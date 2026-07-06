@@ -20,7 +20,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
-    run_init,
+    run_doctor,
 )
 from cmoc_runtime import CmocError, SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
@@ -53,8 +53,8 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     ancestor.mkdir()
     root = make_repo(ancestor)
     monkeypatch.chdir(root)
-    init_result = run_init(root)
-    assert init_result.exit_code == 0
+    doctor_result = run_doctor(root)
+    assert doctor_result.exit_code == 0
     fork_result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
     assert fork_result.exit_code == 0
     calls: list[str] = []
@@ -113,7 +113,7 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -311,7 +311,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     """linked worktree 上の session branch と oracle を review 対象にする。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "linked-review"
     run_git(root, "worktree", "add", "-b", "linked-review-home", str(linked), "HEAD")
     (linked / "oracle" / "linked.md").write_text("# linked oracle\n")
@@ -753,7 +753,7 @@ def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     )
     run_git(root, "commit", "-m", "add binary and memo-shaped oracle")
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -801,7 +801,7 @@ def test_review_oracle_accepts_short_scope_option(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -843,7 +843,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -886,7 +886,7 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     run_git(root, "add", "-f", ".gitignore", "oracle/ignored-link.md")
     run_git(root, "commit", "-m", "add ignored oracle symlink")
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -964,7 +964,7 @@ def test_review_oracle_merges_review_index_changes(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1020,7 +1020,7 @@ def test_review_oracle_merges_preflight_committed_index_changes(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1105,7 +1105,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -1163,7 +1163,7 @@ def test_review_oracle_rejects_non_index_worktree_changes(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )

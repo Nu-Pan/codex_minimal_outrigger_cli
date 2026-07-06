@@ -24,7 +24,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
-    run_init,
+    run_doctor,
 )
 from main import app
 import sub_commands.apply.join as apply_module
@@ -70,7 +70,7 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     calls: list[str] = []
 
     class FakeCodexResult:
@@ -137,7 +137,7 @@ def test_indexing_targets_current_linked_worktree(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     main_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
     linked = root / ".cmoc" / "local" / "worktree" / "indexing"
     run_git(root, "worktree", "add", "-b", "linked-indexing", str(linked), "HEAD")
@@ -171,7 +171,7 @@ def test_indexing_rejects_dirty_current_linked_worktree(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "dirty-indexing"
     run_git(root, "worktree", "add", "-b", "dirty-indexing", str(linked), "HEAD")
     (linked / "README.md").write_text("# repo\n\nlinked change\n")
@@ -200,7 +200,7 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     config = cmoc_runtime.sync_config(root)
     custom_model = CodexModelSpec("codex", "CUSTOM-INDEXING-EFFICIENCY")
     config.codex.model[ModelClass.EFFICIENCY] = custom_model
@@ -245,7 +245,7 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
 
     class FakeCodexResult:
         output_json = {
@@ -300,7 +300,7 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     (root / "README.md").write_text("# repo\n\nchanged\n")
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
     calls: list[Path] = []

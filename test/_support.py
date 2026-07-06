@@ -116,16 +116,6 @@ def run_doctor(root: Path) -> Result:
     return result
 
 
-def run_init(root: Path) -> Result:
-    """Run init with fake managed Ollama/systemctl commands."""
-    from main import app
-
-    env = fake_managed_ollama_env(root)
-    result = runner.invoke(app, ["init"], env=env, catch_exceptions=False)
-    assert result.exit_code == 0
-    return result
-
-
 def fake_managed_ollama_env(root: Path) -> dict[str, str]:
     """Prepare fake commands for tests that trigger doctor through profile creation."""
     home = root / ".cmoc" / "local" / "test-home"

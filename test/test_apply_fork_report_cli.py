@@ -21,7 +21,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
-    run_init,
+    run_doctor,
     setup_codex_home,
     write_python_executable,
 )
@@ -276,7 +276,7 @@ def test_apply_fork_writes_report_with_change_summary(
     """未収束 report に Codex 由来の変更要約と機械生成 commit message が反映される。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -367,7 +367,7 @@ def test_apply_fork_rechecks_changed_files_until_converged(
     """apply 後の変更ファイルを再調査し、新規ディレクトリ配下も展開する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -445,7 +445,7 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     """最後の調査対象が空所見なら上限回でも収束として扱う。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -493,7 +493,7 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     """所見対応で差分が出なくても、所見ありの起点対象は再調査待ちに戻す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -562,7 +562,7 @@ def test_apply_fork_does_not_recover_agent_written_forbidden_file(
     """所見適用が禁止領域を汚しても事後修復しない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -664,7 +664,7 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
     """エラー report の変更要約は commit 前の working tree 差分も対象にする。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -829,7 +829,7 @@ def test_apply_fork_report_does_not_invent_loop_when_no_targets(
     """調査対象がない場合、未実行の loop 1 を report しない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -861,7 +861,7 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     """rolling apply fork が前回 apply join 後の変更だけを対象にする。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )

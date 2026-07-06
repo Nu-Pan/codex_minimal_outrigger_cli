@@ -222,7 +222,7 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     assert f"- repo_root: `{root}`" in result.stdout
 
 
-def test_init_syncs_default_config_without_overwriting_human_values(
+def test_doctor_syncs_default_config_without_overwriting_human_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -247,14 +247,7 @@ def test_init_syncs_default_config_without_overwriting_human_values(
     )
     monkeypatch.chdir(root)
 
-    result = runner.invoke(
-        app,
-        ["init"],
-        env=fake_managed_ollama_env(root),
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
+    run_doctor(root)
     data = json.loads(config_path.read_text())
     assert data["num_parallel"] == 3
     assert data["codex"]["model"]["mainstream"] == {
@@ -268,37 +261,6 @@ def test_init_syncs_default_config_without_overwriting_human_values(
     assert data["codex"]["num_try_falv_recovery"] == 5
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["apply_fork"]["num_apply_files"] == 200
-
-
-def test_init_generates_and_tracks_config(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-
-    result = runner.invoke(
-        app,
-        ["init"],
-        env=fake_managed_ollama_env(root),
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    assert "# cmoc init" in result.stdout
-    assert (root / ".cmoc" / "config.json").is_file()
-    assert (
-        subprocess.run(
-            ["git", "check-ignore", "-q", ".cmoc/config.json"],
-            cwd=root,
-            check=False,
-        ).returncode
-        != 0
-    )
-    assert (
-        run_git(root, "ls-files", "--", ".cmoc/config.json").stdout.strip()
-        == ".cmoc/config.json"
-    )
-    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
 
 
 def test_doctor_preprocess_untracks_existing_cmoc_local_files(
