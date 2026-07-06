@@ -156,21 +156,20 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収めるディレクトリ。CLI 外部挙動、Codex runtime、session/apply/review/indexing/doctor/TUI、prompt rendering、packaged import、共有 pytest helper など、src 実装が oracle 断片を満たすかを回帰確認する入口になる。
-- 複数のテストファイルは、サブコマンド単位や runtime 境界単位で fixture・git 状態・外部コマンド fake を共有し、state/worktree/branch/log/profile/schema などの副作用を外部観測として検証する。
+- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex runtime、indexing、prompt rendering、packaged import、共有 pytest helper など、src の実装が外部挙動と共通 runtime 契約を満たすかを検証する入口になる。
+- apply/session/review/indexing/doctor/TUI/Codex 実行系などの領域ごとにテストファイルが分かれており、個別の期待挙動や回帰観点へ進むためのルーティング対象である。
 
 ## Read this when
-- cmoc の実装変更後に、対応する realization test や既存の検証観点を探すとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、doctor/init、TUI、Codex exec/TUI runtime の CLI から見える挙動を確認・変更するとき。
-- Codex home/profile/sandbox、file access mode、quota/capacity retry、post validation、subprocess tracking、managed Ollama など、runtime 共通契約のテスト入口を探すとき。
-- テスト用 Git repository、fake Codex/Ollama/systemctl、AgentCallParameter、apply worktree 解決など、複数テストで共有される pytest helper を探すとき。
-- prompt parts、StructDoc Markdown rendering、packaged import、ACP builder の公開境界や schema 参照など、CLI 以外の realization test を確認するとき。
+- cmoc の実装変更に対応する realization test を探し、どのテストファイルを読むべきか判断したいとき。
+- CLI 外部挙動、session/apply state、worktree/branch cleanup、Codex runtime、file access mode、INDEX.md 更新、prompt builder、packaged import などの既存テスト観点を確認したいとき。
+- 新しいテストを追加する前に、同じ fixture、同じサブコマンド、同じ runtime 契約を扱う既存テストへ統合できるか確認したいとき。
+- pytest 向け共有 helper、fake Codex/Ollama/systemctl 環境、一時 Git repository、Codex home/profile stub など、テスト支援コードの入口を探すとき。
 
 ## Do not read this when
-- プロダクト本体の実装責務や内部処理を先に確認したい場合は、src 配下の該当 implementation へ進む。
-- oracle file の正本仕様、標準文書、schema 定義、path placeholder の定義そのものを確認したい場合は、oracle 配下の該当文書または src を読む。
-- INDEX.md エントリー生成規則や routing 文書の書き方だけを確認したい場合は、正本仕様側または indexing 用 builder/schema を優先して読む。
-- 単一の低レベル helper やデータ構造だけを確認したく、CLI 境界・git 状態・外部副作用の回帰観点が不要な場合は、対応する実装ファイルを直接読む。
+- プロダクト本体の実装責務や内部 helper を先に確認したい場合は、src 配下の該当実装へ進む。
+- 正本仕様断片、oracle file の定義、schema、開発ルールそのものを確認したい場合は、oracle 配下の該当文書または src を読む。
+- 個別ファイル名や対象サブコマンドが既に分かっている場合は、この階層全体ではなく該当テストファイルを直接読む。
+- Codex CLI や LLM の出力品質そのものを検証したい場合は対象外であり、このテスト群は cmoc の制御ロジックと外部挙動を扱う。
 
 ## hash
-- ded4fbac0673abf964c8e50bd8de6235428c051d7f6c0170b8510b2e00f6b0af
+- cf4bf3d71bdd59bdd3446a65129ff6460e7701efe60a8b13612d01cc4c7ee4b4

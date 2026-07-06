@@ -62,26 +62,22 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork CLI の外部挙動を、共有 fixture を使って回帰確認するテスト群。Codex loop 実行、apply run の state/worktree 更新、linked worktree 起点、doctor preflight、設定読み込み失敗時の停止、gitignore 編集、target normalization、report 前の completed 書き込みを同じ CLI 境界から検証する。
-- 16,000 文字超のまま維持する根拠を持つテスト文脈であり、target normalization、doctor preflight、config failure、state updates、gitignore handling を分割せず同じ apply fork 境界と repository fixture で観測する。
+- apply fork CLI の回帰テスト群。Codex loop 実行、apply run の state 更新、worktree/branch 作成、doctor preprocess、設定読み込み失敗、gitignore 取り扱い、target normalization を、共有 repository fixture を通じた外部挙動として検証する。
+- 16,000 文字超の単一テストファイルとして維持する理由も本文に明示されており、apply fork 境界で同時に観測される複数ケースの文脈を共有している。
 
 ## Read this when
-- apply fork の CLI 実行が Codex 呼び出し後に state、apply branch、worktree、process pid 周辺をどう更新するか確認・変更する。
-- apply fork が linked worktree の session branch と HEAD を起点に apply run を開始する挙動を確認・変更する。
-- apply fork 本体前の doctor preprocess、特に .cmoc/local ignore 修復と clean worktree 維持を確認・変更する。
-- cmoc config の破損または欠落時に apply run の branch/state を開始しない失敗挙動を確認・変更する。
-- apply fork の対象列挙や target normalization で、root 直下 memo、管理領域、INDEX/AGENTS、.cmoc/local、binary、tracked ignored file、oracle 配下 symlink をどう扱うか確認・変更する。
-- apply fork が .gitignore を所見対象として扱い、apply branch 側で編集できることを確認・変更する。
-- apply loop 正常完了後、report 生成前に state file へ completed を書く順序を確認・変更する。
+- apply fork の CLI 挙動、state 遷移、apply branch/worktree の作成場所、report 前の completed 書き込みを確認・変更する場合。
+- apply fork の doctor preprocess、cmoc ignore 修復、.gitignore を所見対象として編集する挙動を確認・変更する場合。
+- apply fork 開始前の設定ファイル欠落・破損時の失敗挙動や、apply run を開始しない保証を確認・変更する場合。
+- apply 対象の正規化で、memo、oracle、.cmoc/local、AGENTS/INDEX、tracked ignored file、binary file、symlink の扱いを確認・変更する場合。
 
 ## Do not read this when
-- apply fork 以外の apply サブコマンドや session 操作だけを調べたい。
-- Codex CLI や LLM 出力品質そのものの検証を調べたい。
-- 単体 helper の内部実装だけを確認したく、CLI 境界・repository fixture・state/worktree 副作用を伴う外部挙動が関係しない。
-- oracle 文書や oracle src の正本仕様内容そのものを確認したい。
+- apply fork 以外のサブコマンドや、apply の内部 helper だけを局所的に確認したい場合。
+- Codex CLI や LLM 出力品質そのものの検証方針を探している場合。
+- repository fixture 全体の作り方や共通テスト支援関数だけを確認したい場合は、支援コード側を直接読む。
 
 ## hash
-- 15368877c84664bd5f05d87ce401b558c7e606399675c6eed7a0b083526b2746
+- 24f90f95327d21ac73cb7fadf136eb534b7b53bb40a59611edc0db4b54774575
 
 # `test_apply_fork_report_cli.py`
 
