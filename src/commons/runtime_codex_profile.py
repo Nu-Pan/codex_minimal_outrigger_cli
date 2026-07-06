@@ -244,7 +244,11 @@ def _append_writable_path(
     if not _is_writable_path_allowed(mode, root, path, allow_oracle_conflict_writes):
         return
     if path.is_dir():
-        if is_untracked_git_ignored(root, path / ".__cmoc_ignore_probe__"):
+        if is_untracked_git_ignored(
+            root, path / ".__cmoc_ignore_probe__"
+        ) or _directory_has_denied_descendant(
+            mode, root, path, allow_oracle_conflict_writes
+        ):
             for child in sorted(path.iterdir()):
                 _append_writable_path(
                     result,
@@ -255,11 +259,29 @@ def _append_writable_path(
                     allow_oracle_conflict_writes,
                 )
             return
-        # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-        # Codex sandbox has no child deny rule. Directories are still needed so
-        # new realization/oracle files can be created; forbidden child changes
-        # are rejected by the post-call file access check.
     _append_writable_root(result, seen, path)
+
+
+def _directory_has_denied_descendant(
+    mode: FileAccessMode,
+    root: Path,
+    directory: Path,
+    allow_oracle_conflict_writes: bool,
+) -> bool:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Codex workspace-write cannot express child deny rules, so any existing
+    # denied descendant forces this directory to be represented by narrower
+    # child/file roots before the agent call starts.
+    return any(
+        not _is_writable_path_allowed(mode, root, child, allow_oracle_conflict_writes)
+        or (
+            child.is_dir()
+            and _directory_has_denied_descendant(
+                mode, root, child, allow_oracle_conflict_writes
+            )
+        )
+        for child in directory.iterdir()
+    )
 
 
 def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:
@@ -310,18 +332,6 @@ def _is_writable_path_allowed(
     if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
         return False
     return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
-
-
-def is_file_access_writable_path_allowed(
-    mode: FileAccessMode,
-    root: Path,
-    path: Path,
-    allow_oracle_conflict_writes: bool = False,
-) -> bool:
-    """Codex 実行後検証からも profile と同じ書き込み境界を参照する。"""
-    return _is_writable_path_allowed(
-        mode, root, path, allow_oracle_conflict_writes
-    )
 
 
 def _append_workspace_write_section(

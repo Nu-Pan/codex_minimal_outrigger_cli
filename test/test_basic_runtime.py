@@ -44,7 +44,6 @@ from cmoc_runtime import (
 from commons.runtime_codex_profile import (
     build_codex_profile,
     file_access_to_codex_cwd,
-    is_file_access_writable_path_allowed,
 )
 from commons.runtime_content import is_binary
 from commons.runtime_state import (
@@ -79,10 +78,19 @@ def _profile_permission_filesystem(profile: str) -> dict[str, str]:
 
 
 def _standard_realization_profile_roots(root: Path) -> set[str]:
-    roots = {
-        str((root / path).resolve())
-        for path in ("src", "test", "bin", ".gitignore")
-    }
+    roots: set[str] = set()
+    for path in (root / name for name in ("src", "test", "bin")):
+        if path.is_dir() and any(
+            child.name in {"AGENTS.md", "INDEX.md"} for child in path.iterdir()
+        ):
+            roots.update(
+                str(child.resolve())
+                for child in path.iterdir()
+                if child.name not in {"AGENTS.md", "INDEX.md"}
+            )
+        else:
+            roots.add(str(path.resolve()))
+    roots.add(str((root / ".gitignore").resolve()))
     if (root / "README.md").exists():
         roots.add(str((root / "README.md").resolve()))
     return roots
@@ -289,7 +297,6 @@ def test_config_defaults_match_logical_model_classes() -> None:
         "codex", "gpt-5.5"
     )
     assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
-    assert config.codex.num_try_falv_recovery == 1
 
 
 def test_config_json_preserves_oracle_member_order() -> None:
@@ -298,7 +305,6 @@ def test_config_json_preserves_oracle_member_order() -> None:
     assert list(data["codex"]) == [
         "model",
         "reasoning_effort",
-        "num_try_falv_recovery",
     ]
     assert list(data["codex"]["model"]) == [
         "mainstream",
@@ -380,8 +386,6 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
     [
         {"num_parallel": True},
         {"num_parallel": "3"},
-        {"codex": {"num_try_falv_recovery": True}},
-        {"codex": {"num_try_falv_recovery": "1"}},
         {"apply_fork": {"num_apply_files": True}},
         {"apply_fork": {"num_apply_files": "200"}},
         {"review_oracle": {"num_enumerate_findings_loop": False}},
@@ -399,10 +403,10 @@ def test_config_rejects_non_integer_count_values(data: dict[str, object]) -> Non
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
-def test_config_restores_codex_num_try_falv_recovery() -> None:
-    config = config_from_dict({"codex": {"num_try_falv_recovery": 4}})
+def test_config_ignores_removed_file_access_recovery_setting() -> None:
+    config = config_from_dict({"codex": {"num_try_falv_recovery": "legacy"}})
 
-    assert config.codex.num_try_falv_recovery == 4
+    assert "num_try_falv_recovery" not in config_to_dict(config)["codex"]
 
 
 def test_render_error_uses_structured_markdown() -> None:
@@ -814,11 +818,11 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     assert _profile_writable_roots(profiles[FileAccessMode.READONLY]) == set()
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_READ]) == set()
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == {
-        str((root / "oracle").resolve())
+        str((root / "oracle" / "spec.md").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
         *realization_roots,
-        str((root / "oracle").resolve()),
+        str((root / "oracle" / "spec.md").resolve()),
     }
     for mode, profile in profiles.items():
         if mode == FileAccessMode.NO_RULE:
@@ -831,14 +835,11 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "existing.py"
     )
     _assert_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / ".gitignore")
-    _assert_writable(
+    _assert_not_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "new.py"
     )
-    assert not is_file_access_writable_path_allowed(
-        FileAccessMode.REALIZATION_WRITE, root, root / "src" / "INDEX.md"
-    )
-    assert not is_file_access_writable_path_allowed(
-        FileAccessMode.REALIZATION_WRITE, root, root / "test" / "INDEX.md"
+    _assert_not_writable(
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "INDEX.md"
     )
     _assert_not_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / ".agents" / "blocked.md"
@@ -849,8 +850,8 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "spec.md"
     )
-    assert not is_file_access_writable_path_allowed(
-        FileAccessMode.REPO_WRITE, root, root / "oracle" / "INDEX.md"
+    _assert_not_writable(
+        profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "INDEX.md"
     )
     _assert_writable(profiles[FileAccessMode.REPO_WRITE], root / ".gitignore")
     _assert_not_writable(
