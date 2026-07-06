@@ -158,18 +158,19 @@
 # `test`
 
 ## Summary
-- CLI、runtime、Codex 実行、apply/session/review/indexing/doctor/prompt などの realization test を集約するディレクトリ。共有 pytest helper と、サブコマンドや共通 runtime 境界の外部挙動を検証するテスト群への入口になる。
-- 各テストは、正本仕様断片そのものではなく、realization implementation が oracle と既存挙動から導いた公開的な制御、状態遷移、ログ、git 操作、subprocess 境界を確認する。
+- cmoc の realization test 群を収めるディレクトリ。CLI サブコマンド、Codex runtime、doctor、indexing、prompt rendering、ACP builder、packaged import など、`src` の実装が外部挙動と共通 runtime 契約を満たすかを検証する入口になる。
+- 共有 pytest helper と、apply/session/review/indexing/TUI/Codex runtime などの領域別テストへ分かれており、変更対象の挙動に対応するテストファイルを選ぶための上位ルーティングを担う。
 
 ## Read this when
-- cmoc の CLI サブコマンド、runtime wrapper、Codex 実行、apply/session/review/indexing/doctor まわりの realization implementation を変更し、対応する回帰テストを探したいとき。
-- 外部状態を伴うテスト fixture、fake Codex/Ollama/systemctl、使い捨て git repository、Codex home/profile、session/apply state の準備方法を確認したいとき。
-- 特定機能の変更後に、終了コード、標準出力、report、state file、worktree/branch cleanup、log、structured output schema 参照などの既存期待値を確認したいとき。
+- realization implementation を変更した後、対応する既存テストや回帰観点を探したいとき。
+- CLI の外部挙動、session/apply state、worktree/branch cleanup、Codex 実行 wrapper、doctor、indexing preflight、prompt 組み立てなどの期待値を確認・変更するとき。
+- 新しい realization test を追加する前に、既存テストへケース追加できるか、共有 helper を使えるか、同じ観点のテストが既にあるかを確認したいとき。
+- fake Codex、fake Ollama/systemctl、使い捨て git repository、Codex home/profile、apply worktree 解決など、外部状態を伴うテスト前提を探すとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、oracle src の schema、oracle 側のテスト規則を確認したい場合は、oracle 配下の該当対象を読む。
-- 実装本体の責務分割、低レベル helper の内部制御、設定や path model の定義だけを調べたい場合は、先に対応する implementation を読む。
-- INDEX.md エントリー生成規則や routing 文書の書き方だけを確認したい場合は、正本仕様側または routing 関連の対象を読む。
+- 本番実装の責務や制御フローを先に理解したい場合は、対応する `src` 側の implementation を読む。
+- oracle file の正本仕様断片、schema、prompt の正本内容を確認したい場合は、oracle 側の該当ファイルを読む。
+- テストの追加・修正ではなく、INDEX.md エントリー規約やルーティング文書の作成規則だけを確認したいとき。
 
 ## hash
-- 39699ff5cd7ef88aaf4b3a7f81b0c8fea08c0fef928e4068851a6d341683f25b
+- 037d85738021fced1eae537ef6492255236185224876f33f82869910b5c54651

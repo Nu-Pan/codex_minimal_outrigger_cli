@@ -336,21 +336,21 @@
 # `test_indexing_preflight.py`
 
 ## Summary
-- Codex 実行前の indexing preflight が有効時に先に走り、生成された index 変更を専用 commit として残したうえで作業ツリーを清潔に戻す挙動を検証する realization test。
-- 実行 cwd が別 worktree 内にある場合の preflight 対象選択、TUI 実行経路、repository lock 待機、parameter による preflight 無効化、file access violation 後の recovery indexing 抑止を扱う。
+- Codex 実行前に行う index 更新 preflight の realization test。exec/TUI 呼び出しで index 更新が先に実行され commit されること、cwd が別 worktree 内の場合はその worktree を対象にすること、repository lock 待機、parameter による preflight 無効化、file access violation 後に recovery 用の追加 index 更新を走らせないことを検証する。
 
 ## Read this when
-- Codex exec/TUI 呼び出し前に index 更新を走らせる制御を変更する時。
-- indexing preflight の対象 root/cwd 判定、git commit・status cleanup、repository lock 待機の挙動を確認したい時。
-- AgentCallParameter の preflight 無効化フラグや file access violation 後の再実行・recovery 制御を変更する時。
+- Codex 呼び出し前の indexing preflight の実行条件・順序・commit 挙動を変更または確認したいとき。
+- root と cwd が異なる worktree を指す場合に、どの worktree の INDEX 更新を行うべきかを確認したいとき。
+- indexing lock の待機挙動や、preflight 無効化フラグの効き方を変更または確認したいとき。
+- file access violation や recovery 処理と indexing preflight の相互作用を確認したいとき。
 
 ## Do not read this when
-- index 本文の生成内容や markdown 解析規則だけを確認したい時。
-- 通常の Codex 実行引数変換、model/reasoning/file access mode の基本データ構造だけを確認したい時。
-- INDEX.md エントリー生成の品質や Structured Output の内容だけを検証したい時。
+- INDEX 更新内容そのもの、エントリー生成ロジック、対象ファイル探索の詳細を確認したいときは、indexing 実装やその専用テストを読む。
+- Codex subprocess/TUI 実行自体の引数組み立てや出力解析を確認したいだけで、preflight との順序や抑止条件に関心がないとき。
+- agent call parameter の enum や config の定義だけを確認したいときは、それぞれの定義元を読む。
 
 ## hash
-- 05c11c693adab64f994f02fa03836c04b402c1f9352eb5a99e468f66e1a3f373
+- 53add1f54659fea880475e18a941754e100865991782abe1acb7cc4bc800827d
 
 # `test_packaged_import.py`
 
