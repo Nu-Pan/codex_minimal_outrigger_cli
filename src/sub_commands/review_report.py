@@ -53,7 +53,8 @@ def render_review_oracle_report(
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
     # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
-    # H2 sections are severity-owned; verdict only splits subsections.
+    # Keep required severity H2 sections, then render finding details in
+    # accepted fatal, accepted minor, rejected fatal, rejected minor order.
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
     fatal_accepted = _findings_with(accepted, "fatal")
@@ -113,15 +114,16 @@ def render_review_oracle_report(
             "## Fatal findings",
             f"- Accepted: {len(fatal_accepted)}",
             f"- Rejected: {len(fatal_rejected)}",
-            "### Accepted fatal findings",
-            render_finding_section(fatal_accepted),
-            "### Rejected fatal findings",
-            render_finding_section(fatal_rejected),
             "## Minor findings",
             f"- Accepted: {len(minor_accepted)}",
             f"- Rejected: {len(minor_rejected)}",
+            "## Finding details",
+            "### Accepted fatal findings",
+            render_finding_section(fatal_accepted),
             "### Accepted minor findings",
             render_finding_section(minor_accepted),
+            "### Rejected fatal findings",
+            render_finding_section(fatal_rejected),
             "### Rejected minor findings",
             render_finding_section(minor_rejected),
             "",

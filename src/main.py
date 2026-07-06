@@ -12,7 +12,8 @@ from cmoc_runtime import (
 from sub_commands.apply.abandon import cmoc_apply_abandon_impl
 from sub_commands.apply.fork import cmoc_apply_fork_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
-from sub_commands.doctor import cmoc_doctor_impl, cmoc_init_impl
+from sub_commands.doctor import cmoc_doctor_impl
+from sub_commands.eval_oracle import cmoc_eval_oracle_impl
 from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.review.oracle import cmoc_review_oracle_impl
 from sub_commands.session.abandon import cmoc_session_abandon_impl
@@ -88,14 +89,15 @@ app.add_typer(review_app, name="review")
 
 
 @app.command()
-def init() -> None:
-    """初回 setup と config 同期を実行する CLI 入口。"""
-    cmoc_init_impl()
-
-
-@app.command()
 def doctor() -> None:
     """cmoc 実行前の共通検証・修復を明示実行する CLI 入口。"""
+    cmoc_doctor_impl()
+
+
+@app.command("dector")
+def dector_alias() -> None:
+    """usage 手順の `cmoc dector` を doctor 実装へ接続する CLI 入口。"""
+    # <work-root>/oracle/doc/app_spec/usage.md
     cmoc_doctor_impl()
 
 
@@ -151,6 +153,15 @@ def review_oracle(
     """oracle review を隔離 worktree で実行する CLI 入口。"""
     # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
     cmoc_review_oracle_impl(scope.value)
+
+
+@app.command("eval-oracle")
+def eval_oracle(
+    scope: ReviewOracleScope = typer.Option(ReviewOracleScope.session, "--scope", "-s"),
+) -> None:
+    """want を書き出した oracle を AI review する CLI 入口。"""
+    # <work-root>/oracle/doc/considered_alternative/working_plan_review.md
+    cmoc_eval_oracle_impl(scope.value)
 
 
 @app.command()

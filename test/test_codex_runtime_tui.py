@@ -1,6 +1,7 @@
 import json
 import subprocess
 import tomllib
+from dataclasses import replace
 from pathlib import Path
 
 import cmoc_runtime
@@ -63,8 +64,14 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
+    schema_path = tmp_path / "schema.json"
+    schema_path.write_text('{"type":"object"}\n')
+
     run_codex_tui(
-        codex_parameter(FileAccessMode.PURE_ORACLE_READ),
+        replace(
+            codex_parameter(FileAccessMode.PURE_ORACLE_READ),
+            structured_output_schema_path=schema_path,
+        ),
         root=root,
         extra_read_paths=[prompt_path],
         config=CmocConfig(),
@@ -73,6 +80,7 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(root.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
+    assert "--output-schema" not in record["args"]
 
 
 def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
@@ -94,16 +102,22 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
         [
             "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
+            "prompt = args[-1]",
+            "prompt_path = pathlib.Path(prompt.split(' を読んで')[0])",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
+            "    'prompt_text': prompt_path.read_text(),",
             "}))",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     run_codex_tui(
-        codex_parameter(FileAccessMode.REPO_WRITE),
+        replace(
+            codex_parameter(FileAccessMode.REPO_WRITE),
+            prompt=f"{prompt_path} を読んで、その指示に従って下さい",
+        ),
         root=root,
         cwd=linked,
         extra_read_paths=[prompt_path],
@@ -112,14 +126,18 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
 
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
+    assert record["prompt_text"] == "complete prompt\n"
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
     call_log = next((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
     profile = tomllib.loads(
         Path(json.loads(call_log.read_text())["profile_path"]).read_text()
     )
-    assert profile["sandbox_workspace_write"]["writable_roots"] == [
-        str(linked.resolve())
-    ]
+    filesystem = profile["permissions"]["cmoc"]["filesystem"]
+    assert profile["default_permissions"] == "cmoc"
+    assert filesystem[str((root / ".cmoc" / "local").resolve())] == "read"
+    assert filesystem[str((linked / "README.md").resolve())] == "write"
+    assert filesystem[str((linked / "oracle").resolve())] == "write"
+    assert "sandbox_workspace_write" not in profile
 
 
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
@@ -143,4 +161,3 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
     assert len(call_logs) == 1
     call_log = json.loads(call_logs[0].read_text())
     assert call_log["argv"][:3] == ["codex", "--profile", call_log["profile_name"]]
-

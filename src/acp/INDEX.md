@@ -19,20 +19,21 @@
 # `builder`
 
 ## Summary
-- acp builder 配下の互換入口と個別 builder 領域へのルーティングを担うディレクトリ。oracle 側実装を正本に保ちつつ、旧来の acp.builder import 経路を canonical 実装や realization 側の適応層へ接続する。
-- apply fork、indexing、quota probe、review、session、TUI などの builder 入口があり、実処理本体ではなく import 互換、oracle builder 委譲、realization 公開型への最小変換、削除条件確認の入口として使う。
+- acp builder 配下で、oracle 側 builder 実装を正本に保ちながら旧来の acp.builder 系 import 経路を成立させる realization 側互換入口を束ねる階層。
+- apply、review、session、tui、indexing などの builder 群について、canonical oracle 実装への中継、再公開、薄い wrapper、削除条件を確認するための入口になる。
+- quota 回復確認用の最小 agent call parameter builder など、通常 builder とは異なる限定用途の実装も含む。
 
 ## Read this when
-- acp.builder.* の旧 import 経路が、oracle 側 canonical 実装または realization 側 wrapper へどう接続されるかを調べたいとき。
-- oracle 側 builder を正本としながら realization 側で AgentCallParameter への変換、module alias、package path 追加、既知 typo 補正などをどこで行うか確認したいとき。
-- apply fork、quota probe、review、session、TUI、indexing の builder 互換入口や削除条件を確認し、個別領域へ進む入口を選びたいとき。
-- 旧 acp.builder 参照を canonical import path へ移行する作業で、残すべき互換層、既存参照向け公開面、削除できる条件を調べたいとき。
+- acp.builder.* の旧 import 互換性や、既存参照を oracle 側実装へ接続する仕組みを確認したいとき。
+- apply、review、session、tui、indexing の agent call parameter builder について、realization 側の互換入口、再公開、wrapper、削除可否を調べたいとき。
+- oracle 側 builder を呼び出した結果を realization 側公開型や既存公開名へどう適合させるかを確認したいとき。
+- quota wait 中の回復確認で使う低コストな probe 用 agent call parameter の構築内容を確認・変更したいとき。
 
 ## Do not read this when
-- oracle 側 builder の正本仕様、prompt 本文、parameter 生成内容そのものを確認したい場合は、対応する oracle 側実装を直接読む。
-- apply、review、session、TUI など各機能の実行フロー、画面挙動、branch 操作、finding 処理など builder 以外の実装詳細を調べたい場合は、該当機能の実装へ進む。
-- AgentCallParameter の基本型、file access mode、path model、Structured Output schema などの共通基礎仕様だけを確認したい場合は、それぞれの共通定義を読む。
-- 新しい公開 API や新規 import 経路を設計したい場合は、この互換領域ではなく正本仕様または新規機能の入口を確認する。
+- 各 builder の正本仕様、prompt、生成内容、人間意図を確認したい場合は、対応する oracle 側 builder を読む。
+- apply fork、review、session、TUI など各機能全体の実行フローや CLI 制御を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
+- ACP parameter の公開型、path model、汎用 git helper、index entry 生成仕様など、builder 互換入口以外の共通実装を調べたい場合は該当対象を読む。
+- 新規機能の実装場所を探しているだけで、既存 acp.builder import 互換や quota probe に関係しない場合。
 
 ## hash
-- ebd7c0a82c1bef7ff80f973308194949451ef3a138f2dbeb65af7707112da669
+- 110915aad540f1dfc04662648e2159e9f044eabe48fc1f5e3bb982a5458e0fcb

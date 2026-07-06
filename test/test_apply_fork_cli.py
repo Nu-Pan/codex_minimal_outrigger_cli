@@ -1,7 +1,15 @@
+"""Apply fork CLI regression tests share one fixture-heavy external behavior context.
+
+The file intentionally stays above 16,000 characters because target normalization,
+doctor preflight, config failure, state updates, and gitignore handling are all
+observed through the same apply fork CLI boundary and shared repository fixtures.
+Splitting those cases would increase repeated setup and hide the cross-case context.
+Size rationale: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
+
 import json
 from pathlib import Path
 
-import pytest
 from basic.acp import AgentCallParameter
 from _support import (
     add_tracked_ignored_oracle_file,
@@ -9,7 +17,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
-    run_init,
+    run_doctor,
 )
 from main import app
 from pytest import MonkeyPatch
@@ -31,8 +39,8 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     """apply fork が Codex loop 後に state と worktree を完成状態へ更新する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    init_result = run_init(root)
-    assert init_result.exit_code == 0
+    doctor_result = run_doctor(root)
+    assert doctor_result.exit_code == 0
     fork_result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
     assert fork_result.exit_code == 0
     calls: list[str] = []
@@ -79,7 +87,7 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     """linked worktree 上の session branch と HEAD から apply run を開始する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "linked-apply"
     run_git(root, "worktree", "add", "-b", "linked-apply-home", str(linked), "HEAD")
     (linked / "README.md").write_text("# linked apply\n")
@@ -124,7 +132,7 @@ def test_apply_fork_runs_doctor_preprocess_before_body(
     """apply fork 本体前に doctor preprocess の共通修復が実行される。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -159,7 +167,7 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     """apply fork は未 ignore の .cmoc/local を clean worktree のまま ignore する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -196,7 +204,7 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     """設定読み込み失敗時に apply run の branch/state を開始しないことを確認する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -229,7 +237,7 @@ def test_apply_fork_missing_config_fails_before_starting_apply_run(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -256,7 +264,7 @@ def test_apply_fork_can_target_and_edit_gitignore(
     """所見対象としての .gitignore は apply branch 側で編集できることを確認する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -481,7 +489,7 @@ def test_apply_fork_marks_state_completed_before_report(
     """apply loop 正常完了直後、report 生成前に completed を state file へ書く。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )

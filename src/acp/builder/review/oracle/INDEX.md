@@ -50,22 +50,21 @@
 # `merge_finding.py`
 
 ## Summary
-- レビュー用 oracle finding 統合プロンプトを組み立てる公開関数を提供する薄いラッパー。
-- 正本側ビルダーの戻り値を保ったまま、正本側の既知の placeholder 表記不具合だけを最小補正する互換処理を担う。
-- 補正対象は prompt 内の placeholder 定義ブロックに限定され、既知 finding の内容や他のパラメータは変更しない。
+- review oracle の finding merge 用 AgentCallParameter を正本 builder から生成し、正本 prompt に残る `<oracle-root>` placeholder 定義 typo だけを限定補正する薄い adapter。
+- 正本側の bug を realization 側で最小補正するための一時的な処理を持ち、known findings の扱いや parameter 本体の構成は正本 builder に委譲する。
 
 ## Read this when
-- レビュー用 oracle finding 統合の agent call parameter が、どの正本ビルダーを経由して作られるか確認したいとき。
-- prompt 内の oracle root placeholder 表記補正がどこで行われているか調べるとき。
-- 正本側の placeholder 表記不具合に対する一時的な realization 側補正や、その削除条件を確認するとき。
+- review oracle の merge finding 用 agent call parameter がどこで組み立てられるかを確認したいとき。
+- 正本 prompt の placeholder 定義 typo に対する realization 側の補正範囲、削除条件、根拠コメントを確認したいとき。
+- known findings を渡した後の prompt 補正が、parameter の他要素を変えずに適用されるかを調べるとき。
 
 ## Do not read this when
-- レビュー一般の finding 統合仕様や prompt 本文そのものを確認したいだけのときは、対応する oracle 側の定義を直接読む。
-- agent call parameter の基本構造や型の責務を確認したいだけのときは、基礎パラメータ定義を読む。
-- placeholder 表記補正と無関係なレビュー処理、ファイルアクセス、構造化出力 schema の詳細を調べたいとき。
+- review oracle 以外の builder や agent call parameter 全般の構造を調べたいとき。
+- 正本 prompt の内容そのもの、または merge finding の正本仕様を確認したいとき。
+- placeholder typo 補正ではなく、review finding の解析・統合ロジック本体を調べたいとき。
 
 ## hash
-- a7e8e1c98ef881912e56cf2367360407162b30eb80ecb5cb21848496405ca3b6
+- 23e268b53d2c94a31254521af78903039cd5fe98b5c6e9d283463d1fb79810fb
 
 # `validate_finding_advocate.py`
 

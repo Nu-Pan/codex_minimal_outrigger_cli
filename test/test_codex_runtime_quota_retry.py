@@ -51,6 +51,7 @@ def stub_quota_probe_builder(
             FileAccessMode.READONLY,
             probe_prompt,
             None,
+            run_indexing_preflight=False,
             cwd=base_parameter.cwd,
         ),
     )
@@ -242,7 +243,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- Exit code: `0`" in console
 
 
-def test_quota_probe_builder_returns_minimal_readonly_parameter() -> None:
+def test_quota_probe_builder_returns_minimal_probe_parameter() -> None:
     base = AgentCallParameter(
         ModelClass.FLAGSHIP,
         ReasoningEffort.HIGH,
@@ -255,10 +256,10 @@ def test_quota_probe_builder_returns_minimal_readonly_parameter() -> None:
 
     probe = build_quota_availability_probe_parameter(base)
 
+    assert "OK" in probe.prompt
     assert probe.model_class == ModelClass.MINIMUM
     assert probe.reasoning_effort == ReasoningEffort.LOW
     assert probe.file_access_mode == FileAccessMode.READONLY
-    assert probe.prompt
     assert probe.structured_output_schema_path is None
     assert probe.run_indexing_preflight is False
     assert probe.cwd == base.cwd
@@ -280,7 +281,7 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
         None,
         cwd=root,
     )
-    probe_parameter = build_quota_availability_probe_parameter(parameter)
+    probe_prompt = build_quota_availability_probe_parameter(parameter).prompt
 
     def fake_run(
         argv: list[str], **kwargs: object
@@ -314,7 +315,7 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
         config=CmocConfig(),
     )
 
-    assert calls == ["prompt", probe_parameter.prompt, "prompt"]
+    assert calls == ["prompt", probe_prompt, "prompt"]
     assert result.output_json == {"ok": 3}
 
 

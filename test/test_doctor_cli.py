@@ -6,6 +6,7 @@ import pytest
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 import commons.runtime_doctor as doctor_module
+import commons.runtime_ollama as ollama_module
 from commons.runtime_config import write_config
 from commons.runtime_errors import CmocError
 from config.cmoc_config import CmocConfig
@@ -24,7 +25,7 @@ from _support import (
 
 def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     config = CmocConfig()
@@ -84,42 +85,46 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     )
 
 
-def test_verify_ollama_service_rejects_missing_main_pid(monkeypatch) -> None:
+def test_verify_ollama_service_rejects_missing_main_pid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     executable = Path("/home/user/.cmoc/ollama/bin/ollama")
 
-    monkeypatch.setattr(doctor_module, "_service_active", lambda: True)
-    monkeypatch.setattr(doctor_module, "_service_main_pid", lambda: None)
+    monkeypatch.setattr(ollama_module, "_service_active", lambda: True)
+    monkeypatch.setattr(ollama_module, "_service_main_pid", lambda: None)
 
     with pytest.raises(CmocError):
-        doctor_module._verify_ollama_service(executable)
+        ollama_module._verify_ollama_service(executable)
 
 
-def test_ollama_listener_must_be_expected_service_process(monkeypatch) -> None:
+def test_ollama_listener_must_be_expected_service_process(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     executable = Path("/home/user/.cmoc/ollama/bin/ollama")
 
-    monkeypatch.setattr(doctor_module, "_ollama_listener_process_ids", lambda: {20, 30})
+    monkeypatch.setattr(ollama_module, "_ollama_listener_process_ids", lambda: {20, 30})
     monkeypatch.setattr(
-        doctor_module, "_process_is_descendant", lambda pid, main: pid == 20
+        ollama_module, "_process_is_descendant", lambda pid, main: pid == 20
     )
     monkeypatch.setattr(
-        doctor_module,
+        ollama_module,
         "_process_argv_uses_executable",
         lambda pid, path: path == executable and pid == 30,
     )
 
-    assert not doctor_module._listener_matches_service(10, executable)
+    assert not ollama_module._listener_matches_service(10, executable)
 
     monkeypatch.setattr(
-        doctor_module,
+        ollama_module,
         "_process_argv_uses_executable",
         lambda pid, path: path == executable and pid == 20,
     )
 
-    assert doctor_module._listener_matches_service(10, executable)
+    assert ollama_module._listener_matches_service(10, executable)
 
 
 def test_doctor_pulls_each_unique_cmoc_provider_model(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     config = CmocConfig()
@@ -131,16 +136,16 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
 
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.setattr(
-        doctor_module, "_ensure_ollama_installed", lambda: Path("ollama")
+        ollama_module, "_ensure_ollama_installed", lambda: Path("ollama")
     )
     monkeypatch.setattr(
-        doctor_module, "_ensure_ollama_service", lambda executable: None
+        ollama_module, "_ensure_ollama_service", lambda executable: None
     )
     monkeypatch.setattr(
-        doctor_module, "_verify_ollama_service", lambda executable: None
+        ollama_module, "_verify_ollama_service", lambda executable: None
     )
     monkeypatch.setattr(
-        doctor_module,
+        ollama_module,
         "_ensure_ollama_model",
         lambda executable, model: pulled.append(model),
     )
@@ -150,7 +155,42 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
     assert pulled == ["alpha", "beta"]
 
 
-def test_doctor_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None:
+def test_doctor_preprocess_in_linked_worktree_uses_repo_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-ollama-config"
+    run_git(root, "worktree", "add", "-b", "linked-ollama-config", str(linked), "HEAD")
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "repo-model")
+    write_config(root / ".cmoc" / "config.json", config)
+    pulled: list[str] = []
+
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(
+        ollama_module, "_ensure_ollama_installed", lambda: Path("ollama")
+    )
+    monkeypatch.setattr(
+        ollama_module, "_ensure_ollama_service", lambda executable: None
+    )
+    monkeypatch.setattr(
+        ollama_module, "_verify_ollama_service", lambda executable: None
+    )
+    monkeypatch.setattr(
+        ollama_module,
+        "_ensure_ollama_model",
+        lambda executable, model: pulled.append(model),
+    )
+
+    doctor_module.run_doctor_preprocess(linked)
+
+    assert pulled == ["repo-model"]
+    assert not (linked / ".cmoc" / "config.json").exists()
+
+
+def test_doctor_generates_and_tracks_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
     monkeypatch.chdir(root)
@@ -162,16 +202,34 @@ def test_doctor_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None
         run_git(root, "ls-files", "--", ".cmoc/config.json").stdout.strip()
         == ".cmoc/config.json"
     )
+    assert json.loads(config_path.read_text())["codex"]["num_try_falv_recovery"] == 1
     assert run_git(
         root, "show", "--name-only", "--format=", "HEAD"
     ).stdout.splitlines() == [".cmoc/config.json"]
 
 
-def test_doctor_preprocess_targets_current_linked_worktree(
-    tmp_path: Path, monkeypatch
+def test_dector_alias_runs_doctor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    linked = tmp_path / "linked"
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(
+        app,
+        ["dector"],
+        env=fake_managed_ollama_env(root),
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert (root / ".cmoc" / "config.json").is_file()
+
+
+def test_doctor_preprocess_targets_current_linked_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-doctor"
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
 
@@ -192,10 +250,13 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     ).returncode == 0
     assert not (root / ".gitignore").exists()
     assert not (root / ".agents").exists()
+    assert (root / ".cmoc" / "config.json").is_file()
+    assert not (linked / ".cmoc" / "config.json").exists()
+    assert f"- repo_root: `{root}`" in result.stdout
 
 
-def test_init_syncs_default_config_without_overwriting_human_values(
-    tmp_path: Path, monkeypatch
+def test_doctor_syncs_default_config_without_overwriting_human_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
@@ -210,7 +271,8 @@ def test_init_syncs_default_config_without_overwriting_human_values(
                             "model_provider": "codex",
                             "model": "CUSTOM",
                         }
-                    }
+                    },
+                    "num_try_falv_recovery": 5,
                 },
             }
         )
@@ -218,14 +280,7 @@ def test_init_syncs_default_config_without_overwriting_human_values(
     )
     monkeypatch.chdir(root)
 
-    result = runner.invoke(
-        app,
-        ["init"],
-        env=fake_managed_ollama_env(root),
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
+    run_doctor(root)
     data = json.loads(config_path.read_text())
     assert data["num_parallel"] == 3
     assert data["codex"]["model"]["mainstream"] == {
@@ -236,41 +291,13 @@ def test_init_syncs_default_config_without_overwriting_human_values(
         "model_provider": "codex",
         "model": "gpt-5.4-mini",
     }
+    assert data["codex"]["num_try_falv_recovery"] == 5
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["apply_fork"]["num_apply_files"] == 200
 
 
-def test_init_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None:
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-
-    result = runner.invoke(
-        app,
-        ["init"],
-        env=fake_managed_ollama_env(root),
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    assert "# cmoc init" in result.stdout
-    assert (root / ".cmoc" / "config.json").is_file()
-    assert (
-        subprocess.run(
-            ["git", "check-ignore", "-q", ".cmoc/config.json"],
-            cwd=root,
-            check=False,
-        ).returncode
-        != 0
-    )
-    assert (
-        run_git(root, "ls-files", "--", ".cmoc/config.json").stdout.strip()
-        == ".cmoc/config.json"
-    )
-    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
-
-
 def test_doctor_preprocess_untracks_existing_cmoc_local_files(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     local_path = root / ".cmoc" / "local" / "cache.json"
@@ -287,7 +314,7 @@ def test_doctor_preprocess_untracks_existing_cmoc_local_files(
 
 
 def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     local_path = root / ".cmoc" / "local" / "cache.json"
@@ -307,7 +334,7 @@ def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
 
 
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     user_file = root / "user.txt"
@@ -325,7 +352,7 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
 
 
 def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
@@ -346,7 +373,7 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
 
 
 def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
@@ -366,7 +393,7 @@ def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
 
 
 def test_doctor_preprocess_preserves_preexisting_staged_rename(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     old_path = root / "old.txt"
@@ -387,7 +414,7 @@ def test_doctor_preprocess_preserves_preexisting_staged_rename(
 
 
 def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)

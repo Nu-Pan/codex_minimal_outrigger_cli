@@ -14,12 +14,13 @@ import subprocess
 import threading
 import time
 from datetime import datetime, timedelta
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
 from jsonschema import validate
 
-from basic.acp import AgentCallParameter
+from basic.acp import AgentCallParameter, FileAccessMode
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_config import load_config
@@ -28,6 +29,7 @@ from commons.runtime_codex_profile import (
     codex_profile_name,
     codex_subprocess_env,
     extract_resume_token,
+    is_file_access_writable_path_allowed,
     is_capacity_error,
     is_quota_error,
     prepare_codex_profile,
@@ -113,9 +115,17 @@ def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
 def _quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
-    from acp.builder.quota_probe import build_quota_availability_probe_parameter
+    try:
+        from acp.builder.quota_probe import build_quota_availability_probe_parameter
 
-    return build_quota_availability_probe_parameter(base_parameter)
+        return build_quota_availability_probe_parameter(base_parameter)
+    except (AttributeError, ModuleNotFoundError) as exc:
+        raise CmocError(
+            "quota availability probe の builder が見つかりません。",
+            ["cmoc のインストール内容を確認してから再実行してください。"],
+            str(exc),
+        ) from exc
+
 
 
 def _next_codex_log_timestamp() -> str:
@@ -376,6 +386,7 @@ def run_codex_exec(
     sleep_sec = capacity_initial_sleep_sec
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
+    initial_changed_signatures = _changed_path_signatures(codex_work_root)
 
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
@@ -729,6 +740,13 @@ def run_codex_exec(
                 ) from exc
         else:
             output_json = read_output_json(output_path)
+        _validate_post_call_file_access(
+            parameter.file_access_mode,
+            codex_work_root,
+            initial_changed_signatures,
+            extra_writable_paths,
+            allow_oracle_conflict_writes,
+        )
         emit_codex_call_event(
             run_purpose=purpose,
             run_call_path=call_path,
@@ -782,3 +800,84 @@ def _changed_worktree_path_statuses(root: Path) -> list[tuple[str, Path]]:
     # apply requeue needs file-level paths after an agent call; default status
     # can collapse untracked directories into one directory path.
     return status_path_statuses(root, untracked_all=True)
+
+
+def _changed_path_signatures(root: Path) -> dict[Path, str]:
+    return {
+        path.resolve(): f"{status}\0{_path_signature(path)}"
+        for status, path in _changed_worktree_path_statuses(root)
+    }
+
+
+def _path_signature(path: Path) -> str:
+    try:
+        stat = path.lstat()
+    except FileNotFoundError:
+        return "missing"
+    if path.is_symlink():
+        return f"symlink\0{path.readlink()}"
+    if path.is_file():
+        return f"file\0{sha256(path.read_bytes()).hexdigest()}"
+    return f"other\0{stat.st_mode}\0{stat.st_size}\0{stat.st_mtime_ns}"
+
+
+def _validate_post_call_file_access(
+    mode: FileAccessMode,
+    root: Path,
+    initial_signatures: dict[Path, str],
+    extra_writable_paths: list[Path] | None,
+    allow_oracle_conflict_writes: bool,
+) -> None:
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # read-only 系 mode は Codex sandbox ではなく cmoc の事後チェックで
+    # 論理的な書き込み禁止を保証する。
+    changed = _changed_path_signatures(root)
+    current_attempt_paths = [
+        path
+        for path, signature in changed.items()
+        if initial_signatures.get(path) != signature
+        and not _is_cmoc_local_path(root, path)
+        and not _is_temporary_runtime_path(root, path)
+    ]
+    blocked = [
+        path
+        for path in current_attempt_paths
+        if not _is_post_call_writable_path_allowed(
+            mode, root, path, extra_writable_paths, allow_oracle_conflict_writes
+        )
+    ]
+    if not blocked:
+        return
+    relative = "\n".join(str(path.relative_to(root)) for path in blocked)
+    raise CmocError(
+        "Codex CLI 呼び出し後に FileAccessMode の禁止差分を検出しました。",
+        ["禁止領域の差分を確認し、必要なら手動で戻してから再実行してください。"],
+        f"mode: {mode.value}\nblocked paths:\n{relative}",
+    )
+
+
+def _is_post_call_writable_path_allowed(
+    mode: FileAccessMode,
+    root: Path,
+    path: Path,
+    extra_writable_paths: list[Path] | None,
+    allow_oracle_conflict_writes: bool,
+) -> bool:
+    if not allow_oracle_conflict_writes:
+        return is_file_access_writable_path_allowed(mode, root, path)
+    allowed_roots = [extra.resolve() for extra in extra_writable_paths or []]
+    if not any(path.resolve().is_relative_to(allowed) for allowed in allowed_roots):
+        return is_file_access_writable_path_allowed(mode, root, path)
+    return is_file_access_writable_path_allowed(mode, root, path, True)
+
+
+def _is_cmoc_local_path(root: Path, path: Path) -> bool:
+    return path.resolve().is_relative_to(root.resolve() / ".cmoc" / "local")
+
+
+def _is_temporary_runtime_path(root: Path, path: Path) -> bool:
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return relative.parts[:1] == (".pytest_cache",) or "__pycache__" in relative.parts

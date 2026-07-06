@@ -19,4 +19,4 @@ def finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
             return resolve_real_path(path)
         except (TypeError, ValueError):
             return None
-    return (worktree / path).resolve()
+    return None

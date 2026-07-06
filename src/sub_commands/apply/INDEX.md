@@ -37,45 +37,44 @@
 # `fork.py`
 
 ## Summary
-- apply fork の実行本体を扱う。session branch 上で apply 用 branch/worktree を作成し、scope から対象ファイルを列挙し、Codex による finding 列挙と適用、差分 commit、apply state 更新、report 出力までの一連の制御を担う。
-- apply 対象の正規化、再キュー、重複排除、commit subject 生成、前回 join 済み apply commit の解決など、apply fork loop の復旧条件や継続条件に関わる補助処理も同じ制御単位として含む。
+- apply fork の 1 回の実行を開始し、isolated worktree 上で対象ファイル列挙、Codex による finding 列挙と適用、変更 commit、apply state 更新、report 生成までを制御する。
+- scope、session state、前回 join 履歴、変更差分から apply finding の調査対象を決め、oracle file・realization file・除外対象の境界に従って対象を正規化する。
+- apply fork の orchestration 全体を一つの loop として扱い、apply state、worktree、再キュー、commit subject、失敗時 report の復旧条件を同じ文脈で管理する。
 
 ## Read this when
-- apply fork の開始条件、作成される branch/worktree、apply state の running/completed/error 更新、process id 管理、report 出力の流れを確認したいとき。
-- apply scope ごとの対象ファイル列挙、oracle file と realization file の扱い、git ignored や管理外ディレクトリの除外条件を確認したいとき。
-- Codex による finding 列挙、finding 適用、変更ファイルの再キュー、apply commit 生成、未収束時の終了コードを変更または調査したいとき。
-- 前回 join 済み apply merge commit 以降の差分を apply 対象にする判定や、同一 session の apply branch 履歴解決を確認したいとき。
+- apply fork サブコマンドの事前条件、branch/worktree 作成、apply state の running/completed/error 遷移、process id 管理を確認または変更したいとき。
+- apply fork がどのファイルを finding 列挙対象にするか、scope ごとの差分基準、oracle file や git ignored file の除外条件を確認または変更したいとき。
+- Codex による finding 列挙・finding 適用の呼び出し、適用後の再キュー、commit message 生成、converged/unconverged/error report の扱いを確認または変更したいとき。
+- apply fork の失敗時に state や report path がどう更新されるか、stdout や returncode がどう決まるかを追うとき。
 
 ## Do not read this when
-- apply fork の report 本文の書式や保存内容だけを確認したいときは、report 生成を担当する対象を読む。
-- Codex に渡す finding 列挙用または finding 適用用 prompt/parameter の内容だけを確認したいときは、それぞれの builder を読む。
-- apply fork 以外の apply subcommand、session 作成、join、共通 CLI runtime の挙動を調べたいだけのときは、それらを担当する対象へ進む。
-- 一般的な path model、oracle file 判定、git 実行、worktree 作成、state 入出力の共通実装を調べたいだけのときは、runtime 側の対象を読む。
+- apply fork の report 本文の書式や出力内容だけを変更したいときは、report 生成側を直接読む。
+- Codex に渡す finding 列挙・finding 適用プロンプトや parameter の詳細だけを変更したいときは、builder 側を直接読む。
+- apply 以外のサブコマンド、join 処理、session 作成処理、共通 CLI runtime の一般仕様を調べたいだけのときは、それぞれの担当箇所を読む。
+- oracle file や realization file の定義そのもの、INDEX.md 生成規則、path model の正本仕様を確認したいだけのときは、oracle 側の該当文書を読む。
 
 ## hash
-- 1ae085c188d67a880ca283370781127c422afc55c5905e109f174b88c778286c
+- b248a93c6cd1cce17d3f14a48961350a5cf2b13ef24acef803841c1ba626a0c1
 
 # `fork_report.py`
 
 ## Summary
-- apply fork の実行結果または失敗結果を Markdown report として保存し、frontmatter、作業結果、所見数推移、変更内容要約を組み立てる実装。
-- apply worktree の fork 以降の管理対象差分、未 staged 差分、staged 差分、untracked file 差分を収集し、Codex による構造化要約または path のみの fallback 要約へ変換する。
-- apply fork report の出力内容、未収束時警告、変更なし・要約失敗時の表示、削除済み path を除外した差分扱いに関する処理の入口となる。
+- apply fork の実行結果または失敗結果を Markdown レポートとして保存する処理を担う。
+- apply worktree 上の fork 起点以降の管理対象差分と未追跡ファイル差分を集め、Codex による変更要約または機械的な fallback 要約をレポートへ含める。
+- 収束状態、所見数推移、apply branch や fork commit などの作業文脈を YAML frontmatter と本文に描画する。
 
 ## Read this when
-- apply fork の作業レポート生成、失敗時レポート生成、保存先、Markdown 構成、YAML frontmatter の内容を確認または変更したいとき。
-- apply fork で発生した変更差分の集め方、untracked file の扱い、rename や deleted path の扱い、変更 path の重複排除を確認または変更したいとき。
-- Codex による apply fork 変更要約の入力、出力が空の場合の扱い、例外時の fallback 要約を確認または変更したいとき。
-- 未収束時に所見数推移へ残す注意文や、converged・unconverged・error の report 表示文を確認または変更したいとき。
+- apply fork の作業レポート生成、失敗時レポート生成、保存先、frontmatter、本文構成を確認または変更したいとき。
+- apply fork の変更内容要約がどの git diff 範囲、未追跡ファイル、fallback 条件から作られるかを確認したいとき。
+- 未収束時の警告文、所見数推移、変更なし表示など、apply fork レポート上の利用者向け文言を扱うとき。
 
 ## Do not read this when
-- apply fork のループ制御、branch 作成、worktree 作成、session state 更新そのものを確認したいだけのとき。
-- 変更要約を依頼する Codex parameter の prompt や Structured Output schema を確認したいとき。
-- report 保存ディレクトリや timestamp の共通仕様、git 実行 wrapper、session state 型の定義を確認したいとき。
-- apply fork 以外の sub command の report 生成や差分収集を確認したいとき。
+- apply fork のループ制御、所見列挙、作業ブランチ作成や worktree 管理そのものを確認したいだけのとき。
+- Codex に渡す変更要約用パラメータの schema や prompt の詳細を確認したいとき。
+- apply fork 以外のサブコマンドのレポート生成や git 差分取得を扱うとき。
 
 ## hash
-- a8d4396799cbe46740ee05059b78a5f5dbb4ed8b96b8c2bcb4da78df99122cb3
+- 690ca1ebff01a6a1ac9195d36ffc86e75bd1813b5048748f25df508d82db8524
 
 # `join.py`
 

@@ -11,7 +11,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
-    run_init,
+    run_doctor,
     setup_codex_home,
     stub_codex_profile,
     write_python_executable,
@@ -25,7 +25,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake_code = bin_dir / "code"
@@ -72,7 +72,8 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.model_class == ModelClass.MAINSTREAM
         assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
-        assert parameter.structured_output_schema_path is None
+        assert parameter.structured_output_schema_path is not None
+        assert parameter.structured_output_schema_path.name == "launch_tui.json"
         assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
         assert len(kwargs["extra_read_paths"]) == 1
         assert str(kwargs["extra_read_paths"][0]) in parameter.prompt
@@ -114,7 +115,8 @@ def test_tui_uses_default_file_access_mode_for_empty_resolved_value(
     )
 
     assert parameter.file_access_mode == FileAccessMode.READONLY
-    assert parameter.structured_output_schema_path is None
+    assert parameter.structured_output_schema_path is not None
+    assert parameter.structured_output_schema_path.name == "launch_tui.json"
 
 
 def test_tui_saves_complete_prompt_in_linked_worktree(
@@ -125,7 +127,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
     monkeypatch.chdir(linked)

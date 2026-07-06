@@ -265,13 +265,13 @@ def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
                 {
                     "severity": "fatal",
                     "title": "missing requirement",
-                    "oracle_path": "oracle/spec.md",
+                    "oracle_path": "<oracle-root>/spec.md",
                     "reason": "仕様断片として致命的な欠落がある。",
                 },
                 {
                     "severity": "minor",
                     "title": "ambiguous wording",
-                    "oracle_path": "oracle/spec.md",
+                    "oracle_path": "<oracle-root>/spec.md",
                     "reason": "軽微な曖昧さとして改善余地がある。",
                 },
             ]
@@ -309,7 +309,7 @@ def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
     finding = {
         "severity": "fatal",
         "title": "merged",
-        "oracle_path": "oracle/spec.md",
+        "oracle_path": "<oracle-root>/spec.md",
         "reason": "merged reason",
     }
 

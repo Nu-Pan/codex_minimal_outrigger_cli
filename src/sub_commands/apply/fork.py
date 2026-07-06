@@ -24,7 +24,6 @@ from cmoc_runtime import (
     CliRunResult,
     CmocError,
     SessionState,
-    apply_branch_session_id,
     create_run_worktree,
     current_branch,
     current_subcommand_logger,
@@ -107,7 +106,9 @@ def _cmoc_apply_fork_body(
     try:
         with apply_process_tracking(root, session_id), pushd(apply_worktree):
             findings: list[dict] = []
-            pending_targets = enumerate_apply_targets(apply_worktree, scope, state)
+            pending_targets = enumerate_apply_targets(
+                apply_worktree, scope, session_id, state
+            )
             for _apply_loop in range(config.apply_fork.num_apply_files):
                 pending_targets = dedupe_apply_targets(pending_targets)
                 if not pending_targets:
@@ -303,7 +304,10 @@ def normalize_apply_targets(
 
 
 def enumerate_apply_targets(
-    root: Path, scope: str, state: SessionState | None = None
+    root: Path,
+    scope: str,
+    session_id: str,
+    state: SessionState | None = None,
 ) -> list[Path]:
     """apply scope と session state から finding 列挙対象 file を決める。"""
     if scope == "full":
@@ -316,7 +320,9 @@ def enumerate_apply_targets(
         )
         changed = run_git(["diff", "--name-only", base, "HEAD"], root).stdout.splitlines()
         candidates = [root / path for path in changed]
-    elif state and (base := previous_apply_join_commit(root, state)):
+    elif state and (
+        base := previous_apply_join_commit(root, state, session_id)
+    ):
         changed = run_git(
             ["diff", "--name-only", base, "HEAD"],
             root,
@@ -334,14 +340,12 @@ def enumerate_apply_targets(
     return normalize_apply_targets(root, set(candidates))
 
 
-def previous_apply_join_commit(root: Path, state: SessionState) -> str | None:
+def previous_apply_join_commit(
+    root: Path, state: SessionState, session_id: str
+) -> str | None:
     """最後に join した同一 session の apply merge commit を git 履歴から解決する。"""
     snapshot = state.session.last_joined_apply_oracle_snapshot_commit
     if not snapshot:
-        return None
-    try:
-        session_id = apply_branch_session_id(current_branch(root))
-    except CmocError:
         return None
     merges = run_git(
         ["rev-list", "--first-parent", "--merges", "--reverse", f"{snapshot}..HEAD"],

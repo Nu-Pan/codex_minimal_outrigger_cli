@@ -18,22 +18,22 @@
 # `abandon.py`
 
 ## Summary
-- active な session branch 上で `cmoc session abandon` を実行し、home branch へ merge せず session を破棄する CLI サブコマンド実装。
-- session state と apply state、clean worktree、home branch の存在を事前条件として確認し、home branch へ切り替えた後に state を abandoned に更新して session branch だけを強制削除する。
-- cleanup 失敗時は state を active に戻し、可能なら session branch へ戻ったうえで、手動復旧と再実行に必要な情報を含む `CmocError` を返す。
+- active session を home branch へ merge せず破棄する `session abandon` サブコマンド実装。実行時コンテキスト取得、session branch と state の事前条件確認、clean worktree 要求、home branch への switch、state の `abandoned` 更新、session branch 削除、結果表示を担う。
+- cleanup 失敗時は state を `active` に戻し、可能なら session branch へ戻して、再実行可能性を保つための詳細付き `CmocError` を返す。
 
 ## Read this when
-- `cmoc session abandon` の実行条件、状態遷移、branch 切り替え、session branch 削除の挙動を確認したいとき。
-- session abandon の失敗時 rollback、cleanup エラー、手動復旧メッセージを調べるとき。
-- session abandon が home branch を保持し、session branch だけを削除する実装根拠を確認したいとき。
+- `cmoc session abandon` の外部挙動、事前条件、成功時出力、失敗時エラーを確認または変更する。
+- session branch を merge せず破棄し、home branch は残しつつ session branch だけを削除する処理を確認する。
+- cleanup 中の例外、ユーザー中断、state rollback、branch rollback、再実行可能状態への復旧方針を確認する。
+- session state の `active` から `abandoned` への更新、`joined_at` の扱い、state file 書き込みタイミングを確認する。
 
 ## Do not read this when
-- session を home branch へ取り込む join/merge 系の挙動を調べたいとき。
-- session 作成、状態ファイルの一般的な読み書き、git helper の詳細実装を調べたいとき。
-- session abandon の正本仕様そのものを確認したいとき。
+- session 作成、join、通常の merge 完了など、abandon 以外の session lifecycle を確認したい。
+- git 操作、state 読み書き、worktree 検査、CLI runtime 実行ラッパーの共通実装自体を確認したい。
+- oracle 上の `session abandon` 正本仕様を確認したい。
 
 ## hash
-- 0754bb47dc52cd1096c081de7fc74b78890a7d701fb6192dbb5b534ba585e223
+- f32f7a66d991cb31193050f5a2c915d260df0590ce18f0ba9e498c64d725d9bd
 
 # `fork.py`
 

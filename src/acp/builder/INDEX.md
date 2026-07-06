@@ -21,20 +21,23 @@
 # `apply`
 
 ## Summary
-- apply 向け ACP builder の互換入口と apply fork 向け builder 群を含む領域。旧来の import 経路を維持する薄い互換層と、oracle 側 builder の生成結果を realization 側公開型へ適合させる apply fork 用 builder package への入口になる。
+- apply 系 agent call parameter builder のうち、既存 import 互換を担う領域。正本側 apply package への互換 import 経路と、apply fork 向け builder 群の薄い realization 入口をまとめて扱う。
+- apply fork 向け builder では、repo root 解決、oracle builder import 準備、oracle 側生成結果から realization 側公開型への変換、旧来 import 互換 package 境界を確認する入口になる。
 
 ## Read this when
-- apply 系 ACP builder のうち、旧来の import 互換 package が残っている理由や削除条件を確認したいとき。
-- `cmoc apply fork` の agent call parameter 構築経路、oracle 側 builder 呼び出し、realization 側 `AgentCallParameter` への変換境界を確認・変更したいとき。
-- apply fork 用 builder 共通の repo root 解決、oracle builder import 準備、oracle parameter 受け渡し境界を調べたいとき。
+- apply 系 ACP builder の既存 import 互換を維持または削除できるか判断したいとき。
+- apply fork の変更要約、ファイル単位所見列挙、所見適用に関する agent call parameter 構築経路を確認・変更したいとき。
+- apply fork の realization 側 builder が oracle 側 builder をどう呼び出し、戻り値を realization 側公開型へ適合させるか確認したいとき。
+- apply fork 用 ACP builder 共通の repo root 解決、oracle src import 準備、oracle parameter 受け渡し境界を確認したいとき。
 
 ## Do not read this when
-- apply 機能そのものの実装詳細、実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、apply fork 実装や呼び出し元へ進む。
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいときは、対応する oracle 側 builder を読む。
-- ACP parameter の公開型、汎用 git helper、path model、apply fork 以外の ACP builder 個別ロジックを調べたいだけのときは、それぞれの共通実装や対象 builder へ直接進む。
+- apply の具体的な処理内容、agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder を読む。
+- cmoc apply fork 全体の実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたい場合は、上位の apply fork 実装や呼び出し元を読む。
+- ACP parameter のデータ構造、公開型そのもの、汎用 git helper、path model を調べたいだけなら、それぞれの共通実装や型定義を読む。
+- 新規機能の実装場所を探しているだけで、既存 import 互換や apply fork 向け ACP builder に関係しない。
 
 ## hash
-- 05cc984b2400570a44a7c6c6b73a2c6509fa2cfec997f63fba4f14eece4064b4
+- 2768622529fbcc60d514e387ab4731654edde265aeef4b6856a33d44fd97035d
 
 # `common`
 
@@ -71,43 +74,39 @@
 # `quota_probe.py`
 
 ## Summary
-- Codex quota availability probe 用の AgentCallParameter を組み立てる互換ビルダーです。正本側の quota probe ビルダーが存在する場合はそれへ委譲し、存在しない間だけ最小モデル・低 reasoning・readonly・indexing preflight 無効のフォールバック parameter を返します。
+- quota 回復確認のための最小構成の agent call parameter を構築する実装。既存の実行パラメータから作業ディレクトリだけを引き継ぎ、低コスト・読み取り専用・indexing preflight 無効の probe 呼び出しを作る。
 
 ## Read this when
-- quota availability probe の agent call parameter がどの model class、reasoning effort、file access mode、prompt、cwd、preflight 設定で作られるかを確認したいとき。
-- 正本側の quota probe ビルダーが未実装または欠落している場合の realization 側フォールバック挙動を確認・変更したいとき。
-- oracle src 側の同名ビルダーへ委譲する互換層の import 失敗時の扱いを確認したいとき。
+- quota wait 中に実行可能状態を確認するための probe 呼び出し内容を確認・変更したいとき。
+- probe 用 agent call parameter の model class、reasoning effort、file access mode、prompt、cwd 引き継ぎ、indexing preflight の扱いを確認したいとき。
+- quota 回復確認で通常の agent call parameter builder ではなく、最小の Codex exec 呼び出しを使う理由を追いたいとき。
 
 ## Do not read this when
-- 通常の agent call parameter 全般の型定義、列挙値、または基本データ構造を確認したいだけのとき。
-- quota probe 以外の agent call parameter builder の挙動を調べたいとき。
-- 正本仕様としての prompt standard や codex exec rule の内容そのものを確認したいとき。
+- 通常の agent call parameter 全体の構築規則や共通 builder の責務を調べたいとき。
+- quota wait のポーリング制御、待機間隔、再試行条件、成功失敗判定の流れを調べたいとき。
+- quota 回復確認以外の Codex exec 呼び出しや indexing preflight の一般仕様を調べたいとき。
 
 ## hash
-- a9619b6ae173735996355a9f24ca76002339b03f007ea30609c9b804c2d97fe4
+- 47f15b35955d56905ecd58ad55693d751e5949813a030b6bf9b481eed55ab9f5
 
 # `review`
 
 ## Summary
-- review builder 領域のうち、旧 import 経路を保つ互換 package と、review oracle 用 agent call parameter builder の互換入口・最小補正層をまとめる場所。
-- canonical 実装への再 export、既存 caller 移行までの互換維持、oracle src 由来 builder 戻り値への既知 placeholder/typo 補正が主な責務であり、review finding の実処理本体や正本 prompt は扱わない。
+- review builder 配下で、旧 import 経路を維持する互換 package 初期化と review oracle 向け互換 adapter 群を束ねる階層。
+- 実処理は主に canonical oracle path や oracle src 側へ委譲され、この階層は移行中 caller との互換性、削除条件、正本 builder 由来 prompt の限定補正境界を確認する入口になる。
 
 ## Read this when
-- review builder 周辺で、古い import 経路から canonical 実装へつながる互換層を確認する。
-- 既存 caller を canonical path へ移行する作業で、互換 package や互換モジュールの削除可否・削除条件を判断する。
-- review oracle finding の列挙・判定・統合・検証に関して、旧 import 経路がどの canonical 実装へ委譲されるか確認する。
-- oracle src 由来の agent call parameter に対して、prompt 内の oracle root placeholder 表記や静的 typo の最小補正がどこで行われるか確認する。
-- finding や既知理由などの動的入力を改変せず保持する境界を確認する。
+- review builder 周辺の旧 import 互換性や、古い acp.builder.review 系参照を削除できるか確認する。
+- review oracle の旧 import 経路から canonical oracle path への移行状況、互換 shim の再 export 対象、または削除可否を確認する。
+- merge finding や validate finding advocate の agent call parameter について、正本 builder 取得後に realization 側で補正される範囲と削除条件を確認する。
 
 ## Do not read this when
-- review finding enumeration、judgment、validation の実処理や parameter 構築ロジックを確認したい場合は、canonical oracle path 側を読む。
-- review builder の実処理や変換ロジックそのものを調べたい。
-- レビュー一般の finding 統合仕様、prompt 本文、または oracle src 側の正本定義そのものを確認・変更したい。
-- agent call parameter の基本構造、型責務、構造化出力 schema、path model、ファイルアクセスなど、互換 import 経路や既知表記補正と無関係な基礎仕様を調べる。
-- 新しい公開 API、利用者向け機能の仕様、または新規 caller が利用すべき import path だけを確認したい。
+- review builder の実処理、変換ロジック、finding enumeration、judgment、challenger validation の parameter 構築を調べたい場合は、より直接の実装先を読む。
+- review oracle の正本仕様や正本 prompt の内容そのものを確認したい場合は、oracle 側の該当本文を読む。
+- review oracle 以外の builder、agent call parameter 全般、path model、INDEX.md エントリー生成、または一般的な oracle file 定義を調べたい場合。
 
 ## hash
-- 5f3817838f319760619962a83f071479c50ecfdf4d4843e53f43904faad19e04
+- 8c0170ecf4d16e76f4eabb38112c44d157461f19eb65650a549149278abf7611
 
 # `session`
 
@@ -131,19 +130,18 @@
 # `tui`
 
 ## Summary
-- TUI 起動用 builder まわりの互換層を扱うディレクトリ。既存の `acp.builder.tui.*` import surface を維持しつつ、正本側 builder の再公開や realization runtime への complete prompt 保存を経由して TUI 用 AgentCallParameter を組み立てる入口を置く。
+- TUI 起動・resolve parameter builder について、旧 `acp.builder.tui.*` import surface を維持するための realization 側互換層を扱うディレクトリ。
+- oracle 側 canonical builder を呼び出しまたは再公開しつつ、TUI runtime で必要な最小の補助処理や既存公開名の維持を担う。
 
 ## Read this when
-- 既存の `acp.builder.tui.*` import 互換性、公開名、削除可否を確認する。
-- TUI 起動用 AgentCallParameter の組み立て、モデル種別、reasoning effort、file access mode、Structured Output schema 非指定の扱いを確認または変更する。
-- TUI 起動時の complete prompt 生成、markdown 保存、保存先パス、agent へ渡す指示文の関係を確認する。
-- TUI resolve parameter builder の呼び出し元を正本側 import path へ移行する。
+- 既存 import 経路 `acp.builder.tui.*` の互換維持、公開名、削除可否を確認するとき。
+- TUI 起動用または resolve 用の parameter builder を realization 側から利用する入口を確認するとき。
+- oracle 側 builder と realization 側互換 wrapper の関係、または TUI 起動前に保証される runtime 側 directory の責務を確認するとき。
 
 ## Do not read this when
-- TUI 画面そのものの表示、入力処理、イベントループ、端末 UI の挙動を調べたい場合。
-- prompt builder の正本仕様、StructDoc の markdown rendering、runtime のローカルディレクトリ配置や repo root 解決の一般仕様を調べたい場合。
-- TUI 以外の builder や file access mode 全体の定義を確認したい場合。
-- 新しい公開 API や新規 import 経路を設計したい場合。
+- AgentCallParameter や TUI parameter builder の正本仕様を確認したい場合は、oracle 側の canonical builder を読む。
+- TUI 画面構成、CLI サブコマンド全体、runtime path 全般、logs directory 構成を調べたい場合は、それぞれを扱う対象を読む。
+- 新しい公開 API や新規 import 経路を設計したいだけで、既存互換 import surface の維持や移行に関係しない場合。
 
 ## hash
-- e24d457b6a6333995ae031725e52ee505ea421f7f2b703335e0eff1f3f22782b
+- 6d462fda219bbdc61a8fa9fb6b8d497d66e925f893607def2c4864a23c271fb6

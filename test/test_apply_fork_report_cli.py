@@ -21,7 +21,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
-    run_init,
+    run_doctor,
     setup_codex_home,
     write_python_executable,
 )
@@ -48,77 +48,13 @@ class FakeCodexResult:
         self.output_text = output_text
 
 
-def test_change_summary_builder_imports_with_src_pythonpath_only() -> None:
-    root = Path(__file__).parents[1]
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "from acp.builder.apply.fork.change_summary import "
-                "build_apply_fork_change_summary_parameter as build; "
-                "p = build('diff'); "
-                "assert p.structured_output_schema_path.name == 'change_summary.json'; "
-                "assert '# oracle and realization basic' in p.prompt"
-            ),
-        ],
-        cwd=root,
-        env={**os.environ, "PYTHONPATH": str(root / "src")},
-        text=True,
-        capture_output=True,
-    )
+def run_apply_fork_builder_import(
+    tmp_path: Path, code: str
+) -> subprocess.CompletedProcess[str]:
+    """subprocess の被テスト環境を tmp_path 配下だけに置く。
 
-    assert result.returncode == 0, result.stderr
-
-
-def test_file_finding_enumeration_builder_imports_with_src_pythonpath_only() -> None:
-    root = Path(__file__).parents[1]
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "from pathlib import Path; "
-                "from acp.builder.apply.fork.file_finding_enumeration import "
-                "build_apply_fork_file_finding_enumeration_parameter as build; "
-                "p = build(Path('<repo-root>') / 'src' / 'main.py'); "
-                "assert p.structured_output_schema_path.name == "
-                "'file_finding_enumeration.json'"
-            ),
-        ],
-        cwd=root,
-        env={**os.environ, "PYTHONPATH": str(root / "src")},
-        text=True,
-        capture_output=True,
-    )
-
-    assert result.returncode == 0, result.stderr
-
-
-def test_finding_application_builder_imports_with_src_pythonpath_only() -> None:
-    root = Path(__file__).parents[1]
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "from acp.builder.apply.fork.finding_application import "
-                "build_apply_fork_finding_application_parameter as build; "
-                "p = build([{'title': 't'}]); "
-                "assert p.structured_output_schema_path is None; "
-                "assert 'realization file' in p.prompt"
-            ),
-        ],
-        cwd=root,
-        env={**os.environ, "PYTHONPATH": str(root / "src")},
-        text=True,
-        capture_output=True,
-    )
-
-    assert result.returncode == 0, result.stderr
-
-
-def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None:
+    根拠: <work-root>/oracle/doc/dev_rule/test_rule.md
+    """
     root = Path(__file__).parents[1]
     target = tmp_path / "site"
     shutil.copytree(root / "src" / "acp", target / "acp")
@@ -127,33 +63,86 @@ def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None
 
     work = tmp_path / "work"
     (work / ".git").mkdir(parents=True)
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "from pathlib import Path; "
-                "from acp.builder.apply.fork.change_summary import "
-                "build_apply_fork_change_summary_parameter as change_summary; "
-                "from acp.builder.apply.fork.file_finding_enumeration import "
-                "build_apply_fork_file_finding_enumeration_parameter as enumerate_file; "
-                "from acp.builder.apply.fork.finding_application import "
-                "build_apply_fork_finding_application_parameter as apply_finding; "
-                "cs = change_summary('diff'); "
-                "fe = enumerate_file(Path('<repo-root>') / 'src' / 'main.py'); "
-                "fa = apply_finding([{'title': 't'}]); "
-                "assert cs.structured_output_schema_path.name == 'change_summary.json'; "
-                "assert fe.structured_output_schema_path.name == "
-                "'file_finding_enumeration.json'; "
-                "assert fa.structured_output_schema_path is None; "
-                "assert '# oracle and realization basic' in cs.prompt; "
-                "assert 'realization file' in fa.prompt"
-            ),
-        ],
+    return subprocess.run(
+        [sys.executable, "-c", code],
         cwd=work,
         env={**os.environ, "PYTHONPATH": str(target), "PYTHONNOUSERSITE": "1"},
         text=True,
         capture_output=True,
+    )
+
+
+def test_change_summary_builder_imports_with_src_pythonpath_only(tmp_path: Path) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from acp.builder.apply.fork.change_summary import "
+            "build_apply_fork_change_summary_parameter as build; "
+            "p = build('diff'); "
+            "assert p.structured_output_schema_path.name == 'change_summary.json'; "
+            "assert '# oracle and realization basic' in p.prompt"
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_file_finding_enumeration_builder_imports_with_src_pythonpath_only(
+    tmp_path: Path,
+) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from pathlib import Path; "
+            "from acp.builder.apply.fork.file_finding_enumeration import "
+            "build_apply_fork_file_finding_enumeration_parameter as build; "
+            "p = build(Path('<repo-root>') / 'src' / 'main.py'); "
+            "assert p.structured_output_schema_path.name == "
+            "'file_finding_enumeration.json'"
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_finding_application_builder_imports_with_src_pythonpath_only(
+    tmp_path: Path,
+) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from acp.builder.apply.fork.finding_application import "
+            "build_apply_fork_finding_application_parameter as build; "
+            "p = build([{'title': 't'}]); "
+            "assert p.structured_output_schema_path is None; "
+            "assert 'realization file' in p.prompt"
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from pathlib import Path; "
+            "from acp.builder.apply.fork.change_summary import "
+            "build_apply_fork_change_summary_parameter as change_summary; "
+            "from acp.builder.apply.fork.file_finding_enumeration import "
+            "build_apply_fork_file_finding_enumeration_parameter as enumerate_file; "
+            "from acp.builder.apply.fork.finding_application import "
+            "build_apply_fork_finding_application_parameter as apply_finding; "
+            "cs = change_summary('diff'); "
+            "fe = enumerate_file(Path('<repo-root>') / 'src' / 'main.py'); "
+            "fa = apply_finding([{'title': 't'}]); "
+            "assert cs.structured_output_schema_path.name == 'change_summary.json'; "
+            "assert fe.structured_output_schema_path.name == "
+            "'file_finding_enumeration.json'; "
+            "assert fa.structured_output_schema_path is None; "
+            "assert '# oracle and realization basic' in cs.prompt; "
+            "assert 'realization file' in fa.prompt"
+        ),
     )
 
     assert result.returncode == 0, result.stderr
@@ -287,7 +276,7 @@ def test_apply_fork_writes_report_with_change_summary(
     """未収束 report に Codex 由来の変更要約と機械生成 commit message が反映される。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -378,7 +367,7 @@ def test_apply_fork_rechecks_changed_files_until_converged(
     """apply 後の変更ファイルを再調査し、新規ディレクトリ配下も展開する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -456,7 +445,7 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     """最後の調査対象が空所見なら上限回でも収束として扱う。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -504,7 +493,7 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     """所見対応で差分が出なくても、所見ありの起点対象は再調査待ちに戻す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -567,13 +556,13 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     )
 
 
-def test_apply_fork_does_not_recover_agent_written_forbidden_file(
+def test_apply_fork_rejects_agent_written_forbidden_file(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """所見適用が禁止領域を汚しても事後修復しない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -649,24 +638,12 @@ def test_apply_fork_does_not_recover_agent_written_forbidden_file(
         app, ["apply", "fork", "--scope", "session"], catch_exceptions=False
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
     calls = []
     for path in sorted((root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json")):
         call = json.loads(path.read_text())
         calls.append((call["purpose"], call["file_access_mode"]))
     assert ("file access rule violation recovery", "realization_write") not in calls
-    branch = run_git(root, "branch", "--show-current").stdout.strip()
-    session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "local" / "session" / f"{session_id}.json").read_text())
-    apply_branch = state["apply"]["apply_branch"]
-    assert (
-        run_git(root, "show", f"{apply_branch}:src/app.py").stdout
-        == "print('updated')\n"
-    )
-    assert (
-        run_git(root, "show", f"{apply_branch}:oracle/spec.md").stdout
-        == "# violated\n"
-    )
 
 
 def test_apply_fork_error_report_summarizes_uncommitted_diff(
@@ -675,7 +652,7 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
     """エラー report の変更要約は commit 前の working tree 差分も対象にする。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -807,13 +784,40 @@ def test_apply_fork_change_summary_excludes_deleted_tracked_files(
     assert "deleted_realization.py" not in captured_prompt
 
 
+@pytest.mark.parametrize("codex_output", [{"changes": []}, {}])
+def test_apply_fork_change_summary_fallback_keeps_paths(
+    tmp_path: Path, codex_output: dict[str, object]
+) -> None:
+    """Codex の空要約時も、差分がある report から変更 path を落とさない。"""
+    root = make_repo(tmp_path)
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "README.md").write_text("# fallback path\n")
+
+    def fake_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        return FakeCodexResult(codex_output)
+
+    summary = build_change_summary(
+        root, root, fork_commit, CmocConfig(), fake_codex_exec
+    )
+
+    assert summary == [
+        {
+            "category": "変更要約なし",
+            "summary": "変更 path のみを機械的に記録しました。",
+            "changed_paths": ["README.md"],
+        }
+    ]
+
+
 def test_apply_fork_report_does_not_invent_loop_when_no_targets(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """調査対象がない場合、未実行の loop 1 を report しない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -845,13 +849,16 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     """rolling apply fork が前回 apply join 後の変更だけを対象にする。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_init(root).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    (root / "unrelated.py").write_text("print('before join')\n")
+    run_git(root, "add", "unrelated.py")
+    run_git(root, "commit", "-m", "change before apply join")
     apply_branch = f"cmoc/apply/{session_id}/manual"
     apply_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "manual"
     oracle_snapshot_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -873,12 +880,6 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     (root / "oracle" / "spec.md").write_text("# changed after join\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "change oracle after apply join")
-    run_git(root, "switch", "-c", "unrelated", oracle_snapshot_commit)
-    (root / "unrelated.py").write_text("print('unrelated')\n")
-    run_git(root, "add", "unrelated.py")
-    run_git(root, "commit", "-m", "change unrelated branch")
-    run_git(root, "switch", session_branch)
-    run_git(root, "merge", "--no-ff", "unrelated", "-m", "merge unrelated branch")
 
     target_rels: list[str] = []
 
@@ -912,5 +913,7 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
 
     assert result.exit_code == 0
     assert "oracle/spec.md" in target_rels
+    assert "README.md" not in target_rels
+    assert "unrelated.py" not in target_rels
     state = json.loads(state_path.read_text())["session"]
     assert state["last_joined_apply_oracle_snapshot_commit"] == oracle_snapshot_commit

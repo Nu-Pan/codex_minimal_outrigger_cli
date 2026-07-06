@@ -380,8 +380,15 @@ def test_session_abandon_requires_existing_home_branch(
     assert run_git(root, "ls-files", "--", ".cmoc/local").stdout == ""
 
 
+@pytest.mark.parametrize(
+    "cleanup_error",
+    [
+        CmocError("delete failed", ["next"], "branch delete failed"),
+        KeyboardInterrupt(),
+    ],
+)
 def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cleanup_error: BaseException
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -408,7 +415,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
 
     def fake_delete_branch(root: Path, branch: str, force: bool = False) -> None:
         if branch == session_branch:
-            raise CmocError("delete failed", ["next"], "branch delete failed")
+            raise cleanup_error
         return original_delete_branch(root, branch, force)
 
     monkeypatch.setattr(session_module, "delete_branch", fake_delete_branch)
@@ -500,8 +507,17 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
         writable_roots = set(
             tomllib.loads(profile)["sandbox_workspace_write"]["writable_roots"]
         )
-        assert writable_roots == {str(root.resolve())}
-        assert all(Path(path).is_dir() for path in writable_roots)
+        assert writable_roots == {
+            str(path.resolve())
+            for path in (
+                root / ".gitignore",
+                root / "README.md",
+                root / "bin",
+                root / "oracle",
+                root / "src",
+                root / "test",
+            )
+        }
         target.write_text("resolved change\nTitle\n=======\n")
         return FakeCodexResult()
 
@@ -509,7 +525,7 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert current_branch(root) == home_branch
     assert target.read_text() == "resolved change\nTitle\n=======\n"
     assert calls == ["session join conflict resolution"]
