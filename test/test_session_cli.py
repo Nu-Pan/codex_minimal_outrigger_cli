@@ -532,6 +532,49 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
     assert modes == [FileAccessMode.REPO_WRITE]
 
 
+def test_session_join_handles_conflict_path_containing_newline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "src" / "line\nbreak.txt"
+    target.parent.mkdir()
+    target.write_text("base\n")
+    run_git(root, "add", "src/line\nbreak.txt")
+    run_git(root, "commit", "-m", "add newline path")
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    run_git(root, "add", "src/line\nbreak.txt")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "src/line\nbreak.txt")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        assert kwargs["extra_writable_paths"] == [target]
+        target.write_text("resolved change\n")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert current_branch(root) == home_branch
+    assert target.read_text() == "resolved change\n"
+    assert run_git(root, "diff", "--name-only", "-z", "--diff-filter=U").stdout == ""
+
+
 def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -671,6 +714,59 @@ def test_session_join_rejects_disappeared_non_conflict_change(
     assert current_branch(root) == home_branch
     assert "conflict 解消以外の差分が残っています。" in result.stderr
     assert "src/extra.py" in result.stderr
+    assert "session changes" not in run_git(root, "log", "--oneline", "-1").stdout
+
+
+def test_session_join_rejects_non_conflict_directory_symlink_target_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    link = root / "src" / "link"
+    (root / "src" / "dir_a").mkdir(parents=True)
+    (root / "src" / "dir_b").mkdir()
+    (root / "src" / "dir_c").mkdir()
+    for directory in ("dir_a", "dir_b", "dir_c"):
+        (root / "src" / directory / ".keep").write_text("keep\n")
+    link.symlink_to("dir_a")
+    run_git(root, "add", "src")
+    run_git(root, "commit", "-m", "add symlink")
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    link.unlink()
+    link.symlink_to("dir_b")
+    run_git(root, "add", "oracle/spec.md", "src/link")
+    run_git(root, "commit", "-m", "session changes")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        target.write_text("resolved change\n")
+        link.unlink()
+        link.symlink_to("dir_c")
+        run_git(root, "add", "src/link")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "conflict 解消以外の差分が残っています。" in result.stderr
+    assert "src/link" in result.stderr
     assert "session changes" not in run_git(root, "log", "--oneline", "-1").stdout
 
 
