@@ -1,7 +1,7 @@
 import multiprocessing
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from multiprocessing.connection import Connection
 from pathlib import Path
 
@@ -17,6 +17,13 @@ from _support import (
     write_python_executable,
 )
 import commons.indexing as indexing_module
+
+
+@pytest.fixture(autouse=True)
+def reset_indexing_preflight() -> Iterator[None]:
+    codex_preflight_module.disable_indexing_preflight()
+    yield
+    codex_preflight_module.disable_indexing_preflight()
 
 
 def hold_indexing_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
@@ -319,16 +326,13 @@ def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
     indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
-    try:
-        codex_preflight_module.run_codex_exec(
-            parameter,
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-            purpose="apply fork refine findings",
-        )
-    finally:
-        codex_preflight_module.disable_indexing_preflight()
+    codex_preflight_module.run_codex_exec(
+        parameter,
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+        purpose="apply fork refine findings",
+    )
 
     assert counter.read_text() == "1"
     assert events == [root]
