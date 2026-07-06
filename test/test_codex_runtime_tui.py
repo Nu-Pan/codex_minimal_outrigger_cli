@@ -136,7 +136,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     assert profile["default_permissions"] == "cmoc"
     assert filesystem[str((root / ".cmoc" / "local").resolve())] == "read"
     assert filesystem[str((linked / "README.md").resolve())] == "write"
-    assert filesystem[str((linked / "oracle" / "spec.md").resolve())] == "write"
+    assert filesystem[str((linked / "oracle").resolve())] == "write"
     assert "sandbox_workspace_write" not in profile
 
 

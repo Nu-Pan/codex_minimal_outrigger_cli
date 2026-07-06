@@ -133,7 +133,14 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     )
     assert writable_roots == {
         str(path.resolve())
-        for path in (root / "README.md", root / "oracle" / "spec.md")
+        for path in (
+            root / ".gitignore",
+            root / "README.md",
+            root / "bin",
+            root / "oracle",
+            root / "src",
+            root / "test",
+        )
     }
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"

@@ -22,7 +22,7 @@ from config.cmoc_config import CmocConfig
 
 from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
 from commons.runtime_errors import CmocError
-from commons.runtime_git import is_oracle_file_path
+from commons.runtime_git import is_oracle_file_path, is_untracked_git_ignored
 from commons.runtime_paths import logs_dir, schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
@@ -32,6 +32,7 @@ _PROFILE_BLOCKED_ROOT_NAMES = {
     ".cmoc",
     ".codex",
     ".git",
+    ".pytest_cache",
     "AGENTS.md",
     "INDEX.md",
     "memo",
@@ -187,7 +188,7 @@ def _writable_roots(
         _append_writable_path(result, seen, mode, root, resolved)
     for path in extra_writable_paths or []:
         resolved = path.resolve()
-        if not resolved.exists() or not _is_writable_path_allowed(
+        if not _is_writable_path_allowed(
             mode, root, resolved, allow_oracle_conflict_writes
         ):
             raise CmocError(
@@ -202,7 +203,7 @@ def _writable_roots(
             seen,
             mode,
             root,
-            resolved,
+            _existing_or_target_writable_root(resolved),
             allow_oracle_conflict_writes,
         )
     return result
@@ -211,9 +212,7 @@ def _writable_roots(
 def _top_level_writable_roots(mode: FileAccessMode, root: Path) -> list[Path]:
     """root 自体を開かず、許可済み top-level path だけを候補にする。"""
     paths: list[Path] = []
-    candidates = [
-        root / name for name in _STANDARD_REALIZATION_WRITE_PATHS if (root / name).exists()
-    ]
+    candidates = [root / name for name in _STANDARD_REALIZATION_WRITE_PATHS]
     if mode == FileAccessMode.REPO_WRITE:
         candidates.append(root / "oracle")
     if root.exists():
@@ -223,6 +222,15 @@ def _top_level_writable_roots(mode: FileAccessMode, root: Path) -> list[Path]:
         if resolved not in paths and _is_writable_path_allowed(mode, root, resolved):
             paths.append(resolved)
     return paths
+
+
+def _existing_or_target_writable_root(path: Path) -> Path:
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # 未存在の deep path は、最初に作る必要がある directory までを sandbox
+    # root にする。既存 parent 直下の未存在 file はその file path のまま渡す。
+    if path.exists() or path.parent.exists():
+        return path
+    return _existing_or_target_writable_root(path.parent)
 
 
 def _append_writable_path(
@@ -235,22 +243,22 @@ def _append_writable_path(
 ) -> None:
     if not _is_writable_path_allowed(mode, root, path, allow_oracle_conflict_writes):
         return
-    if not path.exists():
-        return
     if path.is_dir():
-        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-        # Codex profile has no deny rule, so do not open directories that can
-        # contain AGENTS.md or INDEX.md; enumerate writable files instead.
-        for child in sorted(path.iterdir()):
-            _append_writable_path(
-                result,
-                seen,
-                mode,
-                root,
-                child.resolve(),
-                allow_oracle_conflict_writes,
-            )
-        return
+        if is_untracked_git_ignored(root, path / ".__cmoc_ignore_probe__"):
+            for child in sorted(path.iterdir()):
+                _append_writable_path(
+                    result,
+                    seen,
+                    mode,
+                    root,
+                    child.resolve(),
+                    allow_oracle_conflict_writes,
+                )
+            return
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+        # Codex sandbox has no child deny rule. Directories are still needed so
+        # new realization/oracle files can be created; forbidden child changes
+        # are rejected by the post-call file access check.
     _append_writable_root(result, seen, path)
 
 
@@ -281,6 +289,8 @@ def _is_writable_path_allowed(
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
     relative = path.relative_to(root)
     if path.name in {"AGENTS.md", "INDEX.md"}:
+        return False
+    if is_untracked_git_ignored(root, path):
         return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md

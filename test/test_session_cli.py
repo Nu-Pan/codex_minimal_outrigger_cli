@@ -512,7 +512,10 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
             for path in (
                 root / ".gitignore",
                 root / "README.md",
-                root / "oracle" / "spec.md",
+                root / "bin",
+                root / "oracle",
+                root / "src",
+                root / "test",
             )
         }
         target.write_text("resolved change\nTitle\n=======\n")
