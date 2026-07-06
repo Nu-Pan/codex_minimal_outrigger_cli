@@ -58,25 +58,23 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時に複数領域から共有される runtime helper 群をまとめる領域。
-- Codex 実行、設定、パス、git、ログ、状態、エラー、doctor 前処理、INDEX 更新 preflight、apply process 追跡など、サブコマンド横断の共通実装への入口になる。
-- 一部は実装本体ではなく公開 import 境界や再公開入口を担うため、個別挙動は責務に対応する下位要素で確認する。
+- cmoc の実行時に複数箇所から共有される runtime helper 群をまとめる領域。
+- Codex 実行、設定、git、path、ログ、状態、doctor、indexing preflight、Ollama、エラー、結果型など、CLI サブコマンド横断の共通処理への入口になる。
 
 ## Read this when
-- CLI サブコマンドをまたいで使われる runtime 共通処理の配置先や公開入口を探すとき。
-- Codex exec/TUI 呼び出し、profile/env/schema/permission 準備、Structured Output 検証、quota/capacity/retry/resume、call log などの実行制御を調べるとき。
-- root path 解決、cmoc 管理領域、設定 JSON、session state、apply worktree/process、git 操作、ログ、共通エラー、外部コマンド結果型などの runtime 基盤を確認・変更するとき。
-- Codex 実行前の INDEX 更新 preflight、doctor preprocess、config 同期、またはそれらの commit 作成条件を調べるとき。
-- 共有 runtime API の再公開対象や、呼び出し側がどの import 入口を使うべきかを確認するとき。
+- CLI サブコマンドや実行制御から共有 runtime helper を探し、どの責務の下位要素へ進むべきか判断したいとき。
+- Codex exec/TUI 実行、profile、preflight、quota/capacity、call log、Structured Output、または Codex subprocess 境界に関わる共通処理を調べたいとき。
+- config、git、path、logging、state、doctor preprocess、Ollama、error report、command result など、複数モジュールから使われる runtime 基盤を確認・変更したいとき。
+- INDEX.md 自動更新、hash 検証、entry 生成、indexing commit など、indexing preflight の実装を調べたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、引数定義、Typer 登録、利用者向け workflow を確認したいだけのときは、該当する command 層や app spec を読む。
-- oracle file にある正本仕様断片、prompt、Structured Output schema、path keyword の定義、INDEX entry standard そのものを確認したいときは、対応する oracle 側を読む。
-- テスト固有の期待値や外部挙動だけを調べたいときは、対応する test 側を読む。
-- 特定 helper の詳細な入出力や失敗時挙動が既に分かっているときは、この領域全体ではなく該当する下位要素を直接読む。
+- 個別 CLI サブコマンドの業務処理、引数定義、利用者向け workflow、または app spec を確認したいときは、該当する command 層や oracle 側の仕様を読む。
+- oracle file、path keyword、config 型、prompt、Structured Output schema など正本仕様断片そのものを確認したいときは、oracle 側の対象を読む。
+- 特定 helper の詳細な入出力や失敗時挙動が既に分かっている場合は、この領域全体ではなく該当する下位要素を直接読む。
+- テスト固有の期待値や外部挙動を確認したいときは、対応する realization test を読む。
 
 ## hash
-- eda7536ea021a13b8ef4ec1d5c6d2d3de97e31859c9e53ac4185d3d424dc01f2
+- afc1ca24b2f9cf6c978641205fd45d85ff7b98b06bb54bff9c0bc18dfe2514fe
 
 # `config`
 
