@@ -3,7 +3,6 @@ import os
 import shutil
 import socket
 import subprocess
-import time
 import tomllib
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -34,65 +33,49 @@ def _port_available(port: int) -> bool:
     return True
 
 
+def _require_systemd_user(env: dict[str, str]) -> None:
+    if shutil.which("systemctl") is None:
+        pytest.skip("systemctl is not installed")
+    result = subprocess.run(
+        ["systemctl", "--user", "show-environment"],
+        env=env,
+        text=True,
+        capture_output=True,
+        timeout=10,
+    )
+    if result.returncode != 0:
+        pytest.skip("systemd user service manager is not available")
+
+
 @contextmanager
-def _real_test_ollama(root: Path) -> Iterator[dict[str, str]]:
-    ollama = shutil.which("ollama")
-    if ollama is None:
-        pytest.skip("real Ollama is not installed")
+def _real_cmoc_managed_ollama_env(root: Path) -> Iterator[dict[str, str]]:
+    # <work-root>/oracle/doc/dev_rule/test_rule.md and
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md: real Codex
+    # integration uses the normal doctor preprocess managed-service path.
     if not _port_available(11434):
         pytest.skip("127.0.0.1:11434 is already in use")
     home = root / ".cmoc" / "local" / "test-home"
-    models = home / ".cmoc" / "ollama" / "models"
-    models.mkdir(parents=True)
+    home.mkdir(parents=True)
     env = os.environ.copy()
-    env.update(
-        {
-            "HOME": str(home),
-            "OLLAMA_HOST": "127.0.0.1:11434",
-            "OLLAMA_MODELS": str(models),
-        }
-    )
-    process = subprocess.Popen(
-        [ollama, "serve"],
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
+    env["HOME"] = str(home)
+    _require_systemd_user(env)
     try:
-        for _ in range(120):
-            result = subprocess.run(
-                [ollama, "list"], env=env, text=True, capture_output=True, timeout=5
-            )
-            if result.returncode == 0:
-                break
-            time.sleep(0.25)
-        else:
-            pytest.skip("real Ollama did not start")
-        if subprocess.run(
-            [ollama, "show", TEST_SLM_MODEL],
+        yield {"HOME": str(home)}
+    finally:
+        subprocess.run(
+            ["systemctl", "--user", "disable", "--now", "cmoc-ollama"],
             env=env,
             text=True,
             capture_output=True,
             timeout=30,
-        ).returncode != 0:
-            pull = subprocess.run(
-                [ollama, "pull", TEST_SLM_MODEL],
-                env=env,
-                text=True,
-                capture_output=True,
-                timeout=900,
-            )
-            if pull.returncode != 0:
-                pytest.skip(f"test SLM is not available: {pull.stderr.strip()}")
-        yield {"HOME": str(home)}
-    finally:
-        process.terminate()
-        try:
-            process.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=10)
+        )
+        subprocess.run(
+            ["systemctl", "--user", "daemon-reload"],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
 
 
 def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
@@ -121,7 +104,7 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         '{"result":"cmoc-real-codex-provider"}'
     )
 
-    with _real_test_ollama(root) as ollama_env:
+    with _real_cmoc_managed_ollama_env(root) as ollama_env:
         for key, value in ollama_env.items():
             monkeypatch.setenv(key, value)
         monkeypatch.setenv(
