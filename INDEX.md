@@ -158,20 +158,18 @@
 # `test`
 
 ## Summary
-- realization test 全体への入口。CLI、runtime、Codex 実行 wrapper、apply/session/review/indexing、prompt rendering、packaged import など、cmoc の外部挙動と共有テスト helper を領域別のテストファイルで検証する。
-- 共有 fixture と fake 外部サービスを使う統合寄りの回帰が多く、個別サブコマンドの状態遷移、git worktree/branch cleanup、Codex profile・sandbox・log、routing document 更新、oracle review loop などの期待挙動を確認するための下位項目へ進む起点になる。
+- CLI、runtime、Codex 実行、apply/session/review/indexing/doctor/prompt などの realization test を集約するディレクトリ。共有 pytest helper と、サブコマンドや共通 runtime 境界の外部挙動を検証するテスト群への入口になる。
+- 各テストは、正本仕様断片そのものではなく、realization implementation が oracle と既存挙動から導いた公開的な制御、状態遷移、ログ、git 操作、subprocess 境界を確認する。
 
 ## Read this when
-- realization implementation の変更後に、対応する CLI 外部挙動、runtime 共通契約、Codex 実行経路、apply/session/review/indexing の回帰テストを探したいとき。
-- 使い捨て git repository、Codex home/profile、fake Codex/Ollama/systemctl、doctor 実行、apply worktree 解決など、複数テストで共有される pytest helper の前提を確認したいとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、TUI、doctor、Codex retry/quota/subprocess/home/error handling など、サブコマンド境界から観測される挙動の既存期待値を確認したいとき。
-- prompt parts、ACP builder、packaged import、StructDoc markdown rendering など、実装単体よりも出力互換性や公開 import 境界をテストで確認したいとき。
+- cmoc の CLI サブコマンド、runtime wrapper、Codex 実行、apply/session/review/indexing/doctor まわりの realization implementation を変更し、対応する回帰テストを探したいとき。
+- 外部状態を伴うテスト fixture、fake Codex/Ollama/systemctl、使い捨て git repository、Codex home/profile、session/apply state の準備方法を確認したいとき。
+- 特定機能の変更後に、終了コード、標準出力、report、state file、worktree/branch cleanup、log、structured output schema 参照などの既存期待値を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、oracle src、oracle test、oracle 側の routing 規則そのものを確認したいときは、oracle 配下の該当対象を読む。
-- 本番実装の責務分割、内部 helper、path model、git 操作、Codex/Ollama 管理処理そのものを調べたいときは、src 配下の対応する realization implementation を先に読む。
-- 個別の期待出力や狭い helper の挙動だけを確認すれば足り、CLI 経由の統合挙動や共有 fixture の文脈が不要なときは、対象の実装またはより直接の小さいテストへ進む。
-- LLM 出力品質そのもの、将来機能の仕様、生成済みログや一時成果物を確認したいだけのとき。
+- oracle file の正本仕様断片、oracle src の schema、oracle 側のテスト規則を確認したい場合は、oracle 配下の該当対象を読む。
+- 実装本体の責務分割、低レベル helper の内部制御、設定や path model の定義だけを調べたい場合は、先に対応する implementation を読む。
+- INDEX.md エントリー生成規則や routing 文書の書き方だけを確認したい場合は、正本仕様側または routing 関連の対象を読む。
 
 ## hash
-- 713fd96c68176153bed6460db22c8d8a8dc34538556de463ae5f02e4dd4afb16
+- 39699ff5cd7ef88aaf4b3a7f81b0c8fea08c0fef928e4068851a6d341683f25b

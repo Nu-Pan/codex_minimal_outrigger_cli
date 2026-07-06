@@ -276,21 +276,20 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 呼び出し実行処理のテスト群。起動前の追加 read path 検証、complete prompt の許可範囲、linked worktree からの呼び出し時の作業ディレクトリ・権限 profile、Codex CLI/TUI 非ゼロ終了時のエラー表示と call log 記録を検証する。
+- Codex TUI 実行ラッパーの realization test。起動前の追加読み取りパス検査、pure oracle read 時の complete prompt 取り扱い、linked worktree からの prompt 読み取り、呼び出しログとサブコマンドログ、Codex CLI/TUI の非ゼロ終了時エラーを外部挙動として検証する。
 
 ## Read this when
-- Codex TUI 実行ラッパーの挙動を変更し、subprocess 起動条件、cwd、--cd 引数、profile 生成、call log、エラー処理への影響を確認したいとき。
-- 追加 read path の許可判定、memo 配下の拒否、complete prompt の扱い、PURE_ORACLE_READ と REPO_WRITE の差をテストで確認したいとき。
-- linked worktree から Codex TUI を起動する場合の、prompt 参照、local 配下の read 権限、worktree 側の write 権限が期待通りか確認したいとき。
-- Codex CLI/TUI が非ゼロ終了した時に、CmocError、コンソール出力、tui call log がどの外部挙動として固定されているか確認したいとき。
+- Codex TUI 呼び出し時のアクセス許可、追加読み取りパス、complete prompt、linked worktree の cwd と profile 権限に関する挙動を確認・変更する時。
+- Codex CLI/TUI 呼び出しの成功・失敗ログ、標準出力への呼び出し結果表示、call log と subcommand logger の記録内容を確認・変更する時。
+- Codex TUI 実行ラッパーの回帰テストを追加・整理し、外部 codex 実行を stub して argv、cwd、profile、ログを検証したい時。
 
 ## Do not read this when
-- Codex TUI ではない通常の Codex 実行、agent 呼び出し、または他サブコマンドのテストを探しているとき。
-- 権限モデルや path 分類の仕様そのものを確認したいとき。この対象はそれらを使った TUI 実行時の外部挙動だけを検証する。
-- Codex subprocess の細かい実装手順や profile TOML の生成ロジックを直接変更したいとき。まず実装側の該当処理を読む方がよい。
+- Codex TUI ではなく Codex API 実行、agent call、または他サブコマンドの runtime 挙動だけを扱う時。
+- 実装本体の制御フローや profile 生成ロジックを確認したい時は、対応する runtime 実装や設定生成側を読む。
+- oracle file の正本仕様断片を確認したい時は、oracle 配下の該当文書・実装を読む。
 
 ## hash
-- 8aab459acdf1746faed23c188b30f0ccb5f8fd1a8adcc0e98c3f783312817abe
+- 2cb7a8f0578f3726c1d5dfd18207da0e71ef2640c4c819187dac2993b3d0dcb8
 
 # `test_doctor_cli.py`
 
