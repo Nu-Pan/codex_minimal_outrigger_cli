@@ -105,7 +105,7 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
     """prompt 上の読み取り禁止領域を追加 read path にも適用する。"""
     if not path.is_relative_to(root):
         return False
-    if path.is_relative_to(root / "memo") or path.is_relative_to(root / ".agents"):
+    if path.is_relative_to(root / "memo"):
         return False
     if _is_tui_complete_prompt_path(root, path):
         # <work-root>/oracle/doc/app_spec/sub_command/tui.md

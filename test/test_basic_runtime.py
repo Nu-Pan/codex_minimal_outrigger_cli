@@ -841,10 +841,13 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     assert _profile_permission_filesystem(profiles[FileAccessMode.READONLY]) == {
         str(path.resolve()): "read"
         for path in root.iterdir()
-        if path.name not in {"memo", ".agents"}
+        if path.name != "memo"
     }
     _assert_not_permission_accessible(
         profiles[FileAccessMode.READONLY], root / "memo" / "private.md"
+    )
+    assert str((root / ".agents").resolve()) in _profile_permission_roots(
+        profiles[FileAccessMode.READONLY], "read"
     )
     assert _profile_permission_filesystem(
         profiles[FileAccessMode.PURE_ORACLE_READ]
