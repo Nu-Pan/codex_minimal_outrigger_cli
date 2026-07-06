@@ -58,25 +58,22 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時に複数箇所から共有される runtime helper 群をまとめる領域。
-- Codex 実行、設定、git、path、logging、error、state、doctor、indexing、apply などの共通 runtime 実装と、それらをまとめて参照する再公開入口を含む。
-- 個別 helper の挙動は下位要素ごとに分かれており、この領域は共通 runtime API の配置先を選ぶ入口になる。
+- cmoc の実行時に複数領域から共有される runtime helper 群をまとめる領域。
+- Codex 実行、設定、git、path、ログ、エラー、状態管理、doctor 前処理、indexing preflight、apply process 管理など、サブコマンド横断の共通処理への入口になる。
 
 ## Read this when
-- cmoc の実行時処理で複数モジュールから使われる共通 helper の配置場所を探したいとき。
-- Codex exec/TUI 実行、sandbox/profile、quota/capacity、Structured Output、call log など Codex runtime 境界に関わる実装へ進みたいとき。
-- config 永続化、doctor preprocess、Ollama 準備、git 操作、path 解決、subcommand logging、共通 error、session/apply state など runtime 共通機能を確認・変更したいとき。
-- INDEX.md 自動更新や indexing preflight の実行、entry hash 検証、Codex による entry 生成、indexing commit の処理を調べたいとき。
-- 複数 runtime module の公開 API をまとめて import する入口や、再公開対象の追加・削除を確認したいとき。
+- CLI サブコマンドや agent call 実行から共有される runtime 共通処理の配置場所を探すとき。
+- Codex exec/TUI 起動、profile、Structured Output、quota/capacity retry、call log、preflight など Codex 実行基盤を調べるとき。
+- repo/work/root path、設定永続化、git 操作、実行ログ、エラー整形、session state、apply process 追跡など、複数サブコマンドで使う runtime 基盤を確認・変更するとき。
+- INDEX.md 自動更新、doctor preprocess、Ollama local SLM 準備など、通常のコマンド実行前後に挟まる共通処理を追うとき。
 
 ## Do not read this when
-- CLI サブコマンド固有の業務処理、引数定義、Typer 登録、利用者向け workflow を確認したいときは、該当するサブコマンド実装や app spec を読む。
-- 正本仕様断片、oracle doc、prompt builder、path model、config 定義そのものを確認したいときは、oracle 側または対応する正本定義へ進む。
-- 個別 runtime API の詳細がすでに分かっている場合は、この領域全体ではなく対応する下位要素を直接読む。
-- テスト固有の期待値や外部挙動を調べたいときは、runtime helper ではなく対応する test や対象コマンドの実装を読む。
+- 特定サブコマンド固有の引数、業務処理、出力仕様、状態遷移を確認したいときは、該当する command 実装または app spec を読む。
+- 正本仕様断片、prompt、Structured Output schema、path keyword、config 定義そのものを確認したいときは、対応する oracle 側を読む。
+- テストだけを調べたいとき、または runtime helper を介さない個別実装を調べたいときは、より直接その責務を持つ対象へ進む。
 
 ## hash
-- 72dd85a3a62cff7daf4e89905910a33c6ecfddbfab4c8481ecb860660eea859f
+- 8ac1d51832526e45c2b0c8a84ea57c35952f6dbba31fb8fc0aa8ca45d3504104
 
 # `config`
 

@@ -123,26 +123,21 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断的に検証する realization test。root placeholder 解決、run/work/repo root 判定、config 変換と検証、CmocError 表示、CLI error 出力、subcommand log、session state、FileAccessMode から sandbox/Codex profile への変換、binary 判定など、個別サブコマンドより下位の実行前提をまとめて扱う。
-- 複数の runtime 基盤機能が同じ fixture と root 状態に依存して同時に崩れやすいことを理由に、大きめの単一テストファイルとして保持されている。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、repo root と linked worktree の扱い、config の既定値・検証・直列化、CmocError の report 表示、CLI wrapper の preflight と error 出力、subcommand log、session state の branch 解析、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
+- 共通 fixture と root 状態を共有する runtime 回帰テスト群であり、分割すると文脈が散るため一箇所に凝集している。
 
 ## Read this when
-- runtime 基盤の外部挙動を変更・確認する。
-- root placeholder、repo root、work root、run root、linked worktree の扱いを変更・確認する。
-- CmocConfig の既定値、dict 変換、JSON 順序、設定不正時の CmocError を変更・確認する。
-- CLI wrapper、doctor preprocess、Click/Typer parse error、stdout/stderr の error report、subcommand log の挙動を変更・確認する。
-- session branch/apply branch からの session id 抽出、session state 読み書き、state validation を変更・確認する。
-- FileAccessMode、Codex sandbox profile、追加 writable/read root、oracle/realization/repo write 権限境界を変更・確認する。
-- runtime の binary 判定、duration 表示、gitignore 更新、起動 wrapper の error report 表示を変更・確認する。
+- cmoc の runtime 共通処理、root 解決、worktree 判定、config 読み込み・検証、CmocError 表示、CLI error 変換、subcommand log、session state 読み書きに関わる変更を行うとき。
+- FileAccessMode、Codex profile、sandbox writable/readable root、追加書き込み許可、linked worktree 実行時の読み取り許可に関わる挙動を確認・変更するとき。
+- doctor preprocess、CLI preflight、completion probe、起動 wrapper、`.cmoc/local` ignore 追加、binary 判定など、サブコマンド実行前後の共通 runtime 境界を検証したいとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の business logic、prompt 構築、review/apply/indexing などの詳細挙動だけを確認する場合。
-- oracle file 本文の仕様や文書構成を確認したい場合。
-- テスト支援関数そのものの実装を確認したい場合は、共通 fixture や helper の定義元を直接読む。
-- 単一モジュール内の純粋な helper 実装だけを確認したい場合で、このファイルが検証する公開 runtime 契約に影響しない場合。
+- 個別サブコマンド固有の業務ロジック、出力内容、状態遷移だけを確認したいときは、そのサブコマンドの専用テストへ進む。
+- oracle doc や oracle src の正本仕様断片そのものを確認したいときは、対応する oracle 側の本文を読む。
+- INDEX.md 生成やルーティング文書の形式だけを確認したいときは、INDEX 関連の仕様・テストを読む。
 
 ## hash
-- 923164964a03b914385fc7f8ff129619f80b1bce9405fc02d74f8caf5157b043
+- 5909a1d81fb5ebd5d10efec260484079569f5e1e12018fd701cd25a35a510623
 
 # `test_cli_tui.py`
 
