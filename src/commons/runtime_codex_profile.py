@@ -302,6 +302,18 @@ def _is_writable_path_allowed(
     return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
 
 
+def is_file_access_writable_path_allowed(
+    mode: FileAccessMode,
+    root: Path,
+    path: Path,
+    allow_oracle_conflict_writes: bool = False,
+) -> bool:
+    """Codex 実行後検証からも profile と同じ書き込み境界を参照する。"""
+    return _is_writable_path_allowed(
+        mode, root, path, allow_oracle_conflict_writes
+    )
+
+
 def _append_workspace_write_section(
     lines: list[str], writable_roots: list[Path]
 ) -> None:

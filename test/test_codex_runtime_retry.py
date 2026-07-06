@@ -229,7 +229,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     assert "Selected model is at capacity" in codex_events[0]["error"]
 
 
-def test_run_codex_exec_does_not_post_validate_file_access_violations_before_capacity_retry(
+def test_run_codex_exec_rejects_file_access_violations_after_capacity_retry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -263,20 +263,20 @@ def test_run_codex_exec_does_not_post_validate_file_access_violations_before_cap
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    result = run_codex_exec(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.REALIZATION_WRITE,
-            "prompt",
-            None,
-        ),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
+    with pytest.raises(CmocError, match="禁止差分"):
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                None,
+            ),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
 
-    assert result.output_json == {"ok": True}
     assert counter.read_text() == "2"
     assert (root / "oracle" / "blocked.md").read_text() == "blocked\n"
 

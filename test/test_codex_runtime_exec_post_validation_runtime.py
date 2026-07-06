@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from basic.acp import FileAccessMode
+from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 from _support import (
     codex_parameter,
@@ -209,7 +210,7 @@ def test_run_codex_exec_allows_readonly_temporary_cache_under_blocked_root(
     assert (root / blocked_dir / "__pycache__" / "blocked.cpython-313.pyc").is_file()
 
 
-def test_run_codex_exec_allows_readonly_realization_diff_after_call(
+def test_run_codex_exec_rejects_readonly_realization_diff_after_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -230,12 +231,13 @@ def test_run_codex_exec_allows_readonly_realization_diff_after_call(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    run_codex_exec(
-        codex_parameter(FileAccessMode.READONLY),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
+    with pytest.raises(CmocError, match="禁止差分"):
+        run_codex_exec(
+            codex_parameter(FileAccessMode.READONLY),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
 
     assert (root / "src" / "changed.py").read_text() == "changed\n"
 

@@ -15,7 +15,7 @@ from _support import (
 from commons.runtime_codex import run_codex_exec
 
 
-def test_run_codex_exec_does_not_post_validate_file_access_violations(
+def test_run_codex_exec_rejects_file_access_violations(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -44,19 +44,20 @@ def test_run_codex_exec_does_not_post_validate_file_access_violations(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    run_codex_exec(
-        codex_parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
+    with pytest.raises(CmocError, match="禁止差分"):
+        run_codex_exec(
+            codex_parameter(FileAccessMode.REALIZATION_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
 
     assert counter.read_text() == "1"
     assert (root / "oracle" / "blocked.md").read_text() == "blocked\n"
 
 
 @pytest.mark.parametrize("blocked_name", ["a b.md", 'quoted " name.md'])
-def test_run_codex_exec_does_not_post_validate_quoted_oracle_path_file_access_violations(
+def test_run_codex_exec_rejects_quoted_oracle_path_file_access_violations(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, blocked_name: str
 ) -> None:
     root = make_repo(tmp_path)
@@ -82,12 +83,13 @@ def test_run_codex_exec_does_not_post_validate_quoted_oracle_path_file_access_vi
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    run_codex_exec(
-        codex_parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
+    with pytest.raises(CmocError, match="禁止差分"):
+        run_codex_exec(
+            codex_parameter(FileAccessMode.REALIZATION_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
 
     assert counter.read_text() == "1"
     assert (root / blocked_path).read_text() == "blocked\n"
@@ -170,7 +172,7 @@ def test_run_codex_exec_does_not_post_validate_file_access_violations_before_non
     assert (root / "oracle" / "blocked.md").read_text() == "blocked\n"
 
 
-def test_run_codex_exec_does_not_post_validate_file_access_violations_before_schema_retry(
+def test_run_codex_exec_rejects_file_access_violations_after_schema_retry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -209,22 +211,22 @@ def test_run_codex_exec_does_not_post_validate_file_access_violations_before_sch
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    result = run_codex_exec(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.REALIZATION_WRITE,
-            "prompt",
-            schema,
-        ),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
+    with pytest.raises(CmocError, match="禁止差分"):
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                schema,
+            ),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
 
     assert counter.read_text() == "2"
     assert (root / "oracle" / "blocked.md").read_text() == "blocked\n"
-    assert result.output_json == {"ok": True}
 
 
 def test_run_codex_exec_allows_root_readme_realization_diff(
@@ -301,7 +303,7 @@ def test_run_codex_exec_ignores_preexisting_forbidden_diff(
     assert target.read_text() == "preexisting\n"
 
 
-def test_run_codex_exec_leaves_modified_preexisting_forbidden_diff(
+def test_run_codex_exec_rejects_modified_preexisting_forbidden_diff(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -334,18 +336,19 @@ def test_run_codex_exec_leaves_modified_preexisting_forbidden_diff(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    run_codex_exec(
-        codex_parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
+    with pytest.raises(CmocError, match="禁止差分"):
+        run_codex_exec(
+            codex_parameter(FileAccessMode.REALIZATION_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
 
     assert counter.read_text() == "1"
     assert target.read_text() == "agent changed\n"
 
 
-def test_run_codex_exec_does_not_post_validate_session_join_conflict_targets(
+def test_run_codex_exec_rejects_non_conflict_target_during_session_join_resolution(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -375,16 +378,16 @@ def test_run_codex_exec_does_not_post_validate_session_join_conflict_targets(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    run_codex_exec(
-        codex_parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-        extra_writable_paths=[target],
-        allow_oracle_conflict_writes=True,
-    )
+    with pytest.raises(CmocError, match="禁止差分"):
+        run_codex_exec(
+            codex_parameter(FileAccessMode.REALIZATION_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+            extra_writable_paths=[target],
+            allow_oracle_conflict_writes=True,
+        )
 
     assert counter.read_text() == "1"
     assert target.read_text() == "resolved\n"
     assert other.read_text() == "blocked\n"
-

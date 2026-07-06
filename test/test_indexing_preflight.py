@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 
 from _support import (
@@ -326,13 +327,14 @@ def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
     indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
-    codex_preflight_module.run_codex_exec(
-        parameter,
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-        purpose="apply fork refine findings",
-    )
+    with pytest.raises(CmocError, match="禁止差分"):
+        codex_preflight_module.run_codex_exec(
+            parameter,
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+            purpose="apply fork refine findings",
+        )
 
     assert counter.read_text() == "1"
     assert events == [root]
