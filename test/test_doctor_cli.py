@@ -162,7 +162,7 @@ def test_doctor_generates_and_tracks_config(
         run_git(root, "ls-files", "--", ".cmoc/config.json").stdout.strip()
         == ".cmoc/config.json"
     )
-    assert json.loads(config_path.read_text())["codex"]["num_try_falv_recovery"] == 1
+    assert "num_try_falv_recovery" not in json.loads(config_path.read_text())["codex"]
     assert run_git(
         root, "show", "--name-only", "--format=", "HEAD"
     ).stdout.splitlines() == [".cmoc/config.json"]
@@ -226,7 +226,7 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
             {
                 "num_parallel": 3,
                 "codex": {
-                    "num_try_falv_recovery": 5,
+                    "num_try_falv_recovery": "legacy",
                     "model": {
                         "mainstream": {
                             "model_provider": "codex",
@@ -251,7 +251,7 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
         "model_provider": "codex",
         "model": "gpt-5.4-mini",
     }
-    assert data["codex"]["num_try_falv_recovery"] == 5
+    assert "num_try_falv_recovery" not in data["codex"]
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["apply_fork"]["num_apply_files"] == 200
 
@@ -371,4 +371,3 @@ def test_doctor_preprocess_preserves_preexisting_staged_rename(
         "R100\told.txt\tnew.txt"
     ]
     assert run_git(root, "diff", "--name-status").stdout.strip() == ""
-

@@ -33,7 +33,6 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
                 key.value: value
                 for key, value in config.codex.reasoning_effort.items()
             },
-            "num_try_falv_recovery": config.codex.num_try_falv_recovery,
         },
         "apply_fork": {
             "num_apply_files": config.apply_fork.num_apply_files,
@@ -114,6 +113,9 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
     default = CmocConfig()
     try:
         codex_data = _section(data, "codex")
+        # `<work-root>/oracle/doc/app_spec/codex_exec_rule.md` bans post-call
+        # file access violation validation, so old FALV recovery config is not
+        # restored from user JSON and disappears on the next sync.
         model = _model_spec_map_from_dict(
             default.codex.model,
             codex_data.get("model", {}),
@@ -132,11 +134,6 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             codex=CmocConfigCodex(
                 model=model,
                 reasoning_effort=reasoning_effort,
-                num_try_falv_recovery=_int_value(
-                    codex_data,
-                    "num_try_falv_recovery",
-                    default.codex.num_try_falv_recovery,
-                ),
             ),
             apply_fork=CmocConfigApplyFork(
                 num_apply_files=_int_value(
