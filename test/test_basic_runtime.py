@@ -77,6 +77,14 @@ def _profile_permission_filesystem(profile: str) -> dict[str, str]:
     return parsed.get("permissions", {}).get("cmoc", {}).get("filesystem", {})
 
 
+def _profile_permission_roots(profile: str, access: str) -> set[str]:
+    return {
+        path
+        for path, actual_access in _profile_permission_filesystem(profile).items()
+        if actual_access == access
+    }
+
+
 def _standard_realization_profile_roots(root: Path) -> set[str]:
     roots: set[str] = set()
     for path in (root / name for name in ("src", "test", "bin")):
@@ -107,6 +115,14 @@ def _assert_not_writable(profile: str, path: Path) -> None:
     target = path.resolve()
     assert not any(
         target.is_relative_to(Path(root)) for root in _profile_writable_roots(profile)
+    )
+
+
+def _assert_not_permission_accessible(profile: str, path: Path) -> None:
+    target = path.resolve()
+    assert not any(
+        target.is_relative_to(Path(root))
+        for root in _profile_permission_filesystem(profile)
     )
 
 
@@ -803,37 +819,48 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         for mode in FileAccessMode
     }
 
-    for mode in (
-        FileAccessMode.REALIZATION_WRITE,
-        FileAccessMode.PURE_ORACLE_WRITE,
-        FileAccessMode.REPO_WRITE,
-    ):
+    for mode in (FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE):
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
         assert "[sandbox_workspace_write]" in profiles[mode]
-    for mode in (FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ):
+    for mode in (
+        FileAccessMode.READONLY,
+        FileAccessMode.PURE_ORACLE_READ,
+        FileAccessMode.PURE_ORACLE_WRITE,
+    ):
         parsed = tomllib.loads(profiles[mode])
         assert "sandbox_mode" not in parsed
         assert "sandbox_workspace_write" not in parsed
         assert parsed["default_permissions"] == "cmoc"
-        assert all(
-            access == "read"
-            for access in parsed["permissions"]["cmoc"]["filesystem"].values()
-        )
     assert _profile_permission_filesystem(profiles[FileAccessMode.READONLY]) == {
-        str(root.resolve()): "read"
+        str(path.resolve()): "read"
+        for path in root.iterdir()
+        if path.name not in {"memo", ".agents"}
     }
+    _assert_not_permission_accessible(
+        profiles[FileAccessMode.READONLY], root / "memo" / "private.md"
+    )
     assert _profile_permission_filesystem(
         profiles[FileAccessMode.PURE_ORACLE_READ]
     ) == {str((root / "oracle").resolve()): "read"}
+    assert _profile_permission_filesystem(
+        profiles[FileAccessMode.PURE_ORACLE_WRITE]
+    ) == {
+        str((root / "oracle").resolve()): "read",
+        str((root / "oracle" / "spec.md").resolve()): "write",
+    }
+    _assert_not_permission_accessible(
+        profiles[FileAccessMode.PURE_ORACLE_WRITE], root / "src" / "existing.py"
+    )
     realization_roots = _standard_realization_profile_roots(root)
     assert _profile_writable_roots(
         profiles[FileAccessMode.REALIZATION_WRITE]
     ) == realization_roots
     assert _profile_writable_roots(profiles[FileAccessMode.READONLY]) == set()
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_READ]) == set()
-    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == {
-        str((root / "oracle" / "spec.md").resolve())
-    }
+    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == set()
+    assert _profile_permission_roots(
+        profiles[FileAccessMode.PURE_ORACLE_WRITE], "write"
+    ) == {str((root / "oracle" / "spec.md").resolve())}
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
         *realization_roots,
         str((root / "oracle" / "spec.md").resolve()),

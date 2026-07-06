@@ -285,6 +285,11 @@ def _directory_has_denied_descendant(
 
 def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:
     """親子関係で冗長な writable root を持たないように追加する。"""
+    _append_access_root(result, seen, path)
+
+
+def _append_access_root(result: list[Path], seen: set[Path], path: Path) -> None:
+    """親子関係で冗長な permission filesystem root を持たないように追加する。"""
     resolved = path.resolve()
     if resolved in seen or any(resolved.is_relative_to(parent) for parent in seen):
         return
@@ -351,6 +356,7 @@ def _needs_permission_profile(
     return mode in {
         FileAccessMode.READONLY,
         FileAccessMode.PURE_ORACLE_READ,
+        FileAccessMode.PURE_ORACLE_WRITE,
     } or any(not path.resolve().is_relative_to(root) for path in extra_read_paths or [])
 
 
@@ -361,7 +367,11 @@ def _read_roots_for_permission_profile(
     extra_read_root: Path | None,
 ) -> list[Path]:
     """Codex permission profile に渡す読み取り root を作る。"""
-    roots = [root / "oracle"] if mode == FileAccessMode.PURE_ORACLE_READ else [root]
+    roots = (
+        [root / "oracle"]
+        if mode in {FileAccessMode.PURE_ORACLE_READ, FileAccessMode.PURE_ORACLE_WRITE}
+        else _top_level_read_roots(mode, root)
+    )
     for path in extra_read_paths or []:
         resolved = path.resolve()
         if any(resolved.is_relative_to(read_root) for read_root in roots):
@@ -375,16 +385,24 @@ def _read_roots_for_permission_profile(
     result: list[Path] = []
     seen: set[Path] = set()
     for path in roots:
-        resolved = path.resolve()
-        if resolved in seen or any(resolved.is_relative_to(parent) for parent in seen):
-            continue
-        redundant = [existing for existing in seen if existing.is_relative_to(resolved)]
-        if redundant:
-            result[:] = [existing for existing in result if existing not in redundant]
-            seen.difference_update(redundant)
-        seen.add(resolved)
-        result.append(resolved)
+        _append_access_root(result, seen, path)
     return result
+
+
+def _top_level_read_roots(mode: FileAccessMode, root: Path) -> list[Path]:
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # Codex permission filesystem is positive-only; READONLY cannot use
+    # <work-root> itself because that would also grant the memo read denied by
+    # the base file access rule.
+    if mode != FileAccessMode.READONLY:
+        return [root]
+    if not root.exists():
+        return []
+    return [
+        path.resolve()
+        for path in sorted(root.iterdir())
+        if _is_read_path_allowed(mode, root, path.resolve())
+    ]
 
 
 def _append_permission_profile_section(
