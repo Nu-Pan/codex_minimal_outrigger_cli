@@ -182,21 +182,22 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ラッパーの統合的な挙動を検証するテスト。プロファイル生成、sandbox writable_roots、作業ディレクトリ、schema 保存先、linked worktree、cmoc managed ollama provider、実 Codex CLI 経由の呼び出し境界を扱う。
+- Codex CLI 実行ラッパーの統合テスト群。実際または偽装した Codex 実行ファイルを使い、プロファイル生成、sandbox writable_roots、作業ディレクトリ、schema 保存先、call log、cmoc 管理 Ollama provider 設定が期待どおりになることを検証する。
+- realization test として、`run_codex_exec` が agent call parameter と cmoc 設定から Codex CLI 起動引数・標準入力・出力・ローカル状態をどう構成するかを確認する入口になる。
 
 ## Read this when
-- Codex CLI を起動する実装、生成される Codex profile、`run_codex_exec` の引数・環境・作業ディレクトリ・出力ファイル処理を変更する。
-- file access mode ごとの sandbox 設定、writable_roots、`.agents` や linked worktree 周辺のアクセス許可を確認する。
-- cmoc managed ollama provider 用の profile 内容や、ローカル SLM 利用時に Codex CLI の組み込み ollama flags を使わない挙動を確認する。
-- structured output schema の一時保存先や、repo root と worktree cwd の分離に関する挙動を確認する。
+- Codex CLI を起動する runtime 実装、特に `run_codex_exec` の引数生成、profile TOML、schema パス、出力ログ、call log の挙動を変更する。
+- `FileAccessMode` ごとの sandbox 設定、writable_roots、PURE_ORACLE_READ 時の書き込み許可範囲、`.agents` 除外を確認したい。
+- cmoc 管理 Ollama provider、ローカル SLM profile、実 Codex CLI と実 Ollama を使う統合確認の条件や期待値を確認したい。
+- git worktree からの実行時に、cwd と repo root 配下の `.cmoc/local` 状態保存先がどう扱われるかを確認したい。
 
 ## Do not read this when
-- Codex CLI 実行ではなく、agent call parameter のデータ構造や model class の定義そのものだけを確認したい。
-- Codex profile や sandbox ではなく、oracle 文書、INDEX 生成、または一般的な設定ファイル読み込みだけを確認したい。
-- LLM の応答品質や Codex CLI 自体の内部挙動を検証したい。
+- Codex CLI 起動ではなく、oracle 文書や path model の正本仕様そのものを確認したい。
+- agent call parameter のデータ構造や cmoc config の定義だけを確認したい場合は、それらの実装・oracle 定義を直接読む方が適切。
+- Codex 実行結果の内容品質や LLM 応答の妥当性を検証したい場合。このテストは cmoc が管理する起動・状態・設定の外部挙動を対象にしている。
 
 ## hash
-- 285b58f2ae9b3ce8137b795243955b024239b1ffe0f42b1ee25f6735a8a79aca
+- b382616b943a28de6a78338c1f30d23bcfa34e43a0286e6005b1e6ce96422c4d
 
 # `test_codex_runtime_home.py`
 

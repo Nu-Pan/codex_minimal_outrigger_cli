@@ -156,21 +156,18 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群。CLI サブコマンド、Codex runtime、doctor、indexing、prompt rendering、ACP builder、packaged import など、実装が正本仕様断片と既存の外部挙動を満たすかを pytest で検証する。
-- 個別実装の詳細よりも、git worktree、session/apply state、Codex home/profile、fake 外部コマンド、report、structured output schema 参照などを伴う統合境界の期待値を確認する入口になる。
+- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex runtime、doctor、indexing、prompt/rendering、ACP builder、packaged import など、実装側の外部挙動と共通 runtime 契約を pytest で検証する。
+- 共有 pytest helper から個別サブコマンドの統合テスト、runtime wrapper の失敗・再試行・権限テストまで、realization implementation の変更に対応するテスト入口をまとめる。
 
 ## Read this when
-- CLI サブコマンドの外部挙動、終了 code、stdout/stderr、report、state 更新、branch/worktree cleanup、dirty worktree 拒否などの回帰期待値を確認または変更するとき。
-- Codex exec/TUI 実行 wrapper、profile/sandbox、CODEX_HOME、quota/capacity retry、subprocess tracking、call log、preflight indexing など runtime 境界のテストを探すとき。
-- apply、session、doctor、indexing、review oracle、TUI など複数要素をまたぐ挙動を、実プロセスや git 状態に近い fixture 上で検証したいとき。
-- ACP builder、prompt parts、structured output schema 参照、packaged import、Markdown rendering など、実装と oracle src/schema/prompt 断片の接続を検証するテストを探すとき。
-- 共有 pytest helper、fake Codex/Ollama/systemctl、最小 git repository、Codex home stub など、テスト前提を確認または変更したいとき。
+- realization implementation を変更した後、対応する CLI 外部挙動、runtime 契約、prompt 生成、INDEX 更新、session/apply/review/doctor の回帰テストを探すとき。
+- apply、session、doctor、indexing、TUI、Codex exec/TUI/runtime retry、ACP builder、prompt parts、StructDoc renderer などの既存テスト観点を確認し、追加・変更すべきテストファイルを選ぶとき。
+- テスト用 git repository、Codex home、fake 外部コマンド、doctor 実行、apply worktree 解決など、複数テストで共有される fixture や helper の入口を探すとき。
 
 ## Do not read this when
-- 正本仕様断片そのものを確認したい場合は、oracle 側の該当 doc/src/test を読む。
-- 本番実装の責務、内部 helper、設定 schema、path model、git 操作 wrapper などを局所的に変更するだけなら、対応する implementation を先に読む。
-- 個別サブコマンドや runtime 領域に関係しないルーティング文書本文の自然言語表現だけを検討しているとき。
-- LLM や Codex CLI 自体の出力品質・内部挙動を評価したいだけで、cmoc が固定している外部挙動や制御境界を確認しないとき。
+- cmoc の本番実装を調べたい場合は、対応する realization implementation を先に読む。
+- oracle file の正本仕様断片、schema、prompt、path model、テスト規則そのものを確認したい場合は、oracle 側の該当 doc/src/test を読む。
+- 個別機能の期待挙動ではなく、INDEX.md エントリー生成規則やルーティング文書の書き方だけを確認したい場合。
 
 ## hash
-- 1044128a63c9d523cbf523fd5c7eb827be1bc38dcb800f3948a582f22b983058
+- 3814728729ad49d97dba73422d56c3d9ec567b29e29bba767fea21c880e0a4da
