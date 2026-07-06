@@ -76,24 +76,28 @@
 # `review`
 
 ## Summary
-- review 系サブコマンド群を収める package。階層自体は最小の package 初期化のみを持ち、主要な実行入口として review oracle サブコマンド全体の orchestration を担う。
-- review oracle では active session branch と clean worktree を前提に、isolated review worktree の作成、oracle review 対象列挙、Codex review loop、INDEX 変更の commit/merge、report 出力、作業用 worktree/branch の後片付けまでを統括する。
+- review 系サブコマンド群のうち、review oracle コマンドの package 境界と実行入口を扱う。
+- package 初期化モジュールはこの階層が review 系サブコマンドのまとまりであることだけを示し、実処理は持たない。
+- review oracle の全体制御では、active session branch の検証、未コミット差分の拒否、isolated review worktree 作成、oracle file 列挙、review loop、INDEX 変更の commit/merge、report 出力、cleanup への入口になる。
 
 ## Read this when
-- review 系サブコマンド群の package 境界や、この階層が review 系サブコマンド用 Python package として扱われる根拠を確認したいとき。
-- review oracle サブコマンド全体の実行順序、事前条件、失敗時 report 出力、review 用 branch/worktree の作成・削除タイミングを確認したいとき。
-- oracle review の対象列挙、review loop、INDEX 変更 merge、report 生成がどの順で呼ばれ、どの値を受け渡すかを追いたいとき。
-- review oracle が active session branch 以外や dirty worktree で停止する条件、または一時 review branch を session branch に merge する条件を確認したいとき。
+- review oracle コマンドの開始条件、実行順序、失敗時 report、cleanup の責務を確認したいとき。
+- active session branch 上でのみ動く制約や、oracle file 以外の未コミット差分を拒否する挙動を調べるとき。
+- 未コミットの oracle 変更を review worktree に snapshot commit してから review する流れを変更または検証するとき。
+- review 結果による INDEX 変更を review branch に commit し、必要に応じて session branch へ merge する制御を追うとき。
+- review oracle 関連の対象列挙、review loop、report、INDEX merge 処理のうち、どの下位実装へ進むべきか判断したいとき。
+- review 系サブコマンド群の package 境界そのものや、この階層が Python package として扱われる根拠を確認したいとき。
 
 ## Do not read this when
-- review 系サブコマンド内の個別機能や実装詳細だけを調べたいときは、該当する下位モジュールを直接読む。
-- oracle file の列挙条件や scope ごとの対象選択だけを確認したい場合は、対象列挙を担う下位モジュールを読む。
-- Codex に渡す review prompt、finding の検出・merge 操作、review loop の詳細だけを確認したい場合は、review loop 側の下位モジュールを読む。
-- review report の本文整形、finding section、report file の書き込み形式だけを確認したい場合は、report 生成側の下位モジュールを読む。
-- package 初期化時の import、副作用、公開シンボルを調べたいとき。ただし現在内容からはそのような責務は読み取れない。
+- review 系サブコマンドの具体的な CLI 挙動、引数、出力、制御フローのうち review oracle 全体制御に限らない事項を調べたいとき。
+- oracle file の列挙条件や scope ごとの対象選択だけを確認したい場合は、対象列挙の実装へ直接進む。
+- review loop 内で Codex に渡す内容、finding の解釈、修正適用の詳細を確認したい場合は、review loop の実装へ直接進む。
+- review report の表示文面、section 描画、report file の書き込み形式だけを確認したい場合は、report 生成の実装へ直接進む。
+- INDEX 変更の conflict 解決、review branch の merge、worktree status path の詳細だけを確認したい場合は、INDEX review 操作の実装へ直接進む。
+- 汎用の git 実行、worktree 作成削除、状態読み込み、config 読み込みの挙動だけを確認したい場合は、runtime 側の実装へ直接進む。
 
 ## hash
-- d7291d262cc5b0c25feb243c9be0adc6efb44e0e05d12457850398d7ae814dd0
+- 8e625035fbccbfd5813609b417e9d59828f7350193c2b19f2b004cadca53a3b0
 
 # `review_index.py`
 

@@ -138,18 +138,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装の入口を集める領域で、session、apply、review、indexing、doctor、TUI、oracle 評価などの利用者向け操作から、各 workflow の制御ロジックへ進むためのルーティング境界を担う。
-- 各サブコマンドの薄い委譲入口から、状態遷移、branch/worktree 管理、Codex 呼び出し、merge、cleanup、report 生成、runtime preprocess 連携まで、操作種別ごとの主要処理へ下位対象を振り分ける。
+- cmoc の利用者向けサブコマンド実装をまとめる領域で、session、apply、review oracle、indexing、TUI、doctor、eval oracle などの実行入口と制御フローへのルーティング起点となる。
+- 各サブコマンド固有の事前条件、状態遷移、branch/worktree/process 管理、Codex 呼び出し、merge、cleanup、report 生成、runtime への委譲を扱う下位対象を選ぶために読む。
 
 ## Read this when
-- CLI サブコマンドの実装入口を探し、どの下位対象へ進むべきかを判断したいとき。
-- session、apply、review、indexing、doctor、TUI、oracle 評価のいずれかに関する実行フロー、事前条件、委譲先、状態更新、branch/worktree 操作、report 出力の担当箇所を探したいとき。
-- 複数のサブコマンド間で、runtime への接続、workflow orchestration、失敗時処理、cleanup、利用者向け出力の責務境界を確認したいとき。
+- どのサブコマンド実装へ進むべきかを、利用者向け操作や workflow 単位で判断したいとき。
+- session や apply の lifecycle、review oracle の対象列挙・review loop・report・INDEX merge、indexing の起動制御、TUI 起動、doctor や eval oracle の委譲先を探したいとき。
+- サブコマンド間で、開始条件、失敗時処理、状態更新、branch/worktree 操作、report 保存、runtime 共通処理への接続の責務境界を確認したいとき。
 
 ## Do not read this when
-- CLI 全体のサブコマンド登録、共通 runtime、共通 git/worktree helper、状態ファイル形式、path model の定義そのものを調べたいとき。
-- oracle file や realization file の定義、INDEX.md エントリー作成規則、正本仕様文書そのものを確認したいとき。
-- 具体的に読むべきサブコマンド実装や共通 helper が既に決まっており、その対象へ直接進めるとき。
+- CLI runtime、git/worktree helper、state file schema、path model、Codex 実行 wrapper など、複数サブコマンドで使う共通処理そのものを調べたいとき。
+- oracle file や realization file の定義、INDEX.md エントリー作成規則、各サブコマンドの正本仕様を確認したいとき。
+- 具体的に読むべきサブコマンドや下位実装が既に決まっており、その対象へ直接進めるとき。
 
 ## hash
-- 4c210d36a5c9cb163a471286ee12499ce103325bf1130c39dd74f1e81ad9a346
+- bc3baf6d2c4da940b9893ce830f0a56f89b0a3d29fd646e986ddce08844e9cce
