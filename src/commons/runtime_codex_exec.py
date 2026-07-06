@@ -121,11 +121,9 @@ def _quota_availability_probe_parameter(
         return build_quota_availability_probe_parameter(base_parameter)
     except (AttributeError, ModuleNotFoundError) as exc:
         raise CmocError(
-            "quota availability probe の oracle builder が見つかりません。",
-            [
-                "quota 回復確認用の oracle AgentCallParameter builder を追加してから再実行してください。"
-            ],
-            "missing: <work-root>/oracle/src/oracle/acp_builder/quota_probe.py",
+            "quota availability probe の builder が見つかりません。",
+            ["cmoc のインストール内容を確認してから再実行してください。"],
+            str(exc),
         ) from exc
 
 

@@ -1,21 +1,27 @@
-"""quota availability probe builder の旧 import 互換 adapter。
+"""quota availability probe 用の AgentCallParameter を構築する。"""
 
-Oracle: <work-root>/oracle/src/oracle/acp_builder/quota_probe.py
-"""
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 
-from importlib import import_module
 
-from basic.acp import AgentCallParameter
+_PROMPT = "quota 回復確認です。実行可能なら OK とだけ返してください。"
 
 
 def build_quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Individual `codex exec` call parameters are canonical only under oracle.
-    module = import_module("oracle.acp_builder.quota_probe")
-    build_parameter = module.build_quota_availability_probe_parameter
-    return build_parameter(base_parameter)
+    # quota wait must keep polling with a minimal Codex exec call. This builder
+    # stays deliberately small because no separate oracle src fragment exists
+    # for the probe-specific parameter.
+    return AgentCallParameter(
+        ModelClass.MINIMUM,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        _PROMPT,
+        None,
+        run_indexing_preflight=False,
+        cwd=base_parameter.cwd,
+    )
 
 
 __all__ = ["build_quota_availability_probe_parameter"]
