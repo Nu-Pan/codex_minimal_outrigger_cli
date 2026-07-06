@@ -69,10 +69,10 @@ def apply_process_id_file_lock(path: Path) -> Iterator[None]:
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
     """cmoc の file access policy を Codex CLI が理解する sandbox 名へ落とす。"""
     match mode:
+        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
+            return "read-only"
         case (
-            FileAccessMode.READONLY
-            | FileAccessMode.PURE_ORACLE_READ
-            | FileAccessMode.REALIZATION_WRITE
+            FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
             | FileAccessMode.NO_RULE
@@ -154,15 +154,14 @@ def _writable_roots(
     match mode:
         case FileAccessMode.READONLY:
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # READONLY は cmoc 上の論理的な読み取り専用であり、Codex CLI
-            # sandbox は pytest cache などの一時生成物を許せるよう workspace
-            # に寄せる。
-            paths = _top_level_writable_roots(mode, root)
+            # READONLY は oracle/realization file を書き込み禁止にするため、
+            # Codex profile 側にも write root を渡さない。
+            paths = []
         case FileAccessMode.PURE_ORACLE_READ:
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # READONLY より狭い読み取り系モードなので、oracle tree も
-            # sandbox writable root には渡さない。
-            paths = _top_level_writable_roots(mode, root)
+            # PURE_ORACLE_READ は realization file を読み書き禁止にするため、
+            # 読み取り root は permission profile 側だけで表現する。
+            paths = []
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -345,21 +344,27 @@ def _append_workspace_write_section(
     lines.extend(["[sandbox_workspace_write]", f"writable_roots = [{roots}]"])
 
 
-def _needs_permission_profile(root: Path, extra_read_paths: list[Path] | None) -> bool:
-    """旧 sandbox で表現できない work root 外の読み取り許可だけ profile 化する。"""
-    return any(not path.resolve().is_relative_to(root) for path in extra_read_paths or [])
+def _needs_permission_profile(
+    mode: FileAccessMode, root: Path, extra_read_paths: list[Path] | None
+) -> bool:
+    """sandbox_mode だけで表現できない読み取り境界は profile 化する。"""
+    return mode in {
+        FileAccessMode.READONLY,
+        FileAccessMode.PURE_ORACLE_READ,
+    } or any(not path.resolve().is_relative_to(root) for path in extra_read_paths or [])
 
 
 def _read_roots_for_permission_profile(
+    mode: FileAccessMode,
     root: Path,
     extra_read_paths: list[Path] | None,
     extra_read_root: Path | None,
 ) -> list[Path]:
     """Codex permission profile に渡す読み取り root を作る。"""
-    roots = [root]
+    roots = [root / "oracle"] if mode == FileAccessMode.PURE_ORACLE_READ else [root]
     for path in extra_read_paths or []:
         resolved = path.resolve()
-        if resolved.is_relative_to(root):
+        if any(resolved.is_relative_to(read_root) for read_root in roots):
             continue
         if extra_read_root is not None and _is_repo_local_read_path(
             extra_read_root, resolved
@@ -390,8 +395,9 @@ def _append_permission_profile_section(
     """work root 外の read-only root は Codex beta permission profile で渡す。"""
     # <work-root>/oracle/doc/app_spec/sub_command/tui.md
     # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    # sandbox_workspace_write has writable_roots only; permission profiles can
-    # represent repo-local TUI logs as read without granting write access.
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # sandbox_mode cannot express "read this root but never make the primary
+    # workspace writable"; permission profiles can.
     entries = {str(path): "read" for path in read_roots}
     entries.update({str(path): "write" for path in writable_roots})
     lines.extend(
@@ -449,7 +455,9 @@ def build_codex_profile(
             extra_read_paths,
             extra_read_root=read_root,
         )
-        use_permission_profile = _needs_permission_profile(root, extra_read_paths)
+        use_permission_profile = _needs_permission_profile(
+            parameter.file_access_mode, root, extra_read_paths
+        )
     if not use_permission_profile:
         sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
         lines.append(f'sandbox_mode = "{sandbox_mode}"')
@@ -463,7 +471,9 @@ def build_codex_profile(
         if use_permission_profile:
             _append_permission_profile_section(
                 lines,
-                _read_roots_for_permission_profile(root, extra_read_paths, read_root),
+                _read_roots_for_permission_profile(
+                    parameter.file_access_mode, root, extra_read_paths, read_root
+                ),
                 writable_roots,
             )
         else:

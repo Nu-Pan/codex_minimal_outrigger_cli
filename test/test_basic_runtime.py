@@ -708,8 +708,8 @@ def test_file_access_mode_values_are_json_ready() -> None:
 
 def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     """repo write mode まで Codex sandbox mode へ欠落なく変換する。"""
-    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "workspace-write"
-    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
+    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
@@ -803,17 +803,28 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         for mode in FileAccessMode
     }
 
-    assert 'sandbox_mode = "workspace-write"' in profiles[FileAccessMode.READONLY]
-    assert 'sandbox_mode = "workspace-write"' in profiles[FileAccessMode.PURE_ORACLE_READ]
     for mode in (
-        FileAccessMode.READONLY,
-        FileAccessMode.PURE_ORACLE_READ,
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
         FileAccessMode.REPO_WRITE,
     ):
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
         assert "[sandbox_workspace_write]" in profiles[mode]
+    for mode in (FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ):
+        parsed = tomllib.loads(profiles[mode])
+        assert "sandbox_mode" not in parsed
+        assert "sandbox_workspace_write" not in parsed
+        assert parsed["default_permissions"] == "cmoc"
+        assert all(
+            access == "read"
+            for access in parsed["permissions"]["cmoc"]["filesystem"].values()
+        )
+    assert _profile_permission_filesystem(profiles[FileAccessMode.READONLY]) == {
+        str(root.resolve()): "read"
+    }
+    assert _profile_permission_filesystem(
+        profiles[FileAccessMode.PURE_ORACLE_READ]
+    ) == {str((root / "oracle").resolve()): "read"}
     realization_roots = _standard_realization_profile_roots(root)
     assert _profile_writable_roots(
         profiles[FileAccessMode.REALIZATION_WRITE]

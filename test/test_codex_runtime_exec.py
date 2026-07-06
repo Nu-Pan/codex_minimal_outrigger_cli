@@ -336,9 +336,13 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     work_root = str(root.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == work_root
     assert record["cwd"] == work_root
-    assert 'sandbox_mode = "workspace-write"' in record["profile"]
     profile = tomllib.loads(record["profile"])
-    assert profile["sandbox_workspace_write"]["writable_roots"] == []
+    assert "sandbox_mode" not in profile
+    assert "sandbox_workspace_write" not in profile
+    assert profile["default_permissions"] == "cmoc"
+    assert profile["permissions"]["cmoc"]["filesystem"] == {
+        str((root / "oracle").resolve()): "read"
+    }
 
 
 def test_run_codex_exec_stores_schema_state_under_repo_root(
@@ -469,7 +473,7 @@ def test_run_codex_exec_profile_does_not_open_agents_tree(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     run_codex_exec(
-        codex_parameter(),
+        codex_parameter(FileAccessMode.REPO_WRITE),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
