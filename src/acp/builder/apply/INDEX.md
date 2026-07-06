@@ -1,18 +1,18 @@
 # `__init__.py`
 
 ## Summary
-- oracle.acp_builder.apply と互換の package として、既存の acp.builder.apply.* import を維持するための入口。実体ではなく互換層であり、realization 側と公開面から同参照が消えた後に削除できる。
+- oracle 側の apply package への互換 import 経路を維持するための package 初期化ファイル。既存の acp.builder.apply.* 参照を正本側配置へつなぐ互換層として位置づけられ、参照がなくなれば削除可能な対象である。
 
 ## Read this when
-- 既存コードや利用者向け公開面で acp.builder.apply.* import が残っている理由を確認したいとき。
-- oracle.acp_builder.apply 側への移行に伴い、この互換 package を削除できる条件を判断したいとき。
+- acp.builder.apply.* import の互換維持や削除可否を確認する。
+- apply package の正本側配置と realization 側の import 経路の関係を確認する。
 
 ## Do not read this when
-- apply 機能の実装詳細や挙動を確認したいときは、実装本体へ進む。
-- 新しい import 経路や公開 API を追加する場所を探しているとき。
+- apply の具体的な処理内容や仕様を確認したい場合は、正本側の apply package を読む。
+- 新規機能の実装場所を探しているだけで、既存 import 互換に関係しない。
 
 ## hash
-- 3b7b28a47bd63cc192d8e90c21680ef7b23035187cf7a0ead5fabeef8e509a4c
+- cd3525acfac667a62268ceec2006db542a5aa39415a6a3f282225c5dacb5c290
 
 # `fork`
 

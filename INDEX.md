@@ -134,22 +134,23 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を配置する階層。CLI 入口、サブコマンド実行、共通 runtime helper、正本側定義への import shim、旧公開 import 経路の互換層を扱う。
-- 利用者向けコマンドを実体処理へ接続し、サブコマンド横断の Codex 実行基盤、設定参照、git/path/state/logging、INDEX 更新支援などの実行時基盤へ進む入口になる。
-- oracle 側の正本実装を複製せず参照・再公開する互換境界が含まれ、旧 import 経路や shim の削除可否を判断する起点になる。
+- cmoc の realization implementation を置く実装ルート。CLI 入口、サブコマンド、共通 runtime helper、oracle src への package shim、旧 import path を維持する互換層への入口をまとめる。
+- 公開 CLI 面から各 workflow 実装へ進む場合、または realization 側に残る acp/basic/config/runtime/oracle import 経路と正本側実装への中継を確認する場合の起点となる。
 
 ## Read this when
-- cmoc の realization implementation の配置先を探し、CLI 入口、サブコマンド、共通 runtime、互換 shim のどこへ進むべきか判断したいとき。
-- コマンド公開面、引数 dispatch、サブコマンド実行フロー、共通 runtime helper、Codex 実行基盤、状態操作、INDEX 更新処理を確認または変更したいとき。
-- 正本側定義を複製しないための再公開層、旧 import 経路互換、package shim、adapter や fallback の残存理由と削除条件を調べたいとき。
+- cmoc の CLI 入口、サブコマンド実装、共通 runtime helper、または realization implementation の配置先を探したいとき。
+- apply、session、review、indexing、tui、init、doctor、eval oracle など利用者向けコマンドの実行入口や委譲先を確認したいとき。
+- Codex 実行基盤、config 読み込み、git/path/state/logging、INDEX 更新 preflight など、複数サブコマンドで共有される runtime 処理へ進みたいとき。
+- oracle src 側の正本実装を複製せず参照・再公開している acp/basic/config/oracle 互換入口や、旧 import path の削除条件を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、oracle 側 builder、設定定義、path model、構造化文書 API などの仕様や canonical 実装を確認したいときは、oracle 側の該当対象を読む。
-- テスト固有の期待値や外部挙動を確認したいときは、対応する test 側へ進む。
-- 特定の責務を持つ実装対象がすでに分かっているときは、この階層全体ではなく、該当する下位対象を直接読む。
+- oracle file の正本仕様断片、人間意図、prompt、parameter 生成内容、path model や config 型の意味を確認したいときは、対応する oracle 側を読む。
+- テストの期待値、外部挙動の検証、fixture、回帰確認を調べたいときは、test 側を読む。
+- 個別の詳細責務がすでに分かっている場合は、この階層全体ではなく、該当する sub_commands、commons、互換入口、または実体 module へ直接進む。
+- README、AGENTS、INDEX.md などのルーティング・開発指示・説明文書を確認したいだけのときは、この実装ルートではなく該当文書を読む。
 
 ## hash
-- 6528bc6b2e2cf50086a5213866719bea7598ed97e7b84af7361c491f52b02118
+- 5663a6f94c0f42bd796aba459163bcf9f1d935c885750dba377268394599837e
 
 # `test`
 

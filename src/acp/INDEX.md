@@ -19,18 +19,20 @@
 # `builder`
 
 ## Summary
-- acp builder 配下の旧 import path 互換入口をまとめるディレクトリ。oracle 側 builder を正本に保ちながら、既存の acp.builder.* 参照を canonical 実装や realization 側 adapter へ中継する。
-- apply、review、session、tui、indexing、quota probe などの builder 互換層と、oracle 実装の再公開・alias・fallback・削除条件を確認する入口になる。
+- acp builder 配下の realization 側互換入口を束ねるディレクトリ。oracle 側 canonical builder を正本に保ちながら、旧 acp.builder 系 import path、module alias、薄い wrapper、正本側欠落時の限定 fallback を扱う。
+- apply、review、session、tui、indexing、quota probe などの agent call parameter builder について、既存参照を oracle 側実装へ中継し、realization 側公開型への適応や互換削除条件を確認する入口になる。
 
 ## Read this when
-- acp.builder.* の旧 import 経路互換、canonical oracle builder への接続、module alias、再公開 shim の残存理由を確認したいとき。
-- apply fork、review oracle、session、TUI、indexing、quota probe の agent call parameter builder について、realization 側の互換境界や oracle 側への委譲関係を調べるとき。
-- 正本 builder 追加後または旧参照移行後に、互換入口・fallback・wrapper を削除できる条件を確認したいとき。
+- acp.builder.* の旧 import 互換性、再公開 module、module alias、package path 接続を確認したいとき。
+- agent call parameter builder が oracle 側 canonical 実装をどう呼び出し、必要に応じて realization 側公開型や既存公開名へどう適応するかを調べるとき。
+- apply、review、session、tui、indexing、quota probe の builder 互換層を残す理由や削除条件を確認したいとき。
+- 正本側 builder 欠落時の quota probe fallback など、この階層に限った一時的な互換実装の所在を探すとき。
 
 ## Do not read this when
-- agent prompt、parameter 生成内容、builder 本体の正本仕様や canonical 実装を確認したい場合は、oracle 側の該当 builder を直接読む。
-- apply、review、session、TUI など各機能の実行フロー、CLI 引数処理、状態操作、画面構成を調べたい場合は、それぞれの機能実装へ進む。
-- acp.builder 以外の acp package 公開面、汎用 AgentCallParameter 型、git helper、path model、quota 判定ロジックそのものを調べたい場合は、対象の共通実装や上位 package を読む。
+- 各 builder の正本仕様、prompt、parameter 生成内容、人間意図を確認したい場合は、対応する oracle 側 canonical 実装や oracle file を読む。
+- cmoc apply fork、review、session、TUI など各機能全体の実行フロー、CLI 引数処理、runtime path、git 操作を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
+- AgentCallParameter の公開型、汎用 git helper、path model、quota 管理、INDEX.md 生成仕様など builder 互換入口以外の共通概念を調べたいだけの場合。
+- 新規機能の通常実装場所を探しており、既存 acp.builder import surface の維持や移行に関係しない場合。
 
 ## hash
-- d28a2d91e0a968f86c5ac7803651bc80785347f956d9f9e51a0672e60d285af8
+- 21f1e423075dab393715a7f463f99193ee7bfc44251267059c8fccfa8f4ab13d
