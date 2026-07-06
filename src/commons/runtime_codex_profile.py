@@ -172,13 +172,13 @@ def _writable_roots(
         case FileAccessMode.READONLY:
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # READONLY は oracle/realization file を書き込み禁止にするため、
-            # Codex profile 側にも write root を渡さない。
-            paths = []
+            # positive-only profile では既存の隙間を列挙して表現する。
+            paths = _readonly_gap_writable_roots(root)
         case FileAccessMode.PURE_ORACLE_READ:
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # PURE_ORACLE_READ は realization file を読み書き禁止にするため、
-            # 読み取り root は permission profile 側だけで表現する。
-            paths = []
+            # realization file 読み書き禁止と oracle file 書き込み禁止は保ち、
+            # READONLY と同じくルール上の隙間だけ profile で開く。
+            paths = _readonly_gap_writable_roots(root)
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -240,6 +240,12 @@ def _top_level_writable_roots(mode: FileAccessMode, root: Path) -> list[Path]:
     return paths
 
 
+def _readonly_gap_writable_roots(root: Path) -> list[Path]:
+    if not root.exists():
+        return []
+    return [path.resolve() for path in root.iterdir()]
+
+
 def _existing_or_target_writable_root(path: Path) -> Path:
     # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     # 未存在の deep path は、最初に作る必要がある directory までを sandbox
@@ -257,11 +263,32 @@ def _append_writable_path(
     path: Path,
     allow_oracle_conflict_writes: bool = False,
 ) -> None:
+    if (
+        mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}
+        and path.is_dir()
+        and not _is_writable_path_allowed(mode, root, path)
+    ):
+        for child in sorted(path.iterdir()):
+            _append_writable_path(
+                result,
+                seen,
+                mode,
+                root,
+                child.resolve(),
+                allow_oracle_conflict_writes,
+            )
+        return
     if not _is_writable_path_allowed(mode, root, path, allow_oracle_conflict_writes):
         return
     if path.is_dir():
-        if _has_denied_write_file(path) or is_untracked_git_ignored(
-            root, path / ".__cmoc_ignore_probe__"
+        if (
+            _should_expand_writable_directory(
+                mode, root, path, allow_oracle_conflict_writes
+            )
+            or (
+                mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}
+                and is_untracked_git_ignored(root, path / ".__cmoc_ignore_probe__")
+            )
         ):
             # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -279,6 +306,26 @@ def _append_writable_path(
                 )
             return
     _append_writable_root(result, seen, path)
+
+
+def _should_expand_writable_directory(
+    mode: FileAccessMode,
+    root: Path,
+    path: Path,
+    allow_oracle_conflict_writes: bool,
+) -> bool:
+    if _has_denied_write_file(path):
+        return True
+    if mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
+        return False
+    if not is_untracked_git_ignored(root, path):
+        return True
+    return any(
+        not _is_writable_path_allowed(
+            mode, root, child.resolve(), allow_oracle_conflict_writes
+        )
+        for child in path.iterdir()
+    )
 
 
 def _has_denied_write_file(path: Path) -> bool:
@@ -318,7 +365,10 @@ def _is_writable_path_allowed(
     relative = path.relative_to(root)
     if path.name in _DENIED_WRITE_FILE_NAMES:
         return False
-    if is_untracked_git_ignored(root, path):
+    if (
+        mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}
+        and is_untracked_git_ignored(root, path)
+    ):
         return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
@@ -336,8 +386,32 @@ def _is_writable_path_allowed(
     if mode == FileAccessMode.PURE_ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
     if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
-        return False
+        return not (
+            is_oracle_file_path(root, path) or _is_realization_file_path(root, path)
+        )
     return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
+
+
+def _is_realization_file_path(root: Path, path: Path) -> bool:
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # READONLY 系では git ignored 一時 file を realization file から外し、
+    # oracle と同じ正本定義に合わせて隙間だけを writable に残す。
+    try:
+        relative = path.absolute().relative_to(root.absolute())
+    except ValueError:
+        return False
+    if not relative.parts or relative.parts[0] in {
+        "oracle",
+        "memo",
+        ".git",
+        ".agents",
+        ".codex",
+        ".cmoc",
+    }:
+        return False
+    return path.name not in _DENIED_WRITE_FILE_NAMES and not is_untracked_git_ignored(
+        root, path
+    )
 
 
 def _append_workspace_write_section(

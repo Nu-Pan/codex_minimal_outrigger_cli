@@ -876,6 +876,12 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_READ]) == set()
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == set()
     assert _profile_permission_roots(
+        profiles[FileAccessMode.READONLY], "write"
+    ) == set()
+    assert _profile_permission_roots(
+        profiles[FileAccessMode.PURE_ORACLE_READ], "write"
+    ) == set()
+    assert _profile_permission_roots(
         profiles[FileAccessMode.PURE_ORACLE_WRITE], "write"
     ) == {str((root / "oracle" / "spec.md").resolve())}
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
@@ -1017,6 +1023,79 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
             root,
             [root / ".cmoc" / "local" / "log" / "tui" / "20260101_orig.md"],
         )
+
+
+@pytest.mark.parametrize(
+    "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
+)
+def test_codex_profile_readonly_modes_allow_only_ignored_gap_writes(
+    tmp_path: Path, mode: FileAccessMode
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("__pycache__/\n/build/\n")
+    (root / "src").mkdir()
+    (root / "src" / "main.py").write_text("print('ok')\n")
+    (root / "src" / "__pycache__").mkdir()
+    (root / "src" / "__pycache__" / "main.pyc").write_text("cache\n")
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    (root / "oracle" / "__pycache__").mkdir()
+    (root / "oracle" / "__pycache__" / "spec.pyc").write_text("cache\n")
+    (root / "build").mkdir()
+    (root / "build" / "artifact.txt").write_text("tracked\n")
+    (root / "build" / "scratch.txt").write_text("scratch\n")
+    run_git(root, "add", ".gitignore", "src/main.py", "oracle/spec.md")
+    run_git(root, "add", "-f", "build/artifact.txt")
+    run_git(root, "commit", "-m", "add tracked files")
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            mode,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+    )
+
+    _assert_writable(profile, root / "src" / "__pycache__" / "new.pyc")
+    _assert_writable(profile, root / "oracle" / "__pycache__" / "new.pyc")
+    _assert_writable(profile, root / "build" / "scratch.txt")
+    _assert_not_writable(profile, root / "src" / "main.py")
+    _assert_not_writable(profile, root / "oracle" / "spec.md")
+    _assert_not_writable(profile, root / "build" / "artifact.txt")
+    _assert_not_writable(profile, root / "memo" / "private.md")
+    _assert_not_writable(profile, root / ".cmoc" / "local" / "state.json")
+
+
+@pytest.mark.parametrize(
+    "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
+)
+def test_codex_profile_readonly_modes_allow_extra_ignored_gap_path(
+    tmp_path: Path, mode: FileAccessMode
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("/scratch/\n")
+    (root / "scratch").mkdir()
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "add gitignore")
+    target = root / "scratch" / "agent.tmp"
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            mode,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[target],
+    )
+
+    _assert_writable(profile, target)
 
 
 def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
