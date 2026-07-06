@@ -169,22 +169,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動するための profile 生成、sandbox/permission profile の read/write 境界、CODEX_HOME 検証、subprocess 実行、apply child process tracking、schema 配置、Codex JSONL error 判定をまとめる実装。
-- FileAccessMode と AgentCallParameter から Codex CLI に渡す実行環境を構成し、Codex subprocess 境界で発生する実行前検査・失敗解釈・retry 判定を扱う。
+- Codex CLI subprocess 境界で必要になる実行 profile、permission profile、sandbox writable/read root、CODEX_HOME、schema 配置、child process tracking、JSONL error 判定をまとめる実装。
+- FileAccessMode と AgentCallParameter から Codex CLI 起動設定を組み立て、起動前検証、subprocess 実行、apply abandon 用 pid 記録、Structured Output schema の保存、Codex stdout/stderr のエラー解釈まで扱う。
+- 大きな実行境界を一箇所に保つ理由も本文内に記録されており、Codex CLI に渡す環境と返却結果の解釈を同時に確認する入口になる。
 
 ## Read this when
-- Codex CLI 起動時の sandbox_mode、writable_roots、permission profile、追加 read/write path の許可判定を確認・変更するとき。
-- AgentCallParameter.cwd、CODEX_HOME、Codex profile file、cmoc managed ollama provider など、Codex subprocess に渡す実行環境の組み立てを扱うとき。
-- apply abandon と連動する Codex child process の pid 記録、lock、削除、pid 再利用判定を確認・変更するとき。
-- Structured Output schema の配置、Codex output JSON の読み取り、Codex JSONL stdout/stderr から error detail・resume token・capacity/quota error を取り出す処理を扱うとき。
+- Codex CLI に渡す sandbox_mode、permission profile、writable_roots、read root、model provider 設定の生成挙動を確認または変更したいとき。
+- FileAccessMode ごとの読み取り・書き込み許可境界、oracle や realization の編集可否、追加 read/write path の検証を扱うとき。
+- Codex subprocess の cwd、CODEX_HOME、profile ファイル生成、認証情報の事前検査、Codex CLI 不在時のエラー化を確認したいとき。
+- apply 実行中の Codex child process tracking、pid file lock、process group 起動、abandon 可能性に関わる処理を変更するとき。
+- Structured Output schema の配置、Codex output JSON の読み取り、JSONL stdout からのエラー文・resume token・capacity/quota 判定を扱うとき。
 
 ## Do not read this when
-- prompt に載せる file access rule の文面や正本仕様断片そのものを確認したいだけなら、oracle 側の該当文書を読む。
-- Codex CLI を呼び出さない通常の path 計算、log/schema store のディレクトリ定義、git ignore 判定、oracle file 判定を変更する場合は、それぞれの runtime helper を読む。
-- cmoc config の model や reasoning effort の定義、AgentCallParameter や FileAccessMode の型定義を確認するだけなら、config や basic の定義元を読む。
+- Codex に渡す prompt 本文や file access rule の文章そのものを確認したいだけなら、prompt builder 側の正本仕様断片または該当部品を読む。
+- cmoc の設定値そのものや model/reasoning effort の定義を確認したいだけなら、設定定義を扱う対象を読む。
+- ログや schema store のディレクトリ構成だけを確認したいなら、runtime path を扱う対象を読む。
+- Git 上で oracle file や ignored path を判定する低レベル処理だけを確認したいなら、runtime git を扱う対象を読む。
+- 一般的な subprocess 呼び出しではなく、特定サブコマンド全体の制御フローや利用者向け仕様を追う場合は、そのサブコマンド実装または app spec を先に読む。
 
 ## hash
-- 18b93e7ee1a9f6f8f9875f28950cf71d93e8aa865a5219e9f87ae88446ab2a59
+- bc02000448f09ee0b3dd7e3376a2e4fe49848ef35a00abf8f827b9c564027a69
 
 # `runtime_codex_tui.py`
 

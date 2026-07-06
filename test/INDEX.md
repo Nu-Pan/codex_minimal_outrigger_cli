@@ -123,25 +123,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断して検証する realization test。root placeholder と worktree 判定、config 読み書き、CmocError の表示、CLI preflight と parse error、subcommand log、session state、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の実行前提をまとめて扱う。
-- 個別機能の詳細仕様ではなく、複数の runtime 部品が同じ root 状態・fixture・権限境界のもとで崩れないことを確認する入口として位置づけられている。
+- cmoc の基礎 runtime 契約を横断して検証する realization test。root placeholder 解決、linked worktree と work root 判定、config 読み書き、CmocError 表示、CLI preflight と error report、subcommand log、session state、FileAccessMode、Codex profile sandbox、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
 
 ## Read this when
-- runtime の基本契約、root 解決、linked worktree、run/work/repo root の扱いを変更・調査するとき。
-- config の既定値、dict 変換、invalid input に対する CmocError、doctor への誘導文を変更・調査するとき。
-- CLI wrapper、preflight、doctor preprocess、Click/Typer parse error、stdout/stderr の error report、subcommand log の成功・失敗記録を変更・調査するとき。
-- session/apply branch 名の解釈、session state の読み書き・検証、壊れた branch 名や state payload の拒否を変更・調査するとき。
-- FileAccessMode、Codex profile、sandbox writable roots、permission filesystem、extra writable/read roots、oracle conflict write 許可の境界を変更・調査するとき。
-- `.cmoc/local` の ignore 設定、起動 wrapper の missing venv report、binary 判定、duration 表示など、runtime 共通 helper の外部挙動を変更・調査するとき。
+- runtime の共通契約に関わる実装を変更し、その影響が root 解決、config、error 表示、log、state、sandbox profile、file access mode のいずれかに及ぶ可能性があるとき。
+- CLI wrapper、doctor preprocess、Click/Typer parse error、stdout/stderr の error report、subcommand log の生成や終了記録を確認するとき。
+- Codex profile の権限モデル、writable roots、oracle/realization/repo write mode、linked worktree からの repo local read、追加書き込み許可 path の制約を確認するとき。
+- cmoc の基礎 runtime 回帰テストが大きい理由や、共通 fixture と root 状態を一箇所で扱う境界を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の正常系・業務フローだけを確認したい場合は、そのサブコマンドのテストを読む方が直接的。
-- oracle file の正本仕様本文や設計意図そのものを確認したい場合は、対応する oracle doc/src/test を読む方が直接的。
-- INDEX.md エントリー生成やルーティング文書の規則だけを確認したい場合は、この runtime 回帰テストではなくルーティング規則の対象を読む方が直接的。
-- 実装の内部構造だけを調べたい場合は、検証対象の runtime module を読む方が直接的。
+- 個別サブコマンド固有の業務ロジック、prompt 内容、review/apply/session の詳細挙動だけを確認したいとき。
+- oracle file の正本仕様そのものを確認したいとき。対応する oracle 配下の文書や src を直接読む方が適切。
+- INDEX.md 生成規則やルーティング文書の形式だけを確認したいとき。
+- 単一 helper の内部実装だけを局所的に変更し、runtime 境界や CLI 実行前提に影響しないことが明らかなとき。
 
 ## hash
-- e079a321fbf5d258bf5523aed961e6583096451d98dfc25619d6bde9110363fd
+- 055bbb90d8b6fd0f99f95b1c8e70c814fea2697ee254754e26ba7239b728de90
 
 # `test_cli_tui.py`
 
