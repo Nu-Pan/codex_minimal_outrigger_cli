@@ -339,23 +339,23 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor/init CLI と managed Ollama 起動準備まわりの realization test。git 修復、設定生成・追跡、`.cmoc/local` の ignore/untrack、既存 staged/unstaged 変更の保全、linked worktree 対象化、Ollama service 検証、local SLM profile 準備時の doctor 実行を外部挙動として検証する。
+- doctor/init CLI と managed Ollama 周辺の外部挙動を検証する realization test。doctor preprocess による git 状態修復、`.cmoc/local` の ignore/untrack、`.agents` 管理、config 生成・追跡、既存 staged/unstaged 変更の保護、linked worktree 対応、Ollama service 検証、Codex profile 準備時の doctor 起動を扱う。
 
 ## Read this when
-- doctor または init コマンドの挙動、別名コマンド、設定ファイル生成・同期・git 追跡を変更する。
-- doctor preprocess が `.gitignore`、`.agents`、`.cmoc/local`、commit 作成、既存 index/worktree 状態をどう扱うかを変更する。
-- managed Ollama の install/service/model pull/listener 検証、または cmoc provider model の重複排除 pull を変更する。
-- local SLM 用 Codex profile 準備が、Ollama port 不在時に doctor を実行する制御を変更する。
-- linked worktree 上での doctor 対象 root 判定や、preexisting staged/unstaged change の保全に関する回帰を確認したい。
+- doctor または dector alias の CLI 挙動、preprocess、修復 commit、gitignore、`.agents`、`.cmoc/config.json`、`.cmoc/local` の扱いを変更する時。
+- init が default config を生成・同期し、人間が設定済みの値を上書きしない挙動を確認する時。
+- managed Ollama の install/service/model pull/listener verification、または cmoc provider model の重複排除 pull を変更する時。
+- local SLM 用 Codex profile 作成時に、Ollama port が無い場合の doctor 実行や profile 内容を確認する時。
+- preexisting staged changes、unstaged hunks、staged rename、過去に tracked だった `.cmoc/local` ファイルを doctor が壊さないことを検証したい時。
 
 ## Do not read this when
-- doctor/init の実装経路に関係しない CLI コマンドや agent call 制御だけを調べる。
-- Ollama の一般的な導入方法や systemd unit の詳細仕様を調べるだけで、cmoc の doctor preprocessing との接続を扱わない。
-- 設定 schema の正本定義や model class の定義そのものを確認したい場合は、対応する oracle/config 側を先に読む。
-- テスト支援関数や fake repository fixture の実装を変更したいだけの場合は、共通 test support 側を直接読む。
+- doctor/init の実装詳細ではなく、設定 schema や config object の定義だけを確認したい時。
+- Ollama service の systemd unit 内容や listener 判定ではなく、汎用的な runtime error 型や CLI runner support を調べたい時。
+- agent call parameter、model class、reasoning effort、file access mode の基本定義だけを確認したい時。
+- doctor/init 以外のサブコマンド、apply fork、path model、INDEX.md 生成規則のテストを探している時。
 
 ## hash
-- 0bd7b5326d7d0f08920bdd4def3c9eb2172dffb6352733c8c55768d023164e29
+- 1e705641861a5f26b27f20511a1eac3d6d6f71d9ea8152f0d92602eecfbb9671
 
 # `test_indexing_cli.py`
 

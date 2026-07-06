@@ -366,20 +366,23 @@
 # `runtime_preprocess_command.py`
 
 ## Summary
-- CLI サブコマンド実行前の共通前処理をまとめる実装。doctor 前処理、設定同期、設定ファイルの git commit、実行見出しの表示までを 1 つのランナーとして扱う。
+- doctor preprocess、config 同期、config 差分の git commit、見出し出力をまとめて実行する CLI 前処理サブコマンド用の実行入口。
+- runtime path 解決、doctor 前処理、config 同期、git add/diff/commit を既存 runtime helper 経由で連結し、通常の CLI サブコマンド実行ラッパーに渡す責務を持つ。
 
 ## Read this when
-- サブコマンド開始時に doctor 前処理や設定同期を走らせる流れを確認・変更したいとき。
-- `.cmoc/config.json` を前処理中に stage し、差分がある場合だけ commit する挙動を確認・変更したいとき。
-- `run_cli_subcommand` に渡す前処理コマンドの引数、見出し、doctor 前処理抑制の指定を確認したいとき。
+- preprocess 系コマンドが実行時にどの前処理を行うか確認・変更したいとき。
+- doctor preprocess と config 同期が CLI 実行前後のどこで呼ばれるかを追いたいとき。
+- .cmoc/config.json の同期結果を git commit する条件や commit メッセージを確認・変更したいとき。
+- preprocess コマンドの標準出力に含まれる見出しや repo root 表示を確認・変更したいとき。
 
 ## Do not read this when
-- 個別の doctor 前処理内容そのものを確認したいときは、doctor 前処理の実装や対応する oracle doc を読む。
-- 設定値の定義や同期内容の詳細を確認したいときは、設定同期の実装や対応する oracle src を読む。
-- git コマンド実行 wrapper の挙動を確認したいときは、git 実行の共通実装を読む。
+- 個別の doctor preprocess の検査内容を確認したいだけなら、doctor preprocess 側の実装や対応する oracle doc を読む。
+- config の正本定義や同期内容そのものを確認したいだけなら、config 定義・同期処理側を読む。
+- git コマンド実行 helper の共通挙動を確認したいだけなら、runtime git helper 側を読む。
+- repo root や work root の解決規則を確認したいだけなら、runtime path helper 側を読む。
 
 ## hash
-- 61feec31b018bcb1c8d23f423cb443339773508659f928540632e528fafc2057
+- 2c59ed090cd67f23df77eceafbf163ec3eb5731d24b159df5ff7cf5717f13411
 
 # `runtime_results.py`
 
