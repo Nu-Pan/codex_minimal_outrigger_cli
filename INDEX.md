@@ -157,20 +157,20 @@
 # `test`
 
 ## Summary
-- CLI、runtime、Codex 実行、apply/session/review/indexing などの外部挙動を検証する realization test 群をまとめるテストディレクトリ。
-- 共通 helper により一時 Git リポジトリ、Codex home、fake 外部コマンド、managed Ollama、Typer runner、apply worktree 解決などを共有し、サブコマンド境界と runtime 基盤の回帰確認への入口になる。
+- CLI、runtime、Codex 実行、apply/session/review/indexing/doctor、prompt・renderer など、cmoc の外部挙動と基盤契約を検証する realization test 群を置くディレクトリ。
+- 共有テスト支援を使い、一時 Git リポジトリ、Codex home、fake 外部コマンド、linked worktree、永続状態、report、structured output schema 参照などを統合的に確認する入口になる。
 
 ## Read this when
-- realization implementation の変更後に、対応する CLI・runtime・Codex wrapper・apply/session/review/indexing の期待外部挙動を確認したいとき。
-- テスト用 Git 状態、Codex home、fake Codex/Ollama/systemctl、runner 実行などの共通 fixture や helper を使う既存テストを探したいとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、doctor、TUI、Codex exec/TUI/subprocess/retry/quota retry の統合的な回帰テストを追加・整理するとき。
-- root placeholder、file access mode、config、session state、prompt parts、StructDoc rendering、packaged import、ACP builder parameter など、共通基盤の realization test を確認したいとき。
+- cmoc の realization test 全体から、変更対象に対応する CLI・runtime・builder・prompt・外部サービス境界の回帰テストを探したいとき。
+- apply、session、review oracle、indexing、doctor、TUI、Codex runtime、Ollama runtime などの外部挙動や状態遷移を変更し、該当テストの所在を絞り込みたいとき。
+- テストで使う一時リポジトリ、fake Codex、fake Ollama/systemctl、Typer runner、apply worktree 解決などの共通 fixture や helper を探したいとき。
+- packaged import、ACP builder、prompt parts、Markdown rendering など、CLI 実行以外の realization 側公開契約を検証するテストを探したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、oracle/realization/path keyword/INDEX entry standard などの定義を確認したいだけなら、oracle 側の該当文書を読む。
-- 実装本体の責務や内部 helper の制御フローだけを確認したい場合は、対応する realization implementation を直接読む。
-- 個別サブコマンドのテスト範囲が分かっており、特定の期待出力や境界条件だけを確認したい場合は、該当するテストファイルを直接読む。
-- Codex CLI や外部サービスの実環境での挙動そのものを調べたい場合は、このディレクトリの fake/stub を使うテストではなく対応する runtime 実装や実行手順を確認する。
+- 実装本文を変更するために関数・クラス・設定の責務を確認したい場合は、対応する realization implementation を直接読む。
+- oracle file の正本仕様断片、path keyword、oracle/realization 境界、INDEX エントリー規約を確認したい場合は、oracle 側の該当文書を読む。
+- 個別テストの期待値や fixture の詳細がすでに分かっている場合は、この階層ではなく該当するテスト本文または共通支援モジュールへ直接進む。
+- Codex CLI や LLM の出力品質そのものを評価したい場合は、このテスト群の対象外。
 
 ## hash
-- f789d7b6aac3579a70b8350c5109a260ff96ea958a577a6e6eb392c77b11fe23
+- d38267ad945483cde3f5ed5d6ef16af6e65029f25890941f69dc62f588084836
