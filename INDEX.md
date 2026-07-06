@@ -134,42 +134,40 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める階層で、CLI 入口、サブコマンド実装、共通 runtime helper、oracle 正本実装への import shim、旧 import 経路を維持する互換層への入口になる。
-- 主な下位要素は、利用者向け CLI 配線、サブコマンド orchestration、Codex 実行・設定・git・path・state・logging などの共通基盤、oracle package 解決、acp/basic/config/runtime 系の互換 shim に分かれる。
-- oracle 側の正本定義を複製せず参照・再公開するための realization 側境界と、既存公開 import 経路の維持・削除判断を確認する起点になる。
+- cmoc の realization implementation を置く階層で、CLI 入口、サブコマンド実装、runtime 共通処理、oracle 側正本実装への参照 shim、旧 import 経路の互換層へ進む起点になる。
+- Typer CLI 配線、apply/review/session/indexing/doctor/TUI などの実行入口、Codex 実行・設定・git・path・state・logging などの共通 runtime 基盤を扱う。
+- oracle 側の ACP builder、基本 API、設定、oracle package を複製せず参照・再公開する realization 側互換入口も含む。
 
 ## Read this when
-- cmoc の realization implementation 全体から、CLI 入口、サブコマンド、共通 runtime、互換 shim のどこへ進むべきか切り分けたいとき。
-- 利用者向け command 面、サブコマンド実行フロー、Codex 実行基盤、設定・git・path・state などの実装入口を探したいとき。
-- oracle src 側の正本定義を realization 側でどう参照・再公開し、旧来の import 経路を維持しているか確認したいとき。
-- acp/basic/config/runtime/oracle package などの互換入口を残す理由、公開名、委譲先、削除条件を確認したいとき。
+- cmoc の実装本体で、CLI command、subcommand、runtime helper、互換 import 経路のどこを読むべきか切り分けたいとき。
+- CLI 入口から各サブコマンド実装への委譲、または apply/review/session/indexing/doctor/TUI/oracle 評価の実行フローを確認・変更したいとき。
+- Codex 呼び出し、設定、git/worktree、path、logging、state、error 表示、INDEX 更新 preflight など、複数コマンドで共有される runtime 基盤を調べたいとき。
+- oracle 側の正本実装を realization 側の既存公開名や旧 import 経路からどう参照・再公開しているか確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様、prompt、人間意図、path model や INDEX 生成規則そのものを確認したいときは、対応する oracle 側の文書または実装を読む。
-- テストの期待挙動、fixture、検証観点を調べたいときは、test 側の対象へ進む。
-- 特定の CLI サブコマンド、共通 helper、互換 shim など読むべき下位対象がすでに分かっているときは、この階層全体ではなく該当対象へ直接進む。
-- README、AGENTS、INDEX、memo、git metadata、agent 設定など realization implementation 以外のリポジトリ管理情報を調べたいとき。
+- oracle file の正本仕様断片、prompt、schema、path model の定義そのものを確認したいときは、oracle 側の該当対象を読む。
+- テスト実装を確認・変更したいときは、realization test 側を読む。
+- memo、AGENTS.md、INDEX.md、git metadata、codex/agents 用の管理領域を調べたいとき。
+- 特定の下位 module やサブコマンド内の対象がすでに分かっているときは、この階層全体ではなく該当対象へ直接進む。
 
 ## hash
-- 1f45c9c2463dcc6145c1a99a6635bbea7b1eef72fe4cf2690e5beba0c63a9838
+- 22a515223ba46501288958f22d18d7ba59be9ce52591bd3ae3d3dc6ab2d281ba
 
 # `test`
 
 ## Summary
-- CLI、runtime、apply、session、doctor、indexing、review oracle、prompt rendering など、cmoc の realization test 群を配置するテスト領域。
-- 共有 pytest helper と各サブコマンド・runtime 境界の回帰テストがあり、実 git repository、fake Codex/Ollama/systemctl、state file、linked worktree、file access validation など外部状態を伴う挙動の入口になる。
+- cmoc の realization test 全体を収めるディレクトリ。CLI サブコマンド、Codex runtime、doctor、indexing、prompt builder、packaged import、StructDoc rendering など、実装が外部挙動や制御契約を満たすかを pytest で検証する入口になる。
+- 共通 pytest helper と、apply/session/review/indexing/runtime などの領域別テストが並び、変更対象の実装に対応する回帰観点を探すためのルーティング単位。
 
 ## Read this when
-- realization implementation の変更後に、対応する CLI 外部挙動、runtime wrapper、state 遷移、git 副作用、file access 境界の既存期待値を確認したいとき。
-- apply fork/join/abandon、session fork/join/abandon、doctor、indexing、review oracle、TUI、Codex exec/TUI/subprocess、quota retry、post validation などの回帰テストを探すとき。
-- テスト用の最小 git repository、Codex home/profile、fake 外部コマンド、doctor 実行、apply worktree 解決など、複数テストで共有される fixture や helper を確認・変更するとき。
-- prompt parts、ACP builder、StructDoc renderer、packaged import など、CLI 実行より下位の生成・import・描画境界を realization test で確認したいとき。
+- realization implementation を変更した後、対応する外部挙動・状態遷移・失敗条件・回帰テストの入口を探すとき。
+- CLI サブコマンド、Codex 実行 wrapper、doctor、indexing preflight、prompt 組み立て、packaged import、Markdown rendering のどのテストを読むべきか切り分けたいとき。
+- 新しい realization test を追加する前に、既存テストへケース追加できる領域や共有 fixture の有無を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのものを確認したい場合は、oracle 側の該当 doc/src/test を読む。
-- 本番実装の責務分割、内部 helper、設定定義、path model、runtime 実装を直接調べたい場合は、src 側の対象実装を読む。
-- 個別テストの前提や期待値が不要で、INDEX.md エントリー生成規則やルーティング文書の書き方だけを確認したい場合。
-- テスト追加・変更ではなく、実行ログ、生成キャッシュ、一時ファイル、ビルド成果物を確認したいだけの場合。
+- 正本仕様断片や oracle src/test/doc の内容そのものを確認したい場合は、oracle 側の対象を直接読む。
+- 本番実装の責務分割や内部 helper の詳細だけを調べたい場合は、まず src 側の該当実装を読む。
+- 個別テストファイルが既に特定できており、ディレクトリ全体から入口を選ぶ必要がないとき。
 
 ## hash
-- 20bd5dbbe7be3b0dc17a6a17914c8d26ec82c5415ab432e64de6c51da82b1cb6
+- 075782b7f402422c58451bac0a73bc92774e7af66be563b8370af9286303d540
