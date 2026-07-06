@@ -307,7 +307,11 @@ def test_config_defaults_match_logical_model_classes() -> None:
 def test_config_json_preserves_oracle_member_order() -> None:
     data = config_to_dict(CmocConfig())
 
-    assert list(data["codex"]) == ["model", "reasoning_effort"]
+    assert list(data["codex"]) == [
+        "model",
+        "reasoning_effort",
+        "num_try_falv_recovery",
+    ]
     assert list(data["codex"]["model"]) == [
         "mainstream",
         "flagship",
@@ -390,6 +394,8 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
         {"num_parallel": "3"},
         {"apply_fork": {"num_apply_files": True}},
         {"apply_fork": {"num_apply_files": "200"}},
+        {"codex": {"num_try_falv_recovery": True}},
+        {"codex": {"num_try_falv_recovery": "4"}},
         {"review_oracle": {"num_enumerate_findings_loop": False}},
         {"review_oracle": {"num_enumerate_findings_loop": "2"}},
         {"review_oracle": {"num_merge_findings_loop": True}},
@@ -405,10 +411,11 @@ def test_config_rejects_non_integer_int_values(data: dict[str, object]) -> None:
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
-def test_config_ignores_old_file_access_recovery_setting() -> None:
+def test_config_preserves_file_access_recovery_setting() -> None:
     config = config_from_dict({"codex": {"num_try_falv_recovery": 4}})
 
-    assert "num_try_falv_recovery" not in config_to_dict(config)["codex"]
+    assert config.codex.num_try_falv_recovery == 4
+    assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 4
 
 
 def test_render_error_uses_structured_markdown() -> None:
