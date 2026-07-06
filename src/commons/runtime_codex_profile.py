@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass
+from basic.acp import AgentCallParameter, FileAccessMode
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
