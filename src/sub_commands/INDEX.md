@@ -214,22 +214,23 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装をまとめるディレクトリ。session の作成、取り込み、破棄など、session branch と session state を扱う個別コマンド実装への入口になる。
-- 各コマンド実装は、clean worktree、active session、home branch、state file、branch 切り替え・削除などの事前条件と状態遷移を扱い、失敗時には利用者向けの復旧情報を返す。
-- merge conflict 解消や session-id 衝突回避など、特定コマンド固有の安全境界もこの配下の該当実装に分かれている。
+- session 系サブコマンドの実装をまとめるディレクトリ。session の開始、home branch への join、merge しない破棄など、session lifecycle の利用者向け挙動と状態遷移を扱う。
+- 各サブコマンドは CLI runtime、git 操作、session state、worktree 検査などの共通実装を利用しつつ、サブコマンド固有の事前条件、失敗時復旧、出力を定義する。
 
 ## Read this when
-- session 系サブコマンドのどの実装へ進むべきかを選びたいとき。
-- session branch の作成、home branch への取り込み、破棄、状態更新、branch 削除条件など、session 操作の実行本体を調べたいとき。
-- session 操作の事前条件、失敗時 rollback、cleanup、manual resolution、利用者向けエラーや出力の扱いを確認したいとき。
+- session 系サブコマンドの実装入口を探し、対象操作に対応する下位モジュールを選びたいとき。
+- session の作成、join、merge しない破棄に関する外部挙動、事前条件、状態更新、branch 操作、利用者向け出力を確認または変更したいとき。
+- active session の検出、session branch と home branch の扱い、state file 更新、cleanup 失敗時の rollback など、session lifecycle 固有の制御を調べたいとき。
+- merge conflict 解消フロー、conflict 対象外差分の拒否、conflict marker 検出、manual resolution 要求など、session join 固有の安全境界を確認したいとき。
 
 ## Do not read this when
-- CLI 全体の dispatch、共通 runtime、git wrapper、path model、state schema そのものを調べたいとき。その場合は共通基盤側を読む。
-- apply workflow や session 以外のサブコマンド実装を調べたいとき。
-- session の正本仕様断片そのものを確認したいとき。その場合は oracle 側の該当文書を読む。
+- session state のデータ構造、state file schema、path model の定義そのものを確認したいときは、それぞれの共通定義を読む。
+- git 実行 wrapper、CLI runtime、worktree clean 判定、branch 判定、path status 解析などの共通 helper の一般挙動を確認したいときは、共通実装側を読む。
+- session join 用の Codex prompt や conflict resolution parameter の組み立てだけを確認したいときは、その builder 側を読む。
+- session 以外のサブコマンド、apply workflow、CLI 全体の dispatch、または oracle 上の正本仕様を確認したいときは、それぞれの対象領域を読む。
 
 ## hash
-- ebca94b04c4964aacd9c7206a1c632dcd214cb6372dc3629f2533963058f98cc
+- 5fcafa3b7bcd34b5877b45d5a15c27c4f07693148ea5dd5abd6e806db1e9cba4
 
 # `tui.py`
 
