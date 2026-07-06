@@ -326,25 +326,23 @@
 # `runtime_ollama.py`
 
 ## Summary
-- cmoc provider を要求する model がある場合に、cmoc 管理下の Ollama を user service として起動し、固定 endpoint と管理 model store で local SLM を serve 可能にする実装。
-- 設定から cmoc 管理対象の model 名を抽出し、Ollama archive の取得・install、systemd user service file の同期、service/listener/HTTP 応答の検証、model pull をまとめて扱う。
-- Ollama の process lock、/proc による listener 所有 process 検証、systemctl/ollama command の CmocError 変換を確認する入口となる。
+- cmoc provider の model を local SLM として使うため、管理対象 Ollama の導入、systemd user service 起動、固定 endpoint 検証、model pull をまとめて行う runtime 実装。
+- config から cmoc managed 対象 model を抽出し、~/.cmoc/ollama 配下の executable・model store・lock と 127.0.0.1:11434 の service 実体を扱う。
+- Ollama archive 取得、service file 同期、systemctl 実行、/proc による listener と process 系列の照合、HTTP 疎通確認、ollama command 実行失敗時の CmocError 化を含む。
 
 ## Read this when
-- cmoc provider の local SLM を起動前に利用可能にする処理を変更する時。
-- cmoc 管理の Ollama install 先、model store、固定 host/port、systemd user service の挙動を確認する時。
-- Ollama archive 取得失敗、systemctl 失敗、listener 不一致、HTTP 接続失敗、model pull/show 失敗のエラー処理を調べる時。
-- 設定内の codex model provider から、cmoc managed Ollama が扱う model 名をどう選ぶか確認する時。
-- 127.0.0.1:11434 の listener が cmoc 管理 service 由来かを /proc で判定する処理を変更する時。
+- cmoc provider の model を実行前に local Ollama で serve 可能にする処理を確認・変更したいとき。
+- managed Ollama の install 先、model store、systemd user service、固定 host/port、process lock、model pull の挙動を調べるとき。
+- 127.0.0.1:11434 の listener が cmoc managed Ollama 由来かどうかの検証、/proc 読み取り、systemctl や ollama command の失敗時エラーを扱うとき。
+- config 内の model provider から cmoc managed 対象 model 名を重複排除して取り出す処理を確認するとき。
 
 ## Do not read this when
-- cmoc provider 以外の model provider 選択や通常の設定読み込み全体を調べたいだけの場合。
-- Ollama を使わない agent 実行、worktree 管理、Git 操作、CLI routing の実装を調べる場合。
-- managed Ollama の仕様意図そのものを確認したい場合は、対応する oracle doc を先に読む。
-- systemd や /proc を介さない外部サービス連携、または一般的な subprocess helper を探しているだけの場合。
+- runtime 設定ファイルそのものの schema、読み込み、保存場所の定義を調べたいだけなら、設定や path を担当する対象を読む。
+- cmoc provider 以外の model provider の選択、Codex 設定全体、agent 呼び出し制御を調べたいだけなら、呼び出し側や設定変換を担当する対象を読む。
+- Ollama 自体の一般的な仕様や model の品質、LLM 出力内容を調べたいだけなら、この runtime 実装は入口ではない。
 
 ## hash
-- 9769c97e9ea838fc022849a51e1dde1b2756280cfd122dd39fccd5c2eb7d99b2
+- 26c5a3a7377c2caffd20dc4b952f1a5d037be22a7a67006ca200a3ac01e0b45e
 
 # `runtime_paths.py`
 

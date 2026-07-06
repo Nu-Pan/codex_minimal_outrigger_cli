@@ -338,22 +338,24 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor CLI と managed Ollama 周辺の統合テスト。doctor 前処理による git 状態修復、設定生成・同期、`.cmoc/local` の ignore/untrack、既存 staged/unstaged 変更の保護、linked worktree での対象 root 判定、`dector` alias、local SLM profile 作成時の doctor 起動を検証する。
-- Ollama runtime の service 検証に関する単体テストも含み、main PID 欠落時の拒否、listener process が期待する service process と一致する条件、cmoc provider model の重複排除 pull を扱う。
+- doctor CLI と doctor preprocess の外部挙動を検証する realization test。git 修復、`.cmoc/local` の ignore/untrack、`.agents` 管理、config 生成・同期、managed Ollama の導入・検証、linked worktree での対象 root 判定、`dector` alias、local SLM profile 作成時の doctor 起動を扱う。
+- doctor 実行が既存の staged/unstaged 変更や rename を壊さないこと、repair commit と config commit の対象が分離されることを確認する入口になる。
 
 ## Read this when
-- doctor コマンド、doctor 前処理、設定ファイル生成・既存値保持、`.gitignore` や `.agents/.gitkeep` の自動修復、`.cmoc/local` の追跡除外に関する挙動を変更・確認するとき。
-- doctor 実行時にユーザーの既存 staged/unstaged 変更、staged rename、既存 staged `.gitignore` を壊さないことを確認したいとき。
-- managed Ollama の install/service/model pull、service listener 検証、または local SLM 用 Codex profile 生成時の doctor 連携を変更するとき。
-- linked worktree から doctor を実行した場合の worktree 側修復と repo root 側 config 生成の境界を確認するとき。
+- doctor コマンド、`dector` alias、または doctor preprocess の挙動を変更する。
+- `.cmoc/config.json` の生成・default 同期・git tracking、または linked worktree で repo config を使う処理を変更する。
+- `.cmoc/local` の ignore/untrack、`.agents/.gitkeep`、repair commit、既存 staged/unstaged 変更の保全に関わる git 操作を変更する。
+- managed Ollama の install/service/model pull/listener verification、または cmoc provider model の pull 対象選定を変更する。
+- local SLM 用 Codex profile 作成時に doctor を起動する条件や副作用を変更する。
 
 ## Do not read this when
-- doctor や managed Ollama、runtime config、Codex profile 生成に関係しない CLI サブコマンドの挙動だけを調べるとき。
-- oracle 側の正本仕様や設定 schema の定義そのものを確認したいとき。
-- 低レベルの git helper や test support fixture の実装だけを調べたい場合で、doctor の外部挙動を確認する必要がないとき。
+- doctor 以外の CLI サブコマンドだけを変更する。
+- config schema の定義そのものや serialization の単体挙動だけを確認したい場合は、config 側の実装・テストを先に読む。
+- Ollama service helper の内部単体挙動だけを確認したい場合は、runtime Ollama 側のより直接的なテストや実装を先に読む。
+- agent call parameter、model class、reasoning effort、file access mode の定義だけを調べる場合は、basic 側の対象を読む。
 
 ## hash
-- 23db9855cd2d0a3c37cd0f85d194e3f1d520c495b763829fc752408870e530fc
+- a18521dbb2a3e559ad9094ac62e525f399f09d42776f2bc05ef760f5d9021d65
 
 # `test_indexing_cli.py`
 
