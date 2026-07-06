@@ -135,19 +135,21 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装を集約するディレクトリ。apply、session、review、indexing、tui、doctor、eval oracle など、CLI から呼ばれる各コマンドの実行入口と workflow 制御へ進むための上位ルーティング対象である。
-- 個別サブコマンドの本体は下位ファイルまたは下位 package に分かれ、状態管理、git/worktree/branch 操作、Codex 呼び出し、レポート生成、cleanup などの制御は対象コマンドごとの実装へ委譲される。
+- CLI サブコマンドの実行入口をまとめる実装ディレクトリ。apply、session、review、indexing、doctor、eval oracle、tui などの各コマンドについて、CLI runtime や共通処理へ接続する orchestration と workflow 制御を扱う。
+- 個別コマンドの状態遷移、worktree・branch・process 管理、差分検査、report 生成、preflight、cleanup など、利用者が実行するサブコマンド単位の外部挙動を追る入口になる。
 
 ## Read this when
-- cmoc の特定サブコマンド実装を探し、apply、session、review、indexing、tui、doctor、eval oracle のどこから読むべきか判断したいとき。
-- CLI サブコマンドの実行入口、runtime への接続、workflow 全体制御、状態更新、git/worktree/branch/process 操作、レポート生成などの担当箇所を確認したいとき。
-- apply run/fork/join/abandon、session fork/join/abandon、review oracle、INDEX.md maintenance、TUI 起動、doctor preprocess、eval oracle 委譲の実装入口を探すとき。
+- CLI サブコマンドの実行入口、委譲先、runtime への渡し方、コマンド単位の前提条件や後片付けを確認または変更したいとき。
+- apply、session、review oracle、indexing、doctor、eval oracle、tui のいずれかの具体的な workflow 制御や状態更新を調べたいとき。
+- サブコマンド実行時の branch/worktree/process 管理、clean worktree 検査、merge conflict 処理、report 出力、Codex 起動前後の接続を追いたいとき。
+- どの個別サブコマンド実装へ進むべきかを、サブコマンド種別や扱う workflow から判断したいとき。
 
 ## Do not read this when
-- Typer app へのサブコマンド登録や CLI 全体の外側ルーティングだけを確認したいときは、CLI entrypoint や登録側の実装を読む。
-- git wrapper、CLI runtime、path model、session state、oracle file 判定、INDEX.md 生成ロジック、Codex parameter builder などの共通 API 自体を変更したいときは、それぞれの runtime/helper/builder 側を読む。
-- oracle file や realization file の定義、サブコマンドの正本仕様断片、INDEX.md エントリー生成規則を確認したいときは、対応する oracle doc を読む。
-- すでに対象サブコマンドや個別処理が特定できているときは、この階層ではなく該当する下位ファイルまたは下位 package を直接読む。
+- Typer 登録、トップレベル CLI ルーティング、CLI 全体の構成だけを確認したいとき。
+- git wrapper、path model、state file schema、worktree 探索、oracle file 判定、Codex 実行 wrapper などの共通 runtime API 自体を変更したいとき。
+- Codex に渡す prompt、Structured Output schema、parameter builder、finding 生成・適用・変更要約の詳細だけを確認したいとき。
+- oracle file や realization file の定義、INDEX.md 生成規則、各サブコマンドの正本仕様断片を確認したいとき。
+- 個別サブコマンドの下位責務がすでに特定できている場合は、その対象を直接読む。
 
 ## hash
-- 23fbb76184d9b47a2ee2734533b0948e8f281101f2b59962cdece869b3d15c33
+- ac90c6f79ef4490f4cbccdf231da74268671168ecb30deaf174a9c0454f4f415

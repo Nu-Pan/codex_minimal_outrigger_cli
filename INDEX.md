@@ -134,41 +134,41 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口であり、CLI 入口、サブコマンド実装、runtime 共通処理、正本側 oracle 実装への参照 shim、旧 import 互換層を束ねる。
-- 利用者向け command 面から workflow 制御、Codex 実行基盤、設定・基本 API・builder 互換経路まで、実装領域内で読む先を選ぶための上位ルーティング対象。
-- 正本仕様や正本側実装を複製する場所ではなく、必要に応じて oracle 側定義へ中継・再公開しながら realization 側の公開面と実処理を構成する領域。
+- cmoc の realization implementation を収める実装ルート。CLI 入口、サブコマンド実行、runtime 共通処理、oracle 正本実装への shim、旧 import 互換層を扱う。
+- 利用者向け command 面から apply、session、review、indexing、doctor、eval oracle、tui などの workflow 制御へ進む入口になる。
+- 正本仕様や oracle src の内容を複製せず参照・再公開する境界と、移行期間中の互換 import 経路を確認する起点になる。
 
 ## Read this when
-- cmoc の realization implementation で、CLI 入口、サブコマンド、runtime helper、互換 import、oracle package 参照のどこから調べるべきか判断したいとき。
-- command 追加・変更、サブコマンド workflow、Codex 実行基盤、git/path/log/state/error など複数領域にまたがる実装入口を探したいとき。
-- 旧来の公開 import 経路を正本側実装へどう接続しているか、互換層や shim の削除可否を確認したいとき。
-- realization 側から oracle 側 package や builder、設定、基本 API を複製せず参照・再公開している境界を確認したいとき。
+- cmoc の CLI 実装、サブコマンド orchestration、runtime 共通処理、または realization 側 import 互換層の配置を探すとき。
+- Typer 入口から個別サブコマンド、Codex 実行基盤、git/path/state/log/error などの共有 helper へどう接続されるか確認したいとき。
+- oracle 側の正本実装を realization 側公開面から参照・再公開する shim や wrapper の残存理由、削除条件、移行経路を調べたいとき。
+- acp builder、basic API、config、runtime、oracle package などの旧 import 経路がどの互換入口で受け止められているか判断したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、prompt、生成内容、人間意図を確認したいときは、対応する oracle 側の文書または実装を読む。
-- 特定サブコマンド、runtime helper、互換 import 経路など対象がすでに分かっているときは、この階層ではなく該当する下位対象を直接読む。
-- テスト実装だけを調べたいときは、realization test 側の対象を読む。
-- ACP 型、path model、設定定義、Structured Output schema、INDEX.md 生成仕様などの正本定義そのものを確認したいときは、再公開入口ではなく正本側の該当対象を読む。
+- 正本仕様断片、prompt、Structured Output schema、path keyword、設定定義、oracle src の実装内容そのものを確認したいときは、対応する oracle 側を読む。
+- テスト実装だけを確認したいときは、test 側の対象を読む。
+- 特定の下位責務がすでに分かっている場合は、この階層全体ではなく該当する command、runtime helper、互換 module を直接読む。
+- AGENTS.md、INDEX.md、memo、git metadata、agent/codex 内部状態など、realization implementation ではない対象を調べたいとき。
 
 ## hash
-- a3f483a62e2c24b1ef709359e5b0f74e8a83a53342481adda907d378575a29a6
+- 83f377bd578f6c0e6aa9cca0d8d99c55380e47deee727e539ef759fc605dbb49
 
 # `test`
 
 ## Summary
-- CLI、runtime、Codex 実行、apply/session/review/indexing/doctor、prompt、Ollama、packaged import などの realization test と、それらで共有するテスト支援モジュールを収めるテスト領域。
-- 外部 CLI 挙動、git/worktree/session state の副作用、Codex/Ollama 連携の stub・fake 環境、structured output schema 参照、共通 runtime 契約の回帰確認への入口になる。
+- CLI、runtime、Codex 実行、apply/session/review/indexing/doctor、prompt rendering、Ollama などの realization test を集約するテスト領域。
+- 共有 fixture を入口に、サブコマンドの外部挙動、git/state 副作用、Codex profile・preflight・retry、oracle schema 参照、packaged import の回帰を確認する。
 
 ## Read this when
-- cmoc の CLI サブコマンドや runtime 共通処理を変更し、対応する realization test の入口を探すとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、doctor、TUI、Codex runtime、Ollama runtime の外部挙動テストを探すとき。
-- テスト用 Git リポジトリ、Codex home、fake executable、fake managed Ollama、Typer runner などの共有 fixture や helper を確認したいとき。
-- prompt parts、ACP builder parameter、packaged import、StructDoc rendering など、CLI 以外の回帰テストの配置を確認したいとき。
+- CLI サブコマンドや runtime 共通処理を変更し、外部挙動・終了コード・標準出力・状態ファイル・git worktree/branch の副作用を確認したいとき。
+- Codex 実行 wrapper、profile 生成、quota/capacity retry、TUI 起動、subprocess tracking、Codex home 検証に関する既存テストを探すとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、doctor、Ollama runtime の統合的な回帰観点を確認したいとき。
+- ACP builder、prompt parts、structured output schema 参照、packaged import、StructDoc Markdown rendering の期待値を確認したいとき。
 
 ## Do not read this when
-- 実装本体の責務や制御フローを確認したい場合は、対応する realization implementation を直接読む。
-- oracle file、realization file、path keyword、INDEX entry standard などの正本仕様断片を確認したい場合は、oracle 側の該当文書を読む。
-- 個別テストの期待値ではなく利用者向け仕様や設計意図だけを確認したい場合は、関連する仕様文書または実装側を先に読む。
+- 実装本体の責務や制御フローを確認したいだけなら、対応する realization implementation を直接読む。
+- oracle file、path keyword、INDEX.md エントリー規約、structured output schema の正本内容を確認したいだけなら、oracle 側の該当文書または schema を読む。
+- 個別 helper の純粋な内部入出力だけを調べたい場合で、CLI 経由の外部挙動や git/state 副作用の回帰確認が不要なとき。
 
 ## hash
-- b9c1058cf1419a17a376c38612a0db0a152b0eb1de1a76e2313024c120ac1af6
+- 0a7a84efca21f9fafcd41d1fbf07a101a120ce3ee24f5a9975174395119c8946

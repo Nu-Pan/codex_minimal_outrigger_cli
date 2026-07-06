@@ -393,25 +393,22 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 外部挙動と所見評価 loop を検証するテスト。対象 oracle の列挙、scope 別の選択、report 生成、accepted/rejected 所見の分類表示、merge/validate/judge の制御、上限到達時の失敗、review worktree と join commit、INDEX.md 変更の取り込み、処理失敗時 report、想定外差分の拒否を扱う。
-- eval-oracle が review oracle 実装へ委譲する互換経路、oracle_path プレースホルダ解決、oracle symlink や tracked ignored oracle file の扱いもこのテストで確認する。
-- このファイルは大きいが、同じ review run の fake Codex 応答、report 文脈、所見状態を共有する統合的なテスト群としてまとまっている。
+- review oracle の CLI 外部挙動を検証する realization test。review 実行時の oracle 対象列挙、report 生成、finding の列挙・検証・judge・merge loop、error report、review worktree 上の INDEX 変更取り込み、作業ツリー差分拒否をまとめて扱う。
+- eval-oracle が review oracle 実装へ委譲する互換経路、finding の oracle path 解決、linked worktree・session scope・full scope の対象選択、tracked ignored oracle file や symlink の扱いも検証対象に含む。
 
 ## Read this when
-- review oracle CLI の挙動、report の出力内容、scope full/session の対象選択、所見の列挙・検証・judge・merge loop を変更する。
-- oracle file の列挙条件、tracked ignored file、symlink、AGENTS.md/INDEX.md 除外、<oracle-root>/<work-root> の oracle_path 解決を確認したい。
-- review 実行用 worktree、linked worktree 上の session branch、review_join_commit、INDEX.md 変更の merge や conflict 解決に関わる処理を変更する。
-- review oracle 実行中のエラー report、未コミット差分の拒否、review が INDEX.md 以外の差分を作った場合の拒否や復元を確認したい。
-- eval-oracle コマンドと review oracle コマンドの接続を変更する。
+- review oracle サブコマンドの CLI 挙動、report 内容、review scope、対象 oracle file の列挙条件を変更する。
+- finding の列挙・検証・advocate/challenger・judge・merge の制御 loop、merge operation の契約、semantic retry の挙動を変更する。
+- review 用 worktree、review fork commit、join commit、INDEX 変更の取り込み、conflict 解決、非 INDEX 差分の拒否に関わる実装を変更する。
+- eval-oracle から review oracle への委譲、または finding 内の oracle path placeholder 解決を変更する。
 
 ## Do not read this when
-- oracle review 以外の CLI サブコマンドや session 操作だけを調べる場合。
-- report の文字列整形ではなく、Codex 実行基盤、設定読み込み、runtime preflight の一般処理だけを調べる場合。
-- INDEX.md エントリー生成の仕様や oracle/realization 標準そのものを確認したい場合。
-- 単体 helper の詳細実装だけを確認でき、review oracle の CLI 経由の外部挙動や loop 制御に関心がない場合。
+- review oracle 以外のサブコマンドや通常の session 操作だけを確認したい場合。
+- oracle review の外部挙動ではなく、prompt 文面や Structured Output schema 単体の詳細を確認したい場合。
+- INDEX 生成一般、doctor 一般、runtime Codex preflight 一般の挙動を確認したいだけで、review oracle 実行中の統合挙動に関係しない場合。
 
 ## hash
-- 7c7dfdfed515a03c4c2db9f4195bb17fa89d5a732c1afb6fe4e0bb65d9d2cdfc
+- 504ec0fc6b9dbd70aa1b80555a714cdb96ff98074757983dbc460b35488b43ac
 
 # `test_runtime_ollama.py`
 
