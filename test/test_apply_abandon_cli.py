@@ -545,10 +545,55 @@ def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(
     result = runner.invoke(app, ["apply", "abandon"])
 
     assert result.exit_code != 0
-    assert "apply worktree を特定できません。" in result.output
+    assert "apply branch 名から session-id を特定できません。" in result.output
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"] == "cmoc/apply/malformed"
+
+
+def test_apply_abandon_rejects_other_session_apply_branch_from_session_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """state に混入した別 session apply branch は cleanup 前に拒否する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    other_session_id = "other-session"
+    other_apply_branch = f"cmoc/apply/{other_session_id}/manual"
+    other_apply_worktree = (
+        root / ".cmoc" / "local" / "worktree" / other_session_id / "manual"
+    )
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        other_apply_branch,
+        str(other_apply_worktree),
+        session_branch,
+    )
+    state = json.loads(state_path.read_text())
+    state["apply"]["state"] = "completed"
+    state["apply"]["apply_branch"] = other_apply_branch
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+
+    result = runner.invoke(app, ["apply", "abandon"])
+
+    assert result.exit_code != 0
+    assert "破棄対象 apply run の補助情報を特定できません。" in result.output
+    assert f"session_id: {session_id}" in result.output
+    assert f"apply_branch: {other_apply_branch}" in result.output
+    assert other_apply_worktree.is_dir()
+    assert run_git(root, "rev-parse", "--verify", other_apply_branch).returncode == 0
+    state = json.loads(state_path.read_text())
+    assert state["apply"]["state"] == "completed"
+    assert state["apply"]["apply_branch"] == other_apply_branch
 
 
 def test_apply_abandon_can_run_from_apply_worktree(
