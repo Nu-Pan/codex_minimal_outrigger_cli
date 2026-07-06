@@ -125,20 +125,26 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder と linked worktree の解決、config の既定値・復元・不正値拒否、CmocError の表示、CLI preflight と error 出力、subcommand log、session/apply branch state、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
+- cmoc の基礎 runtime 契約を横断的に固定する回帰テスト群。root placeholder 解決、linked worktree での root 判定、config 読み書きと検証、CmocError の表示、CLI preflight と parse error、subcommand log、session state、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通前提を扱う。
+- 共通 fixture と root 状態を共有する runtime 境界の崩れを一箇所で検出する位置づけであり、個別機能の詳細挙動よりも CLI 実行前提・権限境界・設定境界・エラー報告境界を確認する入口になる。
 
 ## Read this when
-- runtime 境界に関わる変更を行い、root 解決、worktree 管理、CLI wrapper、doctor preprocess、subcommand log、CmocError 表示、config 読み書き、session state、FileAccessMode、Codex profile、binary 判定の回帰テストを確認したいとき。
-- linked worktree と main worktree の扱い、`.cmoc/local` の ignore、起動 wrapper の error report、CLI parse error の stdout 変換など、複数の基礎 runtime 部品が同時に関わる失敗を調査するとき。
-- FileAccessMode ごとの書き込み許可 root、extra writable path、oracle conflict write、repo-local read など、Codex sandbox profile の許可境界を変更・確認するとき。
+- root placeholder、repo root、run root、work root、linked worktree の解決や判定に関する挙動を確認・変更する場合。
+- CmocConfig、config の JSON 変換、config 読み込み失敗、model spec、reasoning effort、count 値の検証を変更する場合。
+- CmocError、render_error、CLI error report、Click/Typer の parse error を stdout の cmoc 形式 report に変換する挙動を確認する場合。
+- CLI wrapper の doctor preprocess、pre-log check、completion probe、subcommand log の生成・記録・失敗時挙動を変更する場合。
+- session/apply branch 名からの session id 抽出、session state 読み書き、破損 state の拒否条件を確認する場合。
+- FileAccessMode の値、sandbox mode 変換、Codex profile の writable/read permission、extra writable path、oracle conflict write、repo-local read 許可を変更する場合。
+- binary 判定、duration 表示、gitignore への cmoc local ignore 追加、起動 wrapper の missing venv report など、runtime 共通 utility の外部挙動を確認する場合。
 
 ## Do not read this when
-- 特定サブコマンド固有の business logic、prompt 内容、oracle review/apply/session の詳細フローだけを調べたいときは、そのサブコマンドや対象 module のテストを直接読む。
-- 単一 helper の内部実装だけを確認したい場合で、外部挙動や runtime 共通契約の回帰を見ないときは、対応する implementation file を先に読む。
-- INDEX.md 生成規則や oracle file の記述方針そのものを調べたいときは、routing/index/oracle standard 側の文書を読む。
+- 個別サブコマンドの業務ロジックだけを確認したい場合は、そのサブコマンド専用の実装またはテストへ進む。
+- oracle doc や oracle src の正本仕様断片そのものを確認したい場合は、対応する oracle file を読む。
+- INDEX.md エントリー生成やルーティング文書の規則だけを確認したい場合は、runtime テストではなくルーティング規則の正本へ進む。
+- 単一 helper の内部実装だけを変更し、root 解決・config・CLI error・profile 権限・state などの共通契約に影響しないことが明らかな場合は、より直接対応する実装ファイルや狭いテストを読む。
 
 ## hash
-- a0b32d1c9b398ef5920dad3b6c9437f90324e2dca0a310b5c3f4b2c601e8086a
+- f81e5651a520e514fa8f8adbc94e05257a842ba873f71ee494c3101fd5220563
 
 # `test_cli_tui.py`
 
@@ -312,23 +318,22 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 起動処理のテスト群。追加 read path の許可判定、complete prompt の扱い、linked worktree での作業ディレクトリと writable roots、Codex CLI 異常終了時のエラー表示と呼び出しログを検証する。
-- 実際の Codex CLI は一時実行ファイルで差し替え、起動引数、cwd、profile、ログ内容など外部挙動を確認する。
+- Codex TUI 実行ラッパーのテスト。追加読み取りパスの事前検証、完了済みプロンプトの扱い、linked worktree からの起動、Codex CLI/TUI 失敗時のエラー報告と呼び出しログを検証する。
+- 主に `run_codex_tui` が Codex 起動前に権限境界を守り、作業ディレクトリ・`--cd`・権限プロファイル・出力スキーマ引数・失敗時表示を正しく組み立てるかを見る入口である。
 
 ## Read this when
-- Codex TUI 呼び出し処理、特に `run_codex_tui` の引数構築、cwd、profile、sandbox writable roots、呼び出しログを変更する時。
-- TUI 実行前の追加 read path 検証や、`memo` 配下を許可領域外として拒否する挙動を確認する時。
-- pure oracle read や repo write の file access mode ごとに、complete prompt を extra read path として扱う条件を確認する時。
-- Codex CLI が非 0 終了した場合の `CmocError`、コンソール出力、tui call log の期待挙動を確認する時。
+- Codex TUI 呼び出し時のファイルアクセス許可、追加読み取りパス、完了済みプロンプトの扱いを変更する。
+- `run_codex_tui` の起動 cwd、`--cd` 引数、linked worktree 対応、または Codex プロファイル生成内容を変更する。
+- Codex CLI/TUI が非ゼロ終了した場合の `CmocError`、コンソール出力、または `_tui_call.json` ログの挙動を確認・変更する。
+- PURE_ORACLE_READ で構造化出力スキーマを渡さない挙動や、REPO_WRITE で `.cmoc/local` を read にする権限設定を確認する。
 
 ## Do not read this when
-- Codex TUI ではなく非対話的な Codex 実行、agent call、または別 CLI サブコマンドの挙動だけを確認したい時。
-- file access mode の定義そのもの、path model、設定値の正本仕様を確認したい時。
-- Git worktree の一般操作やリポジトリ生成 helper の実装を調べたい時。
-- TUI 呼び出しの外部挙動ではなく、Codex CLI や LLM の出力品質そのものを検証したい時。
+- Codex TUI ではなく通常の agent 呼び出し、非対話実行、または別ランタイム経路の挙動だけを調べる。
+- Codex 呼び出しに関係しない設定読み込み、リポジトリ作成 helper、git helper の詳細だけを調べる。
+- oracle file や realization file の一般的な分類・定義を確認したいだけで、TUI ランタイムの外部挙動を扱わない。
 
 ## hash
-- 21420e8f441b2b53bdfaa328d0e7bd3f8045bf0c9c77f24b55794b12cdb78a4d
+- a855200478036f873b7e472742733b33bc52939fe72fa78fc0ccb46cc83bde65
 
 # `test_doctor_cli.py`
 

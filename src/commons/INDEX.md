@@ -166,27 +166,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界で使う profile 生成、sandbox writable root 算出、CODEX_HOME 検査、schema 配置、実行エラー解釈をまとめる実装。
-- FileAccessMode と Codex CLI の sandbox/profile/cwd/env の対応、追加 read/write path の許可判定、apply abandon 用 child process tracking、Codex JSONL stdout からの retry 判定を扱う。
-- Codex CLI 起動前後の不変条件を一箇所で確認する入口であり、設定値から profile を作る処理と subprocess 結果を cmoc の実行時意味へ変換する処理が同居する。
+- Codex CLI subprocess 境界で必要な実行 profile、sandbox/permission profile、CODEX_HOME、schema 配置、apply child process tracking、JSONL error 判定をまとめる実装。
+- Codex 起動前の環境検査と、Codex から返る機械的な実行結果の解釈を同じ不変条件で扱う入口。
 
 ## Read this when
-- AgentCallParameter や CmocConfig から Codex CLI profile を生成・保存する処理を確認または変更するとき。
-- FileAccessMode ごとの sandbox_mode、writable_roots、追加 read/write path の許可境界を調べるとき。
-- CODEX_HOME の解決、検証、Codex subprocess に渡す環境変数を扱うとき。
-- apply abandon が Codex child process を追跡・停止できるようにする pid file 記録や lock の挙動を確認するとき。
-- Structured Output schema の配置、schema なし output JSON の読み取り、Codex JSONL stdout/stderr からの error detail、capacity/quota retry 判定、resume token 抽出を変更するとき。
-- Codex CLI 不在や profile 生成失敗を CmocError として利用者向けに整える境界を調べるとき。
+- Codex CLI に渡す profile、sandbox writable root、permission profile、model provider、CODEX_HOME の生成・検証を確認または変更したいとき。
+- FileAccessMode に応じた read/write 許可境界、追加 read/write path、oracle conflict write 例外の扱いを追うとき。
+- apply abandon のための Codex child process tracking、pid file lock、process start time 記録を確認または変更したいとき。
+- Structured Output schema の配置、Codex output JSON の読み取り、Codex JSONL stdout/stderr からの error detail、capacity/quota retry 判定、resume token 抽出を扱うとき。
 
 ## Do not read this when
-- prompt 本文に載せる FileAccessMode の自然言語ルール自体を変更したいだけなら、oracle 側の file access rule を読む。
-- cmoc の config schema や model/reasoning_effort の定義そのものを確認したいだけなら、設定定義側を読む。
-- Codex subprocess を呼ぶ上位のサブコマンド処理や agent call 全体の制御フローを追いたいだけなら、その呼び出し元を読む。
-- runtime path の具体的なディレクトリ算出だけを変更したいなら、runtime paths 側を読む。
-- git 上の oracle file 判定ロジックそのものを変更したいなら、runtime git 側を読む。
+- Codex に渡す prompt 本文や file access rule の自然言語生成を確認したいだけなら、prompt builder 側を読む。
+- cmoc 全体の path model、logs/schema store の場所、oracle file 判定そのものを調べたい場合は、それぞれの runtime path/git 実装を直接読む。
+- Codex subprocess 境界ではなく、個別サブコマンドの業務ロジックや user-facing CLI 引数を変更する場合は、そのサブコマンド実装を先に読む。
 
 ## hash
-- 23ea5a48d32806a7e9bd03d5742175ed6ea89f84a2a2cdd0f3e068c227b6e4a5
+- a0a6524ec6696a9ed1aa3ca77439271a05ddcbe9a0701a8c000006540f76d37a
 
 # `runtime_codex_tui.py`
 
