@@ -134,19 +134,18 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の利用者向けサブコマンド実装をまとめる領域で、session、apply、review oracle、indexing、tui、doctor、eval oracle などの実行入口と orchestration への分岐点になる。
-- 各サブコマンド固有の事前条件、状態遷移、branch/worktree/process 管理、Codex 呼び出し、merge、cleanup、report 生成、runtime 共通処理への委譲を下位対象へ振り分ける。
+- cmoc のサブコマンド実装を配置する領域で、apply、session、review oracle、indexing、tui、doctor、eval oracle などの実行入口と制御ロジックへのルーティング起点となる。
+- 各サブコマンド固有の lifecycle、git/worktree/state 操作、Codex 呼び出し、report 生成、runtime 共通処理への委譲関係を下位対象へ振り分ける。
 
 ## Read this when
-- 利用者向けサブコマンドの実装入口を探し、どの下位領域またはモジュールへ進むべきか判断したいとき。
-- session lifecycle、apply run lifecycle、review oracle、INDEX maintenance、TUI 起動、doctor preprocess、oracle 評価委譲のどの実装を読むべきか切り分けたいとき。
-- サブコマンド間で、開始条件、失敗時処理、cleanup、report 保存、runtime 共通処理への委譲などの責務境界を確認したいとき。
+- cmoc のどのサブコマンド実装を読むべきかを判断したいとき。
+- apply、session、review oracle、indexing、tui、doctor、eval oracle の実行入口、委譲先、状態遷移、branch/worktree 管理、cleanup、report 生成の担当箇所を探したいとき。
+- サブコマンド間または下位モジュール間の責務境界を確認し、より具体的な実装へ進む入口を選びたいとき。
 
 ## Do not read this when
-- CLI 全体の引数定義、Typer app 登録、トップレベル dispatch だけを確認したいときは、CLI entrypoint や command 登録側を読む。
-- git 実行 wrapper、worktree 操作、path model、state file schema、config 読み込み、Codex 実行 wrapper などの共通 helper 自体を調べたいときは、runtime や共通実装側を読む。
-- oracle file や realization file の定義、INDEX.md エントリー作成規則、正本仕様そのものを確認したいときは、対応する oracle doc を読む。
-- 具体的に読むべきサブコマンド実装が既に決まっており、その下位対象へ直接進めるとき。
+- CLI runtime、git/worktree helper、path model、state file schema、Codex 実行 wrapper などの共通処理そのものを調べたいとき。
+- oracle file や realization file の定義、INDEX.md エントリー作成規則、各サブコマンドの正本仕様を確認したいとき。
+- 具体的に読むべきサブコマンド実装や下位モジュールが既に決まっており、その対象へ直接進めるとき。
 
 ## hash
-- e5c4bcd29d86f2819398584ccc387b8578c750ec4c5dde084626b0fd6c8a0abd
+- 40bb21e6850180c29da40b52250aac52a906b3d6012ae9904091ad366ef84099

@@ -58,19 +58,20 @@
 # `join.py`
 
 ## Summary
-- `session join` の実行本体を扱う CLI 実装。active session branch の事前条件確認、session home branch への merge、状態更新、session branch 削除判定、利用者向け結果出力を担う。
-- merge conflict 発生時に Codex CLI へ conflict 解消を依頼し、conflict 対象外の差分拒否、conflict marker 残存検出、unmerged path 確認、merge commit 完了までの制御を担う。
-- git の変更スナップショット、path fingerprint、可変長 conflict marker block 検出など、session join の安全境界を保つための補助処理を含む。
+- `session join` サブコマンドの実行本体を担い、active session branch を session home branch へ merge し、状態更新、session branch 削除判定、利用者向け結果出力まで扱う。
+- merge conflict 発生時は Codex CLI に conflict 解消を依頼し、conflict 対象以外の差分を拒否し、marker・unmerged path の残存確認後に merge commit を完了させる。
+- session join の事前条件、worktree 清潔性、cmoc ignore 確保、post-precondition failure の stderr 扱い、branch 到達性に基づく削除安全性など、実行時制御と Git 操作境界をまとめる。
 
 ## Read this when
-- `cmoc session join` の挙動、事前条件、出力、状態遷移、session branch 削除条件を確認または変更したいとき。
-- session join 中の merge conflict 解消フロー、Codex CLI への依頼内容、oracle conflict 書き込み許可、conflict 対象外差分の拒否条件を確認または変更したいとき。
-- session join 失敗時のエラー出力先、manual resolution を要求する条件、conflict marker 検出や unmerged path 検査の実装を調べるとき。
+- `cmoc session join` の挙動、事前条件、出力内容、状態遷移、session home branch への merge 処理を確認・変更したいとき。
+- session join 中の merge conflict 解消フロー、Codex CLI への依頼内容、conflict 対象以外の差分拒否、conflict marker 検出、merge commit 完了条件を調べるとき。
+- session branch を削除する条件、削除失敗時の warning、remote-tracking ref を安全性判定に使わない制御を確認したいとき。
+- session join で Git コマンド失敗後のエラー出力先、手動解決が必要な失敗の扱い、worktree 差分 snapshot・fingerprint 判定を変更したいとき。
 
 ## Do not read this when
-- session join 用 Codex prompt や conflict resolution parameter の組み立てだけを確認したい場合は、その builder 側を直接読む。
-- git status の path status 解析や runtime git wrapper の一般挙動を確認したい場合は、共通 runtime または indexing 側を直接読む。
-- session join 以外の session subcommand、apply workflow、または CLI 全体の dispatch を調べる場合は、それぞれの subcommand 実装や runtime 側を読む。
+- session join 用の conflict 解消 prompt や Codex 実行パラメータそのものを確認したいだけなら、builder 側の session join conflict resolution 定義を読む。
+- Git 実行 helper、repo/work root 解決、状態ファイルの読み書き、共通 CLI runtime の詳細を確認したいだけなら、runtime や commons 側の該当実装を読む。
+- session join 以外の session サブコマンド、または session/apply state のデータ構造そのものを調べたい場合は、それぞれのサブコマンド実装や状態定義を読む。
 
 ## hash
-- 17b55332f672e0cd9519d19f2fcdfc2695585dc4de1c08681a9a3db569e174a9
+- 050bcfade09e89034d4e49143680119c567faf50ac063088cb3d17c5ffd8cfce

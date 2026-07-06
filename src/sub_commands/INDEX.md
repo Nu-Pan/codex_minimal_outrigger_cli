@@ -201,23 +201,25 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装をまとめるディレクトリ。session の開始、home branch への join、merge しない破棄など、session lifecycle の利用者向け挙動と状態遷移を扱う。
-- 各サブコマンドは CLI runtime、git 操作、session state、worktree 検査などの共通実装を利用しつつ、サブコマンド固有の事前条件、失敗時復旧、出力を定義する。
+- session 系サブコマンドの実装をまとめる領域。session の開始、完了、破棄など、active session と home branch、session branch、session state file の関係を具体的な CLI 挙動として扱う。
+- 各サブコマンドは CLI runtime、git 操作、worktree 清潔性、state 更新、利用者向け出力やエラーを組み合わせ、session lifecycle の外部挙動を実装する。
 
 ## Read this when
-- session 系サブコマンドの実装入口を探し、対象操作に対応する下位モジュールを選びたいとき。
-- session の作成、join、merge しない破棄に関する外部挙動、事前条件、状態更新、branch 操作、利用者向け出力を確認または変更したいとき。
-- active session の検出、session branch と home branch の扱い、state file 更新、cleanup 失敗時の rollback など、session lifecycle 固有の制御を調べたいとき。
-- merge conflict 解消フロー、conflict 対象外差分の拒否、conflict marker 検出、manual resolution 要求など、session join 固有の安全境界を確認したいとき。
+- session 系サブコマンドの挙動、事前条件、成功時出力、失敗時エラー、state 遷移、branch 操作を確認または変更したいとき。
+- local branch から session branch を作る処理、session branch を home branch へ merge する処理、または merge せず破棄する処理を調べたいとき。
+- active session の重複検出、managed branch 上での禁止判定、clean worktree 要求、session-id 衝突回避、session branch 削除条件を確認したいとき。
+- merge conflict 解消フロー、Codex CLI への依頼、conflict 対象以外の差分拒否、marker・unmerged path 検出、merge commit 完了条件を調べたいとき。
+- cleanup 失敗時や Git コマンド失敗時の rollback、warning、再実行可能状態への復旧方針を確認したいとき。
 
 ## Do not read this when
-- session state のデータ構造、state file schema、path model の定義そのものを確認したいときは、それぞれの共通定義を読む。
-- git 実行 wrapper、CLI runtime、worktree clean 判定、branch 判定、path status 解析などの共通 helper の一般挙動を確認したいときは、共通実装側を読む。
-- session join 用の Codex prompt や conflict resolution parameter の組み立てだけを確認したいときは、その builder 側を読む。
-- session 以外のサブコマンド、apply workflow、CLI 全体の dispatch、または oracle 上の正本仕様を確認したいときは、それぞれの対象領域を読む。
+- session 以外のサブコマンド、共通 CLI ルーティング、サブコマンド登録の仕組みを調べたいとき。
+- git 実行 wrapper、CLI runtime、repo/work root 解決、worktree 検査、状態ファイル読み書きの共通実装自体を確認したいとき。
+- session state のデータ構造、state file schema、path model の定義そのものを確認したいとき。
+- session join 用の conflict 解消 prompt や Codex 実行パラメータの正本定義だけを確認したいとき。
+- oracle 上の session 系サブコマンド正本仕様を確認したいとき。
 
 ## hash
-- 5fcafa3b7bcd34b5877b45d5a15c27c4f07693148ea5dd5abd6e806db1e9cba4
+- 6e2931275a761526d449a22a2415e379a4384eb2aa8bc09df7a85b90558581e1
 
 # `tui.py`
 
