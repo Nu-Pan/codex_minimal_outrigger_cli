@@ -93,17 +93,6 @@ def _standard_realization_profile_roots(root: Path) -> set[str]:
     return roots
 
 
-def _standard_realization_profile_roots_with_index(root: Path) -> set[str]:
-    roots = {str((root / name).resolve()) for name in ("bin", ".gitignore")}
-    roots.update(
-        str(path.resolve())
-        for path in (root / "src" / "existing.py", root / "test" / "test_existing.py")
-    )
-    if (root / "README.md").exists():
-        roots.add(str((root / "README.md").resolve()))
-    return roots
-
-
 def _assert_writable(profile: str, path: Path) -> None:
     target = path.resolve()
     assert any(
@@ -846,14 +835,11 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     ) == {str((root / "oracle").resolve()): "read"}
     assert _profile_permission_filesystem(
         profiles[FileAccessMode.PURE_ORACLE_WRITE]
-    ) == {
-        str((root / "oracle").resolve()): "read",
-        str((root / "oracle" / "spec.md").resolve()): "write",
-    }
+    ) == {str((root / "oracle").resolve()): "write"}
     _assert_not_permission_accessible(
         profiles[FileAccessMode.PURE_ORACLE_WRITE], root / "src" / "existing.py"
     )
-    realization_roots = _standard_realization_profile_roots_with_index(root)
+    realization_roots = _standard_realization_profile_roots(root)
     assert _profile_writable_roots(
         profiles[FileAccessMode.REALIZATION_WRITE]
     ) == realization_roots
@@ -862,10 +848,10 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == set()
     assert _profile_permission_roots(
         profiles[FileAccessMode.PURE_ORACLE_WRITE], "write"
-    ) == {str((root / "oracle" / "spec.md").resolve())}
+    ) == {str((root / "oracle").resolve())}
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
         *realization_roots,
-        str((root / "oracle" / "spec.md").resolve()),
+        str((root / "oracle").resolve()),
     }
     for mode, profile in profiles.items():
         if mode == FileAccessMode.NO_RULE:
@@ -877,12 +863,13 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "existing.py"
     )
-    _assert_not_writable(
-        profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "INDEX.md"
+    _assert_writable(
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "new.py"
     )
-    _assert_not_writable(
-        profiles[FileAccessMode.REALIZATION_WRITE], root / "test" / "INDEX.md"
+    _assert_writable(
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "test" / "test_new.py"
     )
+    _assert_not_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / "INDEX.md")
     _assert_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / ".gitignore")
     _assert_not_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / ".agents" / "blocked.md"
@@ -893,9 +880,8 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "spec.md"
     )
-    _assert_not_writable(
-        profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "INDEX.md"
-    )
+    _assert_writable(profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "new.md")
+    _assert_not_writable(profiles[FileAccessMode.REPO_WRITE], root / "INDEX.md")
     _assert_writable(profiles[FileAccessMode.REPO_WRITE], root / ".gitignore")
     _assert_not_writable(
         profiles[FileAccessMode.REPO_WRITE], root / ".agents" / "blocked.md"

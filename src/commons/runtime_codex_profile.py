@@ -260,13 +260,14 @@ def _append_writable_path(
     if not _is_writable_path_allowed(mode, root, path, allow_oracle_conflict_writes):
         return
     if path.is_dir():
-        if is_untracked_git_ignored(
-            root, path / ".__cmoc_ignore_probe__"
-        ) or _has_denied_write_file(path):
+        if is_untracked_git_ignored(root, path / ".__cmoc_ignore_probe__"):
             # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # Codex profile has only positive writable roots. A directory that
-            # would ignore newly created children or contain base-denied files
-            # cannot be opened as one root; expand existing children instead.
+            # would ignore newly created children cannot be opened as one root;
+            # expand existing children instead. INDEX.md/AGENTS.md are denied
+            # by prompt rule, but keeping ordinary directory roots is necessary
+            # to permit new realization/oracle files beside those routing files.
             for child in sorted(path.iterdir()):
                 _append_writable_path(
                     result,
@@ -278,19 +279,6 @@ def _append_writable_path(
                 )
             return
     _append_writable_root(result, seen, path)
-
-
-def _has_denied_write_file(path: Path) -> bool:
-    try:
-        children = list(path.iterdir())
-    except OSError:
-        return False
-    for child in children:
-        if child.name in _DENIED_WRITE_FILE_NAMES:
-            return True
-        if child.is_dir() and not child.is_symlink() and _has_denied_write_file(child):
-            return True
-    return False
 
 
 def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:
