@@ -134,43 +134,42 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を配置する階層で、CLI 入口、サブコマンド orchestration、共通 runtime helper、oracle src への shim、旧 import 互換層への入口になる。
-- 利用者向け command 面、各 workflow の実行制御、複数モジュールから共有される runtime 基盤、正本側定義を複製しない再公開・中継処理を確認するための上位ルーティングを担う。
+- cmoc の realization implementation 全体への入口。CLI 入口、サブコマンド実行、共通 runtime 基盤、oracle 正本実装への shim、旧 import 互換層を扱う。
+- 利用者向け command 面から workflow orchestration、Codex 実行・git・path・state・logging・INDEX 更新などの横断 helper へ進むための実装領域。
+- oracle 側定義を複製せず参照・再公開する互換入口を含み、既存公開 import 経路の維持や削除判断の起点になる。
 
 ## Read this when
-- cmoc の実装側で、CLI 入口、サブコマンド、共通 runtime、互換 import 経路のどこから調べるべきかを切り分けたいとき。
-- apply、session、review、indexing、tui、doctor、eval oracle などの workflow 実装入口を探したいとき。
-- Codex 実行、設定、git、path、ログ、状態、error report、Structured Output、indexing preflight など、複数箇所から使われる共通処理の担当領域を探したいとき。
-- oracle 側の正本実装を realization 側の既存公開面や旧 import 経路へどう接続しているか確認したいとき。
-- runtime module、oracle package、設定・基本 API・acp builder などの互換 shim や再公開層の残存理由、削除条件を判断したいとき。
+- cmoc の CLI 実装、サブコマンド配線、workflow 制御、共通 runtime helper の所在を探したいとき。
+- apply、session、review、indexing、tui、doctor、eval oracle などの実行入口や、状態遷移・git/worktree/process 操作・利用者向け出力を確認または変更したいとき。
+- Codex subprocess 実行、quota/capacity retry、config、logging、path 解決、state、error、INDEX 更新 preflight など、複数領域から使われる runtime 基盤へ進みたいとき。
+- oracle 側の正本実装や定義を realization 側の既存公開 import 経路へどう接続しているか、互換 shim や再公開層を確認・整理したいとき。
 
 ## Do not read this when
-- 正本仕様断片、prompt、schema、人間意図、path keyword、config 型、oracle file や realization file の定義を確認したいときは、oracle 側の該当対象を読む。
-- テスト固有の期待値、fixture、外部挙動の検証内容を確認したいときは、対応する realization test を読む。
-- 特定 helper、特定サブコマンド、特定互換層の担当が既に分かっているときは、この階層全体ではなく該当する下位対象を直接読む。
-- 新しい公開 API、CLI 引数、設定項目、状態ファイルを追加する場所を探しているだけで、現行仕様上の必要性や既存公開面との接続をまだ確認していないとき。
+- oracle file にある正本仕様断片、prompt、Structured Output schema、path model の定義そのものを確認したいときは、oracle 側の対応箇所を読む。
+- 自動テストの期待値、fixture、外部挙動の検証観点を確認したいときは、テスト領域を読む。
+- ルーティング文書や正本仕様の記述方針を確認したいだけで、realization implementation の変更に関係しないとき。
+- 特定の互換 import や個別 helper の詳細だけを調べたいときは、この領域全体ではなく責務に対応する下位要素へ直接進む。
 
 ## hash
-- e3c9bf53c490dcc6c9c1f052f5325781cd26c93ef625b16b69d832effc85bf0d
+- 798e6e6de598662869951ba403357867aac5bf6408b1e4fd42b292f8d977b879
 
 # `test`
 
 ## Summary
-- CLI、runtime、Codex 実行 wrapper、apply/session/review/indexing/doctor/TUI、prompt rendering などの realization test と、これらのテストで共有する fixture・fake 外部コマンド・一時 Git 環境の補助を収める領域。
-- サブコマンドの外部挙動、状態遷移、git worktree/branch cleanup、Codex 呼び出し引数・profile・ログ、INDEX 更新 preflight、prompt builder の出力など、実装を利用者境界から検証する入口になる。
+- CLI、runtime、Codex 実行 wrapper、apply/session/review/indexing/doctor、prompt builder、packaged import、Markdown rendering などの realization test をまとめるテスト領域。
+- 共有 fixture による一時 Git リポジトリ・Codex home・fake 外部コマンドを使い、個別実装の内部詳細よりもサブコマンド境界や共通 runtime 境界の外部挙動を検証する入口になる。
 
 ## Read this when
-- CLI サブコマンドや runtime 共通処理を変更した後、対応する外部挙動・終了コード・標準出力・状態ファイル・git 状態の期待値を確認したいとき。
-- Codex 実行 wrapper、TUI 起動、quota/capacity retry、Codex home/profile/sandbox 権限、subprocess tracking、call log や prompt log の回帰テストを探すとき。
-- apply、session、review、indexing、doctor の workflow が worktree、branch、dirty 判定、conflict、cleanup、report、preflight とどう接続されるかをテスト側から確認したいとき。
-- prompt parts、structured output schema 参照、builder parameter、packaged import、Markdown renderer など、実装境界の期待出力や import 公開面を検証するテストを探すとき。
-- 新しいテストを書く前に、既存 fixture、fake Codex、fake managed Ollama/systemctl、一時 Git repository、Typer runner 実行などの共有補助を使えるか確認したいとき。
+- realization implementation の変更後に、対応する CLI 外部挙動、状態遷移、git 副作用、ログ、report、profile、schema 参照、権限境界の期待値を確認したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、doctor、TUI、Codex runtime の統合的な回帰テストを探すとき。
+- Codex 実行の retry、quota、home 解決、subprocess tracking、TUI/exec 起動引数、fake 外部コマンドを使った検証方法を確認したいとき。
+- prompt parts、ACP builder、packaged import、StructDoc rendering など、CLI 以外の realization code に対する既存テスト観点を探すとき。
 
 ## Do not read this when
-- 実装方針や内部 helper の責務を直接確認したいだけなら、対応する実装領域を読む。
-- oracle file、realization file、path keyword、file access rule、INDEX エントリー規約などの正本仕様断片を確認したいだけなら、oracle 側の該当文書を読む。
-- 個別の prompt 本文、structured output schema 本体、設定 schema の正本内容を確認したい場合は、対応する正本または builder 実装を直接読む。
-- テストではなく本番の Codex profile 生成、Ollama 管理、runtime apply/session/review/indexing 処理そのものを変更する作業では、まず対応する実装モジュールを読む。
+- oracle file の正本仕様断片、path keyword、file access rule、INDEX エントリー規則そのものを確認したいだけなら、oracle 側の該当本文を読む。
+- 実装の制御フローや helper の責務を最初に調べたい場合は、対応する realization implementation を先に読む。
+- 個別サブコマンドや builder に関係しない一般的なリポジトリ構成、設定定義、正本 schema の内容だけを確認したい場合。
+- テスト支援 fixture の使い方だけが必要な場合は、共有支援モジュールの本文へ直接進む。
 
 ## hash
-- 07f9b9a90a1c9c69a84c22e4511cd2898086165528b9d052246c12ead20e1ff9
+- b521b519ef9cad28128a9e725428ae8925b0d6b7e4bd6f8b8712fed95b35fce7
