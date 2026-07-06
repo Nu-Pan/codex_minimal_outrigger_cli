@@ -337,24 +337,22 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor CLI と doctor preprocess の外部挙動を検証する realization test。git 修復、`.cmoc/local` の ignore/untrack、`.agents` 管理、config 生成・同期、managed Ollama の導入・検証、linked worktree での対象 root 判定、`dector` alias、local SLM profile 作成時の doctor 起動を扱う。
-- doctor 実行が既存の staged/unstaged 変更や rename を壊さないこと、repair commit と config commit の対象が分離されることを確認する入口になる。
+- doctor 系 CLI と管理 Ollama 起動準備に関する pytest テスト群。リポジトリ修復、設定生成・同期、linked worktree での対象判定、`.cmoc/local` の追跡解除、既存 staged/unstaged 変更の保全、Ollama service 検証、cmoc provider model pull、local SLM profile 準備時の doctor 実行を外部挙動として確認する。
+- CLI entrypoint、runtime doctor、runtime ollama、runtime config、Codex profile 準備が連携して作る Git 状態・設定ファイル・systemd user service・モデル準備の期待値を確認する入口になる。
 
 ## Read this when
-- doctor コマンド、`dector` alias、または doctor preprocess の挙動を変更する。
-- `.cmoc/config.json` の生成・default 同期・git tracking、または linked worktree で repo config を使う処理を変更する。
-- `.cmoc/local` の ignore/untrack、`.agents/.gitkeep`、repair commit、既存 staged/unstaged 変更の保全に関わる git 操作を変更する。
-- managed Ollama の install/service/model pull/listener verification、または cmoc provider model の pull 対象選定を変更する。
-- local SLM 用 Codex profile 作成時に doctor を起動する条件や副作用を変更する。
+- doctor または dector の CLI 挙動、preprocess、設定生成、設定同期、Git 修復 commit、`.gitignore` や `.agents` の扱いを変更する時。
+- `.cmoc/local` を追跡対象外にする処理、既存の staged/unstaged 変更や rename を壊さない Git 操作、linked worktree での repo config 参照を確認する時。
+- 管理 Ollama のインストール先、systemd user service、service process/listener 検証、HTTP readiness、cmoc provider model の pull 対象選定を変更する時。
+- local SLM 用 Codex profile 作成時に doctor が走る条件や、managed Ollama provider 設定との連携を確認する時。
 
 ## Do not read this when
-- doctor 以外の CLI サブコマンドだけを変更する。
-- config schema の定義そのものや serialization の単体挙動だけを確認したい場合は、config 側の実装・テストを先に読む。
-- Ollama service helper の内部単体挙動だけを確認したい場合は、runtime Ollama 側のより直接的なテストや実装を先に読む。
-- agent call parameter、model class、reasoning effort、file access mode の定義だけを調べる場合は、basic 側の対象を読む。
+- doctor 系 CLI や管理 Ollama 準備に関係しない通常の agent call、apply、fork、ルーティング、プロンプト処理の挙動を調べる時。
+- CmocConfig の構造や既定値そのものを確認したいだけで、doctor による生成・同期結果を見ない時。
+- Ollama API や systemd の実装詳細を単体で調べたいだけで、doctor/preprocess からの統合挙動を扱わない時。
 
 ## hash
-- a18521dbb2a3e559ad9094ac62e525f399f09d42776f2bc05ef760f5d9021d65
+- 728af3ba8f2d972b1a4b9e5ce598013d579d788dea62a25a83d0b64f34d671cf
 
 # `test_indexing_cli.py`
 
