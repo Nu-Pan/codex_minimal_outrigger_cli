@@ -831,6 +831,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         assert "sandbox_mode" not in parsed
         assert "sandbox_workspace_write" not in parsed
         assert parsed["default_permissions"] == "cmoc"
+        assert parsed["permissions"]["cmoc"]["extends"] == ":workspace"
     assert _profile_permission_filesystem(profiles[FileAccessMode.READONLY]) == {
         str(path.resolve()): "read"
         for path in root.iterdir()

@@ -435,7 +435,7 @@ def _append_permission_profile_section(
             f'default_permissions = "{_CMOC_PERMISSION_PROFILE}"',
             "",
             f"[permissions.{_CMOC_PERMISSION_PROFILE}]",
-            'extends = ":read-only"',
+            'extends = ":workspace"',
             "",
             f"[permissions.{_CMOC_PERMISSION_PROFILE}.filesystem]",
         ]
