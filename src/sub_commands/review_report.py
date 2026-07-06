@@ -109,9 +109,13 @@ def render_review_oracle_report(
             "|---:|---|---:|",
             rows,
             "## Fatal findings",
-            _render_severity_findings("fatal", fatal_accepted, fatal_rejected),
+            _render_finding_group("Accepted fatal findings", fatal_accepted),
             "## Minor findings",
-            _render_severity_findings("minor", minor_accepted, minor_rejected),
+            _render_ordered_finding_tail(
+                minor_accepted,
+                fatal_rejected,
+                minor_rejected,
+            ),
             "",
         ]
     )
@@ -121,19 +125,23 @@ def _findings_with(findings: list[dict], severity: str) -> list[dict]:
     return [finding for finding in findings if finding.get("severity") == severity]
 
 
-def _render_severity_findings(
-    severity: str,
-    accepted: list[dict],
-    rejected: list[dict],
+def _render_finding_group(title: str, findings: list[dict]) -> str:
+    return "\n".join([f"### {title}", render_finding_section(findings)])
+
+
+def _render_ordered_finding_tail(
+    minor_accepted: list[dict],
+    fatal_rejected: list[dict],
+    minor_rejected: list[dict],
 ) -> str:
-    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
-    # The severity H2 itself is the required finding list, not a summary anchor.
+    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md requires the
+    # finding detail stream to be ordered by verdict first, while also requiring
+    # the Fatal and Minor H2 anchors in that order.
     return "\n".join(
         [
-            f"### Accepted {severity} findings",
-            render_finding_section(accepted),
-            f"### Rejected {severity} findings",
-            render_finding_section(rejected),
+            _render_finding_group("Accepted minor findings", minor_accepted),
+            _render_finding_group("Rejected fatal findings", fatal_rejected),
+            _render_finding_group("Rejected minor findings", minor_rejected),
         ]
     )
 
