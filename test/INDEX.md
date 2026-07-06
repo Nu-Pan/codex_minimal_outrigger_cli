@@ -19,24 +19,22 @@
 # `test_acp_builder_parameters.py`
 
 ## Summary
-- ACP builder が生成する agent call parameter、prompt に埋め込む root 表記、structured output schema 参照、公開 export 境界を検証する realization test。
-- apply fork、TUI parameter resolve、index entry、review oracle、session join conflict resolution など、複数 builder の互換性と正本 schema 追従を横断的に確認する。
+- ACP builder が生成する AgentCallParameter のモデル種別、reasoning effort、file access mode、preflight 設定、prompt 埋め込み、structured output schema 参照、互換 module の公開名を検証する realization test。
+- apply fork、TUI resolve parameter、indexing index entry、review oracle、session join conflict resolution の builder 群について、oracle src の schema や builder と realization 側の出力が一致するかを確認する。
 
 ## Read this when
-- ACP builder の model class、reasoning effort、file access mode、preflight 実行有無、schema path の期待値を変更する。
-- builder prompt に含める `<repo-root>`、`<work-root>`、`<oracle-root>` などの placeholder 表記や、動的入力文字列の保持挙動を変更する。
-- oracle 側 structured output schema と realization builder が参照する schema の一致を確認したい。
-- builder module の `__all__` や互換 module が外部へ公開する名前を変更する。
-- apply fork、TUI resolve parameter、indexing index entry、review oracle finding、session conflict resolution の既存外部挙動に影響する変更を行う。
+- ACP builder の parameter 生成ロジック、prompt 内容、schema path、schema 内容、公開 API を変更する。
+- apply fork、TUI resolve parameter、indexing index entry、review oracle、session join conflict resolution の builder 実装や compatibility module を変更した後、既存挙動の期待値を確認する。
+- oracle src の structured output schema を realization 側 builder が正しく参照しているかを調べる。
+- builder が使う `<repo-root>`、`<work-root>`、`<oracle-root>` の prompt 表記や動的文字列の保持を検証したい。
 
 ## Do not read this when
-- 個別 builder の実装詳細だけを調べる場合は、対応する implementation へ直接進めばよい。
-- oracle schema の内容そのものを編集・確認する場合は、oracle 側の schema 定義を読む。
-- ACP の基礎型や enum の定義だけを確認したい場合は、基礎型を定義する implementation を読む。
-- INDEX.md エントリー生成の出力文面だけを調整する場合は、indexing 用 builder またはその schema を優先して読む。
+- ACP builder 以外の CLI 実行、永続状態、path model、index 生成本文などを調べたい場合。
+- structured output schema の正本内容そのものを確認したい場合は、対応する oracle src の schema を直接読む。
+- 個別 builder の実装方針を調べたい場合は、対象 builder の realization implementation を直接読む。
 
 ## hash
-- cf91f4a5e1b2deb5113e2f191407d273f16c7acb9c633c5305dac69b150efa93
+- 9af27731ac237fd99af478859368c13a57b4401a0f1e8e7000593bb7ab644450
 
 # `test_apply_abandon_cli.py`
 
@@ -439,21 +437,25 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle コマンドと eval-oracle 委譲を CLI 経由で検証する realization test。report の構成・件数・所見の accept/reject 表示、対象 oracle file の列挙、所見 enumerate/validate/judge/merge loop、review worktree と INDEX.md 変更の取り込み、失敗時 report、非 INDEX 差分拒否を扱う。
+- review oracle の CLI 外部挙動を検証する realization test。eval-oracle から review oracle 実装への委譲、review oracle report の生成内容、finding の列挙・検証・judge・merge loop、対象 oracle file の選択、review 用 worktree と join commit、INDEX.md 差分の扱い、処理失敗時 report、review 中の不正な非 INDEX 差分拒否を扱う。
+- 対象選択、report 出力、finding 評価 loop、merge 操作、worktree 統合の各挙動が同じ review run の状態と fake Codex 応答を共有するため、review oracle の CLI 振る舞いを広く確認する入口になる。
 
 ## Read this when
-- review oracle または eval-oracle の外部挙動、report 出力、scope 指定、対象 oracle file の選択条件を変更する。
-- review oracle の所見列挙、同一対象内の既存所見 prompt、challenger/advocate/judge、merge operation の検証・再試行・失敗処理を変更する。
-- review 実行用 worktree、linked worktree 上の session branch、review 後の INDEX.md merge、merge conflict 解決、review が作成した非 INDEX 差分の扱いを確認する。
-- review oracle の処理途中失敗時に error report を残す挙動や CLI へのエラー表示を変更する。
+- review oracle コマンド、eval-oracle コマンド、または review oracle の report 出力形式を変更する。
+- review oracle の finding 列挙、検証、judge、merge、semantic retry、上限到達時の挙動を変更する。
+- review oracle の対象 oracle file 判定、full scope と session scope、tracked ignored file、symlink、AGENTS.md や INDEX.md の除外条件を確認する。
+- review oracle が linked worktree や session branch 上でどの oracle と commit を対象にするかを変更する。
+- review oracle 実行中に生成された INDEX.md 差分の取り込み、preflight indexing 差分、merge conflict 解決、非 INDEX 差分拒否を変更する。
+- review oracle の処理失敗時に error report を残す挙動や CLI へのエラー表示を変更する。
 
 ## Do not read this when
-- oracle review 以外のサブコマンドや、CLI を介さない小さな helper の単体挙動だけを確認したい。
-- INDEX.md エントリー生成規則そのものや oracle file の仕様文書を確認したい場合は、対応する oracle doc または prompt builder 側を読む。
-- 通常の session fork、doctor、git helper の基礎挙動だけを確認したい場合は、それらを直接扱う test や実装を読む。
+- review oracle 以外の review 種別、または oracle review と共有されない CLI コマンドだけを扱う。
+- Codex 実行基盤、設定読み込み、git helper、session 管理などの内部実装だけを調べたい場合で、review oracle の外部挙動を確認する必要がない。
+- report 本文の実装方法だけを局所的に調べたい場合は、まず review oracle 実装側を読む。
+- oracle file の定義や realization standard そのものを確認したい場合は、正本仕様側を読む。
 
 ## hash
-- a2682e34b6fa72adf7e9253c29dcc1c19c162e18a2f5d4b6cf0c52c09599dfd8
+- e73f418d72a45d89af2bd56f7d5640651e45bbf92fef2ce10481799dab026c24
 
 # `test_session_cli.py`
 

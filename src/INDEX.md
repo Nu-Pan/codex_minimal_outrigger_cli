@@ -135,20 +135,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI のサブコマンド実装を集約する階層。実行入口は、session lifecycle、apply run、review oracle、indexing、TUI、doctor、oracle 評価などの利用者向け操作を、runtime や下位の共通処理へ接続する。
-- 各操作の詳細ロジックをすべて持つ場所ではなく、サブコマンド単位の入口、実行順序、事前条件、委譲先、利用者向け出力への接続を切り分けるためのルーティング起点になる。
+- CLI サブコマンド実装を領域別に束ねる階層。apply run、session lifecycle、review oracle、indexing、doctor、TUI、oracle 評価など、利用者向けコマンドの実行入口と orchestration 層へ進むための起点になる。
+- 各対象は共通 runtime、git 操作、state、worktree、Codex 呼び出し、report 生成などを必要に応じて接続し、詳細な生成・判定・共通 helper 実装は下位または共通領域へ委譲する。
 
 ## Read this when
-- どのサブコマンド実装へ進むべきかを、利用者向け操作の種類から切り分けたいとき。
-- session の開始・join・破棄、apply run の開始・abandon・join・report、review oracle、indexing、TUI、doctor、oracle 評価のいずれかの実行入口を探したいとき。
-- サブコマンドが CLI runtime、git 操作、worktree、state、Codex 実行、report 生成、INDEX.md maintenance などの下位処理へどう接続されるかを追い始めたいとき。
-- 特定サブコマンドの事前条件、失敗時挙動、状態更新、branch/worktree 操作、公開出力を確認または変更する入口を探したいとき。
+- CLI サブコマンドの実装入口を探し、どのコマンド領域または下位 module を読むべきか切り分けたいとき。
+- apply run、session、review oracle、INDEX maintenance、doctor preprocess、TUI 起動、oracle 評価の実行フローや委譲先を確認または変更したいとき。
+- サブコマンド固有の preflight、branch/worktree/state/process/report、失敗時処理、利用者向け出力がどこで束ねられているかを追いたいとき。
 
 ## Do not read this when
-- CLI 全体のサブコマンド登録、引数定義、runtime 共通規約、git wrapper、worktree 探索、path model の定義そのものを調べたいときは、それぞれの共通実装を直接読む。
-- INDEX.md の本文生成、差分検出、lock、commit など indexing 共通処理の詳細だけを調べたいときは、サブコマンド入口ではなく共通処理側を読む。
-- review finding 生成、対象列挙、report 描画、INDEX 統合、apply や session の個別操作など、読むべき下位実装がすでに分かっているときは、その本文へ直接進む。
+- CLI runtime、git wrapper、path model、state schema、Codex 実行 wrapper、INDEX 生成ロジックなどの共通処理そのものを調べたいときは、それぞれの共通実装へ直接進む。
 - oracle file や realization file の定義、INDEX.md 生成規則、path model などの正本仕様を確認したいときは、対応する oracle doc または oracle src を読む。
+- 特定サブコマンド内で対象列挙、prompt builder、report 描画、merge 処理など読むべき下位 module がすでに分かっているときは、その本文へ直接進む。
 
 ## hash
-- 50b14da0500f1230083adc0181906757e9406d0babf3a6a3346b76d0aed3cf61
+- c4a9130e8d8f76ddbb7193910439f5eeebf28090a0c0621f2e0850d481493767

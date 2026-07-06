@@ -141,21 +141,21 @@
 # `review_paths.py`
 
 ## Summary
-- review finding の `oracle_path` 値を、実在パスまたは解決済みパスへ変換する補助処理を扱う。
-- 空値・非文字列・不正なプレースホルダを `None` にし、絶対パス、`<oracle-root>` alias、その他のパスプレースホルダ、worktree 相対パスを分岐して解決する。
+- レビュー結果に含まれる oracle 参照文字列を、実在パスとして扱える場合だけ解決する補助処理を提供する。
+- 絶対パス、oracle ルート別名、既定のプレースホルダ表記をそれぞれ扱い、不正または未対応の値は解決不能として返す。
 
 ## Read this when
-- review finding に含まれる oracle 参照パスの解決方法を確認または変更したいとき。
-- `<oracle-root>` alias、`<...>` 形式のパスプレースホルダ、worktree 相対パスの扱いを調べたいとき。
-- finding に oracle path が無い場合や不正な場合の戻り値を確認したいとき。
+- review 系の処理で finding に含まれる oracle 参照を実ファイルパスへ変換する挙動を確認したいとき。
+- oracle ルート別名やプレースホルダ付きパスが、作業ツリー内の oracle 配下または共通のパス解決処理へどう渡されるかを調べるとき。
+- finding 側の oracle 参照が欠落、不正型、空文字、未解決表記だった場合の扱いを確認したいとき。
 
 ## Do not read this when
-- review finding の列挙 prompt や oracle path の出力仕様そのものを確認したいとき。
-- 汎用的なパスプレースホルダ解決規則や path model 全体を調べたいとき。
-- review サブコマンド全体の制御フロー、表示、終了コードを確認したいとき。
+- レビュー対象ファイル一覧そのものの収集、差分解析、または finding の生成ロジックを調べたいだけのとき。
+- 一般的なパスプレースホルダの定義や解決規則を調べたいときは、共通のパスモデル側を直接読む方がよい。
+- oracle 文書や oracle 実装の仕様本文を確認したいとき。
 
 ## hash
-- 030dc150f751305de30cf8f55a7b22f925529de6c4aa2b2b36480935057e02ae
+- aa47d49a026ac5e963a47a199475d047e99aa2597916bb7fa1173fe3cfb15aca
 
 # `review_report.py`
 
