@@ -1,22 +1,25 @@
 # `acp`
 
 ## Summary
-- oracle src 側の agent call parameter builder を正本に保ちながら、realization 側で旧来の acp 系 import 互換を維持するための入口階層。実体実装の複製ではなく、canonical builder への委譲、再公開、薄い wrapper、module alias、削除条件の確認に使う。
-- apply、review、session、tui、indexing、quota probe などの builder 領域について、既存公開面や realization 側参照を壊さず oracle 側実装へ接続する境界を扱う。
+- 旧来の `acp.*` import 面を維持するための realization 側互換入口を扱う階層。oracle 側 acp builder 実装を正本に保ちつつ、再公開 package、薄い adapter、module alias、移行期間中の公開 import path を収める。
+- agent call parameter builder 群について、oracle 実装への接続、realization 側公開型への最小変換、互換入口の残存理由や削除条件を確認する起点になる。
+- oracle 側 builder を持たない quota 回復確認用のような realization-only の最小 builder も含む。
 
 ## Read this when
-- acp 系 import path を oracle 側 canonical 実装または実体 module へ移行する作業で、互換入口を残す理由、委譲先、削除条件を確認したいとき。
-- realization 側または利用者向け公開面に残る acp 系参照について、再公開境界、薄い wrapper、限定補正、runtime 補助処理の扱いを判断したいとき。
-- agent call parameter builder の旧 import 互換が、apply、review、session、tui、indexing、quota probe などの領域ごとにどこで維持されているかを追跡したいとき。
+- `acp.*` または `acp.builder.*` の旧 import path 互換性、再公開入口、module alias、削除条件を確認したいとき。
+- apply fork、review、session、TUI、indexing などの agent call parameter builder が oracle 側実装へどう接続されるかを調べるとき。
+- oracle 側 builder の生成結果を realization 側公開型や既存 caller 向け import surface にどう適応しているか確認・変更したいとき。
+- quota availability probe や quota 回復確認用の最小 agent call parameter builder を確認・変更したいとき。
 
 ## Do not read this when
-- agent call parameter の具体的な構築仕様、prompt、出力条件、人間意図を確認したいとき。対応する oracle 側 canonical builder を読む。
-- 各機能全体の実行フロー、CLI 引数処理、状態操作、画面構成、git 処理を調べたいとき。それぞれの上位実装または直接の機能実装を読む。
-- 公開型、汎用 path model、git helper、oracle file 定義、INDEX.md エントリー生成仕様など、builder import 互換以外の共通概念を調べたいとき。それぞれの共通実装や正本仕様へ進む。
-- acp 系参照が全公開面と realization 側から消えていることを確認済みで、互換入口の削除判断や移行経緯を読む必要がないとき。
+- agent prompt、出力条件、parameter 生成内容などの正本仕様や人間意図を確認したいときは、対応する oracle 側 builder を読む。
+- acp builder の実装本体や生成処理そのものを調べたいときは、互換入口ではなく実体 module へ進む。
+- apply fork、review、session、TUI など各機能全体の実行フロー、CLI 引数処理、状態操作、画面構成を調べたいときは、それぞれの上位実装や呼び出し元を読む。
+- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、path model、git helper などの共通型・共通処理そのものを調べたいときは、該当する共通実装を読む。
+- 新しい acp 機能や通常の機能実装場所を探しているだけで、既存 import 互換や builder 入口に関係しないときは、対象機能の実装階層へ直接進む。
 
 ## hash
-- 8a30e62ad6cd17ae3ca589daf06896998e85eb44f41619fe332bbdaa54f7663c
+- 0217d13bdb1a329a3082db807c50d3888537d232abdbe92e5df3aeca3aa3cbed
 
 # `basic`
 

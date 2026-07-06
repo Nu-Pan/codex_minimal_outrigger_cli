@@ -74,21 +74,20 @@
 # `quota_probe.py`
 
 ## Summary
-- Codex quota availability probe 用の AgentCallParameter を組み立てる互換レイヤー。実際の組み立て処理は oracle 側の builder に委譲し、realization 側から同じ関数を import して使える入口だけを提供する。
-- prompt standard と codex exec rule に対応する quota probe parameter 構築処理へ進む前に、realization 側の公開関数がどこへ委譲しているかを確認するための薄い中継点。
+- quota 回復確認用の最小 agent call parameter を組み立てる builder。base parameter から cwd だけを引き継ぎ、最小 model、低 reasoning、readonly file access、短い probe prompt、indexing preflight 無効化を指定する。
 
 ## Read this when
-- quota availability probe 用の AgentCallParameter 構築関数を realization 側から呼び出す経路を確認したいとき。
-- quota probe parameter builder の import 経路、公開関数、oracle 側 builder への委譲関係を調べるとき。
-- prompt standard または codex exec rule に基づく quota probe parameter 構築の realization 側エントリーポイントを確認するとき。
+- quota availability probe や quota 回復確認の agent call parameter の内容を確認・変更したいとき。
+- quota 回復確認の実行で使う model class、reasoning effort、file access mode、prompt、cwd 引き継ぎ、indexing preflight の扱いを確認したいとき。
+- oracle src に対応 builder がない quota probe 用の realization-only 実装意図を確認したいとき。
 
 ## Do not read this when
-- quota probe parameter の具体的な組み立て仕様や変換内容を確認したいとき。この対象は処理本体を持たず、oracle 側 builder へ委譲するだけである。
-- AgentCallParameter 型そのものの定義や属性を調べたいとき。
-- quota availability probe 以外の agent call parameter builder を探しているとき。
+- 通常の agent call parameter builder 全般や他用途の prompt 組み立てを確認したいだけのとき。
+- quota 回復確認ではなく、indexing preflight 自体の仕様や実装を確認したいとき。
+- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort の型定義や意味を確認したいとき。
 
 ## hash
-- c058c65beb35280cdd1c34cb3eb8f919d8bb5a0f6cfafa44106e0206d91cecdd
+- e8b937e421520df3d9bd8332a36faeb4806bab706f7623ee268d20c23c4e626f
 
 # `review`
 

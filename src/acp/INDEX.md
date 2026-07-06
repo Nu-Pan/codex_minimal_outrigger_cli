@@ -19,18 +19,21 @@
 # `builder`
 
 ## Summary
-- agent call parameter builder の realization 側入口を束ねる階層。主に旧来の acp.builder 系 import 互換を維持し、oracle 側 canonical builder への委譲・再公開・薄い wrapper 境界を扱う。
-- apply、review、session、tui、indexing、quota probe などの builder 領域について、既存参照を壊さず oracle 側実装へ接続するための package path、module alias、公開関数、削除条件を確認する入口になる。
+- agent call parameter builder 群の realization 側入口を扱う階層。主に oracle 側 builder を正本に保ちながら、旧来の acp.builder 系 import path を維持する互換 wrapper、再公開 package、薄い adapter を収める。
+- apply、review、session、tui、indexing などの builder 領域について、canonical oracle 実装への接続、realization 側公開型への最小変換、互換入口の残存理由や削除条件を確認する起点になる。
+- quota 回復確認用のように oracle 側 builder を持たない realization-only の最小 builder も含む。
 
 ## Read this when
-- acp.builder 配下の旧 import path 互換が、oracle 側 canonical 実装または realization 側 wrapper へどう接続されるかを調べたいとき。
-- apply、review、session、tui、indexing、quota probe の AgentCallParameter builder について、realization 側公開入口、委譲先、再公開境界、互換 shim の削除可否を確認したいとき。
-- oracle 側 builder を正本に保ちながら、realization 側で package path、module alias、戻り値変換、限定補正、runtime 補助処理をどこまで担うかを追跡したいとき。
+- acp.builder.* の旧 import path 互換性、module alias、再公開入口、削除条件を確認したいとき。
+- apply fork、review、session、TUI、indexing などの agent call parameter builder が oracle 側実装へどう接続されるかを調べるとき。
+- oracle 側 builder の生成結果を realization 側公開型や既存 caller 向け import surface にどう適応しているか確認・変更したいとき。
+- quota availability probe や quota 回復確認用の最小 agent call parameter builder を確認・変更したいとき。
 
 ## Do not read this when
-- AgentCallParameter の具体的な構築仕様、prompt、出力条件、人間意図を確認したい場合は、対応する oracle 側 canonical builder を読む。
-- apply fork、review、session、TUI など各機能全体の実行フロー、CLI 引数処理、状態操作、画面構成、git 処理を調べたい場合は、それぞれの上位実装または直接の機能実装を読む。
-- ACP parameter の公開型、汎用 path model、git helper、oracle file 定義、INDEX.md エントリー生成仕様など、builder import 互換以外の共通概念を調べたい場合は、それぞれの共通実装や正本仕様へ進む。
+- agent prompt、出力条件、parameter 生成内容などの正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder を読む。
+- apply fork、review、session、TUI など各機能全体の実行フロー、CLI 引数処理、状態操作、画面構成を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
+- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、path model、git helper などの共通型・共通処理そのものを調べたい場合は、該当する共通実装を読む。
+- 新規機能の通常実装場所を探しているだけで、既存 import 互換や builder 入口に関係しない場合は、対象機能の実装階層へ直接進む。
 
 ## hash
-- 6bfbcfda2722a0c9c52e52da91435c4403b5fe256078eec2a2f60b0866ff5239
+- 845925685c57b83232fa0fbf4a31a8883694585c57ae1b80a871e1df3349a33d
