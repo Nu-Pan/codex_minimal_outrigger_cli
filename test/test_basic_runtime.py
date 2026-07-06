@@ -321,6 +321,7 @@ def test_config_json_preserves_oracle_member_order() -> None:
     assert list(data["codex"]) == [
         "model",
         "reasoning_effort",
+        "num_try_falv_recovery",
     ]
     assert list(data["codex"]["model"]) == [
         "mainstream",
@@ -402,6 +403,8 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
     [
         {"num_parallel": True},
         {"num_parallel": "3"},
+        {"codex": {"num_try_falv_recovery": True}},
+        {"codex": {"num_try_falv_recovery": "1"}},
         {"apply_fork": {"num_apply_files": True}},
         {"apply_fork": {"num_apply_files": "200"}},
         {"review_oracle": {"num_enumerate_findings_loop": False}},
@@ -419,10 +422,11 @@ def test_config_rejects_non_integer_int_values(data: dict[str, object]) -> None:
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
-def test_config_drops_removed_codex_setting() -> None:
+def test_config_preserves_codex_falv_recovery_try_count() -> None:
     config = config_from_dict({"codex": {"num_try_falv_recovery": 4}})
 
-    assert "num_try_falv_recovery" not in config_to_dict(config)["codex"]
+    assert config.codex.num_try_falv_recovery == 4
+    assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 4
 
 
 def test_render_error_uses_structured_markdown() -> None:
