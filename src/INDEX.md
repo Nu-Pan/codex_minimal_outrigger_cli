@@ -58,25 +58,23 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時に複数領域から共有される runtime helper 群をまとめる領域。
-- Codex 実行、CLI 共通実行、設定、git、path、ログ、状態、doctor、indexing、apply 補助など、サブコマンド横断の基盤処理への入口になる。
-- この領域自体は共有 runtime API と補助実装のまとまりを示し、個別機能の挙動や失敗時処理は下位要素で確認する。
+- cmoc の実行時に複数箇所から共有される runtime helper 群をまとめる領域。
+- Codex 実行、設定、git、path、logging、state、doctor、Ollama、INDEX 更新 preflight など、サブコマンド横断の共通処理へ進む入口になる。
 
 ## Read this when
-- サブコマンド横断で使われる runtime helper の所在や責務境界を確認したいとき。
-- Codex 実行、profile、preflight、quota、call log、TUI/exec 起動などの共通実行基盤を調べたいとき。
-- config 読み書き、path 解決、git 操作、ログ、状態ファイル、doctor preprocess、Ollama 準備などの runtime 共通処理へ進む入口を探すとき。
-- INDEX.md 自動更新や indexing preflight の実装、entry 再生成、hash 検証、indexing commit の挙動を調べたいとき。
-- apply process 追跡、worktree 解決、process 停止など apply 実行を支える runtime 補助処理を調べたいとき。
+- CLI サブコマンドや runtime 処理から共通 helper を使う箇所、または共有 runtime API の配置先を確認したいとき。
+- Codex exec/TUI 呼び出し、profile 生成、quota/capacity retry、Structured Output 検証、call log、preflight など Codex 実行境界の共通処理を調べたいとき。
+- work root や repo root の解決、cmoc 管理ディレクトリ、設定ファイル、session state、apply process、git worktree、git ignore 判定など実行時状態や path を扱う処理を確認したいとき。
+- サブコマンド共通 runner、doctor preprocess、config 同期、エラー整形、実行ログ、外部コマンド結果型など、個別コマンドに閉じない実行基盤を変更・調査したいとき。
+- INDEX.md の自動更新 preflight、entry hash、既存 entry 再利用、Codex による entry 生成、indexing commit の挙動を確認・変更したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの業務処理、引数定義、利用者向け workflow を確認したいときは、該当する command 層や app spec を読む。
-- 正本仕様断片、自然言語プロンプト、設定型、path keyword の概念定義そのものを確認したいときは、対応する oracle 側を読む。
-- 特定 helper の詳細な入出力、失敗時挙動、保存形式だけを確認したいときは、この領域全体ではなく該当する下位要素を直接読む。
-- テスト固有の期待値や外部挙動を確認したいときは、runtime helper 群ではなく対応する test または対象機能の実装を読む。
+- 個別サブコマンドの引数、業務処理、状態遷移、利用者向け workflow だけを調べたいときは、そのコマンド実装または対応する app spec を読む。
+- 正本仕様断片、prompt、Structured Output schema、path keyword、config 型など oracle 側の定義そのものを確認したいときは、対応する oracle file を読む。
+- 特定 helper の挙動、入出力、失敗時処理だけを確認したいときは、この領域全体ではなく、責務に対応する下位要素を直接読む。
 
 ## hash
-- 0067c980395adb46a72e02aa450466012933540058a07550b6dcfa9bda072569
+- 099d23383af5e8c616449c347fc1e1ad4aa24b6e8a351039cc27741952fae1fd
 
 # `config`
 

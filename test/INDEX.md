@@ -123,21 +123,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に固定する回帰テスト群。root placeholder と linked worktree の解決、config の既定値・検証・変換、CmocError の Markdown 表示、CLI preflight と parse error の stdout report、subcommand log、session/apply branch state、worktree 作成削除の安全境界、FileAccessMode から Codex profile/sandbox への変換、binary 判定などを扱う。
-- 個別サブコマンドの業務ロジックではなく、複数サブコマンドの実行前提になる runtime 層の外部挙動をまとめて確認する入口。
+- cmoc の basic runtime 契約を横断的に固定する pytest 群。root placeholder と worktree 判定、config 読み書き、CmocError の表示、CLI preflight と parse error、subcommand log、session state、FileAccessMode と Codex profile sandbox、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて検証する。
+- 共通 fixture と root 状態を共有する runtime 回帰テストとして一箇所に集約されており、分割すると読み取り文脈が散る境界を扱う。
 
 ## Read this when
-- runtime の共通契約を変更する。特に root/repo/work/run の解決、linked worktree、`.cmoc/local`、git worktree、CLI wrapper、doctor preprocess、subcommand log、CmocError 表示、config 読み書き、session state、FileAccessMode、Codex profile、binary 判定に触れるとき。
-- CLI error を stdout の cmoc 形式 report として返す挙動、または Click/Typer の parse error・completion probe・work root 制約を確認したいとき。
-- agent call 用の filesystem permission、writable_roots、extra writable/read path、oracle conflict write、repo/local read permission の境界を検証したいとき。
+- runtime の共通契約を変更する。特に repo root と linked worktree、run/work root、placeholder path 解決、worktree 作成・削除の安全条件を触るとき。
+- config の default、dict 変換、旧設定の破棄、不正値の CmocError 化、Codex model spec や reasoning effort の扱いを変更するとき。
+- CmocError の markdown 表示、CLI error/parse error の stdout report、doctor preprocess、pre-log check、subcommand log の生成・記録内容を変更するとき。
+- SessionState、session/apply branch 名の解釈、branch から state を読む制御を変更するとき。
+- FileAccessMode、Codex profile、sandbox writable roots、permission filesystem、extra writable/read path、oracle conflict write、repo-local read 許可を変更するとき。
+- binary 判定、duration 表示、起動 wrapper の missing venv report、`.cmoc/local` の gitignore 追加など basic runtime の補助挙動を変更するとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の apply、review、session、doctor、indexing の詳細ロジックだけを調べたい場合。まず該当サブコマンドの実装または専用テストへ進む。
-- oracle file の正本仕様本文、INDEX.md 生成規則、または文書ルーティングの内容自体を確認したい場合。oracle 配下の該当文書を読む。
-- UI 表示や LLM 出力品質の検証など、runtime 境界の外部挙動に関係しない変更を扱う場合。
+- 個別サブコマンド固有の business logic、入出力、状態遷移だけを確認したい場合は、そのサブコマンドのテストを先に読む。
+- oracle doc の正本仕様そのもの、INDEX.md のルーティング文、AGENTS.md の作業規則を確認したい場合は対象外。
+- UI 表示、LLM 出力品質、プロンプト本文の妥当性など、basic runtime 境界ではない振る舞いを調べる場合は対象外。
+- 単一 helper の内部実装だけを狭く変更し、root/config/error/profile/log/state などの共通 runtime 契約に影響しないことが明らかな場合は、より近い実装ファイルと対応テストを読む。
 
 ## hash
-- b8e778d3ff4d7e76038f89f6228d1a5561ae6fae2df52fb25873b6a7226c8a4f
+- 5ec1fbd31c19965359c03334580f3639090ab592d69cd3c03f27e3a0556f7259
 
 # `test_cli_tui.py`
 
