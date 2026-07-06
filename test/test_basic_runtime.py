@@ -1039,6 +1039,33 @@ def test_codex_profile_allows_repo_local_read_from_linked_worktree(
     assert filesystem[str((root / ".cmoc" / "local").resolve())] == "read"
     assert "sandbox_workspace_write" not in tomllib.loads(profile)
 
+    profile = build_codex_profile(
+        parameter,
+        CmocConfig(),
+        linked,
+        extra_read_root=root,
+    )
+    filesystem = _profile_permission_filesystem(profile)
+    assert filesystem[str((root / ".cmoc" / "local").resolve())] == "read"
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            parameter.model_class,
+            parameter.reasoning_effort,
+            FileAccessMode.REPO_WRITE,
+            parameter.prompt,
+            parameter.structured_output_schema_path,
+        ),
+        CmocConfig(),
+        linked,
+        extra_read_root=root,
+    )
+    parsed = tomllib.loads(profile)
+    assert "sandbox_mode" not in parsed
+    assert parsed["permissions"]["cmoc"]["filesystem"][
+        str((root / ".cmoc" / "local").resolve())
+    ] == "read"
+
     with pytest.raises(CmocError, match="許可領域外"):
         build_codex_profile(
             parameter,

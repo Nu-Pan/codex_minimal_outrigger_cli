@@ -117,7 +117,11 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
 
 
 def _is_repo_local_read_path(root: Path, path: Path) -> bool:
-    return path.is_relative_to(logs_dir(root).parent.parent)
+    return path.is_relative_to(_repo_local_read_root(root))
+
+
+def _repo_local_read_root(root: Path) -> Path:
+    return logs_dir(root).parent.parent.resolve()
 
 
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
@@ -362,14 +366,21 @@ def _append_workspace_write_section(
 
 
 def _needs_permission_profile(
-    mode: FileAccessMode, root: Path, extra_read_paths: list[Path] | None
+    mode: FileAccessMode,
+    root: Path,
+    extra_read_paths: list[Path] | None,
+    extra_read_root: Path | None,
 ) -> bool:
     """sandbox_mode だけで表現できない読み取り境界は profile 化する。"""
     return mode in {
         FileAccessMode.READONLY,
         FileAccessMode.PURE_ORACLE_READ,
         FileAccessMode.PURE_ORACLE_WRITE,
-    } or any(not path.resolve().is_relative_to(root) for path in extra_read_paths or [])
+    } or (
+        mode != FileAccessMode.NO_RULE
+        and extra_read_root is not None
+        and extra_read_root.resolve() != root
+    ) or any(not path.resolve().is_relative_to(root) for path in extra_read_paths or [])
 
 
 def _read_roots_for_permission_profile(
@@ -384,6 +395,14 @@ def _read_roots_for_permission_profile(
         if mode in {FileAccessMode.PURE_ORACLE_READ, FileAccessMode.PURE_ORACLE_WRITE}
         else _top_level_read_roots(mode, root)
     )
+    if (
+        mode != FileAccessMode.NO_RULE
+        and extra_read_root is not None
+        and extra_read_root != root
+    ):
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        # linked worktree の規則文は repo 側 `.cmoc/local` を常時 read 例外にする。
+        roots.append(_repo_local_read_root(extra_read_root))
     for path in extra_read_paths or []:
         resolved = path.resolve()
         if any(resolved.is_relative_to(read_root) for read_root in roots):
@@ -391,7 +410,7 @@ def _read_roots_for_permission_profile(
         if extra_read_root is not None and _is_repo_local_read_path(
             extra_read_root, resolved
         ):
-            roots.append(logs_dir(extra_read_root).parent.parent.resolve())
+            roots.append(_repo_local_read_root(extra_read_root))
         else:
             roots.append(resolved)
     result: list[Path] = []
@@ -486,7 +505,7 @@ def build_codex_profile(
             extra_read_root=read_root,
         )
         use_permission_profile = _needs_permission_profile(
-            parameter.file_access_mode, root, extra_read_paths
+            parameter.file_access_mode, root, extra_read_paths, read_root
         )
     if not use_permission_profile:
         sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
