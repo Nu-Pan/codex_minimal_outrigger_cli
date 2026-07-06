@@ -168,25 +168,23 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界で使う profile 生成、sandbox/permission profile の読み書き許可 root 計算、CODEX_HOME 検証、schema 配置、child process tracking、JSONL error 判定をまとめる実装。
-- FileAccessMode を Codex CLI 起動設定と実行後検証用の書き込み許可判定へ変換し、追加 read/write path が cmoc の許可境界を広げないよう検査する。
-- Codex CLI の実行環境準備と実行結果解釈に閉じた責務を持ち、apply abandon 用の child process pid 記録や capacity/quota retry 判定もこの subprocess 境界の一部として扱う。
+- Codex CLI の subprocess 境界で使う profile 生成、sandbox/permission profile 変換、CODEX_HOME 検証、apply 中の child process tracking、schema 配置、Codex JSONL 出力からの error/quota/capacity 判定をまとめる実装。
+- FileAccessMode を Codex CLI が扱える実行環境へ落とし込む処理と、Codex subprocess 起動前後の失敗を cmoc の実行時エラーや retry 判定へ変換する処理の入口になる。
 
 ## Read this when
-- Codex CLI に渡す profile、sandbox mode、permission profile、writable/readable root の決まり方を確認または変更するとき。
-- FileAccessMode ごとの読み取り・書き込み許可境界、追加 read/write path の検証、oracle conflict 解消時の例外的な書き込み許可を調べるとき。
-- CODEX_HOME の解決・検証、hashed profile の生成、cmoc 管理 Ollama provider 設定、schema store への Structured Output schema 配置を扱うとき。
-- Codex subprocess の起動失敗、apply 実行中の child process tracking、pid file lock、pid 再利用検出、abandon との同期を確認するとき。
-- Codex JSONL stdout/stderr から利用者向け error detail、resume token、capacity error、quota error を抽出する挙動を変更するとき。
+- Codex CLI 起動用 profile の model、reasoning effort、sandbox、permission profile、writable/read root の組み立てを確認または変更したいとき。
+- FileAccessMode ごとの読み取り・書き込み許可境界、oracle/realization/repo write の sandbox 表現、追加 read/write path の検証を扱うとき。
+- CODEX_HOME の解決・検証、Codex CLI 不在時のエラー化、Ollama provider 設定、schema store への Structured Output schema 配置を調べるとき。
+- apply abandon と連動する Codex child process の pid 記録、lock、pid 再利用対策、tracking path の process-local 切り替えを扱うとき。
+- Codex JSONL stdout/stderr から利用者向け error detail、resume token、capacity error、quota error を抽出する挙動を確認したいとき。
 
 ## Do not read this when
-- CLI subcommand の利用者向け仕様、prompt 本文、または FileAccessMode の自然言語ルールそのものを確認したいだけの場合は、対応する oracle 側の仕様断片を読む。
-- Codex subprocess 境界ではなく、実行後の git 差分検証、path model、runtime log 保存、または config 定義を調べる場合は、それぞれの責務を持つ別実装へ進む。
-- 個別コマンドの制御フローや agent call 全体の orchestration を追う場合は、この実装ではなく呼び出し元の command/session/apply 系の実装を読む。
-- Structured Output schema の内容や JSON schema 自体を確認したい場合は、この実装ではなく schema の生成元または呼び出し側を読む。
+- cmoc の正本仕様そのものを確認したいとき。対応する oracle file を直接読むべき。
+- Codex subprocess 境界ではなく、通常の runtime path 計算、git 判定、hash file 書き込み、設定定義そのものを変更したいとき。それぞれの責務を持つ実装を直接読むべき。
+- CLI サブコマンドの利用者向けフローや prompt 本文の構成を調べたいだけのとき。subprocess 起動環境や JSONL error 判定に踏み込む場合だけ読む。
 
 ## hash
-- 4ceaff6f5335f351684de1ffff98b1c62d8e7b6ec9a04d48342296c1e31afc30
+- 35556536607fb7fdf982e7ef4486552dd08f0250bc91f65c1f67c0bbb6bc1c06
 
 # `runtime_codex_tui.py`
 
@@ -209,22 +207,24 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc の永続化 config JSON と runtime の正本 config 型を相互変換し、config ファイルの読み込み・生成・現在形への書き戻しを行う。
-- JSON の section・enum key map・model spec・int 値を検証し、不正な利用者編集を CmocError の利用者向けメッセージへ変換する。
-- config 保存先は runtime path helper から得て、未作成時は既定 config を生成し、既存時は不足値を補完した安定 JSON 表現で保存し直す。
+- cmoc の設定オブジェクトと永続化 JSON の相互変換、設定ファイルの読み込み・書き込み・初期同期を担う runtime 実装。
+- 正本 config 型の既定値を基準に、不足 section を補完しつつ enum key、Codex model spec、整数値を検証して復元する。
+- 不正な JSON 構文、top-level 形式、型不一致、未作成 config を利用者向け CmocError に変換する設定入出力の境界である。
 
 ## Read this when
-- cmoc config JSON の読み込み、初期生成、同期、保存形式、既定値補完の挙動を確認または変更したいとき。
-- CmocConfig、CmocConfigCodex、apply_fork、review_oracle、Codex model spec、reasoning effort の永続化 JSON 表現を扱うとき。
-- 不正な config JSON、欠落 section、型違い、空文字、未知 enum key、JSON 構文 error に対する CmocError 境界を確認したいとき。
+- 設定 JSON の保存形式、既定値補完、型検証、または human-edited config のエラー扱いを変更したいとき。
+- cmoc doctor などから config を生成・正規化・再書き込みする処理を追うとき。
+- Codex model、reasoning effort、apply fork、review oracle の runtime 設定が永続化 JSON とどう対応するか確認したいとき。
+- 設定ファイルの場所解決後に、存在確認、JSON parse、CmocError への変換がどこで行われるか調べるとき。
 
 ## Do not read this when
-- config 値そのものの正本定義、既定値、model class、reasoning effort、Codex model spec の意味を確認したいだけなら、正本 config 型や oracle 側の定義を読む。
-- config ファイルのパス規則だけを確認したいなら、runtime path helper を読む。
-- CLI command の引数処理、doctor 実行フロー、agent orchestration 側で config 値をどう使うかを調べたい場合は、それぞれの呼び出し元を読む。
+- config 型そのものの正本定義や既定値の意味を確認したいだけなら、正本側の config 定義を読む。
+- 設定ファイルのパスモデルや保存場所の規則だけを確認したいなら、runtime path 解決を担う対象を読む。
+- CLI command の引数処理や doctor command の利用者向け workflow を確認したいだけなら、各 command 実装を読む。
+- agent 実行時の model 選択や reasoning effort の使われ方を追う場合は、この設定を読み込んだ後の呼び出し側へ進む。
 
 ## hash
-- 1120d55ea7a5a55ce14b73f76f472319f67fe3da04ee9717c70ebf73e14deeda
+- b8193c978e8ebbfc577d312ecb771813a22e52ab7cc38be7327d0dbfa2bf9712
 
 # `runtime_content.py`
 
