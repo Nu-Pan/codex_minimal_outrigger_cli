@@ -417,20 +417,25 @@
 # `test_session_cli.py`
 
 ## Summary
-- session の fork、join、abandon を通した CLI 外部挙動を検証する回帰テスト。session branch と session state のライフサイクル、linked worktree、state cleanup、dirty worktree 拒否、join 時の conflict 解消と失敗時出力をまとめて扱う。
+- session branch と session state のライフサイクルを、CLI の外部挙動としてまとめて検証する realization test。
+- fork、join、abandon、linked worktree、state cleanup、dirty worktree 拒否、conflict 解消 agent の制約、エラー出力先を同じ session 状態遷移の観測点として扱う。
+- 大きいテストファイルだが、同じ branch/state fixture を追う必要があるため session CLI 回帰テストとして一箇所に保たれている。
 
 ## Read this when
-- session fork/join/abandon の CLI 挙動、出力、終了コード、branch/state 遷移を変更または確認するとき。
-- session state file の生成・破損検出・abandoned/joined/active 遷移、session branch の削除や rollback を確認するとき。
-- linked worktree 上での session 操作、preprocess、dirty worktree 拒否、join conflict 解消 agent の権限や差分検証を扱うとき。
+- session fork/join/abandon の CLI 挙動、出力、終了コード、branch/state 更新を変更または確認する。
+- session state file の生成、破損検出、collision retry、active/joined/abandoned 遷移を検証するテストを探している。
+- linked worktree 上の session 操作、preprocess invariants、dirty worktree 拒否、home branch 欠落時の挙動を確認する。
+- session join の conflict 解消 agent 呼び出し、writable profile、conflict path、非 conflict 差分拒否、conflict marker 検出、delete conflict staging を確認する。
+- session abandon/join の cleanup 失敗、session branch 削除失敗、エラーレポートの stdout/stderr 振り分けを変更する。
 
 ## Do not read this when
-- session 以外のサブコマンドや、session CLI の外部挙動に関係しない内部 helper だけを確認するとき。
-- fork/join/abandon をまたがない単体の小さな実装詳細を調べるだけで、より直接の実装ファイルや狭いテストがあるとき。
-- Codex CLI や LLM 出力品質そのものを検証したいとき。
+- session CLI 以外のサブコマンドや、session 状態遷移に関係しない一般的な CLI テストを探している。
+- session の内部 helper 単体の詳細だけを確認したい場合で、外部挙動や git/state 副作用を追う必要がない。
+- agent call の出力品質そのもの、または Codex CLI/LLM の生成内容を検証したい。
+- oracle file の正本仕様本文を確認したい場合。
 
 ## hash
-- 88dc1fe755a17b2930c1cb4696989401494a51274dc7a3fd9eb2583c2ace8c1e
+- 4d36820c80933ac20f61dfe958673b7b8233b38020039b054a72c5e77ca6dee9
 
 # `test_struct_doc_rendering.py`
 

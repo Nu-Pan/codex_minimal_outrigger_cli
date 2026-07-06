@@ -201,25 +201,23 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装をまとめる領域。session の開始、完了、破棄など、active session と home branch、session branch、session state file の関係を具体的な CLI 挙動として扱う。
-- 各サブコマンドは CLI runtime、git 操作、worktree 清潔性、state 更新、利用者向け出力やエラーを組み合わせ、session lifecycle の外部挙動を実装する。
+- session 系サブコマンド実装をまとめるディレクトリ。package 初期化に加え、session branch の作成、home branch への join、merge しない破棄など、session lifecycle の具体的な CLI 処理へ進む入口となる。
+- 各サブコマンドは CLI runtime、git 操作、session state、worktree 条件、利用者向け出力や失敗時復旧を扱うが、共通 helper や正本仕様そのものはこの階層の主責務ではない。
 
 ## Read this when
-- session 系サブコマンドの挙動、事前条件、成功時出力、失敗時エラー、state 遷移、branch 操作を確認または変更したいとき。
-- local branch から session branch を作る処理、session branch を home branch へ merge する処理、または merge せず破棄する処理を調べたいとき。
-- active session の重複検出、managed branch 上での禁止判定、clean worktree 要求、session-id 衝突回避、session branch 削除条件を確認したいとき。
-- merge conflict 解消フロー、Codex CLI への依頼、conflict 対象以外の差分拒否、marker・unmerged path 検出、merge commit 完了条件を調べたいとき。
-- cleanup 失敗時や Git コマンド失敗時の rollback、warning、再実行可能状態への復旧方針を確認したいとき。
+- session 系サブコマンドの実装ファイルを探し、fork、join、abandon のどれを読むべきか判断したいとき。
+- session branch の作成、home branch への merge 完了、merge しない破棄など、session lifecycle の外部挙動や状態更新を確認または変更したいとき。
+- session 操作での事前条件、clean worktree 要求、branch/state の確認、成功時出力、失敗時エラーや rollback 方針の実装入口を探すとき。
+- session join の merge conflict 自動解消や、conflict 解消後の差分検査、marker 残存判定、merge commit 完了処理を調べたいとき。
 
 ## Do not read this when
-- session 以外のサブコマンド、共通 CLI ルーティング、サブコマンド登録の仕組みを調べたいとき。
-- git 実行 wrapper、CLI runtime、repo/work root 解決、worktree 検査、状態ファイル読み書きの共通実装自体を確認したいとき。
-- session state のデータ構造、state file schema、path model の定義そのものを確認したいとき。
-- session join 用の conflict 解消 prompt や Codex 実行パラメータの正本定義だけを確認したいとき。
-- oracle 上の session 系サブコマンド正本仕様を確認したいとき。
+- session 以外のサブコマンド、共通 CLI ルーティング、サブコマンド登録の実装を調べたいとき。
+- git 実行 wrapper、CLI runtime、worktree 検査、branch 判定、state file schema、path model などの共通実装そのものを確認したいとき。
+- session 系サブコマンドの正本仕様断片を確認したいとき。その場合は対応する oracle doc を読む。
+- 個別サブコマンドがすでに特定できており、その処理だけを詳しく確認したいとき。その場合は該当する実装モジュールを直接読む。
 
 ## hash
-- 6e2931275a761526d449a22a2415e379a4384eb2aa8bc09df7a85b90558581e1
+- a4c55dddea5656ceda9a0db4e06f5c0d783a2cba9c5e0b4df1666b59de815c53
 
 # `tui.py`
 

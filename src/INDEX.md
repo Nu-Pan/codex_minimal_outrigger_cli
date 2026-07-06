@@ -136,21 +136,19 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめるディレクトリ。apply、session、review、indexing、tui、doctor、eval oracle などの実行入口と、各 workflow の状態遷移・git/worktree/process 操作・レポート生成への接続を扱う。
-- 共通 runtime や prompt/schema builder の詳細ではなく、サブコマンドとしてそれらをどう呼び出し、外部挙動へ結びつけるかを追う入口になる。
+- サブコマンド実装をまとめるディレクトリ。apply、session、review、indexing、tui、doctor、eval oracle などの CLI 実行入口や、各 workflow の orchestration へ進むための上位入口になる。
+- 個別サブコマンドの詳細実装は下位対象に分かれており、この階層はサブコマンドごとの読む先を選ぶために使う。
 
 ## Read this when
-- 特定サブコマンドの実行条件、状態遷移、branch/worktree/process 管理、cleanup、利用者向け出力、失敗時挙動を確認または変更したいとき。
-- apply、session、review oracle、indexing、tui、doctor、eval oracle のいずれかのサブコマンド実行入口や orchestration を探したいとき。
-- サブコマンドが共通 runtime、git helper、Codex 呼び出し、状態ファイル、レポート生成処理へどう接続されるかを確認したいとき。
-- apply fork/join/abandon、session start/join/abandon、review oracle の対象列挙・loop・INDEX 変更取り込み・report 生成など、workflow 単位の制御を追いたいとき。
+- CLI サブコマンド実装のうち、どのサブコマンド領域を読むべきか判断したいとき。
+- apply、session、review、indexing、tui、doctor、eval oracle の実行入口、状態遷移、worktree/branch/process 管理、report 生成、runtime 委譲のいずれかを確認または変更したいとき。
+- 複数のサブコマンド実装にまたがる調査で、まず対象となる workflow や入口 module を絞り込みたいとき。
 
 ## Do not read this when
-- CLI 全体の Typer 登録、トップレベル command routing、共通 runtime API 自体を確認したいだけのとき。
-- git wrapper、worktree 検索、状態ファイル読み書き、path model、oracle file 判定、cmoc ignore 判定などの共通 helper 実装を変更したいとき。
-- Codex に渡す prompt、Structured Output schema、parameter builder、finding 生成・適用・要約 builder の詳細だけを確認したいとき。
-- oracle file や realization file の定義、INDEX.md 生成規則、path model などの正本仕様を確認したいとき。
-- 各サブコマンド workflow ではなく、下位の共通処理や個別データ構造の実装だけを直接調べたいとき。
+- CLI 全体の Typer 登録、トップレベルの command routing、共通 runtime API そのものを調べたいときは、それぞれの entrypoint や runtime/helper 側を読む。
+- oracle file、realization file、INDEX.md 生成規則、path model などの正本仕様を確認したいときは、対応する oracle doc や oracle src を読む。
+- Codex に渡す prompt、Structured Output schema、parameter builder の詳細だけを確認したいときは、各 builder 側を読む。
+- 個別サブコマンドや対象 module がすでに特定できているときは、この階層ではなく該当する下位対象を直接読む。
 
 ## hash
-- 371c90557f82d9e0b6bee31afbbe5c7506a565413f4eac7eab120584d633069f
+- 7feb76f30b4c9b4d51b9fd2de77abf485b6adb7073e4eb1fa4f373cb40421653
