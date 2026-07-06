@@ -881,6 +881,105 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     assert "レビュー対象 oracle が 0 件でした。" in rendered
 
 
+def test_review_oracle_session_scope_reviews_uncommitted_oracle_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    original_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "oracle" / "uncommitted.md").write_text("# uncommitted\n")
+    calls: list[str] = []
+
+    class FakeCodexResult:
+        def __init__(self, output_json: dict[str, object]) -> None:
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        calls.append(kwargs["purpose"])
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult({"findings": []})
+        raise AssertionError(schema_name)
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["review", "oracle"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == original_head
+    assert "?? oracle/uncommitted.md" in run_git(root, "status", "--short").stdout
+    enumerate_calls = [
+        call for call in calls if call.startswith("review oracle enumerate findings")
+    ]
+    assert len(enumerate_calls) == 1
+    assert "uncommitted.md" in enumerate_calls[0]
+    rendered = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    ).read_text()
+    assert "oracle_count_total: 2" in rendered
+    assert "oracle_count_evaluated: 1" in rendered
+    assert "`oracle/uncommitted.md`" in rendered
+
+
+def test_review_oracle_merges_only_index_when_oracle_is_uncommitted(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / "oracle" / "uncommitted.md").write_text("# uncommitted\n")
+
+    class FakeCodexResult:
+        def __init__(self, output_json: dict[str, object]) -> None:
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            (Path.cwd() / "INDEX.md").write_text("# generated review index\n")
+            return FakeCodexResult({"findings": []})
+        raise AssertionError(schema_name)
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["review", "oracle"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert (root / "INDEX.md").read_text() == "# generated review index\n"
+    assert "?? oracle/uncommitted.md" in run_git(root, "status", "--short").stdout
+    merged_paths = run_git(root, "diff", "--name-only", "HEAD^1", "HEAD").stdout
+    assert "INDEX.md" in merged_paths
+    assert "oracle/uncommitted.md" not in merged_paths
+
+
+def test_review_oracle_rejects_uncommitted_non_oracle_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / "README.md").write_text("dirty\n")
+
+    result = runner.invoke(app, ["review", "oracle"])
+
+    assert result.exit_code != 0
+    assert "oracle file 以外の未コミット差分" in result.output
+    assert "README.md" in result.output
+
+
 def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
