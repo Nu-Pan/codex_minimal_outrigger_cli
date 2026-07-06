@@ -10,6 +10,8 @@ subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であ�
 
 import json
 import subprocess
+import sys
+import types
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TextIO, cast
@@ -51,9 +53,35 @@ def stub_quota_probe_builder(
             FileAccessMode.READONLY,
             probe_prompt,
             None,
+            run_indexing_preflight=False,
             cwd=base_parameter.cwd,
         ),
     )
+    return probe_prompt
+
+
+def install_oracle_quota_probe_builder(
+    monkeypatch: pytest.MonkeyPatch, probe_prompt: str = PROBE_PROMPT
+) -> str:
+    module = types.ModuleType("oracle.acp_builder.quota_probe")
+
+    def build_quota_availability_probe_parameter(
+        base_parameter: AgentCallParameter,
+    ) -> AgentCallParameter:
+        return AgentCallParameter(
+            ModelClass.MINIMUM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            probe_prompt,
+            None,
+            run_indexing_preflight=False,
+            cwd=base_parameter.cwd,
+        )
+
+    module.build_quota_availability_probe_parameter = (
+        build_quota_availability_probe_parameter
+    )
+    monkeypatch.setitem(sys.modules, "oracle.acp_builder.quota_probe", module)
     return probe_prompt
 
 
@@ -242,7 +270,10 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- Exit code: `0`" in console
 
 
-def test_quota_probe_builder_builds_minimal_parameter() -> None:
+def test_quota_probe_builder_delegates_to_oracle_builder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    probe_prompt = install_oracle_quota_probe_builder(monkeypatch)
     base = AgentCallParameter(
         ModelClass.FLAGSHIP,
         ReasoningEffort.HIGH,
@@ -255,13 +286,9 @@ def test_quota_probe_builder_builds_minimal_parameter() -> None:
 
     probe = build_quota_availability_probe_parameter(base)
 
-    assert probe.model_class == ModelClass.MINIMUM
-    assert probe.reasoning_effort == ReasoningEffort.LOW
-    assert probe.file_access_mode == FileAccessMode.READONLY
-    assert probe.structured_output_schema_path is None
+    assert probe.prompt == probe_prompt
     assert probe.run_indexing_preflight is False
     assert probe.cwd == base.cwd
-    assert probe.prompt
 
 
 def test_quota_probe_uses_real_builder_when_quota_recovers(
@@ -280,6 +307,7 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
         None,
         cwd=root,
     )
+    install_oracle_quota_probe_builder(monkeypatch)
     probe_prompt = build_quota_availability_probe_parameter(parameter).prompt
 
     def fake_run(

@@ -113,9 +113,19 @@ def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
 def _quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
-    from acp.builder.quota_probe import build_quota_availability_probe_parameter
+    try:
+        from acp.builder.quota_probe import build_quota_availability_probe_parameter
 
-    return build_quota_availability_probe_parameter(base_parameter)
+        return build_quota_availability_probe_parameter(base_parameter)
+    except (AttributeError, ModuleNotFoundError) as exc:
+        raise CmocError(
+            "quota availability probe の oracle builder が見つかりません。",
+            [
+                "quota 回復確認用の oracle AgentCallParameter builder を追加してから再実行してください。"
+            ],
+            "missing: <work-root>/oracle/src/oracle/acp_builder/quota_probe.py",
+        ) from exc
+
 
 
 def _next_codex_log_timestamp() -> str:
