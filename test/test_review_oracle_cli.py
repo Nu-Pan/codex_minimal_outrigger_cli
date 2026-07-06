@@ -27,6 +27,7 @@ from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app
 import sub_commands.eval_oracle as eval_oracle_module
 import sub_commands.review.oracle as review_module
+from sub_commands.review_paths import finding_oracle_path
 from sub_commands.review_targets import enumerate_review_all_oracle_files
 
 
@@ -46,6 +47,14 @@ def test_eval_oracle_delegates_to_review_oracle_impl(
 
     assert result.exit_code == 0
     assert calls == ["full"]
+
+
+def test_finding_oracle_path_rejects_relative_without_placeholder(tmp_path: Path) -> None:
+    assert finding_oracle_path({"oracle_path": "oracle/spec.md"}, tmp_path) is None
+    assert (
+        finding_oracle_path({"oracle_path": "<oracle-root>/spec.md"}, tmp_path)
+        == (tmp_path / "oracle" / "spec.md").resolve()
+    )
 
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -134,25 +143,25 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
                 {
                     "findings": [
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "fatal",
                             "title": "accepted fatal",
                             "reason": "fatal accepted reason",
                         },
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "fatal",
                             "title": "rejected fatal",
                             "reason": "fatal reason",
                         },
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "minor",
                             "title": "accepted minor",
                             "reason": "minor reason",
                         },
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "minor",
                             "title": "rejected minor",
                             "reason": "minor rejected reason",
@@ -237,7 +246,7 @@ def test_review_oracle_report_includes_rejected_findings(
         [
             {
                 "finding_id": "finding-0001",
-                "oracle_path": "oracle/spec.md",
+                "oracle_path": "<oracle-root>/spec.md",
                 "severity": severity,
                 "verdict": "reject",
                 "title": "rejected finding",
@@ -448,7 +457,7 @@ def test_review_oracle_advocate_receives_same_round_challenger_reasons(
                 {
                     "findings": [
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "fatal",
                             "title": "finding",
                             "reason": "reason",
@@ -503,8 +512,8 @@ def test_review_oracle_retries_semantic_merge_finding_failure(
             return FakeCodexResult(
                 {
                     "findings": [
-                        {"oracle_path": "oracle/spec.md", "title": "a"},
-                        {"oracle_path": "oracle/spec.md", "title": "b"},
+                        {"oracle_path": "<oracle-root>/spec.md", "title": "a"},
+                        {"oracle_path": "<oracle-root>/spec.md", "title": "b"},
                     ]
                 }
             )
@@ -577,7 +586,7 @@ def test_review_oracle_fails_after_merge_finding_semantic_retries(
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             return FakeCodexResult(
-                {"findings": [{"oracle_path": "oracle/spec.md", "title": "a"}]}
+                {"findings": [{"oracle_path": "<oracle-root>/spec.md", "title": "a"}]}
             )
         if schema_name == "merge_finding.json":
             merge_calls += 1
@@ -1121,7 +1130,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
                 {
                     "findings": [
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "fatal",
                             "title": "unjudged fatal",
                             "reason": "judge did not run",
