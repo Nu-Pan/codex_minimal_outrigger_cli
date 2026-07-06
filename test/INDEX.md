@@ -180,23 +180,23 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex 実行ラッパーが Codex CLI 起動引数、profile 生成、sandbox 権限、出力 schema の保存先、呼び出しログ、ローカル SLM provider 設定を期待通り扱うことを検証する realization test。
-- 実物の Codex CLI と Ollama を使う任意の統合確認と、偽の codex 実行ファイルを使う制御ロジック確認を含む。
+- Codex CLI 実行ラッパーの統合テスト群。プロファイル生成、sandbox/permissions、作業ディレクトリ、schema 保存先、call log、cmoc managed ollama provider 連携、real Codex CLI を使う任意統合経路を検証する。
+- fake Codex 実行ファイルを使い、実際に渡される argv、stdin、環境、生成された TOML profile、出力ファイル、許可された writable/readable root が期待どおりかを外部挙動として確認する。
 
 ## Read this when
-- Codex CLI を起動する処理、profile TOML 生成、`--cd` や `--output-schema` などの引数構成を変更する。
-- `FileAccessMode` ごとの filesystem 権限、writable roots、`.agents` 除外、pure oracle read の権限表現を確認する。
-- cmoc 管理 Ollama provider、ローカル SLM model、Codex 組み込み Ollama flag を使わない挙動を変更または調査する。
-- linked worktree 実行時の cwd、repo root 配下への schema state 保存、repo local read の扱いを確認する。
-- Codex 実行結果の出力本文、JSON 出力、prompt log、call log の保存・対応関係を検証する。
+- Codex CLI を起動する実行経路、profile 生成、`--cd`、`--output-schema`、`--output-last-message`、call log、prompt log の挙動を変更する場合。
+- file access mode ごとの sandbox 設定、読み取り権限、書き込み可能 root、`.agents` を開かない制約を確認・変更する場合。
+- cmoc managed ollama provider、local SLM profile、real Codex CLI 統合、systemd user service を使う任意統合テストの期待挙動を確認する場合。
+- linked worktree から実行する際の cwd、repo local state の保存先、追加 read path の扱いを変更する場合。
 
 ## Do not read this when
-- Codex runtime の外部挙動ではなく、個別の oracle 文書や routing 文書の内容だけを確認したい。
-- Codex CLI 起動に関係しない一般的な設定読み込み、git 操作 helper、テスト支援 fixture の詳細を調べたい。
-- LLM の回答品質やプロンプト内容そのものを検証したい。
+- agent call parameter のデータ構造や enum 定義だけを確認したい場合は、それらの定義元を読む。
+- cmoc 設定値や model provider の正本定義だけを確認したい場合は、設定・oracle 側の定義を読む。
+- Codex 実行ラッパー以外の CLI サブコマンド、ルーティング文書生成、通常の git 操作の挙動を調べる場合。
+- 単体 helper の内部実装だけを変更し、このテストが検証する公開的な実行引数・profile・保存先・権限に影響しない場合。
 
 ## hash
-- 8d7ae2572f52e0343e730c204727135e9be77bdf5c8551815a0c0d7b541f179a
+- 26e81e283fcb12ded3ef4e78fd6cb20cdbdd42f1ef127e8a06164c3e5c39c1bd
 
 # `test_codex_runtime_home.py`
 

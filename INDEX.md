@@ -158,20 +158,20 @@
 # `test`
 
 ## Summary
-- CLI、runtime、Codex 実行、apply/session/review/indexing などの realization test 群を置くディレクトリ。外部挙動、状態遷移、git worktree、fake 外部コマンド、ACP builder、prompt rendering など、実装変更時の回帰確認先をサブコマンド別・基盤別に探す入口になる。
-- 共有 fixture と外部状態を伴う統合寄りのテストが多く、個別実装の責務そのものではなく、利用者から観測される CLI 挙動や runtime 契約を確認するための下位項目へルーティングする。
+- realization test 全体への入口。CLI、runtime、Codex 実行 wrapper、apply/session/review/indexing、prompt rendering、packaged import など、cmoc の外部挙動と共有テスト helper を領域別のテストファイルで検証する。
+- 共有 fixture と fake 外部サービスを使う統合寄りの回帰が多く、個別サブコマンドの状態遷移、git worktree/branch cleanup、Codex profile・sandbox・log、routing document 更新、oracle review loop などの期待挙動を確認するための下位項目へ進む起点になる。
 
 ## Read this when
-- realization implementation を変更した後に、対応する CLI 外部挙動、runtime 契約、Codex 呼び出し、git 状態、report、state cleanup の回帰テストを探すとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、doctor、TUI、Codex runtime の既存期待値をテスト側から確認したいとき。
-- ACP builder、prompt parts、StructDoc rendering、packaged import など、サブコマンド横断の生成物・公開名・import 境界を検証する realization test を探すとき。
-- テスト用の git repository、Codex home/profile、fake Codex/Ollama/systemctl、apply worktree 解決など、複数テストで共有される helper の前提を確認したいとき。
+- realization implementation の変更後に、対応する CLI 外部挙動、runtime 共通契約、Codex 実行経路、apply/session/review/indexing の回帰テストを探したいとき。
+- 使い捨て git repository、Codex home/profile、fake Codex/Ollama/systemctl、doctor 実行、apply worktree 解決など、複数テストで共有される pytest helper の前提を確認したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、TUI、doctor、Codex retry/quota/subprocess/home/error handling など、サブコマンド境界から観測される挙動の既存期待値を確認したいとき。
+- prompt parts、ACP builder、packaged import、StructDoc markdown rendering など、実装単体よりも出力互換性や公開 import 境界をテストで確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、oracle 側のテスト規則、path model の定義を確認したい場合は、oracle 側の該当文書や実装を読む。
-- 本番実装の内部構造、helper 分割、低レベル処理を先に理解したい場合は、対応する realization implementation を直接読む。
-- 個別の期待出力や単一サブコマンドの挙動が目的で、対象テストが分かっている場合は、この階層全体ではなく該当テストへ進む。
-- LLM の回答品質や Codex CLI 自体の品質を検証したい場合は、このディレクトリの realization test の責務外。
+- 正本仕様断片、oracle src、oracle test、oracle 側の routing 規則そのものを確認したいときは、oracle 配下の該当対象を読む。
+- 本番実装の責務分割、内部 helper、path model、git 操作、Codex/Ollama 管理処理そのものを調べたいときは、src 配下の対応する realization implementation を先に読む。
+- 個別の期待出力や狭い helper の挙動だけを確認すれば足り、CLI 経由の統合挙動や共有 fixture の文脈が不要なときは、対象の実装またはより直接の小さいテストへ進む。
+- LLM 出力品質そのもの、将来機能の仕様、生成済みログや一時成果物を確認したいだけのとき。
 
 ## hash
-- affbc8c55b0aa94a11a3d67cd361a7291aa51af2c4231b6e71799bcd4e4f079c
+- 713fd96c68176153bed6460db22c8d8a8dc34538556de463ae5f02e4dd4afb16
