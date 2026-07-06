@@ -46,6 +46,7 @@ _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
 }
 _STANDARD_REALIZATION_WRITE_PATHS = ("src", "test", "bin", ".gitignore")
 _OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
+_CMOC_PERMISSION_PROFILE = "cmoc"
 
 
 @contextmanager
@@ -312,6 +313,69 @@ def _append_workspace_write_section(
     lines.extend(["[sandbox_workspace_write]", f"writable_roots = [{roots}]"])
 
 
+def _needs_permission_profile(root: Path, extra_read_paths: list[Path] | None) -> bool:
+    """旧 sandbox で表現できない work root 外の読み取り許可だけ profile 化する。"""
+    return any(not path.resolve().is_relative_to(root) for path in extra_read_paths or [])
+
+
+def _read_roots_for_permission_profile(
+    root: Path,
+    extra_read_paths: list[Path] | None,
+    extra_read_root: Path | None,
+) -> list[Path]:
+    """Codex permission profile に渡す読み取り root を作る。"""
+    roots = [root]
+    for path in extra_read_paths or []:
+        resolved = path.resolve()
+        if resolved.is_relative_to(root):
+            continue
+        if extra_read_root is not None and _is_repo_local_read_path(
+            extra_read_root, resolved
+        ):
+            roots.append(logs_dir(extra_read_root).parent.parent.resolve())
+        else:
+            roots.append(resolved)
+    result: list[Path] = []
+    seen: set[Path] = set()
+    for path in roots:
+        resolved = path.resolve()
+        if resolved in seen or any(resolved.is_relative_to(parent) for parent in seen):
+            continue
+        redundant = [existing for existing in seen if existing.is_relative_to(resolved)]
+        if redundant:
+            result[:] = [existing for existing in result if existing not in redundant]
+            seen.difference_update(redundant)
+        seen.add(resolved)
+        result.append(resolved)
+    return result
+
+
+def _append_permission_profile_section(
+    lines: list[str],
+    read_roots: list[Path],
+    writable_roots: list[Path],
+) -> None:
+    """work root 外の read-only root は Codex beta permission profile で渡す。"""
+    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # sandbox_workspace_write has writable_roots only; permission profiles can
+    # represent repo-local TUI logs as read without granting write access.
+    entries = {str(path): "read" for path in read_roots}
+    entries.update({str(path): "write" for path in writable_roots})
+    lines.extend(
+        [
+            f'default_permissions = "{_CMOC_PERMISSION_PROFILE}"',
+            "",
+            f"[permissions.{_CMOC_PERMISSION_PROFILE}]",
+            'extends = ":read-only"',
+            "",
+            f"[permissions.{_CMOC_PERMISSION_PROFILE}.filesystem]",
+        ]
+    )
+    for path, access in sorted(entries.items()):
+        lines.append(f"{_toml_string(path)} = {_toml_string(access)}")
+
+
 def _append_ollama_provider_section(lines: list[str], root: Path | None) -> None:
     lines.extend(
         [
@@ -343,6 +407,7 @@ def build_codex_profile(
     use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"
     if use_cmoc_managed_ollama:
         lines.append(f'model_provider = "{_OLLAMA_PROVIDER_ID}"')
+    use_permission_profile = False
     if root is not None:
         root = root.resolve()
         read_root = (extra_read_root or root).resolve()
@@ -352,18 +417,25 @@ def build_codex_profile(
             extra_read_paths,
             extra_read_root=read_root,
         )
-    sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
-    lines.append(f'sandbox_mode = "{sandbox_mode}"')
+        use_permission_profile = _needs_permission_profile(root, extra_read_paths)
+    if not use_permission_profile:
+        sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
+        lines.append(f'sandbox_mode = "{sandbox_mode}"')
     if root is not None:
-        _append_workspace_write_section(
-            lines,
-            _writable_roots(
-                parameter.file_access_mode,
-                root,
-                extra_writable_paths,
-                allow_oracle_conflict_writes,
-            ),
+        writable_roots = _writable_roots(
+            parameter.file_access_mode,
+            root,
+            extra_writable_paths,
+            allow_oracle_conflict_writes,
         )
+        if use_permission_profile:
+            _append_permission_profile_section(
+                lines,
+                _read_roots_for_permission_profile(root, extra_read_paths, read_root),
+                writable_roots,
+            )
+        else:
+            _append_workspace_write_section(lines, writable_roots)
     if use_cmoc_managed_ollama:
         _append_ollama_provider_section(lines, root)
     lines.append("")
