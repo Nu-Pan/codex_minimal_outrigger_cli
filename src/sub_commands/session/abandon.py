@@ -59,20 +59,21 @@ def _cmoc_session_abandon_body() -> None:
                 ["git branch の状態を確認してください。"],
                 delete_result.stderr,
             )
-    except Exception as error:
+    except BaseException as error:
+        # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+        # treats user interruption during cleanup as a cleanup failure that must
+        # return the session to a rerunnable state.
         cleanup_detail = error.detail if isinstance(error, CmocError) else repr(error)
         rollback_errors: list[str] = []
         state.session.state = "active"
         try:
             write_state(path, state)
-        except Exception as rollback_error:
+        except BaseException as rollback_error:
             rollback_errors.append(f"state rollback failed: {rollback_error!r}")
-        switched_back = False
         try:
             if branch_exists(repo, branch):
                 run_git(["switch", branch], work)
-                switched_back = True
-        except Exception as rollback_error:
+        except BaseException as rollback_error:
             rollback_errors.append(f"branch rollback failed: {rollback_error!r}")
         details = [
             "cleanup error:",

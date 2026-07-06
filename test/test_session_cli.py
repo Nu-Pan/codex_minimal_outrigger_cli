@@ -380,8 +380,15 @@ def test_session_abandon_requires_existing_home_branch(
     assert run_git(root, "ls-files", "--", ".cmoc/local").stdout == ""
 
 
+@pytest.mark.parametrize(
+    "cleanup_error",
+    [
+        CmocError("delete failed", ["next"], "branch delete failed"),
+        KeyboardInterrupt(),
+    ],
+)
 def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cleanup_error: BaseException
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -408,7 +415,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
 
     def fake_delete_branch(root: Path, branch: str, force: bool = False) -> None:
         if branch == session_branch:
-            raise CmocError("delete failed", ["next"], "branch delete failed")
+            raise cleanup_error
         return original_delete_branch(root, branch, force)
 
     monkeypatch.setattr(session_module, "delete_branch", fake_delete_branch)
