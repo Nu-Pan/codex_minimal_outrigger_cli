@@ -163,24 +163,21 @@
 # `review_report.py`
 
 ## Summary
-- review oracle コマンドの結果を、Markdown 本文と YAML frontmatter を持つレポートとして生成する処理を担う。
-- レビュー対象 oracle file の一覧、accepted/rejected と fatal/minor に分類された finding、実行失敗時のエラー、ブランチ・コミット情報、集計件数を人間向けレポートへ整形する。
-- oracle path の表示名を、可能な範囲で work root からの相対表記または oracle 起点表記に正規化する補助処理も含む。
+- review oracle の実行結果を Markdown レポートとして保存・描画するモジュール。YAML frontmatter、判定結果、評価対象 oracle file 一覧、accepted/rejected finding の severity 別セクションを組み立てる。
+- finding の表示用整形、oracle path の表示形式への変換、エラー・対象なし・fatal/minor/ok のレポート結果判定もここで扱う。
 
 ## Read this when
-- review oracle のレポート出力内容、frontmatter の項目、見出し構成、verdict 文言、finding 一覧の描画を確認・変更したいとき。
-- review oracle の結果判定が error、no_targets、fatal、minor、ok のどれになるかを確認・変更したいとき。
-- finding の severity や verdict による分類、accepted/rejected の件数集計、対象 oracle file ごとの finding 数表示を調べたいとき。
-- レポート内で oracle file path がどのように表示されるか、root 外や oracle 配下の path 表示規則を確認したいとき。
+- review oracle コマンドが生成するレポート本文、frontmatter、見出し構成、finding の並びや表示文言を確認・変更したいとき。
+- review oracle の findings 件数、accepted/rejected と fatal/minor の分類、result 判定がレポートへどう反映されるかを追いたいとき。
+- oracle file のパスがレポート上でどのように相対表示されるか、または oracle ツリー外のパス表示 fallback を確認したいとき。
 
 ## Do not read this when
-- review oracle がどの oracle file を対象に選ぶか、finding をどのように検出・判定するかを調べたいとき。
-- review oracle 以外のサブコマンドの出力、状態管理、CLI 引数処理を調べたいとき。
-- レポート保存先ディレクトリや timestamp の汎用的な定義だけを確認したいとき。
-- oracle file や realization file の定義そのもの、または review oracle の正本仕様文書を確認したいとき。
+- review oracle の対象 oracle file の収集条件や finding 自体の検出ロジックを調べたいとき。
+- review oracle 以外のサブコマンドのレポート出力や、レポート保存先ディレクトリの共通仕様だけを確認したいとき。
+- Markdown レポートの生成後に行われる git 操作、ブランチ操作、セッション状態更新の処理を調べたいとき。
 
 ## hash
-- a46d7cbb9dc03a32e5cbb2928dd4d99f0c88f7971cadeff6c3a552aa038f4646
+- 4276dcb5ad4ff58c5b5d8be3cd175ecaa89471e0b2f11cd4168c9b3db48998b2
 
 # `review_targets.py`
 

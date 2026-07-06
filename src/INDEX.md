@@ -134,18 +134,19 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装をまとめる領域で、apply、session、review oracle、indexing、tui、doctor、eval oracle などの実行入口と、サブコマンド固有の制御ロジックへの入口を提供する。
-- サブコマンドごとの package 境界、CLI runtime への委譲、git/worktree/state/Codex 呼び出し/report/cleanup などの orchestration を扱い、必要に応じて下位対象へ読み進めるための分岐点になる。
+- cmoc の利用者向けサブコマンド実装をまとめる領域で、session、apply、review oracle、indexing、tui、doctor、eval oracle などの実行入口と orchestration への分岐点になる。
+- 各サブコマンド固有の事前条件、状態遷移、branch/worktree/process 管理、Codex 呼び出し、merge、cleanup、report 生成、runtime 共通処理への委譲を下位対象へ振り分ける。
 
 ## Read this when
-- cmoc のサブコマンド実装の入口を探し、対象操作に対応するファイルまたは下位ディレクトリを選びたいとき。
-- apply run、session lifecycle、review oracle、INDEX.md maintenance、TUI 起動、doctor preprocess、eval oracle の実行経路や責務境界を確認したいとき。
-- サブコマンドが CLI runtime、共通 git/worktree helper、state、Codex 呼び出し、report 生成などへどのように接続されるかを追い始めたいとき。
+- 利用者向けサブコマンドの実装入口を探し、どの下位領域またはモジュールへ進むべきか判断したいとき。
+- session lifecycle、apply run lifecycle、review oracle、INDEX maintenance、TUI 起動、doctor preprocess、oracle 評価委譲のどの実装を読むべきか切り分けたいとき。
+- サブコマンド間で、開始条件、失敗時処理、cleanup、report 保存、runtime 共通処理への委譲などの責務境界を確認したいとき。
 
 ## Do not read this when
-- CLI 全体のサブコマンド登録、Typer app 構成、共通 runtime、共通 git/worktree helper、state file schema、path model の定義だけを確認したいとき。
-- oracle file や realization file の定義、INDEX.md エントリー作成規則、正本仕様文書そのものを確認したいとき。
-- 読むべき具体的なサブコマンド実装または共通 helper が既に決まっており、その対象へ直接進めるとき。
+- CLI 全体の引数定義、Typer app 登録、トップレベル dispatch だけを確認したいときは、CLI entrypoint や command 登録側を読む。
+- git 実行 wrapper、worktree 操作、path model、state file schema、config 読み込み、Codex 実行 wrapper などの共通 helper 自体を調べたいときは、runtime や共通実装側を読む。
+- oracle file や realization file の定義、INDEX.md エントリー作成規則、正本仕様そのものを確認したいときは、対応する oracle doc を読む。
+- 具体的に読むべきサブコマンド実装が既に決まっており、その下位対象へ直接進めるとき。
 
 ## hash
-- a4705423cff1e0fce00ccf1e8a14b4310ba1adfddcc2faefd84412b33228e4c8
+- e5c4bcd29d86f2819398584ccc387b8578c750ec4c5dde084626b0fd6c8a0abd
