@@ -395,24 +395,24 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 外部挙動を検証する realization test。report の生成内容、対象 oracle file の列挙、所見の列挙・検証・judge・merge、エラー時 report、review 用 worktree と join commit、INDEX.md 差分の取り込み・競合解決を扱う。
-- eval-oracle から review oracle 実装への委譲、scope 指定、未コミット差分や review 中の非 INDEX.md 差分の拒否、tracked ignored file と symlink の扱いなど、review oracle run 全体の状態遷移と出力確認の入口になる。
+- review oracle の CLI 外部挙動を検証するテスト群。eval-oracle から review oracle 実装への委譲、review report の構成・集計・エラー表示、scope ごとの oracle 対象選択、finding の列挙・検証・judge・merge loop、review worktree と join commit、INDEX.md 差分の反映と衝突解決、非 INDEX 差分の拒否を扱う。
+- 対象 oracle の選択、report 生成、finding 評価 loop、review 用 worktree の状態遷移が同じ fake Codex 応答と report 文脈を共有するため、oracle review run 全体の挙動確認の入口になる。
 
 ## Read this when
-- review oracle CLI の report 出力、終了コード、標準出力、scope ごとの対象選択を変更・確認する。
-- oracle file の列挙条件、tracked ignored file、AGENTS.md・INDEX.md 除外、symlink の分類、session scope の差分範囲を変更・確認する。
-- 所見 loop の enumerate、validate challenger、validate advocate、judge、merge、semantic retry、merge operation contract を変更・確認する。
-- review 実行用 worktree、linked worktree、review fork commit、review join commit、INDEX.md 生成差分の merge、INDEX.md conflict 解決を変更・確認する。
-- review oracle の処理失敗時 report、未コミット差分拒否、review 中に生成された想定外差分の拒否を変更・確認する。
+- review oracle または eval-oracle の CLI 挙動、終了結果、出力 report の内容や順序を変更・確認したいとき。
+- oracle review の full/session scope における対象 oracle file の列挙、tracked ignored file、symlink、AGENTS.md・INDEX.md 除外、review fork commit 基準の差分選択を確認したいとき。
+- finding の enumerate、validate challenger/advocate、judge、merge 操作、semantic merge retry、accepted/rejected finding の集計や表示を変更・確認したいとき。
+- review 実行中に生成される INDEX.md 差分の merge、preflight indexing 差分、INDEX.md 削除衝突の解決、INDEX.md 以外の差分拒否を確認したいとき。
+- review oracle が途中失敗した場合の error report、標準出力へのエラー表示、未判定 finding の扱いを確認したいとき。
 
 ## Do not read this when
-- oracle review のプロンプト文面や structured output schema 自体だけを確認したい場合。
-- 一般的な session fork、doctor、設定読み込み、git helper の単体挙動だけを確認したい場合。
-- oracle 以外の review 対象、または review run と無関係な CLI サブコマンドの挙動を確認したい場合。
-- INDEX.md エントリー生成規則やルーティング文書の仕様だけを確認したい場合。
+- review oracle の内部 prompt 文面や Structured Output schema そのものだけを確認したいとき。
+- oracle review 以外の subcommand、session 管理、doctor、config の一般挙動を調べたいとき。
+- INDEX.md ルーティング文書の生成規則や oracle/realization の正本仕様を確認したいとき。
+- 単体 helper の型・実装詳細だけを追う場合で、CLI 経由の review run 全体の外部挙動を確認する必要がないとき。
 
 ## hash
-- 713d3c8831e38ff2d285d95ef53063e2d9b74accbdfd877e168cdcf608963baa
+- e2149a4b796b5056d496dcf50a0f456a23407bdc05171d86c66333ea587f5626
 
 # `test_session_cli.py`
 
