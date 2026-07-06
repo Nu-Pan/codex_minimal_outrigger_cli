@@ -405,17 +405,17 @@
 # `runtime_state.py`
 
 ## Summary
-- session state file の永続化モデルと読み書き処理を担う。session/apply の state 断片、branch 名からの session_id 抽出、現在 branch に対応する state 読み込み、canonical JSON 書き戻し、home branch に紐づく active session 探索を扱う。
+- session state file の永続化モデルと読み書き処理を扱う。session/apply の state 断片、branch 名からの session_id 抽出、現在 branch に対応する state 読み込み、canonical JSON 書き戻し、home branch に紐づく active session 探索の入口になる。
 
 ## Read this when
-- session state file の JSON schema、欠落 field、不正 state、保存形式に関わる挙動を確認・変更したいとき。
-- cmoc 管理 branch 名から session_id を特定する処理、または session/apply branch 上で state file を読み込む処理を確認・変更したいとき。
-- home branch に対応する active session の探索条件を確認・変更したいとき。
+- session state file の schema、必須 field、許容 state、null/string 制約を確認または変更したいとき。
+- cmoc/session、cmoc/apply の branch 名から session_id を特定する処理や、その失敗時エラーを確認または変更したいとき。
+- session state file の保存先、読み込み、書き戻し、home branch から active session を探す処理を確認または変更したいとき。
 
 ## Do not read this when
-- session state file の保存ディレクトリなど runtime path の組み立てだけを確認したいときは、runtime path を扱う対象を読む。
-- CmocError の表示形式や例外クラス自体を確認したいときは、runtime error を扱う対象を読む。
-- session/apply/abandon など各サブコマンドの利用者向け制御フローを確認したいときは、該当コマンド実装を読む。
+- session state file のディレクトリ配置だけを確認したいときは、runtime path を扱う対象を直接読む。
+- 個別サブコマンドの操作手順や状態遷移の業務仕様を確認したいときは、対応する app spec やコマンド実装を読む。
+- CmocError の表示形式や共通エラー処理だけを確認したいときは、runtime error を扱う対象を読む。
 
 ## hash
-- a9b62b64b304d58d929898813350f1f806a919e435b8ba036a23c109c1509fde
+- 5453ce64ca708e9c80e6e3aa4a0416dbc93461ecafdc6a30864d7db0274f46bf
