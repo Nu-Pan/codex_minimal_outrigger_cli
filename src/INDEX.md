@@ -58,25 +58,25 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時に複数箇所から共有される runtime helper 群をまとめる領域。
-- Codex 実行、CLI 共通実行、設定、git、path、ログ、状態、doctor、Ollama、INDEX 更新 preflight など、サブコマンド横断の基盤処理への入口になる。
-- 領域直下には共有 API の集約入口、薄い再公開モジュール、責務別 runtime 実装が並び、個別挙動は対応する下位要素で確認する。
+- cmoc の実行時に複数領域から共有される runtime helper 群をまとめる領域。
+- Codex 実行、CLI 共通 runner、config、content hash、doctor preprocess、error、git、logging、Ollama、path、result、state、apply process、INDEX 更新 preflight などの runtime 共通処理への入口になる。
+- この領域自体は共有 runtime 実装群のまとまりであり、個別 API の挙動や責務境界は下位要素の本文で確認する。
 
 ## Read this when
-- CLI サブコマンド横断で使う実行時共通処理の所在を探したいとき。
-- Codex exec/TUI 実行、profile、preflight、retry、ログ、Structured Output 検証、file access 検査など Codex 呼び出し基盤を調査・変更したいとき。
-- runtime path、config、git、state、doctor preprocess、Ollama、error/report、外部コマンド結果型など、複数モジュールから共有される補助処理へ進みたいとき。
-- INDEX.md 自動更新の実行制御、entry 再生成、hash 検証、indexing commit 作成など indexing runtime の実装を確認したいとき。
-- 共有 runtime API をどの import 入口から参照するか、または再公開対象を追加・削除するか判断したいとき。
+- cmoc の runtime 共通機能の配置を調べ、どの helper や再公開入口へ進むべきか判断したいとき。
+- Codex exec/TUI 実行、profile、preflight、call log、quota retry、Structured Output 検証など Codex 実行基盤に関わる実装を探したいとき。
+- CLI サブコマンド共通 runner、doctor preprocess、config 同期、subcommand logging、利用者向け error report など、複数コマンドから共有される実行制御を確認したいとき。
+- git 操作、root/path 解決、content hash、session state、apply process 追跡、Ollama 管理、外部コマンド結果型などの runtime 補助処理を確認・変更したいとき。
+- INDEX.md 自動更新 preflight、entry hash 検証、Codex による entry 生成、indexing commit 作成の実装を確認・変更したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、引数定義、Typer 登録、利用者向け workflow を確認したいときは、そのサブコマンド実装や app spec を読む。
-- 正本仕様断片、prompt、Structured Output schema、path model、config 値の意味など oracle 側の定義を確認したいときは、対応する oracle file を読む。
-- 特定 helper の挙動、引数、失敗時処理、保存形式だけを確認したいときは、この領域全体ではなく責務に対応する下位要素へ直接進む。
-- テスト固有の期待値や外部挙動を確認したいときは、共有 runtime helper ではなく該当する test または対象実装を読む。
+- 個別 CLI サブコマンドの業務処理、引数定義、Typer 登録、利用者向け workflow を調べたいときは、該当するサブコマンド実装や app spec を読む。
+- 正本仕様断片、prompt、Structured Output schema、path model、config 定義、FileAccessMode の自然言語ルールを確認したいだけなら、対応する oracle 側の文書や定義を読む。
+- テスト固有の fixture、期待値、外部挙動検証を調べたいときは、test 側の対象を読む。
+- 特定の runtime API の詳細が既に分かっている場合は、この領域全体ではなく、該当する下位要素を直接読む。
 
 ## hash
-- 961222d7491703ae1a556320fa10fbd6158481a0a13b2af954d9fc58e00c79a8
+- 2066f4f53d71acc44dc6cc3bf52d0638fb28b39cebf488231083c84b224b7174
 
 # `config`
 
