@@ -95,6 +95,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
         "## Evaluated oracle file",
         "## Fatal findings",
         "## Minor findings",
+        "## Finding details",
     ]
     section_offsets = [rendered.index(section) for section in required_sections]
     assert section_offsets == sorted(section_offsets)
@@ -188,15 +189,15 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
         "## Evaluated oracle file",
         "## Fatal findings",
         "## Minor findings",
+        "## Finding details",
     ]
     detail_order = [
         "### Accepted fatal findings",
         "accepted fatal",
-        "### Rejected fatal findings",
-        "rejected fatal",
-        "## Minor findings",
         "### Accepted minor findings",
         "accepted minor",
+        "### Rejected fatal findings",
+        "rejected fatal",
         "### Rejected minor findings",
         "rejected minor",
     ]
@@ -260,17 +261,16 @@ def test_review_oracle_report_includes_rejected_findings(
         "## Evaluated oracle file",
         "## Fatal findings",
         "## Minor findings",
+        "## Finding details",
     ]
     assert "### Rejected fatal findings" in rendered
     assert "### Rejected minor findings" in rendered
     assert "rejected finding" in rendered
-    fatal_section = rendered.index("## Fatal findings")
-    minor_section = rendered.index("## Minor findings")
     finding_offset = rendered.index("rejected finding")
     if severity == "fatal":
-        assert fatal_section < finding_offset < minor_section
+        assert rendered.index("### Rejected fatal findings") < finding_offset
     else:
-        assert minor_section < finding_offset
+        assert rendered.index("### Rejected minor findings") < finding_offset
     assert "rejected reason" in rendered
     assert "judge reason: judge rejected reason" in rendered
     assert "session_id:" not in rendered
