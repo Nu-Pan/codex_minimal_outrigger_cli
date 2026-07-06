@@ -58,23 +58,23 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時に複数領域から共有される runtime helper 群をまとめる実装領域。Codex 実行、CLI 共通 runner、config、content hash、doctor preprocess、error、git、logging、Ollama、path、result、state、apply process、INDEX 更新 preflight などの横断的な基盤を扱う。
-- この領域自体は共有 runtime 基盤への入口であり、個別機能の挙動や失敗時処理は責務に対応する下位要素で確認する。
+- cmoc の実行時処理で複数箇所から共有される runtime helper 群をまとめる領域。
+- Codex 実行、設定、git、path、log、状態、doctor 前処理、INDEX 更新、apply process 追跡など、サブコマンド横断の共通実装へ進む入口になる。
 
 ## Read this when
-- cmoc の複数サブコマンドや複数実装領域から使われる runtime 共通機能の所在を探したいとき。
-- Codex subprocess 実行、profile、preflight、quota/capacity retry、call log、TUI/exec 起動など Codex 実行基盤に関わる実装へ進みたいとき。
-- CLI サブコマンド共通の実行ライフサイクル、doctor preprocess、config 同期、runtime logging、利用者向け error、git 操作、path 解決、状態ファイル、外部コマンド結果型を扱う実装を探すとき。
-- INDEX.md 自動更新や entry 生成、hash 検証、indexing commit のような runtime 側の indexing 処理を確認・変更したいとき。
+- CLI サブコマンド横断で使う runtime helper の配置先や責務境界を確認したいとき。
+- Codex exec/TUI 実行、profile、preflight、quota/capacity retry、call log など Codex 実行基盤に関わる実装を探すとき。
+- runtime config、git 操作、path 解決、logging、error、result、state、content hash、doctor preprocess など共通基盤の実装先を選びたいとき。
+- INDEX.md 自動更新や entry hash 検証、Structured Output 生成依頼、indexing commit の処理を調べたいとき。
+- apply 実行の worktree 解決、pid file、process 停止、abandon 時の process safety を扱う実装を探すとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の引数、業務処理、状態遷移、利用者向け workflow を確認したいときは、該当する command 実装または app spec を読む。
-- oracle file にある正本仕様断片、自然言語プロンプト、Structured Output schema、path model の定義そのものを確認したいときは、oracle 側の対応箇所を読む。
-- 特定 helper の詳細な入出力、失敗時挙動、保存形式だけを確認したいときは、この領域全体ではなく責務に対応する下位要素を直接読む。
-- テスト固有の fixture、期待値、外部挙動の検証観点を調べたいときは、runtime helper 群ではなく対応するテスト領域へ進む。
+- 個別 CLI サブコマンドの業務処理、引数定義、Typer 登録、利用者向け workflow を確認したいときは、該当する command 層や app spec を読む。
+- oracle file にある正本仕様断片、prompt、Structured Output schema、path model、config 型定義そのものを確認したいときは、対応する oracle 側の対象を読む。
+- 特定の runtime API の詳細な挙動が既に分かっているときは、この領域全体ではなく該当する下位要素を直接読む。
 
 ## hash
-- cd9396ea8d68d162d166de231ba6dd944d27aff01ed8b6c40d38a9df8d496500
+- 59d6c2eb06085c7ab2ef166acc68f7aac5466e03fae77858d3ecd506ed2b2951
 
 # `config`
 

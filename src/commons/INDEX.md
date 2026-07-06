@@ -169,22 +169,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界で必要になる profile 生成、sandbox/permission profile の read/write root 判定、cwd/CODEX_HOME 検査、schema 配置、child process tracking、JSONL error・quota・capacity 判定を扱う実行時補助。
-- FileAccessMode と AgentCallParameter を Codex CLI 起動設定へ変換し、cmoc のファイルアクセス境界を Codex profile と起動前検証に落とし込む入口である。
+- Codex CLI を起動するための profile 生成、sandbox/permission profile の read/write 境界、CODEX_HOME 検証、subprocess 実行、apply child process tracking、schema 配置、Codex JSONL error 判定をまとめる実装。
+- FileAccessMode と AgentCallParameter から Codex CLI に渡す実行環境を構成し、Codex subprocess 境界で発生する実行前検査・失敗解釈・retry 判定を扱う。
 
 ## Read this when
-- Codex CLI を起動する前の profile TOML、sandbox_mode、writable_roots、permission profile、model provider、CODEX_HOME、cwd 補正の挙動を確認・変更したいとき。
-- 追加 read/write path が FileAccessMode の許可境界内か、oracle/realization/memo/.git/.agents/.codex などの禁止領域をどう扱うかを調べるとき。
-- apply abandon や apply 実行中の Codex child process tracking、pid file lock、process start time による pid 同一性管理を確認・変更したいとき。
-- Codex CLI の stdout/stderr、JSONL error event、resume token、quota error、capacity error、schema 付き出力や schema なし JSON 出力の解釈を扱うとき。
+- Codex CLI 起動時の sandbox_mode、writable_roots、permission profile、追加 read/write path の許可判定を確認・変更するとき。
+- AgentCallParameter.cwd、CODEX_HOME、Codex profile file、cmoc managed ollama provider など、Codex subprocess に渡す実行環境の組み立てを扱うとき。
+- apply abandon と連動する Codex child process の pid 記録、lock、削除、pid 再利用判定を確認・変更するとき。
+- Structured Output schema の配置、Codex output JSON の読み取り、Codex JSONL stdout/stderr から error detail・resume token・capacity/quota error を取り出す処理を扱うとき。
 
 ## Do not read this when
-- prompt 本文に載せる file access rule や oracle/realization の概念定義そのものを確認したいだけなら、対応する oracle 側の仕様断片を読む。
-- cmoc の path モデル、logs/schema store の配置、git ignore 判定、hashed file 書き込みの実装を調べたいだけなら、それぞれの runtime path/git/content helper を読む。
-- Codex CLI に渡す prompt の内容生成やサブコマンド固有の業務ロジックを変更したいだけなら、この subprocess profile 境界ではなく該当する command/prompt builder 側を読む。
+- prompt に載せる file access rule の文面や正本仕様断片そのものを確認したいだけなら、oracle 側の該当文書を読む。
+- Codex CLI を呼び出さない通常の path 計算、log/schema store のディレクトリ定義、git ignore 判定、oracle file 判定を変更する場合は、それぞれの runtime helper を読む。
+- cmoc config の model や reasoning effort の定義、AgentCallParameter や FileAccessMode の型定義を確認するだけなら、config や basic の定義元を読む。
 
 ## hash
-- 527eb98d70155069ccab59f0f6a24fd7533abe91e92db62bd9cf6eb90daa4e9d
+- 18b93e7ee1a9f6f8f9875f28950cf71d93e8aa865a5219e9f87ae88446ab2a59
 
 # `runtime_codex_tui.py`
 
