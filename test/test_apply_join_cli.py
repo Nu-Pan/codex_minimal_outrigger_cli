@@ -474,6 +474,55 @@ def test_apply_join_reports_session_oracle_agents_diff_and_force_reverts(
     assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
 
 
+@pytest.mark.parametrize("side", ["apply", "session"])
+def test_apply_join_force_reverts_unexpected_rename_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    side: str,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state = json.loads(state_path.read_text())
+    changed_root = apply_worktree_from_state(root, state) if side == "apply" else root
+    (changed_root / "docs").mkdir()
+    run_git(changed_root, "mv", "README.md", "docs/README.md")
+    run_git(changed_root, "commit", "-m", f"{side} unexpected rename")
+
+    normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert normal.exit_code == 1
+    report_line = [
+        line for line in normal.output.splitlines() if "保存済み report" in line
+    ][0]
+    assert (
+        f"- {side}: docs/README.md"
+        in Path(report_line.rsplit(": ", 1)[1]).read_text()
+    )
+    forced = runner.invoke(
+        app, ["apply", "join", "--force-resolve"], catch_exceptions=False
+    )
+    assert forced.exit_code == 0
+    assert (root / "README.md").read_text() == "# repo\n"
+    assert not (root / "docs" / "README.md").exists()
+
+
 def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
