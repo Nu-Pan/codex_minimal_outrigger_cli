@@ -5,12 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from basic.acp import AgentCallParameter
-from commons.runtime_codex import (
+from .runtime_codex import (
     run_codex_exec as runtime_run_codex_exec,
     run_codex_tui as runtime_run_codex_tui,
 )
-from commons.runtime_paths import repo_root, work_root
-from commons.runtime_results import CodexExecResult, CommandResult
+from .runtime_paths import repo_root, work_root
+from .runtime_results import CodexExecResult, CommandResult
 
 
 CodexExec = Callable[..., object]

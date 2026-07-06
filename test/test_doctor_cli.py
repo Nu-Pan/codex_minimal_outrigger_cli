@@ -25,7 +25,7 @@ from _support import (
 
 def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     config = CmocConfig()
@@ -85,7 +85,9 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     )
 
 
-def test_verify_ollama_service_rejects_missing_main_pid(monkeypatch) -> None:
+def test_verify_ollama_service_rejects_missing_main_pid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     executable = Path("/home/user/.cmoc/ollama/bin/ollama")
 
     monkeypatch.setattr(ollama_module, "_service_active", lambda: True)
@@ -95,7 +97,9 @@ def test_verify_ollama_service_rejects_missing_main_pid(monkeypatch) -> None:
         ollama_module._verify_ollama_service(executable)
 
 
-def test_ollama_listener_must_be_expected_service_process(monkeypatch) -> None:
+def test_ollama_listener_must_be_expected_service_process(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     executable = Path("/home/user/.cmoc/ollama/bin/ollama")
 
     monkeypatch.setattr(ollama_module, "_ollama_listener_process_ids", lambda: {20, 30})
@@ -120,7 +124,7 @@ def test_ollama_listener_must_be_expected_service_process(monkeypatch) -> None:
 
 
 def test_doctor_pulls_each_unique_cmoc_provider_model(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     config = CmocConfig()
@@ -151,7 +155,9 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
     assert pulled == ["alpha", "beta"]
 
 
-def test_doctor_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None:
+def test_doctor_generates_and_tracks_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
     monkeypatch.chdir(root)
@@ -169,7 +175,9 @@ def test_doctor_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None
     ).stdout.splitlines() == [".cmoc/config.json"]
 
 
-def test_dector_alias_runs_doctor(tmp_path: Path, monkeypatch) -> None:
+def test_dector_alias_runs_doctor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
@@ -185,7 +193,7 @@ def test_dector_alias_runs_doctor(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_doctor_preprocess_targets_current_linked_worktree(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     linked = tmp_path / "linked"
@@ -212,7 +220,7 @@ def test_doctor_preprocess_targets_current_linked_worktree(
 
 
 def test_init_syncs_default_config_without_overwriting_human_values(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
@@ -259,7 +267,9 @@ def test_init_syncs_default_config_without_overwriting_human_values(
     assert data["apply_fork"]["num_apply_files"] == 200
 
 
-def test_init_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None:
+def test_init_generates_and_tracks_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
@@ -289,7 +299,7 @@ def test_init_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_doctor_preprocess_untracks_existing_cmoc_local_files(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     local_path = root / ".cmoc" / "local" / "cache.json"
@@ -306,7 +316,7 @@ def test_doctor_preprocess_untracks_existing_cmoc_local_files(
 
 
 def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     local_path = root / ".cmoc" / "local" / "cache.json"
@@ -326,7 +336,7 @@ def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
 
 
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     user_file = root / "user.txt"
@@ -344,7 +354,7 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
 
 
 def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
@@ -365,7 +375,7 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
 
 
 def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
@@ -385,7 +395,7 @@ def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
 
 
 def test_doctor_preprocess_preserves_preexisting_staged_rename(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     old_path = root / "old.txt"
@@ -406,7 +416,7 @@ def test_doctor_preprocess_preserves_preexisting_staged_rename(
 
 
 def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
