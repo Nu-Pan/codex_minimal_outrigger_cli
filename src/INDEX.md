@@ -137,20 +137,19 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装をまとめる階層。apply、session、review、indexing、tui、doctor、eval oracle などの実行入口と workflow 制御へ進むためのルーティング対象である。
-- 各対象は CLI runtime、git/worktree/branch/state/process、Codex 呼び出し、report 生成、INDEX.md maintenance などをサブコマンド単位で接続するが、共通 runtime API や正本仕様そのものは主責務ではない。
+- cmoc の各サブコマンド実装を集めるディレクトリ。apply、session、review、indexing、tui、doctor、eval oracle などの実行入口と workflow 制御へ進むためのルーティング起点になる。
+- サブコマンドごとの実装は、CLI runtime への委譲、worktree・branch・process・state の操作、report 生成、cleanup、評価や review の上位制御などを扱う。
 
 ## Read this when
-- cmoc のサブコマンド実装を探し、apply、session、review、indexing、tui、doctor、eval oracle のどの実行入口へ進むべきか判断したいとき。
-- apply や session の branch/worktree/state/process 管理、join、abandon、cleanup、conflict 処理など、サブコマンド固有 workflow の制御入口を確認または変更したいとき。
-- review oracle の対象列挙、finding loop、INDEX.md 差分 commit/merge、review report など、review 系サブコマンドの実行経路を追いたいとき。
-- indexing、tui、doctor、eval oracle のように、共通処理や別 workflow へ委譲するサブコマンド入口とその接続先を確認したいとき。
+- cmoc のサブコマンド実装を探し、apply、session、review、indexing、tui、doctor、eval oracle のどの領域へ進むべきか判断したいとき。
+- サブコマンド実行時の入口関数、runtime への接続、上位 workflow、状態遷移、branch/worktree/process 管理、report 出力や cleanup の実装場所を確認したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、INDEX.md maintenance、TUI 起動、doctor preprocess、eval oracle の委譲関係を調べたいとき。
 
 ## Do not read this when
-- CLI 全体の Typer 登録、トップレベル command routing、共通 runtime の実行規約だけを確認したいとき。
-- git wrapper、worktree 検索、状態ファイル読み書き、path model、oracle file 判定、Codex 実行 wrapper などの共通 API 自体を変更したいとき。
-- Codex に渡す prompt、Structured Output schema、finding builder、parameter builder など、サブコマンドから呼ばれる生成部品の詳細だけを確認したいとき。
-- oracle file や realization file の定義、INDEX.md 生成規則、path model などの正本仕様断片を確認したいとき。
+- CLI 全体の Typer 登録、トップレベル command routing、共通 runtime API、git wrapper、path model、state file schema そのものを変更したいとき。
+- Codex に渡す prompt、Structured Output schema、parameter builder、finding builder、INDEX.md 生成規則など、各 workflow の下位 builder や正本仕様を確認したいとき。
+- oracle file や realization file の定義、path keyword、INDEX.md エントリー生成規則などの正本仕様断片を確認したいとき。
+- 対象サブコマンドや個別処理がすでに特定できている場合は、この階層ではなく該当する下位ディレクトリまたは実装モジュールを直接読む。
 
 ## hash
-- d06662da723db1bf6609f4046923d3abb0d0518d40b3e3738e16cacb2a1435d1
+- 42a7f2463cba87de77613e279ec9b028b3264ff3fe2d31f53f6bdf608fdf399d
