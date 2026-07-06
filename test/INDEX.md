@@ -123,21 +123,21 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、repo root と linked worktree の扱い、config の既定値・検証・直列化、CmocError の report 表示、CLI wrapper の preflight と error 出力、subcommand log、session state の branch 解析、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
-- 共通 fixture と root 状態を共有する runtime 回帰テスト群であり、分割すると文脈が散るため一箇所に凝集している。
+- cmoc の基礎 runtime 契約を横断的に固定する回帰テスト群。root placeholder と linked worktree の解決、config の既定値・検証・変換、CmocError の Markdown 表示、CLI preflight と parse error の stdout report、subcommand log、session/apply branch state、worktree 作成削除の安全境界、FileAccessMode から Codex profile/sandbox への変換、binary 判定などを扱う。
+- 個別サブコマンドの業務ロジックではなく、複数サブコマンドの実行前提になる runtime 層の外部挙動をまとめて確認する入口。
 
 ## Read this when
-- cmoc の runtime 共通処理、root 解決、worktree 判定、config 読み込み・検証、CmocError 表示、CLI error 変換、subcommand log、session state 読み書きに関わる変更を行うとき。
-- FileAccessMode、Codex profile、sandbox writable/readable root、追加書き込み許可、linked worktree 実行時の読み取り許可に関わる挙動を確認・変更するとき。
-- doctor preprocess、CLI preflight、completion probe、起動 wrapper、`.cmoc/local` ignore 追加、binary 判定など、サブコマンド実行前後の共通 runtime 境界を検証したいとき。
+- runtime の共通契約を変更する。特に root/repo/work/run の解決、linked worktree、`.cmoc/local`、git worktree、CLI wrapper、doctor preprocess、subcommand log、CmocError 表示、config 読み書き、session state、FileAccessMode、Codex profile、binary 判定に触れるとき。
+- CLI error を stdout の cmoc 形式 report として返す挙動、または Click/Typer の parse error・completion probe・work root 制約を確認したいとき。
+- agent call 用の filesystem permission、writable_roots、extra writable/read path、oracle conflict write、repo/local read permission の境界を検証したいとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務ロジック、出力内容、状態遷移だけを確認したいときは、そのサブコマンドの専用テストへ進む。
-- oracle doc や oracle src の正本仕様断片そのものを確認したいときは、対応する oracle 側の本文を読む。
-- INDEX.md 生成やルーティング文書の形式だけを確認したいときは、INDEX 関連の仕様・テストを読む。
+- 特定サブコマンド固有の apply、review、session、doctor、indexing の詳細ロジックだけを調べたい場合。まず該当サブコマンドの実装または専用テストへ進む。
+- oracle file の正本仕様本文、INDEX.md 生成規則、または文書ルーティングの内容自体を確認したい場合。oracle 配下の該当文書を読む。
+- UI 表示や LLM 出力品質の検証など、runtime 境界の外部挙動に関係しない変更を扱う場合。
 
 ## hash
-- 5909a1d81fb5ebd5d10efec260484079569f5e1e12018fd701cd25a35a510623
+- b8e778d3ff4d7e76038f89f6228d1a5561ae6fae2df52fb25873b6a7226c8a4f
 
 # `test_cli_tui.py`
 
@@ -293,23 +293,20 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor 系 CLI の統合テスト。リポジトリ修復、管理 Ollama の準備、設定ファイル生成・同期、linked worktree での対象解決、既存の staged/unstaged 変更を壊さない git 操作を外部挙動として検証する。
-- doctor と別名コマンドの実行結果、`.cmoc/local` の ignore/untrack、`.agents` 追跡、config の追跡・既存値保持、cmoc provider model の pull 対象重複排除を確認する。
+- doctor CLI と doctor preprocess の realization test。リポジトリ修復、`.cmoc/config.json` 生成・同期、managed Ollama 初期化、cmoc provider model pull、linked worktree での対象 root 判定、`dector` alias、既存 staged/unstaged 変更を壊さない git 操作を検証する。
 
 ## Read this when
-- doctor preprocess の挙動、設定生成・同期、管理 Ollama 初期化、または doctor CLI の終了コード・出力を変更する。
-- linked worktree 上で doctor が worktree 側を修復しつつ repo 側 config を使う挙動を確認・変更する。
-- `.gitignore`、`.agents`、`.cmoc/local`、`.cmoc/config.json` の git 追跡状態や commit 対象を扱う修復ロジックを変更する。
-- preexisting staged changes、unstaged hunks、staged rename を doctor 実行時に保持する制御を確認・変更する。
-- cmoc provider の Ollama model pull 対象や重複排除を変更する。
+- doctor command、doctor preprocess、managed Ollama 起動準備、cmoc provider model pull、config 生成・同期、`.cmoc/local` ignore/untrack、`.agents/.gitkeep` tracking、linked worktree 対応を変更する。
+- doctor が作る commit の対象 path、既存 staged 変更や unstaged hunk の保持、tracked `.cmoc/local` の除外など、git index を触る挙動を確認する。
+- `dector` alias が doctor と同じ初期化を行うか確認する。
 
 ## Do not read this when
-- doctor CLI と関係しないサブコマンド、一般的な設定 schema 定義、または Ollama runtime の内部実装だけを調べたい場合。
-- 単体 helper の純粋な入出力を確認したいだけで、CLI 実行後の git 状態やファイル副作用を検証しない場合。
-- Codex CLI や LLM 出力品質そのもののテストを探している場合。
+- doctor 以外の CLI command の入出力や制御を調べる。
+- config schema そのものや default 値の正本定義を確認する場合は、対応する oracle src または config 実装を直接読む。
+- Ollama install、systemd service、model pull の個別実装詳細だけを調べる場合は、runtime 側の実装を直接読む。
 
 ## hash
-- 1a662d4aab02816c7dda5a48f9f37aa2a4e04a4795d62082977f85bf8a1de040
+- be0de2484cc067f91e64f370127768cc071fd0551159e1e18ac2951defce6311
 
 # `test_indexing_cli.py`
 
