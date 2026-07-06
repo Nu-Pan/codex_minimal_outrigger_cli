@@ -156,20 +156,21 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を配置し、CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、packaged import、INDEX.md 更新などの外部挙動と共通 runtime 契約を検証する。
-- 共有 pytest helper から、apply/session/review/doctor/indexing/TUI/Codex 実行系の各回帰テストへ進む入口になる。
+- cmoc の realization test 群を収める領域。CLI サブコマンド、Codex runtime、indexing、prompt rendering、packaged import など、oracle file から具体化された外部挙動と共通 runtime 契約を pytest で検証する。
+- 共有 fixture/helper を入口に、一時 Git リポジトリ、Codex home/profile、fake 外部コマンド、apply/session state などを使う統合的な回帰テストへ進むための上位ルーティング対象である。
 
 ## Read this when
-- cmoc の CLI や runtime の変更に対して、対応する realization test や既存の回帰観点を探すとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、doctor/init、indexing、TUI、Codex exec/TUI/subprocess/retry/quota/home/post validation の外部挙動を確認・変更するとき。
-- ACP builder、prompt parts、StructDoc rendering、packaged import など、実装と oracle src/schema/prompt 境界に関わるテストを探すとき。
-- テスト用 Git repository、Codex home/profile、fake Ollama/systemctl、apply worktree 解決など、複数テストで共有される pytest helper を確認・変更するとき。
+- cmoc の挙動変更に対して、対応する realization test の所在を探したいとき。
+- CLI から観測される apply、session、doctor/init、review oracle、indexing、TUI の外部挙動や state 遷移の回帰テストを確認・変更するとき。
+- Codex exec/TUI runtime、retry、quota、file access post validation、sandbox/profile、Codex home、subprocess tracking などの runtime 境界を検証するテストを探すとき。
+- prompt parts、ACP builder、packaged import、StructDoc rendering など、個別 CLI より下位の共通契約に対する realization test を探すとき。
+- 複数テストで共有される repository fixture、fake Codex/Ollama/systemctl、apply worktree 解決などのテスト補助を確認したいとき。
 
 ## Do not read this when
-- プロダクト本体の実装責務や内部 helper を先に確認したい場合は、src 配下の対応する implementation を読む。
-- oracle file の正本仕様、開発標準、schema、prompt 文面そのものを確認したい場合は、oracle 配下の該当文書または oracle src/test を読む。
-- 個別サブコマンドや runtime 領域に関係しない補助ファイル、設定、開発手順を調べる場合は、より直接の対象へ進む。
-- INDEX.md エントリー生成規則や routing 文書の書き方だけを確認したい場合は、この realization test 群ではなく対応する標準文書を読む。
+- プロダクト本体の実装責務や処理手順を先に確認したい場合は、対応する実装領域へ直接進む。
+- oracle file の正本仕様、開発標準、schema 定義、prompt 正本の内容を確認したい場合は、oracle 配下の該当対象を読む。
+- 単一サブコマンドや単一 runtime helper の内部構造だけを局所的に変更したい場合は、まず対応する実装ファイルを読む。
+- INDEX.md エントリー生成規則やルーティング文書そのものを確認したい場合は、routing/indexing の正本仕様または関連実装を読む。
 
 ## hash
-- d0f46b6acdc78d595f8d75881ac10ef26b694a1e61c5920a58aa81fe69bc2ac4
+- 3bea457aa5063402f64028c2a8327ea03356969a442ca8cc9d3ad5310b41fe76

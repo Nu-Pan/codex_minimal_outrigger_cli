@@ -294,20 +294,20 @@
 # `test_codex_runtime_subprocess.py`
 
 ## Summary
-- Codex subprocess 起動時の apply process tracking の扱いを検証する realization test。専用 process group の記録、既存 tracking file の保持、継承された tracking 環境変数を通常の Codex 実行から除外する挙動を扱う。
+- Codex subprocess 起動 helper のテスト。追跡付き起動が子プロセスを専用 process group で実行し、一時的な apply process tracking 情報を親の tracking file に残さないことを検証する。通常起動が継承された apply tracking 環境変数を無視し、外部 tracking file を作らないことも確認する。
 
 ## Read this when
-- Codex subprocess 実行 helper の process group 分離や apply process tracking の挙動を変更・確認するとき。
-- `run_tracked_codex_subprocess` または `run_codex_subprocess` が tracking file や tracking 環境変数をどう扱うべきかをテストから確認したいとき。
-- Codex 実行時に外部から継承された apply tracking 設定で不要な状態ファイルが作られないことを確認したいとき。
+- Codex subprocess 起動 helper の process group 分離や apply process tracking の扱いを変更する時。
+- run_codex_subprocess と run_tracked_codex_subprocess の外部挙動、環境変数の継承抑制、一時 tracking file 更新の期待値を確認したい時。
+- Codex 実行用 subprocess wrapper のテスト失敗を調査する時。
 
 ## Do not read this when
-- Codex subprocess 以外の CLI コマンド挙動や出力形式を調べたいとき。
-- apply process tracking と無関係な runtime profile の設定・探索・環境構築を確認したいとき。
-- 実装側の helper 責務や内部処理を確認したいだけなら、対応する runtime profile 実装を直接読む。
+- Codex subprocess wrapper の実装ではなく、CLI コマンド引数や出力 schema の仕様を確認したい時。
+- 一般的なテスト補助関数や Python executable fixture の使い方だけを調べたい時。
+- apply process tracking と無関係な runtime 設定、path model、oracle/realization 境界を確認したい時。
 
 ## hash
-- ad80da3fef78c45fa133633666d9a2d60df6a2244d07c1a849846adadb2e363b
+- d9f96358767fbb5d265ebd4e8c302ad0f070f1e1765812f32ce388205dabba8d
 
 # `test_codex_runtime_tui.py`
 
