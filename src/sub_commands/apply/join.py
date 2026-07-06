@@ -328,11 +328,9 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
     p = Path(path)
     if p.name == "INDEX.md":
         return True
-    if p.name == "AGENTS.md":
-        return False
-    if path.startswith((".git/", ".codex/")):
-        return False
-    if path.startswith(("oracle/", ".agents/")) or is_root_memo_path(path):
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md limits apply
+    # branch products to implementation files; AGENTS.md places them under src/.
+    if not path.startswith("src/"):
         return False
     return not is_untracked_git_ignored(root, root / path)
 

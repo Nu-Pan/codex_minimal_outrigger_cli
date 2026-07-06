@@ -773,9 +773,11 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     apply_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "manual"
     oracle_snapshot_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     run_git(root, "worktree", "add", "-b", apply_branch, str(apply_worktree), "HEAD")
-    (apply_worktree / "README.md").write_text("# updated by apply\n")
-    run_git(apply_worktree, "add", "README.md")
-    run_git(apply_worktree, "commit", "-m", "update readme from apply")
+    applied = apply_worktree / "src" / "applied.py"
+    applied.parent.mkdir()
+    applied.write_text("value = 'updated by apply'\n")
+    run_git(apply_worktree, "add", "src/applied.py")
+    run_git(apply_worktree, "commit", "-m", "update implementation from apply")
     state = json.loads(state_path.read_text())
     state["apply"] = {
         "state": "completed",
@@ -823,7 +825,7 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
 
     assert result.exit_code == 0
     assert "oracle/spec.md" in target_rels
-    assert "README.md" not in target_rels
+    assert "src/applied.py" not in target_rels
     assert "unrelated.py" not in target_rels
     state = json.loads(state_path.read_text())["session"]
     assert state["last_joined_apply_oracle_snapshot_commit"] == oracle_snapshot_commit
