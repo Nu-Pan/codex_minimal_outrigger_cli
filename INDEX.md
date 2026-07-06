@@ -134,22 +134,27 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く実装ルート。CLI 入口、サブコマンド実装、共通 runtime helper、oracle src への package shim、旧 import 経路を維持する互換層へ進むための入口になる。
-- Typer command 配線、apply/session/review/indexing/tui/doctor/eval oracle の実行制御、Codex 実行基盤、設定・path・git・state・error・INDEX 更新補助、oracle 側定義の再公開や中継を扱う。
+- cmoc の realization implementation 全体への入口であり、CLI 起動、サブコマンド実行、runtime 共通 helper、旧 import 互換層、oracle package 参照 shim へ進むためのルーティング階層。
+- Typer による command 配線、apply・session・review・indexing・tui・doctor・eval oracle などの workflow 実装、Codex 実行・設定・git・path・状態管理などの runtime 基盤を扱う下位要素をまとめる。
+- oracle 側実装を正本に保つため、acp・basic・config などの既存公開 import 経路は複製ではなく再公開・中継・薄い wrapper として維持される。
 
 ## Read this when
-- cmoc の realization implementation の所在を探し、CLI 入口、サブコマンド、共通 runtime、互換 import 層のどこへ進むべきか判断したいとき。
-- CLI command や subcommand の公開面、実行 workflow、runtime helper、Codex 呼び出し、状態管理、git/worktree/process 操作、INDEX.md maintenance の実装を調査・変更したいとき。
-- `acp.*`、`acp.builder.*`、`basic.*`、`config.*`、`oracle.*`、runtime module など、既存 import 経路や oracle src 参照を realization 側でどう維持しているか確認したいとき。
+- cmoc の realization 側で、どの実装領域へ進むべきかを最初に判断したいとき。
+- CLI command、subcommand、option、alias、console script 起動、または各 command 実装への委譲関係を調べたいとき。
+- apply、session、review、indexing、tui、doctor、eval oracle などのサブコマンド workflow や状態遷移、branch/worktree/process 管理、report 出力、cleanup の実装場所を探したいとき。
+- Codex 実行、設定読み書き、git 操作、path 解決、ログ、状態管理、doctor preprocess、indexing preflight、apply process 追跡など、複数領域から共有される runtime 基盤の読む先を選びたいとき。
+- acp・basic・config などの旧 import 互換、公開名の再公開、oracle 側正本実装への中継、互換 shim の削除可否を確認したいとき。
+- realization code から oracle package を import 可能にする仕組みや、package shim による正本側 module 参照経路を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、prompt、Structured Output schema、path keyword、oracle file と realization file の定義、人間意図を確認したいときは、oracle 側の該当文書や実装を読む。
-- realization test の期待値や外部挙動を確認したいときは、test 配下の該当対象を読む。
-- 設定値、ACP 型、path model、構造化文書 API、builder 生成内容などの正本側定義そのものを確認したいときは、再公開や互換層ではなく oracle 側または実体 module を読む。
-- 対象の command、helper、互換経路がすでに特定できている場合は、この階層全体ではなく該当する下位要素へ直接進む。
+- oracle file の正本仕様、人間意図、prompt、Structured Output schema、path keyword、INDEX entry 生成方針などを確認したいときは、対応する oracle 側の文書または実装を読む。
+- ACP 型、設定定義、path model、構造化文書 API などの正本側定義そのものを調べたいときは、互換層ではなく再公開先の正本側実装を読む。
+- 特定のサブコマンド、runtime helper、builder、または shim がすでに特定できているときは、この階層ではなく該当する下位対象を直接読む。
+- 利用者向け workflow や CLI 制御ではなく、Codex に渡す prompt、parameter builder、finding builder、quota probe builder などの生成内容を確認したいときは、対応する builder または oracle 側を読む。
+- 新しい公開 API、設定項目、状態ファイル、または CLI 面を追加する場所を探しているだけで、既存の実装責務や互換経路との関係を確認しないとき。
 
 ## hash
-- 74582dfd3680ab314a1a53744fd821aa44073bfe920d269347e7cf62801954d7
+- 9039ba4d6f3f24072997da79f2f012a1e23e94df44e8282e4059ed9f82ed92fd
 
 # `test`
 
