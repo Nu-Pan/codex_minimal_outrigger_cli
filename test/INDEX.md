@@ -78,46 +78,47 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 経由の制御を検証するテスト群。所見列挙、所見適用、commit、変更要約、report 生成、session state 更新までの一連の apply fork loop を扱う。
-- apply fork 用 ACP builder の import 可能性、prompt 内容、schema 参照も検証し、packaged layout や src のみの PYTHONPATH で壊れないことを確認する。
-- apply fork report の収束、未収束、error、変更ファイル再調査、未追跡 file、削除済み file 除外、rolling fork の対象選定を同じ report schema と loop 観測としてまとめて確認する。
+- apply fork を CLI から実行したときの所見列挙、適用、commit、変更要約、report 生成、session state 更新までの制御を検証する realization test。
+- 変更ファイルの再調査、収束・未収束・error report、未追跡 file や削除済み file の変更要約、rolling apply fork の対象選択を同じ report schema と loop 制御の観測として扱う。
+- apply fork 用 ACP builder が packaged layout や src のみの PYTHONPATH で import でき、標準 prompt と oracle schema を参照できることも検証する。
 
 ## Read this when
-- apply fork の report 出力内容、終了コード、収束判定、未収束判定、error report の変更要約を変更または調査するとき。
-- apply fork が所見適用後に変更 file や新規 directory 配下を再調査する制御を確認するとき。
-- apply fork の変更要約で未追跡 file を含める挙動、削除済み tracked file を除外する挙動、Codex 要約が空のときの fallback を確認するとき。
-- apply fork の commit message 生成有無、apply branch の更新、session state の apply 情報や rolling fork の基準 commit 更新を確認するとき。
-- apply fork 用の change summary、file finding enumeration、finding application の ACP builder が参照する prompt、schema、import layout を確認するとき。
+- apply fork の CLI 実行結果、終了 code、report 内容、変更要約、commit message、session state 更新を変更または調査するとき。
+- apply fork が適用後の変更 file や新規 directory 配下を再調査する loop、回数上限での収束判定、未差分適用時の未収束扱いを確認するとき。
+- apply fork の error report が未 commit 差分を要約する挙動、未追跡 file を差分に含める挙動、削除済み tracked file を要約対象から外す挙動を扱うとき。
+- rolling apply fork が前回 apply join 後の oracle 変更だけを対象にする制御を変更または確認するとき。
+- apply fork の所見列挙・所見適用・変更要約 builder の import、prompt、structured output schema path を調査するとき。
 
 ## Do not read this when
-- apply fork 以外の apply join、session fork、doctor などの単体仕様を調べたいだけのとき。
-- CLI を通さない低レベル helper の実装詳細だけを確認したいとき。ただし report 用変更要約 helper の外部挙動を確認する場合は読む。
-- Codex CLI や LLM の実出力品質を評価したいとき。このテストは fake 応答で apply fork の制御と report を検証している。
+- apply fork 以外の CLI command、session fork/join 単体、doctor、設定 load などを調査しており、apply fork の report や再検査制御に触れないとき。
+- report rendering の細部だけを局所的に確認したい場合で、対象 module の単体実装またはより小さい report helper test を直接読む方が十分なとき。
+- ACP builder 全般の共通仕様や oracle prompt 断片そのものを調査しており、apply fork 専用 builder の CLI 経由検証が不要なとき。
 
 ## hash
-- ffb8aa6f65764a91226f14f507773c9cd3ec6f6e3d542df0e88e8df0745ecad6
+- 1619b1eb112c0ee77a38e6d8bad7239186617d0e432ec91971d10f7096d23f0f
 
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply run を session へ join する CLI 外部挙動を検証するテスト。apply worktree と branch の cleanup、session state 更新、report 生成、linked session worktree への merge、dirty worktree 拒否、想定外差分検出、force resolve、merge conflict 処理を同じ join 操作の境界条件として扱う。
-- apply join が realization file と session 側変更をどう分類し、oracle、memo、AGENTS、INDEX、.codex、gitignore、tracked ignored file、rename/delete path をどう扱うかを確認する入口。
+- apply run を session へ join する CLI 外部挙動を検証する realization test。apply worktree/branch の後片付け、state 更新、report 生成、linked session worktree への反映、dirty worktree 拒否、想定外差分、force resolve、merge conflict 処理を同じ join 操作の境界条件として扱う。
+- realization file と oracle file の境界に基づき、apply 側で許容される変更 path と session 側で許容される変更 path の分類 helper も検証する。
 
 ## Read this when
-- apply join の成功時 cleanup、state 更新、report 出力、または apply worktree から実行した場合の残存挙動を変更・確認したいとき。
-- apply join が dirty apply worktree、stale apply branch、想定外差分、merge conflict を拒否または報告する条件を確認したいとき。
-- apply join の --force-resolve が oracle、AGENTS、.codex などの想定外差分を戻す挙動を変更・確認したいとき。
-- apply join の変更パス分類、managed branch 上の rename/delete 扱い、root memo や tracked ignored file の期待変更判定を確認したいとき。
-- linked session worktree から fork された apply を、root ではなく現在の session worktree へ join する挙動を扱うとき。
+- apply join の成功時に apply worktree や apply branch が削除される条件、または current cwd が apply worktree の場合に削除されない条件を確認したいとき。
+- apply join 後の session state、last joined oracle snapshot commit、結果 report の生成内容を変更・確認したいとき。
+- linked session worktree 上で apply fork/join した変更が、root worktree ではなく現在の session worktree に反映される挙動を確認したいとき。
+- stale apply branch、dirty apply worktree、想定外差分、merge conflict に対する apply join の拒否条件と出力・report・state 維持を確認したいとき。
+- force resolve が apply 側または session 側の許可されない変更を戻し、許可される変更だけを join する挙動を確認したいとき。
+- apply join が realization path、oracle path、memo、AGENTS、INDEX、codex 設定、tracked ignored path、削除 path、rename target をどう分類するか確認したいとき。
 
 ## Do not read this when
-- apply fork の Codex 実行、prompt 構築、または apply branch/worktree 作成だけを確認したいとき。
-- session fork、doctor、git helper、test fixture の一般的な挙動を確認したいだけで、apply join の外部挙動に関心がないとき。
-- INDEX.md エントリー生成や oracle/realization の概念定義そのものを確認したいとき。
-- apply join の内部実装だけを局所的に調べたい場合で、CLI 経由の統合挙動や git 状態を伴うテスト確認が不要なとき。
+- apply fork が Codex 実行結果から state や worktree を作る挙動だけを確認したいとき。
+- session fork の branch/worktree 作成や session state 初期化だけを確認したいとき。
+- apply join の内部関数実装を変更したいだけで、CLI 経由の外部挙動や path 分類テストを確認する必要がないとき。
+- oracle 文書や prompt builder の正本仕様そのものを確認したいとき。
 
 ## hash
-- 4ccd1a3f2a8925b1f2beb303e380699abc4ed905cfe5a2eab7c7be7ba900625e
+- 9427f52919c7d95fd0bca3267719388f51c25d1ff8196f9fccd18e2b6d51d84c
 
 # `test_basic_runtime.py`
 

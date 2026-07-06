@@ -134,43 +134,40 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く階層で、CLI 入口、利用者向けサブコマンド、実行時共通 helper、oracle 側実装への import shim、旧 import 経路の互換入口をまとめる。
-- command 配線、workflow orchestration、runtime 共通処理、設定・基本 API・ACP builder などの再公開境界を切り分け、下位の担当領域へ進むための入口になる。
-- 正本仕様断片そのものではなく、oracle 側で述べられた人間意図を実行可能な実装や互換層として具体化する realization 側の主要実装領域である。
+- cmoc の realization implementation を置く階層で、CLI 入口、サブコマンド orchestration、runtime 共通 helper、正本側 oracle 実装への package shim、旧 import 経路を維持する互換層への入口になる。
+- 利用者向け command 面、実行制御、状態・git・path・Codex 実行などの共通処理、oracle src 定義を複製しない再公開・中継の所在を、下位要素へ進んで確認するためのルーティング単位。
 
 ## Read this when
-- cmoc の realization implementation 全体から、CLI 入口、サブコマンド実装、runtime 共通処理、互換 shim のどこを読むべきか判断したいとき。
-- 利用者向け command や subcommand の公開面、Typer/Click から各 workflow への委譲、console script 起動経路を確認・変更したいとき。
-- apply、session、review、indexing、tui、doctor、eval oracle などの workflow 実装入口や orchestration の配置を探したいとき。
-- Codex 実行、git 操作、path 解決、状態管理、logging、error report、preflight、quota retry など、複数領域から共有される runtime helper を探したいとき。
-- oracle 側の正本実装を複製せず参照・再公開する互換 import 経路や package shim の残存理由、公開名、削除条件を確認したいとき。
+- cmoc の realization implementation の中で、CLI 入口、サブコマンド実装、runtime 共通処理、互換 import 層のどこを読むべきか判断したいとき。
+- 利用者向け command、option、alias、console script 起動、引数解析エラー処理から実処理への委譲経路を確認したいとき。
+- session、apply、review、indexing、doctor、eval oracle、tui などのサブコマンド単位の orchestration や実装入口を探したいとき。
+- Codex 実行基盤、config 同期、git/path/state、logging、error report、preflight、INDEX 更新など、複数領域で共有される runtime helper を探したいとき。
+- oracle src 側の正本定義を複製せず、既存の公開 import 経路や互換 shim から参照・再公開している箇所を確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様、prompt、Structured Output schema、人間意図そのものを確認したいときは、対応する oracle 側の文書または実装を読む。
-- テストの期待値、fixture、外部挙動検証、回帰確認だけを調べたいときは、test 側の対象を読む。
-- 特定の helper、subcommand、互換入口が既に分かっている場合は、この階層全体ではなく該当する下位対象を直接読む。
-- README、AGENTS、INDEX などのルーティング・開発規則・利用説明を確認したいだけのときは、それぞれの対象を読む。
-- 正本側の設定定義、path model、ACP 型、構造化文書 API、builder 生成内容そのものを確認したいときは、再公開入口ではなく正本側の該当対象を読む。
+- oracle file の正本仕様断片、prompt、生成内容、人間意図、path model や config 定義そのものを確認したいときは、対応する oracle 側の文書または実装を読む。
+- realization test の fixture、期待値、外部挙動検証を確認したいときは、test 側の対象を読む。
+- 特定のサブコマンド、runtime helper、互換層など読む対象が既に決まっているときは、この階層全体ではなく該当する下位要素へ直接進む。
+- oracle と realization の定義、INDEX.md エントリー作成規則、ファイルアクセス規則などの仕様本文を確認したいだけのときは、仕様文書側を読む。
 
 ## hash
-- b05f99787d4f074176e484a4083c55b231866368067e37bea60a3c0fcedd4b35
+- db31f4dbd7e3e01f33e22596040c73b99d75510d4699cb3547a26782ec2ee27c
 
 # `test`
 
 ## Summary
-- CLI、runtime、apply、session、indexing、review oracle、prompt などの realization test を集約するテスト領域。共有 pytest helper と、外部 CLI 挙動・Codex 実行 wrapper・git 状態・report 生成・prompt/schema 参照の回帰確認への入口になる。
+- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex runtime、doctor、indexing、prompt rendering、packaged import、session/apply/review の外部挙動や共通 runtime 契約を pytest で検証する。
+- 個別テストは、共有 fixture・fake 外部サービス・worktree/state 操作を使いながら、oracle 仕様を具体化した realization implementation の回帰確認入口として分かれている。
 
 ## Read this when
-- cmoc の実装変更後に、対応する realization test の場所を探したいとき。
-- apply fork/join/abandon、session fork/join/abandon、doctor、TUI、indexing、review oracle などの CLI 外部挙動をテストで確認したいとき。
-- Codex runtime の exec/TUI/subprocess/home/quota/retry/profile/sandbox まわりの期待挙動を確認または変更したいとき。
-- ACP builder、prompt parts、StructDoc rendering、packaged import など、CLI 横断の生成物・公開名・描画結果・配布時 import 境界を検証するテストを探すとき。
-- テスト用 git repository、Codex home、fake 外部コマンド、doctor 実行などの共通 fixture や helper の前提を確認したいとき。
+- cmoc の CLI、runtime、apply、session、review、indexing、doctor、Codex 実行 wrapper、prompt builder などの変更に対応する既存 realization test を探すとき。
+- 変更した実装に対して、どのテストファイルが外部挙動、状態遷移、Git worktree、Codex profile、structured output schema 参照、report 生成を検証しているか絞り込みたいとき。
+- 新しい realization test を追加する前に、同じ観点を既存テストへ統合できるか、または共有 helper を使うべきか確認するとき。
 
 ## Do not read this when
-- 本番実装の責務や内部処理を先に確認したい場合は、対応する realization implementation を読む。
-- oracle file の正本仕様断片、schema、prompt、path model の定義そのものを確認したい場合は、対応する oracle 側の文書または src を読む。
-- 個別テスト対象が明確で、そのファイル名や責務が分かっている場合は、この階層全体ではなく該当テストを直接読む。
+- oracle file の正本仕様断片そのものを確認したい場合は、対応する oracle 側の文書や schema を読む。
+- 本番実装の責務分割や内部 helper の詳細だけを調べたい場合は、まず対応する実装側の対象を読む。
+- INDEX.md エントリーの自然言語規則だけを確認したい場合や、個別テストの期待値に関心がない場合。
 
 ## hash
-- 2867fff0fc693a971c1d5406f9660038ed1db3c27eeaac2add9d2a73575da344
+- 2290120a56f109aca4aca0cbf0f74e2990cd38872c483f6917a881ec1c00e7d3

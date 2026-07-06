@@ -138,23 +138,18 @@
 # `sub_commands`
 
 ## Summary
-- 利用者向けサブコマンドの実装入口をまとめる階層。apply、session、review、indexing、tui、doctor、eval oracle などの実行入口から、各 workflow 固有の orchestration へ進むためのルーティング対象になる。
-- CLI runtime、git 操作、状態管理、worktree/process/report、Codex 呼び出しなどの共通実装を利用しながら、サブコマンド固有の事前条件、状態遷移、cleanup、出力、委譲先を接続する層を扱う。
-- 詳細な生成ロジックや共通 helper そのものではなく、各サブコマンドがどの下位処理・共通処理へ処理を渡すかを切り分ける入口として位置づけられる。
+- CLI サブコマンド実装を集約する領域で、session、apply、review、indexing、doctor、eval oracle、tui などの利用者向け操作から下位実装へ進む入口となる。
+- 各サブコマンドの薄い委譲入口、実行前検査、状態遷移、worktree/branch 操作、Codex 呼び出し、merge、cleanup、report 生成など、コマンド単位の orchestration の所在を判断するために読む。
 
 ## Read this when
-- 利用者向けサブコマンドの実装入口を探し、対象 workflow に対応する下位要素へ進みたいとき。
-- apply、session、review の開始・join・破棄・fork・report・状態遷移・cleanup など、複数の state、branch、worktree、process、report をまたぐ制御を調べたいとき。
-- indexing、tui、doctor、eval oracle などのサブコマンドが CLI runtime や既存の共通処理へどう委譲されるかを確認または変更したいとき。
-- review oracle の対象列挙、finding loop、INDEX 変更反映、report 出力、review branch merge など、review workflow の処理境界を切り分けたいとき。
-- session lifecycle や apply lifecycle に固有の事前条件、失敗時復旧、conflict 処理、利用者向け出力を確認したいとき。
+- CLI サブコマンドの実装入口を探し、対象コマンドに対応する下位領域または module を選びたいとき。
+- session lifecycle、apply run lifecycle、review oracle、INDEX.md maintenance、TUI 起動、doctor preprocess、eval oracle 委譲のどの実装を読むべきか判断したいとき。
+- サブコマンド固有の事前条件、runtime への接続、branch/worktree/state 管理、失敗時処理、report や出力への接続点を確認したいとき。
 
 ## Do not read this when
-- CLI runtime、git wrapper、path model、state file schema、Codex 実行 wrapper などの共通 helper の詳細だけを調べたいとき。
-- oracle file や realization file の一般定義、正本仕様、INDEX.md 生成規則など、仕様側の概念を確認したいとき。
-- Codex に渡す prompt、Structured Output schema、parameter builder の本文や詳細だけを変更したいとき。
-- INDEX.md の内容生成、差分検出、lock、commit など indexing 共通処理の詳細ロジックだけを調べたいとき。
-- 特定サブコマンド内の対象列挙、report 描画、merge 処理、path 解決など、責務が明確に分かれている下位処理を直接読む方がよいとき。
+- CLI runtime、git/worktree helper、path model、state file schema、Codex 実行 wrapper など、複数サブコマンドで共有される基盤そのものを調べたいとき。
+- oracle file や realization file の定義、INDEX.md エントリー作成規則、正本仕様本文を確認したいとき。
+- 具体的に読むべきサブコマンドまたは下位 module が既に決まっており、その対象へ直接進めるとき。
 
 ## hash
-- be8ba7df57d2a782e573040fe324d9395f60bc0ad0fe0c558bfe4f5d8a879044
+- c6c81f8c5ecb39e8c96ff3c7293ed2260992401a30b21163dfce6ce8b099ab95
