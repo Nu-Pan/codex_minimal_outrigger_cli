@@ -1,8 +1,14 @@
-"""Codex quota availability probe parameter compatibility builder."""
+"""Codex quota availability probe parameter builder."""
 
-from importlib import import_module
+from basic.acp import (
+    AgentCallParameter,
+    FileAccessMode,
+    ModelClass,
+    ReasoningEffort,
+)
 
-from basic.acp import AgentCallParameter
+
+_PROBE_PROMPT = "quota 回復確認のための最小実行です。短く完了してください。"
 
 
 def build_quota_availability_probe_parameter(
@@ -10,8 +16,17 @@ def build_quota_availability_probe_parameter(
 ) -> AgentCallParameter:
     # <work-root>/oracle/doc/app_spec/prompt_standard.md
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    builder = import_module("oracle.acp_builder.quota_probe")
-    return builder.build_quota_availability_probe_parameter(base_parameter)
+    # oracle src lacks a quota probe builder, but quota recovery cannot depend
+    # on a missing module. Keep this realization-only completion minimal.
+    return AgentCallParameter(
+        ModelClass.MINIMUM,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        _PROBE_PROMPT,
+        None,
+        run_indexing_preflight=False,
+        cwd=base_parameter.cwd,
+    )
 
 
 __all__ = ["build_quota_availability_probe_parameter"]
