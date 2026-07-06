@@ -151,20 +151,20 @@
 # `runtime_codex_preflight.py`
 
 ## Summary
-- Codex exec/TUI 呼び出しの直前に、登録済みの INDEX 更新 preflight を必要に応じて実行してから実行本体へ委譲する薄いラッパーを扱う。preflight の登録・解除、実行起点 root の決定、ロックと ContextVar による直列化・再入抑止を担う。
+- Codex exec/TUI 実行の直前に登録済みの INDEX 更新 preflight を挟むための薄い委譲層。preflight の登録・解除、実行起点 root の決定、再入抑止と直列化を扱い、実際の Codex 実行は runtime 側へ渡す。
 
 ## Read this when
-- Codex 呼び出し前に INDEX 更新 preflight が実行される条件や順序を確認・変更したいとき。
-- preflight の登録・解除 API、テスト時の無効化、再入抑止、並行実行時のロック挙動を調べたいとき。
-- Codex 呼び出しに渡された cwd/root と agent parameter の cwd から、indexing 対象 root がどう決まるかを確認したいとき。
+- Codex exec/TUI 呼び出し前に indexing preflight が実行される条件や順序を確認したいとき。
+- run_indexing_preflight、cwd、root、parameter.cwd から preflight の起点 root がどう決まるかを調べたいとき。
+- indexing preflight の登録解除、再入防止、ロックによる直列実行の挙動を変更したいとき。
 
 ## Do not read this when
-- Codex exec/TUI の実際のプロセス起動、標準入出力、戻り値変換を調べたいだけのときは、実行本体を扱う runtime 側へ進む。
-- AgentCallParameter のフィールド定義や run_indexing_preflight の意味そのものを確認したいときは、agent 呼び出しパラメータの定義へ進む。
-- repo root や work root の解決規則を詳しく確認したいときは、runtime path 解決を扱う対象へ進む。
+- Codex exec/TUI の実行本体、サブプロセス実行、戻り値の組み立てを調べたいときは runtime 実行側を読む。
+- repo root や work root の判定規則そのものを調べたいときは path 解決を担う runtime path 側を読む。
+- AgentCallParameter の項目定義や run_indexing_preflight の意味を確認したいときは basic 側の parameter 定義を読む。
 
 ## hash
-- 89a645a3eedc934ea16a6574c988bd0653ef220cfb48d418483de39768176610
+- 21640496726fe5b154993e3215648edd155e6984b8fcb368ada7a22845c04670
 
 # `runtime_codex_profile.py`
 
@@ -323,25 +323,25 @@
 # `runtime_ollama.py`
 
 ## Summary
-- cmoc 管理の Ollama を準備し、cmoc provider の model が要求された場合だけ local SLM を利用可能にする runtime 補助実装。
-- 設定から cmoc provider の model 名を抽出し、Ollama binary の取得・展開、systemd user service の作成・起動、11434 listener の実プロセス確認、model pull/show をまとめて扱う。
-- Ollama の保存場所、service file、環境変数、systemctl 実行、/proc による listener 照合、HTTP readiness 確認に関する具体処理の入口となる。
+- cmoc provider を要求する model がある場合に、cmoc 管理下の Ollama を user service として起動し、固定 endpoint と管理 model store で local SLM を serve 可能にする実装。
+- 設定から cmoc 管理対象の model 名を抽出し、Ollama archive の取得・install、systemd user service file の同期、service/listener/HTTP 応答の検証、model pull をまとめて扱う。
+- Ollama の process lock、/proc による listener 所有 process 検証、systemctl/ollama command の CmocError 変換を確認する入口となる。
 
 ## Read this when
-- cmoc provider の model を使う前に Ollama を自動準備する処理を変更したいとき。
-- Ollama archive の取得、~/.cmoc/ollama 配下への展開、binary version 確認、model store の扱いを確認したいとき。
-- cmoc-ollama systemd user service の生成内容、起動手順、OLLAMA_HOST/OLLAMA_MODELS の設定を調べたいとき。
-- 127.0.0.1:11434 の listener が cmoc 管理の Ollama process かどうかを /proc と MainPID で検証する挙動を変更したいとき。
-- Ollama model の存在確認、pull、serve 可能状態の確認、またはそれらの失敗時 CmocError を扱うとき。
+- cmoc provider の local SLM を起動前に利用可能にする処理を変更する時。
+- cmoc 管理の Ollama install 先、model store、固定 host/port、systemd user service の挙動を確認する時。
+- Ollama archive 取得失敗、systemctl 失敗、listener 不一致、HTTP 接続失敗、model pull/show 失敗のエラー処理を調べる時。
+- 設定内の codex model provider から、cmoc managed Ollama が扱う model 名をどう選ぶか確認する時。
+- 127.0.0.1:11434 の listener が cmoc 管理 service 由来かを /proc で判定する処理を変更する時。
 
 ## Do not read this when
-- runtime 設定ファイルの構造や model provider 設定の定義そのものを確認したいだけのときは、設定定義や設定読み込み側を読む。
-- Ollama 以外の provider、Codex 実行、agent orchestration、CLI command routing を変更したいときは、それぞれの担当実装を直接読む。
-- cmoc managed Ollama の正本仕様を確認したいときは、コメントで参照されている oracle doc を読む。
-- INDEX.md 生成規則やルーティング文書の書き方を確認したいだけのときは、この runtime 実装ではなく該当する文書作成規則を読む。
+- cmoc provider 以外の model provider 選択や通常の設定読み込み全体を調べたいだけの場合。
+- Ollama を使わない agent 実行、worktree 管理、Git 操作、CLI routing の実装を調べる場合。
+- managed Ollama の仕様意図そのものを確認したい場合は、対応する oracle doc を先に読む。
+- systemd や /proc を介さない外部サービス連携、または一般的な subprocess helper を探しているだけの場合。
 
 ## hash
-- b155ae82653ee4761e2719b4d62bb35dc06b5794b411505bb5e1f2a006b970f7
+- 9769c97e9ea838fc022849a51e1dde1b2756280cfd122dd39fccd5c2eb7d99b2
 
 # `runtime_paths.py`
 
