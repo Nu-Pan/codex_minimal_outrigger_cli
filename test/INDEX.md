@@ -123,23 +123,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- 基礎 runtime 境界を横断する回帰テスト群。root placeholder と worktree 判定、config 読み書き、CmocError の表示、CLI preflight と parse error、subcommand log、session state、FileAccessMode から Codex profile への権限変換、binary 判定など、個別サブコマンドより下位の共通契約をまとめて検証する。
-- 共通 fixture と root 状態を共有する runtime 契約が同時に崩れやすいため、分割せず一箇所で読む前提のテスト対象として位置づけられている。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、repo/run/work root の扱い、config 変換・検証、CmocError の表示、CLI wrapper の preflight と error report、subcommand log、session state、FileAccessMode から Codex profile への変換、binary 判定、managed worktree 操作の安全性を、共通 fixture と root 状態を共有する回帰テストとして扱う。
+- 個別サブコマンドの仕様確認より下層にある、実行前提・sandbox/profile・root 解決・状態読み書きの共通 runtime 挙動を変更するときの入口になる。
 
 ## Read this when
-- runtime の基礎契約、root 解決、linked worktree、run/work/repo root の扱いを変更・調査する。
-- config の既定値、JSON 変換、validation、CmocError、CLI error report、preflight、subcommand log の挙動を変更・調査する。
-- FileAccessMode、Codex profile の sandbox・permission・追加書き込み許可、oracle/realization/memo/.agents/.codex/.cmoc/.git へのアクセス境界を変更・調査する。
-- session branch 名、apply branch 名、session state の読み書きや validation を変更・調査する。
-- binary 判定、起動 wrapper の missing venv report、`.cmoc/local` ignore 設定など、runtime 前提の小さな共通挙動を変更・調査する。
+- root placeholder、repo root、run root、work root、linked worktree の解決挙動を変更・調査する。
+- CmocConfig の既定値、JSON 変換順、config 読み込み失敗、config_from_dict の型検証を変更・調査する。
+- CmocError、render_error、CLI parse error、stdout/stderr の error report、doctor preprocess、pre-log check、subcommand log の挙動を変更・調査する。
+- session/apply branch 名から session id を読む処理、SessionState の dict 変換・検証、branch に対応する state 読み込みを変更・調査する。
+- FileAccessMode、Codex sandbox mode、Codex cwd、build_codex_profile の読み書き許可 root、extra writable/read root、ignored gap write、oracle conflict write の制御を変更・調査する。
+- `.cmoc/local` の gitignore 追加、run worktree 作成・削除の安全性、起動 wrapper の missing venv call stack 表示、binary 判定の runtime 補助挙動を変更・調査する。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務ロジックだけを調べたい場合は、そのサブコマンドの実装や専用テストを先に読む。
-- oracle file の正本仕様そのものを確認したい場合は、対応する oracle doc/src/test を読む。
-- CLI の表層的なコマンド一覧や引数定義だけを確認したい場合は、CLI 定義側を直接読む。
+- apply、review、doctor、indexing など個別サブコマンド固有の業務仕様や出力仕様だけを確認したい場合。
+- oracle doc や oracle src の正本仕様断片そのものを確認したい場合。
+- 単一 helper の内部実装だけを読む方が直接的で、共通 runtime 契約の回帰観点を確認する必要がない場合。
+- LLM 出力品質、prompt 文面、生成される自然言語の妥当性そのものを検証したい場合。
 
 ## hash
-- 00b78f9de7f5802111b0f653c689a4993e2537f1ec2f3233b34487d9643827bd
+- 596ed13adbfb8a0ed592f47e47ea23ba62f5eccffa503cf07c293bc5add29d6b
 
 # `test_cli_tui.py`
 
