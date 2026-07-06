@@ -53,7 +53,7 @@ def render_review_oracle_report(
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
     # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
-    # Keep the required H2 order, then render finding details in verdict-first order.
+    # Fatal/minor findings must be listed inside their required H2 sections.
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
     fatal_accepted = _findings_with(accepted, "fatal")
@@ -111,18 +111,9 @@ def render_review_oracle_report(
             "|---:|---|---:|",
             rows,
             "## Fatal findings",
-            _severity_summary("fatal", fatal_accepted, fatal_rejected),
+            _render_severity_finding_section("fatal", fatal_accepted, fatal_rejected),
             "## Minor findings",
-            _severity_summary("minor", minor_accepted, minor_rejected),
-            "## Finding details",
-            "### Accepted fatal findings",
-            render_finding_section(fatal_accepted),
-            "### Accepted minor findings",
-            render_finding_section(minor_accepted),
-            "### Rejected fatal findings",
-            render_finding_section(fatal_rejected),
-            "### Rejected minor findings",
-            render_finding_section(minor_rejected),
+            _render_severity_finding_section("minor", minor_accepted, minor_rejected),
             "",
         ]
     )
@@ -138,6 +129,22 @@ def _severity_summary(
     rejected: list[dict],
 ) -> str:
     return f"accepted: {len(accepted)}, rejected: {len(rejected)} {severity} findings"
+
+
+def _render_severity_finding_section(
+    severity: str,
+    accepted: list[dict],
+    rejected: list[dict],
+) -> str:
+    return "\n".join(
+        [
+            _severity_summary(severity, accepted, rejected),
+            f"### Accepted {severity} findings",
+            render_finding_section(accepted),
+            f"### Rejected {severity} findings",
+            render_finding_section(rejected),
+        ]
+    )
 
 
 def _review_report_verdict(
