@@ -134,19 +134,19 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装を集めるディレクトリ。apply、session、review、indexing、tui、doctor、eval oracle など、CLI から呼ばれる各機能の実行入口と workflow 制御へ進むための上位ルーティング対象である。
-- 各サブコマンド配下では、runtime への委譲、worktree/branch/process/state 管理、Codex 呼び出し、review や apply の反復制御、レポート生成、cleanup など、利用者向けコマンドの具体的な実行処理を扱う。
+- cmoc のサブコマンド実装を集約するディレクトリ。apply、session、review、indexing、tui、doctor、eval oracle など、CLI から呼ばれる各コマンドの実行入口と workflow 制御へ進むための上位ルーティング対象である。
+- 個別サブコマンドの本体は下位ファイルまたは下位 package に分かれ、状態管理、git/worktree/branch 操作、Codex 呼び出し、レポート生成、cleanup などの制御は対象コマンドごとの実装へ委譲される。
 
 ## Read this when
-- 特定の cmoc サブコマンドの実装入口を探し、どの module や下位 package を読むべきか判断したいとき。
-- apply、session、review oracle、indexing、tui、doctor、eval oracle の実行フロー、前提条件、状態更新、branch/worktree 管理、出力や後片付けを確認または変更したいとき。
-- サブコマンドが共通 runtime、git 操作、Codex 実行、INDEX maintenance、review/apply workflow、レポート生成へどう接続されるかを追いたいとき。
+- cmoc の特定サブコマンド実装を探し、apply、session、review、indexing、tui、doctor、eval oracle のどこから読むべきか判断したいとき。
+- CLI サブコマンドの実行入口、runtime への接続、workflow 全体制御、状態更新、git/worktree/branch/process 操作、レポート生成などの担当箇所を確認したいとき。
+- apply run/fork/join/abandon、session fork/join/abandon、review oracle、INDEX.md maintenance、TUI 起動、doctor preprocess、eval oracle 委譲の実装入口を探すとき。
 
 ## Do not read this when
-- CLI 全体の Typer 登録やトップレベルの command routing だけを確認したいとき。
-- git wrapper、path model、state file schema、runtime helper、Codex parameter builder、INDEX.md 生成ロジックなど、サブコマンドから呼ばれる共通処理そのものを変更したいとき。
-- oracle file や realization file の定義、各サブコマンドの正本仕様断片、INDEX.md エントリー生成規則を確認したいとき。
-- 対象の個別サブコマンドや下位 module がすでに分かっており、その詳細だけを読む方が直接的なとき。
+- Typer app へのサブコマンド登録や CLI 全体の外側ルーティングだけを確認したいときは、CLI entrypoint や登録側の実装を読む。
+- git wrapper、CLI runtime、path model、session state、oracle file 判定、INDEX.md 生成ロジック、Codex parameter builder などの共通 API 自体を変更したいときは、それぞれの runtime/helper/builder 側を読む。
+- oracle file や realization file の定義、サブコマンドの正本仕様断片、INDEX.md エントリー生成規則を確認したいときは、対応する oracle doc を読む。
+- すでに対象サブコマンドや個別処理が特定できているときは、この階層ではなく該当する下位ファイルまたは下位 package を直接読む。
 
 ## hash
-- ebf968e9d2592d0779fbd45f2efa1416a2908dccb2f96e23a0161887a4fb6831
+- 23fbb76184d9b47a2ee2734533b0948e8f281101f2b59962cdece869b3d15c33
