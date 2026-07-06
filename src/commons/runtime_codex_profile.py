@@ -314,7 +314,10 @@ def _should_expand_writable_directory(
     path: Path,
     allow_oracle_conflict_writes: bool,
 ) -> bool:
-    if _has_denied_write_file(path):
+    if (
+        mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}
+        and _has_denied_write_file(path)
+    ):
         return True
     if mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
         return False
