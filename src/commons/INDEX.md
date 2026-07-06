@@ -169,23 +169,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界で使う profile 生成、permission filesystem と sandbox writable root の組み立て、CODEX_HOME 検証、schema 配置、JSON/JSONL 出力からの error・quota・capacity 判定を扱う。
-- FileAccessMode と AgentCallParameter を Codex CLI 起動用設定へ変換し、読み書き許可 root、作業 cwd 補正、cmoc managed Ollama provider、apply 実行中の child process tracking を同じ実行境界の不変条件としてまとめる。
+- Codex CLI を起動する直前の profile、sandbox、permission、cwd、CODEX_HOME、schema 配置と、起動後の subprocess 実行結果、process tracking、JSONL error 判定を扱う境界。
+- Codex subprocess に渡す実行環境と、Codex subprocess から返る機械的結果の解釈を同じ不変条件でまとめている。
 
 ## Read this when
-- Codex CLI 起動前に渡す sandbox_mode、permission profile、writable_roots、read roots、profile TOML、model provider 設定を確認または変更したいとき。
-- FileAccessMode ごとの読み取り・書き込み許可境界、oracle/realization/memo/.git/.agents/.codex/INDEX.md/AGENTS.md の扱い、追加 read/write path の検証を追うとき。
-- AgentCallParameter.cwd と work root の関係、linked worktree での Codex 実行 cwd 補正、CODEX_HOME の解決・検証・subprocess env を調べるとき。
-- apply abandon に関係する Codex child process pid file の lock、記録、削除、pid 再利用判定を変更するとき。
-- Structured Output schema の hash store 配置、Codex 出力 JSON の読み取り、JSONL event からの error text・resume token・capacity/quota retry 判定を扱うとき。
+- AgentCallParameter や FileAccessMode から Codex CLI profile、sandbox mode、writable/read root、permission profile を組み立てる処理を確認・変更したいとき。
+- Codex subprocess の cwd、CODEX_HOME、auth.json 検証、profile ファイル生成、schema store 配置を扱う処理を追いたいとき。
+- apply abandon や apply 実行中の Codex child process tracking、pid file lock、pid 再利用判定に関わる挙動を確認したいとき。
+- Codex JSONL stdout/stderr から error detail、resume token、capacity error、quota error を判定する処理を確認・変更したいとき。
 
 ## Do not read this when
-- prompt 本文に載せる file access rule や realization standard の仕様文そのものを確認したいだけなら、対応する oracle 側の文書または prompt_builder parts を読む。
-- Codex CLI を呼び出す上位コマンドの流れ、apply/session/tui などサブコマンド固有の操作手順を知りたいだけなら、それぞれの command 実装を読む。
-- git ignore 判定、oracle file 判定、runtime directory の算出、hash file 書き込みの中身を変更したい場合は、それらを定義する runtime helper を直接読む。
+- cmoc の抽象的な file access policy 文面や oracle/realization file の定義そのものを確認したいだけのとき。
+- Codex CLI に渡す prompt 本文、サブコマンド仕様、または AgentCallParameter のデータ定義を確認したいとき。
+- git 判定、runtime path 算出、hashed file 書き込み、doctor preprocess の個別実装だけを調べたいとき。
 
 ## hash
-- 11726a0359e7627895a5340f4ef11f42865851318e25306e1a2ccd54edc8e9eb
+- b988b72ed2aeb18eaec44e3a2d9a900fcad049d125596793571825b9a1776d5c
 
 # `runtime_codex_tui.py`
 
