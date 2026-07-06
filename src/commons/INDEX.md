@@ -327,21 +327,24 @@
 # `runtime_ollama.py`
 
 ## Summary
-- cmoc provider の local SLM を、cmoc 管理の Ollama として利用可能にする runtime 実装。設定から対象 model を抽出し、Ollama の取得・配置、systemd user service の同期と起動確認、固定 endpoint の所有 process 検証、model pull までを扱う。
+- cmoc provider の local SLM を利用可能にするため、管理対象 Ollama の導入、systemd user service 起動、固定 endpoint の検証、model pull と memory load を行う runtime 実装。
+- 設定から cmoc provider の model 名を抽出し、重複を除いて必要な model だけを管理対象 Ollama に準備する。
+- Ollama archive 取得、管理領域、service file、procfs による listener 照合、HTTP health check、利用者向けエラー変換を扱う。
 
 ## Read this when
-- cmoc provider の model を実行前に local Ollama で serve できる状態へ整える処理を確認・変更したいとき。
-- Ollama archive の取得先、管理領域、model store、固定 host/port、systemd user service の扱いを調べたいとき。
-- 127.0.0.1:11434 の listener が cmoc 管理 service 由来かを procfs と systemd 情報で検証する制御を確認したいとき。
-- Ollama の install、service 起動、HTTP 応答確認、model show/pull の失敗を CmocError に変換する利用者向けエラー処理を変更したいとき。
+- cmoc provider の model を実行前に local SLM として serve 可能にする処理を確認または変更するとき。
+- 管理対象 Ollama の install 先、model store、固定 host、systemd user service、service 検証、model pull/load の挙動を調べるとき。
+- Ollama 起動失敗、11434 の listener 不一致、archive 取得失敗、model 取得失敗、load 応答解釈失敗に関する CmocError を調整するとき。
+- runtime config から cmoc provider の model 名を取り出す条件や、repo 単位の config 読み込みとの関係を確認するとき。
 
 ## Do not read this when
-- cmoc 設定 schema や model provider 定義そのものを確認したいだけのときは、設定定義側を読む。
-- Ollama 以外の provider 実行、Codex 呼び出し、agent call orchestration の処理を調べたいとき。
-- パスモデル一般、worktree/repo root の解決、config file path の定義だけを確認したいときは、runtime path や oracle の path model を読む。
+- 通常の Codex 設定 schema や設定値そのものの定義を確認したいだけなら、設定定義側を読む。
+- cmoc provider 以外の model provider、LLM 呼び出し本体、agent 実行制御を調べたいだけなら、それぞれの実行経路を読む。
+- path keyword や repo/worktree/config path の一般仕様を確認したいだけなら、path model や runtime path の定義を読む。
+- Ollama を使わない runtime error 表示や CLI 全般のエラー整形を変更したいだけなら、共通エラー処理を読む。
 
 ## hash
-- c1454428151f7829b3634d2c8d92cdcf8a4a5a876e1b56ab13fac5b71e43333c
+- 45a8c1d1f92fcb592c22477058fb18d03092ff401da2503025fbd68f6f105e95
 
 # `runtime_paths.py`
 
