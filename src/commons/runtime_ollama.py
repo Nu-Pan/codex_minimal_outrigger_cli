@@ -355,7 +355,7 @@ def _ollama_http_ok() -> bool:
             f"http://{_OLLAMA_HOST}/api/tags",
             timeout=_OLLAMA_CONNECT_TIMEOUT_SEC,
         ) as response:
-            return 200 <= response.status < 500
+            return 200 <= response.status < 300
     except (OSError, urllib.error.URLError):
         return False
 

@@ -97,6 +97,40 @@ def test_verify_ollama_service_rejects_missing_main_pid(
         ollama_module._verify_ollama_service(executable)
 
 
+@pytest.mark.parametrize("status", [400, 404, 500])
+def test_verify_ollama_service_rejects_non_2xx_http_status(
+    monkeypatch: pytest.MonkeyPatch, status: int
+) -> None:
+    executable = Path("/home/user/.cmoc/ollama/bin/ollama")
+
+    class Response:
+        def __enter__(self) -> "Response":
+            self.status = status
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    clock = iter([0.0, 0.0, 2.0])
+    monkeypatch.setattr(ollama_module, "_service_active", lambda: True)
+    monkeypatch.setattr(ollama_module, "_service_main_pid", lambda: 10)
+    monkeypatch.setattr(
+        ollama_module, "_process_argv_uses_executable", lambda pid, path: True
+    )
+    monkeypatch.setattr(
+        ollama_module, "_listener_matches_service", lambda pid, path: True
+    )
+    monkeypatch.setattr(
+        ollama_module.urllib.request, "urlopen", lambda *args, **kwargs: Response()
+    )
+    monkeypatch.setattr(ollama_module.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(ollama_module.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr(ollama_module, "_OLLAMA_START_TIMEOUT_SEC", 1.0)
+
+    with pytest.raises(CmocError, match="接続できませんでした"):
+        ollama_module._verify_ollama_service(executable)
+
+
 def test_ollama_listener_must_be_expected_service_process(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
