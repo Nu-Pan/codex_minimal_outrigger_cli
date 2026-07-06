@@ -123,25 +123,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder と worktree 解決、config 読み書き、CmocError の表示、CLI preflight と parse error、subcommand log、session state、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下の共通実行前提をまとめて扱う。
-- 大きいテストファイルだが、共通 fixture と root 状態を共有する basic runtime 回帰として凝集しており、runtime 境界の変更が複数領域へ波及しないかを確認する入口になる。
+- cmoc の基礎 runtime 契約を横断的に固定する回帰テスト群。root placeholder 解決、linked worktree と work root 判定、config 変換と検証、CmocError の表示、CLI preflight と parse error、subcommand log、session state、FileAccessMode から Codex profile への権限変換、binary 判定など、個別サブコマンドより下位の共通実行前提を扱う。
+- 複数の runtime 要素が同じ fixture や root 状態に依存して一緒に崩れやすいことを根拠に、分割せず basic runtime 回帰としてまとまっている。
 
 ## Read this when
-- root placeholder、repo root、work root、linked worktree、run worktree の解決や安全な worktree 作成・削除の挙動を確認・変更する。
-- CmocError、CLI error report、Click parse error、doctor preprocess、pre-log check、shell completion probe、subcommand log の共通 CLI runtime 挙動を確認・変更する。
-- cmoc config の既定値、dict 変換、検証、missing config error、Codex model spec や reasoning effort の扱いを確認・変更する。
-- session branch、apply branch、session state file の読み書きや不正値拒否を確認・変更する。
-- FileAccessMode、Codex cwd、sandbox mode、Codex profile の read/write 権限、extra writable paths、oracle conflict write、repo-local read 許可を確認・変更する。
-- `.cmoc/local` の ignore、起動 wrapper の missing venv report、duration 表示、binary 判定など、サブコマンド横断の小さな runtime 契約を確認・変更する。
+- root placeholder、repo root、work root、run root、linked worktree の解決や拒否条件を変更・確認する。
+- cmoc config の既定値、JSON 化順序、読み込み失敗時の案内、不正値検証、削除済み設定の無視を変更・確認する。
+- CmocError の Markdown report、CLI error の stdout 出力、Click parse error 変換、doctor preprocess、pre-log check、completion probe、subcommand log の挙動を変更・確認する。
+- session branch、apply branch、session state file の読み書きや不正形状の拒否を変更・確認する。
+- FileAccessMode、Codex sandbox mode、Codex cwd、Codex profile の読み書き許可 root、追加書き込み許可、oracle conflict write、repo local read、local SLM provider 設定を変更・確認する。
+- `.cmoc/local` ignore 追加、起動 wrapper の missing venv report、binary 判定の読み取り量など、runtime の基礎補助挙動を変更・確認する。
 
 ## Do not read this when
-- 特定サブコマンド固有の業務フロー、入出力、状態遷移だけを確認したい場合は、そのサブコマンドの実装や専用テストへ進む。
-- oracle file の正本仕様本文や routing 文書を確認したい場合は、oracle 側の該当文書へ進む。
-- UI 表示、LLM 出力品質、プロンプト本文の内容など、runtime の共通実行前提ではない領域を調べる場合は読まなくてよい。
-- 単一 helper の純粋な内部実装だけを追う場合は、まず該当 implementation を読み、この横断回帰が必要になった時だけ読む。
+- 個別サブコマンド固有の業務ロジック、出力内容、ワークフローだけを確認したい場合は、そのサブコマンドのテストへ直接進む。
+- oracle file の仕様文書そのもの、INDEX.md エントリー生成規則、AGENTS.md の運用規則を確認したい場合は、対応する oracle またはルーティング文書を読む。
+- UI、LLM 出力品質、外部サービス応答など、cmoc runtime 境界ではない振る舞いを調べる場合は対象外。
 
 ## hash
-- 4c0a7dd56e046d826d4cb45949bdc18279d3aa31982f68ca1fe839dfb69b3fa5
+- f1a5a4d3da9668a087e590fbb794c2f4c03863b15bdd406963975664bcd796d2
 
 # `test_cli_tui.py`
 
@@ -296,20 +295,26 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor CLI の前処理と managed Ollama 連携を外部挙動で検証する realization test。git 状態の修復、`.cmoc/local` の ignore/untrack、`.agents` 初期化、設定生成・同期、linked worktree での repo config 参照、Ollama service/model 確認、`dector` alias、local SLM profile 準備時の doctor 実行を扱う。
+- doctor 系の CLI 前処理と managed Ollama 準備に関する realization test。gitignore・.agents・.cmoc/local の修復、設定ファイル生成・同期、linked worktree での repo config 利用、既存 staged/unstaged 変更の保護、Ollama service 検証、cmoc provider model の pull、local SLM profile 準備時の doctor 実行を外部挙動として検証する。
 
 ## Read this when
-- doctor / dector コマンドの挙動、doctor preprocess、設定ファイル生成・同期、managed Ollama の起動確認や model pull 条件を変更する時。
-- `.cmoc/local`、`.agents`、`.gitignore`、既存 staged/unstaged 変更、linked worktree など、doctor が git worktree 状態へ与える影響を確認したい時。
-- local SLM 用 Codex profile の準備が、Ollama port 不在時に doctor を実行する経路を変更・検証する時。
+- doctor コマンドまたは dector alias の挙動、終了コード、生成ファイル、git commit 対象、stdout 表示を変更・確認する。
+- doctor preprocess が .gitignore、.agents、.cmoc/local の追跡除外や untrack をどう扱うか確認する。
+- doctor が既存の staged/unstaged 変更、staged rename、既存 staged .gitignore を壊さないことを検証する。
+- linked worktree で doctor preprocess が現在の worktree を修復対象にしつつ、設定は repo 側へ生成・参照する挙動を確認する。
+- managed Ollama のインストール配置、systemd user service 内容、service 検証、listener process 判定、model show/pull/load の制御を変更する。
+- cmoc provider の model 設定から重複を除いて pull 対象を決める処理を変更する。
+- local SLM 用 Codex profile 作成時に Ollama port が未準備なら doctor を走らせる挙動を確認する。
+- 設定ファイルの default 同期で人間が書いた値を保持し、廃止キーを残さない挙動を変更・確認する。
 
 ## Do not read this when
-- doctor CLI 以外のサブコマンドや agent call 実行本体の挙動だけを調べる時。
-- Ollama の実装詳細を直接変更する場合で、service 検証・model ensure のテスト期待ではなく実装本文から確認すべき時。
-- config schema の正本定義や default 値そのものを確認したい時。
+- doctor や managed Ollama の実行経路に関係しない CLI サブコマンドだけを調べる。
+- oracle 側の doctor 仕様断片や設定 schema の正本を確認したい場合は、対応する oracle file を先に読む。
+- テスト支援関数、fixture、git helper の実装だけを変更する場合は、支援コード側を直接読む。
+- Codex profile の通常 provider 出力だけを確認し、local SLM や managed Ollama 起動条件に触れない。
 
 ## hash
-- ee74ac9804355e6e94ae562273ed31703f179c7f48243d6129dc59bd32b09021
+- b4c5cdaf1f9fc8efc2854a9359a63c46e4cb721d16f55bcd7b027a4aeb67a8de
 
 # `test_indexing_cli.py`
 

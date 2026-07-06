@@ -59,21 +59,24 @@
 
 ## Summary
 - cmoc の実行時に複数領域から共有される runtime helper 群をまとめる領域。
-- Codex 実行、設定、git、path、logging、error、state、doctor、indexing、Ollama、apply process など、CLI サブコマンド横断の共通処理への入口になる。
+- Codex 実行、設定、パス、git、ログ、状態、エラー、doctor 前処理、INDEX 更新 preflight、apply process 追跡など、サブコマンド横断の共通実装への入口になる。
+- 一部は実装本体ではなく公開 import 境界や再公開入口を担うため、個別挙動は責務に対応する下位要素で確認する。
 
 ## Read this when
-- CLI サブコマンド横断で使われる runtime 共通処理の配置先を探したいとき。
-- Codex 実行前後の制御、profile、preflight、call log、quota/capacity retry、Structured Output 検証など runtime 実行基盤を調べたいとき。
-- config 読み書き、runtime path 解決、git 操作、サブコマンド logging、共通 error/report、session state、doctor preprocess の実装入口を選びたいとき。
-- INDEX.md 自動更新、apply process 追跡、managed Ollama、内容 hash など、複数機能から参照される補助処理を確認・変更したいとき。
+- CLI サブコマンドをまたいで使われる runtime 共通処理の配置先や公開入口を探すとき。
+- Codex exec/TUI 呼び出し、profile/env/schema/permission 準備、Structured Output 検証、quota/capacity/retry/resume、call log などの実行制御を調べるとき。
+- root path 解決、cmoc 管理領域、設定 JSON、session state、apply worktree/process、git 操作、ログ、共通エラー、外部コマンド結果型などの runtime 基盤を確認・変更するとき。
+- Codex 実行前の INDEX 更新 preflight、doctor preprocess、config 同期、またはそれらの commit 作成条件を調べるとき。
+- 共有 runtime API の再公開対象や、呼び出し側がどの import 入口を使うべきかを確認するとき。
 
 ## Do not read this when
-- 特定 CLI サブコマンドの引数、業務処理、利用者向け workflow を確認したいときは、該当する command 層または app spec を読む。
-- 正本仕様断片、prompt、path keyword、oracle/realization の概念定義を確認したいときは、対応する oracle file を読む。
-- 個別 helper の詳細な入出力や失敗時挙動まで読む対象が既に分かっているときは、この領域全体ではなく該当する下位要素を直接読む。
+- 個別サブコマンドの業務処理、引数定義、Typer 登録、利用者向け workflow を確認したいだけのときは、該当する command 層や app spec を読む。
+- oracle file にある正本仕様断片、prompt、Structured Output schema、path keyword の定義、INDEX entry standard そのものを確認したいときは、対応する oracle 側を読む。
+- テスト固有の期待値や外部挙動だけを調べたいときは、対応する test 側を読む。
+- 特定 helper の詳細な入出力や失敗時挙動が既に分かっているときは、この領域全体ではなく該当する下位要素を直接読む。
 
 ## hash
-- afc1ca24b2f9cf6c978641205fd45d85ff7b98b06bb54bff9c0bc18dfe2514fe
+- eda7536ea021a13b8ef4ec1d5c6d2d3de97e31859c9e53ac4185d3d424dc01f2
 
 # `config`
 
