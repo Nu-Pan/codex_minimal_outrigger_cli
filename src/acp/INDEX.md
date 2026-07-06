@@ -19,21 +19,21 @@
 # `builder`
 
 ## Summary
-- agent call parameter builder 群の realization 側入口を扱う階層。主に oracle 側 builder を正本に保ちながら、旧来の acp.builder 系 import path を維持する互換 wrapper、再公開 package、薄い adapter を収める。
-- apply、review、session、tui、indexing などの builder 領域について、canonical oracle 実装への接続、realization 側公開型への最小変換、互換入口の残存理由や削除条件を確認する起点になる。
-- quota 回復確認用のように oracle 側 builder を持たない realization-only の最小 builder も含む。
+- acp builder 領域で、oracle 側 builder を正本に保ちながら旧来の `acp.builder.*` import surface を維持する互換層を束ねる。
+- apply、indexing、quota probe、review、session、TUI などの agent call parameter builder について、canonical 実装への委譲、再公開、薄い wrapper、削除条件を確認する入口になる。
+- 実処理や正本仕様そのものではなく、既存 import 互換、oracle builder との接続、realization 側公開型への限定的な適合を扱う。
 
 ## Read this when
-- acp.builder.* の旧 import path 互換性、module alias、再公開入口、削除条件を確認したいとき。
-- apply fork、review、session、TUI、indexing などの agent call parameter builder が oracle 側実装へどう接続されるかを調べるとき。
-- oracle 側 builder の生成結果を realization 側公開型や既存 caller 向け import surface にどう適応しているか確認・変更したいとき。
-- quota availability probe や quota 回復確認用の最小 agent call parameter builder を確認・変更したいとき。
+- `acp.builder.*` の旧 import path 互換性を確認・維持・削除判断したいとき。
+- agent call parameter builder が oracle 側 canonical 実装へどう委譲または再公開されるかを調べるとき。
+- apply fork、review oracle、session、TUI、quota probe、index entry builder などの既存 builder 入口を realization 側から追跡したいとき。
+- oracle 側 builder を正本に保ちつつ、realization 側 wrapper や module alias がどの範囲で公開面を適合させているか確認したいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容などの正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder を読む。
-- apply fork、review、session、TUI など各機能全体の実行フロー、CLI 引数処理、状態操作、画面構成を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
-- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、path model、git helper などの共通型・共通処理そのものを調べたい場合は、該当する共通実装を読む。
-- 新規機能の通常実装場所を探しているだけで、既存 import 互換や builder 入口に関係しない場合は、対象機能の実装階層へ直接進む。
+- 各 builder の正本仕様、prompt、parameter 生成内容、canonical 実装の詳細を確認したい場合は、対応する oracle 側の本文を読む。
+- cmoc の apply、review、session、TUI など各機能全体の実行フローや CLI 処理を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
+- AgentCallParameter のデータ構造、path model、git helper、INDEX.md 生成仕様など builder 互換層以外の共通概念を調べたい場合は、該当する共通実装や型定義を読む。
+- 新規 builder や新しい公開 API を設計したいだけで、既存の `acp.builder.*` import surface の互換維持に関係しない場合。
 
 ## hash
-- 845925685c57b83232fa0fbf4a31a8883694585c57ae1b80a871e1df3349a33d
+- 433c6281ad7324f6b768c19f117966e72866ce9457972eaad5ceef76c3df6119

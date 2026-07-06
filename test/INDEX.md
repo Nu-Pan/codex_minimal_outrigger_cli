@@ -262,22 +262,23 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex exec が quota exceeded になった後の待機、probe、resume または再実行の外部挙動を検証するテスト群。
-- probe 用 parameter、resume token 抽出、call log と subcommand log、CODEX_HOME と cwd、並列呼び出し時の代表 probe 共有を同じ retry 状態機械の観測点として扱う。
+- Codex quota exceeded 後の retry 状態機械を、外部 Codex exec 呼び出しの観測可能な挙動として検証する realization test。quota availability probe、resume token 抽出、resume または再実行、call log/subcommand log、CODEX_HOME と cwd、並列実行時の代表 probe 共有を同じ fake Codex 呼び出し列で扱う。
 
 ## Read this when
-- quota exceeded 後に Codex 呼び出しが probe を行い、復旧後に resume または再実行する挙動を変更・確認したいとき。
-- quota availability probe の parameter、prompt、profile、ログ出力、失敗時の扱いを確認したいとき。
-- quota retry 中の call log、subcommand log、stdout/output/prompt log、resume token 抽出に関わる回帰を調べるとき。
-- CODEX_HOME が相対パスの場合の cwd 解決や、並列 quota 待機時に probe が代表 1 回に共有される制御を確認したいとき。
+- Codex exec が quota exceeded を返した後の待機、probe、resume、再実行の制御を変更・調査するとき。
+- quota retry 中の call log、stdout/output jsonl、prompt log、subcommand log の記録内容や順序を確認するとき。
+- quota availability probe の builder 委譲、profile、model class、reasoning effort、file access mode、cwd、CODEX_HOME の扱いを確認するとき。
+- quota retry の失敗時に post validation を走らせない挙動や、probe 失敗時の即時失敗を確認するとき。
+- 複数の Codex exec が同時に quota 待機へ入った場合の代表 probe 共有と待機中 call の成功・失敗伝播を確認するとき。
 
 ## Do not read this when
-- quota retry と関係しない通常の Codex exec 成功・失敗処理だけを確認したいとき。
-- quota probe の prompt 本文や parameter 構築だけを調べるなら、その builder 側を直接読む方がよい。
-- ファイルアクセス事後検証そのものの仕様や一般的な検証ロジックを調べたいだけなら、該当する runtime 実装または専用テストを読む方がよい。
+- 通常の Codex exec 成功経路、引数組み立て、出力 JSON 解析だけを確認したいとき。
+- quota availability probe prompt の正本内容や builder の仕様断片を確認したいとき。
+- リポジトリ作成、CODEX_HOME セットアップ、fake executable 作成などテスト支援関数そのものを確認したいとき。
+- quota retry 以外の file access mode、post validation、subcommand logging の一般仕様を確認したいとき。
 
 ## hash
-- 01843b4698f091cfbfe2e71d8493efbf065b92aeed0577c878f18bdab7564d5d
+- 1dca58d74fce6aaa29473244becf656b6ea2ffd3d42f9f7d87d904f629d528b6
 
 # `test_codex_runtime_retry.py`
 

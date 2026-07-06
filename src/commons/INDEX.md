@@ -110,22 +110,25 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを実行制御する実装。Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、Codex call のログ保存と subcommand event 記録を同じ状態機械として扱う。
-- Codex 実行時の cwd/profile/CODEX_HOME/schema/prompt/stdout/stderr/output/call log の組み立てと保存、quota wait の共有制御、実行結果の CodexExecResult 化、変更 worktree path の取得を担う。
+- Codex exec の単一試行ループを中心に、Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、call log・prompt/stdout/stderr/output log 記録、subcommand event 発行を一体で扱う実行制御モジュール。
+- Codex CLI 呼び出しの cwd/profile/schema/CODEX_HOME 準備、実行 argv 構築、失敗種別ごとの再試行・待機・例外化、成功時の CodexExecResult 組み立てを読む入口になる。
+- agent call 後の worktree 変更 path を git status から absolute path として取得する小さな補助処理も含む。
 
 ## Read this when
-- Codex exec 呼び出しの再試行条件、Structured Output 検証失敗時の扱い、capacity/quota エラー時の挙動、resume token の扱いを確認または変更したいとき。
-- Codex call log、prompt log、stdout/stderr/output log、subcommand event、quota wait 時間や poll 数の記録内容を確認または変更したいとき。
-- Codex 実行に使う cwd、CODEX_HOME、profile、output schema、subprocess argv/env の組み立てを確認または変更したいとき。
-- agent call 後の worktree 変更 path 取得や apply requeue 向けの git status path 取得を確認したいとき。
+- Codex exec 呼び出しの再試行条件、Structured Output 検証失敗時の扱い、capacity error の backoff、quota error 後の polling と resume の流れを確認・変更したいとき。
+- Codex call log、prompt/stdin log、stdout/stderr/output log、subcommand の codex_call event に記録される内容や生成タイミングを確認・変更したいとき。
+- Codex exec 実行時の profile、CODEX_HOME、cwd、output schema、extra read/write path、oracle conflict write 許可の渡り方を追いたいとき。
+- quota availability probe の実行条件、probe 用 AgentCallParameter、代表 probe の共有状態、待機中スレッドの再開条件を確認・変更したいとき。
+- agent call 後に変更された worktree path を取得する処理を確認・変更したいとき。
 
 ## Do not read this when
-- TUI 起動や exec 以外の Codex 起動分岐を調べるとき。
-- Codex profile の具体的な生成内容、CODEX_HOME 解決、schema 準備、Codex stdout 解析などの低レベル共通処理だけを調べるとき。
-- CLI サブコマンド定義、設定ファイルの読み込み仕様、または AgentCallParameter の構築ロジックだけを調べるとき。
+- TUI 起動や exec 以外の Codex 起動分岐を確認したいときは、TUI 側の実行制御モジュールを直接読む。
+- Codex profile の具体的な生成内容、CODEX_HOME 解決、resume token 抽出、error 判定、schema 準備、output JSON 読み取りの内部実装を確認したいだけなら、runtime_codex_profile 側を読む。
+- subcommand log の保存形式や logger の一般的な仕組みを確認したいだけなら、runtime_logging 側を読む。
+- git status 実行の共通処理や path status の低レベル取得を確認したいだけなら、runtime_git 側を読む。
 
 ## hash
-- 4254bd141118194fa89f19a067d69c6c1e7ee61d2905e90d11cbe54a5dec7504
+- 7ce71eca6d76563c72759104876ef8dc5a4875118ad14f18658960976d4675f3
 
 # `runtime_codex_logging.py`
 
