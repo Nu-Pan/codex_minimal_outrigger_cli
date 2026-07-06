@@ -15,8 +15,8 @@ from typer.testing import CliRunner
 runner = CliRunner()
 _FAKE_OLLAMA_PID_PATHS: set[Path] = set()
 
-# <work-root>/oracle/doc/dev_rule/test_rule.md fixes the local SLM used by
-# Codex CLI tests.
+# <work-root>/oracle/doc/dev_rule/test_rule.md は Codex CLI テストで使う
+# local SLM を固定している。
 TEST_SLM_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 
 
@@ -39,8 +39,8 @@ def make_repo(tmp_path: Path) -> Path:
     run_git(root, "init")
     run_git(root, "config", "user.email", "cmoc@example.invalid")
     run_git(root, "config", "user.name", "cmoc test")
-    # <work-root>/oracle/doc/dev_rule/test_rule.md: test repos must not depend on
-    # user Git signing or hook configuration before cmoc control logic runs.
+    # <work-root>/oracle/doc/dev_rule/test_rule.md: cmoc の制御ロジック実行前に、
+    # テストリポジトリが user Git signing や hook 設定へ依存しないようにする。
     run_git(root, "config", "commit.gpgsign", "false")
     run_git(root, "config", "core.hooksPath", "/dev/null")
     (root / "README.md").write_text("# repo\n")
@@ -141,9 +141,9 @@ def fake_managed_ollama_env(root: Path) -> dict[str, str]:
 
 
 def _stop_registered_fake_ollama_services() -> None:
-    # <work-root>/oracle/doc/dev_rule/test_rule.md keeps fake service state under
-    # each tmp_path; this in-memory registry only prevents fixed-port collisions
-    # between tests in the same pytest process.
+    # <work-root>/oracle/doc/dev_rule/test_rule.md は fake service state を各
+    # tmp_path 配下に保つ。この in-memory registry は同一 pytest process 内の
+    # テスト間で fixed-port collision を避けるためだけに使う。
     for pid_path in _FAKE_OLLAMA_PID_PATHS:
         try:
             process_id = int(pid_path.read_text())
