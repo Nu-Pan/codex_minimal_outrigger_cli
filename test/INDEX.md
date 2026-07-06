@@ -261,23 +261,26 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota exceeded 後の retry 状態機械を、外部 Codex exec 呼び出しの観測可能な挙動として検証する realization test。quota availability probe、resume token 抽出、resume または再実行、call log/subcommand log、CODEX_HOME と cwd、並列実行時の代表 probe 共有を同じ fake Codex 呼び出し列で扱う。
+- Codex exec が quota exceeded になった後の待機、probe、resume token 利用、resume 不可時の再実行、call log と subcommand log、CODEX_HOME と cwd の扱いを検証する realization test。
+- 並列実行時に quota availability probe を代表 1 回へ共有し、成功時は待機中の呼び出しが resume し、probe 失敗時は待機中の呼び出しも失敗することを確認する。
+- quota retry 回帰の観測点を同じ fake Codex 呼び出し列で追うため、ファイルサイズは大きいが単一の retry 状態機械の外部挙動テストとして一箇所にまとまっている。
 
 ## Read this when
-- Codex exec が quota exceeded を返した後の待機、probe、resume、再実行の制御を変更・調査するとき。
-- quota retry 中の call log、stdout/output jsonl、prompt log、subcommand log の記録内容や順序を確認するとき。
-- quota availability probe の builder 委譲、profile、model class、reasoning effort、file access mode、cwd、CODEX_HOME の扱いを確認するとき。
-- quota retry の失敗時に post validation を走らせない挙動や、probe 失敗時の即時失敗を確認するとき。
-- 複数の Codex exec が同時に quota 待機へ入った場合の代表 probe 共有と待機中 call の成功・失敗伝播を確認するとき。
+- Codex exec の quota exceeded 検出後の retry、probe、resume、再実行の挙動を変更または調査する時。
+- quota availability probe の生成条件、最小モデル・低 reasoning・readonly・preflight 無効化・cwd 継承を確認する時。
+- Codex call log、output jsonl log、prompt log、stdout/stderr log、subcommand log の quota retry 関連イベントを変更する時。
+- CODEX_HOME が相対パスの場合の subprocess cwd、Codex の --cd、profile 分離の扱いを確認する時。
+- 複数の Codex 呼び出しが同時に quota exceeded になった場合の代表 probe 共有と待機側の成否伝播を変更する時。
+- quota poll limit 到達時または probe 失敗時に file access post validation を行わない挙動を確認する時。
 
 ## Do not read this when
-- 通常の Codex exec 成功経路、引数組み立て、出力 JSON 解析だけを確認したいとき。
-- quota availability probe prompt の正本内容や builder の仕様断片を確認したいとき。
-- リポジトリ作成、CODEX_HOME セットアップ、fake executable 作成などテスト支援関数そのものを確認したいとき。
-- quota retry 以外の file access mode、post validation、subcommand logging の一般仕様を確認したいとき。
+- quota retry と無関係な通常成功時の Codex exec 起動引数や基本的な subprocess 実行だけを確認したい時。
+- agent call parameter の一般的な構造、モデル種別、file access mode の定義だけを確認したい時。
+- INDEX 生成、path model、oracle/realization の一般ルールなど、Codex runtime の quota retry 以外の仕様を調べる時。
+- quota availability probe のプロンプト本文そのものの仕様だけを確認したい時は、probe builder 側を直接読む。
 
 ## hash
-- 1dca58d74fce6aaa29473244becf656b6ea2ffd3d42f9f7d87d904f629d528b6
+- cb134ed051e775572c74b9e5cf6a3f58d141acfdea2f63a238fa29a3ea3b40f1
 
 # `test_codex_runtime_retry.py`
 

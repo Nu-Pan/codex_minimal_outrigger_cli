@@ -74,20 +74,20 @@
 # `quota_probe.py`
 
 ## Summary
-- quota availability probe builder の旧 import 経路を保つ互換 adapter。実体は oracle 側の builder を動的 import して委譲し、個別の `codex exec` call parameter の正本を oracle 側に保つための入口になっている。
+- quota 回復確認のための最小構成の agent call parameter を構築する実装。既存の実行パラメータから作業ディレクトリだけを引き継ぎ、低コスト・読み取り専用・indexing preflight 無効の probe 呼び出しを作る。
 
 ## Read this when
-- quota availability probe parameter builder の旧 import 経路からの呼び出し互換性を確認したいとき。
-- realization 側に builder 本体を複製せず、oracle 側の定義へ委譲している箇所を確認したいとき。
-- `build_quota_availability_probe_parameter` の公開 import がどこへ転送されるかを調べるとき。
+- quota wait 中に実行可能状態を確認するための probe 呼び出し内容を確認・変更したいとき。
+- probe 用 agent call parameter の model class、reasoning effort、file access mode、prompt、cwd 引き継ぎ、indexing preflight の扱いを確認したいとき。
+- quota 回復確認で通常の agent call parameter builder ではなく、最小の Codex exec 呼び出しを使う理由を追いたいとき。
 
 ## Do not read this when
-- quota availability probe parameter の正本仕様や実際の構築内容を確認したいとき。その場合は oracle 側の builder を読む。
-- AgentCallParameter 自体の構造や一般的な agent call parameter の扱いを調べたいとき。
-- 新しい builder 実装を追加・変更したいとき。この adapter ではなく、正本または実体を持つ builder 側を確認する。
+- 通常の agent call parameter 全体の構築規則や共通 builder の責務を調べたいとき。
+- quota wait のポーリング制御、待機間隔、再試行条件、成功失敗判定の流れを調べたいとき。
+- quota 回復確認以外の Codex exec 呼び出しや indexing preflight の一般仕様を調べたいとき。
 
 ## hash
-- 3b7cb41747b26c65c5ed81915a6cc6b92c56f759546f9e580738e0ffb5370e67
+- 47f15b35955d56905ecd58ad55693d751e5949813a030b6bf9b481eed55ab9f5
 
 # `review`
 

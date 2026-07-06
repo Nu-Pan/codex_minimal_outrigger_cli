@@ -110,23 +110,23 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを制御する実装。Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、call log と subcommand event、実行後の FileAccessMode 差分検査を同じ状態機械として扱う。
-- TUI 起動ではなく exec 実行制御に責務を限定し、Codex profile、schema、prompt/stdout/stderr/output/call log、quota poll 状態、変更 path 検出をまとめて扱う入口である。
+- Codex exec の実行制御を担い、prompt/call/stdout/stderr/output log の保存、Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、実行後の file access 差分検査を一体の状態機械として扱う。
+- TUI 起動など exec 以外の分岐は別責務に分け、subprocess 結果、call log、subcommand event、retry counter、resume token を共有する exec 実行制御の文脈だけをまとめて読む入口である。
 
 ## Read this when
-- Codex exec 呼び出しの argv、cwd、CODEX_HOME、profile、Structured Output schema、prompt stdin log、各種 log path の生成や記録を確認・変更したいとき。
-- Codex CLI の capacity error retry、quota error 待機、代表 quota probe、resume token 抽出、quota wait の共有状態や subcommand event を扱うとき。
-- Codex exec 成功後の output JSON 読み取り、schema validation、semantic retry、CodexExecResult の内容を確認・変更したいとき。
-- AgentCallParameter の FileAccessMode に対する実行後の禁止差分検出、変更 path の取得、許可書き込み path 判定を扱うとき。
+- Codex exec 呼び出しの argv、cwd、profile、CODEX_HOME、schema、stdin prompt log、call log の生成条件や記録内容を確認・変更したいとき。
+- Structured Output の読み取り、JSON schema 検証、semantic retry の失敗条件や再試行挙動を確認・変更したいとき。
+- capacity error や quota error に対する retry、quota polling、代表 probe、待機中の他スレッド連携、resume token の扱いを確認・変更したいとき。
+- Codex call 後に FileAccessMode の禁止差分を検出する事後チェック、変更 path の署名化、許可 path 判定を確認・変更したいとき。
+- subcommand log や console へ Codex call の成功・失敗・待機・retry event をどう記録するかを確認・変更したいとき。
 
 ## Do not read this when
-- Codex profile の具体的な生成、Codex subprocess 実行 wrapper、quota/capacity error 判定、schema 準備そのものを変更したいだけなら、それらを提供する runtime Codex profile 周辺を直接読む。
-- subcommand log の保存形式や logger 本体を変更したいだけなら、logging 周辺を直接読む。
-- git status の低水準取得処理を変更したいだけなら、runtime git 周辺を直接読む。
-- TUI 起動や exec 以外の Codex 呼び出し分岐を探している場合は、この実行制御ではなく該当する別 module を読む。
+- Codex profile の具体的な生成規則、sandbox 設定、schema ファイル準備、Codex CLI stdout/stderr からの error 判定そのものを調べたいだけのときは、それらの runtime helper を直接読む。
+- AgentCallParameter の構造、prompt の組み立て、quota probe 用 parameter の内容を調べたいときは、それぞれの定義や builder を直接読む。
+- TUI 起動、exec 以外のサブコマンド本体、設定ファイルの読み込み仕様、git status helper の内部実装を調べたいだけのときは、該当する別責務の対象を読む。
 
 ## hash
-- 9465f1b58b9c79c0a14ced6a9a1f9c313670aef772f46b422e9d1276cd2b5662
+- ddb16c816697e2d48624800a0301d7991228d8fc9ef0f896f66edb9b3a7fa938
 
 # `runtime_codex_logging.py`
 

@@ -19,21 +19,21 @@
 # `builder`
 
 ## Summary
-- acp builder 領域で、oracle 側 builder を正本に保ちながら旧来の `acp.builder.*` import surface を維持する互換層を束ねる。
-- apply、indexing、quota probe、review、session、TUI などの agent call parameter builder について、canonical 実装への委譲、再公開、薄い wrapper、削除条件を確認する入口になる。
-- 実処理や正本仕様そのものではなく、既存 import 互換、oracle builder との接続、realization 側公開型への限定的な適合を扱う。
+- acp builder 配下で、oracle 側 builder 実装を正本に保ちながら旧来の acp.builder 系 import 経路を成立させる realization 側互換入口を束ねる階層。
+- apply、review、session、tui、indexing などの builder 群について、canonical oracle 実装への中継、再公開、薄い wrapper、削除条件を確認するための入口になる。
+- quota 回復確認用の最小 agent call parameter builder など、通常 builder とは異なる限定用途の実装も含む。
 
 ## Read this when
-- `acp.builder.*` の旧 import path 互換性を確認・維持・削除判断したいとき。
-- agent call parameter builder が oracle 側 canonical 実装へどう委譲または再公開されるかを調べるとき。
-- apply fork、review oracle、session、TUI、quota probe、index entry builder などの既存 builder 入口を realization 側から追跡したいとき。
-- oracle 側 builder を正本に保ちつつ、realization 側 wrapper や module alias がどの範囲で公開面を適合させているか確認したいとき。
+- acp.builder.* の旧 import 互換性や、既存参照を oracle 側実装へ接続する仕組みを確認したいとき。
+- apply、review、session、tui、indexing の agent call parameter builder について、realization 側の互換入口、再公開、wrapper、削除可否を調べたいとき。
+- oracle 側 builder を呼び出した結果を realization 側公開型や既存公開名へどう適合させるかを確認したいとき。
+- quota wait 中の回復確認で使う低コストな probe 用 agent call parameter の構築内容を確認・変更したいとき。
 
 ## Do not read this when
-- 各 builder の正本仕様、prompt、parameter 生成内容、canonical 実装の詳細を確認したい場合は、対応する oracle 側の本文を読む。
-- cmoc の apply、review、session、TUI など各機能全体の実行フローや CLI 処理を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
-- AgentCallParameter のデータ構造、path model、git helper、INDEX.md 生成仕様など builder 互換層以外の共通概念を調べたい場合は、該当する共通実装や型定義を読む。
-- 新規 builder や新しい公開 API を設計したいだけで、既存の `acp.builder.*` import surface の互換維持に関係しない場合。
+- 各 builder の正本仕様、prompt、生成内容、人間意図を確認したい場合は、対応する oracle 側 builder を読む。
+- apply fork、review、session、TUI など各機能全体の実行フローや CLI 制御を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
+- ACP parameter の公開型、path model、汎用 git helper、index entry 生成仕様など、builder 互換入口以外の共通実装を調べたい場合は該当対象を読む。
+- 新規機能の実装場所を探しているだけで、既存 acp.builder import 互換や quota probe に関係しない場合。
 
 ## hash
-- 433c6281ad7324f6b768c19f117966e72866ce9457972eaad5ceef76c3df6119
+- 110915aad540f1dfc04662648e2159e9f044eabe48fc1f5e3bb982a5458e0fcb
