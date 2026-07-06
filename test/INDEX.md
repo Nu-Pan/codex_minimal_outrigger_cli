@@ -123,25 +123,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、repo/run/work root の扱い、config 変換・検証、CmocError の表示、CLI wrapper の preflight と error report、subcommand log、session state、FileAccessMode から Codex profile への変換、binary 判定、managed worktree 操作の安全性を、共通 fixture と root 状態を共有する回帰テストとして扱う。
-- 個別サブコマンドの仕様確認より下層にある、実行前提・sandbox/profile・root 解決・状態読み書きの共通 runtime 挙動を変更するときの入口になる。
+- cmoc の基礎 runtime 契約を横断的に固定する realization test。root placeholder 解決、linked worktree での root 判定、config 変換・検証、CmocError の Markdown 表示、CLI preflight と stdout error report、subcommand log、session state の branch 形状検証、FileAccessMode と Codex profile の sandbox/権限生成、binary 判定など、複数サブコマンドの前提になる挙動を一箇所で検証する。
+- 個別機能の詳細テストではなく、共通 runtime 前提が崩れた時に検出するための回帰テスト群として読む入口になる。
 
 ## Read this when
-- root placeholder、repo root、run root、work root、linked worktree の解決挙動を変更・調査する。
-- CmocConfig の既定値、JSON 変換順、config 読み込み失敗、config_from_dict の型検証を変更・調査する。
-- CmocError、render_error、CLI parse error、stdout/stderr の error report、doctor preprocess、pre-log check、subcommand log の挙動を変更・調査する。
-- session/apply branch 名から session id を読む処理、SessionState の dict 変換・検証、branch に対応する state 読み込みを変更・調査する。
-- FileAccessMode、Codex sandbox mode、Codex cwd、build_codex_profile の読み書き許可 root、extra writable/read root、ignored gap write、oracle conflict write の制御を変更・調査する。
-- `.cmoc/local` の gitignore 追加、run worktree 作成・削除の安全性、起動 wrapper の missing venv call stack 表示、binary 判定の runtime 補助挙動を変更・調査する。
+- root placeholder、repo root、work root、run root、linked worktree の解決や境界判定を変更する。
+- CmocError、render_error、CLI 引数解析 error、doctor preprocess、pre-log check、subcommand log など、CLI 実行 wrapper とエラー表示の共通挙動を変更する。
+- CmocConfig の既定値、config_from_dict、config_to_dict、load_config、Codex model spec、reasoning effort、数値設定の validation を変更する。
+- SessionState、branch_session_id、apply_branch_session_id、load_state_for_branch など、session/apply branch 名と状態ファイル読み書きの共通制御を変更する。
+- FileAccessMode、file_access_to_sandbox_mode、build_codex_profile、file_access_to_codex_cwd、extra writable/read root、readonly gap write、oracle/realization/repo write 権限の扱いを変更する。
+- format_duration、ensure_cmoc_ignored、起動 wrapper の missing venv report、is_binary など、runtime 基盤の小さな共通契約を変更する。
 
 ## Do not read this when
-- apply、review、doctor、indexing など個別サブコマンド固有の業務仕様や出力仕様だけを確認したい場合。
-- oracle doc や oracle src の正本仕様断片そのものを確認したい場合。
-- 単一 helper の内部実装だけを読む方が直接的で、共通 runtime 契約の回帰観点を確認する必要がない場合。
-- LLM 出力品質、prompt 文面、生成される自然言語の妥当性そのものを検証したい場合。
+- 特定サブコマンド固有の業務ロジック、入出力、状態遷移だけを確認したい場合は、そのサブコマンドの realization test を直接読む。
+- oracle doc や oracle src の正本仕様断片そのものを確認したい場合は、対応する oracle file を読む。
+- テスト支援関数、fixture、git repo 作成 helper の実装だけを変更する場合は、支援コード側の対象を読む。
+- INDEX.md 生成規則やルーティング文書の内容だけを扱う場合は、indexing 関連の対象を読む。
 
 ## hash
-- 596ed13adbfb8a0ed592f47e47ea23ba62f5eccffa503cf07c293bc5add29d6b
+- 2e4d12a70a2ff0bcfc32971f46cee41d6390fcee5401083b7a44a55f2b6ca0b1
 
 # `test_cli_tui.py`
 
