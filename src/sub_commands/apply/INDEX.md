@@ -79,18 +79,20 @@
 # `join.py`
 
 ## Summary
-- apply run の join 処理を担う CLI 実装。apply branch を session branch へ merge し、apply state を初期化し、結果 report を作成し、到達可能な apply branch/worktree を片付ける。
-- join 前の想定外差分検出、--force-resolve 時の差分復元、INDEX.md だけの merge conflict 自動解決、join 結果 report の描画も扱う。
+- `apply join` サブコマンドの実行本体を担い、apply branch を session branch へ join し、状態更新・レポート作成・後片付けを行う実装。
+- join 前に session/apply 側の想定外差分を分類し、通常時は中止レポート、force-resolve 時は基準 commit への復元 commit を作る。
+- merge conflict、INDEX.md conflict の機械解決、apply worktree/branch の削除可否、警告付き CLI 出力まで含む apply join 処理の入口。
 
 ## Read this when
-- apply join の実行条件、状態遷移、merge、cleanup、report 出力を確認または変更したいとき。
-- apply branch/session branch 上で許可される差分の分類、想定外差分の検出、force-resolve による復元挙動を確認または変更したいとき。
-- apply join 中の merge conflict 処理、特に INDEX.md conflict の機械解決とそれ以外の conflict 報告を確認したいとき。
+- `cmoc apply join` の挙動、失敗条件、force-resolve、join 結果レポート、cleanup 表示を変更する。
+- apply branch と session branch の差分分類、許可される apply/session 側変更、rename や deleted path の扱いを確認する。
+- apply join 後の session state 更新、apply state 初期化、apply worktree や apply branch の削除条件を調べる。
+- apply join の merge conflict 処理、INDEX.md conflict の自動解決、想定外差分の revert 処理を修正する。
 
 ## Do not read this when
-- apply run の開始・実行・状態作成など、join 以外の apply サブコマンド挙動を確認したいとき。
-- session state のデータ構造、git helper、worktree helper、report 保存先の共通仕様だけを確認したいとき。
-- oracle file や realization file の定義、INDEX.md エントリー作成規則そのものを確認したいとき。
+- apply join 以外の apply サブコマンド、apply run の開始・実行・状態生成を調べたい場合。
+- worktree 検索、git wrapper、状態ファイルの読み書き、oracle file 判定などの共通 runtime API 自体を変更したい場合。
+- CLI 全体の Typer 登録、サブコマンド一覧、外側のコマンドルーティングだけを確認したい場合。
 
 ## hash
-- 329bc87eaa3fa47e48ff99f9545d943fc9b007a601a3f28551973481c73983ba
+- ba3b712d92e694756ee73feda605ac7f3fd7a4495269501935bd89bf15fc2951

@@ -1,21 +1,25 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実装をまとめる領域で、apply run の開始、破棄、join、fork 結果レポート生成に関する制御ロジックへの入口となる。
-- apply state、apply branch/worktree、process id、session branch との整合性、Codex 呼び出し、merge、cleanup、report 生成など、apply run のライフサイクル上の主要処理を下位対象へ振り分ける。
+- apply 系サブコマンドの実行本体をまとめる実装ディレクトリ。apply run の開始、破棄、join、レポート生成など、apply state・worktree・branch・process・差分検査を伴う制御を扱う。
+- apply fork の対象ファイル選定、Codex 呼び出し、収束判定、失敗時復旧、apply join の conflict 処理や cleanup など、apply workflow の主要な状態遷移を追う入口になる。
 
 ## Read this when
-- apply abandon、apply fork、apply join、apply fork report のどの実装を読むべきかを判断したいとき。
-- apply run の状態遷移、branch/worktree 管理、process 管理、cleanup、report 生成の担当箇所を探したいとき。
-- apply サブコマンド間で、開始、破棄、join、失敗時処理、レポート保存の責務境界を確認したいとき。
+- apply サブコマンドの実行条件、状態遷移、branch/worktree/process 管理、cleanup、警告出力を確認または変更したいとき。
+- apply fork が調査対象ファイルをどう決め、finding 列挙・適用・再キュー・commit・report 生成をどう制御するかを調べるとき。
+- apply join の差分分類、force-resolve、merge conflict、INDEX.md conflict の自動解決、join 後の状態更新や後片付けを扱うとき。
+- apply abandon による未 join apply run の破棄、実行中 process 停止、apply worktree・branch・process id の削除条件を確認したいとき。
+- apply fork の成功・失敗レポート、frontmatter、本文構成、変更要約、未収束時表示などを変更したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、session 作成処理、共通 CLI runtime、共通 git/worktree helper、状態ファイル形式そのものを調べたいとき。
-- oracle file や realization file の定義、INDEX.md エントリー作成規則、path model の正本仕様を確認したいとき。
-- 具体的に読むべき apply サブコマンド実装が既に決まっており、その対象へ直接進めるとき。
+- apply 以外のサブコマンド、CLI 全体の Typer 登録、外側のコマンドルーティングだけを調べたいとき。
+- worktree 検索、git wrapper、状態ファイル読み書き、oracle file 判定、path model などの共通 runtime API 自体を変更したいとき。
+- Codex に渡す prompt、parameter schema、finding 列挙・適用・変更要約の builder 詳細だけを確認したいとき。
+- oracle file や realization file の定義、INDEX.md 生成規則、path model の正本仕様を確認したいとき。
+- 具体的な apply workflow の制御ではなく、パッケージ説明や import 時副作用の有無だけを確認したいとき。
 
 ## hash
-- 21362a0cf9140b960ea20973614725a49cebbf3489455ae8a77da8d719e2cd13
+- 9ed4fc11fa0bcc0f2d99496dd75fab85283e82bf5aec8b66dd75b5631ac8a908
 
 # `doctor.py`
 

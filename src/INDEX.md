@@ -134,18 +134,22 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装を配置する領域で、apply、session、review oracle、indexing、tui、doctor、eval oracle などの実行入口と制御ロジックへのルーティング起点となる。
-- 各サブコマンド固有の lifecycle、git/worktree/state 操作、Codex 呼び出し、report 生成、runtime 共通処理への委譲関係を下位対象へ振り分ける。
+- CLI サブコマンドの実行本体をまとめる実装領域。apply、session、review oracle、indexing、tui、doctor、eval oracle などの外部挙動を、CLI runtime、git 操作、worktree・branch・state 管理、Codex 呼び出し、report 生成へ接続する。
+- 各サブコマンドの詳細実装へ進む入口であり、サブコマンドごとの開始条件、状態遷移、cleanup、失敗時挙動、利用者向け出力、下位 helper への委譲関係を切り分けて確認するために読む。
 
 ## Read this when
-- cmoc のどのサブコマンド実装を読むべきかを判断したいとき。
-- apply、session、review oracle、indexing、tui、doctor、eval oracle の実行入口、委譲先、状態遷移、branch/worktree 管理、cleanup、report 生成の担当箇所を探したいとき。
-- サブコマンド間または下位モジュール間の責務境界を確認し、より具体的な実装へ進む入口を選びたいとき。
+- CLI サブコマンド単位の実行フロー、事前条件、状態更新、git/worktree/branch/process 操作、cleanup、警告やエラー出力を確認または変更したいとき。
+- apply workflow の開始、fork、join、abandon、report、conflict 処理、process 停止、apply state 更新など、apply 系サブコマンドの制御へ進みたいとき。
+- session lifecycle の開始、完了、破棄、home branch と session branch の merge、session state 更新、conflict 解消、rollback 条件を調べたいとき。
+- review oracle の対象列挙、review loop、finding 操作、INDEX 変更の commit/merge、report 出力、isolated worktree cleanup のどこを読むべきか判断したいとき。
+- indexing、tui、doctor、eval oracle などの薄いサブコマンド入口が、runtime 共通処理や既存実装へどのように委譲しているかを確認したいとき。
 
 ## Do not read this when
-- CLI runtime、git/worktree helper、path model、state file schema、Codex 実行 wrapper などの共通処理そのものを調べたいとき。
-- oracle file や realization file の定義、INDEX.md エントリー作成規則、各サブコマンドの正本仕様を確認したいとき。
-- 具体的に読むべきサブコマンド実装や下位モジュールが既に決まっており、その対象へ直接進めるとき。
+- トップレベル CLI へのサブコマンド登録、Typer app 構成、外側の command routing だけを確認したいとき。
+- git wrapper、CLI runtime、work root 解決、状態ファイル読み書き、path model、oracle file 判定、cmoc ignore 判定などの共通 runtime API 自体を変更したいとき。
+- Codex に渡す prompt、Structured Output schema、parameter builder、finding 生成・適用・変更要約 builder の本文や定義だけを確認したいとき。
+- oracle file や realization file の定義、INDEX.md 生成規則、path model、各サブコマンドの正本仕様を確認したいとき。
+- 各サブコマンドの具体的な workflow 制御ではなく、パッケージ初期化、import 時副作用の有無、または共通 helper の詳細だけを確認したいとき。
 
 ## hash
-- 40bb21e6850180c29da40b52250aac52a906b3d6012ae9904091ad366ef84099
+- 354ec78a37f5cc041dfd7f52b647b414482a19649d1ba0417f9169c74b6cd921

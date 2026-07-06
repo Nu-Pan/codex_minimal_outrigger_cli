@@ -100,25 +100,23 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply run を session へ join する CLI 外部挙動を検証する realization test。apply worktree/branch の後片付け、state 更新、report 生成、linked session worktree への反映、dirty worktree 拒否、想定外差分、force resolve、merge conflict 処理を同じ join 操作の境界条件として扱う。
-- realization file と oracle file の境界に基づき、apply 側で許容される変更 path と session 側で許容される変更 path の分類 helper も検証する。
+- apply run を session へ join する CLI 外部挙動を検証する realization test。join 成功時の worktree/branch cleanup、state 更新、report 生成と、dirty worktree、想定外差分、merge conflict、force resolve、linked session worktree などの拒否・回復条件を一箇所で扱う。
+- 責務は apply join の可否判断と後片付けの統合的な挙動確認に閉じており、fixture と git 状態の読み取り文脈を共有する境界条件群への入口になる。
 
 ## Read this when
-- apply join の成功時に apply worktree や apply branch が削除される条件、または current cwd が apply worktree の場合に削除されない条件を確認したいとき。
-- apply join 後の session state、last joined oracle snapshot commit、結果 report の生成内容を変更・確認したいとき。
-- linked session worktree 上で apply fork/join した変更が、root worktree ではなく現在の session worktree に反映される挙動を確認したいとき。
-- stale apply branch、dirty apply worktree、想定外差分、merge conflict に対する apply join の拒否条件と出力・report・state 維持を確認したいとき。
-- force resolve が apply 側または session 側の許可されない変更を戻し、許可される変更だけを join する挙動を確認したいとき。
-- apply join が realization path、oracle path、memo、AGENTS、INDEX、codex 設定、tracked ignored path、削除 path、rename target をどう分類するか確認したいとき。
+- apply join の CLI 挙動、終了コード、標準出力、report 生成、state 更新、apply worktree/branch cleanup を変更または確認したいとき。
+- apply join が apply worktree 内、session worktree 内、linked session worktree 内のどこから実行された場合に何へ merge するかを確認したいとき。
+- dirty apply worktree、stale apply branch、想定外差分、tracked ignored path、rename/delete、root memo、oracle/AGENTS、.codex、INDEX conflict、未解決 merge conflict の扱いを確認したいとき。
+- apply join の force resolve が session/apply 側の想定外変更をどう戻すか、また cleanup 可能性に応じて worktree と branch を残すか削除するかを確認したいとき。
 
 ## Do not read this when
-- apply fork が Codex 実行結果から state や worktree を作る挙動だけを確認したいとき。
-- session fork の branch/worktree 作成や session state 初期化だけを確認したいとき。
-- apply join の内部関数実装を変更したいだけで、CLI 経由の外部挙動や path 分類テストを確認する必要がないとき。
-- oracle 文書や prompt builder の正本仕様そのものを確認したいとき。
+- apply fork の Codex 実行、prompt 生成、apply worktree 作成そのものを確認したいだけのとき。
+- session fork や doctor の基本動作を確認したいだけで、apply join への接続条件を扱わないとき。
+- 内部 helper の単体的な path 判定だけを調べたい場合で、CLI 経由の join 全体挙動や git 状態の fixture が不要なとき。
+- oracle file や realization file の一般定義、INDEX エントリー規約、ファイルアクセス規則を確認したいとき。
 
 ## hash
-- 9427f52919c7d95fd0bca3267719388f51c25d1ff8196f9fccd18e2b6d51d84c
+- ad667629064f5a56d12c809d6c0c4a998829eadf38332d7dfbeff6f07b271f0b
 
 # `test_basic_runtime.py`
 
