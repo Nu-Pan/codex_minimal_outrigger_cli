@@ -123,24 +123,23 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に固定する回帰テスト群。root placeholder 解決、linked worktree と work root 判定、config の既定値・検証・JSON 化、CmocError の Markdown 表示、CLI error の stdout 出力、subcommand log、session state の検証、FileAccessMode から sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提を扱う。
-- 共通 runtime 前提が一緒に崩れやすい領域を同じ fixture と root 状態で検証するため、個別機能の仕様確認ではなく runtime 境界の回帰確認への入口になる。
+- 基礎 runtime 境界を横断する回帰テスト群。root placeholder と worktree 判定、config 読み書き、CmocError の表示、CLI preflight と parse error、subcommand log、session state、FileAccessMode から Codex profile への権限変換、binary 判定など、個別サブコマンドより下位の共通契約をまとめて検証する。
+- 共通 fixture と root 状態を共有する runtime 契約が同時に崩れやすいため、分割せず一箇所で読む前提のテスト対象として位置づけられている。
 
 ## Read this when
-- root placeholder、repo root、work root、run root、linked worktree の解決や判定を変更・調査する。
-- config の読み込み、既定値、dict 変換、legacy 項目の扱い、不正値エラーを変更・調査する。
-- CmocError、CLI 引数解析エラー、doctor preprocess、pre-log check、stdout/stderr のエラー表示、subcommand log の生成を変更・調査する。
-- session/apply branch 名から session id や state を扱う処理、session state の payload 検証を変更・調査する。
-- FileAccessMode、Codex sandbox mode、Codex cwd、profile の read/write permission、extra writable/read roots、oracle conflict write の許可境界を変更・調査する。
-- binary 判定、duration 表示、`.cmoc/local` ignore 追加、起動 wrapper の missing venv report など、基礎 runtime の小さな共通契約を確認する。
+- runtime の基礎契約、root 解決、linked worktree、run/work/repo root の扱いを変更・調査する。
+- config の既定値、JSON 変換、validation、CmocError、CLI error report、preflight、subcommand log の挙動を変更・調査する。
+- FileAccessMode、Codex profile の sandbox・permission・追加書き込み許可、oracle/realization/memo/.agents/.codex/.cmoc/.git へのアクセス境界を変更・調査する。
+- session branch 名、apply branch 名、session state の読み書きや validation を変更・調査する。
+- binary 判定、起動 wrapper の missing venv report、`.cmoc/local` ignore 設定など、runtime 前提の小さな共通挙動を変更・調査する。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務ロジック、出力内容、プロンプト構築、レビューや apply の詳細挙動だけを確認したい。
-- 単一 helper の内部実装だけを追えば足り、runtime 境界や CLI 実行前提との相互作用を確認する必要がない。
-- oracle file の正本仕様そのものを確認したい場合。対応する oracle doc または oracle src を直接読む。
+- 個別サブコマンド固有の業務ロジックだけを調べたい場合は、そのサブコマンドの実装や専用テストを先に読む。
+- oracle file の正本仕様そのものを確認したい場合は、対応する oracle doc/src/test を読む。
+- CLI の表層的なコマンド一覧や引数定義だけを確認したい場合は、CLI 定義側を直接読む。
 
 ## hash
-- a6a6c9082d76f09f65d7e2cd14182afa44c2562ecfbd4f8baaa8d23294bda111
+- 00b78f9de7f5802111b0f653c689a4993e2537f1ec2f3233b34487d9643827bd
 
 # `test_cli_tui.py`
 
@@ -296,20 +295,24 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor CLI と doctor preprocess の realization test。リポジトリ修復、`.cmoc/config.json` 生成・同期、managed Ollama 初期化、cmoc provider model pull、linked worktree での対象 root 判定、`dector` alias、既存 staged/unstaged 変更を壊さない git 操作を検証する。
+- doctor 系 CLI の pytest 群。doctor 前処理が git 状態を修復し、管理対象 ollama を準備し、既定設定を生成・同期し、linked worktree では対象 worktree と repo 側 config を正しく扱うことを外部挙動で検証する。
+- gitignore、.agents、.cmoc/local の追跡解除、config commit、既存 staged/unstaged 変更や rename の保持など、doctor が利用者の git index を壊さないことを確認する入口。
+- cmoc provider model の重複排除 pull、doctor の別名コマンド、設定値の非上書き同期を含む、doctor CLI と preprocess の回帰テストをまとめて扱う。
 
 ## Read this when
-- doctor command、doctor preprocess、managed Ollama 起動準備、cmoc provider model pull、config 生成・同期、`.cmoc/local` ignore/untrack、`.agents/.gitkeep` tracking、linked worktree 対応を変更する。
-- doctor が作る commit の対象 path、既存 staged 変更や unstaged hunk の保持、tracked `.cmoc/local` の除外など、git index を触る挙動を確認する。
-- `dector` alias が doctor と同じ初期化を行うか確認する。
+- doctor コマンド、doctor preprocess、または dector alias の挙動を変更・調査するとき。
+- doctor が生成・同期する config、管理対象 ollama の準備、cmoc provider model の pull 対象選定を確認するとき。
+- doctor 実行時の git 修復 commit、.cmoc/local の ignore/untrack、.agents の tracking、既存 staged/unstaged 変更の保持を検証するとき。
+- linked worktree 上で doctor がどの root に修復・config 生成を行うべきかを確認するとき。
 
 ## Do not read this when
-- doctor 以外の CLI command の入出力や制御を調べる。
-- config schema そのものや default 値の正本定義を確認する場合は、対応する oracle src または config 実装を直接読む。
-- Ollama install、systemd service、model pull の個別実装詳細だけを調べる場合は、runtime 側の実装を直接読む。
+- doctor 以外のサブコマンドや agent orchestration の仕様・実装だけを調べるとき。
+- config schema や model spec の定義そのものを確認したいときは、対応する設定定義や oracle src を直接読む。
+- ollama の install、service、model pull の内部実装だけを調べたいときは、runtime 側の実装を直接読む。
+- テスト支援 fixture、repo 作成 helper、CLI runner helper の詳細だけを確認したいときは、支援コードを直接読む。
 
 ## hash
-- be0de2484cc067f91e64f370127768cc071fd0551159e1e18ac2951defce6311
+- 7f6486133c85c23dba3e28afac19f5ce0f7b338685ca85bbbb5209f84b57bf8e
 
 # `test_indexing_cli.py`
 
