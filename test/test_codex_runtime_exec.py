@@ -132,8 +132,8 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
     )
     assert writable_roots == {
-        str((root / name).resolve())
-        for name in ("bin", ".gitignore", "README.md", "oracle", "src", "test")
+        str(path.resolve())
+        for path in (root / "README.md", root / "oracle" / "spec.md")
     }
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"

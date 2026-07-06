@@ -501,8 +501,12 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
             tomllib.loads(profile)["sandbox_workspace_write"]["writable_roots"]
         )
         assert writable_roots == {
-            str((root / name).resolve())
-            for name in ("bin", ".gitignore", "README.md", "oracle", "src", "test")
+            str(path.resolve())
+            for path in (
+                root / ".gitignore",
+                root / "README.md",
+                root / "oracle" / "spec.md",
+            )
         }
         target.write_text("resolved change\nTitle\n=======\n")
         return FakeCodexResult()
@@ -511,7 +515,7 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert current_branch(root) == home_branch
     assert target.read_text() == "resolved change\nTitle\n=======\n"
     assert calls == ["session join conflict resolution"]

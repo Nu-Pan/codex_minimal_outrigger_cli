@@ -183,13 +183,10 @@ def _writable_roots(
     seen: set[Path] = set()
     for path in paths:
         resolved = path.resolve()
-        if resolved not in seen and not any(
-            resolved.is_relative_to(parent) for parent in seen
-        ):
-            _append_writable_root(result, seen, resolved)
+        _append_writable_path(result, seen, mode, root, resolved)
     for path in extra_writable_paths or []:
         resolved = path.resolve()
-        if not _is_writable_path_allowed(
+        if not resolved.exists() or not _is_writable_path_allowed(
             mode, root, resolved, allow_oracle_conflict_writes
         ):
             raise CmocError(
@@ -199,17 +196,23 @@ def _writable_roots(
                 ],
                 f"mode: {mode.value}\npath: {resolved}",
             )
-        if resolved not in seen and not any(
-            resolved.is_relative_to(parent) for parent in seen
-        ):
-            _append_writable_root(result, seen, resolved)
+        _append_writable_path(
+            result,
+            seen,
+            mode,
+            root,
+            resolved,
+            allow_oracle_conflict_writes,
+        )
     return result
 
 
 def _top_level_writable_roots(mode: FileAccessMode, root: Path) -> list[Path]:
-    """root 自体を開かず、許可済み top-level path だけを sandbox に渡す。"""
+    """root 自体を開かず、許可済み top-level path だけを候補にする。"""
     paths: list[Path] = []
-    candidates = [root / name for name in _STANDARD_REALIZATION_WRITE_PATHS]
+    candidates = [
+        root / name for name in _STANDARD_REALIZATION_WRITE_PATHS if (root / name).exists()
+    ]
     if mode == FileAccessMode.REPO_WRITE:
         candidates.append(root / "oracle")
     if root.exists():
@@ -219,6 +222,35 @@ def _top_level_writable_roots(mode: FileAccessMode, root: Path) -> list[Path]:
         if resolved not in paths and _is_writable_path_allowed(mode, root, resolved):
             paths.append(resolved)
     return paths
+
+
+def _append_writable_path(
+    result: list[Path],
+    seen: set[Path],
+    mode: FileAccessMode,
+    root: Path,
+    path: Path,
+    allow_oracle_conflict_writes: bool = False,
+) -> None:
+    if not _is_writable_path_allowed(mode, root, path, allow_oracle_conflict_writes):
+        return
+    if not path.exists():
+        return
+    if path.is_dir():
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        # Codex profile has no deny rule, so do not open directories that can
+        # contain AGENTS.md or INDEX.md; enumerate writable files instead.
+        for child in sorted(path.iterdir()):
+            _append_writable_path(
+                result,
+                seen,
+                mode,
+                root,
+                child.resolve(),
+                allow_oracle_conflict_writes,
+            )
+        return
+    _append_writable_root(result, seen, path)
 
 
 def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:

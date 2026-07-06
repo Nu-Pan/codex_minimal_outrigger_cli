@@ -127,8 +127,8 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     )
     writable_roots = set(profile["sandbox_workspace_write"]["writable_roots"])
     assert writable_roots == {
-        str((linked / name).resolve())
-        for name in ("bin", ".gitignore", "README.md", "oracle", "src", "test")
+        str(path.resolve())
+        for path in (linked / "README.md", linked / "oracle" / "spec.md")
     }
 
 
