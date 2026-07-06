@@ -135,21 +135,20 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実行入口をまとめる実装ディレクトリ。apply、session、review、indexing、doctor、eval oracle、tui などの各コマンドについて、CLI runtime や共通処理へ接続する orchestration と workflow 制御を扱う。
-- 個別コマンドの状態遷移、worktree・branch・process 管理、差分検査、report 生成、preflight、cleanup など、利用者が実行するサブコマンド単位の外部挙動を追る入口になる。
+- cmoc のサブコマンド実装をまとめる階層。apply、session、review、indexing、tui、doctor、eval oracle などの実行入口と workflow 制御へ進むためのルーティング対象である。
+- 各対象は CLI runtime、git/worktree/branch/state/process、Codex 呼び出し、report 生成、INDEX.md maintenance などをサブコマンド単位で接続するが、共通 runtime API や正本仕様そのものは主責務ではない。
 
 ## Read this when
-- CLI サブコマンドの実行入口、委譲先、runtime への渡し方、コマンド単位の前提条件や後片付けを確認または変更したいとき。
-- apply、session、review oracle、indexing、doctor、eval oracle、tui のいずれかの具体的な workflow 制御や状態更新を調べたいとき。
-- サブコマンド実行時の branch/worktree/process 管理、clean worktree 検査、merge conflict 処理、report 出力、Codex 起動前後の接続を追いたいとき。
-- どの個別サブコマンド実装へ進むべきかを、サブコマンド種別や扱う workflow から判断したいとき。
+- cmoc のサブコマンド実装を探し、apply、session、review、indexing、tui、doctor、eval oracle のどの実行入口へ進むべきか判断したいとき。
+- apply や session の branch/worktree/state/process 管理、join、abandon、cleanup、conflict 処理など、サブコマンド固有 workflow の制御入口を確認または変更したいとき。
+- review oracle の対象列挙、finding loop、INDEX.md 差分 commit/merge、review report など、review 系サブコマンドの実行経路を追いたいとき。
+- indexing、tui、doctor、eval oracle のように、共通処理や別 workflow へ委譲するサブコマンド入口とその接続先を確認したいとき。
 
 ## Do not read this when
-- Typer 登録、トップレベル CLI ルーティング、CLI 全体の構成だけを確認したいとき。
-- git wrapper、path model、state file schema、worktree 探索、oracle file 判定、Codex 実行 wrapper などの共通 runtime API 自体を変更したいとき。
-- Codex に渡す prompt、Structured Output schema、parameter builder、finding 生成・適用・変更要約の詳細だけを確認したいとき。
-- oracle file や realization file の定義、INDEX.md 生成規則、各サブコマンドの正本仕様断片を確認したいとき。
-- 個別サブコマンドの下位責務がすでに特定できている場合は、その対象を直接読む。
+- CLI 全体の Typer 登録、トップレベル command routing、共通 runtime の実行規約だけを確認したいとき。
+- git wrapper、worktree 検索、状態ファイル読み書き、path model、oracle file 判定、Codex 実行 wrapper などの共通 API 自体を変更したいとき。
+- Codex に渡す prompt、Structured Output schema、finding builder、parameter builder など、サブコマンドから呼ばれる生成部品の詳細だけを確認したいとき。
+- oracle file や realization file の定義、INDEX.md 生成規則、path model などの正本仕様断片を確認したいとき。
 
 ## hash
-- ac90c6f79ef4490f4cbccdf231da74268671168ecb30deaf174a9c0454f4f415
+- d06662da723db1bf6609f4046923d3abb0d0518d40b3e3738e16cacb2a1435d1

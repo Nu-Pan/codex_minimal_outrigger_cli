@@ -393,22 +393,23 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 外部挙動を検証する realization test。review 実行時の oracle 対象列挙、report 生成、finding の列挙・検証・judge・merge loop、error report、review worktree 上の INDEX 変更取り込み、作業ツリー差分拒否をまとめて扱う。
-- eval-oracle が review oracle 実装へ委譲する互換経路、finding の oracle path 解決、linked worktree・session scope・full scope の対象選択、tracked ignored oracle file や symlink の扱いも検証対象に含む。
+- review oracle の CLI 外部挙動を検証する realization test。report 生成、対象 oracle file の列挙、所見の列挙・検証・judge・merge、accepted/rejected findings の表示、エラー report、review worktree と join commit の扱いをまとめて扱う。
+- eval-oracle から review oracle 実装への委譲、oracle path placeholder 解決、tracked ignored oracle file や symlink の対象判定、session/full scope の差分対象、INDEX.md 変更の取り込みと非 INDEX 差分の拒否も検証する。
 
 ## Read this when
-- review oracle サブコマンドの CLI 挙動、report 内容、review scope、対象 oracle file の列挙条件を変更する。
-- finding の列挙・検証・advocate/challenger・judge・merge の制御 loop、merge operation の契約、semantic retry の挙動を変更する。
-- review 用 worktree、review fork commit、join commit、INDEX 変更の取り込み、conflict 解決、非 INDEX 差分の拒否に関わる実装を変更する。
-- eval-oracle から review oracle への委譲、または finding 内の oracle path placeholder 解決を変更する。
+- `review oracle` CLI の report 出力、終了結果、出力セクション、件数集計、accepted/rejected findings の扱いを変更・調査するとき。
+- oracle review の対象列挙で、full/session scope、tracked ignored file、symlink、AGENTS.md/INDEX.md 除外、review fork commit 基準の差分を確認するとき。
+- 所見評価 loop の enumerate、validate challenger/advocate、judge、merge operation、semantic retry、関連 findings の prompt 引き継ぎを変更するとき。
+- review 実行用 worktree、linked worktree、INDEX.md の preflight/update/merge、join commit、review が作った差分の許容範囲を扱うとき。
+- `eval-oracle` コマンド、`finding_oracle_path`、`apply_finding_merge_operations`、`resolve_review_index_conflicts` の外部挙動を確認するとき。
 
 ## Do not read this when
-- review oracle 以外のサブコマンドや通常の session 操作だけを確認したい場合。
-- oracle review の外部挙動ではなく、prompt 文面や Structured Output schema 単体の詳細を確認したい場合。
-- INDEX 生成一般、doctor 一般、runtime Codex preflight 一般の挙動を確認したいだけで、review oracle 実行中の統合挙動に関係しない場合。
+- oracle review の prompt 文面や Structured Output schema そのものを確認したいだけなら、該当する prompt/schema 側を読む。
+- review oracle 以外の review サブコマンド、または oracle file 定義に関係しない一般的な CLI 挙動を調べるとき。
+- 個別 helper の内部実装だけを変更し、CLI report・対象列挙・所見 loop・worktree 差分制御に影響しないことが明確なとき。
 
 ## hash
-- 504ec0fc6b9dbd70aa1b80555a714cdb96ff98074757983dbc460b35488b43ac
+- a88ec99ac1df6a28f45b570c88f3c7f44a6a178c65d45e0a973fd8b7fd119678
 
 # `test_runtime_ollama.py`
 
