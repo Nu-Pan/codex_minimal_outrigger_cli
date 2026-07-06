@@ -12,6 +12,7 @@ from config.cmoc_config import CmocConfig
 
 from .runtime_config import load_config
 from .runtime_errors import CmocError
+from .runtime_paths import config_path, repo_root
 
 _OLLAMA_ARCHIVE_URL = "https://ollama.com/download/ollama-linux-amd64.tar.zst"
 _OLLAMA_HOST = "127.0.0.1:11434"
@@ -42,10 +43,13 @@ def _cmoc_managed_model_names(
 ) -> list[str]:
     """config から cmoc managed Ollama が扱う model 名を重複なく取り出す。"""
     if config is None:
-        try:
-            config = load_config(root)
-        except CmocError:
+        # <work-root>/oracle/src/oracle/other/cmoc_config.py
+        # config は worktree ではなく main worktree の repo 単位で所有される。
+        config_root = repo_root(root)
+        if not config_path(config_root).exists():
             config = CmocConfig()
+        else:
+            config = load_config(config_root)
     models: list[str] = []
     seen: set[str] = set()
     for spec in config.codex.model.values():

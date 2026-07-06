@@ -155,6 +155,39 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
     assert pulled == ["alpha", "beta"]
 
 
+def test_doctor_preprocess_in_linked_worktree_uses_repo_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-ollama-config"
+    run_git(root, "worktree", "add", "-b", "linked-ollama-config", str(linked), "HEAD")
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "repo-model")
+    write_config(root / ".cmoc" / "config.json", config)
+    pulled: list[str] = []
+
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(
+        ollama_module, "_ensure_ollama_installed", lambda: Path("ollama")
+    )
+    monkeypatch.setattr(
+        ollama_module, "_ensure_ollama_service", lambda executable: None
+    )
+    monkeypatch.setattr(
+        ollama_module, "_verify_ollama_service", lambda executable: None
+    )
+    monkeypatch.setattr(
+        ollama_module,
+        "_ensure_ollama_model",
+        lambda executable, model: pulled.append(model),
+    )
+
+    doctor_module.run_doctor_preprocess(linked)
+
+    assert pulled == ["repo-model"]
+    assert not (linked / ".cmoc" / "config.json").exists()
+
+
 def test_doctor_generates_and_tracks_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
