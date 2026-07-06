@@ -52,9 +52,6 @@ def render_review_oracle_report(
     error_message: str | None = None,
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
-    # Finding details are ordered by verdict first, while required fatal/minor H2s
-    # remain as summary anchors.
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
     fatal_accepted = _findings_with(accepted, "fatal")
@@ -112,16 +109,9 @@ def render_review_oracle_report(
             "|---:|---|---:|",
             rows,
             "## Fatal findings",
-            _severity_summary("fatal", fatal_accepted, fatal_rejected),
+            _render_severity_findings("fatal", fatal_accepted, fatal_rejected),
             "## Minor findings",
-            _severity_summary("minor", minor_accepted, minor_rejected),
-            "## Finding details",
-            _render_finding_details(
-                fatal_accepted,
-                minor_accepted,
-                fatal_rejected,
-                minor_rejected,
-            ),
+            _render_severity_findings("minor", minor_accepted, minor_rejected),
             "",
         ]
     )
@@ -131,30 +121,19 @@ def _findings_with(findings: list[dict], severity: str) -> list[dict]:
     return [finding for finding in findings if finding.get("severity") == severity]
 
 
-def _severity_summary(
+def _render_severity_findings(
     severity: str,
     accepted: list[dict],
     rejected: list[dict],
 ) -> str:
-    return f"accepted: {len(accepted)}, rejected: {len(rejected)} {severity} findings"
-
-
-def _render_finding_details(
-    fatal_accepted: list[dict],
-    minor_accepted: list[dict],
-    fatal_rejected: list[dict],
-    minor_rejected: list[dict],
-) -> str:
+    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
+    # The severity H2 itself is the required finding list, not a summary anchor.
     return "\n".join(
         [
-            "### Accepted fatal findings",
-            render_finding_section(fatal_accepted),
-            "### Accepted minor findings",
-            render_finding_section(minor_accepted),
-            "### Rejected fatal findings",
-            render_finding_section(fatal_rejected),
-            "### Rejected minor findings",
-            render_finding_section(minor_rejected),
+            f"### Accepted {severity} findings",
+            render_finding_section(accepted),
+            f"### Rejected {severity} findings",
+            render_finding_section(rejected),
         ]
     )
 
