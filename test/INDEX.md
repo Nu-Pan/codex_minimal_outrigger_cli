@@ -394,25 +394,26 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 外部挙動を検証する realization test。eval-oracle から review oracle 実装への委譲、review oracle report の生成内容、finding の列挙・検証・judge・merge loop、対象 oracle file の選択、review 用 worktree と join commit、INDEX.md 差分の扱い、処理失敗時 report、review 中の不正な非 INDEX 差分拒否を扱う。
-- 対象選択、report 出力、finding 評価 loop、merge 操作、worktree 統合の各挙動が同じ review run の状態と fake Codex 応答を共有するため、review oracle の CLI 振る舞いを広く確認する入口になる。
+- review oracle と eval-oracle から review oracle 実装へ至る CLI 外部挙動を検証するテスト群。report の構成・件数・所見の accept/reject 表示、scope ごとの対象選択、linked worktree 上の実行、review 用 worktree で発生した index 差分の join、処理失敗時の error report までを扱う。
+- 所見 loop の制御を検証するテスト群。所見の列挙、同一対象内での既存所見の再提示、challenger/advocate/judge の情報受け渡し、semantic merge の retry と失敗、merge operation の契約違反検出を確認する。
+- oracle file 定義に基づく review 対象列挙も扱う。tracked ignored file、untracked ignored file、binary、symlink、memo 形状の path、AGENTS/INDEX 除外、session scope の fork commit 固定など、対象選択の境界を確認する。
 
 ## Read this when
-- review oracle コマンド、eval-oracle コマンド、または review oracle の report 出力形式を変更する。
-- review oracle の finding 列挙、検証、judge、merge、semantic retry、上限到達時の挙動を変更する。
-- review oracle の対象 oracle file 判定、full scope と session scope、tracked ignored file、symlink、AGENTS.md や INDEX.md の除外条件を確認する。
-- review oracle が linked worktree や session branch 上でどの oracle と commit を対象にするかを変更する。
-- review oracle 実行中に生成された INDEX.md 差分の取り込み、preflight indexing 差分、merge conflict 解決、非 INDEX 差分拒否を変更する。
-- review oracle の処理失敗時に error report を残す挙動や CLI へのエラー表示を変更する。
+- review oracle CLI の report 出力、section 順序、metadata、所見件数、accepted/rejected finding の表示を変更・調査する時。
+- review oracle の scope 判定、oracle file の対象列挙、tracked ignored file や symlink の扱い、session scope の差分基準を変更・調査する時。
+- review oracle の Codex 呼び出し loop、finding の validate/judge/merge、semantic merge retry、merge operation の validation を変更・調査する時。
+- review oracle が作る review worktree、INDEX.md 差分の取り込み、index conflict 解決、INDEX.md 以外の差分拒否、処理失敗時の error report を変更・調査する時。
+- eval-oracle が review oracle 実装へ委譲する経路や、oracle finding path の placeholder 解決を変更・調査する時。
 
 ## Do not read this when
-- review oracle 以外の review 種別、または oracle review と共有されない CLI コマンドだけを扱う。
-- Codex 実行基盤、設定読み込み、git helper、session 管理などの内部実装だけを調べたい場合で、review oracle の外部挙動を確認する必要がない。
-- report 本文の実装方法だけを局所的に調べたい場合は、まず review oracle 実装側を読む。
-- oracle file の定義や realization standard そのものを確認したい場合は、正本仕様側を読む。
+- review oracle 以外の CLI command の一般的な引数処理や表示だけを確認したい時。
+- oracle review の外部挙動ではなく、prompt 文面や structured output schema の詳細だけを確認したい時。
+- INDEX.md エントリー生成、通常の index 更新処理、または routing 文書の内容そのものを調査したい時。
+- session fork や worktree 管理の基礎挙動だけを調査したい時。ただし review oracle 実行時の linked worktree や join commit への影響を扱う場合は読む。
+- 実際の Codex CLI 出力品質や LLM の判断品質を評価したい時。この対象は fake Codex 応答を使った制御ロジックと外部挙動の検証に限られる。
 
 ## hash
-- e73f418d72a45d89af2bd56f7d5640651e45bbf92fef2ce10481799dab026c24
+- 644f3f958d48c039946731d609302d2f7911dc26a0e7c2c0ea4ae927ba60266c
 
 # `test_session_cli.py`
 

@@ -19,19 +19,18 @@
 # `oracle.py`
 
 ## Summary
-- active session branch 上で oracle review を実行する CLI 実装の入口。preflight、session/state 検証、clean worktree 確認、isolated review worktree 作成、対象 oracle file 列挙、review loop 実行、INDEX 変更の commit/merge、worktree/branch 後片付け、report 出力までの制御フローを束ねる。
-- review 対象列挙、review loop、report 描画、INDEX merge/conflict 処理などの個別責務は下位 module へ委譲し、この対象はそれらを CLI 実行単位として接続する orchestration 層である。
+- review oracle サブコマンドの実行入口。active session branch と clean worktree を前提に、isolated review worktree を作成して oracle review 対象列挙、Codex review loop、INDEX 変更の commit/merge、report 出力、作業用 worktree/branch の後片付けまでを統括する。
+- review oracle の個別処理は対象列挙、review loop、INDEX merge、report 生成の各下位モジュールへ委譲し、このファイルは CLI runtime との接続、session 状態検証、review 用 branch/worktree のライフサイクル管理を担う。
 
 ## Read this when
-- review oracle サブコマンドの実行順序、session branch 制約、clean worktree 要件、run worktree の作成・削除、review branch の merge 条件、失敗時 report 出力の扱いを確認または変更したいとき。
-- review oracle がどの helper module を呼び出し、対象列挙から findings 生成、INDEX 変更反映、report 書き込みまでをどう接続しているかを追いたいとき。
-- review oracle 実行時の公開入口や import/export される review 関連 API の集約点を確認したいとき。
+- review oracle サブコマンド全体の実行順序、事前条件、失敗時 report 出力、review 用 branch/worktree の作成・削除タイミングを確認したいとき。
+- oracle review の対象列挙、review loop、INDEX 変更 merge、report 生成がどの順で呼ばれ、どの値を受け渡すかを追いたいとき。
+- review oracle が active session branch 以外や dirty worktree で停止する条件、または一時 review branch を session branch に merge する条件を確認したいとき。
 
 ## Do not read this when
-- oracle file の列挙条件や scope ごとの対象選定だけを変更したいときは、対象列挙を担う module を直接読む。
-- review loop 内で Codex に渡す prompt、finding の merge 操作、反復制御だけを扱うときは、review loop を担う module を直接読む。
-- report の本文構成、finding section の描画、report path の決定だけを扱うときは、report 生成を担う module を直接読む。
-- INDEX 変更の commit、review branch merge、conflict 解決、status path 取得だけを扱うときは、INDEX 統合処理を担う module を直接読む。
+- oracle file の列挙条件や scope ごとの対象選択だけを確認したい場合は、対象列挙を担う下位モジュールを読む。
+- Codex に渡す review prompt、finding の検出・merge 操作、review loop の詳細だけを確認したい場合は、review loop 側の下位モジュールを読む。
+- review report の本文整形、finding section、report file の書き込み形式だけを確認したい場合は、report 生成側の下位モジュールを読む。
 
 ## hash
-- 126e80a595c4eb9b059f539a8c38eab361dbe838dbfb24a31479464eb24bb50d
+- f9020ad738275494fed154893d216a8081b977211c2f438f1627200c490de69b

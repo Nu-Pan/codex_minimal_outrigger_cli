@@ -76,25 +76,24 @@
 # `review`
 
 ## Summary
-- review 系サブコマンド群の package 境界と、oracle review を CLI 実行単位として接続する orchestration 層を含む。
-- この階層は、review oracle の実行入口を中心に、preflight、session/state 検証、worktree 操作、対象列挙、review loop、INDEX 変更反映、後片付け、report 出力へ処理をつなぐ入口になる。
-- 具体的な対象列挙、review loop、report 描画、INDEX 統合処理は下位 module が担い、この階層の入口はそれらを review oracle サブコマンドとして束ねる。
+- review 系サブコマンド群を収める package。階層自体は最小の package 初期化のみを持ち、主要な実行入口として review oracle サブコマンド全体の orchestration を担う。
+- review oracle では active session branch と clean worktree を前提に、isolated review worktree の作成、oracle review 対象列挙、Codex review loop、INDEX 変更の commit/merge、report 出力、作業用 worktree/branch の後片付けまでを統括する。
 
 ## Read this when
-- review 系サブコマンド群の Python package 境界を確認したいとき。
-- review oracle サブコマンドの実行順序、session branch 制約、clean worktree 要件、run worktree の作成・削除、review branch の merge 条件、失敗時 report 出力の扱いを確認または変更したいとき。
-- review oracle が対象列挙、findings 生成、INDEX 変更反映、report 書き込みをどの helper module で接続しているかを追いたいとき。
-- review oracle 実行時の公開入口や、review 関連 API の集約点を確認したいとき。
+- review 系サブコマンド群の package 境界や、この階層が review 系サブコマンド用 Python package として扱われる根拠を確認したいとき。
+- review oracle サブコマンド全体の実行順序、事前条件、失敗時 report 出力、review 用 branch/worktree の作成・削除タイミングを確認したいとき。
+- oracle review の対象列挙、review loop、INDEX 変更 merge、report 生成がどの順で呼ばれ、どの値を受け渡すかを追いたいとき。
+- review oracle が active session branch 以外や dirty worktree で停止する条件、または一時 review branch を session branch に merge する条件を確認したいとき。
 
 ## Do not read this when
-- review oracle の対象列挙条件や scope ごとの対象選定だけを変更したいときは、対象列挙を担う下位 module を読む。
-- review loop 内で Codex に渡す prompt、finding の merge 操作、反復制御だけを扱うときは、review loop を担う下位 module を読む。
-- report の本文構成、finding section の描画、report path の決定だけを扱うときは、report 生成を担う下位 module を読む。
-- INDEX 変更の commit、review branch merge、conflict 解決、status path 取得だけを扱うときは、INDEX 統合処理を担う下位 module を読む。
+- review 系サブコマンド内の個別機能や実装詳細だけを調べたいときは、該当する下位モジュールを直接読む。
+- oracle file の列挙条件や scope ごとの対象選択だけを確認したい場合は、対象列挙を担う下位モジュールを読む。
+- Codex に渡す review prompt、finding の検出・merge 操作、review loop の詳細だけを確認したい場合は、review loop 側の下位モジュールを読む。
+- review report の本文整形、finding section、report file の書き込み形式だけを確認したい場合は、report 生成側の下位モジュールを読む。
 - package 初期化時の import、副作用、公開シンボルを調べたいとき。ただし現在内容からはそのような責務は読み取れない。
 
 ## hash
-- 7ea1740b338b184b4fba2974299d880e5575af5a23ebd4d13d2e6373496024e8
+- d7291d262cc5b0c25feb243c9be0adc6efb44e0e05d12457850398d7ae814dd0
 
 # `review_index.py`
 
@@ -160,40 +159,43 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を Markdown レポートとして保存・描画する処理を担う。YAML frontmatter、評価対象 oracle 一覧、重大度別の採否件数、finding 詳細、エラー時や対象なし時を含む verdict 文言を組み立てる。
-- finding の採否・重大度による分類、oracle path の表示用整形、レポート全体の result 判定を確認する入口になる。
+- review oracle コマンドの結果を、Markdown 本文と YAML frontmatter を持つレポートとして生成する処理を担う。
+- レビュー対象 oracle file の一覧、accepted/rejected と fatal/minor に分類された finding、実行失敗時のエラー、ブランチ・コミット情報、集計件数を人間向けレポートへ整形する。
+- oracle path の表示名を、可能な範囲で work root からの相対表記または oracle 起点表記に正規化する補助処理も含む。
 
 ## Read this when
-- review oracle のレポート保存先、生成タイミング、Markdown 構成、frontmatter 項目、verdict 文言を変更・確認したいとき。
-- review oracle の finding を accepted fatal、accepted minor、rejected fatal、rejected minor の順で表示する制御を確認したいとき。
-- review oracle の評価対象 oracle 一覧に表示される findings 件数や oracle path の表示形式を確認したいとき。
-- レビュー処理失敗、対象 oracle なし、accepted fatal/minor あり、問題なしの場合に、レポート result と本文がどう変わるかを確認したいとき。
+- review oracle のレポート出力内容、frontmatter の項目、見出し構成、verdict 文言、finding 一覧の描画を確認・変更したいとき。
+- review oracle の結果判定が error、no_targets、fatal、minor、ok のどれになるかを確認・変更したいとき。
+- finding の severity や verdict による分類、accepted/rejected の件数集計、対象 oracle file ごとの finding 数表示を調べたいとき。
+- レポート内で oracle file path がどのように表示されるか、root 外や oracle 配下の path 表示規則を確認したいとき。
 
 ## Do not read this when
-- review oracle の対象 oracle file の収集方法、finding の生成・判定ロジック、agent 呼び出し制御を確認したいだけのとき。
-- report directory や timestamp など、レポート保存基盤そのものの仕様や実装を確認したいだけのとき。
-- review oracle 以外のサブコマンドの出力形式やレポート形式を確認したいとき。
+- review oracle がどの oracle file を対象に選ぶか、finding をどのように検出・判定するかを調べたいとき。
+- review oracle 以外のサブコマンドの出力、状態管理、CLI 引数処理を調べたいとき。
+- レポート保存先ディレクトリや timestamp の汎用的な定義だけを確認したいとき。
+- oracle file や realization file の定義そのもの、または review oracle の正本仕様文書を確認したいとき。
 
 ## hash
-- ec9e535681efaf730a593395818c3385f273f7db33fb9a040015fe409815a302
+- a46d7cbb9dc03a32e5cbb2928dd4d99f0c88f7971cadeff6c3a552aa038f4646
 
 # `review_targets.py`
 
 ## Summary
-- review oracle の対象となる oracle file を列挙する実装。scope が full の場合は全 oracle file、差分 scope の場合は session start commit から HEAD までに変更された oracle 配下の対象だけを返す。
+- review oracle の対象となる oracle file を、指定 scope と session 状態に基づいて列挙する実装。full scope では全 oracle file、session scope では session 開始 commit から review fork commit までに変更された oracle file だけを返す。
+- oracle file 判定と git diff 結果を組み合わせ、review 対象候補の全件列挙と scope による絞り込みの入口になる。
 
 ## Read this when
-- review oracle が検査対象にする oracle file の列挙条件を確認したいとき。
-- scope と session state に応じて full review と差分 review の対象がどう変わるかを確認したいとき。
-- oracle 配下から git 追跡対象外・INDEX.md・AGENTS.md などを除外する判定が対象列挙にどう使われるかを追いたいとき。
+- review oracle がどの oracle file を対象にするかを確認・変更したいとき。
+- full scope と session scope の対象範囲の違い、または session 開始 commit が無い場合の挙動を確認したいとき。
+- oracle ツリー内のファイルから review 対象候補を列挙する条件を確認したいとき。
 
 ## Do not read this when
-- oracle file かどうかの判定条件そのものを確認したいときは、runtime 側の path 判定を読む。
-- review の実行内容、診断観点、出力形式を確認したいときは、対象列挙ではなく review 本体の実装を読む。
-- oracle 以外の review 対象や一般的なファイル探索処理を確認したいとき。
+- review 結果の表示形式、診断内容、プロンプト内容を確認したいとき。
+- oracle file かどうかの共通判定そのものを確認したいとき。
+- session 状態の保存・復元や review fork commit の作成処理を確認したいとき。
 
 ## hash
-- 76df8a9304aa0f5e4a6801534aeb25108d711ef343aabc725a20f8549b02c5ef
+- 6348e3e7183b868e00c08b13eb27e550cf440e14e718b53dcc3599c73657aaca
 
 # `session`
 
