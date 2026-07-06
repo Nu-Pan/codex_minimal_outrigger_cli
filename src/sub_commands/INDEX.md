@@ -80,28 +80,22 @@
 # `review`
 
 ## Summary
-- review 系サブコマンド群のうち、review oracle コマンドの package 境界と実行入口を扱う。
-- package 初期化モジュールはこの階層が review 系サブコマンドのまとまりであることだけを示し、実処理は持たない。
-- review oracle の全体制御では、active session branch の検証、未コミット差分の拒否、isolated review worktree 作成、oracle file 列挙、review loop、INDEX 変更の commit/merge、report 出力、cleanup への入口になる。
+- review 系サブコマンド群の実装を置く package。package 境界だけを示す初期化モジュールと、review oracle サブコマンドの実行入口・全体制御を担う module を含む。
+- review oracle workflow では、active session branch と clean worktree の検証、isolated review worktree の作成、oracle 対象列挙、review loop 実行、INDEX 変更の commit/merge、作業用 worktree/branch の後始末、review report 出力を接続する。
 
 ## Read this when
-- review oracle コマンドの開始条件、実行順序、失敗時 report、cleanup の責務を確認したいとき。
-- active session branch 上でのみ動く制約や、oracle file 以外の未コミット差分を拒否する挙動を調べるとき。
-- 未コミットの oracle 変更を review worktree に snapshot commit してから review する流れを変更または検証するとき。
-- review 結果による INDEX 変更を review branch に commit し、必要に応じて session branch へ merge する制御を追うとき。
-- review oracle 関連の対象列挙、review loop、report、INDEX merge 処理のうち、どの下位実装へ進むべきか判断したいとき。
-- review 系サブコマンド群の package 境界そのものや、この階層が Python package として扱われる根拠を確認したいとき。
+- review 系サブコマンド群の package 境界や、この階層が review 系サブコマンド用 Python package として扱われる根拠を確認したいとき。
+- review oracle サブコマンドの実行順序、前提条件、作業用 branch/worktree のライフサイクル、失敗時 report 出力を確認したいとき。
+- oracle review workflow が下位 module を呼び出す流れや、INDEX 変更の commit/merge と report 作成のタイミングを追いたいとき。
+- 未コミット差分がある場合や active session branch 以外での実行を拒否する制御を確認したいとき。
 
 ## Do not read this when
-- review 系サブコマンドの具体的な CLI 挙動、引数、出力、制御フローのうち review oracle 全体制御に限らない事項を調べたいとき。
-- oracle file の列挙条件や scope ごとの対象選択だけを確認したい場合は、対象列挙の実装へ直接進む。
-- review loop 内で Codex に渡す内容、finding の解釈、修正適用の詳細を確認したい場合は、review loop の実装へ直接進む。
-- review report の表示文面、section 描画、report file の書き込み形式だけを確認したい場合は、report 生成の実装へ直接進む。
-- INDEX 変更の conflict 解決、review branch の merge、worktree status path の詳細だけを確認したい場合は、INDEX review 操作の実装へ直接進む。
-- 汎用の git 実行、worktree 作成削除、状態読み込み、config 読み込みの挙動だけを確認したい場合は、runtime 側の実装へ直接進む。
+- review oracle の個別処理だけを確認したいときは、対象列挙、review loop、review report、INDEX 操作を担う下位 module を直接読む。
+- review 系サブコマンドの具体的な CLI 挙動、引数、出力、制御フローのうち、この階層の実行入口以外に閉じた詳細を調べたいとき。
+- package 初期化時の import、副作用、公開シンボルを調べたいとき。ただし現在内容からはそのような責務は読み取れない。
 
 ## hash
-- 8e625035fbccbfd5813609b417e9d59828f7350193c2b19f2b004cadca53a3b0
+- 5eb0e18b30d330973e0e2740952884fec3b20ec52f89beb14128d849de33d21a
 
 # `review_index.py`
 
@@ -167,21 +161,23 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を Markdown レポートとして保存・描画するモジュール。YAML frontmatter、判定結果、評価対象 oracle file 一覧、accepted/rejected finding の severity 別セクションを組み立てる。
-- finding の表示用整形、oracle path の表示形式への変換、エラー・対象なし・fatal/minor/ok のレポート結果判定もここで扱う。
+- review oracle の結果を Markdown レポートとして生成・保存する処理を担う。YAML frontmatter、判定文、評価対象 oracle file 一覧、重大度別かつ採否別の finding セクションを組み立てる。
+- finding の重大度・verdict による分類、レポート全体の result 判定、oracle path の表示用正規化、finding セクションの文字列表現を含む。
 
 ## Read this when
-- review oracle コマンドが生成するレポート本文、frontmatter、見出し構成、finding の並びや表示文言を確認・変更したいとき。
-- review oracle の findings 件数、accepted/rejected と fatal/minor の分類、result 判定がレポートへどう反映されるかを追いたいとき。
-- oracle file のパスがレポート上でどのように相対表示されるか、または oracle ツリー外のパス表示 fallback を確認したいとき。
+- review oracle のレポート出力内容、frontmatter 項目、見出し構成、result 判定条件を確認または変更したいとき。
+- accepted/rejected と fatal/minor の組み合わせごとの finding 表示、件数集計、評価対象 oracle file ごとの finding 数を扱う処理を調べたいとき。
+- oracle path をレポート上でどのような相対表示にするか、または root 外の oracle path をどう表示するかを確認したいとき。
+- review oracle 実行後に reports 配下へ保存される Markdown レポートの生成箇所を探しているとき。
 
 ## Do not read this when
-- review oracle の対象 oracle file の収集条件や finding 自体の検出ロジックを調べたいとき。
-- review oracle 以外のサブコマンドのレポート出力や、レポート保存先ディレクトリの共通仕様だけを確認したいとき。
-- Markdown レポートの生成後に行われる git 操作、ブランチ操作、セッション状態更新の処理を調べたいとき。
+- review oracle の対象 oracle file を選ぶ条件や走査ロジックを調べたいだけのとき。
+- finding の検出、判定、または oracle path を finding から取り出すロジック自体を変更したいとき。
+- review oracle 以外のサブコマンドのレポート形式や出力処理を調べたいとき。
+- レポート保存先ディレクトリや timestamp の基礎実装だけを確認したいとき。
 
 ## hash
-- 4276dcb5ad4ff58c5b5d8be3cd175ecaa89471e0b2f11cd4168c9b3db48998b2
+- fdd9aaff3a78cfcae9e6df8f06a273891f43f4f22eef615722caeecebd7f032a
 
 # `review_targets.py`
 

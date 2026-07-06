@@ -395,22 +395,24 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 実行と内部 loop を外部挙動から検証する realization test。対象 oracle の列挙、report の構成と集計、所見の列挙・検証・judge・merge、scope 別の対象選択、review 用 worktree と join commit、INDEX.md 変更の取り込み、失敗時 report を扱う。
-- 大きい test file だが、同じ review run の fake Codex 応答、report 文脈、worktree 状態を共有する検証に責務が閉じている。
+- review oracle の CLI 外部挙動を検証する realization test。report の生成内容、対象 oracle file の列挙、所見の列挙・検証・judge・merge、エラー時 report、review 用 worktree と join commit、INDEX.md 差分の取り込み・競合解決を扱う。
+- eval-oracle から review oracle 実装への委譲、scope 指定、未コミット差分や review 中の非 INDEX.md 差分の拒否、tracked ignored file と symlink の扱いなど、review oracle run 全体の状態遷移と出力確認の入口になる。
 
 ## Read this when
-- review oracle CLI の出力 report、scope、対象 oracle の選択、未コミット差分の扱いを変更する時。
-- 所見 loop の enumerate、validate、judge、merge、上限到達、semantic retry、finding id、accepted/rejected 集計を変更する時。
-- review 実行中の worktree 作成、INDEX.md だけの変更取り込み、join commit、conflict 解決、処理失敗時の error report を確認する時。
-- eval-oracle から review oracle への委譲や、oracle path placeholder 解決の回帰を確認する時。
+- review oracle CLI の report 出力、終了コード、標準出力、scope ごとの対象選択を変更・確認する。
+- oracle file の列挙条件、tracked ignored file、AGENTS.md・INDEX.md 除外、symlink の分類、session scope の差分範囲を変更・確認する。
+- 所見 loop の enumerate、validate challenger、validate advocate、judge、merge、semantic retry、merge operation contract を変更・確認する。
+- review 実行用 worktree、linked worktree、review fork commit、review join commit、INDEX.md 生成差分の merge、INDEX.md conflict 解決を変更・確認する。
+- review oracle の処理失敗時 report、未コミット差分拒否、review 中に生成された想定外差分の拒否を変更・確認する。
 
 ## Do not read this when
-- review oracle と関係しない CLI command、設定、session 操作、path model の仕様だけを調べる時。
-- oracle review の実装詳細ではなく、prompt 文面や structured output schema そのものを変更する時は、対応する prompt/schema 側を先に読む。
-- INDEX.md エントリー生成の一般規則や oracle file 定義そのものを確認するだけなら、正本仕様側を読む。
+- oracle review のプロンプト文面や structured output schema 自体だけを確認したい場合。
+- 一般的な session fork、doctor、設定読み込み、git helper の単体挙動だけを確認したい場合。
+- oracle 以外の review 対象、または review run と無関係な CLI サブコマンドの挙動を確認したい場合。
+- INDEX.md エントリー生成規則やルーティング文書の仕様だけを確認したい場合。
 
 ## hash
-- 74de17a04fe78b12bc0c22df0933d74ff4272fc5396972d3ea27a10ba6646d3b
+- 713d3c8831e38ff2d285d95ef53063e2d9b74accbdfd877e168cdcf608963baa
 
 # `test_session_cli.py`
 

@@ -135,22 +135,21 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実行本体をまとめる実装領域。apply、session、review oracle、indexing、tui、doctor、eval oracle などの外部挙動を、CLI runtime、git 操作、worktree・branch・state 管理、Codex 呼び出し、report 生成へ接続する。
-- 各サブコマンドの詳細実装へ進む入口であり、サブコマンドごとの開始条件、状態遷移、cleanup、失敗時挙動、利用者向け出力、下位 helper への委譲関係を切り分けて確認するために読む。
+- CLI サブコマンド実装をまとめるディレクトリ。apply、session、review、indexing、tui、doctor、eval oracle などの実行入口と、各 workflow の状態遷移・git/worktree/process 操作・レポート生成への接続を扱う。
+- 共通 runtime や prompt/schema builder の詳細ではなく、サブコマンドとしてそれらをどう呼び出し、外部挙動へ結びつけるかを追う入口になる。
 
 ## Read this when
-- CLI サブコマンド単位の実行フロー、事前条件、状態更新、git/worktree/branch/process 操作、cleanup、警告やエラー出力を確認または変更したいとき。
-- apply workflow の開始、fork、join、abandon、report、conflict 処理、process 停止、apply state 更新など、apply 系サブコマンドの制御へ進みたいとき。
-- session lifecycle の開始、完了、破棄、home branch と session branch の merge、session state 更新、conflict 解消、rollback 条件を調べたいとき。
-- review oracle の対象列挙、review loop、finding 操作、INDEX 変更の commit/merge、report 出力、isolated worktree cleanup のどこを読むべきか判断したいとき。
-- indexing、tui、doctor、eval oracle などの薄いサブコマンド入口が、runtime 共通処理や既存実装へどのように委譲しているかを確認したいとき。
+- 特定サブコマンドの実行条件、状態遷移、branch/worktree/process 管理、cleanup、利用者向け出力、失敗時挙動を確認または変更したいとき。
+- apply、session、review oracle、indexing、tui、doctor、eval oracle のいずれかのサブコマンド実行入口や orchestration を探したいとき。
+- サブコマンドが共通 runtime、git helper、Codex 呼び出し、状態ファイル、レポート生成処理へどう接続されるかを確認したいとき。
+- apply fork/join/abandon、session start/join/abandon、review oracle の対象列挙・loop・INDEX 変更取り込み・report 生成など、workflow 単位の制御を追いたいとき。
 
 ## Do not read this when
-- トップレベル CLI へのサブコマンド登録、Typer app 構成、外側の command routing だけを確認したいとき。
-- git wrapper、CLI runtime、work root 解決、状態ファイル読み書き、path model、oracle file 判定、cmoc ignore 判定などの共通 runtime API 自体を変更したいとき。
-- Codex に渡す prompt、Structured Output schema、parameter builder、finding 生成・適用・変更要約 builder の本文や定義だけを確認したいとき。
-- oracle file や realization file の定義、INDEX.md 生成規則、path model、各サブコマンドの正本仕様を確認したいとき。
-- 各サブコマンドの具体的な workflow 制御ではなく、パッケージ初期化、import 時副作用の有無、または共通 helper の詳細だけを確認したいとき。
+- CLI 全体の Typer 登録、トップレベル command routing、共通 runtime API 自体を確認したいだけのとき。
+- git wrapper、worktree 検索、状態ファイル読み書き、path model、oracle file 判定、cmoc ignore 判定などの共通 helper 実装を変更したいとき。
+- Codex に渡す prompt、Structured Output schema、parameter builder、finding 生成・適用・要約 builder の詳細だけを確認したいとき。
+- oracle file や realization file の定義、INDEX.md 生成規則、path model などの正本仕様を確認したいとき。
+- 各サブコマンド workflow ではなく、下位の共通処理や個別データ構造の実装だけを直接調べたいとき。
 
 ## hash
-- 354ec78a37f5cc041dfd7f52b647b414482a19649d1ba0417f9169c74b6cd921
+- 371c90557f82d9e0b6bee31afbbe5c7506a565413f4eac7eab120584d633069f

@@ -19,22 +19,19 @@
 # `oracle.py`
 
 ## Summary
-- review oracle コマンドの実行入口と全体制御を担う。active session branch の検証、oracle file 以外の未コミット差分の拒否、isolated review worktree の作成、対象 oracle file の列挙、review loop 実行、INDEX 変更の commit/merge、report 出力、worktree と branch の後始末をまとめる。
-- review oracle に必要な下位処理を他モジュールから集約して公開し、実際の差分検出・対象列挙・review loop・report 描画などの詳細実装へ進む入口になる。
+- review oracle サブコマンドの実行入口と全体制御を担う。active session branch と clean worktree を前提条件として検証し、isolated review worktree の作成、oracle 対象列挙、review loop 実行、INDEX 変更の commit/merge、作業用 worktree/branch の後始末、review report 出力までを接続する。
+- review 対象列挙、review loop、report 描画、INDEX 競合解決などの個別処理は下位 module に委譲し、この対象はそれらを CLI runtime 上の一連の workflow として組み立てる位置づけである。
 
 ## Read this when
-- review oracle コマンドの開始条件、実行順序、失敗時の report 出力、cleanup の責務を確認したいとき。
-- active session branch 上でのみ動く制約や、oracle file 以外の未コミット差分を拒否する挙動を調べるとき。
-- 未コミットの oracle 変更を review worktree に snapshot commit してから review する流れを変更または検証するとき。
-- review 結果による INDEX 変更を review branch に commit し、必要に応じて session branch へ merge する制御を追うとき。
-- review oracle 関連の対象列挙、review loop、report、INDEX merge 処理のどの下位モジュールを読むべきか判断したいとき。
+- review oracle サブコマンドの実行順序、前提条件、作業用 branch/worktree のライフサイクル、失敗時 report 出力を確認したいとき。
+- oracle review workflow がどの下位 module を呼び出し、INDEX 変更の commit/merge と report 作成をどのタイミングで行うかを追いたいとき。
+- 未コミット差分がある場合や active session branch 以外での実行を拒否する制御を確認したいとき。
 
 ## Do not read this when
-- oracle file の列挙条件や scope ごとの対象選択だけを確認したい場合は、対象列挙の実装へ直接進む。
-- review loop 内で Codex に渡す内容、finding の解釈、修正適用の詳細を確認したい場合は、review loop の実装へ直接進む。
-- review report の表示文面、section 描画、report file の書き込み形式だけを確認したい場合は、report 生成の実装へ直接進む。
-- INDEX 変更の conflict 解決、review branch の merge、worktree status path の詳細だけを確認したい場合は、INDEX review 操作の実装へ直接進む。
-- 汎用の git 実行、worktree 作成削除、状態読み込み、config 読み込みの挙動だけを確認したい場合は、runtime 側の実装へ直接進む。
+- oracle file の列挙条件や scope ごとの対象選択だけを確認したいときは、review target 列挙を担う module を読む。
+- review loop 内で Codex に渡す指示、finding の解釈、merge operation の適用だけを確認したいときは、review loop を担う module を読む。
+- review report の文面、section 表現、report file の書き込み形式だけを確認したいときは、review report を担う module を読む。
+- INDEX 変更の検出、commit、merge、競合解決の詳細だけを確認したいときは、review index 操作を担う module を読む。
 
 ## hash
-- 7d7dd0de0368a9e287777a209f912cffd9942ac7ac01f1e2cee442a68619f2f4
+- 6ec5af26c01ade97f16328fa10bdb21f6480824d061dc5c8776718ead3214b78
