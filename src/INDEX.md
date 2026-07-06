@@ -138,18 +138,23 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を領域別に束ねる階層。apply run、session lifecycle、review oracle、indexing、doctor、TUI、oracle 評価など、利用者向けコマンドの実行入口と orchestration 層へ進むための起点になる。
-- 各対象は共通 runtime、git 操作、state、worktree、Codex 呼び出し、report 生成などを必要に応じて接続し、詳細な生成・判定・共通 helper 実装は下位または共通領域へ委譲する。
+- 利用者向けサブコマンドの実装入口をまとめる階層。apply、session、review、indexing、tui、doctor、eval oracle などの実行入口から、各 workflow 固有の orchestration へ進むためのルーティング対象になる。
+- CLI runtime、git 操作、状態管理、worktree/process/report、Codex 呼び出しなどの共通実装を利用しながら、サブコマンド固有の事前条件、状態遷移、cleanup、出力、委譲先を接続する層を扱う。
+- 詳細な生成ロジックや共通 helper そのものではなく、各サブコマンドがどの下位処理・共通処理へ処理を渡すかを切り分ける入口として位置づけられる。
 
 ## Read this when
-- CLI サブコマンドの実装入口を探し、どのコマンド領域または下位 module を読むべきか切り分けたいとき。
-- apply run、session、review oracle、INDEX maintenance、doctor preprocess、TUI 起動、oracle 評価の実行フローや委譲先を確認または変更したいとき。
-- サブコマンド固有の preflight、branch/worktree/state/process/report、失敗時処理、利用者向け出力がどこで束ねられているかを追いたいとき。
+- 利用者向けサブコマンドの実装入口を探し、対象 workflow に対応する下位要素へ進みたいとき。
+- apply、session、review の開始・join・破棄・fork・report・状態遷移・cleanup など、複数の state、branch、worktree、process、report をまたぐ制御を調べたいとき。
+- indexing、tui、doctor、eval oracle などのサブコマンドが CLI runtime や既存の共通処理へどう委譲されるかを確認または変更したいとき。
+- review oracle の対象列挙、finding loop、INDEX 変更反映、report 出力、review branch merge など、review workflow の処理境界を切り分けたいとき。
+- session lifecycle や apply lifecycle に固有の事前条件、失敗時復旧、conflict 処理、利用者向け出力を確認したいとき。
 
 ## Do not read this when
-- CLI runtime、git wrapper、path model、state schema、Codex 実行 wrapper、INDEX 生成ロジックなどの共通処理そのものを調べたいときは、それぞれの共通実装へ直接進む。
-- oracle file や realization file の定義、INDEX.md 生成規則、path model などの正本仕様を確認したいときは、対応する oracle doc または oracle src を読む。
-- 特定サブコマンド内で対象列挙、prompt builder、report 描画、merge 処理など読むべき下位 module がすでに分かっているときは、その本文へ直接進む。
+- CLI runtime、git wrapper、path model、state file schema、Codex 実行 wrapper などの共通 helper の詳細だけを調べたいとき。
+- oracle file や realization file の一般定義、正本仕様、INDEX.md 生成規則など、仕様側の概念を確認したいとき。
+- Codex に渡す prompt、Structured Output schema、parameter builder の本文や詳細だけを変更したいとき。
+- INDEX.md の内容生成、差分検出、lock、commit など indexing 共通処理の詳細ロジックだけを調べたいとき。
+- 特定サブコマンド内の対象列挙、report 描画、merge 処理、path 解決など、責務が明確に分かれている下位処理を直接読む方がよいとき。
 
 ## hash
-- c4a9130e8d8f76ddbb7193910439f5eeebf28090a0c0621f2e0850d481493767
+- be8ba7df57d2a782e573040fe324d9395f60bc0ad0fe0c558bfe4f5d8a879044

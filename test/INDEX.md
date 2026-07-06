@@ -39,20 +39,21 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- apply abandon が active apply run を破棄する外部挙動を CLI 経由で検証する realization test。apply worktree と branch の cleanup、state の ready 化、警告出力、running process 停止、pid reuse や終了競合への扱い、linked session/worktree からの実行境界をまとめて扱う。
+- apply abandon が active apply run を破棄する CLI 外部挙動を検証するテスト。worktree・branch・session state の cleanup、missing target の warning、running process と child process group の停止、pid reuse・race・lock 待ち、実行位置や linked worktree 境界での拒否条件を扱う。
 
 ## Read this when
-- apply abandon の成功時 cleanup、警告扱い、失敗条件、出力内容を変更・確認するとき。
-- running apply process の PID 読み取り、child process group 停止、pidfd signal、PID reuse 防止、停止順序に関する挙動を変更・確認するとき。
-- apply worktree 内、linked session worktree、linked apply worktree、stale apply branch など実行位置ごとの abandon 境界条件を調べるとき。
+- apply abandon の成功時に apply worktree、apply branch、session state、process id file がどう cleanup されるかを確認・変更する。
+- running apply process の停止順序、child process group の扱い、pidfd・start time・PID reuse・終了 race・tracking lock 待ちに関する挙動を確認・変更する。
+- apply abandon を session worktree、apply worktree、linked session worktree、linked apply worktree、stale apply branch から実行したときの受理・拒否条件を確認・変更する。
+- 破損した apply_branch、別 session の apply branch、running state で process identity が無い場合など、cleanup 前に拒否すべき条件を確認・変更する。
 
 ## Do not read this when
-- apply abandon 以外の apply サブコマンドの通常処理や Codex 実行結果の生成を調べたいとき。
-- session fork、doctor、git helper、state 保存形式そのものの実装を調べたいとき。
-- process 停止の単体的な仕様ではなく、他コマンドの process 管理や一般的な runtime helper を調べたいとき。
+- apply abandon 以外の apply subcommand の通常処理や Codex 実行内容を確認したいだけの場合。
+- session fork、doctor、git helper、state schema などの共通基盤そのものを確認・変更する場合。
+- process 停止処理の CLI 経由の abandon 境界ではなく、低レベル runtime helper の単体仕様だけを確認したい場合。
 
 ## hash
-- 4acf89c60ce02aade6c08bf5801e01a9c3325bd6deffe0f3458863e1411e2a86
+- 7114d6da5666657a42c2c9868ff913eabf66c3840903a71e638ceeb6c14e865a
 
 # `test_apply_fork_cli.py`
 
