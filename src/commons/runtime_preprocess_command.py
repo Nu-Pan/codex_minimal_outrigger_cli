@@ -6,7 +6,7 @@ from commons.runtime_cli import run_cli_subcommand
 from commons.runtime_config import sync_config
 from commons.runtime_doctor import run_doctor_preprocess
 from commons.runtime_git import run_git
-from commons.runtime_paths import work_root
+from commons.runtime_paths import repo_root, work_root
 
 
 def run_preprocess_command(command_name: str) -> None:
@@ -20,14 +20,15 @@ def run_preprocess_command(command_name: str) -> None:
 
 
 def _preprocess_body(command_heading: str) -> None:
-    current_root = work_root()
+    current_work_root = work_root()
+    current_repo_root = repo_root()
     # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-    run_doctor_preprocess(current_root)
+    run_doctor_preprocess(current_work_root)
     # <work-root>/oracle/src/oracle/other/cmoc_config.py
     # config は人間編集対象だが、生成・同期は doctor が現在形へ戻す。
-    sync_config(current_root)
-    _commit_config(current_root)
-    typer.echo(f"# cmoc {command_heading}\n- repo_root: `{current_root}`")
+    sync_config(current_repo_root)
+    _commit_config(current_repo_root)
+    typer.echo(f"# cmoc {command_heading}\n- repo_root: `{current_repo_root}`")
 
 
 def _commit_config(root: Path) -> None:

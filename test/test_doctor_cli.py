@@ -196,7 +196,7 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    linked = tmp_path / "linked"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-doctor"
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
 
@@ -217,6 +217,9 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     ).returncode == 0
     assert not (root / ".gitignore").exists()
     assert not (root / ".agents").exists()
+    assert (root / ".cmoc" / "config.json").is_file()
+    assert not (linked / ".cmoc" / "config.json").exists()
+    assert f"- repo_root: `{root}`" in result.stdout
 
 
 def test_init_syncs_default_config_without_overwriting_human_values(
