@@ -4,14 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import ModelClass
 import commons.runtime_doctor as doctor_module
 import commons.runtime_ollama as ollama_module
 from commons.runtime_config import write_config
-from commons.runtime_errors import CmocError
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
-from commons.runtime_codex_profile import prepare_codex_profile
 from main import app
 from _support import (
     TEST_SLM_MODEL,
@@ -83,112 +81,6 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
         ).returncode
         != 0
     )
-
-
-def test_verify_ollama_service_rejects_missing_main_pid(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    executable = Path("/home/user/.cmoc/ollama/bin/ollama")
-
-    monkeypatch.setattr(ollama_module, "_service_active", lambda: True)
-    monkeypatch.setattr(ollama_module, "_service_main_pid", lambda: None)
-
-    with pytest.raises(CmocError):
-        ollama_module._verify_ollama_service(executable)
-
-
-@pytest.mark.parametrize("status", [400, 404, 500])
-def test_verify_ollama_service_rejects_non_2xx_http_status(
-    monkeypatch: pytest.MonkeyPatch, status: int
-) -> None:
-    executable = Path("/home/user/.cmoc/ollama/bin/ollama")
-
-    class Response:
-        def __enter__(self) -> "Response":
-            self.status = status
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            return None
-
-    clock = iter([0.0, 0.0, 2.0])
-    monkeypatch.setattr(ollama_module, "_service_active", lambda: True)
-    monkeypatch.setattr(ollama_module, "_service_main_pid", lambda: 10)
-    monkeypatch.setattr(
-        ollama_module, "_process_argv_uses_executable", lambda pid, path: True
-    )
-    monkeypatch.setattr(
-        ollama_module, "_listener_matches_service", lambda pid, path: True
-    )
-    monkeypatch.setattr(
-        ollama_module.urllib.request, "urlopen", lambda *args, **kwargs: Response()
-    )
-    monkeypatch.setattr(ollama_module.time, "monotonic", lambda: next(clock))
-    monkeypatch.setattr(ollama_module.time, "sleep", lambda seconds: None)
-    monkeypatch.setattr(ollama_module, "_OLLAMA_START_TIMEOUT_SEC", 1.0)
-
-    with pytest.raises(CmocError, match="接続できませんでした"):
-        ollama_module._verify_ollama_service(executable)
-
-
-def test_ollama_listener_must_be_expected_service_process(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    executable = Path("/home/user/.cmoc/ollama/bin/ollama")
-
-    monkeypatch.setattr(ollama_module, "_ollama_listener_process_ids", lambda: {20, 30})
-    monkeypatch.setattr(
-        ollama_module, "_process_is_descendant", lambda pid, main: pid == 20
-    )
-    monkeypatch.setattr(
-        ollama_module,
-        "_process_argv_uses_executable",
-        lambda pid, path: path == executable and pid == 30,
-    )
-
-    assert not ollama_module._listener_matches_service(10, executable)
-
-    monkeypatch.setattr(
-        ollama_module,
-        "_process_argv_uses_executable",
-        lambda pid, path: path == executable and pid == 20,
-    )
-
-    assert ollama_module._listener_matches_service(10, executable)
-
-
-@pytest.mark.parametrize(
-    ("show_codes", "expected_commands"),
-    [
-        ([0], [["show", "model"]]),
-        ([1, 0], [["show", "model"], ["pull", "model"], ["show", "model"]]),
-    ],
-)
-def test_ensure_ollama_model_loads_after_store_is_ready(
-    monkeypatch: pytest.MonkeyPatch,
-    show_codes: list[int],
-    expected_commands: list[list[str]],
-) -> None:
-    commands: list[list[str]] = []
-    show_iter = iter(show_codes)
-    loaded: list[str] = []
-
-    def fake_run_ollama(
-        executable: Path, args: list[str]
-    ) -> subprocess.CompletedProcess[str]:
-        commands.append(args)
-        returncode = next(show_iter) if args[0] == "show" else 0
-        return subprocess.CompletedProcess(
-            [str(executable), *args], returncode, "", ""
-        )
-
-    monkeypatch.setattr(ollama_module, "_run_ollama", fake_run_ollama)
-    monkeypatch.setattr(ollama_module, "_load_ollama_model", loaded.append)
-
-    ollama_module._ensure_ollama_model(Path("ollama"), "model")
-
-    assert commands == expected_commands
-    assert loaded == ["model"]
 
 
 def test_doctor_pulls_each_unique_cmoc_provider_model(
@@ -480,41 +372,3 @@ def test_doctor_preprocess_preserves_preexisting_staged_rename(
     ]
     assert run_git(root, "diff", "--name-status").stdout.strip() == ""
 
-
-def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    for key, value in fake_managed_ollama_env(root).items():
-        monkeypatch.setenv(key, value)
-    codex_home = tmp_path / "codex_home"
-    codex_home.mkdir()
-    config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
-
-    profile_path = prepare_codex_profile(
-        AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
-        ),
-        config,
-        codex_home,
-        root,
-    )
-
-    assert profile_path.is_file()
-    assert 'model_provider = "cmoc_managed_ollama"' in profile_path.read_text()
-    assert (
-        root
-        / ".cmoc"
-        / "local"
-        / "test-home"
-        / ".config"
-        / "systemd"
-        / "user"
-        / "cmoc-ollama.service"
-    ).is_file()

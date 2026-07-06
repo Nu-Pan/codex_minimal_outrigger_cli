@@ -22,6 +22,7 @@ from _support import (
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_codex_profile import prepare_codex_profile
 
 
 def _port_available(port: int) -> bool:
@@ -278,6 +279,45 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
         "base_url": "http://127.0.0.1:11434/v1",
         "wire_api": "responses",
     }
+
+
+def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    for key, value in fake_managed_ollama_env(root).items():
+        monkeypatch.setenv(key, value)
+    codex_home = tmp_path / "codex_home"
+    codex_home.mkdir()
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
+
+    profile_path = prepare_codex_profile(
+        AgentCallParameter(
+            ModelClass.MINIMUM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
+            None,
+        ),
+        config,
+        codex_home,
+        root,
+    )
+
+    assert profile_path.is_file()
+    assert 'model_provider = "cmoc_managed_ollama"' in profile_path.read_text()
+    assert (
+        root
+        / ".cmoc"
+        / "local"
+        / "test-home"
+        / ".config"
+        / "systemd"
+        / "user"
+        / "cmoc-ollama.service"
+    ).is_file()
 
 
 def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
