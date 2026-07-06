@@ -52,6 +52,8 @@ class SessionState:
         _require_state(
             apply_data, "apply", {"ready", "running", "completed", "error"}, source
         )
+        _require_nullable_strings(session_data, "session", source)
+        _require_nullable_strings(apply_data, "apply", source)
         return cls(
             session=SessionPart(**session_data),
             apply=ApplyPart(**apply_data),
@@ -170,6 +172,17 @@ def _require_state(
             source,
             f"`{key}.state` が不正です: {state!r}; allowed: {', '.join(sorted(allowed))}",
         )
+
+
+def _require_nullable_strings(
+    part: dict[str, Any], key: str, source: Path | None
+) -> None:
+    for field, value in part.items():
+        if field != "state" and value is not None and not isinstance(value, str):
+            raise _invalid_state(
+                source,
+                f"`{key}.{field}` は string または null である必要があります: {value!r}",
+            )
 
 
 def _invalid_state(source: Path | None, reason: str) -> CmocError:

@@ -485,6 +485,41 @@ def test_session_state_rejects_unhashable_state_values(
     assert f"`{part}.state` が不正です" in exc_info.value.detail
 
 
+@pytest.mark.parametrize(
+    ("part", "field"),
+    [
+        ("session", "session_home_branch"),
+        ("session", "session_start_commit"),
+        ("session", "last_joined_apply_oracle_snapshot_commit"),
+        ("session", "joined_at"),
+        ("apply", "apply_branch"),
+        ("apply", "oracle_snapshot_commit"),
+    ],
+)
+@pytest.mark.parametrize("value", [[], {}, 1, False])
+def test_session_state_rejects_non_string_payload_fields(
+    part: str, field: str, value: object
+) -> None:
+    data = SessionState().to_dict()
+    data[part][field] = value
+
+    with pytest.raises(CmocError) as exc_info:
+        SessionState.from_dict(data)
+
+    assert exc_info.value.summary == "session state file が不正です。"
+    assert f"`{part}.{field}` は string または null" in exc_info.value.detail
+
+
+@pytest.mark.parametrize("part", ["session", "apply"])
+def test_session_state_allows_nullable_payload_fields(part: str) -> None:
+    data = SessionState().to_dict()
+    for field in data[part]:
+        if field != "state":
+            data[part][field] = None
+
+    SessionState.from_dict(data)
+
+
 def test_cli_error_report_is_written_to_stdout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
