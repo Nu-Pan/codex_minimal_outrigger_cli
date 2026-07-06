@@ -209,23 +209,22 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc の永続化 config JSON と runtime config 型の相互変換、既定値補完、検証、読み込み、書き込み、未作成時の生成を扱う。
-- 人間が編集する config JSON の不正値を利用者向けエラーへ変換し、正本 config 型に基づく安定した保存表現を提供する。
+- cmoc の永続化 config JSON と正本 config 型の相互変換、読み込み、書き込み、初期生成を扱う。
+- 人間編集された config JSON の型・enum key・空文字などを検証し、不正時は利用者向けの CmocError に変換する。
+- config の保存場所は runtime path helper から取得し、欠落項目は既定値で補完しながら現在の JSON 形へ同期する。
 
 ## Read this when
-- config JSON の schema 境界、既定値補完、型検証、エラーメッセージを変更する。
-- config の読み込み、書き込み、初期生成、既存 config の現在形への同期処理を確認する。
-- model class、reasoning effort、Codex model spec など、正本 enum や正本 config 型と永続化 JSON の対応を調べる。
-- config ファイルが存在しない場合、JSON として読めない場合、top-level が object でない場合、不正な値を含む場合の挙動を確認する。
+- config JSON の schema、既定値補完、型検証、enum key 復元、Codex model 設定の復元に関わる変更を行うとき。
+- cmoc config の読み込み失敗、構文エラー、不正値、未生成時の利用者向けエラーメッセージを確認または変更するとき。
+- cmoc doctor などから config を生成・同期・再保存する挙動を追うとき。
 
 ## Do not read this when
-- 正本 config 型そのものの項目定義や既定値を確認したい場合。
-- config ファイルの配置場所や path model の定義だけを確認したい場合。
-- CLI command の引数解析や doctor command 全体の制御フローを調べたい場合。
-- 永続化 config 以外の runtime path、git 状態、agent 実行状態を扱う処理を探している場合。
+- config 型そのもののフィールド定義や既定値だけを確認したいときは、正本 config 型の定義を読む。
+- config ファイルの配置パス計算だけを確認したいときは、runtime path helper を読む。
+- CLI サブコマンドの引数処理や実行フローを確認したいだけなら、各 command 実装を読む。
 
 ## hash
-- 1120d55ea7a5a55ce14b73f76f472319f67fe3da04ee9717c70ebf73e14deeda
+- b8193c978e8ebbfc577d312ecb771813a22e52ab7cc38be7327d0dbfa2bf9712
 
 # `runtime_content.py`
 
