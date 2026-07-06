@@ -62,21 +62,26 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork の CLI 挙動と対象正規化を検証する pytest 群。Codex 実行を fake 化し、session fork 後の apply run 完了、state 更新、worktree/branch 作成、doctor preprocess、設定読み込み失敗、.gitignore 編集、対象 path の除外・保持条件を確認する。
+- apply fork CLI の外部挙動を、共有 fixture を使って回帰確認するテスト群。Codex loop 実行、apply run の state/worktree 更新、linked worktree 起点、doctor preflight、設定読み込み失敗時の停止、gitignore 編集、target normalization、report 前の completed 書き込みを同じ CLI 境界から検証する。
+- 16,000 文字超のまま維持する根拠を持つテスト文脈であり、target normalization、doctor preflight、config failure、state updates、gitignore handling を分割せず同じ apply fork 境界と repository fixture で観測する。
 
 ## Read this when
-- apply fork の外部挙動、状態遷移、作業ブランチ・worktree の作成規則を変更または確認したいとき。
-- apply fork が Codex loop、所見列挙、所見適用、report 生成とどう接続されるべきかをテスト側から確認したいとき。
-- apply fork 実行前の doctor preprocess、.cmoc/local ignore 追加、clean worktree 維持、設定ファイル読み込み失敗時の中断挙動を扱うとき。
-- apply 対象の正規化で、root 直下 memo、oracle、.gitignore、.cmoc/local、AGENTS.md、INDEX.md、tracked ignored file、binary file、symlink をどう扱うか確認したいとき。
+- apply fork の CLI 実行が Codex 呼び出し後に state、apply branch、worktree、process pid 周辺をどう更新するか確認・変更する。
+- apply fork が linked worktree の session branch と HEAD を起点に apply run を開始する挙動を確認・変更する。
+- apply fork 本体前の doctor preprocess、特に .cmoc/local ignore 修復と clean worktree 維持を確認・変更する。
+- cmoc config の破損または欠落時に apply run の branch/state を開始しない失敗挙動を確認・変更する。
+- apply fork の対象列挙や target normalization で、root 直下 memo、管理領域、INDEX/AGENTS、.cmoc/local、binary、tracked ignored file、oracle 配下 symlink をどう扱うか確認・変更する。
+- apply fork が .gitignore を所見対象として扱い、apply branch 側で編集できることを確認・変更する。
+- apply loop 正常完了後、report 生成前に state file へ completed を書く順序を確認・変更する。
 
 ## Do not read this when
-- apply fork の内部実装手順そのものを読みたいだけなら、実装側の apply fork 本体へ進む。
-- apply 以外の session fork、doctor、config、report の単体仕様や実装だけを調べたいときは、それぞれの直接の実装またはテストへ進む。
-- Codex 実行品質や LLM 出力内容そのものを検証したいとき。この対象は Codex 実行を fake 化し、cmoc 側の制御と副作用を検証する。
+- apply fork 以外の apply サブコマンドや session 操作だけを調べたい。
+- Codex CLI や LLM 出力品質そのものの検証を調べたい。
+- 単体 helper の内部実装だけを確認したく、CLI 境界・repository fixture・state/worktree 副作用を伴う外部挙動が関係しない。
+- oracle 文書や oracle src の正本仕様内容そのものを確認したい。
 
 ## hash
-- 497cbb0513213e9ef27deccaef4af3a1ab3de15385ed917f69937a8c90c7f2d2
+- 15368877c84664bd5f05d87ce401b558c7e606399675c6eed7a0b083526b2746
 
 # `test_apply_fork_report_cli.py`
 
@@ -333,22 +338,22 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- CLI の初期化・doctor 前処理・管理 Ollama 連携を外部挙動として検証するテスト群。設定ファイル生成と既存値保持、gitignore と追跡状態の修復、preexisting staged/unstaged 変更の保全、worktree 対象選択、doctor 別名、Codex profile 準備時の doctor 起動を扱う。
-- Ollama サービスについては、systemd user service の生成内容、管理バイナリと models ディレクトリの配置、サービス PID と listener process の照合、cmoc provider model の重複排除 pull を検証する。
+- doctor/init 系 CLI の外部挙動を検証する realization test。git 修復、`.cmoc/local` の ignore/untrack、`.agents` 追跡、設定生成・同期、managed Ollama の導入・検証、local SLM 用 Codex profile 準備時の doctor 起動を扱う。
+- 既存の staged/unstaged 変更や rename を壊さずに修復コミットを作ること、設定ファイルだけを追跡対象にし local cache を追跡しないことなど、git 状態を伴う doctor 前処理の回帰確認への入口になる。
 
 ## Read this when
-- doctor または init コマンドの利用者向け挙動、生成される設定、git 追跡・ignore 修復、修復 commit の対象範囲を変更・確認したいとき。
-- 管理 Ollama のインストール、systemd service 生成、サービス検証、listener 照合、cmoc provider model pull の制御ロジックを変更・確認したいとき。
-- Codex profile 準備時に local SLM 用の managed Ollama が不足している場合の自動 doctor 実行を変更・確認したいとき。
-- 既存の staged 変更、unstaged hunk、rename、過去に追跡された local cache を doctor 前処理がどう保全・整理するかを検証したいとき。
+- doctor または init の CLI 挙動、別名コマンド、標準出力、設定生成・既存設定との同期を変更する。
+- doctor 前処理が `.gitignore`、`.agents`、`.cmoc/config.json`、`.cmoc/local`、linked worktree、既存の staged/unstaged 変更に与える影響を確認する。
+- managed Ollama の install/service/model pull/port listener 検証や、cmoc provider model の重複排除 pull を変更する。
+- local SLM 用 Codex profile 生成時に doctor が起動される条件や、managed Ollama profile 内容を変更する。
 
 ## Do not read this when
-- doctor/init の外部挙動ではなく、設定 schema やデフォルト値の正本定義そのものを確認したいだけのとき。
-- Ollama service の内部 helper 実装だけを局所的に読めば足り、CLI 経由の統合挙動や git 状態への副作用を確認しないとき。
-- agent call、apply fork、path model など doctor/init と直接関係しない領域のテストを探しているとき。
+- agent call parameter や model enum の純粋なデータ構造だけを確認したい場合は、該当する実装または単体テストへ進む。
+- doctor/init 以外のサブコマンド、通常の agent 実行、apply fork、出力 schema の挙動を調べる場合は、より直接その領域のテストへ進む。
+- Ollama service の実プロセス制御全体を読む必要があり、このテストで monkeypatch されている境界だけでは足りない場合は、runtime 側の実装へ進む。
 
 ## hash
-- eac9f79b06ec0e5bdecd7d97218e71b6976de00f65617f1e848276832574f357
+- ba18c8937621798507df273e723a6fa469c1c258e63a28a0cc2638233a8c41af
 
 # `test_indexing_cli.py`
 
