@@ -1,4 +1,3 @@
-import shutil
 from pathlib import Path
 from typing import Callable
 
@@ -11,13 +10,11 @@ from cmoc_runtime import (
     delete_branch,
     ensure_cmoc_ignored,
     head_commit,
-    is_oracle_file_path,
     load_config,
     load_state_for_branch,
     pushd,
     remove_worktree,
     repo_root,
-    run_git,
     run_cli_subcommand,
     run_codex_exec,
     timestamp,
@@ -92,14 +89,13 @@ def _cmoc_review_oracle_body(
     session_id, _state_path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/") or state.session.state != "active":
         raise CmocError("review oracle は active session branch 上で実行してください。", [], branch)
-    oracle_snapshot_needed = _require_only_oracle_worktree_changes(current_root)
+    _require_clean_worktree(current_root)
     ensure_cmoc_ignored(current_root)
     config = load_config(root)
     run_id = timestamp()
     review_branch = f"cmoc/run/{session_id}/{run_id}"
     review_worktree = worktrees_dir(root) / session_id / run_id
     review_fork_commit = head_commit(current_root)
-    review_base_commit = review_fork_commit
     review_join_commit = None
     all_oracle_files: list[Path] = []
     oracle_files: list[Path] = []
@@ -110,10 +106,6 @@ def _cmoc_review_oracle_body(
         worktree_created = True
         try:
             with pushd(review_worktree):
-                if oracle_snapshot_needed:
-                    review_fork_commit = _commit_oracle_worktree_snapshot(
-                        current_root, review_worktree
-                    )
                 all_oracle_files = enumerate_review_all_oracle_files(review_worktree)
                 oracle_files = enumerate_review_oracle_targets(
                     review_worktree, scope, state, review_fork_commit
@@ -125,10 +117,6 @@ def _cmoc_review_oracle_body(
                 review_has_index_changes = review_branch_has_index_changes(
                     review_worktree, review_fork_commit
                 )
-                if review_has_index_changes and oracle_snapshot_needed:
-                    _keep_only_review_index_changes(
-                        review_worktree, review_base_commit, review_fork_commit
-                    )
             if review_has_index_changes:
                 review_join_commit = merge_review_branch(current_root, review_branch)
         finally:
@@ -166,61 +154,13 @@ def _cmoc_review_oracle_body(
     typer.echo(str(report_path.resolve()))
 
 
-def _require_only_oracle_worktree_changes(root: Path) -> bool:
+def _require_clean_worktree(root: Path) -> None:
     statuses = status_path_statuses(
         root, untracked_all=True, include_rename_sources=True
     )
-    non_oracle = [
-        str(path.relative_to(root))
-        for _status, path in statuses
-        if not is_oracle_file_path(root, path)
-    ]
-    if non_oracle:
+    if statuses:
         raise CmocError(
-            "review oracle は oracle file 以外の未コミット差分を扱えません。",
-            ["oracle file 以外の差分を commit または退避してから再実行してください。"],
-            "\n".join(non_oracle),
+            "review oracle は git 未コミット差分がある状態では実行できません。",
+            ["差分を commit または退避してから再実行してください。"],
+            "\n".join(str(path.relative_to(root)) for _status, path in statuses),
         )
-    return bool(statuses)
-
-
-def _commit_oracle_worktree_snapshot(source_root: Path, review_worktree: Path) -> str:
-    # <work-root>/oracle/doc/app_spec/usage.md
-    # review oracle is intentionally run before humans commit oracle changes.
-    source_oracle = source_root / "oracle"
-    target_oracle = review_worktree / "oracle"
-    if target_oracle.exists():
-        shutil.rmtree(target_oracle)
-    if source_oracle.exists():
-        shutil.copytree(source_oracle, target_oracle, symlinks=True)
-    run_git(["add", "-A", "--", "oracle"], review_worktree)
-    if run_git(["diff", "--cached", "--quiet"], review_worktree, check=False).returncode:
-        run_git(["commit", "-m", "cmoc review oracle snapshot"], review_worktree)
-    return head_commit(review_worktree)
-
-
-def _keep_only_review_index_changes(
-    review_worktree: Path, base_commit: str, review_fork_commit: str
-) -> None:
-    changed_paths = run_git(
-        ["diff", "--name-only", f"{review_fork_commit}..HEAD"], review_worktree
-    ).stdout.splitlines()
-    index_contents = {
-        path: (review_worktree / path).read_bytes()
-        if (review_worktree / path).exists()
-        else None
-        for path in changed_paths
-        if Path(path).name == "INDEX.md"
-    }
-    run_git(["reset", "--hard", base_commit], review_worktree)
-    for path, content in index_contents.items():
-        target = review_worktree / path
-        if content is None:
-            if target.exists():
-                target.unlink()
-        else:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(content)
-    run_git(["add", "-A", "--", *index_contents], review_worktree)
-    if run_git(["diff", "--cached", "--quiet"], review_worktree, check=False).returncode:
-        run_git(["commit", "-m", "cmoc review oracle indexing"], review_worktree)
