@@ -525,7 +525,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     assert "profile is broken" in codex_events[1]["error"]
 
 
-def test_quota_poll_limit_does_not_post_validate_failed_call_file_access_violation(
+def test_quota_poll_limit_stops_before_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -533,7 +533,7 @@ def test_quota_poll_limit_does_not_post_validate_failed_call_file_access_violati
     stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    calls = tmp_path / "quota_limit_post_validation_calls.jsonl"
+    calls = tmp_path / "quota_limit_calls.jsonl"
     write_python_executable(
         bin_dir / "codex",
         [
@@ -576,7 +576,7 @@ def test_quota_poll_limit_does_not_post_validate_failed_call_file_access_violati
     assert (root / "src" / "blocked.py").read_text() == "blocked\n"
 
 
-def test_quota_probe_failure_does_not_post_validate_probe_file_access_violation(
+def test_quota_probe_failure_reports_probe_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -586,7 +586,7 @@ def test_quota_probe_failure_does_not_post_validate_probe_file_access_violation(
     probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    calls = tmp_path / "probe_failure_post_validation_calls.jsonl"
+    calls = tmp_path / "probe_failure_calls.jsonl"
     write_python_executable(
         bin_dir / "codex",
         [

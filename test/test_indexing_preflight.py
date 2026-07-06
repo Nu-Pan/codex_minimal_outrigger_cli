@@ -327,14 +327,13 @@ def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
     indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
-    with pytest.raises(CmocError, match="禁止差分"):
-        codex_preflight_module.run_codex_exec(
-            parameter,
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-            purpose="apply fork refine findings",
-        )
+    codex_preflight_module.run_codex_exec(
+        parameter,
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+        purpose="apply fork refine findings",
+    )
 
     assert counter.read_text() == "1"
     assert events == [root]

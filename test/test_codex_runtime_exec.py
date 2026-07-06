@@ -348,3 +348,44 @@ def test_run_codex_exec_allows_repo_local_read_from_linked_worktree(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
+
+
+def test_run_codex_exec_profile_does_not_open_agents_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys, tomllib",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "profile = args[args.index('--profile') + 1]",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "profile_path = home / f'{profile}.config.toml'",
+            "roots = tomllib.loads(profile_path.read_text())",
+            "roots = roots['sandbox_workspace_write']['writable_roots']",
+            "agents = pathlib.Path('.agents').resolve()",
+            "assert not any(agents.is_relative_to(pathlib.Path(root)) for root in roots)",
+            "output.write_text(json.dumps({'ok': True}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        codex_parameter(),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    profile_path = next(tmp_path.glob("codex_home/cmoc_*.config.toml"))
+    writable_roots = tomllib.loads(profile_path.read_text())["sandbox_workspace_write"][
+        "writable_roots"
+    ]
+    agents = (root / ".agents").resolve()
+    assert not any(agents.is_relative_to(Path(path)) for path in writable_roots)
