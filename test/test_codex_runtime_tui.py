@@ -7,7 +7,7 @@ from pathlib import Path
 import cmoc_runtime
 import pytest
 from basic.acp import FileAccessMode
-from cmoc_runtime import CmocError
+from cmoc_runtime import CmocError, SubcommandLogger
 from config.cmoc_config import CmocConfig
 from _support import (
     codex_parameter,
@@ -18,6 +18,10 @@ from _support import (
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_tui
+from commons.runtime_logging import (
+    reset_current_subcommand_logger,
+    set_current_subcommand_logger,
+)
 
 
 def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
@@ -138,6 +142,37 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     assert filesystem[str((linked / "README.md").resolve())] == "write"
     assert filesystem[str((linked / "oracle").resolve())] == "write"
     assert "sandbox_workspace_write" not in profile
+
+
+def test_run_codex_tui_logs_successful_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(0)"])
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    logger = SubcommandLogger(root, "test")
+    token = set_current_subcommand_logger(logger)
+    try:
+        result = run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+    finally:
+        reset_current_subcommand_logger(token)
+
+    assert result.returncode == 0
+    console = capsys.readouterr().out
+    assert "- Purpose: `codex tui`" in console
+    assert "- Exit code: `0`" in console
+    call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
+    assert len(call_logs) == 1
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in events if event["event"] == "codex_call"]
+    assert len(codex_events) == 1
+    assert codex_events[0]["status"] == "succeeded"
+    assert codex_events[0]["returncode"] == 0
+    assert codex_events[0]["call_log_path"] == str(call_logs[0])
 
 
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
