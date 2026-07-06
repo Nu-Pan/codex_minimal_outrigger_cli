@@ -1,13 +1,18 @@
 import json
+import os
 import shutil
+import socket
+import subprocess
+import time
 import tomllib
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
-from commons.runtime_errors import CmocError
 from _support import (
     TEST_SLM_MODEL,
     codex_parameter,
@@ -20,6 +25,76 @@ from _support import (
 from commons.runtime_codex import run_codex_exec
 
 
+def _port_available(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+    return True
+
+
+@contextmanager
+def _real_test_ollama(root: Path) -> Iterator[dict[str, str]]:
+    ollama = shutil.which("ollama")
+    if ollama is None:
+        pytest.skip("real Ollama is not installed")
+    if not _port_available(11434):
+        pytest.skip("127.0.0.1:11434 is already in use")
+    home = root / ".cmoc" / "local" / "test-home"
+    models = home / ".cmoc" / "ollama" / "models"
+    models.mkdir(parents=True)
+    env = os.environ.copy()
+    env.update(
+        {
+            "HOME": str(home),
+            "OLLAMA_HOST": "127.0.0.1:11434",
+            "OLLAMA_MODELS": str(models),
+        }
+    )
+    process = subprocess.Popen(
+        [ollama, "serve"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    try:
+        for _ in range(120):
+            result = subprocess.run(
+                [ollama, "list"], env=env, text=True, capture_output=True, timeout=5
+            )
+            if result.returncode == 0:
+                break
+            time.sleep(0.25)
+        else:
+            pytest.skip("real Ollama did not start")
+        if subprocess.run(
+            [ollama, "show", TEST_SLM_MODEL],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=30,
+        ).returncode != 0:
+            pull = subprocess.run(
+                [ollama, "pull", TEST_SLM_MODEL],
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=900,
+            )
+            if pull.returncode != 0:
+                pytest.skip(f"test SLM is not available: {pull.stderr.strip()}")
+        yield {"HOME": str(home)}
+    finally:
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=10)
+
+
 def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -28,41 +103,58 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         pytest.skip("real Codex CLI is not installed")
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    fake_env = fake_managed_ollama_env(root)
-    for key, value in fake_env.items():
-        monkeypatch.setenv(key, value)
-    monkeypatch.setenv(
-        "PATH",
-        f"{root / '.cmoc' / 'local' / 'fake-bin'}:{Path(real_codex).parent}:/usr/bin",
-    )
-    monkeypatch.setenv("OPENAI_API_KEY", "cmoc-local-test")
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
+    schema_source = tmp_path / "schema.json"
+    schema_source.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["result"],
+                "properties": {"result": {"type": "string"}},
+            }
+        )
+    )
+    prompt = (
+        'Return exactly this JSON object and no other text: '
+        '{"result":"cmoc-real-codex-provider"}'
+    )
 
-    # <work-root>/oracle/doc/dev_rule/test_rule.md: this intentionally uses the
-    # real Codex CLI. The provider is controlled because LLM/provider quality is
-    # outside cmoc's test goal.
-    with pytest.raises(CmocError):
-        run_codex_exec(
+    with _real_test_ollama(root) as ollama_env:
+        for key, value in ollama_env.items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv(
+            "PATH", f"{Path(real_codex).parent}:{os.environ.get('PATH', '')}"
+        )
+        monkeypatch.setenv("OPENAI_API_KEY", "cmoc-local-test")
+        # <work-root>/oracle/doc/dev_rule/test_rule.md: this intentionally uses
+        # real Codex CLI with a local SLM provider. The assertions stay on
+        # cmoc-owned integration artifacts, not answer quality.
+        result = run_codex_exec(
             AgentCallParameter(
                 ModelClass.MINIMUM,
                 ReasoningEffort.LOW,
                 FileAccessMode.READONLY,
-                "Reply with exactly cmoc-real-codex-provider.",
-                None,
+                prompt,
+                schema_source,
             ),
             root=root,
             capacity_initial_sleep_sec=0,
             max_capacity_retries=0,
+            max_semantic_retries=1,
             config=config,
         )
 
-    call_log_path = next(
-        (root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json")
-    )
+    call_log_path = result.call_log_path
     call_log = json.loads(call_log_path.read_text())
     profile = tomllib.loads(Path(call_log["profile_path"]).read_text())
     assert call_log["argv"][:3] == ["codex", "exec", "--skip-git-repo-check"]
+    assert "--output-schema" in call_log["argv"]
+    assert call_log["schema_path"] == str(result.schema_path)
+    assert Path(call_log["prompt_log_path"]).read_text() == prompt
+    assert result.output_path.read_text() == result.output_text
+    assert isinstance(result.output_json["result"], str)
     assert call_log["model_class"] == ModelClass.MINIMUM.value
     assert profile["model"] == TEST_SLM_MODEL
     assert profile["model_provider"] == "cmoc_managed_ollama"
