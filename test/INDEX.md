@@ -377,20 +377,22 @@
 # `test_indexing_preflight.py`
 
 ## Summary
-- Codex 実行前に INDEX.md 更新 preflight が走ることを検証する realization test。exec/TUI 呼び出し、cwd が別 worktree を指す場合の更新対象、repository lock 待機、parameter による preflight 無効化、file access violation 後に recovery 用の追加 indexing が走らないことを扱う。
+- Codex 実行前の indexing preflight が、exec/TUI 呼び出しの前に INDEX 更新を行い、更新結果を indexing commit として残し、作業ツリーを clean に保つことを検証するテスト群。
+- preflight 対象 root の選択、repository lock 待機、パラメータによる preflight 無効化、file access violation 後に recovery 用 indexing を追加実行しないことを扱う。
 
 ## Read this when
-- Codex 呼び出し前の indexing preflight の実行順、対象 root/worktree、commit 後の作業ツリー状態を変更・確認したいとき。
-- indexing preflight の lock 待機、無効化フラグ、file access violation 時の再実行抑制に関するテストを確認したいとき。
-- runtime Codex wrapper と indexing_module.update_indexes の連携を mock した制御ロジックのテストを探しているとき。
+- Codex runtime wrapper が indexing preflight をいつ実行するか、または実行しないかの外部挙動を確認・変更するとき。
+- cwd が別 worktree 内にある場合に、渡された root ではなく cwd 側 worktree を indexing 対象にする挙動を確認するとき。
+- indexing lock による排他制御、待機順序、並行実行時の preflight 呼び出しを変更するとき。
+- AgentCallParameter の preflight 無効化フラグや、file access violation 後の再実行・回復処理と indexing の関係を確認するとき。
 
 ## Do not read this when
-- INDEX.md エントリー生成ロジック自体や対象ファイル走査ルールを確認したいだけなら、indexing 実装や専用テストへ進む。
-- Codex 実行バイナリの引数組み立て、モデル設定、ACP 値そのものを確認したいだけなら、runtime Codex 実装や basic/config 側へ進む。
-- 通常のリポジトリ作成 helper、git helper、Codex home setup helper の詳細を確認したいだけなら、テスト支援モジュールへ進む。
+- INDEX 生成内容そのもの、エントリー文面、ファイル走査規則の詳細を確認したいだけなら、indexing 実装またはその単体テストを読む。
+- Codex CLI プロセス起動、設定、出力 JSON 処理など、preflight 以外の runtime 実行詳細だけを確認したい場合。
+- git repository や test 用 Codex home の fixture 作成方法だけを確認したい場合は、共通 test support を読む。
 
 ## hash
-- 3acf23fa47098ab15a3be7f2e5aee79bf66f091be6fd7808f39b0c1e0f9f0f73
+- 53add1f54659fea880475e18a941754e100865991782abe1acb7cc4bc800827d
 
 # `test_packaged_import.py`
 

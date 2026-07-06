@@ -158,21 +158,21 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群をまとめるディレクトリ。CLI サブコマンド、Codex runtime、indexing、prompt builder、session/apply/review oracle、packaging、共通 runtime 契約を pytest で検証する。
-- 共有テスト補助と、各機能の外部挙動・回帰条件を確認する個別テストファイルへの入口になる。
+- cmoc の realization test 群をまとめる領域。CLI サブコマンド、Codex runtime、session/apply state、INDEX 更新、prompt 組み立て、packaged import など、src の外部挙動と共通 runtime 契約を pytest で検証する。
+- 共有 fixture と外部コマンド stub を使い、Git worktree・branch・設定・ログ・sandbox profile・structured output schema 参照など、複数実装にまたがる回帰条件への入口になる。
 
 ## Read this when
-- cmoc のテスト全体から、変更対象の機能に対応する realization test を探すとき。
-- apply fork/join/abandon、session、review oracle、doctor/init、TUI、indexing など CLI から見える外部挙動の期待値を確認・変更するとき。
-- Codex exec/TUI runtime、quota/capacity retry、file access post validation、Codex home/profile/sandbox、subprocess tracking など Codex 実行境界の回帰テストを探すとき。
-- root placeholder、config、CmocError、session state、FileAccessMode、prompt parts、StructDoc rendering、packaged import など共通 runtime や基礎部品のテスト入口を選びたいとき。
-- 複数テストで使う一時 Git repository、fake Codex/Ollama/systemctl、Codex home/profile、apply worktree 解決などの pytest helper を確認したいとき。
+- CLI から観測される cmoc の挙動、終了コード、stdout/stderr report、state 遷移、Git cleanup、worktree 境界の期待値を確認・変更するとき。
+- Codex exec/TUI runtime の起動引数、home/profile、sandbox 権限、retry、quota/capacity、post validation、subprocess tracking の回帰テストを探すとき。
+- apply、session、doctor/init、indexing、review oracle、TUI preflight などの既存テスト観点へ進む入口を探すとき。
+- prompt builder、ACP builder、structured output schema 参照、packaged import 境界、Markdown renderer など、実装単位より外部契約寄りのテストを確認するとき。
+- 新しい realization test を追加する前に、既存ケースへ統合できる同じ fixture・同じ外部挙動の検証があるか確認するとき。
 
 ## Do not read this when
-- プロダクト本体の実装を先に変更したい場合は、src 配下の対応する implementation へ進む。
-- oracle file の正本仕様断片、標準文書、schema 定義そのものを確認したい場合は、oracle 配下の該当ファイルを読む。
-- INDEX.md 生成規則や routing 文書の原則だけを確認したい場合は、正本仕様側または indexing 関連のより直接の対象を読む。
-- 単一 helper や単一 module の内部実装だけを調べれば足り、CLI 外部挙動や回帰テストの期待値に関心がない場合は、対応する実装ファイルへ直接進む。
+- プロダクト本体の実装責務や内部 helper の構造を先に調べたい場合は、src 配下の対応する実装へ進む。
+- oracle file の正本仕様、開発標準、schema 定義、prompt 文面そのものを確認・編集したい場合は、oracle 配下の該当文書または定義を読む。
+- 個別テストの期待値ではなく、共通 fixture や fake 環境の作り方だけを確認したい場合は、共有テスト支援コードを直接読む。
+- INDEX.md エントリー生成規則やルーティング文書の書き方そのものを確認したい場合は、テスト群ではなく正本仕様側を読む。
 
 ## hash
-- 8a5b9126f354331cd32d024ba93195fe8d03ba19ff30450b698a81141989303b
+- a02421c14611819e9f82ff7cb5980ab5594d8fe5c9a4dd47016ba44c535d3d50
