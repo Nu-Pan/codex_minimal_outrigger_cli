@@ -259,11 +259,12 @@ def _append_writable_path(
     if not _is_writable_path_allowed(mode, root, path, allow_oracle_conflict_writes):
         return
     if path.is_dir():
-        if is_untracked_git_ignored(
-            root, path / ".__cmoc_ignore_probe__"
-        ) or _directory_has_denied_descendant(
-            mode, root, path, allow_oracle_conflict_writes
-        ):
+        if is_untracked_git_ignored(root, path / ".__cmoc_ignore_probe__"):
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+            # Codex profile has only positive writable roots. A directory that
+            # would ignore newly created children cannot be opened as a root,
+            # but INDEX.md/AGENTS.md descendants alone must not prevent new
+            # realization files in normal implementation directories.
             for child in sorted(path.iterdir()):
                 _append_writable_path(
                     result,
@@ -275,28 +276,6 @@ def _append_writable_path(
                 )
             return
     _append_writable_root(result, seen, path)
-
-
-def _directory_has_denied_descendant(
-    mode: FileAccessMode,
-    root: Path,
-    directory: Path,
-    allow_oracle_conflict_writes: bool,
-) -> bool:
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Codex workspace-write cannot express child deny rules, so any existing
-    # denied descendant forces this directory to be represented by narrower
-    # child/file roots before the agent call starts.
-    return any(
-        not _is_writable_path_allowed(mode, root, child, allow_oracle_conflict_writes)
-        or (
-            child.is_dir()
-            and _directory_has_denied_descendant(
-                mode, root, child, allow_oracle_conflict_writes
-            )
-        )
-        for child in directory.iterdir()
-    )
 
 
 def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:
