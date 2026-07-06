@@ -30,6 +30,7 @@ from commons.runtime_codex_profile import (
     extract_resume_token,
     is_capacity_error,
     is_quota_error,
+    parameter_codex_cwd,
     prepare_codex_profile,
     prepare_schema,
     read_output_json,
@@ -142,15 +143,6 @@ def _next_codex_log_timestamp() -> str:
         return current
 
 
-def _codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) -> Path:
-    """AgentCallParameter.cwd を優先し、対象 work root 外の古い呼び出しを補正する。"""
-    parameter_cwd = parameter.cwd.resolve()
-    work = codex_work_root.resolve()
-    if parameter_cwd.is_relative_to(work):
-        return parameter_cwd
-    return work
-
-
 def run_codex_exec(
     parameter: AgentCallParameter,
     *,
@@ -175,7 +167,7 @@ def run_codex_exec(
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
     codex_work_root = work_root(cwd)
-    codex_cwd = _codex_cwd(parameter, codex_work_root)
+    codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # Relative CODEX_HOME is still passed through unchanged, so preflight and
     # profile generation must target the path Codex resolves from its real cwd.
@@ -503,7 +495,7 @@ def run_codex_exec(
                         quota_probe_parameter = _quota_availability_probe_parameter(
                             parameter
                         )
-                        probe_codex_cwd = _codex_cwd(
+                        probe_codex_cwd = parameter_codex_cwd(
                             quota_probe_parameter, codex_work_root
                         )
                         # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
