@@ -57,6 +57,20 @@ def test_finding_oracle_path_rejects_relative_without_placeholder(tmp_path: Path
     )
 
 
+def test_finding_oracle_path_resolves_work_root_from_review_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    review_parent = tmp_path / "review"
+    review_parent.mkdir()
+    unrelated = make_repo(tmp_path)
+    review_worktree = make_repo(review_parent)
+    monkeypatch.chdir(unrelated)
+
+    assert finding_oracle_path(
+        {"oracle_path": "<work-root>/oracle/spec.md"}, review_worktree
+    ) == (review_worktree / "oracle" / "spec.md").resolve()
+
+
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     ancestor = tmp_path / "oracle"
     ancestor.mkdir()
