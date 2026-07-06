@@ -156,20 +156,21 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 全体への入口。CLI の session/apply/review/indexing/doctor/TUI、Codex runtime、ACP builder、prompt rendering、packaged import などの外部挙動と共通実行前提を検証するテスト群を配置している。
-- 共有 fixture/helper、個別サブコマンドの CLI 回帰、Codex 実行ラッパー、INDEX.md 更新、oracle review、StructDoc rendering など、実装変更の影響範囲に応じて読むべきテストファイルを選ぶための階層。
+- cmoc の realization test 群を収めるディレクトリ。CLI 外部挙動、Codex runtime、session/apply/review/indexing/doctor/TUI、prompt rendering、packaged import、共有 pytest helper など、src 実装が oracle 断片を満たすかを回帰確認する入口になる。
+- 複数のテストファイルは、サブコマンド単位や runtime 境界単位で fixture・git 状態・外部コマンド fake を共有し、state/worktree/branch/log/profile/schema などの副作用を外部観測として検証する。
 
 ## Read this when
-- realization implementation を変更し、対応する CLI 外部挙動・runtime 契約・prompt/ACP 生成・packaging 境界の既存テスト入口を探すとき。
-- session、apply、review oracle、indexing、doctor/init、TUI、Codex runtime のいずれかについて、回帰テストの所在や同じ fixture に統合できる既存ケースを確認したいとき。
-- テスト支援 helper、fake Codex/Ollama/systemctl、最小 Git リポジトリ、Codex home、apply worktree 解決など、複数テストで共有される fixture を探すとき。
-- 変更後に追加・整理すべき realization test の責務境界を判断し、既存テストへ case 追加できるか確認したいとき。
+- cmoc の実装変更後に、対応する realization test や既存の検証観点を探すとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、doctor/init、TUI、Codex exec/TUI runtime の CLI から見える挙動を確認・変更するとき。
+- Codex home/profile/sandbox、file access mode、quota/capacity retry、post validation、subprocess tracking、managed Ollama など、runtime 共通契約のテスト入口を探すとき。
+- テスト用 Git repository、fake Codex/Ollama/systemctl、AgentCallParameter、apply worktree 解決など、複数テストで共有される pytest helper を探すとき。
+- prompt parts、StructDoc Markdown rendering、packaged import、ACP builder の公開境界や schema 参照など、CLI 以外の realization test を確認するとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片や開発ルールを確認したい場合は、oracle 配下の該当文書を読む。
-- 本番実装の責務・内部処理・公開 API を先に変更したい場合は、src 側の該当 module を読む。
-- 個別のテスト期待値や fixture 名が既に分かっている場合は、この階層全体ではなく該当テストファイルへ直接進む。
-- INDEX.md エントリー生成規則や routing 文書の標準そのものを確認したい場合は、対応する oracle 文書または prompt/schema 側を読む。
+- プロダクト本体の実装責務や内部処理を先に確認したい場合は、src 配下の該当 implementation へ進む。
+- oracle file の正本仕様、標準文書、schema 定義、path placeholder の定義そのものを確認したい場合は、oracle 配下の該当文書または src を読む。
+- INDEX.md エントリー生成規則や routing 文書の書き方だけを確認したい場合は、正本仕様側または indexing 用 builder/schema を優先して読む。
+- 単一の低レベル helper やデータ構造だけを確認したく、CLI 境界・git 状態・外部副作用の回帰観点が不要な場合は、対応する実装ファイルを直接読む。
 
 ## hash
-- 518008b3f3e5d407500198a20d592ce16b22cdce55d07c1a9fb58de587320e9b
+- ded4fbac0673abf964c8e50bd8de6235428c051d7f6c0170b8510b2e00f6b0af
