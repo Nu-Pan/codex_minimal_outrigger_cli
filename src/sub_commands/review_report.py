@@ -53,7 +53,8 @@ def render_review_oracle_report(
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
     # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
-    # Fatal/minor findings must be listed inside their required H2 sections.
+    # Finding details are ordered by verdict first, while required fatal/minor H2s
+    # remain as summary anchors.
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
     fatal_accepted = _findings_with(accepted, "fatal")
@@ -111,9 +112,16 @@ def render_review_oracle_report(
             "|---:|---|---:|",
             rows,
             "## Fatal findings",
-            _render_severity_finding_section("fatal", fatal_accepted, fatal_rejected),
+            _severity_summary("fatal", fatal_accepted, fatal_rejected),
             "## Minor findings",
-            _render_severity_finding_section("minor", minor_accepted, minor_rejected),
+            _severity_summary("minor", minor_accepted, minor_rejected),
+            "## Finding details",
+            _render_finding_details(
+                fatal_accepted,
+                minor_accepted,
+                fatal_rejected,
+                minor_rejected,
+            ),
             "",
         ]
     )
@@ -131,18 +139,22 @@ def _severity_summary(
     return f"accepted: {len(accepted)}, rejected: {len(rejected)} {severity} findings"
 
 
-def _render_severity_finding_section(
-    severity: str,
-    accepted: list[dict],
-    rejected: list[dict],
+def _render_finding_details(
+    fatal_accepted: list[dict],
+    minor_accepted: list[dict],
+    fatal_rejected: list[dict],
+    minor_rejected: list[dict],
 ) -> str:
     return "\n".join(
         [
-            _severity_summary(severity, accepted, rejected),
-            f"### Accepted {severity} findings",
-            render_finding_section(accepted),
-            f"### Rejected {severity} findings",
-            render_finding_section(rejected),
+            "### Accepted fatal findings",
+            render_finding_section(fatal_accepted),
+            "### Accepted minor findings",
+            render_finding_section(minor_accepted),
+            "### Rejected fatal findings",
+            render_finding_section(fatal_rejected),
+            "### Rejected minor findings",
+            render_finding_section(minor_rejected),
         ]
     )
 

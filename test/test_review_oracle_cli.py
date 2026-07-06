@@ -215,19 +215,18 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     detail_order = [
         "### Accepted fatal findings",
         "accepted fatal",
-        "### Rejected fatal findings",
-        "rejected fatal",
         "### Accepted minor findings",
         "accepted minor",
+        "### Rejected fatal findings",
+        "rejected fatal",
         "### Rejected minor findings",
         "rejected minor",
     ]
     assert [rendered.index(text) for text in detail_order] == sorted(
         rendered.index(text) for text in detail_order
     )
-    assert "## Finding details" not in rendered
-    assert rendered.index("accepted fatal") < rendered.index("## Minor findings")
-    assert rendered.index("accepted minor") > rendered.index("## Minor findings")
+    assert rendered.index("## Minor findings") < rendered.index("## Finding details")
+    assert rendered.index("accepted minor") < rendered.index("rejected fatal")
     assert "result: fatal" in rendered
     assert "fatal_findings_accepted_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
@@ -290,15 +289,14 @@ def test_review_oracle_report_includes_rejected_findings(
     assert "### Rejected fatal findings" in rendered
     assert "### Rejected minor findings" in rendered
     assert "rejected finding" in rendered
-    assert "## Finding details" not in rendered
+    assert "## Finding details" in rendered
     assert rendered.index("## Fatal findings") < rendered.index("## Minor findings")
+    assert rendered.index("## Minor findings") < rendered.index("## Finding details")
     finding_offset = rendered.index("rejected finding")
     if severity == "fatal":
         assert rendered.index("### Rejected fatal findings") < finding_offset
-        assert finding_offset < rendered.index("## Minor findings")
     else:
         assert rendered.index("### Rejected minor findings") < finding_offset
-        assert rendered.index("## Minor findings") < finding_offset
     assert "rejected reason" in rendered
     assert "judge reason: judge rejected reason" in rendered
     assert "session_id:" not in rendered
