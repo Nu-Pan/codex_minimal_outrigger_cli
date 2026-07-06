@@ -158,21 +158,20 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群をまとめる領域。CLI サブコマンド、Codex runtime、session/apply state、INDEX 更新、prompt 組み立て、packaged import など、src の外部挙動と共通 runtime 契約を pytest で検証する。
-- 共有 fixture と外部コマンド stub を使い、Git worktree・branch・設定・ログ・sandbox profile・structured output schema 参照など、複数実装にまたがる回帰条件への入口になる。
+- cmoc の realization test 群を収めるディレクトリ。CLI サブコマンド、Codex runtime、session/apply lifecycle、indexing、doctor/init、prompt rendering、packaged import など、src の外部挙動と共通 runtime 契約を pytest で検証する。
+- 共有 pytest helper と、個別機能ごとの回帰テストへの入口を提供し、実装変更時に対応する外部挙動・状態遷移・git 境界・Codex 呼び出し境界を確認するためのルーティング対象になる。
 
 ## Read this when
-- CLI から観測される cmoc の挙動、終了コード、stdout/stderr report、state 遷移、Git cleanup、worktree 境界の期待値を確認・変更するとき。
-- Codex exec/TUI runtime の起動引数、home/profile、sandbox 権限、retry、quota/capacity、post validation、subprocess tracking の回帰テストを探すとき。
-- apply、session、doctor/init、indexing、review oracle、TUI preflight などの既存テスト観点へ進む入口を探すとき。
-- prompt builder、ACP builder、structured output schema 参照、packaged import 境界、Markdown renderer など、実装単位より外部契約寄りのテストを確認するとき。
-- 新しい realization test を追加する前に、既存ケースへ統合できる同じ fixture・同じ外部挙動の検証があるか確認するとき。
+- realization implementation の変更に対して、対応する realization test や共有 pytest helper を探すとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、doctor/init、TUI など CLI から見える外部挙動の期待値を確認・変更するとき。
+- Codex exec/TUI runtime、quota/capacity retry、Codex home/profile、file access post validation、subprocess tracking など Codex 呼び出し境界の回帰テストを探すとき。
+- root placeholder、config、CmocError、FileAccessMode、session state、prompt parts、StructDoc rendering、packaged import など共通基盤の契約をテスト観点から確認するとき。
 
 ## Do not read this when
-- プロダクト本体の実装責務や内部 helper の構造を先に調べたい場合は、src 配下の対応する実装へ進む。
-- oracle file の正本仕様、開発標準、schema 定義、prompt 文面そのものを確認・編集したい場合は、oracle 配下の該当文書または定義を読む。
-- 個別テストの期待値ではなく、共通 fixture や fake 環境の作り方だけを確認したい場合は、共有テスト支援コードを直接読む。
-- INDEX.md エントリー生成規則やルーティング文書の書き方そのものを確認したい場合は、テスト群ではなく正本仕様側を読む。
+- プロダクト本体の実装責務や内部 helper を先に調べたい場合は、src 配下の対応する implementation を読む。
+- oracle file の正本仕様断片、標準、schema、path 定義そのものを確認したい場合は、oracle 配下の該当対象を読む。
+- INDEX.md エントリー文面やルーティング規則だけを確認したい場合は、indexing 関連の builder/schema または正本仕様側へ進む。
+- 個別テストの前提作成だけを知りたい場合は、このディレクトリ全体ではなく共有 test support のエントリーを優先する。
 
 ## hash
-- a02421c14611819e9f82ff7cb5980ab5594d8fe5c9a4dd47016ba44c535d3d50
+- ae45573a475d8f2beb0fa00c601152e515b3ae338e9f47e9df88442f8beb5f10

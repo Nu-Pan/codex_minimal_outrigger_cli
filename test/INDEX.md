@@ -397,20 +397,21 @@
 # `test_packaged_import.py`
 
 ## Summary
-- packaged layout だけを PYTHONPATH に置いた subprocess 上で、realization implementation と oracle src の import 境界が成立することを検証する realization test。pyproject の oracle package 設定、review oracle enumerate builder、basic builder の canonical reexport、config reexport の公開範囲を確認する。
+- インストール後に近い配置へ必要なパッケージだけを複写し、通常の作業ディレクトリ外から import できることを検証するテスト。
+- 設定上の package 配置、review oracle 用 builder の prompt/schema 参照、basic builder の canonical 定義への再公開、設定定義の再公開境界を確認する。
 
 ## Read this when
-- packaged layout、PYTHONPATH、setuptools package-dir/packages 設定に関わる変更を行うとき。
-- oracle src を realization implementation から import・reexport する境界を変更するとき。
-- review oracle enumerate builder、acp.builder.basic、config.cmoc_config の import 互換性や公開名を変更するとき。
+- packaged layout からの import 失敗、package-dir や package discovery 設定、oracle src を含む配布配置の問題を調査するとき。
+- review oracle enumerate builder が配布相当の import 環境で prompt や structured output schema を参照できるか確認するとき。
+- basic builder や設定定義の再公開境界を変更し、canonical な oracle src 定義との関係や公開名の範囲を検証するとき。
 
 ## Do not read this when
-- 通常の CLI 実行フローやコマンド引数の挙動だけを確認したいとき。
-- oracle doc の自然言語仕様や prompt 文面そのものを確認したいとき。
-- パッケージ配置や import 境界に関係しない単体ロジックのテストを探しているとき。
+- 通常の開発ツリー上での単体 import や関数内部ロジックだけを確認したいとき。
+- CLI の実行フロー、永続状態、agent call orchestration の挙動を調べたいとき。
+- prompt 本文、schema 本体、設定 dataclass の詳細仕様そのものを読む必要があるとき。
 
 ## hash
-- 484451aa5216148342d78d9c4c971994fc8e33e9de194a997d6b2fc605432142
+- ed59fc9ad74514656ac722e4f60386946e3868ea9284ecd7656a4bc61d4d6131
 
 # `test_prompt_parts.py`
 
