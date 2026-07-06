@@ -171,10 +171,12 @@ def _reject_non_conflict_changes(
     # REPO_WRITE is needed for oracle conflicts, so this command enforces the
     # narrower "conflict targets only" boundary after the agent returns.
     allowed = {path.resolve() for path in conflicted_paths}
+    after_codex = _changed_path_snapshot(root, git)
     changed = [
         path
-        for path, value in _changed_path_snapshot(root, git).items()
-        if path.resolve() not in allowed and before_codex.get(path) != value
+        for path in before_codex.keys() | after_codex.keys()
+        if path.resolve() not in allowed
+        and before_codex.get(path) != after_codex.get(path)
     ]
     if changed:
         raise CmocError(
