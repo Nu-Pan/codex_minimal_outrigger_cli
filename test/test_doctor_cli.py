@@ -6,6 +6,7 @@ import pytest
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 import commons.runtime_doctor as doctor_module
+import commons.runtime_ollama as ollama_module
 from commons.runtime_config import write_config
 from commons.runtime_errors import CmocError
 from config.cmoc_config import CmocConfig
@@ -87,35 +88,35 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
 def test_verify_ollama_service_rejects_missing_main_pid(monkeypatch) -> None:
     executable = Path("/home/user/.cmoc/ollama/bin/ollama")
 
-    monkeypatch.setattr(doctor_module, "_service_active", lambda: True)
-    monkeypatch.setattr(doctor_module, "_service_main_pid", lambda: None)
+    monkeypatch.setattr(ollama_module, "_service_active", lambda: True)
+    monkeypatch.setattr(ollama_module, "_service_main_pid", lambda: None)
 
     with pytest.raises(CmocError):
-        doctor_module._verify_ollama_service(executable)
+        ollama_module._verify_ollama_service(executable)
 
 
 def test_ollama_listener_must_be_expected_service_process(monkeypatch) -> None:
     executable = Path("/home/user/.cmoc/ollama/bin/ollama")
 
-    monkeypatch.setattr(doctor_module, "_ollama_listener_process_ids", lambda: {20, 30})
+    monkeypatch.setattr(ollama_module, "_ollama_listener_process_ids", lambda: {20, 30})
     monkeypatch.setattr(
-        doctor_module, "_process_is_descendant", lambda pid, main: pid == 20
+        ollama_module, "_process_is_descendant", lambda pid, main: pid == 20
     )
     monkeypatch.setattr(
-        doctor_module,
+        ollama_module,
         "_process_argv_uses_executable",
         lambda pid, path: path == executable and pid == 30,
     )
 
-    assert not doctor_module._listener_matches_service(10, executable)
+    assert not ollama_module._listener_matches_service(10, executable)
 
     monkeypatch.setattr(
-        doctor_module,
+        ollama_module,
         "_process_argv_uses_executable",
         lambda pid, path: path == executable and pid == 20,
     )
 
-    assert doctor_module._listener_matches_service(10, executable)
+    assert ollama_module._listener_matches_service(10, executable)
 
 
 def test_doctor_pulls_each_unique_cmoc_provider_model(
@@ -131,16 +132,16 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
 
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.setattr(
-        doctor_module, "_ensure_ollama_installed", lambda: Path("ollama")
+        ollama_module, "_ensure_ollama_installed", lambda: Path("ollama")
     )
     monkeypatch.setattr(
-        doctor_module, "_ensure_ollama_service", lambda executable: None
+        ollama_module, "_ensure_ollama_service", lambda executable: None
     )
     monkeypatch.setattr(
-        doctor_module, "_verify_ollama_service", lambda executable: None
+        ollama_module, "_verify_ollama_service", lambda executable: None
     )
     monkeypatch.setattr(
-        doctor_module,
+        ollama_module,
         "_ensure_ollama_model",
         lambda executable, model: pulled.append(model),
     )

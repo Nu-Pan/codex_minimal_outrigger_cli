@@ -1,3 +1,12 @@
+"""Apply fork CLI regression tests share one fixture-heavy external behavior context.
+
+The file intentionally stays above 16,000 characters because target normalization,
+doctor preflight, config failure, state updates, and gitignore handling are all
+observed through the same apply fork CLI boundary and shared repository fixtures.
+Splitting those cases would increase repeated setup and hide the cross-case context.
+Size rationale: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
+
 import json
 from pathlib import Path
 
