@@ -1,4 +1,5 @@
 import fcntl
+import json
 import os
 import subprocess
 import time
@@ -17,6 +18,7 @@ from .runtime_paths import config_path, repo_root
 _OLLAMA_ARCHIVE_URL = "https://ollama.com/download/ollama-linux-amd64.tar.zst"
 _OLLAMA_HOST = "127.0.0.1:11434"
 _OLLAMA_CONNECT_TIMEOUT_SEC = 0.5
+_OLLAMA_LOAD_TIMEOUT_SEC = 600.0
 _OLLAMA_START_TIMEOUT_SEC = 30.0
 _OLLAMA_SERVICE_NAME = "cmoc-ollama"
 
@@ -361,22 +363,62 @@ def _ollama_http_ok() -> bool:
 
 
 def _ensure_ollama_model(executable: Path, model: str) -> None:
-    """指定 model が serve 可能でなければ pull して再確認する。"""
-    if _run_ollama(executable, ["show", model]).returncode == 0:
-        return
-    pull = _run_ollama(executable, ["pull", model])
-    if pull.returncode != 0:
-        raise CmocError(
-            "ollama SLM model を取得できませんでした。",
-            ["モデル名と ollama の接続状態を確認してください。"],
-            f"model: {model}\nstdout:\n{pull.stdout}\nstderr:\n{pull.stderr}",
-        )
+    """指定 model が store に存在し、managed service 上で load 済みになるようにする。"""
     show = _run_ollama(executable, ["show", model])
+    if show.returncode != 0:
+        pull = _run_ollama(executable, ["pull", model])
+        if pull.returncode != 0:
+            raise CmocError(
+                "ollama SLM model を取得できませんでした。",
+                ["モデル名と ollama の接続状態を確認してください。"],
+                f"model: {model}\nstdout:\n{pull.stdout}\nstderr:\n{pull.stderr}",
+            )
+        show = _run_ollama(executable, ["show", model])
     if show.returncode != 0:
         raise CmocError(
             "ollama SLM model を serve 可能な状態にできませんでした。",
             ["モデル名と ollama の model store を確認してください。"],
             f"model: {model}\nstdout:\n{show.stdout}\nstderr:\n{show.stderr}",
+        )
+    _load_ollama_model(model)
+
+
+def _load_ollama_model(model: str) -> None:
+    """managed Ollama service に model を memory load させる。"""
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # Ollama は空 prompt の /api/generate を load 操作として定義している。
+    body = json.dumps({"model": model, "stream": False}).encode()
+    request = urllib.request.Request(
+        f"http://{_OLLAMA_HOST}/api/generate",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(
+            request,
+            timeout=_OLLAMA_LOAD_TIMEOUT_SEC,
+        ) as response:
+            response_body = response.read()
+    except (OSError, urllib.error.URLError) as exc:
+        raise CmocError(
+            "ollama SLM model を load できませんでした。",
+            ["モデル名と ollama の接続状態を確認してください。"],
+            f"model: {model}\nendpoint: http://{_OLLAMA_HOST}/api/generate",
+        ) from exc
+    try:
+        payload = json.loads(response_body.decode())
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise CmocError(
+            "ollama SLM model の load 応答を解釈できませんでした。",
+            ["ollama service の状態を確認してください。"],
+            f"model: {model}\nresponse: {response_body[:500]!r}",
+        ) from exc
+    if payload.get("done") is not True:
+        raise CmocError(
+            "ollama SLM model を load できませんでした。",
+            ["ollama service の状態を確認してください。"],
+            f"model: {model}\nresponse: {payload!r}",
         )
 
 

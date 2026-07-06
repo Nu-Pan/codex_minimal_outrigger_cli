@@ -157,6 +157,40 @@ def test_ollama_listener_must_be_expected_service_process(
     assert ollama_module._listener_matches_service(10, executable)
 
 
+@pytest.mark.parametrize(
+    ("show_codes", "expected_commands"),
+    [
+        ([0], [["show", "model"]]),
+        ([1, 0], [["show", "model"], ["pull", "model"], ["show", "model"]]),
+    ],
+)
+def test_ensure_ollama_model_loads_after_store_is_ready(
+    monkeypatch: pytest.MonkeyPatch,
+    show_codes: list[int],
+    expected_commands: list[list[str]],
+) -> None:
+    commands: list[list[str]] = []
+    show_iter = iter(show_codes)
+    loaded: list[str] = []
+
+    def fake_run_ollama(
+        executable: Path, args: list[str]
+    ) -> subprocess.CompletedProcess[str]:
+        commands.append(args)
+        returncode = next(show_iter) if args[0] == "show" else 0
+        return subprocess.CompletedProcess(
+            [str(executable), *args], returncode, "", ""
+        )
+
+    monkeypatch.setattr(ollama_module, "_run_ollama", fake_run_ollama)
+    monkeypatch.setattr(ollama_module, "_load_ollama_model", loaded.append)
+
+    ollama_module._ensure_ollama_model(Path("ollama"), "model")
+
+    assert commands == expected_commands
+    assert loaded == ["model"]
+
+
 def test_doctor_pulls_each_unique_cmoc_provider_model(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
