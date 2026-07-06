@@ -129,24 +129,20 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証するテスト群。root placeholder と worktree 解決、config の既定値・復元・不正値拒否、CmocError の Markdown 表示、CLI error の stdout 出力、subcommand log、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提を扱う。
-- 共通 fixture と root 状態を同じ文脈で読む必要がある runtime 回帰テストとしてまとまっており、複数のサブコマンドや runtime helper が共有する境界条件の変更時の入口になる。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder と linked worktree の解決、config の既定値・復元・不正値拒否、CmocError の表示、CLI preflight と error 出力、subcommand log、session/apply branch state、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
 
 ## Read this when
-- root 解決、repo root と linked worktree、run/work root placeholder、worktree 作成・削除の安全条件を変更または確認するとき。
-- cmoc config の既定値、JSON 変換順、不正値検証、欠落時の CmocError を変更または確認するとき。
-- CmocError の report 形式、CLI parse error、想定済み CLI error、preflight 失敗、doctor preprocess、completion probe、subcommand log の挙動を変更または確認するとき。
-- FileAccessMode、Codex profile、sandbox writable roots、extra writable/read path、oracle conflict write、local SLM provider 設定の境界を変更または確認するとき。
-- binary 判定、duration 表示、gitignore 更新、テスト用 repo 作成 helper の runtime 前提を変更または確認するとき。
+- runtime 境界に関わる変更を行い、root 解決、worktree 管理、CLI wrapper、doctor preprocess、subcommand log、CmocError 表示、config 読み書き、session state、FileAccessMode、Codex profile、binary 判定の回帰テストを確認したいとき。
+- linked worktree と main worktree の扱い、`.cmoc/local` の ignore、起動 wrapper の error report、CLI parse error の stdout 変換など、複数の基礎 runtime 部品が同時に関わる失敗を調査するとき。
+- FileAccessMode ごとの書き込み許可 root、extra writable path、oracle conflict write、repo-local read など、Codex sandbox profile の許可境界を変更・確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックだけを確認したい場合は、そのサブコマンドを直接検証するテストや実装へ進む。
-- oracle file の正本仕様そのものを確認したい場合は、対応する oracle doc または oracle src を読む。
-- UI 表示、LLM 出力品質、生成内容の意味評価など、基礎 runtime 契約ではない領域を調べる場合は対象外。
-- 単一 helper の内部実装だけを局所的に変更し、root 状態・CLI wrapper・profile・config などの共通 runtime 境界に影響しないことが明らかな場合は、より近い実装ファイルと狭いテストを優先する。
+- 特定サブコマンド固有の business logic、prompt 内容、oracle review/apply/session の詳細フローだけを調べたいときは、そのサブコマンドや対象 module のテストを直接読む。
+- 単一 helper の内部実装だけを確認したい場合で、外部挙動や runtime 共通契約の回帰を見ないときは、対応する implementation file を先に読む。
+- INDEX.md 生成規則や oracle file の記述方針そのものを調べたいときは、routing/index/oracle standard 側の文書を読む。
 
 ## hash
-- 62e892f5a46177a48411cfe9f3209361c87d83e512f7a46bd4438f0510400a2d
+- a0b32d1c9b398ef5920dad3b6c9437f90324e2dca0a310b5c3f4b2c601e8086a
 
 # `test_cli_tui.py`
 

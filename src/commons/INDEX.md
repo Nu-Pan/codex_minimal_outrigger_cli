@@ -405,17 +405,17 @@
 # `runtime_state.py`
 
 ## Summary
-- cmoc 管理 branch と session state file の対応を扱う永続化モデル。session/apply の state 断片、JSON schema 検証、canonical JSON 書き戻し、branch 名からの session_id 抽出、home branch に紐づく active session 探索を担う。
+- session state file の永続化モデルと読み書き処理を担う。session/apply の state 断片、branch 名からの session_id 抽出、現在 branch に対応する state 読み込み、canonical JSON 書き戻し、home branch に紐づく active session 探索を扱う。
 
 ## Read this when
-- session state file の構造、必須 field、許可される state 値、欠落 field の扱いを確認・変更したいとき。
-- cmoc 管理 branch 名から session_id を特定する処理や、session/apply branch 判定のエラー挙動を確認・変更したいとき。
-- session state file の読み込み、保存先決定、canonical JSON 書き戻し、active session 探索に関わる処理を追うとき。
+- session state file の JSON schema、欠落 field、不正 state、保存形式に関わる挙動を確認・変更したいとき。
+- cmoc 管理 branch 名から session_id を特定する処理、または session/apply branch 上で state file を読み込む処理を確認・変更したいとき。
+- home branch に対応する active session の探索条件を確認・変更したいとき。
 
 ## Do not read this when
-- CLI サブコマンドの引数定義や利用者向け出力だけを確認したいとき。
-- git 操作そのものの実行処理や branch 作成・削除の手順を確認したいとき。
-- runtime path のディレクトリ定義だけを確認したいとき。
+- session state file の保存ディレクトリなど runtime path の組み立てだけを確認したいときは、runtime path を扱う対象を読む。
+- CmocError の表示形式や例外クラス自体を確認したいときは、runtime error を扱う対象を読む。
+- session/apply/abandon など各サブコマンドの利用者向け制御フローを確認したいときは、該当コマンド実装を読む。
 
 ## hash
-- d608145646343b8c53fb1f215b685f21693e0ada024aee1bbbd2f2b2abe8961e
+- a9b62b64b304d58d929898813350f1f806a919e435b8ba036a23c109c1509fde
