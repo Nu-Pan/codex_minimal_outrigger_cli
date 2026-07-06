@@ -77,26 +77,25 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行を通じて、所見列挙、適用、commit、変更要約、report 出力、session state 更新までの制御を検証するテスト。
-- apply fork report の収束、未収束、error、変更ファイル再調査、rolling fork、禁止領域汚染時の扱い、変更要約生成の差分対象をまとめて扱う。
-- apply fork 用 ACP builder の import 条件、prompt 内容、schema 参照先も、CLI レポート検証と同じ apply fork 制御の入口として確認する。
+- CLI 経由の apply fork 制御を、所見列挙、所見適用、commit、変更要約、report 生成、session state 更新まで一連の挙動として検証するテスト。
+- apply fork 用 ACP builder の import 可能性、prompt/schema の接続、変更ファイル再調査、収束・未収束・error report、未追跡/削除済み file の変更要約、rolling apply fork の対象選定を扱う。
+- apply fork report の期待値と loop 制御の観測文脈を一箇所に集めることで、report schema と再検査制御の関係を追える入口になる。
 
 ## Read this when
-- apply fork の report 内容、終了コード、収束判定、未収束判定、error report、所見数推移、変更内容要約の期待値を確認したいとき。
-- apply fork が所見適用後に変更ファイルや新規ディレクトリ配下を再調査する制御を変更・調査するとき。
-- apply fork の commit 作成、commit message、apply branch、session state 更新、rolling fork の対象範囲を確認するとき。
-- apply fork report 用の変更要約が未追跡ファイル、削除済み tracked file、Codex の空要約、commit 前の working tree 差分をどう扱うか確認するとき。
-- apply fork 用 ACP builder の prompt、Structured Output schema path、packaged layout や src のみの PYTHONPATH での import 可否を変更するとき。
-- 所見適用が oracle などの禁止領域を書き換えた場合に、apply fork が事後修復を呼ばない挙動を確認するとき。
+- apply fork の CLI 実行結果、終了コード、report 内容、session state 更新、apply branch の commit 結果を変更または調査する。
+- apply fork が所見適用後に変更 file や新規ディレクトリ配下を再調査する条件、収束・未収束の判定、上限到達時の扱いを確認する。
+- apply fork の error report や変更要約が、commit 前差分、未追跡 file、削除済み tracked file をどう扱うかを確認する。
+- apply fork 用 ACP builder の prompt、Structured Output schema path、packaged layout での import、禁止領域書き込み時の挙動を確認する。
+- rolling apply fork が前回 apply join 後の oracle 変更だけを対象にするかを調査する。
 
 ## Do not read this when
-- apply fork の内部 helper 単体の細かい実装だけを確認したい場合で、CLI からの一連の report・session state 観測が不要なとき。
-- apply fork 以外の subcommand、session fork/join 単体、doctor、Codex runtime 一般の挙動を調べるとき。
-- oracle 文書や realization standard の正本内容そのものを確認したいとき。
-- INDEX.md エントリー生成やルーティング文書の形式だけを確認したいとき。
+- apply fork の内部 helper 単体の実装だけを確認したい場合は、実装側の該当モジュールを直接読む。
+- apply join、session fork、doctor など apply fork report 以外の CLI 挙動だけを調査する場合は、それぞれの専用テストまたは実装を読む。
+- ACP builder 全般の共通構造や oracle schema 自体を確認したい場合は、builder 実装または oracle 側の定義を読む。
+- report 内容を伴わない単純な git 操作 helper、テスト fixture、実行支援関数の詳細だけを確認したい場合は、共通 test support を読む。
 
 ## hash
-- 9b9a8659985bb78d8115f26a6d302f92ccedd80133792e40a0da514abac4102f
+- f7fc8307f5c3e4f0bf58dbf73a36a4b57ee9c714f53b982f093d6494601e8fef
 
 # `test_apply_join_cli.py`
 
@@ -205,39 +204,41 @@
 # `test_codex_runtime_exec_post_validation_forbidden.py`
 
 ## Summary
-- Codex CLI 実行後に、実行中の forbidden file access 差分を事後検証で拒否しないことを検証するテスト群。oracle 配下、.git 配下、引用符や空白を含む oracle path、README.md、既存の forbidden 差分、session join conflict 対象を扱い、schema retry や非ゼロ終了時の挙動も確認する。
+- Codex CLI 実行後の差分検証が、許可されない oracle 側変更を検出して CmocError にすることを検証する realization test。
+- schema retry、既存の禁止差分、引用符や空白を含む oracle path、session join resolution の許可対象外差分など、post validation の境界条件を扱う。
+- 非ゼロ終了時や .git 配下変更時には post validation の禁止差分判定を優先しないこと、許可された realization 側変更は通すことも確認する。
 
 ## Read this when
-- Codex CLI 呼び出し後の file access post validation の有無や対象範囲を変更する時。
-- run_codex_exec が forbidden path への書き込みを見つけた時に再試行・失敗・巻き戻しを行うべきかを確認する時。
-- schema validation retry、非ゼロ終了、allow_oracle_conflict_writes、extra_writable_paths と forbidden diff の関係を調べる時。
+- Codex CLI 実行後に禁止差分を検出する処理、特に oracle への書き込み検出や preexisting diff との差分比較を変更する時。
+- FileAccessMode、extra_writable_paths、allow_oracle_conflict_writes、schema retry が post validation とどう相互作用するかを確認したい時。
+- Codex CLI の終了コード、turn.completed、output-last-message 周辺の失敗処理と差分検証の優先順位を変更・調査する時。
 
 ## Do not read this when
-- Codex CLI に渡す引数、環境変数、sandbox 設定の組み立てだけを調べる時。
-- file access rule の定義や path 分類そのものを調べる時。
-- Codex CLI の stdout event parsing や output-last-message 読み取りだけを変更する時。
+- Codex CLI の引数構築、モデル選択、capacity wait など、差分検証後の禁止ファイル判定に関係しない実行制御だけを扱う時。
+- oracle/realization のファイル分類ルールそのものや path model の正本仕様を確認したい時。
+- 通常の realization ファイル編集許可や README 更新許可だけを確認したい場合で、post validation の失敗条件に踏み込まない時。
 
 ## hash
-- 16d397a8bbb52f49de8c29f5076e936a4e0c0988c7ed16192e028fc7ab817581
+- 67adc5ced4af290ed713f19b63f51d7f73477533ba01abe6572425d6a5ba6c54
 
 # `test_codex_runtime_exec_post_validation_runtime.py`
 
 ## Summary
-- Codex 実行後のファイル差分検証で、無視対象・一時キャッシュ・仮想環境・cmoc ログ・制限ディレクトリ内の許容差分が再試行や失敗扱いにならないことを確認するテスト群。
-- 擬似 codex 実行ファイルで実行後差分を作り、FileAccessMode ごとの post validation と sandbox profile の writable_roots 境界を検証する。
+- Codex 実行後のファイルアクセス検証について、実行時に発生し得る差分の許可・拒否境界を確認するテスト群。無視された生成物、一時キャッシュ、仮想環境、cmoc ログ、ブロック対象ディレクトリ配下の扱いを、アクセスモード別の外部挙動として検証する。
 
 ## Read this when
-- run_codex_exec の実行後ファイルアクセス検証、差分許容条件、または FileAccessMode ごとの扱いを変更する時。
-- git ignore された成果物、一時キャッシュ、.venv、.cmoc/local ログ、memo・.agents・.codex・.git 配下の実行時生成物を許容する条件を確認したい時。
-- Codex 用 sandbox profile が .agents を writable_roots に含めないことを検証するテストを探す時。
+- Codex 実行後の禁止差分検出や許容差分の判定を変更する。
+- readonly、realization write、repo write の各アクセスモードで、実行後に残るファイル差分の扱いを確認する。
+- git ignore された生成物、一時キャッシュ、仮想環境、cmoc ログ、ブロック対象ディレクトリ配下の差分が許可される条件を調べる。
+- Codex 用 sandbox profile の writable roots に、書き込み禁止領域が含まれないことを検証したい。
 
 ## Do not read this when
-- Codex 実行プロセスの起動引数、出力 JSON、イベント処理そのものの正常系・異常系を確認したいだけの時。
-- ファイルアクセスモードの定義やパス分類ロジックの実装を確認したい時。
-- oracle file と realization file の概念仕様やルーティング文書生成規則を確認したい時。
+- Codex プロセスの起動引数、標準出力イベント、最終メッセージの通常処理だけを確認したい。
+- ファイルアクセス分類そのものやパス種別の定義を調べたい。
+- Codex 実行後の差分検証に関係しない CLI コマンド、設定読み込み、リポジトリ作成補助のテストを探している。
 
 ## hash
-- 115e61bbe3bbe1d58835956060b0cc8d9f36b126b18d47c2627f5e5f196ac905
+- 2b0bbc11e7e1f8f93ffd626e7d0a887566000327ecb4a3e190c9c33e9fceea8f
 
 # `test_codex_runtime_home.py`
 
@@ -281,20 +282,20 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex CLI 実行ラッパーの再試行制御を検証する realization test。構造化出力の schema 不一致、出力ファイル欠落・空・JSON 破損、モデル capacity、quota/capacity 文言の検出範囲、再試行時の call log と subcommand log の外部挙動を扱う。
+- Codex CLI 実行ラッパーのリトライ挙動を検証する realization test。構造化出力の schema 不一致・JSON 解析失敗・capacity エラー時の再試行、call log と subcommand log の記録、capacity retry 後の file access violation 検出、stdout JSONL 外のエラーマーカーをリトライ条件にしないことを扱う。
 
 ## Read this when
-- Codex CLI 呼び出しの retry 条件、成功判定、失敗詳細、call log 記録、subcommand log イベントを変更または調査する時。
-- 構造化出力の parse/schema validation 失敗後に再試行する挙動、または capacity retry 中の file access post validation の扱いを確認する時。
-- stdout JSONL の error event と、stderr や通常 stdout に出た同一文言を区別する挙動を確認する時。
+- `run_codex_exec` のリトライ条件、構造化出力検証、capacity/quota エラー判定、call log 記録、または `codex_call` イベントの status を変更・確認する。
+- Codex CLI 呼び出し失敗時に、出力ファイル、stdout/stderr、JSONL イベント、または file access violation をどう扱うかを調べる。
+- `commons.runtime_codex` の外部挙動に関する回帰テストを追加・整理する。
 
 ## Do not read this when
-- Codex CLI の通常起動引数、sandbox 設定、prompt 組み立てだけを確認したい時。
-- agent call parameter や設定値のデータ構造そのものを調べたい時。
-- retry を伴わない単純なログ出力やリポジトリ fixture の作成方法だけを確認したい時。
+- Codex CLI 呼び出しの通常成功経路だけを確認したい場合は、より直接その基本実行を検証するテストを読む。
+- agent call parameter、config、logger、テスト用 repo 作成 helper の定義だけを調べたい場合は、それぞれの実装または support 側を読む。
+- oracle file や INDEX.md の仕様・ルーティング規則自体を確認したい場合は対象外。
 
 ## hash
-- 118abe8694a4f2e5aa72946ec6b81d5fe4b3dd16e53c0fc49afa13326f3907f5
+- 36bbd2e896572cbf17dce5a12fd44ebddfe4b4f24f7d4b1a6f15f738f1274513
 
 # `test_codex_runtime_subprocess.py`
 
@@ -377,22 +378,23 @@
 # `test_indexing_preflight.py`
 
 ## Summary
-- Codex 実行前の indexing preflight が、exec/TUI 呼び出しの前に INDEX 更新を行い、更新結果を indexing commit として残し、作業ツリーを clean に保つことを検証するテスト群。
-- preflight 対象 root の選択、repository lock 待機、パラメータによる preflight 無効化、file access violation 後に recovery 用 indexing を追加実行しないことを扱う。
+- Codex 実行前に INDEX 更新の preflight が走ること、更新が commit され worktree が clean に戻ること、実際の Codex 呼び出し順序が保たれることを検証する pytest。
+- preflight 対象 root の選択、repository lock 待機、AgentCallParameter による preflight 無効化、file access violation 時に recovery 側の追加 indexing が走らないことを扱う。
+- 実 git repository、fake Codex executable、monkeypatch した indexing 更新処理を使い、commons.runtime_codex_preflight と commons.indexing の連携挙動を外部挙動として確認する。
 
 ## Read this when
-- Codex runtime wrapper が indexing preflight をいつ実行するか、または実行しないかの外部挙動を確認・変更するとき。
-- cwd が別 worktree 内にある場合に、渡された root ではなく cwd 側 worktree を indexing 対象にする挙動を確認するとき。
-- indexing lock による排他制御、待機順序、並行実行時の preflight 呼び出しを変更するとき。
-- AgentCallParameter の preflight 無効化フラグや、file access violation 後の再実行・回復処理と indexing の関係を確認するとき。
+- Codex call または TUI call の前に indexing preflight が実行される条件や順序を変更する。
+- cwd が別 worktree 内にある場合の indexing 対象 repository の選択ロジックを変更する。
+- indexing lock、preflight の有効化・無効化、AgentCallParameter の indexing preflight フラグに関わる制御を変更する。
+- Codex 実行失敗や file access violation 後の recovery 処理と indexing preflight の関係を確認する。
 
 ## Do not read this when
-- INDEX 生成内容そのもの、エントリー文面、ファイル走査規則の詳細を確認したいだけなら、indexing 実装またはその単体テストを読む。
-- Codex CLI プロセス起動、設定、出力 JSON 処理など、preflight 以外の runtime 実行詳細だけを確認したい場合。
-- git repository や test 用 Codex home の fixture 作成方法だけを確認したい場合は、共通 test support を読む。
+- INDEX.md 生成内容そのもの、各 entry の文面、indexing 対象ファイル探索の詳細だけを確認したい場合。
+- Codex CLI の引数組み立てや subprocess 実行一般を確認したいが、indexing preflight との連携を扱わない場合。
+- oracle/realization のファイルアクセス規則そのものを確認したい場合。
 
 ## hash
-- 53add1f54659fea880475e18a941754e100865991782abe1acb7cc4bc800827d
+- 08f486a6d0b17bc60b01a7f81985a2be47ad9ce3233d4c0c2e65be6a55281410
 
 # `test_packaged_import.py`
 
