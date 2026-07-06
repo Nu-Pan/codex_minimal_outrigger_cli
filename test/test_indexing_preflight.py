@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 
 from _support import (
