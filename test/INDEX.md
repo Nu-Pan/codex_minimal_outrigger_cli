@@ -395,23 +395,23 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle と eval-oracle の CLI 外部挙動を検証するテスト群。report の構成・件数・所見分類、対象 oracle file の列挙、session/full scope、linked worktree、INDEX.md 変更の取り込み、異常時 report、review 実行中に許される差分境界を扱う。
-- 所見 loop の列挙・検証・judge・merge の制御、merge operation の契約、semantic retry、同一 round の challenger/advocate 文脈伝播を確認する。
+- review oracle の CLI 経由の外部挙動を検証するテスト。report の生成内容、scope 別の対象選択、finding の列挙・検証・judge・merge、エラー時 report、review 用 worktree と join commit、INDEX.md だけを反映する制御を扱う。
+- eval-oracle が review oracle 実装へ委譲すること、oracle_path placeholder の解決、oracle file 定義に基づくレビュー対象列挙も同じ review oracle 実行文脈の一部として検証する。
 
 ## Read this when
-- review oracle CLI の出力 report、scope 解釈、対象 oracle file の選択、または review 用 worktree と join commit の扱いを変更する。
-- review oracle の所見 loop、finding の accept/reject 分類、merge operation、semantic retry、validate/judge の prompt 文脈を変更する。
-- eval-oracle から review oracle への委譲、または review 実行中に生成された INDEX.md だけを session 側へ反映する制御を変更する。
-- oracle file 定義に関わる tracked ignored file、symlink、INDEX.md/AGENTS.md 除外、uncommitted oracle file の扱いを確認したい。
-- review oracle 実行中の非 oracle 未コミット差分、非 INDEX.md 生成差分、処理失敗時の error report の挙動を確認したい。
+- review oracle CLI の出力 report、終了コード、scope の意味、finding の分類・件数・表示順を変更または調査する時。
+- review oracle の finding loop、merge operation の契約、semantic retry、validate challenger/advocate/judge の呼び出し文脈を変更または調査する時。
+- review oracle が session branch、linked worktree、review fork commit、review_join_commit、INDEX.md 生成差分をどう扱うか確認する時。
+- oracle file の対象列挙で、tracked ignored file、untracked ignored file、symlink、AGENTS.md、INDEX.md、memo 配下との境界を確認する時。
+- eval-oracle サブコマンドと review oracle 実装の接続、または finding の oracle_path 解決を変更する時。
 
 ## Do not read this when
-- review oracle 以外の review サブコマンドや通常の index 生成だけを調べる場合。
-- Codex 実行 wrapper、設定 loader、session fork の内部実装だけを確認したく、review oracle CLI の外部挙動に触れない場合。
-- oracle file の正本仕様本文そのものを確認したい場合。
+- review oracle 以外の review 種別、通常の session 操作、doctor、index 生成単体の仕様だけを調べたい時。
+- Codex 実行 wrapper、config 読み込み、git helper などの汎用部品の内部実装だけを調べたい時。
+- oracle file 本文の仕様内容や INDEX.md エントリーの生成規則そのものを確認したい時。
 
 ## hash
-- 4cd5f4663c0eadfcd545b7284b99137509d45c4bb7a378b84c3614fa0ecc6a20
+- a26c86b7dce7b08a593ef4b835e1a764e5719e3d4b94362231d8a55f0906a245
 
 # `test_session_cli.py`
 

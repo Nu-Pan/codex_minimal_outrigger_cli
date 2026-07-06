@@ -134,18 +134,18 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の利用者向けサブコマンド実装をまとめる領域で、session、apply、review oracle、indexing、TUI、doctor、eval oracle などの実行入口と制御フローへのルーティング起点となる。
-- 各サブコマンド固有の事前条件、状態遷移、branch/worktree/process 管理、Codex 呼び出し、merge、cleanup、report 生成、runtime への委譲を扱う下位対象を選ぶために読む。
+- cmoc の各サブコマンド実装をまとめる領域で、apply、session、review oracle、indexing、tui、doctor、eval oracle などの実行入口と、サブコマンド固有の制御ロジックへの入口を提供する。
+- サブコマンドごとの package 境界、CLI runtime への委譲、git/worktree/state/Codex 呼び出し/report/cleanup などの orchestration を扱い、必要に応じて下位対象へ読み進めるための分岐点になる。
 
 ## Read this when
-- どのサブコマンド実装へ進むべきかを、利用者向け操作や workflow 単位で判断したいとき。
-- session や apply の lifecycle、review oracle の対象列挙・review loop・report・INDEX merge、indexing の起動制御、TUI 起動、doctor や eval oracle の委譲先を探したいとき。
-- サブコマンド間で、開始条件、失敗時処理、状態更新、branch/worktree 操作、report 保存、runtime 共通処理への接続の責務境界を確認したいとき。
+- cmoc のサブコマンド実装の入口を探し、対象操作に対応するファイルまたは下位ディレクトリを選びたいとき。
+- apply run、session lifecycle、review oracle、INDEX.md maintenance、TUI 起動、doctor preprocess、eval oracle の実行経路や責務境界を確認したいとき。
+- サブコマンドが CLI runtime、共通 git/worktree helper、state、Codex 呼び出し、report 生成などへどのように接続されるかを追い始めたいとき。
 
 ## Do not read this when
-- CLI runtime、git/worktree helper、state file schema、path model、Codex 実行 wrapper など、複数サブコマンドで使う共通処理そのものを調べたいとき。
-- oracle file や realization file の定義、INDEX.md エントリー作成規則、各サブコマンドの正本仕様を確認したいとき。
-- 具体的に読むべきサブコマンドや下位実装が既に決まっており、その対象へ直接進めるとき。
+- CLI 全体のサブコマンド登録、Typer app 構成、共通 runtime、共通 git/worktree helper、state file schema、path model の定義だけを確認したいとき。
+- oracle file や realization file の定義、INDEX.md エントリー作成規則、正本仕様文書そのものを確認したいとき。
+- 読むべき具体的なサブコマンド実装または共通 helper が既に決まっており、その対象へ直接進めるとき。
 
 ## hash
-- bc3baf6d2c4da940b9893ce830f0a56f89b0a3d29fd646e986ddce08844e9cce
+- a4705423cff1e0fce00ccf1e8a14b4310ba1adfddcc2faefd84412b33228e4c8
