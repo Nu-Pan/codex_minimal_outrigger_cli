@@ -16,7 +16,7 @@
 
 ## 実行手順
 
-1. `<work-root>/.cmoc` が git の追跡対象外であることを保証する
+1. doctor preprocess を呼び出す
 2. オリジナルプロンプトをユーザーからエディタ入力
 3. 必要なパラメータを agent call で決定
 4. AI Agent CLI/TUI を起動

@@ -19,18 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP builder 配下の realization 側入口をまとめる領域。oracle 側 builder を正本に保ちながら、旧来の `acp.builder` import 経路、apply/review/session/tui/indexing などの互換 package、quota probe 用の軽量 builder へ進むためのルーティング起点になる。
-- 主な責務は、canonical oracle 実装への中継、既存参照を壊さない再 export、必要最小限の realization 側適応、各 builder 領域の削除条件や互換維持理由の確認入口を分けることにある。
+- acp builder 配下で、oracle 側 builder 実装を正本に保ちながら旧来の acp.builder 系 import 経路を成立させる realization 側互換入口を束ねる階層。
+- apply、review、session、tui、indexing などの builder 群について、canonical oracle 実装への中継、再公開、薄い wrapper、削除条件を確認するための入口になる。
+- quota 回復確認用の最小 agent call parameter builder など、通常 builder とは異なる限定用途の実装も含む。
 
 ## Read this when
-- ACP builder 全体で、旧 import path 互換、oracle 側 canonical builder への委譲、realization 側公開型への適応境界のどこを読むべきか選びたいとき。
-- apply fork、review oracle、session、TUI、indexing、quota probe などの agent call parameter builder 領域を横断して、該当する下位 package または module への入口を探すとき。
-- `acp.builder.*` 参照の移行・削除・互換維持を検討しており、どの互換入口がどの責務を持つか切り分けたいとき。
+- acp.builder.* の旧 import 互換性や、既存参照を oracle 側実装へ接続する仕組みを確認したいとき。
+- apply、review、session、tui、indexing の agent call parameter builder について、realization 側の互換入口、再公開、wrapper、削除可否を調べたいとき。
+- oracle 側 builder を呼び出した結果を realization 側公開型や既存公開名へどう適合させるかを確認したいとき。
+- quota wait 中の回復確認で使う低コストな probe 用 agent call parameter の構築内容を確認・変更したいとき。
 
 ## Do not read this when
-- oracle 側 builder の正本 prompt、canonical 実装、生成内容そのものを確認したい場合は、対応する oracle 側の実装や doc を直接読む。
-- ACP parameter の共通型、汎用 git helper、path model、CLI 実行フロー、TUI 描画、apply/review/session の本体挙動など、builder 入口や import 互換と無関係な詳細を調べたい場合は、それぞれの実装領域へ進む。
-- 個別 builder の変換処理、wrapper の詳細、quota probe の呼び出し制御など読む対象が既に特定できている場合は、この階層ではなく該当する下位 module または呼び出し元を直接読む。
+- 各 builder の正本仕様、prompt、生成内容、人間意図を確認したい場合は、対応する oracle 側 builder を読む。
+- apply fork、review、session、TUI など各機能全体の実行フローや CLI 制御を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
+- ACP parameter の公開型、path model、汎用 git helper、index entry 生成仕様など、builder 互換入口以外の共通実装を調べたい場合は該当対象を読む。
+- 新規機能の実装場所を探しているだけで、既存 acp.builder import 互換や quota probe に関係しない場合。
 
 ## hash
-- cb74f5bae750efd7e34355906d2dbf73619b6c92f710c13d85f84d87e1ecdf03
+- 110915aad540f1dfc04662648e2159e9f044eabe48fc1f5e3bb982a5458e0fcb

@@ -1,18 +1,6 @@
 
 # cmoc の作業品質
-
-## テスト周りをもうちょっとちゃんとする
-
-- ローカル SLM でのテストを組み込む
-    - テスト時はローカルで SLM サーバーを立ててそれを使う (`<repo-root>/.cmoc/config.json` 経由で注入)
-- テストの仕様をもうちょっと真面目に書く
-    - テストの実行パスくらいは固定死体
-
-## cmoc 注入プロンプトとリポジトリ固有指示の整合性を取りたい
-
-- ファイルアクセス規則系とか、今はたまたまセーフなだけで普通に危ない
-- oracle の開発ルール系も合わせて見直したい
-
+    
 ## OpenAI 公式のベストプラクティスを取り入れる
 
 - [Reasoning best practices | OpenAI API](https://developers.openai.com/api/docs/guides/reasoning-best-practices)
@@ -23,6 +11,12 @@
 - [Prompt caching | OpenAI API](https://developers.openai.com/api/docs/guides/prompt-caching?utm_source=chatgpt.com)
 - [Prompt engineering | OpenAI API](https://developers.openai.com/api/docs/guides/prompt-engineering)
 - [Best practices for prompt engineering with the OpenAI API | OpenAI Help Center](https://help.openai.com/en/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api)
+
+## AGENTS.md 復活させる
+
+- cmoc 自体の説明とか、ディレクトリ構成とか、テストコマンドとか、いろいろ書ける余地はありそう
+- これはつまり `<repo-root>` が cmoc の開発対象としての用件を満たしているかのチェックの話なので `cmoc doctor scaffold` みたいなの用意して自動チェック化したい
+- 既存の `cmoc doctor` は `cmoc doctor fundamental` とかだろうか
 
 ## コメントをめっちゃ書かせたい
 
@@ -36,6 +30,18 @@
     - この実装でなければならない根拠
     - あえて取らなかった実装方針とその根拠
     - 対応する oracle file が存在するなら、そのファイルパス (`<work-root>` 起点で)
+
+## ファイル別をやる前に、差分ベースの普通の apply をやったほうが良いかも
+
+- リポジトリ全体に対する「oracle file にこういう修正いれたから追従させて」を先にやる
+    - 一発でうまくいくわけ無いので、所見リストアップ --> 実装を繰り返し実行
+    - もう所見ないよって言われるまで繰り返し
+    - その後で、仕上げにファイル単位の網羅的チェックを行う
+- 気持ち
+    - ファイル単位調査だと、ファイル個別の事情に釣られやすそう
+    なので「抜け漏れは有るかもしれないが、大筋対応出来ている」な状態を先に作る
+    - その後であれば、ファイル単位修正が多少近視眼的でも大きな問題にはならないはず
+    - 実際、人力での開発の時も、大抵はそんな流れのはず
 
 ## ファイル配置の階層化を組み込む
 
@@ -131,6 +137,10 @@
 - 所見を必ず守らなくても良いとしている
 - であれば完了条件はある程度の柔軟性が求められるはず
 
+## git commit のコメント実は大事説
+
+- agent が過去の変更内容を参照する時のヒントとして重要かも
+
 ## `review oracle` に用語統一機能を組み込みたい
 
 - 用語リストに基づいたファイル別チェックを駆使すれば、かなり安く行けるはず。
@@ -138,6 +148,17 @@
 - oracle の規模が大きくなってきて、用語統一が大変だと感じるようになってきたので、早めに欲しい
 - あと、 AI に提供するインデクシング情報としても有用なはず
     - ワードの統一が保証されているのであれば、検索ベースの関連文章検索の信頼度が上がる
+
+## 「並列処理 --> マージ」コンセプト
+
+- 複数エージェントに全く同じ作業をやらせて、その結果を１つにマージすれば、調子がいい時の結果を得られる確率が上がるはず、みいたいなやつ
+- 当然ながら、トークン消費は激しい
+- SLM バックエンドでできるだけ高い性能を得たいならこれか？
+
+## `AGENTS.md` の扱いが宙ぶらりん
+
+- 今は `cmoc tui` からの起動を前提として、`AGENTS.md` を消している
+- 若干の気持ち悪さがある
 
 # トークン消費効率
 
@@ -250,7 +271,16 @@
 
 - 普通に考えて、ちゃんとカテゴライズするべき
 
+# 実行時間短縮
+
+なし
+
 # cmoc ワークフロー
+
+## コマンドの並び順がおかしい
+
+- `cmoc review oracle` じゃなくて `cmoc oracle review` だよなぁ
+- `cmoc <category> <action>` だろう
 
 ## `cmoc apply join` にも自動マージを組み込む
 
@@ -315,6 +345,11 @@
 
 - 古いステートファイルが検証で引っかかって…みたいな事が平気で起きる
 
+## cmoc managed ollama のシャットダウン
+
+- 今は立ち上がりっぱなしということにしている
+- Ubuntu (WSL2) 上で動かす場合、ホストの Windows 11 とリソース共用なので、不要になったらシャットダウンということにしたい
+
 # 補助的なサブコマンド
 
 ## `cmoc review session`
@@ -356,14 +391,6 @@
 - apply が完了扱いか未完了扱いか
 - merge 可能そうか
 
-## `cmoc dector` サブコマンド
-
-- codex が呼べるか
-- Structured Output が使えるか
-- .cmoc が gitignore されているか
-- oracle/INDEX.md があるか
-- 必要な git 状態か
-
 ## `cmoc kaizen fork` サブコマンド
 
 - cmoc 自体を改善するための情報を収集してレポートする機能
@@ -395,3 +422,4 @@
 - 例えば、登場人物は「名前＋説明」みたいな辞書形式で書ける
 - そうやって、無理のない範囲で構造化して、機械的処理の適性を改善したい
 - 「LLM っていう自然言語を解釈可能な情報処理モジュール」の存在を前提とした新しい言語が必要
+

@@ -62,18 +62,18 @@
 # `test_rule.md`
 
 ## Summary
-- cmoc の自動テスト実装に関する正本仕様断片。pytest の使用、テスト配置先、正規の Codex CLI に依存するテストの禁止、Fake Codex CLI による代替の許容を定める。
-- テスト対象を、git 状態検査、作業ディレクトリ決定、対象ファイル列挙などの決定論的な制御ロジックに限定し、Codex CLI や LLM の挙動・出力品質を自動テストの対象外にする境界を示す。
+- cmoc の自動テストを書く際の正本仕様断片。pytest、realization test の配置、検証対象と非対象、テスト用リポジトリ環境、Real Codex CLI 呼び出し時の provider/model、Fake Codex CLI の使い分けを扱う。
 
 ## Read this when
-- cmoc のテストを追加・変更し、どの種類の挙動を自動テストで検証してよいか判断したいとき。
-- Codex CLI 呼び出しを含むテスト設計で、正規の Codex CLI への依存を避けるべきか、Fake Codex CLI を使ってよいか確認したいとき。
-- 実装した制御ロジックに対して、pytest で検証すべき範囲と、LLM や Codex CLI 自体の品質確認に踏み込まない境界を確認したいとき。
+- cmoc の realization test を追加・変更する。
+- テストで Real Codex CLI、cmoc managed ollama、Fake Codex CLI のどれを使うべきか判断する。
+- テスト環境を tmp_path 配下にどう構築するか、または有料クラウド backend を避ける条件を確認する。
+- LLM の回答品質、Codex CLI の仕事の意味的成功、cmoc が責任を持つ制御・結合動作の境界を確認する。
 
 ## Do not read this when
-- テスト方針ではなく、cmoc 本体の CLI 仕様、path model、git 操作、作業ディレクトリ決定など個別機能の正本仕様を確認したいとき。
-- pytest の一般的な書き方、fixture 設計、テスト実装の詳細パターンだけを知りたいとき。
-- Codex CLI や LLM の実際の応答品質、プロンプト品質、生成結果の妥当性を評価する方法を探しているとき。
+- cmoc の実装コードの構造や通常実行時の挙動だけを確認したい。
+- テストに関係しない oracle doc、oracle src、または CLI 仕様を探している。
+- Codex CLI や外部 provider そのものの正しさ・安定性を検証する仕様を探している。
 
 ## hash
-- e089c0f9f2dc35b7d188a96f58e35da3501bd049dc23499439995b5dffce31ae
+- ea44e203bd5af4e78236f8191f743556b71292a200b562d53a21c66272954071

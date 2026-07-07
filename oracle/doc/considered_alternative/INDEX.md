@@ -20,6 +20,25 @@
 ## hash
 - a3a005b892d1f98ae6278c59c8e740a94d42f92ef59987cf959c1432ea020309
 
+# `file_access_rule_violation_post_validation.md`
+
+## Summary
+- file access rule 違反を agent call 後の差分検査で検出し、違反時に別 agent call で回復する案を検討したが、false-positive と差分帰属判定の困難さにより断念した経緯を記録する。
+- 並列 agent 編集時の相互差分誤検出や、検査対象外にすべき gitignore 系の扱いが実装へ安定して反映されない問題を、断念理由の具体例として示す。
+
+## Read this when
+- file access rule 違反を事後検査で扱う方式を再検討するとき。
+- agent call が発生させた差分だけを判定対象にする設計の難しさや、false-positive による停止リスクを確認したいとき。
+- 過去に削除された post validation 系仕様の背景や、同種のリカバリー案を避けるべき理由を確認したいとき。
+
+## Do not read this when
+- 現行の file access rule の定義や禁止対象を確認したいだけのとき。
+- cmoc の現在の実装経路やテスト対象を探しているとき。
+- 検討済みで断念された代替案ではなく、採用済み仕様の根拠を確認したいとき。
+
+## hash
+- 0c38e6aa99ee1726277d40cf97e5cb8791d0189152aa730c09c7c8ed1b34721f
+
 # `gitignore_to_permission_profile.md`
 
 ## Summary

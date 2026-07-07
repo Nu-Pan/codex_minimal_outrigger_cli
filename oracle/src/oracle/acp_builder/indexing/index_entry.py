@@ -59,10 +59,14 @@ def build_indexing_index_entry_parameter(
         index_entry_standard=True,
     )
     # パラメータを生成して返す
+    # NOTE
+    #   この agent call は indexing preflight そのもの。
+    #   よって run_indexing_preflight=False が正しい。
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
+        False,
     )

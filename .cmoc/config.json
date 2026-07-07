@@ -2,15 +2,27 @@
   "num_parallel": 8,
   "codex": {
     "model": {
-      "efficiency": "GPT-5.4-mini",
-      "flagship": "GPT-5.5",
-      "mainstream": "GPT-5.5",
-      "minimum": "GPT-5.4-mini"
+      "mainstream": {
+        "model_provider": "codex",
+        "model": "gpt-5.5"
+      },
+      "flagship": {
+        "model_provider": "codex",
+        "model": "gpt-5.5"
+      },
+      "efficiency": {
+        "model_provider": "codex",
+        "model": "gpt-5.4-mini"
+      },
+      "minimum": {
+        "model_provider": "codex",
+        "model": "gpt-5.4-mini"
+      }
     },
     "reasoning_effort": {
-      "high": "high",
       "low": "low",
-      "medium": "medium"
+      "medium": "medium",
+      "high": "high"
     },
     "num_try_falv_recovery": 1
   },

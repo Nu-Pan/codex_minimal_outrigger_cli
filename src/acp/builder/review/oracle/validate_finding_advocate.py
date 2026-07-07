@@ -22,6 +22,7 @@ def build_review_oracle_validate_finding_advocate_parameter(
         parameter.file_access_mode,
         _fix_oracle_root_goal_typo(parameter.prompt),
         parameter.structured_output_schema_path,
+        parameter.run_indexing_preflight,
     )
 
 

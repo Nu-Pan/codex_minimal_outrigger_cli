@@ -3,14 +3,18 @@
 
 - cmoc の挙動設定のうち、開発対象リポジトリごとに変わりうる事柄は `CmocConfig` に集約する
 - `CmocConfig` は `<repo-root>/.cmoc/config.json` として永続化される
+- `CmocConfig` を json にシリアライズする際、メンバーの順序は保持される
 - Enum 系を継承したクラスのインスタンスは value 化して json に保存する
     - e.g. `ModelClass.MAINSTREAM` --> `mainstream`
-- `<repo-root>/.cmoc/config.json` は `cmoc init` によって生成・同期される
+- `<repo-root>/.cmoc/config.json` は `cmoc doctor` によって生成・同期される
 - `<repo-root>/.cmoc/config.json` は人間によって編集・調整される
 """
 
 # std
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Literal
+from enum import StrEnum, auto
 
 # cmoc
 from oracle.acp_builder.basic import ModelClass, ReasoningEffort
@@ -25,7 +29,7 @@ class CmocConfig:
     # AI エージェント呼び出しの最大並列数
     num_parallel: int = field(default=8)
 
-    # Codex CLI 用の設定
+    # Codex CLI 関係の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())
 
     # `cmoc apply fork` サブコマンドの挙動設定
@@ -40,18 +44,37 @@ class CmocConfig:
 
 
 @dataclass(frozen=True)
+class CodexModelSpec:
+    """Codex CLI 上のモデル指定"""
+
+    # model provider 設定
+    # codex:
+    #   Codex CLI 標準のモデル設定を使う
+    #   いわば未指定 (default)
+    # cmoc:
+    #   cmoc managed ollama を使う
+    model_provider: Literal["codex", "cmoc"]
+
+    # モデル名
+    model: str
+
+
+@dataclass(frozen=True)
 class CmocConfigCodex:
     """
     cmoc の設定 (config) のうち Codex CLI 向けの設定を集約したクラス
     """
 
     # `ModelClass` --> Codex CLI が受理可能な Model 名
-    model: dict[ModelClass, str] = field(
+    # NOTE
+    #   モデル名の未定義は禁止
+    #   モデル名は case sensitive なので注意
+    model: dict[ModelClass, CodexModelSpec] = field(
         default_factory=lambda: {
-            ModelClass.MAINSTREAM: "GPT-5.5",
-            ModelClass.FLAGSHIP: "GPT-5.5",
-            ModelClass.EFFICIENCY: "GPT-5.4-mini",
-            ModelClass.MINIMUM: "GPT-5.4-mini",
+            ModelClass.MAINSTREAM: CodexModelSpec("codex", "gpt-5.5"),
+            ModelClass.FLAGSHIP: CodexModelSpec("codex", "gpt-5.5"),
+            ModelClass.EFFICIENCY: CodexModelSpec("codex", "gpt-5.4-mini"),
+            ModelClass.MINIMUM: CodexModelSpec("codex", "gpt-5.4-mini"),
         }
     )
 

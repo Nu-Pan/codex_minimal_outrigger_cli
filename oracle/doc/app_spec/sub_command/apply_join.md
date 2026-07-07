@@ -44,20 +44,22 @@
 
 ## 実行作業
 
-1. `<cmoc-apply-branch>` 前準備
+1. doctor preprocess を呼び出す
+2. 事前条件を満たしている事を確認する
+3. `<cmoc-apply-branch>` 前準備
     1. `<cmoc-apply-branch>` を checkout
     2. `<cmoc-apply-branch>` 上の想定外の差分を…
         - 通常モード : レポート用に記録
         - 強制モード : revert して、その事をレポート用に記録
-2. `<cmoc-session-branch>` 前準備
+4. `<cmoc-session-branch>` 前準備
     1. `<cmoc-session-branch>` を checkout
     2. `<oracle-snapshot-commit>` から `<cmoc-session-branch>` HEAD までの間にあった (i.e. apply 実行中にユーザーが発生させた) 想定外の差分を…
         - 通常モード : レポート用に記録
         - 強制モード : rever して、その事をレポート用に記録
-3. 通常モード : レポート用の変更の有無が記録されている場合、それらをレポートしてコマンド終了
-4. `<cmoc-session-branch>` 上で `git merge --no-ff <cmoc-apply-branch>` を実行する。
-5. `<cmoc-session-state-file>` を更新する (e.g. `apply.state` を `ready` に遷移)
-6. 結果をレポート
+5. 通常モード : レポート用の変更の有無が記録されている場合、それらをレポートしてコマンド終了
+6. `<cmoc-session-branch>` 上で `git merge --no-ff <cmoc-apply-branch>` を実行する。
+7. `<cmoc-session-state-file>` を更新する (e.g. `apply.state` を `ready` に遷移)
+8. 結果をレポート
 
 ## merge conflict
 

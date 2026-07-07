@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import typer
 
 from cmoc_runtime import (
@@ -7,7 +5,6 @@ from cmoc_runtime import (
     branch_exists,
     current_branch,
     delete_branch,
-    ensure_cmoc_ignored,
     load_state_for_branch,
     repo_root,
     require_clean_worktree,
@@ -18,15 +15,13 @@ from cmoc_runtime import (
 )
 
 
-type CmocIgnoreSnapshot = tuple[bool, str, bool]
-
-
 def cmoc_session_abandon_impl() -> None:
     """CLI runtime を通して session abandon を実行する。"""
     run_cli_subcommand(
         _cmoc_session_abandon_body,
         command_name="session abandon",
         command_argv=["cmoc", "session", "abandon"],
+        use_work_root_runtime=True,
     )
 
 
@@ -50,11 +45,10 @@ def _cmoc_session_abandon_body() -> None:
             ["session state file と git branch の状態を確認してください。"],
             f"session_home_branch: {home}",
         )
-    ignore_snapshot = _cmoc_ignore_snapshot(work)
-    ensure_cmoc_ignored(work)
     try:
         run_git(["switch", home], work)
         state.session.state = "abandoned"
+        state.session.joined_at = None
         write_state(path, state)
         # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
         # requires preserving the home branch while deleting only the session branch.
@@ -65,32 +59,22 @@ def _cmoc_session_abandon_body() -> None:
                 ["git branch の状態を確認してください。"],
                 delete_result.stderr,
             )
-    except Exception as error:
+    except BaseException as error:
+        # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+        # treats user interruption during cleanup as a cleanup failure that must
+        # return the session to a rerunnable state.
         cleanup_detail = error.detail if isinstance(error, CmocError) else repr(error)
         rollback_errors: list[str] = []
         state.session.state = "active"
         try:
             write_state(path, state)
-        except Exception as rollback_error:
+        except BaseException as rollback_error:
             rollback_errors.append(f"state rollback failed: {rollback_error!r}")
-        try:
-            _discard_cmoc_ignore_changes_on_current_head(work, ignore_snapshot)
-        except Exception as rollback_error:
-            rollback_errors.append(f"cmoc ignore discard failed: {rollback_error!r}")
-        switched_back = False
         try:
             if branch_exists(repo, branch):
                 run_git(["switch", branch], work)
-                switched_back = True
-        except Exception as rollback_error:
+        except BaseException as rollback_error:
             rollback_errors.append(f"branch rollback failed: {rollback_error!r}")
-        if switched_back:
-            try:
-                _restore_cmoc_ignore_snapshot(work, ignore_snapshot)
-            except Exception as rollback_error:
-                rollback_errors.append(
-                    f"cmoc ignore rollback failed: {rollback_error!r}"
-                )
         details = [
             "cleanup error:",
             cleanup_detail,
@@ -119,39 +103,3 @@ def _cmoc_session_abandon_body() -> None:
             ]
         )
     )
-
-
-def _cmoc_ignore_snapshot(root: Path) -> CmocIgnoreSnapshot:
-    gitignore = root / ".gitignore"
-    return (
-        gitignore.exists(),
-        gitignore.read_text() if gitignore.exists() else "",
-        bool(run_git(["ls-files", "--", ".cmoc"], root).stdout.strip()),
-    )
-
-
-def _discard_cmoc_ignore_changes_on_current_head(
-    root: Path, snapshot: CmocIgnoreSnapshot
-) -> None:
-    # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
-    # Carried gitignore/index changes can block switching back to the session branch.
-    run_git(["restore", "--staged", "--", ".cmoc"], root, check=False)
-    run_git(["restore", "--worktree", "--", ".gitignore"], root, check=False)
-    gitignore = root / ".gitignore"
-    if not snapshot[0] and gitignore.exists():
-        gitignore.unlink()
-
-
-def _restore_cmoc_ignore_snapshot(root: Path, snapshot: CmocIgnoreSnapshot) -> None:
-    # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
-    # ensure_cmoc_ignored may mutate .gitignore and the index before cleanup fails.
-    gitignore_existed, gitignore_content, had_tracked_cmoc = snapshot
-    gitignore = root / ".gitignore"
-    if gitignore_existed:
-        gitignore.write_text(gitignore_content)
-    elif gitignore.exists():
-        gitignore.unlink()
-    if had_tracked_cmoc:
-        run_git(["restore", "--staged", "--", ".cmoc"], root, check=False)
-    else:
-        run_git(["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc"], root)

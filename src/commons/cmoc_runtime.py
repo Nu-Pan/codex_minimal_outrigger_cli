@@ -43,6 +43,7 @@ from commons.runtime_cli import (
     require_current_directory_is_work_root,
     run_cli_subcommand,
 )
+from commons.runtime_doctor import run_doctor_preprocess
 from commons.runtime_errors import CmocError, render_error
 from commons.runtime_git import (
     MANAGED_BRANCH_PREFIXES,

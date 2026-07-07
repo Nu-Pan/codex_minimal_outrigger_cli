@@ -20,12 +20,55 @@ from _support import (
     make_repo,
     run_git,
     runner,
+    run_doctor,
 )
-from cmoc_runtime import SessionState
+from cmoc_runtime import CmocError, SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app
+import sub_commands.eval_oracle as eval_oracle_module
 import sub_commands.review.oracle as review_module
+from sub_commands.review_paths import finding_oracle_path
 from sub_commands.review_targets import enumerate_review_all_oracle_files
+
+
+def test_eval_oracle_delegates_to_review_oracle_impl(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+
+    def fake_review_oracle_impl(scope: str) -> None:
+        calls.append(scope)
+
+    monkeypatch.setattr(
+        eval_oracle_module, "cmoc_review_oracle_impl", fake_review_oracle_impl
+    )
+
+    result = runner.invoke(app, ["eval-oracle", "-s", "full"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert calls == ["full"]
+
+
+def test_finding_oracle_path_rejects_relative_without_placeholder(tmp_path: Path) -> None:
+    assert finding_oracle_path({"oracle_path": "oracle/spec.md"}, tmp_path) is None
+    assert (
+        finding_oracle_path({"oracle_path": "<oracle-root>/spec.md"}, tmp_path)
+        == (tmp_path / "oracle" / "spec.md").resolve()
+    )
+
+
+def test_finding_oracle_path_resolves_work_root_from_review_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    review_parent = tmp_path / "review"
+    review_parent.mkdir()
+    unrelated = make_repo(tmp_path)
+    review_worktree = make_repo(review_parent)
+    monkeypatch.chdir(unrelated)
+
+    assert finding_oracle_path(
+        {"oracle_path": "<work-root>/oracle/spec.md"}, review_worktree
+    ) == (review_worktree / "oracle" / "spec.md").resolve()
 
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -33,8 +76,8 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     ancestor.mkdir()
     root = make_repo(ancestor)
     monkeypatch.chdir(root)
-    init_result = runner.invoke(app, ["init"], catch_exceptions=False)
-    assert init_result.exit_code == 0
+    doctor_result = run_doctor(root)
+    assert doctor_result.exit_code == 0
     fork_result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
     assert fork_result.exit_code == 0
     calls: list[str] = []
@@ -79,7 +122,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     section_offsets = [rendered.index(section) for section in required_sections]
     assert section_offsets == sorted(section_offsets)
     h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
-    assert h2_sections == required_sections[1:]
+    assert h2_sections[: len(required_sections) - 1] == required_sections[1:]
     assert "`oracle/spec.md`" in rendered
     assert "review_join_commit: null" in rendered
     assert "session_id:" not in rendered
@@ -92,7 +135,7 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -113,25 +156,25 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
                 {
                     "findings": [
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "fatal",
                             "title": "accepted fatal",
                             "reason": "fatal accepted reason",
                         },
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "fatal",
                             "title": "rejected fatal",
                             "reason": "fatal reason",
                         },
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "minor",
                             "title": "accepted minor",
                             "reason": "minor reason",
                         },
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "minor",
                             "title": "rejected minor",
                             "reason": "minor rejected reason",
@@ -163,7 +206,7 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
     h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
-    assert h2_sections == [
+    assert h2_sections[:4] == [
         "## Verdict",
         "## Evaluated oracle file",
         "## Fatal findings",
@@ -172,17 +215,18 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     detail_order = [
         "### Accepted fatal findings",
         "accepted fatal",
-        "### Rejected fatal findings",
-        "rejected fatal",
-        "## Minor findings",
         "### Accepted minor findings",
         "accepted minor",
+        "### Rejected fatal findings",
+        "rejected fatal",
         "### Rejected minor findings",
         "rejected minor",
     ]
     assert [rendered.index(text) for text in detail_order] == sorted(
         rendered.index(text) for text in detail_order
     )
+    assert rendered.index("## Minor findings") < rendered.index("accepted minor")
+    assert rendered.index("accepted minor") < rendered.index("rejected fatal")
     assert "result: fatal" in rendered
     assert "fatal_findings_accepted_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
@@ -216,7 +260,7 @@ def test_review_oracle_report_includes_rejected_findings(
         [
             {
                 "finding_id": "finding-0001",
-                "oracle_path": "oracle/spec.md",
+                "oracle_path": "<oracle-root>/spec.md",
                 "severity": severity,
                 "verdict": "reject",
                 "title": "rejected finding",
@@ -235,7 +279,8 @@ def test_review_oracle_report_includes_rejected_findings(
     assert f"minor_findings_rejected_count: {expected_minor_count}" in rendered
     assert "## Fatal findings" in rendered
     assert "## Minor findings" in rendered
-    assert [line for line in rendered.splitlines() if line.startswith("## ")] == [
+    h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
+    assert h2_sections[:4] == [
         "## Verdict",
         "## Evaluated oracle file",
         "## Fatal findings",
@@ -244,13 +289,14 @@ def test_review_oracle_report_includes_rejected_findings(
     assert "### Rejected fatal findings" in rendered
     assert "### Rejected minor findings" in rendered
     assert "rejected finding" in rendered
-    fatal_section = rendered.index("## Fatal findings")
-    minor_section = rendered.index("## Minor findings")
+    assert rendered.index("## Fatal findings") < rendered.index("## Minor findings")
     finding_offset = rendered.index("rejected finding")
     if severity == "fatal":
-        assert fatal_section < finding_offset < minor_section
+        assert rendered.index("### Rejected fatal findings") < finding_offset
+        assert rendered.index("## Minor findings") < finding_offset
     else:
-        assert minor_section < finding_offset
+        assert rendered.index("## Minor findings") < finding_offset
+        assert rendered.index("### Rejected minor findings") < finding_offset
     assert "rejected reason" in rendered
     assert "judge reason: judge rejected reason" in rendered
     assert "session_id:" not in rendered
@@ -291,7 +337,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     """linked worktree 上の session branch と oracle を review 対象にする。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "linked-review"
     run_git(root, "worktree", "add", "-b", "linked-review-home", str(linked), "HEAD")
     (linked / "oracle" / "linked.md").write_text("# linked oracle\n")
@@ -327,6 +373,8 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     report_path = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     )
+    assert report_path.is_relative_to(root / ".cmoc" / "local" / "report")
+    assert not report_path.is_relative_to(linked)
     rendered = report_path.read_text()
     assert f"review_fork_commit: {linked_commit}" in rendered
     assert "`oracle/linked.md`" in rendered
@@ -428,7 +476,7 @@ def test_review_oracle_advocate_receives_same_round_challenger_reasons(
                 {
                     "findings": [
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "fatal",
                             "title": "finding",
                             "reason": "reason",
@@ -457,6 +505,133 @@ def test_review_oracle_advocate_receives_same_round_challenger_reasons(
     assert advocate_prompts
     assert "old challenger reason" in advocate_prompts[0]
     assert "same-round challenger reason" in advocate_prompts[0]
+
+
+def test_review_oracle_retries_semantic_merge_finding_failure(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    merge_calls = 0
+    config = CmocConfig(
+        review_oracle=CmocConfigReviewOracle(
+            num_enumerate_findings_loop=1,
+            num_merge_findings_loop=1,
+            num_validate_findings_loop=1,
+        ),
+    )
+
+    class FakeCodexResult:
+        def __init__(self, output_json: dict[str, object]) -> None:
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        nonlocal merge_calls
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult(
+                {
+                    "findings": [
+                        {"oracle_path": "<oracle-root>/spec.md", "title": "a"},
+                        {"oracle_path": "<oracle-root>/spec.md", "title": "b"},
+                    ]
+                }
+            )
+        if schema_name == "merge_finding.json":
+            merge_calls += 1
+            if merge_calls == 1:
+                return FakeCodexResult(
+                    {
+                        "operations": [
+                            {
+                                "kind": "delete",
+                                "target_ids": ["finding-9999"],
+                                "finding": None,
+                            }
+                        ]
+                    }
+                )
+            return FakeCodexResult(
+                {
+                    "operations": [
+                        {
+                            "kind": "merge",
+                            "target_ids": ["finding-0001", "finding-0002"],
+                            "finding": {"title": "merged"},
+                        }
+                    ]
+                }
+            )
+        if schema_name in {
+            "validate_finding_challenger.json",
+            "validate_finding_advocate.json",
+        }:
+            return FakeCodexResult({"reasons": []})
+        if schema_name == "judge_finding.json":
+            return FakeCodexResult({"verdict": "reject", "reason": "rejected"})
+        raise AssertionError(schema_name)
+
+    findings = review_module.run_review_oracle_loop(
+        root,
+        root,
+        [root / "oracle" / "spec.md"],
+        config,
+        fake_run_codex_exec,
+    )
+
+    assert merge_calls == 2
+    assert [finding["finding_id"] for finding in findings] == ["finding-0003"]
+    assert findings[0]["title"] == "merged"
+
+
+def test_review_oracle_fails_after_merge_finding_semantic_retries(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    merge_calls = 0
+    config = CmocConfig(
+        review_oracle=CmocConfigReviewOracle(
+            num_enumerate_findings_loop=1,
+            num_merge_findings_loop=1,
+            num_validate_findings_loop=1,
+        ),
+    )
+
+    class FakeCodexResult:
+        def __init__(self, output_json: dict[str, object]) -> None:
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        nonlocal merge_calls
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult(
+                {"findings": [{"oracle_path": "<oracle-root>/spec.md", "title": "a"}]}
+            )
+        if schema_name == "merge_finding.json":
+            merge_calls += 1
+            return FakeCodexResult(
+                {
+                    "operations": [
+                        {
+                            "kind": "delete",
+                            "target_ids": ["finding-9999"],
+                            "finding": None,
+                        }
+                    ]
+                }
+            )
+        raise AssertionError(schema_name)
+
+    with pytest.raises(CmocError, match="merge finding"):
+        review_module.run_review_oracle_loop(
+            root,
+            root,
+            [root / "oracle" / "spec.md"],
+            config,
+            fake_run_codex_exec,
+        )
+
+    assert merge_calls == 3
 
 
 def test_apply_finding_merge_operations_enforces_kind_contract() -> None:
@@ -606,7 +781,7 @@ def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     )
     run_git(root, "commit", "-m", "add binary and memo-shaped oracle")
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -633,20 +808,20 @@ def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "oracle_count_total: 5" in rendered
-    assert "oracle_count_evaluated: 5" in rendered
+    assert "oracle_count_total: 6" in rendered
+    assert "oracle_count_evaluated: 6" in rendered
     assert "`oracle/asset.bin`" in rendered
     assert "`oracle/ignored-link.md`" in rendered
     assert "`oracle/ignored.md`" in rendered
     assert "`oracle/memo/kept.md`" in rendered
+    assert "`oracle/memo-link.md`" in rendered
     assert "`oracle/spec.md`" in rendered
     assert "oracle/untracked-ignored.md" not in rendered
-    assert "oracle/memo-link.md" not in rendered
     assert "memo/oracle/draft.md" not in rendered
     enumerate_calls = [
         call for call in calls if call.startswith("review oracle enumerate findings")
     ]
-    assert len(enumerate_calls) == 5
+    assert len(enumerate_calls) == 6
 
 
 def test_review_oracle_accepts_short_scope_option(
@@ -654,7 +829,7 @@ def test_review_oracle_accepts_short_scope_option(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -696,7 +871,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -725,6 +900,34 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     assert "レビュー対象 oracle が 0 件でした。" in rendered
 
 
+@pytest.mark.parametrize(
+    ("relative_path", "content"),
+    [
+        ("oracle/uncommitted.md", "# uncommitted\n"),
+        ("README.md", "dirty\n"),
+    ],
+)
+def test_review_oracle_rejects_uncommitted_worktree_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    relative_path: str,
+    content: str,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / relative_path).write_text(content)
+
+    result = runner.invoke(app, ["review", "oracle"])
+
+    assert result.exit_code != 0
+    assert "git 未コミット差分" in result.output
+    assert relative_path in result.output
+
+
 def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -739,7 +942,7 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     run_git(root, "add", "-f", ".gitignore", "oracle/ignored-link.md")
     run_git(root, "commit", "-m", "add ignored oracle symlink")
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -782,6 +985,30 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     assert "`oracle/ignored.md`" in rendered
 
 
+def test_review_oracle_session_scope_uses_review_fork_commit(
+    tmp_path: Path,
+) -> None:
+    """session scope の差分終点は実行時 HEAD ではなく review fork commit に固定する。"""
+    root = make_repo(tmp_path)
+    state = SessionState()
+    state.session.session_start_commit = run_git(
+        root, "rev-parse", "HEAD"
+    ).stdout.strip()
+    (root / "oracle" / "fork.md").write_text("# fork\n")
+    run_git(root, "add", "oracle/fork.md")
+    run_git(root, "commit", "-m", "review fork target")
+    review_fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "oracle" / "after.md").write_text("# after\n")
+    run_git(root, "add", "oracle/after.md")
+    run_git(root, "commit", "-m", "after review fork")
+
+    targets = review_module.enumerate_review_oracle_targets(
+        root, "session", state, review_fork_commit
+    )
+
+    assert targets == [(root / "oracle" / "fork.md").resolve()]
+
+
 def test_review_oracle_target_enumeration_excludes_agents_and_index(
     tmp_path: Path,
 ) -> None:
@@ -797,12 +1024,27 @@ def test_review_oracle_target_enumeration_excludes_agents_and_index(
     assert enumerate_review_all_oracle_files(root) == [spec.resolve()]
 
 
+def test_review_oracle_target_enumeration_classifies_oracle_symlink_by_repo_path(
+    tmp_path: Path,
+) -> None:
+    """oracle 配下 symlink は link 先ではなく repository path で分類する。"""
+    root = make_repo(tmp_path)
+    (root / "memo").mkdir()
+    (root / "memo" / "draft.md").write_text("# draft\n")
+    oracle_link = root / "oracle" / "memo-link.md"
+    oracle_link.symlink_to("../memo/draft.md")
+    run_git(root, "add", "memo/draft.md", "oracle/memo-link.md")
+    run_git(root, "commit", "-m", "add oracle symlink")
+
+    assert oracle_link.absolute() in enumerate_review_all_oracle_files(root)
+
+
 def test_review_oracle_merges_review_index_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -858,7 +1100,7 @@ def test_review_oracle_merges_preflight_committed_index_changes(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -943,7 +1185,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -959,7 +1201,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
                 {
                     "findings": [
                         {
-                            "oracle_path": "oracle/spec.md",
+                            "oracle_path": "<oracle-root>/spec.md",
                             "severity": "fatal",
                             "title": "unjudged fatal",
                             "reason": "judge did not run",
@@ -1001,7 +1243,7 @@ def test_review_oracle_rejects_non_index_worktree_changes(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )

@@ -11,7 +11,7 @@ from commons.runtime_codex_logging import emit_codex_call_console
 from commons.runtime_codex_profile import (
     codex_profile_name,
     codex_subprocess_env,
-    file_access_to_codex_cwd,
+    parameter_codex_cwd,
     prepare_codex_profile,
     resolve_codex_home,
     run_codex_subprocess,
@@ -41,7 +41,7 @@ def run_codex_tui(
     ts = timestamp()
     call_path = log_dir / f"{ts}_tui_call.json"
     codex_work_root = work_root(cwd)
-    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, codex_work_root)
+    codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # Match validation/profile placement to where Codex resolves a relative
     # CODEX_HOME while keeping the user-provided env value unchanged.
@@ -79,6 +79,7 @@ def run_codex_tui(
                 "model_class": parameter.model_class.value,
                 "reasoning_effort": parameter.reasoning_effort.value,
                 "file_access_mode": parameter.file_access_mode.value,
+                "cwd": str(codex_cwd),
             },
             ensure_ascii=False,
             indent=2,

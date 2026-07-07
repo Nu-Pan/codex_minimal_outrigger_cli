@@ -15,7 +15,6 @@ from cmoc_runtime import (
     pushd,
     remove_worktree,
     repo_root,
-    require_clean_worktree,
     run_cli_subcommand,
     run_codex_exec,
     timestamp,
@@ -44,6 +43,7 @@ from sub_commands.review_targets import (
     enumerate_review_oracle_targets,
 )
 from commons.indexing import enable_indexing_preflight
+from commons.runtime_git import status_path_statuses
 
 
 CodexExec = Callable[..., object]
@@ -89,7 +89,7 @@ def _cmoc_review_oracle_body(
     session_id, _state_path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/") or state.session.state != "active":
         raise CmocError("review oracle は active session branch 上で実行してください。", [], branch)
-    require_clean_worktree(current_root)
+    _require_clean_worktree(current_root)
     ensure_cmoc_ignored(current_root)
     config = load_config(root)
     run_id = timestamp()
@@ -108,7 +108,7 @@ def _cmoc_review_oracle_body(
             with pushd(review_worktree):
                 all_oracle_files = enumerate_review_all_oracle_files(review_worktree)
                 oracle_files = enumerate_review_oracle_targets(
-                    review_worktree, scope, state
+                    review_worktree, scope, state, review_fork_commit
                 )
                 findings = run_review_oracle_loop(
                     root, review_worktree, oracle_files, config, codex_exec
@@ -152,3 +152,15 @@ def _cmoc_review_oracle_body(
         typer.echo(str(report_path.resolve()))
         raise
     typer.echo(str(report_path.resolve()))
+
+
+def _require_clean_worktree(root: Path) -> None:
+    statuses = status_path_statuses(
+        root, untracked_all=True, include_rename_sources=True
+    )
+    if statuses:
+        raise CmocError(
+            "review oracle は git 未コミット差分がある状態では実行できません。",
+            ["差分を commit または退避してから再実行してください。"],
+            "\n".join(str(path.relative_to(root)) for _status, path in statuses),
+        )

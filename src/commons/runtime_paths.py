@@ -8,20 +8,11 @@ from basic.path_model import RootPathPlaceHolder, resolve_real_path
 
 from commons.runtime_errors import CmocError
 
-# `<work-root>/oracle/src/oracle/other/path_model.py` keeps root resolver
-# functions internal to path resolution. Runtime needs `start_path` for cwd-like
-# checks, so this module wraps those internals without re-exporting them through
-# `basic.path_model`.
-from oracle.other.path_model import (
-    resolve_repo_root as _resolve_repo_root,
-    resolve_work_root as _resolve_work_root,
-)
-
 
 def repo_root(cwd: Path | None = None) -> Path:
     """cmoc の実行前提に合う repository root を runtime error として解決する。"""
     try:
-        return _resolve_repo_root(cwd)
+        return _resolve_root(RootPathPlaceHolder.REPO, cwd)
     except ValueError as exc:
         raise CmocError(
             "<repo-root> を特定できません。",
@@ -33,13 +24,24 @@ def repo_root(cwd: Path | None = None) -> Path:
 def work_root(cwd: Path | None = None) -> Path:
     """cmoc の実行前提に合う worktree root を runtime error として解決する。"""
     try:
-        return _resolve_work_root(cwd)
+        return _resolve_root(RootPathPlaceHolder.WORK, cwd)
     except ValueError as exc:
         raise CmocError(
             "<work-root> を特定できません。",
             ["git worktree 内から cmoc を再実行してください。"],
             str(cwd or Path.cwd()),
         ) from exc
+
+
+def _resolve_root(placeholder: RootPathPlaceHolder, cwd: Path | None) -> Path:
+    if cwd is None:
+        return resolve_real_path(placeholder)
+    start_dir = cwd.resolve() if cwd.is_dir() else cwd.resolve().parent
+    # <work-root>/oracle/src/oracle/other/path_model.py
+    # root resolver は resolve_real_path 専用の内部実装なので、cwd 起点の
+    # runtime 契約は一時的な cwd 切替で公開 API へ寄せる。
+    with pushd(start_dir):
+        return resolve_real_path(placeholder)
 
 
 def timestamp() -> str:
@@ -90,7 +92,7 @@ def codex_log_dir(root: Path) -> Path:
 
 def schema_store_dir(root: Path) -> Path:
     """Structured Output schema store directory を返す。"""
-    return root / ".cmoc" / "local" / "state" / "schema"
+    return root / ".cmoc" / "local" / "schema"
 
 
 def config_path(root: Path) -> Path:

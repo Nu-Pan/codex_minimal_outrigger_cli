@@ -60,6 +60,16 @@ def _cmoc_apply_abandon_body() -> None:
             ["session state file の apply.apply_branch を確認してください。"],
             str(path),
         )
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # The state file is mutable local state, so cleanup must prove the stored
+    # apply branch still belongs to the current session before deleting it.
+    apply_session_id = apply_branch_session_id(apply_branch)
+    if apply_session_id != session_id:
+        raise CmocError(
+            "破棄対象 apply run の補助情報を特定できません。",
+            ["session state file の apply.apply_branch を確認してください。"],
+            f"session_id: {session_id}\napply_branch: {apply_branch}",
+        )
     if branch.startswith("cmoc/apply/") and branch != apply_branch:
         raise CmocError(
             "現在の apply branch は破棄対象の active apply run ではありません。",
@@ -76,7 +86,10 @@ def _cmoc_apply_abandon_body() -> None:
                 ["apply process id file を確認し、apply process 停止後に再実行してください。"],
                 f"session_id: {session_id}",
             )
-        stopped_warning = stop_apply_process(process_id)
+        stopped_warning = stop_apply_process(
+            process_id,
+            lambda: read_apply_process_id(repo, session_id),
+        )
         if stopped_warning:
             warnings.append(stopped_warning)
     if branch == apply_branch:

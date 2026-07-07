@@ -1,7 +1,7 @@
 import multiprocessing
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from multiprocessing.connection import Connection
 from pathlib import Path
 
@@ -17,6 +17,13 @@ from _support import (
     write_python_executable,
 )
 import commons.indexing as indexing_module
+
+
+@pytest.fixture(autouse=True)
+def reset_indexing_preflight() -> Iterator[None]:
+    codex_preflight_module.disable_indexing_preflight()
+    yield
+    codex_preflight_module.disable_indexing_preflight()
 
 
 def hold_indexing_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
@@ -227,7 +234,7 @@ def test_indexing_preflight_waits_for_repository_lock(
             process.join()
 
 
-def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resolution(
+def test_command_codex_call_skips_indexing_when_parameter_disables_preflight(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -238,6 +245,7 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
         FileAccessMode.READONLY,
         "prompt",
         None,
+        False,
     )
     calls: list[str] = []
 
@@ -274,7 +282,7 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
     ]
 
 
-def test_file_access_recovery_codex_call_runs_indexing_preflight(
+def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -292,10 +300,7 @@ def test_file_access_recovery_codex_call_runs_indexing_preflight(
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "blocked = pathlib.Path('oracle/blocked.md')",
-            "if count == 0:",
-            "    blocked.write_text('blocked\\n')",
-            "else:",
-            "    blocked.unlink(missing_ok=True)",
+            "blocked.write_text('blocked\\n')",
             "output.write_text('{}\\n')",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
@@ -321,17 +326,14 @@ def test_file_access_recovery_codex_call_runs_indexing_preflight(
     indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
-    try:
-        codex_preflight_module.run_codex_exec(
-            parameter,
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-            purpose="apply fork refine findings",
-        )
-    finally:
-        codex_preflight_module.disable_indexing_preflight()
+    codex_preflight_module.run_codex_exec(
+        parameter,
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+        purpose="apply fork refine findings",
+    )
 
-    assert counter.read_text() == "2"
-    assert events == [root, root]
-    assert not (root / "oracle" / "blocked.md").exists()
+    assert counter.read_text() == "1"
+    assert events == [root]
+    assert (root / "oracle" / "blocked.md").read_text() == "blocked\n"

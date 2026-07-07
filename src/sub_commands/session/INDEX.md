@@ -18,21 +18,22 @@
 # `abandon.py`
 
 ## Summary
-- active session を home branch へ merge せず破棄する session abandon サブコマンドの実行本体を扱う。session branch 上での事前条件確認、clean worktree 確認、home branch への switch、session state の abandoned 更新、session branch 削除、失敗時 rollback を担う。
-- .cmoc ignore 状態を cleanup 前に記録し、ensure_cmoc_ignored による .gitignore/index 変更を失敗時に戻す補助処理も含む。
+- active session を home branch へ merge せず破棄する `session abandon` サブコマンド実装。実行時コンテキスト取得、session branch と state の事前条件確認、clean worktree 要求、home branch への switch、state の `abandoned` 更新、session branch 削除、結果表示を担う。
+- cleanup 失敗時は state を `active` に戻し、可能なら session branch へ戻して、再実行可能性を保つための詳細付き `CmocError` を返す。
 
 ## Read this when
-- session abandon の成功時挙動、出力内容、事前条件、state 更新、branch switch/delete の順序を確認または変更したいとき。
-- session abandon の cleanup 失敗時に、state を active へ戻す処理、session branch へ戻る処理、.gitignore や .cmoc index 状態の復元処理を調べたいとき。
-- session abandon が session home branch を削除せず session branch だけを削除する実装根拠や、その周辺の git 操作を確認したいとき。
+- `cmoc session abandon` の外部挙動、事前条件、成功時出力、失敗時エラーを確認または変更する。
+- session branch を merge せず破棄し、home branch は残しつつ session branch だけを削除する処理を確認する。
+- cleanup 中の例外、ユーザー中断、state rollback、branch rollback、再実行可能状態への復旧方針を確認する。
+- session state の `active` から `abandoned` への更新、`joined_at` の扱い、state file 書き込みタイミングを確認する。
 
 ## Do not read this when
-- session abandon の正本仕様そのものを確認したいときは、対応する oracle doc を読む。
-- session abandon 以外の session サブコマンド、または共通 CLI runtime・git helper・state model の詳細を調べたいときは、それぞれの実装へ進む。
-- INDEX.md 用エントリーの生成規則やルーティング文書の書き方を確認したいだけなら、このサブコマンド実装ではなく規則本文を読む。
+- session 作成、join、通常の merge 完了など、abandon 以外の session lifecycle を確認したい。
+- git 操作、state 読み書き、worktree 検査、CLI runtime 実行ラッパーの共通実装自体を確認したい。
+- oracle 上の `session abandon` 正本仕様を確認したい。
 
 ## hash
-- 9808d6eea7dd01c323fde262c6c5fef34f5c32469627eb3cebfd3fc4789be104
+- f32f7a66d991cb31193050f5a2c915d260df0590ce18f0ba9e498c64d725d9bd
 
 # `fork.py`
 
@@ -57,18 +58,18 @@
 # `join.py`
 
 ## Summary
-- session join サブコマンドの実行本体。active session branch を session home branch へ merge し、状態更新、session branch 削除、結果表示までを扱う。
-- merge conflict 発生時は Codex CLI に conflict 対象の解消を依頼し、対象外差分、残存 conflict marker、unmerged path を検査して merge commit を完了する。
+- session join サブコマンドの実行本体を担う。active session branch を session home branch に切り替えて merge し、成功時に session 状態を joined へ更新し、到達可能な local session branch だけを削除し、結果サマリを出力する。
+- merge conflict 発生時は Codex CLI に conflict 解消を依頼し、対象外差分・残存 conflict marker・未解消 unmerged path を検査してから merge commit を完了する。
 
 ## Read this when
-- session join の事前条件、成功時の状態遷移、session home branch への merge、session branch 削除条件、出力内容を確認または変更したいとき。
-- session join 中の merge conflict 解消フロー、Codex CLI へ渡す conflict 対象、oracle conflict 書き込み例外、対象外差分の拒否、conflict marker 検出を確認または変更したいとき。
-- session join 失敗時のエラー出力先、手動解決を要する merge 状態、git status や merge-base に基づく判定を調査するとき。
+- session join の事前条件、branch 切り替え、merge、状態更新、session branch 削除、成功時出力を確認または変更したいとき。
+- session join の merge conflict 自動解消、Codex CLI へ渡す conflict 対象、oracle conflict 書き込み許可、対象外差分の拒否、merge commit 完了処理を調べるとき。
+- Git の unmerged path 検出、作業ツリー差分 snapshot、symlink を含む path fingerprint、conflict marker 残存判定の実装を確認したいとき。
 
 ## Do not read this when
-- session join 以外の session サブコマンドの挙動を調べたいとき。
-- Codex CLI に渡す conflict 解消 prompt の内容やパラメータ構築そのものを変更したいときは、conflict resolution parameter builder を直接読む。
-- branch 状態ファイルの schema、repo/work root 解決、git 実行 wrapper、CLI 実行 wrapper の汎用挙動を調べたいだけのときは、runtime 側を直接読む。
+- session join 用の Codex prompt や実行パラメータの内容だけを確認したいときは、conflict resolution parameter を組み立てる側を読む。
+- session 状態モデル、状態ファイルの schema、branch からの state 読み込みそのものを調べたいときは、runtime や state 定義側を読む。
+- session join の正本仕様断片を確認したいときは、対応する oracle doc を読む。
 
 ## hash
-- 0cb7e79dd80f8783c5b3b6c434e595030162b2f19376e3d11c5d0ba4a6278031
+- 5a9899b688fcb2fafd51d98f9fcc17605740d898a02d33d254b6f774d01ccea8

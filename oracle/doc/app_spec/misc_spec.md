@@ -26,12 +26,6 @@ cmoc による操作対象リポジトリである `<work-root>` は以下の要
 
 - cmoc 実行時のカレント (pwd) は必ず  `<work-root>` とする
 
-## `<repo-root>/.cmoc`
-
-- `<repo-root>/.cmoc` は git の追跡対象外とする
-- このことは `cmoc init` で保証される
-- `<repo-root>/.cmoc` 配下のログファイルが未コミット差分として現れて、各サブコマンドの処理が狂ってしまう可能性を排除するための仕様である
-
 ## タイムスタンプのフォーマット
 
 - タイムスタンプ `<time-stamp>` はフォーマット `<year>-<month>-<day>_<hour>-<minute>_<sec>_<msec>` に従うものとする

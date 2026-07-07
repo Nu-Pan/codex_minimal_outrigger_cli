@@ -9,6 +9,11 @@ __all__ = ["build_review_oracle_merge_finding_parameter"]
 def build_review_oracle_merge_finding_parameter(
     known_findings: str,
 ) -> _AgentCallParameter:
+    """正本 builder の parameter へ、既知 typo の prompt 補正だけを適用する。
+
+    Oracle:
+        `<work-root>/oracle/src/oracle/acp_builder/review/oracle/merge_finding.py`
+    """
     parameter = _build_parameter(known_findings)
     return type(parameter)(
         parameter.model_class,
@@ -16,10 +21,16 @@ def build_review_oracle_merge_finding_parameter(
         parameter.file_access_mode,
         _fix_oracle_root_placeholder_definition(parameter.prompt),
         parameter.structured_output_schema_path,
+        parameter.run_indexing_preflight,
     )
 
 
 def _fix_oracle_root_placeholder_definition(prompt: str) -> str:
+    """正本 prompt の placeholder 定義 typo だけを限定的に補正する。
+
+    Oracle:
+        `<work-root>/oracle/src/oracle/acp_builder/review/oracle/merge_finding.py`
+    """
     # Oracle: <work-root>/oracle/src/oracle/acp_builder/review/oracle/merge_finding.py
     # <work-root>/oracle/doc/app_spec/prompt_standard.md permits only the
     # minimum correction needed for an oracle src bug; known findings are input.

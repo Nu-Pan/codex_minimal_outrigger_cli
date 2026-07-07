@@ -1,85 +1,152 @@
 import json
+import os
+import shutil
+import socket
 import subprocess
 import tomllib
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
-import cmoc_runtime
 import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
+from oracle.other.cmoc_config import CodexModelSpec
 from _support import (
+    TEST_SLM_MODEL,
+    codex_parameter,
+    fake_managed_ollama_env,
     make_repo,
     run_git,
     setup_codex_home,
-    stub_codex_profile,
     write_python_executable,
 )
-from commons.runtime_codex import run_codex_exec, run_codex_tui
-from commons.runtime_codex_profile import (
-    run_codex_subprocess,
-    run_tracked_codex_subprocess,
-)
+from commons.runtime_codex import run_codex_exec
+from commons.runtime_codex_profile import prepare_codex_profile
 
 
-def _parameter(mode: FileAccessMode = FileAccessMode.READONLY) -> AgentCallParameter:
-    return AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        mode,
-        "prompt",
-        None,
-    )
+def _port_available(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+    return True
 
 
-def test_tracked_codex_subprocess_records_dedicated_process_group(
-    tmp_path: Path,
-) -> None:
-    tracking_path = tmp_path / "apply.pid"
-    tracking_path.write_text("111 222\n")
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    script = bin_dir / "codex"
-    write_python_executable(
-        script,
-        [
-            "import os, pathlib, sys, time",
-            "time.sleep(0.2)",
-            "print(os.getpid())",
-            "print(os.getpgrp())",
-            "print(pathlib.Path(sys.argv[1]).read_text(), end='')",
-        ],
-    )
-
-    result = run_tracked_codex_subprocess(
-        [str(script), str(tracking_path)],
-        tracking_path,
+def _require_systemd_user(env: dict[str, str]) -> None:
+    if shutil.which("systemctl") is None:
+        pytest.skip("systemctl is not installed")
+    result = subprocess.run(
+        ["systemctl", "--user", "show-environment"],
+        env=env,
         text=True,
         capture_output=True,
+        timeout=10,
     )
-
-    stdout_lines = result.stdout.splitlines()
-    process_id = stdout_lines[0]
-    assert stdout_lines[1] == process_id
-    assert stdout_lines[2] == "111 222"
-    assert stdout_lines[3].startswith(f"child {process_id} ")
-    assert tracking_path.read_text() == "111 222\n"
+    if result.returncode != 0:
+        pytest.skip("systemd user service manager is not available")
 
 
-def test_run_codex_subprocess_ignores_inherited_apply_tracking_env(
+@contextmanager
+def _real_cmoc_managed_ollama_env(root: Path) -> Iterator[dict[str, str]]:
+    # <work-root>/oracle/doc/dev_rule/test_rule.md and
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md: real Codex
+    # integration uses the normal doctor preprocess managed-service path.
+    if not _port_available(11434):
+        pytest.skip("127.0.0.1:11434 is already in use")
+    home = root / ".cmoc" / "local" / "test-home"
+    home.mkdir(parents=True)
+    env = os.environ.copy()
+    env["HOME"] = str(home)
+    _require_systemd_user(env)
+    try:
+        yield {"HOME": str(home)}
+    finally:
+        subprocess.run(
+            ["systemctl", "--user", "disable", "--now", "cmoc-ollama"],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+        subprocess.run(
+            ["systemctl", "--user", "daemon-reload"],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+
+
+def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    tracking_path = tmp_path / "external" / "apply.pid"
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(bin_dir / "codex", ["print('ok')"])
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    monkeypatch.setenv(cmoc_runtime.APPLY_PROCESS_TRACKING_ENV, str(tracking_path))
+    real_codex = shutil.which("codex")
+    if real_codex is None:
+        pytest.skip("real Codex CLI is not installed")
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
+    schema_source = tmp_path / "schema.json"
+    schema_source.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["result"],
+                "properties": {"result": {"type": "string"}},
+            }
+        )
+    )
+    prompt = (
+        'Return exactly this JSON object and no other text: '
+        '{"result":"cmoc-real-codex-provider"}'
+    )
 
-    result = run_codex_subprocess(["codex"], text=True, capture_output=True)
+    with _real_cmoc_managed_ollama_env(root) as ollama_env:
+        for key, value in ollama_env.items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv(
+            "PATH", f"{Path(real_codex).parent}:{os.environ.get('PATH', '')}"
+        )
+        monkeypatch.setenv("OPENAI_API_KEY", "cmoc-local-test")
+        # <work-root>/oracle/doc/dev_rule/test_rule.md: this intentionally uses
+        # real Codex CLI with a local SLM provider. The assertions stay on
+        # cmoc-owned integration artifacts, not answer quality.
+        result = run_codex_exec(
+            AgentCallParameter(
+                ModelClass.MINIMUM,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                prompt,
+                schema_source,
+            ),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            max_capacity_retries=0,
+            max_semantic_retries=1,
+            config=config,
+        )
 
-    assert result.stdout == "ok\n"
-    assert not tracking_path.exists()
+    call_log_path = result.call_log_path
+    call_log = json.loads(call_log_path.read_text())
+    profile = tomllib.loads(Path(call_log["profile_path"]).read_text())
+    assert call_log["argv"][:3] == ["codex", "exec", "--skip-git-repo-check"]
+    assert "--output-schema" in call_log["argv"]
+    assert call_log["schema_path"] == str(result.schema_path)
+    assert Path(call_log["prompt_log_path"]).read_text() == prompt
+    assert result.output_path.read_text() == result.output_text
+    assert isinstance(result.output_json["result"], str)
+    assert call_log["model_class"] == ModelClass.MINIMUM.value
+    assert profile["model"] == TEST_SLM_MODEL
+    assert profile["model_provider"] == "cmoc_managed_ollama"
+    assert profile["model_providers"]["cmoc_managed_ollama"] == {
+        "name": "cmoc managed ollama",
+        "base_url": "http://127.0.0.1:11434/v1",
+        "wire_api": "responses",
+    }
 
 
 def test_run_codex_exec_generates_profile_and_starts_codex(
@@ -117,7 +184,7 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     result = run_codex_exec(
-        _parameter(FileAccessMode.REPO_WRITE),
+        codex_parameter(FileAccessMode.REPO_WRITE),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
@@ -140,644 +207,120 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     writable_roots = set(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
     )
-    assert writable_roots == {str(root.resolve())}
+    assert writable_roots == {
+        str(path.resolve())
+        for path in (
+            root / ".gitignore",
+            root / "README.md",
+            root / "bin",
+            root / "oracle",
+            root / "src",
+            root / "test",
+        )
+    }
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
     assert result.output_text == "done\n"
 
 
-def test_run_codex_exec_recovers_file_access_violations(
+def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    (root / "src").mkdir()
-    (root / "src" / "app.py").write_text("")
-    run_git(root, "add", "src")
-    run_git(root, "commit", "-m", "add src")
     setup_codex_home(tmp_path, monkeypatch)
+    fake_env = fake_managed_ollama_env(root)
+    for key, value in fake_env.items():
+        monkeypatch.setenv(key, value)
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    recovery_prompt = tmp_path / "recovery_prompt.txt"
+    recorder = tmp_path / "record.json"
     write_python_executable(
         bin_dir / "codex",
         [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            f"recovery_prompt = pathlib.Path({str(recovery_prompt)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
+            "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "blocked = pathlib.Path('oracle/blocked.md')",
-            "if count == 0:",
-            "    blocked.write_text('blocked\\n')",
-            "else:",
-            "    recovery_prompt.write_text(sys.stdin.read())",
-            "    blocked.unlink(missing_ok=True)",
-            "output.write_text('{}\\n')",
+            "profile = args[args.index('--profile') + 1]",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "profile_path = home / f'{profile}.config.toml'",
+            "output.write_text('done\\n')",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'profile': profile_path.read_text(),",
+            "}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setenv("PATH", f"{bin_dir}:{fake_env['PATH']}")
 
     run_codex_exec(
-        _parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert counter.read_text() == "2"
-    assert not (root / "oracle" / "blocked.md").exists()
-    prompt = recovery_prompt.read_text()
-    assert "ソフトウェア実装の修正担当" in prompt
-    assert "FINDING-00" in prompt
-    assert "oracle/blocked.md" in prompt
-    assert "build_apply_fork_finding_application_parameter" in prompt
-
-
-@pytest.mark.parametrize("blocked_name", ["a b.md", 'quoted " name.md'])
-def test_run_codex_exec_recovers_quoted_oracle_path_file_access_violations(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, blocked_name: str
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    blocked_path = Path("oracle") / blocked_name
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            f"blocked = pathlib.Path({str(blocked_path)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if count == 0:",
-            "    blocked.write_text('blocked\\n')",
-            "else:",
-            "    blocked.unlink(missing_ok=True)",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        _parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert counter.read_text() == "2"
-    assert not (root / blocked_path).exists()
-
-
-def test_run_codex_exec_recovers_git_directory_file_access_violation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    saved_config = tmp_path / "git_config.txt"
-    recovery_prompt = tmp_path / "recovery_prompt.txt"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            f"saved_config = pathlib.Path({str(saved_config)!r})",
-            f"recovery_prompt = pathlib.Path({str(recovery_prompt)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "config = pathlib.Path('.git/config')",
-            "if count == 0:",
-            "    saved_config.write_text(config.read_text())",
-            "    config.write_text(config.read_text() + '\\n[cmoc-test]\\n\\tvalue = true\\n')",
-            "else:",
-            "    recovery_prompt.write_text(sys.stdin.read())",
-            "    config.write_text(saved_config.read_text())",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        _parameter(FileAccessMode.REPO_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert counter.read_text() == "2"
-    assert (root / ".git" / "config").read_text() == saved_config.read_text()
-    prompt = recovery_prompt.read_text()
-    assert "FINDING-00" in prompt
-    assert ".git/config" in prompt
-
-
-def test_run_codex_exec_recovers_file_access_violations_before_nonzero_error(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "blocked = pathlib.Path('oracle/blocked.md')",
-            "if count == 0:",
-            "    blocked.write_text('blocked\\n')",
-            "    print(json.dumps({'type': 'error', 'message': 'boom'}))",
-            "    raise SystemExit(7)",
-            "blocked.unlink(missing_ok=True)",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗しました"):
-        run_codex_exec(
-            _parameter(FileAccessMode.REALIZATION_WRITE),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-        )
-
-    assert counter.read_text() == "2"
-    assert not (root / "oracle" / "blocked.md").exists()
-
-
-def test_run_codex_exec_recovers_file_access_violations_before_schema_retry(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    schema = tmp_path / "schema.json"
-    schema.write_text(
-        json.dumps(
-            {
-                "type": "object",
-                "properties": {"ok": {"type": "boolean"}},
-                "required": ["ok"],
-                "additionalProperties": False,
-            }
-        )
-    )
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "blocked = pathlib.Path('oracle/blocked.md')",
-            "if count == 0:",
-            "    blocked.write_text('blocked\\n')",
-            "    output.write_text('{}\\n')",
-            "elif count == 1:",
-            "    blocked.unlink(missing_ok=True)",
-            "    output.write_text('{}\\n')",
-            "else:",
-            "    output.write_text(json.dumps({'ok': True}) + '\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    result = run_codex_exec(
         AgentCallParameter(
-            ModelClass.EFFICIENCY,
+            ModelClass.MINIMUM,
             ReasoningEffort.LOW,
-            FileAccessMode.REALIZATION_WRITE,
+            FileAccessMode.READONLY,
             "prompt",
-            schema,
+            None,
         ),
         root=root,
         capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
+        config=config,
     )
 
-    assert counter.read_text() == "3"
-    assert not (root / "oracle" / "blocked.md").exists()
-    assert result.output_json == {"ok": True}
+    record = json.loads(recorder.read_text())
+    profile = tomllib.loads(record["profile"])
+    assert "--oss" not in record["args"]
+    assert "--local-provider" not in record["args"]
+    assert profile["model_provider"] == "cmoc_managed_ollama"
+    assert profile["model_providers"]["cmoc_managed_ollama"] == {
+        "name": "cmoc managed ollama",
+        "base_url": "http://127.0.0.1:11434/v1",
+        "wire_api": "responses",
+    }
 
 
-def test_run_codex_exec_allows_root_readme_realization_diff(
+def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "pathlib.Path('README.md').write_text('# updated\\n')",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.chdir(root)
+    for key, value in fake_managed_ollama_env(root).items():
+        monkeypatch.setenv(key, value)
+    codex_home = tmp_path / "codex_home"
+    codex_home.mkdir()
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
 
-    run_codex_exec(
-        _parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
+    profile_path = prepare_codex_profile(
+        AgentCallParameter(
+            ModelClass.MINIMUM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
+            None,
+        ),
+        config,
+        codex_home,
+        root,
     )
 
-    assert counter.read_text() == "1"
-    assert (root / "README.md").read_text() == "# updated\n"
+    assert profile_path.is_file()
+    assert 'model_provider = "cmoc_managed_ollama"' in profile_path.read_text()
+    assert (
+        root
+        / ".cmoc"
+        / "local"
+        / "test-home"
+        / ".config"
+        / "systemd"
+        / "user"
+        / "cmoc-ollama.service"
+    ).is_file()
 
 
-def test_run_codex_exec_ignores_preexisting_forbidden_diff(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    target = root / "oracle" / "spec.md"
-    target.write_text("base\n")
-    run_git(root, "add", "oracle/spec.md")
-    run_git(root, "commit", "-m", "add oracle spec")
-    target.write_text("preexisting\n")
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        _parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert counter.read_text() == "1"
-    assert target.read_text() == "preexisting\n"
-
-
-def test_run_codex_exec_recovers_when_preexisting_forbidden_diff_is_modified(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    target = root / "oracle" / "spec.md"
-    target.write_text("base\n")
-    run_git(root, "add", "oracle/spec.md")
-    run_git(root, "commit", "-m", "add oracle spec")
-    target.write_text("preexisting\n")
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "target = pathlib.Path('oracle/spec.md')",
-            "if count == 0:",
-            "    target.write_text('agent changed\\n')",
-            "else:",
-            "    target.write_text('preexisting\\n')",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        _parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert counter.read_text() == "2"
-    assert target.read_text() == "preexisting\n"
-
-
-def test_run_codex_exec_allows_ignored_untracked_realization_write_diff(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("/build/\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "ignore build")
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "artifact = pathlib.Path('build/artifact.txt')",
-            "artifact.parent.mkdir(exist_ok=True)",
-            "artifact.write_text('ignored\\n')",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        _parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert counter.read_text() == "1"
-    assert (root / "build" / "artifact.txt").read_text() == "ignored\n"
-
-
-def test_run_codex_exec_allows_realization_write_temporary_cache_diff(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("/.pytest_cache/\n__pycache__/\n*.pyc\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "ignore python caches")
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "cache = pathlib.Path('.pytest_cache')",
-            "cache.mkdir(exist_ok=True)",
-            "(cache / 'state').write_text('temporary\\n')",
-            "pycache = pathlib.Path('oracle/__pycache__')",
-            "pycache.mkdir(exist_ok=True)",
-            "(pycache / 'spec.cpython-313.pyc').write_bytes(b'cache')",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        _parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert counter.read_text() == "1"
-    assert (root / ".pytest_cache" / "state").read_text() == "temporary\n"
-    assert (root / "oracle" / "__pycache__" / "spec.cpython-313.pyc").is_file()
-
-
-def test_run_codex_exec_ignores_venv_diff_from_post_call_file_access_check(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("/.venv/\n")
-    venv_python = root / ".venv" / "bin" / "python3"
-    venv_python.parent.mkdir(parents=True)
-    venv_python.write_text("before\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "ignore venv")
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "pathlib.Path('.venv/bin/python3').write_text(f'touched {count}\\n')",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        _parameter(FileAccessMode.READONLY),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert counter.read_text() == "1"
-    assert venv_python.read_text() == "touched 0\n"
-
-
-def test_run_codex_exec_allows_readonly_temporary_pytest_cache_diff(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "cache = pathlib.Path('.pytest_cache')",
-            "cache.mkdir(exist_ok=True)",
-            "(cache / 'state').write_text('temporary\\n')",
-            "pycache = pathlib.Path('oracle/__pycache__')",
-            "pycache.mkdir(exist_ok=True)",
-            "(pycache / 'spec.cpython-313.pyc').write_bytes(b'cache')",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        _parameter(FileAccessMode.READONLY),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert (root / ".pytest_cache" / "state").read_text() == "temporary\n"
-    assert (root / "oracle" / "__pycache__" / "spec.cpython-313.pyc").is_file()
-
-
-@pytest.mark.parametrize("blocked_dir", [".agents", ".codex", ".git", "memo"])
-def test_run_codex_exec_rejects_readonly_temporary_cache_under_blocked_root(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, blocked_dir: str
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            f"pycache = pathlib.Path({blocked_dir!r}) / '__pycache__'",
-            "pycache.mkdir(parents=True, exist_ok=True)",
-            "(pycache / 'blocked.cpython-313.pyc').write_bytes(b'cache')",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    with pytest.raises(CmocError, match="ファイルアクセス規則"):
-        run_codex_exec(
-            _parameter(FileAccessMode.READONLY),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-        )
-
-    assert (root / blocked_dir / "__pycache__" / "blocked.cpython-313.pyc").is_file()
-
-
-def test_run_codex_exec_rejects_readonly_realization_diff_after_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "pathlib.Path('src').mkdir(exist_ok=True)",
-            "pathlib.Path('src/changed.py').write_text('changed\\n')",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    with pytest.raises(CmocError, match="ファイルアクセス規則"):
-        run_codex_exec(
-            _parameter(FileAccessMode.READONLY),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-        )
-
-    assert (root / "src" / "changed.py").read_text() == "changed\n"
-
-
-def test_run_codex_exec_allows_only_session_join_conflict_targets(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    target = root / "oracle" / "spec.md"
-    other = root / "oracle" / "other.md"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if count == 0:",
-            "    pathlib.Path('oracle/spec.md').write_text('resolved\\n')",
-            "    pathlib.Path('oracle/other.md').write_text('blocked\\n')",
-            "else:",
-            "    pathlib.Path('oracle/other.md').unlink(missing_ok=True)",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_exec(
-        _parameter(FileAccessMode.REALIZATION_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-        extra_writable_paths=[target],
-        allow_oracle_conflict_writes=True,
-    )
-
-    assert counter.read_text() == "2"
-    assert target.read_text() == "resolved\n"
-    assert not other.exists()
-
-
-def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
+def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -806,22 +349,26 @@ def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     run_codex_exec(
-        _parameter(FileAccessMode.PURE_ORACLE_READ),
+        codex_parameter(FileAccessMode.PURE_ORACLE_READ),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
     )
 
     record = json.loads(recorder.read_text())
-    oracle_root = str((root / "oracle").resolve())
-    assert record["args"][record["args"].index("--cd") + 1] == oracle_root
-    assert record["cwd"] == oracle_root
-    assert 'sandbox_mode = "workspace-write"' in record["profile"]
+    work_root = str(root.resolve())
+    assert record["args"][record["args"].index("--cd") + 1] == work_root
+    assert record["cwd"] == work_root
     profile = tomllib.loads(record["profile"])
-    assert profile["sandbox_workspace_write"]["writable_roots"] == [oracle_root]
+    assert "sandbox_mode" not in profile
+    assert "sandbox_workspace_write" not in profile
+    assert profile["default_permissions"] == "cmoc"
+    assert profile["permissions"]["cmoc"]["filesystem"] == {
+        str((root / "oracle").resolve()): "read"
+    }
 
 
-def test_run_codex_exec_stores_schema_state_under_codex_work_root(
+def test_run_codex_exec_stores_schema_state_under_repo_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -877,11 +424,11 @@ def test_run_codex_exec_stores_schema_state_under_codex_work_root(
     schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
     assert record["cwd"] == str(linked.resolve())
     assert result.schema_path == schema_arg
-    assert schema_arg.parent == linked / ".cmoc" / "local" / "state" / "schema"
-    assert not (root / ".cmoc" / "local" / "state" / "schema").exists()
+    assert schema_arg.parent == root / ".cmoc" / "local" / "schema"
+    assert not (linked / ".cmoc" / "local" / "schema").exists()
 
 
-def test_run_codex_exec_allows_repo_log_read_from_linked_worktree(
+def test_run_codex_exec_allows_repo_local_read_from_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -909,366 +456,55 @@ def test_run_codex_exec_allows_repo_log_read_from_linked_worktree(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     run_codex_exec(
-        _parameter(FileAccessMode.PURE_ORACLE_READ),
+        codex_parameter(FileAccessMode.PURE_ORACLE_READ),
         root=root,
         cwd=linked,
-        extra_read_paths=[root / ".cmoc" / "local" / "log" / "codex" / "20260101_call.json"],
+        extra_read_paths=[root / ".cmoc" / "local" / "report" / "review" / "report.md"],
         capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-
-    record = json.loads(recorder.read_text())
-    assert record["cwd"] == str((linked / "oracle").resolve())
-    assert record["args"][record["args"].index("--cd") + 1] == str(
-        (linked / "oracle").resolve()
-    )
-
-
-def test_run_codex_exec_rejects_blocked_runtime_diffs_after_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'ok': True}))",
-            "agents = pathlib.Path('.agents')",
-            "agents.mkdir(exist_ok=True)",
-            "(agents / 'generated.md').write_text('changed\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    with pytest.raises(CmocError, match="ファイルアクセス規則"):
-        run_codex_exec(
-            _parameter(),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-        )
-
-    assert (root / ".agents" / "generated.md").read_text() == "changed\n"
-
-
-def test_run_codex_exec_rejects_agent_created_cmoc_log_diff(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("/.cmoc/local/\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "ignore cmoc")
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "agent_log = pathlib.Path('.cmoc/local/log/codex/agent-created.txt')",
-            "agent_log.parent.mkdir(parents=True, exist_ok=True)",
-            "agent_log.write_text('agent\\n')",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    with pytest.raises(CmocError, match="ファイルアクセス規則"):
-        run_codex_exec(
-            _parameter(FileAccessMode.REPO_WRITE),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-        )
-
-    assert (root / ".cmoc" / "local" / "log" / "codex" / "agent-created.txt").read_text() == (
-        "agent\n"
-    )
-
-
-def test_run_codex_exec_rejects_agent_modified_previous_cmoc_log_diff(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "count.txt"
-    previous_log_ref = tmp_path / "previous_log.txt"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            f"counter = pathlib.Path({str(counter)!r})",
-            f"previous_log_ref = pathlib.Path({str(previous_log_ref)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "if count >= 1:",
-            "    pathlib.Path(previous_log_ref.read_text()).write_text('agent\\n')",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    first_result = run_codex_exec(
-        _parameter(FileAccessMode.REPO_WRITE),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-    )
-    previous_log_ref.write_text(str(first_result.call_log_path))
-
-    with pytest.raises(CmocError, match="ファイルアクセス規則"):
-        run_codex_exec(
-            _parameter(FileAccessMode.REPO_WRITE),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-        )
-
-    assert first_result.call_log_path.read_text() == "agent\n"
-
-
-@pytest.mark.parametrize(
-    ("blocked_dir", "mode"),
-    [
-        (".agents", FileAccessMode.READONLY),
-        ("memo", FileAccessMode.REPO_WRITE),
-    ],
-)
-def test_run_codex_exec_rejects_empty_blocked_runtime_dir_after_call(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    blocked_dir: str,
-    mode: FileAccessMode,
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'ok': True}))",
-            f"pathlib.Path({blocked_dir!r}).mkdir(exist_ok=True)",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    with pytest.raises(CmocError, match="ファイルアクセス規則"):
-        run_codex_exec(
-            _parameter(mode),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-        )
-
-    assert (root / blocked_dir).is_dir()
-    assert not any((root / blocked_dir).iterdir())
-
-
-def test_run_codex_exec_rejects_repo_write_blocked_diffs_after_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("memo/\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "ignore memo")
-    setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'ok': True}))",
-            "pathlib.Path('memo').mkdir(exist_ok=True)",
-            "pathlib.Path('memo/blocked.md').write_text('blocked\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    with pytest.raises(CmocError, match="ファイルアクセス規則"):
-        run_codex_exec(
-            _parameter(FileAccessMode.REPO_WRITE),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-        )
-
-    assert (root / "memo" / "blocked.md").read_text() == "blocked\n"
-
-
-def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-
-    def fail_run(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
-        raise AssertionError("Codex subprocess must not start")
-
-    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fail_run)
-
-    with pytest.raises(CmocError, match="許可領域外"):
-        run_codex_tui(
-            _parameter(FileAccessMode.REPO_WRITE),
-            root=root,
-            extra_read_paths=[root / "memo" / "prompt_cmpl.md"],
-            config=CmocConfig(),
-        )
-
-
-def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    prompt_path = root / ".cmoc" / "local" / "log" / "tui" / "20260101_cmpl.md"
-    prompt_path.parent.mkdir(parents=True)
-    prompt_path.write_text("complete prompt\n")
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, os, pathlib, sys",
-            "args = sys.argv[1:]",
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
-            "    'args': args,",
-            "    'cwd': os.getcwd(),",
-            "}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_tui(
-        _parameter(FileAccessMode.PURE_ORACLE_READ),
-        root=root,
-        extra_read_paths=[prompt_path],
-        config=CmocConfig(),
-    )
-
-    record = json.loads(recorder.read_text())
-    assert record["cwd"] == str((root / "oracle").resolve())
-    assert record["args"][record["args"].index("--cd") + 1] == str(
-        (root / "oracle").resolve()
-    )
-
-
-def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    linked = root / ".cmoc" / "local" / "worktree" / "linked"
-    linked.parent.mkdir(parents=True)
-    run_git(root, "worktree", "add", "-b", "linked-tui-runtime", str(linked), "HEAD")
-    prompt_path = root / ".cmoc" / "local" / "log" / "tui" / "20260101_cmpl.md"
-    prompt_path.parent.mkdir(parents=True)
-    prompt_path.write_text("complete prompt\n")
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, os, pathlib, sys",
-            "args = sys.argv[1:]",
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
-            "    'args': args,",
-            "    'cwd': os.getcwd(),",
-            "}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    run_codex_tui(
-        _parameter(FileAccessMode.REPO_WRITE),
-        root=root,
-        cwd=linked,
-        extra_read_paths=[prompt_path],
         config=CmocConfig(),
     )
 
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
-    call_log = next((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
-    profile = tomllib.loads(
-        Path(json.loads(call_log.read_text())["profile_path"]).read_text()
-    )
-    assert profile["sandbox_workspace_write"]["writable_roots"] == [
-        str(linked.resolve())
-    ]
 
 
-def test_run_codex_tui_fails_when_codex_exits_nonzero(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+def test_run_codex_exec_profile_does_not_open_agents_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(7)"])
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys, tomllib",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "profile = args[args.index('--profile') + 1]",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "profile_path = home / f'{profile}.config.toml'",
+            "roots = tomllib.loads(profile_path.read_text())",
+            "roots = roots['sandbox_workspace_write']['writable_roots']",
+            "agents = pathlib.Path('.agents').resolve()",
+            "assert not any(agents.is_relative_to(pathlib.Path(root)) for root in roots)",
+            "output.write_text(json.dumps({'ok': True}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    with pytest.raises(CmocError, match="Codex CLI/TUI 呼び出しが失敗"):
-        run_codex_tui(_parameter(), root=root, config=CmocConfig())
+    run_codex_exec(
+        codex_parameter(FileAccessMode.REPO_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
 
-    console = capsys.readouterr().out
-    assert "- Purpose: `codex tui`" in console
-    assert "- Exit code: `7`" in console
-    call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
-    assert len(call_logs) == 1
-    call_log = json.loads(call_logs[0].read_text())
-    assert call_log["argv"][:3] == ["codex", "--profile", call_log["profile_name"]]
-
-
-@pytest.mark.parametrize("runner", ["exec", "tui"])
-def test_codex_runtime_reports_missing_codex_cli(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runner: str
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
-    real_run = subprocess.run
-
-    def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
-        if args[:1] == ["codex"]:
-            raise FileNotFoundError("codex")
-        return real_run(args, *pos, **kwargs)
-
-    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fake_run)
-
-    with pytest.raises(CmocError, match="Codex CLI が見つかりません"):
-        if runner == "exec":
-            run_codex_exec(
-                _parameter(),
-                root=root,
-                capacity_initial_sleep_sec=0,
-                config=CmocConfig(),
-            )
-        else:
-            run_codex_tui(_parameter(), root=root, config=CmocConfig())
+    profile_path = next(tmp_path.glob("codex_home/cmoc_*.config.toml"))
+    writable_roots = tomllib.loads(profile_path.read_text())["sandbox_workspace_write"][
+        "writable_roots"
+    ]
+    agents = (root / ".agents").resolve()
+    assert not any(agents.is_relative_to(Path(path)) for path in writable_roots)

@@ -1,8 +1,8 @@
 import fcntl
+from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Iterator
 from contextlib import contextmanager
-from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
@@ -88,9 +88,6 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
     for directory in dirs:
         depth = len(directory.relative_to(root).parts)
         dirs_by_depth.setdefault(depth, []).append(directory)
-    # <work-root>/oracle/doc/app_spec/indexing.md requires descendants to
-    # finish first, while allowing non-ancestor INDEX.md entries to run in
-    # parallel. A depth batch is the smallest scheduling boundary for that.
     for depth in sorted(dirs_by_depth, reverse=True):
         plans = [
             _plan_index_directory(root, directory)
@@ -99,19 +96,26 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
         missing = [(plan, item) for plan in plans for item in plan.missing_children]
         if missing:
             config = load_config(config_root)
-            with ThreadPoolExecutor(max_workers=max(1, config.num_parallel)) as executor:
-                futures = [
-                    executor.submit(
-                        build_index_entry,
+            max_workers = max(1, min(config.num_parallel, len(missing)))
+
+            def build_missing(
+                missing_item: tuple[_IndexDirectoryPlan, tuple[int, Path, str]],
+            ) -> tuple[_IndexDirectoryPlan, int, str]:
+                plan, (index, child, digest) = missing_item
+                return (
+                    plan,
+                    index,
+                    build_index_entry(
                         root,
                         child,
                         digest=digest,
                         codex_exec=codex_exec,
-                    )
-                    for plan, (_index, child, digest) in missing
-                ]
-                for (plan, (index, _child, _digest)), future in zip(missing, futures):
-                    plan.entries[index] = future.result()
+                    ),
+                )
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                for plan, index, entry in executor.map(build_missing, missing):
+                    plan.entries[index] = entry
         for plan in plans:
             entries = [entry for entry in plan.entries if entry is not None]
             content = "\n\n".join(entries)
@@ -261,8 +265,9 @@ def build_index_entry(
         )
     content = target_content_for_indexing(path)
     log_root = repo_root(root)
+    parameter = replace(build_indexing_index_entry_parameter(path, content), cwd=root)
     result = codex_exec(
-        build_indexing_index_entry_parameter(path, content),
+        parameter,
         # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
         # <work-root>/oracle/doc/app_spec/run_isolation.md
         # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は

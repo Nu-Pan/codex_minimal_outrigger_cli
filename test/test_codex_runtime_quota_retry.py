@@ -51,6 +51,8 @@ def stub_quota_probe_builder(
             FileAccessMode.READONLY,
             probe_prompt,
             None,
+            run_indexing_preflight=False,
+            cwd=base_parameter.cwd,
         ),
     )
     return probe_prompt
@@ -205,6 +207,10 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         '{"type": "thread.started", "thread_id": "sess-1"}\n'
         '{"type": "error", "message": "Quota exceeded"}'
     )
+    assert Path(initial_log["output_jsonl_log_path"]).name.endswith("_output.jsonl")
+    assert Path(initial_log["output_jsonl_log_path"]).read_text() == Path(
+        initial_log["stdout_log_path"]
+    ).read_text()
     assert Path(resume_log["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )
@@ -237,6 +243,28 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- Exit code: `0`" in console
 
 
+def test_quota_probe_builder_returns_minimal_probe_parameter() -> None:
+    base = AgentCallParameter(
+        ModelClass.FLAGSHIP,
+        ReasoningEffort.HIGH,
+        FileAccessMode.REPO_WRITE,
+        "base",
+        None,
+        run_indexing_preflight=True,
+        cwd=Path("/tmp/base-cwd"),
+    )
+
+    probe = build_quota_availability_probe_parameter(base)
+
+    assert "OK" in probe.prompt
+    assert probe.model_class == ModelClass.MINIMUM
+    assert probe.reasoning_effort == ReasoningEffort.LOW
+    assert probe.file_access_mode == FileAccessMode.READONLY
+    assert probe.structured_output_schema_path is None
+    assert probe.run_indexing_preflight is False
+    assert probe.cwd == base.cwd
+
+
 def test_quota_probe_uses_real_builder_when_quota_recovers(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -245,19 +273,15 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     calls: list[str] = []
-    probe_parameter = build_quota_availability_probe_parameter(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
-        )
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+        cwd=root,
     )
-    assert probe_parameter.model_class == ModelClass.MINIMUM
-    assert probe_parameter.reasoning_effort == ReasoningEffort.LOW
-    assert probe_parameter.file_access_mode == FileAccessMode.READONLY
-    assert probe_parameter.structured_output_schema_path is None
+    probe_prompt = build_quota_availability_probe_parameter(parameter).prompt
 
     def fake_run(
         argv: list[str], **kwargs: object
@@ -282,13 +306,6 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
         )
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-    )
 
     result = run_codex_exec(
         parameter,
@@ -298,7 +315,7 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
         config=CmocConfig(),
     )
 
-    assert calls == ["prompt", probe_parameter.prompt, "prompt"]
+    assert calls == ["prompt", probe_prompt, "prompt"]
     assert result.output_json == {"ok": 3}
 
 
@@ -306,9 +323,9 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    initial_codex_home = root / "oracle" / "relative_codex_home"
+    initial_codex_home = root / "relative_codex_home"
     probe_codex_home = root / "relative_codex_home"
-    for codex_home in [initial_codex_home, probe_codex_home]:
+    for codex_home in {initial_codex_home, probe_codex_home}:
         codex_home.mkdir()
         (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
@@ -362,22 +379,21 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
         config=CmocConfig(),
     )
 
-    oracle_root = root / "oracle"
     expected = [
         (
             "initial",
-            oracle_root,
+            root,
             Path("relative_codex_home"),
             initial_codex_home,
-            oracle_root,
+            root,
         ),
         ("probe", root, Path("relative_codex_home"), probe_codex_home, root),
         (
             "resume",
-            oracle_root,
+            root,
             Path("relative_codex_home"),
             initial_codex_home,
-            oracle_root,
+            root,
         ),
     ]
     assert records == [
@@ -509,7 +525,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     assert "profile is broken" in codex_events[1]["error"]
 
 
-def test_quota_poll_limit_recovers_failed_call_file_access_violation(
+def test_quota_poll_limit_stops_before_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -517,7 +533,7 @@ def test_quota_poll_limit_recovers_failed_call_file_access_violation(
     stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    calls = tmp_path / "quota_limit_recovery_calls.jsonl"
+    calls = tmp_path / "quota_limit_calls.jsonl"
     write_python_executable(
         bin_dir / "codex",
         [
@@ -533,9 +549,7 @@ def test_quota_poll_limit_recovers_failed_call_file_access_violation(
             "    print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
             "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
             "    sys.exit(1)",
-            "pathlib.Path('src/blocked.py').unlink(missing_ok=True)",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
+            "raise AssertionError('unexpected extra call')",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
@@ -557,14 +571,12 @@ def test_quota_poll_limit_recovers_failed_call_file_access_violation(
         )
 
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert len(call_records) == 2
+    assert len(call_records) == 1
     assert call_records[0]["stdin"] == "prompt"
-    assert "FINDING-00" in call_records[1]["stdin"]
-    assert "src/blocked.py" in call_records[1]["stdin"]
-    assert not (root / "src" / "blocked.py").exists()
+    assert (root / "src" / "blocked.py").read_text() == "blocked\n"
 
 
-def test_quota_probe_failure_recovers_probe_file_access_violation(
+def test_quota_probe_failure_reports_probe_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -574,7 +586,7 @@ def test_quota_probe_failure_recovers_probe_file_access_violation(
     probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    calls = tmp_path / "probe_failure_recovery_calls.jsonl"
+    calls = tmp_path / "probe_failure_calls.jsonl"
     write_python_executable(
         bin_dir / "codex",
         [
@@ -593,9 +605,7 @@ def test_quota_probe_failure_recovers_probe_file_access_violation(
             "    pathlib.Path('src/probe.py').write_text('blocked\\n')",
             "    print(json.dumps({'type':'error','message':'profile is broken'}))",
             "    sys.exit(2)",
-            "pathlib.Path('src/probe.py').unlink(missing_ok=True)",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
+            "raise AssertionError('unexpected extra call')",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
@@ -617,11 +627,8 @@ def test_quota_probe_failure_recovers_probe_file_access_violation(
         )
 
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert [record["stdin"] for record in call_records[:2]] == ["prompt", probe_prompt]
-    assert len(call_records) == 3
-    assert "FINDING-00" in call_records[2]["stdin"]
-    assert "src/probe.py" in call_records[2]["stdin"]
-    assert not (root / "src" / "probe.py").exists()
+    assert [record["stdin"] for record in call_records] == ["prompt", probe_prompt]
+    assert (root / "src" / "probe.py").read_text() == "blocked\n"
 
 
 def test_run_codex_exec_uses_single_representative_quota_probe(

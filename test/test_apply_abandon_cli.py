@@ -22,6 +22,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
+    run_doctor,
 )
 from main import app
 import sub_commands.apply.abandon as apply_abandon_module
@@ -78,7 +79,7 @@ def test_apply_abandon_removes_apply_worktree_and_branch(
     """completed apply run の worktree、branch、state cleanup を固定する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -129,7 +130,7 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
     """cleanup 対象が先に消えていても警告として成功扱いにする。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -172,7 +173,7 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     """running apply process を停止してから git cleanup へ進む順序を固定する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -203,7 +204,10 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     process_id_path.write_text("12345 67890\n")
     stopped: list[int] = []
 
-    def fake_stop_apply_process(process: apply_runtime.ApplyProcessIdentity) -> str:
+    def fake_stop_apply_process(
+        process: apply_runtime.ApplyProcessIdentity,
+        read_after_parent_exit: object = None,
+    ) -> str:
         """cleanup 前の worktree と branch がまだ残っていることを観測する。"""
         assert apply_worktree.is_dir()
         assert run_git(root, "rev-parse", "--verify", apply_branch).returncode == 0
@@ -232,10 +236,10 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     assert not process_id_path.exists()
 
 
-def test_stop_apply_process_stops_tracked_child_group_before_parent(
+def test_stop_apply_process_rereads_child_groups_after_parent_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Codex subprocess は親 apply process より先に専用 process group ごと止める。"""
+    """親終了後の pid file 再読込で後発 Codex child group も止める。"""
     order: list[str] = []
 
     def fake_stop_child(process: apply_runtime.ProcessIdentity) -> None:
@@ -256,17 +260,20 @@ def test_stop_apply_process_stops_tracked_child_group_before_parent(
     warning = apply_runtime.stop_apply_process(
         apply_runtime.ApplyProcessIdentity(
             12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
-        )
+        ),
+        lambda: apply_runtime.ApplyProcessIdentity(
+            12345, 20, (apply_runtime.ProcessIdentity(34567, 40),)
+        ),
     )
 
     assert warning is None
-    assert order == [f"child:23456", f"parent:12345:{apply_runtime.signal.SIGTERM}"]
+    assert order == [f"parent:12345:{apply_runtime.signal.SIGTERM}", "child:34567"]
 
 
 def test_stop_apply_process_keeps_child_warning_when_parent_is_stale(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """親 process 側の早期 warning でも child 停止 warning を破棄しない。"""
+    """親 process 側の warning 後も child 停止 warning を破棄しない。"""
     monkeypatch.setattr(
         apply_runtime,
         "stop_child_process_group",
@@ -283,8 +290,8 @@ def test_stop_apply_process_keeps_child_warning_when_parent_is_stale(
     )
 
     assert warning == (
-        "apply child process already stopped: 23456; "
-        "stale apply process id ignored: 12345"
+        "stale apply process id ignored: 12345; "
+        "apply child process already stopped: 23456"
     )
 
 
@@ -478,7 +485,7 @@ def test_apply_abandon_rejects_running_state_without_process_id(
     """running state で process identity が無い場合は cleanup 前に拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -523,7 +530,7 @@ def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(
     """state 上の apply branch から worktree が導けない破損状態を拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -538,10 +545,55 @@ def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(
     result = runner.invoke(app, ["apply", "abandon"])
 
     assert result.exit_code != 0
-    assert "apply worktree を特定できません。" in result.output
+    assert "apply branch 名から session-id を特定できません。" in result.output
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"] == "cmoc/apply/malformed"
+
+
+def test_apply_abandon_rejects_other_session_apply_branch_from_session_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """state に混入した別 session apply branch は cleanup 前に拒否する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    other_session_id = "other-session"
+    other_apply_branch = f"cmoc/apply/{other_session_id}/manual"
+    other_apply_worktree = (
+        root / ".cmoc" / "local" / "worktree" / other_session_id / "manual"
+    )
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        other_apply_branch,
+        str(other_apply_worktree),
+        session_branch,
+    )
+    state = json.loads(state_path.read_text())
+    state["apply"]["state"] = "completed"
+    state["apply"]["apply_branch"] = other_apply_branch
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+
+    result = runner.invoke(app, ["apply", "abandon"])
+
+    assert result.exit_code != 0
+    assert "破棄対象 apply run の補助情報を特定できません。" in result.output
+    assert f"session_id: {session_id}" in result.output
+    assert f"apply_branch: {other_apply_branch}" in result.output
+    assert other_apply_worktree.is_dir()
+    assert run_git(root, "rev-parse", "--verify", other_apply_branch).returncode == 0
+    state = json.loads(state_path.read_text())
+    assert state["apply"]["state"] == "completed"
+    assert state["apply"]["apply_branch"] == other_apply_branch
 
 
 def test_apply_abandon_can_run_from_apply_worktree(
@@ -550,7 +602,7 @@ def test_apply_abandon_can_run_from_apply_worktree(
     """apply worktree 内からの abandon は repo root へ戻して cleanup する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -595,7 +647,7 @@ def test_apply_abandon_checks_linked_session_worktree_dirty(
     """linked session worktree の未コミット差分がある abandon を拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     linked, state_path, apply_branch, apply_worktree = setup_linked_session_apply(
         root, monkeypatch
     )
@@ -619,7 +671,7 @@ def test_apply_abandon_from_linked_apply_worktree_uses_repo_state(
     """linked apply worktree からでも repo 側 state を正として cleanup する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     linked, state_path, apply_branch, apply_worktree = setup_linked_session_apply(
         root, monkeypatch
     )
@@ -647,7 +699,7 @@ def test_apply_abandon_rejects_stale_apply_branch(
     """同じ session の古い apply branch から active run 破棄を拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )

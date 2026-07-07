@@ -26,7 +26,7 @@ def build_oracle_and_realization_basic() -> tuple[PlaceholderMap, StructDoc]:
                         以下の条件をすべて満たしたファイルの事を指す
                         - `<work-root>/oracle` ツリー内である
                         - `INDEX.md`, `AGENTS.md` ではない
-                        - `git check-ignore` で git 追跡対象外ではない
+                        - `git check-ignore` で git 追跡対象外ではないと判定された
                         """,
                     ),
                     StructDoc(
@@ -66,7 +66,7 @@ def build_oracle_and_realization_basic() -> tuple[PlaceholderMap, StructDoc]:
                     - `<work-root>/.agents` ツリー内ではない
                     - `<work-root>/.codex` ツリー内ではない
                     - `INDEX.md`, `AGENTS.md` ではない
-                    - `git check-ignore` で git 追跡対象外ではない
+                    - `git check-ignore` で git 追跡対象外ではないと判定された
                     """,
                 ),
                 StructDoc(

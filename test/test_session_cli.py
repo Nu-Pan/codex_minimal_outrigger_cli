@@ -24,6 +24,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
+    run_doctor,
 )
 from main import app
 import sub_commands.session.abandon as session_module
@@ -52,6 +53,7 @@ def write_abandoned_state(root: Path, session_id: str) -> Path:
                     "session_home_branch": "old-home",
                     "session_start_commit": "old-commit",
                     "last_joined_apply_oracle_snapshot_commit": None,
+                    "joined_at": None,
                 },
                 "apply": {
                     "state": "ready",
@@ -67,14 +69,34 @@ def write_abandoned_state(root: Path, session_id: str) -> Path:
     return path
 
 
+def break_preprocess_invariants(work: Path) -> Path:
+    gitignore = work / ".gitignore"
+    gitignore.write_text(
+        "\n".join(
+            line
+            for line in gitignore.read_text().splitlines()
+            if line != "/.cmoc/local/"
+        )
+        + "\n"
+    )
+    tracked_probe = work / ".cmoc" / "local" / "tracked-probe"
+    tracked_probe.parent.mkdir(parents=True, exist_ok=True)
+    tracked_probe.write_text("tracked\n")
+    run_git(work, "add", ".gitignore")
+    run_git(work, "add", "-f", ".cmoc/local/tracked-probe")
+    run_git(work, "rm", ".agents/.gitkeep")
+    run_git(work, "commit", "-m", "break preprocess invariants")
+    return gitignore
+
+
 def test_session_fork_creates_session_branch_and_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     home_branch = current_branch(root)
-    init_result = runner.invoke(app, ["init"], catch_exceptions=False)
-    assert init_result.exit_code == 0
+    doctor_result = run_doctor(root)
+    assert doctor_result.exit_code == 0
 
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
 
@@ -85,6 +107,7 @@ def test_session_fork_creates_session_branch_and_state(
     assert state["session"]["state"] == "active"
     assert state["session"]["session_home_branch"] == home_branch
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is None
+    assert state["session"]["joined_at"] is None
     assert state["apply"]["state"] == "ready"
 
 
@@ -170,7 +193,7 @@ def test_session_fork_initializes_cmoc_ignore_before_logging(
     branch = current_branch(root)
     assert branch.startswith("cmoc/session/")
     assert session_home_branch(root, branch) == home_branch
-    assert not (root / ".gitignore").exists()
+    assert "/.cmoc/local/" in (root / ".gitignore").read_text()
     assert (
         subprocess.run(
             ["git", "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"],
@@ -187,7 +210,7 @@ def test_session_fork_uses_linked_worktree_branch_and_head(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
@@ -214,7 +237,7 @@ def test_session_abandon_switches_home_and_marks_state(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -236,6 +259,7 @@ def test_session_abandon_switches_home_and_marks_state(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "abandoned"
+    assert state["session"]["joined_at"] is None
     assert f"- abandoned_branch: `{session_branch}`" in result.output
     assert "- session_state: `abandoned`" in result.output
 
@@ -245,7 +269,7 @@ def test_session_abandon_uses_linked_worktree_branch(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
@@ -272,7 +296,38 @@ def test_session_abandon_uses_linked_worktree_branch(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "abandoned"
+    assert state["session"]["joined_at"] is None
     assert f"- abandoned_branch: `{session_branch}`" in result.output
+
+
+def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(linked)
+    home_branch = session_home_branch(root, session_branch)
+    gitignore = break_preprocess_invariants(linked)
+    run_git(root, "branch", "-D", home_branch)
+
+    result = runner.invoke(app, ["session", "abandon"])
+
+    assert result.exit_code != 0
+    assert current_branch(linked) == session_branch
+    assert "session home branch が存在しません。" in result.stdout
+    assert "/.cmoc/local/" in gitignore.read_text().splitlines()
+    assert run_git(linked, "ls-files", "--", ".cmoc/local").stdout == ""
+    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
+    assert run_git(linked, "status", "--short").stdout.strip() == ""
 
 
 def test_session_abandon_requires_existing_home_branch(
@@ -280,7 +335,7 @@ def test_session_abandon_requires_existing_home_branch(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -294,12 +349,12 @@ def test_session_abandon_requires_existing_home_branch(
         )
         + "\n"
     )
-    tracked_probe = root / ".cmoc" / "tracked-probe"
+    tracked_probe = root / ".cmoc" / "local" / "tracked-probe"
+    tracked_probe.parent.mkdir(parents=True, exist_ok=True)
     tracked_probe.write_text("tracked\n")
     run_git(root, "add", ".gitignore")
-    run_git(root, "add", "-f", ".cmoc/tracked-probe")
+    run_git(root, "add", "-f", ".cmoc/local/tracked-probe")
     run_git(root, "commit", "-m", "track cmoc probe on session")
-    tracked_cmoc = run_git(root, "ls-files", "--", ".cmoc").stdout
     run_git(root, "branch", "-D", home_branch)
     run_git(root, "tag", home_branch, home_commit)
 
@@ -321,16 +376,23 @@ def test_session_abandon_requires_existing_home_branch(
         ).returncode
         == 0
     )
-    assert "/.cmoc/local/" not in gitignore.read_text().splitlines()
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout == tracked_cmoc
+    assert "/.cmoc/local/" in gitignore.read_text().splitlines()
+    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout == ""
 
 
+@pytest.mark.parametrize(
+    "cleanup_error",
+    [
+        CmocError("delete failed", ["next"], "branch delete failed"),
+        KeyboardInterrupt(),
+    ],
+)
 def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cleanup_error: BaseException
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -343,17 +405,17 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
         )
         + "\n"
     )
-    tracked_probe = root / ".cmoc" / "tracked-probe"
+    tracked_probe = root / ".cmoc" / "local" / "tracked-probe"
+    tracked_probe.parent.mkdir(parents=True, exist_ok=True)
     tracked_probe.write_text("tracked\n")
     run_git(root, "add", ".gitignore")
-    run_git(root, "add", "-f", ".cmoc/tracked-probe")
+    run_git(root, "add", "-f", ".cmoc/local/tracked-probe")
     run_git(root, "commit", "-m", "track cmoc probe on session")
-    tracked_cmoc = run_git(root, "ls-files", "--", ".cmoc").stdout
     original_delete_branch = session_module.delete_branch
 
     def fake_delete_branch(root: Path, branch: str, force: bool = False) -> None:
         if branch == session_branch:
-            raise CmocError("delete failed", ["next"], "branch delete failed")
+            raise cleanup_error
         return original_delete_branch(root, branch, force)
 
     monkeypatch.setattr(session_module, "delete_branch", fake_delete_branch)
@@ -373,8 +435,9 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "active"
-    assert "/.cmoc/local/" not in gitignore.read_text().splitlines()
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout == tracked_cmoc
+    assert state["session"]["joined_at"] is None
+    assert "/.cmoc/local/" in gitignore.read_text().splitlines()
+    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout == ""
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -384,7 +447,7 @@ def test_session_completion_rejects_missing_state_fields(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -409,7 +472,7 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -444,9 +507,62 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
         writable_roots = set(
             tomllib.loads(profile)["sandbox_workspace_write"]["writable_roots"]
         )
-        assert writable_roots == {str(root.resolve())}
-        assert all(Path(path).is_dir() for path in writable_roots)
+        assert writable_roots == {
+            str(path.resolve())
+            for path in (
+                root / ".gitignore",
+                root / "README.md",
+                root / "bin",
+                root / "oracle",
+                root / "src",
+                root / "test",
+            )
+        }
         target.write_text("resolved change\nTitle\n=======\n")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert current_branch(root) == home_branch
+    assert target.read_text() == "resolved change\nTitle\n=======\n"
+    assert calls == ["session join conflict resolution"]
+    assert modes == [FileAccessMode.REPO_WRITE]
+
+
+def test_session_join_handles_conflict_path_containing_newline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "src" / "line\nbreak.txt"
+    target.parent.mkdir()
+    target.write_text("base\n")
+    run_git(root, "add", "src/line\nbreak.txt")
+    run_git(root, "commit", "-m", "add newline path")
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    run_git(root, "add", "src/line\nbreak.txt")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "src/line\nbreak.txt")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        assert kwargs["extra_writable_paths"] == [target]
+        target.write_text("resolved change\n")
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
@@ -455,9 +571,8 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
 
     assert result.exit_code == 0
     assert current_branch(root) == home_branch
-    assert target.read_text() == "resolved change\nTitle\n=======\n"
-    assert calls == ["session join conflict resolution"]
-    assert modes == [FileAccessMode.REPO_WRITE]
+    assert target.read_text() == "resolved change\n"
+    assert run_git(root, "diff", "--name-only", "-z", "--diff-filter=U").stdout == ""
 
 
 def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
@@ -467,7 +582,7 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     target = root / "oracle" / "spec.md"
     extra = root / "src" / "extra.py"
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -502,6 +617,159 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
 
 
+def test_session_join_rejects_staged_non_conflict_change_with_quoted_status_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    extra = root / "src" / "extra file.py"
+    extra.parent.mkdir()
+    extra.write_text("base\n")
+    run_git(root, "add", "src/extra file.py")
+    run_git(root, "commit", "-m", "add extra")
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    extra.write_text("session extra\n")
+    run_git(root, "add", "oracle/spec.md", "src/extra file.py")
+    run_git(root, "commit", "-m", "session changes")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        target.write_text("resolved change\n")
+        extra.write_text("agent extra\n")
+        run_git(root, "add", "src/extra file.py")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "conflict 解消以外の差分が残っています。" in result.stderr
+    assert "src/extra file.py" in result.stderr
+    assert "session changes" not in run_git(root, "log", "--oneline", "-1").stdout
+
+
+def test_session_join_rejects_disappeared_non_conflict_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    extra = root / "src" / "extra.py"
+    extra.parent.mkdir()
+    extra.write_text("base\n")
+    run_git(root, "add", "src/extra.py")
+    run_git(root, "commit", "-m", "add extra")
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    extra.write_text("session extra\n")
+    run_git(root, "add", "oracle/spec.md", "src/extra.py")
+    run_git(root, "commit", "-m", "session changes")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        target.write_text("resolved change\n")
+        run_git(
+            root,
+            "restore",
+            "--source=HEAD",
+            "--staged",
+            "--worktree",
+            "src/extra.py",
+        )
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "conflict 解消以外の差分が残っています。" in result.stderr
+    assert "src/extra.py" in result.stderr
+    assert "session changes" not in run_git(root, "log", "--oneline", "-1").stdout
+
+
+def test_session_join_rejects_non_conflict_directory_symlink_target_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    link = root / "src" / "link"
+    (root / "src" / "dir_a").mkdir(parents=True)
+    (root / "src" / "dir_b").mkdir()
+    (root / "src" / "dir_c").mkdir()
+    for directory in ("dir_a", "dir_b", "dir_c"):
+        (root / "src" / directory / ".keep").write_text("keep\n")
+    link.symlink_to("dir_a")
+    run_git(root, "add", "src")
+    run_git(root, "commit", "-m", "add symlink")
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    link.unlink()
+    link.symlink_to("dir_b")
+    run_git(root, "add", "oracle/spec.md", "src/link")
+    run_git(root, "commit", "-m", "session changes")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        target.write_text("resolved change\n")
+        link.unlink()
+        link.symlink_to("dir_c")
+        run_git(root, "add", "src/link")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "conflict 解消以外の差分が残っています。" in result.stderr
+    assert "src/link" in result.stderr
+    assert "session changes" not in run_git(root, "log", "--oneline", "-1").stdout
+
+
 def test_session_join_conflict_marker_detection_uses_marker_block() -> None:
     assert not session_join_module._has_conflict_marker_block("Title\n=======\n")
     assert session_join_module._has_conflict_marker_block(
@@ -517,7 +785,7 @@ def test_session_join_uses_linked_worktree_branch(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
@@ -539,7 +807,38 @@ def test_session_join_uses_linked_worktree_branch(
     assert (linked / "README.md").read_text() == "linked session change\n"
     state = json.loads(session_state_path(root, session_branch).read_text())
     assert state["session"]["state"] == "joined"
-    assert "joined_at" not in state["session"]
+    assert state["session"]["joined_at"] is None
+
+
+def test_session_join_preprocesses_linked_worktree_before_preconditions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(linked)
+    home_branch = session_home_branch(root, session_branch)
+    gitignore = break_preprocess_invariants(linked)
+    run_git(root, "branch", "-D", home_branch)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(linked) == session_branch
+    assert "git コマンドが失敗しました。" in result.stderr
+    assert "git コマンドが失敗しました。" not in result.stdout
+    assert "/.cmoc/local/" in gitignore.read_text().splitlines()
+    assert run_git(linked, "ls-files", "--", ".cmoc/local").stdout == ""
+    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
+    assert run_git(linked, "status", "--short").stdout.strip() == ""
 
 
 def test_session_join_stages_delete_conflict_resolution(
@@ -547,7 +846,7 @@ def test_session_join_stages_delete_conflict_resolution(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -584,7 +883,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -618,7 +917,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -657,7 +956,7 @@ def test_session_join_error_report_is_written_to_stdout(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -679,7 +978,7 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     root = make_repo(tmp_path)
     target = root / "README.md"
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )

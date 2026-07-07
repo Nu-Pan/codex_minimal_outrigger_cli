@@ -9,20 +9,17 @@ subcommand event、retry counter を共有する 1 つの状態機械である�
 根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
-import hashlib
 import json
-import os
 import subprocess
 import threading
 import time
-from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from jsonschema import validate
 
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_config import load_config
@@ -31,9 +28,9 @@ from commons.runtime_codex_profile import (
     codex_profile_name,
     codex_subprocess_env,
     extract_resume_token,
-    file_access_to_codex_cwd,
     is_capacity_error,
     is_quota_error,
+    parameter_codex_cwd,
     prepare_codex_profile,
     prepare_schema,
     read_output_json,
@@ -43,7 +40,7 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_errors import CmocError
 from commons.runtime_codex_logging import emit_codex_call_console
-from commons.runtime_git import is_oracle_file_path, run_git
+from commons.runtime_git import status_path_statuses
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
     codex_log_dir,
@@ -61,18 +58,6 @@ _QUOTA_PROBE_AVAILABLE = False
 _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
-_PathFingerprint = tuple[str, int, int, str | None] | None
-_GENERATED_DIFF_PATHS_LOCK = threading.Lock()
-_GENERATED_DIFF_FINGERPRINTS: dict[Path, _PathFingerprint] = {}
-_FORBIDDEN_FILESYSTEM_DIFF_ROOTS = (".agents", ".codex", ".git", "memo")
-_IGNORED_GIT_DIFF_EXCLUDED_ROOTS = (".venv",)
-_ForbiddenSnapshot = dict[Path, tuple[int, int, int, int, str | None]]
-_WorktreeDiffSnapshot = dict[Path, tuple[str, _PathFingerprint]]
-# <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-# `git status` may refresh the index during post-check; .git itself is still
-# denied, so only that cmoc-owned metadata churn is excluded from comparison.
-_GIT_STATUS_MUTABLE_PATHS = {Path(".git/index")}
-_BeforeCodexCall = Callable[[str, Path], None]
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -80,19 +65,6 @@ def _write_prompt_log(path: Path, prompt: str) -> None:
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # The prompt log is the replayable stdin source itself, not metadata.
     path.write_text(prompt)
-    _record_generated_diff_paths({path})
-
-
-def _record_generated_diff_paths(paths: set[Path]) -> None:
-    """cmoc が生成した差分 path の現在 fingerprint を post-check 用に記録する。"""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Concurrent cmoc calls share a worktree. A generated path is ignored only
-    # while its fingerprint still matches the cmoc-written content; later agent
-    # edits to that same path must be checked normally.
-    with _GENERATED_DIFF_PATHS_LOCK:
-        for path in paths:
-            resolved = path.resolve()
-            _GENERATED_DIFF_FINGERPRINTS[resolved] = _path_fingerprint(resolved)
 
 
 def _read_required_output_json(path: Path) -> Any:
@@ -142,9 +114,17 @@ def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
 def _quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
-    from acp.builder.quota_probe import build_quota_availability_probe_parameter
+    try:
+        from acp.builder.quota_probe import build_quota_availability_probe_parameter
 
-    return build_quota_availability_probe_parameter(base_parameter)
+        return build_quota_availability_probe_parameter(base_parameter)
+    except (AttributeError, ModuleNotFoundError) as exc:
+        raise CmocError(
+            "quota availability probe の builder が見つかりません。",
+            ["cmoc のインストール内容を確認してから再実行してください。"],
+            str(exc),
+        ) from exc
+
 
 
 def _next_codex_log_timestamp() -> str:
@@ -179,8 +159,6 @@ def run_codex_exec(
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
     allow_oracle_conflict_writes: bool = False,
-    verify_file_access: bool = True,
-    _before_recovery_codex_call: _BeforeCodexCall | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
@@ -189,7 +167,7 @@ def run_codex_exec(
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
     codex_work_root = work_root(cwd)
-    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, codex_work_root)
+    codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # Relative CODEX_HOME is still passed through unchanged, so preflight and
     # profile generation must target the path Codex resolves from its real cwd.
@@ -208,9 +186,10 @@ def run_codex_exec(
     )
     profile_name = codex_profile_name(profile_path)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # `--output-schema` must point at state under the same work root Codex uses.
+    # `--output-schema` must point at the repo-root local schema store, even
+    # when Codex itself runs inside a linked worktree.
     schema_path = (
-        prepare_schema(codex_work_root, parameter.structured_output_schema_path)
+        prepare_schema(root, parameter.structured_output_schema_path)
         if parameter.structured_output_schema_path
         else None
     )
@@ -220,6 +199,7 @@ def run_codex_exec(
         run_codex_home: Path,
         run_profile_path: Path,
         run_profile_name: str,
+        run_codex_cwd: Path,
     ) -> dict[str, str]:
         """call log に残す profile 由来値を実際の呼び出し parameter に揃える。"""
         return {
@@ -229,9 +209,12 @@ def run_codex_exec(
             "model_class": run_parameter.model_class.value,
             "reasoning_effort": run_parameter.reasoning_effort.value,
             "file_access_mode": run_parameter.file_access_mode.value,
+            "cwd": str(run_codex_cwd.resolve()),
         }
 
-    base_call_data = call_data(parameter, codex_home, profile_path, profile_name)
+    base_call_data = call_data(
+        parameter, codex_home, profile_path, profile_name, codex_cwd
+    )
 
     def new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
@@ -304,6 +287,7 @@ def run_codex_exec(
                     "stdout_log_path": str(run_stdout_path),
                     "stderr_log_path": str(run_stderr_path),
                     "output_path": str(run_output_path),
+                    "output_jsonl_log_path": str(run_output_path.with_suffix(".jsonl")),
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -357,8 +341,6 @@ def run_codex_exec(
         if error is not None:
             payload["error"] = error
         logger.event("codex_call", **payload)
-        _record_generated_diff_paths({logger.path})
-
     def codex_exec_result_from_paths(
         result: subprocess.CompletedProcess[str],
         *,
@@ -388,80 +370,18 @@ def run_codex_exec(
             quota_polls=quota_polls,
         )
 
-    def recover_terminal_file_access_violations(
-        exec_result: CodexExecResult,
-    ) -> None:
-        if not verify_file_access:
-            return
-        allowed_paths: list[Path] = []
-        if allow_oracle_conflict_writes:
-            # <work-root>/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
-            # Codex profile can only open parent directories, so the
-            # stricter file-level conflict target boundary is enforced here.
-            allowed_paths.extend(extra_writable_paths or [])
-        recover_file_access_violations(
-            codex_work_root,
-            exec_result,
-            parameter.file_access_mode,
-            config,
-            generated_paths,
-            root=root,
-            subcommand_logger=logger,
-            allowed_paths=allowed_paths,
-            forbidden_baseline=forbidden_baseline,
-            worktree_diff_baseline=worktree_diff_baseline,
-            before_recovery_codex_call=_before_recovery_codex_call,
-        )
-
-    def recover_call_file_access_violations(
-        result: subprocess.CompletedProcess[str],
-        *,
-        run_call_path: Path,
-        run_prompt_path: Path,
-        run_stdout_path: Path,
-        run_stderr_path: Path,
-        run_output_path: Path,
-        run_schema_path: Path | None = schema_path,
-    ) -> None:
-        recover_terminal_file_access_violations(
-            codex_exec_result_from_paths(
-                result,
-                run_call_path=run_call_path,
-                run_prompt_path=run_prompt_path,
-                run_stdout_path=run_stdout_path,
-                run_stderr_path=run_stderr_path,
-                run_output_path=run_output_path,
-                run_schema_path=run_schema_path,
-            )
-        )
-
     semantic_attempts = 0
     capacity_attempts = 0
     quota_polls = 0
     sleep_sec = capacity_initial_sleep_sec
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
-    generated_paths: set[Path] = {profile_path.resolve()}
-    if schema_path is not None:
-        generated_paths.add(schema_path.resolve())
-    if logger is not None:
-        generated_paths.add(logger.path.resolve())
-    _record_generated_diff_paths(generated_paths)
-    forbidden_baseline = (
-        _forbidden_filesystem_snapshot(codex_work_root) if verify_file_access else None
-    )
-    worktree_diff_baseline = (
-        _worktree_diff_snapshot(codex_work_root) if verify_file_access else None
-    )
 
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
+        output_jsonl_path = output_path.with_suffix(".jsonl")
         current_argv = build_argv(output_path, resume_token)
         _write_prompt_log(prompt_path, parameter.prompt)
-        generated_paths.update(
-            path.resolve()
-            for path in (prompt_path, stdout_path, stderr_path, output_path, call_path)
-        )
         write_call_log(
             call_path,
             run_purpose=purpose,
@@ -473,13 +393,12 @@ def run_codex_exec(
             run_output_path=output_path,
             run_schema_path=schema_path,
         )
-        _record_generated_diff_paths({call_path})
         attempt_started_at = time.perf_counter()
         result = run_with_prompt_file(current_argv, prompt_path)
         last_result = result
         stdout_path.write_text(result.stdout)
+        output_jsonl_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
-        _record_generated_diff_paths({stdout_path, stderr_path, output_path})
         error_text = codex_error_text(result.stdout, result.stderr)
         if result.returncode != 0:
             if (
@@ -499,17 +418,6 @@ def run_codex_exec(
                     returncode=result.returncode,
                     status="capacity_retrying",
                     error=error_text,
-                )
-                # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-                # Capacity retry does not exempt the completed agent call
-                # from the mandatory file-access post-check.
-                recover_call_file_access_violations(
-                    result,
-                    run_call_path=call_path,
-                    run_prompt_path=prompt_path,
-                    run_stdout_path=stdout_path,
-                    run_stderr_path=stderr_path,
-                    run_output_path=output_path,
                 )
                 time.sleep(sleep_sec)
                 sleep_sec *= 2
@@ -544,24 +452,8 @@ def run_codex_exec(
                         if logger is not None:
                             logger.add_quota_wait(waited_sec)
                         if _QUOTA_PROBE_ERROR is not None:
-                            recover_call_file_access_violations(
-                                result,
-                                run_call_path=call_path,
-                                run_prompt_path=prompt_path,
-                                run_stdout_path=stdout_path,
-                                run_stderr_path=stderr_path,
-                                run_output_path=output_path,
-                            )
                             raise _QUOTA_PROBE_ERROR
                         if not _QUOTA_PROBE_AVAILABLE:
-                            recover_call_file_access_violations(
-                                result,
-                                run_call_path=call_path,
-                                run_prompt_path=prompt_path,
-                                run_stdout_path=stdout_path,
-                                run_stderr_path=stderr_path,
-                                run_output_path=output_path,
-                            )
                             raise CmocError(
                                 "Codex CLI quota 待機の代表 probe が中断しました。",
                                 [
@@ -570,7 +462,7 @@ def run_codex_exec(
                                 error_text,
                             )
                         resume_token = _extract_resume_token_from_jsonl_log(
-                            stdout_path
+                            output_jsonl_path
                         )
                         continue
                     _QUOTA_PROBE_AVAILABLE = False
@@ -588,14 +480,6 @@ def run_codex_exec(
                             max_quota_polls is not None
                             and quota_polls >= max_quota_polls
                         ):
-                            recover_call_file_access_violations(
-                                result,
-                                run_call_path=call_path,
-                                run_prompt_path=prompt_path,
-                                run_stdout_path=stdout_path,
-                                run_stderr_path=stderr_path,
-                                run_output_path=output_path,
-                            )
                             raise CmocError(
                                 "Codex CLI quota が枯渇しました。",
                                 [
@@ -611,8 +495,8 @@ def run_codex_exec(
                         quota_probe_parameter = _quota_availability_probe_parameter(
                             parameter
                         )
-                        probe_codex_cwd = file_access_to_codex_cwd(
-                            quota_probe_parameter.file_access_mode, codex_work_root
+                        probe_codex_cwd = parameter_codex_cwd(
+                            quota_probe_parameter, codex_work_root
                         )
                         # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
                         # quota probe is a separate Codex call; its minimal
@@ -633,9 +517,8 @@ def run_codex_exec(
                             probe_codex_home,
                             probe_profile_path,
                             probe_profile_name,
+                            probe_codex_cwd,
                         )
-                        generated_paths.add(probe_profile_path.resolve())
-                        _record_generated_diff_paths({probe_profile_path})
                         (
                             probe_ts,
                             probe_prompt_path,
@@ -644,16 +527,7 @@ def run_codex_exec(
                             probe_output_path,
                             probe_call_path,
                         ) = new_log_paths()
-                        generated_paths.update(
-                            path.resolve()
-                            for path in (
-                                probe_prompt_path,
-                                probe_stdout_path,
-                                probe_stderr_path,
-                                probe_output_path,
-                                probe_call_path,
-                            )
-                        )
+                        probe_output_jsonl_path = probe_output_path.with_suffix(".jsonl")
                         probe_argv = _base_exec_argv(
                             probe_profile_name, probe_codex_cwd
                         )
@@ -680,7 +554,6 @@ def run_codex_exec(
                             run_schema_path=None,
                             run_call_data=probe_call_data,
                         )
-                        _record_generated_diff_paths({probe_call_path})
                         probe_started_at = time.perf_counter()
                         poll = run_with_prompt_file(
                             probe_argv,
@@ -689,10 +562,8 @@ def run_codex_exec(
                             run_codex_env=probe_codex_env,
                         )
                         probe_stdout_path.write_text(poll.stdout)
+                        probe_output_jsonl_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
-                        _record_generated_diff_paths(
-                            {probe_stdout_path, probe_stderr_path, probe_output_path}
-                        )
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
                         probe_quota_error = is_quota_error(poll.stdout)
                         probe_capacity_error = is_capacity_error(poll.stdout)
@@ -723,18 +594,6 @@ def run_codex_exec(
                                 run_profile_path=probe_profile_path,
                                 run_profile_name=probe_profile_name,
                             )
-                            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-                            # A quota probe is still an agent call; capacity
-                            # retry only changes the next step, not post-check.
-                            recover_call_file_access_violations(
-                                poll,
-                                run_call_path=probe_call_path,
-                                run_prompt_path=probe_prompt_path,
-                                run_stdout_path=probe_stdout_path,
-                                run_stderr_path=probe_stderr_path,
-                                run_output_path=probe_output_path,
-                                run_schema_path=None,
-                            )
                             time.sleep(sleep_sec)
                             sleep_sec *= 2
                             continue
@@ -758,15 +617,6 @@ def run_codex_exec(
                             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
                             # A probe is still `codex exec`; non-quota failure is
                             # not recoverable by waiting for quota reset.
-                            recover_call_file_access_violations(
-                                poll,
-                                run_call_path=probe_call_path,
-                                run_prompt_path=probe_prompt_path,
-                                run_stdout_path=probe_stdout_path,
-                                run_stderr_path=probe_stderr_path,
-                                run_output_path=probe_output_path,
-                                run_schema_path=None,
-                            )
                             raise CmocError(
                                 "Codex CLI quota availability probe が失敗しました。",
                                 ["stderr/stdout log を確認して原因を解消してください。"],
@@ -811,7 +661,7 @@ def run_codex_exec(
                     f"# {console_timestamp()} Codex CLI quota wait: resuming work",
                     flush=True,
                 )
-                resume_token = _extract_resume_token_from_jsonl_log(stdout_path)
+                resume_token = _extract_resume_token_from_jsonl_log(output_jsonl_path)
                 continue
             emit_codex_call_event(
                 run_purpose=purpose,
@@ -825,16 +675,6 @@ def run_codex_exec(
                 returncode=result.returncode,
                 status="failed",
                 error=error_text,
-            )
-            recover_terminal_file_access_violations(
-                codex_exec_result_from_paths(
-                    result,
-                    run_call_path=call_path,
-                    run_prompt_path=prompt_path,
-                    run_stdout_path=stdout_path,
-                    run_stderr_path=stderr_path,
-                    run_output_path=output_path,
-                )
             )
             raise CmocError(
                 "Codex CLI 呼び出しが失敗しました。",
@@ -868,17 +708,6 @@ def run_codex_exec(
                         status="schema_validation_retrying",
                         error=str(exc),
                     )
-                    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-                    # Semantic retry does not exempt the completed agent call
-                    # from the mandatory file-access post-check.
-                    recover_call_file_access_violations(
-                        result,
-                        run_call_path=call_path,
-                        run_prompt_path=prompt_path,
-                        run_stdout_path=stdout_path,
-                        run_stderr_path=stderr_path,
-                        run_output_path=output_path,
-                    )
                     continue
                 emit_codex_call_event(
                     run_purpose=purpose,
@@ -892,16 +721,6 @@ def run_codex_exec(
                     returncode=result.returncode,
                     status="schema_validation_failed",
                     error=str(exc),
-                )
-                recover_terminal_file_access_violations(
-                    codex_exec_result_from_paths(
-                        result,
-                        run_call_path=call_path,
-                        run_prompt_path=prompt_path,
-                        run_stdout_path=stdout_path,
-                        run_stderr_path=stderr_path,
-                        run_output_path=output_path,
-                    )
                 )
                 raise CmocError(
                     "Codex CLI の Structured Output 検証に失敗しました。",
@@ -947,156 +766,9 @@ def run_codex_exec(
             quota_wait_sec=quota_wait_sec,
             quota_polls=quota_polls,
         )
-        recover_terminal_file_access_violations(exec_result)
         return exec_result
 
     assert last_result is not None
-
-
-def recover_file_access_violations(
-    worktree: Path,
-    violated_result: CodexExecResult,
-    violated_mode: FileAccessMode,
-    config: CmocConfig,
-    ignored_paths: set[Path] | None = None,
-    *,
-    root: Path | None = None,
-    subcommand_logger: SubcommandLogger | None = None,
-    allowed_paths: list[Path] | None = None,
-    forbidden_baseline: _ForbiddenSnapshot | None = None,
-    worktree_diff_baseline: _WorktreeDiffSnapshot | None = None,
-    before_recovery_codex_call: _BeforeCodexCall | None = None,
-) -> None:
-    """agent call 後に残った file access rule 違反を設定回数だけ修復する。"""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Runtime-generated logs are ignored here; the post-check targets agent
-    # edits that remain in the worktree after the call.
-    ignored = {path.resolve() for path in ignored_paths or set()}
-    violations = file_access_violations(
-        worktree,
-        _post_call_changed_worktree_paths(
-            worktree, forbidden_baseline, worktree_diff_baseline
-        ),
-        violated_mode,
-        ignored,
-        allowed_paths,
-    )
-    if not violations:
-        return
-    for _attempt in range(config.codex.num_try_falv_recovery):
-        parameter = _file_access_recovery_parameter(
-            violated_result.call_log_path,
-            violations,
-            violated_mode,
-        )
-        purpose = "file access rule violation recovery"
-        recovery_root = root or worktree
-        if before_recovery_codex_call is not None:
-            # <work-root>/oracle/doc/app_spec/indexing.md
-            # Recovery is an agent call, but it recurses into this exec
-            # implementation instead of the outer preflight wrapper.
-            before_recovery_codex_call(purpose, worktree)
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # The post-check targets agent edits only; indexing preflight may
-            # commit INDEX.md and update .git before the recovery agent starts.
-            if forbidden_baseline is not None:
-                forbidden_baseline = _forbidden_filesystem_snapshot(worktree)
-            if worktree_diff_baseline is not None:
-                worktree_diff_baseline = _worktree_diff_snapshot(worktree)
-        recovery_result = run_codex_exec(
-            parameter,
-            root=recovery_root,
-            cwd=worktree,
-            config=config,
-            purpose=purpose,
-            subcommand_logger=subcommand_logger,
-            verify_file_access=False,
-        )
-        recovery_generated_paths = {
-            path.resolve()
-            for path in (
-                recovery_result.call_log_path,
-                recovery_result.prompt_log_path,
-                recovery_result.stdout_log_path,
-                recovery_result.stderr_log_path,
-                recovery_result.output_path,
-            )
-        }
-        if recovery_result.schema_path is not None:
-            recovery_generated_paths.add(recovery_result.schema_path.resolve())
-        ignored.update(recovery_generated_paths)
-        if ignored_paths is not None:
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # Recovery is part of the same cmoc-managed post-check sequence;
-            # later retries in this outer call must not treat its logs as agent
-            # edits, but future run_codex_exec calls get a fresh ignore set.
-            ignored_paths.update(recovery_generated_paths)
-        violations = file_access_violations(
-            worktree,
-            _post_call_changed_worktree_paths(
-                worktree, forbidden_baseline, worktree_diff_baseline
-            ),
-            violated_mode,
-            ignored,
-            allowed_paths,
-        )
-        if not violations:
-            return
-    raise CmocError(
-        "agent call がファイルアクセス規則に違反しました。",
-        ["Codex call log と作業差分を確認してから cmoc コマンドを再実行してください。"],
-        "\n".join(str(path) for path in violations),
-    )
-
-
-def _file_access_recovery_parameter(
-    violated_agent_call_log: Path,
-    violations: list[Path],
-    violated_mode: FileAccessMode,
-) -> AgentCallParameter:
-    from acp.builder.apply.fork.finding_application import (
-        build_apply_fork_finding_application_parameter,
-    )
-
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # File-access recovery must use the finding-application agent call
-    # contract; the runtime only adapts detected violations into findings.
-    return build_apply_fork_finding_application_parameter(
-        [
-            {
-                "title": "File access rule violation recovery",
-                "evidences": [
-                    {
-                        "path": str(path),
-                        "line_start": 1,
-                        "line_end": 1,
-                        "summary": (
-                            f"`{path}` still has a diff forbidden by "
-                            f"`{violated_mode.value}`."
-                        ),
-                    }
-                    for path in violations
-                ],
-                "oracle_requirement": (
-                    "`<work-root>/oracle/doc/app_spec/codex_exec_rule.md` requires "
-                    "post-call file access violations to be recovered by an agent "
-                    "call whose contract is `build_apply_fork_finding_application_parameter`."
-                ),
-                "observed_implementation": (
-                    f"`{violated_agent_call_log}` left diffs outside the "
-                    f"`{violated_mode.value}` file access mode."
-                ),
-                "reason": (
-                    "The remaining diffs violate the file access mode of the "
-                    "agent call that produced them."
-                ),
-                "suggested_fix": (
-                    "Remove or move the forbidden diffs while preserving the "
-                    "semantic purpose of the original agent call log."
-                ),
-            }
-        ]
-    )
 
 
 def changed_worktree_paths(root: Path) -> list[Path]:
@@ -1104,242 +776,9 @@ def changed_worktree_paths(root: Path) -> list[Path]:
     return [path for _status, path in _changed_worktree_path_statuses(root)]
 
 
-def _changed_worktree_path_statuses(
-    root: Path, *, include_ignored: bool = False
-) -> list[tuple[str, Path]]:
+def _changed_worktree_path_statuses(root: Path) -> list[tuple[str, Path]]:
     """worktree 上の変更 path と git status code を absolute path として返す。"""
-    paths: list[tuple[str, Path]] = []
     # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # apply requeue and file access validation both need file-level paths;
-    # default status can collapse untracked directories into one directory path.
-    status_fields = run_git(
-        ["status", "--porcelain=v1", "-z", "-uall"], root
-    ).stdout.split("\0")
-    index = 0
-    while index < len(status_fields):
-        field = status_fields[index]
-        index += 1
-        if not field:
-            continue
-        status = field[:2]
-        paths.append((status, root / field[3:]))
-        if status[0] in {"R", "C"} or status[1] in {"R", "C"}:
-            index += 1
-    if not include_ignored:
-        return paths
-    for path_text in run_git(
-        ["ls-files", "--others", "--ignored", "--exclude-standard", "-z"], root
-    ).stdout.split("\0"):
-        if not path_text:
-            continue
-        parts = Path(path_text).parts
-        if parts and parts[0] in _IGNORED_GIT_DIFF_EXCLUDED_ROOTS:
-            continue
-        paths.append(("!!", root / path_text))
-    return paths
-
-
-def _post_call_changed_worktree_paths(
-    root: Path,
-    forbidden_baseline: _ForbiddenSnapshot | None,
-    worktree_diff_baseline: _WorktreeDiffSnapshot | None,
-) -> list[Path]:
-    """agent call 後の検査対象 path を返す。"""
-    paths = _post_call_changed_git_paths(root, worktree_diff_baseline)
-    if forbidden_baseline is not None:
-        paths.extend(_forbidden_filesystem_changed_paths(root, forbidden_baseline))
-    seen: set[Path] = set()
-    result: list[Path] = []
-    for path in paths:
-        resolved = path.resolve()
-        if resolved not in seen:
-            seen.add(resolved)
-            result.append(path)
-    return result
-
-
-def _post_call_changed_git_paths(
-    root: Path, baseline: _WorktreeDiffSnapshot | None
-) -> list[Path]:
-    paths: list[Path] = []
-    for status, path in _changed_worktree_path_statuses(root, include_ignored=True):
-        if baseline is None:
-            paths.append(path)
-            continue
-        resolved = path.resolve()
-        current = (status, _path_fingerprint(path))
-        if baseline.get(resolved) != current:
-            paths.append(path)
-    return paths
-
-
-def _worktree_diff_snapshot(root: Path) -> _WorktreeDiffSnapshot:
-    return {
-        path.resolve(): (status, _path_fingerprint(path))
-        for status, path in _changed_worktree_path_statuses(root, include_ignored=True)
-    }
-
-
-def _path_fingerprint(path: Path) -> _PathFingerprint:
-    try:
-        stat = path.lstat()
-    except FileNotFoundError:
-        return None
-    digest: str | None = None
-    if path.is_symlink():
-        digest = hashlib.sha256(os.readlink(path).encode()).hexdigest()
-    elif path.is_file():
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    return (
-        "dir" if path.is_dir() else "file",
-        stat.st_mode,
-        stat.st_size,
-        digest,
-    )
-
-
-def _forbidden_filesystem_snapshot(root: Path) -> _ForbiddenSnapshot:
-    snapshot: _ForbiddenSnapshot = {}
-    for name in _FORBIDDEN_FILESYSTEM_DIFF_ROOTS:
-        base = root / name
-        if not base.exists():
-            continue
-        if base.is_file() or base.is_symlink():
-            snapshot[base.relative_to(root)] = _forbidden_path_fingerprint(
-                base, include_digest=name == ".git"
-            )
-            continue
-        for current_root, _dirnames, filenames in os.walk(base):
-            paths = [Path(current_root)]
-            paths.extend(Path(current_root) / filename for filename in filenames)
-            for path in paths:
-                relative = path.relative_to(root)
-                if relative in _GIT_STATUS_MUTABLE_PATHS:
-                    continue
-                try:
-                    fingerprint = _forbidden_path_fingerprint(
-                        path,
-                        include_digest=name == ".git" and path.is_file(),
-                        stable_metadata=name == ".git",
-                    )
-                except FileNotFoundError:
-                    continue
-                snapshot[relative] = fingerprint
-    return snapshot
-
-
-def _forbidden_path_fingerprint(
-    path: Path, *, include_digest: bool = False, stable_metadata: bool = False
-) -> tuple[int, int, int, int, str | None]:
-    stat = path.lstat()
-    digest = hashlib.sha256(path.read_bytes()).hexdigest() if include_digest else None
-    mtime_ns = 0 if stable_metadata else stat.st_mtime_ns
-    ctime_ns = 0 if stable_metadata else stat.st_ctime_ns
-    return stat.st_mode, stat.st_size, mtime_ns, ctime_ns, digest
-
-
-def _forbidden_filesystem_changed_paths(
-    root: Path, baseline: _ForbiddenSnapshot
-) -> list[Path]:
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Ignored files below denied roots do not appear in git status, so post-check
-    # also compares file metadata captured immediately before the agent call.
-    current = _forbidden_filesystem_snapshot(root)
-    changed: list[Path] = []
-    for relative in sorted(set(baseline) | set(current), key=str):
-        if baseline.get(relative) != current.get(relative):
-            changed.append(root / relative)
-    return changed
-
-
-def file_access_violations(
-    root: Path,
-    paths: list[Path],
-    mode: FileAccessMode,
-    ignored_paths: set[Path] | None = None,
-    allowed_paths: list[Path] | None = None,
-) -> list[Path]:
-    """FileAccessMode 上、差分が残ってはいけない path だけを返す。"""
-    ignored = {path.resolve() for path in ignored_paths or set()}
-    allowed = {path.resolve() for path in allowed_paths or []}
-    return [
-        path
-        for path in paths
-        if path.resolve() not in ignored
-        and not _is_unchanged_generated_diff_path(path)
-        and path.resolve() not in allowed
-        and not _is_write_allowed_by_file_access_mode(root, path, mode)
-    ]
-
-
-def _is_unchanged_generated_diff_path(path: Path) -> bool:
-    resolved = path.resolve()
-    with _GENERATED_DIFF_PATHS_LOCK:
-        fingerprint = _GENERATED_DIFF_FINGERPRINTS.get(resolved)
-    return fingerprint is not None and fingerprint == _path_fingerprint(resolved)
-
-
-def _is_blocked_runtime_path(root: Path, path: Path) -> bool:
-    try:
-        relative = path.resolve().relative_to(root.resolve())
-    except ValueError:
-        return False
-    blocked_runtime_roots = {
-        ".agents",
-        ".cmoc",
-        ".codex",
-        ".git",
-        "memo",
-    }
-    return bool(relative.parts) and (
-        relative.parts[0] in blocked_runtime_roots
-        or path.name in {"AGENTS.md", "INDEX.md"}
-    )
-
-
-def _is_write_allowed_by_file_access_mode(
-    root: Path,
-    path: Path,
-    mode: FileAccessMode,
-) -> bool:
-    try:
-        relative = path.resolve().relative_to(root.resolve())
-    except ValueError:
-        return False
-    if not relative.parts:
-        return False
-    if _is_blocked_runtime_path(root, path):
-        return False
-    if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
-        return _is_readonly_temporary_diff_path(root, path, mode)
-    match mode:
-        case FileAccessMode.REALIZATION_WRITE:
-            return not is_oracle_file_path(root, path)
-        case FileAccessMode.PURE_ORACLE_WRITE:
-            return relative.parts[0] == "oracle"
-        case FileAccessMode.REPO_WRITE | FileAccessMode.NO_RULE:
-            return True
-        case _:
-            return False
-
-
-def _is_readonly_temporary_diff_path(
-    root: Path,
-    path: Path,
-    mode: FileAccessMode,
-) -> bool:
-    """READONLY 系で許す実行時一時生成物かどうかを返す。"""
-    try:
-        relative = path.resolve().relative_to(root.resolve())
-    except ValueError:
-        return False
-    if mode == FileAccessMode.PURE_ORACLE_READ and not path.resolve().is_relative_to(
-        (root / "oracle").resolve()
-    ):
-        return False
-    return (
-        ".pytest_cache" in relative.parts
-        or "__pycache__" in relative.parts
-        or path.name.endswith((".pyc", ".pyo"))
-    )
+    # apply requeue needs file-level paths after an agent call; default status
+    # can collapse untracked directories into one directory path.
+    return status_path_statuses(root, untracked_all=True)

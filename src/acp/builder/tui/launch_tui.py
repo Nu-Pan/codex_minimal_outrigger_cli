@@ -1,21 +1,11 @@
-"""TUI 起動 parameter builder の realization 側互換入口。
+"""TUI 起動 parameter builder の realization 側互換入口。"""
 
-oracle 側の builder は prompt 構築を正本として使うが、実行時の保存先は
-realization runtime の `.cmoc/local` 配置に従う。
-"""
-
-from pathlib import Path
-
-from oracle.acp_builder.basic import (
-    AgentCallParameter,
-    FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
+from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
+from oracle.acp_builder.tui.launch_tui import (
+    build_tui_launch_tui_parameter as _oracle_build_tui_launch_tui_parameter,
 )
-from oracle.other.path_model import resolve_repo_root
-from oracle.other.struct_doc import StructDoc, render_as_markdown
-from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
+from basic.path_model import RootPathPlaceHolder, resolve_real_path
 from commons.runtime_paths import logs_dir
 
 
@@ -34,35 +24,24 @@ def build_tui_launch_tui_parameter(
     index_entry_standard: bool,
 ) -> AgentCallParameter:
     """`cmoc tui` の TUI 起動用 AgentCallParameter を構築する。"""
-    complete_prompt = build_complete_prompt(
-        role=role,
-        summary=summary,
-        goal=goal,
-        file_access_mode=file_access_mode,
-        aux_dynamic_prompt=[
-            StructDoc(
-                "オリジナルプロンプト",
-                original_prompt,
-            ),
-        ],
-        oracle_and_realization_basic=oracle_and_realization_basic,
-        oracle_standard=oracle_standard,
-        realization_standard=realization_standard,
-        review_oracle_standard=review_oracle_standard,
-        apply_review_standard=apply_review_standard,
-        index_entry_standard=index_entry_standard,
-    )
-    complete_prompt_path = (
-        logs_dir(resolve_repo_root()).parent / "tui" / f"{time_stamp}_cmpl.md"
-    )
-    complete_prompt_path.parent.mkdir(parents=True, exist_ok=True)
-    complete_prompt_path.write_text(render_as_markdown(complete_prompt))
-    return AgentCallParameter(
-        ModelClass.MAINSTREAM,
-        ReasoningEffort.MEDIUM,
+    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+    # oracle builder が正本だが保存先 directory を作らないため、呼び出し前に
+    # runtime 側の配置だけ保証する。oracle 側で作成されるようになれば削除できる。
+    repo = resolve_real_path(RootPathPlaceHolder.REPO)
+    (logs_dir(repo).parent / "tui").mkdir(parents=True, exist_ok=True)
+    return _oracle_build_tui_launch_tui_parameter(
+        time_stamp,
+        role,
+        summary,
+        goal,
         file_access_mode,
-        f"{complete_prompt_path} を読んで、その指示に従って下さい",
-        Path(__file__).with_suffix(".json"),
+        original_prompt,
+        oracle_and_realization_basic,
+        oracle_standard,
+        realization_standard,
+        review_oracle_standard,
+        apply_review_standard,
+        index_entry_standard,
     )
 
 

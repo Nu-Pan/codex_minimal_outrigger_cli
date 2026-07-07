@@ -31,7 +31,7 @@
 
 ## 実行作業
 
-1. `<work-root>/.cmoc` が git の追跡対象外であることを保証する
+1. doctor preprocess を呼び出す
 2. run の隔離実行を開始する
 3. 調査待ちファイルリストを初期化
 3. apply ループ

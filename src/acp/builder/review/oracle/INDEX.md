@@ -50,39 +50,40 @@
 # `merge_finding.py`
 
 ## Summary
-- review oracle merge finding 用の agent call parameter を oracle src の builder から生成し、prompt 内の oracle root placeholder 表記だけを最小補正して返す薄い実装。
-- oracle src 側の placeholder 生成不具合を吸収する一時的な互換処理を持ち、oracle src が正しい表記を出すようになった後に削除できる境界をコメントで示している。
+- review oracle の finding merge 用 AgentCallParameter を正本 builder から生成し、正本 prompt に残る `<oracle-root>` placeholder 定義 typo だけを限定補正する薄い adapter。
+- 正本側の bug を realization 側で最小補正するための一時的な処理を持ち、known findings の扱いや parameter 本体の構成は正本 builder に委譲する。
 
 ## Read this when
-- review oracle merge finding の agent call parameter 生成経路を確認・変更する場合。
-- known findings を入力として渡す review oracle merge finding prompt の組み立て結果や structured output schema への接続を追う場合。
-- prompt の placeholder 定義で oracle root 表記が補正される理由、範囲、削除条件を確認する場合。
+- review oracle の merge finding 用 agent call parameter がどこで組み立てられるかを確認したいとき。
+- 正本 prompt の placeholder 定義 typo に対する realization 側の補正範囲、削除条件、根拠コメントを確認したいとき。
+- known findings を渡した後の prompt 補正が、parameter の他要素を変えずに適用されるかを調べるとき。
 
 ## Do not read this when
-- review oracle merge finding の正本 prompt 内容そのものを確認したい場合は、対応する oracle src を直接読む。
-- placeholder 表記補正と無関係な review workflow 全体、CLI、永続状態、git 操作を調べる場合。
-- agent call parameter の基本データ構造や共通 builder の仕様を調べる場合は、共通定義側を読む。
+- review oracle 以外の builder や agent call parameter 全般の構造を調べたいとき。
+- 正本 prompt の内容そのもの、または merge finding の正本仕様を確認したいとき。
+- placeholder typo 補正ではなく、review finding の解析・統合ロジック本体を調べたいとき。
 
 ## hash
-- 80e3f3d9dad597c0d434205368fa5b1ceecda22c8fbc650780e6ef7bd9c6ff11
+- 23e268b53d2c94a31254521af78903039cd5fe98b5c6e9d283463d1fb79810fb
 
 # `validate_finding_advocate.py`
 
 ## Summary
-- review oracle の finding advocate 検証用 AgentCallParameter を生成する realization 実装。oracle src の builder 結果を利用しつつ、正本側に残る `<oracle_root>` 表記ゆれだけをプロンプト上で最小補正して返す。
+- レビュー用 oracle finding 検証の advocate 側 agent call parameter を、oracle src の builder から取得しつつ、既知の静的 typo だけを最小補正する realization 実装。
+- 動的入力である finding と既知理由は改変せず、prompt 内の oracle root 表記 typo だけを 1 回置換してから同型の parameter として返す。
 
 ## Read this when
-- review oracle の finding advocate 検証プロンプトを組み立てる経路を確認・変更したいとき。
-- oracle src 由来の AgentCallParameter を realization 側で包み直す理由や、プロンプト中の `<oracle_root>` から `<oracle-root>` への限定的な補正条件を確認したいとき。
-- dynamic input である finding や既知理由を変更せず、静的な oracle src の typo だけを扱う実装境界を確認したいとき。
+- review oracle validate finding advocate 用の agent call parameter 生成経路を確認・変更する。
+- oracle src 由来 prompt の静的 typo 補正、またはその補正を削除できる条件を確認する。
+- finding や known reasons を byte-for-byte で保持する必要がある処理境界を確認する。
 
 ## Do not read this when
-- review oracle 以外の agent call parameter builder を調べたいとき。
-- finding advocate 検証の正本プロンプト内容そのものを確認したいとき。この対象ではなく対応する oracle src または prompt standard を読む。
-- typo 補正の方針ではなく、AgentCallParameter 型そのものや共通 builder 基盤を調べたいとき。
+- review oracle validate finding advocate 以外の builder や validator を確認したい。
+- oracle src 側の正本 prompt 内容そのものを確認・変更したい。
+- INDEX.md 用エントリー生成、path model、または一般的な oracle file 定義を確認したい。
 
 ## hash
-- 7111c4192cff8b09164626ba9bfec3d3a543e0d17313460e5ca6019bfab38d4c
+- d416fda47a6fb6bed4efab0f376caa38e172459d6fe7531296bf4962ea8135f6
 
 # `validate_finding_challenger.py`
 

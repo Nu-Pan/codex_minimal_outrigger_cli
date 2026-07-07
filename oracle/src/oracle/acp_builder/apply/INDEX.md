@@ -1,17 +1,18 @@
 # `fork`
 
 ## Summary
-- `cmoc apply fork` で使う AI エージェント呼び出しパラメータと、その出力契約を扱う。差分要約、ファイル単位の所見列挙、所見対応作業の prompt・モデル設定・ファイルアクセス方針・Structured Output schema への入口となる。
+- `cmoc apply fork` で使う agent call parameter と Structured Output schema のうち、fork 適用後のレビュー、所見列挙、所見対応、変更要約に関わる正本仕様断片をまとめるディレクトリ。
+- 差分から人間向け変更要約を生成する prompt、ファイル単位の所見リストアップ prompt、検出所見を修正 agent に渡す prompt、それらの出力契約を確認する入口になる。
 
 ## Read this when
-- `cmoc apply fork` の作業レポート向け差分要約、実装レビュー所見の列挙、または検出所見への対応 agent call parameter を確認するとき。
-- fork 適用後の差分や対象ファイルを AI に渡す prompt、placeholder、readonly/write 権限、model class、reasoning effort、Structured Output schema の指定を確認したいとき。
-- 変更要約や所見リストの JSON 出力契約と、それを生成・利用する apply fork 用 oracle src の対応関係をたどりたいとき。
+- `cmoc apply fork` の fork 適用後に、差分要約、実装レビュー所見、所見対応作業をどの agent call parameter と schema で扱うか確認するとき。
+- 変更要約や所見列挙の Structured Output schema と、それを使う prompt 側の対応関係を確認したいとき。
+- 所見を人間向けレビュー結果として報告し、その後 realization file 修正 agent に渡す流れの正本仕様断片を探すとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体の CLI 引数解析、git 操作、branch 操作、作業レポート保存、所見統合などの実行フローを調べたいとき。
-- apply fork 以外のサブコマンド用 prompt、agent call parameter、出力 schema を探しているとき。
-- AgentCallParameter、complete prompt builder、path placeholder 解決、markdown rendering などの共通部品そのものの実装詳細を確認したいとき。
+- `cmoc apply fork` の fork 作成、branch 操作、diff 取得、レポート保存、CLI 引数処理など、agent call parameter や出力契約以外の実行制御を調べたいとき。
+- apply review standard、oracle standard、realization standard そのものの内容を確認したいとき。
+- 共通の prompt builder、path placeholder 解決、markdown rendering、agent call parameter の汎用データ構造の実装を調べたいとき。
 
 ## hash
-- bb2f3cefe92fabe1755ef47e94b56af1f6bdcff410e29dd9326d59ae260d56fb
+- 34dd7511fe97a86b45ffb37cb7feb9be91c52b9e6e420c674df2e08a9e5d4c18

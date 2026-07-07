@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
@@ -100,7 +101,10 @@ def build_change_summary(
         ]
     try:
         summary = codex_exec(
-            build_apply_fork_change_summary_parameter(raw_diff),
+            replace(
+                build_apply_fork_change_summary_parameter(raw_diff),
+                cwd=apply_worktree,
+            ),
             root=root,
             cwd=apply_worktree,
             config=config,
@@ -108,13 +112,10 @@ def build_change_summary(
         ).output_json
     except Exception:
         return fallback_change_summary(apply_worktree, fork_commit, "変更要約生成失敗")
-    return list((summary or {}).get("changes", [])) or [
-        {
-            "category": "変更要約なし",
-            "summary": "変更差分はありますが、構造化された変更要約は空でした。",
-            "changed_paths": [],
-        }
-    ]
+    changes = list((summary or {}).get("changes", []))
+    if not changes:
+        return fallback_change_summary(apply_worktree, fork_commit, "変更要約なし")
+    return changes
 
 
 def changed_diff_since_fork(apply_worktree: Path, fork_commit: str) -> str:

@@ -9,6 +9,7 @@ from config.cmoc_config import (
     CmocConfigCodex,
     CmocConfigReviewOracle,
 )
+from oracle.other.cmoc_config import CodexModelSpec
 
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import config_path
@@ -22,17 +23,15 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
         "num_parallel": config.num_parallel,
         "codex": {
             "model": {
-                key.value: value
-                for key, value in sorted(
-                    config.codex.model.items(), key=lambda item: item[0].value
-                )
+                key.value: {
+                    "model_provider": value.model_provider,
+                    "model": value.model,
+                }
+                for key, value in config.codex.model.items()
             },
             "reasoning_effort": {
                 key.value: value
-                for key, value in sorted(
-                    config.codex.reasoning_effort.items(),
-                    key=lambda item: item[0].value,
-                )
+                for key, value in config.codex.reasoning_effort.items()
             },
             "num_try_falv_recovery": config.codex.num_try_falv_recovery,
         },
@@ -57,15 +56,41 @@ def _enum_str_map_from_dict(
     if not isinstance(data, dict):
         raise TypeError
     for key, value in data.items():
-        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` stores enum values
-        # in JSON, so non-strings must be rejected, not stringified.
-        if not isinstance(value, str):
+        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` maps
+        # ReasoningEffort to Codex CLI names; blank names are invalid JSON edits.
+        if not isinstance(value, str) or not value.strip():
             raise TypeError
         restored[key_type(key)] = value
     return restored
 
 
+def _model_spec_map_from_dict(
+    default: dict[ModelClass, CodexModelSpec],
+    data: Any,
+) -> dict[ModelClass, CodexModelSpec]:
+    """JSON 由来の model spec map を正本 enum key と設定型へ戻す。"""
+    restored = dict(default)
+    if not isinstance(data, dict):
+        raise TypeError
+    for key, value in data.items():
+        if not isinstance(value, dict):
+            raise TypeError
+        provider = value.get("model_provider")
+        model = value.get("model")
+        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` forbids undefined
+        # Codex model names; blank human-edited JSON values fail at this boundary.
+        if (
+            provider not in {"codex", "cmoc"}
+            or not isinstance(model, str)
+            or not model.strip()
+        ):
+            raise TypeError
+        restored[ModelClass(key)] = CodexModelSpec(provider, model)
+    return restored
+
+
 def _section(data: dict[str, Any], key: str) -> dict[str, Any]:
+    """省略可能な config section を、型検証済み dict として取り出す。"""
     if key not in data:
         return {}
     value = data[key]
@@ -75,6 +100,7 @@ def _section(data: dict[str, Any], key: str) -> dict[str, Any]:
 
 
 def _int_value(data: dict[str, Any], key: str, default: int) -> int:
+    """JSON の bool 混入を拒否しつつ int config 値を復元する。"""
     value = data.get(key, default)
     # `<work-root>/oracle/src/oracle/other/cmoc_config.py` defines these as
     # int fields; JSON bool/string values are human edit errors, not numbers.
@@ -88,10 +114,9 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
     default = CmocConfig()
     try:
         codex_data = _section(data, "codex")
-        model = _enum_str_map_from_dict(
+        model = _model_spec_map_from_dict(
             default.codex.model,
             codex_data.get("model", {}),
-            ModelClass,
         )
         reasoning_effort = _enum_str_map_from_dict(
             default.codex.reasoning_effort,
@@ -160,7 +185,7 @@ def load_config(root: Path) -> CmocConfig:
     if not path.exists():
         raise CmocError(
             "cmoc config が存在しません。",
-            ["cmoc init を実行して <repo-root>/.cmoc/config.json を生成してください。"],
+            ["cmoc doctor を実行して <repo-root>/.cmoc/config.json を生成してください。"],
             str(path),
         )
     try:

@@ -113,7 +113,7 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    codex_home = root / "oracle" / "relative_codex_home"
+    codex_home = root / "relative_codex_home"
     codex_home.mkdir()
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
@@ -154,7 +154,7 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
 
     recorded = json.loads(recorder.read_text())
     assert recorded["codex_home"] == "relative_codex_home"
-    assert Path(recorded["cwd"]) == root / "oracle"
+    assert Path(recorded["cwd"]) == root
     assert Path(recorded["resolved_home"]) == codex_home
     assert result.codex_home == codex_home
     assert result.profile_path.parent == codex_home

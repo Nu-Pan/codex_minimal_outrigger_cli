@@ -57,4 +57,5 @@ def build_apply_fork_change_summary_parameter(
         FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
+        True,
     )

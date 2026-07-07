@@ -64,10 +64,13 @@ def build_session_join_conflict_resolution_parameter(
         realization_standard=True,
     )
     # パラメータを生成して返す
+    # NOTE
+    #   conflic 解消時に余計な事をしてほしくないので run_indexing_preflight=False
     return AgentCallParameter(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
         FileAccessMode.REPO_WRITE,
         render_as_markdown(prompt),
         None,
+        False,
     )

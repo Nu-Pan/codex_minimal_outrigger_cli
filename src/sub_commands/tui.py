@@ -2,6 +2,7 @@ import re
 import shutil
 import subprocess
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 from acp.builder.tui.resolve_parameter import (
@@ -9,7 +10,7 @@ from acp.builder.tui.resolve_parameter import (
     build_tui_resolve_parameter_parameter,
 )
 from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass
 from cmoc_runtime import (
     CmocError,
     CodexExecResult,
@@ -62,8 +63,14 @@ def _cmoc_tui_body(
     original_path = initialize_original_prompt(root)
     run_editor(original_path)
     original_prompt = read_original_prompt(original_path)
+    # <work-root>/oracle/doc/app_spec/sub_command/tui.md fixes this agent call
+    # to MAINSTREAM even when the canonical builder currently differs.
     resolved = run_codex_exec(
-        build_tui_resolve_parameter_parameter(original_prompt),
+        replace(
+            build_tui_resolve_parameter_parameter(original_prompt),
+            model_class=ModelClass.MAINSTREAM,
+            cwd=work_root,
+        ),
         root=root,
         cwd=work_root,
         config=config,
@@ -75,6 +82,7 @@ def _cmoc_tui_body(
         resolved or {},
         launch_timestamp=launch_timestamp,
     )
+    parameter = replace(parameter, cwd=work_root)
     complete_prompt_path = logs_dir(root).parent / "tui" / f"{launch_timestamp}_cmpl.md"
     run_codex_tui(
         parameter,

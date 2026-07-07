@@ -45,22 +45,23 @@
 
 ## 実行手順
 
-1. 現在の branch と `<cmoc-session-state-file>` から `<session-id>` を特定する。
-2. `<cmoc-session-state-file>` を読み込む。
-3. `session.state` が `active` であることを確認する。
-4. `apply.state` が `ready` ではないことを確認する。
-5. `apply.state` が `running` である場合、実行中の apply プロセスが存在しないことを保証する (i.e. 停止する) 
-6. `<cmoc-session-branch>`, `<cmoc-apply-branch>`, `<cmoc-apply-worktree>` を特定する。
-7. 現在の branch が `<cmoc-apply-branch>` の場合、削除対象 worktree の外から cleanup できる状態へ移動する。
-8. `<cmoc-apply-worktree>` が存在する場合、強制削除する。
+1. doctor preprocess を呼び出す
+2. 現在の branch と `<cmoc-session-state-file>` から `<session-id>` を特定する。
+3. `<cmoc-session-state-file>` を読み込む。
+4. `session.state` が `active` であることを確認する。
+5. `apply.state` が `ready` ではないことを確認する。
+6. `apply.state` が `running` である場合、実行中の apply プロセスが存在しないことを保証する (i.e. 停止する) 
+7. `<cmoc-session-branch>`, `<cmoc-apply-branch>`, `<cmoc-apply-worktree>` を特定する。
+8. 現在の branch が `<cmoc-apply-branch>` の場合、削除対象 worktree の外から cleanup できる状態へ移動する。
+9. `<cmoc-apply-worktree>` が存在する場合、強制削除する。
     - `<cmoc-apply-worktree>` 上の未コミット差分は破棄してよい。
     - 既に存在しない場合は warning として記録し、処理を続行してよい。
-9. `<cmoc-apply-branch>` が存在する場合、強制削除する。
+10. `<cmoc-apply-branch>` が存在する場合、強制削除する。
     - `<cmoc-apply-branch>` が `<cmoc-session-branch>` に merge 済みであることは要求しない。
     - 既に存在しない場合は warning として記録し、処理を続行してよい。
-10. `<cmoc-session-state-file>` の `apply.state` を `ready` に更新する。
-11. active apply run を特定するための補助情報を、次回 apply の妨げにならない状態へ初期化する。
-12. 結果を stdout に表示する。
+11. `<cmoc-session-state-file>` の `apply.state` を `ready` に更新する。
+12. active apply run を特定するための補助情報を、次回 apply の妨げにならない状態へ初期化する。
+13. 結果を stdout に表示する。
 
 ## 状態遷移
 
