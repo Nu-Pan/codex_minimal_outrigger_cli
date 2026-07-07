@@ -113,10 +113,7 @@ def resolve_session_join_conflict(
     git: GitRun = run_git,
 ) -> None:
     """session join の merge conflict を Codex CLI へ依頼して解消する。"""
-    conflicted_paths = [
-        root / line
-        for line in git(["diff", "--name-only", "--diff-filter=U"], root).stdout.splitlines()
-    ]
+    conflicted_paths = _unmerged_paths(root, git)
     if not conflicted_paths:
         raise CmocError(
             "merge に失敗しましたが conflict 対象ファイルを特定できません。",
@@ -151,7 +148,8 @@ def resolve_session_join_conflict(
         )
     for path in conflicted_paths:
         git(["add", "--", str(path.relative_to(root))], root)
-    unmerged = git(["diff", "--name-only", "--diff-filter=U"], root).stdout.strip()
+    unmerged_paths = _unmerged_paths(root, git)
+    unmerged = "\n".join(str(path.relative_to(root)) for path in unmerged_paths)
     if unmerged:
         raise CmocError(
             "unmerged path が残っています。",
@@ -159,6 +157,13 @@ def resolve_session_join_conflict(
             unmerged,
         )
     git(["commit", "--no-edit"], root)
+
+
+def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
+    # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
+    # Git paths can contain newlines, so conflict targets must use NUL framing.
+    fields = git(["diff", "--name-only", "-z", "--diff-filter=U"], root).stdout.split("\0")
+    return [root / field for field in fields if field]
 
 
 def _reject_non_conflict_changes(
@@ -170,11 +175,13 @@ def _reject_non_conflict_changes(
     # <work-root>/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py:
     # REPO_WRITE is needed for oracle conflicts, so this command enforces the
     # narrower "conflict targets only" boundary after the agent returns.
-    allowed = {path.resolve() for path in conflicted_paths}
+    allowed = {_absolute_path(path) for path in conflicted_paths}
+    after_codex = _changed_path_snapshot(root, git)
     changed = [
         path
-        for path, value in _changed_path_snapshot(root, git).items()
-        if path.resolve() not in allowed and before_codex.get(path) != value
+        for path in before_codex.keys() | after_codex.keys()
+        if _absolute_path(path) not in allowed
+        and before_codex.get(path) != after_codex.get(path)
     ]
     if changed:
         raise CmocError(
@@ -189,9 +196,13 @@ def _changed_path_snapshot(
 ) -> dict[Path, tuple[str, tuple[str, int, int, str | None] | None]]:
     snapshot: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]] = {}
     for status, path in status_path_statuses(root, untracked_all=True, git=git):
-        resolved = path.resolve()
-        snapshot[resolved] = (status, _path_fingerprint(resolved))
+        absolute = _absolute_path(path)
+        snapshot[absolute] = (status, _path_fingerprint(absolute))
     return snapshot
+
+
+def _absolute_path(path: Path) -> Path:
+    return path if path.is_absolute() else path.absolute()
 
 
 def _path_fingerprint(path: Path) -> tuple[str, int, int, str | None] | None:
@@ -199,13 +210,14 @@ def _path_fingerprint(path: Path) -> tuple[str, int, int, str | None] | None:
         stat = path.lstat()
     except FileNotFoundError:
         return None
-    digest: str | None = None
     if path.is_symlink():
         digest = hashlib.sha256(path.readlink().as_posix().encode()).hexdigest()
-    elif path.is_file():
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        return ("symlink", stat.st_mode, stat.st_size, digest)
     if path.is_dir():
         return ("dir", stat.st_mode, stat.st_size, None)
+    digest: str | None = None
+    if path.is_file():
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
     return ("file", stat.st_mode, stat.st_size, digest)
 
 

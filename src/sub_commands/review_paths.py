@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from basic.path_model import resolve_real_path
+from commons.runtime_paths import pushd
 
 
 def finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
@@ -16,7 +17,10 @@ def finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
         return (worktree / "oracle" / Path(*path.parts[1:])).resolve()
     if path.parts and path.parts[0].startswith("<"):
         try:
-            return resolve_real_path(path)
+            # <work-root>/oracle/src/oracle/other/path_model.py
+            # review oracle の finding は隔離 worktree 上の path として照合する。
+            with pushd(worktree):
+                return resolve_real_path(path)
         except (TypeError, ValueError):
             return None
     return None

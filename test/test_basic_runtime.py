@@ -44,7 +44,6 @@ from cmoc_runtime import (
 from commons.runtime_codex_profile import (
     build_codex_profile,
     file_access_to_codex_cwd,
-    is_file_access_writable_path_allowed,
 )
 from commons.runtime_content import is_binary
 from commons.runtime_state import (
@@ -78,27 +77,51 @@ def _profile_permission_filesystem(profile: str) -> dict[str, str]:
     return parsed.get("permissions", {}).get("cmoc", {}).get("filesystem", {})
 
 
-def _standard_realization_profile_roots(root: Path) -> set[str]:
-    roots = {
-        str((root / path).resolve())
-        for path in ("src", "test", "bin", ".gitignore")
+def _profile_permission_roots(profile: str, access: str) -> set[str]:
+    return {
+        path
+        for path, actual_access in _profile_permission_filesystem(profile).items()
+        if actual_access == access
     }
+
+
+def _standard_realization_profile_roots(root: Path) -> set[str]:
+    roots: set[str] = set()
+    for name in ("src", "test", "bin"):
+        path = root / name
+        roots.add(str(path.resolve()))
+    roots.add(str((root / ".gitignore").resolve()))
     if (root / "README.md").exists():
         roots.add(str((root / "README.md").resolve()))
     return roots
 
 
+def _profile_write_roots(profile: str) -> set[str]:
+    return {
+        *_profile_writable_roots(profile),
+        *_profile_permission_roots(profile, "write"),
+    }
+
+
 def _assert_writable(profile: str, path: Path) -> None:
     target = path.resolve()
     assert any(
-        target.is_relative_to(Path(root)) for root in _profile_writable_roots(profile)
+        target.is_relative_to(Path(root)) for root in _profile_write_roots(profile)
     )
 
 
 def _assert_not_writable(profile: str, path: Path) -> None:
     target = path.resolve()
     assert not any(
-        target.is_relative_to(Path(root)) for root in _profile_writable_roots(profile)
+        target.is_relative_to(Path(root)) for root in _profile_write_roots(profile)
+    )
+
+
+def _assert_not_permission_accessible(profile: str, path: Path) -> None:
+    target = path.resolve()
+    assert not any(
+        target.is_relative_to(Path(root))
+        for root in _profile_permission_filesystem(profile)
     )
 
 
@@ -392,17 +415,18 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
         {"review_oracle": {"num_validate_findings_loop": "2"}},
     ],
 )
-def test_config_rejects_non_integer_count_values(data: dict[str, object]) -> None:
+def test_config_rejects_non_integer_int_values(data: dict[str, object]) -> None:
     with pytest.raises(CmocError) as exc_info:
         config_from_dict(data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
-def test_config_restores_codex_num_try_falv_recovery() -> None:
+def test_config_preserves_codex_falv_recovery_try_count() -> None:
     config = config_from_dict({"codex": {"num_try_falv_recovery": 4}})
 
     assert config.codex.num_try_falv_recovery == 4
+    assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 4
 
 
 def test_render_error_uses_structured_markdown() -> None:
@@ -701,8 +725,8 @@ def test_file_access_mode_values_are_json_ready() -> None:
 
 def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     """repo write mode まで Codex sandbox mode へ欠落なく変換する。"""
-    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "workspace-write"
-    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
+    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
@@ -768,6 +792,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
     (root / "oracle" / "INDEX.md").write_text("index\n")
+    (root / "oracle" / "AGENTS.md").write_text("agents\n")
     (root / "oracle" / "spec.md").write_text("# spec\n")
     (root / "memo").mkdir()
     (root / ".agents").mkdir()
@@ -796,26 +821,57 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         for mode in FileAccessMode
     }
 
-    assert 'sandbox_mode = "workspace-write"' in profiles[FileAccessMode.READONLY]
-    assert 'sandbox_mode = "workspace-write"' in profiles[FileAccessMode.PURE_ORACLE_READ]
+    for mode in (FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE):
+        assert 'sandbox_mode = "workspace-write"' in profiles[mode]
+        assert "[sandbox_workspace_write]" in profiles[mode]
     for mode in (
         FileAccessMode.READONLY,
         FileAccessMode.PURE_ORACLE_READ,
-        FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
-        FileAccessMode.REPO_WRITE,
     ):
-        assert 'sandbox_mode = "workspace-write"' in profiles[mode]
-        assert "[sandbox_workspace_write]" in profiles[mode]
+        parsed = tomllib.loads(profiles[mode])
+        assert "sandbox_mode" not in parsed
+        assert "sandbox_workspace_write" not in parsed
+        assert parsed["default_permissions"] == "cmoc"
+        assert parsed["permissions"]["cmoc"]["extends"] == ":workspace"
+    assert _profile_permission_filesystem(profiles[FileAccessMode.READONLY]) == {
+        str(path.resolve()): "read"
+        for path in root.iterdir()
+        if path.name != "memo"
+    }
+    _assert_not_permission_accessible(
+        profiles[FileAccessMode.READONLY], root / "memo" / "private.md"
+    )
+    assert str((root / ".agents").resolve()) in _profile_permission_roots(
+        profiles[FileAccessMode.READONLY], "read"
+    )
+    assert _profile_permission_filesystem(
+        profiles[FileAccessMode.PURE_ORACLE_READ]
+    ) == {str((root / "oracle").resolve()): "read"}
+    assert _profile_permission_filesystem(
+        profiles[FileAccessMode.PURE_ORACLE_WRITE]
+    ) == {
+        str((root / "oracle").resolve()): "write",
+    }
+    _assert_not_permission_accessible(
+        profiles[FileAccessMode.PURE_ORACLE_WRITE], root / "src" / "existing.py"
+    )
     realization_roots = _standard_realization_profile_roots(root)
     assert _profile_writable_roots(
         profiles[FileAccessMode.REALIZATION_WRITE]
     ) == realization_roots
     assert _profile_writable_roots(profiles[FileAccessMode.READONLY]) == set()
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_READ]) == set()
-    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == {
-        str((root / "oracle").resolve())
-    }
+    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == set()
+    assert _profile_permission_roots(
+        profiles[FileAccessMode.READONLY], "write"
+    ) == set()
+    assert _profile_permission_roots(
+        profiles[FileAccessMode.PURE_ORACLE_READ], "write"
+    ) == set()
+    assert _profile_permission_roots(
+        profiles[FileAccessMode.PURE_ORACLE_WRITE], "write"
+    ) == {str((root / "oracle").resolve())}
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
         *realization_roots,
         str((root / "oracle").resolve()),
@@ -830,16 +886,14 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "existing.py"
     )
-    _assert_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / ".gitignore")
     _assert_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "new.py"
     )
-    assert not is_file_access_writable_path_allowed(
-        FileAccessMode.REALIZATION_WRITE, root, root / "src" / "INDEX.md"
+    _assert_writable(
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "test" / "test_new.py"
     )
-    assert not is_file_access_writable_path_allowed(
-        FileAccessMode.REALIZATION_WRITE, root, root / "test" / "INDEX.md"
-    )
+    _assert_not_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / "INDEX.md")
+    _assert_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / ".gitignore")
     _assert_not_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / ".agents" / "blocked.md"
     )
@@ -849,8 +903,12 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "spec.md"
     )
-    assert not is_file_access_writable_path_allowed(
-        FileAccessMode.REPO_WRITE, root, root / "oracle" / "INDEX.md"
+    _assert_writable(
+        profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "new.md"
+    )
+    _assert_not_writable(profiles[FileAccessMode.REPO_WRITE], root / "INDEX.md")
+    _assert_writable(
+        profiles[FileAccessMode.PURE_ORACLE_WRITE], root / "oracle" / "new.md"
     )
     _assert_writable(profiles[FileAccessMode.REPO_WRITE], root / ".gitignore")
     _assert_not_writable(
@@ -937,6 +995,79 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
+)
+def test_codex_profile_readonly_modes_allow_only_ignored_gap_writes(
+    tmp_path: Path, mode: FileAccessMode
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("__pycache__/\n/build/\n")
+    (root / "src").mkdir()
+    (root / "src" / "main.py").write_text("print('ok')\n")
+    (root / "src" / "__pycache__").mkdir()
+    (root / "src" / "__pycache__" / "main.pyc").write_text("cache\n")
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    (root / "oracle" / "__pycache__").mkdir()
+    (root / "oracle" / "__pycache__" / "spec.pyc").write_text("cache\n")
+    (root / "build").mkdir()
+    (root / "build" / "artifact.txt").write_text("tracked\n")
+    (root / "build" / "scratch.txt").write_text("scratch\n")
+    run_git(root, "add", ".gitignore", "src/main.py", "oracle/spec.md")
+    run_git(root, "add", "-f", "build/artifact.txt")
+    run_git(root, "commit", "-m", "add tracked files")
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            mode,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+    )
+
+    _assert_writable(profile, root / "src" / "__pycache__" / "new.pyc")
+    _assert_writable(profile, root / "oracle" / "__pycache__" / "new.pyc")
+    _assert_writable(profile, root / "build" / "scratch.txt")
+    _assert_not_writable(profile, root / "src" / "main.py")
+    _assert_not_writable(profile, root / "oracle" / "spec.md")
+    _assert_not_writable(profile, root / "build" / "artifact.txt")
+    _assert_not_writable(profile, root / "memo" / "private.md")
+    _assert_not_writable(profile, root / ".cmoc" / "local" / "state.json")
+
+
+@pytest.mark.parametrize(
+    "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
+)
+def test_codex_profile_readonly_modes_allow_extra_ignored_gap_path(
+    tmp_path: Path, mode: FileAccessMode
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("/scratch/\n")
+    (root / "scratch").mkdir()
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "add gitignore")
+    target = root / "scratch" / "agent.tmp"
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            mode,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[target],
+    )
+
+    _assert_writable(profile, target)
+
+
 def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
     tmp_path: Path,
 ) -> None:
@@ -995,6 +1126,33 @@ def test_codex_profile_allows_repo_local_read_from_linked_worktree(
     assert tomllib.loads(profile)["default_permissions"] == "cmoc"
     assert filesystem[str((root / ".cmoc" / "local").resolve())] == "read"
     assert "sandbox_workspace_write" not in tomllib.loads(profile)
+
+    profile = build_codex_profile(
+        parameter,
+        CmocConfig(),
+        linked,
+        extra_read_root=root,
+    )
+    filesystem = _profile_permission_filesystem(profile)
+    assert filesystem[str((root / ".cmoc" / "local").resolve())] == "read"
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            parameter.model_class,
+            parameter.reasoning_effort,
+            FileAccessMode.REPO_WRITE,
+            parameter.prompt,
+            parameter.structured_output_schema_path,
+        ),
+        CmocConfig(),
+        linked,
+        extra_read_root=root,
+    )
+    parsed = tomllib.loads(profile)
+    assert "sandbox_mode" not in parsed
+    assert parsed["permissions"]["cmoc"]["filesystem"][
+        str((root / ".cmoc" / "local").resolve())
+    ] == "read"
 
     with pytest.raises(CmocError, match="許可領域外"):
         build_codex_profile(

@@ -52,9 +52,6 @@ def render_review_oracle_report(
     error_message: str | None = None,
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
-    # Keep required severity H2 sections, then render finding details in
-    # accepted fatal, accepted minor, rejected fatal, rejected minor order.
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
     fatal_accepted = _findings_with(accepted, "fatal")
@@ -112,20 +109,13 @@ def render_review_oracle_report(
             "|---:|---|---:|",
             rows,
             "## Fatal findings",
-            f"- Accepted: {len(fatal_accepted)}",
-            f"- Rejected: {len(fatal_rejected)}",
+            _render_finding_group("Accepted fatal findings", fatal_accepted),
             "## Minor findings",
-            f"- Accepted: {len(minor_accepted)}",
-            f"- Rejected: {len(minor_rejected)}",
-            "## Finding details",
-            "### Accepted fatal findings",
-            render_finding_section(fatal_accepted),
-            "### Accepted minor findings",
-            render_finding_section(minor_accepted),
-            "### Rejected fatal findings",
-            render_finding_section(fatal_rejected),
-            "### Rejected minor findings",
-            render_finding_section(minor_rejected),
+            _render_ordered_finding_tail(
+                minor_accepted,
+                fatal_rejected,
+                minor_rejected,
+            ),
             "",
         ]
     )
@@ -133,6 +123,27 @@ def render_review_oracle_report(
 
 def _findings_with(findings: list[dict], severity: str) -> list[dict]:
     return [finding for finding in findings if finding.get("severity") == severity]
+
+
+def _render_finding_group(title: str, findings: list[dict]) -> str:
+    return "\n".join([f"### {title}", render_finding_section(findings)])
+
+
+def _render_ordered_finding_tail(
+    minor_accepted: list[dict],
+    fatal_rejected: list[dict],
+    minor_rejected: list[dict],
+) -> str:
+    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md requires the
+    # finding detail stream to be ordered by verdict first, while also requiring
+    # the Fatal and Minor H2 anchors in that order.
+    return "\n".join(
+        [
+            _render_finding_group("Accepted minor findings", minor_accepted),
+            _render_finding_group("Rejected fatal findings", fatal_rejected),
+            _render_finding_group("Rejected minor findings", minor_rejected),
+        ]
+    )
 
 
 def _review_report_verdict(

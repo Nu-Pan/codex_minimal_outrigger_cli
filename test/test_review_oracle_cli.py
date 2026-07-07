@@ -57,6 +57,20 @@ def test_finding_oracle_path_rejects_relative_without_placeholder(tmp_path: Path
     )
 
 
+def test_finding_oracle_path_resolves_work_root_from_review_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    review_parent = tmp_path / "review"
+    review_parent.mkdir()
+    unrelated = make_repo(tmp_path)
+    review_worktree = make_repo(review_parent)
+    monkeypatch.chdir(unrelated)
+
+    assert finding_oracle_path(
+        {"oracle_path": "<work-root>/oracle/spec.md"}, review_worktree
+    ) == (review_worktree / "oracle" / "spec.md").resolve()
+
+
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     ancestor = tmp_path / "oracle"
     ancestor.mkdir()
@@ -104,12 +118,11 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
         "## Evaluated oracle file",
         "## Fatal findings",
         "## Minor findings",
-        "## Finding details",
     ]
     section_offsets = [rendered.index(section) for section in required_sections]
     assert section_offsets == sorted(section_offsets)
     h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
-    assert h2_sections == required_sections[1:]
+    assert h2_sections[: len(required_sections) - 1] == required_sections[1:]
     assert "`oracle/spec.md`" in rendered
     assert "review_join_commit: null" in rendered
     assert "session_id:" not in rendered
@@ -193,12 +206,11 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
     h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
-    assert h2_sections == [
+    assert h2_sections[:4] == [
         "## Verdict",
         "## Evaluated oracle file",
         "## Fatal findings",
         "## Minor findings",
-        "## Finding details",
     ]
     detail_order = [
         "### Accepted fatal findings",
@@ -213,6 +225,8 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     assert [rendered.index(text) for text in detail_order] == sorted(
         rendered.index(text) for text in detail_order
     )
+    assert rendered.index("## Minor findings") < rendered.index("accepted minor")
+    assert rendered.index("accepted minor") < rendered.index("rejected fatal")
     assert "result: fatal" in rendered
     assert "fatal_findings_accepted_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
@@ -265,20 +279,23 @@ def test_review_oracle_report_includes_rejected_findings(
     assert f"minor_findings_rejected_count: {expected_minor_count}" in rendered
     assert "## Fatal findings" in rendered
     assert "## Minor findings" in rendered
-    assert [line for line in rendered.splitlines() if line.startswith("## ")] == [
+    h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
+    assert h2_sections[:4] == [
         "## Verdict",
         "## Evaluated oracle file",
         "## Fatal findings",
         "## Minor findings",
-        "## Finding details",
     ]
     assert "### Rejected fatal findings" in rendered
     assert "### Rejected minor findings" in rendered
     assert "rejected finding" in rendered
+    assert rendered.index("## Fatal findings") < rendered.index("## Minor findings")
     finding_offset = rendered.index("rejected finding")
     if severity == "fatal":
         assert rendered.index("### Rejected fatal findings") < finding_offset
+        assert rendered.index("## Minor findings") < finding_offset
     else:
+        assert rendered.index("## Minor findings") < finding_offset
         assert rendered.index("### Rejected minor findings") < finding_offset
     assert "rejected reason" in rendered
     assert "judge reason: judge rejected reason" in rendered
@@ -356,6 +373,8 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     report_path = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     )
+    assert report_path.is_relative_to(root / ".cmoc" / "local" / "report")
+    assert not report_path.is_relative_to(linked)
     rendered = report_path.read_text()
     assert f"review_fork_commit: {linked_commit}" in rendered
     assert "`oracle/linked.md`" in rendered
@@ -881,6 +900,34 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     assert "レビュー対象 oracle が 0 件でした。" in rendered
 
 
+@pytest.mark.parametrize(
+    ("relative_path", "content"),
+    [
+        ("oracle/uncommitted.md", "# uncommitted\n"),
+        ("README.md", "dirty\n"),
+    ],
+)
+def test_review_oracle_rejects_uncommitted_worktree_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    relative_path: str,
+    content: str,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / relative_path).write_text(content)
+
+    result = runner.invoke(app, ["review", "oracle"])
+
+    assert result.exit_code != 0
+    assert "git 未コミット差分" in result.output
+    assert relative_path in result.output
+
+
 def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -936,6 +983,30 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     assert "oracle_count_evaluated: 2" in rendered
     assert "`oracle/ignored-link.md`" in rendered
     assert "`oracle/ignored.md`" in rendered
+
+
+def test_review_oracle_session_scope_uses_review_fork_commit(
+    tmp_path: Path,
+) -> None:
+    """session scope の差分終点は実行時 HEAD ではなく review fork commit に固定する。"""
+    root = make_repo(tmp_path)
+    state = SessionState()
+    state.session.session_start_commit = run_git(
+        root, "rev-parse", "HEAD"
+    ).stdout.strip()
+    (root / "oracle" / "fork.md").write_text("# fork\n")
+    run_git(root, "add", "oracle/fork.md")
+    run_git(root, "commit", "-m", "review fork target")
+    review_fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "oracle" / "after.md").write_text("# after\n")
+    run_git(root, "add", "oracle/after.md")
+    run_git(root, "commit", "-m", "after review fork")
+
+    targets = review_module.enumerate_review_oracle_targets(
+        root, "session", state, review_fork_commit
+    )
+
+    assert targets == [(root / "oracle" / "fork.md").resolve()]
 
 
 def test_review_oracle_target_enumeration_excludes_agents_and_index(

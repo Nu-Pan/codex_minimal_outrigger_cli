@@ -19,19 +19,19 @@
 # `oracle.py`
 
 ## Summary
-- active session branch 上で oracle review を実行する CLI 実装の入口。preflight、session/state 検証、clean worktree 確認、isolated review worktree 作成、対象 oracle file 列挙、review loop 実行、INDEX 変更の commit/merge、worktree/branch 後片付け、report 出力までの制御フローを束ねる。
-- review 対象列挙、review loop、report 描画、INDEX merge/conflict 処理などの個別責務は下位 module へ委譲し、この対象はそれらを CLI 実行単位として接続する orchestration 層である。
+- review oracle サブコマンドの実行入口と全体制御を担う。active session branch と clean worktree を前提条件として検証し、isolated review worktree の作成、oracle 対象列挙、review loop 実行、INDEX 変更の commit/merge、作業用 worktree/branch の後始末、review report 出力までを接続する。
+- review 対象列挙、review loop、report 描画、INDEX 競合解決などの個別処理は下位 module に委譲し、この対象はそれらを CLI runtime 上の一連の workflow として組み立てる位置づけである。
 
 ## Read this when
-- review oracle サブコマンドの実行順序、session branch 制約、clean worktree 要件、run worktree の作成・削除、review branch の merge 条件、失敗時 report 出力の扱いを確認または変更したいとき。
-- review oracle がどの helper module を呼び出し、対象列挙から findings 生成、INDEX 変更反映、report 書き込みまでをどう接続しているかを追いたいとき。
-- review oracle 実行時の公開入口や import/export される review 関連 API の集約点を確認したいとき。
+- review oracle サブコマンドの実行順序、前提条件、作業用 branch/worktree のライフサイクル、失敗時 report 出力を確認したいとき。
+- oracle review workflow がどの下位 module を呼び出し、INDEX 変更の commit/merge と report 作成をどのタイミングで行うかを追いたいとき。
+- 未コミット差分がある場合や active session branch 以外での実行を拒否する制御を確認したいとき。
 
 ## Do not read this when
-- oracle file の列挙条件や scope ごとの対象選定だけを変更したいときは、対象列挙を担う module を直接読む。
-- review loop 内で Codex に渡す prompt、finding の merge 操作、反復制御だけを扱うときは、review loop を担う module を直接読む。
-- report の本文構成、finding section の描画、report path の決定だけを扱うときは、report 生成を担う module を直接読む。
-- INDEX 変更の commit、review branch merge、conflict 解決、status path 取得だけを扱うときは、INDEX 統合処理を担う module を直接読む。
+- oracle file の列挙条件や scope ごとの対象選択だけを確認したいときは、review target 列挙を担う module を読む。
+- review loop 内で Codex に渡す指示、finding の解釈、merge operation の適用だけを確認したいときは、review loop を担う module を読む。
+- review report の文面、section 表現、report file の書き込み形式だけを確認したいときは、review report を担う module を読む。
+- INDEX 変更の検出、commit、merge、競合解決の詳細だけを確認したいときは、review index 操作を担う module を読む。
 
 ## hash
-- 126e80a595c4eb9b059f539a8c38eab361dbe838dbfb24a31479464eb24bb50d
+- 6ec5af26c01ade97f16328fa10bdb21f6480824d061dc5c8776718ead3214b78

@@ -302,17 +302,7 @@ def collect_apply_join_unexpected_changes(
 def changed_paths_on_managed_branch(root: Path, base: str, branch: str) -> list[str]:
     # <work-root>/oracle/doc/app_spec/misc_spec.md requires deleted paths to be
     # outside managed-branch change scope, and renames to be classified by new path.
-    lines = run_git(
-        [
-            "diff",
-            "--name-status",
-            "--find-renames",
-            "--diff-filter=ACMRT",
-            base,
-            branch,
-        ],
-        root,
-    ).stdout.splitlines()
+    lines = managed_branch_name_status_lines(root, base, branch)
     paths: list[str] = []
     for line in lines:
         columns = line.split("\t")
@@ -323,16 +313,38 @@ def changed_paths_on_managed_branch(root: Path, base: str, branch: str) -> list[
     return paths
 
 
+def rename_sources_on_managed_branch(root: Path, base: str, branch: str) -> dict[str, str]:
+    lines = managed_branch_name_status_lines(root, base, branch)
+    sources: dict[str, str] = {}
+    for line in lines:
+        columns = line.split("\t")
+        if columns[0].startswith("R"):
+            sources[columns[2]] = columns[1]
+    return sources
+
+
+def managed_branch_name_status_lines(root: Path, base: str, branch: str) -> list[str]:
+    return run_git(
+        [
+            "diff",
+            "--name-status",
+            "--find-renames",
+            "--diff-filter=ACMRT",
+            base,
+            branch,
+        ],
+        root,
+    ).stdout.splitlines()
+
+
 def is_expected_apply_change(root: Path, path: str) -> bool:
     """apply branch 上で許可される差分かどうかを判定する。"""
     p = Path(path)
     if p.name == "INDEX.md":
         return True
-    if p.name == "AGENTS.md":
-        return False
-    if path.startswith((".git/", ".codex/")):
-        return False
-    if path.startswith(("oracle/", ".agents/")) or is_root_memo_path(path):
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md limits apply
+    # branch products to implementation files; AGENTS.md places them under src/.
+    if not path.startswith("src/"):
         return False
     return not is_untracked_git_ignored(root, root / path)
 
@@ -364,14 +376,17 @@ def revert_unexpected_changes(
             ["session state file を確認してください。"],
             json.dumps(state.to_dict(), ensure_ascii=False, indent=2),
         )
-    for path in unexpected.get("session", []):
-        restore_path_from_commit(root, base, path)
+    if unexpected.get("session"):
+        session_rename_sources = rename_sources_on_managed_branch(root, base, "HEAD")
+        for path in unexpected["session"]:
+            restore_managed_branch_path(root, base, path, session_rename_sources)
     session_changed = run_git(["status", "--short"], root).stdout.strip()
     if session_changed:
         run_git(["add", "."], root)
         run_git(["commit", "-m", "cmoc apply join force-resolve session changes"], root)
     apply_branch = state.apply.apply_branch
     if apply_branch and unexpected.get("apply"):
+        apply_rename_sources = rename_sources_on_managed_branch(root, base, apply_branch)
         apply_root = worktree_for_branch_optional(root, apply_branch)
         if apply_root is None:
             raise CmocError(
@@ -380,11 +395,24 @@ def revert_unexpected_changes(
                 f"apply_branch: {apply_branch}",
             )
         for path in unexpected["apply"]:
-            restore_path_from_commit(apply_root, base, path)
+            restore_managed_branch_path(apply_root, base, path, apply_rename_sources)
         apply_changed = run_git(["status", "--short"], apply_root).stdout.strip()
         if apply_changed:
             run_git(["add", "."], apply_root)
             run_git(["commit", "-m", "cmoc apply join force-resolve apply changes"], apply_root)
+
+
+def restore_managed_branch_path(
+    root: Path, commit: str, path: str, rename_sources: dict[str, str]
+) -> None:
+    restore_path_from_commit(root, commit, path)
+    source = rename_sources.get(path)
+    if source:
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md requires
+        # force-resolve to revert unexpected changes; managed-branch
+        # classification reports only the rename target, so source restoration is
+        # kept in the force-resolve path.
+        restore_path_from_commit(root, commit, source)
 
 
 def restore_path_from_commit(root: Path, commit: str, path: str) -> None:

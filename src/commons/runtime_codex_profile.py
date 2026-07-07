@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass
+from basic.acp import AgentCallParameter, FileAccessMode
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
@@ -45,6 +45,7 @@ _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".git",
     "memo",
 }
+_DENIED_WRITE_FILE_NAMES = {"AGENTS.md", "INDEX.md"}
 _STANDARD_REALIZATION_WRITE_PATHS = ("src", "test", "bin", ".gitignore")
 _OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
 _CMOC_PERMISSION_PROFILE = "cmoc"
@@ -69,10 +70,10 @@ def apply_process_id_file_lock(path: Path) -> Iterator[None]:
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
     """cmoc の file access policy を Codex CLI が理解する sandbox 名へ落とす。"""
     match mode:
+        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
+            return "read-only"
         case (
-            FileAccessMode.READONLY
-            | FileAccessMode.PURE_ORACLE_READ
-            | FileAccessMode.REALIZATION_WRITE
+            FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
             | FileAccessMode.NO_RULE
@@ -88,11 +89,23 @@ def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
     return root
 
 
+def parameter_codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) -> Path:
+    """AgentCallParameter.cwd を優先し、対象 work root 外の古い呼び出しを補正する。"""
+    parameter_cwd = parameter.cwd.resolve()
+    work = codex_work_root.resolve()
+    if parameter_cwd.is_relative_to(work):
+        return parameter_cwd
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Older call paths may still pass the repo root while launching against a
+    # linked worktree; Codex must run inside the target work root.
+    return work
+
+
 def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
     """prompt 上の読み取り禁止領域を追加 read path にも適用する。"""
     if not path.is_relative_to(root):
         return False
-    if path.is_relative_to(root / "memo") or path.is_relative_to(root / ".agents"):
+    if path.is_relative_to(root / "memo"):
         return False
     if _is_tui_complete_prompt_path(root, path):
         # <work-root>/oracle/doc/app_spec/sub_command/tui.md
@@ -105,7 +118,11 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
 
 
 def _is_repo_local_read_path(root: Path, path: Path) -> bool:
-    return path.is_relative_to(logs_dir(root).parent.parent)
+    return path.is_relative_to(_repo_local_read_root(root))
+
+
+def _repo_local_read_root(root: Path) -> Path:
+    return logs_dir(root).parent.parent.resolve()
 
 
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
@@ -154,15 +171,14 @@ def _writable_roots(
     match mode:
         case FileAccessMode.READONLY:
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # READONLY は cmoc 上の論理的な読み取り専用であり、Codex CLI
-            # sandbox は pytest cache などの一時生成物を許せるよう workspace
-            # に寄せる。
-            paths = _top_level_writable_roots(mode, root)
+            # READONLY は oracle/realization file を書き込み禁止にするため、
+            # positive-only profile では既存の隙間を列挙して表現する。
+            paths = _readonly_gap_writable_roots(root)
         case FileAccessMode.PURE_ORACLE_READ:
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # READONLY より狭い読み取り系モードなので、oracle tree も
-            # sandbox writable root には渡さない。
-            paths = _top_level_writable_roots(mode, root)
+            # realization file 読み書き禁止と oracle file 書き込み禁止は保ち、
+            # READONLY と同じくルール上の隙間だけ profile で開く。
+            paths = _readonly_gap_writable_roots(root)
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -224,6 +240,12 @@ def _top_level_writable_roots(mode: FileAccessMode, root: Path) -> list[Path]:
     return paths
 
 
+def _readonly_gap_writable_roots(root: Path) -> list[Path]:
+    if not root.exists():
+        return []
+    return [path.resolve() for path in root.iterdir()]
+
+
 def _existing_or_target_writable_root(path: Path) -> Path:
     # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     # 未存在の deep path は、最初に作る必要がある directory までを sandbox
@@ -241,10 +263,38 @@ def _append_writable_path(
     path: Path,
     allow_oracle_conflict_writes: bool = False,
 ) -> None:
+    if (
+        mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}
+        and path.is_dir()
+        and not _is_writable_path_allowed(mode, root, path)
+    ):
+        for child in sorted(path.iterdir()):
+            _append_writable_path(
+                result,
+                seen,
+                mode,
+                root,
+                child.resolve(),
+                allow_oracle_conflict_writes,
+            )
+        return
     if not _is_writable_path_allowed(mode, root, path, allow_oracle_conflict_writes):
         return
     if path.is_dir():
-        if is_untracked_git_ignored(root, path / ".__cmoc_ignore_probe__"):
+        if (
+            _should_expand_writable_directory(
+                mode, root, path, allow_oracle_conflict_writes
+            )
+            or (
+                mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}
+                and is_untracked_git_ignored(root, path / ".__cmoc_ignore_probe__")
+            )
+        ):
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # Codex profile has only positive writable roots. A directory that
+            # contains denied routing files or would ignore new children cannot
+            # be opened as one root; expand existing children instead.
             for child in sorted(path.iterdir()):
                 _append_writable_path(
                     result,
@@ -255,15 +305,43 @@ def _append_writable_path(
                     allow_oracle_conflict_writes,
                 )
             return
-        # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-        # Codex sandbox has no child deny rule. Directories are still needed so
-        # new realization/oracle files can be created; forbidden child changes
-        # are rejected by the post-call file access check.
     _append_writable_root(result, seen, path)
+
+
+def _should_expand_writable_directory(
+    mode: FileAccessMode,
+    root: Path,
+    path: Path,
+    allow_oracle_conflict_writes: bool,
+) -> bool:
+    if (
+        mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}
+        and _has_denied_write_file(path)
+    ):
+        return True
+    if mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
+        return False
+    if not is_untracked_git_ignored(root, path):
+        return True
+    return any(
+        not _is_writable_path_allowed(
+            mode, root, child.resolve(), allow_oracle_conflict_writes
+        )
+        for child in path.iterdir()
+    )
+
+
+def _has_denied_write_file(path: Path) -> bool:
+    return any((path / name).exists() for name in _DENIED_WRITE_FILE_NAMES)
 
 
 def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:
     """親子関係で冗長な writable root を持たないように追加する。"""
+    _append_access_root(result, seen, path)
+
+
+def _append_access_root(result: list[Path], seen: set[Path], path: Path) -> None:
+    """親子関係で冗長な permission filesystem root を持たないように追加する。"""
     resolved = path.resolve()
     if resolved in seen or any(resolved.is_relative_to(parent) for parent in seen):
         return
@@ -288,9 +366,12 @@ def _is_writable_path_allowed(
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
     relative = path.relative_to(root)
-    if path.name in {"AGENTS.md", "INDEX.md"}:
+    if path.name in _DENIED_WRITE_FILE_NAMES:
         return False
-    if is_untracked_git_ignored(root, path):
+    if (
+        mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}
+        and is_untracked_git_ignored(root, path)
+    ):
         return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
@@ -308,19 +389,31 @@ def _is_writable_path_allowed(
     if mode == FileAccessMode.PURE_ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
     if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
-        return False
+        return not (
+            is_oracle_file_path(root, path) or _is_realization_file_path(root, path)
+        )
     return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
 
 
-def is_file_access_writable_path_allowed(
-    mode: FileAccessMode,
-    root: Path,
-    path: Path,
-    allow_oracle_conflict_writes: bool = False,
-) -> bool:
-    """Codex 実行後検証からも profile と同じ書き込み境界を参照する。"""
-    return _is_writable_path_allowed(
-        mode, root, path, allow_oracle_conflict_writes
+def _is_realization_file_path(root: Path, path: Path) -> bool:
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # READONLY 系では git ignored 一時 file を realization file から外し、
+    # oracle と同じ正本定義に合わせて隙間だけを writable に残す。
+    try:
+        relative = path.absolute().relative_to(root.absolute())
+    except ValueError:
+        return False
+    if not relative.parts or relative.parts[0] in {
+        "oracle",
+        "memo",
+        ".git",
+        ".agents",
+        ".codex",
+        ".cmoc",
+    }:
+        return False
+    return path.name not in _DENIED_WRITE_FILE_NAMES and not is_untracked_git_ignored(
+        root, path
     )
 
 
@@ -335,41 +428,75 @@ def _append_workspace_write_section(
     lines.extend(["[sandbox_workspace_write]", f"writable_roots = [{roots}]"])
 
 
-def _needs_permission_profile(root: Path, extra_read_paths: list[Path] | None) -> bool:
-    """旧 sandbox で表現できない work root 外の読み取り許可だけ profile 化する。"""
-    return any(not path.resolve().is_relative_to(root) for path in extra_read_paths or [])
+def _needs_permission_profile(
+    mode: FileAccessMode,
+    root: Path,
+    extra_read_paths: list[Path] | None,
+    extra_read_root: Path | None,
+) -> bool:
+    """sandbox_mode だけで表現できない読み取り境界は profile 化する。"""
+    return mode in {
+        FileAccessMode.READONLY,
+        FileAccessMode.PURE_ORACLE_READ,
+        FileAccessMode.PURE_ORACLE_WRITE,
+    } or (
+        mode != FileAccessMode.NO_RULE
+        and extra_read_root is not None
+        and extra_read_root.resolve() != root
+    ) or any(not path.resolve().is_relative_to(root) for path in extra_read_paths or [])
 
 
 def _read_roots_for_permission_profile(
+    mode: FileAccessMode,
     root: Path,
     extra_read_paths: list[Path] | None,
     extra_read_root: Path | None,
 ) -> list[Path]:
     """Codex permission profile に渡す読み取り root を作る。"""
-    roots = [root]
+    roots = (
+        [root / "oracle"]
+        if mode in {FileAccessMode.PURE_ORACLE_READ, FileAccessMode.PURE_ORACLE_WRITE}
+        else _top_level_read_roots(mode, root)
+    )
+    if (
+        mode != FileAccessMode.NO_RULE
+        and extra_read_root is not None
+        and extra_read_root != root
+    ):
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        # linked worktree の規則文は repo 側 `.cmoc/local` を常時 read 例外にする。
+        roots.append(_repo_local_read_root(extra_read_root))
     for path in extra_read_paths or []:
         resolved = path.resolve()
-        if resolved.is_relative_to(root):
+        if any(resolved.is_relative_to(read_root) for read_root in roots):
             continue
         if extra_read_root is not None and _is_repo_local_read_path(
             extra_read_root, resolved
         ):
-            roots.append(logs_dir(extra_read_root).parent.parent.resolve())
+            roots.append(_repo_local_read_root(extra_read_root))
         else:
             roots.append(resolved)
     result: list[Path] = []
     seen: set[Path] = set()
     for path in roots:
-        resolved = path.resolve()
-        if resolved in seen or any(resolved.is_relative_to(parent) for parent in seen):
-            continue
-        redundant = [existing for existing in seen if existing.is_relative_to(resolved)]
-        if redundant:
-            result[:] = [existing for existing in result if existing not in redundant]
-            seen.difference_update(redundant)
-        seen.add(resolved)
-        result.append(resolved)
+        _append_access_root(result, seen, path)
     return result
+
+
+def _top_level_read_roots(mode: FileAccessMode, root: Path) -> list[Path]:
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # Codex permission filesystem is positive-only; READONLY cannot use
+    # <work-root> itself because that would also grant the memo read denied by
+    # the base file access rule.
+    if mode != FileAccessMode.READONLY:
+        return [root]
+    if not root.exists():
+        return []
+    return [
+        path.resolve()
+        for path in sorted(root.iterdir())
+        if _is_read_path_allowed(mode, root, path.resolve())
+    ]
 
 
 def _append_permission_profile_section(
@@ -380,8 +507,9 @@ def _append_permission_profile_section(
     """work root 外の read-only root は Codex beta permission profile で渡す。"""
     # <work-root>/oracle/doc/app_spec/sub_command/tui.md
     # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    # sandbox_workspace_write has writable_roots only; permission profiles can
-    # represent repo-local TUI logs as read without granting write access.
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # sandbox_mode cannot express "read this root but never make the primary
+    # workspace writable"; permission profiles can.
     entries = {str(path): "read" for path in read_roots}
     entries.update({str(path): "write" for path in writable_roots})
     lines.extend(
@@ -389,7 +517,7 @@ def _append_permission_profile_section(
             f'default_permissions = "{_CMOC_PERMISSION_PROFILE}"',
             "",
             f"[permissions.{_CMOC_PERMISSION_PROFILE}]",
-            'extends = ":read-only"',
+            'extends = ":workspace"',
             "",
             f"[permissions.{_CMOC_PERMISSION_PROFILE}.filesystem]",
         ]
@@ -439,7 +567,9 @@ def build_codex_profile(
             extra_read_paths,
             extra_read_root=read_root,
         )
-        use_permission_profile = _needs_permission_profile(root, extra_read_paths)
+        use_permission_profile = _needs_permission_profile(
+            parameter.file_access_mode, root, extra_read_paths, read_root
+        )
     if not use_permission_profile:
         sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
         lines.append(f'sandbox_mode = "{sandbox_mode}"')
@@ -453,7 +583,9 @@ def build_codex_profile(
         if use_permission_profile:
             _append_permission_profile_section(
                 lines,
-                _read_roots_for_permission_profile(root, extra_read_paths, read_root),
+                _read_roots_for_permission_profile(
+                    parameter.file_access_mode, root, extra_read_paths, read_root
+                ),
                 writable_roots,
             )
         else:

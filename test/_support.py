@@ -161,6 +161,7 @@ def _write_fake_ollama(path: Path) -> None:
         textwrap.dedent(
             """\
             import http.server
+            import json
             import os
             import sys
 
@@ -181,6 +182,19 @@ def _write_fake_ollama(path: Path) -> None:
                     self.send_response(200)
                     self.end_headers()
                     self.wfile.write(b'{"models":[]}')
+
+                def do_POST(self):
+                    if self.path != "/api/generate":
+                        self.send_response(404)
+                        self.end_headers()
+                        return
+                    length = int(self.headers.get("content-length", "0"))
+                    payload = json.loads(self.rfile.read(length))
+                    assert payload["model"]
+                    assert payload["stream"] is False
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'{"done":true}')
 
                 def log_message(self, *_args):
                     pass

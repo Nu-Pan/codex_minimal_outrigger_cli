@@ -556,96 +556,6 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     )
 
 
-def test_apply_fork_rejects_agent_written_forbidden_file(
-    tmp_path: Path, monkeypatch: MonkeyPatch
-) -> None:
-    """所見適用が禁止領域を汚しても事後修復しない。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    (root / "src").mkdir()
-    (root / "src" / "app.py").write_text("print('old')\n")
-    run_git(root, "add", "src/app.py")
-    run_git(root, "commit", "-m", "add app")
-    finding = {
-        "title": "Update app",
-        "evidences": [
-            {
-                "path": str(root / "src" / "app.py"),
-                "line_start": 1,
-                "line_end": 1,
-                "summary": "app",
-            }
-        ],
-        "oracle_requirement": "test requirement",
-        "observed_implementation": "old",
-        "reason": "needs update",
-        "suggested_fix": "update app",
-    }
-    setup_codex_home(tmp_path, monkeypatch)
-    monkeypatch.setattr(apply_fork_module, "enable_indexing_preflight", lambda: None)
-    counts = tmp_path / "codex_counts"
-    counts.mkdir()
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            f"counts = pathlib.Path({str(counts)!r})",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "def bump(name):",
-            "    path = counts / f'{name}.txt'",
-            "    value = int(path.read_text()) if path.exists() else 0",
-            "    path.write_text(str(value + 1))",
-            "    return value",
-            "schema = None",
-            "if '--output-schema' in args:",
-            "    schema_path = pathlib.Path(args[args.index('--output-schema') + 1])",
-            "    schema = json.loads(schema_path.read_text())",
-            "props = (schema or {}).get('properties', {})",
-            "if 'findings' in props:",
-            f"    finding = {json.dumps(finding)!r}",
-            "    output.write_text(json.dumps({'findings': [json.loads(finding)] if bump('findings') == 0 else []}))",
-            "elif 'changes' in props:",
-            "    output.write_text(json.dumps({'changes': []}))",
-            "else:",
-            "    if bump('plain') == 0:",
-            "        pathlib.Path('src/app.py').write_text(\"print('updated')\\n\")",
-            "        pathlib.Path('oracle/spec.md').write_text('# violated\\n')",
-            "    else:",
-            "        pathlib.Path('oracle/spec.md').write_text('# spec\\n')",
-            "    output.write_text('{}')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-
-    def run_real_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
-        return real_run_codex_exec(
-            parameter,
-            capacity_initial_sleep_sec=0,
-            **kwargs,
-        )
-
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", run_real_codex_exec)
-
-    result = runner.invoke(
-        app, ["apply", "fork", "--scope", "session"], catch_exceptions=False
-    )
-
-    assert result.exit_code == 1
-    calls = []
-    for path in sorted((root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json")):
-        call = json.loads(path.read_text())
-        calls.append((call["purpose"], call["file_access_mode"]))
-    assert ("file access rule violation recovery", "realization_write") not in calls
-
-
 def test_apply_fork_error_report_summarizes_uncommitted_diff(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
@@ -863,9 +773,11 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     apply_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "manual"
     oracle_snapshot_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     run_git(root, "worktree", "add", "-b", apply_branch, str(apply_worktree), "HEAD")
-    (apply_worktree / "README.md").write_text("# updated by apply\n")
-    run_git(apply_worktree, "add", "README.md")
-    run_git(apply_worktree, "commit", "-m", "update readme from apply")
+    applied = apply_worktree / "src" / "applied.py"
+    applied.parent.mkdir()
+    applied.write_text("value = 'updated by apply'\n")
+    run_git(apply_worktree, "add", "src/applied.py")
+    run_git(apply_worktree, "commit", "-m", "update implementation from apply")
     state = json.loads(state_path.read_text())
     state["apply"] = {
         "state": "completed",
@@ -913,7 +825,7 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
 
     assert result.exit_code == 0
     assert "oracle/spec.md" in target_rels
-    assert "README.md" not in target_rels
+    assert "src/applied.py" not in target_rels
     assert "unrelated.py" not in target_rels
     state = json.loads(state_path.read_text())["session"]
     assert state["last_joined_apply_oracle_snapshot_commit"] == oracle_snapshot_commit

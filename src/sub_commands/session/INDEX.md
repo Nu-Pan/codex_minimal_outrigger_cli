@@ -58,19 +58,18 @@
 # `join.py`
 
 ## Summary
-- `session join` の実行本体を扱う CLI 実装。active session branch の事前条件確認、session home branch への merge、状態更新、session branch 削除判定、利用者向け結果出力を担う。
-- merge conflict 発生時に Codex CLI へ conflict 解消を依頼し、conflict 対象外の差分拒否、conflict marker 残存検出、unmerged path 確認、merge commit 完了までの制御を担う。
-- git の変更スナップショット、path fingerprint、可変長 conflict marker block 検出など、session join の安全境界を保つための補助処理を含む。
+- session join サブコマンドの実行本体を担う。active session branch を session home branch に切り替えて merge し、成功時に session 状態を joined へ更新し、到達可能な local session branch だけを削除し、結果サマリを出力する。
+- merge conflict 発生時は Codex CLI に conflict 解消を依頼し、対象外差分・残存 conflict marker・未解消 unmerged path を検査してから merge commit を完了する。
 
 ## Read this when
-- `cmoc session join` の挙動、事前条件、出力、状態遷移、session branch 削除条件を確認または変更したいとき。
-- session join 中の merge conflict 解消フロー、Codex CLI への依頼内容、oracle conflict 書き込み許可、conflict 対象外差分の拒否条件を確認または変更したいとき。
-- session join 失敗時のエラー出力先、manual resolution を要求する条件、conflict marker 検出や unmerged path 検査の実装を調べるとき。
+- session join の事前条件、branch 切り替え、merge、状態更新、session branch 削除、成功時出力を確認または変更したいとき。
+- session join の merge conflict 自動解消、Codex CLI へ渡す conflict 対象、oracle conflict 書き込み許可、対象外差分の拒否、merge commit 完了処理を調べるとき。
+- Git の unmerged path 検出、作業ツリー差分 snapshot、symlink を含む path fingerprint、conflict marker 残存判定の実装を確認したいとき。
 
 ## Do not read this when
-- session join 用 Codex prompt や conflict resolution parameter の組み立てだけを確認したい場合は、その builder 側を直接読む。
-- git status の path status 解析や runtime git wrapper の一般挙動を確認したい場合は、共通 runtime または indexing 側を直接読む。
-- session join 以外の session subcommand、apply workflow、または CLI 全体の dispatch を調べる場合は、それぞれの subcommand 実装や runtime 側を読む。
+- session join 用の Codex prompt や実行パラメータの内容だけを確認したいときは、conflict resolution parameter を組み立てる側を読む。
+- session 状態モデル、状態ファイルの schema、branch からの state 読み込みそのものを調べたいときは、runtime や state 定義側を読む。
+- session join の正本仕様断片を確認したいときは、対応する oracle doc を読む。
 
 ## hash
-- 17b55332f672e0cd9519d19f2fcdfc2695585dc4de1c08681a9a3db569e174a9
+- 5a9899b688fcb2fafd51d98f9fcc17605740d898a02d33d254b6f774d01ccea8

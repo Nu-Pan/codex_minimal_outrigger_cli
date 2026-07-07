@@ -1,13 +1,17 @@
 import json
+import os
 import shutil
+import socket
+import subprocess
 import tomllib
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
-from commons.runtime_errors import CmocError
 from _support import (
     TEST_SLM_MODEL,
     codex_parameter,
@@ -18,6 +22,61 @@ from _support import (
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_codex_profile import prepare_codex_profile
+
+
+def _port_available(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+    return True
+
+
+def _require_systemd_user(env: dict[str, str]) -> None:
+    if shutil.which("systemctl") is None:
+        pytest.skip("systemctl is not installed")
+    result = subprocess.run(
+        ["systemctl", "--user", "show-environment"],
+        env=env,
+        text=True,
+        capture_output=True,
+        timeout=10,
+    )
+    if result.returncode != 0:
+        pytest.skip("systemd user service manager is not available")
+
+
+@contextmanager
+def _real_cmoc_managed_ollama_env(root: Path) -> Iterator[dict[str, str]]:
+    # <work-root>/oracle/doc/dev_rule/test_rule.md and
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md: real Codex
+    # integration uses the normal doctor preprocess managed-service path.
+    if not _port_available(11434):
+        pytest.skip("127.0.0.1:11434 is already in use")
+    home = root / ".cmoc" / "local" / "test-home"
+    home.mkdir(parents=True)
+    env = os.environ.copy()
+    env["HOME"] = str(home)
+    _require_systemd_user(env)
+    try:
+        yield {"HOME": str(home)}
+    finally:
+        subprocess.run(
+            ["systemctl", "--user", "disable", "--now", "cmoc-ollama"],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+        subprocess.run(
+            ["systemctl", "--user", "daemon-reload"],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
 
 
 def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
@@ -28,41 +87,58 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         pytest.skip("real Codex CLI is not installed")
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    fake_env = fake_managed_ollama_env(root)
-    for key, value in fake_env.items():
-        monkeypatch.setenv(key, value)
-    monkeypatch.setenv(
-        "PATH",
-        f"{root / '.cmoc' / 'local' / 'fake-bin'}:{Path(real_codex).parent}:/usr/bin",
-    )
-    monkeypatch.setenv("OPENAI_API_KEY", "cmoc-local-test")
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
+    schema_source = tmp_path / "schema.json"
+    schema_source.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["result"],
+                "properties": {"result": {"type": "string"}},
+            }
+        )
+    )
+    prompt = (
+        'Return exactly this JSON object and no other text: '
+        '{"result":"cmoc-real-codex-provider"}'
+    )
 
-    # <work-root>/oracle/doc/dev_rule/test_rule.md: this intentionally uses the
-    # real Codex CLI. The provider is controlled because LLM/provider quality is
-    # outside cmoc's test goal.
-    with pytest.raises(CmocError):
-        run_codex_exec(
+    with _real_cmoc_managed_ollama_env(root) as ollama_env:
+        for key, value in ollama_env.items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv(
+            "PATH", f"{Path(real_codex).parent}:{os.environ.get('PATH', '')}"
+        )
+        monkeypatch.setenv("OPENAI_API_KEY", "cmoc-local-test")
+        # <work-root>/oracle/doc/dev_rule/test_rule.md: this intentionally uses
+        # real Codex CLI with a local SLM provider. The assertions stay on
+        # cmoc-owned integration artifacts, not answer quality.
+        result = run_codex_exec(
             AgentCallParameter(
                 ModelClass.MINIMUM,
                 ReasoningEffort.LOW,
                 FileAccessMode.READONLY,
-                "Reply with exactly cmoc-real-codex-provider.",
-                None,
+                prompt,
+                schema_source,
             ),
             root=root,
             capacity_initial_sleep_sec=0,
             max_capacity_retries=0,
+            max_semantic_retries=1,
             config=config,
         )
 
-    call_log_path = next(
-        (root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json")
-    )
+    call_log_path = result.call_log_path
     call_log = json.loads(call_log_path.read_text())
     profile = tomllib.loads(Path(call_log["profile_path"]).read_text())
     assert call_log["argv"][:3] == ["codex", "exec", "--skip-git-repo-check"]
+    assert "--output-schema" in call_log["argv"]
+    assert call_log["schema_path"] == str(result.schema_path)
+    assert Path(call_log["prompt_log_path"]).read_text() == prompt
+    assert result.output_path.read_text() == result.output_text
+    assert isinstance(result.output_json["result"], str)
     assert call_log["model_class"] == ModelClass.MINIMUM.value
     assert profile["model"] == TEST_SLM_MODEL
     assert profile["model_provider"] == "cmoc_managed_ollama"
@@ -205,6 +281,45 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
     }
 
 
+def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    for key, value in fake_managed_ollama_env(root).items():
+        monkeypatch.setenv(key, value)
+    codex_home = tmp_path / "codex_home"
+    codex_home.mkdir()
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
+
+    profile_path = prepare_codex_profile(
+        AgentCallParameter(
+            ModelClass.MINIMUM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
+            None,
+        ),
+        config,
+        codex_home,
+        root,
+    )
+
+    assert profile_path.is_file()
+    assert 'model_provider = "cmoc_managed_ollama"' in profile_path.read_text()
+    assert (
+        root
+        / ".cmoc"
+        / "local"
+        / "test-home"
+        / ".config"
+        / "systemd"
+        / "user"
+        / "cmoc-ollama.service"
+    ).is_file()
+
+
 def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -244,9 +359,13 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     work_root = str(root.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == work_root
     assert record["cwd"] == work_root
-    assert 'sandbox_mode = "workspace-write"' in record["profile"]
     profile = tomllib.loads(record["profile"])
-    assert profile["sandbox_workspace_write"]["writable_roots"] == []
+    assert "sandbox_mode" not in profile
+    assert "sandbox_workspace_write" not in profile
+    assert profile["default_permissions"] == "cmoc"
+    assert profile["permissions"]["cmoc"]["filesystem"] == {
+        str((root / "oracle").resolve()): "read"
+    }
 
 
 def test_run_codex_exec_stores_schema_state_under_repo_root(
@@ -348,3 +467,44 @@ def test_run_codex_exec_allows_repo_local_read_from_linked_worktree(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
+
+
+def test_run_codex_exec_profile_does_not_open_agents_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys, tomllib",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "profile = args[args.index('--profile') + 1]",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "profile_path = home / f'{profile}.config.toml'",
+            "roots = tomllib.loads(profile_path.read_text())",
+            "roots = roots['sandbox_workspace_write']['writable_roots']",
+            "agents = pathlib.Path('.agents').resolve()",
+            "assert not any(agents.is_relative_to(pathlib.Path(root)) for root in roots)",
+            "output.write_text(json.dumps({'ok': True}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        codex_parameter(FileAccessMode.REPO_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    profile_path = next(tmp_path.glob("codex_home/cmoc_*.config.toml"))
+    writable_roots = tomllib.loads(profile_path.read_text())["sandbox_workspace_write"][
+        "writable_roots"
+    ]
+    agents = (root / ".agents").resolve()
+    assert not any(agents.is_relative_to(Path(path)) for path in writable_roots)

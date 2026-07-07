@@ -154,16 +154,21 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
-    (apply_worktree / "JOINED.md").write_text("joined from apply\n")
-    run_git(apply_worktree, "add", "JOINED.md")
+    joined = apply_worktree / "src" / "joined.py"
+    joined.parent.mkdir()
+    joined.write_text("value = 'joined from apply'\n")
+    run_git(apply_worktree, "add", "src/joined.py")
     run_git(apply_worktree, "commit", "-m", "apply linked session change")
     assert current_branch(root) == root_branch
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert (linked / "JOINED.md").read_text() == "joined from apply\n"
-    assert not (root / "JOINED.md").exists()
+    assert (
+        (linked / "src" / "joined.py").read_text()
+        == "value = 'joined from apply'\n"
+    )
+    assert not (root / "src" / "joined.py").exists()
     assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
     assert run_git(linked, "branch", "--show-current").stdout.strip() == session_branch
     assert current_branch(root) == root_branch
@@ -341,11 +346,12 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
+    (apply_worktree / "README.md").write_text("# apply\n")
     (apply_worktree / "oracle" / "spec.md").write_text("# changed oracle in apply\n")
     broken_link = apply_worktree / ".codex" / "broken"
     broken_link.parent.mkdir(exist_ok=True)
     broken_link.symlink_to("missing-target")
-    run_git(apply_worktree, "add", "oracle/spec.md", ".codex/broken")
+    run_git(apply_worktree, "add", "README.md", "oracle/spec.md", ".codex/broken")
     run_git(apply_worktree, "commit", "-m", "unexpected oracle change")
 
     normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
@@ -359,13 +365,14 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     report = report_path.read_text()
     assert "join を中止しました" in report
     assert "## 想定外差分" in report
-    assert "- apply: .codex/broken, oracle/spec.md" in report
+    assert "- apply: .codex/broken, README.md, oracle/spec.md" in report
     assert "## マージコンフリクト" in report
     assert "- なし" in report
     forced = runner.invoke(
         app, ["apply", "join", "--force-resolve"], catch_exceptions=False
     )
     assert forced.exit_code == 0
+    assert (root / "README.md").read_text() == "# repo\n"
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
     assert not (root / ".codex" / "broken").exists()
     assert not (root / ".codex" / "broken").is_symlink()
@@ -467,6 +474,55 @@ def test_apply_join_reports_session_oracle_agents_diff_and_force_reverts(
     assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
 
 
+@pytest.mark.parametrize("side", ["apply", "session"])
+def test_apply_join_force_reverts_unexpected_rename_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    side: str,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state = json.loads(state_path.read_text())
+    changed_root = apply_worktree_from_state(root, state) if side == "apply" else root
+    (changed_root / "docs").mkdir()
+    run_git(changed_root, "mv", "README.md", "docs/README.md")
+    run_git(changed_root, "commit", "-m", f"{side} unexpected rename")
+
+    normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert normal.exit_code == 1
+    report_line = [
+        line for line in normal.output.splitlines() if "保存済み report" in line
+    ][0]
+    assert (
+        f"- {side}: docs/README.md"
+        in Path(report_line.rsplit(": ", 1)[1]).read_text()
+    )
+    forced = runner.invoke(
+        app, ["apply", "join", "--force-resolve"], catch_exceptions=False
+    )
+    assert forced.exit_code == 0
+    assert (root / "README.md").read_text() == "# repo\n"
+    assert not (root / "docs" / "README.md").exists()
+
+
 def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -548,7 +604,16 @@ def test_apply_join_allows_session_oracle_symlink_to_outside_root(
     assert apply_module.is_expected_session_change(root, path) is True
 
 
-@pytest.mark.parametrize("path", ["AGENTS.md", ".codex/config.toml"])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "AGENTS.md",
+        ".codex/config.toml",
+        ".gitignore",
+        "README.md",
+        "test/test_app.py",
+    ],
+)
 def test_apply_join_rejects_non_realization_apply_paths(
     tmp_path: Path,
     path: str,
@@ -558,7 +623,7 @@ def test_apply_join_rejects_non_realization_apply_paths(
     assert apply_module.is_expected_apply_change(root, path) is False
 
 
-def test_apply_join_allows_gitignore_and_tracked_ignored_apply_diff(
+def test_apply_join_allows_tracked_ignored_src_apply_diff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -592,16 +657,13 @@ def test_apply_join_allows_gitignore_and_tracked_ignored_apply_diff(
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
     (apply_worktree / "src" / "ignored.py").write_text("value = 2\n")
-    changed_gitignore = (apply_worktree / ".gitignore").read_text() + "# expected\n"
-    (apply_worktree / ".gitignore").write_text(changed_gitignore)
-    run_git(apply_worktree, "add", ".gitignore", "src/ignored.py")
+    run_git(apply_worktree, "add", "src/ignored.py")
     run_git(apply_worktree, "commit", "-m", "apply ignored implementation change")
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert "想定外差分" not in result.output
-    assert (root / ".gitignore").read_text() == changed_gitignore
     assert (root / "src" / "ignored.py").read_text() == "value = 2\n"
 
 
