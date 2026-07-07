@@ -15,6 +15,8 @@
 ## AGENTS.md 復活させる
 
 - cmoc 自体の説明とか、ディレクトリ構成とか、テストコマンドとか、いろいろ書ける余地はありそう
+- これはつまり `<repo-root>` が cmoc の開発対象としての用件を満たしているかのチェックの話なので `cmoc doctor scaffold` みたいなの用意して自動チェック化したい
+- 既存の `cmoc doctor` は `cmoc doctor fundamental` とかだろうか
 
 ## コメントをめっちゃ書かせたい
 
