@@ -268,6 +268,12 @@
 
 # cmoc ワークフロー
 
+## `cmoc apply fork` の途中停止 が欲しい
+
+- Ctrl+C で安全に途中停止みたいなの
+- apply は小さいバグ修正を繰り返しているのだから、中断しても何ら問題はないはず
+- 状態のファイル永続化の仕様をどうするのかが問題
+
 ## コマンドの並び順がおかしい
 
 - `cmoc review oracle` じゃなくて `cmoc oracle review` だよなぁ
@@ -287,21 +293,11 @@
 - 普通のプログラミングで言う所の「コード書いてビルドエラー読んで…」みたいなイテレーションを高速で回せるようにする
 - 細かい話は `memo/oracle_file_maintenance_strategry.md` を参照
 
-## `cmoc apply fork` の途中停止 が欲しい
-
-- Ctrl+C で安全に途中停止みたいなの
-- apply は小さいバグ修正を繰り返しているのだから、中断しても何ら問題はないはず
-
-## `.cmoc/config.json` が .gitignore の対象になっている
-
-- 設定ファイルなので git でトラックしたい
-- `.gitignore` の対象は `<repo-root>/.cmoc/untrack`, `<repo-root>/.cmoc/track` に分けるのが丸いか
-
 ## Codex CLI が oracle を触っちゃったら話
 
 - `ownership_and_safety.md` で書いてる内容、他の箇所でも言及していた気がする
 - サンドボックスで強固にガードしたい
-- codex cli のサンドボックスってちゃんと動くようになったんだろうか？
+- codex cli のサンドボックスが experimental を卒業しない限り無理
 
 ## 通知
 
