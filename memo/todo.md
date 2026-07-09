@@ -3,20 +3,28 @@
     
 ## OpenAI 公式のベストプラクティスを取り入れる
 
-- [Reasoning best practices | OpenAI API](https://developers.openai.com/api/docs/guides/reasoning-best-practices)
-- [Prompt guidance | OpenAI API](https://developers.openai.com/api/docs/guides/prompt-guidance)
-- [Customization – Codex | OpenAI Developers](https://developers.openai.com/codex/concepts/customization?utm_source=chatgpt.com)
-- [Best practices – Codex | OpenAI Developers](https://developers.openai.com/codex/learn/best-practices?utm_source=chatgpt.com)
-- [Prompt Caching 201](https://developers.openai.com/cookbook/examples/prompt_caching_201?utm_source=chatgpt.com)
-- [Prompt caching | OpenAI API](https://developers.openai.com/api/docs/guides/prompt-caching?utm_source=chatgpt.com)
-- [Prompt engineering | OpenAI API](https://developers.openai.com/api/docs/guides/prompt-engineering)
-- [Best practices for prompt engineering with the OpenAI API | OpenAI Help Center](https://help.openai.com/en/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api)
+- ベストプラクティスを oracle file に standard として組み込み
+- standard に基づいて既存プロンプトを調整
+
+## 各プロンプトをきっちり仕様化
+
+- 今は指定が雑なので AI エージェントの仕事も雑
+- AI エージェントがサボれないよう、きっちり組む必要がある
+- 多分 oracle 上に python 関数として書いたほうが良い
+- まだ抜け漏れがあるはず
 
 ## AGENTS.md 復活させる
 
 - cmoc 自体の説明とか、ディレクトリ構成とか、テストコマンドとか、いろいろ書ける余地はありそう
 - これはつまり `<repo-root>` が cmoc の開発対象としての用件を満たしているかのチェックの話なので `cmoc doctor scaffold` みたいなの用意して自動チェック化したい
 - 既存の `cmoc doctor` は `cmoc doctor fundamental` とかだろうか
+
+## cmoc が生成するプロンプトと、リポジトリ固有指示との整合性チェックが欲しい
+
+- 「リポジトリ側の `AGENTS.md` なり oracle ファイルなりで書いた指示」と「cmoc のプロンプト由来の指示」とが矛盾する可能性は当然ある
+- この矛盾が発生しているかどうかは cmoc 側でチェックしてほしい
+- `cmoc review oracle` とかだろうか？
+- しかし `AGENTS.md` は oracle ファイルに含まれないので、別のサブコマンドが必要か？
 
 ## コメントをめっちゃ書かせたい
 
@@ -31,7 +39,7 @@
     - あえて取らなかった実装方針とその根拠
     - 対応する oracle file が存在するなら、そのファイルパス (`<work-root>` 起点で)
 
-## ファイル別をやる前に、差分ベースの普通の apply をやったほうが良いかも
+## ファイル別をやる前に、差分ベースの全体 apply をやったほうが良いかも
 
 - リポジトリ全体に対する「oracle file にこういう修正いれたから追従させて」を先にやる
     - 一発でうまくいくわけ無いので、所見リストアップ --> 実装を繰り返し実行
@@ -42,6 +50,8 @@
     なので「抜け漏れは有るかもしれないが、大筋対応出来ている」な状態を先に作る
     - その後であれば、ファイル単位修正が多少近視眼的でも大きな問題にはならないはず
     - 実際、人力での開発の時も、大抵はそんな流れのはず
+- せっかく GPT-5.6 が来るので
+    - Sol による自動オーケストレーションを試しても良いかも
 
 ## ファイル配置の階層化を組み込む
 
@@ -61,13 +71,6 @@
 - かなり類似しているので、お互いに良いところを真似したり、共通化出来るところは共通化したい
 - e.g. 所見のマージとか
 - 差が出るのがしょうがない部分もあるので一定程度は妥協する
-
-## 各プロンプトをきっちり仕様化
-
-- 今は指定が雑なので AI エージェントの仕事も雑
-- AI エージェントがサボれないよう、きっちり組む必要がある
-- 多分 oracle 上に python 関数として書いたほうが良い
-- まだ抜け漏れがあるはず
 
 ## 無茶な仕様を調べる方法が欲しい
 
@@ -101,13 +104,6 @@
     - LLM の調査漏れを防ぐ
 - 削除に対する追従も必要な事を考えると git diff の結果を流し込むべきか
     - oracle スナップショット参照原則と真正面から衝突するので、ここは原則の方を組み直す必要がある
-
-## cmoc が生成するプロンプトと、リポジトリ固有指示との整合性チェックが欲しい
-
-- 「リポジトリ側の `AGENTS.md` なり oracle ファイルなりで書いた指示」と「cmoc のプロンプト由来の指示」とが矛盾する可能性は当然ある
-- この矛盾が発生しているかどうかは cmoc 側でチェックしてほしい
-- `cmoc review oracle` とかだろうか？
-- しかし `AGENTS.md` は oracle ファイルに含まれないので、別のサブコマンドが必要か？
 
 ## 用語は英語での定義が必要
 
@@ -154,11 +150,6 @@
 - 複数エージェントに全く同じ作業をやらせて、その結果を１つにマージすれば、調子がいい時の結果を得られる確率が上がるはず、みいたいなやつ
 - 当然ながら、トークン消費は激しい
 - SLM バックエンドでできるだけ高い性能を得たいならこれか？
-
-## `AGENTS.md` の扱いが宙ぶらりん
-
-- 今は `cmoc tui` からの起動を前提として、`AGENTS.md` を消している
-- 若干の気持ち悪さがある
 
 # トークン消費効率
 
