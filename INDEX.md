@@ -94,21 +94,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様断片を置く領域で、自然言語の oracle doc と、AI エージェント呼び出しや共通基盤を定義する oracle src への入口になる。
-- 利用者向け仕様、branch/worktree モデル、設計判断、開発作法は自然言語文書へ、prompt・Structured Output schema・モデル設定・パスモデル・共通規範プロンプトなどの正本実装断片は oracle src へ進む。
+- cmoc の人間所有の正本仕様断片を、自然言語で記述された仕様と、プログラミング言語・設定形式で記述された正本定義に分けて収める領域。利用者向け挙動、branch・worktree モデル、設計判断、開発作法は自然言語側へ、AI エージェント呼び出し契約、プロンプト、Structured Output、設定・パス・規範の構造化定義はコード・設定側へ進む入口になる。
 
 ## Read this when
-- cmoc の実装・テスト・レビューで、正本仕様断片の所在を oracle doc と oracle src から切り分けたいとき。
-- CLI 挙動、共通処理、外部連携、状態、ログ、実行環境、branch/worktree モデル、開発作法、テスト方針に関する自然言語仕様を探したいとき。
-- AI agent call の prompt、Structured Output schema、モデル設定、ファイルアクセス権限、preflight 設定、共通データ構造、規範プロンプトの正本実装断片を確認したいとき。
+- cmoc の実装・テスト・レビューに先立ち、人間意図を示す正本仕様断片の所在を判断するとき。
+- 確認事項が自然言語のアプリケーション仕様・設計背景・開発規則に属するか、コードまたは設定形式の呼び出し契約・構造化定義に属するかを切り分けるとき。
+- realization implementation または realization test と正本仕様断片の整合性を確認するため、参照すべき下位領域を選ぶとき。
 
 ## Do not read this when
-- realization code の現在の実装場所、関数シグネチャ、内部ロジック、テスト期待値だけを直接調べたいとき。
-- oracle file と realization file の一般的な定義、編集責務、品質基準、INDEX.md エントリー作成規則だけを確認したいとき。
-- path placeholder、work root、repo root、run root などの語彙定義そのものだけを確認したいとき。
+- 現在の realization code の関数シグネチャ、内部ロジック、テスト期待値だけを調べるときは、実装またはテストの対象へ直接進む。
+- 自然言語で記述された利用者向け挙動、branch・worktree モデル、設計判断、開発作法を確認すると決まっているときは、自然言語の正本仕様断片へ直接進む。
+- AI エージェント呼び出し、プロンプト、Structured Output、設定、ルートパス変換、規範の構造化表現を確認すると決まっているときは、コード・設定形式の正本定義へ直接進む。
 
 ## hash
-- 3a7fbaba0658d335217373593cc427bb065d2478cace0551d056a64cc41b534c
+- aa22b75369041f6d1469265ec818c4d7943edce5b0a2f2cb6e44feaec5fd23b3
 
 # `pyproject.toml`
 

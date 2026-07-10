@@ -1,22 +1,22 @@
 # `oracle`
 
 ## Summary
-- AI エージェント呼び出し仕様、共通基盤型、プロンプト構築仕様を扱う oracle src 配下の領域。agent call parameter、Structured Output schema、モデル・reasoning effort・ファイルアクセス設定、パスモデル、設定、規範モデル、構造化 Markdown、共通規範プロンプトへの入口になる。
-- INDEX.md エントリー生成、oracle file レビュー、fork 適用後レビュー、session join の conflict marker 解消、TUI 起動前後のパラメータ選定、prompt と schema の対応、共通標準文書の注入方法を確認するための下位領域へ進む起点になる。
+- AI エージェント呼び出しの論理パラメータとプロンプト構築、およびそれらを支える設定・パス・規範表現・Markdown レンダリングの正本仕様断片を扱う領域。
+- 個別の agent call 契約や共通プロンプト規範から、リポジトリ設定、ルートパス変換、構造化文書モデルまで、実装・テストへ反映する前に参照するソース形式の仕様群への入口となる。
 
 ## Read this when
-- cmoc が AI agent call をどの prompt、Structured Output schema、モデル設定、ファイルアクセス権限、preflight 設定で組み立てるか確認したいとき。
-- agent call parameter の共通データ構造、論理モデル名、論理 reasoning effort、Structured Output schema 指定方法を確認したいとき。
-- cmoc 全体で共有される設定値、パス表記、ルート解決、規範データ構造、構造化文書レンダリングの正本実装断片を探すとき。
-- agent call 用の完全なプロンプトが、標準文書、読み書き規則、補助プロンプト、プレースホルダ定義などの部品からどう構築されるか確認・変更したいとき。
-- oracle file、realization file、INDEX.md エントリー、レビュー所見、ファイル読み書きなど、AI に注入する共通規範プロンプトを確認・変更したいとき。
+- AI エージェント呼び出しについて、モデル設定、reasoning effort、ファイルアクセス権限、prompt、cwd、indexing preflight、Structured Output schema の正本仕様断片を確認するとき。
+- 完全プロンプトの構成順序、静的部分と動的部分の配置、プレースホルダ置換、ファイルアクセス規則や各種標準文書の注入方法を確認するとき。
+- INDEX.md エントリー生成、oracle file レビュー、fork 適用後レビュー、session join の conflict marker 解消、TUI 起動に用いる agent call の入力・出力契約を確認するとき。
+- リポジトリ別設定、ルートパスの探索と変換、規範の構造化表現、階層文書の Markdown レンダリングに関する正本仕様断片を探すとき。
+- これらの概念を利用する realization implementation または realization test を変更する前に、人間意図との境界を確認するとき。
 
 ## Do not read this when
-- CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形など、AI エージェント呼び出し以外の実行制御実装を調べたいとき。
-- CLI サブコマンドごとの利用者向け入出力、実行フロー、状態ファイルの仕様を直接確認したいとき。
-- oracle standard、realization standard、apply review standard、index entry standard など、規範本文の意味だけを確認したいとき。
-- バックエンド API へ送る実際のリクエスト形式、具体的なモデル名解決、agent CLI 実行処理など realization src 側の実装詳細を調べたいとき。
-- 生成済み Markdown、個別の標準文書本文、パス概念そのもの、または実装ファイルやテストファイルの現在構造だけを調べたいとき。
+- CLI 引数処理、branch・diff・merge・保存・表示など、個別サブコマンドの実行制御だけを調べるとき。
+- バックエンド API の実リクエスト形式、具体的なモデル名への解決、agent CLI の起動処理など、realization implementation 固有の詳細だけを調べるとき。
+- 個別サブコマンドの利用者向け入出力、実行フロー、永続状態だけを確認するときは、その仕様を直接扱う領域へ進む。
+- oracle standard、realization standard、review standard などの具体的な規範本文だけを確認するときは、対象の標準文書へ直接進む。
+- 生成済みプロンプトや Markdown の内容・配置だけを確認し、その構築規則や構造化表現を調べる必要がないとき。
 
 ## hash
-- 2b71013c8701d5b6263a80882590be82ff50f85d7aa4a341bf42115f846ebbd7
+- 473fd3377ae88f67818028f908bf5242f993bfa19b535220c8a9417c7b61bc74

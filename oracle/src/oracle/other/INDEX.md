@@ -1,23 +1,23 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc の開発対象リポジトリごとの挙動設定を集約する正本実装断片。永続化先、JSON 化時の順序・Enum value 化、doctor による生成・同期、人間による編集対象であることを定める。
-- Codex CLI 向けのモデル指定、reasoning effort、ファイルアクセス規則違反時の recovery 試行回数、apply fork と review oracle のループ・処理件数予算の既定値を定義する。
+- 開発対象リポジトリ単位で変わる cmoc の設定を、永続化される不変なデータクラス群として定義する正本仕様断片。
+- AI エージェントの最大並列数、Codex CLI のモデル・推論強度・ファイルアクセス規則違反時の回復試行回数、apply fork の処理上限、review oracle の各ループ上限を扱う。
+- モデル区分ごとの provider とモデル名、推論強度の対応、各サブコマンド固有設定、および Enum 値を含む JSON シリアライズの要件を確認する入口となる。
 
 ## Read this when
-- リポジトリごとに変わりうる cmoc 設定の責務、永続化、同期、編集主体を確認したいとき。
-- Codex CLI に渡す model provider、model 名、reasoning effort 名の正本定義や既定 mapping を確認したいとき。
-- apply fork の最大処理ファイル数、review oracle の列挙・マージ・検証ループ回数、ファイルアクセス規則違反時の recovery 試行回数を確認または具体化するとき。
-- 設定 dataclass を JSON に変換する実装で、メンバー順序保持や Enum 系インスタンスの value 化が必要か判断するとき。
+- 開発対象リポジトリごとの cmoc 設定項目、既定値、型、または設定の責務分割を確認・変更するとき。
+- 設定の JSON 永続化先、メンバー順序の保持、Enum 系インスタンスの value 化、doctor による生成・同期と人間による調整の境界を確認するとき。
+- Codex CLI で使用するモデル provider、モデル名、推論強度の対応、または未定義モデルを許さない制約を確認するとき。
+- AI エージェントの並列数、ファイルアクセス規則違反時の回復試行、apply fork の処理ファイル数、review oracle の列挙・マージ・検証ループの予算を確認するとき。
 
 ## Do not read this when
-- cmoc 設定の保存形式や既定値ではなく、path placeholder の意味や root model を確認したいとき。
-- Codex CLI 呼び出し全体の組み立てや agent call orchestration の処理手順を確認したいだけのとき。
-- doctor サブコマンドの実行フローや config 生成・同期処理そのものを確認したいとき。
-- oracle review の所見 schema や判定基準など、review 内容の仕様を確認したいとき。
+- 設定値の読み込み、検証、JSON 変換、doctor による同期処理など、設定定義を利用する具体的な実装だけを調べるとき。
+- モデル区分や推論強度そのものの定義・意味を確認したいときは、それらを定義する正本仕様断片へ直接進む。
+- cmoc の設定と無関係な CLI サブコマンドの処理手順、入出力、または永続状態を調べるとき。
 
 ## hash
-- cdf48ee1558bf00be5f3e2a1ba3adf608a14aa10a5ae2224b762b2941a1e7697
+- 843bfa68ad070ea9b222f233f02aecbf12a72eb882a48712e6dde438e42e3e07
 
 # `path_model.py`
 
