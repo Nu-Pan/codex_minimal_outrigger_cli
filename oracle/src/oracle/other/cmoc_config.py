@@ -71,9 +71,9 @@ class CmocConfigCodex:
     #   モデル名は case sensitive なので注意
     model: dict[ModelClass, CodexModelSpec] = field(
         default_factory=lambda: {
-            ModelClass.MAINSTREAM: CodexModelSpec("codex", "gpt-5.5"),
-            ModelClass.FLAGSHIP: CodexModelSpec("codex", "gpt-5.5"),
-            ModelClass.EFFICIENCY: CodexModelSpec("codex", "gpt-5.4-mini"),
+            ModelClass.MAINSTREAM: CodexModelSpec("codex", "gpt-5.6-terra"),
+            ModelClass.FLAGSHIP: CodexModelSpec("codex", "gpt-5.6-sol"),
+            ModelClass.EFFICIENCY: CodexModelSpec("codex", "gpt-5.6-luna"),
             ModelClass.MINIMUM: CodexModelSpec("codex", "gpt-5.4-mini"),
         }
     )

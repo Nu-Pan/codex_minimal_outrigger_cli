@@ -82,8 +82,8 @@ def build_tui_launch_tui_parameter(
         f.write(render_as_markdown(complete_prompt))
     # パラメータを生成して返す
     return AgentCallParameter(
-        ModelClass.MAINSTREAM,
-        ReasoningEffort.MEDIUM,
+        ModelClass.FLAGSHIP,
+        ReasoningEffort.HIGH,
         file_access_mode,
         f"{complete_prompt_path} を読んで、その指示に従って下さい",
         Path(__file__).with_suffix(".json"),
