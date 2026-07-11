@@ -314,21 +314,20 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- `run_codex_exec` の再試行まわりを検証する回帰テスト群。出力 JSON の妥当性確認、容量不足時の再試行、失敗ログの記録、再試行後にエージェント差分が失われないこと、JSONL 外の文字列を再試行理由にしないことを扱う。
-- `codex_call` ログの状態遷移と、呼び出しごとの入出力ファイル分離を確認する入口でもある。ファイル単体の内部実装ではなく、`commons.runtime_codex.run_codex_exec` の外部挙動を変えるときに読む。
+- `run_codex_exec` のリトライ挙動を検証するテスト群。構造化出力の再試行、JSONL エラーの扱い、capacity/quota の再試行条件、再試行後も差分や入力が維持されることを確認する。
 
 ## Read this when
-- `commons.runtime_codex.run_codex_exec` の再試行条件や終了条件を変える。
-- Codex CLI の呼び出しログ、`codex_call` イベント、`output_path` や `prompt_log_path` の扱いを変える。
-- 容量不足・構造化出力の失敗・スキーマ不一致のリトライ挙動を追加または修正する。
+- `commons.runtime_codex.run_codex_exec` の再試行条件や失敗時の判定を変更する。
+- Codex CLI の出力解析、structured output の検証、capacity/quota 由来の再実行ロジックを変える。
+- 呼び出しログやサブコマンドログに残す状態・エラー内容・再試行回数の扱いを確認したい。
 
 ## Do not read this when
-- 再試行と無関係な通常の実行経路だけを変える。
-- `test_codex_runtime_retry.py` 以外のサブコマンドや別の runtime 連携のテストを探している。
-- ログ形式やファイル生成ではなく、純粋なモデル選択や設定読み込みだけを変える。
+- `run_codex_exec` 以外の CLI 起動経路や別サブコマンドのテストを探している。
+- ファイルアクセスモードやプロンプト生成そのものの仕様を確認したい。
+- Codex 実行以外の一般的な JSON パースやテスト補助関数の定義を探している。
 
 ## hash
-- 10314201ed00b88955981990873fd7d0c290131357f583836d3e0e5115d67464
+- 005c0a658825567d1a2a502527dd8c2a4f9c40c2933c021074f364d5a4a8a9b4
 
 # `test_codex_runtime_subprocess.py`
 

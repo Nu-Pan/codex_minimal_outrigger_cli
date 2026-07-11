@@ -115,37 +115,37 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation の入口。`acp` や `basic` の互換層、CLI 入口、共通基盤、設定、各サブコマンドの実体をまとめて辿るための案内で、正本側定義そのものではなく realization 側の接続点を確認するときに使う。
-- ここでは個別機能の詳細仕様ではなく、どの領域がどの責務を持つか、互換 shim と実体の境界がどこにあるかを切り分ける。`src` 直下の各 module は、既存公開面の維持、CLI 配線、共通 helper、設定受け口、サブコマンド実装へ分かれている。
+- `src` 配下の realization implementation 全体への入口。CLI の実行本体、共通基盤、設定や互換 shim を含む実体側の実装を読むときに使う。
+- この階層は、`main.py` の CLI 入口、`sub_commands` の各実行入口、`commons` の共有処理、`config` や `oracle.py` の互換入口をまとめて辿るための案内であり、個別責務の詳細は下位本文で確認する。
 
 ## Read this when
-- realization 側の公開 import 入口や互換層の配置を確認したいとき。
-- CLI 入口から各サブコマンド実装への接続を追いたいとき。
-- 共通 helper、設定、互換 shim、サブコマンド実装のどこを読むべきか切り分けたいとき。
+- realization implementation の実体を確認したいとき。
+- CLI 本体やサブコマンド実装へ、互換入口からどう接続されているかを追いたいとき。
+- 共通 helper、設定、package shim など、複数領域にまたがる実装の入口を切り分けたいとき。
 
 ## Do not read this when
-- 正本仕様そのものや oracle 側の定義を確認したいとき。
-- 個別コマンドの詳細な挙動や内部アルゴリズムだけを知りたいとき。
-- 互換層や配線ではなく、新しい正本仕様断片を探しているとき。
+- 正本仕様そのものを確認したいとき。
+- 個別機能の細部だけを確認したいときは、対応する下位モジュールを直接読む。
+- oracle file / realization file の定義や INDEX 生成規則を確認したいとき。
 
 ## hash
-- 8d466ba364488c2dc20136410d4c27902dad35ba9ec1df8a35b0578d562114a6
+- 32680384c2c5051f9507340670de0f77732aa09a36ba9b7c4b1bc3f0c4659092
 
 # `test`
 
 ## Summary
-- `test` 配下の realization test を、関心ごとごとに読むための入口。CLI、runtime、prompt、support helper などの回帰テスト群がまとまっているので、目的の外部挙動を確認したいときにここから個別の test ファイルへ進む。
-- 共通の fixture や支援モジュールも含むが、実装本体の仕様確認ではなく、現行挙動の期待値や境界条件を確かめるために使う。
+- `test` 配下の共通支援モジュールをまとめる入口。CLI・runtime・worktree・Codex/Ollama まわりの複数テストで使う補助関数を探すときにここから各 support file へ進む。
+- 個別の機能テスト本体ではなく、テスト間で共通化された runner・fake コマンド・repo fixture・runtime 差し替え・補助的な状態復元を扱う。
 
 ## Read this when
-- 特定の CLI サブコマンドや runtime 境界の外部挙動を確認したいとき。
-- prompt 生成や markdown rendering の回帰を確認したいとき。
-- 複数のテストで共通に使う補助モジュールや fixture の役割を追いたいとき。
+- 複数のテストで使う共通 fixture や helper の所在を確認したいとき。
+- CLI 実行、git/worktree、Codex 実行、Ollama、state 復元などのテスト補助を横断して探したいとき。
+- 個別テストの期待値ではなく、そのテストが依存する共通準備の責務を追いたいとき。
 
 ## Do not read this when
-- 実装本体のアルゴリズムや責務を知りたいときは、対応する `src` 側を読む。
-- 正本仕様そのものを確認したいときは、対応する `oracle` 側を読む。
-- この配下の個別テストの期待値ではなく、ルーティング情報だけが必要なとき。
+- 個別サブコマンドや runtime の仕様そのものを知りたいときは、対応する実装側や各テスト本体を読む。
+- INDEX.md のルーティング方針や正本仕様断片を探しているときは、`oracle` 側の文書を読む。
+- 共通支援ではなく、単一テスト固有の期待値や制御フローだけを確認したいときは該当テストファイルを直接読む。
 
 ## hash
-- 37c343f390e59950754874c30d32fa5f6810f3360e384430512dad4747cd053a
+- 0b2de2eeb65e96144c8f975e85a7beb8a5fe8adb2cf84437bbaa0f167b50e1c3
