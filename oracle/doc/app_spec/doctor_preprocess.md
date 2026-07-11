@@ -13,7 +13,7 @@
 
 1. `<work-root>/.cmoc/local` が git 追跡対象外であることを保証する
 2. `<work-root>/.agents` が git 追跡対象であることを保証する
-3. cmoc managed ollama が利用可能であることを保証する
+3. cmoc managed ollama を使用する場合、その利用可能性を保証する
 4. ここまでの作業で発生した差分を git commit する
 
 ## 「`<repo-root>/.cmoc/local` が git 追跡対象外であることを保証する」の詳細
@@ -55,6 +55,6 @@
 - `<work-root>/.agents` ツリー内に tracked file が無い場合は `<work-root>/.agents/.gitkeep` を git index に追加する
 - 修復後も `<work-root>/.agents` ツリー内に tracked file が無い場合はエラー終了する
 
-## 「cmoc managed ollama が利用可能であることを保証する」の詳細
+## 「cmoc managed ollama を使用する場合、その利用可能性を保証する」の詳細
 
 - `<cmoc-root>/oracle/doc/app_spec/cmoc_managed_ollama.md` を正本とする
