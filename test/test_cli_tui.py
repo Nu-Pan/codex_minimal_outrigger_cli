@@ -88,7 +88,11 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert len(tui_calls) == 1
     orig_files = list((root / ".cmoc" / "local" / "log" / "tui").glob("*_orig.md"))
     assert len(orig_files) == 1
-    assert "TODO ここから書き始める" in orig_files[0].read_text()
+    original_prompt = orig_files[0].read_text()
+    assert "基本的な考え方は以下の通り" in original_prompt
+    assert "手順の過剰固定" in original_prompt
+    assert "# 目的" in original_prompt
+    assert "# 裁量範囲" in original_prompt
     complete_files = list((root / ".cmoc" / "local" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     complete_prompt = complete_files[0].read_text()
