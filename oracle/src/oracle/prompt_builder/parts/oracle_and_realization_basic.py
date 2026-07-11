@@ -1,6 +1,6 @@
 # cmoc
 from oracle.other.struct_doc import StructDoc
-from oracle.other.path_model import resolve_work_root
+from oracle.other.path_model import resolve_repo_root, resolve_work_root
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
@@ -65,6 +65,7 @@ def build_oracle_and_realization_basic() -> tuple[PlaceholderMap, StructDoc]:
                     - `<work-root>/.git` ツリー内ではない
                     - `<work-root>/.agents` ツリー内ではない
                     - `<work-root>/.codex` ツリー内ではない
+                    - `<work-root>/.cmoc` ツリー内ではない
                     - `INDEX.md`, `AGENTS.md` ではない
                     - `git check-ignore` で git 追跡対象外ではないと判定された
                     """,
