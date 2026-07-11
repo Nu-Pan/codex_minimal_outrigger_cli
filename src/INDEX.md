@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- oracle 側の acp builder 実装を正本に保ちつつ、旧来の `acp.*` / `acp.builder.*` import 経路を成立させる realization 側互換入口を扱う階層。
-- 既存公開名の再公開、canonical oracle 実装への中継、薄い wrapper、移行期間中の削除条件を確認するための入口になる。
-- apply、review、session、tui、indexing 系 builder の互換経路に加え、quota 回復確認用の低コスト probe builder も含む。
+- `acp` 系の互換 import 入口と、`acp.builder` 配下の転送層をまとめて見るための案内。旧公開名を維持するだけの薄い層と、正本側実装へつなぐ入口を切り分けて辿るときに使う。
+- 配下の各領域は、互換維持か正本側への接続かを判断したいときに読む。`common` は共通ビルダー処理の置き場だが、現時点では本文がないため、この案内から実体は読めない。
+- `quota_probe` は quota 回復確認のための最小呼び出しを確認したいときに読む。機能追加や本体仕様の調査ではなく、旧 import path の扱いと接続境界の確認に向いている。
 
 ## Read this when
-- `acp.*` または `acp.builder.*` の旧 import 互換性を確認・維持・削除判断したいとき。
-- realization 側や利用者向け公開面に残る acp 系 import を oracle 側実装へどう接続しているか調べたいとき。
-- oracle 側 builder の結果を既存の公開型や公開名へ適合させる wrapper、再公開、中継処理を確認したいとき。
-- quota wait 中の回復確認で使う最小 agent call parameter builder の内容を確認・変更したいとき。
+- `acp.builder.*` の旧 import 互換を残すか削るかを判断したいとき。
+- 正本側の builder を旧公開名からどう辿るか、またどの互換入口が残っているかを確認したいとき。
+- 各サブ領域の互換 wrapper と、正本側実装への接続境界を確認したいとき。
+- quota 回復確認のための最小呼び出し内容を確認したいとき。
 
 ## Do not read this when
-- acp builder の正本仕様、prompt、生成内容、人間意図を確認したいときは、対応する oracle 側 builder を読む。
-- apply fork、review、session、TUI などの機能全体の実行フローや CLI 制御を調べたいときは、それぞれの上位実装や呼び出し元を読む。
-- ACP parameter の公開型、path model、git helper、index entry 生成仕様など、builder 互換入口以外の共通実装を調べたいときは該当対象を読む。
-- 新規 acp 機能や API 仕様の追加場所を探しているだけで、既存 import 互換や quota probe に関係しないとき。
+- 正本側の具体的な実装内容や仕様本体を確認したいとき。
+- 互換入口ではなく個別機能の中身を確認したいとき。
+- `common` の実装詳細を探しているとき。
+- `acp.builder` 以外の公開面や、互換以外の新規 API を探しているとき。
 
 ## hash
-- c35c16dceec30fb4f9b69e36cbbab9e4f340620e069b481f5450635346d5d7e8
+- eb41ce1e871c19639fa976bd0c383f502b49f242ff49174f47120acac27e11cc
 
 # `basic`
 

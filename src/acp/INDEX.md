@@ -19,21 +19,22 @@
 # `builder`
 
 ## Summary
-- acp builder 配下で、oracle 側 builder 実装を正本に保ちながら旧来の acp.builder 系 import 経路を成立させる realization 側互換入口を束ねる階層。
-- apply、review、session、tui、indexing などの builder 群について、canonical oracle 実装への中継、再公開、薄い wrapper、削除条件を確認するための入口になる。
-- quota 回復確認用の最小 agent call parameter builder など、通常 builder とは異なる限定用途の実装も含む。
+- `acp.builder` 配下の互換入口と正本側 builder への転送層を束ねる領域。旧 import path を維持する薄い公開面、正本実装へつなぐ再公開、最小補助実装をここから辿れる。
+- 個別サブ領域は `apply`、`indexing`、`review`、`session`、`tui` に分かれており、いずれも既存参照の互換維持か、正本側実装への接続を主目的にしている。
+- `common` は共通ビルダー処理の置き場だが、現時点では本文ファイルを持たない。
+- `quota_probe.py` は quota 回復確認用の最小 probe 呼び出しを構築する。
 
 ## Read this when
-- acp.builder.* の旧 import 互換性や、既存参照を oracle 側実装へ接続する仕組みを確認したいとき。
-- apply、review、session、tui、indexing の agent call parameter builder について、realization 側の互換入口、再公開、wrapper、削除可否を調べたいとき。
-- oracle 側 builder を呼び出した結果を realization 側公開型や既存公開名へどう適合させるかを確認したいとき。
-- quota wait 中の回復確認で使う低コストな probe 用 agent call parameter の構築内容を確認・変更したいとき。
+- `acp.builder.*` の旧 import 互換を残すか削るか判断したい。
+- 正本側の builder を旧公開名からどう辿るか、あるいはどの互換入口が残っているか確認したい。
+- 各サブ領域の互換 wrapper と、正本側実装への接続境界を確認したい。
+- quota 回復確認のための最小呼び出し内容を確認したい。
 
 ## Do not read this when
-- 各 builder の正本仕様、prompt、生成内容、人間意図を確認したい場合は、対応する oracle 側 builder を読む。
-- apply fork、review、session、TUI など各機能全体の実行フローや CLI 制御を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
-- ACP parameter の公開型、path model、汎用 git helper、index entry 生成仕様など、builder 互換入口以外の共通実装を調べたい場合は該当対象を読む。
-- 新規機能の実装場所を探しているだけで、既存 acp.builder import 互換や quota probe に関係しない場合。
+- 正本側の具体的な実装内容や仕様本体を確認したい場合は、`oracle` 側の各対象を読む。
+- 互換入口ではなく個別機能の中身を確認したい場合は、各サブモジュールの実体を読む。
+- `common` の実装詳細を探している場合は、現時点ではこの対象からは読めないので別の本文へ進む。
+- `acp.builder` 以外の公開面や、互換以外の新規 API を探している場合はこの領域は対象外。
 
 ## hash
-- 110915aad540f1dfc04662648e2159e9f044eabe48fc1f5e3bb982a5458e0fcb
+- 3b1b868c23f0567c2cb6b0771b4b4c0eed7c3dd56f510623612100ff50339996

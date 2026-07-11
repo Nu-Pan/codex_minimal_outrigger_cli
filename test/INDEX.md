@@ -425,21 +425,20 @@
 # `test_packaged_import.py`
 
 ## Summary
-- インストール後に近い配置へ必要なパッケージだけを複写し、通常の作業ディレクトリ外から import できることを検証するテスト。
-- 設定上の package 配置、review oracle 用 builder の prompt/schema 参照、basic builder の canonical 定義への再公開、設定定義の再公開境界を確認する。
+- `packaged` 配置での import ルートと re-export の境界を検証するテスト群。`oracle/src/oracle` を site 配下に置いたときに、builder 側の参照が正本実装へ向くことと、config の公開名が余計なものを混ぜずに定義どおりに露出することを確認する。
 
 ## Read this when
-- packaged layout からの import 失敗、package-dir や package discovery 設定、oracle src を含む配布配置の問題を調査するとき。
-- review oracle enumerate builder が配布相当の import 環境で prompt や structured output schema を参照できるか確認するとき。
-- basic builder や設定定義の再公開境界を変更し、canonical な oracle src 定義との関係や公開名の範囲を検証するとき。
+- `oracle` ツリーを配布配置した前提で import が成立するか確認したいとき。
+- `acp.builder` から参照される正本定義が、packaged layout でも同一オブジェクトとして再利用されるべきか確かめたいとき。
+- `config.cmoc_config` の公開名が、設定定義だけに絞られているか確認したいとき。
 
 ## Do not read this when
-- 通常の開発ツリー上での単体 import や関数内部ロジックだけを確認したいとき。
-- CLI の実行フロー、永続状態、agent call orchestration の挙動を調べたいとき。
-- prompt 本文、schema 本体、設定 dataclass の詳細仕様そのものを読む必要があるとき。
+- 通常の機能仕様や CLI 挙動を知りたいとき。
+- `oracle` 配下の個別仕様や prompt 本文そのものを読みたいとき。
+- packaging 以外の import 境界、依存解決、実行時動作を調べたいとき。
 
 ## hash
-- ed59fc9ad74514656ac722e4f60386946e3868ea9284ecd7656a4bc61d4d6131
+- 74dd7cd80b6e020389e9935b2d03db0716995c52119fee53c27eb0c207f521cb
 
 # `test_prompt_parts.py`
 
