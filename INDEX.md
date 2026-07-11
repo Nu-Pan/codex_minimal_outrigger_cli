@@ -115,36 +115,39 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation をまとめる頂点ディレクトリ。CLI 入口、共有 runtime helpers、互換 import 入口、各サブコマンド実装、`acp` builder 実装、`oracle` package shim を束ね、どの責務がどの下位領域にあるかを辿る起点になる。
-- この階層では、利用者向け公開面と realization 側の実体をつなぐ互換層を含めて扱うが、正本仕様そのものは置かず、各責務の実装本体へ進むためのルーティングを担う。
+- `src` は realization 側の公開入口が集まる上位階層で、CLI 入口、互換 shim、共有 runtime helper、互換 import 入口、サブコマンド群をまとめて案内する。
+- `main.py` は CLI の root command と各 subcommand の配線、`oracle.py` は正本側 `oracle.*` を解決する package shim、`cmoc_runtime.py` は runtime 互換 import の維持を担う。
+- `acp`、`basic`、`config` はそれぞれ正本側実装や公開面を複製せずに保つ互換 import 入口であり、`commons` は共有 runtime helper のまとまり、`sub_commands` は個別 CLI 実行入口群のまとまりである。
 
 ## Read this when
-- CLI 入口、サブコマンド群、共有 runtime helper、設定読み込み、互換 import 入口、`oracle` package shim のどれを読むべきか切り分けたいとき。
-- `acp.*` / `basic.*` / `config.*` / `commons.*` の公開経路が realization 側でどう接続されているか確認したいとき。
-- apply、review、session、doctor、indexing、TUI などのサブコマンド実装へ進む前に、まず realization 側の責務配置を把握したいとき。
+- CLI 入口や subcommand 配線の全体像を確認したいとき。
+- `oracle.*`、`acp.*`、`basic.*`、`config.*` の互換 import 経路や削除条件を確認したいとき。
+- 共有 runtime helper の配置や、どの実行処理が `commons` 側に集約されているかを確認したいとき。
+- `apply`、`review`、`session`、`tui`、`indexing`、`doctor`、`eval-oracle` のどれを読むべきか切り分けたいとき。
 
 ## Do not read this when
-- acp builder、basic API、設定値、CLI 挙動の正本仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
-- 個別 helper や個別サブコマンドの具体的な入出力、失敗時挙動、状態遷移を知りたいときは、この階層ではなく該当モジュールを直接読む。
-- 互換 import ではなく新しい仕様や新規 API の追加場所を探しているだけなら、目的の責務を持つ下位実装を直接読む。
+- 正本となる oracle 側の仕様や実装内容を確認したいときは、`oracle` ツリー側の対応対象を読む。
+- 個別 subcommand の実処理、git 操作、state 操作、path 変換などの本体を調べたいときは、`sub_commands` 配下の該当 module や `commons` の個別 helper を読む。
+- 互換 import ではなく新しい公開 API や新規 CLI 面の追加場所を探しているだけなら、ここではなく対応する本体側を読む。
 
 ## hash
-- 17bcc28227d148f45219de56264955185cc500fb78194c3c3191a4680aa18932
+- 8754196304c1bf6c31e9cbdb350db8010a73ee2b151057e85a0d48a8a2a263ec
 
 # `test`
 
 ## Summary
-- `test/_support.py` の共通テスト基盤をまとめる入口。最小 Git リポジトリ、Codex 実行用の固定引数、偽 `ollama` / `systemctl` 環境、テスト用ヘルパーを提供し、複数の CLI テストや managed Ollama 関連テストが共通に使う前処理を担う。
+- `test/_support.py` の共通テスト基盤をまとめる入口。最小 Git リポジトリ、Codex 実行用の固定引数、偽の外部コマンド環境、テスト用ヘルパーを使う変更で読む。
+- CLI テストや managed Ollama 周辺の制御ロジックを共有 fixture とスタブで支えるための補助層であり、個別の CLI 振る舞い本体ではなく前処理・環境構築・共通 helper を見るときに進む。
 
 ## Read this when
-- CLI テストで共有 fixture やヘルパーを追加・変更したい。
-- managed Ollama、`systemctl`、Codex 実行引数のテスト用スタブを調整したい。
-- テスト用の最小 Git リポジトリや fake external command の振る舞いを見直したい。
+- CLI テストで使う共通 fixture や helper を追加・変更するとき。
+- managed Ollama、systemctl、Codex 実行引数のテスト用スタブを調整するとき。
+- テスト用の最小 Git リポジトリや外部コマンドの偽実装の振る舞いを見直したいとき。
 
 ## Do not read this when
 - 個別の CLI 挙動そのものを確認したいだけなら、各テスト本体を先に読む。
 - 本番実装の責務や永続データの仕様を知りたいだけなら、対応する oracle 側を読む。
-- ここに定義されていないサブコマンドや新しいテスト方針を探したいだけなら、別のテストファイルを探す。
+- この補助層に定義されていない別のサブコマンドや新しいテスト方針を探したいだけなら、別のテストファイルを探す。
 
 ## hash
-- 26b96d514b622b6a521d2f95bad84bde90f0bf0f38514662136c9cb5ba0aed2b
+- 0ba16b5382a56124b91555daac7721adc35293d0827ce7683d184fda14afe808

@@ -110,25 +110,21 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループと、その周辺の再試行・検証・記録を担う実行制御モジュール。Structured Output 検証、capacity retry、quota 代表 probe、resume 継続、call log と subcommand event の記録を同じ状態機械として扱う。
-- Codex CLI 呼び出し用の argv 上書き、stdin prompt log、stdout/stderr/output/call log、CODEX_HOME、schema path、quota 待機中の共有 probe 状態をまとめて制御する入口になる。
-- agent call 後の worktree 変更 path を git status から absolute path として取得する補助関数も含む。
+- Codex exec の単一試行ループを実行し、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume token 継続、実行ログ記録をまとめて扱う。実行制御と失敗時の再試行境界を追うときに読む。
+- 同じ責務で使われる内部 helper もここにあり、prompt log / call log / stdout・stderr / output の保存や、変更された worktree path の収集など、Codex 呼び出し周辺の記録と制御を確認するときの入口になる。
 
 ## Read this when
-- Codex exec 呼び出しの再試行条件、失敗時の CmocError、Structured Output 検証、output JSON の読み取り、resume token の扱いを確認または変更するとき。
-- Codex call log、prompt log、stdout/stderr/output log、subcommand event、console 出力に残る実行記録の内容や生成タイミングを追うとき。
-- capacity error と quota error の分岐、quota 枯渇時の代表 probe、複数 worker の quota 待機共有、quota 回復後の resume 継続を調べるとき。
-- model・reasoning effort・file access の argv 上書き、CODEX_HOME、Codex cwd、schema store、追加 read/write path が Codex subprocess 呼び出しへどう渡るかを確認するとき。
-- agent call 後に変更された worktree path を取得する処理、特に untracked directory を file-level path として扱う必要がある処理を調べるとき。
+- Codex exec の再試行条件、quota 待機、Structured Output の検証失敗、resume 継続の扱いを確認したい。
+- Codex 呼び出しに付随する prompt/call/stdout/stderr/output のログ記録や、呼び出し結果の組み立て方法を確認したい。
+- 変更済み worktree path を絶対 path で列挙する処理の入口を探している。
 
 ## Do not read this when
-- TUI 起動や対話 UI 側の制御を調べるとき。このファイルは exec 実行制御だけを扱う。
-- Codex argv 上書きの具体的な組み立て、Codex subprocess 実行 wrapper、quota/capacity 判定、resume token 抽出の低レベル実装だけを変更したいときは、それらを提供する Codex subprocess 境界の実装を直接読む方がよい。
-- git status の取得そのものや path status の解釈を変更したいときは、git 操作を扱う runtime 実装を直接読む方がよい。
-- 設定値の定義や読み込み仕様だけを確認したいときは、設定モデルや設定読み込み側を読む方がよい。
+- TUI 起動やサブコマンド全体の起動制御を見たい場合は、別 module の入口を読む。
+- 個別の git status 収集ロジックや worktree 変更検出の詳細だけを見たい場合は、その下位の runtime git 側を直接読む。
+- Codex 実行の入力生成や schema 生成の正本仕様を見たい場合は、根拠として挙げられている oracle 側の文書を読む。
 
 ## hash
-- 9c2280006eb332264dddf8cf7dd70eac00851fcbc707aeb698281b3406fb063f
+- 4d2c85aa1cbf841f7bba632a40c6780a8d9d14dbd8abd7ba4cb090ff5ffbcda1
 
 # `runtime_codex_logging.py`
 
