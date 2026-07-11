@@ -1,41 +1,34 @@
 # `doc`
 
 ## Summary
-- cmoc の oracle doc を置く領域で、アプリケーション仕様、branch/worktree モデル、採用しなかった設計案、開発作法など、自然言語で書かれた正本仕様断片への入口になる。
-- 利用者向け挙動やサブコマンド横断仕様を探す場合はアプリケーション仕様へ、git branch・worktree の作業隔離モデルは branch/worktree モデルへ、過去の不採用案は設計判断メモへ、実装・テストの作法は開発規則へ進む。
+- `oracle/doc` 配下の個別仕様断片を束ねる入口。CLI の起動経路、補完、ログ、事前検証、エラー処理、外部 provider との境界、状態や実行分離など、利用者に見える機能仕様の断片を探すときにここから進む。
 
 ## Read this when
-- cmoc の実装・テスト・レビューで、自然言語の oracle doc から該当する正本仕様断片を探したいとき。
-- CLI 挙動、共通処理、外部連携、状態、ログ、実行環境、branch/worktree モデル、開発作法、テスト方針のいずれかに関する仕様を確認したいとき。
-- 現行仕様そのものを読むべきか、採用しなかった代替案や設計判断の背景を読むべきかを切り分けたいとき。
+- アプリ全体の仕様断片を、どの文書へ進んで読むべきか判断したいとき。
+- CLI の起動前処理、補完、ログ、エラー、状態、実行分離、外部 provider 境界のうち、個別の振る舞いを実装・修正・検証したいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な定義、編集責務、品質基準、INDEX.md エントリー作成規則だけを確認したいとき。
-- path placeholder、work root、repo root、run root などの語彙定義だけを確認したいとき。
-- realization code の現在の実装場所、関数シグネチャ、内部ロジック、テスト期待値だけを直接調べたいとき。
+- oracle file と realization file の一般的な役割分担や編集規則だけを確認したいとき。
+- 個別のサブコマンド仕様やデータ構造の細部だけを直接見たいときは、該当する下位文書へ進むほうが適切なとき。
 
 ## hash
-- cf685940a413585024c118851719249ecda25a3ac597420dfa197a2cb843d12e
+- df61f8338e0c2d3a0cdb38bcd2ad71af2fd748daacbd48f0b2a06ed6423384f2
 
 # `src`
 
 ## Summary
-- AI エージェント呼び出しの論理パラメータ、用途別プロンプト、Structured Output 契約を定義する正本仕様断片への入口。indexing、fork 適用、oracle file レビュー、session join の conflict 解消、TUI 起動に伴う呼び出し契約を扱う。
-- 完全プロンプトの構成、ファイルアクセス規則と各種 standard の注入、プレースホルダ置換を支えるほか、リポジトリ設定、ルートパス変換、規範の構造化表現、階層文書の Markdown レンダリングに関する正本定義を収める。
+- `oracle/src` 配下の正本仕様断片を用途別に辿るための入口。`acp_builder`、`other`、`prompt_builder` などの下位領域へ進む前に、どの責務を読むべきかを絞り込む。
 
 ## Read this when
-- AI エージェント呼び出しについて、論理モデル、reasoning effort、ファイルアクセスモード、prompt、cwd、indexing preflight、Structured Output の正本契約を確認するとき。
-- 完全プロンプトにおける静的部分と動的部分の順序、依存する standard の自動追加、プレースホルダの定義・置換、ファイルアクセス規則やルーティング規則の注入方法を確認するとき。
-- INDEX.md エントリー生成、fork 適用後の所見列挙・修正・変更要約、oracle file の所見列挙・検証・採否判定・統合、session join の conflict marker 解消、TUI パラメータ解決・起動に使う agent call の入力と出力を確認するとき。
-- リポジトリ別設定の構造、各種ルートの探索・相互変換、standard の構造化表現、構造化文書から Markdown へのレンダリング規則を確認するとき。
-- これらの正本定義を具体化する realization implementation または realization test を変更する前に、固定すべき人間意図を確認するとき。
+- `oracle/src` 配下のどの領域を読むべきか、まず入口を絞りたい。
+- builder 間で共有する概念、型、出力契約、各サブコマンドの prompt や実行条件のどれを確認すべきか整理したい。
+- agent call 用プロンプトの構成要素や、共通規範の注入位置を確認したい。
+- 設定、パス表現、文書モデル、Markdown レンダリング補助の基礎を確認したい。
 
 ## Do not read this when
-- CLI の引数解析、サブコマンドの制御フロー、branch・diff・merge・保存・表示など、realization implementation 側の処理だけを調べるとき。
-- バックエンド固有の API リクエスト、論理モデルから具体的なモデル名への解決、AI agent CLI のプロセス起動など、正本の呼び出し契約を具体化する実装詳細だけを調べるとき。
-- 個別サブコマンドの利用者向け入出力、永続状態、操作手順だけを確認するときは、それらを直接定義または実装する対象へ進む。
-- oracle standard、realization standard、review standard、file access rule など、特定の規範本文だけが必要で、呼び出し契約やプロンプト構築との関係を調べないときは、該当する規範定義へ直接進む。
-- 生成済みの prompt、Structured Output、Markdown の結果だけを確認し、その構築規則や構造化表現を調べる必要がないとき。
+- 個別の実装詳細やテストの中身だけを確認したい。
+- `oracle/src` 以外の仕様を探している。
+- 既に読む対象の下位領域が特定できていて、この入口で再度絞り込みたくない。
 
 ## hash
-- 8fc1b2225e134c28c0b8aa6c673aeaff8b1399076acaff95d0c6b596048b78d8
+- d5ad6722b357196bc8982fd41dc955016ded1cd1924d3d9e52e73222438ea9fc

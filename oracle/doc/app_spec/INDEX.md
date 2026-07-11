@@ -20,48 +20,39 @@
 # `cmoc_managed_ollama.md`
 
 ## Summary
-- cmoc が設定に応じてローカルの ollama を管理し、Codex CLI 向けの model provider として SLM を提供するための正本仕様断片。サービス起動、archive 展開先、モデル pull 先、provider 設定、検証条件、doctor preprocess での起動条件を扱う。
+- cmoc が管理する ollama の起動、モデル取得、Codex CLI への接続方法、起動前検証を扱う。doctor preprocess と Codex model provider 設定を確認したいときに読む。
 
 ## Read this when
-- cmoc managed ollama を使う条件、起動タイミング、検証項目を確認したいとき。
-- ollama の取得、配置、systemd user service としての起動、モデル保存先を実装または確認するとき。
-- Codex CLI 用 profile に設定する cmoc managed ollama provider の接続先、wire API、model 指定を確認するとき。
-- CodexModelSpec の model_provider が cmoc の場合に、モデル pull や doctor preprocess が何をすべきか確認するとき。
+- cmoc がローカルで ollama を起動して SLM を提供する挙動を実装・変更するとき。
+- cmoc が `model_provider=="cmoc"` のモデルを使う流れ、モデルの pull 先、サービス起動条件を確認したいとき。
+- Codex CLI から cmoc managed ollama へ接続する引数や、127.0.0.1:11434 への到達性を確認したいとき。
 
 ## Do not read this when
-- Codex CLI の通常 provider 全般や、cmoc managed ollama 以外の provider の仕様を確認したいとき。
-- ollama 自体の内部実装、モデル推論品質、モデル選定基準を調べたいとき。
-- cmoc managed ollama に関係しない CLI 引数、workspace、agent 呼び出し、path model の仕様を確認したいとき。
+- ollama 自体の一般的な運用や、cmoc と無関係な外部 provider の設定だけを見たいとき。
+- profile 注入や `--oss` / `--local-provider` のような、ここで禁止されている別経路の検討が目的のとき。
+- cmoc managed ollama ではないモデル提供経路の仕様を確認したいとき。
 
 ## hash
-- 108da15c826775799a72737a1ca07f70d2f35ac5fe5840c6c3754a631d1e4d23
+- b3f9e8d63bc03d790664c6ffde9b5424f73851158c14e93dc909796e212169df
 
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI を `codex exec` で呼び出す際の正本規約を扱う。環境変数、preflight validation、動的 codex profile、ファイルアクセス制限、プロンプト受け渡し、ログ保存、Structured Output、並列実行、失敗時の retry・quota 待機・resume、編集禁止領域の扱いを定める。
-- 個別の呼び出し仕様や具体的な profile 設定は AgentCallParameter builder を正本とし、この対象は呼び出し全体の境界条件、保存先、失敗処理、Codex CLI へ渡す情報と渡してはいけない情報を判断する入口になる。
+- `codex exec` を呼ぶ側が、起動前の前提確認・引数上書き・プロンプト受け渡し・実行結果保存の扱いを決めるときに読む。
+- Codex CLI をどう呼ぶかという入口仕様だけを押さえたい場合に読む。個別の `AgentCallParameter` builder の値決定や下位実装の分割は、ここではなく builder 側を読む。
 
 ## Read this when
-- cmoc から Codex CLI を起動する実装、テスト、設計判断を扱うとき。
-- `CODEX_HOME` の決定、auth の事前確認、動的 codex profile の生成、`--profile`・`--json`・`--output-last-message`・`--output-schema` の使い方を確認したいとき。
-- Codex CLI に渡すプロンプト本文をどこまで加工してよいか、argv・stdin・ログ保存をどう分けるかを判断するとき。
-- Codex CLI 呼び出しの stdout、stderr、output、call 情報、schema、prompt の保存先や同一呼び出し内の timestamp 一致条件を確認するとき。
-- Structured Output の要求方法、schema 保存、cmoc 側での機械的検証を実装または検証するとき。
-- Codex CLI 呼び出しの失敗時に、レスポンス検証失敗、quota 枯渇、レートリミット、モデル capacity、想定外エラーをどう扱うかを確認するとき。
-- quota 待機時のポーリング、並列呼び出し時の代表ポーリング、resume 対象セッション ID の取得、resume 失敗時の再実行方針を扱うとき。
-- Codex CLI に対するファイルアクセス制限を profile とプロンプトでどう伝え、事後検証を行わない理由を確認するとき。
-- `.agents` 配下を cmoc から編集対象にしてよいか判断するとき。
+- cmoc から Codex CLI を起動する経路を実装・修正するとき。
+- `$CODEX_HOME` の扱い、事前検証、`--model` や `--config` による上書き、stdin 経由のプロンプト受け渡し、実行ログ保存の方針を確認したいとき。
+- Structured Output の使い方や、呼び出し失敗時のリトライ・待機・再開の方針を確認したいとき。
 
 ## Do not read this when
-- AgentCallParameter builder が定める個別パラメータの具体的な構築ロジックだけを確認したいときは、builder 側を直接読む。
-- cmoc の一般的なパス用語や `<cmoc-root>`、`<repo-root>`、`<work-root>`、`<run-root>` の定義だけを確認したいときは、パスモデルの正本を読む。
-- Codex CLI 呼び出しと無関係なサブコマンド、内部データ構造、UI 表示、通常のファイル走査ロジックだけを扱うとき。
-- Codex CLI 自体の一般的な利用方法や外部ドキュメント上の仕様だけを調べたいとき。
-- oracle file と realization file の所有関係、編集責務、INDEX.md エントリー作成規則だけを確認したいとき。
+- `AgentCallParameter` の具体的な生成規則や設定解決の細部だけを知りたいとき。
+- Codex CLI の一般的な使い方や他サブコマンドの仕様だけを探しているとき。
+- ファイルアクセス制限の具体的な値や prompt 文面の詳細だけを知りたいとき。
 
 ## hash
-- c0e2ede26482c4cb97d2b0455c403f538aeffb04674676da87479b74d41600c5
+- e3f8f5ef0d4afee0c3c0859808f0bad776aae21835e0ab9576361b6fe9f332e5
 
 # `console_and_file_log.md`
 
@@ -249,23 +240,23 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンド仕様断片を集めた領域。session の開始・完了・破棄、apply の実行・取り込み・破棄、oracle review、indexing、doctor、TUI 起動など、利用者が直接呼び出す CLI 挙動の正本仕様へ進む入口になる。
-- 各サブコマンドの事前条件、状態遷移、git 操作、agent call との境界、stdout report、終了条件、cleanup 対象など、外部挙動として実装差を避けたい事項を扱う。
+- `cmoc apply abandon` の cleanup 系サブコマンド仕様。現在の session に紐づく未 join の active apply run を機械的に破棄し、apply 状態を `ready` に戻す挙動を確認するときに読む。
+- 破棄対象と保護対象、状態遷移、cleanup 失敗時の扱い、stdout report、終了コードを確認する入口。
 
 ## Read this when
-- cmoc のサブコマンド単位の CLI 引数、実行順序、事前条件、終了コード、標準出力、レポート保存、状態更新を確認したいとき。
-- session または apply の lifecycle に関わる開始、実行、join、abandon の仕様へ進みたいとき。
-- doctor、indexing、oracle review、TUI 起動など、利用者が明示実行するコマンド入口の仕様を探すとき。
-- サブコマンド実装やテストの変更前に、対象コマンドの正本仕様断片を特定したいとき。
+- 未 join の apply run を破棄する処理を実装・修正・検証するとき。
+- apply worktree、apply branch、session state の cleanup 境界を確認するとき。
+- `running`、`completed`、`error` の apply 状態から `ready` へ戻る状態遷移を扱うとき。
+- apply abandon の stdout 表示内容、warning、終了コードを確認するとき。
 
 ## Do not read this when
-- path placeholder、oracle file、realization file、managed branch、state file などの一般定義だけを確認したいときは、用語やパスモデルの仕様を読む。
-- agent call の詳細な prompt、Structured Output、parameter builder のみを確認したいときは、対応する agent call 定義へ直接進む。
-- 隔離実行、doctor preprocess、indexing 生成規則など、サブコマンドから呼ばれる共通処理そのものの詳細だけを確認したいときは、その共通仕様を読む。
-- 実装ファイルの責務分割、内部 helper、git command wrapper の設計だけを確認したいときは、realization code 側を読む。
+- apply 成果物を session branch へ取り込む処理を扱うときは、join 側の仕様を読む。
+- apply run を開始・実行する処理を扱うときは、run 側の仕様を読む。
+- join 済み結果の rollback 仕様を探しているとき。この対象は rollback コマンドを定義しない。
+- oracle 改訂内容や session branch の commit を変更する処理を扱うとき。この対象ではそれらを保護対象として扱う。
 
 ## hash
-- 6e86e14345912a52ef710d6db2903cdb08e43538ed7f9ccbb36cc2e3b15666fe
+- 7645c58ed93dd96f004792d7c619f1bb3ac89120e29c340de7053e8d35ff5966
 
 # `usage.md`
 

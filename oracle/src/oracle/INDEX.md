@@ -1,44 +1,39 @@
 # `acp_builder`
 
 ## Summary
-- AI エージェント呼び出しに渡す論理パラメータと Structured Output schema の正本仕様断片を扱う領域。モデルクラス、reasoning effort、ファイルアクセスモード、prompt、cwd、indexing preflight 有無などの共通定義と、各サブコマンド向け呼び出し設定への入口になる。
-- INDEX.md エントリー生成、oracle file レビュー、fork 適用後レビュー、session join の conflict marker 解消、TUI 起動前後のパラメータ選定など、cmoc が AI agent call を組み立てる仕様を確認するためのまとまり。
+- `oracle/src/oracle/acp_builder` 配下の各 builder 領域への入口。`cmoc` の agent call 周辺で、用途別に分かれた正本仕様断片を案内する。
+- 配下には、apply, review, session, tui の各処理と、共通部品 `common`、型定義 `basic.py`、INDEX.md エントリー生成契約 `indexing` がある。
 
 ## Read this when
-- cmoc のサブコマンドがどの prompt、Structured Output schema、モデル設定、ファイルアクセス権限、preflight 設定で AI エージェントを呼び出すか確認したいとき。
-- agent call parameter の共通データ構造や論理モデル名、論理 reasoning effort、Structured Output schema 指定方法を確認したいとき。
-- INDEX.md エントリー生成、oracle file レビュー、fork 適用後の差分要約・所見対応、session join の conflict marker 解消、TUI 用パラメータ選定の正本仕様断片を探すとき。
-- prompt と Structured Output schema の対応関係、または個別 agent call の入力契約と出力契約を実装・テストへ反映する前に確認したいとき。
+- ACP builder のどの領域を読むべきか、まず入口を絞りたい。
+- builder 間で共有する概念、型、出力契約、各サブコマンドの prompt や実行条件のどれを確認すべきか整理したい。
+- 個別領域の仕様を読む前に、対象が apply / review / session / tui / 共通 / 型定義 / INDEX エントリー契約のどれかを判断したい。
 
 ## Do not read this when
-- AI エージェント呼び出しではなく、CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形などの実行制御実装を調べたいとき。
-- oracle standard、realization standard、apply review standard、index entry standard など、レビューや文書品質の基準そのものを確認したいとき。
-- バックエンド API へ送る実際のリクエスト形式、具体的なモデル名解決、agent CLI 実行処理など realization src 側の実装詳細を調べたいとき。
-- パスキーワード、work root 解決、prompt builder の共通構成、markdown rendering、placeholder 解決など、agent call parameter 周辺の別概念を直接確認したいとき。
+- 個別の実装詳細やテストの中身だけを確認したい。
+- ACP builder 以外の oracle 仕様を探している。
+- 既に読む対象の下位領域が特定できているので、この入口で再度絞り込みたくない。
 
 ## hash
-- 7142a5cb168c925cc744aea3b6f4a520fa798536546f83fa9dc8c3433391887b
+- 635f78b63a3f8612c4e882c6a4b8d3590131cd4b8d834716ca8bd33d366c5d8f
 
 # `other`
 
 ## Summary
-- cmoc の横断的な基礎概念と補助モデルを定義する正本仕様断片群。リポジトリ別設定、ルートパスプレースホルダと実パスの相互変換、規範の構造化表現、階層文書の Markdown レンダリングを扱う。
-- 個別サブコマンドの処理から共通して参照される設定・パス・規範文書の基盤を確認し、目的に応じて各下位要素へ進むための入口となる。
+- `cmoc` の共通モデルと文書化・パス解決の基礎をまとめた領域。設定定義、ルートパス表現、規範文書の構造化モデル、Markdown レンダリング補助を確認したいときの入口になる。
 
 ## Read this when
-- 開発対象リポジトリ単位の設定項目、Codex CLI のモデル対応、並列数や各処理ループの上限、設定の JSON 永続化要件を確認するとき。
-- ルートパスプレースホルダの意味、許容されるパス表記、git worktree を考慮したルート探索、プレースホルダ付きパスと実パスの変換を確認するとき。
-- 規範を背景・要求・判断例として構造化するモデル、要求ラベル、または規範から構造化文書への変換を確認するとき。
-- 階層化された自然言語文書やコードブロックを Markdown にレンダリングする構造、見出し深さ、文字列のインデント・空行正規化を確認するとき。
+- 設定値の集約・既定値・永続化形式を確認したいとき。
+- `<cmoc-root>` などのルート表現、相対パス禁止の扱い、実パスとの相互変換を確認したいとき。
+- 規範文書を保持するデータ構造や、Markdown 生成のための文書レンダリング補助を確認したいとき。
 
 ## Do not read this when
-- 個別の CLI サブコマンドについて、利用者向け入出力、実行フロー、または固有の永続状態だけを調べるときは、そのサブコマンドを定義する正本仕様断片へ直接進む。
-- 設定の読み込み・検証・同期など、ここで定義された設定を利用する realization implementation だけを調べるとき。
-- 個別の規範が要求する具体的な内容を知りたいときは、規範の表現モデルではなく対象の規範本文へ直接進む。
-- 生成済み Markdown の内容や配置だけを確認したいときで、構造化表現やレンダリング規則を調べる必要がない場合。
+- CLI の個別サブコマンドや実行フローを知りたいだけなら、対応するコマンド側のルーティングを読む。
+- 設定の読み書き実装やパス解決の詳細な処理順だけが目的なら、対応する実装ファイルを直接読む。
+- 規範本文そのものや利用者向け文書内容を探しているだけなら、この共通基盤ではなく該当する文書側を読む。
 
 ## hash
-- 6da532f26c60e35f505941060176419f2f4a95cfcdc9c5dc0b853889c136a84c
+- 1a4352fb423b08c5ecb9ea1340cc81c7851b549f2359483d38f851b6b0719002
 
 # `prompt_builder`
 

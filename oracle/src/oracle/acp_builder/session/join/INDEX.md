@@ -1,17 +1,18 @@
 # `conflict_resolution.py`
 
 ## Summary
-- `cmoc session join` で merge conflict marker を解消するための agent call parameter を組み立てる正本実装。対象パス一覧、追加の oracle file 編集許可、完全 prompt、モデル・推論強度・書き込み権限・preflight 抑制を定義する。
+- `cmoc session join` の conflict marker 解消用のエージェント呼び出しパラメータを組み立てる処理を読む入口。`session join` で merge conflict の解消を扱うとき、対象パスの正規化、プロンプト組み立て、実行パラメータ設定の全体像を確認したい場合にここから入る。
+- conflict 対象ファイルの列挙や、解消時に追加で許される編集範囲を確認したいときに読む。プロンプト本文の細部や共通 prompt 組み立ての他責務は、ここではなく関連する prompt builder 側を優先して読む。
 
 ## Read this when
-- session join の conflict marker 解消用 agent 呼び出しで、どの prompt・権限・モデル設定を使うべきか確認する必要があるとき。
-- conflict 対象ファイル一覧を prompt に渡す方法や、conflict 解消時だけ oracle file 編集を許可する境界を確認するとき。
-- merge conflict marker 解消時に indexing preflight を実行しない理由や、その設定値を確認するとき。
+- `cmoc session join` の conflict resolution 用パラメータ生成を変更・確認したい。
+- conflict 対象パスの扱い、実行モデル、推論強度、repo write 前提の設定を確認したい。
+- merge conflict 解消時に AI に渡す制約や追加ファイルアクセス条件を確認したい。
 
 ## Do not read this when
-- session join 全体の通常処理、merge 実行、run 管理、または conflict 検出の実装を探しているとき。
-- prompt builder や agent call parameter 型そのものの一般仕様を確認したいとき。
-- conflict marker 解消以外のサブコマンド用 prompt や agent 呼び出し設定を調べたいとき。
+- 通常の `session join` の接続処理やセッション管理だけを見たい。
+- 共通の prompt 生成ロジックや markdown 化の実装だけを見たい。
+- conflict 解消以外のサブコマンド向けエージェントパラメータを探している。
 
 ## hash
-- b14b023338d816126d7e6536dbc1b37b6b43e72a11fcbdeccc3b150d3dacd234
+- f6ae4a7d59acd24ac6b5921e784882991cd53c0f7f7eab6bcc2db4eb92d89107

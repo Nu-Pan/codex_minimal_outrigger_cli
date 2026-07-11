@@ -1,18 +1,19 @@
 # `fork`
 
 ## Summary
-- `cmoc apply fork` で使う agent call parameter と Structured Output schema のうち、fork 適用後のレビュー、所見列挙、所見対応、変更要約に関わる正本仕様断片をまとめるディレクトリ。
-- 差分から人間向け変更要約を生成する prompt、ファイル単位の所見リストアップ prompt、検出所見を修正 agent に渡す prompt、それらの出力契約を確認する入口になる。
+- `cmoc apply fork` の差分要約・所見列挙・所見適用のための prompt/agent 呼び出し条件をまとめる領域。作業レポート用の要約、file 単位の所見リスト、所見本文からの適用処理に分かれ、個別の出力契約と呼び出し方針を確認するときの入口になる。
+- 変更要約だけを見たいときは `change_summary.*`、file 単位の所見抽出だけを見たいときは `file_finding_enumeration.*`、所見本文から適用用の呼び出し条件を見たいときは `finding_application.py` を読む。
 
 ## Read this when
-- `cmoc apply fork` の fork 適用後に、差分要約、実装レビュー所見、所見対応作業をどの agent call parameter と schema で扱うか確認するとき。
-- 変更要約や所見列挙の Structured Output schema と、それを使う prompt 側の対応関係を確認したいとき。
-- 所見を人間向けレビュー結果として報告し、その後 realization file 修正 agent に渡す流れの正本仕様断片を探すとき。
+- `cmoc apply fork` で fork 後の差分を人間向けに要約・分類して出力する仕様を確認したいとき。
+- file 単位の所見を列挙する入力条件、読ませる範囲、出力の形を確認したいとき。
+- 所見本文から修正作業用の agent 呼び出し条件や prompt 構成を確認したいとき。
+- 差分要約、所見列挙、所見適用のどれか一つの契約だけを追いたいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の fork 作成、branch 操作、diff 取得、レポート保存、CLI 引数処理など、agent call parameter や出力契約以外の実行制御を調べたいとき。
-- apply review standard、oracle standard、realization standard そのものの内容を確認したいとき。
-- 共通の prompt builder、path placeholder 解決、markdown rendering、agent call parameter の汎用データ構造の実装を調べたいとき。
+- fork の作成、branch 操作、diff 取得、保存などの実行フロー全体を追いたいとき。
+- 個別の所見内容や実装修正そのものを確認したいときは、対象の oracle file または realization file を読むべきで、ここは出力契約と呼び出し条件の入口に留まる。
+- `cmoc apply fork` 以外のサブコマンドの prompt や agent call 条件を探しているとき。
 
 ## hash
-- 34dd7511fe97a86b45ffb37cb7feb9be91c52b9e6e420c674df2e08a9e5d4c18
+- 687bde67bff25f93a489725dbb0812965d7b905c9191b12cf4adc215aee64ae5

@@ -20,18 +20,19 @@
 # `index_entry.py`
 
 ## Summary
-- `cmoc indexing` で、対象ファイルまたはディレクトリの本文から `INDEX.md` 用エントリーを生成するための AI エージェント呼び出しパラメータを組み立てる正本仕様断片。
-- ルーティング文書作成担当としての役割、Structured Output への準拠、既存目次を読まずオリジナル本文を根拠にする制約、対象内容の埋め込み、読み取り専用実行、indexing preflight を再帰させない設定をまとめて定義する。
+- `cmoc indexing` の INDEX.md で、目次情報生成用の agent 呼び出しパラメータ構築を読むための入口。
+- この対象は、プロンプト組み立てと `AgentCallParameter` の固定値をまとめているため、indexing の呼び出し設定や入出力の根拠を確認したいときに読む。
+- `resolve_real_path` による `<target-path>` 展開や、`index_entry_standard` を有効にする理由を追うときの参照先。
 
 ## Read this when
-- `cmoc indexing` の目次情報生成で AI に渡す prompt、role、goal、補助文脈、プレースホルダ、file access mode を確認または変更したいとき。
-- INDEX エントリー生成時に、既存目次ではなく対象本文を根拠にする制約や、ディレクトリ対象では直下目次の内容を渡す前提を確認したいとき。
-- indexing 用 agent call のモデル種別、reasoning effort、出力 schema、preflight 再帰抑止の扱いを確認したいとき。
+- indexing 用の prompt 正本から、どのモデル・推論設定・アクセス権で呼び出すかを確認したい。
+- `<target-path>` と `target_content` をどう prompt に埋め込むか、また `INDEX.md` 用エントリー生成規則をどう渡しているかを見たい。
+- 目次情報生成の preflight 呼び出しがどの固定値で構成されているかを確認したい。
 
 ## Do not read this when
-- 生成された `INDEX.md` エントリーの内容そのものを確認したいだけのとき。
-- 通常の agent call prompt 全体の組み立て規則を調べたいときは、complete prompt 側を読む方が直接的。
-- パスプレースホルダの意味や実パス解決規則を調べたいときは、path model 側を読む方が直接的。
+- 目次情報生成そのものの文言仕様だけを知りたい場合は、ここではなく prompt 組み立て側の正本を読む。
+- `INDEX.md` の個々の記述内容やルーティング方針を知りたい場合は、この構築関数ではなく対象となる本文を読む。
+- `AgentCallParameter` や関連型の定義自体を知りたい場合は、このファイルではなく型定義側を読む。
 
 ## hash
-- 7a8bf8920c177f8942e106412a6779bd8f0c7ac42e07313c5174f5caa5e3b0da
+- aa84ff8862d099d364aba94542163ebdba8132cecf3cc2dafe810a53001d2c43

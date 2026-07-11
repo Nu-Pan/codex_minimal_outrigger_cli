@@ -186,20 +186,16 @@
 # `tui.md`
 
 ## Summary
-- ユーザーがエディタで入力したオリジナルプロンプトと cmoc 側の自動生成プロンプトを使って、AI Agent CLI/TUI を起動するサブコマンドの正本仕様断片。
-- doctor preprocess、エディタ入力、agent call による起動パラメータ決定、TUI 起動までの実行順序と、Codex CLI 起動時に持ち込む規則の境界を扱う。
+- `cmoc tui` サブコマンドの起動手順と、ユーザー入力の取り込み方、agent call で決めるパラメータ、Codex CLI 起動時に持ち込む要素を確認するときに読む。
 
 ## Read this when
-- 任意のプロンプトを cmoc の規則・規範の上で AI Agent CLI/TUI に渡す起動フローを確認・実装・テストする。
-- ユーザー入力用エディタの選択順、待機条件、初期テンプレート、コメント除去と空白除去の扱いを確認する。
-- TUI 起動前に agent call へ委ねるパラメータと、固定する model class・reasoning effort の境界を確認する。
-- Codex CLI を TUI として起動する場合のコマンド種別や、既存の Codex 実行規則から持ち込む要素を確認する。
+- `cmoc tui` の実行フロー、入力プロンプトの編集対象と読み出し規則、起動時に参照する正本仕様を確認したいとき。
+- AI Agent CLI/TUI の起動条件や、Codex CLI でどの要素を引き継ぐかを確認したいとき。
 
 ## Do not read this when
-- doctor preprocess 自体の詳細仕様だけを確認したい。
-- agent call に渡すパラメータ構造の詳細だけを確認したい。
-- TUI 起動パラメータの構造や出力形式の詳細だけを確認したい。
-- Codex 実行規則全般、環境変数、preflight validation、profile の詳細だけを確認したい。
+- `cmoc tui` 以外のサブコマンドの仕様を見たいとき。
+- agent call の詳細仕様そのものだけを確認したいときは、ここではなく該当の正本仕様を直接読む。
+- エディタの選択順や初期文面だけを探しているなら、`tui` 全体ではなく入出力周辺の実装を直接読む。
 
 ## hash
-- ede49ccc7f4139b7099aa7726ed5dfc93c7ca3077e0404f3bd330b9c4bbfdc2f
+- d75f7305a5b9d9a0263f000af7e4042024e0922eb0f90e6db13eb70c97ab3c9b

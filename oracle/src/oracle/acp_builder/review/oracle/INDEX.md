@@ -23,20 +23,18 @@
 # `enumerate_finding.py`
 
 ## Summary
-- `cmoc review oracle` でレビュー対象の oracle file から新規所見を列挙するための agent call parameter を組み立てる prompt 正本。既知の関連所見を補助文脈として渡し、oracle review 用の標準・アクセスモード・Structured Output schema を指定する。
+- `cmoc review oracle` の新規所見列挙用の AI 呼び出しパラメータを組み立てる入口。レビュー対象の oracle file と既知所見を束ねて、所見列挙プロンプトと実行設定を返す。
 
 ## Read this when
-- `cmoc review oracle` の新規所見列挙 agent call に渡す role、summary、goal、補助文脈、placeholder、標準読み込み設定を確認したいとき。
-- レビュー対象 oracle file と既知所見を入力にして、重複しない新規所見だけを返す prompt 構築の正本を確認したいとき。
-- oracle review 用の agent call parameter がどの model class、reasoning effort、file access mode、schema path を使うか確認したいとき。
+- `cmoc review oracle` で、レビュー対象 oracle file から新しい所見だけを抽出する処理を追いたいとき。
+- レビュー用プロンプトが、どの oracle file を起点にし、既知所見をどう差し込むかを確認したいとき。
 
 ## Do not read this when
-- oracle file レビューの所見 schema そのものを確認したいとき。schema 定義を直接読む方が適切。
-- `cmoc review oracle` の所見列挙以外の review 処理、CLI 実装、所見保存処理を確認したいとき。
-- oracle review ではなく realization review や index entry 生成の prompt 正本を確認したいとき。
+- oracle file 自体のレビュー基準や所見の判断内容を確認したいときは、review/oracle 側の正本仕様断片を読む。
+- 呼び出しパラメータの共通構築や別サブコマンドの prompt 組み立てを追いたいときは、各サブコマンドの生成入口を読む。
 
 ## hash
-- 4bab73660afd12977e3febdda67380b02bfd2dbed8ebe2becfebf24dce5ae095
+- c059d78a94e392e5e023b5de64c7c9e10253cbe4bbb1daae089a082f50ee084b
 
 # `judge_finding.json`
 
@@ -59,20 +57,21 @@
 # `judge_finding.py`
 
 ## Summary
-- `cmoc review oracle` の所見採否判定を行う agent call parameter を構築する oracle src。判定対象所見、妥当理由、非妥当理由を prompt に埋め込み、pure oracle read のファイルアクセスと review oracle standard を前提にした呼び出し設定を返す。
+- `cmoc review oracle` の所見採否判定用プロンプト生成を担当する。所見本文と賛否理由を束ねて `AgentCallParameter` を組み立てるので、この判定フローの入出力やプロンプト条件を調整したいときに読む。
+- 同じ `review/oracle` 配下でも、所見列挙や賛否理由の列挙を扱うファイルとは役割が違う。採否判定の prompt 内容、参照する補助文脈、返却する実行パラメータの設定を確認したい場合に優先して読む。
 
 ## Read this when
-- `cmoc review oracle` の所見採否判定 prompt や agent call parameter の正本意図を確認したいとき。
-- 所見本文、advocate 側理由、challenger 側理由が判定 prompt にどう渡されるかを確認したいとき。
-- 所見採否判定で使う model class、reasoning effort、file access mode、structured output schema の対応関係を確認したいとき。
+- `cmoc review oracle` の所見を人間へ提示すべきかどうかの判定ロジックを変更・確認したいとき。
+- 所見本文、妥当とする理由、妥当ではない理由を入力にした prompt 構成や、返却する `AgentCallParameter` の設定を確認したいとき。
+- review oracle の他の prompt 生成処理ではなく、採否判定だけを追いたいとき。
 
 ## Do not read this when
-- `cmoc review oracle` 全体のレビュー収集、所見生成、表示、採否後処理を確認したいとき。
-- oracle review 以外のサブコマンド用 prompt や agent call parameter を確認したいとき。
-- prompt 部品の共通組み立て、path placeholder 解決、markdown rendering の実装詳細を確認したいとき。
+- 所見の新規列挙や所見リストの整理を扱うときは、同階層の別ファイルを読む。
+- 賛成理由だけ・反対理由だけの列挙を確認したいときは、このファイルではなく対応する列挙用ファイルを読む。
+- `cmoc review oracle` 以外のサブコマンドや、判定結果そのものの保存・解釈を追いたいとき。
 
 ## hash
-- 2673d7d3a6cb6aeadfe266750f53203cd150464b7906f17088c04d57a8d39843
+- 99ab2019a3ebfd2be09de2ac0fa3a7675e00b016a5931cfeb976afa38836f3db
 
 # `merge_finding.json`
 
@@ -99,19 +98,21 @@
 # `merge_finding.py`
 
 ## Summary
-- `cmoc review oracle` の所見リストマージ用 AgentCallParameter を構築する oracle src。入力された所見リストを prompt に埋め込み、oracle file レビュー所見の重複・矛盾解消に必要な編集操作を Structured Output で列挙させる呼び出し条件を定義する。
+- `cmoc review oracle` で、入力された所見リストを重複・矛盾の解消という観点で整理するための prompt 正本。既存の所見を補助文脈として渡し、整理後に空配列も返せる呼び出し条件を定める。
+- 所見リストの統合、削除、置換、変更不要の整理判断に進むときに読む。所見の生成や個別所見の妥当性判定ではなく、すでに集まった所見群をどうまとめるかを確認したい場合の入口。
 
 ## Read this when
-- `cmoc review oracle` の所見リストをマージ・整理する agent call の role、goal、file access mode、補助 prompt、placeholder、model class、reasoning effort、schema path を確認・変更したいとき。
-- oracle file レビュー結果の findings をどのように prompt へ渡し、どの Structured Output schema に対応させるかを確認したいとき。
+- `cmoc review oracle` の所見リスト整理に渡す role、summary、goal、補助文脈、placeholder、model class、reasoning effort、schema の対応を確認したいとき。
+- 入力所見の重複排除や相互矛盾の解消を、どの意味で編集操作として扱うか確認したいとき。
+- 十分にコンパクトで整合的な所見群に対して、変更なしを返す扱いを確認したいとき。
 
 ## Do not read this when
-- oracle file 本文そのもののレビュー基準や oracle standard の内容を確認したいだけのとき。
-- `cmoc review oracle` 以外のサブコマンド、または所見リストのマージではないレビュー処理の agent call 定義を探しているとき。
-- Structured Output schema の項目定義そのものを確認したいとき。
+- 新規所見の列挙や、所見の妥当性・反証理由の検証をしたいとき。
+- レビュー対象の oracle file 本文や oracle standard の基準だけを確認したいとき。
+- 所見リスト整理ではなく、CLI 実装や保存処理、表示整形を確認したいとき。
 
 ## hash
-- 00496c930faab30fdf4973fb527f7e8c727ecb25d4daf036c5636a50b3d3acbb
+- 87b313edd57b7dbef6fc6b663f2e26bd00ed501ff72832ce43699391e1b739e2
 
 # `validate_finding_advocate.json`
 
@@ -135,20 +136,20 @@
 # `validate_finding_advocate.py`
 
 ## Summary
-- `cmoc review oracle` でレビュー所見が妥当である理由を列挙するための agent call parameter を構築する oracle src。対象所見、既知の擁護理由、既知の反論理由を prompt に埋め込み、純粋な oracle 読み取り権限で新規の根拠理由だけを返させる。
+- `cmoc review oracle` の所見に対して、擁護側の新規理由を列挙するための AI 呼び出しパラメータを組み立てる入口。所見本文と既知理由を受け取り、oracle file を根拠に重複なしで理由を返す用途で読む。
 
 ## Read this when
-- `cmoc review oracle` の所見検証で、所見を擁護する側の prompt や agent call parameter の意図を確認したいとき。
-- 所見が妥当である理由の列挙で、既知理由との重複排除、oracle file 根拠の要求、Structured Output への接続を確認したいとき。
-- レビュー所見の擁護担当に渡す入力項目や file access mode、model class、reasoning effort を確認したいとき。
+- `cmoc review oracle` で所見の妥当性を支える理由を追加・修正したいとき。
+- レビュー用 prompt の role, goal, file access 制約, 付帯情報の渡し方を確認したいとき。
+- この関数が返す呼び出しパラメータのモデル選択や推論設定、出力先 JSON の決まりを確認したいとき。
 
 ## Do not read this when
-- 所見が妥当ではない理由を列挙する challenger 側の prompt を確認したいとき。
-- `cmoc review oracle` 以外のサブコマンド用 agent call parameter を確認したいとき。
-- prompt 構築共通処理、path placeholder 解決、Structured markdown rendering の詳細を確認したいとき。
+- 所見そのものの判定ロジックや challenger 側の理由生成を追いたいときは、対応する別の review oracle 生成関数を読む。
+- prompt 文面の共通組み立て仕様だけを追いたいときは、`build_complete_prompt` 側を読む。
+- oracle file の実体や内容そのものを確認したいときは、この入口ではなく oracle 側の本文を読む。
 
 ## hash
-- 0fc6884fa24441f048b7dcc50dfbf6ce1e9e8487676e4919893965e2c197d24a
+- 5b01b92303cdf90b60680372316a8287b10450f13d2873ac724f16cb324736be
 
 # `validate_finding_challenger.json`
 
@@ -171,15 +172,17 @@
 # `validate_finding_challenger.py`
 
 ## Summary
-- `cmoc review oracle` でレビュー所見を否定する新規理由を列挙するための agent call parameter を組み立てる oracle src。対象所見、既知の肯定理由、既知の否定理由を prompt に埋め込み、oracle file を根拠にした反証調査用の呼び出し設定を定義する。
+- `cmoc review oracle` の所見が妥当ではない理由を列挙する AI 呼び出しパラメータを組み立てる。対象所見・既知理由・`<work-root>/oracle` を根拠にした prompt をまとめ、モデル選択・推論強度・ファイルアクセス制約・出力先 JSON を固定する。
 
 ## Read this when
-- `cmoc review oracle` の所見検証で、所見が妥当ではない理由を探す側の prompt や agent call parameter を確認・変更したいとき。
-- 既知理由との重複を避けた否定理由列挙、PURE_ORACLE_READ、出力先 schema、使用 model class・reasoning effort の設定を確認したいとき。
+- `cmoc review oracle` の反証側 prompt の文面、根拠の渡し方、空配列を返す条件を変えたいとき.
+- この呼び出しで使うモデル種別、推論強度、oracle 参照制約、保存先の扱いを見直したいとき.
+- 対象所見や既知理由をどのように prompt に載せるかを確認したいとき.
 
 ## Do not read this when
-- 所見が妥当である理由を列挙する側の prompt を確認したいとき。
-- oracle review 以外のサブコマンドや、oracle file ではなく realization file を根拠にするレビュー処理を確認したいとき。
+- `cmoc review oracle` の肯定側・別種の所見処理を変えるだけなら、対応する別の builder を読むべきである.
+- prompt の共通組み立て規則だけを確認したいなら、`complete_prompt` 側を先に読むべきである.
+- oracle 仕様そのものの見直しや追加を書きたいだけなら、この builder ではなく `<work-root>/oracle` 側を読むべきである.
 
 ## hash
-- 283e960f0a2525200634eafbb5f9ed732bd0f806cbc8a408254639a1697e305c
+- 886f5a2ef45bcc1f11a58cbde98e8b4bbe66de2ac190ac06173bc171cc2d4725

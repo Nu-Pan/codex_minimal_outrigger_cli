@@ -58,37 +58,33 @@
 # `file_finding_enumeration.py`
 
 ## Summary
-- `cmoc apply fork` における、指定ファイルを起点とした所見リストアップ用の agent call parameter を構築する oracle src。読み取り専用で `<repo-root>` 内の関連 oracle file・realization file を調査し、apply review standard に従う Structured Output の所見リストを返す prompt を組み立てる。
+- `cmoc apply fork` で、起点ファイルから file 単位の所見リストを作るための AI 呼び出し条件と出力設定を確認したいときに読む。ここは prompt 正本で、呼び出し対象・制約・モデル選択の根拠を持つ。
 
 ## Read this when
-- `cmoc apply fork` のファイル単位所見リストアップ agent に渡す role、summary、goal、参照標準、ファイルアクセスモードを確認したいとき。
-- 所見リストアップ処理がどの placeholder、Structured Output schema、model class、reasoning effort を使って agent call parameter を作るか確認したいとき。
-- ファイル単位の所見列挙が下流処理へ与える影響や、MAINSTREAM model を使う根拠を確認したいとき。
+- `cmoc apply fork` の file 単位所見抽出の入力条件、読むべき対象範囲、呼び出しパラメータの決め方を変えるとき。
+- 所見リストアップ用 prompt の正本を修正するとき。
+- この処理がどの file を前提に読むか、read-only で扱うか、どの設定で呼ぶかを確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体の実行制御、所見の統合、修正適用、または CLI 引数処理を確認したいとき。
-- apply review standard 自体の内容、oracle standard、realization standard の詳細を確認したいとき。
-- agent call parameter の汎用データ構造、prompt builder、path 解決処理、markdown rendering の実装を確認したいとき。
+- 単一の所見本文そのものや各 file の個別判断根拠を知りたいときは、ここではなく対象の oracle file または realization file 本体を読む。
+- `cmoc apply fork` 以外のサブコマンドの prompt や、所見列挙以外の役割を見たいとき。
+- AI 呼び出しの実行ログや生成済み結果だけを追いたいとき。
 
 ## hash
-- 82f129704a2d44ec6aa12ef816a9c64beb9197b89fb90a43e43de19fe8dfc0cf
+- 2c37b6c27a6232d6b95235b8b0d394b29b1eff1d0159523099da9ffa306ea59e
 
 # `finding_application.py`
 
 ## Summary
-- `cmoc apply fork` で検出された所見に対応する修正作業を AI agent に依頼するための prompt 正本。
-- 所見本文を JSON code block として埋め込み、realization file の修正、realization standard の遵守、テスト通過を目標にした agent call parameter を構築する。
-- 所見を絶対指示ではなく作業ヒントとして扱う注意、commit 禁止、realization write の file access mode など、所見対応作業の実行条件を定める。
+- `cmoc apply fork` の所見本文から、所見対応用のエージェント呼び出しパラメータを組み立てる責務を持つ。`build_complete_prompt` に渡す role・summary・goal・注意事項・所見一覧のまとめ方と、返す `AgentCallParameter` の方針を確認したいときに読む。
 
 ## Read this when
-- `cmoc apply fork` の所見対応 agent call で使う role、goal、注意事項、file access mode、model class、reasoning effort を確認または変更したいとき。
-- 所見リストを prompt に埋め込む形式や、所見対応作業へ渡す dynamic prompt の構成を確認したいとき。
-- realization file を修正する agent 呼び出しに、oracle and realization basic や realization standard を含める箇所を確認したいとき。
+- `cmoc apply fork` の所見対応作業で使うプロンプト内容や、AI 呼び出しパラメータの構成を変えたいとき。
+- 所見本文の扱い、作業上の注意、モデル選択、実行モードの固定方針を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 以外のサブコマンド用 prompt や agent call parameter を確認したいとき。
-- 所見の検出ロジック、fork 処理本体、テスト実行方法、または実際の realization file 修正手順を調べたいとき。
-- 共通の prompt 組み立て処理、構造化 markdown の描画、path placeholder 解決の実装を直接確認したいとき。
+- 所見対応の実際の実装やファイル修正方針を追いたいときは、所見対応先の realization 実装を読む。
+- 共通の prompt 組み立て規約だけを見たいときは、個別サブコマンド用ではなく `build_complete_prompt` 側を読む。
 
 ## hash
-- 842c443ac3b9ede9dc4f5e6dfff8ec0e4561e0b63de29372c5aecb3f0f9f2eca
+- 17959b40cdd8d278c665de924b85da32ca858a994957a5a9b976d827921853fa
