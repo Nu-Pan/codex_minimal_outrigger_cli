@@ -878,9 +878,9 @@ def extract_resume_token(stdout_text: str) -> str | None:
     return None
 
 
-def _codex_jsonl_error_messages(stdout_text: str) -> list[str]:
-    """retry 判定対象を Codex JSONL の error event に限定して抽出する。"""
-    messages: list[str] = []
+def _codex_jsonl_error_messages(stdout_text: str) -> list[str | None]:
+    """Codex JSONL の error event message を retry 判定用に抽出する。"""
+    messages: list[str | None] = []
     for line in stdout_text.splitlines():
         try:
             item = json.loads(line)
@@ -888,33 +888,50 @@ def _codex_jsonl_error_messages(stdout_text: str) -> list[str]:
             continue
         if item.get("type") == "error":
             message = item.get("message")
-            if isinstance(message, str):
-                messages.append(message)
+            messages.append(message if isinstance(message, str) else None)
         elif item.get("type") == "turn.failed":
             error = item.get("error")
-            if isinstance(error, dict) and isinstance(error.get("message"), str):
-                messages.append(error["message"])
+            message = error.get("message") if isinstance(error, dict) else None
+            messages.append(message if isinstance(message, str) else None)
     return messages
+
+
+_CAPACITY_ERROR_MARKER = "Selected model is at capacity"
+_QUOTA_ERROR_MARKERS = (
+    "Quota exceeded",
+    "You've hit your usage limit",
+    "out of credits",
+    "You hit your spend cap",
+)
 
 
 def is_capacity_error(stdout_text: str) -> bool:
     """Codex JSONL 上の model capacity error だけを retry 対象として判定する。"""
     return any(
-        "Selected model is at capacity" in message
+        isinstance(message, str) and _CAPACITY_ERROR_MARKER in message
         for message in _codex_jsonl_error_messages(stdout_text)
     )
 
 
 def is_quota_error(stdout_text: str) -> bool:
     """usage limit 系の Codex JSONL error を quota 待機対象として判定する。"""
-    quota_markers = [
-        "Quota exceeded",
-        "You've hit your usage limit",
-        "out of credits",
-        "You hit your spend cap",
-    ]
     return any(
-        marker in message
+        isinstance(message, str) and marker in message
         for message in _codex_jsonl_error_messages(stdout_text)
-        for marker in quota_markers
+        for marker in _QUOTA_ERROR_MARKERS
+    )
+
+
+def is_unexpected_error(stdout_text: str) -> bool:
+    """既知の capacity/quota 以外の Codex JSONL error を検出する。"""
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Only capacity and quota events have recovery paths; malformed or other
+    # error events must not be hidden by a zero subprocess return code.
+    return any(
+        not isinstance(message, str)
+        or (
+            _CAPACITY_ERROR_MARKER not in message
+            and not any(marker in message for marker in _QUOTA_ERROR_MARKERS)
+        )
+        for message in _codex_jsonl_error_messages(stdout_text)
     )

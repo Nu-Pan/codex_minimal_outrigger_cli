@@ -227,6 +227,71 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     assert "Selected model is at capacity" in codex_events[0]["error"]
 
 
+@pytest.mark.parametrize(
+    "event",
+    [
+        {"type": "error", "message": "unexpected failure"},
+        {"type": "turn.failed", "error": {"message": "unexpected failure"}},
+    ],
+)
+@pytest.mark.parametrize("structured_output", [False, True])
+def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    event: dict[str, object],
+    structured_output: bool,
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "counter"
+    fake_codex = bin_dir / "codex"
+    event_text = json.dumps(event)
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            f"print({event_text!r})",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    schema: Path | None = None
+    if structured_output:
+        schema = tmp_path / "schema.json"
+        schema.write_text("{}")
+    logger = SubcommandLogger(root, "test")
+
+    with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗しました") as error:
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                schema,
+            ),
+            root=root,
+            config=CmocConfig(),
+            subcommand_logger=logger,
+        )
+
+    assert "unexpected failure" in error.value.detail
+    assert counter.read_text() == "1"
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert [event["status"] for event in codex_events] == ["failed"]
+    assert codex_events[0]["returncode"] == 0
+    assert "unexpected failure" in codex_events[0]["error"]
+
+
 def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

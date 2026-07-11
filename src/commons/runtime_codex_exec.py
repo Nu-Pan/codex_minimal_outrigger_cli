@@ -29,6 +29,7 @@ from commons.runtime_codex_profile import (
     extract_resume_token,
     is_capacity_error,
     is_quota_error,
+    is_unexpected_error,
     parameter_codex_cwd,
     prepare_codex_override_args,
     prepare_schema,
@@ -389,9 +390,17 @@ def run_codex_exec(
         # fallback failure signal when no known event was emitted.
         capacity_error = is_capacity_error(result.stdout)
         quota_error = is_quota_error(result.stdout)
-        if result.returncode != 0 or capacity_error or quota_error:
+        unexpected_error = is_unexpected_error(result.stdout)
+        if (
+            result.returncode != 0
+            or capacity_error
+            or quota_error
+            or unexpected_error
+        ):
             if (
-                capacity_error and capacity_attempts < max_capacity_retries
+                capacity_error
+                and not unexpected_error
+                and capacity_attempts < max_capacity_retries
             ):
                 capacity_attempts += 1
                 emit_codex_call_event(
@@ -410,7 +419,7 @@ def run_codex_exec(
                 time.sleep(sleep_sec)
                 sleep_sec *= 2
                 continue
-            if quota_error:
+            if quota_error and not unexpected_error:
                 global _QUOTA_POLLING, _QUOTA_PROBE_AVAILABLE, _QUOTA_PROBE_ERROR
                 emit_codex_call_event(
                     run_purpose=purpose,
