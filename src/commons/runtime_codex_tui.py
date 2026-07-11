@@ -9,10 +9,9 @@ from config.cmoc_config import CmocConfig
 from commons.runtime_config import load_config
 from commons.runtime_codex_logging import emit_codex_call_console
 from commons.runtime_codex_profile import (
-    codex_profile_name,
     codex_subprocess_env,
     parameter_codex_cwd,
-    prepare_codex_profile,
+    prepare_codex_override_args,
     resolve_codex_home,
     run_codex_subprocess,
     validate_codex_home,
@@ -32,7 +31,7 @@ def run_codex_tui(
     purpose: str = "codex tui",
     extra_read_paths: list[Path] | None = None,
 ) -> CommandResult:
-    """Codex TUI を profile と call log を準備して起動する。"""
+    """Codex TUI を設定上書き argv と call log を準備して起動する。"""
     root = root or repo_root()
     cwd = cwd or root
     config = config or load_config(root)
@@ -43,26 +42,23 @@ def run_codex_tui(
     codex_work_root = work_root(cwd)
     codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Match validation/profile placement to where Codex resolves a relative
+    # Match validation to where Codex resolves a relative
     # CODEX_HOME while keeping the user-provided env value unchanged.
     codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
     # <work-root>/oracle/doc/app_spec/sub_command/tui.md
     # TUI complete prompt is stored under <repo-root> even when Codex runs in a
     # linked worktree; writable roots and schema state still follow codex_work_root.
-    profile_path = prepare_codex_profile(
+    override_args = prepare_codex_override_args(
         parameter,
         config,
-        codex_home,
         codex_work_root,
         extra_read_paths,
         extra_read_root=root,
     )
-    profile_name = codex_profile_name(profile_path)
     argv = [
         "codex",
-        "--profile",
-        profile_name,
+        *override_args,
         "--cd",
         str(codex_cwd),
         parameter.prompt,
@@ -74,8 +70,6 @@ def run_codex_tui(
                 "timestamp": ts,
                 "argv": argv,
                 "codex_home": str(codex_home),
-                "profile_name": profile_name,
-                "profile_path": str(profile_path),
                 "model_class": parameter.model_class.value,
                 "reasoning_effort": parameter.reasoning_effort.value,
                 "file_access_mode": parameter.file_access_mode.value,
@@ -114,8 +108,6 @@ def run_codex_tui(
             "elapsed_sec": elapsed_sec,
             "call_log_path": str(call_path),
             "codex_home": str(codex_home),
-            "profile_name": profile_name,
-            "profile_path": str(profile_path),
         }
         if error is not None:
             payload["error"] = error

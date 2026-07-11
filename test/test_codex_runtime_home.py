@@ -8,7 +8,7 @@ import pytest
 
 from _support import (
     make_repo,
-    stub_codex_profile,
+    stub_codex_overrides,
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
@@ -23,7 +23,7 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.delenv("CODEX_HOME", raising=False)
     monkeypatch.setattr(Path, "home", lambda: home)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -55,12 +55,9 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
 
     recorded = json.loads(recorder.read_text())
     assert recorded["codex_home"] == str(codex_home)
-    assert (
-        recorded["args"][recorded["args"].index("--profile") + 1]
-        == result.profile_name
-    )
+    assert "--profile" not in recorded["args"]
     assert result.codex_home == codex_home
-    assert result.profile_path.parent == codex_home
+    assert not list(codex_home.glob("cmoc_*.config.toml"))
 
 
 def test_run_codex_exec_preserves_configured_codex_home_env_value(
@@ -71,7 +68,7 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
     codex_home.mkdir()
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -104,9 +101,10 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
     recorded = json.loads(recorder.read_text())
     assert recorded["codex_home"] == "relative_codex_home"
     assert result.codex_home == codex_home
-    assert result.profile_path.parent == codex_home
     call_log = json.loads(result.call_log_path.read_text())
     assert call_log["codex_home"] == str(codex_home)
+    assert "profile_name" not in call_log
+    assert "profile_path" not in call_log
 
 
 def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
@@ -117,7 +115,7 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
     codex_home.mkdir()
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -157,7 +155,7 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
     assert Path(recorded["cwd"]) == root
     assert Path(recorded["resolved_home"]) == codex_home
     assert result.codex_home == codex_home
-    assert result.profile_path.parent == codex_home
+    assert not list(codex_home.glob("cmoc_*.config.toml"))
 
 
 def test_run_codex_exec_fails_before_codex_when_codex_home_missing(

@@ -1,6 +1,5 @@
 import json
 import subprocess
-import tomllib
 from dataclasses import replace
 from pathlib import Path
 
@@ -10,11 +9,12 @@ from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
 from config.cmoc_config import CmocConfig
 from _support import (
+    codex_override_config,
     codex_parameter,
     make_repo,
     run_git,
     setup_codex_home,
-    stub_codex_profile,
+    stub_codex_overrides,
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_tui
@@ -133,15 +133,15 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     assert record["prompt_text"] == "complete prompt\n"
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
     call_log = next((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
-    profile = tomllib.loads(
-        Path(json.loads(call_log.read_text())["profile_path"]).read_text()
-    )
-    filesystem = profile["permissions"]["cmoc"]["filesystem"]
-    assert profile["default_permissions"] == "cmoc"
+    call_data = json.loads(call_log.read_text())
+    override_config = codex_override_config(call_data["argv"])
+    filesystem = override_config["permissions"]["cmoc"]["filesystem"]
+    assert override_config["default_permissions"] == "cmoc"
     assert filesystem[str((root / ".cmoc" / "local").resolve())] == "read"
     assert filesystem[str((linked / "README.md").resolve())] == "write"
     assert filesystem[str((linked / "oracle").resolve())] == "write"
-    assert "sandbox_workspace_write" not in profile
+    assert "sandbox_workspace_write" not in override_config
+    assert "--profile" not in call_data["argv"]
 
 
 def test_run_codex_tui_logs_successful_call(
@@ -149,7 +149,7 @@ def test_run_codex_tui_logs_successful_call(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(0)"])
@@ -180,7 +180,7 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(7)"])
@@ -195,4 +195,7 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
     call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
     assert len(call_logs) == 1
     call_log = json.loads(call_logs[0].read_text())
-    assert call_log["argv"][:3] == ["codex", "--profile", call_log["profile_name"]]
+    assert call_log["argv"][:3] == ["codex", "--model", "fake"]
+    assert "--profile" not in call_log["argv"]
+    assert "profile_name" not in call_log
+    assert "profile_path" not in call_log

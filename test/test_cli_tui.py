@@ -13,7 +13,7 @@ from _support import (
     runner,
     run_doctor,
     setup_codex_home,
-    stub_codex_profile,
+    stub_codex_overrides,
     write_python_executable,
 )
 from main import app
@@ -58,8 +58,8 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     ) -> FakeResolveResult:
         exec_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui resolve parameter"
-        assert parameter.model_class == ModelClass.MAINSTREAM
-        assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+        assert parameter.model_class == ModelClass.EFFICIENCY
+        assert parameter.reasoning_effort == ReasoningEffort.MAX
         assert parameter.file_access_mode == FileAccessMode.READONLY
         assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
         assert "remove me" not in parameter.prompt
@@ -69,8 +69,8 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
-        assert parameter.model_class == ModelClass.MAINSTREAM
-        assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+        assert parameter.model_class == ModelClass.FLAGSHIP
+        assert parameter.reasoning_effort == ReasoningEffort.MAX
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is not None
         assert parameter.structured_output_schema_path.name == "launch_tui.json"
@@ -125,7 +125,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "linked"

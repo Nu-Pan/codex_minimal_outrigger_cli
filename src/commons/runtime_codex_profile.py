@@ -1,10 +1,10 @@
-"""Codex CLI 起動前後の profile/env/schema/error 判定をまとめる境界。
+"""Codex CLI 起動前後の argv/env/schema/error 判定をまとめる境界。
 
 このファイルは 16,000 文字を超えるが、責務境界は Codex CLI に渡す実行環境と
-Codex CLI から返る機械的な実行結果の解釈に閉じている。sandbox/profile/cwd、
+Codex CLI から返る機械的な実行結果の解釈に閉じている。sandbox/argv/cwd、
 CODEX_HOME、child process tracking、schema 配置、JSONL error 判定は同じ
 subprocess 境界の不変条件を共有するため、分割すると呼び出し側が同時に読むべき
-失敗時文脈が増える。現状は Codex profile 境界として一箇所に保つ方が凝集性が高い。
+失敗時文脈が増える。現状は Codex subprocess 境界として一箇所に保つ方が凝集性が高い。
 根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
@@ -20,14 +20,14 @@ from typing import Any
 from basic.acp import AgentCallParameter, FileAccessMode
 from config.cmoc_config import CmocConfig
 
-from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
+from commons.runtime_content import write_hashed_file
 from commons.runtime_errors import CmocError
 from commons.runtime_git import is_oracle_file_path, is_untracked_git_ignored
 from commons.runtime_paths import logs_dir, schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
 _active_apply_process_tracking_path: Path | None = None
-_PROFILE_BLOCKED_ROOT_NAMES = {
+_CODEX_BLOCKED_ROOT_NAMES = {
     ".agents",
     ".cmoc",
     ".codex",
@@ -37,7 +37,7 @@ _PROFILE_BLOCKED_ROOT_NAMES = {
     "INDEX.md",
     "memo",
 }
-_REPO_WRITE_BLOCKED_ROOT_NAMES = _PROFILE_BLOCKED_ROOT_NAMES
+_REPO_WRITE_BLOCKED_ROOT_NAMES = _CODEX_BLOCKED_ROOT_NAMES
 _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".agents",
     ".cmoc",
@@ -137,7 +137,7 @@ def _validate_extra_read_paths(
     extra_read_paths: list[Path] | None,
     extra_read_root: Path | None = None,
 ) -> None:
-    """Codex profile に足す read path が cmoc の許可境界内か検査する。"""
+    """Codex argv に足す read path が cmoc の許可境界内か検査する。"""
     extra_log_root = extra_read_root.resolve() if extra_read_root is not None else None
     for path in extra_read_paths or []:
         resolved = path.resolve()
@@ -172,12 +172,12 @@ def _writable_roots(
         case FileAccessMode.READONLY:
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # READONLY は oracle/realization file を書き込み禁止にするため、
-            # positive-only profile では既存の隙間を列挙して表現する。
+            # positive-only permission 設定では既存の隙間を列挙して表現する。
             paths = _readonly_gap_writable_roots(root)
         case FileAccessMode.PURE_ORACLE_READ:
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # realization file 読み書き禁止と oracle file 書き込み禁止は保ち、
-            # READONLY と同じくルール上の隙間だけ profile で開く。
+            # READONLY と同じくルール上の隙間だけ permission 設定で開く。
             paths = _readonly_gap_writable_roots(root)
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -292,7 +292,7 @@ def _append_writable_path(
         ):
             # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # Codex profile has only positive writable roots. A directory that
+            # Codex permission settings have only positive writable roots. A directory that
             # contains denied routing files or would ignore new children cannot
             # be opened as one root; expand existing children instead.
             for child in sorted(path.iterdir()):
@@ -417,15 +417,20 @@ def _is_realization_file_path(root: Path, path: Path) -> bool:
     )
 
 
-def _append_workspace_write_section(
-    lines: list[str], writable_roots: list[Path]
-) -> None:
-    """Codex sandbox が理解できる workspace-write section を追加する。"""
+def _config_override(key: str, toml_value: str) -> list[str]:
+    """Codex CLI の単一 config override を argv fragment にする。"""
+    return ["--config", f"{key}={toml_value}"]
+
+
+def _workspace_write_override_args(writable_roots: list[Path]) -> list[str]:
+    """workspace-write の追加 writable roots を argv で上書きする。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # FileAccessMode の細かい deny は prompt 側にも載せるが、Codex profile
-    # で表現できる sandbox 境界はここで必ず渡してから起動する。
+    # FileAccessMode の細かい deny は prompt 側にも載せるが、Codex config
+    # で表現できる sandbox 境界は argv でも必ず上書きしてから起動する。
     roots = ", ".join(_toml_string(str(path)) for path in writable_roots)
-    lines.extend(["[sandbox_workspace_write]", f"writable_roots = [{roots}]"])
+    return _config_override(
+        "sandbox_workspace_write.writable_roots", f"[{roots}]"
+    )
 
 
 def _needs_permission_profile(
@@ -434,7 +439,7 @@ def _needs_permission_profile(
     extra_read_paths: list[Path] | None,
     extra_read_root: Path | None,
 ) -> bool:
-    """sandbox_mode だけで表現できない読み取り境界は profile 化する。"""
+    """sandbox mode だけで表現できない読み取り境界を判定する。"""
     return mode in {
         FileAccessMode.READONLY,
         FileAccessMode.PURE_ORACLE_READ,
@@ -499,12 +504,11 @@ def _top_level_read_roots(mode: FileAccessMode, root: Path) -> list[Path]:
     ]
 
 
-def _append_permission_profile_section(
-    lines: list[str],
+def _permission_profile_override_args(
     read_roots: list[Path],
     writable_roots: list[Path],
-) -> None:
-    """work root 外の read-only root は Codex beta permission profile で渡す。"""
+) -> list[str]:
+    """Codex beta permission profile を config override argv で渡す。"""
     # <work-root>/oracle/doc/app_spec/sub_command/tui.md
     # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -512,32 +516,47 @@ def _append_permission_profile_section(
     # workspace writable"; permission profiles can.
     entries = {str(path): "read" for path in read_roots}
     entries.update({str(path): "write" for path in writable_roots})
-    lines.extend(
-        [
-            f'default_permissions = "{_CMOC_PERMISSION_PROFILE}"',
-            "",
-            f"[permissions.{_CMOC_PERMISSION_PROFILE}]",
-            'extends = ":workspace"',
-            "",
-            f"[permissions.{_CMOC_PERMISSION_PROFILE}.filesystem]",
-        ]
+    filesystem = ", ".join(
+        f"{_toml_string(path)} = {_toml_string(access)}"
+        for path, access in sorted(entries.items())
     )
-    for path, access in sorted(entries.items()):
-        lines.append(f"{_toml_string(path)} = {_toml_string(access)}")
-
-
-def _append_ollama_provider_section(lines: list[str], root: Path | None) -> None:
-    lines.extend(
-        [
-            f"[model_providers.{_OLLAMA_PROVIDER_ID}]",
-            'name = "cmoc managed ollama"',
-            'base_url = "http://127.0.0.1:11434/v1"',
-            'wire_api = "responses"',
-        ]
+    permission = (
+        f'{{ extends = ":workspace", filesystem = {{ {filesystem} }} }}'
     )
+    return [
+        *_config_override(
+            "default_permissions", _toml_string(_CMOC_PERMISSION_PROFILE)
+        ),
+        *_config_override(
+            f"permissions.{_CMOC_PERMISSION_PROFILE}", permission
+        ),
+    ]
 
 
-def build_codex_profile(
+def _ollama_provider_override_args() -> list[str]:
+    """cmoc managed ollama provider を argv config override にする。"""
+    provider_key = f"model_providers.{_OLLAMA_PROVIDER_ID}"
+    return [
+        # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+        # Codex enables non-function web-search and multi-agent tool types by
+        # default, while Ollama's Responses endpoint accepts function tools.
+        # Keep the managed local provider on their common tool subset.
+        "--disable",
+        "multi_agent",
+        *_config_override("web_search", _toml_string("disabled")),
+        *_config_override("model_provider", _toml_string(_OLLAMA_PROVIDER_ID)),
+        *_config_override(
+            f"{provider_key}.name", _toml_string("cmoc managed ollama")
+        ),
+        *_config_override(
+            f"{provider_key}.base_url",
+            _toml_string("http://127.0.0.1:11434/v1"),
+        ),
+        *_config_override(f"{provider_key}.wire_api", _toml_string("responses")),
+    ]
+
+
+def build_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig,
     root: Path | None = None,
@@ -546,17 +565,20 @@ def build_codex_profile(
     *,
     extra_read_root: Path | None = None,
     allow_oracle_conflict_writes: bool = False,
-) -> str:
-    """AgentCallParameter と repo config から再利用可能な Codex profile 本文を作る。"""
+) -> list[str]:
+    """AgentCallParameter と repo config から Codex CLI 上書き argv を作る。"""
     model_spec = config.codex.model[parameter.model_class]
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
-    lines = [
-        f'model = "{model_spec.model}"',
-        f'model_reasoning_effort = "{reasoning_effort}"',
+    args = [
+        "--model",
+        model_spec.model,
+        *_config_override(
+            "model_reasoning_effort", _toml_string(reasoning_effort)
+        ),
     ]
     use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"
     if use_cmoc_managed_ollama:
-        lines.append(f'model_provider = "{_OLLAMA_PROVIDER_ID}"')
+        args.extend(_ollama_provider_override_args())
     use_permission_profile = False
     if root is not None:
         root = root.resolve()
@@ -572,7 +594,7 @@ def build_codex_profile(
         )
     if not use_permission_profile:
         sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
-        lines.append(f'sandbox_mode = "{sandbox_mode}"')
+        args.extend(["--sandbox", sandbox_mode])
     if root is not None:
         writable_roots = _writable_roots(
             parameter.file_access_mode,
@@ -581,19 +603,17 @@ def build_codex_profile(
             allow_oracle_conflict_writes,
         )
         if use_permission_profile:
-            _append_permission_profile_section(
-                lines,
-                _read_roots_for_permission_profile(
-                    parameter.file_access_mode, root, extra_read_paths, read_root
-                ),
-                writable_roots,
+            args.extend(
+                _permission_profile_override_args(
+                    _read_roots_for_permission_profile(
+                        parameter.file_access_mode, root, extra_read_paths, read_root
+                    ),
+                    writable_roots,
+                )
             )
         else:
-            _append_workspace_write_section(lines, writable_roots)
-    if use_cmoc_managed_ollama:
-        _append_ollama_provider_section(lines, root)
-    lines.append("")
-    return "\n".join(lines)
+            args.extend(_workspace_write_override_args(writable_roots))
+    return args
 
 
 def resolve_codex_home(cwd: Path | None = None) -> Path:
@@ -637,26 +657,17 @@ def validate_codex_home(codex_home: Path) -> None:
         )
 
 
-def codex_profile_name(profile_path: Path) -> str:
-    """hashed profile path から Codex CLI の profile 名だけを取り出す。"""
-    suffix = ".config.toml"
-    if profile_path.name.endswith(suffix):
-        return profile_path.name[: -len(suffix)]
-    return profile_path.stem
-
-
-def prepare_codex_profile(
+def prepare_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig | None = None,
-    codex_home: Path | None = None,
     root: Path | None = None,
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
     *,
     extra_read_root: Path | None = None,
     allow_oracle_conflict_writes: bool = False,
-) -> Path:
-    """Codex home 内へ内容 hash 名の profile を作り、同一内容なら再利用する。"""
+) -> list[str]:
+    """必要なら local provider を準備し、Codex CLI 上書き argv を返す。"""
     if (
         (config or CmocConfig()).codex.model[parameter.model_class].model_provider
         == "cmoc"
@@ -665,7 +676,7 @@ def prepare_codex_profile(
         from commons.runtime_doctor import run_doctor_preprocess
 
         run_doctor_preprocess(root, config)
-    profile = build_codex_profile(
+    return build_codex_override_args(
         parameter,
         config or CmocConfig(),
         root,
@@ -674,20 +685,6 @@ def prepare_codex_profile(
         extra_read_root=extra_read_root,
         allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
-    target_home = codex_home or resolve_codex_home()
-    try:
-        return write_hashed_file_in_existing_dir(
-            target_home, "cmoc_", ".config.toml", profile
-        )
-    except OSError as exc:
-        raise CmocError(
-            "Codex profile を生成できません。",
-            [
-                "CODEX_HOME の権限を確認してください。",
-                "Codex CLI の通常利用環境を初期化してから再実行してください。",
-            ],
-            f"CODEX_HOME: {target_home}\nerror: {exc}",
-        ) from exc
 
 
 def codex_subprocess_env(codex_home: Path) -> dict[str, str]:

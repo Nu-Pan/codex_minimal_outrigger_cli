@@ -30,6 +30,9 @@ from acp.builder.indexing.index_entry import build_indexing_index_entry_paramete
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
 )
+from acp.builder.review.oracle.judge_finding import (
+    build_review_oracle_judge_finding_parameter,
+)
 from acp.builder.review.oracle.merge_finding import (
     build_review_oracle_merge_finding_parameter,
 )
@@ -73,6 +76,10 @@ def test_apply_fork_prompts_use_expected_roots(
     finding_enumeration = build_apply_fork_file_finding_enumeration_parameter(target)
     change_summary = build_apply_fork_change_summary_parameter("diff")
 
+    assert finding_application.model_class == ModelClass.EFFICIENCY
+    assert finding_application.reasoning_effort == ReasoningEffort.MAX
+    assert finding_enumeration.model_class == ModelClass.EFFICIENCY
+    assert finding_enumeration.reasoning_effort == ReasoningEffort.MAX
     assert "`<repo-root>` ツリー内の realization file" in finding_application.prompt
     assert f"- <repo-root> = {repo_root}" in finding_application.prompt
     assert f"- <work-root> = {apply_worktree}" in finding_application.prompt
@@ -113,7 +120,7 @@ def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
     parameter = build_tui_resolve_parameter_parameter(original_prompt)
 
     assert parameter.model_class == ModelClass.EFFICIENCY
-    assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.READONLY
     assert parameter.structured_output_schema_path is not None
     assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
@@ -179,10 +186,10 @@ def test_tui_resolve_parameter_module_exports_only_required_names() -> None:
     assert not hasattr(tui_resolve_parameter_module, "render_as_markdown")
 
 
-def test_indexing_index_entry_uses_low_reasoning() -> None:
+def test_indexing_index_entry_uses_minimum_model_and_low_reasoning() -> None:
     parameter = build_indexing_index_entry_parameter(__file__, "# README")
 
-    assert parameter.model_class == ModelClass.EFFICIENCY
+    assert parameter.model_class == ModelClass.MINIMUM
     assert parameter.reasoning_effort == ReasoningEffort.LOW
     assert parameter.file_access_mode == FileAccessMode.READONLY
     assert parameter.run_indexing_preflight is False
@@ -241,9 +248,19 @@ def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
     parameter = build_review_oracle_merge_finding_parameter("[]")
 
     assert parameter.model_class == ModelClass.EFFICIENCY
-    assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
     assert parameter.run_indexing_preflight is True
+
+
+def test_review_oracle_judge_finding_uses_max_reasoning() -> None:
+    parameter = build_review_oracle_judge_finding_parameter(
+        "finding", "advocate", "challenger"
+    )
+
+    assert parameter.model_class == ModelClass.EFFICIENCY
+    assert parameter.reasoning_effort == ReasoningEffort.MAX
+    assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
 
 
 def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
@@ -251,6 +268,8 @@ def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
         Path("<work-root>/oracle/spec.md"),
         "[]",
     )
+    assert parameter.model_class == ModelClass.EFFICIENCY
+    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
@@ -362,7 +381,7 @@ def test_review_oracle_validate_finding_schema_matches_oracle_source(
 ) -> None:
     parameter = builder("finding", "known advocate", "known challenger")
     assert parameter.model_class == ModelClass.EFFICIENCY
-    assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
     assert "finding" in parameter.prompt
     assert "known advocate" in parameter.prompt
@@ -403,7 +422,7 @@ def test_review_oracle_validate_finding_advocate_preserves_dynamic_text() -> Non
 def test_session_join_conflict_resolution_uses_repo_write_mode() -> None:
     parameter = build_session_join_conflict_resolution_parameter([__file__])
 
-    assert parameter.model_class == ModelClass.MAINSTREAM
-    assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+    assert parameter.model_class == ModelClass.FLAGSHIP
+    assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert "conflict 対象ファイル" in parameter.prompt

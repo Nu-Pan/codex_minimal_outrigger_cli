@@ -25,8 +25,6 @@ class CodexExecResult:
     stderr_log_path: Path
     output_path: Path
     codex_home: Path
-    profile_name: str
-    profile_path: Path
     schema_path: Path | None
     elapsed_sec: float = 0.0
     quota_wait_sec: float = 0.0

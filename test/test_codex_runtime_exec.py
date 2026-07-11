@@ -3,7 +3,6 @@ import os
 import shutil
 import socket
 import subprocess
-import tomllib
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -14,15 +13,18 @@ from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from _support import (
     TEST_SLM_MODEL,
+    codex_arg_value,
+    codex_override_config,
     codex_parameter,
     fake_managed_ollama_env,
+    fake_managed_systemctl_env,
     make_repo,
     run_git,
     setup_codex_home,
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
-from commons.runtime_codex_profile import prepare_codex_profile
+from commons.runtime_codex_profile import prepare_codex_override_args
 
 
 def _port_available(port: int) -> bool:
@@ -34,34 +36,18 @@ def _port_available(port: int) -> bool:
     return True
 
 
-def _require_systemd_user(env: dict[str, str]) -> None:
-    if shutil.which("systemctl") is None:
-        pytest.skip("systemctl is not installed")
-    result = subprocess.run(
-        ["systemctl", "--user", "show-environment"],
-        env=env,
-        text=True,
-        capture_output=True,
-        timeout=10,
-    )
-    if result.returncode != 0:
-        pytest.skip("systemd user service manager is not available")
-
-
 @contextmanager
 def _real_cmoc_managed_ollama_env(root: Path) -> Iterator[dict[str, str]]:
     # <work-root>/oracle/doc/dev_rule/test_rule.md and
     # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md: real Codex
     # integration uses the normal doctor preprocess managed-service path.
+    managed_env = fake_managed_systemctl_env(root)
     if not _port_available(11434):
-        pytest.skip("127.0.0.1:11434 is already in use")
-    home = root / ".cmoc" / "local" / "test-home"
-    home.mkdir(parents=True)
+        pytest.skip("127.0.0.1:11434 is already in use outside this test process")
     env = os.environ.copy()
-    env["HOME"] = str(home)
-    _require_systemd_user(env)
+    env.update(managed_env)
     try:
-        yield {"HOME": str(home)}
+        yield managed_env
     finally:
         subprocess.run(
             ["systemctl", "--user", "disable", "--now", "cmoc-ollama"],
@@ -132,24 +118,27 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
 
     call_log_path = result.call_log_path
     call_log = json.loads(call_log_path.read_text())
-    profile = tomllib.loads(Path(call_log["profile_path"]).read_text())
+    override_config = codex_override_config(call_log["argv"])
     assert call_log["argv"][:3] == ["codex", "exec", "--skip-git-repo-check"]
     assert "--output-schema" in call_log["argv"]
-    assert call_log["schema_path"] == str(result.schema_path)
     assert Path(call_log["prompt_log_path"]).read_text() == prompt
-    assert result.output_path.read_text() == result.output_text
-    assert isinstance(result.output_json["result"], str)
     assert call_log["model_class"] == ModelClass.MINIMUM.value
-    assert profile["model"] == TEST_SLM_MODEL
-    assert profile["model_provider"] == "cmoc_managed_ollama"
-    assert profile["model_providers"]["cmoc_managed_ollama"] == {
+    assert codex_arg_value(call_log["argv"], "--model") == TEST_SLM_MODEL
+    assert codex_arg_value(call_log["argv"], "--disable") == "multi_agent"
+    assert "--profile" not in call_log["argv"]
+    assert override_config["web_search"] == "disabled"
+    assert override_config["model_provider"] == "cmoc_managed_ollama"
+    assert override_config["model_providers"]["cmoc_managed_ollama"] == {
         "name": "cmoc managed ollama",
         "base_url": "http://127.0.0.1:11434/v1",
         "wire_api": "responses",
     }
+    assert call_log["schema_path"] == str(result.schema_path)
+    assert result.output_path.read_text() == result.output_text
+    assert isinstance(result.output_json["result"], str)
 
 
-def test_run_codex_exec_generates_profile_and_starts_codex(
+def test_run_codex_exec_injects_overrides_and_starts_codex(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -163,9 +152,6 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
             "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "profile = args[args.index('--profile') + 1]",
-            "home = pathlib.Path(os.environ['CODEX_HOME'])",
-            "profile_path = home / f'{profile}.config.toml'",
             "output.write_text('done\\n')",
             "pathlib.Path('oracle/created.md').write_text('created\\n')",
             "pathlib.Path('src').mkdir(exist_ok=True)",
@@ -176,7 +162,6 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
             "    'cwd': os.getcwd(),",
             "    'stdin': sys.stdin.read(),",
             "    'stdin_fd': os.readlink('/proc/self/fd/0'),",
-            "    'profile': profile_path.read_text(),",
             "}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
@@ -191,21 +176,22 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     )
 
     record = json.loads(recorder.read_text())
-    assert record["args"][:7] == [
+    assert record["args"][:4] == [
         "exec",
         "--skip-git-repo-check",
-        "--profile",
-        result.profile_name,
-        "--cd",
-        str(root.resolve()),
-        "--json",
+        "--model",
+        "gpt-5.6-luna",
     ]
+    assert "--profile" not in record["args"]
+    assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
     assert Path(record["stdin_fd"]).resolve() == result.prompt_log_path.resolve()
-    assert 'sandbox_mode = "workspace-write"' in record["profile"]
+    assert codex_arg_value(record["args"], "--sandbox") == "workspace-write"
+    override_config = codex_override_config(record["args"])
+    assert override_config["model_reasoning_effort"] == "low"
     writable_roots = set(
-        tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
+        override_config["sandbox_workspace_write"]["writable_roots"]
     )
     assert writable_roots == {
         str(path.resolve())
@@ -224,7 +210,7 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     assert result.output_text == "done\n"
 
 
-def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
+def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -243,13 +229,9 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
             "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "profile = args[args.index('--profile') + 1]",
-            "home = pathlib.Path(os.environ['CODEX_HOME'])",
-            "profile_path = home / f'{profile}.config.toml'",
             "output.write_text('done\\n')",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
-            "    'profile': profile_path.read_text(),",
             "}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
@@ -270,18 +252,22 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
     )
 
     record = json.loads(recorder.read_text())
-    profile = tomllib.loads(record["profile"])
+    override_config = codex_override_config(record["args"])
     assert "--oss" not in record["args"]
     assert "--local-provider" not in record["args"]
-    assert profile["model_provider"] == "cmoc_managed_ollama"
-    assert profile["model_providers"]["cmoc_managed_ollama"] == {
+    assert "--profile" not in record["args"]
+    assert codex_arg_value(record["args"], "--model") == TEST_SLM_MODEL
+    assert codex_arg_value(record["args"], "--disable") == "multi_agent"
+    assert override_config["web_search"] == "disabled"
+    assert override_config["model_provider"] == "cmoc_managed_ollama"
+    assert override_config["model_providers"]["cmoc_managed_ollama"] == {
         "name": "cmoc managed ollama",
         "base_url": "http://127.0.0.1:11434/v1",
         "wire_api": "responses",
     }
 
 
-def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
+def test_prepare_local_slm_overrides_run_doctor_when_port_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -293,7 +279,7 @@ def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
 
-    profile_path = prepare_codex_profile(
+    override_args = prepare_codex_override_args(
         AgentCallParameter(
             ModelClass.MINIMUM,
             ReasoningEffort.LOW,
@@ -302,12 +288,14 @@ def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
             None,
         ),
         config,
-        codex_home,
         root,
     )
 
-    assert profile_path.is_file()
-    assert 'model_provider = "cmoc_managed_ollama"' in profile_path.read_text()
+    assert codex_override_config(override_args)["model_provider"] == (
+        "cmoc_managed_ollama"
+    )
+    assert "--profile" not in override_args
+    assert not list(codex_home.glob("cmoc_*.config.toml"))
     assert (
         root
         / ".cmoc"
@@ -334,14 +322,10 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
             "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "profile = args[args.index('--profile') + 1]",
-            "home = pathlib.Path(os.environ['CODEX_HOME'])",
-            "profile_path = home / f'{profile}.config.toml'",
             "output.write_text('done\\n')",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
-            "    'profile': profile_path.read_text(),",
             "}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
@@ -359,11 +343,11 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     work_root = str(root.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == work_root
     assert record["cwd"] == work_root
-    profile = tomllib.loads(record["profile"])
-    assert "sandbox_mode" not in profile
-    assert "sandbox_workspace_write" not in profile
-    assert profile["default_permissions"] == "cmoc"
-    assert profile["permissions"]["cmoc"]["filesystem"] == {
+    override_config = codex_override_config(record["args"])
+    assert "--sandbox" not in record["args"]
+    assert "sandbox_workspace_write" not in override_config
+    assert override_config["default_permissions"] == "cmoc"
+    assert override_config["permissions"]["cmoc"]["filesystem"] == {
         str((root / "oracle").resolve()): "read"
     }
 
@@ -469,26 +453,21 @@ def test_run_codex_exec_allows_repo_local_read_from_linked_worktree(
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
 
 
-def test_run_codex_exec_profile_does_not_open_agents_tree(
+def test_run_codex_exec_overrides_do_not_open_agents_tree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
     write_python_executable(
         bin_dir / "codex",
         [
-            "import json, os, pathlib, sys, tomllib",
+            "import json, pathlib, sys",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "profile = args[args.index('--profile') + 1]",
-            "home = pathlib.Path(os.environ['CODEX_HOME'])",
-            "profile_path = home / f'{profile}.config.toml'",
-            "roots = tomllib.loads(profile_path.read_text())",
-            "roots = roots['sandbox_workspace_write']['writable_roots']",
-            "agents = pathlib.Path('.agents').resolve()",
-            "assert not any(agents.is_relative_to(pathlib.Path(root)) for root in roots)",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps(args))",
             "output.write_text(json.dumps({'ok': True}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
@@ -502,9 +481,10 @@ def test_run_codex_exec_profile_does_not_open_agents_tree(
         config=CmocConfig(),
     )
 
-    profile_path = next(tmp_path.glob("codex_home/cmoc_*.config.toml"))
-    writable_roots = tomllib.loads(profile_path.read_text())["sandbox_workspace_write"][
+    args = json.loads(recorder.read_text())
+    writable_roots = codex_override_config(args)["sandbox_workspace_write"][
         "writable_roots"
     ]
     agents = (root / ".agents").resolve()
     assert not any(agents.is_relative_to(Path(path)) for path in writable_roots)
+    assert "--profile" not in args

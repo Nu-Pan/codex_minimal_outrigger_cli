@@ -25,13 +25,12 @@ from config.cmoc_config import CmocConfig
 from commons.runtime_config import load_config
 from commons.runtime_codex_profile import (
     codex_error_text,
-    codex_profile_name,
     codex_subprocess_env,
     extract_resume_token,
     is_capacity_error,
     is_quota_error,
     parameter_codex_cwd,
-    prepare_codex_profile,
+    prepare_codex_override_args,
     prepare_schema,
     read_output_json,
     resolve_codex_home,
@@ -95,8 +94,8 @@ def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
         return None
 
 
-def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
-    """cmoc 側で検査済みの cwd/profile を使う Codex exec argv の共通部分を作る。"""
+def _base_exec_argv(override_args: list[str], codex_cwd: Path) -> list[str]:
+    """cmoc 側で検査済みの cwd と設定上書きを Codex exec argv にする。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # cmoc may run Codex from linked worktrees or generated roots; repo
     # validation belongs to cmoc's own preflight, not to Codex CLI startup.
@@ -104,8 +103,7 @@ def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
         "codex",
         "exec",
         "--skip-git-repo-check",
-        "--profile",
-        profile_name,
+        *override_args,
         "--cd",
         str(codex_cwd),
     ]
@@ -169,22 +167,20 @@ def run_codex_exec(
     codex_work_root = work_root(cwd)
     codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Relative CODEX_HOME is still passed through unchanged, so preflight and
-    # profile generation must target the path Codex resolves from its real cwd.
+    # Relative CODEX_HOME is still passed through unchanged, so preflight must
+    # target the path Codex resolves from its real cwd.
     codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
-    profile_path = prepare_codex_profile(
+    override_args = prepare_codex_override_args(
         parameter,
         config,
-        codex_home,
         codex_work_root,
         extra_read_paths,
         extra_writable_paths,
         extra_read_root=root,
         allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
-    profile_name = codex_profile_name(profile_path)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # `--output-schema` must point at the repo-root local schema store, even
     # when Codex itself runs inside a linked worktree.
@@ -197,24 +193,18 @@ def run_codex_exec(
     def call_data(
         run_parameter: AgentCallParameter,
         run_codex_home: Path,
-        run_profile_path: Path,
-        run_profile_name: str,
         run_codex_cwd: Path,
     ) -> dict[str, str]:
-        """call log に残す profile 由来値を実際の呼び出し parameter に揃える。"""
+        """call log に残す論理値を実際の呼び出し parameter に揃える。"""
         return {
             "codex_home": str(run_codex_home),
-            "profile_name": run_profile_name,
-            "profile_path": str(run_profile_path),
             "model_class": run_parameter.model_class.value,
             "reasoning_effort": run_parameter.reasoning_effort.value,
             "file_access_mode": run_parameter.file_access_mode.value,
             "cwd": str(run_codex_cwd.resolve()),
         }
 
-    base_call_data = call_data(
-        parameter, codex_home, profile_path, profile_name, codex_cwd
-    )
+    base_call_data = call_data(parameter, codex_home, codex_cwd)
 
     def new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
@@ -233,7 +223,7 @@ def run_codex_exec(
 
     def build_argv(output_path: Path, resume_token: str | None) -> list[str]:
         """schema と resume 状態を反映した `codex exec` の argv を組み立てる。"""
-        run_argv = _base_exec_argv(profile_name, codex_cwd)
+        run_argv = _base_exec_argv(override_args, codex_cwd)
         run_argv.extend(["--json", "--output-last-message", str(output_path)])
         if schema_path is not None:
             run_argv.extend(["--output-schema", str(schema_path)])
@@ -313,8 +303,6 @@ def run_codex_exec(
         status: str,
         error: str | None = None,
         run_codex_home: Path = codex_home,
-        run_profile_path: Path = profile_path,
-        run_profile_name: str = profile_name,
     ) -> None:
         """console と subcommand log の両方へ Codex call 結果を記録する。"""
         elapsed_sec = time.perf_counter() - started_at
@@ -334,8 +322,6 @@ def run_codex_exec(
             "stderr_log_path": str(run_stderr_path),
             "output_path": str(run_output_path),
             "codex_home": str(run_codex_home),
-            "profile_name": run_profile_name,
-            "profile_path": str(run_profile_path),
             "schema_path": str(run_schema_path) if run_schema_path else None,
         }
         if error is not None:
@@ -362,8 +348,6 @@ def run_codex_exec(
             stderr_log_path=run_stderr_path,
             output_path=run_output_path,
             codex_home=codex_home,
-            profile_name=profile_name,
-            profile_path=profile_path,
             schema_path=run_schema_path,
             elapsed_sec=time.perf_counter() - call_started_at,
             quota_wait_sec=quota_wait_sec,
@@ -500,23 +484,19 @@ def run_codex_exec(
                         )
                         # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
                         # quota probe is a separate Codex call; its minimal
-                        # AgentCallParameter must drive profile/cwd/env too.
+                        # AgentCallParameter must drive argv/cwd/env too.
                         probe_codex_home = resolve_codex_home(probe_codex_cwd)
                         validate_codex_home(probe_codex_home)
                         probe_codex_env = codex_subprocess_env(probe_codex_home)
-                        probe_profile_path = prepare_codex_profile(
+                        probe_override_args = prepare_codex_override_args(
                             quota_probe_parameter,
                             config,
-                            probe_codex_home,
                             codex_work_root,
                             extra_read_root=root,
                         )
-                        probe_profile_name = codex_profile_name(probe_profile_path)
                         probe_call_data = call_data(
                             quota_probe_parameter,
                             probe_codex_home,
-                            probe_profile_path,
-                            probe_profile_name,
                             probe_codex_cwd,
                         )
                         (
@@ -529,7 +509,7 @@ def run_codex_exec(
                         ) = new_log_paths()
                         probe_output_jsonl_path = probe_output_path.with_suffix(".jsonl")
                         probe_argv = _base_exec_argv(
-                            probe_profile_name, probe_codex_cwd
+                            probe_override_args, probe_codex_cwd
                         )
                         probe_argv.extend(
                             [
@@ -591,8 +571,6 @@ def run_codex_exec(
                                 status="capacity_retrying",
                                 error=probe_error_text,
                                 run_codex_home=probe_codex_home,
-                                run_profile_path=probe_profile_path,
-                                run_profile_name=probe_profile_name,
                             )
                             time.sleep(sleep_sec)
                             sleep_sec *= 2
@@ -611,8 +589,6 @@ def run_codex_exec(
                                 status="failed",
                                 error=probe_error_text,
                                 run_codex_home=probe_codex_home,
-                                run_profile_path=probe_profile_path,
-                                run_profile_name=probe_profile_name,
                             )
                             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
                             # A probe is still `codex exec`; non-quota failure is
@@ -640,8 +616,6 @@ def run_codex_exec(
                             status="succeeded" if probe_available else "quota_waiting",
                             error=None if probe_available else probe_error_text,
                             run_codex_home=probe_codex_home,
-                            run_profile_path=probe_profile_path,
-                            run_profile_name=probe_profile_name,
                         )
                         if probe_available:
                             break
@@ -759,8 +733,6 @@ def run_codex_exec(
             stderr_log_path=stderr_path,
             output_path=output_path,
             codex_home=codex_home,
-            profile_name=profile_name,
-            profile_path=profile_path,
             schema_path=schema_path,
             elapsed_sec=exec_result.elapsed_sec,
             quota_wait_sec=quota_wait_sec,

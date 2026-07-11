@@ -217,7 +217,7 @@
 - 個別サブコマンドがすでに特定できており、その処理だけを詳しく確認したいとき。その場合は該当する実装モジュールを直接読む。
 
 ## hash
-- a4c55dddea5656ceda9a0db4e06f5c0d783a2cba9c5e0b4df1666b59de815c53
+- 1834946b2c3e1469cfc08a9fbf9120538fff8c1ba772c0024a065411c36fbfcf
 
 # `tui.py`
 
@@ -239,4 +239,4 @@
 - TUI 以外のサブコマンドの挙動や CLI 全体の command routing を調べたい場合は、そのサブコマンドまたは CLI entrypoint を読む。
 
 ## hash
-- ec33c67348f84c67cb37c97936f7d21ff0b8f53fe546f3169c70732bb149c750
+- 55d0479e65c41ecc57339c3249b78c8a26dff08c1cbac95f988c499a2551fa23

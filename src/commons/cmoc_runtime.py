@@ -8,15 +8,14 @@ from commons.runtime_codex_preflight import (
 from commons.runtime_codex_profile import (
     APPLY_PROCESS_TRACKING_ENV,
     apply_process_id_file_lock,
-    build_codex_profile,
+    build_codex_override_args,
     codex_error_text,
-    codex_profile_name,
     codex_subprocess_env,
     extract_resume_token,
     file_access_to_sandbox_mode,
     is_capacity_error,
     is_quota_error,
-    prepare_codex_profile,
+    prepare_codex_override_args,
     prepare_schema,
     process_start_time,
     read_output_json,
@@ -36,7 +35,6 @@ from commons.runtime_content import (
     is_binary,
     text_sha256,
     write_hashed_file,
-    write_hashed_file_in_existing_dir,
 )
 from commons.runtime_cli import (
     CliRunResult,

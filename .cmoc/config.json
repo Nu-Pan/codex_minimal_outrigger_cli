@@ -22,7 +22,9 @@
     "reasoning_effort": {
       "low": "low",
       "medium": "medium",
-      "high": "high"
+      "high": "high",
+      "xhigh": "xhigh",
+      "max": "max"
     },
     "num_try_falv_recovery": 1
   },

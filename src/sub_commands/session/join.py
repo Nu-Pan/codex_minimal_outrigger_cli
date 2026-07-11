@@ -130,7 +130,7 @@ def resolve_session_join_conflict(
         purpose="session join conflict resolution",
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
         # oracle conflict の例外は prompt だけでは sandbox に効かないため、
-        # conflict 対象だけを profile の writable root にも反映する。
+        # conflict 対象だけを Codex CLI の writable roots 上書きにも反映する。
         extra_writable_paths=conflicted_paths,
         allow_oracle_conflict_writes=True,
     )

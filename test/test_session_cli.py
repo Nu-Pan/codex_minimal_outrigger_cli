@@ -15,7 +15,7 @@ from pathlib import Path
 import cmoc_runtime
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
-from commons.runtime_codex_profile import build_codex_profile
+from commons.runtime_codex_profile import build_codex_override_args
 from config.cmoc_config import CmocConfig
 import pytest
 
@@ -466,7 +466,7 @@ def test_session_completion_rejects_missing_state_fields(
     assert current_branch(root) == session_branch
 
 
-def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
+def test_session_join_resolves_oracle_conflict_with_repo_write_overrides(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -497,7 +497,7 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
         modes.append(parameter.file_access_mode)
         assert kwargs["extra_writable_paths"] == [target]
         assert kwargs["allow_oracle_conflict_writes"] is True
-        profile = build_codex_profile(
+        override_args = build_codex_override_args(
             parameter,
             CmocConfig(),
             root,
@@ -505,7 +505,16 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
             allow_oracle_conflict_writes=kwargs["allow_oracle_conflict_writes"],
         )
         writable_roots = set(
-            tomllib.loads(profile)["sandbox_workspace_write"]["writable_roots"]
+            next(
+                tomllib.loads(override_args[index + 1])["sandbox_workspace_write"][
+                    "writable_roots"
+                ]
+                for index, arg in enumerate(override_args)
+                if arg == "--config"
+                and override_args[index + 1].startswith(
+                    "sandbox_workspace_write.writable_roots="
+                )
+            )
         )
         assert writable_roots == {
             str(path.resolve())

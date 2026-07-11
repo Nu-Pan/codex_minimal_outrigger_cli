@@ -153,7 +153,7 @@
 - 新しい公開 API、設定項目、状態ファイル、または CLI 面を追加する場所を探しているだけで、既存の実装責務や互換経路との関係を確認しないとき。
 
 ## hash
-- 9039ba4d6f3f24072997da79f2f012a1e23e94df44e8282e4059ed9f82ed92fd
+- 8be22d125046cd9791f65d4f34d6765470ef864570a4f619f2685db87f621417
 
 # `test`
 
@@ -164,7 +164,7 @@
 ## Read this when
 - cmoc の実装変更後に、どの realization test が該当する外部挙動や制御ロジックを固定しているかを探したいとき。
 - apply fork/join/abandon、session fork/join/abandon、review oracle、doctor、indexing、TUI、Codex runtime、Ollama runtime などの CLI または runtime 境界の回帰テストを確認・追加・整理したいとき。
-- Codex profile、file access mode、root placeholder、session/apply state、Git worktree、subcommand log、structured output schema 参照など、複数機能にまたがる前提をテスト側から確認したいとき。
+- Codex CLI の argv 設定上書き、file access mode、root placeholder、session/apply state、Git worktree、subcommand log、structured output schema 参照など、複数機能にまたがる前提をテスト側から確認したいとき。
 - テスト支援 helper、fake 外部コマンド、fixture、packaged import、Markdown rendering など、実装本体ではなくテスト環境や検証観点の置き場所を探したいとき。
 
 ## Do not read this when
@@ -174,4 +174,4 @@
 - 特定のテストファイルが既に分かっている場合は、このディレクトリ全体ではなく該当するテスト本文または共有支援モジュールへ直接進む。
 
 ## hash
-- a43777823a72a82ea4e4d44b1dae2be49ab51947244060704526b8f744ffc4b8
+- beda0913e4a094986437d71b405241780f092e1d2c3662a7166f21cc2af81a1a

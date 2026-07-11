@@ -249,10 +249,12 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     }
     assert data["codex"]["model"]["efficiency"] == {
         "model_provider": "codex",
-        "model": "gpt-5.4-mini",
+        "model": "gpt-5.6-luna",
     }
     assert data["codex"]["num_try_falv_recovery"] == 4
     assert data["codex"]["reasoning_effort"]["low"] == "low"
+    assert data["codex"]["reasoning_effort"]["xhigh"] == "xhigh"
+    assert data["codex"]["reasoning_effort"]["max"] == "max"
     assert data["apply_fork"]["num_apply_files"] == 200
 
 

@@ -12,7 +12,6 @@ import json
 import shutil
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -42,7 +41,7 @@ from cmoc_runtime import (
     work_root,
 )
 from commons.runtime_codex_profile import (
-    build_codex_profile,
+    build_codex_override_args,
     file_access_to_codex_cwd,
 )
 from commons.runtime_content import is_binary
@@ -60,6 +59,8 @@ from main import app
 
 from _support import (
     TEST_SLM_MODEL,
+    codex_arg_value,
+    codex_override_config,
     make_repo,
     run_git,
     runner,
@@ -67,25 +68,25 @@ from _support import (
 )
 
 
-def _profile_writable_roots(profile: str) -> set[str]:
-    parsed = tomllib.loads(profile)
+def _override_writable_roots(args: list[str]) -> set[str]:
+    parsed = codex_override_config(args)
     return set(parsed.get("sandbox_workspace_write", {}).get("writable_roots", []))
 
 
-def _profile_permission_filesystem(profile: str) -> dict[str, str]:
-    parsed = tomllib.loads(profile)
+def _override_permission_filesystem(args: list[str]) -> dict[str, str]:
+    parsed = codex_override_config(args)
     return parsed.get("permissions", {}).get("cmoc", {}).get("filesystem", {})
 
 
-def _profile_permission_roots(profile: str, access: str) -> set[str]:
+def _override_permission_roots(args: list[str], access: str) -> set[str]:
     return {
         path
-        for path, actual_access in _profile_permission_filesystem(profile).items()
+        for path, actual_access in _override_permission_filesystem(args).items()
         if actual_access == access
     }
 
 
-def _standard_realization_profile_roots(root: Path) -> set[str]:
+def _standard_realization_override_roots(root: Path) -> set[str]:
     roots: set[str] = set()
     for name in ("src", "test", "bin"):
         path = root / name
@@ -96,32 +97,32 @@ def _standard_realization_profile_roots(root: Path) -> set[str]:
     return roots
 
 
-def _profile_write_roots(profile: str) -> set[str]:
+def _override_write_roots(args: list[str]) -> set[str]:
     return {
-        *_profile_writable_roots(profile),
-        *_profile_permission_roots(profile, "write"),
+        *_override_writable_roots(args),
+        *_override_permission_roots(args, "write"),
     }
 
 
-def _assert_writable(profile: str, path: Path) -> None:
+def _assert_writable(args: list[str], path: Path) -> None:
     target = path.resolve()
     assert any(
-        target.is_relative_to(Path(root)) for root in _profile_write_roots(profile)
+        target.is_relative_to(Path(root)) for root in _override_write_roots(args)
     )
 
 
-def _assert_not_writable(profile: str, path: Path) -> None:
+def _assert_not_writable(args: list[str], path: Path) -> None:
     target = path.resolve()
     assert not any(
-        target.is_relative_to(Path(root)) for root in _profile_write_roots(profile)
+        target.is_relative_to(Path(root)) for root in _override_write_roots(args)
     )
 
 
-def _assert_not_permission_accessible(profile: str, path: Path) -> None:
+def _assert_not_permission_accessible(args: list[str], path: Path) -> None:
     target = path.resolve()
     assert not any(
         target.is_relative_to(Path(root))
-        for root in _profile_permission_filesystem(profile)
+        for root in _override_permission_filesystem(args)
     )
 
 
@@ -309,9 +310,11 @@ def test_config_defaults_match_logical_model_classes() -> None:
 
     assert config.num_parallel == 8
     assert config.codex.model[ModelClass.MAINSTREAM] == CodexModelSpec(
-        "codex", "gpt-5.5"
+        "codex", "gpt-5.6-terra"
     )
     assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
+    assert config.codex.reasoning_effort[ReasoningEffort.XHIGH] == "xhigh"
+    assert config.codex.reasoning_effort[ReasoningEffort.MAX] == "max"
     assert config.codex.num_try_falv_recovery == 1
 
 
@@ -329,7 +332,13 @@ def test_config_json_preserves_oracle_member_order() -> None:
         "efficiency",
         "minimum",
     ]
-    assert list(data["codex"]["reasoning_effort"]) == ["low", "medium", "high"]
+    assert list(data["codex"]["reasoning_effort"]) == [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+    ]
 
 
 def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
@@ -774,8 +783,8 @@ def test_is_binary_reads_only_initial_chunk() -> None:
     assert path.reader.size == 4096
 
 
-def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
-    """root 付き通常経路でも FileAccessMode ごとの profile を生成する。"""
+def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
+    """root 付き通常経路でも FileAccessMode ごとの argv を生成する。"""
     root = tmp_path / "repo"
     root.mkdir()
     (root / ".cmoc").mkdir()
@@ -806,8 +815,8 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         "prompt",
         None,
     )
-    profiles = {
-        mode: build_codex_profile(
+    overrides = {
+        mode: build_codex_override_args(
             AgentCallParameter(
                 parameter.model_class,
                 parameter.reasoning_effort,
@@ -822,101 +831,101 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     }
 
     for mode in (FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE):
-        assert 'sandbox_mode = "workspace-write"' in profiles[mode]
-        assert "[sandbox_workspace_write]" in profiles[mode]
+        assert codex_arg_value(overrides[mode], "--sandbox") == "workspace-write"
+        assert "sandbox_workspace_write" in codex_override_config(overrides[mode])
     for mode in (
         FileAccessMode.READONLY,
         FileAccessMode.PURE_ORACLE_READ,
         FileAccessMode.PURE_ORACLE_WRITE,
     ):
-        parsed = tomllib.loads(profiles[mode])
-        assert "sandbox_mode" not in parsed
+        parsed = codex_override_config(overrides[mode])
+        assert "--sandbox" not in overrides[mode]
         assert "sandbox_workspace_write" not in parsed
         assert parsed["default_permissions"] == "cmoc"
         assert parsed["permissions"]["cmoc"]["extends"] == ":workspace"
-    assert _profile_permission_filesystem(profiles[FileAccessMode.READONLY]) == {
+    assert _override_permission_filesystem(overrides[FileAccessMode.READONLY]) == {
         str(path.resolve()): "read"
         for path in root.iterdir()
         if path.name != "memo"
     }
     _assert_not_permission_accessible(
-        profiles[FileAccessMode.READONLY], root / "memo" / "private.md"
+        overrides[FileAccessMode.READONLY], root / "memo" / "private.md"
     )
-    assert str((root / ".agents").resolve()) in _profile_permission_roots(
-        profiles[FileAccessMode.READONLY], "read"
+    assert str((root / ".agents").resolve()) in _override_permission_roots(
+        overrides[FileAccessMode.READONLY], "read"
     )
-    assert _profile_permission_filesystem(
-        profiles[FileAccessMode.PURE_ORACLE_READ]
+    assert _override_permission_filesystem(
+        overrides[FileAccessMode.PURE_ORACLE_READ]
     ) == {str((root / "oracle").resolve()): "read"}
-    assert _profile_permission_filesystem(
-        profiles[FileAccessMode.PURE_ORACLE_WRITE]
+    assert _override_permission_filesystem(
+        overrides[FileAccessMode.PURE_ORACLE_WRITE]
     ) == {
         str((root / "oracle").resolve()): "write",
     }
     _assert_not_permission_accessible(
-        profiles[FileAccessMode.PURE_ORACLE_WRITE], root / "src" / "existing.py"
+        overrides[FileAccessMode.PURE_ORACLE_WRITE], root / "src" / "existing.py"
     )
-    realization_roots = _standard_realization_profile_roots(root)
-    assert _profile_writable_roots(
-        profiles[FileAccessMode.REALIZATION_WRITE]
+    realization_roots = _standard_realization_override_roots(root)
+    assert _override_writable_roots(
+        overrides[FileAccessMode.REALIZATION_WRITE]
     ) == realization_roots
-    assert _profile_writable_roots(profiles[FileAccessMode.READONLY]) == set()
-    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_READ]) == set()
-    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == set()
-    assert _profile_permission_roots(
-        profiles[FileAccessMode.READONLY], "write"
+    assert _override_writable_roots(overrides[FileAccessMode.READONLY]) == set()
+    assert _override_writable_roots(overrides[FileAccessMode.PURE_ORACLE_READ]) == set()
+    assert _override_writable_roots(overrides[FileAccessMode.PURE_ORACLE_WRITE]) == set()
+    assert _override_permission_roots(
+        overrides[FileAccessMode.READONLY], "write"
     ) == set()
-    assert _profile_permission_roots(
-        profiles[FileAccessMode.PURE_ORACLE_READ], "write"
+    assert _override_permission_roots(
+        overrides[FileAccessMode.PURE_ORACLE_READ], "write"
     ) == set()
-    assert _profile_permission_roots(
-        profiles[FileAccessMode.PURE_ORACLE_WRITE], "write"
+    assert _override_permission_roots(
+        overrides[FileAccessMode.PURE_ORACLE_WRITE], "write"
     ) == {str((root / "oracle").resolve())}
-    assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
+    assert _override_writable_roots(overrides[FileAccessMode.REPO_WRITE]) == {
         *realization_roots,
         str((root / "oracle").resolve()),
     }
-    for mode, profile in profiles.items():
+    for mode, override_args in overrides.items():
         if mode == FileAccessMode.NO_RULE:
             continue
         assert not any(
             (root / ".agents").resolve().is_relative_to(Path(path))
-            for path in _profile_writable_roots(profile)
+            for path in _override_writable_roots(override_args)
         )
     _assert_writable(
-        profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "existing.py"
+        overrides[FileAccessMode.REALIZATION_WRITE], root / "src" / "existing.py"
     )
     _assert_writable(
-        profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "new.py"
+        overrides[FileAccessMode.REALIZATION_WRITE], root / "src" / "new.py"
     )
     _assert_writable(
-        profiles[FileAccessMode.REALIZATION_WRITE], root / "test" / "test_new.py"
+        overrides[FileAccessMode.REALIZATION_WRITE], root / "test" / "test_new.py"
     )
-    _assert_not_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / "INDEX.md")
-    _assert_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / ".gitignore")
+    _assert_not_writable(overrides[FileAccessMode.REALIZATION_WRITE], root / "INDEX.md")
+    _assert_writable(overrides[FileAccessMode.REALIZATION_WRITE], root / ".gitignore")
     _assert_not_writable(
-        profiles[FileAccessMode.REALIZATION_WRITE], root / ".agents" / "blocked.md"
+        overrides[FileAccessMode.REALIZATION_WRITE], root / ".agents" / "blocked.md"
     )
     _assert_not_writable(
-        profiles[FileAccessMode.PURE_ORACLE_READ], root / "oracle" / "blocked.md"
+        overrides[FileAccessMode.PURE_ORACLE_READ], root / "oracle" / "blocked.md"
     )
     _assert_writable(
-        profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "spec.md"
+        overrides[FileAccessMode.REPO_WRITE], root / "oracle" / "spec.md"
     )
     _assert_writable(
-        profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "new.md"
+        overrides[FileAccessMode.REPO_WRITE], root / "oracle" / "new.md"
     )
-    _assert_not_writable(profiles[FileAccessMode.REPO_WRITE], root / "INDEX.md")
+    _assert_not_writable(overrides[FileAccessMode.REPO_WRITE], root / "INDEX.md")
     _assert_writable(
-        profiles[FileAccessMode.PURE_ORACLE_WRITE], root / "oracle" / "new.md"
+        overrides[FileAccessMode.PURE_ORACLE_WRITE], root / "oracle" / "new.md"
     )
-    _assert_writable(profiles[FileAccessMode.REPO_WRITE], root / ".gitignore")
+    _assert_writable(overrides[FileAccessMode.REPO_WRITE], root / ".gitignore")
     _assert_not_writable(
-        profiles[FileAccessMode.REPO_WRITE], root / ".agents" / "blocked.md"
+        overrides[FileAccessMode.REPO_WRITE], root / ".agents" / "blocked.md"
     )
 
     extra = root / "src" / "existing.py"
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             parameter.model_class,
             parameter.reasoning_effort,
@@ -928,10 +937,10 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         root,
         extra_writable_paths=[extra],
     )
-    assert _profile_writable_roots(profile) == realization_roots
+    assert _override_writable_roots(override_args) == realization_roots
 
     repo_extra = root / "new_dir"
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             parameter.model_class,
             parameter.reasoning_effort,
@@ -943,10 +952,10 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         root,
         extra_writable_paths=[repo_extra],
     )
-    assert str(repo_extra.resolve()) in _profile_writable_roots(profile)
+    assert str(repo_extra.resolve()) in _override_writable_roots(override_args)
 
     with pytest.raises(CmocError, match="許可領域外"):
-        build_codex_profile(
+        build_codex_override_args(
             parameter,
             CmocConfig(),
             root,
@@ -954,7 +963,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         )
 
     with pytest.raises(CmocError, match="許可領域外"):
-        build_codex_profile(
+        build_codex_override_args(
             AgentCallParameter(
                 parameter.model_class,
                 parameter.reasoning_effort,
@@ -967,7 +976,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
             [root / "src" / "blocked.md"],
         )
 
-    build_codex_profile(
+    build_codex_override_args(
         AgentCallParameter(
             parameter.model_class,
             parameter.reasoning_effort,
@@ -981,7 +990,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     )
 
     with pytest.raises(CmocError, match="許可領域外"):
-        build_codex_profile(
+        build_codex_override_args(
             AgentCallParameter(
                 parameter.model_class,
                 parameter.reasoning_effort,
@@ -998,7 +1007,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
 )
-def test_codex_profile_readonly_modes_allow_only_ignored_gap_writes(
+def test_codex_overrides_readonly_modes_allow_only_ignored_gap_writes(
     tmp_path: Path, mode: FileAccessMode
 ) -> None:
     root = make_repo(tmp_path)
@@ -1017,7 +1026,7 @@ def test_codex_profile_readonly_modes_allow_only_ignored_gap_writes(
     run_git(root, "add", "-f", "build/artifact.txt")
     run_git(root, "commit", "-m", "add tracked files")
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
@@ -1029,20 +1038,22 @@ def test_codex_profile_readonly_modes_allow_only_ignored_gap_writes(
         root,
     )
 
-    _assert_writable(profile, root / "src" / "__pycache__" / "new.pyc")
-    _assert_writable(profile, root / "oracle" / "__pycache__" / "new.pyc")
-    _assert_writable(profile, root / "build" / "scratch.txt")
-    _assert_not_writable(profile, root / "src" / "main.py")
-    _assert_not_writable(profile, root / "oracle" / "spec.md")
-    _assert_not_writable(profile, root / "build" / "artifact.txt")
-    _assert_not_writable(profile, root / "memo" / "private.md")
-    _assert_not_writable(profile, root / ".cmoc" / "local" / "state.json")
+    _assert_writable(override_args, root / "src" / "__pycache__" / "new.pyc")
+    _assert_writable(override_args, root / "oracle" / "__pycache__" / "new.pyc")
+    _assert_writable(override_args, root / "build" / "scratch.txt")
+    _assert_not_writable(override_args, root / "src" / "main.py")
+    _assert_not_writable(override_args, root / "oracle" / "spec.md")
+    _assert_not_writable(override_args, root / "build" / "artifact.txt")
+    _assert_not_writable(override_args, root / "memo" / "private.md")
+    _assert_not_writable(
+        override_args, root / ".cmoc" / "local" / "state.json"
+    )
 
 
 @pytest.mark.parametrize(
     "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
 )
-def test_codex_profile_readonly_modes_allow_extra_ignored_gap_path(
+def test_codex_overrides_readonly_modes_allow_extra_ignored_gap_path(
     tmp_path: Path, mode: FileAccessMode
 ) -> None:
     root = make_repo(tmp_path)
@@ -1052,7 +1063,7 @@ def test_codex_profile_readonly_modes_allow_extra_ignored_gap_path(
     run_git(root, "commit", "-m", "add gitignore")
     target = root / "scratch" / "agent.tmp"
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
@@ -1065,10 +1076,10 @@ def test_codex_profile_readonly_modes_allow_extra_ignored_gap_path(
         extra_writable_paths=[target],
     )
 
-    _assert_writable(profile, target)
+    _assert_writable(override_args, target)
 
 
-def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
+def test_codex_overrides_uses_cmoc_ollama_provider_for_local_slm(
     tmp_path: Path,
 ) -> None:
     root = tmp_path / "repo"
@@ -1076,7 +1087,7 @@ def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             ModelClass.MINIMUM,
             ReasoningEffort.LOW,
@@ -1088,9 +1099,11 @@ def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
         root,
     )
 
-    parsed = tomllib.loads(profile)
+    parsed = codex_override_config(override_args)
     provider = parsed["model_providers"]["cmoc_managed_ollama"]
-    assert parsed["model"] == TEST_SLM_MODEL
+    assert codex_arg_value(override_args, "--model") == TEST_SLM_MODEL
+    assert codex_arg_value(override_args, "--disable") == "multi_agent"
+    assert parsed["web_search"] == "disabled"
     assert parsed["model_provider"] == "cmoc_managed_ollama"
     assert provider == {
         "name": "cmoc managed ollama",
@@ -1099,7 +1112,7 @@ def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
     }
 
 
-def test_codex_profile_allows_repo_local_read_from_linked_worktree(
+def test_codex_overrides_allows_repo_local_read_from_linked_worktree(
     tmp_path: Path,
 ) -> None:
     """linked worktree 実行時だけ repo 側 `.cmoc/local` 読み取りを追加許可する。"""
@@ -1115,28 +1128,28 @@ def test_codex_profile_allows_repo_local_read_from_linked_worktree(
         None,
     )
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         parameter,
         CmocConfig(),
         linked,
         [root / ".cmoc" / "local" / "report" / "review" / "report.md"],
         extra_read_root=root,
     )
-    filesystem = _profile_permission_filesystem(profile)
-    assert tomllib.loads(profile)["default_permissions"] == "cmoc"
+    filesystem = _override_permission_filesystem(override_args)
+    assert codex_override_config(override_args)["default_permissions"] == "cmoc"
     assert filesystem[str((root / ".cmoc" / "local").resolve())] == "read"
-    assert "sandbox_workspace_write" not in tomllib.loads(profile)
+    assert "sandbox_workspace_write" not in codex_override_config(override_args)
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         parameter,
         CmocConfig(),
         linked,
         extra_read_root=root,
     )
-    filesystem = _profile_permission_filesystem(profile)
+    filesystem = _override_permission_filesystem(override_args)
     assert filesystem[str((root / ".cmoc" / "local").resolve())] == "read"
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             parameter.model_class,
             parameter.reasoning_effort,
@@ -1148,14 +1161,14 @@ def test_codex_profile_allows_repo_local_read_from_linked_worktree(
         linked,
         extra_read_root=root,
     )
-    parsed = tomllib.loads(profile)
-    assert "sandbox_mode" not in parsed
+    parsed = codex_override_config(override_args)
+    assert "--sandbox" not in override_args
     assert parsed["permissions"]["cmoc"]["filesystem"][
         str((root / ".cmoc" / "local").resolve())
     ] == "read"
 
     with pytest.raises(CmocError, match="許可領域外"):
-        build_codex_profile(
+        build_codex_override_args(
             parameter,
             CmocConfig(),
             linked,
@@ -1164,7 +1177,7 @@ def test_codex_profile_allows_repo_local_read_from_linked_worktree(
         )
 
 
-def test_codex_profile_uses_allowed_top_level_roots_for_realization_write(
+def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(
     tmp_path: Path,
 ) -> None:
     root = make_repo(tmp_path)
@@ -1179,7 +1192,7 @@ def test_codex_profile_uses_allowed_top_level_roots_for_realization_write(
     run_git(root, "add", "-f", "build")
     run_git(root, "commit", "-m", "add realization dirs")
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
@@ -1192,17 +1205,17 @@ def test_codex_profile_uses_allowed_top_level_roots_for_realization_write(
     )
 
     expected_roots = {
-        *_standard_realization_profile_roots(root),
+        *_standard_realization_override_roots(root),
         str((root / "build" / "artifact.txt").resolve()),
     }
-    assert _profile_writable_roots(profile) == expected_roots
-    _assert_writable(profile, root / "src" / "main.py")
-    _assert_writable(profile, root / "src" / "new.py")
-    _assert_writable(profile, root / ".gitignore")
-    _assert_not_writable(profile, root / "build" / "new.txt")
-    _assert_not_writable(profile, root / ".agents" / "blocked.md")
+    assert _override_writable_roots(override_args) == expected_roots
+    _assert_writable(override_args, root / "src" / "main.py")
+    _assert_writable(override_args, root / "src" / "new.py")
+    _assert_writable(override_args, root / ".gitignore")
+    _assert_not_writable(override_args, root / "build" / "new.txt")
+    _assert_not_writable(override_args, root / ".agents" / "blocked.md")
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
@@ -1214,7 +1227,7 @@ def test_codex_profile_uses_allowed_top_level_roots_for_realization_write(
         root,
         extra_writable_paths=[root / "build" / "artifact.txt"],
     )
-    assert _profile_writable_roots(profile) == expected_roots
+    assert _override_writable_roots(override_args) == expected_roots
 
 
 @pytest.mark.parametrize(
@@ -1241,7 +1254,7 @@ def test_codex_profile_uses_allowed_top_level_roots_for_realization_write(
         (FileAccessMode.REPO_WRITE, "../outside.md"),
     ],
 )
-def test_codex_profile_rejects_disallowed_extra_writable_paths(
+def test_codex_overrides_rejects_disallowed_extra_writable_paths(
     tmp_path: Path, mode: FileAccessMode, extra: str
 ) -> None:
     root = tmp_path / "repo"
@@ -1254,7 +1267,7 @@ def test_codex_profile_rejects_disallowed_extra_writable_paths(
         (root / extra).write_text("memo\n")
 
     with pytest.raises(CmocError, match="追加書き込み許可 path"):
-        build_codex_profile(
+        build_codex_override_args(
             AgentCallParameter(
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
@@ -1268,7 +1281,7 @@ def test_codex_profile_rejects_disallowed_extra_writable_paths(
         )
 
 
-def test_codex_profile_allows_root_ancillary_extra_writable_path(
+def test_codex_overrides_allows_root_ancillary_extra_writable_path(
     tmp_path: Path,
 ) -> None:
     root = make_repo(tmp_path)
@@ -1279,7 +1292,7 @@ def test_codex_profile_allows_root_ancillary_extra_writable_path(
     run_git(root, "commit", "-m", "add gitignore")
 
     for extra in [root / ".gitignore", root / "README.md"]:
-        profile = build_codex_profile(
+        override_args = build_codex_override_args(
             AgentCallParameter(
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
@@ -1292,13 +1305,13 @@ def test_codex_profile_allows_root_ancillary_extra_writable_path(
             extra_writable_paths=[extra],
         )
 
-        assert _profile_writable_roots(
-            profile
-        ) == _standard_realization_profile_roots(root)
-        _assert_writable(profile, extra)
+        assert _override_writable_roots(
+            override_args
+        ) == _standard_realization_override_roots(root)
+        _assert_writable(override_args, extra)
 
 
-def test_codex_profile_uses_file_roots_for_session_join_conflict_resolution(
+def test_codex_overrides_uses_file_roots_for_session_join_conflict_resolution(
     tmp_path: Path,
 ) -> None:
     root = tmp_path / "repo"
@@ -1308,7 +1321,7 @@ def test_codex_profile_uses_file_roots_for_session_join_conflict_resolution(
     target = root / "oracle" / "spec.md"
     target.write_text("conflict\n")
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
@@ -1322,14 +1335,14 @@ def test_codex_profile_uses_file_roots_for_session_join_conflict_resolution(
         allow_oracle_conflict_writes=True,
     )
 
-    assert _profile_writable_roots(profile) == {
-        *_standard_realization_profile_roots(root),
+    assert _override_writable_roots(override_args) == {
+        *_standard_realization_override_roots(root),
         str(target.resolve()),
     }
-    _assert_writable(profile, target)
+    _assert_writable(override_args, target)
 
 
-def test_codex_profile_allows_session_join_conflict_targets_under_allowed_dirs(
+def test_codex_overrides_allows_session_join_conflict_targets_under_allowed_dirs(
     tmp_path: Path,
 ) -> None:
     root = tmp_path / "repo"
@@ -1340,7 +1353,7 @@ def test_codex_profile_allows_session_join_conflict_targets_under_allowed_dirs(
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("conflict\n")
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
@@ -1354,15 +1367,15 @@ def test_codex_profile_allows_session_join_conflict_targets_under_allowed_dirs(
         allow_oracle_conflict_writes=True,
     )
 
-    assert _profile_writable_roots(profile) == {
-        *_standard_realization_profile_roots(root),
+    assert _override_writable_roots(override_args) == {
+        *_standard_realization_override_roots(root),
         str(target.resolve()),
     }
-    _assert_writable(profile, target)
+    _assert_writable(override_args, target)
 
 
 @pytest.mark.parametrize("extra", ["oracle/INDEX.md", "oracle/AGENTS.md"])
-def test_codex_profile_rejects_session_join_conflict_targets_with_denied_names(
+def test_codex_overrides_rejects_session_join_conflict_targets_with_denied_names(
     tmp_path: Path, extra: str
 ) -> None:
     root = tmp_path / "repo"
@@ -1373,7 +1386,7 @@ def test_codex_profile_rejects_session_join_conflict_targets_with_denied_names(
     target.write_text("conflict\n")
 
     with pytest.raises(CmocError, match="追加書き込み許可 path"):
-        build_codex_profile(
+        build_codex_override_args(
             AgentCallParameter(
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
@@ -1389,7 +1402,7 @@ def test_codex_profile_rejects_session_join_conflict_targets_with_denied_names(
 
 
 @pytest.mark.parametrize("extra", ["INDEX.md", "AGENTS.md"])
-def test_codex_profile_rejects_root_file_session_join_conflict_targets(
+def test_codex_overrides_rejects_root_file_session_join_conflict_targets(
     tmp_path: Path, extra: str
 ) -> None:
     root = tmp_path / "repo"
@@ -1399,7 +1412,7 @@ def test_codex_profile_rejects_root_file_session_join_conflict_targets(
     target.write_text("conflict\n")
 
     with pytest.raises(CmocError, match="追加書き込み許可 path"):
-        build_codex_profile(
+        build_codex_override_args(
             AgentCallParameter(
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
@@ -1414,7 +1427,7 @@ def test_codex_profile_rejects_root_file_session_join_conflict_targets(
         )
 
 
-def test_codex_profile_allows_root_readme_session_join_conflict_target(
+def test_codex_overrides_allows_root_readme_session_join_conflict_target(
     tmp_path: Path,
 ) -> None:
     root = tmp_path / "repo"
@@ -1423,7 +1436,7 @@ def test_codex_profile_allows_root_readme_session_join_conflict_target(
     target = root / "README.md"
     target.write_text("conflict\n")
 
-    profile = build_codex_profile(
+    override_args = build_codex_override_args(
         AgentCallParameter(
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
@@ -1437,11 +1450,11 @@ def test_codex_profile_allows_root_readme_session_join_conflict_target(
         allow_oracle_conflict_writes=True,
     )
 
-    assert _profile_writable_roots(profile) == {
-        *_standard_realization_profile_roots(root),
+    assert _override_writable_roots(override_args) == {
+        *_standard_realization_override_roots(root),
         str((root / "README.md").resolve()),
     }
-    _assert_writable(profile, target)
+    _assert_writable(override_args, target)
 
 
 @pytest.mark.parametrize(
@@ -1454,7 +1467,7 @@ def test_codex_profile_allows_root_readme_session_join_conflict_target(
         "memo/blocked.md",
     ],
 )
-def test_codex_profile_rejects_runtime_paths_even_for_session_join_conflict(
+def test_codex_overrides_rejects_runtime_paths_even_for_session_join_conflict(
     tmp_path: Path, extra: str
 ) -> None:
     root = tmp_path / "repo"
@@ -1462,7 +1475,7 @@ def test_codex_profile_rejects_runtime_paths_even_for_session_join_conflict(
     (root / "src").mkdir()
 
     with pytest.raises(CmocError, match="追加書き込み許可 path"):
-        build_codex_profile(
+        build_codex_override_args(
             AgentCallParameter(
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,

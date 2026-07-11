@@ -23,9 +23,11 @@ from config.cmoc_config import CmocConfig
 import pytest
 
 from _support import (
+    codex_arg_value,
+    codex_override_config,
     make_repo,
     setup_codex_home,
-    stub_codex_profile,
+    stub_codex_overrides,
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
@@ -137,8 +139,10 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert argv_calls[0][-1] == "-"
     assert all(record["codex_home"] == str(codex_home) for record in call_records)
     assert call_records[1]["stdin"] == probe_prompt
-    assert argv_calls[1][:3] == ["exec", "--skip-git-repo-check", "--profile"]
-    assert argv_calls[1][argv_calls[1].index("--profile") + 1].startswith("cmoc_")
+    assert argv_calls[1][:2] == ["exec", "--skip-git-repo-check"]
+    assert codex_arg_value(argv_calls[1], "--model") == "gpt-5.4-mini"
+    assert codex_override_config(argv_calls[1])["model_reasoning_effort"] == "low"
+    assert "--profile" not in argv_calls[1]
     assert "--json" in argv_calls[1]
     assert "--output-last-message" in argv_calls[1]
     assert argv_calls[1][-1] == "-"
@@ -165,10 +169,8 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     )
     assert len(probe_logs) == 1
     assert probe_logs[0]["argv"][1:] == argv_calls[1]
-    assert (
-        probe_logs[0]["profile_name"]
-        == argv_calls[1][argv_calls[1].index("--profile") + 1]
-    )
+    assert "profile_name" not in probe_logs[0]
+    assert "profile_path" not in probe_logs[0]
     assert probe_logs[0]["model_class"] == "minimum"
     assert probe_logs[0]["reasoning_effort"] == "low"
     assert probe_logs[0]["file_access_mode"] == "readonly"
@@ -192,11 +194,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     resume_entry = next((path, log) for path, log in main_entries if log is resume_log)
     assert initial_log["argv"][1:] == argv_calls[0]
     assert resume_log["argv"][1:] == argv_calls[2]
-    assert probe_logs[0]["profile_name"] != initial_log["profile_name"]
-    assert probe_logs[0]["profile_path"] != initial_log["profile_path"]
-    assert Path(probe_logs[0]["profile_path"]).read_text() != Path(
-        initial_log["profile_path"]
-    ).read_text()
+    assert codex_arg_value(probe_logs[0]["argv"], "--model") == "gpt-5.4-mini"
+    assert codex_arg_value(initial_log["argv"], "--model") == "gpt-5.6-sol"
+    assert "--profile" not in initial_log["argv"]
+    assert "profile_name" not in initial_log
+    assert "profile_path" not in initial_log
     assert len({log["stdout_log_path"] for log in main_logs}) == 2
     assert [prompt_log_text(log["prompt_log_path"]) for log in main_logs] == [
         "prompt",
@@ -270,7 +272,7 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     calls: list[str] = []
     parameter = AgentCallParameter(
@@ -329,7 +331,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
         codex_home.mkdir()
         (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     probe_prompt = stub_quota_probe_builder(monkeypatch)
     records: list[tuple[str, Path, Path, Path, Path]] = []
@@ -407,7 +409,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -469,7 +471,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -485,7 +487,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
             "stdin = sys.stdin.read()",
             "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
             f"if stdin == {probe_prompt!r}:",
-            "    print(json.dumps({'type':'error','message':'profile is broken'}))",
+            "    print(json.dumps({'type':'error','message':'override is broken'}))",
             "    sys.exit(2)",
             "print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
             "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
@@ -522,7 +524,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     assert [event["status"] for event in codex_events] == ["quota_waiting", "failed"]
     assert codex_events[1]["purpose"] == "quota availability probe"
     assert codex_events[1]["returncode"] == 2
-    assert "profile is broken" in codex_events[1]["error"]
+    assert "override is broken" in codex_events[1]["error"]
 
 
 def test_quota_poll_limit_stops_before_probe(
@@ -530,7 +532,7 @@ def test_quota_poll_limit_stops_before_probe(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "quota_limit_calls.jsonl"
@@ -581,7 +583,7 @@ def test_quota_probe_failure_reports_probe_error(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -603,7 +605,7 @@ def test_quota_probe_failure_reports_probe_error(
             f"if stdin == {probe_prompt!r}:",
             "    pathlib.Path('src').mkdir(exist_ok=True)",
             "    pathlib.Path('src/probe.py').write_text('blocked\\n')",
-            "    print(json.dumps({'type':'error','message':'profile is broken'}))",
+            "    print(json.dumps({'type':'error','message':'override is broken'}))",
             "    sys.exit(2)",
             "raise AssertionError('unexpected extra call')",
         ],
@@ -636,7 +638,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -705,7 +707,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()

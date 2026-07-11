@@ -9,7 +9,7 @@ from _support import (
     codex_parameter,
     make_repo,
     setup_codex_home,
-    stub_codex_profile,
+    stub_codex_overrides,
 )
 from commons.runtime_codex import run_codex_exec, run_codex_tui
 
@@ -20,7 +20,7 @@ def test_codex_runtime_reports_missing_codex_cli(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     real_run = subprocess.run
 
     def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
