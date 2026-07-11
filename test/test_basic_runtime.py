@@ -99,17 +99,37 @@ def _override_write_roots(args: list[str]) -> set[str]:
     }
 
 
+def _most_specific_permission_access(args: list[str], path: Path) -> str | None:
+    target = path.resolve()
+    matches = [
+        (Path(allowed).resolve(), access)
+        for allowed, access in _override_permission_filesystem(args).items()
+        if target.is_relative_to(Path(allowed).resolve())
+    ]
+    return max(matches, key=lambda item: len(item[0].parts))[1] if matches else None
+
+
 def _assert_writable(args: list[str], path: Path) -> None:
+    access = _most_specific_permission_access(args, path)
+    if access is not None:
+        assert access == "write"
+        return
     target = path.resolve()
     assert any(
-        target.is_relative_to(Path(root)) for root in _override_write_roots(args)
+        target.is_relative_to(Path(root))
+        for root in _override_write_roots(args)
     )
 
 
 def _assert_not_writable(args: list[str], path: Path) -> None:
+    access = _most_specific_permission_access(args, path)
+    if access is not None:
+        assert access != "write"
+        return
     target = path.resolve()
     assert not any(
-        target.is_relative_to(Path(root)) for root in _override_write_roots(args)
+        target.is_relative_to(Path(root))
+        for root in _override_write_roots(args)
     )
 
 
@@ -825,14 +845,7 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
         for mode in FileAccessMode
     }
 
-    for mode in (FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE):
-        assert codex_arg_value(overrides[mode], "--sandbox") == "workspace-write"
-        assert "sandbox_workspace_write" in codex_override_config(overrides[mode])
-    for mode in (
-        FileAccessMode.READONLY,
-        FileAccessMode.PURE_ORACLE_READ,
-        FileAccessMode.PURE_ORACLE_WRITE,
-    ):
+    for mode in FileAccessMode:
         parsed = codex_override_config(overrides[mode])
         assert "--sandbox" not in overrides[mode]
         assert "sandbox_workspace_write" not in parsed
@@ -852,17 +865,20 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     assert _override_permission_filesystem(
         overrides[FileAccessMode.PURE_ORACLE_READ]
     ) == {str((root / "oracle").resolve()): "read"}
-    assert _override_permission_filesystem(
+    pure_oracle_write_filesystem = _override_permission_filesystem(
         overrides[FileAccessMode.PURE_ORACLE_WRITE]
-    ) == {
-        str((root / "oracle").resolve()): "write",
-    }
+    )
+    assert pure_oracle_write_filesystem[str((root / "oracle").resolve())] == "write"
+    for name in ("AGENTS.md", "INDEX.md"):
+        assert pure_oracle_write_filesystem[
+            str((root / "oracle" / name).resolve())
+        ] == "read"
     _assert_not_permission_accessible(
         overrides[FileAccessMode.PURE_ORACLE_WRITE], root / "src" / "existing.py"
     )
     realization_roots = _standard_realization_override_roots(root)
-    assert _override_writable_roots(
-        overrides[FileAccessMode.REALIZATION_WRITE]
+    assert _override_permission_roots(
+        overrides[FileAccessMode.REALIZATION_WRITE], "write"
     ) == realization_roots
     assert _override_writable_roots(overrides[FileAccessMode.READONLY]) == set()
     assert _override_writable_roots(overrides[FileAccessMode.PURE_ORACLE_READ]) == set()
@@ -876,17 +892,12 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     assert _override_permission_roots(
         overrides[FileAccessMode.PURE_ORACLE_WRITE], "write"
     ) == {str((root / "oracle").resolve())}
-    assert _override_writable_roots(overrides[FileAccessMode.REPO_WRITE]) == {
+    assert _override_permission_roots(
+        overrides[FileAccessMode.REPO_WRITE], "write"
+    ) == {
         *realization_roots,
         str((root / "oracle").resolve()),
     }
-    for mode, override_args in overrides.items():
-        if mode == FileAccessMode.NO_RULE:
-            continue
-        assert not any(
-            (root / ".agents").resolve().is_relative_to(Path(path))
-            for path in _override_writable_roots(override_args)
-        )
     _assert_writable(
         overrides[FileAccessMode.REALIZATION_WRITE], root / "src" / "existing.py"
     )
@@ -897,6 +908,11 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
         overrides[FileAccessMode.REALIZATION_WRITE], root / "test" / "test_new.py"
     )
     _assert_not_writable(overrides[FileAccessMode.REALIZATION_WRITE], root / "INDEX.md")
+    for path in (root / "src" / "INDEX.md", root / "test" / "INDEX.md"):
+        assert _override_permission_filesystem(
+            overrides[FileAccessMode.REALIZATION_WRITE]
+        )[str(path.resolve())] == "read"
+        _assert_not_writable(overrides[FileAccessMode.REALIZATION_WRITE], path)
     _assert_writable(overrides[FileAccessMode.REALIZATION_WRITE], root / ".gitignore")
     _assert_not_writable(
         overrides[FileAccessMode.REALIZATION_WRITE], root / ".agents" / "blocked.md"
@@ -904,6 +920,12 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_not_writable(
         overrides[FileAccessMode.PURE_ORACLE_READ], root / "oracle" / "blocked.md"
     )
+    for name in ("AGENTS.md", "INDEX.md"):
+        path = root / "oracle" / name
+        assert _override_permission_filesystem(
+            overrides[FileAccessMode.REPO_WRITE]
+        )[str(path.resolve())] == "read"
+        _assert_not_writable(overrides[FileAccessMode.REPO_WRITE], path)
     _assert_writable(
         overrides[FileAccessMode.REPO_WRITE], root / "oracle" / "spec.md"
     )
@@ -932,7 +954,7 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
         root,
         extra_writable_paths=[extra],
     )
-    assert _override_writable_roots(override_args) == realization_roots
+    assert _override_permission_roots(override_args, "write") == realization_roots
 
     repo_extra = root / "new_dir"
     override_args = build_codex_override_args(
@@ -947,7 +969,9 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
         root,
         extra_writable_paths=[repo_extra],
     )
-    assert str(repo_extra.resolve()) in _override_writable_roots(override_args)
+    assert str(repo_extra.resolve()) in _override_permission_roots(
+        override_args, "write"
+    )
 
     with pytest.raises(CmocError, match="許可領域外"):
         build_codex_override_args(
@@ -1203,7 +1227,7 @@ def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(
         *_standard_realization_override_roots(root),
         str((root / "build" / "artifact.txt").resolve()),
     }
-    assert _override_writable_roots(override_args) == expected_roots
+    assert _override_permission_roots(override_args, "write") == expected_roots
     _assert_writable(override_args, root / "src" / "main.py")
     _assert_writable(override_args, root / "src" / "new.py")
     _assert_writable(override_args, root / ".gitignore")
@@ -1222,7 +1246,7 @@ def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(
         root,
         extra_writable_paths=[root / "build" / "artifact.txt"],
     )
-    assert _override_writable_roots(override_args) == expected_roots
+    assert _override_permission_roots(override_args, "write") == expected_roots
 
 
 @pytest.mark.parametrize(
@@ -1300,8 +1324,8 @@ def test_codex_overrides_allows_root_ancillary_extra_writable_path(
             extra_writable_paths=[extra],
         )
 
-        assert _override_writable_roots(
-            override_args
+        assert _override_permission_roots(
+            override_args, "write"
         ) == _standard_realization_override_roots(root)
         _assert_writable(override_args, extra)
 
@@ -1330,7 +1354,7 @@ def test_codex_overrides_uses_file_roots_for_session_join_conflict_resolution(
         allow_oracle_conflict_writes=True,
     )
 
-    assert _override_writable_roots(override_args) == {
+    assert _override_permission_roots(override_args, "write") == {
         *_standard_realization_override_roots(root),
         str(target.resolve()),
     }
@@ -1362,7 +1386,7 @@ def test_codex_overrides_allows_session_join_conflict_targets_under_allowed_dirs
         allow_oracle_conflict_writes=True,
     )
 
-    assert _override_writable_roots(override_args) == {
+    assert _override_permission_roots(override_args, "write") == {
         *_standard_realization_override_roots(root),
         str(target.resolve()),
     }
@@ -1445,7 +1469,7 @@ def test_codex_overrides_allows_root_readme_session_join_conflict_target(
         allow_oracle_conflict_writes=True,
     )
 
-    assert _override_writable_roots(override_args) == {
+    assert _override_permission_roots(override_args, "write") == {
         *_standard_realization_override_roots(root),
         str((root / "README.md").resolve()),
     }

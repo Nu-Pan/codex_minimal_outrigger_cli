@@ -422,35 +422,6 @@ def _config_override(key: str, toml_value: str) -> list[str]:
     return ["--config", f"{key}={toml_value}"]
 
 
-def _workspace_write_override_args(writable_roots: list[Path]) -> list[str]:
-    """workspace-write の追加 writable roots を argv で上書きする。"""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # FileAccessMode の細かい deny は prompt 側にも載せるが、Codex config
-    # で表現できる sandbox 境界は argv でも必ず上書きしてから起動する。
-    roots = ", ".join(_toml_string(str(path)) for path in writable_roots)
-    return _config_override(
-        "sandbox_workspace_write.writable_roots", f"[{roots}]"
-    )
-
-
-def _needs_permission_profile(
-    mode: FileAccessMode,
-    root: Path,
-    extra_read_paths: list[Path] | None,
-    extra_read_root: Path | None,
-) -> bool:
-    """sandbox mode だけで表現できない読み取り境界を判定する。"""
-    return mode in {
-        FileAccessMode.READONLY,
-        FileAccessMode.PURE_ORACLE_READ,
-        FileAccessMode.PURE_ORACLE_WRITE,
-    } or (
-        mode != FileAccessMode.NO_RULE
-        and extra_read_root is not None
-        and extra_read_root.resolve() != root
-    ) or any(not path.resolve().is_relative_to(root) for path in extra_read_paths or [])
-
-
 def _read_roots_for_permission_profile(
     mode: FileAccessMode,
     root: Path,
@@ -507,6 +478,7 @@ def _top_level_read_roots(mode: FileAccessMode, root: Path) -> list[Path]:
 def _permission_profile_override_args(
     read_roots: list[Path],
     writable_roots: list[Path],
+    protected_paths: list[Path],
 ) -> list[str]:
     """Codex beta permission profile を config override argv で渡す。"""
     # <work-root>/oracle/doc/app_spec/sub_command/tui.md
@@ -516,6 +488,9 @@ def _permission_profile_override_args(
     # workspace writable"; permission profiles can.
     entries = {str(path): "read" for path in read_roots}
     entries.update({str(path): "write" for path in writable_roots})
+    # A parent write grant is needed for new files.  A narrower read grant
+    # keeps existing AGENTS.md/INDEX.md files protected inside that parent.
+    entries.update({str(path): "read" for path in protected_paths})
     filesystem = ", ".join(
         f"{_toml_string(path)} = {_toml_string(access)}"
         for path, access in sorted(entries.items())
@@ -531,6 +506,22 @@ def _permission_profile_override_args(
             f"permissions.{_CMOC_PERMISSION_PROFILE}", permission
         ),
     ]
+
+
+def _protected_writable_paths(writable_roots: list[Path]) -> list[Path]:
+    """書き込み root 配下の AGENTS.md/INDEX.md を具体的な read rule にする。"""
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    paths: set[Path] = set()
+    for root in writable_roots:
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if path.name not in _DENIED_WRITE_FILE_NAMES:
+                continue
+            resolved = path.resolve()
+            if resolved.is_relative_to(root.resolve()):
+                paths.add(resolved)
+    return sorted(paths)
 
 
 def _ollama_provider_override_args() -> list[str]:
@@ -579,7 +570,6 @@ def build_codex_override_args(
     use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"
     if use_cmoc_managed_ollama:
         args.extend(_ollama_provider_override_args())
-    use_permission_profile = False
     if root is not None:
         root = root.resolve()
         read_root = (extra_read_root or root).resolve()
@@ -589,10 +579,7 @@ def build_codex_override_args(
             extra_read_paths,
             extra_read_root=read_root,
         )
-        use_permission_profile = _needs_permission_profile(
-            parameter.file_access_mode, root, extra_read_paths, read_root
-        )
-    if not use_permission_profile:
+    else:
         sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
         args.extend(["--sandbox", sandbox_mode])
     if root is not None:
@@ -602,17 +589,15 @@ def build_codex_override_args(
             extra_writable_paths,
             allow_oracle_conflict_writes,
         )
-        if use_permission_profile:
-            args.extend(
-                _permission_profile_override_args(
-                    _read_roots_for_permission_profile(
-                        parameter.file_access_mode, root, extra_read_paths, read_root
-                    ),
-                    writable_roots,
-                )
+        args.extend(
+            _permission_profile_override_args(
+                _read_roots_for_permission_profile(
+                    parameter.file_access_mode, root, extra_read_paths, read_root
+                ),
+                writable_roots,
+                _protected_writable_paths(writable_roots),
             )
-        else:
-            args.extend(_workspace_write_override_args(writable_roots))
+        )
     return args
 
 

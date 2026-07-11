@@ -160,13 +160,14 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
     assert Path(record["stdin_fd"]).resolve() == result.prompt_log_path.resolve()
-    assert codex_arg_value(record["args"], "--sandbox") == "workspace-write"
+    assert "--sandbox" not in record["args"]
     override_config = codex_override_config(record["args"])
     assert override_config["model_reasoning_effort"] == "low"
-    writable_roots = set(
-        override_config["sandbox_workspace_write"]["writable_roots"]
-    )
-    assert writable_roots == {
+    assert override_config["default_permissions"] == "cmoc"
+    filesystem = override_config["permissions"]["cmoc"]["filesystem"]
+    assert {
+        path for path, access in filesystem.items() if access == "write"
+    } == {
         str(path.resolve())
         for path in (
             root / ".gitignore",
@@ -455,9 +456,10 @@ def test_run_codex_exec_overrides_do_not_open_agents_tree(
     )
 
     args = json.loads(recorder.read_text())
-    writable_roots = codex_override_config(args)["sandbox_workspace_write"][
-        "writable_roots"
-    ]
+    filesystem = codex_override_config(args)["permissions"]["cmoc"]["filesystem"]
     agents = (root / ".agents").resolve()
-    assert not any(agents.is_relative_to(Path(path)) for path in writable_roots)
+    assert not any(
+        access == "write" and agents.is_relative_to(Path(path))
+        for path, access in filesystem.items()
+    )
     assert "--profile" not in args

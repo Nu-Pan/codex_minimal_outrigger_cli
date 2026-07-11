@@ -500,19 +500,17 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_overrides(
             extra_writable_paths=kwargs["extra_writable_paths"],
             allow_oracle_conflict_writes=kwargs["allow_oracle_conflict_writes"],
         )
-        writable_roots = set(
-            next(
-                tomllib.loads(override_args[index + 1])["sandbox_workspace_write"][
-                    "writable_roots"
-                ]
-                for index, arg in enumerate(override_args)
-                if arg == "--config"
-                and override_args[index + 1].startswith(
-                    "sandbox_workspace_write.writable_roots="
-                )
-            )
+        filesystem = next(
+            tomllib.loads(override_args[index + 1])["permissions"]["cmoc"][
+                "filesystem"
+            ]
+            for index, arg in enumerate(override_args)
+            if arg == "--config"
+            and override_args[index + 1].startswith("permissions.cmoc=")
         )
-        assert writable_roots == {
+        assert {
+            path for path, access in filesystem.items() if access == "write"
+        } == {
             str(path.resolve())
             for path in (
                 root / ".gitignore",
