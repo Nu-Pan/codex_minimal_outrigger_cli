@@ -20,4 +20,6 @@ for _path in _oracle_spec.submodule_search_locations:
     if _path not in __path__:
         __path__.append(_path)
 
-sys.modules[f"{__name__}.basic"] = import_module("oracle.acp_builder.basic")
+_basic_module = import_module("oracle.acp_builder.basic")
+sys.modules[f"{__name__}.basic"] = _basic_module
+setattr(sys.modules[__name__], "basic", _basic_module)
