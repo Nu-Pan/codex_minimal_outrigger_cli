@@ -26,7 +26,7 @@
 - cmoc がエディタを起動して、そこにユーザーがオリジナルプロンプトを入力する
 - 起動するエディタは (高優先度) `code` --> `nano` --> `vim` --> `vi` (低優先度) の順でフォールバックする
 - `code` で起動する場合は必ず `--wait` を付けること
-- エディタの編集対象は `<repo-root>/.cmoc/local/log/tui/<time-stamp>_orig.md` とする
+- エディタの編集対象は `<repo-root>/.cmoc/gu/ar/log/tui/<time-stamp>_orig.md` とする
 - `<time-stamp>_orig.md` は初期値として以下の文面を持つこととする
     ```markdown
     <!--

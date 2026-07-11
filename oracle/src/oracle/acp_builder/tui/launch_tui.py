@@ -73,7 +73,8 @@ def build_tui_launch_tui_parameter(
     complete_prompt_path = (
         resolve_repo_root()
         / ".cmoc"
-        / "local"
+        / "gu"
+        / "ar"
         / "log"
         / "tui"
         / f"{time_stamp}_cmpl.md"

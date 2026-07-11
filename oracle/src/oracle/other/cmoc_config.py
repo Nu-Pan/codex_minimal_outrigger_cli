@@ -2,12 +2,12 @@
 # cmoc config
 
 - cmoc の挙動設定のうち、開発対象リポジトリごとに変わりうる事柄は `CmocConfig` に集約する
-- `CmocConfig` は `<repo-root>/.cmoc/config.json` として永続化される
+- `CmocConfig` は `<repo-root>/.cmoc/gt/ar/config.json` として永続化される
 - `CmocConfig` を json にシリアライズする際、メンバーの順序は保持される
 - Enum 系を継承したクラスのインスタンスは value 化して json に保存する
     - e.g. `ModelClass.MAINSTREAM` --> `mainstream`
-- `<repo-root>/.cmoc/config.json` は `cmoc doctor` によって生成・同期される
-- `<repo-root>/.cmoc/config.json` は人間によって編集・調整される
+- `<repo-root>/.cmoc/gt/ar/config.json` は `cmoc doctor` によって生成・同期される
+- `<repo-root>/.cmoc/gt/ar/config.json` は人間によって編集・調整される
 """
 
 # std

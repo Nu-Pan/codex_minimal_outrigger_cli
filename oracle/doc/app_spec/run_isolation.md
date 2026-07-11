@@ -37,6 +37,6 @@
 
 ## `<run-root>` 外への書き込み例外規則
 
-- 原則として、cmoc の run 作業は `<run-root>` 内のみ読み書き可能である
+- 原則として、cmoc の run 作業は `<run-root>` ツリー内のみ読み書き可能である
 - ただし、例外として明示したケースにおいては、cmoc の run 作業として `<repo-root>` 配下のファイルを読み書きしても良い
-- e.g. cmoc 実行中のログ・ステートファイルは `<run-root>/.cmoc/local/...` ではなく `<repo-root>/.cmoc/local/...` に書き込まなければならない
+    - e.g. cmoc 実行中のログ・ステートファイルは `<run-root>/.cmoc/gu` ツリー内ではなく `<repo-root>/.cmoc/gu` ツリー内に書き込まなければならない

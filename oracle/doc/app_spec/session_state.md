@@ -3,7 +3,7 @@
 ## 概要
 
 - cmoc ワ―フロー上発生する fork, join の挙動を一意に定めるための情報をファイル永続化するための json ファイル
-- 保存先は `<repo-root>/.cmoc/local/session/<session-id>.json`
+- 保存先は `<repo-root>/.cmoc/gu/ar/session/<session-id>.json`
 
 
 ## スキーマ設計の基本原則

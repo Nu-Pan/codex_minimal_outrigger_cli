@@ -127,7 +127,7 @@
     - `<cmoc-apply-branch>` 上の全ての変更内容に対する要約
         - この `cmoc apply fork` で行った作業内容だけの要約に限定する
         - 変更内容の意味論に基づいたカテゴリ分けを行うこと
-- レポート本体は `<repo-root>/.cmoc/local/report/apply/fork/<time-stamp>.md` にファイルに保存する
+- レポート本体は `<repo-root>/.cmoc/gu/ar/report/apply/fork/<time-stamp>.md` にファイルに保存する
 - 作成したレポートのフルパスを標準出力に流すこと (内容は流さない)
 
 ## `<cmoc-apply-branch>` 上の全ての変更内容に対する要約の生成方法
