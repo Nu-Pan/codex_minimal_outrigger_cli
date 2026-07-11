@@ -134,18 +134,18 @@
 # `test`
 
 ## Summary
-- `test` は、cmoc の realization test を集める上位ディレクトリ。CLI サブコマンド、runtime 共通基盤、prompt 生成、indexed routing 更新、Codex 実行ラッパー、session/apply/review/doctor の外部挙動を、それぞれの責務ごとに分けたテスト群へ案内する。
-- 共通補助や状態共有のテスト基盤を読む入口は `_support.py`、設定や runtime 共通契約は `test_basic_runtime.py`、prompt 標準と renderer は `test_prompt_parts.py` と `test_struct_doc_rendering.py`、Codex 実行系は `test_codex_runtime_*.py`、session/apply/review/doctor/indexing は各サブコマンドの CLI テストへ進む。
+- `test` 配下の realization test をまとめて読むための入口。CLI や runtime の外部挙動、共通 support、prompt/renderer、packaged import など、実装ではなく観測可能な振る舞いを確認したいときにここから対象を選ぶ。
+- 個別の helper やテスト本体を直接読む前に、まず目的別にどの支援モジュールかどの回帰テスト群かを絞り込むための案内を置く。
 
 ## Read this when
-- CLI や runtime の変更後に、対応する外部挙動の回帰テストを探したいとき。
-- 共通 fixture、fake 外部コマンド、Git/worktree セットアップ、Codex 実行支援を使うテストを書くか修正するとき。
-- prompt parts、structured prompt、StructDoc rendering、INDEX 更新、session/apply/review/doctor の CLI 境界を確認するとき。
+- 特定のサブコマンドや runtime の外部挙動を変えた後、対応する回帰テスト群を探したいとき。
+- 共通の test support がどのテスト群に使われているかを確認したいとき。
+- prompt 組み立て、StructDoc rendering、packaged import のようなテスト対象ごとの入口を見分けたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの詳細を追うだけなら、この上位ディレクトリではなく該当テストファイルを直接読む。
-- テスト支援関数の追加や挙動変更が不要なら、`_support.py` は読まなくてよい。
-- 正本仕様そのものを確認したいなら、`oracle` 側の該当文書や実装を先に読む。
+- 実装本体や oracle 側の正本仕様を確認したいときは、この配下ではなく該当する realization implementation または oracle file を読む。
+- 個別テストの期待値や細かな分岐を追いたいだけなら、この案内ではなく対応するテスト本文を直接読む。
+- INDEX.md の書き方やルーティング規則そのものを確認したいときは、対象配下の本文ではなくルーティング仕様を読む。
 
 ## hash
-- 973e72e3f05c824ed4bd83766c6c8786a5bdd87d012cf8b307ca69dafc9a04e8
+- 73b8d0a464938be3949a21c77f57b989dafe077af92db95fa50ae5167fd86b1b
