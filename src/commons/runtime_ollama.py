@@ -153,20 +153,29 @@ def _download_ollama_archive(path: Path) -> None:
 
 
 def _ensure_ollama_service(executable: Path) -> None:
-    """managed Ollama の systemd user service を現在の executable で起動する。"""
-    _write_ollama_service_file(executable)
+    """managed Ollama の unit と active process を同期して起動する。"""
+    service_changed = _write_ollama_service_file(executable)
     reload_result = _run_systemctl(["daemon-reload"])
     if reload_result.returncode != 0:
         _raise_systemctl_error(
             "ollama service 設定を再読み込みできませんでした。", reload_result
         )
+    service_was_active = _service_active()
     start_result = _run_systemctl(["enable", "--now", _OLLAMA_SERVICE_NAME])
     if start_result.returncode != 0:
         _raise_systemctl_error("ollama service を起動できませんでした。", start_result)
+    if service_was_active and (
+        service_changed or not _service_process_matches(executable)
+    ):
+        restart_result = _run_systemctl(["restart", _OLLAMA_SERVICE_NAME])
+        if restart_result.returncode != 0:
+            _raise_systemctl_error(
+                "ollama service を再起動できませんでした。", restart_result
+            )
 
 
-def _write_ollama_service_file(executable: Path) -> None:
-    """固定 port と管理 model store を使う user service file を同期する。"""
+def _write_ollama_service_file(executable: Path) -> bool:
+    """固定 port と管理 model store を使う unit を同期し、変更有無を返す。"""
     models_dir = executable.parents[1] / "models"
     models_dir.mkdir(parents=True, exist_ok=True)
     service_path = _ollama_service_file()
@@ -188,8 +197,16 @@ def _write_ollama_service_file(executable: Path) -> None:
             "",
         ]
     )
-    if not service_path.exists() or service_path.read_text() != text:
+    changed = not service_path.exists() or service_path.read_text() != text
+    if changed:
         service_path.write_text(text)
+    return changed
+
+
+def _service_process_matches(executable: Path) -> bool:
+    """active service の MainPID が期待する managed Ollama executable か調べる。"""
+    main_pid = _service_main_pid()
+    return main_pid is not None and _process_argv_uses_executable(main_pid, executable)
 
 
 def _verify_ollama_service(executable: Path) -> None:

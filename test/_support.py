@@ -205,18 +205,141 @@ def _write_fake_ollama(path: Path) -> None:
 
                 def do_POST(self):
                     global loaded_model
-                    if self.path != "/api/generate":
+                    length = int(self.headers.get("content-length", "0"))
+                    payload = json.loads(self.rfile.read(length))
+                    if self.path == "/api/generate":
+                        assert payload["model"]
+                        loaded_model = payload["model"]
+                        assert payload["stream"] is False
+                        self.send_response(200)
+                        self.end_headers()
+                        self.wfile.write(b'{"done":true}')
+                        return
+                    if self.path != "/v1/responses":
                         self.send_response(404)
                         self.end_headers()
                         return
-                    length = int(self.headers.get("content-length", "0"))
-                    payload = json.loads(self.rfile.read(length))
-                    assert payload["model"]
-                    loaded_model = payload["model"]
-                    assert payload["stream"] is False
+                    loaded_model = payload.get("model") or loaded_model
+                    text = '{"result":"cmoc-real-codex-provider"}'
+                    message = {
+                        "id": "msg-cmoc",
+                        "type": "message",
+                        "status": "completed",
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "output_text",
+                                "text": text,
+                                "annotations": [],
+                            }
+                        ],
+                    }
+                    response = {
+                        "id": "resp-cmoc",
+                        "object": "response",
+                        "created_at": 0,
+                        "completed_at": 0,
+                        "status": "completed",
+                        "error": None,
+                        "incomplete_details": None,
+                        "input": [],
+                        "instructions": None,
+                        "max_output_tokens": None,
+                        "model": loaded_model,
+                        "output": [message],
+                        "previous_response_id": None,
+                        "reasoning": {"effort": None, "summary": None},
+                        "store": False,
+                        "temperature": 1,
+                        "text": {"format": {"type": "text"}},
+                        "tool_choice": "auto",
+                        "tools": [],
+                        "top_p": 1,
+                        "truncation": "disabled",
+                        "usage": {
+                            "input_tokens": 0,
+                            "input_tokens_details": {"cached_tokens": 0},
+                            "output_tokens": 0,
+                            "output_tokens_details": {"reasoning_tokens": 0},
+                            "total_tokens": 0,
+                        },
+                        "user": None,
+                        "metadata": {},
+                    }
                     self.send_response(200)
+                    if payload.get("stream"):
+                        self.send_header("Content-Type", "text/event-stream")
+                    else:
+                        self.send_header("Content-Type", "application/json")
                     self.end_headers()
-                    self.wfile.write(b'{"done":true}')
+                    if payload.get("stream"):
+                        message_in_progress = {
+                            **message, "status": "in_progress", "content": []
+                        }
+                        part_in_progress = {
+                            "type": "output_text", "text": "", "annotations": []
+                        }
+                        events = [
+                            (
+                                "response.output_item.added",
+                                {"output_index": 0, "item": message_in_progress},
+                            ),
+                            (
+                                "response.content_part.added",
+                                {
+                                    "item_id": "msg-cmoc",
+                                    "output_index": 0,
+                                    "content_index": 0,
+                                    "part": part_in_progress,
+                                },
+                            ),
+                            (
+                                "response.output_text.delta",
+                                {
+                                    "item_id": "msg-cmoc",
+                                    "output_index": 0,
+                                    "content_index": 0,
+                                    "delta": text,
+                                },
+                            ),
+                            (
+                                "response.output_text.done",
+                                {
+                                    "item_id": "msg-cmoc",
+                                    "output_index": 0,
+                                    "content_index": 0,
+                                    "text": text,
+                                },
+                            ),
+                            (
+                                "response.content_part.done",
+                                {
+                                    "item_id": "msg-cmoc",
+                                    "output_index": 0,
+                                    "content_index": 0,
+                                    "part": message["content"][0],
+                                },
+                            ),
+                            (
+                                "response.output_item.done",
+                                {"output_index": 0, "item": message},
+                            ),
+                            ("response.completed", {"response": response}),
+                        ]
+                        for sequence, (event_type, data) in enumerate(events, 1):
+                            event = {
+                                "type": event_type,
+                                **data,
+                                "sequence_number": sequence,
+                            }
+                            event_text = (
+                                f"event: {event_type}\\n"
+                                f"data: {json.dumps(event)}\\n\\n"
+                            )
+                            self.wfile.write(event_text.encode())
+                            self.wfile.flush()
+                    else:
+                        self.wfile.write(json.dumps(response).encode())
 
                 def log_message(self, *_args):
                     pass
@@ -236,6 +359,7 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
             import os
             import subprocess
             import sys
+            import time
             from pathlib import Path
 
             home = Path({str(home)!r})
@@ -247,7 +371,7 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
                 args = args[1:]
             if args == ["daemon-reload"]:
                 raise SystemExit(0)
-            if args == ["enable", "--now", "cmoc-ollama"]:
+            if args in [["enable", "--now", "cmoc-ollama"], ["restart", "cmoc-ollama"]]:
                 lines = service.read_text().splitlines()
                 exec_start = next(line for line in lines if line.startswith("ExecStart="))
                 env_lines = [line.removeprefix("Environment=") for line in lines if line.startswith("Environment=")]
@@ -257,12 +381,23 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
                     for key, value in (item.split("=", 1) for item in env_lines)
                 }})
                 argv = exec_start.removeprefix("ExecStart=").split()
-                if pid_path.exists():
+                if args == ["enable", "--now", "cmoc-ollama"] and pid_path.exists():
                     try:
                         if Path(f"/proc/{{int(pid_path.read_text())}}").exists():
                             raise SystemExit(0)
                     except ValueError:
                         pass
+                if args == ["restart", "cmoc-ollama"] and pid_path.exists():
+                    try:
+                        old_pid = int(pid_path.read_text())
+                        os.kill(old_pid, 15)
+                        for _ in range(20):
+                            if not Path(f"/proc/{{old_pid}}").exists():
+                                break
+                            time.sleep(0.05)
+                    except (OSError, ValueError):
+                        pass
+                    pid_path.unlink(missing_ok=True)
                 process = subprocess.Popen(argv, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
                 pid_path.parent.mkdir(parents=True, exist_ok=True)
                 pid_path.write_text(str(process.pid))

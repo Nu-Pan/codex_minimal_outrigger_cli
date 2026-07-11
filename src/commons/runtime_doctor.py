@@ -16,19 +16,19 @@ def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
     root = root.resolve()
     restored_index_tree = _restored_index_tree(root)
     ensure_cmoc_ignored(root)
-    _ensure_agents_tracked(root)
+    agents_gitkeep_added = _ensure_agents_tracked(root)
     ensure_ollama_serves_local_slm(root, config)
-    _commit_doctor_repairs(root, restored_index_tree)
+    _commit_doctor_repairs(root, restored_index_tree, agents_gitkeep_added)
 
 
-def _ensure_agents_tracked(root: Path) -> None:
+def _ensure_agents_tracked(root: Path) -> bool:
     # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
     # .agents は agent 操作禁止領域なので、tracked file がない場合だけ
     # placeholder を追加して差分が出る余地を小さくする。
     agents = root / ".agents"
     agents.mkdir(exist_ok=True)
     if run_git(["ls-files", "--", ".agents"], root).stdout.strip():
-        return
+        return False
     gitkeep = agents / ".gitkeep"
     gitkeep.touch(exist_ok=True)
     run_git(["add", "-f", ".agents/.gitkeep"], root)
@@ -38,17 +38,20 @@ def _ensure_agents_tracked(root: Path) -> None:
             [".agents/.gitkeep と git index の状態を確認してください。"],
             str(agents),
         )
+    return True
 
 
-def _commit_doctor_repairs(root: Path, restored_index_tree: str) -> None:
-    _commit_doctor_repairs_from_head(root)
+def _commit_doctor_repairs(
+    root: Path, restored_index_tree: str, agents_gitkeep_added: bool
+) -> None:
+    _commit_doctor_repairs_from_head(root, agents_gitkeep_added)
     try:
         run_git(["reset", "-q", "HEAD"], root)
     finally:
         run_git(["read-tree", restored_index_tree], root)
 
 
-def _commit_doctor_repairs_from_head(root: Path) -> None:
+def _commit_doctor_repairs_from_head(root: Path, agents_gitkeep_added: bool) -> None:
     # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
     # repair commit は doctor の作業差分だけなので、通常 index ではなく
     # HEAD 起点の一時 index で user staged hunks と同一 path 上でも分離する。
@@ -58,7 +61,7 @@ def _commit_doctor_repairs_from_head(root: Path) -> None:
     try:
         _run_git_with_index(["read-tree", "HEAD"], root, index_path)
         _stage_gitignore_repair(root, index_path)
-        _stage_agents_gitkeep_repair(root, index_path)
+        _stage_agents_gitkeep_repair(root, index_path, agents_gitkeep_added)
         _run_git_with_index(
             ["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc/local"],
             root,
@@ -83,11 +86,12 @@ def _stage_gitignore_repair(root: Path, index_path: Path) -> None:
         _stage_text(root, index_path, ".gitignore", repaired)
 
 
-def _stage_agents_gitkeep_repair(root: Path, index_path: Path) -> None:
-    head_agents = run_git(
-        ["ls-tree", "-r", "--name-only", "HEAD", "--", ".agents"], root
-    ).stdout.strip()
-    if not head_agents and (root / ".agents" / ".gitkeep").exists():
+def _stage_agents_gitkeep_repair(
+    root: Path, index_path: Path, agents_gitkeep_added: bool
+) -> None:
+    # 現在 index に doctor が追加した repair を HEAD 起点の index にも載せる。
+    # HEAD に既存の .agents file があっても、それを repair commit から落とさない。
+    if agents_gitkeep_added:
         _stage_text(root, index_path, ".agents/.gitkeep", "")
 
 

@@ -22,6 +22,7 @@ from _support import (
     setup_codex_home,
     write_python_executable,
 )
+import commons.runtime_ollama as ollama_module
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
 
@@ -35,14 +36,32 @@ def _port_available(port: int) -> bool:
     return True
 
 
+def _managed_ollama_listener_available(executable: Path) -> bool:
+    """共有 listener が fake managed service の process 系列に属するか確認する。"""
+    if not ollama_module._service_active():
+        return False
+    main_pid = ollama_module._service_main_pid()
+    return (
+        main_pid is not None
+        and ollama_module._process_argv_uses_executable(main_pid, executable)
+        and ollama_module._listener_matches_service(main_pid, executable)
+    )
+
+
 @contextmanager
-def _real_cmoc_managed_ollama_env(root: Path) -> Iterator[dict[str, str]]:
+def _real_cmoc_managed_ollama_env(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[dict[str, str]]:
     # <work-root>/oracle/doc/dev_rule/test_rule.md and
     # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md: real Codex
     # integration uses the normal doctor preprocess managed-service path.
     managed_env = fake_managed_systemctl_env(root)
+    for key, value in managed_env.items():
+        monkeypatch.setenv(key, value)
     if not _port_available(11434):
-        pytest.skip("127.0.0.1:11434 is already in use outside this test process")
+        executable = Path(managed_env["HOME"]) / ".cmoc" / "ollama" / "bin" / "ollama"
+        if not _managed_ollama_listener_available(executable):
+            pytest.skip("127.0.0.1:11434 is already in use by a non-managed service")
     # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
     # The shared fake user service is intentionally left enabled after this test.
     yield managed_env
@@ -74,7 +93,7 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         '{"result":"cmoc-real-codex-provider"}'
     )
 
-    with _real_cmoc_managed_ollama_env(root) as ollama_env:
+    with _real_cmoc_managed_ollama_env(root, monkeypatch) as ollama_env:
         for key, value in ollama_env.items():
             monkeypatch.setenv(key, value)
         monkeypatch.setenv(

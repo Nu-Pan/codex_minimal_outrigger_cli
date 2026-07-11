@@ -22,6 +22,41 @@ class _Response:
         return None
 
 
+# <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+@pytest.mark.parametrize(
+    ("service_changed", "process_matches", "restart_expected"),
+    [(True, True, True), (False, False, True), (False, True, False)],
+)
+def test_ensure_ollama_service_restarts_only_when_active_service_needs_repair(
+    monkeypatch: pytest.MonkeyPatch,
+    service_changed: bool,
+    process_matches: bool,
+    restart_expected: bool,
+) -> None:
+    calls: list[list[str]] = []
+    executable = Path("/home/user/.cmoc/ollama/bin/ollama")
+
+    def fake_systemctl(args: list[str]) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return subprocess.CompletedProcess(["systemctl", *args], 0, "", "")
+
+    monkeypatch.setattr(
+        ollama_module, "_write_ollama_service_file", lambda path: service_changed
+    )
+    monkeypatch.setattr(ollama_module, "_run_systemctl", fake_systemctl)
+    monkeypatch.setattr(ollama_module, "_service_active", lambda: True)
+    monkeypatch.setattr(
+        ollama_module, "_service_process_matches", lambda path: process_matches
+    )
+
+    ollama_module._ensure_ollama_service(executable)
+
+    expected = [["daemon-reload"], ["enable", "--now", "cmoc-ollama"]]
+    if restart_expected:
+        expected.append(["restart", "cmoc-ollama"])
+    assert calls == expected
+
+
 def test_verify_ollama_service_rejects_missing_main_pid(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

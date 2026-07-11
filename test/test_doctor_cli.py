@@ -298,6 +298,30 @@ def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
     assert run_git(root, "diff", "--cached", "--name-only").stdout.strip() == ""
 
 
+def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_deletion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    agents_file = root / ".agents" / "existing.txt"
+    agents_file.parent.mkdir()
+    agents_file.write_text("existing\n")
+    run_git(root, "add", ".agents")
+    run_git(root, "commit", "-m", "track agent file")
+    agents_file.unlink()
+    run_git(root, "add", "-u", ".agents")
+    monkeypatch.chdir(root)
+
+    doctor_module.run_doctor_preprocess(root)
+
+    repair_paths = run_git(
+        root, "show", "--name-only", "--format=", "HEAD"
+    ).stdout.splitlines()
+    assert ".agents/.gitkeep" in repair_paths
+    assert run_git(root, "diff", "--cached", "--name-status").stdout.splitlines() == [
+        "D\t.agents/existing.txt"
+    ]
+
+
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
