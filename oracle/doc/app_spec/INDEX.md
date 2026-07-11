@@ -240,23 +240,20 @@
 # `sub_command`
 
 ## Summary
-- `cmoc apply abandon` の cleanup 系サブコマンド仕様。現在の session に紐づく未 join の active apply run を機械的に破棄し、apply 状態を `ready` に戻す挙動を確認するときに読む。
-- 破棄対象と保護対象、状態遷移、cleanup 失敗時の扱い、stdout report、終了コードを確認する入口。
+- `cmoc` の各サブコマンド仕様をまとめる案内。`apply`、`session`、`review`、`doctor`、`indexing`、`tui` の正本仕様断片へ進む入口を与える。
 
 ## Read this when
-- 未 join の apply run を破棄する処理を実装・修正・検証するとき。
-- apply worktree、apply branch、session state の cleanup 境界を確認するとき。
-- `running`、`completed`、`error` の apply 状態から `ready` へ戻る状態遷移を扱うとき。
-- apply abandon の stdout 表示内容、warning、終了コードを確認するとき。
+- サブコマンド全体の一覧から、読むべき個別仕様を選びたいとき。
+- 新しいサブコマンド仕様を追加・整理するときに、この階層へ案内を足すべきか確認したいとき。
+- 個別仕様の所属先が不明で、`apply` 系、`session` 系、`review` 系、`doctor` 系、`indexing` 系、`tui` 系のどれを読むか切り分けたいとき。
 
 ## Do not read this when
-- apply 成果物を session branch へ取り込む処理を扱うときは、join 側の仕様を読む。
-- apply run を開始・実行する処理を扱うときは、run 側の仕様を読む。
-- join 済み結果の rollback 仕様を探しているとき。この対象は rollback コマンドを定義しない。
-- oracle 改訂内容や session branch の commit を変更する処理を扱うとき。この対象ではそれらを保護対象として扱う。
+- 個別サブコマンドの挙動を実装・修正・検証したいときは、該当する個別仕様を直接読む。
+- パスや用語の定義だけを確認したいときは、用語・パスモデルの仕様を読む。
+- この階層の案内だけで十分な場合に、下位の個別仕様へ進む必要はない。
 
 ## hash
-- 7645c58ed93dd96f004792d7c619f1bb3ac89120e29c340de7053e8d35ff5966
+- f62a22ad0fd11740b4b6570cb8db25eff45d9d74f7af105178f0e8c3ccc0ca31
 
 # `usage.md`
 

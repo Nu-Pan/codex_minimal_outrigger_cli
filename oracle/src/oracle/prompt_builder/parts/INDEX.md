@@ -107,25 +107,19 @@
 # `oracle_standard.py`
 
 ## Summary
-- oracle file が従うべき基本規範を StructDoc として構築する対象。人間の認知負荷の節約、正本仕様断片としての扱い、未定義部分の許容、文字数最小化、論理矛盾の禁止、実装から仕様への逆流禁止、用語・命名の統一、oracle file 優先、goal/non-goal 境界の記述といった規範群を定義する。
-- prompt builder が出力する oracle standard 文書の根拠であり、oracle file の書き方・保守方針・仕様断片としての境界を確認する入口になる。
+- `oracle standard` を組み立てる規範定義を持つ。`Standard` 群の内容や文言を変える必要があるときに読む。
+- この層は oracle file 向けの規範文章を生成する入口なので、仕様本文そのものではなく、規範の構成と個々の標準の選定意図を確認したいときに読む。
 
 ## Read this when
-- oracle file に書くべき内容と AI 裁量に任せてよい内容の境界を確認したいとき。
-- oracle file を小さく保つ、重複を避ける、未定義部分を許容する、矛盾を避けるといった規範を確認したいとき。
-- oracle file と既存実装・既存テストの関係、特に実装から仕様へ逆流させてよいかを判断したいとき。
-- oracle file 内の用語統一、命名、ベストプラクティスより oracle file を優先する判断、goal と non-goal の書き分けを確認したいとき。
-- oracle standard の StructDoc 生成内容や、各 Standard/Requirement の構成を変更・確認したいとき。
+- oracle file に書くべき規範の追加・削除・言い換えを判断したい。
+- `oracle standard` の収集対象や、どの標準をまとめるかの意図を確認したい。
 
 ## Do not read this when
-- realization file の実装品質、テスト肥大化、依存追加、公開面増加など、実装側の規範だけを確認したいとき。
-- oracle file と realization file の定義や配置上の分類だけを確認したいとき。
-- 特定コマンドの入出力仕様や個別機能の正本仕様断片を探しているとき。
-- INDEX.md エントリーの生成規範そのものを確認したいとき。
-- StructDoc、Standard、Requirement、PlaceholderMap などのデータ構造や変換処理の実装詳細を確認したいとき。
+- `StructDoc` や `Standard` の汎用実装を確認したいだけなら、定義元の実装側を読む。
+- 個々の標準の詳細本文だけを確認したいなら、この入口ではなく各標準の元文を読む。
 
 ## hash
-- 79ba7326ddbddb60db66b8f2f933f29644dbd962fdc5dad23a17e7c3890e1ba2
+- 0ebfbbb5116ecfc55994439d49ffee866e6e4ba455eefa14325c858f3f1e0363
 
 # `realization_standard.py`
 

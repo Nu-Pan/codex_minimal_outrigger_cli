@@ -1,18 +1,20 @@
 # `app_spec`
 
 ## Summary
-- `oracle/doc/app_spec` 配下の個別仕様断片をまとめる入口。CLI の起動経路、補完、ログ、事前検証、エラー処理、外部 provider との境界、状態や実行分離など、実装差を避けたいアプリ仕様を読むときにここから各文書へ進む。
+- `app_spec` 配下の正本仕様断片群への入口。CLI 起動前処理、補完、実行呼び出し、ログ、事前検証、エラー処理、model provider 境界、索引更新、プロンプト標準、run 隔離、session 状態、利用手順のような横断仕様を読むときに進む。
 
 ## Read this when
-- アプリ全体の仕様断片をどれに進んで読むべきか判断したいとき。
-- CLI の起動前処理、補完、ログ、エラー、状態、実行分離、外部 provider 境界のうち、個別の振る舞いを実装・修正・検証したいとき。
+- cmoc の CLI 全体に関わる横断仕様を確認・実装・修正・テストするとき。
+- 補完、`codex exec` 呼び出し、ログ出力、doctor preprocess、エラー処理、indexing、session/apply 状態、run 隔離、外部 model provider 境界のどれを読むべきか切り分けたいとき。
+- 利用手順や prompt 標準のように、個別コマンドの細部ではなく共通の起動・出力・状態管理の規則を確認したいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な役割分担や編集規則だけを確認したいとき。
-- 個別のサブコマンド仕様やデータ構造の細部だけを直接見たいときは、該当する下位文書へ進むほうが適切なとき。
+- 個別サブコマンド仕様を直接知りたいときは、`sub_command` 配下の該当仕様を先に読む。
+- この階層ではなく、個別の CLI 引数や状態フィールドの細部だけを確認したいとき。
+- oracle file と realization file の一般論や、INDEX.md エントリー作成ルールそのものを調べたいとき。
 
 ## hash
-- 89bfe9e2c309ba91475f11ac56356d22ddbd9df2b9974ff72e4b8fe041f39494
+- 70248a05175d8e3ffdb303779182c902437d73dc51c1ab4332f5ebc5d356cd26
 
 # `branch_model.md`
 
