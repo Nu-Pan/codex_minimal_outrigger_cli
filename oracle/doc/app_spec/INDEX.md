@@ -20,20 +20,20 @@
 # `cmoc_managed_ollama.md`
 
 ## Summary
-- cmoc が管理する ollama の起動、モデル取得、Codex CLI への接続方法、起動前検証を扱う。doctor preprocess と Codex model provider 設定を確認したいときに読む。
+- cmoc がローカルの Ollama を user systemd で管理し、Codex CLI の `cmoc` provider に接続するための運用仕様をまとめる。サービスの起動・再利用・修復、モデル取得、GPU 推論の利用可否確認、CLI 呼び出し時の設定固定が主題で、実装やテストはこの仕様に合わせる。
 
 ## Read this when
-- cmoc がローカルで ollama を起動して SLM を提供する挙動を実装・変更するとき。
-- cmoc が `model_provider=="cmoc"` のモデルを使う流れ、モデルの pull 先、サービス起動条件を確認したいとき。
-- Codex CLI から cmoc managed ollama へ接続する引数や、127.0.0.1:11434 への到達性を確認したいとき。
+- `CodexModelSpec.model_provider` が `cmoc` のときに、事前保証すべき Ollama の可用性や GPU 推論条件を確認したいとき。
+- cmoc が user systemd 配下の Ollama サービスをどう準備・起動・再利用・修復するかを実装または変更するとき。
+- Codex CLI から `127.0.0.1:11434` の Ollama を使うための固定設定や禁止事項を確認したいとき。
 
 ## Do not read this when
-- ollama 自体の一般的な運用や、cmoc と無関係な外部 provider の設定だけを見たいとき。
-- profile 注入や `--oss` / `--local-provider` のような、ここで禁止されている別経路の検討が目的のとき。
-- cmoc managed ollama ではないモデル提供経路の仕様を確認したいとき。
+- `cmoc` 以外の model provider の仕様を探したいとき。
+- Ollama 本体の一般的な使い方や GPU 推論の一般論だけを確認したいとき。
+- サービス管理やモデル配置ではなく、別の CLI サブコマンドや別機能の仕様を追いたいとき。
 
 ## hash
-- b3f9e8d63bc03d790664c6ffde9b5424f73851158c14e93dc909796e212169df
+- fef7d8affc3c262acb8ea23ba8577825dd33bc650f163018809b01f2947ac04f
 
 # `codex_exec_rule.md`
 
@@ -76,24 +76,21 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- doctor preprocess の正本仕様断片。cmoc の各サブコマンド本命処理前に共通実行される事前検証・修復の責務、実行順序、失敗時の扱いを定める。
-- git ignore 対象にすべきローカル状態、事前に tracked にしておく agent 操作禁止領域、cmoc managed ollama 利用可能性の保証を扱う。
-- 個別サブコマンド固有の前提条件ではなく、全サブコマンドに共通する実行環境整備の入口として読む。
+- doctor preprocess の責務は、`cmoc` 共通の起動前前提をまとめて検証・修復し、各サブコマンド本体の前に環境を整えること。ここでは特に、`/.cmoc/local` の追跡除外、`.agents` の追跡状態確保、cmoc managed ollama の利用可能性確認、そして修復後差分のコミットまでを扱う。
+- 同階層の他文書ではなくこの文書を読むべきなのは、サブコマンド個別ではなく全体共通の事前処理を扱い、かつ修復不能時の終了条件まで含むから。cmoc managed ollama の具体的な可用性判定だけは別文書を参照する。
 
 ## Read this when
-- 各サブコマンド開始前に必ず走る共通事前処理の仕様を確認・実装・テストする。
-- ローカル状態を git 追跡対象外にする処理、既存 tracked file の index 除外、ignore 完了判定を扱う。
-- agent 操作禁止領域を作成し、空の場合の保持ファイル追加や git 追跡対象化を扱う。
-- 共通事前処理の修復後に差分を commit する流れ、または修復不能時のエラー終了条件を確認する。
-- cmoc managed ollama の利用可能性確認が、共通事前処理のどこに位置づくかを確認する。
+- `cmoc` の各サブコマンドを起動する前に必要な共通前処理の責務を確認したいとき。
+- `.cmoc/local` を追跡対象外にする条件や、`.agents` を差分の出ない状態に保つ条件を確認したいとき。
+- 前提チェックで失敗した場合に、その場で終了するか修復を試みるかの境界を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の事前条件や本命処理だけを調べたい。
-- cmoc managed ollama 自体の詳細仕様を確認したい。
-- git ignore や agent 操作禁止領域と無関係な一般的な path model、CLI 出力形式、agent 実行制御を調べたい。
+- サブコマンド固有の事前条件を確認したいときは、doctor preprocess ではなく各サブコマンド側の文書を読む。
+- cmoc managed ollama の有効化や検証の細部だけを知りたいときは、`<work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md` を読む。
+- 個別の実装詳細やコミット手順の内訳だけを追いたいときは、この文書ではなく該当する実装側へ進む。
 
 ## hash
-- 7e2c28bacd702ec043c6a683ac3ec9d1a1fcd2bd15519c72a50094356e85c0fc
+- b439874df502422792f7f2cbaef9ea5c257ecc7ebe7d26612f35e8533b5274bb
 
 # `error_handling.md`
 
