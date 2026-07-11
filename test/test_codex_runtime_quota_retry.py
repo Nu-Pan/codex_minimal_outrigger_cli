@@ -267,8 +267,9 @@ def test_quota_probe_builder_returns_minimal_probe_parameter() -> None:
     assert probe.cwd == base.cwd
 
 
+@pytest.mark.parametrize("quota_returncode", [0, 1])
 def test_quota_probe_uses_real_builder_when_quota_recovers(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, quota_returncode: int
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -293,7 +294,7 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
         if len(calls) == 1:
             return subprocess.CompletedProcess(
                 argv,
-                1,
+                quota_returncode,
                 '{"type":"thread.started","thread_id":"sess-1"}\n'
                 '{"type":"error","message":"Quota exceeded"}\n',
                 "",

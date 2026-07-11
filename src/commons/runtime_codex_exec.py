@@ -384,10 +384,14 @@ def run_codex_exec(
         output_jsonl_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
         error_text = codex_error_text(result.stdout, result.stderr)
-        if result.returncode != 0:
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # JSONL events determine retry/wait behavior; exit status is only the
+        # fallback failure signal when no known event was emitted.
+        capacity_error = is_capacity_error(result.stdout)
+        quota_error = is_quota_error(result.stdout)
+        if result.returncode != 0 or capacity_error or quota_error:
             if (
-                is_capacity_error(result.stdout)
-                and capacity_attempts < max_capacity_retries
+                capacity_error and capacity_attempts < max_capacity_retries
             ):
                 capacity_attempts += 1
                 emit_codex_call_event(
@@ -406,7 +410,7 @@ def run_codex_exec(
                 time.sleep(sleep_sec)
                 sleep_sec *= 2
                 continue
-            if is_quota_error(result.stdout):
+            if quota_error:
                 global _QUOTA_POLLING, _QUOTA_PROBE_AVAILABLE, _QUOTA_PROBE_ERROR
                 emit_codex_call_event(
                     run_purpose=purpose,

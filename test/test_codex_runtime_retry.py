@@ -168,8 +168,9 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
     assert expected_error in codex_events[0]["error"]
 
 
+@pytest.mark.parametrize("failure_returncode", [0, 1])
 def test_run_codex_exec_logs_capacity_retrying_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_returncode: int
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -193,7 +194,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
                 "    print(json.dumps({'type': 'error', "
                 "'message': 'Selected model is at capacity'}))"
             ),
-            "    sys.exit(1)",
+            f"    sys.exit({failure_returncode})",
             "output.write_text(json.dumps({'ok': True}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
@@ -224,7 +225,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
         "capacity_retrying",
         "succeeded",
     ]
-    assert codex_events[0]["returncode"] == 1
+    assert codex_events[0]["returncode"] == failure_returncode
     assert codex_events[0]["call_log_path"] == str(call_paths[0])
     assert "Selected model is at capacity" in codex_events[0]["error"]
 
