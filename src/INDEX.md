@@ -58,21 +58,18 @@
 # `commons`
 
 ## Summary
-- cmoc の runtime 共通 helper 群をまとめる領域。Codex 実行、CLI 共通ライフサイクル、設定、git、path、ログ、状態、doctor、indexing preflight など、複数モジュールから使われる実行時基盤の入口になる。
-- 個別 helper の詳細実装だけでなく、runtime API の集約 import、Codex exec/TUI 境界、永続状態、内容 hash、Ollama 準備、apply process 追跡などの下位要素へ進むためのまとまりを示す。
+- cmoc 実行時に複数モジュールから再利用される共通補助機能の入口。個別 helper の責務はここではなく下位の実装で確認する。
 
 ## Read this when
-- cmoc の複数サブコマンドや runtime 系処理から共有される helper の配置場所を探したいとき。
-- Codex 実行、設定読み書き、git 操作、path 解決、ログ、状態管理、doctor preprocess、indexing preflight、apply process 追跡などの runtime 基盤に関する読む先を選びたいとき。
-- runtime 共通 API をまとめて import する入口や、個別 runtime module の責務境界を確認したいとき。
+- 実行時に複数箇所で使う共通 helper の配置先や入口を確認したいとき。
+- 共有 helper 群へ進む前に、この領域が runtime helper のまとまりであることを確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、CLI 引数定義、利用者向け workflow だけを調べたいときは、該当する command 層や app spec を読む。
-- 正本仕様断片、path keyword の概念定義、INDEX entry 生成方針、config や model の正本定義だけを確認したいときは、対応する oracle 側を読む。
-- 特定 helper の引数、失敗時挙動、保存形式、外部コマンド呼び出し詳細がすでに分かっているときは、この領域全体ではなく該当する下位要素を直接読む。
+- 特定 helper の実装、入出力、失敗時挙動を確認したいとき。該当する下位要素を直接読む。
+- CLI 固有処理やテスト固有処理を調べたいとき。より直接その責務を持つ対象へ進む。
 
 ## hash
-- a61436fc4d817f0238aca757367d9b88c08da9abc67ad2b6ddedba3bd5199b50
+- b63f791e93533feed05851f7732da501c68509206e6bee4a7c9e05f247166ab4
 
 # `config`
 

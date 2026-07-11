@@ -115,38 +115,36 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization 実装全体の入口で、CLI 入口、共通 runtime、互換 shim、`acp` 系 builder 群、公開互換の `basic` / `config` / `oracle` 受け口をまとめて案内する階層。
-- ここを読むと、旧 import 互換をどこで受け止めているか、CLI の配線がどこにあるか、共有基盤と各サブコマンド実装、そして oracle 側 builder へつながる具体的な実装群のどこへ進むべきかを切り分けられる。
-- 新しい実装の本体や互換入口を探す起点には向くが、個別機能の詳細や正本仕様そのものを読む場所ではない。
+- cmoc の realization implementation をまとめる頂点ディレクトリ。CLI 入口、共有 runtime helpers、互換 import 入口、各サブコマンド実装、`acp` builder 実装、`oracle` package shim を束ね、どの責務がどの下位領域にあるかを辿る起点になる。
+- この階層では、利用者向け公開面と realization 側の実体をつなぐ互換層を含めて扱うが、正本仕様そのものは置かず、各責務の実装本体へ進むためのルーティングを担う。
 
 ## Read this when
-- cmoc の realization 実装で、どの下位 module がどの責務を持つかをまず切り分けたいとき。
-- `main.py` から各 subcommand へどう配線されるか、または `commons` / `sub_commands` / `acp` / `basic` / `config` / `oracle` のどこを読むべきか判断したいとき。
-- 旧来の import 経路や互換 shim を維持・削除判断したいときに、その受け口が `src` 配下のどこにあるか確認したいとき。
+- CLI 入口、サブコマンド群、共有 runtime helper、設定読み込み、互換 import 入口、`oracle` package shim のどれを読むべきか切り分けたいとき。
+- `acp.*` / `basic.*` / `config.*` / `commons.*` の公開経路が realization 側でどう接続されているか確認したいとき。
+- apply、review、session、doctor、indexing、TUI などのサブコマンド実装へ進む前に、まず realization 側の責務配置を把握したいとき。
 
 ## Do not read this when
-- acp builder の正本仕様、prompt、生成内容、人間意図を確認したいときは oracle 側の builder を読む。
-- 個別の CLI 挙動やサブコマンド実装の細部だけを調べたいときは、`sub_commands` や各下位 module を直接読む。
-- 設定や path model、共通 runtime helper の詳細だけが目的なら、`commons` や対応する専用 module を直接読む。
+- acp builder、basic API、設定値、CLI 挙動の正本仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
+- 個別 helper や個別サブコマンドの具体的な入出力、失敗時挙動、状態遷移を知りたいときは、この階層ではなく該当モジュールを直接読む。
+- 互換 import ではなく新しい仕様や新規 API の追加場所を探しているだけなら、目的の責務を持つ下位実装を直接読む。
 
 ## hash
-- 48e33f5d891e74b3aa1d1a77111ad10586bcf6502412e2e3b40dcfd514625fd2
+- 17bcc28227d148f45219de56264955185cc500fb78194c3c3191a4680aa18932
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群をまとめる入口。CLI、runtime、prompt、indexing、session、doctor、review、apply などの外部挙動回帰を、関心領域ごとの個別テストへ振り分けるために読む。
-- 共通 fixture や test 支援モジュールに触れる前に、まずどの挙動を固定したいかを決めるための案内点として使う。
+- `test/_support.py` の共通テスト基盤をまとめる入口。最小 Git リポジトリ、Codex 実行用の固定引数、偽 `ollama` / `systemctl` 環境、テスト用ヘルパーを提供し、複数の CLI テストや managed Ollama 関連テストが共通に使う前処理を担う。
 
 ## Read this when
-- 実装変更の影響を受ける外部挙動を、どのテストから確認すべきか探したいとき。
-- CLI 起動前処理、Codex runtime、prompt 組み立て、index 更新、session/doctor/review/apply のいずれかに関する回帰テストを探したいとき。
-- 共有 fixture やテスト支援コードではなく、対象機能の境界と期待挙動をまず把握したいとき。
+- CLI テストで共有 fixture やヘルパーを追加・変更したい。
+- managed Ollama、`systemctl`、Codex 実行引数のテスト用スタブを調整したい。
+- テスト用の最小 Git リポジトリや fake external command の振る舞いを見直したい。
 
 ## Do not read this when
-- 個別機能の期待値や失敗条件を確認したいだけなら、対応する個別テスト本文を直接読む。
-- テスト支援関数、fixture、git repo 作成 helper の実装を追いたいなら、支援モジュール側を直接読む。
-- oracle file の正本仕様や実装本体を確認したいなら、それぞれの oracle 側・src 側を直接読む。
+- 個別の CLI 挙動そのものを確認したいだけなら、各テスト本体を先に読む。
+- 本番実装の責務や永続データの仕様を知りたいだけなら、対応する oracle 側を読む。
+- ここに定義されていないサブコマンドや新しいテスト方針を探したいだけなら、別のテストファイルを探す。
 
 ## hash
-- 52c2455a36118f65f2f9a7299008300e3d4fcfbd4a3ee14d039392bfd4aa682f
+- 26b96d514b622b6a521d2f95bad84bde90f0bf0f38514662136c9cb5ba0aed2b
