@@ -1,10 +1,8 @@
-import atexit
 import os
-import signal
 import subprocess
 import sys
+import tempfile
 import textwrap
-import time
 import tomllib
 from pathlib import Path
 
@@ -14,7 +12,9 @@ from click.testing import Result
 from typer.testing import CliRunner
 
 runner = CliRunner()
-_FAKE_OLLAMA_PID_PATHS: set[Path] = set()
+# <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+# Keep one fake user service and its model resource across all test boundaries.
+_FAKE_OLLAMA_HOME = Path(tempfile.gettempdir()) / f"cmoc-managed-ollama-{os.getuid()}"
 
 # <work-root>/oracle/doc/dev_rule/test_rule.md は Codex CLI テストで使う
 # local SLM を固定している。
@@ -149,12 +149,10 @@ def fake_managed_ollama_env(root: Path) -> dict[str, str]:
     return env
 
 
-def fake_managed_systemctl_env(root: Path) -> dict[str, str]:
+def fake_managed_systemctl_env(_root: Path) -> dict[str, str]:
     """Isolate managed-service control while leaving the Ollama binary real."""
-    home = root / ".cmoc" / "local" / "test-home"
-    fake_bin = root / ".cmoc" / "local" / "fake-bin"
-    _stop_registered_fake_ollama_services()
-    _FAKE_OLLAMA_PID_PATHS.add(home / ".cmoc" / "ollama" / "service.pid")
+    home = _FAKE_OLLAMA_HOME
+    fake_bin = home / "bin"
     _write_fake_systemctl(fake_bin / "systemctl", home)
     return {
         "HOME": str(home),
@@ -162,28 +160,6 @@ def fake_managed_systemctl_env(root: Path) -> dict[str, str]:
     }
 
 
-def _stop_registered_fake_ollama_services() -> None:
-    # <work-root>/oracle/doc/dev_rule/test_rule.md は fake service state を各
-    # tmp_path 配下に保つ。この in-memory registry は同一 pytest process 内の
-    # テスト間で fixed-port collision を避けるためだけに使う。
-    for pid_path in _FAKE_OLLAMA_PID_PATHS:
-        try:
-            process_id = int(pid_path.read_text())
-        except (OSError, ValueError):
-            continue
-        try:
-            os.kill(process_id, signal.SIGTERM)
-        except OSError:
-            continue
-        for _ in range(20):
-            try:
-                os.kill(process_id, 0)
-            except OSError:
-                break
-            time.sleep(0.05)
-
-
-atexit.register(_stop_registered_fake_ollama_services)
 
 
 def _write_fake_ollama(path: Path) -> None:
@@ -209,13 +185,26 @@ def _write_fake_ollama(path: Path) -> None:
 
             host, port = os.environ["OLLAMA_HOST"].split(":")
 
+            loaded_model = None
+
             class Handler(http.server.BaseHTTPRequestHandler):
                 def do_GET(self):
+                    if self.path == "/api/ps":
+                        self.send_response(200)
+                        self.end_headers()
+                        models = (
+                            [{"name": loaded_model, "size_vram": 1}]
+                            if loaded_model
+                            else []
+                        )
+                        self.wfile.write(json.dumps({"models": models}).encode())
+                        return
                     self.send_response(200)
                     self.end_headers()
                     self.wfile.write(b'{"models":[]}')
 
                 def do_POST(self):
+                    global loaded_model
                     if self.path != "/api/generate":
                         self.send_response(404)
                         self.end_headers()
@@ -223,6 +212,7 @@ def _write_fake_ollama(path: Path) -> None:
                     length = int(self.headers.get("content-length", "0"))
                     payload = json.loads(self.rfile.read(length))
                     assert payload["model"]
+                    loaded_model = payload["model"]
                     assert payload["stream"] is False
                     self.send_response(200)
                     self.end_headers()
@@ -246,7 +236,6 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
             import os
             import subprocess
             import sys
-            import time
             from pathlib import Path
 
             home = Path({str(home)!r})
@@ -270,28 +259,13 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
                 argv = exec_start.removeprefix("ExecStart=").split()
                 if pid_path.exists():
                     try:
-                        os.kill(int(pid_path.read_text()), 0)
-                        raise SystemExit(0)
-                    except OSError:
+                        if Path(f"/proc/{{int(pid_path.read_text())}}").exists():
+                            raise SystemExit(0)
+                    except ValueError:
                         pass
                 process = subprocess.Popen(argv, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
                 pid_path.parent.mkdir(parents=True, exist_ok=True)
                 pid_path.write_text(str(process.pid))
-                raise SystemExit(0)
-            if args == ["disable", "--now", "cmoc-ollama"]:
-                if pid_path.exists():
-                    try:
-                        process_id = int(pid_path.read_text())
-                        os.kill(process_id, 15)
-                        for _ in range(50):
-                            try:
-                                os.kill(process_id, 0)
-                            except OSError:
-                                break
-                            time.sleep(0.1)
-                    except (OSError, ValueError):
-                        pass
-                    pid_path.unlink(missing_ok=True)
                 raise SystemExit(0)
             if args == ["is-active", "--quiet", "cmoc-ollama"]:
                 if not pid_path.exists():

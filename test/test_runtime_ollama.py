@@ -7,6 +7,21 @@ import commons.runtime_ollama as ollama_module
 from commons.runtime_errors import CmocError
 
 
+class _Response:
+    def __init__(self, body: bytes, status: int = 200) -> None:
+        self.body = body
+        self.status = status
+
+    def read(self) -> bytes:
+        return self.body
+
+    def __enter__(self) -> "_Response":
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        return None
+
+
 def test_verify_ollama_service_rejects_missing_main_pid(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -94,6 +109,7 @@ def test_ensure_ollama_model_loads_after_store_is_ready(
     commands: list[list[str]] = []
     show_iter = iter(show_codes)
     loaded: list[str] = []
+    verified: list[str] = []
 
     def fake_run_ollama(
         executable: Path, args: list[str]
@@ -103,9 +119,39 @@ def test_ensure_ollama_model_loads_after_store_is_ready(
         return subprocess.CompletedProcess([str(executable), *args], returncode, "", "")
 
     monkeypatch.setattr(ollama_module, "_run_ollama", fake_run_ollama)
+    monkeypatch.setattr(ollama_module, "_verify_ollama_gpu", verified.append)
     monkeypatch.setattr(ollama_module, "_load_ollama_model", loaded.append)
 
     ollama_module._ensure_ollama_model(Path("ollama"), "model")
 
     assert commands == expected_commands
     assert loaded == ["model"]
+    assert verified == ["model"]
+
+
+def test_verify_ollama_gpu_accepts_runtime_vram(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    response = _Response(b'{"models":[{"name":"model","size_vram":1}]}')
+    monkeypatch.setattr(
+        ollama_module.urllib.request,
+        "urlopen",
+        lambda *_args, **_kwargs: response,
+    )
+    ollama_module._verify_ollama_gpu("model")
+
+
+@pytest.mark.parametrize(
+    "body", [b'{"models":[]}', b'{"models":[{"name":"model","size_vram":0}]}']
+)
+def test_verify_ollama_gpu_rejects_unconfirmed_runtime(
+    monkeypatch: pytest.MonkeyPatch, body: bytes
+) -> None:
+    response = _Response(body)
+    monkeypatch.setattr(
+        ollama_module.urllib.request,
+        "urlopen",
+        lambda *_args, **_kwargs: response,
+    )
+    with pytest.raises(CmocError, match="GPU 推論を確認できませんでした"):
+        ollama_module._verify_ollama_gpu("model")

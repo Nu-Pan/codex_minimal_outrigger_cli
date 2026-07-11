@@ -2,7 +2,6 @@ import json
 import os
 import shutil
 import socket
-import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -44,25 +43,9 @@ def _real_cmoc_managed_ollama_env(root: Path) -> Iterator[dict[str, str]]:
     managed_env = fake_managed_systemctl_env(root)
     if not _port_available(11434):
         pytest.skip("127.0.0.1:11434 is already in use outside this test process")
-    env = os.environ.copy()
-    env.update(managed_env)
-    try:
-        yield managed_env
-    finally:
-        subprocess.run(
-            ["systemctl", "--user", "disable", "--now", "cmoc-ollama"],
-            env=env,
-            text=True,
-            capture_output=True,
-            timeout=30,
-        )
-        subprocess.run(
-            ["systemctl", "--user", "daemon-reload"],
-            env=env,
-            text=True,
-            capture_output=True,
-            timeout=30,
-        )
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # The shared fake user service is intentionally left enabled after this test.
+    yield managed_env
 
 
 def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
@@ -272,7 +255,8 @@ def test_prepare_local_slm_overrides_run_doctor_when_port_is_missing(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    for key, value in fake_managed_ollama_env(root).items():
+    fake_env = fake_managed_ollama_env(root)
+    for key, value in fake_env.items():
         monkeypatch.setenv(key, value)
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
@@ -297,10 +281,7 @@ def test_prepare_local_slm_overrides_run_doctor_when_port_is_missing(
     assert "--profile" not in override_args
     assert not list(codex_home.glob("cmoc_*.config.toml"))
     assert (
-        root
-        / ".cmoc"
-        / "local"
-        / "test-home"
+        Path(fake_env["HOME"])
         / ".config"
         / "systemd"
         / "user"

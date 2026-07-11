@@ -180,6 +180,8 @@ def _write_ollama_service_file(executable: Path) -> None:
             f"ExecStart={executable} serve",
             f"Environment=OLLAMA_HOST={_OLLAMA_HOST}",
             "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
+            "Restart=on-failure",
+            "RestartSec=2s",
             "",
             "[Install]",
             "WantedBy=default.target",
@@ -381,6 +383,7 @@ def _ensure_ollama_model(executable: Path, model: str) -> None:
             f"model: {model}\nstdout:\n{show.stdout}\nstderr:\n{show.stderr}",
         )
     _load_ollama_model(model)
+    _verify_ollama_gpu(model)
 
 
 def _load_ollama_model(model: str) -> None:
@@ -418,6 +421,67 @@ def _load_ollama_model(model: str) -> None:
         raise CmocError(
             "ollama SLM model を load できませんでした。",
             ["ollama service の状態を確認してください。"],
+            f"model: {model}\nresponse: {payload!r}",
+        )
+
+
+def _gpu_verification_error(model: str, detail: str) -> CmocError:
+    return CmocError(
+        "ollama SLM model の GPU 推論を確認できませんでした。",
+        ["ollama service の /api/ps 応答と GPU 利用状況を確認してください。"],
+        f"model: {model}\n{detail}",
+    )
+
+
+def _verify_ollama_gpu(model: str) -> None:
+    """実行中 model の VRAM 使用を managed Ollama の runtime 情報で確認する。"""
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # /api/ps の size_vram が正であることを、検出だけでなく offload の確認とする。
+    endpoint = f"http://{_OLLAMA_HOST}/api/ps"
+    try:
+        with urllib.request.urlopen(
+            endpoint,
+            timeout=_OLLAMA_CONNECT_TIMEOUT_SEC,
+        ) as response:
+            response_body = response.read()
+            status = getattr(response, "status", 200)
+            if not 200 <= status < 300:
+                raise _gpu_verification_error(
+                    model, f"endpoint: {endpoint}\nstatus: {status}"
+                )
+    except (OSError, urllib.error.URLError) as exc:
+        raise _gpu_verification_error(
+            model, f"endpoint: {endpoint}"
+        ) from exc
+    try:
+        payload = json.loads(response_body.decode())
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise _gpu_verification_error(
+            model, f"response: {response_body[:500]!r}"
+        ) from exc
+    models = payload.get("models") if isinstance(payload, dict) else None
+    running_model = (
+        next(
+            (
+                item
+                for item in models
+                if isinstance(item, dict)
+                and (item.get("name") == model or item.get("model") == model)
+            ),
+            None,
+        )
+        if isinstance(models, list)
+        else None
+    )
+    size_vram = running_model.get("size_vram") if running_model else None
+    if (
+        not isinstance(size_vram, (int, float))
+        or isinstance(size_vram, bool)
+        or size_vram <= 0
+    ):
+        raise CmocError(
+            "ollama SLM model の GPU 推論を確認できませんでした。",
+            ["CPU のみの推論へ切り替えず、GPU と Ollama の状態を確認してください。"],
             f"model: {model}\nresponse: {payload!r}",
         )
 

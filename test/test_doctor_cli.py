@@ -31,6 +31,7 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     write_config(root / ".cmoc" / "config.json", config)
 
     monkeypatch.chdir(root)
+    fake_env = fake_managed_ollama_env(root)
     result = run_doctor(root)
 
     assert result.exit_code == 0
@@ -38,7 +39,7 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
-    home = root / ".cmoc" / "local" / "test-home"
+    home = Path(fake_env["HOME"])
     service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
     assert (home / ".cmoc" / "ollama" / "bin" / "ollama").is_file()
     assert (home / ".cmoc" / "ollama" / "models").is_dir()
@@ -50,6 +51,8 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
         f"ExecStart={home}/.cmoc/ollama/bin/ollama serve",
         "Environment=OLLAMA_HOST=127.0.0.1:11434",
         "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
+        "Restart=on-failure",
+        "RestartSec=2s",
         "",
         "[Install]",
         "WantedBy=default.target",
