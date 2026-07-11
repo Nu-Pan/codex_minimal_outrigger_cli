@@ -121,7 +121,7 @@ def build_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
             ],
         ),
         Standard(
-            title="oracle file の総文字数の最小化を目標とする",
+            title="oracle file は必要な判断情報を保ったまま読むべき文脈量を抑える",
             backgrounds=[
                 "oracle file の規模が大きいほど、人間の認知負荷が増える",
                 "oracle file の規模が大きいほど、AI が読む文脈量も増える",
@@ -129,7 +129,7 @@ def build_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
             requirements=[
                 Requirement(
                     "推奨",
-                    "必ず守らなければならない要件を満たしている範囲内で、oracle file 全体の総文字数が最小となることを目指す",
+                    "必ず守らなければならない要件を満たしている範囲内で、oracle file の読むべき文脈量を小さく保つ",
                 ),
                 Requirement(
                     "推奨",
@@ -150,6 +150,10 @@ def build_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
                 Requirement(
                     "禁止",
                     "助詞や接続関係の省略により解釈が不安定になる書き方をしてはいけない",
+                ),
+                Requirement(
+                    "禁止",
+                    "oracle file の簡潔性要求を、調査根拠・検証結果・重大な留保を省く理由にしてはいけない",
                 ),
             ],
             examples=[
