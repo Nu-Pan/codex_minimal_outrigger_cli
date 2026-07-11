@@ -22,7 +22,8 @@
 
 - pytest の `tmp_path` を `<test-root>` とする
 - realization test 上の実行中、被テスト cmoc が動作する環境は `<test-root>` ツリー内に構築する
-- テストが `<test-root>` ツリー内で収まりさえすれば、それ以外は agent の裁量で決めて良い
+- cmoc managed ollama のサービスと永続化したダウンロード資源はこの隔離の対象外とし、`<cmoc-root>/oracle/doc/app_spec/cmoc_managed_ollama.md` が定める配置先をテスト実行間で共有する
+- 前項の例外を除いてテストが `<test-root>` ツリー内で収まりさえすれば、それ以外は agent の裁量で決めて良い
 
 ## クラウドバックエンド
 
@@ -33,6 +34,7 @@
 - Real Codex CLI 呼び出しを伴うテストを実行する際は、原則として cmoc managed ollama を Codex CLI の model provider として使用する
 - テスト用の SLM としては `qwen3:4b-instruct-2507-q4_K_M` を使うこと
 - テスト目的の場合は `AgentCallParameter.model_class` に対応する Codex CLI provider/model を cmoc managed ollama とテスト用 SLM に切り替えてよい
+- cmoc managed ollama を使用するテストは、`<cmoc-root>/oracle/doc/app_spec/cmoc_managed_ollama.md` が定めるダウンロード資源の永続化と GPU 推論の要件を満たさなければならない
 
 ## Fake Codex CLI
 
