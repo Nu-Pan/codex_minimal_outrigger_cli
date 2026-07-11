@@ -73,11 +73,11 @@
 
 - `cmoc apply fork` では調査対象のファイルを「調査待ちファイルリスト」で管理する
 - `--scope rolling`: ローリングスコープ（デフォルト値）
-    - 「前回の apply の `<cmoc-apply-join-commit>`」から「今回の apply の `<cmoc-apply-fork-commit>`」の間に変更があったファイルを、調査待ちファイルリストの初期値とする
+    - 「前回の apply の `<cmoc-apply-join-commit>`」から「今回の apply の `<cmoc-apply-fork-commit>`」の間に変更があった oracle file, realization file を、調査待ちファイルリストの初期値とする
     - そのセッションの最初の apply の場合は、セッションスコープにフォールバックする
     - i.e. `cmoc apply fork` 後に変更があったファイルについて、最低 1 回は調査が行われるということ
 - `--scope session`: セッションスコープ
-    - `<cmoc-session-fork-commit>` から `<cmoc-apply-fork-commit>` の間で変更があったファイルを、調査待ちファイルリストの初期値とする
+    - `<cmoc-session-fork-commit>` から `<cmoc-apply-fork-commit>` の間で変更があった oracle file, realization file を、調査待ちファイルリストの初期値とする
     - i.e. そのセッション上で変更のあったファイルについて、最低 1 回は調査が行われるということ
 - `--scope full`
     - 全ての oracle file, realization file を、調査待ちファイルリストの初期値とする
