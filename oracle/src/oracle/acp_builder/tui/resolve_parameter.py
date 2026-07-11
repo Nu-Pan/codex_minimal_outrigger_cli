@@ -76,9 +76,13 @@ def build_tui_resolve_parameter_parameter(
         index_entry_standard=True,
     )
     # パラメータを生成して返す
+    # NOTE
+    #   性質的にはかなり簡単なタスクなので、品質を切り詰めやすい
+    #   しかし、ここで間違えられると、後続の本命作業がパーになってキレそうになる
+    #   経済性重視系の最高性能を使用する
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
-        ReasoningEffort.MEDIUM,
+        ReasoningEffort.MAX,
         FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),

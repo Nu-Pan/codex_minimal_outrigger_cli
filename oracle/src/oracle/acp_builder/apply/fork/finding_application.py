@@ -66,9 +66,12 @@ def build_apply_fork_finding_application_parameter(
         realization_standard=True,
     )
     # パラメータを生成して返す
+    # NOTE
+    #   所見反映作業は失敗を観測しやすいので、比較的低品質を攻めやすい
+    #   一旦、GPT-5.6-luna + max 想定で様子見
     return AgentCallParameter(
-        ModelClass.MAINSTREAM,
-        ReasoningEffort.MEDIUM,
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.MAX,
         FileAccessMode.REALIZATION_WRITE,
         render_as_markdown(prompt),
         None,

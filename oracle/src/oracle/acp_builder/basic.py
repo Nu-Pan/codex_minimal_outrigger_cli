@@ -41,12 +41,14 @@ class ModelClass(StrEnum):
 class ReasoningEffort(StrEnum):
     """
     cmoc 上の論理的な Reasoning effort
-    バックエンドが受理可能な Reasoning Effort 名への解決は realization src の責任
+    バックエンドに対応する Reasoning Effort 名が存在しない場合、realization src の責任で近い名前に丸めても良い
     """
 
     LOW = auto()
     MEDIUM = auto()
     HIGH = auto()
+    XHIGH = auto()
+    MAX = auto()
 
 
 class FileAccessMode(StrEnum):

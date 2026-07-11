@@ -32,16 +32,15 @@
 ## Codex CLI からの ollama の使用方法
 
 - cmoc から ollama へは `127.0.0.1:11434` でアクセスする
-- 生成する codex profile に以下を設定する
-    ```toml
-    model = "<slm-name>"
-    model_provider = "cmoc_managed_ollama"
-
-    [model_providers.cmoc_managed_ollama]
-    name = "cmoc managed ollama"
-    base_url = "http://127.0.0.1:11434/v1"
-    wire_api = "responses"
+- Codex CLI 呼び出しの argv で以下を指定する
+    ```text
+    --model <slm-name>
+    --config 'model_provider="cmoc_managed_ollama"'
+    --config 'model_providers.cmoc_managed_ollama.name="cmoc managed ollama"'
+    --config 'model_providers.cmoc_managed_ollama.base_url="http://127.0.0.1:11434/v1"'
+    --config 'model_providers.cmoc_managed_ollama.wire_api="responses"'
     ```
+- `--profile` (`-p`) を使って cmoc managed ollama の設定を注入してはならない
 - cmoc は `codex exec` の argv に `--oss` や `--local-provider` を指定しない
 - cmoc は Codex CLI の組み込み `ollama` provider ID に依存しない
 

@@ -62,8 +62,12 @@ def build_indexing_index_entry_parameter(
     # NOTE
     #   この agent call は indexing preflight そのもの。
     #   よって run_indexing_preflight=False が正しい。
+    # NOTE
+    #   呼び出し回数がとにかく多いので、経済性がとても大事
+    #   非常に単純な要約タスクなので、かなり品質を下げても成立しやすい
+    #   cmoc 上の下限設定を採用
     return AgentCallParameter(
-        ModelClass.EFFICIENCY,
+        ModelClass.MINIMUM,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
         render_as_markdown(prompt),

@@ -51,7 +51,7 @@ def build_review_oracle_merge_finding_parameter(
     # パラメータを生成して返す
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
-        ReasoningEffort.MEDIUM,
+        ReasoningEffort.MAX,
         FileAccessMode.PURE_ORACLE_READ,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),

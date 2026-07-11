@@ -49,10 +49,12 @@ def build_apply_fork_file_finding_enumeration_parameter(
     # パラメータを生成して返す
     # NOTE
     #   ファイル数だけ呼び出されるということは、トークン消費 N 倍なので重い。
-    #   しかし、ここの失敗が下流全てに影響することを鑑みて MAINSTREAM にしている。
+    #   一方で、ここの失敗は下流全てに影響するし、根本的には所見列挙漏れは事後観測が難しいので、あまり品質を落とせない。
+    #   これら事情を鑑み、GPT-5.6-luna + max 想定の低コスト寄り設定とした。
+    #   ダメなら Terra max, Sol high あたりも検討する
     return AgentCallParameter(
-        ModelClass.MAINSTREAM,
-        ReasoningEffort.MEDIUM,
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.MAX,
         FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),

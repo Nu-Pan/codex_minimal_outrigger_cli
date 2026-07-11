@@ -46,9 +46,6 @@
 
 - `cmoc tui` で必要になるパラメータの大半は agent call で決定する
 - agent call の詳細仕様は `build_tui_resolve_parameter_parameter` を正本とする
-- 以下のパラメータは agent call に委ねず固定とする
-    - `ModelClass.MAINSTREAM`
-    - `ReasoningEffort.MEDIUM`
 
 ## 「AI Agent CLI/TUI を起動」の詳細
 
@@ -62,4 +59,4 @@
 - `<cmoc-root>/oracle/doc/app_spec/codex_exec_rule.md` から、以下の要素を持ち込む
     - 環境変数 `$CODEX_HOME`
     - preflight validation
-    - codex profile
+    - Codex CLI 引数による設定上書き

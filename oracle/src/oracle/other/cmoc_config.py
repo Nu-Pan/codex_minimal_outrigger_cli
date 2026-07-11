@@ -84,6 +84,8 @@ class CmocConfigCodex:
             ReasoningEffort.LOW: "low",
             ReasoningEffort.MEDIUM: "medium",
             ReasoningEffort.HIGH: "high",
+            ReasoningEffort.XHIGH: "xhigh",
+            ReasoningEffort.MAX: "max",
         }
     )
 

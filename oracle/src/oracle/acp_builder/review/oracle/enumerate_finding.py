@@ -61,8 +61,8 @@ def build_review_oracle_enumerate_finding_parameter(
     )
     # パラメータを生成して返す
     return AgentCallParameter(
-        ModelClass.MAINSTREAM,
-        ReasoningEffort.MEDIUM,
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.MAX,
         FileAccessMode.PURE_ORACLE_READ,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),

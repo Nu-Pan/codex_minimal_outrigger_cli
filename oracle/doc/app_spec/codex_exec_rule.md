@@ -18,16 +18,22 @@
     - `$CODEX_HOME/auth.json` がファイルとして存在すること
 - preflight validation に失敗した場合、cmoc の実行を即時失敗させる
 
-## codex profile
+## Codex CLI 引数による設定上書き
 
-- cmoc は Codex CLI 呼び出し前に `$CODEX_HOME/cmoc_<hash>.config.toml` を動的に生成する
-- cmoc は `codex exec --profile cmoc_<hash>` の形式で、動的に生成した codex profile を指定する
-- `$CODEX_HOME/cmoc_<hash>.config.toml` の内容は cmoc 側の設定 (e.g. `AgentCallParameters`, `CmocConfig`, ...) から一意に決まる
-- `<hash>` は `cmoc_<hash>.config.toml` 本文の SHA256 ハッシュとする
+- cmoc は Codex CLI 呼び出しに `--profile` (`-p`) を指定してはならない
+- cmoc は Codex CLI 呼び出しのために `$CODEX_HOME/<name>.config.toml` を生成してはならない
+- `AgentCallParameter`, `CmocConfig` などから決まる呼び出し単位の設定は、Codex CLI の argv で明示的に上書きする
+- 上書き対象に専用引数が存在する場合は専用引数を使う
+- 専用引数が存在しない設定は、`--config` (`-c`) と `key=value` 形式の設定値を使って上書きする
+    - `--config` は設定項目ごとに繰り返してよい
+    - `key=value` は 1 個の argv 要素として渡す
+    - `value` は Codex CLI が解釈する TOML 値とする
+- cmoc が上書きする設定について、`$CODEX_HOME/config.toml` や project config の値に依存してはならない
 
 ## ファイルアクセス制限
 
-- Codex CLI に対するファイルアクセス制限の設定は codex profile 経由で行う
+- Codex CLI に対するファイルアクセス制限の設定は Codex CLI の引数で上書きする
+- 専用引数で表現できる設定は専用引数を使い、それ以外は `--config` を使う
 - 具体的な設定は AgentCallParameter builder を正本とする
 - cmoc はファイルアクセス制限についての情報をプロンプトとして注入して Codex CLI に知らせる
 
@@ -37,7 +43,11 @@
 
 ## Model, Reasoning Effort
 
-- Codex CLI に対する Model, Reasoning Effort の設定は codex profile 経由で行う
+- Codex CLI に対する Model, Reasoning Effort は、全ての呼び出しで以下の argv により明示的に上書きする
+    - Model: `--model`, `<model-name>`
+    - Reasoning Effort: `--config`, `model_reasoning_effort="<reasoning-effort>"`
+- `<model-name>` は `AgentCallParameter.model_class` を `CmocConfigCodex.model` で解決したモデル名とする
+- `<reasoning-effort>` は `AgentCallParameter.reasoning_effort` を `CmocConfigCodex.reasoning_effort` で解決した値とする
 - 具体的な設定は AgentCallParameter builder を正本とする
 - cmoc は Model, Reasoning Effort 設定についての情報を Codex CLI プロンプトに注入しない
 
@@ -53,7 +63,7 @@
 - プロンプト本文を argv に載せてはならない
 - `codex exec` にわたすプロンプト全文は一度 `<repo-root>/.cmoc/local/log/codex/<time-stamp>_prompt.jsonl` に出力すること
 - プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で `<time-stamp>_prompt.jsonl` をリダイレクト入力すること
-- argv に載せてよいのは、フラグ、短い固定文字列、短いファイルパスのみとする
+- argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする
 
 ## Codex CLI 呼び出し情報の保存
 
