@@ -1,70 +1,43 @@
 import json
 import os
 import shutil
-import socket
-from collections.abc import Iterator
-from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
-from _support import (
-    TEST_SLM_MODEL,
+from _codex_support import (
     codex_arg_value,
     codex_override_config,
     codex_parameter,
-    fake_managed_ollama_env,
-    fake_managed_systemctl_env,
-    make_repo,
-    run_git,
     setup_codex_home,
-    write_python_executable,
 )
-import commons.runtime_ollama as ollama_module
+from _command_support import write_python_executable
+from _git_support import make_repo, run_git
+from _ollama_support import (
+    TEST_SLM_MODEL,
+    fake_managed_ollama_env,
+    fake_managed_ollama_runtime,
+)
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
+from commons.runtime_doctor import run_doctor_preprocess
 
 
-def _port_available(port: int) -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        try:
-            sock.bind(("127.0.0.1", port))
-        except OSError:
-            return False
-    return True
-
-
-def _managed_ollama_listener_available(executable: Path) -> bool:
-    """共有 listener が fake managed service の process 系列に属するか確認する。"""
-    if not ollama_module._service_active():
-        return False
-    main_pid = ollama_module._service_main_pid()
-    return (
-        main_pid is not None
-        and ollama_module._process_argv_uses_executable(main_pid, executable)
-        and ollama_module._listener_matches_service(main_pid, executable)
-    )
-
-
-@contextmanager
-def _real_cmoc_managed_ollama_env(
-    root: Path, monkeypatch: pytest.MonkeyPatch
-) -> Iterator[dict[str, str]]:
-    # <work-root>/oracle/doc/dev_rule/test_rule.md and
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md: real Codex
-    # integration uses the normal doctor preprocess managed-service path.
-    managed_env = fake_managed_systemctl_env(root)
-    for key, value in managed_env.items():
-        monkeypatch.setenv(key, value)
-    if not _port_available(11434):
-        executable = Path(managed_env["HOME"]) / ".cmoc" / "ollama" / "bin" / "ollama"
-        if not _managed_ollama_listener_available(executable):
-            pytest.skip("127.0.0.1:11434 is already in use by a non-managed service")
+def _prepare_production_managed_ollama(
+    root: Path, config: CmocConfig
+) -> None:
+    """Require the real per-user managed service used by production Codex calls."""
+    # <work-root>/oracle/doc/dev_rule/test_rule.md
     # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # The shared fake user service is intentionally left enabled after this test.
-    yield managed_env
+    # Do not replace HOME, PATH, systemctl, or ~/.cmoc/ollama here: this test
+    # must exercise the same service and persistent model store as production.
+    try:
+        run_doctor_preprocess(root, config)
+    except (CmocError, OSError) as exc:
+        pytest.skip(f"production cmoc managed ollama is unavailable: {exc}")
 
 
 def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
@@ -93,30 +66,28 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         '{"result":"cmoc-real-codex-provider"}'
     )
 
-    with _real_cmoc_managed_ollama_env(root, monkeypatch) as ollama_env:
-        for key, value in ollama_env.items():
-            monkeypatch.setenv(key, value)
-        monkeypatch.setenv(
-            "PATH", f"{Path(real_codex).parent}:{os.environ.get('PATH', '')}"
-        )
-        monkeypatch.setenv("OPENAI_API_KEY", "cmoc-local-test")
-        # <work-root>/oracle/doc/dev_rule/test_rule.md: this intentionally uses
-        # real Codex CLI with a local SLM provider. The assertions stay on
-        # cmoc-owned integration artifacts, not answer quality.
-        result = run_codex_exec(
-            AgentCallParameter(
-                ModelClass.MINIMUM,
-                ReasoningEffort.LOW,
-                FileAccessMode.READONLY,
-                prompt,
-                schema_source,
-            ),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            max_capacity_retries=0,
-            max_semantic_retries=1,
-            config=config,
-        )
+    _prepare_production_managed_ollama(root, config)
+    monkeypatch.setenv(
+        "PATH", f"{Path(real_codex).parent}:{os.environ.get('PATH', '')}"
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "cmoc-local-test")
+    # <work-root>/oracle/doc/dev_rule/test_rule.md: this intentionally uses
+    # real Codex CLI with a local SLM provider. The assertions stay on
+    # cmoc-owned integration artifacts, not answer quality.
+    result = run_codex_exec(
+        AgentCallParameter(
+            ModelClass.MINIMUM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            prompt,
+            schema_source,
+        ),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        max_capacity_retries=0,
+        max_semantic_retries=1,
+        config=config,
+    )
 
     call_log_path = result.call_log_path
     call_log = json.loads(call_log_path.read_text())
@@ -240,18 +211,19 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{fake_env['PATH']}")
 
-    run_codex_exec(
-        AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
-        ),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=config,
-    )
+    with fake_managed_ollama_runtime():
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.MINIMUM,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                None,
+            ),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=config,
+        )
 
     record = json.loads(recorder.read_text())
     override_config = codex_override_config(record["args"])
@@ -282,17 +254,18 @@ def test_prepare_local_slm_overrides_run_doctor_when_port_is_missing(
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
 
-    override_args = prepare_codex_override_args(
-        AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
-        ),
-        config,
-        root,
-    )
+    with fake_managed_ollama_runtime():
+        override_args = prepare_codex_override_args(
+            AgentCallParameter(
+                ModelClass.MINIMUM,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                None,
+            ),
+            config,
+            root,
+        )
 
     assert codex_override_config(override_args)["model_provider"] == (
         "cmoc_managed_ollama"

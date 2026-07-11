@@ -57,15 +57,10 @@ from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from main import app
 
-from _support import (
-    TEST_SLM_MODEL,
-    codex_arg_value,
-    codex_override_config,
-    make_repo,
-    run_git,
-    runner,
-    run_doctor,
-)
+from _cli_support import runner
+from _codex_support import codex_arg_value, codex_override_config
+from _git_support import make_repo, run_git
+from _ollama_support import TEST_SLM_MODEL, run_doctor
 
 
 def _override_writable_roots(args: list[str]) -> set[str]:

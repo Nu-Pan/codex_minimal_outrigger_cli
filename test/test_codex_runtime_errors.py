@@ -5,12 +5,8 @@ import cmoc_runtime
 import pytest
 from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
-from _support import (
-    codex_parameter,
-    make_repo,
-    setup_codex_home,
-    stub_codex_overrides,
-)
+from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
+from _git_support import make_repo
 from commons.runtime_codex import run_codex_exec, run_codex_tui
 
 

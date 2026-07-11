@@ -2,7 +2,7 @@ import cmoc_runtime
 import pytest
 from pathlib import Path
 
-from _support import write_python_executable
+from _command_support import write_python_executable
 from commons.runtime_codex_profile import (
     run_codex_subprocess,
     run_tracked_codex_subprocess,

@@ -19,13 +19,9 @@ import commons.indexing as indexing_common
 from basic.acp import AgentCallParameter, ModelClass
 from oracle.other.cmoc_config import CodexModelSpec
 
-from _support import (
-    current_branch,
-    make_repo,
-    run_git,
-    runner,
-    run_doctor,
-)
+from _cli_support import runner
+from _git_support import current_branch, make_repo, run_git
+from _ollama_support import run_doctor
 from main import app
 import sub_commands.apply.join as apply_module
 import sub_commands.indexing as indexing_module

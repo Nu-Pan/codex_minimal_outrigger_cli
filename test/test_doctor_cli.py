@@ -11,14 +11,15 @@ from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from main import app
-from _support import (
+from _ollama_support import (
+    FAKE_OLLAMA_HOST,
     TEST_SLM_MODEL,
     fake_managed_ollama_env,
-    make_repo,
-    runner,
+    fake_managed_ollama_runtime,
     run_doctor,
-    run_git,
 )
+from _cli_support import runner
+from _git_support import make_repo, run_git
 
 
 def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
@@ -49,7 +50,7 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
         "",
         "[Service]",
         f"ExecStart={home}/.cmoc/ollama/bin/ollama serve",
-        "Environment=OLLAMA_HOST=127.0.0.1:11434",
+        f"Environment=OLLAMA_HOST={FAKE_OLLAMA_HOST}",
         "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
         "Restart=on-failure",
         "RestartSec=2s",
@@ -177,12 +178,13 @@ def test_dector_alias_runs_doctor(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
-    result = runner.invoke(
-        app,
-        ["dector"],
-        env=fake_managed_ollama_env(root),
-        catch_exceptions=False,
-    )
+    with fake_managed_ollama_runtime():
+        result = runner.invoke(
+            app,
+            ["dector"],
+            env=fake_managed_ollama_env(root),
+            catch_exceptions=False,
+        )
 
     assert result.exit_code == 0
     assert (root / ".cmoc" / "config.json").is_file()
@@ -196,12 +198,13 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
 
-    result = runner.invoke(
-        app,
-        ["doctor"],
-        env=fake_managed_ollama_env(linked),
-        catch_exceptions=False,
-    )
+    with fake_managed_ollama_runtime():
+        result = runner.invoke(
+            app,
+            ["doctor"],
+            env=fake_managed_ollama_env(linked),
+            catch_exceptions=False,
+        )
 
     assert result.exit_code == 0
     assert "/.cmoc/local/" in (linked / ".gitignore").read_text()

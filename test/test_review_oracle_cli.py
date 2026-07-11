@@ -15,13 +15,9 @@ import pytest
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
-from _support import (
-    add_tracked_ignored_oracle_file,
-    make_repo,
-    run_git,
-    runner,
-    run_doctor,
-)
+from _cli_support import runner
+from _git_support import add_tracked_ignored_oracle_file, make_repo, run_git
+from _ollama_support import run_doctor
 from cmoc_runtime import CmocError, SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app

@@ -17,13 +17,10 @@ from pathlib import Path
 
 import pytest
 
-from _support import (
-    apply_worktree_from_state,
-    make_repo,
-    run_git,
-    runner,
-    run_doctor,
-)
+from _apply_support import apply_worktree_from_state
+from _cli_support import runner
+from _git_support import make_repo, run_git
+from _ollama_support import run_doctor
 from main import app
 import sub_commands.apply.abandon as apply_abandon_module
 import sub_commands.apply.fork as apply_fork_module

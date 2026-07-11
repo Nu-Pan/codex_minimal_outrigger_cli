@@ -19,13 +19,9 @@ from commons.runtime_codex_profile import build_codex_override_args
 from config.cmoc_config import CmocConfig
 import pytest
 
-from _support import (
-    current_branch,
-    make_repo,
-    run_git,
-    runner,
-    run_doctor,
-)
+from _cli_support import runner
+from _git_support import current_branch, make_repo, run_git
+from _ollama_support import run_doctor
 from main import app
 import sub_commands.session.abandon as session_module
 import sub_commands.session.fork as session_fork_module
