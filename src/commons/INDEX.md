@@ -246,21 +246,21 @@
 # `runtime_doctor.py`
 
 ## Summary
-- 共通実行前の doctor preprocess を担当し、cmoc ignore、.agents の追跡確保、Ollama ローカル SLM 確認を行ったうえで、doctor 修復差分だけを専用の一時 git index で commit する処理をまとめる。
-- user の staged hunks や通常 index を壊さないよう、現在 index の復元用 tree と HEAD 起点の repair commit 用 index を分けて扱い、.gitignore、.agents/.gitkeep、.cmoc/local の追跡解除を doctor 修復として合成する。
+- `cmoc doctor preprocess` の共通修復処理をまとめる。Git の作業ツリー修復、`.agents` の追跡補助、ローカル SLM 起動確認、修復差分の commit までを一連で扱う入口。
+- 通常の Git 操作や Ollama 制御の個別処理を読む場所ではなく、doctor 実行時に「何を修復し、どこまで commit するか」を確認したいときに読む。
 
 ## Read this when
-- cmoc コマンド実行前に行う自動修復、doctor preprocess、または repair commit の挙動を確認・変更したいとき。
-- user の staged 変更を保持したまま .gitignore や .agents の修復だけを commit する制御を調べたいとき。
-- .cmoc/local を git index から外す処理、GIT_INDEX_FILE を使った一時 index 操作、または git 失敗時の CmocError 化を確認したいとき。
+- doctor 実行前に入る共通修復の範囲を確認したい。
+- 修復対象に `.gitignore`、`.agents`、`.cmoc/local` が含まれる理由や、修復差分だけを commit する流れを追いたい。
+- 一時 index を使って user の staged 変更と doctor の修復 commit を分離する意図を確認したい。
 
 ## Do not read this when
-- cmoc ignore パターンそのものの文字列生成や git コマンド wrapper の基本挙動だけを調べたい場合は、対応する runtime git 側を直接読む。
-- Ollama がローカル SLM を提供しているかの判定・起動確認だけを調べたい場合は、Ollama runtime 側を直接読む。
-- CLI 引数、サブコマンド構成、または doctor 以外の通常実行フローを調べたい場合は、それらを担当する上位 CLI 実装から読む。
+- 通常の Git 操作や汎用的な error handling の実装だけを追いたい。
+- Ollama 起動確認の詳細だけを知りたいなら、より直接の実装を読むべきである。
+- doctor 前処理以外のサブコマンドや一般的な CLI 初期化の入口を探している。
 
 ## hash
-- 1b7e438f300d8227644fcf78a79203dc3cb53fd1c8409d0dca19d84deead08c3
+- 582b46929933fcfe8334d576eb38a2c65afd86f14cdc7bf803ae6ea97cd0c900
 
 # `runtime_errors.py`
 
@@ -323,24 +323,21 @@
 # `runtime_ollama.py`
 
 ## Summary
-- `src/commons/runtime_ollama.py` は、`cmoc` provider の local SLM を managed Ollama で使える状態にするための実行時処理をまとめる。install、systemd user service の同期、稼働確認、model pull/load、GPU 推論確認までを扱う。
-- このファイルを読むべきなのは、`cmoc` provider の model を起動前に自動準備する流れや、Ollama の固定ホスト・固定 service 名・管理領域の扱いを確認したいときである。
-- モデル選定の根拠は設定の読み出し側にあるため、設定仕様そのものを追う場合は runtime config 側を先に読む。逆に、Ollama の運用・検証・エラー処理を見たい場合はこのファイルが入口になる。
+- `cmoc` が管理する Ollama を起動・維持・検証し、必要な SLM モデルを取得して読み込む処理の入口です。`systemd user service`、`/proc` による実行中プロセス確認、`/api/generate` と `/api/ps` の接続確認、archive の取得と展開までをまとめて扱います。
+- 周辺の設定解決やエラー型、保存先の基底パス確認は補助的に参照します。扱うべき主題は `cmoc managed Ollama` の挙動と、`model_provider == 
 
 ## Read this when
-- `cmoc` provider の model を local で serve するための自動準備手順を追いたいとき
-- Ollama の install、service 起動、model pull/load、GPU 利用確認の流れを確認したいとき
-- 固定 port や管理ディレクトリを前提にした runtime 挙動を確認したいとき
-- 接続失敗や service 不整合時にどの条件で `CmocError` になるかを知りたいとき
+- `cmoc` provider の local SLM を managed Ollama で提供する挙動を変えたいとき.
+- Ollama の install、systemd user service の作成・再起動・検証、model pull/load、GPU 利用確認の境界を確認したいとき.
+- `127.0.0.1:11434` を固定で使う前提や、`/proc` と `systemctl --user` を使った service 同定の根拠を追いたいとき.
 
 ## Do not read this when
-- model 名の選択元や設定の読み込み仕様だけを知りたいときは、runtime config 側を先に読む
-- CLI 引数やコマンド分岐の入口だけを追いたいときは、より上位の command 実装を読む
-- Ollama ではなく別 provider の実行時処理を追いたいとき
-- 永続設定ファイルの定義そのものを確認したいとき
+- 単なる config 読み込みや repo root 解決だけを追いたいときは、`runtime_config` や `runtime_paths` を先に読むほうが直接的です.
+- Ollama 以外の provider の選別や CLI 全体のコマンドルーティングを追いたいときは、別の `runtime_*` モジュールを読むほうが適切です.
+- この file が扱うのは managed Ollama の運用であり、一般的な Ollama の機能全般や別 port の運用を知りたいだけのときには向きません.
 
 ## hash
-- 610183f9c7d5ea2940ca31ecad7b9fc51c898b43eaa14bfecdb865d434447962
+- c095fc7b0ff383779bbd6a84569e3136a6b2eaab8af066f75bff237d5403cf0d
 
 # `runtime_paths.py`
 

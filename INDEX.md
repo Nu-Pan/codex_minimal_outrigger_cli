@@ -115,39 +115,37 @@
 # `src`
 
 ## Summary
-- `src` は realization 側の公開入口が集まる上位階層で、CLI 入口、互換 shim、共有 runtime helper、互換 import 入口、サブコマンド群をまとめて案内する。
-- `main.py` は CLI の root command と各 subcommand の配線、`oracle.py` は正本側 `oracle.*` を解決する package shim、`cmoc_runtime.py` は runtime 互換 import の維持を担う。
-- `acp`、`basic`、`config` はそれぞれ正本側実装や公開面を複製せずに保つ互換 import 入口であり、`commons` は共有 runtime helper のまとまり、`sub_commands` は個別 CLI 実行入口群のまとまりである。
+- cmoc 実行時の realization implementation の入口をまとめる階層で、CLI 入口、runtime 共通機能、互換再公開、設定変換、acp builder 群、サブコマンド群へのルーティングを担う。
+- ここは `src` 配下のトップレベル案内として使い、個別の処理仕様や実装詳細は各下位モジュールへ進む前提で読む。
 
 ## Read this when
-- CLI 入口や subcommand 配線の全体像を確認したいとき。
-- `oracle.*`、`acp.*`、`basic.*`、`config.*` の互換 import 経路や削除条件を確認したいとき。
-- 共有 runtime helper の配置や、どの実行処理が `commons` 側に集約されているかを確認したいとき。
-- `apply`、`review`、`session`、`tui`、`indexing`、`doctor`、`eval-oracle` のどれを読むべきか切り分けたいとき。
+- `src` 配下で、どの実装領域に進むべきかを切り分けたいとき。
+- CLI 入口、runtime 共通機能、設定変換、互換再公開、acp builder、サブコマンド実装のどれを読むか判断したいとき。
+- 共有 runtime helper や互換モジュールがどの責務を持つかを、下位要素へ進む前に確認したいとき。
 
 ## Do not read this when
-- 正本となる oracle 側の仕様や実装内容を確認したいときは、`oracle` ツリー側の対応対象を読む。
-- 個別 subcommand の実処理、git 操作、state 操作、path 変換などの本体を調べたいときは、`sub_commands` 配下の該当 module や `commons` の個別 helper を読む。
-- 互換 import ではなく新しい公開 API や新規 CLI 面の追加場所を探しているだけなら、ここではなく対応する本体側を読む。
+- 個別 helper、個別コマンド、個別 builder の実装内容や失敗時挙動を確認したいときは、対応する下位モジュールを直接読む。
+- 正本仕様断片や oracle file の人間意図を確認したいときは、`oracle` 側の該当文書を読む。
+- 既に読む対象が `main.py`、`commons`、`config`、`basic`、`acp`、`sub_commands` に絞れているときは、この階層ではなく該当対象へ進む。
 
 ## hash
-- 8754196304c1bf6c31e9cbdb350db8010a73ee2b151057e85a0d48a8a2a263ec
+- bdc7b95f9d780e6cb3315e9374edef98d47b9c765ca4e7fa9501d04947e9cf7a
 
 # `test`
 
 ## Summary
-- `test/_support.py` の共通テスト基盤をまとめる入口。最小 Git リポジトリ、Codex 実行用の固定引数、偽の外部コマンド環境、テスト用ヘルパーを使う変更で読む。
-- CLI テストや managed Ollama 周辺の制御ロジックを共有 fixture とスタブで支えるための補助層であり、個別の CLI 振る舞い本体ではなく前処理・環境構築・共通 helper を見るときに進む。
+- `test` は、cmoc の realization test を集める上位ディレクトリ。CLI サブコマンド、runtime 共通基盤、prompt 生成、indexed routing 更新、Codex 実行ラッパー、session/apply/review/doctor の外部挙動を、それぞれの責務ごとに分けたテスト群へ案内する。
+- 共通補助や状態共有のテスト基盤を読む入口は `_support.py`、設定や runtime 共通契約は `test_basic_runtime.py`、prompt 標準と renderer は `test_prompt_parts.py` と `test_struct_doc_rendering.py`、Codex 実行系は `test_codex_runtime_*.py`、session/apply/review/doctor/indexing は各サブコマンドの CLI テストへ進む。
 
 ## Read this when
-- CLI テストで使う共通 fixture や helper を追加・変更するとき。
-- managed Ollama、systemctl、Codex 実行引数のテスト用スタブを調整するとき。
-- テスト用の最小 Git リポジトリや外部コマンドの偽実装の振る舞いを見直したいとき。
+- CLI や runtime の変更後に、対応する外部挙動の回帰テストを探したいとき。
+- 共通 fixture、fake 外部コマンド、Git/worktree セットアップ、Codex 実行支援を使うテストを書くか修正するとき。
+- prompt parts、structured prompt、StructDoc rendering、INDEX 更新、session/apply/review/doctor の CLI 境界を確認するとき。
 
 ## Do not read this when
-- 個別の CLI 挙動そのものを確認したいだけなら、各テスト本体を先に読む。
-- 本番実装の責務や永続データの仕様を知りたいだけなら、対応する oracle 側を読む。
-- この補助層に定義されていない別のサブコマンドや新しいテスト方針を探したいだけなら、別のテストファイルを探す。
+- 個別サブコマンドの詳細を追うだけなら、この上位ディレクトリではなく該当テストファイルを直接読む。
+- テスト支援関数の追加や挙動変更が不要なら、`_support.py` は読まなくてよい。
+- 正本仕様そのものを確認したいなら、`oracle` 側の該当文書や実装を先に読む。
 
 ## hash
-- 0ba16b5382a56124b91555daac7721adc35293d0827ce7683d184fda14afe808
+- 973e72e3f05c824ed4bd83766c6c8786a5bdd87d012cf8b307ca69dafc9a04e8

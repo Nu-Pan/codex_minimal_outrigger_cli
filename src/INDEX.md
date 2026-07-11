@@ -58,21 +58,19 @@
 # `commons`
 
 ## Summary
-- cmoc 実行時に共通利用される helper 群の入口であり、再公開モジュールと個別 runtime helper のまとまりを案内する。
-- この領域には、Codex 実行、CLI 実行、preflight、設定、git、paths、logging、results、errors、state、content などの共有 runtime 機能が集まっているため、個別責務は下位の本文へ進む前提で読む。
+- cmoc の実行時に複数箇所から使う共通 helper 群の入口をまとめる領域で、個別 helper の責務は下位要素に委ねる。
+- この領域は runtime 共通機能のパッケージ境界を示すためのもので、特定 helper の挙動確認ではなく、共有 helper 群へ進む入口判断に使う。
 
 ## Read this when
-- cmoc の実行時処理で、複数モジュールから使う共通 helper の配置場所や公開入口を確認したいとき。
-- runtime 共通 API の再公開範囲や、どの helper 群がこの領域に属するかを見極めたいとき。
+- cmoc の実行時処理で、複数モジュールから参照する共通 helper の配置場所や入口を確認したいとき。
 - 共有 helper 群へ進む前に、この領域が runtime helper 用のまとまりであることを確認したいとき。
 
 ## Do not read this when
-- 特定の helper の実装、入出力、失敗時挙動を確認したいとき。該当する下位要素の本文を読む。
+- 特定の helper の実装、入出力、失敗時挙動を確認したいとき。この対象ではなく、該当する下位要素の本文を読む。
 - CLI コマンド固有の処理やテスト固有の処理を調べたいとき。共有 runtime helper ではなく、より直接その責務を持つ対象へ進む。
-- 実装詳細ではなく再公開だけが必要なときは、この領域の個別 helper ではなく公開入口を参照する。
 
 ## hash
-- 417986b32812424c7ba6ab9786c081cd4fa099acdaa5c22ed9a9907e522d295a
+- 7848702bd9a0ce1a03006e0bee6c1c43727f800d8fd8abd845bf4807f3973f6b
 
 # `config`
 
