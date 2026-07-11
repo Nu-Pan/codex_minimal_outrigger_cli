@@ -200,22 +200,21 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 境界を横断して回帰確認するテスト群への入口。root/work tree の解決、CLI の preflight と error 表示、subcommand log、config 変換、state 読み書き、worktree 管理、Codex 実行権限の生成までをまとめて検証する。
-- 個別サブコマンドの業務ロジックを確認したいときではなく、共通 runtime 契約が崩れていないかを一度に見たいときに読む。共通 fixture と root 状態の整合が重要なため、関連する断片を分散して追うよりここを起点にする。
-- `cmoc` の入出力仕様そのものや、利用者向けの新しい機能仕様を確認したい場合はここを起点にしない。該当する実装側や、より局所のテストへ進んだ方が直接的である。
+- cmoc の基礎 runtime 契約を横断して守る回帰テスト群の入口。root/work root 解決、config 既定値と JSON 順序、CLI のエラー表示、subcommand log、worktree/state 操作、FileAccessMode ごとの Codex override、binary 判定までをまとめて確認する。
+- 個別サブコマンドの業務ロジックではなく、起動前提と共通 runtime 境界が壊れていないかを見たいときに読む。共通 fixture と root 状態をまたぐため、関連テストを一箇所で追いたい場合の起点になる。
 
 ## Read this when
-- root/work root の解決、linked worktree の扱い、CLI 実行前提の検証、error report の出力先、subcommand log の生成条件を確認したいとき。
-- config の既定値、JSON 化の順序、`CmocError` の整形、`SessionState` の妥当性、`FileAccessMode` の sandbox 変換や Codex override 生成の境界を確認したいとき。
-- worktree 作成・削除や、`ensure_cmoc_ignored` のような repo 状態更新を含む共通 runtime 契約の回帰を見たいとき。
+- work root / repo root / linked worktree の扱い、CLI preflight、エラー報告、runtime state、Codex override、sandbox 権限、ignore 反映のどこかを変えた。
+- config 既定値、`CmocError` の表示形式、subcommand ログ、`FileAccessMode` の権限制御、binary 判定の契約を確認したい。
+- basic runtime の回帰として、複数の共通前提が同時に崩れていないかを一通り確認したい。
 
 ## Do not read this when
-- 特定サブコマンドの業務仕様や UI 細部だけを確認したいとき。まずそのサブコマンド固有の実装・テストを読む方がよい。
-- `INDEX.md` のルーティング情報だけを探しているとき。ここは実体の回帰テストであり、案内文ではない。
-- CLI の単純な引数定義や個別 helper の内部実装だけが目的のとき。共通 runtime 境界を横断する必要がなければ、このファイルは広すぎる。
+- 個別サブコマンドの入出力や業務フローだけを確認したい。より直接のサブコマンド別テストを読む。
+- 実装の内部 helper 分割や共通化方針だけを見たい。ここは外部契約の回帰が主目的で、内部構造の根拠にはしない。
+- runtime 境界に触れない単独機能の細部だけを追いたい。
 
 ## hash
-- 0f87061785aab372d4c9401cb588ad541784c348a76732e4cf394b8632b304fc
+- f27a262999f19ad07deb7dfc2f1fe24b606dd7fff36cfdf5f1df68451d7d49be
 
 # `test_cli_tui.py`
 
@@ -258,20 +257,22 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex 実行ラッパーの統合テスト群で、`run_codex_exec` とそれに連なるオーバーライド生成が、実 CLI 呼び出し・作業ディレクトリ・サンドボックス・出力保存・schema 配置・managed Ollama 連携を期待どおりに組み立てるかを確認する。
+- `run_codex_exec` とそれに関連する実行支援の挙動を確認する統合テスト群。Codex 実行時の引数注入、モデル/プロバイダの上書き、作業ディレクトリ、スキーマ保存先、managed Ollama 前提、`.agents` を開かない制約など、実行経路の外部挙動をまとめて検証したいときに読む。
+- 個別の内部 helper ではなく、実際の `codex` 起動結果・ログ・生成物を使って「実行時に何が保証されるか」を見たいときに進む。純粋な `CmocConfig` の定義や Codex 仕様そのものを読む目的なら、より直接の定義元を当たる。
 
 ## Read this when
-- `run_codex_exec` の引数組み立て、CLI 実行、出力保存、schema 配置、workspace-write / pure oracle read の切り替え、linked worktree での振る舞いを確認したいときに読む。
-- Codex の local SLM / managed Ollama への向き先、`run_doctor_preprocess` を伴う事前準備、`--profile` や override 設定の有無を確認したいときに読む。
-- 実際の `codex` バイナリ、スタブ化した `codex`、またはワークツリー上への書き込み可否をまたぐ挙動差を見たいときに読む。
+- `run_codex_exec` の CLI 引数や override config の組み立て結果を確認したいとき
+- read-only / repo-write / pure oracle read の各モードで、`codex` 起動にどう反映されるかを確かめたいとき
+- linked worktree での `cwd` や schema 保存先など、実行時のパス解決を確認したいとき
+- managed Ollama 前提の実行や doctor 前処理との接続を追いたいとき
 
 ## Do not read this when
-- Codex の基本的な設定型やモデル列挙の定義そのものを追いたいときは、テストではなく対応する設定・runtime 側を見る。
-- managed Ollama サービスの実装や doctor 前処理の仕様を追いたいときは、このテストではなくそれらの実体を読む。
-- 個別の ACL、ファイルアクセスモード、CLI 解析の細部だけを追いたいときは、より直接の実装テストや runtime 側のファイルを読む。
+- `CmocConfig` や `CodexModelSpec` の定義そのものを知りたいだけのとき
+- Codex CLI そのものの一般仕様やモデル仕様を読みたいだけのとき
+- ファイルシステムや git 周りの実装詳細ではなく、別のサブコマンドや設定層の挙動を追いたいとき
 
 ## hash
-- 1cb0560db852b42c33f759273156fd399f09d30dc191508e1a938b0ed74968b2
+- 462cb7e9f3e3531ceebcc73b5ecb4b5a0abb0d338e83129849f769384e114793
 
 # `test_codex_runtime_home.py`
 
@@ -501,18 +502,24 @@
 # `test_session_cli.py`
 
 ## Summary
-- `session fork` / `session join` / `session abandon` の CLI 外部挙動を、session branch と session state のライフサイクル単位でまとめて確認する回帰テスト群。linked worktree、dirty worktree 拒否、state cleanup、conflict 解消後の残差検査まで、この 3 コマンドの状態遷移と副作用を読むときに見る。
+- `session fork` / `join` / `abandon` の外部挙動を、session 状態ファイルと branch/worktree の遷移まで含めて検証するテスト群。fork の状態初期化、join の conflict 解消と後処理、abandon の戻り先復帰と cleanup を一箇所で追う入口として読む。
+- linked worktree から実行したときの home branch 判定や current branch の扱い、state cleanup の成否、dirty worktree や preprocess invariants 破壊時の拒否挙動を確認したい場合に読む。
+- session join の conflict 判定、追加差分の拒否、delete conflict resolution、stdout / stderr のエラー出力分離、session branch 削除可否の判定を確認したい場合に読む。
 
 ## Read this when
-- session コマンドの作成・変更で、fork / join / abandon の branch 遷移、session state 更新、linked worktree 対応、cleanup 成否、エラー出力の境界を確認したいとき。
-- session 関連の振る舞いを 1 つの回帰観点として追いたいとき。
+- `session fork` / `session join` / `session abandon` の CLI 回帰をまとめて追いたいとき.
+- linked worktree から session コマンドを実行した場合の home branch と状態更新の基準を確認したいとき.
+- session state file の初期化・破損・欠落フィールド・終了後の state 更新を確認したいとき.
+- join 後に conflict 以外の差分が残っていないか、または branch 削除の可否がどう決まるかを確認したいとき.
 
 ## Do not read this when
-- session 以外の CLI や、個別の内部 helper の実装詳細だけを見たいとき。
-- session 状態の保存形式そのものや、他領域の仕様断片を探したいとき。
+- `session` 以外の CLI サブコマンドの挙動を見たいときは、より直接の CLI テストを読むべきである.
+- session の内部 helper 実装や state schema の定義そのものを確認したいときは、対応する実装側を読むべきである.
+- git / worktree / preprocess の共通補助そのものを確認したいときは、このファイルではなく補助モジュールを読むべきである.
+- 単体の conflict 解析ロジックだけを見たいときは、join 専用の最小テストを読むべきである.
 
 ## hash
-- 5c514fc6b63a29c349b246379993b83182bc0030e3da0efd7ad3ecb5c2499ca0
+- b567e60e3c10a303186bb0e1ed2b176fad0b410470343a842f8a87516cfbd128
 
 # `test_struct_doc_rendering.py`
 

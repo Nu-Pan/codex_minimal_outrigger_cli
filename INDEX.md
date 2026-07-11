@@ -115,37 +115,39 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation 全体への入口。CLI の実行本体、共通基盤、設定や互換 shim を含む実体側の実装を読むときに使う。
-- この階層は、`main.py` の CLI 入口、`sub_commands` の各実行入口、`commons` の共有処理、`config` や `oracle.py` の互換入口をまとめて辿るための案内であり、個別責務の詳細は下位本文で確認する。
+- `src` 配下の realization 実装をまとめて読むための入口。CLI 本体や共通基盤の薄い再公開ではなく、実際の挙動を担う実装側の module を辿るときに使う。
+- この階層は、`basic`・`commons`・`config`・`sub_commands` のような公開面や入口から、実処理の実体へ進みたいときに読む。互換 shim や正本側の定義そのものを探す用途には向かない。
+- `oracle.py` は正本側 `oracle` package を起動時に解決するための shim だが、`src` 全体の案内としては、そこから先の実体実装を追う必要があるときに読む。
 
 ## Read this when
-- realization implementation の実体を確認したいとき。
-- CLI 本体やサブコマンド実装へ、互換入口からどう接続されているかを追いたいとき。
-- 共通 helper、設定、package shim など、複数領域にまたがる実装の入口を切り分けたいとき。
+- CLI の実処理本体、共通 runtime、状態管理、path や git の扱いなど、入口の先にある realization implementation を確認したいとき。
+- `basic`・`commons`・`config`・`sub_commands` などの公開面から、実体 module へどうつながるかを辿りたいとき。
+- `oracle` package の解決 shim を起点に、正本側 module を参照する経路を確認したいとき。
 
 ## Do not read this when
-- 正本仕様そのものを確認したいとき。
-- 個別機能の細部だけを確認したいときは、対応する下位モジュールを直接読む。
-- oracle file / realization file の定義や INDEX 生成規則を確認したいとき。
+- 互換 import の維持可否や旧公開名の扱いだけを確認したいときは、より直接の互換層を読む。
+- 正本仕様断片や oracle file の文面を確認したいときは、`oracle` ツリー側を読む。
+- CLI の登録、サブコマンドの接続、設定や共通 helper の入口だけを確認したいときは、それぞれの下位ディレクトリへ直接進む。
 
 ## hash
-- 32680384c2c5051f9507340670de0f77732aa09a36ba9b7c4b1bc3f0c4659092
+- adc4c1e47fdb45a4b0c972a3b84964ba50dfc4148d1ce2f5e1ec88ae9a86ca93
 
 # `test`
 
 ## Summary
-- `test` 配下の共通支援モジュールをまとめる入口。CLI・runtime・worktree・Codex/Ollama まわりの複数テストで使う補助関数を探すときにここから各 support file へ進む。
-- 個別の機能テスト本体ではなく、テスト間で共通化された runner・fake コマンド・repo fixture・runtime 差し替え・補助的な状態復元を扱う。
+- テスト群の入口。共有テスト補助と各機能の回帰テストが集まっており、CLI 振る舞い・実行時契約・prompt 生成・状態遷移・Markdown レンダリングのどれを追うかで、読む先を切り分けるための案内に使う。
+- 共通補助は、外部コマンドの差し替え、git/worktree の最小 fixture、Codex 実行環境の固定、Ollama の隔離、CLI 実行支援など、複数テストで再利用される前提準備をまとめる。
+- 個別テストは、apply/session/indexing/review/doctor/tui/Codex runtime/prompt parts/StructDoc rendering などの外部挙動を確認する回帰検証であり、実装本体ではなく仕様上意味のある境界を固定する。
 
 ## Read this when
-- 複数のテストで使う共通 fixture や helper の所在を確認したいとき。
-- CLI 実行、git/worktree、Codex 実行、Ollama、state 復元などのテスト補助を横断して探したいとき。
-- 個別テストの期待値ではなく、そのテストが依存する共通準備の責務を追いたいとき。
+- 共通 fixture やテスト支援の使い分けを確認したいとき。
+- CLI の外部挙動、状態ファイル遷移、worktree との整合、Codex 起動前後の前提条件、prompt 生成、Markdown レンダリングのどれかを変更したとき。
+- 特定機能の回帰テストを探していて、まずどのテスト群を見るべきかを判断したいとき。
 
 ## Do not read this when
-- 個別サブコマンドや runtime の仕様そのものを知りたいときは、対応する実装側や各テスト本体を読む。
-- INDEX.md のルーティング方針や正本仕様断片を探しているときは、`oracle` 側の文書を読む。
-- 共通支援ではなく、単一テスト固有の期待値や制御フローだけを確認したいときは該当テストファイルを直接読む。
+- 実装本体のアルゴリズムや内部 helper の分割だけを知りたいときは、対応する実装側を読む。
+- 仕様の正本や設計意図そのものを確認したいときは、テストではなく oracle 側の文書や定義を読む。
+- テスト支援ではなく CLI 定義、設定定義、runtime 実装、prompt 正本を探しているときは、この領域ではなく該当する実装領域を読む。
 
 ## hash
-- 0b2de2eeb65e96144c8f975e85a7beb8a5fe8adb2cf84437bbaa0f167b50e1c3
+- 130b0fb829fc41e8b27071105befd01f3658b5369a7f01027ca1f29bff98b2cd

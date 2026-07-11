@@ -164,21 +164,21 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動する前後の実行環境組み立てと、Codex から返る機械的結果の判定をまとめる境界です。argv 上書き、sandbox / permission profile、CODEX_HOME、追跡中 child process、schema 配置、JSONL error 判定を読むときにここを起点にします。
-- Codex subprocess の許可境界や失敗判定を変える作業ではここを読みます。特に file access mode、書き込み可能 root、read path の許可条件、provider 差、capacity / quota / unexpected error の扱いを確認したいときの入口です。
+- Codex CLI を起動する前後で、`argv`/sandbox・read/write 許可・`CODEX_HOME`・child process tracking・Structured Output schema 配置・JSONL error 判定を一括で扱う基盤を読む入口。Codex subprocess 境界の不変条件や、実行環境の組み立てと失敗時の解釈を変える作業でここを読む。
+- このファイルを読むのは、Codex 呼び出しの権限境界、実行 root の決定、追加 read/write path の妥当性、tracked child process の記録、schema の保存先、CLI 出力のエラー判定を確認・変更したいとき。実装を分割して個別 helper だけを追うより、subprocess 周辺の挙動全体を把握したい場合に向く。
 
 ## Read this when
-- Codex CLI 実行時の sandbox、argv、環境変数、permission profile の組み立てを変更・確認したいとき。
-- child process tracking や apply abandon 周りの pid file 直列化・記録・除去を扱うとき。
-- Structured Output schema の配置方法や、Codex の stdout / stderr / JSONL を見てエラー種別や resume token を判定するロジックを追いたいとき。
+- Codex CLI に渡す sandbox、permission profile、`CODEX_HOME`、`cwd`、追加 path 制御を変えたい
+- apply 実行中の child process tracking や pid file ロック、終了時のクリーンアップを調べたい
+- Structured Output schema の配置方法や、Codex の stdout/stderr から capacity/quota/unexpected error を判定する条件を確認したい
 
 ## Do not read this when
-- 単なる上位コマンドの引数解釈やサブコマンド分岐だけを確認したいときは、まずその呼び出し元の entry point を読むべきです。
-- ファイルアクセス規則そのものの全体像を知りたいだけなら、このファイルより file access rule を直接読む方が適切です。
-- Codex 以外の外部プロセス起動や一般的な runtime 補助を調べたいときは、ここではなく該当する別の runtime helper を優先します。
+- 単純な設定値や runtime path の個別定義だけを知りたい場合は、まずそれぞれの設定・path 生成側を読む
+- Codex CLI の高レベルなサブコマンド仕様や人間向け運用手順だけを知りたい場合は、対応する app_spec 側を先に読む
+- この境界をまたがない単独 helper の内部実装だけを追いたい場合は、より局所的な実装ファイルを直接読む
 
 ## hash
-- ecd3f1cf3da0ac35ee601caf4a5ebaa038e246d5deb2dc5a72593a38ae37083d
+- d1e5c028706285f3041bf21382e01e795c76084de1f7ad33a4c325d26d774a3b
 
 # `runtime_codex_tui.py`
 
