@@ -62,18 +62,17 @@
 # `test_rule.md`
 
 ## Summary
-- cmoc の自動テストを書く際の正本仕様断片。pytest、realization test の配置、検証対象と非対象、テスト用リポジトリ環境、Real Codex CLI 呼び出し時の provider/model、Fake Codex CLI の使い分けを扱う。
+- cmoc の決定論的な制御ロジックを検証する realization test の方針をまとめる入口。pytest 前提で、`<cmoc-root>/test` に置くテストの対象範囲と、Real Codex CLI 経路で cmoc managed ollama を使うべき条件を確認するために読む。
 
 ## Read this when
-- cmoc の realization test を追加・変更する。
-- テストで Real Codex CLI、cmoc managed ollama、Fake Codex CLI のどれを使うべきか判断する。
-- テスト環境を tmp_path 配下にどう構築するか、または有料クラウド backend を避ける条件を確認する。
-- LLM の回答品質、Codex CLI の仕事の意味的成功、cmoc が責任を持つ制御・結合動作の境界を確認する。
+- cmoc の自動テストで、状態検査・作業ディレクトリ決定・対象列挙・設定生成・ログ保存・状態更新・エラー処理のような決定論的な制御ロジックをどう検証するか判断したいとき。
+- Real Codex CLI 呼び出しを含むテストで、cmoc managed ollama を使うべきか、Fake Codex CLI で足りるかを切り分けたいとき。
+- テストの実行環境を `<test-root>` 内に隔離する前提や、共有してよい ollama 側の境界を確認したいとき。
 
 ## Do not read this when
-- cmoc の実装コードの構造や通常実行時の挙動だけを確認したい。
-- テストに関係しない oracle doc、oracle src、または CLI 仕様を探している。
-- Codex CLI や外部 provider そのものの正しさ・安定性を検証する仕様を探している。
+- Codex CLI 自体、外部 provider、有料クラウド backend の正しさや性能を評価したいだけのとき。
+- LLM の回答品質や、依頼した仕事の意味的な成功そのものを検証したいとき。
+- `<cmoc-root>/test` の具体的な個別テスト実装や、`cmoc managed ollama` の管理・配置の詳細を直接知りたいときは、それぞれ該当する本文を読むべきで、この案内は不要。
 
 ## hash
-- ea44e203bd5af4e78236f8191f743556b71292a200b562d53a21c66272954071
+- 32b1e73790eaf1f3c1c6574d477cabd1ba2e19062de0792c6e422b47935ecad9

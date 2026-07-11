@@ -1,20 +1,21 @@
 # `doc`
 
 ## Summary
-- `app_spec` 配下の正本仕様断片群への入口。CLI の起動前処理、補完、実行呼び出し、ログ、事前検証、エラー処理、model provider 境界、索引更新、prompt 標準、run 隔離、session 状態、利用手順のような横断仕様を確認するときに進む。
+- `app_spec` は cmoc の実行仕様をまとめる oracle/doc 配下の上位入口で、CLI 起動前後の共通規則、出力、ログ、エラー処理、run 隔離、状態管理、外部 model provider 境界、補完、利用手順を横断して確認するときに使う。
+- 個別サブコマンドへ進む前に読むルーティング用の文書で、cmoc 全体の挙動を把握したいときにここから sub_command 配下へ分岐する。
 
 ## Read this when
-- cmoc の CLI 全体に関わる横断仕様を確認・実装・修正・テストするとき。
-- 補完、`codex exec` 呼び出し、ログ出力、doctor preprocess、エラー処理、indexing、session/apply 状態、run 隔離、外部 model provider 境界のどれを読むべきか切り分けたいとき。
-- 利用手順や prompt 標準のように、個別コマンドの細部ではなく共通の起動・出力・状態管理の規則を確認したいとき。
+- cmoc 全体の実行仕様を横断して把握したいとき。
+- CLI 補完、ログ、エラー処理、run 隔離、状態管理、prompt、外部 model provider との責務分担をまたいで確認したいとき。
+- どの個別サブコマンド仕様へ進むべきか判断したいときの入口として使うとき。
 
 ## Do not read this when
-- 個別サブコマンド仕様を直接知りたいときは、`sub_command` 配下の該当仕様を先に読む。
-- この階層ではなく、個別の CLI 引数や状態フィールドの細部だけを確認したいとき。
-- oracle file と realization file の一般論や、INDEX.md エントリー作成ルールそのものを調べたいとき。
+- 個別サブコマンドの挙動だけを確認したいときは、対応する sub_command 側を直接読む。
+- oracle file と realization file の一般的な役割分担や編集規則だけを確認したいとき。
+- この配下にない別領域の仕様や実装を調べたいとき。
 
 ## hash
-- f5f6357fd57dca315cc37eb5dfb45da49846f8595076a48eae725db41550e2dd
+- eba2cbcbec6eaf0769411bcd4e779c153e303366af81a7408f6234ba26b1596b
 
 # `src`
 
