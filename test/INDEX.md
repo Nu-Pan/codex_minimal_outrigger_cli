@@ -146,20 +146,22 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI サブコマンド起動直前の CLI 前処理を検証する realization test。エディタで作成した依頼文の整形、Codex パラメータ解決、TUI 起動用パラメータ、ログ保存先、`.cmoc/local` の ignore、linked worktree での root/cwd/schema/log の扱いを外部挙動として確認する。
+- TUI サブコマンドの起動前処理を検証するテスト群。プロンプト補完、権限解決、ログ保存先、linked worktree での扱いをまとめて確認したいときに読む入口。
 
 ## Read this when
-- TUI サブコマンドの起動前処理、依頼文編集、完了プロンプト生成、Codex exec/TUI 呼び出しパラメータを変更する時。
-- TUI の file access mode 解決、空値時の既定値、structured output schema の選択を確認する時。
-- linked worktree 上で TUI を実行した場合のログ保存先、schema 生成先、root/cwd 引き渡し、`.cmoc/local` の git ignore 挙動を変更または調査する時。
+- `tui` 実行時に、編集前のプロンプトがどのように補完されるかを確認したいとき。
+- `run_codex_exec` で権限や実行条件を解決し、その結果を `run_codex_tui` に渡す流れを確認したいとき。
+- `.cmoc/local/log/tui` と linked worktree 配下でのログ・schema の保存先の違いを確認したいとき。
+- `.gitignore` への追記や、repo 配下と linked worktree 配下のどちらに状態を残すかを確認したいとき。
 
 ## Do not read this when
-- TUI 内部画面の操作や表示だけを確認したい時。
-- Codex 実行共通処理、doctor、git helper、設定読み込みなど、TUI 起動前処理以外の単体挙動を直接確認したい時。
-- oracle file の正本仕様断片そのものを確認したい時。
+- TUI 以外のサブコマンドの起動前処理を探しているとき。
+- `build_tui_codex_parameter` 以外の parameter 生成ロジックだけを確認したいとき。
+- `oracle` 側の仕様本文や CLI 実装本体を先に読むべき明確な対象があるとき。
+- 一般的なテスト補助関数や共通 fixture の実装を探しているとき。
 
 ## hash
-- d0a28976d1ca1972849deff43ce3beb70ce8f8fc28e1e11711bd5232ed3d1214
+- 81ca52fa1e8ec249ef6d08101f24846b0add6849a2ae440f65f69308ffa3a6ae
 
 # `test_codex_runtime_errors.py`
 

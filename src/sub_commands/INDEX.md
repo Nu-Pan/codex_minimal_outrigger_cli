@@ -222,21 +222,18 @@
 # `tui.py`
 
 ## Summary
-- 対話的な依頼文編集から実行パラメータ解決、Codex TUI 起動までをつなぐ `cmoc tui` の実装を担う。
-- TUI 用ログ領域への元 prompt 作成、利用可能なエディタ選択、HTML コメント除去、解決済み JSON からの起動パラメータ構築、TUI で許可される file access mode の検証を扱う。
-- CLI runtime から現在の repository/context を取得して TUI 本体処理へ渡し、ログ作成前に必要な `.cmoc` ignore を保証する入口でもある。
+- `cmoc tui` の起動、利用者が編集する元プロンプトの作成、エディタ起動、解決済みパラメータからの Codex TUI 用パラメータ構築を担当する。TUI 実行の入口と、そこで使う補助処理がまとまっている。
+- `.cmoc` の ignore 保証や、TUI 用の原始プロンプト・完成プロンプトのログ配置に関する扱いもこの対象で決める。
 
 ## Read this when
-- `cmoc tui` の実行フロー、エディタ起動、prompt ファイル作成、TUI 起動前の parameter 解決を変更したいとき。
-- TUI サブコマンドで利用する file access mode、role・summary・goal・各標準フラグの既定値や resolved JSON の読み取り方を確認したいとき。
-- TUI 実行時のログ保存先、元 prompt と完成 prompt の扱い、`.cmoc` ignore 保証の挙動を調べたいとき。
-- TUI 起動前の Codex exec 呼び出しと TUI 起動呼び出しの引数、cwd、purpose、config の渡し方を確認したいとき。
+- `cmoc tui` の実行フロー、TUI 起動前後の処理、編集用テンプレートの生成方法を確認したいとき。
+- TUI で使うエディタ選択、元プロンプトの読み取り、解決済み JSON からのパラメータ組み立て、許可される file access mode の判定を変えたいとき。
+- TUI 実行時に `.cmoc` をどの root で保証するか、ログ周りのファイル配置を追いたいとき。
 
 ## Do not read this when
-- TUI 用 prompt の標準文面や agent call parameter の最終的な本文構築そのものを確認したいだけなら、TUI 起動パラメータを組み立てる builder 側を読む。
-- resolved JSON を生成するためのプロンプトや schema、TUI で指定可能な解決項目を確認したいだけなら、parameter resolve の builder 側を読む。
-- CLI runtime 共通の subcommand 実行、config 読み込み、log path、repository root 判定、Codex 実行 wrapper の詳細を調べたいだけなら、runtime 共通処理を読む。
-- TUI 以外のサブコマンドの挙動や CLI 全体の command routing を調べたい場合は、そのサブコマンドまたは CLI entrypoint を読む。
+- TUI から呼ばれる実際の `build_tui_launch_tui_parameter` の詳細仕様だけを見たいときは、そちらの定義側を読む。
+- CLI の共通実行基盤や設定ロードの詳細だけが目的なら、このファイルではなく `cmoc_runtime` や config 側を読む。
+- プロンプト標準や TUI 向け文面そのものの正本を確認したいだけなら、コメントで参照されている oracle 側の文書を読む。
 
 ## hash
-- 55d0479e65c41ecc57339c3249b78c8a26dff08c1cbac95f988c499a2551fa23
+- a57657daf7e927c8ff18be389b47a54bee6c0f01a5869b41440c8df76dcb10b7

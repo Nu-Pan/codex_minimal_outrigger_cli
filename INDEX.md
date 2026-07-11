@@ -134,45 +134,38 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口であり、CLI 起動、サブコマンド実行、runtime 共通 helper、旧 import 互換層、oracle package 参照 shim へ進むためのルーティング階層。
-- Typer による command 配線、apply・session・review・indexing・tui・doctor・eval oracle などの workflow 実装、Codex 実行・設定・git・path・状態管理などの runtime 基盤を扱う下位要素をまとめる。
-- oracle 側実装を正本に保つため、acp・basic・config などの既存公開 import 経路は複製ではなく再公開・中継・薄い wrapper として維持される。
+- `src` は cmoc の realization 実装全体の入口で、CLI 入口、共通 runtime、互換 shim、`acp` 系 builder 群、公開互換の `basic` / `config` / `oracle` 受け口をまとめて案内する階層。
+- ここを読むと、旧 import 互換をどこで受け止めているか、CLI の配線がどこにあるか、共有基盤と各サブコマンド実装、そして oracle 側 builder へつながる具体的な実装群のどこへ進むべきかを切り分けられる。
+- 新しい実装の本体や互換入口を探す起点には向くが、個別機能の詳細や正本仕様そのものを読む場所ではない。
 
 ## Read this when
-- cmoc の realization 側で、どの実装領域へ進むべきかを最初に判断したいとき。
-- CLI command、subcommand、option、alias、console script 起動、または各 command 実装への委譲関係を調べたいとき。
-- apply、session、review、indexing、tui、doctor、eval oracle などのサブコマンド workflow や状態遷移、branch/worktree/process 管理、report 出力、cleanup の実装場所を探したいとき。
-- Codex 実行、設定読み書き、git 操作、path 解決、ログ、状態管理、doctor preprocess、indexing preflight、apply process 追跡など、複数領域から共有される runtime 基盤の読む先を選びたいとき。
-- acp・basic・config などの旧 import 互換、公開名の再公開、oracle 側正本実装への中継、互換 shim の削除可否を確認したいとき。
-- realization code から oracle package を import 可能にする仕組みや、package shim による正本側 module 参照経路を確認したいとき。
+- cmoc の realization 実装で、どの下位 module がどの責務を持つかをまず切り分けたいとき。
+- `main.py` から各 subcommand へどう配線されるか、または `commons` / `sub_commands` / `acp` / `basic` / `config` / `oracle` のどこを読むべきか判断したいとき。
+- 旧来の import 経路や互換 shim を維持・削除判断したいときに、その受け口が `src` 配下のどこにあるか確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様、人間意図、prompt、Structured Output schema、path keyword、INDEX entry 生成方針などを確認したいときは、対応する oracle 側の文書または実装を読む。
-- ACP 型、設定定義、path model、構造化文書 API などの正本側定義そのものを調べたいときは、互換層ではなく再公開先の正本側実装を読む。
-- 特定のサブコマンド、runtime helper、builder、または shim がすでに特定できているときは、この階層ではなく該当する下位対象を直接読む。
-- 利用者向け workflow や CLI 制御ではなく、Codex に渡す prompt、parameter builder、finding builder、quota probe builder などの生成内容を確認したいときは、対応する builder または oracle 側を読む。
-- 新しい公開 API、設定項目、状態ファイル、または CLI 面を追加する場所を探しているだけで、既存の実装責務や互換経路との関係を確認しないとき。
+- acp builder の正本仕様、prompt、生成内容、人間意図を確認したいときは oracle 側の builder を読む。
+- 個別の CLI 挙動やサブコマンド実装の細部だけを調べたいときは、`sub_commands` や各下位 module を直接読む。
+- 設定や path model、共通 runtime helper の詳細だけが目的なら、`commons` や対応する専用 module を直接読む。
 
 ## hash
-- 8be22d125046cd9791f65d4f34d6765470ef864570a4f619f2685db87f621417
+- 48e33f5d891e74b3aa1d1a77111ad10586bcf6502412e2e3b40dcfd514625fd2
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を置くディレクトリで、CLI サブコマンド、Codex runtime、doctor、indexing、apply/session/review workflow、prompt/rendering、Ollama runtime などの外部挙動と共通 runtime 契約を検証する。
-- 共有 fixture と helper を入口に、一時 Git repository、fake Codex/Ollama/systemctl、Typer runner、linked worktree などを使って、実装が oracle file 由来の意図を満たすかを確認するテスト本文へ進むための上位入口になる。
+- cmoc の realization test 群をまとめる入口。CLI、runtime、prompt、indexing、session、doctor、review、apply などの外部挙動回帰を、関心領域ごとの個別テストへ振り分けるために読む。
+- 共通 fixture や test 支援モジュールに触れる前に、まずどの挙動を固定したいかを決めるための案内点として使う。
 
 ## Read this when
-- cmoc の実装変更後に、どの realization test が該当する外部挙動や制御ロジックを固定しているかを探したいとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、doctor、indexing、TUI、Codex runtime、Ollama runtime などの CLI または runtime 境界の回帰テストを確認・追加・整理したいとき。
-- Codex CLI の argv 設定上書き、file access mode、root placeholder、session/apply state、Git worktree、subcommand log、structured output schema 参照など、複数機能にまたがる前提をテスト側から確認したいとき。
-- テスト支援 helper、fake 外部コマンド、fixture、packaged import、Markdown rendering など、実装本体ではなくテスト環境や検証観点の置き場所を探したいとき。
+- 実装変更の影響を受ける外部挙動を、どのテストから確認すべきか探したいとき。
+- CLI 起動前処理、Codex runtime、prompt 組み立て、index 更新、session/doctor/review/apply のいずれかに関する回帰テストを探したいとき。
+- 共有 fixture やテスト支援コードではなく、対象機能の境界と期待挙動をまず把握したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのものを確認したい場合は、oracle doc、oracle src、oracle test の該当対象を読む。
-- 実装の責務分割、制御フロー、設定定義、runtime helper の詳細を直接変更したい場合は、対応する realization implementation を読む。
-- 個別サブコマンドや runtime 領域に関係しないルーティング文書規約だけを確認したい場合は、INDEX.md エントリー生成規則や indexing 関連の対象を読む。
-- 特定のテストファイルが既に分かっている場合は、このディレクトリ全体ではなく該当するテスト本文または共有支援モジュールへ直接進む。
+- 個別機能の期待値や失敗条件を確認したいだけなら、対応する個別テスト本文を直接読む。
+- テスト支援関数、fixture、git repo 作成 helper の実装を追いたいなら、支援モジュール側を直接読む。
+- oracle file の正本仕様や実装本体を確認したいなら、それぞれの oracle 側・src 側を直接読む。
 
 ## hash
-- beda0913e4a094986437d71b405241780f092e1d2c3662a7166f21cc2af81a1a
+- 52c2455a36118f65f2f9a7299008300e3d4fcfbd4a3ee14d039392bfd4aa682f

@@ -134,19 +134,18 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装を集めるディレクトリ。apply、session、review、indexing、tui、doctor、eval oracle などの実行入口と workflow 制御へ進むためのルーティング起点になる。
-- サブコマンドごとの実装は、CLI runtime への委譲、worktree・branch・process・state の操作、report 生成、cleanup、評価や review の上位制御などを扱う。
+- `sub_commands` 配下の CLI 実行入口群をまとめる階層。各サブコマンドの起動・委譲・前提条件・利用者向け出力を担い、個別処理の本体は下位モジュールに分かれている。
+- この階層は、`apply`・`review`・`session`・`doctor`・`indexing`・`tui` などの実行入口や、そのサブコマンド間の接続を追うときの入口になる。
 
 ## Read this when
-- cmoc のサブコマンド実装を探し、apply、session、review、indexing、tui、doctor、eval oracle のどの領域へ進むべきか判断したいとき。
-- サブコマンド実行時の入口関数、runtime への接続、上位 workflow、状態遷移、branch/worktree/process 管理、report 出力や cleanup の実装場所を確認したいとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、INDEX.md maintenance、TUI 起動、doctor preprocess、eval oracle の委譲関係を調べたいとき。
+- 特定のサブコマンドの実行入口がどこにあり、どの下位実装へ委譲するかを確認または変更したいとき。
+- サブコマンドの起動条件、前提チェック、利用者向け出力、外側の CLI ルーティングとの接続を確認したいとき。
+- `apply`、`review`、`session`、`indexing`、`tui`、`doctor`、`eval_oracle` のどれを読むべきか切り分けたいとき。
 
 ## Do not read this when
-- CLI 全体の Typer 登録、トップレベル command routing、共通 runtime API、git wrapper、path model、state file schema そのものを変更したいとき。
-- Codex に渡す prompt、Structured Output schema、parameter builder、finding builder、INDEX.md 生成規則など、各 workflow の下位 builder や正本仕様を確認したいとき。
-- oracle file や realization file の定義、path keyword、INDEX.md エントリー生成規則などの正本仕様断片を確認したいとき。
-- 対象サブコマンドや個別処理がすでに特定できている場合は、この階層ではなく該当する下位ディレクトリまたは実装モジュールを直接読む。
+- サブコマンドの実処理本体、共通 runtime、git wrapper、state 仕様、path model などの共通基盤を調べたいとき。
+- oracle file や realization file の定義、INDEX.md 生成規則、正本仕様そのものを確認したいとき。
+- CLI 全体の登録や、ここに含まれない外側のコマンド配線だけを確認したいとき。
 
 ## hash
-- f1f3d92cf9e1395c28b23705fd211aaad5f5175d85744958732691a9e182767a
+- 569837ce89eb8733c15ce11a5ab67d533d96f76fedbbbef320c9eb975b7e584d
