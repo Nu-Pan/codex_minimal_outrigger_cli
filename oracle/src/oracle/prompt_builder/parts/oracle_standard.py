@@ -157,7 +157,7 @@ def build_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
                 ),
             ],
             examples=[
-                "`<work-root>` の定義を複数文書で使う場合は、定義を 1 箇所に置き、他の箇所ではその語だけを使う",
+                "`{{work-root}}` の定義を複数文書で使う場合は、定義を 1 箇所に置き、他の箇所ではその語だけを使う",
                 "`A を B に渡す` と `A が B に渡る` で責務が変わる箇所では、短縮より係り受けの明確さを優先する",
             ],
         ),

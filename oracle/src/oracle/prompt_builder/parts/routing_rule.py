@@ -26,7 +26,7 @@ def build_routing_rule() -> tuple[PlaceholderMap, StructDoc]:
                 "読み進め方",
                 """
                 - 作業開始時に対象領域を推定し、それと近い階層の `INDEX.md` を読む
-                - 対象領域を推定出来ない場合は `<work-root>/INDEX.md` を起点に読む
+                - 対象領域を推定出来ない場合は `{{work-root}}/INDEX.md` を起点に読む
                 - 下位ディレクトリへ進む場合は、その階層の `INDEX.md` も必要に応じて読む
                 - `INDEX.md` を読んでも判断できない場合は、候補となる本文を読んで根拠を確認する
                 - 関連しそうなファイルを総当たりで読む前に、まず `INDEX.md` で候補を絞る

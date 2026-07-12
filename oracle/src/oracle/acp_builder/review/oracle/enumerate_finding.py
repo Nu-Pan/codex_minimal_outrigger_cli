@@ -33,8 +33,8 @@ def build_review_oracle_enumerate_finding_parameter(
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片のレビュー担当です",
         summary="""
-        - `<oracle-path>` を起点に `<oracle-root>` ツリー内の oracle file をレビューすること
-        - 必要なら `<oracle-path>` 以外の関連する oracle file も読むこと
+        - `{{oracle-path}}` を起点に `{{oracle-root}}` ツリー内の oracle file をレビューすること
+        - 必要なら `{{oracle-path}}` 以外の関連する oracle file も読むこと
         """,
         goal="""
         - 指定の Structured Output schema に従って所見が列挙されていること
@@ -53,7 +53,7 @@ def build_review_oracle_enumerate_finding_parameter(
         ],
         aux_placeholder_def={
             "oracle-path": resolve_real_path(oracle_path),
-            "oracle-root": resolve_real_path(Path("<work-root>/oracle")),
+            "oracle-root": resolve_real_path(Path("{{work-root}}/oracle")),
         },
         oracle_and_realization_basic=True,
         oracle_standard=True,

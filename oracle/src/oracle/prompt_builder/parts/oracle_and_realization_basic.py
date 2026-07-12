@@ -24,7 +24,7 @@ def build_oracle_and_realization_basic() -> tuple[PlaceholderMap, StructDoc]:
                         "定義",
                         """
                         以下の条件をすべて満たしたファイルの事を指す
-                        - `<work-root>/oracle` ツリー内である
+                        - `{{work-root}}/oracle` ツリー内である
                         - `INDEX.md`, `AGENTS.md` ではない
                         - `git check-ignore` で git 追跡対象外ではないと判定された
                         """,
@@ -42,13 +42,13 @@ def build_oracle_and_realization_basic() -> tuple[PlaceholderMap, StructDoc]:
                         """
                         - oracle doc
                             - oracle file のうち、自然言語の markdown ドキュメント形式で記述されたもの
-                            - `<work-root>/oracle/doc` に配置されている
+                            - `{{work-root}}/oracle/doc` に配置されている
                         - oracle src
                             - oracle file のうち、プログラミング言語・設定ファイルで記述された実装
-                            - `<work-root>/oracle/src` に配置されている
+                            - `{{work-root}}/oracle/src` に配置されている
                         - oracle test
                             - oracle file のうち、プログラミング言語で記述されたテスト
-                            - `<work-root>/oracle/test` に配置されている
+                            - `{{work-root}}/oracle/test` に配置されている
                         """,
                     ),
                 ),
@@ -59,13 +59,13 @@ def build_oracle_and_realization_basic() -> tuple[PlaceholderMap, StructDoc]:
                     "定義",
                     """
                     以下の条件をすべて満たしたファイルの事を指す
-                    - `<work-root>` ツリー内である
-                    - `<work-root>/oracle` ツリー内ではない
-                    - `<work-root>/memo` ツリー内ではない
-                    - `<work-root>/.git` ツリー内ではない
-                    - `<work-root>/.agents` ツリー内ではない
-                    - `<work-root>/.codex` ツリー内ではない
-                    - `<work-root>/.cmoc` ツリー内ではない
+                    - `{{work-root}}` ツリー内である
+                    - `{{work-root}}/oracle` ツリー内ではない
+                    - `{{work-root}}/memo` ツリー内ではない
+                    - `{{work-root}}/.git` ツリー内ではない
+                    - `{{work-root}}/.agents` ツリー内ではない
+                    - `{{work-root}}/.codex` ツリー内ではない
+                    - `{{work-root}}/.cmoc` ツリー内ではない
                     - `INDEX.md`, `AGENTS.md` ではない
                     - `git check-ignore` で git 追跡対象外ではないと判定された
                     """,
@@ -86,13 +86,13 @@ def build_oracle_and_realization_basic() -> tuple[PlaceholderMap, StructDoc]:
                     - realization implementation
                         - realization code のうち、実装ファイルを指す
                         - 純粋なソースコードだけでなく、プロダクトの挙動を記述する設定ファイル類も含む
-                        - `<work-root>/src` に配置されている
+                        - `{{work-root}}/src` に配置されている
                     - realization test
                         - realization test とは、realization code のうち、テストのソースコードを指す
-                        - `<work-root>/test` に配置されている
+                        - `{{work-root}}/test` に配置されている
                     - realization ancillary
                         - realization ancillary とは、realization file のうち、補助的なファイルを指す
-                        - e.g. `<work-root>/.gitignore`, `<work-root>/bin/**/*`
+                        - e.g. `{{work-root}}/.gitignore`, `{{work-root}}/bin/**/*`
                     """,
                 ),
             ),

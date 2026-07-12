@@ -23,17 +23,17 @@ def build_apply_fork_change_summary_parameter(
     AI エージェント呼び出しパラメータを構築する。
 
     raw_git_diff:
-        `<cmoc-apply-branch>` 上の変更内容を表す、git コマンド出力そのままの差分テキスト。
+        `{{cmoc-apply-branch}}` 上の変更内容を表す、git コマンド出力そのままの差分テキスト。
         典型的には `git diff` の標準出力を、解析・整形せずに渡す。
     """
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア変更内容の要約担当です",
         summary="""
-        - `<repo-root>` ツリー内の差分を、人間が読む用に要約すること
+        - `{{repo-root}}` ツリー内の差分を、人間が読む用に要約すること
         """,
         goal="""
-        - `<repo-root>` ツリー内の差分を、指定の Structured Output schema に従って返却すること
+        - `{{repo-root}}` ツリー内の差分を、指定の Structured Output schema に従って返却すること
         """,
         file_access_mode=FileAccessMode.READONLY,
         aux_dynamic_prompt=[

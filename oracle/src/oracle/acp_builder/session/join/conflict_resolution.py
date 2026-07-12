@@ -32,7 +32,7 @@ def build_session_join_conflict_resolution_parameter(
     prompt = build_complete_prompt(
         role="- あなたは git merge conflict の解消担当です",
         summary="""
-        - `<work-root>` ツリー内の merge conflict marker を解消すること
+        - `{{work-root}}` ツリー内の merge conflict marker を解消すること
         """,
         goal="""
         - conflict marker の解消いがいの余計な差分が存在しないこと

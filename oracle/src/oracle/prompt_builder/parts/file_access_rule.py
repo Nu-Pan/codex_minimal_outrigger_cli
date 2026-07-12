@@ -19,19 +19,19 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     #   work-root 外の書き込み禁止は、言わなくてもわかりそう。
     #   だが、ルール文章としての整合性を優先して明示する。
     # NOTE
-    #   ログ関係だけは例外的に `<run-root>` で作業していようと cmoc が `<repo-root>/.cmoc/gu/ar/log` に書きに行く。
-    #   その関係で、agent が `<run-root>` での作業中に `<repo-root>/.cmoc/gu/ar/log` を読みに行きたくなる事がある。
-    #   更に log から `<repo-root>/.cmoc` ツリー内を読みに行きたくなるはずである (report とか)。
-    #   よって、`<repo-root>/.cmoc/g*/ar` だけは例外的にアクセスを許可する。
+    #   ログ関係だけは例外的に `{{run-root}}` で作業していようと cmoc が `{{repo-root}}/.cmoc/gu/ar/log` に書きに行く。
+    #   その関係で、agent が `{{run-root}}` での作業中に `{{repo-root}}/.cmoc/gu/ar/log` を読みに行きたくなる事がある。
+    #   更に log から `{{repo-root}}/.cmoc` ツリー内を読みに行きたくなるはずである (report とか)。
+    #   よって、`{{repo-root}}/.cmoc/g*/ar` だけは例外的にアクセスを許可する。
     repo_root = resolve_repo_root()
     work_root = resolve_work_root()
     if repo_root == work_root:
         out_repo_deny_rule = [
-            "`<repo-root>` ツリー外は読み書き禁止",
+            "`{{repo-root}}` ツリー外は読み書き禁止",
         ]
     else:
         out_repo_deny_rule = [
-            "`<work-root>` ツリー外は読み書き禁止だが、例外的に `<repo-root>/.cmoc/g*/ar` ツリー内は読み込み可能",
+            "`{{work-root}}` ツリー外は読み書き禁止だが、例外的に `{{repo-root}}/.cmoc/g*/ar` ツリー内は読み込み可能",
         ]
     # 基礎 deny ルール
     # NOTE
@@ -48,13 +48,13 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     #   memo は agent 不可視のユーザーワークスペースとするので読み書き禁止で固定
     base_deny_rule = [
         *out_repo_deny_rule,
-        "`<work-root>/.git` ツリー内は書き込み禁止",
-        "`<work-root>/.agents` ツリー内は書き込み禁止",
-        "`<work-root>/.codex` ツリー内は書き込み禁止",
-        "`<work-root>/.cmoc/g*/ar` ツリー内は書き込み禁止",
+        "`{{work-root}}/.git` ツリー内は書き込み禁止",
+        "`{{work-root}}/.agents` ツリー内は書き込み禁止",
+        "`{{work-root}}/.codex` ツリー内は書き込み禁止",
+        "`{{work-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止",
         "`AGENTS.md` は書き込み禁止",
         "`INDEX.md` は書き込み禁止",
-        "`<work-root>/memo` は読み書き禁止",
+        "`{{work-root}}/memo` は読み書き禁止",
     ]
     # モード別ルール設定
     # NOTE

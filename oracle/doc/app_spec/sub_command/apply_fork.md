@@ -4,13 +4,13 @@
 
 - `cmoc apply fork` は、Codex CLI による apply ループを実行する
 - この apply ループは以下の状態を目標とする
-    - `<work-root>` の実装が `<work-root>/oracle` の正本仕様断片と一致している
-    - `<work-root>` の実装が最低限度の品質を満たしている
+    - `{{work-root}}` の実装が `{{work-root}}/oracle` の正本仕様断片と一致している
+    - `{{work-root}}` の実装が最低限度の品質を満たしている
 - `cmoc apply fork` が正常に実行完了したからといって、目標達成が保証されるわけではない
     - あくまで、apply ループを実行し、目標達成のために努力する所までが `cmoc apply fork` の責任範囲である
     - i.e. ベストエフォート的な振る舞いで良い
-- `cmoc apply fork` は `<cmoc-session-branch>` と作業用コピーを直接汚すことはしない
-    - `<cmoc-apply-branch>` を作成し、そこにコミットを積み上げる
+- `cmoc apply fork` は `{{cmoc-session-branch}}` と作業用コピーを直接汚すことはしない
+    - `{{cmoc-apply-branch}}` を作成し、そこにコミットを積み上げる
 
 ## 引数
 
@@ -23,10 +23,10 @@
 
 以下の場合はエラー終了する
 
-- 現在のブランチが `<cmoc-session-branch>` ではない
-- 対応する `<cmoc-session-state-file>` が存在しない
-- 対応する `<cmoc-session-state-file>` の `session.state` が `active` ではない
-- 対応する `<cmoc-session-state-file>` の `apply.state` が `ready` ではない
+- 現在のブランチが `{{cmoc-session-branch}}` ではない
+- 対応する `{{cmoc-session-state-file}}` が存在しない
+- 対応する `{{cmoc-session-state-file}}` の `session.state` が `active` ではない
+- 対応する `{{cmoc-session-state-file}}` の `apply.state` が `ready` ではない
 - git 未コミット差分が存在する
 
 ## 実行作業
@@ -40,7 +40,7 @@
     3. 所見リストが空なら apply ループ先頭へ戻る
     4. agent call で「所見リストに対する修正作業」を Codex CLI に依頼する
     5. apply ループ先頭に戻る
-4. `<cmoc-session-state-file>` の状態を更新
+4. `{{cmoc-session-state-file}}` の状態を更新
 5. 作業結果をレポートする
 
 ## `cmoc apply fork` の責務境界
@@ -54,15 +54,15 @@
 
 ## ユーザー中断
 
-- `cmoc apply fork` は中断可能サブコマンドとし、共通動作は `<cmoc-root>/oracle/doc/app_spec/subcommand_interruption.md` を正本とする
+- `cmoc apply fork` は中断可能サブコマンドとし、共通動作は `{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` を正本とする
 - ユーザー中断要求を受け付けた場合、apply ループを次の一貫した境界で打ち切る
     - 完了済みの処理単位による commit は保持する
     - 実行中だった処理単位は、完了させて commit するか、そこで発生した未確定の変更を破棄する
-    - `<cmoc-apply-branch>` と `<cmoc-apply-worktree>` に未確定の変更を残さない
+    - `{{cmoc-apply-branch}}` と `{{cmoc-apply-worktree}}` に未確定の変更を残さない
 - apply ループは未収束として正常に完了させ、`apply.state` を `completed` に遷移させる
 - 中断までに確定した部分結果は `cmoc apply join` または `cmoc apply abandon` で扱えるものとし、中断した apply ループ自体は再開しない
 
-## `<cmoc-session-state-file>` 状態遷移
+## `{{cmoc-session-state-file}}` 状態遷移
 
 - apply ループ開始直前
     - `apply.state` を `running` に遷移させる
@@ -77,18 +77,18 @@
 
 ## 「run の隔離実行を開始する」とは
 
-- それ以降の実際の作業を `<cmoc-review-worktree>` 上で隔離実行することを指す
-- 詳しくは `<cmoc-root>/oracle/doc/app_specs/run_isolation.md` を参照すること
+- それ以降の実際の作業を `{{cmoc-review-worktree}}` 上で隔離実行することを指す
+- 詳しくは `{{cmoc-root}}/oracle/doc/app_specs/run_isolation.md` を参照すること
 
 ## 「調査待ちリストを初期化」とは
 
 - `cmoc apply fork` では調査対象のファイルを「調査待ちファイルリスト」で管理する
 - `--scope rolling`: ローリングスコープ（デフォルト値）
-    - 「前回の apply の `<cmoc-apply-join-commit>`」から「今回の apply の `<cmoc-apply-fork-commit>`」の間に変更があった oracle file, realization file を、調査待ちファイルリストの初期値とする
+    - 「前回の apply の `{{cmoc-apply-join-commit}}`」から「今回の apply の `{{cmoc-apply-fork-commit}}`」の間に変更があった oracle file, realization file を、調査待ちファイルリストの初期値とする
     - そのセッションの最初の apply の場合は、セッションスコープにフォールバックする
     - i.e. `cmoc apply fork` 後に変更があったファイルについて、最低 1 回は調査が行われるということ
 - `--scope session`: セッションスコープ
-    - `<cmoc-session-fork-commit>` から `<cmoc-apply-fork-commit>` の間で変更があった oracle file, realization file を、調査待ちファイルリストの初期値とする
+    - `{{cmoc-session-fork-commit}}` から `{{cmoc-apply-fork-commit}}` の間で変更があった oracle file, realization file を、調査待ちファイルリストの初期値とする
     - i.e. そのセッション上で変更のあったファイルについて、最低 1 回は調査が行われるということ
 - `--scope full`
     - 全ての oracle file, realization file を、調査待ちファイルリストの初期値とする
@@ -122,11 +122,11 @@
 
 - レポートの形式は markdown + YAML Front Matter とする
 - YAML Front Matter に必ず含める項目
-    - `<cmoc-session-branch>`
-    - `<cmoc-session-fork-commit>`
-    - `<cmoc-apply-branch>`
-    - `<cmoc-apply-fork-commit>`
-    - `<cmoc-apply-worktree>`
+    - `{{cmoc-session-branch}}`
+    - `{{cmoc-session-fork-commit}}`
+    - `{{cmoc-apply-branch}}`
+    - `{{cmoc-apply-fork-commit}}`
+    - `{{cmoc-apply-worktree}}`
 - レポート本文に必ず含める項目
     - 作業結果
         - 収束 : 「検出された所見リストが空」によりループを終了した
@@ -136,15 +136,15 @@
     - 所見数の推移
         - ループごとに何件の所見を見つけたかを書く
         - 「未収束」の場合は、まだ所見が残っている可能性を定型文で追記する
-    - `<cmoc-apply-branch>` 上の全ての変更内容に対する要約
+    - `{{cmoc-apply-branch}}` 上の全ての変更内容に対する要約
         - この `cmoc apply fork` で行った作業内容だけの要約に限定する
         - 変更内容の意味論に基づいたカテゴリ分けを行うこと
-- レポート本体は `<repo-root>/.cmoc/gu/ar/report/apply/fork/<time-stamp>.md` にファイルに保存する
+- レポート本体は `{{repo-root}}/.cmoc/gu/ar/report/apply/fork/{{time-stamp}}.md` にファイルに保存する
 - 作成したレポートのフルパスを標準出力に流すこと (内容は流さない)
 
-## `<cmoc-apply-branch>` 上の全ての変更内容に対する要約の生成方法
+## `{{cmoc-apply-branch}}` 上の全ての変更内容に対する要約の生成方法
 
-- `<cmoc-apply-branch>` 上の全ての変更内容に対する要約の生成を agent call に依頼する
+- `{{cmoc-apply-branch}}` 上の全ての変更内容に対する要約の生成を agent call に依頼する
 - この agent call の詳細仕様は `build_apply_fork_change_summary_parameter` を正本とする
 - cmoc は Structured Output を作業レポート用 Markdown にレンダリングする
 

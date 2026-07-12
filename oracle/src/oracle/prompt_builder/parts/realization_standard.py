@@ -162,7 +162,7 @@ def build_realization_standard() -> tuple[PlaceholderMap, StructDoc]:
                 ),
                 Requirement(
                     "必須",
-                    "対応する oracle file が存在する場合は、コメントにプレースホルダ `<work-root>` 起点の oracle file path を書く",
+                    "対応する oracle file が存在する場合は、コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く",
                 ),
                 Requirement(
                     "必須",
@@ -182,7 +182,7 @@ def build_realization_standard() -> tuple[PlaceholderMap, StructDoc]:
                 ),
             ],
             examples=[
-                "oracle file の明示要求に対応する処理には、必要に応じて `<work-root>/oracle/doc/...` のように根拠 path を近くに残す",
+                "oracle file の明示要求に対応する処理には、必要に応じて `{{work-root}}/oracle/doc/...` のように根拠 path を近くに残す",
                 "単純な代入や関数呼び出しには `値を代入する` のようなコメントを書かない",
                 "一見自然なライブラリ利用を避けている場合は、依存増加や失敗時挙動の違いなど、避けた理由を短く書く",
             ],

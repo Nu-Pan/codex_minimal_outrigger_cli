@@ -26,8 +26,8 @@
 - cmoc がエディタを起動して、そこにユーザーがオリジナルプロンプトを入力する
 - 起動するエディタは (高優先度) `code` --> `nano` --> `vim` --> `vi` (低優先度) の順でフォールバックする
 - `code` で起動する場合は必ず `--wait` を付けること
-- エディタの編集対象は `<repo-root>/.cmoc/gu/ar/log/tui/<time-stamp>_orig.md` とする
-- `<time-stamp>_orig.md` は初期値として以下の文面を持つこととする
+- エディタの編集対象は `{{repo-root}}/.cmoc/gu/ar/log/tui/{{time-stamp}}_orig.md` とする
+- `{{time-stamp}}_orig.md` は初期値として以下の文面を持つこととする
     ```markdown
     <!--
     AI Agent CLI/TUI に与えるプロンプトをここに書く。
@@ -147,7 +147,7 @@
 
     ```
 - エディタから cmoc に処理が戻ってきたらユーザー入力完了とみなす
-- `<time-stamp>_orig.md` からのオリジナルプロンプト読み出しは以下の挙動とする
+- `{{time-stamp}}_orig.md` からのオリジナルプロンプト読み出しは以下の挙動とする
     - コメント `<!-- ... -->` は削除
     - 前後の空白文字は除去 (`strip`)
 
@@ -165,7 +165,7 @@
 ### Codex CLI の場合
 
 - 起動コマンドは `codex` とする (`codex exec` ではない)
-- `<cmoc-root>/oracle/doc/app_spec/codex_exec_rule.md` から、以下の要素を持ち込む
+- `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` から、以下の要素を持ち込む
     - 環境変数 `$CODEX_HOME`
     - preflight validation
     - Codex CLI 引数による設定上書き

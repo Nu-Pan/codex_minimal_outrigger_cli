@@ -95,5 +95,5 @@ class AgentCallParameter:
     run_indexing_preflight: bool = field(default=True)
 
     # agent call 時のカレントパス
-    # 通常は `<work-root>` のままで良い
+    # 通常は `{{work-root}}` のままで良い
     cwd: Path = field(default_factory=lambda: resolve_work_root())

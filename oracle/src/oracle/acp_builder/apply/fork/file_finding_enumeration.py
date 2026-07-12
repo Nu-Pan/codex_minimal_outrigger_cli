@@ -30,10 +30,10 @@ def build_apply_fork_file_finding_enumeration_parameter(
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア実装の所見リストアップ担当です",
         summary="""
-        - `<target-path>` を起点に `<repo-root>` ツリー内の所見 (realization file の要修正点) を調査すること
+        - `{{target-path}}` を起点に `{{repo-root}}` ツリー内の所見 (realization file の要修正点) を調査すること
         """,
         goal="""
-        - `<target-path>` 以外の必要な oracle file, realization file も読んでいること
+        - `{{target-path}}` 以外の必要な oracle file, realization file も読んでいること
         - 指定された Structured Output schema に従って所見リストを返すこと
         - 列挙した所見リストが apply review standard を満たしている事
         """,

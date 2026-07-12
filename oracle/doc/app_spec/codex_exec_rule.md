@@ -3,7 +3,7 @@
 ## 基本
 
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
-- 個別の `codex exec` 呼び出しの仕様は `<cmoc-root>/oracle/src/acp/builder` ツリー内の AgentCallParameter builder を正本とする
+- 個別の `codex exec` 呼び出しの仕様は `{{cmoc-root}}/oracle/src/acp/builder` ツリー内の AgentCallParameter builder を正本とする
 
 ## 環境変数 `$CODEX_HOME`
 
@@ -21,7 +21,7 @@
 ## Codex CLI 引数による設定上書き
 
 - cmoc は Codex CLI 呼び出しに `--profile` (`-p`) を指定してはならない
-- cmoc は Codex CLI 呼び出しのために `$CODEX_HOME/<name>.config.toml` を生成してはならない
+- cmoc は Codex CLI 呼び出しのために `$CODEX_HOME/{{name}}.config.toml` を生成してはならない
 - `AgentCallParameter`, `CmocConfig` などから決まる呼び出し単位の設定は、Codex CLI の argv で明示的に上書きする
 - 上書き対象に専用引数が存在する場合は専用引数を使う
 - 専用引数が存在しない設定は、`--config` (`-c`) と `key=value` 形式の設定値を使って上書きする
@@ -44,10 +44,10 @@
 ## Model, Reasoning Effort
 
 - Codex CLI に対する Model, Reasoning Effort は、全ての呼び出しで以下の argv により明示的に上書きする
-    - Model: `--model`, `<model-name>`
-    - Reasoning Effort: `--config`, `model_reasoning_effort="<reasoning-effort>"`
-- `<model-name>` は `AgentCallParameter.model_class` を `CmocConfigCodex.model` で解決したモデル名とする
-- `<reasoning-effort>` は `AgentCallParameter.reasoning_effort` を `CmocConfigCodex.reasoning_effort` で解決した値とする
+    - Model: `--model`, `{{model-name}}`
+    - Reasoning Effort: `--config`, `model_reasoning_effort="{{reasoning-effort}}"`
+- `{{model-name}}` は `AgentCallParameter.model_class` を `CmocConfigCodex.model` で解決したモデル名とする
+- `{{reasoning-effort}}` は `AgentCallParameter.reasoning_effort` を `CmocConfigCodex.reasoning_effort` で解決した値とする
 - 具体的な設定は AgentCallParameter builder を正本とする
 - cmoc は Model, Reasoning Effort 設定についての情報を Codex CLI プロンプトに注入しない
 
@@ -61,34 +61,34 @@
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意
 味内容を変更しない範囲に限って許可する
 - プロンプト本文を argv に載せてはならない
-- `codex exec` にわたすプロンプト全文は一度 `<repo-root>/.cmoc/gu/ar/log/codex/<time-stamp>_prompt.jsonl` に出力すること
-- プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で `<time-stamp>_prompt.jsonl` をリダイレクト入力すること
+- `codex exec` にわたすプロンプト全文は一度 `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_prompt.jsonl` に出力すること
+- プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で `{{time-stamp}}_prompt.jsonl` をリダイレクト入力すること
 - argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする
 
 ## Codex CLI 呼び出し情報の保存
 
-- Codex CLI 呼び出しに関する情報は `<repo-root>/.cmoc/gu/ar/log/codex/<time-stamp>_call.json` に保存すること
-- `<time-stamp>_stdout.jsonl`, `<time-stamp>_stderr.log`, `<time-stamp>_output.json` に残らない情報だけを `<time-stamp>_call.json` に書くこと
-- 同一の Codex CLI 呼び出しの間で `<time-stamp>` は一致しなければならない
+- Codex CLI 呼び出しに関する情報は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_call.json` に保存すること
+- `{{time-stamp}}_stdout.jsonl`, `{{time-stamp}}_stderr.log`, `{{time-stamp}}_output.json` に残らない情報だけを `{{time-stamp}}_call.json` に書くこと
+- 同一の Codex CLI 呼び出しの間で `{{time-stamp}}` は一致しなければならない
 
 ## stdout, stderr の扱い
 
 - `--json` を必ず指定すること
-- stdout は `<repo-root>/.cmoc/gu/ar/log/codex/<time-stamp>_stdout.jsonl` に出力すること
-- stderr は `<repo-root>/.cmoc/gu/ar/log/codex/<time-stamp>_stderr.log` に出力すること
+- stdout は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_stdout.jsonl` に出力すること
+- stderr は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_stderr.log` に出力すること
 - stdout, stderr をコンソールには流さないこと
 
 ## `--output-last-message`
 
-- `--output-last-message <repo-root>/.cmoc/gu/ar/log/codex/<time-stamp>_output.json` を必ず指定すること
-- cmoc が Codex CLI の作業結果を取り出す必要がある場合、`<time-stamp>_output.json` から読み出すこと
+- `--output-last-message {{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_output.json` を必ず指定すること
+- cmoc が Codex CLI の作業結果を取り出す必要がある場合、`{{time-stamp}}_output.json` から読み出すこと
 
 ## Structured Output
 
 - Codex CLI に Structured Output を要求する場合は、必ず `--output-schema` を使うこと
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
-- スキーマは、一度 `<repo-root>/.cmoc/gu/ar/schema/<hash>.json` に保存して、これを Codex CLI に参照させること
-- `<hash>` は schema 本文の SHA256 ハッシュとする
+- スキーマは、一度 `{{repo-root}}/.cmoc/gu/ar/schema/{{hash}}.json` に保存して、これを Codex CLI に参照させること
+- `{{hash}}` は schema 本文の SHA256 ハッシュとする
 - Structured Output の結果は cmoc 側でも機械的検証を行うこと
 
 ## `codex exec` の並列呼び出し
@@ -128,7 +128,7 @@
     - 一番最初に待機に入ったスレッドだけが代表してポーリングを行う
     - 複数スレッドで並列にポーリングを行うのは禁止
 - 再開対象セッション ID の調査方法
-    - 対象セッションの `<repo-root>/.cmoc/gu/ar/log/codex/<time-stamp>_output.jsonl` から読み取る
+    - 対象セッションの `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_output.jsonl` から読み取る
     - `type == thread.started` になっている要素の `thread_id` フィールドから読み取る
     - e.g.
         ```json
@@ -170,5 +170,5 @@
 ## `.agents` 配下を編集出来ない問題
 
 - `.agents` ツリー内 Codex CLI で特別扱いされているため、人間が個別に approve しないと編集出来ない
-- `codex exec` は個別の approve が出来ないので `<repo-root>/.agents` 配下は絶対に編集できない（やろうとしても失敗する）
+- `codex exec` は個別の approve が出来ないので `{{repo-root}}/.agents` 配下は絶対に編集できない（やろうとしても失敗する）
 - `.agents` ツリー内編集は cmoc としても禁止とする

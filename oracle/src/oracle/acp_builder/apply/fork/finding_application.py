@@ -30,7 +30,7 @@ def build_apply_fork_finding_application_parameter(
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア実装の修正担当です",
-        summary="- `<repo-root>` ツリー内の realization file を修正すること",
+        summary="- `{{repo-root}}` ツリー内の realization file を修正すること",
         goal="""
         - 所見として指摘されている問題の修正作業をベストエフォートで実施したこと
         - realization file が realization standard に従っていること

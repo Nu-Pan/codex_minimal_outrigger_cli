@@ -38,7 +38,7 @@ def build_review_oracle_validate_finding_challenger_parameter(
         goal="""
         - 指定の Structured Output schema に従って、対象所見が妥当ではない理由を返していること
         - 既存の理由と重複しないよう、新規理由だけが列挙されていること
-        - `<oracle-root>` ツリー内の oracle file を具体的な根拠とし、「かもしれない」「可能性がある」は根拠にしないこと
+        - `{{oracle-root}}` ツリー内の oracle file を具体的な根拠とし、「かもしれない」「可能性がある」は根拠にしないこと
         - 新規理由が無い場合は空配列を返すこと
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
@@ -66,7 +66,7 @@ def build_review_oracle_validate_finding_challenger_parameter(
             ),
         ],
         aux_placeholder_def={
-            "oracle-root": resolve_real_path("<work-root>/oracle"),
+            "oracle-root": resolve_real_path("{{work-root}}/oracle"),
         },
         oracle_standard=True,
         review_oracle_standard=True,

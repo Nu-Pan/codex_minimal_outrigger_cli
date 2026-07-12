@@ -4,7 +4,7 @@
 ## 基本
 
 - pytest を使用する
-- realization test は `<cmoc-root>/test` に実装する
+- realization test は `{{cmoc-root}}/test` に実装する
 
 ## goal
 
@@ -20,11 +20,11 @@
 
 ## テスト用開発対象リポジトリパス
 
-- pytest の `tmp_path` を `<test-root>` とする
-- realization test 上の実行中、被テスト cmoc が動作する環境は `<test-root>` ツリー内に構築する
+- pytest の `tmp_path` を `{{test-root}}` とする
+- realization test 上の実行中、被テスト cmoc が動作する環境は `{{test-root}}` ツリー内に構築する
 - cmoc managed ollama のサービス、サービス設定、および永続化したダウンロード資源はこの隔離の対象外とし、本番実行とテストで共有する
-- cmoc managed ollama の管理・ライフサイクル・配置先は `<cmoc-root>/oracle/doc/app_spec/cmoc_managed_ollama.md` を正本とする
-- 前項の例外を除いてテストが `<test-root>` ツリー内で収まりさえすれば、それ以外は agent の裁量で決めて良い
+- cmoc managed ollama の管理・ライフサイクル・配置先は `{{cmoc-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md` を正本とする
+- 前項の例外を除いてテストが `{{test-root}}` ツリー内で収まりさえすれば、それ以外は agent の裁量で決めて良い
 
 ## クラウドバックエンド
 

@@ -28,7 +28,7 @@ def build_review_oracle_merge_finding_parameter(
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片レビュー結果の整理担当です",
-        summary=f"- `<oracle-root>` ツリー内の oracle file に対する所見リストを整理すること",
+        summary=f"- `{{{{oracle-root}}}}` ツリー内の oracle file に対する所見リストを整理すること",
         goal="""
         - 指定の Structured Output schema に従って編集操作を列挙すること
         - 編集操作実行後、所見同士の内容的な重複や相互矛盾が解消されていること
@@ -43,7 +43,7 @@ def build_review_oracle_merge_finding_parameter(
             ),
         ],
         aux_placeholder_def={
-            "<oracle-root>": resolve_real_path("<work-root>/oracle"),
+            "{{oracle-root}}": resolve_real_path("{{work-root}}/oracle"),
         },
         oracle_standard=True,
         review_oracle_standard=True,

@@ -8,7 +8,7 @@
 
 ## 用語定義
 
-- `CodexModelSpec.model` を `<slm-name>` とする
+- `CodexModelSpec.model` を `{{slm-name}}` とする
 - GPU 推論とは、モデルの推論計算の一部以上を GPU へ offload して実行することを指す。GPU の検出だけでは GPU 推論とはみなさない
 
 ## 管理主体・ライフサイクル
@@ -49,7 +49,7 @@
 - cmoc から ollama へは `127.0.0.1:11434` でアクセスする
 - Codex CLI 呼び出しの argv で以下を指定する
     ```text
-    --model <slm-name>
+    --model {{slm-name}}
     --config 'model_provider="cmoc_managed_ollama"'
     --config 'model_providers.cmoc_managed_ollama.name="cmoc managed ollama"'
     --config 'model_providers.cmoc_managed_ollama.base_url="http://127.0.0.1:11434/v1"'

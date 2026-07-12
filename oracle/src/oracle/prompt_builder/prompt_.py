@@ -162,7 +162,7 @@ def build_complete_prompt(
     prompt.append(
         StructDoc(
             "place holder definition",
-            "\n".join(f"- <{k}> = {v}" for k, v in ph_map.items()),
+            "\n".join(f"- {{{{{k}}}}} = {v}" for k, v in ph_map.items()),
         )
     )
 
