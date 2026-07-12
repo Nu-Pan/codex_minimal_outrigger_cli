@@ -30,26 +30,45 @@ import sub_commands.session.fork as session_fork_module
 import sub_commands.session.join as session_join_module
 
 
-# <work-root>/oracle/doc/dev_rule/test_rule.md:
-# process-global preflight must not leak between deterministic tests.
 @pytest.fixture(autouse=True)
 def reset_indexing_preflight() -> Iterator[None]:
+    """テスト間で process-global な preflight 状態を持ち越さない。
+
+    根拠: <work-root>/oracle/doc/dev_rule/test_rule.md
+    """
+
     codex_preflight_module.disable_indexing_preflight()
     yield
     codex_preflight_module.disable_indexing_preflight()
 
 
 def session_state_path(root: Path, session_branch: str) -> Path:
+    """managed session branch に対応する永続 state file の path を求める。
+
+    根拠: <work-root>/oracle/doc/app_spec/session_state.md
+    """
+
     session_id = session_branch.removeprefix("cmoc/session/")
     return root / ".cmoc" / "local" / "session" / f"{session_id}.json"
 
 
 def session_home_branch(root: Path, session_branch: str) -> str:
+    """session state から fork 元かつ join 先の home branch を読む。
+
+    根拠: <work-root>/oracle/doc/app_spec/session_state.md
+    """
+
     state = json.loads(session_state_path(root, session_branch).read_text())
     return state["session"]["session_home_branch"]
 
 
 def write_abandoned_state(root: Path, session_id: str) -> Path:
+    """session fork の session-id collision 用に abandoned state を作る。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
+    <work-root>/oracle/doc/app_spec/session_state.md
+    """
+
     path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -77,6 +96,11 @@ def write_abandoned_state(root: Path, session_id: str) -> Path:
 
 
 def break_preprocess_invariants(work: Path) -> Path:
+    """doctor preprocess が修復すべき ignore/tracking 破損状態を commit する。
+
+    根拠: <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    """
+
     gitignore = work / ".gitignore"
     gitignore.write_text(
         "\n".join(
@@ -310,6 +334,12 @@ def test_session_abandon_uses_linked_worktree_branch(
 def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked worktree の abandon が固有の事前条件より先に preprocess することを検証する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+    <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    """
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -476,6 +506,13 @@ def test_session_completion_rejects_missing_state_fields(
 def test_session_join_resolves_oracle_conflict_with_repo_write_overrides(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """oracle conflict 解消時の REPO_WRITE 境界と対象 oracle の write override を検証する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+    <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    <work-root>/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
+    """
+
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
     monkeypatch.chdir(root)
@@ -497,9 +534,20 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_overrides(
     modes: list[FileAccessMode] = []
 
     class FakeCodexResult:
+        """conflict resolution の成功を表す最小 fake result。
+
+        根拠: <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+        """
+
         output_json = None
 
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
+        """Codex 呼び出しを置換し、生成された filesystem override を検証する。
+
+        根拠: <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+        <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        """
+
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
         assert kwargs["extra_writable_paths"] == [target]
@@ -895,6 +943,12 @@ def test_session_join_uses_linked_worktree_branch(
 def test_session_join_preprocesses_linked_worktree_before_preconditions(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked worktree の join が固有の事前条件より先に preprocess することを検証する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+    <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    """
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -1097,6 +1151,13 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
 def test_session_join_conflict_uses_repo_root_for_codex_storage(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked worktree の conflict 解消で Codex storage は repo root、cwd は linked worktree になることを検証する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+    <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    <work-root>/oracle/src/oracle/other/path_model.py
+    """
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -1120,9 +1181,20 @@ def test_session_join_conflict_uses_repo_root_for_codex_storage(
     seen: dict[str, Path] = {}
 
     class FakeCodexResult:
+        """conflict resolution の成功を表す最小 fake result。
+
+        根拠: <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+        """
+
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """Codex wrapper に渡された repo root と linked-worktree cwd を記録する。
+
+        根拠: <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+        <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        """
+
         seen["root"] = kwargs["root"]
         seen["cwd"] = kwargs["cwd"]
         target.write_text("resolved change\nTitle\n=======\n")
