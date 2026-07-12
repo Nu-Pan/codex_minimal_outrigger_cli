@@ -5,6 +5,7 @@
 - <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
 """
 
+from fnmatch import fnmatch
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from config.cmoc_config import CmocConfig
 from _codex_support import (
     _assert_not_writable,
     _assert_writable,
+    _override_permission_filesystem,
     _override_permission_roots,
     _standard_realization_override_roots,
 )
@@ -67,6 +69,58 @@ def test_codex_overrides_readonly_modes_allow_only_ignored_gap_writes(
     _assert_not_writable(
         override_args, root / ".cmoc" / "local" / "state.json"
     )
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [
+        FileAccessMode.REALIZATION_WRITE,
+        FileAccessMode.PURE_ORACLE_WRITE,
+        FileAccessMode.REPO_WRITE,
+    ],
+)
+def test_codex_overrides_protect_memo_and_future_routing_files(
+    tmp_path: Path, mode: FileAccessMode
+) -> None:
+    root = make_repo(tmp_path)
+    (root / "src").mkdir()
+    (root / "test").mkdir()
+
+    override_args = build_codex_override_args(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            mode,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+    )
+
+    filesystem = _override_permission_filesystem(override_args)
+    assert filesystem[str((root / "memo").resolve())] == "deny"
+    assert filesystem["glob_scan_max_depth"] == 64
+    routing_rules = filesystem[":workspace_roots"]
+    assert routing_rules == {
+        "AGENTS.md": "read",
+        "INDEX.md": "read",
+        "**/AGENTS.md": "read",
+        "**/INDEX.md": "read",
+    }
+
+    for relative in (
+        "AGENTS.md",
+        "INDEX.md",
+        "src/INDEX.md",
+        "src/deep/AGENTS.md",
+        "oracle/INDEX.md",
+    ):
+        assert any(
+            access == "read" and fnmatch(relative, pattern)
+            for pattern, access in routing_rules.items()
+        )
+    _assert_not_writable(override_args, root / "memo" / "private.md")
 
 
 def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(

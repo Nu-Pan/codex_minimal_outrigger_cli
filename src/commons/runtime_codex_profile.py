@@ -49,6 +49,14 @@ _DENIED_WRITE_FILE_NAMES = {"AGENTS.md", "INDEX.md"}
 _STANDARD_REALIZATION_WRITE_PATHS = ("src", "test", "bin", ".gitignore")
 _OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
 _CMOC_PERMISSION_PROFILE = "cmoc"
+_PERMISSION_GLOB_SCAN_MAX_DEPTH = 64
+_PERMISSION_PROFILE_WRITE_MODES = frozenset(
+    {
+        FileAccessMode.REALIZATION_WRITE,
+        FileAccessMode.PURE_ORACLE_WRITE,
+        FileAccessMode.REPO_WRITE,
+    }
+)
 
 
 @contextmanager
@@ -158,6 +166,20 @@ def _validate_extra_read_paths(
 def _toml_string(value: str) -> str:
     """TOML string として安全な JSON 互換 quote へ寄せる。"""
     return json.dumps(value, ensure_ascii=False)
+
+
+def _toml_inline_table(values: dict[str, Any]) -> str:
+    """ネストした値を Codex の inline TOML table に変換する。"""
+    rendered: list[str] = []
+    for key, value in sorted(values.items()):
+        if isinstance(value, dict):
+            value_text = _toml_inline_table(value)
+        elif isinstance(value, int):
+            value_text = str(value)
+        else:
+            value_text = _toml_string(value)
+        rendered.append(f"{_toml_string(key)} = {value_text}")
+    return "{ " + ", ".join(rendered) + " }"
 
 
 def _writable_roots(
@@ -475,10 +497,31 @@ def _top_level_read_roots(mode: FileAccessMode, root: Path) -> list[Path]:
     ]
 
 
+def _permission_profile_filesystem_overrides(
+    mode: FileAccessMode, root: Path
+) -> dict[str, Any]:
+    """permission profile に、将来の path にも効く保護 rule を追加する。"""
+    if mode not in _PERMISSION_PROFILE_WRITE_MODES:
+        return {}
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # memo は広い read root に含まれるため deny し、AGENTS.md/INDEX.md は routing のため
+    # 読めるまま parent write root より狭い read rule で新規作成も防ぐ。
+    routing_rules = {name: "read" for name in _DENIED_WRITE_FILE_NAMES}
+    routing_rules.update(
+        {f"**/{name}": "read" for name in _DENIED_WRITE_FILE_NAMES}
+    )
+    return {
+        str((root / "memo").resolve()): "deny",
+        "glob_scan_max_depth": _PERMISSION_GLOB_SCAN_MAX_DEPTH,
+        ":workspace_roots": routing_rules,
+    }
+
+
 def _permission_profile_override_args(
     read_roots: list[Path],
     writable_roots: list[Path],
     protected_paths: list[Path],
+    filesystem_overrides: dict[str, Any] | None = None,
 ) -> list[str]:
     """Codex beta permission profile を config override argv で渡す。"""
     # <work-root>/oracle/doc/app_spec/sub_command/tui.md
@@ -491,12 +534,10 @@ def _permission_profile_override_args(
     # A parent write grant is needed for new files.  A narrower read grant
     # keeps existing AGENTS.md/INDEX.md files protected inside that parent.
     entries.update({str(path): "read" for path in protected_paths})
-    filesystem = ", ".join(
-        f"{_toml_string(path)} = {_toml_string(access)}"
-        for path, access in sorted(entries.items())
-    )
+    entries.update(filesystem_overrides or {})
+    filesystem = _toml_inline_table(entries)
     permission = (
-        f'{{ extends = ":workspace", filesystem = {{ {filesystem} }} }}'
+        f'{{ extends = ":workspace", filesystem = {filesystem} }}'
     )
     return [
         *_config_override(
@@ -596,6 +637,9 @@ def build_codex_override_args(
                 ),
                 writable_roots,
                 _protected_writable_paths(writable_roots),
+                _permission_profile_filesystem_overrides(
+                    parameter.file_access_mode, root
+                ),
             )
         )
     return args
