@@ -689,23 +689,21 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- Codex の権限オーバーライドが、`READONLY`・`PURE_ORACLE_READ`・`REALIZATION_WRITE`・`PURE_ORACLE_WRITE`・`REPO_WRITE` の各モードで、どの領域を書けるかを検証するテスト群。
-- `extra_writable_paths` の許可・拒否条件、`memo` や `.agents` や `.cmoc/local` などの保護、`INDEX.md` と `AGENTS.md` の読み取り許可、ignored gap の扱いを確認する。
-- 権限ルールや追加 writable path の判定が変わるときに読む対象で、個々の実装ヘルパーの内部構成や既存の git 支援関数の詳細を追うための入口ではない。
+- `build_codex_override_args` が生成する Codex のファイルアクセス制御を検証するテスト群。読み取り専用・oracle 寄り・realization write・repo write の各モードで、許可される書き込み先、拒否される領域、追加 writable path の扱いを確認する入口として読む。
+- `memo` と `AGENTS.md` / `INDEX.md` 系の保護、`realization write` のトップレベル許可範囲、モード別の追加 writable path 拒否をまとめて扱うため、許可領域ルールを見直すときにこのファイルを読む。
 
 ## Read this when
-- Codex の file access / permission override の振る舞いを変更する。
-- `extra_writable_paths` の受理条件や拒否条件を変更する。
-- `memo`、`.agents`、`.cmoc/local`、`INDEX.md`、`AGENTS.md` のアクセス境界を変える。
-- ignored な gap path を writable とみなすかどうかを確認したい。
+- Codex の read/write 許可領域の判定条件を変えるとき。
+- 追加 writable path の受理・拒否条件を確認したいとき。
+- `memo` やルーティング系ファイルの保護範囲を検証したいとき。
 
 ## Do not read this when
-- `build_codex_override_args` の実装詳細だけを追いたい場合は、対応する実装ファイルを直接読む。
-- git リポジトリ作成や `run_git` の挙動だけを調べたい場合は、このテストではなく git 支援側の本文を読む。
-- INDEX.md 用のルーティング文を作るだけなら、個別の権限ケースの逐語的な手順までは読む必要がない。
+- `build_codex_override_args` の内部実装を追いたいだけなら、まず `oracle/src/oracle/prompt_builder/parts/file_access_rule.py` 側の正本仕様を読む。
+- Git の ignore 判定や repo 作成の補助実装を知りたいだけなら、このテストではなく補助関数側を読む。
+- Codex のアクセス制御とは関係ない一般的な CLI 挙動を探しているなら、このファイルは読まなくてよい。
 
 ## hash
-- 4bd7d4354e4220438e40224ac9c261dde5fed7fcd2c95d5d994fe70341b4cddf
+- c33add86a06d13258920e198e0f2d1e62881aaa46200ee39711c8f81763511f5
 
 # `test_runtime_codex_profile.py`
 
