@@ -42,6 +42,12 @@
 
 - `apply.state` が `error` であっても、処理を続行しても良いものとする
 
+## ユーザー中断された apply の扱い
+
+- ユーザー中断要求によって正常に完了した `cmoc apply fork` は `apply.state = completed` であるため、`cmoc apply join` の対象とする
+- 中断までに `<cmoc-apply-branch>` へ確定された部分結果を、自然完了した apply と同じ手順で `<cmoc-session-branch>` へマージする
+- 中断した apply ループの再開は `cmoc apply join` の責務ではない
+
 ## 実行作業
 
 1. doctor preprocess を呼び出す
