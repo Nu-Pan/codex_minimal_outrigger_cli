@@ -13,14 +13,12 @@ from _codex_support import (
     codex_override_config,
     codex_parameter,
     setup_codex_home,
+    stub_managed_ollama_preflight,
 )
 from _command_support import write_python_executable
 from _git_support import make_repo
-from _ollama_support import (
-    TEST_SLM_MODEL,
-    fake_managed_ollama_env,
-    fake_managed_ollama_runtime,
-)
+from _ollama_support import TEST_SLM_MODEL
+import commons.runtime_doctor as doctor_module
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
 from commons.runtime_doctor import run_doctor_preprocess
@@ -192,9 +190,7 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    fake_env = fake_managed_ollama_env(root)
-    for key, value in fake_env.items():
-        monkeypatch.setenv(key, value)
+    stub_managed_ollama_preflight(monkeypatch)
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
     bin_dir = tmp_path / "bin"
@@ -213,21 +209,20 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{fake_env['PATH']}")
+    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ.get('PATH', '')}")
 
-    with fake_managed_ollama_runtime(root):
-        run_codex_exec(
-            AgentCallParameter(
-                ModelClass.MINIMUM,
-                ReasoningEffort.LOW,
-                FileAccessMode.READONLY,
-                "prompt",
-                None,
-            ),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=config,
-        )
+    run_codex_exec(
+        AgentCallParameter(
+            ModelClass.MINIMUM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
+            None,
+        ),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=config,
+    )
 
     record = json.loads(recorder.read_text())
     override_config = codex_override_config(record["args"])
@@ -244,15 +239,11 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
         "wire_api": "responses",
     }
 
-
-def test_prepare_local_slm_overrides_run_doctor_when_port_is_missing(
+def test_prepare_local_slm_runs_managed_ollama_preflight(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    fake_env = fake_managed_ollama_env(root)
-    for key, value in fake_env.items():
-        monkeypatch.setenv(key, value)
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -260,39 +251,34 @@ def test_prepare_local_slm_overrides_run_doctor_when_port_is_missing(
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
 
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
-    service = (
-        Path(fake_env["HOME"])
-        / ".config"
-        / "systemd"
-        / "user"
-        / "cmoc-ollama.service"
-    )
-    service_pid = Path(fake_env["HOME"]) / ".cmoc" / "ollama" / "service.pid"
-    assert not service.exists()
-    assert not service_pid.exists()
+    ollama_preflight_calls: list[tuple[Path, CmocConfig | None]] = []
 
-    with fake_managed_ollama_runtime(root):
-        override_args = prepare_codex_override_args(
-            AgentCallParameter(
-                ModelClass.MINIMUM,
-                ReasoningEffort.LOW,
-                FileAccessMode.READONLY,
-                "prompt",
-                None,
-            ),
-            config,
-            root,
-        )
-        assert service.is_file()
-        assert service_pid.is_file()
+    def record_ollama_preflight(
+        actual_root: Path, actual_config: CmocConfig | None = None
+    ) -> None:
+        ollama_preflight_calls.append((actual_root, actual_config))
+
+    monkeypatch.setattr(
+        doctor_module, "ensure_ollama_serves_local_slm", record_ollama_preflight
+    )
+    override_args = prepare_codex_override_args(
+        AgentCallParameter(
+            ModelClass.MINIMUM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
+            None,
+        ),
+        config,
+        root,
+    )
 
     assert codex_override_config(override_args)["model_provider"] == (
         "cmoc_managed_ollama"
     )
+    assert ollama_preflight_calls == [(root.resolve(), config)]
     assert "--profile" not in override_args
     assert not list(codex_home.glob("cmoc_*.config.toml"))
-
 
 # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
 def test_prepare_codex_override_args_does_not_create_codex_home_config(

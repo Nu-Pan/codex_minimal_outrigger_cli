@@ -16,6 +16,19 @@ def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return codex_home
 
 
+def stub_managed_ollama_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip managed Ollama setup while testing fake Codex subprocess argv."""
+    import commons.runtime_doctor as doctor_module
+
+    # <work-root>/oracle/doc/dev_rule/test_rule.md
+    # Fake Codex tests verify cmoc's argv construction, not the shared service.
+    monkeypatch.setattr(
+        doctor_module,
+        "ensure_ollama_serves_local_slm",
+        lambda *_args, **_kwargs: None,
+    )
+
+
 def codex_parameter(mode: FileAccessMode = FileAccessMode.READONLY) -> AgentCallParameter:
     """Build the small default Codex parameter used by runtime wrapper tests."""
     return AgentCallParameter(
