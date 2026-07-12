@@ -10,12 +10,13 @@ indexing subcommand が routing document を更新する外部挙動に閉じて
 
 import subprocess
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
 import cmoc_runtime
 import commons.indexing as indexing_common
+import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, ModelClass
 from oracle.other.cmoc_config import CodexModelSpec
 
@@ -25,6 +26,13 @@ from _ollama_support import run_doctor
 from main import app
 import sub_commands.apply.join as apply_module
 import sub_commands.indexing as indexing_module
+
+
+@pytest.fixture(autouse=True)
+def reset_indexing_preflight() -> Iterator[None]:
+    codex_preflight_module.disable_indexing_preflight()
+    yield
+    codex_preflight_module.disable_indexing_preflight()
 
 
 def test_resolve_index_conflicts_deletes_index_and_commits(tmp_path: Path) -> None:
