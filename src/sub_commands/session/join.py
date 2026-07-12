@@ -144,12 +144,12 @@ def resolve_session_join_conflict(
         raise CmocError(
             "conflict marker が残っています。",
             ["conflict marker を手動で解消してから git commit してください。"],
-            "\n".join(str(path) for path in remaining_markers),
+            "\n".join(str(_absolute_path(path)) for path in remaining_markers),
         )
     for path in conflicted_paths:
         git(["add", "--", str(path.relative_to(root))], root)
     unmerged_paths = _unmerged_paths(root, git)
-    unmerged = "\n".join(str(path.relative_to(root)) for path in unmerged_paths)
+    unmerged = "\n".join(str(_absolute_path(path)) for path in unmerged_paths)
     if unmerged:
         raise CmocError(
             "unmerged path が残っています。",
@@ -187,7 +187,7 @@ def _reject_non_conflict_changes(
         raise CmocError(
             "conflict 解消以外の差分が残っています。",
             ["差分を確認し、不要な変更を戻してから手動で merge を完了してください。"],
-            "\n".join(str(path.relative_to(root)) for path in changed),
+            "\n".join(str(_absolute_path(path)) for path in changed),
         )
 
 
@@ -195,7 +195,9 @@ def _changed_path_snapshot(
     root: Path, git: GitRun
 ) -> dict[Path, tuple[str, tuple[str, int, int, str | None] | None]]:
     snapshot: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]] = {}
-    for status, path in status_path_statuses(root, untracked_all=True, git=git):
+    for status, path in status_path_statuses(
+        root, untracked_all=True, include_rename_sources=True, git=git
+    ):
         absolute = _absolute_path(path)
         snapshot[absolute] = (status, _path_fingerprint(absolute))
     return snapshot

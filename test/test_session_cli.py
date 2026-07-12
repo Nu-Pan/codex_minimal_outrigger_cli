@@ -620,6 +620,74 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
 
 
+def test_session_join_rejects_renamed_non_conflict_source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    extra = root / "src" / "extra.py"
+    extra.parent.mkdir()
+    extra.write_text("resolved change\n")
+    run_git(root, "add", "src/extra.py")
+    run_git(root, "commit", "-m", "add extra")
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    run_git(root, "rm", "oracle/spec.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        extra.rename(target)
+        run_git(root, "add", "-A")
+        status = run_git(root, "status", "--porcelain=v1", "-z").stdout
+        assert status.startswith("R")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "conflict 解消以外の差分が残っています。" in result.stderr
+    assert str(extra) in result.stderr
+    assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
+
+
+def test_session_join_reports_unmerged_path_as_absolute(tmp_path: Path) -> None:
+    root = tmp_path
+    target = root / "src" / "unmerged.py"
+    target.parent.mkdir()
+
+    def fake_git(args: list[str], cwd: Path) -> cmoc_runtime.CommandResult:
+        if args == ["diff", "--name-only", "-z", "--diff-filter=U"]:
+            return cmoc_runtime.CommandResult(0, "src/unmerged.py\0", "")
+        return cmoc_runtime.CommandResult(0, "", "")
+
+    def fake_codex_exec(parameter: object, **kwargs: object) -> object:
+        return object()
+
+    with pytest.raises(CmocError) as error:
+        session_join_module.resolve_session_join_conflict(
+            root, fake_codex_exec, fake_git
+        )
+
+    assert error.value.summary == "unmerged path が残っています。"
+    assert error.value.detail == str(target)
+
+
 def test_session_join_rejects_staged_non_conflict_change_with_quoted_status_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
