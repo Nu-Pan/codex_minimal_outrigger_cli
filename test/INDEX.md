@@ -324,22 +324,20 @@
 # `test_cli_tui.py`
 
 ## Summary
-- `tui` サブコマンドの起動前後で、エディタ編集・正規化済みプロンプト生成・Codex 起動・ログ保存・linked worktree での保存先選択がどうなるかを確認するためのテスト群。
-- `file_access_mode` の既定値や、linked worktree では元 worktree 側の `.cmoc/local` 配下を使う境界を見たいときに読む。
-- `.gitignore` の更新や `.cmoc/local/log/sub_command` との連携を含む、TUI 前処理の副作用を確かめたいときに進む先。
+- `cmoc tui` の外部挙動を検証するテスト群。エディタ入力の取り扱い、解決済みパラメータの生成、Codex TUI 起動、`_orig.md` / `_cmpl.md` の保存先と `linked worktree` での保存先切り替え、`.cmoc` の ignore を確認したいときに読む。
 
 ## Read this when
-- `tui` 実行時の前処理が期待どおりか、外部挙動ベースで確認したい。
-- 編集前の入力プロンプトと、編集後に Codex へ渡す complete プロンプトの差分や保存内容を検証したい。
-- linked worktree で起動した場合に、ログ・schema・ignore 設定の参照先がどこになるかを確認したい。
+- `cmoc tui` の起動前処理や起動後のふるまいを変更するとき。
+- オリジナルプロンプトのエディタ編集、解決パラメータ、TUI 起動引数、ログ保存先、`linked worktree` 対応を確認したいとき。
+- `.cmoc` 配下の ignore や、repository 側と linked worktree 側のどちらへ保存されるかを確認したいとき。
 
 ## Do not read this when
-- TUI 本体の実装手順やヘルパー分割を追いたい場合は、`sub_commands/tui` 側を先に読む。
-- CLI 全体の起動や共通前処理の責務を見たい場合は、このテストより上位のエントリを読む。
-- `tui` 以外のサブコマンドの挙動を知りたい場合は、このファイルは読まず各サブコマンドのテストを読む。
+- `cmoc tui` の仕様そのものを把握したいだけなら、対応する正本仕様の `oracle/doc/app_spec/sub_command/tui.md` を先に読む。
+- 他のサブコマンドの CLI 挙動だけを変える作業では、このテストは直接は読まなくてよい。
+- TUI 以外の共通 runner や補助関数の変更だけなら、まずそれらの実装・テストを読む。
 
 ## hash
-- 9e0d700b4fd811d3e02456d89c2eedb5ccc42d251d1e9b51791c80f989b16698
+- 5e6abb73dc0cd395eb8bc5baf6b8d98a6e9872b67d47c04672902426c659fe9d
 
 # `test_codex_runtime_errors.py`
 
