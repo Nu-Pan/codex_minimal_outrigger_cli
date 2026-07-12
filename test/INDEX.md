@@ -742,24 +742,39 @@
 ## hash
 - 1e5ca12366b3c1a968fda5cf0179a1404f3f54a7ecc3e695bf4bd54ba909d8fc
 
+# `test_runtime_content.py`
+
+## Summary
+- `commons.runtime_content.is_binary` の判定が、通常のテキストと NUL 文字を含む内容で分かれることを検証するテスト。
+
+## Read this when
+- `runtime_content` のバイナリ判定の境界を確認したいとき。
+- NUL 文字を含む入力をバイナリ扱いにする挙動を変更する可能性があるとき。
+
+## Do not read this when
+- `is_binary` の内部実装方式や判定アルゴリズムを確認したいだけのとき。
+- `commons.runtime_content` 以外の内容判定ロジックを探したいとき。
+
+## hash
+- 85b61e7dbf84d03903062b96ba5df65b0c4a595ae9a66aa84d5637e06e5c5f10
+
 # `test_runtime_file_access.py`
 
 ## Summary
-- `FileAccessMode` の永続化値、sandbox 変換、作業 root の扱い、binary 判定の読み取り範囲という、runtime 周辺の契約をまとめて検証するテスト。
+- FileAccessMode の永続化値と Codex sandbox への変換の対応関係を固定するテスト群。論理的なファイルアクセスモードの追加・改名・値変更、または sandbox 変換の見直しをするならここを読む。
 
 ## Read this when
-- `FileAccessMode` の値変更が JSON 互換性や変換先に影響しないか確認したいとき。
-- `file_access_to_sandbox_mode` の各アクセス種別が sandbox 権限へ欠落なく写るか確認したいとき。
-- `file_access_to_codex_cwd` が work root を維持する互換性を壊していないか確認したいとき。
-- `is_binary` が先頭 chunk だけを読む前提を壊していないか確認したいとき。
+- `FileAccessMode` の列挙値や永続化文字列を変えるとき。
+- 論理モードから Codex sandbox mode への変換を追加・変更するとき。
+- ファイルアクセス権限の契約が JSON schema や runtime 側と食い違っていないか確認したいとき。
 
 ## Do not read this when
-- runtime の実装詳細や enum 定義そのものを追いたいだけなら、対応する realization 側を直接読む。
-- prompt 生成や file access ルールの文面仕様を確認したいだけなら、ここではなく根拠側の oracle file を読む。
-- binary 判定以外の content 判定や file I/O 全般の挙動を探しているなら、別のテスト対象を読む。
+- ファイルアクセス以外の runtime 挙動だけを変更するとき。
+- prompt 文生成や個別の実行フローだけを調整するとき。
+- `FileAccessMode` と sandbox 変換の契約に触れない修正のとき。
 
 ## hash
-- 6b4a9f40267b269b622e987b9d2e3b1b6b1810d94bafedca4bc2494a6e33dcf4
+- ab49dc866cba181e7b05dfaf189b683bd1b5cf41a7e8abd242da1afb2b2d679b
 
 # `test_runtime_ollama.py`
 
