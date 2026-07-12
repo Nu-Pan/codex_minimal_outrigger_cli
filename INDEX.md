@@ -115,38 +115,37 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation の起点。CLI 入口、互換 shim、共通 runtime 基盤、`acp` 系の実装本体、`basic` 互換公開面、`config` 互換公開面を束ねる。
-- 各下位領域は責務ごとに分かれており、ここは「どの実装へ進むか」を選ぶために読む入口として使う。
+- `src` は cmoc の realization 実装本体を置く上位領域で、`oracle` 側の正本仕様断片を具体化する code と、必要最小限の realization ancillary をまとめる入口である。
+- この階層は公開 CLI、共通 helper、各 subcommand 実装、正本 oracle 参照用の shim を含むため、どの責務の本文へ進むかを振り分ける分岐点として使う。
 
 ## Read this when
-- CLI の公開入口から各サブコマンド実装への接続を追いたいとき。
-- 共通 runtime、git、logging、path、state、Codex 実行など複数経路で使う基盤処理を探したいとき。
-- `acp` 系の実装本体、`basic` 互換公開面、`config` 互換公開面、`oracle.*` import shim のどれを読むべきか切り分けたいとき。
+- realization 実装の本体を探したいとき。
+- CLI 入口、共通 helper、subcommand 実装、oracle 参照用 shim のどれを読むべきかを切り分けたいとき。
+- oracle 側の正本仕様を前提に、実装側でどの領域が責務を持つか確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの処理本体を確認したいときは、対応する `sub_commands` 配下へ進む。
-- `acp` の詳細な builder 実装を見たいときは、`acp/builder` 側へ進む。
-- 設定定義や互換公開の細部だけを見たいときは、`basic` または `config` 側、`oracle.*` import だけを見たいときは `oracle.py` を直接読む。
+- 正本仕様そのものを確認したいときは、`oracle` 側を読む。
+- 個別のコマンド挙動や helper の詳細を知りたいだけなら、この上位領域ではなく該当する下位 module を読む。
+- 互換導線や実装本体の区別が不要で、単に利用可能な公開名だけを確認したいときは、より直接の定義元を読む。
 
 ## hash
-- bf62e2600698306c75e22b7f48d607456329c3a0af70617f68503810e12b12da
+- acd2f7f6173157205e38db946edd6f8f54fedc734ab79ed79986967d6cb913a5
 
 # `test`
 
 ## Summary
-- `test` 配下の回帰テスト群をまとめる入口で、CLI・runtime・prompt builder・oracle 参照の各テストへ進むためのルーティング対象である。
-- `acp_builder` の正本 schema とその参照補助、Codex 実行系、`apply` / `session` / `review` / `doctor` / `indexing` の CLI 挙動、prompt parts の整合性を確認したいときに読む。
-- 個別機能の正本仕様そのものではなく、どのテストを読むべきかを切り分けるための案内に位置づける。
+- `test` 配下の回帰テストと共通テスト補助をまとめる入口である。CLI、runtime、prompt、ACP builder、rendering など、現行の外部挙動や正本仕様との対応を確認したいときに、まずここから該当対象へ進む。
+- 共通補助は、テストで使う最小の支援だけを提供する。実装本体や正本仕様そのものではなく、各テスト群がどの契約を固定しているかを見分けるための案内として読む。
 
 ## Read this when
-- 特定のテスト対象がどの責務を持つかを見分けたいとき。
-- CLI、runtime、prompt builder、oracle 参照、StructDoc renderer のどれに進むべきか判断したいとき。
-- 共通 test support と個別回帰テストの境界を確認したいとき。
+- どのテスト群が対象の挙動を固定しているかを先に絞り込みたいとき。
+- CLI の外部挙動、runtime の失敗系・再試行・権限、prompt の組み立て、ACP builder の schema 参照、StructDoc の Markdown 変換など、目的の観点に対応するテストを探したいとき。
+- 複数のテストで共有される補助関数や fixture の責務を確認したいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様や実装本文を確認したいときは、対応する oracle 側や実装側を読む。
-- 単一テストファイルの外部挙動だけを追いたいときは、この案内ではなく該当テスト本文を読む。
-- `INDEX.md` の書き方やルーティング規則そのものを確認したいときは、上位の案内を読む。
+- 個別機能の正本仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
+- 実装本体の分割や内部 helper の詳細を追いたいときは、各テストではなく対応する realization implementation を読む。
+- INDEX.md の書き方やルーティング方針そのものを確認したいときは、ここではなく上位の案内を読む。
 
 ## hash
-- 9e4f5fb768f137f934f89c833a80f4801776875eb76cf8bc397e769fcb430c3b
+- a848673a100068153c36524b9f5b749b9b7a8cf29ef7f35a87d7b70ef4b9dd2a

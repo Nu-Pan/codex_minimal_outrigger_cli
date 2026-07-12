@@ -415,21 +415,24 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- `run_codex_exec` の quota 超過時の probe / resume / 再実行制御を検証する回帰テスト群。Codex 実行の外部挙動、呼び出しログ、`CODEX_HOME` と `cwd` の扱い、probe の単一化と失敗伝播までをまとめて確認する。
-- 個別の内部 helper の分解や実装手順ではなく、quota 待機から復帰するかどうかを境界にした観測可能な振る舞いを扱う。
+- Codex quota 枯渇後の `probe` / `resume` / `retry` 制御を、`run_codex_exec` の外部挙動として検証するテスト群。代表 probe の開始条件、再開時の session 復元、同一 prompt の再実行、並列待機の集約、quota 以外の probe 失敗、待機上限、ログ記録までを扱う。
+- この対象を読むのは、`codex exec` の quota 復帰フロー、resume token の復元、並列呼び出し時の代表 probe、または関連ログの観測点を確認したいとき。`codex exec` の一般的な入出力や prompt builder の詳細そのものを追うだけなら、より直接の実装側を読む方が適切。
 
 ## Read this when
-- Codex 実行が quota 超過後に再試行・resume されるかを変える実装を確認するとき。
-- probe 用の代表呼び出し、resume token の復元、`CODEX_HOME` の解決、call log / subcommand log の記録内容を変えるとき。
-- quota probe が失敗した場合のエラー伝播や、並行実行時に probe が 1 回に抑えられるかを確認したいとき。
+- `codex exec` が quota 枯渇後にどう再開されるかを確認したいとき
+- resume token の取得元、probe の発火条件、再実行の判定条件を確認したいとき
+- 並列に開始した呼び出しのうち、どの 1 件が代表して probe するかを確認したいとき
+- quota 以外の probe 失敗や、待機上限到達時の失敗挙動を確認したいとき
+- call log, stdout, prompt log, subcommand log のどれを観測しているテストかを確認したいとき
 
 ## Do not read this when
-- quota retry 以外の Codex 実行挙動を見たいだけなら、より直接の実行テストや実装ファイルを読む。
-- CLI の一般的な引数解釈や設定読み込みだけを確認したいとき。
-- prompt 文面や probe 生成ロジックの正本仕様そのものを確認したいときは、参照先の oracle 側を見る。
+- `codex exec` の通常の引数組み立てや prompt 生成の正本を見たいだけのとき
+- quota 復帰ではなく、通常成功系や別種のエラー処理だけを追いたいとき
+- log 形式の定義そのものを見たいときは、このテストではなく対応するログ仕様側を先に読む方がよい
+- prompt builder の一般規約だけを確認したいときは、このテストではなく oracle 側の規約定義を読む方が直接的
 
 ## hash
-- b6a9b5befdbcab5a5bfc80d038077370ec849630c5ec94135908e8031b367ef1
+- 780b38f0d390b963420a6b25b56be1cc4574bf9c62633cbefb8c9b48431c7f4e
 
 # `test_codex_runtime_retry.py`
 

@@ -19,18 +19,18 @@
 # `builder`
 
 ## Summary
-- `acp.builder` 互換の入口をまとめる階層。正本側 `oracle.acp_builder` へつなぐ再公開・委譲・互換維持の責務を持つため、この配下を読む。
-- 個別のサブモジュールに進む前の案内役として、互換入口の有無や削除可否、どの公開面を残すかを判断するときに使う。
+- `acp.builder` 系の互換入口をまとめる上位ディレクトリ。正本側 `oracle.acp_builder` への転送や再公開を担う入口と、apply・review・session・indexing・tui・quota_probe の各配下をここから振り分ける。
+- この階層は実処理本体ではなく、旧 `acp.builder.*` 参照をどこへつなぐか、どの互換面を残すかを判断するための案内点として読む。
 
 ## Read this when
-- `acp.builder` 経由の参照互換を維持したいとき。
-- 旧公開名から正本側モジュールへつながる入口の振る舞いを確認したいとき。
-- 互換入口を残すか削除するか、どの公開面を維持するかを判断したいとき。
+- `acp.builder.*` の旧 import 互換を維持したい、または削除できるか判断したいとき。
+- `oracle.acp_builder` を正本に保ちながら、この階層がどのサブ領域を公開しているか確認したいとき。
+- 互換入口の削除条件や、apply・review・session・indexing・tui・quota_probe のどこへ進むべきかを選びたいとき。
 
 ## Do not read this when
-- 正本側 `oracle.acp_builder` の実装そのものを変えたいときは、そちらの配下を読む。
-- `acp.builder` 配下の個別機能の実装を確認したいときは、この入口ではなく各サブモジュールを読む。
-- `acp.builder` 以外の公開面や別名互換の方針を確認したいとき。
+- `oracle.acp_builder` 側の正本実装そのものを変更したいときは、そちらの配下を読む。
+- apply・review・session・indexing・tui の個別挙動や builder 本体を確認したいときは、この上位入口ではなく各サブモジュールを読む。
+- quota probe の実装詳細や最小 fallback の内容を確認したいときは、この階層ではなく `quota_probe.py` を読む。
 
 ## hash
-- 1c95c0d73958cffa2a14bb1cf59cdff0ee15b1d04bd60fa3ca384519211ad091
+- 28cfc0ab2dcf9899e47631a1bc14a9e0336969323e4aba9e1db9744698d7ce10

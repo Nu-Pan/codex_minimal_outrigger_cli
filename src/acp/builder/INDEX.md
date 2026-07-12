@@ -72,18 +72,20 @@
 # `quota_probe.py`
 
 ## Summary
-- `build_quota_availability_probe_parameter` を再利用する互換アダプタ。呼び出し側がこの公開関数を使っており、実体は正本側の quota probe 構築へ委譲されることだけを確認したいときに読む。
+- 正本の quota probe builder が未配置の間だけ、`oracle.acp_builder.quota_probe` への委譲を試し、失敗時は quota 復帰確認用の最小 fallback を返す互換アダプタ。
+- 正本 builder が追加された後に、利用側からこの互換経路が消える前提の削除対象でもある。
 
 ## Read this when
-- quota availability probe の引数生成経路をたどりたいとき
-- この公開関数がどこへ委譲するか、また遅延 import を含む互換維持の理由を確認したいとき
+- quota availability probe の呼び出し先を決める責務を確認したいとき。
+- 正本 builder がある場合の委譲条件と、欠落時の fallback 挙動を確認したいとき。
+- quota 復帰確認のために、最小の probe パラメータがどう組み立てられるかを追いたいとき。
 
 ## Do not read this when
-- canonical な prompt や call settings の正本を確認したいときは、`<work-root>/oracle/src/oracle/acp_builder/quota_probe.py` を読む
-- quota probe 以外の ACP builder 群の分岐や実装方針を追いたいときは、より直接の実装側を読む
+- quota probe の正本実装そのものを確認したいときは、`oracle/acp_builder/quota_probe.py` 側を読むべきで、この互換層は不要。
+- `acp.builder.quota_probe` の削除条件や移行完了後の整理方針を探しているだけなら、この互換アダプタ本文より上位の仕様文書を優先する。
 
 ## hash
-- 3f7514ef51853e259d4a0bd798493cc4a16259f271db9ab7157db55bbf2d9520
+- f33468be7724319fa2bf4f17bad36789b50a24a7b10cc4153157915d7d283fe6
 
 # `review`
 
