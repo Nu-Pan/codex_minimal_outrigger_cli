@@ -16,6 +16,7 @@ def _run_from_packaged_layout(
 ) -> subprocess.CompletedProcess[str]:
     work = tmp_path / "work"
     work.mkdir(exist_ok=True)
+    (work / ".git").mkdir()
     return subprocess.run(
         [sys.executable, "-S", "-c", code],
         cwd=work,
