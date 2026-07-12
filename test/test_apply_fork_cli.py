@@ -67,6 +67,7 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     apply_worktree = apply_worktree_from_state(root, state)
     assert apply_worktree == root / ".cmoc" / "local" / "worktree" / session_id / run_id
     assert apply_worktree.is_dir()
+    assert run_git(apply_worktree, "branch", "--show-current").stdout.strip() == state["apply"]["apply_branch"]
     assert not (root / ".cmoc" / "local" / "worktree" / "apply").exists()
     assert "apply_worktree" not in state["apply"]
     assert "apply_process_id" not in state["apply"]
@@ -119,6 +120,8 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     run_id = state["apply"]["apply_branch"].removeprefix(f"cmoc/apply/{session_id}/")
     apply_worktree = apply_worktree_from_state(root, state)
     assert apply_worktree == root / ".cmoc" / "local" / "worktree" / session_id / run_id
+    assert apply_worktree.is_dir()
+    assert run_git(apply_worktree, "branch", "--show-current").stdout.strip() == state["apply"]["apply_branch"]
     assert not apply_worktree.is_relative_to(linked)
 
 

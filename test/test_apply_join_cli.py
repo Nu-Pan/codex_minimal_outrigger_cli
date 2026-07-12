@@ -48,6 +48,8 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     apply_branch = state["apply"]["apply_branch"]
     apply_oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
     apply_worktree = apply_worktree_from_state(root, state)
+    assert apply_worktree.is_dir()
+    assert current_branch(apply_worktree) == apply_branch
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
@@ -99,6 +101,8 @@ def test_apply_join_can_run_from_apply_worktree(
     apply_branch = state["apply"]["apply_branch"]
     apply_oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
     apply_worktree = apply_worktree_from_state(root, state)
+    assert apply_worktree.is_dir()
+    assert current_branch(apply_worktree) == apply_branch
     monkeypatch.chdir(apply_worktree)
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
@@ -149,7 +153,10 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     session_id = session_branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
+    apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
+    assert apply_worktree.is_dir()
+    assert current_branch(apply_worktree) == apply_branch
     joined = apply_worktree / "src" / "joined.py"
     joined.parent.mkdir()
     joined.write_text("value = 'joined from apply'\n")
@@ -195,6 +202,8 @@ def test_apply_join_rejects_stale_apply_branch_for_same_session(
     state = json.loads(state_path.read_text())
     active_apply_branch = state["apply"]["apply_branch"]
     active_apply_worktree = apply_worktree_from_state(root, state)
+    assert active_apply_worktree.is_dir()
+    assert current_branch(active_apply_worktree) == active_apply_branch
     stale_apply_branch = f"cmoc/apply/{session_id}/stale"
     stale_apply_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "stale"
     run_git(
@@ -206,6 +215,7 @@ def test_apply_join_rejects_stale_apply_branch_for_same_session(
         str(stale_apply_worktree),
         session_branch,
     )
+    assert current_branch(stale_apply_worktree) == stale_apply_branch
     monkeypatch.chdir(stale_apply_worktree)
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
@@ -249,6 +259,8 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
+    assert apply_worktree.is_dir()
+    assert current_branch(apply_worktree) == apply_branch
     (apply_worktree / "dirty.txt").write_text("dirty\n")
     root_log_count = len(
         list((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))
@@ -301,6 +313,8 @@ def test_apply_join_from_session_requires_clean_apply_worktree(
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
+    assert apply_worktree.is_dir()
+    assert current_branch(apply_worktree) == apply_branch
     (apply_worktree / "dirty.txt").write_text("dirty\n")
 
     result = runner.invoke(app, ["apply", "join"])
