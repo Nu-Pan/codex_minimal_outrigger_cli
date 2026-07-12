@@ -134,18 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の realization test 群の入口である。`runtime`・`session`・`apply`・`review`・`indexing`・`doctor`・`tui`・`codex`・`prompt` 周辺の外部挙動回帰を置き、各機能の実装ではなく CLI や runtime 境界の期待結果を確認する。
-- 共通 support と個別 test を分けて参照し、必要な機能の回帰だけに進むためのルーティング点として使う。特に `acp_builder` の正本 schema 参照、Codex 実行制御、ファイルアクセス制御、worktree と state の整合性、prompt parts の整形確認を読む入口になる。
+- `test` 配下の回帰テスト群を案内する入口。ACP builder、apply/session/indexing/review/doctor、Codex runtime、prompt 組み立て、runtime 基盤の各テストへ進むかどうかを判断するために読む。
+- 共通 support ファイルは、複数のテストで使う実行補助や fixture の責務を確認したいときだけ読む。個別機能の仕様は対応する `test_*.py` か、必要なら oracle 側の本文へ進む。
 
 ## Read this when
-- CLI や runtime の外部挙動を変更したので、その回帰テストを探したいとき。
-- `session`・`apply`・`review`・`indexing`・`doctor`・`tui`・`codex` のいずれかで、失敗条件・state 遷移・worktree 挙動・権限制御・ログ出力を確認したいとき。
-- 共通 test support を確認したいが、どの領域の補助かを先に絞り込みたいとき。
+- `test` 配下で、どの機能の回帰テストを読めばよいかを判断したいとき。
+- ACP builder、apply/session/indexing/review、Codex runtime、prompt parts、runtime 基盤のどれに属するテストかを切り分けたいとき。
+- 複数のテストで共有される support ファイルの役割を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの正本仕様や prompt / schema の内容そのものを確認したいときは、対応する oracle 側を読む。
-- 実装の内部分割や helper の責務だけを追いたいときは、この配下の CLI 回帰ではなく対象実装側を読む。
-- Markdown renderer など、ここで扱わない別機能の単体テストを探しているときは、その対象の test ファイルへ直接進む。
+- 個別機能の外部挙動や正本仕様を確認したいときは、この入口ではなく該当する `test_*.py` か oracle 側の本文を読む。
+- 実装本文や CLI 本体の挙動を追いたいときは、対応する realization implementation 側を読む。
+- `test` 全体の案内ではなく、特定の helper や単体テストの詳細を見たいときは、その対象へ直接進む。
 
 ## hash
-- c3f9f0113894ab3e4fa5b60aef9862bdf9a85b8e3db67dd5893f44cad1c77910
+- 8f481b25ab5776c09f1adda0bb7729c667b029264c5eca9dc59a9abdcc4dbf99
