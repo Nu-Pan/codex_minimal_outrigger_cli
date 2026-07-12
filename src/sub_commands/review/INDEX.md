@@ -19,19 +19,15 @@
 # `oracle.py`
 
 ## Summary
-- review oracle サブコマンドの実行入口と全体制御を担う。active session branch と clean worktree を前提条件として検証し、isolated review worktree の作成、oracle 対象列挙、review loop 実行、INDEX 変更の commit/merge、作業用 worktree/branch の後始末、review report 出力までを接続する。
-- review 対象列挙、review loop、report 描画、INDEX 競合解決などの個別処理は下位 module に委譲し、この対象はそれらを CLI runtime 上の一連の workflow として組み立てる位置づけである。
+- `review/oracle.py` は、現在の session branch に対して review oracle を isolated review worktree 上で実行し、所見収集・レビュー用 index の反映・必要なら review branch の merge・レポート出力までをまとめて扱う実行入口です。
 
 ## Read this when
-- review oracle サブコマンドの実行順序、前提条件、作業用 branch/worktree のライフサイクル、失敗時 report 出力を確認したいとき。
-- oracle review workflow がどの下位 module を呼び出し、INDEX 変更の commit/merge と report 作成をどのタイミングで行うかを追いたいとき。
-- 未コミット差分がある場合や active session branch 以外での実行を拒否する制御を確認したいとき。
+- `review oracle` CLI の実行フロー、review worktree の作成/削除、review branch の merge 条件、所見レポートの出力経路を確認したいとき。
+- review 対象の oracle ファイル列挙や scope に応じた対象選択、レビュー処理ループ、失敗時のレポート生成を追いたいとき。
 
 ## Do not read this when
-- oracle file の列挙条件や scope ごとの対象選択だけを確認したいときは、review target 列挙を担う module を読む。
-- review loop 内で Codex に渡す指示、finding の解釈、merge operation の適用だけを確認したいときは、review loop を担う module を読む。
-- review report の文面、section 表現、report file の書き込み形式だけを確認したいときは、review report を担う module を読む。
-- INDEX 変更の検出、commit、merge、競合解決の詳細だけを確認したいときは、review index 操作を担う module を読む。
+- 通常の subcommand 実行基盤や汎用 runtime 操作だけを追いたいときは、より下位の runtime / helper 側を読むべきです。
+- oracle 対象の列挙規則やレビュー index の衝突解決だけを確認したいときは、この入口より対応する helper モジュールを直接読むべきです。
 
 ## hash
-- 6ec5af26c01ade97f16328fa10bdb21f6480824d061dc5c8776718ead3214b78
+- a386908f0bf6383e71e8d8e418272efa36acadbcb9dc7958d48680b0f62849e8

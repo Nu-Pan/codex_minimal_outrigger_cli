@@ -828,20 +828,23 @@
 # `test_session_cli.py`
 
 ## Summary
-- session CLI の fork/join/abandon に関する外部挙動回帰をまとめて追うためのテスト群。session 状態遷移、linked worktree、cleanup、preprocess、conflict resolution、stdout/stderr の出し分けを確認したいときに読む。
+- `session fork` / `join` / `abandon` の外部挙動をまとめて確認したいときに読む統合テスト。session branch と session state の遷移、linked worktree、state cleanup、dirty worktree 拒否、conflict 解消の境界を一箇所で押さえる。
+- この対象は、個別の内部 helper ではなく CLI レベルの回帰を見たいときの入口になる。session の状態遷移や `run_codex_exec` 経由の conflict resolution の観測点を確認したい場合に優先して読む。
+- 一方で、`session state` の保存形式や各サブコマンドの仕様そのものを深く追う必要がある場合は、ここよりも対応する oracle doc や oracle src 側を直接読むほうが近い。
 
 ## Read this when
-- `session fork` / `session join` / `session abandon` の挙動変更や回帰を確認したいとき。
-- session state ファイル、managed session branch、linked worktree、cleanup の振る舞いが絡む変更を検証したいとき。
-- Codex 呼び出し境界、conflict 解消時の書き込み許可、preprocess の先行実行を含む session CLI の観測点を確認したいとき。
+- session CLI の回帰テスト全体を追いたいとき
+- `fork` / `join` / `abandon` のどれかで branch 遷移や state 更新の期待値を確認したいとき
+- linked worktree での session 操作や、preprocess の順序・dirty worktree 拒否・cleanup rollback の観点を見たいとき
+- conflict resolution 時の Codex 呼び出し境界や、未解決 path が残る失敗条件を確認したいとき
 
 ## Do not read this when
-- session CLI の実装そのものを追いたいときは、対応する `src/sub_commands/session/*` 側を直接読む。
-- doctor preprocess だけを確認したいときは、session テストではなく preprocess 専用のテストや仕様を読む。
-- 個別の Git ヘルパーや共通 fixture の詳細だけを知りたいときは、この統合テストではなく該当ヘルパー定義を読む。
+- session の実装方針や内部関数の詳細だけを知りたいときは、対応する oracle src を先に読む
+- 個別の仕様文言や責務境界を確認したいだけなら、対応する oracle doc を直接読む
+- session 以外の CLI 回帰を見たいときは、この対象ではなく該当サブコマンドのテスト群へ進む
 
 ## hash
-- 785531377e9267d5d92d3e23c1eb9d64e8d4977f455c10673830fa6264018d49
+- f3c69dba698a676cbe742d6b1bbf0967d5593977d92c1416475af0394caf1fc0
 
 # `test_struct_doc_rendering.py`
 
