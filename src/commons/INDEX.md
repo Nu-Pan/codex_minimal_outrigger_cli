@@ -320,20 +320,22 @@
 # `runtime_ollama.py`
 
 ## Summary
-- cmoc が管理する Ollama の導入、user service の同期、`/proc` による稼働主体の確認、モデルの取得・load・GPU 推論確認までを一連で扱う入口。」「単一の `ensure_ollama_serves_local_slm` を起点に読むと、修復と検証の順序、失敗時の停止条件、どこまでがこの module の責務かを把握しやすい。」「Ollama の設定値や共通 config 取得の詳細を追いたいときは、この module より先に `runtime_config` や `runtime_paths` を読む。
+- cmoc が管理する Ollama の導入、systemd user service の同期、`127.0.0.1:11434` での提供確認、モデルの取得・load・GPU 推論確認を一連で担う単一 preflight の入口。
+- config から cmoc provider の model 名を集め、重複排除したうえで必要な model だけを対象にする。
+- 実処理は install/service/procfs/HTTP/model 検証に分かれるが、外部からは `ensure_ollama_serves_local_slm` を起点に読むべき対象。
 
 ## Read this when
-- cmoc provider の local SLM を Ollama で自動的に使える状態へ整える処理を変更・確認したいとき。
-- Ollama の install、systemd user service、model load、GPU 利用確認のいずれかを、同じ起動経路の一部として扱う必要があるとき。
-- サービスが本当に cmoc 管理の Ollama か、`/proc` と `systemctl --user` でどう判定しているかを確認したいとき。
+- cmoc provider の local SLM を Ollama で serve 可能にする流れを追いたいとき。
+- Ollama の archive install、user service 設定、`/proc` による listener と MainPID の突合、`/api/generate` による load、`/api/ps` による GPU 使用確認の境界を確認したいとき。
+- どの model を対象にするかの決定と、失敗時にどの段階で止まるかを知りたいとき。
 
 ## Do not read this when
-- Ollama のモデル名や provider 設定の値そのものを決めたいだけなら、先に `runtime_config` 側を読む。
-- Ollama 以外の provider の起動や検証を扱いたいときは、この module ではなくその provider 専用の実装を読む。
-- CLI の引数解釈やコマンド分岐だけを追いたいときは、この module ではなく呼び出し元の subcommand 実装を読む。
+- Ollama の provider 選択や model 仕様そのものを確認したいときは、config 側や app_spec 側を先に読む。
+- systemd や procfs、HTTP クライアントの一般的な使い方だけを知りたいときは、この対象よりも各責務の実装や標準ライブラリ側を読む。
+- 単独の helper 再利用先を探しているだけなら、まずはこのファイルの外で同責務の入口がないかを確認する。
 
 ## hash
-- 092a1e1e44d6512fb4b3f39644107c066450eda14370e09ab0cb0e27c1b65ed1
+- 7a29c53f3a4a68e3b958bdfda14d9390cf26f6c1e9dee953e868d8c88ecc32eb
 
 # `runtime_paths.py`
 
