@@ -18,12 +18,9 @@ from pathlib import Path
 import pytest
 from basic.acp import AgentCallParameter
 from _cli_support import runner
-from _codex_support import setup_codex_home
-from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
 from cmoc_runtime import CmocError
-from commons.runtime_codex import run_codex_exec as real_run_codex_exec
 from config.cmoc_config import CmocConfig
 from main import app
 from pytest import MonkeyPatch
