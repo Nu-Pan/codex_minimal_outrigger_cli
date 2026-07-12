@@ -398,19 +398,21 @@
 # `test_codex_runtime_paths.py`
 
 ## Summary
-- Codex 実行時の作業ディレクトリ、出力スキーマ保存先、権限オーバーライドの境界を確認するテスト群。リンク済み worktree や repo-local 読み取りの扱い、`.agents` を開けないことも含め、実行パス周りの仕様を見たいときの入口になる。
+- `run_codex_exec` の実行時パス処理を検証するテスト群。`cwd` の決定、出力 schema の保存先、権限 profile への反映、リンク済み worktree や追加 read path の扱いを確認したいときの入口。
 
 ## Read this when
-- `run_codex_exec` の cwd や `--cd` の扱いを確認したい。
-- 出力スキーマの保存先が worktree ではなく repo root 側になる条件を確認したい。
-- 権限オーバーライドが `oracle` や `.cmoc/local` にどう効くか、`.agents` を開けない制約を確認したい。
+- `commons.runtime_codex.run_codex_exec` の `cwd` や `--cd` の決め方を変えるとき。
+- 出力 schema をどこに保存するか、repo root 配下に置くかを確認したいとき。
+- `FileAccessMode` から Codex の filesystem 権限 override を組み立てる境界を確認したいとき。
+- リンク済み worktree から実行したときのパス解決や、追加 read path の許可範囲を確認したいとき。
 
 ## Do not read this when
-- Codex 実行そのものの引数組み立てやプロンプト生成の詳細を見たいときは、より下位の実装を読む。
-- ファイルアクセスルールの正本定義だけを確認したいときは、対応する oracle 側を先に読む。
+- 再試行、容量 retry、JSONL エラー、KeyboardInterrupt などの実行制御を見たいときは、別の `run_codex_exec` テスト群を読む。
+- prompt 生成や `FileAccessMode` の定義そのものを確認したいときは、`oracle/src/oracle/prompt_builder/parts/file_access_rule.py` 側を読む。
+- session/apply など上位 CLI の引数解決やサブコマンド分岐を確認したいときは、このファイルではなく該当する CLI テストや実装を読む。
 
 ## hash
-- cbc9905852473ebc5dedf6cd82179034059f08384ffcb6f2117858b6f3afc1fa
+- 962990fb7916c430d53376f096d2df6bebd94de53140f9d33951e73917f2b954
 
 # `test_codex_runtime_quota_retry.py`
 

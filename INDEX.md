@@ -134,18 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の realization test と共通 support をまとめる案内対象である。CLI、runtime、prompt、ACP builder、review/apply/session などの外部挙動を、機能別の個別テストへ案内する入口として読む。
-- 各テストファイルは、それぞれ対応するサブコマンドや runtime 契約、正本 schema との整合、あるいは共通 support の責務を確認したいときに進む先を絞るためのもの。
+- `test` 配下の realization test と共有 support をまとめる入口。CLI、runtime、ACP builder、prompt rendering、packaged import などの外部挙動を、対象別の test 本文へ振り分ける。
+- 共有 support は個別テストの重複 fixture を減らすための補助で、仕様本文ではなくテスト共通処理を読むときに使う。
 
 ## Read this when
-- このディレクトリ内で、対象機能に対応するテストや support の所在地を特定したいとき。
-- CLI 挙動、runtime 境界、prompt 生成、ACP builder、review/apply/session のいずれかに関する外部挙動回帰を確認したいとき。
-- 共通 support がどの種類のテストを支えるか、またはその support を使うべきかを見分けたいとき。
+- CLI の end-to-end 挙動、runtime の境界、ACP builder の生成結果、review/apply/session/doctor/indexing などの機能別回帰を確認したいとき。
+- 共通 test helper がどの責務を担うかを確認したいとき。
+- realization test から見える現行外部挙動を、対象別に絞って追いたいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
-- 実装の内部分割や helper の詳細だけを追いたいときは、この案内ではなく対応する realization implementation を読む。
-- この階層のルーティング方針そのものを確認したいときは、上位の案内を読む。
+- 正本仕様そのものを確認したいときは oracle 側本文を読む。
+- 実装内部の helper 分割や業務ロジックだけを追いたいときは realization implementation 側を読む。
+- まだ対象機能が分からず総当たりで探したいときは、ここより上位の案内や対象別テストを先に読む。
 
 ## hash
-- e95b78b4fcd149723bb7b178030b20a82aa02dbb1c56bfcedd76f28771667a3f
+- dded3c4f33f3ae0a9fb652c10580a50911a5c9fc169aeae0735965a2db4157c9
