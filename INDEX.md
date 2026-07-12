@@ -134,18 +134,17 @@
 # `test`
 
 ## Summary
-- `test` 配下の realization test と共有 support をまとめる入口。CLI、runtime、ACP builder、prompt rendering、packaged import などの外部挙動を、対象別の test 本文へ振り分ける。
-- 共有 support は個別テストの重複 fixture を減らすための補助で、仕様本文ではなくテスト共通処理を読むときに使う。
+- `test` 配下の共通テスト補助をまとめた案内で、`acp_builder` の正本 schema 参照や `CliRunner`、git / codex / ollama / command stub など、各種テスト支援の入口を選ぶために読む。
 
 ## Read this when
-- CLI の end-to-end 挙動、runtime の境界、ACP builder の生成結果、review/apply/session/doctor/indexing などの機能別回帰を確認したいとき。
-- 共通 test helper がどの責務を担うかを確認したいとき。
-- realization test から見える現行外部挙動を、対象別に絞って追いたいとき。
+- `test` 配下の共通補助の責務や使い分けを確認したいとき。
+- 特定のテスト補助が、`acp_builder` の正本 schema 参照、CLI 実行、git 初期化、fake command 生成、codex / ollama 実行補助のどれを担うか見分けたいとき。
+- 個別テスト本文ではなく、まずどの支援ファイルを読むべきかを判断したいとき。
 
 ## Do not read this when
-- 正本仕様そのものを確認したいときは oracle 側本文を読む。
-- 実装内部の helper 分割や業務ロジックだけを追いたいときは realization implementation 側を読む。
-- まだ対象機能が分からず総当たりで探したいときは、ここより上位の案内や対象別テストを先に読む。
+- 個別の CLI 挙動や各サブコマンドの仕様そのものを確認したいとき。
+- テスト補助ではなく、`oracle` 側の正本仕様断片を確認したいとき。
+- この案内ではなく、対象テストや実装の本文を直接読むべきとき。
 
 ## hash
-- dded3c4f33f3ae0a9fb652c10580a50911a5c9fc169aeae0735965a2db4157c9
+- 6c034b756091c3cb87bba170e022640dba7fb1e4512dcad58402e3e2e186e90b

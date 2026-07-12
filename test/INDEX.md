@@ -379,21 +379,19 @@
 # `test_codex_runtime_home.py`
 
 ## Summary
-- Codex 実行ラッパーが `CODEX_HOME` をどう解決し、実行前にどの環境不備で失敗するかを確認するテスト群。既定の home 探索、相対パスの扱い、`auth.json` 必須条件、そして失敗が Codex CLI 起動前に起きることをまとめて検証する。
-- `run_codex_exec` の home まわりの外部挙動を変えたときはここを読む。CLI 実行ログや subprocess の起動有無まで含めて、環境検証の境界を確認したい場合の入口になる。
+- `run_codex_exec` の実行前に、`CODEX_HOME` の解決結果と preflight 失敗時の遮断を検証するテスト群。`codex exec` を起動せずに失敗する条件や、相対/既定の home の扱いを確認したいときに読む。
 
 ## Read this when
-- `run_codex_exec` が使う Codex home の決め方を変えるとき
-- `CODEX_HOME` が未設定・相対パス・存在しない・ディレクトリでない場合の失敗仕様を確認したいとき
-- Codex CLI を呼ぶ前に落とすべき前提条件を追加・変更するとき
+- `CODEX_HOME` が未設定・相対パス・不正な型のときの `run_codex_exec` の挙動を確認したい。
+- `auth.json` の有無やディレクトリ種別を理由に、`codex` subprocess を起動する前に失敗するかを確認したい。
+- `run_codex_exec` が実際に子プロセスへ渡す home 値と、`call_log` に残る解決済み path の一致を確認したい。
 
 ## Do not read this when
-- Codex home の探索や妥当性判定の実装そのものを追いたいときは、`commons.runtime_codex` 側を直接読む
-- home 以外の `run_codex_exec` の入出力変換や実行制御を見たいときは、このテスト群ではなく該当する実装・別テストを読む
-- CLI 本体の挙動や `auth.json` の生成処理を確認したいときは、このファイルではなく Codex 側の実装を読む
+- `codex exec` の再試行、Structured Output 検証、quota 復帰は別の runtime_codex 系テストを見る。
+- `CODEX_HOME` 以外の codex 実行引数やファイルアクセス制御の確認は、対応する builder や subprocess テストを見る。
 
 ## hash
-- c9a20de9c8172da28721fd715784c7c730de2ca80fbc9570c61c9a0b85b0024c
+- 36143b5ce50111592664082e59e00925e96b6294be2e74248d02ee22ad33d474
 
 # `test_codex_runtime_paths.py`
 
