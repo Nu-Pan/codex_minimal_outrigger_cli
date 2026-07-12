@@ -239,20 +239,20 @@
 # `test_codex_runtime_errors.py`
 
 ## Summary
-- `codex_runtime` 経由で Codex CLI 起動時の失敗を扱うテストを置く。`exec` と `tui` の両経路で、CLI 自体が見つからない場合に同じエラー扱いになることを確認する。
+- Codex CLI 呼び出しの失敗処理を検証するテスト。`codex` 実行自体が見つからない場合に、`run_codex_exec` と `run_codex_tui` が同じ例外と監査ログを出すことを確認する。
 
 ## Read this when
-- `commons.runtime_codex` の起動失敗時の振る舞いを変えるとき。
-- Codex CLI が存在しない環境でのエラーメッセージや例外種別を確認したいとき。
-- `run_codex_exec` と `run_codex_tui` の両方に共通する失敗処理を検証したいとき。
+- Codex 起動失敗時の例外メッセージや `codex_call` ログの記録内容を確認したいとき。
+- `exec` と `tui` の両経路で、CLI 不在を同じように扱うべきかを確認したいとき。
+- 外部 `codex` コマンドが起動できない異常系のテスト追加・修正をするとき。
 
 ## Do not read this when
-- Codex CLI が見つかる通常起動経路だけを確認したいときは、通常の起動テストを読む。
-- `cmoc_runtime` 以外の認証やセッション管理の失敗を調べたいときは、このテストではなく該当モジュール側のテストを読む。
-- `exec` と `tui` の内部実装差だけを追いたいときは、このテストではなく起動実装そのものを読む。
+- Codex の通常実行、引数組み立て、成功時の挙動を見たいとき。
+- 別の失敗要因の扱いを確認したいときは、より直接のエラーテストを読むべきで、このテストは読まなくてよい。
+- ログ形式全体やサブコマンド実行基盤の仕様を把握したいだけのとき。
 
 ## hash
-- 933432c51f5faa4490e1f72338baaf1e65c0f27087d2896ff41cc9cc3f279e04
+- 688efb4449733c71d7cc6efba4f59ff9c4ce24947e6cbc607e708b37922e990c
 
 # `test_codex_runtime_exec.py`
 
@@ -349,20 +349,20 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- `codex` TUI 起動の外部挙動を検証するテスト群。起動前の読取許可判定、complete prompt の扱い、リンク済み worktree での cwd・読み取り対象・call log の整合、成功/失敗時のログ出力を確認する。
+- `codex_runtime` の TUI 起動まわりを検証するテスト群。`run_codex_tui` の事前チェック、`codex` 呼び出し引数、許可領域の判定、成功・失敗時のログ記録とエラー表示を確認する。
 
 ## Read this when
-- `run_codex_tui` の入出力、起動前検証、call log、コンソール出力、worktree 由来のパス解決を変更するとき。
-- TUI 起動時の extra read path の扱い、`memo` や oracle 以外の参照制御、`codex` サブプロセス引数の組み立てを変えるとき。
-- Codex TUI の成功・失敗時に残る記録やエラー伝播を確認したいとき。
+- `run_codex_tui` の入出力や失敗時挙動を変えるとき。
+- `codex` subprocess の起動条件、実行位置、`--cd` や出力スキーマの扱いを変えるとき。
+- `extra_read_paths`、`memo`/`oracle` へのアクセス可否、呼び出しログやサブコマンドログの記録方法を変えるとき。
 
 ## Do not read this when
-- `tui` コマンドのプロンプト生成や事前解析だけを直すときは、より上流の CLI/TUI 変換テストを先に読む。
-- `codex` 実行本体や一般的な subprocess 共通処理を変えるだけなら、TUI 専用のこのテストではなく共通 runtime 側のテストを読む。
-- ファイルアクセスモードや oracle 一般の仕様だけを調べたいときは、この TUI 専用テストではなく該当する仕様断片や共通テストを読む。
+- `codex` 実行本体の実装を追いたいだけなら、テスト対象の実装側を読む。
+- ファイルアクセス許可やリポジトリ境界の共通ロジックを確認したいだけなら、個別テストではなく関連する runtime/permission 実装を読む。
+- TUI 以外のサブコマンドの挙動を調べたいだけなら、このファイルではなく該当サブコマンドのテストへ進む。
 
 ## hash
-- b5a49e74ba5374ff5348dc54ba8e7345c96fe0d2fb80d4d7f9f7ece4158c1913
+- e300386b3a1715845fd2808fea3f15f239bfc4789c9d8f5d8cac6c3d62d2e694
 
 # `test_doctor_cli.py`
 

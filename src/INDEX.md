@@ -58,21 +58,21 @@
 # `commons`
 
 ## Summary
-- cmoc 実行時の共通基盤をまとめる領域の入口で、設定・path・git・logging・error・results・Codex 実行・doctor・indexing を横断する runtime helper 群へ進むための案内。
-- 個別 helper の実装や責務はここでは扱わず、必要に応じて再公開モジュールと各 runtime_* 実装へ分岐する。
+- cmoc の実行時共通処理を集めた共有 helper 群の領域。CLI 実行、git、path、config、logging、error、state、Codex/Ollama まわりの runtime 補助をここから辿る。
+- 個別の実装責務は下位モジュールに分かれており、この対象自体は共有 runtime helper のまとまりを示す入口として使う。
 
 ## Read this when
-- 複数の runtime helper をまたぐ処理の入口や、共通基盤のどの領域へ進むべきかを判断したいとき。
-- runtime 系の再公開、設定、path、git、ログ、エラー、結果、Codex 実行、doctor、indexing のいずれかが関係していて、まずこの領域の担当範囲を確認したいとき。
-- 新しい共通 helper を追加する前に、既存の runtime 共通領域に置くべきかを見極めたいとき。
+- 実行時に複数モジュールから使う共通 helper の配置や、どの helper 群へ進むべきかを確認したいとき。
+- CLI 共通実行、path 解決、git 操作、設定変換、ログ、エラー、state、Codex/Ollama 関連の runtime 補助をまとめて探したいとき。
+- 共有 helper 群に新しい実装を追加する前に、この領域が runtime 共通基盤のまとまりであることを確認したいとき。
 
 ## Do not read this when
-- 特定 helper の入出力、失敗時挙動、永続状態、表示文言を確認したいときは、この入口ではなく該当する runtime_* 実装を読む。
-- CLI サブコマンド固有の業務処理やテスト固有の仕様を調べたいときは、共通 runtime ではなくより直接の責務を持つ対象へ進む。
-- 正本仕様断片の文面そのものを確認したいときは、対応する oracle 側の文書を読む。
+- 特定 helper の入力、出力、失敗時挙動を確認したいとき。該当する下位モジュールの本文を読む。
+- CLI コマンド固有の業務処理やテスト固有の挙動を調べたいとき。より直接その責務を持つ対象へ進む。
+- 正本仕様断片そのものを確認したいとき。対応する oracle 側の文書を読む。
 
 ## hash
-- 6a9ef3ce85bb9e706ae7a8264414c5875fcb7d2818da5b9c324a0e77c179a8a0
+- 835ca513ea7317fa06729cf20a4fd879c3d1a8d36207b5a9b378f5d9df7634ea
 
 # `config`
 

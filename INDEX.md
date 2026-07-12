@@ -115,39 +115,36 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization 実装をまとめて読むための入口。CLI 本体や共通基盤の薄い再公開ではなく、実際の挙動を担う実装側の module を辿るときに使う。
-- この階層は、`basic`・`commons`・`config`・`sub_commands` のような公開面や入口から、実処理の実体へ進みたいときに読む。互換 shim や正本側の定義そのものを探す用途には向かない。
-- `oracle.py` は正本側 `oracle` package を起動時に解決するための shim だが、`src` 全体の案内としては、そこから先の実体実装を追う必要があるときに読む。
+- `src` 配下の realization implementation 全体をまとめて見るための入口。正本側の `oracle` package を参照する shim と、cmoc の CLI 入口・共有 runtime helper・各種互換入口をまとめて辿るときに使う。
+- この階層は、利用者向けの公開面をどこへ配線しているか、互換維持の薄い層と本体実装の接続境界がどこにあるかを確認したいときに読む。
 
 ## Read this when
-- CLI の実処理本体、共通 runtime、状態管理、path や git の扱いなど、入口の先にある realization implementation を確認したいとき。
-- `basic`・`commons`・`config`・`sub_commands` などの公開面から、実体 module へどうつながるかを辿りたいとき。
-- `oracle` package の解決 shim を起点に、正本側 module を参照する経路を確認したいとき。
+- `src` 配下の realization implementation の入口を探したいとき。
+- 公開 import の互換 shim と、実体実装への接続境界を確認したいとき。
+- CLI 入口や共有 runtime helper の配置を切り分けたいとき。
 
 ## Do not read this when
-- 互換 import の維持可否や旧公開名の扱いだけを確認したいときは、より直接の互換層を読む。
-- 正本仕様断片や oracle file の文面を確認したいときは、`oracle` ツリー側を読む。
-- CLI の登録、サブコマンドの接続、設定や共通 helper の入口だけを確認したいときは、それぞれの下位ディレクトリへ直接進む。
+- oracle file や仕様断片そのものを確認したいとき。
+- `src` 配下の個別実装の詳細や、各 subcommand・helper の中身だけを追いたいとき。
+- 互換層ではなく正本側の定義や本体仕様を直接読みたいとき。
 
 ## hash
-- adc4c1e47fdb45a4b0c972a3b84964ba50dfc4148d1ce2f5e1ec88ae9a86ca93
+- cbf43e7e9a7e7e2aee490afa0736a4509a6ebe6b08dc274d4715ecbaaa6bf27a
 
 # `test`
 
 ## Summary
-- テスト群の入口。共有テスト補助と各機能の回帰テストが集まっており、CLI 振る舞い・実行時契約・prompt 生成・状態遷移・Markdown レンダリングのどれを追うかで、読む先を切り分けるための案内に使う。
-- 共通補助は、外部コマンドの差し替え、git/worktree の最小 fixture、Codex 実行環境の固定、Ollama の隔離、CLI 実行支援など、複数テストで再利用される前提準備をまとめる。
-- 個別テストは、apply/session/indexing/review/doctor/tui/Codex runtime/prompt parts/StructDoc rendering などの外部挙動を確認する回帰検証であり、実装本体ではなく仕様上意味のある境界を固定する。
+- `test` 配下の各共通補助モジュールと、CLI・runtime・prompt・packaging・renderer をまたぐ回帰テスト群を案内する。各エントリーは、そのファイルがどの共通 fixture や外部挙動の入口なのかを、隣接する対象との境界が分かる粒度で示す。
 
 ## Read this when
-- 共通 fixture やテスト支援の使い分けを確認したいとき。
-- CLI の外部挙動、状態ファイル遷移、worktree との整合、Codex 起動前後の前提条件、prompt 生成、Markdown レンダリングのどれかを変更したとき。
-- 特定機能の回帰テストを探していて、まずどのテスト群を見るべきかを判断したいとき。
+- `test` 配下の共通補助、CLI 回帰、runtime 回帰、prompt 組み立て、packaged import、Markdown renderer のどこへ進むべきかを選びたいとき。
+- 特定のサブコマンドや runtime の外部挙動を変えた後に、対応する回帰テストの入口を絞り込みたいとき。
+- 共通 fixture を使うテストの前提や、どの補助モジュールがどの種類のテストを支えるかを確認したいとき。
 
 ## Do not read this when
-- 実装本体のアルゴリズムや内部 helper の分割だけを知りたいときは、対応する実装側を読む。
-- 仕様の正本や設計意図そのものを確認したいときは、テストではなく oracle 側の文書や定義を読む。
-- テスト支援ではなく CLI 定義、設定定義、runtime 実装、prompt 正本を探しているときは、この領域ではなく該当する実装領域を読む。
+- 個別の実装本体や oracle 側の正本定義を知りたいときは、この索引対象ではなく、対応する実装・oracle 文書を読むべきとき。
+- ルーティング情報だけが必要で、各テストの詳細な期待値や内部 helper の分解までは不要なとき。
+- CLI 挙動、runtime 制御、prompt 生成、packaging、renderer のうち、すでに読む対象が明確なときは、この索引対象を経由せず直接読む方がよいとき。
 
 ## hash
-- 130b0fb829fc41e8b27071105befd01f3658b5369a7f01027ca1f29bff98b2cd
+- c56132bb8bb700ccca76824857dd2aa1dcce5a104fd95a36fcf992002e0afb6a

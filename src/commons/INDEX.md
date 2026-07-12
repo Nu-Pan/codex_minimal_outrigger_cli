@@ -110,38 +110,40 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループ、Structured Output 検証、capacity 再試行、quota 待機と代表 probe、resume 継続、実行ログ出力をまとめて扱う。実行制御の分岐と状態遷移を読むときに進む。
+- Codex exec の単一試行ループを読む入口。Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call/prompt/stdout/stderr/output の各 log 生成を確認したいときに進む。TUI 起動や他サブコマンドの分岐は対象外。
+- この module を読むのは、`codex exec` の実行制御と再試行の境界、失敗時にどの log を残すか、quota 共有状態機械の扱いを確認したいとき。変更が log 命名、resume token の扱い、Structured Output の失敗判定に触れるなら優先して読む。
 
 ## Read this when
-- `codex exec` の呼び出し条件、再試行条件、quota 待機条件、resume token の扱い、call log / stdout / stderr / output log の記録方法を確認したいとき。
-- Structured Output の必須 JSON 読み取り、schema 検証、失敗時の再実行やエラー化の境界を確認したいとき。
-- quota 待機中の代表 probe の実行条件と、待機中の複数呼び出しの調停方法を確認したいとき。
+- `codex exec` の実行フロー、再試行、Structured Output 検証、quota 待機の挙動を変えるとき。
+- 実行ごとの prompt/stdout/stderr/output/call log の生成や、resume token の継続条件を確認したいとき。
+- capacity error と quota error の分岐、代表 probe の開始・共有・復帰条件を追いたいとき。
 
 ## Do not read this when
-- TUI 起動や別サブコマンドの制御を探しているとき。
-- `git` 変更 path の収集だけが目的のときは、同じファイル内の下部の変更 path 補助関数だけを読む方が直接的。
-- Codex exec の実行制御ではなく、共有 runtime の別責務を探しているとき。
+- TUI 起動や UI 側の制御を変えたいときは、別 module を先に読む。
+- `git status` ベースの変更 path 収集だけが目的なら、この module 全体ではなく変更 path 取得側を読む。
+- Codex exec 以外のサブコマンドの分岐や CLI 定義を調べたいだけなら、この module は後回しでよい。
 
 ## hash
-- 13601a6bfa71e2543f9328bf0331d6308537267d756294b74c5c8a5c4e1c7b06
+- f4d8c2244c0b283e4e9608724fbf67d2d6bce884fab326793d5d35ae044e43b5
 
 # `runtime_codex_logging.py`
 
 ## Summary
-- Codex CLI 呼び出しの完了情報を利用者向け console に出力する小さな実装。目的、呼び出しログの場所、経過時間、終了コードを、既存の時刻・期間フォーマットを使って整形して表示する。
+- Codex CLI 呼び出しに関する console 出力と、起動失敗時の error 文面を共通化する補助をまとめた対象。呼び出し通知の表示形式を確認したいときや、失敗理由の整形を他の出力経路と揃えたいときの入口になる。
+- console に出す時刻・経過時間・終了コードの組み立てを見たい場合と、`CmocError` を含む例外を利用者向けの短い error text に直したい場合に読む。
 
 ## Read this when
-- Codex CLI 呼び出し後に console へ表示する通知内容や表示順を確認・変更したいとき。
-- Codex CLI 呼び出し通知で、目的、呼び出しログ、経過時間、終了コードをどのように利用者へ見せているか確認したいとき。
-- console 通知の時刻や経過時間が、共通の実行時フォーマット処理とどう接続しているか確認したいとき。
+- Codex CLI 呼び出しの通知を console に出す処理を追加・修正したい。
+- 起動失敗や例外の文面を、console 出力と event で同じ表現に揃えたい。
+- 経過時間や時刻表示を含む呼び出しログの見え方を確認したい。
 
 ## Do not read this when
-- Codex CLI 呼び出しそのものの実行制御、引数構築、プロセス管理を調べたいとき。
-- 呼び出しログファイルの生成・保存・更新の実装を調べたいとき。
-- 時刻文字列や経過時間文字列の共通フォーマット規則そのものを変更したいとき。
+- 呼び出しの記録先そのものや永続化の責務を変えたいときは、保存・記録側の対象を先に読む。
+- Codex 以外の CLI 表示や一般的な runtime エラー処理を変えたいだけなら、より上位の入出力処理を読む。
+- `console_timestamp` や `format_duration` の表示仕様だけを追いたいときは、それらを定義している対象を直接読む。
 
 ## hash
-- d6c16807d74cfa4ef374c6062dcd9ce3fd7c9464c0d331fb11bf238d5d5d5f6b
+- 3aa2c9b4388542920c4557bddf5901e75f441a15c053f019c7c9b9f20c90267d
 
 # `runtime_codex_preflight.py`
 
@@ -183,22 +185,21 @@
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI 起動用に、実行ディレクトリ、Codex home、設定上書き argv、call log を準備し、Codex subprocess を実行して結果と失敗時エラーを扱う処理を提供する。
-- TUI 呼び出しの console 表示、subcommand logger への codex_call event 記録、call log JSON の保存内容を確認する入口になる。
+- Codex TUI の起動を 1 か所にまとめた実行補助。呼び出し用 argv の組み立て、call log の保存、起動後のエラー整形と例外変換までを扱う。
+- Codex の実行先 cwd と `CODEX_HOME` の解決・検証、設定上書き引数の準備、サブコマンドログへのイベント記録が必要なときに読む。
 
 ## Read this when
-- Codex TUI を起動する処理、設定上書き argv や Codex home の解決、TUI 実行時の cwd 決定を確認・変更したいとき。
-- TUI 呼び出しの call log に記録される引数、model class、reasoning effort、file access mode などを確認・変更したいとき。
-- Codex TUI subprocess の成功・失敗時の戻り値、console 表示、logger event、CmocError への変換を調べたいとき。
-- TUI 実行で追加 read path や linked worktree 配下の work root/repo root の扱いが関係するとき。
+- Codex TUI を起動する処理を追加・変更するとき。
+- 呼び出し前に `CODEX_HOME` の解決や検証、`--cd` の決定方法、追加 read path の扱いを確認したいとき。
+- call log の保存内容、起動失敗時の `CmocError` 変換、サブコマンドログへの記録を追いたいとき。
 
 ## Do not read this when
-- Codex TUI ではなく exec 形式や別サブコマンドの Codex 呼び出し処理を調べたいときは、その呼び出し元または共通実行処理を読む。
-- argv 上書きの生成内容、Codex home の検証、subprocess 実行、Codex 環境変数の詳細そのものを調べたいときは、それらを提供する共通 Codex subprocess 境界を読む。
-- 設定ファイルの読み込み仕様、runtime path の定義、logger の実装、CommandResult や CmocError の型定義だけを確認したいときは、それぞれの責務を持つ対象を読む。
+- Codex の通常 CLI 実行や別サブコマンドの起動経路を見たいときは、各サブコマンド側の実行補助を読む。
+- 設定値の読み込みや Codex プロファイルの詳細だけを確認したいときは、このファイルではなく各責務の元のモジュールを読む。
+- TUI 以外の call log 形式や保存先の全体方針だけを知りたいときは、より上位のログ・パス管理側を読む。
 
 ## hash
-- 9b7d706abb20e4aba4b83c315f9b7e98c870b262c5fa901009a06ce37d8b6c8e
+- 1ac3e6cc3de04dbe252fbf40360285086b7736e54c580b62da3b7920189e47de
 
 # `runtime_config.py`
 
