@@ -180,18 +180,18 @@
 # `test_acp_builder_session_join_parameters.py`
 
 ## Summary
-- `cmoc session join` の conflict resolution 用エージェントパラメータの契約を確認するテストを読む入口。公開 API がビルダ 1 本に絞られていることと、repo write 前提の実行条件を固定していることを確認したいときにここから入る。
+- `acp.builder.session.join.conflict_resolution` の公開 API と、セッション join の conflict resolution 用パラメータ生成が正本どおりかを確認する回帰テスト。公開された builder だけを残し、内部依存を外へ漏らさないことと、生成時に repo write 権限・高い推論設定・索引事前処理なしで conflict 対象ファイルを prompt に反映することを扱う。
 
 ## Read this when
-- `cmoc session join` の conflict resolution まわりで、公開されるビルダ API と実行パラメータの契約を確認・変更したい。
-- module の公開面を絞る意図や、conflict 対象ファイルを扱うときの実行モードを確認したい。
+- セッション join の conflict resolution builder の契約変更を確認したいとき。
+- 公開モジュールの export 境界や、生成される agent call parameter の権限・モデル設定・prompt 反映を検証したいとき。
 
 ## Do not read this when
-- prompt 本文や conflict 対象ファイルの列挙ルールそのものを見たいときは、対応する oracle src 側を読む。
-- 通常の session join 接続処理や他サブコマンドのパラメータ生成だけを見たいときは、ここではなくその責務のファイルを読む。
+- session join の他の builder や join 処理全体の挙動を追いたいときは、より直接の実装・テストを読む。
+- 公開 API ではなく内部ヘルパーの分割や実装手順だけを確認したいときは、ここではなく対応する実装側を読む。
 
 ## hash
-- 1f7fc5c95bedda5a2db47987f9878a67578090967083c0cbf66d96941114e4b7
+- 0e1cfedb64251290b7dab4e8a69db9fa29c5c44c0d8f10dc2783621c24cd0637
 
 # `test_acp_builder_tui_parameters.py`
 
