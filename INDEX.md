@@ -134,18 +134,21 @@
 # `test`
 
 ## Summary
-- `test` 配下の共通 support と回帰テストの案内で、CLI・runtime・prompt builder・各サブコマンドの外部挙動を確認するときの入口である。個別実装ではなく、対象ごとの test/support へ進むためのルーティングを担う。
-- 各 `*_support.py` はテスト用の共通補助、各 `test_*.py` は `acp_builder`・`runtime`・`session`・`apply`・`review`・`doctor`・`indexing`・`tui` などの外部挙動を固定する回帰テストで構成される。
+- `test` 配下の共通支援ファイル群。`acp_builder` の正本 schema を参照する path helper、apply/session の状態復元、CLI 実行補助、git・Ollama・Codex runtime の共通 fixture をまとめる。個別の機能テストではなく、複数のテストから再利用される前提条件や補助処理を確認したいときの入口である。
+- `test_*` 群は、`acp_builder` の parameter 生成、apply/session/review/indexing/doctor/tui の CLI 挙動、Codex runtime の引数・権限・再試行・失敗処理、設定や path model の境界を検証する。各テストは、対応する実装や oracle 側の正本仕様へ進むかを判断するためのルーティング情報を持つ。
 
 ## Read this when
-- `test` 配下で、共通 helper の責務や使い分けを見分けたいとき。
-- CLI、runtime、prompt builder、`acp_builder` 関連の回帰テストのうち、どのファイルを読むべきかを選びたいとき。
-- `apply`、`review`、`session`、`doctor`、`indexing`、`tui` のいずれかの外部挙動を変える前に、対応するテスト群の入口を確認したいとき。
+- 共通 helper の責務や、どのテストがどの前提条件を固定しているかを確認したいとき。
+- `acp_builder` の正本 schema 参照、apply/session の状態・branch 復元、CLI 実行補助、git/Ollama/Codex runtime の共通テスト支援を確認したいとき。
+- `apply`、`session`、`review`、`indexing`、`doctor`、`tui` の各 CLI 回帰テストで、成功条件・拒否条件・cleanup・report・対象選定の境界を確認したいとき。
+- Codex runtime の home、cwd、path access、permissions、subprocess、retry、quota retry、error handling、profile 設定の外部挙動を変える作業をするとき。
+- 設定、path model、StructDoc renderer、runtime content/file access/state、Ollama 管理の境界や互換性を確認したいとき。
 
 ## Do not read this when
-- 個別の正本仕様や実装本文を確認したいときは、対応する `oracle` 側や実装側を読む。
-- `INDEX.md` のルーティング方針そのものを確認したいときは、この配下ではなく上位の案内を読む。
-- 共通 helper ではなく、特定サブコマンドの挙動だけを追いたいときは、対応する `test_*.py` を直接読む。
+- 個別の CLI 本体や runtime 実装の内部分割だけを見たいときは、この支援群ではなく対応する実装側を読む。
+- `INDEX.md` や `AGENTS.md` のルーティング方針そのものを確認したいときは、この配下のテストではなく上位の案内を読む。
+- 正本仕様そのものを確認したいときは、`oracle` 側の本文を読む。
+- 共通 helper ではなく、単一機能の実装や単体テストだけを追いたいときは、対応する対象ファイルへ直接進む。
 
 ## hash
-- 3e5946174d88d295b8b1ce9388a84cdf7839e68ccb258e63fc2d3da36d0dd434
+- 583b7b6d3204dba06da298cbfb576ccc8271c7d31f325f8a1c72898085349630
