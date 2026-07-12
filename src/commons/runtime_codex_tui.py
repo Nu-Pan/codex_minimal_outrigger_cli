@@ -85,7 +85,7 @@ def run_codex_tui(
     )
     started_at = time.perf_counter()
     failure: subprocess.CalledProcessError | None = None
-    startup_failure: Exception | None = None
+    startup_failure: BaseException | None = None
     returncode: int | None = None
     try:
         result = run_codex_subprocess(
@@ -98,7 +98,7 @@ def run_codex_tui(
     except subprocess.CalledProcessError as exc:
         failure = exc
         returncode = exc.returncode
-    except Exception as exc:
+    except BaseException as exc:
         startup_failure = exc
     elapsed_sec = time.perf_counter() - started_at
     error: str | None = None

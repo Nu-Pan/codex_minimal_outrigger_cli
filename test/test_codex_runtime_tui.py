@@ -4,6 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import cmoc_runtime
+import commons.runtime_codex_tui as runtime_codex_tui
 import pytest
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
@@ -210,6 +211,38 @@ def test_run_codex_tui_logs_missing_cli_failure(
     assert codex_events[0]["returncode"] is None
     assert codex_events[0]["call_log_path"] == str(call_logs[0])
     assert "Codex CLI が見つかりません" in codex_events[0]["error"]
+
+
+def test_run_codex_tui_logs_keyboard_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+
+    def interrupt(*_args: object, **_kwargs: object) -> object:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", interrupt)
+    logger = SubcommandLogger(root, "test")
+    token = set_current_subcommand_logger(logger)
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+    finally:
+        reset_current_subcommand_logger(token)
+
+    console = capsys.readouterr().out
+    assert "- Exit code: `not started`" in console
+    call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
+    assert len(call_logs) == 1
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in events if event["event"] == "codex_call"]
+    assert len(codex_events) == 1
+    assert codex_events[0]["status"] == "failed"
+    assert codex_events[0]["returncode"] is None
+    assert codex_events[0]["call_log_path"] == str(call_logs[0])
+    assert codex_events[0]["error"] == "KeyboardInterrupt()"
 
 
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
