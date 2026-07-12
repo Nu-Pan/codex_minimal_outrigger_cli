@@ -38,59 +38,57 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- `codex exec` を呼ぶ側が、起動前の前提確認・引数上書き・プロンプト受け渡し・実行結果保存の扱いを決めるときに読む。
-- Codex CLI をどう呼ぶかという入口仕様だけを押さえたい場合に読む。個別の `AgentCallParameter` builder の値決定や下位実装の分割は、ここではなく builder 側を読む。
+- `codex exec` で cmoc から Codex CLI を呼ぶときの実行規約を定める文書。呼び出し形、`$CODEX_HOME` の扱い、事前検証、引数による上書き、プロンプトの渡し方、ログ保存、Structured Output、失敗時の再試行や待機の方針を確認したいときに読む。
+- Codex CLI 呼び出しの実装方針を決めるときの正本であり、個別の `AgentCallParameter` builder 仕様へ進む前に、この呼び出し境界で何を固定し、何を上位の builder に委ねるかを把握する入口になる。
 
 ## Read this when
-- cmoc から Codex CLI を起動する経路を実装・修正するとき。
-- `$CODEX_HOME` の扱い、事前検証、`--model` や `--config` による上書き、stdin 経由のプロンプト受け渡し、実行ログ保存の方針を確認したいとき。
-- Structured Output の使い方や、呼び出し失敗時のリトライ・待機・再開の方針を確認したいとき。
+- cmoc から Codex CLI を起動する実装を追加・修正するとき。
+- `$CODEX_HOME` の解決、preflight validation、`--model` や `--config` による上書き、stdin でのプロンプト受け渡し、`--json` や `--output-last-message` を含む呼び出し周辺を確認したいとき。
+- Codex CLI の失敗時の再試行、quota 枯渇時の待機、サーバー一時不調時のリトライ条件を確認したいとき。
 
 ## Do not read this when
-- `AgentCallParameter` の具体的な生成規則や設定解決の細部だけを知りたいとき。
-- Codex CLI の一般的な使い方や他サブコマンドの仕様だけを探しているとき。
-- ファイルアクセス制限の具体的な値や prompt 文面の詳細だけを知りたいとき。
+- `AgentCallParameter` の具体的な値決定や builder 内部の詳細だけを知りたいときは、より直接の builder 側の正本を読む。
+- Codex CLI 呼び出しではなく、一般の cmoc 設定や別のサブコマンドの入出力を扱うだけなら、この文書は先に読まなくてよい。
+- ファイルアクセス制限の事後検証やリカバリ方針を実装したい場合は、この文書ではなく該当する制御箇所を読む。
 
 ## hash
-- e3f8f5ef0d4afee0c3c0859808f0bad776aae21835e0ab9576361b6fe9f332e5
+- 11df9873b79d4dcf58d511d048daece8416da6246a4ad3662e7a57cb3b03470b
 
 # `console_and_file_log.md`
 
 ## Summary
-- コンソール表示、パス・時間の表記、サブコマンドごとの JSON Lines ログファイル、サブコマンド実行状況を人間が読むための markdown 形式コンソールログについて定める正本仕様断片。
-- ログファイルの出力先、即時 flush、必須イベント、ステップ開始・Codex CLI 呼び出し・完了サマリーでコンソールに出す最低限の情報を確認する入口。
+- `console_and_file_log.md` は、cmoc のサブコマンド実行時に人間へ見せるコンソールログと、追跡用の JSON Lines ログをどう出すかを決める正本断片。時間・パスの表記、必須イベント、開始時通知、完了サマリーの出力要件が必要なら読む。
+- この文書は出力の見た目と記録内容の境界を定めるための入口であり、ログの保存先や即時 flush、ステップ番号つきの見出し形式など、実装差を避けたい出力規則を確認したいときに進む。
 
 ## Read this when
-- stdout や stderr に出すログの形式、時間表示、パス表示を実装・変更・検証する。
-- サブコマンド単位のログファイル作成、保存場所、JSON Lines 形式、イベント記録、flush 方針を扱う。
-- サブコマンド実行中のステップ通知、Codex CLI 呼び出し通知、完了サマリーのコンソール出力を扱う。
+- サブコマンドのコンソール表示やログファイルの出力形式を実装・変更するとき。
+- 開始通知、ステップ侵入通知、Codex CLI 呼び出し通知、完了サマリーに含める情報を確認したいとき。
+- 時間表示の整形やパスの囲み方など、ログ出力の表記規則を合わせたいとき。
 
 ## Do not read this when
-- ログ以外の CLI 引数、サブコマンド構成、作業ディレクトリ構造そのものを確認したい。
-- Codex CLI 呼び出しログファイル自体の内部形式だけを確認したい。
-- oracle file と realization file の一般的な責務境界や編集規則だけを確認したい。
+- サブコマンドの内部処理手順や具体的なログ収集実装だけを確認したいときは、まずその実装側の本文を読む。
+- この文書は出力規則の断片に限るので、他のサブコマンド仕様や別種の入出力仕様を探す目的では読まない。
 
 ## hash
-- aa330ad885fd644d57380e4babe3dd24c7f26e386cca778036e7bc1efd864ed9
+- 7edd768c574fed88f782dc8bee7468a04cb5c4619d48fb154528d689ac49bdf8
 
 # `doctor_preprocess.md`
 
 ## Summary
-- doctor preprocess の責務は、`cmoc` 共通の起動前前提をまとめて検証・修復し、各サブコマンド本体の前に環境を整えること。ここでは特に、`/.cmoc/local` の追跡除外、`.agents` の追跡状態確保、cmoc managed ollama の利用可能性確認、そして修復後差分のコミットまでを扱う。
-- 同階層の他文書ではなくこの文書を読むべきなのは、サブコマンド個別ではなく全体共通の事前処理を扱い、かつ修復不能時の終了条件まで含むから。cmoc managed ollama の具体的な可用性判定だけは別文書を参照する。
+- doctor preprocess は、各サブコマンド開始前に共通で必要な repo 健全性の検証と修復をまとめて担う入口であり、`.cmoc/gu` の ignore 保証、`.agents` の tracked 化、`.cmoc/gt/config.json` の tracked 化、必要時の cmoc managed ollama 準備、修復後の commit までを扱う。個別サブコマンド固有の前提ではなく、全体共通の事前条件を満たす場面で読む。
 
 ## Read this when
-- `cmoc` の各サブコマンドを起動する前に必要な共通前処理の責務を確認したいとき。
-- `.cmoc/local` を追跡対象外にする条件や、`.agents` を差分の出ない状態に保つ条件を確認したいとき。
-- 前提チェックで失敗した場合に、その場で終了するか修復を試みるかの境界を確認したいとき。
+- cmoc の本命処理の前に共通の初期化・修復をどう行うか確認したいとき。
+- .cmoc/gu の追跡除外保証、`.agents` の事前作成・追跡、`.cmoc/gt/config.json` の作成・追跡、または cmoc managed ollama の利用可能性保証に関わる変更をするとき。
+- 各サブコマンド個別の前提ではなく、起動前に必ず通す共通の doctor 処理を見直すとき。
 
 ## Do not read this when
-- サブコマンド固有の事前条件を確認したいときは、doctor preprocess ではなく各サブコマンド側の文書を読む。
-- cmoc managed ollama の有効化や検証の細部だけを知りたいときは、`<work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md` を読む。
-- 個別の実装詳細やコミット手順の内訳だけを追いたいときは、この文書ではなく該当する実装側へ進む。
+- 各サブコマンド固有の引数・入出力・本体処理を確認したいだけのときは、該当サブコマンド側の仕様を読む。
+- cmoc managed ollama のサービス仕様そのものだけを確認したいときは、`cmoc_managed_ollama.md` を直接読む。
+- 共通の事前修復ではなく、通常実行中や終了処理中の振る舞いを確認したいとき。
 
 ## hash
-- b439874df502422792f7f2cbaef9ea5c257ecc7ebe7d26612f35e8533b5274bb
+- a85852a16cc6db3fa4e1e33a8cb3a579e6e7e67596d37ce4340b5b20f607c1e0
 
 # `error_handling.md`
 
@@ -197,60 +195,61 @@
 # `run_isolation.md`
 
 ## Summary
-- サブコマンド呼び出しごとの run を、人間が触る作業ツリーから隔離するための正本仕様断片。run と session branch/run branch/run worktree の関係、run 作業を記録する branch と checkout 先 worktree、完了後のマージ規則がサブコマンドごとに異なることを扱う。
-- run 作業の読み書き範囲は原則として run root 内に閉じるが、ログ・ステートファイルのように repo root 配下へ書くべき例外がある、という境界も示す。
+- cmoc の run を他の操作と衝突させないための隔離規則を扱う。run ごとの branch と worktree の作り方、run 中の作業場所、run-root 外への書き込み例外を確認したいときの入口になる。
+- サブコマンド実装で、作業環境の分離や run 完了後の session 側への戻し方を決める前に読む。
+- 個別サブコマンドの入出力や UI ではなく、run の実行環境と永続先の境界を知りたいときに読む。
 
 ## Read this when
-- サブコマンド 1 回の実行単位である run の作業場所、branch、worktree の扱いを確認したいとき。
-- run 開始時にどの HEAD から run 用 branch を作るべきか、run 作業をどこに記録すべきかを実装・検証するとき。
-- run worktree 上で run branch を checkout して作業する制御を実装・レビューするとき。
-- run 完了後に run branch を session branch へどう反映するかについて、サブコマンドごとのマージ規則との接点を確認したいとき。
-- run 作業が run root 外へ書き込んでよい例外条件、特に実行中ログやステートファイルの保存先を判断したいとき。
+- cmoc のサブコマンドがどの branch と worktree で実行されるべきかを決めるとき。
+- run 中の変更がどこに記録され、どこへマージされるべきかを確認したいとき。
+- run-root の外に書ける例外を整理したいとき。
 
 ## Do not read this when
-- サブコマンド固有の具体的な branch 名、worktree 名、または個別のマージ手順そのものを確認したいときは、各サブコマンドの仕様を直接読む。
-- path placeholder の一般定義や repo root/run root/work root の意味だけを確認したいときは、path model の仕様へ進む。
-- run 隔離とは無関係な CLI 引数、出力形式、プロンプト、レビュー内容の仕様を調べるとき。
+- サブコマンドの引数、出力形式、エラー文言などの個別仕様だけを確認したいとき。
+- git branch や worktree ではなく、別の機能の保存形式やデータモデルを確認したいとき。
+- run の隔離ではなく、実装内部の helper 分割やコマンド組み立てだけを見たいとき。
 
 ## hash
-- 09080d9369142ee34fc3e3f62417f75bf96a43acc236dab7c9677f750598f972
+- da0e339241d7aef60122b871cd7617fbe5fed2abcf27eac5adfe5ae189bad582
 
 # `session_state.md`
 
 ## Summary
-- cmoc のセッション状態ファイルに永続化する最小情報と JSON 構造を定める正本仕様断片。
-- fork 元ブランチ、fork 元コミット、最後に join した oracle snapshot、apply の状態・作業ブランチ・oracle snapshot commit など、session/apply の状態遷移で保持する値の意味と初期化条件を扱う。
+- cmoc の session state を永続化する正本仕様断片。fork と join の遷移に関わる状態名、初期値、どの情報をステートに持つかという境界を確認したいときに読む。
 
 ## Read this when
-- セッション状態ファイルの保存先、責務、永続化する情報の範囲を確認したいとき。
-- `cmoc session fork`、`cmoc apply join`、apply state の ready 遷移などが、状態ファイルの各フィールドをどう初期化・更新するか確認したいとき。
-- fork、join、apply の挙動を一意にするために必要な session/apply state の JSON schema を実装・テストする とき。
+- cmoc session / cmoc apply の状態遷移や永続化内容を実装・修正するとき。
+- fork 元ブランチ、fork 元コミット、最後に join した oracle snapshot commit の扱いを確認したいとき。
+- session state に何を保存し、何をその場で解決する前提にするかを判断したいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な責務境界や編集規則だけを確認したいとき。
-- パスキーワード一般の定義を確認したいとき。
-- セッション状態ではなく、他の永続状態・CLI 出力・サブコマンド仕様を確認したいとき。
+- cmoc のコマンド体系全体や他のサブコマンドの責務だけを知りたいときは、より直接の仕様断片を読む。
+- JSON の機械的な形や保存先のパスだけを探しているときは、この断片ではなく実装側の該当箇所を先に確認する。
+- fork / join 以外の永続状態や別の session ファイル形式を扱うとき。
 
 ## hash
-- 5df81738a7b7d744d2c6708e1822bb7a68bea88de3cf1407cec7aa6c964fe8cf
+- 45858e4190eaced2325df570adda3e0c20c7a5b3283c38a1b31441dcb6d25277
 
 # `sub_command`
 
 ## Summary
-- `cmoc` の各サブコマンド仕様をまとめる案内。`apply`、`session`、`review`、`doctor`、`indexing`、`tui` の正本仕様断片へ進む入口を与える。
+- `cmoc` の各サブコマンド仕様へ進むためのルーティング入口。引数、事前条件、状態遷移、レポート、終了コードのどれを確認すべきかを、対象サブコマンドごとに切り分けるときに読む。
+- `apply`、`session`、`review`、`doctor`、`indexing`、`tui` の外部仕様をまとめて案内し、どのコマンド文書へ進むべきかを判断するための索引として使う。
 
 ## Read this when
-- サブコマンド全体の一覧から、読むべき個別仕様を選びたいとき。
-- 新しいサブコマンド仕様を追加・整理するときに、この階層へ案内を足すべきか確認したいとき。
-- 個別仕様の所属先が不明で、`apply` 系、`session` 系、`review` 系、`doctor` 系、`indexing` 系、`tui` 系のどれを読むか切り分けたいとき。
+- 特定の `cmoc` サブコマンドの挙動を確認したいとき。
+- `apply fork`、`apply join`、`apply abandon` のどれを読むべきか切り分けたいとき。
+- `session fork`、`session join`、`session abandon` のどれを読むべきか切り分けたいとき。
+- `review oracle`、`indexing`、`doctor`、`tui` の起動条件や実行順序を確認したいとき。
+- state 遷移、cleanup、レポート出力、終了コードのどれがそのコマンド責務かを見極めたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの挙動を実装・修正・検証したいときは、該当する個別仕様を直接読む。
-- パスや用語の定義だけを確認したいときは、用語・パスモデルの仕様を読む。
-- この階層の案内だけで十分な場合に、下位の個別仕様へ進む必要はない。
+- 既に読む対象のサブコマンド文書が分かっているときは、直接その文書を読む。
+- run isolation や agent call の個別パラメータの詳細だけを確認したいときは、対応する専用の正本仕様を読む。
+- 実装ファイルの内部 helper、命名、分割方針だけを確認したいときは、この索引ではなく実装側を読む。
 
 ## hash
-- f62a22ad0fd11740b4b6570cb8db25eff45d9d74f7af105178f0e8c3ccc0ca31
+- a2755e34e1e1a06ab90db4ea6063cc8f743ed19a4e373ebc465f78483cbcf294
 
 # `usage.md`
 

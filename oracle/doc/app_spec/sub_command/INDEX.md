@@ -22,23 +22,20 @@
 # `apply_fork.md`
 
 ## Summary
-- Codex CLI による apply ループを実行するサブコマンドの正本仕様断片。セッション状態・git 差分・隔離作業ツリーを前提に、調査対象ファイルの選定、所見列挙、修正依頼、自動コミット、状態遷移、作業レポート生成までの責務境界を定める。
+- `cmoc apply fork` の実行責務と境界を定める正本仕様断片。事前条件、`--scope` の初期調査対象、apply ループの流れ、状態遷移、レポート出力までを確認したいときに読む。
 
 ## Read this when
-- apply ループを実行するサブコマンドの CLI 引数、事前条件、終了状態、終了コードを確認したいとき。
-- セッション状態ファイルの apply セクションをいつ running、completed、error に遷移させるか確認したいとき。
-- rolling、session、full の各スコープで調査待ちファイルリストをどう初期化するか確認したいとき。
-- 所見列挙、所見反映、変更要約の agent call をどのタイミングで呼び、結果を調査待ちリストやコミットへどう反映するか確認したいとき。
-- apply 作業レポートの保存先、Front Matter、本文に含める内容、標準出力へ流す値を実装またはテストしたいとき。
+- `cmoc apply fork` の挙動や終了条件を実装・修正したいとき。
+- apply 対象ファイルの初期化条件、重複除去、再調査の扱いを確認したいとき。
+- セッション状態ファイルの `apply` 状態遷移や、作業レポートの保存・出力要件を確認したいとき。
 
 ## Do not read this when
-- run の隔離実行そのものの詳細仕様を確認したいときは、隔離実行の仕様を直接読む。
-- agent call パラメータの詳細なプロンプトや Structured Output を確認したいときは、対応するパラメータ生成仕様を直接読む。
-- apply 以外のサブコマンドの引数、状態遷移、レポート仕様を調べたいときは、そのサブコマンドの仕様へ進む。
-- oracle file、realization file、パスプレースホルダの一般定義だけを確認したいときは、用語やパスモデルの仕様を読む。
+- `run` の隔離実行そのものの詳細だけを知りたいときは、参照先の `run_isolation` の仕様断片を読む。
+- `build_apply_fork_file_finding_enumeration_parameter` や `build_apply_fork_finding_application_parameter` の入出力の詳細だけを確認したいときは、それぞれの正本仕様断片を読む。
+- `cmoc apply fork` 以外のサブコマンドの一般仕様を探しているとき。
 
 ## hash
-- ed0ad23eb49a444f0b0bffd7b03ed03353a215afa9096aaf8d518725533d633e
+- 4b83469f170f1c66c5ebd6079c936da72d4e14ffc7e62d31d94ab622fe525306
 
 # `apply_join.md`
 
@@ -98,22 +95,21 @@
 # `review_oracle.md`
 
 ## Summary
-- `cmoc review oracle` の正本仕様断片。現在の oracle file のスナップショットを対象に、致命的または軽微な問題の所見を agent call で列挙・マージ・検証・判定し、人間向けの Markdown レポートとして保存・提示するサブコマンドの責務、前提条件、実行手順、ループ制御、レポート形式を定める。
+- `cmoc review oracle` のルーティング用エントリー。`oracle` 配下のスナップショットをレビューし、所見を集約して Markdown レポートを出すコマンドに進むための入口を示す。
+- この対象は、`--scope` によるレビュー範囲、事前条件、所見の列挙・検証・判定の流れ、最終レポートの保存先を扱う。実装本体ではなく、レビューの責務境界と出力物の確認が必要なときに読む。
 
 ## Read this when
-- oracle file をレビューするサブコマンドの挙動、責務境界、対象範囲、またはスコープ指定を確認したいとき。
-- レビュー所見の列挙、マージ、検証、採用判定に関わる agent call の呼び出し順序や反復条件を確認したいとき。
-- レビュー対象となる oracle file の選び方、ダーティーフラグ、ループ回数上限、隔離実行の扱いを確認したいとき。
-- レビュー結果として保存・標準出力へ提示される Markdown レポートの構成、frontmatter、本文セクション、所見表示順を実装またはテストしたいとき。
+- `oracle` ツリーの内容に対するレビュー仕様、処理手順、出力レポート形式を確認したいとき。
+- レビュー対象の範囲や前提条件、所見の集約順序、レポート保存先を知りたいとき。
+- `cmoc review oracle` が何を責務とし、何を責務外とするかを確認したいとき。
 
 ## Do not read this when
-- oracle file の内容そのものを修正する作業で、レビューサブコマンドの挙動を確認する必要がないとき。
-- 実装ファイルや生成物を交えた総合レビュー、または過去の oracle file の変更履歴レビューを扱うとき。
-- 個別 agent call のプロンプトやパラメータ構造だけを確認したいときは、対応する builder 定義を直接読む方が適切。
-- run の隔離実行そのものの一般仕様を確認したいときは、隔離実行の仕様を直接読む方が適切。
+- 実装ファイルや一般的なコマンド実行手順を知りたいだけのとき。
+- 自動生成ファイルや別コマンドの仕様を探しているとき。
+- 所見の個別内容そのものではなく、`oracle` 配下の別文書や実装詳細を直接読むべきとき。
 
 ## hash
-- 305ad4b3715f3fc13c345e7ccff3c81a13daf2acf2c62a9c2669fc2782a09824
+- 026f8af4331413ebc3759bb25643694e8176d2b35e8862d0e8c6b917b445ab0f
 
 # `session_abandon.md`
 
@@ -139,23 +135,24 @@
 # `session_fork.md`
 
 ## Summary
-- 現在 checkout しているローカルブランチを session の分岐元兼 merge 先として扱い、そこから session 用 managed branch と local session 状態を作成するサブコマンドの正本仕様断片。
-- 実行可能な checkout 状態、未コミット差分や既存 active session によるエラー条件、作成する branch と session 状態、標準出力に出す情報の境界を定める。
-- 任意 start point、repository default branch の特別扱い、旧 branch 命名、旧サブコマンド互換を現行対象外として切り分ける。
+- `cmoc session fork` を読むべき条件を、現在のローカルブランチから session 用ブランチを新規作成する処理、事前条件の検証、session 状態保存、旧 `cmoc branch` / `cmoc_<time-stamp>` 系の非互換方針に絞って案内する。
+- この文書は、分岐元を変えたい場合の start point 指定ではなく、既に目的のローカルブランチへ移動したうえで fork する流れを確認したいときに読む。
+- `doctor preprocess` の呼び出し、active な session の重複禁止、作成ブランチ名と home branch 名の出力仕様を確認したいときの入口に置く。
 
 ## Read this when
-- session を開始するサブコマンドの実装、CLI ルーティング、標準出力、状態ファイル作成、または git branch 作成処理を変更する。
-- session 開始時に許可する checkout 状態、managed branch 上での実行可否、未コミット差分、active session 重複の扱いを確認する。
-- session branch の命名、session id の生成、home branch と fork commit の保存内容、doctor preprocess の呼び出し有無を確認する。
-- 旧 branch 形式や旧サブコマンド名への互換実装・テストを残してよいか判断する。
+- 現在 checkout しているローカルブランチを起点に `cmoc session fork` がどう session ブランチを作るか確認したいとき。
+- 実行前の失敗条件として、detached HEAD、remote-tracking branch や commit hash からの実行、`cmoc/session/...` や `cmoc/apply/...` 上での実行、未コミット差分、既存 active session の有無を確認したいとき。
+- session ID 生成、branch 作成と checkout、`/.cmoc/gu/ar/session/<session-id>.json` への状態保存、標準出力への表示内容を確認したいとき。
+- 旧 `cmoc branch` や `cmoc_<time-stamp>` 形式を実装・テストから排除すべきか判断したいとき。
 
 ## Do not read this when
-- session の merge、apply、終了、削除など、開始後の session 操作だけを扱う。
-- path placeholder の意味、managed branch 全般の分類、または doctor preprocess 自体の詳細仕様を確認したい。
-- INDEX.md エントリー生成規則や oracle file と realization file の責務境界を確認したい。
+- 任意の start point を受け取る fork 挙動を確認したいときは、この文書ではなく、start point を扱う別の仕様を読むべき。
+- session の開始後にどう join するか、あるいは abandon するかを確認したいときは、この文書ではなく該当する別のサブコマンド仕様を読むべき。
+- branch 命名以外の session 状態全般や CLI 共通規則だけを確認したいときは、より上位の一般仕様を読むべき。
+- 旧 `cmoc branch` への後方互換を前提にした実装を探したいときは、この文書ではなく、非互換方針を含む他の仕様を確認すべき。
 
 ## hash
-- 700e5f0b4083ac19c029f1aa024dbdd477552bc4e26f5b87e049889aa0437c5e
+- dc02c6bd4c55ff5d696db81813820583de05785e5a19c854e03c41bab2e9ff71
 
 # `session_join.md`
 
@@ -186,16 +183,19 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` の起動フローを扱う案内。ユーザー入力の取得、agent call によるパラメータ決定、AI Agent CLI/TUI の起動条件をまとめて読む入口。
-- エディタ起動時の入力ファイル名・初期文面・コメント除去と `strip` の扱い、Codex CLI 利用時の `codex` 起動条件や持ち込む要素を確認したいときに読む。
+- `cmoc tui` サブコマンドの起動経路を扱う。ユーザーのオリジナルプロンプトをエディタ入力で受け取り、agent call で必要パラメータを決め、AI Agent CLI/TUI を起動する流れを確認したいときに読む。
+- この対象は、入力エディタの起動順序と初期テンプレート、入力読み出し時の整形、TUI 起動時に参照すべき正本仕様、Codex CLI 起動時に持ち込む追加要素を定める。
+- 実装の内部分割や agent call の詳細、TUI 起動パラメータの細部はここでは追わず、対応する正本仕様へ進む。
 
 ## Read this when
-- `cmoc tui` の実行手順や、起動前にどのパラメータや入力を揃えるかを確認したいとき。
-- ユーザーがエディタでオリジナルプロンプトを入力する流れ、入力ファイルの扱い、または Codex CLI を起動する条件を確認したいとき。
+- `cmoc tui` の全体フロー、特に入力取得から TUI 起動までの接続を確認したいとき。
+- ユーザー入力用エディタの選定順、初期プロンプト雛形、読み出し時の整形条件を確認したいとき。
+- Codex CLI バックエンドで起動するときの追加条件や持ち込み要素を確認したいとき。
 
 ## Do not read this when
-- AI Agent CLI/TUI の個別パラメータ決定の詳細だけを知りたいときは、そこで正本とされる別資料を直接読む。
-- TUI 以外のサブコマンドや、エディタ候補の一般的な使い分けだけを探しているとき。
+- agent call のパラメータ解決の個別仕様だけを見たいときは、そちらの正本仕様を直接読む。
+- TUI 起動パラメータの詳細だけを確認したいときは、起動パラメータの正本仕様を直接読む。
+- エディタ起動やプロンプト入力を伴わない別サブコマンドの流れを見たいとき。
 
 ## hash
-- e7003cfafb45aef63053d1655718bce328348400b7949aa4cea975515cf380cd
+- d150cc09cab57f12ffc1074eec9e261fc79875b029efe97e01c5d7d9b48d9f6a

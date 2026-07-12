@@ -1,19 +1,22 @@
 # `cmoc_config.py`
 
 ## Summary
-- `CmocConfig` と、その配下の Codex・apply fork・review oracle 向け設定値をまとめた設定定義。永続化形式と既定値、列挙型の JSON 化方針を確認したいときに読む。
+- `cmoc` のリポジトリごとの設定正本を持つ。`CmocConfig` 本体と、その配下の Codex モデル対応、`cmoc apply fork`、`cmoc review oracle` の各設定断片を読む入口。
+- JSON 永続化時の順序保持、Enum 系の value 化、既定値やループ上限の意図のように、実装差を避けたい設定ルールを確認したいときに進む。
 
 ## Read this when
-- `cmoc` のリポジトリ別設定の集約先と既定値を確認したいとき。
-- `<repo-root>/.cmoc/config.json` の生成・同期や、人間による手編集の前提を確認したいとき。
-- モデル名、reasoning effort、または `cmoc apply fork` / `cmoc review oracle` の挙動調整値を扱うとき。
+- `cmoc` の挙動設定を追加・変更したい。
+- モデル名や reasoning effort の対応、永続化される設定値の既定値を確認したい。
+- `cmoc apply fork` または `cmoc review oracle` の設定上限や回数制御の意図を確認したい。
+- 設定の JSON 化や、Enum 系の保存形式に関わる仕様を確認したい。
 
 ## Do not read this when
-- 設定の読み書き処理や JSON シリアライズの実装詳細を探すだけなら、対応する実装ファイルを直接読む。
-- `cmoc` 全体のコマンド体系や他の設定領域を知りたいだけなら、このファイルではなく上位のルーティングを読む。
+- `cmoc` 全体のコマンド仕様やサブコマンドの入出力を知りたいだけなら、各サブコマンド側の実装へ進む。
+- 設定値の利用箇所や実際の処理フローを追いたいだけなら、ここではなく各設定を参照する実装側を読む。
+- このファイルの記述方針や用途だけを知りたいなら、他の設定断片を先に読む必要はない。
 
 ## hash
-- 960bf917865360adff931717438c88b92365a5cc17118e2a1543faf725e50d24
+- 34eaec951a656b1183d8f1e2232522db42fdc071c48b358541b9aa99b7d018e2
 
 # `path_model.py`
 

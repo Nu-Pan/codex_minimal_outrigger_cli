@@ -25,24 +25,21 @@
 # `file_access_rule.py`
 
 ## Summary
-- AI エージェントへ注入するファイル読み書き規則文を、アクセスモードごとの deny list として組み立てる処理を扱う。
-- リポジトリルートとワークルートの関係に応じた外部アクセス制限、共通の書き込み禁止対象、oracle file と realization file に対するモード別制限をまとめ、プレースホルダ値と構造化文書として返す。
-- 通常の規則生成を行わない特別モードでは空のプレースホルダと空文書を返し、不正なモードは例外として扱う。
+- `FileAccessMode` ごとのファイル読み書き規則プロンプトを組み立てる入口。リポジトリ外、`.git`/`.agents`/`.codex`/`memo`、`AGENTS.md`/`INDEX.md`、および oracle file・realization file へのアクセス可否をモード別に切り替える。
+- `repo-root` と `work-root` をプレースホルダへ渡し、`StructDoc` として最終文面を返すだけの部品。アクセス規則の文言やモードごとの禁止範囲を確認したいときに読む。
 
 ## Read this when
-- AI エージェントに渡すファイル読み書き規則プロンプトの内容や生成条件を確認・変更したいとき。
-- 読み取り専用、oracle 専用、realization 追従、リポジトリ書き込みなど、アクセスモードごとの禁止規則の差分を確認したいとき。
-- リポジトリルートとワークルートが異なる場合の例外的な読み取り許可や、プロンプトへ埋め込むルートプレースホルダの扱いを確認したいとき。
-- oracle file、realization file、管理用メタ領域、補助ワークスペースに対するアクセス禁止文面の根拠を追いたいとき。
+- ファイル読み書き権限の注入文面を変更したいとき。
+- `READONLY`、`PURE_ORACLE_READ`、`REPO_WRITE`、`PURE_ORACLE_WRITE`、`REALIZATION_WRITE`、`NO_RULE` のどれかの挙動を見直すとき。
+- oracle file と realization file のどちらを読める/書けるべきか、また境界ファイルをどう扱うかを確認したいとき。
 
 ## Do not read this when
-- ルートパスの解決方法そのものを確認したいだけのときは、パスモデルを扱う対象を読む。
-- アクセスモードの列挙値や意味の正本定義を確認したいだけのときは、モード定義を扱う対象を読む。
-- 構造化文書やプレースホルダ表現のデータ構造を確認したいだけのときは、それぞれの基礎型を扱う対象を読む。
-- 実際のサンドボックス実装や事後チェック機構の詳細を確認したいだけのときは、この規則文を利用する上位処理を読む。
+- 実際のファイルアクセス判定ロジックそのものを追いたいときは、先に `FileAccessMode` の定義側を読む。
+- `repo-root`/`work-root` の解決方法だけを知りたいときは、ここではなく path 解決側を読む。
+- プロンプト全体の組み立て順や他の文面部品を知りたいときは、この関数の周辺の別パーツを読む。
 
 ## hash
-- 0651d22964749172c16e03de93c63deb85a5b95dfaa3ce44a75144f17fa0b49d
+- 5187c83b5b19d36fa9212e0f7da65cfd830e60eb9cdb24bd0f1605e3954a009b
 
 # `index_entry_standard.py`
 
@@ -67,24 +64,22 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- oracle file と realization file の定義・役割・下位概念を説明するプロンプト部品を構築する。
-- oracle file を人間所有の正本仕様断片、realization file を oracle file の意図を AI が具体化した非正本ファイルとして区別する基本知識を扱う。
-- oracle doc/src/test と realization code/implementation/test/ancillary の分類、および配置先の基本を確認する入口になる。
+- `oracle` と `realization` の区別、各ファイル種別の定義と役割を読むための入口。`<work-root>` 配下で何が正本仕様で、何が実装側かを確認したいときに参照する。
+- 人間の責任範囲、AI が編集してよい範囲、正本から実装が生成されるという前提を確認する。仕様の境界や責務分担を詰める作業に向く。
+- `oracle doc`、`oracle src`、`oracle test` の位置づけが必要なときに読む。個別の実装やコマンド詳細より、まず概念整理が必要な場合の案内。
 
 ## Read this when
-- oracle file と realization file の責務境界や所有者の違いを確認したいとき。
-- oracle 配下と非 oracle 配下のファイルを、正本仕様断片か実装成果物かに分類する必要があるとき。
-- oracle doc、oracle src、oracle test、realization implementation、realization test、realization ancillary などの基本分類と配置先を確認したいとき。
-- realization file が oracle file を正本として生成され、その逆方向の正本化は禁止されるという前提を確認したいとき。
+- 正本仕様と実装生成の関係を確認したいとき。
+- `oracle` 配下とそれ以外のファイルの責務境界を判断したいとき。
+- `oracle file` / `realization file` / 各下位概念の定義を先に押さえてから別ファイルへ進みたいとき。
 
 ## Do not read this when
-- oracle file や realization file の品質基準、記述量、コメント方針、テスト肥大化抑制などの詳細な作業標準を確認したいとき。
-- 具体的なパスキーワードの意味や解決規則を確認したいとき。
-- 個別サブコマンド、CLI 出力、実装処理、テストケースの仕様を調べたいとき。
-- INDEX.md エントリーの生成規則やルーティング文書の書き方を確認したいとき。
+- 個別の実装手順、CLI の細部、関数の内部ロジックを知りたいとき。
+- すでに `oracle` と `realization` の責務境界が分かっていて、具体的な仕様断片や実装ファイルへ直接進むべきとき。
+- `INDEX.md` や `AGENTS.md` 自体の編集方針を探しているとき。
 
 ## hash
-- c0530e70cfe7491a14741dd786d862fce92e871e9a5cd28688b5bbb48a172a7a
+- 735e094838b5ceac96ecea2ba17094807f900dd0c66f5765c0406118a34d285d
 
 # `oracle_review_standard.py`
 

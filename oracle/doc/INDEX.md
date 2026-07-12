@@ -1,40 +1,39 @@
 # `app_spec`
 
 ## Summary
-- `cmoc` のアプリ仕様群をまとめる入口。サブコマンド、起動前処理、補完、ログ、状態、実行隔離、プロンプト、外部 provider 連携など、利用者向け挙動や実装境界を決めるときにここから必要な個別仕様へ進む。
-- 個別機能の正本仕様断片を探すための案内であり、ここ自体は詳細仕様の代替ではない。対象の責務がどの文書に属するかを切り分けるために読む。
+- `app_spec` 配下の個別仕様を読むための入口。CLI の振る舞い、状態、出力、エラー処理などのうち、この配下にある正本仕様断片へ進む必要があるときに使う。
 
 ## Read this when
-- `cmoc` の CLI 挙動、サブコマンド、実行フロー、ログ、状態管理、補完、インデクシング、外部 model 連携のどれを実装・修正・検証するか判断したいとき。
-- 起動前の共通処理、エラー処理、run/session の隔離や状態更新、プロンプト受け渡しなど、複数機能にまたがる仕様の入口を探したいとき。
-- どの個別仕様文書を読むべきか迷っていて、責務境界で候補を絞りたいとき。
+- この配下の個別仕様を実装・修正・テストするとき。
+- 対象機能の人間向け仕様がこの配下にあるか確認してから本文へ進むべきとき。
+- 複数の正本仕様断片のうち、この配下のものを読む必要があるか切り分けたいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な役割分担や編集規則だけを確認したいとき。
-- 個別仕様がすでに分かっていて、その文書本文だけで判断できるとき。
-- cmoc 以外の一般的な CLI 設計や、ここに属さない別機能の仕様を探したいとき。
+- この配下ではない別の正本仕様断片を直接確認したいとき。
+- 実装ファイルやテストファイルの内容だけを見れば判断できるとき。
+- oracle file と realization file の一般原則だけを確認したいとき。
 
 ## hash
-- 2f54c6008e5920a79e4b330d1f714d952705fca8b1212e6daa54ec2664f830cb
+- c82fb3ef7d1cfebe970227c130ed8814a68e92d1f2b07949ec671969d35f0281
 
 # `branch_model.md`
 
 ## Summary
-- cmoc が通常の local branch から session branch を作り、run ごとに subcommand-specific な managed branch と linked worktree へ作業を隔離する branch/worktree モデルを定義する。
-- repository default branch、local branch、remote-tracking branch、cmoc-managed branch、session/run 系 branch、fork/join commit、run worktree の意味と命名規則を扱う。
+- cmoc が session 用 branch と run 用 branch / worktree をどう切り分けるかを定める基礎仕様。`session fork` でどの local branch を session の home とみなすか、各 merge commit が何を結ぶか、run ごとの隔離先の命名と役割を確認したいときに読む。
+- branch 名・commit 名・worktree 名の対応関係を揃える必要がある変更の入口。サブコマンド固有名を決める前提として、共通の抽象概念と具体名への落とし込みを確認するために読む。
 
 ## Read this when
-- cmoc の session fork/join や apply/review などの run が、どの git branch・commit・worktree を作成または利用するかを確認したいとき。
-- `<cmoc-session-branch>`、`<cmoc-session-home-branch>`、`<cmoc-run-branch>`、`<cmoc-run-worktree>` などの用語の意味や命名規則を確認したいとき。
-- repository default branch を特別扱いするか、session の home branch をどの時点の branch とみなすかを判断したいとき。
+- session 作成時の分岐元や最終 merge 先を決める必要がある。
+- run 実行を session の作業履歴から分離する branch / worktree の扱いを実装・修正したい。
+- branch 名、fork / join commit 名、worktree 名の命名規則を合わせたい。
 
 ## Do not read this when
-- oracle file と realization file の責務境界、編集権限、追跡対象判定などを確認したいとき。
-- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` のパス概念そのものを確認したいとき。
-- git branch/worktree ではなく、oracle 文書構成、INDEX.md エントリー規則、または realization code の品質基準を確認したいとき。
+- 個別サブコマンドの実処理や引数仕様だけを確認したい。
+- git の一般的な branch 運用や worktree 機能そのものを学びたいだけで、cmoc 固有の対応関係は不要である。
+- session や run の状態保存、エラー処理、表示文言の仕様を確認したい。
 
 ## hash
-- 4c44301943a5bf0f9213b6720b0852c2f85bd0b69b2967ab72baf1cda109e4b9
+- 641e02b2de87442586902c10daa64b10afe5459c2e7f4dc361d085a419c25eb7
 
 # `considered_alternative`
 
