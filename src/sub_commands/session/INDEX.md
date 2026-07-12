@@ -58,18 +58,17 @@
 # `join.py`
 
 ## Summary
-- `cmoc session join` の実行本体をまとめたモジュール。セッション branch から home branch へ merge し、必要なら conflict 解消を Codex CLI に委ね、状態更新・branch 削除・結果表示までを扱う。
-- 同じファイル内に、merge conflict 対応の補助処理、非 conflict 変更の排除、未解決 marker 検査、変更スナップショット取得、path fingerprint 作成が入っている。
+- `session join` の CLI 実行本体と、merge conflict 発生時の Codex 依頼・差分制限・解消後の検査までを扱う。通常の join 処理、conflict 解消、未解決状態や削除可否の判断を追いたいときに読む。
 
 ## Read this when
-- `session join` の CLI 実行フロー、前提条件チェック、merge 後の状態更新や branch 削除の挙動を確認したいとき。
-- merge conflict が発生した後に、どの範囲を Codex CLI に解消させ、どこから先を手動確認に戻すのかを知りたいとき。
-- conflict 対象の path 抽出、conflict marker 検出、変更差分の判定方法を調べたいとき。
+- `session join` の実行条件、状態遷移、branch 切り替え、merge 後の削除判定を確認したい。
+- merge conflict が起きたときの Codex 実行範囲、conflict 対象だけに変更を閉じ込める制約、残存 marker や unmerged path の検査を確認したい。
+- join 処理のエラー条件や、stderr に出すべき失敗経路を確認したい。
 
 ## Do not read this when
-- `session join` の引数定義やコマンド登録だけを見たいときは、CLI エントリポイント側を先に読むべき。
-- session state の永続化形式や join 以外の session 操作を見たいときは、状態管理や他の session サブコマンドを読むべき。
-- merge conflict 解消用プロンプトの文面や生成規則だけを見たいときは、`build_session_join_conflict_resolution_parameter` 側を直接読むべき。
+- `session join` で使う conflict 解消用の入力パラメータだけを見たい場合は、`build_session_join_conflict_resolution_parameter` 側を先に読む。
+- indexing の前提条件だけを見たい場合は `commons.indexing` 側を読む。
+- Git 状態取得や worktree/state 読み書きの詳細だけを見たい場合は、`cmoc_runtime` や `commons.runtime_git` 側を読む。
 
 ## hash
-- 89989e1906cb6b142f931005541db19dc88e70d34c38cb273a1f9ae7767ea3f5
+- 099db825f66fbdabb288cc81e0fdc52c6d90d65d1e55bcab3c1ef0e490e63208

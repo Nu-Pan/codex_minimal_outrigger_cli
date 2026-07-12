@@ -115,37 +115,34 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation を束ねる上位入口。公開 CLI や互換 shim ではなく、実際の実装本体へ進む前に、どの責務がここに属するかを切り分けるために読む。
-- ここでは実行時の実装群をまとめて案内するだけで、個別のコマンド処理、共有 helper、正本側定義の複製を扱わない。
+- `src` 配下の realization implementation と realization test を束ねる上位入口。個別の実装詳細へ進む前に、実装本体・テスト・補助要素のどこへ読む先を分けるかを判断するために読む。
+- `src` には `acp` や `basic` の互換入口、CLI 本体、設定・runtime の公開面、サブコマンド実装、`oracle` 参照の shim が含まれる。正本定義の複製ではなく、既存公開面をどう具体化しているかを確認したいときに読む。
 
 ## Read this when
-- 実際の実装本体をどこから読むべきか判断したいとき。
-- CLI、互換 shim、共有 helper、設定、各サブコマンド実装のうち、実装側の入口を先に絞りたいとき。
-- 実装群の責務境界を確認し、下位モジュールへ進む前に全体の配置を把握したいとき。
+- `src` 配下で、どの実装モジュールへ進むべきかを切り分けたいとき。
+- 互換 import 面や公開入口を維持する実装を確認したいとき。
+- CLI 入口、設定、runtime、サブコマンド群のどれに責務があるかを見たいとき。
 
 ## Do not read this when
-- 個別のコマンド実行フローや入出力の詳細を知りたいとき。
-- 互換 import 面や正本側の定義そのものを確認したいとき。
-- 正本仕様断片やルーティング方針だけを確認したいとき。
+- 個別の実装ロジック、変換処理、状態操作の詳細を知りたいとき。該当する下位モジュールを直接読む。
+- 正本仕様そのものや oracle file の定義を確認したいとき。
+- 入口の有無だけを確認できており、下位の実装選定が不要なとき。
 
 ## hash
-- 3466c10c7a59a977a4dad83baced80685c8555d044fca8a180f0e798e5c7ad8d
+- e4bd3d9bdd17a799504cbcefc0f070fac737ba661fbe881577f4e6d6af38f180
 
 # `test`
 
 ## Summary
-- `test` 配下の回帰テスト群を読む入口。CLI、runtime、ACP builder、prompt rendering、session/apply/review/indexing などの外部挙動を確認したいときに、まずこの配下から対象の test 本文へ進む。
-- この配下には、個別サブコマンドの CLI 挙動や runtime 契約を固定するテストと、共通補助ファイルがある。対象の振る舞いを確認したいなら各 test 本文へ、共通の初期化やスタブ生成が必要なら support 系へ進む。
+- `test` 配下から `<work-root>/oracle/src/oracle/acp_builder` の正本 schema を参照するための共通 path 解決をまとめたテスト補助。acp_builder 関連テストで schema の実体位置を重複計算したくないときの入口になる。
 
 ## Read this when
-- CLI サブコマンドや runtime の外部挙動を変えたので、対応する回帰テストを探したい。
-- 特定の機能の boundary 条件や error handling を、実装本文ではなくテストから確認したい。
-- 複数テストで共通に使う helper や support file の役割を把握したい。
+- acp_builder 関連テストで、正本 schema ファイルの参照先を一箇所に集約したい。
+- `test` 配下のテストから oracle tree の schema を読むが、個別の相対パス計算を書きたくない。
 
 ## Do not read this when
-- `oracle` 側の正本仕様そのものを確認したいなら、対応する oracle 本文を読む。
-- 個別機能の実装手順や helper 分割を追いたいだけなら、対象の realization src を直接読む。
-- この配下のどのテストを読むべきか明確な場合は、まずその対象の test 本文へ進む。
+- acp_builder 以外の対象で path 解決が必要なら、対象ごとの専用 helper を探す。
+- oracle schema 自体の内容や structured output の仕様を確認したいだけなら、oracle tree 側の本文を読む。
 
 ## hash
-- 34d60c4f0fc5cf48f2e5bee22b03f43ae8e8a2145efa42b8c497373b51656c10
+- 919f69a2ee52f8a0d474c9eba1c30bbccae7314c022c17700e0c81a0828fe24a
