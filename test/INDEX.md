@@ -17,18 +17,20 @@
 # `_apply_support.py`
 
 ## Summary
-- セッション状態スナップショットから apply 用の worktree を復元する小さなテスト補助関数を置く。branch 名を state から取り出して `commons.runtime_apply` の worktree 解決へ渡す責務に絞る。
+- `apply` セッション状態から管理対象の作業先パスを復元するテスト補助関数。状態スナップショットに含まれるブランチ表現を直接解釈し、通常の作業先探索経路に依存しない形で期待パスを組み立てる。
 
 ## Read this when
-- apply セッションの state から worktree パスを復元する経路を確認したいとき。
-- 状態の `apply` 部分に含まれる branch 名が、どの worktree 解決処理に渡されるべきかを追いたいとき。
+- `apply` の状態から作業先パスを導く仕様を確認したいとき。
+- ブランチ名の妥当性検証と、その結果としてどの作業先が選ばれるかをテスト側で合わせたいとき。
+- `oracle/doc/branch_model.md` と `oracle/doc/app_spec/session_state.md` にある branch / state の約束に合わせて、apply 周辺のテストを調整したいとき。
 
 ## Do not read this when
-- apply worktree の作成・更新・削除の本体仕様を知りたいときは、補助関数ではなく `commons.runtime_apply` 側を読む。
-- session state の保存形式全体や他の state 項目を知りたいときは、この補助関数ではなく state 定義側を読む。
+- 通常の作業先探索や実運用のパス解決を追いたいとき。
+- apply セッション以外の状態変換や、パス生成以外のテスト補助を探しているとき。
+- branch モデルや session state の正本仕様そのものを確認したいとき。
 
 ## hash
-- 3b712042f89265b83678a441ea1303b97064d27293e5813fea29dffd686fb17e
+- af6fe5225afe056c9a64fb9b2b027117b7068638e52fe8a37ce897e8ec8965da
 
 # `_cli_support.py`
 
@@ -230,20 +232,21 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- `apply fork` CLI の回帰テスト群。セッション作成後の apply 実行、Codex ループ完了後の state/worktree 更新、linked worktree からの開始、doctor 前処理、config 読み込み失敗、.gitignore への反映、target 正規化の境界をまとめて確認する。
+- `apply fork` CLI の回帰テスト群で、session/worktree/state/report/gitignore/target 正規化までを同じ境界で確認する入口。`apply fork` の外部挙動や対象判定の変更を読むときに進む。
+- 設定失敗・doctor preflight・Codex ループ完了・state 遷移・linked worktree・gitignore 反映・対象正規化のうち、どれか一つではなく複数が同じ変更理由で動くかを確認したいときに読む。
 
 ## Read this when
-- `apply fork` の外部挙動を追加・変更したとき。
-- 対象の正規化、gitignore 判定、state 遷移、report 生成順、linked worktree 由来の実行元解決を確認したいとき。
-- doctor preflight や config 失敗時の開始前ガードを確認したいとき。
+- `apply fork` の正常系や失敗系の回帰を追加・修正するとき。
+- session branch、apply branch、worktree、state file、report file の関係をまとめて確認したいとき。
+- target 正規化や `.cmoc/local`、`oracle`、`memo`、`.agents`、`.codex`、`AGENTS.md`、`INDEX.md` の扱いを `apply fork` の観点で確かめたいとき。
 
 ## Do not read this when
-- `apply` 以外の CLI や session 生成の仕様だけを見たいときは、より直接のテスト群を読む。
-- `apply fork` の実装詳細や helper の内部分解だけを知りたいときは、この回帰テストではなく対応する実装を読む。
-- 別の target 正規化ルールだけを調べたいときは、個別の正規化テストを優先して読む。
+- `apply fork` 以外のサブコマンドだけを変更するとき。
+- 実装本体の分岐や内部 helper の構造だけを追いたいときは、対応する `src` 側を直接読む。
+- 単独の fixture や共通テスト補助の整理だけをしたいときは、この回帰群より先に共有 fixture の定義元を読む。
 
 ## hash
-- 2221d43445a276a4fbd0f343f27f2f1038ef6cca18a7711ef130b50428280961
+- 32ea4fd80e20daf92d96e95efa3fee6d0e7057f3b1c2206dfec3cd707252aedb
 
 # `test_apply_fork_report_cli.py`
 
@@ -266,20 +269,22 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- `apply join` の CLI 振る舞いを検証するテスト群。apply worktree の後片付け、session state 更新、結果 report 生成、dirty worktree や想定外差分、merge conflict の扱いをまとめて扱う。
+- `apply join` の CLI 経路を検証するテスト群への案内。`session fork` と `apply fork` の後に `apply join` を実行し、apply worktree の削除、状態更新、report 生成、現在作業ディレクトリ依存、想定外差分、merge conflict、force resolve まで含めて確認する内容が中心です。
+- 同じ join 操作でも、通常の join 成功・拒否条件・worktree 上からの実行・linked session worktree への反映・期待差分と想定外差分の判定・削除対象/非対象パスの境界を読む必要があるときに参照します。
 
 ## Read this when
-- `apply join` の成功条件と失敗条件を確認したいとき。
-- apply worktree の削除・branch 消去・state 更新・report 保存のどれかが変わるとき。
-- 想定外差分の判定、`--force-resolve` の挙動、dirty worktree や merge conflict の検証を追加・修正するとき。
+- `apply join` の CLI 挙動を追加・変更・修正するとき。
+- apply worktree の後片付け、session state 更新、join report の出力内容を確認するとき。
+- dirty worktree、stale apply branch、想定外差分、merge conflict、`--force-resolve` の扱いを確認するとき。
+- apply 側と session 側で、どのパス変更が join 対象かを判定するロジックを確認するとき。
 
 ## Do not read this when
-- `apply fork` 自体の挙動だけを確認したいときは、fork 側のテストを読む。
-- CLI の個別コマンド定義や引数パースだけを追いたいときは、join 以外のコマンド実装を読む。
-- 純粋な git 補助関数や worktree 構築の詳細だけを見たいときは、このファイルではなく補助モジュールを読む。
+- `apply fork` 自体の作成処理を確認したいだけのときは、fork 側のテストを読むほうが直接です。
+- `session fork` や session 管理の一般仕様だけを追いたいときは、session 系のテストや実装を直接読むほうが適切です。
+- CLI 全体の共通ヘルパや git 補助だけを見たいときは、この join 専用テストではなく対応する共通 helper を読むほうが適切です。
 
 ## hash
-- de29b403faf93bf183628ce6b8c960ff9042f8ba7812f3438dc57c008ce99b91
+- 0d6fcbd296b8040330a858c52010e552228ccaf7cd043ae6d0fe42543b105d51
 
 # `test_basic_runtime.py`
 

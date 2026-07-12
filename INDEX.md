@@ -134,18 +134,15 @@
 # `test`
 
 ## Summary
-- `test` 配下の回帰テスト群をまとめて読む入口。CLI、runtime、prompt、session、apply、indexing、Codex/Ollama、StructDoc など、機能別の外部挙動と境界条件を固定するテストを探すときに使う。
-- 個別の実装本文ではなく、どの仕様境界をどのテストが担っているかを切り分けて案内するための階層。共通補助ファイルと機能別テストが混在するので、目的に近い対象へ進む起点にする。
+- `test` 配下の acp_builder テストが、`<work-root>/oracle/src/oracle/acp_builder` 配下の正本 schema へ向かうための共通 path 解決をまとめる補助ファイル。テストごとに oracle tree への相対計算を重複させたくないときの入口。
 
 ## Read this when
-- CLI の外部挙動、runtime の契約、prompt 生成、session/apply/indexing の回帰を確認したい。
-- 共通 test support を使っている箇所を探したい、または特定サブコマンドのテストだけを先に見つけたい。
-- 機能ごとの境界条件や失敗時挙動を、該当する test ファイルへ絞って読みたい。
+- acp_builder 関連テストで、正本 schema ファイルの実体位置を一箇所に集約して参照したい。
+- テストが oracle tree の schema を読むが、`test` 配下からの相対計算を個別に書きたくない。
 
 ## Do not read this when
-- 実装本体のアルゴリズムや helper 分割を追いたいときは、対応する `src` 側を読む。
-- 正本仕様そのものを確認したいときは、対応する `oracle` 側を読む。
-- 単一の共通補助だけを探しているときは、機能別テストではなく同名の support ファイルへ進む。
+- acp_builder 以外のテスト対象で path 解決が必要なら、対象ごとの専用 helper を探す。
+- oracle schema 自体の内容や structured output の仕様を確認したいだけなら、oracle tree 側の本文を読む。
 
 ## hash
-- db187a8053978330e3c8750b01e8e93e55f44ac016537154696c5daf1a883201
+- 7eaaa135dd13265737ee361e0636d8449204ed12a29e552ff02f950d1e8494d1
