@@ -1,3 +1,13 @@
+"""cmoc managed Ollama の単一 preflight を実装する。
+
+archive install、user systemd、procfs による所有者確認、model/API/GPU 確認は、
+同じ `ensure_ollama_serves_local_slm` の lock 内で同じ executable・service・model
+を順序どおりに修復・検証する一連の処理である。独立した再利用入口もないため、
+分割すると失敗時の停止条件と前後関係を理解するために複数 module を同時に読む
+必要が生じ、単一の managed Ollama preflight という責務の凝集性を損なう。
+根拠: <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+"""
+
 import fcntl
 import json
 import os
@@ -186,7 +196,7 @@ def _write_ollama_service_file(executable: Path) -> bool:
             "Description=cmoc managed ollama",
             "",
             "[Service]",
-            f"ExecStart={executable} serve",
+            "ExecStart=%h/.cmoc/ollama/bin/ollama serve",
             f"Environment=OLLAMA_HOST={_OLLAMA_HOST}",
             "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
             "Restart=on-failure",

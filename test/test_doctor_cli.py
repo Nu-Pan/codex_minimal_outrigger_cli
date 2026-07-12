@@ -48,7 +48,7 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
         "Description=cmoc managed ollama",
         "",
         "[Service]",
-        f"ExecStart={home}/.cmoc/ollama/bin/ollama serve",
+        "ExecStart=%h/.cmoc/ollama/bin/ollama serve",
         "Environment=OLLAMA_HOST=127.0.0.1:11434",
         "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
         "Restart=on-failure",

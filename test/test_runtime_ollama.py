@@ -57,6 +57,19 @@ def test_ensure_ollama_service_restarts_only_when_active_service_needs_repair(
     assert calls == expected
 
 
+def test_write_ollama_service_uses_home_specifier_for_executable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home with spaces"
+    executable = home / ".cmoc" / "ollama" / "bin" / "ollama"
+    service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
+    monkeypatch.setattr(ollama_module, "_ollama_service_file", lambda: service)
+
+    assert ollama_module._write_ollama_service_file(executable)
+
+    assert "ExecStart=%h/.cmoc/ollama/bin/ollama serve" in service.read_text()
+
+
 def test_verify_ollama_service_rejects_missing_main_pid(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

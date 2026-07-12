@@ -210,7 +210,10 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
                     key: value.replace("%h", str(home))
                     for key, value in (item.split("=", 1) for item in env_lines)
                 }})
-                argv = exec_start.removeprefix("ExecStart=").split()
+                argv = [
+                    item.replace("%h", str(home))
+                    for item in exec_start.removeprefix("ExecStart=").split()
+                ]
                 if args == ["enable", "--now", "cmoc-ollama"] and pid_path.exists():
                     try:
                         if Path(f"/proc/{{int(pid_path.read_text())}}").exists():
