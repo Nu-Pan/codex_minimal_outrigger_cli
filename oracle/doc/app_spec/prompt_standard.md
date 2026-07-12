@@ -12,6 +12,30 @@
 - 原則として、この動的構築された　プロンプトをそのまま agent call 側に渡す事し、realization file 側でプロンプトを加工するのは禁止
 - 例外として、oracle src 側にバグがあって realization file 側でフォローする必要がある場合は、必要最低限の範囲内での加工を許容する
 
+## 記法
+
+### プレースホルダ
+
+- プレースホルダは、`{{repo-root}}` のように名前を二重波括弧で囲って表記する
+
+### プロンプト上の参照関係
+
+- 参照される対象は、次の XML タグ風の記法で囲う
+
+    ```xml
+    <cmoc_block id="target-1">
+    ...
+    </cmoc_block>
+    ```
+
+- 対象への参照は、次の XML タグ風の記法で表す
+
+    ```xml
+    <cmoc_ref target="target-1"/>
+    ```
+
+- `cmoc_block`、`id`、`cmoc_ref`、`target` は固定の名前とし、`target-1` は参照先を対応付ける可変値とする
+
 ## 言語
 
 ### 原則
