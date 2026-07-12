@@ -105,22 +105,21 @@
 # `_ollama_support.py`
 
 ## Summary
-- Ollama を使う doctor/プロバイダ関連テストのための、決定的な偽環境を組み立てる補助群です。`doctor` 実行用の fake 環境、fake `systemctl`、fake `ollama`、実行中の偽サービス停止処理をまとめて扱います。
-- このファイルを読むのは、Ollama 依存テストを安定化したいとき、`cmoc-ollama` の user service 挙動をテストで再現したいとき、または偽 `HOME`・偽バイナリ・偽ホストの生成方法を確認したいときです。
-- `commons.runtime_ollama` の実 runtime 判定ロジックを直接修正したい場合や、`doctor` 以外のコマンドの一般的なテスト支援を探している場合は優先度が低いです。実サービスの起動や本番 Ollama の操作方法を知りたいときも、このファイルではなく各実装側を読むべきです。
+- `test/_ollama_support.py` は、doctor 系テストで使う Ollama / systemctl のテスト専用支援コードをまとめる。production の per-user service を直接触る `run_doctor` と、隔離された fake HOME・fake service・fake endpoint を作る補助群がここにある。
+- このファイルを読むのは、doctor テストの実行環境、fake Ollama の立ち上げ方、service PID の停止処理、runtime 側の Ollama 判定をどうテスト用に差し替えているかを確認したいとき。
 
 ## Read this when
-- Ollama 接続を伴うテストを deterministic にしたい。
-- `doctor` コマンドのテストで、実サービスではなく fake `systemctl` と fake `ollama` を使う根拠を確認したい。
-- テスト用の isolated な `HOME`、偽サービスの PID 管理、偽 `ollama` の HTTP 応答を調べたい。
+- doctor のテストが本番の per-user service を使う前提や、その例外を確認したいとき。
+- fake `systemctl` / fake `ollama` / fake runtime の切り替え方を知りたいとき。
+- テスト終了時に fake Ollama を止める条件や、再利用 PID の誤停止を避ける扱いを確認したいとき。
 
 ## Do not read this when
-- 実運用の Ollama サービス設定を変更したい。
-- `doctor` 以外の CLI の一般的なテスト補助を探している。
-- Ollama の本体実装や runtime 判定の本筋を読みたいだけで、テスト専用の隔離環境は不要。
+- Ollama 本体の実装や CLI の一般的な挙動を知りたいときは、ここではなく本体実装側を読むべき。
+- doctor 以外のテスト支援や、別のサービス向けの共通テスト基盤を探しているとき。
+- 単なる通常の pytest fixture 一覧や、アプリ本体の設定値の定義を探しているとき。
 
 ## hash
-- 4007754c08ca921c30952aef7491cf12faae788781598ebc9885ba85650ce615
+- bf1d4b19c04b9bcb01d0fd352acfa84c3a7bcccaa64a8a1c74b52a67b75bd429
 
 # `test_acp_builder_apply_parameters.py`
 
@@ -465,20 +464,22 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- `doctor` CLI の振る舞いを end-to-end で固定するテスト群。`.cmoc/config.json` の生成・同期、linked worktree での対象切り替え、git state の修復、`.gitignore` や `.agents/.gitkeep` の扱い、managed ollama 起動とモデル取得の副作用を確認するときに読む。
-- 個別の内部 helper の実装より、CLI 実行結果・git の追跡状態・設定ファイル内容・外部サービス呼び出しの契約を確認したいときに読む。
+- doctor コマンドの振る舞いを検証するテスト群。git 状態の修復、`.cmoc/config.json` の生成・追従、linked worktree の扱い、managed ollama の準備までをまとめて確認する入口。
 
 ## Read this when
-- `doctor` サブコマンドの外部挙動を変える変更をするとき。
-- `.cmoc/config.json` の生成、既存値の保持、tracked/ignored 状態の修復、linked worktree での動作を確認したいとき。
-- managed ollama のセットアップやモデル取得の順序・重複排除・対象選択を確認したいとき。
+- doctor/preprocess の振る舞いを変えるとき。
+- `.gitignore`、`.agents/.gitkeep`、`.cmoc/local` の扱いを変えるとき。
+- `.cmoc/config.json` の生成、既存値の保持、モデル同期の仕様を変えるとき。
+- CLI の `doctor` / `dector` 経路や current worktree の解決を変えるとき。
+- managed ollama の起動準備や service/model 配置の責務を確認するとき。
 
 ## Do not read this when
-- 設定スキーマそのものの正本仕様を確認したいときは、テストではなく対応する oracle 側を読む。
-- CLI の内部実装詳細や共通ヘルパの分割方針だけを知りたいときは、該当する実装ファイルを直接読む。
+- doctor 以外の CLI サブコマンドだけを変えるときは、まずそのサブコマンドのテストを読む。
+- config の純粋なスキーマ定義や runtime helper の内部実装だけを追いたいときは、対応する本体側を先に読む。
+- git 操作の共通ヘルパーの挙動だけを確認したいときは、このテスト群ではなく共通ヘルパー側を見る。
 
 ## hash
-- ddc8c52b255f7b5c8c084d4908b4487bb09a9d170408cd64a389105f7ccd57b2
+- 20f3c3984ad422ea24f22d7c5d0b2eab80a7f33d946540113d6fe3bc8c7bebc0
 
 # `test_indexing_cli.py`
 
