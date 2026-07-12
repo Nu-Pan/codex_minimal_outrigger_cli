@@ -22,7 +22,7 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     #   ログ関係だけは例外的に `<run-root>` で作業していようと cmoc が `<repo-root>/.cmoc/gu/ar/log` に書きに行く。
     #   その関係で、agent が `<run-root>` での作業中に `<repo-root>/.cmoc/gu/ar/log` を読みに行きたくなる事がある。
     #   更に log から `<repo-root>/.cmoc` ツリー内を読みに行きたくなるはずである (report とか)。
-    #   よって、`<repo-root>/.cmoc` だけは例外的にアクセスを許可する。
+    #   よって、`<repo-root>/.cmoc/g*/ar` だけは例外的にアクセスを許可する。
     repo_root = resolve_repo_root()
     work_root = resolve_work_root()
     if repo_root == work_root:

@@ -13,7 +13,7 @@
 
 1. `<work-root>/.cmoc/gu` が git 追跡対象外であることを保証する
 2. `<work-root>/.agents` が git 追跡対象であることを保証する
-3. `<work-root>/.cmoc/gt/config.json` が git 追跡対象である事を保証する
+3. `<work-root>/.cmoc/gt/ar/config.json` が git 追跡対象である事を保証する
 4. cmoc managed ollama を使用する場合、その利用可能性を保証する
 5. ここまでの作業で発生した差分を git commit する
 
@@ -56,17 +56,17 @@
 - `<work-root>/.agents` ツリー内に tracked file が無い場合は `<work-root>/.agents/.gitkeep` を git index に追加する
 - 修復後も `<work-root>/.agents` ツリー内に tracked file が無い場合はエラー終了する
 
-## 「`<work-root>/.cmoc/gt/config.json` が git 追跡対象である事を保証する」の詳細
+## 「`<work-root>/.cmoc/gt/ar/config.json` が git 追跡対象である事を保証する」の詳細
 
 ### 検証
 
-- `<work-root>/.cmoc/gt/config.json` が存在していること
-- `<work-root>/.cmoc/gt/config.json` が git 追跡対象であること
+- `<work-root>/.cmoc/gt/ar/config.json` が存在していること
+- `<work-root>/.cmoc/gt/ar/config.json` が git 追跡対象であること
 
 ### 修復
 
-- `<work-root>/.cmoc/gt/config.json` が存在しなければ作成する
-- `<work-root>/.cmoc/gt/config.json` を git 追跡対象に追加する
+- `<work-root>/.cmoc/gt/ar/config.json` が存在しなければ作成する
+- `<work-root>/.cmoc/gt/ar/config.json` を git 追跡対象に追加する
 
 ## 「cmoc managed ollama を使用する場合、その利用可能性を保証する」の詳細
 
