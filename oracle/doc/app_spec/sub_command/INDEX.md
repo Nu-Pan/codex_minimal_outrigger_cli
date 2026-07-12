@@ -22,39 +22,43 @@
 # `apply_fork.md`
 
 ## Summary
-- `cmoc apply fork` の実行責務と境界を定める正本仕様断片。事前条件、`--scope` の初期調査対象、apply ループの流れ、状態遷移、レポート出力までを確認したいときに読む。
+- `cmoc apply fork` の実行条件、調査待ちファイルリストの初期化、apply ループ、状態遷移、レポート出力を定義する。`cmoc apply fork` の振る舞いを実装・修正するときに読む。
+- 中断時の扱い、`rolling`/`session`/`full` の対象範囲、所見調査と修正作業に使う正本の参照先を含む。ループ制御や対象選定の仕様を確認したいときに読む。
+- 作業レポートの保存先と必須項目、終了コードの区別を定める。レポート生成や終了理由の表現を実装するときに読む。
 
 ## Read this when
-- `cmoc apply fork` の挙動や終了条件を実装・修正したいとき。
-- apply 対象ファイルの初期化条件、重複除去、再調査の扱いを確認したいとき。
-- セッション状態ファイルの `apply` 状態遷移や、作業レポートの保存・出力要件を確認したいとき。
+- `cmoc apply fork` の起動条件、処理手順、終了条件を実装・変更するとき。
+- 調査対象ファイルの選び方、重複削除、再投入条件を確認したいとき。
+- 中断要求の受け付け方、`apply.state` の遷移、作業レポートの内容と保存を扱うとき。
 
 ## Do not read this when
-- `run` の隔離実行そのものの詳細だけを知りたいときは、参照先の `run_isolation` の仕様断片を読む。
-- `build_apply_fork_file_finding_enumeration_parameter` や `build_apply_fork_finding_application_parameter` の入出力の詳細だけを確認したいときは、それぞれの正本仕様断片を読む。
-- `cmoc apply fork` 以外のサブコマンドの一般仕様を探しているとき。
+- `cmoc apply fork` ではなく `cmoc apply join` や `cmoc apply abandon` の仕様を見たいとき。
+- `doctor preprocess` や run isolation の詳細だけを知りたいときは、それぞれの正本に直接進む。
+- 所見列挙や修正適用の引数仕様そのものを知りたいときは、この文書ではなく各 `build_apply_fork_*` の正本を読む。
 
 ## hash
-- 4b83469f170f1c66c5ebd6079c936da72d4e14ffc7e62d31d94ab622fe525306
+- 313ed7bb22b3fa6f3641d887545358497cf914fedd46827749483803349c1794
 
 # `apply_join.md`
 
 ## Summary
-- `apply fork` の成果物をセッション本流へ取り込む `cmoc apply join` の正本仕様断片。事前条件、通常モードと `--force-resolve` の差分処理、merge conflict の扱い、状態更新、使用済み apply branch/worktree の削除条件を定義する。
+- `cmoc apply join` を扱うときに読む入口。`cmoc apply fork` の結果を `cmoc-session-branch` に取り込む処理、想定外の差分の扱い、`apply.state` と `session.state` の前提、マージ失敗時の振る舞い、使用済みブランチ削除条件を確認したい場合に進む。
 
 ## Read this when
-- `cmoc apply join` の CLI 引数、実行順序、終了条件、レポート内容、状態遷移を確認または実装する。
-- apply 実行中に発生した想定外の差分を、通常モードでは中止、強制モードでは revert する境界を確認する。
-- `INDEX.md` の merge conflict 自動解決、または自動解決対象外 conflict の報告方針を確認する。
-- apply 完了後に apply branch/worktree を削除してよい条件を確認する。
+- `cmoc apply join` の実行条件やエラー条件を確認したいとき。
+- 通常モードと `--force-resolve` で、想定外の差分への対応がどう変わるかを確認したいとき。
+- `apply.state = error` やユーザー中断後の `cmoc apply fork` をどう扱うかを確認したいとき。
+- マージコンフリクトの自動解決対象と、それ以外をユーザー報告に回す境界を確認したいとき。
+- 処理後に `cmoc-apply-branch` と `cmoc-apply-worktree` を削除してよい条件を確認したいとき。
 
 ## Do not read this when
-- `apply join` 以外の apply 系サブコマンドの起動、実行、状態作成を確認したい。
-- path placeholder、branch 名、session state file などの用語定義そのものを確認したい。
-- 実装ファイルの責務分割、内部 helper、git コマンド実行 wrapper の詳細だけを確認したい。
+- `cmoc apply fork` の作成側の手順や分岐を知りたいとき。
+- apply の再開や中断処理そのものを追いたいとき。
+- session 側の abandonment や review、doctor、indexing の仕様を知りたいとき。
+- 単に CLI の一覧や共通ルーティングを見たいだけで、`cmoc apply join` 固有の挙動は不要なとき。
 
 ## hash
-- e8e8a871e1b6833cd1b3d74a7bcaa03f4bf162fc355e453dafa3e2361a7f24de
+- 1595ec8928d6d463afc6c53a8ec42cc141cff7fdac0a47b8662a0334c6417b89
 
 # `doctor.md`
 
@@ -95,21 +99,21 @@
 # `review_oracle.md`
 
 ## Summary
-- `cmoc review oracle` のルーティング用エントリー。`oracle` 配下のスナップショットをレビューし、所見を集約して Markdown レポートを出すコマンドに進むための入口を示す。
-- この対象は、`--scope` によるレビュー範囲、事前条件、所見の列挙・検証・判定の流れ、最終レポートの保存先を扱う。実装本体ではなく、レビューの責務境界と出力物の確認が必要なときに読む。
+- `cmoc review oracle` の実行条件、隔離実行の流れ、所見の列挙・検証・判定、そして Markdown レポート保存までを扱う案内です。レビュー実行の入口として読むべきで、個別の agent call 仕様や隔離実行の共通仕様へ進む判断材料も含みます。
+- 人間が確認すべき境界は、対象が `oracle` のスナップショットレビューであること、実装ファイルや自動生成物は対象外であること、`scope` によって列挙対象が変わることです。
 
 ## Read this when
-- `oracle` ツリーの内容に対するレビュー仕様、処理手順、出力レポート形式を確認したいとき。
-- レビュー対象の範囲や前提条件、所見の集約順序、レポート保存先を知りたいとき。
-- `cmoc review oracle` が何を責務とし、何を責務外とするかを確認したいとき。
+- `cmoc review oracle` の実行条件、出力レポートの体裁、または所見の扱いを確認したいとき.
+- レビューの対象範囲や `--scope` による違い、ユーザー中断時の振る舞いを知りたいとき.
+- 隔離実行や各 agent call の正本仕様へ進む前に、このサブコマンド全体の責務境界を見たいとき.
 
 ## Do not read this when
-- 実装ファイルや一般的なコマンド実行手順を知りたいだけのとき。
-- 自動生成ファイルや別コマンドの仕様を探しているとき。
-- 所見の個別内容そのものではなく、`oracle` 配下の別文書や実装詳細を直接読むべきとき。
+- `oracle` そのものの具体的な正本仕様や個別のレビュー判定基準を知りたいときは、ここではなく対応する正本仕様断片を読むべきです.
+- 自動生成物や実装ファイルのレビュー方針を探しているときは、このサブコマンドの案内ではなく、対象に直接対応する文書を読むべきです.
+- レポート生成以外のサブコマンド操作や一般的な CLI 仕様を探しているときは、より直接の入口を読むべきです.
 
 ## hash
-- 026f8af4331413ebc3759bb25643694e8176d2b35e8862d0e8c6b917b445ab0f
+- 43665127e04f2f52aa69e7bfbd914b0fb05cd36c37643bd6c81d37c553bc23d5
 
 # `session_abandon.md`
 
