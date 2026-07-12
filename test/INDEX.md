@@ -412,39 +412,38 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex 実行時の quota exceeded 後に、probe・resume・再実行・失敗停止の制御が外部挙動としてどう動くかを確かめる回帰テスト群。JSONL からの resume token 復元、quota probe の組み立て、`CODEX_HOME` と `cwd` の扱い、call log と subcommand log の記録もこの範囲に含める。
-- 同じ retry 状態機械を前提にした fake Codex 呼び出し列やログ観測をまとめて追う必要があるときに読む。probe 共有、resume の有無、quota 待機の上限、並行実行時の代表 probe、probe 失敗時の即時エラーを確認したい場合の入口になる。
+- `Codex` 実行が `quota exceeded` 後にどう待機・再試行・再開するかを外部挙動として検証するテスト群。`resume token` の復元、quota probe の組み立て、再実行時の `CODEX_HOME`/`cwd`、呼び出しログとサブコマンドログまで含めて確認する入口。
+- 並行実行時に代表 probe だけを使う制御や、probe 失敗・poll 上限・KeyboardInterrupt などの失敗経路もここで扱う。quota retry の状態機械や観測点を変える作業で読む。
 
 ## Read this when
-- Codex 実行が quota exceeded から回復する経路、または回復しない経路の外部挙動を変えたか確認したいとき。
-- resume token の復元方法、quota probe の最小パラメータ、実行ログの残り方、`CODEX_HOME` と相対パスの解決を確認したいとき。
-- quota 待機中の再試行回数、代表 probe の共有、並行呼び出し時の挙動を変える変更を入れるとき。
+- `quota exceeded` 後の `probe`/`resume`/再実行フローを変えるとき。
+- resume token の抽出元、quota probe パラメータ、`CODEX_HOME` や `cwd` の引き回しを変えるとき。
+- 呼び出しログ、サブコマンドログ、並行実行時の代表 probe 選択や失敗時挙動を確認するとき。
 
 ## Do not read this when
-- quota retry 以外の Codex 実行経路だけを調べたいときは、より直接の実行テストへ進む。
-- prompt 生成や一般的な ACP パラメータ変換だけを確認したいときは、この巨大な quota retry 回帰群ではなく、その責務のテストを読む。
-- このファイルは Codex の出力品質そのものを評価する場所ではないので、LLM 品質や一般的な CLI 挙動の確認目的では読まない。
+- quota retry と無関係な通常の `Codex exec` 挙動だけを変えるときは、まず通常経路のテストを読む。
+- quota 制御以外のサブコマンド、別の runtime helper、一般的なテスト基盤の変更だけを追うとき。
 
 ## hash
-- 2dc5f969b51ae479362084efa15fa55d95d09cbcbdc6070e262369eeaac4b754
+- c64cd4c8efcddd5ce0f60d72c17165979faa1d2922884fc930606a53bfa34794
 
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- `run_codex_exec` のリトライ挙動を検証するテスト群。構造化出力の再試行、JSONL エラーの扱い、capacity/quota の再試行条件、再試行後も差分や入力が維持されることを確認する。
+- `run_codex_exec` の再試行まわりを検証するテスト群。構造化出力の再試行、容量再試行、JSONL エラー処理、KeyboardInterrupt の記録、再試行後も差分が保持されること、stdout 以外のエラーマーカーを無視することを扱う。
 
 ## Read this when
-- `commons.runtime_codex.run_codex_exec` の再試行条件や失敗時の判定を変更する。
-- Codex CLI の出力解析、structured output の検証、capacity/quota 由来の再実行ロジックを変える。
-- 呼び出しログやサブコマンドログに残す状態・エラー内容・再試行回数の扱いを確認したい。
+- `commons.runtime_codex.run_codex_exec` の再試行条件や失敗時の記録方法を変えるとき。
+- Codex CLI の出力検証、`call_log`/サブコマンドログの内容、再試行時のプロンプトや出力ファイルの扱いを確認したいとき。
+- 容量・構造化出力・JSONL エラー・中断のいずれかが、現行の失敗判定やログ仕様に影響するかを見たいとき。
 
 ## Do not read this when
-- `run_codex_exec` 以外の CLI 起動経路や別サブコマンドのテストを探している。
-- ファイルアクセスモードやプロンプト生成そのものの仕様を確認したい。
-- Codex 実行以外の一般的な JSON パースやテスト補助関数の定義を探している。
+- `run_codex_exec` 以外の Codex 実行経路を確認したいときは、実装側の `commons.runtime_codex` 本体や関連する上位テストを先に読む。
+- CLI 引数の組み立てや設定値の定義だけを確認したいときは、このテストではなく `basic.acp` や `config.cmoc_config` 側を読む。
+- 再試行以外の一般的なテスト配置や共通 fixture の定義を探したいだけなら、ここではなく共通補助ファイルを探す。
 
 ## hash
-- 005c0a658825567d1a2a502527dd8c2a4f9c40c2933c021074f364d5a4a8a9b4
+- bae14eb77d298c8e1295c0019b1ca348d646ac5dc568b47cb944580e3e2400ea
 
 # `test_codex_runtime_subprocess.py`
 

@@ -115,37 +115,37 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization 実装の総入口。CLI 入口、共通 runtime helper、互換 shim、`acp`/`basic`/`config` の公開面、`sub_commands` 系の実行実装を束ねるので、まずどの責務の下位実装へ進むかを切り分けるために読む。
-- この階層は正本仕様そのものではなく、実体実装と互換入口の配置を案内する場所として使う。個別のコマンド挙動や変換ロジックを追う前に、`main.py`、`commons`、`sub_commands`、`acp`、`basic`、`config`、`oracle.py`、`cmoc_runtime.py` のどれへ進むべきか判断したいときに読む。
+- `src` 配下の realization implementation を束ねる上位入口。公開 CLI や互換 shim ではなく、実際の実装本体へ進む前に、どの責務がここに属するかを切り分けるために読む。
+- ここでは実行時の実装群をまとめて案内するだけで、個別のコマンド処理、共有 helper、正本側定義の複製を扱わない。
 
 ## Read this when
-- `src` 全体の役割分担と、目的の処理がどの下位 module にあるかを先に絞りたいとき。
-- CLI 入口、共通 runtime helper、互換 shim、公開面の再公開、各サブコマンド実装のどれを読むべきか判断したいとき。
-- 互換 import 面と実体実装の境界を確認したいとき。
+- 実際の実装本体をどこから読むべきか判断したいとき。
+- CLI、互換 shim、共有 helper、設定、各サブコマンド実装のうち、実装側の入口を先に絞りたいとき。
+- 実装群の責務境界を確認し、下位モジュールへ進む前に全体の配置を把握したいとき。
 
 ## Do not read this when
-- 個別コマンドの実処理、branch/worktree 操作、review/apply/session の制御内容を知りたいとき。その場合は対応する下位 module を直接読む。
-- `acp`、`basic`、`config` の個別公開面の意味や削除条件だけを確認したいとき。その場合は各パッケージの入口を読む。
-- 正本仕様や oracle 文書の内容を確認したいとき。その場合は `oracle` ツリー側を読む。
+- 個別のコマンド実行フローや入出力の詳細を知りたいとき。
+- 互換 import 面や正本側の定義そのものを確認したいとき。
+- 正本仕様断片やルーティング方針だけを確認したいとき。
 
 ## hash
-- de5de1e841a035eb20b2873c23a81ef3527b5f343981d4ba59b9f779a04ae26d
+- 3466c10c7a59a977a4dad83baced80685c8555d044fca8a180f0e798e5c7ad8d
 
 # `test`
 
 ## Summary
-- `test` 配下には、複数の回帰テスト本体と、それらで共通に使う支援ファイルがある。共通補助の役割を持つものは、個別テストの重複を減らすための入口として読む。
-- 個別のテストファイルは、CLI・runtime・builder・prompt・oracle 周辺の外部挙動や境界条件を固定する。対象機能の振る舞いを変えるときは、対応するテストを読む。
+- `test` 配下の回帰テスト群を読む入口。CLI、runtime、ACP builder、prompt rendering、session/apply/review/indexing などの外部挙動を確認したいときに、まずこの配下から対象の test 本文へ進む。
+- この配下には、個別サブコマンドの CLI 挙動や runtime 契約を固定するテストと、共通補助ファイルがある。対象の振る舞いを確認したいなら各 test 本文へ、共通の初期化やスタブ生成が必要なら support 系へ進む。
 
 ## Read this when
-- 共通のテスト支援関数や fixture の使い分けを確認したい。
-- 特定サブコマンドや runtime 境界の回帰テストを探して、その外部挙動や拒否条件を確認したい。
-- oracle 側の正本仕様に対応する実装・テストの入口を探している。
+- CLI サブコマンドや runtime の外部挙動を変えたので、対応する回帰テストを探したい。
+- 特定の機能の boundary 条件や error handling を、実装本文ではなくテストから確認したい。
+- 複数テストで共通に使う helper や support file の役割を把握したい。
 
 ## Do not read this when
-- 正本仕様そのものを確認したいだけなら、`oracle` 側の本文を読む。
-- 実装本体の分割や内部 helper の構成だけを見たいなら、対応する `src` 側を読む。
-- ルーティング文や共通規約だけを探しているなら、この配下の個別テストではなく上位の案内を読む。
+- `oracle` 側の正本仕様そのものを確認したいなら、対応する oracle 本文を読む。
+- 個別機能の実装手順や helper 分割を追いたいだけなら、対象の realization src を直接読む。
+- この配下のどのテストを読むべきか明確な場合は、まずその対象の test 本文へ進む。
 
 ## hash
-- 8eb1f29776e7544274b159d0fd2d91dc821452abc77df73df057bddceeeed0ae
+- 34d60c4f0fc5cf48f2e5bee22b03f43ae8e8a2145efa42b8c497373b51656c10
