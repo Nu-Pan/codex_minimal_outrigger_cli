@@ -115,38 +115,37 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation を束ねる上位入口。CLI 本体、共通 runtime helper、互換 shim、サブコマンド実装へ進む前に、どの責務の下位実装を読むべきかを振り分けるための場所として読む。
-- `acp`、`basic`、`config`、`oracle.py` のような互換・再公開・package shim を扱う入口と、`main.py`・`sub_commands`・`commons` のような実処理入口を見分けたいときに読む。
+- `src` 配下の realization 実装の起点を束ねる上位領域。CLI 入口、共通 runtime、`acp`/`basic`/`config` の公開面、サブコマンド群、正本側 `oracle` への接続を読む前に、どの実体へ進むかを切り分けるための入口として使う。
+- 個別機能の実処理は持たず、互換 shim と実装本体の境界、CLI から各 subcommand への配線、共有 helper の配置先を確認したいときに読む。
 
 ## Read this when
-- `src` 配下で、公開入口から実処理へ進む前に責務の境界を確認したいとき。
-- 互換 import 面や package shim ではなく、どの下位 module が実処理を持つかを見分けたいとき。
-- CLI 起動、サブコマンド配線、共通 helper、正本側への再公開のどこへ進むべきかを判断したいとき。
+- `src` 全体の役割分担と、目的の実装がどの下位領域にあるかを判断したいとき。
+- CLI 入口、共通 runtime、互換 import 面、サブコマンド群、正本側 `oracle` への接続のどれを読むべきか先に絞りたいとき。
+- 新しい実装や変更先を探す前に、公開面と実体の境界を確認したいとき。
 
 ## Do not read this when
-- 個別の CLI 挙動、subcommand の処理本体、path 変換や状態管理の詳細を知りたいときは、対応する下位 module を直接読む。
-- 正本仕様断片そのものや oracle file の定義を確認したいときは、`src` ではなく oracle 側を読む。
-- すでに読むべき下位 module が特定できていて、上位のルーティング情報が不要なとき。
+- 個別コマンドの処理内容、path/setting/ACP の具体仕様、レビューや apply の実行ロジックを知りたいときは、対応する下位モジュールや正本側文書を直接読む。
+- 互換入口の有無だけを確認済みで、詳細な配線や委譲先の説明が不要なとき。
+- 正本仕様そのものを確認したいときは、`oracle` 側の対応文書や実装へ進む。
 
 ## hash
-- 74e5980390d46c11c92c544dc5e90aeb6f6ebfd268c9aef41e0d41a76297439e
+- 09d6fd548732ede590f6dbc02c54e337876e21980fe0ab1855853dcaf63bb2c5
 
 # `test`
 
 ## Summary
-- `test` 配下の各 realization test への入口をまとめるルーティング領域。CLI、runtime、ACP builder、prompt rendering、packaged import、StructDoc など、変更対象ごとに読むべきテストを絞り込むために使う。
-- 共通 helper 群は各テストの近くにある支援処理をまとめたもので、個別挙動ではなく fixture や外部コマンド差し替え、git/worktree、Codex 実行、Ollama などの共通前提を確認したいときに進む。
-- `oracle` 側の正本仕様を読むべきか、`test` 側の回帰検証を読むべきかを分けるための案内であり、実装詳細そのものよりも外部挙動・契約・境界条件の確認を優先する。
+- `test` 配下の共通補助と回帰テストをまとめる案内。CLI・runtime・builder・oracle/realization 境界ごとのテスト入口を選ぶために読む。
+- 個別テストを読む前に、そのテストが何を保証し、どの実装や oracle 側の正本仕様へ進むべきかを判断するためのルーティング情報を載せる。
 
 ## Read this when
-- 変更したい対象が CLI 挙動、runtime 契約、ACP builder の parameter 生成、prompt parts の描画、StructDoc renderer の整形、packaged import の境界のどれに当たるかをまず切り分けたいとき。
-- `git`、`CliRunner`、fake command、`CODEX_HOME`、managed Ollama、worktree などの共通テスト補助を探していて、対応する個別テスト群へ進む前に入口を絞りたいとき。
-- ある機能の回帰テストがどの外部挙動を固定しているかを確認してから、対応する `oracle` 側の正本仕様や実装側へ進みたいとき。
+- `test` 配下で、共通 helper を先に探してから個別テストに進みたい。
+- ある機能の外部挙動を変える前に、対応する回帰テストの入口を特定したい。
+- CLI、runtime、builder、prompt、oracle / realization 境界のどこを読むべきかを絞り込みたい。
 
 ## Do not read this when
-- 個別の実装アルゴリズムや helper 分割だけを追いたいときは、このルーティング層ではなく対応する実装本文を読む。
-- 正本仕様そのものや prompt 文面の定義だけを確認したいときは、`oracle` 側を直接読む。
-- ここに挙がっていない別サブコマンドや別責務のテストを探しているときは、該当する専用の test ファイルを直接読む。
+- 個別テストの本文や実装詳細をそのまま確認したいときは、該当するテストファイルや実装側を直接読む。
+- 正本仕様そのものを確認したいだけなら、対応する oracle 側の本文へ進む。
+- test 配下の共通補助ではなく、機能実装や oracle 仕様の内容を探しているだけならここは読まない。
 
 ## hash
-- aaa792a8f17ebf48e56fce445ac6e476a8d379147b4dc03089a5b12f40d3cba4
+- e8a0d3afe6a84f7b9ec2f718ce2eea72edfa1e7446e1bc26e1256d532877f3d1
