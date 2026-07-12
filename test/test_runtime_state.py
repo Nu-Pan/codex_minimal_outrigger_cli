@@ -61,6 +61,7 @@ def test_load_state_for_branch_rejects_apply_branch_with_extra_parts(tmp_path: P
 def test_session_state_rejects_unhashable_state_values(
     part: str, value: object
 ) -> None:
+    """session/apply state の state フィールドに list や dict を指定した入力を拒否する。"""
     data = SessionState().to_dict()
     data[part]["state"] = value
 
@@ -86,6 +87,7 @@ def test_session_state_rejects_unhashable_state_values(
 def test_session_state_rejects_non_string_payload_fields(
     part: str, field: str, value: object
 ) -> None:
+    """session state の payload フィールドに非文字列値を指定した入力を拒否する。"""
     data = SessionState().to_dict()
     data[part][field] = value
 
@@ -98,6 +100,7 @@ def test_session_state_rejects_non_string_payload_fields(
 
 @pytest.mark.parametrize("part", ["session", "apply"])
 def test_session_state_allows_nullable_payload_fields(part: str) -> None:
+    """session state の payload フィールドに null を指定した入力を受け付ける。"""
     data = SessionState().to_dict()
     for field in data[part]:
         if field != "state":
