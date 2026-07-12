@@ -115,38 +115,37 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization 側実装の入口。CLI 入口、共通 runtime、互換 shim、公開 package 境界、各サブコマンド実装へのルーティングをまとめて確認する場所として読む。
-- この階層は実処理そのものよりも、`acp`・`basic`・`config`・`oracle` の互換 import 面と、`main.py`・`commons`・`sub_commands` へ進む分岐を把握するための上位層である。
+- `src` 配下の realization implementation を束ねる上位入口。`oracle` 側の正本定義をそのまま複製せず、実行時に使う実装・設定・補助物へ進む前に、この層がどの責務を受け持つかを確認するための場所として読む。
+- CLI 本体や共有 runtime helper、互換 shim、各サブコマンド実装へ進む前に、`src` 全体の責務境界と読み分けを把握したいときに読む。個別の処理詳細や正本仕様そのものを知りたいだけなら、対応する下位モジュールや `oracle` 側を直接読む。
 
 ## Read this when
-- realization 側の公開入口や package 境界を確認したいとき。
-- `acp.*`、`basic.*`、`config.*`、`oracle.*` の互換 import 経路と、その削除条件を見たいとき。
-- CLI 入口から共通 runtime や各サブコマンド実装へどう委譲されるかを切り分けたいとき。
-- どの下位ディレクトリを読むべきかを先に絞りたいとき。
+- `src` 配下の公開実装面をどの下位モジュールへ進めるか判断したいとき。
+- 互換入口と実体実装の境界を見たいとき。
+- CLI 本体、共有 helper、サブコマンド実装のどれを先に読むべきか切り分けたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの実行フロー、git/worktree 操作、レビュー処理の詳細を知りたいとき。その場合は `sub_commands` 側を読む。
-- CLI 引数解析や subcommand 登録の具体を知りたいとき。その場合は `main.py` を読む。
-- 共通 helper の実装詳細を知りたいとき。その場合は `commons` 側を読む。
-- 互換 import 面ではなく、正本側の仕様本文や oracle file を確認したいとき。その場合は対応する oracle 文書を読む。
+- 個別の実装ロジック、変換処理、実行フローを追いたいとき。対応する下位モジュールを直接読む。
+- 正本仕様断片そのものを確認したいとき。`oracle` 側の対象を読む。
+- 互換入口の有無だけを確認済みで、詳細な責務分担が不要なとき。
 
 ## hash
-- 04208fdf3c51e14aea269a66e9023f4a473dd43d02432688960365d0ad7ff291
+- 8a3bb847e129a18b88b85b59778f857498bac7ebd18b2eb9bad54c6418408932
 
 # `test`
 
 ## Summary
-- `test` 配下の realization test と共通 support をまとめる入口で、CLI・runtime・prompt・builder などの外部挙動回帰を確認したいときに読む。個別の機能仕様は各サブ領域のテストに進み、共通補助は対応する support ファイルを読む。
+- `test` 配下の realization test と共通 support をまとめる入口であり、CLI・runtime・builder・prompt renderer などの利用者向け挙動を、該当する個別テストへ振り分けるために読む。共通補助は `_*_support.py`、機能別の回帰は `test_*.py` を起点にする。
+- 同じ機能でも、外部挙動を確認したいなら対応する CLI / runtime / builder テスト、共有 fixture や補助関数の責務を見たいなら support ファイルへ進む。
 
 ## Read this when
-- `test` 配下のどの回帰テストに進むべきかを判断したいとき。
-- CLI、runtime、prompt、ACP builder、session/apply/review/indexing のどれかの外部挙動や境界条件を変更したときに、対応するテスト群を探したいとき。
-- 共通 test support の役割がどこに分かれているかを確認してから、個別テスト本文へ進みたいとき。
+- `test` 配下で、どの共通 support を使うべきか、またはどの機能別回帰テストに進むべきかを判断したいとき。
+- CLI 挙動、runtime 実行、`acp_builder` の parameter 生成、prompt rendering、git や path 解決のテスト入口を探したいとき。
+- 共通 helper の責務と、個別テストが何を外部挙動として保証しているかを確認したいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
-- 共通 helper の実装詳細だけを追いたいときは、ここではなく各 support ファイルを読む。
+- 個別機能の仕様本文や正本仕様を確認したいときは、対応する `oracle` 側の本文を読む。
+- 実装の分割方針や内部 helper の細部だけを追いたいときは、対応する `src` 側や個別テスト本文を直接読む。
 - `INDEX.md` のルーティング方針そのものを確認したいときは、この配下ではなく上位の案内を読む。
 
 ## hash
-- 6ed9f6430907b04a96c873f1ef2aff0aa9b0e5c4301a4e481af10a6495e00aa0
+- 089453c1fac28a6cc5f3ac757c6849c1096c135bf1c06749ed54e71b1c7e009f

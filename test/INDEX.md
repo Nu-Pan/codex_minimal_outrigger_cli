@@ -678,39 +678,41 @@
 # `test_runtime_codex_conflicts.py`
 
 ## Summary
-- Codex の追加書き込み許可が、セッション join の conflict 解決で選ばれた対象に対してどの範囲まで有効になるかを検証するテスト群。 oracle 側の conflict resolution と file access rule に由来する境界を確認したいときに読む。
+- セッション参加の conflict 解決で、Codex の追加書き込み許可がどのパスに付与されるか、また予約済みパスを拒否するかを検証するテスト群。
+- 書き込み許可のルート解決、拒否条件、`CmocError` の発生条件を変えるときに読む。
 
 ## Read this when
-- session join の conflict 対象に対する write 可否、拒否条件、許可される境界を変える変更をする。
-- 追加書き込み許可の判定が、oracle 配下・INDEX/AGENTS・実行時保護領域・通常の作業対象でどう振る舞うかを確認したい。
-- Codex のオーバーライド引数生成や、session join conflict resolution に関する回帰をこの観点で追加・修正したい。
+- セッション参加 conflict の解決結果をもとに Codex の書き込み許可を組み立てる処理を変更する。
+- Oracle 配下や実行時予約領域のような、追加書き込みを許してはいけないパスの判定を変更する。
+- 許可ルートの解決結果や拒否時のエラー条件を確認したい。
 
 ## Do not read this when
-- session join の通常の参加パラメータだけを変更する場合は、より直接の session join パラメータ系テストを読む。
-- write policy ではなく、indexing・review・apply の別経路の引数生成や CLI 挙動を調べたい場合はこのテスト群は読まない。
-- oracle file 自体の仕様文を確認したいだけなら、このテストではなく根拠となる oracle 側の文書を読む。
+- 一般的なセッション参加処理や conflict 解決の内部手順だけを変える場合は、まずその実装側を読む。
+- 書き込み許可の組み立てではなく、通常の runtime Codex プロファイルや別の権限制御を変える場合はここを読まない。
+- 他のサブコマンドの出力形式や設定項目だけを変える場合は対象外。
 
 ## hash
-- 059405185d07ce2025bb7804412cfbf6c8d7672a36a398f6b89dfe23b9d6d7c1
+- 004b0a573df98b02c1c192ad8e8f61d2f2fbb4f9260a75395f24120487016a67
 
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- `build_codex_override_args` が生成する Codex のファイルアクセス制御を検証するテスト群。読み取り専用・oracle 寄り・realization write・repo write の各モードで、許可される書き込み先、拒否される領域、追加 writable path の扱いを確認する入口として読む。
-- `memo` と `AGENTS.md` / `INDEX.md` 系の保護、`realization write` のトップレベル許可範囲、モード別の追加 writable path 拒否をまとめて扱うため、許可領域ルールを見直すときにこのファイルを読む。
+- Codex の read/write 許可ルール生成を検証するテスト集。`build_codex_override_args` がモード別の書き込み可否、`memo` と将来のルーティング領域の保護、`extra_writable_paths` の受理条件をどう扱うべきかを確認したいときに読む。
+- 対象は `FileAccessMode` ごとの差分、無視対象パスの扱い、`REALIZATION_WRITE` と `PURE_ORACLE_WRITE` の境界、禁止領域に対する追加書き込み先の拒否を確認する場面に向く。
+- 正本の用語定義や許可領域の根拠は oracle 側にあるため、このテストを読む前提として、`oracle/src/oracle/prompt_builder/parts/file_access_rule.py` と `oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` を先に参照する。
 
 ## Read this when
-- Codex の read/write 許可領域の判定条件を変えるとき。
-- 追加 writable path の受理・拒否条件を確認したいとき。
-- `memo` やルーティング系ファイルの保護範囲を検証したいとき。
+- Codex CLI のファイルアクセス許可が、モードごとに期待どおりか確認したい。
+- `extra_writable_paths` を追加したときの受理・拒否条件を追いたい。
+- `memo`、`.agents`、`.cmoc`、`.codex`、`.git`、`AGENTS.md`、`INDEX.md` への保護が、どのモードでどう効くかを調べたい。
 
 ## Do not read this when
-- `build_codex_override_args` の内部実装を追いたいだけなら、まず `oracle/src/oracle/prompt_builder/parts/file_access_rule.py` 側の正本仕様を読む。
-- Git の ignore 判定や repo 作成の補助実装を知りたいだけなら、このテストではなく補助関数側を読む。
-- Codex のアクセス制御とは関係ない一般的な CLI 挙動を探しているなら、このファイルは読まなくてよい。
+- プロンプト本文の正本定義だけを知りたいなら、`oracle/src/oracle/prompt_builder/parts/file_access_rule.py` を読む。
+- `oracle` と `realization` の用語定義だけを確認したいなら、`oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` を読む。
+- ファイルアクセス以外の `CmocConfig` や `AgentCallParameter` の一般的な挙動を調べたいだけなら、より直接の実装や型定義を読む。
 
 ## hash
-- c33add86a06d13258920e198e0f2d1e62881aaa46200ee39711c8f81763511f5
+- ce939027ebdf2261411623a4ed9fedd4d28d03fbda9c056344d55045ebdda0fe
 
 # `test_runtime_codex_profile.py`
 
@@ -822,24 +824,20 @@
 # `test_session_cli.py`
 
 ## Summary
-- `session fork` / `join` / `abandon` の CLI 挙動を、状態遷移・linked worktree・preprocess・conflict 解消・cleanup の観点からまとめて確認する回帰テスト群。
-- session state の永続化、session branch の生成/削除/復帰、dirty worktree や破損 state の拒否、join 時の conflict 解消結果の検証に進みたいときに読む。
-- 内部 helper の単体仕様や別サブコマンドの挙動を追う用途には向かない。
+- session CLI の fork/join/abandon に関する外部挙動回帰をまとめて追うためのテスト群。session 状態遷移、linked worktree、cleanup、preprocess、conflict resolution、stdout/stderr の出し分けを確認したいときに読む。
 
 ## Read this when
-- `session fork` が branch と session state をどう作るか確認したい。
-- `session join` が linked worktree でどう動くか、conflict 解消後の状態確認や branch 削除可否を確かめたい。
-- `session abandon` の home branch への復帰、state 更新、cleanup failure 時の巻き戻しを確認したい。
-- session CLI が dirty worktree や破損した session state をどう拒否するかを見たい。
+- `session fork` / `session join` / `session abandon` の挙動変更や回帰を確認したいとき。
+- session state ファイル、managed session branch、linked worktree、cleanup の振る舞いが絡む変更を検証したいとき。
+- Codex 呼び出し境界、conflict 解消時の書き込み許可、preprocess の先行実行を含む session CLI の観測点を確認したいとき。
 
 ## Do not read this when
-- `session` 以外のサブコマンドの仕様を知りたいだけなら読まない。
-- session state のデータ形式や永続化ルールの正本を確認したいなら、対応する session state の文書へ進む。
-- Codex 実行権限や conflict resolution の正本仕様だけを知りたいなら、別の app_spec / oracle src を先に読む。
-- CLI の細かな内部実装順や helper の分割方針だけを知りたいなら、ここではなく対象実装モジュールへ進む。
+- session CLI の実装そのものを追いたいときは、対応する `src/sub_commands/session/*` 側を直接読む。
+- doctor preprocess だけを確認したいときは、session テストではなく preprocess 専用のテストや仕様を読む。
+- 個別の Git ヘルパーや共通 fixture の詳細だけを知りたいときは、この統合テストではなく該当ヘルパー定義を読む。
 
 ## hash
-- 9cbcbdfe02ccc0dffa4d89199bb6576583d8532b73892f8b15e046f5c4738c19
+- 785531377e9267d5d92d3e23c1eb9d64e8d4977f455c10673830fa6264018d49
 
 # `test_struct_doc_rendering.py`
 

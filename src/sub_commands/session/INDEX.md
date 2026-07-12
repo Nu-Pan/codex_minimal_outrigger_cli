@@ -58,17 +58,18 @@
 # `join.py`
 
 ## Summary
-- `session join` の CLI 実行本体と、merge conflict 発生時の Codex 依頼・差分制限・解消後の検査までを扱う。通常の join 処理、conflict 解消、未解決状態や削除可否の判断を追いたいときに読む。
+- `cmoc session join` の実行本体を持つ実装。`session join` の起動、事前条件確認、`git switch` / `git merge`、conflict 解消の再実行、`session.state` の更新、join 後の branch 削除可否判定までをここで読む。
+- 同じ責務の別ファイルを探す前に読む入口であり、`session_join.md` に書かれた外部仕様を実装へ落とす箇所として扱う。
 
 ## Read this when
-- `session join` の実行条件、状態遷移、branch 切り替え、merge 後の削除判定を確認したい。
-- merge conflict が起きたときの Codex 実行範囲、conflict 対象だけに変更を閉じ込める制約、残存 marker や unmerged path の検査を確認したい。
-- join 処理のエラー条件や、stderr に出すべき失敗経路を確認したい。
+- `cmoc session join` の CLI 実行フロー、事前条件、merge 後の後始末を実装・修正・テストしたいとき。
+- conflict 発生時の unmerged path 列挙、Codex CLI への解消依頼、conflict marker 確認、`git add`、merge commit 生成の流れを確認したいとき。
+- session branch を安全に削除できる条件や、削除失敗時の warning 扱いを確認したいとき。
 
 ## Do not read this when
-- `session join` で使う conflict 解消用の入力パラメータだけを見たい場合は、`build_session_join_conflict_resolution_parameter` 側を先に読む。
-- indexing の前提条件だけを見たい場合は `commons.indexing` 側を読む。
-- Git 状態取得や worktree/state 読み書きの詳細だけを見たい場合は、`cmoc_runtime` や `commons.runtime_git` 側を読む。
+- session の作成や破棄を扱うときは、fork や abandon の実装へ進む。
+- conflict 解消用 agent call の引数構築そのものを確認したいときは、対応する builder 定義を直接読む。
+- `cmoc session join` の外部仕様だけを確認したいときは、実装ではなく `oracle/doc/app_spec/sub_command/session_join.md` を読む。
 
 ## hash
-- 099db825f66fbdabb288cc81e0fdc52c6d90d65d1e55bcab3c1ef0e490e63208
+- f933a93c79ed5d5c1a5c363ce25d0191eefe36774b6368b771a489e92845e778

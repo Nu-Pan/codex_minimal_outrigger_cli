@@ -197,20 +197,25 @@
 # `session`
 
 ## Summary
-- `src/sub_commands/session` 配下の session 系サブコマンド実装群への入口であり、各サブコマンドの実行条件・状態遷移・失敗時挙動を個別モジュールで追うための案内をまとめる。
+- `session` 系サブコマンド実装をまとめるパッケージの入口で、下位の個別コマンド実装へ進むための最小構成を置く。
+- `abandon` は active session を破棄して session branch を削除し、失敗時の state rollback と branch rollback まで扱う。
+- `fork` は現在の branch から session branch を新規作成し、session state file の生成と衝突回避を扱う。
+- `join` は session branch を home branch に取り込み、conflict 解消の再実行や merge 後の後始末まで扱う。
 
 ## Read this when
-- session 系サブコマンドの個別挙動を確認したいとき。
-- session lifecycle のうち、fork・join・abandon のように処理責務が分かれた実装を見分けたいとき。
-- session 関連の失敗条件や branch/state 操作の外部挙動を、対象のサブコマンド単位で追いたいとき。
+- session 系サブコマンドの実装境界や、この階層に初期化以外の処理があるかを確認したいとき。
+- `session abandon` の事前条件、成功時の結果、cleanup 失敗時の復旧方針を確認または変更したいとき。
+- `session fork` の作成条件、session-id 衝突回避、state file 生成、利用者向け失敗条件を確認または変更したいとき。
+- `session join` の実行フロー、merge と conflict 解消、join 後の branch 削除条件を確認または変更したいとき。
 
 ## Do not read this when
-- 共通 CLI ルーティングや session 以外のサブコマンド実装を調べたいとき。
-- git 実行、state 読み書き、worktree 検査などの共通 helper の詳細だけを知りたいとき。
-- 個別サブコマンドの具体的な入出力や状態操作が必要なら、この階層ではなく該当モジュールを直接読むべきとき。
+- 個別の session コマンドの引数、入出力、状態操作を詳しく調べたいときは、対応する実装モジュールを読む。
+- session lifecycle 全体ではなく、作成・破棄・join のどれか一つだけを確認したいときは、目的のモジュールへ直接進む。
+- 共通 CLI ルーティングや session 以外のサブコマンド実装を調べたいときは、この階層ではなく上位の実装を読む。
+- session コマンドの外部仕様だけを確認したいときは、実装ではなく oracle 側の仕様文書を読む。
 
 ## hash
-- cb9447d3d2b45432bdf38d468571dd14331323a2f8952338b94f29477c5f470d
+- 81519ae638a6fc7569b2a22dec8ddc6ca5c180cc374ac49596d9eaf2c957cc9c
 
 # `tui.py`
 

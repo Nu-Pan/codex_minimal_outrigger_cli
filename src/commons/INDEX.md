@@ -167,22 +167,24 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 起動時の実行条件を組み立てる共通基盤で、`argv`/`sandbox`/permission profile/`CODEX_HOME`/schema 配置/子 process 追跡/JSONL error 判定までをまとめて扱う。Codex subprocess の境界条件や失敗時の判定を変えるときに読む。
-- `AgentCallParameter` と `CmocConfig` から Codex CLI 用の上書き引数や環境変数を作る処理が中心で、必要に応じて `run_doctor_preprocess` や schema ハッシュ配置もここから呼ぶ。
-- apply 実行中の pid file 追跡、`Codex` subprocess の実行ラッパー、capacity/quota/unexpected error の判定も同居しているため、起動前後の実行制御や再試行判定を変更するときの入口になる。
+- Codex CLI を起動する前後の実行環境整備と、起動結果の機械的な判定をまとめる入口。argv の上書き、sandbox/permission profile、CODEX_HOME、child process tracking、schema 配置、JSONL error 判定を扱う作業で読む。
+- Codex subprocess 境界を一箇所で保つための実装であり、個別の CLI サブコマンド実装や prompt 文面そのものを追うより、Codex 呼び出し条件と失敗時の解釈を確認したいときに進む。
+- ファイルアクセス境界や復旧判定の根拠コメントもこの層に集約されているため、sandbox へ渡す root の選び方、追加 read/write path の許可条件、tracked child process の記録・削除、Codex JSONL からの error/resume 判定を確認する場合に読む。
 
 ## Read this when
-- Codex CLI の `sandbox` や permission profile の切り替え条件を変えたいとき。
-- `CODEX_HOME` の解決・検証・subprocess への引き回しを確認したいとき。
-- 追加 read/write path の許可境界、oracle/realization の書き込み制約、tracked child process の記録方法、schema 配置、JSONL error 判定を変更したいとき。
+- Codex CLI の起動引数や環境変数の組み立てを変えたいとき。
+- file access mode と sandbox/permission profile の対応を確認したいとき。
+- 追加 read/write path の許可境界や、worktree 外を誤って開かない条件を見たいとき。
+- Codex subprocess の子プロセス追跡、pid file 更新、resume token 抽出、capacity/quota/error 判定を扱うとき。
+- Structured Output schema の配置先や、Codex の出力 JSON をどう解釈するかを確認したいとき。
 
 ## Do not read this when
-- Codex CLI に渡す個別サブコマンドの文言や業務フローだけを変えたいときは、各サブコマンド側の文書や実装を先に読む。
-- ファイルアクセス規則そのものの意図や正本仕様を詰めたいだけなら、このファイルより参照先の oracle 仕様を読む。
-- 単なるモデル設定値や一般的な cmoc 設定の定義を確認したいだけなら、設定側の定義を先に読む。
+- Codex の各サブコマンドの入出力仕様や利用フロー自体を知りたいだけのときは、より上位の app_spec 側を読む。
+- prompt の本文や文面の生成方針だけを確認したいときは、この境界実装ではなく prompt_builder 側を読む。
+- 一般的な runtime 共通処理ではなく、Codex 固有の subprocess/permission 変換以外を見たいときは別の commons モジュールを優先する。
 
 ## hash
-- 8cef9c09f6a4a59145aab312a11ea7040057345ddbf8594cf600828e724eb0f2
+- a8286c28185df20544757307e8053fe8e4b15b1a4e7381c914c6aa2506be43ec
 
 # `runtime_codex_tui.py`
 
