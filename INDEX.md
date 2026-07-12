@@ -134,18 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の共通補助と回帰テストをまとめる案内。CLI・runtime・builder・oracle/realization 境界ごとのテスト入口を選ぶために読む。
-- 個別テストを読む前に、そのテストが何を保証し、どの実装や oracle 側の正本仕様へ進むべきかを判断するためのルーティング情報を載せる。
+- テスト用の共通支援ファイル群の案内。各 helper は、CLI 実行補助、git/command 生成、Codex/Ollama 実行補助、apply/session 状態復元、schema 参照のように、特定のテスト責務にだけ使う最小単位の入口として整理されている。
+- 各エントリーは、どのテスト群がその helper を読むべきか、逆にどの用途では別の helper や oracle 側の本文を読むべきかを切り分けるためのルーティング情報になっている。
 
 ## Read this when
-- `test` 配下で、共通 helper を先に探してから個別テストに進みたい。
-- ある機能の外部挙動を変える前に、対応する回帰テストの入口を特定したい。
-- CLI、runtime、builder、prompt、oracle / realization 境界のどこを読むべきかを絞り込みたい。
+- テストで共通の path 解決、CLI runner 初期化、fake 外部コマンド生成、git 初期化、Codex/Ollama 実行補助、apply/session 状態復元を使い回したい。
+- acp builder や runtime、CLI 統合テストで、同じ前提や実行条件を個別に書かずに済ませたい。
+- 対応する oracle 側の仕様や schema を読む前に、テスト補助がどの正本断片に対応しているかを確認したい。
 
 ## Do not read this when
-- 個別テストの本文や実装詳細をそのまま確認したいときは、該当するテストファイルや実装側を直接読む。
-- 正本仕様そのものを確認したいだけなら、対応する oracle 側の本文へ進む。
-- test 配下の共通補助ではなく、機能実装や oracle 仕様の内容を探しているだけならここは読まない。
+- 個別の CLI 挙動、実装本体、正本仕様そのものを確認したいだけなら、各テスト本文または oracle 側の本文を直接読む。
+- 対象外のサブコマンドや別領域のテスト補助を探しているなら、同じ階層の別 helper を読む。
+- INDEX.md やルーティング規約だけを確認したいなら、この helper 群ではなく上位の案内を読む。
 
 ## hash
-- e8a0d3afe6a84f7b9ec2f718ce2eea72edfa1e7446e1bc26e1256d532877f3d1
+- 51e8ae5a83e713cf65ac7a7240b9c648676942e0141066d94755cb37330de985
