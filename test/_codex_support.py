@@ -65,16 +65,19 @@ def codex_override_config(args: list[str]) -> dict[str, object]:
 
 # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
 def _override_writable_roots(args: list[str]) -> set[str]:
+    """Extract sandbox roots that the Codex override allows tests to write."""
     parsed = codex_override_config(args)
     return set(parsed.get("sandbox_workspace_write", {}).get("writable_roots", []))
 
 
 def _override_permission_filesystem(args: list[str]) -> dict[str, str]:
+    """Extract the explicit permission filesystem map from Codex overrides."""
     parsed = codex_override_config(args)
     return parsed.get("permissions", {}).get("cmoc", {}).get("filesystem", {})
 
 
 def _override_permission_roots(args: list[str], access: str) -> set[str]:
+    """Return explicit permission roots matching the requested access mode."""
     return {
         path
         for path, actual_access in _override_permission_filesystem(args).items()
@@ -83,6 +86,7 @@ def _override_permission_roots(args: list[str], access: str) -> set[str]:
 
 
 def _standard_realization_override_roots(root: Path) -> set[str]:
+    """Return tracked standard realization paths allowed by the test override."""
     root = root.resolve()
     candidates = [root / name for name in ("src", "test", "bin", ".gitignore")]
     if (root / "README.md").exists():
@@ -97,6 +101,7 @@ def _standard_realization_override_roots(root: Path) -> set[str]:
 
 
 def _override_write_roots(args: list[str]) -> set[str]:
+    """Combine override roots that grant write access to tests."""
     return {
         *_override_writable_roots(args),
         *_override_permission_roots(args, "write"),
@@ -104,6 +109,7 @@ def _override_write_roots(args: list[str]) -> set[str]:
 
 
 def _most_specific_permission_access(args: list[str], path: Path) -> str | None:
+    """Resolve the most specific explicit permission for a test path."""
     target = path.resolve()
     matches = [
         (Path(allowed).resolve(), access)
@@ -114,6 +120,7 @@ def _most_specific_permission_access(args: list[str], path: Path) -> str | None:
 
 
 def _assert_writable(args: list[str], path: Path) -> None:
+    """Assert that a path is writable under the Codex override."""
     access = _most_specific_permission_access(args, path)
     if access is not None:
         assert access == "write"
@@ -126,6 +133,7 @@ def _assert_writable(args: list[str], path: Path) -> None:
 
 
 def _assert_not_writable(args: list[str], path: Path) -> None:
+    """Assert that a path is not writable under the Codex override."""
     access = _most_specific_permission_access(args, path)
     if access is not None:
         assert access != "write"
@@ -138,6 +146,7 @@ def _assert_not_writable(args: list[str], path: Path) -> None:
 
 
 def _assert_not_permission_accessible(args: list[str], path: Path) -> None:
+    """Assert that a path has no explicit permission entry in the override."""
     target = path.resolve()
     assert not any(
         target.is_relative_to(Path(root))
