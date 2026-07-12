@@ -134,15 +134,19 @@
 # `test`
 
 ## Summary
-- acp_builder 系列テストで、`<work-root>/oracle/src/oracle/acp_builder` 配下の正本 schema への path を一箇所で組み立てる共通補助。テストごとに oracle tree の相対計算を重複させたくないときに読む。
+- `test/` 配下の共通テスト補助と回帰テストをまとめる入口。`oracle` 側の正本仕様に対するテスト用の path 解決、git リポジトリや CLI 実行環境の共通 fixture、各サブコマンドや runtime の外部挙動を固定するテスト群を案内する。
+- `_acp_builder_support.py` は、acp_builder 系テストで oracle tree 内の schema 参照先を共通化したいときの path 解決補助。`_apply_support.py` は apply state から作業先パスを復元するテスト補助。`_cli_support.py`、`_command_support.py`、`_git_support.py`、`_ollama_support.py` はそれぞれ CLI、外部コマンド、git、Ollama 関連の共通 fixture / helper を扱う。
+- `test_*.py` 群は、`acp_builder` の parameter 生成、`apply` / `session` / `doctor` / `indexing` / `review oracle` などの CLI 挙動、`runtime_codex` / `runtime_ollama` / `runtime_state` / `runtime_file_access` / `runtime_config` / `runtime_cli` などの境界契約を検証する。`oracle` 側の正本仕様や structured output schema との整合を確認したいときの入口でもある。
 
 ## Read this when
-- acp_builder 関連テストで、正本 schema ファイルの参照先を共通化したい。
-- oracle tree の schema を読むテストで、各テスト本文に個別の相対 path 計算を書きたくない。
+- 共通の test helper の役割を先に見てから、個別の回帰テスト本文に進みたい。
+- acp_builder、apply、session、runtime、doctor、indexing、review oracle のどれかに関する外部挙動や回帰条件を確認したい。
+- oracle 側の schema や prompt / path / permission の正本仕様に対応するテストを探したい。
 
 ## Do not read this when
-- acp_builder 以外の対象で path 解決が必要なら、対象ごとの専用 helper を探す。
-- oracle schema の内容や structured output の仕様そのものを確認したいだけなら、oracle tree 側の本文を読む。
+- 実装本体や oracle の正本仕様そのものを確認したいだけなら、対応する `oracle/src`、`oracle/doc`、または `src` 側を直接読む。
+- CLI や runtime の個別挙動を 1 つだけ追いたいなら、共通 helper ではなく該当する `test_*.py` を直接読む。
+- `INDEX.md` のルーティング規則や本文の細部だけを確認したいなら、この配下の個別テストではなく上位の案内を読む。
 
 ## hash
-- ff9c9cbc6f3589aa9e8f474be19d2b5be81958516e979f5d7e379ef8b64e56c0
+- 90416ea62f2194794f269a99e099c24e6efa4b26f4de3d42c1d1fbff2796394a
