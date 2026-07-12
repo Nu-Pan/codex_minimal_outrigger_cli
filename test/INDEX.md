@@ -51,21 +51,20 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex CLI 実行まわりのテスト補助関数をまとめたファイル。最小の `CODEX_HOME` 構築、共通の `AgentCallParameter` 生成、CLI 引数の抽出、`--config` のマージ、実行時オーバーライドの差し替えを、他のテストから再利用するために使う。
-- `<work-root>/oracle/doc/app_spec/codex_exec_rule.md` と `<work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py` に対応するテスト支援が必要なときに読む。Codex subprocess の引数検証や、write 可否・権限ルートの判定を組み立てる側のテストで使う。
+- Codex 実行まわりのテストで共通に使う小さな fixture と、`--config` や権限オーバーライド引数を解析して断言しやすくする補助関数をまとめている。個別テスト本文より先に、同種の引数組み立てや権限判定を再利用したいときに読む。
 
 ## Read this when
-- Codex 実行ラッパーや TUI のテストで、共通の初期化・引数解析・オーバーライド固定化が必要なとき。
-- file access rule の検証で、`--config` の内容や書き込み許可ルートをテスト側で解釈したいとき。
-- `CODEX_HOME` の擬似認証状態を作る、または subprocess への差し替えを共通化したいとき。
+- Codex CLI や TUI の subprocess 引数をテストで安定化したいとき。
+- `CODEX_HOME`、`--config`、sandbox の writable roots、filesystem 権限の断言補助を使いたいとき。
+- oracle 側の runtime / prompt builder テストが、同じ Codex オーバーライド前提で増えるとき。
 
 ## Do not read this when
-- 本体の Codex 実装や file access rule の仕様そのものを知りたいときは、対応する oracle src/doc を直接読む。
+- Codex 本体の実装や仕様断片を知りたいときは、対応する oracle src を読む。
 - 個別テストの期待値だけを確認したいときは、この補助ファイルではなく各テスト本文を読む。
-- Codex 以外の CLI 補助や一般的な pytest fixture を探しているとき。
+- この補助群の外にある一般的な runtime 処理や権限制御の全体像だけを知りたいとき。
 
 ## hash
-- 91a1e62c1539f67bf2bcce471e124d0117ee73b7b81d8a425583f04d2fd9c114
+- 1095d58144dfc179ed8dd62a70cfbf62694246a20507d0367e6b76d4d566ac62
 
 # `_command_support.py`
 
@@ -639,23 +638,22 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 呼び出し時の上書き引数、とくにファイルアクセス制限・sandbox・`--model` / reasoning effort・model provider の決定を確認するテスト。
-- `<work-root>` / `repo-root` / linked worktree / `extra_read_root` の組み合わせで、許可される読み書き領域と拒否される領域が変わる場合に読む。
-- ローカル SLM 向けの `cmoc` 管理 provider 選択、`CODEX_HOME` 系の一般的な起動条件、`INDEX.md` や `AGENTS.md` を含む境界確認が必要なときに読む。
+- `build_codex_override_args` が、`FileAccessMode` ごとの Codex 起動引数・権限境界・モデルプロバイダ選択をどう組み立てるかを検証するテスト群。`oracle/src/oracle/prompt_builder/parts/file_access_rule.py` と `oracle/doc/app_spec/codex_exec_rule.md`、`oracle/doc/app_spec/external_model_provider.md` に対応する実装や変更を読む入口にする。
+- `make_repo`、`run_git`、`_codex_support` を使った境界条件の確認も含むため、`<work-root>` 配下の実行権限ルール、`oracle` と `realization` の読み書き境界、linked worktree 時の追加読取許可を直すときに参照する。
 
 ## Read this when
-- Codex CLI に渡す argv や sandbox 設定が、`FileAccessMode` ごとにどう変わるべきか確認したい。
-- `<work-root>` 外、`.agents`、`.codex`、`.git`、`memo`、`oracle`、`realization` の境界で、読み書き可否の期待値を確かめたい。
-- linked worktree からの実行で、repo 側の `.cmoc/local` を追加で読む条件を確認したい。
-- `ModelClass` と `CmocConfig` から local model provider を選ぶ条件を確認したい。
+- Codex の sandbox 権限、`FileAccessMode` ごとの `--sandbox` / `permissions` / `writable_roots` の生成条件を変えるとき。
+- `oracle` 配下・`src` 配下・`test` 配下・`.agents` / `.cmoc` / `.gitignore` まわりの可読・可書き境界を調整するとき。
+- local SLM のモデルプロバイダ選択や `cmoc_managed_ollama` への切り替え条件を変えるとき。
+- linked worktree 実行時の `extra_read_root` や repo 側 `cmoc/local` 読取許可の扱いを変えるとき。
 
 ## Do not read this when
-- Codex CLI の一般的な起動手順だけを知りたい場合は、`codex_exec_rule` 側を先に読む。
-- 設定ファイルの全体構造や他の builder を見たいだけなら、このテストではなく対応する oracle src を読む。
-- 個別の path 解決や work-root 定義だけを確認したい場合は、`path_model` や関連する基礎定義を読む。
+- Codex 起動引数そのものではなく、別の実行経路や別コマンドの引数生成を確認したいだけのとき。
+- `oracle` 文書の本文を更新する作業で、このテストの観点だけを見れば十分なときは、まず対応する oracle doc を読む。
+- 一般的な repo 構成やパス規則ではなく、`test_runtime_codex_profile.py` の対象外のサブコマンドや別プロファイルを扱うとき。
 
 ## hash
-- 3956cbfcbfba51cbf95549c5196ca015ba585714fc040953ecde8c17396c66d9
+- 47957ed5e85c47c47926963cad8fcf38659a3583e3bb670a05160c40b0827aa8
 
 # `test_runtime_config.py`
 

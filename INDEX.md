@@ -134,15 +134,15 @@
 # `test`
 
 ## Summary
-- `test` 配下の acp_builder テストが、`<work-root>/oracle/src/oracle/acp_builder` 配下の正本 schema へ向かうための共通 path 解決をまとめる補助ファイル。テストごとに oracle tree への相対計算を重複させたくないときの入口。
+- acp_builder 系列テストで、`<work-root>/oracle/src/oracle/acp_builder` 配下の正本 schema への path を一箇所で組み立てる共通補助。テストごとに oracle tree の相対計算を重複させたくないときに読む。
 
 ## Read this when
-- acp_builder 関連テストで、正本 schema ファイルの実体位置を一箇所に集約して参照したい。
-- テストが oracle tree の schema を読むが、`test` 配下からの相対計算を個別に書きたくない。
+- acp_builder 関連テストで、正本 schema ファイルの参照先を共通化したい。
+- oracle tree の schema を読むテストで、各テスト本文に個別の相対 path 計算を書きたくない。
 
 ## Do not read this when
-- acp_builder 以外のテスト対象で path 解決が必要なら、対象ごとの専用 helper を探す。
-- oracle schema 自体の内容や structured output の仕様を確認したいだけなら、oracle tree 側の本文を読む。
+- acp_builder 以外の対象で path 解決が必要なら、対象ごとの専用 helper を探す。
+- oracle schema の内容や structured output の仕様そのものを確認したいだけなら、oracle tree 側の本文を読む。
 
 ## hash
-- 7eaaa135dd13265737ee361e0636d8449204ed12a29e552ff02f950d1e8494d1
+- ff9c9cbc6f3589aa9e8f474be19d2b5be81958516e979f5d7e379ef8b64e56c0
