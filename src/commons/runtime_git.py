@@ -192,11 +192,16 @@ def _unmanaged_worktree_error(worktree: Path, base: Path) -> CmocError:
     )
 
 
-def _main_worktree_root(root: Path) -> Path:
+def git_common_dir(root: Path) -> Path:
+    """Git common directory の絶対 path を返す。"""
     common = run_git(
         ["rev-parse", "--path-format=absolute", "--git-common-dir"], root
     ).stdout.strip()
-    return Path(common).parent.resolve()
+    return Path(common).resolve()
+
+
+def _main_worktree_root(root: Path) -> Path:
+    return git_common_dir(root).parent
 
 
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:

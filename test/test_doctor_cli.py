@@ -1,5 +1,9 @@
 import json
+import multiprocessing
 import subprocess
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
@@ -17,6 +21,17 @@ from _ollama_support import (
 )
 from _cli_support import runner
 from _git_support import make_repo, run_git
+
+
+def hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
+    import fcntl
+
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        ready.send(True)
+        release.recv()
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
@@ -149,6 +164,52 @@ def test_doctor_preprocess_in_linked_worktree_uses_repo_config(
 
     assert pulled == ["repo-model"]
     assert not (linked / ".cmoc" / "config.json").exists()
+
+
+def test_doctor_preprocess_waits_for_common_repository_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-doctor-lock"
+    run_git(
+        root, "worktree", "add", "-b", "linked-doctor-lock", str(linked), "HEAD"
+    )
+    lock_path = doctor_module.doctor_lock_path(root)
+    assert doctor_module.doctor_lock_path(linked) == lock_path
+
+    ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
+    release_child, release_parent = multiprocessing.Pipe(duplex=False)
+    process = multiprocessing.Process(
+        target=hold_doctor_lock,
+        args=(lock_path, ready_child, release_child),
+    )
+    lock_attempted = threading.Event()
+    original_flock = doctor_module.fcntl.flock
+
+    def observe_lock_attempt(fd: int, operation: int) -> None:
+        if operation & doctor_module.fcntl.LOCK_EX:
+            lock_attempted.set()
+        original_flock(fd, operation)
+
+    monkeypatch.setattr(doctor_module.fcntl, "flock", observe_lock_attempt)
+    process.start()
+    released = False
+    try:
+        assert ready_parent.recv() is True
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(doctor_module.run_doctor_preprocess, linked)
+            assert lock_attempted.wait(timeout=3)
+            assert not future.done()
+            release_parent.send(True)
+            released = True
+            future.result(timeout=3)
+    finally:
+        if process.is_alive() and not released:
+            release_parent.send(True)
+        process.join(timeout=3)
+        if process.is_alive():
+            process.terminate()
+            process.join()
 
 
 def test_doctor_generates_and_tracks_config(

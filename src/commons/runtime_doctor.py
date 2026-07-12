@@ -1,40 +1,69 @@
+import fcntl
 import os
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_errors import CmocError
-from commons.runtime_git import ensure_cmoc_ignored, run_git, with_cmoc_ignore_pattern
+from commons.runtime_git import (
+    ensure_cmoc_ignored,
+    git_common_dir,
+    run_git,
+    with_cmoc_ignore_pattern,
+)
 from commons.runtime_ollama import ensure_ollama_serves_local_slm
 from commons.runtime_paths import repo_root
 
 
 def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
-    """current と main worktree の共通修復を行い、修復差分だけを commit する。"""
+    """current と main worktree の共通修復を排他実行し、修復差分だけを commit する。"""
     root = root.resolve()
-    repair_roots = [root]
-    main_root = repo_root(root)
-    if main_root != root:
-        # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-        # サブコマンドログは doctor 開始前に main worktree 側へ作られるため、
-        # linked worktree 実行時も両方の .cmoc/local を ignore 対象にする。
-        repair_roots.append(main_root)
+    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    # snapshot 作成から修復 commit と元の index 復元までを同じ Git common
+    # directory の lock 内で行い、並行 doctor が共有 index を混ぜないようにする。
+    with doctor_lock(root):
+        repair_roots = [root]
+        main_root = repo_root(root)
+        if main_root != root:
+            # サブコマンドログは doctor 開始前に main worktree 側へ作られるため、
+            # linked worktree 実行時も両方の .cmoc/local を ignore 対象にする。
+            repair_roots.append(main_root)
 
-    repairs: list[tuple[Path, str, bool]] = []
-    for repair_root in repair_roots:
-        restored_index_tree = _restored_index_tree(repair_root)
-        ensure_cmoc_ignored(repair_root)
-        agents_gitkeep_added = _ensure_agents_tracked(repair_root)
-        repairs.append((repair_root, restored_index_tree, agents_gitkeep_added))
+        repairs: list[tuple[Path, str, bool]] = []
+        for repair_root in repair_roots:
+            restored_index_tree = _restored_index_tree(repair_root)
+            ensure_cmoc_ignored(repair_root)
+            agents_gitkeep_added = _ensure_agents_tracked(repair_root)
+            repairs.append((repair_root, restored_index_tree, agents_gitkeep_added))
 
-    ensure_ollama_serves_local_slm(root, config)
-    for repair_root, restored_index_tree, agents_gitkeep_added in repairs:
-        _commit_doctor_repairs(
-            repair_root, restored_index_tree, agents_gitkeep_added
-        )
+        ensure_ollama_serves_local_slm(root, config)
+        for repair_root, restored_index_tree, agents_gitkeep_added in repairs:
+            _commit_doctor_repairs(
+                repair_root, restored_index_tree, agents_gitkeep_added
+            )
+
+
+@contextmanager
+def doctor_lock(root: Path) -> Iterator[None]:
+    """Git common directory 単位の doctor 用 process lock を保持する。"""
+    lock_path = doctor_lock_path(root)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def doctor_lock_path(root: Path) -> Path:
+    """Git common directory 内の doctor lock file path を返す。"""
+    return git_common_dir(root) / "cmoc-doctor.lock"
 
 
 def _ensure_agents_tracked(root: Path) -> bool:
