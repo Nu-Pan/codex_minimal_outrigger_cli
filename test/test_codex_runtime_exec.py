@@ -30,8 +30,8 @@ def _prepare_production_managed_ollama(
     """Require the real per-user managed service used by production Codex calls."""
     # <work-root>/oracle/doc/dev_rule/test_rule.md
     # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # Do not replace HOME, PATH, systemctl, or ~/.cmoc/ollama here: this test
-    # must exercise the same service and persistent model store as production.
+    # 本番と同じサービスと永続モデルストアを検証するため、HOME、PATH、systemctl、
+    # ~/.cmoc/ollama は差し替えない。
     try:
         run_doctor_preprocess(root, config)
     except (CmocError, OSError) as exc:
@@ -41,6 +41,7 @@ def _prepare_production_managed_ollama(
 def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Real Codex CLI と cmoc managed ollama の結合動作を検証する。"""
     real_codex = shutil.which("codex")
     if real_codex is None:
         pytest.skip("real Codex CLI is not installed")
@@ -69,9 +70,8 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         "PATH", f"{Path(real_codex).parent}:{os.environ.get('PATH', '')}"
     )
     monkeypatch.setenv("OPENAI_API_KEY", "cmoc-local-test")
-    # <work-root>/oracle/doc/dev_rule/test_rule.md: this intentionally uses
-    # real Codex CLI with a local SLM provider. The assertions stay on
-    # cmoc-owned integration artifacts, not answer quality.
+    # <work-root>/oracle/doc/dev_rule/test_rule.md: ローカル SLM を provider にした
+    # Real Codex CLI を意図的に使い、cmoc が所有する結合成果物だけを検証する。
     result = run_codex_exec(
         AgentCallParameter(
             ModelClass.MINIMUM,
@@ -112,6 +112,7 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
 def test_run_codex_exec_injects_overrides_and_starts_codex(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Codex CLI の override とリポジトリ書き込み結果を検証する。"""
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -188,6 +189,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
 def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """local SLM 用 override と組み込み Ollama フラグの不使用を検証する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_managed_ollama_preflight(monkeypatch)
@@ -239,9 +241,11 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
         "wire_api": "responses",
     }
 
+
 def test_prepare_local_slm_runs_managed_ollama_preflight(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """local SLM 用 override の構築前に Ollama preflight を実行することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     codex_home = tmp_path / "codex_home"
@@ -256,6 +260,7 @@ def test_prepare_local_slm_runs_managed_ollama_preflight(
     def record_ollama_preflight(
         actual_root: Path, actual_config: CmocConfig | None = None
     ) -> None:
+        """Ollama preflight に渡された root と設定を記録する。"""
         ollama_preflight_calls.append((actual_root, actual_config))
 
     monkeypatch.setattr(
@@ -284,6 +289,7 @@ def test_prepare_local_slm_runs_managed_ollama_preflight(
 def test_prepare_codex_override_args_does_not_create_codex_home_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Codex override の構築時に CODEX_HOME の設定ファイルを作成しないことを検証する。"""
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
 
