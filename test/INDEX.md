@@ -1,18 +1,20 @@
 # `_acp_builder_support.py`
 
 ## Summary
-- テスト側から `<work-root>/oracle/src/oracle/acp_builder` 配下の schema を読むための共通 path 解決をまとめる。oracle tree の schema 参照先をテストごとに重複させたくないときに使う。
+- `test` 配下で、`acp_builder` の正本 schema をテストから参照するための共通 path helper を置く補助対象である。`test` 側に schema を複製せず、oracle 側の `acp_builder` 定義へ直接つなぐ必要があるときに読む。
 
 ## Read this when
-- acp_builder 関連テストで、正本 schema ファイルの実体位置を一箇所に集約して参照したい。
-- テストが oracle tree の schema を読むが、`test` 配下からの相対計算を個別に書きたくない。
+- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
+- テスト用に正本 schema をコピーせず、oracle 側を参照する方針がどこで支えられているかを確認したいとき。
+- `acp_builder` 関連のテスト helper が他にあるかではなく、この path 解決 helper の責務を見たいとき。
 
 ## Do not read this when
-- acp_builder 以外のテスト対象で path 解決が必要なら、対象ごとの専用 helper を探す。
-- oracle schema 自体の内容や structured output の仕様を確認したいだけなら、oracle tree 側の本文を読む。
+- 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
+- テスト全体の CLI 挙動や他の共通サポートを確認したいときは、この helper ではなく該当する別の test support を読む。
+- `INDEX.md` のルーティング方針そのものを確認したいときは、この helper ではなく上位の案内を読む。
 
 ## hash
-- 4d3dade84c28b5de1c63095a310c1bb8a6a93bfc3a68a86e42f78ea3591b73f5
+- de5d24592d722cda97a3290b3f356479ac2cea7bc27a0e17c7391864eced41f9
 
 # `_apply_support.py`
 
@@ -250,21 +252,20 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- `apply fork` の report 生成、変更要約、変更ファイル再調査、rolling 対象の切り替えまでを CLI 経由で検証するテスト群。`change_summary`/`file_finding_enumeration`/`finding_application` のビルド条件と、収束・未収束・error 時の report 記載を読む入口に向く。
-- `sub_commands.apply.fork` の内部分割そのものより、外部から見える report 内容、session state 更新、commit 対象の選び方、未追跡 file や削除済み file を含む差分扱いの確認が主目的。
+- `cmoc apply fork` の作業レポートと再検査ループを CLI 経由で検証する回帰テスト群。収束・未収束・error の判定、変更要約の反映、未追跡ファイルや削除済みファイルを含む差分集計、rolling apply の対象切り替えを確認したいときに読む。
 
 ## Read this when
-- `apply fork` の report 仕様、変更要約の出し方、再検査ループの収束条件、rolling 実行時の対象選定を確認したいとき。
-- `change_summary.json` や所見列挙結果、適用後の diff 反映、session state 更新のどれかが関係する変更をするとき。
-- packaged layout から `acp.builder.apply.fork.*` を import できることや、prompt が正本の制約文を含むことを確認したいとき。
+- `cmoc apply fork` の report 出力、終了判定、再検査の繰り返し条件を変えたいとき。
+- 変更要約の生成結果が report にどう反映されるか、また commit 前後や未追跡ファイルを差分としてどう扱うか確認したいとき。
+- rolling apply で前回の apply join 後の変更だけを再調査対象にする挙動を確認したいとき。
 
 ## Do not read this when
-- `apply fork` 以外の apply 系サブコマンドの挙動だけを確認したいときは、より直接のテストを先に読む。
-- report の書式そのものではなく、個別の builder 実装や共通 prompt 定義だけを確認したいときは、対応する実装側へ進む。
-- 一般的な oracle/realization 規約だけを確認したいときは、このテストファイルではなく規約本文を読む。
+- 変更要約や file 単位所見の prompt / schema そのものを確認したいときは、`acp_builder` 側の正本仕様を読む。
+- `apply fork` の内部実装分割だけを追いたいときは、この CLI テストではなく対応する realization implementation を読む。
+- `cmoc apply fork` 以外のサブコマンドの report や状態遷移を確認したいとき。
 
 ## hash
-- 9b9131aac7157d3e975a800e16d5423239be3ee95c4df8e9b332b827de1d20b3
+- 3b12e69c7edde1c04db6870c1ac26d6ed57e50b0f393cff0c221868d9287b903
 
 # `test_apply_fork_target_normalization.py`
 

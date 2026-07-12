@@ -134,15 +134,19 @@
 # `test`
 
 ## Summary
-- `test` 配下から `<work-root>/oracle/src/oracle/acp_builder` の正本 schema を参照するための共通 path 解決をまとめたテスト補助。acp_builder 関連テストで schema の実体位置を重複計算したくないときの入口になる。
+- `test` 配下の回帰テスト群を束ねる入口で、CLI・runtime・prompt builder・oracle 連携・共通 test support を目的別に案内する。個別の実装本体ではなく、どの挙動を確認したいかに応じて読む先を絞るためのルーティングを担う。
+- 共通 support は、git・Codex 実行・Ollama・CLI runner・外部コマンド生成などのテスト基盤をまとめる。機能別テストは、session / apply / review / indexing / doctor / runtime / prompt の外部挙動や境界条件を確認する。
+- この階層は、正本仕様そのものではなく、正本仕様に対する回帰確認を行う実装側の観測点として読む。個別対象の詳細は、それぞれのテスト本文か対応する oracle 側へ進む。
 
 ## Read this when
-- acp_builder 関連テストで、正本 schema ファイルの参照先を一箇所に集約したい。
-- `test` 配下のテストから oracle tree の schema を読むが、個別の相対パス計算を書きたくない。
+- `test` 配下で、どの機能の回帰テストや共通 support を読むべきか判断したいとき。
+- CLI、runtime、prompt builder、oracle 連携、git/worktree/sandbox 境界のどれを確認するテストがあるかを探したいとき。
+- 個別ファイル名ではなく、テスト群の責務の切り分けから読む先を選びたいとき。
 
 ## Do not read this when
-- acp_builder 以外の対象で path 解決が必要なら、対象ごとの専用 helper を探す。
-- oracle schema 自体の内容や structured output の仕様を確認したいだけなら、oracle tree 側の本文を読む。
+- 特定機能の正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
+- 実装本体の内部分割や helper の詳細を追いたいときは、この階層ではなく該当する `src` 側を読む。
+- `INDEX.md` の書き方やルーティング規則そのものを確認したいときは、ここではなく上位の案内を読む。
 
 ## hash
-- 919f69a2ee52f8a0d474c9eba1c30bbccae7314c022c17700e0c81a0828fe24a
+- 143fc9f973570b4aa99555306d11e50fecce9defd79efd74a66454d950627850
