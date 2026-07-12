@@ -134,17 +134,17 @@
 # `test`
 
 ## Summary
-- `test` 配下の回帰テストと共通補助をまとめる入口。CLI、runtime、prompt builder、ACP builder、session/apply/review/indexing、`doctor`、`codex` 実行系、StructDoc、基盤ヘルパーを、対象ごとに必要なときだけ辿るために読む。
+- `test` 配下の realization test と共通 support をまとめる入口で、CLI・runtime・prompt・builder などの外部挙動回帰を確認したいときに読む。個別の機能仕様は各サブ領域のテストに進み、共通補助は対応する support ファイルを読む。
 
 ## Read this when
-- 個別サブコマンドや runtime の外部挙動を、対応するテストから確認したいとき。
-- 共通の test helper がどの責務を持つか、どのテスト群で使われるかを確認したいとき。
-- `test` 配下のどの回帰テストを入口にすべきかを、変更対象から絞り込みたいとき。
+- `test` 配下のどの回帰テストに進むべきかを判断したいとき。
+- CLI、runtime、prompt、ACP builder、session/apply/review/indexing のどれかの外部挙動や境界条件を変更したときに、対応するテスト群を探したいとき。
+- 共通 test support の役割がどこに分かれているかを確認してから、個別テスト本文へ進みたいとき。
 
 ## Do not read this when
-- 正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
-- CLI や runtime の実装詳細だけを追いたいときは、対応する `src` 側を読む。
+- 個別機能の正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
+- 共通 helper の実装詳細だけを追いたいときは、ここではなく各 support ファイルを読む。
 - `INDEX.md` のルーティング方針そのものを確認したいときは、この配下ではなく上位の案内を読む。
 
 ## hash
-- e6eee8cd5e85ec4193c3e1c2fac7770cb23798b0c57ddc492b4173c407dd69a5
+- 6ed9f6430907b04a96c873f1ef2aff0aa9b0e5c4301a4e481af10a6495e00aa0

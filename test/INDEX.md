@@ -822,22 +822,24 @@
 # `test_session_cli.py`
 
 ## Summary
-- `session fork`・`session join`・`session abandon` の外部挙動を、session 状態ファイル、branch 切り替え、linked worktree、preflight、cleanup、conflict 解消の観点でまとめて確認する回帰テスト群。
-- session の生成・参加・放棄に加えて、dirty worktree 拒否、状態破損、session-id 衝突、削除失敗時の巻き戻し、join 後の残差検出や stdout/stderr の出し分けを読むときの入口。
-- 関連する個別の session 実装や補助関数ではなく、CLI を通した end-to-end の期待結果を確認したい場合に読む。
+- `session fork` / `join` / `abandon` の CLI 挙動を、状態遷移・linked worktree・preprocess・conflict 解消・cleanup の観点からまとめて確認する回帰テスト群。
+- session state の永続化、session branch の生成/削除/復帰、dirty worktree や破損 state の拒否、join 時の conflict 解消結果の検証に進みたいときに読む。
+- 内部 helper の単体仕様や別サブコマンドの挙動を追う用途には向かない。
 
 ## Read this when
-- `session` サブコマンドのユーザー向け挙動を変える変更をしたとき。
-- session state の生成・更新・破棄、branch 遷移、linked worktree 対応、dirty / corrupt 状態の拒否条件を確認したいとき。
-- join の conflict 解消判定、残差検出、エラー出力先、cleanup 失敗時の復旧をまとめて追いたいとき。
+- `session fork` が branch と session state をどう作るか確認したい。
+- `session join` が linked worktree でどう動くか、conflict 解消後の状態確認や branch 削除可否を確かめたい。
+- `session abandon` の home branch への復帰、state 更新、cleanup failure 時の巻き戻しを確認したい。
+- session CLI が dirty worktree や破損した session state をどう拒否するかを見たい。
 
 ## Do not read this when
-- `session` 実装の内部分割や helper の責務だけを確認したいときは、対応する `src/sub_commands/session/*` を直接読む。
-- 個別の state schema や preflight ルールの正本を確認したいだけなら、対応する oracle 側の文書や実装を読む。
-- CLI 全体の共通テストや別サブコマンドの挙動を探したいだけなら、このファイルは範囲外。
+- `session` 以外のサブコマンドの仕様を知りたいだけなら読まない。
+- session state のデータ形式や永続化ルールの正本を確認したいなら、対応する session state の文書へ進む。
+- Codex 実行権限や conflict resolution の正本仕様だけを知りたいなら、別の app_spec / oracle src を先に読む。
+- CLI の細かな内部実装順や helper の分割方針だけを知りたいなら、ここではなく対象実装モジュールへ進む。
 
 ## hash
-- 876bc3bbff5180805f51e75f514a66e231624f06174194dd35369718de8b54b6
+- 9cbcbdfe02ccc0dffa4d89199bb6576583d8532b73892f8b15e046f5c4738c19
 
 # `test_struct_doc_rendering.py`
 
