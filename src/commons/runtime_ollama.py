@@ -453,6 +453,7 @@ def _load_ollama_model(model: str) -> None:
 
 
 def _gpu_verification_error(model: str, detail: str) -> CmocError:
+    """GPU 推論検証の失敗を、model と詳細付きの CmocError にする。"""
     return CmocError(
         "ollama SLM model の GPU 推論を確認できませんでした。",
         ["ollama service の /api/ps 応答と GPU 利用状況を確認してください。"],
