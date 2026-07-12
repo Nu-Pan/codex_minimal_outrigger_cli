@@ -1092,3 +1092,47 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     assert "conflict marker が残っています。" not in result.stdout
     assert "# ERROR" in result.stderr
     assert "conflict marker が残っています。" in result.stderr
+
+
+def test_session_join_conflict_uses_repo_root_for_codex_storage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(linked)
+    home_branch = session_home_branch(root, session_branch)
+    target = linked / "oracle" / "spec.md"
+    target.write_text("linked session change\n")
+    run_git(linked, "add", "oracle/spec.md")
+    run_git(linked, "commit", "-m", "linked session change")
+    run_git(linked, "switch", home_branch)
+    target.write_text("linked home change\n")
+    run_git(linked, "add", "oracle/spec.md")
+    run_git(linked, "commit", "-m", "linked home change")
+    run_git(linked, "switch", session_branch)
+    seen: dict[str, Path] = {}
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        seen["root"] = kwargs["root"]
+        seen["cwd"] = kwargs["cwd"]
+        target.write_text("resolved change\nTitle\n=======\n")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert seen == {"root": root, "cwd": linked}
+    assert current_branch(linked) == home_branch
+    assert target.read_text() == "resolved change\nTitle\n=======\n"

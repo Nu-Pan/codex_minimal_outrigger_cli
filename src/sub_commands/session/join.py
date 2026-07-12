@@ -126,7 +126,10 @@ def resolve_session_join_conflict(
             build_session_join_conflict_resolution_parameter(conflicted_paths),
             cwd=root,
         ),
-        root=root,
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md:
+        # config/logs stay in repo-root while Codex edits this worktree.
+        root=repo_root(root),
+        cwd=root,
         purpose="session join conflict resolution",
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
         # oracle conflict の例外は prompt だけでは sandbox に効かないため、
