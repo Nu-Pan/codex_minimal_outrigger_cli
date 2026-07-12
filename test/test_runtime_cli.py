@@ -291,7 +291,13 @@ def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_patte
 
     ensure_cmoc_ignored(root)
 
-    assert (root / ".gitignore").read_text() == ".cmoc/\n\n/.cmoc/local/\n"
+    assert (root / ".gitignore").read_text() == (
+        ".cmoc/\n\n"
+        "!/.cmoc/\n"
+        "/.cmoc/*\n"
+        "!/.cmoc/config.json\n"
+        "/.cmoc/local/\n"
+    )
     assert run_git(root, "status", "--short").stdout.strip() == "M .gitignore"
 
 

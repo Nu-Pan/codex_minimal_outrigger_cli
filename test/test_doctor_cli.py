@@ -78,7 +78,7 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
     )
     assert (
         subprocess.run(
-            ["git", "check-ignore", "-q", ".cmoc/config.json"],
+            ["git", "check-ignore", "--no-index", "-q", ".cmoc/config.json"],
             cwd=root,
             check=False,
         ).returncode
@@ -199,7 +199,7 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
         == ".cmoc/config.json"
     )
     check_ignore = subprocess.run(
-        ["git", "check-ignore", "-q", ".cmoc/config.json"],
+        ["git", "check-ignore", "--no-index", "-q", ".cmoc/config.json"],
         cwd=root,
         check=False,
     )

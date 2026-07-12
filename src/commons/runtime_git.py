@@ -10,6 +10,14 @@ from commons.runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/apply/", "cmoc/run/")
 CMOC_IGNORE_PATTERN = "/.cmoc/local/"
+# <work-root>/oracle/src/oracle/other/cmoc_config.py
+# Keep a broad user .cmoc/ rule effective for other children while making the
+# tracked repository config a non-ignored realization file.
+CMOC_CONFIG_IGNORE_EXCEPTIONS = (
+    "!/.cmoc/",
+    "/.cmoc/*",
+    "!/.cmoc/config.json",
+)
 CMOC_IGNORE_PROBE = ".cmoc/local/.__cmoc_ignore_probe__"
 
 
@@ -203,9 +211,15 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
 
 
 def with_cmoc_ignore_pattern(content: str) -> str:
-    """既存の末尾改行を崩さず .cmoc/local ignore pattern を追加する。"""
+    """既存の末尾改行を崩さず cmoc の ignore 規則を追加する。"""
     lines = content.splitlines()
     patterns = []
+    if any(line in {".cmoc/", "/.cmoc/"} for line in lines):
+        patterns.extend(
+            pattern
+            for pattern in CMOC_CONFIG_IGNORE_EXCEPTIONS
+            if pattern not in lines
+        )
     if CMOC_IGNORE_PATTERN not in lines:
         patterns.append(CMOC_IGNORE_PATTERN)
     if not patterns:
