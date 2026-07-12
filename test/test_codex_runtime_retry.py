@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import cmoc_runtime
+import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError, SubcommandLogger
 from config.cmoc_config import CmocConfig
@@ -94,6 +95,48 @@ def test_run_codex_exec_retries_semantic_output(
     ]
     assert codex_events[0]["returncode"] == 0
     assert codex_events[0]["call_log_path"] == str(call_paths[0])
+
+
+def test_run_codex_exec_logs_keyboard_interrupt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+
+    def interrupt(*_args: object, **_kwargs: object) -> object:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", interrupt)
+    logger = SubcommandLogger(root, "test")
+
+    with pytest.raises(KeyboardInterrupt):
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                None,
+            ),
+            root=root,
+            config=CmocConfig(),
+            subcommand_logger=logger,
+        )
+
+    console = capsys.readouterr().out
+    assert "- Exit code: `not started`" in console
+    assert "- Error: `KeyboardInterrupt()`" in console
+    call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json"))
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in events if event["event"] == "codex_call"]
+    assert len(call_logs) == 1
+    assert len(codex_events) == 1
+    assert codex_events[0]["status"] == "failed"
+    assert codex_events[0]["returncode"] is None
+    assert codex_events[0]["error"] == "KeyboardInterrupt()"
 
 
 @pytest.mark.parametrize(

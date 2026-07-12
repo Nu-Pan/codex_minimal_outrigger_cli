@@ -245,6 +245,67 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- Exit code: `0`" in console
 
 
+def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    calls: list[str] = []
+
+    def fake_run(
+        argv: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        prompt = cast(TextIO, kwargs["stdin"]).read()
+        calls.append(prompt)
+        if prompt == "prompt":
+            return subprocess.CompletedProcess(
+                argv,
+                1,
+                '{"type":"thread.started","thread_id":"sess-1"}\n'
+                '{"type":"error","message":"Quota exceeded"}\n',
+                "",
+            )
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
+    logger = SubcommandLogger(root, "test")
+
+    with pytest.raises(KeyboardInterrupt):
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                None,
+            ),
+            root=root,
+            quota_poll_interval_sec=0,
+            max_quota_polls=1,
+            config=CmocConfig(),
+            subcommand_logger=logger,
+        )
+
+    assert calls == ["prompt", probe_prompt]
+    console = capsys.readouterr().out
+    assert "- Purpose: `quota availability probe`" in console
+    assert "- Error: `KeyboardInterrupt()`" in console
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in events if event["event"] == "codex_call"]
+    assert [event["purpose"] for event in codex_events] == [
+        "codex exec",
+        "quota availability probe",
+    ]
+    assert codex_events[0]["status"] == "quota_waiting"
+    assert codex_events[1]["status"] == "failed"
+    assert codex_events[1]["error"] == "KeyboardInterrupt()"
+
+
 def test_quota_probe_builder_returns_minimal_probe_parameter() -> None:
     base = AgentCallParameter(
         ModelClass.FLAGSHIP,

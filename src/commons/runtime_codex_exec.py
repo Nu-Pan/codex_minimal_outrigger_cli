@@ -310,7 +310,9 @@ def run_codex_exec(
     ) -> None:
         """console と subcommand log の両方へ Codex call 結果を記録する。"""
         elapsed_sec = time.perf_counter() - started_at
-        emit_codex_call_console(run_purpose, run_call_path, elapsed_sec, returncode)
+        emit_codex_call_console(
+            run_purpose, run_call_path, elapsed_sec, returncode, error
+        )
         if logger is None:
             return
         payload: dict[str, Any] = {
@@ -384,7 +386,7 @@ def run_codex_exec(
         attempt_started_at = time.perf_counter()
         try:
             result = run_with_prompt_file(current_argv, prompt_path)
-        except Exception as exc:
+        except BaseException as exc:
             emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
@@ -574,7 +576,7 @@ def run_codex_exec(
                                 run_codex_cwd=probe_codex_cwd,
                                 run_codex_env=probe_codex_env,
                             )
-                        except Exception as exc:
+                        except BaseException as exc:
                             emit_codex_call_event(
                                 run_purpose="quota availability probe",
                                 run_call_path=probe_call_path,
