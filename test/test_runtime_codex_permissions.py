@@ -78,6 +78,7 @@ def test_codex_overrides_readonly_modes_allow_only_ignored_gap_writes(
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
         FileAccessMode.REPO_WRITE,
+        FileAccessMode.NO_RULE,
     ],
 )
 def test_codex_overrides_protect_memo_and_future_routing_files(
@@ -123,6 +124,42 @@ def test_codex_overrides_protect_memo_and_future_routing_files(
             for pattern, access in routing_rules.items()
         )
     _assert_not_writable(override_args, root / "memo" / "private.md")
+
+
+def test_codex_overrides_no_rule_excludes_cmoc_blocked_roots(
+    tmp_path: Path,
+) -> None:
+    """NO_RULE でも禁止 root を含む work root-wide write を生成しない。"""
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    root = make_repo(tmp_path)
+    for name in (".agents", ".cmoc", ".codex", "memo"):
+        (root / name).mkdir()
+    (root / "src").mkdir()
+
+    override_args = build_codex_override_args(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.NO_RULE,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+    )
+
+    assert str(root.resolve()) not in _override_permission_roots(
+        override_args, "write"
+    )
+    for relative in (
+        ".agents/blocked.md",
+        ".cmoc/local/state.json",
+        ".codex/config.toml",
+        ".git/config",
+        "memo/private.md",
+    ):
+        _assert_not_writable(override_args, root / relative)
+    _assert_writable(override_args, root / "src" / "new.py")
 
 
 def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(

@@ -55,6 +55,7 @@ _PERMISSION_PROFILE_WRITE_MODES = frozenset(
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
         FileAccessMode.REPO_WRITE,
+        FileAccessMode.NO_RULE,
     }
 )
 
@@ -210,9 +211,17 @@ def _writable_roots(
         case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.NO_RULE:
-            paths = [root]
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # NO_RULE omits the prompt rule; cmoc and Codex-reserved trees stay
+            # blocked in the argv permission profile.
+            paths = _top_level_writable_roots(mode, root)
         case _:
             paths = []
+    if allow_oracle_conflict_writes:
+        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # Conflict resolution exposes only explicit targets before launch.
+        paths = []
     result: list[Path] = []
     seen: set[Path] = set()
     for path in paths:

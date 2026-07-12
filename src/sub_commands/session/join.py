@@ -1,4 +1,3 @@
-import hashlib
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -10,7 +9,6 @@ from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
 from commons.indexing import enable_indexing_preflight
-from commons.runtime_git import status_path_statuses
 from cmoc_runtime import (
     CmocError,
     CommandResult,
@@ -120,7 +118,6 @@ def resolve_session_join_conflict(
             ["git status を確認し、手動解決後に再実行してください。"],
             git(["status", "--short"], root).stdout,
         )
-    before_codex = _changed_path_snapshot(root, git)
     codex_exec(
         replace(
             build_session_join_conflict_resolution_parameter(conflicted_paths),
@@ -137,7 +134,6 @@ def resolve_session_join_conflict(
         extra_writable_paths=conflicted_paths,
         allow_oracle_conflict_writes=True,
     )
-    _reject_non_conflict_changes(root, git, before_codex, conflicted_paths)
     remaining_markers = [
         path
         for path in conflicted_paths
@@ -169,61 +165,8 @@ def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
     return [root / field for field in fields if field]
 
 
-def _reject_non_conflict_changes(
-    root: Path,
-    git: GitRun,
-    before_codex: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]],
-    conflicted_paths: list[Path],
-) -> None:
-    # <work-root>/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py:
-    # REPO_WRITE is needed for oracle conflicts, so this command enforces the
-    # narrower "conflict targets only" boundary after the agent returns.
-    allowed = {_absolute_path(path) for path in conflicted_paths}
-    after_codex = _changed_path_snapshot(root, git)
-    changed = [
-        path
-        for path in before_codex.keys() | after_codex.keys()
-        if _absolute_path(path) not in allowed
-        and before_codex.get(path) != after_codex.get(path)
-    ]
-    if changed:
-        raise CmocError(
-            "conflict 解消以外の差分が残っています。",
-            ["差分を確認し、不要な変更を戻してから手動で merge を完了してください。"],
-            "\n".join(str(_absolute_path(path)) for path in changed),
-        )
-
-
-def _changed_path_snapshot(
-    root: Path, git: GitRun
-) -> dict[Path, tuple[str, tuple[str, int, int, str | None] | None]]:
-    snapshot: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]] = {}
-    for status, path in status_path_statuses(
-        root, untracked_all=True, include_rename_sources=True, git=git
-    ):
-        absolute = _absolute_path(path)
-        snapshot[absolute] = (status, _path_fingerprint(absolute))
-    return snapshot
-
-
 def _absolute_path(path: Path) -> Path:
     return path if path.is_absolute() else path.absolute()
-
-
-def _path_fingerprint(path: Path) -> tuple[str, int, int, str | None] | None:
-    try:
-        stat = path.lstat()
-    except FileNotFoundError:
-        return None
-    if path.is_symlink():
-        digest = hashlib.sha256(path.readlink().as_posix().encode()).hexdigest()
-        return ("symlink", stat.st_mode, stat.st_size, digest)
-    if path.is_dir():
-        return ("dir", stat.st_mode, stat.st_size, None)
-    digest: str | None = None
-    if path.is_file():
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    return ("file", stat.st_mode, stat.st_size, digest)
 
 
 def _has_conflict_marker_block(text: str) -> bool:

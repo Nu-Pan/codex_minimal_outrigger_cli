@@ -19,7 +19,6 @@ from config.cmoc_config import CmocConfig
 from _codex_support import (
     _assert_writable,
     _override_permission_roots,
-    _standard_realization_override_roots,
 )
 
 
@@ -42,8 +41,7 @@ def test_codex_overrides_uses_file_roots_for_session_join_conflict_resolution(
     )
 
     assert _override_permission_roots(override_args, "write") == {
-        *_standard_realization_override_roots(root),
-        str((root / "oracle").resolve()),
+        str(target.resolve()),
     }
     _assert_writable(override_args, target)
 
@@ -107,9 +105,7 @@ def test_codex_overrides_allows_root_readme_session_join_conflict_target(
     )
 
     assert _override_permission_roots(override_args, "write") == {
-        *_standard_realization_override_roots(root),
         str((root / "README.md").resolve()),
-        str((root / "oracle").resolve()),
     }
     _assert_writable(override_args, target)
 
