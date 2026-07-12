@@ -485,22 +485,24 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- `doctor` サブコマンドの振る舞いを、CLI 経由の統合テストとして固定する。git 状態の修復、`.cmoc/config.json` の生成・同期、linked worktree での対象切り替え、managed ollama の準備、既存の staged 変更を壊さないことを確認する観点をまとめている。
+- `doctor` CLI の振る舞いを検証するテスト群の入口。`.cmoc` 設定の生成・同期、`doctor`/`dector` 実行、Git 状態の修復、`ollama` の共有管理、linked worktree での振る舞い確認を読むときにここから入る。
+- 個別ケースは、Git の追跡/未追跡/ステージ済み状態、`.gitignore` の修復、`.agents/.gitkeep` の維持、`.cmoc/local` の扱い、既存のステージ済み差分を壊さないこと、`cmoc` 管理の ollama サービス生成をそれぞれ確認する意図でまとまっている。
 
 ## Read this when
-- `doctor` のエンドツーエンド挙動を変えるとき。
-- .gitignore`, `.agents/.gitkeep`, `.cmoc/config.json`, `.cmoc/local` の扱いを変えるとき。
-- managed ollama のセットアップや再利用条件を変えるとき。
-- linked worktree で `doctor` を実行したときの対象選択や修復範囲を変えるとき。
-- staged 変更・rename・untracked/unstaged 差分の保持方針を変えるとき。
+- `doctor` コマンドの統合テストを追加・修正したいとき。
+- `.cmoc/config.json` の生成やデフォルト同期、既存値を壊さない更新方針を確認したいとき。
+- Git worktree や linked worktree で `doctor` がどのルートを対象にするかを確認したいとき。
+- `.cmoc/local` の ignore/track 方針、`.agents/.gitkeep` の生成、既存ステージ済み変更の保護を確認したいとき。
+- `cmoc` 管理の ollama サービスとモデル取得のテスト観点を確認したいとき。
 
 ## Do not read this when
-- `doctor` の内部 helper の分割や実装手順だけを変えるときは、まず実装側を読む。
-- `doctor` 以外の CLI サブコマンドの振る舞いを変えるときは、各サブコマンドのテストを読む。
-- config schema や managed ollama の正本仕様を確認したいだけなら、対応する oracle 側の文書を読む。
+- `doctor` の実装本体やサブコマンド配線を追いたいだけなら、テストではなく対応する実装側を読むべき。
+- `_cli_support` や `_git_support`、`_ollama_support` の共通ヘルパーの詳細を知りたいときは、このファイルではなくそれぞれのヘルパー定義を読むべき。
+- `doctor` 以外のサブコマンドの仕様を知りたいとき。
+- Git 以外の永続化や設定全般の仕様を広く確認したいだけなら、この個別テストではなく対象機能の正本仕様断片を読むべき。
 
 ## hash
-- 67fcb3c7f90ea764571ab2bdcecf209a3794371b546ac6999d4875f05f61e925
+- 91aafa52143e5bc8c88ebb93eb8fbe19c4db4ffc30230ab28695d95450252fd2
 
 # `test_indexing_cli.py`
 
@@ -654,21 +656,24 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の実行前後で発生する error 表示、ログ出力、preflight、shell completion の境界をまとめて検証するテスト群の入口。`runtime_cli` と `runtime_logging` の実行制御、`CmocError` の整形、`cmoc` 起動時の副作用有無を確認したいときに読む。
+- CLI の error 表示、サブコマンドログ、preflight、shell completion の境界を検証するテスト群。`CmocError` の整形、`typer`/`click` の失敗時の stdout/stderr 挙動、`work root` 判定、`ensure_cmoc_ignored` の .gitignore 追記、`doctor` 前処理の対象 root を固定したいときに読む。
+- `cmoc_runtime` と `commons.runtime_cli` の公開挙動を、実行時の副作用とログ出力まで含めて確認する入口。内部 helper の分解や実装順ではなく、利用者に見えるエラー形式・適用範囲・副作用の有無を確認する用途に向く。
 
 ## Read this when
-- CLI の失敗が stdout/stderr のどちらに出るべきかを確認したいとき。
-- サブコマンドログの生成条件や、pre-log check / doctor preprocess の実行順を確認したいとき。
-- work root 判定、detached HEAD の拒否、completion probe で副作用を起こさない条件を確認したいとき。
-- `CmocError` の Markdown report 形式や duration 表示の仕様を確認したいとき。
+- CLI の失敗時に stdout と stderr のどちらへ何を出すべきかを確認したいとき。
+- `detached HEAD`、`work root` 以外の cwd、引数解析失敗、`doctor` preflight 失敗などの拒否条件を確認したいとき。
+- サブコマンド実行で `.cmoc/local/log/sub_command` に残る記録や、その生成条件を確認したいとき。
+- completion probe が preflight や初期化副作用を起こさないことを確認したいとき。
+- `.gitignore` への `/.cmoc/local/` 追加方針や、`doctor` 前処理が current worktree を対象にすることを確認したいとき。
 
 ## Do not read this when
-- サブコマンド本体の業務ロジックを確認したいときは、各サブコマンド側のテストや実装を読む。
-- git ignore の生成規則だけを追いたいときは、ignore 専用の実装・テストを読む。
-- CLI 以外のログ形式や一般的なファイル管理の仕様を確認したいときは、別の対象を読む。
+- サブコマンド個別の業務ロジックや入出力仕様を確認したいとき。
+- ログファイル内部の詳細な JSON スキーマや永続化実装を読みたいとき。
+- `INDEX.md` 生成ルールやルーティング方針そのものを確認したいとき。
+- completion 以外の CLI 構成やコマンド一覧だけを知りたいとき。
 
 ## hash
-- 8d0de04a29fc2b06f1251abe217641042e438bb3a42d22b8f77ff91ced6c2d1b
+- 02817535788b403945bd1f112aa1d600d97aea61cdfdd66d653d16d916d4213e
 
 # `test_runtime_codex_conflicts.py`
 

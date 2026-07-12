@@ -284,24 +284,20 @@
 # `runtime_git.py`
 
 ## Summary
-- git subprocess 実行を利用者向けエラーへ変換する境界と、branch・HEAD・status・worktree・ignore 判定を扱う runtime helper 群。
-- cmoc 管理 branch namespace、run/apply 用 linked worktree の作成・削除安全確認、`.cmoc/local` の git ignore 初期化・検査、oracle file 判定を担う。
+- Git 呼び出しを 1 箇所に集約し、利用者向けエラー整形、branch/worktree 操作、`.cmoc/local` の ignore 判定、oracle/realization 判定を扱う実行時基盤。Git の失敗を cmoc の例外へ揃える処理や、worktree・ignore・oracle file 判定を変更する場合に読む。
 
 ## Read this when
-- git コマンド呼び出しの失敗時挙動、戻り値、利用者向けエラー化を確認・変更したいとき。
-- 未コミット差分の検査、porcelain status の path 取得、rename/copy path の扱いを確認したいとき。
-- cmoc が管理する branch 名、run/apply 用 worktree path の対応、worktree 作成・削除の安全条件を確認したいとき。
-- `.cmoc/local` を `.gitignore` または git exclude で追跡対象外にする処理や、その初期化済み検査を確認したいとき。
-- git ignore 判定、tracked file と ignore pattern の関係、oracle file path 判定を扱う実装を確認したいとき。
+- git コマンドの実行方法や失敗時のエラー整形を変えたいとき
+- managed branch、managed worktree、`.cmoc/local` の扱いを変えたいとき
+- oracle file / realization file の判定条件や、git ignore 判定の使い方を確認したいとき
 
 ## Do not read this when
-- path keyword の概念定義そのものを確認したいだけなら、oracle 側の path model を読む。
-- CLI サブコマンドの入出力仕様や利用者向け workflow を確認したいだけなら、該当する app spec を読む。
-- runtime path のディレクトリ構成や `.cmoc/local` 配下の具体的な path 組み立てだけを確認したいなら、runtime paths 側を読む。
-- CommandResult や CmocError の型・表示形式だけを確認したいなら、それぞれの runtime result/error 定義を読む。
+- 個別サブコマンドの入出力や CLI 文言だけを変えるとき
+- branch 名や worktree パスの生成規則そのものを決めたいときは、呼び出し側のサブコマンド実装を先に読む
+- git 以外の共通 runtime 処理を探しているとき
 
 ## hash
-- bfcce2aa66615b98cf1af9b07e665542bf19bea772bd5200bddac41b3ad4b98a
+- d1a2a3fa00d07e6d2ff91fbba0fd420aec79924a21277217ff32fe0b42ff1ac8
 
 # `runtime_logging.py`
 

@@ -115,36 +115,36 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation と公開入口をまとめる上位ディレクトリ。CLI 入口、互換 shim、共通補助、設定まわりの実体を、個別 module に進む前に切り分けて読むための場所として使う。
-- 互換 import の受け止め先と、`main.py` から各 subcommand 実装へどう委譲するかを確認したいときに読む。個別の処理詳細や API 本体を探す入口ではない。
+- `src` 配下の realization implementation を束ねる上位ディレクトリ。CLI 入口から委譲される実体実装や、互換 shim ではない本体モジュールへ進む前に、この階層で責務の切り分けと読む先を選ぶために使う。
+- `acp`・`basic`・`commons`・`config`・`sub_commands` など、公開入口と実体実装が並ぶ領域へのルーティングをまとめる。個別機能の詳細仕様ではなく、どの下位実装を読むべきかを判断するための入口として読む。
 
 ## Read this when
-- `src` 配下で、どの実装ファイルが CLI 入口・互換 shim・共通補助・設定の担当か切り分けたいとき。
-- `main.py` の CLI 配線、`oracle.py` の package shim、`basic`/`config`/`commons`/`sub_commands` の互換や入口の役割を確認したいとき。
-- realization implementation と oracle 側の責務境界を見て、個別 module に進む前のルーティングを決めたいとき。
+- `src` 配下で、どの実体モジュールへ進めばよいかをまず切り分けたいとき。
+- CLI 入口から委譲される本体実装、共有 helper、互換 shim のどれを読むべきか判断したいとき。
+- 上位の公開面と下位の個別実装の境界を見てから、目的に合う担当モジュールへ進みたいとき。
 
 ## Do not read this when
-- 個別 command の実行ロジック、git/worktree 操作、レビュー処理、TUI 起動の詳細を知りたいとき。
-- 設定値の意味、検証、本体の API 仕様など、各担当 module の中身そのものを調べたいとき。
-- 互換入口の有無だけを確認済みで、詳細な配線や責務分担が不要なとき。
+- 個別のコマンド処理、path 変換、設定、状態管理、レビュー制御などの詳細実装を知りたいとき。その場合は対応する下位モジュールを直接読む。
+- 互換入口や公開再公開の有無だけを確認済みで、追加のルーティング判断が不要なとき。
+- 新しい機能や API の仕様本文を探しているとき。その場合は該当する正本仕様断片や実装本体へ進む。
 
 ## hash
-- b9e64076e91e0cdc68e7c42dbbd995b17b16aa9290186c656dc36119b5ba091d
+- c2661c3ad0d72632dfd5ff56bbc7d200b7ab7c54b601ecc63102a57a1ffcff16
 
 # `test`
 
 ## Summary
-- `test` 配下の共通テスト補助をまとめた案内で、`acp_builder` の正本 schema 参照や `CliRunner`、git / codex / ollama / command stub など、各種テスト支援の入口を選ぶために読む。
+- `test` 配下の回帰テストと共通補助をまとめる入口。CLI、runtime、prompt builder、ACP builder、session/apply/review/indexing、`doctor`、`codex` 実行系、StructDoc、基盤ヘルパーを、対象ごとに必要なときだけ辿るために読む。
 
 ## Read this when
-- `test` 配下の共通補助の責務や使い分けを確認したいとき。
-- 特定のテスト補助が、`acp_builder` の正本 schema 参照、CLI 実行、git 初期化、fake command 生成、codex / ollama 実行補助のどれを担うか見分けたいとき。
-- 個別テスト本文ではなく、まずどの支援ファイルを読むべきかを判断したいとき。
+- 個別サブコマンドや runtime の外部挙動を、対応するテストから確認したいとき。
+- 共通の test helper がどの責務を持つか、どのテスト群で使われるかを確認したいとき。
+- `test` 配下のどの回帰テストを入口にすべきかを、変更対象から絞り込みたいとき。
 
 ## Do not read this when
-- 個別の CLI 挙動や各サブコマンドの仕様そのものを確認したいとき。
-- テスト補助ではなく、`oracle` 側の正本仕様断片を確認したいとき。
-- この案内ではなく、対象テストや実装の本文を直接読むべきとき。
+- 正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
+- CLI や runtime の実装詳細だけを追いたいときは、対応する `src` 側を読む。
+- `INDEX.md` のルーティング方針そのものを確認したいときは、この配下ではなく上位の案内を読む。
 
 ## hash
-- 6c034b756091c3cb87bba170e022640dba7fb1e4512dcad58402e3e2e186e90b
+- e6eee8cd5e85ec4193c3e1c2fac7770cb23798b0c57ddc492b4173c407dd69a5
