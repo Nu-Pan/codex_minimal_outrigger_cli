@@ -134,17 +134,20 @@
 # `test`
 
 ## Summary
-- `test` 配下には、各 realization 実装の外部挙動を固定する回帰テストと、それを支える共通補助が置かれている。ここは CLI・runtime・prompt/render・builder などの境界挙動を確認したいときの入口で、個別実装の内部分割ではなく、現行仕様上意味のある観測点を探すために読む。
+- `test` 配下の回帰テスト群をまとめて読む入口。CLI の外部挙動、runtime 境界、prompt/rendering、ACP builder と正本 schema の整合性を確認する必要があるときに進む。
+- 個別のテストファイルは、それぞれのサブコマンドや runtime 領域ごとの契約を固定する役割を持つ。似た責務の確認を横断したいときは、この階層から対象のテストへ進む。
+- 共通支援ファイルは、複数テストで重複する path 解決、git/worktree、CLI 実行、fake コマンド生成、Ollama/doctor 系の隔離環境構築を集約する入口になる。
 
 ## Read this when
-- CLI の成功・失敗・副作用を外部挙動ベースで確認したいとき。
-- runtime や state、file access、worktree、prompt/render の境界契約を回帰テストで追いたいとき。
-- 複数テストで共通化された補助関数や fake コマンドの役割を確認したいとき。
+- CLI の外部挙動や終了条件を回帰確認したいとき。
+- runtime の file access、state、Codex 実行、Ollama、worktree 境界をまとめて追いたいとき。
+- prompt parts や StructDoc のレンダリング、ACP builder の parameter / schema の整合性を確認したいとき。
+- 複数テストで共通化された補助関数の責務を確認したいとき。
 
 ## Do not read this when
-- 個別コマンドや runtime の実装手順を追いたいときは、対応する realization code 側を直接読む。
+- 個別サブコマンドの実装手順だけを追いたいときは、対応する realization code 側を読む。
 - 正本仕様そのものを確認したいだけなら、対応する oracle 側の本文を読む。
-- この配下の共通補助ではなく、単一テストの期待値だけを確認したいときは、該当するテスト本文を直接読む。
+- 単一の helper の細部だけが必要なら、この階層全体ではなく該当 helper ファイルを直接読む。
 
 ## hash
-- 2659b51e681ae20098adcabd765c7c4f33c350a944db7d9d376c5f8bcbfce5d8
+- a39b38dbbe3c60769136b9ed124972375799345e9c25cac9e0dc923a45a6cf58

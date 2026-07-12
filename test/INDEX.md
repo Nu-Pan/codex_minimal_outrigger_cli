@@ -338,38 +338,40 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- `run_codex_exec` と `prepare_codex_override_args` の実行経路を、実 CLI 起動・権限差し替え・managed Ollama 連携まで含めて検証する統合テスト群。Codex 実行時にどの引数や設定が注入されるべきか、実ファイル生成や service 起動の副作用まで確認したいときに読む。
+- `run_codex_exec` と `prepare_codex_override_args` の統合テスト群。real Codex CLI、cmoc managed ollama、権限オーバーライド、生成物の書き込み境界をまたいだ挙動を確認する。
+- 実装の内部分解や helper の細部より、Codex 起動時にどの引数・環境・出力・永続副作用を維持すべきかを確認したいときに読む。
 
 ## Read this when
-- Codex 実行ラッパーの挙動を変える変更をするとき。
-- 権限設定、`CODEX_HOME`、`PATH`、managed Ollama への切り替えに関わる挙動を確認したいとき。
-- 実 CLI を使う経路で、出力スキーマ、ログ、生成ファイル、副作用のどこを固定したいか判断したいとき。
+- `run_codex_exec` の起動引数、出力、ログ、スキーマ連携、または model/provider 切り替えを確認したい。
+- real Codex CLI を使った統合経路が cmoc managed ollama を通るか、必要な前処理やサービス起動が入るかを確認したい。
+- Codex 起動時の filesystem 権限や `CODEX_HOME` の扱い、`--profile` や built-in Ollama 系フラグを出さない条件を確認したい。
 
 ## Do not read this when
-- 純粋な引数組み立てだけを見たいときは、`prepare_codex_override_args` 側の本体を先に読む。
-- Codex 実行基盤そのものの実装詳細が必要なときは、`run_codex_exec` の実装側を直接読む。
-- managed Ollama のサービス仕様そのものを確認したいだけなら、関連する仕様ドキュメントを先に読む。
+- `AgentCallParameter` や `CmocConfig` の型定義そのものを知りたい。
+- Codex の個別引数や profile 生成ロジックの単体仕様だけを追いたい。
+- CLI 全体の入出力や別サブコマンドの挙動を見たい場合は、このテストではなく該当する各コマンドのテストを読む。
 
 ## hash
-- 22f595bbe0e4f95f01b0f0816232e834f2f269b2f4c95023ac2a4ccafc4fd681
+- a7a38007f03bb36411410d955d63f968fb0fec28fbe32869d99b228416719c9a
 
 # `test_codex_runtime_home.py`
 
 ## Summary
-- Codex CLI 実行前の `CODEX_HOME` 解決と preflight 検証を扱うテスト群。未設定時の既定値、相対値の扱い、`auth.json` を含む失敗条件を確認したいときに読む。
-- Codex 呼び出し前に失敗すべき境界だけを固定する。`CODEX_HOME` の環境変数をそのまま渡す条件と、実行時に解決した home を使う条件の両方を確認する。
+- Codex 実行ラッパーが `CODEX_HOME` をどう解決し、実行前にどの環境不備で失敗するかを確認するテスト群。既定の home 探索、相対パスの扱い、`auth.json` 必須条件、そして失敗が Codex CLI 起動前に起きることをまとめて検証する。
+- `run_codex_exec` の home まわりの外部挙動を変えたときはここを読む。CLI 実行ログや subprocess の起動有無まで含めて、環境検証の境界を確認したい場合の入口になる。
 
 ## Read this when
-- Codex home の既定値解決や、設定済み `CODEX_HOME` をどう扱うかを確認したいとき。
-- `CODEX_HOME` が存在しない、ディレクトリでない、`auth.json` がない場合の事前失敗条件を確認したいとき。
-- Codex 実行前に、環境変数値を保持したまま実行時解決だけ行う挙動を確認したいとき。
+- `run_codex_exec` が使う Codex home の決め方を変えるとき
+- `CODEX_HOME` が未設定・相対パス・存在しない・ディレクトリでない場合の失敗仕様を確認したいとき
+- Codex CLI を呼ぶ前に落とすべき前提条件を追加・変更するとき
 
 ## Do not read this when
-- Codex exec の再試行、quota 待機、Structured Output 検証を追いたいときは、exec 実行制御のテストへ進む。
-- 一般的なエラーレポート整形や CLI 全体の例外処理を追いたいときは、別の error handling 系を読む。
+- Codex home の探索や妥当性判定の実装そのものを追いたいときは、`commons.runtime_codex` 側を直接読む
+- home 以外の `run_codex_exec` の入出力変換や実行制御を見たいときは、このテスト群ではなく該当する実装・別テストを読む
+- CLI 本体の挙動や `auth.json` の生成処理を確認したいときは、このファイルではなく Codex 側の実装を読む
 
 ## hash
-- be07e773cef9149fff068e12507ace8b0c661f5706ee53baea1082f7ebb14a6d
+- c9a20de9c8172da28721fd715784c7c730de2ca80fbc9570c61c9a0b85b0024c
 
 # `test_codex_runtime_paths.py`
 
