@@ -21,6 +21,7 @@ def _spy_codex_subprocess(
     calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
 
     def record_call(*args: object, **kwargs: object) -> None:
+        """Record a Codex subprocess invocation without starting it."""
         calls.append((args, kwargs))
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", record_call)
@@ -30,6 +31,7 @@ def _spy_codex_subprocess(
 def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Uses the default home and passes it to the Codex subprocess."""
     root = make_repo(tmp_path)
     home = tmp_path / "home"
     codex_home = home / ".codex"
@@ -75,6 +77,7 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
 def test_run_codex_exec_preserves_configured_codex_home_env_value(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Preserves a configured home value and records its resolved path."""
     root = make_repo(tmp_path)
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
@@ -120,6 +123,7 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
 def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Resolves a relative home from the Codex subprocess working directory."""
     root = make_repo(tmp_path)
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
@@ -170,6 +174,7 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
 def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Rejects a missing home before starting the Codex subprocess."""
     root = make_repo(tmp_path)
     codex_calls = _spy_codex_subprocess(monkeypatch)
     missing_home = tmp_path / "missing_codex_home"
@@ -200,6 +205,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
 def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Rejects a file-valued home before starting the Codex subprocess."""
     root = make_repo(tmp_path)
     codex_calls = _spy_codex_subprocess(monkeypatch)
     codex_home = tmp_path / "codex_home_file"
@@ -231,6 +237,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
 def test_run_codex_exec_fails_before_codex_when_auth_json_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Rejects a home without auth.json before starting Codex."""
     root = make_repo(tmp_path)
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
