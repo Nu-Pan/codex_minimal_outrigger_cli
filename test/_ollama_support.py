@@ -1,12 +1,12 @@
+import hashlib
 import os
-import subprocess
-import tempfile
+import signal
 import textwrap
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-import pytest
 from click.testing import Result
 
 from _cli_support import runner
@@ -18,8 +18,6 @@ from _command_support import write_python_executable
 
 
 TEST_SLM_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
-_FAKE_OLLAMA_HOME = Path(tempfile.gettempdir()) / f"cmoc-test-ollama-v2-{os.getuid()}"
-FAKE_OLLAMA_HOST = "127.0.0.1:11436"
 
 
 def run_doctor(root: Path) -> Result:
@@ -27,7 +25,7 @@ def run_doctor(root: Path) -> Result:
     from main import app
 
     env = fake_managed_ollama_env(root)
-    with fake_managed_ollama_runtime():
+    with fake_managed_ollama_runtime(root):
         result = runner.invoke(app, ["doctor"], env=env, catch_exceptions=False)
     assert result.exit_code == 0
     return result
@@ -37,13 +35,30 @@ def fake_managed_ollama_env(root: Path) -> dict[str, str]:
     """Prepare fake commands for deterministic doctor and provider tests."""
     env = fake_managed_systemctl_env(root)
     home = Path(env["HOME"])
-    _write_fake_ollama(home / ".cmoc" / "ollama" / "bin" / "ollama")
+    _write_fake_ollama(
+        home / ".cmoc" / "ollama" / "bin" / "ollama",
+        fake_managed_ollama_host(root),
+    )
     return env
 
 
-def fake_managed_systemctl_env(_root: Path) -> dict[str, str]:
+def fake_managed_ollama_home(root: Path) -> Path:
+    """Return the fake HOME isolated to one pytest repository."""
+    resolved = root.resolve()
+    return resolved.parent / f".cmoc-test-ollama-{resolved.name}"
+
+
+def fake_managed_ollama_host(root: Path) -> str:
+    """Return a deterministic endpoint isolated to one pytest repository."""
+    # A detached fake service must not make the next test depend on its listener.
+    digest = hashlib.sha256(str(root.resolve()).encode()).digest()
+    port = 20_000 + int.from_bytes(digest[:2], "big") % 20_000
+    return f"127.0.0.1:{port}"
+
+
+def fake_managed_systemctl_env(root: Path) -> dict[str, str]:
     """Use a fake HOME and user service, separate from production Ollama."""
-    home = _FAKE_OLLAMA_HOME
+    home = fake_managed_ollama_home(root)
     fake_bin = home / "bin"
     _write_fake_systemctl(fake_bin / "systemctl", home)
     return {
@@ -53,21 +68,22 @@ def fake_managed_systemctl_env(_root: Path) -> dict[str, str]:
 
 
 @contextmanager
-def fake_managed_ollama_runtime() -> Iterator[None]:
+def fake_managed_ollama_runtime(root: Path) -> Iterator[None]:
     """Point runtime Ollama checks at the deterministic test-only endpoint."""
     import commons.runtime_ollama as ollama_module
 
     previous_host = ollama_module._OLLAMA_HOST
     previous_listener = ollama_module._is_ollama_listen_socket
+    host = fake_managed_ollama_host(root)
 
     def fake_listener(local_address: str, state: str) -> bool:
         if state != "0A":
             return False
         host_hex, port_hex = local_address.rsplit(":", 1)
-        fake_port = int(FAKE_OLLAMA_HOST.rsplit(":", 1)[1])
+        fake_port = int(host.rsplit(":", 1)[1])
         return host_hex == "0100007F" and int(port_hex, 16) == fake_port
 
-    ollama_module._OLLAMA_HOST = FAKE_OLLAMA_HOST
+    ollama_module._OLLAMA_HOST = host
     ollama_module._is_ollama_listen_socket = fake_listener
 
     try:
@@ -75,9 +91,36 @@ def fake_managed_ollama_runtime() -> Iterator[None]:
     finally:
         ollama_module._OLLAMA_HOST = previous_host
         ollama_module._is_ollama_listen_socket = previous_listener
+        _stop_fake_ollama(root)
 
 
-def _write_fake_ollama(path: Path) -> None:
+def _stop_fake_ollama(root: Path) -> None:
+    pid_path = fake_managed_ollama_home(root) / ".cmoc" / "ollama" / "service.pid"
+    try:
+        process_id = int(pid_path.read_text())
+    except (OSError, ValueError):
+        pid_path.unlink(missing_ok=True)
+        return
+    executable = fake_managed_ollama_home(root) / ".cmoc" / "ollama" / "bin" / "ollama"
+    try:
+        command_line = Path(f"/proc/{process_id}/cmdline").read_bytes()
+    except OSError:
+        pid_path.unlink(missing_ok=True)
+        return
+    # Do not signal a reused PID if a stale service file points elsewhere.
+    if str(executable).encode() in command_line:
+        try:
+            os.kill(process_id, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        for _ in range(20):
+            if not Path(f"/proc/{process_id}").exists():
+                break
+            time.sleep(0.01)
+    pid_path.unlink(missing_ok=True)
+
+
+def _write_fake_ollama(path: Path, host: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         return
@@ -94,7 +137,7 @@ def _write_fake_ollama(path: Path) -> None:
                 print("ollama fake")
                 raise SystemExit(0)
             if sys.argv[1:2] in [["show"], ["pull"]]:
-                assert os.environ["OLLAMA_HOST"] == "{FAKE_OLLAMA_HOST}"
+                assert os.environ["OLLAMA_HOST"] == "{host}"
                 assert os.environ["OLLAMA_MODELS"].endswith("/.cmoc/ollama/models")
                 raise SystemExit(0)
             if sys.argv[1:] != ["serve"]:

@@ -12,9 +12,9 @@ from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from main import app
 from _ollama_support import (
-    FAKE_OLLAMA_HOST,
     TEST_SLM_MODEL,
     fake_managed_ollama_env,
+    fake_managed_ollama_host,
     fake_managed_ollama_runtime,
     run_doctor,
 )
@@ -50,7 +50,7 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
         "",
         "[Service]",
         f"ExecStart={home}/.cmoc/ollama/bin/ollama serve",
-        f"Environment=OLLAMA_HOST={FAKE_OLLAMA_HOST}",
+        f"Environment=OLLAMA_HOST={fake_managed_ollama_host(root)}",
         "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
         "Restart=on-failure",
         "RestartSec=2s",
@@ -178,7 +178,7 @@ def test_dector_alias_runs_doctor(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
-    with fake_managed_ollama_runtime():
+    with fake_managed_ollama_runtime(root):
         result = runner.invoke(
             app,
             ["dector"],
@@ -198,7 +198,7 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
 
-    with fake_managed_ollama_runtime():
+    with fake_managed_ollama_runtime(linked):
         result = runner.invoke(
             app,
             ["doctor"],
