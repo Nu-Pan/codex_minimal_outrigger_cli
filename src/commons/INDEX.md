@@ -74,21 +74,21 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンドの共通実行ライフサイクルを扱う実装。work root 検査、サブコマンドログの開始・完了記録、doctor preprocess、標準の進捗・完了サマリー、終了コード変換、例外時のエラー表示とログ記録をまとめて管理する。
-- 標準サマリー以外の stdout 契約を持つサブコマンドが、終了コードと追加 stdout を返すための小さな結果型も定義する。
+- CLI サブコマンドの共通実行ライフサイクルをまとめる。work root 検査、doctor preprocess、サブコマンドログ、開始・完了の標準出力、戻り値の終了コード化、例外時の標準エラー表示を一箇所で統制する。
+- 個別のサブコマンド実装ではなく、複数サブコマンドに共通する実行前後の振る舞いを変更・確認したいときに読む。work root 実行前提の検査や、標準サマリーと例外表示の境界を扱うときの入口でもある。
 
 ## Read this when
-- CLI サブコマンド実装を共通 runner に接続する方法、戻り値から終了コードや stdout が決まる経路、例外時の表示先や終了処理を確認したいとき。
-- サブコマンドログ、doctor preprocess、work root 実行前提、開始・実行・完了のコンソール表示、quota 待機時間を含む完了サマリーの挙動を変更または調査するとき。
-- サブコマンド固有の事前検査を、ログ作成後かつ本処理前に実行する流れを確認したいとき。
+- CLI サブコマンドの共通前処理・後処理・例外経路を調整したい。
+- subcommand logger の生成・切替・復帰、または標準出力サマリーの出し方を確認したい。
+- work root 前提の検査や doctor preprocess の実行条件を見たい。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理そのもの、引数定義、または command ごとの Typer 登録だけを確認したいとき。
-- runtime path の検出規則、ログファイルの具体的な保存形式、doctor preprocess の修復内容、エラー文面の構成だけを調べたいときは、それぞれの責務を持つ実装へ直接進む。
-- 正本仕様断片の記述内容そのものを確認したいときは、対応する oracle doc を読む。
+- 個別サブコマンド固有の業務処理だけを変えたい。
+- エラー文言そのものや各機能の詳細な仕様を確認したい。
+- ログ保存先や runtime state の個別実装だけを追いたい。
 
 ## hash
-- 6349ae3b90ca5082d2f1c9c251aab80cf42f80ff7a6dee3b471494a1bf705a73
+- 1a8d0cb05364b8e4b318cc3b3355a01196b9b3730e9229fb959cfe18d634fa86
 
 # `runtime_codex.py`
 
@@ -243,21 +243,21 @@
 # `runtime_doctor.py`
 
 ## Summary
-- `cmoc doctor preprocess` の共通修復処理をまとめる。Git の作業ツリー修復、`.agents` の追跡補助、ローカル SLM 起動確認、修復差分の commit までを一連で扱う入口。
-- 通常の Git 操作や Ollama 制御の個別処理を読む場所ではなく、doctor 実行時に「何を修復し、どこまで commit するか」を確認したいときに読む。
+- `doctor preprocess` の共通修復処理をまとめる実装入口。`.cmoc/local` の追跡除外、`.agents` の追跡固定、cmoc managed ollama の可用性保証、修復差分の commit を一連で扱う。
+- current worktree と main worktree の両方を修復対象に含める分岐、git index を HEAD 起点で合成し直す処理、.gitignore と `.agents/.gitkeep` の修復ステージングはこの file 側を見る。
 
 ## Read this when
-- doctor 実行前に入る共通修復の範囲を確認したい。
-- 修復対象に `.gitignore`、`.agents`、`.cmoc/local` が含まれる理由や、修復差分だけを commit する流れを追いたい。
-- 一時 index を使って user の staged 変更と doctor の修復 commit を分離する意図を確認したい。
+- `doctor preprocess` の修復順序や、current worktree と linked main worktree の両方を扱う理由を確認したい。
+- .cmoc/local の ignore 修復、`.agents` の tracked 化、修復後 commit の条件を実装・修正したい。
+- HEAD 起点の一時 index を使って repair commit を作る制御や、restore 用 tree の組み立て方を追いたい。
 
 ## Do not read this when
-- 通常の Git 操作や汎用的な error handling の実装だけを追いたい。
-- Ollama 起動確認の詳細だけを知りたいなら、より直接の実装を読むべきである。
-- doctor 前処理以外のサブコマンドや一般的な CLI 初期化の入口を探している。
+- `doctor preprocess` の詳細な正本仕様断片だけを確認したいときは `<work-root>/oracle/doc/app_spec/doctor_preprocess.md` を読む。
+- cmoc managed ollama の準備・起動・検証の詳細だけを知りたいときは、その正本仕様断片を直接読む。
+- サブコマンド個別の事前条件、本命処理、一般的な run 隔離やログ仕様を追いたいときは別の仕様を読む。
 
 ## hash
-- 582b46929933fcfe8334d576eb38a2c65afd86f14cdc7bf803ae6ea97cd0c900
+- 1a1f99625965f0b7696071c2e8e6a4bd83fe816f84b3644c7d2f0a500eab16da
 
 # `runtime_errors.py`
 
@@ -358,23 +358,19 @@
 # `runtime_preprocess_command.py`
 
 ## Summary
-- doctor preprocess、config 同期、config 差分の git commit、見出し出力をまとめて実行する CLI 前処理サブコマンド用の実行入口。
-- runtime path 解決、doctor 前処理、config 同期、git add/diff/commit を既存 runtime helper 経由で連結し、通常の CLI サブコマンド実行ラッパーに渡す責務を持つ。
+- `cmoc` 系の preprocess コマンド実行をまとめる入口。 doctor 前処理を走らせ、設定同期と必要時のコミットまでを一連で進めるので、`cmoc` の事前整備フローや設定反映の流れを確認したいときに読む。
+- `run_preprocess_command` の呼び出し契約と `_preprocess_body` の順序が重要な対象。コマンド名の渡し方、前処理の実行順、設定同期後にコミットする判断を追いたいときに読む。
 
 ## Read this when
-- preprocess 系コマンドが実行時にどの前処理を行うか確認・変更したいとき。
-- doctor preprocess と config 同期が CLI 実行前後のどこで呼ばれるかを追いたいとき。
-- .cmoc/config.json の同期結果を git commit する条件や commit メッセージを確認・変更したいとき。
-- preprocess コマンドの標準出力に含まれる見出しや repo root 表示を確認・変更したいとき。
+- `cmoc` の preprocess 実行で何が先に行われるか、どこで設定が現在形へ戻されるかを確認したい。
+- doctor 前処理、設定同期、tracked 設定のコミットが一連でどこから起動されるかを追いたい。
 
 ## Do not read this when
-- 個別の doctor preprocess の検査内容を確認したいだけなら、doctor preprocess 側の実装や対応する oracle doc を読む。
-- config の正本定義や同期内容そのものを確認したいだけなら、config 定義・同期処理側を読む。
-- git コマンド実行 helper の共通挙動を確認したいだけなら、runtime git helper 側を読む。
-- repo root や work root の解決規則を確認したいだけなら、runtime path helper 側を読む。
+- `cmoc` の個別 subcommand 本体の振る舞いを知りたいだけなら、各 subcommand の実装を読む。
+- doctor 前処理や設定同期の詳細仕様そのものを知りたいなら、この入口ではなく対応する doctor / config 側の本文を読む。
 
 ## hash
-- 2c59ed090cd67f23df77eceafbf163ec3eb5731d24b159df5ff7cf5717f13411
+- 001da48237818075abfda6bb58a0b8c1e66daa9f23166cf4ee34b4b0196077de
 
 # `runtime_results.py`
 

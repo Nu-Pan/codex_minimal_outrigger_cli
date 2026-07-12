@@ -462,20 +462,22 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- `doctor` と `dector` の CLI 挙動を確認するテスト群。Git 状態の修復、`.cmoc/config.json` の生成・更新、linked worktree での対象選択、共有管理 Ollama の準備とモデル取得をまとめて検証する。
+- `doctor` サブコマンドの振る舞いを、CLI 経由の統合テストとして固定する。git 状態の修復、`.cmoc/config.json` の生成・同期、linked worktree での対象切り替え、managed ollama の準備、既存の staged 変更を壊さないことを確認する観点をまとめている。
 
 ## Read this when
-- `doctor` 系コマンドの外部挙動を変えたとき。
-- Git の修復対象や、`.cmoc/local`・`.agents`・`.gitignore` の扱いを変えたとき。
-- 設定生成・既存値維持・linked worktree の参照元切替・Ollama 準備の流れを確認したいとき。
+- `doctor` のエンドツーエンド挙動を変えるとき。
+- .gitignore`, `.agents/.gitkeep`, `.cmoc/config.json`, `.cmoc/local` の扱いを変えるとき。
+- managed ollama のセットアップや再利用条件を変えるとき。
+- linked worktree で `doctor` を実行したときの対象選択や修復範囲を変えるとき。
+- staged 変更・rename・untracked/unstaged 差分の保持方針を変えるとき。
 
 ## Do not read this when
-- 個別の実装分割や内部 helper の整理だけをしたいときは、対応する実装側を先に読む。
-- Ollama のサービス定義そのものを確認したいときは、このテストではなくサービス仕様の正本を読む。
-- doctor 以外の CLI サブコマンドの挙動を追いたいときは、該当サブコマンドのテストへ進む。
+- `doctor` の内部 helper の分割や実装手順だけを変えるときは、まず実装側を読む。
+- `doctor` 以外の CLI サブコマンドの振る舞いを変えるときは、各サブコマンドのテストを読む。
+- config schema や managed ollama の正本仕様を確認したいだけなら、対応する oracle 側の文書を読む。
 
 ## hash
-- 8cdef31e47a2f2fc89f24ce9f5cd0b9a1977928d8864b8b7b0a9a28c38d9ff38
+- 67fcb3c7f90ea764571ab2bdcecf209a3794371b546ac6999d4875f05f61e925
 
 # `test_indexing_cli.py`
 
