@@ -115,7 +115,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -156,6 +156,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
         "gpt-5.6-luna",
     ]
     assert "--profile" not in record["args"]
+    assert "-p" not in record["args"]
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
@@ -181,6 +182,8 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
+    assert not (codex_home / "config.toml").exists()
+    assert not list(codex_home.glob("*.config.toml"))
     assert result.output_text == "done\n"
 
 
@@ -289,3 +292,20 @@ def test_prepare_local_slm_overrides_run_doctor_when_port_is_missing(
     )
     assert "--profile" not in override_args
     assert not list(codex_home.glob("cmoc_*.config.toml"))
+
+
+# <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+def test_prepare_codex_override_args_does_not_create_codex_home_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
+
+    override_args = prepare_codex_override_args(
+        codex_parameter(), CmocConfig(), root
+    )
+
+    assert "--profile" not in override_args
+    assert "-p" not in override_args
+    assert not (codex_home / "config.toml").exists()
+    assert not list(codex_home.glob("*.config.toml"))
