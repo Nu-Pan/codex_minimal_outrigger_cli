@@ -521,20 +521,22 @@
 # `test_indexing_preflight.py`
 
 ## Summary
-- `commons.runtime_codex_preflight` と `commons.indexing` の連携を検証する回帰テスト群。`run_codex_exec` / `run_codex_tui` の前に index 更新が挟まること、作業対象が root と cwd のどちらに解決されるか、repository lock 待ちの挙動、parameter で preflight を無効化したときのスキップ、file access violation 時に回復用 index 更新へ逸れないことを確認する。
+- `commons.runtime_codex_preflight` と `commons.indexing` の連携を検証するテスト群。Codex 実行前に INDEX 更新 preflight が走ること、TUI/exec 両経路で同じ前提が保たれること、索引更新がリポジトリロックに従って直列化されることを確認する。
 
 ## Read this when
-- codex 実行や TUI 実行の前処理として indexing preflight を入れる・外す・待たせる挙動を変えるとき。
-- root と cwd が別 worktree のときに、どちらへ index 更新をかけるかの境界を確認したいとき。
-- repository lock による排他待ちや、preflight 無効化フラグ、file access violation 後の回復経路に触るとき。
+- Codex 呼び出しの前に index 更新が入るかを確認したいとき。
+- `cwd` が worktree 側にある場合に、root ではなくその worktree を索引更新の起点にする挙動を確認したいとき。
+- 索引更新の排他ロック待ちや、`run_indexing_preflight` の待機順序を検証したいとき。
+- preflight 無効化フラグや、file access violation 時に recovery 用の再 indexing が走らない条件を確認したいとき。
 
 ## Do not read this when
-- index 生成そのものの実装だけを変える場合は、`commons.indexing` 側の本文を先に読む。
-- run_codex_exec / run_codex_tui の通常実行フローだけを変える場合は、より直接の実装ファイルを読む。
-- lock 取得の共通処理や git 作業ツリー生成の詳細を見たいだけなら、このテストファイルではなく対応する支援モジュールを読む。
+- INDEX 生成ロジックそのものの仕様を確認したいときは、`commons.indexing` 側のテストや実装を読む。
+- Codex 入出力パラメータの組み立てを確認したいときは、ACP builder 系のテストを読む。
+- session join や review/apply の個別機能の仕様を確認したいときは、それぞれのサブコマンドや oracle 側の文書を読む。
+- index 更新の実際の entry 生成内容ではなく、呼び出し前後の制御だけを見たいときに読む。
 
 ## hash
-- e471c14f079e7924022b8ffb4a7a18ee48655f53549b253c3dc4d0d610bde671
+- 074c05eda316a1630f6ec80d19eb4f28629daf8ae6c76e7da073b195e6dfa39a
 
 # `test_packaged_import.py`
 
