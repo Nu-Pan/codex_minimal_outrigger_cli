@@ -6,7 +6,12 @@
 """
 
 # std
+import re
 import textwrap
+from xml.sax.saxutils import quoteattr
+
+
+_CMOC_REF_PATTERN = re.compile(r'<cmoc_ref target="([^"]+)"/>')
 
 
 class StructDoc:
@@ -17,19 +22,19 @@ class StructDoc:
     def __init__(
         self,
         title: str,
-        *children: "StructDoc|StructCodeBlock|str",
+        *children: "StructDoc|StructBlock|StructCodeBlock|str",
     ):
         """
         コンストラクタ
         """
         self._title = title
-        self._children: list[StructDoc] | StructCodeBlock | str
+        self._children: list[StructDoc | StructBlock] | StructCodeBlock | str
         if len(children) == 1 and isinstance(children[0], (StructCodeBlock, str)):
             self._children = children[0]
         else:
             self._children = list()
             for c in children:
-                if isinstance(c, StructDoc):
+                if isinstance(c, (StructDoc, StructBlock)):
                     self._children.append(c)
                 else:
                     raise TypeError(
@@ -44,11 +49,37 @@ class StructDoc:
         return self._title
 
     @property
-    def children(self) -> "list[StructDoc] | StructCodeBlock | str":
+    def children(
+        self,
+    ) -> "list[StructDoc | StructBlock] | StructCodeBlock | str":
         """
         子要素を取得する
         """
         return self._children
+
+
+class StructBlock:
+    """
+    `cmoc_block` としてレンダリングする親要素
+    """
+
+    def __init__(self, block_id: str, child: StructDoc):
+        if not isinstance(block_id, str):
+            raise TypeError(f"block_id has unexpected type (type={type(block_id)})")
+        if not block_id:
+            raise ValueError("block_id must not be empty")
+        if not isinstance(child, StructDoc):
+            raise TypeError(f"child has unexpected type (type={type(child)})")
+        self._block_id = block_id
+        self._child = child
+
+    @property
+    def block_id(self) -> str:
+        return self._block_id
+
+    @property
+    def child(self) -> StructDoc:
+        return self._child
 
 
 class StructCodeBlock:
@@ -89,27 +120,42 @@ class StructCodeBlock:
         return self._body
 
 
-def render_as_markdown(struct_doc: StructDoc | list[StructDoc]) -> str:
+def render_as_markdown(
+    struct_doc: StructDoc | StructBlock | list[StructDoc | StructBlock],
+) -> str:
     """
     struct_doc を markdown としてレンダリングする
     """
-    result = ""
-    if isinstance(struct_doc, StructDoc):
-        result += _render_as_markdown(struct_doc)
+    if isinstance(struct_doc, (StructDoc, StructBlock)):
+        roots = [struct_doc]
     elif isinstance(struct_doc, list):
-        for sd in struct_doc:
-            result += "\n"
-            result += _render_as_markdown(sd)
+        roots = struct_doc
+        for root in roots:
+            if not isinstance(root, (StructDoc, StructBlock)):
+                raise TypeError(
+                    f"struct_doc contains unexpected type element (type={type(root)})"
+                )
     else:
         raise TypeError(f"Invalid type of struct_doc (type={type(struct_doc)})")
-    return result
+    _validate_references(roots)
+    return "\n".join(_render_as_markdown(root) for root in roots)
 
 
-def _render_as_markdown(struct_doc: StructDoc, depth: int = 1) -> str:
+def _render_as_markdown(
+    struct_node: StructDoc | StructBlock,
+    depth: int = 1,
+) -> str:
     """
-    struct_doc を markdown としてレンダリングする
+    struct_node を markdown としてレンダリングする
     内部実装
     """
+    if isinstance(struct_node, StructBlock):
+        result = f"<cmoc_block id={quoteattr(struct_node.block_id)}>\n"
+        result += _render_as_markdown(struct_node.child, depth)
+        result += "</cmoc_block>\n"
+        return _collapse_blank_lines(result)
+
+    struct_doc = struct_node
     # 見出しを生成
     result = ""
     result += ("#" * depth) + " " + struct_doc.title + "\n"
@@ -136,6 +182,40 @@ def _render_as_markdown(struct_doc: StructDoc, depth: int = 1) -> str:
     result = _collapse_blank_lines(result)
     # 正常終了
     return result
+
+
+def _validate_references(roots: list[StructDoc | StructBlock]) -> None:
+    """
+    参照先ブロックの欠落と block id の重複をレンダリング直前に検査する。
+
+    根拠: <work-root>/oracle/doc/app_spec/prompt_standard.md
+    """
+    blocks: dict[str, StructBlock] = {}
+    refs: list[str] = []
+
+    def _visit(node: StructDoc | StructBlock) -> None:
+        if isinstance(node, StructBlock):
+            if node.block_id in blocks:
+                raise ValueError(f"Duplicate cmoc_block id (id={node.block_id!r})")
+            blocks[node.block_id] = node
+            _visit(node.child)
+            return
+
+        if isinstance(node.children, list):
+            for child in node.children:
+                _visit(child)
+        elif isinstance(node.children, str):
+            matches = list(_CMOC_REF_PATTERN.finditer(node.children))
+            if node.children.count("<cmoc_ref") != len(matches):
+                raise ValueError("Invalid cmoc_ref syntax")
+            refs.extend(match.group(1) for match in matches)
+
+    for root in roots:
+        _visit(root)
+
+    for target in refs:
+        if target not in blocks:
+            raise ValueError(f"cmoc_ref target is not present (target={target!r})")
 
 
 def _collapse_blank_lines(text: str) -> str:
