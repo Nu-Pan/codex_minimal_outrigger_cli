@@ -20,21 +20,21 @@
 # `change_summary.py`
 
 ## Summary
-- `cmoc apply fork` の作業レポート向けに、git diff そのものを入力として人間向け変更要約を生成する agent call parameter の正本仕様断片。
-- 変更要約担当 agent の role、summary、goal、readonly file access、差分埋め込み、Structured Output schema 指定、使用 model class と reasoning effort を定める。
+- `cmoc apply fork` の変更要約生成を組み立てる正本。差分テキストを人間向けの要約入力に変換し、変更レポート用の AI 呼び出しパラメータを返す。
+- 同じ `apply fork` 配下でも、所見の列挙や所見への対応ではなく、変更内容の要約を作りたいときに読む。
 
 ## Read this when
-- `cmoc apply fork` が作業レポート用の変更要約をどの prompt・agent call parameter で生成するかを確認する。
-- 変更要約生成に渡す差分入力の扱い、特に git diff 出力を解析・整形せず prompt に含める方針を確認する。
-- `cmoc apply fork` の変更要約生成で使う file access mode、model class、reasoning effort、出力 schema 参照の正本を確認する。
+- `cmoc apply fork` の作業結果を短い要約として出したいとき。
+- git 差分をそのまま AI に渡す変更要約用の入力構築を確認したいとき。
+- 変更レポート側のエージェント設定や出力先を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の fork 作成、branch 操作、diff 取得、レポート保存など、変更要約 prompt 以外の処理を調べる。
-- 変更要約の Structured Output schema そのものの項目や型を確認する。
-- `cmoc apply fork` 以外のサブコマンドの prompt や agent call parameter を調べる。
+- ファイル単位で所見を洗い出したいときは、所見列挙側を読む。
+- 見つかった所見に基づいて realization file を修正したいときは、所見対応側を読む。
+- 差分そのものの取得方法や生成元を探したいときは、このファイルではなく差分生成側を読む。
 
 ## hash
-- 621f88956b6bc0cf1539c6f2e413dd4b7caeff0e5cbe6093e70a8139c6cd5d6c
+- d1dce570eba6c646ae3efc703b2aa2799a96003b4c97a5a8de1eb5aa58758022
 
 # `file_finding_enumeration.json`
 
@@ -58,33 +58,36 @@
 # `file_finding_enumeration.py`
 
 ## Summary
-- `cmoc apply fork` で、起点ファイルから file 単位の所見リストを作るための AI 呼び出し条件と出力設定を確認したいときに読む。ここは prompt 正本で、呼び出し対象・制約・モデル選択の根拠を持つ。
+- `cmoc apply fork` のファイル単位の所見列挙用エージェント呼び出しパラメータ生成を担う。`target_path` を起点に、読み取り専用で oracle file と realization file を調査して所見一覧を返す用途で、この呼び出し設定やプロンプト組み立ての挙動を確認したいときに読む。
 
 ## Read this when
-- `cmoc apply fork` の file 単位所見抽出の入力条件、読むべき対象範囲、呼び出しパラメータの決め方を変えるとき。
-- 所見リストアップ用 prompt の正本を修正するとき。
-- この処理がどの file を前提に読むか、read-only で扱うか、どの設定で呼ぶかを確認したいとき。
+- `cmoc apply fork` のファイル単位レビューで、どの入力ファイルを起点にどの探索範囲へ所見列挙を投げるかを確認したいとき。
+- エージェント呼び出しのモデル選択、推論強度、読み取り専用制約、プロンプト組み立て方針を見たいとき。
+- 所見列挙が oracle file と realization file の双方を対象にしているか、またその前提を変えずに調整したいとき。
 
 ## Do not read this when
-- 単一の所見本文そのものや各 file の個別判断根拠を知りたいときは、ここではなく対象の oracle file または realization file 本体を読む。
-- `cmoc apply fork` 以外のサブコマンドの prompt や、所見列挙以外の役割を見たいとき。
-- AI 呼び出しの実行ログや生成済み結果だけを追いたいとき。
+- 実際の所見抽出ロジックや評価ロジックを追いたいときは、ここではなく所見を消費・検証する側の実装を読むべき。
+- プロンプト本文の共通部品や markdown 化の詳細だけを見たいときは、呼び出し側より先にプロンプト生成や整形の共通実装を読むべき。
+- ファイル探索やパス解決の一般ロジックだけを見たいときは、ここより先に path 解決の共通実装を読むべき。
 
 ## hash
-- 2c37b6c27a6232d6b95235b8b0d394b29b1eff1d0159523099da9ffa306ea59e
+- dd3e9214e678180e76bbc3a6046f74e3a63c3ade5dc41a161e18e9570a9e3d21
 
 # `finding_application.py`
 
 ## Summary
-- `cmoc apply fork` の所見本文から、所見対応用のエージェント呼び出しパラメータを組み立てる責務を持つ。`build_complete_prompt` に渡す role・summary・goal・注意事項・所見一覧のまとめ方と、返す `AgentCallParameter` の方針を確認したいときに読む。
+- `cmoc apply fork` の所見を受けて、AI 呼び出しパラメータとその入力用プロンプトを組み立てる入口。所見の並べ方、作業時の注意、モデル選定、実行権限の固定方針を確認したいときに読む。
 
 ## Read this when
-- `cmoc apply fork` の所見対応作業で使うプロンプト内容や、AI 呼び出しパラメータの構成を変えたいとき。
-- 所見本文の扱い、作業上の注意、モデル選択、実行モードの固定方針を確認したいとき。
+- 所見対応用の agent 呼び出し条件を変えたいとき
+- 所見本文をどの形で prompt に埋め込むかを確認したいとき
+- このサブコマンドで使う model class、reasoning effort、file access mode の選び方を追いたいとき
+- 人間向けの注意文と作業対象の境界を確認したいとき
 
 ## Do not read this when
-- 所見対応の実際の実装やファイル修正方針を追いたいときは、所見対応先の realization 実装を読む。
-- 共通の prompt 組み立て規約だけを見たいときは、個別サブコマンド用ではなく `build_complete_prompt` 側を読む。
+- 実際の prompt 文字列の詳細な文面だけを確認したいときは、関連する prompt 組み立て側を直接読む
+- 所見そのものの内容や判定基準を知りたいときは、この入口ではなく所見データの側を読む
+- ファイル解決や markdown 変換の一般仕様を追いたいときは、各 helper の責務に応じた別ファイルを読む
 
 ## hash
-- 17959b40cdd8d278c665de924b85da32ca858a994957a5a9b976d827921853fa
+- 7e21dec9378d7eeada0d9dda4f8eb84f5e1f1e0d5c8f7f5f6641175433533b77

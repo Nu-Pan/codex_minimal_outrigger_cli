@@ -23,40 +23,39 @@
 # `file_access_rule_violation_post_validation.md`
 
 ## Summary
-- file access rule 違反を agent call 後の差分検査で検出し、違反時に別 agent call で回復する案を検討したが、false-positive と差分帰属判定の困難さにより断念した経緯を記録する。
-- 並列 agent 編集時の相互差分誤検出や、検査対象外にすべき gitignore 系の扱いが実装へ安定して反映されない問題を、断念理由の具体例として示す。
+- `cmoc` の事後検査として、agent call が作った差分を file access rule 違反の観点で再確認する案と、その案を false-positive 多発で見送った経緯を扱う。
+- この文書は、採用しなかった代替案の記録として読むもので、現行の差分検査実装や file access rule 本体の仕様を探す入口ではない。
 
 ## Read this when
-- file access rule 違反を事後検査で扱う方式を再検討するとき。
-- agent call が発生させた差分だけを判定対象にする設計の難しさや、false-positive による停止リスクを確認したいとき。
-- 過去に削除された post validation 系仕様の背景や、同種のリカバリー案を避けるべき理由を確認したいとき。
+- 事後検査方式の採否や、なぜその方式をやめたかの判断根拠を確認したいとき。
+- `cmoc` が別 agent call によるリカバリーを構想していた痕跡を追いたいとき。
+- 並列編集時の false-positive や、`gitignore` 系を検査対象から外す扱いのような、見送った論点を確認したいとき。
 
 ## Do not read this when
-- 現行の file access rule の定義や禁止対象を確認したいだけのとき。
-- cmoc の現在の実装経路やテスト対象を探しているとき。
-- 検討済みで断念された代替案ではなく、採用済み仕様の根拠を確認したいとき。
+- 現在の file access rule の実装や検査ロジックそのものを知りたいとき。
+- 現行の差分検査の仕様、保存先、CLI 挙動を確認したいときは、より直接にそれらを扱う本文を読むべきで、この文書は読まなくてよい。
+- `cmoc` の現行リカバリー経路や agent 呼び出しの通常フローを確認したいとき。
 
 ## hash
-- 0c38e6aa99ee1726277d40cf97e5cb8791d0189152aa730c09c7c8ed1b34721f
+- 6c1b9b5c04251202f8528be8834a5298c099c670559952955f3909d4125dd8dc
 
 # `gitignore_to_permission_profile.md`
 
 ## Summary
-- git 追跡対象外と判定されるファイルを通常の読み書き規則の例外として自由に扱えるようにし、その規則を permission profile へ変換する案を検討した記録。
-- .gitignore の表現力と permission profile の表現力が一致せず、ディレクトリ限定パターンや柔軟なワイルドカードを正しく変換できないため断念した理由を説明する。
+- `.gitignore` に基づく権限例外を permission profile に落とし込めるかを検討したが、記法互換性の不足で断念した経緯をまとめた文書。permission profile 変換の可否や限界を確認したいときに読む。
 
 ## Read this when
-- git 追跡対象外ファイルを読み書き規則や permission profile 上で例外扱いする案の背景を確認したいとき。
-- .gitignore の判定結果を Codex CLI の permission profile へ変換する設計が採用されていない理由を調べるとき。
-- 作業中に生成される追跡対象外ファイルの掃除と、oracle などの書き込み禁止領域との関係を検討するとき。
+- `.gitignore` の除外規則を、Codex CLI の permission profile にそのまま移せるかを判断したいとき。
+- git 追跡対象外ファイルを、通常の読み書き規則とは別の例外として扱う設計を検討したいとき。
+- なぜ `.gitignore` ベースの例外定義を採用しなかったか、その判断理由を確認したいとき。
 
 ## Do not read this when
-- 現在採用されている permission profile の仕様や実装方法を確認したいだけのとき。
-- .gitignore そのものの一般的な仕様や git の ignore 判定を詳しく調べたいとき。
-- 読み書き規則全体の正本仕様や、oracle file と realization file の責務境界を確認したいとき。
+- permission profile の具体的な記法や運用方法を知りたいだけのとき。
+- `.gitignore` の一般的な書き方やパターン表現そのものを確認したいとき。
+- 実際にどのファイルが追跡対象外かを調べたいだけのとき。
 
 ## hash
-- ed09c3445976ef4bebdd51511c2b056d7a10291f1e2bf13ca123977c4ed991e9
+- e0dba5305b6b6ad014365541ec8b6d6d125e380283660a8cfbc13b60bf46ccdb
 
 # `memory_alternative.md`
 

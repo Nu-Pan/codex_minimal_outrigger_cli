@@ -20,19 +20,15 @@
 # `index_entry.py`
 
 ## Summary
-- `cmoc indexing` の INDEX.md で、目次情報生成用の agent 呼び出しパラメータ構築を読むための入口。
-- この対象は、プロンプト組み立てと `AgentCallParameter` の固定値をまとめているため、indexing の呼び出し設定や入出力の根拠を確認したいときに読む。
-- `resolve_real_path` による `<target-path>` 展開や、`index_entry_standard` を有効にする理由を追うときの参照先。
+- `cmoc indexing` の目次情報生成に使う agent 呼び出しパラメータの組み立てを扱う。ここでは、どのモデル設定・権限制御・入力束ね方で indexing 用の呼び出しを作るかを確認する。
 
 ## Read this when
-- indexing 用の prompt 正本から、どのモデル・推論設定・アクセス権で呼び出すかを確認したい。
-- `<target-path>` と `target_content` をどう prompt に埋め込むか、また `INDEX.md` 用エントリー生成規則をどう渡しているかを見たい。
-- 目次情報生成の preflight 呼び出しがどの固定値で構成されているかを確認したい。
+- `cmoc indexing` で、目次情報生成用の agent 呼び出しをどう構築しているかを確認したいとき。
+- indexing preflight 用の呼び出し条件や、目次情報生成向けの入力の渡し方を確認したいとき。
 
 ## Do not read this when
-- 目次情報生成そのものの文言仕様だけを知りたい場合は、ここではなく prompt 組み立て側の正本を読む。
-- `INDEX.md` の個々の記述内容やルーティング方針を知りたい場合は、この構築関数ではなく対象となる本文を読む。
-- `AgentCallParameter` や関連型の定義自体を知りたい場合は、このファイルではなく型定義側を読む。
+- indexing の実行本体や、生成された目次情報そのものを確認したいときは、より下流の処理を読む。
+- prompt 文面の共通組み立てや他のサブコマンド向け呼び出し設定を見たいだけなら、この対象ではなく関連する共通 builder を読む。
 
 ## hash
-- aa84ff8862d099d364aba94542163ebdba8132cecf3cc2dafe810a53001d2c43
+- ab8a1e72f4e4cd9b8b37bbd93cbdd712d05f0e5d2c308ee8cb9f5fb65e6b89f3

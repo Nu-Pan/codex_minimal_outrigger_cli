@@ -1,18 +1,15 @@
 # `join`
 
 ## Summary
-- `cmoc session join` の conflict marker 解消向けに、対象パスの正規化、プロンプト組み立て、実行パラメータ設定を確認する入口。merge conflict の解消に関わる処理全体を見たいときにここから読む。
-- conflict 対象ファイルの列挙や、解消時に許される追加編集範囲を確認したいときに読む。共通の prompt 生成や markdown 化の詳細は、ここではなく別の prompt builder 側を優先する。
+- `cmoc session join` の merge conflict 解消用に、AI 呼び出しへ渡すパラメータを組み立てる入口。競合ファイルの実パスを正規化し、conflict 解消に必要な範囲だけを扱う prompt と実行設定を返す。
 
 ## Read this when
-- `cmoc session join` の conflict resolution 用パラメータ生成を変更・確認したい。
-- conflict 対象パスの扱い、実行モデル、推論強度、repo write 前提の設定を確認したい。
-- merge conflict 解消時に AI に渡す制約や追加ファイルアクセス条件を確認したい。
+- `cmoc session join` で merge conflict marker を解消する呼び出し条件や、AI に渡す指示内容・実行設定を確認したいとき。
+- 競合ファイルの扱いを変えたいとき、または conflict 解消時に許される編集範囲や品質設定の根拠を確認したいとき。
 
 ## Do not read this when
-- 通常の `session join` の接続処理やセッション管理だけを見たい。
-- 共通の prompt 生成ロジックや markdown 化の実装だけを見たい。
-- conflict 解消以外のサブコマンド向けエージェントパラメータを探している。
+- session join の通常の接続や同期処理を探しているときは、join 本体の実装や周辺の session モジュールを先に読む。
+- merge conflict 解消の実行結果そのものや後段の適用処理を知りたいときは、このパラメータ生成ではなく、呼び出し先の実行経路を読む。
 
 ## hash
-- e88816171ef5820e886fd4240d718fc2765dd1aec17db5c41f8a3f7108287d2d
+- 6a35517220794414368499c04b978d9e1d772bbd2ab1be4e16c2ae72da14a4c9

@@ -1,205 +1,185 @@
 # `apply_abandon.md`
 
 ## Summary
-- `cmoc apply abandon` の正本仕様断片。現在の session に紐づく未 join の active apply run を、Codex CLI を呼ばず機械的に破棄し、apply 状態を `ready` に戻す cleanup コマンドの挙動を定義する。
-- 破棄対象と保護対象、事前条件、状態遷移、cleanup 失敗時の扱い、stdout report、終了コードを扱う。
+- `cmoc apply abandon` の正本仕様断片。未 join の apply run を破棄し、`{{cmoc-apply-branch}}` と `{{cmoc-apply-worktree}}` の cleanup、`{{cmoc-session-state-file}}` の `apply.state` を `ready` へ戻す処理を扱う。
+- `cmoc apply fork` で作られた apply 成果物を取り消したいとき、または session を破棄する前に active / completed / error の apply run を先に片付けたいときに読む。
+- `cmoc apply join` のような merge ではなく破棄を行う場面、`cmoc session abandon` の前提となる apply 側 cleanup を実装・確認したい場面で読む。
 
 ## Read this when
-- 未 join の apply run を破棄する処理を実装・修正・検証するとき。
-- apply worktree、apply branch、session state の cleanup 境界を確認するとき。
-- `running`、`completed`、`error` の apply 状態から `ready` へ戻す状態遷移を扱うとき。
-- apply abandon の stdout 表示内容、warning、終了コードを確認するとき。
+- 現在の session に紐づく未 join の apply run を破棄する挙動を実装・確認するとき。
+- `{{cmoc-apply-branch}}` や `{{cmoc-apply-worktree}}` を削除する正規手順と、その前提条件・警告・終了コードを確認したいとき。
+- `cmoc apply fork` の結果を取り消したいが、`cmoc apply join` は行わず、session 本体は維持したいとき。
+- `cmoc session abandon` 実行前に、残っている apply run を先に片付ける必要があるかを確認したいとき。
 
 ## Do not read this when
-- apply 成果物を session branch へ取り込む処理を扱うときは、join 側の仕様を読む。
-- apply run を開始・実行する処理を扱うときは、run 側の仕様を読む。
-- join 済み結果の rollback 仕様を探しているとき。この対象は rollback コマンドを定義しない。
-- oracle 改訂内容や session branch の commit を変更する処理を扱うとき。この対象ではそれらを保護対象として扱う。
+- apply 成果物を `{{cmoc-session-branch}}` に取り込む処理を知りたいときは、`cmoc apply join` を読む。
+- session 自体を破棄したいときは、`cmoc session abandon` を読む。
+- apply の実行や探索、差分反映のループを知りたいときは、`cmoc apply fork` を読む。
+- report 保存や merge 後のブランチ削除など、join 側の後処理を知りたいときは、この対象ではなく `cmoc apply join` を読む。
 
 ## hash
-- d8cc18d3e8ed2a18a61d9ea5261d5cc9a7c50571eb6879746501b3ee0190eaa4
+- 5b0680f4bce466a631f035f15800d028b8a60a4a1da5f0aa3f16bc9bbd349289
 
 # `apply_fork.md`
 
 ## Summary
-- `cmoc apply fork` の実行条件、調査待ちファイルリストの初期化、apply ループ、状態遷移、レポート出力を定義する。`cmoc apply fork` の振る舞いを実装・修正するときに読む。
-- 中断時の扱い、`rolling`/`session`/`full` の対象範囲、所見調査と修正作業に使う正本の参照先を含む。ループ制御や対象選定の仕様を確認したいときに読む。
-- 作業レポートの保存先と必須項目、終了コードの区別を定める。レポート生成や終了理由の表現を実装するときに読む。
+- `cmoc apply fork` の実行条件、状態遷移、調査待ちファイルの初期化、所見調査と修正依頼のループ、レポート生成までを扱う入口。apply ループ全体の責務と、`run` 隔離実行や各 agent call 正本へのつなぎ先を確認したいときに読む。
 
 ## Read this when
-- `cmoc apply fork` の起動条件、処理手順、終了条件を実装・変更するとき。
-- 調査対象ファイルの選び方、重複削除、再投入条件を確認したいとき。
-- 中断要求の受け付け方、`apply.state` の遷移、作業レポートの内容と保存を扱うとき。
+- `cmoc apply fork` の引数、事前条件、終了コード、作業レポート形式を確認したいとき。
+- apply ループの流れ、`apply.state` の更新条件、ユーザー中断時の扱いを確認したいとき。
+- 調査待ちファイルリストの初期化基準や、所見調査・修正反映の起点となる正本を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` ではなく `cmoc apply join` や `cmoc apply abandon` の仕様を見たいとき。
-- `doctor preprocess` や run isolation の詳細だけを知りたいときは、それぞれの正本に直接進む。
-- 所見列挙や修正適用の引数仕様そのものを知りたいときは、この文書ではなく各 `build_apply_fork_*` の正本を読む。
+- `run` の隔離実行そのものの詳細だけを知りたいときは、`app_specs/run_isolation.md` を直接読む。
+- `build_apply_fork_file_finding_enumeration_parameter` や `build_apply_fork_finding_application_parameter` の個別仕様だけを知りたいときは、それぞれの正本を直接読む。
+- `cmoc apply fork` 以外のサブコマンドの責務やレポート仕様を探しているとき。
 
 ## hash
-- 313ed7bb22b3fa6f3641d887545358497cf914fedd46827749483803349c1794
+- 4fb82f5d1608b87bb80d4e9c2f02a6fd80e58cedb24805da8d8fe4fc40117f54
 
 # `apply_join.md`
 
 ## Summary
-- `cmoc apply join` を扱うときに読む入口。`cmoc apply fork` の結果を `cmoc-session-branch` に取り込む処理、想定外の差分の扱い、`apply.state` と `session.state` の前提、マージ失敗時の振る舞い、使用済みブランチ削除条件を確認したい場合に進む。
+- `cmoc apply join` の実行条件と分岐を確認したいときに読む。apply の成果物を session 本流へマージする責務があり、通常モードと強制モード、`apply.state = error`、ユーザー中断済み apply、merge conflict、使用済み branch/worktree の削除条件を扱うため、実行時の制御と失敗時挙動を実装・修正するときの入口になる。
 
 ## Read this when
-- `cmoc apply join` の実行条件やエラー条件を確認したいとき。
-- 通常モードと `--force-resolve` で、想定外の差分への対応がどう変わるかを確認したいとき。
-- `apply.state = error` やユーザー中断後の `cmoc apply fork` をどう扱うかを確認したいとき。
-- マージコンフリクトの自動解決対象と、それ以外をユーザー報告に回す境界を確認したいとき。
-- 処理後に `cmoc-apply-branch` と `cmoc-apply-worktree` を削除してよい条件を確認したいとき。
+- `cmoc apply join` の引数、事前条件、モード分岐、マージ時の conflict 扱い、state 更新、branch/worktree 削除条件を確認したいとき。
+- apply 実行後に session 側へ結果を取り込む処理や、想定外の差分を通常モードで止めるか強制モードで revert するかを判断したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の作成側の手順や分岐を知りたいとき。
-- apply の再開や中断処理そのものを追いたいとき。
-- session 側の abandonment や review、doctor、indexing の仕様を知りたいとき。
-- 単に CLI の一覧や共通ルーティングを見たいだけで、`cmoc apply join` 固有の挙動は不要なとき。
+- apply の実行本体や fork 側の処理を調べたいときは、そちらの対象を読む。
+- session/state file の保存形式そのものだけを確認したいときは、より直接その state 定義を扱う対象を読む。
 
 ## hash
-- 1595ec8928d6d463afc6c53a8ec42cc141cff7fdac0a47b8662a0334c6417b89
+- 2257bce933ed9cf50c749288ed9bf496ef760adf394c22ae37af3690928cf675
 
 # `doctor.md`
 
 ## Summary
-- cmoc の実行可能性を検証し、可能な範囲で修復するために doctor preprocess を明示実行するサブコマンド仕様。引数を取らず、固有の事前条件も持たない単純な起動口として位置づけられる。
+- `cmoc doctor` の役割は、リポジトリが `cmoc` を正常実行できる状態かを検証し、必要なら修復を試みることにある。中身は doctor preprocess を明示的に呼ぶための入口なので、このコマンドの振る舞いを実装・変更するときに読む。
 
 ## Read this when
-- 利用者が明示的にリポジトリ状態の検証・修復を起動するサブコマンドの挙動を確認したいとき。
-- doctor preprocess を CLI から呼び出す入口の引数、事前条件、実行手順を確認したいとき。
-- 引数なしで実行される診断系サブコマンドの仕様に合わせて実装やテストを書くとき。
+- `cmoc doctor` の実行開始条件や、doctor preprocess への委譲方法を確認したいとき。
+- `cmoc` の環境診断と修復の入口として、このコマンドが何を保証すべきかを把握したいとき。
 
 ## Do not read this when
-- doctor preprocess 自体が何を検証・修復するかを詳しく確認したいとき。
-- 通常のコマンド実行時に暗黙で行われる前処理の適用条件や順序を確認したいとき。
-- リポジトリパスや作業ルートなどのパス概念そのものを確認したいとき。
+- doctor preprocess の内部処理だけを変えたいときは、まずその処理側の定義を読む。
+- 引数設計や追加オプションの検討ではなく、単に `cmoc doctor` の入力なし実行を前提にしたいだけのとき。
 
 ## hash
-- 7e91b86ad01bbeb36bc4e965ac92b894e817234344a580d86fb46694185d690f
+- 8354ebcd7f732dcf70eb06ee6ed33abe6093b06e6effe5dcf1084dc3dce1f39c
 
 # `indexing.md`
 
 ## Summary
-- 現在の作業ツリーに対してインデクシングを実行するサブコマンドの仕様断片。引数を取らず、未コミット差分がある場合はエラー終了し、doctor preprocess、明示的なインデクシング、発生差分の git commit を順に行う。
+- `cmoc indexing` のサブコマンド入口として、作業ツリー全体に対するインデクシングの実行条件と、その結果を自動コミットする責務を持つ。
+- この文書は、引数なしで実行されること、実行前に未コミット差分がある場合は失敗すること、そして `doctor preprocess` の後にインデクシングと git commit を行う必要があることを確認したいときに読む。
+- インデクシングの意味そのものは別の正本仕様に委ねられているため、この文書はサブコマンドの手順と事前条件の確認に絞る。
 
 ## Read this when
-- インデクシング実行用サブコマンドの外部仕様、事前条件、実行順序を確認したいとき。
-- インデクシング結果を自動的に git commit する挙動を実装またはテストするとき。
-- 未コミット差分がある状態でのエラー終了条件を確認したいとき。
+- `cmoc indexing` の実行可否や前提条件を確認したいとき。
+- このサブコマンドが何を順に呼び出し、どこで差分が確定してコミットされるかを確認したいとき。
+- インデクシングの定義そのものではなく、サブコマンドとしての入出力や実行フローだけを知りたいとき。
 
 ## Do not read this when
-- インデクシングそのものの対象、生成内容、更新規則を確認したいとき。
-- doctor preprocess の詳細な仕様や個別の処理内容を確認したいとき。
-- 他のサブコマンドの引数、事前条件、実行手順を確認したいとき。
+- インデクシング処理の詳細仕様そのものを知りたいときは、参照先の正本仕様を読む。
+- 引数設計や他サブコマンドとの比較を知りたいだけなら、ここではなくより上位のルーティング文書を読む。
+- git commit の一般的な運用や doctor preprocess の内部動作を知りたいときは、この文書ではなく各処理の本体を読む。
 
 ## hash
-- a35701932f19171b593632055592a5d0a46367d438f2be544655e7001f8c413d
+- 00122849aac5fb7274dffd1fdeadb48c89c3dc735f7dfc6668c3a2fa8fe02b15
 
 # `review_oracle.md`
 
 ## Summary
-- `cmoc review oracle` の実行条件、隔離実行の流れ、所見の列挙・検証・判定、そして Markdown レポート保存までを扱う案内です。レビュー実行の入口として読むべきで、個別の agent call 仕様や隔離実行の共通仕様へ進む判断材料も含みます。
-- 人間が確認すべき境界は、対象が `oracle` のスナップショットレビューであること、実装ファイルや自動生成物は対象外であること、`scope` によって列挙対象が変わることです。
+- `cmoc review oracle` は、`oracle` ツリー内の正本仕様を対象に、致命的または重要な所見を収集して人間へレポートするためのレビュー用サブコマンドです。
+- この項目は、レビューの実行条件、隔離実行、所見リストの列挙・統合・検証・判定、そして Markdown レポート生成までを扱うときに読むべき入口です。
+- 一方で、`cmoc` 自身の実装詳細や、レビュー対象ではない自動生成ファイル、別サブコマンドの仕様はここからは追いません。
 
 ## Read this when
-- `cmoc review oracle` の実行条件、出力レポートの体裁、または所見の扱いを確認したいとき.
-- レビューの対象範囲や `--scope` による違い、ユーザー中断時の振る舞いを知りたいとき.
-- 隔離実行や各 agent call の正本仕様へ進む前に、このサブコマンド全体の責務境界を見たいとき.
+- `oracle` 配下の仕様をレビューするサブコマンドの入出力、実行順序、停止条件を確認したいとき。
+- レビュー対象の選定、所見の生成・統合・検証・採否判定、レポート保存の流れを把握したいとき。
+- 中断時にどこまでを確定結果として扱うか、また最終レポートに何を含めるかを確認したいとき。
 
 ## Do not read this when
-- `oracle` そのものの具体的な正本仕様や個別のレビュー判定基準を知りたいときは、ここではなく対応する正本仕様断片を読むべきです.
-- 自動生成物や実装ファイルのレビュー方針を探しているときは、このサブコマンドの案内ではなく、対象に直接対応する文書を読むべきです.
-- レポート生成以外のサブコマンド操作や一般的な CLI 仕様を探しているときは、より直接の入口を読むべきです.
+- `cmoc` の一般的な実行基盤や隔離実行の共通仕様だけを確認したいときは、`run isolation` や共通のサブコマンド中断仕様を先に読むべきです。
+- `oracle` 以外の対象をレビューする場合は、この項目ではなく、その対象のサブコマンド仕様を読むべきです。
+- `INDEX.md` の自動生成や他のルーティング情報だけを更新したい場合は、本文仕様ではなく該当階層の案内を直接扱うべきです。
 
 ## hash
-- 43665127e04f2f52aa69e7bfbd914b0fb05cd36c37643bd6c81d37c553bc23d5
+- 759423a1c9aad0df869d39332f750e7eaed47b5e61ce02a0b94cc5944b041d66
 
 # `session_abandon.md`
 
 ## Summary
-- 現在の session branch を home branch に取り込まず破棄するサブコマンドの仕様。実行可能な状態、破棄してよい対象と破棄してはいけない対象、状態更新、失敗時の再実行可能性を定める。
-- session の成果物を本流へ反映する join ではなく、管理下の active session を安全に abandon 状態へ移すための境界を示す。
+- `cmoc session abandon` の実行条件、破棄してよい対象、失敗時の扱いを読むための入口。`session join` との差分や、`session` と `apply` の状態制約を確認したいときに読む。
 
 ## Read this when
-- session を merge せず終了する挙動を実装または検証する。
-- active session の破棄前検証、apply run が残っている場合の扱い、未コミット差分の拒否条件を確認する。
-- session branch 削除、state file 更新、home branch への切り替え、abandoned 状態への遷移を扱う。
-- クリーンアップ途中の失敗時に、ロールバックと再実行可能性をどう扱うか確認する。
+- `cmoc session abandon` の引数、事前条件、終了時の状態遷移を確認したいとき。
+- session を破棄する正規手段と、手作業でのブランチ削除や rollback との違いを確認したいとき。
+- `session.state` と `apply.state` の整合条件、またはクリーンアップ中の失敗時に何をロールバックするかを確認したいとき。
 
 ## Do not read this when
-- session の成果物を home branch へ取り込む完了処理を確認したい場合は、join の仕様を読む。
-- join 済み結果を取り消す rollback 挙動を探している場合は、この対象ではない。
-- apply run 自体の破棄方法を確認したい場合は、apply abandon の仕様を読む。
-- session を新規作成する fork の条件や挙動だけを確認したい場合は、fork の仕様を読む。
+- session を本流へ取り込む処理を知りたいときは、`cmoc session join` を読む。
+- すでに `session join` 済みの結果を取り消す処理を探しているときは、この文書ではなく rollback 系の定義を探す。
+- `apply run` の破棄だけを扱いたいときは、`cmoc apply abandon` を読む。
 
 ## hash
-- 170436dbc12899d7540fccb0c26d04f0663f5a359fc7865c77c8e7f82577c8ba
+- 5baf43474a1dee9a372d6b19827f6b24f83b16d07d95d664fdd6812779d45bfe
 
 # `session_fork.md`
 
 ## Summary
-- `cmoc session fork` を読むべき条件を、現在のローカルブランチから session 用ブランチを新規作成する処理、事前条件の検証、session 状態保存、旧 `cmoc branch` / `cmoc_<time-stamp>` 系の非互換方針に絞って案内する。
-- この文書は、分岐元を変えたい場合の start point 指定ではなく、既に目的のローカルブランチへ移動したうえで fork する流れを確認したいときに読む。
-- `doctor preprocess` の呼び出し、active な session の重複禁止、作成ブランチ名と home branch 名の出力仕様を確認したいときの入口に置く。
+- `cmoc session fork` の実行条件、分岐元の決め方、session ブランチ命名、保存情報、legacy `cmoc branch`/`cmoc_...` を切り捨てる方針を確認したいときに読む。
+- 現在 checkout 中の local branch を session の home branch として扱う点、未コミット差分や既存 active session がある場合のエラー、任意 start point を受け取らない点がこの対象の主眼。
 
 ## Read this when
-- 現在 checkout しているローカルブランチを起点に `cmoc session fork` がどう session ブランチを作るか確認したいとき。
-- 実行前の失敗条件として、detached HEAD、remote-tracking branch や commit hash からの実行、`cmoc/session/...` や `cmoc/apply/...` 上での実行、未コミット差分、既存 active session の有無を確認したいとき。
-- session ID 生成、branch 作成と checkout、`/.cmoc/gu/ar/session/<session-id>.json` への状態保存、標準出力への表示内容を確認したいとき。
-- 旧 `cmoc branch` や `cmoc_<time-stamp>` 形式を実装・テストから排除すべきか判断したいとき。
+- `cmoc session fork` の新規実装や挙動変更を確認したい。
+- session fork がどの状態で実行可能か、どの branch 名を作るか、どこに session 情報を保存するかを知りたい。
+- legacy の `cmoc branch` や `cmoc_{{time-stamp}}` 仕様を残す必要があるか判断したい。
 
 ## Do not read this when
-- 任意の start point を受け取る fork 挙動を確認したいときは、この文書ではなく、start point を扱う別の仕様を読むべき。
-- session の開始後にどう join するか、あるいは abandon するかを確認したいときは、この文書ではなく該当する別のサブコマンド仕様を読むべき。
-- branch 命名以外の session 状態全般や CLI 共通規則だけを確認したいときは、より上位の一般仕様を読むべき。
-- 旧 `cmoc branch` への後方互換を前提にした実装を探したいときは、この文書ではなく、非互換方針を含む他の仕様を確認すべき。
+- session 作成後の別サブコマンドの動作を知りたい場合は、そちらの仕様を読む。
+- branch 管理の一般論だけを確認したい場合は、この対象ではなくより基礎的な branch/session 系の仕様を読む。
+- すでに session が作成された後の apply/review/join の詳細を調べたい場合は、この対象は直接は不要。
 
 ## hash
-- dc02c6bd4c55ff5d696db81813820583de05785e5a19c854e03c41bab2e9ff71
+- 40a2393b3f6ec060887750acb08460c93dd460ef65b087713059dcd1d2785dfd
 
 # `session_join.md`
 
 ## Summary
-- session を完了し、現在の session branch を session home branch に merge して join 済み状態へ遷移させるコマンド仕様。
-- 引数なしで動作し、state file・branch 状態・未コミット差分・apply ready 状態などの事前条件、merge 手順、conflict 解消 agent call、後始末、managed branch 削除条件を定める。
-- legacy 名の互換維持を不要とし、旧名の実装・テスト痕跡を残さない境界も扱う。
+- `cmoc session join` の実行条件と終了までの流れを知りたいときに読む。セッション完了時の merge 先、事前条件、コンフリクト時の扱い、完了後の後始末がこの文書の責務である。
 
 ## Read this when
-- session 完了時に session branch を home branch へ取り込むコマンドの挙動を確認・実装・テストする。
-- join 実行前の state file 条件、active/ready 判定、home branch 特定、未コミット差分の扱いを確認する。
-- home branch が session 作成後に進んだ場合の merge 基準や conflict 発生時の扱いを確認する。
-- merge conflict 発生時に conflict 対象列挙、agent call、marker 検査、git add、unmerged path 検査、merge commit 作成の流れを扱う。
-- conflict 解消時だけ oracle file 編集禁止や差分検査の規則を例外扱いする必要がある。
-- join 後に session state を joined にする処理や、session branch を安全確認できる場合だけ削除する処理を扱う。
-- 旧名コマンドの後方互換性を残すべきか、または既存の旧名実装・テストを削除すべきか判断する。
+- `cmoc session join` の入力なしコマンドとしての仕様、実行前の検証条件、merge 手順、コンフリクト解消の流れ、セッション終了時の状態更新やブランチ削除条件を確認したいとき。
+- `cmoc session join` と旧名の `cmoc merge` の関係、あるいは `home branch` が session 作成後に進んでいた場合の扱いを確認したいとき。
 
 ## Do not read this when
-- 通常の git branch 同士を任意に merge する汎用 wrapper の仕様を探している。
-- repository default branch を特別扱いする処理の仕様を探している。
-- session の作成、apply ready へ至る処理、state file の一般的な形式など、join 実行前の別フェーズを主に扱う。
-- conflict 解消 agent call の詳細な parameter 構築仕様そのものを確認したい場合は、その正本定義を直接読む。
-- legacy 名の互換実装を新たに追加する目的で読もうとしている。
+- session 開始や状態取得など、`cmoc session join` 以外の session コマンドの仕様を知りたいとき。
+- 一般的な git merge の使い方や汎用 merge wrapper の設計を知りたいとき。
+- conflict marker 解消用 agent call の詳細そのものを知りたいときは、そちらの正本仕様断片を直接読むべきである。
 
 ## hash
-- 6c1ed51eb5eea52942ca8984857198e485152c992c65aeed3301afc2d7f528cc
+- a6250333e1b9d484a7a7dd1a4da58cd32fd47c1462b561544fb274afb7277742
 
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの起動経路を扱う。ユーザーのオリジナルプロンプトをエディタ入力で受け取り、agent call で必要パラメータを決め、AI Agent CLI/TUI を起動する流れを確認したいときに読む。
-- この対象は、入力エディタの起動順序と初期テンプレート、入力読み出し時の整形、TUI 起動時に参照すべき正本仕様、Codex CLI 起動時に持ち込む追加要素を定める。
-- 実装の内部分割や agent call の詳細、TUI 起動パラメータの細部はここでは追わず、対応する正本仕様へ進む。
+- `cmoc tui` サブコマンドの起動フロー、ユーザー入力プロンプトの編集先と初期テンプレート、agent call で決める起動パラメータ、Codex CLI 起動時に持ち込む固有要件を確認したいときに読む。
+- この文書は、TUI 起動時の人間入力と自動決定の境界、エディタ選択順、入力読み出しの扱い、バックエンド共通の起動条件を決める役割を持つ。
 
 ## Read this when
-- `cmoc tui` の全体フロー、特に入力取得から TUI 起動までの接続を確認したいとき。
-- ユーザー入力用エディタの選定順、初期プロンプト雛形、読み出し時の整形条件を確認したいとき。
-- Codex CLI バックエンドで起動するときの追加条件や持ち込み要素を確認したいとき。
+- `cmoc tui` の起動手順、入力テンプレート、または起動パラメータの正本を確認したいとき。
+- AI Agent CLI/TUI の起動条件や、Codex CLI を使う場合に追加で引き継ぐ要素を確認したいとき。
+- ユーザーが入力するオリジナルプロンプトの編集場所、初期文面、読み出し時の整形規則を変更したいとき。
 
 ## Do not read this when
-- agent call のパラメータ解決の個別仕様だけを見たいときは、そちらの正本仕様を直接読む。
-- TUI 起動パラメータの詳細だけを確認したいときは、起動パラメータの正本仕様を直接読む。
-- エディタ起動やプロンプト入力を伴わない別サブコマンドの流れを見たいとき。
+- TUI 以外のサブコマンドの仕様を知りたいときは、より直接の対象を読む。
+- agent call の個別の解決仕様だけを知りたいときは、`build_tui_resolve_parameter_parameter` の正本を読む。
+- 全バックエンド共通の launch パラメータだけを知りたいときは、`build_tui_launch_tui_parameter` の正本を読む。
+- Codex CLI 固有の preflight validation や環境変数の正本だけを知りたいときは、`codex_exec_rule.md` を読む。
 
 ## hash
-- d150cc09cab57f12ffc1074eec9e261fc79875b029efe97e01c5d7d9b48d9f6a
+- b28837a3690a3d1a2fceae1388d903d29067e4a4990400dbf0a66ae1da2fa57b

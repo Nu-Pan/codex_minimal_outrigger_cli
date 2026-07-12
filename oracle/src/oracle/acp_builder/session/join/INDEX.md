@@ -1,18 +1,15 @@
 # `conflict_resolution.py`
 
 ## Summary
-- `cmoc session join` の conflict marker 解消用のエージェント呼び出しパラメータを組み立てる処理を読む入口。`session join` で merge conflict の解消を扱うとき、対象パスの正規化、プロンプト組み立て、実行パラメータ設定の全体像を確認したい場合にここから入る。
-- conflict 対象ファイルの列挙や、解消時に追加で許される編集範囲を確認したいときに読む。プロンプト本文の細部や共通 prompt 組み立ての他責務は、ここではなく関連する prompt builder 側を優先して読む。
+- `cmoc session join` の merge conflict 解消に使う AI 呼び出しパラメータを組み立てる入口。競合ファイルの実パスを正規化し、修正対象の範囲を conflict 解消に限定した prompt と実行設定を返す。
 
 ## Read this when
-- `cmoc session join` の conflict resolution 用パラメータ生成を変更・確認したい。
-- conflict 対象パスの扱い、実行モデル、推論強度、repo write 前提の設定を確認したい。
-- merge conflict 解消時に AI に渡す制約や追加ファイルアクセス条件を確認したい。
+- `cmoc session join` で merge conflict marker を解消する呼び出し条件や、AI に渡す指示内容・実行設定を確認したいとき。
+- 競合ファイルの扱いを変えたい、または conflict 解消時に許される編集範囲や品質設定の根拠を確認したいとき。
 
 ## Do not read this when
-- 通常の `session join` の接続処理やセッション管理だけを見たい。
-- 共通の prompt 生成ロジックや markdown 化の実装だけを見たい。
-- conflict 解消以外のサブコマンド向けエージェントパラメータを探している。
+- session join の通常の接続や同期処理を探しているときは、join 本体の実装や周辺の session モジュールを先に読む。
+- merge conflict 解消の実行結果そのものや後段の適用処理を知りたいときは、このパラメータ生成ではなく、呼び出し先の実行経路を読む。
 
 ## hash
-- f6ae4a7d59acd24ac6b5921e784882991cd53c0f7f7eab6bcc2db4eb92d89107
+- 5f646aac557f2c4083580311cb0aef8d2b055d400fbea13bee43603b97e52910
