@@ -708,22 +708,21 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- `build_codex_override_args` が、`FileAccessMode` ごとの Codex 起動引数・権限境界・モデルプロバイダ選択をどう組み立てるかを検証するテスト群。`oracle/src/oracle/prompt_builder/parts/file_access_rule.py` と `oracle/doc/app_spec/codex_exec_rule.md`、`oracle/doc/app_spec/external_model_provider.md` に対応する実装や変更を読む入口にする。
-- `make_repo`、`run_git`、`_codex_support` を使った境界条件の確認も含むため、`<work-root>` 配下の実行権限ルール、`oracle` と `realization` の読み書き境界、linked worktree 時の追加読取許可を直すときに参照する。
+- `codex exec` の model・reasoning effort・sandbox/permission 上書きと、`cmoc managed ollama` の provider 切り替えを検証する統合テスト群。
+- ファイルアクセス制限の root/readonly/readwrite 境界、`oracle` と realization の分離、linked worktree での `cmoc/local` 読み取り許可まで含めて確認する。
 
 ## Read this when
-- Codex の sandbox 権限、`FileAccessMode` ごとの `--sandbox` / `permissions` / `writable_roots` の生成条件を変えるとき。
-- `oracle` 配下・`src` 配下・`test` 配下・`.agents` / `.cmoc` / `.gitignore` まわりの可読・可書き境界を調整するとき。
-- local SLM のモデルプロバイダ選択や `cmoc_managed_ollama` への切り替え条件を変えるとき。
-- linked worktree 実行時の `extra_read_root` や repo 側 `cmoc/local` 読取許可の扱いを変えるとき。
+- Codex CLI へ渡す上書き引数の構成や、`FileAccessMode` ごとのアクセス境界を変えるとき。
+- `cmoc managed ollama` を使うモデル選択・provider 設定・web_search 無効化の挙動を確認したいとき。
+- linked worktree や extra read root を含むファイルアクセス許可条件、または許可領域外エラーの扱いを変えるとき。
 
 ## Do not read this when
-- Codex 起動引数そのものではなく、別の実行経路や別コマンドの引数生成を確認したいだけのとき。
-- `oracle` 文書の本文を更新する作業で、このテストの観点だけを見れば十分なときは、まず対応する oracle doc を読む。
-- 一般的な repo 構成やパス規則ではなく、`test_runtime_codex_profile.py` の対象外のサブコマンドや別プロファイルを扱うとき。
+- 個別の prompt 文面や file access rule の正本仕様そのものを確認したいときは、対応する oracle 側を読む。
+- Codex CLI の一般的な呼び出し規約や cmoc managed ollama のサービス運用方針だけを知りたいときは、対応する oracle doc を直接読む。
+- このテストの内部ヘルパー実装だけを追いたいときは、まず本体の実装ファイルを読む。
 
 ## hash
-- 47957ed5e85c47c47926963cad8fcf38659a3583e3bb670a05160c40b0827aa8
+- 0848882e10388cbc7c65a0c46a46f0c2d2b68b0449600d6471660ce9c8e0109f
 
 # `test_runtime_config.py`
 

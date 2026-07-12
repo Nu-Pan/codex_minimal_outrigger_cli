@@ -134,18 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の共通補助と各種回帰テストをまとめた案内である。CLI、runtime、ACP builder、prompt/rendering、review/session/apply/indexing の外部挙動を確認したいときに、まずこの配下から該当テストへ進む。
-- 共通補助は、git・Codex・Ollama・CLI 実行・path 解決など、複数テストで同じ前提を再利用するための支援に寄る。個別機能の正本仕様や実装本文はここではなく、それぞれ対応する oracle 側または実装側を読む。
+- `test` 配下の realization test 群の入口である。`runtime`・`session`・`apply`・`review`・`indexing`・`doctor`・`tui`・`codex`・`prompt` 周辺の外部挙動回帰を置き、各機能の実装ではなく CLI や runtime 境界の期待結果を確認する。
+- 共通 support と個別 test を分けて参照し、必要な機能の回帰だけに進むためのルーティング点として使う。特に `acp_builder` の正本 schema 参照、Codex 実行制御、ファイルアクセス制御、worktree と state の整合性、prompt parts の整形確認を読む入口になる。
 
 ## Read this when
-- CLI の外部挙動、状態遷移、エラー表示、preflight、ログ、権限境界の回帰を確認したいとき。
-- Codex 実行、Ollama 連携、file access、prompt 組み立て、indexing、review、apply、session のいずれかをテスト観点から追いたいとき。
-- 複数のテストで共通に使う support helper の責務や境界を確認したいとき。
+- CLI や runtime の外部挙動を変更したので、その回帰テストを探したいとき。
+- `session`・`apply`・`review`・`indexing`・`doctor`・`tui`・`codex` のいずれかで、失敗条件・state 遷移・worktree 挙動・権限制御・ログ出力を確認したいとき。
+- 共通 test support を確認したいが、どの領域の補助かを先に絞り込みたいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
-- 実装の内部分割や helper の詳細だけを追いたいときは、対応する実装側を直接読む。
-- この配下全体の案内ではなく、特定サブコマンドや特定領域の回帰だけを見たいときは、より狭い対象のテストへ進む。
+- 個別サブコマンドの正本仕様や prompt / schema の内容そのものを確認したいときは、対応する oracle 側を読む。
+- 実装の内部分割や helper の責務だけを追いたいときは、この配下の CLI 回帰ではなく対象実装側を読む。
+- Markdown renderer など、ここで扱わない別機能の単体テストを探しているときは、その対象の test ファイルへ直接進む。
 
 ## hash
-- b1f4259470b1f2ad1f103a9370af58774f5bdadec17b12ba5f1ba08fb9d9fc35
+- c3f9f0113894ab3e4fa5b60aef9862bdf9a85b8e3db67dd5893f44cad1c77910
