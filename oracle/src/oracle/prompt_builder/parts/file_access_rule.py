@@ -28,11 +28,10 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     if repo_root == work_root:
         out_repo_deny_rule = [
             "`<repo-root>` ツリー外は読み書き禁止",
-            "`<repo-root>/.git` ツリー内は書き込み禁止",
         ]
     else:
         out_repo_deny_rule = [
-            "`<work-root>` ツリー外は読み書き禁止だが、例外的に `<repo-root>/.cmoc` ツリー内は読み込み可能",
+            "`<work-root>` ツリー外は読み書き禁止だが、例外的に `<repo-root>/.cmoc/g*/ar` ツリー内は読み込み可能",
         ]
     # 基礎 deny ルール
     # NOTE
@@ -49,6 +48,7 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     #   memo は agent 不可視のユーザーワークスペースとするので読み書き禁止で固定
     base_deny_rule = [
         *out_repo_deny_rule,
+        "`<work-root>/.git` ツリー内は書き込み禁止",
         "`<work-root>/.agents` ツリー内は書き込み禁止",
         "`<work-root>/.codex` ツリー内は書き込み禁止",
         "`<work-root>/.cmoc/g*/ar` ツリー内は書き込み禁止",
