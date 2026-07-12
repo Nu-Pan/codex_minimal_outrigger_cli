@@ -289,6 +289,32 @@ def test_codex_overrides_uses_cmoc_ollama_provider_for_local_slm(
     }
 
 
+def test_standard_realization_roots_follow_path_boundaries(tmp_path: Path) -> None:
+    """Expected roots exclude outside symlinks and untracked ignored paths."""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (root / "src").symlink_to(outside, target_is_directory=True)
+    (root / "test").mkdir()
+    (root / ".gitignore").write_text("test/\n")
+
+    override_args = build_codex_override_args(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+    )
+
+    assert _override_permission_roots(override_args, "write") == (
+        _standard_realization_override_roots(root)
+    )
+
+
 def test_codex_overrides_allows_repo_local_read_from_linked_worktree(
     tmp_path: Path,
 ) -> None:
