@@ -115,21 +115,21 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation をまとめる上位ルーティング層。CLI 入口、共通基盤、設定、`acp` 互換面、`oracle` 参照 shim、各サブコマンド群のどこへ進むべきかを見分けるために読む。
-- この階層では実処理の詳細は扱わず、同階層の個別実装へ進む前に責務境界と互換入口の所在を確認する。
+- `src` 配下の realization implementation を束ねる上位入口。CLI 本体、共通 runtime helper、互換 shim、サブコマンド実装へ進む前に、どの責務の下位実装を読むべきかを振り分けるための場所として読む。
+- `acp`、`basic`、`config`、`oracle.py` のような互換・再公開・package shim を扱う入口と、`main.py`・`sub_commands`・`commons` のような実処理入口を見分けたいときに読む。
 
 ## Read this when
-- `src` 配下で、どの実装ディレクトリや module に進むべきか判断したいとき。
-- CLI 入口、共通基盤、設定、`acp` 互換面、`oracle` package shim、サブコマンド群の配置関係を確認したいとき。
-- 上位の公開面から実体 module への振り分け先を把握したいとき。
+- `src` 配下で、公開入口から実処理へ進む前に責務の境界を確認したいとき。
+- 互換 import 面や package shim ではなく、どの下位 module が実処理を持つかを見分けたいとき。
+- CLI 起動、サブコマンド配線、共通 helper、正本側への再公開のどこへ進むべきかを判断したいとき。
 
 ## Do not read this when
-- 個別コマンドの処理本体、状態管理、変換ロジック、互換 shim の詳細挙動を知りたいとき。
-- 特定の共通 helper や設定実装、サブコマンド実装を直接確認したいとき。
-- `INDEX.md` や正本仕様そのものの規則を確認したいとき。
+- 個別の CLI 挙動、subcommand の処理本体、path 変換や状態管理の詳細を知りたいときは、対応する下位 module を直接読む。
+- 正本仕様断片そのものや oracle file の定義を確認したいときは、`src` ではなく oracle 側を読む。
+- すでに読むべき下位 module が特定できていて、上位のルーティング情報が不要なとき。
 
 ## hash
-- 1d2c00f0a5aebd1df76e79294efa6f1a08e3997036ecfa2d5c41bfe97d326d6e
+- 74e5980390d46c11c92c544dc5e90aeb6f6ebfd268c9aef41e0d41a76297439e
 
 # `test`
 

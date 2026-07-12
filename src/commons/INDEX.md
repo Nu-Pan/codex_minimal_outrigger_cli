@@ -243,21 +243,24 @@
 # `runtime_doctor.py`
 
 ## Summary
-- `doctor preprocess` の共通修復処理をまとめる実装入口。`.cmoc/local` の追跡除外、`.agents` の追跡固定、cmoc managed ollama の可用性保証、修復差分の commit を一連で扱う。
-- current worktree と main worktree の両方を修復対象に含める分岐、git index を HEAD 起点で合成し直す処理、.gitignore と `.agents/.gitkeep` の修復ステージングはこの file 側を見る。
+- `src/commons/runtime_doctor.py` は、doctor 実行前後に current worktree と main worktree の修復差分をまとめて扱うための実装です。`.gitignore` への `cmoc` ignore 追加、`.agents/.gitkeep` の追跡、`.cmoc/local` の除外、そして修復内容だけを一時 index 経由で commit し、元の index/tree を戻す流れを担います。
+- このファイルを読むべきなのは、doctor 前処理の commit / restore の挙動、linked worktree 時の main worktree への波及、`.agents` の扱い、Git index を壊さずに修復を合成する必要がある場合です。
+- ここでは git 操作の共通ヘルパーや一時 index の作成、`.gitignore` と `.agents/.gitkeep` だけを修復対象にする境界が重要です。個別のコマンド実装や他サブコマンドの仕様を知りたいだけなら、このファイルより各呼び先の実装を先に読むべきです。
 
 ## Read this when
-- `doctor preprocess` の修復順序や、current worktree と linked main worktree の両方を扱う理由を確認したい。
-- .cmoc/local の ignore 修復、`.agents` の tracked 化、修復後 commit の条件を実装・修正したい。
-- HEAD 起点の一時 index を使って repair commit を作る制御や、restore 用 tree の組み立て方を追いたい。
+- doctor_preprocess の前処理が何を修復し、どの順序で commit するかを確認したいとき
+- linked worktree 実行時に main worktree 側まで修復対象に含める理由を知りたいとき
+- `.agents` を tracked にする条件や `.gitkeep` の扱いを確認したいとき
+- 現在の index と修復差分を分離したまま tree を復元する必要がある変更を入れるとき
 
 ## Do not read this when
-- `doctor preprocess` の詳細な正本仕様断片だけを確認したいときは `<work-root>/oracle/doc/app_spec/doctor_preprocess.md` を読む。
-- cmoc managed ollama の準備・起動・検証の詳細だけを知りたいときは、その正本仕様断片を直接読む。
-- サブコマンド個別の事前条件、本命処理、一般的な run 隔離やログ仕様を追いたいときは別の仕様を読む。
+- 単なる git ヘルパーの実装詳細だけを追いたいときは、まず `commons.runtime_git` を読むべきです
+- Ollama 起動確認の挙動だけを知りたいときは、このファイルではなく `commons.runtime_ollama` を読むべきです
+- worktree の解決や repo root の導出だけを知りたいときは、`commons.runtime_paths` を先に読むべきです
+- doctor_preprocess 以外のサブコマンドの仕様を探しているときは、このファイルは直接の入口ではありません
 
 ## hash
-- 1a1f99625965f0b7696071c2e8e6a4bd83fe816f84b3644c7d2f0a500eab16da
+- 920a33a447821e6364ce894b71819779ce2debf82dc2bc815394143170ffea95
 
 # `runtime_errors.py`
 
