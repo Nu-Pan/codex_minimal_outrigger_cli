@@ -46,7 +46,15 @@ def _ensure_agents_tracked(root: Path) -> bool:
     if run_git(["ls-files", "--", ".agents"], root).stdout.strip():
         return False
     gitkeep = agents / ".gitkeep"
-    gitkeep.touch(exist_ok=True)
+    if not gitkeep.exists() and not gitkeep.is_symlink() and _head_entry(
+        root, ".agents/.gitkeep"
+    ):
+        run_git(
+            ["restore", "--source=HEAD", "--worktree", "--", ".agents/.gitkeep"],
+            root,
+        )
+    else:
+        gitkeep.touch(exist_ok=True)
     run_git(["add", "-f", ".agents/.gitkeep"], root)
     if not run_git(["ls-files", "--", ".agents"], root).stdout.strip():
         raise CmocError(
@@ -106,9 +114,9 @@ def _stage_agents_gitkeep_repair(
     root: Path, index_path: Path, agents_gitkeep_added: bool
 ) -> None:
     # 現在 index に doctor が追加した repair を HEAD 起点の index にも載せる。
-    # HEAD に既存の .agents file があっても、それを repair commit から落とさない。
+    # HEAD に既存の .gitkeep があれば、その blob と mode を repair commit に使う。
     if agents_gitkeep_added:
-        _stage_text(root, index_path, ".agents/.gitkeep", "")
+        _stage_agents_gitkeep(root, index_path)
 
 
 def _restored_index_tree(root: Path) -> str:
@@ -155,7 +163,19 @@ def _stage_agents_gitkeep_repair_from_index(root: Path, index_path: Path) -> Non
         ["ls-files", "--", ".agents"], root, index_path
     ).stdout.strip()
     if not agents:
+        _stage_agents_gitkeep(root, index_path)
+
+
+def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
+    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    # HEAD に既存の placeholder がある場合は、復元用 index と repair commit 用
+    # index の双方で同じ blob/mode を参照する。新規作成時だけ空 blob にする。
+    entry = _head_entry(root, ".agents/.gitkeep")
+    if entry is None:
         _stage_text(root, index_path, ".agents/.gitkeep", "")
+        return
+    mode, blob = entry
+    _stage_blob(root, index_path, ".agents/.gitkeep", mode, blob)
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:
@@ -169,8 +189,18 @@ def _stage_text(root: Path, index_path: Path, path: str, content: str) -> None:
     blob = _run_git_with_index(
         ["hash-object", "-w", "--stdin"], root, index_path, input_text=content
     ).stdout.strip()
+    mode = _index_mode(root, index_path, path)
+    if mode is None:
+        entry = _head_entry(root, path)
+        mode = entry[0] if entry else "100644"
+    _stage_blob(root, index_path, path, mode, blob)
+
+
+def _stage_blob(
+    root: Path, index_path: Path, path: str, mode: str, blob: str
+) -> None:
     _run_git_with_index(
-        ["update-index", "--add", "--cacheinfo", "100644", blob, path],
+        ["update-index", "--add", "--cacheinfo", mode, blob, path],
         root,
         index_path,
     )
@@ -201,3 +231,19 @@ def _run_git_with_index(
         )
     return result
 
+
+def _head_entry(root: Path, path: str) -> tuple[str, str] | None:
+    result = run_git(["ls-tree", "HEAD", "--", path], root, check=False)
+    metadata = result.stdout.split("\t", 1)[0].split()
+    if result.returncode != 0 or len(metadata) < 3:
+        return None
+    return metadata[0], metadata[2]
+
+
+def _index_mode(root: Path, index_path: Path, path: str) -> str | None:
+    result = _run_git_with_index(
+        ["ls-files", "--stage", "--", path], root, index_path, check=False
+    )
+    if result.returncode != 0 or not result.stdout:
+        return None
+    return result.stdout.split(maxsplit=1)[0]
