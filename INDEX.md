@@ -134,19 +134,19 @@
 # `test`
 
 ## Summary
-- `test/` 配下の共通テスト補助と回帰テストをまとめる入口。`oracle` 側の正本仕様に対するテスト用の path 解決、git リポジトリや CLI 実行環境の共通 fixture、各サブコマンドや runtime の外部挙動を固定するテスト群を案内する。
-- `_acp_builder_support.py` は、acp_builder 系テストで oracle tree 内の schema 参照先を共通化したいときの path 解決補助。`_apply_support.py` は apply state から作業先パスを復元するテスト補助。`_cli_support.py`、`_command_support.py`、`_git_support.py`、`_ollama_support.py` はそれぞれ CLI、外部コマンド、git、Ollama 関連の共通 fixture / helper を扱う。
-- `test_*.py` 群は、`acp_builder` の parameter 生成、`apply` / `session` / `doctor` / `indexing` / `review oracle` などの CLI 挙動、`runtime_codex` / `runtime_ollama` / `runtime_state` / `runtime_file_access` / `runtime_config` / `runtime_cli` などの境界契約を検証する。`oracle` 側の正本仕様や structured output schema との整合を確認したいときの入口でもある。
+- `test` 配下の `acp_builder` 関連テストで、正本 schema の実体位置や共通の path 解決を使い回すための支援モジュール。`oracle` tree の schema 参照先をテストごとに重複させず、個別の helper を選ぶ入口になる。
+- apply/session/tui/review/indexing を含む各種 CLI テスト向けの共通支援ファイル群。`CliRunner` 初期化、偽コマンド生成、git 初期化、Codex 実行補助、Ollama 補助など、対象ごとに役割が分かれている。
+- `test` 配下の個別回帰テストは、CLI 挙動、runtime 契約、prompt 部品、StructDoc renderer などの外部挙動を検証する。正本仕様の本文や内部 helper ではなく、テスト側で固定したい境界を確認する入口になる。
 
 ## Read this when
-- 共通の test helper の役割を先に見てから、個別の回帰テスト本文に進みたい。
-- acp_builder、apply、session、runtime、doctor、indexing、review oracle のどれかに関する外部挙動や回帰条件を確認したい。
-- oracle 側の schema や prompt / path / permission の正本仕様に対応するテストを探したい。
+- acp_builder 関連テストで、正本 schema ファイルや oracle tree の参照先を共通化したいとき。
+- apply/session/tui/review/indexing などの CLI テストで、共通の runner・git fixture・Codex 実行補助・fake command を探したいとき。
+- Codex runtime、file access、prompt parts、StructDoc renderer などの回帰テストを、外部挙動や契約境界から追加・修正したいとき。
 
 ## Do not read this when
-- 実装本体や oracle の正本仕様そのものを確認したいだけなら、対応する `oracle/src`、`oracle/doc`、または `src` 側を直接読む。
-- CLI や runtime の個別挙動を 1 つだけ追いたいなら、共通 helper ではなく該当する `test_*.py` を直接読む。
-- `INDEX.md` のルーティング規則や本文の細部だけを確認したいなら、この配下の個別テストではなく上位の案内を読む。
+- 正本仕様そのものや prompt/schema 本文を確認したいだけなら、対応する `oracle` 側の本文を読む。
+- CLI 実装や runtime の分岐、内部 helper の構成だけを見たいなら、各テスト支援ファイルではなく実装側を読む。
+- 特定のサブコマンドや runtime 領域と無関係な一般的なテスト補助を探しているだけなら、対象領域の専用 helper を読む。
 
 ## hash
-- 90416ea62f2194794f269a99e099c24e6efa4b26f4de3d42c1d1fbff2796394a
+- ac2ab6b29e9bd86a7e4672d8034da0de8eaf9e8f0ce62d0517a771d0109e228c

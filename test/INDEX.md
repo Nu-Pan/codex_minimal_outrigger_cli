@@ -51,20 +51,19 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex 実行まわりのテストで共通に使う小さな fixture と、`--config` や権限オーバーライド引数を解析して断言しやすくする補助関数をまとめている。個別テスト本文より先に、同種の引数組み立てや権限判定を再利用したいときに読む。
+- Codex 実行系テストで共通に使う支援関数群。認証済み `CODEX_HOME` の作成、Codex への override argv の固定、CLI 引数や `--config` の解析をまとめる。
+- ファイルアクセス制約の検証補助も含む。sandbox の writable roots や permission filesystem の override を読み取り、実行系が期待どおりの権限引数を組み立てたかを確認する。
 
 ## Read this when
-- Codex CLI や TUI の subprocess 引数をテストで安定化したいとき。
-- `CODEX_HOME`、`--config`、sandbox の writable roots、filesystem 権限の断言補助を使いたいとき。
-- oracle 側の runtime / prompt builder テストが、同じ Codex オーバーライド前提で増えるとき。
+- Codex 実行ラッパーや TUI ラッパーの subprocess 引数生成を確認したいとき。
+- Codex の認証済みホーム、override 設定、権限まわりのテスト補助が必要なとき。
 
 ## Do not read this when
-- Codex 本体の実装や仕様断片を知りたいときは、対応する oracle src を読む。
-- 個別テストの期待値だけを確認したいときは、この補助ファイルではなく各テスト本文を読む。
-- この補助群の外にある一般的な runtime 処理や権限制御の全体像だけを知りたいとき。
+- 実際の Codex サブコマンド実装や権限判定ロジックそのものを追いたいときは、対応する実装側を読む。
+- Codex 以外の一般的なテスト共通処理を探しているだけなら、このファイルではなく目的のテスト群の近くを読む。
 
 ## hash
-- 1095d58144dfc179ed8dd62a70cfbf62694246a20507d0367e6b76d4d566ac62
+- ba4cb11e6ee70e7f8467264bba74cdc97cb3ec5238e9088a72df4d0f8bc02c7e
 
 # `_command_support.py`
 
@@ -105,20 +104,22 @@
 # `_ollama_support.py`
 
 ## Summary
-- Ollama と systemctl を使うテスト用支援をまとめたファイル。production と同じ doctor 実行経路を使う確認、fake HOME/PATH と fake ollama/systemctl の組み立て、deterministic なローカル endpoint、残存した fake service の停止処理を扱う。
+- `test` 配下の Ollama 関連テスト用の共通補助をまとめる。`doctor` を本番と共有する managed Ollama 環境で実行する流れを使うときに読む。
+- この補助は `doctor` の呼び出し方と前提条件を固定するためのもの。テストが本番ユーザー用サービスをそのまま使う前提や、`127.0.0.1:11434` の固定エンドポイントを保つ必要がある場合に参照する。
+- `fake service` のライフサイクルを扱うテスト、Ollama 以外の CLI 補助、`doctor` 以外の起動経路を探す場合は読む対象ではない。
 
 ## Read this when
-- managed Ollama を前提にしたテストで、production と同じ `doctor` 経路をそのまま使いたいとき
-- fake HOME / PATH / user service / ollama executable を組み立てて、CLI テストを実プロセスから切り離したいとき
-- Ollama の接続先をテストごとに固定し、listener 依存や PID 残骸を避けたいとき
+- Ollama を本番共有の managed service に対して起動するテスト補助が必要なとき。
+- `doctor` を実サービス前提で呼び出し、結果の `exit_code` を確認したいとき。
+- テスト側で HOME や PATH、固定のローカル Ollama エンドポイントを維持したまま実行したいとき。
 
 ## Do not read this when
-- Ollama や systemctl を使わない CLI テストを追加・修正するときは、より直接の各テスト支援ファイルを読むべき
-- production runtime 側の Ollama 判定や service 管理の実装を追いたいときは、テスト支援ではなく実装側を見るべき
-- 単純なコマンド実行補助や汎用の test fixture が必要なだけなら、このファイルは対象外
+- fake な Ollama サービスやサービス寿命の制御をテストしたいとき。
+- `doctor` 以外の CLI サポートや、別のテスト対象の共通補助を探しているとき。
+- Ollama 接続先や実行前提を切り替える必要があるとき。
 
 ## hash
-- de33941bdbff0b91fe3c28d85b7072068ef0be6a1b3e7148b2243c2f99cd0480
+- 8244f5a3e425825932ae1324ddc139123d345e1c619a2bae3907480b74034a41
 
 # `test_acp_builder_apply_parameters.py`
 
@@ -339,21 +340,21 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- `run_codex_exec` と `prepare_codex_override_args` の統合テスト群。real Codex CLI、cmoc managed ollama、権限オーバーライド、生成物の書き込み境界をまたいだ挙動を確認する。
-- 実装の内部分解や helper の細部より、Codex 起動時にどの引数・環境・出力・永続副作用を維持すべきかを確認したいときに読む。
+- `test_codex_runtime_exec.py` は、Codex 実行経路の統合テストをまとめる。`run_codex_exec` が実際の Codex CLI に渡す引数、`prepare_codex_override_args` が組み立てる上書き設定、local SLM 用の managed ollama 事前確認、`CODEX_HOME` 配下に永続設定を作らないことを検証する。
+- Codex 呼び出しの接続先や権限、モデル選択、プロンプト・スキーマの受け渡し、production と同じ managed ollama を前提にした挙動を変えるときに読む。実装の内部分割や汎用ヘルパーの整理だけなら、ここは直接読まなくてよい。
 
 ## Read this when
-- `run_codex_exec` の起動引数、出力、ログ、スキーマ連携、または model/provider 切り替えを確認したい。
-- real Codex CLI を使った統合経路が cmoc managed ollama を通るか、必要な前処理やサービス起動が入るかを確認したい。
-- Codex 起動時の filesystem 権限や `CODEX_HOME` の扱い、`--profile` や built-in Ollama 系フラグを出さない条件を確認したい。
+- Codex 実行時の CLI 引数や override 設定の形を変えるとき
+- local SLM を使う経路で managed ollama の事前確認や provider 選択を調整するとき
+- `CODEX_HOME` に設定ファイルを残さないことや、実際の Codex 呼び出しとの接続を確認したいとき
 
 ## Do not read this when
-- `AgentCallParameter` や `CmocConfig` の型定義そのものを知りたい。
-- Codex の個別引数や profile 生成ロジックの単体仕様だけを追いたい。
-- CLI 全体の入出力や別サブコマンドの挙動を見たい場合は、このテストではなく該当する各コマンドのテストを読む。
+- 一般的な config モデル定義や未接続の runtime helper だけを変更するとき
+- Codex 以外のサブコマンドや別の入出力変換を扱うとき
+- 純粋なユニットテストの細部や内部実装の分割方針だけを確認したいとき
 
 ## hash
-- a7a38007f03bb36411410d955d63f968fb0fec28fbe32869d99b228416719c9a
+- 3f9a0023bfa0b79b2da39d3e43aa7709a388c8a89e7c1a75ca5a4d58f78d133e
 
 # `test_codex_runtime_home.py`
 
