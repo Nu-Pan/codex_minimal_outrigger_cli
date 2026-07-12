@@ -105,20 +105,22 @@
 # `_ollama_support.py`
 
 ## Summary
-- `test` 配下の Ollama まわりのテストで使う隔離済み支援コードをまとめた補助モジュール。 fake `systemctl` と fake `ollama`、および deterministic な runtime 差し替えを提供し、cmoc managed ollama の doctor と provider 結合を本物のサービスに触れずに検証したいときに読む。
+- Ollama を使う doctor/プロバイダ関連テストのための、決定的な偽環境を組み立てる補助群です。`doctor` 実行用の fake 環境、fake `systemctl`、fake `ollama`、実行中の偽サービス停止処理をまとめて扱います。
+- このファイルを読むのは、Ollama 依存テストを安定化したいとき、`cmoc-ollama` の user service 挙動をテストで再現したいとき、または偽 `HOME`・偽バイナリ・偽ホストの生成方法を確認したいときです。
+- `commons.runtime_ollama` の実 runtime 判定ロジックを直接修正したい場合や、`doctor` 以外のコマンドの一般的なテスト支援を探している場合は優先度が低いです。実サービスの起動や本番 Ollama の操作方法を知りたいときも、このファイルではなく各実装側を読むべきです。
 
 ## Read this when
-- cmoc managed ollama のテストを、実機の Ollama や user systemd に依存せず deterministic に走らせたいとき。
-- doctor や provider 連携のテストで、fake `HOME`、fake `PATH`、fake `ollama` 実行ファイル、fake `systemctl`、runtime monkeypatch を使う必要があるとき。
-- `test_doctor_cli.py` や Ollama provider 系テストの共通準備を確認・変更したいとき。
+- Ollama 接続を伴うテストを deterministic にしたい。
+- `doctor` コマンドのテストで、実サービスではなく fake `systemctl` と fake `ollama` を使う根拠を確認したい。
+- テスト用の isolated な `HOME`、偽サービスの PID 管理、偽 `ollama` の HTTP 応答を調べたい。
 
 ## Do not read this when
-- Ollama 以外の CLI テストや一般的な test fixture を探しているときは、各対象テスト本体や別の共通ヘルパーを先に読む。
-- `cmoc managed ollama` の仕様そのもの、配置先、利用可能性保証の正本を確認したいときは、`<work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md` を読む。
-- Real Codex CLI の意味的な成功や出力品質を確認したいときは、この支援モジュールではなく、該当する結合テスト本体を読む。
+- 実運用の Ollama サービス設定を変更したい。
+- `doctor` 以外の CLI の一般的なテスト補助を探している。
+- Ollama の本体実装や runtime 判定の本筋を読みたいだけで、テスト専用の隔離環境は不要。
 
 ## hash
-- a9d7d262b807af663e577d9bca277a2f3f8b10b0b48cf630e0fb91c7bd1d4150
+- 4007754c08ca921c30952aef7491cf12faae788781598ebc9885ba85650ce615
 
 # `test_acp_builder_apply_parameters.py`
 
@@ -336,22 +338,20 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- `run_codex_exec` とそれに関連する実行支援の挙動を確認する統合テスト群。Codex 実行時の引数注入、モデル/プロバイダの上書き、作業ディレクトリ、スキーマ保存先、managed Ollama 前提、`.agents` を開かない制約など、実行経路の外部挙動をまとめて検証したいときに読む。
-- 個別の内部 helper ではなく、実際の `codex` 起動結果・ログ・生成物を使って「実行時に何が保証されるか」を見たいときに進む。純粋な `CmocConfig` の定義や Codex 仕様そのものを読む目的なら、より直接の定義元を当たる。
+- `run_codex_exec` と `prepare_codex_override_args` の実行経路を、実 CLI 起動・権限差し替え・managed Ollama 連携まで含めて検証する統合テスト群。Codex 実行時にどの引数や設定が注入されるべきか、実ファイル生成や service 起動の副作用まで確認したいときに読む。
 
 ## Read this when
-- `run_codex_exec` の CLI 引数や override config の組み立て結果を確認したいとき
-- read-only / repo-write / pure oracle read の各モードで、`codex` 起動にどう反映されるかを確かめたいとき
-- linked worktree での `cwd` や schema 保存先など、実行時のパス解決を確認したいとき
-- managed Ollama 前提の実行や doctor 前処理との接続を追いたいとき
+- Codex 実行ラッパーの挙動を変える変更をするとき。
+- 権限設定、`CODEX_HOME`、`PATH`、managed Ollama への切り替えに関わる挙動を確認したいとき。
+- 実 CLI を使う経路で、出力スキーマ、ログ、生成ファイル、副作用のどこを固定したいか判断したいとき。
 
 ## Do not read this when
-- `CmocConfig` や `CodexModelSpec` の定義そのものを知りたいだけのとき
-- Codex CLI そのものの一般仕様やモデル仕様を読みたいだけのとき
-- ファイルシステムや git 周りの実装詳細ではなく、別のサブコマンドや設定層の挙動を追いたいとき
+- 純粋な引数組み立てだけを見たいときは、`prepare_codex_override_args` 側の本体を先に読む。
+- Codex 実行基盤そのものの実装詳細が必要なときは、`run_codex_exec` の実装側を直接読む。
+- managed Ollama のサービス仕様そのものを確認したいだけなら、関連する仕様ドキュメントを先に読む。
 
 ## hash
-- 462cb7e9f3e3531ceebcc73b5ecb4b5a0abb0d338e83129849f769384e114793
+- 22f595bbe0e4f95f01b0f0816232e834f2f269b2f4c95023ac2a4ccafc4fd681
 
 # `test_codex_runtime_home.py`
 
@@ -370,6 +370,23 @@
 
 ## hash
 - be07e773cef9149fff068e12507ace8b0c661f5706ee53baea1082f7ebb14a6d
+
+# `test_codex_runtime_paths.py`
+
+## Summary
+- Codex 実行時の作業ディレクトリ、出力スキーマ保存先、権限オーバーライドの境界を確認するテスト群。リンク済み worktree や repo-local 読み取りの扱い、`.agents` を開けないことも含め、実行パス周りの仕様を見たいときの入口になる。
+
+## Read this when
+- `run_codex_exec` の cwd や `--cd` の扱いを確認したい。
+- 出力スキーマの保存先が worktree ではなく repo root 側になる条件を確認したい。
+- 権限オーバーライドが `oracle` や `.cmoc/local` にどう効くか、`.agents` を開けない制約を確認したい。
+
+## Do not read this when
+- Codex 実行そのものの引数組み立てやプロンプト生成の詳細を見たいときは、より下位の実装を読む。
+- ファイルアクセスルールの正本定義だけを確認したいときは、対応する oracle 側を先に読む。
+
+## hash
+- cbc9905852473ebc5dedf6cd82179034059f08384ffcb6f2117858b6f3afc1fa
 
 # `test_codex_runtime_quota_retry.py`
 
@@ -446,24 +463,20 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- `doctor` CLI と、その事前処理が Git 状態修復・`.cmoc` 設定生成・managed Ollama 起動をどう結び付けるかを確認するための統合テスト群。`run_doctor`/`run_doctor_preprocess` の外部挙動、作成されるファイル、Git の追跡・ステージ状態、worktree 切替時の扱いをまとめて見る入口。
-- 既定設定の同期、既存の人間編集を上書きしないこと、`.cmoc/local` の未追跡化、`.agents/.gitkeep` の再生成、既存の staged change を壊さないことなど、doctor の境界条件を検証する。
-- `doctor` の実装本体や config/ollama/git 支援関数の詳細を追う前に、まずこのテストで期待されるユーザー向け挙動を把握する位置づけ。
+- `doctor` CLI の振る舞いを end-to-end で固定するテスト群。`.cmoc/config.json` の生成・同期、linked worktree での対象切り替え、git state の修復、`.gitignore` や `.agents/.gitkeep` の扱い、managed ollama 起動とモデル取得の副作用を確認するときに読む。
+- 個別の内部 helper の実装より、CLI 実行結果・git の追跡状態・設定ファイル内容・外部サービス呼び出しの契約を確認したいときに読む。
 
 ## Read this when
-- `doctor`/`dector` コマンドの挙動を変える可能性があるとき。
-- `.gitignore`、`.agents`、`.cmoc/config.json`、`.cmoc/local` の生成・修復・追跡状態を変えるとき。
-- managed Ollama の起動やモデル選択の処理が、doctor の前処理からどう呼ばれるかを確認したいとき。
-- linked worktree で doctor を実行した場合の参照先や作業対象を確認したいとき。
+- `doctor` サブコマンドの外部挙動を変える変更をするとき。
+- `.cmoc/config.json` の生成、既存値の保持、tracked/ignored 状態の修復、linked worktree での動作を確認したいとき。
+- managed ollama のセットアップやモデル取得の順序・重複排除・対象選択を確認したいとき。
 
 ## Do not read this when
-- CLI の引数定義やコマンド登録だけを確認したいときは、実装側の CLI 入口を先に読む。
-- `doctor` 以外のサブコマンドの仕様を調べたいとき。
-- `git` や `ollama` の単体ラッパーの細部だけが目的なら、それぞれの支援モジュールを直接読む。
-- 設定スキーマ全体の定義を見たいだけなら、この統合テストではなく config 定義の本文を読む。
+- 設定スキーマそのものの正本仕様を確認したいときは、テストではなく対応する oracle 側を読む。
+- CLI の内部実装詳細や共通ヘルパの分割方針だけを知りたいときは、該当する実装ファイルを直接読む。
 
 ## hash
-- 6f274f473e716490c64cc395049476b960f76cec7d5447c0d22b014c3f62630e
+- ddc8c52b255f7b5c8c084d4908b4487bb09a9d170408cd64a389105f7ccd57b2
 
 # `test_indexing_cli.py`
 
