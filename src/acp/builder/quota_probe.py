@@ -1,38 +1,24 @@
-"""quota availability probe 用の AgentCallParameter を構築する。"""
+"""Compatibility adapter for the canonical quota availability probe builder.
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from oracle.other.struct_doc import render_as_markdown
-from oracle.prompt_builder.complete_prompt import build_complete_prompt
+The canonical prompt and call settings belong to
+`<work-root>/oracle/src/oracle/acp_builder/quota_probe.py`.
+"""
+
+from basic.acp import AgentCallParameter
 
 
-_PROMPT = "quota 回復確認です。実行可能なら OK とだけ返してください。"
+__all__ = ["build_quota_availability_probe_parameter"]
 
 
 def build_quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
-    prompt = render_as_markdown(
-        build_complete_prompt(
-            role="- quota 回復確認を行う担当です",
-            summary=f"- {_PROMPT}",
-            goal="- 実行可能なら OK とだけ返してください。",
-            file_access_mode=FileAccessMode.READONLY,
-        )
-    )
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # <work-root>/oracle/src/oracle/prompt_builder/complete_prompt.py
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    # Keep the READONLY rule in the prompt aligned with the argv setting; the
-    # runtime passes this prompt to Codex unchanged.
-    return AgentCallParameter(
-        ModelClass.MINIMUM,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        prompt,
-        None,
-        run_indexing_preflight=False,
-        cwd=base_parameter.cwd,
+    """Delegate quota probe construction to the oracle builder."""
+    # Keep this import lazy so the compatibility module remains importable in
+    # layouts where the human-owned oracle builder has not been installed yet;
+    # there is intentionally no realization-side prompt or parameter fallback.
+    from oracle.acp_builder.quota_probe import (
+        build_quota_availability_probe_parameter as build_oracle_parameter,
     )
 
-
-__all__ = ["build_quota_availability_probe_parameter"]
+    return build_oracle_parameter(base_parameter)

@@ -10,13 +10,14 @@ subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であ�
 
 import json
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import ModuleType
 from typing import TextIO, cast
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
-from acp.builder.quota_probe import build_quota_availability_probe_parameter
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import SubcommandLogger
 from config.cmoc_config import CmocConfig
@@ -306,7 +307,11 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     assert codex_events[1]["error"] == "KeyboardInterrupt()"
 
 
-def test_quota_probe_builder_returns_minimal_probe_parameter() -> None:
+def test_quota_probe_adapter_delegates_to_oracle_builder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from acp.builder.quota_probe import build_quota_availability_probe_parameter
+
     base = AgentCallParameter(
         ModelClass.FLAGSHIP,
         ReasoningEffort.HIGH,
@@ -316,74 +321,31 @@ def test_quota_probe_builder_returns_minimal_probe_parameter() -> None:
         run_indexing_preflight=True,
         cwd=Path("/tmp/base-cwd"),
     )
-
-    probe = build_quota_availability_probe_parameter(base)
-
-    assert "OK" in probe.prompt
-    assert "# file read write rule - readonly" in probe.prompt
-    assert "oracle file は書き込み禁止" in probe.prompt
-    assert "realization file は書き込み禁止" in probe.prompt
-    assert probe.model_class == ModelClass.MINIMUM
-    assert probe.reasoning_effort == ReasoningEffort.LOW
-    assert probe.file_access_mode == FileAccessMode.READONLY
-    assert probe.structured_output_schema_path is None
-    assert probe.run_indexing_preflight is False
-    assert probe.cwd == base.cwd
-
-
-@pytest.mark.parametrize("quota_returncode", [0, 1])
-def test_quota_probe_uses_real_builder_when_quota_recovers(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, quota_returncode: int
-) -> None:
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    calls: list[str] = []
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
+    expected = AgentCallParameter(
+        ModelClass.MINIMUM,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
-        "prompt",
+        "oracle prompt",
         None,
-        cwd=root,
+        run_indexing_preflight=False,
+        cwd=base.cwd,
     )
-    probe_prompt = build_quota_availability_probe_parameter(parameter).prompt
+    calls: list[AgentCallParameter] = []
+    oracle_module = ModuleType("oracle.acp_builder.quota_probe")
 
-    def fake_run(
-        argv: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
-        prompt = cast(TextIO, kwargs["stdin"]).read()
-        calls.append(prompt)
-        if len(calls) == 1:
-            return subprocess.CompletedProcess(
-                argv,
-                quota_returncode,
-                '{"type":"thread.started","thread_id":"sess-1"}\n'
-                '{"type":"error","message":"Quota exceeded"}\n',
-                "",
-            )
-        output = Path(argv[argv.index("--output-last-message") + 1])
-        output.write_text(json.dumps({"ok": len(calls)}))
-        return subprocess.CompletedProcess(
-            argv,
-            0,
-            '{"type":"turn.completed"}\n',
-            "",
-        )
+    def build_oracle_parameter(parameter: AgentCallParameter) -> AgentCallParameter:
+        calls.append(parameter)
+        return expected
 
-    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
-
-    result = run_codex_exec(
-        parameter,
-        root=root,
-        quota_poll_interval_sec=0,
-        max_quota_polls=1,
-        config=CmocConfig(),
+    setattr(
+        oracle_module,
+        "build_quota_availability_probe_parameter",
+        build_oracle_parameter,
     )
+    monkeypatch.setitem(sys.modules, oracle_module.__name__, oracle_module)
 
-    assert calls == ["prompt", probe_prompt, "prompt"]
-    assert result.output_json == {"ok": 3}
+    assert build_quota_availability_probe_parameter(base) is expected
+    assert calls == [base]
 
 
 def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
