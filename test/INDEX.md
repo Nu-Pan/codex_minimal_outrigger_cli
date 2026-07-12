@@ -231,21 +231,21 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- `apply fork` CLI の回帰テスト群で、session/worktree/state/report/gitignore/target 正規化までを同じ境界で確認する入口。`apply fork` の外部挙動や対象判定の変更を読むときに進む。
-- 設定失敗・doctor preflight・Codex ループ完了・state 遷移・linked worktree・gitignore 反映・対象正規化のうち、どれか一つではなく複数が同じ変更理由で動くかを確認したいときに読む。
+- `apply fork` の CLI 回帰テスト群です。セッション fork 後の apply 実行が、state 更新・worktree/branch 生成・docter preprocess・gitignore 修復・設定エラーの停止条件・対象 path の編集可否・report 生成前の完了状態反映まで、意図どおりに進むかを確認します。
+- `session` や target 正規化の責務はここでは扱いません。apply fork の実行フロー、状態管理、外部副作用、CLI から見える振る舞いを確認したいときに読む対象です。
 
 ## Read this when
-- `apply fork` の正常系や失敗系の回帰を追加・修正するとき。
-- session branch、apply branch、worktree、state file、report file の関係をまとめて確認したいとき。
-- target 正規化や `.cmoc/local`、`oracle`、`memo`、`.agents`、`.codex`、`AGENTS.md`、`INDEX.md` の扱いを `apply fork` の観点で確かめたいとき。
+- `apply fork` の end-to-end 振る舞い、state file の遷移、apply branch / worktree の生成・配置・参照先を確認したいとき。
+- doctor preprocess の実行順、`.gitignore` と `.git/info/exclude` の補正、設定不足・設定破損時の失敗条件を確認したいとき。
+- 所見対象としての `.gitignore` 編集可否や、完了状態を書いた後に report を生成する順序を確認したいとき。
 
 ## Do not read this when
-- `apply fork` 以外のサブコマンドだけを変更するとき。
-- 実装本体の分岐や内部 helper の構造だけを追いたいときは、対応する `src` 側を直接読む。
-- 単独の fixture や共通テスト補助の整理だけをしたいときは、この回帰群より先に共有 fixture の定義元を読む。
+- session fork 自体の生成・正規化・分岐命名だけを確認したいときは、session 側のテストを読むべきです。
+- target path の個別正規化や enumerator の単体挙動だけを確認したいときは、より狭い対象のテストを読むべきです。
+- 実装詳細の helper 分割だけを追いたいときは、この CLI 回帰テストではなく対応する実装モジュールを読むべきです。
 
 ## hash
-- 32ea4fd80e20daf92d96e95efa3fee6d0e7057f3b1c2206dfec3cd707252aedb
+- 8550fb3bf6e082be28fe1c33fe52dc26ec9fb90fe032ebedd70a85ec2fb9c9ad
 
 # `test_apply_fork_report_cli.py`
 
@@ -264,6 +264,23 @@
 
 ## hash
 - 67ddab5270bdb242c28431b893028c35d616a147b24cd3c01ce4fcfd394c0724
+
+# `test_apply_fork_target_normalization.py`
+
+## Summary
+- `cmoc apply fork` の調査対象ファイル正規化を検証する回帰テスト。`apply_fork` の対象判定境界、特に `memo`、`.cmoc/local`、`.agents`、`.codex`、`INDEX.md`、`AGENTS.md`、binary、tracked ignored file、symlink の扱いを確認したいときに読む。
+
+## Read this when
+- `cmoc apply fork` の対象ファイル選定や正規化ロジックを修正・検証するとき。
+- root 直下の除外と入れ子ディレクトリの許可、管理領域や規範ファイルの除外、tracked ignored file の扱い、binary file の扱い、symlink の分類境界を確認したいとき。
+
+## Do not read this when
+- apply fork の CLI 引数、状態遷移、レポート生成、終了コードを確認したいときは、`apply_fork` 本体の仕様を読む。
+- apply fork 以外のサブコマンドの対象選定やレポート仕様を調べたいとき。
+- 所見列挙や修正依頼の agent call 詳細を確認したいときは、対応する parameter 生成仕様を直接読む。
+
+## hash
+- 51657e4c95aa0a047d663a1f57a72aa545e7cf426eb4fc1cf4ee3d896d87c74c
 
 # `test_apply_join_cli.py`
 

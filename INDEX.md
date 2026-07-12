@@ -134,19 +134,17 @@
 # `test`
 
 ## Summary
-- `test` 配下の `acp_builder` 関連テストで、正本 schema の実体位置や共通の path 解決を使い回すための支援モジュール。`oracle` tree の schema 参照先をテストごとに重複させず、個別の helper を選ぶ入口になる。
-- apply/session/tui/review/indexing を含む各種 CLI テスト向けの共通支援ファイル群。`CliRunner` 初期化、偽コマンド生成、git 初期化、Codex 実行補助、Ollama 補助など、対象ごとに役割が分かれている。
-- `test` 配下の個別回帰テストは、CLI 挙動、runtime 契約、prompt 部品、StructDoc renderer などの外部挙動を検証する。正本仕様の本文や内部 helper ではなく、テスト側で固定したい境界を確認する入口になる。
+- `test` 配下の acp_builder 共通テスト補助を集めた案内。`oracle` ツリー側の正本 schema や branch/state 前提をテストから参照するときの、専用 path 解決・状態復元・CLI 実行・外部コマンド生成の入口をまとめている。
 
 ## Read this when
-- acp_builder 関連テストで、正本 schema ファイルや oracle tree の参照先を共通化したいとき。
-- apply/session/tui/review/indexing などの CLI テストで、共通の runner・git fixture・Codex 実行補助・fake command を探したいとき。
-- Codex runtime、file access、prompt parts、StructDoc renderer などの回帰テストを、外部挙動や契約境界から追加・修正したいとき。
+- acp_builder 関連テストで、正本 schema ファイルの位置を共通化して参照したいとき。
+- apply / session / indexing / review / tui / Codex 実行まわりのテストで、共通の補助関数や runner を使っているか確認したいとき。
+- テストが oracle tree の schema、branch/state、fake command、CLI 実行前提をどう扱うかを知りたいとき。
 
 ## Do not read this when
-- 正本仕様そのものや prompt/schema 本文を確認したいだけなら、対応する `oracle` 側の本文を読む。
-- CLI 実装や runtime の分岐、内部 helper の構成だけを見たいなら、各テスト支援ファイルではなく実装側を読む。
-- 特定のサブコマンドや runtime 領域と無関係な一般的なテスト補助を探しているだけなら、対象領域の専用 helper を読む。
+- 個別機能の実装や CLI 本体の挙動だけを追いたいとき。
+- oracle schema の内容そのものや正本仕様を確認したいときは、対応する oracle 側本文を読む。
+- acp_builder 以外の対象で path 解決やテスト補助が必要なら、この配下ではなく対象別の helper を探す。
 
 ## hash
-- ac2ab6b29e9bd86a7e4672d8034da0de8eaf9e8f0ce62d0517a771d0109e228c
+- 7fb54a6cded3c6640b04095dc655f711c425d13d5a69d53642210b5e56d02054
