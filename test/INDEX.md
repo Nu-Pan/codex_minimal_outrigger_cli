@@ -105,21 +105,20 @@
 # `_ollama_support.py`
 
 ## Summary
-- `test/_ollama_support.py` は、doctor 系テストで使う Ollama / systemctl のテスト専用支援コードをまとめる。production の per-user service を直接触る `run_doctor` と、隔離された fake HOME・fake service・fake endpoint を作る補助群がここにある。
-- このファイルを読むのは、doctor テストの実行環境、fake Ollama の立ち上げ方、service PID の停止処理、runtime 側の Ollama 判定をどうテスト用に差し替えているかを確認したいとき。
+- Ollama と systemctl を使うテスト用支援をまとめたファイル。production と同じ doctor 実行経路を使う確認、fake HOME/PATH と fake ollama/systemctl の組み立て、deterministic なローカル endpoint、残存した fake service の停止処理を扱う。
 
 ## Read this when
-- doctor のテストが本番の per-user service を使う前提や、その例外を確認したいとき。
-- fake `systemctl` / fake `ollama` / fake runtime の切り替え方を知りたいとき。
-- テスト終了時に fake Ollama を止める条件や、再利用 PID の誤停止を避ける扱いを確認したいとき。
+- managed Ollama を前提にしたテストで、production と同じ `doctor` 経路をそのまま使いたいとき
+- fake HOME / PATH / user service / ollama executable を組み立てて、CLI テストを実プロセスから切り離したいとき
+- Ollama の接続先をテストごとに固定し、listener 依存や PID 残骸を避けたいとき
 
 ## Do not read this when
-- Ollama 本体の実装や CLI の一般的な挙動を知りたいときは、ここではなく本体実装側を読むべき。
-- doctor 以外のテスト支援や、別のサービス向けの共通テスト基盤を探しているとき。
-- 単なる通常の pytest fixture 一覧や、アプリ本体の設定値の定義を探しているとき。
+- Ollama や systemctl を使わない CLI テストを追加・修正するときは、より直接の各テスト支援ファイルを読むべき
+- production runtime 側の Ollama 判定や service 管理の実装を追いたいときは、テスト支援ではなく実装側を見るべき
+- 単純なコマンド実行補助や汎用の test fixture が必要なだけなら、このファイルは対象外
 
 ## hash
-- bf1d4b19c04b9bcb01d0fd352acfa84c3a7bcccaa64a8a1c74b52a67b75bd429
+- de33941bdbff0b91fe3c28d85b7072068ef0be6a1b3e7148b2243c2f99cd0480
 
 # `test_acp_builder_apply_parameters.py`
 
@@ -464,22 +463,20 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor コマンドの振る舞いを検証するテスト群。git 状態の修復、`.cmoc/config.json` の生成・追従、linked worktree の扱い、managed ollama の準備までをまとめて確認する入口。
+- `doctor` と `dector` の CLI 挙動を確認するテスト群。Git 状態の修復、`.cmoc/config.json` の生成・更新、linked worktree での対象選択、共有管理 Ollama の準備とモデル取得をまとめて検証する。
 
 ## Read this when
-- doctor/preprocess の振る舞いを変えるとき。
-- `.gitignore`、`.agents/.gitkeep`、`.cmoc/local` の扱いを変えるとき。
-- `.cmoc/config.json` の生成、既存値の保持、モデル同期の仕様を変えるとき。
-- CLI の `doctor` / `dector` 経路や current worktree の解決を変えるとき。
-- managed ollama の起動準備や service/model 配置の責務を確認するとき。
+- `doctor` 系コマンドの外部挙動を変えたとき。
+- Git の修復対象や、`.cmoc/local`・`.agents`・`.gitignore` の扱いを変えたとき。
+- 設定生成・既存値維持・linked worktree の参照元切替・Ollama 準備の流れを確認したいとき。
 
 ## Do not read this when
-- doctor 以外の CLI サブコマンドだけを変えるときは、まずそのサブコマンドのテストを読む。
-- config の純粋なスキーマ定義や runtime helper の内部実装だけを追いたいときは、対応する本体側を先に読む。
-- git 操作の共通ヘルパーの挙動だけを確認したいときは、このテスト群ではなく共通ヘルパー側を見る。
+- 個別の実装分割や内部 helper の整理だけをしたいときは、対応する実装側を先に読む。
+- Ollama のサービス定義そのものを確認したいときは、このテストではなくサービス仕様の正本を読む。
+- doctor 以外の CLI サブコマンドの挙動を追いたいときは、該当サブコマンドのテストへ進む。
 
 ## hash
-- 20f3c3984ad422ea24f22d7c5d0b2eab80a7f33d946540113d6fe3bc8c7bebc0
+- 8cdef31e47a2f2fc89f24ce9f5cd0b9a1977928d8864b8b7b0a9a28c38d9ff38
 
 # `test_indexing_cli.py`
 
@@ -695,20 +692,20 @@
 # `test_runtime_ollama.py`
 
 ## Summary
-- `commons.runtime_ollama` の Ollama 起動・サービス維持・GPU 利用確認に関する振る舞いを検証するテスト群。サービス再修復の再起動条件、HTTP 到達確認の失敗扱い、リスナーが期待するサービスプロセスかの判定、モデル読み込み後の確認順序、GPU 推論可否の判定を扱う。
+- `commons.runtime_ollama` のサービス管理・接続確認・モデル準備の挙動を検証するテスト群。`cmoc` が管理する Ollama の再起動条件、systemd ユーザーサービス生成、起動後の疎通確認、モデルのロード確認が中心。
 
 ## Read this when
-- Ollama の常駐サービスやモデルロードの判定条件を変えるとき。
-- サービス再作成、再起動、接続確認、GPU 確認のどの失敗をエラーにするかを確認したいとき。
-- `commons.runtime_ollama` の外部挙動に対する回帰テストを追加・修正したいとき。
+- `commons.runtime_ollama` の修正で、Ollama サービスの修復条件・再起動条件・検証失敗時の例外挙動を確認したいとき。
+- `cmoc` 管理下の Ollama を systemd ユーザーサービスとして扱う仕様や、`%h` を使った service file の出力を確認したいとき。
+- モデルの事前ロードや GPU 推論確認の判定条件を変えるとき。
 
 ## Do not read this when
-- Ollama 以外の runtime 実装や別の service 管理ロジックを変更するとき。
-- `runtime_ollama` の内部 helper の分割や実装手順だけを見直したいときは、まず該当する実装本体を読むべきとき。
-- GPU 判定や HTTP 応答の詳細仕様ではなく、別のコマンドや別サービスのテストを探しているとき。
+- Ollama 以外のランタイムや別サブコマンドの仕様を確認したいとき。
+- CLI の引数解析、コマンド一覧、設定項目の全体像を知りたいときは、より上位のコマンド定義や仕様文書を読むべきで、このテストは直接の入口ではない。
+- サービス管理ではなく、一般的な HTTP クライアントや subprocess ラッパーの共通実装だけを確認したいとき。
 
 ## hash
-- 859258328f9114eeba1966d058499e06f871e8175c0599d7786aad71c76419b0
+- f62c704b643c0ba9f6bd600f8957917763457eb3c98548114354a16bb27b45b0
 
 # `test_runtime_state.py`
 

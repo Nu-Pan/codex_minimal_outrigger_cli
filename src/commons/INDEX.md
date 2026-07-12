@@ -319,21 +319,20 @@
 # `runtime_ollama.py`
 
 ## Summary
-- `cmoc` が管理する Ollama を起動・維持・検証し、必要な SLM モデルを取得して読み込む処理の入口です。`systemd user service`、`/proc` による実行中プロセス確認、`/api/generate` と `/api/ps` の接続確認、archive の取得と展開までをまとめて扱います。
-- 周辺の設定解決やエラー型、保存先の基底パス確認は補助的に参照します。扱うべき主題は `cmoc managed Ollama` の挙動と、`model_provider == 
+- cmoc が管理する Ollama の導入、user service の同期、`/proc` による稼働主体の確認、モデルの取得・load・GPU 推論確認までを一連で扱う入口。」「単一の `ensure_ollama_serves_local_slm` を起点に読むと、修復と検証の順序、失敗時の停止条件、どこまでがこの module の責務かを把握しやすい。」「Ollama の設定値や共通 config 取得の詳細を追いたいときは、この module より先に `runtime_config` や `runtime_paths` を読む。
 
 ## Read this when
-- `cmoc` provider の local SLM を managed Ollama で提供する挙動を変えたいとき.
-- Ollama の install、systemd user service の作成・再起動・検証、model pull/load、GPU 利用確認の境界を確認したいとき.
-- `127.0.0.1:11434` を固定で使う前提や、`/proc` と `systemctl --user` を使った service 同定の根拠を追いたいとき.
+- cmoc provider の local SLM を Ollama で自動的に使える状態へ整える処理を変更・確認したいとき。
+- Ollama の install、systemd user service、model load、GPU 利用確認のいずれかを、同じ起動経路の一部として扱う必要があるとき。
+- サービスが本当に cmoc 管理の Ollama か、`/proc` と `systemctl --user` でどう判定しているかを確認したいとき。
 
 ## Do not read this when
-- 単なる config 読み込みや repo root 解決だけを追いたいときは、`runtime_config` や `runtime_paths` を先に読むほうが直接的です.
-- Ollama 以外の provider の選別や CLI 全体のコマンドルーティングを追いたいときは、別の `runtime_*` モジュールを読むほうが適切です.
-- この file が扱うのは managed Ollama の運用であり、一般的な Ollama の機能全般や別 port の運用を知りたいだけのときには向きません.
+- Ollama のモデル名や provider 設定の値そのものを決めたいだけなら、先に `runtime_config` 側を読む。
+- Ollama 以外の provider の起動や検証を扱いたいときは、この module ではなくその provider 専用の実装を読む。
+- CLI の引数解釈やコマンド分岐だけを追いたいときは、この module ではなく呼び出し元の subcommand 実装を読む。
 
 ## hash
-- c095fc7b0ff383779bbd6a84569e3136a6b2eaab8af066f75bff237d5403cf0d
+- 092a1e1e44d6512fb4b3f39644107c066450eda14370e09ab0cb0e27c1b65ed1
 
 # `runtime_paths.py`
 

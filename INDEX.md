@@ -115,37 +115,40 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation を束ねる入口。CLI 起動、共通 runtime、設定、サブコマンド実装、正本側 `oracle` への接続用 shim をまとめて辿るときに読む。
-- この階層は、`oracle` 側の正本仕様を複製する場所ではなく、正本側の意図を具体化した実装と、既存公開面を支える互換入口を切り分けて追うための案内として使う。
+- `src` 配下の realization 実装全体への入口。CLI 入口、互換 shim、共通 runtime、設定、`basic`/`acp` 系の公開面、各サブコマンド実装をまとめて辿るときに使う。
+- この階層は、まずどの責務領域へ進むかを切り分けるための案内であり、個別機能の仕様や処理本体は持たない。互換 import の維持か、正本側への接続か、CLI 配線か、共通 helper かを見分ける起点になる。
 
 ## Read this when
-- `src` 配下で、どの実装が CLI 入口・共通基盤・サブコマンド・互換 shim に属するかを見分けたいとき。
-- 旧公開名の互換維持と、正本側実装への接続境界を確認したいとき。
-- 実装を追加・整理する前に、同じ変更理由で一緒に読むべき realization implementation の範囲を絞りたいとき。
+- `src` 全体の責務境界を確認したいとき。
+- CLI 入口、互換 shim、設定、共通 runtime、`basic`/`acp` 系の再公開、サブコマンド実装のどこへ進むべきかを判断したいとき。
+- 互換維持の薄い層と、実体実装へつながる層を切り分けたいとき。
 
 ## Do not read this when
-- 正本仕様そのものを確認したいとき。対応する `oracle` 側の文書や実装を読む。
-- 個別コマンドの細かな処理、状態管理、入出力変換、共通 helper の内部を知りたいとき。該当する下位モジュールを直接読む。
-- `src` 以外の公開面や、互換以外の新規 API を探しているとき。
+- 個別 module の実装内容や挙動を知りたいとき。その場合は該当する下位の対象を直接読む。
+- `src` 配下の routing ではなく、機能本体や細部の制御ロジックを調べたいとき。
+- 正本仕様断片や oracle 側の内容を確認したいとき。
 
 ## hash
-- be991f0894dc2dded5dc8db1b7596a61423b90291f99aa3bb6289b4169c87fdb
+- 3df77701fa1bd066585841ac14ab2bb5899baee681c2436833a3c2854e14109e
 
 # `test`
 
 ## Summary
-- `test` 配下の共通補助と各回帰テストへの入口をまとめる。個別のサブコマンドや runtime 境界ごとに読むべきテストを選ぶための案内で、共通 support は複数テストで再利用される前提のものだけを扱う。
-- ここではテスト対象の本体仕様ではなく、どの挙動を確認したいときにどの support / test ファイルへ進むかを分ける。
+- `test` ツリーは、CLI・runtime・prompt builder・ACP builder の回帰テストをまとめて読む入口である。外部挙動、境界条件、既存仕様との互換性を確認するときにここから下位の個別テストへ進む。
+- この領域のテストは、実装の内部分解ではなく、ファイルアクセス、worktree / state 遷移、Codex 実行、Ollama、indexing、session/apply などの現行仕様上意味のある振る舞いを固定する役割を持つ。
+- 個別テストは、それぞれ担当するサブコマンドやランタイム契約、正本 schema との整合、出力形式、失敗時挙動のどれを確認するかで分かれている。
 
 ## Read this when
-- `test` 配下で共通に使う補助関数の用途を確認したい。
-- `acp_builder`、`apply`、`session`、`tui`、`doctor`、`indexing`、`review`、`codex_runtime` など、個別領域の外部挙動回帰を探したい。
-- CLI、runtime、prompt、file access、state、worktree、subprocess、logging のどの境界に触れるテストへ進むべきかを判断したい。
+- CLI や runtime の外部挙動を変えたため、対応する回帰テストを探したい。
+- session / apply / indexing / doctor / review oracle / TUI / Codex 実行まわりの境界条件や状態遷移を確認したい。
+- prompt 生成、file access、structured output schema、権限境界、managed Ollama の扱いなど、実行時契約をテスト側から追いたい。
+- 正本仕様そのものではなく、正本仕様に対応する実装の観測点を確認したい。
 
 ## Do not read this when
-- 個別の挙動や期待値だけを確認したいときは、この入口ではなく該当する test 本文を直接読む。
-- 補助ファイルではなく、本体実装や oracle 側の正本仕様を確認したいときはそちらを読む。
-- `INDEX.md` や `AGENTS.md` のルーティング規則そのものを確認したいだけなら、この配下の各テストではなく上位の案内を読む。
+- 実装本体の分割方針や helper の内部構成だけを追いたい。
+- 正本仕様の本文や schema そのものを確認したいだけなら、対応する oracle 側を読む。
+- この領域全体の案内ではなく、特定の 1 テストの期待値だけが必要なら、そのテスト本文へ直接進む。
+- 一般的なルーティング規則や INDEX.md の書き方だけを確認したい。
 
 ## hash
-- 4118b256abd2a63686abc6fe562ba514eca6b1c14570e388ba1d7be24b7be102
+- 3ab81e37bcd05f1e36212d91348956aa542378deedac91eb1125cdac397249b8
