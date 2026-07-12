@@ -134,21 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の共通支援ファイル群。`acp_builder` の正本 schema を参照する path helper、apply/session の状態復元、CLI 実行補助、git・Ollama・Codex runtime の共通 fixture をまとめる。個別の機能テストではなく、複数のテストから再利用される前提条件や補助処理を確認したいときの入口である。
-- `test_*` 群は、`acp_builder` の parameter 生成、apply/session/review/indexing/doctor/tui の CLI 挙動、Codex runtime の引数・権限・再試行・失敗処理、設定や path model の境界を検証する。各テストは、対応する実装や oracle 側の正本仕様へ進むかを判断するためのルーティング情報を持つ。
+- `test` 配下の realization test と共通 support をまとめる案内対象である。CLI、runtime、prompt、ACP builder、review/apply/session などの外部挙動を、機能別の個別テストへ案内する入口として読む。
+- 各テストファイルは、それぞれ対応するサブコマンドや runtime 契約、正本 schema との整合、あるいは共通 support の責務を確認したいときに進む先を絞るためのもの。
 
 ## Read this when
-- 共通 helper の責務や、どのテストがどの前提条件を固定しているかを確認したいとき。
-- `acp_builder` の正本 schema 参照、apply/session の状態・branch 復元、CLI 実行補助、git/Ollama/Codex runtime の共通テスト支援を確認したいとき。
-- `apply`、`session`、`review`、`indexing`、`doctor`、`tui` の各 CLI 回帰テストで、成功条件・拒否条件・cleanup・report・対象選定の境界を確認したいとき。
-- Codex runtime の home、cwd、path access、permissions、subprocess、retry、quota retry、error handling、profile 設定の外部挙動を変える作業をするとき。
-- 設定、path model、StructDoc renderer、runtime content/file access/state、Ollama 管理の境界や互換性を確認したいとき。
+- このディレクトリ内で、対象機能に対応するテストや support の所在地を特定したいとき。
+- CLI 挙動、runtime 境界、prompt 生成、ACP builder、review/apply/session のいずれかに関する外部挙動回帰を確認したいとき。
+- 共通 support がどの種類のテストを支えるか、またはその support を使うべきかを見分けたいとき。
 
 ## Do not read this when
-- 個別の CLI 本体や runtime 実装の内部分割だけを見たいときは、この支援群ではなく対応する実装側を読む。
-- `INDEX.md` や `AGENTS.md` のルーティング方針そのものを確認したいときは、この配下のテストではなく上位の案内を読む。
-- 正本仕様そのものを確認したいときは、`oracle` 側の本文を読む。
-- 共通 helper ではなく、単一機能の実装や単体テストだけを追いたいときは、対応する対象ファイルへ直接進む。
+- 個別機能の正本仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
+- 実装の内部分割や helper の詳細だけを追いたいときは、この案内ではなく対応する realization implementation を読む。
+- この階層のルーティング方針そのものを確認したいときは、上位の案内を読む。
 
 ## hash
-- 583b7b6d3204dba06da298cbfb576ccc8271c7d31f325f8a1c72898085349630
+- e95b78b4fcd149723bb7b178030b20a82aa02dbb1c56bfcedd76f28771667a3f
