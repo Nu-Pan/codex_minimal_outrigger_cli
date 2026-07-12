@@ -72,20 +72,21 @@
 # `quota_probe.py`
 
 ## Summary
-- quota 回復確認のための最小構成の agent call parameter を構築する実装。既存の実行パラメータから作業ディレクトリだけを引き継ぎ、低コスト・読み取り専用・indexing preflight 無効の probe 呼び出しを作る。
+- `quota availability probe` 用の `AgentCallParameter` を組み立てる実装への案内。既存の基底パラメータを引き継ぎつつ、読み取り専用・低推論・最小モデルのプローブ用設定を作る場面で読む。
+- 実行可否を確認するための短い固定文面と、その文面を Markdown 化して prompt に載せる処理が主題。prompt の整形方針や、`READONLY` 制約を保持する必要がある変更で進む。
 
 ## Read this when
-- quota wait 中に実行可能状態を確認するための probe 呼び出し内容を確認・変更したいとき。
-- probe 用 agent call parameter の model class、reasoning effort、file access mode、prompt、cwd 引き継ぎ、indexing preflight の扱いを確認したいとき。
-- quota 回復確認で通常の agent call parameter builder ではなく、最小の Codex exec 呼び出しを使う理由を追いたいとき。
+- quota 回復可否の事前確認や、実行前の軽い疎通用パラメータ生成を変更したいとき。
+- prompt に載せる役割・要約・目的の組み立て方を確認したいとき。
+- `AgentCallParameter` のモデル種別、推論強度、ファイルアクセス条件、`cwd` 継承の扱いを見たいとき。
 
 ## Do not read this when
-- 通常の agent call parameter 全体の構築規則や共通 builder の責務を調べたいとき。
-- quota wait のポーリング制御、待機間隔、再試行条件、成功失敗判定の流れを調べたいとき。
-- quota 回復確認以外の Codex exec 呼び出しや indexing preflight の一般仕様を調べたいとき。
+- 通常の実行用 prompt や、プローブ以外の `AgentCallParameter` を探しているとき。
+- Markdown 整形の詳細実装そのものが目的で、プローブ用パラメータ生成とは無関係なとき。
+- quota probe 以外のコマンド制御や indexing preflight の一般仕様を読みたいだけのとき。
 
 ## hash
-- 47f15b35955d56905ecd58ad55693d751e5949813a030b6bf9b481eed55ab9f5
+- f20d85d0da594206533c2232a4e23495018302eea467fb879a4e403e6e4a31e4
 
 # `review`
 

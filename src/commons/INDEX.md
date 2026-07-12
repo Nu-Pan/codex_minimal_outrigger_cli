@@ -110,21 +110,22 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを読む入口。Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call/prompt/stdout/stderr/output の各 log 生成を確認したいときに進む。TUI 起動や他サブコマンドの分岐は対象外。
-- この module を読むのは、`codex exec` の実行制御と再試行の境界、失敗時にどの log を残すか、quota 共有状態機械の扱いを確認したいとき。変更が log 命名、resume token の扱い、Structured Output の失敗判定に触れるなら優先して読む。
+- Codex exec の単一試行ループを実行し、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log / event 記録を一体で扱う。exec 実行制御の入口であり、TUI 起動や別サブコマンドの分岐はここでは扱わない。
+- 同じ実行制御の中でも、prompt / stdout / stderr / output の保存、失敗判定、再試行条件、quota 待機の共有状態、実行結果の組み立てが変更対象ならここを読む。
+- worktree 変更 path を git status 付きで取得する補助も含むが、これは apply 再投入に必要な path 列挙のための最小補助であり、変更検出ロジック全般の入口ではない。
 
 ## Read this when
-- `codex exec` の実行フロー、再試行、Structured Output 検証、quota 待機の挙動を変えるとき。
-- 実行ごとの prompt/stdout/stderr/output/call log の生成や、resume token の継続条件を確認したいとき。
-- capacity error と quota error の分岐、代表 probe の開始・共有・復帰条件を追いたいとき。
+- Codex exec の再試行条件、Structured Output 検証、resume token の扱い、quota 待機の代表 probe、call log / subcommand event の記録方法を変えたい。
+- exec 実行時の log 保存先、argv / env / cwd の組み立て、失敗時の例外メッセージや返却結果の構成を確認したい。
+- git 変更 path を実行単位で絶対 path として列挙する補助が必要で、apply 再投入の対象 path の取り方を見たい。
 
 ## Do not read this when
-- TUI 起動や UI 側の制御を変えたいときは、別 module を先に読む。
-- `git status` ベースの変更 path 収集だけが目的なら、この module 全体ではなく変更 path 取得側を読む。
-- Codex exec 以外のサブコマンドの分岐や CLI 定義を調べたいだけなら、この module は後回しでよい。
+- TUI の起動や対話 UI の分岐を追いたい場合は、別 module を読む。
+- Codex 以外のサブコマンド制御、設定読み込み、一般的なログ基盤、git status 取得の共通実装を見たい場合は、この file ではなくそれぞれの責務側を読む。
+- Structured Output の schema 本体や quota probe 用 builder の本体を知りたい場合は、ここではなく参照先の実装を読む。
 
 ## hash
-- f4d8c2244c0b283e4e9608724fbf67d2d6bce884fab326793d5d35ae044e43b5
+- 87593e4a2fb511412ad178d7000c7f90558269b041958caca3886b5499e2b5e7
 
 # `runtime_codex_logging.py`
 

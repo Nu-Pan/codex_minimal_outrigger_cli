@@ -391,22 +391,21 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota 超過後の待機・再試行・resume 復帰を検証するテストで、単発失敗時の挙動だけでなく、probe の実行条件、resume token の復元、call log とサブコマンドログの記録、CODEX_HOME/CWD の扱いまで含めて確認する。
-- 同じ retry 状態機械に関わる外部挙動を一箇所で追うための集約テストとして読む。quota 待機の分岐、probe 失敗、上限到達、並列実行時の代表 probe 制御までを確認したいときに進む。
+- Codex 実行時の quota exceeded 後に、probe・resume・再実行・失敗停止の制御が外部挙動としてどう動くかを確かめる回帰テスト群。JSONL からの resume token 復元、quota probe の組み立て、`CODEX_HOME` と `cwd` の扱い、call log と subcommand log の記録もこの範囲に含める。
+- 同じ retry 状態機械を前提にした fake Codex 呼び出し列やログ観測をまとめて追う必要があるときに読む。probe 共有、resume の有無、quota 待機の上限、並行実行時の代表 probe、probe 失敗時の即時エラーを確認したい場合の入口になる。
 
 ## Read this when
-- `run_codex_exec` の quota 超過後の制御フローを変える、またはその回帰を確認したいとき。
-- probe 用の `AgentCallParameter` がどの制約で作られるか、resume token がどのログから復元されるかを確認したいとき。
-- call log、stdout/output 生成物、サブコマンドログ、`CODEX_HOME` と `cwd` の対応をまとめて追いたいとき。
-- quota 待機中の並列呼び出しが単一の代表 probe に収束するか、probe 失敗時に即失敗するかを確認したいとき。
+- Codex 実行が quota exceeded から回復する経路、または回復しない経路の外部挙動を変えたか確認したいとき。
+- resume token の復元方法、quota probe の最小パラメータ、実行ログの残り方、`CODEX_HOME` と相対パスの解決を確認したいとき。
+- quota 待機中の再試行回数、代表 probe の共有、並行呼び出し時の挙動を変える変更を入れるとき。
 
 ## Do not read this when
-- Codex の通常実行だけを確認したいときは、quota retry 以外の実行テストを読む方が直接的。
-- probe パラメータ生成の定義そのものを見たいだけなら、対応する oracle 側の定義を先に読む方がよい。
-- CLI の引数定義や一般的なログ形式だけを探しているなら、このファイルは粒度が細かすぎる。
+- quota retry 以外の Codex 実行経路だけを調べたいときは、より直接の実行テストへ進む。
+- prompt 生成や一般的な ACP パラメータ変換だけを確認したいときは、この巨大な quota retry 回帰群ではなく、その責務のテストを読む。
+- このファイルは Codex の出力品質そのものを評価する場所ではないので、LLM 品質や一般的な CLI 挙動の確認目的では読まない。
 
 ## hash
-- 0ce86c8afb3efbe485954bf033293d04311767034a7a2b63afa0b6a3849e852f
+- 2dc5f969b51ae479362084efa15fa55d95d09cbcbdc6070e262369eeaac4b754
 
 # `test_codex_runtime_retry.py`
 

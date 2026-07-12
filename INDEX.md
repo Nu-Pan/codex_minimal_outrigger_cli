@@ -115,40 +115,37 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization 実装全体への入口。CLI 入口、互換 shim、共通 runtime、設定、`basic`/`acp` 系の公開面、各サブコマンド実装をまとめて辿るときに使う。
-- この階層は、まずどの責務領域へ進むかを切り分けるための案内であり、個別機能の仕様や処理本体は持たない。互換 import の維持か、正本側への接続か、CLI 配線か、共通 helper かを見分ける起点になる。
+- `src` 配下の realization implementation と realization test を束ねる上位入口。CLI 入口や共通基盤ではなく、実際の実装・テスト本体へ進む前に、この配下で扱う責務の境界を確認するための場所として読む。
+- `oracle` 配下の正本仕様断片を具体化した実装群のルーティング点であり、互換 shim や再公開層ではなく、現行仕様を実装するファイル群の探索に使う。
 
 ## Read this when
-- `src` 全体の責務境界を確認したいとき。
-- CLI 入口、互換 shim、設定、共通 runtime、`basic`/`acp` 系の再公開、サブコマンド実装のどこへ進むべきかを判断したいとき。
-- 互換維持の薄い層と、実体実装へつながる層を切り分けたいとき。
+- realization implementation と realization test の配置先や責務の境界を確認したいとき。
+- 正本仕様を受けて、どの実装モジュールへ進むべきか判断したいとき。
+- 上位の CLI や共通基盤ではなく、この配下の具体的な実装・テストを読む前に対象を絞りたいとき。
 
 ## Do not read this when
-- 個別 module の実装内容や挙動を知りたいとき。その場合は該当する下位の対象を直接読む。
-- `src` 配下の routing ではなく、機能本体や細部の制御ロジックを調べたいとき。
-- 正本仕様断片や oracle 側の内容を確認したいとき。
+- CLI 入口、互換 shim、再公開層、共通 helper の詳細を知りたいとき。
+- oracle 側の正本仕様そのものを確認したいとき。
+- 個別モジュール名がすでに分かっており、直接その本文を読む方が早いとき。
 
 ## hash
-- 3df77701fa1bd066585841ac14ab2bb5899baee681c2436833a3c2854e14109e
+- 6e01f14ba1ad43f3564d45a1de139abd8cc3a0343e0195f1a999dbfeeb645f95
 
 # `test`
 
 ## Summary
-- `test` ツリーは、CLI・runtime・prompt builder・ACP builder の回帰テストをまとめて読む入口である。外部挙動、境界条件、既存仕様との互換性を確認するときにここから下位の個別テストへ進む。
-- この領域のテストは、実装の内部分解ではなく、ファイルアクセス、worktree / state 遷移、Codex 実行、Ollama、indexing、session/apply などの現行仕様上意味のある振る舞いを固定する役割を持つ。
-- 個別テストは、それぞれ担当するサブコマンドやランタイム契約、正本 schema との整合、出力形式、失敗時挙動のどれを確認するかで分かれている。
+- `test` 配下の realization test を案内する入口。`oracle` 配下の正本仕様を前提に、CLI・runtime・builder・support の各テストを読むべき条件へ振り分ける。
+- このディレクトリは、個別の実装本文ではなく、外部挙動や契約境界を確認したいときに進む先を選ぶためのルーティング層として扱う。
 
 ## Read this when
-- CLI や runtime の外部挙動を変えたため、対応する回帰テストを探したい。
-- session / apply / indexing / doctor / review oracle / TUI / Codex 実行まわりの境界条件や状態遷移を確認したい。
-- prompt 生成、file access、structured output schema、権限境界、managed Ollama の扱いなど、実行時契約をテスト側から追いたい。
-- 正本仕様そのものではなく、正本仕様に対応する実装の観測点を確認したい。
+- 実装や正本仕様の変更に伴って、どのテストを読むべきか判断したいとき。
+- CLI、runtime、builder、prompt、support のいずれかについて、外部挙動や契約境界を確認したいとき。
+- `oracle` 側の本文を読む前に、まず対応する回帰テストや補助テストの入口を特定したいとき。
 
 ## Do not read this when
-- 実装本体の分割方針や helper の内部構成だけを追いたい。
-- 正本仕様の本文や schema そのものを確認したいだけなら、対応する oracle 側を読む。
-- この領域全体の案内ではなく、特定の 1 テストの期待値だけが必要なら、そのテスト本文へ直接進む。
-- 一般的なルーティング規則や INDEX.md の書き方だけを確認したい。
+- 正本仕様そのものを確認したいときは、`oracle` 側の本文を直接読む。
+- 個別テストの期待値や失敗条件を確認したいだけなら、この案内ではなく該当するテスト本文を読む。
+- 実装の分割や helper の内部構成だけを追いたいときは、対応する realization code 側を読む。
 
 ## hash
-- 3ab81e37bcd05f1e36212d91348956aa542378deedac91eb1125cdac397249b8
+- 795af04df0ba07a290f114f4ecd6401755fecafca18df58947c12c31e91621ff
