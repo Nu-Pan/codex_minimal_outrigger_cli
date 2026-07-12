@@ -7,7 +7,10 @@ from basic.acp import AgentCallParameter
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_config import load_config
-from commons.runtime_codex_logging import emit_codex_call_console
+from commons.runtime_codex_logging import (
+    emit_codex_call_console,
+    format_codex_call_error,
+)
 from commons.runtime_codex_profile import (
     codex_subprocess_env,
     parameter_codex_cwd,
@@ -82,6 +85,8 @@ def run_codex_tui(
     )
     started_at = time.perf_counter()
     failure: subprocess.CalledProcessError | None = None
+    startup_failure: Exception | None = None
+    returncode: int | None = None
     try:
         result = run_codex_subprocess(
             argv,
@@ -93,8 +98,13 @@ def run_codex_tui(
     except subprocess.CalledProcessError as exc:
         failure = exc
         returncode = exc.returncode
+    except Exception as exc:
+        startup_failure = exc
     elapsed_sec = time.perf_counter() - started_at
-    emit_codex_call_console(purpose, call_path, elapsed_sec, returncode)
+    error: str | None = None
+    if startup_failure is not None:
+        error = format_codex_call_error(startup_failure)
+    emit_codex_call_console(purpose, call_path, elapsed_sec, returncode, error)
     logger = current_subcommand_logger()
     status = "succeeded" if returncode == 0 else "failed"
 
@@ -116,6 +126,9 @@ def run_codex_tui(
             **payload,
         )
 
+    if startup_failure is not None:
+        emit_event(error)
+        raise startup_failure
     emit_event()
     if failure is not None:
         raise CmocError(
@@ -123,4 +136,5 @@ def run_codex_tui(
             ["Codex CLI/TUI の出力と call log を確認してください。"],
             f"returncode: {returncode}\ncall_log: {call_path}",
         ) from failure
+    assert returncode is not None
     return CommandResult(returncode, "", "")

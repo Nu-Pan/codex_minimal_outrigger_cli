@@ -174,6 +174,44 @@ def test_run_codex_tui_logs_successful_call(
     assert codex_events[0]["call_log_path"] == str(call_logs[0])
 
 
+def test_run_codex_tui_logs_missing_cli_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    real_run = subprocess.run
+
+    def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
+        if args[:1] == ["codex"]:
+            raise FileNotFoundError("codex")
+        return real_run(args, *pos, **kwargs)
+
+    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fake_run)
+    logger = SubcommandLogger(root, "test")
+    token = set_current_subcommand_logger(logger)
+    try:
+        with pytest.raises(CmocError, match="Codex CLI が見つかりません"):
+            run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+    finally:
+        reset_current_subcommand_logger(token)
+
+    console = capsys.readouterr().out
+    call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
+    assert len(call_logs) == 1
+    assert str(call_logs[0]) in console
+    assert "not started" in console
+    assert "Codex CLI が見つかりません" in console
+
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in events if event["event"] == "codex_call"]
+    assert len(codex_events) == 1
+    assert codex_events[0]["status"] == "failed"
+    assert codex_events[0]["returncode"] is None
+    assert codex_events[0]["call_log_path"] == str(call_logs[0])
+    assert "Codex CLI が見つかりません" in codex_events[0]["error"]
+
+
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

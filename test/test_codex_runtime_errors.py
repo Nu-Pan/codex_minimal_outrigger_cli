@@ -1,3 +1,4 @@
+import json
 import subprocess
 from pathlib import Path
 
@@ -8,6 +9,11 @@ from config.cmoc_config import CmocConfig
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
 from _git_support import make_repo
 from commons.runtime_codex import run_codex_exec, run_codex_tui
+from commons.runtime_logging import (
+    SubcommandLogger,
+    reset_current_subcommand_logger,
+    set_current_subcommand_logger,
+)
 
 
 @pytest.mark.parametrize("runner", ["exec", "tui"])
@@ -26,13 +32,25 @@ def test_codex_runtime_reports_missing_codex_cli(
 
     monkeypatch.setattr(cmoc_runtime.subprocess, "run", fake_run)
 
-    with pytest.raises(CmocError, match="Codex CLI が見つかりません"):
-        if runner == "exec":
-            run_codex_exec(
-                codex_parameter(),
-                root=root,
-                capacity_initial_sleep_sec=0,
-                config=CmocConfig(),
-            )
-        else:
-            run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+    logger = SubcommandLogger(root, "test")
+    token = set_current_subcommand_logger(logger)
+    try:
+        with pytest.raises(CmocError, match="Codex CLI が見つかりません"):
+            if runner == "exec":
+                run_codex_exec(
+                    codex_parameter(),
+                    root=root,
+                    capacity_initial_sleep_sec=0,
+                    config=CmocConfig(),
+                )
+            else:
+                run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+    finally:
+        reset_current_subcommand_logger(token)
+
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in events if event["event"] == "codex_call"]
+    assert len(codex_events) == 1
+    assert codex_events[0]["status"] == "failed"
+    assert codex_events[0]["returncode"] is None
+    assert "Codex CLI が見つかりません" in codex_events[0]["error"]

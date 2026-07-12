@@ -39,7 +39,10 @@ from commons.runtime_codex_profile import (
     validate_codex_home,
 )
 from commons.runtime_errors import CmocError
-from commons.runtime_codex_logging import emit_codex_call_console
+from commons.runtime_codex_logging import (
+    emit_codex_call_console,
+    format_codex_call_error,
+)
 from commons.runtime_git import status_path_statuses
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
@@ -300,7 +303,7 @@ def run_codex_exec(
         run_output_path: Path,
         run_schema_path: Path | None,
         started_at: float,
-        returncode: int,
+        returncode: int | None,
         status: str,
         error: str | None = None,
         run_codex_home: Path = codex_home,
@@ -379,7 +382,23 @@ def run_codex_exec(
             run_schema_path=schema_path,
         )
         attempt_started_at = time.perf_counter()
-        result = run_with_prompt_file(current_argv, prompt_path)
+        try:
+            result = run_with_prompt_file(current_argv, prompt_path)
+        except Exception as exc:
+            emit_codex_call_event(
+                run_purpose=purpose,
+                run_call_path=call_path,
+                run_prompt_path=prompt_path,
+                run_stdout_path=stdout_path,
+                run_stderr_path=stderr_path,
+                run_output_path=output_path,
+                run_schema_path=schema_path,
+                started_at=attempt_started_at,
+                returncode=None,
+                status="failed",
+                error=format_codex_call_error(exc),
+            )
+            raise
         last_result = result
         stdout_path.write_text(result.stdout)
         output_jsonl_path.write_text(result.stdout)
@@ -548,12 +567,29 @@ def run_codex_exec(
                             run_call_data=probe_call_data,
                         )
                         probe_started_at = time.perf_counter()
-                        poll = run_with_prompt_file(
-                            probe_argv,
-                            probe_prompt_path,
-                            run_codex_cwd=probe_codex_cwd,
-                            run_codex_env=probe_codex_env,
-                        )
+                        try:
+                            poll = run_with_prompt_file(
+                                probe_argv,
+                                probe_prompt_path,
+                                run_codex_cwd=probe_codex_cwd,
+                                run_codex_env=probe_codex_env,
+                            )
+                        except Exception as exc:
+                            emit_codex_call_event(
+                                run_purpose="quota availability probe",
+                                run_call_path=probe_call_path,
+                                run_prompt_path=probe_prompt_path,
+                                run_stdout_path=probe_stdout_path,
+                                run_stderr_path=probe_stderr_path,
+                                run_output_path=probe_output_path,
+                                run_schema_path=None,
+                                started_at=probe_started_at,
+                                returncode=None,
+                                status="failed",
+                                error=format_codex_call_error(exc),
+                                run_codex_home=probe_codex_home,
+                            )
+                            raise
                         probe_stdout_path.write_text(poll.stdout)
                         probe_output_jsonl_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
