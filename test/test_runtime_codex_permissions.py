@@ -31,6 +31,7 @@ from _git_support import make_repo, run_git
 def test_codex_overrides_readonly_modes_allow_only_ignored_gap_writes(
     tmp_path: Path, mode: FileAccessMode
 ) -> None:
+    """読み取り専用モードが無視対象の未追跡パスだけを書き込み可能にすることを検証する。"""
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text("__pycache__/\n/build/\n")
     (root / "src").mkdir()
@@ -82,6 +83,7 @@ def test_codex_overrides_readonly_modes_allow_only_ignored_gap_writes(
 def test_codex_overrides_protect_memo_and_future_routing_files(
     tmp_path: Path, mode: FileAccessMode
 ) -> None:
+    """memo と将来のルーティングファイルを全書き込みモードで保護することを検証する。"""
     root = make_repo(tmp_path)
     (root / "src").mkdir()
     (root / "test").mkdir()
@@ -126,6 +128,7 @@ def test_codex_overrides_protect_memo_and_future_routing_files(
 def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(
     tmp_path: Path,
 ) -> None:
+    """realization write の書き込み先を許可されたトップレベル領域に限定することを検証する。"""
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text("/build/\n")
     (root / "src").mkdir()
@@ -203,14 +206,13 @@ def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(
 def test_codex_overrides_rejects_disallowed_extra_writable_paths(
     tmp_path: Path, mode: FileAccessMode, extra: str
 ) -> None:
+    """モードごとの許可領域外にある追加書き込み先を拒否することを検証する。"""
     root = tmp_path / "repo"
     root.mkdir()
     (root / "src").mkdir()
     (root / "oracle").mkdir()
     (root / "memo").mkdir()
     (root / ".agents").mkdir()
-    if extra == ".gitignore":
-        (root / extra).write_text("memo\n")
 
     with pytest.raises(CmocError, match="追加書き込み許可 path"):
         build_codex_override_args(
@@ -230,6 +232,7 @@ def test_codex_overrides_rejects_disallowed_extra_writable_paths(
 def test_codex_overrides_allows_root_ancillary_extra_writable_path(
     tmp_path: Path,
 ) -> None:
+    """realization write がルート直下の ancillary ファイルを追加許可できることを検証する。"""
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text("memo\n")
     (root / "README.md").write_text("# repo\n")
@@ -264,6 +267,7 @@ def test_codex_overrides_allows_root_ancillary_extra_writable_path(
 def test_codex_overrides_readonly_modes_allow_extra_ignored_gap_path(
     tmp_path: Path, mode: FileAccessMode
 ) -> None:
+    """読み取り専用モードが ignore された gap path の追加許可を受け入れることを検証する。"""
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text("/scratch/\n")
     (root / "scratch").mkdir()
