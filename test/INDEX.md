@@ -415,20 +415,21 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- `Codex` 実行が `quota exceeded` 後にどう待機・再試行・再開するかを外部挙動として検証するテスト群。`resume token` の復元、quota probe の組み立て、再実行時の `CODEX_HOME`/`cwd`、呼び出しログとサブコマンドログまで含めて確認する入口。
-- 並行実行時に代表 probe だけを使う制御や、probe 失敗・poll 上限・KeyboardInterrupt などの失敗経路もここで扱う。quota retry の状態機械や観測点を変える作業で読む。
+- `run_codex_exec` の quota 超過時の probe / resume / 再実行制御を検証する回帰テスト群。Codex 実行の外部挙動、呼び出しログ、`CODEX_HOME` と `cwd` の扱い、probe の単一化と失敗伝播までをまとめて確認する。
+- 個別の内部 helper の分解や実装手順ではなく、quota 待機から復帰するかどうかを境界にした観測可能な振る舞いを扱う。
 
 ## Read this when
-- `quota exceeded` 後の `probe`/`resume`/再実行フローを変えるとき。
-- resume token の抽出元、quota probe パラメータ、`CODEX_HOME` や `cwd` の引き回しを変えるとき。
-- 呼び出しログ、サブコマンドログ、並行実行時の代表 probe 選択や失敗時挙動を確認するとき。
+- Codex 実行が quota 超過後に再試行・resume されるかを変える実装を確認するとき。
+- probe 用の代表呼び出し、resume token の復元、`CODEX_HOME` の解決、call log / subcommand log の記録内容を変えるとき。
+- quota probe が失敗した場合のエラー伝播や、並行実行時に probe が 1 回に抑えられるかを確認したいとき。
 
 ## Do not read this when
-- quota retry と無関係な通常の `Codex exec` 挙動だけを変えるときは、まず通常経路のテストを読む。
-- quota 制御以外のサブコマンド、別の runtime helper、一般的なテスト基盤の変更だけを追うとき。
+- quota retry 以外の Codex 実行挙動を見たいだけなら、より直接の実行テストや実装ファイルを読む。
+- CLI の一般的な引数解釈や設定読み込みだけを確認したいとき。
+- prompt 文面や probe 生成ロジックの正本仕様そのものを確認したいときは、参照先の oracle 側を見る。
 
 ## hash
-- c64cd4c8efcddd5ce0f60d72c17165979faa1d2922884fc930606a53bfa34794
+- b6a9b5befdbcab5a5bfc80d038077370ec849630c5ec94135908e8031b367ef1
 
 # `test_codex_runtime_retry.py`
 

@@ -72,21 +72,18 @@
 # `quota_probe.py`
 
 ## Summary
-- `quota availability probe` 用の `AgentCallParameter` を組み立てる実装への案内。既存の基底パラメータを引き継ぎつつ、読み取り専用・低推論・最小モデルのプローブ用設定を作る場面で読む。
-- 実行可否を確認するための短い固定文面と、その文面を Markdown 化して prompt に載せる処理が主題。prompt の整形方針や、`READONLY` 制約を保持する必要がある変更で進む。
+- `build_quota_availability_probe_parameter` を再利用する互換アダプタ。呼び出し側がこの公開関数を使っており、実体は正本側の quota probe 構築へ委譲されることだけを確認したいときに読む。
 
 ## Read this when
-- quota 回復可否の事前確認や、実行前の軽い疎通用パラメータ生成を変更したいとき。
-- prompt に載せる役割・要約・目的の組み立て方を確認したいとき。
-- `AgentCallParameter` のモデル種別、推論強度、ファイルアクセス条件、`cwd` 継承の扱いを見たいとき。
+- quota availability probe の引数生成経路をたどりたいとき
+- この公開関数がどこへ委譲するか、また遅延 import を含む互換維持の理由を確認したいとき
 
 ## Do not read this when
-- 通常の実行用 prompt や、プローブ以外の `AgentCallParameter` を探しているとき。
-- Markdown 整形の詳細実装そのものが目的で、プローブ用パラメータ生成とは無関係なとき。
-- quota probe 以外のコマンド制御や indexing preflight の一般仕様を読みたいだけのとき。
+- canonical な prompt や call settings の正本を確認したいときは、`<work-root>/oracle/src/oracle/acp_builder/quota_probe.py` を読む
+- quota probe 以外の ACP builder 群の分岐や実装方針を追いたいときは、より直接の実装側を読む
 
 ## hash
-- f20d85d0da594206533c2232a4e23495018302eea467fb879a4e403e6e4a31e4
+- 3f7514ef51853e259d4a0bd798493cc4a16259f271db9ab7157db55bbf2d9520
 
 # `review`
 
