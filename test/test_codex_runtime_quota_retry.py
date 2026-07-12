@@ -5,19 +5,19 @@ Codex exec の外部挙動に閉じている。probe 共有、resume token、再
 subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であり、分割すると
 同じ fake Codex 呼び出し列を追う文脈が分散する。現状は quota retry 回帰として
 一箇所に保つ方が凝集性が高い。
-根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+および <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
 import subprocess
-import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from types import ModuleType
 from typing import TextIO, cast
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
+from acp.builder.quota_probe import build_quota_availability_probe_parameter
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import SubcommandLogger
 from config.cmoc_config import CmocConfig
@@ -35,33 +35,27 @@ from commons.runtime_codex import run_codex_exec
 from commons.runtime_errors import CmocError
 
 
-PROBE_PROMPT = "ビルダー由来の確認入力"
-
-
 def prompt_log_text(path: str) -> str:
+    """保存済み prompt log の本文を読み取る。"""
     return Path(path).read_text()
 
 
-def stub_quota_probe_builder(
-    monkeypatch: pytest.MonkeyPatch, probe_prompt: str = PROBE_PROMPT
-) -> str:
-    monkeypatch.setattr(
-        runtime_codex_exec,
-        "_quota_availability_probe_parameter",
-        lambda base_parameter: AgentCallParameter(
-            ModelClass.MINIMUM,
+def quota_probe_prompt(cwd: Path) -> str:
+    """実在する quota probe adapter が生成する prompt を返す。"""
+    return build_quota_availability_probe_parameter(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
             FileAccessMode.READONLY,
-            probe_prompt,
+            "base",
             None,
-            run_indexing_preflight=False,
-            cwd=base_parameter.cwd,
-        ),
-    )
-    return probe_prompt
+            cwd=cwd,
+        )
+    ).prompt
 
 
 def test_resume_token_is_read_from_persisted_jsonl_log(tmp_path: Path) -> None:
+    """保存済み JSONL から resume token を復元し、欠落時は None にする。"""
     log_path = tmp_path / "failed_call.jsonl"
     log_path.write_text('{"type":"thread.started","thread_id":"sess-from-log"}\n')
 
@@ -77,6 +71,7 @@ def test_resume_token_is_read_from_persisted_jsonl_log(tmp_path: Path) -> None:
 def test_run_codex_exec_polls_and_resumes_after_quota(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """quota 枯渇後に代表 probe を実行し、元 session を resume する。"""
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
@@ -88,7 +83,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         ]
     )
     monkeypatch.setattr(runtime_codex_exec, "timestamp", lambda: next(timestamps))
-    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    probe_prompt = quota_probe_prompt(root)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
@@ -251,16 +246,18 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """代表 probe の KeyboardInterrupt をログへ記録して伝播する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    probe_prompt = quota_probe_prompt(root)
     calls: list[str] = []
 
     def fake_run(
         argv: list[str], **kwargs: object
     ) -> subprocess.CompletedProcess[str]:
+        """初回 quota 失敗後の代表 probe を KeyboardInterrupt にする。"""
         prompt = cast(TextIO, kwargs["stdin"]).read()
         calls.append(prompt)
         if prompt == "prompt":
@@ -307,11 +304,8 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     assert codex_events[1]["error"] == "KeyboardInterrupt()"
 
 
-def test_quota_probe_adapter_delegates_to_oracle_builder(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from acp.builder.quota_probe import build_quota_availability_probe_parameter
-
+def test_quota_probe_adapter_builds_parameter_without_module_injection() -> None:
+    """実在する adapter 経路で quota probe の最小 parameter を構築する。"""
     base = AgentCallParameter(
         ModelClass.FLAGSHIP,
         ReasoningEffort.HIGH,
@@ -321,36 +315,23 @@ def test_quota_probe_adapter_delegates_to_oracle_builder(
         run_indexing_preflight=True,
         cwd=Path("/tmp/base-cwd"),
     )
-    expected = AgentCallParameter(
-        ModelClass.MINIMUM,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "oracle prompt",
-        None,
-        run_indexing_preflight=False,
-        cwd=base.cwd,
-    )
-    calls: list[AgentCallParameter] = []
-    oracle_module = ModuleType("oracle.acp_builder.quota_probe")
+    # <work-root>/oracle/src/oracle/acp_builder/quota_probe.py
+    # 現在の oracle tree に正本がないため、実際の fallback 経路を検証する。
+    probe = build_quota_availability_probe_parameter(base)
 
-    def build_oracle_parameter(parameter: AgentCallParameter) -> AgentCallParameter:
-        calls.append(parameter)
-        return expected
-
-    setattr(
-        oracle_module,
-        "build_quota_availability_probe_parameter",
-        build_oracle_parameter,
-    )
-    monkeypatch.setitem(sys.modules, oracle_module.__name__, oracle_module)
-
-    assert build_quota_availability_probe_parameter(base) is expected
-    assert calls == [base]
+    assert probe.model_class == ModelClass.MINIMUM
+    assert probe.reasoning_effort == ReasoningEffort.LOW
+    assert probe.file_access_mode == FileAccessMode.READONLY
+    assert probe.prompt
+    assert probe.structured_output_schema_path is None
+    assert probe.run_indexing_preflight is False
+    assert probe.cwd == base.cwd
 
 
 def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """probe も Codex cwd 基準で相対 CODEX_HOME を解決する。"""
     root = make_repo(tmp_path)
     initial_codex_home = root / "relative_codex_home"
     probe_codex_home = root / "relative_codex_home"
@@ -360,12 +341,13 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    probe_prompt = quota_probe_prompt(root)
     records: list[tuple[str, Path, Path, Path, Path]] = []
 
     def fake_run(
         argv: list[str], **kwargs: object
     ) -> subprocess.CompletedProcess[str]:
+        """初回、probe、resume の cwd と CODEX_HOME を記録する。"""
         stdin = cast(TextIO, kwargs["stdin"]).read()
         cwd = Path(cast(str, kwargs["cwd"]))
         kind = (
@@ -434,11 +416,12 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
 def test_run_codex_exec_reruns_after_quota_without_resume_token(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """resume token がない quota 復帰で同じ prompt を再実行する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    probe_prompt = quota_probe_prompt(root)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
@@ -497,11 +480,12 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
 def test_quota_probe_non_quota_failure_fails_immediately(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, probe_returncode: int
 ) -> None:
+    """代表 probe の quota 以外の失敗を即時に伝播する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    probe_prompt = quota_probe_prompt(root)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "failed_probe_calls.jsonl"
@@ -558,6 +542,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
 def test_quota_poll_limit_stops_before_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """quota poll 上限到達時は代表 probe を起動せず失敗する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -609,11 +594,12 @@ def test_quota_poll_limit_stops_before_probe(
 def test_quota_probe_failure_reports_probe_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """代表 probe の失敗を quota 復帰失敗として報告する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    probe_prompt = quota_probe_prompt(root)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "probe_failure_calls.jsonl"
@@ -664,10 +650,11 @@ def test_quota_probe_failure_reports_probe_error(
 def test_run_codex_exec_uses_single_representative_quota_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """並行 quota 待機を一つの代表 probe に集約する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    probe_prompt = quota_probe_prompt(root)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "parallel_calls.jsonl"
@@ -712,6 +699,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     )
 
     def call_codex() -> object:
+        """並行呼び出し一件分の quota 復帰処理を実行する。"""
         return run_codex_exec(
             parameter,
             root=root,
@@ -733,10 +721,11 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
 def test_waiting_quota_calls_fail_when_representative_probe_fails(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """代表 probe の失敗を待機中の全呼び出しへ伝播する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    probe_prompt = quota_probe_prompt(root)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "parallel_failed_probe_calls.jsonl"
@@ -779,6 +768,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
     )
 
     def call_codex() -> object:
+        """代表 probe 失敗を受ける並行呼び出し一件を実行する。"""
         return run_codex_exec(
             parameter,
             root=root,
