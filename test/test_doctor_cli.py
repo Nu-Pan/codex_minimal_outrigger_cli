@@ -183,6 +183,29 @@ def test_dector_alias_runs_doctor(
     assert (root / ".cmoc" / "config.json").is_file()
 
 
+def test_doctor_generates_config_under_broad_cmoc_ignore(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text(".cmoc/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore cmoc working data")
+    monkeypatch.chdir(root)
+
+    run_doctor(root)
+
+    assert (
+        run_git(root, "ls-files", "--", ".cmoc/config.json").stdout.strip()
+        == ".cmoc/config.json"
+    )
+    check_ignore = subprocess.run(
+        ["git", "check-ignore", "-q", ".cmoc/config.json"],
+        cwd=root,
+        check=False,
+    )
+    assert check_ignore.returncode != 0
+
+
 def test_doctor_preprocess_targets_current_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -201,9 +224,29 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     assert run_git(
         linked, "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"
     ).returncode == 0
-    assert not (root / ".gitignore").exists()
-    assert not (root / ".agents").exists()
+    assert "/.cmoc/local/" in (root / ".gitignore").read_text()
+    assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
+    assert (
+        run_git(
+            root,
+            "check-ignore",
+            "-q",
+            ".cmoc/local/worktree/linked-doctor",
+        ).returncode
+        == 0
+    )
+    assert (
+        run_git(
+            root, "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"
+        ).returncode
+        == 0
+    )
     assert (root / ".cmoc" / "config.json").is_file()
+    assert list((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))
+    assert not (linked / ".cmoc" / "local" / "log" / "sub_command").exists()
+    assert run_git(root, "status", "--short").stdout.strip() == ""
     assert not (linked / ".cmoc" / "config.json").exists()
     assert f"- repo_root: `{root}`" in result.stdout
 

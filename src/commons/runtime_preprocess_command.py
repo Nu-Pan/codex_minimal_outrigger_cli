@@ -32,7 +32,10 @@ def _preprocess_body(command_heading: str) -> None:
 
 
 def _commit_config(root: Path) -> None:
-    run_git(["add", ".cmoc/config.json"], root)
+    # <work-root>/oracle/src/oracle/other/cmoc_config.py
+    # config は .cmoc/local と違って repo の tracked 正本なので、広域の
+    # .cmoc/ ignore があっても明示的に index へ追加する。
+    run_git(["add", "-f", ".cmoc/config.json"], root)
     has_config_diff = (
         run_git(
             ["diff", "--cached", "--quiet", "--", ".cmoc/config.json"],

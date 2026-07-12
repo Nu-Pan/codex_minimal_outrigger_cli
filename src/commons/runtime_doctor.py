@@ -9,16 +9,32 @@ from config.cmoc_config import CmocConfig
 from commons.runtime_errors import CmocError
 from commons.runtime_git import ensure_cmoc_ignored, run_git, with_cmoc_ignore_pattern
 from commons.runtime_ollama import ensure_ollama_serves_local_slm
+from commons.runtime_paths import repo_root
 
 
 def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
-    """共通実行前修復を行い、修復差分だけを commit する。"""
+    """current と main worktree の共通修復を行い、修復差分だけを commit する。"""
     root = root.resolve()
-    restored_index_tree = _restored_index_tree(root)
-    ensure_cmoc_ignored(root)
-    agents_gitkeep_added = _ensure_agents_tracked(root)
+    repair_roots = [root]
+    main_root = repo_root(root)
+    if main_root != root:
+        # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+        # サブコマンドログは doctor 開始前に main worktree 側へ作られるため、
+        # linked worktree 実行時も両方の .cmoc/local を ignore 対象にする。
+        repair_roots.append(main_root)
+
+    repairs: list[tuple[Path, str, bool]] = []
+    for repair_root in repair_roots:
+        restored_index_tree = _restored_index_tree(repair_root)
+        ensure_cmoc_ignored(repair_root)
+        agents_gitkeep_added = _ensure_agents_tracked(repair_root)
+        repairs.append((repair_root, restored_index_tree, agents_gitkeep_added))
+
     ensure_ollama_serves_local_slm(root, config)
-    _commit_doctor_repairs(root, restored_index_tree, agents_gitkeep_added)
+    for repair_root, restored_index_tree, agents_gitkeep_added in repairs:
+        _commit_doctor_repairs(
+            repair_root, restored_index_tree, agents_gitkeep_added
+        )
 
 
 def _ensure_agents_tracked(root: Path) -> bool:

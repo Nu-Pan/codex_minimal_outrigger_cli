@@ -39,7 +39,8 @@ def run_cli_subcommand(
     work root 検査後、doctor preprocess より前にサブコマンドログを作成し、
     開始・完了表示、戻り値の終了コード化、例外のエラー表示を一箇所で扱う。
     runtime state は通常 repo root に置き、linked worktree 前処理では work root に置く。
-    doctor preprocess は runtime state の保存先とは別に常に current work root を修復する。
+    doctor preprocess は current work root を起点に、current と main repo root の
+    両方を修復する。
     サブコマンドログは常に repo root に置く。
     """
     logger = None
