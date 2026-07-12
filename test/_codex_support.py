@@ -49,6 +49,84 @@ def codex_override_config(args: list[str]) -> dict[str, object]:
     return result
 
 
+# <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+def _override_writable_roots(args: list[str]) -> set[str]:
+    parsed = codex_override_config(args)
+    return set(parsed.get("sandbox_workspace_write", {}).get("writable_roots", []))
+
+
+def _override_permission_filesystem(args: list[str]) -> dict[str, str]:
+    parsed = codex_override_config(args)
+    return parsed.get("permissions", {}).get("cmoc", {}).get("filesystem", {})
+
+
+def _override_permission_roots(args: list[str], access: str) -> set[str]:
+    return {
+        path
+        for path, actual_access in _override_permission_filesystem(args).items()
+        if actual_access == access
+    }
+
+
+def _standard_realization_override_roots(root: Path) -> set[str]:
+    roots: set[str] = set()
+    for name in ("src", "test", "bin"):
+        roots.add(str((root / name).resolve()))
+    roots.add(str((root / ".gitignore").resolve()))
+    if (root / "README.md").exists():
+        roots.add(str((root / "README.md").resolve()))
+    return roots
+
+
+def _override_write_roots(args: list[str]) -> set[str]:
+    return {
+        *_override_writable_roots(args),
+        *_override_permission_roots(args, "write"),
+    }
+
+
+def _most_specific_permission_access(args: list[str], path: Path) -> str | None:
+    target = path.resolve()
+    matches = [
+        (Path(allowed).resolve(), access)
+        for allowed, access in _override_permission_filesystem(args).items()
+        if target.is_relative_to(Path(allowed).resolve())
+    ]
+    return max(matches, key=lambda item: len(item[0].parts))[1] if matches else None
+
+
+def _assert_writable(args: list[str], path: Path) -> None:
+    access = _most_specific_permission_access(args, path)
+    if access is not None:
+        assert access == "write"
+        return
+    target = path.resolve()
+    assert any(
+        target.is_relative_to(Path(root))
+        for root in _override_write_roots(args)
+    )
+
+
+def _assert_not_writable(args: list[str], path: Path) -> None:
+    access = _most_specific_permission_access(args, path)
+    if access is not None:
+        assert access != "write"
+        return
+    target = path.resolve()
+    assert not any(
+        target.is_relative_to(Path(root))
+        for root in _override_write_roots(args)
+    )
+
+
+def _assert_not_permission_accessible(args: list[str], path: Path) -> None:
+    target = path.resolve()
+    assert not any(
+        target.is_relative_to(Path(root))
+        for root in _override_permission_filesystem(args)
+    )
+
+
 def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """Use stable Codex override argv in tests that target subprocess control."""
     import commons.runtime_codex_exec as exec_module
