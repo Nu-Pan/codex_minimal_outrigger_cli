@@ -618,6 +618,7 @@ def test_apply_join_allows_session_oracle_symlink_to_outside_root(
     "path",
     [
         "AGENTS.md",
+        "src/AGENTS.md",
         ".codex/config.toml",
         ".gitignore",
         "README.md",

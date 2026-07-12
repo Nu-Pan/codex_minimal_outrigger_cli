@@ -340,10 +340,14 @@ def managed_branch_name_status_lines(root: Path, base: str, branch: str) -> list
 def is_expected_apply_change(root: Path, path: str) -> bool:
     """apply branch 上で許可される差分かどうかを判定する。"""
     p = Path(path)
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # defines AGENTS.md as outside realization files at every depth.
+    if p.name == "AGENTS.md":
+        return False
     if p.name == "INDEX.md":
         return True
     # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md limits apply
-    # branch products to implementation files; AGENTS.md places them under src/.
+    # branch products to implementation files and INDEX.md.
     if not path.startswith("src/"):
         return False
     return not is_untracked_git_ignored(root, root / path)
