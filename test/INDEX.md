@@ -577,25 +577,77 @@
 ## hash
 - a61448d13fe6b11acc398a8f268160b43e11b800fb149526e056ef20a992fdad
 
-# `test_review_oracle_cli.py`
+# `test_review_oracle_loop.py`
 
 ## Summary
-- review oracle の CLI 実行とレポート生成を end-to-end で検証するテスト群。対象 oracle の選択、scope 別の列挙、report の見出し・集計・評価結果・エラー報告を確認する入口。
-- 所見の enumerate / validate / judge / merge のループ制御、再試行、失敗時挙動、review 作業中に作られる作業ツリーや commit の扱いを検証する。
-- `<work-root>/oracle` 配下の対象判定や、`INDEX.md` / `AGENTS.md` 除外、tracked / ignored / symlink / memo 混在時の対象抽出など、レビュー対象探索の境界条件を確認する。
+- `review oracle` の反復実行で、finding の列挙・検証・マージが期待どおりに結び付くかを確認するテスト群。`sub_commands.review.oracle` の loop 全体と、finding merge の適用規則の境界を読む入口。
+- 同じラウンドの challenger 理由が advocate に引き継がれるか、既存の challenger 理由が保持されるか、merge operation の再試行や失敗時の打ち切り条件がどう扱われるかを確認したいときに読む。
 
 ## Read this when
-- review oracle の CLI 出力、report 生成、または所見評価ループの仕様を変えるとき。
-- oracle 対象の列挙条件や、`session` / `full` scope の扱いを変えるとき。
-- merge 失敗、judge 失敗、未コミット差分、INDEX 競合などの失敗系や復旧系を変更するとき。
+- `review oracle` の loop に関する振る舞い、finding の生成・統合・判定の流れ、または merge operation の妥当性検証を変更するとき。
+- finding の target 共有、同一ラウンド内の reason の引き継ぎ、merge 失敗後の再試行回数やエラー条件を確認したいとき。
 
 ## Do not read this when
-- 通常の一般的な CLI 画面や他サブコマンドの仕様だけを追うとき。
-- `oracle` 以外のレビュー対象抽出や、別の report 形式を探すとき。
-- 実装本体のアルゴリズムを理解したいだけで、CLI 経由の統合検証は不要なとき。
+- `review oracle` のプロンプト文面や schema 定義そのものを変えたいときは、対応する実装側を先に読む。
+- finding 以外の review フロー全般や別サブコマンドの挙動を追いたいときは、このテストではなく該当する上位の review 入口を読む。
 
 ## hash
-- 7eb48fbdaa9bf3f758ceeb58e9a2c6526b468a3c0038e3387d5f1d4bae16bdc6
+- 2a19ab413b7f601aff51a07428afa466f23a03728b6a3b7f3a0192532fb61c23
+
+# `test_review_oracle_report.py`
+
+## Summary
+- `review oracle` 系の回帰テスト群。`eval-oracle` から `review oracle` 実装へ委譲されること、レポートの Markdown 構成、集計結果、エラー時レポート出力を確認する。
+
+## Read this when
+- `review oracle` の CLI 出力、レポート生成、findings の採否・集計・並び順を変える。
+- `eval-oracle` と `review oracle` の接続や、scope 引数の受け渡しを変える。
+- 処理失敗時に error report を出す挙動を変える。
+
+## Do not read this when
+- `review oracle` の内部検出ロジックそのものを追うなら、実装側の `sub_commands/review/oracle` を先に読む。
+- セッション作成や doctor の準備挙動だけを変えるなら、各サブコマンドの別テストを読む。
+- `review oracle` 以外の review サブコマンドの仕様だけを確認したい場合は、このファイルは読まない。
+
+## hash
+- 405024b6366a9702605c60db7d900bb152d20e7e4a3b5c6dff07a05ecac2eb93
+
+# `test_review_oracle_targets.py`
+
+## Summary
+- `review oracle` の対象解決と列挙ルールを検証するテスト群。`oracle_path` の `<work-root>` / `<oracle-root>` 解決、`full` / `session` スコープでの oracle 対象選定、ignored や symlink を含む oracle file の扱い、`AGENTS.md` / `INDEX.md` を除外する境界を確かめる。
+
+## Read this when
+- `review oracle` の対象ファイル選定やパス解決を変更する。
+- oracle 配下の symlink, ignored file, tracked ignored file, `AGENTS.md`, `INDEX.md` の扱いを変える。
+- session scope と full scope の対象数や評価数の差が変わる可能性がある。
+
+## Do not read this when
+- review 実行の見た目だけを変える。
+- finding 本文の評価ロジックや report の文面だけを変える。
+- oracle 以外のサブコマンドの対象列挙を直す。
+
+## hash
+- ae482ffa010320a92be4a6c65a7633c5a2efe074181a12b161d07b55b81928d9
+
+# `test_review_oracle_worktree.py`
+
+## Summary
+- `review oracle` が worktree 選択、INDEX 統合、差分検査、競合解決をどう扱うかを検証するテスト群。
+- セッション fork 後の review 実行で、linked worktree や preflight 由来の INDEX.md をどう反映するか、また未コミット差分や不要な worktree 生成をどう拒否するかを確認する。
+
+## Read this when
+- `review oracle` の CLI 挙動、worktree の選択条件、INDEX.md のマージや競合解決を変えるとき。
+- review 実行前後の git 差分チェックや、linked worktree / session branch の扱いを確認したいとき。
+- review で生成される report や worktree 配置が期待どおりかを確認したいとき。
+
+## Do not read this when
+- `review oracle` 以外の review ルートの一般的な実装を追いたいときは、対応する実装側を読む。
+- INDEX 統合の具体処理だけを追いたいときは、このテストより `commons.indexing` 側を読む。
+- セッション fork 自体の挙動だけを確認したいときは、このファイルではなく session 関連のテストを読む。
+
+## hash
+- d4a9017f429505064cc1704b3c60d331bcee268fe15119594e7b471e5b1bbc85
 
 # `test_runtime_cli.py`
 
