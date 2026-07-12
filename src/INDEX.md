@@ -55,21 +55,19 @@
 # `commons`
 
 ## Summary
-- cmoc の実行基盤で複数モジュールから共有される runtime helper 群のまとまりを扱う領域。個別 helper の実装ではなく、この配下でどの共通基盤を探すべきかを判断するときの入口になる。
-- 共通 runtime の再公開や、実行・設定・状態・git・path・logging・Codex まわりの基盤処理を横断して確認したいときに進む。
+- cmoc の実行基盤を横断的に共有する共通 runtime helpers の集約点。設定、git、path、logging、results、state、Codex 実行、Ollama、doctor、apply、indexing などの下位実装を、利用側が一箇所から参照できるように束ねる。
+- 個別の振る舞いはここでは定義せず、共通基盤の入口としてどの runtime helper 群へ進むべきかを判断するために読む。
 
 ## Read this when
-- 複数モジュールで共有する runtime helper の配置場所や入口を確認したいとき。
-- 共通 runtime の再公開点を起点に、実行・設定・状態・git・path・logging・Codex などの基盤処理をまたぐ変更をしたいとき。
-- 共有 helper 群のどの下位要素へ進むべきかを、責務の境界から判断したいとき。
+- cmoc 実行時に複数モジュールから共通利用する helper 群の配置や公開入口を確認したいとき。
+- 設定、git、path、ログ、state、Codex 実行、preflight、doctor、apply の横断的な共通処理へ進む前に、この領域が shared runtime のまとまりであることを確認したいとき。
 
 ## Do not read this when
-- 特定の helper の内部アルゴリズム、入出力、失敗時挙動を確認したいとき。対応する下位要素の本文を直接読む。
-- CLI サブコマンド固有の処理やドメイン固有の実装を調べたいとき。より直接その責務を持つ対象へ進む。
-- 単なる再公開の有無だけを知りたいとき。この領域ではなく、該当する下位実装を読む。
+- 特定 helper の実装、入出力、失敗時挙動を確認したいとき。該当する下位実装を直接読む。
+- CLI コマンド固有の手順、画面、ドメイン仕様を調べたいとき。共有 runtime helper ではなく、より直接その責務を持つ対象へ進む。
 
 ## hash
-- ea0f536df46aa36bb26c10e65d794131671eb840f7be1c903cbe7d8c0f3cde9b
+- 151719ff188df250513406a2b0c6a5ce6e75fac6db97fd8f278a2fae124f78b2
 
 # `config`
 

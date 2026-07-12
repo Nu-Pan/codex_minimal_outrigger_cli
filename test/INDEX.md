@@ -489,24 +489,21 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- `doctor` CLI の振る舞いを検証するテスト群の入口。`.cmoc` 設定の生成・同期、`doctor`/`dector` 実行、Git 状態の修復、`ollama` の共有管理、linked worktree での振る舞い確認を読むときにここから入る。
-- 個別ケースは、Git の追跡/未追跡/ステージ済み状態、`.gitignore` の修復、`.agents/.gitkeep` の維持、`.cmoc/local` の扱い、既存のステージ済み差分を壊さないこと、`cmoc` 管理の ollama サービス生成をそれぞれ確認する意図でまとまっている。
+- doctor コマンドの事前修復と設定生成の外形挙動を検証する統合テスト群。`.cmoc` 周辺の修復、git 状態の保持、linked worktree の扱い、Ollama 連携、`dector` 互換までをまとめて扱う。
+- 個別の内部実装ではなく、`doctor` 実行後に残るファイル状態・commit 内容・ignore 状態・サービス設定・モデル取得順序を確認したいときに読む。
 
 ## Read this when
-- `doctor` コマンドの統合テストを追加・修正したいとき。
-- `.cmoc/config.json` の生成やデフォルト同期、既存値を壊さない更新方針を確認したいとき。
-- Git worktree や linked worktree で `doctor` がどのルートを対象にするかを確認したいとき。
-- `.cmoc/local` の ignore/track 方針、`.agents/.gitkeep` の生成、既存ステージ済み変更の保護を確認したいとき。
-- `cmoc` 管理の ollama サービスとモデル取得のテスト観点を確認したいとき。
+- `doctor` / `dector` の CLI 挙動を変える、またはその修復処理を調べたいとき。
+- `.gitignore`、`.agents/.gitkeep`、`.cmoc/config.json`、`.cmoc/local`、linked worktree の扱いなど、doctor 実行後のリポジトリ状態を確認したいとき。
+- Ollama の managed service とモデル取得の順序・対象がどうなるかを確認したいとき。
 
 ## Do not read this when
-- `doctor` の実装本体やサブコマンド配線を追いたいだけなら、テストではなく対応する実装側を読むべき。
-- `_cli_support` や `_git_support`、`_ollama_support` の共通ヘルパーの詳細を知りたいときは、このファイルではなくそれぞれのヘルパー定義を読むべき。
-- `doctor` 以外のサブコマンドの仕様を知りたいとき。
-- Git 以外の永続化や設定全般の仕様を広く確認したいだけなら、この個別テストではなく対象機能の正本仕様断片を読むべき。
+- doctor 以外の CLI サブコマンドの外形挙動を調べるときは、そちらのテスト群を先に読む。
+- Ollama のインストール手順や service 定義そのものの仕様を知りたいだけなら、doctor テストではなく該当する runtime / config 側を読む。
+- 内部 helper の細かな実装順や git 操作の逐語的な流れだけを追いたいときは、まず対応する実装ファイルを読む。
 
 ## hash
-- 91aafa52143e5bc8c88ebb93eb8fbe19c4db4ffc30230ab28695d95450252fd2
+- 0f3cdb2204056fdd5676af62d25bad7649e3577560f56ce362b0901f1e386620
 
 # `test_indexing_cli.py`
 

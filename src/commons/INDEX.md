@@ -248,24 +248,23 @@
 # `runtime_doctor.py`
 
 ## Summary
-- `src/commons/runtime_doctor.py` は、doctor 実行前後に current worktree と main worktree の修復差分をまとめて扱うための実装です。`.gitignore` への `cmoc` ignore 追加、`.agents/.gitkeep` の追跡、`.cmoc/local` の除外、そして修復内容だけを一時 index 経由で commit し、元の index/tree を戻す流れを担います。
-- このファイルを読むべきなのは、doctor 前処理の commit / restore の挙動、linked worktree 時の main worktree への波及、`.agents` の扱い、Git index を壊さずに修復を合成する必要がある場合です。
-- ここでは git 操作の共通ヘルパーや一時 index の作成、`.gitignore` と `.agents/.gitkeep` だけを修復対象にする境界が重要です。個別のコマンド実装や他サブコマンドの仕様を知りたいだけなら、このファイルより各呼び先の実装を先に読むべきです。
+- `src/commons/runtime_doctor.py` は、`doctor preprocess` の共通修復処理をまとめる入口。`<work-root>` と main worktree の両方に対して、`.cmoc/local` の追跡除外、`.agents` の追跡固定、cmoc managed ollama の可用性確認を行い、修復差分を commit して元の index を復元する責務を持つ。
+- この対象では、Git common directory 単位の排他ロック、HEAD 起点の一時 index を使った修復 commit、現在 index の退避と復元、`.gitignore` と `.agents/.gitkeep` の修復合成までを扱う。
 
 ## Read this when
-- doctor_preprocess の前処理が何を修復し、どの順序で commit するかを確認したいとき
-- linked worktree 実行時に main worktree 側まで修復対象に含める理由を知りたいとき
-- `.agents` を tracked にする条件や `.gitkeep` の扱いを確認したいとき
-- 現在の index と修復差分を分離したまま tree を復元する必要がある変更を入れるとき
+- `doctor preprocess` の実行順、排他条件、修復対象、commit までの流れを確認・変更したいとき。
+- `.cmoc/local` を追跡対象外に保つ条件と、既存 tracked file の扱いを確認したいとき。
+- `.agents` を追跡対象として固定する条件、placeholder の追加条件、失敗時の扱いを確認したいとき。
+- linked worktree で main worktree 側も含めて修復する理由や、共有 index を壊さないための復元方法を確認したいとき。
+- doctor 用の process lock や、修復だけを別 index で commit する実装境界を確認したいとき。
 
 ## Do not read this when
-- 単なる git ヘルパーの実装詳細だけを追いたいときは、まず `commons.runtime_git` を読むべきです
-- Ollama 起動確認の挙動だけを知りたいときは、このファイルではなく `commons.runtime_ollama` を読むべきです
-- worktree の解決や repo root の導出だけを知りたいときは、`commons.runtime_paths` を先に読むべきです
-- doctor_preprocess 以外のサブコマンドの仕様を探しているときは、このファイルは直接の入口ではありません
+- `doctor preprocess` の個別仕様そのものではなく、特定サブコマンド固有の前提条件を知りたいときは、そのサブコマンド側を読む。
+- Git の一般的な操作方法や、共通 runtime の他の責務だけを確認したいとき。
+- cmoc managed ollama の取得・配置・起動の詳細だけを確認したいときは、そちらの正本仕様断片を読む。
 
 ## hash
-- 920a33a447821e6364ce894b71819779ce2debf82dc2bc815394143170ffea95
+- f052fc72e4e25abf1737ef356b05346752771460d6e0d6532c6bec01be54e2cc
 
 # `runtime_errors.py`
 
@@ -288,20 +287,22 @@
 # `runtime_git.py`
 
 ## Summary
-- Git 呼び出しを 1 箇所に集約し、利用者向けエラー整形、branch/worktree 操作、`.cmoc/local` の ignore 判定、oracle/realization 判定を扱う実行時基盤。Git の失敗を cmoc の例外へ揃える処理や、worktree・ignore・oracle file 判定を変更する場合に読む。
+- Git まわりの共通境界をまとめた実行時ヘルパー群です。branch 判定、worktree の作成・削除、状態取得、`.cmoc/local` の ignore 制御、oracle file 判定を扱います。
+- `git` 呼び出しの失敗を利用者向けエラーへ揃える境界や、cmoc 管理領域の worktree・ignore 判定を確認したいときに読む対象です。
 
 ## Read this when
-- git コマンドの実行方法や失敗時のエラー整形を変えたいとき
-- managed branch、managed worktree、`.cmoc/local` の扱いを変えたいとき
-- oracle file / realization file の判定条件や、git ignore 判定の使い方を確認したいとき
+- `git` subprocess の失敗処理や、branch / HEAD / status の取得方法を確認したい。
+- cmoc が管理する worktree の作成・削除条件や、管理外 worktree を拒否する制約を確認したい。
+- `.cmoc/local` を tracked にしないための ignore 追加・検査・修復ロジックを確認したい。
+- oracle file かどうかの判定基準を確認したい。
 
 ## Do not read this when
-- 個別サブコマンドの入出力や CLI 文言だけを変えるとき
-- branch 名や worktree パスの生成規則そのものを決めたいときは、呼び出し側のサブコマンド実装を先に読む
-- git 以外の共通 runtime 処理を探しているとき
+- session / apply / review のコマンド全体の制御フローを追いたいときは、各 `sub_commands` 側を読む。
+- git 以外の入出力変換やレポート生成を追いたいときは、このファイルではなく該当機能の実装を読む。
+- 既に `git` 呼び出し境界や ignore 判定の詳細を知っていて、上位コマンドの振る舞いだけを追いたいときは、より上位のモジュールを先に読む。
 
 ## hash
-- d1a2a3fa00d07e6d2ff91fbba0fd420aec79924a21277217ff32fe0b42ff1ac8
+- ec4a87a8ad077112339331808411cd7608e7aea9599f594b7dbcdcc39132f493
 
 # `runtime_logging.py`
 
