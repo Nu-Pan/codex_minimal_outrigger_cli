@@ -19,12 +19,19 @@ from commons.runtime_logging import (
 def test_codex_runtime_reports_missing_codex_cli(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Codex CLI 不在時の例外と失敗ログを検証する。
+
+    対応する正本:
+        <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        <work-root>/oracle/doc/app_spec/console_and_file_log.md
+    """
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     real_run = subprocess.run
 
     def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
+        """Codex CLI の不在を再現し、それ以外の subprocess 呼び出しを委譲する。"""
         if args[:1] == ["codex"]:
             raise FileNotFoundError("codex")
         return real_run(args, *pos, **kwargs)
