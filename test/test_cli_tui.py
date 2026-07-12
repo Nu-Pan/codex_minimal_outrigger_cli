@@ -1,6 +1,7 @@
 """TUI 起動直前の CLI 前処理の外部挙動を検証する。"""
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
 
 import commons.runtime_codex_preflight as codex_preflight_module
@@ -14,6 +15,12 @@ from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
 from main import app
 import sub_commands.tui as tui_module
+
+@pytest.fixture(autouse=True)
+def reset_indexing_preflight() -> Iterator[None]:
+    codex_preflight_module.disable_indexing_preflight()
+    yield
+    codex_preflight_module.disable_indexing_preflight()
 
 def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     tmp_path: Path,
@@ -175,7 +182,6 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
         tui_calls.append((parameter, kwargs))
 
     monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
-    codex_preflight_module.disable_indexing_preflight()
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
