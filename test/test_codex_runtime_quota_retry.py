@@ -259,6 +259,9 @@ def test_quota_probe_builder_returns_minimal_probe_parameter() -> None:
     probe = build_quota_availability_probe_parameter(base)
 
     assert "OK" in probe.prompt
+    assert "# file read write rule - readonly" in probe.prompt
+    assert "oracle file は書き込み禁止" in probe.prompt
+    assert "realization file は書き込み禁止" in probe.prompt
     assert probe.model_class == ModelClass.MINIMUM
     assert probe.reasoning_effort == ReasoningEffort.LOW
     assert probe.file_access_mode == FileAccessMode.READONLY
@@ -467,8 +470,9 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
     assert result.output_json == {"ok": True}
 
 
+@pytest.mark.parametrize("probe_returncode", [0, 2])
 def test_quota_probe_non_quota_failure_fails_immediately(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, probe_returncode: int
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -489,7 +493,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
             "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
             f"if stdin == {probe_prompt!r}:",
             "    print(json.dumps({'type':'error','message':'override is broken'}))",
-            "    sys.exit(2)",
+            f"    sys.exit({probe_returncode})",
             "print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
             "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
             "sys.exit(1)",
@@ -524,7 +528,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == ["quota_waiting", "failed"]
     assert codex_events[1]["purpose"] == "quota availability probe"
-    assert codex_events[1]["returncode"] == 2
+    assert codex_events[1]["returncode"] == probe_returncode
     assert "override is broken" in codex_events[1]["error"]
 
 
