@@ -75,20 +75,20 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- doctor preprocess は、各サブコマンド開始前に共通で必要な repo 健全性の検証と修復をまとめて担う入口であり、`.cmoc/gu` の ignore 保証、`.agents` の tracked 化、`.cmoc/gt/config.json` の tracked 化、必要時の cmoc managed ollama 準備、修復後の commit までを扱う。個別サブコマンド固有の前提ではなく、全体共通の事前条件を満たす場面で読む。
+- cmoc 起動前に行う共通の事前検証と修復を扱う。`.cmoc/gu` の追跡外化、`.agents` の追跡可能化、`.cmoc/gt/ar/config.json` の追跡状態確保、必要時の managed ollama 可用性確認、差分の commit までが対象で、個別サブコマンド固有の前提確認はここでは扱わない。
 
 ## Read this when
-- cmoc の本命処理の前に共通の初期化・修復をどう行うか確認したいとき。
-- .cmoc/gu の追跡除外保証、`.agents` の事前作成・追跡、`.cmoc/gt/config.json` の作成・追跡、または cmoc managed ollama の利用可能性保証に関わる変更をするとき。
-- 各サブコマンド個別の前提ではなく、起動前に必ず通す共通の doctor 処理を見直すとき。
+- サブコマンド実行前の共通前処理を実装・変更したいとき。
+- `.cmoc/gu` の ignore 設定や tracked 状態の整理、`.agents` の初期化、`.cmoc/gt/ar/config.json` の生成・追跡追加を確認したいとき。
+- managed ollama を使う前提の可用性確認や、その失敗時に cmoc を止める条件を確認したいとき。
 
 ## Do not read this when
-- 各サブコマンド固有の引数・入出力・本体処理を確認したいだけのときは、該当サブコマンド側の仕様を読む。
-- cmoc managed ollama のサービス仕様そのものだけを確認したいときは、`cmoc_managed_ollama.md` を直接読む。
-- 共通の事前修復ではなく、通常実行中や終了処理中の振る舞いを確認したいとき。
+- 各サブコマンド固有の入力検証や本処理の流れを見たいときは、各サブコマンドの仕様を読む。
+- 共通事前処理の後に行う個別前提や機能別の挙動を見たいときは、該当する機能側の仕様を読む。
+- 起動前の環境整備ではなく、通常実行時のコマンド振る舞いだけを確認したいとき。
 
 ## hash
-- a85852a16cc6db3fa4e1e33a8cb3a579e6e7e67596d37ce4340b5b20f607c1e0
+- 631962b52a08945fd832125650aa8d4e9d9a61f2417464acf305092304179f68
 
 # `error_handling.md`
 

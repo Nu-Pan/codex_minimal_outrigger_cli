@@ -25,21 +25,21 @@
 # `file_access_rule.py`
 
 ## Summary
-- `FileAccessMode` ごとのファイル読み書き規則プロンプトを組み立てる入口。リポジトリ外、`.git`/`.agents`/`.codex`/`memo`、`AGENTS.md`/`INDEX.md`、および oracle file・realization file へのアクセス可否をモード別に切り替える。
-- `repo-root` と `work-root` をプレースホルダへ渡し、`StructDoc` として最終文面を返すだけの部品。アクセス規則の文言やモードごとの禁止範囲を確認したいときに読む。
+- ファイル読み書き規則の本文と、その文面に差し込む `repo-root` / `work-root` を組み立てる。アクセス可否そのものではなく、モードごとの禁止条件をどの文面に落とすかを決める入口。
+- `FileAccessMode` ごとの文面差分、`NO_RULE` の特例、例外的に残している設計上の注意があるため、アクセス規則の表示内容やモード分岐を変えるときに読む。
 
 ## Read this when
-- ファイル読み書き権限の注入文面を変更したいとき。
-- `READONLY`、`PURE_ORACLE_READ`、`REPO_WRITE`、`PURE_ORACLE_WRITE`、`REALIZATION_WRITE`、`NO_RULE` のどれかの挙動を見直すとき。
-- oracle file と realization file のどちらを読める/書けるべきか、また境界ファイルをどう扱うかを確認したいとき。
+- ファイルアクセス規則のプロンプト文面を追加・変更したい。
+- `READONLY` / `PURE_ORACLE_READ` / `REPO_WRITE` / `PURE_ORACLE_WRITE` / `REALIZATION_WRITE` / `NO_RULE` の扱いを確認したい。
+- アクセス規則に差し込むワークスペース根拠の値をどこから渡すかを確認したい。
 
 ## Do not read this when
-- 実際のファイルアクセス判定ロジックそのものを追いたいときは、先に `FileAccessMode` の定義側を読む。
-- `repo-root`/`work-root` の解決方法だけを知りたいときは、ここではなく path 解決側を読む。
-- プロンプト全体の組み立て順や他の文面部品を知りたいときは、この関数の周辺の別パーツを読む。
+- 実際のファイルアクセス制御の判定ロジックそのものを追いたい場合は、プロンプト組み立てではなく実行側の制御を読む。
+- `StructDoc` の一般的な使い方だけを知りたい場合は、より基礎的な定義側を読む。
+- アクセスモード列挙の定義そのものだけを確認したい場合は、この組み立て関数ではなくモード定義側を読む。
 
 ## hash
-- 5187c83b5b19d36fa9212e0f7da65cfd830e60eb9cdb24bd0f1605e3954a009b
+- 0c8056db4862065298038bf684bfb4bac37586a7a1f269394f1759fb7dd69a0e
 
 # `index_entry_standard.py`
 
