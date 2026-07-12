@@ -134,18 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の回帰テストと共通補助をまとめる入口。CLI、runtime、prompt/rendering、ACP builder、session/apply/indexing/doctor/review など、実装の外部挙動や境界契約を確認したいときに読む。
-- 同階層の個別テストは、それぞれが担当する機能領域ごとの外部挙動を固定する。共通補助は各テスト群から再利用される前提で、個別テスト本文より先に支援関数を探すための導線として置く。
+- `test` 配下の共通補助と各回帰テストへの入口をまとめる。個別のサブコマンドや runtime 境界ごとに読むべきテストを選ぶための案内で、共通 support は複数テストで再利用される前提のものだけを扱う。
+- ここではテスト対象の本体仕様ではなく、どの挙動を確認したいときにどの support / test ファイルへ進むかを分ける。
 
 ## Read this when
-- CLI や runtime の外部挙動、状態遷移、権限境界、worktree 操作、structured output、prompt 生成の回帰を確認したい。
-- acp_builder、Codex 実行、session/apply、indexing、doctor、review oracle、TUI のいずれかに関するテストを探していて、まず対象領域を絞りたい。
-- 複数テストで使う共通補助や、特定機能群のテスト支援を探したい。
+- `test` 配下で共通に使う補助関数の用途を確認したい。
+- `acp_builder`、`apply`、`session`、`tui`、`doctor`、`indexing`、`review`、`codex_runtime` など、個別領域の外部挙動回帰を探したい。
+- CLI、runtime、prompt、file access、state、worktree、subprocess、logging のどの境界に触れるテストへ進むべきかを判断したい。
 
 ## Do not read this when
-- 実装本文や正本仕様そのものを確認したいときは、対応する `oracle` 側や `src` 側を読む。
-- 個別テストの期待値だけを見たいときは、この階層の案内ではなく該当テスト本文を直接読む。
-- テスト以外のルーティング規則や正本仕様の編集方針を確認したいときは、`oracle` 側の文書を読む。
+- 個別の挙動や期待値だけを確認したいときは、この入口ではなく該当する test 本文を直接読む。
+- 補助ファイルではなく、本体実装や oracle 側の正本仕様を確認したいときはそちらを読む。
+- `INDEX.md` や `AGENTS.md` のルーティング規則そのものを確認したいだけなら、この配下の各テストではなく上位の案内を読む。
 
 ## hash
-- 3f3b88600c81772f3af62dcb4044516744b67651546327e741602e190c4d1418
+- 4118b256abd2a63686abc6fe562ba514eca6b1c14570e388ba1d7be24b7be102
