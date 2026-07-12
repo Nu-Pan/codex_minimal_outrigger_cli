@@ -671,21 +671,20 @@
 # `test_runtime_codex_conflicts.py`
 
 ## Summary
-- session join の conflict 解消時に、Codex の追加書き込み許可がどの path を writable にするか、また拒否対象の名前・ランタイム領域をどう弾くかを検証するテスト群。
-- `build_codex_override_args` とファイルアクセス規則の境界を変える作業、特に oracle 側の conflict 解消対象と realization 側の書き込み許可判定を調整する時に読む。
+- Codex の追加書き込み許可が、セッション join の conflict 解決で選ばれた対象に対してどの範囲まで有効になるかを検証するテスト群。 oracle 側の conflict resolution と file access rule に由来する境界を確認したいときに読む。
 
 ## Read this when
-- session join の conflict 解消で、追加書き込み許可の root 判定や拒否条件を変更したい。
-- oracle file とそれ以外の path の書き込み可否、`INDEX.md` や `AGENTS.md`、runtime 領域の扱いを確認したい。
-- `build_codex_override_args` の追加書き込み許可ロジックや、その回帰テストを更新する必要がある。
+- session join の conflict 対象に対する write 可否、拒否条件、許可される境界を変える変更をする。
+- 追加書き込み許可の判定が、oracle 配下・INDEX/AGENTS・実行時保護領域・通常の作業対象でどう振る舞うかを確認したい。
+- Codex のオーバーライド引数生成や、session join conflict resolution に関する回帰をこの観点で追加・修正したい。
 
 ## Do not read this when
-- 通常の session join 処理や conflict 解消ロジックそのものだけを追う場合。
-- Codex のファイルアクセス規則や追加書き込み許可 path を変えない変更をする場合。
-- このテストの入力生成や pytest の共通補助だけを確認したい場合。
+- session join の通常の参加パラメータだけを変更する場合は、より直接の session join パラメータ系テストを読む。
+- write policy ではなく、indexing・review・apply の別経路の引数生成や CLI 挙動を調べたい場合はこのテスト群は読まない。
+- oracle file 自体の仕様文を確認したいだけなら、このテストではなく根拠となる oracle 側の文書を読む。
 
 ## hash
-- 2c1f26fe02d301c0b5d236b7f3b3f8701d5cd85137aec075e24902953ca46c5f
+- 059405185d07ce2025bb7804412cfbf6c8d7672a36a398f6b89dfe23b9d6d7c1
 
 # `test_runtime_codex_permissions.py`
 
