@@ -134,16 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の回帰テストと共通支援を集めた入口。CLI、runtime、prompt 生成、ACP builder、StructDoc renderer など、外部挙動や契約境界を確認したいときに読む。
-- 個別の実装本文に進む前に、どの振る舞いがこのテスト群で固定されているかを見分けるための案内層として位置づく。
+- `test` 配下の回帰テスト群の入口。CLI、runtime、prompt、ACP builder、StructDoc など、機能ごとの外部挙動を確認したいときに、まずこの階層から対象のテストファイルへ進む。
+- この階層は、個別の実装本文を読む前に、どの機能のテストがどこにあるかを絞り込むために使う。実装詳細や正本仕様そのものではなく、テストが何を検証しているかを見分けるための案内に向く。
 
 ## Read this when
-- CLI の外部挙動、runtime 契約、prompt 組み立て、structured output schema、worktree や file access 境界の回帰を確認したい。
-- 共通テスト補助を使うべきか、個別テスト本文へ直接進むべきかを判断したい。
+- 特定機能の外部挙動を検証するテストを探しているとき。
+- CLI、runtime、prompt、builder、StructDoc などの境界や回帰条件を、対応するテスト群から確認したいとき。
+- どのテストファイルを読むべきかが分からず、まず対象領域を絞り込みたいとき。
 
 ## Do not read this when
-- 正本仕様そのものを確認したいときは `oracle` 側の本文を読む。
-- 特定の実装ロジックだけを追いたいときは、この案内層ではなく対応する realization code を読む。
+- 個別のテスト期待値や失敗条件を直接確認したいときは、この階層ではなく該当するテスト本文を読む。
+- 正本仕様の内容や oracle 側の定義を確認したいときは、`oracle` ツリー側を読む。
+- 実装本体の処理経路や helper の分割だけを追いたいときは、対応する realization implementation を読む。
 
 ## hash
-- 82f2c58c885f6d8ac6c2415e53616a4c50d8a2490d80ed8d92eecb87f029da51
+- 41a7a37fb997557449836f2a5a3df74ed50535c6cbe406c5894ea8b2579069a2

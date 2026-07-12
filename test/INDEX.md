@@ -322,20 +322,16 @@
 # `test_codex_runtime_errors.py`
 
 ## Summary
-- Codex CLI 呼び出しの失敗処理を検証するテスト。`codex` 実行自体が見つからない場合に、`run_codex_exec` と `run_codex_tui` が同じ例外と監査ログを出すことを確認する。
+- Codex 実行まわりのエラー処理を確認するための回帰テストで、CLI が起動できない失敗を例外とログの両方で検証する。
 
 ## Read this when
-- Codex 起動失敗時の例外メッセージや `codex_call` ログの記録内容を確認したいとき。
-- `exec` と `tui` の両経路で、CLI 不在を同じように扱うべきかを確認したいとき。
-- 外部 `codex` コマンドが起動できない異常系のテスト追加・修正をするとき。
+- Codex 実行が `FileNotFoundError` で始められない場合の扱い、または失敗時に残る `codex_call` ログの内容を確認したいとき。
 
 ## Do not read this when
-- Codex の通常実行、引数組み立て、成功時の挙動を見たいとき。
-- 別の失敗要因の扱いを確認したいときは、より直接のエラーテストを読むべきで、このテストは読まなくてよい。
-- ログ形式全体やサブコマンド実行基盤の仕様を把握したいだけのとき。
+- 通常の成功系の実行経路だけを追いたいとき。CLI 未検出ではなく、再試行・quota・Structured Output の検証を見たいときは別の実行テストを読む。
 
 ## hash
-- 688efb4449733c71d7cc6efba4f59ff9c4ce24947e6cbc607e708b37922e990c
+- 93c65cc35c92826c9d1154c06f038f65f764d1ef713c15f24c8cf09fe89a6446
 
 # `test_codex_runtime_exec.py`
 
