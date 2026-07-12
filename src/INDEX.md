@@ -55,18 +55,18 @@
 # `commons`
 
 ## Summary
-- `src/commons` 配下の共有 runtime helper 群の入口を置く領域。`__init__.py` はパッケージ境界のみを示し、個別 helper の責務は下位要素で確認する。
+- cmoc 実行時に複数モジュールから共有される補助機能をまとめるパッケージ境界の入口。個別 helper の責務は下位要素で確認する。
 
 ## Read this when
 - cmoc の実行時処理で、複数モジュールから使う共通 helper の配置場所や入口を確認したいとき。
-- 共有 helper 群へ進む前に、この領域が runtime helper 用のまとまりであることを確認したいとき。
+- 共有 helper 群の下位要素へ進む前に、この領域が runtime helper 用のまとまりであることを確認したいとき。
 
 ## Do not read this when
-- 特定の helper の実装、入出力、失敗時挙動を確認したいとき。該当する下位要素の本文を読む。
+- 特定の helper の実装、入出力、失敗時挙動を確認したいとき。この対象ではなく、該当する下位要素の本文を読む。
 - CLI コマンド固有の処理やテスト固有の処理を調べたいとき。共有 runtime helper ではなく、より直接その責務を持つ対象へ進む。
 
 ## hash
-- ae6601165c772ff8f6008ba1e8d78bc496696facc3df9bc45bdc6d7007be2c40
+- fa29060ffb3bf40ac4ec665ce995fc9e7545e22448525ab51df6a2d0d71bce6b
 
 # `config`
 

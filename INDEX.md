@@ -115,65 +115,34 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization 実装の起点を束ねる上位領域。CLI 入口、共通 runtime、`acp`/`basic`/`config` の公開面、サブコマンド群、正本側 `oracle` への接続を読む前に、どの実体へ進むかを切り分けるための入口として使う。
-- 個別機能の実処理は持たず、互換 shim と実装本体の境界、CLI から各 subcommand への配線、共有 helper の配置先を確認したいときに読む。
+- `src` 配下の realization implementation へ進むための入口。上位の CLI や互換 shim から委譲された実処理を探すときに読む。
+- 個別機能の実装本文ではなく、どの下位モジュールに責務があるかを切り分けるための案内として使う。
 
 ## Read this when
-- `src` 全体の役割分担と、目的の実装がどの下位領域にあるかを判断したいとき。
-- CLI 入口、共通 runtime、互換 import 面、サブコマンド群、正本側 `oracle` への接続のどれを読むべきか先に絞りたいとき。
-- 新しい実装や変更先を探す前に、公開面と実体の境界を確認したいとき。
+- 実装対象の本体が `src` 配下のどこにあるか判断したいとき。
+- CLI 入口や互換入口から、実際の処理モジュールへ進む前に責務境界を確認したいとき。
+- 公開面よりも realization implementation 側の構成を先に把握したいとき。
 
 ## Do not read this when
-- 個別コマンドの処理内容、path/setting/ACP の具体仕様、レビューや apply の実行ロジックを知りたいときは、対応する下位モジュールや正本側文書を直接読む。
-- 互換入口の有無だけを確認済みで、詳細な配線や委譲先の説明が不要なとき。
-- 正本仕様そのものを確認したいときは、`oracle` 側の対応文書や実装へ進む。
+- 個別関数の挙動、例外処理、入出力の詳細を知りたいとき。その場合は目的の下位モジュールを直接読む。
+- oracle 側の正本仕様を確認したいとき。
+- 単に import 名やディレクトリ名だけを確認したいとき。
 
 ## hash
-- 09d6fd548732ede590f6dbc02c54e337876e21980fe0ab1855853dcaf63bb2c5
+- 4ba225396de02c9fc3463716ded7eb1dd51b31c3b0b2fb7118085344d1a0fb6d
 
 # `test`
 
 ## Summary
-- `_acp_builder_support.py` は、acp_builder 関連テストが `<work-root>/oracle/src/oracle/acp_builder` 配下の正本 schema を共通の path 解決で参照するための補助で、schema 参照先をテストごとに重複させたくないときの入口である。
-- `_apply_support.py` は、apply セッション状態から管理対象の作業先パスを復元するテスト補助で、状態スナップショットに含まれる branch 表現を直接解釈して期待パスを組み立てる用途に向く。
-- `_cli_support.py` は、Typer CLI テストで共通の `CliRunner` 初期化をまとめる補助で、CLI 実行の入出力や終了コードを検証するテストの共通入口である。
-- `_codex_support.py` は、Codex 実行系テスト向けの共通補助群で、認証済み `CODEX_HOME`、override argv、`--config` 解析、権限制約の検証補助をまとめる。
-- `_command_support.py` は、`test` 配下で PATH 上に置く偽外部コマンドを Python の実行可能スクリプトとして生成する共通補助で、UTF-8 書き出しと実行権限付与を扱う。
-- `_git_support.py` は、`git` を使う CLI テスト向けの最小リポジトリ作成ヘルパーで、初期化、現在ブランチ確認、追跡済みだが ignored な oracle file の用意を支える。
-- `_ollama_support.py` は、Ollama 関連テストで本番共有の managed service を前提に `doctor` を呼ぶ流れを支える共通補助で、サービス前提と固定エンドポイントを扱う。
-- `test_acp_builder_*` 群は、apply / indexing / review oracle / session join / tui の各 ACP builder が返す parameter、公開面、schema 参照、prompt 置換やモデル設定を正本仕様に沿って保つ回帰テストである。
-- `test_apply_*` 群は、`apply fork` / `apply join` / `apply abandon` の CLI 挙動、状態遷移、worktree・branch・report・cleanup・境界条件を確認する回帰テストである。
-- `test_basic_runtime.py`、`test_runtime_*`、`test_codex_runtime_*` は、path model、file access、config、state、subprocess、retry、quota、TUI、Ollama、preflight などの runtime 契約と Codex 実行境界を固定する回帰テストである。
-- `test_cli_tui.py`、`test_doctor_cli.py`、`test_indexing_cli.py`、`test_runtime_cli.py` は、各 CLI の前処理、副作用、report、preflight、linked worktree や git 状態に対する外部挙動を確認する統合テストである。
-- `test_review_oracle_*`、`test_session_cli.py`、`test_struct_doc_rendering.py` は、review oracle の対象選定・反復・レポート、session fork/join/abandon の状態遷移、StructDoc の Markdown rendering をそれぞれ検証する入口である。
+- `test` 配下の acp_builder 系テストが、`<work-root>/oracle/src/oracle/acp_builder` 配下の正本 schema を重複なく参照するための共通 path 解決補助を扱う。schema の実体位置をテストごとに書き分けたくない場合の入口にする。
 
 ## Read this when
-- acp_builder 関連テストで、正本 schema の参照先を一箇所に集約したい。
-- apply セッション状態から作業先パスを導く仕様や、branch 名の妥当性と選択先の対応を合わせたい。
-- Typer CLI テストで同じ `CliRunner` 初期化を繰り返したくない。
-- Codex 実行ラッパーの argv、`CODEX_HOME`、権限、`--config` 解析、実行系テスト補助を確認したい。
-- 外部コマンドを差し替えるテストで、実行可能な stub を共通の方法で作りたい。
-- git 初期化、初期コミット済み repo fixture、ignored oracle file の扱いを共通化したい。
-- Ollama を本番共有の managed service 前提で起動するテスト補助が必要だ。
-- apply / indexing / review oracle / session join / tui の parameter、schema、prompt、公開面の回帰を確認したい。
-- `apply fork` / `apply join` / `apply abandon` の外部挙動、cleanup、状態遷移、境界条件を確認したい。
-- path model、file access、config、state、subprocess、retry、quota、TUI、Ollama、preflight の runtime 契約を確認したい。
-- 各 CLI の前処理、linked worktree、report、preflight、副作用を外部挙動ベースで確認したい。
-- review oracle の対象選定、反復、レポート、session CLI の state 遷移、StructDoc の Markdown rendering を確認したい。
+- acp_builder 関連テストで、正本 schema ファイルの参照先を一箇所に集約したい。
+- テストが oracle tree の schema を読むが、`test` 配下からの相対計算を個別に書きたくない。
 
 ## Do not read this when
-- oracle schema 本文や structured output の正本仕様そのものを確認したい。
-- 通常の作業先探索や実運用の path 解決、apply 以外の状態変換を追いたい。
-- CLI 実装本体、`CliRunner` 以外の汎用 fixture、またはコマンド定義そのものを確認したい。
-- Codex 以外の一般的なテスト共通処理や、実装側の権限判定ロジックだけを追いたい。
-- fake command ではなく、CLI runner や永続的な補助ファイルの設計を探している。
-- git 操作そのものの実装や、個別 CLI 挙動だけを追いたい。
-- fake Ollama サービスや `doctor` 以外の起動経路を探したい。
-- 別サブコマンドの parameter、別領域の schema、または oracle 側の本文そのものを読みたい。
-- session fork / apply fork / apply join などの内部実装分割や、他サブコマンドの挙動だけを見たい。
-- runtime 実装の細部や oracle 本文だけを確認したい場合は、対応する実装側または正本仕様を読む。
-- 個別サブコマンドの業務ロジックや Markdown report の文言ではなく、CLI 全体の他の層を見たい。
-- review oracle の prompt 文面、session fork の生成ロジック、あるいは Oracle 本文そのものを確認したい。
+- acp_builder 以外の対象で path 解決が必要なら、対象ごとの専用 helper を探す。
+- oracle schema 自体の内容や structured output の仕様を確認したいだけなら、oracle tree 側の本文を読む。
 
 ## hash
-- ed63085354ab55efd8db86fded6d0de8d06322d7571037ccf2fadb45f3a4e392
+- ba2e8e4e2bd7d4b1ebd9e714fca1718b1c90b3ab3166c32f0d01fd683becf1ae

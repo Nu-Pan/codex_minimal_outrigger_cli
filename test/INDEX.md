@@ -689,22 +689,23 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- `commons.runtime_codex_profile.build_codex_override_args` が、Codex のアクセスモード別に read/write 許可の root 集合と `extra_writable_paths` の扱いを正しく組み立てるかを検証するテスト。
-- `READONLY` / `PURE_ORACLE_READ` では ignored gap だけを書けること、`REALIZATION_WRITE` では標準の realization 許可領域に加えて root 直下の追加 writable path を受け入れること、`REPO_WRITE` / `PURE_ORACLE_WRITE` では許可外 path を拒否することを確認する。
-- アクセス許可の境界そのものを固定したいときの回帰テストであり、`file_access_rule.py` と `oracle_and_realization_basic.py` の定義を前提に、実運用の sandbox/permission profile への反映差分を見張る入口になる。
+- Codex の権限オーバーライドが、`READONLY`・`PURE_ORACLE_READ`・`REALIZATION_WRITE`・`PURE_ORACLE_WRITE`・`REPO_WRITE` の各モードで、どの領域を書けるかを検証するテスト群。
+- `extra_writable_paths` の許可・拒否条件、`memo` や `.agents` や `.cmoc/local` などの保護、`INDEX.md` と `AGENTS.md` の読み取り許可、ignored gap の扱いを確認する。
+- 権限ルールや追加 writable path の判定が変わるときに読む対象で、個々の実装ヘルパーの内部構成や既存の git 支援関数の詳細を追うための入口ではない。
 
 ## Read this when
-- Codex override の write 許可 root が、モードごとの正本仕様どおりか確認したいとき。
-- `extra_writable_paths` が root 直下の補助ファイルだけを追加許可できるのか、あるいは許可外 path を拒否するのかを変えたいとき。
-- `READONLY` / `PURE_ORACLE_READ` / `REALIZATION_WRITE` / `PURE_ORACLE_WRITE` / `REPO_WRITE` の許可境界を回帰確認したいとき。
+- Codex の file access / permission override の振る舞いを変更する。
+- `extra_writable_paths` の受理条件や拒否条件を変更する。
+- `memo`、`.agents`、`.cmoc/local`、`INDEX.md`、`AGENTS.md` のアクセス境界を変える。
+- ignored な gap path を writable とみなすかどうかを確認したい。
 
 ## Do not read this when
-- Codex のモデル選択、provider 切り替え、`CODEX_HOME` 検査など、権限以外の override 生成を見たいときは別の runtime_codex_profile テストを読む。
-- `build_codex_override_args` の内部実装や permission profile の組み立て詳細だけを確認したいときは、この回帰テストではなく実装側を読む。
-- `file_access_rule.py` や `oracle_and_realization_basic.py` の正本本文そのものを読みたいときは、対応する oracle 側を直接読む。
+- `build_codex_override_args` の実装詳細だけを追いたい場合は、対応する実装ファイルを直接読む。
+- git リポジトリ作成や `run_git` の挙動だけを調べたい場合は、このテストではなく git 支援側の本文を読む。
+- INDEX.md 用のルーティング文を作るだけなら、個別の権限ケースの逐語的な手順までは読む必要がない。
 
 ## hash
-- d68af819997d5e1e26b2678c11d27f3d636a9c29d1fb978ca7ffd2e6f913f019
+- 4bd7d4354e4220438e40224ac9c261dde5fed7fcd2c95d5d994fe70341b4cddf
 
 # `test_runtime_codex_profile.py`
 

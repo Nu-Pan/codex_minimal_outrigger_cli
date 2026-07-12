@@ -167,21 +167,21 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動する前後で、`argv`/sandbox・read/write 許可・`CODEX_HOME`・child process tracking・Structured Output schema 配置・JSONL error 判定を一括で扱う基盤を読む入口。Codex subprocess 境界の不変条件や、実行環境の組み立てと失敗時の解釈を変える作業でここを読む。
-- このファイルを読むのは、Codex 呼び出しの権限境界、実行 root の決定、追加 read/write path の妥当性、tracked child process の記録、schema の保存先、CLI 出力のエラー判定を確認・変更したいとき。実装を分割して個別 helper だけを追うより、subprocess 周辺の挙動全体を把握したい場合に向く。
+- Codex CLI を起動する前後の実行条件をまとめる境界。`argv` 上書き、`CODEX_HOME`、sandbox / permission profile、追加 read/write 許可、schema 配置、subprocess 実行とエラー判定を扱う。
+- Codex への渡し方や返り値の解釈を変える作業で読む。外部コマンド呼び出しの安全境界、tracked process 管理、JSONL からの quota / capacity / unexpected error 判定もこの file の担当。
 
 ## Read this when
-- Codex CLI に渡す sandbox、permission profile、`CODEX_HOME`、`cwd`、追加 path 制御を変えたい
-- apply 実行中の child process tracking や pid file ロック、終了時のクリーンアップを調べたい
-- Structured Output schema の配置方法や、Codex の stdout/stderr から capacity/quota/unexpected error を判定する条件を確認したい
+- Codex CLI に渡す引数や環境変数、permission profile の決め方を変えるとき。
+- schema の配置方法、`CODEX_HOME` の解決・検証、subprocess 実行や child process tracking を直したいとき。
+- Codex の stdout / stderr から retry 対象・想定外エラー・resume token を判定する処理を確認したいとき。
 
 ## Do not read this when
-- 単純な設定値や runtime path の個別定義だけを知りたい場合は、まずそれぞれの設定・path 生成側を読む
-- Codex CLI の高レベルなサブコマンド仕様や人間向け運用手順だけを知りたい場合は、対応する app_spec 側を先に読む
-- この境界をまたがない単独 helper の内部実装だけを追いたい場合は、より局所的な実装ファイルを直接読む
+- Codex のプロンプト本文そのものや subcommand の利用者向け仕様だけを読みたいときは、該当する prompt / app_spec 側を先に読む。
+- 個別の file access ルールの正本だけを確認したいときは、実装側の細部より oracle の file access 定義を読む。
+- Codex 起動前後と無関係な通常の path 操作や一般的な runtime helper を探しているとき。
 
 ## hash
-- d1e5c028706285f3041bf21382e01e795c76084de1f7ad33a4c325d26d774a3b
+- 60ec7eb28b57ddee13546da823dd54a102777db44d344b024a0dcbe203af40fd
 
 # `runtime_codex_tui.py`
 
