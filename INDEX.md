@@ -134,15 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の共通テスト補助モジュール。acp_builder 関連テストから、oracle tree 内の schema 参照先を一箇所に集約して扱うための path 解決だけを担う。
+- `test` 配下の共通テスト補助群をまとめたルーティング用ディレクトリ。`acp_builder` の schema 参照補助、apply/session/CLI の共通支援、`git`・`ollama`・`command`・`codex` 実行補助など、個別テストから再利用される入口を案内する。
+- ここは本体仕様ではなく、テスト側の重複を減らすための支援関数と、対象別に読むべき補助モジュールへの分岐点を示す。
 
 ## Read this when
-- acp_builder 関連テストで、正本 schema ファイルの位置を共通化して参照したい。
-- 各テストで `<work-root>/oracle/src/oracle/acp_builder` への相対計算を重複させたくない。
+- acp_builder 系テストで、正本 schema の参照先や共通 path 解決をまとめて使いたい。
+- apply/session/CLI まわりのテストで、worktree 復元、CliRunner 初期化、外部コマンドの偽装、git fixture、codex/ollama 実行補助を再利用したい。
+- 特定のテストで共通 helper を探しており、どの補助モジュールに進むべきかを絞り込みたい。
 
 ## Do not read this when
-- acp_builder 以外の対象で path 解決が必要なら、その対象専用の helper を読む。
-- oracle schema の内容や structured output の正本仕様を確認したいだけなら、oracle tree 側の本文を読む。
+- 個別サブコマンドや runtime の本体仕様を知りたいだけなら、対応するテスト本文や oracle 側の本文を読む。
+- このディレクトリ全体の一覧や補助群の索引が不要で、すでに対象 helper 名が分かっているなら直接そのファイルを読む。
+- test 以外の実装や oracle 文書の内容確認が目的なら、ここではなく対応する実装・正本側へ進む。
 
 ## hash
-- 9cb07bc7a4635ec0b968809128c172b526d261c694bc4032391c460b80073f07
+- b19adbfcaf9af360b4888e6696078ce67db9055605e17a250aadf8ee26c7f649

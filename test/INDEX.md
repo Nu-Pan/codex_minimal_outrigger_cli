@@ -49,21 +49,21 @@
 # `_codex_support.py`
 
 ## Summary
-- `test/_codex_support.py` は、Codex 実行系テストで共通に使う補助関数をまとめた支援モジュール。最小限の認証済み `CODEX_HOME`、Codex 用の標準 `AgentCallParameter`、CLI 引数の単一値抽出、重複する `--config` の検証用統合、Codex override の固定化が必要なテストを読む入口にする。
+- Codex CLI 実行まわりのテスト補助関数をまとめたファイル。最小の `CODEX_HOME` 構築、共通の `AgentCallParameter` 生成、CLI 引数の抽出、`--config` のマージ、実行時オーバーライドの差し替えを、他のテストから再利用するために使う。
+- `<work-root>/oracle/doc/app_spec/codex_exec_rule.md` と `<work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py` に対応するテスト支援が必要なときに読む。Codex subprocess の引数検証や、write 可否・権限ルートの判定を組み立てる側のテストで使う。
 
 ## Read this when
-- 複数の Codex 実行テストで共通の `CODEX_HOME` 初期化が必要なとき。
-- Codex テストで使う既定の `AgentCallParameter` を揃えたいとき。
-- Codex CLI 引数の値抽出や `--config` の重複マージを検証したいとき。
-- Codex 実行系テストで override 引数を固定して subprocess 関連の観測を安定させたいとき。
+- Codex 実行ラッパーや TUI のテストで、共通の初期化・引数解析・オーバーライド固定化が必要なとき。
+- file access rule の検証で、`--config` の内容や書き込み許可ルートをテスト側で解釈したいとき。
+- `CODEX_HOME` の擬似認証状態を作る、または subprocess への差し替えを共通化したいとき。
 
 ## Do not read this when
-- 個別の Codex 実行挙動やエラー処理だけを確認したいときは、対応するテスト本体を直接読む。
-- Codex 以外の共通 fixture や Git・CLI まわりの補助を探しているときは、別の支援モジュールを読む。
-- このモジュールの補助関数を追加・変更しないなら、読む必要はない。
+- 本体の Codex 実装や file access rule の仕様そのものを知りたいときは、対応する oracle src/doc を直接読む。
+- 個別テストの期待値だけを確認したいときは、この補助ファイルではなく各テスト本文を読む。
+- Codex 以外の CLI 補助や一般的な pytest fixture を探しているとき。
 
 ## hash
-- f8acf74d3b454096b26cf1785aaca7caeb8577cb2421fb9249df26b6f3090d08
+- 91a1e62c1539f67bf2bcce471e124d0117ee73b7b81d8a425583f04d2fd9c114
 
 # `_command_support.py`
 
@@ -284,21 +284,20 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断して守る回帰テスト群の入口。root/work root 解決、config 既定値と JSON 順序、CLI のエラー表示、subcommand log、worktree/state 操作、FileAccessMode ごとの Codex override、binary 判定までをまとめて確認する。
-- 個別サブコマンドの業務ロジックではなく、起動前提と共通 runtime 境界が壊れていないかを見たいときに読む。共通 fixture と root 状態をまたぐため、関連テストを一箇所で追いたい場合の起点になる。
+- `basic.path_model` と `cmoc_runtime` の境界契約を検証するテスト群。`<run-root>` と `<cmoc-root>` の復元、repo root / work root / run root の区別、そして managed worktree 以外への作成・削除を拒否する挙動を確認したいときに読む。
 
 ## Read this when
-- work root / repo root / linked worktree の扱い、CLI preflight、エラー報告、runtime state、Codex override、sandbox 権限、ignore 反映のどこかを変えた。
-- config 既定値、`CmocError` の表示形式、subcommand ログ、`FileAccessMode` の権限制御、binary 判定の契約を確認したい。
-- basic runtime の回帰として、複数の共通前提が同時に崩れていないかを一通り確認したい。
+- root placeholder から実パスを復元する規則を確認したいとき。
+- linked worktree で repo root と run/work root をどう分けるかを確認したいとき。
+- run worktree の作成・削除が managed 範囲外の path を拒否するかを確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの入出力や業務フローだけを確認したい。より直接のサブコマンド別テストを読む。
-- 実装の内部 helper 分割や共通化方針だけを見たい。ここは外部契約の回帰が主目的で、内部構造の根拠にはしない。
-- runtime 境界に触れない単独機能の細部だけを追いたい。
+- path token の設計や path model の本体実装を追いたいときは、対応する oracle src を読む。
+- worktree の生成・削除ロジックの詳細な実装経路を見たいときは、runtime 側の実装ファイルを読む。
+- git 操作の一般的なヘルパー実装や別の runtime 契約を確認したいときは、このテストではなく該当する別テストや実装を読む。
 
 ## hash
-- f27a262999f19ad07deb7dfc2f1fe24b606dd7fff36cfdf5f1df68451d7d49be
+- f5de1d86db23e269cd8495acdd9de7005de81f92c10e8b2b24cdc926431819c9
 
 # `test_cli_tui.py`
 
@@ -565,6 +564,122 @@
 ## hash
 - 7eb48fbdaa9bf3f758ceeb58e9a2c6526b468a3c0038e3387d5f1d4bae16bdc6
 
+# `test_runtime_cli.py`
+
+## Summary
+- CLI の例外整形、標準出力への error report 出力、サブコマンドログ生成、work root / worktree preflight、shell completion の副作用回避を確認する統合テスト群。`runtime_cli`、`runtime_logging`、`cmoc_runtime`、`main` の CLI 境界を変えるときに読む。
+
+## Read this when
+- CLI 実行時の error 表示先や report 形式を変えるとき。
+- サブコマンド実行前後の log 記録、preflight、work root 判定、`doctor` 系の前処理の境界を変えるとき。
+- completion probe で初期化副作用を起こさない保証や、`ensure_cmoc_ignored` の `.gitignore` 更新方針を確認したいとき。
+
+## Do not read this when
+- 個別サブコマンドの業務ロジックだけを変えるときは、各サブコマンド側のテストを読む。
+- Markdown report の文言だけを追いたいときは、error 生成側の実装とそれを定義する oracle doc を先に読む。
+- git 操作や worktree の一般仕様だけを見たいときは、この統合テストではなく該当 helper の実装を読む。
+
+## hash
+- 24a03a7ac7e3dd0d000cf0009d55bb2f63e6546f0f419d0206fa4ed1d0377ede
+
+# `test_runtime_codex_conflicts.py`
+
+## Summary
+- session join の conflict 解消時に、Codex の追加書き込み許可がどの path を writable にするか、また拒否対象の名前・ランタイム領域をどう弾くかを検証するテスト群。
+- `build_codex_override_args` とファイルアクセス規則の境界を変える作業、特に oracle 側の conflict 解消対象と realization 側の書き込み許可判定を調整する時に読む。
+
+## Read this when
+- session join の conflict 解消で、追加書き込み許可の root 判定や拒否条件を変更したい。
+- oracle file とそれ以外の path の書き込み可否、`INDEX.md` や `AGENTS.md`、runtime 領域の扱いを確認したい。
+- `build_codex_override_args` の追加書き込み許可ロジックや、その回帰テストを更新する必要がある。
+
+## Do not read this when
+- 通常の session join 処理や conflict 解消ロジックそのものだけを追う場合。
+- Codex のファイルアクセス規則や追加書き込み許可 path を変えない変更をする場合。
+- このテストの入力生成や pytest の共通補助だけを確認したい場合。
+
+## hash
+- 2c1f26fe02d301c0b5d236b7f3b3f8701d5cd85137aec075e24902953ca46c5f
+
+# `test_runtime_codex_permissions.py`
+
+## Summary
+- `commons.runtime_codex_profile.build_codex_override_args` が、Codex のアクセスモード別に read/write 許可の root 集合と `extra_writable_paths` の扱いを正しく組み立てるかを検証するテスト。
+- `READONLY` / `PURE_ORACLE_READ` では ignored gap だけを書けること、`REALIZATION_WRITE` では標準の realization 許可領域に加えて root 直下の追加 writable path を受け入れること、`REPO_WRITE` / `PURE_ORACLE_WRITE` では許可外 path を拒否することを確認する。
+- アクセス許可の境界そのものを固定したいときの回帰テストであり、`file_access_rule.py` と `oracle_and_realization_basic.py` の定義を前提に、実運用の sandbox/permission profile への反映差分を見張る入口になる。
+
+## Read this when
+- Codex override の write 許可 root が、モードごとの正本仕様どおりか確認したいとき。
+- `extra_writable_paths` が root 直下の補助ファイルだけを追加許可できるのか、あるいは許可外 path を拒否するのかを変えたいとき。
+- `READONLY` / `PURE_ORACLE_READ` / `REALIZATION_WRITE` / `PURE_ORACLE_WRITE` / `REPO_WRITE` の許可境界を回帰確認したいとき。
+
+## Do not read this when
+- Codex のモデル選択、provider 切り替え、`CODEX_HOME` 検査など、権限以外の override 生成を見たいときは別の runtime_codex_profile テストを読む。
+- `build_codex_override_args` の内部実装や permission profile の組み立て詳細だけを確認したいときは、この回帰テストではなく実装側を読む。
+- `file_access_rule.py` や `oracle_and_realization_basic.py` の正本本文そのものを読みたいときは、対応する oracle 側を直接読む。
+
+## hash
+- d68af819997d5e1e26b2678c11d27f3d636a9c29d1fb978ca7ffd2e6f913f019
+
+# `test_runtime_codex_profile.py`
+
+## Summary
+- Codex CLI 呼び出し時の上書き引数、とくにファイルアクセス制限・sandbox・`--model` / reasoning effort・model provider の決定を確認するテスト。
+- `<work-root>` / `repo-root` / linked worktree / `extra_read_root` の組み合わせで、許可される読み書き領域と拒否される領域が変わる場合に読む。
+- ローカル SLM 向けの `cmoc` 管理 provider 選択、`CODEX_HOME` 系の一般的な起動条件、`INDEX.md` や `AGENTS.md` を含む境界確認が必要なときに読む。
+
+## Read this when
+- Codex CLI に渡す argv や sandbox 設定が、`FileAccessMode` ごとにどう変わるべきか確認したい。
+- `<work-root>` 外、`.agents`、`.codex`、`.git`、`memo`、`oracle`、`realization` の境界で、読み書き可否の期待値を確かめたい。
+- linked worktree からの実行で、repo 側の `.cmoc/local` を追加で読む条件を確認したい。
+- `ModelClass` と `CmocConfig` から local model provider を選ぶ条件を確認したい。
+
+## Do not read this when
+- Codex CLI の一般的な起動手順だけを知りたい場合は、`codex_exec_rule` 側を先に読む。
+- 設定ファイルの全体構造や他の builder を見たいだけなら、このテストではなく対応する oracle src を読む。
+- 個別の path 解決や work-root 定義だけを確認したい場合は、`path_model` や関連する基礎定義を読む。
+
+## hash
+- 3956cbfcbfba51cbf95549c5196ca015ba585714fc040953ecde8c17396c66d9
+
+# `test_runtime_config.py`
+
+## Summary
+- `CmocConfig` の既定値、JSON 変換時の member 順序、入力検証、欠損時のエラー文言を検証するテスト。設定の振る舞いを固定したいときに読む。
+
+## Read this when
+- `CmocConfig` の既定値や配下設定の初期値を確認・追加するとき。
+- 設定の JSON 変換で順序や値の保持を変えたくないとき。
+- 不正な設定入力に対する `CmocError` の出し方や文言を変えるとき。
+- 設定まわりの回帰テストを追加・整理するとき。
+
+## Do not read this when
+- 設定の実装や変換ロジックそのものを追うなら、対応する実装側を直接読む。
+- 設定項目の意味や正本仕様を確認したいだけなら、oracle 側の設定定義とエラーハンドリング規則を読む。
+- `cmoc` 全体のコマンド体系や他領域の仕様を知りたいだけなら、このテストではなく上位のルーティングを読む。
+
+## hash
+- 7a9b7e985de26b453b7462d375d1a5d649da297d220c67025aeaa2dd591a62b9
+
+# `test_runtime_file_access.py`
+
+## Summary
+- `FileAccessMode` の永続化値、sandbox 変換、作業 root の扱い、binary 判定の読み取り範囲という、runtime 周辺の契約をまとめて検証するテスト。
+
+## Read this when
+- `FileAccessMode` の値変更が JSON 互換性や変換先に影響しないか確認したいとき。
+- `file_access_to_sandbox_mode` の各アクセス種別が sandbox 権限へ欠落なく写るか確認したいとき。
+- `file_access_to_codex_cwd` が work root を維持する互換性を壊していないか確認したいとき。
+- `is_binary` が先頭 chunk だけを読む前提を壊していないか確認したいとき。
+
+## Do not read this when
+- runtime の実装詳細や enum 定義そのものを追いたいだけなら、対応する realization 側を直接読む。
+- prompt 生成や file access ルールの文面仕様を確認したいだけなら、ここではなく根拠側の oracle file を読む。
+- binary 判定以外の content 判定や file I/O 全般の挙動を探しているなら、別のテスト対象を読む。
+
+## hash
+- 6b4a9f40267b269b622e987b9d2e3b1b6b1810d94bafedca4bc2494a6e33dcf4
+
 # `test_runtime_ollama.py`
 
 ## Summary
@@ -582,6 +697,22 @@
 
 ## hash
 - 859258328f9114eeba1966d058499e06f871e8175c0599d7786aad71c76419b0
+
+# `test_runtime_state.py`
+
+## Summary
+- `commons.runtime_state` の session/apply 状態 JSON の検証と、branch 名から session id を取り出す境界条件を扱う。state file の形状・nullable 項目・不正 branch の拒否を確認したいときに読む。
+
+## Read this when
+- session/apply state の読み書き形式を変える、または branch 名から session id を解釈する条件を変えるとき。
+- state file の不正値や破損 branch を、どの入力でエラーにするか確認したいとき。
+
+## Do not read this when
+- merge 手順全体や conflict 解消の流れを追いたいときは、`cmoc session join` の仕様を見る。
+- branch 操作の実行順や git 操作そのものを変えたいときは、state 解析ではなく該当コマンド側を見る。
+
+## hash
+- c1e45a52f5c411c578eb0dec0daac4d2beb9d279955dd2e96e4a628dda7e7256
 
 # `test_session_cli.py`
 
