@@ -797,18 +797,20 @@
 # `test_runtime_state.py`
 
 ## Summary
-- `commons.runtime_state` の session/apply 状態 JSON の検証と、branch 名から session id を取り出す境界条件を扱う。state file の形状・nullable 項目・不正 branch の拒否を確認したいときに読む。
+- `session` と `apply` の state 形状検証、および branch 名から session id を取り出す境界条件を確認するテスト群。`commons.runtime_state` の state 変換・読込・ branch 解析に不整合がないかを確かめたいときに読む。
 
 ## Read this when
-- session/apply state の読み書き形式を変える、または branch 名から session id を解釈する条件を変えるとき。
-- state file の不正値や破損 branch を、どの入力でエラーにするか確認したいとき。
+- `SessionState` の辞書変換や復元で、`state` や各 payload フィールドの型制約を確認したいとき。
+- `branch_session_id` や `apply_branch_session_id` が、余分な区切りや要素不足を不正入力として拒否するか確認したいとき。
+- `load_state_for_branch` が壊れた `apply` branch 名を誤って受理しないか確認したいとき。
 
 ## Do not read this when
-- merge 手順全体や conflict 解消の流れを追いたいときは、`cmoc session join` の仕様を見る。
-- branch 操作の実行順や git 操作そのものを変えたいときは、state 解析ではなく該当コマンド側を見る。
+- `SessionState` の永続化形式そのものを変更したいだけなら、実装側の state 定義や読込処理を先に読む。
+- branch 命名規則の全体仕様を確認したいだけなら、より上位の session / apply 仕様本文を読む。
+- このテストの追加・整理ではなく、runtime state の実装変更だけが目的なら、まず `commons.runtime_state` 側を読む。
 
 ## hash
-- c1e45a52f5c411c578eb0dec0daac4d2beb9d279955dd2e96e4a628dda7e7256
+- 78b2a84796519b9b9c6c970910d4ca16803256de9634f28cd98111a7098aba13
 
 # `test_session_cli.py`
 

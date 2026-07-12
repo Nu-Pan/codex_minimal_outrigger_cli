@@ -134,17 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下で `acp_builder` の正本 schema を参照するための共通 path helper を扱う補助対象。テスト側で schema を複製せず、oracle 側の `acp_builder` 定義へ直接つなぐ必要があるときの入口にする。
+- `test` 配下の共通補助と回帰テストをまとめる入口。`acp_builder` の正本 schema 参照、Codex/CLI/runtime/session/apply/review/indexing/doctor/TUI の外部挙動、ならびにテスト用の git・command・ollama・prompt 補助を読むときにここから進む。
 
 ## Read this when
-- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
-- テスト用に正本 schema をコピーせず、oracle 側を参照する方針がどこで支えられているかを確認したいとき。
-- `acp_builder` 関連のテスト helper が他にあるかではなく、この path 解決 helper の責務を見たいとき。
+- `test` 配下で共通に使う補助関数や fixture の責務を確認したいとき。
+- CLI、runtime、session、apply、review、indexing、doctor、tui のいずれかの外部挙動を回帰テストから確認したいとき。
+- `acp_builder` の正本 schema を参照するテスト、Codex 実行や権限・sandbox・quota retry を扱うテスト、または prompt 断片のレンダリングを確認したいとき。
+- git 初期化、fake command、process tracking、managed ollama などのテスト支援を確認したいとき。
 
 ## Do not read this when
-- 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
-- テスト全体の CLI 挙動や他の共通サポートを確認したいときは、この helper ではなく該当する別の test support を読む。
-- `INDEX.md` のルーティング方針そのものを確認したいときは、この helper ではなく上位の案内を読む。
+- 個別の機能実装や正本仕様そのものを確認したいときは、対応する `oracle` 側や実装側を読む。
+- `INDEX.md` の書き方やルーティング規則そのものを確認したいときは、この配下の本文ではなく上位の案内を読む。
+- 特定サブコマンドだけの内部 helper 分割を追いたいときは、この入口ではなく該当モジュールや該当テストを直接読む。
 
 ## hash
-- 60976deb8b299cee11e19f5eb37493eab997363b0a8206e4d61a26ab286e597f
+- cfc5f55ff57a95d80dfec611a7e2f9bb6cc9cb8bd35748996638f22840035c44
