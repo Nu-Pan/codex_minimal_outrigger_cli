@@ -250,20 +250,21 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- `apply fork` の report 生成と再検査制御を CLI 経由で検証するテスト群。所見列挙、適用、変更要約、未収束/エラー時の report、変更ファイル再調査、rolling apply の対象選定までをまとめて見る入口に向く。
+- `apply fork` の report 生成、変更要約、変更ファイル再調査、rolling 対象の切り替えまでを CLI 経由で検証するテスト群。`change_summary`/`file_finding_enumeration`/`finding_application` のビルド条件と、収束・未収束・error 時の report 記載を読む入口に向く。
+- `sub_commands.apply.fork` の内部分割そのものより、外部から見える report 内容、session state 更新、commit 対象の選び方、未追跡 file や削除済み file を含む差分扱いの確認が主目的。
 
 ## Read this when
-- `apply fork` の report 文面、収束判定、変更要約、session state 更新の振る舞いを確認したいとき。
-- 所見が残る場合と、適用後に差分が消えた場合や新規ファイルが増えた場合の再調査ロジックを追いたいとき。
-- apply fork の関連 builder が、packaged layout と src-only import の両方で正しく動くかを確認したいとき。
+- `apply fork` の report 仕様、変更要約の出し方、再検査ループの収束条件、rolling 実行時の対象選定を確認したいとき。
+- `change_summary.json` や所見列挙結果、適用後の diff 反映、session state 更新のどれかが関係する変更をするとき。
+- packaged layout から `acp.builder.apply.fork.*` を import できることや、prompt が正本の制約文を含むことを確認したいとき。
 
 ## Do not read this when
-- `apply fork` 本体の実装や report 生成ロジックそのものを追いたいときは、対応する realization code を直接読むべきで、このテストファイルは優先対象ではない。
-- `apply` 以外のサブコマンドや、apply fork 以外の report 形式だけを見たいとき。
-- ルーティング文書だけが必要で、CLI 振る舞いの詳細な期待値までは不要なとき。
+- `apply fork` 以外の apply 系サブコマンドの挙動だけを確認したいときは、より直接のテストを先に読む。
+- report の書式そのものではなく、個別の builder 実装や共通 prompt 定義だけを確認したいときは、対応する実装側へ進む。
+- 一般的な oracle/realization 規約だけを確認したいときは、このテストファイルではなく規約本文を読む。
 
 ## hash
-- 67ddab5270bdb242c28431b893028c35d616a147b24cd3c01ce4fcfd394c0724
+- 9b9131aac7157d3e975a800e16d5423239be3ee95c4df8e9b332b827de1d20b3
 
 # `test_apply_fork_target_normalization.py`
 
