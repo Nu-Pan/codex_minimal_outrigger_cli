@@ -91,12 +91,6 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
 
 
-def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
-    """旧互換 API。Codex 作業 root は AgentCallParameter.cwd が正本。"""
-    root = root.resolve()
-    return root
-
-
 def parameter_codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) -> Path:
     """AgentCallParameter.cwd を優先し、対象 work root 外の古い呼び出しを補正する。"""
     parameter_cwd = parameter.cwd.resolve()
