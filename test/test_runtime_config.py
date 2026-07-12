@@ -31,6 +31,7 @@ def test_config_defaults_match_logical_model_classes() -> None:
 
 
 def test_config_json_preserves_oracle_member_order() -> None:
+    """config の JSON 化で model と reasoning effort の定義順を保つ。"""
     data = config_to_dict(CmocConfig())
 
     assert list(data["codex"]) == [
@@ -54,6 +55,7 @@ def test_config_json_preserves_oracle_member_order() -> None:
 
 
 def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
+    """設定ファイルがない場合に doctor の実行を案内する。"""
     root = make_repo(tmp_path)
 
     with pytest.raises(CmocError) as exc_info:
@@ -67,6 +69,7 @@ def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("value", [False, None, [], "gpt"])
 def test_config_rejects_non_object_codex_model_specs(value: object) -> None:
+    """model の値にオブジェクト以外を指定した config を拒否する。"""
     with pytest.raises(CmocError) as exc_info:
         config_from_dict({"codex": {"model": {"mainstream": value}}})
 
@@ -85,6 +88,7 @@ def test_config_rejects_non_object_codex_model_specs(value: object) -> None:
 def test_config_rejects_invalid_codex_model_specs(
     spec: dict[str, object],
 ) -> None:
+    """model provider や model 名が不正な config を拒否する。"""
     with pytest.raises(CmocError) as exc_info:
         config_from_dict({"codex": {"model": {"mainstream": spec}}})
 
@@ -93,6 +97,7 @@ def test_config_rejects_invalid_codex_model_specs(
 
 @pytest.mark.parametrize("value", [False, None, [], {}, "", "  "])
 def test_config_rejects_non_string_reasoning_effort_names(value: object) -> None:
+    """reasoning effort 名に文字列以外や空文字列を指定した config を拒否する。"""
     with pytest.raises(CmocError) as exc_info:
         config_from_dict({"codex": {"reasoning_effort": {"low": value}}})
 
@@ -104,6 +109,7 @@ def test_config_rejects_non_string_reasoning_effort_names(value: object) -> None
 def test_config_rejects_non_object_codex_name_maps(
     field: str, value: object
 ) -> None:
+    """codex の model と reasoning_effort にオブジェクト以外を指定した config を拒否する。"""
     with pytest.raises(CmocError) as exc_info:
         config_from_dict({"codex": {field: value}})
 
@@ -113,6 +119,7 @@ def test_config_rejects_non_object_codex_name_maps(
 @pytest.mark.parametrize("section", ["codex", "apply_fork", "review_oracle"])
 @pytest.mark.parametrize("value", [None, [], "invalid"])
 def test_config_rejects_non_object_sections(section: str, value: object) -> None:
+    """各設定 section にオブジェクト以外を指定した config を拒否する。"""
     with pytest.raises(CmocError) as exc_info:
         config_from_dict({section: value})
 
@@ -137,6 +144,7 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
     ],
 )
 def test_config_rejects_non_integer_int_values(data: dict[str, object]) -> None:
+    """整数を要求する設定項目が bool や文字列を受け入れない。"""
     with pytest.raises(CmocError) as exc_info:
         config_from_dict(data)
 
@@ -144,6 +152,7 @@ def test_config_rejects_non_integer_int_values(data: dict[str, object]) -> None:
 
 
 def test_config_preserves_codex_falv_recovery_try_count() -> None:
+    """codex の recovery 試行回数を読み込みと JSON 化の両方で保持する。"""
     config = config_from_dict({"codex": {"num_try_falv_recovery": 4}})
 
     assert config.codex.num_try_falv_recovery == 4
