@@ -134,16 +134,15 @@
 # `test`
 
 ## Summary
-- `test` 配下の共通テスト補助と個別の回帰テストをまとめて案内する入口。CLI、runtime、prompt、indexing、session、review、apply、doctor、Ollama まわりの外部挙動を確認したいときに、まずここから目的の対象へ進む。
+- `test` 配下の共通テスト補助モジュール。acp_builder 関連テストから、oracle tree 内の schema 参照先を一箇所に集約して扱うための path 解決だけを担う。
 
 ## Read this when
-- `test` 配下で、どの共通補助や個別テストがどの挙動を守っているかを探したいとき。
-- CLI、runtime、prompt 生成、indexing、session、review、apply、doctor、Ollama のどれかを変更した後、対応する回帰テストの入口を探したいとき。
+- acp_builder 関連テストで、正本 schema ファイルの位置を共通化して参照したい。
+- 各テストで `<work-root>/oracle/src/oracle/acp_builder` への相対計算を重複させたくない。
 
 ## Do not read this when
-- 個別機能の実装や正本仕様そのものを知りたいときは、対応する `oracle` 側や realization 実装を読む。
-- テスト支援の共通モジュールだけを探しているときは、対象の補助ファイルを直接読む。
-- この階層で扱う外部挙動ではなく、別領域の仕様や実装を追いたいとき。
+- acp_builder 以外の対象で path 解決が必要なら、その対象専用の helper を読む。
+- oracle schema の内容や structured output の正本仕様を確認したいだけなら、oracle tree 側の本文を読む。
 
 ## hash
-- cb383f2bb6a84528a8f6083b0715540b00a53b65ac74e48333d03c9c2a56ce94
+- 9cb07bc7a4635ec0b968809128c172b526d261c694bc4032391c460b80073f07

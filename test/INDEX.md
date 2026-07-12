@@ -1,3 +1,19 @@
+# `_acp_builder_support.py`
+
+## Summary
+- テスト側から `<work-root>/oracle/src/oracle/acp_builder` 配下の schema を読むための共通 path 解決をまとめる。oracle tree の schema 参照先をテストごとに重複させたくないときに使う。
+
+## Read this when
+- acp_builder 関連テストで、正本 schema ファイルの実体位置を一箇所に集約して参照したい。
+- テストが oracle tree の schema を読むが、`test` 配下からの相対計算を個別に書きたくない。
+
+## Do not read this when
+- acp_builder 以外のテスト対象で path 解決が必要なら、対象ごとの専用 helper を探す。
+- oracle schema 自体の内容や structured output の仕様を確認したいだけなら、oracle tree 側の本文を読む。
+
+## hash
+- 4d3dade84c28b5de1c63095a310c1bb8a6a93bfc3a68a86e42f78ea3591b73f5
+
 # `_apply_support.py`
 
 ## Summary
@@ -104,25 +120,93 @@
 ## hash
 - a9d7d262b807af663e577d9bca277a2f3f8b10b0b48cf630e0fb91c7bd1d4150
 
-# `test_acp_builder_parameters.py`
+# `test_acp_builder_apply_parameters.py`
 
 ## Summary
-- ACP builder が生成する AgentCallParameter のモデル種別、reasoning effort、file access mode、preflight 設定、prompt 埋め込み、structured output schema 参照、互換 module の公開名を検証する realization test。
-- apply fork、TUI resolve parameter、indexing index entry、review oracle、session join conflict resolution の builder 群について、oracle src の schema や builder と realization 側の出力が一致するかを確認する。
+- `test/test_acp_builder_apply_parameters.py` は、apply fork ACP builder の parameter 生成が参照する root と schema を正本仕様どおりに保つための回帰テスト群を扱う。
+- `build_apply_fork_finding_application_parameter` / `build_apply_fork_file_finding_enumeration_parameter` / `build_apply_fork_change_summary_parameter` のプロンプト内容、`ModelClass` / `ReasoningEffort`、および `change_summary.json` の structured output schema 参照を確認する変更で読む。
+- `<work-root>/oracle/src/oracle/acp_builder/apply/fork/` 配下の正本 schema と整合しているかを確認したいときに読む。
 
 ## Read this when
-- ACP builder の parameter 生成ロジック、prompt 内容、schema path、schema 内容、公開 API を変更する。
-- apply fork、TUI resolve parameter、indexing index entry、review oracle、session join conflict resolution の builder 実装や compatibility module を変更した後、既存挙動の期待値を確認する。
-- oracle src の structured output schema を realization 側 builder が正しく参照しているかを調べる。
-- builder が使う `<repo-root>`、`<work-root>`、`<oracle-root>` の prompt 表記や動的文字列の保持を検証したい。
+- apply fork の prompt に含める `<repo-root>` / `<work-root>` の解決方法を確認・変更するとき。
+- apply fork の parameter が `EFFICIENCY` / `MAX` を使うか、または change summary の schema 参照先を変えるとき。
+- このテストが正本 schema に対して何を保証しているかを確認してから、対応する oracle 側の schema を読む入口にしたいとき。
 
 ## Do not read this when
-- ACP builder 以外の CLI 実行、永続状態、path model、index 生成本文などを調べたい場合。
-- structured output schema の正本内容そのものを確認したい場合は、対応する oracle src の schema を直接読む。
-- 個別 builder の実装方針を調べたい場合は、対象 builder の realization implementation を直接読む。
+- apply fork の内部実装分割や helper の構成だけを見たいときは、ここではなく `src/acp/builder/apply/fork/` 側を読む。
+- `INDEX.md` や `AGENTS.md` のルーティング規則だけを確認したいときは、このテスト本文ではなく上位の案内を読む。
+- apply fork 以外の ACP builder の parameter や schema を確認したいときは、別の対象を読む。
 
 ## hash
-- e41e29054eb05095e6cb2dd467f62c95dc60cab965c04be787f521fc3b903fc2
+- ad5013ffbb81db63d43cd2df671bb69676c90d090a15ed18326282682768c428
+
+# `test_acp_builder_indexing_parameters.py`
+
+## Summary
+- `acp.builder.indexing.index_entry` の互換ビルダーが、indexing 用の実行条件を最小権限・低負荷に固定して返すことを確認するテスト。あわせて、このモジュールの公開面が互換ビルダーだけに絞られていることを検証する。
+
+## Read this when
+- indexing 用の INDEX エントリー生成が、どの `ModelClass`・`ReasoningEffort`・`FileAccessMode` を選ぶべきか確認したいとき。
+- モジュールの公開面を整理していて、互換ビルダー以外の補助実装を見せないことを確かめたいとき。
+
+## Do not read this when
+- indexing の正本仕様そのものを確認したいときは、対応する oracle 側の定義を読む。
+- indexing 以外のエントリー生成や、実装内部の分割方針を調べたいときはこのテストではなく該当する実装側を見る。
+
+## hash
+- 9cf2e5899a2e454b72d47eba735854f4be26d61d7705ad61f2975e2012497c8d
+
+# `test_acp_builder_review_oracle_parameters.py`
+
+## Summary
+- review oracle ACP builder の各 parameter builder が返す `AgentCallParameter` の公開面と、対応する structured output schema を検証するテスト群。互換ラッパーの export 範囲、モデル設定、schema ファイル一致、prompt 内の `<oracle-root>` 置換や動的文字列保持を確認する。
+
+## Read this when
+- review oracle 向け builder の公開 API を変えるとき
+- schema JSON との一致や prompt 置換規則を確認したいとき
+- 互換公開面の export 範囲や余計な内部記号の露出を検査したいとき
+
+## Do not read this when
+- review oracle builder の実装本文や prompt 生成ロジックそのものを追いたいときは、対応する `oracle/src/oracle/acp_builder/review/oracle/` 側を読む
+- review 以外の ACP builder の parameter や schema を調べたいとき
+- oracle 仕様本文の修正方針を決めたいだけのとき
+
+## hash
+- 92b72d198438ac9a435b293e2a21024fb995ae292469b834d42ebec573ab4059
+
+# `test_acp_builder_session_join_parameters.py`
+
+## Summary
+- `cmoc session join` の conflict resolution 用エージェントパラメータの契約を確認するテストを読む入口。公開 API がビルダ 1 本に絞られていることと、repo write 前提の実行条件を固定していることを確認したいときにここから入る。
+
+## Read this when
+- `cmoc session join` の conflict resolution まわりで、公開されるビルダ API と実行パラメータの契約を確認・変更したい。
+- module の公開面を絞る意図や、conflict 対象ファイルを扱うときの実行モードを確認したい。
+
+## Do not read this when
+- prompt 本文や conflict 対象ファイルの列挙ルールそのものを見たいときは、対応する oracle src 側を読む。
+- 通常の session join 接続処理や他サブコマンドのパラメータ生成だけを見たいときは、ここではなくその責務のファイルを読む。
+
+## hash
+- 1f7fc5c95bedda5a2db47987f9878a67578090967083c0cbf66d96941114e4b7
+
+# `test_acp_builder_tui_parameters.py`
+
+## Summary
+- TUI 用の resolve_parameter ビルダーと、その返却値の正本仕様との対応を確認するテスト群。ビルダーが埋め込む元プロンプト、選択されるモデル系パラメータ、公開されるモジュール名、生成される structured output schema の整合性をまとめて検証する。
+
+## Read this when
+- `acp.builder.tui.resolve_parameter` の出力内容を変えるとき。
+- TUI から生成する実行パラメータの既定値や、返却オブジェクトに埋め込む説明文を確認したいとき。
+- structured output schema の必須項目、型、列挙値、公開 API の変化を検証したいとき。
+
+## Do not read this when
+- TUI resolve_parameter の内部実装や補助関数の分割だけを確認したいときは、対象の実装本文を読む。
+- 他の builder や別コマンドのパラメータ定義を追いたいときは、その対象のテスト群を読む。
+- 単に正本仕様の内容そのものを確認したいときは、対応する oracle 側の本文を読む。
+
+## hash
+- 56aeb783a50189d8710750fb7c69c5001b71827cf413ed53f9cf438f83d75956
 
 # `test_apply_abandon_cli.py`
 
