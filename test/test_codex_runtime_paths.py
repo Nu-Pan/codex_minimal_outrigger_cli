@@ -6,7 +6,6 @@
 """
 
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -22,6 +21,12 @@ from commons.runtime_codex import run_codex_exec
 def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """パラメータの cwd と pure-oracle read の権限境界を検証する。
+
+    正本仕様:
+        <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    """
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -66,6 +71,11 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
 def test_run_codex_exec_stores_schema_state_under_repo_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """リンク済み worktree の出力 schema を repo root 配下へ保存することを検証する。
+
+    正本仕様:
+        <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    """
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "local" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
@@ -126,6 +136,11 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
 def test_run_codex_exec_allows_repo_local_read_from_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """リンク済み worktree から repo-local の追加 read path を許可することを検証する。
+
+    正本仕様:
+        <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    """
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "local" / "worktree" / "linked-exec-log"
     linked.parent.mkdir(parents=True)
@@ -172,6 +187,11 @@ def test_run_codex_exec_allows_repo_local_read_from_linked_worktree(
 def test_run_codex_exec_overrides_do_not_open_agents_tree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """権限 override が `.agents` tree を write 対象として開かないことを検証する。
+
+    正本仕様:
+        <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    """
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
