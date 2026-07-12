@@ -134,17 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の realization test をまとめる入口で、CLI・runtime・prompt・support helper などの外部挙動を確認したいときに読む。個別機能の正本仕様ではなく、実装側の回帰テスト群へのルーティングに使う。
+- `test` 配下の回帰テスト群を案内するルーティング入口である。CLI、runtime、prompt、ACP builder、`oracle` 参照の各テストを用途別に振り分け、目的の外部挙動や境界契約に最短で進むために読む。
+- 個別のサブコマンド挙動や runtime 契約を変えるときは対応する test 本文へ進み、正本仕様そのものを確認したい場合は対応する `oracle` 側へ進む。
 
 ## Read this when
-- `test` 配下のどの回帰テストを読むべきかを、対象サブコマンドや関心事から絞り込みたいとき。
-- CLI、runtime、prompt builder、support helper などのテスト変更を行う前に、該当するテスト群の責務境界を確認したいとき。
-- 実装ではなく、外部挙動を固定する test 側の確認から入りたいとき。
+- CLI の外部挙動、runtime 契約、prompt 組み立て、`acp_builder` の公開面や schema 参照をテスト側から確認したいとき。
+- `apply`、`session`、`review oracle`、`doctor`、`indexing`、`tui`、`Codex` 実行まわりの回帰テストを、対象サブコマンドごとに探したいとき。
+- 共通の test support ではなく、目的の振る舞いを固定している個別テストを見分けたいとき。
 
 ## Do not read this when
-- 個別の機能仕様や正本定義そのものを確認したいときは、対応する `oracle` 側の本文を読む。
-- `INDEX.md` のルーティング規則そのものを確認したいときは、この `test` 入口ではなく上位の案内を読む。
-- テスト補助ではなく実装本体の修正方針を確認したいときは、対応する `src` 側を読む。
+- 正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
+- 共通の test support の実装や helper 群だけを確認したいときは、ここではなく該当する support ファイルを読む。
+- `INDEX.md` のルーティング方針そのものを確認したいときは、この `test` 入口ではなく上位の案内を読む。
 
 ## hash
-- 38c947740d6e035ca27dbe514aa81351c1e2dd9a45c30b163676610542755a0d
+- c2ac1a27418bd5a9ad6393cd14bae0439a988ae4c916a7e2eed2b7709eed1296

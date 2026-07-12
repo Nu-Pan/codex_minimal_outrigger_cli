@@ -652,20 +652,21 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の例外整形、標準出力への error report 出力、サブコマンドログ生成、work root / worktree preflight、shell completion の副作用回避を確認する統合テスト群。`runtime_cli`、`runtime_logging`、`cmoc_runtime`、`main` の CLI 境界を変えるときに読む。
+- CLI の実行前後で発生する error 表示、ログ出力、preflight、shell completion の境界をまとめて検証するテスト群の入口。`runtime_cli` と `runtime_logging` の実行制御、`CmocError` の整形、`cmoc` 起動時の副作用有無を確認したいときに読む。
 
 ## Read this when
-- CLI 実行時の error 表示先や report 形式を変えるとき。
-- サブコマンド実行前後の log 記録、preflight、work root 判定、`doctor` 系の前処理の境界を変えるとき。
-- completion probe で初期化副作用を起こさない保証や、`ensure_cmoc_ignored` の `.gitignore` 更新方針を確認したいとき。
+- CLI の失敗が stdout/stderr のどちらに出るべきかを確認したいとき。
+- サブコマンドログの生成条件や、pre-log check / doctor preprocess の実行順を確認したいとき。
+- work root 判定、detached HEAD の拒否、completion probe で副作用を起こさない条件を確認したいとき。
+- `CmocError` の Markdown report 形式や duration 表示の仕様を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックだけを変えるときは、各サブコマンド側のテストを読む。
-- Markdown report の文言だけを追いたいときは、error 生成側の実装とそれを定義する oracle doc を先に読む。
-- git 操作や worktree の一般仕様だけを見たいときは、この統合テストではなく該当 helper の実装を読む。
+- サブコマンド本体の業務ロジックを確認したいときは、各サブコマンド側のテストや実装を読む。
+- git ignore の生成規則だけを追いたいときは、ignore 専用の実装・テストを読む。
+- CLI 以外のログ形式や一般的なファイル管理の仕様を確認したいときは、別の対象を読む。
 
 ## hash
-- 24a03a7ac7e3dd0d000cf0009d55bb2f63e6546f0f419d0206fa4ed1d0377ede
+- 8d0de04a29fc2b06f1251abe217641042e438bb3a42d22b8f77ff91ced6c2d1b
 
 # `test_runtime_codex_conflicts.py`
 
