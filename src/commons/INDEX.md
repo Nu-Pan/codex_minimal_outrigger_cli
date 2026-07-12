@@ -186,21 +186,21 @@
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI の起動を 1 か所にまとめた実行補助。呼び出し用 argv の組み立て、call log の保存、起動後のエラー整形と例外変換までを扱う。
-- Codex の実行先 cwd と `CODEX_HOME` の解決・検証、設定上書き引数の準備、サブコマンドログへのイベント記録が必要なときに読む。
+- Codex TUI を直接起動するための実行本体で、設定上書き argv の組み立て、call log の保存、起動結果のコンソール/サブコマンド記録、失敗時の例外化をまとめて扱う。
+- `runtime_codex.py` の薄い委譲や、`runtime_codex_preflight.py` の indexing 前処理ではなく、Codex TUI 自体の起動条件・記録形式・エラー処理を確認したいときに読む。
 
 ## Read this when
-- Codex TUI を起動する処理を追加・変更するとき。
-- 呼び出し前に `CODEX_HOME` の解決や検証、`--cd` の決定方法、追加 read path の扱いを確認したいとき。
-- call log の保存内容、起動失敗時の `CmocError` 変換、サブコマンドログへの記録を追いたいとき。
+- Codex TUI の起動引数や `call log` に何を残すかを確認したい。
+- 起動失敗時にどの例外へ変換されるか、またコンソール/イベント記録がいつ出るかを確認したい。
+- `cwd` や `CODEX_HOME` の解決を含む TUI 実行フローそのものを追いたい。
 
 ## Do not read this when
-- Codex の通常 CLI 実行や別サブコマンドの起動経路を見たいときは、各サブコマンド側の実行補助を読む。
-- 設定値の読み込みや Codex プロファイルの詳細だけを確認したいときは、このファイルではなく各責務の元のモジュールを読む。
-- TUI 以外の call log 形式や保存先の全体方針だけを知りたいときは、より上位のログ・パス管理側を読む。
+- Structured Output 検証、retry、resume、quota など `exec` 専用の実行制御を追いたい場合は `runtime_codex_exec.py` を読む。
+- indexing preflight の有無や、Codex 呼び出し前の前処理の分岐を追いたい場合は `runtime_codex.py` を読む。
+- サブコマンド全体のルーティングだけを見たい場合は、より上位の呼び出し元を読む。
 
 ## hash
-- 1ac3e6cc3de04dbe252fbf40360285086b7736e54c580b62da3b7920189e47de
+- 531d6042d4ca28b73dedcea94e42a995df895b12a743bfa82c5a499e34a72b5e
 
 # `runtime_config.py`
 

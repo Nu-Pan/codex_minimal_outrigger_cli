@@ -115,34 +115,37 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation へ進むための入口。上位の CLI や互換 shim から委譲された実処理を探すときに読む。
-- 個別機能の実装本文ではなく、どの下位モジュールに責務があるかを切り分けるための案内として使う。
+- `src` 配下の realization 実装の総入口。CLI 入口、共通 runtime helper、互換 shim、`acp`/`basic`/`config` の公開面、`sub_commands` 系の実行実装を束ねるので、まずどの責務の下位実装へ進むかを切り分けるために読む。
+- この階層は正本仕様そのものではなく、実体実装と互換入口の配置を案内する場所として使う。個別のコマンド挙動や変換ロジックを追う前に、`main.py`、`commons`、`sub_commands`、`acp`、`basic`、`config`、`oracle.py`、`cmoc_runtime.py` のどれへ進むべきか判断したいときに読む。
 
 ## Read this when
-- 実装対象の本体が `src` 配下のどこにあるか判断したいとき。
-- CLI 入口や互換入口から、実際の処理モジュールへ進む前に責務境界を確認したいとき。
-- 公開面よりも realization implementation 側の構成を先に把握したいとき。
+- `src` 全体の役割分担と、目的の処理がどの下位 module にあるかを先に絞りたいとき。
+- CLI 入口、共通 runtime helper、互換 shim、公開面の再公開、各サブコマンド実装のどれを読むべきか判断したいとき。
+- 互換 import 面と実体実装の境界を確認したいとき。
 
 ## Do not read this when
-- 個別関数の挙動、例外処理、入出力の詳細を知りたいとき。その場合は目的の下位モジュールを直接読む。
-- oracle 側の正本仕様を確認したいとき。
-- 単に import 名やディレクトリ名だけを確認したいとき。
+- 個別コマンドの実処理、branch/worktree 操作、review/apply/session の制御内容を知りたいとき。その場合は対応する下位 module を直接読む。
+- `acp`、`basic`、`config` の個別公開面の意味や削除条件だけを確認したいとき。その場合は各パッケージの入口を読む。
+- 正本仕様や oracle 文書の内容を確認したいとき。その場合は `oracle` ツリー側を読む。
 
 ## hash
-- 4ba225396de02c9fc3463716ded7eb1dd51b31c3b0b2fb7118085344d1a0fb6d
+- de5de1e841a035eb20b2873c23a81ef3527b5f343981d4ba59b9f779a04ae26d
 
 # `test`
 
 ## Summary
-- `test` 配下の acp_builder 系テストが、`<work-root>/oracle/src/oracle/acp_builder` 配下の正本 schema を重複なく参照するための共通 path 解決補助を扱う。schema の実体位置をテストごとに書き分けたくない場合の入口にする。
+- `test` 配下には、複数の回帰テスト本体と、それらで共通に使う支援ファイルがある。共通補助の役割を持つものは、個別テストの重複を減らすための入口として読む。
+- 個別のテストファイルは、CLI・runtime・builder・prompt・oracle 周辺の外部挙動や境界条件を固定する。対象機能の振る舞いを変えるときは、対応するテストを読む。
 
 ## Read this when
-- acp_builder 関連テストで、正本 schema ファイルの参照先を一箇所に集約したい。
-- テストが oracle tree の schema を読むが、`test` 配下からの相対計算を個別に書きたくない。
+- 共通のテスト支援関数や fixture の使い分けを確認したい。
+- 特定サブコマンドや runtime 境界の回帰テストを探して、その外部挙動や拒否条件を確認したい。
+- oracle 側の正本仕様に対応する実装・テストの入口を探している。
 
 ## Do not read this when
-- acp_builder 以外の対象で path 解決が必要なら、対象ごとの専用 helper を探す。
-- oracle schema 自体の内容や structured output の仕様を確認したいだけなら、oracle tree 側の本文を読む。
+- 正本仕様そのものを確認したいだけなら、`oracle` 側の本文を読む。
+- 実装本体の分割や内部 helper の構成だけを見たいなら、対応する `src` 側を読む。
+- ルーティング文や共通規約だけを探しているなら、この配下の個別テストではなく上位の案内を読む。
 
 ## hash
-- ba2e8e4e2bd7d4b1ebd9e714fca1718b1c90b3ab3166c32f0d01fd683becf1ae
+- 8eb1f29776e7544274b159d0fd2d91dc821452abc77df73df057bddceeeed0ae
