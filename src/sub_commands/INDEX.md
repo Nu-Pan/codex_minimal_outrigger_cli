@@ -201,23 +201,19 @@
 # `session`
 
 ## Summary
-- session 系サブコマンド実装をまとめるディレクトリ。package 初期化に加え、session branch の作成、home branch への join、merge しない破棄など、session lifecycle の具体的な CLI 処理へ進む入口となる。
-- 各サブコマンドは CLI runtime、git 操作、session state、worktree 条件、利用者向け出力や失敗時復旧を扱うが、共通 helper や正本仕様そのものはこの階層の主責務ではない。
+- `session` サブコマンド群の入口となるパッケージ。個別の `session` 系サブコマンド実装を読む前に、この階層が何を束ねているかだけを確認するための案内を置く。
+- ここ自体には処理や公開 API を持たせず、`abandon`、`fork`、`join` の各実装へ進む起点として扱う。
 
 ## Read this when
-- session 系サブコマンドの実装ファイルを探し、fork、join、abandon のどれを読むべきか判断したいとき。
-- session branch の作成、home branch への merge 完了、merge しない破棄など、session lifecycle の外部挙動や状態更新を確認または変更したいとき。
-- session 操作での事前条件、clean worktree 要求、branch/state の確認、成功時出力、失敗時エラーや rollback 方針の実装入口を探すとき。
-- session join の merge conflict 自動解消や、conflict 解消後の差分検査、marker 残存判定、merge commit 完了処理を調べたいとき。
+- `session` 系サブコマンドの実装を読む前に、パッケージ境界やこの階層の役割だけを確認したいとき。
+- この配下に session 関連の実装がまとまっているかを先に判断したいとき。
 
 ## Do not read this when
-- session 以外のサブコマンド、共通 CLI ルーティング、サブコマンド登録の実装を調べたいとき。
-- git 実行 wrapper、CLI runtime、worktree 検査、branch 判定、state file schema、path model などの共通実装そのものを確認したいとき。
-- session 系サブコマンドの正本仕様断片を確認したいとき。その場合は対応する oracle doc を読む。
-- 個別サブコマンドがすでに特定できており、その処理だけを詳しく確認したいとき。その場合は該当する実装モジュールを直接読む。
+- 個別の `session` サブコマンドの挙動、引数、状態更新、merge や branch 操作の詳細を知りたいとき。その場合は各サブコマンド実装を読む。
+- `session` 以外の CLI ルーティングや共通基盤を確認したいとき。
 
 ## hash
-- 1834946b2c3e1469cfc08a9fbf9120538fff8c1ba772c0024a065411c36fbfcf
+- 2039577793c9e295600723bca008c156bedb4bd62cae20faa0f7ec4bd8c40202
 
 # `tui.py`
 

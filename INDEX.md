@@ -115,36 +115,35 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation 全体をまとめて見るための入口。正本側の `oracle` package を参照する shim と、cmoc の CLI 入口・共有 runtime helper・各種互換入口をまとめて辿るときに使う。
-- この階層は、利用者向けの公開面をどこへ配線しているか、互換維持の薄い層と本体実装の接続境界がどこにあるかを確認したいときに読む。
+- `src` 配下の realization implementation を束ねる入口。CLI 起動、共通 runtime、設定、サブコマンド実装、正本側 `oracle` への接続用 shim をまとめて辿るときに読む。
+- この階層は、`oracle` 側の正本仕様を複製する場所ではなく、正本側の意図を具体化した実装と、既存公開面を支える互換入口を切り分けて追うための案内として使う。
 
 ## Read this when
-- `src` 配下の realization implementation の入口を探したいとき。
-- 公開 import の互換 shim と、実体実装への接続境界を確認したいとき。
-- CLI 入口や共有 runtime helper の配置を切り分けたいとき。
+- `src` 配下で、どの実装が CLI 入口・共通基盤・サブコマンド・互換 shim に属するかを見分けたいとき。
+- 旧公開名の互換維持と、正本側実装への接続境界を確認したいとき。
+- 実装を追加・整理する前に、同じ変更理由で一緒に読むべき realization implementation の範囲を絞りたいとき。
 
 ## Do not read this when
-- oracle file や仕様断片そのものを確認したいとき。
-- `src` 配下の個別実装の詳細や、各 subcommand・helper の中身だけを追いたいとき。
-- 互換層ではなく正本側の定義や本体仕様を直接読みたいとき。
+- 正本仕様そのものを確認したいとき。対応する `oracle` 側の文書や実装を読む。
+- 個別コマンドの細かな処理、状態管理、入出力変換、共通 helper の内部を知りたいとき。該当する下位モジュールを直接読む。
+- `src` 以外の公開面や、互換以外の新規 API を探しているとき。
 
 ## hash
-- cbf43e7e9a7e7e2aee490afa0736a4509a6ebe6b08dc274d4715ecbaaa6bf27a
+- be991f0894dc2dded5dc8db1b7596a61423b90291f99aa3bb6289b4169c87fdb
 
 # `test`
 
 ## Summary
-- `test` 配下の各共通補助モジュールと、CLI・runtime・prompt・packaging・renderer をまたぐ回帰テスト群を案内する。各エントリーは、そのファイルがどの共通 fixture や外部挙動の入口なのかを、隣接する対象との境界が分かる粒度で示す。
+- `test` 配下の共通テスト補助と個別の回帰テストをまとめて案内する入口。CLI、runtime、prompt、indexing、session、review、apply、doctor、Ollama まわりの外部挙動を確認したいときに、まずここから目的の対象へ進む。
 
 ## Read this when
-- `test` 配下の共通補助、CLI 回帰、runtime 回帰、prompt 組み立て、packaged import、Markdown renderer のどこへ進むべきかを選びたいとき。
-- 特定のサブコマンドや runtime の外部挙動を変えた後に、対応する回帰テストの入口を絞り込みたいとき。
-- 共通 fixture を使うテストの前提や、どの補助モジュールがどの種類のテストを支えるかを確認したいとき。
+- `test` 配下で、どの共通補助や個別テストがどの挙動を守っているかを探したいとき。
+- CLI、runtime、prompt 生成、indexing、session、review、apply、doctor、Ollama のどれかを変更した後、対応する回帰テストの入口を探したいとき。
 
 ## Do not read this when
-- 個別の実装本体や oracle 側の正本定義を知りたいときは、この索引対象ではなく、対応する実装・oracle 文書を読むべきとき。
-- ルーティング情報だけが必要で、各テストの詳細な期待値や内部 helper の分解までは不要なとき。
-- CLI 挙動、runtime 制御、prompt 生成、packaging、renderer のうち、すでに読む対象が明確なときは、この索引対象を経由せず直接読む方がよいとき。
+- 個別機能の実装や正本仕様そのものを知りたいときは、対応する `oracle` 側や realization 実装を読む。
+- テスト支援の共通モジュールだけを探しているときは、対象の補助ファイルを直接読む。
+- この階層で扱う外部挙動ではなく、別領域の仕様や実装を追いたいとき。
 
 ## hash
-- c56132bb8bb700ccca76824857dd2aa1dcce5a104fd95a36fcf992002e0afb6a
+- cb383f2bb6a84528a8f6083b0715540b00a53b65ac74e48333d03c9c2a56ce94

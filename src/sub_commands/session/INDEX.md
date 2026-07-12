@@ -58,18 +58,18 @@
 # `join.py`
 
 ## Summary
-- session join サブコマンドの実行本体を担う。active session branch を session home branch に切り替えて merge し、成功時に session 状態を joined へ更新し、到達可能な local session branch だけを削除し、結果サマリを出力する。
-- merge conflict 発生時は Codex CLI に conflict 解消を依頼し、対象外差分・残存 conflict marker・未解消 unmerged path を検査してから merge commit を完了する。
+- `cmoc session join` の実行本体をまとめたモジュール。セッション branch から home branch へ merge し、必要なら conflict 解消を Codex CLI に委ね、状態更新・branch 削除・結果表示までを扱う。
+- 同じファイル内に、merge conflict 対応の補助処理、非 conflict 変更の排除、未解決 marker 検査、変更スナップショット取得、path fingerprint 作成が入っている。
 
 ## Read this when
-- session join の事前条件、branch 切り替え、merge、状態更新、session branch 削除、成功時出力を確認または変更したいとき。
-- session join の merge conflict 自動解消、Codex CLI へ渡す conflict 対象、oracle conflict 書き込み許可、対象外差分の拒否、merge commit 完了処理を調べるとき。
-- Git の unmerged path 検出、作業ツリー差分 snapshot、symlink を含む path fingerprint、conflict marker 残存判定の実装を確認したいとき。
+- `session join` の CLI 実行フロー、前提条件チェック、merge 後の状態更新や branch 削除の挙動を確認したいとき。
+- merge conflict が発生した後に、どの範囲を Codex CLI に解消させ、どこから先を手動確認に戻すのかを知りたいとき。
+- conflict 対象の path 抽出、conflict marker 検出、変更差分の判定方法を調べたいとき。
 
 ## Do not read this when
-- session join 用の Codex prompt や実行パラメータの内容だけを確認したいときは、conflict resolution parameter を組み立てる側を読む。
-- session 状態モデル、状態ファイルの schema、branch からの state 読み込みそのものを調べたいときは、runtime や state 定義側を読む。
-- session join の正本仕様断片を確認したいときは、対応する oracle doc を読む。
+- `session join` の引数定義やコマンド登録だけを見たいときは、CLI エントリポイント側を先に読むべき。
+- session state の永続化形式や join 以外の session 操作を見たいときは、状態管理や他の session サブコマンドを読むべき。
+- merge conflict 解消用プロンプトの文面や生成規則だけを見たいときは、`build_session_join_conflict_resolution_parameter` 側を直接読むべき。
 
 ## hash
-- 5ef7c240e3a175492466118cb60694d0f9558a81e76f17f098fe25befb2167a9
+- 89989e1906cb6b142f931005541db19dc88e70d34c38cb273a1f9ae7767ea3f5

@@ -502,24 +502,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- `session fork` / `join` / `abandon` の外部挙動を、session 状態ファイルと branch/worktree の遷移まで含めて検証するテスト群。fork の状態初期化、join の conflict 解消と後処理、abandon の戻り先復帰と cleanup を一箇所で追う入口として読む。
-- linked worktree から実行したときの home branch 判定や current branch の扱い、state cleanup の成否、dirty worktree や preprocess invariants 破壊時の拒否挙動を確認したい場合に読む。
-- session join の conflict 判定、追加差分の拒否、delete conflict resolution、stdout / stderr のエラー出力分離、session branch 削除可否の判定を確認したい場合に読む。
+- `session fork` / `join` / `abandon` の外部挙動回帰をまとめて確認する入口。session branch と session state の遷移、linked worktree、state cleanup、dirty worktree 拒否、conflict 解消の境界を扱うテスト群へ進むときに読む。
+- 同じ session CLI でも、個別の内部 helper の単体確認や別サブコマンドの挙動確認が目的なら優先しない。ここは CLI 全体の状態遷移と副作用を観測する回帰テストに絞る。
 
 ## Read this when
-- `session fork` / `session join` / `session abandon` の CLI 回帰をまとめて追いたいとき.
-- linked worktree から session コマンドを実行した場合の home branch と状態更新の基準を確認したいとき.
-- session state file の初期化・破損・欠落フィールド・終了後の state 更新を確認したいとき.
-- join 後に conflict 以外の差分が残っていないか、または branch 削除の可否がどう決まるかを確認したいとき.
+- session CLI の `fork` / `join` / `abandon` の期待挙動を確認したい。
+- session state ファイル、session branch、linked worktree、preprocess、cleanup の関係をまとめて追いたい。
+- dirty worktree 拒否、state corruption、conflict resolution、branch deletion 可否の回帰を見たい。
 
 ## Do not read this when
-- `session` 以外の CLI サブコマンドの挙動を見たいときは、より直接の CLI テストを読むべきである.
-- session の内部 helper 実装や state schema の定義そのものを確認したいときは、対応する実装側を読むべきである.
-- git / worktree / preprocess の共通補助そのものを確認したいときは、このファイルではなく補助モジュールを読むべきである.
-- 単体の conflict 解析ロジックだけを見たいときは、join 専用の最小テストを読むべきである.
+- 個別の実装 helper の詳細を追いたいだけなら、対応する実装モジュールを直接読む。
+- session 以外のサブコマンドや一般的な CLI 挙動を確認したいだけなら、このテスト群は読まない。
+- このファイルは session CLI の統合回帰に限定されるので、状態遷移と関係しない単発のユーティリティ確認には使わない。
 
 ## hash
-- b567e60e3c10a303186bb0e1ed2b176fad0b410470343a842f8a87516cfbd128
+- 6284eb3df086367bf4390b7c46db8f3e9436a778fdfa39466397f22c736dd787
 
 # `test_struct_doc_rendering.py`
 
