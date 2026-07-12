@@ -15,6 +15,7 @@ from cmoc_runtime import (
     require_clean_worktree,
     run_cli_subcommand,
     run_git,
+    start_subcommand_step,
     state_path,
     timestamp,
     work_root,
@@ -33,6 +34,7 @@ def cmoc_session_fork_impl() -> None:
         command_name="session fork",
         command_argv=["cmoc", "session", "fork"],
         use_work_root_runtime=True,
+        total_steps=7,
     )
 
 
@@ -40,6 +42,7 @@ def _cmoc_session_fork_body() -> None:
     """現在の local branch から cmoc session branch を作成する。"""
     root = repo_root()
     work = work_root()
+    start_subcommand_step(2, "現在の local branch を取得", "get current branch")
     branch = current_branch(work)
     if is_managed_branch(branch):
         raise CmocError(
@@ -56,14 +59,19 @@ def _cmoc_session_fork_body() -> None:
             ["既存 session を join または abandon してから再実行してください。"],
             str(existing),
         )
+    start_subcommand_step(3, "現在の HEAD commit を取得", "get HEAD commit")
+    start_commit = head_commit(work)
+    start_subcommand_step(4, "session-id を生成", "generate session id")
     session_id = _new_session_id(root)
     session_branch = f"cmoc/session/{session_id}"
-    start_commit = head_commit(work)
+    start_subcommand_step(5, "session branch を作成して checkout", "create session branch")
     run_git(["switch", "-c", session_branch], work)
+    start_subcommand_step(6, "session state を保存", "write session state")
     state = SessionState()
     state.session.session_home_branch = branch
     state.session.session_start_commit = start_commit
     write_state(state_path(root, session_id), state)
+    start_subcommand_step(7, "作成結果を表示", "show session result")
     typer.echo(
         "\n".join(
             [

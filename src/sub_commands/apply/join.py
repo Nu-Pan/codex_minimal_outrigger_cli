@@ -19,6 +19,7 @@ from cmoc_runtime import (
     reports_dir,
     require_clean_worktree,
     run_cli_subcommand,
+    start_subcommand_step,
     run_git,
     timestamp,
     work_root,
@@ -39,6 +40,7 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
             "join",
             *(["--force-resolve"] if force_resolve else []),
         ],
+        total_steps=8,
     )
 
 
@@ -46,7 +48,9 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     """apply branch を session branch へ merge し、apply state を ready に戻す。"""
     repo = repo_root()
     current_root = work_root()
+    start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     branch = current_branch(current_root)
+    start_subcommand_step(3, "apply branch の前準備", "prepare apply branch")
     if branch.startswith("cmoc/apply/"):
         require_clean_worktree(current_root)
         session_id = apply_branch_session_id(branch)
@@ -56,6 +60,7 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
         root = current_root
         session_branch = branch
     _session_id, path, state = load_state_for_branch(repo, branch)
+    start_subcommand_step(4, "session branch の前準備", "prepare session branch")
     if not (branch.startswith("cmoc/session/") or branch.startswith("cmoc/apply/")):
         raise CmocError("apply join は session branch または apply branch 上で実行してください。", [], branch)
     if state.session.state != "active" or state.apply.state not in {"completed", "error"}:
@@ -81,6 +86,7 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     apply_worktree = worktree_for_branch_optional(root, apply_branch)
     if apply_worktree:
         require_clean_worktree(apply_worktree)
+    start_subcommand_step(5, "apply branch の差分を確認", "check unexpected changes")
     unexpected = collect_apply_join_unexpected_changes(root, state, apply_branch, session_branch)
     if unexpected and not force_resolve:
         report_path = write_apply_join_report(
@@ -104,6 +110,7 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
         )
     if unexpected and force_resolve:
         revert_unexpected_changes(root, unexpected, state)
+    start_subcommand_step(6, "apply branch を merge", "merge apply branch")
     merge = run_git(["merge", "--no-ff", apply_branch], root, check=False)
     if merge.returncode != 0:
         index_conflicts_resolved = resolve_index_conflicts(root)
@@ -136,6 +143,7 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
                 ["必要なら手動で解決するか、--force-resolve を検討してください。"],
                 merge.stderr,
             )
+    start_subcommand_step(7, "apply state を更新", "update apply state")
     state.session.last_joined_apply_oracle_snapshot_commit = apply_oracle_snapshot_commit
     state.apply = ApplyPart()
     write_state(path, state)
@@ -148,6 +156,7 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
         ).returncode
         == 0
     )
+    start_subcommand_step(8, "結果をレポートして後始末", "report and cleanup")
     report_path = write_apply_join_report(
         repo,
         session_branch,

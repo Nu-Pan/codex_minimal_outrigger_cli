@@ -9,6 +9,7 @@ from cmoc_runtime import (
     repo_root,
     require_clean_worktree,
     run_cli_subcommand,
+    start_subcommand_step,
     run_git,
     work_root,
     write_state,
@@ -22,6 +23,7 @@ def cmoc_session_abandon_impl() -> None:
         command_name="session abandon",
         command_argv=["cmoc", "session", "abandon"],
         use_work_root_runtime=True,
+        total_steps=4,
     )
 
 
@@ -30,6 +32,7 @@ def _cmoc_session_abandon_body() -> None:
     repo = repo_root()
     work = work_root()
     branch = current_branch(work)
+    start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     _session_id, path, state = load_state_for_branch(repo, branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError("session abandon は session branch 上で実行してください。", [], branch)
@@ -45,6 +48,7 @@ def _cmoc_session_abandon_body() -> None:
             ["session state file と git branch の状態を確認してください。"],
             f"session_home_branch: {home}",
         )
+    start_subcommand_step(3, "session をクリーンアップ", "cleanup session")
     try:
         run_git(["switch", home], work)
         state.session.state = "abandoned"
@@ -93,6 +97,7 @@ def _cmoc_session_abandon_body() -> None:
             ],
             "\n".join(details),
         ) from error
+    start_subcommand_step(4, "結果を表示", "show session result")
     typer.echo(
         "\n".join(
             [

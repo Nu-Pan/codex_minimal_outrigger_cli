@@ -40,6 +40,7 @@ from commons.runtime_cli import (
     CliRunResult,
     require_current_directory_is_work_root,
     run_cli_subcommand,
+    start_subcommand_step,
 )
 from commons.runtime_doctor import run_doctor_preprocess
 from commons.runtime_errors import CmocError, render_error

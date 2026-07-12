@@ -25,6 +25,22 @@ from sub_commands.review_paths import finding_oracle_path
 CodexExec = Callable[..., object]
 _MAX_MERGE_FINDING_SEMANTIC_RETRIES = 2
 
+StepCallback = Callable[[int | str, str, str | None], None]
+
+
+def _report_step(
+    step_callback: StepCallback | None,
+    index: int | str,
+    description: str,
+    log_description: str,
+) -> None:
+    """step callback が指定された場合だけ手順開始を通知する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    """
+    if step_callback is not None:
+        step_callback(index, description, log_description)
+
 
 def run_review_oracle_loop(
     log_root: Path,
@@ -32,14 +48,22 @@ def run_review_oracle_loop(
     oracle_files: list[Path],
     config: CmocConfig,
     codex_exec: CodexExec,
+    step_callback: StepCallback | None = None,
 ) -> list[dict]:
     """review oracle の finding enumerate/merge/validate/judge loop を実行する。"""
+    _report_step(step_callback, 4, "所見リスト列挙ループ", "enumerate findings loop")
     findings: list[dict] = []
     dirty_files = set(oracle_files)
     next_id = 1
     for _ in range(config.review_oracle.num_enumerate_findings_loop):
         if not dirty_files:
             break
+        _report_step(
+            step_callback,
+            "4/8, 1/2",
+            "レビュー対象ファイルを列挙",
+            "enumerate oracle files",
+        )
         for oracle_path in sorted(dirty_files):
             result = codex_exec(
                 replace(
@@ -73,6 +97,7 @@ def run_review_oracle_loop(
                 findings.append(finding)
         if not dirty_files:
             break
+        _report_step(step_callback, "4/8, 2/2", "所見リストをマージ", "merge findings")
         for _ in range(config.review_oracle.num_merge_findings_loop):
             findings, added_count, changed = _merge_findings_with_semantic_retry(
                 log_root, worktree, findings, next_id, config, codex_exec
@@ -80,7 +105,9 @@ def run_review_oracle_loop(
             if not changed:
                 break
             next_id += added_count
-    return _validate_and_judge_findings(log_root, worktree, findings, config, codex_exec)
+    return _validate_and_judge_findings(
+        log_root, worktree, findings, config, codex_exec, step_callback
+    )
 
 
 def _findings_related_to_oracle_path(
@@ -99,7 +126,9 @@ def _validate_and_judge_findings(
     findings: list[dict],
     config: CmocConfig,
     codex_exec: CodexExec,
+    step_callback: StepCallback | None = None,
 ) -> list[dict]:
+    _report_step(step_callback, 5, "所見リスト検証ループ", "validate findings loop")
     dirty_findings = {finding["finding_id"] for finding in findings}
     for _ in range(config.review_oracle.num_validate_findings_loop):
         if not dirty_findings:
@@ -108,6 +137,12 @@ def _validate_and_judge_findings(
         for finding in findings:
             if finding["finding_id"] not in dirty_findings:
                 continue
+            _report_step(
+                step_callback,
+                "5/8, 1/2",
+                "所見の妥当性を反証",
+                "challenge finding",
+            )
             finding_text = json.dumps(finding, ensure_ascii=False, indent=2)
             challenger = codex_exec(
                 replace(
@@ -124,6 +159,12 @@ def _validate_and_judge_findings(
                 purpose=f"review oracle validate challenger {finding['finding_id']}",
             ).output_json
             challenger_reasons = list((challenger or {}).get("reasons", []))
+            _report_step(
+                step_callback,
+                "5/8, 2/2",
+                "所見の妥当性を擁護",
+                "advocate finding",
+            )
             advocate = codex_exec(
                 replace(
                     build_review_oracle_validate_finding_advocate_parameter(
@@ -144,6 +185,7 @@ def _validate_and_judge_findings(
             if challenger_reasons or advocate_reasons:
                 next_dirty.add(finding["finding_id"])
         dirty_findings = next_dirty
+    _report_step(step_callback, 6, "所見を採用・不採用判定", "judge findings")
     for finding in findings:
         judge = codex_exec(
             replace(

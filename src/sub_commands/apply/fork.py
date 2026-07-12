@@ -37,6 +37,7 @@ from cmoc_runtime import (
     repo_root,
     require_clean_worktree,
     run_cli_subcommand,
+    start_subcommand_step,
     run_codex_exec,
     run_git,
     timestamp,
@@ -69,6 +70,7 @@ def cmoc_apply_fork_impl(scope: str) -> None:
         run_codex_exec,
         command_name="apply fork",
         command_argv=["cmoc", "apply", "fork", "--scope", scope],
+        total_steps=6,
     )
 
 
@@ -92,6 +94,7 @@ def _cmoc_apply_fork_body(
     apply_branch = f"cmoc/apply/{session_id}/{run_id}"
     oracle_snapshot_commit = head_commit(current_root)
     apply_worktree = worktrees_dir(root) / session_id / run_id
+    start_subcommand_step(2, "run の隔離実行を開始", "start isolated run")
     create_run_worktree(current_root, apply_branch, apply_worktree, "HEAD")
     write_apply_process_id(root, session_id, os.getpid())
     state.apply = ApplyPart(
@@ -105,16 +108,20 @@ def _cmoc_apply_fork_body(
     report_path: Path | None = None
     try:
         with apply_process_tracking(root, session_id), pushd(apply_worktree):
+            start_subcommand_step(3, "調査待ちファイルリストを初期化", "initialize pending files")
             findings: list[dict] = []
             pending_targets = enumerate_apply_targets(
                 apply_worktree, scope, session_id, state
             )
+            start_subcommand_step(4, "apply ループ", "apply loop")
             for _apply_loop in range(config.apply_fork.num_apply_files):
                 pending_targets = dedupe_apply_targets(pending_targets)
                 if not pending_targets:
                     result_label = "converged"
                     break
+                start_subcommand_step("4/6, 1/3", "調査対象を pop", "pop pending target")
                 target = pending_targets.pop(0)
+                start_subcommand_step("4/6, 2/3", "対象ファイルの所見を列挙", "enumerate findings")
                 findings = enumerate_apply_findings_for_target(
                     apply_worktree,
                     target,
@@ -126,6 +133,7 @@ def _cmoc_apply_fork_body(
                 if not findings:
                     continue
                 pending_targets.append(target)
+                start_subcommand_step("4/6, 3/3", "所見を適用", "apply findings")
                 run_finding_application(
                     root,
                     apply_worktree,
@@ -153,8 +161,10 @@ def _cmoc_apply_fork_body(
             else:
                 pending_targets = dedupe_apply_targets(pending_targets)
                 result_label = "unconverged" if pending_targets else "converged"
+            start_subcommand_step(5, "apply state を更新", "update apply state")
             state.apply.state = "completed"
             write_state(path, state)
+            start_subcommand_step(6, "作業結果をレポート", "write apply report")
             report_path = write_apply_fork_report(
                 root,
                 apply_worktree,

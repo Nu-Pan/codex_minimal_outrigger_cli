@@ -400,7 +400,7 @@ def test_session_abandon_requires_existing_home_branch(
     assert result.exit_code != 0
     assert "完了 session abandon" in result.output
     assert "- サブコマンドログ: `" in result.output
-    assert "- ステップ経過時間[2/3 実行 session abandon]: `" in result.output
+    assert "- ステップ経過時間[2/4 事前条件を確認]: `" in result.output
     assert "- 経過時間: `" in result.output
     assert "- quota 待機時間: `" in result.output
     assert "- 終了コード: `1`" in result.output

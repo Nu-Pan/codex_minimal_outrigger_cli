@@ -18,6 +18,7 @@ from cmoc_runtime import (
     repo_root,
     require_clean_worktree,
     run_cli_subcommand,
+    start_subcommand_step,
     run_codex_exec,
     run_git,
     work_root,
@@ -38,6 +39,7 @@ def cmoc_session_join_impl() -> None:
         run_git,
         command_name="session join",
         command_argv=["cmoc", "session", "join"],
+        total_steps=4,
         use_work_root_runtime=True,
     )
 
@@ -47,6 +49,7 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
     root = repo_root()
     work = work_root()
     branch = current_branch(work)
+    start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     session_id, path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError("session join は session branch 上で実行してください。", [], branch)
@@ -61,12 +64,14 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
     home = state.session.session_home_branch
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
+    start_subcommand_step(3, "session branch を merge", "merge session branch")
     try:
         run_git(["switch", home], work)
         merge = git(["merge", "--no-ff", branch], work, check=False)
         if merge.returncode != 0:
             resolve_session_join_conflict(work, codex_exec, git)
         state.session.state = "joined"
+        start_subcommand_step(4, "後始末と結果を表示", "finish session join")
         write_state(path, state)
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
         # delete only when the local session branch itself is reachable from
@@ -111,6 +116,7 @@ def resolve_session_join_conflict(
     git: GitRun = run_git,
 ) -> None:
     """session join の merge conflict を Codex CLI へ依頼して解消する。"""
+    start_subcommand_step("3/4, 1/5", "conflict 対象を列挙", "enumerate conflicts")
     conflicted_paths = _unmerged_paths(root, git)
     if not conflicted_paths:
         raise CmocError(
@@ -118,6 +124,7 @@ def resolve_session_join_conflict(
             ["git status を確認し、手動解決後に再実行してください。"],
             git(["status", "--short"], root).stdout,
         )
+    start_subcommand_step("3/4, 2/5", "conflict marker 解消を依頼", "resolve conflicts")
     codex_exec(
         replace(
             build_session_join_conflict_resolution_parameter(conflicted_paths),
@@ -134,6 +141,9 @@ def resolve_session_join_conflict(
         extra_writable_paths=conflicted_paths,
         allow_oracle_conflict_writes=True,
     )
+    start_subcommand_step(
+        "3/4, 3/5", "conflict marker の残存を確認", "check conflict markers"
+    )
     remaining_markers = [
         path
         for path in conflicted_paths
@@ -145,9 +155,13 @@ def resolve_session_join_conflict(
             ["conflict marker を手動で解消してから git commit してください。"],
             "\n".join(str(_absolute_path(path)) for path in remaining_markers),
         )
+    start_subcommand_step("3/4, 4/5", "conflict 対象を stage", "stage conflicts")
     for path in conflicted_paths:
         git(["add", "--", str(path.relative_to(root))], root)
     unmerged_paths = _unmerged_paths(root, git)
+    start_subcommand_step(
+        "3/4, 5/5", "unmerged path と merge 完了を確認", "finish conflict merge"
+    )
     unmerged = "\n".join(str(_absolute_path(path)) for path in unmerged_paths)
     if unmerged:
         raise CmocError(

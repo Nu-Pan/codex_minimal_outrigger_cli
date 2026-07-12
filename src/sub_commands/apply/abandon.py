@@ -14,6 +14,7 @@ from cmoc_runtime import (
     repo_root,
     require_clean_worktree,
     run_cli_subcommand,
+    start_subcommand_step,
     work_root,
     write_state,
 )
@@ -32,6 +33,7 @@ def cmoc_apply_abandon_impl() -> None:
         _cmoc_apply_abandon_body,
         command_name="apply abandon",
         command_argv=["cmoc", "apply", "abandon"],
+        total_steps=13,
     )
 
 
@@ -39,6 +41,7 @@ def _cmoc_apply_abandon_body() -> None:
     """未 join の apply run を破棄して apply state を ready に戻す。"""
     repo = repo_root()
     current_root = work_root()
+    start_subcommand_step(2, "session-id を特定", "identify session")
     branch = current_branch(current_root)
     if not (branch.startswith("cmoc/session/") or branch.startswith("cmoc/apply/")):
         raise CmocError("apply abandon は session branch または apply branch 上で実行してください。", [], branch)
@@ -48,8 +51,13 @@ def _cmoc_apply_abandon_body() -> None:
         session_worktree = worktree_for_branch(repo, session_branch)
     else:
         session_worktree = current_root
+    start_subcommand_step(3, "session state を読み込む", "load session state")
     session_id, path, state = load_state_for_branch(repo, branch)
-    if state.session.state != "active" or state.apply.state == "ready":
+    start_subcommand_step(4, "session state が active か確認", "check active session")
+    if state.session.state != "active":
+        raise CmocError("破棄対象の active apply run がありません。", [], str(path))
+    start_subcommand_step(5, "apply state が ready でないことを確認", "check apply state")
+    if state.apply.state == "ready":
         raise CmocError("破棄対象の active apply run がありません。", [], str(path))
     require_clean_worktree(session_worktree)
     previous = state.apply.state
@@ -76,8 +84,8 @@ def _cmoc_apply_abandon_body() -> None:
             ["session state file が指す apply branch 上、または session branch 上から再実行してください。"],
             f"current_branch: {branch}\napply_branch: {apply_branch}",
         )
-    apply_worktree = expected_apply_worktree(repo, apply_branch)
     warnings: list[str] = []
+    start_subcommand_step(6, "実行中 apply process を停止", "stop apply process")
     if previous == "running":
         process_id = read_apply_process_id(repo, session_id)
         if process_id is None:
@@ -92,11 +100,16 @@ def _cmoc_apply_abandon_body() -> None:
         )
         if stopped_warning:
             warnings.append(stopped_warning)
+    start_subcommand_step(7, "apply branch と worktree を特定", "identify apply resources")
+    apply_worktree = expected_apply_worktree(repo, apply_branch)
+    start_subcommand_step(8, "cleanup 可能な場所へ移動", "move out of apply worktree")
     if branch == apply_branch:
         os.chdir(session_worktree)
+    start_subcommand_step(9, "apply worktree を削除", "remove apply worktree")
     if not apply_worktree.exists():
         warnings.append(f"apply worktree already missing: {apply_worktree}")
     remove_worktree(repo, apply_worktree)
+    start_subcommand_step(10, "apply branch を削除", "remove apply branch")
     if not branch_exists(repo, apply_branch):
         warnings.append(f"apply branch already missing: {apply_branch}")
     else:
@@ -105,10 +118,13 @@ def _cmoc_apply_abandon_body() -> None:
         warnings.append(f"orphan apply worktree remains: {apply_worktree}")
     if branch_exists(repo, apply_branch):
         warnings.append(f"orphan apply branch remains: {apply_branch}")
-    delete_apply_process_id(repo, session_id)
+    start_subcommand_step(11, "apply state を ready に更新", "reset apply state")
     state.apply = ApplyPart()
     write_state(path, state)
+    start_subcommand_step(12, "process 追跡情報を初期化", "clear process tracking")
+    delete_apply_process_id(repo, session_id)
     warning_lines = [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
+    start_subcommand_step(13, "結果を表示", "show apply abandon result")
     typer.echo(
         "\n".join(
             [
