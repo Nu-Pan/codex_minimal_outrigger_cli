@@ -1,7 +1,7 @@
 import multiprocessing
 import threading
-import time
 from collections.abc import Callable, Iterator
+from concurrent.futures import ThreadPoolExecutor
 from multiprocessing.connection import Connection
 from pathlib import Path
 
@@ -207,21 +207,33 @@ def test_indexing_preflight_waits_for_repository_lock(
 
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
+    lock_attempted = threading.Event()
+    original_flock = indexing_module.fcntl.flock
+
+    def observe_lock_attempt(fd: int, operation: int) -> None:
+        if operation & indexing_module.fcntl.LOCK_EX:
+            lock_attempted.set()
+        original_flock(fd, operation)
+
     process.start()
+    monkeypatch.setattr(indexing_module.fcntl, "flock", observe_lock_attempt)
     try:
         assert ready_parent.recv() is True
-        thread = threading.Thread(
-            target=indexing_module.run_indexing_preflight,
-            args=(root, lambda *args, **kwargs: None),
-        )
-        thread.start()
-        time.sleep(0.2)
-        assert events == []
-        release_parent.send(True)
-        released = True
-        thread.join(timeout=3)
-        assert not thread.is_alive()
-        assert events == ["updated"]
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                indexing_module.run_indexing_preflight,
+                root,
+                lambda *args, **kwargs: None,
+            )
+            try:
+                assert lock_attempted.wait(timeout=3)
+                assert events == []
+            finally:
+                if not released:
+                    release_parent.send(True)
+                    released = True
+            future.result(timeout=3)
+            assert events == ["updated"]
     finally:
         if process.is_alive() and not released:
             release_parent.send(True)
