@@ -43,6 +43,7 @@ def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> Non
 def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """同一 timestamp でもサブコマンドごとに固有のログファイルを保持する。"""
     timestamps = iter(
         [
             "2026-06-27_10-00_00_000001000",
@@ -68,6 +69,7 @@ def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
 def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """doctor preprocess の失敗を終了コードとサブコマンドログに記録する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
@@ -219,6 +221,7 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
 def test_pre_log_check_failure_writes_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """pre-log check の失敗時にもサブコマンドログを生成する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
