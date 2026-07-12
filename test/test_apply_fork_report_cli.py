@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 from basic.acp import AgentCallParameter
+from _acp_builder_support import oracle_schema_path
 from _cli_support import runner
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
@@ -194,20 +195,11 @@ def test_file_finding_enumeration_schema_matches_oracle_source() -> None:
         build_apply_fork_file_finding_enumeration_parameter,
     )
 
-    root = Path(__file__).parents[1]
     parameter = build_apply_fork_file_finding_enumeration_parameter(Path(__file__))
-    oracle_schema_path = (
-        root
-        / "oracle"
-        / "src"
-        / "oracle"
-        / "acp_builder"
-        / "apply"
-        / "fork"
-        / "file_finding_enumeration.json"
-    )
 
-    assert parameter.structured_output_schema_path == oracle_schema_path
+    assert parameter.structured_output_schema_path == oracle_schema_path(
+        "apply", "fork", "file_finding_enumeration.json"
+    )
     assert (
         json.loads(parameter.structured_output_schema_path.read_text())["type"]
         == "object"
