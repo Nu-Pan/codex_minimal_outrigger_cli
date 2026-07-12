@@ -53,19 +53,22 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex 実行系テストで共通に使う支援関数群。認証済み `CODEX_HOME` の作成、Codex への override argv の固定、CLI 引数や `--config` の解析をまとめる。
-- ファイルアクセス制約の検証補助も含む。sandbox の writable roots や permission filesystem の override を読み取り、実行系が期待どおりの権限引数を組み立てたかを確認する。
+- Codex CLI の fake 実行テストで共通に使う補助関数群で、`CODEX_HOME` の最小認証状態づくり、Codex 起動引数の検証用ヘルパー、sandbox / filesystem override の解釈、書き込み可否のアサーションをまとめている。
+- このファイルは、`commons.runtime_codex_exec` や `commons.runtime_codex_tui` の subprocess  नियंत्रणと、override されたファイルアクセス境界を確認するテストから入る。
+- 外部サービス本体の挙動や一般的な runtime 実装ではなく、テスト用の固定 argv とパス判定ロジックを再利用したいときに読む。
 
 ## Read this when
-- Codex 実行ラッパーや TUI ラッパーの subprocess 引数生成を確認したいとき。
-- Codex の認証済みホーム、override 設定、権限まわりのテスト補助が必要なとき。
+- Codex 実行ラッパーのテストで、fake CLI の引数構築や `--config` の内容確認を共通化したい。
+- sandbox の writable roots と explicit filesystem permission の重なり方を、テスト側で同じ判定規則で扱いたい。
+- `CODEX_HOME` の最小セットアップや、Ollama の事前確認をテストで差し替える方法を探している。
 
 ## Do not read this when
-- 実際の Codex サブコマンド実装や権限判定ロジックそのものを追いたいときは、対応する実装側を読む。
-- Codex 以外の一般的なテスト共通処理を探しているだけなら、このファイルではなく目的のテスト群の近くを読む。
+- Codex 本体の実装ロジックや実サービスの責務を理解したいだけなら、より直接の実装ファイルを読む。
+- 個別テストケースの期待値を知りたいだけなら、この補助モジュールではなく呼び出し元のテスト本文を読む。
+- 一般的なファイルアクセス規則や sandbox 設計の正本仕様を探しているなら、対応する oracle doc を読む。
 
 ## hash
-- ba4cb11e6ee70e7f8467264bba74cdc97cb3ec5238e9088a72df4d0f8bc02c7e
+- dc08300e2c3921755db2f7ba21387141e04d8a93458af48b5bac0bfea6a46077
 
 # `_command_support.py`
 
