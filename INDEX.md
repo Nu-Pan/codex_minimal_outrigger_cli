@@ -134,18 +134,16 @@
 # `test`
 
 ## Summary
-- `test` 配下の共通テスト補助群をまとめたルーティング用ディレクトリ。`acp_builder` の schema 参照補助、apply/session/CLI の共通支援、`git`・`ollama`・`command`・`codex` 実行補助など、個別テストから再利用される入口を案内する。
-- ここは本体仕様ではなく、テスト側の重複を減らすための支援関数と、対象別に読むべき補助モジュールへの分岐点を示す。
+- `test` 配下の回帰テストと共通支援を集めた入口。CLI、runtime、prompt 生成、ACP builder、StructDoc renderer など、外部挙動や契約境界を確認したいときに読む。
+- 個別の実装本文に進む前に、どの振る舞いがこのテスト群で固定されているかを見分けるための案内層として位置づく。
 
 ## Read this when
-- acp_builder 系テストで、正本 schema の参照先や共通 path 解決をまとめて使いたい。
-- apply/session/CLI まわりのテストで、worktree 復元、CliRunner 初期化、外部コマンドの偽装、git fixture、codex/ollama 実行補助を再利用したい。
-- 特定のテストで共通 helper を探しており、どの補助モジュールに進むべきかを絞り込みたい。
+- CLI の外部挙動、runtime 契約、prompt 組み立て、structured output schema、worktree や file access 境界の回帰を確認したい。
+- 共通テスト補助を使うべきか、個別テスト本文へ直接進むべきかを判断したい。
 
 ## Do not read this when
-- 個別サブコマンドや runtime の本体仕様を知りたいだけなら、対応するテスト本文や oracle 側の本文を読む。
-- このディレクトリ全体の一覧や補助群の索引が不要で、すでに対象 helper 名が分かっているなら直接そのファイルを読む。
-- test 以外の実装や oracle 文書の内容確認が目的なら、ここではなく対応する実装・正本側へ進む。
+- 正本仕様そのものを確認したいときは `oracle` 側の本文を読む。
+- 特定の実装ロジックだけを追いたいときは、この案内層ではなく対応する realization code を読む。
 
 ## hash
-- b19adbfcaf9af360b4888e6696078ce67db9055605e17a250aadf8ee26c7f649
+- 82f2c58c885f6d8ac6c2415e53616a4c50d8a2490d80ed8d92eecb87f029da51

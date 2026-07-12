@@ -302,22 +302,22 @@
 # `test_cli_tui.py`
 
 ## Summary
-- `tui` サブコマンドの起動直前に行う前処理の外部挙動を検証するテスト群。編集対象が `tui` の引数解決、プロンプト生成、Codex 起動、ログ保存、リンク済み worktree での保存先分岐ならここを読む。
-- `file_access_mode` などの解決結果が `tui` 実行にどう反映されるか、元プロンプトと完成プロンプトがどのログへ残るか、実行時に参照する追加ファイルの渡し方を確認したいときに読む。
-- worktree 直下とリンク済み worktree の両方で `.cmoc` 配下の扱いを変える必要がある変更なら、関連するログ配置と `.gitignore` 更新の検証意図をこのテストから追う。
+- `tui` サブコマンドの起動前後で、エディタ編集・正規化済みプロンプト生成・Codex 起動・ログ保存・linked worktree での保存先選択がどうなるかを確認するためのテスト群。
+- `file_access_mode` の既定値や、linked worktree では元 worktree 側の `.cmoc/local` 配下を使う境界を見たいときに読む。
+- `.gitignore` の更新や `.cmoc/local/log/sub_command` との連携を含む、TUI 前処理の副作用を確かめたいときに進む先。
 
 ## Read this when
-- `tui` コマンドの前処理、Codex 実行前のパラメータ解決、起動後のログ保存の仕様を変えるとき。
-- 完成プロンプトの組み立て方、追加で読むファイル、`repo_write` と `readonly` の切り替えに影響する変更をするとき。
-- linked worktree での `.cmoc` 配下の保存先や参照先を変えるとき。
+- `tui` 実行時の前処理が期待どおりか、外部挙動ベースで確認したい。
+- 編集前の入力プロンプトと、編集後に Codex へ渡す complete プロンプトの差分や保存内容を検証したい。
+- linked worktree で起動した場合に、ログ・schema・ignore 設定の参照先がどこになるかを確認したい。
 
 ## Do not read this when
-- `tui` 以外のサブコマンドだけを変更するとき。
-- `run_codex_exec` や `run_codex_tui` の内部実装そのものを確認したいときは、まずそれぞれの実装側を読むべきで、このテストファイルは後回しでよい。
-- 一般的な git helper、コマンド実行 helper、プロンプト部品の共通ロジックだけを追いたいときは、対応する実装や共通モジュールを直接読む方がよい。
+- TUI 本体の実装手順やヘルパー分割を追いたい場合は、`sub_commands/tui` 側を先に読む。
+- CLI 全体の起動や共通前処理の責務を見たい場合は、このテストより上位のエントリを読む。
+- `tui` 以外のサブコマンドの挙動を知りたい場合は、このファイルは読まず各サブコマンドのテストを読む。
 
 ## hash
-- 221ccd1aebb345cdfde3f4191aca42c6d6a26d314178305c263184feae908adc
+- 9e0d700b4fd811d3e02456d89c2eedb5ccc42d251d1e9b51791c80f989b16698
 
 # `test_codex_runtime_errors.py`
 
