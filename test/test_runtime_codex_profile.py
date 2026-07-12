@@ -3,7 +3,7 @@
 根拠:
 - <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
 - <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-- <work-root>/oracle/doc/app_spec/external_model_provider.md
+- <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
 """
 
 from pathlib import Path
@@ -33,8 +33,7 @@ from _ollama_support import TEST_SLM_MODEL
 
 def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     """root 付き通常経路でも FileAccessMode ごとの argv を生成する。"""
-    root = tmp_path / "repo"
-    root.mkdir()
+    root = make_repo(tmp_path)
     (root / ".cmoc").mkdir()
     (root / ".codex").mkdir()
     (root / ".pytest_cache").mkdir()
@@ -47,13 +46,11 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     (root / "test" / "INDEX.md").write_text("index\n")
     (root / "test" / "test_existing.py").write_text("def test_ok(): pass\n")
     (root / "README.md").write_text("# repo\n")
-    (root / "oracle").mkdir()
     (root / "oracle" / "INDEX.md").write_text("index\n")
     (root / "oracle" / "AGENTS.md").write_text("agents\n")
     (root / "oracle" / "spec.md").write_text("# spec\n")
     (root / "memo").mkdir()
     (root / ".agents").mkdir()
-    (root / ".git").mkdir()
     (root / ".gitignore").write_text("memo\n")
 
     parameter = AgentCallParameter(
