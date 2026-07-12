@@ -14,25 +14,26 @@ from _command_support import write_python_executable
 
 # <work-root>/oracle/doc/dev_rule/test_rule.md
 # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
-# Deterministic tests use a separate endpoint; Real Codex never enters this context.
+# run_doctor uses the production per-user service. Fake helpers below are
+# limited to tests whose Codex invocation is intentionally not real.
 
 
 TEST_SLM_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 
 
 def run_doctor(root: Path) -> Result:
-    """Run doctor against the isolated deterministic Ollama service."""
+    """Run doctor against the managed Ollama service shared with production."""
     from main import app
 
-    env = fake_managed_ollama_env(root)
-    with fake_managed_ollama_runtime(root):
-        result = runner.invoke(app, ["doctor"], env=env, catch_exceptions=False)
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # Keep production HOME, PATH, and the fixed 127.0.0.1:11434 endpoint.
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
     assert result.exit_code == 0
     return result
 
 
 def fake_managed_ollama_env(root: Path) -> dict[str, str]:
-    """Prepare fake commands for deterministic doctor and provider tests."""
+    """Prepare fake commands for tests that replace the Codex CLI."""
     env = fake_managed_systemctl_env(root)
     home = Path(env["HOME"])
     _write_fake_ollama(

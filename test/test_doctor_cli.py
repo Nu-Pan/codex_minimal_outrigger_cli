@@ -13,16 +13,13 @@ from oracle.other.cmoc_config import CodexModelSpec
 from main import app
 from _ollama_support import (
     TEST_SLM_MODEL,
-    fake_managed_ollama_env,
-    fake_managed_ollama_host,
-    fake_managed_ollama_runtime,
     run_doctor,
 )
 from _cli_support import runner
 from _git_support import make_repo, run_git
 
 
-def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
+def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -32,7 +29,6 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     write_config(root / ".cmoc" / "config.json", config)
 
     monkeypatch.chdir(root)
-    fake_env = fake_managed_ollama_env(root)
     result = run_doctor(root)
 
     assert result.exit_code == 0
@@ -40,7 +36,10 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
-    home = Path(fake_env["HOME"])
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # This is the production service and persistent model store, not a test
+    # HOME or endpoint. doctor must leave this service reusable for later tests.
+    home = Path.home()
     service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
     assert (home / ".cmoc" / "ollama" / "bin" / "ollama").is_file()
     assert (home / ".cmoc" / "ollama" / "models").is_dir()
@@ -50,7 +49,7 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
         "",
         "[Service]",
         f"ExecStart={home}/.cmoc/ollama/bin/ollama serve",
-        f"Environment=OLLAMA_HOST={fake_managed_ollama_host(root)}",
+        "Environment=OLLAMA_HOST=127.0.0.1:11434",
         "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
         "Restart=on-failure",
         "RestartSec=2s",
@@ -178,13 +177,7 @@ def test_dector_alias_runs_doctor(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
-    with fake_managed_ollama_runtime(root):
-        result = runner.invoke(
-            app,
-            ["dector"],
-            env=fake_managed_ollama_env(root),
-            catch_exceptions=False,
-        )
+    result = runner.invoke(app, ["dector"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert (root / ".cmoc" / "config.json").is_file()
@@ -198,13 +191,7 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
 
-    with fake_managed_ollama_runtime(linked):
-        result = runner.invoke(
-            app,
-            ["doctor"],
-            env=fake_managed_ollama_env(linked),
-            catch_exceptions=False,
-        )
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert "/.cmoc/local/" in (linked / ".gitignore").read_text()
