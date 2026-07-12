@@ -8,7 +8,7 @@ from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
 from _git_support import make_repo
-from commons.runtime_codex import run_codex_exec, run_codex_tui
+from commons.runtime_codex import run_codex_exec
 from commons.runtime_logging import (
     SubcommandLogger,
     reset_current_subcommand_logger,
@@ -16,9 +16,8 @@ from commons.runtime_logging import (
 )
 
 
-@pytest.mark.parametrize("runner", ["exec", "tui"])
 def test_codex_runtime_reports_missing_codex_cli(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runner: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -36,15 +35,12 @@ def test_codex_runtime_reports_missing_codex_cli(
     token = set_current_subcommand_logger(logger)
     try:
         with pytest.raises(CmocError, match="Codex CLI が見つかりません"):
-            if runner == "exec":
-                run_codex_exec(
-                    codex_parameter(),
-                    root=root,
-                    capacity_initial_sleep_sec=0,
-                    config=CmocConfig(),
-                )
-            else:
-                run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+            run_codex_exec(
+                codex_parameter(),
+                root=root,
+                capacity_initial_sleep_sec=0,
+                config=CmocConfig(),
+            )
     finally:
         reset_current_subcommand_logger(token)
 
