@@ -112,22 +112,22 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の実行制御をまとめて扱う中核モジュール。Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、実行ログ生成をこの 1 ファイルで追う。
-- 実行結果の call log・prompt log・stdout/stderr・output の対応関係と、再試行ごとの状態遷移を確認したいときに読む。
-- worktree の変更 path を git status から列挙する処理もここにあるため、requeue や変更検出の挙動を直したいときにも入口になる。
+- Codex exec の単一試行ループと再試行制御の入口。Structured Output 検証、capacity 再試行、quota 待機と代表 probe、resume token の継続、call log と subcommand event の記録をまとめて扱うため、この実行制御の流れを追うときに読む。
+- TUI 起動や別サブコマンドの責務ではなく、Codex 呼び出しの argv/env/cwd/schema の組み立て、実行結果の判定、変更 worktree path の列挙だけを確認したいときに進む。
 
 ## Read this when
-- Codex exec の再試行条件、Structured Output 検証、resume token の扱い、quota 待機や代表 probe の状態遷移を変えたいとき。
-- Codex exec の call log / prompt log / stdout / stderr / output の保存内容や、失敗時にどの記録を残すかを確認したいとき。
-- worktree 上の変更 path の取得方法や、変更検出の粒度を調整したいとき。
+- Codex exec の失敗時挙動、再試行条件、quota 待機の継続条件、Structured Output の検証条件を確認したいとき。
+- call log、prompt log、stdout/stderr、output の保存内容や、subcommand logger へ何を記録するかを追いたいとき。
+- resume token の復元や quota 代表 probe の扱いを含む、実行制御の状態遷移を理解したいとき。
+- worktree 上の変更 path を絶対 path で列挙する処理の入口を探しているとき。
 
 ## Do not read this when
-- TUI 起動や画面操作の分岐を追いたいとき。
-- Codex 呼び出し前の設定読み込み、profile 構築、環境変数の詳細だけを見たいときは、まずそれぞれの helper の定義を読むべきで、このファイル全体は不要。
-- Codex exec 以外のサブコマンド実装や、実行制御と無関係な UI・コマンド定義を探しているとき。
+- Codex exec 以外のサブコマンドの入出力変換や TUI 起動を見たいときは、より直接のモジュールを読む。
+- 実行ログの保存先や runtime path の定義そのものを確認したいだけなら、関連する paths や logging 側の定義を先に読む。
+- Codex CLI の内部実装全体を追う必要はなく、単に `codex exec` 呼び出しの結果だけ知りたい場合は、このファイルの周辺ロジックだけで足りる。
 
 ## hash
-- c386d892b59df13a662cad76974d77af44a8ab443b13d59bac601604a2cb9d5f
+- 0e6bdc6c3cea02554413e903fcfc1cb4ff8b46d9a7f03487e62a197a1f20625c
 
 # `runtime_codex_logging.py`
 
@@ -169,22 +169,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI の起動前後に必要な実行環境設定、権限プロファイルの組み立て、子プロセス追跡、Schema 配置、JSONL エラー判定をまとめる。`AgentCallParameter` と `CmocConfig` から Codex subprocess 用の引数・環境・検証結果を作る入口でもある。
-- この対象は、sandbox/argv/cwd、`CODEX_HOME`、read/write 許可 root、`apply` 実行中の pid file、Structured Output schema、Codex の stdout/stderr 解釈のいずれかを変える変更で読む。」「Codex subprocess 境界」として複数の失敗時文脈を同時に扱うため、関連関数が広く集約されている。
+- Codex CLI の起動条件と実行結果の判定をまとめる境界で、`argv`/`env`/`schema`/エラー解釈に関する実装を読む入口にする。
+- `sandbox` や `CODEX_HOME`、子プロセス追跡、Structured Output schema の配置、JSONL エラー判定など、Codex subprocess 周りの不変条件が知りたいときに読む。
+- 内部 helper の分割方針や個々の実装詳細ではなく、起動前後で何が許可され、何を失敗として扱うかを確認したいときに読む。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox モード、permission profile、追加 read/write path の許可条件を確認したいとき。
-- `CODEX_HOME` の解決・検証、または Codex subprocess へ渡す環境変数の扱いを変えるとき。
-- `apply` 実行中の child process tracking、pid file ロック、終了時の追跡解除、abandon 連携を確認したいとき。
-- Structured Output schema の配置方法や、Codex の stdout JSONL から resume token・capacity/quota/unexpected error を判定するロジックを確認したいとき。
+- Codex CLI に渡す引数、sandbox / permission profile、読み書き可能領域、`CODEX_HOME`、schema 配置、JSONL エラー判定のどれかを変更・確認したいとき。
+- apply 実行中の child process 記録や、Codex subprocess の起動・待機・失敗処理の境界を確認したいとき。
+- stdout / stderr から capacity・quota・unexpected error をどう見分けるかを確認したいとき。
 
 ## Do not read this when
-- Codex CLI とは無関係な一般的な runtime 文字列処理や別サブコマンドの入出力変換だけを見たいときは、より直接の実装へ進む。
-- 実際のサブコマンド仕様やユーザー向け操作手順だけを知りたいときは、関連する app_spec 側の文書を読むべきで、この境界実装は後回しでよい。
-- ファイルアクセス制御の正本仕様そのものを確認したいだけなら、この実装ではなく根拠として参照されている oracle 側の仕様断片を読むべきである。
+- 単純な path 操作や一般的な runtime helper だけを確認したいときは、より局所的な実装ファイルを先に読む。
+- Codex CLI 以外のサブコマンド仕様や prompt 文面の全体像だけを知りたいときは、この境界より上位の仕様断片を先に読む。
+- sandbox 以外の認証・通信・UI 振る舞いを探したいときは、このファイルではなく該当機能の実装を読む。
 
 ## hash
-- d34569060ac263b3980d65834bb257474786849f746a7532a73304249a9a61b7
+- 952756f4b64a100151629331b5d278a5d9bd2e092719935bb1db722225408c29
 
 # `runtime_codex_tui.py`
 

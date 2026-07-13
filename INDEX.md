@@ -115,35 +115,35 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization implementation の入口で、CLI 起動・互換 shim・共有 runtime helper・各機能サブコマンドへの振り分けをまとめる。実処理の本体はここではなく、下位の責務別 module と package にある。
-- `main.py` は Typer ベースの CLI 入口、`oracle.py` と `cmoc_runtime.py` は import 互換 shim、`commons` は複数機能から再利用される runtime helper 群、`sub_commands` は各サブコマンドの実行入口、`acp` / `basic` / `config` は既存 import 経路を受け止める互換層として読む。
+- `src` 配下の realization 実装全体の入口。CLI の本体、共通 runtime、サブコマンド実装、互換再公開層をまとめ、どの責務の本文へ進むべきかを切り分ける案内に使う。
+- `main.py` は cmoc CLI の起動点とサブコマンド配線、`commons` は複数経路で共有する runtime 基盤、`sub_commands` は apply/review/session などの実行入口群、`config` は設定の互換再公開、`basic` と `acp` は正本側定義を複製せず既存 import を維持する互換層をまとめる。
+- `oracle.py` と `cmoc_runtime.py` は正本側または実体 module へつなぐ互換 shim であり、実装本体そのものを読む対象ではない。
 
 ## Read this when
-- CLI の root command、subcommand、option、alias、起動経路を変えるとき。
-- `src` 起点の import がどこへ委譲されるか、互換 shim を残すべきか削除できるかを判断したいとき。
-- 複数モジュールから使う共通 helper、設定、状態、git、path、logging、error、runtime の入口を探したいとき。
-- `apply`、`review`、`session`、`tui`、`indexing`、`doctor`、`eval_oracle` のどの入口がどこへ進むかを切り分けたいとき。
-- `acp.*`、`basic.*`、`config.*`、`oracle.*`、`cmoc_runtime` の既存 import 互換を確認したいとき。
+- `cmoc` の CLI 入口、サブコマンド配線、補完時の例外変換、console script 起動を確認したいとき。
+- 共通 runtime の入出力、設定・状態・git・path・ログ・Codex 実行基盤の入口を確認したいとき。
+- apply/review/session/tui/indexing/doctor/eval-oracle などのサブコマンド実装本体へ進む前に、どの責務がどこにあるかを切り分けたいとき。
+- `basic.*`、`acp.*`、`config.*`、`oracle.*`、`cmoc_runtime` の旧来 import 経路や互換公開面の残存理由、削除条件を確認したいとき。
+- 正本側定義を複製せず、実体 module へ委譲・再公開する境界を確認したいとき。
 
 ## Do not read this when
-- 個別コマンドの実処理や状態遷移を知りたいだけなら、`sub_commands` 配下の該当 module を直接読む。
-- 共通 helper の細部、入出力、失敗時挙動を確認したいだけなら、`commons` 配下の該当 module を直接読む。
-- `acp`、`basic`、`config` の正本仕様や実装詳細を調べたいときは、互換入口ではなく対応する正本側 module を読む。
-- `oracle` パッケージの本体実装や `oracle/src` 側の内容を調べたいときは、この階層ではなく正本側を読む。
-- 新しい機能や API を追加する場所を探しているだけなら、この互換・入口層ではなく、実体のある下位 module を読む。
+- 実処理の詳細、個別の差分判定、report 生成、path 解決、設定検証などを調べたいときは、対応する下位 module を直接読む。
+- 新しい機能や公開面を追加する場所を探しているだけなら、この階層ではなく責務に対応する下位対象へ進む。
+- 互換 import の維持や再公開が論点でないなら、`basic`、`acp`、`config`、`oracle`、`cmoc_runtime` の shim は読まなくてよい。
+- サブコマンドの個別引数や内部制御を確認したいだけなら、`sub_commands` の個別実装へ進む。
 
 ## hash
-- d3399e8878284455b2c8c705dede8d5eeeacbbca02af4aed752f53e4a487b1b5
+- 86194faf2e23d051c17436d36973abf695a7f11a0e90242b4886691fb2bf04d3
 
 # `test`
 
 ## Summary
-- `test` 配下で `acp_builder` の正本 schema 参照先をテストから引くための共通 path helper をまとめた補助対象。test 側に schema を複製せず、oracle 側の定義へ直接つなぐ必要があるときに進む。
+- `test` 配下で `acp_builder` 正本 schema への path 解決を共通化する補助対象。テストが schema を複製せず、oracle 側の定義へ直接つなぐための入口になる。
 
 ## Read this when
-- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
-- テスト用に正本 schema をコピーせず、oracle 側を参照する方針がどこで支えられているかを確認したいとき。
-- `acp_builder` 関連のテスト helper が他にあるかではなく、この path 解決 helper の責務を見たいとき。
+- `acp_builder` 正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
+- テスト用に正本 schema をコピーせず、oracle 側を参照する方針の根拠を確認したいとき。
+- `acp_builder` 関連の他の helper ではなく、この path 解決 helper の責務を見たいとき。
 
 ## Do not read this when
 - 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
@@ -151,4 +151,4 @@
 - `INDEX.md` のルーティング方針そのものを確認したいときは、この helper ではなく上位の案内を読む。
 
 ## hash
-- 825b2ad5110894f29390ed68bedcc6d0219a471f38d7217f78c9fb3b3811e813
+- bf2e0740744d2ce1d10a870e15f5c026ae8905c88dd14bd47ca671017c6eff68
