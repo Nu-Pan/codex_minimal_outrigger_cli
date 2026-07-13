@@ -139,6 +139,14 @@ def _validate_and_judge_findings(
     codex_exec: CodexExec,
     step_callback: StepCallback | None = None,
 ) -> list[dict]:
+    """所見の妥当性を反復検証し、各所見の採否を判定する。
+
+    反証・擁護の新規理由がある所見だけを次の周回へ送り、検証が収束した
+    所見に judge の verdict と理由を付与する。
+
+    根拠:
+        <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    """
     _report_step(step_callback, 5, "所見リスト検証ループ", "validate findings loop")
     dirty_findings = {finding["finding_id"] for finding in findings}
     for _ in range(config.review_oracle.num_validate_findings_loop):
@@ -225,6 +233,15 @@ def _merge_findings_with_semantic_retry(
     config: CmocConfig,
     codex_exec: CodexExec,
 ) -> tuple[list[dict], int, bool]:
+    """所見リストの編集操作を適用し、意味的な検証失敗だけ再試行する。
+
+    変更不要の空操作はそのまま返し、無効な Structured Output は2回まで
+    再試行した後にレビュー全体を失敗させる。
+
+    根拠:
+        <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+        <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    """
     last_error: ValueError | None = None
     for _ in range(_MAX_MERGE_FINDING_SEMANTIC_RETRIES + 1):
         operations = codex_exec(
@@ -303,6 +320,14 @@ def apply_finding_merge_operations(
 def _validate_finding_merge_operation(
     operation: dict, existing_ids: set[str]
 ) -> set[str]:
+    """1件の merge operation が所見リストへ適用可能か検証する。
+
+    target_ids の形式・既存性・重複と、kind ごとの target/finding の組み合わせを
+    確認し、適用対象 ID の集合を返す。契約違反は ValueError として通知する。
+
+    根拠:
+        <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    """
     kind = operation.get("kind")
     target_ids = operation.get("target_ids")
     if not isinstance(target_ids, list) or not all(
