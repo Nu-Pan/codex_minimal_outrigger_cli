@@ -20,7 +20,7 @@ from acp.builder.review.oracle.validate_finding_challenger import (
     build_review_oracle_validate_finding_challenger_parameter,
 )
 from config.cmoc_config import CmocConfig
-from sub_commands.review_paths import finding_oracle_path
+from sub_commands.review_paths import finding_oracle_path, oracle_path_key
 
 CodexExec = Callable[..., object]
 _MAX_MERGE_FINDING_SEMANTIC_RETRIES = 2
@@ -113,11 +113,22 @@ def run_review_oracle_loop(
 def _findings_related_to_oracle_path(
     findings: list[dict], oracle_path: Path, worktree: Path
 ) -> list[dict]:
-    return [
-        finding
-        for finding in findings
-        if finding_oracle_path(finding, worktree) == oracle_path.resolve()
-    ]
+    """対象 oracle file と同じ repository path の finding だけを返す。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    """
+    target_key = oracle_path_key(worktree, oracle_path)
+    if target_key is None:
+        return []
+    related: list[dict] = []
+    for finding in findings:
+        finding_path = finding_oracle_path(finding, worktree)
+        if (
+            finding_path is not None
+            and oracle_path_key(worktree, finding_path) == target_key
+        ):
+            related.append(finding)
+    return related
 
 
 def _validate_and_judge_findings(

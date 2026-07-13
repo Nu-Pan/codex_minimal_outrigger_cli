@@ -306,6 +306,41 @@ def test_review_oracle_report_counts_oracle_root_alias_findings(
 
     assert "| 1 | `oracle/a.md` | 1 |" in rendered
 
+def test_review_oracle_report_counts_symlink_findings_by_repository_path(
+    tmp_path: Path,
+) -> None:
+    """oracle 配下 symlink の finding を link 先ではなく対象行へ集計する。"""
+    root = tmp_path
+    (root / "oracle").mkdir()
+    target = root / "memo.md"
+    target.write_text("# memo\n")
+    oracle_link = root / "oracle" / "memo-link.md"
+    oracle_link.symlink_to("../memo.md")
+    rendered = review_module.render_review_oracle_report(
+        root,
+        "full",
+        "cmoc/session/session-1",
+        SessionState(),
+        1,
+        [oracle_link],
+        [
+            {
+                "finding_id": "finding-0001",
+                "oracle_path": "<oracle-root>/memo-link.md",
+                "severity": "fatal",
+                "verdict": "accept",
+                "title": "accepted symlink finding",
+                "reason": "symlink reason",
+            }
+        ],
+        "cmoc/run/session-1/run-1",
+        "fork",
+        None,
+    )
+
+    assert "| 1 | `oracle/memo-link.md` | 1 |" in rendered
+
+
 def test_review_oracle_accepts_short_scope_option(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

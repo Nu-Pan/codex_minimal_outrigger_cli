@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from cmoc_runtime import SessionState, reports_dir, timestamp
-from sub_commands.review_paths import finding_oracle_path
+from sub_commands.review_paths import finding_oracle_path, oracle_path_key
 
 
 def write_review_oracle_report(
@@ -69,15 +69,18 @@ def render_review_oracle_report(
     findings_by_path: dict[str, int] = {}
     for finding in [*accepted, *rejected]:
         oracle_path = finding_oracle_path(finding, root)
-        if oracle_path is None:
+        path_key = None if oracle_path is None else oracle_path_key(root, oracle_path)
+        if path_key is None:
             continue
-        display = path_display(root, oracle_path)
-        findings_by_path[display] = findings_by_path.get(display, 0) + 1
-    rows = "\n".join(
-        f"| {idx} | `{path_display(root, path)}` | "
-        f"{findings_by_path.get(path_display(root, path), 0)} |"
-        for idx, path in enumerate(oracle_files, 1)
-    )
+        findings_by_path[path_key] = findings_by_path.get(path_key, 0) + 1
+    rows = []
+    for idx, path in enumerate(oracle_files, 1):
+        path_key = oracle_path_key(root, path)
+        rows.append(
+            f"| {idx} | `{path_display(root, path)}` | "
+            f"{findings_by_path.get(path_key, 0)} |"
+        )
+    rows = "\n".join(rows)
     frontmatter = [
         ("command", "review oracle"),
         ("generated_at", timestamp()),
@@ -187,16 +190,14 @@ def render_finding_section(findings: list[dict]) -> str:
 
 
 def path_display(root: Path, path: Path) -> str:
+    """oracle file の report 表示に repository-relative key を使う。"""
+    key = oracle_path_key(root, path)
+    if key is not None:
+        return key
     try:
         relative = path.relative_to(root)
     except ValueError:
         relative = None
-    if relative is not None and relative.parts[:1] == ("oracle",):
-        return str(relative)
-    parts = path.parts
-    for index in range(len(parts) - 1, -1, -1):
-        if parts[index] == "oracle":
-            return str(Path(*parts[index:]))
     if relative is not None:
         return str(relative)
     return str(path)

@@ -1,4 +1,12 @@
-"""review oracle の finding path と対象列挙を検証する。"""
+"""review oracle の finding path と対象列挙を検証する。
+
+根拠:
+- <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+- <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+- <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+- <work-root>/oracle/doc/dev_rule/coding_rule.md
+- <work-root>/oracle/doc/dev_rule/test_rule.md
+"""
 
 from pathlib import Path
 
@@ -13,7 +21,23 @@ import sub_commands.review.oracle as review_module
 from sub_commands.review_paths import finding_oracle_path
 from sub_commands.review_targets import enumerate_review_all_oracle_files
 
+class _FakeCodexResult:
+    """Structured Output payload だけを保持する review oracle fake。"""
+
+    def __init__(self, output_json: dict[str, object]) -> None:
+        """Codex fake が返す JSON payload を保存する。"""
+        self.output_json = output_json
+
+
+def _empty_finding_response(parameter: object) -> _FakeCodexResult:
+    """enumerate_finding 用の空 Structured Output 応答を返す。"""
+    schema_name = parameter.structured_output_schema_path.name
+    if schema_name != "enumerate_finding.json":
+        raise AssertionError(schema_name)
+    return _FakeCodexResult({"findings": []})
+
 def test_finding_oracle_path_rejects_relative_without_placeholder(tmp_path: Path) -> None:
+    """placeholder のない相対 finding path を拒否し、oracle alias を解決する。"""
     assert finding_oracle_path({"oracle_path": "oracle/spec.md"}, tmp_path) is None
     assert (
         finding_oracle_path({"oracle_path": "<oracle-root>/spec.md"}, tmp_path)
@@ -23,6 +47,7 @@ def test_finding_oracle_path_rejects_relative_without_placeholder(tmp_path: Path
 def test_finding_oracle_path_resolves_work_root_from_review_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """<work-root> finding path を review worktree 基準で解決する。"""
     review_parent = tmp_path / "review"
     review_parent.mkdir()
     unrelated = make_repo(tmp_path)
@@ -37,6 +62,7 @@ def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """full scope が追跡済み oracle file と symlink を対象に含める。"""
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
     outside_target = tmp_path / "ignored-link-target.md"
@@ -70,16 +96,10 @@ def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     )
     calls: list[str] = []
 
-    class FakeCodexResult:
-        def __init__(self, output_json: dict[str, object]) -> None:
-            self.output_json = output_json
-
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """呼び出し目的を記録し、対象列挙には空の finding を返す。"""
         calls.append(kwargs["purpose"])
-        schema_name = parameter.structured_output_schema_path.name
-        if schema_name == "enumerate_finding.json":
-            return FakeCodexResult({"findings": []})
-        raise AssertionError(schema_name)
+        return _empty_finding_response(parameter)
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
@@ -110,6 +130,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """session scope に対象がない場合、Codex を呼ばず no_targets を出力する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -144,6 +165,7 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """session scope が review fork 時点で変更された追跡済み oracle file を保つ。"""
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
     outside_target = tmp_path / "ignored-link-target.md"
@@ -168,16 +190,10 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     run_git(root, "commit", "-m", "change ignored oracle")
     calls: list[str] = []
 
-    class FakeCodexResult:
-        def __init__(self, output_json: dict[str, object]) -> None:
-            self.output_json = output_json
-
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """呼び出し目的を記録し、対象列挙には空の finding を返す。"""
         calls.append(kwargs["purpose"])
-        schema_name = parameter.structured_output_schema_path.name
-        if schema_name == "enumerate_finding.json":
-            return FakeCodexResult({"findings": []})
-        raise AssertionError(schema_name)
+        return _empty_finding_response(parameter)
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
