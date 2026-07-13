@@ -16,12 +16,28 @@ from basic.acp import (
     ModelClass,
     ReasoningEffort,
 )
-
-
-_FALLBACK_PROMPT = "quota 回復確認です。実行可能なら OK とだけ返してください。"
+from basic.struct_doc import render_as_markdown
+from oracle.prompt_builder.parts.file_access_rule import build_file_access_rule
 
 
 __all__ = ["build_quota_availability_probe_parameter"]
+
+
+def _fallback_prompt() -> str:
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # Keep the READONLY wording owned by the oracle prompt part while the
+    # quota-specific fallback remains only an adapter concern.
+    _, file_access_rule = build_file_access_rule(FileAccessMode.READONLY)
+    return (
+        render_as_markdown(file_access_rule)
+        + "\n# quota availability probe\n\n"
+        + "quota 回復確認です。実行可能なら OK とだけ返してください。\n"
+    )
+
+
+# The canonical part resolves roots from ambient cwd; render it once so
+# concurrent probe calls cannot observe another call's temporary root lookup.
+_FALLBACK_PROMPT = _fallback_prompt()
 
 
 def build_quota_availability_probe_parameter(

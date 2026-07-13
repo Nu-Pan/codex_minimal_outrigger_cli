@@ -164,10 +164,11 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
     assert "apply_worktree" not in state["apply"]
 
 
-def test_apply_abandon_stops_running_apply_process_before_cleanup(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("apply_state", ["running", "error"])
+def test_apply_abandon_stops_tracked_apply_process_before_cleanup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, apply_state: str
 ) -> None:
-    """running apply process を停止してから git cleanup へ進む順序を固定する。"""
+    """running/error state の tracked process を止めてから cleanup へ進む。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -192,7 +193,7 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
-    state["apply"]["state"] = "running"
+    state["apply"]["state"] = apply_state
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
     process_id_path = (
         root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
@@ -221,6 +222,7 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     result = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0
+    assert f"- before: `{apply_state}`" in result.output
     assert stopped == [12345]
     assert "apply child process already stopped: 23456" in result.output
     assert "apply process already stopped: 12345" in result.output

@@ -6,6 +6,7 @@
 """
 
 import json
+from multiprocessing import Barrier, Pipe, Process
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,51 @@ from _codex_support import codex_override_config, codex_parameter, setup_codex_h
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_paths import _reserve_timestamped_path
+
+
+def reserve_fixed_codex_path(
+    directory: Path, barrier: Barrier, connection: object
+) -> None:
+    """同じ初回 timestamp を使う別 process の予約を再現する。"""
+    attempts = 0
+
+    def timestamp_factory() -> str:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            barrier.wait(timeout=5)
+            return "2099-01-01_00-00_00_000000000"
+        return f"2099-01-01_00-00_00_000000000_retry_{attempts}"
+
+    _, path = _reserve_timestamped_path(directory, "_call.json", timestamp_factory)
+    connection.send(path.name)
+    connection.close()
+
+
+def test_timestamped_path_reservation_is_process_safe(tmp_path: Path) -> None:
+    """同一 timestamp の並列予約でもログ path を共有しない。"""
+    log_dir = tmp_path / "codex"
+    log_dir.mkdir()
+    barrier = Barrier(2)
+    channels = [Pipe() for _ in range(2)]
+    processes = [
+        Process(
+            target=reserve_fixed_codex_path,
+            args=(log_dir, barrier, child),
+        )
+        for _parent, child in channels
+    ]
+    for process in processes:
+        process.start()
+
+    names = [parent.recv() for parent, _child in channels]
+    for process in processes:
+        process.join(5)
+
+    assert all(process.exitcode == 0 for process in processes)
+    assert len(set(names)) == 2
+    assert all((log_dir / name).is_file() for name in names)
 
 
 def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(

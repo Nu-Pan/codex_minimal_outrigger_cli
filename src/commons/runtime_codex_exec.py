@@ -46,6 +46,7 @@ from commons.runtime_codex_logging import (
 from commons.runtime_git import status_path_statuses
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
+    _reserve_timestamped_path,
     codex_log_dir,
     console_timestamp,
     repo_root,
@@ -212,18 +213,21 @@ def run_codex_exec(
 
     def new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
-        while True:
-            run_ts = _next_codex_log_timestamp()
-            run_call_path = log_dir / f"{run_ts}_call.json"
-            if not run_call_path.exists():
-                return (
-                    run_ts,
-                    log_dir / f"{run_ts}_prompt.jsonl",
-                    log_dir / f"{run_ts}_stdout.jsonl",
-                    log_dir / f"{run_ts}_stderr.log",
-                    log_dir / f"{run_ts}_output.json",
-                    run_call_path,
-                )
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # Reserve the call path with O_EXCL before deriving its sibling paths;
+        # the process-local timestamp lock alone cannot protect parallel cmoc
+        # processes.
+        run_ts, run_call_path = _reserve_timestamped_path(
+            log_dir, "_call.json", _next_codex_log_timestamp
+        )
+        return (
+            run_ts,
+            log_dir / f"{run_ts}_prompt.jsonl",
+            log_dir / f"{run_ts}_stdout.jsonl",
+            log_dir / f"{run_ts}_stderr.log",
+            log_dir / f"{run_ts}_output.json",
+            run_call_path,
+        )
 
     def build_argv(output_path: Path, resume_token: str | None) -> list[str]:
         """schema と resume 状態を反映した `codex exec` の argv を組み立てる。"""

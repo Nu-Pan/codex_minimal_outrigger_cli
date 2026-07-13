@@ -30,6 +30,15 @@ def test_codex_jsonl_non_object_events_are_unexpected(line: str) -> None:
     assert is_unexpected_error(line)
 
 
+@pytest.mark.parametrize("stdout_text", ["not-json", "{}\n\n"])
+def test_codex_jsonl_invalid_lines_are_unexpected(stdout_text: str) -> None:
+    """不正 JSON と空行を JSONL protocol failure として分類する。"""
+    assert is_unexpected_error(stdout_text)
+    assert "malformed JSONL event (invalid JSON):" in codex_error_text(
+        stdout_text, ""
+    )
+
+
 def test_codex_runtime_rejects_non_object_jsonl_event(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -55,6 +64,39 @@ def test_codex_runtime_rejects_non_object_jsonl_event(
         )
 
     assert "malformed JSONL event (expected object): null" in exc_info.value.detail
+
+
+def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """returncode 0 と valid output があっても不正 stdout は失敗にする。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib",
+            "import sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            "print('not-json')",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError) as exc_info:
+        run_codex_exec(
+            codex_parameter(),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert "malformed JSONL event (invalid JSON): not-json" in exc_info.value.detail
 
 
 def test_codex_runtime_reports_missing_codex_cli(

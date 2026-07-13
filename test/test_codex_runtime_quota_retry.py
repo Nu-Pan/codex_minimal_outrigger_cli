@@ -322,7 +322,9 @@ def test_quota_probe_adapter_builds_parameter_without_module_injection() -> None
     assert probe.model_class == ModelClass.MINIMUM
     assert probe.reasoning_effort == ReasoningEffort.LOW
     assert probe.file_access_mode == FileAccessMode.READONLY
-    assert probe.prompt
+    assert "file read write rule - readonly" in probe.prompt
+    assert "oracle file は書き込み禁止" in probe.prompt
+    assert "realization file は書き込み禁止" in probe.prompt
     assert probe.structured_output_schema_path is None
     assert probe.run_indexing_preflight is False
     assert probe.cwd == base.cwd
@@ -537,6 +539,55 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     assert codex_events[1]["purpose"] == "quota availability probe"
     assert codex_events[1]["returncode"] == probe_returncode
     assert "override is broken" in codex_events[1]["error"]
+
+
+def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """probe も valid output だけでは不正 stdout を成功扱いしない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    probe_prompt = quota_probe_prompt(root)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "stdin = sys.stdin.read()",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "if stdin == 'prompt':",
+            "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "    sys.exit(1)",
+            f"if stdin == {probe_prompt!r}:",
+            "    output.write_text(json.dumps({'probe': True}))",
+            "    print('not-json')",
+            "    sys.exit(0)",
+            "raise AssertionError('unexpected extra call')",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError) as exc_info:
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                None,
+            ),
+            root=root,
+            quota_poll_interval_sec=0,
+            max_quota_polls=1,
+            config=CmocConfig(),
+        )
+
+    assert "quota availability probe" in str(exc_info.value)
+    assert "malformed JSONL event (invalid JSON): not-json" in exc_info.value.detail
 
 
 def test_quota_poll_limit_stops_before_probe(

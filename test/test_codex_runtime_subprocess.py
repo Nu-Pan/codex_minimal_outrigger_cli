@@ -3,6 +3,7 @@ import pytest
 from pathlib import Path
 
 from _command_support import write_python_executable
+import commons.runtime_codex_profile as runtime_codex_profile
 from commons.runtime_codex_profile import (
     run_codex_subprocess,
     run_tracked_codex_subprocess,
@@ -53,6 +54,38 @@ def test_tracked_codex_subprocess_records_dedicated_process_group(
     assert tracking_path.read_text() == "111 222\n"
 
 
+def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """communicate 中断時は abandon 用 child tracking を保持する。"""
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
+
+    class InterruptedProcess:
+        pid = 4321
+
+        def communicate(self, _input: object) -> object:
+            raise KeyboardInterrupt
+
+        def poll(self) -> None:
+            return None
+
+    process = InterruptedProcess()
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: process,
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+
+    with pytest.raises(KeyboardInterrupt):
+        run_tracked_codex_subprocess(
+            ["codex"], tracking_path, text=True, capture_output=True
+        )
+
+    assert tracking_path.read_text() == "111 222\nchild 4321 333\n"
+
+
 def test_run_codex_subprocess_ignores_inherited_apply_tracking_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -67,4 +100,3 @@ def test_run_codex_subprocess_ignores_inherited_apply_tracking_env(
 
     assert result.stdout == "ok\n"
     assert not tracking_path.exists()
-

@@ -86,20 +86,22 @@ def _cmoc_apply_abandon_body() -> None:
         )
     warnings: list[str] = []
     start_subcommand_step(6, "実行中 apply process を停止", "stop apply process")
-    if previous == "running":
+    if previous in {"running", "error"}:
         process_id = read_apply_process_id(repo, session_id)
         if process_id is None:
-            raise CmocError(
-                "実行中 apply process を特定できません。",
-                ["apply process id file を確認し、apply process 停止後に再実行してください。"],
-                f"session_id: {session_id}",
+            if previous == "running":
+                raise CmocError(
+                    "実行中 apply process を特定できません。",
+                    ["apply process id file を確認し、apply process 停止後に再実行してください。"],
+                    f"session_id: {session_id}",
+                )
+        else:
+            stopped_warning = stop_apply_process(
+                process_id,
+                lambda: read_apply_process_id(repo, session_id),
             )
-        stopped_warning = stop_apply_process(
-            process_id,
-            lambda: read_apply_process_id(repo, session_id),
-        )
-        if stopped_warning:
-            warnings.append(stopped_warning)
+            if stopped_warning:
+                warnings.append(stopped_warning)
     start_subcommand_step(7, "apply branch と worktree を特定", "identify apply resources")
     apply_worktree = expected_apply_worktree(repo, apply_branch)
     start_subcommand_step(8, "cleanup 可能な場所へ移動", "move out of apply worktree")

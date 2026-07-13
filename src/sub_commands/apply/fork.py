@@ -53,6 +53,7 @@ from sub_commands.apply.fork_report import (
 from commons.runtime_apply import (
     apply_process_tracking,
     delete_apply_process_id,
+    read_apply_process_id,
     write_apply_process_id,
 )
 from commons.indexing import enable_indexing_preflight
@@ -177,7 +178,12 @@ def _cmoc_apply_fork_body(
             )
         delete_apply_process_id(root, session_id)
     except BaseException as exc:
-        delete_apply_process_id(root, session_id)
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # An interrupted Codex call may outlive this apply process. Preserve
+        # its child identity so error-state abandon can stop it before cleanup.
+        tracked_process = read_apply_process_id(root, session_id)
+        if not tracked_process or not tracked_process.child_processes:
+            delete_apply_process_id(root, session_id)
         state.apply.state = "error"
         write_state(path, state)
         if report_path is None:

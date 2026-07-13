@@ -820,14 +820,19 @@ def run_tracked_codex_subprocess(
             )
         return result
     finally:
-        try:
-            remove_tracked_child_process(tracking_path, process.pid)
-        except OSError as exc:
-            raise CmocError(
-                "apply process tracking を更新できません。",
-                ["apply process pid file の権限と保存先を確認してください。"],
-                f"path: {tracking_path}\nerror: {exc}",
-            ) from exc
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # communicate() can be interrupted while a start_new_session child is
+        # still running. Keep its group in the pid file so error-state abandon
+        # can stop and wait for it before deleting the apply worktree.
+        if process.poll() is not None:
+            try:
+                remove_tracked_child_process(tracking_path, process.pid)
+            except OSError as exc:
+                raise CmocError(
+                    "apply process tracking を更新できません。",
+                    ["apply process pid file の権限と保存先を確認してください。"],
+                    f"path: {tracking_path}\nerror: {exc}",
+                ) from exc
 
 
 def record_tracked_child_process(path: Path, process_id: int) -> None:
@@ -899,7 +904,10 @@ def codex_error_text(stdout_text: str, stderr_text: str) -> str:
         try:
             item = json.loads(line)
         except json.JSONDecodeError:
-            fragments.append(line)
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # Keep the original line visible even when it is blank; malformed
+            # stdout is a protocol failure, not an ignorable diagnostic.
+            fragments.append(f"malformed JSONL event (invalid JSON): {line}")
             continue
         if not isinstance(item, dict):
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -942,6 +950,10 @@ def _codex_jsonl_error_messages(stdout_text: str) -> list[str | None]:
         try:
             item = json.loads(line)
         except json.JSONDecodeError:
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # A JSONL protocol violation is unexpected even when the process
+            # returned zero and the output-last-message file is valid.
+            messages.append(None)
             continue
         if not isinstance(item, dict):
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
