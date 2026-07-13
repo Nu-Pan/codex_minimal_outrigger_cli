@@ -175,6 +175,42 @@ def test_run_codex_tui_logs_successful_call(
     assert codex_events[0]["call_log_path"] == str(call_logs[0])
 
 
+def test_run_codex_tui_keeps_call_logs_on_timestamp_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """同一 timestamp の TUI 呼び出しでも call log を上書きしない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(0)"])
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    timestamps = iter(
+        [
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000002000",
+        ]
+    )
+    monkeypatch.setattr(runtime_codex_tui, "timestamp", lambda: next(timestamps))
+
+    run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+    run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+
+    call_logs = sorted(
+        (root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json")
+    )
+    assert [path.name for path in call_logs] == [
+        "2026-06-27_10-00_00_000001000_tui_call.json",
+        "2026-06-27_10-00_00_000002000_tui_call.json",
+    ]
+    assert [json.loads(path.read_text())["timestamp"] for path in call_logs] == [
+        "2026-06-27_10-00_00_000001000",
+        "2026-06-27_10-00_00_000002000",
+    ]
+
+
 def test_run_codex_tui_logs_missing_cli_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

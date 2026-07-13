@@ -21,7 +21,13 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_errors import CmocError
 from commons.runtime_logging import current_subcommand_logger
-from commons.runtime_paths import codex_log_dir, repo_root, timestamp, work_root
+from commons.runtime_paths import (
+    _reserve_timestamped_path,
+    codex_log_dir,
+    repo_root,
+    timestamp,
+    work_root,
+)
 from commons.runtime_results import CommandResult
 
 
@@ -40,8 +46,6 @@ def run_codex_tui(
     config = config or load_config(root)
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
-    ts = timestamp()
-    call_path = log_dir / f"{ts}_tui_call.json"
     codex_work_root = work_root(cwd)
     codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -66,6 +70,8 @@ def run_codex_tui(
         str(codex_cwd),
         parameter.prompt,
     ]
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    ts, call_path = _reserve_timestamped_path(log_dir, "_tui_call.json", timestamp)
     call_path.write_text(
         json.dumps(
             {
@@ -109,6 +115,10 @@ def run_codex_tui(
     status = "succeeded" if returncode == 0 else "failed"
 
     def emit_event(error: str | None = None) -> None:
+        """Codex CLI の成功・失敗 event を logger に記録する。
+
+        根拠: <work-root>/oracle/doc/app_spec/console_and_file_log.md
+        """
         if logger is None:
             return
         payload = {

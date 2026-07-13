@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from commons.runtime_paths import logs_dir, timestamp
+from commons.runtime_paths import _reserve_timestamped_path, logs_dir, timestamp
 
 
 _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
@@ -37,15 +37,8 @@ class SubcommandLogger:
         self.step_timings: list[StepTiming] = []
         log_dir = logs_dir(root)
         log_dir.mkdir(parents=True, exist_ok=True)
-        while True:
-            self.path = log_dir / f"{timestamp()}.jsonl"
-            try:
-                # <work-root>/oracle/doc/app_spec/console_and_file_log.md requires
-                # one <time-stamp>.jsonl per subcommand; reserve it atomically.
-                self.path.open("x").close()
-                break
-            except FileExistsError:
-                time.sleep(0.000001)
+        # <work-root>/oracle/doc/app_spec/console_and_file_log.md
+        _, self.path = _reserve_timestamped_path(log_dir, ".jsonl", timestamp)
 
     def event(self, kind: str, **payload: Any) -> None:
         """実行時に後から検査したい event を安定した JSON record として残す。"""

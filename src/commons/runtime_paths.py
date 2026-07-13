@@ -1,5 +1,6 @@
 import os
-from collections.abc import Iterator
+import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -47,6 +48,23 @@ def _resolve_root(placeholder: RootPathPlaceHolder, cwd: Path | None) -> Path:
 def timestamp() -> str:
     """file name に使う衝突しにくい実行時刻表記を返す。"""
     return datetime.now().strftime("%Y-%m-%d_%H-%M_%S_%f000")
+
+
+def _reserve_timestamped_path(
+    directory: Path, suffix: str, timestamp_factory: Callable[[], str]
+) -> tuple[str, Path]:
+    """timestamp 付き path を排他的に予約し、timestamp と path を返す。"""
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # <work-root>/oracle/doc/app_spec/console_and_file_log.md
+    # 壁時計 timestamp が衝突しても、内容を書き始める前に別 path を予約する。
+    while True:
+        value = timestamp_factory()
+        path = directory / f"{value}{suffix}"
+        try:
+            path.open("x").close()
+            return value, path
+        except FileExistsError:
+            time.sleep(0.000001)
 
 
 def console_timestamp() -> str:
