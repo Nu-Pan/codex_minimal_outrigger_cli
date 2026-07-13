@@ -253,13 +253,18 @@ def test_apply_fork_missing_config_fails_before_starting_apply_run(
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
+    branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     run_git(root, "rm", ".cmoc/config.json")
     run_git(root, "commit", "-m", "remove cmoc config")
+    codex_calls: list[None] = []
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
         """設定失敗経路で使われる Codex 結果の契約を満たす。"""
+        codex_calls.append(None)
         return FakeCodexResult({"findings": []})
 
     monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
@@ -269,6 +274,15 @@ def test_apply_fork_missing_config_fails_before_starting_apply_run(
     assert result.exit_code != 0
     assert "cmoc config が存在しません。" in result.stdout
     assert not (root / ".cmoc" / "config.json").exists()
+    assert not codex_calls
+    state = json.loads(state_path.read_text())
+    assert state["apply"]["state"] == "ready"
+    assert state["apply"]["apply_branch"] is None
+    assert not (root / ".cmoc" / "local" / "worktree" / session_id).exists()
+    assert not (
+        root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
+    ).exists()
+    assert run_git(root, "branch", "--list", f"cmoc/apply/{session_id}/*").stdout == ""
 
 
 def test_apply_fork_can_target_and_edit_gitignore(
