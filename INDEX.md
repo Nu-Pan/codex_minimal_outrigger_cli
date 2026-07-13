@@ -136,17 +136,19 @@
 # `test`
 
 ## Summary
-- `test` 配下の realization test と共通 test support をまとめるルーティング入口。各サブコマンドや runtime の外部挙動を検証するテストを、目的に応じて個別ファイルへ案内する。
+- `test` 配下で共通に使う補助関数と、`acp_builder`・runtime・CLI の回帰テスト群をまとめるルーティング対象。個別機能の仕様本文ではなく、各テストがどの外部挙動や境界を確認するかを見分ける入口として使う。
+- 共通 support は、`CliRunner` 初期化、git fixture、fake command 作成、Ollama/ Codex 実行補助、`apply` 状態復元など、複数テストから再利用される土台を担う。個別テスト本文を読む前に、共通の前提や helper の責務だけ確認したいときに進む。
+- 個別の test モジュールは、`acp_builder` の parameter/schema 契約、apply/session/review/indexing の CLI 挙動、Codex 実行と権限制御、runtime の状態・設定・サービス管理、prompt/StructDoc の描画境界をそれぞれ検証する。
 
 ## Read this when
-- CLI や runtime の外部挙動をテスト側から確認したいとき。
-- 共通 test support を探していて、どの補助ファイルへ進むべきか判断したいとき。
-- 個別サブコマンドや runtime の回帰テストの入口を探したいとき。
+- `test` 配下の共通 support の責務や使い分けを確認したいとき。
+- CLI、runtime、prompt、indexing、review、session、apply のどの回帰テストへ進むべきか判断したいとき。
+- テストで再利用する git / Codex / Ollama / CLI 補助がどこにあるかを見たいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様そのものを確認したいときは、対応する oracle 側を読む。
-- 共通ルーティング方針そのものを確認したいときは、上位の案内を読む。
-- 特定の helper や単独テストの詳細を見たいときは、この入口ではなく該当ファイルへ直接進む。
+- 個別の機能仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
+- 実装本体の処理手順や内部 helper の分割だけを追いたいときは、このルーティングではなく対象 `src` を読む。
+- INDEX ルーティングの作法そのものを確認したいときは、上位の案内を読む。
 
 ## hash
-- 63b555a81a286d19c7908aad2ec7f7f82b0dd550f9dda6105865b45c0a687987
+- 2d9ef4193c8a3ca877137d2a9e0c3d110c9323cdaca83a517957aaa853b7fa99

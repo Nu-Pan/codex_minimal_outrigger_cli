@@ -664,24 +664,20 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の error 表示、サブコマンドログ、preflight、shell completion の境界を検証するテスト群。`CmocError` の整形、`typer`/`click` の失敗時の stdout/stderr 挙動、`work root` 判定、`ensure_cmoc_ignored` の .gitignore 追記、`doctor` 前処理の対象 root を固定したいときに読む。
-- `cmoc_runtime` と `commons.runtime_cli` の公開挙動を、実行時の副作用とログ出力まで含めて確認する入口。内部 helper の分解や実装順ではなく、利用者に見えるエラー形式・適用範囲・副作用の有無を確認する用途に向く。
+- CLI 実行時の境界を検証するテスト群。エラー整形、work root 判定、preflight と completion の副作用有無、サブコマンドログの生成条件を確認したいときに読む。
 
 ## Read this when
-- CLI の失敗時に stdout と stderr のどちらへ何を出すべきかを確認したいとき。
-- `detached HEAD`、`work root` 以外の cwd、引数解析失敗、`doctor` preflight 失敗などの拒否条件を確認したいとき。
-- サブコマンド実行で `.cmoc/local/log/sub_command` に残る記録や、その生成条件を確認したいとき。
-- completion probe が preflight や初期化副作用を起こさないことを確認したいとき。
-- `.gitignore` への `/.cmoc/local/` 追加方針や、`doctor` 前処理が current worktree を対象にすることを確認したいとき。
+- CLI のエラー表示先やエラーレポート形式を変えるとき。
+- work root 判定、pre-log check、doctor preprocess、shell completion の実行順や副作用条件を変えるとき。
+- サブコマンドログの生成条件や、`cmoc` 起動 wrapper の位置情報の出し方を変えるとき。
 
 ## Do not read this when
-- サブコマンド個別の業務ロジックや入出力仕様を確認したいとき。
-- ログファイル内部の詳細な JSON スキーマや永続化実装を読みたいとき。
-- `INDEX.md` 生成ルールやルーティング方針そのものを確認したいとき。
-- completion 以外の CLI 構成やコマンド一覧だけを知りたいとき。
+- 個別サブコマンドの業務ロジックを変えるだけで、CLI 境界に影響しないとき。
+- ログやエラー表示の内部ヘルパー実装だけを調べたいときは、まずそれぞれの実装側を直接読む。
+- completion 以外のコマンド実行経路だけを追いたいとき。
 
 ## hash
-- 02817535788b403945bd1f112aa1d600d97aea61cdfdd66d653d16d916d4213e
+- 58a6c5466689168cadefce448d6adcf7327c5fe41c23b36cec62b8d0d97ae818
 
 # `test_runtime_codex_conflicts.py`
 
