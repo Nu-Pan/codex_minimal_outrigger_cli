@@ -7,6 +7,13 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
 
 
+class FakeCodexResult:
+    """apply fork tests' minimal structured Codex result double."""
+
+    def __init__(self, output_json: object | None = None) -> None:
+        self.output_json = output_json
+
+
 def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Prepare a minimal authenticated Codex home for fake CLI execution."""
     codex_home = tmp_path / "codex_home"

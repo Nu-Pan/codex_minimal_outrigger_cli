@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 from basic.acp import AgentCallParameter
 from _cli_support import runner
+from _codex_support import FakeCodexResult
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
 from cmoc_runtime import CmocError
@@ -27,15 +28,6 @@ from sub_commands.apply.fork_report import (
     changed_paths_since_fork,
     fallback_change_summary,
 )
-
-
-class FakeCodexResult:
-    """apply fork テストが参照する Codex 実行結果 field だけを持つ fake。"""
-
-    def __init__(self, output_json: object | None = None, output_text: str = "") -> None:
-        """必要な結果 field をテストごとに差し替えられるように保持する。"""
-        self.output_json = output_json
-        self.output_text = output_text
 
 
 def report_path_from_stdout(stdout: str) -> Path:
@@ -416,7 +408,7 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
 
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
-    assert result.exit_code != 0
+    assert result.exit_code == 1
     assert applications == 1
     assert "README.md" in summary_prompt
     assert "+# updated before error" in summary_prompt

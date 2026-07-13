@@ -20,21 +20,13 @@ from cmoc_runtime import CmocError
 import commons.runtime_cli as runtime_cli_module
 from _apply_support import apply_worktree_from_state
 from _cli_support import runner
+from _codex_support import FakeCodexResult
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
 from main import app
 from pytest import MonkeyPatch
 import pytest
 import sub_commands.apply.fork as apply_fork_module
-
-
-class FakeCodexResult:
-    """apply fork テストが参照する Codex 実行結果 field だけを持つ fake。"""
-
-    def __init__(self, output_json: object | None = None, output_text: str = "") -> None:
-        """必要な結果 field をテストごとに差し替えられるように保持する。"""
-        self.output_json = output_json
-        self.output_text = output_text
 
 
 def test_apply_fork_runs_codex_loop_and_updates_state(
