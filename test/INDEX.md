@@ -585,19 +585,21 @@
 # `test_review_oracle_loop.py`
 
 ## Summary
-- `review oracle` の反復実行で、finding の列挙・検証・マージが期待どおりに結び付くかを確認するテスト群。`sub_commands.review.oracle` の loop 全体と、finding merge の適用規則の境界を読む入口。
-- 同じラウンドの challenger 理由が advocate に引き継がれるか、既存の challenger 理由が保持されるか、merge operation の再試行や失敗時の打ち切り条件がどう扱われるかを確認したいときに読む。
+- `cmoc review oracle` の所見列挙・所見マージ・所見検証の周回制御をまとめて確認するテスト群。Codex 呼び出しの受け渡し条件、merge operation の適用条件、再試行時の失敗条件を読む入口にする。
 
 ## Read this when
-- `review oracle` の loop に関する振る舞い、finding の生成・統合・判定の流れ、または merge operation の妥当性検証を変更するとき。
-- finding の target 共有、同一ラウンド内の reason の引き継ぎ、merge 失敗後の再試行回数やエラー条件を確認したいとき。
+- review oracle の finding loop の順序、打ち切り条件、ダーティフラグ更新を確認したいとき。
+- merge operation の kind 契約、target_ids の妥当性、重複 target の扱いを確認したいとき。
+- validate / advocate / judge への prompt 伝播や、隔離実行のコンテキストを確認したいとき。
+- merge の意味的な不正入力に対する再試行回数や、最終的なエラー終了条件を確認したいとき。
 
 ## Do not read this when
-- `review oracle` のプロンプト文面や schema 定義そのものを変えたいときは、対応する実装側を先に読む。
-- finding 以外の review フロー全般や別サブコマンドの挙動を追いたいときは、このテストではなく該当する上位の review 入口を読む。
+- `cmoc review oracle` の仕様そのものだけを知りたいときは、対応する app_spec 側を先に読む。
+- Codex CLI 呼び出し規約や Structured Output の保存規則だけを知りたいときは、個別の呼び出し規約側を読む。
+- テストの実装詳細ではなく、共通のテスト方針や開発規約を確認したいときは、dev_rule 側を読む。
 
 ## hash
-- 2a19ab413b7f601aff51a07428afa466f23a03728b6a3b7f3a0192532fb61c23
+- 337660aea5c73e0ac91f3719f0bcf3d477d90f80edd1ff196bb368429cdc6cd8
 
 # `test_review_oracle_report.py`
 

@@ -134,21 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の共通 support と回帰テストの入口をまとめる対象で、`acp_builder`・runtime・CLI・prompt/markdown rendering それぞれの振る舞いを確認したいときに読む。
-- 共通 helper は、`git`/`CliRunner`/fake command/`CODEX_HOME`/`Ollama` などのテスト前提を揃えるためのものとして置かれている。
-- 個別テストは、各サブコマンドや runtime 境界、prompt parts、StructDoc rendering の観測可能な挙動を固定する役割を持つ。
+- `test` 配下の回帰テスト群をまとめるルーティング対象で、CLI・runtime・prompt/render・acp builder まわりの外部挙動を確認したいときの入口になる。個別仕様ではなく、まずどのテスト本文へ進むべきかを選ぶために読む。
+- この対象は共通のテスト支援ファイルと機能別テストを束ねるが、正本仕様そのものや実装本体の説明はここでは扱わない。
 
 ## Read this when
-- 共通 test support の責務や、どの補助を使えばよいかを確認したいとき。
-- `acp_builder` の parameter 生成、schema 参照、公開 API 境界を検証するテストへ進みたいとき。
-- `apply` / `session` / `review oracle` / `indexing` / `doctor` / `tui` / `fork` / `join` などの CLI 挙動を確認したいとき。
-- `run_codex_exec` / `run_codex_tui` / `runtime_state` / `runtime_config` / `runtime_ollama` / `runtime_file_access` の境界を確認したいとき。
-- prompt parts や StructDoc の Markdown rendering のように、出力整形や注入される標準文書を確認したいとき。
+- `test` 配下のどのテスト本文を読むべきか判断したいとき。
+- CLI、runtime、prompt parts、acp builder、StructDoc renderer などの回帰テストの入口を探したいとき。
+- 共通 support ファイルと機能別テストの役割分担を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドや runtime の正本仕様そのものを知りたいときは、対応する oracle 側の本文を読む。
-- 実装本体の分割や内部 helper の手順だけを追いたいときは、この test 入口ではなく該当する `src` 側を読む。
-- テスト共通化の方針ではなく、特定の CLI 失敗要因や既存回帰だけを確認したいときは、該当する単一テストファイルを直接読む。
+- 個別機能の正本仕様を確認したいときは、対応する `oracle` 側の本文を読む。
+- 実装本体の詳細を追いたいときは、対応する `src` 側を読む。
+- この階層のルーティング方針そのものを確認したいときは、より上位の案内を読む。
 
 ## hash
-- 37b4e55889653ca1a6c2e0d9792f8e93f3c9f8266d66e2fd8c2c435c892e1c2d
+- 0d663bc2b9b3395c8ea92b3f271c10b9043008a921f53a5d7a328d63b60f6d0b
