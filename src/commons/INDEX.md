@@ -32,22 +32,23 @@
 # `indexing.py`
 
 ## Summary
-- Codex 呼び出し前の indexing preflight を登録・実行し、排他制御下で各階層の INDEX.md を再生成して必要な更新 commit を作る実装を扱う。
-- indexable な directory・child の列挙、既存 entry の hash 検証と再利用、Codex による不足 entry 生成、Structured Output からの entry Markdown 描画までを担う。
+- Codex 実行前に INDEX.md の更新を走らせ、その変更を必要なら commit まで行う処理をまとめる。
+- 対象 directory の列挙、既存 entry の再利用判定、欠落 entry の並列生成、内容と hash の再構成を担う。
+- 既存 INDEX.md の解析と妥当性確認を行い、形式不備や生成失敗をエラーとして扱う。
 
 ## Read this when
-- INDEX.md の自動更新、鮮度判定、hash 形式、entry の再生成条件、または indexing commit の作成挙動を変更したいとき。
-- indexing 対象から除外する file・directory、binary・symlink・memo・git ignored の扱い、または directory traversal の条件を確認したいとき。
-- Codex に INDEX.md entry 生成を依頼する入力内容、実行時の root・cwd・config・purpose、または生成結果の検証エラーを調べたいとき。
-- 既存 INDEX.md entry の parse、必須 section 構造、bullet-only 制約、hash 抽出条件に関する不具合を調査するとき。
+- Codex 実行前の indexing preflight の登録や実行経路を確認したいとき。
+- INDEX.md をどの範囲で再生成し、どの条件で既存 entry を再利用するかを追いたいとき。
+- lock による直列化、Git への add/commit、生成結果の検証と失敗時挙動を確認したいとき。
+- INDEX.md entry の解析形式、hash の検証条件、生成対象の絞り込み条件を調べたいとき。
 
 ## Do not read this when
-- INDEX.md entry の自然言語生成プロンプトや Structured Output schema の正本側定義だけを確認したいときは、oracle 側の prompt builder や indexing 仕様を直接読む。
-- 通常の CLI コマンド引数、設定ファイル全体、または Codex 実行基盤そのものを調べたいだけなら、それぞれの担当 module を読む。
-- 個別の INDEX.md 文面を人間がどう書くべきかの方針を確認したいだけなら、この実装ではなく indexing 標準や entry standard の正本仕様を読む。
+- 単に Codex 実行フックの登録先だけを知りたいなら、preflight の呼び出し元を先に読む。
+- INDEX.md entry の表示用テンプレートや項目仕様だけを知りたいなら、entry 標準を扱う別の定義を読む。
+- Git 操作や runtime 共通ユーティリティの一般的な実装だけを見たいとき。
 
 ## hash
-- dacc5d7428ac22757c3c87ba8deac1328124e8779fa43df5a9b81834e19665a1
+- 4120d6058beb46dde65a920eccad155f05fe489d3799ebd5500de393b1ae17cd
 
 # `runtime_apply.py`
 

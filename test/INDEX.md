@@ -512,21 +512,37 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- `indexing` CLI の外部挙動を固定する回帰テスト群。INDEX.md の生成・更新、preflight、commit、linked worktree、dirty repo、hash 既存判定、壊れた既存エントリーの再生成までを扱う。
-- INDEX 更新ワークフローの入出力や境界条件を変える作業で読む。実装内部の分割や汎用 helper の追加より、CLI と indexing_common の観測可能な振る舞いを確認したいときに進む。
+- `cmoc indexing` の CLI 挙動を検証するテスト群。事前条件確認、doctor 実行、worktree の対象選択、INDEX.md 更新、Codex 呼び出し、commit 条件までを外部挙動として扱う。
 
 ## Read this when
-- `indexing` サブコマンドの成否条件、commit 対象、preflight の対象 root、既存差分の扱い、linked worktree での更新先を変更するとき。
-- INDEX.md の生成物の内容、hash による再生成抑止、壊れた既存エントリーの扱い、empty directory や symlink cycle の扱いを変えるとき。
-- `sub_commands.indexing` と `commons.indexing` の境界で、CLI 回帰として確認すべき外部挙動を増減したいとき。
+- `cmoc indexing` のコマンド全体の流れを確認したいとき。
+- CLI がどの条件で開始・拒否されるか、また INDEX.md 生成後にどこまで commit されるかを確認したいとき。
+- preflight が repository 側設定を使うか、既存差分や fresh な hash をどう扱うかを確認したいとき。
 
 ## Do not read this when
-- `indexing` 以外の CLI や、git 支援関数そのものの変更だけを扱うとき。
-- preflight や commit の共通基盤ではなく、別サブコマンドの routing や出力仕様を変更するとき。
-- 純粋な実装整理だけで、INDEX.md の生成・更新・拒否条件に影響しないとき。
+- INDEX.md の見出し文面や structured output schema の定義そのものを確認したいときは、対応する oracle doc / oracle src を直接読むべきで、このテスト群はその確認先ではない。
+- `cmoc indexing` 以外のサブコマンドの routing や一般的な CLI 基盤を確認したいとき。
 
 ## hash
-- 96900fca457f8ac6dbf01113b73b79d1c4cb69297bb0c7fb66c39df2b204c73f
+- b8f18f4f34453e17c3374b1d18b1a6ab8783ad6f91e203eea335553525b20b80
+
+# `test_indexing_common.py`
+
+## Summary
+- `commons.indexing` の INDEX entry 生成と更新の振る舞いを確認するための直接テスト群。入力検証、空/不正な entry の扱い、空ディレクトリや兄弟要素の生成順、並列更新、memo 配下と symlink cycle の除外を扱う。
+
+## Read this when
+- index entry の render/update ルールを変えるとき
+- directory traversal の対象範囲、除外条件、並列実行の制御を変えるとき
+- hash 再利用や malformed entry の再生成条件を確認したいとき
+
+## Do not read this when
+- CLI の起動・引数解釈・終了処理だけを変えるとき
+- index 以外の builder や別種のテストの仕様を確認したいとき
+- markdown の見た目だけを調整したいとき
+
+## hash
+- 774f58ff1cc89da828c16341e0e4a1a6c1e90e007cdf5eeba98422660818fac0
 
 # `test_indexing_preflight.py`
 

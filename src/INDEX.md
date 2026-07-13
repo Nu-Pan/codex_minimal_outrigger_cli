@@ -56,21 +56,72 @@
 # `commons`
 
 ## Summary
-- `src/commons` は cmoc の実行時共通基盤の集約点で、ここから下位の runtime helper 群へ進むための入口だけを示す。個別 helper の詳細は各ファイル側を読む。
-- 配下には、CLI 実行ライフサイクル、Codex 起動系、設定・状態・ログ・path・Git・エラー処理・共通結果型など、複数サブコマンドから共有される実行時処理がまとまっている。
+- `src/commons` は cmoc の実行時共通基盤を集める領域で、サブコマンド実行、設定、状態、Git、パス、ログ、エラー、Codex 呼び出し周辺の共有処理へ進むための入口になる。個別機能は下位モジュールで読む。
+- `__init__.py` は共有 runtime helper 群のパッケージ境界だけを示す。共有 helper の入口を確認するときだけ読む。
+- `cmoc_runtime.py` は実行ライフサイクル全体の横断入口で、Codex 実行前後の準備、設定・状態・ログ・パス・Git・エラー・結果型をまとめて扱う。
+- `indexing.py` は Codex 実行前の INDEX 更新 preflight と、その commit 判定や生成結果の検証を扱う。
+- `runtime_apply.py` は `cmoc apply abandon` の cleanup と、対象 worktree や実行中 process の追跡・停止確認を扱う。
+- `runtime_cli.py` はサブコマンド共通の実行順序、work root 検査、doctor preprocess、step 通知、完了サマリー、例外の終了コード化を扱う。
+- `runtime_codex.py` は Codex 実行系の公開入口で、exec 実行と TUI 実行の起動関数を同じ import 元から参照できるようにする。
+- `runtime_codex_exec.py` は Codex exec の単一試行と再試行制御、Structured Output 検証、quota 待機、resume token、実行ログ記録を扱う。
+- `runtime_codex_logging.py` は Codex CLI 呼び出しの console 表示と起動失敗時の error 文面整形を共通化する。
+- `runtime_codex_preflight.py` は Codex exec/TUI の直前に indexing preflight を挟む薄い委譲層で、登録、起点 root 決定、再入抑止を扱う。
+- `runtime_codex_profile.py` は Codex CLI の起動条件、sandbox、`CODEX_HOME`、schema 配置、子プロセス追跡、JSONL エラー判定の境界を扱う。
+- `runtime_codex_tui.py` は Codex TUI 起動の共通処理で、argv と `CODEX_HOME` の準備、call log、実行結果の返却を扱う。
+- `runtime_config.py` は cmoc config の読み込み、検証、既定値補完、永続 JSON との変換を扱う。
+- `runtime_content.py` は SHA-256 digest に基づく内容アドレス型ファイルの書き出しと簡易 binary 判定を扱う。
+- `runtime_doctor.py` は doctor 用の Git ロック、一時 index、ignore 修復、placeholder 補完、修復 commit 生成を扱う。
+- `runtime_errors.py` は cmoc の実行時例外と利用者向け Markdown エラーレポート生成を扱う。
+- `runtime_git.py` は Git 依存の基盤処理で、branch/HEAD/worktree 判定、ignore 管理、Git 由来エラー整形、oracle/file path 判定を扱う。
+- `runtime_logging.py` はサブコマンドごとの JSON Lines ログと経過時間の共有 logger を扱う。
+- `runtime_ollama.py` は cmoc が管理する Ollama の導入、service 同期、提供確認、model 取得と検証を一連で扱う。
+- `runtime_paths.py` は `<repo-root>` と `<work-root>` の解決、timestamp、保存先 path の決定を扱う。
+- `runtime_preprocess_command.py` は `cmoc` の前処理コマンド群の実行順、設定同期、設定 commit を扱う。
+- `runtime_results.py` は外部コマンド実行結果と Codex exec 実行結果を保持する不変 dataclass を扱う。
+- `runtime_state.py` は session/apply 用 state file の読み書き、branch からの session_id 復元、active session 探索、fork lock を扱う。
 
 ## Read this when
-- cmoc の実行時共通処理を探すとき。
-- サブコマンド間で共有される helper の責務境界や、どの実装へ進むべきかを確認したいとき。
-- 設定、状態、ログ、path、Git、Codex 起動、エラー整形、結果型のいずれかを横断して扱うとき。
+- cmoc 実行時の共通基盤の入口を探したいとき。
+- 共有 runtime helper 群のパッケージ境界だけを確認したいとき。
+- Codex 実行の前後をまたぐ共通処理をまとめて追いたいとき。
+- Codex 実行前の indexing preflight を確認したいとき。
+- `cmoc apply abandon` の cleanup と停止対象の追跡を確認したいとき。
+- サブコマンド共通の実行順序や失敗時の見せ方を確認したいとき。
+- Codex 実行系の公開 API 境界だけを確認したいとき。
+- Codex exec の再試行、quota 待機、Structured Output 検証、resume token を確認したいとき。
+- Codex CLI 呼び出しの console 表示や失敗文面を確認したいとき。
+- Codex 実行前に indexing preflight を差し込む条件や順序を確認したいとき。
+- Codex CLI の起動条件、sandbox、`CODEX_HOME`、schema、JSONL エラー判定を確認したいとき。
+- Codex TUI 起動時の argv、`CODEX_HOME`、call log、失敗時の扱いを確認したいとき。
+- 設定ファイルの保存形式、検証、既定値補完、書き戻しを確認したいとき。
+- 内容 hash による成果物名生成や binary 判定を確認したいとき。
+- doctor の Git 修復や ignore 保障の流れを確認したいとき。
+- cmoc の共通エラーレポート構成や文面を確認したいとき。
+- Git 依存の基盤処理や oracle/file path 判定を確認したいとき。
+- サブコマンドごとの JSON Lines ログや step 経過時間を確認したいとき。
+- Ollama の導入と local SLM 提供の preflight を確認したいとき。
+- `<repo-root>` と `<work-root>` の解決や保存先 path を確認したいとき。
+- 前処理コマンドの順序や設定同期、設定 commit を確認したいとき。
+- 外部コマンドや Codex exec の結果コンテナを確認したいとき。
+- session/apply state の読み書きや branch からの session_id 復元を確認したいとき。
 
 ## Do not read this when
-- 特定 helper の入出力や失敗時挙動を知りたいときは、この入口ではなく該当ファイルを直接読む。
-- CLI の業務ロジックやサブコマンド固有の処理だけを追いたいときは、ここではなく担当コマンド側を読む。
-- 実行基盤の入口だけが必要で、下位 helper の実装詳細は不要なとき。
+- 個別 helper の実装や入出力、失敗時挙動だけを確認したいとき。
+- CLI 固有の業務ロジックやテスト固有の処理を追いたいとき。
+- 単一サブコマンドだけの詳細を知りたいときは、その責務を持つ下位モジュールを直接読むべきとき。
+- INDEX の表示テンプレートや項目仕様だけを知りたいとき。
+- session state の読み書きや branch 遷移だけを追いたいとき。
+- サブコマンドの個別ビジネスロジックだけを変更したいとき。
+- exec 実行の具体的処理、引数処理、プロセス制御を確認したいとき。
+- TUI 起動、端末制御、対話実行の具体的挙動を確認したいとき。
+- 記録先そのものや永続化の責務を変えたいとき。
+- Codex 実行本体や構造化出力の判定を調べたいとき。
+- 単純な path 操作や局所 helper だけを確認したいとき。
+- 実行結果コンテナではなくログ保存先だけを知りたいとき。
+- route の選定ではなく state schema の人間向け正本仕様を見たいとき。
 
 ## hash
-- 95ddbd73337e3f30d2b5edb2054e5ab9c719b26762888762873892f7e24fda68
+- 89fa7e9a5b55749343e2d2be2b615e29f9308a5b57aca596b82c9d96b95c9015
 
 # `config`
 

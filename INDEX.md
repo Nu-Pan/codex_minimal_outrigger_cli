@@ -115,37 +115,86 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の実行時実装のまとまりで、CLI 入口、共通 runtime 基盤、`sub_commands` の実行本体、`basic`/`acp`/`config` の互換再公開層、`oracle` への接続口をまとめて読むための階層です。
-- `main.py` は CLI 配線、`commons` は実行時共通基盤、`sub_commands` は各サブコマンド入口、`basic` と `acp` と `config` は正本側定義を複製せず既存 import 面を維持する互換層として扱います。
-- `oracle.py` は `src` 起点の import から正本側 `oracle` package を解決するための shim で、正本側 module の本体仕様はここでは持ちません。
+- `src` 配下の realization implementation への入口。CLI 本体、共通 runtime、設定、`acp`/`basic` の再公開層、`oracle` 参照、各 `sub_commands` への分岐をたどるために読む。
+- ここでは実処理の詳細を追わず、どの責務がどの下位 module にあるかを切り分ける。互換 import 面と実体実装の境界を確認したいときの起点になる。
 
 ## Read this when
-- CLI 入口から各サブコマンドや共通基盤へどう分かれるかを確認したいとき。
-- `src` 配下で互換 import 面と実体実装の境界を判断したいとき。
-- 実行時共通処理、Codex 起動、設定・状態・ログ・Git・path 解決のどれかを横断して追いたいとき。
+- `src` 全体の責務分担を把握して、目的に合う下位 module を選びたいとき。
+- CLI 入口、共通 runtime、設定、`acp`/`basic` 互換層、`oracle` package shim、各サブコマンド実装のどこへ進むべきか判断したいとき。
+- 互換 import 面を残すべきか、実体実装側へ進むべきかの境界を確認したいとき。
 
 ## Do not read this when
-- すでに目的の個別 module が分かっていて、そこへ直接進めるとき。
-- 新しい公開 API を追加する場所を探しているだけのとき。この階層は既存入口の整理が主目的です。
-- 正本仕様そのものや INDEX 更新の人間向け方針だけを確認したいときは、対応する oracle 側や下位の専用文書を読むべきです。
+- 個別処理の仕様、入出力、失敗時挙動を知りたいとき。そうした詳細は `commons`、`sub_commands`、`acp`、`basic`、`config`、`main.py`、`oracle.py` 側を直接読む。
+- 新しい機能や公開 API を追加する場所を探しているとき。ここは全体のルーティング入口であり、追加先の候補を絞る場所ではない。
+- 実装そのものではなく人間向けの正本仕様を確認したいとき。仕様は oracle 側の文書や src 配下の正本実装に分かれている。
 
 ## hash
-- 82fe2cddc50130caaa9e5602401f8041bcd36d2cd081c6490ff5560518e85b51
+- c8395450797afabb45ed2f2e9c838a37cebcc10df6e8a27f9f962b7dcc34f226
 
 # `test`
 
 ## Summary
-- `test/` 配下の共通テスト補助と、`acp_builder`・runtime・CLI・prompt/StructDoc 各領域の回帰テストへの入口をまとめる。個別の実装本文ではなく、目的の振る舞いに応じて読むべきテスト群や support helper を選び分けるための案内である。
+- `_acp_builder_support.py` は、`test` 側で `acp_builder` の正本 schema へ直接つなぐための共通 path helper を置く補助対象。正本 schema をコピーせずに参照経路だけを整えたいテストから入る。
+- `_apply_support.py` は、`apply` セッション状態から管理対象の作業先パスを復元する補助対象。状態スナップショットの branch 表現と、それに基づく作業先選択をテスト側で合わせたいときに読む。
+- `_cli_support.py` は、Typer CLI テストで共通の `CliRunner` 初期化をまとめる補助対象。CLI 実行の入出力や終了コードを同じ runner で検証したいときに読む。
+- `_codex_support.py` は、Codex 実行系テストで使う最小限の共通補助をまとめる対象。偽の結果オブジェクト、`CODEX_HOME` 初期化、引数抽出、権限制御、Ollama 前処理差し替えを共通化したいときに読む。
+- `_command_support.py` は、`PATH` 上に置く偽の外部コマンドを現在の Python で起動する実行可能スタブとして作る補助対象。外部コマンド差し替えテストで、同じ作り方を使い回したいときに読む。
+- `_git_support.py` は、`git` を使う CLI テスト用の最小リポジトリを作る共通ヘルパー対象。初期化、現在ブランチ確認、追跡済みだが ignore される oracle file の用意を共通化したいときに読む。
+- `_ollama_support.py` は、`doctor` CLI テストから指定 worktree を cwd にして実行する補助対象。cmoc managed Ollama を本番共有のまま使う前提で `doctor` を呼びたいときに読む。
+- `test_acp_builder_apply_parameters.py` は、`acp.builder.apply.fork` 系の parameter 生成と prompt・schema 参照・root 取り扱い・拒否条件を検証するテスト群。apply fork の builder が正本 schema と標準文面をどう組み立てるかを確認したいときに読む。
+- `test_acp_builder_indexing_parameters.py` は、`acp.builder.indexing.index_entry` の互換ビルダーが indexing 用の実行条件を最小権限・低負荷に固定して返すことを確かめるテスト。公開面が互換ビルダーだけに絞られているかも確認したいときに読む。
+- `test_acp_builder_review_oracle_parameters.py` は、review oracle ACP builder の公開面と structured output schema を検証するテスト群。互換ラッパーの export 範囲、モデル設定、schema 一致、prompt 置換を確認したいときに読む。
+- `test_acp_builder_session_join_parameters.py` は、`acp.builder.session.join.conflict_resolution` の公開面と conflict resolution 用パラメータ契約を検証するテスト。ビルダ以外を export しないことや、権限・推論強度の固定を確認したいときに読む。
+- `test_acp_builder_tui_parameters.py` は、TUI 用の `resolve_parameter` ビルダーと返却値の正本仕様対応を確認するテスト群。元プロンプト、モデル系パラメータ、公開モジュール名、schema 整合をまとめて確認したいときに読む。
+- `test_apply_abandon_cli.py` は、`apply abandon` の外部挙動を CLI 経由で検証するテスト群。cleanup、警告扱い、稼働中 process の停止、worktree/branch/state 整合、破損 state や stale branch の拒否を確認したいときに読む。
+- `test_apply_fork_cli.py` は、`apply fork` の CLI 回帰テスト群。セッション作成後の apply 実行、state/worktree/branch 更新、設定欠落や config 読み込み失敗、`.gitignore` と `.cmoc/local` の扱いを確認したいときに読む。
+- `test_apply_fork_report_cli.py` は、`apply fork` の report 生成、収束判定、再検査、rolling 実行、state 更新を確認するテスト群。report 文面、終了コード、再調査条件、変更要約の扱いを確認したいときに読む。
+- `test_apply_fork_target_normalization.py` は、`sub_commands.apply.fork` の対象正規化ロジックを回帰検証するテスト群。`oracle` 配下、管理領域、tracked ignored file、symlink などの除外・扱いを確認したいときに読む。
+- `test_apply_join_cli.py` は、`apply join` の CLI 挙動を検証するテスト群。成功条件と拒否条件、cleanup と state/report 更新、dirty worktree、stale branch、merge conflict、force 解消をまとめて追いたいときに読む。
+- `test_basic_runtime.py` は、`basic.path_model` と `cmoc_runtime` の実行時契約を確認する回帰テスト群。token から実 path への復元、repo root と run/work root の分離、run worktree の受け入れ条件を見たいときに読む。
+- `test_cli_tui.py` は、`cmoc tui` の外部挙動を検証するテスト群。エディタ入力、解決済みパラメータ、TUI 起動、保存先、linked worktree 対応、`.cmoc` の ignore を確認したいときに読む。
+- `test_codex_runtime_errors.py` は、Codex 実行時の異常系を確認するテスト群。JSONL の不正イベント分類と、Codex CLI 不在時の例外内容や失敗記録を扱う。
+- `test_codex_runtime_exec.py` は、Codex CLI 実行時の `run_codex_exec` と override 生成を検証する統合テスト群。実 CLI 呼び出し、Ollama 連携、`CODEX_HOME` への永続設定非作成、権限制御付き実行を確認したいときに読む。
+- `test_codex_runtime_home.py` は、`run_codex_exec` の `CODEX_HOME` 解決と preflight validation を扱う回帰テスト群。未設定時の既定値、相対パス解決、`auth.json` 確認、起動前に失敗する条件を押さえたいときに読む。
+- `test_codex_runtime_paths.py` は、`run_codex_exec` の cwd 解決、出力 schema 保存先、権限 override 境界を検証する統合テスト群。起動先ディレクトリや許可パス、並列実行時の衝突回避を確認したいときに読む。
+- `test_codex_runtime_quota_retry.py` は、quota 枯渇後に probe を一度だけ挟んで resume/retry へ進む制御を確認するテスト群。quota 待機中のログ、resume token 復元、probe 失敗、並行待機の集約を追いたいときに読む。
+- `test_codex_runtime_retry.py` は、`run_codex_exec` の再試行判定と失敗時ログを確認するテスト。Structured Output 検証失敗、capacity retry、JSONL error、KeyboardInterrupt、中断後差分保持を外部挙動として押さえたいときに読む。
+- `test_codex_runtime_subprocess.py` は、`commons.runtime_codex_profile` の subprocess 実行と tracking 振る舞いを確認するテスト群。process group 記録、`communicate()` 中断時の tracking 維持、継承環境変数の無視を扱う。
+- `test_codex_runtime_tui.py` は、`codex_runtime_tui` の呼び出し規約とログ挙動を検証するテスト群。TUI 起動前の権限制約、完成済み prompt、call log、`KeyboardInterrupt` や非 0 終了の記録を確認したいときに読む。
+- `test_doctor_cli.py` は、`doctor preprocess` の共有 lifecycle を CLI 経由と直接呼び出しの両方から確認する統合テスト群。`.cmoc/local`、`.agents`、config、managed Ollama、Git index の修復と保持を一続きで見たいときに読む。
+- `test_indexing_cli.py` は、`cmoc indexing` の CLI 挙動を検証するテスト群。事前条件確認、doctor 実行、worktree 対象選択、INDEX.md 更新、Codex 呼び出し、commit 条件を外部挙動として扱う。
+- `test_indexing_common.py` は、`commons.indexing` の INDEX entry 生成と更新を確認する直接テスト群。入力検証、空/不正 entry、空ディレクトリ、並列更新、memo 配下と symlink cycle の除外を扱う。
+- `test_indexing_preflight.py` は、Codex 実行前の indexing preflight が走る条件、順序、worktree 選択、ロック待機、再実行抑止を検証するテスト群。`commons.runtime_codex_preflight` と `commons.indexing` の呼び出し契約を確認したいときに読む。
+- `test_packaged_import.py` は、packaged layout での import 境界と公開面を検証するテスト群。`oracle` 配下の正本定義が配布物側で再公開されるか、余計な公開が混入しないかを確認したいときに読む。
+- `test_prompt_parts.py` は、標準 prompt parts と complete prompt の Markdown 組み立て結果を検証する realization test。標準文書の主要語句、file access rule、root placeholder、注入制御を確認したいときに読む。
+- `test_review_oracle_loop.py` は、`cmoc review oracle` の所見列挙・マージ・検証の周回制御を確認するテスト群。Codex 呼び出しの受け渡し条件、merge operation の適用条件、再試行失敗条件を読む入口にする。
+- `test_review_oracle_report.py` は、`cmoc review oracle` のレポート生成と CLI 挙動を検証する統合テスト群。出力順、集計件数、`--scope` 反映、処理失敗時の error report、`eval-oracle` からの委譲を扱う。
+- `test_review_oracle_targets.py` は、`review oracle` の対象抽出と `finding` からの oracle path 解決の境界を検証するテスト群。`session` と `full` の対象選定、ignore される追跡済み oracle file、`AGENTS.md` / `INDEX.md` 除外、symlink 分類を確認したいときに読む。
+- `test_review_oracle_worktree.py` は、`cmoc review oracle` の worktree 選択と INDEX 統合の振る舞いを確認する統合テスト群。linked worktree での実行、review 用 worktree の分離、INDEX 変更の取り込み、競合時方針、他差分混入時の拒否を扱う。
+- `test_runtime_cli.py` は、CLI 実行時の境界を検証するテスト群。エラー整形、work root 判定、preflight と completion の副作用有無、サブコマンドログ生成条件を確認したいときに読む。
+- `test_runtime_codex_conflicts.py` は、セッション参加の conflict 解決で、Codex の追加書き込み許可がどのパスに付与されるかを検証するテスト群。書き込み許可ルート解決、予約済みパス拒否、`CmocError` 条件を変えるときに読む。
+- `test_runtime_codex_permissions.py` は、`build_codex_override_args` の書き込み許可境界を確認するテスト。読み取り専用モード、`extra_writable_paths` の受理条件、保護対象パス、各 permission mode の差を追いたいときに読む。
+- `test_runtime_codex_profile.py` は、`build_codex_override_args` の `FileAccessMode` ごとの sandbox 生成、`CmocConfig` による model/provider 切り替え、linked worktree での追加 read 許可を検証するテスト群。
+- `test_runtime_config.py` は、`CmocConfig` と設定入出力の仕様を検証するテスト群。既定値、JSON 変換、読み込み失敗時の案内、型・値検証、復元用数値の保持を確認したいときに読む。
+- `test_runtime_content.py` は、`commons.runtime_content.is_binary` の判定が通常のテキストと NUL 文字を含む内容で分かれることを検証するテスト。バイナリ判定境界を確認したいときに読む。
+- `test_runtime_file_access.py` は、FileAccessMode の永続化値と Codex sandbox への変換の対応関係を固定するテスト群。モードの追加・改名・値変更、sandbox 変換の見直しをするならここを読む。
+- `test_runtime_ollama.py` は、`commons.runtime_ollama` のサービス管理・接続確認・モデル準備の挙動を検証するテスト群。Ollama の再起動条件、systemd ユーザーサービス生成、疎通確認、モデルロード確認が中心。
+- `test_runtime_state.py` は、`session` / `apply` の状態ファイル形状と branch 名から session id を取り出す境界条件を確認するテスト群。破損した branch 名や不正な state/payload 値を拒否する挙動、`session_fork_lock` の排他を扱う。
+- `test_session_cli.py` は、`cmoc session fork` / `join` / `abandon` の CLI 外部挙動を横断して確認するテスト群。session branch の作成・完了・破棄、linked worktree での branch/state、dirty worktree や precondition 失敗時の拒否をまとめて扱う。
+- `test_struct_doc_rendering.py` は、StructDoc の Markdown renderer が通常テキストとコードブロック内の連続空行をどう畳むかを検証する単体テスト。整形互換性と空行圧縮境界を確認したいときに読む。
 
 ## Read this when
-- `test/` 配下で共通化された helper の責務や使い分けを確認したいとき。
-- `acp_builder` の parameter 生成、schema 参照、root/権限の扱いをテストから確認したいとき。
-- `apply` / `session` / `review` / `indexing` / `doctor` / `cmoc tui` / `codex runtime` / `runtime state` / `runtime config` / `prompt parts` / `StructDoc` の外部挙動を、対応する回帰テストから追いたいとき。
+- 対象 helper の挙動や共通テスト基盤を変えたいときは、その helper に対応する `test_*` から読む。
+- CLI や runtime の外部挙動を変えるときは、該当サブコマンド名や runtime 名が入ったテスト群から読む。
+- 正本 schema や oracle 仕様そのものを確認したいときは、`oracle/src` または `oracle/doc` 側を読む。
+- packaged layout での import 契約や公開面を確認したいときは、`test_packaged_import.py` を読む。
+- prompt 文面、file access rule、root placeholder の保持を確認したいときは、`test_prompt_parts.py` を読む。
 
 ## Do not read this when
-- 個別機能の正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
-- CLI や runtime の実装詳細だけを追いたいときは、対応する realization implementation を読む。
-- INDEX のルーティング方針そのものを確認したいときは、この階層ではなく上位の案内を読む。
+- 個別の実装本文だけを確認したいときは、対応する `src` 側を読む。
+- 正本仕様の内容そのものを読みたいときは、対応する `oracle` 側を読む。
+- 別サブコマンドや別 runtime の挙動だけを追いたいときは、該当する別テストへ進む。
+- INDEX.md のルーティング方針そのものを確認したいときは、この配下の test ではなく上位の案内を読む。
 
 ## hash
-- d1dedf448a6757b01dd546b5ca949c85213c7f2acf8c24f873f0f683d6c4b0e9
+- 3ce238029ac5770070fd3b5310a989a27301148b6aea0dd3c43e5334537aa2f3
