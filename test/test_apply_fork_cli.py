@@ -3,6 +3,12 @@
 Target normalization has an independent test module because it does not need the
 CLI lifecycle or its repository fixtures. The execution order follows
 <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md.
+
+Although this file exceeds 16,000 characters, its scenarios share the same
+repository/session fixtures and apply state/worktree context, so splitting them
+would scatter the lifecycle read context without a natural responsibility boundary.
+This size decision follows
+<work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py.
 """
 
 import json
@@ -130,7 +136,7 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
 def test_apply_fork_runs_doctor_preprocess_before_body(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """apply fork 本体前に doctor preprocess の共通修復が実行される。"""
+    """doctor preprocess、run 隔離、apply 本体の順で開始する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -143,6 +149,7 @@ def test_apply_fork_runs_doctor_preprocess_before_body(
 
     events: list[str] = []
     original_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
+    original_create_run_worktree = apply_fork_module.create_run_worktree
 
     def record_doctor_preprocess(root_arg: Path) -> None:
         """doctor preprocess の実行を記録して本来の修復処理へ委譲する。"""
@@ -153,6 +160,19 @@ def test_apply_fork_runs_doctor_preprocess_before_body(
         runtime_cli_module,
         "run_doctor_preprocess",
         record_doctor_preprocess,
+    )
+
+    def record_create_run_worktree(
+        root_arg: Path, branch: str, worktree: Path, start_point: str
+    ) -> Path:
+        """run の隔離開始を記録して本来の worktree 作成へ委譲する。"""
+        events.append("run isolation")
+        return original_create_run_worktree(root_arg, branch, worktree, start_point)
+
+    monkeypatch.setattr(
+        apply_fork_module,
+        "create_run_worktree",
+        record_create_run_worktree,
     )
 
     def fake_run_codex_exec(
@@ -173,7 +193,11 @@ def test_apply_fork_runs_doctor_preprocess_before_body(
     )
 
     assert result.exit_code == 0, result.stdout
-    assert events.index("doctor preprocess") < events.index("apply body")
+    assert (
+        events.index("doctor preprocess")
+        < events.index("run isolation")
+        < events.index("apply body")
+    )
     assert "/.cmoc/local/" in (root / ".gitignore").read_text().splitlines()
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
@@ -437,17 +461,10 @@ def test_apply_fork_rechecks_ready_state_before_creating_run(
         worktree.mkdir(parents=True)
         return worktree
 
-    def fake_write_report(*args: object, **kwargs: object) -> Path:
-        report_path = root / "report.md"
-        report_path.write_text("# report\n")
-        return report_path
-
     monkeypatch.setattr(apply_fork_module, "apply_run_lock", fake_apply_run_lock)
     monkeypatch.setattr(
         apply_fork_module, "create_run_worktree", fake_create_run_worktree
     )
-    monkeypatch.setattr(apply_fork_module, "enumerate_apply_targets", lambda *args: [])
-    monkeypatch.setattr(apply_fork_module, "write_apply_fork_report", fake_write_report)
 
     with pytest.raises(CmocError, match="事前条件"):
         apply_fork_module._cmoc_apply_fork_body(
