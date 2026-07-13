@@ -134,17 +134,17 @@
 # `test`
 
 ## Summary
-- `test` 配下で `acp_builder` の正本 schema を参照するための共通 path helper をまとめた補助対象です。テスト側で schema を複製せず、oracle 側の `acp_builder` 定義へ直接つなぐ必要がある場面の入口になります。
+- `test` 配下の realization test と共通 support をまとめる入口で、CLI・runtime・acp builder・apply/session/review/indexing・prompt/renderer 系の外部挙動回帰を読むための案内対象である。個別テスト本文へ進む前に、どの機能の回帰を確認したいかで読む先を絞る。
 
 ## Read this when
-- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
-- テスト用に正本 schema をコピーせず、oracle 側を参照する方針がどこで支えられているかを確認したいとき。
-- `acp_builder` 関連のテスト helper が他にあるかではなく、この path 解決 helper の責務を見たいとき。
+- CLI の外部挙動、runtime の境界条件、prompt builder の返却値、または apply/session/review/indexing の回帰を確認したいとき。
+- 複数のテストから共通利用される helper や support の責務を確認したいとき。
+- 特定の機能に対する回帰入口を探していて、どの test file を先に読むべきかを判断したいとき。
 
 ## Do not read this when
-- 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
-- テスト全体の CLI 挙動や他の共通サポートを確認したいときは、この helper ではなく該当する別の test support を読む。
-- `INDEX.md` のルーティング方針そのものを確認したいときは、この helper ではなく上位の案内を読む。
+- 個別機能の正本仕様や実装意図そのものを確認したいときは、対応する oracle 側の本文を読む。
+- 実装ファイルや CLI 本体を追いたいときは、この test まとめではなく該当する realization implementation を読む。
+- INDEX.md のルーティング規則そのものを確認したいときは、この配下ではなく上位の案内を読む。
 
 ## hash
-- 66d4e885e306a6dde26a1f233e4f773f156dc6e7072776d92007ad106b3f1423
+- 403154c703377fbcd040d3a03cd01d158787666a3cbf28123252587ec4cdd8ad

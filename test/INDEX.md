@@ -269,19 +269,20 @@
 # `test_apply_fork_target_normalization.py`
 
 ## Summary
-- `cmoc apply fork` の調査対象ファイル正規化を検証する回帰テスト。`apply_fork` の対象判定境界、特に `memo`、`.cmoc/local`、`.agents`、`.codex`、`INDEX.md`、`AGENTS.md`、binary、tracked ignored file、symlink の扱いを確認したいときに読む。
+- `sub_commands.apply.fork` の対象正規化ロジックを回帰検証するテスト群。`memo`/`.cmoc/local`/`.codex`/`.agents`/`AGENTS.md`/`INDEX.md` を除外しつつ、`oracle` 配下・入れ子の管理名・binary file・tracked ignored file・symlink の扱いを確認する変更時に読む。
 
 ## Read this when
-- `cmoc apply fork` の対象ファイル選定や正規化ロジックを修正・検証するとき。
-- root 直下の除外と入れ子ディレクトリの許可、管理領域や規範ファイルの除外、tracked ignored file の扱い、binary file の扱い、symlink の分類境界を確認したいとき。
+- apply fork の対象選別や正規化条件を変えるとき。
+- `oracle` 配下の file を対象に含めるか、`memo` や `.cmoc/local` などの管理領域を除外するかを調べるとき。
+- tracked ignored file や symlink の扱いを含む対象集合の境界を確認するとき。
 
 ## Do not read this when
-- apply fork の CLI 引数、状態遷移、レポート生成、終了コードを確認したいときは、`apply_fork` 本体の仕様を読む。
-- apply fork 以外のサブコマンドの対象選定やレポート仕様を調べたいとき。
-- 所見列挙や修正依頼の agent call 詳細を確認したいときは、対応する parameter 生成仕様を直接読む。
+- apply fork の本体の適用処理や file 内容の変換を追うだけなら、`sub_commands.apply.fork` の実装側を先に読む。
+- `oracle` 側の正本仕様そのものを確認したいだけなら、対応する oracle doc を読む。
+- 対象選別ではなく commit や git 操作の実装を見たいだけなら、git helper 側を読む。
 
 ## hash
-- 51657e4c95aa0a047d663a1f57a72aa545e7cf426eb4fc1cf4ee3d896d87c74c
+- c86830c3a4925f70cf4ed41babafd6f2d9f2a757e94f99a44c8663a36a365b44
 
 # `test_apply_join_cli.py`
 
