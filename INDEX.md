@@ -134,17 +134,19 @@
 # `test`
 
 ## Summary
-- `test` 配下の realization test 群の入口で、各サブコマンドや runtime の外部挙動を確認する回帰テストへ進むための案内を置く対象である。`acp_builder` や `runtime` の個別仕様を直接読む前に、どのテスト群がその挙動を固定しているかを選ぶときに使う。
+- `test` 配下の回帰テストと共有 helper をまとめた入口である。`apply`、`session`、`review oracle`、`indexing`、`doctor`、`runtime`、`Codex` 連携、`acp_builder` の各境界について、どのテスト群を読むべきかを選ぶときに使う。
+- 共有 helper 群は、CLI 実行、git fixture、Codex subprocess、Ollama、path 解決、`acp_builder` 参照など、複数テストで共通に使う補助責務を持つものだけを扱う。個別機能の仕様確認ではなく、テスト側の共通前提や補助ロジックを確認したいときに読む。
 
 ## Read this when
-- CLI の外部挙動、runtime の副作用、prompt 生成、worktree/state 遷移、review/apply/session/indexing などの回帰を確認したいとき。
-- 個別機能の実装ではなく、その機能に対応する test 群の入口を探したいとき。
-- 共通 support を読まずに、まずどのテスト本文へ進むべきかを判断したいとき。
+- 特定の CLI や runtime の回帰テストを探したいとき。
+- `apply`、`session`、`review oracle`、`indexing`、`doctor`、`runtime`、`Codex`、`acp_builder` のどれに属するテストかを切り分けたいとき。
+- 複数テストで共通化された helper の役割や前提を確認したいとき。
+- テストの入口を決めてから、対応する実装や oracle 側へ進む前段として読むとき。
 
 ## Do not read this when
-- 個別の正本仕様や実装詳細を確認したいときは、対応する oracle 側本文や realization implementation を読む。
-- 共通 support の細部だけを探しているときは、この入口ではなく該当する helper を読む。
-- INDEX.md の書き方やルーティング方針そのものを確認したいときは、この配下ではなく上位の案内を読む。
+- 個別機能の正本仕様そのものを確認したいときは、この配下ではなく対応する oracle 側を読む。
+- CLI 本体や runtime 実装の詳細を追いたいときは、この配下ではなく対応する実装ファイルを読む。
+- テスト共通 helper ではなく、業務ロジックの変更点だけを探しているときは、対応する個別テストへ直接進む。
 
 ## hash
-- e259974a064d2899b5f8396b035d2262e56ce9cc27579f6d94b50cba80dbb70f
+- 0b032e3e0973e2fe80f6b3457b1413de4ea4b64cb3fc7f925f18b71098e678db

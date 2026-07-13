@@ -109,22 +109,18 @@
 # `_ollama_support.py`
 
 ## Summary
-- `test` 配下の Ollama 関連テスト用の共通補助をまとめる。`doctor` を本番と共有する managed Ollama 環境で実行する流れを使うときに読む。
-- この補助は `doctor` の呼び出し方と前提条件を固定するためのもの。テストが本番ユーザー用サービスをそのまま使う前提や、`127.0.0.1:11434` の固定エンドポイントを保つ必要がある場合に参照する。
-- `fake service` のライフサイクルを扱うテスト、Ollama 以外の CLI 補助、`doctor` 以外の起動経路を探す場合は読む対象ではない。
+- `doctor` CLI のテストから、指定した worktree を cwd にして `doctor` を実行し、cmoc managed Ollama を本番共有のまま使うための共通補助です。`doctor` の呼び出し方と、テスト境界として fake サービス管理を含めない前提を確認したいときに読む対象です。
 
 ## Read this when
-- Ollama を本番共有の managed service に対して起動するテスト補助が必要なとき。
-- `doctor` を実サービス前提で呼び出し、結果の `exit_code` を確認したいとき。
-- テスト側で HOME や PATH、固定のローカル Ollama エンドポイントを維持したまま実行したいとき。
+- `doctor` コマンドのテストや呼び出し補助を実装・修正するとき
+- worktree を cwd で識別する前提や、cmoc managed Ollama を本番と共有する前提を確認したいとき
 
 ## Do not read this when
-- fake な Ollama サービスやサービス寿命の制御をテストしたいとき。
-- `doctor` 以外の CLI サポートや、別のテスト対象の共通補助を探しているとき。
-- Ollama 接続先や実行前提を切り替える必要があるとき。
+- `doctor` 以外の CLI 補助を探しているとき
+- fake な Ollama サービスのライフサイクル管理や、サービス起動/停止そのものの仕様を確認したいとき
 
 ## hash
-- 8244f5a3e425825932ae1324ddc139123d345e1c619a2bae3907480b74034a41
+- bba6138ff1b9985aaaa86beda1fc713f0ff4ef3211b3e1b13b60e054a4ac6008
 
 # `test_acp_builder_apply_parameters.py`
 
