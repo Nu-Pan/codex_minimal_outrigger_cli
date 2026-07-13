@@ -13,6 +13,8 @@ dirty worktree、想定外差分、merge conflict は同じ join 操作の可否
 
 import json
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -230,6 +232,118 @@ def test_apply_join_rejects_stale_apply_branch_for_same_session(
         == 0
     )
     assert json.loads(state_path.read_text())["apply"]["state"] == "completed"
+
+
+def test_apply_join_rejects_apply_branch_from_other_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """state の apply branch が別 session に属する場合は join しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    _patch_fake_codex_exec(monkeypatch)
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state = json.loads(state_path.read_text())
+    apply_worktree = apply_worktree_from_state(root, state)
+    state["apply"]["apply_branch"] = "cmoc/apply/other-session/run"
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert "現在の session に属していません" in result.output
+    assert apply_worktree.exists()
+    assert json.loads(state_path.read_text())["apply"]["state"] == "completed"
+
+
+def test_apply_join_reloads_state_inside_lifecycle_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """lock 待ちの間に state が変わった場合は再読込後の状態を使う。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    _patch_fake_codex_exec(monkeypatch)
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_id = run_git(root, "branch", "--show-current").stdout.strip().removeprefix(
+        "cmoc/session/"
+    )
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+
+    @contextmanager
+    def fake_apply_run_lock(_root: Path, _session_id: str) -> Iterator[None]:
+        state = json.loads(state_path.read_text())
+        state["apply"]["state"] = "ready"
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+        yield
+
+    monkeypatch.setattr(apply_module, "apply_run_lock", fake_apply_run_lock)
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert "join 可能な apply run がありません" in result.output
+    assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
+
+
+def test_apply_join_stops_error_process_before_clean_check(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """error state の tracked process を停止してから worktree を検査する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    _patch_fake_codex_exec(monkeypatch)
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_id = run_git(root, "branch", "--show-current").stdout.strip().removeprefix(
+        "cmoc/session/"
+    )
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state = json.loads(state_path.read_text())
+    state["apply"]["state"] = "error"
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+    apply_worktree = apply_worktree_from_state(root, state)
+    dirty = apply_worktree / "dirty.txt"
+    dirty.write_text("child still running\n")
+    tracked_process = object()
+    stopped: list[object] = []
+
+    def fake_stop_apply_process(
+        process: object, _read_after_parent_exit: object
+    ) -> str:
+        stopped.append(process)
+        dirty.unlink()
+        return "stopped fake apply process"
+
+    monkeypatch.setattr(
+        apply_module,
+        "read_apply_process_id",
+        lambda _root, _session_id: tracked_process,
+    )
+    monkeypatch.setattr(
+        apply_module, "stop_apply_process", fake_stop_apply_process
+    )
+
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert stopped == [tracked_process]
+    assert not dirty.exists()
+    assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
 
 
 def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(

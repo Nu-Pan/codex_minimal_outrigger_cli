@@ -32,7 +32,15 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
-from commons.runtime_apply import worktree_for_branch, worktree_for_branch_optional
+from commons.runtime_apply import (
+    apply_process_id_path,
+    apply_run_lock,
+    delete_apply_process_id,
+    read_apply_process_id,
+    stop_apply_process,
+    worktree_for_branch,
+    worktree_for_branch_optional,
+)
 
 
 def cmoc_apply_join_impl(force_resolve: bool) -> None:
@@ -57,26 +65,50 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     current_root = work_root()
     start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     branch = current_branch(current_root)
+    if branch.startswith("cmoc/apply/"):
+        session_id = apply_branch_session_id(branch)
+    else:
+        session_id, _, _ = load_state_for_branch(repo, branch)
+    with apply_run_lock(repo, session_id):
+        _cmoc_apply_join_locked(
+            repo, current_root, branch, force_resolve, session_id
+        )
+
+
+def _cmoc_apply_join_locked(
+    repo: Path,
+    current_root: Path,
+    branch: str,
+    force_resolve: bool,
+    session_id: str,
+) -> None:
+    """lock 内で state の再読込から merge・report・cleanup までを直列化する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    """
     start_subcommand_step(3, "apply branch の前準備", "prepare apply branch")
     if branch.startswith("cmoc/apply/"):
-        require_clean_worktree(current_root)
-        session_id = apply_branch_session_id(branch)
         session_branch = f"cmoc/session/{session_id}"
         root = worktree_for_branch(repo, session_branch)
     else:
         root = current_root
         session_branch = branch
-    _session_id, path, state = load_state_for_branch(repo, branch)
+    session_id, path, state = load_state_for_branch(repo, branch)
     start_subcommand_step(4, "session branch の前準備", "prepare session branch")
-    if not (branch.startswith("cmoc/session/") or branch.startswith("cmoc/apply/")):
-        raise CmocError("apply join は session branch または apply branch 上で実行してください。", [], branch)
-    if state.session.state != "active" or state.apply.state not in {"completed", "error"}:
+    if state.session.state != "active" or state.apply.state not in {
+        "completed",
+        "error",
+    }:
         raise CmocError("join 可能な apply run がありません。", [], str(path))
-    require_clean_worktree(root)
-    ensure_cmoc_ignored(root)
     apply_branch = state.apply.apply_branch
     if not apply_branch:
         raise CmocError("apply branch を特定できません。", [], str(path))
+    if apply_branch_session_id(apply_branch) != session_id:
+        raise CmocError(
+            "apply branch が現在の session に属していません。",
+            ["session state file の apply.apply_branch を確認してください。"],
+            f"session_id: {session_id}\napply_branch: {apply_branch}",
+        )
     if branch.startswith("cmoc/apply/") and branch != apply_branch:
         raise CmocError(
             "現在の apply branch は join 対象の active apply run ではありません。",
@@ -90,6 +122,13 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
             ["session state file を確認してください。"],
             str(path),
         )
+    warnings: list[str] = []
+    if state.apply.state == "error":
+        warning = _stop_error_apply_process(repo, session_id)
+        if warning:
+            warnings.append(warning)
+    require_clean_worktree(root)
+    ensure_cmoc_ignored(root)
     apply_worktree = worktree_for_branch_optional(root, apply_branch)
     if apply_worktree:
         require_clean_worktree(apply_worktree)
@@ -153,10 +192,11 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
                 merge.stderr,
             )
     start_subcommand_step(7, "apply state を更新", "update apply state")
-    state.session.last_joined_apply_oracle_snapshot_commit = apply_oracle_snapshot_commit
+    state.session.last_joined_apply_oracle_snapshot_commit = (
+        apply_oracle_snapshot_commit
+    )
     state.apply = ApplyPart()
     write_state(path, state)
-    warnings: list[str] = []
     merged_reachable = (
         run_git(
             ["merge-base", "--is-ancestor", apply_branch, "HEAD"],
@@ -181,11 +221,12 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     if merged_reachable:
         if apply_worktree:
             if apply_worktree == current_root:
-                # <work-root>/oracle/doc/app_spec/misc_spec.md keeps cmoc pwd fixed
-                # to the caller's worktree, so join must not chdir away to delete it.
+                # <work-root>/oracle/doc/app_spec/misc_spec.md は呼び出し元 worktree
+                # の cwd を固定するため、削除のために chdir してはならない。
                 kept_current_worktree = True
                 warnings.append(
-                    f"apply worktree remains because it is current cwd: {apply_worktree}"
+                    "apply worktree remains because it is current cwd: "
+                    f"{apply_worktree}"
                 )
             else:
                 remove_worktree(repo, apply_worktree)
@@ -194,10 +235,17 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
             if delete_result.returncode != 0:
                 warnings.append(f"apply branch was not deleted: {apply_branch}")
     else:
-        warnings.append(f"apply branch is not reachable from session HEAD: {apply_branch}")
+        warnings.append(
+            "apply branch is not reachable from session HEAD: "
+            f"{apply_branch}"
+        )
     if apply_worktree and apply_worktree.exists() and not kept_current_worktree:
         warnings.append(f"apply worktree remains: {apply_worktree}")
-    warning_lines = [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
+    warning_lines = (
+        [f"  - {warning}" for warning in warnings]
+        if warnings
+        else ["  - none"]
+    )
     typer.echo(
         "\n".join(
             [
@@ -214,6 +262,31 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     )
 
 
+def _stop_error_apply_process(repo: Path, session_id: str) -> str | None:
+    """error state の apply process と Codex child を停止して pid file を消す。
+
+    error state では fork が残した child process が apply worktree を変更し得る。
+    そのため、clean 検査より先に停止し、停止対象を読めない pid file は安全側で
+    join を中止する。根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    """
+    tracking_path = apply_process_id_path(repo, session_id)
+    process = read_apply_process_id(repo, session_id)
+    if process is None:
+        if tracking_path.exists():
+            raise CmocError(
+                "apply process tracking を読み取れません。",
+                ["apply process を確認し、tracking file を修復してから再実行してください。"],
+                str(tracking_path),
+            )
+        return None
+    warning = stop_apply_process(
+        process,
+        lambda: read_apply_process_id(repo, session_id),
+    )
+    delete_apply_process_id(repo, session_id)
+    return warning
+
+
 def write_apply_join_report(
     root: Path,
     session_branch: str,
@@ -225,6 +298,10 @@ def write_apply_join_report(
     cleanup_reachable: bool,
     merge_conflicts: list[str],
 ) -> Path:
+    """apply join の結果を timestamp 付き Markdown report として保存する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    """
     report_dir = reports_dir(root, "apply/join")
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"{timestamp()}.md"
@@ -253,6 +330,10 @@ def render_apply_join_report(
     cleanup_reachable: bool,
     merge_conflicts: list[str],
 ) -> str:
+    """apply join の state・差分・conflict を Markdown report 本文へ描画する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    """
     unexpected_lines = [
         f"- {kind}: {', '.join(paths)}"
         for kind, paths in unexpected.items()
@@ -296,7 +377,10 @@ def collect_apply_join_unexpected_changes(
     session_branch: str,
     apply_worktree: Path | None = None,
 ) -> dict[str, list[str]]:
-    """apply/session branch 上の想定外差分を分類して返す。"""
+    """apply/session branch 上の想定外差分を分類して返す。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    """
     base = (
         state.apply.oracle_snapshot_commit
         or state.session.session_start_commit
@@ -323,8 +407,10 @@ def collect_apply_join_unexpected_changes(
 
 
 def changed_paths_on_managed_branch(root: Path, base: str, branch: str) -> list[str]:
-    # <work-root>/oracle/doc/app_spec/misc_spec.md requires deleted paths to be
-    # outside managed-branch change scope, and renames to be classified by new path.
+    """managed branch の差分を削除 path 除外・rename 先優先で列挙する。
+
+    根拠: <work-root>/oracle/doc/app_spec/misc_spec.md
+    """
     lines = managed_branch_name_status_lines(root, base, branch)
     paths: list[str] = []
     for line in lines:
@@ -336,7 +422,13 @@ def changed_paths_on_managed_branch(root: Path, base: str, branch: str) -> list[
     return paths
 
 
-def rename_sources_on_managed_branch(root: Path, base: str, branch: str) -> dict[str, str]:
+def rename_sources_on_managed_branch(
+    root: Path, base: str, branch: str
+) -> dict[str, str]:
+    """managed branch の rename 先から、復元すべき rename 元を引く。
+
+    根拠: <work-root>/oracle/doc/app_spec/misc_spec.md
+    """
     lines = managed_branch_name_status_lines(root, base, branch)
     sources: dict[str, str] = {}
     for line in lines:
@@ -347,6 +439,10 @@ def rename_sources_on_managed_branch(root: Path, base: str, branch: str) -> dict
 
 
 def managed_branch_name_status_lines(root: Path, base: str, branch: str) -> list[str]:
+    """managed branch 間の name-status diff を Git の出力行として返す。
+
+    根拠: <work-root>/oracle/doc/app_spec/misc_spec.md
+    """
     return run_git(
         [
             "diff",
@@ -370,30 +466,32 @@ def is_expected_apply_change(
     """apply branch 上で許可される差分かどうかを判定する。"""
     p = Path(path)
     # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-    # defines AGENTS.md as outside realization files at every depth.
+    # は全階層の AGENTS.md を realization file の対象外と定めている。
     if p.name == "AGENTS.md":
         return False
     if p.name == "INDEX.md":
         return True
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md limits apply
-    # branch products to implementation files and INDEX.md.
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md は apply branch の
+    # 成果物を実装 file と INDEX.md に限定している。
     if not path.startswith("src/"):
         return False
     if apply_worktree is not None:
-        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md requires
-        # tracked apply-branch files to be classified using that branch's state.
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md に従い、tracked
+        # file は apply branch 自身の state で分類する。
         return not is_untracked_git_ignored(apply_worktree, apply_worktree / path)
     if apply_branch and is_tracked_on_branch(root, apply_branch, path):
-        # The apply worktree may be unavailable during recovery, but a path in
-        # the branch tree is tracked even when the session worktree ignores it.
+        # 復旧中は apply worktree が無い場合もあるが、session worktree の ignore
+        # に関係なく branch の tree にある path は tracked と判定する。
         return True
     return not is_untracked_git_ignored(root, root / path)
 
 
 def is_tracked_on_branch(root: Path, branch: str, path: str) -> bool:
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md requires the
-    # apply branch's tracked state; the session worktree may not contain a new
-    # apply path, so its index cannot answer this question.
+    """apply branch の tree に path が tracked で存在するか確認する。
+
+    apply worktree が復旧中に無くても branch の tree を正として判定する。
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    """
     return bool(
         run_git(
             ["ls-tree", "-r", "--name-only", branch, "--", path],
@@ -411,8 +509,10 @@ def is_expected_session_change(root: Path, path: str) -> bool:
 
 
 def is_root_memo_path(path: str) -> bool:
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md treats root memo
-    # and paths below it as session-side changes, not apply-side products.
+    """path が root memo またはその配下かどうかを判定する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    """
     return path == "memo" or path.startswith("memo/")
 
 
@@ -439,7 +539,9 @@ def revert_unexpected_changes(
         run_git(["commit", "-m", "cmoc apply join force-resolve session changes"], root)
     apply_branch = state.apply.apply_branch
     if apply_branch and unexpected.get("apply"):
-        apply_rename_sources = rename_sources_on_managed_branch(root, base, apply_branch)
+        apply_rename_sources = rename_sources_on_managed_branch(
+            root, base, apply_branch
+        )
         apply_root = worktree_for_branch_optional(root, apply_branch)
         if apply_root is None:
             raise CmocError(
@@ -452,39 +554,54 @@ def revert_unexpected_changes(
         apply_changed = run_git(["status", "--short"], apply_root).stdout.strip()
         if apply_changed:
             run_git(["add", "."], apply_root)
-            run_git(["commit", "-m", "cmoc apply join force-resolve apply changes"], apply_root)
+            run_git(
+                ["commit", "-m", "cmoc apply join force-resolve apply changes"],
+                apply_root,
+            )
 
 
 def restore_managed_branch_path(
     root: Path, commit: str, path: str, rename_sources: dict[str, str]
 ) -> None:
+    """managed branch の差分 path と rename 元を指定 commit へ戻す。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    """
     restore_path_from_commit(root, commit, path)
     source = rename_sources.get(path)
     if source:
-        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md requires
-        # force-resolve to revert unexpected changes; managed-branch
-        # classification reports only the rename target, so source restoration is
-        # kept in the force-resolve path.
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md に従い、想定外
+        # 差分は force-resolve で戻す。managed branch の分類は rename 先だけを
+        # 報告するため、rename 元の復元もこの経路で行う。
         restore_path_from_commit(root, commit, source)
 
 
 def restore_path_from_commit(root: Path, commit: str, path: str) -> None:
     """path を指定 commit の内容へ戻し、存在しない場合は削除する。"""
-    exists = run_git(["cat-file", "-e", f"{commit}:{path}"], root, check=False).returncode == 0
+    exists = (
+        run_git(
+            ["cat-file", "-e", f"{commit}:{path}"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
     if exists:
         run_git(["checkout", commit, "--", path], root)
     else:
         target = root / path
-        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md requires
-        # force-resolve to revert added paths; broken symlinks are Git paths even
-        # though Path.exists() is false.
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md に従い、追加
+        # path は force-resolve で戻す。broken symlink は Path.exists() が false
+        # でも Git path なので is_symlink() も確認する。
         if target.exists() or target.is_symlink():
             run_git(["rm", "-f", "--", path], root)
 
 
 def resolve_index_conflicts(root: Path) -> bool:
     """INDEX.md だけの merge conflict を削除 commit で機械解決する。"""
-    conflicted = run_git(["diff", "--name-only", "--diff-filter=U"], root).stdout.splitlines()
+    conflicted = run_git(
+        ["diff", "--name-only", "--diff-filter=U"], root
+    ).stdout.splitlines()
     if not conflicted:
         return False
     if any(Path(path).name != "INDEX.md" for path in conflicted):
