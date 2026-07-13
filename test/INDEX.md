@@ -412,39 +412,43 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex exec の quota 枯渇後に、probe の実行、resume token 復元、再実行、並行待機の集約を検証する回帰テスト群。`run_codex_exec` の外部挙動、call log、subcommand log、`CODEX_HOME`/`cwd` の扱いを確認したいときに読む。
+- `Codex` の quota 枯渇後に、probe 実行・resume token 復元・再実行・並行待機の制御を確認したいときに読む。外部挙動としては、初回失敗後の待機、代表 probe の一回化、resume の有無による再実行分岐、probe 失敗時の伝播、ロギング内容が主対象。
+- この対象は、quota retry の状態機械を一箇所で追うための回帰テスト群として機能する。同じ fake Codex 呼び出し列を使う観点が強く、probe 共有・resume・call log・subcommand log をまとめて確認したい変更で優先して読む。
+- `Codex` の quota retry 以外の一般的な実行経路や、quota と無関係な CLI 振る舞いを確認したい場合は優先度が低い。実装内部の helper 分割や個別の細かい制御よりも、quota 復帰の観測点が重要なときに読む。
 
 ## Read this when
-- quota 復帰の挙動を追加・変更したとき
-- probe 共有や resume token の扱いを変えたとき
-- 並行実行時に代表 probe へ集約する制御を確認したいとき
-- Codex 実行ログやサブコマンドログの観測点を変えるとき
+- quota 超過後の再試行や resume 制御を変更した
+- 代表 probe の共有や並行待機の扱いを確認したい
+- call log, subcommand log, `CODEX_HOME`, `cwd` の観測結果をまとめて見たい
+- resume token の復元や quota probe のエラーハンドリングを追いたい
 
 ## Do not read this when
-- 通常の Codex 実行や quota 無関係の CLI 挙動だけを確認したいとき
-- probe の prompt 生成そのものではなく、別の adapter や prompt builder を見たいとき
-- 実装の内部 helper 分割や小さなリファクタだけを確認したいとき
+- quota retry と無関係な通常実行のテストを探している
+- 実装内部の helper 配置だけを確認したい
+- CLI の一般的な引数解析や出力形式だけを確認したい
+- quota 復帰ではなく別の失敗系を見たい
 
 ## hash
-- 952cbd0dc4b4362791ffb800cf8f82a6b51b432fdaa3b3aa28e0913bc667a025
+- f828e8dcc3b88dbe806c2f4429a37031c5824aa1361f43ec5a43b838cbcff9d8
 
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- `run_codex_exec` の再試行まわりを検証するテスト群。構造化出力の再試行、容量再試行、JSONL エラー処理、KeyboardInterrupt の記録、再試行後も差分が保持されること、stdout 以外のエラーマーカーを無視することを扱う。
+- `run_codex_exec` の再試行判定と失敗時ログを確認したいときに読むテスト。Structured Output の検証失敗、capacity retry、JSONL error、KeyboardInterrupt、中断後の差分保持、stdout 以外の error marker の扱いを外部挙動として押さえている。
 
 ## Read this when
-- `commons.runtime_codex.run_codex_exec` の再試行条件や失敗時の記録方法を変えるとき。
-- Codex CLI の出力検証、`call_log`/サブコマンドログの内容、再試行時のプロンプトや出力ファイルの扱いを確認したいとき。
-- 容量・構造化出力・JSONL エラー・中断のいずれかが、現行の失敗判定やログ仕様に影響するかを見たいとき。
+- Codex 実行の再試行条件や失敗時の記録方法を変更するとき。
+- Structured Output のパース失敗や schema 不一致をどう扱うかを確認したいとき。
+- capacity / quota まわりの retry 判定や、ログイベントの status・error・returncode の整合性を確認したいとき。
+- 中断やエラー時に既存の差分や生成物が残るべきかを確認したいとき。
 
 ## Do not read this when
-- `run_codex_exec` 以外の Codex 実行経路を確認したいときは、実装側の `commons.runtime_codex` 本体や関連する上位テストを先に読む。
-- CLI 引数の組み立てや設定値の定義だけを確認したいときは、このテストではなく `basic.acp` や `config.cmoc_config` 側を読む。
-- 再試行以外の一般的なテスト配置や共通 fixture の定義を探したいだけなら、ここではなく共通補助ファイルを探す。
+- Codex 実行の引数組み立てやプロンプト生成そのものを見たいときは、より近い実装側のファイルを読む。
+- 一般的なログ基盤やサブコマンド共通ログの仕様だけを確認したいときは、対応するドキュメントやロガー実装を先に読む。
+- Codex CLI 以外の実行経路や別サブコマンドの挙動を確認したいときは、このテストではなく該当経路のテストを読む。
 
 ## hash
-- bae14eb77d298c8e1295c0019b1ca348d646ac5dc568b47cb944580e3e2400ea
+- cc15d29643a56a9f8000ac8fbd57ef74936a0115f2c0c58d8a523b5f60d692a8
 
 # `test_codex_runtime_subprocess.py`
 
