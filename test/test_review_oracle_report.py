@@ -1,4 +1,12 @@
-"""review oracle の report と CLI 出力を検証する。"""
+"""review oracle の report と CLI 出力を検証する。
+
+根拠:
+- `<work-root>/oracle/doc/app_spec/sub_command/review_oracle.md`
+- `<work-root>/oracle/doc/app_spec/codex_exec_rule.md`
+- `<work-root>/oracle/doc/dev_rule/test_rule.md`
+- `<work-root>/oracle/doc/dev_rule/coding_rule.md`
+- `<work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py`
+"""
 
 from pathlib import Path
 
@@ -12,12 +20,23 @@ from main import app
 import sub_commands.eval_oracle as eval_oracle_module
 import sub_commands.review.oracle as review_module
 
+
+class _FakeCodexResult:
+    """テスト用 Codex 実行結果として Structured Output を保持する。"""
+
+    def __init__(self, output_json: dict[str, object]) -> None:
+        """review 処理が読む JSON payload を保存する。"""
+        self.output_json = output_json
+
+
 def test_eval_oracle_delegates_to_review_oracle_impl(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """`eval-oracle` が scope を review oracle 実装へ渡すことを検証する。"""
     calls: list[str] = []
 
     def fake_review_oracle_impl(scope: str) -> None:
+        """委譲された scope を記録する fake callback。"""
         calls.append(scope)
 
     monkeypatch.setattr(
@@ -30,6 +49,7 @@ def test_eval_oracle_delegates_to_review_oracle_impl(
     assert calls == ["full"]
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """空の所見結果から report の節順と実行情報を検証する。"""
     ancestor = tmp_path / "oracle"
     ancestor.mkdir()
     root = make_repo(ancestor)
@@ -40,22 +60,21 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert fork_result.exit_code == 0
     calls: list[str] = []
 
-    class FakeCodexResult:
-        def __init__(self, output_json: dict[str, object]) -> None:
-            self.output_json = output_json
-
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: object, **kwargs: object
+    ) -> _FakeCodexResult:
+        """Structured Output schema に対応する最小の fake 応答を返す。"""
         calls.append(kwargs["purpose"])
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
-            return FakeCodexResult({"findings": []})
+            return _FakeCodexResult({"findings": []})
         if schema_name in {
             "validate_finding_challenger.json",
             "validate_finding_advocate.json",
         }:
-            return FakeCodexResult({"reasons": []})
+            return _FakeCodexResult({"reasons": []})
         if schema_name == "judge_finding.json":
-            return FakeCodexResult({"verdict": "reject", "reason": "no finding"})
+            return _FakeCodexResult({"verdict": "reject", "reason": "no finding"})
         raise AssertionError(schema_name)
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
@@ -90,6 +109,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
 def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """accepted/rejected finding が severity 別の report 節へ分類されることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -98,18 +118,17 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     )
     enumerated = False
 
-    class FakeCodexResult:
-        def __init__(self, output_json: dict[str, object]) -> None:
-            self.output_json = output_json
-
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: object, **kwargs: object
+    ) -> _FakeCodexResult:
+        """Structured Output schema に対応する最小の fake 応答を返す。"""
         nonlocal enumerated
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             if enumerated:
-                return FakeCodexResult({"findings": []})
+                return _FakeCodexResult({"findings": []})
             enumerated = True
-            return FakeCodexResult(
+            return _FakeCodexResult(
                 {
                     "findings": [
                         {
@@ -143,13 +162,13 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
             "validate_finding_challenger.json",
             "validate_finding_advocate.json",
         }:
-            return FakeCodexResult({"reasons": []})
+            return _FakeCodexResult({"reasons": []})
         if schema_name == "merge_finding.json":
-            return FakeCodexResult({"operations": []})
+            return _FakeCodexResult({"operations": []})
         if schema_name == "judge_finding.json":
             if kwargs["purpose"].endswith(("finding-0001", "finding-0003")):
-                return FakeCodexResult({"verdict": "accept", "reason": "accepted"})
-            return FakeCodexResult({"verdict": "reject", "reason": "rejected"})
+                return _FakeCodexResult({"verdict": "accept", "reason": "accepted"})
+            return _FakeCodexResult({"verdict": "reject", "reason": "rejected"})
         raise AssertionError(schema_name)
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
@@ -205,6 +224,7 @@ def test_review_oracle_report_includes_rejected_findings(
     expected_fatal_count: int,
     expected_minor_count: int,
 ) -> None:
+    """rejected finding が severity 別の節と件数へ出力されることを検証する。"""
     root = tmp_path
     rendered = review_module.render_review_oracle_report(
         root,
@@ -260,6 +280,7 @@ def test_review_oracle_report_includes_rejected_findings(
 def test_review_oracle_report_counts_oracle_root_alias_findings(
     tmp_path: Path,
 ) -> None:
+    """`<oracle-root>` alias の finding が report の path 件数へ反映されることを検証する。"""
     root = tmp_path
     rendered = review_module.render_review_oracle_report(
         root,
@@ -288,6 +309,7 @@ def test_review_oracle_report_counts_oracle_root_alias_findings(
 def test_review_oracle_accepts_short_scope_option(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """短縮 `-s` option が report の scope に反映されることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -295,21 +317,20 @@ def test_review_oracle_accepts_short_scope_option(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        def __init__(self, output_json: dict[str, object]) -> None:
-            self.output_json = output_json
-
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: object, **kwargs: object
+    ) -> _FakeCodexResult:
+        """Structured Output schema に対応する最小の fake 応答を返す。"""
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
-            return FakeCodexResult({"findings": []})
+            return _FakeCodexResult({"findings": []})
         if schema_name in {
             "validate_finding_challenger.json",
             "validate_finding_advocate.json",
         }:
-            return FakeCodexResult({"reasons": []})
+            return _FakeCodexResult({"reasons": []})
         if schema_name == "judge_finding.json":
-            return FakeCodexResult({"verdict": "reject", "reason": "no finding"})
+            return _FakeCodexResult({"verdict": "reject", "reason": "no finding"})
         raise AssertionError(schema_name)
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
@@ -335,14 +356,13 @@ def test_review_oracle_writes_error_report_on_processing_failure(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        def __init__(self, output_json: dict[str, object]) -> None:
-            self.output_json = output_json
-
-    def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
+    def fail_run_codex_exec(
+        parameter: object, **kwargs: object
+    ) -> _FakeCodexResult:
+        """列挙・検証は成功させ、judge 呼び出しだけを失敗させる fake callback。"""
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
-            return FakeCodexResult(
+            return _FakeCodexResult(
                 {
                     "findings": [
                         {
@@ -358,7 +378,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
             "validate_finding_challenger.json",
             "validate_finding_advocate.json",
         }:
-            return FakeCodexResult({"reasons": []})
+            return _FakeCodexResult({"reasons": []})
         raise RuntimeError("judge failed")
 
     monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
