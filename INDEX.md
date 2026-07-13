@@ -134,17 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下で `acp_builder` 正本 schema への参照を共通化する path helper の案内。テスト側で schema を複製せず、oracle 側の `acp_builder` 定義へ直接つなぐ必要があるときの入口にする。
+- `test` 配下の各 realization test と共通 support を案内するルーティング対象である。CLI, runtime, prompt, indexing, review, session, apply の外部挙動や境界条件を確認したいときに、対応する個別テストへ進む入口になる。
+- 共通 support は、git fixture, CLI runner, Codex/Ollama 実行補助, fake command 生成, path 復元など、複数テストで再利用する支援をまとめる。個別の実装本文ではなく、テスト側で何を共通化しているかを確認したいときに読む。
 
 ## Read this when
-- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
-- テスト用に正本 schema をコピーせず、oracle 側を参照する方針がどこで支えられているかを確認したいとき。
-- `acp_builder` 関連のテスト helper が他にあるかではなく、この path 解決 helper の責務を見たいとき。
+- 特定のサブコマンドや runtime の外部挙動を固定している回帰テストを探したいとき。
+- テスト用の共通 helper が、どの前提や判定規則を共有しているかを確認したいとき。
+- packaged import, path 解決, git fixture, fake コマンド, Codex 実行補助などのテスト支援の責務を見たいとき。
 
 ## Do not read this when
-- 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
-- テスト全体の CLI 挙動や他の共通サポートを確認したいときは、この helper ではなく該当する別の test support を読む。
-- `INDEX.md` のルーティング方針そのものを確認したいときは、この helper ではなく上位の案内を読む。
+- 個別機能の正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
+- CLI や runtime の実装手順そのものを追いたいときは、対応する `src` 側を読む。
+- `INDEX.md` のルーティング方針そのものを確認したいときは、この `test` 配下ではなく上位の案内を読む。
 
 ## hash
-- 7ebfa23c22b1d99ad3abdf2fe56f5a2d46b886e671988ad7ffbe32e7a6276da6
+- e51d9537ca631fb800585bc829f3bde138e6336603e0dcbae1579f54129da5f2

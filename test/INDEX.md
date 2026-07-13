@@ -507,20 +507,21 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- `indexing` CLI の回帰テスト群。`INDEX.md` の生成・再生成・衝突解決・コミット条件・linked worktree での対象決定・既存 hash 再利用・空ディレクトリやメモ配下の扱いを、外部挙動として確認する。
+- `indexing` CLI の外部挙動を固定する回帰テスト群。INDEX.md の生成・更新、preflight、commit、linked worktree、dirty repo、hash 既存判定、壊れた既存エントリーの再生成までを扱う。
+- INDEX 更新ワークフローの入出力や境界条件を変える作業で読む。実装内部の分割や汎用 helper の追加より、CLI と indexing_common の観測可能な振る舞いを確認したいときに進む。
 
 ## Read this when
-- `indexing` の実行で `INDEX.md` が作られるか、更新されるか、コミットされるかを確認したいとき。
-- linked worktree や dirty 状態で `indexing` の対象がどこになるか、また処理を止める条件を確認したいとき。
-- INDEX.md conflict 解決や hash 再利用、空ディレクトリ、memo 配下、symlink cycle などの境界条件を確認したいとき。
+- `indexing` サブコマンドの成否条件、commit 対象、preflight の対象 root、既存差分の扱い、linked worktree での更新先を変更するとき。
+- INDEX.md の生成物の内容、hash による再生成抑止、壊れた既存エントリーの扱い、empty directory や symlink cycle の扱いを変えるとき。
+- `sub_commands.indexing` と `commons.indexing` の境界で、CLI 回帰として確認すべき外部挙動を増減したいとき。
 
 ## Do not read this when
-- `indexing` の実装そのものや git 操作の共通処理を追いたいときは、対応する実装側を読む。
-- `INDEX.md` の個別テンプレートや生成ロジックの詳細を確認したいときは、このテストより先に indexing 関連の実装と正本仕様を読む。
-- 別サブコマンドの回帰だけを見たいときは、このファイルは読まない。
+- `indexing` 以外の CLI や、git 支援関数そのものの変更だけを扱うとき。
+- preflight や commit の共通基盤ではなく、別サブコマンドの routing や出力仕様を変更するとき。
+- 純粋な実装整理だけで、INDEX.md の生成・更新・拒否条件に影響しないとき。
 
 ## hash
-- 64ee342f862e6fe7808f6a6c5d79aa2e5e40f95f86167d7d201a01479899692d
+- 96900fca457f8ac6dbf01113b73b79d1c4cb69297bb0c7fb66c39df2b204c73f
 
 # `test_indexing_preflight.py`
 
