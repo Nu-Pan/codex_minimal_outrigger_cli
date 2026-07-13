@@ -5,6 +5,9 @@
 dirty worktree、想定外差分、merge conflict は同じ join 操作の可否を判断する
 境界条件であり、分割すると同じ fixture と git 状態の読み取り文脈が分散する。
 現状は apply join の成功条件と拒否条件を一箇所で読む方が凝集性が高い。
+正本仕様: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+差分分類: <work-root>/oracle/doc/app_spec/misc_spec.md
+テスト方針: <work-root>/oracle/doc/dev_rule/test_rule.md
 根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
@@ -22,9 +25,29 @@ from main import app
 import sub_commands.apply.fork as apply_fork_module
 import sub_commands.apply.join as apply_module
 
+
+class _FakeCodexResult:
+    """apply fork を findings なしで完了させる最小の fake 結果。"""
+
+    output_json: dict[str, list[object]] = {"findings": []}
+
+
+def _fake_run_codex_exec(
+    _parameter: object, **_kwargs: object
+) -> _FakeCodexResult:
+    """apply fork の Codex 呼び出しに空の所見結果を返す。"""
+    return _FakeCodexResult()
+
+
+def _patch_fake_codex_exec(monkeypatch: pytest.MonkeyPatch) -> None:
+    """apply fork の Codex 呼び出しを共通 fake に置き換える。"""
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", _fake_run_codex_exec)
+
+
 def test_apply_join_removes_apply_worktree_and_resets_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """apply join が worktree、branch、state、report を更新する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -32,14 +55,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -78,6 +94,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
 def test_apply_join_can_run_from_apply_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """apply worktree を cwd にした join が cleanup を保留して成功する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -85,14 +102,7 @@ def test_apply_join_can_run_from_apply_worktree(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -129,6 +139,7 @@ def test_apply_join_can_run_from_apply_worktree(
 def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked session worktree から apply の変更を session にマージする。"""
     root = make_repo(tmp_path)
     root_branch = current_branch(root)
     monkeypatch.chdir(root)
@@ -140,14 +151,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(linked, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -180,6 +184,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
 def test_apply_join_rejects_stale_apply_branch_for_same_session(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """同じ session の stale apply branch からの join を拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -187,14 +192,7 @@ def test_apply_join_rejects_stale_apply_branch_for_same_session(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -237,6 +235,7 @@ def test_apply_join_rejects_stale_apply_branch_for_same_session(
 def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """apply worktree が dirty な場合、worktree 実行の join を拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -244,14 +243,7 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -291,6 +283,7 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
 def test_apply_join_from_session_requires_clean_apply_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """session worktree から dirty な apply worktree を検出して拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -298,14 +291,7 @@ def test_apply_join_from_session_requires_clean_apply_worktree(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -335,6 +321,7 @@ def test_apply_join_from_session_requires_clean_apply_worktree(
 def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """apply 側の想定外差分を報告し、force モードで元に戻す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -342,14 +329,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -391,6 +371,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
 def test_apply_join_reports_codex_apply_diff_and_force_reverts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """追跡済み Codex 設定の apply 差分を報告し、force モードで戻す。"""
     root = make_repo(tmp_path)
     codex_config = root / ".codex" / "config.toml"
     codex_config.parent.mkdir()
@@ -403,14 +384,7 @@ def test_apply_join_reports_codex_apply_diff_and_force_reverts(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
         root
@@ -442,6 +416,7 @@ def test_apply_join_reports_codex_apply_diff_and_force_reverts(
 def test_apply_join_reports_session_oracle_agents_diff_and_force_reverts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """session 側の oracle/AGENTS.md 差分を報告し、force モードで戻す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -449,14 +424,7 @@ def test_apply_join_reports_session_oracle_agents_diff_and_force_reverts(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -490,6 +458,7 @@ def test_apply_join_force_reverts_unexpected_rename_source(
     monkeypatch: pytest.MonkeyPatch,
     side: str,
 ) -> None:
+    """apply/session 側の予期しない rename 元を force モードで戻す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -497,14 +466,7 @@ def test_apply_join_force_reverts_unexpected_rename_source(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -536,6 +498,7 @@ def test_apply_join_force_reverts_unexpected_rename_source(
 def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """apply 側で削除された oracle path を想定外差分に数えない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -543,14 +506,7 @@ def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
         root
@@ -572,6 +528,7 @@ def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
 def test_apply_join_managed_branch_paths_exclude_deletes_and_use_rename_target(
     tmp_path: Path,
 ) -> None:
+    """管理対象 branch の rename 先だけを変更 path として列挙する。"""
     root = make_repo(tmp_path)
     base = run_git(root, "rev-parse", "HEAD").stdout.strip()
     run_git(root, "checkout", "-b", "changed")
@@ -590,6 +547,7 @@ def test_apply_join_classifies_root_memo_as_session_change(
     tmp_path: Path,
     path: str,
 ) -> None:
+    """root の memo を session 側の変更として分類する。"""
     root = make_repo(tmp_path)
 
     assert apply_module.is_expected_apply_change(root, path) is False
@@ -599,6 +557,7 @@ def test_apply_join_classifies_root_memo_as_session_change(
 def test_apply_join_allows_session_oracle_symlink_to_outside_root(
     tmp_path: Path,
 ) -> None:
+    """worktree 外を指す session oracle symlink を許可する。"""
     root = make_repo(tmp_path)
     outside_target = tmp_path / "outside-oracle.md"
     outside_target.write_text("# outside\n")
@@ -629,6 +588,7 @@ def test_apply_join_rejects_non_realization_apply_paths(
     tmp_path: Path,
     path: str,
 ) -> None:
+    """realization file ではない apply path を拒否する。"""
     root = make_repo(tmp_path)
 
     assert apply_module.is_expected_apply_change(root, path) is False
@@ -638,6 +598,7 @@ def test_apply_join_allows_tracked_ignored_src_apply_diff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """追跡済みで ignore された src path の apply 差分を許可する。"""
     root = make_repo(tmp_path)
     ignored_src = root / "src" / "ignored.py"
     ignored_src.parent.mkdir()
@@ -651,14 +612,7 @@ def test_apply_join_allows_tracked_ignored_src_apply_diff(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
         root
@@ -681,6 +635,7 @@ def test_apply_join_allows_tracked_ignored_src_apply_diff(
 def test_apply_join_reports_unresolved_non_index_conflict(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """INDEX.md 以外の merge conflict を未解決として報告する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -688,14 +643,7 @@ def test_apply_join_reports_unresolved_non_index_conflict(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
         root
@@ -733,6 +681,7 @@ def test_apply_join_reports_unresolved_non_index_conflict(
 def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """通常モードでも INDEX.md の merge conflict を解決して join を続行する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     (root / "INDEX.md").write_text("base\n")
@@ -743,14 +692,7 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        output_json = {"findings": []}
-
-    monkeypatch.setattr(
-        apply_fork_module,
-        "run_codex_exec",
-        lambda parameter, **kwargs: FakeCodexResult(),
-    )
+    _patch_fake_codex_exec(monkeypatch)
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     state_path = (
