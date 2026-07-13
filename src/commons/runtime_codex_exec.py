@@ -368,6 +368,7 @@ def run_codex_exec(
     capacity_attempts = 0
     quota_polls = 0
     sleep_sec = capacity_initial_sleep_sec
+    capacity_retry_pending = False
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
 
@@ -510,10 +511,16 @@ def run_codex_exec(
                                 error_text,
                             )
                         quota_polls += 1
-                        if logger is not None:
-                            logger.add_quota_wait(quota_poll_interval_sec)
-                        quota_wait_sec += quota_poll_interval_sec
-                        time.sleep(quota_poll_interval_sec)
+                        if capacity_retry_pending:
+                            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                            # Capacity retry already waited its own backoff;
+                            # do not add the regular quota polling interval.
+                            capacity_retry_pending = False
+                        else:
+                            if logger is not None:
+                                logger.add_quota_wait(quota_poll_interval_sec)
+                            quota_wait_sec += quota_poll_interval_sec
+                            time.sleep(quota_poll_interval_sec)
                         quota_probe_parameter = _quota_availability_probe_parameter(
                             parameter
                         )
@@ -632,6 +639,7 @@ def run_codex_exec(
                             )
                             time.sleep(sleep_sec)
                             sleep_sec *= 2
+                            capacity_retry_pending = True
                             continue
                         if not probe_available and (
                             probe_unexpected_error or not probe_quota_error

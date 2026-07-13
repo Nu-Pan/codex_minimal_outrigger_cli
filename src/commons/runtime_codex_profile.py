@@ -197,14 +197,15 @@ def _writable_roots(
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # `.agents` is a Codex-reserved tree, so opening <work-root> itself
-            # would grant a write path that codex exec cannot safely mediate.
+            # The permission profile opens work-root itself so a new root-level
+            # realization file has a parent write root. Narrower read/deny
+            # entries below keep reserved trees and oracle outside that scope.
             paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # Keep the sandbox roots positive-only; root itself would include
-            # `.agents`, `.git`, `.codex`, memo, and `.cmoc/local` runtime state.
+            # The root write entry is paired with narrower protected entries in
+            # `_permission_profile_filesystem_overrides`.
             paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
@@ -249,7 +250,13 @@ def _writable_roots(
 
 
 def _top_level_writable_roots(mode: FileAccessMode, root: Path) -> list[Path]:
-    """root 自体を開かず、許可済み top-level path だけを候補にする。"""
+    """permission profile 用の top-level write root を返す。"""
+    if mode in {FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE}:
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+        # New root-level files cannot be named in advance. Codex permission
+        # entries use most-specific matching, so the root write is safe only
+        # together with the protected descendants added below.
+        return [root]
     paths: list[Path] = []
     candidates = [root / name for name in _STANDARD_REALIZATION_WRITE_PATHS]
     if mode == FileAccessMode.REPO_WRITE:
@@ -524,6 +531,47 @@ def _permission_profile_filesystem_overrides(
         "glob_scan_max_depth": _PERMISSION_GLOB_SCAN_MAX_DEPTH,
         ":workspace_roots": routing_rules,
     }
+    if mode in {FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE}:
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        # A root write is required for unknown, non-protected root-level
+        # realization files. Codex selects the most specific filesystem rule,
+        # so protect the fixed reserved roots explicitly instead of relying on
+        # a later diff check (which is not an access control mechanism).
+        overrides.update(
+            {
+                str(root.resolve() / name): "read"
+                for name in (".agents", ".codex", ".git", ".pytest_cache")
+            }
+        )
+        overrides[str((root / ".cmoc" / "local").resolve())] = "read"
+        if mode == FileAccessMode.REALIZATION_WRITE:
+            overrides[str((root / "oracle").resolve())] = "read"
+        overrides.update(
+            {
+                str((root / name).resolve()): "read"
+                for name in _DENIED_WRITE_FILE_NAMES
+            }
+        )
+        if root.exists():
+            # `git check-ignore` cannot be represented by permission-profile
+            # globs. Preserve the existing top-level behavior for paths known
+            # to be ignored while allowing future ordinary root files.
+            for path in root.iterdir():
+                resolved_path = path.resolve()
+                if not resolved_path.is_relative_to(root.resolve()):
+                    # Existing top-level symlinks must not turn the root write
+                    # into an escape from the work-root boundary.
+                    overrides[str(resolved_path)] = "read"
+                    continue
+                if path.name in _REPO_WRITE_BLOCKED_ROOT_NAMES or (
+                    mode == FileAccessMode.REALIZATION_WRITE and path.name == "oracle"
+                ):
+                    continue
+                if is_untracked_git_ignored(root, path) or (
+                    path.is_dir()
+                    and is_untracked_git_ignored(root, path / ".__cmoc_ignore_probe__")
+                ):
+                    overrides[str(resolved_path)] = "read"
     if mode in {
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.REPO_WRITE,

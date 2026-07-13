@@ -21,7 +21,6 @@ from _codex_support import (
     _assert_writable,
     _override_permission_filesystem,
     _override_permission_roots,
-    _standard_realization_override_roots,
 )
 from _git_support import make_repo, run_git
 
@@ -197,10 +196,10 @@ def test_codex_overrides_allows_tracked_cmoc_config_but_blocks_local(
     _assert_not_writable(override_args, root / "INDEX.md")
 
 
-def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(
+def test_codex_overrides_allows_root_realization_file_and_protects_ignored_dir(
     tmp_path: Path,
 ) -> None:
-    """realization write の書き込み先を許可されたトップレベル領域に限定することを検証する。"""
+    """root 直下の realization file を許可し、無視対象 directory を保護する。"""
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text("/build/\n")
     (root / "src").mkdir()
@@ -226,28 +225,22 @@ def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(
         root,
     )
 
-    expected_roots = {
-        *_standard_realization_override_roots(root),
-        str((root / "build" / "artifact.txt").resolve()),
-    }
+    expected_roots = {str(root.resolve())}
     assert _override_permission_roots(override_args, "write") == expected_roots
     _assert_writable(override_args, root / "src" / "main.py")
     _assert_writable(override_args, root / "src" / "new.py")
     _assert_writable(override_args, root / ".gitignore")
     _assert_not_writable(override_args, root / "build" / "new.txt")
     _assert_not_writable(override_args, root / ".agents" / "blocked.md")
-
     extra = root / "docs" / "generated.md"
-    _assert_not_writable(override_args, extra)
+
     override_args = build_codex_override_args(
         parameter,
         CmocConfig(),
         root,
         extra_writable_paths=[extra],
     )
-    assert _override_permission_roots(override_args, "write") == (
-        expected_roots | {str((root / "docs").resolve())}
-    )
+    assert _override_permission_roots(override_args, "write") == expected_roots
     _assert_writable(override_args, extra)
 
 
@@ -301,8 +294,11 @@ def test_codex_overrides_rejects_disallowed_extra_writable_paths(
         )
 
 
-def test_codex_overrides_allows_root_ancillary_extra_writable_path(
-    tmp_path: Path,
+@pytest.mark.parametrize(
+    "mode", [FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE]
+)
+def test_codex_overrides_allows_new_root_ancillary_file(
+    tmp_path: Path, mode: FileAccessMode
 ) -> None:
     """realization write がルート直下の ancillary ファイルを追加許可できることを検証する。"""
     root = make_repo(tmp_path)
@@ -316,7 +312,7 @@ def test_codex_overrides_allows_root_ancillary_extra_writable_path(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.REALIZATION_WRITE,
+        mode,
         "prompt",
         None,
     )
@@ -325,19 +321,10 @@ def test_codex_overrides_allows_root_ancillary_extra_writable_path(
         CmocConfig(),
         root,
     )
-    _assert_not_writable(baseline_args, extra)
-
-    override_args = build_codex_override_args(
-        parameter,
-        CmocConfig(),
-        root,
-        extra_writable_paths=[extra],
-    )
-
-    assert _override_permission_roots(override_args, "write") == (
-        _standard_realization_override_roots(root) | {str(extra.resolve())}
-    )
-    _assert_writable(override_args, extra)
+    _assert_writable(baseline_args, extra)
+    assert _override_permission_roots(baseline_args, "write") == {
+        str(root.resolve())
+    }
 
 
 

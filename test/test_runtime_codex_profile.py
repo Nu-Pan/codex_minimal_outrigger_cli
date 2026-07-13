@@ -23,7 +23,6 @@ from _codex_support import (
     _override_permission_filesystem,
     _override_permission_roots,
     _override_writable_roots,
-    _standard_realization_override_roots,
     codex_arg_value,
     codex_override_config,
 )
@@ -106,7 +105,7 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_not_permission_accessible(
         overrides[FileAccessMode.PURE_ORACLE_WRITE], root / "src" / "existing.py"
     )
-    realization_roots = _standard_realization_override_roots(root)
+    realization_roots = {str(root.resolve())}
     assert _override_permission_roots(
         overrides[FileAccessMode.REALIZATION_WRITE], "write"
     ) == realization_roots
@@ -124,10 +123,7 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     ) == {str((root / "oracle").resolve())}
     assert _override_permission_roots(
         overrides[FileAccessMode.REPO_WRITE], "write"
-    ) == {
-        *realization_roots,
-        str((root / "oracle").resolve()),
-    }
+    ) == realization_roots
     _assert_writable(
         overrides[FileAccessMode.REALIZATION_WRITE], root / "src" / "existing.py"
     )
@@ -199,9 +195,7 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
         root,
         extra_writable_paths=[repo_extra],
     )
-    assert str(repo_extra.resolve()) in _override_permission_roots(
-        override_args, "write"
-    )
+    _assert_writable(override_args, repo_extra)
 
     with pytest.raises(CmocError, match="許可領域外"):
         build_codex_override_args(
@@ -307,9 +301,10 @@ def test_standard_realization_roots_follow_path_boundaries(tmp_path: Path) -> No
         root,
     )
 
-    assert _override_permission_roots(override_args, "write") == (
-        _standard_realization_override_roots(root)
-    )
+    assert _override_permission_roots(override_args, "write") == {
+        str(root.resolve())
+    }
+    _assert_not_writable(override_args, outside / "new.py")
 
 
 def test_codex_overrides_allows_repo_local_read_from_linked_worktree(

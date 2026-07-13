@@ -236,6 +236,77 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- Exit code: `0`" in console
 
 
+def test_capacity_probe_retry_skips_quota_poll_interval(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """probe の capacity retry は quota polling 間隔を重ねて待たない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    probe_prompt = quota_probe_prompt(root)
+    sleeps: list[float] = []
+    monkeypatch.setattr(runtime_codex_exec.time, "sleep", sleeps.append)
+    calls: list[str] = []
+    probe_count = 0
+
+    def fake_run(
+        argv: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """quota failure, capacity probe, recovery probe, resume の列を返す。"""
+        nonlocal probe_count
+        stdin = cast(TextIO, kwargs["stdin"]).read()
+        if "resume" in argv:
+            kind = "resume"
+        elif stdin == probe_prompt:
+            kind = "probe"
+        else:
+            kind = "initial"
+        calls.append(kind)
+        output = Path(argv[argv.index("--output-last-message") + 1])
+        if kind == "initial":
+            return subprocess.CompletedProcess(
+                argv,
+                1,
+                '{"type":"thread.started","thread_id":"sess-1"}\n'
+                '{"type":"error","message":"Quota exceeded"}\n',
+                "",
+            )
+        if kind == "probe":
+            probe_count += 1
+            if probe_count == 1:
+                return subprocess.CompletedProcess(
+                    argv,
+                    1,
+                    '{"type":"error","message":"Selected model is at capacity"}\n',
+                    "",
+                )
+        output.write_text('{"ok":true}')
+        return subprocess.CompletedProcess(
+            argv, 0, '{"type":"turn.completed"}\n', ""
+        )
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
+    result = run_codex_exec(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
+            None,
+        ),
+        root=root,
+        quota_poll_interval_sec=1800,
+        capacity_initial_sleep_sec=5,
+        max_quota_polls=1,
+        config=CmocConfig(),
+    )
+
+    assert calls == ["initial", "probe", "probe", "resume"]
+    assert sleeps == [1800, 5]
+    assert result.quota_wait_sec == 1800
+    assert result.output_json == {"ok": True}
+
+
 def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

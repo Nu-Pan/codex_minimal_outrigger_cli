@@ -177,17 +177,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     filesystem = override_config["permissions"]["cmoc"]["filesystem"]
     assert {
         path for path, access in filesystem.items() if access == "write"
-    } == {
-        str(path.resolve())
-        for path in (
-            root / ".gitignore",
-            root / "README.md",
-            root / "bin",
-            root / "oracle",
-            root / "src",
-            root / "test",
-        )
-    }
+    } == {str(root.resolve())}
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
