@@ -1,3 +1,4 @@
+from contextlib import chdir
 from pathlib import Path
 
 from click.testing import Result
@@ -13,11 +14,14 @@ TEST_SLM_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 
 
 def run_doctor(root: Path) -> Result:
-    """Run doctor against the managed Ollama service shared with production."""
+    """Run doctor in root against the managed Ollama service shared with production."""
     from main import app
 
     # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
     # Keep production HOME, PATH, and the fixed 127.0.0.1:11434 endpoint.
-    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+    # <work-root>/oracle/doc/app_spec/sub_command/doctor.md
+    # doctor has no root option; its cwd must identify the requested worktree.
+    with chdir(root):
+        result = runner.invoke(app, ["doctor"], catch_exceptions=False)
     assert result.exit_code == 0
     return result
