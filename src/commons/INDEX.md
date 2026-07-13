@@ -285,22 +285,23 @@
 # `runtime_git.py`
 
 ## Summary
-- Git まわりの共通境界をまとめた実行時ヘルパー群です。branch 判定、worktree の作成・削除、状態取得、`.cmoc/local` の ignore 制御、oracle file 判定を扱います。
-- `git` 呼び出しの失敗を利用者向けエラーへ揃える境界や、cmoc 管理領域の worktree・ignore 判定を確認したいときに読む対象です。
+- `src/commons/runtime_git.py` は、cmoc が使う git 操作の共通境界をまとめる。git subprocess の実行、現在 branch/HEAD の取得、worktree と managed branch の検証・削除、`.cmoc/local` の ignore 状態管理、oracle file / realization file の判定を扱う。
+- このファイルを読むべきなのは、git コマンド失敗時の利用者向け例外化、branch や worktree の命名・存在確認、worktree の安全な削除条件、`.cmoc/local` を追跡対象外にする処理、ある path が oracle file か realization file かの判定を変更・追跡したいとき。
+- このファイルを読まなくてよいのは、cmoc の設定値そのもの、path placeholder の解決ロジック、個別サブコマンドの業務手順だけを扱うとき。`runtime_git.py` はそれらの前提を利用する側であり、仕様本体ではない。
 
 ## Read this when
-- `git` subprocess の失敗処理や、branch / HEAD / status の取得方法を確認したい。
-- cmoc が管理する worktree の作成・削除条件や、管理外 worktree を拒否する制約を確認したい。
-- `.cmoc/local` を tracked にしないための ignore 追加・検査・修復ロジックを確認したい。
-- oracle file かどうかの判定基準を確認したい。
+- git 呼び出しのエラー変換や `CommandResult` の扱いを変えたいとき。
+- `cmoc/session/...` や `cmoc/apply/...` の branch、linked worktree、削除条件を変更したいとき。
+- `.cmoc/local` の ignore 判定、`.gitignore` / `info/exclude` の更新、tracked か untracked かの扱いを見直したいとき。
+- oracle file / realization file の分類条件や、`INDEX.md` / `AGENTS.md` を除外する判定を確認したいとき。
 
 ## Do not read this when
-- session / apply / review のコマンド全体の制御フローを追いたいときは、各 `sub_commands` 側を読む。
-- git 以外の入出力変換やレポート生成を追いたいときは、このファイルではなく該当機能の実装を読む。
-- 既に `git` 呼び出し境界や ignore 判定の詳細を知っていて、上位コマンドの振る舞いだけを追いたいときは、より上位のモジュールを先に読む。
+- cmoc の設定項目や既定値だけを確認したいとき。その場合は config 側を見る。
+- `<repo-root>`, `<work-root>`, `<run-root>` の解決規則だけを確認したいとき。その場合は path model 側を見る。
+- session fork や apply fork の実行手順そのものを追いたいとき。その場合は各サブコマンドの oracle doc を読む。
 
 ## hash
-- ec4a87a8ad077112339331808411cd7608e7aea9599f594b7dbcdcc39132f493
+- ef8ea7bf8eac761548c4d6fc3094a7abdecf88c1c09276e290d19d1176eeb750
 
 # `runtime_logging.py`
 
