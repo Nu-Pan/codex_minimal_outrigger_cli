@@ -42,7 +42,7 @@ def run_apply_fork_builder_import(
     work = tmp_path / "work"
     (work / ".git").mkdir(parents=True)
     return subprocess.run(
-        [sys.executable, "-c", code],
+        [sys.executable, "-S", "-c", code],
         cwd=work,
         env={**os.environ, "PYTHONPATH": str(target), "PYTHONNOUSERSITE": "1"},
         text=True,
@@ -51,6 +51,11 @@ def run_apply_fork_builder_import(
 
 
 def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None:
+    """packaged layout で apply fork builder の import 契約を検証する。
+
+    根拠: <work-root>/oracle/src/oracle/acp_builder/apply/fork/change_summary.json
+    <work-root>/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.json
+    """
     result = run_apply_fork_builder_import(
         tmp_path,
         (
@@ -79,6 +84,10 @@ def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None
 def test_finding_application_prompt_uses_complete_standard_prompt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """finding application が標準 prompt と所見を保持することを検証する。
+
+    根拠: <work-root>/oracle/src/oracle/acp_builder/apply/fork/finding_application.py
+    """
     repo_root = tmp_path / "repo"
     apply_worktree = repo_root / ".cmoc" / "local" / "worktree" / "session" / "run"
     apply_worktree.mkdir(parents=True)
@@ -120,6 +129,10 @@ def test_finding_application_prompt_uses_complete_standard_prompt(
 
 
 def test_file_finding_enumeration_schema_matches_oracle_source() -> None:
+    """file finding enumeration が正本 schema を参照することを検証する。
+
+    根拠: <work-root>/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.json
+    """
     parameter = build_apply_fork_file_finding_enumeration_parameter(Path(__file__))
 
     assert parameter.structured_output_schema_path == oracle_schema_path(
@@ -134,6 +147,10 @@ def test_file_finding_enumeration_schema_matches_oracle_source() -> None:
 def test_file_finding_enumeration_prompt_uses_complete_standard_prompt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """file finding enumeration が標準 prompt と root を組み立てることを検証する。
+
+    根拠: <work-root>/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.py
+    """
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     (repo_root / ".git").mkdir()
@@ -157,6 +174,10 @@ def test_file_finding_enumeration_prompt_uses_complete_standard_prompt(
 def test_file_finding_enumeration_rejects_relative_target_without_root_token(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """root token のない相対 target path を拒否することを検証する。
+
+    根拠: <work-root>/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.py
+    """
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     (repo_root / ".git").mkdir()
@@ -171,6 +192,10 @@ def test_file_finding_enumeration_rejects_relative_target_without_root_token(
 def test_apply_fork_prompts_use_expected_roots(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """apply fork の各 prompt が repo root と work root を使い分けることを検証する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    """
     repo_root = tmp_path / "repo"
     apply_worktree = repo_root / ".cmoc" / "local" / "worktree" / "session" / "run"
     apply_worktree.mkdir(parents=True)
@@ -201,6 +226,10 @@ def test_apply_fork_prompts_use_expected_roots(
 
 
 def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
+    """change summary が正本 schema に適合することを検証する。
+
+    根拠: <work-root>/oracle/src/oracle/acp_builder/apply/fork/change_summary.json
+    """
     parameter = build_apply_fork_change_summary_parameter("diff")
     expected_path = oracle_schema_path("apply", "fork", "change_summary.json")
 
