@@ -21,6 +21,7 @@ import sub_commands.review.oracle as review_module
 from sub_commands.review_paths import finding_oracle_path
 from sub_commands.review_targets import enumerate_review_all_oracle_files
 
+
 class _FakeCodexResult:
     """Structured Output payload だけを保持する review oracle fake。"""
 
@@ -36,13 +37,17 @@ def _empty_finding_response(parameter: object) -> _FakeCodexResult:
         raise AssertionError(schema_name)
     return _FakeCodexResult({"findings": []})
 
-def test_finding_oracle_path_rejects_relative_without_placeholder(tmp_path: Path) -> None:
+
+def test_finding_oracle_path_rejects_relative_without_placeholder(
+    tmp_path: Path,
+) -> None:
     """placeholder のない相対 finding path を拒否し、oracle alias を解決する。"""
     assert finding_oracle_path({"oracle_path": "oracle/spec.md"}, tmp_path) is None
     assert (
         finding_oracle_path({"oracle_path": "<oracle-root>/spec.md"}, tmp_path)
         == (tmp_path / "oracle" / "spec.md").resolve()
     )
+
 
 def test_finding_oracle_path_resolves_work_root_from_review_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -57,6 +62,7 @@ def test_finding_oracle_path_resolves_work_root_from_review_worktree(
     assert finding_oracle_path(
         {"oracle_path": "<work-root>/oracle/spec.md"}, review_worktree
     ) == (review_worktree / "oracle" / "spec.md").resolve()
+
 
 def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     tmp_path: Path,
@@ -126,6 +132,7 @@ def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     ]
     assert len(enumerate_calls) == 6
 
+
 def test_review_oracle_session_scope_reports_total_and_no_targets(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -160,6 +167,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     assert "oracle_count_evaluated: 0" in rendered
     assert "result: no_targets" in rendered
     assert "レビュー対象 oracle が 0 件でした。" in rendered
+
 
 def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     tmp_path: Path,
@@ -212,6 +220,7 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     assert "`oracle/ignored-link.md`" in rendered
     assert "`oracle/ignored.md`" in rendered
 
+
 def test_review_oracle_session_scope_uses_review_fork_commit(
     tmp_path: Path,
 ) -> None:
@@ -235,6 +244,7 @@ def test_review_oracle_session_scope_uses_review_fork_commit(
 
     assert targets == [(root / "oracle" / "fork.md").resolve()]
 
+
 def test_review_oracle_target_enumeration_excludes_agents_and_index(
     tmp_path: Path,
 ) -> None:
@@ -248,6 +258,7 @@ def test_review_oracle_target_enumeration_excludes_agents_and_index(
     index.write_text("# index\n")
 
     assert enumerate_review_all_oracle_files(root) == [spec.resolve()]
+
 
 def test_review_oracle_target_enumeration_classifies_oracle_symlink_by_repo_path(
     tmp_path: Path,
