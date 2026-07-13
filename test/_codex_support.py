@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from commons.runtime_git import is_untracked_git_ignored
 # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
 
 
@@ -89,21 +88,6 @@ def _override_permission_roots(args: list[str], access: str) -> set[str]:
         path
         for path, actual_access in _override_permission_filesystem(args).items()
         if actual_access == access
-    }
-
-
-def _standard_realization_override_roots(root: Path) -> set[str]:
-    """Return tracked standard realization paths allowed by the test override."""
-    root = root.resolve()
-    candidates = [root / name for name in ("src", "test", "bin", ".gitignore")]
-    if (root / "README.md").exists():
-        candidates.append(root / "README.md")
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-    return {
-        str(path)
-        for candidate in candidates
-        for path in (candidate.resolve(),)
-        if path.is_relative_to(root) and not is_untracked_git_ignored(root, path)
     }
 
 
