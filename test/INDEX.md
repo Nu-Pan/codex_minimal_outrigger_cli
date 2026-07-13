@@ -546,20 +546,22 @@
 # `test_packaged_import.py`
 
 ## Summary
-- パッケージ配置での import 境界を確認するテスト群。`oracle` 側の正本定義が、配布形態でも `acp.builder` と `config.cmoc_config` から正しく参照・再公開されること、そしてレビュー用の oracle 生成処理が packaged layout でも期待どおりの参照先と出力スキーマを持つことを検証する。
+- `packaged layout` での import 境界と公開面の検証をまとめたテスト群。`oracle` 配下の正本定義が配布物側で正しく再公開されるか、余計な公開が混入しないかを確認したいときに読む。
+- 対象は `acp.builder.review.oracle` の builder、`acp.builder.basic` の canonical 型再公開、`config.cmoc_config` の公開面制約で、個別の実装ロジックや oracle 本文の仕様確認よりも import 契約の確認が主目的。
 
 ## Read this when
-- `oracle` 配下の実装を配布用レイアウトから import できるかを確認したいとき。
-- `acp.builder` の公開 API が canonical 定義を再公開していることを確認したいとき。
-- レビュー用 oracle のパラメータ生成が、正本仕様ファイルを入力に受け取り、生成物と prompt の契約を満たすかを確認したいとき。
+- packaged layout で `acp.builder.review.oracle` の builder が正しく import できるかを確認したいとき
+- 正本の `AgentCallParameter` や `ModelClass` が realization 側で複製されず再公開されているかを確認したいとき
+- `config.cmoc_config` の公開面が設定定義だけに絞られているかを確認したいとき
+- 配布物として組み立てた tree で import 境界や `__all__` の契約を検証したいとき
 
 ## Do not read this when
-- 通常のビジネスロジックや CLI 挙動を確認したいだけのとき。
-- `oracle` の正本内容そのものの編集方針を知りたいときは、このテストではなく対応する `oracle` 側の定義を読むべき。
-- packaged layout ではない通常の開発環境での import 解決だけを見たいときは、より直接のモジュール実装や公開定義を読むべき。
+- oracle の仕様断片そのものを追加・修正したいときは、対応する `oracle/src` 側を見るべきで、このテストは読まなくてよい
+- builder のプロンプト内容や schema 本文の仕様を確認したいときは、対応する正本実装や prompt builder 側を直接読むべきで、このテストは主対象ではない
+- packaged layout ではなく通常の実行時挙動や CLI 全体の流れを追いたいときは、より上位の実装・テストを読むべきで、このファイルは後回しでよい
 
 ## hash
-- 3678aacc11be328efaffe58f8f497cb99edf2a97ea9fb17b6040f973943ba350
+- 392997d67501bad02e59642e8c08a3bcdaff1e1a87aee044e57561d96efa9c5a
 
 # `test_prompt_parts.py`
 
