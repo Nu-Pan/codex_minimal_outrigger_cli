@@ -115,21 +115,22 @@
 # `src`
 
 ## Summary
-- `src` は realization implementation の本体をまとめる上位入口。互換 shim や補助層ではなく、CLI、共通基盤、設定、各サブコマンドの実体へ進む起点として読む。
-- この階層は `acp`、`basic`、`commons`、`config`、`main.py`、`oracle.py`、`sub_commands` などの公開面と実装本体を含み、どの責務がどの下位 module にあるかを切り分けるための案内を担う。
+- `src` は cmoc の realization implementation の本体。CLI 入口、互換 import 面、共通 runtime 基盤、設定、サブコマンド実装をまとめて案内する起点として読む。
+- `main.py` は Typer ベースの CLI 入口とサブコマンド接続、引数解析エラーの cmoc 形式変換を担う。利用者向けコマンド面を確認したいときに進む。
+- `acp`、`basic`、`config` は既存 import 面を保つ互換層、`commons` は共有 runtime 基盤、`sub_commands` は各操作の実処理入口、`cmoc_runtime.py` と `oracle.py` は packaged 起動時の import 互換を担う。
 
 ## Read this when
-- realization implementation の本体を探していて、どの下位 module を読むべきか絞り込みたいとき。
-- CLI 入口、互換 import 面、共通基盤、設定、各サブコマンド実装の責務境界を確認したいとき。
-- `acp.*` や `basic.*` などの既存参照を残しつつ、実体側へどう接続されているかを追いたいとき。
+- CLI の公開面や subcommand の接続先を確認したいとき。
+- 既存の `acp.*`、`basic.*`、`config.*`、`oracle.*` import を壊さずに正本側へつなぐ経路を確認したいとき。
+- 共通 runtime helper、設定、サブコマンド実装のどこへ進むべきかを見分けたいとき。
 
 ## Do not read this when
-- 個別機能の実装詳細や制御フローを直接知りたいときは、ここではなく該当する下位 module を読む。
-- `oracle` 側の正本仕様断片そのものを確認したいときは、`src` ではなく正本側を読む。
-- 互換入口や公開面の維持可否ではなく、単一の具体的な処理だけを調べたいとき。
+- 個別サブコマンドの内部処理だけを追いたいときは、対応する下位 module を直接読む。
+- 正本仕様の本文や人間向けの仕様断片だけを確認したいときは、`oracle` 側を読む。
+- 新しい公開 API を追加する場所を探しているときは、ここは入口なので下位の責務別 module を読む。
 
 ## hash
-- c16dbeeeb886d27b69fd48b6ed320ad45276d65de3a71a2426091a2500012566
+- d4e8daba6260c169a18f1db9b8c8f96400e983b8d1d5353f23b077861b7093f1
 
 # `test`
 

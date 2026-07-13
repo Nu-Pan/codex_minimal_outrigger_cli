@@ -74,25 +74,29 @@
 # `review`
 
 ## Summary
-- `__init__.py` は review 系サブコマンド群の package 境界だけを示す最小の初期化モジュールです。ここでは具体的な CLI 動作や公開 API は追わず、この階層を review 系の Python package として扱う根拠を確認したいときに読む対象です。
-- `oracle.py` は review oracle の実行入口です。isolated review worktree の作成と削除、対象 oracle の選択、review branch の merge 条件、所見収集と report 出力までの流れを追いたいときに読む対象です。
+- `review` 系サブコマンド群の package 境界だけを示す最小の初期化モジュールで、具体的な処理や公開 API は持たない。
+- `oracle.py` は `cmoc review oracle` の実行入口で、起動前提の確認から isolated review worktree の作成・削除、必要時の merge、所見レポート出力までの全体制御を担う。
 
 ## Read this when
 - review 系サブコマンド群の package 境界そのものを確認したいとき。
 - この階層が review 系サブコマンド用の Python package として扱われる根拠を確認したいとき。
-- review oracle の実行フローを確認したいとき。
-- review worktree の作成・削除、review branch の merge 条件、所見レポートの出力経路を確認したいとき。
-- review 対象の oracle ファイル列挙、scope に応じた対象選択、レビュー処理ループ、失敗時のレポート生成を追いたいとき。
+- `cmoc review oracle` の実行フロー全体を確認したいとき。
+- isolated review worktree の作成・削除、review branch の merge 条件、レポート出力までの制御を追いたいとき。
+- review 実行の前提条件として、active session branch かどうか、git 未コミット差分がないかを確認したいとき。
+- 対象 oracle の列挙や所見処理そのものではなく、それらをどう組み合わせて実行しているかを見たいとき。
 
 ## Do not read this when
 - review 系サブコマンドの具体的な CLI 挙動、引数、出力、制御フローを調べたいとき。
 - review 系サブコマンド内の個別機能や実装詳細を調べたいとき。
-- package 初期化時の import、副作用、公開シンボルを調べたいとき。ただし現在内容からはその責務は読み取れません。
-- 通常の subcommand 実行基盤や汎用 runtime 操作だけを追いたいとき。
-- oracle 対象の列挙規則やレビュー index の衝突解決だけを確認したいとき。
+- package 初期化時の import、副作用、公開シンボルを調べたいとき。
+- review 対象 oracle file の選定規則だけを知りたいとき。
+- 所見の列挙・整理・擁護・反証の処理本体を追いたいとき。
+- review branch の INDEX.md 反映や merge 失敗時の競合解決だけを確認したいとき。
+- レポートの Markdown 形式や集計表示だけを確認したいとき。
+- このサブコマンドの CLI 登録や引数定義だけを確認したいとき。
 
 ## hash
-- 9c33838b8459397caba6c5f972c9d55f9980ac457c8c8101bc3161d760c9a7bb
+- 2aa5e427bc725a82d683da533801858fbf9f10adcb9dc77e5ed5d14d4f5c1a3c
 
 # `review_index.py`
 

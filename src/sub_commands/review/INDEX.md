@@ -19,15 +19,21 @@
 # `oracle.py`
 
 ## Summary
-- `review/oracle.py` は、現在の session branch に対して review oracle を isolated review worktree 上で実行し、所見収集・レビュー用 index の反映・必要なら review branch の merge・レポート出力までをまとめて扱う実行入口です。
+- `cmoc review oracle` の実行入口で、CLI runtime 経由の起動、active session branch の検査、clean worktree 確認、isolated review worktree の作成と削除、review branch の必要時 merge、所見レポート出力までを一連で扱う。
+- `_require_clean_worktree` は review 実行前提の git 未コミット差分チェックにだけ使う。対象選定は `review_targets`、所見ループは `review_loop`、INDEX.md 反映と merge は `review_index`、レポート描画は `review_report` に分かれているので、このファイルは全体制御の流れを追う入口として読む。
 
 ## Read this when
-- `review oracle` CLI の実行フロー、review worktree の作成/削除、review branch の merge 条件、所見レポートの出力経路を確認したいとき。
-- review 対象の oracle ファイル列挙や scope に応じた対象選択、レビュー処理ループ、失敗時のレポート生成を追いたいとき。
+- `cmoc review oracle` の実行フロー全体を確認したいとき。
+- isolated review worktree の作成・削除、review branch の merge 条件、レポート出力までの制御を追いたいとき。
+- review 実行の前提条件として、active session branch かどうか、git 未コミット差分がないかを確認したいとき。
+- 対象 oracle の列挙や所見処理そのものではなく、それらをどう組み合わせて実行しているかを見たいとき。
 
 ## Do not read this when
-- 通常の subcommand 実行基盤や汎用 runtime 操作だけを追いたいときは、より下位の runtime / helper 側を読むべきです。
-- oracle 対象の列挙規則やレビュー index の衝突解決だけを確認したいときは、この入口より対応する helper モジュールを直接読むべきです。
+- review 対象 oracle file の選定規則だけを知りたいときは `review_targets` を読む。
+- 所見の列挙・整理・擁護・反証の処理本体を追いたいときは `review_loop` 配下を読む。
+- review branch の INDEX.md 反映や merge 失敗時の競合解決だけを確認したいときは `review_index` を読む。
+- レポートの Markdown 形式や集計表示だけを確認したいときは `review_report` を読む。
+- このサブコマンドの CLI 登録や引数定義だけを確認したいときは、より上位の CLI 構成側を見る。
 
 ## hash
-- a386908f0bf6383e71e8d8e418272efa36acadbcb9dc7958d48680b0f62849e8
+- 3fe07833192e4c4b6893405f70bfcd8b2ac0f6d2b7838a6b3cc5e370b5b9fb61
