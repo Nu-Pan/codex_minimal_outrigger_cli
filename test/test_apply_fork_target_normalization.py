@@ -1,6 +1,8 @@
 """apply fork の対象 file 正規化だけを検証する回帰テスト。
 
-対象分類の正本: <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+対象分類の正本: <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+`.cmoc/local` の前提: <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+apply fork の適用範囲の正本: <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
 """
 
 from pathlib import Path
