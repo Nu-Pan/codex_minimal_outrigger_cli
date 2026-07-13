@@ -162,6 +162,7 @@ def _cmoc_review_oracle_body(
 
 
 def _require_clean_worktree(root: Path) -> None:
+    """git status を検査し、未コミット差分があれば CmocError を送出する。"""
     statuses = status_path_statuses(
         root, untracked_all=True, include_rename_sources=True
     )
