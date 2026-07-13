@@ -177,18 +177,20 @@
 # `test_acp_builder_session_join_parameters.py`
 
 ## Summary
-- `acp.builder.session.join.conflict_resolution` の公開 API と、セッション join の conflict resolution 用パラメータ生成が正本どおりかを確認する回帰テスト。公開された builder だけを残し、内部依存を外へ漏らさないことと、生成時に repo write 権限・高い推論設定・索引事前処理なしで conflict 対象ファイルを prompt に反映することを扱う。
+- `acp.builder.session.join.conflict_resolution` の公開面と、conflict resolution 用パラメータの契約を検証するテスト。ビルダ以外を export しないこと、repo write 権限で高強度推論を使うこと、prompt に conflict 対象ファイルが含まれることを確認する。
 
 ## Read this when
-- セッション join の conflict resolution builder の契約変更を確認したいとき。
-- 公開モジュールの export 境界や、生成される agent call parameter の権限・モデル設定・prompt 反映を検証したいとき。
+- session join の conflict resolution builder がどの公開 API を持つべきか確認したいとき。
+- conflict resolution 用の agent call パラメータが、モデル種別・推論強度・ファイルアクセス権限・事前 indexing の有無をどう固定しているか確認したいとき。
+- 公開モジュールから内部依存が漏れていないかを検証するテストを追加・更新したいとき。
 
 ## Do not read this when
-- session join の他の builder や join 処理全体の挙動を追いたいときは、より直接の実装・テストを読む。
-- 公開 API ではなく内部ヘルパーの分割や実装手順だけを確認したいときは、ここではなく対応する実装側を読む。
+- conflict resolution の実装本体や prompt 組み立てロジックの詳細を追いたいときは、対応する実装側を直接読むべき。
+- session join 以外の builder や他の agent parameter の契約を確認したいときは、このテストではなく該当領域のテストを読むべき。
+- 一般的な ACP パラメータ仕様を知りたいだけなら、このファイルではなく型定義や共通実装を読むべき。
 
 ## hash
-- 0e1cfedb64251290b7dab4e8a69db9fa29c5c44c0d8f10dc2783621c24cd0637
+- eaf28ad4dbb1c7591faa34e604dfdeb606731bcf327b153ff757134f3a5181c7
 
 # `test_acp_builder_tui_parameters.py`
 
