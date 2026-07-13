@@ -490,21 +490,21 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor コマンドの事前修復と設定生成の外形挙動を検証する統合テスト群。`.cmoc` 周辺の修復、git 状態の保持、linked worktree の扱い、Ollama 連携、`dector` 互換までをまとめて扱う。
-- 個別の内部実装ではなく、`doctor` 実行後に残るファイル状態・commit 内容・ignore 状態・サービス設定・モデル取得順序を確認したいときに読む。
+- `doctor preprocess` の共有 lifecycle を、CLI 経由と直接呼び出しの両方から確認する統合テスト群。`.cmoc/local`、`.agents`、config、managed Ollama、Git index の相互作用をまたぐ挙動を読むときに進む。
+- 共有 fixture と lock 待ち、repo/worktree 分岐、preexisting staged changes の保持を扱うため、関連する単体テストより先にこのファイルを読む。
 
 ## Read this when
-- `doctor` / `dector` の CLI 挙動を変える、またはその修復処理を調べたいとき。
-- `.gitignore`、`.agents/.gitkeep`、`.cmoc/config.json`、`.cmoc/local`、linked worktree の扱いなど、doctor 実行後のリポジトリ状態を確認したいとき。
-- Ollama の managed service とモデル取得の順序・対象がどうなるかを確認したいとき。
+- `doctor preprocess` が repository/worktree 前提で何を修復し、何を commit し、何を保持するかを確認したいとき。
+- CLI 起点と `run_doctor_preprocess` 直呼び出しの両方で、shared doctor lock、linked worktree、managed Ollama、Git index の扱いをまとめて追いたいとき。
+- `.cmoc/local` の ignore 修復や `.agents/.gitkeep` の生成、既存 staged 変更を壊さない条件を確認したいとき。
 
 ## Do not read this when
-- doctor 以外の CLI サブコマンドの外形挙動を調べるときは、そちらのテスト群を先に読む。
-- Ollama のインストール手順や service 定義そのものの仕様を知りたいだけなら、doctor テストではなく該当する runtime / config 側を読む。
-- 内部 helper の細かな実装順や git 操作の逐語的な流れだけを追いたいときは、まず対応する実装ファイルを読む。
+- Ollama の個別実装やサービス生成だけを追いたいときは、managed Ollama 側の仕様や実装を直接読む。
+- config の構造やデフォルト同期だけを見たいときは、config 生成・同期の対象へ直接進む。
+- doctor 以外の sub command の挙動や別の統合テストを見たいときは、このファイルではなく該当するテストへ進む。
 
 ## hash
-- 0f3cdb2204056fdd5676af62d25bad7649e3577560f56ce362b0901f1e386620
+- 0b8f1462f85f74cd89666411f4ef08e8fdfc6e732a7aeb55c073d462892fbf8a
 
 # `test_indexing_cli.py`
 
