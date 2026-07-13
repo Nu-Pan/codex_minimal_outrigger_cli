@@ -384,6 +384,12 @@ def test_review_oracle_accepts_short_scope_option(
 def test_review_oracle_writes_error_report_on_processing_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """judge 失敗時の error report 保存・提示と未判定 finding の扱いを検証する。
+
+    根拠:
+        <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+        <work-root>/oracle/doc/dev_rule/coding_rule.md
+    """
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -414,6 +420,11 @@ def test_review_oracle_writes_error_report_on_processing_failure(
             "validate_finding_advocate.json",
         }:
             return _FakeCodexResult({"reasons": []})
+        if schema_name == "merge_finding.json":
+            return _FakeCodexResult({"operations": []})
+        assert schema_name == "judge_finding.json"
+        purpose = kwargs.get("purpose")
+        assert isinstance(purpose, str) and "judge" in purpose
         raise RuntimeError("judge failed")
 
     monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
