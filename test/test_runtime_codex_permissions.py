@@ -3,6 +3,7 @@
 根拠:
 - <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
 - <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+- <work-root>/oracle/doc/app_spec/doctor_preprocess.md
 """
 
 from fnmatch import fnmatch
@@ -212,14 +213,15 @@ def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(
     run_git(root, "add", "-f", "build")
     run_git(root, "commit", "-m", "add realization dirs")
 
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.REALIZATION_WRITE,
+        "prompt",
+        None,
+    )
     override_args = build_codex_override_args(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.REALIZATION_WRITE,
-            "prompt",
-            None,
-        ),
+        parameter,
         CmocConfig(),
         root,
     )
@@ -235,19 +237,18 @@ def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(
     _assert_not_writable(override_args, root / "build" / "new.txt")
     _assert_not_writable(override_args, root / ".agents" / "blocked.md")
 
+    extra = root / "docs" / "generated.md"
+    _assert_not_writable(override_args, extra)
     override_args = build_codex_override_args(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.REALIZATION_WRITE,
-            "prompt",
-            None,
-        ),
+        parameter,
         CmocConfig(),
         root,
-        extra_writable_paths=[root / "build" / "artifact.txt"],
+        extra_writable_paths=[extra],
     )
-    assert _override_permission_roots(override_args, "write") == expected_roots
+    assert _override_permission_roots(override_args, "write") == (
+        expected_roots | {str((root / "docs").resolve())}
+    )
+    _assert_writable(override_args, extra)
 
 
 @pytest.mark.parametrize(
@@ -311,24 +312,32 @@ def test_codex_overrides_allows_root_ancillary_extra_writable_path(
     run_git(root, "add", "README.md")
     run_git(root, "commit", "-m", "add gitignore")
 
-    for extra in [root / ".gitignore", root / "README.md"]:
-        override_args = build_codex_override_args(
-            AgentCallParameter(
-                ModelClass.EFFICIENCY,
-                ReasoningEffort.LOW,
-                FileAccessMode.REALIZATION_WRITE,
-                "prompt",
-                None,
-            ),
-            CmocConfig(),
-            root,
-            extra_writable_paths=[extra],
-        )
+    extra = root / "CHANGELOG.md"
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.REALIZATION_WRITE,
+        "prompt",
+        None,
+    )
+    baseline_args = build_codex_override_args(
+        parameter,
+        CmocConfig(),
+        root,
+    )
+    _assert_not_writable(baseline_args, extra)
 
-        assert _override_permission_roots(
-            override_args, "write"
-        ) == _standard_realization_override_roots(root)
-        _assert_writable(override_args, extra)
+    override_args = build_codex_override_args(
+        parameter,
+        CmocConfig(),
+        root,
+        extra_writable_paths=[extra],
+    )
+
+    assert _override_permission_roots(override_args, "write") == (
+        _standard_realization_override_roots(root) | {str(extra.resolve())}
+    )
+    _assert_writable(override_args, extra)
 
 
 
@@ -340,20 +349,27 @@ def test_codex_overrides_readonly_modes_allow_extra_ignored_gap_path(
 ) -> None:
     """読み取り専用モードが ignore された gap path の追加許可を受け入れることを検証する。"""
     root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("/scratch/\n")
-    (root / "scratch").mkdir()
+    (root / ".gitignore").write_text("/scratch.tmp\n")
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "add gitignore")
-    target = root / "scratch" / "agent.tmp"
+    target = root / "scratch.tmp"
+
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        mode,
+        "prompt",
+        None,
+    )
+    baseline_args = build_codex_override_args(
+        parameter,
+        CmocConfig(),
+        root,
+    )
+    _assert_not_writable(baseline_args, target)
 
     override_args = build_codex_override_args(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            mode,
-            "prompt",
-            None,
-        ),
+        parameter,
         CmocConfig(),
         root,
         extra_writable_paths=[target],
