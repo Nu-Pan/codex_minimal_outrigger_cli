@@ -1,3 +1,14 @@
+"""Codex exec の再試行と失敗時ログを検証する。
+
+Structured Output の意味的失敗、capacity retry、JSONL error、中断、差分保持を
+外部挙動として確認する。根拠は次の正本仕様断片にある。
+
+- <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+- <work-root>/oracle/doc/app_spec/console_and_file_log.md
+- <work-root>/oracle/doc/dev_rule/coding_rule.md
+- <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
+
 import json
 from pathlib import Path
 
@@ -14,13 +25,10 @@ from _git_support import make_repo
 from commons.runtime_codex import run_codex_exec
 
 
-def prompt_log_text(path: str) -> str:
-    return Path(path).read_text()
-
-
 def test_run_codex_exec_retries_semantic_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Structured Output の意味的失敗を一度だけ再試行し、各ログを保存する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -80,7 +88,7 @@ def test_run_codex_exec_retries_semantic_output(
         '{"bad": true}',
         '{"ok": true}',
     ]
-    assert [prompt_log_text(log["prompt_log_path"]) for log in call_logs] == [
+    assert [Path(log["prompt_log_path"]).read_text() for log in call_logs] == [
         "prompt",
         "prompt",
     ]
@@ -102,11 +110,13 @@ def test_run_codex_exec_logs_keyboard_interrupt(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """KeyboardInterrupt を failed call event として記録し、例外を伝播する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
 
     def interrupt(*_args: object, **_kwargs: object) -> object:
+        """Codex subprocess 呼び出しを KeyboardInterrupt で中断する fake。"""
         raise KeyboardInterrupt
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", interrupt)
@@ -154,6 +164,7 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
     first_output_lines: list[str],
     expected_error: str,
 ) -> None:
+    """Structured Output の欠落・空・不正 JSON を再試行し、失敗理由を記録する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -212,6 +223,7 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
 def test_run_codex_exec_logs_capacity_retrying_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_returncode: int
 ) -> None:
+    """capacity error を再試行し、戻り値に依存せず retry event を記録する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -284,6 +296,7 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
     event: dict[str, object],
     structured_output: bool,
 ) -> None:
+    """未知の JSONL error は終了コード 0 でも即時失敗させ、再試行しない。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -338,6 +351,7 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
 def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """capacity retry を挟んでも Codex が作った agent diff を保持する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -389,6 +403,7 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """stdout JSONL 外の error marker を retry 判定に使わず、直接失敗させる。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)

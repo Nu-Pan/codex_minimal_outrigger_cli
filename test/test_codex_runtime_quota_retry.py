@@ -35,11 +35,6 @@ from commons.runtime_codex import run_codex_exec
 from commons.runtime_errors import CmocError
 
 
-def prompt_log_text(path: str) -> str:
-    """保存済み prompt log の本文を読み取る。"""
-    return Path(path).read_text()
-
-
 def quota_probe_prompt(cwd: Path) -> str:
     """実在する quota probe adapter が生成する prompt を返す。"""
     return build_quota_availability_probe_parameter(
@@ -174,7 +169,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         '{"type": "turn.completed"}'
     )
     assert (
-        prompt_log_text(probe_logs[0]["prompt_log_path"])
+        Path(probe_logs[0]["prompt_log_path"]).read_text()
         == probe_prompt
     )
     assert Path(probe_logs[0]["stderr_log_path"]).read_text() == ""
@@ -196,7 +191,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "profile_name" not in initial_log
     assert "profile_path" not in initial_log
     assert len({log["stdout_log_path"] for log in main_logs}) == 2
-    assert [prompt_log_text(log["prompt_log_path"]) for log in main_logs] == [
+    assert [Path(log["prompt_log_path"]).read_text() for log in main_logs] == [
         "prompt",
         "prompt",
     ]
