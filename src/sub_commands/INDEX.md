@@ -1,22 +1,20 @@
 # `apply`
 
 ## Summary
-- `cmoc apply` 系のサブコマンド実装をまとめる領域で、開始・終了・実行結果の記録をそれぞれ別の実装に分けて読む入口。
-- `__init__.py` はパッケージの役割確認だけに使い、`abandon.py` は実行中の apply run の破棄、`fork.py` は 1 回分の apply 実行制御、`fork_report.py` は fork の結果レポート生成、`join.py` は apply join の整合確認とマージ処理を担う。
-- この階層は apply フロー全体を横断して読む必要があるときに使い、個別の subcommand の制御やレポート、cleanup の責務境界を切り分けるための案内に向く。
+- `src/sub_commands/apply` 配下の `cmoc apply` 実装群への入口。各 subcommand の実行本体と、実行結果レポート生成の責務境界を確認したいときに使う。
 
 ## Read this when
-- apply 系サブコマンドの全体像から、どの責務がどのファイルにあるかを見分けたいとき。
-- 破棄・開始・レポート・結合のうち、特定の apply フローに関わる実行本体や状態遷移を確認したいとき。
-- パッケージ説明だけを確認したいときや、どの実装ファイルへ進むべきかを最初に絞り込みたいとき。
+- `cmoc apply` 系の実行フローや失敗時の状態遷移を追いたいとき。
+- `abandon`・`fork`・`join` のどれが目的の処理かを切り分けて、該当実装へ進みたいとき。
+- apply レポートの生成や保存条件を確認したいとき。
 
 ## Do not read this when
-- apply 以外の subcommand の仕様や実装を調べたいとき。
-- 共通 runtime 操作、branch/worktree 基盤、state 読み書きの詳細だけが目的で、この階層の個別制御を読む必要がないとき。
-- 個別コマンドの引数定義やエラー処理を直接追うなら、該当する下位実装へ進んだ方がよいとき。
+- 共通の Git runtime や session/state 基盤だけを確認したいときは、より下位の共通実装へ直接進む。
+- `cmoc apply` 以外の subcommand の入出力や CLI 定義だけを見たいとき。
+- 対象 subcommand がすでに分かっていて、その個別実装へ直接進めるとき。
 
 ## hash
-- c084231ddcd3f355de782a413d5132dc96c0d020b8b2a4a43378fd587b5a5061
+- 3b1c668aa2a015c4fc50ad4b40711c4325069bcdc42379b387db9dc1b83e3677
 
 # `doctor.py`
 

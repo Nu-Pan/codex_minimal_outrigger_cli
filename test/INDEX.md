@@ -290,21 +290,22 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply join の CLI 挙動を検証するテスト群。apply/session の join 成功、cleanup、state 更新、report 出力、dirty worktree、想定外差分、merge conflict、force 解決をまとめて確認する入口として使う。
-- 同じ join 操作でも、branch/state/report などの外部挙動の可否判定を読むときにこのファイルへ進む。内部 helper の分割や実装詳細を追う目的では読まない。
+- `apply join` の CLI 挙動を検証するテスト群。apply worktree の結合成功、clean-up、state 更新、report 生成、cwd が apply worktree のときの扱い、linked session worktree からの join を読む入口にする。
+- 同じ join 操作の境界条件として、stale branch、別 session 由来 branch、lock 後の state 再読込、error process の停止、dirty worktree、想定外差分、merge conflict、force 解消、許可される差分分類を一箇所で確認する。
+- `apply` 側の差分分類と `session` 側の差分分類の境界、`INDEX.md` 以外の conflict の扱い、realization file かどうかの判定を確認したいときに読む。
 
 ## Read this when
-- apply join の成功条件と拒否条件を CLI レベルで確認したいとき。
-- worktree の cwd、dirty 状態、stale branch、想定外差分、rename、merge conflict、force 解決のどれかを含む join 挙動を確認したいとき。
-- join 後に apply worktree、branch、session state、report がどう変わるかを知りたいとき。
+- `apply join` の成功条件と拒否条件、cleanup と state/report の更新を確認したいとき。
+- `apply` と `session` のどちら側の差分として扱うか、また force で戻す対象を確認したいとき。
+- dirty worktree、stale apply branch、別 session の branch、merge conflict、lock 中の state 変化などの境界条件をまとめて追いたいとき。
 
 ## Do not read this when
-- apply join の実装手順や内部関数の分割だけを知りたいときは、対応する実装側を読む。
-- apply/join 以外の CLI や別サブコマンドの振る舞いを調べたいとき。
-- fixture の作り方や git 操作の共通部だけを追いたいときは、支援モジュールを読む。
+- `apply fork` の作成手順や所見生成の詳細だけを見たいときは、join テストではなく apply fork 側を読む。
+- 差分分類の汎用ルールだけを見たいときは、このテスト群より差分分類の正本や補助仕様を先に読む。
+- `INDEX.md` の内容や別コマンドの出力仕様だけを確認したいときは、この join テスト群は直接読まなくてよい。
 
 ## hash
-- c3debd038d7c93a0405813627ed399c4beeee25e120569885b97cfd50d2e9e8a
+- b20e2dd189be6c40287194028d05698ce162752cafdd7e98740c8b86f3915c0a
 
 # `test_basic_runtime.py`
 
