@@ -1,3 +1,10 @@
+"""Codex JSONL の異常系と CLI 不在時のログを検証する。
+
+対応する正本:
+    <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    <work-root>/oracle/doc/app_spec/console_and_file_log.md
+"""
+
 import json
 import subprocess
 from pathlib import Path
@@ -102,12 +109,7 @@ def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_outp
 def test_codex_runtime_reports_missing_codex_cli(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Codex CLI 不在時の例外と失敗ログを検証する。
-
-    対応する正本:
-        <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-        <work-root>/oracle/doc/app_spec/console_and_file_log.md
-    """
+    """Codex CLI 不在時の例外と失敗ログを検証する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
