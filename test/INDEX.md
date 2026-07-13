@@ -414,20 +414,21 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex の quota 枯渇後に、probe の実行、resume token の復元、再実行、待機中並列呼び出しの集約と失敗伝播を検証する回帰テスト群。Codex 実行の外部挙動、ログ出力、待機制御、CODEX_HOME/cwd の扱いを確認したいときに読む。
+- Codex 実行時の quota 枯渇後に、代表 probe を一度だけ挟んで resume/retry へ進む制御を確認したいときに読む。`Codex exec` の外部挙動、resume token の復元、quota probe の呼び出し列、並行待機の集約が主題。
+- quota 待機中の stderr/stdout、call log、subcommand log、`CODEX_HOME` と `cwd` の解決、invalid JSONL や probe 失敗の伝播を追う変更で読む。実装内部の分岐整理や一般的な CLI 設計の議論だけなら他の本文を優先する。
 
 ## Read this when
-- quota exceeded 後の再試行・resume・probe の分岐を確認したいとき。
-- Codex 実行時の call log, subcommand log, stdout/stderr/last-message の記録内容を確認したいとき。
-- 並行に待機している呼び出しが 1 つの代表 probe に集約されるか、失敗が全呼び出しへ伝播するかを確認したいとき。
+- quota exceeded 後に probe を挟んで再実行する挙動を変える、または回帰確認したいとき。
+- resume token の保存・復元、probe の失敗判定、並行待機の集約、`CODEX_HOME`/`cwd` の解決条件を確認したいとき。
+- `codex exec` のログ出力や quota 復帰の観測点を合わせて読みたいとき。
 
 ## Do not read this when
-- quota 以外の Codex 実行経路を見たいときは、より直接の runtime 実行テストを読む。
-- quota probe 用の parameter 構築だけを見たいときは、このファイルではなく quota probe adapter 側を読む。
-- 待機や resume の実装本体を追いたいときは、このテストではなく runtime_codex_exec 側の実装を読む。
+- quota retry 以外の `codex exec` 一般の仕様だけを追いたいとき。
+- probe 以外の builder や別サブコマンドの仕様変更を確認したいとき。
+- 実装の内部 helper 分割やリファクタリングだけが目的で、quota 待機の外部挙動を変えないとき。
 
 ## hash
-- 79f32fa5443b08ac5ea20b62f2b9a37d63df27d13b22f7feeddf0d5e1b32e7ed
+- 2f90753aa11a1011f5a064273d8b6a91b55bfb3a981f6320274408e4d93f14fd
 
 # `test_codex_runtime_retry.py`
 

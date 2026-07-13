@@ -72,20 +72,22 @@
 # `quota_probe.py`
 
 ## Summary
-- 正本の `quota_probe` がまだ無い間だけ使う互換 adapter を扱う。正本への委譲、欠落時の最小 fallback、そしてこの互換経路を消す条件がここにまとまっている。
+- `quota_probe.py` は、配布側の互換入口としてクォータ確認用の builder 呼び出しを受け取り、正本側の実装へそのまま委譲する。
+- この対象を読むのは、互換経路の有無、委譲先の切り替え方、または `AgentCallParameter` を受けて同値で返す入口仕様を確認したいとき。
+- 正本 builder の中身やクォータ確認の仕様本体を追う必要があるときは、この対象ではなく正本側の実装を読む。
 
 ## Read this when
-- `acp.builder.quota_probe` への委譲可否や、欠落時に返す probe 用 parameter の既定値を変えたいとき。
-- quota 回復確認の文面や file access の最小 fallback を、正本 prompt 部品との整合を保ちながら調整したいとき。
-- 正本 builder が追加された後に、この互換 adapter を削除できるか確認したいとき。
+- 配布側の互換入口が必要か確認したいとき。
+- `AgentCallParameter` を受けて同じ値を返す委譲関数の責務を確認したいとき。
+- 互換層がどの正本実装へつながるかを追跡したいとき。
 
 ## Do not read this when
-- 通常の builder 実装全般を追いたいときは、より直接の builder 実装を読む。
-- quota probe 以外の prompt 部品や file access ルールそのものを変更したいときは、それぞれの正本側を読む。
-- この互換経路を使わない状態の利用箇所だけを調べたいときは、利用側から直接たどる。
+- クォータ確認の仕様そのものや builder の内部方針を知りたいとき。
+- 互換入口ではなく正本実装の挙動を確認したいとき。
+- `INDEX.md` のルーティングや上位構成だけを見たいとき。
 
 ## hash
-- c21154655671f9b2da2d217c4afb938e16aad638bf8236f4de676e2d681b94d0
+- befbfaad1a410f47a801e52ea7f202873b193b8ba6e53e573859a7ec5d6e2d33
 
 # `review`
 
