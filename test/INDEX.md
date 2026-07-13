@@ -665,22 +665,20 @@
 # `test_review_oracle_targets.py`
 
 ## Summary
-- `review oracle` の対象抽出と `finding` からの oracle path 解決の境界を検証するテスト群。`, `session scope` と `full scope` の対象選定、追跡済みだが ignore される oracle file の扱い、AGENTS.md / INDEX.md の除外、symlink の分類基準を確認したいときに読む。
-- `review oracle` の CLI 挙動そのものより、対象列挙と path 解決の仕様を確かめる入口として読む。`finding` の Structured Output をどう解釈して review 対象へ落とすか、レビュー結果の選定ロジックを追いたいときに直接進む。
+- review oracle の対象集合と finding の oracle path 解決を検証するテスト群。`review oracle` の対象列挙、`<work-root>` 基準の path 解決、scope 別の対象選択、AGENTS.md / INDEX.md を除外する境界を確認したいときの入口。
 
 ## Read this when
-- `review oracle` のレビュー対象がどの oracle file になるべきかを確認したい。
-- `finding` に含まれる `oracle_path` を `review` 実行時の基準位置からどう解決するかを確認したい。
-- ignore されるが追跡済みの oracle file、symlink、`AGENTS.md`、`INDEX.md` の扱いを確認したい。
-- `session` スコープと `full` スコープで対象集合が変わる条件を確認したい。
+- `review oracle` の対象に含める / 含めない条件を確認したい
+- finding の `oracle_path` から実ファイル位置をどう解決するかを確認したい
+- session scope と full scope の対象選択差を確認したい
 
 ## Do not read this when
-- review 実行の出力整形、レポート本文の文言、Codex 呼び出しの詳細だけを追いたい場合は、より上位の CLI 実装や出力生成側を読む。
-- oracle file の総論や開発規則だけを知りたい場合は、このテストではなく参照先の正本仕様断片を読む。
-- 対象列挙以外の review サブコマンド全般を追いたい場合は、このファイルではなく `review` 本体の実装を読む。
+- review oracle の実装本体や CLI 出力の整形を追いたいときは、対応する実装ファイルを直接読む
+- oracle file の一般原則や開発規則を知りたいだけなら、このテストではなく oracle 側の仕様文書を読む
+- target 列挙以外の review 機能を確認したいときは、別の review テストを読む
 
 ## hash
-- d3d8ad6407f7587debc0e5a25474e42d4bda8f74fcde35d97f6777f55b071790
+- 0196e8f9eb39d17816295375be17a871abe831c73c996ccbdba6962229222e2a
 
 # `test_review_oracle_worktree.py`
 
