@@ -137,29 +137,19 @@
 # `sub_commands`
 
 ## Summary
-- `src/sub_commands` は `cmoc` のサブコマンド実行入口を束ねる階層で、ここでは個別コマンド本体へ進む前に役割の境界を切り分ける。共通の CLI 入口と、apply・session・review・tui・補助コマンドの分岐先を選ぶための案内として読む。
-- `apply` は apply 系サブコマンド群の実行入口をまとめる。破棄・適用・統合・レポートのどれを追うべきかを切り分けたいときに読む。
-- `doctor.py` は doctor サブコマンドから CLI runtime の preprocess 実行へ委譲する薄い入口を扱う。doctor 固有の処理ではなく、どの preprocess 経路に接続されるかを確認したいときに読む。
-- `eval_oracle.py` は want を書き出した oracle の評価を review oracle 実装へ委譲する入口を扱う。評価本体そのものではなく、評価経路の接続関係を確認したいときに読む。
-- `indexing.py` は indexing サブコマンドの起動入口を扱う。事前検査を通したうえで work root の INDEX.md 更新と commit をつなぐ外形的な流れを確認したいときに読む。
-- `review` は review 系サブコマンド群の package 境界と review oracle 実行入口をまとめる。review oracle の実行フローや、review 系の個別実装へ進む前の切り分けに使う。
-- `review_index.py` は review worktree/branch の差分を INDEX.md のみに制限して commit し、必要なら session branch へ merge する処理を扱う。INDEX.md 以外の差分検査や merge 競合の自動解消を追いたいときに読む。
-- `review_loop.py` は review oracle の所見処理ループ本体を扱う。所見の追加・統合・再検証・採用判定の順序や、merge finding の編集検証を確認したいときに読む。
-- `review_paths.py` は finding に入った oracle_path を実体 path と比較用 key に正規化する補助を扱う。レビュー対象の oracle file 参照先解決や、root プレースホルダの解釈を確認したいときに読む。
-- `review_report.py` は review oracle レポートの Markdown 生成を扱う。レポート本文、frontmatter、集計、表示順、保存先の見せ方を変えたいときに読む。
-- `review_targets.py` は review oracle の対象となる oracle file を scope と session 状態に基づいて列挙する。full scope と session scope の対象範囲の違いを確認したいときに読む。
-- `session` は session 系サブコマンド群の package 境界と個別入口をまとめる。session の開始・統合・終了のどれを追うべきかを切り分けたいときに読む。
-- `tui.py` は `cmoc tui` の実行本体を扱う。編集プロンプトの作成、エディタ起動、実行パラメータ解決、TUI 起動までの流れを確認したいときに読む。
+- `src/sub_commands` は `cmoc` の各サブコマンド実行入口をまとめる層で、ここでは個別機能の本体ではなく、どの実装へ進むべきかを切り分けるための案内を担う。
+- この階層には `apply` 系、`review` 系、`session` 系、`tui`、`indexing`、`doctor`、`eval_oracle` の入口があり、各サブコマンドの責務分担や委譲先を確認したいときの起点になる。
+- 実行フローの詳細、状態遷移、出力生成、レポート文面、個別の検査ロジックはこの階層では追わず、対応する下位モジュールへ進む。
 
 ## Read this when
-- `cmoc` のサブコマンド群の中で、どの入口がどの責務を持つかを先に切り分けたいとき。
-- apply・session・review のどれを読むべきかを、目的から判断したいとき。
-- 特定のサブコマンド実装へ進む前に、この階層の案内だけで十分か確認したいとき。
+- `cmoc` のサブコマンド群について、どの機能がどの入口に属するかを切り分けたいとき。
+- 特定の操作を実行する前に、その実装本体がどの下位モジュールにあるかを確認したいとき。
+- サブコマンド共通の入口確認が必要で、個別実装を直接読む前に読む先を絞り込みたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数、エラー処理、内部ロジックの詳細を追いたいときは、該当ファイルへ直接進む。
-- review 対象の選定、レポート生成、所見ループなどの個別機能の内部仕様を知りたいときは、対応する下位モジュールを読む。
-- 共通 runtime や git 操作など、より下位の共通実装だけを見たいときは、この階層ではなく共通モジュールを読む。
+- 特定サブコマンドの引数処理、状態遷移、エラー処理、出力形式の詳細を追いたいときは、該当する実装本体を直接読む。
+- git 操作や worktree 操作、report 生成、差分判定などの共通処理だけを見たいときは、より下位の共通実装を読む。
+- レビュー対象の選定条件、レポート本文、所見ループ、TUI の入力処理など、個別機能の内部仕様を知りたいときは、この階層ではなく該当モジュールを読む。
 
 ## hash
-- 603b52d4a0ec6f94c75da3423e1070256fc1b6a7fc4ee02ebf4a8c9224fe885b
+- 15fa82b24b6b096e5cdeea2becb3953d5263de37cf0690f8f9ac83e32263c381

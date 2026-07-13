@@ -53,19 +53,18 @@
 # `join.py`
 
 ## Summary
-- `session join` サブコマンドの実行本体。session branch 上での前提確認、merge 実行、必要時の conflict 解消依頼、状態更新、ブランチ削除、結果表示までを一連で扱う。
-- merge conflict の検出と処理も含む。未解決 path の列挙、Codex CLI への解消依頼、conflict marker の残存確認、stage、commit までをまとめて読む対象にする。
-- 内部 helper はこのサブコマンドのための実装補助であり、他の session 系コマンドや一般的な git 操作を読む入口にはしない。
+- `cmoc session join` の実行本体です。session branch 上で事前条件を確認し、home branch へ merge して、必要なら conflict 解消を Codex CLI に依頼し、state 更新・branch 削除・結果表示までをまとめて扱います。
+- このファイルは `session join` 固有の制御ロジックを読む入口です。merge conflict の対象列挙、conflict marker の残存確認、stage、commit まで含めて確認したいときに進みます。
 
 ## Read this when
-- `cmoc session join` の挙動、前提条件、出力、失敗時の扱いを確認したいとき。
-- merge 失敗時にどの conflict を対象にし、どの時点で手動介入を要求するかを確認したいとき。
-- session branch の削除条件や、state 更新と git 操作の順序が仕様上重要なとき。
+- `cmoc session join` の実行条件、失敗条件、出力内容、状態遷移を確認したいとき。
+- merge 失敗時にどのファイルを conflict 対象にし、どの時点で手動介入を要求するかを確認したいとき。
+- session branch の削除可否や、state 更新と git 操作の順序が重要なとき。
 
 ## Do not read this when
-- session 機能全体の一覧や別サブコマンドの入口を探しているだけのときは、より上位の session ルーティングを読む。
-- 一般的な conflict 解消ロジックや Codex 実行規約だけを知りたいときは、それぞれの共通実装や実行規約側を読む。
-- 単純な git ラッパーや状態読書きの共通処理を確認したいだけのときは、このサブコマンド本体ではなく対応する共通モジュールを読む。
+- `session join` の CLI 入口だけを知りたいときは、上位のコマンド登録側を読むべきです。
+- session 機能全体の一覧や、`fork` / `abandon` など別サブコマンドを追いたいとき。
+- 一般的な git 操作や Codex 実行規約だけを知りたいときは、このファイルではなく共通実装側を読むべきです。
 
 ## hash
-- d3625a8a20a6824bd1df0cabae2b308594f48df497381bdec15e56127ccdc579
+- 47d8cabd5fdd2641858ffb632add670674f7d18bcb2450c1c1026c40cd7a8189

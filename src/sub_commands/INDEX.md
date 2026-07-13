@@ -198,22 +198,18 @@
 # `session`
 
 ## Summary
-- session サブコマンド群の実装をまとめる階層で、個別コマンド本体と最小限のパッケージ入口だけを収める。session の起動・終了・統合の流れを追うときに、この階層から個別ファイルへ進む。
-- `fork` は session branch の作成と session state 保存を扱い、`join` は session branch での merge と conflict 解消・状態更新・ブランチ削除を扱い、`abandon` は session branch の破棄と active session の終了処理を扱う。
-- 各ファイルは session という同じ責務の中でも、開始、統合、終了で役割が分かれているため、処理の入口と状態遷移の種類で読む対象を切り分ける。
+- `src/sub_commands/session` 配下の session サブコマンド実装への入口。各コマンド個別の制御ロジックや session 状態の扱いを確認するときに、この階層から下位モジュールへ進む。
 
 ## Read this when
-- session サブコマンド実装の境界や、どのコマンドがこの階層に属するかを確認したいとき。
-- `session fork` の作成条件や state 保存、`session join` の merge と conflict 処理、`session abandon` の破棄フローを個別に追いたいとき。
-- session 系コマンドの実行順序、branch 遷移、state 更新の責務分担を把握したいとき。
+- session 系サブコマンドの個別実装を読む前に、この階層が session 用のまとまりか確認したいとき。
+- session サブコマンドの共通の入口として、どの操作がこの階層に属するかを把握したいとき。
 
 ## Do not read this when
-- 個別コマンドの詳細な引数、I/O、失敗条件まで追いたいときは、それぞれの実装ファイルを読む。
-- session 以外の CLI ルーティングや共通基盤を調べたいときは、この階層ではなく上位や共通モジュールを読む。
-- 単なるパッケージ初期化の有無だけを確認したいときは、`__init__.py` だけを見ればよい。
+- 個別の session サブコマンドの処理、引数、入出力、状態操作を調べたいとき。その場合は下位の実装モジュールを読む。
+- 共通 CLI ルーティングや session 以外のサブコマンド実装を調べたいとき。
 
 ## hash
-- 289ef3bd2bc9364307129f8d4edbc95e4bd52ba3d1ee3c3e7d9dbeca7a90fac6
+- 915f8cd24174802a4183466abe107fa2049067ea27746018e971115fb6debdfe
 
 # `tui.py`
 
