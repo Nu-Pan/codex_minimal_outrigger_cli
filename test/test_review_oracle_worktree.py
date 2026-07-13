@@ -1,4 +1,10 @@
-"""review oracle の worktree と INDEX 統合を検証する。"""
+"""review oracle の worktree と INDEX 統合を検証する。
+
+仕様根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md、
+<work-root>/oracle/doc/app_spec/run_isolation.md、
+<work-root>/oracle/doc/branch_model.md、
+<work-root>/oracle/doc/app_spec/indexing.md。
+"""
 
 import subprocess
 from pathlib import Path
@@ -149,7 +155,7 @@ def test_review_oracle_merges_review_index_changes(
     assert not any(
         path.name == ".git" for path in (root / ".cmoc" / "local" / "worktree").rglob(".git")
     )
-    assert not (root / ".cmoc" / "local" / "worktree" / "review").exists()
+    assert all(not path.exists() for path in review_worktrees)
 
 def test_review_oracle_merges_preflight_committed_index_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
