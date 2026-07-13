@@ -115,37 +115,41 @@
 # `src`
 
 ## Summary
-- realization implementation の本体群をまとめる入口で、`acp` 互換層や `basic` 互換再公開ではなく、実際の実装・共通基盤・CLI 入口・サブコマンド実装へ進むために読む。
-- この階層は、設定・共通 runtime・CLI 起動・サブコマンド制御・正本側への接続を含む実装領域の案内に限る。個別挙動の詳細は下位の対象を読む。
+- `src` は realization implementation の公開入口で、CLI 本体・共通 runtime・互換 shim・サブコマンド実装の配置を見分けるために読む。正本仕様ではなく、既存の公開 import 面や起動経路をどこへ接続するかを判断する案内層として扱う。
+- `acp` と `basic` は既存の import 経路を壊さずに正本側へつなぐ互換層なので、互換維持の要否や削除条件を確認したいときに読む。実装本体や新機能の定義場所としては使わない。
+- `commons` は cmoc の実行時共通基盤の集約点で、設定・状態・ログ・path・Git・エラー処理・Codex 起動・共通結果型のような共有 helper を探すときに読む。個別 command の業務ロジックはここでは追わない。
+- `config` と `oracle.py` は、それぞれ設定実装と oracle package の互換 import を受け止める入口なので、正本側定義への再公開や import 解決の仕組みを確認したいときに読む。
+- `main.py` は Typer ベースの CLI 入口で、root command、subcommand 接続、引数解析エラー変換、completion 時の挙動を確認したいときに読む。
+- `sub_commands` は各サブコマンド実装へのルーティング層で、どのコマンドがどの下位実装に対応するかを素早く特定したいときに読む。個別処理の詳細は下位 module を読む。
 
 ## Read this when
-- realization implementation 全体の配置や責務分担を確認して、どの下位領域へ進むべきか判断したいとき。
-- CLI 入口、共通基盤、サブコマンド実装、正本側 package への接続のどれを読むべきか絞り込みたいとき。
-- `src` 配下で互換層ではなく実体実装を探したいとき。
+- `src` 配下で、どの領域が互換入口でどの領域が実装本体かを切り分けたいとき。
+- `acp.*`、`basic.*`、`config.*`、`oracle.*` の既存参照を、壊さずに正本側または実体 module へ接続する変更をするとき。
+- CLI 入口、共通 runtime、サブコマンドの責務境界を先に絞ってから、読むべき実装ファイルを選びたいとき。
 
 ## Do not read this when
-- `acp.*` や `basic.*` の互換 import 面だけを確認したいとき。そうした入口は別の互換層を読む。
-- 特定コマンドや helper の詳細な挙動を直接確認したいとき。ここは全体の入口であり、詳細は下位 module にある。
-- 新しい公開面や設定項目を追加する場所を探しているとき。ここは既存実装の案内であり、公開面追加の起点ではない。
+- 実処理、生成ロジック、設定値の意味、状態管理の詳細を直接追いたいときは、この階層ではなく該当 module を読む。
+- 新しい公開面や機能を追加する実装場所を探しているときは、互換層やルーティング層ではなく担当実装へ進む。
+- すでに互換参照の削除が終わっていて、入口の維持要否を確認する必要がないとき。
 
 ## hash
-- 642ee0b6846c5cc856f593ac104f5a134ce415b7ab00b77030b27969b5a2f33a
+- 8eb3b35e67a387e1ae4e152f722e0d0654414f54b0567e24b67239b4e466f6a6
 
 # `test`
 
 ## Summary
-- `test` 配下の共通 support と機能別 test 群への入口である。CLI、runtime、prompt、ACP builder、StructDoc など、変更したい外部挙動に対応する専用 test と支援ファイルを選ぶときに読む。
-- 個別の実装ではなく、どの test を読むべきかを切り分けるための案内を担う。共通 helper は再利用前提の補助、個別 test は観測したい振る舞いの回帰確認に使う。
+- `test` 配下の回帰テストと共通支援をまとめる案内。CLI、runtime、prompt、ACP builder、StructDoc などの観測可能な振る舞いを確認したいときの入口であり、個別の正本仕様ではなく、それぞれの振る舞いを固定するテスト群へ進むために読む。
+- 共通支援は、`git` 初期化、`CliRunner`、fake 外部コマンド、Codex 実行補助、Ollama 補助など、複数テストから再利用される最小限のテスト基盤を提供する。
 
 ## Read this when
-- test 用の共通 helper の責務や使い分けを確認したいとき。
-- CLI、runtime、prompt、ACP builder、StructDoc のどれかに関する外部挙動の変更点を、対応する test から追いたいとき。
-- packaged import、git fixture、fake command、runner など、複数 test で共有する補助の入口を探したいとき。
+- 特定の CLI サブコマンドや runtime 挙動を回帰確認したいとき。
+- prompt 生成、file access、`Codex` 実行、`Ollama` 管理、`INDEX` 生成、`review oracle` や `apply` / `session` の外部挙動を確認したいとき。
+- 複数テストで共通に使う fixture や支援関数の責務を確認したいとき。
 
 ## Do not read this when
 - 個別機能の正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
-- 実装本体の処理順や内部 helper 分割を追いたいときは、対応する `src` 側を読む。
-- INDEX ルーティングの方針そのものを確認したいときは、この階層ではなく上位の案内を読む。
+- CLI や runtime の実装本体を追いたいときは、この配下のテストではなく対応する `src` 側を読む。
+- テスト基盤ではなく、`INDEX.md` の上位ルーティング方針そのものを確認したいときは、この配下ではなく上位の案内を読む。
 
 ## hash
-- c9c4cf651497a823a0edd186c0ecbede466a2d3e85172cf09b96c90ff92e97f8
+- 0fb8c2629ce22a1b6801efed8128c9da38956e62133164b1e508078b0a7b6afe

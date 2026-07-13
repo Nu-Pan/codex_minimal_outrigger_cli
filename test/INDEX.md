@@ -491,21 +491,21 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- `doctor preprocess` の共有 lifecycle を、CLI 経由と直接呼び出しの両方から確認する統合テスト群。`.cmoc/local`、`.agents`、config、managed Ollama、Git index の相互作用をまたぐ挙動を読むときに進む。
-- 共有 fixture と lock 待ち、repo/worktree 分岐、preexisting staged changes の保持を扱うため、関連する単体テストより先にこのファイルを読む。
+- `doctor preprocess` の共有 lifecycle を、CLI 経由と直接呼び出しの両方から外部挙動で確認する統合テスト群。`.cmoc/local`、`.agents`、config、managed Ollama、Git index の修復と保持を一続きで見る必要があるときに読む。
+- `make_repo`、linked worktree、共有 doctor lock、Ollama 副作用、pre-existing staged changes や rename の保持をまたいだ挙動を確認したい場合の入口。個別の単体テストではなく、doctor preprocess 全体の契約を追うために読む。
 
 ## Read this when
-- `doctor preprocess` が repository/worktree 前提で何を修復し、何を commit し、何を保持するかを確認したいとき。
-- CLI 起点と `run_doctor_preprocess` 直呼び出しの両方で、shared doctor lock、linked worktree、managed Ollama、Git index の扱いをまとめて追いたいとき。
-- `.cmoc/local` の ignore 修復や `.agents/.gitkeep` の生成、既存 staged 変更を壊さない条件を確認したいとき。
+- `doctor` / `dector` の外部挙動が変わったかを確認したいとき。
+- repository/worktree をまたぐ修復、共有 lock、`.cmoc/local` の扱い、`.agents` の再生成、config 追跡、managed Ollama の維持を同時に確認したいとき。
+- Git index 上の staged 変更、unstaged hunk、rename、既存 `.cmoc/local` 追跡状態の保持を含めて doctor preprocess の影響範囲を見たいとき。
 
 ## Do not read this when
-- Ollama の個別実装やサービス生成だけを追いたいときは、managed Ollama 側の仕様や実装を直接読む。
-- config の構造やデフォルト同期だけを見たいときは、config 生成・同期の対象へ直接進む。
-- doctor 以外の sub command の挙動や別の統合テストを見たいときは、このファイルではなく該当するテストへ進む。
+- `doctor preprocess` の内部実装や helper 分割だけを確認したいときは、対応する realization implementation 側を読む。
+- Ollama の単体仕様や config の単体仕様だけを確認したいときは、専用の oracle file を読む。
+- Git 操作の細部や fixture の共通化方針だけを知りたいときは、この統合テストではなく、より直接の実装・補助ファイルを読む。
 
 ## hash
-- 0b8f1462f85f74cd89666411f4ef08e8fdfc6e732a7aeb55c073d462892fbf8a
+- 8dec0e68f2d6d94b2f4958a0cb519171dd68f8a3ce2059503082104458f3e5ca
 
 # `test_indexing_cli.py`
 
