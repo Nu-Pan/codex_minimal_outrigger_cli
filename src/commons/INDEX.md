@@ -169,24 +169,23 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動する前後の実行環境整備と、起動結果の機械的な判定をまとめる入口。argv の上書き、sandbox/permission profile、CODEX_HOME、child process tracking、schema 配置、JSONL error 判定を扱う作業で読む。
-- Codex subprocess 境界を一箇所で保つための実装であり、個別の CLI サブコマンド実装や prompt 文面そのものを追うより、Codex 呼び出し条件と失敗時の解釈を確認したいときに進む。
-- ファイルアクセス境界や復旧判定の根拠コメントもこの層に集約されているため、sandbox へ渡す root の選び方、追加 read/write path の許可条件、tracked child process の記録・削除、Codex JSONL からの error/resume 判定を確認する場合に読む。
+- Codex CLI へ渡す実行環境と、その返り値の解釈をまとめる境界層。`FileAccessMode` から sandbox/permission profile/書き込み許可/読み取り許可を組み立てる処理、`CODEX_HOME` の解決と検証、Codex subprocess の起動と child process 追跡、schema 配置、JSONL エラー判定を扱う。
+- Codex 起動前後の制約が交差する変更ではここを読む。特に、argv と環境変数の組み立て、read/write 境界、runtime state と realization file の分離、quota/capacity/error の判定、tracked subprocess の扱いを変える作業はこのファイルが入口になる。
+- 単純な上位コマンドの流れや個別サブコマンドの UI 仕様だけを追う作業ではここは不要で、より直接のサブコマンド実装や app spec を読む方が適切。
 
 ## Read this when
-- Codex CLI の起動引数や環境変数の組み立てを変えたいとき。
-- file access mode と sandbox/permission profile の対応を確認したいとき。
-- 追加 read/write path の許可境界や、worktree 外を誤って開かない条件を見たいとき。
-- Codex subprocess の子プロセス追跡、pid file 更新、resume token 抽出、capacity/quota/error 判定を扱うとき。
-- Structured Output schema の配置先や、Codex の出力 JSON をどう解釈するかを確認したいとき。
+- Codex subprocess に渡す `argv`、`--sandbox`、permission profile、`CODEX_HOME`、または追加 read/write path の許可条件を変える。
+- Codex 実行結果の JSONL から error / capacity / quota / resume token をどう判定するかを確認したい。
+- apply 実行中の child process tracking、pid file のロック、tracked subprocess の記録・削除の挙動を変える。
+- Structured Output schema の配置先や、schema 用の hashed file 生成に関わる処理を追う。
 
 ## Do not read this when
-- Codex の各サブコマンドの入出力仕様や利用フロー自体を知りたいだけのときは、より上位の app_spec 側を読む。
-- prompt の本文や文面の生成方針だけを確認したいときは、この境界実装ではなく prompt_builder 側を読む。
-- 一般的な runtime 共通処理ではなく、Codex 固有の subprocess/permission 変換以外を見たいときは別の commons モジュールを優先する。
+- 個別サブコマンドの利用者向け文言や操作手順だけを変更したい。
+- Codex 以外の一般的な path 操作、git 判定、runtime path 解決だけを確認したい。
+- この境界層を経由しない内部 helper の細部だけを修正したい場合は、該当 helper を直接読む方が速い。
 
 ## hash
-- a8286c28185df20544757307e8053fe8e4b15b1a4e7381c914c6aa2506be43ec
+- f96f5fdf207522952813d2061b2f03b1e5333b1fcd33d29f8b5fb07c2028abcb
 
 # `runtime_codex_tui.py`
 

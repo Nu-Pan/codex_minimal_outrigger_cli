@@ -55,19 +55,21 @@
 # `commons`
 
 ## Summary
-- cmoc の実行基盤を横断的に共有する共通 runtime helpers の集約点。設定、git、path、logging、results、state、Codex 実行、Ollama、doctor、apply、indexing などの下位実装を、利用側が一箇所から参照できるように束ねる。
-- 個別の振る舞いはここでは定義せず、共通基盤の入口としてどの runtime helper 群へ進むべきかを判断するために読む。
+- `src/commons` は、cmoc の実行時に複数箇所から共有される基盤 helper 群をまとめる領域の入口であり、個別 helper の責務は下位ファイルに分かれている。
+- この領域は、共通 runtime の実装や再公開の境界を把握したいときに読む。
 
 ## Read this when
-- cmoc 実行時に複数モジュールから共通利用する helper 群の配置や公開入口を確認したいとき。
-- 設定、git、path、ログ、state、Codex 実行、preflight、doctor、apply の横断的な共通処理へ進む前に、この領域が shared runtime のまとまりであることを確認したいとき。
+- cmoc 実行時の共通 helper の配置や入口を確認したいとき。
+- 共有 runtime の下位ファイルへ進む前に、この領域が何をまとめているかを確認したいとき。
+- 複数モジュールから使う基盤処理の共通化方針や、どの helper を参照すべきかを判断したいとき。
 
 ## Do not read this when
-- 特定 helper の実装、入出力、失敗時挙動を確認したいとき。該当する下位実装を直接読む。
-- CLI コマンド固有の手順、画面、ドメイン仕様を調べたいとき。共有 runtime helper ではなく、より直接その責務を持つ対象へ進む。
+- 特定 helper の内部アルゴリズム、入出力、失敗時挙動を確認したいときは、該当する下位ファイルを読む。
+- CLI コマンド固有の処理やテスト固有の処理を調べたいときは、より直接その責務を持つ対象へ進む。
+- 実行時の共通入口ではなく、個別の runtime 実装やサブコマンド実装だけを追いたいとき。
 
 ## hash
-- 151719ff188df250513406a2b0c6a5ce6e75fac6db97fd8f278a2fae124f78b2
+- eb7f7149a883944a72a72f9d819c4287cc7d7e8344832bbc614b9501d51d1003
 
 # `config`
 

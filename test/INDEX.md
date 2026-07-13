@@ -341,21 +341,19 @@
 # `test_codex_runtime_errors.py`
 
 ## Summary
-- Codex runtime の失敗系を扱うテスト群への入口。Codex CLI が起動できない場合に、例外と失敗ログの両方が期待どおりになるかを確認したいときに読む。
-- CLI 呼び出しのエラー処理とサブコマンドログの記録仕様を押さえるためのファイルで、正常系や他の runtime エラーの詳細はここでは追わない。
+- Codex 実行まわりのエラー処理を検証するテスト群。Codex CLI から返る JSONL の異常値を、パーサ境界で安全に `CmocError` 側へ寄せることと、CLI 不在時の失敗記録を確認する。
+- `commons.runtime_codex_profile` の異常判定と resume token 抽出の境界、`commons.runtime_codex.run_codex_exec` の例外変換、`commons.runtime_logging` への失敗イベント記録をまとめて扱う。
 
 ## Read this when
-- Codex CLI の不在や起動失敗を契機に `CmocError` になる経路を確認したい。
-- `codex_call` ログの失敗記録に、returncode や error 文言がどう残るべきかを確認したい。
-- CLI 呼び出し失敗時の振る舞いを検証するテストを追加・修正したい。
+- Codex CLI の起動失敗、JSONL イベントの malformed 扱い、例外メッセージの出し分けを変える必要があるとき。
+- 実行失敗時に `codex_call` がどう記録されるか、また parser 境界で非 object イベントをどう扱うかを確認したいとき。
 
 ## Do not read this when
-- Codex の正常系実行や引数整形だけを追いたいときは、より直接の runtime 呼び出し側を読む。
-- ログ出力全般の形式や他イベント種別を確認したいときは、ログ定義側や別のログ関連テストを読む。
-- このファイルが参照する正本仕様の本文を確認したいだけなら、コメントにある正本側を直接読む。
+- 通常の成功経路やプロンプト生成の仕様だけを追いたいとき。
+- 一般的なログ形式やサブコマンド全体の設計を見たいだけで、Codex 実行失敗の境界を扱わないとき。
 
 ## hash
-- 7187451342221a1b90bed9f51f448c8edc06dcba845caabb4c37ab8d1c91a7a8
+- 02f1d716c39f1a3894afd2ed7ad17ef182e9acad5e326442370abd85970d9a1f
 
 # `test_codex_runtime_exec.py`
 
@@ -703,22 +701,20 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- Codex の read/write 許可ルール生成を検証するテスト集。`build_codex_override_args` がモード別の書き込み可否、`memo` と将来のルーティング領域の保護、`extra_writable_paths` の受理条件をどう扱うべきかを確認したいときに読む。
-- 対象は `FileAccessMode` ごとの差分、無視対象パスの扱い、`REALIZATION_WRITE` と `PURE_ORACLE_WRITE` の境界、禁止領域に対する追加書き込み先の拒否を確認する場面に向く。
-- 正本の用語定義や許可領域の根拠は oracle 側にあるため、このテストを読む前提として、`oracle/src/oracle/prompt_builder/parts/file_access_rule.py` と `oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` を先に参照する。
+- `build_codex_override_args` が生成する read/write 許可境界と、追加 writable path の受け入れ・拒否を確認するテスト群。モード別の許可領域、`memo` やルーティング系ファイルの保護、`NO_RULE` の扱いを調べるときに読む。
 
 ## Read this when
-- Codex CLI のファイルアクセス許可が、モードごとに期待どおりか確認したい。
-- `extra_writable_paths` を追加したときの受理・拒否条件を追いたい。
-- `memo`、`.agents`、`.cmoc`、`.codex`、`.git`、`AGENTS.md`、`INDEX.md` への保護が、どのモードでどう効くかを調べたい。
+- Codex のファイルアクセス制御を変更・確認するとき。
+- readonly / oracle-only / realization-write / repo-write / no-rule の境界や、`extra_writable_paths` の許可条件を見直すとき。
+- `memo`、`AGENTS.md`、`INDEX.md`、`.cmoc/local` の保護方針や、無視対象の gap path の扱いを確認するとき。
 
 ## Do not read this when
-- プロンプト本文の正本定義だけを知りたいなら、`oracle/src/oracle/prompt_builder/parts/file_access_rule.py` を読む。
-- `oracle` と `realization` の用語定義だけを確認したいなら、`oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` を読む。
-- ファイルアクセス以外の `CmocConfig` や `AgentCallParameter` の一般的な挙動を調べたいだけなら、より直接の実装や型定義を読む。
+- 一般的な git 操作や一時ファイル処理だけを変更するとき。
+- CLI 全体の引数解釈や他のプロンプト文面を調べるだけのとき。
+- 許可ルールの本文そのものを確認したいだけなら、対応する oracle 側の仕様断片を直接読む方がよい。
 
 ## hash
-- ce939027ebdf2261411623a4ed9fedd4d28d03fbda9c056344d55045ebdda0fe
+- aa83d2bbf755a055b3e7bcca6bfda1263571449964084552c74b0d7ad7abbaf8
 
 # `test_runtime_codex_profile.py`
 
