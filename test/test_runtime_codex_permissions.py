@@ -126,10 +126,10 @@ def test_codex_overrides_protect_memo_and_future_routing_files(
     _assert_not_writable(override_args, root / "memo" / "private.md")
 
 
-def test_codex_overrides_no_rule_excludes_cmoc_blocked_roots(
+def test_codex_overrides_no_rule_excludes_runtime_blocked_roots(
     tmp_path: Path,
 ) -> None:
-    """NO_RULE でも禁止 root を含む work root-wide write を生成しない。"""
+    """NO_RULE でも runtime/Codex の禁止 root を work root-wide write に含めない。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     root = make_repo(tmp_path)
     for name in (".agents", ".cmoc", ".codex", "memo"):
@@ -160,6 +160,40 @@ def test_codex_overrides_no_rule_excludes_cmoc_blocked_roots(
     ):
         _assert_not_writable(override_args, root / relative)
     _assert_writable(override_args, root / "src" / "new.py")
+
+
+@pytest.mark.parametrize(
+    "mode", [FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE]
+)
+def test_codex_overrides_allows_tracked_cmoc_config_but_blocks_local(
+    tmp_path: Path, mode: FileAccessMode
+) -> None:
+    """tracked な config は許可し、runtime state と routing file は保護する。"""
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "config.json"
+    local_path = root / ".cmoc" / "local"
+    local_path.mkdir(parents=True)
+    config_path.write_text("{}\n")
+    (root / ".gitignore").write_text("/.cmoc/local/\n")
+    run_git(root, "add", ".gitignore", ".cmoc/config.json")
+    run_git(root, "commit", "-m", "add tracked cmoc config")
+
+    override_args = build_codex_override_args(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            mode,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+    )
+
+    _assert_writable(override_args, config_path)
+    _assert_not_writable(override_args, local_path / "state.json")
+    _assert_not_writable(override_args, root / "AGENTS.md")
+    _assert_not_writable(override_args, root / "INDEX.md")
 
 
 def test_codex_overrides_uses_allowed_top_level_roots_for_realization_write(

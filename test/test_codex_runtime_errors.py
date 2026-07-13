@@ -7,13 +7,54 @@ import pytest
 from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
+from _command_support import write_python_executable
 from _git_support import make_repo
+from commons.runtime_codex_profile import (
+    codex_error_text,
+    extract_resume_token,
+    is_unexpected_error,
+)
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_logging import (
     SubcommandLogger,
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
+
+
+@pytest.mark.parametrize("line", ["null", "[]", "1"])
+def test_codex_jsonl_non_object_events_are_unexpected(line: str) -> None:
+    """非 object event を parser 境界で安全に malformed error として扱う。"""
+    assert "malformed JSONL event" in codex_error_text(line, "")
+    assert extract_resume_token(line) is None
+    assert is_unexpected_error(line)
+
+
+def test_codex_runtime_rejects_non_object_jsonl_event(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """非 object JSONL でも AttributeError ではなく CmocError にする。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_codex = bin_dir / "codex"
+    write_python_executable(
+        fake_codex,
+        ["print('null')"],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError) as exc_info:
+        run_codex_exec(
+            codex_parameter(),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert "malformed JSONL event (expected object): null" in exc_info.value.detail
 
 
 def test_codex_runtime_reports_missing_codex_cli(

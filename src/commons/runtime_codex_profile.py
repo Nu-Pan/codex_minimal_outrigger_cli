@@ -29,7 +29,6 @@ APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
 _active_apply_process_tracking_path: Path | None = None
 _CODEX_BLOCKED_ROOT_NAMES = {
     ".agents",
-    ".cmoc",
     ".codex",
     ".git",
     ".pytest_cache",
@@ -40,7 +39,6 @@ _CODEX_BLOCKED_ROOT_NAMES = {
 _REPO_WRITE_BLOCKED_ROOT_NAMES = _CODEX_BLOCKED_ROOT_NAMES
 _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".agents",
-    ".cmoc",
     ".codex",
     ".git",
     "memo",
@@ -206,14 +204,14 @@ def _writable_roots(
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # Keep the sandbox roots positive-only; root itself would include
-            # `.agents`, `.git`, `.codex`, memo, and cmoc runtime state.
+            # `.agents`, `.git`, `.codex`, memo, and `.cmoc/local` runtime state.
             paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.NO_RULE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # NO_RULE omits the prompt rule; cmoc and Codex-reserved trees stay
-            # blocked in the argv permission profile.
+            # NO_RULE omits the prompt rule; `.cmoc/local` and Codex-reserved
+            # trees stay blocked in the argv permission profile.
             paths = _top_level_writable_roots(mode, root)
         case _:
             paths = []
@@ -345,6 +343,10 @@ def _should_expand_writable_directory(
     ):
         return True
     if mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
+        if path.resolve() == (root / ".cmoc").resolve():
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+            # Keep non-ignored .cmoc files addressable without opening runtime state.
+            return True
         return False
     if not is_untracked_git_ignored(root, path):
         return True
@@ -398,6 +400,11 @@ def _is_writable_path_allowed(
         and is_untracked_git_ignored(root, path)
     ):
         return False
+    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    # .cmoc/config.json is a realization file, while .cmoc/local is generated
+    # runtime state and must remain outside every write mode.
+    if relative.parts[:2] == (".cmoc", "local"):
+        return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
         # session join の conflict 解消は oracle file も git conflict 対象なら編集する。
@@ -434,7 +441,6 @@ def _is_realization_file_path(root: Path, path: Path) -> bool:
         ".git",
         ".agents",
         ".codex",
-        ".cmoc",
     }:
         return False
     return path.name not in _DENIED_WRITE_FILE_NAMES and not is_untracked_git_ignored(
@@ -513,11 +519,20 @@ def _permission_profile_filesystem_overrides(
     routing_rules.update(
         {f"**/{name}": "read" for name in _DENIED_WRITE_FILE_NAMES}
     )
-    return {
+    overrides: dict[str, Any] = {
         str((root / "memo").resolve()): "deny",
         "glob_scan_max_depth": _PERMISSION_GLOB_SCAN_MAX_DEPTH,
         ":workspace_roots": routing_rules,
     }
+    if mode in {
+        FileAccessMode.REALIZATION_WRITE,
+        FileAccessMode.REPO_WRITE,
+        FileAccessMode.NO_RULE,
+    }:
+        # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+        # .cmoc/local is readable runtime state, but never a write target.
+        overrides[str((root / ".cmoc" / "local").resolve())] = "read"
+    return overrides
 
 
 def _permission_profile_override_args(
@@ -886,6 +901,12 @@ def codex_error_text(stdout_text: str, stderr_text: str) -> str:
         except json.JSONDecodeError:
             fragments.append(line)
             continue
+        if not isinstance(item, dict):
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # Known JSONL events are objects; preserve malformed output in
+            # error detail so the caller takes the non-retryable failure path.
+            fragments.append(f"malformed JSONL event (expected object): {line}")
+            continue
         message = item.get("message")
         if isinstance(message, str):
             fragments.append(message)
@@ -902,6 +923,10 @@ def extract_resume_token(stdout_text: str) -> str | None:
             item = json.loads(line)
         except json.JSONDecodeError:
             continue
+        if not isinstance(item, dict):
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # A non-object event cannot carry a resume token.
+            continue
         if item.get("type") != "thread.started":
             continue
         value = item.get("thread_id")
@@ -917,6 +942,11 @@ def _codex_jsonl_error_messages(stdout_text: str) -> list[str | None]:
         try:
             item = json.loads(line)
         except json.JSONDecodeError:
+            continue
+        if not isinstance(item, dict):
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # A malformed event is an unexpected error, never a retry signal.
+            messages.append(None)
             continue
         if item.get("type") == "error":
             message = item.get("message")
