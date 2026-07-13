@@ -6,9 +6,11 @@ CLI lifecycle or its repository fixtures. The execution order follows
 """
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
 
 from basic.acp import AgentCallParameter
+from cmoc_runtime import CmocError
 import commons.runtime_cli as runtime_cli_module
 from _apply_support import apply_worktree_from_state
 from _cli_support import runner
@@ -16,6 +18,7 @@ from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
 from main import app
 from pytest import MonkeyPatch
+import pytest
 import sub_commands.apply.fork as apply_fork_module
 
 
@@ -392,3 +395,64 @@ def test_apply_fork_marks_state_completed_before_report(
 
     assert result.returncode == 0
     assert seen_states == ["completed"]
+
+
+def test_apply_fork_rechecks_ready_state_before_creating_run(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """lock 内の再読込で、競合した apply run の作成を拒否する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    lock_entries = 0
+    created: list[Path] = []
+
+    @contextmanager
+    def fake_apply_run_lock(_root: Path, _session_id: str):
+        nonlocal lock_entries
+        lock_entries += 1
+        if lock_entries == 1:
+            # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+            data = json.loads(state_path.read_text())
+            data["apply"].update(
+                {
+                    "state": "running",
+                    "apply_branch": f"cmoc/apply/{session_id}/other",
+                    "oracle_snapshot_commit": "other",
+                }
+            )
+            state_path.write_text(json.dumps(data) + "\n")
+        yield
+
+    def fake_create_run_worktree(
+        _root: Path, _branch: str, worktree: Path, _start_point: str
+    ) -> Path:
+        created.append(worktree)
+        worktree.mkdir(parents=True)
+        return worktree
+
+    def fake_write_report(*args: object, **kwargs: object) -> Path:
+        report_path = root / "report.md"
+        report_path.write_text("# report\n")
+        return report_path
+
+    monkeypatch.setattr(apply_fork_module, "apply_run_lock", fake_apply_run_lock)
+    monkeypatch.setattr(
+        apply_fork_module, "create_run_worktree", fake_create_run_worktree
+    )
+    monkeypatch.setattr(apply_fork_module, "enumerate_apply_targets", lambda *args: [])
+    monkeypatch.setattr(apply_fork_module, "write_apply_fork_report", fake_write_report)
+
+    with pytest.raises(CmocError, match="事前条件"):
+        apply_fork_module._cmoc_apply_fork_body(
+            "full", lambda *args, **kwargs: FakeCodexResult({"findings": []})
+        )
+
+    assert lock_entries == 1
+    assert created == []

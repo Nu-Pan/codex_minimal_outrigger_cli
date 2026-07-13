@@ -84,21 +84,25 @@ def _cmoc_apply_fork_body(
     root = repo_root()
     current_root = work_root()
     branch = current_branch(current_root)
-    session_id, path, state = load_state_for_branch(root, branch)
+    session_id, _, _ = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError("apply fork は session branch 上で実行してください。", [], branch)
-    if state.session.state != "active" or state.apply.state != "ready":
-        raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
     ensure_cmoc_ignored_in_exclude(current_root)
     require_clean_worktree(current_root)
     config = load_config(root)
-    run_id = timestamp()
-    apply_branch = f"cmoc/apply/{session_id}/{run_id}"
-    oracle_snapshot_commit = head_commit(current_root)
-    apply_worktree = worktrees_dir(root) / session_id / run_id
-    start_subcommand_step(2, "run の隔離実行を開始", "start isolated run")
-    create_run_worktree(current_root, apply_branch, apply_worktree, "HEAD")
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    # Re-read the mutable state while holding the lifecycle lock. Otherwise two
+    # callers can both observe ready and publish different apply runs.
     with apply_run_lock(root, session_id):
+        session_id, path, state = load_state_for_branch(root, branch)
+        if state.session.state != "active" or state.apply.state != "ready":
+            raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
+        run_id = timestamp()
+        apply_branch = f"cmoc/apply/{session_id}/{run_id}"
+        oracle_snapshot_commit = head_commit(current_root)
+        apply_worktree = worktrees_dir(root) / session_id / run_id
+        start_subcommand_step(2, "run の隔離実行を開始", "start isolated run")
+        create_run_worktree(current_root, apply_branch, apply_worktree, "HEAD")
         write_apply_process_id(root, session_id, os.getpid())
         state.apply = ApplyPart(
             state="running",
