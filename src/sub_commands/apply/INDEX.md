@@ -78,18 +78,19 @@
 # `join.py`
 
 ## Summary
-- `cmoc apply join` の実行本体を担う。apply branch を session branch に merge し、状態更新・レポート出力・後始末までを一括で処理する。
-- 想定外差分の判定、`--force-resolve` 時の revert、`INDEX.md` だけの merge conflict の機械解決、join 結果レポートの生成もここで扱う。
+- apply join の実行本体を扱う。session branch / apply branch の整合確認、想定外差分の判定、`--force-resolve` 時の復旧、`git merge`、状態更新、後始末までを一連の流れとしてまとめている。
+- apply join の結果レポート生成と、想定外差分の分類・復元・rename 元追跡・INDEX.md だけの conflict 解消もここに含まれる。
+- branch や worktree の一般的な runtime 操作は別モジュールに寄せ、このファイルは join 固有の制御と判定に読む。
 
 ## Read this when
-- `cmoc apply join` の挙動、失敗条件、成功時の cleanup を変更したいとき。
-- apply branch と session branch のどちらを基準に差分判定するか、また `--force-resolve` の扱いを確認したいとき。
-- join 結果レポートの文面や、残す warning の条件を調整したいとき。
+- apply join の CLI 挙動、成功時の cleanup、失敗時メッセージや report 出力を変えたいとき。
+- session branch と apply branch のどちらを対象にするか、どの差分を許可・禁止するか、`--force-resolve` で何を戻すかを確認したいとき。
+- merge conflict の扱い、rename を含む想定外差分の分類、結果レポートの内容を追いたいとき。
 
 ## Do not read this when
-- apply join 以外のサブコマンドの流れを追いたいときは、各コマンドの実行本体を読む。
-- 共通の Git 実行ラッパーや worktree 管理の一般処理だけを確認したいときは、専用の共通モジュールを読む。
-- 状態ファイルの全体構造だけを把握したいときは、join 処理ではなく state 定義側を読む。
+- apply branch を作る・開始する・終了するなど join 以外の apply フローを追いたいときは、より直接の subcommand 実装を読む。
+- branch/worktree の基礎操作だけを確認したいときは、このファイルより `cmoc_runtime` や `commons.runtime_apply` を先に読む。
+- 単に `INDEX.md` や oracle 側の正本仕様を探しているだけなら、この実装ではなく oracle 文書を読む。
 
 ## hash
-- 83d0f1a5bbc5f1ac3138af84a81cf1073ffac90634450d5e1a074dfaa1c7c87f
+- f041901b929c362452351cfc4db5c1a6e3a959ad6026c20ca7bd42d70cea0519

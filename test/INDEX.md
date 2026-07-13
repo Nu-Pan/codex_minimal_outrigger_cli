@@ -286,21 +286,21 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- `cmoc apply join` の CLI 挙動を検証するテスト群。apply worktree と session branch の結合、状態更新、report 生成、cleanup 条件、想定外差分の報告と `--force-resolve` の分岐、merge conflict の扱いを外部挙動として確かめる。
-- `apply join` の受け入れ条件や拒否条件、終了後に残すべき状態、削除してよい worktree/branch の境界を確認したいときに読む。
+- apply join の CLI 挙動を検証するテスト群。apply/session の join 成功、cleanup、state 更新、report 出力、dirty worktree、想定外差分、merge conflict、force 解決をまとめて確認する入口として使う。
+- 同じ join 操作でも、branch/state/report などの外部挙動の可否判定を読むときにこのファイルへ進む。内部 helper の分割や実装詳細を追う目的では読まない。
 
 ## Read this when
-- `cmoc apply join` の外部挙動を CLI 経由で確認したいとき。
-- apply worktree の cleanup、session state 更新、report 保存の条件をテストするとき。
-- 想定外差分、dirty worktree、merge conflict、`--force-resolve` の分岐を確認したいとき。
+- apply join の成功条件と拒否条件を CLI レベルで確認したいとき。
+- worktree の cwd、dirty 状態、stale branch、想定外差分、rename、merge conflict、force 解決のどれかを含む join 挙動を確認したいとき。
+- join 後に apply worktree、branch、session state、report がどう変わるかを知りたいとき。
 
 ## Do not read this when
-- `cmoc apply join` の正本仕様断片そのものを確認したいときは、対応する oracle doc を読む。
-- apply join の内部 helper 分割や git 操作 wrapper の実装だけを確認したいときは、実装側を読む。
-- apply join 以外の apply サブコマンドや session join の挙動を確認したいときは、このテストではなく該当コマンドの対象を読む。
+- apply join の実装手順や内部関数の分割だけを知りたいときは、対応する実装側を読む。
+- apply/join 以外の CLI や別サブコマンドの振る舞いを調べたいとき。
+- fixture の作り方や git 操作の共通部だけを追いたいときは、支援モジュールを読む。
 
 ## hash
-- a53392b937790219a80aaa00d765fcdc15ad2c2e35d5230fc5d35f4ffd04d2e1
+- c3debd038d7c93a0405813627ed399c4beeee25e120569885b97cfd50d2e9e8a
 
 # `test_basic_runtime.py`
 

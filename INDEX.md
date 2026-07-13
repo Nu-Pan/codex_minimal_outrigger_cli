@@ -115,37 +115,36 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization 側の実装入口で、CLI 入口、共通 runtime helpers、`acp` 互換 shim、`basic` 再公開層、`config` 互換入口、各サブコマンド実装のルーティングをまとめる上位領域。個別機能の本文ではなく、どの責務の実体へ進むべきかを切り分けるために読む。
-- この階層は、実体実装そのものを説明する場所ではない。互換導線か実体側か、CLI 配線か共通基盤か、サブコマンドか補助 API かを見分ける入口として使う。
+- `src` 配下の realization implementation と realization test の上位入口。`acp` や `basic` などの互換層ではなく、cmoc 本体の実装とテストを機能別に読むための分岐点として使う。
+- この階層は公開面の薄い配線や共通基盤の入口を含むため、CLI・runtime・設定・サブコマンド実装のどこへ進むべきかを判断するときに読む。
 
 ## Read this when
-- `src` 配下で、どの領域が公開入口でどの領域が実体実装かを切り分けたいとき。
-- `acp`、`basic`、`config`、`oracle` などの互換 shim や再公開層を追って、正本側または実体 module へ進むべきか判断したいとき。
-- CLI 入口、共通 runtime helpers、サブコマンド実装のどれを読むべきかを先に絞りたいとき。
+- `src` 直下の実装やテストの責務分担を確認したいとき。
+- CLI 入口、共通 runtime、設定、サブコマンド実装のどれへ進むべきかを切り分けたいとき。
+- 旧互換層ではなく、cmoc 本体の realization implementation を追いたいとき。
 
 ## Do not read this when
-- 個別コマンドの実処理、path 変換、state 管理、review/apply/session の挙動そのものを確認したいときは、対応する下位モジュールを直接読む。
-- 互換導線の有無だけ確認済みで、再公開先や実体側へすぐ進むときは、ここを経由せず目的の下位領域へ進む。
-- 正本仕様の本文や oracle file の内容を確認したいときは、`src` ではなく正本側の該当領域を読む。
+- 正本仕様そのものを確認したいときは、`oracle` 側を読む。
+- 個別機能の挙動や内部処理を詳しく追いたいときは、該当する下位 module を直接読む。
+- `acp` や `basic` の互換導線だけを確認したいときは、そちらの入口を読む。
 
 ## hash
-- 0bde499e596a89e76ad339b3de9e2aeae0c046cb42d47147f0f7d3c7b38ddb75
+- 7e1ef1ca34e77134ffbd501b2a5d3a139640513a62552cb374167a4ce8263a26
 
 # `test`
 
 ## Summary
-- `test` 配下の共通補助と各 realization test の入口をまとめるルーティング対象。CLI、runtime、ACP builder、prompt 生成、review/apply/indexing/session など、機能別の回帰テストへ進む起点になる。
-- `_*.py` の support 群はテスト共通の fixture・helper を置く場所で、個別機能の本文ではなくテスト支援の責務を持つ。
+- `test` 配下で `acp_builder` 正本 schema への参照を共通化する path helper の案内。テスト側で schema を複製せず、oracle 側の `acp_builder` 定義へ直接つなぐ必要があるときの入口にする。
 
 ## Read this when
-- `test` 配下で、どの機能の回帰テストや共通 helper を読むべきかを選びたいとき。
-- CLI、runtime、prompt builder、review/apply/session/indexing などの外部挙動を変える前に、対応するテスト群の入口を探したいとき。
-- 共通のテスト補助がどの責務を持つか、あるいはどの機能群に対応するかを確認したいとき。
+- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
+- テスト用に正本 schema をコピーせず、oracle 側を参照する方針がどこで支えられているかを確認したいとき。
+- `acp_builder` 関連のテスト helper が他にあるかではなく、この path 解決 helper の責務を見たいとき。
 
 ## Do not read this when
-- 個別の実装や正本仕様そのものを確認したいときは、対応する `oracle` 側や `src` 側の本文を読む。
-- 特定のテストケースの期待値や分岐だけを追いたいときは、このルーティングではなく該当する個別テスト本文を読む。
-- `INDEX.md` の書き方やルーティング規約そのものを確認したいときは、対象の本文ではなく上位の案内を読む。
+- 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
+- テスト全体の CLI 挙動や他の共通サポートを確認したいときは、この helper ではなく該当する別の test support を読む。
+- `INDEX.md` のルーティング方針そのものを確認したいときは、この helper ではなく上位の案内を読む。
 
 ## hash
-- d038700cca8e1f1eec8a0319135e3ac2a635fac1901961c19277717d9534d570
+- 7ebfa23c22b1d99ad3abdf2fe56f5a2d46b886e671988ad7ffbe32e7a6276da6

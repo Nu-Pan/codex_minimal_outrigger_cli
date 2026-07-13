@@ -129,18 +129,24 @@
 # `sub_commands`
 
 ## Summary
-- `cmoc` のサブコマンド実装への入口をまとめる階層。`apply`・`doctor`・`eval_oracle`・`indexing`・`review`・`session`・`tui` の各処理に進む前のルーティング地点として使う。
-- 個別ファイルは、実行制御・評価委譲・INDEX 更新・review 系・session 系・TUI 起動で責務が分かれているため、作業対象のサブコマンドや処理段階に応じて読む先を絞る。
+- `cmoc` のサブコマンド層の入口。個別コマンドの実行制御と、関連する review / session / apply 系の役割境界を見分けたいときにここから入る。
+- `apply` は apply 系サブコマンド群の実行制御をまとめる階層で、fork・join・abandon・fork report のどれを読むべきかを切り分ける入口になる。
+- `doctor.py` は doctor サブコマンドから runtime preprocess へ委譲する薄い入口で、doctor 固有処理ではなく委譲先との接続だけを確認したいときに読む。
+- `eval_oracle.py` は want を書き出した oracle の評価を review oracle 実装へ委譲する入口で、評価本体をどこに集約しているか確認したいときに読む。
+- `indexing.py` は indexing サブコマンドの実行入口で、事前検査を通したうえで INDEX.md 更新と commit までを 1 本の流れとして追いたいときに読む。
+- `review` は review 系サブコマンド群の package 境界と review oracle 実行入口をまとめる階層で、対象選定・所見収集・レポート出力の責務分担を見分けたいときに読む。
+- `session` は session サブコマンド群の package 境界で、fork・join・abandon の開始・統合・終了の役割分担を切り分けたいときに読む。
+- `tui.py` は `cmoc tui` の実行本体で、元プロンプト作成、エディタ起動、実行パラメータ解決、TUI 起動までの流れを確認したいときに読む。
 
 ## Read this when
-- `cmoc` のどのサブコマンド実装へ進むべきかを切り分けたいとき。
-- `apply`・`doctor`・`eval_oracle`・`indexing`・`review`・`session`・`tui` のうち、対象の実行経路を特定したいとき。
-- サブコマンド変更で、開始条件・委譲先・実行順序・状態更新・後始末のどれに触れるかを判断したいとき。
+- `cmoc` のサブコマンド実装のうち、どの責務がどのファイルにあるかを切り分けたいとき。
+- apply / review / session / indexing / tui のいずれを読むべきか迷っているとき。
+- サブコマンドの起動経路と、入口から各実行本体へどう分岐するかを把握したいとき。
 
 ## Do not read this when
-- `cmoc` 以外の CLI 群の仕様を知りたいとき。
-- 共通の Git 操作や worktree 管理だけを追いたいときは、より下位の共通実装を直接読むべきとき。
-- 個別サブコマンドの内部 helper や詳細な処理だけを知りたいときは、この階層ではなく対応する専用ファイルへ進むべきとき。
+- 個別サブコマンドの引数定義や内部制御を詳しく追いたいときは、対応する実装ファイルへ直接進む。
+- doctro? ではなく一般的な runtime / helper の共通処理だけを確認したいときは、ここではなく共通基盤を読む。
+- `cmoc` 以外の正本仕様そのものを探したいときは、この階層ではなく oracle 側を読む。
 
 ## hash
-- 95462015f25c15ea3cb26f63032ce378d365cafc7128de6d27d5a6ad15c458b5
+- e624182f14bd67a6762fa7e14e4cd6ed329cae57faefc967ec13f5da3d229b7c
