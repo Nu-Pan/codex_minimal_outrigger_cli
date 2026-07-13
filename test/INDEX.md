@@ -608,21 +608,39 @@
 # `test_review_oracle_loop.py`
 
 ## Summary
-- `cmoc review oracle` の所見列挙・所見マージ・所見検証の周回制御をまとめて確認するテスト群。Codex 呼び出しの受け渡し条件、merge operation の適用条件、再試行時の失敗条件を読む入口にする。
+- `review_oracle` の finding 生成・統合・検証・判定の loop 挙動を確認するテスト。`sub_commands.review.oracle` と `sub_commands.review_loop` の周辺で、review 実行時の prompt の受け渡し、同一周回の challenger reason の保持、merge 再試行と失敗終了を追うときに読む。
 
 ## Read this when
-- review oracle の finding loop の順序、打ち切り条件、ダーティフラグ更新を確認したいとき。
-- merge operation の kind 契約、target_ids の妥当性、重複 target の扱いを確認したいとき。
-- validate / advocate / judge への prompt 伝播や、隔離実行のコンテキストを確認したいとき。
-- merge の意味的な不正入力に対する再試行回数や、最終的なエラー終了条件を確認したいとき。
+- review oracle のループ制御を変更するとき
+- enumerate / merge / validate / judge の prompt や Structured Output の受け渡しを確認するとき
+- review 実行時の worktree 分離や Codex 呼び出しコンテキストを確認するとき
 
 ## Do not read this when
-- `cmoc review oracle` の仕様そのものだけを知りたいときは、対応する app_spec 側を先に読む。
-- Codex CLI 呼び出し規約や Structured Output の保存規則だけを知りたいときは、個別の呼び出し規約側を読む。
-- テストの実装詳細ではなく、共通のテスト方針や開発規約を確認したいときは、dev_rule 側を読む。
+- review oracle 以外のサブコマンドのテストを探しているとき
+- review の結果保存や CLI 引数の定義だけを見たいとき
+- 単体の config 定義や prompt 断片だけを確認したいとき
 
 ## hash
-- 337660aea5c73e0ac91f3719f0bcf3d477d90f80edd1ff196bb368429cdc6cd8
+- fed9e6e5051f630206f5b5526456c9740bc1d5e8eb362984be37c7c43e20627e
+
+# `test_review_oracle_merge_operations.py`
+
+## Summary
+- `sub_commands.review.oracle` の merge operation 適用ロジックを検証するテストに進むための入口。kind ごとの契約、無効な operation の拒否、同じ `finding_id` の再利用拒否を確認したいときに読む。
+- `review_oracle` の `apply_finding_merge_operations` の振る舞いだけを追う対象で、review 全体の CLI や他の review テストへ広げる必要はない。
+
+## Read this when
+- `apply_finding_merge_operations` の kind 契約を変更したか確認したいとき。
+- merge operation の入力検証や、複数 operation 間での `finding_id` 再利用の扱いを確認したいとき。
+- `review` 配下の他の処理ではなく、oracle 側の merge 適用だけを見たいとき。
+
+## Do not read this when
+- merge operation 以外の review 振る舞いを探したいだけのとき。
+- `review` サブコマンド全体の仕様や CLI 入出力を追いたいとき。
+- `apply_finding_merge_operations` ではない別の merge / update ロジックを確認したいとき。
+
+## hash
+- f7714ad7732b9348c4fe7a238e28d6e5fd4218534da6ddca3fa14e81d5ee9425
 
 # `test_review_oracle_report.py`
 
