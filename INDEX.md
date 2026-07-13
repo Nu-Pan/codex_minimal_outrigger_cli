@@ -134,18 +134,21 @@
 # `test`
 
 ## Summary
-- `test` 配下の各 realization test と共通 support を案内するルーティング対象である。CLI, runtime, prompt, indexing, review, session, apply の外部挙動や境界条件を確認したいときに、対応する個別テストへ進む入口になる。
-- 共通 support は、git fixture, CLI runner, Codex/Ollama 実行補助, fake command 生成, path 復元など、複数テストで再利用する支援をまとめる。個別の実装本文ではなく、テスト側で何を共通化しているかを確認したいときに読む。
+- `test` 配下の共通 support と回帰テストの入口をまとめる対象で、`acp_builder`・runtime・CLI・prompt/markdown rendering それぞれの振る舞いを確認したいときに読む。
+- 共通 helper は、`git`/`CliRunner`/fake command/`CODEX_HOME`/`Ollama` などのテスト前提を揃えるためのものとして置かれている。
+- 個別テストは、各サブコマンドや runtime 境界、prompt parts、StructDoc rendering の観測可能な挙動を固定する役割を持つ。
 
 ## Read this when
-- 特定のサブコマンドや runtime の外部挙動を固定している回帰テストを探したいとき。
-- テスト用の共通 helper が、どの前提や判定規則を共有しているかを確認したいとき。
-- packaged import, path 解決, git fixture, fake コマンド, Codex 実行補助などのテスト支援の責務を見たいとき。
+- 共通 test support の責務や、どの補助を使えばよいかを確認したいとき。
+- `acp_builder` の parameter 生成、schema 参照、公開 API 境界を検証するテストへ進みたいとき。
+- `apply` / `session` / `review oracle` / `indexing` / `doctor` / `tui` / `fork` / `join` などの CLI 挙動を確認したいとき。
+- `run_codex_exec` / `run_codex_tui` / `runtime_state` / `runtime_config` / `runtime_ollama` / `runtime_file_access` の境界を確認したいとき。
+- prompt parts や StructDoc の Markdown rendering のように、出力整形や注入される標準文書を確認したいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
-- CLI や runtime の実装手順そのものを追いたいときは、対応する `src` 側を読む。
-- `INDEX.md` のルーティング方針そのものを確認したいときは、この `test` 配下ではなく上位の案内を読む。
+- 個別サブコマンドや runtime の正本仕様そのものを知りたいときは、対応する oracle 側の本文を読む。
+- 実装本体の分割や内部 helper の手順だけを追いたいときは、この test 入口ではなく該当する `src` 側を読む。
+- テスト共通化の方針ではなく、特定の CLI 失敗要因や既存回帰だけを確認したいときは、該当する単一テストファイルを直接読む。
 
 ## hash
-- e51d9537ca631fb800585bc829f3bde138e6336603e0dcbae1579f54129da5f2
+- 37b4e55889653ca1a6c2e0d9792f8e93f3c9f8266d66e2fd8c2c435c892e1c2d
