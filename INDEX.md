@@ -138,18 +138,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の回帰テストと共通支援をまとめる案内。CLI、runtime、prompt、ACP builder、StructDoc などの観測可能な振る舞いを確認したいときの入口であり、個別の正本仕様ではなく、それぞれの振る舞いを固定するテスト群へ進むために読む。
-- 共通支援は、`git` 初期化、`CliRunner`、fake 外部コマンド、Codex 実行補助、Ollama 補助など、複数テストから再利用される最小限のテスト基盤を提供する。
+- `test` 配下の共通 support と各 realization test をまとめて案内するルーティング対象。CLI、runtime、prompt builder、package import、StructDoc renderer など、対象機能ごとの回帰テストへ進む入口として使う。
+- 個別の実装本文ではなく、どの変更でどのテスト群を読むべきかを判定するための案内に絞る。oracle 側の正本仕様そのものはここでは扱わない。
 
 ## Read this when
-- 特定の CLI サブコマンドや runtime 挙動を回帰確認したいとき。
-- prompt 生成、file access、`Codex` 実行、`Ollama` 管理、`INDEX` 生成、`review oracle` や `apply` / `session` の外部挙動を確認したいとき。
-- 複数テストで共通に使う fixture や支援関数の責務を確認したいとき。
+- CLI の外部挙動、runtime の契約、prompt 組み立て、indexing、review、apply、session などの変更で、対応する回帰テストを探したいとき。
+- テスト用の共通 support が、git・CLI・Codex 実行・path 解決・fake command 生成・Ollama 呼び出しのどれを支えているか確認したいとき。
+- packaged layout の import 境界や、StructDoc の Markdown render など、実装ではなくテスト観点の入口を選びたいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
-- CLI や runtime の実装本体を追いたいときは、この配下のテストではなく対応する `src` 側を読む。
-- テスト基盤ではなく、`INDEX.md` の上位ルーティング方針そのものを確認したいときは、この配下ではなく上位の案内を読む。
+- 正本仕様の本文や oracle 側の定義を確認したいときは、対応する oracle 文書を読む。
+- 特定サブコマンドの実装詳細や helper 分割だけを追いたいときは、対応する src 側を読む。
+- INDEX.md の書き方やルーティング規則そのものを確認したいときは、この配下の個別テストではなく上位の案内を読む。
 
 ## hash
-- 0fb8c2629ce22a1b6801efed8128c9da38956e62133164b1e508078b0a7b6afe
+- 095b4fc0853c91adf0070a422f1c603d370f978415dcc3bb10b99cff70e9aa7a
