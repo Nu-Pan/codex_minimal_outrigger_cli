@@ -211,21 +211,22 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- `cmoc apply abandon` の CLI 挙動を、実行位置・状態検証・worktree/branch/state の後始末・追跡中 process の停止まで含めて確認するテスト群。破棄成功、cleanup 警告、running/error の停止順序、破損 state の拒否をまとめて扱う。
-- 同じ apply abandon の外部挙動を一箇所で読めるようにし、`apply` の開始や join、他のサブコマンドではなく abandon 専用の境界条件を確認したいときの入口にする。
+- `apply abandon` の外部挙動を CLI 経由で検証するテスト群です。完了済み apply run の cleanup、欠損 cleanup 対象の警告扱い、稼働中 process の停止、worktree/branch/state の整合、実行場所の違い、破損 state や stale branch の拒否を確認したいときに読む対象です。
+- 同じ apply abandon でも、process 停止の実装詳細そのものより、CLI がどの状態を成功・警告・失敗として扱うかを追う入口です。cleanup 後に state が `ready` に戻る条件や、repo root 側の state を正として扱う境界を見たい場合にここから入ります。
 
 ## Read this when
-- `cmoc apply abandon` の成功時 cleanup と失敗条件を CLI 経由で確認したいとき。
-- active apply run の破棄時に、worktree と branch の削除、apply state の遷移、実行中 process の停止順序を確認したいとき。
-- session branch / apply branch 上からの実行可否や、破損した state を拒否する条件を確認したいとき。
+- `apply abandon` の成功・警告・失敗条件を CLI 観点で確認したいとき。
+- completed apply run の worktree・branch・state がどう片付くかを追いたいとき。
+- running apply process の停止順序や、PID/child PID の扱いを含めて境界条件を確認したいとき。
+- apply worktree 上や linked session 上から実行した場合の扱いを確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の生成条件や active apply run の作成手順を見たいとき。
-- `cmoc apply join` の挙動や、join 後の state 遷移を見たいとき。
-- process 停止の共通実装だけを見たいときは、CLI テストより `src/commons/runtime_apply.py` を先に読む。
+- `apply abandon` の内部停止処理だけを見たいなら、関連する `runtime_apply` 側の実装やテストを先に読む方が直接的です。
+- session 作成や apply fork の基本挙動を知りたいだけなら、そちらの CLI テストを読む方が適切です。
+- cleanup ではなく apply 実行中の生成・記録ロジックを確認したい場合は、このファイルではなく apply fork 側を読むべきです。
 
 ## hash
-- d99ea492d950d98b52b59750dbab3a7debcaf7d2a32c2a7e53de994ddc45d83a
+- 238a4029f3f689ca8179b5ccf673276026108f12e240695bb3e12e36ab932db4
 
 # `test_apply_fork_cli.py`
 

@@ -56,20 +56,20 @@
 # `runtime_apply.py`
 
 ## Summary
-- apply 実行に対応する worktree と apply process 追跡状態を扱う runtime 補助コード。session branch から linked worktree を探す処理、apply branch 名から managed worktree path を復元する処理、apply process の pid file 読み書き、Codex subprocess group を含む停止処理をまとめる。
+- `cmoc apply abandon` の cleanup と、そのために必要な worktree 解決・apply process ID 追跡・child process group 停止をまとめて扱う共通実装。`cmoc apply abandon` の挙動、停止対象の同一性確認、pidfile 生成/読取/削除、process group の終了確認を見たいときに読む。
 
 ## Read this when
-- apply 実行中 process の記録、追跡、削除、停止、または abandon 時の停止安全性を確認・変更したいとき。
-- session branch や apply branch から worktree path を特定する runtime 処理を確認・変更したいとき。
-- pid 再利用、pidfd、process start time、process group、zombie child を考慮した process 停止ロジックを確認したいとき。
+- `cmoc apply abandon` の削除対象 worktree/branch を特定する処理を確認したい。
+- apply 実行中 process の記録・読取・削除、または PID 再利用を避けた停止判定を変えたい。
+- Codex subprocess を process group 単位で止める条件や、pidfd が使えない環境でのエラー扱いを確認したい。
 
 ## Do not read this when
-- apply の CLI 引数、出力文言、状態遷移そのものを確認したいだけなら、subcommand 側または対応する app spec を先に読む。
-- 汎用的な git 実行、worktree 置き場、process start time 取得、pid file lock の実装を確認したい場合は、それらを定義する runtime 基盤へ進む。
-- apply と無関係な session 管理、prompt 構築、通常のファイル操作を調べる場合は読まなくてよい。
+- session state の読み書きや branch 遷移そのものを追いたいだけなら、より上位の session/apply コマンド実装を読む。
+- 一般的な git worktree 操作や process 管理の共通基盤だけを見たいなら、この apply 専用実装ではなく該当する汎用モジュールを読む。
+- `cmoc apply abandon` 以外のサブコマンドの入出力仕様だけを確認したいなら、このファイルは読まず各サブコマンド実装へ進む。
 
 ## hash
-- d140e6a14473bec52d65e02ccd6c504f7a14b08e0b263dd943a21dcdf9b007b8
+- 083122281aa88bc209cecf31e649d34eac38ce7b226a5b09ad220dba4158a400
 
 # `runtime_cli.py`
 
