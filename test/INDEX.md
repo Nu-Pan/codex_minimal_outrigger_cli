@@ -604,20 +604,21 @@
 # `test_review_oracle_report.py`
 
 ## Summary
-- `review oracle` 系の回帰テスト群。`eval-oracle` から `review oracle` 実装へ委譲されること、レポートの Markdown 構成、集計結果、エラー時レポート出力を確認する。
+- `cmoc review oracle` のレポート生成と CLI 出力の見え方を検証するテスト群の入口。`eval-oracle` から `review oracle` への委譲、レポート本文の節順と集計、accepted / rejected の分類、エラー時の報告までを確認する。
+- レビュー機能の実装そのものではなく、実行結果として人間が読む report とコマンド出力が正本どおりかを確かめたいときに読む。
 
 ## Read this when
-- `review oracle` の CLI 出力、レポート生成、findings の採否・集計・並び順を変える。
-- `eval-oracle` と `review oracle` の接続や、scope 引数の受け渡しを変える。
-- 処理失敗時に error report を出す挙動を変える。
+- `review oracle` の report 形式、節順、件数集計、`ok` / `fatal` / `error` の表示を変えるとき。
+- `eval-oracle` の CLI から review 実装への委譲関係や scope の受け渡しを確認したいとき。
+- レビューレポートに出る oracle file 表記、採用・不採用の分類、エラー時の出力先を検証したいとき。
 
 ## Do not read this when
-- `review oracle` の内部検出ロジックそのものを追うなら、実装側の `sub_commands/review/oracle` を先に読む。
-- セッション作成や doctor の準備挙動だけを変えるなら、各サブコマンドの別テストを読む。
-- `review oracle` 以外の review サブコマンドの仕様だけを確認したい場合は、このファイルは読まない。
+- レビュー本体の所見抽出・判定ロジックを変えたいだけなら、まず実装側の `sub_commands.review.oracle` を読む。
+- `review oracle` 以外のサブコマンドの出力確認や、一般的な CLI 基盤の挙動確認だけならここは読まない。
+- `oracle` 配下の仕様本文を確認したいだけなら、このテストではなく対応する `oracle/doc/app_spec/sub_command/review_oracle.md` を読む。
 
 ## hash
-- 405024b6366a9702605c60db7d900bb152d20e7e4a3b5c6dff07a05ecac2eb93
+- f5da1877b8c789a0286a3e73117569b213bde02b6541d068a9f2be55628f609e
 
 # `test_review_oracle_targets.py`
 
