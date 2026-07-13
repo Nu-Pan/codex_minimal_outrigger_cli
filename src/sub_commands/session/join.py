@@ -13,7 +13,6 @@ from cmoc_runtime import (
     CmocError,
     CommandResult,
     current_branch,
-    ensure_cmoc_ignored,
     load_state_for_branch,
     repo_root,
     require_clean_worktree,
@@ -60,7 +59,6 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
             json.dumps(state.to_dict(), ensure_ascii=False, indent=2),
         )
     require_clean_worktree(work)
-    ensure_cmoc_ignored(work)
     home = state.session.session_home_branch
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
