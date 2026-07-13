@@ -138,18 +138,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の realization test と test support をまとめるルーティング対象である。CLI、runtime、prompt、apply/review/indexing、packaged import、StructDoc などの現行仕様を外部挙動として確認したいときに、該当する個別テストへ進む入口になる。
-- 共通 support は、外部コマンドの fake 化、git 初期化、CLI runner、Codex 実行系の前処理や補助状態の組み立てに分かれている。個別機能の本文ではなく、テスト基盤の責務境界を見たいときに読む。
+- `test` 配下の共通サポートと回帰テストを束ねる入口です。`_*.py` は各種テストで再利用する補助だけを置き、個別の仕様や CLI 挙動は対応する `test_*.py` か oracle 側へ進むために使います。
+- `test_*.py` は `acp_builder`、CLI、runtime、prompt、review、session、indexing などの外部挙動をそれぞれ固定する回帰群です。変更対象の機能に応じて、該当するサブコマンド名や runtime 名を含むものを読むのが入口です。
 
 ## Read this when
-- `test` 配下でどの realization test や support を読むべきか判断したいとき。
-- CLI の外部挙動、runtime 契約、prompt 組み立て、apply/review/indexing の回帰、packaged import 境界、StructDoc rendering のどれを変えるかを切り分けたいとき。
-- テスト共通補助の役割や、どの補助がどのサブコマンド群に対応するかを確認したいとき。
+- `test` 配下で共通化された補助処理の責務や使い分けを確認したいとき。
+- 特定サブコマンドの外部挙動や回帰条件を確認したいときに、対応する `test_*.py` を探したいとき。
+- `oracle` 側の正本仕様断片に対応する realization test の入口を絞り込みたいとき。
 
 ## Do not read this when
-- 個別の機能仕様や実装本文を確認したいときは、このルーティングではなく対応する oracle 側か realization 側の本文を読む。
-- INDEX.md の書き方そのものや上位ルーティングを確認したいときは、この配下ではなく上位の案内を読む。
-- テスト基盤ではなく、本体の業務ロジックや永続状態の仕様だけを追いたいときは個別実装を直接読む。
+- 個別機能の正本仕様そのものを確認したいときは、対応する `oracle` 側を読む。
+- `test` 全体のルーティング方針や上位の案内を確認したいときは、ここではなく上位階層の案内を読む。
+- テスト以外の実装本体や CLI ロジックを追いたいときは、各 `src` 側を読む。
 
 ## hash
-- 84e60845b2f545a48019ff79aab488083999eb9d3f5268eaef70c1ecdb15ab99
+- 5da52754ed7a23a0a9268e35ebbe8127611db143f9b7f1552c34875b01fbb82d

@@ -125,20 +125,20 @@
 # `test_acp_builder_apply_parameters.py`
 
 ## Summary
-- `acp.builder.apply.fork` 配下の parameter 生成が、正本 schema の参照先・prompt・モデル設定を意図どおりに組み立てるかを確認するテスト。パッケージ配置からの import 可否、`<repo-root>` と `<work-root>` の解決、`<target-path>` の扱い、schema 一致を見たいときに読む。
+- `acp.builder.apply.fork` 系の parameter 生成と、その prompt・schema 参照・root 取り扱い・拒否条件を検証するテスト群を案内する。apply fork の各 builder が正本 schema と標準文面をどう組み立てるか、相対 path の扱いを確かめたいときに読む。
 
 ## Read this when
-- `apply/fork` 用の parameter builder が、どの正本 schema を指すべきか確認したいとき。
-- prompt に含める標準文面や root の埋め込み方、`<repo-root>` / `<work-root>` / `<target-path>` の使い分けを変更したいとき。
-- packaged layout でも import できること、または target path の相対指定に関する制約を確認したいとき。
+- apply fork の builder 生成結果に含まれる prompt、`structured_output_schema_path`、`model_class`、`reasoning_effort` を確認したい。
+- packaged layout での import 契約や、`<repo-root>` と `<work-root>` の使い分けを検証したい。
+- root token のない相対 target path を拒否する条件や、finding application / file finding enumeration / change summary の正本 schema 参照を確認したい。
 
 ## Do not read this when
-- `acp.builder.apply.fork` の実装本体や prompt 生成ロジックそのものを追いたいときは、対応する `src` 側を直接読む。
-- 正本 schema の中身や運用ルールを知りたいだけなら、このテストではなく対応する `oracle` 側の schema・doc を読む。
-- `apply/fork` 以外の subcommand の parameter 生成を見たいときは、各 subcommand の個別テストへ進む。
+- apply fork builder の実装そのものを追いたい場合は、対応する `src/acp/builder/apply/fork/` 側を読む。
+- 正本 schema の内容そのものを確認したい場合は、`oracle/src/oracle/acp_builder/apply/fork/` 側を読む。
+- apply fork 以外の ACP builder の prompt 構成や schema 参照を探している場合は、このテストではなく該当サブコマンドのテストを読む。
 
 ## hash
-- 35db896a2f164d366da03dc8a72d687703b985e3f8f6014835460e60210d86f0
+- 861db2f4835dd0bb7e8df68a55e80b68e1ab2974a87e413e5287b474c41328c7
 
 # `test_acp_builder_indexing_parameters.py`
 
