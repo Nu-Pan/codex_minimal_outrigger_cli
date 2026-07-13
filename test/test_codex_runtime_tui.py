@@ -24,13 +24,21 @@ from commons.runtime_logging import (
 )
 
 
+# 根拠: TUI の prompt、アクセス境界、Codex 呼び出し、ログ出力を検証する。
+# <work-root>/oracle/doc/app_spec/sub_command/tui.md
+# <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+# <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+# <work-root>/oracle/doc/app_spec/console_and_file_log.md
+# docstring の責務記述は <work-root>/oracle/doc/dev_rule/coding_rule.md に従う。
 def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """許可領域外の追加読み取りパスでは Codex を起動しないことを確認する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
 
     def fail_run(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        """Codex 起動が先行していないことを検出する fake subprocess。"""
         raise AssertionError("Codex subprocess must not start")
 
     monkeypatch.setattr(cmoc_runtime.subprocess, "run", fail_run)
@@ -47,6 +55,7 @@ def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
 def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """PURE_ORACLE_READ で完成済み prompt を読み、CLI 引数を制約どおり渡すことを確認する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     prompt_path = root / ".cmoc" / "local" / "log" / "tui" / "20260101_cmpl.md"
@@ -90,6 +99,7 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
 def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked worktree の完成済み prompt と、そのファイルアクセス上書きを維持することを確認する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     linked = root / ".cmoc" / "local" / "worktree" / "linked"
@@ -147,6 +157,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
 def test_run_codex_tui_logs_successful_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """正常終了時に TUI の call log、サブコマンドイベント、コンソール要約を残すことを確認する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -214,12 +225,14 @@ def test_run_codex_tui_keeps_call_logs_on_timestamp_collision(
 def test_run_codex_tui_logs_missing_cli_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Codex CLI 不在時に未起動の失敗として各ログへ記録し、エラーを返すことを確認する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     real_run = subprocess.run
 
     def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
+        """Codex の実行だけを CLI 不在に差し替え、他の subprocess は通す fake。"""
         if args[:1] == ["codex"]:
             raise FileNotFoundError("codex")
         return real_run(args, *pos, **kwargs)
@@ -252,11 +265,13 @@ def test_run_codex_tui_logs_missing_cli_failure(
 def test_run_codex_tui_logs_keyboard_interrupt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """KeyboardInterrupt を再送出しつつ、未起動扱いの call log とイベントを残すことを確認する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
 
     def interrupt(*_args: object, **_kwargs: object) -> object:
+        """Codex subprocess が KeyboardInterrupt を送出する状態を作る fake。"""
         raise KeyboardInterrupt
 
     monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", interrupt)
@@ -284,6 +299,7 @@ def test_run_codex_tui_logs_keyboard_interrupt(
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Codex の非 0 終了を TUI 呼び出し失敗として報告し、call log を保存することを確認する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
