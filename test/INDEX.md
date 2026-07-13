@@ -642,21 +642,20 @@
 # `test_review_oracle_worktree.py`
 
 ## Summary
-- `review oracle` が worktree 選択、INDEX 統合、差分検査、競合解決をどう扱うかを検証するテスト群。
-- セッション fork 後の review 実行で、linked worktree や preflight 由来の INDEX.md をどう反映するか、また未コミット差分や不要な worktree 生成をどう拒否するかを確認する。
+- `cmoc review oracle` の worktree 選択と INDEX 統合の振る舞いを確認する統合テスト群。linked worktree の session branch で実行されること、review 用 worktree が分離されること、INDEX 変更が取り込まれること、競合時の解決方針、review 実行中に INDEX 以外の差分が混ざった場合の拒否を扱う。
 
 ## Read this when
-- `review oracle` の CLI 挙動、worktree の選択条件、INDEX.md のマージや競合解決を変えるとき。
-- review 実行前後の git 差分チェックや、linked worktree / session branch の扱いを確認したいとき。
-- review で生成される report や worktree 配置が期待どおりかを確認したいとき。
+- `cmoc review oracle` の対象 worktree がどれになるべきかを確認したいとき。
+- review 実行時に INDEX.md の生成・マージ・競合解決がどう扱われるかを確認したいとき。
+- review 中に未コミット差分や INDEX.md 以外の差分がある場合の拒否条件を確認したいとき。
 
 ## Do not read this when
-- `review oracle` 以外の review ルートの一般的な実装を追いたいときは、対応する実装側を読む。
-- INDEX 統合の具体処理だけを追いたいときは、このテストより `commons.indexing` 側を読む。
-- セッション fork 自体の挙動だけを確認したいときは、このファイルではなく session 関連のテストを読む。
+- review oracle の所見列挙・採否判定・レポート本文だけを確認したいときは、review ループや report 側のテストを読む。
+- `cmoc review oracle` 以外の一般的な CLI 挙動や別サブコマンドの振る舞いを確認したいとき。
+- 対象 oracle の選定そのものだけを確認したいときは、対象抽出側のテストを読む。
 
 ## hash
-- d4a9017f429505064cc1704b3c60d331bcee268fe15119594e7b471e5b1bbc85
+- c51cf53de335391985ea9d46ba1e4e54417e79ea1f34a15d858b0bf44a69dd93
 
 # `test_runtime_cli.py`
 

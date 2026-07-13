@@ -134,18 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の realization test と test support を束ねるルーティング対象で、`acp_builder`、`runtime`、`CLI`、`prompt`、`session`、`indexing` の外部挙動回帰を読む入口になる。
-- 個別の機能確認では、対応するサブシステム別テストへ進み、共通補助や対象別の境界を確認したいときにこの階層を読む。
+- `test` 配下の回帰テスト群への入口。CLI、runtime、prompt、builder、oracle 連携、共通 support をまたぐ外部挙動の検証先を選ぶときに読む。
+- 個別の機能変更では、まず該当サブコマンドや runtime のテストへ進み、共通の補助や fixture を辿る必要があるときにだけこの層を見る。
 
 ## Read this when
-- 特定の CLI、runtime、prompt、session、indexing の外部挙動を変えたので、その回帰テストを探したいとき。
-- テスト用共通補助がどの責務を持ち、どの個別テスト群がそれを使うかを確認したいとき。
-- `oracle` 側の正本仕様に対応する観測点を、テストから辿りたいとき。
+- どの機能の回帰テストがあるかを探したいとき。
+- CLI、runtime、prompt、oracle 連携のどれかを変えたので、対応するテストの入口を選びたいとき。
+- 共通 support と個別テストの責務境界を確認したいとき。
 
 ## Do not read this when
-- 正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
-- 実装本体の分割や内部 helper の詳細だけを追いたいときは、対応する `src` 側を読む。
-- `INDEX.md` のルーティング方針そのものを確認したいときは、この階層ではなく上位の案内を読む。
+- 個別機能の正本仕様そのものを確認したいときは、対応する oracle 側を読む。
+- 実装の詳細や内部 helper の分割だけを追いたいときは、該当する src 側を読む。
+- ルーティング方針そのものを確認したいときは、この層ではなく上位の案内を読む。
 
 ## hash
-- 1335e75ef4576a477861357ae8a8ad21350ff3704deb1ffbed20c40a7a05ff3e
+- d6ce5c80734a3b07e9ec0d8ce200bc4ce5f86680274633bdbbd1c1391b8d71d2
