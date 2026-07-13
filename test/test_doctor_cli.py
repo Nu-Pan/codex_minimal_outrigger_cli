@@ -428,10 +428,11 @@ def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
     local_path.write_text('{"new": true}\n')
     run_git(root, "add", "-f", ".cmoc/local/cache.json")
     monkeypatch.chdir(root)
+    local_path.write_text('{"working": true}\n')
 
     run_doctor(root)
 
-    assert local_path.read_text() == '{"new": true}\n'
+    assert local_path.read_text() == '{"working": true}\n'
     assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
     assert run_git(root, "diff", "--cached", "--name-only").stdout.strip() == ""
 

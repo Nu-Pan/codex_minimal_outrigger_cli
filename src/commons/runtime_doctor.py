@@ -116,7 +116,7 @@ def _commit_doctor_repairs_from_head(root: Path, agents_gitkeep_added: bool) -> 
         _stage_gitignore_repair(root, index_path)
         _stage_agents_gitkeep_repair(root, index_path, agents_gitkeep_added)
         _run_git_with_index(
-            ["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc/local"],
+            ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/local"],
             root,
             index_path,
         )
@@ -157,7 +157,7 @@ def _restored_index_tree(root: Path) -> str:
         _stage_gitignore_repair_from_index(root, index_path)
         _stage_agents_gitkeep_repair_from_index(root, index_path)
         _run_git_with_index(
-            ["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc/local"],
+            ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/local"],
             root,
             index_path,
         )

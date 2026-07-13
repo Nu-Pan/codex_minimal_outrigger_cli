@@ -268,7 +268,7 @@ def ensure_cmoc_ignored(root: Path) -> None:
     if not tracked and ignored_returncode == 0:
         return
 
-    run_git(["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc/local"], root)
+    run_git(["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/local"], root)
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(
