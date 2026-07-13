@@ -64,8 +64,6 @@ def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
     assert [line for line in second.path.read_text().splitlines() if line]
 
 
-
-
 def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -74,6 +72,10 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
     monkeypatch.chdir(root)
 
     def fail_doctor(_root: Path) -> None:
+        """doctor preprocess の失敗を再現する fake。
+
+        根拠: <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+        """
         raise CmocError("doctor failed", ["fix doctor"], "doctor detail")
 
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", fail_doctor)
@@ -299,7 +301,6 @@ def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_patte
         "/.cmoc/local/\n"
     )
     assert run_git(root, "status", "--short").stdout.strip() == "M .gitignore"
-
 
 
 def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
