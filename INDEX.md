@@ -134,18 +134,20 @@
 # `test`
 
 ## Summary
-- `test` 配下で共有する `_support.py` 群の入口。各 helper がどのテスト境界を支え、どの共通前提を持つかを確認したいときに読む。
-- 個別サブコマンドや runtime 本体ではなく、テスト補助の責務分担と再利用点を見たい場合のルーティング先である。
+- `test` 配下の共通 support ファイル群と個別の回帰テストを案内するための入口です。各 helper は、CLI 実行・git fixture・Codex 実行・Ollama 連携・path 解決など、対応するテスト群が同じ前提を繰り返し読まなくて済むように役割を分けています。
+- `acp_builder` 系は、正本 schema や prompt 置換、公開面の契約を確認したいときに対応テストへ進みます。`session` / `apply` / `review` / `indexing` / `doctor` / `tui` / `codex runtime` / `basic runtime` は、それぞれ外部挙動や権限制御、状態遷移、レポート生成、preflight、呼び出し境界を確認したいときの入口です。
 
 ## Read this when
-- 複数のテストで共通に使う補助処理の役割や使い分けを確認したいとき。
-- 特定のテスト helper が、どの外部挙動や仕様断片に結びつくかを見たいとき。
-- テスト本文を読む前に、共通 support の責務境界だけを絞って把握したいとき。
+- 共通の test support を使っている理由や、どのテスト群がその helper を前提にしているかを確認したいとき。
+- `acp_builder` の正本 schema・prompt・公開 API の契約を確認したいとき。
+- `apply` / `session` / `review` / `indexing` / `doctor` / `tui` / `codex exec` まわりの CLI 挙動、state 遷移、preflight、権限制御、report 生成を確認したいとき。
+- `runtime` 系の path、config、file access、Ollama、subprocess、retry、quota、error handling を確認したいとき。
+- `basic.path_model` と cmoc runtime の root 復元や managed 範囲の制約を確認したいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様や実装本体を確認したいときは、対応する `oracle` 側本文を読む。
-- テスト対象そのものの CLI 挙動や runtime 振る舞いを追いたいときは、support ではなく該当する test 本文を読む。
-- この領域の routing 方針そのものを確認したいときは、上位の案内を読む。
+- 個別コマンドや helper の実装本文を確認したいときは、対応する実装ファイルや oracle 側の本文を直接読むべきです。
+- 正本仕様そのものを確認したいだけなら、この test 入口ではなく対応する oracle doc / oracle src を読むべきです。
+- INDEX ルーティング方針そのものを確認したいときは、この領域ではなく上位の案内を読むべきです。
 
 ## hash
-- db39ec0b0b9ace4c40ba8b3a281f2e060db3a8a5a5e1ccb754b843aedf91eb84
+- 21cf488507847f9eb20493c4ad2c655a77f69525b49d632068355427d89f36f9
