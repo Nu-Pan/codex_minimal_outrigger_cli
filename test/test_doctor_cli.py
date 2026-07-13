@@ -1,3 +1,21 @@
+"""doctor preprocess の共有 lifecycle を外部挙動から検証する統合テスト。
+
+doctor preprocess は `.cmoc/local`、`.agents`、config、managed Ollama を同じ
+repository/worktree 前提で修復し、必要な差分を commit する。このファイルは
+CLI と直接呼び出しの両方で、その lifecycle と pre-existing Git index の保持を
+一続きの文脈で確認する。
+
+Ollama・lock・CLI/config・Git index はテスト観点としては分かれるが、各ケース
+が同じ `make_repo`、linked worktree、共有 doctor lock、preprocess の副作用を
+前提にする。ファイルを分割すると、これらの fixture と lifecycle の説明を
+複数のモジュールで重複して読む必要があり、局所的な読解量が増えるため、
+責務を doctor preprocess の外部契約に限定して一つに保つ。
+
+正本仕様: `<work-root>/oracle/doc/app_spec/doctor_preprocess.md`,
+`<work-root>/oracle/doc/app_spec/sub_command/doctor.md`,
+`<work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md`。
+"""
+
 import json
 import multiprocessing
 import subprocess
@@ -24,6 +42,8 @@ from _git_support import make_repo, run_git
 
 
 def hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
+    """別プロセスで共有 doctor lock を保持し、解放通知まで待機する。"""
+
     import fcntl
 
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -38,6 +58,8 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """doctor が Git の共通状態を修復し、共有 Ollama を再利用可能にすることを検証する。"""
+
     root = make_repo(tmp_path)
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
@@ -52,8 +74,8 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
         ".agents/.gitkeep"
     ]
     # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # This is the production service and persistent model store, not a test
-    # HOME or endpoint. doctor must leave this service reusable for later tests.
+    # これはテスト用 HOME や endpoint ではなく、本番実行と共有するサービスと永続 model store である。
+    # 後続テストでも再利用できるよう、doctor はこのサービスをそのまま残す。
     home = Path.home()
     service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
     assert (home / ".cmoc" / "ollama" / "bin" / "ollama").is_file()
@@ -104,6 +126,8 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
 def test_doctor_pulls_each_unique_cmoc_provider_model(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """設定に現れる cmoc provider model を重複なく pull 対象にすることを検証する。"""
+
     root = make_repo(tmp_path)
     config = CmocConfig()
     config.codex.model[ModelClass.MAINSTREAM] = CodexModelSpec("cmoc", "alpha")
@@ -136,6 +160,8 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
 def test_doctor_preprocess_in_linked_worktree_uses_repo_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked worktree からの preprocess が repository 側の model 設定を使うことを検証する。"""
+
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "local" / "worktree" / "linked-ollama-config"
     run_git(root, "worktree", "add", "-b", "linked-ollama-config", str(linked), "HEAD")
@@ -169,6 +195,8 @@ def test_doctor_preprocess_in_linked_worktree_uses_repo_config(
 def test_doctor_preprocess_waits_for_common_repository_lock(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked worktree と repository で共有する doctor lock の解放待ちを検証する。"""
+
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "local" / "worktree" / "linked-doctor-lock"
     run_git(
@@ -187,6 +215,8 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
     original_flock = doctor_module.fcntl.flock
 
     def observe_lock_attempt(fd: int, operation: int) -> None:
+        """doctor が排他 lock を取得しようとしたことをテストへ通知する。"""
+
         if operation & doctor_module.fcntl.LOCK_EX:
             lock_attempted.set()
         original_flock(fd, operation)
@@ -215,6 +245,8 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
 def test_doctor_generates_and_tracks_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """doctor が既定 config を生成し、Git index へ追跡することを検証する。"""
+
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
     monkeypatch.chdir(root)
@@ -235,6 +267,8 @@ def test_doctor_generates_and_tracks_config(
 def test_dector_alias_runs_doctor(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """互換 alias `dector` が doctor と同じ config 生成を実行することを検証する。"""
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
@@ -247,6 +281,8 @@ def test_dector_alias_runs_doctor(
 def test_doctor_generates_config_under_broad_cmoc_ignore(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """広い `.cmoc/` ignore があっても生成 config を追跡可能に修復することを検証する。"""
+
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text(".cmoc/\n")
     run_git(root, "add", ".gitignore")
@@ -270,6 +306,8 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
 def test_doctor_preprocess_targets_current_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked worktree 起点の doctor が repository と worktree の状態を正しく修復することを検証する。"""
+
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "local" / "worktree" / "linked-doctor"
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
@@ -315,6 +353,8 @@ def test_doctor_preprocess_targets_current_linked_worktree(
 def test_doctor_syncs_default_config_without_overwriting_human_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """既存 config の人間による値を保ったまま不足する既定値を同期することを検証する。"""
+
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
     config_path.parent.mkdir()
@@ -358,6 +398,8 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
 def test_doctor_preprocess_untracks_existing_cmoc_local_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """既に追跡された `.cmoc/local` のファイルを実体を残して index から外すことを検証する。"""
+
     root = make_repo(tmp_path)
     local_path = root / ".cmoc" / "local" / "cache.json"
     local_path.parent.mkdir(parents=True)
@@ -375,6 +417,8 @@ def test_doctor_preprocess_untracks_existing_cmoc_local_files(
 def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """事前に stage された `.cmoc/local` の変更を doctor が復元・上書きしないことを検証する。"""
+
     root = make_repo(tmp_path)
     local_path = root / ".cmoc" / "local" / "cache.json"
     local_path.parent.mkdir(parents=True)
@@ -395,6 +439,8 @@ def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
 def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_deletion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """生成した `.agents/.gitkeep` だけを修復 commit し、既存の削除 stage を保つことを検証する。"""
+
     root = make_repo(tmp_path)
     agents_file = root / ".agents" / "existing.txt"
     agents_file.parent.mkdir()
@@ -419,6 +465,8 @@ def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_delet
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """doctor の修復 commit が事前に stage された利用者変更を取り込まないことを検証する。"""
+
     root = make_repo(tmp_path)
     user_file = root / "user.txt"
     user_file.write_text("user change\n")
@@ -437,6 +485,8 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
 def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """doctor の `.gitignore` 修復 commit が事前の stage 内容を上書きしないことを検証する。"""
+
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
     gitignore.write_text("human-rule\n")
@@ -458,6 +508,8 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
 def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """修復対象 path にある staged と unstaged の差分をそれぞれ保つことを検証する。"""
+
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
     gitignore.write_text("staged-rule\n")
@@ -478,6 +530,8 @@ def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
 def test_doctor_preprocess_preserves_preexisting_staged_rename(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """doctor が事前に stage された rename の index 表現を保つことを検証する。"""
+
     root = make_repo(tmp_path)
     old_path = root / "old.txt"
     new_path = root / "new.txt"
