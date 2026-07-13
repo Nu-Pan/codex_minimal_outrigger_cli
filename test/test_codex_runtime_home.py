@@ -234,13 +234,19 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
     assert codex_calls == []
 
 
-def test_run_codex_exec_fails_before_codex_when_auth_json_missing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("auth_json_is_directory", [False, True])
+def test_run_codex_exec_fails_before_codex_when_auth_json_is_not_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    auth_json_is_directory: bool,
 ) -> None:
-    """Rejects a home without auth.json before starting Codex."""
+    """Rejects missing or non-file auth.json before starting Codex."""
     root = make_repo(tmp_path)
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
+    auth_path = codex_home / "auth.json"
+    if auth_json_is_directory:
+        auth_path.mkdir()
     monkeypatch.setenv("CODEX_HOME", str(codex_home))
     codex_calls = _spy_codex_subprocess(monkeypatch)
     parameter = AgentCallParameter(
