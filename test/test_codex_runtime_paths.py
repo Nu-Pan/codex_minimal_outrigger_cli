@@ -13,17 +13,24 @@ import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from config.cmoc_config import CmocConfig
 
-from _codex_support import codex_override_config, codex_parameter, setup_codex_home
+from _codex_support import (
+    _assert_not_writable,
+    codex_override_config,
+    codex_parameter,
+    setup_codex_home,
+)
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 from commons.runtime_codex import run_codex_exec
-from commons.runtime_paths import _reserve_timestamped_path
 
 
-def reserve_fixed_codex_path(
-    directory: Path, barrier: Barrier, connection: object
-) -> None:
-    """同じ初回 timestamp を使う別 process の予約を再現する。"""
+_FIXED_CODEX_TIMESTAMP = "2099-01-01_00-00_00_000000000"
+
+
+def run_fixed_codex_exec(root: Path, barrier: Barrier, connection: object) -> None:
+    """同じ初回 timestamp の実運用 Codex 呼び出しを別 process で実行する。"""
+    import commons.runtime_codex_exec as exec_module
+
     attempts = 0
 
     def timestamp_factory() -> str:
@@ -31,41 +38,119 @@ def reserve_fixed_codex_path(
         attempts += 1
         if attempts == 1:
             barrier.wait(timeout=5)
-            return "2099-01-01_00-00_00_000000000"
-        return f"2099-01-01_00-00_00_000000000_retry_{attempts}"
+            return _FIXED_CODEX_TIMESTAMP
+        return f"{_FIXED_CODEX_TIMESTAMP}_retry_{attempts}"
 
-    _, path = _reserve_timestamped_path(directory, "_call.json", timestamp_factory)
-    connection.send(path.name)
-    connection.close()
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Force both production calls through the same initial timestamp so the
+    # reservation is exercised at the run_codex_exec boundary.
+    exec_module.timestamp = timestamp_factory
+    try:
+        result = run_codex_exec(
+            codex_parameter(),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+        connection.send(
+            {
+                "call_log_path": str(result.call_log_path),
+                "prompt_log_path": str(result.prompt_log_path),
+                "stdout_log_path": str(result.stdout_log_path),
+                "stderr_log_path": str(result.stderr_log_path),
+                "output_path": str(result.output_path),
+            }
+        )
+    except BaseException as exc:
+        connection.send({"error": f"{type(exc).__name__}: {exc}"})
+    finally:
+        connection.close()
 
 
-def test_timestamped_path_reservation_is_process_safe(tmp_path: Path) -> None:
-    """同一 timestamp の並列予約でもログ path を共有しない。"""
-    log_dir = tmp_path / "codex"
-    log_dir.mkdir()
+def test_timestamped_path_reservation_is_process_safe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """並列 run_codex_exec が同一 timestamp でもログ path を共有しない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text('done\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     barrier = Barrier(2)
     channels = [Pipe() for _ in range(2)]
     processes = [
         Process(
-            target=reserve_fixed_codex_path,
-            args=(log_dir, barrier, child),
+            target=run_fixed_codex_exec,
+            args=(root, barrier, child),
         )
         for _parent, child in channels
     ]
     for process in processes:
         process.start()
 
-    names = [parent.recv() for parent, _child in channels]
+    records = []
+    for parent, _child in channels:
+        assert parent.poll(10)
+        records.append(parent.recv())
     for process in processes:
-        process.join(5)
+        process.join(10)
 
     assert all(process.exitcode == 0 for process in processes)
-    assert len(set(names)) == 2
-    assert all((log_dir / name).is_file() for name in names)
+    assert all("error" not in record for record in records), records
+    all_log_paths = []
+    for record in records:
+        call_path = Path(record["call_log_path"])
+        call_log = json.loads(call_path.read_text())
+        timestamp = call_log["timestamp"]
+        assert timestamp.startswith(_FIXED_CODEX_TIMESTAMP)
+        assert call_path.name == f"{timestamp}_call.json"
+        related_paths = [
+            call_path,
+            *(
+                Path(call_log[key])
+                for key in (
+                    "prompt_log_path",
+                    "stdout_log_path",
+                    "stderr_log_path",
+                    "output_path",
+                    "output_jsonl_log_path",
+                )
+            ),
+        ]
+        assert all(path.is_file() for path in related_paths)
+        assert all(path.name.startswith(f"{timestamp}_") for path in related_paths)
+        assert {
+            Path(record[key])
+            for key in (
+                "call_log_path",
+                "prompt_log_path",
+                "stdout_log_path",
+                "stderr_log_path",
+                "output_path",
+            )
+        }.issubset(related_paths)
+        all_log_paths.extend(related_paths)
+
+    assert len(all_log_paths) == len(set(all_log_paths))
 
 
+@pytest.mark.parametrize(
+    "parameter_cwd",
+    [None, "oracle"],
+    ids=["fallback_to_work_root", "parameter_cwd"],
+)
 def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, parameter_cwd: str | None
 ) -> None:
     """パラメータの cwd と pure-oracle read の権限境界を検証する。
 
@@ -94,17 +179,18 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
+    target_cwd = root / parameter_cwd if parameter_cwd is not None else None
     run_codex_exec(
-        codex_parameter(FileAccessMode.PURE_ORACLE_READ),
+        codex_parameter(FileAccessMode.PURE_ORACLE_READ, cwd=target_cwd),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
     )
 
     record = json.loads(recorder.read_text())
-    work_root = str(root.resolve())
-    assert record["args"][record["args"].index("--cd") + 1] == work_root
-    assert record["cwd"] == work_root
+    expected_cwd = (target_cwd or root).resolve()
+    assert record["args"][record["args"].index("--cd") + 1] == str(expected_cwd)
+    assert record["cwd"] == str(expected_cwd)
     override_config = codex_override_config(record["args"])
     assert "--sandbox" not in record["args"]
     assert "sandbox_workspace_write" not in override_config
@@ -239,6 +325,9 @@ def test_run_codex_exec_overrides_do_not_open_agents_tree(
         <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     """
     root = make_repo(tmp_path)
+    agents_file = root / ".agents" / "nested" / "instructions.md"
+    agents_file.parent.mkdir(parents=True)
+    agents_file.write_text("agent instructions\n")
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -264,10 +353,5 @@ def test_run_codex_exec_overrides_do_not_open_agents_tree(
     )
 
     args = json.loads(recorder.read_text())
-    filesystem = codex_override_config(args)["permissions"]["cmoc"]["filesystem"]
-    agents = (root / ".agents").resolve()
-    assert not any(
-        access == "write" and agents.is_relative_to(Path(path))
-        for path, access in filesystem.items()
-    )
+    _assert_not_writable(args, agents_file)
     assert "--profile" not in args

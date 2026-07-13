@@ -1,3 +1,4 @@
+from dataclasses import replace
 import tomllib
 from pathlib import Path
 
@@ -29,15 +30,21 @@ def stub_managed_ollama_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def codex_parameter(mode: FileAccessMode = FileAccessMode.READONLY) -> AgentCallParameter:
+def codex_parameter(
+    mode: FileAccessMode = FileAccessMode.READONLY, *, cwd: Path | None = None
+) -> AgentCallParameter:
     """Build the small default Codex parameter used by runtime wrapper tests."""
-    return AgentCallParameter(
+    parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         mode,
         "prompt",
         None,
     )
+    if cwd is None:
+        return parameter
+    # <work-root>/oracle/src/oracle/acp_builder/basic.py
+    return replace(parameter, cwd=cwd)
 
 
 def codex_arg_value(args: list[str], flag: str) -> str | None:
