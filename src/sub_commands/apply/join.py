@@ -1,3 +1,10 @@
+"""apply join の差分判定、merge、report、後始末を一つの実行単位として扱う。
+
+このファイルは 16,000 文字を超えるが、各処理は同じ apply/session state、
+worktree、branch の失敗時文脈を共有するため、分割せず一箇所で追える凝集した責務である。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
+
 import json
 from pathlib import Path
 
@@ -87,7 +94,9 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     if apply_worktree:
         require_clean_worktree(apply_worktree)
     start_subcommand_step(5, "apply branch の差分を確認", "check unexpected changes")
-    unexpected = collect_apply_join_unexpected_changes(root, state, apply_branch, session_branch)
+    unexpected = collect_apply_join_unexpected_changes(
+        root, state, apply_branch, session_branch, apply_worktree
+    )
     if unexpected and not force_resolve:
         report_path = write_apply_join_report(
             repo,
@@ -285,6 +294,7 @@ def collect_apply_join_unexpected_changes(
     state: SessionState,
     apply_branch: str,
     session_branch: str,
+    apply_worktree: Path | None = None,
 ) -> dict[str, list[str]]:
     """apply/session branch 上の想定外差分を分類して返す。"""
     base = (
@@ -295,7 +305,11 @@ def collect_apply_join_unexpected_changes(
     apply_paths = changed_paths_on_managed_branch(root, base, apply_branch)
     session_paths = changed_paths_on_managed_branch(root, base, session_branch)
     unexpected_apply = [
-        path for path in apply_paths if not is_expected_apply_change(root, path)
+        path
+        for path in apply_paths
+        if not is_expected_apply_change(
+            root, path, apply_branch=apply_branch, apply_worktree=apply_worktree
+        )
     ]
     unexpected_session = [
         path for path in session_paths if not is_expected_session_change(root, path)
@@ -346,7 +360,13 @@ def managed_branch_name_status_lines(root: Path, base: str, branch: str) -> list
     ).stdout.splitlines()
 
 
-def is_expected_apply_change(root: Path, path: str) -> bool:
+def is_expected_apply_change(
+    root: Path,
+    path: str,
+    *,
+    apply_branch: str | None = None,
+    apply_worktree: Path | None = None,
+) -> bool:
     """apply branch 上で許可される差分かどうかを判定する。"""
     p = Path(path)
     # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
@@ -359,7 +379,27 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
     # branch products to implementation files and INDEX.md.
     if not path.startswith("src/"):
         return False
+    if apply_worktree is not None:
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md requires
+        # tracked apply-branch files to be classified using that branch's state.
+        return not is_untracked_git_ignored(apply_worktree, apply_worktree / path)
+    if apply_branch and is_tracked_on_branch(root, apply_branch, path):
+        # The apply worktree may be unavailable during recovery, but a path in
+        # the branch tree is tracked even when the session worktree ignores it.
+        return True
     return not is_untracked_git_ignored(root, root / path)
+
+
+def is_tracked_on_branch(root: Path, branch: str, path: str) -> bool:
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md requires the
+    # apply branch's tracked state; the session worktree may not contain a new
+    # apply path, so its index cannot answer this question.
+    return bool(
+        run_git(
+            ["ls-tree", "-r", "--name-only", branch, "--", path],
+            root,
+        ).stdout.splitlines()
+    )
 
 
 def is_expected_session_change(root: Path, path: str) -> bool:

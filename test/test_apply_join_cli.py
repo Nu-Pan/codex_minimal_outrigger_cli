@@ -598,14 +598,11 @@ def test_apply_join_allows_tracked_ignored_src_apply_diff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """追跡済みで ignore された src path の apply 差分を許可する。"""
+    """apply branch で新規追加した tracked ignored src path を許可する。"""
     root = make_repo(tmp_path)
-    ignored_src = root / "src" / "ignored.py"
-    ignored_src.parent.mkdir()
-    ignored_src.write_text("value = 1\n")
     (root / ".gitignore").write_text("src/ignored.py\n")
-    run_git(root, "add", "-f", ".gitignore", "src/ignored.py")
-    run_git(root, "commit", "-m", "add tracked ignored src")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore src implementation")
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     assert (
@@ -621,9 +618,13 @@ def test_apply_join_allows_tracked_ignored_src_apply_diff(
     )
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
+    (apply_worktree / "src").mkdir()
     (apply_worktree / "src" / "ignored.py").write_text("value = 2\n")
-    run_git(apply_worktree, "add", "src/ignored.py")
+    run_git(apply_worktree, "add", "-f", "src/ignored.py")
     run_git(apply_worktree, "commit", "-m", "apply ignored implementation change")
+    assert apply_module.is_expected_apply_change(
+        root, "src/ignored.py", apply_branch=state["apply"]["apply_branch"]
+    )
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
