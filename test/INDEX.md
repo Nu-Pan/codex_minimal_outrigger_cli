@@ -359,20 +359,21 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- `codex exec` 呼び出しの実行経路を、`cmoc managed ollama`・`CODEX_HOME`・プロンプト/スキーマ/ログ保存まで含めて検証する回帰テスト群。Real Codex CLI を使う結合動作と、Fake ではなく実 CLI を呼ぶ前提の挙動確認が主目的。
+- `run_codex_exec` と `prepare_codex_override_args` の結合動作を確認するテスト群。実 Codex CLI の起動、`cmoc_managed_ollama` provider の選択、出力 schema の受け渡し、`CODEX_HOME` 設定ファイルを作らないことを扱う。
+- `runtime_codex` の引数組み立てや、`runtime_doctor` による managed ollama 事前確認の境界を変える作業で読む。`codex_exec_rule` と `cmoc_managed_ollama` の仕様差分を確認したいときの入口にする。
 
 ## Read this when
-- `run_codex_exec` や `prepare_codex_override_args` の変更で、Codex CLI への引数注入・プロンプト渡し・出力保存・schema 指定・`CODEX_HOME` 扱い・`cmoc managed ollama` provider 切り替えの仕様を確認したいとき。
-- Real Codex CLI を使う経路で、`cmoc managed ollama` の preflight や `model_provider="cmoc_managed_ollama"` の注入が正しいかを見たいとき。
-- `codex exec` 呼び出しの回帰を、実行結果だけでなく argv・stdin・保存ファイル・override config まで含めて確かめたいとき。
+- Codex 実行経路の統合テストを追加・修正するとき
+- local SLM を `cmoc_managed_ollama` 経由で使う条件や preflight の扱いを変えるとき
+- 出力 schema の保存先や `CODEX_HOME` に設定を書かない保証を確認したいとき
 
 ## Do not read this when
-- Codex CLI 以外の実行経路や、`cmoc managed ollama` を使わない機能を確認したいだけのとき。
-- LLM の応答品質や外部 provider 自体の正しさを検証したいとき。
-- `codex exec` の内部実装ではなく、別のサブコマンドや一般的なテスト方針だけを追いたいとき。
+- CLI の他サブコマンドや一般的な prompt 生成だけを扱うとき
+- `runtime_doctor` 単体の診断ロジックだけを変更するとき
+- Codex 実行以外のファイルアクセスやリポジトリ操作の仕様を確認したいとき
 
 ## hash
-- fc45122df2860fdbf2dcd333bae33464fe6f8f955545e7c4fcf0df07975f2263
+- 3c2621c63ad7de247ec70672f51926e715bf8c75ded3b74af30b0dded31c02de
 
 # `test_codex_runtime_home.py`
 

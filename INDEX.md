@@ -136,17 +136,22 @@
 # `test`
 
 ## Summary
-- `test` 配下で `acp_builder` の正本 schema を参照するための共通 path helper に進むための入口。テスト側に schema を複製せず、oracle 側の `acp_builder` 定義へ直接つなぐ必要がある場合に読む。
+- `test` 配下の realization test をまとめて案内する入口で、CLI 挙動、runtime 境界、prompt/structdoc 生成、ACP builder 互換性の各回帰テストへ振り分ける。
+- この階層は実装本体ではなく、外部挙動や契約を固定するテスト群を持つ。個別機能ごとの入口だけを選べるよう、責務の近いテスト単位へ進むために読む。
+- 共通 support はテスト生成や実行補助に限られ、正本仕様の本文は持たない。仕様の根拠が必要なときは対応する oracle 側へ進む。
 
 ## Read this when
-- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
-- テスト用に正本 schema をコピーせず、oracle 側を参照する方針がどこで支えられているかを確認したいとき。
-- `acp_builder` 関連のテスト helper が他にあるかではなく、この path 解決 helper の責務を見たいとき。
+- CLI 回帰を見たいときは、対象サブコマンドごとのテスト群へ進む。
+- runtime の path、権限、状態、Ollama、Codex 実行、preflight の境界を確認したいときは、対応する runtime 系テストへ進む。
+- `apply`、`session`、`review oracle`、`indexing`、`tui` など、個別サブコマンドの外部挙動を確認したいときは、そのサブコマンド専用の test を読む。
+- prompt 部品や structured output schema の描画結果を確認したいときは、prompt/structdoc 系テストへ進む。
+- ACP builder の公開面、schema 参照先、parameter 組み立てを確認したいときは、ACP builder 系テストへ進む。
 
 ## Do not read this when
-- 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
-- テスト全体の CLI 挙動や他の共通サポートを確認したいときは、この helper ではなく該当する別の test support を読む。
-- `INDEX.md` のルーティング方針そのものを確認したいときは、この helper ではなく上位の案内を読む。
+- 正本仕様の本文を確認したいときは、対応する oracle 側を読む。
+- 実装の内部分割や helper の責務だけを追いたいときは、test ではなく対応する `src` 側を読む。
+- この階層全体のルーティング方針を知りたいときは、上位の案内を読む。
+- 個別ファイルの細部ではなく、共通の開発規約や正本仕様を確認したいときは、この階層ではなく目的に合う oracle/doc を読む。
 
 ## hash
-- 8442eb991c6f95e191fe776a81a54e81ef33fad980dce4dc097fc6f3fd3a80a0
+- 151c387b49a203f0a0447d0b4ecc770034a6d15363b7557a210b56a0a730b434
