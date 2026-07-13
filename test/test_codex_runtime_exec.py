@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import shutil
@@ -104,7 +105,16 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         "base_url": "http://127.0.0.1:11434/v1",
         "wire_api": "responses",
     }
-    assert call_log["schema_path"] == str(result.schema_path)
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    schema_arg = codex_arg_value(call_log["argv"], "--output-schema")
+    assert schema_arg is not None
+    output_schema_path = Path(schema_arg)
+    schema_bytes = schema_source.read_bytes()
+    assert output_schema_path == result.schema_path
+    assert output_schema_path.parent == root / ".cmoc" / "local" / "schema"
+    assert output_schema_path.read_bytes() == schema_bytes
+    assert output_schema_path.name == f"{hashlib.sha256(schema_bytes).hexdigest()}.json"
+    assert call_log["schema_path"] == str(output_schema_path)
     assert result.output_path.read_text() == result.output_text
     assert isinstance(result.output_json["result"], str)
 
