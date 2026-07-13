@@ -53,22 +53,20 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex CLI の fake 実行テストで共通に使う補助関数群で、`CODEX_HOME` の最小認証状態づくり、Codex 起動引数の検証用ヘルパー、sandbox / filesystem override の解釈、書き込み可否のアサーションをまとめている。
-- このファイルは、`commons.runtime_codex_exec` や `commons.runtime_codex_tui` の subprocess  नियंत्रणと、override されたファイルアクセス境界を確認するテストから入る。
-- 外部サービス本体の挙動や一般的な runtime 実装ではなく、テスト用の固定 argv とパス判定ロジックを再利用したいときに読む。
+- Codex 実行時の引数組み立てと、テストからそれを安定して検証するための支援関数を集めたファイル。Codex 実行ルール本体、サンドボックス上書き、Codex Home の最小認証状態、既存実装の引数検証に使う小さな共通補助を読むときに進む。
 
 ## Read this when
-- Codex 実行ラッパーのテストで、fake CLI の引数構築や `--config` の内容確認を共通化したい。
-- sandbox の writable roots と explicit filesystem permission の重なり方を、テスト側で同じ判定規則で扱いたい。
-- `CODEX_HOME` の最小セットアップや、Ollama の事前確認をテストで差し替える方法を探している。
+- Codex 実行コマンドの生成や上書き設定の検証方法を確認したいとき。
+- テストで使う最小限の Codex Home や、引数・設定の共通補助を再利用したいとき。
+- 実行ルールやファイルアクセス制御の仕様を、テスト用の補助実装にどう反映しているかを追いたいとき。
 
 ## Do not read this when
-- Codex 本体の実装ロジックや実サービスの責務を理解したいだけなら、より直接の実装ファイルを読む。
-- 個別テストケースの期待値を知りたいだけなら、この補助モジュールではなく呼び出し元のテスト本文を読む。
-- 一般的なファイルアクセス規則や sandbox 設計の正本仕様を探しているなら、対応する oracle doc を読む。
+- Codex 実行ルールそのものの仕様本文を読みたいときは、対応する oracle doc を先に読む。
+- ファイルアクセス規則や sandbox の本仕様を確認したいだけなら、該当する正本仕様断片を直接読む。
+- 実運用コードや CLI 本体の処理を追いたいだけなら、この補助ファイルではなく実装側へ進む。
 
 ## hash
-- dc08300e2c3921755db2f7ba21387141e04d8a93458af48b5bac0bfea6a46077
+- 11951f81dd839ac3bd08346386a834b152c2b4bc86b0245bbca537cf35641eb3
 
 # `_command_support.py`
 
@@ -395,20 +393,22 @@
 # `test_codex_runtime_paths.py`
 
 ## Summary
-- Codex 実行時の path 解決と権限設定を検証するテスト群。cwd の扱い、schema 保存先、追加 read path、`.agents` を write 対象に含めない制約を確認したいときに読む。
+- `run_codex_exec` の cwd 解決、出力 schema 保存先、権限 override の境界を検証する統合テスト群。`codex` 実行時の引数や権限マップが変わる作業で読む。
+- 並列実行時の timestamp 衝突回避、linked worktree からの repo-local read 許可、`.agents` を write 対象に含めないことを確認したいときの入口。
 
 ## Read this when
-- `run_codex_exec` の cwd / schema 保存先 / permission profile の結合条件を確認したいとき。
-- linked worktree で repo-local な read path を許可する条件や、権限 override が `.agents` を write 対象にしない条件を確認したいとき。
-- timestamp 予約の並列性など、Codex 実行前後の path 生成と保存の境界を確認したいとき。
+- `run_codex_exec` の起動前後で、実行先ディレクトリや schema 保存先の決まり方を確認したい。
+- cwd が `None` の場合と明示指定の場合で、`--cd` と実際の実行先が一致するかを確認したい。
+- linked worktree から repo-local の追加 read path を許可する条件や、`.agents` tree を権限 override に含めない条件を確認したい。
+- 同一 timestamp の並列実行でもログ path が衝突しないことを確認したい。
 
 ## Do not read this when
-- Codex のプロンプト文面や出力 schema 自体の仕様を確認したいときは、対応する oracle doc / oracle src を直接読む。
-- 一般的な git worktree 操作やテスト補助関数の実装詳細だけを知りたいときは、ここではなく各補助モジュールを読む。
-- 権限ルールの正本仕様そのものを確認したいときは、このテストではなく `<work-root>/oracle/doc/app_spec/codex_exec_rule.md` と `<work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py` を読む。
+- `run_codex_exec` の内部実装や引数構築の詳細だけを追いたい場合は、関連する実装側を直接読む。
+- 出力 schema の内容そのものや prompt 文面の仕様を確認したい場合は、このテストではなく正本仕様断片を読む。
+- Git worktree 操作や test helper の一般仕様を知りたいだけなら、このファイルではなく対応する helper 側を読む。
 
 ## hash
-- 7509f25127a7349b007a938fc05058567ceecacd0fa0f6187c655a4d39a18426
+- 51483245b0dcbe237824d80231cb14a68849406e48d4000295e1d7e7b9d307f3
 
 # `test_codex_runtime_quota_retry.py`
 

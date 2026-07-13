@@ -136,22 +136,19 @@
 # `test`
 
 ## Summary
-- `test` 配下の realization test をまとめて案内する入口で、CLI 挙動、runtime 境界、prompt/structdoc 生成、ACP builder 互換性の各回帰テストへ振り分ける。
-- この階層は実装本体ではなく、外部挙動や契約を固定するテスト群を持つ。個別機能ごとの入口だけを選べるよう、責務の近いテスト単位へ進むために読む。
-- 共通 support はテスト生成や実行補助に限られ、正本仕様の本文は持たない。仕様の根拠が必要なときは対応する oracle 側へ進む。
+- `test` 配下の共通テスト補助と、各機能の実行可能な振る舞いを確認する realization test を案内する入口。個別の CLI 挙動や runtime 契約を確認したいときは、対応する test 本文へ進む。
+- 共通補助は `acp_builder` 関連の path 参照、CLI 実行、git fixture、Codex 実行補助、Ollama 補助などの再利用点をまとめる。ここで各補助の責務境界を確認してから、該当する個別テストへ進む。
+- 各機能テストは、`apply` / `session` / `review oracle` / `indexing` / `doctor` / `tui` / `Codex runtime` / `prompt parts` / `StructDoc` など、ユーザー可視の外部挙動や制御ロジックの回帰確認に使う。
 
 ## Read this when
-- CLI 回帰を見たいときは、対象サブコマンドごとのテスト群へ進む。
-- runtime の path、権限、状態、Ollama、Codex 実行、preflight の境界を確認したいときは、対応する runtime 系テストへ進む。
-- `apply`、`session`、`review oracle`、`indexing`、`tui` など、個別サブコマンドの外部挙動を確認したいときは、そのサブコマンド専用の test を読む。
-- prompt 部品や structured output schema の描画結果を確認したいときは、prompt/structdoc 系テストへ進む。
-- ACP builder の公開面、schema 参照先、parameter 組み立てを確認したいときは、ACP builder 系テストへ進む。
+- 共通のテスト補助ファイルが何を支えているか確認したいとき。
+- CLI の外形挙動、runtime の契約、prompt 生成、INDEX 更新、worktree/state 遷移、Codex 実行条件など、対象機能の回帰を見たいとき。
+- `oracle` 側の正本仕様に対応する realization test の入口を探したいとき。
 
 ## Do not read this when
-- 正本仕様の本文を確認したいときは、対応する oracle 側を読む。
-- 実装の内部分割や helper の責務だけを追いたいときは、test ではなく対応する `src` 側を読む。
-- この階層全体のルーティング方針を知りたいときは、上位の案内を読む。
-- 個別ファイルの細部ではなく、共通の開発規約や正本仕様を確認したいときは、この階層ではなく目的に合う oracle/doc を読む。
+- 個別機能の正本仕様そのものを読みたいときは、対応する `oracle` 側へ進む。
+- 共通補助のうち別の責務を持つものを探しているときは、この階層の別ファイルや別テストを読む。
+- INDEX.md のルーティング方針そのものを確認したいときは、上位の案内を読む。
 
 ## hash
-- 151c387b49a203f0a0447d0b4ecc770034a6d15363b7557a210b56a0a730b434
+- 0f3de57d4be4d1b069a80446fcaf3ab48c8207dbac6216d0763ff3eb58e6bdcb
