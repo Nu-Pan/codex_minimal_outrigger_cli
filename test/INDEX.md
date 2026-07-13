@@ -701,20 +701,20 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- `build_codex_override_args` が生成する read/write 許可境界と、追加 writable path の受け入れ・拒否を確認するテスト群。モード別の許可領域、`memo` やルーティング系ファイルの保護、`NO_RULE` の扱いを調べるときに読む。
+- Codex の実行時ファイルアクセス権限を検証するテスト群。`build_codex_override_args` が読み取り専用・実装書き込み・純 Oracle 読み取り/書き込み・リポジトリ全体書き込みの各モードで、どの path を書き込み可/不可にするかと、`extra_writable_paths` の追加許可条件をどう扱うかを確認する。
 
 ## Read this when
-- Codex のファイルアクセス制御を変更・確認するとき。
-- readonly / oracle-only / realization-write / repo-write / no-rule の境界や、`extra_writable_paths` の許可条件を見直すとき。
-- `memo`、`AGENTS.md`、`INDEX.md`、`.cmoc/local` の保護方針や、無視対象の gap path の扱いを確認するとき。
+- Codex の filesystem 権限オーバーライドの可否を変えたとき。
+- `FileAccessMode` ごとの書き込み範囲、`memo` や `.agents`、`.cmoc/local`、`.codex`、`AGENTS.md`、`INDEX.md` の保護条件を確認したいとき。
+- 追加書き込み許可 path が、モードごとの許可範囲内かどうかの判定を変えたとき。
 
 ## Do not read this when
-- 一般的な git 操作や一時ファイル処理だけを変更するとき。
-- CLI 全体の引数解釈や他のプロンプト文面を調べるだけのとき。
-- 許可ルールの本文そのものを確認したいだけなら、対応する oracle 側の仕様断片を直接読む方がよい。
+- ファイルアクセスルールの正本仕様そのものを確認したいときは、対応する Oracle の本文を読む。
+- git 追跡状態や ignore 判定の実装詳細を確認したいときは、権限オーバーライド生成側や git 補助の実装を読む。
+- 権限ではなく CLI の別モードやプロンプト生成の変更を扱うだけなら、このテストは読まなくてよい。
 
 ## hash
-- aa83d2bbf755a055b3e7bcca6bfda1263571449964084552c74b0d7ad7abbaf8
+- 874e61fd4ce7237fa112495a17795f7d6f2ed7f37939819396ae1e467ed9bd05
 
 # `test_runtime_codex_profile.py`
 
