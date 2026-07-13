@@ -645,20 +645,22 @@
 # `test_review_oracle_report.py`
 
 ## Summary
-- `cmoc review oracle` のレポート生成と CLI 挙動を検証する統合テスト群。`review oracle` の出力順、集計件数、`--scope` の反映、処理失敗時の error report、`eval-oracle` からの委譲確認を扱う。
+- `review oracle` のレポート生成と CLI 出力の検証が必要なときに読む。`eval-oracle` からの委譲、`review oracle` の report 生成、findings の severity 別集計、`<oracle-root>` や symlink を含む path の扱い、失敗時の error report をまとめて確認するための入口。
+- 同じ report でも本文の整形や集計結果を変える変更、または `review oracle` の処理失敗時の出力仕様を触る場合に読む。CLI 引数の短縮形や、report 内の節順・件数・見出し・エラー提示の安定性を確認したいときもここが起点になる。
 
 ## Read this when
-- `review oracle` の Markdown レポート本文や frontmatter を変更するとき。
-- 所見の採用・不採用の分類、fatal/minor の集計、`<oracle-root>` や symlink の集計ルールを変えるとき。
-- `review oracle` の `--scope` やエラー時出力、`eval-oracle` からの委譲経路を変えるとき。
+- `review oracle` の report 生成ロジックや CLI 出力を変更するとき
+- `eval-oracle` から `review oracle` 実装への委譲関係を確認したいとき
+- finding の severity 別分類、accepted / rejected の集計、`<oracle-root>` 表示、symlink の集計方法を確認したいとき
+- 処理失敗時に error report を保存・表示する挙動を確認したいとき
 
 ## Do not read this when
-- `review oracle` 以外のサブコマンドの一般的な CLI 仕様だけを変えるとき。
-- Codex CLI 呼び出しの共通規約や schema 定義そのものだけを変えるとき。
-- 個別の oracle 仕様本文を編集したいだけで、レポート生成や CLI 出力の検証を触らないとき。
+- CLI 全般の共通引数や他サブコマンドの仕様だけを見たいときは、対象サブコマンド側の本文を先に読む
+- report ではなく finding の抽出・判定・マージの個別アルゴリズムだけを追いたいときは、該当する実装本文を直接読む
+- oracle 仕様の正本そのものを確認したいだけなら、このテストではなく参照されている oracle/doc 側を読む
 
 ## hash
-- d5e6ae8091d689c498d140cd3645217e43e375c475e8ba4b1408d81619464e1d
+- 935e77fc35d5f1399bd939bc84ccff0af77f3a3243841beb058ebac306a72e7a
 
 # `test_review_oracle_targets.py`
 
