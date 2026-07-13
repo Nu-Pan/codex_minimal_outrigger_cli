@@ -1,21 +1,27 @@
 # `acp`
 
 ## Summary
-- `acp` 系の公開入口をまとめる上位領域。`oracle.acp_builder` 側の正本実装へつなぐ互換導線と、配下の機能別入口を読むための分岐点として使う。
-- この階層は実装本体ではなく、旧 `acp.*` 参照をどこへ維持するか、どこから実体実装へ進むかを判断するための案内に限定される。
+- `acp` 名前空間の互換公開面を維持するための薄い入口。実体実装は別 module に置かれ、この対象は既存 import 経路を壊さずに正本側へつなぐ役割に限られる。
+- `acp.builder` 配下の互換入口と薄い実装層を束ねる上位ディレクトリ。公開面維持と各 builder 領域への振り分けの起点であり、個別仕様は下位対象で確認する。
 
 ## Read this when
-- `acp.*` の旧 import 互換を残す必要があるか、削除できるかを判断したいとき。
-- 正本側の実装を保ちながら、この領域がどの機能入口を公開しているかを確認したいとき。
-- 互換入口の削除条件や、配下の機能別入口へ進むべきかを選びたいとき。
+- `acp.*` の参照を別実体へ移す途中で、互換入口を残す必要性や削除条件を確認したいとき。
+- 利用者向け公開面に残る `acp.*` import の扱いを判断したいとき。
+- `acp.builder.*` の既存参照互換を維持したいとき。
+- 互換入口から正本実装へ到達する振る舞いを確認したいとき。
+- この名前空間に残す薄い公開面と削る対象を判断したいとき。
+- 配下の builder 領域を横断して、互換層と正本側実装の境界を確認したいとき。
 
 ## Do not read this when
-- 正本の実装内容そのものを確認したいときは、ここではなく実体側の領域を読む。
-- 個別機能の挙動や内部処理を調べたいときは、上位の互換案内ではなく該当する下位領域を読む。
-- `acp.*` 参照がすでに不要かどうかだけを確認済みで、互換導線の詳細が不要なとき。
+- 実装本体や生成処理そのものを調べたいとき。この対象は薄い互換入口なので、実体のある module へ進む。
+- 新しい機能や API 仕様を追加する場所を探しているとき。この対象は互換維持専用で、機能追加の入口ではない。
+- `acp.*` 参照がすでに公開面から消えており、互換入口の詳細が不要なとき。
+- 個別の builder の具体仕様や生成ロジックを確認したいとき。対応する下位対象を読む。
+- 正本側の builder 実装そのものを変更したいとき。
+- `acp.builder` 以外の公開面や別名互換の方針を確認したいとき。
 
 ## hash
-- 3681d21e3acf193cc38bf135dd703e4f4882dcd64a572df3d32f6219be206ab9
+- e2d563ef36ccb3f8b5e940da4bbea68388ac913d9c84434709541a667e22c3d2
 
 # `basic`
 
@@ -55,18 +61,21 @@
 # `commons`
 
 ## Summary
-- cmoc の複数領域から再利用される共通補助処理を束ねるパッケージ境界。個別の実装詳細ではなく、共有 helper 群の入口としてどこから進むべきかを判断するために読む。
+- cmoc の共通 runtime helper 群をまとめる領域の入口。個別 helper の実装ではなく、複数モジュールから共有される基盤処理の配置先と境界を確認したいときに読む。
+- この領域は、共通 runtime の公開入口と、その下位にある実装群へ進む前のルーティングに使う。個別の入出力や失敗時挙動は下位要素で確認する。
 
 ## Read this when
-- 複数モジュールから使う共通 helper の置き場所や、この領域が共有補助の入口かどうかを確認したいとき。
-- 共有 helper 群へ進む前に、このまとまりが実行時の共通基盤に属することを確認したいとき。
+- 複数モジュールから使う共通 helper の入口や配置先を確認したいとき。
+- 共有 runtime の下位要素へ進む前に、この領域が共通基盤のまとまりであることを確認したいとき。
+- 共通 helper 群のどの層を読むべきかを、上位のサブコマンド実装に進む前に判断したいとき。
 
 ## Do not read this when
-- 特定 helper の入出力、失敗時挙動、内部アルゴリズムを確認したいとき。該当する下位要素を直接読む。
-- CLI コマンド固有の処理やテスト固有の処理を調べたいとき。共有 helper ではなく、より直接その責務を持つ対象を読む。
+- 特定 helper の内部アルゴリズム、入出力、失敗時挙動を確認したいとき。
+- CLI コマンド固有の処理やテスト固有の処理を調べたいとき。
+- 共有基盤そのものではなく、より直接その責務を持つ下位要素を読むべきとき。
 
 ## hash
-- a3e9b270c4255ef03b2d425f740765a9b39cd67edf04c1c8ed9d38512cc8af80
+- 49db763ddeb7039c57a0d13a1b3a415a75750990b785a80495d1433b27c348ba
 
 # `config`
 
@@ -128,41 +137,29 @@
 # `sub_commands`
 
 ## Summary
-- `cmoc` の各サブコマンド実行入口をまとめる階層。ここでは個別コマンドの責務境界を見分け、必要なら対応する実行本体や共通 runtime 側へ進む。
-- `apply` は apply 系の実行制御を扱い、fork・join・abandon・fork report の役割分担と実行順序を追いたいときの入口になる。
-- `session` は session 系の開始・統合・終了を扱い、fork・join・abandon の状態遷移や branch 操作を確認したいときの入口になる。
-- `review` は review 系サブコマンド群の package 境界と review oracle 実行フローを扱い、対象選択・所見収集・レポート出力を追いたいときの入口になる。
-- `indexing` は INDEX.md 更新と commit をつなぐ実行入口で、前提条件と更新の外形的な流れを確認したいときに読む。
-- `tui.py` は `cmoc tui` の起動入口で、元プロンプト編集、エディタ起動、実行パラメータ解決、TUI 起動の流れを確認したいときに読む。
-- `doctor.py` は doctor サブコマンドから runtime preprocess への薄い委譲入口で、doctor 固有処理ではなく委譲先を確認したいときに読む。
-- `eval_oracle.py` は want を書き出した oracle 評価を review oracle 実装へ委譲する薄い入口で、評価本体そのものではなく接続先を確認したいときに読む。
-- `review_index.py` は review worktree や branch の差分を INDEX.md に絞って検査・確定・取り込みする処理を扱い、INDEX.md 以外の差分混入や merge 解決条件を確認したいときに読む。
-- `review_loop.py` は review oracle の所見処理ループ本体を扱い、所見の列挙・統合・再検証・採否判定の順序を追いたいときに読む。
-- `review_paths.py` は review 結果に含まれる oracle_path の解決と正規化を扱い、finding の参照先を worktree 間で同一 key として扱いたいときに読む。
-- `review_report.py` は review oracle レポートの Markdown 生成を扱い、frontmatter、集計、finding の見せ方、保存先を確認したいときに読む。
-- `review_targets.py` は review oracle の対象 oracle file を scope と session 状態に基づいて列挙する処理を扱い、どの file が対象になるかを確認したいときに読む。
+- `src/sub_commands` は `cmoc` のサブコマンド実行入口を束ねる階層で、ここでは個別コマンド本体へ進む前に役割の境界を切り分ける。共通の CLI 入口と、apply・session・review・tui・補助コマンドの分岐先を選ぶための案内として読む。
+- `apply` は apply 系サブコマンド群の実行入口をまとめる。破棄・適用・統合・レポートのどれを追うべきかを切り分けたいときに読む。
+- `doctor.py` は doctor サブコマンドから CLI runtime の preprocess 実行へ委譲する薄い入口を扱う。doctor 固有の処理ではなく、どの preprocess 経路に接続されるかを確認したいときに読む。
+- `eval_oracle.py` は want を書き出した oracle の評価を review oracle 実装へ委譲する入口を扱う。評価本体そのものではなく、評価経路の接続関係を確認したいときに読む。
+- `indexing.py` は indexing サブコマンドの起動入口を扱う。事前検査を通したうえで work root の INDEX.md 更新と commit をつなぐ外形的な流れを確認したいときに読む。
+- `review` は review 系サブコマンド群の package 境界と review oracle 実行入口をまとめる。review oracle の実行フローや、review 系の個別実装へ進む前の切り分けに使う。
+- `review_index.py` は review worktree/branch の差分を INDEX.md のみに制限して commit し、必要なら session branch へ merge する処理を扱う。INDEX.md 以外の差分検査や merge 競合の自動解消を追いたいときに読む。
+- `review_loop.py` は review oracle の所見処理ループ本体を扱う。所見の追加・統合・再検証・採用判定の順序や、merge finding の編集検証を確認したいときに読む。
+- `review_paths.py` は finding に入った oracle_path を実体 path と比較用 key に正規化する補助を扱う。レビュー対象の oracle file 参照先解決や、root プレースホルダの解釈を確認したいときに読む。
+- `review_report.py` は review oracle レポートの Markdown 生成を扱う。レポート本文、frontmatter、集計、表示順、保存先の見せ方を変えたいときに読む。
+- `review_targets.py` は review oracle の対象となる oracle file を scope と session 状態に基づいて列挙する。full scope と session scope の対象範囲の違いを確認したいときに読む。
+- `session` は session 系サブコマンド群の package 境界と個別入口をまとめる。session の開始・統合・終了のどれを追うべきかを切り分けたいときに読む。
+- `tui.py` は `cmoc tui` の実行本体を扱う。編集プロンプトの作成、エディタ起動、実行パラメータ解決、TUI 起動までの流れを確認したいときに読む。
 
 ## Read this when
-- `cmoc` サブコマンド階層の中で、どの責務がどのファイルにあるかを切り分けたいとき。
-- apply 系サブコマンドの実行順序、終了時の state や report の流れを把握したいとき。
-- session 系サブコマンドの開始・統合・終了の責務分担を確認したいとき。
-- review oracle の対象選択、処理ループ、レポート生成、パス正規化のどこを読むべきか迷っているとき。
-- INDEX.md 更新の起動条件と外形的な実行順序を確認したいとき。
-- `cmoc tui` の入力プロンプト、エディタ起動、起動前後のパラメータ解決を確認したいとき。
-- doctor の実行入口がどの runtime preprocess に接続されるかを確認したいとき。
-- want を書き出した oracle の評価経路が review oracle と同一であることを確認したいとき。
-- review worktree や branch の差分が INDEX.md のみに制限される条件を確認したいとき。
+- `cmoc` のサブコマンド群の中で、どの入口がどの責務を持つかを先に切り分けたいとき。
+- apply・session・review のどれを読むべきかを、目的から判断したいとき。
+- 特定のサブコマンド実装へ進む前に、この階層の案内だけで十分か確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義や内部制御を詳しく追いたいときは、対応する実装ファイルへ直接進む。
-- branch や worktree の一般的な操作だけを確認したいときは、共通 runtime 側を読む。
-- review 以外のサブコマンドや正本仕様そのものを探したいときは、この階層ではなくより直接の対象や oracle 側を読む。
-- INDEX.md の更新内容そのものや更新アルゴリズムの詳細を知りたいときは、`commons.indexing` 側を読む。
-- doctor preprocess の中身や診断項目を調べたいときは、その preprocess 本体を読む。
-- review oracle の評価処理本体、出力、検査内容を確認したいときは、委譲先の review oracle 実装を読む。
-- review レポート本文の構成や採点基準を変えたいときは、`review_report.py` を読む。
-- finding の `oracle_path` 以外の項目解釈や列挙ロジックを変更したいときは、`review_paths.py` ではない別の対象を読む。
-- review 対象 oracle の探索・判定・実行制御を確認したいだけなら、レポート生成側や対象選定側の対象を優先する。
+- 個別サブコマンドの引数、エラー処理、内部ロジックの詳細を追いたいときは、該当ファイルへ直接進む。
+- review 対象の選定、レポート生成、所見ループなどの個別機能の内部仕様を知りたいときは、対応する下位モジュールを読む。
+- 共通 runtime や git 操作など、より下位の共通実装だけを見たいときは、この階層ではなく共通モジュールを読む。
 
 ## hash
-- 515ed47c00f5247dcec86f8f1f33d8156fbec1b92730bf00a41c6df99e7b0676
+- 603b52d4a0ec6f94c75da3423e1070256fc1b6a7fc4ee02ebf4a8c9224fe885b

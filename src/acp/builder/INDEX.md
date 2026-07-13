@@ -72,20 +72,20 @@
 # `quota_probe.py`
 
 ## Summary
-- 正本の quota probe builder が未配置の間だけ、`oracle.acp_builder.quota_probe` への委譲を試し、失敗時は quota 復帰確認用の最小 fallback を返す互換アダプタ。
-- 正本 builder が追加された後に、利用側からこの互換経路が消える前提の削除対象でもある。
+- 正本の `quota_probe` がまだ無い間だけ使う互換 adapter を扱う。正本への委譲、欠落時の最小 fallback、そしてこの互換経路を消す条件がここにまとまっている。
 
 ## Read this when
-- quota availability probe の呼び出し先を決める責務を確認したいとき。
-- 正本 builder がある場合の委譲条件と、欠落時の fallback 挙動を確認したいとき。
-- quota 復帰確認のために、最小の probe パラメータがどう組み立てられるかを追いたいとき。
+- `acp.builder.quota_probe` への委譲可否や、欠落時に返す probe 用 parameter の既定値を変えたいとき。
+- quota 回復確認の文面や file access の最小 fallback を、正本 prompt 部品との整合を保ちながら調整したいとき。
+- 正本 builder が追加された後に、この互換 adapter を削除できるか確認したいとき。
 
 ## Do not read this when
-- quota probe の正本実装そのものを確認したいときは、`oracle/acp_builder/quota_probe.py` 側を読むべきで、この互換層は不要。
-- `acp.builder.quota_probe` の削除条件や移行完了後の整理方針を探しているだけなら、この互換アダプタ本文より上位の仕様文書を優先する。
+- 通常の builder 実装全般を追いたいときは、より直接の builder 実装を読む。
+- quota probe 以外の prompt 部品や file access ルールそのものを変更したいときは、それぞれの正本側を読む。
+- この互換経路を使わない状態の利用箇所だけを調べたいときは、利用側から直接たどる。
 
 ## hash
-- f33468be7724319fa2bf4f17bad36789b50a24a7b10cc4153157915d7d283fe6
+- c21154655671f9b2da2d217c4afb938e16aad638bf8236f4de676e2d681b94d0
 
 # `review`
 

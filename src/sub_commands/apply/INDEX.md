@@ -19,41 +19,40 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc apply abandon` の実行本体です。未 join の apply run を安全に破棄し、apply state を ready に戻すための判定、停止、worktree/branch 削除、state 更新、結果表示をまとめています。
-- このファイルは、apply abandon の実行順序や安全条件を確認したいときに読む対象です。CLI の手続き全体を把握したい場合の入口になります。
+- `cmoc apply abandon` の実行本体。active な apply run を破棄し、apply state を ready に戻すまでの制御、状態検証、作業ツリーと branch の後始末、追跡中 process の停止をまとめて扱う。
 
 ## Read this when
-- `cmoc apply abandon` がどの条件で実行可能か、何を削除し、どの state を戻すかを確認したい。
-- apply run の破棄処理で、process 停止・branch/worktree 削除・state 初期化のつながりを追いたい。
-- apply branch 上と session branch 上で挙動がどう分かれるかを確認したい。
+- `apply abandon` の CLI 挙動、破棄可能条件、状態遷移、後始末の責務を確認したいとき。
+- apply branch か session branch から実行する処理、session state と apply state の整合確認、worktree と branch の削除順を追いたいとき。
+- 破棄処理で process 追跡情報をどう初期化するか、警告をどの条件で出すかを確認したいとき。
 
 ## Do not read this when
-- apply run の状態定義そのものを知りたい場合は、state 定義側を読む。
-- worktree や branch の一般的な操作方法だけを知りたい場合は、共通 runtime や branch 操作の実装を読む。
-- CLI の他の apply サブコマンドの仕様を知りたい場合は、それぞれのサブコマンド実装を読む。
+- `apply abandon` ではなく apply の開始、join、通常の更新フローを見たいとき。
+- branch や worktree の基本操作だけを見たいときは、`cmoc_runtime` や `commons.runtime_apply` 側を先に読むべきで、このファイルは不要。
+- CLI の共通実行ラッパーや step 表示の実装だけを確認したいときは、`run_cli_subcommand` や `start_subcommand_step` の定義を直接読むべき。
 
 ## hash
-- 628d23721070460f8552708ef4fce3582fa12871a65b0daa76867126b610fd4f
+- ed9998e8cdd362ccaaf1998a48a7139baa51ad042320d94691a76ae104ab1a5e
 
 # `fork.py`
 
 ## Summary
-- `apply fork` の実行制御をまとめる入口。session branch の前提確認、apply worktree 作成、所見列挙と適用、commit、state 更新、最終レポート出力までを追うときに読む。
-- 同じ領域の補助実装として、対象ファイル候補の正規化・重複排除・列挙範囲決定・commit subject 生成・前回 join 後の merge commit 解決も含む。
-- 所見列挙そのものや適用処理の詳細は別モジュールに委ねており、このファイルは apply loop の orchestration と失敗時復旧条件の把握に向く。
+- session branch 上の apply fork 実行をまとめる orchestration 入口。run worktree の作成、所見列挙、Codex による適用、commit、state/report 更新までの一連の loop を扱う。
+- 対象ファイルの列挙条件や正規化、重複排除、直前の apply merge commit の解決など、適用対象の決定ロジックを読むときにここから入る。
+- apply loop の失敗時復旧、process tracking、エラー報告、commit subject 生成、個別 finding 適用の実行経路を追うときに読む。
 
 ## Read this when
-- `apply fork` の開始条件、進行ステップ、終了時の state/report の流れを確認したいとき。
-- 調査対象ファイルの選び方、oracle と realization の扱い分け、重複除去、再調査の条件を確認したいとき。
-- apply loop の中で commit を作る条件や、前回の join 以降の差分をどう再開するかを追いたいとき。
+- apply fork の全体フローを変更したいとき
+- 対象ファイルの選び方、正規化、重複排除、再キュー条件を確認したいとき
+- Codex 実行後の finding 適用、commit 生成、state/report 更新、異常終了時の処理を追いたいとき
 
 ## Do not read this when
-- 所見の抽出ロジックや Codex への具体的な問い合わせ内容だけを知りたいときは、所見列挙側の実装を見る。
-- 所見の適用方法や Codex 実行パラメータの生成だけを知りたいときは、適用側の実装を見る。
-- report の書式や永続 state の定義全体だけを知りたいときは、それぞれの責務に対応する別ファイルを見る。
+- file ごとの finding 列挙ルールだけを見たいなら、対応する列挙用 helper を直接読む
+- finding の内容生成や適用パラメータの詳細だけを見たいなら、対応する parameter 生成側を直接読む
+- apply 報告書の書式だけを確認したいなら、report 出力側を直接読む
 
 ## hash
-- b8887dc1c4f44cb2cbe02c292709cae00945e4a4611e0f529277c6458eb68f6b
+- ac742f18b1eef2246bca569580737e6ccb09e7c4aada1f11acb69096e36c2e70
 
 # `fork_report.py`
 

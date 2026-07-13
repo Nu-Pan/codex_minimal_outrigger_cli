@@ -211,21 +211,21 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- `apply abandon` の外部挙動を CLI 経由で確認するテスト群。active apply run の worktree・branch・state の cleanup、実行位置の違い、running process の停止順序と警告扱いをまとめて検証する。
-- 破損 state や別 session 由来の apply branch、実行中 process 情報の欠落など、破棄前に拒否すべき境界条件も含む。関連する apply の終了・停止・識別ロジックを読むときの入口にする。
+- `cmoc apply abandon` の CLI 挙動を、実行位置・状態検証・worktree/branch/state の後始末・追跡中 process の停止まで含めて確認するテスト群。破棄成功、cleanup 警告、running/error の停止順序、破損 state の拒否をまとめて扱う。
+- 同じ apply abandon の外部挙動を一箇所で読めるようにし、`apply` の開始や join、他のサブコマンドではなく abandon 専用の境界条件を確認したいときの入口にする。
 
 ## Read this when
-- `apply abandon` の成功時 cleanup と、警告を伴って成功する条件を確認したいとき。
-- running apply process の停止順序、pid file の再読込、PID reuse や stale 判定の挙動を変えるとき。
-- apply branch / worktree / session state の整合性チェックや、CLI をどの位置から実行しても repo state を正として扱う挙動を確認したいとき。
+- `cmoc apply abandon` の成功時 cleanup と失敗条件を CLI 経由で確認したいとき。
+- active apply run の破棄時に、worktree と branch の削除、apply state の遷移、実行中 process の停止順序を確認したいとき。
+- session branch / apply branch 上からの実行可否や、破損した state を拒否する条件を確認したいとき。
 
 ## Do not read this when
-- `apply fork` の生成処理そのものを知りたいときは、fork 側のテストや実装を先に読む。
-- session 管理全般や他の apply サブコマンドの挙動だけを追いたいときは、このファイルではなく該当コマンド側を読む。
-- 汎用的な git helper や process helper の実装詳細だけを確認したいときは、対応する support / runtime 側を直接読む。
+- `cmoc apply fork` の生成条件や active apply run の作成手順を見たいとき。
+- `cmoc apply join` の挙動や、join 後の state 遷移を見たいとき。
+- process 停止の共通実装だけを見たいときは、CLI テストより `src/commons/runtime_apply.py` を先に読む。
 
 ## hash
-- 7dda7a8523bb0c2ec92929a723d19149786a264a7fead78891be287887817151
+- d99ea492d950d98b52b59750dbab3a7debcaf7d2a32c2a7e53de994ddc45d83a
 
 # `test_apply_fork_cli.py`
 
@@ -341,19 +341,20 @@
 # `test_codex_runtime_errors.py`
 
 ## Summary
-- Codex 実行まわりのエラー処理を検証するテスト群。Codex CLI から返る JSONL の異常値を、パーサ境界で安全に `CmocError` 側へ寄せることと、CLI 不在時の失敗記録を確認する。
-- `commons.runtime_codex_profile` の異常判定と resume token 抽出の境界、`commons.runtime_codex.run_codex_exec` の例外変換、`commons.runtime_logging` への失敗イベント記録をまとめて扱う。
+- Codex 実行まわりの異常系を検証するテスト群。JSONL のパース境界、CLI 不在、返却結果と失敗ログの扱いを確認する入口として使う。
 
 ## Read this when
-- Codex CLI の起動失敗、JSONL イベントの malformed 扱い、例外メッセージの出し分けを変える必要があるとき。
-- 実行失敗時に `codex_call` がどう記録されるか、また parser 境界で非 object イベントをどう扱うかを確認したいとき。
+- Codex 実行結果が正しく取れず、入力や stdout の壊れ方によって失敗分類を変えたいとき。
+- Codex CLI が見つからない、または stdout に不正な JSONL イベントが混ざるときの扱いを確認したいとき。
+- 実行処理の正常系ではなく、例外メッセージや失敗ログの内容を詰めたいとき。
 
 ## Do not read this when
-- 通常の成功経路やプロンプト生成の仕様だけを追いたいとき。
-- 一般的なログ形式やサブコマンド全体の設計を見たいだけで、Codex 実行失敗の境界を扱わないとき。
+- 通常の Codex 起動引数、権限設定、モデル選択の契約を見たいときは、Codex 実行の正常系テストへ進む。
+- ファイルアクセス境界やワークツリー許可範囲を見たいときは、権限・パス解決・構成のテストへ進む。
+- JSONL 以外のプロトコルや別コマンドの異常系を見たいときは、このテスト群ではなく該当する実行経路のテストを読む。
 
 ## hash
-- 02f1d716c39f1a3894afd2ed7ad17ef182e9acad5e326442370abd85970d9a1f
+- 701afed8c1cfcbf6d10691ddc1b6ee087bec596d703bbe66d5bfce8ba305266b
 
 # `test_codex_runtime_exec.py`
 
@@ -393,43 +394,39 @@
 # `test_codex_runtime_paths.py`
 
 ## Summary
-- `run_codex_exec` の実行時パス処理を検証するテスト群。`cwd` の決定、出力 schema の保存先、権限 profile への反映、リンク済み worktree や追加 read path の扱いを確認したいときの入口。
+- Codex 実行時の path 解決と権限設定を検証するテスト群。cwd の扱い、schema 保存先、追加 read path、`.agents` を write 対象に含めない制約を確認したいときに読む。
 
 ## Read this when
-- `commons.runtime_codex.run_codex_exec` の `cwd` や `--cd` の決め方を変えるとき。
-- 出力 schema をどこに保存するか、repo root 配下に置くかを確認したいとき。
-- `FileAccessMode` から Codex の filesystem 権限 override を組み立てる境界を確認したいとき。
-- リンク済み worktree から実行したときのパス解決や、追加 read path の許可範囲を確認したいとき。
+- `run_codex_exec` の cwd / schema 保存先 / permission profile の結合条件を確認したいとき。
+- linked worktree で repo-local な read path を許可する条件や、権限 override が `.agents` を write 対象にしない条件を確認したいとき。
+- timestamp 予約の並列性など、Codex 実行前後の path 生成と保存の境界を確認したいとき。
 
 ## Do not read this when
-- 再試行、容量 retry、JSONL エラー、KeyboardInterrupt などの実行制御を見たいときは、別の `run_codex_exec` テスト群を読む。
-- prompt 生成や `FileAccessMode` の定義そのものを確認したいときは、`oracle/src/oracle/prompt_builder/parts/file_access_rule.py` 側を読む。
-- session/apply など上位 CLI の引数解決やサブコマンド分岐を確認したいときは、このファイルではなく該当する CLI テストや実装を読む。
+- Codex のプロンプト文面や出力 schema 自体の仕様を確認したいときは、対応する oracle doc / oracle src を直接読む。
+- 一般的な git worktree 操作やテスト補助関数の実装詳細だけを知りたいときは、ここではなく各補助モジュールを読む。
+- 権限ルールの正本仕様そのものを確認したいときは、このテストではなく `<work-root>/oracle/doc/app_spec/codex_exec_rule.md` と `<work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py` を読む。
 
 ## hash
-- 962990fb7916c430d53376f096d2df6bebd94de53140f9d33951e73917f2b954
+- 7509f25127a7349b007a938fc05058567ceecacd0fa0f6187c655a4d39a18426
 
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota 枯渇後の `probe` / `resume` / `retry` 制御を、`run_codex_exec` の外部挙動として検証するテスト群。代表 probe の開始条件、再開時の session 復元、同一 prompt の再実行、並列待機の集約、quota 以外の probe 失敗、待機上限、ログ記録までを扱う。
-- この対象を読むのは、`codex exec` の quota 復帰フロー、resume token の復元、並列呼び出し時の代表 probe、または関連ログの観測点を確認したいとき。`codex exec` の一般的な入出力や prompt builder の詳細そのものを追うだけなら、より直接の実装側を読む方が適切。
+- Codex exec の quota 枯渇後に、probe の実行、resume token 復元、再実行、並行待機の集約を検証する回帰テスト群。`run_codex_exec` の外部挙動、call log、subcommand log、`CODEX_HOME`/`cwd` の扱いを確認したいときに読む。
 
 ## Read this when
-- `codex exec` が quota 枯渇後にどう再開されるかを確認したいとき
-- resume token の取得元、probe の発火条件、再実行の判定条件を確認したいとき
-- 並列に開始した呼び出しのうち、どの 1 件が代表して probe するかを確認したいとき
-- quota 以外の probe 失敗や、待機上限到達時の失敗挙動を確認したいとき
-- call log, stdout, prompt log, subcommand log のどれを観測しているテストかを確認したいとき
+- quota 復帰の挙動を追加・変更したとき
+- probe 共有や resume token の扱いを変えたとき
+- 並行実行時に代表 probe へ集約する制御を確認したいとき
+- Codex 実行ログやサブコマンドログの観測点を変えるとき
 
 ## Do not read this when
-- `codex exec` の通常の引数組み立てや prompt 生成の正本を見たいだけのとき
-- quota 復帰ではなく、通常成功系や別種のエラー処理だけを追いたいとき
-- log 形式の定義そのものを見たいときは、このテストではなく対応するログ仕様側を先に読む方がよい
-- prompt builder の一般規約だけを確認したいときは、このテストではなく oracle 側の規約定義を読む方が直接的
+- 通常の Codex 実行や quota 無関係の CLI 挙動だけを確認したいとき
+- probe の prompt 生成そのものではなく、別の adapter や prompt builder を見たいとき
+- 実装の内部 helper 分割や小さなリファクタだけを確認したいとき
 
 ## hash
-- 780b38f0d390b963420a6b25b56be1cc4574bf9c62633cbefb8c9b48431c7f4e
+- 952cbd0dc4b4362791ffb800cf8f82a6b51b432fdaa3b3aa28e0913bc667a025
 
 # `test_codex_runtime_retry.py`
 
@@ -452,18 +449,19 @@
 # `test_codex_runtime_subprocess.py`
 
 ## Summary
-- Codex CLI の subprocess 起動補助に対する外部挙動を確認するテスト群。専用 process group への記録と、継承された tracking 環境変数を通常起動で無視する挙動を扱う。
+- `commons.runtime_codex_profile` の `run_codex_subprocess` / `run_tracked_codex_subprocess` に対する振る舞いを確認するテスト群。apply 実行中の Codex subprocess の process group 記録、`communicate()` 中断時の tracking 維持、継承された tracking 環境変数を無視する扱いを検証する。
 
 ## Read this when
-- run_codex_subprocess / run_tracked_codex_subprocess の process group 分離や apply process tracking の扱いを変更したいとき。
-- tracking file の更新・復元・継承抑制が利用者向けの挙動として正しいか確認したいとき。
+- Codex subprocess の起動方法や process group の扱いを変えるとき。
+- apply 実行中の child process tracking の記録・保持・削除条件を変えるとき。
+- `CODEX_HOME` や `CMOC_APPLY_PROCESS_ID_PATH` の継承や無視の境界を確認したいとき。
 
 ## Do not read this when
-- Codex CLI 全体の起動前後の argv / sandbox / schema / error 判定を追いたいときは、subprocess 境界をまとめた別の runtime_codex_profile 側を読む。
-- apply 停止や pid reuse、lock 待ちなど、tracking file そのものの停止制御を確認したいときは、停止ロジック側のテストを読む。
+- Codex CLI の一般的な error 判定や JSONL 解釈だけを変えるときは、`commons.runtime_codex_profile` 本体側を先に読む。
+- apply abandon の pid file 排他制御や start time 判定だけを変えるときは、関連する他の apply/runtime テストを先に読む。
 
 ## hash
-- 3e865634ac5bf2e461b525c349fdc27b94468e171380af38fee657e2410b0cf7
+- f7111f256da1db596baf66d16b6f67c544eee649d1025388a6945b851747a2ab
 
 # `test_codex_runtime_tui.py`
 
