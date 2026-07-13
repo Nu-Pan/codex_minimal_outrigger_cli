@@ -52,6 +52,7 @@ from sub_commands.apply.fork_report import (
 )
 from commons.runtime_apply import (
     apply_process_tracking,
+    apply_run_lock,
     delete_apply_process_id,
     read_apply_process_id,
     write_apply_process_id,
@@ -97,13 +98,14 @@ def _cmoc_apply_fork_body(
     apply_worktree = worktrees_dir(root) / session_id / run_id
     start_subcommand_step(2, "run の隔離実行を開始", "start isolated run")
     create_run_worktree(current_root, apply_branch, apply_worktree, "HEAD")
-    write_apply_process_id(root, session_id, os.getpid())
-    state.apply = ApplyPart(
-        state="running",
-        apply_branch=apply_branch,
-        oracle_snapshot_commit=oracle_snapshot_commit,
-    )
-    write_state(path, state)
+    with apply_run_lock(root, session_id):
+        write_apply_process_id(root, session_id, os.getpid())
+        state.apply = ApplyPart(
+            state="running",
+            apply_branch=apply_branch,
+            oracle_snapshot_commit=oracle_snapshot_commit,
+        )
+        write_state(path, state)
     finding_counts: list[int] = []
     result_label = "error"
     report_path: Path | None = None
@@ -162,35 +164,48 @@ def _cmoc_apply_fork_body(
             else:
                 pending_targets = dedupe_apply_targets(pending_targets)
                 result_label = "unconverged" if pending_targets else "converged"
-            start_subcommand_step(5, "apply state を更新", "update apply state")
-            state.apply.state = "completed"
-            write_state(path, state)
-            start_subcommand_step(6, "作業結果をレポート", "write apply report")
-            report_path = write_apply_fork_report(
-                root,
-                apply_worktree,
-                branch,
-                state,
-                finding_counts,
-                result_label,
-                config,
-                codex_exec,
-            )
-        delete_apply_process_id(root, session_id)
+            # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+            # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+            # completed 公開中は report と PID 解放まで cleanup と競合させない。
+            with apply_run_lock(root, session_id):
+                start_subcommand_step(5, "apply state を更新", "update apply state")
+                state.apply.state = "completed"
+                write_state(path, state)
+                start_subcommand_step(6, "作業結果をレポート", "write apply report")
+                report_path = write_apply_fork_report(
+                    root,
+                    apply_worktree,
+                    branch,
+                    state,
+                    finding_counts,
+                    result_label,
+                    config,
+                    codex_exec,
+                )
+                delete_apply_process_id(root, session_id)
     except BaseException as exc:
         # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
         # An interrupted Codex call may outlive this apply process. Preserve
         # its child identity so error-state abandon can stop it before cleanup.
-        tracked_process = read_apply_process_id(root, session_id)
-        if not tracked_process or not tracked_process.child_processes:
-            delete_apply_process_id(root, session_id)
-        state.apply.state = "error"
-        write_state(path, state)
-        if report_path is None:
-            report_path = write_apply_fork_error_report(
-                root, branch, state, finding_counts, apply_worktree, config, codex_exec
-            )
-        setattr(exc, "cmoc_stdout", str(report_path.resolve()))
+        with apply_run_lock(root, session_id):
+            _session_id, path, state = load_state_for_branch(root, branch)
+            if state.apply.state != "ready":
+                state.apply.state = "error"
+                write_state(path, state)
+                if report_path is None:
+                    report_path = write_apply_fork_error_report(
+                        root,
+                        branch,
+                        state,
+                        finding_counts,
+                        apply_worktree,
+                        config,
+                        codex_exec,
+                    )
+                tracked_process = read_apply_process_id(root, session_id)
+                if not tracked_process or not tracked_process.child_processes:
+                    delete_apply_process_id(root, session_id)
+                setattr(exc, "cmoc_stdout", str(report_path.resolve()))
         raise
     # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md requires the
     # generated report path on stdout; common runtime logs are emitted around it.

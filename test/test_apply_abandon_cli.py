@@ -164,11 +164,11 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
     assert "apply_worktree" not in state["apply"]
 
 
-@pytest.mark.parametrize("apply_state", ["running", "error"])
+@pytest.mark.parametrize("apply_state", ["running", "completed", "error"])
 def test_apply_abandon_stops_tracked_apply_process_before_cleanup(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, apply_state: str
 ) -> None:
-    """running/error state の tracked process を止めてから cleanup へ進む。"""
+    """tracked process を止めてから cleanup へ進む。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0

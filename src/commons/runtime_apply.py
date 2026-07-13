@@ -79,6 +79,16 @@ def apply_process_id_path(root: Path, session_id: str) -> Path:
     return root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
 
 
+@contextmanager
+def apply_run_lock(root: Path, session_id: str) -> Iterator[None]:
+    """apply state の公開と abandon cleanup を同じ run 単位で直列化する。"""
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # PID tracking は Codex child 起動中にも取得するため、lifecycle lock は別鍵にする。
+    lock_key = apply_process_id_path(root, session_id).with_name(f"{session_id}.run")
+    with apply_process_id_file_lock(lock_key):
+        yield
+
+
 def write_apply_process_id(root: Path, session_id: str, process_id: int) -> None:
     """apply abandon が同一 process だけを止められる形で pid file を保存する。"""
     path = apply_process_id_path(root, session_id)
@@ -156,7 +166,7 @@ def stop_apply_process(
     process: ApplyProcessIdentity,
     read_after_parent_exit: Callable[[], ApplyProcessIdentity | None] | None = None,
 ) -> str | None:
-    """running abandon では cleanup 前に apply process が消えたことを確認する。"""
+    """abandon では cleanup 前に apply process が消えたことを確認する。"""
     warnings: list[str] = []
 
     def joined_warnings(*extra: str) -> str | None:
