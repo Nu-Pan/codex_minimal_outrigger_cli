@@ -159,20 +159,21 @@
 # `test_acp_builder_review_oracle_parameters.py`
 
 ## Summary
-- review oracle ACP builder の各 parameter builder が返す `AgentCallParameter` の公開面と、対応する structured output schema を検証するテスト群。互換ラッパーの export 範囲、モデル設定、schema ファイル一致、prompt 内の `<oracle-root>` 置換や動的文字列保持を確認する。
+- `test/test_acp_builder_review_oracle_parameters.py` は、review oracle の parameter 生成と schema 互換性をまとめて検証するテスト群です。`acp.builder.review.oracle` の各 builder が返すモデル設定、structured output schema、公開モジュールの export 範囲、prompt 中の `<oracle-root>` / `<oracle-path>` の扱いを確認したいときに読む対象です。
 
 ## Read this when
-- review oracle 向け builder の公開 API を変えるとき
-- schema JSON との一致や prompt 置換規則を確認したいとき
-- 互換公開面の export 範囲や余計な内部記号の露出を検査したいとき
+- `acp.builder.review.oracle` の parameter 生成仕様を変更するとき
+- review oracle の structured output schema を正本側と突き合わせたいとき
+- compatibility 用の薄い公開モジュールの export 範囲や不要な内部公開を確認したいとき
+- prompt に埋め込まれる oracle path の表記や、symlink・動的文字列の保持を変える可能性があるとき
 
 ## Do not read this when
-- review oracle builder の実装本文や prompt 生成ロジックそのものを追いたいときは、対応する `oracle/src/oracle/acp_builder/review/oracle/` 側を読む
-- review 以外の ACP builder の parameter や schema を調べたいとき
-- oracle 仕様本文の修正方針を決めたいだけのとき
+- review oracle の実装本体を追いたいだけなら、対応する `src/acp/builder/review/oracle/` 側を先に読むべきです
+- review oracle 以外の ACP builder や他サブコマンドのテストを探しているなら、この対象ではなく該当領域の test entry を読むべきです
+- schema の生成元や正本定義そのものを確認したいだけなら、`oracle/src/oracle/acp_builder/review/oracle/` 側を読むべきです
 
 ## hash
-- 92b72d198438ac9a435b293e2a21024fb995ae292469b834d42ebec573ab4059
+- 025353a96b5bd6ae300299bbd7379874cdf604a0d35535bfb006ef6d310cba12
 
 # `test_acp_builder_session_join_parameters.py`
 
@@ -665,20 +666,20 @@
 # `test_review_oracle_targets.py`
 
 ## Summary
-- review oracle の対象集合と finding の oracle path 解決を検証するテスト群。`review oracle` の対象列挙、`<work-root>` 基準の path 解決、scope 別の対象選択、AGENTS.md / INDEX.md を除外する境界を確認したいときの入口。
+- review oracle の対象選定と finding の oracle_path 解決を検証するテスト群。review 対象に含めるべき oracle file の判定、スコープ差、symlink や ignore の扱い、review_report に渡る対象列挙の境界を確認したいときに読む。
 
 ## Read this when
-- `review oracle` の対象に含める / 含めない条件を確認したい
-- finding の `oracle_path` から実ファイル位置をどう解決するかを確認したい
-- session scope と full scope の対象選択差を確認したい
+- review oracle の対象ファイル一覧が期待どおりに絞られているかを確認したいとき
+- finding 側の oracle_path が `<work-root>` や `<oracle-root>` をどう解決するかを確認したいとき
+- AGENTS.md や INDEX.md をレビュー対象から外す境界、または symlink と ignored file の扱いを確認したいとき
 
 ## Do not read this when
-- review oracle の実装本体や CLI 出力の整形を追いたいときは、対応する実装ファイルを直接読む
-- oracle file の一般原則や開発規則を知りたいだけなら、このテストではなく oracle 側の仕様文書を読む
-- target 列挙以外の review 機能を確認したいときは、別の review テストを読む
+- review oracle の実行手順全体や report 生成の体裁を知りたいときは、review oracle の本体仕様を読む
+- finding の生成条件や妥当性判定の内容を知りたいときは、review oracle の finding 仕様を読む
+- oracle/realization の基本定義や開発規則を確認したいときは、基本定義や開発規則側を読む
 
 ## hash
-- 0196e8f9eb39d17816295375be17a871abe831c73c996ccbdba6962229222e2a
+- 4ff6e057baf2abd446b7801f8849de7bcdb5e725d49f8020b2d79644cf8cfb96
 
 # `test_review_oracle_worktree.py`
 

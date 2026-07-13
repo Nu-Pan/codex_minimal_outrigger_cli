@@ -1,22 +1,25 @@
 # `acp`
 
 ## Summary
-- `acp` 層の互換入口をまとめる公開面。`oracle.acp_builder` へ直接つなぐのではなく、既存の `acp.*` 参照を壊さずに正本側へ到達させるための受け口として読む。
-- `src/acp/__init__.py` は移行中の互換 import 面を保つための入口に限る。実体や新機能の定義場所ではないので、互換維持の要否や削除条件を確認したいときだけ読む。
-- `src/acp/builder` は builder 群の互換公開層。個別の実装や出力規則ではなく、旧来の `acp.builder.*` 参照を残す範囲と正本側への接続を確認したいときに読む。
+- `__init__.py`: `oracle.acp_builder` を既存の `acp.*` 互換 import 面として公開し続ける初期化入口。実体は正本側に置かれ、この対象は移行期間中の公開 import 面を保つ役割に限る。
+- `builder`: `acp.builder` 配下の ACP parameter builder 群を束ねる互換ルーティング層。個別 builder へ進む前に、`apply`、`indexing`、`review`、`session`、`tui`、`quota_probe.py` のどこを読むべきかを切り分ける。
 
 ## Read this when
-- `acp.*` の参照を正本側や実体 module に移す作業で、互換入口を残す理由と削除条件を確認したいとき。
-- 実装本体ではなく、公開 import 面としてこの階層がどこまで維持されるかを判断したいとき。
-- 既存の `acp.builder.*` 呼び出しを壊さずに正本側へ接続する必要があるとき。
+- `__init__.py` は、`acp.*` 参照を `oracle.*` または実体 module へ移す作業で、互換入口を残す理由や削除条件を確認したいときに読む。
+- `__init__.py` は、realization 側または利用者向け公開面に残る `acp.*` import の扱いを判断したいときに読む。
+- `builder` は、`acp.builder` 配下でどのサブ領域に進むべきかを判断したいときに読む。
+- `builder` は、旧来の import 互換を残す入口と、正本実装への委譲先を見分けたいときに読む。
+- `builder` は、ACP parameter builder 群のうち、共通部品と個別 builder の境界を確認したいときに読む。
 
 ## Do not read this when
-- 実装処理そのものや生成ロジックを調べたいとき。ここは入口であり、本体は下位 module または `oracle.acp_builder` 側にある。
-- 新しい機能や API を追加する場所を探しているとき。ここは互換維持専用で、新規公開面の起点ではない。
-- すでに全公開面から `acp.*` 参照を消し終えて、互換入口の維持要否を確認する必要がないとき。
+- `__init__.py` は、acp builder の実装内容や生成処理そのものを調べたいときには読まない。
+- `__init__.py` は、新しい acp 機能や API 仕様を追加する場所を探しているときには読まない。
+- `builder` は、個別 builder の生成ロジックや仕様本体を知りたいときには読まない。
+- `builder` は、`oracle` 側の正本仕様断片そのものを確認したいときには読まない。
+- `builder` は、単に別の公開名前空間や上位 CLI の振る舞いを調べたいときには読まない。
 
 ## hash
-- 718db3766cb94da5d2e7be8680dcbaae01f2c0a821ac6d66e34bc64fd6bdf833
+- 806ab6f1f488b9b610653202a2f686350fce8f53d7bdeb4cf584144a9180684e
 
 # `basic`
 
@@ -183,18 +186,33 @@
 # `sub_commands`
 
 ## Summary
-- `src/sub_commands` 配下の各サブコマンド実装への入口。`cmoc` の個別サブコマンドがどの責務を持つか、どの実行本体へ進むべきかを切り分けたいときに読む。
-- この階層は、サブコマンドごとの実行入口と、その周辺の薄い制御をまとめて把握するためのルーティング層であり、共通基盤や個別の内部ロジックを追う場所ではない。
+- `src/sub_commands` 配下の `cmoc` サブコマンド実装への入口。各サブコマンドの実行本体と、共通の起動前処理・実行分岐の境界を確認したいときに読む。
+- `apply` は `cmoc apply` 系の実行フローと、`abandon`・`fork`・`join` の個別実装への案内を担う。
+- `doctor.py` は `doctor` サブコマンドから runtime preprocess への薄い委譲入口である。
+- `eval_oracle.py` は want を書き出した oracle 評価を review oracle 実装へ委譲する入口である。
+- `indexing.py` は `indexing` サブコマンドの起動条件と、INDEX.md 更新から commit までの外形的な流れをつなぐ。
+- `review` は review 系サブコマンド群の package 境界と、`oracle.py` による `cmoc review oracle` 全体制御の入口である。
+- `review_index.py` は review branch の INDEX.md 差分確認、commit、session branch への merge と自動競合解消を扱う。
+- `review_loop.py` は `cmoc review oracle` の所見処理本体で、finding の反復処理と状態遷移を扱う。
+- `review_paths.py` は review 結果中の oracle path を正規化し、所属判定を揃える。
+- `review_report.py` は review oracle レポートの Markdown 生成と保存を担う。
+- `review_targets.py` は review 対象 oracle file の列挙と scope による絞り込みを担う。
+- `session` は session 系サブコマンド群の package 境界と、`abandon.py`・`fork.py`・`join.py` の個別実装への入口をまとめる。
+- `tui.py` は `cmoc tui` の起動手順、元プロンプト、エディタ、実行パラメータ解決を扱う。
 
 ## Read this when
-- `cmoc` の個別サブコマンドがどの実行本体に対応するかを確認したいとき。
-- サブコマンドの責務境界を見て、目的に合う個別実装へ進みたいとき。
-- CLI の入口から各サブコマンド実装へどう分かれるかを確認したいとき。
+- `cmoc` のサブコマンド実装全体の配置を把握したいとき。
+- 各サブコマンドの実行本体と、共通処理・個別処理の境界を確認したいとき。
+- `apply`、`review`、`session` のどこへ進むべきかを切り分けたいとき。
+- `doctor`、`indexing`、`tui` の起動入口と委譲先を確認したいとき。
+- `review` 系で対象 oracle の選定、所見処理、レポート出力、INDEX.md 反映のどこを読むべきか判断したいとき。
 
 ## Do not read this when
-- 共通の runtime、session/state、Git 操作などの下位基盤だけを確認したいときは、より直接の共通実装へ進む。
-- 特定サブコマンドの詳細な入出力や処理手順を知りたいときは、この階層ではなく該当サブコマンドの個別実装を読む。
-- CLI 登録や引数定義だけを見たいときは、サブコマンド本体ではなく CLI 構成側を読む。
+- 対象サブコマンドがすでに分かっていて、その個別実装へ直接進めるとき。
+- 共通の Git runtime や session/state 基盤だけを確認したいときは、この階層ではなくより下位の共通実装を読むべきとき。
+- `cmoc apply` 以外の subcommand の入出力や CLI 定義だけを見たいとき。
+- review 対象 oracle の仕様本文や正本仕様そのものを確認したいときは、この階層ではなく対応する oracle file を読むべきとき。
+- `cmoc tui` 以外のサブコマンドのルーティングだけを見たいとき。
 
 ## hash
-- 271a8a6162e4ca220af4f8d81fc68791f709b90b3b170bbb8ce27c816cdebe37
+- 67deb1560a4a5dcea3b2f4afdd3d5e4142d4ca75ed694d9e59eb902cf9e63189

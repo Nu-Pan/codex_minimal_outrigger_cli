@@ -142,21 +142,20 @@
 # `review_paths.py`
 
 ## Summary
-- `finding` に入った `oracle_path` を、symlink を追跡しない絶対 path と repository-relative key に変換する補助をまとめたモジュール。レビュー用の oracle パス解決とキー正規化を扱うときに読む。
-- `<oracle-root>` の別名や `<...>` 形式の root 参照を解釈し、レビュー対象の oracle file を worktree 基準で比較できるようにする。
+- レビュー結果で見つかった oracle の path を、symlink を追わない絶対 path や oracle 配下の repository-relative key に正規化するための変換関数を置く。isolated worktree 上の評価と main worktree 起点の finding を同じ oracle の所属判定へ揃える役割が中心で、境界外の path は無視する。
 
 ## Read this when
-- `finding` に含まれる oracle の参照先を、実際のファイル path として解決したいとき。
-- review 結果の集約で、worktree が違っても同じ oracle file を同一 key として扱いたいとき。
-- `<oracle-root>` や他の root プレースホルダから始まる path を受け取る処理を追加・修正するとき。
+- finding に含まれる oracle_path の正規化方法を確認したいとき.
+- main worktree と isolated worktree をまたぐ oracle file の所属判定や key 化の挙動を変えたいとき.
+- oracle 配下の path を report 評価用にどう解釈するかを調べたいとき.
 
 ## Do not read this when
-- review レポート本文の構成や採点基準だけを変えたいとき。
-- 一般的な path 正規化だけを直したいとき。
-- oracle_path 以外の finding 項目の解釈や列挙ロジックを変更したいとき。
+- レビュー対象の oracle 側の仕様本文を確認したいだけなら、対応する oracle doc/src を読むべきで、この file は読まない.
+- oracle 以外の realization path 変換や一般的な path 操作を探しているなら、より直接の実装を読むべきで、この file は読まない.
+- finding 生成やレビュー判定ロジックそのものを追いたいだけなら、変換後の利用先を読むべきで、この file は読まない.
 
 ## hash
-- 81ea9ace374c686536c1de93839f2dd8b921e2c6e6f68f5038fd070dec4862bf
+- c7a2397ddcdf2ab7cd9fa1f3de046e53590e4c3bb75128456f73fdcdcd38a660
 
 # `review_report.py`
 

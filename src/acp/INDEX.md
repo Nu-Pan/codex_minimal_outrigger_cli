@@ -19,19 +19,18 @@
 # `builder`
 
 ## Summary
-- `src/acp/builder` は、`oracle.acp_builder` を `acp.builder` 互換の入口として見せるための公開層。正本側の実装へつなぐ初期化と、共通化された builder 群の受け口をまとめる。
-- この階層は、旧来の `acp.builder.*` 参照を壊さずに正本側へ到達させたいときに読む。個別機能の本体ではなく、互換入口として何を公開し続けるかを確認するための場所である。
-- 個別の builder 実装や正本仕様の詳細はここでは扱わない。実処理、出力条件、内部の parameter 生成は、対応する下位モジュールか `oracle.acp_builder` 側を読む。
+- `acp.builder` 配下の ACP parameter builder 群を束ねるルーティング層。各サブ領域の互換入口と正本実装への案内を集約し、どの builder 系を読むべきかを切り分ける。
+- ここでは個別 builder の実処理本体ではなく、`apply`、`indexing`、`review`、`session`、`tui`、`quota_probe.py` などの役割境界と参照先の選び分けを確認する。
 
 ## Read this when
-- `acp.builder.*` の参照互換を維持したいとき。
-- `oracle.acp_builder` へつながる入口として、この階層がどの公開面を残すか確認したいとき。
-- この階層が共通 builder 群の受け口としてどう位置づくかを見たいとき。
+- `acp.builder` 配下で、どのサブ領域に進むべきかを判断したいとき。
+- 旧来の import 互換を残す入口と、正本実装への委譲先を見分けたいとき。
+- ACP parameter builder 群のうち、共通部品と個別 builder の境界を確認したいとき。
 
 ## Do not read this when
-- 正本の builder 実装そのものを確認したいときは、`oracle.acp_builder` 側を読む。
-- 個別機能の実装や parameter 生成の詳細を見たいときは、この入口ではなく下位モジュールを読む。
-- 互換入口ではなく、新規の公開 API や別の責務を持つ実装を探しているとき。
+- 個別 builder の生成ロジックや仕様本体を知りたいときは、この階層ではなく該当サブモジュールを読む。
+- `oracle` 側の正本仕様断片そのものを確認したいときは、対応する oracle 配下を読む。
+- 単に別の公開名前空間や上位 CLI の振る舞いを調べたいときは、`acp.builder` ではなくその入口を読む。
 
 ## hash
-- 34427003fab66070874be4054703ae70d463a5f4f91210cf185bb82dc9a3a6b6
+- c3795a10e3cf9af6625be5356f5b711a5acafdb9b972dfe5270874b58562d3c9

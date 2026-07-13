@@ -92,21 +92,24 @@
 # `review`
 
 ## Summary
-- review builder 配下で、旧 import 経路を維持する互換 package 初期化と review oracle 向け互換 adapter 群を束ねる階層。
-- 実処理は主に canonical oracle path や oracle src 側へ委譲され、この階層は移行中 caller との互換性、削除条件、正本 builder 由来 prompt の限定補正境界を確認する入口になる。
+- `src/acp/builder/review` の入口として、review builder 系の互換 import を保つために残る package 初期化と、その配下の正本実装への案内だけをまとめる。
+- この層では、旧 `acp.builder.review` 参照の残存可否、review oracle 側の入口、正本 builder への委譲と最小限の補正の有無を確認する。
 
 ## Read this when
-- review builder 周辺の旧 import 互換性や、古い acp.builder.review 系参照を削除できるか確認する。
-- review oracle の旧 import 経路から canonical oracle path への移行状況、互換 shim の再 export 対象、または削除可否を確認する。
-- merge finding や validate finding advocate の agent call parameter について、正本 builder 取得後に realization 側で補正される範囲と削除条件を確認する。
+- review builder 周辺の import 互換性を確認したい。
+- 古い review 系参照を削除できるか判断したい。
+- review oracle の入口、判定、検証、または symlink 由来の path 表記補正の有無を確認したい。
+- 正本 builder からの委譲範囲と、realization 側で残す最小限の補正だけを確認したい。
 
 ## Do not read this when
-- review builder の実処理、変換ロジック、finding enumeration、judgment、challenger validation の parameter 構築を調べたい場合は、より直接の実装先を読む。
-- review oracle の正本仕様や正本 prompt の内容そのものを確認したい場合は、oracle 側の該当本文を読む。
-- review oracle 以外の builder、agent call parameter 全般、path model、INDEX.md エントリー生成、または一般的な oracle file 定義を調べたい場合。
+- review builder の実処理や変換ロジックを追いたい。
+- canonical な正本実装そのものを追いたい。
+- 新しい公開 API や利用者向け機能の仕様を確認したい。
+- レビュー以外の builder や一般的な oracle file 定義を調べたい。
+- 旧 import 互換の有無が関係しない実装方針を決めたい。
 
 ## hash
-- 8c0170ecf4d16e76f4eabb38112c44d157461f19eb65650a549149278abf7611
+- 22264fb5963cb2b84e543002edb9bfb105425b20c6a9856a62837ce20f79f229
 
 # `session`
 

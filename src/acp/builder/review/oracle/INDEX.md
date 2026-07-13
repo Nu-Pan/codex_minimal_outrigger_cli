@@ -18,18 +18,18 @@
 # `enumerate_finding.py`
 
 ## Summary
-- review finding enumeration の旧 import 経路を維持する互換 shim。canonical 実装の関数を再 export し、既存呼び出し元が移行するまでの入口としてだけ機能する。
+- `acp.builder.review.oracle.enumerate_finding` からの互換 import を維持する薄い入口。canonical な oracle 実装へ処理を渡し、symlink 経由で読まれた `oracle_path` だけは prompt 中の `<oracle-path>` 表記を lexical path に戻す。
 
 ## Read this when
-- review finding enumeration について、旧 import 経路から canonical 実装へつながる互換層を確認したいとき。
-- 旧 import 経路を使う呼び出し元の移行や、この互換層の削除可否を判断したいとき。
+- このモジュールを import している呼び出し元が残っており、互換経路を外す前の振る舞いを確認したいとき。
+- oracle path が symlink だった場合に、レビュー用 prompt へどの path 表記が残るかを確認したいとき。
 
 ## Do not read this when
-- review finding enumeration の実処理や parameter 構築内容を確認したいとき。canonical 実装を直接読む。
-- 新しい review finding enumeration の仕様や挙動を調べたいだけで、旧 import 経路との互換性が関係しないとき。
+- canonical な生成ロジックそのものを追いたいときは、`<work-root>/oracle/src/oracle/acp_builder/review/oracle/enumerate_finding.py` を読む。
+- 互換 import を前提にしない新規呼び出し元の実装方針を決めたいだけなら、この層は読まず canonical 側を直接見る。
 
 ## hash
-- 805a7b8cd6d94fa944dc4c2db6b83efdde249951781858f5652ec2531168d438
+- 806feab394f18408e1caf621c75bc02ef7ff36e1c66a7c46fb8c059b3599986a
 
 # `judge_finding.py`
 
