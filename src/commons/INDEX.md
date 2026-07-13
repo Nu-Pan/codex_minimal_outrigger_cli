@@ -18,20 +18,16 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- `cmoc` 全体で共通に使う実行・設定・状態・git・パス・ログまわりの基盤をまとめて再公開する集約点。個別の実装ではなく、この層で何が共通入口として扱われるかを確認したいときに読む。
+- `commons` 配下の実行時共通基盤を集約する入口。Codex 実行前後の環境準備、設定・状態・ログ・パス・Git・エラー処理・結果型を横断的に使うときに読む。
 
 ## Read this when
-- 共通 runtime の入口がどこにあるかを把握したいとき。
-- コマンド実行、preflight、設定の読み書き、状態の保存、git/worktree 管理、ログ/レポート/セッション/スキーマ保存先の扱いをまたぐ変更をするとき。
-- 複数の下位モジュールに分散している基盤処理を、どの共通 API として使うべきか判断したいとき。
+- サブコマンド実行の前処理や後処理、`codex` 呼び出しの準備、設定や状態ファイルの読み書き、作業ツリーやブランチの管理、ログやレポート出力、共通エラー整形を扱うとき。
 
 ## Do not read this when
-- 特定の helper の内部アルゴリズムや例外処理だけを見たいときは、まずその helper の実装側を読む。
-- 個別サブコマンドの振る舞い、CLI 画面、ドメイン固有の処理を確認したいときは、対応する上位モジュールを読む。
-- 単にパス生成、git 判定、設定変換、状態永続化の細部だけが必要なときは、この集約点ではなく該当する下位実装を直接読む。
+- 個別サブコマンドの入出力や制御フローだけを見たいときは、そのサブコマンド側を直接読む。実行基盤ではなく業務ロジックの詳細を探す目的ではここを起点にしない。
 
 ## hash
-- 6e149683c5808b3b814137b4009f79ee5520a0442ef2b9f8c50f88a6f9025f9e
+- 555239502325c251dbb9f35d6e2bf255b5c273cdfe678a81366abb59f02df9b3
 
 # `indexing.py`
 
@@ -401,17 +397,19 @@
 # `runtime_state.py`
 
 ## Summary
-- session state file の永続化モデルと読み書き処理を扱う。session/apply の state 断片、branch 名からの session_id 抽出、現在 branch に対応する state 読み込み、canonical JSON 書き戻し、home branch に紐づく active session 探索の入口になる。
+- cmoc の session/apply 用 state file を読み書きする共通基盤。branch 名から session_id を取り出し、対応する JSON state を検証付きで読み込み、canonical JSON で書き戻す。
+- active な home branch 対応 state の探索や、session fork の排他 lock もここで扱う。branch/state の整合性確認や state schema の修復が必要なときの入口。
+- state の型検証、必須 field の欠落検出、不正 state への一貫したエラー生成をまとめている。上位の session/apply コマンド側で個別の state 仕様を読む前の基礎層。
 
 ## Read this when
-- session state file の schema、必須 field、許容 state、null/string 制約を確認または変更したいとき。
-- cmoc/session、cmoc/apply の branch 名から session_id を特定する処理や、その失敗時エラーを確認または変更したいとき。
-- session state file の保存先、読み込み、書き戻し、home branch から active session を探す処理を確認または変更したいとき。
+- session state file の保存先・読み込み・書き戻し方を確認したいとき。
+- cmoc session branch / cmoc apply branch から session_id を復元する規則を確認したいとき。
+- active session の探索、fork 時の排他制御、state JSON の妥当性検証やエラーメッセージの方針を確認したいとき。
 
 ## Do not read this when
-- session state file のディレクトリ配置だけを確認したいときは、runtime path を扱う対象を直接読む。
-- 個別サブコマンドの操作手順や状態遷移の業務仕様を確認したいときは、対応する app spec やコマンド実装を読む。
-- CmocError の表示形式や共通エラー処理だけを確認したいときは、runtime error を扱う対象を読む。
+- session/apply の高レベルなコマンド手順だけを知りたいときは、各 sub command 側の文書を先に読む。
+- branch 命名や state schema の人間向け正本仕様を確認したいだけなら、ここではなく対応する oracle doc を読む。
+- git 操作、worktree 操作、CLI 出力整形だけを見たい場合は、この共通 state モジュールではなくそれぞれの担当モジュールを読む。
 
 ## hash
-- 5453ce64ca708e9c80e6e3aa4a0416dbc93461ecafdc6a30864d7db0274f46bf
+- 88b98bb5b7d4d1932a1bfc8018b216a473b64515a37e1492daa87bf8c7e40be8

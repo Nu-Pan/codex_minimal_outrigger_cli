@@ -35,20 +35,21 @@
 # `fork.py`
 
 ## Summary
-- `cmoc session fork` の CLI 実行本体を扱う。現行 branch の検査、managed branch の拒否、作業ツリーの clean 判定、active session の重複防止、session branch 作成、session state 保存、完了表示までをまとめて読む入口。
-- `_new_session_id` は session branch と state file の衝突回避に関わる。session-id の一意性や衝突時の失敗条件を確認したいときに読む。
+- `cmoc session fork` の実行本体を持つ。現在の local branch から session branch と session state を新規作成し、競合時は既存 session の存在確認、worktree の clean 確認、失敗時の rollback までまとめて扱う。
+- `_new_session_id` は session branch と session state の両方に対する一意性を担保する生成ロジックで、fork 作成時の衝突回避条件を読むときに見る。
 
 ## Read this when
-- `cmoc session fork` の開始条件、失敗条件、表示内容、保存される session state を確認したいとき。
-- session branch 名や state file 名の生成規則、または session-id 衝突の扱いを確認したいとき。
+- `cmoc session fork` の作成手順、事前条件、失敗時の rollback、表示する結果を確認したいとき。
+- session の開始時に、home branch と session branch/state の競合をどう避けるかを確認したいとき。
+- session-id の一意性判定に branch と state file の両方が関わる理由を確認したいとき。
 
 ## Do not read this when
-- `cmoc session join` や `abandon` の挙動を知りたいときは、各コマンドの実装へ進む。
-- branch 判定や state 保存の共通部品だけを探しているときは、まず `cmoc_runtime` 側を読む。
-- session 機能全体の仕様一覧を知りたいだけなら、このファイルではなく上位の app spec を読む。
+- `cmoc session fork` の CLI runtime 起動や subcommand 共通の前処理だけを見たいときは、より上位の共通実行層を読む。
+- session の join や abandon の振る舞いを知りたいときは、このファイルではなく各サブコマンドの実装を読む。
+- session state の保存形式そのものを詳細に知りたいときは、state 定義側を読む。
 
 ## hash
-- 40837dff685456659e4d693ec0e88ca8203497f4ec94cfd379f7d96bc34ba143
+- 46bf49b6e4df0d246eaa8480e88b1ddeedb35592c907d27615484f058cc816c0
 
 # `join.py`
 

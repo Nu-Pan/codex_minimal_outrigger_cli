@@ -808,41 +808,41 @@
 # `test_runtime_state.py`
 
 ## Summary
-- `session` と `apply` の state 形状検証、および branch 名から session id を取り出す境界条件を確認するテスト群。`commons.runtime_state` の state 変換・読込・ branch 解析に不整合がないかを確かめたいときに読む。
+- `session` / `apply` の状態ファイル形状検証と、branch 名から session id を取り出す境界条件を確認するテスト群。破損した branch 名や不正な state/payload 値を拒否する挙動、`session_fork_lock` の process 間排他を扱う場合に読む。
+- この対象を読む理由は、`commons.runtime_state` の入力検証と永続 state の読み書きの仕様を確かめたいとき、および session fork のロック共有を確認したいときに直接関係するため。
 
 ## Read this when
-- `SessionState` の辞書変換や復元で、`state` や各 payload フィールドの型制約を確認したいとき。
-- `branch_session_id` や `apply_branch_session_id` が、余分な区切りや要素不足を不正入力として拒否するか確認したいとき。
-- `load_state_for_branch` が壊れた `apply` branch 名を誤って受理しないか確認したいとき。
+- `SessionState.from_dict` や state JSON の許容/拒否条件を変える変更をするとき
+- `branch_session_id` / `apply_branch_session_id` の branch 解析ルールを確認したいとき
+- `load_state_for_branch` が壊れた branch 名をどう扱うべきかを確認したいとき
+- `session_fork_lock` が複数 process から見て同じ排他になっているかを確認したいとき
 
 ## Do not read this when
-- `SessionState` の永続化形式そのものを変更したいだけなら、実装側の state 定義や読込処理を先に読む。
-- branch 命名規則の全体仕様を確認したいだけなら、より上位の session / apply 仕様本文を読む。
-- このテストの追加・整理ではなく、runtime state の実装変更だけが目的なら、まず `commons.runtime_state` 側を読む。
+- CLI の引数解析や subcommand の起動条件だけを確認したいときは、各 subcommand 側の INDEX を先に読む
+- state の具体的な保存先や path 生成だけを確認したいときは、`commons.runtime_state` 本体を先に読む
+- apply/join の処理フロー全体を追いたいだけなら、このテストより対応する subcommand 実装を先に読む
 
 ## hash
-- 78b2a84796519b9b9c6c970910d4ca16803256de9634f28cd98111a7098aba13
+- 369b191c06b7583dd211ba405d91b594aeb2da787f357f21e9088747b8f93b01
 
 # `test_session_cli.py`
 
 ## Summary
-- `session fork` / `join` / `abandon` の外部挙動をまとめて確認したいときに読む統合テスト。session branch と session state の遷移、linked worktree、state cleanup、dirty worktree 拒否、conflict 解消の境界を一箇所で押さえる。
-- この対象は、個別の内部 helper ではなく CLI レベルの回帰を見たいときの入口になる。session の状態遷移や `run_codex_exec` 経由の conflict resolution の観測点を確認したい場合に優先して読む。
-- 一方で、`session state` の保存形式や各サブコマンドの仕様そのものを深く追う必要がある場合は、ここよりも対応する oracle doc や oracle src 側を直接読むほうが近い。
+- `cmoc session fork` / `join` / `abandon` の CLI 外部挙動を横断して確認したいときに読む。session branch の作成・完了・破棄、linked worktree での branch/state の扱い、dirty worktree や precondition 失敗時の拒否、state cleanup、join 時の conflict 解消まわりの回帰をまとめて扱う。
+- 同じ branch/state fixture を共有していて、分割すると観測文脈が散るため、session ライフサイクルを一箇所で追う必要がある場合に読む。
 
 ## Read this when
-- session CLI の回帰テスト全体を追いたいとき
-- `fork` / `join` / `abandon` のどれかで branch 遷移や state 更新の期待値を確認したいとき
-- linked worktree での session 操作や、preprocess の順序・dirty worktree 拒否・cleanup rollback の観点を見たいとき
-- conflict resolution 時の Codex 呼び出し境界や、未解決 path が残る失敗条件を確認したいとき
+- session 関連の CLI 挙動をまとめて確認したいとき
+- fork 後の state 初期化、join 後の state 更新、abandon 後の branch/state 破棄を同じ回帰群として追いたいとき
+- linked worktree での session 操作や、dirty worktree・preprocess・state 不正などの拒否条件を含めて確認したいとき
 
 ## Do not read this when
-- session の実装方針や内部関数の詳細だけを知りたいときは、対応する oracle src を先に読む
-- 個別の仕様文言や責務境界を確認したいだけなら、対応する oracle doc を直接読む
-- session 以外の CLI 回帰を見たいときは、この対象ではなく該当サブコマンドのテスト群へ進む
+- 特定の session サブコマンド 1 つの仕様だけを知りたいときは、対応する `sub_command/session_*.md` を直接読む
+- session state の項目定義だけを確認したいときは `session_state.md` を読む
+- branch モデルや全体の用語定義だけを確認したいときは、より上位の branch/usage 系文書を読む
 
 ## hash
-- f3c69dba698a676cbe742d6b1bbf0967d5593977d92c1416475af0394caf1fc0
+- 9e6aff8755ed84a4d9a28623f0a374d3c0fb864094265d826772c7859d16af72
 
 # `test_struct_doc_rendering.py`
 

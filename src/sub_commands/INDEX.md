@@ -203,18 +203,25 @@
 # `session`
 
 ## Summary
-- `src/sub_commands/session` 配下の session サブコマンド実装への入口。各コマンド個別の制御ロジックや session 状態の扱いを確認するときに、この階層から下位モジュールへ進む。
+- `__init__.py` は session 系サブコマンド実装を収める最小のパッケージ初期化モジュールです。具体処理や公開 API は持たず、この階層がサブコマンド実装の入口かだけを確認したいときに読む対象です。
+- `abandon.py` は `cmoc session abandon` の実行本体です。session branch を home branch へ戻してから破棄し、state を abandoned に更新する流れと、cleanup 失敗時の rollback を確認したいときに読む対象です。
+- `fork.py` は `cmoc session fork` の実行本体です。現在の local branch から session branch と session state を新規作成し、衝突回避、worktree の clean 確認、失敗時 rollback を含めて確認したいときに読む対象です。
+- `join.py` は `cmoc session join` の実行本体です。session branch から home branch へ merge し、必要なら conflict 解消を依頼し、state 更新・branch 削除・結果表示までの制御を確認したいときに読む対象です。
 
 ## Read this when
-- session 系サブコマンドの個別実装を読む前に、この階層が session 用のまとまりか確認したいとき。
-- session サブコマンドの共通の入口として、どの操作がこの階層に属するかを把握したいとき。
+- `__init__.py` は、session 系サブコマンドのパッケージ境界や、パッケージ自体に初期化処理があるかを確認したいときに読む。
+- `abandon.py` は、`session abandon` の実行条件、branch 遷移、state 更新、cleanup 失敗時の rollback 方針を確認したいときに読む。
+- `fork.py` は、`session fork` の作成手順、事前条件、失敗時 rollback、表示結果を確認したいときに読む。
+- `join.py` は、`session join` の実行条件、失敗条件、出力内容、状態遷移、merge conflict の扱いを確認したいときに読む。
 
 ## Do not read this when
-- 個別の session サブコマンドの処理、引数、入出力、状態操作を調べたいとき。その場合は下位の実装モジュールを読む。
-- 共通 CLI ルーティングや session 以外のサブコマンド実装を調べたいとき。
+- `__init__.py` は、個別の session サブコマンドの処理、引数、入出力、状態操作を調べたいときには読まない。
+- `abandon.py` は、`session abandon` の CLI 入口だけ知りたいときや、join / fork など別の session 操作を追いたいときには読まない。
+- `fork.py` は、`session fork` の CLI runtime 起動や共通前処理だけを見たいとき、または join / abandon を追いたいときには読まない。
+- `join.py` は、`session join` の CLI 入口だけを知りたいとき、session 全体の一覧や fork / abandon を追いたいとき、一般的な git 操作や共通実装だけを知りたいときには読まない。
 
 ## hash
-- 915f8cd24174802a4183466abe107fa2049067ea27746018e971115fb6debdfe
+- bf4e9c66b73f369a31fc7b827e7d5b4c0f08980a1092b78933a4d5a2731a43c8
 
 # `tui.py`
 
