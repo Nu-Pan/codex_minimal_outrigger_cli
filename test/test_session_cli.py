@@ -142,6 +142,43 @@ def test_session_fork_creates_session_branch_and_state(
     assert state["apply"]["state"] == "ready"
 
 
+def test_session_fork_rolls_back_when_state_save_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """state 保存失敗時に branch と state を作成前へ戻す。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
+    """
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    home_branch = current_branch(root)
+    session_id = "2026-06-27_01-02_03_000000000"
+    session_branch = f"cmoc/session/{session_id}"
+    monkeypatch.setattr(session_fork_module, "timestamp", lambda: session_id)
+
+    def fail_write_state(_path: Path, _state: cmoc_runtime.SessionState) -> None:
+        raise OSError("state write failed")
+
+    monkeypatch.setattr(session_fork_module, "write_state", fail_write_state)
+
+    result = runner.invoke(app, ["session", "fork"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert not session_state_path(root, session_branch).exists()
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch],
+            cwd=root,
+        ).returncode
+        != 0
+    )
+    assert "session fork の作成に失敗しました。" in result.stdout
+    assert "session_branch_exists: False" in result.stdout
+    assert "session_state_file_exists: False" in result.stdout
+
+
 def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
