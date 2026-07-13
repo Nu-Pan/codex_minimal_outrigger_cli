@@ -144,6 +144,22 @@ def test_review_oracle_enumerate_parameter_matches_oracle_builder() -> None:
     assert parameter == oracle_parameter
 
 
+def test_review_oracle_enumerate_parameter_keeps_symlink_entry_path(
+    tmp_path: Path,
+) -> None:
+    """enumerate prompt の `<oracle-path>` が symlink entry を指す。"""
+    (tmp_path / "oracle").mkdir()
+    target = tmp_path / "memo.md"
+    target.write_text("# memo\n")
+    link = tmp_path / "oracle" / "memo-link.md"
+    link.symlink_to("../memo.md")
+
+    parameter = build_review_oracle_enumerate_finding_parameter(link, "[]")
+
+    assert f"- <oracle-path> = {link}" in parameter.prompt
+    assert f"- <oracle-path> = {link.resolve()}" not in parameter.prompt
+
+
 def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
     parameter = build_review_oracle_merge_finding_parameter("[]")
     assert "<<oracle-root>>" not in parameter.prompt

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from basic.path_model import resolve_real_path
-from commons.runtime_paths import pushd
+from commons.runtime_paths import pushd, worktrees_dir
 
 
 def finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
@@ -38,27 +38,34 @@ def oracle_path_key(root: Path, path: Path) -> str | None:
     """oracle file を symlink 非追跡の repository-relative key に変換する。
 
     report の評価対象は isolated worktree 上の path であり、finding は main
-    worktree を基準にする場合があるため、root 外の path でも oracle suffix を
-    同じ key として扱う。
+    worktree を基準にする場合がある。main worktree と cmoc 管理下の isolated
+    worktree だけを既知の root として扱い、それ以外の path は無視する。
 
     根拠:
     - <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
     - <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     """
 
+    root = _absolute_without_symlink(root)
     candidate = _absolute_without_symlink(path)
-    relative = None
     try:
-        relative = candidate.relative_to(_absolute_without_symlink(root))
+        relative = candidate.relative_to(root)
     except ValueError:
-        pass
-    if relative is None or relative.parts[:1] != ("oracle",):
         relative = None
-        for index in range(len(candidate.parts) - 1, -1, -1):
-            if candidate.parts[index] == "oracle":
-                relative = Path(*candidate.parts[index:])
-                break
-    if relative is None:
+    if relative is None or relative.parts[:1] != ("oracle",):
+        try:
+            managed_relative = candidate.relative_to(
+                _absolute_without_symlink(worktrees_dir(root))
+            )
+        except ValueError:
+            return None
+        # review report は worktree 削除後にも path を描画するため、git の
+        # worktree 登録ではなく、cmoc が予約する session/run の 2 階層だけを
+        # isolated worktree の所属境界として使う。
+        if len(managed_relative.parts) < 3:
+            return None
+        relative = Path(*managed_relative.parts[2:])
+    if relative is None or relative.parts[:1] != ("oracle",):
         return None
     return relative.as_posix()
 

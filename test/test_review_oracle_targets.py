@@ -18,7 +18,7 @@ from _ollama_support import run_doctor
 from cmoc_runtime import SessionState
 from main import app
 import sub_commands.review.oracle as review_module
-from sub_commands.review_paths import finding_oracle_path
+from sub_commands.review_paths import finding_oracle_path, oracle_path_key
 from sub_commands.review_targets import enumerate_review_all_oracle_files
 
 
@@ -62,6 +62,27 @@ def test_finding_oracle_path_resolves_work_root_from_review_worktree(
     assert finding_oracle_path(
         {"oracle_path": "<work-root>/oracle/spec.md"}, review_worktree
     ) == (review_worktree / "oracle" / "spec.md").resolve()
+
+
+def test_finding_oracle_path_preserves_absolute_symlink_entry(
+    tmp_path: Path,
+) -> None:
+    """absolute symlink の finding path を link 先へ追跡しない。"""
+    (tmp_path / "oracle").mkdir()
+    target = tmp_path / "memo.md"
+    target.write_text("# memo\n")
+    link = tmp_path / "oracle" / "memo-link.md"
+    link.symlink_to("../memo.md")
+
+    assert finding_oracle_path({"oracle_path": str(link)}, tmp_path) == link
+
+
+def test_oracle_path_key_rejects_external_oracle_suffix(tmp_path: Path) -> None:
+    """root 外の任意の `oracle` component を現在の repository と同一視しない。"""
+    root = tmp_path / "repo"
+    external = tmp_path / "other" / "oracle" / "spec.md"
+
+    assert oracle_path_key(root, external) is None
 
 
 def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
