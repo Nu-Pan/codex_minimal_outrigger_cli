@@ -468,20 +468,22 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- `codex tui` 実行時の制御と観測可能挙動を検証するテスト群。起動前の読み取り許可判定、プロンプト読み込み、linked worktree での実行、成功・失敗・割り込み時のログ出力とエラー報告を確認したいときに読む。
+- `codex_runtime_tui` の実行経路を検証するテスト群。Codex CLI 起動前の権限検査、プロンプト読込の許可範囲、`--cd` と出力スキーマの扱い、呼び出しログ生成、失敗時ログ、終了コード伝播をまとめて扱う。
+- 同じサブコマンドの内部ヘルパー実装ではなく、外から見える `run_codex_tui` の挙動を確認したいときに読む。
 
 ## Read this when
-- `commons.runtime_codex.run_codex_tui` の振る舞いを変更したとき
-- Codex subprocess の起動条件、出力、失敗時ログ、割り込み時の扱いを確認したいとき
-- `FileAccessMode` ごとの許可判定や、`extra_read_paths` の扱いを見たいとき
+- `run_codex_tui` の権限判定や起動前拒否の条件を確認したいとき。
+- TUI 呼び出し時にどの引数や作業ディレクトリが Codex CLI に渡るべきかを確認したいとき。
+- 呼び出しログやサブコマンドログの記録内容、失敗時の見え方を確認したいとき。
+- 完全な oracle 読込のみを許すケースや、linked worktree からの起動可否を確認したいとき。
 
 ## Do not read this when
-- CLI 引数定義や設定モデルの全体を追いたいときは、より上位の実装や設定側を読む
-- `codex tui` 以外のサブコマンドの仕様を確認したいとき
-- 個別の補助関数の実装詳細だけを追いたいとき
+- Codex TUI の実装内部の分割や helper の配置だけを知りたいとき。
+- `run_codex_tui` 以外のサブコマンドの挙動を確認したいとき。
+- CLI 全体の引数定義や設定体系を確認したいとき。
 
 ## hash
-- c972e0ca03002ac4f071319d0310335d543701bc370c42473134d349118dc270
+- eb5441223bd2c0913036c137fed40fbb1ba60020ab901c35305dcec22deec485
 
 # `test_doctor_cli.py`
 

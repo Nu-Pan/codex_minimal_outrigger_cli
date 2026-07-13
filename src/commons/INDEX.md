@@ -190,21 +190,21 @@
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI を直接起動するための実行本体で、設定上書き argv の組み立て、call log の保存、起動結果のコンソール/サブコマンド記録、失敗時の例外化をまとめて扱う。
-- `runtime_codex.py` の薄い委譲や、`runtime_codex_preflight.py` の indexing 前処理ではなく、Codex TUI 自体の起動条件・記録形式・エラー処理を確認したいときに読む。
+- Codex TUI を起動する共通処理で、`AgentCallParameter` から呼び出し argv・`CODEX_HOME`・call log・サブコマンドログをまとめて準備し、実行結果を `CommandResult` か例外で返す。
+- Codex の起動前後で記録内容や失敗時の扱いを揃えたいときに読む。特に、起動先の cwd 決定、`CODEX_HOME` の解決と検証、呼び出しログ出力、失敗イベント記録の責務を確認するときの入口になる。
 
 ## Read this when
-- Codex TUI の起動引数や `call log` に何を残すかを確認したい。
-- 起動失敗時にどの例外へ変換されるか、またコンソール/イベント記録がいつ出るかを確認したい。
-- `cwd` や `CODEX_HOME` の解決を含む TUI 実行フローそのものを追いたい。
+- Codex TUI の起動方法や、起動時に残す call log とサブコマンドログの内容を変えたい。
+- `CODEX_HOME` の解決・検証や、Codex 呼び出し前の argv 組み立てを見直したい。
+- Codex 実行失敗時の例外変換や、起動失敗をイベントとして記録する経路を確認したい。
 
 ## Do not read this when
-- Structured Output 検証、retry、resume、quota など `exec` 専用の実行制御を追いたい場合は `runtime_codex_exec.py` を読む。
-- indexing preflight の有無や、Codex 呼び出し前の前処理の分岐を追いたい場合は `runtime_codex.py` を読む。
-- サブコマンド全体のルーティングだけを見たい場合は、より上位の呼び出し元を読む。
+- Codex 以外の実行経路や、別サブコマンドの引数組み立てだけを見たい。
+- 単に `CommandResult` の定義や一般的な設定読み込み処理だけを確認したい。
+- call log の保存先だけを知りたい場合は、直接 `runtime_paths` 側を読む方が近い。
 
 ## hash
-- 531d6042d4ca28b73dedcea94e42a995df895b12a743bfa82c5a499e34a72b5e
+- 56354704e19d5e51bc279f550754fc1a964cd8fe3e3a1d66fa012c93f2a9af97
 
 # `runtime_config.py`
 
@@ -306,20 +306,21 @@
 # `runtime_logging.py`
 
 ## Summary
-- サブコマンド単位の実行ログと実測時間を扱う runtime logging 実装。JSON Lines event の追記、step 開始・終了 timing、quota 待機時間の集計、現在の logger を context local に差し替えて参照する仕組みを提供する。
+- サブコマンドごとの JSON Lines ログと経過時間をまとめる共有 logger を定義する。`ContextVar` で現在の logger を深い runtime helper から参照できるようにし、step timing と quota 待機時間も保持する。
+- コンソール出力やファイル出力の連携で、イベント記録の単位、step 開始・終了の扱い、現在 logger の受け渡し方法を変えるときの入口になる。
 
 ## Read this when
-- サブコマンド実行中に記録される JSON Lines log event の生成内容、保存単位、timestamp 付き log file の作成方法を確認したいとき。
-- console summary と file log で共有される step timing、elapsed time、quota wait time の集計方法を確認または変更したいとき。
-- 深い runtime helper から現在のサブコマンド logger を参照する context variable の設定・復元・取得経路を扱うとき。
+- サブコマンド実行中に残すイベント記録の追加・変更をするとき。
+- step の開始時刻、経過時間、quota 待機時間など、サブコマンド全体の実測値の集計方法を変えるとき。
+- 深い runtime helper から現在のサブコマンド logger を参照・差し替え・復元する流れを確認したいとき。
 
 ## Do not read this when
-- log directory のパス規則や timestamp 文字列の生成規則だけを確認したいときは、それらを定義する runtime path 側を読む。
-- 個別サブコマンドの処理順序や step の文言そのものを確認したいときは、そのサブコマンド実装を読む。
-- oracle 上の console 表示・file log 仕様や coding rule の正本内容を確認したいときは、対応する oracle doc を読む。
+- 個別サブコマンドの実処理や引数処理だけを変えるときで、共有 logger の記録方式に触れない場合。
+- Codex CLI 呼び出しの詳細な記録形式だけを扱いたい場合は、`runtime_codex_logging.py` を先に読む。
+- タイムスタンプ付き path の予約やログ保存先の決定だけを確認したい場合は、`runtime_paths.py` を先に読む。
 
 ## hash
-- 435c34b19e2277edd8f95d4456eadef464c857b66fc7bca81fa0646e1a77a4f8
+- f4eb36e9d2b4bb2881b61820de8725a8b750ddb8c0118b57ba999d1bf7d9e241
 
 # `runtime_ollama.py`
 
@@ -344,22 +345,21 @@
 # `runtime_paths.py`
 
 ## Summary
-- 実行時に必要な root path 解決、時刻文字列、duration 表示、cmoc 管理ディレクトリや設定ファイルの path 組み立て、cwd 一時変更、memo 配下判定を扱う runtime path helper 群。
-- root 解決失敗時は `CmocError` に変換し、利用者が実行場所を直せるメッセージを返す責務を持つ。
+- 実行時に `<repo-root>` / `<work-root>` を解決し、失敗時は `CmocError` に変換する root 解決ユーティリティをまとめる。cwd 指定時の解決補助、`pushd` を使った一時的な cwd 切替、`cmoc-root` 解決もここで扱う。
+- 時刻文字列の生成と、セッション・レポート・ログ・worktree・schema・config の保存先パス決定を扱う。`memo` 配下判定のような、保存先やルート判定に関わる周辺ロジックも含む。
 
 ## Read this when
-- 実行時の `<repo-root>`、`<work-root>`、`<cmoc-root>` 解決や、その失敗時エラー文言を確認・変更したいとき。
-- `.cmoc/local` 配下の session、report、log、worktree、schema、config の保存先 path を確認・変更したいとき。
-- file name 用 timestamp、console 表示用 timestamp、duration 表示形式を確認・変更したいとき。
-- `<work-root>/memo` 自体または配下の判定、または cwd 前提 API を呼ぶ短い区間の作業 directory 切替を扱うとき。
+- root placeholder から実パスを解決する処理や、その失敗をユーザー向けエラーに変換する挙動を変えるとき。
+- 実行時刻表記、ファイル名向けの timestamp、または `.cmoc/local` 配下の各種保存先ルールを変えるとき。
+- cwd を一時的に切り替えて外部 API の前提に合わせる必要がある処理を確認するとき。
 
 ## Do not read this when
-- placeholder 名や実 path 変換の正本定義そのものを確認したいだけなら、path model 側を読む。
-- 個別サブコマンドの report、log、session state の中身や schema を確認したいだけなら、それぞれの保存・読み書き処理へ進む。
-- CLI 引数解析、コマンド実行制御、利用者向け出力全体の仕様を確認したいだけなら、該当する command 層へ進む。
+- 個別サブコマンドの業務ロジックや、セッション・ログ・レポートの中身を扱う実装を追うとき。
+- `INDEX.md` のルーティングや他モジュールの責務境界だけを確認したいとき。
+- path 解決や保存先決定と無関係な CLI 解析、出力整形、状態遷移を見たいとき。
 
 ## hash
-- af9e2b9db9e0c790c7f08af804841b073dd6cd5ef99ca122152ad4a3387c78d3
+- 44eb6c915159efffe5354bd1bfa12c771b7f1e9dc6d838f6860733fd18564cee
 
 # `runtime_preprocess_command.py`
 
