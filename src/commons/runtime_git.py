@@ -122,7 +122,7 @@ def branch_exists(root: Path, branch: str) -> bool:
 def create_run_worktree(
     root: Path, branch: str, worktree: Path, start_point: str = "HEAD"
 ) -> Path:
-    """既存 path を除去してから run/apply 用 linked worktree を作る。"""
+    """未使用 path に run/apply 用 linked worktree を作る。"""
     expected_worktree = _expected_managed_worktree(root, branch)
     if worktree.resolve() != expected_worktree:
         raise CmocError(
@@ -132,18 +132,26 @@ def create_run_worktree(
         )
     worktree.parent.mkdir(parents=True, exist_ok=True)
     if worktree.exists():
-        shutil.rmtree(worktree)
+        # <work-root>/oracle/doc/branch_model.md
+        # A matching path is not evidence of a cmoc-created linked worktree; never delete it implicitly.
+        raise CmocError(
+            "run worktree path は既に存在します。",
+            ["既存の directory または worktree を確認してから再実行してください。"],
+            str(worktree),
+        )
     run_git(["worktree", "add", "-b", branch, str(worktree), start_point], root)
     return worktree
 
 
 def remove_worktree(root: Path, worktree: Path) -> CommandResult:
-    """git worktree remove 失敗時も実体 directory の削除まで試みる。"""
+    """登録済み worktree だけを git worktree として削除する。"""
     _require_managed_worktree(root, worktree)
     result = run_git(
         ["worktree", "remove", "--force", str(worktree)], root, check=False
     )
     if result.returncode != 0 and worktree.exists():
+        # git コマンド中の状態変化後も、登録済み path だけを再帰削除する。
+        _require_managed_worktree(root, worktree)
         shutil.rmtree(worktree)
     run_git(["worktree", "prune"], root, check=False)
     return result
@@ -182,6 +190,19 @@ def _require_managed_worktree(root: Path, worktree: Path) -> None:
     # work-root deletion is limited to .cmoc/local/worktree/<parent-run-id>/<run-id>.
     if len(relative.parts) != 2 or not all(relative.parts):
         raise _unmanaged_worktree_error(worktree, base)
+    # <work-root>/oracle/doc/branch_model.md
+    # The naming convention is not enough: deletion is limited to Git linked worktrees.
+    if worktree.exists() and resolved not in _registered_worktree_paths(root):
+        raise _unmanaged_worktree_error(worktree, base)
+
+
+def _registered_worktree_paths(root: Path) -> set[Path]:
+    output = run_git(["worktree", "list", "--porcelain"], root).stdout
+    return {
+        Path(line.removeprefix("worktree ")).resolve()
+        for line in output.splitlines()
+        if line.startswith("worktree ")
+    }
 
 
 def _unmanaged_worktree_error(worktree: Path, base: Path) -> CmocError:

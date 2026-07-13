@@ -102,12 +102,40 @@ def test_create_run_worktree_rejects_path_not_matching_branch(
     assert (target / "keep.txt").read_text() == "keep\n"
 
 
+def test_create_run_worktree_rejects_unregistered_managed_path(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / ".cmoc" / "local" / "worktree" / "session" / "run"
+    target.mkdir(parents=True)
+    (target / "keep.txt").write_text("keep\n")
+
+    with pytest.raises(CmocError, match="run worktree path"):
+        create_run_worktree(root, "cmoc/apply/session/run", target)
+
+    assert (target / "keep.txt").read_text() == "keep\n"
+
+
 def test_remove_worktree_rejects_path_outside_managed_worktrees(
     tmp_path: Path,
 ) -> None:
     root = make_repo(tmp_path)
     target = tmp_path / "unrelated"
     target.mkdir()
+    (target / "keep.txt").write_text("keep\n")
+
+    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+        remove_worktree(root, target)
+
+    assert (target / "keep.txt").read_text() == "keep\n"
+
+
+def test_remove_worktree_rejects_unregistered_managed_path(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / ".cmoc" / "local" / "worktree" / "session" / "run"
+    target.mkdir(parents=True)
     (target / "keep.txt").write_text("keep\n")
 
     with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
