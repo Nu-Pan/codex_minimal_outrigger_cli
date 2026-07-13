@@ -604,39 +604,40 @@
 # `test_review_oracle_report.py`
 
 ## Summary
-- `cmoc review oracle` のレポート生成と CLI 出力の見え方を検証するテスト群の入口。`eval-oracle` から `review oracle` への委譲、レポート本文の節順と集計、accepted / rejected の分類、エラー時の報告までを確認する。
-- レビュー機能の実装そのものではなく、実行結果として人間が読む report とコマンド出力が正本どおりかを確かめたいときに読む。
+- `cmoc review oracle` のレポート生成と CLI 挙動を検証する統合テスト群。`review oracle` の出力順、集計件数、`--scope` の反映、処理失敗時の error report、`eval-oracle` からの委譲確認を扱う。
 
 ## Read this when
-- `review oracle` の report 形式、節順、件数集計、`ok` / `fatal` / `error` の表示を変えるとき。
-- `eval-oracle` の CLI から review 実装への委譲関係や scope の受け渡しを確認したいとき。
-- レビューレポートに出る oracle file 表記、採用・不採用の分類、エラー時の出力先を検証したいとき。
+- `review oracle` の Markdown レポート本文や frontmatter を変更するとき。
+- 所見の採用・不採用の分類、fatal/minor の集計、`<oracle-root>` や symlink の集計ルールを変えるとき。
+- `review oracle` の `--scope` やエラー時出力、`eval-oracle` からの委譲経路を変えるとき。
 
 ## Do not read this when
-- レビュー本体の所見抽出・判定ロジックを変えたいだけなら、まず実装側の `sub_commands.review.oracle` を読む。
-- `review oracle` 以外のサブコマンドの出力確認や、一般的な CLI 基盤の挙動確認だけならここは読まない。
-- `oracle` 配下の仕様本文を確認したいだけなら、このテストではなく対応する `oracle/doc/app_spec/sub_command/review_oracle.md` を読む。
+- `review oracle` 以外のサブコマンドの一般的な CLI 仕様だけを変えるとき。
+- Codex CLI 呼び出しの共通規約や schema 定義そのものだけを変えるとき。
+- 個別の oracle 仕様本文を編集したいだけで、レポート生成や CLI 出力の検証を触らないとき。
 
 ## hash
-- f5da1877b8c789a0286a3e73117569b213bde02b6541d068a9f2be55628f609e
+- d5e6ae8091d689c498d140cd3645217e43e375c475e8ba4b1408d81619464e1d
 
 # `test_review_oracle_targets.py`
 
 ## Summary
-- `review oracle` の対象解決と列挙ルールを検証するテスト群。`oracle_path` の `<work-root>` / `<oracle-root>` 解決、`full` / `session` スコープでの oracle 対象選定、ignored や symlink を含む oracle file の扱い、`AGENTS.md` / `INDEX.md` を除外する境界を確かめる。
+- `review oracle` の対象抽出と `finding` からの oracle path 解決の境界を検証するテスト群。`, `session scope` と `full scope` の対象選定、追跡済みだが ignore される oracle file の扱い、AGENTS.md / INDEX.md の除外、symlink の分類基準を確認したいときに読む。
+- `review oracle` の CLI 挙動そのものより、対象列挙と path 解決の仕様を確かめる入口として読む。`finding` の Structured Output をどう解釈して review 対象へ落とすか、レビュー結果の選定ロジックを追いたいときに直接進む。
 
 ## Read this when
-- `review oracle` の対象ファイル選定やパス解決を変更する。
-- oracle 配下の symlink, ignored file, tracked ignored file, `AGENTS.md`, `INDEX.md` の扱いを変える。
-- session scope と full scope の対象数や評価数の差が変わる可能性がある。
+- `review oracle` のレビュー対象がどの oracle file になるべきかを確認したい。
+- `finding` に含まれる `oracle_path` を `review` 実行時の基準位置からどう解決するかを確認したい。
+- ignore されるが追跡済みの oracle file、symlink、`AGENTS.md`、`INDEX.md` の扱いを確認したい。
+- `session` スコープと `full` スコープで対象集合が変わる条件を確認したい。
 
 ## Do not read this when
-- review 実行の見た目だけを変える。
-- finding 本文の評価ロジックや report の文面だけを変える。
-- oracle 以外のサブコマンドの対象列挙を直す。
+- review 実行の出力整形、レポート本文の文言、Codex 呼び出しの詳細だけを追いたい場合は、より上位の CLI 実装や出力生成側を読む。
+- oracle file の総論や開発規則だけを知りたい場合は、このテストではなく参照先の正本仕様断片を読む。
+- 対象列挙以外の review サブコマンド全般を追いたい場合は、このファイルではなく `review` 本体の実装を読む。
 
 ## hash
-- ae482ffa010320a92be4a6c65a7633c5a2efe074181a12b161d07b55b81928d9
+- d3d8ad6407f7587debc0e5a25474e42d4bda8f74fcde35d97f6777f55b071790
 
 # `test_review_oracle_worktree.py`
 

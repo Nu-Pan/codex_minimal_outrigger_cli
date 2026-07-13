@@ -123,61 +123,61 @@
 # `review_loop.py`
 
 ## Summary
-- review oracle の実行ループをまとめる入口。所見の列挙、重複整理、反証と擁護の往復、採否判定、および merge 操作の検証と適用を一連の流れとして扱う。
-- merge の構文検証や、検証失敗を semantic response failure として扱う境界も含むため、レビュー処理の制御フローやエラー扱いを確認したいときにここから入る。
+- `cmoc review oracle` の所見処理ループ本体を扱う。新規所見の列挙、所見マージ、妥当性検証、採用判定の順序と、各段階でのダーティフラグ更新やリトライ条件を確認したいときに読む。
+- 所見マージの編集操作を所見リストへ適用する検証ロジックもここにある。`finding_id` の再利用禁止、delete/replace/merge の許容条件、merge 段階の意味的リトライ方針を確認したいときに読む。
 
 ## Read this when
-- review oracle の処理順序や、列挙・マージ・検証・判定のどこで再試行や打ち切りが起きるかを確認したいとき。
-- merge finding の操作仕様、target_id の重複禁止、未知 id の拒否など、所見統合のルールを確認したいとき。
-- step callback にどの段階で通知するか、また review の進行ログをどう区切るかを追いたいとき。
+- `cmoc review oracle` が所見をどう反復処理するか、どの段階で次の周回へ進むかを確認したいとき。
+- 新規所見の追加、重複所見の統合、challenge/advocate による再検証、judge による verdict 付与の流れを追いたいとき。
+- merge finding の操作仕様や、無効な edit operation をどう扱うかを確認したいとき。
 
 ## Do not read this when
-- 個別の Codex パラメータ生成だけを見たいときは、各 `build_review_oracle_*_parameter` 側を直接読む。
-- oracle file ごとの関連所見の抽出だけを確認したいときは、`finding_oracle_path` を扱う別モジュールを読む。
-- レビュー全体の CLI 引数や設定値の定義だけが必要なら、呼び出し元のコマンド層を先に読む。
+- レビュー対象 oracle file の列挙条件や scope 判定だけを知りたいときは、対象選定側を読む。
+- 最終レポートの Markdown 形式や frontmatter の項目を知りたいときは、レポート生成側を読む。
+- 個別 agent call の prompt 正本そのものを確認したいときは、対応する oracle src の builder を読む。
 
 ## hash
-- 483350368294835c50169da6f3fe509592d07320314f339c266b4a484de9dcbf
+- 9d31c1efd3694568048a7c0e419fec8fcdcf0befe5c23b7445105f983e73238c
 
 # `review_paths.py`
 
 ## Summary
-- review finding に含まれる oracle_path を、隔離 worktree 上で照合可能な実パスへ変換する補助処理を扱う。
-- 空値・非文字列・未対応プレースホルダを None に落とし、絶対パス、<oracle-root> alias、path_model が解決できるプレースホルダ付きパスを区別して解決する。
+- `finding` に入った `oracle_path` を、symlink を追跡しない絶対 path と repository-relative key に変換する補助をまとめたモジュール。レビュー用の oracle パス解決とキー正規化を扱うときに読む。
+- `<oracle-root>` の別名や `<...>` 形式の root 参照を解釈し、レビュー対象の oracle file を worktree 基準で比較できるようにする。
 
 ## Read this when
-- review finding の oracle_path を Path に変換する挙動を確認・変更したいとき。
-- <oracle-root> alias や <work-root> などのプレースホルダ付きパスを、review 用の隔離 worktree 基準で扱う処理を調べるとき。
-- finding 内の oracle_path が不正または未解決の場合に None になる境界を確認したいとき。
+- `finding` に含まれる oracle の参照先を、実際のファイル path として解決したいとき。
+- review 結果の集約で、worktree が違っても同じ oracle file を同一 key として扱いたいとき。
+- `<oracle-root>` や他の root プレースホルダから始まる path を受け取る処理を追加・修正するとき。
 
 ## Do not read this when
-- 一般的な path keyword の定義や resolve_real_path の解決規則そのものを確認したいだけのときは、path_model 側を読む。
-- review finding を生成する prompt や oracle_path の入力仕様を確認したいときは、finding 生成側の oracle 定義を読む。
-- カレントディレクトリを一時変更する pushd の実装や副作用を調べたいだけのときは、runtime paths 側を読む。
+- review レポート本文の構成や採点基準だけを変えたいとき。
+- 一般的な path 正規化だけを直したいとき。
+- oracle_path 以外の finding 項目の解釈や列挙ロジックを変更したいとき。
 
 ## hash
-- bf2334572baffb103819312c0414528aedfa5242943a0e4d60965d2541914102
+- 81ea9ace374c686536c1de93839f2dd8b921e2c6e6f68f5038fd070dec4862bf
 
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を Markdown レポートとして保存・描画する処理を担う。
-- 評価対象 oracle file の一覧、findings の採否・重大度別集計、frontmatter、表示用 path、最終 verdict 文言を組み立てる。
-- review oracle の report 出力形式や findings 表示順、oracle path の表示変換を確認する入口となる。
+- review oracle レポートの Markdown 生成を担う。`write_review_oracle_report` は保存先ディレクトリを作って、`render_review_oracle_report` の出力を timestamp 名の report ファイルとして書き込む入口である。
+- この対象は、review oracle の出力形式、前提条件、判定文言、frontmatter、oracle file ごとの集計表、finding の並び順や見せ方を確認したいときに読む。
+- 補助関数は、finding の severity/verdict ごとの振り分け、結果判定、frontmatter の整形、finding セクションの描画、oracle file 表示名の正規化をまとめて扱う。
 
 ## Read this when
-- review oracle が生成する Markdown レポートの構成、frontmatter、見出し、表、verdict 文言を確認・変更したいとき。
-- accepted/rejected findings や fatal/minor findings の分類、集計、表示順を追いたいとき。
-- review oracle の出力で oracle file path がどのように相対表示されるかを確認したいとき。
-- review oracle の途中失敗、対象 0 件、fatal/minor/ok の各結果が report 上でどう表現されるかを確認したいとき。
+- review oracle のレポート本文や frontmatter の項目を変更したいとき。
+- finding の集計方法、accept/reject の扱い、fatal/minor の見せ方を確認したいとき。
+- oracle file の表示名や、レポート内での path 集計キーの扱いを変えたいとき。
+- レポートの保存先・ファイル名・生成タイミングを確認したいとき。
 
 ## Do not read this when
-- review oracle の対象 oracle file をどう探索・選定するかを確認したいだけのとき。
-- finding の生成、判定、採否決定そのもののロジックを確認したいとき。
-- review oracle 以外の report 生成や、汎用的な report 保存先の規則だけを確認したいとき。
+- review oracle の検出ロジックや finding 生成ロジックだけを追いたいときは、finding を作る側のサブコマンドや review paths 側を先に読む。
+- report の保存先ディレクトリの共通ルールだけを知りたいときは、`reports_dir` や timestamp を定義している共通モジュールを読む。
+- このファイルは report の描画専用なので、レビュー対象 oracle の探索・判定・実行制御を確認したいだけなら直接読む必要はない。
 
 ## hash
-- 5a2499fad6f56637148a2a518aa7b69c30e6ea400a3a65e93a871335de8564b7
+- d496499d4a070109c3738c1b6cdef8368f6a7523e3fae59de2e4dfa94be613ca
 
 # `review_targets.py`
 

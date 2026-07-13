@@ -129,24 +129,41 @@
 # `sub_commands`
 
 ## Summary
-- `cmoc` のサブコマンド層の入口。個別コマンドの実行制御と、関連する review / session / apply 系の役割境界を見分けたいときにここから入る。
-- `apply` は apply 系サブコマンド群の実行制御をまとめる階層で、fork・join・abandon・fork report のどれを読むべきかを切り分ける入口になる。
-- `doctor.py` は doctor サブコマンドから runtime preprocess へ委譲する薄い入口で、doctor 固有処理ではなく委譲先との接続だけを確認したいときに読む。
-- `eval_oracle.py` は want を書き出した oracle の評価を review oracle 実装へ委譲する入口で、評価本体をどこに集約しているか確認したいときに読む。
-- `indexing.py` は indexing サブコマンドの実行入口で、事前検査を通したうえで INDEX.md 更新と commit までを 1 本の流れとして追いたいときに読む。
-- `review` は review 系サブコマンド群の package 境界と review oracle 実行入口をまとめる階層で、対象選定・所見収集・レポート出力の責務分担を見分けたいときに読む。
-- `session` は session サブコマンド群の package 境界で、fork・join・abandon の開始・統合・終了の役割分担を切り分けたいときに読む。
-- `tui.py` は `cmoc tui` の実行本体で、元プロンプト作成、エディタ起動、実行パラメータ解決、TUI 起動までの流れを確認したいときに読む。
+- `cmoc` の各サブコマンド実行入口をまとめる階層。ここでは個別コマンドの責務境界を見分け、必要なら対応する実行本体や共通 runtime 側へ進む。
+- `apply` は apply 系の実行制御を扱い、fork・join・abandon・fork report の役割分担と実行順序を追いたいときの入口になる。
+- `session` は session 系の開始・統合・終了を扱い、fork・join・abandon の状態遷移や branch 操作を確認したいときの入口になる。
+- `review` は review 系サブコマンド群の package 境界と review oracle 実行フローを扱い、対象選択・所見収集・レポート出力を追いたいときの入口になる。
+- `indexing` は INDEX.md 更新と commit をつなぐ実行入口で、前提条件と更新の外形的な流れを確認したいときに読む。
+- `tui.py` は `cmoc tui` の起動入口で、元プロンプト編集、エディタ起動、実行パラメータ解決、TUI 起動の流れを確認したいときに読む。
+- `doctor.py` は doctor サブコマンドから runtime preprocess への薄い委譲入口で、doctor 固有処理ではなく委譲先を確認したいときに読む。
+- `eval_oracle.py` は want を書き出した oracle 評価を review oracle 実装へ委譲する薄い入口で、評価本体そのものではなく接続先を確認したいときに読む。
+- `review_index.py` は review worktree や branch の差分を INDEX.md に絞って検査・確定・取り込みする処理を扱い、INDEX.md 以外の差分混入や merge 解決条件を確認したいときに読む。
+- `review_loop.py` は review oracle の所見処理ループ本体を扱い、所見の列挙・統合・再検証・採否判定の順序を追いたいときに読む。
+- `review_paths.py` は review 結果に含まれる oracle_path の解決と正規化を扱い、finding の参照先を worktree 間で同一 key として扱いたいときに読む。
+- `review_report.py` は review oracle レポートの Markdown 生成を扱い、frontmatter、集計、finding の見せ方、保存先を確認したいときに読む。
+- `review_targets.py` は review oracle の対象 oracle file を scope と session 状態に基づいて列挙する処理を扱い、どの file が対象になるかを確認したいときに読む。
 
 ## Read this when
-- `cmoc` のサブコマンド実装のうち、どの責務がどのファイルにあるかを切り分けたいとき。
-- apply / review / session / indexing / tui のいずれを読むべきか迷っているとき。
-- サブコマンドの起動経路と、入口から各実行本体へどう分岐するかを把握したいとき。
+- `cmoc` サブコマンド階層の中で、どの責務がどのファイルにあるかを切り分けたいとき。
+- apply 系サブコマンドの実行順序、終了時の state や report の流れを把握したいとき。
+- session 系サブコマンドの開始・統合・終了の責務分担を確認したいとき。
+- review oracle の対象選択、処理ループ、レポート生成、パス正規化のどこを読むべきか迷っているとき。
+- INDEX.md 更新の起動条件と外形的な実行順序を確認したいとき。
+- `cmoc tui` の入力プロンプト、エディタ起動、起動前後のパラメータ解決を確認したいとき。
+- doctor の実行入口がどの runtime preprocess に接続されるかを確認したいとき。
+- want を書き出した oracle の評価経路が review oracle と同一であることを確認したいとき。
+- review worktree や branch の差分が INDEX.md のみに制限される条件を確認したいとき。
 
 ## Do not read this when
 - 個別サブコマンドの引数定義や内部制御を詳しく追いたいときは、対応する実装ファイルへ直接進む。
-- doctro? ではなく一般的な runtime / helper の共通処理だけを確認したいときは、ここではなく共通基盤を読む。
-- `cmoc` 以外の正本仕様そのものを探したいときは、この階層ではなく oracle 側を読む。
+- branch や worktree の一般的な操作だけを確認したいときは、共通 runtime 側を読む。
+- review 以外のサブコマンドや正本仕様そのものを探したいときは、この階層ではなくより直接の対象や oracle 側を読む。
+- INDEX.md の更新内容そのものや更新アルゴリズムの詳細を知りたいときは、`commons.indexing` 側を読む。
+- doctor preprocess の中身や診断項目を調べたいときは、その preprocess 本体を読む。
+- review oracle の評価処理本体、出力、検査内容を確認したいときは、委譲先の review oracle 実装を読む。
+- review レポート本文の構成や採点基準を変えたいときは、`review_report.py` を読む。
+- finding の `oracle_path` 以外の項目解釈や列挙ロジックを変更したいときは、`review_paths.py` ではない別の対象を読む。
+- review 対象 oracle の探索・判定・実行制御を確認したいだけなら、レポート生成側や対象選定側の対象を優先する。
 
 ## hash
-- e624182f14bd67a6762fa7e14e4cd6ed329cae57faefc967ec13f5da3d229b7c
+- 515ed47c00f5247dcec86f8f1f33d8156fbec1b92730bf00a41c6df99e7b0676
