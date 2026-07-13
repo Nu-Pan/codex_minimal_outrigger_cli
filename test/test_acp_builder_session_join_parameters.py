@@ -13,6 +13,8 @@ from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
 
 
 def test_session_join_compatibility_module_exports_only_builder() -> None:
+    """公開モジュールが conflict resolution builder だけを export することを検証する。"""
+
     assert session_conflict_resolution_module.__all__ == [
         "build_session_join_conflict_resolution_parameter"
     ]
@@ -29,6 +31,8 @@ def test_session_join_compatibility_module_exports_only_builder() -> None:
 
 
 def test_session_join_conflict_resolution_uses_repo_write_mode() -> None:
+    """conflict resolution 用パラメータが repo write 権限を使う契約を検証する。"""
+
     conflicted_path = Path(__file__).resolve()
     parameter = build_session_join_conflict_resolution_parameter([conflicted_path])
 
