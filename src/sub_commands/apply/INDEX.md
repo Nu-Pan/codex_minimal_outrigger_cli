@@ -38,22 +38,22 @@
 # `fork.py`
 
 ## Summary
-- `apply fork` の実行制御をまとめる入口で、session branch 上の前提確認から isolated apply worktree 作成、対象ファイル列挙、Codex による所見適用、commit、state 更新、成功・失敗レポート出力までを追うときに読む。
-- 対象ファイルの選び方、重複排除、oracle file と追跡対象の扱い分け、既存 join 由来の差分再開条件を確認したいときに読む。
-- commit subject の生成規則や、apply loop の途中で発生した失敗時に PID と report をどう扱うかを確認したいときに読む。
+- `apply fork` の 1 回分の実行制御をまとめる入口。session branch 上での前提確認、isolated worktree 作成、調査対象の列挙、Codex による所見適用、commit、state 更新、report 出力、異常時の復旧までを扱う。
+- この層を読むべきなのは、`apply fork` 全体の流れ、失敗時の状態遷移、worktree / process 管理、結果レポートの責務境界を確認したいとき。
+- 個別の対象列挙や finding 適用の詳細だけが知りたいなら、ここではなく同階層の専用実装に進む方がよい。
 
 ## Read this when
-- `cmoc apply fork` の全体フローを変更したいとき。
-- apply 対象の列挙条件、重複排除、oracle file を含めるかどうかの境界を変えたいとき。
-- apply 成功時・失敗時の state 更新、worktree、report、commit message の振る舞いを確認したいとき。
+- `apply fork` の実行フロー全体を追いたいとき
+- session branch の前提確認、apply state の更新、worktree 作成、commit / report / cleanup の関係を確認したいとき
+- 異常終了時に何を残し、何を回収するかを見たいとき
 
 ## Do not read this when
-- 単一の finding 列挙ロジックだけを見たいなら、対象の build parameter 側を先に読む。
-- finding の実適用手順だけを見たいなら、このファイルではなく finding application 側を読む。
-- report の書式だけを見たいなら、このファイルではなく apply fork report 側を読む。
+- 調査対象の抽出ルールだけを知りたいときは、対象列挙の実装を読む
+- finding の生成条件や Codex への渡し方だけを知りたいときは、finding 適用の実装を読む
+- apply fork 以外の subcommand の仕様だけを確認したいときは、その subcommand の本文へ進む
 
 ## hash
-- 519b9ef548abc6e726f6455c402f56046734b4d43962655e2694d0b549229b1b
+- f612c9a2257c5967b05b136259bec9dfd7fb30e945b5ba32d4eb63737b5061d4
 
 # `fork_report.py`
 

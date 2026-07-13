@@ -1,28 +1,22 @@
 # `apply`
 
 ## Summary
-- `src/sub_commands/apply` は apply 系サブコマンド実装の入口で、個別コマンド本体へ進む前に役割だけ確認したいときのルーティング先である。
-- `abandon.py` は `cmoc apply abandon` の実行本体で、active な apply run の破棄と後始末の流れを追うための入口である。
-- `fork.py` は `cmoc apply fork` の実行制御の入口で、対象選定から適用、commit、state 更新、結果出力までの全体像を読むときに使う。
-- `fork_report.py` は apply fork の結果レポート生成を担い、Markdown の保存内容や変更要約の作り方を確認したいときに読む。
-- `join.py` は `cmoc apply join` の実行本体で、整合確認、差分判定、`--force-resolve`、merge、cleanup をまとめて追うための入口である。
+- `cmoc apply` 系のサブコマンド実装をまとめる領域で、開始・終了・実行結果の記録をそれぞれ別の実装に分けて読む入口。
+- `__init__.py` はパッケージの役割確認だけに使い、`abandon.py` は実行中の apply run の破棄、`fork.py` は 1 回分の apply 実行制御、`fork_report.py` は fork の結果レポート生成、`join.py` は apply join の整合確認とマージ処理を担う。
+- この階層は apply フロー全体を横断して読む必要があるときに使い、個別の subcommand の制御やレポート、cleanup の責務境界を切り分けるための案内に向く。
 
 ## Read this when
-- apply 系サブコマンドの実装パッケージの役割だけを確認したいとき。
-- `cmoc apply abandon` の挙動や失敗条件、破棄後の cleanup を追いたいとき。
-- `cmoc apply fork` の全体フロー、対象列挙、適用、commit、state 更新、成功・失敗時の挙動を確認したいとき。
-- apply fork のレポート保存、frontmatter、本文構成、変更要約の生成条件を確認したいとき。
-- `cmoc apply join` の CLI 挙動、差分判定、conflict 処理、復旧と cleanup を確認したいとき。
+- apply 系サブコマンドの全体像から、どの責務がどのファイルにあるかを見分けたいとき。
+- 破棄・開始・レポート・結合のうち、特定の apply フローに関わる実行本体や状態遷移を確認したいとき。
+- パッケージ説明だけを確認したいときや、どの実装ファイルへ進むべきかを最初に絞り込みたいとき。
 
 ## Do not read this when
-- 具体的な引数定義や実行ロジックを知りたいだけなら、ここではなく各コマンド本体を読むべきとき。
-- session の生成・join・report など、abandon 以外の apply フローを知りたいとき。
-- report だけを見たい場合に、fork 本体のループ制御や worktree 管理を読む必要がないとき。
-- join 以外の apply フローや、branch/worktree の基礎操作だけを確認したいとき。
-- 正本仕様を探しているだけなら、実装ではなく oracle 側の文書を読むべきとき。
+- apply 以外の subcommand の仕様や実装を調べたいとき。
+- 共通 runtime 操作、branch/worktree 基盤、state 読み書きの詳細だけが目的で、この階層の個別制御を読む必要がないとき。
+- 個別コマンドの引数定義やエラー処理を直接追うなら、該当する下位実装へ進んだ方がよいとき。
 
 ## hash
-- 1aab5abd5760263f7cf95e1dc1661525871edb88ff3c0a14d5aee2f97028a170
+- c084231ddcd3f355de782a413d5132dc96c0d020b8b2a4a43378fd587b5a5061
 
 # `doctor.py`
 
