@@ -231,23 +231,23 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- `apply fork` の CLI 回帰テストをまとめたファイル。セッション fork から apply 実行、state 更新、worktree 作成、report 前の state 反映、gitignore 修復までのライフサイクルを検証する。
-- このファイルは `apply fork` の統合的な振る舞いを確認する入口で、Codex 呼び出し順や失敗時の停止条件、linked worktree での開始点、`.cmoc/local` の ignore 付与などを扱う。
-- target 正規化だけを確かめたい場合は別モジュールを読むべきで、このファイルは CLI 本体の実行経路と repository fixture が必要なときに読む。
+- `cmoc apply fork` の回帰テスト群。CLI の apply ループが session state、apply worktree、gitignore、doctor preprocess、対象ファイル選択、報告生成までをどう扱うかを確認したいときに読む。`target normalization` は別モジュールとして切り出されているため、このファイルは lifecycle と state 遷移、隔離実行、結果反映の検証に進む入口になる。
+- 同じ apply fork でも、実行順や状態更新、失敗時の停止条件、linked worktree からの開始、`.cmoc/local` の ignore 付与、report 生成の整合性を確認するときにここを読む。個々の helper の実装差より、CLI 全体としての振る舞いの境界を見たい場合に適する。
 
 ## Read this when
-- `apply fork` コマンドの開始・完了・失敗の流れを確認したいとき。
-- session state、apply branch、apply worktree、process id の生成・更新・削除の条件を確認したいとき。
-- `.gitignore` と `.git/info/exclude` の修復や、linked worktree 上での apply 開始条件を確認したいとき。
-- Codex 呼び出し順、report 生成前の state 反映、競合検出のような CLI 連携を確認したいとき。
+- `cmoc apply fork` の CLI 変更や回帰修正をするとき
+- apply の開始条件、run isolation、session state 更新、report 生成のどれかに触れるとき
+- `.gitignore` と `.git/info/exclude` の扱い、`.cmoc/local` の ignore 追加、dirty 化回避を確認したいとき
+- linked worktree 上の session branch や HEAD を起点にした apply 開始を確認したいとき
+- 所見調査と修正適用の呼び出し順、終了前後の state 反映を検証したいとき
 
 ## Do not read this when
-- target 正規化だけを確認したいときは、このファイルではなく target 正規化専用のテストを読む。
-- `apply fork` の内部実装そのものや、CLI 以外の apply 周辺モジュールの詳細だけを追いたいときは、実装側を直接読む。
-- CLI の共通基盤や doctor の一般挙動だけを確認したいときは、このファイルよりもそれぞれの専用テストや実装を読む。
+- target normalization だけを確認したいときは、別の target normalization 用テストを読む
+- apply fork の本体実装やプロンプト生成の仕様を知りたいだけなら、このテストではなく対応する oracle 側の仕様断片を読む
+- 単なる共通テスト補助や git 操作の詳細を追いたいだけなら、ここより専用 helper や関連サポートファイルを優先する
 
 ## hash
-- ca8783f14a9369be4e604ef04c92320f2656d4725d7e27003a4e667841fcf317
+- ea7454cf1f22bd72c5ab774d0b3a99e05a11c52b01695cd392094128955dbf51
 
 # `test_apply_fork_report_cli.py`
 
