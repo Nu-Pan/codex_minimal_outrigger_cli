@@ -53,20 +53,22 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex 実行まわりのテストで共通に使う補助関数をまとめた支援ファイル。認証済み `CODEX_HOME` の仮置き、Codex CLI 呼び出し前処理の無効化、テスト用の `AgentCallParameter` 生成、Codex 実行引数の解析を担う。
+- Codex 実行系のテストで使う最小限の共通補助をまとめる。偽の結果オブジェクト、`CODEX_HOME` のテスト用初期化、Subprocess 引数の抽出、設定差分の展開、書き込み許可の判定補助、実行前の Ollama 前処理の差し替えがここに集約されている。
+- 個別の実装や本体ロジックではなく、複数のテストから共通利用される前処理・検証用の足場が必要なときに読む。特に、Codex 実行ラッパーの argv 構築や権限オーバーライドのアサーションを確認したい場合が入口になる。
 
 ## Read this when
-- Codex 実行系のテストで、CLI 起動に必要な最小ホーム環境や固定オーバーライド引数を組み立てたいとき。
-- Codex の引数列から `--config` や権限関連の値を検証したいとき。
-- 実行ラッパーのテストで、`AgentCallParameter` の既定値や `cwd` だけを差し替えた値を共通化したいとき。
+- Codex 実行ラッパーのテストで、偽の CLI 応答や固定された実行前提を用意したいとき。
+- Subprocess に渡した引数から、単一値フラグや重複設定の実効値を検証したいとき。
+- 権限オーバーライドから書き込み可否や明示許可の有無を判定する共通ロジックが必要なとき。
+- Ollama の共有前処理をテスト対象から外し、argv 構築だけに集中したいとき。
 
 ## Do not read this when
-- Codex の実行ルールそのものや CLI 仕様の正本を確認したいときは、参照先の oracle 文書を読む。
-- 個別の実装や制御フローを追いたいときは、この補助ファイルではなく対応する runtime 実装やテスト本体を読む。
-- 一般のテスト方針や共有ルールを探しているだけなら、このファイルではなく上位のテスト関連文書を読む。
+- Codex 本体の実装仕様や権限モデルそのものを確認したいとき。まず対応する仕様断片や実装側を読むべきで、この補助ファイルは読解の入口ではない。
+- 個別のテストケース固有の入力値や期待値だけを確認したいとき。ここには汎用の足場しか置かれていない。
+- 実行時のビジネスロジックやエラー処理の詳細を追いたいとき。これはテスト支援用であり、機能本体の説明にはならない。
 
 ## hash
-- f3259fa84cf32a5b9f5de560098b18b3c90aab05f7d6ab4ce48569e4e7ce808d
+- eb7c1a1c759496d83842d29b42c16a30939d66252f2d43c5a9786a447d52e032
 
 # `_command_support.py`
 
@@ -231,42 +233,41 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- `cmoc apply fork` の回帰テスト群。CLI の apply ループが session state、apply worktree、gitignore、doctor preprocess、対象ファイル選択、報告生成までをどう扱うかを確認したいときに読む。`target normalization` は別モジュールとして切り出されているため、このファイルは lifecycle と state 遷移、隔離実行、結果反映の検証に進む入口になる。
-- 同じ apply fork でも、実行順や状態更新、失敗時の停止条件、linked worktree からの開始、`.cmoc/local` の ignore 付与、report 生成の整合性を確認するときにここを読む。個々の helper の実装差より、CLI 全体としての振る舞いの境界を見たい場合に適する。
+- `apply fork` の CLI 回帰テスト群を案内する。セッション作成後の apply 実行、state/worktree/branch の更新、設定欠落や config 読み込み失敗の停止条件、.gitignore と .cmoc/local の扱い、report 生成前の state 更新を確認したいときに読む。
+- 同じ apply fork でも、target 正規化だけを見たい場合は別のテストへ進む。ここは CLI ライフサイクル、リポジトリ fixtures、git 状態、apply 実行順の検証をまとめて持つため、周辺の実装挙動を追う入口として使う。
 
 ## Read this when
-- `cmoc apply fork` の CLI 変更や回帰修正をするとき
-- apply の開始条件、run isolation、session state 更新、report 生成のどれかに触れるとき
-- `.gitignore` と `.git/info/exclude` の扱い、`.cmoc/local` の ignore 追加、dirty 化回避を確認したいとき
-- linked worktree 上の session branch や HEAD を起点にした apply 開始を確認したいとき
-- 所見調査と修正適用の呼び出し順、終了前後の state 反映を検証したいとき
+- `apply fork` のエンドツーエンド挙動を確認したい。
+- session branch から apply run を開始し、完了時に state と worktree がどう更新されるかを確認したい。
+- 設定欠落・config 読み込み失敗・競合再読込・.gitignore 反映のような lifecycle 回帰を追いたい。
 
 ## Do not read this when
-- target normalization だけを確認したいときは、別の target normalization 用テストを読む
-- apply fork の本体実装やプロンプト生成の仕様を知りたいだけなら、このテストではなく対応する oracle 側の仕様断片を読む
-- 単なる共通テスト補助や git 操作の詳細を追いたいだけなら、ここより専用 helper や関連サポートファイルを優先する
+- target path の正規化だけを確認したい。
+- CLI 本体の実装や helper の分割方針だけを追いたい。
+- report 本文の仕様や apply 対象列挙の細部だけを見たい場合は、より直接の実装・仕様ファイルを読む。
 
 ## hash
-- ea7454cf1f22bd72c5ab774d0b3a99e05a11c52b01695cd392094128955dbf51
+- 85425e2b10d09dd548e33ef58972fa5ddc5fde7cc390ace796ed259b3d4a45a7
 
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- `apply fork` の report 生成、未収束・error 判定、変更要約、再検査対象の選び直し、rolling apply の対象切替を CLI 経由で確認したいときに読む。`fork` 実行後の report 形式と、session state への反映までをまとめて扱う。
-- `sub_commands.apply.fork_report` や `sub_commands.apply.fork` の個別実装を読む前に、report に何を載せるべきかと、どの状況で収束・未収束・error になるかの境界を知りたいときの入口にする。
+- `apply fork` の CLI から、レポート生成、収束判定、再検査、rolling 実行、session state 更新までの制御を確認するための回帰テスト群。`apply fork` の report 文面や終了コード、対象 file の再調査条件を変えるときに読む。
+- `apply fork` の report 形式や変更要約の算出、未追跡 file や削除 file の扱いを確認したいときの入口。内部 helper の切り分けそのものより、CLI から見える出力と状態遷移を優先して読む。
 
 ## Read this when
-- `apply fork` の report 文面、front matter、変更内容要約、所見数の推移、result 判定を変更・確認したい。
-- 所見適用後に再調査対象をどう選ぶか、変更ファイルが増えたときにどこまで再検査するかを確認したい。
-- rolling apply で前回の apply join 後の変更だけを対象にする扱いを確認したい。
+- `apply fork` の report 出力、front matter、結果ラベル、終了コード、所見数の推移表示を変える。
+- 所見の再列挙条件、変更後の再調査、収束と未収束の境界、error への遷移、rolling 実行の対象決定を確認したい。
+- 変更要約が commit 前後の差分や未追跡 file、削除済み tracked file をどう扱うかを確認したい。
+- `apply fork` 後に session state に保存される値や、report に反映する branch / worktree / commit の対応を確認したい。
 
 ## Do not read this when
-- 所見の抽出条件そのものを知りたいだけなら、apply fork の report ではなく所見列挙側を読む。
-- session 作成や join の一般的な流れだけを確認したいなら、この report テストではなく session 側を読む。
-- 変更要約の共通化や差分抽出の詳細だけを知りたいなら、report の CLI 期待値より `sub_commands.apply.fork_report` 側を優先して読む。
+- `apply fork` の CLI 表示や制御ではなく、変更要約の低レベル生成だけを追いたい場合は、`fork_report` 側の実装を先に読む。
+- apply 系の別サブコマンドや、`session fork` の生成処理だけを見たい場合は、この test ではなく各コマンド本体を読む。
+- report の見た目ではなく、oracle 側の規範文や用語定義を確認したいだけなら、対応する oracle doc/src を読む。
 
 ## hash
-- 4656bd2a986b5c68262f80b1b2922840f2ba82324b14a610d84a5c9fd11b0fb8
+- 782f83b416ac144630dca340fd774b76785f594cb1bfcfe01002a2233242a7c7
 
 # `test_apply_fork_target_normalization.py`
 
