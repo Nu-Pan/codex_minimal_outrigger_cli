@@ -124,21 +124,22 @@
 # `review_loop.py`
 
 ## Summary
-- `cmoc review oracle` の所見処理ループ本体を扱う。新規所見の列挙、所見マージ、妥当性検証、採用判定の順序と、各段階でのダーティフラグ更新やリトライ条件を確認したいときに読む。
-- 所見マージの編集操作を所見リストへ適用する検証ロジックもここにある。`finding_id` の再利用禁止、delete/replace/merge の許容条件、merge 段階の意味的リトライ方針を確認したいときに読む。
+- `cmoc review oracle` の所見処理本体を扱う。新規所見の列挙、所見の統合、反証と擁護による再検証、採否判定、merge operation の妥当性検証と適用をまとめて読む入口である。
+- 対象は review 実行の全体制御ではなく、所見リストの反復処理と `finding_id` を中心にした状態遷移である。レビュー対象 oracle の選定や最終レポート生成とは責務が分かれている。
 
 ## Read this when
-- `cmoc review oracle` が所見をどう反復処理するか、どの段階で次の周回へ進むかを確認したいとき。
-- 新規所見の追加、重複所見の統合、challenge/advocate による再検証、judge による verdict 付与の流れを追いたいとき。
-- merge finding の操作仕様や、無効な edit operation をどう扱うかを確認したいとき。
+- 所見がどの順序で列挙・マージ・検証・判定されるかを確認したいとき。
+- merge finding の edit operation を所見リストへどう適用し、どの条件で `ValueError` や `CmocError` にするかを確認したいとき。
+- `finding_id` の再利用禁止、dirty 判定、semantic retry の扱いを変更・確認したいとき。
 
 ## Do not read this when
-- レビュー対象 oracle file の列挙条件や scope 判定だけを知りたいときは、対象選定側を読む。
-- 最終レポートの Markdown 形式や frontmatter の項目を知りたいときは、レポート生成側を読む。
-- 個別 agent call の prompt 正本そのものを確認したいときは、対応する oracle src の builder を読む。
+- review 対象 oracle file の選定条件だけを知りたいときは `review_targets` を読む。
+- `cmoc review oracle` の起動前提、隔離 worktree の作成・削除、branch merge、レポート保存までの全体制御を追いたいときは `oracle.py` を読む。
+- finding の oracle_path 解決や path 正規化だけを確認したいときは `review_paths.py` を読む。
+- レポート本文の Markdown 形式や集計順序だけを知りたいときは `review_report.py` を読む。
 
 ## hash
-- 9d31c1efd3694568048a7c0e419fec8fcdcf0befe5c23b7445105f983e73238c
+- 1a9502524bec53e191e887bd16e5e0d850cbaf2dc8b4947c411de7e014da5ea2
 
 # `review_paths.py`
 
