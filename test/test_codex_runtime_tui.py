@@ -24,6 +24,12 @@ from commons.runtime_logging import (
 )
 
 
+def _tui_call_logs(root: Path) -> list[Path]:
+    """Return the TUI call logs written for a repository."""
+    directory = root / ".cmoc" / "local" / "log" / "codex"
+    return list(directory.glob("*_tui_call.json"))
+
+
 # 根拠: TUI の prompt、アクセス境界、Codex 呼び出し、ログ出力を検証する。
 # <work-root>/oracle/doc/app_spec/sub_command/tui.md
 # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -69,9 +75,12 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
         [
             "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
+            "prompt = args[-1]",
+            "prompt_path = pathlib.Path(prompt.split(' を読んで')[0])",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
+            "    'prompt_text': prompt_path.read_text(),",
             "}))",
         ],
     )
@@ -83,6 +92,7 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     run_codex_tui(
         replace(
             codex_parameter(FileAccessMode.PURE_ORACLE_READ),
+            prompt=f"{prompt_path} を読んで、その指示に従って下さい",
             structured_output_schema_path=schema_path,
         ),
         root=root,
@@ -92,6 +102,7 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
 
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(root.resolve())
+    assert record["prompt_text"] == "complete prompt\n"
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert "--output-schema" not in record["args"]
 
@@ -142,7 +153,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     assert record["cwd"] == str(linked.resolve())
     assert record["prompt_text"] == "complete prompt\n"
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
-    call_log = next((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
+    call_log = _tui_call_logs(root)[0]
     call_data = json.loads(call_log.read_text())
     override_config = codex_override_config(call_data["argv"])
     filesystem = override_config["permissions"]["cmoc"]["filesystem"]
@@ -175,7 +186,7 @@ def test_run_codex_tui_logs_successful_call(
     console = capsys.readouterr().out
     assert "- Purpose: `codex tui`" in console
     assert "- Exit code: `0`" in console
-    call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
+    call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in events if event["event"] == "codex_call"]
@@ -208,9 +219,7 @@ def test_run_codex_tui_keeps_call_logs_on_timestamp_collision(
     run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
     run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
 
-    call_logs = sorted(
-        (root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json")
-    )
+    call_logs = sorted(_tui_call_logs(root))
     assert [path.name for path in call_logs] == [
         "2026-06-27_10-00_00_000001000_tui_call.json",
         "2026-06-27_10-00_00_000002000_tui_call.json",
@@ -246,7 +255,7 @@ def test_run_codex_tui_logs_missing_cli_failure(
         reset_current_subcommand_logger(token)
 
     console = capsys.readouterr().out
-    call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
+    call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     assert str(call_logs[0]) in console
     assert "not started" in console
@@ -284,7 +293,7 @@ def test_run_codex_tui_logs_keyboard_interrupt(
 
     console = capsys.readouterr().out
     assert "- Exit code: `not started`" in console
-    call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
+    call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in events if event["event"] == "codex_call"]
@@ -307,16 +316,27 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
     write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(7)"])
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    with pytest.raises(CmocError, match="Codex CLI/TUI 呼び出しが失敗"):
-        run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+    logger = SubcommandLogger(root, "test")
+    token = set_current_subcommand_logger(logger)
+    try:
+        with pytest.raises(CmocError, match="Codex CLI/TUI 呼び出しが失敗"):
+            run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+    finally:
+        reset_current_subcommand_logger(token)
 
     console = capsys.readouterr().out
     assert "- Purpose: `codex tui`" in console
     assert "- Exit code: `7`" in console
-    call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
+    call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     call_log = json.loads(call_logs[0].read_text())
     assert call_log["argv"][:3] == ["codex", "--model", "fake"]
     assert "--profile" not in call_log["argv"]
     assert "profile_name" not in call_log
     assert "profile_path" not in call_log
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in events if event["event"] == "codex_call"]
+    assert len(codex_events) == 1
+    assert codex_events[0]["status"] == "failed"
+    assert codex_events[0]["returncode"] == 7
+    assert codex_events[0]["call_log_path"] == str(call_logs[0])
