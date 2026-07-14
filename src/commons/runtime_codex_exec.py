@@ -369,7 +369,6 @@ def run_codex_exec(
     quota_polls = 0
     sleep_sec = capacity_initial_sleep_sec
     capacity_retry_pending = False
-    last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
 
     while True:
@@ -406,7 +405,6 @@ def run_codex_exec(
                 error=format_codex_call_error(exc),
             )
             raise
-        last_result = result
         stdout_path.write_text(result.stdout)
         output_jsonl_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
@@ -807,8 +805,6 @@ def run_codex_exec(
             quota_polls=quota_polls,
         )
         return exec_result
-
-    assert last_result is not None
 
 
 def changed_worktree_paths(root: Path) -> list[Path]:

@@ -3,6 +3,12 @@
 Structured Output の意味的失敗、capacity retry、JSONL error、中断、差分保持を
 外部挙動として確認する。根拠は次の正本仕様断片にある。
 
+このファイルは `run_codex_exec` の retry 状態、subprocess の呼び出し回数、call log、
+subcommand event を同時に確認する一つの責務を持つ。semantic failure、capacity failure、
+未知の JSONL error、中断は同じ状態機械の分岐であり、各テストは fake の応答から最終結果と
+ログ列までを一続きの外部挙動として検証する。したがって、16,000 文字を超えても異常系を
+別ファイルへ分けず、retry 状態と共有ログ schema を同じ読み取り文脈に保つ。
+
 - <work-root>/oracle/doc/app_spec/codex_exec_rule.md
 - <work-root>/oracle/doc/app_spec/console_and_file_log.md
 - <work-root>/oracle/doc/dev_rule/coding_rule.md
@@ -449,8 +455,124 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
         try:
             run_codex_exec(parameter, root=root, config=CmocConfig(), **kwargs)
         except CmocError as exc:
+
             assert exc.summary == "Codex CLI 呼び出しが失敗しました。"
             assert expected_detail in exc.detail
         else:
             raise AssertionError(f"{name} marker outside JSONL should fail directly")
         assert counter.read_text() == "1"
+
+
+@pytest.mark.parametrize(
+    (
+        "failure",
+        "expected_calls",
+        "expected_statuses",
+        "expected_sleeps",
+        "summary",
+        "error_fragment",
+    ),
+    [
+        (
+            "semantic",
+            3,
+            ["schema_validation_retrying"] * 2 + ["schema_validation_failed"],
+            [],
+            "Codex CLI の Structured Output 検証に失敗しました。",
+            "Additional properties",
+        ),
+        (
+            "capacity",
+            9,
+            ["capacity_retrying"] * 8 + ["failed"],
+            [5 * 2**attempt for attempt in range(8)],
+            "Codex CLI 呼び出しが失敗しました。",
+            "Selected model is at capacity",
+        ),
+    ],
+)
+def test_run_codex_exec_stops_after_retry_limit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str,
+    expected_calls: int,
+    expected_statuses: list[str],
+    expected_sleeps: list[int],
+    summary: str,
+    error_fragment: str,
+) -> None:
+    """永続失敗が retry 上限、backoff、最終 failure event を越えて続かない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    sleep_calls: list[float] = []
+    monkeypatch.setattr(
+        runtime_codex_exec.time, "sleep", lambda seconds: sleep_calls.append(seconds)
+    )
+    bin_dir = tmp_path / f"{failure}_bin"
+    bin_dir.mkdir()
+    counter = tmp_path / f"{failure}_counter"
+    fake_codex = bin_dir / "codex"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            f"failure = {failure!r}",
+            "if failure == 'semantic':",
+            "    output.write_text(json.dumps({'bad': True}))",
+            "    print(json.dumps({'type': 'turn.completed'}))",
+            "else:",
+            (
+                "    print(json.dumps({'type': 'error', "
+                "'message': 'Selected model is at capacity'}))"
+            ),
+            "    sys.exit(1)",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    schema: Path | None = None
+    if failure == "semantic":
+        schema = tmp_path / "schema.json"
+        schema.write_text(
+            json.dumps(
+                {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["ok"],
+                    "properties": {"ok": {"type": "boolean"}},
+                }
+            )
+        )
+    logger = SubcommandLogger(root, "test")
+
+    with pytest.raises(CmocError, match=summary) as error:
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                schema,
+            ),
+            root=root,
+            config=CmocConfig(),
+            subcommand_logger=logger,
+        )
+
+    assert counter.read_text() == str(expected_calls)
+    assert sleep_calls == expected_sleeps
+    assert error.value.summary == summary
+    assert error_fragment in error.value.detail
+    call_paths = sorted((root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json"))
+    assert len(call_paths) == expected_calls
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert [event["status"] for event in codex_events] == expected_statuses
+    assert [event["call_log_path"] for event in codex_events] == [
+        str(path) for path in call_paths
+    ]
