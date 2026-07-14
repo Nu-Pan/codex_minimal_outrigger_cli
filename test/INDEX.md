@@ -722,20 +722,22 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI 実行時の境界を検証するテスト群。エラー整形、work root 判定、preflight と completion の副作用有無、サブコマンドログの生成条件を確認したいときに読む。
+- CLI のエラー表示、引数解析、completion の分岐、work root 前提、preflight と subcommand ログの境界を確認するテスト群。`cmoc` の起動時副作用や `CmocError` の出力形式を追いたいときに読む。
+- `doctor`、`indexing`、`session fork` などの個別サブコマンドに対する CLI ラッパーの振る舞いを見たいときに読む。`runtime_cli`、`runtime_logging`、`cmoc_runtime`、`main` のいずれか単体だけでは判断しにくい結合部を確認する入口として使う。
+- `_cli_support`、`_git_support`、`_ollama_support` を使うテスト補助と、ログ/ignore/worktree 生成の検証を含む。実装本体ではなく、CLI 周辺の統合テストを探すときの入口にする。
 
 ## Read this when
-- CLI のエラー表示先やエラーレポート形式を変えるとき。
-- work root 判定、pre-log check、doctor preprocess、shell completion の実行順や副作用条件を変えるとき。
-- サブコマンドログの生成条件や、`cmoc` 起動 wrapper の位置情報の出し方を変えるとき。
+- CLI のエラー整形が stdout に出るか、stderr に出ないかを確認したいとき。
+- work root 判定、completion probe、doctor preflight、pre-log check、subcommand logger の境界を確認したいとき。
+- `apply fork` や `review oracle`、`indexing` の CLI 実行前後の副作用を統合的に追いたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックを変えるだけで、CLI 境界に影響しないとき。
-- ログやエラー表示の内部ヘルパー実装だけを調べたいときは、まずそれぞれの実装側を直接読む。
-- completion 以外のコマンド実行経路だけを追いたいとき。
+- 個別のコマンド実装そのものを見たいときは、対応する realization implementation を先に読む。
+- `CmocError` の定義やログ出力の詳細仕様だけを見たいときは、`cmoc_runtime` や `runtime_logging` を直接読む。
+- git ignore 判定や worktree 操作の単体仕様だけを見たいときは、このテストではなく補助実装や関連 oracle を直接読む。
 
 ## hash
-- 58a6c5466689168cadefce448d6adcf7327c5fe41c23b36cec62b8d0d97ae818
+- dade856da0c8a93ed552ca689c1cd207e4246df1634d127743f5a03ca7185b49
 
 # `test_runtime_codex_conflicts.py`
 

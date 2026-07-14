@@ -340,21 +340,22 @@
 # `runtime_paths.py`
 
 ## Summary
-- `cmoc` の実行基盤で使う root 解決、時刻表記、保存先パス組み立てをまとめた共通基盤。`repo_root` / `work_root` / `cmoc_root` の例外変換と、`pushd` による cwd 依存 API の直列化が主題で、各種 `*_dir` / `config_path` は保存先の一貫性を保つためにここを読む。
+- cmoc 実行時の root 解決と、実行時刻・保存先・cwd 切替の共通基盤を持つ。`repo_root`/`work_root`/`cmoc_root` の解決方針、timestamp 生成、`pushd` の直列化、各種 local 保存先の決定が主な役割である。
+- 上位のコマンド実行やログ保存、session/report/schema/working tree のパス組み立てがここに依存する。root 特定の失敗を runtime error に変換する契約も担う。
 
 ## Read this when
-- 実行時に `<repo-root>`・`<work-root>`・`<cmoc-root>` をどう解決するか確認したいとき。
-- cwd 依存の外部 API を一時的に切り替える実装や、その排他制御の根拠を知りたいとき。
-- session / report / log / schema / config などの保存先パス規約を追加・変更したいとき。
-- timestamp や duration の表示形式を共通化している箇所を追いたいとき。
+- root placeholder を絶対パスに解決する方法を確認したいとき
+- `<repo-root>` / `<work-root>` / `<cmoc-root>` の失敗時エラーや cwd 起点の解決契約を確認したいとき
+- cmoc が使う local 配置先や timestamp / duration 表示の共通ルールを確認したいとき
+- cwd を一時的に切り替える処理の排他制御や復元条件を確認したいとき
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックや入出力変換を見たいときは、各サブコマンド側を先に読む。
-- root 解決の失敗メッセージだけを確認したいなら、例外を投げる呼び出し側の薄いラッパーを見る方が直接的なことが多い。
-- `memo` 配下の扱いそのものを変更したいときは、この共通基盤ではなく `memo` を扱う上位の文脈を読む。
+- 特定サブコマンドの業務ロジックや入出力仕様を追いたいとき
+- 個別の JSON 生成、CLI 引数、ログ本文形式の詳細を追いたいとき
+- root 解決を使う側の実装ではなく、解決後のパス利用先を確認したいとき
 
 ## hash
-- 0ae74562c6e07facee79818d751dd6cf120f0c51c6dc49e7251cc091062e06fc
+- fe8c37e4a6e5c5e2c06413e2da70b1b136210eff258087e472adb3359fd75a3d
 
 # `runtime_preprocess_command.py`
 
