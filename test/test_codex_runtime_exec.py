@@ -39,6 +39,23 @@ def _prepare_production_managed_ollama(
         pytest.skip(f"production cmoc managed ollama is unavailable: {exc}")
 
 
+# <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
+    """Codex exec の必須 argv と prompt の stdin 渡しを検証する。"""
+    assert "--json" in args
+    assert "--output-last-message" in args
+    assert args[-1] == "-"
+    assert all(prompt not in arg for arg in args)
+    assert "--profile" not in args
+    assert "-p" not in args
+
+
+def _assert_no_codex_home_config(codex_home: Path) -> None:
+    """CODEX_HOME に利用者設定を生成していないことを検証する。"""
+    assert not (codex_home / "config.toml").exists()
+    assert not list(codex_home.glob("*.config.toml"))
+
+
 def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -62,7 +79,7 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         )
     )
     prompt = (
-        'Return exactly this JSON object and no other text: '
+        '次の JSON オブジェクトだけを正確に返し、他の文字列は返さないでください: '
         '{"result":"cmoc-real-codex-provider"}'
     )
 
@@ -91,13 +108,13 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     call_log_path = result.call_log_path
     call_log = json.loads(call_log_path.read_text())
     override_config = codex_override_config(call_log["argv"])
+    _assert_codex_exec_contract(call_log["argv"], prompt)
     assert call_log["argv"][:3] == ["codex", "exec", "--skip-git-repo-check"]
     assert "--output-schema" in call_log["argv"]
     assert Path(call_log["prompt_log_path"]).read_text() == prompt
     assert call_log["model_class"] == ModelClass.MINIMUM.value
     assert codex_arg_value(call_log["argv"], "--model") == TEST_SLM_MODEL
     assert codex_arg_value(call_log["argv"], "--disable") == "multi_agent"
-    assert "--profile" not in call_log["argv"]
     assert override_config["web_search"] == "disabled"
     assert override_config["model_provider"] == "cmoc_managed_ollama"
     assert override_config["model_providers"]["cmoc_managed_ollama"] == {
@@ -158,14 +175,13 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     )
 
     record = json.loads(recorder.read_text())
+    _assert_codex_exec_contract(record["args"], "prompt")
     assert record["args"][:4] == [
         "exec",
         "--skip-git-repo-check",
         "--model",
         "gpt-5.6-luna",
     ]
-    assert "--profile" not in record["args"]
-    assert "-p" not in record["args"]
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
@@ -181,8 +197,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
-    assert not (codex_home / "config.toml").exists()
-    assert not list(codex_home.glob("*.config.toml"))
+    _assert_no_codex_home_config(codex_home)
     assert result.output_text == "done\n"
 
 
@@ -191,7 +206,7 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
 ) -> None:
     """local SLM 用 override と組み込み Ollama フラグの不使用を検証する。"""
     root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
     stub_managed_ollama_preflight(monkeypatch)
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
@@ -227,10 +242,10 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
     )
 
     record = json.loads(recorder.read_text())
+    _assert_codex_exec_contract(record["args"], "prompt")
     override_config = codex_override_config(record["args"])
     assert "--oss" not in record["args"]
     assert "--local-provider" not in record["args"]
-    assert "--profile" not in record["args"]
     assert codex_arg_value(record["args"], "--model") == TEST_SLM_MODEL
     assert codex_arg_value(record["args"], "--disable") == "multi_agent"
     assert override_config["web_search"] == "disabled"
@@ -240,6 +255,7 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
         "base_url": "http://127.0.0.1:11434/v1",
         "wire_api": "responses",
     }
+    _assert_no_codex_home_config(codex_home)
 
 
 def test_prepare_local_slm_runs_managed_ollama_preflight(
@@ -283,7 +299,8 @@ def test_prepare_local_slm_runs_managed_ollama_preflight(
     )
     assert ollama_preflight_calls == [(root.resolve(), config)]
     assert "--profile" not in override_args
-    assert not list(codex_home.glob("cmoc_*.config.toml"))
+    assert "-p" not in override_args
+    _assert_no_codex_home_config(codex_home)
 
 # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
 def test_prepare_codex_override_args_does_not_create_codex_home_config(
@@ -299,5 +316,4 @@ def test_prepare_codex_override_args_does_not_create_codex_home_config(
 
     assert "--profile" not in override_args
     assert "-p" not in override_args
-    assert not (codex_home / "config.toml").exists()
-    assert not list(codex_home.glob("*.config.toml"))
+    _assert_no_codex_home_config(codex_home)
