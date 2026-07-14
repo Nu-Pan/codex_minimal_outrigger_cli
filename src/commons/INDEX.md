@@ -340,21 +340,21 @@
 # `runtime_paths.py`
 
 ## Summary
-- 実行時に `<repo-root>` / `<work-root>` を解決し、失敗時は `CmocError` に変換する root 解決ユーティリティをまとめる。cwd 指定時の解決補助、`pushd` を使った一時的な cwd 切替、`cmoc-root` 解決もここで扱う。
-- 時刻文字列の生成と、セッション・レポート・ログ・worktree・schema・config の保存先パス決定を扱う。`memo` 配下判定のような、保存先やルート判定に関わる周辺ロジックも含む。
+- `cmoc` の実行基盤で使う root 解決、時刻表記、保存先パス組み立てをまとめた共通基盤。`repo_root` / `work_root` / `cmoc_root` の例外変換と、`pushd` による cwd 依存 API の直列化が主題で、各種 `*_dir` / `config_path` は保存先の一貫性を保つためにここを読む。
 
 ## Read this when
-- root placeholder から実パスを解決する処理や、その失敗をユーザー向けエラーに変換する挙動を変えるとき。
-- 実行時刻表記、ファイル名向けの timestamp、または `.cmoc/local` 配下の各種保存先ルールを変えるとき。
-- cwd を一時的に切り替えて外部 API の前提に合わせる必要がある処理を確認するとき。
+- 実行時に `<repo-root>`・`<work-root>`・`<cmoc-root>` をどう解決するか確認したいとき。
+- cwd 依存の外部 API を一時的に切り替える実装や、その排他制御の根拠を知りたいとき。
+- session / report / log / schema / config などの保存先パス規約を追加・変更したいとき。
+- timestamp や duration の表示形式を共通化している箇所を追いたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックや、セッション・ログ・レポートの中身を扱う実装を追うとき。
-- `INDEX.md` のルーティングや他モジュールの責務境界だけを確認したいとき。
-- path 解決や保存先決定と無関係な CLI 解析、出力整形、状態遷移を見たいとき。
+- 個別サブコマンドの業務ロジックや入出力変換を見たいときは、各サブコマンド側を先に読む。
+- root 解決の失敗メッセージだけを確認したいなら、例外を投げる呼び出し側の薄いラッパーを見る方が直接的なことが多い。
+- `memo` 配下の扱いそのものを変更したいときは、この共通基盤ではなく `memo` を扱う上位の文脈を読む。
 
 ## hash
-- 44eb6c915159efffe5354bd1bfa12c771b7f1e9dc6d838f6860733fd18564cee
+- 0ae74562c6e07facee79818d751dd6cf120f0c51c6dc49e7251cc091062e06fc
 
 # `runtime_preprocess_command.py`
 
