@@ -530,20 +530,20 @@
 # `test_indexing_common.py`
 
 ## Summary
-- `commons.indexing` の INDEX entry 生成と更新の振る舞いを確認するための直接テスト群。入力検証、空/不正な entry の扱い、空ディレクトリや兄弟要素の生成順、並列更新、memo 配下と symlink cycle の除外を扱う。
+- `commons.indexing` の INDEX entry 生成と `update_indexes` の並び替え・再生成・巡回制御を検証するテスト群。CLI lifecycle ではなく、入力検証、hash 再利用、空ディレクトリ、兄弟順序、並列実行、memo 配下と symlink cycle の扱いに関心があるときに読む。
 
 ## Read this when
-- index entry の render/update ルールを変えるとき
-- directory traversal の対象範囲、除外条件、並列実行の制御を変えるとき
-- hash 再利用や malformed entry の再生成条件を確認したいとき
+- INDEX entry のスキーマ不一致や空欄・複数行などの入力検証を確認したい。
+- 既存の hash を使った再生成判定、空ディレクトリへの INDEX.md 作成、兄弟ファイルの安定順序、非祖先ディレクトリの並列生成を確認したい。
+- memo 配下の除外、nested memo directory の扱い、directory symlink cycle の回避、Codex logger の worker 伝播を確認したい。
 
 ## Do not read this when
-- CLI の起動・引数解釈・終了処理だけを変えるとき
-- index 以外の builder や別種のテストの仕様を確認したいとき
-- markdown の見た目だけを調整したいとき
+- CLI 引数、サブコマンド登録、実行開始・終了などの lifecycle 全体を追いたいときは、より上位のサブコマンド側を見る。
+- INDEX entry の文面や構造の正本仕様そのものを確認したいときは、対応する oracle doc と oracle src を読む。
+- indexing 以外の path 操作や git 周辺の汎用支援を探しているだけなら、このテスト群ではなく共通 helper 側を見る。
 
 ## hash
-- 774f58ff1cc89da828c16341e0e4a1a6c1e90e007cdf5eeba98422660818fac0
+- a28c58c6959452820522f14be786bfc035d8a6b29a00f91a6094146c5ef92970
 
 # `test_indexing_preflight.py`
 

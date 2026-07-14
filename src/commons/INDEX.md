@@ -32,23 +32,22 @@
 # `indexing.py`
 
 ## Summary
-- Codex 実行前に INDEX.md の更新を走らせ、その変更を必要なら commit まで行う処理をまとめる。
-- 対象 directory の列挙、既存 entry の再利用判定、欠落 entry の並列生成、内容と hash の再構成を担う。
-- 既存 INDEX.md の解析と妥当性確認を行い、形式不備や生成失敗をエラーとして扱う。
+- `INDEX.md` の生成・更新と、そのための対象列挙、既存エントリの再利用判定、Codex 実行、Markdown への再整形をまとめる。
+- `cmoc` の indexing 前処理を登録・直列化・コミットする入口であり、index 更新の排他、差分検出、失敗時の扱いを確認したいときに読む。
+- index 対象の探索条件、対象内容の要約用入力、Structured Output の検証とレンダリングの境界を把握したいときに読む。
 
 ## Read this when
-- Codex 実行前の indexing preflight の登録や実行経路を確認したいとき。
-- INDEX.md をどの範囲で再生成し、どの条件で既存 entry を再利用するかを追いたいとき。
-- lock による直列化、Git への add/commit、生成結果の検証と失敗時挙動を確認したいとき。
-- INDEX.md entry の解析形式、hash の検証条件、生成対象の絞り込み条件を調べたいとき。
+- INDEX.md を自動更新する処理、または indexing preflight の流れを変更したい。
+- 対象ディレクトリや対象ファイルの選別条件、hash による再利用判定、生成結果の検証条件を確認したい。
+- Codex の呼び出し条件、ログ/作業ディレクトリの固定、更新 commit の作成条件を確認したい。
 
 ## Do not read this when
-- 単に Codex 実行フックの登録先だけを知りたいなら、preflight の呼び出し元を先に読む。
-- INDEX.md entry の表示用テンプレートや項目仕様だけを知りたいなら、entry 標準を扱う別の定義を読む。
-- Git 操作や runtime 共通ユーティリティの一般的な実装だけを見たいとき。
+- `INDEX.md` に書くべき具体的なエントリ文面そのものを編集したいなら、別の prompt/標準定義の本文を読む。
+- `cmoc` 全体の CLI 解析や設定値の定義を見たいなら、ここではなくそれらを扱う実装を読む。
+- index 生成以外の Git 操作や一般的なファイル入出力の実装を追いたいなら、より直接の処理箇所を読む。
 
 ## hash
-- 4120d6058beb46dde65a920eccad155f05fe489d3799ebd5500de393b1ae17cd
+- 46866024a115d65e3c91bb9b503e4d17fa725d906460ac326e88e17e97bd0e6b
 
 # `runtime_apply.py`
 

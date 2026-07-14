@@ -115,39 +115,40 @@
 # `src`
 
 ## Summary
-- `src` は realization 側の実装本体を置く領域で、`oracle` 側の正本仕様を参照しながら具体実装へ進む起点になる。
-- ここは公開面や実行基盤そのものではなく、`acp`、`basic`、`commons`、`config`、`sub_commands` などの実体 module を選び分けるためのルーティング層として読む。
-- `oracle.py` は正本側 `oracle` package を `src` 起点の実行環境で解決するための package shim で、見つからない場合は import 失敗を明示する。
+- `src` は realization 側の実装本体で、`acp` `basic` `commons` `config` `sub_commands` などの公開面と、`main.py` `cmoc_runtime.py` `oracle.py` のような起動・互換・委譲の入口をまとめて辿るための階層である。
+- ここでは個別機能の仕様本体ではなく、公開 import 面、CLI 入口、共有 runtime helper、互換 shim、サブコマンド入口のどこへ進むべきかを切り分ける。
 
 ## Read this when
-- realization 側の実装本体をどの領域へ進んで読むべきか判断したいとき。
-- `acp.*`、`basic.*`、`commons.*`、`config.*`、`sub_commands.*` のどこが実体で、どこが互換入口かを切り分けたいとき。
-- `src` 起点の import 解決や、正本側 `oracle` package への参照経路を確認したいとき。
-- 公開面ではなく、CLI 本体・共有 runtime・互換 shim・各サブコマンド実装の責務境界を確認したいとき。
+- realization 側の実装を見始める前に、公開 import 面と実体モジュールの対応を確認したいとき。
+- CLI 入口、共有 runtime helper、互換 shim、サブコマンドのどこへ進むべきかを判断したいとき。
+- oracle 側の正本仕様ではなく、実装本体の責務境界を確認したいとき。
 
 ## Do not read this when
-- 個別モジュールの実装詳細、入出力、失敗時挙動を知りたいだけなら、対応する下位 module を直接読む。
-- 正本仕様そのものを確認したいだけなら、`src` ではなく `oracle` 側へ進む。
-- 単に CLI コマンド一覧や公開 API の全体像を知りたいだけなら、より上位の入口を読む。
-- 互換 shim の有無ではなく、実際の業務ロジックやテストを調べたいとき。
+- 特定の実装詳細や処理フローを確認したいときは、この階層ではなく該当モジュールを直接読む。
+- 正本仕様断片そのものを確認したいときは `oracle` 側を読む。
+- 単一のサブコマンドや helper の挙動だけを調べたいときは、より下位の対象へ直接進む。
 
 ## hash
-- 3faa676823385e402fc46425e417ca57a7f293b9163d6130ba73f2571c305f4e
+- 4c63cfde3a6e9c285896bd2486b4e1bd24b26eb11a4191824297ce577ee63b4a
 
 # `test`
 
 ## Summary
-- `test` 配下の `acp_builder` 関連テストを、正本 schema や共通テスト補助ごとに辿り分けるための案内対象である。個別の builder 実装ではなく、テスト側から正本定義へ直接つなぐ helper と、各コマンド別の parameter / CLI / runtime テストを読む入口をまとめる。
+- `test` 配下で、oracle 側の `acp_builder` 正本 schema を参照するための共通 path helper と、`oracle` の正本定義を前提にしたテスト支援の入口をまとめる。`acp_builder` 関連のテストが正本を複製せずに参照経路だけを共有したいときに読む。
+- `apply` セッション状態から作業先パスを復元する補助と、branch / state の約束に合わせた test 側の path 生成を扱う。`apply` 周辺の状態解決や、`oracle/doc/branch_model.md` と `oracle/doc/app_spec/session_state.md` に沿うテスト調整が必要なときの入口になる。
+- Typer CLI 用の共通 `CliRunner` 初期化、fake external command の生成、git 初期リポジトリ fixture、Ollama / Codex 実行系の共通テスト補助をまとめる。CLI 実行・外部コマンド差し替え・git 初期化・Codex 実行前提のいずれかを確認したいときにここから入る。
 
 ## Read this when
-- `acp_builder` の正本 schema 参照、prompt 断片、公開面、CLI 挙動、runtime 契約のどれを変えたかで、読むべきテスト helper や回帰テストを選びたいとき。
-- テスト用の共通補助が、schema 参照・git fixture・CLI runner・Codex 実行補助・path 解決のどれを担うか確認したいとき。
-- `apply` / `review` / `session` / `tui` / `indexing` / `codex runtime` の各系統で、どのテストを先に読むべきか判断したいとき。
+- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
+- apply の状態から作業先パスを導く仕様を確認したいとき。
+- Typer CLI テスト、外部コマンドの fake 化、git fixture、Codex 実行補助を共通化したいとき。
+- `doctor`、`cmoc tui`、`cmoc indexing`、`review oracle`、`apply fork` など、個別の CLI ではなく test support 側の前提や共通足場を見たいとき。
 
 ## Do not read this when
-- 個別の builder 実装や正本仕様そのものを確認したいときは、対応する `oracle/src` や `oracle/doc` 側を読むべきで、この案内ではない。
-- CLI 本体や runtime 実装の詳細を追いたいだけなら、該当する realization 実装や各サブコマンドの本文を直接読むべきで、この案内ではない。
-- ルーティング方針そのものや一般的な INDEX.md の書き方を確認したいときは、この配下ではなく上位の案内を読むべきである。
+- 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
+- 通常の作業先探索や実運用のパス解決を追いたいときは、この apply 補助ではなく本体側を読む。
+- CLI 本体やコマンド定義、各サブコマンドの業務ロジックを確認したいときは、この helper 群ではなく対応する実装や各テスト本文を読む。
+- `CliRunner` 以外の汎用 fixture、fake Ollama のライフサイクル、git 操作そのものの実装を追いたいときは、対応する専用 helper や実装側を読む。
 
 ## hash
-- 08315e2f2a4cff5a0805378b007c42bba7739ce54d98e6c857dba4471f7d8145
+- 08ed08ccbe3d17543e83dc9610ef139fae774eebcd94a71bd81851c6f8247434

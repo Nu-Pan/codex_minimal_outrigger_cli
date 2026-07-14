@@ -59,43 +59,19 @@
 # `commons`
 
 ## Summary
-- `commons` 配下の実行時共通基盤をまとめる領域。ここは個別サブコマンドの業務処理ではなく、複数モジュールから共有される runtime helper 群への入口として読む。
-- `cmoc_runtime.py` は、Codex 実行前後の共通処理を束ねる入口。実行ライフサイクル、preflight、ログ、設定・状態・パス・Git・エラー処理・結果型を横断して追うときにここを起点にする。
-- `indexing.py` は、Codex 実行前に INDEX 更新 preflight を走らせ、必要なら commit まで行う経路の入口。既存 entry の再利用、欠落 entry の生成、検証、失敗時挙動を確認したいときに読む。
-- `runtime_apply.py` は `cmoc apply abandon` の cleanup と、worktree 解決・PID 追跡・process group 停止を扱う実装。apply 実行中 process の記録や停止判定を追うときに読む。
-- `runtime_cli.py` は CLI サブコマンド共通の実行ライフサイクルをまとめる。work root 検査、doctor preprocess、ログ初期化、step 通知、完了サマリー、例外の終了コード化を確認したいときに読む。
-- `runtime_codex.py` は Codex 実行系の公開入口を再エクスポートする薄い境界。exec 実行と TUI 実行の起点だけを確認したいときに読む。
-- `runtime_codex_exec.py` は Codex exec の単一試行ループと再試行制御の入口。Structured Output 検証、quota 待機、resume token 継続、call log と event 記録を追うときに読む。
-- `runtime_codex_logging.py` は Codex CLI 呼び出し通知と起動失敗時の文面整形を共通化する補助。console 表示の見え方や失敗理由の短い整形を確認したいときに読む。
-- `runtime_codex_preflight.py` は Codex exec/TUI 実行直前に indexing preflight を差し込む薄い委譲層。preflight の登録、解除、再入抑止、直列化を追うときに読む。
-- `runtime_codex_profile.py` は Codex CLI 起動前後の境界処理を扱う。permission profile、`CODEX_HOME`、schema 配置、子プロセス追跡、JSONL error 判定を確認したいときに読む。
-- `runtime_codex_tui.py` は Codex TUI 起動の共通処理。argv と `CODEX_HOME`、call log、サブコマンドログ、失敗時の扱いを揃えたいときに読む。
-- `runtime_config.py` は設定の正本型と永続化 JSON の変換、読み込み、検証、既定値補完、書き戻しを担う。設定ファイルの形式や利用者向けエラーを確認したいときに読む。
-- `runtime_content.py` は内容 hash と内容アドレス型ファイルの補助をまとめる。digest 計算、重複書き込み回避、簡易 binary 判定を確認したいときに読む。
-- `runtime_doctor.py` は doctor 用の Git ロック、一時 index、`.gitignore` 修復、`.agents/.gitkeep` 補完、修復 commit 生成を扱う。doctor 実行時の Git state 復元や並行実行の競合回避を確認したいときに読む。
-- `runtime_errors.py` は cmoc の実行時例外を利用者向け Markdown エラーレポートへ変換する共通処理。概要、復旧案、詳細、呼び出しスタックの出力を確認したいときに読む。
-- `runtime_git.py` は Git 依存の基盤処理をまとめる境界。branch/HEAD/worktree 判定、`.cmoc/local` の ignore 管理、Git 由来のエラー整形、oracle/realization 判定に使う path 判定を扱う。
-- `runtime_logging.py` はサブコマンドごとの JSON Lines ログと経過時間をまとめる共有 logger。イベント記録、step timing、quota 待機時間、現在 logger の受け渡しを追うときに読む。
-- `runtime_ollama.py` は cmoc が管理する Ollama の導入と serve 可否確認を担う preflight の入口。対象 model の決定、service 同期、listener 確認、load、GPU 推論確認を追うときに読む。
-- `runtime_paths.py` は `<repo-root>` / `<work-root>` の解決、timestamp 生成、各種保存先 path 決定を扱う。root 解決や保存先ルール、cwd 切替の前提を確認したいときに読む。
-- `runtime_preprocess_command.py` は `cmoc` の前処理コマンド群の入口。実行開始ラッパー、設定同期、差分 commit までの流れを追いたいときに読む。
-- `runtime_results.py` は外部コマンド実行結果と Codex exec 実行結果を保持する不変 dataclass 群。結果コンテナの項目や quota 計測値の保持先を確認したいときに読む。
-- `runtime_state.py` は session/apply 用 state file の読み書き基盤。branch 名から session_id を復元し、JSON state を検証付きで扱い、fork 排他 lock も担う。
+- `commons` 配下の共有 runtime helper 群の入口。複数モジュールから再利用される実行時基盤をまとめて参照するときの境界を示す。
+- 個別 helper の責務はここでは扱わず、必要に応じて下位の本文へ進むためのルーティング対象として読む。
 
 ## Read this when
-- `commons` 配下の共有 runtime helper 群へ進むべきか判断したいとき。
-- Codex 実行の前処理・後処理・共通基盤の流れを追いたいとき。
-- 複数モジュールから共有される補助処理の入口だけを確認したいとき。
-- CLI サブコマンド固有の業務処理ではなく、共通実行基盤や周辺 helper の責務境界を知りたいとき。
+- cmoc の実行時処理で、複数モジュールから使う共通 helper の配置場所や入口を確認したいとき。
+- 共有 helper 群へ進む前に、この領域が runtime helper 用のまとまりであることを確認したいとき。
 
 ## Do not read this when
-- 個別 helper の実装、入出力、失敗時挙動を確認したいとき。
-- CLI コマンド固有の業務ロジックやテスト固有の処理を調べたいとき。
-- 共有 runtime helper ではなく、より直接その責務を持つ対象があるとき。
-- この領域の入口だけではなく、下位要素の本文を直接読むべきとき。
+- 特定 helper の実装、入出力、失敗時挙動を確認したいときは、該当する下位要素の本文を読む。
+- CLI コマンド固有の処理やテスト固有の処理を調べたいときは、共有 runtime helper ではなく、より直接その責務を持つ対象へ進む。
 
 ## hash
-- ed0aa8a34ffd7be01efba15d789d603249e76797fd81af48e6033460fb467714
+- 0c63da8d89ae548ef3acccadcb93f0c34c1cc854207342b4404cf092bb0e2173
 
 # `config`
 
