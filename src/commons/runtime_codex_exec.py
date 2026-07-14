@@ -6,7 +6,7 @@ subcommand event、retry counter を共有する 1 つの状態機械である�
 別 module へ分け、exec の分岐だけをここに残すことで責務境界を exec 実行制御
 へ限定している。quota 処理だけをさらに分離すると、resume token と log/event
 の読み取り文脈が呼び出し元と分断されるため、現状は一体で読む方が凝集性が高い。
-根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
@@ -66,14 +66,14 @@ _LAST_CODEX_LOG_TIMESTAMP: str | None = None
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
     """Codex に渡した完全 prompt を再実行可能な stdin log として保存する。"""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # The prompt log is the replayable stdin source itself, not metadata.
     path.write_text(prompt)
 
 
 def _read_required_output_json(path: Path) -> Any:
     """Structured Output の必須 JSON を semantic retry 用に厳格に読み取る。"""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # Structured Output parse failure is semantic failure; schema permissiveness
     # must not turn missing, empty, or malformed output into success.
     try:
@@ -90,7 +90,7 @@ def _read_required_output_json(path: Path) -> Any:
 
 def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
     """失敗した Codex session の永続 JSONL log から resume token を取り出す。"""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # quota resume must be based on the persisted JSONL log for the failed
     # Codex session; if it is unreadable, retry without `resume`.
     try:
@@ -101,7 +101,7 @@ def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
 
 def _base_exec_argv(override_args: list[str], codex_cwd: Path) -> list[str]:
     """cmoc 側で検査済みの cwd と設定上書きを Codex exec argv にする。"""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # cmoc may run Codex from linked worktrees or generated roots; repo
     # validation belongs to cmoc's own preflight, not to Codex CLI startup.
     return [
@@ -185,12 +185,12 @@ def run_codex_exec(
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
     cwd = cwd or root
-    config = config or load_config(root)
+    codex_work_root = work_root(cwd)
+    config = config or load_config(codex_work_root)
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
-    codex_work_root = work_root(cwd)
     codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # Relative CODEX_HOME is still passed through unchanged, so preflight must
     # target the path Codex resolves from its real cwd.
     codex_home = resolve_codex_home(codex_cwd)
@@ -205,7 +205,7 @@ def run_codex_exec(
         extra_read_root=root,
         allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # `--output-schema` must point at the repo-root local schema store, even
     # when Codex itself runs inside a linked worktree.
     schema_path = (
@@ -232,7 +232,7 @@ def run_codex_exec(
 
     def new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # Reserve the call path with O_EXCL before deriving its sibling paths;
         # the process-local timestamp lock alone cannot protect parallel cmoc
         # processes.
@@ -266,7 +266,7 @@ def run_codex_exec(
         run_codex_cwd: Path = codex_cwd,
         run_codex_env: dict[str, str] = codex_env,
     ) -> subprocess.CompletedProcess[str]:
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # The prompt log file is the stdin source for `codex exec ... -`.
         with run_prompt_path.open() as prompt_file:
             return run_codex_subprocess(
@@ -431,7 +431,7 @@ def run_codex_exec(
         output_jsonl_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
         error_text = codex_error_text(result.stdout, result.stderr)
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # JSONL events determine retry/wait behavior; exit status is only the
         # fallback failure signal when no known event was emitted.
         capacity_error = is_capacity_error(result.stdout)
@@ -524,7 +524,7 @@ def run_codex_exec(
                     )
                 except BaseException as exc:
                     with _QUOTA_CONDITION:
-                        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
                         # Waiters must be released when polling cannot start.
                         _QUOTA_PROBE_ERROR = exc
                         _QUOTA_POLLING = False
@@ -553,7 +553,7 @@ def run_codex_exec(
                             )
                         quota_polls += 1
                         if capacity_retry_pending:
-                            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
                             # Capacity retry already waited its own backoff;
                             # do not add the regular quota polling interval.
                             capacity_retry_pending = False
@@ -568,7 +568,7 @@ def run_codex_exec(
                         probe_codex_cwd = parameter_codex_cwd(
                             quota_probe_parameter, codex_work_root
                         )
-                        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
                         # quota probe is a separate Codex call; its minimal
                         # AgentCallParameter must drive argv/cwd/env too.
                         probe_codex_home = resolve_codex_home(probe_codex_cwd)
@@ -701,7 +701,7 @@ def run_codex_exec(
                                 error=probe_error_text,
                                 run_codex_home=probe_codex_home,
                             )
-                            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
                             # A probe is still `codex exec`; non-quota failure is
                             # not recoverable by waiting for quota reset.
                             raise CmocError(
@@ -736,7 +736,7 @@ def run_codex_exec(
                     raise
                 finally:
                     with _QUOTA_CONDITION:
-                        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
                         # Waiters may resume only after the representative probe
                         # proved quota availability; probe failure is shared.
                         _QUOTA_PROBE_AVAILABLE = probe_available
@@ -861,7 +861,7 @@ def changed_worktree_paths(root: Path) -> list[Path]:
 
 def _changed_worktree_path_statuses(root: Path) -> list[tuple[str, Path]]:
     """worktree 上の変更 path と git status code を absolute path として返す。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
     # apply requeue needs file-level paths after an agent call; default status
     # can collapse untracked directories into one directory path.
     return status_path_statuses(root, untracked_all=True)

@@ -5,7 +5,7 @@ Codex CLI から返る機械的な実行結果の解釈に閉じている。sand
 CODEX_HOME、child process tracking、schema 配置、JSONL error 判定は同じ
 subprocess 境界の不変条件を共有するため、分割すると呼び出し側が同時に読むべき
 失敗時文脈が増える。現状は Codex subprocess 境界として一箇所に保つ方が凝集性が高い。
-根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import fcntl
@@ -30,7 +30,7 @@ from commons.runtime_git import (
     is_untracked_git_ignored,
     run_git,
 )
-from commons.runtime_paths import logs_dir, schema_store_dir
+from commons.runtime_paths import agent_read_dirs, logs_dir, schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
 _active_apply_process_tracking_path: Path | None = None
@@ -46,6 +46,7 @@ _CODEX_BLOCKED_ROOT_NAMES = {
 _REPO_WRITE_BLOCKED_ROOT_NAMES = _CODEX_BLOCKED_ROOT_NAMES
 _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".agents",
+    ".cmoc",
     ".codex",
     ".git",
     "memo",
@@ -70,7 +71,7 @@ def apply_process_id_file_lock(path: Path) -> Iterator[None]:
     lock_path = path.with_name(f"{path.name}.lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
-        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
         # abandon が Codex child 起動直後の未記録状態を読まないよう、
         # parent/child pid file 操作は同じ advisory lock に集約する。
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
@@ -224,7 +225,7 @@ def signal_process_group_members(
 
 def stop_process_group(process_group_id: int) -> None:
     """Codex group を個別 pidfd で SIGTERM、必要なら SIGKILL する。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
     signal_process_group_members(process_group_id, signal.SIGTERM)
     if wait_process_group_exit(process_group_id, 5.0):
@@ -261,7 +262,7 @@ def parameter_codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) ->
     work = codex_work_root.resolve()
     if parameter_cwd.is_relative_to(work):
         return parameter_cwd
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # Older call paths may still pass the repo root while launching against a
     # linked worktree; Codex must run inside the target work root.
     return work
@@ -274,7 +275,7 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
     if path.is_relative_to(root / "memo"):
         return False
     if _is_tui_complete_prompt_path(root, path):
-        # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
         # PURE_ORACLE_READ の Codex cwd は oracle に閉じるが、TUI の完全
         # prompt だけは起動指示そのものなので `.cmoc` 側から読ませる。
         return True
@@ -283,12 +284,17 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
     return True
 
 
-def _is_repo_local_read_path(root: Path, path: Path) -> bool:
-    return path.is_relative_to(_repo_local_read_root(root))
+def _is_repo_agent_read_path(root: Path, path: Path) -> bool:
+    """repo 側の agent 読み取り専用領域に含まれるか判定する。"""
+    return any(
+        path.is_relative_to(read_root)
+        for read_root in _repo_agent_read_roots(root)
+    )
 
 
-def _repo_local_read_root(root: Path) -> Path:
-    return logs_dir(root).parent.parent.resolve()
+def _repo_agent_read_roots(root: Path) -> tuple[Path, Path]:
+    """linked worktree から例外的に読める repo 側 directory 群を返す。"""
+    return tuple(path.resolve() for path in agent_read_dirs(root))
 
 
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
@@ -304,13 +310,15 @@ def _validate_extra_read_paths(
     extra_read_root: Path | None = None,
 ) -> None:
     """Codex argv に足す read path が cmoc の許可境界内か検査する。"""
-    extra_log_root = extra_read_root.resolve() if extra_read_root is not None else None
+    extra_repo_root = (
+        extra_read_root.resolve() if extra_read_root is not None else None
+    )
     for path in extra_read_paths or []:
         resolved = path.resolve()
         if not _is_read_path_allowed(mode, root, resolved) and not (
-            extra_log_root is not None
-            and extra_log_root != root
-            and _is_repo_local_read_path(extra_log_root, resolved)
+            extra_repo_root is not None
+            and extra_repo_root != root
+            and _is_repo_agent_read_path(extra_repo_root, resolved)
         ):
             raise CmocError(
                 "追加読み取り許可 path が FileAccessMode の許可領域外にあります。",
@@ -350,40 +358,40 @@ def _writable_roots(
     root = root.resolve()
     match mode:
         case FileAccessMode.READONLY:
-            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # READONLY は oracle/realization file を書き込み禁止にするため、
             # positive-only permission 設定では既存の隙間を列挙して表現する。
             paths = _readonly_gap_writable_roots(root)
         case FileAccessMode.PURE_ORACLE_READ:
-            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # realization file 読み書き禁止と oracle file 書き込み禁止は保ち、
             # READONLY と同じくルール上の隙間だけ permission 設定で開く。
             paths = _readonly_gap_writable_roots(root)
         case FileAccessMode.REALIZATION_WRITE:
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # The permission profile opens work-root itself so a new root-level
             # realization file has a parent write root. Narrower read/deny
             # entries below keep reserved trees and oracle outside that scope.
             paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.REPO_WRITE:
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # The root write entry is paired with narrower protected entries in
             # `_permission_profile_filesystem_overrides`.
             paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.NO_RULE:
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # NO_RULE omits the prompt rule; `.cmoc/local` and Codex-reserved
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # NO_RULE omits the prompt rule; `.cmoc/g*/ar` and Codex-reserved
             # trees stay blocked in the argv permission profile.
             paths = _top_level_writable_roots(mode, root)
         case _:
             paths = []
     if allow_oracle_conflict_writes:
-        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # Conflict resolution exposes only explicit targets before launch.
         paths = []
     result: list[Path] = []
@@ -417,7 +425,7 @@ def _writable_roots(
 def _top_level_writable_roots(mode: FileAccessMode, root: Path) -> list[Path]:
     """permission profile 用の top-level write root を返す。"""
     if mode in {FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE}:
-        # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+        # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
         # New root-level files cannot be named in advance. Codex permission
         # entries use most-specific matching, so the root write is safe only
         # together with the protected descendants added below.
@@ -442,7 +450,7 @@ def _readonly_gap_writable_roots(root: Path) -> list[Path]:
 
 
 def _existing_or_target_writable_root(path: Path) -> Path:
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     # 未存在の deep path は、最初に作る必要がある directory までを sandbox
     # root にする。既存 parent 直下の未存在 file はその file path のまま渡す。
     if path.exists() or path.parent.exists():
@@ -485,8 +493,8 @@ def _append_writable_path(
                 and is_untracked_git_ignored(root, path / ".__cmoc_ignore_probe__")
             )
         ):
-            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+            # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # Codex permission settings have only positive writable roots. A directory that
             # contains denied routing files or would ignore new children cannot
             # be opened as one root; expand existing children instead.
@@ -516,7 +524,7 @@ def _should_expand_writable_directory(
         return True
     if mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
         if path.resolve() == (root / ".cmoc").resolve():
-            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+            # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
             # Keep non-ignored .cmoc files addressable without opening runtime state.
             return True
         return False
@@ -561,8 +569,8 @@ def _is_writable_path_allowed(
     """FileAccessMode の禁止領域を追加 writable path にも適用する。"""
     if not path.is_relative_to(root):
         return False
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
     relative = path.relative_to(root)
     if path.name in _DENIED_WRITE_FILE_NAMES:
@@ -572,13 +580,12 @@ def _is_writable_path_allowed(
         and is_untracked_git_ignored(root, path)
     ):
         return False
-    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-    # .cmoc/config.json is a realization file, while .cmoc/local is generated
-    # runtime state and must remain outside every write mode.
-    if relative.parts[:2] == (".cmoc", "local"):
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # `.cmoc/g*/ar` は git tracking の有無を問わず agent 読み取り専用である。
+    if any(path.is_relative_to(read_root) for read_root in agent_read_dirs(root)):
         return False
-    if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
-        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+    if allow_oracle_conflict_writes:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
         # session join の conflict 解消は oracle file も git conflict 対象なら編集する。
         # runtime 管理領域と root 禁止 file は sandbox 側でも開かない。
         return (
@@ -600,7 +607,7 @@ def _is_writable_path_allowed(
 
 
 def _is_realization_file_path(root: Path, path: Path) -> bool:
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     # READONLY 系では git ignored 一時 file を realization file から外し、
     # oracle と同じ正本定義に合わせて隙間だけを writable に残す。
     try:
@@ -613,6 +620,7 @@ def _is_realization_file_path(root: Path, path: Path) -> bool:
         ".git",
         ".agents",
         ".codex",
+        ".cmoc",
     }:
         return False
     return path.name not in _DENIED_WRITE_FILE_NAMES and not is_untracked_git_ignored(
@@ -642,17 +650,17 @@ def _read_roots_for_permission_profile(
         and extra_read_root is not None
         and extra_read_root != root
     ):
-        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-        # linked worktree の規則文は repo 側 `.cmoc/local` を常時 read 例外にする。
-        roots.append(_repo_local_read_root(extra_read_root))
+        # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        # linked worktree の規則文は repo 側 `.cmoc/g*/ar` を read 例外にする。
+        roots.extend(_repo_agent_read_roots(extra_read_root))
     for path in extra_read_paths or []:
         resolved = path.resolve()
         if any(resolved.is_relative_to(read_root) for read_root in roots):
             continue
-        if extra_read_root is not None and _is_repo_local_read_path(
+        if extra_read_root is not None and _is_repo_agent_read_path(
             extra_read_root, resolved
         ):
-            roots.append(_repo_local_read_root(extra_read_root))
+            roots.extend(_repo_agent_read_roots(extra_read_root))
         else:
             roots.append(resolved)
     result: list[Path] = []
@@ -663,9 +671,9 @@ def _read_roots_for_permission_profile(
 
 
 def _top_level_read_roots(mode: FileAccessMode, root: Path) -> list[Path]:
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # Codex permission filesystem is positive-only; READONLY cannot use
-    # <work-root> itself because that would also grant the memo read denied by
+    # {{work-root}} itself because that would also grant the memo read denied by
     # the base file access rule.
     if mode != FileAccessMode.READONLY:
         return [root]
@@ -708,7 +716,7 @@ def _is_ignored_directory(root: Path, path: Path) -> bool:
 
 def _ignored_path_overrides(mode: FileAccessMode, root: Path) -> dict[str, str]:
     """ignored directory を read にし、内部の tracked file だけ write に戻す。"""
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     # git check-ignore が対象外と判定する tracked file は realization/oracle の
     # 定義に残るため、ignored directory 全体の read rule で巻き込まない。
     overrides: dict[str, str] = {}
@@ -740,21 +748,21 @@ def _external_symlink_overrides(
     root: Path, extra_read_root: Path | None
 ) -> dict[str, str]:
     """work-root 外へ解決する symlink の target を deny にする。"""
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    # work-root 外は読み書き禁止で、例外は repo-root/.cmoc/local の read だけ。
-    allowed_read_root = (
-        _repo_local_read_root(extra_read_root)
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # work-root 外は読み書き禁止で、例外は repo-root/.cmoc/g*/ar の read だけ。
+    allowed_read_roots = (
+        _repo_agent_read_roots(extra_read_root)
         if extra_read_root is not None
-        else None
+        else ()
     )
     overrides: dict[str, str] = {}
     for path in _iter_worktree_paths(root):
         if not path.is_symlink():
             continue
         resolved = path.resolve()
-        if resolved.is_relative_to(root) or (
-            allowed_read_root is not None
-            and resolved.is_relative_to(allowed_read_root)
+        if resolved.is_relative_to(root) or any(
+            resolved.is_relative_to(read_root)
+            for read_root in allowed_read_roots
         ):
             continue
         overrides[str(resolved)] = "deny"
@@ -769,7 +777,7 @@ def _permission_profile_filesystem_overrides(
     """permission profile に、将来の path にも効く保護 rule を追加する。"""
     overrides: dict[str, Any] = {}
     if mode in _PERMISSION_PROFILE_WRITE_MODES:
-        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
         # memo は広い read root に含まれるため deny し、routing file は Codex が
         # 受理する exact な :workspace_roots rule で read のまま write だけ防ぐ。
         routing_rules = {name: "read" for name in _DENIED_WRITE_FILE_NAMES}
@@ -780,7 +788,7 @@ def _permission_profile_filesystem_overrides(
             }
         )
         if mode in {FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE}:
-            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # A root write is required for unknown, non-protected root-level
             # realization files. Codex selects the most specific filesystem rule,
             # so protect the fixed reserved roots explicitly instead of relying on
@@ -791,7 +799,9 @@ def _permission_profile_filesystem_overrides(
                     for name in (".agents", ".codex", ".git", ".pytest_cache")
                 }
             )
-            overrides[str((root / ".cmoc" / "local").resolve())] = "read"
+            overrides.update(
+                {str(path.resolve()): "read" for path in agent_read_dirs(root)}
+            )
             if mode == FileAccessMode.REALIZATION_WRITE:
                 overrides[str((root / "oracle").resolve())] = "read"
             overrides.update(
@@ -806,9 +816,11 @@ def _permission_profile_filesystem_overrides(
             FileAccessMode.REPO_WRITE,
             FileAccessMode.NO_RULE,
         }:
-            # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-            # .cmoc/local is readable runtime state, but never a write target.
-            overrides[str((root / ".cmoc" / "local").resolve())] = "read"
+            # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+            # `.cmoc/g*/ar` は runtime/config の agent 読み取り専用領域である。
+            overrides.update(
+                {str(path.resolve()): "read" for path in agent_read_dirs(root)}
+            )
     # Keep this rule for read-only modes too: their read roots can contain a
     # nested symlink even though they do not have a work-root write entry.
     overrides.update(_external_symlink_overrides(root, extra_read_root))
@@ -822,9 +834,9 @@ def _permission_profile_override_args(
     filesystem_overrides: dict[str, Any] | None = None,
 ) -> list[str]:
     """Codex beta permission profile を config override argv で渡す。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # sandbox_mode cannot express "read this root but never make the primary
     # workspace writable"; permission profiles can.
     entries = {str(path): "read" for path in read_roots}
@@ -849,7 +861,7 @@ def _permission_profile_override_args(
 
 def _protected_writable_paths(writable_roots: list[Path]) -> list[Path]:
     """書き込み root 配下の AGENTS.md/INDEX.md を具体的な read rule にする。"""
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     paths: set[Path] = set()
     for root in writable_roots:
         if not root.is_dir():
@@ -867,7 +879,7 @@ def _ollama_provider_override_args() -> list[str]:
     """cmoc managed ollama provider を argv config override にする。"""
     provider_key = f"model_providers.{_OLLAMA_PROVIDER_ID}"
     return [
-        # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+        # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
         # Codex enables non-function web-search and multi-agent tool types by
         # default, while Ollama's Responses endpoint accepts function tools.
         # Keep the managed local provider on their common tool subset.
@@ -896,7 +908,7 @@ def build_codex_override_args(
     extra_read_root: Path | None = None,
     allow_oracle_conflict_writes: bool = False,
 ) -> list[str]:
-    """AgentCallParameter と repo config から Codex CLI 上書き argv を作る。"""
+    """AgentCallParameter と worktree config から Codex CLI 上書き argv を作る。"""
     model_spec = config.codex.model[parameter.model_class]
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
     args = [
@@ -1027,7 +1039,7 @@ def run_codex_subprocess(
 ) -> subprocess.CompletedProcess[Any]:
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
     try:
-        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
         # Tracking is apply-run internal state; an inherited env var alone must
         # not redirect unrelated Codex calls to a stale or foreign pid file.
         if _active_apply_process_tracking_path is not None and argv[:1] == ["codex"]:
@@ -1038,7 +1050,7 @@ def run_codex_subprocess(
     except FileNotFoundError as exc:
         if argv[:1] != ["codex"]:
             raise
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # Codex CLI missing は想定外の exec 失敗として即時に利用者向け失敗にする。
         raise CmocError(
             "Codex CLI が見つかりません。",
@@ -1070,7 +1082,7 @@ def run_tracked_codex_subprocess(
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
     process: subprocess.Popen[Any] | None = None
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     # Popen と child 行の登録だけを遅延させ、exec 後の child は通常の SIGTERM を受ける。
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
     sigterm_pending = False
@@ -1123,7 +1135,7 @@ def run_tracked_codex_subprocess(
             )
         return result
     finally:
-        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
         # leader 終了後も descendant が group に残る間は tracking を保持する。
         if process.poll() is not None and not process_group_has_running_member(process.pid):
             try:
@@ -1198,13 +1210,13 @@ def codex_error_text(stdout_text: str, stderr_text: str) -> str:
         try:
             item = json.loads(line)
         except json.JSONDecodeError:
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
             # Keep the original line visible even when it is blank; malformed
             # stdout is a protocol failure, not an ignorable diagnostic.
             fragments.append(f"malformed JSONL event (invalid JSON): {line}")
             continue
         if not isinstance(item, dict):
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
             # Known JSONL events are objects; preserve malformed output in
             # error detail so the caller takes the non-retryable failure path.
             fragments.append(f"malformed JSONL event (expected object): {line}")
@@ -1226,7 +1238,7 @@ def extract_resume_token(stdout_text: str) -> str | None:
         except json.JSONDecodeError:
             continue
         if not isinstance(item, dict):
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
             # A non-object event cannot carry a resume token.
             continue
         if item.get("type") != "thread.started":
@@ -1244,13 +1256,13 @@ def _codex_jsonl_error_messages(stdout_text: str) -> list[str | None]:
         try:
             item = json.loads(line)
         except json.JSONDecodeError:
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
             # A JSONL protocol violation is unexpected even when the process
             # returned zero and the output-last-message file is valid.
             messages.append(None)
             continue
         if not isinstance(item, dict):
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
             # A malformed event is an unexpected error, never a retry signal.
             messages.append(None)
             continue
@@ -1292,7 +1304,7 @@ def is_quota_error(stdout_text: str) -> bool:
 
 def is_unexpected_error(stdout_text: str) -> bool:
     """既知の capacity/quota 以外の Codex JSONL error を検出する。"""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # Only capacity and quota events have recovery paths; malformed or other
     # error events must not be hidden by a zero subprocess return code.
     return any(

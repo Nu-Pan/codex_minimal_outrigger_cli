@@ -7,6 +7,69 @@ import commons.runtime_ollama as ollama_module
 from commons.runtime_errors import CmocError
 
 
+class _Response:
+    def __init__(self, body: bytes, status: int = 200) -> None:
+        self.body = body
+        self.status = status
+
+    def read(self) -> bytes:
+        return self.body
+
+    def __enter__(self) -> "_Response":
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        return None
+
+
+# {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
+@pytest.mark.parametrize(
+    ("service_changed", "process_matches", "restart_expected"),
+    [(True, True, True), (False, False, True), (False, True, False)],
+)
+def test_ensure_ollama_service_restarts_only_when_active_service_needs_repair(
+    monkeypatch: pytest.MonkeyPatch,
+    service_changed: bool,
+    process_matches: bool,
+    restart_expected: bool,
+) -> None:
+    calls: list[list[str]] = []
+    executable = Path("/home/user/.cmoc/ollama/bin/ollama")
+
+    def fake_systemctl(args: list[str]) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return subprocess.CompletedProcess(["systemctl", *args], 0, "", "")
+
+    monkeypatch.setattr(
+        ollama_module, "_write_ollama_service_file", lambda path: service_changed
+    )
+    monkeypatch.setattr(ollama_module, "_run_systemctl", fake_systemctl)
+    monkeypatch.setattr(ollama_module, "_service_active", lambda: True)
+    monkeypatch.setattr(
+        ollama_module, "_service_process_matches", lambda path: process_matches
+    )
+
+    ollama_module._ensure_ollama_service(executable)
+
+    expected = [["daemon-reload"], ["enable", "--now", "cmoc-ollama"]]
+    if restart_expected:
+        expected.append(["restart", "cmoc-ollama"])
+    assert calls == expected
+
+
+def test_write_ollama_service_uses_home_specifier_for_executable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home with spaces"
+    executable = home / ".cmoc" / "ollama" / "bin" / "ollama"
+    service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
+    monkeypatch.setattr(ollama_module, "_ollama_service_file", lambda: service)
+
+    assert ollama_module._write_ollama_service_file(executable)
+
+    assert "ExecStart=%h/.cmoc/ollama/bin/ollama serve" in service.read_text()
+
+
 def test_verify_ollama_service_rejects_missing_main_pid(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -94,6 +157,7 @@ def test_ensure_ollama_model_loads_after_store_is_ready(
     commands: list[list[str]] = []
     show_iter = iter(show_codes)
     loaded: list[str] = []
+    verified: list[str] = []
 
     def fake_run_ollama(
         executable: Path, args: list[str]
@@ -103,9 +167,39 @@ def test_ensure_ollama_model_loads_after_store_is_ready(
         return subprocess.CompletedProcess([str(executable), *args], returncode, "", "")
 
     monkeypatch.setattr(ollama_module, "_run_ollama", fake_run_ollama)
+    monkeypatch.setattr(ollama_module, "_verify_ollama_gpu", verified.append)
     monkeypatch.setattr(ollama_module, "_load_ollama_model", loaded.append)
 
     ollama_module._ensure_ollama_model(Path("ollama"), "model")
 
     assert commands == expected_commands
     assert loaded == ["model"]
+    assert verified == ["model"]
+
+
+def test_verify_ollama_gpu_accepts_runtime_vram(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    response = _Response(b'{"models":[{"name":"model","size_vram":1}]}')
+    monkeypatch.setattr(
+        ollama_module.urllib.request,
+        "urlopen",
+        lambda *_args, **_kwargs: response,
+    )
+    ollama_module._verify_ollama_gpu("model")
+
+
+@pytest.mark.parametrize(
+    "body", [b'{"models":[]}', b'{"models":[{"name":"model","size_vram":0}]}']
+)
+def test_verify_ollama_gpu_rejects_unconfirmed_runtime(
+    monkeypatch: pytest.MonkeyPatch, body: bytes
+) -> None:
+    response = _Response(body)
+    monkeypatch.setattr(
+        ollama_module.urllib.request,
+        "urlopen",
+        lambda *_args, **_kwargs: response,
+    )
+    with pytest.raises(CmocError, match="GPU 推論を確認できませんでした"):
+        ollama_module._verify_ollama_gpu("model")

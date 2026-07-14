@@ -43,18 +43,18 @@ def run_codex_tui(
     """Codex TUI を設定上書き argv と call log を準備して起動する。"""
     root = root or repo_root()
     cwd = cwd or root
-    config = config or load_config(root)
+    codex_work_root = work_root(cwd)
+    config = config or load_config(codex_work_root)
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
-    codex_work_root = work_root(cwd)
     codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # Match validation to where Codex resolves a relative
     # CODEX_HOME while keeping the user-provided env value unchanged.
     codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
-    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
-    # TUI complete prompt is stored under <repo-root> even when Codex runs in a
+    # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
+    # TUI complete prompt is stored under {{repo-root}} even when Codex runs in a
     # linked worktree; writable roots and schema state still follow codex_work_root.
     override_args = prepare_codex_override_args(
         parameter,
@@ -70,7 +70,7 @@ def run_codex_tui(
         str(codex_cwd),
         parameter.prompt,
     ]
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     ts, call_path = _reserve_timestamped_path(log_dir, "_tui_call.json", timestamp)
     call_path.write_text(
         json.dumps(
@@ -117,7 +117,7 @@ def run_codex_tui(
     def emit_event(error: str | None = None) -> None:
         """Codex CLI の成功・失敗 event を logger に記録する。
 
-        根拠: <work-root>/oracle/doc/app_spec/console_and_file_log.md
+        根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
         """
         if logger is None:
             return

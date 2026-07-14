@@ -82,7 +82,7 @@ def _cmoc_apply_abandon_body() -> None:
             if stopped_warning:
                 warnings.append(stopped_warning)
     start_subcommand_step(7, "apply branch と worktree を特定", "identify apply resources")
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     # fork は completed 公開から report 終了までこの lock を保持する。
     # 先に process を止めているため、ここで lock を待っても停止処理と deadlock しない。
     with apply_run_lock(repo, session_id):
@@ -146,7 +146,7 @@ def _validate_apply_run(
             ["session state file の apply.apply_branch を確認してください。"],
             str(path),
         )
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     # The state file is mutable local state, so cleanup must prove the stored
     # apply branch still belongs to the current session before deleting it.
     if apply_branch_session_id(apply_branch) != session_id:

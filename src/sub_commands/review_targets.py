@@ -17,7 +17,7 @@ def enumerate_review_oracle_targets(
     start = state.session.session_start_commit
     if not start:
         return []
-    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     # session scope は review fork 時点の oracle snapshot を対象に固定する。
     changed = set(
         run_git(

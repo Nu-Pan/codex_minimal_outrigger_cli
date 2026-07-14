@@ -26,7 +26,7 @@ def build_quota_availability_probe_parameter(
         # optional oracle builder. Remove this entry and migrate all callers
         # to the canonical builder once every supported distribution ships
         # oracle.acp_builder.quota_probe and no caller imports this path.
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # The current oracle tree specifies only a minimal availability call and
         # has no dedicated builder. Empty stdin avoids copying a prompt into the
         # realization layer while keeping quota polling executable in packages

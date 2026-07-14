@@ -1,7 +1,7 @@
 """
 `cmoc apply fork` の所見適用 builder。
 
-Oracle: <work-root>/oracle/src/oracle/acp_builder/apply/fork/finding_application.py
+Oracle: {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/finding_application.py
 """
 
 from typing import Any

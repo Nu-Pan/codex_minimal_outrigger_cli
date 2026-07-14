@@ -9,16 +9,20 @@ from commons.runtime_results import CommandResult
 
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/apply/", "cmoc/run/")
-CMOC_IGNORE_PATTERN = "/.cmoc/local/"
-# <work-root>/oracle/src/oracle/other/cmoc_config.py
+CMOC_IGNORE_PATTERN = "/.cmoc/gu/"
+# {{work-root}}/oracle/src/oracle/other/cmoc_config.py
 # Keep a broad user .cmoc/ rule effective for other children while making the
-# tracked repository config a non-ignored realization file.
+# tracked repository config reachable while keeping other `.cmoc` data ignored.
 CMOC_CONFIG_IGNORE_EXCEPTIONS = (
     "!/.cmoc/",
     "/.cmoc/*",
-    "!/.cmoc/config.json",
+    "!/.cmoc/gt/",
+    "/.cmoc/gt/*",
+    "!/.cmoc/gt/ar/",
+    "/.cmoc/gt/ar/*",
+    "!/.cmoc/gt/ar/config.json",
 )
-CMOC_IGNORE_PROBE = ".cmoc/local/.__cmoc_ignore_probe__"
+CMOC_IGNORE_PROBE = ".cmoc/gu/.__cmoc_ignore_probe__"
 
 
 def run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
@@ -143,7 +147,7 @@ def create_run_worktree(
         )
     candidate.parent.mkdir(parents=True, exist_ok=True)
     if candidate.exists():
-        # <work-root>/oracle/doc/branch_model.md
+        # {{work-root}}/oracle/doc/branch_model.md
         # A matching path is not evidence of a cmoc-created linked worktree; never delete it implicitly.
         raise CmocError(
             "run worktree path は既に存在します。",
@@ -201,11 +205,11 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
         relative = resolved.relative_to(base)
     except ValueError as exc:
         raise _unmanaged_worktree_error(worktree, base) from exc
-    # <work-root>/oracle/src/oracle/other/path_model.py
-    # work-root deletion is limited to .cmoc/local/worktree/<parent-run-id>/<run-id>.
+    # {{work-root}}/oracle/src/oracle/other/path_model.py
+    # work-root deletion is limited to .cmoc/gu/worktree/{{parent-run-id}}/{{run-id}}.
     if len(relative.parts) != 2 or not all(relative.parts):
         raise _unmanaged_worktree_error(worktree, base)
-    # <work-root>/oracle/doc/branch_model.md
+    # {{work-root}}/oracle/doc/branch_model.md
     # The naming convention is not enough: deletion is limited to Git linked worktrees.
     if candidate.exists() and resolved not in _registered_worktree_paths(root):
         raise _unmanaged_worktree_error(worktree, base)
@@ -235,7 +239,7 @@ def _first_symlink_component(path: Path) -> Path | None:
 
 def _first_managed_worktree_symlink(root: Path, *paths: Path) -> Path | None:
     """managed base と path の symlink component を探す。"""
-    # <work-root>/oracle/doc/branch_model.md
+    # {{work-root}}/oracle/doc/branch_model.md
     # resolve() だけでは repo 外の実体が managed path に見えるため、canonicalize 前に
     # lexical path の component を検査して、作成・削除の両方で symlink 経由を拒否する。
     for path in (worktrees_dir(_main_worktree_root(root)), *paths):
@@ -274,8 +278,8 @@ def _main_worktree_root(root: Path) -> Path:
 
 
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
-    """.cmoc/local の追跡有無と ignore 判定を取得する。"""
-    tracked = run_git(["ls-files", "--", ".cmoc/local"], root).stdout.strip()
+    """.cmoc/gu の追跡有無と ignore 判定を取得する。"""
+    tracked = run_git(["ls-files", "--", ".cmoc/gu"], root).stdout.strip()
     ignored = run_git(
         ["check-ignore", "-q", CMOC_IGNORE_PROBE],
         root,
@@ -305,7 +309,7 @@ def with_cmoc_ignore_pattern(content: str) -> str:
 
 
 def ensure_cmoc_ignored(root: Path) -> None:
-    """.gitignore と index を更新できる場面で .cmoc/local を追跡対象外にする。"""
+    """.gitignore と index を更新できる場面で .cmoc/gu を追跡対象外にする。"""
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     gitignore = root / ".gitignore"
     content = gitignore.read_text() if gitignore.exists() else ""
@@ -316,11 +320,11 @@ def ensure_cmoc_ignored(root: Path) -> None:
     if not tracked and ignored_returncode == 0:
         return
 
-    run_git(["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/local"], root)
+    run_git(["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"], root)
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(
-            ".cmoc/local を git 追跡対象外にできませんでした。",
+            ".cmoc/gu を git 追跡対象外にできませんでした。",
             [".gitignore と git index の状態を確認してください。"],
             f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored_returncode}",
         )
@@ -330,8 +334,8 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     """clean worktree を保つ必要がある caller 用に git exclude で .cmoc ignore を保証する。
 
     根拠:
-    - <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
-    - <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    - {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
     """
     exclude_path = root / run_git(
         ["rev-parse", "--git-path", "info/exclude"], root
@@ -344,18 +348,18 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(
-            ".cmoc/local を git 追跡対象外にできませんでした。",
+            ".cmoc/gu を git 追跡対象外にできませんでした。",
             [".gitignore と git index の状態を確認してください。"],
             f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored_returncode}",
         )
 
 
 def require_cmoc_ignored(root: Path) -> None:
-    """初期化済み repository として .cmoc/local ignore 状態を検査する。"""
+    """初期化済み repository として .cmoc/gu ignore 状態を検査する。"""
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(
-            ".cmoc/local が git 追跡対象外に初期化されていません。",
+            ".cmoc/gu が git 追跡対象外に初期化されていません。",
             ["cmoc doctor を実行してから再実行してください。"],
             f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored_returncode}",
         )
@@ -376,7 +380,7 @@ def is_git_ignored(root: Path, path: Path) -> bool:
 
 
 def is_untracked_git_ignored(root: Path, path: Path) -> bool:
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     # oracle/realization file definitions use normal git check-ignore behavior:
     # tracked files remain targets even when they match an ignore pattern.
     candidate = path if path.is_absolute() else root / path
@@ -387,7 +391,7 @@ def is_untracked_git_ignored(root: Path, path: Path) -> bool:
 
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     # Keep the oracle file definition in one runtime helper because it is used by
     # both Codex access checks and apply/session diff classification.
     # Oracle ownership is defined by the repository path, so tracked symlinks

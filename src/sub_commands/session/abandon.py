@@ -54,7 +54,7 @@ def _cmoc_session_abandon_body() -> None:
         state.session.state = "abandoned"
         state.session.joined_at = None
         write_state(path, state)
-        # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
         # requires preserving the home branch while deleting only the session branch.
         delete_result = delete_branch(repo, branch, force=True)
         if delete_result.returncode != 0:
@@ -64,7 +64,7 @@ def _cmoc_session_abandon_body() -> None:
                 delete_result.stderr,
             )
     except BaseException as error:
-        # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
         # treats user interruption during cleanup as a cleanup failure that must
         # return the session to a rerunnable state.
         cleanup_detail = error.detail if isinstance(error, CmocError) else repr(error)

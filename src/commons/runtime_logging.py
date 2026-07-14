@@ -37,7 +37,7 @@ class SubcommandLogger:
         self.step_timings: list[StepTiming] = []
         log_dir = logs_dir(root)
         log_dir.mkdir(parents=True, exist_ok=True)
-        # <work-root>/oracle/doc/app_spec/console_and_file_log.md
+        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
         _, self.path = _reserve_timestamped_path(log_dir, ".jsonl", timestamp)
 
     def event(self, kind: str, **payload: Any) -> None:
@@ -57,8 +57,8 @@ class SubcommandLogger:
     ) -> None:
         """完了サマリー用の step 実測値を開始 event と同じ単位で保持する。
 
-        根拠: <work-root>/oracle/doc/app_spec/console_and_file_log.md
-        `<work-root>/oracle/doc/dev_rule/coding_rule.md` が log message を英語に
+        根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        `{{work-root}}/oracle/doc/dev_rule/coding_rule.md` が log message を英語に
         限るため、console 表示名と JSON Lines の step 名は分けられる。
         """
         self.finish_current_step()

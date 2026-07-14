@@ -29,7 +29,7 @@ def cmoc_indexing_impl() -> None:
         command_name="indexing",
         command_argv=["cmoc", "indexing"],
         total_steps=3,
-        # `<work-root>/oracle/doc/app_spec/sub_command/indexing.md`
+        # `{{work-root}}/oracle/doc/app_spec/sub_command/indexing.md`
         # requires the current worktree, not the main worktree, to be clean.
         use_work_root_runtime=True,
     )

@@ -12,6 +12,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
+import typer
+
 from acp.builder.apply.fork.file_finding_enumeration import (
     build_apply_fork_file_finding_enumeration_parameter,
 )
@@ -58,6 +60,7 @@ from commons.runtime_apply import (
     apply_run_lock,
     delete_apply_process_id,
     read_apply_process_id,
+    stop_child_process_group,
     write_apply_process_id,
 )
 from commons.indexing import enable_indexing_preflight
@@ -92,8 +95,8 @@ def _cmoc_apply_fork_body(
         raise CmocError("apply fork は session branch 上で実行してください。", [], branch)
     ensure_cmoc_ignored_in_exclude(current_root)
     require_clean_worktree(current_root)
-    config = load_config(root)
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    config = load_config(current_root)
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
     # Re-read the mutable state while holding the lifecycle lock. Otherwise two
     # callers can both observe ready and publish different apply runs.
     finding_counts: list[int] = []
@@ -104,6 +107,7 @@ def _cmoc_apply_fork_body(
     state_published = False
     branch_preexisting = False
     worktree_preexisting = False
+    interrupted = False
     try:
         with apply_run_lock(root, session_id):
             session_id, path, state = load_state_for_branch(root, branch)
@@ -137,80 +141,108 @@ def _cmoc_apply_fork_body(
             write_apply_process_id(root, session_id, os.getpid())
         assert apply_worktree is not None
         with apply_process_tracking(root, session_id), pushd(apply_worktree):
-            start_subcommand_step(3, "調査待ちファイルリストを初期化", "initialize pending files")
-            findings: list[dict] = []
-            pending_targets = enumerate_apply_targets(
-                apply_worktree, scope, session_id, state
-            )
-            start_subcommand_step(4, "apply ループ", "apply loop")
-            for _apply_loop in range(config.apply_fork.num_apply_files):
-                pending_targets = dedupe_apply_targets(pending_targets)
-                if not pending_targets:
-                    result_label = "converged"
-                    break
-                start_subcommand_step("4/6, 1/3", "調査対象を pop", "pop pending target")
-                target = pending_targets.pop(0)
-                start_subcommand_step("4/6, 2/3", "対象ファイルの所見を列挙", "enumerate findings")
-                findings = enumerate_apply_findings_for_target(
-                    apply_worktree,
-                    target,
-                    config,
-                    codex_exec,
-                    log_root=root,
+            try:
+                start_subcommand_step(
+                    3,
+                    "調査待ちファイルリストを初期化",
+                    "initialize pending files",
                 )
-                finding_counts.append(len(findings))
-                if not findings:
-                    continue
-                pending_targets.append(target)
-                start_subcommand_step("4/6, 3/3", "所見を適用", "apply findings")
-                run_finding_application(
-                    root,
-                    apply_worktree,
-                    findings,
-                    config,
-                    codex_exec,
+                findings: list[dict] = []
+                pending_targets = enumerate_apply_targets(
+                    apply_worktree, scope, session_id, state
                 )
-                changed = changed_worktree_paths(apply_worktree)
-                if not changed:
-                    continue
-                pending_targets.extend(
-                    normalize_apply_targets(
-                        apply_worktree,
-                        set(changed),
-                        include_oracle=False,
+                start_subcommand_step(4, "apply ループ", "apply loop")
+                for _apply_loop in range(config.apply_fork.num_apply_files):
+                    pending_targets = dedupe_apply_targets(pending_targets)
+                    if not pending_targets:
+                        result_label = "converged"
+                        break
+                    start_subcommand_step(
+                        "4/6, 1/3", "調査対象を pop", "pop pending target"
                     )
-                )
-                if changed:
+                    target = pending_targets.pop(0)
+                    start_subcommand_step(
+                        "4/6, 2/3",
+                        "対象ファイルの所見を列挙",
+                        "enumerate findings",
+                    )
+                    findings = enumerate_apply_findings_for_target(
+                        apply_worktree,
+                        target,
+                        config,
+                        codex_exec,
+                        log_root=root,
+                    )
+                    finding_counts.append(len(findings))
+                    if not findings:
+                        continue
+                    pending_targets.append(target)
+                    start_subcommand_step(
+                        "4/6, 3/3", "所見を適用", "apply findings"
+                    )
+                    run_finding_application(
+                        root,
+                        apply_worktree,
+                        findings,
+                        config,
+                        codex_exec,
+                    )
+                    changed = changed_worktree_paths(apply_worktree)
+                    if not changed:
+                        continue
+                    pending_targets.extend(
+                        normalize_apply_targets(
+                            apply_worktree,
+                            set(changed),
+                            include_oracle=False,
+                        )
+                    )
                     commit_message = generate_apply_commit_message(
                         apply_worktree,
                         {"findings": findings},
                     )
                     run_git(["add", "."], apply_worktree)
                     run_git(["commit", "-m", commit_message], apply_worktree)
-            else:
-                pending_targets = dedupe_apply_targets(pending_targets)
-                result_label = "unconverged" if pending_targets else "converged"
-            # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
-            # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
-            # completed 公開中は report と PID 解放まで cleanup と競合させない。
-            with apply_run_lock(root, session_id):
-                start_subcommand_step(5, "apply state を更新", "update apply state")
-                state.apply.state = "completed"
-                write_state(path, state)
-                start_subcommand_step(6, "作業結果をレポート", "write apply report")
-                report_path = write_apply_fork_report(
+                else:
+                    pending_targets = dedupe_apply_targets(pending_targets)
+                    result_label = "unconverged" if pending_targets else "converged"
+                report_path = _complete_apply_fork_run(
                     root,
+                    session_id,
+                    path,
+                    state,
                     apply_worktree,
                     branch,
-                    state,
                     finding_counts,
                     result_label,
                     config,
                     codex_exec,
+                    interrupted=False,
                 )
-                delete_apply_process_id(root, session_id)
+            except KeyboardInterrupt:
+                # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+                # 新規 agent call を止め、実行中の処理単位だけを破棄して、既に
+                # commit 済みの単位を未収束の部分結果として確定する。
+                interrupted = True
+                result_label = "unconverged"
+                _record_apply_fork_interruption()
+                _stop_interrupted_apply_children(root, session_id)
+                _discard_uncommitted_apply_changes(apply_worktree)
+                report_path = _complete_apply_fork_run(
+                    root,
+                    session_id,
+                    path,
+                    state,
+                    apply_worktree,
+                    branch,
+                    finding_counts,
+                    result_label,
+                    config,
+                    codex_exec,
+                    interrupted=True,
+                )
     except BaseException as exc:
-        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
         # An interrupted Codex call may outlive this apply process. Preserve
         # its child identity so error-state abandon can stop it before cleanup.
         if state_published:
@@ -231,6 +263,7 @@ def _cmoc_apply_fork_body(
                                 apply_worktree or root,
                                 config,
                                 codex_exec,
+                                allow_codex_summary=not interrupted,
                             )
                         tracked_process = read_apply_process_id(root, session_id)
                         if not tracked_process or not tracked_process.child_processes:
@@ -258,12 +291,88 @@ def _cmoc_apply_fork_body(
                             exc.add_note(f"apply state reset failed: {reset_error}")
                 exc.add_note(f"apply run recovery failed: {recovery_error}")
         raise
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md requires the
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md requires the
     # generated report path on stdout; common runtime logs are emitted around it.
     return CliRunResult(
         returncode=2 if result_label == "unconverged" else 0,
         stdout=str(report_path.resolve()),
     )
+
+
+def _complete_apply_fork_run(
+    root: Path,
+    session_id: str,
+    state_path: Path,
+    state: SessionState,
+    apply_worktree: Path,
+    session_branch: str,
+    finding_counts: list[int],
+    result_label: str,
+    config: CmocConfig,
+    codex_exec: CodexExec,
+    *,
+    interrupted: bool,
+) -> Path:
+    """state・report・PID を一つの apply 完了境界で確定する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # completed 公開中は report と PID 解放まで cleanup と競合させない。
+    with apply_run_lock(root, session_id):
+        start_subcommand_step(5, "apply state を更新", "update apply state")
+        state.apply.state = "completed"
+        write_state(state_path, state)
+        start_subcommand_step(6, "作業結果をレポート", "write apply report")
+        report_path = write_apply_fork_report(
+            root,
+            apply_worktree,
+            session_branch,
+            state,
+            finding_counts,
+            result_label,
+            config,
+            codex_exec,
+            interrupted=interrupted,
+            allow_codex_summary=not interrupted,
+        )
+        delete_apply_process_id(root, session_id)
+    return report_path
+
+
+def _record_apply_fork_interruption() -> None:
+    """中断要求を console とサブコマンドログの双方へ記録する。"""
+    typer.echo(
+        "# ユーザー中断要求を受け付けました\n"
+        "- 確定済みの部分結果で apply fork を未収束として完了します。"
+    )
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "user_interruption",
+            command="apply fork",
+            result="unconverged",
+        )
+
+
+def _stop_interrupted_apply_children(root: Path, session_id: str) -> None:
+    """中断された処理単位の Codex process group を停止する。"""
+    process = read_apply_process_id(root, session_id)
+    if process is None:
+        return
+    logger = current_subcommand_logger()
+    for child in process.child_processes:
+        warning = stop_child_process_group(child)
+        if warning and logger is not None:
+            logger.event(
+                "user_interruption_cleanup_warning",
+                command="apply fork",
+                warning=warning,
+            )
+
+
+def _discard_uncommitted_apply_changes(apply_worktree: Path) -> None:
+    """中断時点の未確定な staged/unstaged/untracked 差分を破棄する。"""
+    run_git(["reset", "--hard", "HEAD"], apply_worktree)
+    run_git(["clean", "-fd"], apply_worktree)
 
 
 def _rollback_apply_setup(
@@ -276,7 +385,7 @@ def _rollback_apply_setup(
 ) -> list[str]:
     """error state を保存できない初期化失敗で作成済み resource を戻す。"""
     failures: list[str] = []
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
     # 保存済み error state が無い場合は abandon が cleanup 対象を特定できない。
     if apply_worktree is not None and not worktree_preexisting:
         try:
@@ -397,9 +506,7 @@ def normalize_apply_targets(
             continue
         if not rel_parts:
             continue
-        if rel_parts[0] in {".git", ".agents", ".codex", "memo"}:
-            continue
-        if len(rel_parts) >= 2 and rel_parts[:2] == (".cmoc", "local"):
+        if rel_parts[0] in {".git", ".agents", ".codex", ".cmoc", "memo"}:
             continue
         if rel_parts[0] == "oracle":
             if not include_oracle or not is_oracle_file_path(root, path):
@@ -408,7 +515,7 @@ def normalize_apply_targets(
             continue
         elif is_untracked_git_ignored(root, path):
             continue
-        # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+        # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
         # oracle/ と realization/ は同じ実体を指す symlink でも別 file である。
         repository_path = path.relative_to(root.absolute())
         if repository_path in seen_repository_paths:

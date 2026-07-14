@@ -24,7 +24,7 @@ def build_tui_launch_tui_parameter(
     index_entry_standard: bool,
 ) -> AgentCallParameter:
     """`cmoc tui` の TUI 起動用 AgentCallParameter を構築する。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     # oracle builder が正本だが保存先 directory を作らないため、呼び出し前に
     # runtime 側の配置だけ保証する。oracle 側で作成されるようになれば削除できる。
     repo = resolve_real_path(RootPathPlaceHolder.REPO)

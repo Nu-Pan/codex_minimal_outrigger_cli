@@ -5,7 +5,7 @@ archive install、user systemd、procfs による所有者確認、model/API/GPU
 を順序どおりに修復・検証する一連の処理である。独立した再利用入口もないため、
 分割すると失敗時の停止条件と前後関係を理解するために複数 module を同時に読む
 必要が生じ、単一の managed Ollama preflight という責務の凝集性を損なう。
-根拠: <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+根拠: {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
 """
 
 import fcntl
@@ -23,7 +23,7 @@ from config.cmoc_config import CmocConfig
 
 from .runtime_config import load_config
 from .runtime_errors import CmocError
-from .runtime_paths import config_path, repo_root
+from .runtime_paths import config_path
 
 _OLLAMA_ARCHIVE_URL = "https://ollama.com/download/ollama-linux-amd64.tar.zst"
 _OLLAMA_HOST = "127.0.0.1:11434"
@@ -37,7 +37,7 @@ def ensure_ollama_serves_local_slm(
     root: Path, config: CmocConfig | None = None
 ) -> None:
     """cmoc provider の local SLM を managed Ollama で serve 可能にする。"""
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
     # cmoc provider を要求する model がある場合だけ、user service として 11434 固定で扱う。
     models = _cmoc_managed_model_names(root, config)
     if not models:
@@ -55,13 +55,12 @@ def _cmoc_managed_model_names(
 ) -> list[str]:
     """config から cmoc managed Ollama が扱う model 名を重複なく取り出す。"""
     if config is None:
-        # <work-root>/oracle/src/oracle/other/cmoc_config.py
-        # config は worktree ではなく main worktree の repo 単位で所有される。
-        config_root = repo_root(root)
-        if not config_path(config_root).exists():
+        # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+        # config は呼び出し対象の worktree ごとに追跡される。
+        if not config_path(root).exists():
             config = CmocConfig()
         else:
-            config = load_config(config_root)
+            config = load_config(root)
     models: list[str] = []
     seen: set[str] = set()
     for spec in config.codex.model.values():
@@ -284,7 +283,7 @@ def _service_main_pid() -> int | None:
 
 def _listener_matches_service(main_pid: int, executable: Path) -> bool:
     """11434 の listener が期待する MainPID 系列と executable に属するか調べる。"""
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
     # service file は設定の正しさだけを示すため、11434 の現 listener を
     # /proc で MainPID 系列の cmoc managed ollama process と直接対応付ける。
     for process_id in _ollama_listener_process_ids():
@@ -415,7 +414,7 @@ def _ensure_ollama_model(executable: Path, model: str) -> None:
 
 def _load_ollama_model(model: str) -> None:
     """managed Ollama service に model を memory load させる。"""
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
     # Ollama は空 prompt の /api/generate を load 操作として定義している。
     body = json.dumps({"model": model, "stream": False}).encode()
     request = urllib.request.Request(
@@ -463,7 +462,7 @@ def _gpu_verification_error(model: str, detail: str) -> CmocError:
 
 def _verify_ollama_gpu(model: str) -> None:
     """実行中 model の VRAM 使用を managed Ollama の runtime 情報で確認する。"""
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
     # /api/ps の size_vram が正であることを、検出だけでなく offload の確認とする。
     endpoint = f"http://{_OLLAMA_HOST}/api/ps"
     try:

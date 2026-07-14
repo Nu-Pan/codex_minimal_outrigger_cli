@@ -32,7 +32,7 @@
 
 ## 基本ワークフロー
 
-- `<cmoc-root>/oracle/doc/app_spec/usage.md` を参照
+- `{{cmoc-root}}/oracle/doc/app_spec/usage.md` を参照
 
 ## Tips
 

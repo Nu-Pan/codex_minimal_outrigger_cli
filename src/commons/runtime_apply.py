@@ -80,13 +80,13 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
 
 def apply_process_id_path(root: Path, session_id: str) -> Path:
     """session ごとの apply process pid file path を一箇所で決める。"""
-    return root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
+    return root / ".cmoc" / "gu" / "state" / "apply_processes" / f"{session_id}.pid"
 
 
 @contextmanager
 def apply_run_lock(root: Path, session_id: str) -> Iterator[None]:
     """apply state の公開と abandon cleanup を同じ run 単位で直列化する。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     # PID tracking は Codex child 起動中にも取得するため、lifecycle lock は別鍵にする。
     lock_key = apply_process_id_path(root, session_id).with_name(f"{session_id}.run")
     with apply_process_id_file_lock(lock_key):
@@ -112,7 +112,7 @@ def apply_process_tracking(root: Path, session_id: str) -> Iterator[None]:
     """Codex subprocess 追跡先を apply 実行中だけ有効化する。"""
     path = apply_process_id_path(root, session_id)
     old_value = os.environ.get(APPLY_PROCESS_TRACKING_ENV)
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     # Env is restored for compatibility, but the active tracking decision stays
     # process-local so a parent shell cannot force unrelated Codex calls into it.
     old_tracking_path = set_apply_process_tracking_path(path)
@@ -206,7 +206,7 @@ def stop_apply_process(
     if parent_warning:
         warnings.append(parent_warning)
 
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     # 親 apply process の終了後に pid file を読み直す。親が snapshot 取得後に
     # start_new_session=True の Codex child を増やしても cleanup 前に止めるため。
     child_source = read_after_parent_exit() if read_after_parent_exit else process
@@ -254,7 +254,7 @@ def _stop_parent_apply_process(process: ApplyProcessIdentity) -> str | None:
 
 def stop_child_process_group(process: ProcessIdentity) -> str | None:
     """Codex group を安定した group ID と個別 pidfd で停止する。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     # leader 終了後も数値 PID/PGID の再取得をせず、保存済み group を member pidfd で止める。
     process_id = process.process_id
     process_group_id = process.process_group_id or process_id

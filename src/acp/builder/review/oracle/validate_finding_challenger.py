@@ -3,7 +3,7 @@
 Kept while callers import from
 `acp.builder.review.oracle.validate_finding_challenger`; the canonical
 implementation is
-`<work-root>/oracle/src/oracle/acp_builder/review/oracle/validate_finding_challenger.py`.
+`{{work-root}}/oracle/src/oracle/acp_builder/review/oracle/validate_finding_challenger.py`.
 Delete this module after all callers use the canonical oracle path directly.
 """
 

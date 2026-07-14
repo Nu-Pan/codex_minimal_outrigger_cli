@@ -16,6 +16,8 @@ def write_review_oracle_report(
     review_fork_commit: str | None,
     review_join_commit: str | None,
     error_message: str | None = None,
+    *,
+    interrupted: bool = False,
 ) -> Path:
     """レビュー結果を timestamp 名の Markdown report として保存する。
 
@@ -34,7 +36,7 @@ def write_review_oracle_report(
     Returns:
         作成した report file の path。
 
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
     report_dir = reports_dir(root, "review_oracle")
     report_dir.mkdir(parents=True, exist_ok=True)
@@ -52,6 +54,7 @@ def write_review_oracle_report(
             review_fork_commit,
             review_join_commit,
             error_message=error_message,
+            interrupted=interrupted,
         )
     )
     return report_path
@@ -69,11 +72,13 @@ def render_review_oracle_report(
     review_fork_commit: str | None,
     review_join_commit: str | None,
     error_message: str | None = None,
+    *,
+    interrupted: bool = False,
 ) -> str:
     """review oracle report を Markdown と YAML frontmatter で描画する。
 
     レポートの frontmatter、必須セクション、所見の表示順をまとめて生成する。
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
@@ -85,6 +90,7 @@ def render_review_oracle_report(
         error_message = error_message.replace("`", "'")
     result, verdict = _review_report_verdict(
         error_message,
+        interrupted,
         oracle_files,
         fatal_accepted,
         minor_accepted,
@@ -156,7 +162,7 @@ def _findings_with(findings: list[dict], severity: str) -> list[dict]:
     Returns:
         指定 severity に一致する所見のリスト。
 
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
     return [finding for finding in findings if finding.get("severity") == severity]
 
@@ -170,7 +176,7 @@ def _render_finding_group(title: str, findings: list[dict]) -> str:
     Returns:
         見出しと所見一覧を結合した Markdown。
 
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
     return "\n".join([f"### {title}", render_finding_section(findings)])
 
@@ -190,9 +196,9 @@ def _render_ordered_finding_tail(
         3 つの finding group を順序どおりに結合した Markdown。
 
     Fatal/Minor の H2 節順を保ったまま、所見の採否・severity 順を維持する。
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
-    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md requires the
+    # {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md requires the
     # finding detail stream to be ordered by verdict first, while also requiring
     # the Fatal and Minor H2 anchors in that order.
     return "\n".join(
@@ -206,6 +212,7 @@ def _render_ordered_finding_tail(
 
 def _review_report_verdict(
     error_message: str | None,
+    interrupted: bool,
     oracle_files: list[Path],
     fatal_accepted: list[dict],
     minor_accepted: list[dict],
@@ -214,6 +221,7 @@ def _review_report_verdict(
 
     Args:
         error_message: レビュー中のエラーメッセージ。
+        interrupted: ユーザー中断要求で部分結果を確定したか。
         oracle_files: 実際に評価した oracle file。
         fatal_accepted: 採用された fatal 所見。
         minor_accepted: 採用された minor 所見。
@@ -221,10 +229,17 @@ def _review_report_verdict(
         result と本文の verdict を組み合わせた tuple。
 
     エラー、対象なし、fatal、minor、問題なしの優先順位で判定する。
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
     if error_message is not None:
         return "error", f"レビュー処理が途中で失敗しました。\n\nError: `{error_message}`"
+    if interrupted:
+        return (
+            "interrupted",
+            "ユーザー中断要求によってレビューを完了しました。"
+            "レポートに含まれるのは中断までに確定した部分結果だけであり、"
+            "対象範囲のレビュー完了を保証しません。",
+        )
     if not oracle_files:
         return "no_targets", "レビュー対象 oracle が 0 件でした。"
     if fatal_accepted:
@@ -248,7 +263,7 @@ def _render_frontmatter_field(name: str, value: object) -> str:
         name: value 形式の frontmatter 行。
 
     None を YAML の null として出力し、不明な実行情報も項目として保持する。
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
     return f"{name}: {'null' if value is None else value}"
 
@@ -262,7 +277,7 @@ def render_finding_section(findings: list[dict]) -> str:
         所見が無ければ なし、それ以外は finding ごとの Markdown 行。
 
     各行に finding ID、判定、タイトル、理由を含める。
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
     if not findings:
         return "なし"
@@ -281,7 +296,7 @@ def render_finding_section(findings: list[dict]) -> str:
 def path_display(root: Path, path: Path) -> str:
     """report 内の oracle file 表示名を repository-relative key に揃える。
 
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
     key = oracle_path_key(root, path)
     if key is not None:

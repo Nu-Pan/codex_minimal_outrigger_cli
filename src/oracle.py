@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-# `<work-root>/oracle/src` is intentionally outside the packaged realization
+# `{{work-root}}/oracle/src` is intentionally outside the packaged realization
 # tree, but existing compatibility modules re-export canonical oracle modules.
 _oracle_package = Path(__file__).resolve().parents[1] / "oracle" / "src" / "oracle"
 

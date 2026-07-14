@@ -2,7 +2,7 @@
 
 このファイルは 16,000 文字を超えるが、各処理は同じ apply/session state、
 worktree、branch の失敗時文脈を共有するため、分割せず一箇所で追える凝集した責務である。
-根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
@@ -84,7 +84,7 @@ def _cmoc_apply_join_locked(
 ) -> None:
     """lock 内で state の再読込から merge・report・cleanup までを直列化する。
 
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md
     """
     start_subcommand_step(3, "apply branch の前準備", "prepare apply branch")
     if branch.startswith("cmoc/apply/"):
@@ -221,7 +221,7 @@ def _cmoc_apply_join_locked(
     if merged_reachable:
         if apply_worktree:
             if apply_worktree == current_root:
-                # <work-root>/oracle/doc/app_spec/misc_spec.md は呼び出し元 worktree
+                # {{work-root}}/oracle/doc/app_spec/misc_spec.md は呼び出し元 worktree
                 # の cwd を固定するため、削除のために chdir してはならない。
                 kept_current_worktree = True
                 warnings.append(
@@ -267,7 +267,7 @@ def _stop_error_apply_process(repo: Path, session_id: str) -> str | None:
 
     error state では fork が残した child process が apply worktree を変更し得る。
     そのため、clean 検査より先に停止し、停止対象を読めない pid file は安全側で
-    join を中止する。根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    join を中止する。根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md
     """
     tracking_path = apply_process_id_path(repo, session_id)
     process = read_apply_process_id(repo, session_id)
@@ -300,7 +300,7 @@ def write_apply_join_report(
 ) -> Path:
     """apply join の結果を timestamp 付き Markdown report として保存する。
 
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md
     """
     report_dir = reports_dir(root, "apply/join")
     report_dir.mkdir(parents=True, exist_ok=True)
@@ -332,7 +332,7 @@ def render_apply_join_report(
 ) -> str:
     """apply join の state・差分・conflict を Markdown report 本文へ描画する。
 
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md
     """
     unexpected_lines = [
         f"- {kind}: {', '.join(paths)}"
@@ -379,7 +379,7 @@ def collect_apply_join_unexpected_changes(
 ) -> dict[str, list[str]]:
     """apply/session branch 上の想定外差分を分類して返す。
 
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md
     """
     base = (
         state.apply.oracle_snapshot_commit
@@ -409,7 +409,7 @@ def collect_apply_join_unexpected_changes(
 def changed_paths_on_managed_branch(root: Path, base: str, branch: str) -> list[str]:
     """managed branch の差分を削除 path 除外・rename 先優先で列挙する。
 
-    根拠: <work-root>/oracle/doc/app_spec/misc_spec.md
+    根拠: {{work-root}}/oracle/doc/app_spec/misc_spec.md
     """
     lines = managed_branch_name_status_lines(root, base, branch)
     paths: list[str] = []
@@ -427,7 +427,7 @@ def rename_sources_on_managed_branch(
 ) -> dict[str, str]:
     """managed branch の rename 先から、復元すべき rename 元を引く。
 
-    根拠: <work-root>/oracle/doc/app_spec/misc_spec.md
+    根拠: {{work-root}}/oracle/doc/app_spec/misc_spec.md
     """
     lines = managed_branch_name_status_lines(root, base, branch)
     sources: dict[str, str] = {}
@@ -441,7 +441,7 @@ def rename_sources_on_managed_branch(
 def managed_branch_name_status_lines(root: Path, base: str, branch: str) -> list[str]:
     """managed branch 間の name-status diff を Git の出力行として返す。
 
-    根拠: <work-root>/oracle/doc/app_spec/misc_spec.md
+    根拠: {{work-root}}/oracle/doc/app_spec/misc_spec.md
     """
     return run_git(
         [
@@ -465,18 +465,18 @@ def is_expected_apply_change(
 ) -> bool:
     """apply branch 上で許可される差分かどうかを判定する。"""
     p = Path(path)
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     # は全階層の AGENTS.md を realization file の対象外と定めている。
     if p.name == "AGENTS.md":
         return False
     if p.name == "INDEX.md":
         return True
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md は apply branch の
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md は apply branch の
     # 成果物を実装 file と INDEX.md に限定している。
     if not path.startswith("src/"):
         return False
     if apply_worktree is not None:
-        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md に従い、tracked
+        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md に従い、tracked
         # file は apply branch 自身の state で分類する。
         return not is_untracked_git_ignored(apply_worktree, apply_worktree / path)
     if apply_branch and is_tracked_on_branch(root, apply_branch, path):
@@ -490,7 +490,7 @@ def is_tracked_on_branch(root: Path, branch: str, path: str) -> bool:
     """apply branch の tree に path が tracked で存在するか確認する。
 
     apply worktree が復旧中に無くても branch の tree を正として判定する。
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md
     """
     return bool(
         run_git(
@@ -511,7 +511,7 @@ def is_expected_session_change(root: Path, path: str) -> bool:
 def is_root_memo_path(path: str) -> bool:
     """path が root memo またはその配下かどうかを判定する。
 
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md
     """
     return path == "memo" or path.startswith("memo/")
 
@@ -565,12 +565,12 @@ def restore_managed_branch_path(
 ) -> None:
     """managed branch の差分 path と rename 元を指定 commit へ戻す。
 
-    根拠: <work-root>/oracle/doc/app_spec/sub_command/apply_join.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md
     """
     restore_path_from_commit(root, commit, path)
     source = rename_sources.get(path)
     if source:
-        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md に従い、想定外
+        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md に従い、想定外
         # 差分は force-resolve で戻す。managed branch の分類は rename 先だけを
         # 報告するため、rename 元の復元もこの経路で行う。
         restore_path_from_commit(root, commit, source)
@@ -590,7 +590,7 @@ def restore_path_from_commit(root: Path, commit: str, path: str) -> None:
         run_git(["checkout", commit, "--", path], root)
     else:
         target = root / path
-        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md に従い、追加
+        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md に従い、追加
         # path は force-resolve で戻す。broken symlink は Path.exists() が false
         # でも Git path なので is_symlink() も確認する。
         if target.exists() or target.is_symlink():

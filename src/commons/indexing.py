@@ -82,7 +82,7 @@ def commit_index_updates(root: Path, updated: list[Path]) -> None:
         run_git(["commit", "-m", "cmoc indexing", "--", *index_paths], root)
         return
     if diff.returncode != 0:
-        # <work-root>/oracle/doc/app_spec/indexing.md requires Git failures to
+        # {{work-root}}/oracle/doc/app_spec/indexing.md requires Git failures to
         # fail indexing; only `git diff --quiet` status 1 means “changes exist”.
         raise CmocError(
             "INDEX.md 差分の確認に失敗しました。",
@@ -94,7 +94,7 @@ def commit_index_updates(root: Path, updated: list[Path]) -> None:
 
 def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path]:
     """INDEX.md を深い directory から順に検査・再生成する。"""
-    config_root = repo_root(root)
+    config_root = root
     dirs = indexable_directories(root)
     dirs.append(root)
     updated: list[Path] = []
@@ -131,7 +131,7 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
                 # ContextVars are not inherited by worker threads. Copy each
                 # caller context before submit so Codex events reach the
                 # subcommand log used by the parent command.
-                # <work-root>/oracle/doc/app_spec/console_and_file_log.md
+                # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
                 futures = [
                     executor.submit(copy_context().run, build_missing, item)
                     for item in missing
@@ -229,13 +229,13 @@ def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
         section_positions
     ):
         return ""
-    # <work-root>/oracle/doc/app_spec/indexing.md defines an entry as title plus
+    # {{work-root}}/oracle/doc/app_spec/indexing.md defines an entry as title plus
     # fixed sections; preserving fresh malformed text here would skip regeneration.
     if any(line.strip() for line in lines[1 : section_positions[0]]):
         return ""
     for start, end in zip(section_positions[:3], section_positions[1:]):
         section_lines = [line.strip() for line in lines[start + 1 : end] if line.strip()]
-        # <work-root>/oracle/doc/app_spec/indexing.md requires each entry
+        # {{work-root}}/oracle/doc/app_spec/indexing.md requires each entry
         # section to be bullet-only.
         if not section_lines or any(not line.startswith("- ") for line in section_lines):
             return ""
@@ -260,7 +260,7 @@ def indexable_children(root: Path, directory: Path) -> list[Path]:
     for child in sorted(directory.iterdir(), key=lambda p: p.name):
         if child.name == "INDEX.md" or child.name.startswith("."):
             continue
-        # <work-root>/oracle/doc/app_spec/indexing.md requires indexing
+        # {{work-root}}/oracle/doc/app_spec/indexing.md requires indexing
         # maintenance to finish before agent calls; symlink cycles cannot be
         # valid traversal targets for that contract.
         if child.is_symlink():
@@ -291,13 +291,13 @@ def build_index_entry(
     parameter = replace(build_indexing_index_entry_parameter(path, content), cwd=root)
     result = codex_exec(
         parameter,
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-        # <work-root>/oracle/doc/app_spec/run_isolation.md
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/oracle/doc/app_spec/run_isolation.md
         # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は
         # run worktree 側へ流れないよう repo root に固定する。
         root=log_root,
         cwd=root,
-        config=load_config(log_root),
+        config=load_config(root),
         purpose=f"indexing index entry for {path}",
     ).output_json
     return render_index_entry(root, path, result or {}, digest=digest).rstrip()
@@ -367,8 +367,8 @@ def render_index_entry(
 def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str]:
     """Structured Output の必須 list[str] 項目を検証して取り出す。"""
     value = entry.get(key) if isinstance(entry, dict) else None
-    # <work-root>/oracle/doc/app_spec/indexing.md and
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py
+    # {{work-root}}/oracle/doc/app_spec/indexing.md and
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py
     # require bullet-only semantic entries that are useful before reading the target.
     if (
         isinstance(value, list)

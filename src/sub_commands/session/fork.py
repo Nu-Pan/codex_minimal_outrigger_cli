@@ -55,7 +55,7 @@ def _cmoc_session_fork_body() -> None:
     ensure_cmoc_ignored_in_exclude(work)
     require_clean_worktree(work)
     with session_fork_lock(root):
-        # <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
         # active session と session-id を lock 内で再確認し、同じ home branch に
         # 複数の session branch/state が公開される競合を防ぐ。
         existing = active_session_for_home(root, branch)
@@ -142,8 +142,8 @@ def _cmoc_session_fork_body() -> None:
 
 
 def _new_session_id(root: Path) -> str:
-    # 根拠: <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
-    # 根拠: <work-root>/oracle/doc/app_spec/session_state.md
+    # 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    # 根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
     # state file が残った joined/abandoned session との衝突も session-id 衝突として扱う。
     for _ in range(MAX_SESSION_ID_ATTEMPTS):
         session_id = timestamp()

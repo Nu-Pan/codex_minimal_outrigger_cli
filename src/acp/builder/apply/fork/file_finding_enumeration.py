@@ -1,7 +1,7 @@
 """
 `cmoc apply fork` のファイル単位所見列挙 builder。
 
-Oracle: <work-root>/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.py
+Oracle: {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.py
 """
 
 from pathlib import Path

@@ -68,13 +68,13 @@ def run_cli_subcommand(
         typer.echo(f"# {console_timestamp()} 開始 {name}")
         typer.echo(f"- サブコマンドログ: `{logger.path}`")
         if doctor_preprocess:
-            # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-            # <work-root>/oracle/doc/app_spec/console_and_file_log.md
+            # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+            # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
             # 共通修復の失敗もサブコマンド単位の終了経路として記録する。
             start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
             run_doctor_preprocess(current_root)
         if pre_log_check is not None:
-            # <work-root>/oracle/doc/app_spec/console_and_file_log.md
+            # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
             # 固有の事前条件で失敗しても、サブコマンドログは先に作成しておく。
             pre_log_check(runtime_root)
         impl_result = impl(*args, **kwargs)
@@ -112,7 +112,7 @@ def run_cli_subcommand(
         result_stdout = getattr(exc, "cmoc_stdout", None)
         if result_stdout is not None:
             typer.echo(str(result_stdout))
-        # <work-root>/oracle/doc/app_spec/error_handling.md は stdout を既定とし、
+        # {{work-root}}/oracle/doc/app_spec/error_handling.md は stdout を既定とし、
         # サブコマンド固有の正本だけが stderr への変更を許可する。
         typer.echo(
             render_error(exc),
@@ -136,7 +136,7 @@ def start_subcommand_step(
 ) -> None:
     """現在のサブコマンドの step 開始をログとコンソールへ通知する。
 
-    根拠: <work-root>/oracle/doc/app_spec/console_and_file_log.md
+    根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     """
     logger = current_subcommand_logger()
     if logger is None:
@@ -153,7 +153,7 @@ def start_subcommand_step(
 def require_current_directory_is_work_root(root: Path) -> None:
     """cmoc が work root で実行されている前提を検査する。
 
-    根拠: <work-root>/oracle/doc/app_spec/misc_spec.md
+    根拠: {{work-root}}/oracle/doc/app_spec/misc_spec.md
     """
     if Path.cwd().resolve() == root.resolve():
         return
@@ -169,7 +169,7 @@ def _emit_completion_summary(
 ) -> None:
     """サブコマンド完了時に記録済み step の stdout サマリーを出力する。
 
-    根拠: <work-root>/oracle/doc/app_spec/console_and_file_log.md
+    根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     """
     elapsed = logger.elapsed()
     typer.echo(f"# {console_timestamp()} 完了 {command_name}")

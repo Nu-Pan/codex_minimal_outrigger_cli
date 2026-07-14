@@ -28,7 +28,7 @@ from cmoc_runtime import (
 from config.cmoc_config import CmocConfig
 from commons.indexing import enable_indexing_preflight
 
-# <work-root>/oracle/doc/app_spec/sub_command/tui.md
+# {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
 ORIGINAL_PROMPT_TEMPLATE = """<!--
 AI Agent CLI/TUI に与えるプロンプトをここに書く。
 フォーマットは Markdown で、見出し (`#`, `##`, `###`, ...) やコードブロック (```...```) などの使用は自由。
@@ -208,8 +208,8 @@ def _cmoc_tui_body(
 
 def ensure_tui_cmoc_ignored(root: Path) -> None:
     """TUI がログを書く root の `.cmoc` ignore をログ作成前に保証する。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
-    # <work-root>/oracle/doc/app_spec/misc_spec.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
+    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
     current_root = work_root()
     ensure_cmoc_ignored(current_root)
     if current_root.resolve() != root.resolve():
@@ -225,7 +225,7 @@ def _cmoc_tui_from_current_context() -> None:
         run_codex_tui,
         root=root,
         work_root=current_root,
-        config=load_config(root),
+        config=load_config(current_root),
     )
 
 
@@ -286,8 +286,8 @@ def build_tui_codex_parameter(
             ["プロンプトを保存して `cmoc tui` を再実行してください。"],
             f"file_access_mode: {file_access_mode.value}",
         )
-    # <work-root>/oracle/doc/app_spec/prompt_standard.md
-    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+    # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     return build_tui_launch_tui_parameter(
         launch_timestamp or timestamp(),
         role=nested_value(

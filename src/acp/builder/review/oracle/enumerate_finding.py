@@ -2,7 +2,7 @@
 
 `acp.builder.review.oracle.enumerate_finding` から import する呼び出し元が
 残る間だけ維持する。canonical 実装は
-`<work-root>/oracle/src/oracle/acp_builder/review/oracle/enumerate_finding.py`。
+`{{work-root}}/oracle/src/oracle/acp_builder/review/oracle/enumerate_finding.py`。
 全呼び出し元が canonical oracle path を直接使うようになったら削除できる。
 """
 
@@ -23,15 +23,18 @@ def build_review_oracle_enumerate_finding_parameter(
     parameter = _build_enumerate_parameter(oracle_path, related_findings)
     if not oracle_path.is_absolute() or not oracle_path.is_symlink():
         return parameter
-    # <work-root>/oracle/src/oracle/acp_builder/review/oracle/enumerate_finding.py
+    # {{work-root}}/oracle/src/oracle/acp_builder/review/oracle/enumerate_finding.py
     # canonical builder は絶対 path を resolve するため、symlink entry をレビュー
     # した事実が prompt から失われないよう、動的な定義行だけ lexical path に戻す。
     resolved = str(oracle_path.resolve())
     lexical = os.path.abspath(oracle_path)
-    marker = f"- <oracle-path> = {resolved}"
+    marker = f"- {{{{oracle-path}}}} = {resolved}"
     return replace(
         parameter,
-        prompt=parameter.prompt.replace(marker, f"- <oracle-path> = {lexical}"),
+        prompt=parameter.prompt.replace(
+            marker,
+            f"- {{{{oracle-path}}}} = {lexical}",
+        ),
     )
 
 

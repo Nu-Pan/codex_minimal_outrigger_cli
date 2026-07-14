@@ -29,9 +29,9 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
     return False
 
 
-# <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md requires the
+# {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md requires the
 # review branch to merge at isolation end, including INDEX commits already made
-# by the preflight in <work-root>/oracle/doc/app_spec/indexing.md.
+# by the preflight in {{work-root}}/oracle/doc/app_spec/indexing.md.
 def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> bool:
     """base commit 以降の review branch 差分が INDEX.md だけか確認する。"""
     changed_paths = run_git(

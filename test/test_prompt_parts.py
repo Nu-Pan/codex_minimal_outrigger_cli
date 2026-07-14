@@ -1,6 +1,6 @@
 """標準 prompt parts と complete prompt の組み立て結果を検証する。
 
-分割根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 from pathlib import Path
@@ -184,11 +184,11 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
     assert "`oracle spec`" in rendered
     assert "`仕様ファイル`" in rendered
     assert "`oracles file` のような typo" in rendered
-    for forbidden in ["<cmoc-root>", "<run-root>"]:
+    for forbidden in ["{{cmoc-root}}", "{{run-root}}"]:
         assert forbidden not in rendered
-    assert "<repo-root>" in rendered
-    assert "コメントにプレースホルダ `<work-root>` 起点の oracle file path を書く" in rendered
-    assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
+    assert "{{repo-root}}" in rendered
+    assert "コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く" in rendered
+    assert "`{{work-root}}/oracle/doc/...` のように根拠 path" in rendered
     for expected in [
         "oracle and realization basic",
         "oracle standard",
@@ -213,19 +213,19 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
 
     prompt = build_complete_prompt(
         role="- cmoc から呼び出された AI Agent です",
-        summary="- <repo-root> ツリー内の realization file を修正すること",
+        summary="- {{repo-root}} ツリー内の realization file を修正すること",
         goal="- realization standard と oracle standard に従うこと",
         file_access_mode=FileAccessMode.READONLY,
         aux_dynamic_prompt=[
             StructDoc(
                 "aux realization file",
-                "- <cmoc-root> と <run-root> と <work-root> 配下を確認すること",
+                "- {{cmoc-root}} と {{run-root}} と {{work-root}} 配下を確認すること",
             ),
             StructDoc(
                 "所見本文",
                 StructCodeBlock(
                     "json",
-                    '{"summary": "realization file and <repo-root> stay in code block"}',
+                    '{"summary": "realization file and {{repo-root}} stay in code block"}',
                 ),
             ),
         ],
@@ -236,11 +236,11 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     assert "- realization standard と oracle standard に従うこと" in rendered
     assert "# aux realization file" in rendered
     assert "cmoc から呼び出された" in rendered
-    assert "<repo-root> ツリー内の realization file" in rendered
-    assert "<cmoc-root> と <run-root> と <work-root> 配下" in rendered
-    assert '"summary": "realization file and <repo-root> stay in code block"' in rendered
-    assert f"- <repo-root> = {repo_root}" in rendered
-    assert f"- <work-root> = {repo_root}" in rendered
+    assert "{{repo-root}} ツリー内の realization file" in rendered
+    assert "{{cmoc-root}} と {{run-root}} と {{work-root}} 配下" in rendered
+    assert '"summary": "realization file and {{repo-root}} stay in code block"' in rendered
+    assert f"- {{{{repo-root}}}} = {repo_root}" in rendered
+    assert f"- {{{{work-root}}}} = {repo_root}" in rendered
 
 
 def test_complete_prompt_keeps_literal_root_token_comment_requirement(
@@ -253,7 +253,7 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
 
     prompt = build_complete_prompt(
         role="- role",
-        summary="- <work-root>/src/app.py を確認すること",
+        summary="- {{work-root}}/src/app.py を確認すること",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
         aux_dynamic_prompt=[],
@@ -262,10 +262,10 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
 
     rendered = render_as_markdown(prompt)
 
-    assert "- <work-root>/src/app.py を確認すること" in rendered
-    assert "コメントにプレースホルダ `<work-root>` 起点の oracle file path を書く" in rendered
-    assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
-    assert f"- <work-root> = {repo_root}" in rendered
+    assert "- {{work-root}}/src/app.py を確認すること" in rendered
+    assert "コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く" in rendered
+    assert "`{{work-root}}/oracle/doc/...` のように根拠 path" in rendered
+    assert f"- {{{{work-root}}}} = {repo_root}" in rendered
 
 
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:

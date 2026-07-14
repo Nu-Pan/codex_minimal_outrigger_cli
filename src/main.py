@@ -97,7 +97,7 @@ def doctor() -> None:
 @app.command("dector")
 def dector_alias() -> None:
     """usage 手順の `cmoc dector` を doctor 実装へ接続する CLI 入口。"""
-    # <work-root>/oracle/doc/app_spec/usage.md
+    # {{work-root}}/oracle/doc/app_spec/usage.md
     cmoc_doctor_impl()
 
 
@@ -130,7 +130,7 @@ def apply_fork(
     scope: ApplyForkScope = typer.Option(ApplyForkScope.rolling, "--scope", "-s"),
 ) -> None:
     """finding 適用用の apply run を開始する CLI 入口。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
     cmoc_apply_fork_impl(scope.value)
 
 
@@ -151,7 +151,7 @@ def review_oracle(
     scope: ReviewOracleScope = typer.Option(ReviewOracleScope.session, "--scope", "-s"),
 ) -> None:
     """oracle review を隔離 worktree で実行する CLI 入口。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     cmoc_review_oracle_impl(scope.value)
 
 
@@ -160,7 +160,7 @@ def eval_oracle(
     scope: ReviewOracleScope = typer.Option(ReviewOracleScope.session, "--scope", "-s"),
 ) -> None:
     """want を書き出した oracle を AI review する CLI 入口。"""
-    # <work-root>/oracle/doc/considered_alternative/working_plan_review.md
+    # {{work-root}}/oracle/doc/considered_alternative/working_plan_review.md
     cmoc_eval_oracle_impl(scope.value)
 
 

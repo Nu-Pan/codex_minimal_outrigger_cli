@@ -19,7 +19,7 @@ class SessionPart:
     session_home_branch: str | None = None
     session_start_commit: str | None = None
     last_joined_apply_oracle_snapshot_commit: str | None = None
-    # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
     # session abandon requires this field to remain serialized as JSON null.
     joined_at: str | None = None
 
@@ -44,7 +44,7 @@ class SessionState:
     def from_dict(
         cls: type["SessionState"], data: dict[str, Any], source: Path | None = None
     ) -> "SessionState":
-        # <work-root>/oracle/doc/app_spec/session_state.md
+        # {{work-root}}/oracle/doc/app_spec/session_state.md
         # JSON 読み込み時は、新規作成用 default で欠落 field を active/ready に補わない。
         if not isinstance(data, dict):
             raise _invalid_state(source, "top-level JSON は object である必要があります。")
@@ -79,7 +79,7 @@ def session_fork_lock(root: Path) -> Iterator[None]:
     lock_path = git_common_dir(root) / "cmoc-session-fork.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
-        # <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
         # active state の確認から branch/state 作成までを linked worktree 間で直列化する。
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
         try:

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from config.cmoc_config import CmocConfig
 
+from commons.runtime_config import sync_config
 from commons.runtime_errors import CmocError
 from commons.runtime_git import (
     ensure_cmoc_ignored,
@@ -17,13 +18,13 @@ from commons.runtime_git import (
     with_cmoc_ignore_pattern,
 )
 from commons.runtime_ollama import ensure_ollama_serves_local_slm
-from commons.runtime_paths import repo_root
+from commons.runtime_paths import config_path, repo_root
 
 
 def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
     """current と main worktree の共通修復を排他実行し、修復差分だけを commit する。"""
     root = root.resolve()
-    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # snapshot 作成から修復 commit と元の index 復元までを同じ Git common
     # directory の lock 内で行い、並行 doctor が共有 index を混ぜないようにする。
     with doctor_lock(root):
@@ -31,21 +32,47 @@ def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
         main_root = repo_root(root)
         if main_root != root:
             # サブコマンドログは doctor 開始前に main worktree 側へ作られるため、
-            # linked worktree 実行時も両方の .cmoc/local を ignore 対象にする。
+            # linked worktree 実行時も両方の .cmoc/gu を ignore 対象にする。
             repair_roots.append(main_root)
 
-        repairs: list[tuple[Path, str, bool]] = []
+        # config は worktree ごとの設定なので current work-root だけを同期する。
+        # index にはまだ触れず、後続の一時 index で他の doctor 修復と同じ
+        # commit にまとめる。
+        synced_config = sync_config(root)
+
+        repairs: list[tuple[Path, str, bool, bool]] = []
         for repair_root in repair_roots:
-            restored_index_tree = _restored_index_tree(repair_root)
+            include_config = repair_root == root
+            restored_index_tree = _restored_index_tree(
+                repair_root,
+                include_config=include_config,
+            )
             ensure_cmoc_ignored(repair_root)
             agents_gitkeep_added = _ensure_agents_tracked(repair_root)
-            repairs.append((repair_root, restored_index_tree, agents_gitkeep_added))
-
-        ensure_ollama_serves_local_slm(root, config)
-        for repair_root, restored_index_tree, agents_gitkeep_added in repairs:
-            _commit_doctor_repairs(
-                repair_root, restored_index_tree, agents_gitkeep_added
+            repairs.append(
+                (
+                    repair_root,
+                    restored_index_tree,
+                    agents_gitkeep_added,
+                    include_config,
+                )
             )
+
+        ensure_ollama_serves_local_slm(root, config or synced_config)
+
+        for (
+            repair_root,
+            restored_index_tree,
+            agents_gitkeep_added,
+            include_config,
+        ) in repairs:
+            _commit_doctor_repairs(
+                repair_root,
+                restored_index_tree,
+                agents_gitkeep_added,
+                include_config=include_config,
+            )
+        _validate_config_tracked(root)
 
 
 @contextmanager
@@ -67,7 +94,7 @@ def doctor_lock_path(root: Path) -> Path:
 
 
 def _ensure_agents_tracked(root: Path) -> bool:
-    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # .agents は agent 操作禁止領域なので、tracked file がない場合だけ
     # placeholder を追加して差分が出る余地を小さくする。
     agents = root / ".agents"
@@ -94,18 +121,43 @@ def _ensure_agents_tracked(root: Path) -> bool:
     return True
 
 
+def _validate_config_tracked(root: Path) -> None:
+    """同期済み worktree config が Git index に存在することを検証する。"""
+    config = str(config_path(root).relative_to(root))
+    tracked = run_git(["ls-files", "--", config], root).stdout.strip()
+    if tracked != config:
+        raise CmocError(
+            "cmoc config を git 追跡対象にできませんでした。",
+            ["git index と .gitignore の状態を確認してください。"],
+            f"path: {root / config}\ntracked: {tracked}",
+        )
+
+
 def _commit_doctor_repairs(
-    root: Path, restored_index_tree: str, agents_gitkeep_added: bool
+    root: Path,
+    restored_index_tree: str,
+    agents_gitkeep_added: bool,
+    *,
+    include_config: bool,
 ) -> None:
-    _commit_doctor_repairs_from_head(root, agents_gitkeep_added)
+    _commit_doctor_repairs_from_head(
+        root,
+        agents_gitkeep_added,
+        include_config=include_config,
+    )
     try:
         run_git(["reset", "-q", "HEAD"], root)
     finally:
         run_git(["read-tree", restored_index_tree], root)
 
 
-def _commit_doctor_repairs_from_head(root: Path, agents_gitkeep_added: bool) -> None:
-    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+def _commit_doctor_repairs_from_head(
+    root: Path,
+    agents_gitkeep_added: bool,
+    *,
+    include_config: bool,
+) -> None:
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # repair commit は doctor の作業差分だけなので、通常 index ではなく
     # HEAD 起点の一時 index で user staged hunks と同一 path 上でも分離する。
     fd, index_name = tempfile.mkstemp(prefix="cmoc-doctor-index-")
@@ -115,8 +167,10 @@ def _commit_doctor_repairs_from_head(root: Path, agents_gitkeep_added: bool) -> 
         _run_git_with_index(["read-tree", "HEAD"], root, index_path)
         _stage_gitignore_repair(root, index_path)
         _stage_agents_gitkeep_repair(root, index_path, agents_gitkeep_added)
+        if include_config:
+            _stage_config_repair(root, index_path)
         _run_git_with_index(
-            ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/local"],
+            ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
             root,
             index_path,
         )
@@ -148,16 +202,18 @@ def _stage_agents_gitkeep_repair(
         _stage_agents_gitkeep(root, index_path)
 
 
-def _restored_index_tree(root: Path) -> str:
-    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+def _restored_index_tree(root: Path, *, include_config: bool) -> str:
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # 復元対象は path 列挙ではなく index 全体で扱う。rename や同一 path の
     # unstaged hunk を壊さず、doctor 優先の修復だけを合成した tree を戻す。
     index_path = _copy_current_index(root)
     try:
         _stage_gitignore_repair_from_index(root, index_path)
         _stage_agents_gitkeep_repair_from_index(root, index_path)
+        if include_config:
+            _stage_config_repair(root, index_path)
         _run_git_with_index(
-            ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/local"],
+            ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
             root,
             index_path,
         )
@@ -196,7 +252,7 @@ def _stage_agents_gitkeep_repair_from_index(root: Path, index_path: Path) -> Non
 
 
 def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
-    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # HEAD に既存の placeholder がある場合は、復元用 index と repair commit 用
     # index の双方で同じ blob/mode を参照する。新規作成時だけ空 blob にする。
     entry = _head_entry(root, ".agents/.gitkeep")
@@ -205,6 +261,12 @@ def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
         return
     mode, blob = entry
     _stage_blob(root, index_path, ".agents/.gitkeep", mode, blob)
+
+
+def _stage_config_repair(root: Path, index_path: Path) -> None:
+    """同期済み config を ignore 規則に左右されず一時 index へ載せる。"""
+    path = config_path(root)
+    _stage_text(root, index_path, str(path.relative_to(root)), path.read_text())
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:
