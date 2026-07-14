@@ -115,38 +115,37 @@
 # `src`
 
 ## Summary
-- `src` は realization 側の公開実装の入口で、`main.py` の CLI 入口、`sub_commands` の各サブコマンド本体、`commons` の共通 runtime 基盤、`config` / `basic` / `acp` / `oracle.py` の互換入口を束ねる。ここでは個別ロジックそのものより、どの責務がどの下位モジュールにあるかを見分けるために読む。
+- `src` 階層は realization 側の実装本体の入口で、`acp` や `basic` などの互換公開面を通じて正本側へつなぐ実装群を束ねる。ここでは個別ロジックより、どの名前空間がどの責務を持つか、互換入口を残すか置き換えるかを判断する。
+- `src` 配下の個別モジュールは、CLI 入口、runtime、設定、共通 helper、サブコマンド実装、正本 package への shim などに分かれる。該当する責務の実装や委譲先を探すときに読む。
 
 ## Read this when
-- CLI の起動点やサブコマンドの実行入口をたどりたいとき。
-- 共通 runtime、設定、状態、ログ、Git、結果型などの shared helper の配置先を確認したいとき。
-- `acp.*`、`basic.*`、`config.*`、`oracle.*` の互換 import をどこまで維持しているかを確認したいとき。
-- realization 側でどの領域が正本実装で、どの領域が互換 shim かを切り分けたいとき。
+- `acp.*`、`basic.*`、`config.*`、`oracle.*` などの既存 import 経路を、realization 側でどう受け止めているか確認したいとき。
+- CLI 入口、runtime、共通 helper、サブコマンド実装のどこに責務があるかを切り分けたいとき。
+- 正本側の定義を複製せず、realization 側で参照・再公開・委譲している実装を探したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの処理内容、入出力、状態遷移を知りたいとき。そうした内容は `sub_commands` 配下の個別担当を読む。
-- 共通 helper の具体的な失敗時挙動や内部実装を知りたいとき。そうした内容は `commons` 配下を直接読む。
-- 互換入口の維持可否だけを判断済みで、詳細なルーティングが不要なとき。
-- 新しい機能や業務ロジックの実装場所を探しているとき。ここは主に公開面と責務の案内であり、機能追加の主戦場ではない。
+- 個別コマンドの実処理、入出力仕様、git/worktree 操作の詳細を知りたいとき。そうした内容は対応する下位モジュールを直接読む。
+- 正本仕様そのものや oracle file の記述方針を確認したいとき。`src` は実装側の入口であって正本仕様ではない。
+- 新しい公開面や機能追加の仕様を考えているだけで、既存の互換入口や委譲関係を確認する必要がないとき。
 
 ## hash
-- 3a2009a22942b86b9ae4b9184d0f4bfe366a00c589392862885184c82224b63e
+- 318f6f63915788768acd933d0b3dbb16040c76bda933f80faf71326a728cf10c
 
 # `test`
 
 ## Summary
-- `test` 配下の共通補助と回帰テストをまとめるルーティング対象である。CLI、runtime、indexing、review、apply/session、Codex 実行、prompt 組み立て、StructDoc など、責務ごとの test entry へ進むための入口になる。
-- 個別の実装仕様ではなく、どの test 群や support helper を読むべきかを切り分ける役割を持つ。共通 fixture や helper の挙動確認が必要なときはここから該当 entry へ進む。
+- `test` 配下の realization test 群をまとめて案内する入口で、CLI・runtime・builder・prompt・StructDoc などの外部挙動回帰を、対応する実装や oracle 側へ進む前に絞り込むためのルーティングを担う。
+- 個別の機能仕様ではなく、どのテスト群を読むべきかを判断するための概観だけを置き、`oracle` の正本仕様や `src` の実装本体へ直接進むべき境界を明確にする。
 
 ## Read this when
-- 共通 test helper の責務や使い分けを確認したいとき。
-- CLI、runtime、Codex 実行、apply/session、indexing、review、prompt 生成のどの test 群を読むべきか選びたいとき。
-- 複数の test ファイルにまたがる共通前提や、support file の変更影響を追いたいとき。
+- `test` 配下で、CLI 挙動、runtime 契約、builder の入出力、prompt 生成、StructDoc 変換などの回帰テストの入口を探したいとき。
+- 対象の仕様ではなく、どのテストファイルがその責務を持つかを見分けたいとき。
+- `oracle` 側の正本仕様ではなく、realization test の外部挙動・制御ロジックを確認したいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様や実装本文を確認したいときは、対応する oracle 側や realization 側を読む。
-- すでに読む対象の test ファイルが決まっているときは、このルーティング entry を経由せず直接読む。
-- INDEX.md の書き方やルーティング規則そのものを確認したいときは、上位の案内を読む。
+- 個別サブコマンドや helper の詳細を知りたいときは、対応する各 test 本文や実装側を読む。
+- 正本仕様そのものを確認したいときは `oracle` 側の本文を読む。
+- `INDEX.md` のルーティング方針そのものを確認したいときは、この配下の案内ではなく上位の INDEX を読む。
 
 ## hash
-- 34de64a3ec71e2d159ab0dd91b895755db7af8a1bc3149f92f5fa671b66de29b
+- b70665b41c77b37e7b70ff2ec52a201e0a84bc507a598c5d9aff0b20c0dd30df

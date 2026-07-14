@@ -18,16 +18,21 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- `commons` 配下の実行時共通基盤を集約する入口。Codex 実行前後の環境準備、設定・状態・ログ・パス・Git・エラー処理・結果型を横断的に使うときに読む。
+- `commons` 配下の runtime 群を束ねる統合入口。Codex 実行・TUI 起動、設定と状態の読み書き、Git/作業ツリー操作、ログ・パス・出力処理をまたいで扱うときにここを起点に読む。
+- 各低レベル helper の詳細ではなく、`cmoc` 全体の実行フローやサブコマンド横断の共通処理を追いたい場合に使う。個別の設定変換、Git 操作、状態管理だけを知りたいなら、それぞれの専用モジュールを直接読む。
 
 ## Read this when
-- サブコマンド実行の前処理や後処理、`codex` 呼び出しの準備、設定や状態ファイルの読み書き、作業ツリーやブランチの管理、ログやレポート出力、共通エラー整形を扱うとき。
+- Codex 実行や TUI 起動の前後で、設定・状態・Git・ログをどう連携させるかを確認したいとき。
+- 作業ディレクトリや worktree、branch、session、schema store などの共通パスや永続状態の扱いを横断的に把握したいとき。
+- サブコマンド実行の周辺で、エラー整形や subprocess 実行、ハッシュ付き出力、実行結果の共通表現をまとめて追いたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの入出力や制御フローだけを見たいときは、そのサブコマンド側を直接読む。実行基盤ではなく業務ロジックの詳細を探す目的ではここを起点にしない。
+- 特定の責務だけを調べたいときは、設定なら `runtime_config`、Git なら `runtime_git`、状態なら `runtime_state`、パスなら `runtime_paths` を直接読む。
+- サブコマンド固有の振る舞いだけを確認したいときは、ここではなく各サブコマンド実装を読む。
+- 個々の low-level helper の実装差だけを追う目的では、まずこの統合入口を読む必要はない。
 
 ## hash
-- 555239502325c251dbb9f35d6e2bf255b5c273cdfe678a81366abb59f02df9b3
+- 612c735076091aea4798f3103ca3c336d1c4eb55da60bd7e3e0627a360ec7021
 
 # `indexing.py`
 
@@ -52,20 +57,24 @@
 # `runtime_apply.py`
 
 ## Summary
-- `cmoc apply abandon` の cleanup と、そのために必要な worktree 解決・apply process ID 追跡・child process group 停止をまとめて扱う共通実装。`cmoc apply abandon` の挙動、停止対象の同一性確認、pidfile 生成/読取/削除、process group の終了確認を見たいときに読む。
+- apply 実行の pid / process group / worktree を扱い、`cmoc apply abandon` で安全に停止対象を特定・記録・削除するための基盤です。親 apply process と Codex child group の同一性確認、追跡用環境変数の切替、stale 判定、停止順序の制御をまとめて扱います。
+- apply の停止や追跡に関する挙動を変更する時に読む対象です。特に、pid file の形式、child group の保存・読取、親終了後の再読取、worktree 復元、停止不能時のエラー条件を確認したい場合に進みます。
+- apply abandon 以外のサブコマンド仕様、一般的な process 管理、表示文言の調整だけが目的なら、ここは優先対象ではありません。worktree 計算や process tracking を直接変更しない作業では、より上位の呼び出し元や CLI 側を先に読む方が適切です。
 
 ## Read this when
-- `cmoc apply abandon` の削除対象 worktree/branch を特定する処理を確認したい。
-- apply 実行中 process の記録・読取・削除、または PID 再利用を避けた停止判定を変えたい。
-- Codex subprocess を process group 単位で止める条件や、pidfd が使えない環境でのエラー扱いを確認したい。
+- `cmoc apply abandon` の停止対象判定、pid file 生成・読取・削除、child process group の追跡方式を変える必要があるとき。
+- apply 実行中だけ Codex child を追跡する仕組みや、親 apply process 終了後に tracking を再読込する必要があるとき。
+- branch から linked worktree を復元する処理や、`cmoc/apply/...` 形式の managed worktree path の解釈を確認したいとき。
+- 停止対象が stale かどうか、同一 process かどうか、既に終了済みかどうかの判定条件を確認したいとき。
 
 ## Do not read this when
-- session state の読み書きや branch 遷移そのものを追いたいだけなら、より上位の session/apply コマンド実装を読む。
-- 一般的な git worktree 操作や process 管理の共通基盤だけを見たいなら、この apply 専用実装ではなく該当する汎用モジュールを読む。
-- `cmoc apply abandon` 以外のサブコマンドの入出力仕様だけを確認したいなら、このファイルは読まず各サブコマンド実装へ進む。
+- apply 以外のサブコマンドの実装や CLI 引数の整理だけをしたいとき。
+- process の一般論や OS レベルのシグナル仕様だけを確認したいとき。
+- このモジュールを直接触らず、停止処理を呼ぶ上位コマンドの入出力やユーザー向けメッセージだけを変えたいとき。
+- worktree 名や session state の保存形式を変えず、単なる呼び出し順や小さなリファクタだけを行うとき。
 
 ## hash
-- 083122281aa88bc209cecf31e649d34eac38ce7b226a5b09ad220dba4158a400
+- 92dc35ad5fb186ce11086512e70eaac38531713aec7a930298e21c334f7cd765
 
 # `runtime_cli.py`
 
@@ -165,22 +174,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex subprocess の起動前後に必要な設定と検査をまとめる境界。`CODEX_HOME` 解決と検証、schema の配置、sandbox/permission profile の argv 生成、child process tracking、Codex JSONL エラー判定を扱う。
-- この層を読むべきなのは、Codex CLI に渡す実行環境や返却結果の機械的解釈を変えたいとき。ファイルアクセス許可、tracked child の記録方式、JSONL 上の capacity/quota/異常判定が主要な判断点になる。
-- Codex 本体のプロンプト内容やサブコマンド個別仕様を調べる入口ではない。実行環境の詳細な意図は必要に応じて上位の app spec 側を読む。
+- Codex CLI を起動する前後の環境組み立てと、返ってきた実行結果を正規化・判定する境界を扱う。argv の上書き、sandbox/permission profile、CODEX_HOME、schema 配置、追跡用 pid file、JSONL エラー判定をまとめて確認したいときに読む。
+- 呼び出し側が Codex 実行の権限制御や失敗時挙動を変える必要がある場合に読む。個別のサブコマンド実装や人間向け仕様文書ではなく、Codex subprocess の共通ルールを確認する入口として使う。
 
 ## Read this when
-- Codex CLI 実行時の `argv`、`CODEX_HOME`、`sandbox`、permission profile、schema 配置、error 判定のどれかを変更・確認したいとき。
-- apply 実行中の child process tracking や pid file の扱い、または quota/capacity/不正 JSONL の判定を追いたいとき。
-- Codex に渡す読み取り・書き込み境界を調整したいが、どの境界が subprocess 側で決まっているか確認したいとき。
+- Codex CLI に渡す `--sandbox` や permission profile、追加 read/write path の許可条件を確認したい。
+- `CODEX_HOME` の解決・妥当性検査、または Codex subprocess に渡す環境変数の扱いを確認したい。
+- apply 実行中の child process tracking、pidfd を使った停止、process group の終了待ちを確認したい。
+- Structured Output schema の配置、実行結果 JSON の読み取り、JSONL stdout/stderr からの容量不足・quota・予期しない error 判定を確認したい。
 
 ## Do not read this when
-- サブコマンドの業務ロジックや prompt 本文そのものを確認したいときは、そちらの app spec や prompt builder 側を先に読む。
-- 純粋な Git 操作、設定読み込み、ログ保存の実装だけを追いたいときは、この subprocess 境界より直接その担当モジュールを読む。
-- Codex CLI の仕様全体を把握したいだけで、起動前後の環境変換や結果判定を変えないなら、この層は後回しでよい。
+- 単一のコマンド定義や UI からの入力変換だけを見たい場合は、そちらのサブコマンド実装を先に読む。
+- Codex 実行前の一般的な設定値やドキュメントだけを確認したい場合は、実行境界ではなく対応する仕様文書を読む。
+- ファイルアクセス方針そのものの正本を確認したい場合は、このファイルではなく `<work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py` の側を読む。
 
 ## hash
-- 61aabd20ecbc858df411fbf137bc12073d8884eaf1214915ffd554a7aef3e813
+- 036629fcb2f8ddb5851ee6c9f0b8f8504b660cd46b04bdfd2f82477f2e04ec41
 
 # `runtime_codex_tui.py`
 

@@ -462,20 +462,21 @@
 # `test_codex_runtime_subprocess.py`
 
 ## Summary
-- `commons.runtime_codex_profile` の subprocess 実行まわりを、apply の中断・後始末要件に合わせて検証するテスト。専用プロセスグループの記録、`KeyboardInterrupt` 時の tracking 維持、外部継承した tracking 環境の無視を確認する。
+- Codex subprocess の起動・追跡・中断処理に関する realization test を集めた入口。`run_codex_subprocess` と `run_tracked_codex_subprocess` の実挙動、ならびに process group / pidfd / tracking file の扱いを確認したいときに読む。
 
 ## Read this when
-- Codex subprocess の起動条件や tracking ファイルの更新条件を変えるとき。
-- apply の abandon/cleanup に関わるプロセス管理や環境変数の扱いを確認したいとき。
-- `run_codex_subprocess` / `run_tracked_codex_subprocess` の振る舞いを追加・変更するとき。
+- Codex 起動時に apply 用の tracking 情報を引き継がない挙動を確認したい。
+- tracked subprocess が dedicated process group を記録し、child 行の追記や終了後の tracking 維持・削除をどう扱うかを確認したい。
+- SIGTERM 配信が process group 全体ではなく member ごとの pidfd ベースで行われることを確認したい。
+- communicate 中断時に child tracking を残す制御を確認したい。
 
 ## Do not read this when
-- CLI 全体の引数解釈やサブコマンド分岐を見たいだけのとき。
-- apply 以外の subprocess 利用箇所の一般的な実装を追いたいとき。
-- tracking ファイルを使わない通常の Codex 実行経路だけを確認したいとき。
+- CLI 全体の引数解析やサブコマンド定義を確認したい場合は、より上位の command ルーティング側を読む。
+- tracking ファイルの永続化形式そのものの仕様だけを知りたい場合は、対応する oracle 側の文書を読む。
+- Codex 以外の subprocess ラッパーや一般的な process management の実装を探している場合は、このテスト群ではなく該当実装モジュールを読む。
 
 ## hash
-- 9aad11766f104007dc39c6565f7f234f1a61c6dc280e9b95b5e22962de1ec3b8
+- d9461b91380b016bea99be1165e3fefc45a350180cd96dc1f260e1e1f6fa2682
 
 # `test_codex_runtime_tui.py`
 
@@ -706,20 +707,22 @@
 # `test_runtime_apply.py`
 
 ## Summary
-- `test_runtime_apply.py` は、`cmoc apply abandon` の停止契約を支える `commons.runtime_apply` の低レベル挙動を検証する実現テストです。親 process と child process group の停止順、pidfd による identity 確認、pid file の再読込、advisory lock 待ち、stale PID の扱いを確認したいときに読む対象です。
+- `commons.runtime_apply` の停止・追跡契約を、CLI ではなく低レベル API 単位で検証するテスト群。pid file、advisory lock、pidfd、process group の境界条件を押さえる入口。
+- 親 apply process と child process group の記録・再読込・停止順序、PID reuse、終了済み process、競合ロック時の待機を確認したいときに読む。
+- `test_apply_abandon_cli.py` で扱う外部 CLI 挙動ではなく、プロセス識別子の保存と停止ロジックの内部契約を確認したい場合に読む。
 
 ## Read this when
-- `commons.runtime_apply` の process tracking や停止処理を変えるとき
-- pid file / advisory lock / pidfd / process group の契約を壊していないか確認したいとき
-- `cmoc apply abandon` の実装で、親 process と child process をどう止めるかを判断したいとき
+- apply abandon の process tracking や停止処理の内部契約を追加・修正するとき。
+- pid file の読み出し、advisory lock の待機、pidfd 送信、process group 停止のどれかに関わる変更をするとき。
+- 親 process と child group の両方を扱う停止順序や、PID reuse と stale 判定の境界を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply abandon` の CLI 出力や終了コードだけを調整したいとき
-- apply abandon の外部振る舞いを確認したいだけで、低レベル停止契約には触れないとき
-- この領域の実現テストではなく、`test_apply_abandon_cli.py` 側の振る舞いを追いたいとき
+- CLI 引数、終了コード、ユーザー向け文言などの外部挙動だけを変えるときは、`test_apply_abandon_cli.py` を優先する。
+- apply abandon 以外のサブコマンドや、process tracking を伴わない一般的な runtime テストを探しているとき。
+- `oracle/doc/app_spec/sub_command/apply_abandon.md` の仕様本文を確認したいだけなら、このテストファイルではなく正本側を読む。
 
 ## hash
-- 66f7a26fdcfbe337f576bc26ca807e45648fb30e637b927817c6821992316d28
+- 06272f46d1d2a5ffd1296dc886d81fbf2c70b4236e311536767b9742caa87bc8
 
 # `test_runtime_cli.py`
 
