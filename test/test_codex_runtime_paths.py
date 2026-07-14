@@ -34,6 +34,7 @@ def run_fixed_codex_exec(root: Path, barrier: Barrier, connection: object) -> No
     attempts = 0
 
     def timestamp_factory() -> str:
+        """初回は共有 timestamp を返し、再試行では一意な suffix を付けて返す。"""
         nonlocal attempts
         attempts += 1
         if attempts == 1:
