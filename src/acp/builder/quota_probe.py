@@ -22,6 +22,10 @@ def build_quota_availability_probe_parameter(
     except ModuleNotFoundError as exc:
         if exc.name != "oracle.acp_builder.quota_probe":
             raise
+        # Keep this compatibility fallback for distributions that omit the
+        # optional oracle builder. Remove this entry and migrate all callers
+        # to the canonical builder once every supported distribution ships
+        # oracle.acp_builder.quota_probe and no caller imports this path.
         # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
         # The current oracle tree specifies only a minimal availability call and
         # has no dedicated builder. Empty stdin avoids copying a prompt into the
