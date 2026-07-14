@@ -761,22 +761,21 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- Codex の `build_codex_override_args` が作る書き込み許可の境界を検証するテスト群。`FileAccessMode` ごとの既定許可、`extra_writable_paths` の受理・拒否、`AGENTS.md` / `INDEX.md` / `memo` / `.agents` / `.cmoc/local` / `.codex` / `.git` の保護、ignore された gap path の扱いを確認したいときに読む。
-- `src` や `oracle` のような通常の作業領域と、追跡対象・無視対象・ルーティング用ファイルのどこまでを書けるかが論点なら、このテストが入口になる。権限境界そのものではなく、別の CLI 挙動や設定項目の変更ならここは読まなくてよい。
+- Codex の file access ルール生成と、`extra_writable_paths` を含む権限オーバーライドの許可・拒否境界を検証するテスト群の入口。`FileAccessMode` ごとの書き込み可否、`memo` や routing 用ファイルの保護、`.cmoc/local` などの禁止領域の扱いを確認したいときに読む。
+- `build_codex_override_args` の挙動を変える変更や、`_override_permission_filesystem` / `_override_permission_roots` に関わる権限制御の変更をするときに読む。ファイル単体の細部より、モード別の外部挙動と許可領域の境界確認が主目的。
 
 ## Read this when
-- Codex の read/write 許可領域の判定や、モード別の既定書き込み範囲を変えるとき。
-- `extra_writable_paths` を追加・変更し、その許可条件や拒否条件を確認したいとき。
-- `AGENTS.md` / `INDEX.md` / `memo` / `.agents` / `.cmoc/local` / `.codex` / `.git` の保護方針を変える可能性があるとき。
-- ignore された未追跡パスや gap path を書けるかどうかの扱いを確認したいとき。
+- `commons.runtime_codex_profile` の権限オーバーライド生成を変更したいとき
+- `FileAccessMode` ごとの read/write 境界、`memo` や `.git` 系の保護、`INDEX.md` / `AGENTS.md` の扱いを確認したいとき
+- 追加書き込み先の許可条件や、ignored path と tracked path の扱いを検証するテストを探しているとき
 
 ## Do not read this when
-- Codex の出力文面、プロンプト生成、レビュー判定など、書き込み権限以外の機能を扱うとき。
-- 実装の内部分割だけを変えたいときで、許可・拒否の境界が変わらないとき。
-- 一般的な Git 操作やファイル作成の話だけを確認したいとき。
+- Codex の prompt 文面そのものを変更したいときは、権限ルール生成元の oracle 側を先に読む
+- 一般的な Git 操作やリポジトリ構成だけを確認したいときは、この権限テストではなく対象の実装ファイルやルーティング文書を読む
+- `doctor_preprocess` の全体仕様を知りたいだけなら、このファイルではなく該当する oracle doc を読む
 
 ## hash
-- 8c55e8e1aa250ef75785626205590430a91e08a96cf7782fef12e3cd91ae53da
+- 16fb787291280934e463938f2d66e9623388ec435b18d64e705f5f6fbf0867a8
 
 # `test_runtime_codex_profile.py`
 
