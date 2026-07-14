@@ -70,7 +70,7 @@ def test_codex_runtime_rejects_non_object_jsonl_event(
             config=CmocConfig(),
         )
 
-    assert "malformed JSONL event (expected object): null" in exc_info.value.detail
+    assert "malformed JSONL event (expected object): null" not in exc_info.value.detail
 
 
 def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_output(
@@ -103,7 +103,7 @@ def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_outp
             config=CmocConfig(),
         )
 
-    assert "malformed JSONL event (invalid JSON): not-json" in exc_info.value.detail
+    assert "malformed JSONL event (invalid JSON): not-json" not in exc_info.value.detail
 
 
 def test_codex_runtime_reports_missing_codex_cli(

@@ -345,7 +345,7 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
             subcommand_logger=logger,
         )
 
-    assert "unexpected failure" in error.value.detail
+    assert "unexpected failure" not in error.value.detail
     assert counter.read_text() == "1"
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
@@ -407,7 +407,9 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
 
 
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """stdout JSONL 外の error marker を retry 判定に使わず、直接失敗させる。"""
     root = make_repo(tmp_path)
@@ -457,7 +459,8 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
         except CmocError as exc:
 
             assert exc.summary == "Codex CLI 呼び出しが失敗しました。"
-            assert expected_detail in exc.detail
+            assert expected_detail not in exc.detail
+            assert expected_detail not in capsys.readouterr().out
         else:
             raise AssertionError(f"{name} marker outside JSONL should fail directly")
         assert counter.read_text() == "1"
@@ -567,7 +570,10 @@ def test_run_codex_exec_stops_after_retry_limit(
     assert counter.read_text() == str(expected_calls)
     assert sleep_calls == expected_sleeps
     assert error.value.summary == summary
-    assert error_fragment in error.value.detail
+    if failure == "semantic":
+        assert error_fragment in error.value.detail
+    else:
+        assert error_fragment not in error.value.detail
     call_paths = sorted((root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json"))
     assert len(call_paths) == expected_calls
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]

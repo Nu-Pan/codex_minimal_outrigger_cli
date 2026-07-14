@@ -129,6 +129,25 @@ def _quota_availability_probe_parameter(
         ) from exc
 
 
+def _codex_failure_detail(
+    *,
+    classification: str,
+    returncode: int | None,
+    call_path: Path,
+    stdout_path: Path,
+    stderr_path: Path,
+) -> str:
+    """失敗した Codex の本文を露出せず、調査先だけを返す。"""
+    return "\n".join(
+        [
+            f"classification: {classification}",
+            f"returncode: {returncode if returncode is not None else 'not started'}",
+            f"call_log: {call_path}",
+            f"stdout_log: {stdout_path}",
+            f"stderr_log: {stderr_path}",
+        ]
+    )
+
 
 def _next_codex_log_timestamp() -> str:
     """壁時計後退時も同一プロセス内の Codex exec log 名を単調増加させる。"""
@@ -310,12 +329,13 @@ def run_codex_exec(
         returncode: int | None,
         status: str,
         error: str | None = None,
+        console_error: str | None = None,
         run_codex_home: Path = codex_home,
     ) -> None:
         """console と subcommand log の両方へ Codex call 結果を記録する。"""
         elapsed_sec = time.perf_counter() - started_at
         emit_codex_call_console(
-            run_purpose, run_call_path, elapsed_sec, returncode, error
+            run_purpose, run_call_path, elapsed_sec, returncode, console_error
         )
         if logger is None:
             return
@@ -391,6 +411,7 @@ def run_codex_exec(
         try:
             result = run_with_prompt_file(current_argv, prompt_path)
         except BaseException as exc:
+            startup_error = format_codex_call_error(exc)
             emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
@@ -402,7 +423,8 @@ def run_codex_exec(
                 started_at=attempt_started_at,
                 returncode=None,
                 status="failed",
-                error=format_codex_call_error(exc),
+                error=startup_error,
+                console_error=startup_error,
             )
             raise
         stdout_path.write_text(result.stdout)
@@ -480,7 +502,13 @@ def run_codex_exec(
                                 [
                                     "quota 回復後に同じ cmoc コマンドを再実行してください。"
                                 ],
-                                error_text,
+                                _codex_failure_detail(
+                                    classification="quota wait interrupted",
+                                    returncode=result.returncode,
+                                    call_path=call_path,
+                                    stdout_path=stdout_path,
+                                    stderr_path=stderr_path,
+                                ),
                             )
                         resume_token = _extract_resume_token_from_jsonl_log(
                             output_jsonl_path
@@ -506,7 +534,13 @@ def run_codex_exec(
                                 [
                                     "quota 回復後に同じ cmoc コマンドを再実行してください。"
                                 ],
-                                error_text,
+                                _codex_failure_detail(
+                                    classification="quota exhausted",
+                                    returncode=result.returncode,
+                                    call_path=call_path,
+                                    stdout_path=stdout_path,
+                                    stderr_path=stderr_path,
+                                ),
                             )
                         quota_polls += 1
                         if capacity_retry_pending:
@@ -586,6 +620,7 @@ def run_codex_exec(
                                 run_codex_env=probe_codex_env,
                             )
                         except BaseException as exc:
+                            startup_error = format_codex_call_error(exc)
                             emit_codex_call_event(
                                 run_purpose="quota availability probe",
                                 run_call_path=probe_call_path,
@@ -597,7 +632,8 @@ def run_codex_exec(
                                 started_at=probe_started_at,
                                 returncode=None,
                                 status="failed",
-                                error=format_codex_call_error(exc),
+                                error=startup_error,
+                                console_error=startup_error,
                                 run_codex_home=probe_codex_home,
                             )
                             raise
@@ -662,11 +698,12 @@ def run_codex_exec(
                             raise CmocError(
                                 "Codex CLI quota availability probe が失敗しました。",
                                 ["stderr/stdout log を確認して原因を解消してください。"],
-                                (
-                                    f"call_log: {probe_call_path}\n"
-                                    f"stdout_log: {probe_stdout_path}\n"
-                                    f"stderr_log: {probe_stderr_path}\n"
-                                    f"{probe_error_text}"
+                                _codex_failure_detail(
+                                    classification="quota availability probe failed",
+                                    returncode=poll.returncode,
+                                    call_path=probe_call_path,
+                                    stdout_path=probe_stdout_path,
+                                    stderr_path=probe_stderr_path,
                                 ),
                             )
                         emit_codex_call_event(
@@ -719,11 +756,12 @@ def run_codex_exec(
             raise CmocError(
                 "Codex CLI 呼び出しが失敗しました。",
                 ["stderr/stdout log を確認して原因を解消してください。"],
-                (
-                    f"call_log: {call_path}\n"
-                    f"stdout_log: {stdout_path}\n"
-                    f"stderr_log: {stderr_path}\n"
-                    f"{error_text}"
+                _codex_failure_detail(
+                    classification="codex exec failed",
+                    returncode=result.returncode,
+                    call_path=call_path,
+                    stdout_path=stdout_path,
+                    stderr_path=stderr_path,
                 ),
             )
         if schema_path is not None:
