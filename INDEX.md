@@ -134,18 +134,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の共通補助ファイル群を案内する入口。`acp_builder` や Codex/runtime/CLI の各テストから共通 fixture・スタブ・path 解決を再利用したいときに、個別テスト本文へ入る前のルーティング先になる。
-- ここには、CLI runner・git fixture・fake command・Ollama/doctor 補助・`acp_builder` 参照用 path helper など、複数のテストから横断利用される支援だけを置く。実装本体や各機能の正本仕様ではなく、テスト補助の責務と利用境界を確認するときに読む。
+- `test` 配下で `acp_builder` 正本定義を参照する共通 path helper と、apply 用に状態から作業先を復元する補助をまとめる案内対象。テスト側から正本 schema を直接たどる入口と、apply/session の状態・branch 約束に合わせて path を組み立てる入口を区別して読む。
 
 ## Read this when
-- 複数のテストで共通の `CliRunner`、git repository fixture、fake 外部コマンド、Ollama/doctor 呼び出し補助を使いたいとき。
-- `acp_builder` の正本 schema や branch/session/state の約束を、テスト側の path 解決や fixture から参照する必要があるとき。
-- 個別テスト本文ではなく、テスト支援ファイルがどの責務を持ち、どの補助を再利用すべきかを確認したいとき。
+- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
+- テスト用に正本 schema をコピーせず、oracle 側を参照する方針の根拠を確認したいとき。
+- apply の状態から作業先 path を導く仕様や、branch の妥当性に応じた期待 path の組み立てを確認したいとき。
+- `oracle/doc/branch_model.md` と `oracle/doc/app_spec/session_state.md` にある branch / state の約束に合わせて apply 周辺のテストを調整したいとき。
 
 ## Do not read this when
-- 各サブコマンドや runtime の実装仕様そのものを確認したいときは、対応する realization implementation や oracle 側の本文を読む。
-- 特定のテストケースの期待値や分岐だけを見たいときは、この共通支援ではなく該当する test 本文を読む。
-- `INDEX.md` のルーティング方針そのものを確認したいときは、ここではなく上位の案内を読む。
+- 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
+- 通常の作業先探索や実運用の path 解決を追いたいときは、この helper ではなく該当実装側を読む。
+- test 全体の CLI 挙動や `CliRunner` など別の共通 support を確認したいときは、この helper ではなく該当する別の test support を読む。
 
 ## hash
-- 82f6ade2306bf91d258eef0b20a9d5715eca5fd13e9c71fa34edebe97750b6a3
+- cd46b6ae80380c9d9c21c7c9e642e99a9b6dc50975247a9b287abe5d1978ced9

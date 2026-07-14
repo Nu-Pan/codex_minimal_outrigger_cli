@@ -474,21 +474,20 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- `codex_runtime_tui` の呼び出し規約とログ挙動を検証するテスト群への入口。TUI 起動前の権限制約、完成済み prompt の読み取り、`codex` 呼び出し引数、call log とサブコマンドログの記録方法を確認したいときに読む。
+- TUI 経由で `codex` を起動する runtime の振る舞いを検証するテスト群で、追加読み取りパスの境界、prompt の読み方、linked worktree での権限上書き、call log とサブコマンドイベント、CLI 不在や非 0 終了時の失敗処理をまとめて見る入口です。
 
 ## Read this when
-- `run_codex_tui` の実行順序や失敗時挙動を変えたとき。
-- 追加読み取りパスの検査、linked worktree での実行、`PURE_ORACLE_READ` 時の引数制約を確認したいとき。
-- Codex CLI の未起動、`KeyboardInterrupt`、非 0 終了をどう記録するかを確認したいとき。
-- TUI 呼び出しの console 要約、call log の重複回避、`codex_call` イベントの内容を確認したいとき。
+- TUI 実行まわりの回帰を直したり、`codex` 起動前後のログ・エラー・権限設定の扱いを確認したいとき。
+- 追加読み取りパスの許可判定、完成済み prompt の読み込み、linked worktree での実行差分を確認したいとき。
+- TUI 呼び出しの call log 生成やサブコマンドイベントの記録仕様を確認したいとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンドの振る舞いを調べたいときは、より直接の各サブコマンドのテストへ進む。
-- prompt 生成そのものや file access rule の定義だけを見たいときは、対応する oracle 側の仕様断片を先に読む。
-- ログ基盤や subprocess 共通処理の詳細だけを見たいときは、このテストではなくそれらの実装・共通テストを読む。
+- prompt 文字列の組み立て仕様そのものを見たいだけなら、関連する prompt builder 側の oracle を先に読むべきです。
+- ファイルアクセス境界の正本仕様だけを確認したいなら、TUI テストよりアクセスルールの oracle を直接読むべきです。
+- 一般的なサブコマンド実行基盤や他の runtime の挙動を追いたいだけなら、このテストファイルではなく対応する各 runtime の oracle を読むべきです。
 
 ## hash
-- 072522b94260416caf5fee59437d53215118263539804305b4326d222053cc86
+- edaaac5077072f2e53a7e1cf9b43994594b976e10bc561c7b7eb00e8be876d75
 
 # `test_doctor_cli.py`
 
