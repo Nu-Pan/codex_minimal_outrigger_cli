@@ -59,6 +59,9 @@ def test_codex_overrides_readonly_modes_allow_only_ignored_gap_writes(
         CmocConfig(),
         root,
     )
+    _assert_not_writable(override_args, root / "src" / "new.py")
+    _assert_not_writable(override_args, root / "oracle" / "new.md")
+    _assert_not_writable(override_args, root / "new.md")
 
     _assert_writable(override_args, root / "src" / "__pycache__" / "new.pyc")
     _assert_writable(override_args, root / "oracle" / "__pycache__" / "new.pyc")
