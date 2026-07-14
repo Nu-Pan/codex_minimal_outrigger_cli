@@ -32,10 +32,19 @@
 
 ## ファイルアクセス制限
 
-- Codex CLI に対するファイルアクセス制限の設定は Codex CLI の引数で上書きする
+### goal
+
+- Codex CLI が従うべきファイルアクセス制限設定は Codex CLI の引数で上書きする
 - 専用引数で表現できる設定は専用引数を使い、それ以外は `--config` を使う
 - 具体的な設定は AgentCallParameter builder を正本とする
 - cmoc はファイルアクセス制限についての情報をプロンプトとして注入して Codex CLI に知らせる
+
+### non-goal
+
+- `{{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` にある `git check-ignore` の条件は、oracle file と realization file を分類する境界条件を述べるためだけのものであり、Codex CLI のファイルアクセス制限設定を生成するための入力ではない
+- cmoc は、`.gitignore` の規則または `git check-ignore` の判定結果だけを根拠として、実在する path を Codex CLI の sandbox または permission profile の設定へ自動的に変換、列挙、注入してはならない
+- `git check-ignore` の判定結果をファイル分類や対象ファイルの選別に使用することは、この non-goal の対象外とする
+- 別の active oracle が特定の path に対するアクセス制限を明示的に要求する場合、その path が git 追跡対象外でも、そのアクセス制限はこの non-goal の対象外とする
 
 ## ファイルアクセス制限違反の事後検証とリカバリ
 
