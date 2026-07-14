@@ -1,9 +1,13 @@
+import fcntl
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
 from commons.runtime_errors import CmocError
+from commons.runtime_git import git_common_dir
 from commons.runtime_paths import sessions_dir
 
 
@@ -67,6 +71,21 @@ class SessionState:
 def state_path(root: Path, session_id: str) -> Path:
     """session_id に対応する session state file の保存先を返す。"""
     return sessions_dir(root) / f"{session_id}.json"
+
+
+@contextmanager
+def session_fork_lock(root: Path) -> Iterator[None]:
+    """repository 共通の session fork 排他 lock を保持する。"""
+    lock_path = git_common_dir(root) / "cmoc-session-fork.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock_file:
+        # <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
+        # active state の確認から branch/state 作成までを linked worktree 間で直列化する。
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def branch_session_id(branch: str, kind: str = "session") -> str:

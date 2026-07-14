@@ -6,6 +6,7 @@ from cmoc_runtime import (
     require_clean_worktree,
     require_cmoc_ignored,
     run_cli_subcommand,
+    start_subcommand_step,
     run_codex_exec,
     work_root,
 )
@@ -27,6 +28,7 @@ def cmoc_indexing_impl() -> None:
         pre_log_check=require_indexing_cli_preconditions,
         command_name="indexing",
         command_argv=["cmoc", "indexing"],
+        total_steps=3,
         # `<work-root>/oracle/doc/app_spec/sub_command/indexing.md`
         # requires the current worktree, not the main worktree, to be clean.
         use_work_root_runtime=True,
@@ -39,7 +41,9 @@ def _cmoc_indexing_body(
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
     root = work_root()
     with indexing_lock(root):
+        start_subcommand_step(2, "インデクシングを明示的に実行", "run indexing")
         updated = update_indexes(root, codex_exec)
+        start_subcommand_step(3, "インデクシング差分を commit", "commit indexing changes")
         commit_index_updates(root, updated)
     typer.echo(f"# cmoc indexing\n- updated_index_count: `{len(updated)}`")
 

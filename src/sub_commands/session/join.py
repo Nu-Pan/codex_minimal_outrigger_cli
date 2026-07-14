@@ -1,4 +1,3 @@
-import hashlib
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -10,16 +9,15 @@ from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
 from commons.indexing import enable_indexing_preflight
-from commons.runtime_git import status_path_statuses
 from cmoc_runtime import (
     CmocError,
     CommandResult,
     current_branch,
-    ensure_cmoc_ignored,
     load_state_for_branch,
     repo_root,
     require_clean_worktree,
     run_cli_subcommand,
+    start_subcommand_step,
     run_codex_exec,
     run_git,
     work_root,
@@ -40,6 +38,7 @@ def cmoc_session_join_impl() -> None:
         run_git,
         command_name="session join",
         command_argv=["cmoc", "session", "join"],
+        total_steps=4,
         use_work_root_runtime=True,
     )
 
@@ -49,6 +48,7 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
     root = repo_root()
     work = work_root()
     branch = current_branch(work)
+    start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     session_id, path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError("session join は session branch 上で実行してください。", [], branch)
@@ -59,16 +59,17 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
             json.dumps(state.to_dict(), ensure_ascii=False, indent=2),
         )
     require_clean_worktree(work)
-    ensure_cmoc_ignored(work)
     home = state.session.session_home_branch
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
+    start_subcommand_step(3, "session branch を merge", "merge session branch")
     try:
         run_git(["switch", home], work)
         merge = git(["merge", "--no-ff", branch], work, check=False)
         if merge.returncode != 0:
             resolve_session_join_conflict(work, codex_exec, git)
         state.session.state = "joined"
+        start_subcommand_step(4, "後始末と結果を表示", "finish session join")
         write_state(path, state)
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
         # delete only when the local session branch itself is reachable from
@@ -113,6 +114,7 @@ def resolve_session_join_conflict(
     git: GitRun = run_git,
 ) -> None:
     """session join の merge conflict を Codex CLI へ依頼して解消する。"""
+    start_subcommand_step("3/4, 1/5", "conflict 対象を列挙", "enumerate conflicts")
     conflicted_paths = _unmerged_paths(root, git)
     if not conflicted_paths:
         raise CmocError(
@@ -120,13 +122,16 @@ def resolve_session_join_conflict(
             ["git status を確認し、手動解決後に再実行してください。"],
             git(["status", "--short"], root).stdout,
         )
-    before_codex = _changed_path_snapshot(root, git)
+    start_subcommand_step("3/4, 2/5", "conflict marker 解消を依頼", "resolve conflicts")
     codex_exec(
         replace(
             build_session_join_conflict_resolution_parameter(conflicted_paths),
             cwd=root,
         ),
-        root=root,
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md:
+        # config/logs stay in repo-root while Codex edits this worktree.
+        root=repo_root(root),
+        cwd=root,
         purpose="session join conflict resolution",
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
         # oracle conflict の例外は prompt だけでは sandbox に効かないため、
@@ -134,7 +139,9 @@ def resolve_session_join_conflict(
         extra_writable_paths=conflicted_paths,
         allow_oracle_conflict_writes=True,
     )
-    _reject_non_conflict_changes(root, git, before_codex, conflicted_paths)
+    start_subcommand_step(
+        "3/4, 3/5", "conflict marker の残存を確認", "check conflict markers"
+    )
     remaining_markers = [
         path
         for path in conflicted_paths
@@ -144,12 +151,16 @@ def resolve_session_join_conflict(
         raise CmocError(
             "conflict marker が残っています。",
             ["conflict marker を手動で解消してから git commit してください。"],
-            "\n".join(str(path) for path in remaining_markers),
+            "\n".join(str(_absolute_path(path)) for path in remaining_markers),
         )
+    start_subcommand_step("3/4, 4/5", "conflict 対象を stage", "stage conflicts")
     for path in conflicted_paths:
         git(["add", "--", str(path.relative_to(root))], root)
     unmerged_paths = _unmerged_paths(root, git)
-    unmerged = "\n".join(str(path.relative_to(root)) for path in unmerged_paths)
+    start_subcommand_step(
+        "3/4, 5/5", "unmerged path と merge 完了を確認", "finish conflict merge"
+    )
+    unmerged = "\n".join(str(_absolute_path(path)) for path in unmerged_paths)
     if unmerged:
         raise CmocError(
             "unmerged path が残っています。",
@@ -166,70 +177,21 @@ def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
     return [root / field for field in fields if field]
 
 
-def _reject_non_conflict_changes(
-    root: Path,
-    git: GitRun,
-    before_codex: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]],
-    conflicted_paths: list[Path],
-) -> None:
-    # <work-root>/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py:
-    # REPO_WRITE is needed for oracle conflicts, so this command enforces the
-    # narrower "conflict targets only" boundary after the agent returns.
-    allowed = {_absolute_path(path) for path in conflicted_paths}
-    after_codex = _changed_path_snapshot(root, git)
-    changed = [
-        path
-        for path in before_codex.keys() | after_codex.keys()
-        if _absolute_path(path) not in allowed
-        and before_codex.get(path) != after_codex.get(path)
-    ]
-    if changed:
-        raise CmocError(
-            "conflict 解消以外の差分が残っています。",
-            ["差分を確認し、不要な変更を戻してから手動で merge を完了してください。"],
-            "\n".join(str(path.relative_to(root)) for path in changed),
-        )
-
-
-def _changed_path_snapshot(
-    root: Path, git: GitRun
-) -> dict[Path, tuple[str, tuple[str, int, int, str | None] | None]]:
-    snapshot: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]] = {}
-    for status, path in status_path_statuses(root, untracked_all=True, git=git):
-        absolute = _absolute_path(path)
-        snapshot[absolute] = (status, _path_fingerprint(absolute))
-    return snapshot
-
-
 def _absolute_path(path: Path) -> Path:
     return path if path.is_absolute() else path.absolute()
-
-
-def _path_fingerprint(path: Path) -> tuple[str, int, int, str | None] | None:
-    try:
-        stat = path.lstat()
-    except FileNotFoundError:
-        return None
-    if path.is_symlink():
-        digest = hashlib.sha256(path.readlink().as_posix().encode()).hexdigest()
-        return ("symlink", stat.st_mode, stat.st_size, digest)
-    if path.is_dir():
-        return ("dir", stat.st_mode, stat.st_size, None)
-    digest: str | None = None
-    if path.is_file():
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    return ("file", stat.st_mode, stat.st_size, digest)
 
 
 def _has_conflict_marker_block(text: str) -> bool:
     state = 0
     for line in text.splitlines():
-        if state == 0 and line.startswith("<<<<<<<"):
-            state = 1
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
+        # reject every residual conflict fragment, while a bare `=======`
+        # remains valid Markdown unless an opening marker is still active.
+        if line.startswith("<<<<<<<"):
+            state = 1
+        elif line.startswith(("|||||||", ">>>>>>>")):
+            return True
         # Git allows conflict-marker-size to exceed the default seven chars.
         elif state == 1 and len(line) >= 7 and set(line) == {"="}:
             state = 2
-        elif state == 2 and line.startswith(">>>>>>>"):
-            return True
-    return False
+    return state != 0

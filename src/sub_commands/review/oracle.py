@@ -16,6 +16,7 @@ from cmoc_runtime import (
     remove_worktree,
     repo_root,
     run_cli_subcommand,
+    start_subcommand_step,
     run_codex_exec,
     timestamp,
     work_root,
@@ -75,6 +76,7 @@ def cmoc_review_oracle_impl(scope: str) -> None:
         run_codex_exec,
         command_name="review oracle",
         command_argv=["cmoc", "review", "oracle", "--scope", scope],
+        total_steps=8,
     )
 
 
@@ -102,17 +104,21 @@ def _cmoc_review_oracle_body(
     findings: list[dict] = []
     worktree_created = False
     try:
+        start_subcommand_step(2, "run の隔離実行を開始", "start isolated review")
         create_run_worktree(current_root, review_branch, review_worktree, "HEAD")
         worktree_created = True
         try:
+            start_subcommand_step(3, "所見リストを初期化", "initialize findings")
             with pushd(review_worktree):
                 all_oracle_files = enumerate_review_all_oracle_files(review_worktree)
                 oracle_files = enumerate_review_oracle_targets(
                     review_worktree, scope, state, review_fork_commit
                 )
                 findings = run_review_oracle_loop(
-                    root, review_worktree, oracle_files, config, codex_exec
+                    root, review_worktree, oracle_files, config, codex_exec,
+                    step_callback=start_subcommand_step,
                 )
+                start_subcommand_step(7, "run の隔離実行を終了", "finish isolated review")
                 commit_review_index_changes(review_worktree)
                 review_has_index_changes = review_branch_has_index_changes(
                     review_worktree, review_fork_commit
@@ -123,6 +129,7 @@ def _cmoc_review_oracle_body(
             if worktree_created:
                 remove_worktree(current_root, review_worktree)
                 delete_branch(current_root, review_branch, force=True)
+        start_subcommand_step(8, "所見リストをレポート", "write review report")
         report_path = write_review_oracle_report(
             root,
             scope,
@@ -155,6 +162,7 @@ def _cmoc_review_oracle_body(
 
 
 def _require_clean_worktree(root: Path) -> None:
+    """git status を検査し、未コミット差分があれば CmocError を送出する。"""
     statuses = status_path_statuses(
         root, untracked_all=True, include_rename_sources=True
     )

@@ -10,6 +10,14 @@ from commons.runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/apply/", "cmoc/run/")
 CMOC_IGNORE_PATTERN = "/.cmoc/local/"
+# <work-root>/oracle/src/oracle/other/cmoc_config.py
+# Keep a broad user .cmoc/ rule effective for other children while making the
+# tracked repository config a non-ignored realization file.
+CMOC_CONFIG_IGNORE_EXCEPTIONS = (
+    "!/.cmoc/",
+    "/.cmoc/*",
+    "!/.cmoc/config.json",
+)
 CMOC_IGNORE_PROBE = ".cmoc/local/.__cmoc_ignore_probe__"
 
 
@@ -114,29 +122,48 @@ def branch_exists(root: Path, branch: str) -> bool:
 def create_run_worktree(
     root: Path, branch: str, worktree: Path, start_point: str = "HEAD"
 ) -> Path:
-    """既存 path を除去してから run/apply 用 linked worktree を作る。"""
+    """未使用 path に run/apply 用 linked worktree を作る。"""
     expected_worktree = _expected_managed_worktree(root, branch)
-    if worktree.resolve() != expected_worktree:
+    candidate = _absolute_path(worktree)
+    if _first_managed_worktree_symlink(
+        root, candidate, expected_worktree
+    ) is not None:
+        raise CmocError(
+            "run worktree path は symlink を含められません。",
+            ["branch 名と worktree path の対応を確認してください。"],
+            f"branch: {branch}\nworktree: {worktree}\nexpected: {expected_worktree}",
+        )
+    expected_worktree = expected_worktree.resolve()
+    candidate = candidate.resolve()
+    if candidate != expected_worktree:
         raise CmocError(
             "run worktree path が cmoc 管理領域と一致しません。",
             ["branch 名と worktree path の対応を確認してください。"],
             f"branch: {branch}\nworktree: {worktree}\nexpected: {expected_worktree}",
         )
-    worktree.parent.mkdir(parents=True, exist_ok=True)
-    if worktree.exists():
-        shutil.rmtree(worktree)
-    run_git(["worktree", "add", "-b", branch, str(worktree), start_point], root)
+    candidate.parent.mkdir(parents=True, exist_ok=True)
+    if candidate.exists():
+        # <work-root>/oracle/doc/branch_model.md
+        # A matching path is not evidence of a cmoc-created linked worktree; never delete it implicitly.
+        raise CmocError(
+            "run worktree path は既に存在します。",
+            ["既存の directory または worktree を確認してから再実行してください。"],
+            str(candidate),
+        )
+    run_git(["worktree", "add", "-b", branch, str(candidate), start_point], root)
     return worktree
 
 
 def remove_worktree(root: Path, worktree: Path) -> CommandResult:
-    """git worktree remove 失敗時も実体 directory の削除まで試みる。"""
-    _require_managed_worktree(root, worktree)
+    """登録済み worktree だけを git worktree として削除する。"""
+    safe_worktree = _require_managed_worktree(root, worktree)
     result = run_git(
-        ["worktree", "remove", "--force", str(worktree)], root, check=False
+        ["worktree", "remove", "--force", str(safe_worktree)], root, check=False
     )
-    if result.returncode != 0 and worktree.exists():
-        shutil.rmtree(worktree)
+    if result.returncode != 0 and safe_worktree.exists():
+        # git コマンド中の状態変化後も、登録済み path だけを再帰削除する。
+        safe_worktree = _require_managed_worktree(root, safe_worktree)
+        shutil.rmtree(safe_worktree)
     run_git(["worktree", "prune"], root, check=False)
     return result
 
@@ -160,12 +187,16 @@ def _expected_managed_worktree(root: Path, branch: str) -> Path:
             ["cmoc apply/run branch 名を確認してください。"],
             f"branch: {branch}",
         )
-    return (worktrees_dir(_main_worktree_root(root)) / parts[2] / parts[3]).resolve()
+    return worktrees_dir(_main_worktree_root(root)) / parts[2] / parts[3]
 
 
-def _require_managed_worktree(root: Path, worktree: Path) -> None:
-    base = worktrees_dir(_main_worktree_root(root)).resolve()
-    resolved = worktree.resolve()
+def _require_managed_worktree(root: Path, worktree: Path) -> Path:
+    base = worktrees_dir(_main_worktree_root(root))
+    candidate = _absolute_path(worktree)
+    if _first_managed_worktree_symlink(root, candidate) is not None:
+        raise _unmanaged_worktree_error(worktree, base)
+    base = base.resolve()
+    resolved = candidate.resolve()
     try:
         relative = resolved.relative_to(base)
     except ValueError as exc:
@@ -174,6 +205,52 @@ def _require_managed_worktree(root: Path, worktree: Path) -> None:
     # work-root deletion is limited to .cmoc/local/worktree/<parent-run-id>/<run-id>.
     if len(relative.parts) != 2 or not all(relative.parts):
         raise _unmanaged_worktree_error(worktree, base)
+    # <work-root>/oracle/doc/branch_model.md
+    # The naming convention is not enough: deletion is limited to Git linked worktrees.
+    if candidate.exists() and resolved not in _registered_worktree_paths(root):
+        raise _unmanaged_worktree_error(worktree, base)
+    return resolved
+
+
+def _absolute_path(path: Path) -> Path:
+    """symlink 検査前に相対 path を絶対 path へ変換する。"""
+    return path if path.is_absolute() else Path.cwd() / path
+
+
+def _first_symlink_component(path: Path) -> Path | None:
+    """path を順にたどり、最初に見つかった symlink component を返す。"""
+    absolute = _absolute_path(path)
+    current = Path(absolute.anchor)
+    for part in absolute.parts[1:]:
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            current = current.parent
+            continue
+        current /= part
+        if current.is_symlink():
+            return current
+    return None
+
+
+def _first_managed_worktree_symlink(root: Path, *paths: Path) -> Path | None:
+    """managed base と path の symlink component を探す。"""
+    # <work-root>/oracle/doc/branch_model.md
+    # resolve() だけでは repo 外の実体が managed path に見えるため、canonicalize 前に
+    # lexical path の component を検査して、作成・削除の両方で symlink 経由を拒否する。
+    for path in (worktrees_dir(_main_worktree_root(root)), *paths):
+        if symlink := _first_symlink_component(path):
+            return symlink
+    return None
+
+
+def _registered_worktree_paths(root: Path) -> set[Path]:
+    output = run_git(["worktree", "list", "--porcelain"], root).stdout
+    return {
+        Path(line.removeprefix("worktree ")).resolve()
+        for line in output.splitlines()
+        if line.startswith("worktree ")
+    }
 
 
 def _unmanaged_worktree_error(worktree: Path, base: Path) -> CmocError:
@@ -184,11 +261,16 @@ def _unmanaged_worktree_error(worktree: Path, base: Path) -> CmocError:
     )
 
 
-def _main_worktree_root(root: Path) -> Path:
+def git_common_dir(root: Path) -> Path:
+    """Git common directory の絶対 path を返す。"""
     common = run_git(
         ["rev-parse", "--path-format=absolute", "--git-common-dir"], root
     ).stdout.strip()
-    return Path(common).parent.resolve()
+    return Path(common).resolve()
+
+
+def _main_worktree_root(root: Path) -> Path:
+    return git_common_dir(root).parent
 
 
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
@@ -203,9 +285,15 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
 
 
 def with_cmoc_ignore_pattern(content: str) -> str:
-    """既存の末尾改行を崩さず .cmoc/local ignore pattern を追加する。"""
+    """既存の末尾改行を崩さず cmoc の ignore 規則を追加する。"""
     lines = content.splitlines()
     patterns = []
+    if any(line in {".cmoc/", "/.cmoc/"} for line in lines):
+        patterns.extend(
+            pattern
+            for pattern in CMOC_CONFIG_IGNORE_EXCEPTIONS
+            if pattern not in lines
+        )
     if CMOC_IGNORE_PATTERN not in lines:
         patterns.append(CMOC_IGNORE_PATTERN)
     if not patterns:
@@ -228,7 +316,7 @@ def ensure_cmoc_ignored(root: Path) -> None:
     if not tracked and ignored_returncode == 0:
         return
 
-    run_git(["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc/local"], root)
+    run_git(["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/local"], root)
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(

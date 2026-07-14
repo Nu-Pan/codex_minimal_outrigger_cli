@@ -2,6 +2,7 @@ import fcntl
 from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import copy_context
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
@@ -73,9 +74,22 @@ def commit_index_updates(root: Path, updated: list[Path]) -> None:
         run_git(["add", "--", *index_paths], root)
     if not index_paths:
         return
-    diff = run_git(["diff", "--cached", "--quiet", "--", *index_paths], root, check=False)
+    diff_args = ["diff", "--cached", "--quiet", "--", *index_paths]
+    diff = run_git(diff_args, root, check=False)
+    if diff.returncode == 0:
+        return
     if diff.returncode == 1:
         run_git(["commit", "-m", "cmoc indexing", "--", *index_paths], root)
+        return
+    if diff.returncode != 0:
+        # <work-root>/oracle/doc/app_spec/indexing.md requires Git failures to
+        # fail indexing; only `git diff --quiet` status 1 means “changes exist”.
+        raise CmocError(
+            "INDEX.md 差分の確認に失敗しました。",
+            ["git の状態を確認してから、同じ cmoc コマンドを再実行してください。"],
+            f"command: git {' '.join(diff_args)}\n"
+            f"stdout:\n{diff.stdout}\nstderr:\n{diff.stderr}",
+        )
 
 
 def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path]:
@@ -114,7 +128,16 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
                 )
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                for plan, index, entry in executor.map(build_missing, missing):
+                # ContextVars are not inherited by worker threads. Copy each
+                # caller context before submit so Codex events reach the
+                # subcommand log used by the parent command.
+                # <work-root>/oracle/doc/app_spec/console_and_file_log.md
+                futures = [
+                    executor.submit(copy_context().run, build_missing, item)
+                    for item in missing
+                ]
+                for future in futures:
+                    plan, index, entry = future.result()
                     plan.entries[index] = entry
         for plan in plans:
             entries = [entry for entry in plan.entries if entry is not None]

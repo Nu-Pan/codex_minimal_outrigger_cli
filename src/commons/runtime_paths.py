@@ -1,5 +1,7 @@
 import os
-from collections.abc import Iterator
+import threading
+import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -7,6 +9,8 @@ from pathlib import Path
 from basic.path_model import RootPathPlaceHolder, resolve_real_path
 
 from commons.runtime_errors import CmocError
+
+_CWD_LOCK = threading.RLock()
 
 
 def repo_root(cwd: Path | None = None) -> Path:
@@ -34,8 +38,18 @@ def work_root(cwd: Path | None = None) -> Path:
 
 
 def _resolve_root(placeholder: RootPathPlaceHolder, cwd: Path | None) -> Path:
+    """指定された起点から root placeholder を実パスへ解決する。
+
+    Args:
+        placeholder: 解決対象の root placeholder。
+        cwd: 起点にする file または directory。None は現在の cwd を使う。
+
+    Returns:
+        placeholder が示す絶対 root path。
+    """
     if cwd is None:
-        return resolve_real_path(placeholder)
+        with _CWD_LOCK:
+            return resolve_real_path(placeholder)
     start_dir = cwd.resolve() if cwd.is_dir() else cwd.resolve().parent
     # <work-root>/oracle/src/oracle/other/path_model.py
     # root resolver は resolve_real_path 専用の内部実装なので、cwd 起点の
@@ -49,6 +63,23 @@ def timestamp() -> str:
     return datetime.now().strftime("%Y-%m-%d_%H-%M_%S_%f000")
 
 
+def _reserve_timestamped_path(
+    directory: Path, suffix: str, timestamp_factory: Callable[[], str]
+) -> tuple[str, Path]:
+    """timestamp 付き path を排他的に予約し、timestamp と path を返す。"""
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # <work-root>/oracle/doc/app_spec/console_and_file_log.md
+    # 壁時計 timestamp が衝突しても、内容を書き始める前に別 path を予約する。
+    while True:
+        value = timestamp_factory()
+        path = directory / f"{value}{suffix}"
+        try:
+            path.open("x").close()
+            return value, path
+        except FileExistsError:
+            time.sleep(0.000001)
+
+
 def console_timestamp() -> str:
     """利用者向け console 表示用にミリ秒までの時刻表記を返す。"""
     return datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")[:-3]
@@ -58,6 +89,10 @@ def format_duration(seconds: float) -> str:
     """ログと console の duration 表示を丸めず 0.1 秒単位へそろえる。"""
     total_tenths = int(seconds * 10)
     hours = total_tenths // 36000
+    # <work-root>/oracle/doc/app_spec/console_and_file_log.md requires a two-digit
+    # hour field, so an unrepresentable duration fails instead of widening it.
+    if hours >= 100:
+        raise ValueError("duration exceeds the two-digit hour display limit")
     minutes = (total_tenths % 36000) // 600
     sec_tenths = total_tenths % 600
     sec = sec_tenths // 10
@@ -109,13 +144,15 @@ def is_root_memo(root: Path, path: Path) -> bool:
 
 @contextmanager
 def pushd(path: Path) -> Iterator[None]:
-    """外部 API が cwd 前提を持つ短い区間だけ作業 directory を差し替える。"""
-    previous = Path.cwd()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(previous)
+    """外部 API が cwd 前提を持つ区間を process-wide に直列化する。"""
+    # os.chdir は process-global なので、切替から復元まで lock を保持する。
+    with _CWD_LOCK:
+        previous = Path.cwd()
+        os.chdir(path)
+        try:
+            yield
+        finally:
+            os.chdir(previous)
 
 
 def cmoc_root() -> Path:

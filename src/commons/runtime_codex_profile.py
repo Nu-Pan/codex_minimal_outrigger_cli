@@ -11,7 +11,10 @@ subprocess 境界の不変条件を共有するため、分割すると呼び出
 import fcntl
 import json
 import os
+import select
+import signal
 import subprocess
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -22,14 +25,17 @@ from config.cmoc_config import CmocConfig
 
 from commons.runtime_content import write_hashed_file
 from commons.runtime_errors import CmocError
-from commons.runtime_git import is_oracle_file_path, is_untracked_git_ignored
+from commons.runtime_git import (
+    is_oracle_file_path,
+    is_untracked_git_ignored,
+    run_git,
+)
 from commons.runtime_paths import logs_dir, schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
 _active_apply_process_tracking_path: Path | None = None
 _CODEX_BLOCKED_ROOT_NAMES = {
     ".agents",
-    ".cmoc",
     ".codex",
     ".git",
     ".pytest_cache",
@@ -40,7 +46,6 @@ _CODEX_BLOCKED_ROOT_NAMES = {
 _REPO_WRITE_BLOCKED_ROOT_NAMES = _CODEX_BLOCKED_ROOT_NAMES
 _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".agents",
-    ".cmoc",
     ".codex",
     ".git",
     "memo",
@@ -49,6 +54,14 @@ _DENIED_WRITE_FILE_NAMES = {"AGENTS.md", "INDEX.md"}
 _STANDARD_REALIZATION_WRITE_PATHS = ("src", "test", "bin", ".gitignore")
 _OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
 _CMOC_PERMISSION_PROFILE = "cmoc"
+_PERMISSION_PROFILE_WRITE_MODES = frozenset(
+    {
+        FileAccessMode.REALIZATION_WRITE,
+        FileAccessMode.PURE_ORACLE_WRITE,
+        FileAccessMode.REPO_WRITE,
+        FileAccessMode.NO_RULE,
+    }
+)
 
 
 @contextmanager
@@ -67,6 +80,165 @@ def apply_process_id_file_lock(path: Path) -> Iterator[None]:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
+def open_process_fd(process_id: int, process_name: str = "apply process") -> int | None:
+    """pidfd 対応環境でだけ race を避けた process 参照を開く。"""
+    if not (hasattr(os, "pidfd_open") and hasattr(signal, "pidfd_send_signal")):
+        raise CmocError(
+            f"{process_name} の同一性を安全に確認できません。",
+            [f"{process_name} を手動で停止してから再実行してください。"],
+            f"pid: {process_id}",
+        )
+    try:
+        return os.pidfd_open(process_id)
+    except ProcessLookupError:
+        return None
+    except PermissionError as exc:
+        raise CmocError(
+            f"実行中 {process_name} の確認権限がありません。",
+            [f"{process_name} を手動で確認してから再実行してください。"],
+            f"pid: {process_id}",
+        ) from exc
+
+
+def send_process_signal(
+    process_fd: int,
+    process_id: int,
+    sig: signal.Signals,
+    process_name: str = "apply process",
+) -> None:
+    """pidfd 経由で process へ signal を送り、PID reuse を避ける。"""
+    try:
+        signal.pidfd_send_signal(process_fd, sig)
+    except ProcessLookupError:
+        return
+    except PermissionError as exc:
+        raise CmocError(
+            f"実行中 {process_name} を停止する権限がありません。",
+            [f"{process_name} を手動で停止してから再実行してください。"],
+            f"pid: {process_id}",
+        ) from exc
+
+
+def wait_process_fd_exit(process_fd: int, timeout_sec: float) -> bool:
+    """pidfd の readable 化を process 終了として待つ。"""
+    readable, _, _ = select.select([process_fd], [], [], timeout_sec)
+    return bool(readable)
+
+
+def _process_stat(process_id: int) -> list[str] | None:
+    try:
+        stat = Path(f"/proc/{process_id}/stat").read_text()
+    except OSError:
+        return None
+    try:
+        fields = stat.rsplit(") ", 1)[1].split()
+    except IndexError:
+        return None
+    return fields if len(fields) > 19 else None
+
+
+def process_start_time(process_id: int) -> int | None:
+    """pid 再利用を検出するため Linux proc stat の starttime を読む。"""
+    fields = _process_stat(process_id)
+    if fields is None:
+        return None
+    try:
+        return int(fields[19])
+    except ValueError:
+        return None
+
+
+def process_group_members(
+    process_group_id: int,
+) -> tuple[tuple[int, int], ...] | None:
+    """group 内の非 zombie process を PID と starttime の組で列挙する。"""
+    proc = Path("/proc")
+    if not proc.is_dir():
+        return None
+    members: list[tuple[int, int]] = []
+    try:
+        entries = tuple(proc.iterdir())
+    except OSError:
+        return None
+    for path in entries:
+        if not path.name.isdigit():
+            continue
+        fields = _process_stat(int(path.name))
+        if fields is None:
+            continue
+        try:
+            state = fields[0]
+            member_group_id = int(fields[2])
+            start_time = int(fields[19])
+        except ValueError:
+            continue
+        if member_group_id == process_group_id and state != "Z":
+            members.append((int(path.name), start_time))
+    return tuple(members)
+
+
+def process_group_has_running_member(process_group_id: int) -> bool:
+    """group 内に停止対象となる process が残っているか確認する。"""
+    members = process_group_members(process_group_id)
+    return members is None or bool(members)
+
+
+def wait_process_group_exit(process_group_id: int, timeout_sec: float) -> bool:
+    """数値 PGID へ signal を送らず、group が空になるまで待つ。"""
+    deadline = time.monotonic() + timeout_sec
+    while process_group_has_running_member(process_group_id):
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.05)
+    return True
+
+
+def signal_process_group_members(
+    process_group_id: int, sig: signal.Signals
+) -> None:
+    """group member を個別 pidfd で再検証して signal を送る。"""
+    members = process_group_members(process_group_id)
+    if members is None:
+        raise CmocError(
+            "実行中 Codex subprocess の process group を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pgid: {process_group_id}",
+        )
+    for process_id, expected_start_time in members:
+        process_fd = open_process_fd(process_id, "Codex subprocess")
+        if process_fd is None:
+            continue
+        try:
+            # stat 読み取りと pidfd_open の間の PID reuse も signal 前に捨てる。
+            if process_start_time(process_id) != expected_start_time:
+                continue
+            send_process_signal(
+                process_fd,
+                process_id,
+                sig,
+                "Codex subprocess",
+            )
+        finally:
+            os.close(process_fd)
+
+
+def stop_process_group(process_group_id: int) -> None:
+    """Codex group を個別 pidfd で SIGTERM、必要なら SIGKILL する。"""
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
+    signal_process_group_members(process_group_id, signal.SIGTERM)
+    if wait_process_group_exit(process_group_id, 5.0):
+        return
+    signal_process_group_members(process_group_id, signal.SIGKILL)
+    if wait_process_group_exit(process_group_id, 5.0):
+        return
+    raise CmocError(
+        "実行中 Codex subprocess を停止できません。",
+        ["Codex subprocess を確認して停止後に再実行してください。"],
+        f"pgid: {process_group_id}",
+    )
+
+
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
     """cmoc の file access policy を Codex CLI が理解する sandbox 名へ落とす。"""
     match mode:
@@ -81,12 +253,6 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             return "workspace-write"
         case _:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
-
-
-def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
-    """旧互換 API。Codex 作業 root は AgentCallParameter.cwd が正本。"""
-    root = root.resolve()
-    return root
 
 
 def parameter_codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) -> Path:
@@ -160,6 +326,20 @@ def _toml_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def _toml_inline_table(values: dict[str, Any]) -> str:
+    """ネストした値を Codex の inline TOML table に変換する。"""
+    rendered: list[str] = []
+    for key, value in sorted(values.items()):
+        if isinstance(value, dict):
+            value_text = _toml_inline_table(value)
+        elif isinstance(value, int):
+            value_text = str(value)
+        else:
+            value_text = _toml_string(value)
+        rendered.append(f"{_toml_string(key)} = {value_text}")
+    return "{ " + ", ".join(rendered) + " }"
+
+
 def _writable_roots(
     mode: FileAccessMode,
     root: Path,
@@ -182,21 +362,30 @@ def _writable_roots(
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # `.agents` is a Codex-reserved tree, so opening <work-root> itself
-            # would grant a write path that codex exec cannot safely mediate.
+            # The permission profile opens work-root itself so a new root-level
+            # realization file has a parent write root. Narrower read/deny
+            # entries below keep reserved trees and oracle outside that scope.
             paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # Keep the sandbox roots positive-only; root itself would include
-            # `.agents`, `.git`, `.codex`, memo, and cmoc runtime state.
+            # The root write entry is paired with narrower protected entries in
+            # `_permission_profile_filesystem_overrides`.
             paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.NO_RULE:
-            paths = [root]
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # NO_RULE omits the prompt rule; `.cmoc/local` and Codex-reserved
+            # trees stay blocked in the argv permission profile.
+            paths = _top_level_writable_roots(mode, root)
         case _:
             paths = []
+    if allow_oracle_conflict_writes:
+        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # Conflict resolution exposes only explicit targets before launch.
+        paths = []
     result: list[Path] = []
     seen: set[Path] = set()
     for path in paths:
@@ -226,7 +415,13 @@ def _writable_roots(
 
 
 def _top_level_writable_roots(mode: FileAccessMode, root: Path) -> list[Path]:
-    """root 自体を開かず、許可済み top-level path だけを候補にする。"""
+    """permission profile 用の top-level write root を返す。"""
+    if mode in {FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE}:
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+        # New root-level files cannot be named in advance. Codex permission
+        # entries use most-specific matching, so the root write is safe only
+        # together with the protected descendants added below.
+        return [root]
     paths: list[Path] = []
     candidates = [root / name for name in _STANDARD_REALIZATION_WRITE_PATHS]
     if mode == FileAccessMode.REPO_WRITE:
@@ -320,6 +515,10 @@ def _should_expand_writable_directory(
     ):
         return True
     if mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
+        if path.resolve() == (root / ".cmoc").resolve():
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+            # Keep non-ignored .cmoc files addressable without opening runtime state.
+            return True
         return False
     if not is_untracked_git_ignored(root, path):
         return True
@@ -373,6 +572,11 @@ def _is_writable_path_allowed(
         and is_untracked_git_ignored(root, path)
     ):
         return False
+    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    # .cmoc/config.json is a realization file, while .cmoc/local is generated
+    # runtime state and must remain outside every write mode.
+    if relative.parts[:2] == (".cmoc", "local"):
+        return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
         # session join の conflict 解消は oracle file も git conflict 対象なら編集する。
@@ -409,7 +613,6 @@ def _is_realization_file_path(root: Path, path: Path) -> bool:
         ".git",
         ".agents",
         ".codex",
-        ".cmoc",
     }:
         return False
     return path.name not in _DENIED_WRITE_FILE_NAMES and not is_untracked_git_ignored(
@@ -420,35 +623,6 @@ def _is_realization_file_path(root: Path, path: Path) -> bool:
 def _config_override(key: str, toml_value: str) -> list[str]:
     """Codex CLI の単一 config override を argv fragment にする。"""
     return ["--config", f"{key}={toml_value}"]
-
-
-def _workspace_write_override_args(writable_roots: list[Path]) -> list[str]:
-    """workspace-write の追加 writable roots を argv で上書きする。"""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # FileAccessMode の細かい deny は prompt 側にも載せるが、Codex config
-    # で表現できる sandbox 境界は argv でも必ず上書きしてから起動する。
-    roots = ", ".join(_toml_string(str(path)) for path in writable_roots)
-    return _config_override(
-        "sandbox_workspace_write.writable_roots", f"[{roots}]"
-    )
-
-
-def _needs_permission_profile(
-    mode: FileAccessMode,
-    root: Path,
-    extra_read_paths: list[Path] | None,
-    extra_read_root: Path | None,
-) -> bool:
-    """sandbox mode だけで表現できない読み取り境界を判定する。"""
-    return mode in {
-        FileAccessMode.READONLY,
-        FileAccessMode.PURE_ORACLE_READ,
-        FileAccessMode.PURE_ORACLE_WRITE,
-    } or (
-        mode != FileAccessMode.NO_RULE
-        and extra_read_root is not None
-        and extra_read_root.resolve() != root
-    ) or any(not path.resolve().is_relative_to(root) for path in extra_read_paths or [])
 
 
 def _read_roots_for_permission_profile(
@@ -504,9 +678,148 @@ def _top_level_read_roots(mode: FileAccessMode, root: Path) -> list[Path]:
     ]
 
 
+def _iter_worktree_paths(root: Path) -> Iterator[Path]:
+    """work-root 配下を symlink の解決先へ降りずに列挙する。"""
+    if not root.is_dir() or root.is_symlink():
+        return
+    try:
+        paths = sorted(root.iterdir())
+    except OSError:
+        return
+    for path in paths:
+        yield path
+        if path.is_dir() and not path.is_symlink():
+            yield from _iter_worktree_paths(path)
+
+
+def _git_tracked_paths(root: Path) -> set[Path]:
+    """tracked descendant の復元に使う index path を一度だけ取得する。"""
+    result = run_git(["ls-files", "-z", "--"], root, check=False)
+    if result.returncode != 0:
+        return set()
+    return {root / relative for relative in result.stdout.split("\0") if relative}
+
+
+def _is_ignored_directory(root: Path, path: Path) -> bool:
+    return is_untracked_git_ignored(root, path) or is_untracked_git_ignored(
+        root, path / ".__cmoc_ignore_probe__"
+    )
+
+
+def _ignored_path_overrides(mode: FileAccessMode, root: Path) -> dict[str, str]:
+    """ignored directory を read にし、内部の tracked file だけ write に戻す。"""
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # git check-ignore が対象外と判定する tracked file は realization/oracle の
+    # 定義に残るため、ignored directory 全体の read rule で巻き込まない。
+    overrides: dict[str, str] = {}
+    ignored_directories: list[Path] = []
+    for path in _iter_worktree_paths(root):
+        resolved = path.resolve()
+        if not resolved.is_relative_to(root):
+            continue
+        if path.is_dir() and not path.is_symlink():
+            if _is_ignored_directory(root, path):
+                overrides[str(resolved)] = "read"
+                ignored_directories.append(path)
+        elif is_untracked_git_ignored(root, path):
+            overrides[str(resolved)] = "read"
+
+    tracked_paths = _git_tracked_paths(root)
+    for path in tracked_paths:
+        if not any(path.is_relative_to(directory) for directory in ignored_directories):
+            continue
+        resolved = path.resolve()
+        if resolved.is_relative_to(root) and _is_writable_path_allowed(
+            mode, root, path
+        ):
+            overrides[str(resolved)] = "write"
+    return overrides
+
+
+def _external_symlink_overrides(
+    root: Path, extra_read_root: Path | None
+) -> dict[str, str]:
+    """work-root 外へ解決する symlink の target を deny にする。"""
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    # work-root 外は読み書き禁止で、例外は repo-root/.cmoc/local の read だけ。
+    allowed_read_root = (
+        _repo_local_read_root(extra_read_root)
+        if extra_read_root is not None
+        else None
+    )
+    overrides: dict[str, str] = {}
+    for path in _iter_worktree_paths(root):
+        if not path.is_symlink():
+            continue
+        resolved = path.resolve()
+        if resolved.is_relative_to(root) or (
+            allowed_read_root is not None
+            and resolved.is_relative_to(allowed_read_root)
+        ):
+            continue
+        overrides[str(resolved)] = "deny"
+    return overrides
+
+
+def _permission_profile_filesystem_overrides(
+    mode: FileAccessMode,
+    root: Path,
+    extra_read_root: Path | None = None,
+) -> dict[str, Any]:
+    """permission profile に、将来の path にも効く保護 rule を追加する。"""
+    overrides: dict[str, Any] = {}
+    if mode in _PERMISSION_PROFILE_WRITE_MODES:
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+        # memo は広い read root に含まれるため deny し、routing file は Codex が
+        # 受理する exact な :workspace_roots rule で read のまま write だけ防ぐ。
+        routing_rules = {name: "read" for name in _DENIED_WRITE_FILE_NAMES}
+        overrides.update(
+            {
+                str((root / "memo").resolve()): "deny",
+                ":workspace_roots": routing_rules,
+            }
+        )
+        if mode in {FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE}:
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # A root write is required for unknown, non-protected root-level
+            # realization files. Codex selects the most specific filesystem rule,
+            # so protect the fixed reserved roots explicitly instead of relying on
+            # a later diff check (which is not an access control mechanism).
+            overrides.update(
+                {
+                    str(root.resolve() / name): "read"
+                    for name in (".agents", ".codex", ".git", ".pytest_cache")
+                }
+            )
+            overrides[str((root / ".cmoc" / "local").resolve())] = "read"
+            if mode == FileAccessMode.REALIZATION_WRITE:
+                overrides[str((root / "oracle").resolve())] = "read"
+            overrides.update(
+                {
+                    str((root / name).resolve()): "read"
+                    for name in _DENIED_WRITE_FILE_NAMES
+                }
+            )
+        overrides.update(_ignored_path_overrides(mode, root))
+        if mode in {
+            FileAccessMode.REALIZATION_WRITE,
+            FileAccessMode.REPO_WRITE,
+            FileAccessMode.NO_RULE,
+        }:
+            # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+            # .cmoc/local is readable runtime state, but never a write target.
+            overrides[str((root / ".cmoc" / "local").resolve())] = "read"
+    # Keep this rule for read-only modes too: their read roots can contain a
+    # nested symlink even though they do not have a work-root write entry.
+    overrides.update(_external_symlink_overrides(root, extra_read_root))
+    return overrides
+
+
 def _permission_profile_override_args(
     read_roots: list[Path],
     writable_roots: list[Path],
+    protected_paths: list[Path],
+    filesystem_overrides: dict[str, Any] | None = None,
 ) -> list[str]:
     """Codex beta permission profile を config override argv で渡す。"""
     # <work-root>/oracle/doc/app_spec/sub_command/tui.md
@@ -516,12 +829,13 @@ def _permission_profile_override_args(
     # workspace writable"; permission profiles can.
     entries = {str(path): "read" for path in read_roots}
     entries.update({str(path): "write" for path in writable_roots})
-    filesystem = ", ".join(
-        f"{_toml_string(path)} = {_toml_string(access)}"
-        for path, access in sorted(entries.items())
-    )
+    # A parent write grant is needed for new files.  A narrower read grant
+    # keeps existing AGENTS.md/INDEX.md files protected inside that parent.
+    entries.update({str(path): "read" for path in protected_paths})
+    entries.update(filesystem_overrides or {})
+    filesystem = _toml_inline_table(entries)
     permission = (
-        f'{{ extends = ":workspace", filesystem = {{ {filesystem} }} }}'
+        f'{{ extends = ":workspace", filesystem = {filesystem} }}'
     )
     return [
         *_config_override(
@@ -531,6 +845,22 @@ def _permission_profile_override_args(
             f"permissions.{_CMOC_PERMISSION_PROFILE}", permission
         ),
     ]
+
+
+def _protected_writable_paths(writable_roots: list[Path]) -> list[Path]:
+    """書き込み root 配下の AGENTS.md/INDEX.md を具体的な read rule にする。"""
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+    paths: set[Path] = set()
+    for root in writable_roots:
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if path.name not in _DENIED_WRITE_FILE_NAMES:
+                continue
+            resolved = path.resolve()
+            if resolved.is_relative_to(root.resolve()):
+                paths.add(resolved)
+    return sorted(paths)
 
 
 def _ollama_provider_override_args() -> list[str]:
@@ -579,7 +909,6 @@ def build_codex_override_args(
     use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"
     if use_cmoc_managed_ollama:
         args.extend(_ollama_provider_override_args())
-    use_permission_profile = False
     if root is not None:
         root = root.resolve()
         read_root = (extra_read_root or root).resolve()
@@ -589,10 +918,7 @@ def build_codex_override_args(
             extra_read_paths,
             extra_read_root=read_root,
         )
-        use_permission_profile = _needs_permission_profile(
-            parameter.file_access_mode, root, extra_read_paths, read_root
-        )
-    if not use_permission_profile:
+    else:
         sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
         args.extend(["--sandbox", sandbox_mode])
     if root is not None:
@@ -602,17 +928,18 @@ def build_codex_override_args(
             extra_writable_paths,
             allow_oracle_conflict_writes,
         )
-        if use_permission_profile:
-            args.extend(
-                _permission_profile_override_args(
-                    _read_roots_for_permission_profile(
-                        parameter.file_access_mode, root, extra_read_paths, read_root
-                    ),
-                    writable_roots,
-                )
+        args.extend(
+            _permission_profile_override_args(
+                _read_roots_for_permission_profile(
+                    parameter.file_access_mode, root, extra_read_paths, read_root
+                ),
+                writable_roots,
+                _protected_writable_paths(writable_roots),
+                _permission_profile_filesystem_overrides(
+                    parameter.file_access_mode, root, extra_read_root=read_root
+                ),
             )
-        else:
-            args.extend(_workspace_write_override_args(writable_roots))
+        )
     return args
 
 
@@ -743,24 +1070,47 @@ def run_tracked_codex_subprocess(
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
     process: subprocess.Popen[Any] | None = None
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # Popen と child 行の登録だけを遅延させ、exec 後の child は通常の SIGTERM を受ける。
+    previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
+    sigterm_pending = False
+
+    def defer_sigterm(_signum: int, _frame: Any) -> None:
+        nonlocal sigterm_pending
+        sigterm_pending = True
+
+    signal.signal(signal.SIGTERM, defer_sigterm)
     try:
-        with apply_process_id_file_lock(tracking_path):
-            process = subprocess.Popen(argv, start_new_session=True, **kwargs)
-            _record_tracked_child_process(tracking_path, process.pid)
-    except OSError as exc:
-        if process is None:
-            raise
-        process.terminate()
         try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-        raise CmocError(
-            "apply process tracking を更新できません。",
-            ["apply process pid file の権限と保存先を確認してください。"],
-            f"path: {tracking_path}\nerror: {exc}",
-        ) from exc
+            with apply_process_id_file_lock(tracking_path):
+                process = subprocess.Popen(argv, start_new_session=True, **kwargs)
+                _record_tracked_child_process(
+                    tracking_path, process.pid, process_group_id=process.pid
+                )
+        except OSError as exc:
+            if process is None:
+                raise
+            try:
+                stop_process_group(process.pid)
+            except CmocError as cleanup_exc:
+                raise CmocError(
+                    "apply process tracking を更新できません。",
+                    [
+                        "apply process pid file の権限と保存先を確認してください。",
+                        "Codex subprocess の停止にも失敗しました。",
+                    ],
+                    f"path: {tracking_path}\nerror: {exc}\ncleanup: {cleanup_exc}",
+                ) from exc
+            raise CmocError(
+                "apply process tracking を更新できません。",
+                ["apply process pid file の権限と保存先を確認してください。"],
+                f"path: {tracking_path}\nerror: {exc}",
+            ) from exc
+    finally:
+        signal.signal(signal.SIGTERM, previous_sigterm_handler)
+    if sigterm_pending and previous_sigterm_handler != signal.SIG_IGN:
+        # Popen と pid file 更新の間だけ遅らせ、登録後は通常の中断処理へ戻す。
+        os.kill(os.getpid(), signal.SIGTERM)
     try:
         stdout, stderr = process.communicate(input_data)
         result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
@@ -773,30 +1123,38 @@ def run_tracked_codex_subprocess(
             )
         return result
     finally:
-        try:
-            remove_tracked_child_process(tracking_path, process.pid)
-        except OSError as exc:
-            raise CmocError(
-                "apply process tracking を更新できません。",
-                ["apply process pid file の権限と保存先を確認してください。"],
-                f"path: {tracking_path}\nerror: {exc}",
-            ) from exc
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # leader 終了後も descendant が group に残る間は tracking を保持する。
+        if process.poll() is not None and not process_group_has_running_member(process.pid):
+            try:
+                remove_tracked_child_process(tracking_path, process.pid)
+            except OSError as exc:
+                raise CmocError(
+                    "apply process tracking を更新できません。",
+                    ["apply process pid file の権限と保存先を確認してください。"],
+                    f"path: {tracking_path}\nerror: {exc}",
+                ) from exc
 
 
-def record_tracked_child_process(path: Path, process_id: int) -> None:
+def record_tracked_child_process(
+    path: Path, process_id: int, process_group_id: int | None = None
+) -> None:
     """apply process pid file へ Codex child process の同一性情報を追記する。"""
     with apply_process_id_file_lock(path):
-        _record_tracked_child_process(path, process_id)
+        _record_tracked_child_process(path, process_id, process_group_id)
 
 
-def _record_tracked_child_process(path: Path, process_id: int) -> None:
+def _record_tracked_child_process(
+    path: Path, process_id: int, process_group_id: int | None = None
+) -> None:
     start_time = process_start_time(process_id)
     if start_time is None:
-        return
+        raise OSError(f"process {process_id} start time is unavailable")
     path.parent.mkdir(parents=True, exist_ok=True)
     current = path.read_text() if path.exists() else ""
     lines = [line for line in current.splitlines() if line.strip()]
-    child_line = f"child {process_id} {start_time}"
+    group_id = process_id if process_group_id is None else process_group_id
+    child_line = f"child {process_id} {start_time} {group_id}"
     lines = [line for line in lines if not line.startswith(f"child {process_id} ")]
     lines.append(child_line)
     path.write_text("\n".join(lines) + "\n")
@@ -813,18 +1171,6 @@ def remove_tracked_child_process(path: Path, process_id: int) -> None:
             if not line.startswith(f"child {process_id} ")
         ]
         path.write_text(("\n".join(lines) + "\n") if lines else "")
-
-
-def process_start_time(process_id: int) -> int | None:
-    """pid 再利用を検出するため Linux proc stat の starttime を読む。"""
-    try:
-        stat = Path(f"/proc/{process_id}/stat").read_text()
-    except OSError:
-        return None
-    try:
-        return int(stat.rsplit(") ", 1)[1].split()[19])
-    except (IndexError, ValueError):
-        return None
 
 
 def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
@@ -852,7 +1198,16 @@ def codex_error_text(stdout_text: str, stderr_text: str) -> str:
         try:
             item = json.loads(line)
         except json.JSONDecodeError:
-            fragments.append(line)
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # Keep the original line visible even when it is blank; malformed
+            # stdout is a protocol failure, not an ignorable diagnostic.
+            fragments.append(f"malformed JSONL event (invalid JSON): {line}")
+            continue
+        if not isinstance(item, dict):
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # Known JSONL events are objects; preserve malformed output in
+            # error detail so the caller takes the non-retryable failure path.
+            fragments.append(f"malformed JSONL event (expected object): {line}")
             continue
         message = item.get("message")
         if isinstance(message, str):
@@ -870,6 +1225,10 @@ def extract_resume_token(stdout_text: str) -> str | None:
             item = json.loads(line)
         except json.JSONDecodeError:
             continue
+        if not isinstance(item, dict):
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # A non-object event cannot carry a resume token.
+            continue
         if item.get("type") != "thread.started":
             continue
         value = item.get("thread_id")
@@ -878,43 +1237,69 @@ def extract_resume_token(stdout_text: str) -> str | None:
     return None
 
 
-def _codex_jsonl_error_messages(stdout_text: str) -> list[str]:
-    """retry 判定対象を Codex JSONL の error event に限定して抽出する。"""
-    messages: list[str] = []
+def _codex_jsonl_error_messages(stdout_text: str) -> list[str | None]:
+    """Codex JSONL の error event message を retry 判定用に抽出する。"""
+    messages: list[str | None] = []
     for line in stdout_text.splitlines():
         try:
             item = json.loads(line)
         except json.JSONDecodeError:
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # A JSONL protocol violation is unexpected even when the process
+            # returned zero and the output-last-message file is valid.
+            messages.append(None)
+            continue
+        if not isinstance(item, dict):
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # A malformed event is an unexpected error, never a retry signal.
+            messages.append(None)
             continue
         if item.get("type") == "error":
             message = item.get("message")
-            if isinstance(message, str):
-                messages.append(message)
+            messages.append(message if isinstance(message, str) else None)
         elif item.get("type") == "turn.failed":
             error = item.get("error")
-            if isinstance(error, dict) and isinstance(error.get("message"), str):
-                messages.append(error["message"])
+            message = error.get("message") if isinstance(error, dict) else None
+            messages.append(message if isinstance(message, str) else None)
     return messages
+
+
+_CAPACITY_ERROR_MARKER = "Selected model is at capacity"
+_QUOTA_ERROR_MARKERS = (
+    "Quota exceeded",
+    "You've hit your usage limit",
+    "out of credits",
+    "You hit your spend cap",
+)
 
 
 def is_capacity_error(stdout_text: str) -> bool:
     """Codex JSONL 上の model capacity error だけを retry 対象として判定する。"""
     return any(
-        "Selected model is at capacity" in message
+        isinstance(message, str) and _CAPACITY_ERROR_MARKER in message
         for message in _codex_jsonl_error_messages(stdout_text)
     )
 
 
 def is_quota_error(stdout_text: str) -> bool:
     """usage limit 系の Codex JSONL error を quota 待機対象として判定する。"""
-    quota_markers = [
-        "Quota exceeded",
-        "You've hit your usage limit",
-        "out of credits",
-        "You hit your spend cap",
-    ]
     return any(
-        marker in message
+        isinstance(message, str) and marker in message
         for message in _codex_jsonl_error_messages(stdout_text)
-        for marker in quota_markers
+        for marker in _QUOTA_ERROR_MARKERS
+    )
+
+
+def is_unexpected_error(stdout_text: str) -> bool:
+    """既知の capacity/quota 以外の Codex JSONL error を検出する。"""
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Only capacity and quota events have recovery paths; malformed or other
+    # error events must not be hidden by a zero subprocess return code.
+    return any(
+        not isinstance(message, str)
+        or (
+            _CAPACITY_ERROR_MARKER not in message
+            and not any(marker in message for marker in _QUOTA_ERROR_MARKERS)
+        )
+        for message in _codex_jsonl_error_messages(stdout_text)
     )

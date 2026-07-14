@@ -1,24 +1,21 @@
 # `acp`
 
 ## Summary
-- oracle 側の acp builder 実装を正本に保ちつつ、旧来の `acp.*` / `acp.builder.*` import 経路を成立させる realization 側互換入口を扱う階層。
-- 既存公開名の再公開、canonical oracle 実装への中継、薄い wrapper、移行期間中の削除条件を確認するための入口になる。
-- apply、review、session、tui、indexing 系 builder の互換経路に加え、quota 回復確認用の低コスト probe builder も含む。
+- `acp` 名前空間の互換入口と、その配下の builder 互換層を束ねる上位ルート。`oracle` 側の正本実装へ既存 `acp.*` 参照をつなぐための案内役であり、実装本体ではなく公開 import 面の維持が主目的である。
+- この階層では、`acp` 直下の互換入口と、builder 系の各公開経路をどこまで残すかを判断する。個別の実装ロジックを追うより、どの名前空間を互換として維持し、どれを正本側へ委譲するかを確認するために読む。
 
 ## Read this when
-- `acp.*` または `acp.builder.*` の旧 import 互換性を確認・維持・削除判断したいとき。
-- realization 側や利用者向け公開面に残る acp 系 import を oracle 側実装へどう接続しているか調べたいとき。
-- oracle 側 builder の結果を既存の公開型や公開名へ適合させる wrapper、再公開、中継処理を確認したいとき。
-- quota wait 中の回復確認で使う最小 agent call parameter builder の内容を確認・変更したいとき。
+- `acp.*` 参照を壊さずに正本実装へ移行する作業で、互換入口の残し方や削除条件を確認したいとき。
+- builder 系の公開 import がどの階層で維持されているかを確認し、利用側への影響を見積もりたいとき。
+- 互換 namespace を残す必要があるか、それとも正本側の実体だけに寄せられるかを判断したいとき。
 
 ## Do not read this when
-- acp builder の正本仕様、prompt、生成内容、人間意図を確認したいときは、対応する oracle 側 builder を読む。
-- apply fork、review、session、TUI などの機能全体の実行フローや CLI 制御を調べたいときは、それぞれの上位実装や呼び出し元を読む。
-- ACP parameter の公開型、path model、git helper、index entry 生成仕様など、builder 互換入口以外の共通実装を調べたいときは該当対象を読む。
-- 新規 acp 機能や API 仕様の追加場所を探しているだけで、既存 import 互換や quota probe に関係しないとき。
+- acp の具体的な生成ロジック、CLI 挙動、入出力仕様を調べたいとき。そうした内容はこの階層ではなく、対応する正本実装側を読む。
+- 新しい機能や API を追加する場所を探しているとき。この階層は互換維持が役割で、機能追加の入口ではない。
+- `acp.*` の公開面がすでに消えており、互換入口の維持可否だけを確認済みで詳細が不要なとき。
 
 ## hash
-- c35c16dceec30fb4f9b69e36cbbab9e4f340620e069b481f5450635346d5d7e8
+- ee6fb5b7ad51e758b3da983803fc1e5e8256ffd5ccefdb517fb014eada116186
 
 # `basic`
 
@@ -58,21 +55,18 @@
 # `commons`
 
 ## Summary
-- cmoc の runtime 共通 helper 群をまとめる領域。Codex 実行、CLI 共通ライフサイクル、設定、git、path、ログ、状態、doctor、indexing preflight など、複数モジュールから使われる実行時基盤の入口になる。
-- 個別 helper の詳細実装だけでなく、runtime API の集約 import、Codex exec/TUI 境界、永続状態、内容 hash、Ollama 準備、apply process 追跡などの下位要素へ進むためのまとまりを示す。
+- `commons` 配下の runtime helper 群を束ねるパッケージ境界。個別 helper の実装ではなく、共有 runtime 機能の入口だけを確認したいときに読む。
 
 ## Read this when
-- cmoc の複数サブコマンドや runtime 系処理から共有される helper の配置場所を探したいとき。
-- Codex 実行、設定読み書き、git 操作、path 解決、ログ、状態管理、doctor preprocess、indexing preflight、apply process 追跡などの runtime 基盤に関する読む先を選びたいとき。
-- runtime 共通 API をまとめて import する入口や、個別 runtime module の責務境界を確認したいとき。
+- `commons` から共有 runtime helper を参照する側で、どの統合入口を使うか確認したいとき。
+- 共有 runtime helper 群の下位要素へ進む前に、この領域が共通 runtime 用のまとまりであることを確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、CLI 引数定義、利用者向け workflow だけを調べたいときは、該当する command 層や app spec を読む。
-- 正本仕様断片、path keyword の概念定義、INDEX entry 生成方針、config や model の正本定義だけを確認したいときは、対応する oracle 側を読む。
-- 特定 helper の引数、失敗時挙動、保存形式、外部コマンド呼び出し詳細がすでに分かっているときは、この領域全体ではなく該当する下位要素を直接読む。
+- 特定の helper の入出力や失敗時挙動を確認したいときは、該当する下位要素を直接読む。
+- CLI サブコマンド固有の処理やテスト固有の処理を調べたいときは、共有 runtime helper ではなくその責務を持つ対象へ進む。
 
 ## hash
-- a61436fc4d817f0238aca757367d9b88c08da9abc67ad2b6ddedba3bd5199b50
+- 1347e9b9fc0b3440dc7dc7977f5ffa63374406e67ba2e3877603c21f57eb2d55
 
 # `config`
 
@@ -134,18 +128,19 @@
 # `sub_commands`
 
 ## Summary
-- `sub_commands` 配下の CLI 実行入口群をまとめる階層。各サブコマンドの起動・委譲・前提条件・利用者向け出力を担い、個別処理の本体は下位モジュールに分かれている。
-- この階層は、`apply`・`review`・`session`・`doctor`・`indexing`・`tui` などの実行入口や、そのサブコマンド間の接続を追うときの入口になる。
+- `/src/sub_commands` は `cmoc` のサブコマンド起点を集める層で、個別サブコマンド本体ではなく、どの操作へ進むかを選ぶために読む。共通起動や登録の入口はここで見つけ、実処理は各サブコマンド側へ分岐する。
+- この対象では、`apply`・`review`・`session`・`tui`・`doctor`・`indexing`・`eval_oracle` などの実行入口を束ねるが、各コマンドの引数定義や状態遷移、詳細な処理本体は置かない。目的に応じて下位対象へ進む案内として使う。
+- 実装変更や挙動確認のために本文を読む場所ではなく、まず読むべき下位モジュールを選ぶためのルーティング層として扱う。
 
 ## Read this when
-- 特定のサブコマンドの実行入口がどこにあり、どの下位実装へ委譲するかを確認または変更したいとき。
-- サブコマンドの起動条件、前提チェック、利用者向け出力、外側の CLI ルーティングとの接続を確認したいとき。
-- `apply`、`review`、`session`、`indexing`、`tui`、`doctor`、`eval_oracle` のどれを読むべきか切り分けたいとき。
+- `cmoc` のどのサブコマンド実装を読むべきかを選びたいとき。
+- サブコマンド群の役割分担と、共通の起動層から各実行本体への分岐を確認したいとき。
+- この階層が個別処理ではなく案内役であることを確認したいとき。
 
 ## Do not read this when
-- サブコマンドの実処理本体、共通 runtime、git wrapper、state 仕様、path model などの共通基盤を調べたいとき。
-- oracle file や realization file の定義、INDEX.md 生成規則、正本仕様そのものを確認したいとき。
-- CLI 全体の登録や、ここに含まれない外側のコマンド配線だけを確認したいとき。
+- 個別サブコマンドの CLI 引数、実行フロー、状態更新、エラー処理を調べたいとき。
+- `apply`、`review`、`session`、`tui`、`doctor`、`indexing`、`eval_oracle` のいずれか一つの挙動を詳しく追いたいときは、直接そのモジュールを読むべきとき。
+- 共通 helper や runtime の詳細を調べたいときは、この階層ではなく対応する共通実装を読むべきとき。
 
 ## hash
-- 569837ce89eb8733c15ce11a5ab67d533d96f76fedbbbef320c9eb975b7e584d
+- 0a323564e66488bc85b98c3c3672f1bd870b765daf042980421870e6b8ef1949

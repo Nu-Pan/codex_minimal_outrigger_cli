@@ -19,6 +19,7 @@ from cmoc_runtime import (
     logs_dir,
     repo_root,
     run_cli_subcommand,
+    start_subcommand_step,
     run_codex_exec,
     run_codex_tui,
     timestamp,
@@ -158,6 +159,7 @@ def cmoc_tui_impl() -> None:
         pre_log_check=ensure_tui_cmoc_ignored,
         command_name="tui",
         command_argv=["cmoc", "tui"],
+        total_steps=4,
     )
 
 
@@ -170,9 +172,11 @@ def _cmoc_tui_body(
     config: CmocConfig,
 ) -> None:
     """依頼文の編集、実行パラメータ解決、Codex TUI 起動を一連で行う。"""
+    start_subcommand_step(2, "オリジナルプロンプトを入力", "edit original prompt")
     original_path = initialize_original_prompt(root)
     run_editor(original_path)
     original_prompt = read_original_prompt(original_path)
+    start_subcommand_step(3, "実行パラメータを決定", "resolve parameters")
     resolved = run_codex_exec(
         replace(
             build_tui_resolve_parameter_parameter(original_prompt),
@@ -191,6 +195,7 @@ def _cmoc_tui_body(
     )
     parameter = replace(parameter, cwd=work_root)
     complete_prompt_path = logs_dir(root).parent / "tui" / f"{launch_timestamp}_cmpl.md"
+    start_subcommand_step(4, "AI Agent TUI を起動", "launch agent TUI")
     run_codex_tui(
         parameter,
         root=root,

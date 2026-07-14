@@ -19,21 +19,20 @@
 # `builder`
 
 ## Summary
-- acp builder 配下で、oracle 側 builder 実装を正本に保ちながら旧来の acp.builder 系 import 経路を成立させる realization 側互換入口を束ねる階層。
-- apply、review、session、tui、indexing などの builder 群について、canonical oracle 実装への中継、再公開、薄い wrapper、削除条件を確認するための入口になる。
-- quota 回復確認用の最小 agent call parameter builder など、通常 builder とは異なる限定用途の実装も含む。
+- `src/acp/builder` 配下の互換入口と canonical 実装への橋渡しをまとめる階層。`oracle.acp_builder` 側の正本 builder を既存の `acp.builder.*` 参照から到達できるようにし、必要に応じて薄い互換層だけを残す。
+- この階層で扱うのは、apply / indexing / review / session / tui の各 builder 系入口と、quota 判定の互換呼び出し、および共通処理の置き場である `common`。個別の実処理本体ではなく、どの公開経路を維持するかの判断が主目的になる。
+- `__init__.py` は `acp.builder` 互換の入口、各サブディレクトリは旧 import path 互換や正本実装への再公開を担う。実装詳細を追うより、どの名前空間を残すべきか、どの入口が正本へ委譲するかを確認するための層である。
 
 ## Read this when
-- acp.builder.* の旧 import 互換性や、既存参照を oracle 側実装へ接続する仕組みを確認したいとき。
-- apply、review、session、tui、indexing の agent call parameter builder について、realization 側の互換入口、再公開、wrapper、削除可否を調べたいとき。
-- oracle 側 builder を呼び出した結果を realization 側公開型や既存公開名へどう適合させるかを確認したいとき。
-- quota wait 中の回復確認で使う低コストな probe 用 agent call parameter の構築内容を確認・変更したいとき。
+- `acp.builder.*` の既存参照を壊さずに、どの互換入口を維持・削除できるか判断したいとき。
+- apply / indexing / review / session / tui の builder 系で、正本実装への委譲経路や薄い互換 wrapper の有無を確認したいとき。
+- quota 判定や共通 builder 処理のように、複数の builder 入口から使われる補助的な経路を確認したいとき。
+- 旧公開名前空間から canonical 実装へどうつながるか、またはどの公開面を残すべきかを決めたいとき.
 
 ## Do not read this when
-- 各 builder の正本仕様、prompt、生成内容、人間意図を確認したい場合は、対応する oracle 側 builder を読む。
-- apply fork、review、session、TUI など各機能全体の実行フローや CLI 制御を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
-- ACP parameter の公開型、path model、汎用 git helper、index entry 生成仕様など、builder 互換入口以外の共通実装を調べたい場合は該当対象を読む。
-- 新規機能の実装場所を探しているだけで、既存 acp.builder import 互換や quota probe に関係しない場合。
+- 各 builder の具体的な生成ロジック、入出力仕様、エラー条件そのものを追いたいときは、対応する正本実装側を読む。
+- `acp.builder` 以外の公開 API や新規機能の追加先を探しているだけなら、この互換階層は優先しない。
+- 個別の CLI フロー、fork/session の実行手順、TUI 画面構成など、より上位の機能仕様を知りたいときは別の対象を読む。
 
 ## hash
-- 110915aad540f1dfc04662648e2159e9f044eabe48fc1f5e3bb982a5458e0fcb
+- bc29784563a5175bfb57e516fcd7c95ab9cedc44609043ca97f928f533d3485e

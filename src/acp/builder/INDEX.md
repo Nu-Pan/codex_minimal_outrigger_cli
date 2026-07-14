@@ -1,22 +1,20 @@
 # `__init__.py`
 
 ## Summary
-- oracle 側の acp builder 実装を正本に保ちながら、既存の acp.builder 経由の import を成立させる互換入口。
-- oracle package の検索結果を確認し、oracle 側の submodule search path をこの package に追加したうえで、既存参照向けに basic module を oracle 実装へ対応付ける。
-- local wrapper を oracle 側 path より優先できる順序を保ち、互換が必要な出力だけ realization 側で適応できる余地を残す。
+- `oracle.acp_builder` を既存の `acp.builder` 互換入口として保つための初期化モジュール。正本側の `oracle.acp_builder` を探し、利用者が `acp.builder` 経由で参照しても同じ内容に到達できるよう `__path__` と `basic` の公開を調整する。
 
 ## Read this when
-- acp.builder 経由の import 互換性、特に既存の acp.builder.basic 参照が oracle 側実装へ解決される仕組みを確認したいとき。
-- oracle 側の acp builder package を正本としつつ、realization 側で package path や module alias をどう接続しているかを調べるとき。
-- acp.builder.* 参照を削除または移行する作業で、この互換入口を残す条件や削除条件を確認したいとき。
+- `acp.builder.*` の参照互換を維持したいとき。
+- `acp.builder` から `oracle.acp_builder` の正本モジュールへつなぐ入口の振る舞いを確認したいとき。
+- 互換入口の削除条件や、どの公開面を残すかを判断したいとき。
 
 ## Do not read this when
-- oracle 側 acp builder の正本仕様や canonical module の実装内容を確認したいだけなら、oracle 側の該当実装を直接読む。
-- acp.builder 以外の acp package 公開面や import 互換性を調べる場合は、より上位または該当 subpackage の入口を読む。
-- builder の個別変換処理や wrapper の詳細挙動を調べる場合は、その処理を持つ個別 module を読む。
+- `oracle.acp_builder` 側の正本実装そのものを変更したいときは、そちらの配下を読む。
+- `acp.builder` 配下の個別機能の実装を確認したいときは、この入口ではなく各サブモジュールを読む。
+- `acp.builder` 以外の公開面や別名互換の方針を確認したいとき。
 
 ## hash
-- 7af83fea8ad03595625c00432641609f104d01f963904ec5b9ef0a1d8dc05693
+- 9bc5d41f21c981a29817fa108db0069000807957797ba986d13093db0973ea61
 
 # `apply`
 
@@ -74,39 +72,42 @@
 # `quota_probe.py`
 
 ## Summary
-- quota 回復確認のための最小構成の agent call parameter を構築する実装。既存の実行パラメータから作業ディレクトリだけを引き継ぎ、低コスト・読み取り専用・indexing preflight 無効の probe 呼び出しを作る。
+- `quota_probe.py` は、`quota availability` を判定する呼び出し用の互換入口です。正本 builder が使える場合はそれに委譲し、配布物に正本側 builder が無い場合だけ最小の probe 用 `AgentCallParameter` を組み立てます。
 
 ## Read this when
-- quota wait 中に実行可能状態を確認するための probe 呼び出し内容を確認・変更したいとき。
-- probe 用 agent call parameter の model class、reasoning effort、file access mode、prompt、cwd 引き継ぎ、indexing preflight の扱いを確認したいとき。
-- quota 回復確認で通常の agent call parameter builder ではなく、最小の Codex exec 呼び出しを使う理由を追いたいとき。
+- quota 可用性の判定経路を追いたいとき。
+- `oracle.acp_builder.quota_probe` が配布先に存在するかどうかで挙動が分かれる互換処理を確認したいとき。
+- 空 stdin の最小 probe として扱う fallback の条件と内容を確認したいとき。
 
 ## Do not read this when
-- 通常の agent call parameter 全体の構築規則や共通 builder の責務を調べたいとき。
-- quota wait のポーリング制御、待機間隔、再試行条件、成功失敗判定の流れを調べたいとき。
-- quota 回復確認以外の Codex exec 呼び出しや indexing preflight の一般仕様を調べたいとき。
+- quota 判定そのものの正本仕様を読みたいときは、`<work-root>/oracle` 側の関連定義を読むべきです。
+- 通常の ACP builder 一般の構造や他の builder の責務を知りたいだけなら、この互換入口ではなく該当する各 builder 実装を読むべきです。
+- 配布互換の fallback を必要としない、正本 builder が常に存在する前提の実装経路を見たいだけなら、このファイルは優先対象ではありません。
 
 ## hash
-- 47f15b35955d56905ecd58ad55693d751e5949813a030b6bf9b481eed55ab9f5
+- faa7e4eab5e63e294c84d7eed6b0782c680a5d066b5d24e40536c0efc2f6720c
 
 # `review`
 
 ## Summary
-- review builder 配下で、旧 import 経路を維持する互換 package 初期化と review oracle 向け互換 adapter 群を束ねる階層。
-- 実処理は主に canonical oracle path や oracle src 側へ委譲され、この階層は移行中 caller との互換性、削除条件、正本 builder 由来 prompt の限定補正境界を確認する入口になる。
+- `src/acp/builder/review` の入口として、review builder 系の互換 import を保つために残る package 初期化と、その配下の正本実装への案内だけをまとめる。
+- この層では、旧 `acp.builder.review` 参照の残存可否、review oracle 側の入口、正本 builder への委譲と最小限の補正の有無を確認する。
 
 ## Read this when
-- review builder 周辺の旧 import 互換性や、古い acp.builder.review 系参照を削除できるか確認する。
-- review oracle の旧 import 経路から canonical oracle path への移行状況、互換 shim の再 export 対象、または削除可否を確認する。
-- merge finding や validate finding advocate の agent call parameter について、正本 builder 取得後に realization 側で補正される範囲と削除条件を確認する。
+- review builder 周辺の import 互換性を確認したい。
+- 古い review 系参照を削除できるか判断したい。
+- review oracle の入口、判定、検証、または symlink 由来の path 表記補正の有無を確認したい。
+- 正本 builder からの委譲範囲と、realization 側で残す最小限の補正だけを確認したい。
 
 ## Do not read this when
-- review builder の実処理、変換ロジック、finding enumeration、judgment、challenger validation の parameter 構築を調べたい場合は、より直接の実装先を読む。
-- review oracle の正本仕様や正本 prompt の内容そのものを確認したい場合は、oracle 側の該当本文を読む。
-- review oracle 以外の builder、agent call parameter 全般、path model、INDEX.md エントリー生成、または一般的な oracle file 定義を調べたい場合。
+- review builder の実処理や変換ロジックを追いたい。
+- canonical な正本実装そのものを追いたい。
+- 新しい公開 API や利用者向け機能の仕様を確認したい。
+- レビュー以外の builder や一般的な oracle file 定義を調べたい。
+- 旧 import 互換の有無が関係しない実装方針を決めたい。
 
 ## hash
-- 8c0170ecf4d16e76f4eabb38112c44d157461f19eb65650a549149278abf7611
+- 22264fb5963cb2b84e543002edb9bfb105425b20c6a9856a62837ce20f79f229
 
 # `session`
 

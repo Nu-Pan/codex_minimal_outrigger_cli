@@ -19,80 +19,78 @@
 # `abandon.py`
 
 ## Summary
-- 未 join の apply run を破棄し、apply state を ready に戻す apply abandon サブコマンド実装。session branch または対象 apply branch 上で実行され、状態ファイルが指す apply branch の同一 session 性を検証してから、実行中 process の停止、apply worktree・branch・process id の削除、状態更新、結果表示を行う。
+- `cmoc apply abandon` の実行本体を扱う。active な apply run を破棄し、apply worktree と apply branch を削除して、apply state と process 追跡情報を ready に戻す。
+- 実行位置による分岐、session/apply state の整合性確認、cleanup 対象の検証、削除後の警告表示までをまとめて読む入口。
 
 ## Read this when
-- apply abandon の実行条件、失敗条件、状態遷移、cleanup 対象、警告出力を確認したいとき。
-- active apply run の破棄時に、apply process、apply worktree、apply branch、session state file がどの順序・条件で扱われるかを調べるとき。
-- session branch と apply branch のどちらから apply abandon を実行できるか、また現在 branch と state file 上の apply branch の整合性検査を変更したいとき。
+- `cmoc apply abandon` の挙動や失敗条件を確認したいとき。
+- active な apply run を終了させるときに、どの状態確認と cleanup が行われるかを追いたいとき。
+- apply branch と session branch のどちらから実行した場合でも同じ破棄処理になる理由を確認したいとき。
 
 ## Do not read this when
-- apply run の開始、join、通常完了、または apply 以外のサブコマンドの挙動を調べたいとき。
-- apply worktree や apply process id を扱う共通 helper の低レベルな実装だけを確認したいとき。
-- CLI runtime の共通エラー処理、状態ファイル形式、branch 名規則そのものを調べたいとき。
+- session の生成・join・report の処理を知りたいときは、各コマンド実装を読むべきで、この file だけでは足りない。
+- apply branch の作成や fork の開始条件を知りたいときは、破棄ではなく開始側の実装を読むべき。
+- 共通の state 読み書きや worktree 操作の詳細だけを知りたいときは、対応する runtime helper の実装を直接読むべき。
 
 ## hash
-- cc1ef6c21e576b047fd5dcd081d5be71569f1601edcab95ebb79358169e43177
+- d4c9396e4155bd0f939f69a7754182c3d6fd5425831a6c9238c1592471e82ba6
 
 # `fork.py`
 
 ## Summary
-- apply fork の 1 回の実行を開始し、isolated worktree 上で対象ファイル列挙、Codex による finding 列挙と適用、変更 commit、apply state 更新、report 生成までを制御する。
-- scope、session state、前回 join 履歴、変更差分から apply finding の調査対象を決め、oracle file・realization file・除外対象の境界に従って対象を正規化する。
-- apply fork の orchestration 全体を一つの loop として扱い、apply state、worktree、再キュー、commit subject、失敗時 report の復旧条件を同じ文脈で管理する。
+- `apply` 用の fork 実行をまとめる制御層で、session branch 上の事前条件確認から isolated apply worktree の作成、対象列挙、Codex による所見適用、commit、state/report 更新、異常時の rollback までを扱う。
+- この領域は一つの apply run のライフサイクルを通して読むべきで、`file_finding_enumeration` と `finding_application` はそれぞれ対象列挙と所見適用の詳細を分担する下位入力として参照される。
+- worktree・branch・process tracking・report の失敗復旧条件を共有しているため、fork orchestration を読むときの入口として使う。
 
 ## Read this when
-- apply fork サブコマンドの事前条件、branch/worktree 作成、apply state の running/completed/error 遷移、process id 管理を確認または変更したいとき。
-- apply fork がどのファイルを finding 列挙対象にするか、scope ごとの差分基準、oracle file や git ignored file の除外条件を確認または変更したいとき。
-- Codex による finding 列挙・finding 適用の呼び出し、適用後の再キュー、commit message 生成、converged/unconverged/error report の扱いを確認または変更したいとき。
-- apply fork の失敗時に state や report path がどう更新されるか、stdout や returncode がどう決まるかを追うとき。
+- `apply fork` の実行フロー、state 遷移、report 出力、異常時 cleanup の仕様を確認したいとき。
+- 対象ファイルの選定基準や、変更されたファイルを再度 apply 対象へ戻す条件を追いたいとき。
+- commit subject の生成や、Codex 実行に渡す apply parameter の組み立て方を確認したいとき。
 
 ## Do not read this when
-- apply fork の report 本文の書式や出力内容だけを変更したいときは、report 生成側を直接読む。
-- Codex に渡す finding 列挙・finding 適用プロンプトや parameter の詳細だけを変更したいときは、builder 側を直接読む。
-- apply 以外のサブコマンド、join 処理、session 作成処理、共通 CLI runtime の一般仕様を調べたいだけのときは、それぞれの担当箇所を読む。
-- oracle file や realization file の定義そのもの、INDEX.md 生成規則、path model の正本仕様を確認したいだけのときは、oracle 側の該当文書を読む。
+- 対象列挙の生成ロジックだけを知りたいなら `file_finding_enumeration` 側を先に読む。
+- 所見をどう適用するかの詳細だけを知りたいなら `finding_application` 側を読む。
+- `apply` 以外の subcommand の入出力や state 管理を確認したいだけなら、この orchestration 層ではなく該当 subcommand の実装を読む。
 
 ## hash
-- b248a93c6cd1cce17d3f14a48961350a5cf2b13ef24acef803841c1ba626a0c1
+- 2894d6d1df64b7725b6e86d2266d27e1cde822a2a75c06108d3ec81720f08f21
 
 # `fork_report.py`
 
 ## Summary
-- apply fork の実行結果または失敗結果を Markdown レポートとして保存する処理を担う。
-- apply worktree 上の fork 起点以降の管理対象差分と未追跡ファイル差分を集め、Codex による変更要約または機械的な fallback 要約をレポートへ含める。
-- 収束状態、所見数推移、apply branch や fork commit などの作業文脈を YAML frontmatter と本文に描画する。
+- apply fork の実行レポート生成と、そのための差分要約・未追跡ファイル反映・失敗時フォールバックをまとめて扱う入口。
+- 所見数の推移と変更内容要約を Markdown + frontmatter 形式で出力する責務が中心で、個別の差分収集や要約生成の詳細は下位の helper に委ねる。
 
 ## Read this when
-- apply fork の作業レポート生成、失敗時レポート生成、保存先、frontmatter、本文構成を確認または変更したいとき。
-- apply fork の変更内容要約がどの git diff 範囲、未追跡ファイル、fallback 条件から作られるかを確認したいとき。
-- 未収束時の警告文、所見数推移、変更なし表示など、apply fork レポート上の利用者向け文言を扱うとき。
+- apply fork の実行結果レポートの出力形式や、収束・未収束・エラー時の文言を確認したいとき。
+- fork 以後の変更をどの範囲までレポートに含めるか、未追跡ファイルや差分要約の扱いを確認したいとき。
+- 所見数の推移と変更 path の記録が、どの条件で機械的フォールバックに切り替わるかを確認したいとき。
 
 ## Do not read this when
-- apply fork のループ制御、所見列挙、作業ブランチ作成や worktree 管理そのものを確認したいだけのとき。
-- Codex に渡す変更要約用パラメータの schema や prompt の詳細を確認したいとき。
-- apply fork 以外のサブコマンドのレポート生成や git 差分取得を扱うとき。
+- apply fork 自体の実行制御、所見列挙ループ、または状態遷移の本体を追いたいときは、より上位の apply fork 実行側を読むべきである。
+- 差分要約の生成ロジックだけを見たいときは、change summary 生成側の helper を直接読むべきである。
+- 一般的な report 保存先や timestamp 生成の共通処理だけを確認したいときは、このファイルではなく共通 runtime 側を読むべきである。
 
 ## hash
-- 690ca1ebff01a6a1ac9195d36ffc86e75bd1813b5048748f25df508d82db8524
+- cd0deb8268393baf1aa15c853982d874772bc1583c0cdc943016503324a5c836
 
 # `join.py`
 
 ## Summary
-- `apply join` サブコマンドの実行本体を担い、apply branch を session branch へ join し、状態更新・レポート作成・後片付けを行う実装。
-- join 前に session/apply 側の想定外差分を分類し、通常時は中止レポート、force-resolve 時は基準 commit への復元 commit を作る。
-- merge conflict、INDEX.md conflict の機械解決、apply worktree/branch の削除可否、警告付き CLI 出力まで含む apply join 処理の入口。
+- apply join の実行本体を扱う。事前条件確認、想定外差分の判定、force-resolve 時の巻き戻し、merge、state 更新、report 保存、worktree/branch 後始末までを一連の責務としてまとめている。
+- apply join に関する結果レポートの生成や、想定外差分の分類・復元・merge conflict の機械解決もここにある。
+- apply join の判定基準や許可差分の境界、関連する branch/state/worktree 操作を追いたいときに読む。
 
 ## Read this when
-- `cmoc apply join` の挙動、失敗条件、force-resolve、join 結果レポート、cleanup 表示を変更する。
-- apply branch と session branch の差分分類、許可される apply/session 側変更、rename や deleted path の扱いを確認する。
-- apply join 後の session state 更新、apply state 初期化、apply worktree や apply branch の削除条件を調べる。
-- apply join の merge conflict 処理、INDEX.md conflict の自動解決、想定外差分の revert 処理を修正する。
+- apply join の実行フロー全体を変更したいとき。
+- 想定外差分の検出・force-resolve・復元・報告のどこかを変えるとき。
+- join 後の apply state 更新や worktree/branch 後始末の条件を確認したいとき。
+- apply join で許可される差分の判定根拠を追いたいとき。
 
 ## Do not read this when
-- apply join 以外の apply サブコマンド、apply run の開始・実行・状態生成を調べたい場合。
-- worktree 検索、git wrapper、状態ファイルの読み書き、oracle file 判定などの共通 runtime API 自体を変更したい場合。
-- CLI 全体の Typer 登録、サブコマンド一覧、外側のコマンドルーティングだけを確認したい場合。
+- apply join 以外の subcommand の入出力や CLI 定義だけを見たいとき。
+- 共通の Git runtime や session/state の基盤動作だけを確認したいとき。
+- INDEX.md の対象選定だけが目的で、join の処理内容までは不要なとき。
 
 ## hash
-- ba3b712d92e694756ee73feda605ac7f3fd7a4495269501935bd89bf15fc2951
+- 0b125a9eb20693e071104bd7e0dc836889e5b0aba338f57e6d068b248bd3bf91

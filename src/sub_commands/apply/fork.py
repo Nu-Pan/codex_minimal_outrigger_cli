@@ -24,9 +24,11 @@ from cmoc_runtime import (
     CliRunResult,
     CmocError,
     SessionState,
+    branch_exists,
     create_run_worktree,
     current_branch,
     current_subcommand_logger,
+    delete_branch,
     ensure_cmoc_ignored_in_exclude,
     head_commit,
     is_oracle_file_path,
@@ -35,8 +37,10 @@ from cmoc_runtime import (
     load_state_for_branch,
     pushd,
     repo_root,
+    remove_worktree,
     require_clean_worktree,
     run_cli_subcommand,
+    start_subcommand_step,
     run_codex_exec,
     run_git,
     timestamp,
@@ -51,7 +55,9 @@ from sub_commands.apply.fork_report import (
 )
 from commons.runtime_apply import (
     apply_process_tracking,
+    apply_run_lock,
     delete_apply_process_id,
+    read_apply_process_id,
     write_apply_process_id,
 )
 from commons.indexing import enable_indexing_preflight
@@ -69,6 +75,7 @@ def cmoc_apply_fork_impl(scope: str) -> None:
         run_codex_exec,
         command_name="apply fork",
         command_argv=["cmoc", "apply", "fork", "--scope", scope],
+        total_steps=6,
     )
 
 
@@ -80,41 +87,70 @@ def _cmoc_apply_fork_body(
     root = repo_root()
     current_root = work_root()
     branch = current_branch(current_root)
-    session_id, path, state = load_state_for_branch(root, branch)
+    session_id, _, _ = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError("apply fork は session branch 上で実行してください。", [], branch)
-    if state.session.state != "active" or state.apply.state != "ready":
-        raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
     ensure_cmoc_ignored_in_exclude(current_root)
     require_clean_worktree(current_root)
     config = load_config(root)
-    run_id = timestamp()
-    apply_branch = f"cmoc/apply/{session_id}/{run_id}"
-    oracle_snapshot_commit = head_commit(current_root)
-    apply_worktree = worktrees_dir(root) / session_id / run_id
-    create_run_worktree(current_root, apply_branch, apply_worktree, "HEAD")
-    write_apply_process_id(root, session_id, os.getpid())
-    state.apply = ApplyPart(
-        state="running",
-        apply_branch=apply_branch,
-        oracle_snapshot_commit=oracle_snapshot_commit,
-    )
-    write_state(path, state)
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    # Re-read the mutable state while holding the lifecycle lock. Otherwise two
+    # callers can both observe ready and publish different apply runs.
     finding_counts: list[int] = []
     result_label = "error"
     report_path: Path | None = None
+    apply_branch: str | None = None
+    apply_worktree: Path | None = None
+    state_published = False
+    branch_preexisting = False
+    worktree_preexisting = False
     try:
+        with apply_run_lock(root, session_id):
+            session_id, path, state = load_state_for_branch(root, branch)
+            if state.session.state != "active" or state.apply.state != "ready":
+                raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
+            run_id = timestamp()
+            apply_branch = f"cmoc/apply/{session_id}/{run_id}"
+            oracle_snapshot_commit = head_commit(current_root)
+            apply_worktree = worktrees_dir(root) / session_id / run_id
+            branch_preexisting = branch_exists(root, apply_branch)
+            worktree_preexisting = apply_worktree.exists() or apply_worktree.is_symlink()
+            if branch_preexisting or worktree_preexisting:
+                raise CmocError(
+                    "apply run の branch または worktree が既に存在します。",
+                    ["既存の apply resource を確認してから再実行してください。"],
+                    f"apply_branch: {apply_branch}\napply_worktree: {apply_worktree}",
+                )
+            start_subcommand_step(2, "run の隔離実行を開始", "start isolated run")
+            state.apply = ApplyPart(
+                state="running",
+                apply_branch=apply_branch,
+                oracle_snapshot_commit=oracle_snapshot_commit,
+            )
+            # Publish the cleanup target before creating it. The lifecycle lock keeps
+            # abandon from observing a running state without its PID/worktree.
+            state_published = True
+            write_state(path, state)
+            create_run_worktree(
+                current_root, apply_branch, apply_worktree, oracle_snapshot_commit
+            )
+            write_apply_process_id(root, session_id, os.getpid())
+        assert apply_worktree is not None
         with apply_process_tracking(root, session_id), pushd(apply_worktree):
+            start_subcommand_step(3, "調査待ちファイルリストを初期化", "initialize pending files")
             findings: list[dict] = []
             pending_targets = enumerate_apply_targets(
                 apply_worktree, scope, session_id, state
             )
+            start_subcommand_step(4, "apply ループ", "apply loop")
             for _apply_loop in range(config.apply_fork.num_apply_files):
                 pending_targets = dedupe_apply_targets(pending_targets)
                 if not pending_targets:
                     result_label = "converged"
                     break
+                start_subcommand_step("4/6, 1/3", "調査対象を pop", "pop pending target")
                 target = pending_targets.pop(0)
+                start_subcommand_step("4/6, 2/3", "対象ファイルの所見を列挙", "enumerate findings")
                 findings = enumerate_apply_findings_for_target(
                     apply_worktree,
                     target,
@@ -126,6 +162,7 @@ def _cmoc_apply_fork_body(
                 if not findings:
                     continue
                 pending_targets.append(target)
+                start_subcommand_step("4/6, 3/3", "所見を適用", "apply findings")
                 run_finding_application(
                     root,
                     apply_worktree,
@@ -153,28 +190,73 @@ def _cmoc_apply_fork_body(
             else:
                 pending_targets = dedupe_apply_targets(pending_targets)
                 result_label = "unconverged" if pending_targets else "converged"
-            state.apply.state = "completed"
-            write_state(path, state)
-            report_path = write_apply_fork_report(
-                root,
-                apply_worktree,
-                branch,
-                state,
-                finding_counts,
-                result_label,
-                config,
-                codex_exec,
-            )
-        delete_apply_process_id(root, session_id)
+            # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+            # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+            # completed 公開中は report と PID 解放まで cleanup と競合させない。
+            with apply_run_lock(root, session_id):
+                start_subcommand_step(5, "apply state を更新", "update apply state")
+                state.apply.state = "completed"
+                write_state(path, state)
+                start_subcommand_step(6, "作業結果をレポート", "write apply report")
+                report_path = write_apply_fork_report(
+                    root,
+                    apply_worktree,
+                    branch,
+                    state,
+                    finding_counts,
+                    result_label,
+                    config,
+                    codex_exec,
+                )
+                delete_apply_process_id(root, session_id)
     except BaseException as exc:
-        delete_apply_process_id(root, session_id)
-        state.apply.state = "error"
-        write_state(path, state)
-        if report_path is None:
-            report_path = write_apply_fork_error_report(
-                root, branch, state, finding_counts, apply_worktree, config, codex_exec
-            )
-        setattr(exc, "cmoc_stdout", str(report_path.resolve()))
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # An interrupted Codex call may outlive this apply process. Preserve
+        # its child identity so error-state abandon can stop it before cleanup.
+        if state_published:
+            error_state_saved = False
+            try:
+                with apply_run_lock(root, session_id):
+                    _session_id, path, state = load_state_for_branch(root, branch)
+                    if state.apply.state != "ready":
+                        state.apply.state = "error"
+                        write_state(path, state)
+                        error_state_saved = True
+                        if report_path is None:
+                            report_path = write_apply_fork_error_report(
+                                root,
+                                branch,
+                                state,
+                                finding_counts,
+                                apply_worktree or root,
+                                config,
+                                codex_exec,
+                            )
+                        tracked_process = read_apply_process_id(root, session_id)
+                        if not tracked_process or not tracked_process.child_processes:
+                            delete_apply_process_id(root, session_id)
+                        if report_path is not None:
+                            setattr(exc, "cmoc_stdout", str(report_path.resolve()))
+            except BaseException as recovery_error:
+                if not error_state_saved:
+                    rollback_failures = _rollback_apply_setup(
+                        root,
+                        session_id,
+                        apply_branch,
+                        apply_worktree,
+                        branch_preexisting,
+                        worktree_preexisting,
+                    )
+                    for failure in rollback_failures:
+                        exc.add_note(f"apply resource rollback failed: {failure}")
+                    if not rollback_failures:
+                        try:
+                            # Immediate rollback leaves no active run for abandon.
+                            state.apply = ApplyPart()
+                            write_state(path, state)
+                        except BaseException as reset_error:
+                            exc.add_note(f"apply state reset failed: {reset_error}")
+                exc.add_note(f"apply run recovery failed: {recovery_error}")
         raise
     # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md requires the
     # generated report path on stdout; common runtime logs are emitted around it.
@@ -182,6 +264,39 @@ def _cmoc_apply_fork_body(
         returncode=2 if result_label == "unconverged" else 0,
         stdout=str(report_path.resolve()),
     )
+
+
+def _rollback_apply_setup(
+    root: Path,
+    session_id: str,
+    apply_branch: str | None,
+    apply_worktree: Path | None,
+    branch_preexisting: bool,
+    worktree_preexisting: bool,
+) -> list[str]:
+    """error state を保存できない初期化失敗で作成済み resource を戻す。"""
+    failures: list[str] = []
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    # 保存済み error state が無い場合は abandon が cleanup 対象を特定できない。
+    if apply_worktree is not None and not worktree_preexisting:
+        try:
+            result = remove_worktree(root, apply_worktree)
+            if result.returncode != 0 and apply_worktree.exists():
+                failures.append(f"worktree: {result.stderr.strip() or result.returncode}")
+        except BaseException as error:
+            failures.append(f"worktree: {error}")
+    if apply_branch is not None and not branch_preexisting:
+        try:
+            result = delete_branch(root, apply_branch, force=True)
+            if result.returncode != 0 and branch_exists(root, apply_branch):
+                failures.append(f"branch: {result.stderr.strip() or result.returncode}")
+        except BaseException as error:
+            failures.append(f"branch: {error}")
+    try:
+        delete_apply_process_id(root, session_id)
+    except BaseException as error:
+        failures.append(f"process tracking: {error}")
+    return failures
 
 
 def run_finding_application(
@@ -254,10 +369,10 @@ def dedupe_apply_targets(targets: list[Path]) -> list[Path]:
     deduped: list[Path] = []
     seen: set[Path] = set()
     for target in targets:
-        resolved = target.resolve()
-        if resolved in seen:
+        lexical = target.absolute()
+        if lexical in seen:
             continue
-        seen.add(resolved)
+        seen.add(lexical)
         deduped.append(target)
     return deduped
 
@@ -267,7 +382,7 @@ def normalize_apply_targets(
 ) -> list[Path]:
     """apply finding 列挙対象として扱える file だけに正規化する。"""
     targets: list[Path] = []
-    seen_resolved: set[Path] = set()
+    seen_repository_paths: set[Path] = set()
     for path in sorted(
         {
             (candidate if candidate.is_absolute() else root / candidate).absolute()
@@ -294,11 +409,11 @@ def normalize_apply_targets(
         elif is_untracked_git_ignored(root, path):
             continue
         # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-        # 分類は repository path で行うが、同じ実体への再調査は 1 回に抑える。
-        resolved = path.resolve()
-        if resolved in seen_resolved:
+        # oracle/ と realization/ は同じ実体を指す symlink でも別 file である。
+        repository_path = path.relative_to(root.absolute())
+        if repository_path in seen_repository_paths:
             continue
-        seen_resolved.add(resolved)
+        seen_repository_paths.add(repository_path)
         targets.append(path)
     return targets
 
