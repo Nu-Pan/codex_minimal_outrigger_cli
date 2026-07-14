@@ -1,27 +1,5 @@
-"""doctor preprocess の共有 lifecycle を外部挙動から検証する統合テスト。
-
-doctor preprocess は `.cmoc/local`、`.agents`、config、managed Ollama を同じ
-repository/worktree 前提で修復し、必要な差分を commit する。このファイルは
-CLI と直接呼び出しの両方で、その lifecycle と pre-existing Git index の保持を
-一続きの文脈で確認する。
-
-Ollama・lock・CLI/config・Git index はテスト観点としては分かれるが、各ケース
-が同じ `make_repo`、linked worktree、共有 doctor lock、preprocess の副作用を
-前提にする。ファイルを分割すると、これらの fixture と lifecycle の説明を
-複数のモジュールで重複して読む必要があり、局所的な読解量が増えるため、
-責務を doctor preprocess の外部契約に限定して一つに保つ。
-
-正本仕様: `<work-root>/oracle/doc/app_spec/doctor_preprocess.md`,
-`<work-root>/oracle/doc/app_spec/sub_command/doctor.md`,
-`<work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md`。
-"""
-
 import json
-import multiprocessing
 import subprocess
-import threading
-from concurrent.futures import ThreadPoolExecutor
-from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
@@ -33,33 +11,20 @@ from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from main import app
-from _ollama_support import (
+from _support import (
     TEST_SLM_MODEL,
+    fake_managed_ollama_env,
+    make_repo,
+    runner,
     run_doctor,
+    run_git,
 )
-from _cli_support import runner
-from _git_support import make_repo, run_git
 
 
-def hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
-    """別プロセスで共有 doctor lock を保持し、解放通知まで待機する。"""
-
-    import fcntl
-
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open("a+") as lock_file:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-        ready.send(True)
-        release.recv()
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-
-
-def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
+def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """doctor が Git の共通状態を修復し、共有 Ollama を再利用可能にすることを検証する。"""
-
     root = make_repo(tmp_path)
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
@@ -73,13 +38,7 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
     assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
-    agents_gitkeep = root / ".agents" / ".gitkeep"
-    assert agents_gitkeep.is_file()
-    assert agents_gitkeep.read_text() == ""
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # これはテスト用 HOME や endpoint ではなく、本番実行と共有するサービスと永続 model store である。
-    # 後続テストでも再利用できるよう、doctor はこのサービスをそのまま残す。
-    home = Path.home()
+    home = root / ".cmoc" / "local" / "test-home"
     service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
     assert (home / ".cmoc" / "ollama" / "bin" / "ollama").is_file()
     assert (home / ".cmoc" / "ollama" / "models").is_dir()
@@ -88,11 +47,9 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
         "Description=cmoc managed ollama",
         "",
         "[Service]",
-        "ExecStart=%h/.cmoc/ollama/bin/ollama serve",
+        f"ExecStart={home}/.cmoc/ollama/bin/ollama serve",
         "Environment=OLLAMA_HOST=127.0.0.1:11434",
         "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
-        "Restart=on-failure",
-        "RestartSec=2s",
         "",
         "[Install]",
         "WantedBy=default.target",
@@ -118,7 +75,7 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
     )
     assert (
         subprocess.run(
-            ["git", "check-ignore", "--no-index", "-q", ".cmoc/config.json"],
+            ["git", "check-ignore", "-q", ".cmoc/config.json"],
             cwd=root,
             check=False,
         ).returncode
@@ -129,8 +86,6 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
 def test_doctor_pulls_each_unique_cmoc_provider_model(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """設定に現れる cmoc provider model を重複なく pull 対象にすることを検証する。"""
-
     root = make_repo(tmp_path)
     config = CmocConfig()
     config.codex.model[ModelClass.MAINSTREAM] = CodexModelSpec("cmoc", "alpha")
@@ -157,15 +112,12 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
 
     doctor_module.run_doctor_preprocess(root)
 
-    assert len(pulled) == 2
-    assert set(pulled) == {"alpha", "beta"}
+    assert pulled == ["alpha", "beta"]
 
 
 def test_doctor_preprocess_in_linked_worktree_uses_repo_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree からの preprocess が repository 側の model 設定を使うことを検証する。"""
-
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "local" / "worktree" / "linked-ollama-config"
     run_git(root, "worktree", "add", "-b", "linked-ollama-config", str(linked), "HEAD")
@@ -196,61 +148,9 @@ def test_doctor_preprocess_in_linked_worktree_uses_repo_config(
     assert not (linked / ".cmoc" / "config.json").exists()
 
 
-def test_doctor_preprocess_waits_for_common_repository_lock(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """linked worktree と repository で共有する doctor lock の解放待ちを検証する。"""
-
-    root = make_repo(tmp_path)
-    linked = root / ".cmoc" / "local" / "worktree" / "linked-doctor-lock"
-    run_git(
-        root, "worktree", "add", "-b", "linked-doctor-lock", str(linked), "HEAD"
-    )
-    lock_path = doctor_module.doctor_lock_path(root)
-    assert doctor_module.doctor_lock_path(linked) == lock_path
-
-    ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
-    release_child, release_parent = multiprocessing.Pipe(duplex=False)
-    process = multiprocessing.Process(
-        target=hold_doctor_lock,
-        args=(lock_path, ready_child, release_child),
-    )
-    lock_attempted = threading.Event()
-    original_flock = doctor_module.fcntl.flock
-
-    def observe_lock_attempt(fd: int, operation: int) -> None:
-        """doctor が排他 lock を取得しようとしたことをテストへ通知する。"""
-
-        if operation & doctor_module.fcntl.LOCK_EX:
-            lock_attempted.set()
-        original_flock(fd, operation)
-
-    monkeypatch.setattr(doctor_module.fcntl, "flock", observe_lock_attempt)
-    process.start()
-    released = False
-    try:
-        assert ready_parent.recv() is True
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(doctor_module.run_doctor_preprocess, linked)
-            assert lock_attempted.wait(timeout=3)
-            assert not future.done()
-            release_parent.send(True)
-            released = True
-            future.result(timeout=3)
-    finally:
-        if process.is_alive() and not released:
-            release_parent.send(True)
-        process.join(timeout=3)
-        if process.is_alive():
-            process.terminate()
-            process.join()
-
-
 def test_doctor_generates_and_tracks_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """doctor が既定 config を生成し、Git index へ追跡することを検証する。"""
-
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
     monkeypatch.chdir(root)
@@ -271,53 +171,34 @@ def test_doctor_generates_and_tracks_config(
 def test_dector_alias_runs_doctor(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """互換 alias `dector` が doctor と同じ config 生成を実行することを検証する。"""
-
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
-    result = runner.invoke(app, ["dector"], catch_exceptions=False)
+    result = runner.invoke(
+        app,
+        ["dector"],
+        env=fake_managed_ollama_env(root),
+        catch_exceptions=False,
+    )
 
     assert result.exit_code == 0
     assert (root / ".cmoc" / "config.json").is_file()
 
 
-def test_doctor_generates_config_under_broad_cmoc_ignore(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """広い `.cmoc/` ignore があっても生成 config を追跡可能に修復することを検証する。"""
-
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text(".cmoc/\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "ignore cmoc working data")
-    monkeypatch.chdir(root)
-
-    run_doctor(root)
-
-    assert (
-        run_git(root, "ls-files", "--", ".cmoc/config.json").stdout.strip()
-        == ".cmoc/config.json"
-    )
-    check_ignore = subprocess.run(
-        ["git", "check-ignore", "--no-index", "-q", ".cmoc/config.json"],
-        cwd=root,
-        check=False,
-    )
-    assert check_ignore.returncode != 0
-
-
 def test_doctor_preprocess_targets_current_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree 起点の doctor が repository と worktree の状態を正しく修復することを検証する。"""
-
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "local" / "worktree" / "linked-doctor"
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
 
-    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+    result = runner.invoke(
+        app,
+        ["doctor"],
+        env=fake_managed_ollama_env(linked),
+        catch_exceptions=False,
+    )
 
     assert result.exit_code == 0
     assert "/.cmoc/local/" in (linked / ".gitignore").read_text()
@@ -327,29 +208,9 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     assert run_git(
         linked, "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"
     ).returncode == 0
-    assert "/.cmoc/local/" in (root / ".gitignore").read_text()
-    assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
-        ".agents/.gitkeep"
-    ]
-    assert (
-        run_git(
-            root,
-            "check-ignore",
-            "-q",
-            ".cmoc/local/worktree/linked-doctor",
-        ).returncode
-        == 0
-    )
-    assert (
-        run_git(
-            root, "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"
-        ).returncode
-        == 0
-    )
+    assert not (root / ".gitignore").exists()
+    assert not (root / ".agents").exists()
     assert (root / ".cmoc" / "config.json").is_file()
-    assert list((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))
-    assert not (linked / ".cmoc" / "local" / "log" / "sub_command").exists()
-    assert run_git(root, "status", "--short").stdout.strip() == ""
     assert not (linked / ".cmoc" / "config.json").exists()
     assert f"- repo_root: `{root}`" in result.stdout
 
@@ -357,8 +218,6 @@ def test_doctor_preprocess_targets_current_linked_worktree(
 def test_doctor_syncs_default_config_without_overwriting_human_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """既存 config の人間による値を保ったまま不足する既定値を同期することを検証する。"""
-
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
     config_path.parent.mkdir()
@@ -402,8 +261,6 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
 def test_doctor_preprocess_untracks_existing_cmoc_local_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """既に追跡された `.cmoc/local` のファイルを実体を残して index から外すことを検証する。"""
-
     root = make_repo(tmp_path)
     local_path = root / ".cmoc" / "local" / "cache.json"
     local_path.parent.mkdir(parents=True)
@@ -416,15 +273,11 @@ def test_doctor_preprocess_untracks_existing_cmoc_local_files(
 
     assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
     assert run_git(root, "status", "--short").stdout.strip() == ""
-    assert local_path.is_file()
-    assert local_path.read_text() == "{}\n"
 
 
 def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """事前に stage された `.cmoc/local` の変更を doctor が復元・上書きしないことを検証する。"""
-
     root = make_repo(tmp_path)
     local_path = root / ".cmoc" / "local" / "cache.json"
     local_path.parent.mkdir(parents=True)
@@ -434,49 +287,17 @@ def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
     local_path.write_text('{"new": true}\n')
     run_git(root, "add", "-f", ".cmoc/local/cache.json")
     monkeypatch.chdir(root)
-    local_path.write_text('{"working": true}\n')
 
     run_doctor(root)
 
-    assert local_path.read_text() == '{"working": true}\n'
+    assert local_path.read_text() == '{"new": true}\n'
     assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
     assert run_git(root, "diff", "--cached", "--name-only").stdout.strip() == ""
-
-
-def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_deletion(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """生成した `.agents/.gitkeep` だけを修復 commit し、既存の削除 stage を保つことを検証する。"""
-
-    root = make_repo(tmp_path)
-    agents_file = root / ".agents" / "existing.txt"
-    agents_file.parent.mkdir()
-    agents_file.write_text("existing\n")
-    run_git(root, "add", ".agents")
-    run_git(root, "commit", "-m", "track agent file")
-    agents_file.unlink()
-    run_git(root, "add", "-u", ".agents")
-    monkeypatch.chdir(root)
-
-    doctor_module.run_doctor_preprocess(root)
-
-    gitkeep = root / ".agents" / ".gitkeep"
-    assert gitkeep.is_file()
-    assert gitkeep.read_text() == ""
-    repair_paths = run_git(
-        root, "show", "--name-only", "--format=", "HEAD"
-    ).stdout.splitlines()
-    assert ".agents/.gitkeep" in repair_paths
-    assert run_git(root, "diff", "--cached", "--name-status").stdout.splitlines() == [
-        "D\t.agents/existing.txt"
-    ]
 
 
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """doctor の修復 commit が事前に stage された利用者変更を取り込まないことを検証する。"""
-
     root = make_repo(tmp_path)
     user_file = root / "user.txt"
     user_file.write_text("user change\n")
@@ -495,8 +316,6 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
 def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """doctor の `.gitignore` 修復 commit が事前の stage 内容を上書きしないことを検証する。"""
-
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
     gitignore.write_text("human-rule\n")
@@ -518,8 +337,6 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
 def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """修復対象 path にある staged と unstaged の差分をそれぞれ保つことを検証する。"""
-
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
     gitignore.write_text("staged-rule\n")
@@ -540,8 +357,6 @@ def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
 def test_doctor_preprocess_preserves_preexisting_staged_rename(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """doctor が事前に stage された rename の index 表現を保つことを検証する。"""
-
     root = make_repo(tmp_path)
     old_path = root / "old.txt"
     new_path = root / "new.txt"

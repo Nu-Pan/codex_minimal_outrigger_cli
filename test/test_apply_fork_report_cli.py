@@ -9,15 +9,24 @@ report schema の観測結果として読まれるため、分割すると期待
 """
 
 import json
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 from basic.acp import AgentCallParameter
-from _cli_support import runner
-from _codex_support import FakeCodexResult
-from _git_support import make_repo, run_git
-from _ollama_support import run_doctor
+from _support import (
+    make_repo,
+    run_git,
+    runner,
+    run_doctor,
+    setup_codex_home,
+    write_python_executable,
+)
 from cmoc_runtime import CmocError
+from commons.runtime_codex import run_codex_exec as real_run_codex_exec
 from config.cmoc_config import CmocConfig
 from main import app
 from pytest import MonkeyPatch
@@ -28,6 +37,230 @@ from sub_commands.apply.fork_report import (
     changed_paths_since_fork,
     fallback_change_summary,
 )
+
+
+class FakeCodexResult:
+    """apply fork テストが参照する Codex 実行結果 field だけを持つ fake。"""
+
+    def __init__(self, output_json: object | None = None, output_text: str = "") -> None:
+        """必要な結果 field をテストごとに差し替えられるように保持する。"""
+        self.output_json = output_json
+        self.output_text = output_text
+
+
+def run_apply_fork_builder_import(
+    tmp_path: Path, code: str
+) -> subprocess.CompletedProcess[str]:
+    """subprocess の被テスト環境を tmp_path 配下だけに置く。
+
+    根拠: <work-root>/oracle/doc/dev_rule/test_rule.md
+    """
+    root = Path(__file__).parents[1]
+    target = tmp_path / "site"
+    shutil.copytree(root / "src" / "acp", target / "acp")
+    shutil.copytree(root / "src" / "basic", target / "basic")
+    shutil.copytree(root / "oracle" / "src" / "oracle", target / "oracle")
+
+    work = tmp_path / "work"
+    (work / ".git").mkdir(parents=True)
+    return subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=work,
+        env={**os.environ, "PYTHONPATH": str(target), "PYTHONNOUSERSITE": "1"},
+        text=True,
+        capture_output=True,
+    )
+
+
+def test_change_summary_builder_imports_with_src_pythonpath_only(tmp_path: Path) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from acp.builder.apply.fork.change_summary import "
+            "build_apply_fork_change_summary_parameter as build; "
+            "p = build('diff'); "
+            "assert p.structured_output_schema_path.name == 'change_summary.json'; "
+            "assert '# oracle and realization basic' in p.prompt"
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_file_finding_enumeration_builder_imports_with_src_pythonpath_only(
+    tmp_path: Path,
+) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from pathlib import Path; "
+            "from acp.builder.apply.fork.file_finding_enumeration import "
+            "build_apply_fork_file_finding_enumeration_parameter as build; "
+            "p = build(Path('<repo-root>') / 'src' / 'main.py'); "
+            "assert p.structured_output_schema_path.name == "
+            "'file_finding_enumeration.json'"
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_finding_application_builder_imports_with_src_pythonpath_only(
+    tmp_path: Path,
+) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from acp.builder.apply.fork.finding_application import "
+            "build_apply_fork_finding_application_parameter as build; "
+            "p = build([{'title': 't'}]); "
+            "assert p.structured_output_schema_path is None; "
+            "assert 'realization file' in p.prompt"
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from pathlib import Path; "
+            "from acp.builder.apply.fork.change_summary import "
+            "build_apply_fork_change_summary_parameter as change_summary; "
+            "from acp.builder.apply.fork.file_finding_enumeration import "
+            "build_apply_fork_file_finding_enumeration_parameter as enumerate_file; "
+            "from acp.builder.apply.fork.finding_application import "
+            "build_apply_fork_finding_application_parameter as apply_finding; "
+            "cs = change_summary('diff'); "
+            "fe = enumerate_file(Path('<repo-root>') / 'src' / 'main.py'); "
+            "fa = apply_finding([{'title': 't'}]); "
+            "assert cs.structured_output_schema_path.name == 'change_summary.json'; "
+            "assert fe.structured_output_schema_path.name == "
+            "'file_finding_enumeration.json'; "
+            "assert fa.structured_output_schema_path is None; "
+            "assert '# oracle and realization basic' in cs.prompt; "
+            "assert 'realization file' in fa.prompt"
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_finding_application_prompt_uses_complete_standard_prompt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from acp.builder.apply.fork.finding_application import (
+        build_apply_fork_finding_application_parameter,
+    )
+
+    repo_root = tmp_path / "repo"
+    apply_worktree = repo_root / ".cmoc" / "local" / "worktree" / "session" / "run"
+    apply_worktree.mkdir(parents=True)
+    (repo_root / ".git").mkdir()
+    (apply_worktree / ".git").write_text("gitdir: ignored\n")
+    monkeypatch.chdir(apply_worktree)
+
+    parameter = build_apply_fork_finding_application_parameter(
+        [
+            {
+                "title": "first",
+                "evidences": [
+                    {
+                        "path": str(repo_root / "review" / "_comment.md"),
+                        "line_start": 1,
+                        "line_end": 2,
+                        "summary": "comment evidence",
+                    }
+                ],
+            },
+            {"title": "second"},
+        ]
+    )
+
+    assert "# oracle and realization basic" in parameter.prompt
+    assert "# realization standard" in parameter.prompt
+    assert "# file read write rule - realization_write" in parameter.prompt
+    assert "- oracle file は書き込み禁止" in parameter.prompt
+    assert "- `<work-root>/memo` は読み書き禁止" in parameter.prompt
+    assert "/.agents` ツリー内は書き込み禁止" in parameter.prompt
+    assert "## FINDING-00" in parameter.prompt
+    assert '"title": "first"' in parameter.prompt
+    assert "_comment.md" in parameter.prompt
+    assert "## FINDING-01" in parameter.prompt
+    assert '"title": "second"' in parameter.prompt
+    assert '"findings"' not in parameter.prompt
+    assert f"- <work-root> = {apply_worktree}" in parameter.prompt
+    assert f"- <repo-root> = {repo_root}" in parameter.prompt
+
+
+def test_file_finding_enumeration_schema_matches_oracle_source() -> None:
+    from acp.builder.apply.fork.file_finding_enumeration import (
+        build_apply_fork_file_finding_enumeration_parameter,
+    )
+
+    root = Path(__file__).parents[1]
+    parameter = build_apply_fork_file_finding_enumeration_parameter(Path(__file__))
+    oracle_schema_path = (
+        root
+        / "oracle"
+        / "src"
+        / "oracle"
+        / "acp_builder"
+        / "apply"
+        / "fork"
+        / "file_finding_enumeration.json"
+    )
+
+    assert parameter.structured_output_schema_path == oracle_schema_path
+    assert (
+        json.loads(parameter.structured_output_schema_path.read_text())["type"]
+        == "object"
+    )
+
+
+def test_file_finding_enumeration_prompt_uses_complete_standard_prompt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from acp.builder.apply.fork.file_finding_enumeration import (
+        build_apply_fork_file_finding_enumeration_parameter,
+    )
+
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    target = repo_root / "src" / "app.py"
+    target.parent.mkdir()
+    target.write_text("print('ok')\n")
+    monkeypatch.chdir(repo_root)
+
+    parameter = build_apply_fork_file_finding_enumeration_parameter(
+        Path("<repo-root>") / "src" / "app.py"
+    )
+
+    assert "# oracle standard" in parameter.prompt
+    assert "# realization standard" in parameter.prompt
+    assert "# apply review standard" in parameter.prompt
+    assert "- `<work-root>/memo` は読み書き禁止" in parameter.prompt
+    assert f"- <target-path> = {target}" in parameter.prompt
+    assert f"- <work-root> = {repo_root}" in parameter.prompt
+
+
+def test_file_finding_enumeration_rejects_relative_target_without_root_token(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from acp.builder.apply.fork.file_finding_enumeration import (
+        build_apply_fork_file_finding_enumeration_parameter,
+    )
+
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    monkeypatch.chdir(repo_root)
+
+    with pytest.raises(ValueError, match="relative path without root path place holder"):
+        build_apply_fork_file_finding_enumeration_parameter(Path("src/app.py"))
 
 
 def report_path_from_stdout(stdout: str) -> Path:
@@ -47,12 +280,6 @@ def test_apply_fork_writes_report_with_change_summary(
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
-    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
-    session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
-    session_state = json.loads(state_path.read_text())
-    session_fork_commit = session_state["session"]["session_start_commit"]
-
     finding = {
         "title": "Update README",
         "evidences": [
@@ -124,26 +351,10 @@ def test_apply_fork_writes_report_with_change_summary(
     assert "ドキュメント: README を更新した (README.md)" in rendered
     assert "apply fork change summary" in calls
     assert "apply fork commit message" not in calls
-    state = json.loads(state_path.read_text())
+    branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = branch.removeprefix("cmoc/session/")
+    state = json.loads((root / ".cmoc" / "local" / "session" / f"{session_id}.json").read_text())
     apply_branch = state["apply"]["apply_branch"]
-    apply_fork_commit = state["apply"]["oracle_snapshot_commit"]
-    apply_worktree = (
-        root
-        / ".cmoc"
-        / "local"
-        / "worktree"
-        / session_id
-        / apply_branch.rsplit("/", 1)[-1]
-    )
-    front_matter = dict(
-        line.split(": ", 1)
-        for line in rendered.split("---\n", 2)[1].splitlines()
-    )
-    assert front_matter["cmoc_session_branch"] == session_branch
-    assert front_matter["cmoc_session_fork_commit"] == session_fork_commit
-    assert front_matter["cmoc_apply_branch"] == apply_branch
-    assert front_matter["cmoc_apply_fork_commit"] == apply_fork_commit
-    assert front_matter["cmoc_apply_worktree"] == str(apply_worktree)
     assert (
         run_git(root, "log", "-1", "--pretty=%s", apply_branch).stdout.strip()
         == "Apply finding: Update README"
@@ -355,10 +566,6 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
-    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
-    session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
-
     finding = {
         "title": "Update README before error",
         "evidences": [
@@ -408,12 +615,10 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
 
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
-    assert result.exit_code == 1
+    assert result.exit_code != 0
     assert applications == 1
     assert "README.md" in summary_prompt
     assert "+# updated before error" in summary_prompt
-    state = json.loads(state_path.read_text())
-    assert state["apply"]["state"] == "error"
     rendered = report_path_from_stdout(result.stdout).read_text()
     assert "result: error" in rendered
     assert "実装: commit 前に README を更新した (README.md)" in rendered

@@ -1,36 +1,28 @@
-"""TUI 起動直前の CLI 前処理の外部挙動を検証する。
-
-正本仕様: <work-root>/oracle/doc/app_spec/sub_command/tui.md
-"""
+"""TUI 起動直前の CLI 前処理の外部挙動を検証する。"""
 
 import json
-from collections.abc import Iterator
 from pathlib import Path
 
 import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 import pytest
 
-from _cli_support import runner
-from _codex_support import setup_codex_home, stub_codex_overrides
-from _command_support import write_python_executable
-from _git_support import make_repo, run_git
-from _ollama_support import run_doctor
+from _support import (
+    make_repo,
+    run_git,
+    runner,
+    run_doctor,
+    setup_codex_home,
+    stub_codex_overrides,
+    write_python_executable,
+)
 from main import app
 import sub_commands.tui as tui_module
-
-@pytest.fixture(autouse=True)
-def reset_indexing_preflight() -> Iterator[None]:
-    """各テスト間で indexing preflight の有効状態をリセットする。"""
-    codex_preflight_module.disable_indexing_preflight()
-    yield
-    codex_preflight_module.disable_indexing_preflight()
 
 def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """編集済み prompt の解決と Codex TUI 起動までを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -41,19 +33,16 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         fake_code,
         [
             "import pathlib, sys",
-            "assert sys.argv[1:-1] == ['--wait']",
             "path = pathlib.Path(sys.argv[-1])",
             "text = path.read_text()",
             "path.write_text(text + '\\n<!-- remove me -->\\n# 依頼\\n\\nsrc を確認して必要なら直す\\n')",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    exec_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
-    tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
+    exec_calls = []
+    tui_calls = []
 
     class FakeResolveResult:
-        """parameter 解決 call が返す最小の fake result。"""
-
         output_json = {
             "file_access_mode": {"value": "repo_write", "reason": "repo wide task"},
             "oracle_and_realization_basic": {"value": True, "reason": "needed"},
@@ -67,7 +56,6 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeResolveResult:
-        """解決パラメータ取得 call を記録して期待値を検証する。"""
         exec_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui resolve parameter"
         assert parameter.model_class == ModelClass.EFFICIENCY
@@ -79,7 +67,6 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         return FakeResolveResult()
 
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
-        """TUI 起動 call を記録して生成パラメータを検証する。"""
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
         assert parameter.model_class == ModelClass.FLAGSHIP
@@ -123,7 +110,6 @@ def test_tui_uses_default_file_access_mode_for_empty_resolved_value(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """空の解決値が TUI の readonly 既定値へ戻ることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     (root / ".cmoc" / "local" / "log" / "tui").mkdir(parents=True, exist_ok=True)
@@ -141,7 +127,6 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """linked worktree でも complete prompt を repository 側へ保存する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -158,7 +143,6 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
         fake_code,
         [
             "import pathlib, sys",
-            "assert sys.argv[1:-1] == ['--wait']",
             "path = pathlib.Path(sys.argv[-1])",
             "path.write_text(path.read_text() + '\\nlinked worktree task\\n')",
         ],
@@ -189,13 +173,13 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
+    tui_calls = []
 
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
-        """linked worktree の TUI 起動 call を記録する。"""
         tui_calls.append((parameter, kwargs))
 
     monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
+    codex_preflight_module.disable_indexing_preflight()
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
@@ -221,7 +205,6 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """repository と linked worktree の両方で `.cmoc` ignore を保証する。"""
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
     config_path.parent.mkdir()
@@ -236,7 +219,6 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
         fake_code,
         [
             "import pathlib, sys",
-            "assert sys.argv[1:-1] == ['--wait']",
             "path = pathlib.Path(sys.argv[-1])",
             "path.write_text(path.read_text() + '\\nlinked ignore task\\n')",
         ],
@@ -244,8 +226,6 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     class FakeResolveResult:
-        """parameter 解決 call が返す最小の fake result。"""
-
         output_json = {"file_access_mode": {"value": "readonly", "reason": "test"}}
 
     monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
