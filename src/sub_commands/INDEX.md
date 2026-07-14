@@ -197,25 +197,21 @@
 # `session`
 
 ## Summary
-- `__init__.py` は session 系サブコマンド実装を収める最小のパッケージ初期化モジュールです。具体処理や公開 API は持たず、この階層がサブコマンド実装の入口かだけを確認したいときに読む対象です。
-- `abandon.py` は `cmoc session abandon` の実行本体です。session branch を home branch へ戻してから破棄し、state を abandoned に更新する流れと、cleanup 失敗時の rollback を確認したいときに読む対象です。
-- `fork.py` は `cmoc session fork` の実行本体です。現在の local branch から session branch と session state を新規作成し、衝突回避、worktree の clean 確認、失敗時 rollback を含めて確認したいときに読む対象です。
-- `join.py` は `cmoc session join` の実行本体です。session branch から home branch へ merge し、必要なら conflict 解消を依頼し、state 更新・branch 削除・結果表示までの制御を確認したいときに読む対象です。
+- `session` 系サブコマンド実装をまとめた階層で、`fork`・`join`・`abandon` の各実行本体を分けて収める。ここは個別操作の入口を選ぶための案内であり、実処理そのものは各モジュールで扱う。
+- `__init__.py` はこの階層をパッケージとして成立させる最小初期化で、公開 API や挙動は持たない。`fork.py` は session 作成時の branch/state 生成と衝突回避・rollback を扱い、`join.py` は merge と conflict 解消を含む終了処理を扱い、`abandon.py` は home branch への復帰後に session を破棄する流れを扱う。
 
 ## Read this when
-- `__init__.py` は、session 系サブコマンドのパッケージ境界や、パッケージ自体に初期化処理があるかを確認したいときに読む。
-- `abandon.py` は、`session abandon` の実行条件、branch 遷移、state 更新、cleanup 失敗時の rollback 方針を確認したいときに読む。
-- `fork.py` は、`session fork` の作成手順、事前条件、失敗時 rollback、表示結果を確認したいときに読む。
-- `join.py` は、`session join` の実行条件、失敗条件、出力内容、状態遷移、merge conflict の扱いを確認したいときに読む。
+- session 系サブコマンド全体の構成を見て、どの実装モジュールへ進むべきかを判断したいとき。
+- session の開始・統合・破棄のいずれかで、branch 遷移や state 更新の責務分担を先に把握したいとき。
+- この階層にパッケージ初期化以外の共通処理があるか、または個別サブコマンドがどの責務で分かれているかを確認したいとき。
 
 ## Do not read this when
-- `__init__.py` は、個別の session サブコマンドの処理、引数、入出力、状態操作を調べたいときには読まない。
-- `abandon.py` は、`session abandon` の CLI 入口だけ知りたいときや、join / fork など別の session 操作を追いたいときには読まない。
-- `fork.py` は、`session fork` の CLI runtime 起動や共通前処理だけを見たいとき、または join / abandon を追いたいときには読まない。
-- `join.py` は、`session join` の CLI 入口だけを知りたいとき、session 全体の一覧や fork / abandon を追いたいとき、一般的な git 操作や共通実装だけを知りたいときには読まない。
+- CLI の共通起動や subcommand 登録の全体像を知りたいときは、より上位の共通実行層を読む。
+- 個別の session 操作の条件、失敗時挙動、出力、branch/state 変更を知りたいときは、対応する実装モジュールを直接読む。
+- session 以外のサブコマンド実装を追いたいときは、この階層ではなく別の sub_commands 配下を見る。
 
 ## hash
-- bf4e9c66b73f369a31fc7b827e7d5b4c0f08980a1092b78933a4d5a2731a43c8
+- 9fd5546b65dc716d41bd7cdcdd3ce1dc40a0e29d68dc6354c65e401cf560f759
 
 # `tui.py`
 

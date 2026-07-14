@@ -115,39 +115,37 @@
 # `src`
 
 ## Summary
-- `src` は realization implementation の本体を束ねる上位入口で、`acp` 互換面を含む複数の実装パッケージへ進む前のルーティングに使う。ここでは実装内容そのものより、どの下位領域を読むべきかを切り分ける。
-- `basic` `commons` `config` `main.py` `oracle.py` `sub_commands` は、それぞれ互換公開面、共有基盤、設定入口、CLI 入口、正本側 oracle package への shim、サブコマンド束ねを担当するため、この階層から目的の責務に応じて入る。
+- `src` は realization 側の実装入口をまとめる階層で、`acp`、`basic`、`commons`、`config`、`main.py`、`oracle.py`、`sub_commands` への進み先を切り分けるために読む。ここでは各実装の詳細ではなく、どの責務をどの下位対象に見に行くべきかだけを案内する。
+- 互換 import 面を保つ shim と、CLI 入口と、共有基盤と、サブコマンド群を分けて読むためのルートでもある。正本側の `oracle` 定義を読む場所ではなく、realization 側でどの領域に進むかを選ぶための入口として使う。
 
 ## Read this when
-- `src` 配下の realization implementation 全体から、読むべき担当領域を絞り込みたいとき。
-- `acp.*` 互換公開面、基本 API の再公開、共有 runtime 基盤、設定入口、CLI 入口、oracle package shim、サブコマンド入口のどこへ進むべきか判断したいとき。
-- realization 側で公開面や基盤、コマンド配線の変更を検討していて、まず責務境界を確認したいとき。
+- realization 側で `acp.*`、`basic.*`、`config.*`、`oracle.*`、`cmoc` CLI、または共有 runtime 基盤のどこを読むべきか判断したいとき。
+- 公開 import 経路の互換維持と、正本側への委譲先を見分けたいとき。
+- CLI 入口、共通 helper、サブコマンド実装の責務境界を最初に切り分けたいとき。
 
 ## Do not read this when
-- 個別の実装仕様、制御フロー、失敗時挙動を知りたいときは、ここではなく対応する下位モジュールを直接読む。
-- 正本仕様断片そのものを確認したいときは、`oracle` 側の対象を読む。
-- 単一のコマンドや helper の内部詳細だけを追いたいときは、この上位入口を深掘りしない。
+- `src` 全体の実装詳細や個別機能の仕様本体を知りたいときは読まない。
+- 正本仕様断片そのものを確認したいときは `oracle` 側を読む。
+- 公開面ではなく、個別 helper や個別 subcommand の具体的な制御を追いたいときは、対応する下位対象へ直接進む。
 
 ## hash
-- 81014c1d4fa217fd11a279f515e85efe3ba374f331926bb713201e317a41bb5c
+- b3164a962634821c184f7bbb02c336b4450951cda0fcd57cbd3c57b18ac37164
 
 # `test`
 
 ## Summary
-- `test` 配下で、`acp_builder` と CLI/runtime 系テストが共通利用する補助ファイル群を案内する入口。個別テスト本文ではなく、テスト用の共通 helper の責務と、どの補助へ進むべきかを切り分けるときに読む。
-- 各 helper は、CLI 実行補助、git/command/process 補助、`doctor` や `codex` の runtime 補助、`apply` や `review` の対象選定・パラメータ検証補助、`acp_builder` 正本 schema 参照補助に分かれている。
-- `acp_builder` 関連では、テスト側で正本 schema を複製せず oracle 側へ直接つなぐ path helper と、`apply` / `indexing` / `review oracle` / `session join` / `tui` の parameter 生成や公開面を確認するテスト群が入口になる。
+- `test` 配下の共通テスト支援をまとめる入口で、`acp_builder` 系の正本 schema 参照、CLI 実行補助、git/worktree/権限/runner の共通足場を探すときに読む。
+- 個別機能の本体仕様ではなく、テストから正本側へ直接つなぐための補助と、その境界を確認したい場合の案内に重点を置く。
 
 ## Read this when
-- テスト全体で共通に使う helper の役割を確認したいとき。
-- Typer CLI、外部コマンド、git fixture、Ollama、Codex 実行、runtime 停止や状態管理の共通補助を探したいとき。
-- `acp_builder` の正本 schema 参照や、apply/indexing/review/session join/tui の parameter 生成を確認したいとき。
-- 個別テスト本文へ進む前に、そのテストがどの共通 helper を前提にしているかを見分けたいとき。
+- `acp_builder` 関連テストで共通 helper を探したいとき。
+- CLI、git、worktree、Codex 実行、Ollama、権限、prompt 部品、StructDoc などのテスト支援を確認したいとき。
+- 正本 schema をテストから参照する方針や、テスト補助の責務境界を見たいとき。
 
 ## Do not read this when
-- 個別の CLI や runtime、`acp_builder` 本体の仕様を確認したいときは、対応する実装側や oracle 側の本文を読む。
-- `INDEX.md` のルーティング方針そのものを確認したいときは、この `test` 配下ではなく上位の案内を読む。
-- 共通 helper ではなく、特定コマンドの外部挙動や report 仕様だけを追いたいときは、対応する個別テストを直接読む。
+- 個別の `acp_builder` 仕様や実装本体を確認したいときは、対応する `oracle` 側を読む。
+- 各コマンドや runtime の外部挙動そのものを知りたいときは、該当する test 本文を直接読む。
+- INDEX.md のルーティング方針やリポジトリ全体の開発規則を確認したいときは、この配下ではなく上位の案内を読む。
 
 ## hash
-- 8c71cfc187f9fcee2ff45775d86e7b2b830cac0150665514541c37a4c1711840
+- f55aef8106c4479de89fe054923c58e12a927e7e6e0d9338d8a1a5f99589b8b2

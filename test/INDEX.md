@@ -888,21 +888,23 @@
 # `test_session_cli.py`
 
 ## Summary
-- `cmoc session fork` / `join` / `abandon` の CLI 外部挙動を横断して確認したいときに読む。session branch の作成・完了・破棄、linked worktree での branch/state の扱い、dirty worktree や precondition 失敗時の拒否、state cleanup、join 時の conflict 解消まわりの回帰をまとめて扱う。
-- 同じ branch/state fixture を共有していて、分割すると観測文脈が散るため、session ライフサイクルを一箇所で追う必要がある場合に読む。
+- `test/test_session_cli.py` は `session fork` / `join` / `abandon` の外部挙動をまとめて検証する統合テスト群です。session branch と session state の生成・更新・削除、linked worktree での振る舞い、dirty worktree や破損 state、cleanup 失敗、Codex 実行境界の確認を読むときに進みます。
+- 同じ session CLI の回帰でも、個別の内部 helper の単体仕様よりも、branch/state のライフサイクルやサブコマンド境界、preprocess 順序、conflict resolution の観測点を確認したい場合にこのファイルを読むのが適切です。
+- このファイルは session CLI の回帰検証に特化しているため、別サブコマンドの挙動、一般的な Git 操作、共通テスト支援の実装を知りたいだけなら直接読む先ではありません。
 
 ## Read this when
-- session 関連の CLI 挙動をまとめて確認したいとき
-- fork 後の state 初期化、join 後の state 更新、abandon 後の branch/state 破棄を同じ回帰群として追いたいとき
-- linked worktree での session 操作や、dirty worktree・preprocess・state 不正などの拒否条件を含めて確認したいとき
+- `session fork` / `session join` / `session abandon` の外部挙動をまとめて確認したいとき。
+- session branch の作成・復帰・削除、session state の永続化と cleanup の関係を確認したいとき。
+- linked worktree での session 操作、dirty worktree 拒否、破損 state、ID collision、conflict resolution の回帰を追いたいとき。
+- Codex 実行時の file access 境界や、session join の conflict 解消フローを観測したいとき。
 
 ## Do not read this when
-- 特定の session サブコマンド 1 つの仕様だけを知りたいときは、対応する `sub_command/session_*.md` を直接読む
-- session state の項目定義だけを確認したいときは `session_state.md` を読む
-- branch モデルや全体の用語定義だけを確認したいときは、より上位の branch/usage 系文書を読む
+- 個別の session サブコマンドの実装本体だけを追いたいときは、それぞれの `src/sub_commands/session/*.py` を先に読むべきです。
+- テスト支援の共通処理や Git 生成系 fixture の責務を知りたいだけなら、まず `_cli_support` / `_git_support` / `_ollama_support` 側を読むべきです。
+- session 以外の CLI や汎用の doctor / codex preflight の仕様を知りたいだけなら、この統合テストではなく対応する専用テストを読むべきです。
 
 ## hash
-- 9e6aff8755ed84a4d9a28623f0a374d3c0fb864094265d826772c7859d16af72
+- be177cf5149c6a513e56b9a51dbf63442b7a661403128325202afa68278890f0
 
 # `test_struct_doc_rendering.py`
 

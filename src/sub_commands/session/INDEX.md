@@ -54,18 +54,19 @@
 # `join.py`
 
 ## Summary
-- `cmoc session join` の実行本体です。session branch 上で事前条件を確認し、home branch へ merge して、必要なら conflict 解消を Codex CLI に依頼し、state 更新・branch 削除・結果表示までをまとめて扱います。
-- このファイルは `session join` 固有の制御ロジックを読む入口です。merge conflict の対象列挙、conflict marker の残存確認、stage、commit まで含めて確認したいときに進みます。
+- `cmoc session join` の実行本体です。session branch 上で、状態確認・作業ツリー確認・home branch への merge・必要時の conflict 解消・state 更新・branch 削除・結果表示までを追うときに読む対象です。
+- merge conflict の解消方針、未解決 conflict marker の検出、unmerged path の確認方法を含むため、join の失敗時挙動や手動介入条件を確認したいときにもここを起点にします。
+- session fork や abandon のような別サブコマンドの状態遷移や branch lifecycle を追うだけなら、ここではなく各サブコマンド側を直接読むほうが適切です。
 
 ## Read this when
-- `cmoc session join` の実行条件、失敗条件、出力内容、状態遷移を確認したいとき。
-- merge 失敗時にどのファイルを conflict 対象にし、どの時点で手動介入を要求するかを確認したいとき。
-- session branch の削除可否や、state 更新と git 操作の順序が重要なとき。
+- `cmoc session join` がどの条件で開始でき、どの状態遷移を行い、成功時に何を更新するかを確認したいとき。
+- merge 失敗後に Codex CLI へ conflict 解消を依頼する流れ、残存 conflict marker の検査、unmerged path の再確認を理解したいとき。
+- session branch の削除可否が何を根拠に決まるか、join 後にどの出力が利用者に返るかを確認したいとき。
 
 ## Do not read this when
-- `session join` の CLI 入口だけを知りたいときは、上位のコマンド登録側を読むべきです。
-- session 機能全体の一覧や、`fork` / `abandon` など別サブコマンドを追いたいとき。
-- 一般的な git 操作や Codex 実行規約だけを知りたいときは、このファイルではなく共通実装側を読むべきです。
+- session branch の作成手順を知りたいだけなら、`session fork` の実装を読むほうが直接です。
+- session branch を merge せず破棄する手順を知りたいだけなら、`session abandon` の実装を読むほうが直接です。
+- Codex の一般的な実行ルールや indexing preflight の詳細だけを知りたいなら、このファイルではなく共通 runtime 側を読むほうが適切です。
 
 ## hash
-- 47d8cabd5fdd2641858ffb632add670674f7d18bcb2450c1c1026c40cd7a8189
+- 7c18a9808ca35ac26d955cdc93b6ae26d619946799d6cd87e40432e0a9307bc5
