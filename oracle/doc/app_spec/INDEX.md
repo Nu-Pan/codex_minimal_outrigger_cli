@@ -40,21 +40,20 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- `codex exec` 呼び出しの構築と実行を扱う。`$CODEX_HOME` の解決と preflight validation、argv による設定上書き、ファイルアクセス制限、モデルと reasoning effort の強制指定、プロンプト本文とログ保存、Structured Output、失敗時の再試行や quota 復帰待機を確認したいときに読む。
+- `codex exec` 呼び出しの組み立て方と実行時制約を定める。対象は、環境変数の引き継ぎ、事前検証、argv での設定上書き、プロンプトとログの保存、Structured Output、失敗時の再試行・再開に関わる実装。
 
 ## Read this when
-- Codex CLI を起動する前に、どの引数や環境変数で呼び出し条件を固定すべきか判断したいとき。
-- プロンプト本文をそのまま渡す必要があるか、保存やリダイレクトをどう扱うか確認したいとき。
-- `codex exec --json` の失敗、Structured Output の検証、quota 枯渇や model capacity に対する再試行方針を実装・修正したいとき。
-- Codex CLI 呼び出しに関するファイル保存やログ出力の責務境界を確認したいとき。
+- cmoc から Codex CLI を起動する処理を作る・直すとき。
+- `$CODEX_HOME` の扱い、preflight validation、`--profile` 禁止、`--config` 上書き、`--json`、`--output-last-message`、`--output-schema` の扱いを確認したいとき。
+- Codex CLI のプロンプト保存先や stdout / stderr / output JSON の保存先、quota 枯渇や model capacity のリトライ、resume の条件を確認したいとき。
 
 ## Do not read this when
-- Codex CLI 以外のサブコマンド仕様を知りたいときは、より直接の各サブコマンド仕様を読む。
-- 一般的なプロンプト設計や agent call の上位方針だけを確認したいときは、この文書ではなくプロンプト標準や関連する上位仕様を読む。
-- モデル選択や reasoning effort の詳細な解決規則そのものではなく、別の構成要素の仕様を確認したいだけのとき。
+- agent に渡すプロンプトの一般規範だけを確認したいときは `prompt_standard` を読む。
+- サブコマンド全体のログ形式やコンソール出力規則を確認したいときは `console_and_file_log` を読む。
+- run の worktree / branch 分離や作業隔離だけを確認したいときは `run_isolation` を読む。
 
 ## hash
-- b154f359f0af1503014774d4901c54247b5974bec9ee87d97dec66f6d590fe57
+- 05f1a28e28f4f69f1f2bfa8074276b3148e9f5867f8e4dad703dec5cb9433ca3
 
 # `console_and_file_log.md`
 

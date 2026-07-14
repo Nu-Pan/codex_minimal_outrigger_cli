@@ -168,22 +168,20 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動する前後の共通処理を読む入口。argv 上書き、`CODEX_HOME`、schema 配置、`codex` subprocess 実行、JSONL エラー判定をまとめて扱うため、この境界の挙動や失敗条件を確認したいときに進む。
-- `Codex` に渡す実行環境や、返ってくる出力を機械的に解釈する処理を追うときに読む。特に sandbox/permission の組み立て、process tracking、resume token 抽出、capacity/quota 判定、unexpected error 判定を確認したい場合に適する。
+- Codex subprocess 起動前後の実行環境を組み立てる入口。`argv`、`CODEX_HOME`、sandbox/permisson profile、追加 read/write 許可、schema 配置、JSONL error 判定を扱う変更で読む。
 
 ## Read this when
-- Codex subprocess に渡す argv や環境変数の決め方を変えたいとき。
-- schema をどこへ配置するか、または出力 JSON をどう解釈するかを確認したいとき。
-- `codex` の起動失敗、tracking、終了待ち、JSONL error 判定の条件を追いたいとき。
-- file access mode と sandbox/permission profile の境界がどう効くかを確認したいとき。
+- Codex CLI を呼ぶ前に、どの `cwd`・`CODEX_HOME`・sandbox/permission profile を渡すかを決める必要がある。
+- 追加 read/write path の許可境界や、worktree / oracle / memo / reserved root の扱いを変える。
+- Codex subprocess の出力から schema 配置、resume token、capacity/quota/error 判定を解釈する処理を変える。
 
 ## Do not read this when
-- 実際のサブコマンドの業務ロジックや CLI 引数体系そのものを見たいだけなら、各 subcommand 側の本文へ進む。
-- 個別の prompt 文面や仕様断片を確認したいだけなら、この境界ではなく対応する oracle/doc を読む。
-- 一般的な path 操作や Git 判定だけが目的なら、より小さい共通ユーティリティを先に読む。
+- 単純な CLI 引数パースや設定値の定義だけを追いたい場合は、より上位の呼び出し側を読む。
+- process tracking の保存形式や abandon/stop の操作だけを変える場合は、該当する sub_command 側の文書や実装を読む。
+- このモジュールの境界外にある一般的な runtime helpers や git 判定だけを見たい場合は、個別 helper 側を直接読む。
 
 ## hash
-- 1fa02ab28ebbec8ba4c2a5792ca0f4f04267fb87ec992f82c50f94ad6ed473a7
+- 19158f19d48230f7f33d60c5e245c7b7b06f1d22517888b46fdb67b61b8d37bf
 
 # `runtime_codex_tui.py`
 
