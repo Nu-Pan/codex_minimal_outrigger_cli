@@ -18,35 +18,33 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動 parameter builder の realization 側互換入口。oracle 側 builder を呼び出しつつ、runtime 側で必要な TUI 用保存先 directory の存在だけを事前に保証する。
+- `cmoc tui` の起動パラメータを組み立てる互換入口。実体の生成は oracle 側に委譲し、この層では実行時に必要な `tui` 保存先だけ先に用意する。
 
 ## Read this when
-- TUI 起動用の AgentCallParameter を realization 側から構築する入口を確認したいとき。
-- TUI 起動前に作成される runtime 側 directory の責務や削除条件を確認したいとき。
-- oracle 側 builder と realization 側の互換 wrapper の関係を確認したいとき。
+- TUI 起動時の `AgentCallParameter` の作り方と、実行前に必要な保存先の準備を確認したいとき。
+- realization 側の入口が oracle 側の builder をどう包んでいるかを見たいとき。
 
 ## Do not read this when
-- AgentCallParameter の正本定義や builder 本体の仕様を確認したいときは、oracle 側の対応する builder を読む。
-- runtime path 全般の解決規則や logs directory の構成を確認したいときは、path 解決や runtime path を扱う対象を読む。
-- TUI サブコマンド全体の挙動や CLI 入口を確認したいだけなら、TUI command 側の対象を読む。
+- `cmoc tui` の引数解釈や出力内容そのものを知りたいときは、委譲先の oracle 側 builder を読む。
+- TUI 以外のコマンドの起動パラメータを調べたいとき。
 
 ## hash
-- 060d2704d5ca8e17d8a67939fdd34a3419d9d4049d2b1c808c513409fbadf21f
+- 544414fb16a433336a20d2d8feb385b3b15697d08a23768a5aa47fafd3bcc734
 
 # `resolve_parameter.py`
 
 ## Summary
-- TUI 用 resolve parameter builder の旧 import surface を維持する互換モジュール。正本側 builder を再公開し、既存 TUI 呼び出し向けに NO_RULE を除いた file access mode 群を提供する。
+- TUI の `resolve_parameter` 生成を、既存の TUI 呼び出し経路からたどるための互換入口。正本の実装へ移る前に、この薄い転送層と公開している選択肢だけ確認したいときに読む。
 
 ## Read this when
-- `acp.builder.tui.resolve_parameter` からの import 互換性、公開名、削除条件を確認する。
-- TUI resolve parameter builder の呼び出し元を正本側 import path へ移行する作業を行う。
-- 既存 TUI import surface が参照する file access mode の選択肢を確認する。
+- `acp.builder.tui.resolve_parameter` を import している呼び出し元を直すか確認したいとき。
+- TUI から resolve-parameter 用の builder を使う経路が、どの canonical 実装に委譲されているかを知りたいとき。
+- TUI 側で公開している `FileAccessMode` の利用可能な選択肢が、どの制約で絞られているかを確認したいとき。
 
 ## Do not read this when
-- 正本仕様としての TUI resolve parameter builder の内容を確認したい場合は、oracle 側の canonical builder を読む。
-- TUI 以外の builder や file access mode 全体の定義を確認したい場合は、それぞれの定義元を読む。
-- 互換 import path の維持や移行に関係しない resolve parameter 処理を調べる。
+- TUI resolve-parameter の実際の生成ロジックを変更したいときは、canonical な oracle 側の builder を読む。
+- ファイルアクセスモードの定義そのものを変えたいときは、この互換入口ではなく正本の定義を読む。
+- 新しい TUI 機能を設計したいだけで、既存の互換 import 経路を維持する必要がないとき。
 
 ## hash
-- cb619844023de6245704fce405a8473073988a8795d275f54d87a487d5750b70
+- 96fdbba75b80c4af522536f9bd1b5af9efaad1b5698c436de5ea5fce2e84b1f0

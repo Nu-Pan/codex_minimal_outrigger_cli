@@ -18,17 +18,17 @@
 # `conflict_resolution.py`
 
 ## Summary
-- session join の conflict resolution parameter builder について、旧 import path から canonical oracle 実装へ中継する互換モジュール。呼び出し元が直接 oracle 側の実装を import するまで残す薄い再公開層であり、実装本体ではない。
+- セッション結合の衝突解決パラメータを、互換性のために旧インポート経路から公開している薄い中継層。実装の本体ではなく、呼び出し元がまだ旧経路を使っている間だけ参照する。
 
 ## Read this when
-- session join の conflict resolution builder が、旧 acp.builder 配下の import path からどの実装へ委譲されるかを確認したいとき。
-- 旧 import path の互換維持や削除条件を確認したいとき。
-- build_session_join_conflict_resolution_parameter の公開元を追跡しているとき。
+- `session.join` の衝突解決パラメータをどこから公開しているかを確認したいとき。
+- 旧経路を維持している理由と、削除してよい条件を確認したいとき。
+- このモジュールを本体として直すのではなく、呼び出し元を正準の実装へ移すべきか判断したいとき。
 
 ## Do not read this when
-- conflict resolution parameter builder の実装内容や仕様根拠を確認したいときは、canonical oracle 実装を読む。
-- session join 全体の制御フローや builder 呼び出し順を確認したいときは、呼び出し元の session join 実装を読む。
-- 新しい conflict resolution ロジックを追加・変更したいときは、この互換 import 層ではなく canonical 実装側を確認する。
+- 衝突解決パラメータの本体実装や振る舞いを確認したいときは、正準の oracle 側の実装を見る。
+- `session.join` の他の機能や、互換 import 以外の公開経路を探したいとき。
+- このファイルを新しい実装の置き場として扱いたいとき。
 
 ## hash
-- 303afc45719ee75cf972f2b71e716ce3622227e39c5211b7a2e7b2d4077095d3
+- 9898c72f7a30b418dedee6e47c62149173a0820d92f73593fe987891300a1b10

@@ -18,55 +18,57 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc session abandon` の実行本体です。session branch 上で、active な session を home branch へ戻してから破棄し、state を abandoned に更新して結果を表示します。
-- 事前条件確認、cleanup、失敗時の rollback と再実行可能状態への復帰までを含むので、session 終了時のブランチ・state の扱いを確認したいときに読む対象です。
+- `cmoc session abandon` の実処理をまとめる。active な session を破棄し、home branch へ戻して session branch だけを削除する。失敗時は state と branch を元に戻して再実行可能な状態に復帰する責務を持つ。
 
 ## Read this when
-- `session abandon` の実行条件、branch 遷移、state 更新、cleanup 失敗時の rollback 方針を確認したいとき。
-- session branch を home branch へ戻さずに破棄する流れや、ユーザー中断時の再実行可能性を確認したいとき。
+- session の破棄フローを変更したいとき。
+- cleanup 中の rollback や中断時の再実行可能性を変えたいとき。
+- session branch の削除条件、home branch への切り替え順、session state の `abandoned` 化を確認したいとき。
+- このサブコマンドの利用者向け出力を変えたいとき。
 
 ## Do not read this when
-- `session abandon` の CLI 入口だけ知りたいときは、より上位のコマンド定義側を読むべきです。
-- session ではなく join や apply など別の session 操作を追いたいとき。
+- session の作成・参加・継続の処理を見たいときは、これではなく該当サブコマンド側を読む。
+- branch/state の低レベル操作だけを確認したいときは、まず共通の runtime や git/state 操作側を読む。
+- CLI 起動や step 管理の共通仕組みだけを見たいときは、個別サブコマンドではなく共通層を読む。
 
 ## hash
-- 616a326f6aea60b890393cdc6e50834f90bf02f71bb6712fa91e53557d3886ac
+- d71932d5c122862305302cef12235d93296e3bf83a130082246045290c65d9cc
 
 # `fork.py`
 
 ## Summary
-- `cmoc session fork` の実行本体を持つ。現在の local branch から session branch と session state を新規作成し、競合時は既存 session の存在確認、worktree の clean 確認、失敗時の rollback までまとめて扱う。
-- `_new_session_id` は session branch と session state の両方に対する一意性を担保する生成ロジックで、fork 作成時の衝突回避条件を読むときに見る。
+- `cmoc session fork` の実体実装。現在の local branch を session の home branch として扱い、session branch 作成、session state 保存、失敗時の巻き戻しまで確認したいときに読む。
+- CLI 入口ではなく、branch 条件・active session の再確認・session-id 生成・rollback の制御を変更するときに読む。
 
 ## Read this when
-- `cmoc session fork` の作成手順、事前条件、失敗時の rollback、表示する結果を確認したいとき。
-- session の開始時に、home branch と session branch/state の競合をどう避けるかを確認したいとき。
-- session-id の一意性判定に branch と state file の両方が関わる理由を確認したいとき。
+- `cmoc session fork` の挙動を修正したい。
+- 現在の branch から session branch を作る条件、既存 active session の拒否、state file 生成、失敗時の cleanup を確認したい。
+- 一意な session-id の生成条件や、session branch と state file の衝突回避を見たい。
 
 ## Do not read this when
-- `cmoc session fork` の CLI runtime 起動や subcommand 共通の前処理だけを見たいときは、より上位の共通実行層を読む。
-- session の join や abandon の振る舞いを知りたいときは、このファイルではなく各サブコマンドの実装を読む。
-- session state の保存形式そのものを詳細に知りたいときは、state 定義側を読む。
+- CLI の引数定義やサブコマンド配線だけを確認したい場合は、main 側の entry を読む。
+- session 作成後の join / abandon / apply / review の仕様を知りたい場合は、それぞれの対象を読む。
+- branch model 全体の整理だけが目的なら、より上位の branch / session の仕様を読む。
 
 ## hash
-- 46bf49b6e4df0d246eaa8480e88b1ddeedb35592c907d27615484f058cc816c0
+- 2d3bca97287f3069ae1782ae1c9e08996401287f8245e506f54c9cfbda8f132b
 
 # `join.py`
 
 ## Summary
-- `cmoc session join` の実行本体です。session branch 上で、状態確認・作業ツリー確認・home branch への merge・必要時の conflict 解消・state 更新・branch 削除・結果表示までを追うときに読む対象です。
-- merge conflict の解消方針、未解決 conflict marker の検出、unmerged path の確認方法を含むため、join の失敗時挙動や手動介入条件を確認したいときにもここを起点にします。
-- session fork や abandon のような別サブコマンドの状態遷移や branch lifecycle を追うだけなら、ここではなく各サブコマンド側を直接読むほうが適切です。
+- `cmoc session join` の実行経路をまとめた入口。現在の session branch を session home branch へ merge し、状態更新・ブランチ削除・結果表示までの一連の流れを追うときに読む。
+- merge conflict を Codex CLI に解消させる分岐、残存 conflict marker の検査、unmerged path の確認を含むため、join 時の失敗時挙動や手動介入の境界を確認したいときにも読む。
+- ここは join のオーケストレーションに集中しているので、conflict 解消用の引数構築や下位の session 状態定義だけを知りたい場合は、より直接の定義側を読む。
 
 ## Read this when
-- `cmoc session join` がどの条件で開始でき、どの状態遷移を行い、成功時に何を更新するかを確認したいとき。
-- merge 失敗後に Codex CLI へ conflict 解消を依頼する流れ、残存 conflict marker の検査、unmerged path の再確認を理解したいとき。
-- session branch の削除可否が何を根拠に決まるか、join 後にどの出力が利用者に返るかを確認したいとき。
+- session join サブコマンドの実行順序、事前条件、成功時の状態更新と出力を確認したい。
+- merge conflict 発生時に Codex CLI へ何を渡し、どの条件で再試行や手動解決に切り替わるかを確認したい。
+- session branch の削除条件や、merge 済み判定の取り方を確認したい。
 
 ## Do not read this when
-- session branch の作成手順を知りたいだけなら、`session fork` の実装を読むほうが直接です。
-- session branch を merge せず破棄する手順を知りたいだけなら、`session abandon` の実装を読むほうが直接です。
-- Codex の一般的な実行ルールや indexing preflight の詳細だけを知りたいなら、このファイルではなく共通 runtime 側を読むほうが適切です。
+- session の状態スキーマや永続状態の定義そのものを知りたいだけなら、状態定義側を読む。
+- conflict resolution 用のパラメータ生成だけを知りたいなら、この実行オーケストレーションではなく引数構築側を読む。
+- 他の session 系サブコマンドの routing を知りたいだけなら、join 実装ではなく該当サブコマンドの入口を読む。
 
 ## hash
-- 7c18a9808ca35ac26d955cdc93b6ae26d619946799d6cd87e40432e0a9307bc5
+- baf48c0407f1dbe353ef0915cfe2d1c6630d41873d95cde6b512cc05b8891e47

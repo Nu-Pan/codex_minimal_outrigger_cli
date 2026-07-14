@@ -1,40 +1,42 @@
 # `acp`
 
 ## Summary
-- `acp` 名前空間の互換入口と、その配下の builder 互換層を束ねる上位ルート。`oracle` 側の正本実装へ既存 `acp.*` 参照をつなぐための案内役であり、実装本体ではなく公開 import 面の維持が主目的である。
-- この階層では、`acp` 直下の互換入口と、builder 系の各公開経路をどこまで残すかを判断する。個別の実装ロジックを追うより、どの名前空間を互換として維持し、どれを正本側へ委譲するかを確認するために読む。
+- `acp` 互換の公開入口をまとめる階層で、既存の `acp.*` 参照を壊さずに正本実装へ進むための導線を扱う。
+- 配下の互換入口は、名前解決・委譲・移行経路の確認が主目的で、実体仕様を読む場所ではない。
+- `common` は現時点で実体を持たない目印として扱い、共通処理の本体を探す入口にはしない。
 
 ## Read this when
-- `acp.*` 参照を壊さずに正本実装へ移行する作業で、互換入口の残し方や削除条件を確認したいとき。
-- builder 系の公開 import がどの階層で維持されているかを確認し、利用側への影響を見積もりたいとき。
-- 互換 namespace を残す必要があるか、それとも正本側の実体だけに寄せられるかを判断したいとき。
+- `acp` という公開名を残すべきか、削除できるかを判断したいとき。
+- 既存の利用者向け参照を壊さずに、`oracle` 側の実体へ切り替える導線を確認したいとき。
+- 既存の `acp.builder.*` import を維持したまま、どの実体へ進むべきか整理したいとき。
+- 互換層を残す必要があるか、削除や置き換えが可能かを見極めたいとき。
 
 ## Do not read this when
-- acp の具体的な生成ロジック、CLI 挙動、入出力仕様を調べたいとき。そうした内容はこの階層ではなく、対応する正本実装側を読む。
-- 新しい機能や API を追加する場所を探しているとき。この階層は互換維持が役割で、機能追加の入口ではない。
-- `acp.*` の公開面がすでに消えており、互換入口の維持可否だけを確認済みで詳細が不要なとき。
+- `acp` 配下の具体的な実装内容や移行先の詳細を知りたいだけなら、直接その実体モジュールを読む。
+- 互換入口の存廃ではなく、`acp.*` の内部挙動そのものを変えたいだけならここではない。
+- 実装本体や機能仕様を知りたいときは、この階層ではなく対応する正本側のモジュールを読む。
+- `common` に実装がある前提で読むべきではない。
 
 ## hash
-- ee6fb5b7ad51e758b3da983803fc1e5e8256ffd5ccefdb517fb014eada116186
+- fc9f0af91ccee72360f126f08015e64058d869a21efbd45fd17da3b90bc0bf60
 
 # `basic`
 
 ## Summary
-- oracle src 側の基本 API を realization 側の既存公開面から再公開する互換層。ACP 型、path model、構造化文書 API などを複製せず、正本側定義への参照として維持する入口をまとめる。
-- 既存の `basic.*` import 経路を残すための領域であり、削除可否は realization 側と利用者向け公開面から対応する互換参照がなくなり、正本側または実体 module への移行が済んでいるかで判断する。
+- `basic` パッケージの公開互換層。`basic.*` という既存 import 経路を維持するための再公開口がまとまっており、個別の実体仕様ではなく「どの公開名を残すか」「どこから辿るか」を判断するときに読む。
 
 ## Read this when
-- realization 側で `basic.*` 経由の公開 import 経路や互換維持を確認したいとき。
-- oracle src 側の正本定義を複製せず、既存参照へ再公開している箇所を探したいとき。
-- ACP 型、path model、構造化文書 API の互換再公開を残す理由、公開名、削除条件を確認したいとき。
+- `basic.*` の互換 import を残すか削除するかを判断したいとき。
+- `basic.acp`、`basic.path_model`、`basic.struct_doc` の公開名が何を供給しているかを確認したいとき。
+- 既存利用者が `basic` 側の公開面を参照している前提で、移行先や正本側への辿り方を確認したいとき。
 
 ## Do not read this when
-- ACP 型、path placeholder、構造化文書処理そのものの仕様や実装詳細を確認したいとき。その場合は再公開先の正本側実装を読む。
-- `basic.*` 互換参照や公開 import 経路ではなく、一般的な CLI 挙動、テスト挙動、path 変換仕様の検討をしているとき。
-- 新しい基本 API や公開面を追加する実装場所を探しているとき。
+- ACP 型や path model、構造化文書の本体仕様を知りたいときは、ここではなく正本側を直接読む。
+- `basic` という互換入口ではなく、個別の実体定義や変換規則そのものを確認したいとき。
+- `basic` 配下の個別モジュールの公開内容だけを知りたいときは、対象モジュールを直接読む。
 
 ## hash
-- ad0cfb03fb2c682437a55ec2ac464197bd2fc5eb3bb3da22e79f7473d62523e7
+- b5f40e564f1a3f6d5658b4601d5f614e8a63d57f7eb0e7e2a673bf62618594a6
 
 # `cmoc_runtime.py`
 
@@ -55,92 +57,96 @@
 # `commons`
 
 ## Summary
-- `commons` 配下の runtime helper 群を束ねるパッケージ境界。個別 helper の実装ではなく、共有 runtime 機能の入口だけを確認したいときに読む。
+- `commons` 配下の共通 runtime helper 群の入口をまとめる領域。複数のサブコマンドや実行経路から共有される設定、状態、Git、パス、ログ、エラー、Codex 実行、Ollama、doctor、preprocess などの共通処理へ進む前に、どの責務の実装を読むべきかを分けるためのルーティング起点として扱う。
+- 個別 helper の実装差ではなく、まず共通基盤全体の責務境界を確認したいときに読む。特定の機能だけを追う場合は、この領域ではなく対応する下位モジュールを直接読む。
 
 ## Read this when
-- `commons` から共有 runtime helper を参照する側で、どの統合入口を使うか確認したいとき。
-- 共有 runtime helper 群の下位要素へ進む前に、この領域が共通 runtime 用のまとまりであることを確認したいとき。
+- `cmoc` の実行時に複数モジュールで共有する基盤処理の入口を探したいとき。
+- 設定、状態、Git、パス、ログ、エラー、Codex 実行、Ollama、doctor、preprocess のどれを読むべきかを切り分けたいとき。
+- 共通 helper 群のパッケージ境界を確認してから、個別の責務へ進みたいとき。
 
 ## Do not read this when
-- 特定の helper の入出力や失敗時挙動を確認したいときは、該当する下位要素を直接読む。
-- CLI サブコマンド固有の処理やテスト固有の処理を調べたいときは、共有 runtime helper ではなくその責務を持つ対象へ進む。
+- 特定の helper の入出力や失敗時挙動を知りたいとき。該当する下位モジュールを直接読む。
+- CLI コマンド固有の処理やテスト固有の処理を調べたいとき。共通 runtime helper ではなく、より直接その責務を持つ対象へ進む。
+- この領域の下位要素を既に特定しているとき。入口ではなく対象モジュール本文を読む。
 
 ## hash
-- 1347e9b9fc0b3440dc7dc7977f5ffa63374406e67ba2e3877603c21f57eb2d55
+- f9f019fdc740c9d8c36be1b477091f513c16b0783accadac94a1a74f9a3f5d03
 
 # `config`
 
 ## Summary
-- oracle src 側の設定実装を正本に保ちながら、realization 側に残る旧来の `config.*` import を受け止める互換入口をまとめるディレクトリ。
-- 設定定義や設定ロジック本体は持たず、正本側の定義を複製せず再公開する境界を確認する入口になる。
+- `config.*` 参照を既存利用者向けに維持するための互換入口群。ここでは設定の実体を持たず、正本の oracle src を再公開する経路だけを確認する。
+- `config.cmoc_config` から Cmoc 設定型を再公開する入口。設定定義そのものではなく、既存の公開参照を壊さないための接続点として読む。
 
 ## Read this when
-- 旧来の `config.*` import が realization 側でどこに受け止められているか確認したいとき。
-- 正本側の設定実装を複製せず参照・再公開する互換方針に関わる変更を行うとき。
-- 既存の公開参照や互換 import を削除・置換できる条件を判断したいとき。
+- `config` からの import 経路を維持・確認したいとき。
+- `config.cmoc_config` 経由で Cmoc 系の設定型を参照したいとき。
+- 設定の正本を変更せず、互換入口の有無だけを確認したいとき。
 
 ## Do not read this when
-- 設定値の定義、意味、読み込み、検証などの本体挙動を確認したいとき。
-- oracle src 側の正本となる設定実装そのものを確認したいとき。
-- 互換 import の維持や再公開経路に関係しない設定項目追加・実装変更を行うとき。
+- 設定仕様そのものを確認したいときは、正本側の oracle src を読む。
+- `config.*` 以外の公開面や新規設定追加を扱いたいとき。
+- 設定定義の項目意味や保存仕様を調べたいとき。
 
 ## hash
-- 97eb1bfd8f73945ab835c22962809b5a59009f2d7e1581a56e7058b6c8c786a4
+- c121a67917bdcc7850097d1a5fc153afb19f375da55ada79794c9c5739b22514
 
 # `main.py`
 
 ## Summary
-- Typer ベースの cmoc CLI 入口を定義し、root command と session/apply/review 配下の subcommand を各実装関数へ接続する。
-- CLI 引数解析エラーを cmoc のエラーレポート形式に変換する group、補完時の例外処理回避、console script からの起動責務を持つ。
-- scope option の公開値や alias command など、利用者が直接触れる command 面の薄い配線を扱う。
+- `cmoc` の CLI 入口をまとめる。トップレベル app と各サブコマンドの接続、共通の引数エラー変換、`main()` からの起動を扱う。
+- 個別サブコマンドの実処理そのものではなく、CLI からどの実装へ振り分けるかと、`doctor`・`tui`・`session`・`apply`・`review`・`eval-oracle`・`indexing` の公開面を確認するための入口。
+- `cmoc` の全体的な起動条件や option 値の列挙を確認したいときに読む。
 
 ## Read this when
-- CLI command、subcommand、option、alias、console script 起動の追加・変更・削除を確認したいとき。
-- Typer/Click の引数解析エラーが cmoc 形式で表示される経路、または shell completion 時の挙動を確認したいとき。
-- CLI 入口からどの sub command 実装へ委譲されるか、scope option が実装へどう渡るかを確認したいとき。
+- `cmoc` のコマンド構成やサブコマンドの公開名を確認したいとき。
+- CLI 引数解析エラーを `cmoc` 形式のエラーレポートに変換する挙動を確認したいとき。
+- `doctor`、`tui`、`session`、`apply`、`review`、`eval-oracle`、`indexing` の各 CLI 入口がどの実装へつながるかを確認したいとき。
+- `ApplyForkScope` や `ReviewOracleScope` のような CLI option 値の選択肢と既定値を確認したいとき。
+- console script から `cmoc` を起動する最小経路を確認したいとき。
 
 ## Do not read this when
-- 各 command の実処理、git 操作、worktree 操作、review/apply/session の制御内容を知りたいだけなら、対応する sub command 実装を直接読む。
-- cmoc 共通 error 型や error 表示本文の構造を変更したいだけなら、runtime 側の定義を読む。
-- oracle や INDEX 更新の仕様本文を確認したいだけなら、仕様文書または該当実装へ進む。
+- 各サブコマンドの処理内容や状態遷移の詳細を知りたいときは、それぞれの sub command 実装へ進む。
+- `cmoc apply fork` や `cmoc review oracle` の詳細な手順・レポート形式を知りたいときは、このファイルではなく該当する oracle doc を読む。
+- `INDEX.md` の更新規則や索引生成の詳細を知りたいときは、`indexing` の実装とその対象資料を読む。
+- CLI の見た目ではなく、実際の git 操作や worktree 操作の詳細を知りたいときは、接続先の実装を読む。
 
 ## hash
-- e8d8163fd3e7c5f366a20e21707b54b8ee05450bce0e135bf7b3b5493681c4e6
+- f903f580144c8a4ca2d67d9a8e0558542f9fbaaf2acfa2cbbb697979c6750788
 
 # `oracle.py`
 
 ## Summary
-- `src` だけを import 対象にした起動時にも、正本側の `oracle` package を解決できるようにする package shim。packaged realization tree の外にある oracle source directory を `__path__` に設定し、見つからない場合は import 失敗として明示する。
+- `src` から `oracle.*` を import したときに、正本側の実装群へ解決させるための境界を見る入口。`oracle` 名前空間の参照先を切り替える仕組みだけを扱い、個別の oracle 実装内容を追う前段として読む。
 
 ## Read this when
-- `src` 起点の実行環境で `oracle.*` import を成立させる仕組みを確認したいとき。
-- realization code から正本側 oracle module を参照する import 経路や package shim の挙動を調べるとき。
-- `oracle package source was not found` という import error の原因を確認するとき。
+- `src` 経由の import で正本側 `oracle.*` が見つからない、または参照先の切り替え方法を確認したいとき。
+- `oracle` 名前空間を packaged realization ではなく正本ソースへ向ける必要があるかを判断したいとき。
 
 ## Do not read this when
-- oracle source の個別 module の仕様や実装内容を確認したいときは、正本側の該当 module を直接読む。
-- CLI command、状態管理、入出力処理など cmoc 本体の realization implementation を調べたいときは、それぞれの担当 module を読む。
-- oracle file と realization file の定義やパス概念そのものを確認したいときは、対応する正本仕様文書を読む。
+- `oracle.*` 配下の個別機能や実装内容を知りたいときは、ここではなく正本側の該当モジュールを読む。
+- 通常のアプリ機能や CLI の挙動を追いたいだけなら、この import 解決の仕組みは読まなくてよい。
 
 ## hash
-- b6f4097cc1550a057bef77dda6b9e5434b394da2d2831fb96ccbf3d319c4222d
+- 7ef36bb425d49e4907bce740821b18302da678a21b33bf887d9fd94c111929a5
 
 # `sub_commands`
 
 ## Summary
-- `/src/sub_commands` は `cmoc` のサブコマンド起点を集める層で、個別サブコマンド本体ではなく、どの操作へ進むかを選ぶために読む。共通起動や登録の入口はここで見つけ、実処理は各サブコマンド側へ分岐する。
-- この対象では、`apply`・`review`・`session`・`tui`・`doctor`・`indexing`・`eval_oracle` などの実行入口を束ねるが、各コマンドの引数定義や状態遷移、詳細な処理本体は置かない。目的に応じて下位対象へ進む案内として使う。
-- 実装変更や挙動確認のために本文を読む場所ではなく、まず読むべき下位モジュールを選ぶためのルーティング層として扱う。
+- `cmoc` のサブコマンド群全体の入口。個別コマンド本体へ進む前に、どの機能がどの実装へ分かれているかを切り分けたいときに読む。
+- 共通の起動基盤よりも、`apply` `review` `session` などの責務分担を先に把握したいときのルーティング点になる。
+- ここではコマンド群の境界を確認し、細部の引数処理や実行フローは各サブコマンド側へ進む。
 
 ## Read this when
-- `cmoc` のどのサブコマンド実装を読むべきかを選びたいとき。
-- サブコマンド群の役割分担と、共通の起動層から各実行本体への分岐を確認したいとき。
-- この階層が個別処理ではなく案内役であることを確認したいとき。
+- `cmoc` のどのサブコマンド実装を読むべきかを先に判断したいとき。
+- サブコマンド群の役割分担だけを確認してから、個別の実行本体へ進みたいとき。
+- `apply` `review` `session` などのまとまりごとに、読む対象を絞り込みたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの CLI 引数、実行フロー、状態更新、エラー処理を調べたいとき。
-- `apply`、`review`、`session`、`tui`、`doctor`、`indexing`、`eval_oracle` のいずれか一つの挙動を詳しく追いたいときは、直接そのモジュールを読むべきとき。
-- 共通 helper や runtime の詳細を調べたいときは、この階層ではなく対応する共通実装を読むべきとき。
+- 特定サブコマンドの引数、制御フロー、エラー処理を調べたいときは、対応する実装ファイルを直接読む。
+- 共通の起動処理や CLI 全体の基盤だけを知りたいときは、より上位の入口を読む。
+- 結果表示やレポート文面など、個別機能の下位責務を見たいときは、この階層ではなく該当機能の実装へ進む。
 
 ## hash
-- 0a323564e66488bc85b98c3c3672f1bd870b765daf042980421870e6b8ef1949
+- eb560de04b41bfee108c99b875fc5ac16fa7d609907546bfa9730ace31e39182

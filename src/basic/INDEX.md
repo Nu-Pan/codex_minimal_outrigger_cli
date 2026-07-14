@@ -1,75 +1,67 @@
 # `__init__.py`
 
 ## Summary
-- oracle src 側の basic 互換 import を realization 側で受けるための入口。ACP 基本型などを複製せず、既存の `basic.*` 参照を維持する互換層として位置づけられる。
-- 互換目的で残されており、削除可否は realization 側と利用者向け公開面から `basic.*` 参照がなくなり、正本側または実体 module への移行が済んでいるかで判断する。
+- `basic.*` の互換 import を維持するための入口。実体の実装や正本型を複製せず、`basic` という公開面だけを残している。
 
 ## Read this when
-- `basic.*` 参照の互換維持、移行、削除条件を確認したいとき。
-- oracle src 側の basic 互換 import 入口と、realization 側または利用者向け公開面との関係を確認したいとき。
-- ACP 基本型や関連する基本 module を複製せず既存参照を保つ理由を確認したいとき。
+- `basic.*` 参照を残す必要があるか、削除できるかを判断したいとき。
+- 利用者向け公開面の移行先を確認したいとき。
+- 互換 import の維持条件や廃止条件を確認したいとき。
 
 ## Do not read this when
-- 個別の ACP 基本型や実体 module の定義・挙動を確認したいとき。
-- 正本仕様断片そのものや oracle src 配下の具体的な実装内容を確認したいとき。
-- `basic.*` 互換参照の有無や削除条件ではなく、一般的な path model、CLI 挙動、テスト挙動を調べたいとき。
+- `basic.acp`、`basic.path_model`、`basic.struct_doc` の個別実装や再公開内容を確認したいときは、各モジュールを直接読む。
+- ACP 基本型や path model の正本仕様そのものを確認したいときは、`basic` ではなく正本側を読む。
 
 ## hash
-- bd7e89dfb56983290190c9facb93f671f397b370fc9ea0fb32052b0bc819b591
+- 8a9d153c30f1ec0c568fd2702b1580077d56f027401c802ee1cca9b03f7b76bb
 
 # `acp.py`
 
 ## Summary
-- ACP 関連の正本型を実装側の既存公開面から再公開する互換モジュール。正本型を複製せず oracle 側の定義を参照し、既存の ACP 型 import 経路を維持する。
+- `basic.acp` の公開名を維持するための再公開層。実体定義ではなく、ACP 関連の型を既存の import 経路で受け取りたいときに読む。
 
 ## Read this when
-- 実装側で ACP 型の公開 import 経路や互換性維持を確認する。
-- 正本型を複製せず oracle 側の ACP 定義を参照する箇所を探している。
-- 既存の ACP 型参照を整理し、この再公開モジュールを削除できる条件を確認する。
+- `basic.acp` を import している既存利用を壊さずに、どの型が公開されているかだけ確認したいとき。
+- ACP 関連の公開面を `oracle` 側の正本からどう辿るかを知りたいとき。
 
 ## Do not read this when
-- ACP 型そのものの定義や仕様を確認したい場合は、oracle 側の正本定義を読む。
-- ACP 以外の基本型や設定値を調べている。
-- 新しい ACP 型や公開面を追加するための実装場所を探している。
+- ACP 型そのものの定義や意味を確認したいときは、正本側の定義を読む。
+- `basic` パッケージ全体の互換 import 入口を知りたいだけなら、より上位の `src/basic/__init__.py` を先に読む。
 
 ## hash
-- 74853f85de7f0fa46704caa4c8d85b1cd79cb9aaf22374be83f17e2f42019111
+- e1b16558cbe0f2bb5b16b0b789f757300ec0da5c410a2a5c8e07a88d456545b4
 
 # `path_model.py`
 
 ## Summary
-- 公開 path model の実体を持たず、正本側の path model API を realization 側の既存公開面として再公開する互換モジュール。
-- 既存利用者が参照する path placeholder と path 解決関数を、重複実装せず正本側実装へ委譲する入口として位置づけられている。
+- `oracle.other.path_model` の公開 path model をそのまま再公開する薄い中継層。`basic.path_model` を参照している利用者や、公開面を通じて path model を取り込む変更のときに読む。
+- 中身の実装差ではなく、公開名の維持が目的なので、実体の生成方法や内部の path 変換ロジックを追う必要はない。
 
 ## Read this when
-- realization 側で公開されている path model API の import 経路や再公開内容を確認したいとき。
-- 正本側の path model 実装と既存の公開参照とのつながりを調べたいとき。
-- 互換用の再公開を残す理由、または削除できる条件を確認したいとき。
+- `basic.path_model` 経由の公開名が必要なとき
+- 再公開される `RootPathPlaceHolder` と path 解決関数の公開関係を確認したいとき
+- `basic.path_model` を直接使う既存利用者の互換性を扱うとき
 
 ## Do not read this when
-- path placeholder や path 解決処理そのものの仕様・実装詳細を確認したいとき。その場合は再公開先の正本側実装を読む。
-- path model 以外の basic 領域の機能や責務を調べたいとき。
-- 新しい path 変換仕様を検討しているだけで、既存公開参照の互換性に関わらないとき。
+- path 解決の本体仕様や変換規則を確認したいときは、正本側の実装を見る
+- `basic.path_model` を使わない新規コードの配置先を探しているだけなら、ここは読む必要がない
+- 公開名の一覧だけを知りたい場合は、実体側や利用箇所を優先して読む
 
 ## hash
-- 3ef925dfd0d7897d6364bb284d1591c7c6844ad7ea64df15894d9b69ecbca164
+- 04ccbdd9d67b1290d840fdc1d4a8b3ff576ff7ddf0efee21717a188214d79784
 
 # `struct_doc.py`
 
 ## Summary
-- 構造化文書の正本実装を realization 側で再実装せず、既存の公開参照を維持するための互換再公開モジュール。
-- 構造化文書本体、コードブロック表現、Markdown 描画、補助関数を正本側実装から import し、同じ公開面として提供する。
-- 互換層として残す対象であり、削除できる条件は realization 側と利用者向け公開面から `basic.struct_doc` 参照がなくなること。
+- `oracle.other.struct_doc` の構造化文書 API を `basic` 側から再公開する入口。実装本体はここに置かず、既存の公開名を維持しながら利用者が `StructDoc` 系と `render_as_markdown` を引けるようにする。
 
 ## Read this when
-- `basic.struct_doc` 経由で構造化文書 API を参照している既存実装や公開面の互換性を確認する。
-- 構造化文書 API の import 経路、再公開対象、または `__all__` の公開名を調整する。
-- 正本側の構造化文書実装を realization 側へ複製せず参照する方針や、その互換層の削除条件を確認する。
+- `basic.struct_doc` という公開名で構造化文書の型やレンダラを使う先を探しているとき。
+- `basic` 側の公開 API から、構造化文書の実体がどこから供給されるかを確認したいとき。
 
 ## Do not read this when
-- 構造化文書のデータ構造、Markdown 変換、補助関数の実処理を変更したい場合。正本側の実装を読む。
-- `basic.struct_doc` 参照の互換維持や公開名に関係しない構造化文書利用箇所を調べる場合。利用元を直接読む。
-- realization 側と利用者向け公開面から `basic.struct_doc` 参照が既になく、互換再公開の内容確認が不要な場合。
+- 構造化文書のレンダリング規則や型の制約そのものを知りたいときは、再公開先ではなく `oracle.other.struct_doc` を読む。
+- `basic.struct_doc` を残す必要性や削除条件を確認したいだけなら、この入口ではなく参照元の利用箇所を読む。
 
 ## hash
-- 30e7080d603dfe06e6a8b58c8be36b17cbf95965ac706da3291269a56c890772
+- 0397791c0dc37c51edd489ea3dd01470322afc79499e4a5ddf069f9785bd13f9

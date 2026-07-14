@@ -1,36 +1,33 @@
 # `__init__.py`
 
 ## Summary
-- oracle 側の apply package への互換 import 経路を維持するための package 初期化ファイル。既存の acp.builder.apply.* 参照を正本側配置へつなぐ互換層として位置づけられ、参照がなくなれば削除可能な対象である。
+- `acp.builder.apply` 系の既存 import を保つための互換パッケージ。実処理は正本側の apply 実装へ進める入口として扱う。
 
 ## Read this when
-- acp.builder.apply.* import の互換維持や削除可否を確認する。
-- apply package の正本側配置と realization 側の import 経路の関係を確認する。
+- `acp.builder.apply` 配下の実装を探していて、既存の import 経路を壊さずに正本側の実装へ進みたいとき。
 
 ## Do not read this when
-- apply の具体的な処理内容や仕様を確認したい場合は、正本側の apply package を読む。
-- 新規機能の実装場所を探しているだけで、既存 import 互換に関係しない。
+- 新しい apply 実装の正本を探したいときは、互換層ではなく `oracle/src/oracle/acp_builder/apply` 側を見る。
+- この互換層の内部に実処理や仕様本体がある前提で読むべきではない。
 
 ## hash
-- cd3525acfac667a62268ceec2006db542a5aa39415a6a3f282225c5dacb5c290
+- 484f419d6ff82058c68a8e19540e3837fc6e40e96b976026d61532af98ae9bfb
 
 # `fork`
 
 ## Summary
-- apply fork 向け agent call parameter builder 群を収める package。各 builder は realization 側の薄い入口として、repo root 解決、oracle builder import 準備、oracle 側生成結果から realization 側公開型への変換を担う。
-- 旧来の apply fork 系 import 互換を維持するための package 境界も含み、互換公開面を残す理由と削除判断の入口になる。
+- `cmoc apply fork` の互換公開面と、その下で各 builder が oracle 実装へ委譲する薄い入口群をまとめる。ここでは実処理の詳細ではなく、どの入口が何の変換責務を持つかだけを案内する。
+- 互換 package の削除可否を確認したい場合と、fork 系 builder から oracle 側の正本実装へ渡す前処理を追いたい場合に読む。
 
 ## Read this when
-- `cmoc apply fork` の変更要約、ファイル単位所見列挙、所見適用に関する agent call parameter 構築経路を確認・変更したいとき。
-- apply fork の realization 側 builder が oracle 側 builder をどう呼び出し、戻り値を realization 側 `AgentCallParameter` に適合させるか確認したいとき。
-- apply fork 用 ACP builder 共通の repo root 解決、oracle src import 準備、oracle parameter 受け渡し境界を確認したいとき。
-- 旧来の apply fork 系 import 互換 package を維持または削除できるか判断したいとき。
+- 旧来の `cmoc apply fork` 系 import の互換性を維持すべきか判断したいとき。
+- fork 系 builder で使う共通の repo root 解決や import 調整、oracle 側の parameter をそのまま受け渡す経路を確認したいとき。
+- 変更要約、所見列挙、所見適用のいずれかの入口を個別に探していて、まずどのモジュールを読むべきか判断したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体の実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、上位の apply fork 実装や呼び出し元を読む。
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいときは、対応する oracle 側 builder を読む。
-- ACP parameter のデータ構造、公開型そのもの、汎用 git helper、path model を調べたいだけなら、それぞれの共通実装や型定義を読む。
-- apply fork 以外の ACP builder の個別ロジックを確認したいとき。
+- `cmoc apply fork` の実処理や判定ロジックの詳細を知りたいときは、対応する oracle 側の正本実装を読む。
+- 互換 import の維持可否ではなく、現行の制御ロジックや入出力変換そのものを変更したいとき。
+- `cmoc apply fork` 以外のサブコマンドや、別系統の公開面を追いたいとき。
 
 ## hash
-- aa780174e29dd5732bd1c16b52ac8021bcb036497590175d985fe4d9b4e7c86a
+- 5d778304413e09362af156dacc97b5bf881792cfe1abff9ad0691fac4fc23cdf
