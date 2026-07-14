@@ -95,7 +95,7 @@ def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
     # Codex session; if it is unreadable, retry without `resume`.
     try:
         return extract_resume_token(path.read_text())
-    except OSError:
+    except (OSError, UnicodeError):
         return None
 
 
@@ -517,10 +517,19 @@ def run_codex_exec(
                     _QUOTA_PROBE_AVAILABLE = False
                     _QUOTA_PROBE_ERROR = None
                     _QUOTA_POLLING = True
-                print(
-                    f"# {console_timestamp()} Codex CLI quota wait: entering polling mode",
-                    flush=True,
-                )
+                try:
+                    print(
+                        f"# {console_timestamp()} Codex CLI quota wait: entering polling mode",
+                        flush=True,
+                    )
+                except BaseException as exc:
+                    with _QUOTA_CONDITION:
+                        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                        # Waiters must be released when polling cannot start.
+                        _QUOTA_PROBE_ERROR = exc
+                        _QUOTA_POLLING = False
+                        _QUOTA_CONDITION.notify_all()
+                    raise
                 probe_available = False
                 probe_error: BaseException | None = None
                 try:

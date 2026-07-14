@@ -900,3 +900,61 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
     assert [event["kind"] for event in events].count("probe") == 1
     assert [event["kind"] for event in events].count("resume") == 0
     assert all(isinstance(error, CmocError) for error in errors)
+
+
+def test_resume_token_returns_none_for_invalid_encoding(tmp_path: Path) -> None:
+    """不正な UTF-8 の保存ログでは resume せず再実行する。"""
+    log_path = tmp_path / "invalid_encoding.jsonl"
+    log_path.write_bytes(b"\xff\n")
+
+    assert runtime_codex_exec._extract_resume_token_from_jsonl_log(log_path) is None
+
+
+def test_quota_polling_state_is_cleared_when_progress_output_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """quota 待機開始時の出力失敗でも待機中フラグを解除する。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+
+    def fake_run(
+        argv: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """quota 待機へ入る初回呼び出しだけを返す。"""
+        return subprocess.CompletedProcess(
+            argv,
+            1,
+            '{"type":"error","message":"Quota exceeded"}\n',
+            "",
+        )
+
+    def fail_print(*_args: object, **_kwargs: object) -> None:
+        raise BrokenPipeError("closed output")
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
+    monkeypatch.setattr(runtime_codex_exec, "print", fail_print, raising=False)
+    try:
+        with pytest.raises(BrokenPipeError, match="closed output"):
+            run_codex_exec(
+                AgentCallParameter(
+                    ModelClass.EFFICIENCY,
+                    ReasoningEffort.LOW,
+                    FileAccessMode.READONLY,
+                    "prompt",
+                    None,
+                ),
+                root=root,
+                quota_poll_interval_sec=0,
+                max_quota_polls=1,
+                config=CmocConfig(),
+            )
+
+        with runtime_codex_exec._QUOTA_CONDITION:
+            assert not runtime_codex_exec._QUOTA_POLLING
+    finally:
+        with runtime_codex_exec._QUOTA_CONDITION:
+            runtime_codex_exec._QUOTA_POLLING = False
+            runtime_codex_exec._QUOTA_PROBE_AVAILABLE = False
+            runtime_codex_exec._QUOTA_PROBE_ERROR = None
+            runtime_codex_exec._QUOTA_CONDITION.notify_all()
