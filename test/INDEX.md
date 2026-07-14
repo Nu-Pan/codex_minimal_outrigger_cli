@@ -214,22 +214,21 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- `apply abandon` の外部挙動を CLI 経由で検証するテスト群です。完了済み apply run の cleanup、欠損 cleanup 対象の警告扱い、稼働中 process の停止、worktree/branch/state の整合、実行場所の違い、破損 state や stale branch の拒否を確認したいときに読む対象です。
-- 同じ apply abandon でも、process 停止の実装詳細そのものより、CLI がどの状態を成功・警告・失敗として扱うかを追う入口です。cleanup 後に state が `ready` に戻る条件や、repo root 側の state を正として扱う境界を見たい場合にここから入ります。
+- `test/test_apply_abandon_cli.py` は、`apply abandon` の外部挙動を確認する入口である。`worktree`・`branch`・`state` の cleanup、カレント位置の扱い、実行中 process の停止結果を、CLI が返す成功・警告・失敗として検証する内容に限って読む。低レベルな process helper の契約は別テストに分離されている。
 
 ## Read this when
-- `apply abandon` の成功・警告・失敗条件を CLI 観点で確認したいとき。
-- completed apply run の worktree・branch・state がどう片付くかを追いたいとき。
-- running apply process の停止順序や、PID/child PID の扱いを含めて境界条件を確認したいとき。
-- apply worktree 上や linked session 上から実行した場合の扱いを確認したいとき。
+- `apply abandon` の CLI 応答や終了コードを変えるとき。
+- `worktree` 削除、branch 削除、state 更新の整合を確認するとき。
+- CLI をどの作業ディレクトリから呼んでも同じ cleanup になるかを確認するとき。
+- 実行中 apply process の停止と、その失敗・警告の扱いを確認するとき。
 
 ## Do not read this when
-- `apply abandon` の内部停止処理だけを見たいなら、関連する `runtime_apply` 側の実装やテストを先に読む方が直接的です。
-- session 作成や apply fork の基本挙動を知りたいだけなら、そちらの CLI テストを読む方が適切です。
-- cleanup ではなく apply 実行中の生成・記録ロジックを確認したい場合は、このファイルではなく apply fork 側を読むべきです。
+- `apply fork` の生成処理や findings 変換を変えるだけなら、まず別の apply fork 系テストを読む。
+- process helper 自体の引数契約や停止ロジックだけを確認したいなら、この CLI テストではなく低レベル helper 側のテストを読む。
+- `apply abandon` 以外の session コマンドや一般的な git 補助を確認したいだけなら、このファイルは読まない。
 
 ## hash
-- 238a4029f3f689ca8179b5ccf673276026108f12e240695bb3e12e36ab932db4
+- 8d8d60f6f4813738816dec47dae7e37c784073dfeb29c21be85dc5db50527cd3
 
 # `test_apply_fork_cli.py`
 
@@ -696,6 +695,24 @@
 
 ## hash
 - f94e36cff864f0b6cb1c8e218ca36b0fc7ec0dcf813906f946fa64894322a49b
+
+# `test_runtime_apply.py`
+
+## Summary
+- `test_runtime_apply.py` は、`cmoc apply abandon` の停止契約を支える `commons.runtime_apply` の低レベル挙動を検証する実現テストです。親 process と child process group の停止順、pidfd による identity 確認、pid file の再読込、advisory lock 待ち、stale PID の扱いを確認したいときに読む対象です。
+
+## Read this when
+- `commons.runtime_apply` の process tracking や停止処理を変えるとき
+- pid file / advisory lock / pidfd / process group の契約を壊していないか確認したいとき
+- `cmoc apply abandon` の実装で、親 process と child process をどう止めるかを判断したいとき
+
+## Do not read this when
+- `cmoc apply abandon` の CLI 出力や終了コードだけを調整したいとき
+- apply abandon の外部振る舞いを確認したいだけで、低レベル停止契約には触れないとき
+- この領域の実現テストではなく、`test_apply_abandon_cli.py` 側の振る舞いを追いたいとき
+
+## hash
+- 66f7a26fdcfbe337f576bc26ca807e45648fb30e637b927817c6821992316d28
 
 # `test_runtime_cli.py`
 

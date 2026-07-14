@@ -134,18 +134,22 @@
 # `test`
 
 ## Summary
-- `test` 配下で `acp_builder` 正本定義を参照する共通 path helper と、apply 用に状態から作業先を復元する補助をまとめる案内対象。テスト側から正本 schema を直接たどる入口と、apply/session の状態・branch 約束に合わせて path を組み立てる入口を区別して読む。
+- `test/` 配下の共通補助と回帰テストを集める入口で、`acp_builder` の正本 schema 参照、CLI ランナー、git/worktree、Codex 実行補助、prompt/INDEX 生成、review/apply/session/routing 各経路の外部挙動を辿るときに読む。
+- 個別のテストは、共通 helper の契約を確認したい場合と、対応するサブコマンドや runtime の外部挙動を確認したい場合で分かれる。helper だけを追うのではなく、対象サブコマンドの入出力・権限・状態更新・報告内容を見たいときに下位へ進む。
+- `oracle` 側の正本仕様そのものを確認したい場合は、この `test/` ではなく対応する `oracle/src` や `oracle/doc` を先に読む。
 
 ## Read this when
-- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
-- テスト用に正本 schema をコピーせず、oracle 側を参照する方針の根拠を確認したいとき。
-- apply の状態から作業先 path を導く仕様や、branch の妥当性に応じた期待 path の組み立てを確認したいとき。
-- `oracle/doc/branch_model.md` と `oracle/doc/app_spec/session_state.md` にある branch / state の約束に合わせて apply 周辺のテストを調整したいとき。
+- テスト共通の補助がどの契約を前提にしているかを確認したいとき。
+- `apply` / `review` / `session` / `indexing` / `doctor` / `tui` / `codex runtime` のいずれかの外部挙動回帰を調べたいとき。
+- 正本 schema と realization 側の参照関係、または packaged layout での公開面を確認したいとき。
+- `INDEX.md` 生成や prompt parts の出力、file access rule、root token の扱いを検証したいとき。
+- Git worktree、linked worktree、ignore、tracked ignored file、symlink、binary file の扱いを含む境界を確認したいとき。
 
 ## Do not read this when
-- 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
-- 通常の作業先探索や実運用の path 解決を追いたいときは、この helper ではなく該当実装側を読む。
-- test 全体の CLI 挙動や `CliRunner` など別の共通 support を確認したいときは、この helper ではなく該当する別の test support を読む。
+- 個別コマンドの実装や正本仕様を確認したいときは、対応する `oracle` 側本文や `src` 側実装を読む。
+- 共通 helper ではなく、CLI 本体や runtime 本体の分岐を見たいだけのときは、この `test/` より直接の対象ファイルを読む。
+- `INDEX.md` ルーティング方針そのものを確認したいときは、この `test/` ではなく上位の案内を読む。
+- テスト補助の一般仕様だけを知りたいときは、該当する helper ファイルを直接読むほうがよい。
 
 ## hash
-- cd46b6ae80380c9d9c21c7c9e642e99a9b6dc50975247a9b287abe5d1978ced9
+- 1cddf300d0a8a6b86fc421c871c39c745cc47e8b6e11ff5bf0fe8d8fda9f2d9a
