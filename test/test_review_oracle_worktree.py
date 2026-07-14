@@ -19,10 +19,27 @@ from _ollama_support import run_doctor
 from main import app
 import sub_commands.review.oracle as review_module
 
+
+class _FakeCodexResult:
+    """review oracle が読む構造化出力だけを保持する fake。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    """
+
+    def __init__(self, output_json: dict[str, object]) -> None:
+        """Codex CLI を起動せず、テスト用の構造化出力を保持する。"""
+        self.output_json = output_json
+
+
 def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree 上の session branch と oracle を review 対象にする。"""
+    """linked worktree の session branch と oracle を review 対象にする。
+
+    根拠: <work-root>/oracle/doc/app_spec/run_isolation.md、
+    <work-root>/oracle/doc/branch_model.md。
+    """
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -39,16 +56,17 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     calls: list[str] = []
     review_worktrees: list[Path] = []
 
-    class FakeCodexResult:
-        def __init__(self, output_json: dict[str, object]) -> None:
-            self.output_json = output_json
-
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """finding 列挙の応答と review worktree を記録する。
+
+        根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md。
+        """
+
         review_worktrees.append(Path.cwd())
         calls.append(kwargs["purpose"])
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
-            return FakeCodexResult({"findings": []})
+            return _FakeCodexResult({"findings": []})
         raise AssertionError(schema_name)
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
@@ -71,9 +89,13 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     session_id = branch.removeprefix("cmoc/session/")
     assert review_worktrees
     for review_worktree in review_worktrees:
-        assert review_worktree.parent == root / ".cmoc" / "local" / "worktree" / session_id
+        assert (
+            review_worktree.parent
+            == root / ".cmoc" / "local" / "worktree" / session_id
+        )
         assert not review_worktree.is_relative_to(linked)
     assert any("linked.md" in call for call in calls)
+
 
 @pytest.mark.parametrize(
     ("relative_path", "content"),
@@ -88,6 +110,11 @@ def test_review_oracle_rejects_uncommitted_worktree_changes(
     relative_path: str,
     content: str,
 ) -> None:
+    """session fork 後に未コミット差分がある worktree を拒否する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md。
+    """
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -102,9 +129,16 @@ def test_review_oracle_rejects_uncommitted_worktree_changes(
     assert "git 未コミット差分" in result.output
     assert relative_path in result.output
 
+
 def test_review_oracle_merges_review_index_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """review worktree で生成された INDEX.md だけを session に統合する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md、
+    <work-root>/oracle/doc/app_spec/indexing.md。
+    """
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -118,23 +152,25 @@ def test_review_oracle_merges_review_index_changes(
     )
     review_worktrees: list[Path] = []
 
-    class FakeCodexResult:
-        def __init__(self, output_json: dict[str, object]) -> None:
-            self.output_json = output_json
-
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """finding 検証を空結果にし、review worktree の INDEX を更新する。
+
+        根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md、
+        <work-root>/oracle/doc/app_spec/indexing.md。
+        """
+
         review_worktrees.append(Path.cwd())
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             (Path.cwd() / "INDEX.md").write_text("# generated review index\n")
-            return FakeCodexResult({"findings": []})
+            return _FakeCodexResult({"findings": []})
         if schema_name in {
             "validate_finding_challenger.json",
             "validate_finding_advocate.json",
         }:
-            return FakeCodexResult({"reasons": []})
+            return _FakeCodexResult({"reasons": []})
         if schema_name == "judge_finding.json":
-            return FakeCodexResult({"verdict": "reject", "reason": "no finding"})
+            return _FakeCodexResult({"verdict": "reject", "reason": "no finding"})
         raise AssertionError(schema_name)
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
@@ -151,15 +187,26 @@ def test_review_oracle_merges_review_index_changes(
     assert "review_join_commit: null" not in rendered
     assert review_worktrees
     for review_worktree in review_worktrees:
-        assert review_worktree.parent == root / ".cmoc" / "local" / "worktree" / session_id
+        assert (
+            review_worktree.parent
+            == root / ".cmoc" / "local" / "worktree" / session_id
+        )
     assert not any(
-        path.name == ".git" for path in (root / ".cmoc" / "local" / "worktree").rglob(".git")
+        path.name == ".git"
+        for path in (root / ".cmoc" / "local" / "worktree").rglob(".git")
     )
     assert all(not path.exists() for path in review_worktrees)
+
 
 def test_review_oracle_merges_preflight_committed_index_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """preflight が review worktree にコミットした INDEX.md を統合する。
+
+    根拠: <work-root>/oracle/doc/app_spec/run_isolation.md、
+    <work-root>/oracle/doc/app_spec/indexing.md。
+    """
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -171,19 +218,25 @@ def test_review_oracle_merges_preflight_committed_index_changes(
     def fake_update_indexes(
         update_root: Path, codex_exec: object | None = None
     ) -> list[Path]:
+        """preflight の INDEX 更新先を記録し、生成結果を返す。
+
+        根拠: <work-root>/oracle/doc/app_spec/indexing.md。
+        """
+
         review_worktrees.append(update_root)
         index_path = update_root / "INDEX.md"
         index_path.write_text("# preflight review index\n")
         return [index_path]
 
-    class FakeCodexResult:
-        def __init__(self, output_json: dict[str, object]) -> None:
-            self.output_json = output_json
-
     def fake_runtime_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """preflight 中の finding 列挙を空結果に置き換える。
+
+        根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md。
+        """
+
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
-            return FakeCodexResult({"findings": []})
+            return _FakeCodexResult({"findings": []})
         raise AssertionError(schema_name)
 
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
@@ -207,9 +260,15 @@ def test_review_oracle_merges_preflight_committed_index_changes(
     ).read_text()
     assert "review_join_commit: null" not in rendered
 
+
 def test_review_oracle_resolves_index_conflict_when_session_deleted_index(
     tmp_path: Path,
 ) -> None:
+    """session 側で削除された INDEX.md の merge conflict を解決する。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md。
+    """
+
     root = make_repo(tmp_path)
     home_branch = run_git(root, "branch", "--show-current").stdout.strip()
     (root / "INDEX.md").write_text("base\n")
@@ -240,12 +299,19 @@ def test_review_oracle_resolves_index_conflict_when_session_deleted_index(
     )
     assert "Merge branch 'review'" in run_git(root, "log", "-1", "--pretty=%B").stdout
 
+
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])
 def test_review_oracle_rejects_non_index_worktree_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     change_kind: str,
 ) -> None:
+    """review worktree が INDEX.md 以外を変更した場合に失敗させる。
+
+    根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md、
+    <work-root>/oracle/doc/app_spec/indexing.md。
+    """
+
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -253,11 +319,12 @@ def test_review_oracle_rejects_non_index_worktree_changes(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    class FakeCodexResult:
-        def __init__(self, output_json: dict[str, object]) -> None:
-            self.output_json = output_json
-
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """finding 列挙時に指定された種類の不正な差分を作る。
+
+        根拠: <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md。
+        """
+
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             if change_kind == "untracked":
@@ -266,7 +333,7 @@ def test_review_oracle_rejects_non_index_worktree_changes(
                 (Path.cwd() / "README.md").write_text("unexpected\n")
                 if change_kind == "staged":
                     run_git(Path.cwd(), "add", "README.md")
-            return FakeCodexResult({"findings": []})
+            return _FakeCodexResult({"findings": []})
         raise AssertionError(schema_name)
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
@@ -277,4 +344,3 @@ def test_review_oracle_rejects_non_index_worktree_changes(
     assert "review oracle が INDEX.md 以外の差分を作成しました。" in result.output
     assert (root / "README.md").read_text() == "# repo\n"
     assert not (root / "generated.txt").exists()
-
