@@ -11,7 +11,10 @@ subprocess 境界の不変条件を共有するため、分割すると呼び出
 import fcntl
 import json
 import os
+import select
+import signal
 import subprocess
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -75,6 +78,165 @@ def apply_process_id_file_lock(path: Path) -> Iterator[None]:
             yield
         finally:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def open_process_fd(process_id: int, process_name: str = "apply process") -> int | None:
+    """pidfd 対応環境でだけ race を避けた process 参照を開く。"""
+    if not (hasattr(os, "pidfd_open") and hasattr(signal, "pidfd_send_signal")):
+        raise CmocError(
+            f"{process_name} の同一性を安全に確認できません。",
+            [f"{process_name} を手動で停止してから再実行してください。"],
+            f"pid: {process_id}",
+        )
+    try:
+        return os.pidfd_open(process_id)
+    except ProcessLookupError:
+        return None
+    except PermissionError as exc:
+        raise CmocError(
+            f"実行中 {process_name} の確認権限がありません。",
+            [f"{process_name} を手動で確認してから再実行してください。"],
+            f"pid: {process_id}",
+        ) from exc
+
+
+def send_process_signal(
+    process_fd: int,
+    process_id: int,
+    sig: signal.Signals,
+    process_name: str = "apply process",
+) -> None:
+    """pidfd 経由で process へ signal を送り、PID reuse を避ける。"""
+    try:
+        signal.pidfd_send_signal(process_fd, sig)
+    except ProcessLookupError:
+        return
+    except PermissionError as exc:
+        raise CmocError(
+            f"実行中 {process_name} を停止する権限がありません。",
+            [f"{process_name} を手動で停止してから再実行してください。"],
+            f"pid: {process_id}",
+        ) from exc
+
+
+def wait_process_fd_exit(process_fd: int, timeout_sec: float) -> bool:
+    """pidfd の readable 化を process 終了として待つ。"""
+    readable, _, _ = select.select([process_fd], [], [], timeout_sec)
+    return bool(readable)
+
+
+def _process_stat(process_id: int) -> list[str] | None:
+    try:
+        stat = Path(f"/proc/{process_id}/stat").read_text()
+    except OSError:
+        return None
+    try:
+        fields = stat.rsplit(") ", 1)[1].split()
+    except IndexError:
+        return None
+    return fields if len(fields) > 19 else None
+
+
+def process_start_time(process_id: int) -> int | None:
+    """pid 再利用を検出するため Linux proc stat の starttime を読む。"""
+    fields = _process_stat(process_id)
+    if fields is None:
+        return None
+    try:
+        return int(fields[19])
+    except ValueError:
+        return None
+
+
+def process_group_members(
+    process_group_id: int,
+) -> tuple[tuple[int, int], ...] | None:
+    """group 内の非 zombie process を PID と starttime の組で列挙する。"""
+    proc = Path("/proc")
+    if not proc.is_dir():
+        return None
+    members: list[tuple[int, int]] = []
+    try:
+        entries = tuple(proc.iterdir())
+    except OSError:
+        return None
+    for path in entries:
+        if not path.name.isdigit():
+            continue
+        fields = _process_stat(int(path.name))
+        if fields is None:
+            continue
+        try:
+            state = fields[0]
+            member_group_id = int(fields[2])
+            start_time = int(fields[19])
+        except ValueError:
+            continue
+        if member_group_id == process_group_id and state != "Z":
+            members.append((int(path.name), start_time))
+    return tuple(members)
+
+
+def process_group_has_running_member(process_group_id: int) -> bool:
+    """group 内に停止対象となる process が残っているか確認する。"""
+    members = process_group_members(process_group_id)
+    return members is None or bool(members)
+
+
+def wait_process_group_exit(process_group_id: int, timeout_sec: float) -> bool:
+    """数値 PGID へ signal を送らず、group が空になるまで待つ。"""
+    deadline = time.monotonic() + timeout_sec
+    while process_group_has_running_member(process_group_id):
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.05)
+    return True
+
+
+def signal_process_group_members(
+    process_group_id: int, sig: signal.Signals
+) -> None:
+    """group member を個別 pidfd で再検証して signal を送る。"""
+    members = process_group_members(process_group_id)
+    if members is None:
+        raise CmocError(
+            "実行中 Codex subprocess の process group を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pgid: {process_group_id}",
+        )
+    for process_id, expected_start_time in members:
+        process_fd = open_process_fd(process_id, "Codex subprocess")
+        if process_fd is None:
+            continue
+        try:
+            # stat 読み取りと pidfd_open の間の PID reuse も signal 前に捨てる。
+            if process_start_time(process_id) != expected_start_time:
+                continue
+            send_process_signal(
+                process_fd,
+                process_id,
+                sig,
+                "Codex subprocess",
+            )
+        finally:
+            os.close(process_fd)
+
+
+def stop_process_group(process_group_id: int) -> None:
+    """Codex group を個別 pidfd で SIGTERM、必要なら SIGKILL する。"""
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
+    signal_process_group_members(process_group_id, signal.SIGTERM)
+    if wait_process_group_exit(process_group_id, 5.0):
+        return
+    signal_process_group_members(process_group_id, signal.SIGKILL)
+    if wait_process_group_exit(process_group_id, 5.0):
+        return
+    raise CmocError(
+        "実行中 Codex subprocess を停止できません。",
+        ["Codex subprocess を確認して停止後に再実行してください。"],
+        f"pgid: {process_group_id}",
+    )
 
 
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
@@ -908,24 +1070,47 @@ def run_tracked_codex_subprocess(
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
     process: subprocess.Popen[Any] | None = None
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # Popen と child 行の登録だけを遅延させ、exec 後の child は通常の SIGTERM を受ける。
+    previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
+    sigterm_pending = False
+
+    def defer_sigterm(_signum: int, _frame: Any) -> None:
+        nonlocal sigterm_pending
+        sigterm_pending = True
+
+    signal.signal(signal.SIGTERM, defer_sigterm)
     try:
-        with apply_process_id_file_lock(tracking_path):
-            process = subprocess.Popen(argv, start_new_session=True, **kwargs)
-            _record_tracked_child_process(tracking_path, process.pid)
-    except OSError as exc:
-        if process is None:
-            raise
-        process.terminate()
         try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-        raise CmocError(
-            "apply process tracking を更新できません。",
-            ["apply process pid file の権限と保存先を確認してください。"],
-            f"path: {tracking_path}\nerror: {exc}",
-        ) from exc
+            with apply_process_id_file_lock(tracking_path):
+                process = subprocess.Popen(argv, start_new_session=True, **kwargs)
+                _record_tracked_child_process(
+                    tracking_path, process.pid, process_group_id=process.pid
+                )
+        except OSError as exc:
+            if process is None:
+                raise
+            try:
+                stop_process_group(process.pid)
+            except CmocError as cleanup_exc:
+                raise CmocError(
+                    "apply process tracking を更新できません。",
+                    [
+                        "apply process pid file の権限と保存先を確認してください。",
+                        "Codex subprocess の停止にも失敗しました。",
+                    ],
+                    f"path: {tracking_path}\nerror: {exc}\ncleanup: {cleanup_exc}",
+                ) from exc
+            raise CmocError(
+                "apply process tracking を更新できません。",
+                ["apply process pid file の権限と保存先を確認してください。"],
+                f"path: {tracking_path}\nerror: {exc}",
+            ) from exc
+    finally:
+        signal.signal(signal.SIGTERM, previous_sigterm_handler)
+    if sigterm_pending and previous_sigterm_handler != signal.SIG_IGN:
+        # Popen と pid file 更新の間だけ遅らせ、登録後は通常の中断処理へ戻す。
+        os.kill(os.getpid(), signal.SIGTERM)
     try:
         stdout, stderr = process.communicate(input_data)
         result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
@@ -939,10 +1124,8 @@ def run_tracked_codex_subprocess(
         return result
     finally:
         # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
-        # communicate() can be interrupted while a start_new_session child is
-        # still running. Keep its group in the pid file so error-state abandon
-        # can stop and wait for it before deleting the apply worktree.
-        if process.poll() is not None:
+        # leader 終了後も descendant が group に残る間は tracking を保持する。
+        if process.poll() is not None and not process_group_has_running_member(process.pid):
             try:
                 remove_tracked_child_process(tracking_path, process.pid)
             except OSError as exc:
@@ -953,20 +1136,25 @@ def run_tracked_codex_subprocess(
                 ) from exc
 
 
-def record_tracked_child_process(path: Path, process_id: int) -> None:
+def record_tracked_child_process(
+    path: Path, process_id: int, process_group_id: int | None = None
+) -> None:
     """apply process pid file へ Codex child process の同一性情報を追記する。"""
     with apply_process_id_file_lock(path):
-        _record_tracked_child_process(path, process_id)
+        _record_tracked_child_process(path, process_id, process_group_id)
 
 
-def _record_tracked_child_process(path: Path, process_id: int) -> None:
+def _record_tracked_child_process(
+    path: Path, process_id: int, process_group_id: int | None = None
+) -> None:
     start_time = process_start_time(process_id)
     if start_time is None:
-        return
+        raise OSError(f"process {process_id} start time is unavailable")
     path.parent.mkdir(parents=True, exist_ok=True)
     current = path.read_text() if path.exists() else ""
     lines = [line for line in current.splitlines() if line.strip()]
-    child_line = f"child {process_id} {start_time}"
+    group_id = process_id if process_group_id is None else process_group_id
+    child_line = f"child {process_id} {start_time} {group_id}"
     lines = [line for line in lines if not line.startswith(f"child {process_id} ")]
     lines.append(child_line)
     path.write_text("\n".join(lines) + "\n")
@@ -983,18 +1171,6 @@ def remove_tracked_child_process(path: Path, process_id: int) -> None:
             if not line.startswith(f"child {process_id} ")
         ]
         path.write_text(("\n".join(lines) + "\n") if lines else "")
-
-
-def process_start_time(process_id: int) -> int | None:
-    """pid 再利用を検出するため Linux proc stat の starttime を読む。"""
-    try:
-        stat = Path(f"/proc/{process_id}/stat").read_text()
-    except OSError:
-        return None
-    try:
-        return int(stat.rsplit(") ", 1)[1].split()[19])
-    except (IndexError, ValueError):
-        return None
 
 
 def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:

@@ -89,12 +89,12 @@ def test_apply_process_id_reads_tracked_child_processes(tmp_path: Path) -> None:
     root = tmp_path
     path = root / ".cmoc" / "local" / "state" / "apply_processes" / "session.pid"
     path.parent.mkdir(parents=True)
-    path.write_text("12345 20\nchild 23456 30\n")
+    path.write_text("12345 20\nchild 23456 30 34567\n")
 
     process = apply_runtime.read_apply_process_id(root, "session")
 
     assert process == apply_runtime.ApplyProcessIdentity(
-        12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
+        12345, 20, (apply_runtime.ProcessIdentity(23456, 30, 34567),)
     )
 
 
@@ -135,38 +135,33 @@ def test_apply_process_id_read_waits_for_tracking_lock(tmp_path: Path) -> None:
     ]
 
 
-def test_stop_child_process_group_accepts_exited_zombie_leader(
+def test_stop_child_process_group_uses_stable_group_after_leader_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """終了済み child が親の reap 待ちで group に残っても親停止へ進める。"""
-    sent: list[int] = []
+    """leader 終了後も保存済み group ID の descendant を停止対象にする。"""
+    stopped: list[int] = []
 
-    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 30)
-    monkeypatch.setattr(apply_runtime.os, "getpgid", lambda process_id: process_id)
-    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id, name: 10)
+    monkeypatch.setattr(
+        apply_runtime, "open_process_fd", lambda process_id, name: None
+    )
+    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: None)
     monkeypatch.setattr(
         apply_runtime,
-        "send_process_group_signal",
-        lambda process_group_id, sig: sent.append(sig),
+        "process_group_has_running_member",
+        lambda process_group_id: True,
     )
     monkeypatch.setattr(
         apply_runtime,
-        "wait_process_group_exit",
-        lambda process_group_id, timeout: False,
+        "stop_process_group",
+        lambda process_group_id: stopped.append(process_group_id),
     )
-    monkeypatch.setattr(
-        apply_runtime,
-        "process_group_has_no_running_members",
-        lambda process_fd, pgid: True,
-    )
-    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
 
     warning = apply_runtime.stop_child_process_group(
-        apply_runtime.ProcessIdentity(23456, 30)
+        apply_runtime.ProcessIdentity(23456, 30, 34567)
     )
 
     assert warning is None
-    assert sent == [apply_runtime.signal.SIGTERM]
+    assert stopped == [34567]
 
 
 def test_stop_apply_process_treats_raced_exit_as_stopped(
@@ -239,7 +234,7 @@ def test_stop_child_process_group_opens_pidfd_before_identity_check(
 ) -> None:
     """child PID reuse 確認前に pidfd を握り、別 group への signal を避ける。"""
     order: list[str] = []
-    sent: list[int] = []
+    stopped: list[int] = []
 
     def fake_open_process_fd(process_id: int, name: str) -> int:
         order.append(f"open:{process_id}:{name}")
@@ -251,11 +246,10 @@ def test_stop_child_process_group_opens_pidfd_before_identity_check(
 
     monkeypatch.setattr(apply_runtime, "open_process_fd", fake_open_process_fd)
     monkeypatch.setattr(apply_runtime, "process_start_time", fake_process_start_time)
-    monkeypatch.setattr(apply_runtime.os, "getpgid", lambda process_id: process_id)
     monkeypatch.setattr(
         apply_runtime,
-        "send_process_group_signal",
-        lambda process_group_id, sig: sent.append(sig),
+        "stop_process_group",
+        lambda process_group_id: stopped.append(process_group_id),
     )
     monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
 
@@ -265,4 +259,4 @@ def test_stop_child_process_group_opens_pidfd_before_identity_check(
 
     assert warning == "stale apply child process id ignored: 23456"
     assert order == ["open:23456:Codex subprocess", "start:23456"]
-    assert sent == []
+    assert stopped == []
