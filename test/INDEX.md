@@ -381,20 +381,20 @@
 # `test_codex_runtime_home.py`
 
 ## Summary
-- `run_codex_exec` の `CODEX_HOME` 解決と preflight validation を扱う回帰テスト群。未設定時の既定値、相対パスの解決、`auth.json` の存在確認、起動前に失敗する条件をまとめて確認したいときに読む。
-- Codex subprocess を起動せずに失敗させる境界を押さえる入口でもある。`CODEX_HOME` の観測値と `call_log` の整合、子プロセス呼び出しの遮断を確認したい場合に読む。
+- `test/test_codex_runtime_home.py` は `run_codex_exec` の Codex home 解決と事前検証を扱う回帰テストです。`CODEX_HOME` の未設定・相対値・絶対値の扱い、`auth.json` の存在確認、CLI 起動前に失敗することを確認したいときに読む対象です。
 
 ## Read this when
-- `CODEX_HOME` の未設定・相対指定・不正な実体の扱いを見直したいとき。
-- `auth.json` の有無やファイル種別を理由に、Codex subprocess を起動する前に失敗するか確認したいとき。
-- 実際に子プロセスへ渡る `CODEX_HOME` と、実行ログに残る解決済み path の一致を確認したいとき。
+- Codex home の決定方法や `CODEX_HOME` の解釈を変える可能性があるとき。
+- Codex CLI を起動する前に失敗させる条件やエラーメッセージを確認したいとき。
+- `run_codex_exec` の home 解決に関する回帰を追加・更新したいとき。
 
 ## Do not read this when
-- `CODEX_HOME` 以外の Codex 実行引数、sandbox、権限、出力 schema を見たいときは別の Codex 実行テストを読む。
-- Codex subprocess を起動した後の stdout/stderr 解釈や再試行を見たいときは、このファイルではなく実行結果系のテストを見る。
+- Codex subprocess の引数組み立て全般だけを見たいときは、`run_codex_exec` 本体側を先に読むべきです。
+- 認証情報ファイル以外の Codex 実行フローを確認したいときは、このテストより実装側のモジュールを直接読む方が近いです。
+- CLI 起動後の出力解析や turn 完了処理を見たいときは、このファイルは対象外です。
 
 ## hash
-- 7ca625849cc63f8af4edaad358028fcc5df06290c621978ed9247d4e6455728c
+- bf91514d31779ed7b9fdd5029f95fcf9c722e1758d5d593ec519facd89f7d219
 
 # `test_codex_runtime_paths.py`
 
