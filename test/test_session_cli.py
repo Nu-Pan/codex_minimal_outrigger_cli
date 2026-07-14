@@ -688,14 +688,19 @@ def test_session_join_reports_unmerged_path_as_absolute(tmp_path: Path) -> None:
     assert error.value.detail == str(target)
 
 
-def test_session_join_conflict_marker_detection_uses_marker_block() -> None:
-    assert not session_join_module._has_conflict_marker_block("Title\n=======\n")
-    assert session_join_module._has_conflict_marker_block(
-        "<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n"
-    )
-    assert session_join_module._has_conflict_marker_block(
-        "<<<<<<< HEAD\nhome\n========\nsession\n>>>>>>> branch\n"
-    )
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Title\n=======\n", False),
+        ("<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n", True),
+        ("<<<<<<< HEAD\nhome\n========\nsession\n>>>>>>> branch\n", True),
+        ("<<<<<<< HEAD\nhome\n", True),
+        ("||||||| base\n", True),
+        (">>>>>>> branch\n", True),
+    ],
+)
+def test_session_join_conflict_marker_detection(text: str, expected: bool) -> None:
+    assert session_join_module._has_conflict_marker_block(text) is expected
 
 
 def test_session_join_uses_linked_worktree_branch(
