@@ -437,21 +437,25 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- `run_codex_exec` の再試行判定と失敗時ログを確認したいときに読むテスト。Structured Output の検証失敗、capacity retry、JSONL error、KeyboardInterrupt、中断後の差分保持、stdout 以外の error marker の扱いを外部挙動として押さえている。
+- `run_codex_exec` の再試行・失敗ログ・中断挙動を、実際の subprocess 呼び出し回数とサブコマンドログの両方から確認するテスト群。Structured Output の検証失敗、capacity retry、JSONL error、KeyboardInterrupt、retry 上限到達後の失敗をまとめて扱う。
+- この対象を読むのは、Codex 呼び出しの retry 判定や失敗時の外部挙動、call log と event log の整合性、差分保持の確認が必要なとき。実装内部の helper 分割より、最終結果・再試行回数・記録内容を変えないことが重要なときに進む。
+- 同じ retry 状態機械でも、出力 schema 以外の一般的な CLI 挙動や別のログ領域を確認したいだけならここは優先しない。構造化出力を伴わない単発成功例や、別サブコマンドのログ仕様を知りたいだけのときも直接の読む先ではない。
 
 ## Read this when
-- Codex 実行の再試行条件や失敗時の記録方法を変更するとき。
-- Structured Output のパース失敗や schema 不一致をどう扱うかを確認したいとき。
-- capacity / quota まわりの retry 判定や、ログイベントの status・error・returncode の整合性を確認したいとき。
-- 中断やエラー時に既存の差分や生成物が残るべきかを確認したいとき。
+- Codex 実行の retry 条件と停止条件を確認したいとき
+- call log, stdout log, prompt log, subcommand event の対応関係を追いたいとき
+- Structured Output の再試行と capacity retry が同じ実行経路でどう分岐するかを見たいとき
+- 中断時に例外を伝播しつつログを残すかを確認したいとき
+- retry を挟んだ後も agent diff が保持されるかを確認したいとき
 
 ## Do not read this when
-- Codex 実行の引数組み立てやプロンプト生成そのものを見たいときは、より近い実装側のファイルを読む。
-- 一般的なログ基盤やサブコマンド共通ログの仕様だけを確認したいときは、対応するドキュメントやロガー実装を先に読む。
-- Codex CLI 以外の実行経路や別サブコマンドの挙動を確認したいときは、このテストではなく該当経路のテストを読む。
+- 再試行とは無関係な通常の Codex 実行結果だけを見たいとき
+- 別サブコマンドの入出力やログ仕様を調べたいとき
+- 内部 helper の実装構造だけを確認したいとき
+- call log ではなく別の永続状態や設定ファイルの仕様を読みたいとき
 
 ## hash
-- cc15d29643a56a9f8000ac8fbd57ef74936a0115f2c0c58d8a523b5f60d692a8
+- 455131d89ee3b66e9095992942650807987ef43a7bb49cd1afcca757df317708
 
 # `test_codex_runtime_subprocess.py`
 

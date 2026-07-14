@@ -108,22 +108,22 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループと再試行制御の入口。Structured Output 検証、capacity 再試行、quota 待機と代表 probe、resume token の継続、call log と subcommand event の記録をまとめて扱うため、この実行制御の流れを追うときに読む。
-- TUI 起動や別サブコマンドの責務ではなく、Codex 呼び出しの argv/env/cwd/schema の組み立て、実行結果の判定、変更 worktree path の列挙だけを確認したいときに進む。
+- Codex exec の単一試行ループと再試行制御をまとめた実行制御の中心。Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log と subcommand event の記録を一体で扱う。
+- 補助的に、Codex 呼び出し用の prompt log・argv・出力 JSON・stderr/stdout の保存と、実行結果オブジェクトの構築も担う。変更理由が exec 実行の挙動、再試行条件、ログ記録、quota 待機、Structured Output 検証に関わるならここを読む。
+- 同じファイル内の下位関数は、prompt 保存、出力 JSON の厳格読取、resume token 抽出、log path 生成、quota probe 生成、変更 worktree path 取得のための入口であり、exec ループ本体と合わせて読む前提になっている。
 
 ## Read this when
-- Codex exec の失敗時挙動、再試行条件、quota 待機の継続条件、Structured Output の検証条件を確認したいとき。
-- call log、prompt log、stdout/stderr、output の保存内容や、subcommand logger へ何を記録するかを追いたいとき。
-- resume token の復元や quota 代表 probe の扱いを含む、実行制御の状態遷移を理解したいとき。
-- worktree 上の変更 path を絶対 path で列挙する処理の入口を探しているとき。
+- Codex exec の実行フロー、失敗時の再試行、resume 継続、quota 待機、capacity retry、Structured Output 検証、実行ログの出力を変更・確認したいとき。
+- call log や subcommand event の内容、保存タイミング、出力ファイルの命名・更新条件、stdout/stderr/output の扱いを追いたいとき。
+- quota availability probe の作り方や、変更 worktree path を列挙する制御ロジックを確認したいとき。
 
 ## Do not read this when
-- Codex exec 以外のサブコマンドの入出力変換や TUI 起動を見たいときは、より直接のモジュールを読む。
-- 実行ログの保存先や runtime path の定義そのものを確認したいだけなら、関連する paths や logging 側の定義を先に読む。
-- Codex CLI の内部実装全体を追う必要はなく、単に `codex exec` 呼び出しの結果だけ知りたい場合は、このファイルの周辺ロジックだけで足りる。
+- TUI 起動や別サブコマンドの分岐だけを見たいときは、対応する別モジュールを先に読む。
+- Codex 呼び出し以外の一般的な設定読み込み、git 状態取得、パス操作の実装だけを知りたいときは、各 runtime helper を直接読む。
+- 正本仕様そのものを確認したいだけで、exec ループの実装詳細は不要なときは、この実装ファイルではなく根拠となる oracle 側の文書を読む。
 
 ## hash
-- 0e6bdc6c3cea02554413e903fcfc1cb4ff8b46d9a7f03487e62a197a1f20625c
+- b607868e88f2f2307feef6d684aad23ae0efd1364152bcfe09693ae26f4fea64
 
 # `runtime_codex_logging.py`
 
