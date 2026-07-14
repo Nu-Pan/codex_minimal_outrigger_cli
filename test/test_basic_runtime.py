@@ -5,6 +5,7 @@
 - <work-root>/oracle/doc/app_spec/run_isolation.md
 """
 
+import threading
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,7 @@ from cmoc_runtime import (
     CmocError,
     create_run_worktree,
     remove_worktree,
+    pushd,
     repo_root,
     work_root,
 )
@@ -61,6 +63,48 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
     assert repo_root(linked) == root.resolve()
     assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
     assert work_root(linked) == linked.resolve()
+
+
+def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
+    """並列する pushd が process-global な cwd を混線させない。"""
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first.mkdir()
+    second.mkdir()
+    original = Path.cwd()
+    first_ready = threading.Event()
+    second_started = threading.Event()
+    second_entered = threading.Event()
+    release_first = threading.Event()
+
+    def hold_first_directory() -> None:
+        with pushd(first):
+            first_ready.set()
+            release_first.wait(5)
+
+    def enter_second_directory() -> None:
+        first_ready.wait(5)
+        second_started.set()
+        with pushd(second):
+            second_entered.set()
+
+    first_thread = threading.Thread(target=hold_first_directory)
+    second_thread = threading.Thread(target=enter_second_directory)
+    first_thread.start()
+    second_thread.start()
+    try:
+        assert first_ready.wait(5)
+        assert second_started.wait(5)
+        assert not second_entered.wait(0.1)
+    finally:
+        release_first.set()
+        first_thread.join(5)
+        second_thread.join(5)
+
+    assert second_entered.is_set()
+    assert not first_thread.is_alive()
+    assert not second_thread.is_alive()
+    assert Path.cwd() == original
 
 
 def test_run_root_placeholder_rejects_main_worktree(

@@ -1,4 +1,5 @@
 import os
+import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -8,6 +9,8 @@ from pathlib import Path
 from basic.path_model import RootPathPlaceHolder, resolve_real_path
 
 from commons.runtime_errors import CmocError
+
+_CWD_LOCK = threading.RLock()
 
 
 def repo_root(cwd: Path | None = None) -> Path:
@@ -35,8 +38,18 @@ def work_root(cwd: Path | None = None) -> Path:
 
 
 def _resolve_root(placeholder: RootPathPlaceHolder, cwd: Path | None) -> Path:
+    """指定された起点から root placeholder を実パスへ解決する。
+
+    Args:
+        placeholder: 解決対象の root placeholder。
+        cwd: 起点にする file または directory。None は現在の cwd を使う。
+
+    Returns:
+        placeholder が示す絶対 root path。
+    """
     if cwd is None:
-        return resolve_real_path(placeholder)
+        with _CWD_LOCK:
+            return resolve_real_path(placeholder)
     start_dir = cwd.resolve() if cwd.is_dir() else cwd.resolve().parent
     # <work-root>/oracle/src/oracle/other/path_model.py
     # root resolver は resolve_real_path 専用の内部実装なので、cwd 起点の
@@ -127,13 +140,15 @@ def is_root_memo(root: Path, path: Path) -> bool:
 
 @contextmanager
 def pushd(path: Path) -> Iterator[None]:
-    """外部 API が cwd 前提を持つ短い区間だけ作業 directory を差し替える。"""
-    previous = Path.cwd()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(previous)
+    """外部 API が cwd 前提を持つ区間を process-wide に直列化する。"""
+    # os.chdir は process-global なので、切替から復元まで lock を保持する。
+    with _CWD_LOCK:
+        previous = Path.cwd()
+        os.chdir(path)
+        try:
+            yield
+        finally:
+            os.chdir(previous)
 
 
 def cmoc_root() -> Path:
