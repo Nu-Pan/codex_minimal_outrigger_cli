@@ -1,0 +1,39 @@
+{
+  "num_parallel": 8,
+  "codex": {
+    "model": {
+      "mainstream": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-terra"
+      },
+      "flagship": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-sol"
+      },
+      "efficiency": {
+        "model_provider": "codex",
+        "model": "gpt-5.6-luna"
+      },
+      "minimum": {
+        "model_provider": "codex",
+        "model": "gpt-5.4-mini"
+      }
+    },
+    "reasoning_effort": {
+      "low": "low",
+      "medium": "medium",
+      "high": "high",
+      "xhigh": "xhigh",
+      "max": "max"
+    },
+    "num_try_falv_recovery": 1
+  },
+  "apply_fork": {
+    "num_apply_files": 200
+  },
+  "review_oracle": {
+    "num_enumerate_findings_loop": 2,
+    "num_merge_findings_loop": 2,
+    "num_validate_findings_loop": 2
+  }
+}
