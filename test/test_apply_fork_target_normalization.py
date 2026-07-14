@@ -158,3 +158,27 @@ def test_apply_fork_target_normalization_classifies_oracle_symlink_by_repo_path(
     targets = apply_fork_module.normalize_apply_targets(root, {oracle_link})
 
     assert targets == [oracle_link.absolute()]
+
+
+def test_apply_fork_target_normalization_keeps_distinct_tracked_symlink_paths(
+    tmp_path: Path,
+) -> None:
+    """同じ実体を指す oracle/ と realization/ の tracked path を別対象にする。"""
+    root = make_repo(tmp_path)
+    shared = root / "shared" / "target.py"
+    shared.parent.mkdir()
+    shared.write_text("value = 1\n")
+    oracle_link = root / "oracle" / "link.py"
+    realization_link = root / "src" / "link.py"
+    realization_link.parent.mkdir()
+    oracle_link.symlink_to("../shared/target.py")
+    realization_link.symlink_to("../shared/target.py")
+    run_git(root, "add", "shared/target.py", "oracle/link.py", "src/link.py")
+    run_git(root, "commit", "-m", "add symlink targets")
+
+    targets = apply_fork_module.normalize_apply_targets(
+        root, {oracle_link, realization_link}
+    )
+
+    assert targets == [oracle_link.absolute(), realization_link.absolute()]
+    assert apply_fork_module.dedupe_apply_targets(targets) == targets

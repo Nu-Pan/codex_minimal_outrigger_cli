@@ -95,6 +95,26 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
+    start_points: list[str] = []
+    original_create_run_worktree = apply_fork_module.create_run_worktree
+
+    def advance_session_before_run_creation(
+        root_arg: Path, branch_arg: str, worktree: Path, start_point: str
+    ) -> Path:
+        """snapshot 後に session branch が進んでも、渡した起点を観測する。"""
+        (linked / "README.md").write_text("# session advanced\n")
+        run_git(linked, "add", "README.md")
+        run_git(linked, "commit", "-m", "advance session during apply setup")
+        start_points.append(start_point)
+        return original_create_run_worktree(
+            root_arg, branch_arg, worktree, start_point
+        )
+
+    monkeypatch.setattr(
+        apply_fork_module,
+        "create_run_worktree",
+        advance_session_before_run_creation,
+    )
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
@@ -113,6 +133,7 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "local" / "session" / f"{session_id}.json").read_text())
     assert state["apply"]["oracle_snapshot_commit"] == linked_commit
+    assert start_points == [linked_commit]
     assert (
         run_git(root, "rev-parse", state["apply"]["apply_branch"]).stdout.strip()
         == linked_commit
@@ -465,3 +486,62 @@ def test_apply_fork_rechecks_ready_state_before_creating_run(
 
     assert lock_entries == 1
     assert created == []
+
+
+@pytest.mark.parametrize("failure", ["pid", "state"])
+def test_apply_fork_initialization_failure_is_recoverable_by_abandon(
+    tmp_path: Path, monkeypatch: MonkeyPatch, failure: str
+) -> None:
+    """worktree 作成後の PID/state failure を error state と abandon で回収する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    monkeypatch.setattr(apply_fork_module, "enumerate_apply_targets", lambda *args: [])
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult({"findings": []}),
+    )
+
+    if failure == "pid":
+        def fail_write_pid(*args: object, **kwargs: object) -> None:
+            raise OSError("pid save failed")
+
+        monkeypatch.setattr(apply_fork_module, "write_apply_process_id", fail_write_pid)
+    else:
+        original_write_state = apply_fork_module.write_state
+        write_count = 0
+
+        def fail_completed_state(path: Path, state: object) -> None:
+            nonlocal write_count
+            write_count += 1
+            if write_count == 2:
+                raise OSError("completed state save failed")
+            original_write_state(path, state)
+
+        monkeypatch.setattr(apply_fork_module, "write_state", fail_completed_state)
+
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code != 0
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state = json.loads(state_path.read_text())
+    assert state["apply"]["state"] == "error"
+    apply_branch = state["apply"]["apply_branch"]
+    apply_worktree = apply_worktree_from_state(root, state)
+    assert apply_worktree.is_dir()
+    assert run_git(root, "rev-parse", "--verify", apply_branch).stdout.strip()
+
+    abandoned = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
+
+    assert abandoned.exit_code == 0
+    assert not apply_worktree.exists()
+    assert run_git(root, "branch", "--list", apply_branch).stdout == ""
+    assert json.loads(state_path.read_text())["apply"]["state"] == "ready"

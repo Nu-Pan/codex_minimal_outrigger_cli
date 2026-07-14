@@ -90,6 +90,16 @@ def build_change_summary(
     config: CmocConfig,
     codex_exec: CodexExec,
 ) -> list[dict]:
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    # Initialization errors can be reported before the linked worktree exists.
+    if not apply_worktree.is_dir():
+        return [
+            {
+                "category": "初期化失敗",
+                "summary": "apply worktree が作成される前に失敗しました。",
+                "changed_paths": [],
+            }
+        ]
     raw_diff = changed_diff_since_fork(apply_worktree, fork_commit)
     if not raw_diff.strip():
         return [
