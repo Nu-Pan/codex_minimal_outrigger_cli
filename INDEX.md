@@ -134,22 +134,17 @@
 # `test`
 
 ## Summary
-- `test/` 配下の共通補助と回帰テストを集める入口で、`acp_builder` の正本 schema 参照、CLI ランナー、git/worktree、Codex 実行補助、prompt/INDEX 生成、review/apply/session/routing 各経路の外部挙動を辿るときに読む。
-- 個別のテストは、共通 helper の契約を確認したい場合と、対応するサブコマンドや runtime の外部挙動を確認したい場合で分かれる。helper だけを追うのではなく、対象サブコマンドの入出力・権限・状態更新・報告内容を見たいときに下位へ進む。
-- `oracle` 側の正本仕様そのものを確認したい場合は、この `test/` ではなく対応する `oracle/src` や `oracle/doc` を先に読む。
+- `test/_acp_builder_support.py` に置く、`acp_builder` 系テストから正本 schema へ直接つなぐ共通 path helper の案内対象です。テスト側に schema を複製せず、oracle 側の定義を参照する必要があるときの入口になります。
 
 ## Read this when
-- テスト共通の補助がどの契約を前提にしているかを確認したいとき。
-- `apply` / `review` / `session` / `indexing` / `doctor` / `tui` / `codex runtime` のいずれかの外部挙動回帰を調べたいとき。
-- 正本 schema と realization 側の参照関係、または packaged layout での公開面を確認したいとき。
-- `INDEX.md` 生成や prompt parts の出力、file access rule、root token の扱いを検証したいとき。
-- Git worktree、linked worktree、ignore、tracked ignored file、symlink、binary file の扱いを含む境界を確認したいとき。
+- `acp_builder` の正本 schema をテストから参照する共通 helper の挙動を確認・変更したいとき。
+- テスト用に正本 schema をコピーせず、oracle 側を参照する方針の境界を確認したいとき。
+- `acp_builder` 関連テストのうち、この path 解決 helper の責務だけを見たいとき。
 
 ## Do not read this when
-- 個別コマンドの実装や正本仕様を確認したいときは、対応する `oracle` 側本文や `src` 側実装を読む。
-- 共通 helper ではなく、CLI 本体や runtime 本体の分岐を見たいだけのときは、この `test/` より直接の対象ファイルを読む。
-- `INDEX.md` ルーティング方針そのものを確認したいときは、この `test/` ではなく上位の案内を読む。
-- テスト補助の一般仕様だけを知りたいときは、該当する helper ファイルを直接読むほうがよい。
+- 個別の `acp_builder` 仕様や builder 本体を確認したいときは、対応する oracle 側の本文を読む。
+- テスト全体の CLI 挙動や他の共通サポートを確認したいときは、この helper ではなく該当する別の test support を読む。
+- `INDEX.md` のルーティング方針そのものを確認したいときは、この helper ではなく上位の案内を読む。
 
 ## hash
-- 1cddf300d0a8a6b86fc421c871c39c745cc47e8b6e11ff5bf0fe8d8fda9f2d9a
+- 8eae762b1da04735a80e05f63ba029d68c6ce5ab0bb38b337af459067ef297d5

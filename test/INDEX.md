@@ -456,19 +456,20 @@
 # `test_codex_runtime_subprocess.py`
 
 ## Summary
-- `commons.runtime_codex_profile` の `run_codex_subprocess` / `run_tracked_codex_subprocess` に対する振る舞いを確認するテスト群。apply 実行中の Codex subprocess の process group 記録、`communicate()` 中断時の tracking 維持、継承された tracking 環境変数を無視する扱いを検証する。
+- `commons.runtime_codex_profile` の subprocess 実行まわりを、apply の中断・後始末要件に合わせて検証するテスト。専用プロセスグループの記録、`KeyboardInterrupt` 時の tracking 維持、外部継承した tracking 環境の無視を確認する。
 
 ## Read this when
-- Codex subprocess の起動方法や process group の扱いを変えるとき。
-- apply 実行中の child process tracking の記録・保持・削除条件を変えるとき。
-- `CODEX_HOME` や `CMOC_APPLY_PROCESS_ID_PATH` の継承や無視の境界を確認したいとき。
+- Codex subprocess の起動条件や tracking ファイルの更新条件を変えるとき。
+- apply の abandon/cleanup に関わるプロセス管理や環境変数の扱いを確認したいとき。
+- `run_codex_subprocess` / `run_tracked_codex_subprocess` の振る舞いを追加・変更するとき。
 
 ## Do not read this when
-- Codex CLI の一般的な error 判定や JSONL 解釈だけを変えるときは、`commons.runtime_codex_profile` 本体側を先に読む。
-- apply abandon の pid file 排他制御や start time 判定だけを変えるときは、関連する他の apply/runtime テストを先に読む。
+- CLI 全体の引数解釈やサブコマンド分岐を見たいだけのとき。
+- apply 以外の subprocess 利用箇所の一般的な実装を追いたいとき。
+- tracking ファイルを使わない通常の Codex 実行経路だけを確認したいとき。
 
 ## hash
-- f7111f256da1db596baf66d16b6f67c544eee649d1025388a6945b851747a2ab
+- 9aad11766f104007dc39c6565f7f234f1a61c6dc280e9b95b5e22962de1ec3b8
 
 # `test_codex_runtime_tui.py`
 
