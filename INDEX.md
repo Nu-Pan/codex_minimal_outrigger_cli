@@ -139,19 +139,19 @@
 # `test`
 
 ## Summary
-- `test` 配下で、`oracle` 側の正本仕様や共有補助を参照しながら、CLI・runtime・prompt・builder・review・apply・session・indexing・Codex 実行系の回帰テストを読むための入口である。
-- ここには共通 support と各機能別テストが混在しているため、まず対象サブコマンドや共通関心事を絞り、その責務に対応するテスト本文へ進む。
-- 正本仕様そのものは `oracle` 側に置かれているので、`test` 側は外部挙動・境界条件・互換性を確認するために読む。
+- `test` 配下の共通補助と各 `realization test` を案内するルーティング対象で、個別の CLI / runtime / prompt / indexing / review / session 系テストへ進む前の入口になる。特に `acp_builder` 系の正本 schema 参照、Codex 実行系の共通補助、apply / review / session / indexing の CLI 回帰、runtime の契約確認を切り分けて読むための索引として使う。
+- 補助ファイルはテスト共通の足場だけを持ち、実装本体や正本仕様の代替ではない。個別の責務ごとに対象が分かれているため、読むべき entry は「どの挙動を変えるか」で選ぶ。
 
 ## Read this when
-- `apply`、`session`、`review`、`indexing`、`tui`、`doctor`、`Codex runtime` のいずれかの外部挙動を確認・変更したいとき。
-- `CliRunner`、git fixture、fake command、path 解決、Ollama 連携などの共通 test support を使う必要があるとき。
-- 正本 schema や prompt 断片と、テストで観測する出力・権限・状態遷移の対応を確認したいとき。
+- 共通 test helper の責務や使い分けを確認したいとき。
+- `acp_builder` の正本 schema 参照や builder 互換テストを変更したいとき。
+- `apply` / `review` / `session` / `indexing` / `doctor` / `tui` / `codex runtime` の CLI や実行時契約を変えるとき。
+- `basic.path_model`、`runtime_state`、`runtime_config`、`runtime_ollama`、`runtime_codex_*` などの境界条件を確認したいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
-- 実装本体の分割方針や内部 helper の整理だけを追いたいときは、対応する `src` 側を読む。
-- この配下のうち別サブコマンドのテストや別の support を探したいだけなら、まず対象領域を絞ってから読む。
+- 個別の正本仕様そのものを確認したいときは、対応する `oracle` 側を読む。
+- CLI や runtime の実装本体だけを追いたいときは、対応する realization implementation 側を読む。
+- ここに載っている helper のうち、対象の挙動と無関係なものを総当たりで読む必要はない。
 
 ## hash
-- d359b7d341297622799b162dc9ff721cb74fd6cae6b4a62f92190a57836de7e6
+- b690286ccb3f2aef06afc25dd1e4397a8709cbda430577b7662db5f5af3b0c6e

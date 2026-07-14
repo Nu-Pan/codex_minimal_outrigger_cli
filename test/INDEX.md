@@ -684,20 +684,20 @@
 # `test_review_oracle_worktree.py`
 
 ## Summary
-- `cmoc review oracle` の worktree 選択と INDEX 統合の振る舞いを確認する統合テスト群。linked worktree の session branch で実行されること、review 用 worktree が分離されること、INDEX 変更が取り込まれること、競合時の解決方針、review 実行中に INDEX 以外の差分が混ざった場合の拒否を扱う。
+- `review oracle` の worktree 分離、`INDEX.md` の統合、未コミット差分の拒否、preflight 由来の変更反映、`INDEX.md` 以外の差分検出を検証する回帰テスト群。
 
 ## Read this when
-- `cmoc review oracle` の対象 worktree がどれになるべきかを確認したいとき。
-- review 実行時に INDEX.md の生成・マージ・競合解決がどう扱われるかを確認したいとき。
-- review 中に未コミット差分や INDEX.md 以外の差分がある場合の拒否条件を確認したいとき。
+- `review oracle` が session/worktree/branch のどこを対象にするかを確認したいとき。
+- review 実行中に `INDEX.md` だけを統合し、それ以外の差分は失敗扱いにしたいとき。
+- preflight が review 用 worktree で作った `INDEX.md` をどう扱うか、また merge conflict の解決方針を確認したいとき。
 
 ## Do not read this when
-- review oracle の所見列挙・採否判定・レポート本文だけを確認したいときは、review ループや report 側のテストを読む。
-- `cmoc review oracle` 以外の一般的な CLI 挙動や別サブコマンドの振る舞いを確認したいとき。
-- 対象 oracle の選定そのものだけを確認したいときは、対象抽出側のテストを読む。
+- `review oracle` の本体実装や report 生成ロジックを追いたいときは、実装側の `sub_commands.review.oracle` を読む。
+- `INDEX.md` の更新規則そのものを知りたいときは、`app_spec/indexing.md` 側を読む。
+- session fork や run isolation の一般仕様だけを確認したいときは、個別の実装テストではなく対応する仕様文書を読む。
 
 ## hash
-- c51cf53de335391985ea9d46ba1e4e54417e79ea1f34a15d858b0bf44a69dd93
+- f94e36cff864f0b6cb1c8e218ca36b0fc7ec0dcf813906f946fa64894322a49b
 
 # `test_runtime_cli.py`
 
