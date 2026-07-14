@@ -2,6 +2,7 @@ import fcntl
 from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import copy_context
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
@@ -127,7 +128,16 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
                 )
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                for plan, index, entry in executor.map(build_missing, missing):
+                # ContextVars are not inherited by worker threads. Copy each
+                # caller context before submit so Codex events reach the
+                # subcommand log used by the parent command.
+                # <work-root>/oracle/doc/app_spec/console_and_file_log.md
+                futures = [
+                    executor.submit(copy_context().run, build_missing, item)
+                    for item in missing
+                ]
+                for future in futures:
+                    plan, index, entry = future.result()
                     plan.entries[index] = entry
         for plan in plans:
             entries = [entry for entry in plan.entries if entry is not None]

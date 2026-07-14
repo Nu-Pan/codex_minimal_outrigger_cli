@@ -8,6 +8,7 @@ CLI lifecycle から分離して検証する。根拠は
 `<work-root>/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py`。
 """
 
+import json
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -15,6 +16,14 @@ from pathlib import Path
 import pytest
 import cmoc_runtime
 import commons.indexing as indexing_common
+import commons.runtime_codex_preflight as codex_preflight
+from commons.runtime_logging import (
+    SubcommandLogger,
+    reset_current_subcommand_logger,
+    set_current_subcommand_logger,
+)
+from _codex_support import setup_codex_home, stub_codex_overrides
+from _command_support import write_python_executable
 from _git_support import make_repo
 
 
@@ -287,6 +296,45 @@ def test_update_indexes_generates_sibling_entries_in_stable_render_order(
     assert sorted(calls) == ["a.txt", "b.txt"]
     rendered = (docs / "INDEX.md").read_text()
     assert rendered.index("# `a.txt`") < rendered.index("# `b.txt`")
+
+
+def test_update_indexes_propagates_subcommand_logger_to_codex_workers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """並列 worker の Codex event を親サブコマンドログへ記録する。
+
+    根拠: <work-root>/oracle/doc/app_spec/console_and_file_log.md
+    """
+    root = make_repo(tmp_path)
+    cmoc_runtime.sync_config(root)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text('{\"summary\": [\"summary\"], \"read_this_when\": [\"read\"], \"do_not_read_this_when\": [\"skip\"]}')",
+            "print('{\"type\":\"turn.completed\"}')",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    logger = SubcommandLogger(root, "indexing")
+    token = set_current_subcommand_logger(logger)
+
+    try:
+        indexing_common.update_indexes(root, codex_preflight.run_codex_exec)
+    finally:
+        reset_current_subcommand_logger(token)
+
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in events if event["event"] == "codex_call"]
+    assert codex_events
+    assert all(event["status"] == "succeeded" for event in codex_events)
 
 
 def test_update_indexes_generates_non_ancestor_indexes_in_parallel(
