@@ -3,6 +3,7 @@
 根拠:
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
 """
 
@@ -29,10 +30,10 @@ from _git_support import make_repo, run_git
 @pytest.mark.parametrize(
     "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
 )
-def test_codex_overrides_readonly_modes_allow_only_ignored_gap_writes(
+def test_codex_overrides_readonly_modes_do_not_inject_ignored_gap_writes(
     tmp_path: Path, mode: FileAccessMode
 ) -> None:
-    """読み取り専用モードが無視対象の未追跡パスだけを書き込み可能にすることを検証する。"""
+    """読み取り専用モードが ignore 判定から書き込み権限を生成しないことを検証する。"""
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text("__pycache__/\n/build/\n")
     (root / "src").mkdir()
@@ -64,9 +65,10 @@ def test_codex_overrides_readonly_modes_allow_only_ignored_gap_writes(
     _assert_not_writable(override_args, root / "oracle" / "new.md")
     _assert_not_writable(override_args, root / "new.md")
 
-    _assert_writable(override_args, root / "src" / "__pycache__" / "new.pyc")
-    _assert_writable(override_args, root / "oracle" / "__pycache__" / "new.pyc")
-    _assert_writable(override_args, root / "build" / "scratch.txt")
+    assert _override_permission_roots(override_args, "write") == set()
+    _assert_not_writable(override_args, root / "src" / "__pycache__" / "new.pyc")
+    _assert_not_writable(override_args, root / "oracle" / "__pycache__" / "new.pyc")
+    _assert_not_writable(override_args, root / "build" / "scratch.txt")
     _assert_not_writable(override_args, root / "src" / "main.py")
     _assert_not_writable(override_args, root / "oracle" / "spec.md")
     _assert_not_writable(override_args, root / "build" / "artifact.txt")
@@ -115,10 +117,10 @@ def test_codex_overrides_protect_memo_and_future_routing_files(
     _assert_not_writable(override_args, root / "memo" / "private.md")
 
 
-def test_codex_overrides_no_rule_excludes_runtime_blocked_roots(
+def test_codex_overrides_no_rule_uses_root_with_fixed_protected_paths(
     tmp_path: Path,
 ) -> None:
-    """NO_RULE でも runtime/Codex の禁止 root を work root-wide write に含めない。"""
+    """NO_RULE は root を開き、active oracle の固定 path だけを保護する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     root = make_repo(tmp_path)
     for name in (".agents", ".cmoc", ".codex", "memo"):
@@ -137,17 +139,21 @@ def test_codex_overrides_no_rule_excludes_runtime_blocked_roots(
         root,
     )
 
-    assert str(root.resolve()) not in _override_permission_roots(
-        override_args, "write"
-    )
+    assert _override_permission_roots(override_args, "write") == {
+        str(root.resolve())
+    }
     for relative in (
         ".agents/blocked.md",
-        ".cmoc/gu/state.json",
+        ".cmoc/gu/ar/state.json",
+        ".cmoc/gt/ar/config.json",
         ".codex/config.toml",
         ".git/config",
         "memo/private.md",
+        "AGENTS.md",
+        "INDEX.md",
     ):
         _assert_not_writable(override_args, root / relative)
+    _assert_writable(override_args, root / ".cmoc" / "gu" / "state.json")
     _assert_writable(override_args, root / "src" / "new.py")
 
 
@@ -186,10 +192,10 @@ def test_codex_overrides_allows_tracked_cmoc_config_but_blocks_local(
     _assert_not_writable(override_args, root / "INDEX.md")
 
 
-def test_codex_overrides_allows_root_realization_file_and_protects_ignored_dir(
+def test_codex_overrides_does_not_derive_permissions_from_ignored_dir(
     tmp_path: Path,
 ) -> None:
-    """root 直下の realization file を許可し、無視対象 directory を保護する。"""
+    """無視対象 directory の実在 path を個別の権限設定へ変換しない。"""
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text("/build/\n")
     (root / "src").mkdir()
@@ -215,16 +221,20 @@ def test_codex_overrides_allows_root_realization_file_and_protects_ignored_dir(
         root,
     )
 
-    expected_roots = {
-        str(root.resolve()),
-        str((root / "build" / "artifact.txt").resolve()),
-    }
+    expected_roots = {str(root.resolve())}
     assert _override_permission_roots(override_args, "write") == expected_roots
+    filesystem = _override_permission_filesystem(override_args)
+    build_root = (root / "build").resolve()
+    assert all(
+        key == ":workspace_roots"
+        or not Path(key).resolve().is_relative_to(build_root)
+        for key in filesystem
+    )
     _assert_writable(override_args, root / "src" / "main.py")
     _assert_writable(override_args, root / "src" / "new.py")
     _assert_writable(override_args, root / "build" / "artifact.txt")
     _assert_writable(override_args, root / ".gitignore")
-    _assert_not_writable(override_args, root / "build" / "new.txt")
+    _assert_writable(override_args, root / "build" / "new.txt")
     _assert_not_writable(override_args, root / ".agents" / "blocked.md")
     extra = root / "docs" / "generated.md"
 
@@ -236,6 +246,44 @@ def test_codex_overrides_allows_root_realization_file_and_protects_ignored_dir(
     )
     assert _override_permission_roots(override_args, "write") == expected_roots
     _assert_writable(override_args, extra)
+
+
+@pytest.mark.parametrize("mode", list(FileAccessMode))
+def test_codex_overrides_are_invariant_to_ignored_subtree_contents(
+    tmp_path: Path, mode: FileAccessMode
+) -> None:
+    """ignored subtree の個別ファイルを permission argv へ注入しない。"""
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("/generated/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore generated output")
+    generated = root / "generated"
+    generated.mkdir()
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        mode,
+        "prompt",
+        None,
+    )
+
+    baseline_args = build_codex_override_args(parameter, CmocConfig(), root)
+    for directory_index in range(12):
+        directory = generated / f"part-{directory_index:02d}"
+        directory.mkdir()
+        for file_index in range(20):
+            (directory / f"artifact-{file_index:02d}.bin").write_text("generated\n")
+
+    populated_args = build_codex_override_args(parameter, CmocConfig(), root)
+
+    assert populated_args == baseline_args
+    generated_root = generated.resolve()
+    assert all(
+        key == ":workspace_roots"
+        or Path(key).resolve() == generated_root
+        or not Path(key).resolve().is_relative_to(generated_root)
+        for key in _override_permission_filesystem(populated_args)
+    )
 
 
 @pytest.mark.parametrize(
@@ -355,6 +403,49 @@ def test_codex_overrides_readonly_modes_allow_extra_ignored_gap_path(
     )
 
     _assert_writable(override_args, target)
+
+
+@pytest.mark.parametrize(
+    "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
+)
+def test_codex_overrides_does_not_expand_explicit_ignored_directory(
+    tmp_path: Path, mode: FileAccessMode
+) -> None:
+    """明示した ignored directory は一つの root として許可し、子を列挙しない。"""
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("/scratch/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore scratch")
+    target = root / "scratch"
+    nested = target / "nested"
+    nested.mkdir(parents=True)
+    (nested / "artifact.bin").write_text("scratch\n")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        mode,
+        "prompt",
+        None,
+    )
+
+    override_args = build_codex_override_args(
+        parameter,
+        CmocConfig(),
+        root,
+        extra_writable_paths=[target],
+    )
+
+    assert _override_permission_roots(override_args, "write") == {
+        str(target.resolve())
+    }
+    filesystem = _override_permission_filesystem(override_args)
+    assert all(
+        key == ":workspace_roots"
+        or Path(key).resolve() == target.resolve()
+        or not Path(key).resolve().is_relative_to(target.resolve())
+        for key in filesystem
+    )
+    _assert_writable(override_args, nested / "new.bin")
 
 
 @pytest.mark.parametrize(

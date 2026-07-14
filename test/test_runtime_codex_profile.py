@@ -280,8 +280,8 @@ def test_codex_overrides_uses_cmoc_ollama_provider_for_local_slm(
     }
 
 
-def test_standard_realization_roots_follow_path_boundaries(tmp_path: Path) -> None:
-    """Expected roots exclude outside symlinks and untracked ignored paths."""
+def test_root_write_denies_external_symlink_targets(tmp_path: Path) -> None:
+    """Root write でも work-root 外へ解決する symlink target は拒否する。"""
     root = make_repo(tmp_path)
     outside = tmp_path / "outside"
     outside.mkdir()
