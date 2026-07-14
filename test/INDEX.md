@@ -399,22 +399,21 @@
 # `test_codex_runtime_paths.py`
 
 ## Summary
-- `run_codex_exec` の cwd 解決、出力 schema 保存先、権限 override の境界を検証する統合テスト群。`codex` 実行時の引数や権限マップが変わる作業で読む。
-- 並列実行時の timestamp 衝突回避、linked worktree からの repo-local read 許可、`.agents` を write 対象に含めないことを確認したいときの入口。
+- `run_codex_exec` の経路検証をまとめるテスト群。`cwd` の決定、linked worktree 時の schema 保存先、ログ用 timestamp の衝突回避、権限 override の結合を扱う。
+- `pure-oracle read` のときに `cwd` と read 許可がどう組み合わさるか、repo-local の追加 read path が linked worktree から許可されるか、`.agents` tree が write 対象に入らないかを確認する入口になる。
 
 ## Read this when
-- `run_codex_exec` の起動前後で、実行先ディレクトリや schema 保存先の決まり方を確認したい。
-- cwd が `None` の場合と明示指定の場合で、`--cd` と実際の実行先が一致するかを確認したい。
-- linked worktree から repo-local の追加 read path を許可する条件や、`.agents` tree を権限 override に含めない条件を確認したい。
-- 同一 timestamp の並列実行でもログ path が衝突しないことを確認したい。
+- `run_codex_exec` の cwd 決定やログ/ schema 保存先の挙動を確認したいとき。
+- linked worktree での出力 schema の配置や、同一 timestamp 競合時のログ path 一意性を確認したいとき。
+- permission profile の結合結果、特に `pure-oracle read` や追加 read path の扱いを確認したいとき。
 
 ## Do not read this when
-- `run_codex_exec` の内部実装や引数構築の詳細だけを追いたい場合は、関連する実装側を直接読む。
-- 出力 schema の内容そのものや prompt 文面の仕様を確認したい場合は、このテストではなく正本仕様断片を読む。
-- Git worktree 操作や test helper の一般仕様を知りたいだけなら、このファイルではなく対応する helper 側を読む。
+- Codex 実行のプロンプト生成や file access ルールそのものの正本仕様を読みたいときは、対応する oracle 側を先に読む。
+- `run_codex_exec` 以外の CLI サブコマンドや一般的な git/worktree 操作の挙動を探したいとき。
+- 実装詳細の helper 分割やテスト fixture の作り方だけを確認したいとき。
 
 ## hash
-- 51483245b0dcbe237824d80231cb14a68849406e48d4000295e1d7e7b9d307f3
+- 573620cfe77c73219e49f2da8199223c470dee13f2d09aa700bac0c4cf4230e2
 
 # `test_codex_runtime_quota_retry.py`
 
