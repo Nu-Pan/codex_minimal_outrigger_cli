@@ -115,22 +115,26 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization implementation の主要入口を束ねる領域で、CLI 入口、互換 shim、共通 runtime、サブコマンド実装へのルーティングをまとめて見るときに読む。
-- `main.py` は利用者が直接触る CLI 面の配線、`oracle.py` は正本側 `oracle` package への import shim、`config` と `commons` は実行時の互換入口と共通基盤、`sub_commands` は各サブコマンド本体への入口を担う。
+- `src` は realization 側の実装ルートで、CLI 入口、共通 runtime、サブコマンド実装、正本側への互換再公開と package shim をまとめて読むための起点になる。個別機能は下位の担当 module に分かれる。
+- `main.py` は CLI の公開入口、`commons` は実行時共通基盤、`sub_commands` はサブコマンド実装へのルーティング起点、`basic` `acp` `config` は正本側定義や既存公開面を受け止める互換領域として扱う。
+- `oracle.py` と `cmoc_runtime.py` は、realization 側から正本側 `oracle` package や runtime 実体へ到達するための shim として読む位置づけで、実装本体そのものではない。
 
 ## Read this when
-- CLI の公開コマンド面と、その先の実装への振り分けを把握したいとき。
-- 互換 import 面を残す `config.*` や `oracle.*` の扱いを確認したいとき。
-- 共通 runtime helper 群やサブコマンド群のどこへ進むべきかを判断したいとき。
-- `cmoc` 全体の実行入口から、個別実装へ直接進む前に境界を切り分けたいとき。
+- realization 側の実装全体の入口を探しているとき。
+- CLI 入口から共通 runtime と各サブコマンドへどう分かれるかを確認したいとき。
+- `basic.*` `acp.*` `config.*` の互換公開や、`oracle` package 参照の shim を確認したいとき。
+- 共通処理とサブコマンド固有処理の境界を切り分けたいとき。
+- どの下位ディレクトリを先に読むべきかを判断したいとき。
 
 ## Do not read this when
-- 個別コマンドの処理内容や Git・state・path・logging の詳細を知りたいときは、対応する下位モジュールを直接読む。
-- 正本仕様断片そのものを確認したいときは、`oracle` 側の本文へ進む。
-- 互換 shim ではなく、実体の処理や設定定義を変更したいときは、この層ではなく該当実装を読む。
+- すでに対象のサブコマンドや helper が分かっていて、その個別実装へ直接進めるとき。
+- 正本仕様断片そのものを確認したいときは、`oracle` 配下の本文を読むべきで、この階層は読まない。
+- CLI 振る舞いのうち特定コマンドの詳細仕様だけを見たいときは、`main.py` や該当サブコマンドへ直接進む。
+- 共通 runtime の内部詳細だけを見たいときは、`commons` 配下の個別 module を直接読む。
+- 互換 shim ではなく、実体の処理や設定定義を変更したいとき。
 
 ## hash
-- 051cc6c60ba6de5efb7ba468c10b14403f23f1942e3678b620878959622ea115
+- 2ec7bf9585f56ac68912f86066da607c69fdaca60f4145baf91d0686a818375f
 
 # `test`
 

@@ -186,33 +186,19 @@
 # `sub_commands`
 
 ## Summary
-- `src/sub_commands` 配下の `cmoc` サブコマンド実装への入口。各サブコマンドの実行本体と、共通の起動前処理・実行分岐の境界を確認したいときに読む。
-- `apply` は `cmoc apply` 系の実行フローと、`abandon`・`fork`・`join` の個別実装への案内を担う。
-- `doctor.py` は `doctor` サブコマンドから runtime preprocess への薄い委譲入口である。
-- `eval_oracle.py` は want を書き出した oracle 評価を review oracle 実装へ委譲する入口である。
-- `indexing.py` は `indexing` サブコマンドの起動条件と、INDEX.md 更新から commit までの外形的な流れをつなぐ。
-- `review` は review 系サブコマンド群の package 境界と、`oracle.py` による `cmoc review oracle` 全体制御の入口である。
-- `review_index.py` は review branch の INDEX.md 差分確認、commit、session branch への merge と自動競合解消を扱う。
-- `review_loop.py` は `cmoc review oracle` の所見処理本体で、finding の反復処理と状態遷移を扱う。
-- `review_paths.py` は review 結果中の oracle path を正規化し、所属判定を揃える。
-- `review_report.py` は review oracle レポートの Markdown 生成と保存を担う。
-- `review_targets.py` は review 対象 oracle file の列挙と scope による絞り込みを担う。
-- `session` は session 系サブコマンド群の package 境界と、`abandon.py`・`fork.py`・`join.py` の個別実装への入口をまとめる。
-- `tui.py` は `cmoc tui` の起動手順、元プロンプト、エディタ、実行パラメータ解決を扱う。
+- `cmoc` の各サブコマンド実装を束ねる入口で、個別コマンドの実行本体へ進む前のルーティング起点になる。
+- `apply` `review` `session` `tui` のように、目的のサブコマンドが分かっているときはここから該当実装へ進む。
+- この階層では共通の CLI runtime や基盤処理を追うより、各サブコマンドの責務境界を選び分けるために読む。
 
 ## Read this when
-- `cmoc` のサブコマンド実装全体の配置を把握したいとき。
-- 各サブコマンドの実行本体と、共通処理・個別処理の境界を確認したいとき。
-- `apply`、`review`、`session` のどこへ進むべきかを切り分けたいとき。
-- `doctor`、`indexing`、`tui` の起動入口と委譲先を確認したいとき。
-- `review` 系で対象 oracle の選定、所見処理、レポート出力、INDEX.md 反映のどこを読むべきか判断したいとき。
+- `cmoc` のどのサブコマンドがどの実行本体に対応するかを切り分けたいとき。
+- サブコマンドごとの実行フローや入出力の責務境界を確認したいとき。
+- 個別コマンドの入口を見つけて、さらに下位の実装へ進みたいとき。
 
 ## Do not read this when
-- 対象サブコマンドがすでに分かっていて、その個別実装へ直接進めるとき。
-- 共通の Git runtime や session/state 基盤だけを確認したいときは、この階層ではなくより下位の共通実装を読むべきとき。
-- `cmoc apply` 以外の subcommand の入出力や CLI 定義だけを見たいとき。
-- review 対象 oracle の仕様本文や正本仕様そのものを確認したいときは、この階層ではなく対応する oracle file を読むべきとき。
-- `cmoc tui` 以外のサブコマンドのルーティングだけを見たいとき。
+- 共通の CLI runtime や session/state などの基盤だけを確認したいときは、より下位の共通実装へ直接進む。
+- すでに対象のサブコマンド名が分かっていて、その個別実装へ直接進めるとき。
+- サブコマンド全体の定義や一覧ではなく、特定機能の内部処理だけを見たいとき。
 
 ## hash
-- 67deb1560a4a5dcea3b2f4afdd3d5e4142d4ca75ed694d9e59eb902cf9e63189
+- 81d540ec7a4d3cc96764e277f9dea4b5c2a0b360b473ed52f0ca550521c62be2

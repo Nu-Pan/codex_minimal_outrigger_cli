@@ -160,23 +160,20 @@
 # `review_report.py`
 
 ## Summary
-- review oracle レポートの Markdown 生成を担う。`write_review_oracle_report` は保存先ディレクトリを作って、`render_review_oracle_report` の出力を timestamp 名の report ファイルとして書き込む入口である。
-- この対象は、review oracle の出力形式、前提条件、判定文言、frontmatter、oracle file ごとの集計表、finding の並び順や見せ方を確認したいときに読む。
-- 補助関数は、finding の severity/verdict ごとの振り分け、結果判定、frontmatter の整形、finding セクションの描画、oracle file 表示名の正規化をまとめて扱う。
+- `review oracle` の Markdown レポート生成をまとめた実装で、保存先解決・frontmatter・verdict・所見一覧の描画を扱う。`<work-root>/oracle/doc/app_spec/sub_command/review_oracle.md` の表示順や項目を合わせたいときに読む。
 
 ## Read this when
-- review oracle のレポート本文や frontmatter の項目を変更したいとき。
-- finding の集計方法、accept/reject の扱い、fatal/minor の見せ方を確認したいとき。
-- oracle file の表示名や、レポート内での path 集計キーの扱いを変えたいとき。
-- レポートの保存先・ファイル名・生成タイミングを確認したいとき。
+- `review oracle` の出力本文や frontmatter を変えるとき
+- 所見の集計、採否別の並び、oracle file ごとの件数表示を確認したいとき
+- レポート保存先やファイル名の生成方法を追いたいとき
 
 ## Do not read this when
-- review oracle の検出ロジックや finding 生成ロジックだけを追いたいときは、finding を作る側のサブコマンドや review paths 側を先に読む。
-- report の保存先ディレクトリの共通ルールだけを知りたいときは、`reports_dir` や timestamp を定義している共通モジュールを読む。
-- このファイルは report の描画専用なので、レビュー対象 oracle の探索・判定・実行制御を確認したいだけなら直接読む必要はない。
+- `review oracle` 以外のサブコマンド仕様を見たいときは、各サブコマンドの実装へ進む
+- レビューワークフロー全体の判定ロジックを見たいだけなら、所見収集や判定の元実装を先に読む
+- `review oracle` の対象抽出だけを確認したいときは、レポート描画より対象列挙側を先に読む
 
 ## hash
-- d496499d4a070109c3738c1b6cdef8368f6a7523e3fae59de2e4dfa94be613ca
+- 800f474d769496f9704ff2ef650edf863cd1179a408dbfe75309b5f760bd3eb1
 
 # `review_targets.py`
 
