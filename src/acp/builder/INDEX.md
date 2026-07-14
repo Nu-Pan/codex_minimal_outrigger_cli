@@ -72,21 +72,20 @@
 # `quota_probe.py`
 
 ## Summary
-- `quota availability probe` 用の互換入口を定義する。正本 builder が配布されていればそれを呼び、未配布なら空 stdin の最小 probe を返す。
-- 実装側で保持するのは分岐とフォールバックだけで、probe の具体仕様や prompt 本体はここに持たせない。
+- `quota_probe.py` は、`quota availability` を判定する呼び出し用の互換入口です。正本 builder が使える場合はそれに委譲し、配布物に正本側 builder が無い場合だけ最小の probe 用 `AgentCallParameter` を組み立てます。
 
 ## Read this when
-- quota 確認や availability probe の生成経路を調べたいとき。
-- 正本 builder がある環境とない環境で、どちらの呼び出し経路になるかを確認したいとき。
-- `AgentCallParameter` を返す最小代替の挙動を確認したいとき。
+- quota 可用性の判定経路を追いたいとき。
+- `oracle.acp_builder.quota_probe` が配布先に存在するかどうかで挙動が分かれる互換処理を確認したいとき。
+- 空 stdin の最小 probe として扱う fallback の条件と内容を確認したいとき。
 
 ## Do not read this when
-- probe の正本仕様や文面の詳細を知りたいときは、oracle 側の定義を読むべきで、ここは入口だけを見る場所ではない。
-- quota probe 以外の builder 生成規則や共通引数の詳細を知りたいとき。
-- `INDEX.md` 全体の案内や他のサブコマンドのルーティングを探しているとき。
+- quota 判定そのものの正本仕様を読みたいときは、`<work-root>/oracle` 側の関連定義を読むべきです。
+- 通常の ACP builder 一般の構造や他の builder の責務を知りたいだけなら、この互換入口ではなく該当する各 builder 実装を読むべきです。
+- 配布互換の fallback を必要としない、正本 builder が常に存在する前提の実装経路を見たいだけなら、このファイルは優先対象ではありません。
 
 ## hash
-- 10abdd47009e81af0f1a3ac05a5dea4dbed450f61021bc6e6452ddac45f280bf
+- faa7e4eab5e63e294c84d7eed6b0782c680a5d066b5d24e40536c0efc2f6720c
 
 # `review`
 

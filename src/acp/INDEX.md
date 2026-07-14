@@ -19,18 +19,20 @@
 # `builder`
 
 ## Summary
-- `acp.builder` 配下の互換入口と共通ビルダー群をまとめるルーティング対象。旧 `acp.builder.*` の参照を正本側へつなぐ薄い層と、quota / indexing / review / session / tui などの builder 入口を分けて案内する。
-- この階層は、実処理の本体よりも「どの公開面を残すか」「どこから正本実装へ進むか」を判断するために読む。
+- `src/acp/builder` 配下の互換入口と canonical 実装への橋渡しをまとめる階層。`oracle.acp_builder` 側の正本 builder を既存の `acp.builder.*` 参照から到達できるようにし、必要に応じて薄い互換層だけを残す。
+- この階層で扱うのは、apply / indexing / review / session / tui の各 builder 系入口と、quota 判定の互換呼び出し、および共通処理の置き場である `common`。個別の実処理本体ではなく、どの公開経路を維持するかの判断が主目的になる。
+- `__init__.py` は `acp.builder` 互換の入口、各サブディレクトリは旧 import path 互換や正本実装への再公開を担う。実装詳細を追うより、どの名前空間を残すべきか、どの入口が正本へ委譲するかを確認するための層である。
 
 ## Read this when
-- `acp.builder.*` の既存 import 互換を維持したい、または削除可否を判断したいとき。
-- quota probe、indexing entry、review、session join、tui の各 builder 入口が正本側へどうつながるかを確認したいとき。
-- 共通 builder の責務境界や、互換 wrapper と実体の切り分けを確認したいとき。
+- `acp.builder.*` の既存参照を壊さずに、どの互換入口を維持・削除できるか判断したいとき。
+- apply / indexing / review / session / tui の builder 系で、正本実装への委譲経路や薄い互換 wrapper の有無を確認したいとき。
+- quota 判定や共通 builder 処理のように、複数の builder 入口から使われる補助的な経路を確認したいとき。
+- 旧公開名前空間から canonical 実装へどうつながるか、またはどの公開面を残すべきかを決めたいとき.
 
 ## Do not read this when
-- 個別 builder の具体的な生成ロジックや出力仕様を確認したいときは、対応する正本実装側を読む。
-- `acp.builder` 以外の公開面や別機能の実装方針を調べたいとき。
-- 単に実装本体の詳細を追いたいだけなら、このルーティング層ではなく各サブモジュールへ直接進む。
+- 各 builder の具体的な生成ロジック、入出力仕様、エラー条件そのものを追いたいときは、対応する正本実装側を読む。
+- `acp.builder` 以外の公開 API や新規機能の追加先を探しているだけなら、この互換階層は優先しない。
+- 個別の CLI フロー、fork/session の実行手順、TUI 画面構成など、より上位の機能仕様を知りたいときは別の対象を読む。
 
 ## hash
-- 62b85fcbf9d4c7d1b995384179bfff1694efb6b3337fe518f6e6760f85df9d72
+- bc29784563a5175bfb57e516fcd7c95ab9cedc44609043ca97f928f533d3485e
