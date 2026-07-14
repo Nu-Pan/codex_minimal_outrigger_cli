@@ -1,7 +1,8 @@
-import cmoc_runtime
-import pytest
 from pathlib import Path
 
+import pytest
+
+import cmoc_runtime
 from _command_support import write_python_executable
 import commons.runtime_codex_profile as runtime_codex_profile
 from commons.runtime_codex_profile import (
@@ -13,6 +14,10 @@ from commons.runtime_codex_profile import (
 def test_tracked_codex_subprocess_records_dedicated_process_group(
     tmp_path: Path,
 ) -> None:
+    """Records the dedicated process group needed for apply cleanup.
+
+    Oracle: <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    """
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
     bin_dir = tmp_path / "bin"
@@ -28,7 +33,8 @@ def test_tracked_codex_subprocess_records_dedicated_process_group(
             "deadline = time.monotonic() + 3",
             "while True:",
             "    tracking_text = path.read_text()",
-            "    if any(line.startswith(child_prefix) for line in tracking_text.splitlines()):",
+            "    lines = tracking_text.splitlines()",
+            "    if any(line.startswith(child_prefix) for line in lines):",
             "        break",
             "    if time.monotonic() >= deadline:",
             "        break",
@@ -57,17 +63,27 @@ def test_tracked_codex_subprocess_records_dedicated_process_group(
 def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """communicate 中断時は abandon 用 child tracking を保持する。"""
+    """Keeps child tracking when communicate is interrupted.
+
+    Oracle: <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    """
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
 
     class InterruptedProcess:
+        """Fake process that remains alive after communicate is interrupted.
+
+        Oracle: <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        """
+
         pid = 4321
 
         def communicate(self, _input: object) -> object:
+            """Raise KeyboardInterrupt to model an interrupted communicate."""
             raise KeyboardInterrupt
 
         def poll(self) -> None:
+            """Report that the fake process is still running."""
             return None
 
     process = InterruptedProcess()
@@ -76,7 +92,9 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
         "Popen",
         lambda *_args, **_kwargs: process,
     )
-    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile, "process_start_time", lambda _pid: 333
+    )
 
     with pytest.raises(KeyboardInterrupt):
         run_tracked_codex_subprocess(
@@ -89,12 +107,18 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
 def test_run_codex_subprocess_ignores_inherited_apply_tracking_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Ignores inherited apply tracking while launching Codex.
+
+    Oracle: <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    """
     tracking_path = tmp_path / "external" / "apply.pid"
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     write_python_executable(bin_dir / "codex", ["print('ok')"])
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    monkeypatch.setenv(cmoc_runtime.APPLY_PROCESS_TRACKING_ENV, str(tracking_path))
+    monkeypatch.setenv(
+        cmoc_runtime.APPLY_PROCESS_TRACKING_ENV, str(tracking_path)
+    )
 
     result = run_codex_subprocess(["codex"], text=True, capture_output=True)
 
