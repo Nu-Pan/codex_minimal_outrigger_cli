@@ -146,6 +146,36 @@ def test_create_run_worktree_rejects_path_not_matching_branch(
     assert (target / "keep.txt").read_text() == "keep\n"
 
 
+@pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
+def test_create_run_worktree_rejects_symlink_components(
+    tmp_path: Path, symlink_component: str
+) -> None:
+    root = make_repo(tmp_path)
+    managed = root / ".cmoc" / "local" / "worktree"
+    external = tmp_path / "external"
+    external.mkdir()
+
+    if symlink_component == "base":
+        managed.parent.mkdir(parents=True)
+        managed.symlink_to(external, target_is_directory=True)
+    else:
+        managed.mkdir(parents=True)
+        session = managed / "session"
+        if symlink_component == "session":
+            session.symlink_to(external / "session", target_is_directory=True)
+        else:
+            session.mkdir()
+            (session / "run").symlink_to(
+                external / "session" / "run", target_is_directory=True
+            )
+
+    target = managed / "session" / "run"
+    with pytest.raises(CmocError, match="run worktree path"):
+        create_run_worktree(root, "cmoc/apply/session/run", target)
+
+    assert not (external / "session" / "run").exists()
+
+
 def test_create_run_worktree_rejects_unregistered_managed_path(
     tmp_path: Path,
 ) -> None:
@@ -172,6 +202,44 @@ def test_remove_worktree_rejects_path_outside_managed_worktrees(
         remove_worktree(root, target)
 
     assert (target / "keep.txt").read_text() == "keep\n"
+
+
+@pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
+def test_remove_worktree_rejects_symlink_components(
+    tmp_path: Path, symlink_component: str
+) -> None:
+    root = make_repo(tmp_path)
+    managed = root / ".cmoc" / "local" / "worktree"
+    external = tmp_path / "external"
+    actual = external / "session" / "run"
+    actual.parent.mkdir(parents=True)
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        "cmoc/apply/session/run",
+        str(actual),
+        "HEAD",
+    )
+
+    if symlink_component == "base":
+        managed.parent.mkdir(parents=True)
+        managed.symlink_to(external, target_is_directory=True)
+    else:
+        managed.mkdir(parents=True)
+        session = managed / "session"
+        if symlink_component == "session":
+            session.symlink_to(external / "session", target_is_directory=True)
+        else:
+            session.mkdir(parents=True)
+            (session / "run").symlink_to(actual, target_is_directory=True)
+
+    target = managed / "session" / "run"
+    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+        remove_worktree(root, target)
+
+    assert actual.exists()
 
 
 def test_remove_worktree_rejects_unregistered_managed_path(

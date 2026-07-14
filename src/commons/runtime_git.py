@@ -124,35 +124,46 @@ def create_run_worktree(
 ) -> Path:
     """未使用 path に run/apply 用 linked worktree を作る。"""
     expected_worktree = _expected_managed_worktree(root, branch)
-    if worktree.resolve() != expected_worktree:
+    candidate = _absolute_path(worktree)
+    if _first_managed_worktree_symlink(
+        root, candidate, expected_worktree
+    ) is not None:
+        raise CmocError(
+            "run worktree path は symlink を含められません。",
+            ["branch 名と worktree path の対応を確認してください。"],
+            f"branch: {branch}\nworktree: {worktree}\nexpected: {expected_worktree}",
+        )
+    expected_worktree = expected_worktree.resolve()
+    candidate = candidate.resolve()
+    if candidate != expected_worktree:
         raise CmocError(
             "run worktree path が cmoc 管理領域と一致しません。",
             ["branch 名と worktree path の対応を確認してください。"],
             f"branch: {branch}\nworktree: {worktree}\nexpected: {expected_worktree}",
         )
-    worktree.parent.mkdir(parents=True, exist_ok=True)
-    if worktree.exists():
+    candidate.parent.mkdir(parents=True, exist_ok=True)
+    if candidate.exists():
         # <work-root>/oracle/doc/branch_model.md
         # A matching path is not evidence of a cmoc-created linked worktree; never delete it implicitly.
         raise CmocError(
             "run worktree path は既に存在します。",
             ["既存の directory または worktree を確認してから再実行してください。"],
-            str(worktree),
+            str(candidate),
         )
-    run_git(["worktree", "add", "-b", branch, str(worktree), start_point], root)
+    run_git(["worktree", "add", "-b", branch, str(candidate), start_point], root)
     return worktree
 
 
 def remove_worktree(root: Path, worktree: Path) -> CommandResult:
     """登録済み worktree だけを git worktree として削除する。"""
-    _require_managed_worktree(root, worktree)
+    safe_worktree = _require_managed_worktree(root, worktree)
     result = run_git(
-        ["worktree", "remove", "--force", str(worktree)], root, check=False
+        ["worktree", "remove", "--force", str(safe_worktree)], root, check=False
     )
-    if result.returncode != 0 and worktree.exists():
+    if result.returncode != 0 and safe_worktree.exists():
         # git コマンド中の状態変化後も、登録済み path だけを再帰削除する。
-        _require_managed_worktree(root, worktree)
-        shutil.rmtree(worktree)
+        safe_worktree = _require_managed_worktree(root, safe_worktree)
+        shutil.rmtree(safe_worktree)
     run_git(["worktree", "prune"], root, check=False)
     return result
 
@@ -176,12 +187,16 @@ def _expected_managed_worktree(root: Path, branch: str) -> Path:
             ["cmoc apply/run branch 名を確認してください。"],
             f"branch: {branch}",
         )
-    return (worktrees_dir(_main_worktree_root(root)) / parts[2] / parts[3]).resolve()
+    return worktrees_dir(_main_worktree_root(root)) / parts[2] / parts[3]
 
 
-def _require_managed_worktree(root: Path, worktree: Path) -> None:
-    base = worktrees_dir(_main_worktree_root(root)).resolve()
-    resolved = worktree.resolve()
+def _require_managed_worktree(root: Path, worktree: Path) -> Path:
+    base = worktrees_dir(_main_worktree_root(root))
+    candidate = _absolute_path(worktree)
+    if _first_managed_worktree_symlink(root, candidate) is not None:
+        raise _unmanaged_worktree_error(worktree, base)
+    base = base.resolve()
+    resolved = candidate.resolve()
     try:
         relative = resolved.relative_to(base)
     except ValueError as exc:
@@ -192,8 +207,41 @@ def _require_managed_worktree(root: Path, worktree: Path) -> None:
         raise _unmanaged_worktree_error(worktree, base)
     # <work-root>/oracle/doc/branch_model.md
     # The naming convention is not enough: deletion is limited to Git linked worktrees.
-    if worktree.exists() and resolved not in _registered_worktree_paths(root):
+    if candidate.exists() and resolved not in _registered_worktree_paths(root):
         raise _unmanaged_worktree_error(worktree, base)
+    return resolved
+
+
+def _absolute_path(path: Path) -> Path:
+    """symlink 検査前に相対 path を絶対 path へ変換する。"""
+    return path if path.is_absolute() else Path.cwd() / path
+
+
+def _first_symlink_component(path: Path) -> Path | None:
+    """path を順にたどり、最初に見つかった symlink component を返す。"""
+    absolute = _absolute_path(path)
+    current = Path(absolute.anchor)
+    for part in absolute.parts[1:]:
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            current = current.parent
+            continue
+        current /= part
+        if current.is_symlink():
+            return current
+    return None
+
+
+def _first_managed_worktree_symlink(root: Path, *paths: Path) -> Path | None:
+    """managed base と path の symlink component を探す。"""
+    # <work-root>/oracle/doc/branch_model.md
+    # resolve() だけでは repo 外の実体が managed path に見えるため、canonicalize 前に
+    # lexical path の component を検査して、作成・削除の両方で symlink 経由を拒否する。
+    for path in (worktrees_dir(_main_worktree_root(root)), *paths):
+        if symlink := _first_symlink_component(path):
+            return symlink
+    return None
 
 
 def _registered_worktree_paths(root: Path) -> set[Path]:
