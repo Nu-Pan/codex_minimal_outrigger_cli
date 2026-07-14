@@ -233,21 +233,21 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- `apply fork` の CLI 回帰テスト群を案内する。セッション作成後の apply 実行、state/worktree/branch の更新、設定欠落や config 読み込み失敗の停止条件、.gitignore と .cmoc/local の扱い、report 生成前の state 更新を確認したいときに読む。
-- 同じ apply fork でも、target 正規化だけを見たい場合は別のテストへ進む。ここは CLI ライフサイクル、リポジトリ fixtures、git 状態、apply 実行順の検証をまとめて持つため、周辺の実装挙動を追う入口として使う。
+- `apply fork` CLI の回帰テスト群をまとめる。セッション作成後の apply 実行が、state・worktree・process 後始末・gitignore 反映まで正しく進むかを確認する入口。
+- linked worktree から開始した場合の起点 commit の扱い、doctor 前処理と run 隔離の順序、設定欠落や設定破損時に apply run を開始しないこと、`apply abandon` で失敗後の回収ができることもここで見る。
+- 所見対象の `.gitignore` 編集や state 完了タイミング、競合再読込、初期化失敗の回復など、CLI ライフサイクルと永続状態の境界を確認する変更のときに読む。
 
 ## Read this when
-- `apply fork` のエンドツーエンド挙動を確認したい。
-- session branch から apply run を開始し、完了時に state と worktree がどう更新されるかを確認したい。
-- 設定欠落・config 読み込み失敗・競合再読込・.gitignore 反映のような lifecycle 回帰を追いたい。
+- `apply fork` の実行フロー、state 遷移、worktree 作成、process ID 後始末、`.gitignore` 反映のどれかを変えるとき。
+- session branch の起点や linked worktree からの開始方法を確認したいとき。
+- doctor 前処理、設定読み込み失敗、競合検出、初期化失敗後の `apply abandon` 回収を含む振る舞いを確認したいとき。
 
 ## Do not read this when
-- target path の正規化だけを確認したい。
-- CLI 本体の実装や helper の分割方針だけを追いたい。
-- report 本文の仕様や apply 対象列挙の細部だけを見たい場合は、より直接の実装・仕様ファイルを読む。
+- target path の正規化や個別ターゲット選定だけを見たいときは、別の対象を読む。
+- apply fork 以外の apply サブコマンドや、CLI 以外の内部 helper の細部だけが目的なら、より直接の実装・テストを読む。
 
 ## hash
-- 85425e2b10d09dd548e33ef58972fa5ddc5fde7cc390ace796ed259b3d4a45a7
+- 09f7ddba9aa4ccc8589418b3fc4a660811950a2c0dffe524a72a9decb60f3299
 
 # `test_apply_fork_report_cli.py`
 
@@ -272,20 +272,21 @@
 # `test_apply_fork_target_normalization.py`
 
 ## Summary
-- `sub_commands.apply.fork` の対象正規化ロジックを回帰検証するテスト群。`memo`/`.cmoc/local`/`.codex`/`.agents`/`AGENTS.md`/`INDEX.md` を除外しつつ、`oracle` 配下・入れ子の管理名・binary file・tracked ignored file・symlink の扱いを確認する変更時に読む。
+- `cmoc apply fork` の対象正規化に関する回帰テスト群。`normalize_apply_targets` と `dedupe_apply_targets` の分類境界を、`memo`・`.cmoc/local`・`oracle`・`realization`・tracked ignored file・symlink の扱いまで含めて固定する。
+- `apply fork` の処理順やレポート生成ではなく、対象に入る file と除外される file の判定だけを確認する入口として使う。
 
 ## Read this when
-- apply fork の対象選別や正規化条件を変えるとき。
-- `oracle` 配下の file を対象に含めるか、`memo` や `.cmoc/local` などの管理領域を除外するかを調べるとき。
-- tracked ignored file や symlink の扱いを含む対象集合の境界を確認するとき。
+- `sub_commands.apply.fork` の対象 file 正規化や重複除去の判定を変えるとき。
+- `oracle` / `realization` / `memo` / `.agents` / `.codex` / `.cmoc/local` のどれを apply 対象に含めるかを確認したいとき。
+- tracked ignored file や symlink の扱いを変えて、`git check-ignore` ベースの分類境界を維持したいとき。
 
 ## Do not read this when
-- apply fork の本体の適用処理や file 内容の変換を追うだけなら、`sub_commands.apply.fork` の実装側を先に読む。
-- `oracle` 側の正本仕様そのものを確認したいだけなら、対応する oracle doc を読む。
-- 対象選別ではなく commit や git 操作の実装を見たいだけなら、git helper 側を読む。
+- `cmoc apply fork` 全体の実行手順、状態遷移、レポート仕様を追いたいとき。これらは `oracle/doc/app_spec/sub_command/apply_fork.md` を読む。
+- `oracle` と `realization` の基本定義だけを確認したいとき。まず `oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` を読む。
+- `.cmoc/local` の事前条件や doctor preprocess の保証内容を確認したいとき。まず `oracle/doc/app_spec/doctor_preprocess.md` を読む。
 
 ## hash
-- c86830c3a4925f70cf4ed41babafd6f2d9f2a757e94f99a44c8663a36a365b44
+- 2d97f50ae884071d34fbee51b5e32722b07355cc006453252df17f55d0c738c3
 
 # `test_apply_join_cli.py`
 

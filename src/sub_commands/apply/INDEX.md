@@ -38,42 +38,41 @@
 # `fork.py`
 
 ## Summary
-- `apply fork` の 1 回分の実行制御をまとめる入口。session branch 上での前提確認、isolated worktree 作成、調査対象の列挙、Codex による所見適用、commit、state 更新、report 出力、異常時の復旧までを扱う。
-- この層を読むべきなのは、`apply fork` 全体の流れ、失敗時の状態遷移、worktree / process 管理、結果レポートの責務境界を確認したいとき。
-- 個別の対象列挙や finding 適用の詳細だけが知りたいなら、ここではなく同階層の専用実装に進む方がよい。
+- `apply` 用の fork 実行をまとめる制御層で、session branch 上の事前条件確認から isolated apply worktree の作成、対象列挙、Codex による所見適用、commit、state/report 更新、異常時の rollback までを扱う。
+- この領域は一つの apply run のライフサイクルを通して読むべきで、`file_finding_enumeration` と `finding_application` はそれぞれ対象列挙と所見適用の詳細を分担する下位入力として参照される。
+- worktree・branch・process tracking・report の失敗復旧条件を共有しているため、fork orchestration を読むときの入口として使う。
 
 ## Read this when
-- `apply fork` の実行フロー全体を追いたいとき
-- session branch の前提確認、apply state の更新、worktree 作成、commit / report / cleanup の関係を確認したいとき
-- 異常終了時に何を残し、何を回収するかを見たいとき
+- `apply fork` の実行フロー、state 遷移、report 出力、異常時 cleanup の仕様を確認したいとき。
+- 対象ファイルの選定基準や、変更されたファイルを再度 apply 対象へ戻す条件を追いたいとき。
+- commit subject の生成や、Codex 実行に渡す apply parameter の組み立て方を確認したいとき。
 
 ## Do not read this when
-- 調査対象の抽出ルールだけを知りたいときは、対象列挙の実装を読む
-- finding の生成条件や Codex への渡し方だけを知りたいときは、finding 適用の実装を読む
-- apply fork 以外の subcommand の仕様だけを確認したいときは、その subcommand の本文へ進む
+- 対象列挙の生成ロジックだけを知りたいなら `file_finding_enumeration` 側を先に読む。
+- 所見をどう適用するかの詳細だけを知りたいなら `finding_application` 側を読む。
+- `apply` 以外の subcommand の入出力や state 管理を確認したいだけなら、この orchestration 層ではなく該当 subcommand の実装を読む。
 
 ## hash
-- f612c9a2257c5967b05b136259bec9dfd7fb30e945b5ba32d4eb63737b5061d4
+- 2894d6d1df64b7725b6e86d2266d27e1cde822a2a75c06108d3ec81720f08f21
 
 # `fork_report.py`
 
 ## Summary
-- apply fork の実行結果または失敗結果を Markdown レポートとして保存する処理を担う。
-- apply worktree 上の fork 起点以降の管理対象差分と未追跡ファイル差分を集め、Codex による変更要約または機械的な fallback 要約をレポートへ含める。
-- 収束状態、所見数推移、apply branch や fork commit などの作業文脈を YAML frontmatter と本文に描画する。
+- apply fork の実行レポート生成と、そのための差分要約・未追跡ファイル反映・失敗時フォールバックをまとめて扱う入口。
+- 所見数の推移と変更内容要約を Markdown + frontmatter 形式で出力する責務が中心で、個別の差分収集や要約生成の詳細は下位の helper に委ねる。
 
 ## Read this when
-- apply fork の作業レポート生成、失敗時レポート生成、保存先、frontmatter、本文構成を確認または変更したいとき。
-- apply fork の変更内容要約がどの git diff 範囲、未追跡ファイル、fallback 条件から作られるかを確認したいとき。
-- 未収束時の警告文、所見数推移、変更なし表示など、apply fork レポート上の利用者向け文言を扱うとき。
+- apply fork の実行結果レポートの出力形式や、収束・未収束・エラー時の文言を確認したいとき。
+- fork 以後の変更をどの範囲までレポートに含めるか、未追跡ファイルや差分要約の扱いを確認したいとき。
+- 所見数の推移と変更 path の記録が、どの条件で機械的フォールバックに切り替わるかを確認したいとき。
 
 ## Do not read this when
-- apply fork のループ制御、所見列挙、作業ブランチ作成や worktree 管理そのものを確認したいだけのとき。
-- Codex に渡す変更要約用パラメータの schema や prompt の詳細を確認したいとき。
-- apply fork 以外のサブコマンドのレポート生成や git 差分取得を扱うとき。
+- apply fork 自体の実行制御、所見列挙ループ、または状態遷移の本体を追いたいときは、より上位の apply fork 実行側を読むべきである。
+- 差分要約の生成ロジックだけを見たいときは、change summary 生成側の helper を直接読むべきである。
+- 一般的な report 保存先や timestamp 生成の共通処理だけを確認したいときは、このファイルではなく共通 runtime 側を読むべきである。
 
 ## hash
-- 690ca1ebff01a6a1ac9195d36ffc86e75bd1813b5048748f25df508d82db8524
+- cd0deb8268393baf1aa15c853982d874772bc1583c0cdc943016503324a5c836
 
 # `join.py`
 
