@@ -310,20 +310,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- `basic.path_model` と `cmoc_runtime` の境界条件を検証するテスト群。`<cmoc-root>` / `<run-root>` の解決、linked worktree の扱い、`pushd` の排他性、run worktree の作成・削除時の拒否条件を確認したいときに読む。
-- `_git_support` を使うテスト補助も含むが、目的は Git 操作そのものではなく、runtime が managed worktree 以外を誤って受け付けないことの検証にある。
+- Root/worktree の実体解決、`pushd` の並行安全性、run worktree の生成・削除時の境界条件を検証するテスト群への入口。`, `_git_support` を使う repo 構築補助も含むが、関心は主に runtime 契約の外部挙動にある。
+- `path_model` の `<cmoc-root>` / `<run-root>` 解決と、linked worktree と main worktree の扱い差を確認したいときに読む。run worktree の配置先が managed 範囲内か、symlink 経由で外へ逃げていないかの検証もここにある。
 
 ## Read this when
-- root/worktree 変換や placeholder 解決の仕様を変更したいとき.
-- run worktree の作成・削除条件を見直したいとき.
-- `pushd` の同時実行時の cwd 競合や、linked worktree の区別を確認したいとき.
+- Root/worktree 解決と path placeholder の対応を確認したいとき。
+- linked worktree と main worktree で repo root / work root / run root の分離方針を確認したいとき。
+- `create_run_worktree` と `remove_worktree` の受け入れ条件、拒否条件、拒否時に対象ディレクトリを壊さないことを確認したいとき。
+- `pushd` の cwd 変更がプロセス全体で競合しないことを確認したいとき。
 
 ## Do not read this when
-- `basic.path_model` の正本仕様を確認したいだけなら `<work-root>/oracle/src/oracle/other/path_model.py` を先に読む.
-- Git テスト補助の実装詳細だけが目的ならこのテストより `_git_support` 側を直接読む。
+- git リポジトリ作成補助そのものの仕様だけを追いたいときは、より直接の `_git_support` 側を読む。
+- runtime の上位コマンド仕様や CLI 入出力を追いたいときは、このテストではなく該当する実装側や仕様文書を読む。
+- path model の内部実装詳細だけを追いたいときは、テストではなく `basic/path_model` 側を読む。
 
 ## hash
-- 0d3af364956d565500ebbf07e553fdc50534d8c50adf17468eb320cd27a83799
+- c1d6f40f4b10425afd2031099ba39e059dca80d08bc3b9de4780a3fc6340d8e8
 
 # `test_cli_tui.py`
 
