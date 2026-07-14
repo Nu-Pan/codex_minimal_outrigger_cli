@@ -72,22 +72,21 @@
 # `quota_probe.py`
 
 ## Summary
-- `quota_probe.py` は、配布側の互換入口としてクォータ確認用の builder 呼び出しを受け取り、正本側の実装へそのまま委譲する。
-- この対象を読むのは、互換経路の有無、委譲先の切り替え方、または `AgentCallParameter` を受けて同値で返す入口仕様を確認したいとき。
-- 正本 builder の中身やクォータ確認の仕様本体を追う必要があるときは、この対象ではなく正本側の実装を読む。
+- `quota availability probe` 用の互換入口を定義する。正本 builder が配布されていればそれを呼び、未配布なら空 stdin の最小 probe を返す。
+- 実装側で保持するのは分岐とフォールバックだけで、probe の具体仕様や prompt 本体はここに持たせない。
 
 ## Read this when
-- 配布側の互換入口が必要か確認したいとき。
-- `AgentCallParameter` を受けて同じ値を返す委譲関数の責務を確認したいとき。
-- 互換層がどの正本実装へつながるかを追跡したいとき。
+- quota 確認や availability probe の生成経路を調べたいとき。
+- 正本 builder がある環境とない環境で、どちらの呼び出し経路になるかを確認したいとき。
+- `AgentCallParameter` を返す最小代替の挙動を確認したいとき。
 
 ## Do not read this when
-- クォータ確認の仕様そのものや builder の内部方針を知りたいとき。
-- 互換入口ではなく正本実装の挙動を確認したいとき。
-- `INDEX.md` のルーティングや上位構成だけを見たいとき。
+- probe の正本仕様や文面の詳細を知りたいときは、oracle 側の定義を読むべきで、ここは入口だけを見る場所ではない。
+- quota probe 以外の builder 生成規則や共通引数の詳細を知りたいとき。
+- `INDEX.md` 全体の案内や他のサブコマンドのルーティングを探しているとき。
 
 ## hash
-- befbfaad1a410f47a801e52ea7f202873b193b8ba6e53e573859a7ec5d6e2d33
+- 10abdd47009e81af0f1a3ac05a5dea4dbed450f61021bc6e6452ddac45f280bf
 
 # `review`
 

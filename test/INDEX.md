@@ -348,18 +348,22 @@
 # `test_codex_runtime_errors.py`
 
 ## Summary
-- Codex 実行時の異常系を確認するテスト群。JSONL の不正イベント分類と、Codex CLI が見つからない場合の例外内容およびサブコマンドログの失敗記録を扱う。
+- `test/test_codex_runtime_errors.py` は、`run_codex_exec` のエラー系を確認する回り込みテストです。対象は Codex JSONL の不正イベント分類と、Codex CLI 不在時に失敗ログが残ることです。
+- このファイルを読むのは、Codex 実行時の JSONL 解析失敗、`CmocError` への変換、またはサブコマンドログの失敗記録を確認・変更したいときです。
+- `oracle/doc/app_spec/codex_exec_rule.md` と `oracle/doc/app_spec/console_and_file_log.md` が、このテストが従う正本です。
 
 ## Read this when
-- Codex 実行まわりのエラー分類を変更するとき。
-- JSONL 解析失敗時の扱い、または CLI 不在時の失敗ログを確認したいとき。
+- Codex CLI の出力が JSONL 仕様に合わない場合の失敗扱いを確認したいとき。
+- `run_codex_exec` が不正 stdout や CLI 不在をどう失敗として返すかを変える必要があるとき。
+- 失敗時に `SubcommandLogger` へ残る `codex_call` 記録の内容を確認したいとき。
 
 ## Do not read this when
-- 通常の成功系や別サブコマンドのテストを探しているとき。
-- ログ形式そのものの全体仕様や実行フロー全般を確認したいときは、対応する仕様文書や実装側を先に読むべきとき。
+- 正常系の Codex 実行フローや成功時ログを追いたいときは、実行本体側を読むべきです。
+- JSONL 以外のコマンド引数生成やリトライ戦略を見たいだけなら、このテストより実装側を直接読むべきです。
+- Codex 以外のサブコマンドのログ仕様を確認したいだけなら、このファイルは対象外です。
 
 ## hash
-- 2415ad737a5a1b3e278627d80c1d4d71c4f3128d5cfaab52e08db2d2c3db088a
+- 853e8692a2c6018d31891be939a0aaa7a5d251b8982a7775e60fc6f2439b8a70
 
 # `test_codex_runtime_exec.py`
 
@@ -420,44 +424,40 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex 実行時の quota 枯渇後に、代表 probe を一度だけ挟んで resume/retry へ進む制御を確認したいときに読む。`Codex exec` の外部挙動、resume token の復元、quota probe の呼び出し列、並行待機の集約が主題。
-- quota 待機中の stderr/stdout、call log、subcommand log、`CODEX_HOME` と `cwd` の解決、invalid JSONL や probe 失敗の伝播を追う変更で読む。実装内部の分岐整理や一般的な CLI 設計の議論だけなら他の本文を優先する。
+- `codex exec` の quota 枯渇後の復帰制御を検証するテスト群。代表 probe の実行、resume token の復元、同一 prompt の再実行、待機中の並列呼び出しの集約までを扱うため、`run_codex_exec` の quota retry 状態機械を追う変更で読む。
 
 ## Read this when
-- quota exceeded 後に probe を挟んで再実行する挙動を変える、または回帰確認したいとき。
-- resume token の保存・復元、probe の失敗判定、並行待機の集約、`CODEX_HOME`/`cwd` の解決条件を確認したいとき。
-- `codex exec` のログ出力や quota 復帰の観測点を合わせて読みたいとき。
+- `codex exec` の quota 枯渇からの再開条件、代表 probe の成否、resume / 再実行の分岐、並列待機の扱いを変えるとき。
+- `CODEX_HOME` 解決や call log / stdout / output log の生成・解釈を変えるとき。
+- quota probe の生成内容や、quota 以外の失敗を即時失敗にする境界を確認したいとき。
 
 ## Do not read this when
-- quota retry 以外の `codex exec` 一般の仕様だけを追いたいとき。
-- probe 以外の builder や別サブコマンドの仕様変更を確認したいとき。
-- 実装の内部 helper 分割やリファクタリングだけが目的で、quota 待機の外部挙動を変えないとき。
+- quota retry とは無関係な通常の `codex exec` 引数組み立てやモデル設定だけを変えるときは、より直接の実装側を読む。
+- quota 復帰の状態機械ではなく、一般的な CLI ログ形式や別サブコマンドの入出力を確認したいとき。
+- テストの共通 fixture や補助関数の作り方だけを見たいときは、このファイルより共通補助側を読む。
 
 ## hash
-- 2f90753aa11a1011f5a064273d8b6a91b55bfb3a981f6320274408e4d93f14fd
+- 601efe038d5ba67cc76c7c071b21cb6785cb7bac9f7e1aeb5c216937b13b8eb1
 
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- `run_codex_exec` の再試行・失敗ログ・中断挙動を、実際の subprocess 呼び出し回数とサブコマンドログの両方から確認するテスト群。Structured Output の検証失敗、capacity retry、JSONL error、KeyboardInterrupt、retry 上限到達後の失敗をまとめて扱う。
-- この対象を読むのは、Codex 呼び出しの retry 判定や失敗時の外部挙動、call log と event log の整合性、差分保持の確認が必要なとき。実装内部の helper 分割より、最終結果・再試行回数・記録内容を変えないことが重要なときに進む。
-- 同じ retry 状態機械でも、出力 schema 以外の一般的な CLI 挙動や別のログ領域を確認したいだけならここは優先しない。構造化出力を伴わない単発成功例や、別サブコマンドのログ仕様を知りたいだけのときも直接の読む先ではない。
+- Codex exec の再試行、Structured Output 検証、JSONL error 判定、割り込み、agent diff 保持を同じ状態機械として検証するテスト群への入口。`run_codex_exec` の戻り値だけでなく、呼び出し回数、call log、`SubcommandLogger` の event 列まで含めて確認する作業で読む。
+- 失敗の種類ごとに `schema_validation_retrying`、`capacity_retrying`、`failed` などの遷移と、上限到達時の停止条件を確認したいときに読む。`stderr` 由来の文言ではなく stdout JSONL の内容を判定根拠にする境界もここで扱う。
+- 既存の `codex_exec` 仕様断片、console/file ログ仕様、coding rule、realization standard を背景にした回帰確認のまとめ入口。異常系の再試行方針やログ保持方針を変える変更をするときに優先して読む。
 
 ## Read this when
-- Codex 実行の retry 条件と停止条件を確認したいとき
-- call log, stdout log, prompt log, subcommand event の対応関係を追いたいとき
-- Structured Output の再試行と capacity retry が同じ実行経路でどう分岐するかを見たいとき
-- 中断時に例外を伝播しつつログを残すかを確認したいとき
-- retry を挟んだ後も agent diff が保持されるかを確認したいとき
+- `run_codex_exec` の再試行回数、最終結果、call log の対応づけ、`codex_call` event の status を変える変更をするとき。
+- Structured Output の意味的失敗、空/欠落/不正 JSON、capacity error、未知の JSONL error、中断のどれかに触れる変更をするとき。
+- `stdout` JSONL と `stderr` のどちらを retry 判定に使うか、または retry 上限と backoff の扱いを確認したいとき。
 
 ## Do not read this when
-- 再試行とは無関係な通常の Codex 実行結果だけを見たいとき
-- 別サブコマンドの入出力やログ仕様を調べたいとき
-- 内部 helper の実装構造だけを確認したいとき
-- call log ではなく別の永続状態や設定ファイルの仕様を読みたいとき
+- `run_codex_exec` 以外の CLI 入出力や一般的なコマンド起動だけを変更するときは、より直接の実装・テストを読む。
+- 通常の成功系や schema 変換だけを確認したいときは、この異常系中心のファイルではなく成功系のテストを読む。
+- ログの保存先や event schema 自体を変更していないなら、このファイルより console/file log の仕様断片を先に読む。
 
 ## hash
-- 455131d89ee3b66e9095992942650807987ef43a7bb49cd1afcca757df317708
+- c3b2353ad6b11ea848c03badf4800cb74325bfb6ae2b080b6afc503d639be8db
 
 # `test_codex_runtime_subprocess.py`
 

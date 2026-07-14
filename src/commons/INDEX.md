@@ -108,22 +108,25 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループと再試行制御をまとめた実行制御の中心。Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log と subcommand event の記録を一体で扱う。
-- 補助的に、Codex 呼び出し用の prompt log・argv・出力 JSON・stderr/stdout の保存と、実行結果オブジェクトの構築も担う。変更理由が exec 実行の挙動、再試行条件、ログ記録、quota 待機、Structured Output 検証に関わるならここを読む。
-- 同じファイル内の下位関数は、prompt 保存、出力 JSON の厳格読取、resume token 抽出、log path 生成、quota probe 生成、変更 worktree path 取得のための入口であり、exec ループ本体と合わせて読む前提になっている。
+- Codex exec の単一試行ループを実行する中核。呼び出し記録、prompt/stdout/stderr/output の保存、Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume token 継続を 1 つの状態機械として扱う。
+- この対象を読むのは、`codex exec` の再試行条件、失敗時の扱い、quota 待機の共有制御、出力 JSON の検証、実行ログの記録方法を確認したいとき。
+- 変更 path の収集も同居しているが、これは apply 系の再キュー処理で file-level path が必要なときに使う入口である。
 
 ## Read this when
-- Codex exec の実行フロー、失敗時の再試行、resume 継続、quota 待機、capacity retry、Structured Output 検証、実行ログの出力を変更・確認したいとき。
-- call log や subcommand event の内容、保存タイミング、出力ファイルの命名・更新条件、stdout/stderr/output の扱いを追いたいとき。
-- quota availability probe の作り方や、変更 worktree path を列挙する制御ロジックを確認したいとき。
+- Codex 実行の retry / resume / quota / capacity の振る舞いを確認したい。
+- Structured Output の検証後にいつ再試行し、いつ失敗として止めるかを確認したい。
+- 実行ログや call log に何を残すか、stdout と output JSONL をどう扱うかを確認したい。
+- quota 待機中の複数呼び出しの合流、代表 probe、待機解除条件を確認したい。
+- 変更済み worktree path を file-level で列挙する入口が必要で、apply 系の再キュー処理とつなげたい。
 
 ## Do not read this when
-- TUI 起動や別サブコマンドの分岐だけを見たいときは、対応する別モジュールを先に読む。
-- Codex 呼び出し以外の一般的な設定読み込み、git 状態取得、パス操作の実装だけを知りたいときは、各 runtime helper を直接読む。
-- 正本仕様そのものを確認したいだけで、exec ループの実装詳細は不要なときは、この実装ファイルではなく根拠となる oracle 側の文書を読む。
+- TUI 起動や command routing の全体像だけを見たいときは、別 module の入口を読む。
+- Codex 呼び出しの前提となる設定読み込み、path 解決、subprocess 実行の詳細だけが目的なら、より下位の共通 helper を読む。
+- git status の生の取得方法だけが目的なら、このファイルではなく git/path 取得の共通部分を読む。
+- quota probe の builder そのものを確認したいだけなら、probe 側の定義を直接読む。
 
 ## hash
-- b607868e88f2f2307feef6d684aad23ae0efd1364152bcfe09693ae26f4fea64
+- 9b6b2fcdd3716a33f3ce4a4f704b9e67d9916c1c5502b7201f800d895c8ddc54
 
 # `runtime_codex_logging.py`
 

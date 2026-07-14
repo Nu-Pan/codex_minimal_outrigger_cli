@@ -115,39 +115,38 @@
 # `src`
 
 ## Summary
-- realization 側の公開 import 面と CLI 入口を束ねる実装ルート。`basic`、`config`、`oracle`、`cmoc_runtime.py` の互換 shim と、`commons`、`sub_commands`、`main.py` の実体を見分けて、どの責務へ進むかを切り分ける起点になる。
-- 正本側定義を複製せずに再公開する領域と、実処理を持つ領域が同居するため、互換維持の判断は shim 群、CLI 挙動は `main.py`、共通基盤は `commons`、個別実行フローは `sub_commands` を読む前提で使う。
+- `src` 配下の realization implementation の入口群をまとめる階層。`acp` や `basic` の互換入口、`commons` や `config` の共有実装、`main.py` の CLI 入口、`oracle.py` の package shim、`sub_commands` の各実行本体へ進む前に、どの責務へ分岐するかを判断するために読む。
+- ここは実装本体の詳細説明ではなく、公開入口と責務境界を見分けて下位の実体へ進むためのルーティング層として位置づける。
 
 ## Read this when
-- realization 側の公開 import 経路や互換 shim の残存理由を確認したいとき。
-- cmoc の CLI 入口、共通 runtime、個別サブコマンド実装のどれを読むべきか判断したいとき。
-- 正本側の定義を参照しているだけの領域と、実装本体を持つ領域を切り分けたいとき。
+- `src` 配下で、どの module が互換入口なのか、どの module が実行本体なのかを切り分けたいとき。
+- CLI 入口、共有 runtime 補助、設定互換、package shim、各サブコマンド実装のいずれに進むべきかを判断したいとき。
+- realization implementation の公開面や責務境界を確認してから、より具体的な module を読むべきか決めたいとき。
 
 ## Do not read this when
-- 個別 helper の入力・出力・失敗時挙動を知りたいときは、対応する下位モジュールを直接読む。
-- oracle 側の正本仕様断片そのものを確認したいときは、この実装ルートではなく oracle 側を読む。
-- 公開面や共通基盤ではなく、特定サブコマンドの業務ロジックだけを追いたいときは `sub_commands` 配下へ直接進む。
+- 個別 module の処理内容、入出力、例外処理、内部 helper の実装を知りたいとき。そこは該当する module を直接読む。
+- 正本仕様そのものや oracle file の内容を確認したいとき。ここは realization 側の入口案内であり、正本仕様の本文ではない。
+- すでに対象 module が分かっていて、そこへ直接進めるとき。
 
 ## hash
-- df62cb647f33180a676ea2d0b2911102a3d4f987944d0a5edfa1a220c6f82635
+- d41377fa2213de58e5f506727f9b861ef7ee35799b8ecf865a010d71784ae41c
 
 # `test`
 
 ## Summary
-- `test` 配下の回帰テスト群を、CLI・runtime・Codex 実行・indexing・review・apply・session・prompt・struct doc・共通テスト補助の関心別に案内する入口。各テストは個別の機能契約や境界条件を検証するため、まずこの階層で対象の責務を絞ってから該当ファイルへ進む。
-- 共通補助は `_cli_support.py`、`_git_support.py`、`_codex_support.py`、`_command_support.py`、`_ollama_support.py`、`_apply_support.py`、`_acp_builder_support.py` に分かれており、テスト本文の重複を避けるための足場だけを置く。実装本体や正本仕様はここでは追わない。
-- `acp.builder` 系の契約確認は `test_acp_builder_*` 群、`apply` / `session` / `review` / `indexing` / `codex` / `doctor` / `runtime` はそれぞれ対応するテスト群に分かれている。変更対象のサブコマンドや runtime 境界が分かっているなら、この階層から該当グループへ進む。
+- `test` 配下の共通テスト補助と各テスト入口を束ねる案内層である。`acp_builder` 系、runtime 系、CLI 系、session/apply/review/indexing 系のどの補助や回帰テストを読むべきかを、対象の責務と確認したい外部挙動から絞り込む。
+- 共通 helper は、外部コマンドのスタブ化、git リポジトリ fixture、Ollama/doctor/Codex 実行前提の固定、path 解決、permission/profile の共通化に役割が分かれている。個別実装の仕様ではなく、複数テストで共通に使う前処理・検証の入口として読む。
+- 各 `test_*.py` は、対応する realization implementation や oracle 正本仕様断片のうち、CLI 外部挙動、状態遷移、権限境界、prompt/schema 契約、report 生成、対象選別のような変更時に読むべき観測点を案内する。
 
 ## Read this when
-- テスト対象が CLI、runtime、Codex 実行、indexing、review、apply、session、prompt、StructDoc のどれかに当たり、まず読むべきテスト群を絞りたいとき。
-- 共通テスト補助の責務や、どの補助がどの種類のテストを支えているかを確認したいとき。
-- `acp.builder` の parameter 生成や正本 schema 参照に関わる回帰を追いたいとき。
-- `apply` / `session` / `review` / `indexing` / `runtime` の境界条件や外部挙動を、個別テストの入口からたどりたいとき。
+- 共通テスト補助の責務や、どの helper を使うべきかを確認したいとき。
+- `acp_builder`、`codex` 実行系、`doctor`、`indexing`、`session`、`apply`、`review` のどれに関するテストを読むべきかを、変更対象から絞り込みたいとき。
+- CLI 外部挙動、永続状態、権限境界、prompt 生成、report 生成、対象選別のいずれかを変える予定で、該当するテスト入口を探したいとき。
 
 ## Do not read this when
-- 正本仕様そのものを確認したいときは、この階層ではなく対応する `oracle` 側の本文を読む。
-- CLI や runtime の実装本体を追いたいときは、このテスト群ではなく対応する `src` 側を読む。
-- 個別テストの細部ではなく、共通の routing 方針や上位の案内を確認したいときは、この階層ではなく上位の `INDEX.md` を読む。
+- 個別コマンドの実装や正本仕様そのものを確認したいときは、この案内層ではなく対応する `src` や `oracle` 側を読む。
+- 共通 helper の細部ではなく、テスト対象の具体的な出力・状態遷移・エラー条件だけを確認したいときは、対応する個別テストを直接読む。
+- `INDEX.md` のルーティング方針そのものを見たいときは、この配下ではなく上位の案内を読む。
 
 ## hash
-- 4a52612d817e5d54f585eb42345fb0e1b8da2c0e09cb726000457a511bddc82b
+- 59d452719ae7f4ddc3a0ffd38c6eaee95434a4a38c0a61797fde45a7da1fa995
