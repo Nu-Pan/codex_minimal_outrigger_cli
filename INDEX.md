@@ -138,18 +138,18 @@
 # `test`
 
 ## Summary
-- `test` 配下の正本仕様断片に対応する realization test と共通テスト補助をまとめて案内するルーティング対象である。各サブコマンドや runtime の外部挙動を、対応する oracle 側の仕様に照らして確認したいときの入口になる。
-- 個別の実装本体ではなく、CLI 挙動、runtime 境界、prompt 組み立て、ACP builder、共通 fixture や helper の責務を切り分けて読むための案内を担う。
+- `test` 配下の realization test をまとめる入口で、CLI・runtime・builder・prompt・report・worktree などの外部挙動を、共通補助と組み合わせて回帰検証する対象です。個別の機能仕様ではなく、どの振る舞いをどの test 群で確認するかを振り分けるために使います。
+- この階層は、共通 helper と各領域のテスト本体を束ねるルーティング層です。`acp_builder`、`apply`、`codex`、`indexing`、`review`、`runtime`、`session`、`prompt parts`、`StructDoc` など、変更対象に応じて読むべき test を絞る役割を持ちます。
 
 ## Read this when
-- `test` 配下のどのテストが、確認したい外部挙動や境界条件に対応するかを探したいとき。
-- CLI、runtime、prompt、ACP builder、review/apply/session/indexing などの領域ごとに、まず読むべき test 入口を絞り込みたいとき。
-- 共通テスト補助ではなく、対象の振る舞いを検証する realization test 本体へ直接進むべきか判断したいとき。
+- 特定のサブコマンドや runtime の外部挙動を確認したいが、どの test 群を読むべきか判断したいとき。
+- 共通 helper の責務と、個別テスト本体の境界を確認したいとき。
+- prompt、schema、worktree、git、Ollama、Codex 呼び出しなどの回帰を、対応する test 群へ案内したいとき。
 
 ## Do not read this when
-- 個別機能の正本仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
-- テスト補助の実装詳細だけを追いたいときは、各 helper ファイルを直接読む。
-- `INDEX.md` の書き方やルーティング方針そのものを確認したいときは、この配下の個別 test 入口ではなく上位の案内を読む。
+- 個別機能の正本仕様そのものを確認したいときは、対応する `oracle` 側の本文を読む。
+- `INDEX.md` の書き方やルーティング方針そのものを確認したいときは、この階層ではなく上位の案内を読む。
+- 単一ファイルの実装詳細だけを追いたいときは、このディレクトリではなく該当する realization implementation を読む。
 
 ## hash
-- 4843fac3120758afda6b65ef3644ef0b105809de3490c2034aa0828ab53a2294
+- 63f96f5354cd33b7ea649c59b6d9540f2ec7d5d3efd0c47b6d56221a7f537096

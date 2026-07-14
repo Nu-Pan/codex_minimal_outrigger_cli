@@ -496,21 +496,21 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- `doctor preprocess` の共有 lifecycle を、CLI 経由と直接呼び出しの両方から外部挙動で確認する統合テスト群。`.cmoc/local`、`.agents`、config、managed Ollama、Git index の修復と保持を一続きで見る必要があるときに読む。
-- `make_repo`、linked worktree、共有 doctor lock、Ollama 副作用、pre-existing staged changes や rename の保持をまたいだ挙動を確認したい場合の入口。個別の単体テストではなく、doctor preprocess 全体の契約を追うために読む。
+- doctor preprocess の共有 lifecycle を、CLI 実行と直接呼び出しの両方から外部挙動で確認する統合テスト群。`.cmoc/local`、`.agents`、`config`、managed Ollama、Git index の保持や修復を同じ文脈で扱う。
+- 同じ `make_repo` と linked worktree 前提を共有し、lock 待ち、config 生成・同期、local ファイルの untrack、staged 変更の保持、repair commit の境界をまとめて検証するための入口。
 
 ## Read this when
-- `doctor` / `dector` の外部挙動が変わったかを確認したいとき。
-- repository/worktree をまたぐ修復、共有 lock、`.cmoc/local` の扱い、`.agents` の再生成、config 追跡、managed Ollama の維持を同時に確認したいとき。
-- Git index 上の staged 変更、unstaged hunk、rename、既存 `.cmoc/local` 追跡状態の保持を含めて doctor preprocess の影響範囲を見たいとき。
+- doctor preprocess の副作用や修復後の Git 状態を、CLI 経由と `run_doctor_preprocess` 直呼びの両方で確認したいとき。
+- linked worktree、共有 doctor lock、repository 側 config 参照、managed Ollama の再利用など、複数ケースに共通する lifecycle を外部契約として追いたいとき。
+- `.gitignore`、`.agents/.gitkeep`、`.cmoc/config.json`、`.cmoc/local` の扱い、既存 staged 変更を壊さないことをこの領域の主題として読むとき。
 
 ## Do not read this when
-- `doctor preprocess` の内部実装や helper 分割だけを確認したいときは、対応する realization implementation 側を読む。
-- Ollama の単体仕様や config の単体仕様だけを確認したいときは、専用の oracle file を読む。
-- Git 操作の細部や fixture の共通化方針だけを知りたいときは、この統合テストではなく、より直接の実装・補助ファイルを読む。
+- doctor の個別実装や内部 helper の分割、ロック取得の細部を知りたいだけのときは、より直接の実装本文を読む。
+- Ollama のサービス定義や config schema の詳細を知りたいときは、この統合テストではなく、対応する oracle doc や実装の本文を読む。
+- 単一の Git 操作や個別 fixture の意味だけを確認したいときは、このファイル全体ではなく、その責務に直接対応するテストや実装を読む。
 
 ## hash
-- 8dec0e68f2d6d94b2f4958a0cb519171dd68f8a3ce2059503082104458f3e5ca
+- 8c6d85447bfffc6d8b7017308044faead6f65efa23dc865c4a566a00271cdc1a
 
 # `test_indexing_cli.py`
 
