@@ -73,6 +73,9 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
     assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
+    agents_gitkeep = root / ".agents" / ".gitkeep"
+    assert agents_gitkeep.is_file()
+    assert agents_gitkeep.read_text() == ""
     # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
     # これはテスト用 HOME や endpoint ではなく、本番実行と共有するサービスと永続 model store である。
     # 後続テストでも再利用できるよう、doctor はこのサービスをそのまま残す。
@@ -154,7 +157,8 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
 
     doctor_module.run_doctor_preprocess(root)
 
-    assert pulled == ["alpha", "beta"]
+    assert len(pulled) == 2
+    assert set(pulled) == {"alpha", "beta"}
 
 
 def test_doctor_preprocess_in_linked_worktree_uses_repo_config(
@@ -412,6 +416,8 @@ def test_doctor_preprocess_untracks_existing_cmoc_local_files(
 
     assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
     assert run_git(root, "status", "--short").stdout.strip() == ""
+    assert local_path.is_file()
+    assert local_path.read_text() == "{}\n"
 
 
 def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
@@ -454,6 +460,9 @@ def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_delet
 
     doctor_module.run_doctor_preprocess(root)
 
+    gitkeep = root / ".agents" / ".gitkeep"
+    assert gitkeep.is_file()
+    assert gitkeep.read_text() == ""
     repair_paths = run_git(
         root, "show", "--name-only", "--format=", "HEAD"
     ).stdout.splitlines()
