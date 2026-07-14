@@ -108,25 +108,22 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを実行する中核。呼び出し記録、prompt/stdout/stderr/output の保存、Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume token 継続を 1 つの状態機械として扱う。
-- この対象を読むのは、`codex exec` の再試行条件、失敗時の扱い、quota 待機の共有制御、出力 JSON の検証、実行ログの記録方法を確認したいとき。
-- 変更 path の収集も同居しているが、これは apply 系の再キュー処理で file-level path が必要なときに使う入口である。
+- Codex exec の実行制御を担当する。Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、実行ログ生成、失敗時の要約を 1 つの状態機械としてまとめる。
+- TUI 起動や別サブコマンドのルーティングではなく、`codex exec` 呼び出しそのものの組み立てと再試行条件を読むときに参照する。
+- 変更中の worktree について、更新された path を git status から拾う補助関数もここにある。
 
 ## Read this when
-- Codex 実行の retry / resume / quota / capacity の振る舞いを確認したい。
-- Structured Output の検証後にいつ再試行し、いつ失敗として止めるかを確認したい。
-- 実行ログや call log に何を残すか、stdout と output JSONL をどう扱うかを確認したい。
-- quota 待機中の複数呼び出しの合流、代表 probe、待機解除条件を確認したい。
-- 変更済み worktree path を file-level で列挙する入口が必要で、apply 系の再キュー処理とつなげたい。
+- `codex exec` の呼び出し方、再試行条件、Structured Output の検証失敗時の扱い、quota 待機中の挙動、call log / stdout / stderr / output の記録方法を確認したいとき。
+- resume token の引き継ぎ、quota 代表 probe の開始・終了条件、capacity retry と quota polling の関係を確認したいとき。
+- worktree の変更 path を absolute path で列挙する補助が必要なとき。
 
 ## Do not read this when
-- TUI 起動や command routing の全体像だけを見たいときは、別 module の入口を読む。
-- Codex 呼び出しの前提となる設定読み込み、path 解決、subprocess 実行の詳細だけが目的なら、より下位の共通 helper を読む。
-- git status の生の取得方法だけが目的なら、このファイルではなく git/path 取得の共通部分を読む。
-- quota probe の builder そのものを確認したいだけなら、probe 側の定義を直接読む。
+- TUI の起動経路や画面制御を追いたいときは、別 module を読むべきでここは読まない。
+- サブコマンド全体の入口や CLI ルーティングを見たいだけなら、より上位の実行層を読むべきでここは読まない。
+- git status の一般的な取得方法だけを知りたい場合は、この実行制御モジュールではなく git 操作の共通部を読むべきでここは読まない。
 
 ## hash
-- 9b6b2fcdd3716a33f3ce4a4f704b9e67d9916c1c5502b7201f800d895c8ddc54
+- 692027dd1c8a22888c06fc10447f3ffca97119670145ec4ed6badeb2fa489633
 
 # `runtime_codex_logging.py`
 

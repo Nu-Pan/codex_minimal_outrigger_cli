@@ -424,20 +424,20 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- `codex exec` の quota 枯渇後の復帰制御を検証するテスト群。代表 probe の実行、resume token の復元、同一 prompt の再実行、待機中の並列呼び出しの集約までを扱うため、`run_codex_exec` の quota retry 状態機械を追う変更で読む。
+- Codex exec の quota 枯渇後に、代表 probe を 1 回だけ実行して復帰し、resume token の有無に応じて resume か再実行に分岐する挙動を検証するテスト群です。quota 待機状態機械、並行待機の集約、失敗時の伝播、ログ出力、`CODEX_HOME` と `cwd` の解決を扱います。
 
 ## Read this when
-- `codex exec` の quota 枯渇からの再開条件、代表 probe の成否、resume / 再実行の分岐、並列待機の扱いを変えるとき。
-- `CODEX_HOME` 解決や call log / stdout / output log の生成・解釈を変えるとき。
-- quota probe の生成内容や、quota 以外の失敗を即時失敗にする境界を確認したいとき。
+- quota exceeded 後の再試行・復帰・resume の判定を確認したいとき
+- 代表 probe の実行回数、並行待機の集約、待機状態の解除条件を確認したいとき
+- call log や subcommand log の記録内容、または `CODEX_HOME` / `cwd` の扱いを確認したいとき
 
 ## Do not read this when
-- quota retry とは無関係な通常の `codex exec` 引数組み立てやモデル設定だけを変えるときは、より直接の実装側を読む。
-- quota 復帰の状態機械ではなく、一般的な CLI ログ形式や別サブコマンドの入出力を確認したいとき。
-- テストの共通 fixture や補助関数の作り方だけを見たいときは、このファイルより共通補助側を読む。
+- quota 失敗ではない通常の `codex exec` の入出力や引数だけを確認したいとき
+- quota 待機とは無関係な runtime 共通処理や別サブコマンドの挙動を確認したいとき
+- probe 生成そのものの仕様だけを確認したいときは、関連する builder 側の本文を先に読むべきです
 
 ## hash
-- 601efe038d5ba67cc76c7c071b21cb6785cb7bac9f7e1aeb5c216937b13b8eb1
+- a46fbfc6eb2710a9d06a504fff66e727e494b92817ad61bdc416c8921b57d6cc
 
 # `test_codex_runtime_retry.py`
 

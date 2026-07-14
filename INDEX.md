@@ -115,47 +115,38 @@
 # `src`
 
 ## Summary
-- realization 側の主要実装ルート。`acp` 系の互換入口、`basic` 系の再公開、`commons` の実行時共通処理、CLI 入口、各サブコマンド実装を束ねており、正本仕様を直接書く場所ではなく、既存 import 面と実行入口を維持するための案内役として読む。
-- この階層では、どの名前空間が互換 shim で、どれが実体の実装かを見分ける。個別機能の中身より、目的の責務を持つ下位モジュールへ進むための分岐点として使う。
+- `src` は realization 側の公開実装の入口で、`main.py` の CLI 入口、`sub_commands` の各サブコマンド本体、`commons` の共通 runtime 基盤、`config` / `basic` / `acp` / `oracle.py` の互換入口を束ねる。ここでは個別ロジックそのものより、どの責務がどの下位モジュールにあるかを見分けるために読む。
 
 ## Read this when
-- `acp.*`、`basic.*`、`config.*`、`oracle.*` のような既存 import 経路を残す必要があるかを確認したいとき。
-- CLI 入口から各サブコマンド実装へどう接続されているか、また共通 runtime helper がどこにまとまっているかを確認したいとき。
-- 互換 namespace を維持するべきか、それとも正本側・実体側へ寄せてよいかを判断したいとき。
+- CLI の起動点やサブコマンドの実行入口をたどりたいとき。
+- 共通 runtime、設定、状態、ログ、Git、結果型などの shared helper の配置先を確認したいとき。
+- `acp.*`、`basic.*`、`config.*`、`oracle.*` の互換 import をどこまで維持しているかを確認したいとき。
+- realization 側でどの領域が正本実装で、どの領域が互換 shim かを切り分けたいとき。
 
 ## Do not read this when
-- 個別の生成ロジック、CLI 挙動、状態管理、Git 操作、review/apply/session の実装詳細を知りたいとき。そうした内容は対応する下位モジュールを直接読む。
-- 新しい機能や公開 API を追加する実装場所を探しているとき。この階層は入口の整理が役割で、機能追加の主戦場ではない。
-- 互換入口の維持可否がすでに確定しており、詳細なルーティング確認が不要なとき。
+- 個別サブコマンドの処理内容、入出力、状態遷移を知りたいとき。そうした内容は `sub_commands` 配下の個別担当を読む。
+- 共通 helper の具体的な失敗時挙動や内部実装を知りたいとき。そうした内容は `commons` 配下を直接読む。
+- 互換入口の維持可否だけを判断済みで、詳細なルーティングが不要なとき。
+- 新しい機能や業務ロジックの実装場所を探しているとき。ここは主に公開面と責務の案内であり、機能追加の主戦場ではない。
 
 ## hash
-- 1c4f8f83061a7b5eeb7edeaa11acd7887eeff1f720c8264bd2a7ac3a101b729c
+- 3a2009a22942b86b9ae4b9184d0f4bfe366a00c589392862885184c82224b63e
 
 # `test`
 
 ## Summary
-- `test` 配下の共通補助群を案内するルーティングで、`acp_builder` 正本 schema 参照、CLI 実行補助、git/worktree 補助、Codex/Ollama 補助、INDEX 生成補助、StructDoc などのテスト支援を目的別に分けている。個別機能の正本仕様ではなく、どの共通 helper を読むべきかを絞る入口として使う。
-- `test_acp_builder_*` は `acp.builder` 系の parameter 生成と公開面を検証するテスト群で、apply fork・indexing・review oracle・session join conflict resolution・tui の各 builder が正本 schema や prompt とどう整合するかを確認するための入口になっている。
-- `test_apply_*` は apply fork / join / abandon の CLI 挙動と target 正規化、report 生成、state/worktree/branch cleanup を追うための入口で、対象別に lifecycle・report・正規化・終了コードの観点を分けている。
-- `test_basic_runtime`、`test_runtime_*`、`test_codex_runtime_*` は path/root 解決、設定、file access、process 停止、Ollama、Codex exec の argv・権限・retry・quota・TUI など runtime 周辺の外部挙動を扱う。実行経路ごとに責務を分けており、正本仕様そのものではなく runtime 契約の回帰確認に使う。
-- `test_indexing_*`、`test_review_oracle_*`、`test_session_cli`、`test_cli_tui`、`test_doctor_cli` は各サブコマンドの外部挙動と lifecycle を検証する入口で、INDEX 生成、review 対象選定、session lifecycle、TUI 起動、doctor preprocess のように、実装詳細よりもコマンド境界の確認に向いている。
-- `test_prompt_parts` と `test_struct_doc_rendering` は prompt 文面の組み立てと StructDoc の Markdown 変換を検証する。前者は標準文書・file access rule・root token を含む prompt 構成、後者は空行圧縮の挙動を確認するための入口になっている。
+- `test` 配下の共通補助と回帰テストをまとめるルーティング対象である。CLI、runtime、indexing、review、apply/session、Codex 実行、prompt 組み立て、StructDoc など、責務ごとの test entry へ進むための入口になる。
+- 個別の実装仕様ではなく、どの test 群や support helper を読むべきかを切り分ける役割を持つ。共通 fixture や helper の挙動確認が必要なときはここから該当 entry へ進む。
 
 ## Read this when
-- 共通テスト補助で `CliRunner`、git fixture、fake command、Ollama 呼び出し補助、Codex 実行補助のどれを使うべきか確認したいとき。
-- `acp.builder` 系の builder 出力、公開面、structured output schema、prompt 注入条件を変更・確認したいとき。
-- apply 系の CLI、target 正規化、report、cleanup、state/worktree/branch の更新条件を確認したいとき。
-- runtime の root/path 解決、設定、file access、Codex 実行、Ollama、process tracking、retry/quota、TUI 起動のどれかを変えるとき。
-- indexing、review oracle、session CLI、doctor、TUI の各コマンドの外部挙動や lifecycle を確認したいとき。
-- prompt parts の文面、root token、file access rule、StructDoc の Markdown 整形を変更・確認したいとき。
+- 共通 test helper の責務や使い分けを確認したいとき。
+- CLI、runtime、Codex 実行、apply/session、indexing、review、prompt 生成のどの test 群を読むべきか選びたいとき。
+- 複数の test ファイルにまたがる共通前提や、support file の変更影響を追いたいとき。
 
 ## Do not read this when
-- 個別のコマンド仕様や正本仕様本文を確認したいだけなら、この共通補助群ではなく対応する oracle 側や実装側を読むべきとき。
-- `acp_builder` 以外の CLI や runtime の挙動を見たいだけで、builder の契約に触れないとき。
-- apply 以外のサブコマンドや低レベルの git / process helper だけを確認したいとき。
-- prompt 文面や runtime の一般論ではなく、別の領域のテストや実装を直接見たほうが近いとき。
-- INDEX 生成規則、review 対象選定、session lifecycle、doctor preprocess などの各コマンド本体を追う必要があるとき。
-- StructDoc 以外の prompt builder、CLI、runtime、oracle 正本の内容そのものを確認したいとき。
+- 個別機能の正本仕様や実装本文を確認したいときは、対応する oracle 側や realization 側を読む。
+- すでに読む対象の test ファイルが決まっているときは、このルーティング entry を経由せず直接読む。
+- INDEX.md の書き方やルーティング規則そのものを確認したいときは、上位の案内を読む。
 
 ## hash
-- cdf7e0e21cca2320feb2c075c670fb09080c3b93c858ca7de9c4b42433c9a206
+- 34de64a3ec71e2d159ab0dd91b895755db7af8a1bc3149f92f5fa671b66de29b
