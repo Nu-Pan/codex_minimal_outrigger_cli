@@ -89,6 +89,10 @@ def format_duration(seconds: float) -> str:
     """ログと console の duration 表示を丸めず 0.1 秒単位へそろえる。"""
     total_tenths = int(seconds * 10)
     hours = total_tenths // 36000
+    # <work-root>/oracle/doc/app_spec/console_and_file_log.md requires a two-digit
+    # hour field, so an unrepresentable duration fails instead of widening it.
+    if hours >= 100:
+        raise ValueError("duration exceeds the two-digit hour display limit")
     minutes = (total_tenths % 36000) // 600
     sec_tenths = total_tenths % 600
     sec = sec_tenths // 10
