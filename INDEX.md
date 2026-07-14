@@ -115,38 +115,47 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization implementation の入口群をまとめる階層。`acp` や `basic` の互換入口、`commons` や `config` の共有実装、`main.py` の CLI 入口、`oracle.py` の package shim、`sub_commands` の各実行本体へ進む前に、どの責務へ分岐するかを判断するために読む。
-- ここは実装本体の詳細説明ではなく、公開入口と責務境界を見分けて下位の実体へ進むためのルーティング層として位置づける。
+- `src` 配下の実体実装を束ねる領域。`acp` や `basic` などの公開入口が参照する realization implementation を置き、正本仕様の断片そのものは持たない。
+- この対象は、互換入口や package shim ではなく、CLI 本体・共通実行基盤・各サブコマンド実装へ進むための作業起点として読む。
 
 ## Read this when
-- `src` 配下で、どの module が互換入口なのか、どの module が実行本体なのかを切り分けたいとき。
-- CLI 入口、共有 runtime 補助、設定互換、package shim、各サブコマンド実装のいずれに進むべきかを判断したいとき。
-- realization implementation の公開面や責務境界を確認してから、より具体的な module を読むべきか決めたいとき。
+- realization implementation の本体や、`acp` / `basic` / `config` / `commons` / `sub_commands` から進む先を特定したいとき。
+- 公開入口の背後にある実装責務を確認し、どのモジュールへ読みに行くべきか切り分けたいとき。
+- 互換層ではなく、実際の CLI 挙動、runtime helper、サブコマンド実装を追い始めたいとき。
 
 ## Do not read this when
-- 個別 module の処理内容、入出力、例外処理、内部 helper の実装を知りたいとき。そこは該当する module を直接読む。
-- 正本仕様そのものや oracle file の内容を確認したいとき。ここは realization 側の入口案内であり、正本仕様の本文ではない。
-- すでに対象 module が分かっていて、そこへ直接進めるとき。
+- 正本仕様の断片そのものを確認したいとき。そういう内容は `oracle` 側を読む。
+- 互換入口の残存理由や import 再公開だけを確認したいとき。各公開入口側の INDEX を読む方が直接的。
+- 新しい正本仕様を書きたいとき。ここは実体実装の案内であり、仕様の記述場所ではない。
 
 ## hash
-- d41377fa2213de58e5f506727f9b861ef7ee35799b8ecf865a010d71784ae41c
+- 4f74fc0c1df1346be6ad9d3b4e05812e35a59165d62420912d863c000f035420
 
 # `test`
 
 ## Summary
-- `test` 配下の共通テスト補助と各テスト入口を束ねる案内層である。`acp_builder` 系、runtime 系、CLI 系、session/apply/review/indexing 系のどの補助や回帰テストを読むべきかを、対象の責務と確認したい外部挙動から絞り込む。
-- 共通 helper は、外部コマンドのスタブ化、git リポジトリ fixture、Ollama/doctor/Codex 実行前提の固定、path 解決、permission/profile の共通化に役割が分かれている。個別実装の仕様ではなく、複数テストで共通に使う前処理・検証の入口として読む。
-- 各 `test_*.py` は、対応する realization implementation や oracle 正本仕様断片のうち、CLI 外部挙動、状態遷移、権限境界、prompt/schema 契約、report 生成、対象選別のような変更時に読むべき観測点を案内する。
+- `test` 配下の共通補助群を案内するルーティングで、`acp_builder` 正本 schema 参照、CLI 実行補助、git/worktree 補助、Codex/Ollama 補助、INDEX 生成補助、StructDoc などのテスト支援を目的別に分けている。個別機能の正本仕様ではなく、どの共通 helper を読むべきかを絞る入口として使う。
+- `test_acp_builder_*` は `acp.builder` 系の parameter 生成と公開面を検証するテスト群で、apply fork・indexing・review oracle・session join conflict resolution・tui の各 builder が正本 schema や prompt とどう整合するかを確認するための入口になっている。
+- `test_apply_*` は apply fork / join / abandon の CLI 挙動と target 正規化、report 生成、state/worktree/branch cleanup を追うための入口で、対象別に lifecycle・report・正規化・終了コードの観点を分けている。
+- `test_basic_runtime`、`test_runtime_*`、`test_codex_runtime_*` は path/root 解決、設定、file access、process 停止、Ollama、Codex exec の argv・権限・retry・quota・TUI など runtime 周辺の外部挙動を扱う。実行経路ごとに責務を分けており、正本仕様そのものではなく runtime 契約の回帰確認に使う。
+- `test_indexing_*`、`test_review_oracle_*`、`test_session_cli`、`test_cli_tui`、`test_doctor_cli` は各サブコマンドの外部挙動と lifecycle を検証する入口で、INDEX 生成、review 対象選定、session lifecycle、TUI 起動、doctor preprocess のように、実装詳細よりもコマンド境界の確認に向いている。
+- `test_prompt_parts` と `test_struct_doc_rendering` は prompt 文面の組み立てと StructDoc の Markdown 変換を検証する。前者は標準文書・file access rule・root token を含む prompt 構成、後者は空行圧縮の挙動を確認するための入口になっている。
 
 ## Read this when
-- 共通テスト補助の責務や、どの helper を使うべきかを確認したいとき。
-- `acp_builder`、`codex` 実行系、`doctor`、`indexing`、`session`、`apply`、`review` のどれに関するテストを読むべきかを、変更対象から絞り込みたいとき。
-- CLI 外部挙動、永続状態、権限境界、prompt 生成、report 生成、対象選別のいずれかを変える予定で、該当するテスト入口を探したいとき。
+- 共通テスト補助で `CliRunner`、git fixture、fake command、Ollama 呼び出し補助、Codex 実行補助のどれを使うべきか確認したいとき。
+- `acp.builder` 系の builder 出力、公開面、structured output schema、prompt 注入条件を変更・確認したいとき。
+- apply 系の CLI、target 正規化、report、cleanup、state/worktree/branch の更新条件を確認したいとき。
+- runtime の root/path 解決、設定、file access、Codex 実行、Ollama、process tracking、retry/quota、TUI 起動のどれかを変えるとき。
+- indexing、review oracle、session CLI、doctor、TUI の各コマンドの外部挙動や lifecycle を確認したいとき。
+- prompt parts の文面、root token、file access rule、StructDoc の Markdown 整形を変更・確認したいとき。
 
 ## Do not read this when
-- 個別コマンドの実装や正本仕様そのものを確認したいときは、この案内層ではなく対応する `src` や `oracle` 側を読む。
-- 共通 helper の細部ではなく、テスト対象の具体的な出力・状態遷移・エラー条件だけを確認したいときは、対応する個別テストを直接読む。
-- `INDEX.md` のルーティング方針そのものを見たいときは、この配下ではなく上位の案内を読む。
+- 個別のコマンド仕様や正本仕様本文を確認したいだけなら、この共通補助群ではなく対応する oracle 側や実装側を読むべきとき。
+- `acp_builder` 以外の CLI や runtime の挙動を見たいだけで、builder の契約に触れないとき。
+- apply 以外のサブコマンドや低レベルの git / process helper だけを確認したいとき。
+- prompt 文面や runtime の一般論ではなく、別の領域のテストや実装を直接見たほうが近いとき。
+- INDEX 生成規則、review 対象選定、session lifecycle、doctor preprocess などの各コマンド本体を追う必要があるとき。
+- StructDoc 以外の prompt builder、CLI、runtime、oracle 正本の内容そのものを確認したいとき。
 
 ## hash
-- 59d452719ae7f4ddc3a0ffd38c6eaee95434a4a38c0a61797fde45a7da1fa995
+- cdf7e0e21cca2320feb2c075c670fb09080c3b93c858ca7de9c4b42433c9a206

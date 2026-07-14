@@ -763,21 +763,21 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- Codex の file access ルール生成と、`extra_writable_paths` を含む権限オーバーライドの許可・拒否境界を検証するテスト群の入口。`FileAccessMode` ごとの書き込み可否、`memo` や routing 用ファイルの保護、`.cmoc/local` などの禁止領域の扱いを確認したいときに読む。
-- `build_codex_override_args` の挙動を変える変更や、`_override_permission_filesystem` / `_override_permission_roots` に関わる権限制御の変更をするときに読む。ファイル単体の細部より、モード別の外部挙動と許可領域の境界確認が主目的。
+- Codex の権限オーバーライドが、読み取り専用系・書き込み系の各モードで許可される書き込み先を正しく制限するかを検証するテスト群です。`oracle` 配下、`memo`、`.agents`、`.codex`、`.git`、`AGENTS.md`、`INDEX.md` の扱いと、追加 writable path の受理・拒否を中心に見ます。
+- 実 Codex CLI に渡す permission profile の argv が parser に受理されること、そして schema 読み込み失敗で認証やモデル実行へ進む前に止まることも確認します。
 
 ## Read this when
-- `commons.runtime_codex_profile` の権限オーバーライド生成を変更したいとき
-- `FileAccessMode` ごとの read/write 境界、`memo` や `.git` 系の保護、`INDEX.md` / `AGENTS.md` の扱いを確認したいとき
-- 追加書き込み先の許可条件や、ignored path と tracked path の扱いを検証するテストを探しているとき
+- Codex の file access mode ごとの許可/禁止領域を変更したとき。
+- 追加 writable path の検証ロジックや、ignored gap path / tracked file / routing file の扱いを変えるとき。
+- Codex CLI に渡す permission profile の生成方法や、`codex exec` への接続確認を変えるとき。
 
 ## Do not read this when
-- Codex の prompt 文面そのものを変更したいときは、権限ルール生成元の oracle 側を先に読む
-- 一般的な Git 操作やリポジトリ構成だけを確認したいときは、この権限テストではなく対象の実装ファイルやルーティング文書を読む
-- `doctor_preprocess` の全体仕様を知りたいだけなら、このファイルではなく該当する oracle doc を読む
+- `oracle` 側の正本仕様そのものを修正したいだけなら、対応する oracle 文書を直接読むべきです。
+- 一般的な CLI 引数処理や他の permission ルールを見たいだけなら、ここではなく該当する実装側のロジックを読むべきです。
+- ファイルアクセス以外の runtime 挙動やモデル実行フローを追いたい場合は、このテストより上位の実行経路を読むほうが直接です。
 
 ## hash
-- 16fb787291280934e463938f2d66e9623388ec435b18d64e705f5f6fbf0867a8
+- c1ba2be11353c724307539b0fab7b024a3f97f45ea3b49ab6134fad89ac925cd
 
 # `test_runtime_codex_profile.py`
 

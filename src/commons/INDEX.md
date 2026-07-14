@@ -168,22 +168,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動する前後の境界処理をまとめる実装で、`argv` と permission profile、`CODEX_HOME`、schema 配置、子プロセス追跡、JSONL error 判定を一貫して扱う。Codex subprocess に渡す実行条件と、その戻り値を機械的に解釈する責務の中心である。
-- 権限・read/write 境界を組み立てる部分と、Codex 出力の異常判定を行う部分が同居しているため、起動条件の変更、ファイルアクセス制御の調整、quota/capacity/error 判定の修正をするときに読む。
-- 同じ subprocess 境界の不変条件を共有するため、呼び出し側が起動条件と失敗時挙動をまとめて理解したい場合の入口になる。
+- Codex subprocess の起動前後に必要な設定と検査をまとめる境界。`CODEX_HOME` 解決と検証、schema の配置、sandbox/permission profile の argv 生成、child process tracking、Codex JSONL エラー判定を扱う。
+- この層を読むべきなのは、Codex CLI に渡す実行環境や返却結果の機械的解釈を変えたいとき。ファイルアクセス許可、tracked child の記録方式、JSONL 上の capacity/quota/異常判定が主要な判断点になる。
+- Codex 本体のプロンプト内容やサブコマンド個別仕様を調べる入口ではない。実行環境の詳細な意図は必要に応じて上位の app spec 側を読む。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox/permission profile、`CODEX_HOME`、schema 配置、または child process tracking の扱いを変えたいとき。
-- Codex から返る JSONL を見て capacity/quota/unexpected error をどう判定するか、あるいは resume token をどう抽出するかを確認したいとき。
-- read/write 許可境界や oracle/realization の保護ルールを、Codex subprocess 側の起動条件として見直したいとき。
+- Codex CLI 実行時の `argv`、`CODEX_HOME`、`sandbox`、permission profile、schema 配置、error 判定のどれかを変更・確認したいとき。
+- apply 実行中の child process tracking や pid file の扱い、または quota/capacity/不正 JSONL の判定を追いたいとき。
+- Codex に渡す読み取り・書き込み境界を調整したいが、どの境界が subprocess 側で決まっているか確認したいとき。
 
 ## Do not read this when
-- Codex の一般的なコマンド実装や UI だけを確認したいときは、より上位のサブコマンド実装を先に読む。
-- file access policy の正本定義そのものを確認したいだけなら、対応する oracle 側の仕様断片を読むべきで、このファイルは実装化の境界を見るためのものに留める。
-- JSONL のプロトコルやエラー文言の仕様全体を確認したいだけなら、Codex 実行ルールや該当する oracle doc を先に読む。
+- サブコマンドの業務ロジックや prompt 本文そのものを確認したいときは、そちらの app spec や prompt builder 側を先に読む。
+- 純粋な Git 操作、設定読み込み、ログ保存の実装だけを追いたいときは、この subprocess 境界より直接その担当モジュールを読む。
+- Codex CLI の仕様全体を把握したいだけで、起動前後の環境変換や結果判定を変えないなら、この層は後回しでよい。
 
 ## hash
-- ab16fbf60aaaf0ad819ad6878f7249a43b64c472c899b2a540121d526c2c9427
+- 61aabd20ecbc858df411fbf137bc12073d8884eaf1214915ffd554a7aef3e813
 
 # `runtime_codex_tui.py`
 
