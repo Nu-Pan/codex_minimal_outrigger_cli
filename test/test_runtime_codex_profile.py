@@ -287,6 +287,10 @@ def test_standard_realization_roots_follow_path_boundaries(tmp_path: Path) -> No
     outside.mkdir()
     (root / "src").symlink_to(outside, target_is_directory=True)
     (root / "test").mkdir()
+    (root / "test" / "nested").mkdir()
+    (root / "test" / "nested" / "link").symlink_to(
+        outside, target_is_directory=True
+    )
     (root / ".gitignore").write_text("test/\n")
 
     override_args = build_codex_override_args(
@@ -304,6 +308,8 @@ def test_standard_realization_roots_follow_path_boundaries(tmp_path: Path) -> No
     assert _override_permission_roots(override_args, "write") == {
         str(root.resolve())
     }
+    filesystem = _override_permission_filesystem(override_args)
+    assert filesystem[str(outside.resolve())] == "deny"
     _assert_not_writable(override_args, outside / "new.py")
 
 

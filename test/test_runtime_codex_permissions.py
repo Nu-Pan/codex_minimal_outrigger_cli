@@ -225,10 +225,14 @@ def test_codex_overrides_allows_root_realization_file_and_protects_ignored_dir(
         root,
     )
 
-    expected_roots = {str(root.resolve())}
+    expected_roots = {
+        str(root.resolve()),
+        str((root / "build" / "artifact.txt").resolve()),
+    }
     assert _override_permission_roots(override_args, "write") == expected_roots
     _assert_writable(override_args, root / "src" / "main.py")
     _assert_writable(override_args, root / "src" / "new.py")
+    _assert_writable(override_args, root / "build" / "artifact.txt")
     _assert_writable(override_args, root / ".gitignore")
     _assert_not_writable(override_args, root / "build" / "new.txt")
     _assert_not_writable(override_args, root / ".agents" / "blocked.md")
