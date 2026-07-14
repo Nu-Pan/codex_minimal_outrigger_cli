@@ -51,7 +51,6 @@ _DENIED_WRITE_FILE_NAMES = {"AGENTS.md", "INDEX.md"}
 _STANDARD_REALIZATION_WRITE_PATHS = ("src", "test", "bin", ".gitignore")
 _OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
 _CMOC_PERMISSION_PROFILE = "cmoc"
-_PERMISSION_GLOB_SCAN_MAX_DEPTH = 64
 _PERMISSION_PROFILE_WRITE_MODES = frozenset(
     {
         FileAccessMode.REALIZATION_WRITE,
@@ -609,16 +608,12 @@ def _permission_profile_filesystem_overrides(
     overrides: dict[str, Any] = {}
     if mode in _PERMISSION_PROFILE_WRITE_MODES:
         # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-        # memo は広い read root に含まれるため deny し、AGENTS.md/INDEX.md は routing のため
-        # 読めるまま parent write root より狭い read rule で新規作成も防ぐ。
+        # memo は広い read root に含まれるため deny し、routing file は Codex が
+        # 受理する exact な :workspace_roots rule で read のまま write だけ防ぐ。
         routing_rules = {name: "read" for name in _DENIED_WRITE_FILE_NAMES}
-        routing_rules.update(
-            {f"**/{name}": "read" for name in _DENIED_WRITE_FILE_NAMES}
-        )
         overrides.update(
             {
                 str((root / "memo").resolve()): "deny",
-                "glob_scan_max_depth": _PERMISSION_GLOB_SCAN_MAX_DEPTH,
                 ":workspace_roots": routing_rules,
             }
         )

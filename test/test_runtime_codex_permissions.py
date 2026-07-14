@@ -6,7 +6,8 @@
 - <work-root>/oracle/doc/app_spec/doctor_preprocess.md
 """
 
-from fnmatch import fnmatch
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -106,26 +107,11 @@ def test_codex_overrides_protect_memo_and_future_routing_files(
 
     filesystem = _override_permission_filesystem(override_args)
     assert filesystem[str((root / "memo").resolve())] == "deny"
-    assert filesystem["glob_scan_max_depth"] == 64
     routing_rules = filesystem[":workspace_roots"]
     assert routing_rules == {
         "AGENTS.md": "read",
         "INDEX.md": "read",
-        "**/AGENTS.md": "read",
-        "**/INDEX.md": "read",
     }
-
-    for relative in (
-        "AGENTS.md",
-        "INDEX.md",
-        "src/INDEX.md",
-        "src/deep/AGENTS.md",
-        "oracle/INDEX.md",
-    ):
-        assert any(
-            access == "read" and fnmatch(relative, pattern)
-            for pattern, access in routing_rules.items()
-        )
     _assert_not_writable(override_args, root / "memo" / "private.md")
 
 
@@ -370,3 +356,61 @@ def test_codex_overrides_readonly_modes_allow_extra_ignored_gap_path(
     )
 
     _assert_writable(override_args, target)
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [
+        FileAccessMode.REALIZATION_WRITE,
+        FileAccessMode.PURE_ORACLE_WRITE,
+        FileAccessMode.REPO_WRITE,
+        FileAccessMode.NO_RULE,
+    ],
+)
+def test_codex_permission_profile_is_accepted_by_codex_cli(
+    tmp_path: Path, mode: FileAccessMode
+) -> None:
+    """書き込み用 profile の同じ argv を実 Codex CLI の parser に通す。"""
+    codex = shutil.which("codex")
+    if codex is None:
+        pytest.skip("codex CLI is not installed")
+
+    root = make_repo(tmp_path)
+    args = build_codex_override_args(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            mode,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+    )
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Missing schema validation stops before authentication or model execution.
+    result = subprocess.run(
+        [
+            codex,
+            "exec",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--ephemeral",
+            "--skip-git-repo-check",
+            "--output-schema",
+            str(tmp_path / "missing-schema.json"),
+            "--json",
+            *args,
+            "-",
+        ],
+        cwd=root,
+        input="probe\n",
+        text=True,
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    output = result.stdout + result.stderr
+    assert result.returncode == 1
+    assert "filesystem glob path" not in output
+    assert "Failed to read output schema file" in output
