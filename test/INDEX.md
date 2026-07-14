@@ -362,20 +362,21 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行時の `run_codex_exec` と override 生成を検証する統合テスト群。実 CLI 呼び出し、`cmoc` 管理 Ollama 連携、`CODEX_HOME` への設定ファイル不作成、権限制御付き実行の挙動を確認したいときに読む。
+- `test/test_codex_runtime_exec.py` は、`run_codex_exec` と `prepare_codex_override_args` を中心に、Codex CLI 呼び出しの argv・prompt stdin・`--output-schema` 配置・`CODEX_HOME` 非生成・model provider 上書き・managed ollama 連携を検証する実装寄りテスト群を案内する。
+- Real Codex CLI を使う結合テストと、Fake Codex CLI で呼び出し構築だけを確認するテストの両方を含むので、`codex exec` の実行経路、`cmoc managed ollama` 利用条件、プロンプト保存や schema 生成の振る舞いを追うときに読む。
 
 ## Read this when
-- `commons.runtime_codex.run_codex_exec` や `commons.runtime_codex_profile.prepare_codex_override_args` の外部挙動を変えるとき
-- local SLM / `cmoc` managed ollama の provider 切り替え、preflight 呼び出し、Codex CLI への override 伝播を確認したいとき
-- `CODEX_HOME` 配下に永続設定を作らないことや、repo-write 実行時の書き込み範囲を確認したいとき
+- `commons.runtime_codex.run_codex_exec` や `commons.runtime_codex_profile.prepare_codex_override_args` の変更で、`codex exec` の引数構築・stdin 渡し・出力保存・設定上書きの期待値を確認したいとき。
+- `codex exec` を Real CLI で起動する経路の検証を見たいとき。特に `cmoc managed ollama` を provider にする場合の結合動作、`--output-schema` の保存先とハッシュ命名、`CODEX_HOME` に設定ファイルを作らないことを確認したいとき。
+- Codex 呼び出しに関する回帰が、プロンプト本文・schema ファイル・call log・出力ファイルのどこで観測されるかを知りたいとき。
 
 ## Do not read this when
-- `run_codex_exec` の内部実装詳細だけを追いたいときは、対応する実装ファイルを直接読むべき
-- Codex 実行以外の一般的な runtime doctor 振る舞いだけを確認したいときは、関連する doctest や doctor 側のテストを優先して読むべき
-- このファイルは実行統合の検証が主目的なので、CLI の一般仕様や設定体系の全体像を知りたいだけなら別の仕様文書を読むべき
+- `codex exec` 以外のサブコマンドや、呼び出し実行より前の一般的な設定読み込みだけを調べたいとき。
+- Codex CLI の回答品質や LLM の意味的成功を評価したいとき。このファイルはその目的ではなく、呼び出し契約と cmoc 側の制御ロジックを検証する。
+- `cmoc managed ollama` のサービス配置・運用規約そのものだけを確認したいとき。その場合は、より直接の正本である `oracle/doc/app_spec/cmoc_managed_ollama.md` を読む。
 
 ## hash
-- 6b741d7a2f9f486b91be04baaf161ba88ac6fd59e4e8cbb4253e8011277fae34
+- 4f6ca0076a38634d2f00a90aa44f35fab2f680cb1f50f9aa5d145b5d0e4bd0a8
 
 # `test_codex_runtime_home.py`
 
