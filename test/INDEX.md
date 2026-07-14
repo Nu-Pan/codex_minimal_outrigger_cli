@@ -739,38 +739,41 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- `build_codex_override_args` の書き込み許可境界を確認したいときに読む。読み取り専用モードの扱い、`extra_writable_paths` の受理条件、`memo` や `AGENTS.md` / `INDEX.md` / `.git` / `.agents` / `.codex` / `.cmoc/local` をどう保護するかを検証している。
+- Codex の `build_codex_override_args` が作る書き込み許可の境界を検証するテスト群。`FileAccessMode` ごとの既定許可、`extra_writable_paths` の受理・拒否、`AGENTS.md` / `INDEX.md` / `memo` / `.agents` / `.cmoc/local` / `.codex` / `.git` の保護、ignore された gap path の扱いを確認したいときに読む。
+- `src` や `oracle` のような通常の作業領域と、追跡対象・無視対象・ルーティング用ファイルのどこまでを書けるかが論点なら、このテストが入口になる。権限境界そのものではなく、別の CLI 挙動や設定項目の変更ならここは読まなくてよい。
 
 ## Read this when
-- Codex の permission profile から実際の filesystem 許可がどう組み立てられるかを変えるとき
-- ignore 対象の gap path と tracked file の境界、または root 直下と配下ディレクトリの書き込み可否を確認したいとき
-- 追加 writable path の妥当性チェックや、`REALIZATION_WRITE` / `PURE_ORACLE_WRITE` / `REPO_WRITE` / `READONLY` / `PURE_ORACLE_READ` / `NO_RULE` の差を追いたいとき
+- Codex の read/write 許可領域の判定や、モード別の既定書き込み範囲を変えるとき。
+- `extra_writable_paths` を追加・変更し、その許可条件や拒否条件を確認したいとき。
+- `AGENTS.md` / `INDEX.md` / `memo` / `.agents` / `.cmoc/local` / `.codex` / `.git` の保護方針を変える可能性があるとき。
+- ignore された未追跡パスや gap path を書けるかどうかの扱いを確認したいとき。
 
 ## Do not read this when
-- doctor preprocess の手順や修復方針だけを知りたいときは、`oracle/doc/app_spec/doctor_preprocess.md` を直接読む
-- oracle file と realization file の定義そのものを確認したいだけなら、このテストではなく `oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` を読む
-- Codex の他のプロンプト断片や一般的な prompt 生成の全体像を追いたいだけなら、このテストではなく関連する prompt builder の oracle src を読む
+- Codex の出力文面、プロンプト生成、レビュー判定など、書き込み権限以外の機能を扱うとき。
+- 実装の内部分割だけを変えたいときで、許可・拒否の境界が変わらないとき。
+- 一般的な Git 操作やファイル作成の話だけを確認したいとき。
 
 ## hash
-- ae7b38ea46ee6bb9fa5d5f428c953f7f8726969a0d7093e2ea7103ac530ebf3c
+- 8c55e8e1aa250ef75785626205590430a91e08a96cf7782fef12e3cd91ae53da
 
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- `build_codex_override_args` の `FileAccessMode` ごとの sandbox 生成、`CmocConfig` による model/provider 切り替え、linked worktree での追加 read 許可を検証するテスト群。
+- Codex CLI の `build_codex_override_args` が、`FileAccessMode` ごとに model / sandbox / permissions / writable roots をどう上書きするかを確認したいときに読むテストです。
+- `cmoc managed ollama` を model provider に選ぶ経路、linked worktree 実行時の追加 read root、`memo` / `.agents` / `oracle` / `src` / `test` の境界が主題です。
 
 ## Read this when
-- Codex 実行時の override 引数が、root・oracle・realization の境界どおりに権限化されているかを確認したいとき。
-- local SLM を `cmoc_managed_ollama` に載せる経路、`--disable` や `web_search` の抑制方針を確認したいとき。
-- linked worktree から実行した場合の `cmoc/local` 読み取り追加や、許可領域外の extra path が拒否される条件を確認したいとき。
+- Codex 呼び出し前に生成する argv と permission profile の境界を変える、またはそのテストを追加・修正したいとき。
+- `READONLY` / `PURE_ORACLE_READ` / `PURE_ORACLE_WRITE` / `REALIZATION_WRITE` / `REPO_WRITE` の許可範囲や、追加 read/write path の拒否条件を確認したいとき。
+- `ModelClass` と `CodexModelSpec` の解決結果、`cmoc_managed_ollama` の provider 設定、`--disable multi_agent` の有無を追いたいとき。
 
 ## Do not read this when
-- Codex の個別 CLI サブコマンドの引数整形だけを見たいときは、各サブコマンドの test を読む。
-- ファイルアクセス境界そのものの共通ルールを見たいときは、対応する oracle 側の file access 仕様を読む。
-- git worktree やリポジトリ生成の補助だけが必要なときは、このファイルではなく test 内の support helper を読む。
+- Codex CLI の実行ログ保存や quota/retry の挙動を見たいときは、`runtime_codex.py` 側を読むべきです。
+- `CmocConfig` の永続化形式や設定項目の定義そのものを見たいときは、config 側の本文を読むべきです。
+- file access ではなく prompt 本文の組み立て規則だけを見たいときは、`oracle/src/oracle/prompt_builder/parts/file_access_rule.py` 側を読むべきです。
 
 ## hash
-- f7c797a225bc1d8de333405caebdb4a31fe1cac629d5b7b4ab2cd99005f4db93
+- fbc9a30090b77a12c61da0b2bd836fb37f3731e5d5bd72faa8955183990be6be
 
 # `test_runtime_config.py`
 

@@ -59,72 +59,43 @@
 # `commons`
 
 ## Summary
-- `src/commons` は cmoc の実行時共通基盤を集める領域で、サブコマンド実行、設定、状態、Git、パス、ログ、エラー、Codex 呼び出し周辺の共有処理へ進むための入口になる。個別機能は下位モジュールで読む。
-- `__init__.py` は共有 runtime helper 群のパッケージ境界だけを示す。共有 helper の入口を確認するときだけ読む。
-- `cmoc_runtime.py` は実行ライフサイクル全体の横断入口で、Codex 実行前後の準備、設定・状態・ログ・パス・Git・エラー・結果型をまとめて扱う。
-- `indexing.py` は Codex 実行前の INDEX 更新 preflight と、その commit 判定や生成結果の検証を扱う。
-- `runtime_apply.py` は `cmoc apply abandon` の cleanup と、対象 worktree や実行中 process の追跡・停止確認を扱う。
-- `runtime_cli.py` はサブコマンド共通の実行順序、work root 検査、doctor preprocess、step 通知、完了サマリー、例外の終了コード化を扱う。
-- `runtime_codex.py` は Codex 実行系の公開入口で、exec 実行と TUI 実行の起動関数を同じ import 元から参照できるようにする。
-- `runtime_codex_exec.py` は Codex exec の単一試行と再試行制御、Structured Output 検証、quota 待機、resume token、実行ログ記録を扱う。
-- `runtime_codex_logging.py` は Codex CLI 呼び出しの console 表示と起動失敗時の error 文面整形を共通化する。
-- `runtime_codex_preflight.py` は Codex exec/TUI の直前に indexing preflight を挟む薄い委譲層で、登録、起点 root 決定、再入抑止を扱う。
-- `runtime_codex_profile.py` は Codex CLI の起動条件、sandbox、`CODEX_HOME`、schema 配置、子プロセス追跡、JSONL エラー判定の境界を扱う。
-- `runtime_codex_tui.py` は Codex TUI 起動の共通処理で、argv と `CODEX_HOME` の準備、call log、実行結果の返却を扱う。
-- `runtime_config.py` は cmoc config の読み込み、検証、既定値補完、永続 JSON との変換を扱う。
-- `runtime_content.py` は SHA-256 digest に基づく内容アドレス型ファイルの書き出しと簡易 binary 判定を扱う。
-- `runtime_doctor.py` は doctor 用の Git ロック、一時 index、ignore 修復、placeholder 補完、修復 commit 生成を扱う。
-- `runtime_errors.py` は cmoc の実行時例外と利用者向け Markdown エラーレポート生成を扱う。
-- `runtime_git.py` は Git 依存の基盤処理で、branch/HEAD/worktree 判定、ignore 管理、Git 由来エラー整形、oracle/file path 判定を扱う。
-- `runtime_logging.py` はサブコマンドごとの JSON Lines ログと経過時間の共有 logger を扱う。
-- `runtime_ollama.py` は cmoc が管理する Ollama の導入、service 同期、提供確認、model 取得と検証を一連で扱う。
-- `runtime_paths.py` は `<repo-root>` と `<work-root>` の解決、timestamp、保存先 path の決定を扱う。
-- `runtime_preprocess_command.py` は `cmoc` の前処理コマンド群の実行順、設定同期、設定 commit を扱う。
-- `runtime_results.py` は外部コマンド実行結果と Codex exec 実行結果を保持する不変 dataclass を扱う。
-- `runtime_state.py` は session/apply 用 state file の読み書き、branch からの session_id 復元、active session 探索、fork lock を扱う。
+- `commons` 配下の実行時共通基盤をまとめる領域。ここは個別サブコマンドの業務処理ではなく、複数モジュールから共有される runtime helper 群への入口として読む。
+- `cmoc_runtime.py` は、Codex 実行前後の共通処理を束ねる入口。実行ライフサイクル、preflight、ログ、設定・状態・パス・Git・エラー処理・結果型を横断して追うときにここを起点にする。
+- `indexing.py` は、Codex 実行前に INDEX 更新 preflight を走らせ、必要なら commit まで行う経路の入口。既存 entry の再利用、欠落 entry の生成、検証、失敗時挙動を確認したいときに読む。
+- `runtime_apply.py` は `cmoc apply abandon` の cleanup と、worktree 解決・PID 追跡・process group 停止を扱う実装。apply 実行中 process の記録や停止判定を追うときに読む。
+- `runtime_cli.py` は CLI サブコマンド共通の実行ライフサイクルをまとめる。work root 検査、doctor preprocess、ログ初期化、step 通知、完了サマリー、例外の終了コード化を確認したいときに読む。
+- `runtime_codex.py` は Codex 実行系の公開入口を再エクスポートする薄い境界。exec 実行と TUI 実行の起点だけを確認したいときに読む。
+- `runtime_codex_exec.py` は Codex exec の単一試行ループと再試行制御の入口。Structured Output 検証、quota 待機、resume token 継続、call log と event 記録を追うときに読む。
+- `runtime_codex_logging.py` は Codex CLI 呼び出し通知と起動失敗時の文面整形を共通化する補助。console 表示の見え方や失敗理由の短い整形を確認したいときに読む。
+- `runtime_codex_preflight.py` は Codex exec/TUI 実行直前に indexing preflight を差し込む薄い委譲層。preflight の登録、解除、再入抑止、直列化を追うときに読む。
+- `runtime_codex_profile.py` は Codex CLI 起動前後の境界処理を扱う。permission profile、`CODEX_HOME`、schema 配置、子プロセス追跡、JSONL error 判定を確認したいときに読む。
+- `runtime_codex_tui.py` は Codex TUI 起動の共通処理。argv と `CODEX_HOME`、call log、サブコマンドログ、失敗時の扱いを揃えたいときに読む。
+- `runtime_config.py` は設定の正本型と永続化 JSON の変換、読み込み、検証、既定値補完、書き戻しを担う。設定ファイルの形式や利用者向けエラーを確認したいときに読む。
+- `runtime_content.py` は内容 hash と内容アドレス型ファイルの補助をまとめる。digest 計算、重複書き込み回避、簡易 binary 判定を確認したいときに読む。
+- `runtime_doctor.py` は doctor 用の Git ロック、一時 index、`.gitignore` 修復、`.agents/.gitkeep` 補完、修復 commit 生成を扱う。doctor 実行時の Git state 復元や並行実行の競合回避を確認したいときに読む。
+- `runtime_errors.py` は cmoc の実行時例外を利用者向け Markdown エラーレポートへ変換する共通処理。概要、復旧案、詳細、呼び出しスタックの出力を確認したいときに読む。
+- `runtime_git.py` は Git 依存の基盤処理をまとめる境界。branch/HEAD/worktree 判定、`.cmoc/local` の ignore 管理、Git 由来のエラー整形、oracle/realization 判定に使う path 判定を扱う。
+- `runtime_logging.py` はサブコマンドごとの JSON Lines ログと経過時間をまとめる共有 logger。イベント記録、step timing、quota 待機時間、現在 logger の受け渡しを追うときに読む。
+- `runtime_ollama.py` は cmoc が管理する Ollama の導入と serve 可否確認を担う preflight の入口。対象 model の決定、service 同期、listener 確認、load、GPU 推論確認を追うときに読む。
+- `runtime_paths.py` は `<repo-root>` / `<work-root>` の解決、timestamp 生成、各種保存先 path 決定を扱う。root 解決や保存先ルール、cwd 切替の前提を確認したいときに読む。
+- `runtime_preprocess_command.py` は `cmoc` の前処理コマンド群の入口。実行開始ラッパー、設定同期、差分 commit までの流れを追いたいときに読む。
+- `runtime_results.py` は外部コマンド実行結果と Codex exec 実行結果を保持する不変 dataclass 群。結果コンテナの項目や quota 計測値の保持先を確認したいときに読む。
+- `runtime_state.py` は session/apply 用 state file の読み書き基盤。branch 名から session_id を復元し、JSON state を検証付きで扱い、fork 排他 lock も担う。
 
 ## Read this when
-- cmoc 実行時の共通基盤の入口を探したいとき。
-- 共有 runtime helper 群のパッケージ境界だけを確認したいとき。
-- Codex 実行の前後をまたぐ共通処理をまとめて追いたいとき。
-- Codex 実行前の indexing preflight を確認したいとき。
-- `cmoc apply abandon` の cleanup と停止対象の追跡を確認したいとき。
-- サブコマンド共通の実行順序や失敗時の見せ方を確認したいとき。
-- Codex 実行系の公開 API 境界だけを確認したいとき。
-- Codex exec の再試行、quota 待機、Structured Output 検証、resume token を確認したいとき。
-- Codex CLI 呼び出しの console 表示や失敗文面を確認したいとき。
-- Codex 実行前に indexing preflight を差し込む条件や順序を確認したいとき。
-- Codex CLI の起動条件、sandbox、`CODEX_HOME`、schema、JSONL エラー判定を確認したいとき。
-- Codex TUI 起動時の argv、`CODEX_HOME`、call log、失敗時の扱いを確認したいとき。
-- 設定ファイルの保存形式、検証、既定値補完、書き戻しを確認したいとき。
-- 内容 hash による成果物名生成や binary 判定を確認したいとき。
-- doctor の Git 修復や ignore 保障の流れを確認したいとき。
-- cmoc の共通エラーレポート構成や文面を確認したいとき。
-- Git 依存の基盤処理や oracle/file path 判定を確認したいとき。
-- サブコマンドごとの JSON Lines ログや step 経過時間を確認したいとき。
-- Ollama の導入と local SLM 提供の preflight を確認したいとき。
-- `<repo-root>` と `<work-root>` の解決や保存先 path を確認したいとき。
-- 前処理コマンドの順序や設定同期、設定 commit を確認したいとき。
-- 外部コマンドや Codex exec の結果コンテナを確認したいとき。
-- session/apply state の読み書きや branch からの session_id 復元を確認したいとき。
+- `commons` 配下の共有 runtime helper 群へ進むべきか判断したいとき。
+- Codex 実行の前処理・後処理・共通基盤の流れを追いたいとき。
+- 複数モジュールから共有される補助処理の入口だけを確認したいとき。
+- CLI サブコマンド固有の業務処理ではなく、共通実行基盤や周辺 helper の責務境界を知りたいとき。
 
 ## Do not read this when
-- 個別 helper の実装や入出力、失敗時挙動だけを確認したいとき。
-- CLI 固有の業務ロジックやテスト固有の処理を追いたいとき。
-- 単一サブコマンドだけの詳細を知りたいときは、その責務を持つ下位モジュールを直接読むべきとき。
-- INDEX の表示テンプレートや項目仕様だけを知りたいとき。
-- session state の読み書きや branch 遷移だけを追いたいとき。
-- サブコマンドの個別ビジネスロジックだけを変更したいとき。
-- exec 実行の具体的処理、引数処理、プロセス制御を確認したいとき。
-- TUI 起動、端末制御、対話実行の具体的挙動を確認したいとき。
-- 記録先そのものや永続化の責務を変えたいとき。
-- Codex 実行本体や構造化出力の判定を調べたいとき。
-- 単純な path 操作や局所 helper だけを確認したいとき。
-- 実行結果コンテナではなくログ保存先だけを知りたいとき。
-- route の選定ではなく state schema の人間向け正本仕様を見たいとき。
+- 個別 helper の実装、入出力、失敗時挙動を確認したいとき。
+- CLI コマンド固有の業務ロジックやテスト固有の処理を調べたいとき。
+- 共有 runtime helper ではなく、より直接その責務を持つ対象があるとき。
+- この領域の入口だけではなく、下位要素の本文を直接読むべきとき。
 
 ## hash
-- 89fa7e9a5b55749343e2d2be2b615e29f9308a5b57aca596b82c9d96b95c9015
+- ed0aa8a34ffd7be01efba15d789d603249e76797fd81af48e6033460fb467714
 
 # `config`
 
