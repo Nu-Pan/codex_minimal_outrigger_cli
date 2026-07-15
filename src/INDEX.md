@@ -1,24 +1,18 @@
 # `acp`
 
 ## Summary
-- `acp` 互換の公開入口をまとめる階層で、既存の `acp.*` 参照を壊さずに正本実装へ進むための導線を扱う。
-- 配下の互換入口は、名前解決・委譲・移行経路の確認が主目的で、実体仕様を読む場所ではない。
-- `common` は現時点で実体を持たない目印として扱い、共通処理の本体を探す入口にはしない。
+- `acp` 互換公開入口と、その配下にある builder 関連の互換入口・実装群を案内するディレクトリ。既存の `acp.*` 参照を維持しながら、`oracle.*` または実体モジュールへ委譲・移行するための入口となる。
 
 ## Read this when
-- `acp` という公開名を残すべきか、削除できるかを判断したいとき。
-- 既存の利用者向け参照を壊さずに、`oracle` 側の実体へ切り替える導線を確認したいとき。
-- 既存の `acp.builder.*` import を維持したまま、どの実体へ進むべきか整理したいとき。
-- 互換層を残す必要があるか、削除や置き換えが可能かを見極めたいとき。
+- `acp` 公開名や既存 import の互換性を維持・削除する判断をするとき。
+- `acp.builder.*` の委譲経路、または apply・quota probe・indexing・review・session・TUI など builder 領域の読む先を判断するとき。
 
 ## Do not read this when
-- `acp` 配下の具体的な実装内容や移行先の詳細を知りたいだけなら、直接その実体モジュールを読む。
-- 互換入口の存廃ではなく、`acp.*` の内部挙動そのものを変えたいだけならここではない。
-- 実装本体や機能仕様を知りたいときは、この階層ではなく対応する正本側のモジュールを読む。
-- `common` に実装がある前提で読むべきではない。
+- `acp` 配下の特定モジュールの内部実装や正本仕様だけを確認したいとき。該当する実体モジュールまたは `oracle.acp_builder` を直接読む。
+- `acp` 互換入口と無関係な機能を調査・変更するとき。
 
 ## hash
-- fc9f0af91ccee72360f126f08015e64058d869a21efbd45fd17da3b90bc0bf60
+- 260636d04ac749be845fb420b312882055a92b169c34b907a7bd2c72b0206212
 
 # `basic`
 
@@ -131,17 +125,19 @@
 # `sub_commands`
 
 ## Summary
-- `src/sub_commands` 配下の CLI サブコマンド実装をまとめた入口。apply、review、session、tui、doctor、indexing などの起動処理と、各ライフサイクル・評価・レポート・パス解決の実装へ進むためのルーティングを提供する。
+- CLI のサブコマンド実装を集約する領域。apply・session・review のライフサイクル処理と、oracle 評価、INDEX 更新、doctor、TUI の実行入口を扱う。
+- 各サブコマンドの入口から、state・branch・worktree・Codex 実行・report 生成などの専用実装へ進むための起点となる。
 
 ## Read this when
-- サブコマンド全体から、目的に応じて読むべき実装ファイルを切り分けたいとき。
-- apply、review、session、tui などの開始・実行・終了フローの入口を確認したいとき。
-- レビュー対象選定、oracle 評価、レポート生成、INDEX 更新など、サブコマンド単位の責務分担を把握したいとき。
+- サブコマンドの実行入口や、apply・session・review・TUI などの処理群から読むべき実装を選びたいとき。
+- apply または session の fork・join・abandon、branch/worktree と state のライフサイクルを調べたいとき。
+- review oracle の対象選定、実行ループ、finding の検証・判定、INDEX 差分の merge、report 出力を追いたいとき。
+- oracle 評価、INDEX 更新、doctor preprocess、TUI 起動の CLI 接続を確認したいとき.
 
 ## Do not read this when
-- 特定サブコマンドの詳細な引数、制御フロー、エラー処理を調べるときは、対応する実装ファイルを直接読む。
-- 共通 helper、状態管理、Git の低レベル操作、個別の prompt・report・path 処理だけを調べるときは、それぞれの定義元を直接読む。
-- CLI 全体の共通起動処理や、サブコマンド以外の実装を調べるとき。
+- サブコマンド共通の CLI ルーティング、state 操作、worktree 操作、Git 操作だけを調べたいときは、対応する共通 runtime 実装へ直接進む。
+- 特定の prompt builder、report 描画、path 解決、対象列挙など単一の補助責務だけを調べたいときは、この領域全体ではなく該当する専用実装へ直接進む。
+- apply・session・review と無関係なサブコマンドの実装を調べたいとき。
 
 ## hash
-- 6814f39c454242d9f8981bf5682fc5ca03314b8e04e21f9c35f99dc4f4ec4bb4
+- 23fec24fe7617e706f2a6a890c038fcff7cd8d9d455df61eddd3e0b1cf15423d

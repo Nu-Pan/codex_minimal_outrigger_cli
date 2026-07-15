@@ -16,18 +16,17 @@
 # `fork`
 
 ## Summary
-- `cmoc apply fork` の互換公開面と、その下で各 builder が oracle 実装へ委譲する薄い入口群をまとめる。ここでは実処理の詳細ではなく、どの入口が何の変換責務を持つかだけを案内する。
-- 互換 package の削除可否を確認したい場合と、fork 系 builder から oracle 側の正本実装へ渡す前処理を追いたい場合に読む。
+- `cmoc apply fork` の realization 側 builder package。正本側 builder への委譲入口と、repo root・oracle import 解決などの共通処理を扱い、ファイル単位レビュー・修正および変更要約の agent call parameter を構築する。
 
 ## Read this when
-- 旧来の `cmoc apply fork` 系 import の互換性を維持すべきか判断したいとき。
-- fork 系 builder で使う共通の repo root 解決や import 調整、oracle 側の parameter をそのまま受け渡す経路を確認したいとき。
-- 変更要約、所見列挙、所見適用のいずれかの入口を個別に探していて、まずどのモジュールを読むべきか判断したいとき。
+- `cmoc apply fork` の realization 側 builder の責務や、正本 builder への委譲経路を確認するとき。
+- fork 系 builder の repo root 解決、oracle import、ACP parameter の受け渡しを変更するとき。
+- ファイル単位レビュー・修正または変更要約の parameter 構築入口を変更するとき。
 
 ## Do not read this when
-- `cmoc apply fork` の実処理や判定ロジックの詳細を知りたいときは、対応する oracle 側の正本実装を読む。
-- 互換 import の維持可否ではなく、現行の制御ロジックや入出力変換そのものを変更したいとき。
-- `cmoc apply fork` 以外のサブコマンドや、別系統の公開面を追いたいとき。
+- `cmoc apply fork` のループ制御、再投入、commit、state 遷移を調べたいとき。
+- レビュー・修正や変更要約の prompt・schema など、正本仕様そのものを確認したいとき。
+- `cmoc apply fork` 以外のサブコマンドの実装や、fork builder と無関係な import 解決を変更したいとき。
 
 ## hash
-- 5d778304413e09362af156dacc97b5bf881792cfe1abff9ad0691fac4fc23cdf
+- a54a5a0855c60c8416edffeb93bfae4bdd9f7c780aec7743f8eb4d75eda73e06

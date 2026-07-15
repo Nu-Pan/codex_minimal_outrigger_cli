@@ -17,19 +17,16 @@
 # `builder`
 
 ## Summary
-- `acp.builder` 系の互換入口をまとめる階層。正本実装は `oracle.acp_builder` 側にあり、ここは既存 import を壊さずに各機能へ進むためのルーティング層として読む。
-- 配下には `__init__.py` の名前解決、`apply` 系の委譲入口、`indexing` の互換入口、`review` と `session` と `tui` の互換入口があり、実体ではなく移行経路を見分けるために使う。
-- `common` は現時点では本文を持たないため、共通処理の実体を読む場所ではなく、将来の配置有無や入口の有無を確認するための目印として扱う。
+- `acp.builder` 配下の互換入口と builder 関連の実装群を案内するディレクトリ。既存の `acp.builder.*` import を維持しつつ、`oracle.acp_builder` の正本実装へ委譲する入口、apply・quota probe・review・session・TUI・indexing の各領域への進入点を提供する。
 
 ## Read this when
-- 既存の `acp.builder.*` import を維持したまま、どの実体へ進むべきか判断したいとき。
-- 互換層を残す必要があるか、削除や置き換えが可能かを見極めたいとき。
-- 各下位機能について、正本側の実装本体へ進む前に入口だけ整理したいとき。
+- `acp.builder.*` の既存 import 互換、正本側への委譲経路、または配下の builder 領域を横断して読む先を判断したいとき。
+- apply、quota availability probe、indexing、review、session、TUI のいずれかの互換入口や関連実装を調査・変更するとき。
+- 共通 builder 処理の配置や、現在本文ファイルが存在する下位要素を確認したいとき。
 
 ## Do not read this when
-- 実装本体や機能仕様を知りたいときは、この階層ではなく対応する正本側のモジュールを読む。
-- 互換入口の維持可否ではなく、公開機能そのものの挙動を追いたいとき。
-- `common` に実装がある前提で読むべきではない。
+- 特定機能の正本仕様や実装本体だけを確認したい場合は、該当する下位モジュールまたは `oracle.acp_builder` 側を直接読む。
+- `acp.builder.*` の互換入口と無関係な機能、または個別 builder の内部ロジックだけを追う場合は、このディレクトリ案内を読む必要はない。
 
 ## hash
-- 1c0719a4e80a0cfa9c1ea02b129ece507959ab709b23ddb34471bde2f645ae3f
+- eb2908b68c2d042a50a4f936d04a599ceb882217dbf906aca869a3cd1676b3c6

@@ -19,21 +19,18 @@
 # `apply`
 
 ## Summary
-- `cmoc apply` 系の互換公開面をまとめて案内する入口。実処理本体ではなく、既存 import を壊さずに正本側の apply 実装へ進むためのルーティングに使う。
-- `fork` 系の builder 入口と、その下で正本実装へ委譲する薄い層を含む。fork 固有の前処理や委譲先を追うときに読む。
+- `acp.builder.apply` の既存 import 互換層と、`cmoc apply fork` の realization 側 builder を含む。fork builder は正本 builder への委譲、共通の repo root・oracle import 解決、レビュー・修正および変更要約用 parameter 構築の入口を担う。
 
 ## Read this when
-- `acp.builder.apply` 配下のどの入口に進むべきか判断したいとき。
-- 旧来の `cmoc apply fork` 系 import を維持しつつ、正本側へ進む経路を確認したいとき。
-- fork 系 builder の前処理や委譲先を探していて、まず読む対象を絞りたいとき。
+- `acp.builder.apply` の import 互換経路や、`cmoc apply fork` の builder 委譲・共通 parameter 構築を確認または変更するとき。
 
 ## Do not read this when
-- 新しい apply 実装の正本を探したいときは、互換層ではなく `oracle/src/oracle/acp_builder/apply` 側を見る。
-- この配下に実処理や仕様本体がある前提で読むべきではない。
-- `cmoc apply fork` 以外のサブコマンドや別系統の公開面を追いたいとき。
+- `cmoc apply fork` のループ制御、再投入、commit、state 遷移を調べるとき。
+- レビュー・修正や変更要約の prompt・schema など正本仕様を確認するときは、正本側の apply 実装を直接読む。
+- fork builder と無関係なサブコマンドや import 解決を変更するとき。
 
 ## hash
-- 80f80d8c070654b3303ea873951068eae266dd150f704255560d46d2ab9cd13f
+- 948fba5ad80aaea8fd392250eaed0b89e8ac00688150ddabee9004588f566efd
 
 # `common`
 
