@@ -23,20 +23,21 @@
 # `apply_fork.md`
 
 ## Summary
-- `cmoc apply fork` の実行条件、状態遷移、調査待ちファイルの初期化、所見調査と修正依頼のループ、レポート生成までを扱う入口。apply ループ全体の責務と、`run` 隔離実行や各 agent call 正本へのつなぎ先を確認したいときに読む。
+- `cmoc apply fork` の正本仕様断片。apply ループの引数、事前条件、隔離実行、調査待ちファイル管理、agent call、状態遷移、割り込み、レポート、終了コードを定義する。apply fork の実装や挙動、関連する状態管理・スコープ選択・作業結果レポートを確認する際の入口。
 
 ## Read this when
-- `cmoc apply fork` の引数、事前条件、終了コード、作業レポート形式を確認したいとき。
-- apply ループの流れ、`apply.state` の更新条件、ユーザー中断時の扱いを確認したいとき。
-- 調査待ちファイルリストの初期化基準や、所見調査・修正反映の起点となる正本を確認したいとき。
+- `cmoc apply fork` の実装またはテストを変更・レビューするとき
+- apply のスコープ、ループ収束、ファイル再投入、コミット、割り込み動作を確認するとき
+- apply 状態の遷移、終了区分、作業レポート仕様を確認するとき
+- apply fork が利用する agent call や run 隔離実行との連携を調査するとき
 
 ## Do not read this when
-- `run` の隔離実行そのものの詳細だけを知りたいときは、`app_specs/run_isolation.md` を直接読む。
-- `build_apply_fork_file_finding_enumeration_parameter` や `build_apply_fork_finding_application_parameter` の個別仕様だけを知りたいときは、それぞれの正本を直接読む。
-- `cmoc apply fork` 以外のサブコマンドの責務やレポート仕様を探しているとき。
+- `cmoc apply join` や `cmoc apply abandon` の固有仕様だけを確認するとき
+- run の隔離実行の詳細だけを確認するときは、run isolation の正本仕様を直接読む
+- apply fork の agent call パラメータ詳細だけを確認するときは、対応する parameter 仕様を直接読む
 
 ## hash
-- 4fb82f5d1608b87bb80d4e9c2f02a6fd80e58cedb24805da8d8fe4fc40117f54
+- 9c30c0a4a6af1f6999c6214103e3b1f7411d7dac98ac1bfa6b9accf0c577e00f
 
 # `apply_join.md`
 

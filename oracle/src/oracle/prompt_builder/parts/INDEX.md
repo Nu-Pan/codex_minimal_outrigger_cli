@@ -1,26 +1,19 @@
 # `apply_review_standard.py`
 
 ## Summary
-- oracle file の内容を realization file に適用する際、レビューで何を所見として列挙するかの規範文章を組み立てる部品。
-- oracle file と realization file の明確な不整合、仕様断片の隙間を理由にした過剰な指摘の禁止、realization file 単体で明らかな致命的問題の扱いを定義する。
-- 所見の根拠を oracle file の仕様と realization file の実装の対応関係に置きつつ、oracle file に未定義な部分や単なる品質改善提案を所見から外す境界を確認する入口になる。
+- oracle と realization の適用レビュー基準を構築する正本ソース。明確な仕様不整合、仕様断片の隙間だけでは問題にしない境界、realization 単独で明らかな致命的問題を所見として扱う条件を、背景・要求・例として定義し、構造化文書へ変換する。
 
 ## Read this when
-- oracle file の仕様を realization file に適用するレビューで、どの差分や問題を所見として扱うべきか判断したいとき。
-- oracle file に明記されていない挙動を、仕様違反として指摘してよいか迷うとき。
-- realization file だけを見るとバグに見える問題を、oracle file との不整合ではない所見として扱えるか確認したいとき。
-- レビュー所見に、どの oracle file の仕様とどの realization file の実装が不整合なのかという根拠を求める規範を確認したいとき。
-- 一般的なベストプラクティス、実装上の不要要素、旧仕様の残骸をレビュー所見に含める境界を確認したいとき。
+- oracle file と realization file の整合性レビュー基準を確認・変更するとき
+- 所見として扱う不整合、仕様の未定義部分、致命的実装問題の判断境界を確認するとき
+- apply review standard の構造化プロンプト生成処理を変更するとき
 
 ## Do not read this when
-- oracle file や realization file の基本概念そのもの、所有責任、配置場所を確認したいだけのとき。
-- レビュー所見の出力形式、プロンプト全体の組み立て順、placeholder の具体的な差し込み処理を調べたいとき。
-- 特定の CLI 機能、状態ファイル、パスモデル、テスト方針など個別仕様の内容を確認したいとき。
-- 単なるコード品質改善やリファクタリング方針を調べたいだけで、oracle file 適用レビューの所見判定に関係しないとき。
-- INDEX.md エントリーの書き方やルーティング文書の一般規範を確認したいとき。
+- 個別の oracle file や realization file の実装内容そのものを調査するとき
+- レビュー基準ではなく、CLI やプロンプト生成の別領域を変更するとき
 
 ## hash
-- 65d7fa95504cb9bc06a0d024ca7d982b73ca5f845e6611f760e0fa13c4ed7433
+- 66324f5c139ac3f4e08c85133ecc275307f13f81fc2f01d6dabf8f18813b1e46
 
 # `file_access_rule.py`
 

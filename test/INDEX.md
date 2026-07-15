@@ -139,19 +139,18 @@
 # `test_acp_builder_indexing_parameters.py`
 
 ## Summary
-- `indexing index entry` 互換公開面の振る舞いとモジュール公開名を確認するテスト群への入口。AI 側の実装で、`cmoc indexing` 用の生成パラメータが最小モデル・低推論・読み取り専用・事前処理なしになっているか、また互換入口が余計な名前を公開していないかを確かめたいときに読む。
+- indexing index entry builder のモデル・推論設定、読み取り専用実行、構造化出力スキーマの必須配列、互換公開面を検証するテスト。対応する正本の実装・スキーマを変更するときの挙動確認の入口。
 
 ## Read this when
-- `acp.builder.indexing.index_entry` の互換ビルダーが返す固定設定を変える可能性があるとき。
-- モジュールの公開名を整理したり、互換入口を減らしたり増やしたりする変更をするとき。
-- `cmoc indexing` 向けの呼び出しパラメータの既定値を確認したいとき。
+- indexing index entry builder の parameter 設定や構造化出力スキーマを変更・レビューするとき
+- 互換公開面やモジュールの __all__ を変更するとき
 
 ## Do not read this when
-- `indexing` の実際のプロンプト本文や生成ロジックの詳細を追いたいときは、対応する正本側を先に読む。
-- 一般的な index 生成共通処理や他サブコマンドのパラメータ検証を見たいだけなら、このテストではなく各サブコマンド側のテストを読む。
+- indexing 以外の ACP builder parameter を変更するとき
+- INDEX エントリー生成以外の機能や、対応する正本実装・スキーマを直接確認すべきとき
 
 ## hash
-- 5a7ec035d82ce47d9709be2f65b2e3383ee08f2cc414526a6e2ba3861bc9fbf7
+- 358121a135f54e2124b64ed1e3d0238c5fa2f0bf8c9e75e8c11439e73da44471
 
 # `test_acp_builder_review_oracle_parameters.py`
 

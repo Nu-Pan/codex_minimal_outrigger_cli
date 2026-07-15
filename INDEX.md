@@ -75,21 +75,21 @@
 # `oracle`
 
 ## Summary
-- `oracle` ツリーの正本仕様断片を読む起点。共通前提、利用手順、サブコマンド群、設計判断、開発規則のどれに進むべきかをまず切り分けるときに使う。
-- cmoc 全体の仕様を上位から追うときの入口。個別仕様へ直接進む前に、共通仕様と判断材料を探したい場合に読む。
+- cmoc のアプリケーション仕様断片を集約する oracle ディレクトリ。CLI 共通基盤、実行環境、ログ、状態管理、prompt、session/run、branch、設計判断、Python 開発規則などの正本文書と、ACP builder・設定・パス・構造化文書・prompt 合成に関する正本ソースを扱う。doc と src は、機能別の仕様や正本定義へ進むための入口。
 
 ## Read this when
-- cmoc 全体の仕様のどこから読むべきかを判断したいとき。
-- 共通前提から個別サブコマンドへ進む前に、関連する正本仕様断片を探したいとき。
-- session/run の分離、設計判断の背景、開発時の共通ルールを確認したいとき。
+- cmoc のアプリケーション仕様や、対象機能の正本文書を探すとき。
+- CLI 共通基盤、session/run、branch、設計判断、Python 開発規則など横断的な仕様を確認するとき。
+- ACP builder の呼び出し設定、Structured Output 契約、設定・パス・構造化文書モデル、prompt の正本定義を確認するとき。
+- 採用仕様だけでなく、不採用案の理由や prompt に組み込まれる規範文面を確認するとき。
 
 ## Do not read this when
-- すでに対象サブコマンドや対象ルールが分かっていて、該当本文へ直接進めるとき。
-- 個別の実装詳細や挙動の本体を知りたいだけで、ルーティング情報が不要なとき。
-- 採用中の仕様ではなく、一般論だけを確認したいとき。
+- 実装コードやテストコードの具体的な挙動を確認するときは、対応する src または test 配下へ進む。
+- 対象機能の仕様が明確な場合は、このディレクトリ全体ではなく doc または src 配下の該当する個別ファイルへ直接進む。
+- oracle／realization の一般定義・記述標準や INDEX.md の生成・更新規則だけを確認するときは、各専用文書へ進む。
 
 ## hash
-- 965c0b3759465e7428ce874dbb4992f9a216943c5005bda0c954060a92833749
+- 7e65eeaa260bf2336a8eff27fd983223199ebcbcbaa592dec9321076d8d6c786
 
 # `pyproject.toml`
 
@@ -131,17 +131,17 @@
 # `test`
 
 ## Summary
-- `test/` は、CLI・runtime・builder・prompt・review・session/apply/indexing などの外部挙動を、共通補助を使いながら検証する入口です。個別の機能変更では、まず近い責務の test 本文へ進み、必要ならそこからさらに実装や正本仕様へ降ります。
+- `test/` 配下の回帰・統合テストと、複数テストで共有する補助モジュールを収める。ACP builder、CLI、Codex runtime、apply/session/review oracle、indexing、Git/worktree、設定、権限、Ollama などの外部挙動・制御契約を確認する入口。
 
 ## Read this when
-- 変更した対象の外部挙動を確認したいとき。
-- CLI、runtime、builder、prompt 合成、review、session/apply、indexing のどれかに関する回帰テストを追加・修正したいとき。
-- 共通 test support や統合テストが、どの責務をまとめているかを見たいとき。
+- 実装や正本仕様の変更が、対応する CLI・runtime・builder・state・worktree・report・権限・indexing の外部挙動に影響する可能性があるとき。
+- 変更対象に対応する個別テスト、または複数テストで共有する `_support` 補助の責務を特定したいとき。
+- Codex 実行の retry、quota、subprocess、path、permission、TUI、設定、preflight の回帰を確認するとき。
 
 ## Do not read this when
-- 個別の機能仕様そのものを確認したいときは、対応する oracle 側を先に読む。
-- 単なる実装内部の helper 分割や局所的な制御フローだけを追いたいときは、より直接の実装本文を読む。
-- テスト全体を総当たりで読む必要がないときは、この入口だけで止め、対象責務に近い個別 test file へ進む。
+- 正本仕様そのもの、実装内部の詳細、または schema・prompt・state の定義だけを確認したいときは、対応する `oracle/` や `src/` を直接読む。
+- 対象が明確に単一のテストファイルまたは補助モジュールに限定されている場合は、このディレクトリ全体を読む必要はない。
+- テスト対象と無関係なサブコマンド、runtime 領域、または共通補助の挙動を調べる場合。
 
 ## hash
-- a1daf768e572c3d0ccdec9494d0bf4addc68360780d20781e04d364ad6cf03e0
+- 72a970071f64afe4ad2878f8a653830ae6a35be67a69168cafae7844e7aa7f6d
