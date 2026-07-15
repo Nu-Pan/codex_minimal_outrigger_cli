@@ -7,17 +7,17 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 
-import commons.runtime_codex_preflight as codex_preflight_module
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 import pytest
-
 from _cli_support import runner
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
-from main import app
+
+import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.tui as tui_module
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from main import app
 
 
 @pytest.fixture(autouse=True)

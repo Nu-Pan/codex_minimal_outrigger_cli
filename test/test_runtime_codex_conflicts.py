@@ -7,14 +7,14 @@
 
 from pathlib import Path
 
+from _codex_support import codex_arg_value, codex_override_config
+
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
 from basic.acp import FileAccessMode
 from commons.runtime_codex_profile import build_codex_override_args
 from config.cmoc_config import CmocConfig
-
-from _codex_support import codex_arg_value, codex_override_config
 
 
 def test_session_join_targets_stay_in_prompt_and_not_sandbox_argv(

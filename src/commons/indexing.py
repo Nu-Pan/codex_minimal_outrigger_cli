@@ -1,11 +1,10 @@
 import fcntl
-from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from contextvars import copy_context
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Callable
 
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from cmoc_runtime import (
@@ -20,9 +19,9 @@ from cmoc_runtime import (
     text_sha256,
 )
 from commons.runtime_codex_preflight import configure_indexing_preflight
+from commons.runtime_results import CodexExecCallable
 
-
-CodexExec = Callable[..., object]
+CodexExec = CodexExecCallable
 INDEX_ENTRY_KEYS = {"summary", "read_this_when", "do_not_read_this_when"}
 
 
@@ -40,7 +39,7 @@ def enable_indexing_preflight() -> None:
     )
 
 
-def run_indexing_preflight(root: Path, codex_exec: CodexExec) -> None:
+def run_indexing_preflight(root: Path, codex_exec: CodexExecCallable) -> None:
     """Codex 呼び出し前に INDEX.md を最新化し、必要な更新 commit を作る。"""
     with indexing_lock(root):
         commit_index_updates(root, update_indexes(root, codex_exec))
@@ -92,7 +91,9 @@ def commit_index_updates(root: Path, updated: list[Path]) -> None:
         )
 
 
-def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path]:
+def update_indexes(
+    root: Path, codex_exec: CodexExecCallable | None = None
+) -> list[Path]:
     """INDEX.md を深い directory から順に検査・再生成する。"""
     config_root = root
     dirs = indexable_directories(root)
@@ -104,8 +105,7 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
         dirs_by_depth.setdefault(depth, []).append(directory)
     for depth in sorted(dirs_by_depth, reverse=True):
         plans = [
-            _plan_index_directory(root, directory)
-            for directory in dirs_by_depth[depth]
+            _plan_index_directory(root, directory) for directory in dirs_by_depth[depth]
         ]
         missing = [(plan, item) for plan in plans for item in plan.missing_children]
         if missing:
@@ -234,10 +234,14 @@ def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
     if any(line.strip() for line in lines[1 : section_positions[0]]):
         return ""
     for start, end in zip(section_positions[:3], section_positions[1:]):
-        section_lines = [line.strip() for line in lines[start + 1 : end] if line.strip()]
+        section_lines = [
+            line.strip() for line in lines[start + 1 : end] if line.strip()
+        ]
         # {{work-root}}/oracle/doc/app_spec/indexing.md requires each entry
         # section to be bullet-only.
-        if not section_lines or any(not line.startswith("- ") for line in section_lines):
+        if not section_lines or any(
+            not line.startswith("- ") for line in section_lines
+        ):
             return ""
     for idx, line in enumerate(lines):
         if line == "## hash":
@@ -277,7 +281,7 @@ def build_index_entry(
     root: Path,
     path: Path,
     digest: str | None = None,
-    codex_exec: CodexExec | None = None,
+    codex_exec: CodexExecCallable | None = None,
 ) -> str:
     """Codex CLI に対象 1 件の INDEX.md entry を生成させる。"""
     if codex_exec is None:
@@ -310,7 +314,9 @@ def target_content_for_indexing(path: Path) -> str:
     index_path = path / "INDEX.md"
     if index_path.exists():
         return index_path.read_text(errors="ignore")
-    return "\n".join(child.name for child in sorted(path.iterdir(), key=lambda p: p.name))
+    return "\n".join(
+        child.name for child in sorted(path.iterdir(), key=lambda p: p.name)
+    )
 
 
 def index_target_hash(root: Path, path: Path) -> str:
@@ -321,9 +327,7 @@ def index_target_hash(root: Path, path: Path) -> str:
     for child in indexable_children(root, path):
         child_hash = index_target_hash(root, child)
         kind = "dir" if child.is_dir() else "file"
-        parts.append(
-            f"{kind}\0{child.relative_to(root)}\0{child_hash}\n"
-        )
+        parts.append(f"{kind}\0{child.relative_to(root)}\0{child_hash}\n")
     return text_sha256("".join(parts))
 
 

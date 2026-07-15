@@ -7,11 +7,17 @@ import json
 from pathlib import Path
 from typing import Callable
 
+import pytest
+from _acp_builder_support import oracle_schema_path
+from jsonschema import validate
+from oracle.acp_builder.review.oracle.enumerate_finding import (
+    build_review_oracle_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
+)
+
 import acp.builder.review.oracle.judge_finding as review_judge_finding_module
 import acp.builder.review.oracle.merge_finding as review_merge_finding_module
 import acp.builder.review.oracle.validate_finding_advocate as review_validate_advocate_module
 import acp.builder.review.oracle.validate_finding_challenger as review_validate_challenger_module
-import pytest
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
 )
@@ -28,12 +34,6 @@ from acp.builder.review.oracle.validate_finding_challenger import (
     build_review_oracle_validate_finding_challenger_parameter,
 )
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from jsonschema import validate
-from oracle.acp_builder.review.oracle.enumerate_finding import (
-    build_review_oracle_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
-)
-
-from _acp_builder_support import oracle_schema_path
 
 
 @pytest.mark.parametrize(

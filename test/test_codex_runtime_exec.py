@@ -5,10 +5,6 @@ import shutil
 from pathlib import Path
 
 import pytest
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
-from config.cmoc_config import CmocConfig
-from oracle.other.cmoc_config import CodexModelSpec
 from _codex_support import (
     codex_arg_value,
     codex_override_config,
@@ -19,10 +15,15 @@ from _codex_support import (
 from _command_support import write_python_executable
 from _git_support import make_repo
 from _ollama_support import TEST_SLM_MODEL
+from oracle.other.cmoc_config import CodexModelSpec
+
 import commons.runtime_doctor as doctor_module
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
 from commons.runtime_doctor import run_doctor_preprocess
+from config.cmoc_config import CmocConfig
 
 
 def _prepare_production_managed_ollama(root: Path, config: CmocConfig) -> None:

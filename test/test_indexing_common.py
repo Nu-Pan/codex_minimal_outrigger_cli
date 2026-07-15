@@ -14,6 +14,10 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from _codex_support import setup_codex_home, stub_codex_overrides
+from _command_support import write_python_executable
+from _git_support import make_repo
+
 import cmoc_runtime
 import commons.indexing as indexing_common
 import commons.runtime_codex_preflight as codex_preflight
@@ -22,9 +26,6 @@ from commons.runtime_logging import (
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
-from _codex_support import setup_codex_home, stub_codex_overrides
-from _command_support import write_python_executable
-from _git_support import make_repo
 
 
 def _render_test_entry(root: Path, path: Path, digest: str | None = None) -> str:
@@ -186,7 +187,11 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     [
         None,
         {},
-        {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": [1]},
+        {
+            "summary": ["summary"],
+            "read_this_when": ["read"],
+            "do_not_read_this_when": [1],
+        },
         {
             "summary": ["summary"],
             "read_this_when": ["read"],
@@ -318,8 +323,8 @@ def test_update_indexes_propagates_subcommand_logger_to_codex_workers(
             "import pathlib, sys",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('{\"summary\": [\"summary\"], \"read_this_when\": [\"read\"], \"do_not_read_this_when\": [\"skip\"]}')",
-            "print('{\"type\":\"turn.completed\"}')",
+            'output.write_text(\'{"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]}\')',
+            'print(\'{"type":"turn.completed"}\')',
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")

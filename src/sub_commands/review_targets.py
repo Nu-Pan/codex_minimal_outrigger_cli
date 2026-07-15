@@ -24,9 +24,7 @@ def enumerate_review_oracle_targets(
             ["diff", "--name-only", start, review_fork_commit, "--", "oracle"], root
         ).stdout.splitlines()
     )
-    return [
-        path for path in all_oracle_files if str(path.relative_to(root)) in changed
-    ]
+    return [path for path in all_oracle_files if str(path.relative_to(root)) in changed]
 
 
 def enumerate_review_all_oracle_files(root: Path) -> list[Path]:

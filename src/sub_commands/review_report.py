@@ -102,14 +102,12 @@ def render_review_oracle_report(
         if path_key is None:
             continue
         findings_by_path[path_key] = findings_by_path.get(path_key, 0) + 1
-    rows = []
+    row_lines: list[str] = []
     for idx, path in enumerate(oracle_files, 1):
         path_key = oracle_path_key(root, path)
-        rows.append(
-            f"| {idx} | `{path_display(root, path)}` | "
-            f"{findings_by_path.get(path_key, 0)} |"
-        )
-    rows = "\n".join(rows)
+        finding_count = findings_by_path.get(path_key, 0) if path_key is not None else 0
+        row_lines.append(f"| {idx} | `{path_display(root, path)}` | {finding_count} |")
+    rows = "\n".join(row_lines)
     frontmatter = [
         ("command", "review oracle"),
         ("generated_at", timestamp()),
@@ -232,7 +230,10 @@ def _review_report_verdict(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
     if error_message is not None:
-        return "error", f"レビュー処理が途中で失敗しました。\n\nError: `{error_message}`"
+        return (
+            "error",
+            f"レビュー処理が途中で失敗しました。\n\nError: `{error_message}`",
+        )
     if interrupted:
         return (
             "interrupted",

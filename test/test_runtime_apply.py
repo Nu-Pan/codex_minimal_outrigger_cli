@@ -141,9 +141,7 @@ def test_stop_child_process_group_uses_stable_group_after_leader_exit(
     """leader 終了後も保存済み group ID の descendant を停止対象にする。"""
     stopped: list[int] = []
 
-    monkeypatch.setattr(
-        apply_runtime, "open_process_fd", lambda process_id, name: None
-    )
+    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id, name: None)
     monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: None)
     monkeypatch.setattr(
         apply_runtime,

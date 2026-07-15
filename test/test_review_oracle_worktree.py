@@ -10,14 +10,14 @@ import subprocess
 from pathlib import Path
 
 import pytest
-
-import commons.indexing as indexing_module
-import commons.runtime_codex_preflight as codex_preflight_module
 from _cli_support import runner
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
-from main import app
+
+import commons.indexing as indexing_module
+import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.review.oracle as review_module
+from main import app
 
 
 class _FakeCodexResult:
@@ -89,10 +89,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     session_id = branch.removeprefix("cmoc/session/")
     assert review_worktrees
     for review_worktree in review_worktrees:
-        assert (
-            review_worktree.parent
-            == root / ".cmoc" / "gu" / "worktree" / session_id
-        )
+        assert review_worktree.parent == root / ".cmoc" / "gu" / "worktree" / session_id
         assert not review_worktree.is_relative_to(linked)
     assert any("linked.md" in call for call in calls)
 
@@ -187,10 +184,7 @@ def test_review_oracle_merges_review_index_changes(
     assert "review_join_commit: null" not in rendered
     assert review_worktrees
     for review_worktree in review_worktrees:
-        assert (
-            review_worktree.parent
-            == root / ".cmoc" / "gu" / "worktree" / session_id
-        )
+        assert review_worktree.parent == root / ".cmoc" / "gu" / "worktree" / session_id
     assert not any(
         path.name == ".git"
         for path in (root / ".cmoc" / "gu" / "worktree").rglob(".git")
@@ -294,9 +288,7 @@ def test_review_oracle_resolves_index_conflict_when_session_deleted_index(
 
     assert resolved is True
     assert not (root / "INDEX.md").exists()
-    assert (
-        run_git(root, "diff", "--name-only", "--diff-filter=U").stdout.strip() == ""
-    )
+    assert run_git(root, "diff", "--name-only", "--diff-filter=U").stdout.strip() == ""
     assert "Merge branch 'review'" in run_git(root, "log", "-1", "--pretty=%B").stdout
 
 

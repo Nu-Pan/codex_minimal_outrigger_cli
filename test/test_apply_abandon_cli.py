@@ -14,15 +14,15 @@ import subprocess
 from pathlib import Path
 
 import pytest
-
 from _apply_support import apply_worktree_from_state
 from _cli_support import runner
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
-from main import app
+
+import commons.runtime_apply as apply_runtime
 import sub_commands.apply.abandon as apply_abandon_module
 import sub_commands.apply.fork as apply_fork_module
-import commons.runtime_apply as apply_runtime
+from main import app
 
 
 def setup_linked_session_apply(
@@ -488,7 +488,10 @@ def test_apply_abandon_rejects_stale_apply_branch(
     result = runner.invoke(app, ["apply", "abandon"])
 
     assert result.exit_code != 0
-    assert "現在の apply branch は破棄対象の active apply run ではありません。" in result.stdout
+    assert (
+        "現在の apply branch は破棄対象の active apply run ではありません。"
+        in result.stdout
+    )
     assert f"current_branch: {stale_branch}" in result.stdout
     assert f"apply_branch: {apply_branch}" in result.stdout
     assert result.stderr == ""

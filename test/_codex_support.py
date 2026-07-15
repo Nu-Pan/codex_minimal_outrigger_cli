@@ -1,9 +1,11 @@
-from dataclasses import replace
 import tomllib
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
+
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 
 

@@ -8,7 +8,6 @@ import typer
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
-from commons.indexing import enable_indexing_preflight
 from cmoc_runtime import (
     CmocError,
     CommandResult,
@@ -17,16 +16,17 @@ from cmoc_runtime import (
     repo_root,
     require_clean_worktree,
     run_cli_subcommand,
-    start_subcommand_step,
     run_codex_exec,
     run_git,
+    start_subcommand_step,
     work_root,
     write_state,
 )
+from commons.indexing import enable_indexing_preflight
+from commons.runtime_results import CodexExecCallable
 
-
-CodexExec = Callable[..., object]
-GitRun = Callable[..., object]
+CodexExec = CodexExecCallable
+GitRun = Callable[..., CommandResult]
 
 
 def cmoc_session_join_impl() -> None:

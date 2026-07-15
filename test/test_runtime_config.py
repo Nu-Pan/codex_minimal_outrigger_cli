@@ -8,12 +8,12 @@
 from pathlib import Path
 
 import pytest
+from _git_support import make_repo
+from oracle.other.cmoc_config import CodexModelSpec
 
 from basic.acp import ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError, config_from_dict, config_to_dict, load_config
 from config.cmoc_config import CmocConfig
-from oracle.other.cmoc_config import CodexModelSpec
-from _git_support import make_repo
 
 
 def test_config_defaults_match_logical_model_classes() -> None:
@@ -106,9 +106,7 @@ def test_config_rejects_non_string_reasoning_effort_names(value: object) -> None
 
 @pytest.mark.parametrize("field", ["model", "reasoning_effort"])
 @pytest.mark.parametrize("value", [None, [], "invalid"])
-def test_config_rejects_non_object_codex_name_maps(
-    field: str, value: object
-) -> None:
+def test_config_rejects_non_object_codex_name_maps(field: str, value: object) -> None:
     """codex の model と reasoning_effort にオブジェクト以外を指定した config を拒否する。"""
     with pytest.raises(CmocError) as exc_info:
         config_from_dict({"codex": {field: value}})

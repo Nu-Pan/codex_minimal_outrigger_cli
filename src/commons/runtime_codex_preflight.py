@@ -5,16 +5,17 @@ from pathlib import Path
 from typing import Any
 
 from basic.acp import AgentCallParameter
+
 from .runtime_codex import (
     run_codex_exec as runtime_run_codex_exec,
+)
+from .runtime_codex import (
     run_codex_tui as runtime_run_codex_tui,
 )
 from .runtime_paths import repo_root, work_root
-from .runtime_results import CodexExecResult, CommandResult
+from .runtime_results import CodexExecCallable, CodexExecResult, CommandResult
 
-
-CodexExec = Callable[..., object]
-IndexingPreflight = Callable[[Path, CodexExec], None]
+IndexingPreflight = Callable[[Path, CodexExecCallable], None]
 
 _INDEXING_LOCK = threading.Lock()
 _INDEXING_ACTIVE: ContextVar[bool] = ContextVar("INDEXING_ACTIVE", default=False)
@@ -47,7 +48,9 @@ def run_codex_tui(parameter: AgentCallParameter, **kwargs: Any) -> CommandResult
     return runtime_run_codex_tui(parameter, **kwargs)
 
 
-def _indexing_root_for_codex(parameter: AgentCallParameter, kwargs: dict[str, Any]) -> Path:
+def _indexing_root_for_codex(
+    parameter: AgentCallParameter, kwargs: dict[str, Any]
+) -> Path:
     """Codex 呼び出し設定から indexing の起点 root を決める。"""
     context = kwargs.get("cwd") or kwargs.get("root") or repo_root()
     context_root = work_root(context)
@@ -59,10 +62,7 @@ def _indexing_root_for_codex(parameter: AgentCallParameter, kwargs: dict[str, An
 
 def _run_indexing_before_codex(root: Path) -> None:
     """再入を抑止しながら登録済み indexing preflight を直列実行する。"""
-    if (
-        _INDEXING_PREFLIGHT is None
-        or _INDEXING_ACTIVE.get()
-    ):
+    if _INDEXING_PREFLIGHT is None or _INDEXING_ACTIVE.get():
         return
     with _INDEXING_LOCK:
         token = _INDEXING_ACTIVE.set(True)

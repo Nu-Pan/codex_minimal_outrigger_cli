@@ -3,7 +3,6 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
-from cmoc_runtime import CmocError
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
 )
@@ -19,10 +18,11 @@ from acp.builder.review.oracle.validate_finding_advocate import (
 from acp.builder.review.oracle.validate_finding_challenger import (
     build_review_oracle_validate_finding_challenger_parameter,
 )
+from cmoc_runtime import CmocError
+from commons.runtime_results import CodexExecCallable
 from config.cmoc_config import CmocConfig
 from sub_commands.review_paths import finding_oracle_path, oracle_path_key
 
-CodexExec = Callable[..., object]
 _MAX_MERGE_FINDING_SEMANTIC_RETRIES = 2
 
 StepCallback = Callable[[int | str, str, str | None], None]
@@ -68,7 +68,7 @@ def run_review_oracle_loop(
     worktree: Path,
     oracle_files: list[Path],
     config: CmocConfig,
-    codex_exec: CodexExec,
+    codex_exec: CodexExecCallable,
     step_callback: StepCallback | None = None,
 ) -> list[dict]:
     """review oracle の finding enumerate/merge/validate/judge loop を実行する。"""
@@ -97,7 +97,7 @@ def _run_review_oracle_loop(
     worktree: Path,
     oracle_files: list[Path],
     config: CmocConfig,
-    codex_exec: CodexExec,
+    codex_exec: CodexExecCallable,
     step_callback: StepCallback | None,
     progress: _ReviewProgress,
 ) -> list[dict]:
@@ -191,7 +191,7 @@ def _validate_and_judge_findings(
     worktree: Path,
     findings: list[dict],
     config: CmocConfig,
-    codex_exec: CodexExec,
+    codex_exec: CodexExecCallable,
     step_callback: StepCallback | None = None,
 ) -> list[dict]:
     """所見の妥当性を反復検証し、各所見の採否を判定する。
@@ -286,7 +286,7 @@ def _merge_findings_with_semantic_retry(
     findings: list[dict],
     next_id: int,
     config: CmocConfig,
-    codex_exec: CodexExec,
+    codex_exec: CodexExecCallable,
 ) -> tuple[list[dict], int, bool]:
     """所見リストの編集操作を適用し、意味的な検証失敗だけ再試行する。
 

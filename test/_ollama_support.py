@@ -1,9 +1,8 @@
 from contextlib import chdir
 from pathlib import Path
 
-from click.testing import Result
-
 from _cli_support import runner
+from click.testing import Result
 
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md

@@ -11,15 +11,15 @@
 from pathlib import Path
 
 import pytest
-
 from _cli_support import runner
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
+
+import sub_commands.eval_oracle as eval_oracle_module
+import sub_commands.review.oracle as review_module
 from cmoc_runtime import SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app
-import sub_commands.eval_oracle as eval_oracle_module
-import sub_commands.review.oracle as review_module
 
 
 class _FakeCodexResult:
@@ -118,7 +118,10 @@ def test_eval_oracle_delegates_to_review_oracle_impl(
     assert result.exit_code == 0
     assert calls == ["full"]
 
-def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+
+def test_review_oracle_writes_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """空の所見結果から report の節順と実行情報を検証する。"""
     ancestor = tmp_path / "oracle"
     ancestor.mkdir()
@@ -130,9 +133,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert fork_result.exit_code == 0
     calls: list[str] = []
 
-    def fake_run_codex_exec(
-        parameter: object, **kwargs: object
-    ) -> _FakeCodexResult:
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> _FakeCodexResult:
         """Structured Output schema に対応する最小の fake 応答を返す。"""
         calls.append(kwargs["purpose"])
         schema_name = parameter.structured_output_schema_path.name
@@ -176,6 +177,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert any(call.startswith("review oracle enumerate findings") for call in calls)
     assert "review oracle merge findings" not in calls
 
+
 def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -188,9 +190,7 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     )
     enumerated = False
 
-    def fake_run_codex_exec(
-        parameter: object, **kwargs: object
-    ) -> _FakeCodexResult:
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> _FakeCodexResult:
         """Structured Output schema に対応する最小の fake 応答を返す。"""
         nonlocal enumerated
         schema_name = parameter.structured_output_schema_path.name
@@ -281,6 +281,7 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     assert "judge reason: accepted" in rendered
     assert "judge reason: rejected" in rendered
 
+
 @pytest.mark.parametrize(
     ("severity", "expected_fatal_count", "expected_minor_count"),
     [
@@ -347,6 +348,7 @@ def test_review_oracle_report_includes_rejected_findings(
     assert "judge reason: judge rejected reason" in rendered
     assert "session_id:" not in rendered
 
+
 def test_review_oracle_report_counts_oracle_root_alias_findings(
     tmp_path: Path,
 ) -> None:
@@ -358,7 +360,16 @@ def test_review_oracle_report_counts_oracle_root_alias_findings(
         "cmoc/session/session-1",
         SessionState(),
         1,
-        [root / ".cmoc" / "gu" / "worktree" / "session-1" / "run-1" / "oracle" / "a.md"],
+        [
+            root
+            / ".cmoc"
+            / "gu"
+            / "worktree"
+            / "session-1"
+            / "run-1"
+            / "oracle"
+            / "a.md"
+        ],
         [
             {
                 "finding_id": "finding-0001",
@@ -375,6 +386,7 @@ def test_review_oracle_report_counts_oracle_root_alias_findings(
     )
 
     assert "| 1 | `oracle/a.md` | 1 |" in rendered
+
 
 def test_review_oracle_report_counts_symlink_findings_by_repository_path(
     tmp_path: Path,
@@ -422,9 +434,7 @@ def test_review_oracle_accepts_short_scope_option(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    def fake_run_codex_exec(
-        parameter: object, **kwargs: object
-    ) -> _FakeCodexResult:
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> _FakeCodexResult:
         """Structured Output schema に対応する最小の fake 応答を返す。"""
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -451,6 +461,7 @@ def test_review_oracle_accepts_short_scope_option(
     rendered = report_path.read_text()
     assert "scope: full" in rendered
 
+
 def test_review_oracle_writes_error_report_on_processing_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -467,9 +478,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    def fail_run_codex_exec(
-        parameter: object, **kwargs: object
-    ) -> _FakeCodexResult:
+    def fail_run_codex_exec(parameter: object, **kwargs: object) -> _FakeCodexResult:
         """列挙・検証は成功させ、judge 呼び出しだけを失敗させる fake callback。"""
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":

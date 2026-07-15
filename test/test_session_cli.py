@@ -12,21 +12,21 @@ import subprocess
 from collections.abc import Iterator
 from pathlib import Path
 
-import cmoc_runtime
-from basic.acp import AgentCallParameter, FileAccessMode
-from cmoc_runtime import CmocError
-import commons.runtime_codex_preflight as codex_preflight_module
-from commons.runtime_codex_profile import build_codex_override_args
-from config.cmoc_config import CmocConfig
 import pytest
-
 from _cli_support import runner
 from _git_support import current_branch, make_repo, run_git
 from _ollama_support import run_doctor
-from main import app
+
+import cmoc_runtime
+import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.session.abandon as session_module
 import sub_commands.session.fork as session_fork_module
 import sub_commands.session.join as session_join_module
+from basic.acp import AgentCallParameter, FileAccessMode
+from cmoc_runtime import CmocError
+from commons.runtime_codex_profile import build_codex_override_args
+from config.cmoc_config import CmocConfig
+from main import app
 
 
 @pytest.fixture(autouse=True)

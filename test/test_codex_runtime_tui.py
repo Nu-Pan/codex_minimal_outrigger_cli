@@ -3,12 +3,7 @@ import subprocess
 from dataclasses import replace
 from pathlib import Path
 
-import cmoc_runtime
-import commons.runtime_codex_tui as runtime_codex_tui
 import pytest
-from basic.acp import FileAccessMode
-from cmoc_runtime import CmocError, SubcommandLogger
-from config.cmoc_config import CmocConfig
 from _codex_support import (
     codex_override_config,
     codex_parameter,
@@ -17,11 +12,17 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
+
+import cmoc_runtime
+import commons.runtime_codex_tui as runtime_codex_tui
+from basic.acp import FileAccessMode
+from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_tui
 from commons.runtime_logging import (
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
+from config.cmoc_config import CmocConfig
 
 
 def _tui_call_logs(root: Path) -> list[Path]:

@@ -21,11 +21,10 @@ from pathlib import Path
 from typing import Any
 
 from basic.acp import AgentCallParameter, FileAccessMode
-from config.cmoc_config import CmocConfig
-
 from commons.runtime_content import write_hashed_file
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import schema_store_dir
+from config.cmoc_config import CmocConfig
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
 _active_apply_process_tracking_path: Path | None = None

@@ -11,13 +11,13 @@
 from pathlib import Path
 
 import pytest
-
 from _cli_support import runner
 from _git_support import add_tracked_ignored_oracle_file, make_repo, run_git
 from _ollama_support import run_doctor
+
+import sub_commands.review.oracle as review_module
 from cmoc_runtime import SessionState
 from main import app
-import sub_commands.review.oracle as review_module
 from sub_commands.review_paths import finding_oracle_path, oracle_path_key
 from sub_commands.review_targets import enumerate_review_all_oracle_files
 
@@ -59,9 +59,12 @@ def test_finding_oracle_path_resolves_work_root_from_review_worktree(
     review_worktree = make_repo(review_parent)
     monkeypatch.chdir(unrelated)
 
-    assert finding_oracle_path(
-        {"oracle_path": "{{work-root}}/oracle/spec.md"}, review_worktree
-    ) == (review_worktree / "oracle" / "spec.md").resolve()
+    assert (
+        finding_oracle_path(
+            {"oracle_path": "{{work-root}}/oracle/spec.md"}, review_worktree
+        )
+        == (review_worktree / "oracle" / "spec.md").resolve()
+    )
 
 
 def test_finding_oracle_path_preserves_absolute_symlink_entry(
@@ -294,4 +297,3 @@ def test_review_oracle_target_enumeration_classifies_oracle_symlink_by_repo_path
     run_git(root, "commit", "-m", "add oracle symlink")
 
     assert oracle_link.absolute() in enumerate_review_all_oracle_files(root)
-

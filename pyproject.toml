@@ -10,6 +10,14 @@ dependencies = [
     "typer>=0.12.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "mypy>=2.3.0",
+    "pytest-timeout>=2.4.0",
+    "ruff>=0.15.0",
+    "types-jsonschema>=4.0.0",
+]
+
 [project.scripts]
 cmoc = "main:main"
 
@@ -29,3 +37,15 @@ where = ["src", "oracle/src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "oracle/src"]
+timeout = 120
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = ["src", "oracle/src"]
+explicit_package_bases = true

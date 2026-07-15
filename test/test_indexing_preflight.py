@@ -6,14 +6,14 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-import commons.runtime_codex_preflight as codex_preflight_module
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from config.cmoc_config import CmocConfig
-
 from _codex_support import setup_codex_home
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
+
 import commons.indexing as indexing_module
+import commons.runtime_codex_preflight as codex_preflight_module
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from config.cmoc_config import CmocConfig
 
 # preflight の実行条件・順序・worktree 選択・recovery 禁止は、
 # {{work-root}}/oracle/doc/app_spec/indexing.md と
@@ -158,8 +158,7 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
     assert isinstance(result, FakeCodexResult)
     assert events == ["indexing", "codex"]
     assert (
-        run_git(worktree, "log", "-1", "--pretty=%s").stdout.strip()
-        == "cmoc indexing"
+        run_git(worktree, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     )
     assert run_git(worktree, "status", "--short").stdout.strip() == ""
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "initial"

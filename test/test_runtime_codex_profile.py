@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from _codex_support import codex_arg_value, codex_override_config
+from _ollama_support import TEST_SLM_MODEL
+from oracle.other.cmoc_config import CodexModelSpec
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError
@@ -18,11 +21,6 @@ from commons.runtime_codex_profile import (
     prepare_codex_override_args,
 )
 from config.cmoc_config import CmocConfig
-from oracle.other.cmoc_config import CodexModelSpec
-
-from _codex_support import codex_arg_value, codex_override_config
-from _ollama_support import TEST_SLM_MODEL
-
 
 _SANDBOX_BY_MODE = {
     FileAccessMode.READONLY: "read-only",

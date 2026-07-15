@@ -11,6 +11,9 @@ import sys
 from pathlib import Path
 
 import pytest
+from _acp_builder_support import oracle_schema_path
+from jsonschema import ValidationError, validate
+
 from acp.builder.apply.fork.change_summary import (
     build_apply_fork_change_summary_parameter,
 )
@@ -18,9 +21,6 @@ from acp.builder.apply.fork.file_review_and_fix import (
     build_apply_fork_file_review_and_fix_parameter,
 )
 from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
-from jsonschema import ValidationError, validate
-
-from _acp_builder_support import oracle_schema_path
 
 
 def run_apply_fork_builder_import(

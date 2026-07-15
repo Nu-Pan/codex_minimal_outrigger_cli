@@ -5,28 +5,28 @@ from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
+from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
 from acp.builder.tui.resolve_parameter import (
     TUI_FILE_ACCESS_MODES,
     build_tui_resolve_parameter_parameter,
 )
-from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import (
     CmocError,
-    CodexExecResult,
     ensure_cmoc_ignored,
     load_config,
     logs_dir,
     repo_root,
     run_cli_subcommand,
-    start_subcommand_step,
     run_codex_exec,
     run_codex_tui,
+    start_subcommand_step,
     timestamp,
     work_root,
 )
-from config.cmoc_config import CmocConfig
 from commons.indexing import enable_indexing_preflight
+from commons.runtime_results import CodexExecCallable, CommandResult
+from config.cmoc_config import CmocConfig
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
 ORIGINAL_PROMPT_TEMPLATE = """<!--
@@ -147,8 +147,8 @@ TODO
 
 """
 
-CodexExec = Callable[..., CodexExecResult]
-CodexTui = Callable[..., None]
+CodexExec = CodexExecCallable
+CodexTui = Callable[..., CommandResult]
 
 
 def cmoc_tui_impl() -> None:

@@ -15,18 +15,19 @@ import json
 from contextlib import contextmanager
 from pathlib import Path
 
-from basic.acp import AgentCallParameter
-from cmoc_runtime import CmocError
-import commons.runtime_cli as runtime_cli_module
+import pytest
 from _apply_support import apply_worktree_from_state
 from _cli_support import runner
 from _codex_support import FakeCodexResult
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
-from main import app
 from pytest import MonkeyPatch
-import pytest
+
+import commons.runtime_cli as runtime_cli_module
 import sub_commands.apply.fork as apply_fork_module
+from basic.acp import AgentCallParameter
+from cmoc_runtime import CmocError
+from main import app
 
 
 def test_apply_fork_runs_codex_loop_and_updates_state(

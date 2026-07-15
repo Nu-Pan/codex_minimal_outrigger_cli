@@ -22,6 +22,12 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     """repo write mode まで Codex sandbox mode へ欠落なく変換する。"""
     assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
-    assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
-    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE) == "workspace-write"
+    assert (
+        file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE)
+        == "workspace-write"
+    )
+    assert (
+        file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE)
+        == "workspace-write"
+    )
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"

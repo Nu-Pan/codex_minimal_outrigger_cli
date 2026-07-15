@@ -12,12 +12,12 @@
 from pathlib import Path
 
 import pytest
-
 from _git_support import make_repo
-from cmoc_runtime import CmocError
-from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
+
 import sub_commands.review.oracle as review_module
 import sub_commands.review_loop as review_loop_module
+from cmoc_runtime import CmocError
+from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 
 
 class _FakeCodexResult:
@@ -89,15 +89,11 @@ def test_review_oracle_enumerate_receives_only_related_findings(
 
         根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         """
-        _assert_review_call_context(
-            parameter, kwargs, repo_root, review_worktree
-        )
+        _assert_review_call_context(parameter, kwargs, repo_root, review_worktree)
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             target = Path(
-                kwargs["purpose"].removeprefix(
-                    "review oracle enumerate findings for "
-                )
+                kwargs["purpose"].removeprefix("review oracle enumerate findings for ")
             ).name
             prompts_by_target.setdefault(target, []).append(parameter.prompt)
             if target == "a.md" and len(prompts_by_target[target]) == 1:
@@ -158,9 +154,7 @@ def test_review_oracle_advocate_receives_same_round_challenger_reasons(
 
         根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         """
-        _assert_review_call_context(
-            parameter, kwargs, repo_root, review_worktree
-        )
+        _assert_review_call_context(parameter, kwargs, repo_root, review_worktree)
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             return _FakeCodexResult(
@@ -304,9 +298,7 @@ def test_review_oracle_advocate_keeps_existing_challenger_reasons(
 
         根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         """
-        _assert_review_call_context(
-            parameter, kwargs, repo_root, review_worktree
-        )
+        _assert_review_call_context(parameter, kwargs, repo_root, review_worktree)
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "validate_finding_challenger.json":
             return _FakeCodexResult({"reasons": ["same-round challenger reason"]})
@@ -353,9 +345,7 @@ def test_review_oracle_retries_semantic_merge_finding_failure(
 
         根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         """
-        _assert_review_call_context(
-            parameter, kwargs, repo_root, review_worktree
-        )
+        _assert_review_call_context(parameter, kwargs, repo_root, review_worktree)
         nonlocal merge_calls
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -452,9 +442,7 @@ def test_review_oracle_fails_after_merge_finding_semantic_retries(
 
         根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         """
-        _assert_review_call_context(
-            parameter, kwargs, repo_root, review_worktree
-        )
+        _assert_review_call_context(parameter, kwargs, repo_root, review_worktree)
         nonlocal merge_calls
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
