@@ -55,6 +55,8 @@ class FileAccessMode(StrEnum):
     """cmoc 上の論理的なファイルアクセスモード
 
     各モードの詳細は `build_file_access_rule` を参照
+    Codex CLI sandbox への対応と permission profile の禁止規則は
+    `oracle/doc/app_spec/codex_exec_rule.md` を正本とする
     """
 
     READONLY = auto()

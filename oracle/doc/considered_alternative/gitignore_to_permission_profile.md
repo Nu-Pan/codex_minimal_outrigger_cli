@@ -1,5 +1,10 @@
-
 # .gitignore to permission profile
+
+## 採用結果
+
+- `.gitignore` または他の情報から permission profile を動的に生成する案は採用しない
+- 現行のファイルアクセス制限は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とし、この不採用案を例外や追加規則として扱わない
+- permission profile との記法互換性が将来改善した場合も、この変換を実行時の分岐や fallback として使用しない
 
 ## やりたかったこと
 
@@ -14,7 +19,7 @@
 
 ## 断念した理由
 
-- .gitignore と permision profile の記法に互換性が無く、正しく変換することが出来なかった
+- `.gitignore` と permission profile の記法に互換性が無く、正しく変換することが出来なかった
 - e.g.
     - .gitignore では `{{dir-name}}/` とすることで、`{{dir-name}}` とマッチするディレクトリだけを除外出来るが、permission profile にはその手の「ディレクトリだけ」は存在しない
     - .gitignore では `?` や `[0-9]` のような柔軟な記法が可能だが、これは permission profile にはない

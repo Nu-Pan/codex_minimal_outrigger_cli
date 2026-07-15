@@ -62,16 +62,15 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     #   そもそも「書いてない＝リポジトリ全体規則が適用される」なので、暗に分かるはず。
     #   ということで、ルール文には「例外的に〇〇は許可」は書かず、補足コメントだけを書く。
     # NOTE
-    #   Codex CLI が使用するサンドボックスは permission profile を `:read-only` に設定しても __pycache_ とかは通してしまう。
-    #   つまり、本当に純粋な read-only ではなく、しかもその例外リストは具体的に何なのかはよくわからない。
-    #   よって、意味的に read-only なモードでも Codex CLI permission profile は `:workspace` で固定とする。
-    #   代わりに cmoc が注入するプロンプトと cmoc による事後チェックでカバーする。
+    #   Codex CLI sandbox への対応は `oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
+    #   この関数が生成する詳細な規則はプロンプトとしてのみ使用し、permission profile や
+    #   path 単位の sandbox 設定へ変換してはならない。
     match mode:
         case FileAccessMode.READONLY:
             # NOTE
             #   リポジトリ全体の **cmoc 上の論理的な意味での** 読み取り専用
             #   主要な編集対象である oracle file, realization file を読み取り専用にする
-            #   ルール上言及されていない隙間は `__pycache__` のような一時ファイルを想定しており、そこは読み書き自由とする
+            #   ルール上言及されていない一時ファイル用の path 例外は生成しない
             #   調査系タスク、cmoc が書き込みを代行するケースで使われる想定
             deny_rule = [
                 *base_deny_rule,

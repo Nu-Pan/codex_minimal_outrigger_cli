@@ -3,7 +3,7 @@
 ## 基本
 
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
-- 個別の `codex exec` 呼び出しの仕様は `{{cmoc-root}}/oracle/src/acp/builder` ツリー内の AgentCallParameter builder を正本とする
+- 個別の `codex exec` 呼び出しの仕様は `{{cmoc-root}}/oracle/src/oracle/acp_builder` ツリー内の AgentCallParameter builder を正本とする
 
 ## 環境変数 `$CODEX_HOME`
 
@@ -32,19 +32,33 @@
 
 ## ファイルアクセス制限
 
-### goal
+### Codex CLI sandbox
 
-- Codex CLI が従うべきファイルアクセス制限設定は Codex CLI の引数で上書きする
-- 専用引数で表現できる設定は専用引数を使い、それ以外は `--config` を使う
-- 具体的な設定は AgentCallParameter builder を正本とする
-- cmoc はファイルアクセス制限についての情報をプロンプトとして注入して Codex CLI に知らせる
+- 全ての Codex CLI 呼び出しで、専用引数 `--sandbox` を明示する
+- `--sandbox` の値は `read-only` または `workspace-write` のどちらかに限定する
+- `AgentCallParameter.file_access_mode` は次のように `--sandbox` へ対応付ける
+    - `READONLY`, `PURE_ORACLE_READ`: `--sandbox read-only`
+    - `REPO_WRITE`, `PURE_ORACLE_WRITE`, `REALIZATION_WRITE`, `NO_RULE`: `--sandbox workspace-write`
+- `AgentCallParameter` を使用しない動作確認用の Codex CLI 呼び出しでは `--sandbox read-only` を使う
+- 上記にない file access mode を受け取った場合は、sandbox を推測せず Codex CLI 呼び出し前に失敗させる
+- `$CODEX_HOME/config.toml` や project config の sandbox 設定に依存してはならない
+- sandbox は専用引数で指定し、`--config` で上書きしてはならない
 
-### non-goal
+### 詳細なファイルアクセス制限
 
-- `{{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` にある `git check-ignore` の条件は、oracle file と realization file を分類する境界条件を述べるためだけのものであり、Codex CLI のファイルアクセス制限設定を生成するための入力ではない
-- cmoc は、`.gitignore` の規則または `git check-ignore` の判定結果だけを根拠として、実在する path を Codex CLI の sandbox または permission profile の設定へ自動的に変換、列挙、注入してはならない
-- `git check-ignore` の判定結果をファイル分類や対象ファイルの選別に使用することは、この non-goal の対象外とする
-- 別の active oracle が特定の path に対するアクセス制限を明示的に要求する場合、その path が git 追跡対象外でも、そのアクセス制限はこの non-goal の対象外とする
+- 個別の AgentCallParameter builder は論理的な file access mode を選択する正本とする
+- file access mode ごとの詳細なファイルアクセス制限は、`build_file_access_rule` が生成するプロンプトで Codex CLI に指示する
+- path ごとの読み書き可否など、`read-only` と `workspace-write` だけでは表現できない制限を sandbox に反映しようとしてはならない
+- 詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する
+
+### permission profile の不使用と動的生成禁止
+
+- cmoc は、動的生成を含め、permission profile の生成、更新、選択、Codex CLI への注入、および事前作成された permission profile への依存をしてはならない
+- この禁止は動的生成の入力の種類を問わず、`AgentCallParameter`、file access mode、プロンプト、oracle file、設定、実在 path、ファイル一覧、`.gitignore` の規則、`git check-ignore` の判定結果、およびそれらの組み合わせを入力とする場合を含む
+- permission profile を一時ファイル、設定ファイル、argv、環境変数、`--config` など、いかなる経路でも Codex CLI に注入してはならない
+- oracle file が特定の path に対するアクセス制限を要求する場合も、その制限はプロンプトへ反映し、permission profile や path 単位の sandbox 設定へ変換してはならない
+- `{{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` にある `git check-ignore` の条件は、oracle file と realization file を分類する境界条件を述べるためだけのものとする
+- `git check-ignore` の判定結果をファイル分類や対象ファイルの選別に使用してよいが、Codex CLI の sandbox または permission profile を組み立てる入力にしてはならない
 
 ## ファイルアクセス制限違反の事後検証とリカバリ
 
