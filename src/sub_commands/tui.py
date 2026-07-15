@@ -194,7 +194,6 @@ def _cmoc_tui_body(
         launch_timestamp=launch_timestamp,
     )
     parameter = replace(parameter, cwd=work_root)
-    complete_prompt_path = logs_dir(root).parent / "tui" / f"{launch_timestamp}_cmpl.md"
     start_subcommand_step(4, "AI Agent TUI を起動", "launch agent TUI")
     run_codex_tui(
         parameter,
@@ -202,7 +201,6 @@ def _cmoc_tui_body(
         cwd=work_root,
         config=config,
         purpose="tui codex",
-        extra_read_paths=[complete_prompt_path],
     )
 
 
@@ -278,7 +276,9 @@ def build_tui_codex_parameter(
 ) -> AgentCallParameter:
     """解決済み JSON から TUI 起動用 AgentCallParameter を構築する。"""
     file_access_mode = FileAccessMode(
-        nested_value(resolved_parameter, "file_access_mode", FileAccessMode.READONLY.value)
+        nested_value(
+            resolved_parameter, "file_access_mode", FileAccessMode.READONLY.value
+        )
     )
     if file_access_mode not in TUI_FILE_ACCESS_MODES:
         raise CmocError(

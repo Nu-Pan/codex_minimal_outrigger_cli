@@ -1,137 +1,43 @@
-"""session join conflict target の Codex write policy を検証する。
+"""session join conflict の制約を prompt と共通 sandbox へ分離して検証する。
 
 根拠:
 - {{work-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 """
 
 from pathlib import Path
 
-import pytest
-
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
-from cmoc_runtime import CmocError
+from basic.acp import FileAccessMode
 from commons.runtime_codex_profile import build_codex_override_args
 from config.cmoc_config import CmocConfig
 
-from _codex_support import (
-    _assert_writable,
-    _override_permission_roots,
-)
+from _codex_support import codex_arg_value, codex_override_config
 
 
-def test_codex_overrides_uses_file_roots_for_session_join_conflict_resolution(
+def test_session_join_targets_stay_in_prompt_and_not_sandbox_argv(
     tmp_path: Path,
 ) -> None:
-    root = tmp_path / "repo"
-    root.mkdir()
-    (root / "src").mkdir()
-    (root / "oracle").mkdir()
-    target = root / "oracle" / "spec.md"
-    target.write_text("conflict\n")
+    """conflict path は prompt だけへ反映し、path 別 sandbox 設定へ変換しない。"""
+    first = tmp_path / "repo" / "oracle" / "spec.md"
+    second = tmp_path / "repo" / "src" / "main.py"
+    first.parent.mkdir(parents=True)
+    second.parent.mkdir(parents=True)
 
-    override_args = build_codex_override_args(
-        build_session_join_conflict_resolution_parameter([target]),
-        CmocConfig(),
-        root,
-        extra_writable_paths=[target],
-        allow_oracle_conflict_writes=True,
-    )
+    first_parameter = build_session_join_conflict_resolution_parameter([first])
+    second_parameter = build_session_join_conflict_resolution_parameter([second])
+    first_args = build_codex_override_args(first_parameter, CmocConfig())
+    second_args = build_codex_override_args(second_parameter, CmocConfig())
 
-    assert _override_permission_roots(override_args, "write") == {
-        str(target.resolve()),
-    }
-    _assert_writable(override_args, target)
-
-
-@pytest.mark.parametrize("extra", ["oracle/INDEX.md", "oracle/AGENTS.md"])
-def test_codex_overrides_rejects_session_join_conflict_targets_with_denied_names(
-    tmp_path: Path, extra: str
-) -> None:
-    root = tmp_path / "repo"
-    root.mkdir()
-    (root / "src").mkdir()
-    target = root / extra
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text("conflict\n")
-
-    with pytest.raises(CmocError, match="追加書き込み許可 path"):
-        build_codex_override_args(
-            build_session_join_conflict_resolution_parameter([target]),
-            CmocConfig(),
-            root,
-            extra_writable_paths=[target],
-            allow_oracle_conflict_writes=True,
-        )
-
-
-@pytest.mark.parametrize("extra", ["INDEX.md", "AGENTS.md"])
-def test_codex_overrides_rejects_root_file_session_join_conflict_targets(
-    tmp_path: Path, extra: str
-) -> None:
-    root = tmp_path / "repo"
-    root.mkdir()
-    (root / "src").mkdir()
-    target = root / extra
-    target.write_text("conflict\n")
-
-    with pytest.raises(CmocError, match="追加書き込み許可 path"):
-        build_codex_override_args(
-            build_session_join_conflict_resolution_parameter([target]),
-            CmocConfig(),
-            root,
-            extra_writable_paths=[target],
-            allow_oracle_conflict_writes=True,
-        )
-
-
-def test_codex_overrides_allows_root_readme_session_join_conflict_target(
-    tmp_path: Path,
-) -> None:
-    root = tmp_path / "repo"
-    root.mkdir()
-    (root / "src").mkdir()
-    target = root / "README.md"
-    target.write_text("conflict\n")
-
-    override_args = build_codex_override_args(
-        build_session_join_conflict_resolution_parameter([target]),
-        CmocConfig(),
-        root,
-        extra_writable_paths=[target],
-        allow_oracle_conflict_writes=True,
-    )
-
-    assert _override_permission_roots(override_args, "write") == {
-        str((root / "README.md").resolve()),
-    }
-    _assert_writable(override_args, target)
-
-
-@pytest.mark.parametrize(
-    "extra",
-    [
-        ".agents/blocked.md",
-        ".cmoc/gu/state.json",
-        ".codex/config.toml",
-        ".git/config",
-        "memo/blocked.md",
-    ],
-)
-def test_codex_overrides_rejects_runtime_paths_even_for_session_join_conflict(
-    tmp_path: Path, extra: str
-) -> None:
-    root = tmp_path / "repo"
-    root.mkdir()
-    (root / "src").mkdir()
-
-    with pytest.raises(CmocError, match="追加書き込み許可 path"):
-        build_codex_override_args(
-            build_session_join_conflict_resolution_parameter([root / extra]),
-            CmocConfig(),
-            root,
-            extra_writable_paths=[root / extra],
-            allow_oracle_conflict_writes=True,
-        )
+    assert first_parameter.file_access_mode == FileAccessMode.REPO_WRITE
+    assert second_parameter.file_access_mode == FileAccessMode.REPO_WRITE
+    assert str(first) in first_parameter.prompt
+    assert str(second) in second_parameter.prompt
+    assert first_args == second_args
+    assert codex_arg_value(first_args, "--sandbox") == "workspace-write"
+    assert all(str(first) not in arg and str(second) not in arg for arg in first_args)
+    parsed = codex_override_config(first_args)
+    assert "permissions" not in parsed
+    assert "default_permissions" not in parsed

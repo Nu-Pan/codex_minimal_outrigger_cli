@@ -38,7 +38,6 @@ def run_codex_tui(
     cwd: Path | None = None,
     config: CmocConfig | None = None,
     purpose: str = "codex tui",
-    extra_read_paths: list[Path] | None = None,
 ) -> CommandResult:
     """Codex TUI を設定上書き argv と call log を準備して起動する。"""
     root = root or repo_root()
@@ -53,15 +52,10 @@ def run_codex_tui(
     # CODEX_HOME while keeping the user-provided env value unchanged.
     codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
-    # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
-    # TUI complete prompt is stored under {{repo-root}} even when Codex runs in a
-    # linked worktree; writable roots and schema state still follow codex_work_root.
     override_args = prepare_codex_override_args(
         parameter,
         config,
         codex_work_root,
-        extra_read_paths,
-        extra_read_root=root,
     )
     argv = [
         "codex",

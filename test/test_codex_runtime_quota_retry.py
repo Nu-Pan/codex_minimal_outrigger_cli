@@ -58,9 +58,12 @@ def test_resume_token_is_read_from_persisted_jsonl_log(tmp_path: Path) -> None:
         runtime_codex_exec._extract_resume_token_from_jsonl_log(log_path)
         == "sess-from-log"
     )
-    assert runtime_codex_exec._extract_resume_token_from_jsonl_log(
-        tmp_path / "missing.jsonl"
-    ) is None
+    assert (
+        runtime_codex_exec._extract_resume_token_from_jsonl_log(
+            tmp_path / "missing.jsonl"
+        )
+        is None
+    )
 
 
 def test_run_codex_exec_polls_and_resumes_after_quota(
@@ -132,6 +135,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert call_records[1]["stdin"] == probe_prompt
     assert argv_calls[1][:2] == ["exec", "--skip-git-repo-check"]
     assert codex_arg_value(argv_calls[1], "--model") == "gpt-5.4-mini"
+    assert codex_arg_value(argv_calls[1], "--sandbox") == "read-only"
     assert codex_override_config(argv_calls[1])["model_reasoning_effort"] == "low"
     assert "--profile" not in argv_calls[1]
     assert "--json" in argv_calls[1]
@@ -142,7 +146,9 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert result.output_json == {"ok": True}
     call_entries = [
         (path, json.loads(path.read_text()))
-        for path in sorted((root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json"))
+        for path in sorted(
+            (root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json")
+        )
     ]
     call_logs = [log for _path, log in call_entries]
     assert [log["purpose"] for log in call_logs] == [
@@ -168,10 +174,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert Path(probe_logs[0]["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )
-    assert (
-        Path(probe_logs[0]["prompt_log_path"]).read_text()
-        == probe_prompt
-    )
+    assert Path(probe_logs[0]["prompt_log_path"]).read_text() == probe_prompt
     assert Path(probe_logs[0]["stderr_log_path"]).read_text() == ""
     assert Path(probe_logs[0]["output_path"]).read_text() == '{"probe": true}'
     main_entries = [
@@ -187,6 +190,8 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert resume_log["argv"][1:] == argv_calls[2]
     assert codex_arg_value(probe_logs[0]["argv"], "--model") == "gpt-5.4-mini"
     assert codex_arg_value(initial_log["argv"], "--model") == "gpt-5.6-sol"
+    assert codex_arg_value(initial_log["argv"], "--sandbox") == "read-only"
+    assert codex_arg_value(resume_log["argv"], "--sandbox") == "read-only"
     assert "--profile" not in initial_log["argv"]
     assert "profile_name" not in initial_log
     assert "profile_path" not in initial_log
@@ -201,9 +206,10 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         '{"type": "error", "message": "Quota exceeded"}'
     )
     assert Path(initial_log["output_jsonl_log_path"]).name.endswith("_output.jsonl")
-    assert Path(initial_log["output_jsonl_log_path"]).read_text() == Path(
-        initial_log["stdout_log_path"]
-    ).read_text()
+    assert (
+        Path(initial_log["output_jsonl_log_path"]).read_text()
+        == Path(initial_log["stdout_log_path"]).read_text()
+    )
     assert Path(resume_log["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )
@@ -249,9 +255,7 @@ def test_capacity_probe_retry_skips_quota_poll_interval(
     calls: list[str] = []
     probe_count = 0
 
-    def fake_run(
-        argv: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         """quota failure, capacity probe, recovery probe, resume の列を返す。"""
         nonlocal probe_count
         stdin = cast(TextIO, kwargs["stdin"]).read()
@@ -281,9 +285,7 @@ def test_capacity_probe_retry_skips_quota_poll_interval(
                     "",
                 )
         output.write_text('{"ok":true}')
-        return subprocess.CompletedProcess(
-            argv, 0, '{"type":"turn.completed"}\n', ""
-        )
+        return subprocess.CompletedProcess(argv, 0, '{"type":"turn.completed"}\n', "")
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     result = run_codex_exec(
@@ -320,9 +322,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     probe_prompt = quota_probe_prompt(root)
     calls: list[str] = []
 
-    def fake_run(
-        argv: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         """初回 quota 失敗後の代表 probe を KeyboardInterrupt にする。"""
         prompt = cast(TextIO, kwargs["stdin"]).read()
         calls.append(prompt)
@@ -409,9 +409,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     probe_prompt = quota_probe_prompt(root)
     records: list[tuple[str, Path, Path, Path, Path]] = []
 
-    def fake_run(
-        argv: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         """初回、probe、resume の cwd と CODEX_HOME を記録する。"""
         stdin = cast(TextIO, kwargs["stdin"]).read()
         cwd = Path(cast(str, kwargs["cwd"]))
@@ -423,7 +421,9 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
             else "initial"
         )
         home = Path(cast(dict[str, str], kwargs["env"])["CODEX_HOME"])
-        records.append((kind, cwd, home, cwd / home, Path(argv[argv.index("--cd") + 1])))
+        records.append(
+            (kind, cwd, home, cwd / home, Path(argv[argv.index("--cd") + 1]))
+        )
         if kind == "initial":
             return subprocess.CompletedProcess(
                 argv,
@@ -434,9 +434,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
             )
         output = Path(argv[argv.index("--output-last-message") + 1])
         output.write_text(json.dumps({"ok": kind}))
-        return subprocess.CompletedProcess(
-            argv, 0, '{"type": "turn.completed"}\n', ""
-        )
+        return subprocess.CompletedProcess(argv, 0, '{"type": "turn.completed"}\n', "")
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     parameter = AgentCallParameter(

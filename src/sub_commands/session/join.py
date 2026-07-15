@@ -51,7 +51,9 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
     start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     session_id, path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
-        raise CmocError("session join は session branch 上で実行してください。", [], branch)
+        raise CmocError(
+            "session join は session branch 上で実行してください。", [], branch
+        )
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError(
             "session join の事前条件を満たしていません。",
@@ -74,11 +76,14 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
         # delete only when the local session branch itself is reachable from
         # the merge target HEAD; remote-tracking refs must not prove safety.
-        reachable = git(
-            ["merge-base", "--is-ancestor", branch, "HEAD"],
-            work,
-            check=False,
-        ).returncode == 0
+        reachable = (
+            git(
+                ["merge-base", "--is-ancestor", branch, "HEAD"],
+                work,
+                check=False,
+            ).returncode
+            == 0
+        )
         if reachable:
             delete_result = git(["branch", "-d", branch], work, check=False)
         else:
@@ -94,7 +99,9 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
     warnings: list[str] = []
     if delete_result.returncode != 0:
         warnings.append(f"session branch was not deleted: {branch}")
-    warning_lines = [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
+    warning_lines = (
+        [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
+    )
     typer.echo(
         "\n".join(
             [
@@ -107,6 +114,7 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
             ]
         )
     )
+
 
 def resolve_session_join_conflict(
     root: Path,
@@ -133,11 +141,6 @@ def resolve_session_join_conflict(
         root=repo_root(root),
         cwd=root,
         purpose="session join conflict resolution",
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-        # oracle conflict の例外は prompt だけでは sandbox に効かないため、
-        # conflict 対象だけを Codex CLI の writable roots 上書きにも反映する。
-        extra_writable_paths=conflicted_paths,
-        allow_oracle_conflict_writes=True,
     )
     start_subcommand_step(
         "3/4, 3/5", "conflict marker の残存を確認", "check conflict markers"
@@ -173,7 +176,9 @@ def resolve_session_join_conflict(
 def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
     # Git paths can contain newlines, so conflict targets must use NUL framing.
-    fields = git(["diff", "--name-only", "-z", "--diff-filter=U"], root).stdout.split("\0")
+    fields = git(["diff", "--name-only", "-z", "--diff-filter=U"], root).stdout.split(
+        "\0"
+    )
     return [root / field for field in fields if field]
 
 

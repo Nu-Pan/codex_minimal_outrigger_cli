@@ -36,28 +36,6 @@ def _tui_call_logs(root: Path) -> list[Path]:
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
 # docstring の責務記述は {{work-root}}/oracle/doc/dev_rule/coding_rule.md に従う。
-def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """許可領域外の追加読み取りパスでは Codex を起動しないことを確認する。"""
-    root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-
-    def fail_run(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
-        """Codex 起動が先行していないことを検出する fake subprocess。"""
-        raise AssertionError("Codex subprocess must not start")
-
-    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fail_run)
-
-    with pytest.raises(CmocError, match="許可領域外"):
-        run_codex_tui(
-            codex_parameter(FileAccessMode.REPO_WRITE),
-            root=root,
-            extra_read_paths=[root / "memo" / "prompt_cmpl.md"],
-            config=CmocConfig(),
-        )
-
-
 def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -96,7 +74,6 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
             structured_output_schema_path=schema_path,
         ),
         root=root,
-        extra_read_paths=[prompt_path],
         config=CmocConfig(),
     )
 
@@ -104,6 +81,8 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     assert record["cwd"] == str(root.resolve())
     assert record["prompt_text"] == "complete prompt\n"
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
+    assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
+    assert "permissions" not in codex_override_config(record["args"])
     assert "--output-schema" not in record["args"]
 
 
@@ -145,7 +124,6 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
         ),
         root=root,
         cwd=linked,
-        extra_read_paths=[prompt_path],
         config=CmocConfig(),
     )
 
@@ -156,12 +134,11 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     call_log = _tui_call_logs(root)[0]
     call_data = json.loads(call_log.read_text())
     override_config = codex_override_config(call_data["argv"])
-    filesystem = override_config["permissions"]["cmoc"]["filesystem"]
-    assert override_config["default_permissions"] == "cmoc"
-    assert filesystem[str((root / ".cmoc" / "gu" / "ar").resolve())] == "read"
-    assert filesystem[str((root / ".cmoc" / "gt" / "ar").resolve())] == "read"
-    assert str((root / ".cmoc" / "gu").resolve()) not in filesystem
-    assert filesystem[str(linked.resolve())] == "write"
+    assert call_data["argv"][call_data["argv"].index("--sandbox") + 1] == (
+        "workspace-write"
+    )
+    assert "permissions" not in override_config
+    assert "default_permissions" not in override_config
     assert "sandbox_workspace_write" not in override_config
     assert "--profile" not in call_data["argv"]
 

@@ -1,12 +1,9 @@
-"""Codex の read/write 許可領域と追加 writable path を検証する。
+"""Codex sandbox argv が permission profile に依存しないことを検証する。
 
-根拠:
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-- {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 """
 
+import inspect
 import shutil
 import subprocess
 from pathlib import Path
@@ -14,471 +11,116 @@ from pathlib import Path
 import pytest
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
-from commons.runtime_codex_profile import build_codex_override_args
+from commons.runtime_codex_profile import (
+    build_codex_override_args,
+    prepare_codex_override_args,
+)
 from config.cmoc_config import CmocConfig
 
-from _codex_support import (
-    _assert_not_writable,
-    _assert_writable,
-    _override_permission_filesystem,
-    _override_permission_roots,
-)
-from _git_support import make_repo, run_git
+from _codex_support import codex_arg_value, codex_override_config
 
 
-@pytest.mark.parametrize(
-    "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
-)
-def test_codex_overrides_readonly_modes_do_not_inject_ignored_gap_writes(
-    tmp_path: Path, mode: FileAccessMode
-) -> None:
-    """読み取り専用モードが ignore 判定から書き込み権限を生成しないことを検証する。"""
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("__pycache__/\n/build/\n")
-    (root / "src").mkdir()
-    (root / "src" / "main.py").write_text("print('ok')\n")
-    (root / "src" / "__pycache__").mkdir()
-    (root / "src" / "__pycache__" / "main.pyc").write_text("cache\n")
-    (root / "oracle" / "spec.md").write_text("# spec\n")
-    (root / "oracle" / "__pycache__").mkdir()
-    (root / "oracle" / "__pycache__" / "spec.pyc").write_text("cache\n")
-    (root / "build").mkdir()
-    (root / "build" / "artifact.txt").write_text("tracked\n")
-    (root / "build" / "scratch.txt").write_text("scratch\n")
-    run_git(root, "add", ".gitignore", "src/main.py", "oracle/spec.md")
-    run_git(root, "add", "-f", "build/artifact.txt")
-    run_git(root, "commit", "-m", "add tracked files")
-
-    override_args = build_codex_override_args(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            mode,
-            "prompt",
-            None,
-        ),
-        CmocConfig(),
-        root,
-    )
-    _assert_not_writable(override_args, root / "src" / "new.py")
-    _assert_not_writable(override_args, root / "oracle" / "new.md")
-    _assert_not_writable(override_args, root / "new.md")
-
-    assert _override_permission_roots(override_args, "write") == set()
-    _assert_not_writable(override_args, root / "src" / "__pycache__" / "new.pyc")
-    _assert_not_writable(override_args, root / "oracle" / "__pycache__" / "new.pyc")
-    _assert_not_writable(override_args, root / "build" / "scratch.txt")
-    _assert_not_writable(override_args, root / "src" / "main.py")
-    _assert_not_writable(override_args, root / "oracle" / "spec.md")
-    _assert_not_writable(override_args, root / "build" / "artifact.txt")
-    _assert_not_writable(override_args, root / "memo" / "private.md")
-    _assert_not_writable(
-        override_args, root / ".cmoc" / "gu" / "state.json"
-    )
-
-
-@pytest.mark.parametrize(
-    "mode",
-    [
-        FileAccessMode.REALIZATION_WRITE,
-        FileAccessMode.PURE_ORACLE_WRITE,
-        FileAccessMode.REPO_WRITE,
-        FileAccessMode.NO_RULE,
-    ],
-)
-def test_codex_overrides_protect_memo_and_future_routing_files(
-    tmp_path: Path, mode: FileAccessMode
-) -> None:
-    """memo と将来のルーティングファイルを全書き込みモードで保護することを検証する。"""
-    root = make_repo(tmp_path)
-    (root / "src").mkdir()
-    (root / "test").mkdir()
-
-    override_args = build_codex_override_args(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            mode,
-            "prompt",
-            None,
-        ),
-        CmocConfig(),
-        root,
-    )
-
-    filesystem = _override_permission_filesystem(override_args)
-    assert filesystem[str((root / "memo").resolve())] == "deny"
-    routing_rules = filesystem[":workspace_roots"]
-    assert routing_rules == {
-        "AGENTS.md": "read",
-        "INDEX.md": "read",
-    }
-    _assert_not_writable(override_args, root / "memo" / "private.md")
-
-
-def test_codex_overrides_no_rule_uses_root_with_fixed_protected_paths(
-    tmp_path: Path,
-) -> None:
-    """NO_RULE は root を開き、active oracle の固定 path だけを保護する。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    root = make_repo(tmp_path)
-    for name in (".agents", ".cmoc", ".codex", "memo"):
-        (root / name).mkdir()
-    (root / "src").mkdir()
-
-    override_args = build_codex_override_args(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.NO_RULE,
-            "prompt",
-            None,
-        ),
-        CmocConfig(),
-        root,
-    )
-
-    assert _override_permission_roots(override_args, "write") == {
-        str(root.resolve())
-    }
-    for relative in (
-        ".agents/blocked.md",
-        ".cmoc/gu/ar/state.json",
-        ".cmoc/gt/ar/config.json",
-        ".codex/config.toml",
-        ".git/config",
-        "memo/private.md",
-        "AGENTS.md",
-        "INDEX.md",
-    ):
-        _assert_not_writable(override_args, root / relative)
-    _assert_writable(override_args, root / ".cmoc" / "gu" / "state.json")
-    _assert_writable(override_args, root / "src" / "new.py")
-
-
-@pytest.mark.parametrize(
-    "mode", [FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE]
-)
-def test_codex_overrides_allows_tracked_cmoc_config_but_blocks_local(
-    tmp_path: Path, mode: FileAccessMode
-) -> None:
-    """tracked な config は許可し、runtime state と routing file は保護する。"""
-    root = make_repo(tmp_path)
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
-    generated_agent_read_path = root / ".cmoc" / "gu" / "ar"
-    generated_agent_read_path.mkdir(parents=True)
-    config_path.parent.mkdir(parents=True)
-    config_path.write_text("{}\n")
-    (root / ".gitignore").write_text("/.cmoc/gu/\n")
-    run_git(root, "add", ".gitignore", ".cmoc/gt/ar/config.json")
-    run_git(root, "commit", "-m", "add tracked cmoc config")
-
-    override_args = build_codex_override_args(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            mode,
-            "prompt",
-            None,
-        ),
-        CmocConfig(),
-        root,
-    )
-
-    _assert_not_writable(override_args, config_path)
-    _assert_not_writable(override_args, generated_agent_read_path / "state.json")
-    _assert_not_writable(override_args, root / "AGENTS.md")
-    _assert_not_writable(override_args, root / "INDEX.md")
-
-
-def test_codex_overrides_does_not_derive_permissions_from_ignored_dir(
-    tmp_path: Path,
-) -> None:
-    """無視対象 directory の実在 path を個別の権限設定へ変換しない。"""
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("/build/\n")
-    (root / "src").mkdir()
-    (root / "src" / "main.py").write_text("print('ok')\n")
-    (root / "test").mkdir()
-    (root / "test" / "test_main.py").write_text("def test_ok(): pass\n")
-    (root / "build").mkdir()
-    (root / "build" / "artifact.txt").write_text("artifact\n")
-    run_git(root, "add", ".gitignore", "src", "test")
-    run_git(root, "add", "-f", "build")
-    run_git(root, "commit", "-m", "add realization dirs")
-
-    parameter = AgentCallParameter(
+def _parameter(mode: FileAccessMode) -> AgentCallParameter:
+    return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.REALIZATION_WRITE,
+        mode,
         "prompt",
         None,
     )
-    override_args = build_codex_override_args(
-        parameter,
-        CmocConfig(),
-        root,
-    )
-
-    expected_roots = {str(root.resolve())}
-    assert _override_permission_roots(override_args, "write") == expected_roots
-    filesystem = _override_permission_filesystem(override_args)
-    build_root = (root / "build").resolve()
-    assert all(
-        key == ":workspace_roots"
-        or not Path(key).resolve().is_relative_to(build_root)
-        for key in filesystem
-    )
-    _assert_writable(override_args, root / "src" / "main.py")
-    _assert_writable(override_args, root / "src" / "new.py")
-    _assert_writable(override_args, root / "build" / "artifact.txt")
-    _assert_writable(override_args, root / ".gitignore")
-    _assert_writable(override_args, root / "build" / "new.txt")
-    _assert_not_writable(override_args, root / ".agents" / "blocked.md")
-    extra = root / "docs" / "generated.md"
-
-    override_args = build_codex_override_args(
-        parameter,
-        CmocConfig(),
-        root,
-        extra_writable_paths=[extra],
-    )
-    assert _override_permission_roots(override_args, "write") == expected_roots
-    _assert_writable(override_args, extra)
 
 
 @pytest.mark.parametrize("mode", list(FileAccessMode))
-def test_codex_overrides_are_invariant_to_ignored_subtree_contents(
+def test_codex_overrides_do_not_inject_permission_profile(
+    mode: FileAccessMode,
+) -> None:
+    """profile の生成・選択・config 注入を全 mode で禁止する。"""
+    args = build_codex_override_args(_parameter(mode), CmocConfig())
+    config_values = [
+        args[index + 1] for index, arg in enumerate(args[:-1]) if arg == "--config"
+    ]
+
+    assert codex_arg_value(args, "--sandbox") in {"read-only", "workspace-write"}
+    assert "--profile" not in args
+    assert "-p" not in args
+    assert all(
+        not value.startswith(
+            (
+                "default_permissions=",
+                "permissions.",
+                "sandbox_workspace_write=",
+            )
+        )
+        for value in config_values
+    )
+    parsed = codex_override_config(args)
+    assert "permissions" not in parsed
+    assert "default_permissions" not in parsed
+    assert "sandbox_workspace_write" not in parsed
+
+
+def test_path_based_permission_inputs_are_absent_from_builder_api() -> None:
+    """path 別の read/write 例外を argv builder へ渡す入口を残さない。"""
+    build_parameters = inspect.signature(build_codex_override_args).parameters
+    prepare_parameters = inspect.signature(prepare_codex_override_args).parameters
+
+    assert tuple(build_parameters) == ("parameter", "config")
+    for name in (
+        "extra_read_paths",
+        "extra_writable_paths",
+        "extra_read_root",
+        "allow_oracle_conflict_writes",
+    ):
+        assert name not in prepare_parameters
+
+
+@pytest.mark.parametrize("mode", list(FileAccessMode))
+def test_codex_overrides_are_invariant_to_worktree_contents(
     tmp_path: Path, mode: FileAccessMode
 ) -> None:
-    """ignored subtree の個別ファイルを permission argv へ注入しない。"""
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("/generated/\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "ignore generated output")
-    generated = root / "generated"
-    generated.mkdir()
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        mode,
-        "prompt",
-        None,
-    )
-
-    baseline_args = build_codex_override_args(parameter, CmocConfig(), root)
-    for directory_index in range(12):
-        directory = generated / f"part-{directory_index:02d}"
-        directory.mkdir()
-        for file_index in range(20):
-            (directory / f"artifact-{file_index:02d}.bin").write_text("generated\n")
-
-    populated_args = build_codex_override_args(parameter, CmocConfig(), root)
-
-    assert populated_args == baseline_args
-    generated_root = generated.resolve()
-    assert all(
-        key == ":workspace_roots"
-        or Path(key).resolve() == generated_root
-        or not Path(key).resolve().is_relative_to(generated_root)
-        for key in _override_permission_filesystem(populated_args)
-    )
-
-
-@pytest.mark.parametrize(
-    ("mode", "extra"),
-    [
-        (FileAccessMode.REALIZATION_WRITE, "oracle/blocked.md"),
-        (FileAccessMode.REALIZATION_WRITE, "memo/blocked.md"),
-        (FileAccessMode.REALIZATION_WRITE, ".agents/blocked.md"),
-        (FileAccessMode.REALIZATION_WRITE, ".codex/config.toml"),
-        (FileAccessMode.REALIZATION_WRITE, "AGENTS.md"),
-        (FileAccessMode.REALIZATION_WRITE, "INDEX.md"),
-        (FileAccessMode.PURE_ORACLE_WRITE, "src/blocked.md"),
-        (FileAccessMode.PURE_ORACLE_WRITE, "memo/blocked.md"),
-        (FileAccessMode.PURE_ORACLE_WRITE, ".agents/blocked.md"),
-        (FileAccessMode.PURE_ORACLE_WRITE, "oracle/INDEX.md"),
-        (FileAccessMode.PURE_ORACLE_WRITE, "oracle/AGENTS.md"),
-        (FileAccessMode.REPO_WRITE, "memo/blocked.md"),
-        (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
-        (FileAccessMode.REPO_WRITE, ".git/config"),
-        (FileAccessMode.REPO_WRITE, "AGENTS.md"),
-        (FileAccessMode.REPO_WRITE, "INDEX.md"),
-        (FileAccessMode.REPO_WRITE, "../outside.md"),
-    ],
-)
-def test_codex_overrides_rejects_disallowed_extra_writable_paths(
-    tmp_path: Path, mode: FileAccessMode, extra: str
-) -> None:
-    """モードごとの許可領域外にある追加書き込み先を拒否することを検証する。"""
+    """実在 path、一覧、gitignore の変化を sandbox argv の入力にしない。"""
     root = tmp_path / "repo"
     root.mkdir()
-    (root / "src").mkdir()
-    (root / "oracle").mkdir()
-    (root / "memo").mkdir()
-    (root / ".agents").mkdir()
+    parameter = _parameter(mode)
+    config = CmocConfig()
+    baseline = prepare_codex_override_args(parameter, config, root)
 
-    with pytest.raises(CmocError, match="追加書き込み許可 path"):
-        build_codex_override_args(
-            AgentCallParameter(
-                ModelClass.EFFICIENCY,
-                ReasoningEffort.LOW,
-                mode,
-                "prompt",
-                None,
-            ),
-            CmocConfig(),
-            root,
-            extra_writable_paths=[root / extra],
-        )
+    (root / ".gitignore").write_text("/generated/\n")
+    generated = root / "generated"
+    for directory_index in range(5):
+        directory = generated / f"part-{directory_index}"
+        directory.mkdir(parents=True)
+        for file_index in range(10):
+            (directory / f"artifact-{file_index}.bin").write_text("generated\n")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (root / "external").symlink_to(outside, target_is_directory=True)
 
-
-@pytest.mark.parametrize(
-    "mode", [FileAccessMode.REALIZATION_WRITE, FileAccessMode.REPO_WRITE]
-)
-def test_codex_overrides_allows_new_root_ancillary_file(
-    tmp_path: Path, mode: FileAccessMode
-) -> None:
-    """realization write がルート直下の ancillary ファイルを追加許可できることを検証する。"""
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("memo\n")
-    (root / "README.md").write_text("# repo\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "add gitignore")
-
-    extra = root / "CHANGELOG.md"
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        mode,
-        "prompt",
-        None,
-    )
-    baseline_args = build_codex_override_args(
-        parameter,
-        CmocConfig(),
-        root,
-    )
-    _assert_writable(baseline_args, extra)
-    assert _override_permission_roots(baseline_args, "write") == {
-        str(root.resolve())
-    }
-
-
-
-@pytest.mark.parametrize(
-    "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
-)
-def test_codex_overrides_readonly_modes_allow_extra_ignored_gap_path(
-    tmp_path: Path, mode: FileAccessMode
-) -> None:
-    """読み取り専用モードが ignore された gap path の追加許可を受け入れることを検証する。"""
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("/scratch.tmp\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "add gitignore")
-    target = root / "scratch.tmp"
-
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        mode,
-        "prompt",
-        None,
-    )
-    baseline_args = build_codex_override_args(
-        parameter,
-        CmocConfig(),
-        root,
-    )
-    _assert_not_writable(baseline_args, target)
-
-    override_args = build_codex_override_args(
-        parameter,
-        CmocConfig(),
-        root,
-        extra_writable_paths=[target],
-    )
-
-    _assert_writable(override_args, target)
-
-
-@pytest.mark.parametrize(
-    "mode", [FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ]
-)
-def test_codex_overrides_does_not_expand_explicit_ignored_directory(
-    tmp_path: Path, mode: FileAccessMode
-) -> None:
-    """明示した ignored directory は一つの root として許可し、子を列挙しない。"""
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("/scratch/\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "ignore scratch")
-    target = root / "scratch"
-    nested = target / "nested"
-    nested.mkdir(parents=True)
-    (nested / "artifact.bin").write_text("scratch\n")
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        mode,
-        "prompt",
-        None,
-    )
-
-    override_args = build_codex_override_args(
-        parameter,
-        CmocConfig(),
-        root,
-        extra_writable_paths=[target],
-    )
-
-    assert _override_permission_roots(override_args, "write") == {
-        str(target.resolve())
-    }
-    filesystem = _override_permission_filesystem(override_args)
-    assert all(
-        key == ":workspace_roots"
-        or Path(key).resolve() == target.resolve()
-        or not Path(key).resolve().is_relative_to(target.resolve())
-        for key in filesystem
-    )
-    _assert_writable(override_args, nested / "new.bin")
+    assert prepare_codex_override_args(parameter, config, root) == baseline
 
 
 @pytest.mark.parametrize(
     "mode",
     [
+        FileAccessMode.READONLY,
+        FileAccessMode.PURE_ORACLE_READ,
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
         FileAccessMode.REPO_WRITE,
         FileAccessMode.NO_RULE,
     ],
 )
-def test_codex_permission_profile_is_accepted_by_codex_cli(
+def test_sandbox_argument_is_accepted_by_codex_cli(
     tmp_path: Path, mode: FileAccessMode
 ) -> None:
-    """書き込み用 profile の同じ argv を実 Codex CLI の parser に通す。"""
+    """生成 argv の専用 sandbox 引数を実 Codex CLI parser に通す。"""
     codex = shutil.which("codex")
     if codex is None:
         pytest.skip("codex CLI is not installed")
 
-    root = make_repo(tmp_path)
-    args = build_codex_override_args(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            mode,
-            "prompt",
-            None,
-        ),
-        CmocConfig(),
-        root,
-    )
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # Missing schema validation stops before authentication or model execution.
+    root = tmp_path / "repo"
+    root.mkdir()
+    args = build_codex_override_args(_parameter(mode), CmocConfig())
     result = subprocess.run(
         [
             codex,
@@ -500,7 +142,8 @@ def test_codex_permission_profile_is_accepted_by_codex_cli(
         timeout=10,
         check=False,
     )
+
     output = result.stdout + result.stderr
     assert result.returncode == 1
-    assert "filesystem glob path" not in output
     assert "Failed to read output schema file" in output
+    assert "permission" not in output.lower()

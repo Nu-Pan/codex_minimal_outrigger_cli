@@ -19,12 +19,14 @@ from _ollama_support import run_doctor
 from main import app
 import sub_commands.tui as tui_module
 
+
 @pytest.fixture(autouse=True)
 def reset_indexing_preflight() -> Iterator[None]:
     """各テスト間で indexing preflight の有効状態をリセットする。"""
     codex_preflight_module.disable_indexing_preflight()
     yield
     codex_preflight_module.disable_indexing_preflight()
+
 
 def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     tmp_path: Path,
@@ -88,8 +90,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.structured_output_schema_path is not None
         assert parameter.structured_output_schema_path.name == "launch_tui.json"
         assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
-        assert len(kwargs["extra_read_paths"]) == 1
-        assert str(kwargs["extra_read_paths"][0]) in parameter.prompt
+        assert "extra_read_paths" not in kwargs
 
     monkeypatch.setattr(tui_module, "run_codex_exec", fake_run_codex_exec)
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
@@ -106,7 +107,9 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert "手順の過剰固定" in original_prompt
     assert "# 目的" in original_prompt
     assert "# 裁量範囲" in original_prompt
-    complete_files = list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))
+    complete_files = list(
+        (root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md")
+    )
     assert len(complete_files) == 1
     complete_prompt = complete_files[0].read_text()
     assert "# file read write rule - repo_write" in complete_prompt
@@ -204,12 +207,16 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     assert len(tui_calls) == 1
     assert tui_calls[0][1]["root"] == root.resolve()
     assert tui_calls[0][1]["cwd"] == linked.resolve()
-    assert len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))) == 1
-    complete_files = list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))
+    assert (
+        len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))) == 1
+    )
+    complete_files = list(
+        (root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md")
+    )
     assert not list((linked / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     assert str(complete_files[0]) in tui_calls[0][0].prompt
-    assert tui_calls[0][1]["extra_read_paths"] == [complete_files[0]]
+    assert "extra_read_paths" not in tui_calls[0][1]
     recorded = json.loads(recorder.read_text())
     schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
     assert recorded["cwd"] == str(linked)
@@ -249,7 +256,9 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
         output_json = {"file_access_mode": {"value": "readonly", "reason": "test"}}
 
     monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
-    monkeypatch.setattr(tui_module, "run_codex_exec", lambda *_, **__: FakeResolveResult())
+    monkeypatch.setattr(
+        tui_module, "run_codex_exec", lambda *_, **__: FakeResolveResult()
+    )
     monkeypatch.setattr(tui_module, "run_codex_tui", lambda *_, **__: None)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
@@ -257,9 +266,18 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     assert result.exit_code == 0
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
-    assert len(list((root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl"))) == 1
-    assert len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))) == 1
-    assert len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))) == 1
+    assert (
+        len(
+            list((root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl"))
+        )
+        == 1
+    )
+    assert (
+        len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))) == 1
+    )
+    assert (
+        len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))) == 1
+    )
     assert not list((linked / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))
     assert run_git(root, "status", "--short", "--", ".cmoc/gu").stdout.strip() == ""
     assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""

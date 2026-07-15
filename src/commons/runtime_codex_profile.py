@@ -1,7 +1,7 @@
 """Codex CLI 起動前後の argv/env/schema/error 判定をまとめる境界。
 
-このファイルは 16,000 文字を超えるが、責務境界は Codex CLI に渡す実行環境と
-Codex CLI から返る機械的な実行結果の解釈に閉じている。sandbox/argv/cwd、
+責務境界は Codex CLI に渡す実行環境と Codex CLI から返る機械的な実行結果の
+解釈に閉じている。sandbox/argv/cwd、
 CODEX_HOME、child process tracking、schema 配置、JSONL error 判定は同じ
 subprocess 境界の不変条件を共有するため、分割すると呼び出し側が同時に読むべき
 失敗時文脈が増える。現状は Codex subprocess 境界として一箇所に保つ方が凝集性が高い。
@@ -25,42 +25,11 @@ from config.cmoc_config import CmocConfig
 
 from commons.runtime_content import write_hashed_file
 from commons.runtime_errors import CmocError
-from commons.runtime_git import (
-    is_oracle_file_path,
-    is_untracked_git_ignored,
-)
-from commons.runtime_paths import agent_read_dirs, logs_dir, schema_store_dir
+from commons.runtime_paths import schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
 _active_apply_process_tracking_path: Path | None = None
-_CODEX_BLOCKED_ROOT_NAMES = {
-    ".agents",
-    ".codex",
-    ".git",
-    ".pytest_cache",
-    "AGENTS.md",
-    "INDEX.md",
-    "memo",
-}
-_REPO_WRITE_BLOCKED_ROOT_NAMES = _CODEX_BLOCKED_ROOT_NAMES
-_CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
-    ".agents",
-    ".cmoc",
-    ".codex",
-    ".git",
-    "memo",
-}
-_DENIED_WRITE_FILE_NAMES = {"AGENTS.md", "INDEX.md"}
 _OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
-_CMOC_PERMISSION_PROFILE = "cmoc"
-_PERMISSION_PROFILE_WRITE_MODES = frozenset(
-    {
-        FileAccessMode.REALIZATION_WRITE,
-        FileAccessMode.PURE_ORACLE_WRITE,
-        FileAccessMode.REPO_WRITE,
-        FileAccessMode.NO_RULE,
-    }
-)
 
 
 @contextmanager
@@ -192,9 +161,7 @@ def wait_process_group_exit(process_group_id: int, timeout_sec: float) -> bool:
     return True
 
 
-def signal_process_group_members(
-    process_group_id: int, sig: signal.Signals
-) -> None:
+def signal_process_group_members(process_group_id: int, sig: signal.Signals) -> None:
     """group member を個別 pidfd で再検証して signal を送る。"""
     members = process_group_members(process_group_id)
     if members is None:
@@ -266,413 +233,14 @@ def parameter_codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) ->
     return work
 
 
-def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
-    """prompt 上の読み取り禁止領域を追加 read path にも適用する。"""
-    if not path.is_relative_to(root):
-        return False
-    if path.is_relative_to(root / "memo"):
-        return False
-    if _is_tui_complete_prompt_path(root, path):
-        # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
-        # PURE_ORACLE_READ の Codex cwd は oracle に閉じるが、TUI の完全
-        # prompt だけは起動指示そのものなので `.cmoc` 側から読ませる。
-        return True
-    if mode in {FileAccessMode.PURE_ORACLE_READ, FileAccessMode.PURE_ORACLE_WRITE}:
-        return path.is_relative_to(root / "oracle")
-    return True
-
-
-def _is_repo_agent_read_path(root: Path, path: Path) -> bool:
-    """repo 側の agent 読み取り専用領域に含まれるか判定する。"""
-    return any(
-        path.is_relative_to(read_root)
-        for read_root in _repo_agent_read_roots(root)
-    )
-
-
-def _repo_agent_read_roots(root: Path) -> tuple[Path, Path]:
-    """linked worktree から例外的に読める repo 側 directory 群を返す。"""
-    return tuple(path.resolve() for path in agent_read_dirs(root))
-
-
-def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
-    return path.parent == logs_dir(root).parent / "tui" and path.name.endswith(
-        "_cmpl.md"
-    )
-
-
-def _validate_extra_read_paths(
-    mode: FileAccessMode,
-    root: Path,
-    extra_read_paths: list[Path] | None,
-    extra_read_root: Path | None = None,
-) -> None:
-    """Codex argv に足す read path が cmoc の許可境界内か検査する。"""
-    extra_repo_root = (
-        extra_read_root.resolve() if extra_read_root is not None else None
-    )
-    for path in extra_read_paths or []:
-        resolved = path.resolve()
-        if not _is_read_path_allowed(mode, root, resolved) and not (
-            extra_repo_root is not None
-            and extra_repo_root != root
-            and _is_repo_agent_read_path(extra_repo_root, resolved)
-        ):
-            raise CmocError(
-                "追加読み取り許可 path が FileAccessMode の許可領域外にあります。",
-                [
-                    "file access mode で読み取り可能な work root 配下の path を指定してください。"
-                ],
-                f"mode: {mode.value}\npath: {resolved}",
-            )
-
-
 def _toml_string(value: str) -> str:
     """TOML string として安全な JSON 互換 quote へ寄せる。"""
     return json.dumps(value, ensure_ascii=False)
 
 
-def _toml_inline_table(values: dict[str, Any]) -> str:
-    """ネストした値を Codex の inline TOML table に変換する。"""
-    rendered: list[str] = []
-    for key, value in sorted(values.items()):
-        if isinstance(value, dict):
-            value_text = _toml_inline_table(value)
-        elif isinstance(value, int):
-            value_text = str(value)
-        else:
-            value_text = _toml_string(value)
-        rendered.append(f"{_toml_string(key)} = {value_text}")
-    return "{ " + ", ".join(rendered) + " }"
-
-
-def _writable_roots(
-    mode: FileAccessMode,
-    root: Path,
-    extra_writable_paths: list[Path] | None,
-    allow_oracle_conflict_writes: bool = False,
-) -> list[Path]:
-    """Codex sandbox に渡せる書き込み root を作る。"""
-    root = root.resolve()
-    if allow_oracle_conflict_writes:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # Conflict resolution exposes only explicit targets before launch.
-        paths = []
-    elif mode in {
-        FileAccessMode.REALIZATION_WRITE,
-        FileAccessMode.REPO_WRITE,
-        FileAccessMode.NO_RULE,
-    }:
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # Writable roots are determined by the logical mode.  Do not derive
-        # permission entries from `.gitignore` rules or `git check-ignore`.
-        paths = [root]
-    elif mode == FileAccessMode.PURE_ORACLE_WRITE:
-        paths = [root / "oracle"]
-    else:
-        paths = []
-    result: list[Path] = []
-    seen: set[Path] = set()
-    for path in paths:
-        _append_writable_root(result, seen, path.resolve())
-    for path in extra_writable_paths or []:
-        resolved = path.resolve()
-        if not _is_writable_path_allowed(
-            mode, root, resolved, allow_oracle_conflict_writes
-        ):
-            raise CmocError(
-                "追加書き込み許可 path が FileAccessMode の許可領域外にあります。",
-                [
-                    "file access mode で書き込み可能な work root 配下の path を指定してください。"
-                ],
-                f"mode: {mode.value}\npath: {resolved}",
-            )
-        # Explicit additions grant only the selected path.  A selected
-        # directory grants its subtree, subject to the fixed protected rules.
-        _append_writable_root(result, seen, resolved)
-    return result
-
-
-def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:
-    """親子関係で冗長な writable root を持たないように追加する。"""
-    _append_access_root(result, seen, path)
-
-
-def _append_access_root(result: list[Path], seen: set[Path], path: Path) -> None:
-    """親子関係で冗長な permission filesystem root を持たないように追加する。"""
-    resolved = path.resolve()
-    if resolved in seen or any(resolved.is_relative_to(parent) for parent in seen):
-        return
-    redundant = [existing for existing in seen if existing.is_relative_to(resolved)]
-    if redundant:
-        result[:] = [existing for existing in result if existing not in redundant]
-        seen.difference_update(redundant)
-    seen.add(resolved)
-    result.append(resolved)
-
-
-def _is_writable_path_allowed(
-    mode: FileAccessMode,
-    root: Path,
-    path: Path,
-    allow_oracle_conflict_writes: bool = False,
-) -> bool:
-    """FileAccessMode の禁止領域を追加 writable path にも適用する。"""
-    if not path.is_relative_to(root):
-        return False
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
-    relative = path.relative_to(root)
-    if path.name in _DENIED_WRITE_FILE_NAMES:
-        return False
-    if (
-        mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}
-        and is_untracked_git_ignored(root, path)
-    ):
-        return False
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    # `.cmoc/g*/ar` は git tracking の有無を問わず agent 読み取り専用である。
-    if any(path.is_relative_to(read_root) for read_root in agent_read_dirs(root)):
-        return False
-    if allow_oracle_conflict_writes:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-        # session join の conflict 解消は oracle file も git conflict 対象なら編集する。
-        # runtime 管理領域と root 禁止 file は sandbox 側でも開かない。
-        return (
-            bool(relative.parts)
-            and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
-        )
-    blocked_root_names = _REPO_WRITE_BLOCKED_ROOT_NAMES
-    if relative.parts and relative.parts[0] in blocked_root_names:
-        return False
-    if mode == FileAccessMode.REALIZATION_WRITE:
-        return not is_oracle_file_path(root, path)
-    if mode == FileAccessMode.PURE_ORACLE_WRITE:
-        return path.is_relative_to(root / "oracle")
-    if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
-        return not (
-            is_oracle_file_path(root, path) or _is_realization_file_path(root, path)
-        )
-    return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
-
-
-def _is_realization_file_path(root: Path, path: Path) -> bool:
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-    # git ignored path を realization file から外す分類境界だけを実装する。
-    try:
-        relative = path.absolute().relative_to(root.absolute())
-    except ValueError:
-        return False
-    if not relative.parts or relative.parts[0] in {
-        "oracle",
-        "memo",
-        ".git",
-        ".agents",
-        ".codex",
-        ".cmoc",
-    }:
-        return False
-    return path.name not in _DENIED_WRITE_FILE_NAMES and not is_untracked_git_ignored(
-        root, path
-    )
-
-
 def _config_override(key: str, toml_value: str) -> list[str]:
     """Codex CLI の単一 config override を argv fragment にする。"""
     return ["--config", f"{key}={toml_value}"]
-
-
-def _read_roots_for_permission_profile(
-    mode: FileAccessMode,
-    root: Path,
-    extra_read_paths: list[Path] | None,
-    extra_read_root: Path | None,
-) -> list[Path]:
-    """Codex permission profile に渡す読み取り root を作る。"""
-    roots = (
-        [root / "oracle"]
-        if mode in {FileAccessMode.PURE_ORACLE_READ, FileAccessMode.PURE_ORACLE_WRITE}
-        else _top_level_read_roots(mode, root)
-    )
-    if (
-        mode != FileAccessMode.NO_RULE
-        and extra_read_root is not None
-        and extra_read_root != root
-    ):
-        # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-        # linked worktree の規則文は repo 側 `.cmoc/g*/ar` を read 例外にする。
-        roots.extend(_repo_agent_read_roots(extra_read_root))
-    for path in extra_read_paths or []:
-        resolved = path.resolve()
-        if any(resolved.is_relative_to(read_root) for read_root in roots):
-            continue
-        if extra_read_root is not None and _is_repo_agent_read_path(
-            extra_read_root, resolved
-        ):
-            roots.extend(_repo_agent_read_roots(extra_read_root))
-        else:
-            roots.append(resolved)
-    result: list[Path] = []
-    seen: set[Path] = set()
-    for path in roots:
-        _append_access_root(result, seen, path)
-    return result
-
-
-def _top_level_read_roots(mode: FileAccessMode, root: Path) -> list[Path]:
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    # Codex permission filesystem is positive-only; READONLY cannot use
-    # {{work-root}} itself because that would also grant the memo read denied by
-    # the base file access rule.
-    if mode != FileAccessMode.READONLY:
-        return [root]
-    if not root.exists():
-        return []
-    return [
-        path.resolve()
-        for path in sorted(root.iterdir())
-        if _is_read_path_allowed(mode, root, path.resolve())
-    ]
-
-
-def _iter_worktree_paths(root: Path) -> Iterator[Path]:
-    """work-root 配下を symlink の解決先へ降りずに列挙する。"""
-    if not root.is_dir() or root.is_symlink():
-        return
-    try:
-        paths = sorted(root.iterdir())
-    except OSError:
-        return
-    for path in paths:
-        yield path
-        if path.is_dir() and not path.is_symlink():
-            yield from _iter_worktree_paths(path)
-
-
-def _external_symlink_overrides(
-    root: Path, extra_read_root: Path | None
-) -> dict[str, str]:
-    """work-root 外へ解決する symlink の target を deny にする。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    # work-root 外は読み書き禁止で、例外は repo-root/.cmoc/g*/ar の read だけ。
-    allowed_read_roots = (
-        _repo_agent_read_roots(extra_read_root)
-        if extra_read_root is not None
-        else ()
-    )
-    overrides: dict[str, str] = {}
-    for path in _iter_worktree_paths(root):
-        if not path.is_symlink():
-            continue
-        resolved = path.resolve()
-        if resolved.is_relative_to(root) or any(
-            resolved.is_relative_to(read_root)
-            for read_root in allowed_read_roots
-        ):
-            continue
-        overrides[str(resolved)] = "deny"
-    return overrides
-
-
-def _permission_profile_filesystem_overrides(
-    mode: FileAccessMode,
-    root: Path,
-    extra_read_root: Path | None = None,
-) -> dict[str, Any]:
-    """permission profile に、将来の path にも効く保護 rule を追加する。"""
-    overrides: dict[str, Any] = {}
-    if mode in _PERMISSION_PROFILE_WRITE_MODES:
-        # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-        # memo は広い read root に含まれるため deny し、routing file は Codex が
-        # 受理する exact な :workspace_roots rule で read のまま write だけ防ぐ。
-        routing_rules = {name: "read" for name in _DENIED_WRITE_FILE_NAMES}
-        overrides.update(
-            {
-                str((root / "memo").resolve()): "deny",
-                ":workspace_roots": routing_rules,
-            }
-        )
-        if mode in {
-            FileAccessMode.REALIZATION_WRITE,
-            FileAccessMode.REPO_WRITE,
-            FileAccessMode.NO_RULE,
-        }:
-            # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # A root write is required for unknown, non-protected root-level
-            # realization files. Codex selects the most specific filesystem rule,
-            # so protect the fixed reserved roots explicitly instead of relying on
-            # a later diff check (which is not an access control mechanism).
-            overrides.update(
-                {
-                    str(root.resolve() / name): "read"
-                    for name in (".agents", ".codex", ".git", ".pytest_cache")
-                }
-            )
-            overrides.update(
-                {str(path.resolve()): "read" for path in agent_read_dirs(root)}
-            )
-            if mode == FileAccessMode.REALIZATION_WRITE:
-                overrides[str((root / "oracle").resolve())] = "read"
-            overrides.update(
-                {
-                    str((root / name).resolve()): "read"
-                    for name in _DENIED_WRITE_FILE_NAMES
-                }
-            )
-    # Keep this rule for read-only modes too: their read roots can contain a
-    # nested symlink even though they do not have a work-root write entry.
-    overrides.update(_external_symlink_overrides(root, extra_read_root))
-    return overrides
-
-
-def _permission_profile_override_args(
-    read_roots: list[Path],
-    writable_roots: list[Path],
-    protected_paths: list[Path],
-    filesystem_overrides: dict[str, Any] | None = None,
-) -> list[str]:
-    """Codex beta permission profile を config override argv で渡す。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # sandbox_mode cannot express "read this root but never make the primary
-    # workspace writable"; permission profiles can.
-    entries = {str(path): "read" for path in read_roots}
-    entries.update({str(path): "write" for path in writable_roots})
-    # A parent write grant is needed for new files.  A narrower read grant
-    # keeps existing AGENTS.md/INDEX.md files protected inside that parent.
-    entries.update({str(path): "read" for path in protected_paths})
-    entries.update(filesystem_overrides or {})
-    filesystem = _toml_inline_table(entries)
-    permission = (
-        f'{{ extends = ":workspace", filesystem = {filesystem} }}'
-    )
-    return [
-        *_config_override(
-            "default_permissions", _toml_string(_CMOC_PERMISSION_PROFILE)
-        ),
-        *_config_override(
-            f"permissions.{_CMOC_PERMISSION_PROFILE}", permission
-        ),
-    ]
-
-
-def _protected_writable_paths(writable_roots: list[Path]) -> list[Path]:
-    """書き込み root 配下の AGENTS.md/INDEX.md を具体的な read rule にする。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    paths: set[Path] = set()
-    for root in writable_roots:
-        if not root.is_dir():
-            continue
-        for path in root.rglob("*"):
-            if path.name not in _DENIED_WRITE_FILE_NAMES:
-                continue
-            resolved = path.resolve()
-            if resolved.is_relative_to(root.resolve()):
-                paths.add(resolved)
-    return sorted(paths)
 
 
 def _ollama_provider_override_args() -> list[str]:
@@ -687,9 +255,7 @@ def _ollama_provider_override_args() -> list[str]:
         "multi_agent",
         *_config_override("web_search", _toml_string("disabled")),
         *_config_override("model_provider", _toml_string(_OLLAMA_PROVIDER_ID)),
-        *_config_override(
-            f"{provider_key}.name", _toml_string("cmoc managed ollama")
-        ),
+        *_config_override(f"{provider_key}.name", _toml_string("cmoc managed ollama")),
         *_config_override(
             f"{provider_key}.base_url",
             _toml_string("http://127.0.0.1:11434/v1"),
@@ -701,57 +267,21 @@ def _ollama_provider_override_args() -> list[str]:
 def build_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig,
-    root: Path | None = None,
-    extra_read_paths: list[Path] | None = None,
-    extra_writable_paths: list[Path] | None = None,
-    *,
-    extra_read_root: Path | None = None,
-    allow_oracle_conflict_writes: bool = False,
 ) -> list[str]:
-    """AgentCallParameter と worktree config から Codex CLI 上書き argv を作る。"""
+    """論理設定を専用 sandbox 引数と必要最小限の config argv にする。"""
+    sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
     model_spec = config.codex.model[parameter.model_class]
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
     args = [
         "--model",
         model_spec.model,
-        *_config_override(
-            "model_reasoning_effort", _toml_string(reasoning_effort)
-        ),
+        "--sandbox",
+        sandbox_mode,
+        *_config_override("model_reasoning_effort", _toml_string(reasoning_effort)),
     ]
     use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"
     if use_cmoc_managed_ollama:
         args.extend(_ollama_provider_override_args())
-    if root is not None:
-        root = root.resolve()
-        read_root = (extra_read_root or root).resolve()
-        _validate_extra_read_paths(
-            parameter.file_access_mode,
-            root,
-            extra_read_paths,
-            extra_read_root=read_root,
-        )
-    else:
-        sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
-        args.extend(["--sandbox", sandbox_mode])
-    if root is not None:
-        writable_roots = _writable_roots(
-            parameter.file_access_mode,
-            root,
-            extra_writable_paths,
-            allow_oracle_conflict_writes,
-        )
-        args.extend(
-            _permission_profile_override_args(
-                _read_roots_for_permission_profile(
-                    parameter.file_access_mode, root, extra_read_paths, read_root
-                ),
-                writable_roots,
-                _protected_writable_paths(writable_roots),
-                _permission_profile_filesystem_overrides(
-                    parameter.file_access_mode, root, extra_read_root=read_root
-                ),
-            )
-        )
     return args
 
 
@@ -800,30 +330,21 @@ def prepare_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig | None = None,
     root: Path | None = None,
-    extra_read_paths: list[Path] | None = None,
-    extra_writable_paths: list[Path] | None = None,
-    *,
-    extra_read_root: Path | None = None,
-    allow_oracle_conflict_writes: bool = False,
 ) -> list[str]:
-    """必要なら local provider を準備し、Codex CLI 上書き argv を返す。"""
+    """必要なら local provider を準備し、path 非依存の Codex argv を返す。
+
+    root は managed local provider の事前準備だけに使い、sandbox や詳細な
+    ファイルアクセス設定の組み立てには使わない。
+    """
+    resolved_config = config or CmocConfig()
     if (
-        (config or CmocConfig()).codex.model[parameter.model_class].model_provider
-        == "cmoc"
+        resolved_config.codex.model[parameter.model_class].model_provider == "cmoc"
         and root is not None
     ):
         from commons.runtime_doctor import run_doctor_preprocess
 
-        run_doctor_preprocess(root, config)
-    return build_codex_override_args(
-        parameter,
-        config or CmocConfig(),
-        root,
-        extra_read_paths,
-        extra_writable_paths,
-        extra_read_root=extra_read_root,
-        allow_oracle_conflict_writes=allow_oracle_conflict_writes,
-    )
+        run_doctor_preprocess(root, resolved_config)
+    return build_codex_override_args(parameter, resolved_config)
 
 
 def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
@@ -937,7 +458,9 @@ def run_tracked_codex_subprocess(
     finally:
         # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
         # leader 終了後も descendant が group に残る間は tracking を保持する。
-        if process.poll() is not None and not process_group_has_running_member(process.pid):
+        if process.poll() is not None and not process_group_has_running_member(
+            process.pid
+        ):
             try:
                 remove_tracked_child_process(tracking_path, process.pid)
             except OSError as exc:

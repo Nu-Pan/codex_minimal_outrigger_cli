@@ -25,9 +25,7 @@ from commons.runtime_codex_profile import prepare_codex_override_args
 from commons.runtime_doctor import run_doctor_preprocess
 
 
-def _prepare_production_managed_ollama(
-    root: Path, config: CmocConfig
-) -> None:
+def _prepare_production_managed_ollama(root: Path, config: CmocConfig) -> None:
     """Require the real per-user managed service used by production Codex calls."""
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
     # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
@@ -48,6 +46,7 @@ def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     assert all(prompt not in arg for arg in args)
     assert "--profile" not in args
     assert "-p" not in args
+    assert codex_arg_value(args, "--sandbox") in {"read-only", "workspace-write"}
 
 
 def _assert_no_codex_home_config(codex_home: Path) -> None:
@@ -79,7 +78,7 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         )
     )
     prompt = (
-        '次の JSON オブジェクトだけを正確に返し、他の文字列は返さないでください: '
+        "次の JSON オブジェクトだけを正確に返し、他の文字列は返さないでください: "
         '{"result":"cmoc-real-codex-provider"}'
     )
 
@@ -186,14 +185,11 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
     assert Path(record["stdin_fd"]).resolve() == result.prompt_log_path.resolve()
-    assert "--sandbox" not in record["args"]
+    assert codex_arg_value(record["args"], "--sandbox") == "workspace-write"
     override_config = codex_override_config(record["args"])
     assert override_config["model_reasoning_effort"] == "low"
-    assert override_config["default_permissions"] == "cmoc"
-    filesystem = override_config["permissions"]["cmoc"]["filesystem"]
-    assert {
-        path for path, access in filesystem.items() if access == "write"
-    } == {str(root.resolve())}
+    assert "default_permissions" not in override_config
+    assert "permissions" not in override_config
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
@@ -302,6 +298,7 @@ def test_prepare_local_slm_runs_managed_ollama_preflight(
     assert "-p" not in override_args
     _assert_no_codex_home_config(codex_home)
 
+
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 def test_prepare_codex_override_args_does_not_create_codex_home_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -310,9 +307,7 @@ def test_prepare_codex_override_args_does_not_create_codex_home_config(
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
 
-    override_args = prepare_codex_override_args(
-        codex_parameter(), CmocConfig(), root
-    )
+    override_args = prepare_codex_override_args(codex_parameter(), CmocConfig(), root)
 
     assert "--profile" not in override_args
     assert "-p" not in override_args

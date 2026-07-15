@@ -1,4 +1,4 @@
-"""Codex exec の cwd、schema 保存先、permission profile 結合を検証する。
+"""Codex exec の cwd、schema 保存先、sandbox argv を検証する。
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -14,7 +14,6 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 from config.cmoc_config import CmocConfig
 
 from _codex_support import (
-    _assert_not_writable,
     codex_override_config,
     codex_parameter,
     setup_codex_home,
@@ -193,12 +192,10 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     assert record["args"][record["args"].index("--cd") + 1] == str(expected_cwd)
     assert record["cwd"] == str(expected_cwd)
     override_config = codex_override_config(record["args"])
-    assert "--sandbox" not in record["args"]
+    assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
     assert "sandbox_workspace_write" not in override_config
-    assert override_config["default_permissions"] == "cmoc"
-    assert override_config["permissions"]["cmoc"]["filesystem"] == {
-        str((root / "oracle").resolve()): "read"
-    }
+    assert "default_permissions" not in override_config
+    assert "permissions" not in override_config
 
 
 def test_run_codex_exec_stores_schema_state_under_repo_root(
@@ -266,10 +263,10 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
     assert not (linked / ".cmoc" / "gu" / "ar" / "schema").exists()
 
 
-def test_run_codex_exec_allows_repo_agent_read_dirs_from_linked_worktree(
+def test_run_codex_exec_uses_readonly_sandbox_from_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """リンク済み worktree から repo-local の追加 read path を許可することを検証する。
+    """linked worktree でも PURE_ORACLE_READ を専用 sandbox 引数へ変換する。
 
     正本仕様:
         {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -302,7 +299,6 @@ def test_run_codex_exec_allows_repo_agent_read_dirs_from_linked_worktree(
         codex_parameter(FileAccessMode.PURE_ORACLE_READ),
         root=root,
         cwd=linked,
-        extra_read_paths=[root / ".cmoc" / "gu" / "ar" / "report" / "review" / "report.md"],
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
     )
@@ -310,19 +306,16 @@ def test_run_codex_exec_allows_repo_agent_read_dirs_from_linked_worktree(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    filesystem = codex_override_config(record["args"])["permissions"]["cmoc"][
-        "filesystem"
-    ]
-    assert filesystem[str((root / ".cmoc" / "gu" / "ar").resolve())] == "read"
-    assert filesystem[str((root / ".cmoc" / "gt" / "ar").resolve())] == "read"
-    assert str((root / ".cmoc" / "gu").resolve()) not in filesystem
+    assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
+    override_config = codex_override_config(record["args"])
+    assert "permissions" not in override_config
+    assert "default_permissions" not in override_config
 
 
-def test_run_codex_exec_overrides_do_not_open_agents_tree(
+def test_run_codex_exec_does_not_inject_agents_path_permissions(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """権限 override が `.agents` tree を write 対象として開かないことを検証する。
+    """`.agents` の実在 path を sandbox の個別設定へ変換しないことを検証する。
 
     正本仕様:
         {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -356,5 +349,9 @@ def test_run_codex_exec_overrides_do_not_open_agents_tree(
     )
 
     args = json.loads(recorder.read_text())
-    _assert_not_writable(args, agents_file)
+    assert args[args.index("--sandbox") + 1] == "workspace-write"
+    override_config = codex_override_config(args)
+    assert "permissions" not in override_config
+    assert "default_permissions" not in override_config
+    assert all(str(agents_file.resolve()) not in arg for arg in args)
     assert "--profile" not in args

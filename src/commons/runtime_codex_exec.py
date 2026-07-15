@@ -154,7 +154,10 @@ def _next_codex_log_timestamp() -> str:
     global _LAST_CODEX_LOG_TIMESTAMP
     with _CODEX_LOG_TIMESTAMP_LOCK:
         current = timestamp()
-        if _LAST_CODEX_LOG_TIMESTAMP is not None and current <= _LAST_CODEX_LOG_TIMESTAMP:
+        if (
+            _LAST_CODEX_LOG_TIMESTAMP is not None
+            and current <= _LAST_CODEX_LOG_TIMESTAMP
+        ):
             current_dt = datetime.strptime(
                 _LAST_CODEX_LOG_TIMESTAMP[:-3], "%Y-%m-%d_%H-%M_%S_%f"
             )
@@ -178,9 +181,6 @@ def run_codex_exec(
     quota_poll_interval_sec: float = 1800.0,
     max_quota_polls: int | None = None,
     subcommand_logger: SubcommandLogger | None = None,
-    extra_read_paths: list[Path] | None = None,
-    extra_writable_paths: list[Path] | None = None,
-    allow_oracle_conflict_writes: bool = False,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
@@ -200,10 +200,6 @@ def run_codex_exec(
         parameter,
         config,
         codex_work_root,
-        extra_read_paths,
-        extra_writable_paths,
-        extra_read_root=root,
-        allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # `--output-schema` must point at the repo-root local schema store, even
@@ -357,6 +353,7 @@ def run_codex_exec(
         if error is not None:
             payload["error"] = error
         logger.event("codex_call", **payload)
+
     def codex_exec_result_from_paths(
         result: subprocess.CompletedProcess[str],
         *,
@@ -392,7 +389,9 @@ def run_codex_exec(
     resume_token: str | None = None
 
     while True:
-        ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
+        ts, prompt_path, stdout_path, stderr_path, output_path, call_path = (
+            new_log_paths()
+        )
         output_jsonl_path = output_path.with_suffix(".jsonl")
         current_argv = build_argv(output_path, resume_token)
         _write_prompt_log(prompt_path, parameter.prompt)
@@ -437,12 +436,7 @@ def run_codex_exec(
         capacity_error = is_capacity_error(result.stdout)
         quota_error = is_quota_error(result.stdout)
         unexpected_error = is_unexpected_error(result.stdout)
-        if (
-            result.returncode != 0
-            or capacity_error
-            or quota_error
-            or unexpected_error
-        ):
+        if result.returncode != 0 or capacity_error or quota_error or unexpected_error:
             if (
                 capacity_error
                 and not unexpected_error
@@ -578,7 +572,6 @@ def run_codex_exec(
                             quota_probe_parameter,
                             config,
                             codex_work_root,
-                            extra_read_root=root,
                         )
                         probe_call_data = call_data(
                             quota_probe_parameter,
@@ -593,7 +586,9 @@ def run_codex_exec(
                             probe_output_path,
                             probe_call_path,
                         ) = new_log_paths()
-                        probe_output_jsonl_path = probe_output_path.with_suffix(".jsonl")
+                        probe_output_jsonl_path = probe_output_path.with_suffix(
+                            ".jsonl"
+                        )
                         probe_argv = _base_exec_argv(
                             probe_override_args, probe_codex_cwd
                         )
@@ -706,7 +701,9 @@ def run_codex_exec(
                             # not recoverable by waiting for quota reset.
                             raise CmocError(
                                 "Codex CLI quota availability probe が失敗しました。",
-                                ["stderr/stdout log を確認して原因を解消してください。"],
+                                [
+                                    "stderr/stdout log を確認して原因を解消してください。"
+                                ],
                                 _codex_failure_detail(
                                     classification="quota availability probe failed",
                                     returncode=poll.returncode,
