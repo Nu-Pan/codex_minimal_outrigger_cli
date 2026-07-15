@@ -1,20 +1,20 @@
 # `coding_rule.md`
 
 ## Summary
-- Python 実装全体の書き方を定める正本。命名、型ヒント、import、docstring、コメント、非公開識別子の扱いを確認したいときに読む。
+- Python実装時のコーディング規則を定める正本断片。型ヒント、import 方針、docstring、コメント、命名、非公開識別子の付け方など、実装やレビューの基準を確認したいときに読む。
 
 ## Read this when
-- このリポジトリで Python の新規実装や修正を行うとき
-- 既存コードの命名、型ヒント、docstring、コメントの統一方針を確認したいとき
-- 循環参照の回避や相対 import の使い方を判断したいとき
+- `cmoc` の Python 実装方針を決めるとき。
+- 型ヒント、import、docstring、コメント、命名規則の解釈を確認したいとき。
+- 新規コードや既存コードの書き方を、このリポジトリの規則に合わせて揃えたいとき。
 
 ## Do not read this when
-- このファイルの内容をそのまま実装に写すだけで足りるとき
-- 個別モジュールの業務ロジックや CLI 振る舞いを確認したいとき
-- 他言語の実装規約やプロジェクト固有の入出力仕様を調べたいとき
+- 機能仕様や挙動仕様を確認したいときは、対象機能の oracle doc を直接読む。
+- この規則の要約ではなく、個別モジュールの実装詳細を知りたいときは、そのモジュール本文を読む。
+- INDEX.md の読み方やルーティング方針そのものを確認したいときは、別の routing 文書を読む。
 
 ## hash
-- 5390e60d9b2f0ed11c609a57ddd9f84c963f6e755d6f0e2b4ad714ea219b4974
+- c725d18b649ce36fdca432bb297452492eea1bca900c874e600451769d21d501
 
 # `design_rule.md`
 
@@ -58,20 +58,17 @@
 # `test_rule.md`
 
 ## Summary
-- pytest を使う `cmoc` のテスト実装方針を案内する入口。決定論的な制御ロジックの検証、Real Codex CLI を含む経路での cmoc managed ollama 利用、Fake Codex CLI を使う場合の位置づけを扱う。
-- この文書を読むのは、`cmoc` の実装に対応するテストを追加・修正するとき、特に git 状態確認、作業ディレクトリ決定、対象列挙、設定生成、ログ保存、状態更新、エラー処理、CLI 呼び出し周りの結合動作を確認したいとき。
-- `cmoc` の自動テストで LLM の回答品質そのものや外部 provider / 有料クラウド backend の正しさを扱う必要があるときは読まない。そうした対象はこの文書の non-goal に含まれないため、別の正本仕様を探す。
+- pytest を使った cmoc の自動テスト規約をまとめる入口。決定論的な制御ロジックの検証方針、Real Codex CLI 経路で cmoc managed ollama を使う条件、Fake Codex CLI を許す条件を確認したいときに読む。
 
 ## Read this when
-- `cmoc` の決定論的な制御ロジックを pytest で検証したいとき。
-- Real Codex CLI 呼び出しを含む経路で、prompt 渡し、出力保存、schema 指定、profile 生成など cmoc が責任を持つ結合動作を確認したいとき。
-- テストの実行環境を `tmp_path` 配下に構築する必要があるとき。
-- Real Codex CLI 呼び出しのテストで cmoc managed ollama を使うべきか、Fake Codex CLI で十分かを判断したいとき。
+- cmoc のテストを新規作成・修正するとき
+- git 状態、作業ディレクトリ、ファイル列挙、設定生成、ログ保存、状態更新、エラー処理などの制御ロジックをどう検証するか決めたいとき
+- Real Codex CLI 呼び出しを含むテストで、何を結合動作として扱い、どの provider と model を使うべきか判断したいとき
 
 ## Do not read this when
-- LLM の回答品質や、Codex CLI に依頼した仕事の意味的な成功を検証したいだけのとき。
-- Codex CLI 自体、外部 provider、有料クラウド backend の正しさや安定性を保証したいとき。
-- テスト配置やライフサイクルの正本が `cmoc managed ollama` そのものにあると分かっている場合は、この文書ではなく `cmoc managed ollama` の正本仕様を読むべきとき。
+- LLM の回答品質や Codex CLI 自体の正しさを保証したいだけのとき
+- cmoc managed ollama の管理・配置先・永続資源の詳細だけを知りたいとき
+- pytest の一般的な書き方や個別テスト実装そのものを探しているとき
 
 ## hash
-- e8e44f1e9f1d2ea93b2292fde42b9404a2fa58c2c97e92d8a7e3fb2f73fa364f
+- 7302774fb06ffcbc668b6ec974ae3d87324fdd6b05e522c9aeaa17dc94fded9d
