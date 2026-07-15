@@ -1,20 +1,20 @@
 # `__init__.py`
 
 ## Summary
-- `acp.builder` を既存利用者に対する互換入口として読むための導線。正本の `oracle.acp_builder` を優先しつつ、`acp.builder.*` 参照を成立させるための役割と、どの公開面を維持しているかを確認したいときに読む。
+- `acp.builder` への互換入口を提供する初期化処理。`oracle.acp_builder` を正本として参照しつつ、既存の `acp.builder.*` 呼び出しを成立させる役割を持つ。
 
 ## Read this when
-- `acp.builder` を import したときに、正本の oracle 実装へどう接続しているかを確認したい。
-- `acp.builder.basic` などの既存参照がなぜ動くのか、互換層の責務と削除条件を知りたい。
-- oracle 側のモジュールを正本のまま使いながら、local wrapper がどこまで互換性を担保するかを追いたい。
+- `acp.builder` 配下の公開名をどう解決するか確認したいとき。
+- 既存利用者向けの互換性を維持しながら、`oracle.acp_builder` 側の実装を見せる必要があるとき。
+- `basic` モジュールがどこから来るか、`acp.builder` のモジュール探索順を変える必要があるとき。
 
 ## Do not read this when
-- `acp.builder` の実装本体や新規機能の仕様を知りたい場合は、正本側の `oracle.acp_builder` を読む。
-- 互換入口ではなく、`acp.builder.*` への依存をなくす作業をしている場合は、ここより利用箇所の整理を先に見る。
-- パッケージ内部の詳細なモジュール設計や実装ロジックを確認したいだけなら、この互換ラッパではなく対象モジュール本体を読む。
+- `acp.builder.*` 以外の個別実装や機能の仕様を知りたいときは、対応する下位モジュールを読む。
+- 互換入口ではなく、正本側の実装そのものを確認したいときは `oracle/acp_builder` 側を読む。
+- `acp.builder` の公開面そのものを変えずに内部ロジックだけを追いたいときは、この入口ではなく対象の実体モジュールを読む。
 
 ## hash
-- 509b6204eeeca3f085e3e26ff0c52971deabd980ea82d9d6ec634b9638cda306
+- 848ff37eb14c8145806e0a19d2da20b284094ae0063abf6c9b7b80623ac29764
 
 # `apply`
 
@@ -69,38 +69,44 @@
 # `quota_probe.py`
 
 ## Summary
-- `quota availability probe` の互換入口。正本 builder への委譲と、配布物に正本 builder が含まれない場合の最小 probe への退避を確認したいときに読む。
-- quota 確認を成立させるための後方互換だけを担当するため、正本側の probe builder の仕様や、quota polling 全体の実行制御を追う目的ではここを起点にしない。
+- `oracle.acp_builder.quota_probe` が配布されない環境でも quota availability probe を成立させる互換入口を扱う。正本 builder への委譲と、未配布時に返す最小 probe の分岐を確認したいときに読む。
+- `AgentCallParameter` を受けて probe 用パラメータへ変換する責務を持つ。呼び出し元の cwd を維持しつつ、代替経路の存在条件やフォールバック内容を見たいときに読む。
 
 ## Read this when
-- `quota availability probe` が正本 builder に委譲されるか、未配布時にどの最小 probe に落ちるかを確認したいとき。
-- 配布形態ごとの互換動作を確認し、正本 builder の有無で呼び出し先を切り替える入口だけを見たいとき。
+- quota availability probe の互換動作や fallback の有無を確認したい。
+- optional な oracle 側 builder が無い配布形態でも動くべきかを判断したい。
+- probe の既定値が最小構成になっている理由を知りたい。
 
 ## Do not read this when
-- 正本の `quota_probe` 生成仕様そのものを確認したいときは、互換入口ではなく正本側の builder を読む。
-- quota polling の待機・再試行・復帰制御全体を追いたいときは、ここではなく実行制御側を読む。
+- quota probe の本来の仕様や Codex 呼び出し規約そのものを確認したい場合は、正本側の builder か oracle/doc/app_spec/codex_exec_rule.md を読む。
+- acp builder 全体の別機能を探しているだけなら、この互換入口ではなく該当 builder を直接読む。
 
 ## hash
-- f9d221b3230b6f08444a7fc20c332d0daeef3afa8494a7fd067e99948770a81c
+- 102d844da2e0449cf34e4eb8c6dc71fd44068a7d8df835340a7b349dad321a42
 
 # `review`
 
 ## Summary
-- `acp.builder.review` の互換 import 層。旧来の参照を壊さないための薄い package 初期化と、review oracle 互換エントリをまとめて案内する。
-- 互換 import を維持するだけの層と、`acp.builder.review.oracle.*` から正本 oracle 実装へ進む入口を切り分けるために読む。
+- `__init__.py` は review builder 系の互換 import だけを支える入口。旧 `acp.builder.review` 参照を残す必要があるか、あるいは互換層を削除できるかを判断するときに読む。
+- `oracle` は review builder の互換 shim と正本 oracle への橋渡しをまとめた入口。旧 import 経路の維持可否と、review finding の生成・判定・擁護・反証のどの入口に進むべきかを切り分けるときに読む。
 
 ## Read this when
-- 旧来の `acp.builder.review` 系 import の互換性や削除可否を確認したいとき。
-- `acp.builder.review.oracle.*` の参照を整理して、どの呼び出し元を正本 oracle 実装へ移すべきか判断したいとき。
-- この package が残されている理由や、互換層を外せる条件だけを確認したいとき.
+- `__init__.py` の互換 import を確認する。
+- `__init__.py` を含む review builder 周辺の古い参照を削除できるか判断する。
+- `oracle` 配下で旧い import 経路の互換維持条件や削除可否を確認する。
+- `oracle` 配下で review finding の所見生成、判定、擁護、反証のどの入口に進むべきか切り分ける。
+- `oracle` 配下の symlink 経由の path 表示や既知の互換修正の位置を確認する。
 
 ## Do not read this when
-- review oracle の実処理や変換ロジックそのものを確認したいとき。
-- 新しい公開 API や利用者向け機能の仕様を追いたいとき。
-- 互換 import ではなく、正本の oracle 実装仕様を直接読みたいとき。
+- `__init__.py` で review builder の実処理や変換ロジックを調べたい。
+- `__init__.py` で新しい公開 API や利用者向け機能の仕様を確認したい。
+- `__init__.py` と無関係な builder 実装を変更したい。
+- `oracle` で新しい review 機能全体の設計や、oracle 以外の builder 群を探したい。
+- `oracle` で互換 shim ではなく正本の review oracle 本体だけを直接追いたい。
+- `oracle` 配下の薄い入口ではなく、実装本体の詳細ロジックを確認したい。
 
 ## hash
-- 1e1407221a9ce3abcda4fd9dbd7690d10ed9bcaabd4f52fd1811038aaba0be99
+- dcb356d75e263d93bc452e01a1ba25f2a2d653e27cda46185b96b1a1e25f3077
 
 # `session`
 

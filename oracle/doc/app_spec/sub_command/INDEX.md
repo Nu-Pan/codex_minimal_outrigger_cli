@@ -167,18 +167,19 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの入口。ユーザー入力のオリジナルプロンプトをエディタで受け取り、必要な実行パラメータを agent call で決めて、AI Agent CLI/TUI を起動する処理を扱う。
-- ここでは、プロンプト編集フロー、パラメータ決定、起動時の共通制約と Codex CLI 固有の持ち込み要件を確認する。
+- `cmoc tui` サブコマンドの起動フロー、ユーザー入力プロンプトの編集先と初期テンプレート、agent call で決める起動パラメータ、Codex CLI 起動時に持ち込む固有要件を確認したいときに読む。
+- この文書は、TUI 起動時の人間入力と自動決定の境界、エディタ選択順、入力読み出しの扱い、バックエンド共通の起動条件を決める役割を持つ。
 
 ## Read this when
-- `cmoc tui` の起動手順、エディタ入力、パラメータ決定、または起動コマンドの仕様を確認したいとき。
-- Codex CLI をこのサブコマンド経由で起動するときの前提条件や、持ち込むべき実行制約を確認したいとき。
-- オリジナルプロンプトの初期内容、保存先、読み出し時の整形ルールを確認したいとき。
+- `cmoc tui` の起動手順、入力テンプレート、または起動パラメータの正本を確認したいとき。
+- AI Agent CLI/TUI の起動条件や、Codex CLI を使う場合に追加で引き継ぐ要素を確認したいとき。
+- ユーザーが入力するオリジナルプロンプトの編集場所、初期文面、読み出し時の整形規則を変更したいとき。
 
 ## Do not read this when
-- `cmoc tui` 以外のサブコマンドのルーティングだけを知りたいとき。
-- `build_tui_resolve_parameter_parameter` や `build_tui_launch_tui_parameter` の個別仕様そのものを確認したいときは、そちらの正本を直接読むべきであり、この入口だけでは足りない。
-- `skill_authoring_write` の具体的な書き込み仕様を知りたいときは、`tui` ではなく Skill 作成・保守側の文書を読むべきである。
+- TUI 以外のサブコマンドの仕様を知りたいときは、より直接の対象を読む。
+- agent call の個別の解決仕様だけを知りたいときは、`build_tui_resolve_parameter_parameter` の正本を読む。
+- 全バックエンド共通の launch パラメータだけを知りたいときは、`build_tui_launch_tui_parameter` の正本を読む。
+- Codex CLI 固有の preflight validation や環境変数の正本だけを知りたいときは、`codex_exec_rule.md` を読む。
 
 ## hash
-- a5f93a2959ca250c7500f610a55c96fed5b6a1bbb7a61d650479bfbef96e8a7a
+- b28837a3690a3d1a2fceae1388d903d29067e4a4990400dbf0a66ae1da2fa57b

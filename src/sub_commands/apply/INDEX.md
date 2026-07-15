@@ -19,74 +19,74 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc apply abandon` の実行本体を扱う。apply run を破棄して apply state を ready に戻す流れと、その途中で必要になる branch/worktree/process cleanup の入口になる。
-- この対象は、apply run の破棄条件の判定、cleanup 対象の特定、実行中 process の停止、apply branch と worktree の削除、状態更新、結果表示をまとめて扱う。
+- `cmoc apply abandon` の実行本体を扱う。session branch または apply branch 上で、未 join の active apply run を検証し、実行中 process の停止、apply worktree と apply branch の削除、apply state の ready への復帰、追跡情報の消去までをまとめて確認したいときに読む。
 
 ## Read this when
-- `cmoc apply abandon` のルーティング先を決めたいとき。
-- apply run を破棄する条件、どの branch から実行できるか、どの状態を ready に戻すかを確認したいとき。
-- apply branch / worktree / process の cleanup 手順の入口を探しているとき。
+- apply run を中断して cleanup したいとき
+- active apply run の有無・所属 session・cleanup 対象 worktree/branch の整合性確認を追いたいとき
+- abandon 時の process 停止順序や cleanup 後の state 復帰を確認したいとき
 
 ## Do not read this when
-- session state の作成や更新の定義だけを確認したいときは、apply abandon ではなく session state 側の対象を読む。
-- branch や worktree の一般的な操作仕様だけを見たいときは、より基礎の runtime や branch/worktree 操作側を読む。
-- CLI 全体のサブコマンド一覧や共通実行基盤だけを見たいときは、この対象ではなく上位の CLI ルーティングや共通実行基盤を読む。
+- apply run の開始や Codex による適用 loop を追いたいときは `fork.py` を読む
+- apply run の join / merge / report / cleanup を追いたいときは `join.py` を読む
+- apply fork の report 生成や変更要約の組み立てだけを確認したいときは `fork_report.py` を読む
 
 ## hash
-- 723d1243b709cbcaa1f10f9dd9aa8ba241e6e0e279a10a629fb90689617f7523
+- ed4541038815a7b31a15ede89718b5265b90bafa582eafd08a0fbd8f01153294
 
 # `fork.py`
 
 ## Summary
-- apply fork の実行開始から、対象ファイルの列挙、Codex による所見適用、commit、state/report の確定、異常終了時の巻き戻しまでをまとめる入口。apply run のライフサイクル全体や中断・復旧条件を追うときに読む。
+- `apply fork` の起点から完了までの制御を読むための入口。branch/worktree の作成、対象ファイルの列挙、Codex による所見適用、commit、state 更新、異常時の復旧までを一つの実行単位として扱う。
+- 中断時の部分完了や error 退避、process tracking、cleanup 条件を確認したいときにここを読む。所見の生成方法や適用方法の詳細は、参照先の専用ファイルを読む。
 
 ## Read this when
-- apply fork の実行フロー、対象選定、findings の適用、commit 生成、完了報告の流れを確認したい。
-- 中断時の部分結果確定、child process 停止、未確定差分破棄、初期化失敗時の rollback など、apply run の失敗時挙動を確認したい。
-- apply ループでどの file を再調査対象に戻すか、また commit subject をどう決めるかを確認したい。
+- `apply fork` の実行フロー全体を追いたいとき。
+- 新しい apply run の開始条件、既存 branch/worktree の衝突、失敗時の rollback ルールを確認したいとき。
+- 中断・エラー時に何を残し、何を破棄するかを確認したいとき。
 
 ## Do not read this when
-- apply fork ではなく、別 subcommand の CLI 入口や別の orchestration を追いたい。
-- apply 内で使う個別の parameter 生成や report 生成の詳細だけを見たい場合は、対応する下位モジュールを直接読む。
-- oracle file や INDEX.md の書き方そのものを確認したい場合は、このファイルではなく該当する仕様文書を読む。
+- 所見の列挙ロジックだけを知りたいときは、対象列挙や finding 生成の専用ファイルを先に読む。
+- レポートの出力形式だけを知りたいときは、report 生成の専用ファイルを読む。
+- `apply fork` 以外の subcommand 全体像を見たいだけなら、このファイルではなく上位のルーティング文書を読む。
 
 ## hash
-- fec4b9113a8a152e65be5b864536a3a044132984da015a14d02f59f5c134abf0
+- ed8e733e8a08085ee6ae2b5fdbef106e8dc00cffb5204b181028af4b6e3b1c86
 
 # `fork_report.py`
 
 ## Summary
-- `cmoc apply fork` の実行結果レポートを組み立てる対象。成功・未収束・エラーの本文、所見数の推移、変更内容要約、YAML frontmatter 付き Markdown 出力を確認したいときの入口。
-- fork 実行の本体ではなく、変更差分の収集結果をどの文面で保存するかを扱う。変更要約のフォールバック、未追跡ファイルの差分扱い、中断時の注記を確認したいときに読む。
+- `apply/fork` の実行結果レポート生成に関わる入口。成功・失敗・中断のレポート本文、所見数の推移、変更要約、未追跡ファイルの差分扱いを確認したいときに読む。
+- `git diff` と未追跡ファイルから変更要約を作る部分を扱う。差分の対象範囲、変更なし判定、要約生成失敗時の代替表現を調整したいときに読む。
+- YAML frontmatter を含む Markdown レポートの組み立てを扱う。出力文面、結果ラベルの文言、所見数メモ、変更一覧の表現を確認したいときに読む。
 
 ## Read this when
-- `apply fork` の保存レポートの見た目や文言を変えたいとき。
-- 所見数の履歴や中断メモをレポートにどう残すかを確認したいとき。
-- fork 以後の変更差分をレポートへどう反映するか、要約生成失敗時に何を出すかを確認したいとき。
+- apply fork の完了報告や失敗報告の出力形式を変えたい。
+- 所見数の履歴や中断時メモをレポートにどう出すかを確認したい。
+- fork 以後の変更差分に未追跡ファイルを含めるか、変更要約のフォールバックをどうするかを確認したい。
 
 ## Do not read this when
-- `apply fork` の実行フロー、branch/worktree 作成、state 更新、commit などの制御を追いたいときは本体側を読む。
-- 差分収集に使う git 操作の共通部だけを確認したいときは、`run_git` や関連ユーティリティ側を読む。
-- `apply join` や `apply abandon` のレポートではなく、fork 専用の出力だけを見たいときはこの対象に限る。
+- 実際の apply fork 実行フローや session 状態の更新を追いたい場合は、より上位の apply fork 実行処理を読む。
+- 差分収集の個別コマンドや git 操作の共通部を追いたい場合は、`run_git` を使う共通ユーティリティ側を読む。
+- レポート保存先のディレクトリ規則だけを知りたい場合は、このファイルではなく `reports_dir` 側を読む。
 
 ## hash
-- 832f69581c8b3e36aba2a138b729c17b20c85c3fe638ba8e5e9fb6641b0d363c
+- 6f9fb260196190ef01b337f148c812744075453fb920d0b1654b6c97b947c133
 
 # `join.py`
 
 ## Summary
-- `apply join` の実行本体を読む入口。差分検査、merge、report 保存、force-resolve、後始末までをまとめて確認したいときに進む。
-- この対象を読むのは、apply/session state と worktree・branch の整合性、想定外差分の扱い、cleanup の条件を追いたい場合。
+- apply session の join 実行を扱う。差分検査、merge、report 保存、apply worktree と branch の後始末までを一連で見る必要があるときに読む。
 
 ## Read this when
-- apply join の正常終了条件や失敗条件を確認したい。
-- force-resolve 時に何を revert し、何を残すかを確認したい。
-- merge conflict や report 生成、apply worktree と branch の削除条件を追いたい。
+- `apply join` の CLI 実行フロー、事前条件、merge conflict や想定外差分の扱いを確認したいとき。
+- apply state の更新、report の生成、worktree / branch の cleanup 条件を確認したいとき。
+- `--force-resolve` の有無で join の挙動がどう分かれるかを追いたいとき。
 
 ## Do not read this when
-- apply join 以外の apply サブコマンドを追いたい。
-- managed branch 一般の差分列挙や rename 扱いだけを確認したい場合は、対応する共通処理を先に読む。
-- report だけ、あるいは conflict 解消だけを確認したい場合は、この対象より該当する個別処理を直接読む。
+- `apply fork` や `apply abandon` の処理を見たいときは、それぞれのサブコマンド実装を読む。
+- report の文面だけを見たいときは、report 専用の実装を読む。
+- apply/session の共通 state 操作や worktree 操作だけを追いたいときは、個別の runtime helper を先に読む。
 
 ## hash
-- de1aa378a9a1f623bbfe00473a289e710e8799fed4b4ed0c12a09fdc521242f1
+- 7b6a7efccd106ed55d49f845886882c2821395da91bb7d8ed79daf0a3988f542

@@ -18,51 +18,57 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc session abandon` の CLI 実装。session branch 上でのみ実行され、事前条件確認・home branch への切り替え・session 状態の更新・session branch の削除・失敗時の巻き戻しまでを扱う。
+- `cmoc session abandon` の実処理をまとめる。active な session を破棄し、home branch へ戻して session branch だけを削除する。失敗時は state と branch を元に戻して再実行可能な状態に復帰する責務を持つ。
 
 ## Read this when
-- session を破棄して home branch に戻す挙動を確認したいとき。
-- cleanup 中の失敗時に state と branch が再実行可能な状態へ戻る条件を確認したいとき。
-- session branch 前提、home branch 存在確認、worktree clean 要件、表示メッセージを変更したいとき。
+- session の破棄フローを変更したいとき。
+- cleanup 中の rollback や中断時の再実行可能性を変えたいとき。
+- session branch の削除条件、home branch への切り替え順、session state の `abandoned` 化を確認したいとき。
+- このサブコマンドの利用者向け出力を変えたいとき。
 
 ## Do not read this when
-- session を merge して終了する挙動を見たいときは、merge 系の subcommand を読む。
-- session 作成・参加・通常の state 読み込みだけを扱う変更では、この file は直接読まない。
-- CLI の共通 runtime や git 操作の実装確認が目的なら、subcommand 本体ではなく `cmoc_runtime` 側を読む。
+- session の作成・参加・継続の処理を見たいときは、これではなく該当サブコマンド側を読む。
+- branch/state の低レベル操作だけを確認したいときは、まず共通の runtime や git/state 操作側を読む。
+- CLI 起動や step 管理の共通仕組みだけを見たいときは、個別サブコマンドではなく共通層を読む。
 
 ## hash
-- 28a1100aa48b87a06a5863f1612fff40a710c6e5b79967aec2391feb7ff1c25c
+- d71932d5c122862305302cef12235d93296e3bf83a130082246045290c65d9cc
 
 # `fork.py`
 
 ## Summary
-- `cmoc session fork` の起点です。現在の local branch を session の home branch として扱い、その HEAD から session branch を作成し、session state を保存する処理を追うときに読む。失敗時の rollback と、active session の重複防止を確認したい場合もここが入口になる。
+- `cmoc session fork` の実体実装。現在の local branch を session の home branch として扱い、session branch 作成、session state 保存、失敗時の巻き戻しまで確認したいときに読む。
+- CLI 入口ではなく、branch 条件・active session の再確認・session-id 生成・rollback の制御を変更するときに読む。
 
 ## Read this when
-- `cmoc session fork` の実行条件、branch 作成、session state 保存、標準出力の内容を確認したいとき。
-- fork 失敗時に home branch への戻し方、session branch の削除、state file の掃除まで含めて挙動を追いたいとき。
-- 一意な session-id の生成条件や、既存の session branch / state file との衝突判定を確認したいとき。
+- `cmoc session fork` の挙動を修正したい。
+- 現在の branch から session branch を作る条件、既存 active session の拒否、state file 生成、失敗時の cleanup を確認したい。
+- 一意な session-id の生成条件や、session branch と state file の衝突回避を見たい。
 
 ## Do not read this when
-- session の永続化スキーマだけを確認したいときは [session_state.md](/home/happy/codex_minimal_outrigger_cli_stage1/oracle/doc/app_spec/session_state.md) を先に読む。
-- `cmoc session fork` 以外の `cmoc session` 系サブコマンドの仕様を確認したいときは別の sub_command 配下を読む。
-- CLI の起動順序や共通 precheck の細部だけを確認したいときは、この file ではなく呼び出し元の runtime 側を読む。
+- CLI の引数定義やサブコマンド配線だけを確認したい場合は、main 側の entry を読む。
+- session 作成後の join / abandon / apply / review の仕様を知りたい場合は、それぞれの対象を読む。
+- branch model 全体の整理だけが目的なら、より上位の branch / session の仕様を読む。
 
 ## hash
-- f2404006e55dac3cb99692735a54944ce191f2914e00cb57d0b561d46e4c7bad
+- 2d3bca97287f3069ae1782ae1c9e08996401287f8245e506f54c9cfbda8f132b
 
 # `join.py`
 
 ## Summary
-- `cmoc session join` の CLI 実行本体を置く。事前条件確認、merge 実行、merge conflict の Codex CLI 依頼、状態更新、ブランチ削除と結果表示までをまとめて扱うので、このサブコマンドの振る舞いを追うときに読む。
+- `cmoc session join` の実行経路をまとめた入口。現在の session branch を session home branch へ merge し、状態更新・ブランチ削除・結果表示までの一連の流れを追うときに読む。
+- merge conflict を Codex CLI に解消させる分岐、残存 conflict marker の検査、unmerged path の確認を含むため、join 時の失敗時挙動や手動介入の境界を確認したいときにも読む。
+- ここは join のオーケストレーションに集中しているので、conflict 解消用の引数構築や下位の session 状態定義だけを知りたい場合は、より直接の定義側を読む。
 
 ## Read this when
-- `session join` の実行条件、merge 失敗時の扱い、conflict 解消の流れ、完了後に session state と branch をどう扱うかを確認したいときに読む。
-- CLI から起動される実処理の入口を探していて、`session join` がどの runtime と Git 操作を使うかを知りたいときに読む。
+- session join サブコマンドの実行順序、事前条件、成功時の状態更新と出力を確認したい。
+- merge conflict 発生時に Codex CLI へ何を渡し、どの条件で再試行や手動解決に切り替わるかを確認したい。
+- session branch の削除条件や、merge 済み判定の取り方を確認したい。
 
 ## Do not read this when
-- `session join` 以外のサブコマンドの入口や共通 runtime の仕様を知りたいときは、より上位の共通処理や別サブコマンドの本文を読む。
-- indexing preflight や Codex 実行基盤そのものの仕様を知りたいときは、このファイルではなく、その責務の本文を読む。
+- session の状態スキーマや永続状態の定義そのものを知りたいだけなら、状態定義側を読む。
+- conflict resolution 用のパラメータ生成だけを知りたいなら、この実行オーケストレーションではなく引数構築側を読む。
+- 他の session 系サブコマンドの routing を知りたいだけなら、join 実装ではなく該当サブコマンドの入口を読む。
 
 ## hash
-- f015b4b46576cd392c939102f90ace37a41e42eda536ee31762a5381cb267fc5
+- baf48c0407f1dbe353ef0915cfe2d1c6630d41873d95cde6b512cc05b8891e47

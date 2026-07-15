@@ -40,21 +40,20 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- `codex exec` を cmoc から呼び出すときの引数・環境変数・事前検証・ログ保存・Structured Output の扱いを決めるルールを読むための入口。実際に `codex exec` の起動方法や出力保存方法を実装・変更するときに読む。
-- ファイルアクセス制限やモデル設定、プロンプト本文の渡し方、失敗時の再試行や待機の条件を確認したいときに読む。個別の builder 実装や呼び出し処理の調整は、その仕様の根拠としてここを見る。
+- `codex exec` 呼び出しの組み立て方と実行時制約を定める。対象は、環境変数の引き継ぎ、事前検証、argv での設定上書き、プロンプトとログの保存、Structured Output、失敗時の再試行・再開に関わる実装。
 
 ## Read this when
-- cmoc から Codex CLI を起動する処理を追加・変更するとき
-- `CODEX_HOME` の解決、preflight validation、`--model` や `--config` による上書き、`--json` や `--output-last-message` の保存先を扱うとき
-- プロンプトを stdin で渡す方法、Structured Output の schema 保存、失敗時の再実行や quota 待機の扱いを確認したいとき
+- cmoc から Codex CLI を起動する処理を作る・直すとき。
+- `$CODEX_HOME` の扱い、preflight validation、`--profile` 禁止、`--config` 上書き、`--json`、`--output-last-message`、`--output-schema` の扱いを確認したいとき。
+- Codex CLI のプロンプト保存先や stdout / stderr / output JSON の保存先、quota 枯渇や model capacity のリトライ、resume の条件を確認したいとき。
 
 ## Do not read this when
-- `codex exec` 以外の cmoc 実装や一般的な CLI 仕様だけを見たいとき
-- ファイル分類としての oracle / realization の境界だけを確認したいとき。これは別の oracle で扱う
-- Codex CLI の個別 parameter builder の詳細実装だけを追いたいとき。まずはここで方針を確認し、必要なら正本側の builder 定義へ進む
+- agent に渡すプロンプトの一般規範だけを確認したいときは `prompt_standard` を読む。
+- サブコマンド全体のログ形式やコンソール出力規則を確認したいときは `console_and_file_log` を読む。
+- run の worktree / branch 分離や作業隔離だけを確認したいときは `run_isolation` を読む。
 
 ## hash
-- eb7b8c3503c2eadeae5ce0fdcd3010170b2aea7e1759f003f025810508076b60
+- 05f1a28e28f4f69f1f2bfa8074276b3148e9f5867f8e4dad703dec5cb9433ca3
 
 # `console_and_file_log.md`
 
@@ -76,20 +75,20 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- cmoc の各サブコマンド起動前に共通で走る事前検証と修復、特に `.cmoc/gu` の追跡除外、`.agents` と `.cmoc/gt/ar/config.json` の追跡保証、必要時の cmoc managed ollama 準備、そして失敗時の即時終了方針を定める。
+- `doctor preprocess` の責務を読む入口。`cmoc` の実行前に共通で行う事前検証と修復、特に ignore 状態・初期ディレクトリ準備・追跡対象の保証・必要時のコミットという流れを確認したいときに進む。
 
 ## Read this when
-- サブコマンド本体より前に実行される共通の検証・修復の責務を確認したいとき。
-- `.cmoc/gu` の ignore 化、`.agents` の追跡可能化、`.cmoc/gt/ar/config.json` の追跡保証のどれかを実装・修正するとき。
-- cmoc managed ollama を doctor preprocess から使う条件や前提を確認したいとき。
+- `cmoc` の起動前に共通前処理として何を保証するか知りたいとき。
+- `.cmoc/gu` を追跡対象外にする、`.agents` を追跡対象として用意する、`.cmoc/gt/ar/config.json` を追跡対象にする、のいずれかの要件を確認したいとき。
+- 修復可能ならその場で直し、困難ならエラー終了する条件を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の事前条件や本命処理を確認したいときは、各サブコマンドの仕様を読む。
-- cmoc managed ollama の具体的な扱いだけを確認したいときは、`cmoc_managed_ollama.md` を直接読む。
-- 共通の入出力やエラー体系だけを確認したいときは、より一般的な app_spec の別文書を読む。
+- 個別サブコマンド固有の事前条件を確認したいとき。まず `doctor preprocess` 後に読むべき対象を探す。
+- `cmoc managed ollama` の可用性保証の詳細だけを知りたいとき。そこから先は専用の仕様断片を読む。
+- 既存の `INDEX.md` エントリー一覧やルーティング全体を把握したいだけのとき。
 
 ## hash
-- adfd851d3fe719b82990d8e00020d3b5d36be4f1304fe71acb8c7a0c5d924b62
+- 456a872269e84de215902aa521fb1f4095a8a7af7366b23fba5692d0accff503
 
 # `error_handling.md`
 
@@ -221,24 +220,20 @@
 # `sub_command`
 
 ## Summary
-- `cmoc apply abandon` の正本仕様断片。未 join の apply run を破棄し、apply 側の cleanup と session state の復帰を扱う入口。
-- `cmoc apply fork` の成果物を取り消したいとき、または session 破棄前に active / completed / error の apply run を先に片付けたいときに読む。
-- 破棄ではなく merge をしたい場合や、session 本体の破棄・apply 実行ループ・join 側後処理を扱いたい場合は別の対象を読む。
+- `cmoc` の各サブコマンド仕様を、実行条件・状態遷移・後処理ごとに分けて読むための入口。apply/session/review/doctor/indexing/tui の個別挙動を実装・確認するときに、まずこの階層で該当する正本仕様を選ぶ。
 
 ## Read this when
-- 現在の session に紐づく未 join の apply run を破棄する挙動を実装・確認するとき。
-- `{{cmoc-apply-branch}}` と `{{cmoc-apply-worktree}}` を削除する正規手順と、その前提条件・警告・終了コードを確認したいとき。
-- `cmoc apply fork` の結果を取り消したいが、`cmoc apply join` は行わず、session 本体は維持したいとき。
-- `cmoc session abandon` の前に、残っている apply run を先に片付ける必要があるか確認したいとき。
+- 特定の `cmoc` サブコマンドの入力条件、分岐、終了時の状態更新、後始末を確認したいとき。
+- apply/session 系の破棄・統合・作成・終了を扱う仕様を、個別の責務ごとに見分けて読みたいとき。
+- `cmoc` の起動フロー、診断、インデクシング、レビュー、TUI など、サブコマンド単位の正本仕様を探したいとき。
 
 ## Do not read this when
-- apply 成果物を `{{cmoc-session-branch}}` に取り込む処理を知りたいときは `cmoc apply join` を読む。
-- session 自体を破棄したいときは `cmoc session abandon` を読む。
-- apply の実行や探索、差分反映のループを知りたいときは `cmoc apply fork` を読む。
-- report 保存や merge 後のブランチ削除など、join 側の後処理を知りたいときは `cmoc apply join` を読む。
+- サブコマンド共通の基盤仕様や汎用ルールだけを知りたいときは、より上位の app_spec 側を読む。
+- 特定サブコマンドの本文まで直接分かっているときは、この階層ではなく該当する個別仕様を読む。
+- ここにない別カテゴリの正本仕様や、実装ファイルの詳細だけを探したいときは、別のルーティング文書を読む。
 
 ## hash
-- 388262110d7981d764e4e46050e6a297da39dbbc8eca9bd0e953be3630212fa9
+- c4cb1b1a7658b2640f91eec12b80c5a1409e77d22aec5e2e60914fdf2b61619a
 
 # `subcommand_interruption.md`
 
