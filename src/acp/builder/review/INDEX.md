@@ -19,17 +19,16 @@
 # `oracle`
 
 ## Summary
-- `acp.builder.review.oracle` の互換層と正本 oracle への橋渡しをまとめた領域。旧 import 経路を維持する薄い shim と、review finding の生成・判定・擁護・反証に関する入口を分けて読む。
+- `acp.builder.review.oracle` の互換 import 群をまとめる入口。旧 import 経路を維持するだけの包みか、正本 oracle 実装へ進むべきかを見分けるときに使う。
 
 ## Read this when
-- 旧い import 経路の互換維持条件や削除可否を確認したいとき。
-- review oracle の所見生成、判定、擁護、反証のどの入口に進むべきかを切り分けたいとき。
-- symlink 経由の path 表示や、既知の互換修正がどこで入るかを確認したいとき。
+- 旧来の `acp.builder.review.oracle.*` import をまだ使っている呼び出し元の整理や削除可否を確認したいとき。
+- 互換層を残す理由や、どの条件で削除できるかを確認したいとき。
+- 正本 oracle 実装へ進む前に、この package で維持している互換の範囲だけを確認したいとき。
 
 ## Do not read this when
-- 新しい review 機能全体の設計や、oracle 以外の builder 群を探したいとき。
-- 互換 shim ではなく、正本の review oracle 本体だけを直接追いたいとき。
-- この配下のどの薄い入口でもなく、実装本体の詳細ロジックを確認したいとき。
+- 新しい review oracle の実装仕様や生成ロジックを確認したいときは、対応する `oracle/src` 側を読む。
+- 互換 import 経路ではなく、review oracle 本体の挙動や入力仕様を追いたいとき。
 
 ## hash
-- 4bbc0b556f3dca37ae6d63ef5e75a17e9a6a5990ab2e8c941306b9ac27ce3917
+- a73562e940351b2377912d69014bd9d9c305f33eacaf5c5ec4f0ea0eaa5c4f0f

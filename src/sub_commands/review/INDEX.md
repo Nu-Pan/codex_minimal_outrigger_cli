@@ -19,18 +19,17 @@
 # `oracle.py`
 
 ## Summary
-- `review oracle` コマンドの実行本体を扱う。セッション branch の妥当性確認、隔離 review worktree の作成と削除、oracle 対象の列挙、review loop 実行、所見の集約、report 出力までを一連で追うときに読む。
-- 個別の所見抽出や report 生成の細部ではなく、このコマンド全体の制御フローと終了時の扱いを確認したいときに進む。内部の補助処理だけを知りたい場合は、ここではなく参照先の各 helper を読む。
+- `review oracle` コマンドの実行全体を束ねる入口。実行前の前提確認、隔離 worktree の作成・削除、review ループの起動、結果レポートの出力までを扱う。
 
 ## Read this when
-- `review oracle` の実行手順、分岐、エラー終了、ユーザー中断時の扱いを確認したい。
-- review 対象の選定や worktree での隔離実行が、どの責務で結び付いているかを知りたい。
-- 実行結果の report がどのタイミングで書かれるか、またどの条件でレビュー branch の変更を join するかを見たい。
+- `review oracle` の実行順序や失敗時の振る舞いを変えたいとき。
+- session branch かどうかの判定、未コミット差分の拒否、interruption の扱いを確認したいとき。
+- review 用 worktree のライフサイクルや、最終レポートに渡す実行結果の集約方法を見たいとき。
 
 ## Do not read this when
-- 所見本文のレンダリングだけを追いたいときは、report 系の helper を直接読む。
-- review 対象の列挙規則だけを見たいときは、targets 側を読む。
-- review index の衝突解決や merge の個別操作だけを見たいときは、review index 系の helper を読む。
+- 個別の oracle 対象の列挙条件を見たいときは、対象選択側の実装を直接読む。
+- index 差分の解決や merge の詳細を変えたいときは、review index 側の実装を読む。
+- レポートの描画形式だけを変えたいときは、report 側の実装を読む。
 
 ## hash
-- 5938ab5b69cb4bb408162a9405cdab10be3655d81de1129cf96c943fedb70b10
+- 197fbdf3a58e85776b7ee77d93cb4ca1cbf94161be822d232a27ccd795127390
