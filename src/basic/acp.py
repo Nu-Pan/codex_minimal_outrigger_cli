@@ -11,7 +11,6 @@ from oracle.acp_builder.basic import (
     ReasoningEffort,
 )
 
-
 __all__ = [
     "AgentCallParameter",
     "FileAccessMode",

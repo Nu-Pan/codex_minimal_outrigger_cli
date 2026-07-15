@@ -1,21 +1,25 @@
-from contextvars import ContextVar
 from collections.abc import Callable, Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import typer
 
-from commons.runtime_errors import CmocError, render_error
 from commons.runtime_doctor import run_doctor_preprocess
+from commons.runtime_errors import CmocError, render_error
 from commons.runtime_logging import (
     SubcommandLogger,
     current_subcommand_logger,
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
-from commons.runtime_paths import console_timestamp, format_duration, repo_root, work_root
-
+from commons.runtime_paths import (
+    console_timestamp,
+    format_duration,
+    repo_root,
+    work_root,
+)
 
 _CURRENT_STEP_TOTAL: ContextVar[int | None] = ContextVar(
     "CURRENT_STEP_TOTAL", default=None
@@ -116,10 +120,7 @@ def run_cli_subcommand(
         # サブコマンド固有の正本だけが stderr への変更を許可する。
         typer.echo(
             render_error(exc),
-            err=(
-                error_to_stderr
-                or bool(getattr(exc, "cmoc_error_to_stderr", False))
-            ),
+            err=(error_to_stderr or bool(getattr(exc, "cmoc_error_to_stderr", False))),
         )
         raise typer.Exit(1) from exc
     finally:

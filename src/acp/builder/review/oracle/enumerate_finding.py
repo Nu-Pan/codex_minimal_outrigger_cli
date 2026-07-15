@@ -10,10 +10,11 @@ import os
 from dataclasses import replace
 from pathlib import Path
 
-from basic.acp import AgentCallParameter
 from oracle.acp_builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter as _build_enumerate_parameter,
 )
+
+from basic.acp import AgentCallParameter
 
 
 def build_review_oracle_enumerate_finding_parameter(

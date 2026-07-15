@@ -12,8 +12,8 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-
 from _git_support import make_repo
+
 from cmoc_runtime import CmocError
 from commons.runtime_state import (
     SessionState,
@@ -26,9 +26,7 @@ from commons.runtime_state import (
 )
 
 
-def hold_session_fork_lock(
-    root: Path, ready: Connection, release: Connection
-) -> None:
+def hold_session_fork_lock(root: Path, ready: Connection, release: Connection) -> None:
     """別 process で session fork lock を保持する。"""
 
     with session_fork_lock(root):
@@ -57,13 +55,17 @@ def test_branch_session_id_rejects_invalid_session_branch_shape(branch: str) -> 
         "cmoc/apply/session/run/extra",
     ],
 )
-def test_apply_branch_session_id_rejects_invalid_apply_branch_shape(branch: str) -> None:
+def test_apply_branch_session_id_rejects_invalid_apply_branch_shape(
+    branch: str,
+) -> None:
     """apply branch 名は session id と run id の 2 要素だけを受け付ける。"""
     with pytest.raises(CmocError):
         apply_branch_session_id(branch)
 
 
-def test_load_state_for_branch_rejects_apply_branch_with_extra_parts(tmp_path: Path) -> None:
+def test_load_state_for_branch_rejects_apply_branch_with_extra_parts(
+    tmp_path: Path,
+) -> None:
     """破損した apply branch 名から session state を誤って読まない。"""
     path = state_path(tmp_path, "session")
     write_state(path, SessionState())
@@ -140,9 +142,7 @@ def test_session_fork_lock_is_shared_across_processes(tmp_path: Path) -> None:
     )
     process.start()
     acquired = threading.Event()
-    worker = threading.Thread(
-        target=lambda: _acquire_session_fork_lock(root, acquired)
-    )
+    worker = threading.Thread(target=lambda: _acquire_session_fork_lock(root, acquired))
     released = False
     try:
         assert ready_parent.recv()

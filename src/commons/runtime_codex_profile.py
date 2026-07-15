@@ -21,8 +21,6 @@ from pathlib import Path
 from typing import Any
 
 from basic.acp import AgentCallParameter, FileAccessMode
-from config.cmoc_config import CmocConfig
-
 from commons.runtime_content import write_hashed_file
 from commons.runtime_errors import CmocError
 from commons.runtime_git import (
@@ -30,6 +28,7 @@ from commons.runtime_git import (
     is_untracked_git_ignored,
 )
 from commons.runtime_paths import agent_read_dirs, logs_dir, schema_store_dir
+from config.cmoc_config import CmocConfig
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
 _active_apply_process_tracking_path: Path | None = None
@@ -58,6 +57,7 @@ _PERMISSION_PROFILE_WRITE_MODES = frozenset(
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
         FileAccessMode.REPO_WRITE,
+        FileAccessMode.SKILL_AUTHORING_WRITE,
         FileAccessMode.NO_RULE,
     }
 )
@@ -192,9 +192,7 @@ def wait_process_group_exit(process_group_id: int, timeout_sec: float) -> bool:
     return True
 
 
-def signal_process_group_members(
-    process_group_id: int, sig: signal.Signals
-) -> None:
+def signal_process_group_members(process_group_id: int, sig: signal.Signals) -> None:
     """group member を個別 pidfd で再検証して signal を送る。"""
     members = process_group_members(process_group_id)
     if members is None:
@@ -247,6 +245,7 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
+            | FileAccessMode.SKILL_AUTHORING_WRITE
             | FileAccessMode.NO_RULE
         ):
             return "workspace-write"
@@ -285,14 +284,14 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
 def _is_repo_agent_read_path(root: Path, path: Path) -> bool:
     """repo 側の agent 読み取り専用領域に含まれるか判定する。"""
     return any(
-        path.is_relative_to(read_root)
-        for read_root in _repo_agent_read_roots(root)
+        path.is_relative_to(read_root) for read_root in _repo_agent_read_roots(root)
     )
 
 
 def _repo_agent_read_roots(root: Path) -> tuple[Path, Path]:
     """linked worktree から例外的に読める repo 側 directory 群を返す。"""
-    return tuple(path.resolve() for path in agent_read_dirs(root))
+    first, second = agent_read_dirs(root)
+    return first.resolve(), second.resolve()
 
 
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
@@ -308,9 +307,7 @@ def _validate_extra_read_paths(
     extra_read_root: Path | None = None,
 ) -> None:
     """Codex argv に足す read path が cmoc の許可境界内か検査する。"""
-    extra_repo_root = (
-        extra_read_root.resolve() if extra_read_root is not None else None
-    )
+    extra_repo_root = extra_read_root.resolve() if extra_read_root is not None else None
     for path in extra_read_paths or []:
         resolved = path.resolve()
         if not _is_read_path_allowed(mode, root, resolved) and not (
@@ -362,6 +359,7 @@ def _writable_roots(
     elif mode in {
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.REPO_WRITE,
+        FileAccessMode.SKILL_AUTHORING_WRITE,
         FileAccessMode.NO_RULE,
     }:
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -427,10 +425,10 @@ def _is_writable_path_allowed(
     relative = path.relative_to(root)
     if path.name in _DENIED_WRITE_FILE_NAMES:
         return False
-    if (
-        mode not in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}
-        and is_untracked_git_ignored(root, path)
-    ):
+    if mode not in {
+        FileAccessMode.READONLY,
+        FileAccessMode.PURE_ORACLE_READ,
+    } and is_untracked_git_ignored(root, path):
         return False
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # `.cmoc/g*/ar` は git tracking の有無を問わず agent 読み取り専用である。
@@ -445,6 +443,10 @@ def _is_writable_path_allowed(
             and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
         )
     blocked_root_names = _REPO_WRITE_BLOCKED_ROOT_NAMES
+    if mode == FileAccessMode.SKILL_AUTHORING_WRITE and path.is_relative_to(
+        root / ".agents" / "skills"
+    ):
+        return True
     if relative.parts and relative.parts[0] in blocked_root_names:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
@@ -455,7 +457,11 @@ def _is_writable_path_allowed(
         return not (
             is_oracle_file_path(root, path) or _is_realization_file_path(root, path)
         )
-    return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
+    return mode in {
+        FileAccessMode.REPO_WRITE,
+        FileAccessMode.SKILL_AUTHORING_WRITE,
+        FileAccessMode.NO_RULE,
+    }
 
 
 def _is_realization_file_path(root: Path, path: Path) -> bool:
@@ -558,9 +564,7 @@ def _external_symlink_overrides(
     # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # work-root 外は読み書き禁止で、例外は repo-root/.cmoc/g*/ar の read だけ。
     allowed_read_roots = (
-        _repo_agent_read_roots(extra_read_root)
-        if extra_read_root is not None
-        else ()
+        _repo_agent_read_roots(extra_read_root) if extra_read_root is not None else ()
     )
     overrides: dict[str, str] = {}
     for path in _iter_worktree_paths(root):
@@ -568,8 +572,7 @@ def _external_symlink_overrides(
             continue
         resolved = path.resolve()
         if resolved.is_relative_to(root) or any(
-            resolved.is_relative_to(read_root)
-            for read_root in allowed_read_roots
+            resolved.is_relative_to(read_root) for read_root in allowed_read_roots
         ):
             continue
         overrides[str(resolved)] = "deny"
@@ -597,6 +600,7 @@ def _permission_profile_filesystem_overrides(
         if mode in {
             FileAccessMode.REALIZATION_WRITE,
             FileAccessMode.REPO_WRITE,
+            FileAccessMode.SKILL_AUTHORING_WRITE,
             FileAccessMode.NO_RULE,
         }:
             # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -615,6 +619,8 @@ def _permission_profile_filesystem_overrides(
             )
             if mode == FileAccessMode.REALIZATION_WRITE:
                 overrides[str((root / "oracle").resolve())] = "read"
+            if mode == FileAccessMode.SKILL_AUTHORING_WRITE:
+                overrides[str((root / ".agents" / "skills").resolve())] = "write"
             overrides.update(
                 {
                     str((root / name).resolve()): "read"
@@ -646,16 +652,12 @@ def _permission_profile_override_args(
     entries.update({str(path): "read" for path in protected_paths})
     entries.update(filesystem_overrides or {})
     filesystem = _toml_inline_table(entries)
-    permission = (
-        f'{{ extends = ":workspace", filesystem = {filesystem} }}'
-    )
+    permission = f'{{ extends = ":workspace", filesystem = {filesystem} }}'
     return [
         *_config_override(
             "default_permissions", _toml_string(_CMOC_PERMISSION_PROFILE)
         ),
-        *_config_override(
-            f"permissions.{_CMOC_PERMISSION_PROFILE}", permission
-        ),
+        *_config_override(f"permissions.{_CMOC_PERMISSION_PROFILE}", permission),
     ]
 
 
@@ -687,9 +689,7 @@ def _ollama_provider_override_args() -> list[str]:
         "multi_agent",
         *_config_override("web_search", _toml_string("disabled")),
         *_config_override("model_provider", _toml_string(_OLLAMA_PROVIDER_ID)),
-        *_config_override(
-            f"{provider_key}.name", _toml_string("cmoc managed ollama")
-        ),
+        *_config_override(f"{provider_key}.name", _toml_string("cmoc managed ollama")),
         *_config_override(
             f"{provider_key}.base_url",
             _toml_string("http://127.0.0.1:11434/v1"),
@@ -714,9 +714,7 @@ def build_codex_override_args(
     args = [
         "--model",
         model_spec.model,
-        *_config_override(
-            "model_reasoning_effort", _toml_string(reasoning_effort)
-        ),
+        *_config_override("model_reasoning_effort", _toml_string(reasoning_effort)),
     ]
     use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"
     if use_cmoc_managed_ollama:
@@ -807,11 +805,9 @@ def prepare_codex_override_args(
     allow_oracle_conflict_writes: bool = False,
 ) -> list[str]:
     """必要なら local provider を準備し、Codex CLI 上書き argv を返す。"""
-    if (
-        (config or CmocConfig()).codex.model[parameter.model_class].model_provider
-        == "cmoc"
-        and root is not None
-    ):
+    if (config or CmocConfig()).codex.model[
+        parameter.model_class
+    ].model_provider == "cmoc" and root is not None:
         from commons.runtime_doctor import run_doctor_preprocess
 
         run_doctor_preprocess(root, config)
@@ -937,7 +933,9 @@ def run_tracked_codex_subprocess(
     finally:
         # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
         # leader 終了後も descendant が group に残る間は tracking を保持する。
-        if process.poll() is not None and not process_group_has_running_member(process.pid):
+        if process.poll() is not None and not process_group_has_running_member(
+            process.pid
+        ):
             try:
                 remove_tracked_child_process(tracking_path, process.pid)
             except OSError as exc:

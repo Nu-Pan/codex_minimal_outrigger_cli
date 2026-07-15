@@ -1,12 +1,14 @@
 """quota availability probe の互換入口。"""
 
+from collections.abc import Callable
+from typing import cast
+
 from basic.acp import (
     AgentCallParameter,
     FileAccessMode,
     ModelClass,
     ReasoningEffort,
 )
-
 
 __all__ = ["build_quota_availability_probe_parameter"]
 
@@ -16,7 +18,9 @@ def build_quota_availability_probe_parameter(
 ) -> AgentCallParameter:
     """正本 builder を使い、未配布時は空 stdin の最小 probe を返す。"""
     try:
-        from oracle.acp_builder.quota_probe import (
+        # The canonical builder is intentionally optional in supported packages;
+        # the fallback below is the compatibility behavior for its absence.
+        from oracle.acp_builder.quota_probe import (  # type: ignore[import-not-found]
             build_quota_availability_probe_parameter as build_oracle_parameter,
         )
     except ModuleNotFoundError as exc:
@@ -40,4 +44,7 @@ def build_quota_availability_probe_parameter(
             run_indexing_preflight=False,
             cwd=base_parameter.cwd,
         )
-    return build_oracle_parameter(base_parameter)
+    oracle_builder = cast(
+        Callable[[AgentCallParameter], AgentCallParameter], build_oracle_parameter
+    )
+    return oracle_builder(base_parameter)

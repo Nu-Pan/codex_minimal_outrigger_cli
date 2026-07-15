@@ -14,6 +14,7 @@ def test_file_access_mode_values_are_json_ready() -> None:
     assert FileAccessMode.READONLY.value == "readonly"
     assert FileAccessMode.PURE_ORACLE_READ.value == "pure_oracle_read"
     assert FileAccessMode.REPO_WRITE.value == "repo_write"
+    assert FileAccessMode.SKILL_AUTHORING_WRITE.value == "skill_authoring_write"
     assert FileAccessMode.PURE_ORACLE_WRITE.value == "pure_oracle_write"
     assert FileAccessMode.REALIZATION_WRITE.value == "realization_write"
 
@@ -22,6 +23,16 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     """repo write mode まで Codex sandbox mode へ欠落なく変換する。"""
     assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
-    assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
-    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE) == "workspace-write"
+    assert (
+        file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE)
+        == "workspace-write"
+    )
+    assert (
+        file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE)
+        == "workspace-write"
+    )
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
+    assert (
+        file_access_to_sandbox_mode(FileAccessMode.SKILL_AUTHORING_WRITE)
+        == "workspace-write"
+    )

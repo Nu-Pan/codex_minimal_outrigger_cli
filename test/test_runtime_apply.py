@@ -9,6 +9,7 @@ CLI を呼ばず、pid file、advisory lock、pidfd、process group の低レベ
 import threading
 import time
 from multiprocessing import Pipe, Process
+from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
@@ -16,7 +17,9 @@ import pytest
 import commons.runtime_apply as apply_runtime
 
 
-def hold_apply_process_id_lock(path: Path, ready: object, release: object) -> None:
+def hold_apply_process_id_lock(
+    path: Path, ready: Connection, release: Connection
+) -> None:
     """別 process で advisory lock を保持するテスト用 helper。"""
     from commons.runtime_codex_profile import apply_process_id_file_lock
 
@@ -141,9 +144,7 @@ def test_stop_child_process_group_uses_stable_group_after_leader_exit(
     """leader 終了後も保存済み group ID の descendant を停止対象にする。"""
     stopped: list[int] = []
 
-    monkeypatch.setattr(
-        apply_runtime, "open_process_fd", lambda process_id, name: None
-    )
+    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id, name: None)
     monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: None)
     monkeypatch.setattr(
         apply_runtime,

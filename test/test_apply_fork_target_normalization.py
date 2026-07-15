@@ -8,6 +8,7 @@ apply fork の適用範囲の正本: {{work-root}}/oracle/doc/app_spec/sub_comma
 from pathlib import Path
 
 from _git_support import add_tracked_ignored_oracle_file, make_repo, run_git
+
 import sub_commands.apply.fork as apply_fork_module
 
 

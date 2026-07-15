@@ -9,17 +9,17 @@ import threading
 from pathlib import Path
 
 import pytest
+from _git_support import make_repo, run_git
 
 from basic.path_model import RootPathPlaceHolder, resolve_ph_path, resolve_real_path
 from cmoc_runtime import (
     CmocError,
     create_run_worktree,
-    remove_worktree,
     pushd,
+    remove_worktree,
     repo_root,
     work_root,
 )
-from _git_support import make_repo, run_git
 
 
 def test_path_model_resolves_token_path_inside_repo() -> None:

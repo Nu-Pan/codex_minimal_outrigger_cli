@@ -29,25 +29,6 @@
 - Python インタプリタは `{{cmoc-root}}/.venv/bin/python` を使う
 - pip は `{{cmoc-root}}/.venv/bin/python -m pip` を使う
 
-## 仮想環境の管理
+## 自己開発手順
 
-### `{{cmoc-root}}/.venv` の新規作成
-
-```bash
-cd "{{cmoc-root}}"
-/usr/bin/python3 -m venv .venv
-```
-
-### `{{cmoc-root}}/.venv` へのパッケージインストール
-
-権限昇格付きでの実行が必要なら、ユーザーに依頼すること。
-
-```bash
-cd "{{cmoc-root}}"
-./.venv/bin/python -m pip install -e .
-```
-
-### `{{cmoc-root}}/.venv` への新規パッケージ追加
-
-- `pyproject.toml` に依存関係を追記する
-- その後、上記のインストール手順を実行する
+cmoc 自己開発用 Python 環境の確認、仮想環境の作成、開発用依存関係の導入、および検証コマンドは `$cmoc-self-development-validation` を正本とする。

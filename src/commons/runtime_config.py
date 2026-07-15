@@ -2,17 +2,17 @@ import json
 from pathlib import Path
 from typing import Any, TypeVar
 
+from oracle.other.cmoc_config import CodexModelSpec
+
 from basic.acp import ModelClass, ReasoningEffort
+from commons.runtime_errors import CmocError
+from commons.runtime_paths import config_path
 from config.cmoc_config import (
     CmocConfig,
     CmocConfigApplyFork,
     CmocConfigCodex,
     CmocConfigReviewOracle,
 )
-from oracle.other.cmoc_config import CodexModelSpec
-
-from commons.runtime_errors import CmocError
-from commons.runtime_paths import config_path
 
 ConfigKey = TypeVar("ConfigKey", ModelClass, ReasoningEffort)
 
@@ -30,8 +30,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
                 for key, value in config.codex.model.items()
             },
             "reasoning_effort": {
-                key.value: value
-                for key, value in config.codex.reasoning_effort.items()
+                key.value: value for key, value in config.codex.reasoning_effort.items()
             },
             "num_try_falv_recovery": config.codex.num_try_falv_recovery,
         },
@@ -197,17 +196,13 @@ def load_config(root: Path) -> CmocConfig:
     except json.JSONDecodeError as exc:
         raise CmocError(
             "cmoc config JSON を読み込めません。",
-            [
-                "{{work-root}}/.cmoc/gt/ar/config.json の JSON 構文を確認してください。"
-            ],
+            ["{{work-root}}/.cmoc/gt/ar/config.json の JSON 構文を確認してください。"],
             str(path),
         ) from exc
     if not isinstance(data, dict):
         raise CmocError(
             "cmoc config の top-level は object である必要があります。",
-            [
-                "{{work-root}}/.cmoc/gt/ar/config.json を object に修正してください。"
-            ],
+            ["{{work-root}}/.cmoc/gt/ar/config.json を object に修正してください。"],
             str(path),
         )
     return config_from_dict(data)

@@ -8,16 +8,19 @@
 
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
+from _cli_support import runner
+from _codex_support import codex_schema_name
+from _git_support import make_repo, run_git
+from _ollama_support import run_doctor
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
-from _cli_support import runner
-from _git_support import make_repo, run_git
-from _ollama_support import run_doctor
-from main import app
 import sub_commands.review.oracle as review_module
+from basic.acp import AgentCallParameter
+from main import app
 
 
 class _FakeCodexResult:
@@ -56,7 +59,9 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     calls: list[str] = []
     review_worktrees: list[Path] = []
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> _FakeCodexResult:
         """finding 列挙の応答と review worktree を記録する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md。
@@ -64,7 +69,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
 
         review_worktrees.append(Path.cwd())
         calls.append(kwargs["purpose"])
-        schema_name = parameter.structured_output_schema_path.name
+        schema_name = codex_schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             return _FakeCodexResult({"findings": []})
         raise AssertionError(schema_name)
@@ -89,10 +94,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     session_id = branch.removeprefix("cmoc/session/")
     assert review_worktrees
     for review_worktree in review_worktrees:
-        assert (
-            review_worktree.parent
-            == root / ".cmoc" / "gu" / "worktree" / session_id
-        )
+        assert review_worktree.parent == root / ".cmoc" / "gu" / "worktree" / session_id
         assert not review_worktree.is_relative_to(linked)
     assert any("linked.md" in call for call in calls)
 
@@ -152,7 +154,9 @@ def test_review_oracle_merges_review_index_changes(
     )
     review_worktrees: list[Path] = []
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> _FakeCodexResult:
         """finding 検証を空結果にし、review worktree の INDEX を更新する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md、
@@ -160,7 +164,7 @@ def test_review_oracle_merges_review_index_changes(
         """
 
         review_worktrees.append(Path.cwd())
-        schema_name = parameter.structured_output_schema_path.name
+        schema_name = codex_schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             (Path.cwd() / "INDEX.md").write_text("# generated review index\n")
             return _FakeCodexResult({"findings": []})
@@ -187,10 +191,7 @@ def test_review_oracle_merges_review_index_changes(
     assert "review_join_commit: null" not in rendered
     assert review_worktrees
     for review_worktree in review_worktrees:
-        assert (
-            review_worktree.parent
-            == root / ".cmoc" / "gu" / "worktree" / session_id
-        )
+        assert review_worktree.parent == root / ".cmoc" / "gu" / "worktree" / session_id
     assert not any(
         path.name == ".git"
         for path in (root / ".cmoc" / "gu" / "worktree").rglob(".git")
@@ -228,13 +229,15 @@ def test_review_oracle_merges_preflight_committed_index_changes(
         index_path.write_text("# preflight review index\n")
         return [index_path]
 
-    def fake_runtime_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_runtime_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> _FakeCodexResult:
         """preflight 中の finding 列挙を空結果に置き換える。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md。
         """
 
-        schema_name = parameter.structured_output_schema_path.name
+        schema_name = codex_schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             return _FakeCodexResult({"findings": []})
         raise AssertionError(schema_name)
@@ -294,9 +297,7 @@ def test_review_oracle_resolves_index_conflict_when_session_deleted_index(
 
     assert resolved is True
     assert not (root / "INDEX.md").exists()
-    assert (
-        run_git(root, "diff", "--name-only", "--diff-filter=U").stdout.strip() == ""
-    )
+    assert run_git(root, "diff", "--name-only", "--diff-filter=U").stdout.strip() == ""
     assert "Merge branch 'review'" in run_git(root, "log", "-1", "--pretty=%B").stdout
 
 
@@ -319,13 +320,15 @@ def test_review_oracle_rejects_non_index_worktree_changes(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> _FakeCodexResult:
         """finding 列挙時に指定された種類の不正な差分を作る。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md。
         """
 
-        schema_name = parameter.structured_output_schema_path.name
+        schema_name = codex_schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             if change_kind == "untracked":
                 (Path.cwd() / "generated.txt").write_text("unexpected\n")

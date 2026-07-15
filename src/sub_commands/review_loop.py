@@ -3,7 +3,6 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
-from cmoc_runtime import CmocError
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
 )
@@ -19,10 +18,12 @@ from acp.builder.review.oracle.validate_finding_advocate import (
 from acp.builder.review.oracle.validate_finding_challenger import (
     build_review_oracle_validate_finding_challenger_parameter,
 )
+from cmoc_runtime import CmocError
+from commons.runtime_results import CodexExecResultLike
 from config.cmoc_config import CmocConfig
 from sub_commands.review_paths import finding_oracle_path, oracle_path_key
 
-CodexExec = Callable[..., object]
+CodexExec = Callable[..., CodexExecResultLike]
 _MAX_MERGE_FINDING_SEMANTIC_RETRIES = 2
 
 StepCallback = Callable[[int | str, str, str | None], None]

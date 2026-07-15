@@ -24,7 +24,6 @@ from cmoc_runtime import (
     write_state,
 )
 
-
 MAX_SESSION_ID_ATTEMPTS = 32
 
 
@@ -147,9 +146,10 @@ def _new_session_id(root: Path) -> str:
     # state file が残った joined/abandoned session との衝突も session-id 衝突として扱う。
     for _ in range(MAX_SESSION_ID_ATTEMPTS):
         session_id = timestamp()
-        if not branch_exists(root, f"cmoc/session/{session_id}") and not state_path(
-            root, session_id
-        ).exists():
+        if (
+            not branch_exists(root, f"cmoc/session/{session_id}")
+            and not state_path(root, session_id).exists()
+        ):
             return session_id
     raise CmocError(
         "一意な session-id を生成できませんでした。",

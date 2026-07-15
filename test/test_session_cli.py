@@ -12,22 +12,24 @@ import subprocess
 import tomllib
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
-import cmoc_runtime
-from basic.acp import AgentCallParameter, FileAccessMode
-from cmoc_runtime import CmocError
-import commons.runtime_codex_preflight as codex_preflight_module
-from commons.runtime_codex_profile import build_codex_override_args
-from config.cmoc_config import CmocConfig
 import pytest
-
 from _cli_support import runner
 from _git_support import current_branch, make_repo, run_git
 from _ollama_support import run_doctor
-from main import app
+
+import cmoc_runtime
+import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.session.abandon as session_module
 import sub_commands.session.fork as session_fork_module
 import sub_commands.session.join as session_join_module
+from basic.acp import AgentCallParameter, FileAccessMode
+from cmoc_runtime import CmocError
+from commons.runtime_codex_profile import build_codex_override_args
+from commons.runtime_results import CodexExecResultLike
+from config.cmoc_config import CmocConfig
+from main import app
 
 
 @pytest.fixture(autouse=True)
@@ -59,7 +61,10 @@ def session_home_branch(root: Path, session_branch: str) -> str:
     """
 
     state = json.loads(session_state_path(root, session_branch).read_text())
-    return state["session"]["session_home_branch"]
+    home_branch = state["session"]["session_home_branch"]
+    if not isinstance(home_branch, str):
+        raise AssertionError("session_home_branch must be a string")
+    return home_branch
 
 
 def write_abandoned_state(root: Path, session_id: str) -> Path:
@@ -104,9 +109,7 @@ def break_preprocess_invariants(work: Path) -> Path:
     gitignore = work / ".gitignore"
     gitignore.write_text(
         "\n".join(
-            line
-            for line in gitignore.read_text().splitlines()
-            if line != "/.cmoc/gu/"
+            line for line in gitignore.read_text().splitlines() if line != "/.cmoc/gu/"
         )
         + "\n"
     )
@@ -269,7 +272,12 @@ def test_session_fork_initializes_cmoc_ignore_before_logging(
         ).returncode
         == 0
     )
-    assert len(list((root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert (
+        len(
+            list((root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl"))
+        )
+        == 1
+    )
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -490,7 +498,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     def fake_delete_branch(root: Path, branch: str, force: bool = False) -> None:
         if branch == session_branch:
             raise cleanup_error
-        return original_delete_branch(root, branch, force)
+        original_delete_branch(root, branch, force)
 
     monkeypatch.setattr(session_module, "delete_branch", fake_delete_branch)
 
@@ -578,7 +586,9 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_overrides(
 
         output_json = None
 
-    def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> CodexExecResultLike:
         """Codex 呼び出しを置換し、生成された filesystem override を検証する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
@@ -597,16 +607,12 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_overrides(
             allow_oracle_conflict_writes=kwargs["allow_oracle_conflict_writes"],
         )
         filesystem = next(
-            tomllib.loads(override_args[index + 1])["permissions"]["cmoc"][
-                "filesystem"
-            ]
+            tomllib.loads(override_args[index + 1])["permissions"]["cmoc"]["filesystem"]
             for index, arg in enumerate(override_args)
             if arg == "--config"
             and override_args[index + 1].startswith("permissions.cmoc=")
         )
-        assert {
-            path for path, access in filesystem.items() if access == "write"
-        } == {
+        assert {path for path, access in filesystem.items() if access == "write"} == {
             str(target.resolve())
         }
         target.write_text("resolved change\nTitle\n=======\n")
@@ -651,7 +657,9 @@ def test_session_join_handles_conflict_path_containing_newline(
     class FakeCodexResult:
         output_json = None
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> CodexExecResultLike:
         assert kwargs["extra_writable_paths"] == [target]
         target.write_text("resolved change\n")
         return FakeCodexResult()
@@ -676,8 +684,13 @@ def test_session_join_reports_unmerged_path_as_absolute(tmp_path: Path) -> None:
             return cmoc_runtime.CommandResult(0, "src/unmerged.py\0", "")
         return cmoc_runtime.CommandResult(0, "", "")
 
-    def fake_codex_exec(parameter: object, **kwargs: object) -> object:
-        return object()
+    class EmptyCodexResult:
+        output_json: object | None = None
+
+    def fake_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> CodexExecResultLike:
+        return EmptyCodexResult()
 
     with pytest.raises(CmocError) as error:
         session_join_module.resolve_session_join_conflict(
@@ -793,7 +806,9 @@ def test_session_join_stages_delete_conflict_resolution(
     class FakeCodexResult:
         output_json = None
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> CodexExecResultLike:
         (root / "README.md").unlink()
         return FakeCodexResult()
 
@@ -925,7 +940,9 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     class FakeCodexResult:
         output_json = None
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> CodexExecResultLike:
         target.write_text("<<<<<<< HEAD\nhome\n========\nsession\n>>>>>>> branch\n")
         return FakeCodexResult()
 
@@ -981,7 +998,9 @@ def test_session_join_conflict_uses_repo_root_for_codex_storage(
 
         output_json = None
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> CodexExecResultLike:
         """Codex wrapper に渡された repo root と linked-worktree cwd を記録する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md

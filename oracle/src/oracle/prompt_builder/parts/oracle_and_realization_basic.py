@@ -1,6 +1,6 @@
 # cmoc
-from oracle.other.struct_doc import StructDoc
 from oracle.other.path_model import resolve_work_root
+from oracle.other.struct_doc import StructDoc
 from oracle.prompt_builder.basic import PlaceholderMap
 
 

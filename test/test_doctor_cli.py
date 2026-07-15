@@ -25,20 +25,20 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-
-from basic.acp import ModelClass
-import commons.runtime_doctor as doctor_module
-import commons.runtime_ollama as ollama_module
-from commons.runtime_config import write_config
-from config.cmoc_config import CmocConfig
-from oracle.other.cmoc_config import CodexModelSpec
-from main import app
+from _cli_support import runner
+from _git_support import make_repo, run_git
 from _ollama_support import (
     TEST_SLM_MODEL,
     run_doctor,
 )
-from _cli_support import runner
-from _git_support import make_repo, run_git
+from oracle.other.cmoc_config import CodexModelSpec
+
+import commons.runtime_doctor as doctor_module
+import commons.runtime_ollama as ollama_module
+from basic.acp import ModelClass
+from commons.runtime_config import write_config
+from config.cmoc_config import CmocConfig
+from main import app
 
 
 def hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
@@ -165,9 +165,7 @@ def test_doctor_preprocess_in_linked_worktree_uses_worktree_config(
 
     root = make_repo(tmp_path)
     repo_config = CmocConfig()
-    repo_config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(
-        "cmoc", "repo-model"
-    )
+    repo_config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "repo-model")
     config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
     write_config(config_path, repo_config)
     run_git(root, "add", ".cmoc/gt/ar/config.json")
@@ -204,9 +202,10 @@ def test_doctor_preprocess_in_linked_worktree_uses_worktree_config(
 
     assert pulled == ["worktree-model"]
     assert (linked / ".cmoc" / "gt" / "ar" / "config.json").exists()
-    assert json.loads(config_path.read_text())["codex"]["model"]["minimum"][
-        "model"
-    ] == "repo-model"
+    assert (
+        json.loads(config_path.read_text())["codex"]["model"]["minimum"]["model"]
+        == "repo-model"
+    )
 
 
 def test_doctor_preprocess_waits_for_common_repository_lock(
@@ -216,9 +215,7 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
 
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked-doctor-lock"
-    run_git(
-        root, "worktree", "add", "-b", "linked-doctor-lock", str(linked), "HEAD"
-    )
+    run_git(root, "worktree", "add", "-b", "linked-doctor-lock", str(linked), "HEAD")
     lock_path = doctor_module.doctor_lock_path(root)
     assert doctor_module.doctor_lock_path(linked) == lock_path
 
@@ -276,9 +273,10 @@ def test_doctor_generates_and_tracks_config(
         == ".cmoc/gt/ar/config.json"
     )
     assert json.loads(config_path.read_text())["codex"]["num_try_falv_recovery"] == 1
-    assert ".cmoc/gt/ar/config.json" in run_git(
-        root, "show", "--name-only", "--format=", "HEAD"
-    ).stdout.splitlines()
+    assert (
+        ".cmoc/gt/ar/config.json"
+        in run_git(root, "show", "--name-only", "--format=", "HEAD").stdout.splitlines()
+    )
 
 
 def test_dector_alias_runs_doctor(
@@ -337,9 +335,12 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
-    assert run_git(
-        linked, "check-ignore", "-q", ".cmoc/gu/.__cmoc_ignore_probe__"
-    ).returncode == 0
+    assert (
+        run_git(
+            linked, "check-ignore", "-q", ".cmoc/gu/.__cmoc_ignore_probe__"
+        ).returncode
+        == 0
+    )
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"

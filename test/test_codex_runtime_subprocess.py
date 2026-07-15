@@ -2,9 +2,9 @@ import signal
 from pathlib import Path
 
 import pytest
+from _command_support import write_python_executable
 
 import cmoc_runtime
-from _command_support import write_python_executable
 import commons.runtime_codex_profile as runtime_codex_profile
 from commons.runtime_codex_profile import (
     run_codex_subprocess,
@@ -85,9 +85,7 @@ def test_signal_process_group_members_uses_each_member_pidfd(
     monkeypatch.setattr(
         runtime_codex_profile,
         "send_process_signal",
-        lambda fd, process_id, sig, name: sent.append(
-            (fd, process_id, sig, name)
-        ),
+        lambda fd, process_id, sig, name: sent.append((fd, process_id, sig, name)),
     )
     monkeypatch.setattr(
         runtime_codex_profile.os, "close", lambda process_fd: closed.append(process_fd)
@@ -127,6 +125,7 @@ def test_tracked_codex_subprocess_defers_sigterm_until_tracking_is_written(
     process = ExitedProcess()
     signal.signal(signal.SIGTERM, handler)
     try:
+
         def popen(*_args: object, **_kwargs: object) -> ExitedProcess:
             signal.raise_signal(signal.SIGTERM)
             return process
@@ -168,11 +167,11 @@ def test_tracked_codex_subprocess_keeps_group_tracking_after_leader_exit(
             return 0
 
     monkeypatch.setattr(
-        runtime_codex_profile.subprocess, "Popen", lambda *_args, **_kwargs: ExitedProcess()
+        runtime_codex_profile.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: ExitedProcess(),
     )
-    monkeypatch.setattr(
-        runtime_codex_profile, "process_start_time", lambda _pid: 333
-    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
     monkeypatch.setattr(
         runtime_codex_profile, "process_group_has_running_member", lambda _group: True
     )
@@ -216,9 +215,7 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
         "Popen",
         lambda *_args, **_kwargs: process,
     )
-    monkeypatch.setattr(
-        runtime_codex_profile, "process_start_time", lambda _pid: 333
-    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
 
     with pytest.raises(KeyboardInterrupt):
         run_tracked_codex_subprocess(
@@ -240,9 +237,7 @@ def test_run_codex_subprocess_ignores_inherited_apply_tracking_env(
     bin_dir.mkdir()
     write_python_executable(bin_dir / "codex", ["print('ok')"])
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    monkeypatch.setenv(
-        cmoc_runtime.APPLY_PROCESS_TRACKING_ENV, str(tracking_path)
-    )
+    monkeypatch.setenv(cmoc_runtime.APPLY_PROCESS_TRACKING_ENV, str(tracking_path))
 
     result = run_codex_subprocess(["codex"], text=True, capture_output=True)
 

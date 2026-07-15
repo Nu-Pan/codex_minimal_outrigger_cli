@@ -9,19 +9,22 @@ report schema の観測結果として読まれるため、分割すると期待
 """
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
-from basic.acp import AgentCallParameter
 from _cli_support import runner
 from _codex_support import FakeCodexResult
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
+from pytest import MonkeyPatch
+
+import sub_commands.apply.fork as apply_fork_module
+from basic.acp import AgentCallParameter
 from cmoc_runtime import CmocError
+from commons.runtime_results import CodexExecResultLike
 from config.cmoc_config import CmocConfig
 from main import app
-from pytest import MonkeyPatch
-import sub_commands.apply.fork as apply_fork_module
 from sub_commands.apply.fork_report import (
     build_change_summary,
     changed_diff_since_fork,
@@ -136,8 +139,7 @@ def test_apply_fork_writes_report_with_change_summary(
         / apply_branch.rsplit("/", 1)[-1]
     )
     front_matter = dict(
-        line.split(": ", 1)
-        for line in rendered.split("---\n", 2)[1].splitlines()
+        line.split(": ", 1) for line in rendered.split("---\n", 2)[1].splitlines()
     )
     assert front_matter["cmoc_session_branch"] == session_branch
     assert front_matter["cmoc_session_fork_commit"] == session_fork_commit
@@ -204,13 +206,17 @@ def test_apply_fork_rechecks_changed_files_until_converged(
     def enumerate_findings(
         root_arg: Path,
         target: Path,
-        config: object,
-        codex_exec: object,
+        config: CmocConfig,
+        codex_exec: Callable[..., CodexExecResultLike],
         **kwargs: object,
     ) -> list[dict[str, object]]:
         """実装側の列挙を呼びつつ再検査対象 path を記録する。"""
         target_rels.append(str(target.relative_to(root_arg)))
-        return original_enumerate(root_arg, target, config, codex_exec, **kwargs)
+        log_root = kwargs.get("log_root")
+        assert log_root is None or isinstance(log_root, Path)
+        return original_enumerate(
+            root_arg, target, config, codex_exec, log_root=log_root
+        )
 
     monkeypatch.setattr(
         apply_fork_module, "enumerate_apply_findings_for_target", enumerate_findings
@@ -338,7 +344,9 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     assert "result: unconverged" in report_path.read_text()
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text())
+    state = json.loads(
+        (root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text()
+    )
     assert (
         run_git(root, "rev-parse", state["apply"]["apply_branch"]).stdout.strip()
         == run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -581,9 +589,7 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     }
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
 
-    assert (
-        runner.invoke(app, ["apply", "join"], catch_exceptions=False).exit_code == 0
-    )
+    assert runner.invoke(app, ["apply", "join"], catch_exceptions=False).exit_code == 0
     (root / "oracle" / "spec.md").write_text("# changed after join\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "change oracle after apply join")

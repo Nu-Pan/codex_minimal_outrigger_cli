@@ -20,7 +20,6 @@ from acp.builder.apply.fork.file_finding_enumeration import (
 from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
 )
-from commons.runtime_codex_exec import changed_worktree_paths
 from cmoc_runtime import (
     ApplyPart,
     CliRunResult,
@@ -38,23 +37,19 @@ from cmoc_runtime import (
     load_config,
     load_state_for_branch,
     pushd,
-    repo_root,
     remove_worktree,
+    repo_root,
     require_clean_worktree,
     run_cli_subcommand,
-    start_subcommand_step,
     run_codex_exec,
     run_git,
+    start_subcommand_step,
     timestamp,
     work_root,
     worktrees_dir,
     write_state,
 )
-from config.cmoc_config import CmocConfig
-from sub_commands.apply.fork_report import (
-    write_apply_fork_error_report,
-    write_apply_fork_report,
-)
+from commons.indexing import enable_indexing_preflight
 from commons.runtime_apply import (
     apply_process_tracking,
     apply_run_lock,
@@ -63,10 +58,15 @@ from commons.runtime_apply import (
     stop_child_process_group,
     write_apply_process_id,
 )
-from commons.indexing import enable_indexing_preflight
+from commons.runtime_codex_exec import changed_worktree_paths
+from commons.runtime_results import CodexExecResultLike
+from config.cmoc_config import CmocConfig
+from sub_commands.apply.fork_report import (
+    write_apply_fork_error_report,
+    write_apply_fork_report,
+)
 
-
-CodexExec = Callable[..., object]
+CodexExec = Callable[..., CodexExecResultLike]
 
 
 def cmoc_apply_fork_impl(scope: str) -> None:
@@ -92,7 +92,9 @@ def _cmoc_apply_fork_body(
     branch = current_branch(current_root)
     session_id, _, _ = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
-        raise CmocError("apply fork は session branch 上で実行してください。", [], branch)
+        raise CmocError(
+            "apply fork は session branch 上で実行してください。", [], branch
+        )
     ensure_cmoc_ignored_in_exclude(current_root)
     require_clean_worktree(current_root)
     config = load_config(current_root)
@@ -112,13 +114,17 @@ def _cmoc_apply_fork_body(
         with apply_run_lock(root, session_id):
             session_id, path, state = load_state_for_branch(root, branch)
             if state.session.state != "active" or state.apply.state != "ready":
-                raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
+                raise CmocError(
+                    "apply fork の事前条件を満たしていません。", [], str(path)
+                )
             run_id = timestamp()
             apply_branch = f"cmoc/apply/{session_id}/{run_id}"
             oracle_snapshot_commit = head_commit(current_root)
             apply_worktree = worktrees_dir(root) / session_id / run_id
             branch_preexisting = branch_exists(root, apply_branch)
-            worktree_preexisting = apply_worktree.exists() or apply_worktree.is_symlink()
+            worktree_preexisting = (
+                apply_worktree.exists() or apply_worktree.is_symlink()
+            )
             if branch_preexisting or worktree_preexisting:
                 raise CmocError(
                     "apply run の branch または worktree が既に存在します。",
@@ -177,9 +183,7 @@ def _cmoc_apply_fork_body(
                     if not findings:
                         continue
                     pending_targets.append(target)
-                    start_subcommand_step(
-                        "4/6, 3/3", "所見を適用", "apply findings"
-                    )
+                    start_subcommand_step("4/6, 3/3", "所見を適用", "apply findings")
                     run_finding_application(
                         root,
                         apply_worktree,
@@ -269,7 +273,7 @@ def _cmoc_apply_fork_body(
                         if not tracked_process or not tracked_process.child_processes:
                             delete_apply_process_id(root, session_id)
                         if report_path is not None:
-                            setattr(exc, "cmoc_stdout", str(report_path.resolve()))
+                            exc.__dict__["cmoc_stdout"] = str(report_path.resolve())
             except BaseException as recovery_error:
                 if not error_state_saved:
                     rollback_failures = _rollback_apply_setup(
@@ -391,7 +395,9 @@ def _rollback_apply_setup(
         try:
             result = remove_worktree(root, apply_worktree)
             if result.returncode != 0 and apply_worktree.exists():
-                failures.append(f"worktree: {result.stderr.strip() or result.returncode}")
+                failures.append(
+                    f"worktree: {result.stderr.strip() or result.returncode}"
+                )
         except BaseException as error:
             failures.append(f"worktree: {error}")
     if apply_branch is not None and not branch_preexisting:
@@ -540,13 +546,15 @@ def enumerate_apply_targets(
             if state and state.session.session_start_commit
             else "HEAD"
         )
-        changed = run_git(["diff", "--name-only", base, "HEAD"], root).stdout.splitlines()
+        changed = run_git(
+            ["diff", "--name-only", base, "HEAD"], root
+        ).stdout.splitlines()
         candidates = [root / path for path in changed]
     elif state and (
-        base := previous_apply_join_commit(root, state, session_id)
+        previous_join := previous_apply_join_commit(root, state, session_id)
     ):
         changed = run_git(
-            ["diff", "--name-only", base, "HEAD"],
+            ["diff", "--name-only", previous_join, "HEAD"],
             root,
         ).stdout.splitlines()
         candidates = [root / path for path in changed]

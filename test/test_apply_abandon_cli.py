@@ -14,15 +14,15 @@ import subprocess
 from pathlib import Path
 
 import pytest
-
 from _apply_support import apply_worktree_from_state
 from _cli_support import runner
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
-from main import app
+
+import commons.runtime_apply as apply_runtime
 import sub_commands.apply.abandon as apply_abandon_module
 import sub_commands.apply.fork as apply_fork_module
-import commons.runtime_apply as apply_runtime
+from main import app
 
 
 def setup_linked_session_apply(
@@ -73,7 +73,7 @@ def test_apply_abandon_removes_apply_worktree_and_branch(
     class FakeCodexResult:
         """apply fork を findings なしで完了させる fake 結果。"""
 
-        output_json = {"findings": []}
+        output_json: dict[str, list[object]] = {"findings": []}
 
     monkeypatch.setattr(
         apply_fork_module,
@@ -125,7 +125,7 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
     class FakeCodexResult:
         """cleanup 警告経路へ進むための findings なし fake 結果。"""
 
-        output_json = {"findings": []}
+        output_json: dict[str, list[object]] = {"findings": []}
 
     monkeypatch.setattr(
         apply_fork_module,
@@ -170,7 +170,7 @@ def test_apply_abandon_stops_tracked_apply_process_before_cleanup(
     class FakeCodexResult:
         """running state へ差し替える前提の apply run を作る fake 結果。"""
 
-        output_json = {"findings": []}
+        output_json: dict[str, list[object]] = {"findings": []}
 
     monkeypatch.setattr(
         apply_fork_module,
@@ -240,7 +240,7 @@ def test_apply_abandon_rejects_running_state_without_process_id(
     class FakeCodexResult:
         """process identity 欠落を作る前提の apply run を作る fake 結果。"""
 
-        output_json = {"findings": []}
+        output_json: dict[str, list[object]] = {"findings": []}
 
     monkeypatch.setattr(
         apply_fork_module,
@@ -361,7 +361,7 @@ def test_apply_abandon_can_run_from_apply_worktree(
     class FakeCodexResult:
         """apply worktree から abandon する前提の apply run を作る fake 結果。"""
 
-        output_json = {"findings": []}
+        output_json: dict[str, list[object]] = {"findings": []}
 
     monkeypatch.setattr(
         apply_fork_module,
@@ -458,7 +458,7 @@ def test_apply_abandon_rejects_stale_apply_branch(
     class FakeCodexResult:
         """stale apply branch を追加する前提の active run を作る fake 結果。"""
 
-        output_json = {"findings": []}
+        output_json: dict[str, list[object]] = {"findings": []}
 
     monkeypatch.setattr(
         apply_fork_module,
@@ -488,7 +488,10 @@ def test_apply_abandon_rejects_stale_apply_branch(
     result = runner.invoke(app, ["apply", "abandon"])
 
     assert result.exit_code != 0
-    assert "現在の apply branch は破棄対象の active apply run ではありません。" in result.stdout
+    assert (
+        "現在の apply branch は破棄対象の active apply run ではありません。"
+        in result.stdout
+    )
     assert f"current_branch: {stale_branch}" in result.stdout
     assert f"apply_branch: {apply_branch}" in result.stdout
     assert result.stderr == ""

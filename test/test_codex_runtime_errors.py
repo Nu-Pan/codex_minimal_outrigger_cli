@@ -8,25 +8,27 @@
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
-import cmoc_runtime
 import pytest
-from cmoc_runtime import CmocError
-from config.cmoc_config import CmocConfig
 from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo
+
+import cmoc_runtime
+from cmoc_runtime import CmocError
+from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import (
     codex_error_text,
     extract_resume_token,
     is_unexpected_error,
 )
-from commons.runtime_codex import run_codex_exec
 from commons.runtime_logging import (
     SubcommandLogger,
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
+from config.cmoc_config import CmocConfig
 
 
 @pytest.mark.parametrize("line", ["null", "[]", "1"])
@@ -41,9 +43,7 @@ def test_codex_jsonl_non_object_events_are_unexpected(line: str) -> None:
 def test_codex_jsonl_invalid_lines_are_unexpected(stdout_text: str) -> None:
     """不正 JSON と空行を JSONL protocol failure として分類する。"""
     assert is_unexpected_error(stdout_text)
-    assert "malformed JSONL event (invalid JSON):" in codex_error_text(
-        stdout_text, ""
-    )
+    assert "malformed JSONL event (invalid JSON):" in codex_error_text(stdout_text, "")
 
 
 def test_codex_runtime_rejects_non_object_jsonl_event(
@@ -115,7 +115,7 @@ def test_codex_runtime_reports_missing_codex_cli(
     stub_codex_overrides(monkeypatch)
     real_run = subprocess.run
 
-    def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
+    def fake_run(args: list[str], *pos: Any, **kwargs: Any) -> Any:
         """Codex CLI の不在を再現し、それ以外の subprocess 呼び出しを委譲する。"""
         if args[:1] == ["codex"]:
             raise FileNotFoundError("codex")

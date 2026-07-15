@@ -1,18 +1,19 @@
 """`cmoc apply fork` の所見対応作業 prompt 正本。"""
 
 # std
-from typing import Any
 import json
+from typing import Any
 
-# cmoc
-from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
-from oracle.other.path_model import resolve_repo_root
 from oracle.acp_builder.basic import (
     AgentCallParameter,
+    FileAccessMode,
     ModelClass,
     ReasoningEffort,
-    FileAccessMode,
 )
+from oracle.other.path_model import resolve_repo_root
+
+# cmoc
+from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 

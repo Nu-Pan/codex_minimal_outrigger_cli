@@ -9,15 +9,18 @@
 """
 
 from pathlib import Path
+from typing import Any
 
 import pytest
-
 from _cli_support import runner
+from _codex_support import codex_schema_name
 from _git_support import add_tracked_ignored_oracle_file, make_repo, run_git
 from _ollama_support import run_doctor
+
+import sub_commands.review.oracle as review_module
+from basic.acp import AgentCallParameter
 from cmoc_runtime import SessionState
 from main import app
-import sub_commands.review.oracle as review_module
 from sub_commands.review_paths import finding_oracle_path, oracle_path_key
 from sub_commands.review_targets import enumerate_review_all_oracle_files
 
@@ -30,9 +33,9 @@ class _FakeCodexResult:
         self.output_json = output_json
 
 
-def _empty_finding_response(parameter: object) -> _FakeCodexResult:
+def _empty_finding_response(parameter: AgentCallParameter) -> _FakeCodexResult:
     """enumerate_finding 用の空 Structured Output 応答を返す。"""
-    schema_name = parameter.structured_output_schema_path.name
+    schema_name = codex_schema_name(parameter)
     if schema_name != "enumerate_finding.json":
         raise AssertionError(schema_name)
     return _FakeCodexResult({"findings": []})
@@ -59,9 +62,12 @@ def test_finding_oracle_path_resolves_work_root_from_review_worktree(
     review_worktree = make_repo(review_parent)
     monkeypatch.chdir(unrelated)
 
-    assert finding_oracle_path(
-        {"oracle_path": "{{work-root}}/oracle/spec.md"}, review_worktree
-    ) == (review_worktree / "oracle" / "spec.md").resolve()
+    assert (
+        finding_oracle_path(
+            {"oracle_path": "{{work-root}}/oracle/spec.md"}, review_worktree
+        )
+        == (review_worktree / "oracle" / "spec.md").resolve()
+    )
 
 
 def test_finding_oracle_path_preserves_absolute_symlink_entry(
@@ -123,7 +129,9 @@ def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     )
     calls: list[str] = []
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> _FakeCodexResult:
         """呼び出し目的を記録し、対象列挙には空の finding を返す。"""
         calls.append(kwargs["purpose"])
         return _empty_finding_response(parameter)
@@ -167,7 +175,9 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     )
     calls: list[str] = []
 
-    def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
+    def fail_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> _FakeCodexResult:
         calls.append(kwargs["purpose"])
         raise AssertionError(
             "no session-scope oracle targets should skip review Codex calls"
@@ -219,7 +229,9 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     run_git(root, "commit", "-m", "change ignored oracle")
     calls: list[str] = []
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: Any
+    ) -> _FakeCodexResult:
         """呼び出し目的を記録し、対象列挙には空の finding を返す。"""
         calls.append(kwargs["purpose"])
         return _empty_finding_response(parameter)
@@ -294,4 +306,3 @@ def test_review_oracle_target_enumeration_classifies_oracle_symlink_by_repo_path
     run_git(root, "commit", "-m", "add oracle symlink")
 
     assert oracle_link.absolute() in enumerate_review_all_oracle_files(root)
-

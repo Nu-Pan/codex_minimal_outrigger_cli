@@ -11,6 +11,11 @@ import sys
 from pathlib import Path
 
 import pytest
+from _acp_builder_support import oracle_schema_path
+
+# jsonschema does not publish inline typing; these tests exercise its runtime API.
+from jsonschema import validate  # type: ignore[import-untyped]
+
 from acp.builder.apply.fork.change_summary import (
     build_apply_fork_change_summary_parameter,
 )
@@ -21,9 +26,6 @@ from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
 )
 from basic.acp import ModelClass, ReasoningEffort
-from jsonschema import validate
-
-from _acp_builder_support import oracle_schema_path
 
 
 def run_apply_fork_builder_import(
@@ -206,7 +208,9 @@ def test_apply_fork_prompts_use_expected_roots(
     target.write_text("print('ok')\n")
     monkeypatch.chdir(apply_worktree)
 
-    finding_application = build_apply_fork_finding_application_parameter([{"title": "t"}])
+    finding_application = build_apply_fork_finding_application_parameter(
+        [{"title": "t"}]
+    )
     finding_enumeration = build_apply_fork_file_finding_enumeration_parameter(target)
     change_summary = build_apply_fork_change_summary_parameter("diff")
 

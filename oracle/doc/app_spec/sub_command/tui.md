@@ -155,6 +155,9 @@
 
 - `cmoc tui` で必要になるパラメータの大半は agent call で決定する
 - agent call の詳細仕様は `build_tui_resolve_parameter_parameter` を正本とする
+- repo-local Skill の作成または保守がオリジナルプロンプトで明示されている場合だけ、parameter resolver は `skill_authoring_write` を選べる
+- `skill_authoring_write` は通常の実装、review、indexing、または一般的な repo write では選んではならない
+- `skill_authoring_write` の書き込み例外は `{{work-root}}/.agents/skills` に限定し、`.agents` のその他の領域は開かない
 
 ## 「AI Agent CLI/TUI を起動」の詳細
 

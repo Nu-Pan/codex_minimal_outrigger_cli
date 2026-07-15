@@ -176,8 +176,11 @@
 - 続行しようとしない
 - 即時コマンド全体を失敗させる
 
-## `.agents` 配下を編集出来ない問題
+## `.agents` 配下の書き込み
 
-- `.agents` ツリー内 Codex CLI で特別扱いされているため、人間が個別に approve しないと編集出来ない
-- `codex exec` は個別の approve が出来ないので `{{repo-root}}/.agents` 配下は絶対に編集できない（やろうとしても失敗する）
-- `.agents` ツリー内編集は cmoc としても禁止とする
+- 通常の agent call では `{{work-root}}/.agents` ツリー全体を書き込み禁止とする
+- 例外は、repo-local Skill の作成または保守をオリジナルプロンプトで明示した `cmoc tui` 作業に限る
+- 前項では TUI parameter resolver が専用の `skill_authoring_write` を選び、runtime sandbox は `{{work-root}}/.agents/skills` だけを書き込み可能にする
+- `skill_authoring_write` でも `.agents` のその他の領域は書き込み禁止とし、`AGENTS.md` と `INDEX.md` の書き込み禁止を維持する
+- apply、review、indexing、通常の realization 変更、および一般的な repo write の agent call は `skill_authoring_write` を使用してはならない
+- sandbox が `.agents/skills` への書き込みを拒否した agent は、別 path へのコピーや権限迂回を行わず、専用 mode を選べる新しい `cmoc tui` を起動するようユーザーへ案内する

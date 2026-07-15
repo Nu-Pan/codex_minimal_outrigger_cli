@@ -84,11 +84,7 @@ def _ollama_executable() -> Path:
 def _ollama_service_file() -> Path:
     """systemd user service file の配置先を返す。"""
     return (
-        Path.home()
-        / ".config"
-        / "systemd"
-        / "user"
-        / f"{_OLLAMA_SERVICE_NAME}.service"
+        Path.home() / ".config" / "systemd" / "user" / f"{_OLLAMA_SERVICE_NAME}.service"
     )
 
 
@@ -287,9 +283,9 @@ def _listener_matches_service(main_pid: int, executable: Path) -> bool:
     # service file は設定の正しさだけを示すため、11434 の現 listener を
     # /proc で MainPID 系列の cmoc managed ollama process と直接対応付ける。
     for process_id in _ollama_listener_process_ids():
-        if _process_is_descendant(process_id, main_pid) and _process_argv_uses_executable(
-            process_id, executable
-        ):
+        if _process_is_descendant(
+            process_id, main_pid
+        ) and _process_argv_uses_executable(process_id, executable):
             return True
     return False
 
@@ -385,7 +381,8 @@ def _ollama_http_ok() -> bool:
             f"http://{_OLLAMA_HOST}/api/tags",
             timeout=_OLLAMA_CONNECT_TIMEOUT_SEC,
         ) as response:
-            return 200 <= response.status < 300
+            status = response.status
+            return isinstance(status, int) and 200 <= status < 300
     except (OSError, urllib.error.URLError):
         return False
 
@@ -477,9 +474,7 @@ def _verify_ollama_gpu(model: str) -> None:
                     model, f"endpoint: {endpoint}\nstatus: {status}"
                 )
     except (OSError, urllib.error.URLError) as exc:
-        raise _gpu_verification_error(
-            model, f"endpoint: {endpoint}"
-        ) from exc
+        raise _gpu_verification_error(model, f"endpoint: {endpoint}") from exc
     try:
         payload = json.loads(response_body.decode())
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:

@@ -12,21 +12,23 @@ This size decision follows
 """
 
 import json
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from basic.acp import AgentCallParameter
-from cmoc_runtime import CmocError
-import commons.runtime_cli as runtime_cli_module
+import pytest
 from _apply_support import apply_worktree_from_state
 from _cli_support import runner
 from _codex_support import FakeCodexResult
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
-from main import app
 from pytest import MonkeyPatch
-import pytest
+
+import commons.runtime_cli as runtime_cli_module
 import sub_commands.apply.fork as apply_fork_module
+from basic.acp import AgentCallParameter
+from cmoc_runtime import CmocError, SessionState
+from main import app
 
 
 def test_apply_fork_runs_codex_loop_and_updates_state(
@@ -60,14 +62,19 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     assert branch.startswith("cmoc/session/")
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text())
+    state = json.loads(
+        (root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text()
+    )
     assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"].startswith(f"cmoc/apply/{session_id}/")
     run_id = state["apply"]["apply_branch"].removeprefix(f"cmoc/apply/{session_id}/")
     apply_worktree = apply_worktree_from_state(root, state)
     assert apply_worktree == root / ".cmoc" / "gu" / "worktree" / session_id / run_id
     assert apply_worktree.is_dir()
-    assert run_git(apply_worktree, "branch", "--show-current").stdout.strip() == state["apply"]["apply_branch"]
+    assert (
+        run_git(apply_worktree, "branch", "--show-current").stdout.strip()
+        == state["apply"]["apply_branch"]
+    )
     assert not (root / ".cmoc" / "gu" / "worktree" / "apply").exists()
     assert "apply_worktree" not in state["apply"]
     assert "apply_process_id" not in state["apply"]
@@ -114,9 +121,13 @@ def test_apply_fork_interrupt_keeps_commits_and_discards_current_unit(
             )
         if purpose == "apply fork finding application":
             application_calls += 1
-            worktree = Path(kwargs["cwd"])
-            target = worktree / "src" / (
-                "kept.py" if application_calls == 1 else "discarded.py"
+            worktree_value = kwargs["cwd"]
+            assert isinstance(worktree_value, Path)
+            worktree = worktree_value
+            target = (
+                worktree
+                / "src"
+                / ("kept.py" if application_calls == 1 else "discarded.py")
             )
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(f"value = {application_calls}\n")
@@ -152,17 +163,18 @@ def test_apply_fork_interrupt_keeps_commits_and_discards_current_unit(
     assert (apply_worktree / "src" / "kept.py").is_file()
     assert not (apply_worktree / "src" / "discarded.py").exists()
     assert run_git(apply_worktree, "status", "--short").stdout == ""
-    assert "src/kept.py" in run_git(
-        apply_worktree,
-        "show",
-        "--name-only",
-        "--format=",
-        "HEAD",
-    ).stdout.splitlines()
+    assert (
+        "src/kept.py"
+        in run_git(
+            apply_worktree,
+            "show",
+            "--name-only",
+            "--format=",
+            "HEAD",
+        ).stdout.splitlines()
+    )
     reports = sorted(
-        (root / ".cmoc" / "gu" / "ar" / "report" / "apply" / "fork").glob(
-            "*.md"
-        )
+        (root / ".cmoc" / "gu" / "ar" / "report" / "apply" / "fork").glob("*.md")
     )
     assert reports
     rendered = reports[-1].read_text()
@@ -206,9 +218,7 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
         run_git(linked, "add", "README.md")
         run_git(linked, "commit", "-m", "advance session during apply setup")
         start_points.append(start_point)
-        return original_create_run_worktree(
-            root_arg, branch_arg, worktree, start_point
-        )
+        return original_create_run_worktree(root_arg, branch_arg, worktree, start_point)
 
     monkeypatch.setattr(
         apply_fork_module,
@@ -231,7 +241,9 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     assert result.exit_code == 0
     branch = run_git(linked, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text())
+    state = json.loads(
+        (root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text()
+    )
     assert state["apply"]["oracle_snapshot_commit"] == linked_commit
     assert start_points == [linked_commit]
     assert (
@@ -242,7 +254,10 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     apply_worktree = apply_worktree_from_state(root, state)
     assert apply_worktree == root / ".cmoc" / "gu" / "worktree" / session_id / run_id
     assert apply_worktree.is_dir()
-    assert run_git(apply_worktree, "branch", "--show-current").stdout.strip() == state["apply"]["apply_branch"]
+    assert (
+        run_git(apply_worktree, "branch", "--show-current").stdout.strip()
+        == state["apply"]["apply_branch"]
+    )
     assert not apply_worktree.is_relative_to(linked)
 
 
@@ -331,9 +346,7 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     exclude = root / ".git" / "info" / "exclude"
     exclude.write_text(
         "\n".join(
-            line
-            for line in exclude.read_text().splitlines()
-            if line != "/.cmoc/gu/"
+            line for line in exclude.read_text().splitlines() if line != "/.cmoc/gu/"
         )
         + "\n"
     )
@@ -344,6 +357,7 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     )
 
     assert result.returncode == 0
+    assert result.stdout is not None
     assert Path(result.stdout).is_file()
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert "/.cmoc/gu/" in exclude.read_text().splitlines()
@@ -434,7 +448,7 @@ def test_apply_fork_can_target_and_edit_gitignore(
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
-    finding = {
+    finding: dict[str, object] = {
         "title": "Update gitignore",
         "evidences": [
             {
@@ -493,7 +507,9 @@ def test_apply_fork_can_target_and_edit_gitignore(
     assert [".gitignore"] in target_rels_by_call
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text())
+    state = json.loads(
+        (root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text()
+    )
     assert (
         run_git(root, "show", f"{state['apply']['apply_branch']}:.gitignore").stdout
         == "/.cmoc/gu/\n# editable\n"
@@ -518,7 +534,9 @@ def test_apply_fork_marks_state_completed_before_report(
 
     def fake_write_report(*args: object, **kwargs: object) -> Path:
         seen_states.append(json.loads(state_path.read_text())["apply"]["state"])
-        report_path = root / ".cmoc" / "gu" / "ar" / "report" / "apply" / "fork" / "state.md"
+        report_path = (
+            root / ".cmoc" / "gu" / "ar" / "report" / "apply" / "fork" / "state.md"
+        )
         report_path.parent.mkdir(parents=True)
         report_path.write_text("# report\n")
         return report_path
@@ -550,7 +568,7 @@ def test_apply_fork_rechecks_ready_state_before_creating_run(
     created: list[Path] = []
 
     @contextmanager
-    def fake_apply_run_lock(_root: Path, _session_id: str):
+    def fake_apply_run_lock(_root: Path, _session_id: str) -> Iterator[None]:
         nonlocal lock_entries
         lock_entries += 1
         if lock_entries == 1:
@@ -606,6 +624,7 @@ def test_apply_fork_initialization_failure_is_recoverable_by_abandon(
     )
 
     if failure == "pid":
+
         def fail_write_pid(*args: object, **kwargs: object) -> None:
             raise OSError("pid save failed")
 
@@ -614,7 +633,7 @@ def test_apply_fork_initialization_failure_is_recoverable_by_abandon(
         original_write_state = apply_fork_module.write_state
         write_count = 0
 
-        def fail_completed_state(path: Path, state: object) -> None:
+        def fail_completed_state(path: Path, state: SessionState) -> None:
             nonlocal write_count
             write_count += 1
             if write_count == 2:

@@ -17,18 +17,19 @@ subcommand event を同時に確認する一つの責務を持つ。semantic fai
 
 import json
 from pathlib import Path
+from typing import Any
+
+import pytest
+from _codex_support import setup_codex_home, stub_codex_overrides
+from _command_support import write_python_executable
+from _git_support import make_repo
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError, SubcommandLogger
-from config.cmoc_config import CmocConfig
-import pytest
-
-from _codex_support import setup_codex_home, stub_codex_overrides
-from _command_support import write_python_executable
-from _git_support import make_repo
 from commons.runtime_codex import run_codex_exec
+from config.cmoc_config import CmocConfig
 
 
 def test_run_codex_exec_retries_semantic_output(
@@ -87,7 +88,9 @@ def test_run_codex_exec_retries_semantic_output(
 
     assert result.output_json == {"ok": True}
     assert counter.read_text() == "2"
-    call_paths = sorted((root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json"))
+    call_paths = sorted(
+        (root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json")
+    )
     call_logs = [json.loads(path.read_text()) for path in call_paths]
     assert len(call_logs) == 2
     assert [Path(log["output_path"]).read_text() for log in call_logs] == [
@@ -145,7 +148,9 @@ def test_run_codex_exec_logs_keyboard_interrupt(
     console = capsys.readouterr().out
     assert "- Exit code: `not started`" in console
     assert "- Error: `KeyboardInterrupt()`" in console
-    call_logs = list((root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json"))
+    call_logs = list(
+        (root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json")
+    )
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in events if event["event"] == "codex_call"]
     assert len(call_logs) == 1
@@ -276,7 +281,9 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     )
 
     assert result.output_json == {"ok": True}
-    call_paths = sorted((root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json"))
+    call_paths = sorted(
+        (root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json")
+    )
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == [
@@ -427,7 +434,7 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
         "prompt",
         None,
     )
-    cases = [
+    cases: list[tuple[str, list[str], dict[str, Any], str]] = [
         (
             "capacity",
             ["print('Selected model is at capacity', file=sys.stderr)"],
@@ -457,7 +464,6 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
         try:
             run_codex_exec(parameter, root=root, config=CmocConfig(), **kwargs)
         except CmocError as exc:
-
             assert exc.summary == "Codex CLI 呼び出しが失敗しました。"
             assert expected_detail not in exc.detail
             assert expected_detail not in capsys.readouterr().out
@@ -574,7 +580,9 @@ def test_run_codex_exec_stops_after_retry_limit(
         assert error_fragment in error.value.detail
     else:
         assert error_fragment not in error.value.detail
-    call_paths = sorted((root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json"))
+    call_paths = sorted(
+        (root / ".cmoc" / "gu" / "ar" / "log" / "codex").glob("*_call.json")
+    )
     assert len(call_paths) == expected_calls
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]

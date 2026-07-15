@@ -6,18 +6,24 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
+from _codex_support import setup_codex_home
+from _command_support import write_python_executable
+from _git_support import make_repo, run_git
+
+import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from config.cmoc_config import CmocConfig
 
-from _codex_support import setup_codex_home
-from _command_support import write_python_executable
-from _git_support import make_repo, run_git
-import commons.indexing as indexing_module
-
 # preflight の実行条件・順序・worktree 選択・recovery 禁止は、
 # {{work-root}}/oracle/doc/app_spec/indexing.md と
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md を根拠とする。
+
+
+class _EmptyCodexResult:
+    """Structured Output を使わない preflight callback の最小結果。"""
+
+    output_json: object | None = None
 
 
 @pytest.fixture(autouse=True)
@@ -158,8 +164,7 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
     assert isinstance(result, FakeCodexResult)
     assert events == ["indexing", "codex"]
     assert (
-        run_git(worktree, "log", "-1", "--pretty=%s").stdout.strip()
-        == "cmoc indexing"
+        run_git(worktree, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     )
     assert run_git(worktree, "status", "--short").stdout.strip() == ""
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
@@ -259,7 +264,7 @@ def test_indexing_preflight_waits_for_repository_lock(
             future = executor.submit(
                 indexing_module.run_indexing_preflight,
                 root,
-                lambda *args, **kwargs: None,
+                lambda *args, **kwargs: _EmptyCodexResult(),
             )
             try:
                 assert lock_attempted.wait(timeout=3)
@@ -313,7 +318,9 @@ def test_command_codex_call_skips_indexing_when_parameter_disables_preflight(
     ) -> FakeCodexResult:
         """preflight を省略して Codex exec へ進んだ呼び出しを記録する fake。"""
 
-        calls.append(kwargs["purpose"])
+        purpose = kwargs["purpose"]
+        assert isinstance(purpose, str)
+        calls.append(purpose)
         return FakeCodexResult()
 
     indexing_module.enable_indexing_preflight()

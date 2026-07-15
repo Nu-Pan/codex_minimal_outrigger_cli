@@ -5,13 +5,22 @@
 
 import json
 from pathlib import Path
+from types import ModuleType
 from typing import Callable
+
+import pytest
+from _acp_builder_support import oracle_schema_path
+
+# jsonschema does not publish inline typing; these tests exercise its runtime API.
+from jsonschema import validate  # type: ignore[import-untyped]
+from oracle.acp_builder.review.oracle.enumerate_finding import (
+    build_review_oracle_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
+)
 
 import acp.builder.review.oracle.judge_finding as review_judge_finding_module
 import acp.builder.review.oracle.merge_finding as review_merge_finding_module
 import acp.builder.review.oracle.validate_finding_advocate as review_validate_advocate_module
 import acp.builder.review.oracle.validate_finding_challenger as review_validate_challenger_module
-import pytest
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
 )
@@ -28,12 +37,6 @@ from acp.builder.review.oracle.validate_finding_challenger import (
     build_review_oracle_validate_finding_challenger_parameter,
 )
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from jsonschema import validate
-from oracle.acp_builder.review.oracle.enumerate_finding import (
-    build_review_oracle_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
-)
-
-from _acp_builder_support import oracle_schema_path
 
 
 @pytest.mark.parametrize(
@@ -58,7 +61,7 @@ from _acp_builder_support import oracle_schema_path
     ],
 )
 def test_review_compatibility_modules_export_only_builders(
-    module: object, exported_name: str
+    module: ModuleType, exported_name: str
 ) -> None:
     assert module.__all__ == [exported_name]
     for internal_name in [

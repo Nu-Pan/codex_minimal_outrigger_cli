@@ -22,4 +22,4 @@ for _path in _oracle_spec.submodule_search_locations:
 
 _basic_module = import_module("oracle.acp_builder.basic")
 sys.modules[f"{__name__}.basic"] = _basic_module
-setattr(sys.modules[__name__], "basic", _basic_module)
+sys.modules[__name__].__dict__["basic"] = _basic_module

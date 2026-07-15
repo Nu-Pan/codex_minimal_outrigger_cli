@@ -5,11 +5,8 @@ import shutil
 from pathlib import Path
 
 import pytest
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
-from config.cmoc_config import CmocConfig
-from oracle.other.cmoc_config import CodexModelSpec
 from _codex_support import (
+    _override_permission_filesystem,
     codex_arg_value,
     codex_override_config,
     codex_parameter,
@@ -19,15 +16,18 @@ from _codex_support import (
 from _command_support import write_python_executable
 from _git_support import make_repo
 from _ollama_support import TEST_SLM_MODEL
+from oracle.other.cmoc_config import CodexModelSpec
+
 import commons.runtime_doctor as doctor_module
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
 from commons.runtime_doctor import run_doctor_preprocess
+from config.cmoc_config import CmocConfig
 
 
-def _prepare_production_managed_ollama(
-    root: Path, config: CmocConfig
-) -> None:
+def _prepare_production_managed_ollama(root: Path, config: CmocConfig) -> None:
     """Require the real per-user managed service used by production Codex calls."""
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
     # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
@@ -56,6 +56,7 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
     assert not list(codex_home.glob("*.config.toml"))
 
 
+@pytest.mark.timeout(600)
 def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -79,7 +80,7 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         )
     )
     prompt = (
-        '次の JSON オブジェクトだけを正確に返し、他の文字列は返さないでください: '
+        "次の JSON オブジェクトだけを正確に返し、他の文字列は返さないでください: "
         '{"result":"cmoc-real-codex-provider"}'
     )
 
@@ -117,7 +118,9 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     assert codex_arg_value(call_log["argv"], "--disable") == "multi_agent"
     assert override_config["web_search"] == "disabled"
     assert override_config["model_provider"] == "cmoc_managed_ollama"
-    assert override_config["model_providers"]["cmoc_managed_ollama"] == {
+    providers = override_config["model_providers"]
+    assert isinstance(providers, dict)
+    assert providers["cmoc_managed_ollama"] == {
         "name": "cmoc managed ollama",
         "base_url": "http://127.0.0.1:11434/v1",
         "wire_api": "responses",
@@ -190,10 +193,10 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     override_config = codex_override_config(record["args"])
     assert override_config["model_reasoning_effort"] == "low"
     assert override_config["default_permissions"] == "cmoc"
-    filesystem = override_config["permissions"]["cmoc"]["filesystem"]
-    assert {
-        path for path, access in filesystem.items() if access == "write"
-    } == {str(root.resolve())}
+    filesystem = _override_permission_filesystem(record["args"])
+    assert {path for path, access in filesystem.items() if access == "write"} == {
+        str(root.resolve())
+    }
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
@@ -250,7 +253,9 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
     assert codex_arg_value(record["args"], "--disable") == "multi_agent"
     assert override_config["web_search"] == "disabled"
     assert override_config["model_provider"] == "cmoc_managed_ollama"
-    assert override_config["model_providers"]["cmoc_managed_ollama"] == {
+    providers = override_config["model_providers"]
+    assert isinstance(providers, dict)
+    assert providers["cmoc_managed_ollama"] == {
         "name": "cmoc managed ollama",
         "base_url": "http://127.0.0.1:11434/v1",
         "wire_api": "responses",
@@ -302,6 +307,7 @@ def test_prepare_local_slm_runs_managed_ollama_preflight(
     assert "-p" not in override_args
     _assert_no_codex_home_config(codex_home)
 
+
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 def test_prepare_codex_override_args_does_not_create_codex_home_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -310,9 +316,7 @@ def test_prepare_codex_override_args_does_not_create_codex_home_config(
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
 
-    override_args = prepare_codex_override_args(
-        codex_parameter(), CmocConfig(), root
-    )
+    override_args = prepare_codex_override_args(codex_parameter(), CmocConfig(), root)
 
     assert "--profile" not in override_args
     assert "-p" not in override_args
