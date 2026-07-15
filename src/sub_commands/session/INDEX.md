@@ -56,19 +56,18 @@
 # `join.py`
 
 ## Summary
-- `cmoc session join` の実行経路をまとめた入口。現在の session branch を session home branch へ merge し、状態更新・ブランチ削除・結果表示までの一連の流れを追うときに読む。
-- merge conflict を Codex CLI に解消させる分岐、残存 conflict marker の検査、unmerged path の確認を含むため、join 時の失敗時挙動や手動介入の境界を確認したいときにも読む。
-- ここは join のオーケストレーションに集中しているので、conflict 解消用の引数構築や下位の session 状態定義だけを知りたい場合は、より直接の定義側を読む。
+- session branch を対応する session home branch に merge し、事前条件確認、conflict 解消依頼、merge 完了確認、状態更新、session branch 削除と結果表示までを実行する CLI runtime。
+- session join の Git 操作、conflict 対象の NUL 区切り列挙、Codex CLI による conflict marker 解消、残存 marker・unmerged path の検査を担う。
 
 ## Read this when
-- session join サブコマンドの実行順序、事前条件、成功時の状態更新と出力を確認したい。
-- merge conflict 発生時に Codex CLI へ何を渡し、どの条件で再試行や手動解決に切り替わるかを確認したい。
-- session branch の削除条件や、merge 済み判定の取り方を確認したい。
+- `cmoc session join` の実行条件、merge 先、branch 削除条件、状態遷移、結果表示を変更・調査するとき。
+- session join における merge conflict の検出、Codex CLI への解消依頼、conflict marker 検査、stage・commit 処理を変更・調査するとき。
+- session join の失敗時における stderr 出力や、Git path の newline を含む conflict 対応を確認するとき。
 
 ## Do not read this when
-- session の状態スキーマや永続状態の定義そのものを知りたいだけなら、状態定義側を読む。
-- conflict resolution 用のパラメータ生成だけを知りたいなら、この実行オーケストレーションではなく引数構築側を読む。
-- 他の session 系サブコマンドの routing を知りたいだけなら、join 実装ではなく該当サブコマンドの入口を読む。
+- session join の conflict 解消パラメータ生成そのものを変更・調査するときは、専用の conflict resolution builder を直接読む。
+- session の状態モデル、state ファイルの形式、共通 CLI 実行制御を変更・調査するときは、それぞれの定義元を直接読む。
+- session join 以外の session サブコマンドの挙動だけを変更・調査するとき。
 
 ## hash
-- baf48c0407f1dbe353ef0915cfe2d1c6630d41873d95cde6b512cc05b8891e47
+- 99407dc7366639cf1f44ff87052ff42019d7f7277a1f968b48b1e2d168564ed4

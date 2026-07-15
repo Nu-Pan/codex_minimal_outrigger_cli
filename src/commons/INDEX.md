@@ -113,23 +113,25 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の実行制御をまとめて扱う入口。単発試行の呼び出し、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log と subcommand event の記録を同じ状態機械として管理する。
-- 変更対象が exec の失敗時挙動、再試行条件、ログ出力、resume token の扱い、または worktree の変更 path 取得であればここを読む。TUI 起動や別サブコマンドの制御は対象外で、そちらの入口を先に読む。
+- Codex exec の単一試行ループと実行結果管理を担う中核モジュール。Structured Output の JSON/schema 検証、capacity retry、quota 回復待機と代表 probe、resume token による再開、prompt・stdout・stderr・output・call log の保存、console/subcommand event の記録を一つの状態機械として処理する。TUI 起動や個別の Codex 設定・ログ基盤そのものは担当せず、exec 実行制御の入口となる。
+- 変更された worktree path を absolute path と git status code 付きで取得する補助処理も提供する。
 
 ## Read this when
-- Codex 実行の再試行条件や失敗時の分岐を変えるとき。
-- Structured Output の検証条件、出力 JSON の読み取り、schema 不一致時の扱いを変えるとき。
-- quota 待機、代表 probe、resume token の再開条件、capacity retry の相互作用を確認したいとき。
-- call log、stdout/stderr/output の保存、subcommand event の記録内容を変更するとき。
-- worktree 上の変更 path を収集する挙動を確認したいとき。
+- Codex exec の再試行条件、quota 待機・probe・resume の制御を変更または調査するとき
+- Structured Output の読み取り・schema 検証・semantic retry を変更または調査するとき
+- Codex 呼び出しの argv、cwd、CODEX_HOME、prompt/input、各種ログ、実行イベントの記録仕様を変更または調査するとき
+- Codex exec の失敗分類、エラー報告、結果オブジェクトの生成を変更または調査するとき
+- agent call 後の worktree 変更 path の収集処理を変更または調査するとき
 
 ## Do not read this when
-- TUI の起動や表示を変えたいだけのとき。
-- exec 以外のサブコマンド実装や汎用設定読み込みだけを見たいとき。
-- git 状態取得の一般的な実装を探しているだけで、この関数群の返却形式に関心がないとき。
+- Codex の設定値検証、環境変数・cwd・schema path の準備処理そのものを調査するときは、対応する commons runtime module を直接読む
+- Codex の call log や subcommand log の共通フォーマット・出力基盤を調査するときは、対応する logging module を直接読む
+- quota probe 用 AgentCallParameter の生成仕様を調査するときは、quota probe builder を直接読む
+- TUI 起動や exec 以外のサブコマンド実装を調査するときは、それぞれの command module を直接読む
+- Codex CLI の出力品質や内部 helper の分割だけを確認する場合
 
 ## hash
-- 73bbe18fbf61cab01b1f17a8afc6502b4fc568b31020d63133c8cee5c4dbf70c
+- 156642e88173be4f224b2440eb8607a1ada435f691f4b84378008feff09291fe
 
 # `runtime_codex_logging.py`
 
@@ -168,38 +170,36 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex subprocess 起動前後の実行環境を組み立てる入口。`argv`、`CODEX_HOME`、sandbox/permisson profile、追加 read/write 許可、schema 配置、JSONL error 判定を扱う変更で読む。
+- Codex CLI subprocess 境界の実装。起動時の sandbox・cwd・CODEX_HOME・argv/env・schema 準備、apply 用 process tracking、pidfd による process group 停止、終了後の JSON/JSONL 出力解析と capacity・quota・予期しない error 判定を扱う。Codex CLI 連携の実行環境や機械的な実行結果の解釈を確認する入口。
 
 ## Read this when
-- Codex CLI を呼ぶ前に、どの `cwd`・`CODEX_HOME`・sandbox/permission profile を渡すかを決める必要がある。
-- 追加 read/write path の許可境界や、worktree / oracle / memo / reserved root の扱いを変える。
-- Codex subprocess の出力から schema 配置、resume token、capacity/quota/error 判定を解釈する処理を変える。
+- Codex CLI の起動引数、sandbox、cwd、CODEX_HOME、managed Ollama provider、schema 配置、subprocess 環境を変更・調査するとき
+- apply の child process tracking、pidfd、process group の停止・終了待機、PID 再利用対策を変更・調査するとき
+- Codex の JSON/JSONL 出力、resume token、capacity・quota・予期しない error の判定を変更・調査するとき
 
 ## Do not read this when
-- 単純な CLI 引数パースや設定値の定義だけを追いたい場合は、より上位の呼び出し側を読む。
-- process tracking の保存形式や abandon/stop の操作だけを変える場合は、該当する sub_command 側の文書や実装を読む。
-- このモジュールの境界外にある一般的な runtime helpers や git 判定だけを見たい場合は、個別 helper 側を直接読む。
+- Codex CLI の利用者向けコマンド仕様や apply の業務フロー自体を確認する場合は、対応する oracle doc または上位の command 実装を先に読む
+- Codex CLI 以外の subprocess 実行、一般的な runtime path・content 操作、設定値の定義だけを調べる場合
 
 ## hash
-- 19158f19d48230f7f33d60c5e245c7b7b06f1d22517888b46fdb67b61b8d37bf
+- 48841e07522e36d560b0ab366a646a0e84c2a18b93ad70b683ef848f02d2644c
 
 # `runtime_codex_tui.py`
 
 ## Summary
-- `cmoc tui` で Codex CLI/TUI を起動する実行経路を扱う。ユーザー入力プロンプトの受け渡し、`CODEX_HOME` の解決と事前検証、設定上書き argv の組み立て、call log と実行結果の記録までをまとめて確認したいときに読む。
+- Codex TUI を起動する実行処理。設定・作業ルート・Codex ホーム・上書き引数・作業ディレクトリを解決し、呼び出し記録を保存したうえで Codex サブプロセスを実行する。成功・失敗・起動例外をコンソールおよびサブコマンド logger に記録し、結果または適切な例外を返す。Codex TUI 呼び出し経路、実行ログ、失敗処理を調査・変更する際の入口。
 
 ## Read this when
-- Codex TUI 起動時の引数生成や実行前検証を直したい。
-- プロンプト保存位置、call log の記録内容、実行結果イベントの出し方を確認したい。
-- Codex 起動時に使う `CODEX_HOME`、cwd、読み取り専用パスの扱いを追いたい。
+- Codex TUI の起動引数、作業ディレクトリ、Codex ホーム、設定上書きの挙動を確認するとき
+- Codex 呼び出しの call log、コンソール出力、logger event の内容や生成条件を確認するとき
+- Codex サブプロセスの起動失敗・非ゼロ終了・例外伝播を変更または調査するとき
 
 ## Do not read this when
-- `cmoc exec` など別の Codex 呼び出し経路だけを調べたい。
-- agent call のパラメータ解決そのものを直したい。
-- サブコマンド共通のログ形式だけを見たい場合は、より上位の実行・ログ関連の対象を読む。
+- Codex CLI/TUI の設定値そのものを変更するときは、設定読み込み・上書き処理の実装を直接確認する
+- Codex 呼び出し以外の共通パス、ログ形式、エラー型の一般仕様だけを調査するときは、それぞれの共通モジュールや oracle 文書を直接読む
 
 ## hash
-- e0ea8aff71c383f305655b65963834fd866b04bb74b3aa1d717aa717ac937c6b
+- ac362cba08e4edf7289ed4c1a3f903a7bbd79e01502bb5088e33fc9e488ad43b
 
 # `runtime_config.py`
 

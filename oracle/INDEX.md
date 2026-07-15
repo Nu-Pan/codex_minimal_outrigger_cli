@@ -1,36 +1,39 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション仕様断片を集約するディレクトリ。CLI 共通基盤、実行環境、ログ、状態管理、プロンプト、run 隔離、session、サブコマンド仕様など、機能別の正本文書へ進むための入口。
-- branch と worktree による session/run の境界、採用しなかった設計案、Python 開発規則など、アプリケーション仕様を横断して確認する文書も含む。
+- cmoc のアプリケーション仕様断片をまとめるディレクトリ。CLI 補完、Codex 呼び出し、ログ、前処理、プロンプト、実行隔離、session 状態、branch/run 境界、サブコマンドなどの正本仕様文書への入口。
+- 設計上の代替案や開発規則も含み、目的に応じて個別の仕様文書・設計判断メモ・開発規則へ進むために使う。
 
 ## Read this when
-- cmoc のアプリケーション仕様から、対象機能の正本文書やサブコマンド仕様を探すとき。
-- CLI 共通基盤、session/run、branch、設計判断、Python 開発規則など複数領域にまたがる仕様の入口を確認するとき。
-- 現在の採用仕様だけでなく、不採用案の理由や開発時の共通規則を確認するとき。
+- cmoc の個別機能またはサブコマンドの正本仕様を確認・変更するとき。
+- CLI 補完、Codex 呼び出し、ログ、前処理、プロンプト生成、実行隔離、session 状態、branch/run 境界を調べるとき。
+- cmoc の設計で採用しなかった代替案や、Python・CLI・テストの共通開発規則を確認するとき。
+- app_spec 内の具体的な仕様文書やサブコマンド仕様の入口を選ぶ必要があるとき。
 
 ## Do not read this when
-- 実装コードやテストコードの具体的な挙動を確認するときは、対応する src または test 配下を読む。
-- 対象機能の仕様が明確な場合は、このディレクトリ全体ではなく該当する個別文書へ直接進む。
-- oracle と realization の一般定義や記述標準、INDEX.md の生成・更新規則だけを確認するときは、それぞれの専用文書を読む。
+- INDEX.md の自動生成・更新規則だけを確認したいとき。
+- リポジトリ全体の共通運用前提だけを確認したいとき。
+- 特定文書の本文や実装の詳細が既に明らかな単純な作業で、個別の対象を直接読めるとき。
+- 現行仕様・実装・テストの詳細ではなく、採用しなかった設計案だけを確認したい場合は、該当する設計判断メモを直接読むとき。
 
 ## hash
-- 361092b8354964e4c2bfb12ec1f9cc5e8def8ad81957dfd7ea8a892552634a87
+- 1eb27c0d9a3f194641e66f9490100b9a47b2b48bfac9e7d302874635a08170db
 
 # `src`
 
 ## Summary
-- ACP builder の呼び出し設定・用途別 Structured Output 契約、設定／パス／構造化文書モデル、prompt 合成と規範文面の正本ソースを扱うディレクトリ。下位の acp_builder、other、prompt_builder から個別領域へ進む入口。
+- ACP builder の agent call パラメータ、prompt builder の構成・依存注入、設定・ルートパス解決、規範文書や構造化 markdown を扱う共通 oracle src の領域。個別サブディレクトリの仕様・実装へ進むための入口。
 
 ## Read this when
-- agent 呼び出しパラメータ、モデル・推論設定、ファイルアクセスモード、Structured Output schema の正本を確認・変更するとき。
-- cmoc の設定、ルートパス解決、構造化 markdown、Standard モデルの正本を確認するとき。
-- oracle／realization／review／index の規範や、それらを prompt に組み込む処理を確認するとき。
+- agent call のモデル、推論強度、ファイルアクセス、Structured Output、作業ディレクトリの型を確認するとき。
+- prompt の組み立て、standard・プレースホルダ・ファイルアクセス規則・routing rule の注入を調査するとき。
+- cmoc 設定、ループ回数、JSON 保存、ルートパスプレースホルダ解決、構造化 markdown の検査・レンダリングを確認するとき。
+- 個別実装を読む前に、ACP builder、prompt builder、その他の共通基盤のどこへ進むべきか判断するとき。
 
 ## Do not read this when
-- サブコマンドの実行フロー、CLI 入出力、差分適用、競合解消の realization 実装を調査するとき。
-- prompt の合成順序や個別タスクの実行制御だけを調査するときは、下位の prompt_builder または該当する acp_builder の個別ファイルへ直接進む。
-- 個別の oracle 文書、realization 側の実装・テスト本文だけを確認するとき。
+- 個別サブコマンドの実行フロー、CLI 入出力、ファイル探索、生成物の保存処理を調査するとき。
+- 個別の oracle file や realization file の具体的な仕様・実装を確認するとき。
+- 下位ディレクトリの責務が明確で、共通の agent call、prompt、設定、パス、構造化文書基盤を確認する必要がないとき。
 
 ## hash
-- 14478f6f2108d1e6eefa8d00598fda26d557c34b54aff984bb23baa0ccd39e41
+- 653d8ccb890d140a59a10aad0e8996dca6bbccecc3405aa44c76baa19f0965f3

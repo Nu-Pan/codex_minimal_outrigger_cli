@@ -75,21 +75,23 @@
 # `oracle`
 
 ## Summary
-- cmoc のアプリケーション仕様断片を集約する oracle ディレクトリ。CLI 共通基盤、実行環境、ログ、状態管理、prompt、session/run、branch、設計判断、Python 開発規則などの正本文書と、ACP builder・設定・パス・構造化文書・prompt 合成に関する正本ソースを扱う。doc と src は、機能別の仕様や正本定義へ進むための入口。
+- cmoc アプリケーション仕様断片と設計・開発規則をまとめる正本文書群への入口。CLI 補完、Codex 呼び出し、ログ、前処理、プロンプト、実行隔離、session 状態、branch/run 境界、サブコマンドなどの仕様を扱う。
+- ACP builder、prompt builder、設定・ルートパス解決、規範文書や構造化 markdown を扱う共通 oracle src への入口。
 
 ## Read this when
-- cmoc のアプリケーション仕様や、対象機能の正本文書を探すとき。
-- CLI 共通基盤、session/run、branch、設計判断、Python 開発規則など横断的な仕様を確認するとき。
-- ACP builder の呼び出し設定、Structured Output 契約、設定・パス・構造化文書モデル、prompt の正本定義を確認するとき。
-- 採用仕様だけでなく、不採用案の理由や prompt に組み込まれる規範文面を確認するとき。
+- cmoc の個別機能やサブコマンドの正本仕様を確認・変更するとき。
+- CLI 補完、Codex 呼び出し、ログ、前処理、プロンプト生成、実行隔離、session 状態、branch/run 境界を調べるとき。
+- agent call のパラメータ、prompt の組み立て、設定、ルートパス、構造化 markdown の検査・レンダリングを確認するとき。
+- 個別対象へ進む前に、仕様文書または共通 oracle src の入口を選ぶ必要があるとき。
 
 ## Do not read this when
-- 実装コードやテストコードの具体的な挙動を確認するときは、対応する src または test 配下へ進む。
-- 対象機能の仕様が明確な場合は、このディレクトリ全体ではなく doc または src 配下の該当する個別ファイルへ直接進む。
-- oracle／realization の一般定義・記述標準や INDEX.md の生成・更新規則だけを確認するときは、各専用文書へ進む。
+- INDEX.md の自動生成・更新規則だけを確認したいとき。
+- リポジトリ全体の共通運用前提だけを確認したいとき。
+- 特定文書や実装の詳細が明らかで、個別対象を直接読める単純な作業のとき。
+- 個別サブコマンドの実行フローや生成物保存処理だけを調査し、共通基盤を確認する必要がないとき。
 
 ## hash
-- 7e65eeaa260bf2336a8eff27fd983223199ebcbcbaa592dec9321076d8d6c786
+- 56ab59fb93d7b5c88f13da1832c75d3079139818b5bef3e859fbb1ccda00133e
 
 # `pyproject.toml`
 
@@ -113,35 +115,37 @@
 # `src`
 
 ## Summary
-- `src` 配下の実体実装への入口。CLI 本体、共通 runtime、互換公開面、各サブコマンド、正本側 `oracle` への橋渡しをまとめて見分けるためのルーティング層で、まず読むと下位のどの責務へ進むべきかを切り分けられる。
+- cmoc の実装入口をまとめる階層。CLI 起動とサブコマンド接続、共有 runtime、`acp`・`basic`・`config`・`oracle` の互換 import 経路を扱う。
+- `commons` は設定・状態・Git・パス・ログ・Codex 実行などの共有 runtime、`sub_commands` は apply・review・session・doctor・TUI・indexing の処理、`acp` と `basic` と `config` は既存公開名を保つ互換入口、`oracle.py` は正本側 namespace への解決入口である。
 
 ## Read this when
-- `src` 全体で、まずどの責務の実装へ進むべきかを判断したいとき。
-- CLI 入口、共通 runtime、互換公開面、サブコマンド群、正本側 `oracle` への参照先を整理したいとき。
-- 既存の公開名や移行導線を保ったまま、読むべき下位モジュールを絞り込みたいとき。
+- cmoc CLI の公開入口、サブコマンド構成、起動時の引数処理を確認したいとき。
+- 共有 runtime の責務から、設定・状態・Git・パス・ログ・Codex 実行などの実装先を切り分けたいとき。
+- apply、review、session、doctor、TUI、indexing の処理入口を確認したいとき。
+- 既存の `acp.*`、`basic.*`、`config.*` import や `oracle` namespace の解決経路を維持・変更したいとき。
 
 ## Do not read this when
-- 個別機能の具体的な挙動やアルゴリズムを知りたいときは、対応する下位モジュールを直接読む。
-- 互換入口の存続判断ではなく、特定の実装本体だけを変えたいときはここではない。
-- `src` の配下構成ではなく、`oracle` 側の正本仕様そのものを確認したいときは正本側を読む。
+- 特定のサブコマンドや runtime helper の詳細な入出力・失敗時挙動を調べたいときは、対応する下位モジュールを直接読む。
+- `acp`・`basic`・`config` の正本型や機能仕様を確認したいときは、互換入口ではなく `oracle` 側の実体を読む。
+- CLI の公開構成ではなく、個別の prompt、report、Git 操作、状態管理の実装詳細だけを確認したいとき。
 
 ## hash
-- d0aedd15be6858f6c0c37279e0dff176a3f3770060f321211131c4f2c3110ed1
+- a9dfbd6b69969ac024142303d4666a61f1069beab9508fb0d272d8ba1e238882
 
 # `test`
 
 ## Summary
-- `test/` 配下の回帰・統合テストと、複数テストで共有する補助モジュールを収める。ACP builder、CLI、Codex runtime、apply/session/review oracle、indexing、Git/worktree、設定、権限、Ollama などの外部挙動・制御契約を確認する入口。
+- テスト群を、ACP builder、CLI サブコマンド、Codex runtime、indexing、review oracle、session/apply、共通 runtime などの責務別に整理した検証領域。各テストは対応する実装や正本仕様の外部挙動・制御契約を確認する入口となる。
 
 ## Read this when
-- 実装や正本仕様の変更が、対応する CLI・runtime・builder・state・worktree・report・権限・indexing の外部挙動に影響する可能性があるとき。
-- 変更対象に対応する個別テスト、または複数テストで共有する `_support` 補助の責務を特定したいとき。
-- Codex 実行の retry、quota、subprocess、path、permission、TUI、設定、preflight の回帰を確認するとき。
+- 実装または正本仕様を変更し、その外部挙動・状態遷移・エラー処理・公開契約を回帰確認するとき。
+- 対象が ACP builder、CLI、Codex 実行、indexing、review oracle、session/apply、runtime、設定、Ollama のいずれかに関係するとき。
+- 対応する実装や oracle 文書を確認したうえで、既存の受け入れ条件を調べるとき。
 
 ## Do not read this when
-- 正本仕様そのもの、実装内部の詳細、または schema・prompt・state の定義だけを確認したいときは、対応する `oracle/` や `src/` を直接読む。
-- 対象が明確に単一のテストファイルまたは補助モジュールに限定されている場合は、このディレクトリ全体を読む必要はない。
-- テスト対象と無関係なサブコマンド、runtime 領域、または共通補助の挙動を調べる場合。
+- テスト対象と直接関係する実装や oracle file の内容そのものだけを確認したいとき。
+- テスト領域に含まれない機能や、内部実装の分割・配置だけを調査するとき。
+- Codex CLI や LLM の出力品質自体を評価したいとき。
 
 ## hash
-- 72a970071f64afe4ad2878f8a653830ae6a35be67a69168cafae7844e7aa7f6d
+- 501aeb8bf5f9c93a331fc7867489d1f955c349587754d3209721f5cde6583ca7

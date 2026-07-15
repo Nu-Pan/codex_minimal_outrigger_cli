@@ -42,20 +42,17 @@
 # `gitignore_to_permission_profile.md`
 
 ## Summary
-- `.gitignore` に基づく権限例外を permission profile に落とし込めるかを検討したが、記法互換性の不足で断念した経緯をまとめた文書。permission profile 変換の可否や限界を確認したいときに読む。
+- `.gitignore` の除外判定を permission profile の読み書き例外へ変換する案を検討した記録。記法の非互換性により採用せず、現行のアクセス制限は別の正本仕様に従う方針と、変換を実行時分岐や fallback に使わない判断を示す。
 
 ## Read this when
-- `.gitignore` の除外規則を、Codex CLI の permission profile にそのまま移せるかを判断したいとき。
-- git 追跡対象外ファイルを、通常の読み書き規則とは別の例外として扱う設計を検討したいとき。
-- なぜ `.gitignore` ベースの例外定義を採用しなかったか、その判断理由を確認したいとき。
+- `.gitignore` と permission profile の連携案、その採否理由、または除外ファイルを自由に扱う例外規則の検討経緯を確認するとき。
 
 ## Do not read this when
-- permission profile の具体的な記法や運用方法を知りたいだけのとき。
-- `.gitignore` の一般的な書き方やパターン表現そのものを確認したいとき。
-- 実際にどのファイルが追跡対象外かを調べたいだけのとき。
+- 現行のファイルアクセス制限そのものを確認・変更するとき。指定された正本仕様を直接読むべきである。
+- .gitignore の現在の除外パターンや、実行時のアクセス制御を実装・調査するとき。
 
 ## hash
-- e0dba5305b6b6ad014365541ec8b6d6d125e380283660a8cfbc13b60bf46ccdb
+- b30df9818914933f918982f74982684bbcc96a7ef97e7c179756ad599e7d3601
 
 # `memory_alternative.md`
 

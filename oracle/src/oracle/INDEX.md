@@ -1,20 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- ACP builder の agent 呼び出しパラメータと Structured Output スキーマを定義する oracle src 群。共通のモデル・推論強度・ファイルアクセス表現と、apply fork、indexing、review oracle、session join、TUI 向けの個別設定を扱う入口。
+- ACP builder の oracle src をまとめる領域。AI エージェント呼び出しパラメータの基礎型、各 cmoc サブコマンド向けの prompt・Structured Output 設定、実行時のファイルアクセス方針を扱う。
+- 変更要約・ファイルレビュー修正、indexing、oracle review、session join の conflict 解消、TUI 起動・実行パラメータ解決の各仕様を下位要素から確認するための入口。
 
 ## Read this when
-- ACP builder の AgentCallParameter、モデルクラス、推論強度、ファイルアクセスモードの定義を確認するとき。
-- 変更要約、ファイルレビュー・修正、indexing、oracle review、merge conflict 解消、TUI の prompt と実行設定を実装・検証するとき。
-- 各用途の Structured Output スキーマ、入力条件、出力契約、oracle・realization standard の適用範囲を確認するとき。
+- ACP builder の agent call パラメータやファイルアクセスモードの仕様を確認するとき。
+- `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join`、`cmoc tui` の prompt 構築や Structured Output 設定を調査するとき。
+- oracle review の所見列挙・擁護・反証・採否判定・統合のどの処理を読むべきか判断するとき。
 
 ## Do not read this when
-- cmoc の各サブコマンドの実行フローや、agent 呼び出し後の差分適用・conflict 解消処理を調査するとき。
-- レビュー対象ファイルや TUI の画面制御など、realization 側の具体的な実装・テストだけを確認したいとき。
-- 共通 prompt builder、パス解決、構造化文書処理そのものの実装詳細だけを調査するとき。
+- ACP builder を呼び出す実行本体や、下流の realization 実装・テストを調査するとき。
+- 共通 prompt builder、パス解決、構造化文書処理そのものの実装詳細を調査するとき。
+- INDEX.md の生成規則や、oracle と realization の一般的な責務定義だけを確認したいとき。
 
 ## hash
-- 570c08961715b33fbec48be5bb45a08f182ccbcd9d0af79a0e9c98c64a52a836
+- 1f706c9a7496b6a242cc44ea00dd5b2da3430b3d16cf5ae6bf5d2df0ca8b070b
 
 # `other`
 
@@ -38,18 +39,15 @@
 # `prompt_builder`
 
 ## Summary
-- oracle と realization の定義・各種 standard・ファイルアクセス規則・INDEX.md ルーティング規則を、プロンプトへ注入する部品群を収めるディレクトリ。個別の規範文面を構造化プロンプトへ変換する入口として、standard の追加・変更や組み合わせを確認する際の起点になる。
+- oracle と realization、アクセス規則、レビュー基準、ルーティング規則などをプロンプト部品として構造化するソース群。プレースホルダ型、完全な agent 用プロンプトの組み立て、各 standard の注入処理を確認する入口。
 
 ## Read this when
-- oracle・realization の基本定義や記述標準を確認・変更するとき。
-- レビュー基準、ファイルアクセス規則、INDEX.md ルーティング規則の注入内容を確認・変更するとき。
-- これらの正本文面を組み合わせたプロンプト生成処理を調査するとき。
+- oracle・realization の定義や standard、レビュー基準、ファイルアクセス規則、ルーティング規則を確認または変更するとき
+- 完全な agent 用プロンプトの構成、standard の依存関係・注入順序、プレースホルダの扱いを調査するとき
 
 ## Do not read this when
-- 完全な prompt 列の構成順序やプレースホルダ合成を確認したいときは、親のプロンプト組み立て実装を読む。
-- CLI の引数、入出力、ファイル探索、agent の実行フローを調べるとき。
-- 個別の oracle file・realization file の本文や実装内容を調査するとき。
-- INDEX.md の実ファイル自体を編集・評価するとき。
+- 個別の oracle file・realization file の具体的な仕様や実装を調査するとき
+- CLI の実行フロー、ファイル探索、入出力形式、生成済み文書の保存・表示処理を調べるとき
 
 ## hash
-- ace53d578195f8b13ffb7dcbe200d4686670144db5121460dd5d2828b13768ef
+- 31af1f9fbf5bd64b0d1ff4e5f6dd527ab86afb79a3121e2039b2ab277272b1dc

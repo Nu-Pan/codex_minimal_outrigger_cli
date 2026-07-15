@@ -18,23 +18,19 @@
 # `file_access_rule.py`
 
 ## Summary
-- `FileAccessMode` ごとのファイル読み書き規則文面を組み立てるための入口。`READONLY` / `PURE_ORACLE_READ` / `REPO_WRITE` / `PURE_ORACLE_WRITE` / `REALIZATION_WRITE` / `NO_RULE` の差分や、`repo-root` / `work-root` の扱いを変えるときに読む。
-- アクセス規則そのものの言い回し、禁止対象の境界、`NO_RULE` の特例、またはこのルールをプロンプトへ差し込む前提を確認したいときに参照する。
+- ファイル読み書きモードごとのアクセス規則プロンプトを構築する。リポジトリ外、保護対象ツリー、oracle file、realization file などの deny ルールをモードに応じて組み立て、プレースホルダーと構造化文書を返す。ファイルアクセス規則やプロンプト生成処理を変更・調査する際の入口。
 
 ## Read this when
-- ファイルアクセスモードの追加・削除・意味変更を行う。
-- oracle file と realization file のどちらを読み書き禁止にするか、あるいは `INDEX.md` / `AGENTS.md` / `memo` / `.git` / `.agents` / `.codex` の扱いを変える。
-- `repo-root` と `work-root` が一致しない場合の例外や、`NO_RULE` のような特殊モードの挙動を確認したい。
-- ファイルアクセス規則の文面を他のプロンプト部品へ流用する、または表示名を変える。
+- FileAccessMode ごとの読み書き禁止範囲を確認・変更するとき
+- ファイルアクセス規則プロンプトの生成内容、プレースホルダー、StructDoc の返却を調査するとき
+- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE、NO_RULE の挙動を確認するとき
 
 ## Do not read this when
-- アクセス規則の文面は変えず、呼び出し側でどのモードを選ぶかだけを変える。
-- プロンプト全体の構成順や、他の `StructDoc` 部品の内容だけを調整する。
-- 実ファイルの権限設定やサンドボックスそのものの実装を変えるだけで、この規則文面を直す必要がない。
-- `FileAccessMode` 自体の定義や、それを選ぶ上位ロジックだけを確認したい。
+- CLI の個別コマンドや実際のファイル操作の実装を調査するとき
+- アクセス規則以外のプロンプト部品や oracle の定義を直接確認するとき
 
 ## hash
-- fc5c5177c1f988299e100dcbdcd5e8008cbc9fda34d9c5e552fdc64279733fb6
+- 810849959c6a3099a77a4ddf2a6a173946fe3058e81f6a5869a6fa07e928a8fb
 
 # `index_entry_standard.py`
 

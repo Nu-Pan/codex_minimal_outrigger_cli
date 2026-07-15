@@ -51,16 +51,20 @@
 # `_codex_support.py`
 
 ## Summary
-- `test/` 配下の Codex 呼び出し系テストで共通に使う最小限のテスト補助をまとめる。fake Codex 結果、`CODEX_HOME` の用意、argv 断片の抽出、Codex override 設定の解釈、ファイルアクセス制限の検証用ヘルパー、Codex override 置換のスタブを扱う。
+- Codex 実行ラッパーのテストで共有する補助関数と最小 fake result を提供する。認証済み Codex ホームの準備、Ollama preflight のスタブ、AgentCallParameter の生成、Codex CLI 引数・設定上書き値の検査、実行/TUI 共通の override 引数スタブを扱う。
 
 ## Read this when
-- Codex 呼び出しや runtime wrapper のテストで、Fake Codex 実行や override argv の固定、`CODEX_HOME` の準備、ファイルアクセス制限の断片的な検証が必要なとき。
+- Codex 実行ラッパーまたは TUI の subprocess 引数構築テストを追加・修正するとき
+- Codex の認証環境、作業ディレクトリ、sandbox、model、reasoning effort、設定上書きのテスト補助が必要なとき
+- 共有 fake Codex 結果や managed Ollama preflight のテストスタブの利用方法を確認するとき
 
 ## Do not read this when
-- Git 状態や一般的な CLI 支援だけが必要なとき、または Codex 以外の支援ヘルパーや個別テストの実装を読むべきとき。
+- Codex 実行処理や TUI の本体実装を変更・調査するとき
+- 共有テスト補助ではなく、個別の機能ロジックや oracle 仕様を確認するとき
+- Codex CLI 引数構築以外のテストで、このファイルの補助関数を使わないとき
 
 ## hash
-- 4455c64b69d15ad5b21fdc076e9339944d0bce4aa5d1afda7ba7e16aca950221
+- be887fd655f1a9968a988597d78cdae7ecee13d49c6637669f18efa0547a9afe
 
 # `_command_support.py`
 
@@ -320,21 +324,20 @@
 # `test_cli_tui.py`
 
 ## Summary
-- `cmoc tui` の外部挙動を検証するテスト群。エディタ起動、プロンプト整形、agent call によるパラメータ解決、Codex 起動、linked worktree でのログ保存先や `.cmoc` ignore の扱いまでを確認する。
+- TUI 起動直前の CLI 前処理に関する外部挙動を検証するテスト。編集済み prompt の解決、Codex TUI 起動パラメータ、既定のファイルアクセスモード、prompt 保存先、linked worktree と `.cmoc` ignore の扱いを確認する。TUI 前処理や関連する保存・worktree 挙動を変更・調査するときのテスト入口。
 
 ## Read this when
-- `tui` サブコマンドの end-to-end 挙動を変えるとき。
-- 原稿プロンプトの編集対象、complete prompt の生成、起動前後の保存先を確認したいとき。
-- linked worktree での `.cmoc` 配置や git ignore の扱いを変えるとき。
-- `cmoc tui` のための parameter 解決や起動パラメータを確認したいとき。
+- `tui` サブコマンドの prompt 編集後処理、parameter 解決、Codex TUI 起動を変更するとき
+- TUI の prompt ログ保存先、linked worktree、`.cmoc` の ignore 挙動を変更するとき
+- TUI 前処理の外部挙動を検証・回帰確認するとき
 
 ## Do not read this when
-- `cmoc tui` の仕様そのものを確認したいだけなら、正本仕様の `oracle/doc/app_spec/sub_command/tui.md` を先に読む。
-- `tui` 以外のサブコマンドや共通 CLI 基盤を変えるだけなら、より直接の対象を読む。
-- プロンプト文面やルールの正本を確認したいだけなら、テストではなく oracle 側を読む。
+- TUI 起動前処理ではなく、通常の CLI サブコマンドや Codex 実行基盤そのものを変更・調査するとき
+- TUI の正本仕様を確認することが目的の場合は、先に `oracle/doc/app_spec/sub_command/tui.md` を読むとき
+- TUI 内部の単体実装詳細だけを確認し、外部挙動や保存・worktree 連携を検証しないとき
 
 ## hash
-- b89877424428335c94b53f454681264910e3a909bf15a9303e97c88dbf3238b1
+- 3fb1bd5bfef3908d630d935fa5eef6a6584a33760082cacb09ab81ae3d7b128b
 
 # `test_codex_runtime_errors.py`
 
@@ -357,20 +360,19 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行と `cmoc` の設定連携を検証するテスト群。`run_codex_exec` と `prepare_codex_override_args` が、実運用相当の managed Ollama、出力スキーマ、`CODEX_HOME`、権限オーバーライドをどう組み合わせるかを確認したいときに読む。
+- Codex CLI 実行とローカル SLM 用 managed Ollama provider の結合テスト。argv、stdin、sandbox、override 設定、出力スキーマ、ログ、CODEX_HOME 非変更、リポジトリ書き込み、Ollama preflight を検証する。関連する Codex 実行・override 実装や Codex 実行仕様の変更時に確認する入口。
 
 ## Read this when
-- Codex 実行時の引数組み立てや override 設定を変える予定がある。
-- local SLM を `cmoc managed ollama` に接続する経路や、その事前確認処理を変える予定がある。
-- `CODEX_HOME` に設定ファイルを作らないこと、`--profile` を使わないこと、出力スキーマの配置や転送を変える可能性がある。
+- Codex CLI の実行引数、stdin 経由の prompt、output schema、call log を変更・調査するとき
+- ローカル SLM、managed Ollama provider、Ollama preflight、Codex override の連携を変更・検証するとき
+- CODEX_HOME 設定ファイルを生成しない制約や sandbox・リポジトリ書き込み動作を確認するとき
 
 ## Do not read this when
-- Codex CLI の一般的な仕様や `cmoc` 設定の定義そのものを知りたい場合は、該当する実装・設定側を先に読む。
-- CLI の細かな出力内容ではなく、コマンド全体の実装方針や別サブコマンドの挙動を調べたい場合は、このテストではなく対応する実装領域を読む。
-- ファイル操作の共通補助や Git リポジトリ生成の詳細だけを確認したい場合は、各補助モジュールのほうを直接読む。
+- Codex 実行経路や managed Ollama 連携に関係しない機能を変更・調査するとき
+- 実装の詳細を直接確認する必要があり、commons.runtime_codex または commons.runtime_codex_profile を読む方が適切なとき
 
 ## hash
-- 412cd329024bde54b303de07c08c235610567c19d54adcfec93401ba89cef84b
+- 5c3da5bebc8b9481cfc9b992c8e5a102f090d21dadd07ecf611a7305e3a09d73
 
 # `test_codex_runtime_home.py`
 
@@ -392,41 +394,36 @@
 # `test_codex_runtime_paths.py`
 
 ## Summary
-- `codex exec` の作業ディレクトリ決定、出力スキーマ保存先、ログ/権限用の path 生成が repo root と linked worktree のどちらにぶら下がるべきかを確かめるためのテスト集。
-- 並列実行時の timestamp 衝突回避と、追加 read path や `.agents` への書き込み禁止のような path 境界の検証もここを見る。
+- Codex exec の実行時パスと sandbox argv を検証するテスト。並列実行時の timestamp 予約、指定 cwd、pure-oracle read の read-only sandbox、リンク済み worktree での schema 保存先、.agents パス権限の非注入を扱う。Codex 実行パスやファイルアクセス制御の変更時に読む入口。
 
 ## Read this when
-- `codex exec` が実行時にどの directory を実際の cwd として使うか、また schema や各種ログをどこへ置くかを確認・変更したいとき。
-- linked worktree からの呼び出しで repo-local の補助 path をどう許可するか、また permission 境界の維持を確認したいとき。
-- 同じ timestamp での同時実行や `.agents` へのアクセスが絡む path safety を見たいとき。
+- Codex exec の cwd、出力 schema の保存場所、ログ path の一意性を変更・調査するとき
+- FileAccessMode から Codex sandbox 引数への変換や .agents の扱いを変更・調査するとき
+- リンク済み worktree や並列 Codex 実行に関する回帰を確認するとき
 
 ## Do not read this when
-- Codex CLI の一般的な引数組み立てや prompt 生成だけを見たいときは、より直接の実装や正本仕様を見る。
-- path 以外の出力内容、モデル選択、Structured Output の中身だけを扱うときは、このテスト集は優先しない。
-- ファイルアクセス規則そのものの正本を確認したいだけなら、関連する oracle の本文を先に読む。
+- Codex exec のプロンプト生成内容や一般的なファイルアクセス規則そのものを確認したいときは、参照されている oracle 文書・oracle src を先に読む
+- Codex runtime のパスや sandbox argv と無関係な CLI 機能・テストを変更するとき
 
 ## hash
-- e2853e6e065b509d069a2d22e05add324885f659f97b54e97db9f0593b227e19
+- 28f97967ce6eca999f85d8458f97f089fab2914100c7341b0bdffa291bc55754
 
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- `Codex exec` の quota 枯渇後に、probe・resume・再実行・待機解除がどうつながるかを確認する回帰テスト群。外部挙動として、履歴ログ、サブコマンドログ、`CODEX_HOME`、`cwd`、出力ファイルの整合を追うときに読む。
-- 保存済み JSONL から resume token を復元する補助関数の挙動と、quota 復帰に失敗する条件の切り分けを含む。単なるコマンド引数の構築確認ではなく、quota retry の状態機械を検証したい場合に進む。
-- 並行実行時に代表 probe へ待機を集約する経路や、probe 側の失敗・不正出力・上限到達を扱う回帰をここにまとめている。quota 待機の観測点を横断して確認したいときの入口。
+- Codex の quota 超過後における probe・待機・resume・再実行の外部挙動を検証する回帰テスト。代表 probe の共有、resume token、失敗伝播、poll 上限、ログ、subcommand log、CODEX_HOME と cwd の扱いを対象とする。quota retry 制御の実装・テストを確認する入口である。
 
 ## Read this when
-- Codex exec が quota exceeded 後にどう復帰するかを確認したいとき。
-- resume token の復元、probe の実行条件、再実行の切り替え、待機中フラグの解除をまとめて追いたいとき。
-- quota retry の並行実行や、probe の失敗・不正 stdout・上限到達時の外部挙動を確認したいとき。
+- Codex exec の quota 超過、quota availability probe、resume または prompt 再実行の挙動を変更・調査するとき
+- quota 待機中の並行呼び出し、probe 失敗、poll 上限、KeyboardInterrupt の伝播を確認するとき
+- Codex call log、subcommand log、CODEX_HOME、cwd の quota retry 連携を検証するとき
 
 ## Do not read this when
-- 通常の Codex 起動引数や一般的な subprocess 呼び出しだけを見たいとき。
-- quota retry ではなく、別のサブコマンドや別のエラーパスを調べたいとき。
-- quota 復帰の状態機械ではなく、`build_quota_availability_probe_parameter` 単体や `run_codex_exec` の別機能を確認したいとき。
+- quota retry や Codex exec の外部挙動に関係しない機能を変更・調査するとき
+- quota probe の実装詳細だけを確認する場合は、probe parameter builder の実装・テストを先に読むとき
 
 ## hash
-- 8c2d16643f3e7f5f55cc664d72c91ebc4f9a75526eb83d4a9b7d5975bed5932d
+- f757d974763df49ef62fc1de924a70a062b9756883000ce328a9e9dc0d733185
 
 # `test_codex_runtime_retry.py`
 
@@ -469,21 +466,19 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- `run_codex_tui` の呼び出し境界と周辺のログ・権限制御を検証するテスト群。TUI 起動前の入力検査、完成済み prompt の扱い、call log とサブコマンドイベントの記録、非 0 終了や CLI 不在の失敗経路を確認したいときに読む。
-- Codex 呼び出し時の filesystem 上書きや追加 read path の扱いを追う入口であり、プロンプト生成や実行ラッパーの変更がこの挙動に影響するかを判断するときに進む。
+- Codex TUI 実行ランタイムの統合テスト。完成済み prompt の読み込み、PURE_ORACLE_READ と REPO_WRITE のアクセス境界、linked worktree での実行、CLI 引数、成功・CLI 不在・KeyboardInterrupt・非 0 終了時の例外処理を検証する。あわせて TUI call log、サブコマンドイベント、コンソール要約の出力と timestamp 衝突時のログ保持を確認する。
 
 ## Read this when
-- Codex TUI の起動前に extra read path を検査する必要がある変更を入れるとき。
-- 完成済み prompt を読ませる経路、linked worktree での実行、call log の保存条件を確認したいとき。
-- Codex CLI の失敗、KeyboardInterrupt、非 0 終了時にどのログとイベントが残るべきかを確認したいとき。
+- Codex TUI の prompt 読み込みや sandbox 引数を変更・調査するとき
+- Codex TUI の成功・失敗時の call log、イベント、コンソール出力を変更・調査するとき
+- Codex CLI 不在、割り込み、非 0 終了、linked worktree の挙動を検証するとき
 
 ## Do not read this when
-- TUI の prompt 文面そのものや file access ルールの正本仕様を確認したいときは、対応する oracle 側を先に読む。
-- Codex 呼び出しの共通オーバーライド設定やプロンプト構築の正本を見たいだけなら、このテストではなくそれらの実装・oracle を直接読む。
-- 単純な CLI 入口の引数定義だけを追いたいときは、TUI 実行とログ検証に関係する範囲まで読む必要はない。
+- Codex TUI 以外の Codex 実行経路や、個別の prompt 生成仕様だけを調査するとき
+- 単体の設定モデル、git 操作、または共通ログ実装だけを変更・調査するとき
 
 ## hash
-- 9db27b8d7bdfc5db2f1986baaf1531e6a37f12b1431a632c06be68273e5efacb
+- 2b000fe8f5c17976f9dce638b85a88f2cc160ecc87deed0307a54601dcb7fb0a
 
 # `test_doctor_cli.py`
 
@@ -731,58 +726,51 @@
 # `test_runtime_codex_conflicts.py`
 
 ## Summary
-- `cmoc session join` の conflict 解消で、Codex の追加書き込み許可 path が正しく組まれ、予約された名前や実行環境用ツリーが拒否されることを確かめるテスト。
+- session join の conflict path が prompt にのみ反映され、path 別 sandbox 設定や Codex override の permissions に変換されないことを検証するテスト。対象 path の場所にかかわらず共通の sandbox argv が生成されることも確認する。
 
 ## Read this when
-- session join の conflict 解消用パラメータから、Codex の write 権限オーバーライドがどう決まるかを確認したいとき。
-- oracle 配下の conflict 対象だけを書き込み許可し、それ以外の通常の実行時禁止領域が弾かれるかを見たいとき。
+- session join の conflict resolution、prompt 生成、sandbox argv、または Codex override 設定の挙動を変更・検証するとき
+- conflict path を sandbox の path 別権限へ変換していないことを確認したいとき
 
 ## Do not read this when
-- 通常の join 処理や conflict 解消ロジックそのものを追いたいときは、対応する実装側の conflict resolution を読む。
-- ファイルアクセス規則の全体仕様を追いたいときは、権限ルールを定義している側を読む。
+- session join conflict や Codex override の挙動ではなく、一般的な sandbox 実装や別の runtime テストを調べるとき
+- conflict resolution の実装仕様そのものを確認する必要があり、対応する oracle source と oracle document を直接読むべきとき
 
 ## hash
-- 9d2b73b86e5f6f385361d3e18bf787630445331dad0ee4bd3cea1adfbafa5b3f
+- d0e15965dbe48f45c3a6b01ae8b01ea27c20bb69e22e81837af1abd4600af13c
 
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- `test/test_runtime_codex_permissions.py` は、`build_codex_override_args` が Codex CLI の読み書き許可領域をどう組み立てるかを固定する回帰テストの入口です。`FileAccessMode` ごとの既定権限、`.cmoc` 系の固定保護、`extra_writable_paths` の受理/拒否、ignore 判定から実在 path を許可設定へ落とさないことを確認したいときに読む。
-- このファイルは、Codex 実行時の permission profile とファイルアクセス境界の契約だけを扱います。`codex exec` のプロンプト処理や出力 schema、CLI そのものの実行制御を追いたい場合は別のテストや `oracle/doc/app_spec/codex_exec_rule.md` を読むべきです。
+- Codex sandbox argv が permission profile や path 別権限設定に依存しないことを検証するテスト。各 FileAccessMode、作業ツリー内容の変化、実 Codex CLI parser への sandbox 引数受理を対象とする。
 
 ## Read this when
-- Codex CLI に渡す読み書き権限の組み立て方を変更する可能性があるとき。
-- `FileAccessMode` ごとの既定の書き込み可否や、追加 writable path の受理条件を確認したいとき。
-- `.cmoc`、`memo`、`AGENTS.md`、`INDEX.md` などの保護対象を、このテストがどこまで固定しているかを把握したいとき。
-- ignore された directory や file が permission 設定へ自動展開されないことを確認したいとき。
+- Codex 実行時の sandbox 引数、permission profile、path 別権限入力の回帰を確認するとき。
+- runtime_codex_profile の argv 生成仕様や関連テストの変更影響を調べるとき。
 
 ## Do not read this when
-- Codex CLI の入出力や `--output-schema`、stdin 渡しを確認したいだけのとき。
-- Git 状態や一般的な test fixture の作り方だけを見たいとき。
-- `cmoc doctor` や indexing、review 系の権限契約を追いたいとき。
+- Codex sandbox argv の実装を変更・調査する場合は、先に runtime_codex_profile の実装と対応する oracle 仕様を読むとき。
+- Codex 実行以外のテストや一般的な CLI 入出力を扱うとき。
 
 ## hash
-- 1c314f2a3b8faef5a69a9ff86e612665824a55f94a59edf2dda8ecd96045932d
+- fb2c9362d22d1689d276546864b2f7f71303fef2649c57b98159f36927b49336
 
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- `build_codex_override_args` が、Codex 実行時の sandbox 設定とファイルアクセス制御を、`FileAccessMode` ごとにどう組み立てるかを確認するためのテスト群。`root`・`oracle`・`realization` の許可境界、`extra_writable_paths` / `extra_read_root` の扱い、`cmoc` 管理 Ollama への切り替えをまとめて検証する。
-- このエントリーは、実行時の権限制御やモデル選択の契約を変える変更の入口に置く。個別の内部 helper ではなく、外部から見える Codex override の振る舞いを確認したいときに読む。
+- Codex argv の model、sandbox、reasoning effort、provider 上書き契約を検証するテスト。FileAccessMode の sandbox 変換、未知 mode の拒否、通常 provider での worktree 非走査、ローカル SLM 用 Ollama provider 設定を扱う。Codex 起動引数や runtime profile の変更時に挙動確認の入口となる。
 
 ## Read this when
-- Codex override の引数生成が、どの領域を read / write 可にするかを確認・変更したいとき。
-- `PURE_ORACLE_READ` / `PURE_ORACLE_WRITE` / `REALIZATION_WRITE` / `REPO_WRITE` の境界や、許可領域外エラーの条件を確認したいとき。
-- ローカル SLM を `cmoc_managed_ollama` に振り分ける条件や、関連する model provider 設定を確認したいとき。
-- linked worktree から参照する `.cmoc/g*/ar` の追加許可条件を確認したいとき。
+- Codex の override argv 生成・準備処理を変更またはレビューするとき
+- FileAccessMode と Codex の --sandbox 変換契約を確認するとき
+- 通常 provider または cmoc managed Ollama provider の設定を変更するとき
 
 ## Do not read this when
-- Codex override の実装詳細そのものを追いたいだけで、入出力の契約確認が不要なときは、実装側の `build_codex_override_args` 本体を直接読む。
-- 一般的な git worktree の使い方や `.cmoc` ディレクトリ構成だけを知りたいときは、このテストではなく対応する仕様文書や実装を読む。
-- 個別の補助関数 `_assert_writable` などの単体挙動だけを確認したいときは、この統合テストではなく、該当 helper の定義側を読む。
+- Codex argv や provider 上書き処理に関係しない機能を変更するとき
+- Codex の一般的な実行フローや CLI 入出力だけを確認したいときは、まず対応する実装・仕様ファイルを読む
 
 ## hash
-- 23c74364d5a3aff4def0676b986c0c3e07f21c16c00491bde72e147ed9c20aa3
+- 30ba3740defaec7fa9ec03a690fe19d4bb75e1b6436c2db74f239e83c57d61ca
 
 # `test_runtime_config.py`
 
@@ -879,20 +867,20 @@
 # `test_session_cli.py`
 
 ## Summary
-- `session fork` / `session join` / `session abandon` の CLI 挙動を、linked worktree・session state・cleanup・error report まで含めて検証するテスト群。session 系の回帰確認が必要なときにここから入る。
+- session fork、join、abandon の CLI 外部挙動を横断的に検証するテスト。session branch と state の生成・更新・削除、linked worktree、事前処理、dirty worktree 拒否、競合解消、失敗時のロールバックやエラー出力を扱う。session 状態遷移に関する回帰テストの入口。
 
 ## Read this when
-- session CLI の外部挙動を変えた、または確認したいとき。
-- session state の生成・更新・削除や、fork/join/abandon 間の遷移を追いたいとき。
-- linked worktree での session 動作、dirty worktree 拒否、conflict 解消、cleanup 失敗時の巻き戻しを確認したいとき。
+- session の fork、join、abandon の挙動を変更・調査するとき
+- session state、branch cleanup、linked worktree、conflict resolution の外部挙動を検証するとき
+- session CLI の失敗時処理、出力、ロールバック、doctor preprocess 連携を確認するとき
 
 ## Do not read this when
-- session CLI の実装本体や state 形式の定義を知りたいだけなら、対応する sub_command 実装や session state の仕様を直接読む。
-- doctor preprocess や共通の runtime 挙動だけを追いたいなら、それぞれの専用テストや仕様へ進む。
-- session 以外の CLI 挙動を調べたいだけなら、このテスト群は読まない。
+- session CLI や session state と無関係な機能を変更・調査するとき
+- session サブコマンドの実装詳細を直接確認する必要があり、対応する src や oracle file を読む方が適切なとき
+- Codex の出力品質そのものや、session 状態遷移以外のテスト方針を確認するとき
 
 ## hash
-- 63b92888b6a8a933fb3910c955be112e9975e34cbe8400ea908b98c187a8314a
+- 63b9282fd6e0617dd25c92edc26de7913963ef80a7ba3dcf136305ffaa0444fc
 
 # `test_struct_doc_rendering.py`
 

@@ -180,42 +180,35 @@
 # `session`
 
 ## Summary
-- `__init__.py`: session 系サブコマンド実装のパッケージ境界を示す最小初期化モジュール。下位の session 実装へ進む入口として扱う。
-- `abandon.py`: `cmoc session abandon` の破棄フローを扱う。active session の終了、home branch への復帰、session branch の削除、失敗時の巻き戻しが主題。
-- `fork.py`: `cmoc session fork` の作成フローを扱う。現在の branch を home branch として session branch を作り、state 保存と失敗時の rollback まで含む。
-- `join.py`: `cmoc session join` の実行オーケストレーションを扱う。session branch を home branch に merge し、状態更新、branch 削除、conflict 時の切り替えまで追う。
+- session 系サブコマンドの実装パッケージ。session パッケージの初期化入口と、fork・join・abandon の各ライフサイクル処理を収める。
+- session branch、home branch、state file、Git 操作、失敗時の rollback、join 時の conflict 解消と結果表示を扱う下位実装への入口。
 
 ## Read this when
-- `__init__.py`: session パッケージの境界や、この階層に初期化処理があるかだけを確認したいとき。
-- `abandon.py`: session の破棄手順、rollback、再実行可能性、利用者向け出力を変えたいとき。
-- `fork.py`: session 作成条件、既存 active session の扱い、session-id 生成、state 保存、失敗時 cleanup を確認したいとき。
-- `join.py`: session join の実行順序、merge conflict の扱い、状態更新、branch 削除条件を確認したいとき。
+- session の作成・参加・破棄の挙動や、session branch と state のライフサイクルを調べるとき。
+- session join の merge conflict 検出・解消依頼・stage・commit・branch 削除を調べるとき。
+- session 配下の実装構成や、パッケージ初期化処理の有無を確認するとき。
 
 ## Do not read this when
-- `__init__.py`: 個別の session サブコマンドの処理を知りたいときは、各実装モジュールを読む。
-- `abandon.py`: session の作成・参加・継続を見たいときは、該当サブコマンド側を読む。
-- `fork.py`: CLI 引数定義やサブコマンド配線だけを見たいときは、上位の CLI 入口を読む。
-- `join.py`: 状態スキーマや conflict 解消用の引数生成だけを知りたいときは、より直接の定義側を読む。
+- 共通 CLI ルーティング、サブコマンド登録、状態モデル、Git の低レベル操作だけを調べるとき。
+- session 以外のサブコマンドを調べるとき。
+- join の conflict resolution builder など、session 実装内の特定処理だけを直接調べるときは、その定義元を読む方が適切。
 
 ## hash
-- 1cd11f46c5f0bd63e9f38725f2d43815ae216a4cc0defdc2099af8f423f00073
+- e9a707c2ffea5a14ea987c241ed5030cdac1bbcafe8c543cd8fbab935be5c367
 
 # `tui.py`
 
 ## Summary
-- `cmoc tui` の実行本体。利用者が編集する元プロンプトの作成、エディタ起動、実行パラメータ解決、Codex TUI 起動までの一連の流れを扱う。
-- TUI 起動前に使うテンプレート文面、編集後プロンプトの読み取り、利用可能なエディタ選択、TUI 用の `AgentCallParameter` 生成をまとめている。
-- `cmoc tui` 実行時に `.cmoc` の ignore 条件を保証する処理も含む。
+- `cmoc tui` サブコマンドの実行フローを担当する実装。利用者向けプロンプトの初期化・編集・読み込み、実行パラメータの解決、TUI 起動、関連する ignore 保証を扱う。TUI の起動処理やプロンプトからのパラメータ変換を調べる入口。
 
 ## Read this when
-- `cmoc tui` の起動手順や、編集された元プロンプトがどのように最終 TUI 呼び出しへ渡るかを追いたいとき。
-- TUI 用の初期プロンプト文面、エディタ選択条件、実行パラメータの解決方針を変えたいとき。
-- TUI 実行前に必要なログ領域・ignore 条件・保存先の扱いを確認したいとき。
+- `cmoc tui` の動作、エディタ選択、プロンプトテンプレート、TUI 起動前後の処理を変更・調査するとき
+- 解決済みパラメータから `AgentCallParameter` を構築する処理や、TUI で許可されるファイルアクセスモードを確認するとき
+- TUI サブコマンドのログ領域や `.cmoc` の ignore 保証を調査するとき
 
 ## Do not read this when
-- Codex の TUI 起動時に渡す個別フィールドの定義や生成元だけを追いたいときは、`acp.builder.tui` 側を先に読むべきとき。
-- `cmoc tui` 以外のサブコマンドのルーティングや共通実行基盤を見たいだけのとき。
-- CLI 引数定義やサブコマンド登録だけを確認したいときは、より上位の実行入口を読むべきとき。
+- TUI のパラメータ定義そのものや、TUI 起動パラメータの詳細仕様だけを調べるときは、対応する `acp.builder.tui` の実装を直接読む
+- `cmoc tui` と無関係な CLI サブコマンド、一般的な設定読み込み、共有ランタイムの挙動だけを調べるとき
 
 ## hash
-- 19e2a3688db71a103e4ea6207ce44e0435f7e1d1f266fc4f65afbfc6bc3f6a08
+- 0e4aea977ac81ad59dc3b88e371aeedeca45632926cdf7cd1f6c6a418839e3b0

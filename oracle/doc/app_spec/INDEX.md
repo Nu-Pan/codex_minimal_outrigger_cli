@@ -40,20 +40,18 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- `codex exec` 呼び出しの組み立て方と実行時制約を定める。対象は、環境変数の引き継ぎ、事前検証、argv での設定上書き、プロンプトとログの保存、Structured Output、失敗時の再試行・再開に関わる実装。
+- cmoc が `codex exec` を呼び出す際の正本規約。環境変数、preflight validation、argv による設定上書き、sandbox、permission profile の禁止、プロンプト・ログ・Structured Output・並列実行・失敗時のリトライや待機など、呼び出し全体の必須条件を定める。Codex CLI 呼び出し処理や AgentCallParameter builder の実装を確認・変更する際の入口。
 
 ## Read this when
-- cmoc から Codex CLI を起動する処理を作る・直すとき。
-- `$CODEX_HOME` の扱い、preflight validation、`--profile` 禁止、`--config` 上書き、`--json`、`--output-last-message`、`--output-schema` の扱いを確認したいとき。
-- Codex CLI のプロンプト保存先や stdout / stderr / output JSON の保存先、quota 枯渇や model capacity のリトライ、resume の条件を確認したいとき。
+- cmoc の Codex CLI 呼び出し方法、引数、環境変数、sandbox、ログ保存、Structured Output、失敗時処理を確認または変更するとき
+- AgentCallParameter builder と Codex CLI 呼び出し規約の整合性を確認するとき
 
 ## Do not read this when
-- agent に渡すプロンプトの一般規範だけを確認したいときは `prompt_standard` を読む。
-- サブコマンド全体のログ形式やコンソール出力規則を確認したいときは `console_and_file_log` を読む。
-- run の worktree / branch 分離や作業隔離だけを確認したいときは `run_isolation` を読む。
+- Codex CLI の呼び出し処理に関係しない機能の実装やテストを読むとき
+- 具体的な AgentCallParameter の値や builder 実装の詳細を確認する場合は、先に正本である builder のソースを直接読むとき
 
 ## hash
-- 05f1a28e28f4f69f1f2bfa8074276b3148e9f5867f8e4dad703dec5cb9433ca3
+- 107f066d989b7949efdf77aa6652fa63f920afe92b8cb9e6feb634de4b53726d
 
 # `console_and_file_log.md`
 
