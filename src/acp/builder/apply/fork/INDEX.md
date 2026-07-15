@@ -1,18 +1,18 @@
 # `__init__.py`
 
 ## Summary
-- 旧来の apply fork 系 import との互換性を保つためだけに残された package。実装本体ではなく、既存参照を壊さないための公開面維持と削除条件を示す。
+- `oracle.acp_builder.apply.fork` の正本 builder を realization 側から呼び出す package。ファイル単位レビュー・修正と変更要約の公開入口をまとめる。
 
 ## Read this when
-- 旧来の apply fork 系 import 経路を維持する必要があるか判断するとき。
-- 互換 package を削除できるか確認するため、realization 側と利用者向け公開面に同参照が残っているか調べるとき。
+- apply fork の realization 側 builder package の役割を確認するとき。
+- 正本 builder への委譲入口を追加・削除するとき。
 
 ## Do not read this when
-- apply fork の実処理や挙動を調べたいとき。
-- 互換 import 経路ではなく、現行の実装責務や制御ロジックを変更したいとき。
+- apply fork のループ制御や state 遷移を調べたいとき。
+- prompt や schema の正本仕様そのものを確認したいとき。
 
 ## hash
-- 9fbe41ef7b1f6461c182c9c72161a713cf2ce6cd068519b03772412301ad1bc7
+- 41c42a6aa5bded6005a7579fe2cd55249da6f57871e7ac83b67f41c8c65e24cc
 
 # `_common.py`
 
@@ -46,34 +46,18 @@
 ## hash
 - 83474b219a58ee86b8aa07876c6e7e7ca83df70e821edef6a6e35e15cc907aa9
 
-# `file_finding_enumeration.py`
+# `file_review_and_fix.py`
 
 ## Summary
-- `cmoc apply fork` の所見列挙向け agent call parameter を、実装側から正本の oracle 実装へ委譲して組み立てる入口。`cmoc apply fork` のファイル単位の所見列挙を扱う場合に読む。
+- `cmoc apply fork` のファイル単位レビュー・修正用 parameter を正本 builder へ委譲する realization 入口。所見調査、修正、検証を一つの agent call で行う parameter を返す。
 
 ## Read this when
-- `cmoc apply fork` のファイル単位の所見列挙用 parameter 生成の入口を探している。
-- oracle 側の parameter 生成結果を realization 側へ適合させる委譲処理を確認したい。
+- ファイル単位レビュー・修正用 parameter の realization import 経路を確認するとき。
+- packaged layout と開発 tree の双方から正本 builder を呼び出す委譲を変更するとき。
 
 ## Do not read this when
-- 所見列挙の実際の判定ロジックや oracle 側の仕様を確認したい場合は、対応する oracle src を読む。
-- `cmoc apply fork` の他の種別の parameter 生成や共通補助を探している場合は、同階層の別モジュールを読む。
+- レビュー・修正 prompt や schema の内容を確認したいときは、対応する oracle src を読む。
+- apply ループの再投入・commit 制御を調べたいときは、サブコマンド実装を読む。
 
 ## hash
-- 80dc02e710af633432c40df6016f61908adb063d17bbb25471a955ba13b6f7fc
-
-# `finding_application.py`
-
-## Summary
-- `cmoc apply fork` の所見適用用 agent call parameter を組み立てる入口。所見の list を受け取り、`oracle` 側の正本実装を import できる状態にしたうえで、その結果を realization 側へ適用するための変換だけを担う。
-
-## Read this when
-- `cmoc apply fork` で使う所見適用用の parameter 構築経路を確認したいとき。
-- oracle 側の所見適用ロジックを呼び出す前提づくりや、realization 側への適用変換を追いたいとき。
-
-## Do not read this when
-- 所見内容そのものの解釈や生成ルールを確認したいときは、対応する oracle 側の正本実装を読む。
-- 他の apply 系や fork 以外の agent call parameter 構築を追いたいときは、この入口ではなく該当する各モジュールを読む。
-
-## hash
-- 5cab8ad94b55b3e1e931423f52d74aaf3641ae04db265e97fa272bd79d32cd97
+- 47d7279d95aafad8f2be16f343f89b5436eed9348b5d961719a0b79c1a0e264f

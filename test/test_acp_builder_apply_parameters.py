@@ -14,14 +14,11 @@ import pytest
 from acp.builder.apply.fork.change_summary import (
     build_apply_fork_change_summary_parameter,
 )
-from acp.builder.apply.fork.file_finding_enumeration import (
-    build_apply_fork_file_finding_enumeration_parameter,
+from acp.builder.apply.fork.file_review_and_fix import (
+    build_apply_fork_file_review_and_fix_parameter,
 )
-from acp.builder.apply.fork.finding_application import (
-    build_apply_fork_finding_application_parameter,
-)
-from basic.acp import ModelClass, ReasoningEffort
-from jsonschema import validate
+from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
+from jsonschema import ValidationError, validate
 
 from _acp_builder_support import oracle_schema_path
 
@@ -54,7 +51,7 @@ def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None
     """packaged layout で apply fork builder の import 契約を検証する。
 
     根拠: {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/change_summary.json
-    {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.json
+    {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/file_review_and_fix.json
     """
     result = run_apply_fork_builder_import(
         tmp_path,
@@ -62,94 +59,67 @@ def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None
             "from pathlib import Path; "
             "from acp.builder.apply.fork.change_summary import "
             "build_apply_fork_change_summary_parameter as change_summary; "
-            "from acp.builder.apply.fork.file_finding_enumeration import "
-            "build_apply_fork_file_finding_enumeration_parameter as enumerate_file; "
-            "from acp.builder.apply.fork.finding_application import "
-            "build_apply_fork_finding_application_parameter as apply_finding; "
+            "from acp.builder.apply.fork.file_review_and_fix import "
+            "build_apply_fork_file_review_and_fix_parameter as review_and_fix; "
             "cs = change_summary('diff'); "
-            "fe = enumerate_file(Path('{{repo-root}}') / 'src' / 'main.py'); "
-            "fa = apply_finding([{'title': 't'}]); "
+            "rf = review_and_fix(Path('{{repo-root}}') / 'src' / 'main.py'); "
             "assert cs.structured_output_schema_path.name == 'change_summary.json'; "
-            "assert fe.structured_output_schema_path.name == "
-            "'file_finding_enumeration.json'; "
-            "assert fa.structured_output_schema_path is None; "
+            "assert rf.structured_output_schema_path.name == "
+            "'file_review_and_fix.json'; "
             "assert '# oracle and realization basic' in cs.prompt; "
-            "assert 'realization file' in fa.prompt"
+            "assert '# apply review standard' in rf.prompt; "
+            "assert rf.file_access_mode.value == 'realization_write'"
         ),
     )
 
     assert result.returncode == 0, result.stderr
 
 
-def test_finding_application_prompt_uses_complete_standard_prompt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """finding application が標準 prompt と所見を保持することを検証する。
+@pytest.mark.parametrize("status", ["fixed", "unresolved"])
+def test_file_review_and_fix_schema_matches_oracle_source(status: str) -> None:
+    """file review and fix が正本 schema を参照することを検証する。
 
-    根拠: {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/finding_application.py
+    根拠: {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/file_review_and_fix.json
     """
-    repo_root = tmp_path / "repo"
-    apply_worktree = repo_root / ".cmoc" / "gu" / "worktree" / "session" / "run"
-    apply_worktree.mkdir(parents=True)
-    (repo_root / ".git").mkdir()
-    (apply_worktree / ".git").write_text("gitdir: ignored\n")
-    monkeypatch.chdir(apply_worktree)
+    parameter = build_apply_fork_file_review_and_fix_parameter(Path(__file__))
+    expected_path = oracle_schema_path("apply", "fork", "file_review_and_fix.json")
 
-    parameter = build_apply_fork_finding_application_parameter(
-        [
+    assert parameter.structured_output_schema_path == expected_path
+    schema = json.loads(expected_path.read_text())
+    finding = {
+        "title": "review finding",
+        "evidences": [
             {
-                "title": "first",
-                "evidences": [
-                    {
-                        "path": str(repo_root / "review" / "_comment.md"),
-                        "line_start": 1,
-                        "line_end": 2,
-                        "summary": "comment evidence",
-                    }
-                ],
-            },
-            {"title": "second"},
-        ]
-    )
+                "path": str(Path(__file__)),
+                "line_start": 1,
+                "line_end": 2,
+                "summary": "test evidence",
+            }
+        ],
+        "oracle_requirement": "required behavior",
+        "observed_implementation": "observed behavior",
+        "reason": "the implementation differs",
+        "resolution": {
+            "status": status,
+            "summary": "fixed or left unresolved",
+            "verification": "pytest result",
+        },
+    }
+    validate({"findings": [finding]}, schema)
 
-    assert "# oracle and realization basic" in parameter.prompt
-    assert "# realization standard" in parameter.prompt
-    assert "# file read write rule - realization_write" in parameter.prompt
-    assert "- oracle file は書き込み禁止" in parameter.prompt
-    assert "- `{{work-root}}/memo` は読み書き禁止" in parameter.prompt
-    assert "/.agents` ツリー内は書き込み禁止" in parameter.prompt
-    assert "## FINDING-00" in parameter.prompt
-    assert '"title": "first"' in parameter.prompt
-    assert "_comment.md" in parameter.prompt
-    assert "## FINDING-01" in parameter.prompt
-    assert '"title": "second"' in parameter.prompt
-    assert '"findings"' not in parameter.prompt
-    assert f"- {{{{work-root}}}} = {apply_worktree}" in parameter.prompt
-    assert f"- {{{{repo-root}}}} = {repo_root}" in parameter.prompt
+    with pytest.raises(ValidationError):
+        validate(
+            {"findings": [{**finding, "suggested_fix": "legacy field"}]},
+            schema,
+        )
 
 
-def test_file_finding_enumeration_schema_matches_oracle_source() -> None:
-    """file finding enumeration が正本 schema を参照することを検証する。
-
-    根拠: {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.json
-    """
-    parameter = build_apply_fork_file_finding_enumeration_parameter(Path(__file__))
-
-    assert parameter.structured_output_schema_path == oracle_schema_path(
-        "apply", "fork", "file_finding_enumeration.json"
-    )
-    assert (
-        json.loads(parameter.structured_output_schema_path.read_text())["type"]
-        == "object"
-    )
-
-
-def test_file_finding_enumeration_prompt_uses_complete_standard_prompt(
+def test_file_review_and_fix_prompt_uses_complete_standard_prompt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """file finding enumeration が標準 prompt と root を組み立てることを検証する。
+    """file review and fix が標準 prompt と root を組み立てることを検証する。
 
-    根拠: {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.py
+    根拠: {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/file_review_and_fix.py
     """
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -159,24 +129,30 @@ def test_file_finding_enumeration_prompt_uses_complete_standard_prompt(
     target.write_text("print('ok')\n")
     monkeypatch.chdir(repo_root)
 
-    parameter = build_apply_fork_file_finding_enumeration_parameter(
+    parameter = build_apply_fork_file_review_and_fix_parameter(
         Path("{{repo-root}}") / "src" / "app.py"
     )
 
     assert "# oracle standard" in parameter.prompt
     assert "# realization standard" in parameter.prompt
     assert "# apply review standard" in parameter.prompt
+    assert "# file read write rule - realization_write" in parameter.prompt
+    assert "- oracle file は書き込み禁止" in parameter.prompt
     assert "- `{{work-root}}/memo` は読み書き禁止" in parameter.prompt
+    assert (
+        "所見の調査、修正、修正後の検証を同一の agent call 内で行う" in parameter.prompt
+    )
     assert f"- {{{{target-path}}}} = {target}" in parameter.prompt
     assert f"- {{{{work-root}}}} = {repo_root}" in parameter.prompt
+    assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
 
 
-def test_file_finding_enumeration_rejects_relative_target_without_root_token(
+def test_file_review_and_fix_rejects_relative_target_without_root_token(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """root token のない相対 target path を拒否することを検証する。
 
-    根拠: {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.py
+    根拠: {{work-root}}/oracle/src/oracle/acp_builder/apply/fork/file_review_and_fix.py
     """
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -186,7 +162,7 @@ def test_file_finding_enumeration_rejects_relative_target_without_root_token(
     with pytest.raises(
         ValueError, match="relative path without root path place holder"
     ):
-        build_apply_fork_file_finding_enumeration_parameter(Path("src/app.py"))
+        build_apply_fork_file_review_and_fix_parameter(Path("src/app.py"))
 
 
 def test_apply_fork_prompts_use_expected_roots(
@@ -206,20 +182,15 @@ def test_apply_fork_prompts_use_expected_roots(
     target.write_text("print('ok')\n")
     monkeypatch.chdir(apply_worktree)
 
-    finding_application = build_apply_fork_finding_application_parameter([{"title": "t"}])
-    finding_enumeration = build_apply_fork_file_finding_enumeration_parameter(target)
+    file_review_and_fix = build_apply_fork_file_review_and_fix_parameter(target)
     change_summary = build_apply_fork_change_summary_parameter("diff")
 
-    assert finding_application.model_class == ModelClass.EFFICIENCY
-    assert finding_application.reasoning_effort == ReasoningEffort.MAX
-    assert finding_enumeration.model_class == ModelClass.EFFICIENCY
-    assert finding_enumeration.reasoning_effort == ReasoningEffort.MAX
-    assert "`{{repo-root}}` ツリー内の realization file" in finding_application.prompt
-    assert f"- {{{{repo-root}}}} = {repo_root}" in finding_application.prompt
-    assert f"- {{{{work-root}}}} = {apply_worktree}" in finding_application.prompt
-    assert "`{{repo-root}}` ツリー内の所見" in finding_enumeration.prompt
-    assert f"- {{{{repo-root}}}} = {repo_root}" in finding_enumeration.prompt
-    assert f"`{apply_worktree}` ツリー内の所見" not in finding_enumeration.prompt
+    assert file_review_and_fix.model_class == ModelClass.EFFICIENCY
+    assert file_review_and_fix.reasoning_effort == ReasoningEffort.MAX
+    assert "`{{repo-root}}` ツリー内の所見" in file_review_and_fix.prompt
+    assert "realization file を修正" in file_review_and_fix.prompt
+    assert f"- {{{{repo-root}}}} = {repo_root}" in file_review_and_fix.prompt
+    assert f"- {{{{work-root}}}} = {apply_worktree}" in file_review_and_fix.prompt
     assert "`{{repo-root}}` ツリー内の差分" in change_summary.prompt
     assert f"- {{{{repo-root}}}} = {repo_root}" in change_summary.prompt
     assert "# oracle and realization basic" in change_summary.prompt

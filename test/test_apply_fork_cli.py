@@ -60,14 +60,19 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     assert branch.startswith("cmoc/session/")
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text())
+    state = json.loads(
+        (root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text()
+    )
     assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"].startswith(f"cmoc/apply/{session_id}/")
     run_id = state["apply"]["apply_branch"].removeprefix(f"cmoc/apply/{session_id}/")
     apply_worktree = apply_worktree_from_state(root, state)
     assert apply_worktree == root / ".cmoc" / "gu" / "worktree" / session_id / run_id
     assert apply_worktree.is_dir()
-    assert run_git(apply_worktree, "branch", "--show-current").stdout.strip() == state["apply"]["apply_branch"]
+    assert (
+        run_git(apply_worktree, "branch", "--show-current").stdout.strip()
+        == state["apply"]["apply_branch"]
+    )
     assert not (root / ".cmoc" / "gu" / "worktree" / "apply").exists()
     assert "apply_worktree" not in state["apply"]
     assert "apply_process_id" not in state["apply"]
@@ -75,7 +80,7 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
         root / ".cmoc" / "gu" / "state" / "apply_processes" / f"{session_id}.pid"
     ).exists()
     assert calls
-    assert any(call.startswith("apply fork enumerate findings") for call in calls)
+    assert any(call.startswith("apply fork review and fix") for call in calls)
 
 
 def test_apply_fork_interrupt_keeps_commits_and_discards_current_unit(
@@ -88,41 +93,36 @@ def test_apply_fork_interrupt_keeps_commits_and_discards_current_unit(
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
-    enumerate_calls = 0
-    application_calls = 0
+    review_calls = 0
     purposes: list[str] = []
 
     def interrupting_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
-        """1 単位を確定後、次の適用途中で KeyboardInterrupt を発生させる。"""
-        nonlocal enumerate_calls, application_calls
+        """1 単位を確定後、次のレビュー・修正中に割り込む。"""
+        nonlocal review_calls
         purpose = str(kwargs["purpose"])
         purposes.append(purpose)
-        if purpose.startswith("apply fork enumerate findings"):
-            enumerate_calls += 1
+        if purpose.startswith("apply fork review and fix"):
+            review_calls += 1
+            worktree = Path(kwargs["cwd"])
+            target = (
+                worktree / "src" / ("kept.py" if review_calls == 1 else "discarded.py")
+            )
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(f"value = {review_calls}\n")
+            if review_calls == 2:
+                raise KeyboardInterrupt
             return FakeCodexResult(
                 {
                     "findings": [
                         {
-                            "title": f"finding {enumerate_calls}",
+                            "title": f"finding {review_calls}",
                             "reason": "test interruption",
-                            "severity": "minor",
                         }
                     ]
                 }
             )
-        if purpose == "apply fork finding application":
-            application_calls += 1
-            worktree = Path(kwargs["cwd"])
-            target = worktree / "src" / (
-                "kept.py" if application_calls == 1 else "discarded.py"
-            )
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(f"value = {application_calls}\n")
-            if application_calls == 2:
-                raise KeyboardInterrupt
-            return FakeCodexResult(None)
         raise AssertionError(f"interruption 後に開始された Codex call: {purpose}")
 
     monkeypatch.setattr(
@@ -152,17 +152,18 @@ def test_apply_fork_interrupt_keeps_commits_and_discards_current_unit(
     assert (apply_worktree / "src" / "kept.py").is_file()
     assert not (apply_worktree / "src" / "discarded.py").exists()
     assert run_git(apply_worktree, "status", "--short").stdout == ""
-    assert "src/kept.py" in run_git(
-        apply_worktree,
-        "show",
-        "--name-only",
-        "--format=",
-        "HEAD",
-    ).stdout.splitlines()
+    assert (
+        "src/kept.py"
+        in run_git(
+            apply_worktree,
+            "show",
+            "--name-only",
+            "--format=",
+            "HEAD",
+        ).stdout.splitlines()
+    )
     reports = sorted(
-        (root / ".cmoc" / "gu" / "ar" / "report" / "apply" / "fork").glob(
-            "*.md"
-        )
+        (root / ".cmoc" / "gu" / "ar" / "report" / "apply" / "fork").glob("*.md")
     )
     assert reports
     rendered = reports[-1].read_text()
@@ -206,9 +207,7 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
         run_git(linked, "add", "README.md")
         run_git(linked, "commit", "-m", "advance session during apply setup")
         start_points.append(start_point)
-        return original_create_run_worktree(
-            root_arg, branch_arg, worktree, start_point
-        )
+        return original_create_run_worktree(root_arg, branch_arg, worktree, start_point)
 
     monkeypatch.setattr(
         apply_fork_module,
@@ -231,7 +230,9 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     assert result.exit_code == 0
     branch = run_git(linked, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text())
+    state = json.loads(
+        (root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text()
+    )
     assert state["apply"]["oracle_snapshot_commit"] == linked_commit
     assert start_points == [linked_commit]
     assert (
@@ -242,7 +243,10 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     apply_worktree = apply_worktree_from_state(root, state)
     assert apply_worktree == root / ".cmoc" / "gu" / "worktree" / session_id / run_id
     assert apply_worktree.is_dir()
-    assert run_git(apply_worktree, "branch", "--show-current").stdout.strip() == state["apply"]["apply_branch"]
+    assert (
+        run_git(apply_worktree, "branch", "--show-current").stdout.strip()
+        == state["apply"]["apply_branch"]
+    )
     assert not apply_worktree.is_relative_to(linked)
 
 
@@ -331,9 +335,7 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     exclude = root / ".git" / "info" / "exclude"
     exclude.write_text(
         "\n".join(
-            line
-            for line in exclude.read_text().splitlines()
-            if line != "/.cmoc/gu/"
+            line for line in exclude.read_text().splitlines() if line != "/.cmoc/gu/"
         )
         + "\n"
     )
@@ -447,41 +449,43 @@ def test_apply_fork_can_target_and_edit_gitignore(
         "oracle_requirement": "test requirement",
         "observed_implementation": "old",
         "reason": "needs update",
-        "suggested_fix": "update gitignore",
+        "resolution": {
+            "status": "fixed",
+            "summary": "updated gitignore",
+            "verification": "content checked",
+        },
     }
     target_rels_by_call: list[list[str]] = []
     gitignore_finding_returned = False
 
-    def enumerate_findings(
+    def review_and_fix(
         root_arg: Path,
         target: Path,
         config: object,
         codex_exec: object,
         **kwargs: object,
     ) -> list[dict[str, object]]:
-        """対象 path を記録し、gitignore 初回調査だけ所見を返す。"""
+        """対象 path を記録し、gitignore 初回調査で修正と所見を返す。"""
         nonlocal gitignore_finding_returned
         rel = str(target.relative_to(root_arg))
         target_rels_by_call.append([rel])
         if rel == ".gitignore" and not gitignore_finding_returned:
             gitignore_finding_returned = True
+            (root_arg / ".gitignore").write_text("/.cmoc/gu/\n# editable\n")
             return [finding]
         return []
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
-        """apply による .gitignore 編集と後続出力を再現する。"""
+        """apply 後の変更要約出力を再現する。"""
         purpose = str(kwargs["purpose"])
-        if purpose == "apply fork finding application":
-            (Path.cwd() / ".gitignore").write_text("/.cmoc/gu/\n# editable\n")
-            return FakeCodexResult()
         if purpose == "apply fork change summary":
             return FakeCodexResult({"changes": []})
         raise AssertionError(purpose)
 
     monkeypatch.setattr(
-        apply_fork_module, "enumerate_apply_findings_for_target", enumerate_findings
+        apply_fork_module, "review_and_fix_apply_target", review_and_fix
     )
     monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
 
@@ -493,7 +497,9 @@ def test_apply_fork_can_target_and_edit_gitignore(
     assert [".gitignore"] in target_rels_by_call
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text())
+    state = json.loads(
+        (root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text()
+    )
     assert (
         run_git(root, "show", f"{state['apply']['apply_branch']}:.gitignore").stdout
         == "/.cmoc/gu/\n# editable\n"
@@ -518,7 +524,9 @@ def test_apply_fork_marks_state_completed_before_report(
 
     def fake_write_report(*args: object, **kwargs: object) -> Path:
         seen_states.append(json.loads(state_path.read_text())["apply"]["state"])
-        report_path = root / ".cmoc" / "gu" / "ar" / "report" / "apply" / "fork" / "state.md"
+        report_path = (
+            root / ".cmoc" / "gu" / "ar" / "report" / "apply" / "fork" / "state.md"
+        )
         report_path.parent.mkdir(parents=True)
         report_path.write_text("# report\n")
         return report_path
@@ -606,6 +614,7 @@ def test_apply_fork_initialization_failure_is_recoverable_by_abandon(
     )
 
     if failure == "pid":
+
         def fail_write_pid(*args: object, **kwargs: object) -> None:
             raise OSError("pid save failed")
 

@@ -37,8 +37,8 @@
 # `fork.py`
 
 ## Summary
-- `apply fork` の起点から完了までの制御を読むための入口。branch/worktree の作成、対象ファイルの列挙、Codex による所見適用、commit、state 更新、異常時の復旧までを一つの実行単位として扱う。
-- 中断時の部分完了や error 退避、process tracking、cleanup 条件を確認したいときにここを読む。所見の生成方法や適用方法の詳細は、参照先の専用ファイルを読む。
+- `apply fork` の起点から完了までの制御を読むための入口。branch/worktree の作成、対象ファイルの列挙、Codex によるファイル単位レビュー・修正、再投入、commit、state 更新、異常時の復旧までを一つの実行単位として扱う。
+- 中断時の部分完了や error 退避、process tracking、cleanup 条件を確認したいときにここを読む。レビュー・修正 parameter の詳細は、参照先の専用 builder を読む。
 
 ## Read this when
 - `apply fork` の実行フロー全体を追いたいとき。
@@ -46,12 +46,12 @@
 - 中断・エラー時に何を残し、何を破棄するかを確認したいとき。
 
 ## Do not read this when
-- 所見の列挙ロジックだけを知りたいときは、対象列挙や finding 生成の専用ファイルを先に読む。
+- ファイル単位レビュー・修正 prompt の内容だけを知りたいときは、対応する builder の正本を先に読む。
 - レポートの出力形式だけを知りたいときは、report 生成の専用ファイルを読む。
 - `apply fork` 以外の subcommand 全体像を見たいだけなら、このファイルではなく上位のルーティング文書を読む。
 
 ## hash
-- ed8e733e8a08085ee6ae2b5fdbef106e8dc00cffb5204b181028af4b6e3b1c86
+- a97d6469fbeb6d941b39a6a9eb08c05bc6f5bc7beb6de8873f7e4a79845b7b41
 
 # `fork_report.py`
 

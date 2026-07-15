@@ -124,13 +124,13 @@
 # `test_acp_builder_apply_parameters.py`
 
 ## Summary
-- `cmoc apply fork` の parameter 生成と正本 schema 参照を検証するテストを扱う。`change_summary`、`file_finding_enumeration`、`finding_application` の import 契約、prompt 組み立て、root の使い分け、相対パスの受理/拒否を確認したいときに読む。
+- `cmoc apply fork` の parameter 生成と正本 schema 参照を検証するテストを扱う。`change_summary` と `file_review_and_fix` の import 契約、prompt 組み立て、root の使い分け、相対パスの受理/拒否を確認したいときに読む。
 
 ## Read this when
 - `cmoc apply fork` の各 builder が正本 schema と対応しているかを確認・変更するとき。
 - packaged layout での import 契約や、builder が返す prompt の共通文面を検証したいとき。
 - `repo-root` と `work-root` の使い分け、`target-path` の解決、相対パスの扱いを確認したいとき。
-- `change_summary`、`file_finding_enumeration`、`finding_application` のいずれかの parameter 生成を調べるとき。
+- `change_summary` または `file_review_and_fix` の parameter 生成を調べるとき。
 
 ## Do not read this when
 - apply ループ本体の実行制御、状態遷移、レポート生成を確認したいときは、対応する実装や上位の仕様を読む。
@@ -138,7 +138,7 @@
 - `cmoc apply fork` 以外のサブコマンドの parameter や schema を調べたいとき。
 
 ## hash
-- 7b0a36cade133d7797c8dee73630927999866874e7105e5e936bca9bfe3fdafa
+- fb46374903988f4efc4849fbb1e0bfeb15e1cd7ad5e9cd0291c6e0bbe7005078
 
 # `test_acp_builder_indexing_parameters.py`
 
@@ -230,7 +230,7 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- `apply fork` CLI の回帰テスト群。セッション作成後の apply ランの開始・完了・中断、state/worktree 更新、`doctor` 前処理、`.gitignore` 反映、config 読み込み失敗と復旧、競合時の再検査、初期化失敗後の `abandon` 回収までを確認する。
+- `apply fork` CLI の回帰テスト群。セッション作成後の apply ランの開始・完了・中断、単一レビュー・修正 call、state/worktree 更新、`doctor` 前処理、`.gitignore` 反映、config 読み込み失敗と復旧、初期化失敗後の `abandon` 回収までを確認する。
 - CLI の lifecycle と repository/session fixture を使うので、このファイルを読む。target 正規化のように CLI 全体の状態遷移を要さない観点は別テストへ分ける。
 
 ## Read this when
@@ -244,18 +244,18 @@
 - CLI lifecycle や repository/session fixture に触れない単発の所見生成ロジックだけを変えるときは、より局所的なテストを読む。
 
 ## hash
-- 9cbdbf988acd4149c4310b64b9898ad38b8535fed5777579f12ff9394cd0ae4b
+- 53494a7efc93b28510e24d010cda6fb27de70e23543443f6df10efa1f3a11d75
 
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- `apply fork` の report 生成と再検査ループの外部挙動をまとめて追う回帰テスト群。所見の再調査、変更要約、収束/未収束/error の判定、rolling apply の対象切り替え、session state 更新までを CLI 境界で確認する。
+- `apply fork` の report 生成と再検査ループの外部挙動をまとめて追う回帰テスト群。単一 call 後の再調査、空所見差分の拒否、変更要約、収束/未収束/error の判定、rolling apply の対象切り替え、session state 更新までを CLI 境界で確認する。
 - report に出る result、所見数の推移、変更内容要約、commit message、session state の更新順や表示内容を変えるときに読む。
 - 変更差分の抽出条件として、未追跡 file、削除済み tracked file、commit 前の working tree 差分をどう report に反映するかを確認したいときに読む。
 
 ## Read this when
 - `apply fork` の report 文面や保存先、再検査の収束条件、rolling apply の対象決定を変えるとき。
-- 所見を適用した後に、再調査対象が増えるか、空所見で収束するか、差分なしで未収束になるかを確認したいとき。
+- レビュー・修正後に再調査対象が増えるか、空所見で収束するか、所見あり差分なしで未収束になるかを確認したいとき。
 - 変更要約がどの差分を拾うか、どの path を report に残すかを確認したいとき。
 
 ## Do not read this when
@@ -264,7 +264,7 @@
 - `apply join` や `review oracle` の report を変えたいなら、それぞれのコマンド側のテストを読む。
 
 ## hash
-- b5ecfde13a095dbc0978b065ed979e4418b1baa8b9504ae92af0b995a5a22092
+- 598834575d3ee6a610ebaa43b636070a541ca1635b05c489258e8c7c8657a85b
 
 # `test_apply_fork_target_normalization.py`
 

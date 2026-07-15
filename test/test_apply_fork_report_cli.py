@@ -1,7 +1,7 @@
 """apply fork の report と再検査制御を CLI 経由で検証する。
 
-このファイルは 16,000 文字を超えるが、責務境界は apply fork が所見列挙から
-適用、commit、変更要約、report、session state 更新へ至る制御を検証することに
+このファイルは 16,000 文字を超えるが、責務境界は apply fork がレビュー・修正から
+commit、変更要約、report、session state 更新へ至る制御を検証することに
 閉じている。収束、未収束、error、変更ファイル再調査、rolling fork は同じ loop と
 report schema の観測結果として読まれるため、分割すると期待値の文脈が分散する。
 現状は apply fork report の読み取り文脈を一箇所に保つ方が凝集性が高い。
@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 from basic.acp import AgentCallParameter
+from _apply_support import apply_worktree_from_state
 from _cli_support import runner
 from _codex_support import FakeCodexResult
 from _git_support import make_repo, run_git
@@ -66,16 +67,20 @@ def test_apply_fork_writes_report_with_change_summary(
         "oracle_requirement": "test requirement",
         "observed_implementation": "old",
         "reason": "needs update",
-        "suggested_fix": "update readme",
+        "resolution": {
+            "status": "fixed",
+            "summary": "updated readme",
+            "verification": "content checked",
+        },
     }
     calls: list[str] = []
-    application_count = 0
+    review_count = 0
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
-        """所見、適用、変更要約の各 Codex 応答を返す。"""
-        nonlocal application_count
+        """レビュー・修正と変更要約の Codex 応答を返す。"""
+        nonlocal review_count
         purpose = str(kwargs["purpose"])
         calls.append(purpose)
         schema = (
@@ -83,12 +88,10 @@ def test_apply_fork_writes_report_with_change_summary(
             if parameter.structured_output_schema_path
             else None
         )
-        if purpose.startswith("apply fork enumerate findings"):
+        if purpose.startswith("apply fork review and fix"):
+            review_count += 1
+            (Path.cwd() / "README.md").write_text(f"# updated {review_count}\n")
             return FakeCodexResult({"findings": [finding]})
-        if purpose == "apply fork finding application":
-            application_count += 1
-            (Path.cwd() / "README.md").write_text(f"# updated {application_count}\n")
-            return FakeCodexResult(None)
         if schema == "change_summary.json":
             return FakeCodexResult(
                 {
@@ -136,8 +139,7 @@ def test_apply_fork_writes_report_with_change_summary(
         / apply_branch.rsplit("/", 1)[-1]
     )
     front_matter = dict(
-        line.split(": ", 1)
-        for line in rendered.split("---\n", 2)[1].splitlines()
+        line.split(": ", 1) for line in rendered.split("---\n", 2)[1].splitlines()
     )
     assert front_matter["cmoc_session_branch"] == session_branch
     assert front_matter["cmoc_session_fork_commit"] == session_fork_commit
@@ -173,47 +175,49 @@ def test_apply_fork_rechecks_changed_files_until_converged(
         "oracle_requirement": "test requirement",
         "observed_implementation": "old",
         "reason": "needs update",
-        "suggested_fix": "update readme",
+        "resolution": {
+            "status": "fixed",
+            "summary": "updated readme",
+            "verification": "content checked",
+        },
     }
-    enumerate_calls = 0
+    review_calls = 0
     target_rels: list[str] = []
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
         """変更ファイル再調査が収束するまでの Codex 応答を返す。"""
-        nonlocal enumerate_calls
+        nonlocal review_calls
         purpose = str(kwargs["purpose"])
-        if purpose.startswith("apply fork enumerate findings"):
-            enumerate_calls += 1
-            return FakeCodexResult(
-                {"findings": [finding] if enumerate_calls == 1 else []}
-            )
-        if purpose == "apply fork finding application":
-            (Path.cwd() / "README.md").write_text("# updated\n")
-            (Path.cwd() / "newdir").mkdir()
-            (Path.cwd() / "newdir" / "new.py").write_text("print('new')\n")
-            return FakeCodexResult(None)
+        if purpose.startswith("apply fork review and fix"):
+            review_calls += 1
+            if review_calls == 1:
+                (Path.cwd() / "README.md").write_text("# updated\n")
+                (Path.cwd() / "newdir").mkdir()
+                (Path.cwd() / "newdir" / "new.py").write_text("print('new')\n")
+                return FakeCodexResult({"findings": [finding]})
+            return FakeCodexResult({"findings": []})
         if purpose == "apply fork change summary":
             return FakeCodexResult({"changes": []})
         raise AssertionError(purpose)
 
     monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
-    original_enumerate = apply_fork_module.enumerate_apply_findings_for_target
+    original_review_and_fix = apply_fork_module.review_and_fix_apply_target
 
-    def enumerate_findings(
+    def review_and_fix(
         root_arg: Path,
         target: Path,
         config: object,
         codex_exec: object,
         **kwargs: object,
     ) -> list[dict[str, object]]:
-        """実装側の列挙を呼びつつ再検査対象 path を記録する。"""
+        """実装側のレビュー・修正を呼びつつ再検査対象 path を記録する。"""
         target_rels.append(str(target.relative_to(root_arg)))
-        return original_enumerate(root_arg, target, config, codex_exec, **kwargs)
+        return original_review_and_fix(root_arg, target, config, codex_exec, **kwargs)
 
     monkeypatch.setattr(
-        apply_fork_module, "enumerate_apply_findings_for_target", enumerate_findings
+        apply_fork_module, "review_and_fix_apply_target", review_and_fix
     )
 
     result = runner.invoke(
@@ -221,7 +225,7 @@ def test_apply_fork_rechecks_changed_files_until_converged(
     )
 
     assert result.exit_code == 0
-    assert enumerate_calls >= 2
+    assert review_calls >= 2
     assert "README.md" in target_rels
     assert "newdir/new.py" in target_rels
     report_path = report_path_from_stdout(result.stdout)
@@ -249,16 +253,16 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     config_path.write_text(json.dumps(config, indent=2) + "\n")
     run_git(root, "add", ".cmoc/gt/ar/config.json")
     run_git(root, "commit", "-m", "set apply file limit")
-    enumerate_calls = 0
+    review_calls = 0
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
         """上限内の全調査対象に空所見を返す。"""
-        nonlocal enumerate_calls
+        nonlocal review_calls
         purpose = str(kwargs["purpose"])
-        if purpose.startswith("apply fork enumerate findings"):
-            enumerate_calls += 1
+        if purpose.startswith("apply fork review and fix"):
+            review_calls += 1
             return FakeCodexResult({"findings": []})
         if purpose == "apply fork change summary":
             return FakeCodexResult({"changes": []})
@@ -271,15 +275,15 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     )
 
     assert result.exit_code == 0
-    assert enumerate_calls == 2
+    assert review_calls == 2
     report_path = report_path_from_stdout(result.stdout)
     assert "result: converged" in report_path.read_text()
 
 
-def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
+def test_apply_fork_is_unconverged_when_file_review_and_fix_makes_no_diff(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """所見対応で差分が出なくても、所見ありの起点対象は再調査待ちに戻す。"""
+    """レビュー・修正で差分がなくても、所見ありの起点を再調査待ちに戻す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -308,20 +312,22 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
         "oracle_requirement": "test requirement",
         "observed_implementation": "old",
         "reason": "needs update",
-        "suggested_fix": "update readme",
+        "resolution": {
+            "status": "unresolved",
+            "summary": "no change was made",
+            "verification": "worktree stayed clean",
+        },
     }
     calls: list[str] = []
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
-        """所見は返すが適用では差分を作らない。"""
+        """所見は返すがレビュー・修正では差分を作らない。"""
         purpose = str(kwargs["purpose"])
         calls.append(purpose)
-        if purpose.startswith("apply fork enumerate findings"):
+        if purpose.startswith("apply fork review and fix"):
             return FakeCodexResult({"findings": [finding]})
-        if purpose == "apply fork finding application":
-            return FakeCodexResult()
         if purpose == "apply fork change summary":
             return FakeCodexResult({"changes": []})
         raise AssertionError(purpose)
@@ -338,7 +344,59 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     assert "result: unconverged" in report_path.read_text()
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text())
+    state = json.loads(
+        (root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json").read_text()
+    )
+    assert (
+        run_git(root, "rev-parse", state["apply"]["apply_branch"]).stdout.strip()
+        == run_git(root, "rev-parse", "HEAD").stdout.strip()
+    )
+
+
+def test_apply_fork_rejects_diff_without_findings(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """空所見の agent call が作った差分を commit せず error にする。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / "README.md").write_text("# changed\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "change readme")
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        """空所見と不正な差分、および error report 用要約を返す。"""
+        purpose = str(kwargs["purpose"])
+        if purpose.startswith("apply fork review and fix"):
+            (Path.cwd() / "unexpected.py").write_text("value = 'unexpected'\n")
+            return FakeCodexResult({"findings": []})
+        if purpose == "apply fork change summary":
+            return FakeCodexResult({"changes": []})
+        raise AssertionError(purpose)
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["apply", "fork", "--scope", "session"])
+
+    assert result.exit_code == 1
+    assert "所見なしで差分を生成しました" in result.output
+    assert "unexpected.py" in result.output
+    state = json.loads(state_path.read_text())
+    assert state["apply"]["state"] == "error"
+    apply_worktree = apply_worktree_from_state(root, state)
+    assert (apply_worktree / "unexpected.py").is_file()
+    assert (
+        "?? unexpected.py"
+        in run_git(apply_worktree, "status", "--short").stdout.splitlines()
+    )
     assert (
         run_git(root, "rev-parse", state["apply"]["apply_branch"]).stdout.strip()
         == run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -359,36 +417,19 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
     session_id = session_branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
 
-    finding = {
-        "title": "Update README before error",
-        "evidences": [
-            {
-                "path": str(root / "README.md"),
-                "line_start": 1,
-                "line_end": 1,
-                "summary": "readme",
-            }
-        ],
-        "oracle_requirement": "test requirement",
-        "observed_implementation": "old",
-        "reason": "needs update",
-        "suggested_fix": "update readme",
-    }
-    applications = 0
+    reviews = 0
     summary_prompt = ""
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
         """未 commit 差分を残したまま Codex 適用エラーへ進める。"""
-        nonlocal applications, summary_prompt
+        nonlocal reviews, summary_prompt
         purpose = str(kwargs["purpose"])
-        if purpose.startswith("apply fork enumerate findings"):
-            return FakeCodexResult({"findings": [finding]})
-        if purpose == "apply fork finding application":
-            applications += 1
+        if purpose.startswith("apply fork review and fix"):
+            reviews += 1
             (Path.cwd() / "README.md").write_text("# updated before error\n")
-            raise CmocError("Codex 適用に失敗しました。", [], "test")
+            raise CmocError("Codex レビュー・修正に失敗しました。", [], "test")
         if purpose == "apply fork change summary":
             summary_prompt = parameter.prompt
             return FakeCodexResult(
@@ -409,7 +450,7 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
     assert result.exit_code == 1
-    assert applications == 1
+    assert reviews == 1
     assert "README.md" in summary_prompt
     assert "+# updated before error" in summary_prompt
     state = json.loads(state_path.read_text())
@@ -581,16 +622,14 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     }
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
 
-    assert (
-        runner.invoke(app, ["apply", "join"], catch_exceptions=False).exit_code == 0
-    )
+    assert runner.invoke(app, ["apply", "join"], catch_exceptions=False).exit_code == 0
     (root / "oracle" / "spec.md").write_text("# changed after join\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "change oracle after apply join")
 
     target_rels: list[str] = []
 
-    def enumerate_findings(
+    def review_and_fix(
         root_arg: Path,
         target: Path,
         config: object,
@@ -608,7 +647,7 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
         return FakeCodexResult({"findings": []})
 
     monkeypatch.setattr(
-        apply_fork_module, "enumerate_apply_findings_for_target", enumerate_findings
+        apply_fork_module, "review_and_fix_apply_target", review_and_fix
     )
     monkeypatch.setattr(
         apply_fork_module,
