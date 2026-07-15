@@ -8,6 +8,7 @@ from typing import Any
 
 from commons.runtime_paths import _reserve_timestamped_path, logs_dir, timestamp
 
+
 _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
     "CURRENT_SUBCOMMAND_LOGGER",
     default=None,

@@ -47,9 +47,7 @@ class SessionState:
         # {{work-root}}/oracle/doc/app_spec/session_state.md
         # JSON 読み込み時は、新規作成用 default で欠落 field を active/ready に補わない。
         if not isinstance(data, dict):
-            raise _invalid_state(
-                source, "top-level JSON は object である必要があります。"
-            )
+            raise _invalid_state(source, "top-level JSON は object である必要があります。")
         session_data = _part_data(data, "session", SessionPart, source)
         apply_data = _part_data(data, "apply", ApplyPart, source)
         _require_state(
@@ -198,11 +196,11 @@ def _require_state(
 def _require_nullable_strings(
     part: dict[str, Any], key: str, source: Path | None
 ) -> None:
-    for field_name, value in part.items():
-        if field_name != "state" and value is not None and not isinstance(value, str):
+    for field, value in part.items():
+        if field != "state" and value is not None and not isinstance(value, str):
             raise _invalid_state(
                 source,
-                f"`{key}.{field_name}` は string または null である必要があります: {value!r}",
+                f"`{key}.{field}` は string または null である必要があります: {value!r}",
             )
 
 

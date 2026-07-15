@@ -6,8 +6,8 @@ from cmoc_runtime import (
     require_clean_worktree,
     require_cmoc_ignored,
     run_cli_subcommand,
-    run_codex_exec,
     start_subcommand_step,
+    run_codex_exec,
     work_root,
 )
 from commons.indexing import (
@@ -43,9 +43,7 @@ def _cmoc_indexing_body(
     with indexing_lock(root):
         start_subcommand_step(2, "インデクシングを明示的に実行", "run indexing")
         updated = update_indexes(root, codex_exec)
-        start_subcommand_step(
-            3, "インデクシング差分を commit", "commit indexing changes"
-        )
+        start_subcommand_step(3, "インデクシング差分を commit", "commit indexing changes")
         commit_index_updates(root, updated)
     typer.echo(f"# cmoc indexing\n- updated_index_count: `{len(updated)}`")
 

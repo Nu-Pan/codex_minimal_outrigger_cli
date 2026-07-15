@@ -8,6 +8,7 @@ import typer
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
+from commons.indexing import enable_indexing_preflight
 from cmoc_runtime import (
     CmocError,
     CommandResult,
@@ -16,17 +17,16 @@ from cmoc_runtime import (
     repo_root,
     require_clean_worktree,
     run_cli_subcommand,
+    start_subcommand_step,
     run_codex_exec,
     run_git,
-    start_subcommand_step,
     work_root,
     write_state,
 )
-from commons.indexing import enable_indexing_preflight
-from commons.runtime_results import CodexExecResultLike, CommandResultLike
 
-CodexExec = Callable[..., CodexExecResultLike]
-GitRun = Callable[..., CommandResultLike]
+
+CodexExec = Callable[..., object]
+GitRun = Callable[..., object]
 
 
 def cmoc_session_join_impl() -> None:
@@ -51,9 +51,7 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
     start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     session_id, path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
-        raise CmocError(
-            "session join は session branch 上で実行してください。", [], branch
-        )
+        raise CmocError("session join は session branch 上で実行してください。", [], branch)
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError(
             "session join の事前条件を満たしていません。",
@@ -76,14 +74,11 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
         # delete only when the local session branch itself is reachable from
         # the merge target HEAD; remote-tracking refs must not prove safety.
-        reachable = (
-            git(
-                ["merge-base", "--is-ancestor", branch, "HEAD"],
-                work,
-                check=False,
-            ).returncode
-            == 0
-        )
+        reachable = git(
+            ["merge-base", "--is-ancestor", branch, "HEAD"],
+            work,
+            check=False,
+        ).returncode == 0
         if reachable:
             delete_result = git(["branch", "-d", branch], work, check=False)
         else:
@@ -94,14 +89,12 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
         # post-precondition failures can require manual git resolution, so their
         # error report must go to stderr instead of the default stdout path.
-        exc.__dict__["cmoc_error_to_stderr"] = True
+        setattr(exc, "cmoc_error_to_stderr", True)
         raise
     warnings: list[str] = []
     if delete_result.returncode != 0:
         warnings.append(f"session branch was not deleted: {branch}")
-    warning_lines = (
-        [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
-    )
+    warning_lines = [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
     typer.echo(
         "\n".join(
             [
@@ -114,7 +107,6 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
             ]
         )
     )
-
 
 def resolve_session_join_conflict(
     root: Path,
@@ -181,9 +173,7 @@ def resolve_session_join_conflict(
 def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
     # Git paths can contain newlines, so conflict targets must use NUL framing.
-    fields = git(["diff", "--name-only", "-z", "--diff-filter=U"], root).stdout.split(
-        "\0"
-    )
+    fields = git(["diff", "--name-only", "-z", "--diff-filter=U"], root).stdout.split("\0")
     return [root / field for field in fields if field]
 
 

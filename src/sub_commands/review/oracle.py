@@ -17,20 +17,17 @@ from cmoc_runtime import (
     remove_worktree,
     repo_root,
     run_cli_subcommand,
-    run_codex_exec,
     start_subcommand_step,
+    run_codex_exec,
     timestamp,
     work_root,
     worktrees_dir,
 )
-from commons.indexing import enable_indexing_preflight
-from commons.runtime_git import status_path_statuses
-from commons.runtime_results import CodexExecResultLike
 from sub_commands.review_index import (
     commit_review_index_changes,
     merge_review_branch,
-    resolve_review_index_conflicts,
     review_branch_has_index_changes,
+    resolve_review_index_conflicts,
     review_worktree_status_paths,
 )
 from sub_commands.review_loop import (
@@ -48,8 +45,11 @@ from sub_commands.review_targets import (
     enumerate_review_all_oracle_files,
     enumerate_review_oracle_targets,
 )
+from commons.indexing import enable_indexing_preflight
+from commons.runtime_git import status_path_statuses
 
-CodexExec = Callable[..., CodexExecResultLike]
+
+CodexExec = Callable[..., object]
 
 __all__ = [
     "CodexExec",
@@ -92,9 +92,7 @@ def _cmoc_review_oracle_body(
     branch = current_branch(current_root)
     session_id, _state_path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/") or state.session.state != "active":
-        raise CmocError(
-            "review oracle は active session branch 上で実行してください。", [], branch
-        )
+        raise CmocError("review oracle は active session branch 上で実行してください。", [], branch)
     _require_clean_worktree(current_root)
     ensure_cmoc_ignored(current_root)
     config = load_config(current_root)
@@ -135,9 +133,7 @@ def _cmoc_review_oracle_body(
                     findings = interruption.findings
                     evaluated_oracle_files = interruption.evaluated_files
                     _record_review_oracle_interruption()
-                start_subcommand_step(
-                    7, "run の隔離実行を終了", "finish isolated review"
-                )
+                start_subcommand_step(7, "run の隔離実行を終了", "finish isolated review")
                 commit_review_index_changes(review_worktree)
                 review_has_index_changes = review_branch_has_index_changes(
                     review_worktree, review_fork_commit

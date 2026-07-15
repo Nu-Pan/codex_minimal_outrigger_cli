@@ -26,8 +26,8 @@ from cmoc_runtime import (
     reports_dir,
     require_clean_worktree,
     run_cli_subcommand,
-    run_git,
     start_subcommand_step,
+    run_git,
     timestamp,
     work_root,
     write_state,
@@ -70,7 +70,9 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     else:
         session_id, _, _ = load_state_for_branch(repo, branch)
     with apply_run_lock(repo, session_id):
-        _cmoc_apply_join_locked(repo, current_root, branch, force_resolve, session_id)
+        _cmoc_apply_join_locked(
+            repo, current_root, branch, force_resolve, session_id
+        )
 
 
 def _cmoc_apply_join_locked(
@@ -110,9 +112,7 @@ def _cmoc_apply_join_locked(
     if branch.startswith("cmoc/apply/") and branch != apply_branch:
         raise CmocError(
             "現在の apply branch は join 対象の active apply run ではありません。",
-            [
-                "session state file が指す apply branch 上、または session branch 上から再実行してください。"
-            ],
+            ["session state file が指す apply branch 上、または session branch 上から再実行してください。"],
             f"current_branch: {branch}\napply_branch: {apply_branch}",
         )
     apply_oracle_snapshot_commit = state.apply.oracle_snapshot_commit
@@ -236,12 +236,15 @@ def _cmoc_apply_join_locked(
                 warnings.append(f"apply branch was not deleted: {apply_branch}")
     else:
         warnings.append(
-            f"apply branch is not reachable from session HEAD: {apply_branch}"
+            "apply branch is not reachable from session HEAD: "
+            f"{apply_branch}"
         )
     if apply_worktree and apply_worktree.exists() and not kept_current_worktree:
         warnings.append(f"apply worktree remains: {apply_worktree}")
     warning_lines = (
-        [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
+        [f"  - {warning}" for warning in warnings]
+        if warnings
+        else ["  - none"]
     )
     typer.echo(
         "\n".join(
@@ -272,9 +275,7 @@ def _stop_error_apply_process(repo: Path, session_id: str) -> str | None:
         if tracking_path.exists():
             raise CmocError(
                 "apply process tracking を読み取れません。",
-                [
-                    "apply process を確認し、tracking file を修復してから再実行してください。"
-                ],
+                ["apply process を確認し、tracking file を修復してから再実行してください。"],
                 str(tracking_path),
             )
         return None
@@ -334,9 +335,12 @@ def render_apply_join_report(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md
     """
     unexpected_lines = [
-        f"- {kind}: {', '.join(paths)}" for kind, paths in unexpected.items()
+        f"- {kind}: {', '.join(paths)}"
+        for kind, paths in unexpected.items()
     ] or ["- なし"]
-    conflict_lines = [f"- 未解決: {path}" for path in merge_conflicts] or ["- なし"]
+    conflict_lines = [
+        f"- 未解決: {path}" for path in merge_conflicts
+    ] or ["- なし"]
     if merge_conflicts:
         result = "apply branch の merge conflict が残っています。cmoc は自動解決しませんでした。"
     elif unexpected and not force_resolve:

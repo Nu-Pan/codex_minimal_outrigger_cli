@@ -1,5 +1,6 @@
 import traceback
 
+
 DEFAULT_NEXT_ACTIONS = [
     "入力、実行場所、設定、作業ツリー状態に問題がある場合は、該当箇所を修正してから再実行してください。",
     "原因が実装不具合または仕様不足に見える場合は、Detail と Call stack を添えて調査してください。",

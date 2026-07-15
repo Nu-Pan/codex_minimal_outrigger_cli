@@ -7,18 +7,17 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 
+import commons.runtime_codex_preflight as codex_preflight_module
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 import pytest
+
 from _cli_support import runner
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
-
-import commons.runtime_codex_preflight as codex_preflight_module
-import sub_commands.tui as tui_module
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from main import app
-
+import sub_commands.tui as tui_module
 
 @pytest.fixture(autouse=True)
 def reset_indexing_preflight() -> Iterator[None]:
@@ -26,7 +25,6 @@ def reset_indexing_preflight() -> Iterator[None]:
     codex_preflight_module.disable_indexing_preflight()
     yield
     codex_preflight_module.disable_indexing_preflight()
-
 
 def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     tmp_path: Path,
@@ -75,9 +73,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.model_class == ModelClass.EFFICIENCY
         assert parameter.reasoning_effort == ReasoningEffort.MAX
         assert parameter.file_access_mode == FileAccessMode.READONLY
-        schema_path = parameter.structured_output_schema_path
-        assert schema_path is not None
-        assert schema_path.name == "resolve_parameter.json"
+        assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
         assert "remove me" not in parameter.prompt
         assert "src を確認して必要なら直す" in parameter.prompt
         return FakeResolveResult()
@@ -92,10 +88,8 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.structured_output_schema_path is not None
         assert parameter.structured_output_schema_path.name == "launch_tui.json"
         assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
-        extra_read_paths = kwargs["extra_read_paths"]
-        assert isinstance(extra_read_paths, list)
-        assert len(extra_read_paths) == 1
-        assert str(extra_read_paths[0]) in parameter.prompt
+        assert len(kwargs["extra_read_paths"]) == 1
+        assert str(kwargs["extra_read_paths"][0]) in parameter.prompt
 
     monkeypatch.setattr(tui_module, "run_codex_exec", fake_run_codex_exec)
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
@@ -112,9 +106,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert "手順の過剰固定" in original_prompt
     assert "# 目的" in original_prompt
     assert "# 裁量範囲" in original_prompt
-    complete_files = list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md")
-    )
+    complete_files = list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     complete_prompt = complete_files[0].read_text()
     assert "# file read write rule - repo_write" in complete_prompt
@@ -143,28 +135,6 @@ def test_tui_uses_default_file_access_mode_for_empty_resolved_value(
     assert parameter.file_access_mode == FileAccessMode.READONLY
     assert parameter.structured_output_schema_path is not None
     assert parameter.structured_output_schema_path.name == "launch_tui.json"
-
-
-def test_tui_accepts_explicit_skill_authoring_mode(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """明示的な Skill 作成依頼だけに用いる TUI mode を受理する。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    (root / ".cmoc" / "gu" / "ar" / "log" / "tui").mkdir(parents=True, exist_ok=True)
-
-    parameter = tui_module.build_tui_codex_parameter(
-        "repo-local Skill を作成して下さい。",
-        {
-            "file_access_mode": {
-                "value": "skill_authoring_write",
-                "reason": "repo-local Skill authoring is explicit",
-            }
-        },
-    )
-
-    assert parameter.file_access_mode == FileAccessMode.SKILL_AUTHORING_WRITE
 
 
 def test_tui_saves_complete_prompt_in_linked_worktree(
@@ -234,12 +204,8 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     assert len(tui_calls) == 1
     assert tui_calls[0][1]["root"] == root.resolve()
     assert tui_calls[0][1]["cwd"] == linked.resolve()
-    assert (
-        len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))) == 1
-    )
-    complete_files = list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md")
-    )
+    assert len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))) == 1
+    complete_files = list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))
     assert not list((linked / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     assert str(complete_files[0]) in tui_calls[0][0].prompt
@@ -283,9 +249,7 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
         output_json = {"file_access_mode": {"value": "readonly", "reason": "test"}}
 
     monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
-    monkeypatch.setattr(
-        tui_module, "run_codex_exec", lambda *_, **__: FakeResolveResult()
-    )
+    monkeypatch.setattr(tui_module, "run_codex_exec", lambda *_, **__: FakeResolveResult())
     monkeypatch.setattr(tui_module, "run_codex_tui", lambda *_, **__: None)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
@@ -293,18 +257,9 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     assert result.exit_code == 0
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
-    assert (
-        len(
-            list((root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl"))
-        )
-        == 1
-    )
-    assert (
-        len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))) == 1
-    )
-    assert (
-        len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))) == 1
-    )
+    assert len(list((root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))) == 1
+    assert len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))) == 1
     assert not list((linked / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))
     assert run_git(root, "status", "--short", "--", ".cmoc/gu").stdout.strip() == ""
     assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""

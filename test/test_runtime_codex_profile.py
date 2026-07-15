@@ -9,6 +9,13 @@
 from pathlib import Path
 
 import pytest
+
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
+from commons.runtime_codex_profile import build_codex_override_args
+from config.cmoc_config import CmocConfig
+from oracle.other.cmoc_config import CodexModelSpec
+
 from _codex_support import (
     _assert_not_permission_accessible,
     _assert_not_writable,
@@ -21,12 +28,6 @@ from _codex_support import (
 )
 from _git_support import make_repo, run_git
 from _ollama_support import TEST_SLM_MODEL
-from oracle.other.cmoc_config import CodexModelSpec
-
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
-from commons.runtime_codex_profile import build_codex_override_args
-from config.cmoc_config import CmocConfig
 
 
 def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
@@ -78,13 +79,11 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
         assert "--sandbox" not in overrides[mode]
         assert "sandbox_workspace_write" not in parsed
         assert parsed["default_permissions"] == "cmoc"
-        permissions = parsed["permissions"]
-        assert isinstance(permissions, dict)
-        cmoc_permissions = permissions["cmoc"]
-        assert isinstance(cmoc_permissions, dict)
-        assert cmoc_permissions["extends"] == ":workspace"
+        assert parsed["permissions"]["cmoc"]["extends"] == ":workspace"
     assert _override_permission_filesystem(overrides[FileAccessMode.READONLY]) == {
-        str(path.resolve()): "read" for path in root.iterdir() if path.name != "memo"
+        str(path.resolve()): "read"
+        for path in root.iterdir()
+        if path.name != "memo"
     }
     _assert_not_permission_accessible(
         overrides[FileAccessMode.READONLY], root / "memo" / "private.md"
@@ -100,37 +99,31 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     )
     assert pure_oracle_write_filesystem[str((root / "oracle").resolve())] == "write"
     for name in ("AGENTS.md", "INDEX.md"):
-        assert (
-            pure_oracle_write_filesystem[str((root / "oracle" / name).resolve())]
-            == "read"
-        )
+        assert pure_oracle_write_filesystem[
+            str((root / "oracle" / name).resolve())
+        ] == "read"
     _assert_not_permission_accessible(
         overrides[FileAccessMode.PURE_ORACLE_WRITE], root / "src" / "existing.py"
     )
     realization_roots = {str(root.resolve())}
-    assert (
-        _override_permission_roots(overrides[FileAccessMode.REALIZATION_WRITE], "write")
-        == realization_roots
-    )
+    assert _override_permission_roots(
+        overrides[FileAccessMode.REALIZATION_WRITE], "write"
+    ) == realization_roots
     assert _override_writable_roots(overrides[FileAccessMode.READONLY]) == set()
     assert _override_writable_roots(overrides[FileAccessMode.PURE_ORACLE_READ]) == set()
-    assert (
-        _override_writable_roots(overrides[FileAccessMode.PURE_ORACLE_WRITE]) == set()
-    )
-    assert (
-        _override_permission_roots(overrides[FileAccessMode.READONLY], "write") == set()
-    )
-    assert (
-        _override_permission_roots(overrides[FileAccessMode.PURE_ORACLE_READ], "write")
-        == set()
-    )
+    assert _override_writable_roots(overrides[FileAccessMode.PURE_ORACLE_WRITE]) == set()
+    assert _override_permission_roots(
+        overrides[FileAccessMode.READONLY], "write"
+    ) == set()
+    assert _override_permission_roots(
+        overrides[FileAccessMode.PURE_ORACLE_READ], "write"
+    ) == set()
     assert _override_permission_roots(
         overrides[FileAccessMode.PURE_ORACLE_WRITE], "write"
     ) == {str((root / "oracle").resolve())}
-    assert (
-        _override_permission_roots(overrides[FileAccessMode.REPO_WRITE], "write")
-        == realization_roots
-    )
+    assert _override_permission_roots(
+        overrides[FileAccessMode.REPO_WRITE], "write"
+    ) == realization_roots
     _assert_writable(
         overrides[FileAccessMode.REALIZATION_WRITE], root / "src" / "existing.py"
     )
@@ -142,12 +135,9 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     )
     _assert_not_writable(overrides[FileAccessMode.REALIZATION_WRITE], root / "INDEX.md")
     for path in (root / "src" / "INDEX.md", root / "test" / "INDEX.md"):
-        assert (
-            _override_permission_filesystem(
-                overrides[FileAccessMode.REALIZATION_WRITE]
-            )[str(path.resolve())]
-            == "read"
-        )
+        assert _override_permission_filesystem(
+            overrides[FileAccessMode.REALIZATION_WRITE]
+        )[str(path.resolve())] == "read"
         _assert_not_writable(overrides[FileAccessMode.REALIZATION_WRITE], path)
     _assert_writable(overrides[FileAccessMode.REALIZATION_WRITE], root / ".gitignore")
     _assert_not_writable(
@@ -158,15 +148,16 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     )
     for name in ("AGENTS.md", "INDEX.md"):
         path = root / "oracle" / name
-        assert (
-            _override_permission_filesystem(overrides[FileAccessMode.REPO_WRITE])[
-                str(path.resolve())
-            ]
-            == "read"
-        )
+        assert _override_permission_filesystem(
+            overrides[FileAccessMode.REPO_WRITE]
+        )[str(path.resolve())] == "read"
         _assert_not_writable(overrides[FileAccessMode.REPO_WRITE], path)
-    _assert_writable(overrides[FileAccessMode.REPO_WRITE], root / "oracle" / "spec.md")
-    _assert_writable(overrides[FileAccessMode.REPO_WRITE], root / "oracle" / "new.md")
+    _assert_writable(
+        overrides[FileAccessMode.REPO_WRITE], root / "oracle" / "spec.md"
+    )
+    _assert_writable(
+        overrides[FileAccessMode.REPO_WRITE], root / "oracle" / "new.md"
+    )
     _assert_not_writable(overrides[FileAccessMode.REPO_WRITE], root / "INDEX.md")
     _assert_writable(
         overrides[FileAccessMode.PURE_ORACLE_WRITE], root / "oracle" / "new.md"
@@ -174,14 +165,6 @@ def test_codex_overrides_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_writable(overrides[FileAccessMode.REPO_WRITE], root / ".gitignore")
     _assert_not_writable(
         overrides[FileAccessMode.REPO_WRITE], root / ".agents" / "blocked.md"
-    )
-    _assert_writable(
-        overrides[FileAccessMode.SKILL_AUTHORING_WRITE],
-        root / ".agents" / "skills" / "new-skill" / "SKILL.md",
-    )
-    _assert_not_writable(
-        overrides[FileAccessMode.SKILL_AUTHORING_WRITE],
-        root / ".agents" / "blocked.md",
     )
 
     extra = root / "src" / "existing.py"
@@ -285,9 +268,7 @@ def test_codex_overrides_uses_cmoc_ollama_provider_for_local_slm(
     )
 
     parsed = codex_override_config(override_args)
-    providers = parsed["model_providers"]
-    assert isinstance(providers, dict)
-    provider = providers["cmoc_managed_ollama"]
+    provider = parsed["model_providers"]["cmoc_managed_ollama"]
     assert codex_arg_value(override_args, "--model") == TEST_SLM_MODEL
     assert codex_arg_value(override_args, "--disable") == "multi_agent"
     assert parsed["web_search"] == "disabled"
@@ -307,7 +288,9 @@ def test_root_write_denies_external_symlink_targets(tmp_path: Path) -> None:
     (root / "src").symlink_to(outside, target_is_directory=True)
     (root / "test").mkdir()
     (root / "test" / "nested").mkdir()
-    (root / "test" / "nested" / "link").symlink_to(outside, target_is_directory=True)
+    (root / "test" / "nested" / "link").symlink_to(
+        outside, target_is_directory=True
+    )
     (root / ".gitignore").write_text("test/\n")
 
     override_args = build_codex_override_args(
@@ -322,7 +305,9 @@ def test_root_write_denies_external_symlink_targets(tmp_path: Path) -> None:
         root,
     )
 
-    assert _override_permission_roots(override_args, "write") == {str(root.resolve())}
+    assert _override_permission_roots(override_args, "write") == {
+        str(root.resolve())
+    }
     filesystem = _override_permission_filesystem(override_args)
     assert filesystem[str(outside.resolve())] == "deny"
     _assert_not_writable(override_args, outside / "new.py")
@@ -380,8 +365,9 @@ def test_codex_overrides_allows_repo_agent_read_dirs_from_linked_worktree(
         linked,
         extra_read_root=root,
     )
+    parsed = codex_override_config(override_args)
     assert "--sandbox" not in override_args
-    filesystem = _override_permission_filesystem(override_args)
+    filesystem = parsed["permissions"]["cmoc"]["filesystem"]
     assert filesystem[str((root / ".cmoc" / "gu" / "ar").resolve())] == "read"
     assert filesystem[str((root / ".cmoc" / "gt" / "ar").resolve())] == "read"
 

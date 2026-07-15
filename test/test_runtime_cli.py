@@ -21,13 +21,10 @@ from pathlib import Path
 
 import pytest
 import typer
-from _cli_support import runner
-from _git_support import make_repo, run_git
-from _ollama_support import run_doctor
 
+import main as main_module
 import commons.runtime_cli as runtime_cli
 import commons.runtime_logging as runtime_logging
-import main as main_module
 from cmoc_runtime import (
     CmocError,
     SubcommandLogger,
@@ -36,6 +33,10 @@ from cmoc_runtime import (
     render_error,
 )
 from main import app
+
+from _cli_support import runner
+from _git_support import make_repo, run_git
+from _ollama_support import run_doctor
 
 
 def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> None:

@@ -46,8 +46,8 @@
     - `{{work-root}}/.agents` が空ディレクトリならば `{{work-root}}/.agents/.gitkeep` を作成する
     - `{{work-root}}/.agents` ツリー内 git 追跡対象外ならば `{{work-root}}/.agents/.gitkeep` を git 追跡対象に追加する
 - 必要な理由
-    - `{{work-root}}/.agents` は通常の agent call では操作禁止領域である
-    - repo-local Skill authoring 専用 TUI だけが `.agents/skills` を書ける前提で、repository 初期状態から `.agents` を追跡可能にしておく
+    - `{{work-root}}/.agents` は agent 操作禁止領域なので、差分が出る余地をなくしたい
+    - なので、最初から作っておく
 
 ### 修復
 

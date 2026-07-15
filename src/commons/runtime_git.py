@@ -7,6 +7,7 @@ from commons.runtime_errors import CmocError
 from commons.runtime_paths import worktrees_dir
 from commons.runtime_results import CommandResult
 
+
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/apply/", "cmoc/run/")
 CMOC_IGNORE_PATTERN = "/.cmoc/gu/"
 # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
@@ -128,7 +129,9 @@ def create_run_worktree(
     """未使用 path に run/apply 用 linked worktree を作る。"""
     expected_worktree = _expected_managed_worktree(root, branch)
     candidate = _absolute_path(worktree)
-    if _first_managed_worktree_symlink(root, candidate, expected_worktree) is not None:
+    if _first_managed_worktree_symlink(
+        root, candidate, expected_worktree
+    ) is not None:
         raise CmocError(
             "run worktree path は symlink を含められません。",
             ["branch 名と worktree path の対応を確認してください。"],
@@ -288,10 +291,12 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
 def with_cmoc_ignore_pattern(content: str) -> str:
     """既存の末尾改行を崩さず cmoc の ignore 規則を追加する。"""
     lines = content.splitlines()
-    patterns: list[str] = []
+    patterns = []
     if any(line in {".cmoc/", "/.cmoc/"} for line in lines):
         patterns.extend(
-            pattern for pattern in CMOC_CONFIG_IGNORE_EXCEPTIONS if pattern not in lines
+            pattern
+            for pattern in CMOC_CONFIG_IGNORE_EXCEPTIONS
+            if pattern not in lines
         )
     if CMOC_IGNORE_PATTERN not in lines:
         patterns.append(CMOC_IGNORE_PATTERN)
@@ -332,9 +337,9 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
     - {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
     """
-    exclude_path = (
-        root / run_git(["rev-parse", "--git-path", "info/exclude"], root).stdout.strip()
-    )
+    exclude_path = root / run_git(
+        ["rev-parse", "--git-path", "info/exclude"], root
+    ).stdout.strip()
     content = exclude_path.read_text() if exclude_path.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
     if updated_content != content:
@@ -380,7 +385,9 @@ def is_untracked_git_ignored(root: Path, path: Path) -> bool:
     # tracked files remain targets even when they match an ignore pattern.
     candidate = path if path.is_absolute() else root / path
     rel = candidate.absolute().relative_to(root.absolute())
-    return run_git(["check-ignore", "-q", str(rel)], root, check=False).returncode == 0
+    return (
+        run_git(["check-ignore", "-q", str(rel)], root, check=False).returncode == 0
+    )
 
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:

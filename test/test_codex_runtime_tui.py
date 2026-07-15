@@ -2,11 +2,14 @@ import json
 import subprocess
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
 
+import cmoc_runtime
+import commons.runtime_codex_tui as runtime_codex_tui
 import pytest
+from basic.acp import FileAccessMode
+from cmoc_runtime import CmocError, SubcommandLogger
+from config.cmoc_config import CmocConfig
 from _codex_support import (
-    _override_permission_filesystem,
     codex_override_config,
     codex_parameter,
     setup_codex_home,
@@ -14,17 +17,11 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
-
-import cmoc_runtime
-import commons.runtime_codex_tui as runtime_codex_tui
-from basic.acp import FileAccessMode
-from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_tui
 from commons.runtime_logging import (
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
-from config.cmoc_config import CmocConfig
 
 
 def _tui_call_logs(root: Path) -> list[Path]:
@@ -159,7 +156,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     call_log = _tui_call_logs(root)[0]
     call_data = json.loads(call_log.read_text())
     override_config = codex_override_config(call_data["argv"])
-    filesystem = _override_permission_filesystem(call_data["argv"])
+    filesystem = override_config["permissions"]["cmoc"]["filesystem"]
     assert override_config["default_permissions"] == "cmoc"
     assert filesystem[str((root / ".cmoc" / "gu" / "ar").resolve())] == "read"
     assert filesystem[str((root / ".cmoc" / "gt" / "ar").resolve())] == "read"
@@ -244,7 +241,7 @@ def test_run_codex_tui_logs_missing_cli_failure(
     stub_codex_overrides(monkeypatch)
     real_run = subprocess.run
 
-    def fake_run(args: list[str], *pos: Any, **kwargs: Any) -> Any:
+    def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
         """Codex の実行だけを CLI 不在に差し替え、他の subprocess は通す fake。"""
         if args[:1] == ["codex"]:
             raise FileNotFoundError("codex")

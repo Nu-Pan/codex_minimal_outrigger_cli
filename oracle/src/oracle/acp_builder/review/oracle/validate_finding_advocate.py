@@ -3,16 +3,15 @@
 # std
 from pathlib import Path
 
+# cmoc
+from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
+from oracle.other.path_model import resolve_real_path
 from oracle.acp_builder.basic import (
     AgentCallParameter,
-    FileAccessMode,
     ModelClass,
     ReasoningEffort,
+    FileAccessMode,
 )
-from oracle.other.path_model import resolve_real_path
-
-# cmoc
-from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
@@ -36,10 +35,10 @@ def build_review_oracle_validate_finding_advocate_parameter(
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片レビュー所見の擁護担当です",
         summary="- 対象所見が妥当である理由を調査すること",
-        goal="""
+        goal=f"""
         - 指定の Structured Output schema に従って、対象所見が妥当である理由を返していること
         - 既存の理由と重複しないよう、新規理由だけが列挙されていること
-        - `{{oracle_root}}` ツリー内の oracle file を具体的な根拠とし、「かもしれない」「可能性がある」は根拠にしていないこと
+        - `{{{{oracle_root}}}}` ツリー内の oracle file を具体的な根拠とし、「かもしれない」「可能性がある」は根拠にしていないこと
         - 新規理由が無い場合、空配列を返していること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,

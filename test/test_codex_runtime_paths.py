@@ -7,31 +7,27 @@
 
 import json
 from multiprocessing import Barrier, Pipe, Process
-from multiprocessing.connection import Connection
-from multiprocessing.synchronize import Barrier as BarrierType
 from pathlib import Path
 
 import pytest
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from config.cmoc_config import CmocConfig
+
 from _codex_support import (
     _assert_not_writable,
-    _override_permission_filesystem,
     codex_override_config,
     codex_parameter,
     setup_codex_home,
 )
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
-
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from commons.runtime_codex import run_codex_exec
-from config.cmoc_config import CmocConfig
+
 
 _FIXED_CODEX_TIMESTAMP = "2099-01-01_00-00_00_000000000"
 
 
-def run_fixed_codex_exec(
-    root: Path, barrier: BarrierType, connection: Connection
-) -> None:
+def run_fixed_codex_exec(root: Path, barrier: Barrier, connection: object) -> None:
     """同じ初回 timestamp の実運用 Codex 呼び出しを別 process で実行する。"""
     import commons.runtime_codex_exec as exec_module
 
@@ -103,7 +99,7 @@ def test_timestamped_path_reservation_is_process_safe(
     for process in processes:
         process.start()
 
-    records: list[dict[str, str]] = []
+    records = []
     for parent, _child in channels:
         assert parent.poll(10)
         records.append(parent.recv())
@@ -200,7 +196,7 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     assert "--sandbox" not in record["args"]
     assert "sandbox_workspace_write" not in override_config
     assert override_config["default_permissions"] == "cmoc"
-    assert _override_permission_filesystem(record["args"]) == {
+    assert override_config["permissions"]["cmoc"]["filesystem"] == {
         str((root / "oracle").resolve()): "read"
     }
 
@@ -306,9 +302,7 @@ def test_run_codex_exec_allows_repo_agent_read_dirs_from_linked_worktree(
         codex_parameter(FileAccessMode.PURE_ORACLE_READ),
         root=root,
         cwd=linked,
-        extra_read_paths=[
-            root / ".cmoc" / "gu" / "ar" / "report" / "review" / "report.md"
-        ],
+        extra_read_paths=[root / ".cmoc" / "gu" / "ar" / "report" / "review" / "report.md"],
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
     )
@@ -317,7 +311,9 @@ def test_run_codex_exec_allows_repo_agent_read_dirs_from_linked_worktree(
     assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
     # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    filesystem = _override_permission_filesystem(record["args"])
+    filesystem = codex_override_config(record["args"])["permissions"]["cmoc"][
+        "filesystem"
+    ]
     assert filesystem[str((root / ".cmoc" / "gu" / "ar").resolve())] == "read"
     assert filesystem[str((root / ".cmoc" / "gt" / "ar").resolve())] == "read"
     assert str((root / ".cmoc" / "gu").resolve()) not in filesystem

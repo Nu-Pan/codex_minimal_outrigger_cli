@@ -6,10 +6,10 @@ from acp.builder.apply.fork.change_summary import (
     build_apply_fork_change_summary_parameter,
 )
 from cmoc_runtime import SessionState, reports_dir, run_git, timestamp
-from commons.runtime_results import CodexExecResultLike
 from config.cmoc_config import CmocConfig
 
-CodexExec = Callable[..., CodexExecResultLike]
+
+CodexExec = Callable[..., object]
 MANAGED_CHANGE_DIFF_OPTIONS = ("--find-renames", "--diff-filter=ACMRT")
 UNCONVERGED_FINDINGS_NOTE = "まだ所見が残っている可能性があります。"
 INTERRUPTED_FINDINGS_NOTE = (
@@ -170,9 +170,7 @@ def changed_diff_since_fork(apply_worktree: Path, fork_commit: str) -> str:
         ]
     )
     diffs = [
-        diff
-        for command in commands
-        if (diff := run_git(command, apply_worktree).stdout)
+        diff for command in commands if (diff := run_git(command, apply_worktree).stdout)
     ]
     diffs.extend(untracked_file_diffs(apply_worktree))
     return "\n".join(diffs)

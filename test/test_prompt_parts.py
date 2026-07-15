@@ -6,6 +6,9 @@
 from pathlib import Path
 
 import pytest
+
+from basic.acp import FileAccessMode
+from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 from oracle.prompt_builder.parts.apply_review_standard import (
     build_apply_review_standard as _build_apply_review_standard,
@@ -25,9 +28,6 @@ from oracle.prompt_builder.parts.realization_standard import (
 from oracle.prompt_builder.parts.routing_rule import (
     build_routing_rule as _build_routing_rule,
 )
-
-from basic.acp import FileAccessMode
-from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 
 
 def build_apply_review_standard() -> StructDoc:
@@ -118,15 +118,6 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
             "`AGENTS.md` は書き込み禁止",
             "`INDEX.md` は書き込み禁止",
         ],
-        FileAccessMode.SKILL_AUTHORING_WRITE: [
-            "ツリー外は読み書き禁止",
-            "/memo` は読み書き禁止",
-            "/.git` ツリー内は書き込み禁止",
-            "/.agents` ツリー内は、`{{work-root}}/.agents/skills` ツリー内を除いて書き込み禁止",
-            "repo-local Skill の作成・保守を明示した作業でだけ書き込み可能",
-            "`AGENTS.md` は書き込み禁止",
-            "`INDEX.md` は書き込み禁止",
-        ],
         FileAccessMode.PURE_ORACLE_WRITE: [
             "ツリー外は読み書き禁止",
             "/memo` は読み書き禁止",
@@ -196,10 +187,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
     for forbidden in ["{{cmoc-root}}", "{{run-root}}"]:
         assert forbidden not in rendered
     assert "{{repo-root}}" in rendered
-    assert (
-        "コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く"
-        in rendered
-    )
+    assert "コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く" in rendered
     assert "`{{work-root}}/oracle/doc/...` のように根拠 path" in rendered
     for expected in [
         "oracle and realization basic",
@@ -250,9 +238,7 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     assert "cmoc から呼び出された" in rendered
     assert "{{repo-root}} ツリー内の realization file" in rendered
     assert "{{cmoc-root}} と {{run-root}} と {{work-root}} 配下" in rendered
-    assert (
-        '"summary": "realization file and {{repo-root}} stay in code block"' in rendered
-    )
+    assert '"summary": "realization file and {{repo-root}} stay in code block"' in rendered
     assert f"- {{{{repo-root}}}} = {repo_root}" in rendered
     assert f"- {{{{work-root}}}} = {repo_root}" in rendered
 
@@ -277,10 +263,7 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
     rendered = render_as_markdown(prompt)
 
     assert "- {{work-root}}/src/app.py を確認すること" in rendered
-    assert (
-        "コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く"
-        in rendered
-    )
+    assert "コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く" in rendered
     assert "`{{work-root}}/oracle/doc/...` のように根拠 path" in rendered
     assert f"- {{{{work-root}}}} = {repo_root}" in rendered
 
@@ -342,10 +325,7 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
     assert "読むべき対象へのルーティング情報" in rendered
     assert "対象内容に根拠" in rendered
     assert "機械的に補える情報" in rendered
-    assert (
-        "ファイル・ディレクトリの識別子、ハッシュ、出力形式は、この agent call の外側"
-        in rendered
-    )
+    assert "ファイル・ディレクトリの識別子、ハッシュ、出力形式は、この agent call の外側" in rendered
     assert "ファイル名・ディレクトリ名・ハッシュ値" in rendered
     assert "Structured Output schema を読めば分かる出力項目名・型・形式" in rendered
     assert "関連しそうという理由だけ" in rendered

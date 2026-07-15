@@ -6,10 +6,8 @@
 import json
 
 import acp.builder.tui.resolve_parameter as tui_resolve_parameter_module
-from acp.builder.tui.resolve_parameter import (
-    TUI_FILE_ACCESS_MODES,
-    build_tui_resolve_parameter_parameter,
-)
+from acp.builder.tui.resolve_parameter import TUI_FILE_ACCESS_MODES
+from acp.builder.tui.resolve_parameter import build_tui_resolve_parameter_parameter
 from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
 
 
@@ -65,20 +63,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
     assert schema["properties"]["file_access_mode"]["properties"]["value"]["enum"] == [
         file_access_mode.value for file_access_mode in TUI_FILE_ACCESS_MODES
     ]
-    assert (
-        "repo_write"
-        in schema["properties"]["file_access_mode"]["properties"]["value"]["enum"]
-    )
-    assert (
-        "skill_authoring_write"
-        in schema["properties"]["file_access_mode"]["properties"]["value"]["enum"]
-    )
-    assert (
-        "repo-local Skill"
-        in schema["properties"]["file_access_mode"]["properties"]["value"][
-            "description"
-        ]
-    )
+    assert "repo_write" in schema["properties"]["file_access_mode"]["properties"]["value"]["enum"]
     for flag_name in [
         "oracle_and_realization_basic",
         "oracle_standard",
@@ -87,9 +72,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         "apply_review_standard",
         "index_entry_standard",
     ]:
-        assert (
-            schema["properties"][flag_name]["properties"]["value"]["type"] == "boolean"
-        )
+        assert schema["properties"][flag_name]["properties"]["value"]["type"] == "boolean"
 
 
 def test_tui_resolve_parameter_module_exports_only_required_names() -> None:

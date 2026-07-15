@@ -1,11 +1,9 @@
-import tomllib
 from dataclasses import replace
+import tomllib
 from pathlib import Path
 
 import pytest
-
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 
 
@@ -60,14 +58,6 @@ def codex_arg_value(args: list[str], flag: str) -> str | None:
     return args[args.index(flag) + 1] if flag in args else None
 
 
-def codex_schema_name(parameter: AgentCallParameter) -> str:
-    """Return the required Structured Output schema filename for assertions."""
-    schema_path = parameter.structured_output_schema_path
-    if schema_path is None:
-        raise AssertionError("Codex parameter has no Structured Output schema")
-    return schema_path.name
-
-
 def codex_override_config(args: list[str]) -> dict[str, object]:
     """Merge repeated Codex `--config key=value` arguments for assertions."""
     result: dict[str, object] = {}
@@ -90,30 +80,13 @@ def codex_override_config(args: list[str]) -> dict[str, object]:
 def _override_writable_roots(args: list[str]) -> set[str]:
     """Extract sandbox roots that the Codex override allows tests to write."""
     parsed = codex_override_config(args)
-    sandbox = parsed.get("sandbox_workspace_write")
-    if not isinstance(sandbox, dict):
-        return set()
-    roots = sandbox.get("writable_roots")
-    if not isinstance(roots, list):
-        return set()
-    return {root for root in roots if isinstance(root, str)}
+    return set(parsed.get("sandbox_workspace_write", {}).get("writable_roots", []))
 
 
-def _override_permission_filesystem(args: list[str]) -> dict[str, object]:
+def _override_permission_filesystem(args: list[str]) -> dict[str, str]:
     """Extract the explicit permission filesystem map from Codex overrides."""
     parsed = codex_override_config(args)
-    permissions = parsed.get("permissions")
-    if not isinstance(permissions, dict):
-        return {}
-    cmoc = permissions.get("cmoc")
-    if not isinstance(cmoc, dict):
-        return {}
-    filesystem = cmoc.get("filesystem")
-    if not isinstance(filesystem, dict):
-        return {}
-    return {
-        path: access for path, access in filesystem.items() if isinstance(path, str)
-    }
+    return parsed.get("permissions", {}).get("cmoc", {}).get("filesystem", {})
 
 
 def _override_permission_roots(args: list[str], access: str) -> set[str]:
@@ -139,7 +112,7 @@ def _most_specific_permission_access(args: list[str], path: Path) -> str | None:
     matches = [
         (Path(allowed).resolve(), access)
         for allowed, access in _override_permission_filesystem(args).items()
-        if isinstance(access, str) and target.is_relative_to(Path(allowed).resolve())
+        if target.is_relative_to(Path(allowed).resolve())
     ]
     return max(matches, key=lambda item: len(item[0].parts))[1] if matches else None
 
@@ -152,7 +125,8 @@ def _assert_writable(args: list[str], path: Path) -> None:
         return
     target = path.resolve()
     assert any(
-        target.is_relative_to(Path(root)) for root in _override_write_roots(args)
+        target.is_relative_to(Path(root))
+        for root in _override_write_roots(args)
     )
 
 
@@ -164,7 +138,8 @@ def _assert_not_writable(args: list[str], path: Path) -> None:
         return
     target = path.resolve()
     assert not any(
-        target.is_relative_to(Path(root)) for root in _override_write_roots(args)
+        target.is_relative_to(Path(root))
+        for root in _override_write_roots(args)
     )
 
 

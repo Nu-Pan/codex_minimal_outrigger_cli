@@ -1,16 +1,16 @@
 import json
 from pathlib import Path
 
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
+from config.cmoc_config import CmocConfig
 import pytest
+
 from _codex_support import stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo
-
-import commons.runtime_codex_exec as runtime_codex_exec
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
-from config.cmoc_config import CmocConfig
+import commons.runtime_codex_exec as runtime_codex_exec
 
 
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -278,7 +278,4 @@ def test_run_codex_exec_fails_before_codex_when_auth_json_is_not_file(
 
     assert error.summary == "Codex CLI 認証情報が存在しません。"
     assert str(codex_home / "auth.json") in error.detail
-    assert (
-        "既存の Codex home を指すように CODEX_HOME を設定してください。"
-        in error.next_actions
-    )
+    assert "既存の Codex home を指すように CODEX_HOME を設定してください。" in error.next_actions

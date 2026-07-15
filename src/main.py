@@ -1,7 +1,6 @@
 import os
 from collections.abc import Sequence
 from enum import Enum
-from typing import Any
 
 import click
 import typer
@@ -48,8 +47,8 @@ class _CmocTyperGroup(typer.core.TyperGroup):
         complete_var: str | None = None,
         standalone_mode: bool = True,
         windows_expand_args: bool = True,
-        **extra: Any,
-    ) -> Any:
+        **extra: object,
+    ) -> object:
         """補完時以外の Click 例外を cmoc 形式に変換して実行する。"""
         click_kwargs = {
             "args": args,
@@ -67,9 +66,7 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                 render_error(
                     CmocError(
                         "CLI 引数解析に失敗しました。",
-                        [
-                            "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
-                        ],
+                        ["コマンド名、サブコマンド名、option、引数を確認して再実行してください。"],
                         exc.format_message(),
                     )
                 )

@@ -7,6 +7,8 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from config.cmoc_config import CmocConfig
+
 from commons.runtime_config import sync_config
 from commons.runtime_errors import CmocError
 from commons.runtime_git import (
@@ -17,7 +19,6 @@ from commons.runtime_git import (
 )
 from commons.runtime_ollama import ensure_ollama_serves_local_slm
 from commons.runtime_paths import config_path, repo_root
-from config.cmoc_config import CmocConfig
 
 
 def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
@@ -101,10 +102,8 @@ def _ensure_agents_tracked(root: Path) -> bool:
     if run_git(["ls-files", "--", ".agents"], root).stdout.strip():
         return False
     gitkeep = agents / ".gitkeep"
-    if (
-        not gitkeep.exists()
-        and not gitkeep.is_symlink()
-        and _head_entry(root, ".agents/.gitkeep")
+    if not gitkeep.exists() and not gitkeep.is_symlink() and _head_entry(
+        root, ".agents/.gitkeep"
     ):
         run_git(
             ["restore", "--source=HEAD", "--worktree", "--", ".agents/.gitkeep"],
@@ -227,9 +226,9 @@ def _copy_current_index(root: Path) -> Path:
     fd, index_name = tempfile.mkstemp(prefix="cmoc-doctor-restore-index-")
     os.close(fd)
     index_path = Path(index_name)
-    current_index = (
-        root / run_git(["rev-parse", "--git-path", "index"], root).stdout.strip()
-    )
+    current_index = root / run_git(
+        ["rev-parse", "--git-path", "index"], root
+    ).stdout.strip()
     if current_index.exists():
         shutil.copy2(current_index, index_path)
     else:
@@ -288,7 +287,9 @@ def _stage_text(root: Path, index_path: Path, path: str, content: str) -> None:
     _stage_blob(root, index_path, path, mode, blob)
 
 
-def _stage_blob(root: Path, index_path: Path, path: str, mode: str, blob: str) -> None:
+def _stage_blob(
+    root: Path, index_path: Path, path: str, mode: str, blob: str
+) -> None:
     _run_git_with_index(
         ["update-index", "--add", "--cacheinfo", mode, blob, path],
         root,

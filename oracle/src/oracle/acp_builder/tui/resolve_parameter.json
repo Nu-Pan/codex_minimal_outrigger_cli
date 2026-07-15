@@ -78,12 +78,11 @@
             "properties": {
                 "value": {
                     "type": "string",
-                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際の論理ファイルアクセスモード。過不足の無い権限設定が望ましい。skill_authoring_write は、オリジナルプロンプトが repo-local Skill の作成または保守を明示している場合だけ選ぶ。通常の実装、review、indexing、一般的な repo write では選ばない。",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際の論理ファイルアクセスモード。過不足の無い権限設定が望ましい。",
                     "enum": [
                         "readonly",
                         "pure_oracle_read",
                         "repo_write",
-                        "skill_authoring_write",
                         "pure_oracle_write",
                         "realization_write"
                     ]

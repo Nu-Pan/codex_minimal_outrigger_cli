@@ -44,9 +44,7 @@ def worktree_for_branch(root: Path, branch: str) -> Path:
         return path
     raise CmocError(
         "session branch の worktree を特定できません。",
-        [
-            "git worktree list を確認し、session branch の worktree から再実行してください。"
-        ],
+        ["git worktree list を確認し、session branch の worktree から再実行してください。"],
         f"branch: {branch}",
     )
 
@@ -133,7 +131,9 @@ def _read_apply_process_id_file(path: Path) -> ApplyProcessIdentity | None:
     if not path.is_file():
         return None
     try:
-        lines = [line.split() for line in path.read_text().splitlines() if line.strip()]
+        lines = [
+            line.split() for line in path.read_text().splitlines() if line.strip()
+        ]
         if not lines:
             return None
         parts = lines[0]
@@ -175,7 +175,9 @@ def delete_apply_process_id(root: Path, session_id: str) -> None:
         if process is None:
             return
         if any(
-            process_group_has_running_member(child.process_group_id or child.process_id)
+            process_group_has_running_member(
+                child.process_group_id or child.process_id
+            )
             for child in process.child_processes
         ):
             return

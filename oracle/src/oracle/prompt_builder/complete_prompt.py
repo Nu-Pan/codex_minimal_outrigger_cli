@@ -1,21 +1,19 @@
 # cmoc
+from oracle.other.struct_doc import StructBlock, StructDoc
 from copy import deepcopy
 from typing import Callable
 
-from oracle.acp_builder.basic import FileAccessMode
-from oracle.other.struct_doc import StructBlock, StructDoc
-
-from .basic import PlaceholderMap
-from .parts.apply_review_standard import build_apply_review_standard
-
 # local
 from .parts.file_access_rule import build_file_access_rule
-from .parts.index_entry_standard import build_index_entry_standard
-from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
-from .parts.oracle_review_standard import build_review_oracle_standard
 from .parts.oracle_standard import build_oracle_standard
 from .parts.realization_standard import build_realization_standard
+from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
+from .parts.apply_review_standard import build_apply_review_standard
+from .parts.oracle_review_standard import build_review_oracle_standard
+from .parts.index_entry_standard import build_index_entry_standard
 from .parts.routing_rule import build_routing_rule
+from .basic import PlaceholderMap
+from oracle.acp_builder.basic import FileAccessMode
 
 
 def build_complete_prompt(
@@ -24,9 +22,9 @@ def build_complete_prompt(
     summary: str,
     goal: str,
     file_access_mode: FileAccessMode,
-    aux_static_prompt: list[StructDoc] | None = None,
-    aux_dynamic_prompt: list[StructDoc] | None = None,
-    aux_placeholder_def: PlaceholderMap | None = None,
+    aux_static_prompt: list[StructDoc] = list(),
+    aux_dynamic_prompt: list[StructDoc] = list(),
+    aux_placeholder_def: PlaceholderMap = dict(),
     oracle_and_realization_basic: bool = False,
     oracle_standard: bool = False,
     realization_standard: bool = False,
@@ -89,10 +87,6 @@ def build_complete_prompt(
     return:
         agent call にそのまま渡すことができる完全なプロンプト
     """
-    aux_static_prompt = [] if aux_static_prompt is None else aux_static_prompt
-    aux_dynamic_prompt = [] if aux_dynamic_prompt is None else aux_dynamic_prompt
-    aux_placeholder_def = {} if aux_placeholder_def is None else aux_placeholder_def
-
     # プレースホルダマップ
     if aux_placeholder_def:
         ph_map = deepcopy(aux_placeholder_def)
@@ -115,11 +109,7 @@ def build_complete_prompt(
     ]
 
     # 構築ユーティリティ
-    def _extend_static_prompt(
-        build_fn: Callable[..., tuple[PlaceholderMap, StructDoc]],
-        *args: object,
-        **kwargs: object,
-    ) -> None:
+    def _extend_static_prompt(build_fn: Callable, *args, **kwargs):
         temp_ph_map, temp_prompt = build_fn(*args, **kwargs)
         ph_map.update(**temp_ph_map)
         prompt.append(temp_prompt)

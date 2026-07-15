@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import Literal
-
 from oracle.other.struct_doc import StructDoc
 
 
@@ -16,7 +15,7 @@ class Standard:
         title: str,
         backgrounds: list[str],
         requirements: list["Requirement"],
-        examples: list[str] | None = None,
+        examples: list[str] = list(),
     ):
         # title
         # - この standard の見出し
@@ -25,7 +24,6 @@ class Standard:
         # - この standard が必要になる背景・前提
         # - 必須フィールド
         # - requirements と内容が重複しないように注意
-        examples = [] if examples is None else examples
         if (
             isinstance(backgrounds, list)
             and len(backgrounds) > 0

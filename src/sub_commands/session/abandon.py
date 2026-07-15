@@ -9,8 +9,8 @@ from cmoc_runtime import (
     repo_root,
     require_clean_worktree,
     run_cli_subcommand,
-    run_git,
     start_subcommand_step,
+    run_git,
     work_root,
     write_state,
 )
@@ -35,9 +35,7 @@ def _cmoc_session_abandon_body() -> None:
     start_subcommand_step(2, "事前条件を確認", "validate preconditions")
     _session_id, path, state = load_state_for_branch(repo, branch)
     if not branch.startswith("cmoc/session/"):
-        raise CmocError(
-            "session abandon は session branch 上で実行してください。", [], branch
-        )
+        raise CmocError("session abandon は session branch 上で実行してください。", [], branch)
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError("session abandon の事前条件を満たしていません。", [], str(path))
     require_clean_worktree(work)

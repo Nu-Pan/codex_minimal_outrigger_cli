@@ -17,14 +17,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-# jsonschema does not publish inline typing; calls below stay behind schema files.
-from jsonschema import validate  # type: ignore[import-untyped]
+from jsonschema import validate
 
 from basic.acp import AgentCallParameter
-from commons.runtime_codex_logging import (
-    emit_codex_call_console,
-    format_codex_call_error,
-)
+from config.cmoc_config import CmocConfig
+
+from commons.runtime_config import load_config
 from commons.runtime_codex_profile import (
     codex_error_text,
     codex_subprocess_env,
@@ -40,8 +38,11 @@ from commons.runtime_codex_profile import (
     run_codex_subprocess,
     validate_codex_home,
 )
-from commons.runtime_config import load_config
 from commons.runtime_errors import CmocError
+from commons.runtime_codex_logging import (
+    emit_codex_call_console,
+    format_codex_call_error,
+)
 from commons.runtime_git import status_path_statuses
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
@@ -53,7 +54,7 @@ from commons.runtime_paths import (
     work_root,
 )
 from commons.runtime_results import CodexExecResult
-from config.cmoc_config import CmocConfig
+
 
 _QUOTA_CONDITION = threading.Condition()
 _QUOTA_POLLING = False
@@ -61,11 +62,6 @@ _QUOTA_PROBE_AVAILABLE = False
 _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
-
-
-def _quota_polling_finished() -> bool:
-    """Return whether the representative quota probe has released waiters."""
-    return not _QUOTA_POLLING
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -158,10 +154,7 @@ def _next_codex_log_timestamp() -> str:
     global _LAST_CODEX_LOG_TIMESTAMP
     with _CODEX_LOG_TIMESTAMP_LOCK:
         current = timestamp()
-        if (
-            _LAST_CODEX_LOG_TIMESTAMP is not None
-            and current <= _LAST_CODEX_LOG_TIMESTAMP
-        ):
+        if _LAST_CODEX_LOG_TIMESTAMP is not None and current <= _LAST_CODEX_LOG_TIMESTAMP:
             current_dt = datetime.strptime(
                 _LAST_CODEX_LOG_TIMESTAMP[:-3], "%Y-%m-%d_%H-%M_%S_%f"
             )
@@ -364,7 +357,6 @@ def run_codex_exec(
         if error is not None:
             payload["error"] = error
         logger.event("codex_call", **payload)
-
     def codex_exec_result_from_paths(
         result: subprocess.CompletedProcess[str],
         *,
@@ -400,9 +392,7 @@ def run_codex_exec(
     resume_token: str | None = None
 
     while True:
-        ts, prompt_path, stdout_path, stderr_path, output_path, call_path = (
-            new_log_paths()
-        )
+        ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
         output_jsonl_path = output_path.with_suffix(".jsonl")
         current_argv = build_argv(output_path, resume_token)
         _write_prompt_log(prompt_path, parameter.prompt)
@@ -447,7 +437,12 @@ def run_codex_exec(
         capacity_error = is_capacity_error(result.stdout)
         quota_error = is_quota_error(result.stdout)
         unexpected_error = is_unexpected_error(result.stdout)
-        if result.returncode != 0 or capacity_error or quota_error or unexpected_error:
+        if (
+            result.returncode != 0
+            or capacity_error
+            or quota_error
+            or unexpected_error
+        ):
             if (
                 capacity_error
                 and not unexpected_error
@@ -494,7 +489,7 @@ def run_codex_exec(
                             "Codex CLI quota wait: waiting for representative probe",
                             flush=True,
                         )
-                        _QUOTA_CONDITION.wait_for(_quota_polling_finished)
+                        _QUOTA_CONDITION.wait_for(lambda: not _QUOTA_POLLING)
                         waited_sec = time.perf_counter() - wait_started_at
                         quota_wait_sec += waited_sec
                         if logger is not None:
@@ -598,9 +593,7 @@ def run_codex_exec(
                             probe_output_path,
                             probe_call_path,
                         ) = new_log_paths()
-                        probe_output_jsonl_path = probe_output_path.with_suffix(
-                            ".jsonl"
-                        )
+                        probe_output_jsonl_path = probe_output_path.with_suffix(".jsonl")
                         probe_argv = _base_exec_argv(
                             probe_override_args, probe_codex_cwd
                         )
@@ -713,9 +706,7 @@ def run_codex_exec(
                             # not recoverable by waiting for quota reset.
                             raise CmocError(
                                 "Codex CLI quota availability probe が失敗しました。",
-                                [
-                                    "stderr/stdout log を確認して原因を解消してください。"
-                                ],
+                                ["stderr/stdout log を確認して原因を解消してください。"],
                                 _codex_failure_detail(
                                     classification="quota availability probe failed",
                                     returncode=poll.returncode,

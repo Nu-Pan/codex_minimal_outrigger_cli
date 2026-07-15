@@ -12,6 +12,12 @@ import subprocess
 from pathlib import Path
 
 import pytest
+
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
+from commons.runtime_codex_profile import build_codex_override_args
+from config.cmoc_config import CmocConfig
+
 from _codex_support import (
     _assert_not_writable,
     _assert_writable,
@@ -19,11 +25,6 @@ from _codex_support import (
     _override_permission_roots,
 )
 from _git_support import make_repo, run_git
-
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
-from commons.runtime_codex_profile import build_codex_override_args
-from config.cmoc_config import CmocConfig
 
 
 @pytest.mark.parametrize(
@@ -72,7 +73,9 @@ def test_codex_overrides_readonly_modes_do_not_inject_ignored_gap_writes(
     _assert_not_writable(override_args, root / "oracle" / "spec.md")
     _assert_not_writable(override_args, root / "build" / "artifact.txt")
     _assert_not_writable(override_args, root / "memo" / "private.md")
-    _assert_not_writable(override_args, root / ".cmoc" / "gu" / "state.json")
+    _assert_not_writable(
+        override_args, root / ".cmoc" / "gu" / "state.json"
+    )
 
 
 @pytest.mark.parametrize(
@@ -81,7 +84,6 @@ def test_codex_overrides_readonly_modes_do_not_inject_ignored_gap_writes(
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
         FileAccessMode.REPO_WRITE,
-        FileAccessMode.SKILL_AUTHORING_WRITE,
         FileAccessMode.NO_RULE,
     ],
 )
@@ -137,7 +139,9 @@ def test_codex_overrides_no_rule_uses_root_with_fixed_protected_paths(
         root,
     )
 
-    assert _override_permission_roots(override_args, "write") == {str(root.resolve())}
+    assert _override_permission_roots(override_args, "write") == {
+        str(root.resolve())
+    }
     for relative in (
         ".agents/blocked.md",
         ".cmoc/gu/ar/state.json",
@@ -151,80 +155,6 @@ def test_codex_overrides_no_rule_uses_root_with_fixed_protected_paths(
         _assert_not_writable(override_args, root / relative)
     _assert_writable(override_args, root / ".cmoc" / "gu" / "state.json")
     _assert_writable(override_args, root / "src" / "new.py")
-
-
-def test_codex_overrides_skill_authoring_opens_only_agents_skills(
-    tmp_path: Path,
-) -> None:
-    """Skill authoring mode が `.agents/skills` 以外の保護を維持する。"""
-    root = make_repo(tmp_path)
-    skills = root / ".agents" / "skills"
-    existing_skill = skills / "existing"
-    existing_skill.mkdir(parents=True)
-    (root / ".agents" / ".gitkeep").write_text("")
-    (existing_skill / "SKILL.md").write_text("---\nname: existing\n---\n")
-    (existing_skill / "AGENTS.md").write_text("protected\n")
-    (existing_skill / "INDEX.md").write_text("protected\n")
-
-    override_args = build_codex_override_args(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.SKILL_AUTHORING_WRITE,
-            "prompt",
-            None,
-        ),
-        CmocConfig(),
-        root,
-    )
-
-    filesystem = _override_permission_filesystem(override_args)
-    assert filesystem[str((root / ".agents").resolve())] == "read"
-    assert filesystem[str(skills.resolve())] == "write"
-    _assert_writable(override_args, root / "src" / "new.py")
-    _assert_writable(override_args, existing_skill / "SKILL.md")
-    _assert_writable(override_args, skills / "new-skill" / "SKILL.md")
-    _assert_not_writable(override_args, root / ".agents" / ".gitkeep")
-    _assert_not_writable(override_args, root / ".agents" / "other" / "file.md")
-    _assert_not_writable(override_args, existing_skill / "AGENTS.md")
-    _assert_not_writable(override_args, existing_skill / "INDEX.md")
-    _assert_not_writable(override_args, root / ".git" / "config")
-    _assert_not_writable(override_args, root / ".codex" / "config.toml")
-    _assert_not_writable(override_args, root / ".cmoc" / "gu" / "ar" / "state.json")
-    _assert_not_writable(override_args, root / "memo" / "private.md")
-
-
-@pytest.mark.parametrize(
-    "mode",
-    [
-        FileAccessMode.REALIZATION_WRITE,
-        FileAccessMode.PURE_ORACLE_WRITE,
-        FileAccessMode.REPO_WRITE,
-        FileAccessMode.NO_RULE,
-    ],
-)
-def test_normal_write_modes_cannot_modify_repo_local_skills(
-    tmp_path: Path, mode: FileAccessMode
-) -> None:
-    """専用 mode 以外では repo-local Skill を書き換えられない。"""
-    root = make_repo(tmp_path)
-    skill_file = root / ".agents" / "skills" / "existing" / "SKILL.md"
-    skill_file.parent.mkdir(parents=True)
-    skill_file.write_text("---\nname: existing\n---\n")
-
-    override_args = build_codex_override_args(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            mode,
-            "prompt",
-            None,
-        ),
-        CmocConfig(),
-        root,
-    )
-
-    _assert_not_writable(override_args, skill_file)
 
 
 @pytest.mark.parametrize(
@@ -296,7 +226,8 @@ def test_codex_overrides_does_not_derive_permissions_from_ignored_dir(
     filesystem = _override_permission_filesystem(override_args)
     build_root = (root / "build").resolve()
     assert all(
-        key == ":workspace_roots" or not Path(key).resolve().is_relative_to(build_root)
+        key == ":workspace_roots"
+        or not Path(key).resolve().is_relative_to(build_root)
         for key in filesystem
     )
     _assert_writable(override_args, root / "src" / "main.py")
@@ -375,10 +306,6 @@ def test_codex_overrides_are_invariant_to_ignored_subtree_contents(
         (FileAccessMode.REPO_WRITE, "AGENTS.md"),
         (FileAccessMode.REPO_WRITE, "INDEX.md"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
-        (FileAccessMode.SKILL_AUTHORING_WRITE, ".agents/other/blocked.md"),
-        (FileAccessMode.SKILL_AUTHORING_WRITE, ".git/config"),
-        (FileAccessMode.SKILL_AUTHORING_WRITE, "AGENTS.md"),
-        (FileAccessMode.SKILL_AUTHORING_WRITE, "INDEX.md"),
     ],
 )
 def test_codex_overrides_rejects_disallowed_extra_writable_paths(
@@ -435,7 +362,10 @@ def test_codex_overrides_allows_new_root_ancillary_file(
         root,
     )
     _assert_writable(baseline_args, extra)
-    assert _override_permission_roots(baseline_args, "write") == {str(root.resolve())}
+    assert _override_permission_roots(baseline_args, "write") == {
+        str(root.resolve())
+    }
+
 
 
 @pytest.mark.parametrize(
@@ -505,7 +435,9 @@ def test_codex_overrides_does_not_expand_explicit_ignored_directory(
         extra_writable_paths=[target],
     )
 
-    assert _override_permission_roots(override_args, "write") == {str(target.resolve())}
+    assert _override_permission_roots(override_args, "write") == {
+        str(target.resolve())
+    }
     filesystem = _override_permission_filesystem(override_args)
     assert all(
         key == ":workspace_roots"
@@ -522,7 +454,6 @@ def test_codex_overrides_does_not_expand_explicit_ignored_directory(
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
         FileAccessMode.REPO_WRITE,
-        FileAccessMode.SKILL_AUTHORING_WRITE,
         FileAccessMode.NO_RULE,
     ],
 )

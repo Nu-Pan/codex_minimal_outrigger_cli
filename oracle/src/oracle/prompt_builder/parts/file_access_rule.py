@@ -1,7 +1,7 @@
 # cmoc
-from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import resolve_repo_root, resolve_work_root
 from oracle.other.struct_doc import StructDoc
+from oracle.acp_builder.basic import FileAccessMode
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
@@ -46,11 +46,10 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     #   よって、`REPO_WRITE` 系ルールでは `INDEX.md` は書き込み禁止。
     # NOTE
     #   memo は agent 不可視のユーザーワークスペースとするので読み書き禁止で固定
-    agents_deny_rule = "`{{work-root}}/.agents` ツリー内は書き込み禁止"
     base_deny_rule = [
         *out_repo_deny_rule,
         "`{{work-root}}/.git` ツリー内は書き込み禁止",
-        agents_deny_rule,
+        "`{{work-root}}/.agents` ツリー内は書き込み禁止",
         "`{{work-root}}/.codex` ツリー内は書き込み禁止",
         "`{{work-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止",
         "`AGENTS.md` は書き込み禁止",
@@ -96,16 +95,6 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
                 *base_deny_rule,
                 # oracle file は書き込み許可
                 # realization file は書き込み許可
-            ]
-        case FileAccessMode.SKILL_AUTHORING_WRITE:
-            # NOTE
-            #   repo-local Skill の作成・保守を明示した TUI 作業専用。
-            #   通常の repo write と同じ範囲に加え、`.agents` のうち
-            #   Skill の標準配置だけを例外的に書き込み可能にする。
-            deny_rule = [
-                *(rule for rule in base_deny_rule if rule != agents_deny_rule),
-                "`{{work-root}}/.agents` ツリー内は、`{{work-root}}/.agents/skills` ツリー内を除いて書き込み禁止",
-                "`{{work-root}}/.agents/skills` ツリー内は、repo-local Skill の作成・保守を明示した作業でだけ書き込み可能",
             ]
         case FileAccessMode.PURE_ORACLE_WRITE:
             # NOTE

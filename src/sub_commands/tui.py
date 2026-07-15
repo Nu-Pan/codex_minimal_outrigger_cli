@@ -5,11 +5,11 @@ from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
-from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
 from acp.builder.tui.resolve_parameter import (
     TUI_FILE_ACCESS_MODES,
     build_tui_resolve_parameter_parameter,
 )
+from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import (
     CmocError,
@@ -19,14 +19,14 @@ from cmoc_runtime import (
     logs_dir,
     repo_root,
     run_cli_subcommand,
+    start_subcommand_step,
     run_codex_exec,
     run_codex_tui,
-    start_subcommand_step,
     timestamp,
     work_root,
 )
-from commons.indexing import enable_indexing_preflight
 from config.cmoc_config import CmocConfig
+from commons.indexing import enable_indexing_preflight
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
 ORIGINAL_PROMPT_TEMPLATE = """<!--
@@ -148,7 +148,7 @@ TODO
 """
 
 CodexExec = Callable[..., CodexExecResult]
-CodexTui = Callable[..., object]
+CodexTui = Callable[..., None]
 
 
 def cmoc_tui_impl() -> None:
@@ -278,9 +278,7 @@ def build_tui_codex_parameter(
 ) -> AgentCallParameter:
     """解決済み JSON から TUI 起動用 AgentCallParameter を構築する。"""
     file_access_mode = FileAccessMode(
-        nested_value(
-            resolved_parameter, "file_access_mode", FileAccessMode.READONLY.value
-        )
+        nested_value(resolved_parameter, "file_access_mode", FileAccessMode.READONLY.value)
     )
     if file_access_mode not in TUI_FILE_ACCESS_MODES:
         raise CmocError(
@@ -325,10 +323,12 @@ def build_tui_codex_parameter(
 def nested_value(data: dict, name: str, default: str) -> str:
     """TUI parameter JSON で `{value: ...}` 形式の項目から文字列値を取り出す。"""
     value = data.get(name)
-    if isinstance(value, dict):
-        nested = value.get("value")
-        if isinstance(nested, str) and nested:
-            return nested
+    if (
+        isinstance(value, dict)
+        and isinstance(value.get("value"), str)
+        and value["value"]
+    ):
+        return value["value"]
     return default
 
 

@@ -3,16 +3,15 @@
 # std
 from pathlib import Path
 
-from oracle.acp_builder.basic import (
-    AgentCallParameter,
-    FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
-)
-from oracle.other.path_model import resolve_repo_root
-
 # cmoc
 from oracle.other.struct_doc import StructDoc, render_as_markdown
+from oracle.other.path_model import resolve_repo_root
+from oracle.acp_builder.basic import (
+    AgentCallParameter,
+    ModelClass,
+    ReasoningEffort,
+    FileAccessMode,
+)
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 

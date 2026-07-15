@@ -4,8 +4,8 @@ acp = Agent Call Parameter
 
 # std
 from dataclasses import dataclass, field
-from enum import StrEnum, auto
 from pathlib import Path
+from enum import StrEnum, auto
 
 # cmoc
 from oracle.other.path_model import resolve_work_root
@@ -60,7 +60,6 @@ class FileAccessMode(StrEnum):
     READONLY = auto()
     PURE_ORACLE_READ = auto()
     REPO_WRITE = auto()
-    SKILL_AUTHORING_WRITE = auto()
     PURE_ORACLE_WRITE = auto()
     REALIZATION_WRITE = auto()
     NO_RULE = auto()

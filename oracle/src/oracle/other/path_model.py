@@ -21,10 +21,10 @@
 """
 
 # std
-import subprocess
-from enum import StrEnum
 from pathlib import Path
+from enum import StrEnum
 from typing import Generator
+import subprocess
 
 
 class RootPathPlaceHolder(StrEnum):
@@ -196,7 +196,7 @@ def resolve_ph_path(real_path: Path, rpph: RootPathPlaceHolder) -> Path:
     except ValueError:
         raise ValueError(
             f"real_path is not matched with rpph (real_path={real_path}, rpph={rpph})"
-        ) from None
+        )
     return Path(rpph.value) / relative_path
 
 
