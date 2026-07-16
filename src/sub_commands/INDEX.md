@@ -1,20 +1,20 @@
 # `apply`
 
 ## Summary
-- `apply` サブコマンドの実装群。apply run の開始・中断・join、branch/worktree と state の管理、Codex による適用処理、結果レポート生成までを扱う。各ファイルは個別の処理責務を持つため、具体的な挙動を調べる際の入口になる。
+- `cmoc apply` サブコマンド群の実装ディレクトリ。abandon・fork・join と、fork のレポート生成を通じて、apply run の開始から cleanup・merge・結果報告までのライフサイクルを扱う。具体的な挙動を調べる際は、対象サブコマンドまたはレポート実装へ進む入口となる。
 
 ## Read this when
-- `cmoc apply` の fork・abandon・join の実行フローや cleanup 条件を確認したいとき。
-- apply run の state、branch、worktree、process tracking、異常時復旧の挙動を調べたいとき。
-- apply fork の結果レポートや変更差分の要約生成を確認したいとき。
+- `cmoc apply` のサブコマンド構成や apply run 全体のライフサイクルを把握したいとき。
+- apply の開始・レビュー修正・commit・収束判定・merge・report・abandon・cleanup のいずれかを変更または調査するとき。
+- apply branch、worktree、process 追跡、session state の連携を、具体的な apply 処理の文脈で確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドの実装を調べたいとき。
-- apply の共通 state 操作、worktree 操作、git 操作だけを確認したいときは、対応する共通 runtime helper を直接読む。
-- 具体的な prompt builder や report 文面など、単一の補助責務だけを調べる場合は、対象の専用実装へ直接進む。
+- apply と無関係なサブコマンドや共通 runtime、Git 操作、session state、process lock の一般実装だけを調査するとき。
+- 特定のサブコマンドの詳細を直接確認する場合は、対象の実装ファイルへ進めるとき。
+- apply 対象ファイル単位の review/fix パラメータや finding schema だけを確認したいとき。
 
 ## hash
-- ebdfb1a05d2865ee25e401710f6808effb207d2d2abbca1dd99e757c687856a8
+- 59ca6d80686f81c5cfc04a10ade1c00fa81122e2848bbc35220570b7394bdef6
 
 # `doctor.py`
 
@@ -51,37 +51,35 @@
 # `indexing.py`
 
 ## Summary
-- `cmoc indexing` サブコマンドを起動する入口。CLI 前提条件の検査、work root での INDEX 生成更新、更新差分の commit までをまとめて追いたいときに読む。
+- `cmoc indexing` サブコマンドの実行入口。現在の work root を対象に、前提条件の検査、排他ロック下での INDEX.md 更新、更新差分の commit、更新件数の表示を行う。
 
 ## Read this when
-- `cmoc indexing` の起動条件や実行フローを確認したい。
-- work root 側の `INDEX.md` 更新と commit が、どの順で・どの責務で行われるかを追いたい。
-- indexing 実行前の安全条件検査を変更したい。
+- INDEX.md の maintenance 処理、`cmoc indexing` の CLI 実行条件、INDEX.md 更新の commit 処理を変更・調査するとき。
 
 ## Do not read this when
-- `update_indexes` の具体的な更新ロジックや commit 内容そのものを見たい場合は、そこを実装する別ファイルを直接読む。
-- 単に CLI 全体の共通起動処理を確認したいだけなら、より上位の subcommand 実装を先に読む。
+- 個別の INDEX.md エントリー内容や、インデックス生成ロジック自体を調べるとき。前者は対象の INDEX.md、後者は `commons.indexing` を直接読む。
 
 ## hash
-- c37ac15e0f461975a999061ec892b3b8f00ae8e1b658187ec38ff3f0f2a2616c
+- 1a10ace893665790d49691c5787a004cd8de79848adf472caa5099c64a4599b6
 
 # `review`
 
 ## Summary
-- `review` 系サブコマンド群の入口となる package 境界と、`review oracle` コマンド本体の実行フローを案内する。ここでは境界確認だけを担う初期化モジュールと、セッション検証から隔離実行、結果集約、report 出力までを追う実行本体を分けて読む。
+- review 系サブコマンド群をまとめる Python package。review oracle の CLI 実行ライフサイクルと、所見検出・対象列挙・INDEX 統合・レポート生成へ進むための入口を提供する。
 
 ## Read this when
-- `review` 系サブコマンド群がどこから始まり、どの実装へ進むべきかを確認したいとき。
-- `review oracle` の実行手順、分岐、エラー終了、中断時の扱いを追いたいとき。
-- review 対象の選定、worktree での隔離実行、report 出力の結び付き方を知りたいとき。
+- review 系サブコマンド群の package 境界や構成を確認したいとき。
+- review oracle の実行ライフサイクルを調べるときは oracle.py を読む。
+- 所見検出、oracle 対象列挙、INDEX 統合、レポート生成の具体的な処理を調べるときは、この階層内の各担当モジュールを読む。
 
 ## Do not read this when
-- `review` 系サブコマンド内の個別 helper の細部だけを見たいとき。
-- 所見本文の描画や対象列挙など、`review oracle` の下位責務だけを直接確認したいとき。
-- package 初期化時の import や公開シンボルの詳細だけを調べたいとき。
+- review oracle の具体的な所見検出ループだけを調べるとき。
+- oracle 対象ファイルの列挙規則だけを調べるとき。
+- review report の表示形式やファイル書き込みだけを調べるとき。
+- review branch の INDEX 変更の commit・merge・conflict 解決だけを調べるとき。
 
 ## hash
-- fd59525ab0031b0d90dab28c37cac0f325e6f574f8e6a3e1e688f2b7e50d6916
+- d0b68039591eb520040c7a01c7dcb12b6d27b65a6108ca7bdf6becb9892758fd
 
 # `review_index.py`
 
@@ -102,111 +100,97 @@
 # `review_loop.py`
 
 ## Summary
-- `cmoc review oracle` の実行ループ本体を扱う。所見の列挙・マージ・検証・採否判定の周回制御、ユーザー中断時の部分結果保持、merge 操作の適用と検証をここで追う。
+- レビュー対象 oracle file の finding 列挙・マージ・妥当性検証・採否判定を連続実行する中核ループ。進捗管理、中断時の部分結果保持、merge operation の検証と適用も担う。
 
 ## Read this when
-- `cmoc review oracle` の処理順、反復回数の打ち切り条件、ダーティフラグの更新、所見 ID の付与や継続条件を確認したいとき。
-- 中断時にどこまでを確定済み結果として残すか、また `KeyboardInterrupt` をどのようにレビュー継続可能な形へ変換するかを確認したいとき。
-- merge 操作の妥当性検証や、所見リストへの適用ルールを確認したいとき。
+- review oracle のループ制御、finding の enumerate/merge/validate/judge 処理を変更・調査するとき
+- KeyboardInterrupt 時の部分結果や評価済みファイルの扱いを確認するとき
+- finding merge operation の適用条件・ID 管理・意味的リトライを確認するとき
 
 ## Do not read this when
-- レビュー対象 oracle の選び方や `--scope` の意味だけを知りたいときは、対象選定とパス解決を扱う別のファイルを読むべき。
-- レビュー結果の Markdown レポート体裁や集計表示だけを確認したいときは、レポート生成側を読むべき。
-- Codex 呼び出し用の個別 prompt 仕様だけを確認したいときは、oracle 側の parameter builder 定義を読むべき。
-- review 以外の apply や session 系のサブコマンド挙動を確認したいとき。
+- review oracle の個別 agent call parameter 生成だけを変更・調査するとき
+- review command のパス解決や CLI 入出力など、ループ本体以外を直接扱うとき
+- review oracle と無関係なサブコマンドの実装を扱うとき
 
 ## hash
-- 966ffb4be92050ae8cc33c95618720cffd6e93f46e824c12696fd37c2121d881
+- d6b04ff683fc8b3f1d106f15426561f9dc2b2d3dbd406c492f7867bd21be3ab6
 
 # `review_paths.py`
 
 ## Summary
-- review 系サブコマンドで使う oracle path の解決と key 化をまとめた入口。finding の `oracle_path` を絶対 path に直し、report や対象照合で同一 oracle file を識別するための正規化を担う。
+- oracle ファイルのパスを安全に解決し、評価対象のリポジトリ相対キーへ変換する補助関数群。絶対パス、oracle-root エイリアス、既知のルートプレースホルダーを扱い、シンボリックリンクを追跡しない正規化を行う。
 
 ## Read this when
-- `review oracle` の finding から参照先を復元したいとき
-- symlink を追跡しない path 正規化や、review 対象の同一性判定を確認したいとき
-- review report や finding 照合で oracle file の表示・集計ずれを追いたいとき
+- oracle_path の解決や oracle file のリポジトリ相対キー化を変更・確認するとき
+- main worktree と cmoc 管理下の isolated worktree のパス境界を確認するとき
 
 ## Do not read this when
-- review の実行手順、ループ制御、レポート本文の構成を変えたいときは、より上位の review orchestration/report 側を読む
-- 対象 oracle file の列挙条件そのものを見たいときは、対象列挙モジュールを読む
-- 単なる表示文言や Markdown の体裁だけを調整したいときは、このファイルではなく report 生成側を読む
+- review report の生成ロジックや oracle 内容そのものを確認したいとき
+- パス解決・oracle キー変換に関係しないサブコマンド処理を変更するとき
 
 ## hash
-- 739dd10ce6e0bfa7b45ee39c2bdef0b4d7cbc791d144480e58fdd77fffeb478c
+- 64d912c294cf5559590fc131006b59474f97885375f456e5050ff1a2e38d80f9
 
 # `review_report.py`
 
 ## Summary
-- レビュー oracle report を Markdown と YAML frontmatter で組み立てて保存する処理があるため、`review oracle` の出力形式、見出し構成、所見の並び順、集計値、保存先決定を確認したいときに読む。
-- 所見の抽出・分類・表示整形・最終 verdict 判定がこの対象の責務なので、レビュー結果の見え方を変える変更や、レポート生成ロジックの修正時に読む。
-- `sub_commands/review_paths.py` のようなパス解決や、レビュー実行そのものの探索・収集ロジックを追う目的ではなく、レポート文面と保存処理だけを見たいときに読む。
+- review oracle の実行結果を Markdown レポートとして保存・描画するモジュール。レポートの保存先、YAML frontmatter、Verdict、評価対象 oracle 一覧、Fatal/Minor 所見の表示を扱う。
 
 ## Read this when
-- `review oracle` のレポート本文、frontmatter、集計値、所見の表示順を変える可能性があるとき。
-- レビュー結果の保存先やファイル名の決め方を確認したいとき。
-- 所見が accept/reject、fatal/minor でどう分かれて表示されるかを確認したいとき。
+- review oracle のレポート形式、判定結果、所見の分類・表示順、評価対象 oracle の一覧を変更または確認するとき
+- review oracle 実行後に生成されるレポートの保存処理やパス表示を変更するとき
 
 ## Do not read this when
-- レビュー対象 oracle file の選定方法やパス抽出の詳細を追いたいだけなら、関連する path 解決側を先に読む。
-- レビュー処理の実行手順や収集ロジック、対象探索の本体を変えたいだけなら、この対象ではなくレビュー実行側を読む。
-- Markdown 報告の見た目ではなく、レビュー判定ルールそのものを変えたいときは、判定元の仕様やロジック側を読む。
+- review oracle の対象 oracle file の選定・評価ロジック自体を変更または確認するとき
+- 他のサブコマンドのレポート形式や、レビュー以外の永続化処理を扱うとき
 
 ## hash
-- f0d2ffa1af56e99015b8f2f1f604e601dc583464a2d831353edcc5405c8d8800
+- fc68feb20231a9c0576da203d66683c72b8b4b67eec4b70d57e3fdd7f98b9c72
 
 # `review_targets.py`
 
 ## Summary
-- review 用 oracle の列挙条件を決める入口。`full` か session scope かで対象集合が変わるため、どの oracle file をレビュー対象に含めるかを判断したいときに読む。
-- 全 oracle file の走査と、review fork 時点から session 開始時点までに変化した oracle file の抽出を行う。review 対象の選定ロジックを確認したいときにこのファイルを読む。
+- review oracle の scope に応じてレビュー対象の oracle file を列挙する。full scope では oracle ツリー全体を対象にし、session scope ではセッション開始コミットから review fork commit までに変更された oracle file に限定する。
 
 ## Read this when
-- review の対象 oracle file をどう決めているかを知りたい。
-- session scope の review で、なぜ変更差分だけが対象になるのかを確認したい。
-- oracle file の列挙方法そのものを調べたいが、個別の review 実装や表示処理ではなく対象選定の入口を見たい。
+- review oracle の対象ファイル列挙処理を変更・確認するとき
+- full scope と session scope の対象範囲やコミット差分の扱いを確認するとき
 
 ## Do not read this when
-- review 対象の具体的な表示や実行処理を追いたい場合は、対象選定の後段の実装を読む。
-- oracle file の定義や判定基準そのものを知りたい場合は、oracle 側の仕様断片を読む。
-- review 対象の全体設計やコマンド構成を知りたいだけなら、このファイルではなく上位のコマンド定義を読む。
+- oracle file の内容やレビュー実行そのものを変更・確認するとき
+- review 対象列挙と無関係なサブコマンドの処理を変更・確認するとき
 
 ## hash
-- 76065333206f76110f8fd22ca0b12ba596c4ac579c061039705d0b7ce83a8516
+- 5ec510cfdccdb608eb26afaabebb8e9075b417b1a87c3300026bf06703324b02
 
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装パッケージ。session パッケージの初期化入口と、fork・join・abandon の各ライフサイクル処理を収める。
-- session branch、home branch、state file、Git 操作、失敗時の rollback、join 時の conflict 解消と結果表示を扱う下位実装への入口。
+- session 系サブコマンドの実装パッケージ。session の fork、join、abandon と、パッケージ初期化モジュールを下位要素として収める入口。
 
 ## Read this when
-- session の作成・参加・破棄の挙動や、session branch と state のライフサイクルを調べるとき。
-- session join の merge conflict 検出・解消依頼・stage・commit・branch 削除を調べるとき。
-- session 配下の実装構成や、パッケージ初期化処理の有無を確認するとき。
+- session サブコマンド全体の構成や、fork・join・abandon のどの実装へ進むべきかを確認したいとき。
+- session branch、session state、merge、破棄処理のいずれかを調査・変更するとき。
 
 ## Do not read this when
-- 共通 CLI ルーティング、サブコマンド登録、状態モデル、Git の低レベル操作だけを調べるとき。
-- session 以外のサブコマンドを調べるとき。
-- join の conflict resolution builder など、session 実装内の特定処理だけを直接調べるときは、その定義元を読む方が適切。
+- 共通 CLI ルーティングや session 以外のサブコマンドを調べるとき。
+- 特定の session サブコマンドの詳細な挙動だけを調べるとき。その場合は対応する下位実装を直接読む。
 
 ## hash
-- e9a707c2ffea5a14ea987c241ed5030cdac1bbcafe8c543cd8fbab935be5c367
+- 2ddc936b16739248793392ee38e5ae623a8c4422f180d881c9019185f1e1f834
 
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実行フローを担当する実装。利用者向けプロンプトの初期化・編集・読み込み、実行パラメータの解決、TUI 起動、関連する ignore 保証を扱う。TUI の起動処理やプロンプトからのパラメータ変換を調べる入口。
+- `cmoc tui` サブコマンドの実行フローと補助処理を担う実装ファイル。利用者向けプロンプトの初期化・編集・読み込み、実行パラメータの解決、Codex TUI の起動、TUI 用ファイルアクセスモードの検証を扱う。TUI サブコマンドの挙動変更や関連するパラメータ構築・エディタ選択・ignore 保証を調べる際の入口。
 
 ## Read this when
-- `cmoc tui` の動作、エディタ選択、プロンプトテンプレート、TUI 起動前後の処理を変更・調査するとき
-- 解決済みパラメータから `AgentCallParameter` を構築する処理や、TUI で許可されるファイルアクセスモードを確認するとき
-- TUI サブコマンドのログ領域や `.cmoc` の ignore 保証を調査するとき
+- `cmoc tui` の起動処理、プロンプト編集、TUI 起動パラメータ、ファイルアクセスモード検証を変更または調査するとき
+- TUI 実行前の `.cmoc` ignore 保証やエディタ選択・終了エラーの挙動を確認するとき
 
 ## Do not read this when
-- TUI のパラメータ定義そのものや、TUI 起動パラメータの詳細仕様だけを調べるときは、対応する `acp.builder.tui` の実装を直接読む
-- `cmoc tui` と無関係な CLI サブコマンド、一般的な設定読み込み、共有ランタイムの挙動だけを調べるとき
+- TUI 以外のサブコマンドの実装を調べるとき
+- 共通 CLI ランタイム、設定、ログ、パラメータビルダー自体の詳細を直接調べるときは、それらの定義元を読む
 
 ## hash
-- 0e4aea977ac81ad59dc3b88e371aeedeca45632926cdf7cd1f6c6a418839e3b0
+- 66edc6a24c58eeba12a447d3a68e8c7bdada3c440e6ff9fd788f8ae5daff1a84

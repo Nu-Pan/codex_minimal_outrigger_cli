@@ -18,20 +18,19 @@
 # `enumerate_finding.py`
 
 ## Summary
-- `oracle.acp_builder.review.oracle.enumerate_finding` へ渡す review finding enumeration の引数を組み立てる互換入口。canonical な oracle 実装へ委譲しつつ、symlink された oracle path をレビューした事実が prompt から落ちないよう、表示上の path だけを lexical path に戻す処理を扱う。
+- レビュー finding 列挙用の互換 import 経路。canonical oracle 実装へ委譲し、symlink 経由でレビューした場合は prompt 内の oracle path を lexical path に戻して呼び出し事実を保持する。既存の互換 import 呼び出し元を調査・変更する際の入口。
 
 ## Read this when
-- `acp.builder.review.oracle.enumerate_finding` から import している呼び出し元を、canonical な oracle 実装へ移す前後で挙動確認したいとき。
-- symlink 経由で参照された oracle path が prompt 上でどう表現されるべきかを確認したいとき。
-- review oracle 用の parameter 生成と、その prompt への path 埋め込みの差分だけを見たいとき。
+- `acp.builder.review.oracle.enumerate_finding` の import 経路や呼び出し元を変更するとき
+- symlink 経由の oracle path が review prompt にどう反映されるかを確認するとき
+- canonical builder への移行完了と互換経路の削除可否を判断するとき
 
 ## Do not read this when
-- canonical な review finding enumeration 本体の生成ロジックを追いたいときは、対応する oracle 側の実装を読む。
-- 互換 import 経路の維持条件や削除条件だけを確認したいときは、このファイルではなく呼び出し元の移行状況を読む。
-- レビュー対象 path の解決や symlink 判定以外の review oracle 生成処理を探しているときは、別の builder を読む。
+- canonical な finding 列挙処理そのものの仕様や実装を確認したいとき
+- レビュー finding 列挙と無関係な builder や oracle path の処理を調査するとき
 
 ## hash
-- a0c4aad11a35bfe59c51d03b112571729c9a506f3d8feaed98309c5c26d133aa
+- 2ffda7572a382caaacc41ce17c74586aea14e3b5d05b26e53c02bd5df8572d34
 
 # `judge_finding.py`
 

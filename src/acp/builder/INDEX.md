@@ -66,44 +66,36 @@
 # `quota_probe.py`
 
 ## Summary
-- `oracle.acp_builder.quota_probe` が配布されない環境でも quota availability probe を成立させる互換入口を扱う。正本 builder への委譲と、未配布時に返す最小 probe の分岐を確認したいときに読む。
-- `AgentCallParameter` を受けて probe 用パラメータへ変換する責務を持つ。呼び出し元の cwd を維持しつつ、代替経路の存在条件やフォールバック内容を見たいときに読む。
+- quota availability probe 用の互換入口。任意提供される oracle builder があればそれへ委譲し、未配布時は空 stdin・最小モデル・低推論 effort・読み取り専用の最小 probe を生成する。quota polling を利用する実装や、正本 builder の配布有無に関わる呼び出し経路の確認時に読む。
 
 ## Read this when
-- quota availability probe の互換動作や fallback の有無を確認したい。
-- optional な oracle 側 builder が無い配布形態でも動くべきかを判断したい。
-- probe の既定値が最小構成になっている理由を知りたい。
+- quota availability probe の AgentCallParameter 生成経路を確認・変更するとき
+- oracle builder が存在しない配布形態での互換 fallback や quota polling の挙動を確認するとき
 
 ## Do not read this when
-- quota probe の本来の仕様や Codex 呼び出し規約そのものを確認したい場合は、正本側の builder か oracle/doc/app_spec/codex_exec_rule.md を読む。
-- acp builder 全体の別機能を探しているだけなら、この互換入口ではなく該当 builder を直接読む。
+- 正本の probe 仕様や canonical builder の内容を確認したいときは、先に oracle 側の対応文書・実装を読む
+- quota probe と無関係な AgentCallParameter builder や CLI 処理を調べるとき
 
 ## hash
-- 102d844da2e0449cf34e4eb8c6dc71fd44068a7d8df835340a7b349dad321a42
+- f2e851afa17cb6748655efd734212191c964231c0d9bc6cfb608523dbeb99fd9
 
 # `review`
 
 ## Summary
-- `__init__.py` は review builder 系の互換 import だけを支える入口。旧 `acp.builder.review` 参照を残す必要があるか、あるいは互換層を削除できるかを判断するときに読む。
-- `oracle` は review builder の互換 shim と正本 oracle への橋渡しをまとめた入口。旧 import 経路の維持可否と、review finding の生成・判定・擁護・反証のどの入口に進むべきかを切り分けるときに読む。
+- review builder 周辺の互換 import 経路をまとめるディレクトリ。旧来の package 初期化と review oracle の互換層を入口として、canonical 実装への委譲、finding 処理、パラメータ生成、移行・削除可否を確認する。
 
 ## Read this when
-- `__init__.py` の互換 import を確認する。
-- `__init__.py` を含む review builder 周辺の古い参照を削除できるか判断する。
-- `oracle` 配下で旧い import 経路の互換維持条件や削除可否を確認する。
-- `oracle` 配下で review finding の所見生成、判定、擁護、反証のどの入口に進むべきか切り分ける。
-- `oracle` 配下の symlink 経由の path 表示や既知の互換修正の位置を確認する。
+- review builder 周辺の import 互換性や旧来の参照を調査するとき
+- review oracle の互換経路、補正、canonical 実装への橋渡しを確認するとき
+- 互換 package や shim の残存理由・削除条件を判断するとき
 
 ## Do not read this when
-- `__init__.py` で review builder の実処理や変換ロジックを調べたい。
-- `__init__.py` で新しい公開 API や利用者向け機能の仕様を確認したい。
-- `__init__.py` と無関係な builder 実装を変更したい。
-- `oracle` で新しい review 機能全体の設計や、oracle 以外の builder 群を探したい。
-- `oracle` で互換 shim ではなく正本の review oracle 本体だけを直接追いたい。
-- `oracle` 配下の薄い入口ではなく、実装本体の詳細ロジックを確認したい。
+- レビュー finding の canonical な実処理や検証ロジックだけを確認したいとき
+- 互換経路と無関係な builder、oracle path 処理、別サブコマンドの実装を調べるとき
+- 新しいレビュー機能や利用者向け公開 API の仕様を確認したいとき
 
 ## hash
-- dcb356d75e263d93bc452e01a1ba25f2a2d653e27cda46185b96b1a1e25f3077
+- 1e1407221a9ce3abcda4fd9dbd7690d10ed9bcaabd4f52fd1811038aaba0be99
 
 # `session`
 

@@ -17,16 +17,16 @@
 # `builder`
 
 ## Summary
-- `acp.builder` 配下の互換入口と builder 関連の実装群を案内するディレクトリ。既存の `acp.builder.*` import を維持しつつ、`oracle.acp_builder` の正本実装へ委譲する入口、apply・quota probe・review・session・TUI・indexing の各領域への進入点を提供する。
+- `acp.builder` の互換入口群をまとめるディレクトリ。旧来の `acp.builder.*` import を維持しながら、`oracle.acp_builder` 側の正本実装や各 realization builder・probe・TUI 入口へ到達するための境界を提供する。
 
 ## Read this when
-- `acp.builder.*` の既存 import 互換、正本側への委譲経路、または配下の builder 領域を横断して読む先を判断したいとき。
-- apply、quota availability probe、indexing、review、session、TUI のいずれかの互換入口や関連実装を調査・変更するとき。
-- 共通 builder 処理の配置や、現在本文ファイルが存在する下位要素を確認したいとき。
+- `acp.builder` 配下の互換 import 経路、公開名、モジュール探索順を確認するとき。
+- apply、indexing、review、session、TUI、quota probe などの互換入口や canonical 実装への委譲先を調べるとき。
+- 互換層の維持・整理・削除可否を判断するとき。
 
 ## Do not read this when
-- 特定機能の正本仕様や実装本体だけを確認したい場合は、該当する下位モジュールまたは `oracle.acp_builder` 側を直接読む。
-- `acp.builder.*` の互換入口と無関係な機能、または個別 builder の内部ロジックだけを追う場合は、このディレクトリ案内を読む必要はない。
+- 特定機能の正本仕様や本体実装を確認したいときは、対応する `oracle.acp_builder` 側または委譲先の実体を直接読む。
+- 互換入口と無関係な個別サブコマンドの内部ロジックを調べるとき。
 
 ## hash
-- eb2908b68c2d042a50a4f936d04a599ceb882217dbf906aca869a3cd1676b3c6
+- 77153bacc00daaa85ea56f7e60b670507979857153d8b8daa88c48df20c4d02e

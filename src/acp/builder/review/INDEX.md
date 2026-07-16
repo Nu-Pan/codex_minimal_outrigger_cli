@@ -19,17 +19,17 @@
 # `oracle`
 
 ## Summary
-- `acp.builder.review.oracle` の互換層と正本 oracle への橋渡しをまとめた領域。旧 import 経路を維持する薄い shim と、review finding の生成・判定・擁護・反証に関する入口を分けて読む。
+- レビュー用 oracle builder の互換 import 経路を集約するディレクトリ。finding の列挙・判定・マージ・擁護・反証用パラメータ生成を扱い、canonical な oracle 実装への橋渡しや、必要な最小補正を担う。各ファイルの互換性維持・移行・削除可否を確認する入口。
 
 ## Read this when
-- 旧い import 経路の互換維持条件や削除可否を確認したいとき。
-- review oracle の所見生成、判定、擁護、反証のどの入口に進むべきかを切り分けたいとき。
-- symlink 経由の path 表示や、既知の互換修正がどこで入るかを確認したいとき。
+- レビュー finding の互換 import 経路、canonical 実装への委譲、呼び出し元の移行状況を調査するとき。
+- review oracle の prompt やパラメータ生成で、互換層が加える補正とその削除条件を確認するとき。
+- 旧来の import 経路を維持する必要性や、互換 package・shim を削除できるか判断するとき。
 
 ## Do not read this when
-- 新しい review 機能全体の設計や、oracle 以外の builder 群を探したいとき。
-- 互換 shim ではなく、正本の review oracle 本体だけを直接追いたいとき。
-- この配下のどの薄い入口でもなく、実装本体の詳細ロジックを確認したいとき。
+- canonical なレビュー finding 列挙・判定・検証処理の仕様や実装詳細だけを確認したいとき。
+- 互換経路と無関係な builder、oracle path 処理、または別サブコマンドのパラメータ生成を調べるとき。
+- 新しいレビュー機能の仕様を確認したいとき。
 
 ## hash
-- 4bbc0b556f3dca37ae6d63ef5e75a17e9a6a5990ab2e8c941306b9ac27ce3917
+- a73562e940351b2377912d69014bd9d9c305f33eacaf5c5ec4f0ea0eaa5c4f0f
