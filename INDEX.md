@@ -75,23 +75,26 @@
 # `oracle`
 
 ## Summary
-- cmoc アプリケーション仕様断片と設計・開発規則をまとめる正本文書群への入口。CLI 補完、Codex 呼び出し、ログ、前処理、プロンプト、実行隔離、session 状態、branch/run 境界、サブコマンドなどの仕様を扱う。
-- ACP builder、prompt builder、設定・ルートパス解決、規範文書や構造化 markdown を扱う共通 oracle src への入口。
+- cmoc のアプリケーション仕様断片を収める領域。CLI、サブコマンド、実行前処理、session・run の状態境界、ログ、agent call、provider、run isolation、利用手順、Python 実装・CLI・テスト規則などの詳細仕様へ進む入口。
+- ACP builder と prompt builder、設定・ルートパス解決、規範文書・構造化 markdown 処理など、agent call と共通実行基盤の正本仕様を扱う領域。個別実装へ進む前に、共通基盤の仕様確認が必要な場合の入口。
 
 ## Read this when
-- cmoc の個別機能やサブコマンドの正本仕様を確認・変更するとき。
-- CLI 補完、Codex 呼び出し、ログ、前処理、プロンプト生成、実行隔離、session 状態、branch/run 境界を調べるとき。
-- agent call のパラメータ、prompt の組み立て、設定、ルートパス、構造化 markdown の検査・レンダリングを確認するとき。
-- 個別対象へ進む前に、仕様文書または共通 oracle src の入口を選ぶ必要があるとき。
+- cmoc の CLI 挙動、サブコマンド、実行前処理、状態管理、ログ、agent call、Ollama provider、run isolation の仕様を調べるとき。
+- session や run の branch・worktree 境界を確認するとき。
+- 採用しなかった設計案、Python 実装、CLI 構成、テストの共通規則を確認するとき。
+- agent call のモデル・推論強度・ファイルアクセス・Structured Output・作業ディレクトリ、prompt 構成、設定、パス解決、構造化 markdown 処理を確認するとき。
+- 複数の仕様領域から、作業対象に直接関係する下位文書や共通基盤を選ぶ必要があるとき。
 
 ## Do not read this when
-- INDEX.md の自動生成・更新規則だけを確認したいとき。
-- リポジトリ全体の共通運用前提だけを確認したいとき。
-- 特定文書や実装の詳細が明らかで、個別対象を直接読める単純な作業のとき。
-- 個別サブコマンドの実行フローや生成物保存処理だけを調査し、共通基盤を確認する必要がないとき。
+- INDEX.md の生成・更新規則だけを確認したいとき。
+- git、branch、状態ファイルなどの基礎概念だけを確認したいとき。
+- 特定仕様の詳細や個別実装が明らかな場合。
+- 個別サブコマンドの実行フロー、CLI 入出力、ファイル探索、生成物保存の詳細だけを調べるとき。
+- 特定の oracle file や realization file の具体的な仕様・実装だけを確認するとき。
+- 採用しなかった設計案だけを確認したいとき。
 
 ## hash
-- 56ab59fb93d7b5c88f13da1832c75d3079139818b5bef3e859fbb1ccda00133e
+- 0278044c1d0548ffb1b36734eab5eae1170a9e372170ef1341d6ac9ca97c4609
 
 # `pyproject.toml`
 

@@ -40,18 +40,19 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が `codex exec` を呼び出す際の正本規約。環境変数、preflight validation、argv による設定上書き、sandbox、permission profile の禁止、プロンプト・ログ・Structured Output・並列実行・失敗時のリトライや待機など、呼び出し全体の必須条件を定める。Codex CLI 呼び出し処理や AgentCallParameter builder の実装を確認・変更する際の入口。
+- Codex CLI の `codex exec` 呼び出しに関する正本仕様断片。環境変数、preflight validation、argv による設定上書き、sandbox、permission profile 禁止、モデル・推論設定、プロンプト・ログ・Structured Output の受け渡し、並列実行、失敗時の再試行・待機・復帰方針を定める。Codex CLI 呼び出し処理や AgentCallParameter builder の仕様を確認する際の入口。
 
 ## Read this when
-- cmoc の Codex CLI 呼び出し方法、引数、環境変数、sandbox、ログ保存、Structured Output、失敗時処理を確認または変更するとき
-- AgentCallParameter builder と Codex CLI 呼び出し規約の整合性を確認するとき
+- cmoc または AgentCallParameter による Codex CLI 呼び出しを実装・変更・レビューするとき
+- Codex CLI の sandbox、承認設定、モデル、reasoning effort、Structured Output、ログ保存方法を確認するとき
+- Codex CLI の quota 枯渇、レートリミット、サーバー一時障害などの失敗時処理を確認するとき
 
 ## Do not read this when
-- Codex CLI の呼び出し処理に関係しない機能の実装やテストを読むとき
-- 具体的な AgentCallParameter の値や builder 実装の詳細を確認する場合は、先に正本である builder のソースを直接読むとき
+- Codex CLI 呼び出しやその周辺仕様を扱わず、別の機能領域だけを調査するとき
+- AgentCallParameter builder の具体的な個別設定値だけを確認する場合は、対応する builder の正本仕様を直接読むとき
 
 ## hash
-- 107f066d989b7949efdf77aa6652fa63f920afe92b8cb9e6feb634de4b53726d
+- a38c37009467d95f2fe561bcdeae11572051847b304d1f4e0fca74a1a9217463
 
 # `console_and_file_log.md`
 
