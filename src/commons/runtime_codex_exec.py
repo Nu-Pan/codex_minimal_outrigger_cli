@@ -102,11 +102,13 @@ def _base_exec_argv(override_args: list[str], codex_cwd: Path) -> list[str]:
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # cmoc may run Codex from linked worktrees or generated roots; repo
     # validation belongs to cmoc's own preflight, not to Codex CLI startup.
+    # `--ask-for-approval` は Codex の root parser だけが受理するため、
+    # 共通の設定上書きは `exec` より前へ置く。
     return [
         "codex",
+        *override_args,
         "exec",
         "--skip-git-repo-check",
-        *override_args,
         "--cd",
         str(codex_cwd),
     ]

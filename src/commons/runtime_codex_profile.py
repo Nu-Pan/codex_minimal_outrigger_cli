@@ -272,10 +272,13 @@ def build_codex_override_args(
     model_spec = config.codex.model[parameter.model_class]
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
     args = [
+        "--ask-for-approval",
+        "on-request",
         "--model",
         model_spec.model,
         "--sandbox",
         sandbox_mode,
+        *_config_override("approvals_reviewer", _toml_string("auto_review")),
         *_config_override("model_reasoning_effort", _toml_string(reasoning_effort)),
     ]
     use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"

@@ -123,6 +123,7 @@ def test_sandbox_argument_is_accepted_by_codex_cli(
     result = subprocess.run(
         [
             codex,
+            *args,
             "exec",
             "--ignore-user-config",
             "--ignore-rules",
@@ -131,7 +132,6 @@ def test_sandbox_argument_is_accepted_by_codex_cli(
             "--output-schema",
             str(tmp_path / "missing-schema.json"),
             "--json",
-            *args,
             "-",
         ],
         cwd=root,

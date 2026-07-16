@@ -133,10 +133,13 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert argv_calls[0][-1] == "-"
     assert all(record["codex_home"] == str(codex_home) for record in call_records)
     assert call_records[1]["stdin"] == probe_prompt
-    assert argv_calls[1][:2] == ["exec", "--skip-git-repo-check"]
+    assert argv_calls[1][:3] == ["--ask-for-approval", "on-request", "--model"]
+    assert argv_calls[1][argv_calls[1].index("exec") + 1] == "--skip-git-repo-check"
     assert codex_arg_value(argv_calls[1], "--model") == "gpt-5.4-mini"
     assert codex_arg_value(argv_calls[1], "--sandbox") == "read-only"
-    assert codex_override_config(argv_calls[1])["model_reasoning_effort"] == "low"
+    probe_config = codex_override_config(argv_calls[1])
+    assert probe_config["approvals_reviewer"] == "auto_review"
+    assert probe_config["model_reasoning_effort"] == "low"
     assert "--profile" not in argv_calls[1]
     assert "--json" in argv_calls[1]
     assert "--output-last-message" in argv_calls[1]

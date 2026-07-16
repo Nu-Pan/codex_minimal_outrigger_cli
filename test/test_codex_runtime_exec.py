@@ -48,6 +48,8 @@ def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     assert "--profile" not in args
     assert "-p" not in args
     assert codex_arg_value(args, "--sandbox") in {"read-only", "workspace-write"}
+    assert codex_arg_value(args, "--ask-for-approval") == "on-request"
+    assert codex_override_config(args)["approvals_reviewer"] == "auto_review"
 
 
 def _assert_no_codex_home_config(codex_home: Path) -> None:
@@ -109,7 +111,9 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     call_log = json.loads(call_log_path.read_text())
     override_config = codex_override_config(call_log["argv"])
     _assert_codex_exec_contract(call_log["argv"], prompt)
-    assert call_log["argv"][:3] == ["codex", "exec", "--skip-git-repo-check"]
+    assert call_log["argv"][:3] == ["codex", "--ask-for-approval", "on-request"]
+    exec_index = call_log["argv"].index("exec")
+    assert call_log["argv"][exec_index + 1] == "--skip-git-repo-check"
     assert "--output-schema" in call_log["argv"]
     assert Path(call_log["prompt_log_path"]).read_text() == prompt
     assert call_log["model_class"] == ModelClass.MINIMUM.value
@@ -177,11 +181,12 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     record = json.loads(recorder.read_text())
     _assert_codex_exec_contract(record["args"], "prompt")
     assert record["args"][:4] == [
-        "exec",
-        "--skip-git-repo-check",
+        "--ask-for-approval",
+        "on-request",
         "--model",
         "gpt-5.6-luna",
     ]
+    assert record["args"][record["args"].index("exec") + 1] == "--skip-git-repo-check"
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
