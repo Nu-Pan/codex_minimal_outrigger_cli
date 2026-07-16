@@ -29,6 +29,9 @@
     - `key=value` は 1 個の argv 要素として渡す
     - `value` は Codex CLI が解釈する TOML 値とする
 - cmoc が上書きする設定について、`$CODEX_HOME/config.toml` や project config の値に依存してはならない
+- 全ての Codex CLI 呼び出しで、次の承認設定を呼び出し単位の argv により明示的に上書きする
+    - `approval_policy`: `"on-request"`
+    - `approvals_reviewer`: `"auto_review"`
 
 ## ファイルアクセス制限
 
