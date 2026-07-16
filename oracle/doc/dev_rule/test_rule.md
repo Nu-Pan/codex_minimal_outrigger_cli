@@ -18,6 +18,15 @@
 - LLM の回答品質や、Codex CLI に依頼した仕事の意味的な成功は cmoc の自動テストの目的としない
 - Codex CLI 自体、外部 provider、有料クラウド backend の正しさや安定性を保証することは目的としない
 
+## 全サブコマンドの本番経路試験
+
+- 本番経路試験とは、利用者向け CLI entrypoint を独立した process で起動し、代表的な正常系を本番と同じ code path と外部 process で完了させる realization test である
+- 実行時点で公開されている全末端サブコマンドを対象とし、成功を示す終了 code と、コマンド固有の外部から観測可能な結果を検証する
+- 本番経路で発生するすべての Codex CLI 呼び出しには、実在の Codex CLI executable と cmoc managed ollama による実推論を使用し、response を受けた後の処理まで完了させる。Fake、mock、stub、記録済み response、または起動確認だけでは代替できない
+- 本番との差は、`{{test-root}}` による隔離、決定論的な入力と対話操作の自動化、テスト用 SLM、およびクラウドバックエンド禁止のために必要な範囲だけ許容する
+- `--help`、shell completion、不正入力、事前条件違反、handler の直接呼び出し、または process を分離しない確認は、本番経路試験とはみなさない
+- realization implementation または realization test の変更後は全件を fresh に実行する。新規サブコマンドには同じ作業で試験を追加し、実行結果、Real Codex CLI 呼び出し、本番との差を報告する。未実行、未検証、失敗、または許容外の差があれば作業を完了扱いにしない
+
 ## テスト用開発対象リポジトリパス
 
 - `python-dev-skill` が pytest の隔離に使用する `tmp_path` を `{{test-root}}` とし、被テスト cmoc が動作する環境全体をそのツリー内に構築する
@@ -42,6 +51,4 @@
 
 ## Fake Codex CLI
 
-- Real Codex CLI 呼び出しがテストの目的上不要な場合、Fake Codex CLI を使用してよい
-- Fake Codex CLI は、cmoc 側の呼び出し構築、ログ保存、状態更新などを決定論的に検証するために使用する
-- Codex CLI 呼び出し経路そのものの結合動作を検証する場合は、Fake Codex CLI ではなく cmoc managed ollama を provider とする Real Codex CLI 呼び出しを優先する
+- Fake Codex CLI は、本番経路試験以外で Real Codex CLI が不要な場合に限り、決定論的な制御ロジックの検証に使用してよい
