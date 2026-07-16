@@ -1,20 +1,25 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション仕様断片を集約するディレクトリ。CLI サブコマンド、Codex/Ollama 連携、ログ、エラー処理、状態管理、run isolation、branch・session 境界、利用手順などの正本仕様を選ぶ入口であり、個別仕様の確認は下位文書へ進む。
+- cmoc のアプリケーション仕様断片をまとめたディレクトリ。CLI、状態遷移、ログ・エラー処理、agent call、managed ollama などの個別仕様への入口。
+- session と run の branch・worktree 境界や fork/join を定める仕様。
+- 採用しなかった設計案と不採用理由を記録した設計判断メモ群。
+- Python 開発、CLI 設計、開発環境、テスト規約をまとめた正本文書群。
 
 ## Read this when
-- cmoc の個別機能やサブコマンドの仕様を調査・実装・レビューするとき。
-- CLI 実行、Codex 呼び出し、managed Ollama、ログ、状態管理、run isolation、INDEX 生成などの正本文書を選ぶとき。
-- 利用手順や共通のアプリケーション動作を確認するとき。
+- cmoc の利用者向け挙動、CLI 実行条件、状態遷移、ログ・エラー処理、agent call、managed ollama の仕様を確認するとき。
+- session・run の branch や worktree、fork/join の扱いを確認するとき。
+- 現行設計で採用しなかった代替案と、その理由を確認するとき。
+- Python の実装規則、責務配置、開発環境、pytest の手順を確認するとき。
 
 ## Do not read this when
-- INDEX.md の生成・更新ルールだけを確認したいとき。
-- Python 開発環境、設計、テスト実行規則を確認したいとき。
-- 特定文書の内容が明らかな場合や、既存実装の詳細を確認したい場合。
+- INDEX.md の自動生成・更新規則やルーティング方針だけを確認したいとき。
+- 個別仕様が明らかで、対象ファイルを直接読めば足りるとき。
+- cmoc 以外の通常の git 運用やリポジトリ本流の方針を確認したいとき。
+- 現行仕様・実装・テストの詳細を確認したいときに、採用しなかった代替案の背景だけを扱う文書を読むこと。
 
 ## hash
-- 0ecff0c69f6bf3dfee5008048b179561739edaa82d48748d33ddcc38bdd6a6ee
+- 0cf80c614e912df33a459fdd23a90722acacbe6b540cee6ec7add042b739c4ad
 
 # `src`
 

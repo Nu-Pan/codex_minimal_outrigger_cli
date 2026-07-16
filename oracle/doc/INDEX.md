@@ -1,20 +1,19 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様断片を集約するディレクトリ。CLI の補完、ログ、エラー処理、Codex/Ollama 連携、セッション状態、run 隔離、利用手順、サブコマンド仕様など、個別機能の正本仕様を読むための入口。
+- cmoc のアプリケーション仕様断片をまとめたディレクトリ。CLI の補完、通常実行、サブコマンド、ログ、エラー処理、セッション状態、run 隔離、Codex CLI 呼び出し、managed ollama などの個別仕様への入口となる。
 
 ## Read this when
-- cmoc の個別機能やサブコマンドの仕様を調査・実装・レビューするとき。
-- CLI 実行、Codex 呼び出し、managed Ollama、ログ、状態管理、run isolation、INDEX 生成などの正本文書を選ぶとき。
-- 利用手順や共通のアプリケーション動作を確認するとき。
+- cmoc の利用者向け挙動、CLI 実行条件、状態遷移、ログ・エラー処理、agent call、managed ollama の仕様を確認するとき。
+- 複数のアプリケーション仕様候補から、対象機能に対応する正本仕様断片を選ぶとき。
 
 ## Do not read this when
-- INDEX.md の生成・更新ルールだけを確認したいときは、indexing の仕様を直接読む。
-- Python 開発環境、設計、テスト実行規則を確認したいときは、対応する dev_rule の oracle doc を読む。
-- 特定文書の内容が明らかな場合は、このディレクトリ全体ではなく該当する仕様ファイルへ直接進む。
+- INDEX.md の自動生成・更新規則だけを確認したいときは、インデクシング仕様を直接読む。
+- Python 実行環境、設計ルール、テスト手順など開発規則だけを確認したいときは、対応する dev_rule 文書を読む。
+- 個別仕様が明らかで、対象ファイルへの直接アクセスで足りるとき。
 
 ## hash
-- d521072671354a78f4a8f082e7ea3b0518341e5fc252def25ce72bdddfb0c320
+- 21655a2e18d73bf1f641e5310508385c004428c4ee1b2c11b1e787dafe618806
 
 # `branch_model.md`
 
@@ -57,18 +56,19 @@
 # `dev_rule`
 
 ## Summary
-- cmoc の開発規約をまとめた oracle doc 群。Python コーディング、CLI の設計・配置、開発環境、pytest による realization test の方針を確認する入口。
+- Python 開発規則、CLI 設計、開発環境、テスト規約をまとめた正本文書群。Python 実装の書き方、CLI の責務配置、venv・依存関係の運用、pytest テスト設計を確認するための入口。
 
 ## Read this when
-- Python 実装の書き方、型ヒント、import、docstring、コメント、命名規則を確認したいとき。
-- CLI のエントリーポイント、サブコマンド、共有処理の配置や責務分担を判断したいとき。
-- Python・venv・依存関係・ファイル命名などの開発環境ルールを確認したいとき。
-- realization test の配置、検証範囲、隔離環境、Codex CLI や ollama の使い分けを確認したいとき。
+- Python コーディング規則や命名・型ヒント・import・docstring・コメント方針を確認するときは coding_rule.md を読む。
+- src/main.py、サブコマンド、src/commons の責務分担や配置を判断するときは design_rule.md を読む。
+- WSL2・Codex CLI 前提の開発環境、.venv/bin/python、pip -e .、依存追加、ファイル制約を確認するときは development_environment.md を読む。
+- pytest テストの配置・検証対象・隔離環境・Real/Fake Codex CLI の使い分けを確認するときは test_rule.md を読む。
 
 ## Do not read this when
 - 個別機能や CLI の挙動・出力仕様を確認したいときは、対象機能の oracle doc を直接読む。
-- 既存モジュールの実装詳細を知りたいときは、その realization code を直接読む。
+- 個別モジュールの実装詳細を知りたいときは、該当モジュール本文を読む。
 - INDEX.md の読み方やルーティング方針を確認したいときは、別の routing 文書を読む。
+- Codex CLI や外部 provider の回答品質、managed ollama 自体の管理仕様を確認したいときは、専用の正本文書を読む。
 
 ## hash
-- 3e49c9637bd1f2f7bf758fdd01682f362e3973d6450d144d7d5592277ccb8768
+- 40b97d8acd9c3578ed515a77074d9fc0758821b3d88968fd3824d208f2642e04

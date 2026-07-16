@@ -95,19 +95,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を集約する oracle ディレクトリ。アプリケーション仕様は doc、共通基盤の実装仕様は src へ進むための入口であり、個別の仕様確認は下位対象で行う。
+- cmoc の正本文書と共通 oracle src をまとめた領域。アプリケーション仕様、session・run の境界、設計判断、Python 開発規約、および ACP builder・prompt builder・設定・構造化 markdown 基盤への入口を提供する。
 
 ## Read this when
-- cmoc の正本仕様を調査・実装・レビューするとき。
-- アプリケーション仕様と共通基盤仕様のどちらを参照すべきか判断するとき。
+- cmoc の利用者向け挙動、CLI、状態遷移、agent call、managed ollama、session・run の fork/join 仕様を確認するとき。
+- 採用しなかった設計案と理由、Python 実装・テスト・開発環境の規約を確認するとき。
+- agent call のパラメータ、prompt 組み立て、設定、ルートパス解決、構造化 markdown の共通基盤を調査するとき。
+- 個別仕様・実装へ進む前に、oracle doc または共通 oracle src の入口を選ぶとき。
 
 ## Do not read this when
-- INDEX.md の生成・更新ルールだけを確認したいとき。
-- Python の開発環境、設計、テスト実行規則だけを確認したいとき。
-- 特定の下位文書や実装の内容が明らかで、oracle 全体の入口を読む必要がないとき。
+- INDEX.md の生成・更新規則やルーティング方針だけを確認したいとき。
+- 対象となる個別仕様・実装・テストが明らかで、直接読めば足りるとき。
+- cmoc 以外の通常の git 運用やリポジトリ本流の方針を確認したいとき。
+- 個別サブコマンドの実行フローや生成物保存など、共通 oracle 基盤の確認を要しないとき。
 
 ## hash
-- 750d53d4b2185cc73b2324c253773da4fbdfcf2733ce33d1c6b3e4cf8f29034a
+- 014a95ee8961a3cba9231faac18c8a6c9383041f9221e25ef1258875bc22105a
 
 # `pyproject.toml`
 

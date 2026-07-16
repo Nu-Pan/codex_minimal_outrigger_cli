@@ -19,20 +19,20 @@
 # `cmoc_managed_ollama.md`
 
 ## Summary
-- cmoc がユーザー空間で管理する、OS ユーザーごとに 1 つのローカル Ollama サービスの正本仕様。サービスのライフサイクル、永続ダウンロード資源、preflight のプロセス間 lock、利用可能性保証、GPU 推論要件、および Codex CLI からの接続方法を定義する。
+- cmoc がユーザー空間で管理するローカル SLM サービスの正本仕様。サービスのライフサイクル、永続ダウンロード資源、preflight のプロセス間排他、GPU 推論を含む利用可能性保証、Codex CLI からの接続方法を定める。cmoc managed ollama の構築・修復・利用条件や関連実装の入口となる。
 
 ## Read this when
-- cmoc managed ollama の構築・起動・修復、user systemd サービス、Ollama やモデル資源の配置・再利用を実装または確認するとき
-- cmoc process 間の preflight 排他、lock の取得・待機・解放、および sandbox 外実行の扱いを判断するとき
-- cmoc provider の利用可能性、モデル pull、API 応答、GPU 推論確認、CPU 推論への切替禁止を扱うとき
-- Codex CLI の model provider、argv、base URL、wire API の設定方法を実装または検証するとき
+- cmoc managed ollama の準備・起動・サービス管理・モデル pull・資源永続化を実装または確認するとき
+- cmoc の doctor preprocess、利用可能性保証、GPU 推論確認、エラー終了条件を実装または検証するとき
+- 同一ユーザーの cmoc process 間の preflight 排他やサービスのライフサイクルを扱うとき
+- Codex CLI の model provider、argv、base URL、provider 設定を変更または確認するとき
 
 ## Do not read this when
-- Ollama 管理や cmoc provider の利用可能性に関係しない CLI 機能、一般的な Codex agent 呼び出し、または別の model provider の仕様だけを扱うとき
-- テスト実行時の承認・結果報告規則そのものを確認するときは、指定された test_rule の oracle doc を直接読む
+- cmoc managed ollama に関係しない一般的な CLI、Codex agent 呼び出し、または別の model provider の実装を扱うとき
+- ollama 自体の一般的な仕様や、cmoc が管理しないサービスの運用を調べるとき
 
 ## hash
-- c906a59198574b580bf913b85e3e0e7890bf3f92786f4bc77387b1a1c7bf82e2
+- fc1659cd049f2f1c59c7cf92837719fdcc9e04cc663865acdb131b7f4b9f522b
 
 # `codex_exec_rule.md`
 
