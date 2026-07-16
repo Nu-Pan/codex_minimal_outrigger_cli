@@ -31,6 +31,18 @@
 - cmoc managed ollama が pull したモデルの配置先は `~/.cmoc/ollama/models` とする
 - `CodexModelSpec.model_provider=="cmoc"` のモデルを新たに取得する場合は、cmoc managed ollama で pull する
 
+## preflight のプロセス間排他
+
+- `CodexModelSpec.model_provider=="cmoc"` のモデルを 1 つ以上使用する場合、cmoc は managed Ollama の状態確認・修復を始める前に、`~/.cmoc/ollama/lock` でプロセス間の排他的 advisory lock を取得する
+- lock file は書き込み可能な状態で作成または open する必要がある。サービスとダウンロード資源が既に要求を満たしている場合も、lock の取得を省略してはならない
+- 別の cmoc process が lock を保持している場合、後続 process は access failure とせず、先行する preflight が lock を解放するまで待機する
+- lock は preflight の完了まで保持し、ollama の配置、サービス設定・起動・修復、待受と API の確認、およびモデルの pull・load・GPU 推論確認を、同じ OS ユーザーの cmoc process 間で直列化する
+- lock の目的は、複数の cmoc process が同じサービスや永続資源を同時に変更したり、別 process による修復途中の状態を検証したりすることを防ぐことである。lock file の存在は、サービスの利用可能性や lock の取得状態を表すものではない
+- lock は file descriptor の close または process の終了により解放される。通常の解放操作として lock file を削除してはならない
+- この lock が直列化するのは、同じ lock を使用する cmoc の preflight に限る。preflight 完了後の推論 request や、cmoc を介さない直接のサービス操作は対象外とする
+- Codex agent sandbox 内からこの lock を取得し得る cmoc command を起動する場合は、通常 sandbox 内での失敗を待たず、その command の最初の実行から sandbox 外実行の承認を得る。これは OS の root 権限を与えることではなく、cmoc の管理領域、user systemd、local service、および GPU を Codex agent sandbox の外側から利用させるための承認である
+- テスト実行時の承認と結果報告の規則は `{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする
+
 ## 利用可能性の保証
 
 - `CodexModelSpec.model_provider=="cmoc"` の場合、cmoc は Codex CLI の agent call を開始する前に、doctor preprocess で cmoc managed ollama の利用可能性を保証する
