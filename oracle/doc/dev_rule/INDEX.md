@@ -58,17 +58,18 @@
 # `test_rule.md`
 
 ## Summary
-- pytest を使った cmoc の自動テスト規約をまとめる入口。決定論的な制御ロジックの検証方針、Real Codex CLI 経路で cmoc managed ollama を使う条件、Fake Codex CLI を許す条件を確認したいときに読む。
+- pytest による cmoc realization test の正本規約。テスト配置、検証対象と non-goal、隔離環境、cmoc managed ollama・Real Codex CLI・Fake Codex CLI の使い分け、クラウド課金モデル禁止を定める。cmoc のテスト実装・テスト実行方針を確認する入口。
 
 ## Read this when
-- cmoc のテストを新規作成・修正するとき
-- git 状態、作業ディレクトリ、ファイル列挙、設定生成、ログ保存、状態更新、エラー処理などの制御ロジックをどう検証するか決めたいとき
-- Real Codex CLI 呼び出しを含むテストで、何を結合動作として扱い、どの provider と model を使うべきか判断したいとき
+- cmoc の realization test を追加・修正・レビューするとき
+- pytest の実行方法、tmp_path によるテスト環境、テスト対象の範囲を判断するとき
+- Real Codex CLI、cmoc managed ollama、Fake Codex CLI のどれを使うか判断するとき
+- cmoc managed ollama を使うテストの sandbox 外実行承認や終了時の扱いを確認するとき
 
 ## Do not read this when
-- LLM の回答品質や Codex CLI 自体の正しさを保証したいだけのとき
-- cmoc managed ollama の管理・配置先・永続資源の詳細だけを知りたいとき
-- pytest の一般的な書き方や個別テスト実装そのものを探しているとき
+- 実装コードの配置や CLI 実装の責務境界だけを確認したいときは design_rule.md を読む
+- Python 実行環境や依存関係の構築方法だけを確認したいときは development_environment.md を読む
+- テスト対象と無関係な一般的な pytest の使い方を確認したいとき
 
 ## hash
-- 7302774fb06ffcbc668b6ec974ae3d87324fdd6b05e522c9aeaa17dc94fded9d
+- b7d6eb14b47be6ba92393c586e1e546fc95b5da5b957642fc5f8ea43d9b1ebf2

@@ -19,23 +19,20 @@
 # `cmoc_managed_ollama.md`
 
 ## Summary
-- cmoc が `cmoc` provider 用の Ollama サービスを準備・検証・再利用する必要があるときに読む。サービス管理、永続化資源、GPU 推論の成立確認、Codex CLI への接続条件が主題で、モデル利用だけを扱う実装や一般的な CLI 入口より直接的である。
-- 本番実行とテストで共通の `cmoc managed ollama` をどう維持するかを確認したいときに読む。終了処理で停止や削除をしないこと、既存資源を再利用すること、必要時のみ新規構築・修復することが判断材料になる。
-- `CodexModelSpec.model_provider=="cmoc"` の前提で、agent call 開始前に満たすべき利用可能性条件を確認したいときに読む。GPU 推論の確認、127.0.0.1:11434 の提供元確認、モデル要求一致、リクエスト疎通の修復方針が必要になる場合に進む。
+- cmoc がユーザー空間で管理する、OS ユーザーごとに 1 つのローカル Ollama サービスの正本仕様。サービスのライフサイクル、永続ダウンロード資源、preflight のプロセス間 lock、利用可能性保証、GPU 推論要件、および Codex CLI からの接続方法を定義する。
 
 ## Read this when
-- cmoc がローカル SLM を `cmoc managed ollama` で提供する構成を扱うとき。
-- doctor preprocess でサービスの利用可能性を保証する処理を実装・修正するとき。
-- Ollama の取得、配置、モデル pull、永続資源の扱い、GPU 推論の検証条件を確認するとき。
-- Codex CLI へ渡す `cmoc managed ollama` 用の provider 設定や実行引数を調整するとき。
+- cmoc managed ollama の構築・起動・修復、user systemd サービス、Ollama やモデル資源の配置・再利用を実装または確認するとき
+- cmoc process 間の preflight 排他、lock の取得・待機・解放、および sandbox 外実行の扱いを判断するとき
+- cmoc provider の利用可能性、モデル pull、API 応答、GPU 推論確認、CPU 推論への切替禁止を扱うとき
+- Codex CLI の model provider、argv、base URL、wire API の設定方法を実装または検証するとき
 
 ## Do not read this when
-- 単に cmoc の他のサブコマンドや一般的な設定項目を扱うだけで、Ollama サービスや `cmoc` provider を使わないとき。
-- サービス起動の内部手順ではなく、別のモデル provider や別の実行基盤の仕様を探しているとき。
-- `--profile` や組み込み provider ID の一般的な使い方だけを知りたいときで、`cmoc managed ollama` 固有の制約が不要なとき。
+- Ollama 管理や cmoc provider の利用可能性に関係しない CLI 機能、一般的な Codex agent 呼び出し、または別の model provider の仕様だけを扱うとき
+- テスト実行時の承認・結果報告規則そのものを確認するときは、指定された test_rule の oracle doc を直接読む
 
 ## hash
-- 229d722c09503b9b563c54a23ee8e4a850d5e057b76739987c78848a3acb3c56
+- c906a59198574b580bf913b85e3e0e7890bf3f92786f4bc77387b1a1c7bf82e2
 
 # `codex_exec_rule.md`
 

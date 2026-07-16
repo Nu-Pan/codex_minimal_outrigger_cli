@@ -105,21 +105,19 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを実装する中核モジュール。Structured Output の JSON/schema 検証、capacity retry、quota availability probe と待機、resume 継続、subprocess の入出力・call log・subcommand event 記録を一つの状態機械として扱う。変更時は exec 実行制御、再試行、quota、ログ記録、worktree 変更 path 検出の挙動を確認する入口になる。
+- Codex exec の単一試行ループを実装する中核モジュール。Structured Output の JSON/schema 検証、capacity retry、quota 待機と代表 probe、resume 継続、Codex subprocess の実行記録・console/subcommand event 記録を一つの状態機械として管理する。変更時は exec 実行制御全体と共有するログ・イベント・retry 状態を確認する入口となる。
 
 ## Read this when
-- Codex exec の起動、cwd・CODEX_HOME・schema 設定、prompt/stdout/stderr/output のログ保存を変更または調査するとき
-- Structured Output 検証失敗、capacity error、quota error、quota probe、resume token による再試行を変更または調査するとき
-- Codex call の console/subcommand event や失敗時の調査情報を変更するとき
-- agent call 後の worktree 変更 path 検出を変更するとき
+- Codex exec の起動、再試行、Structured Output 検証、quota 待機、resume 継続を変更・調査するとき
+- Codex call log、prompt/stdout/stderr/output ログ、subcommand event の記録や失敗分類を確認するとき
+- Codex exec 後の worktree 変更 path 検出や apply requeue の挙動を確認するとき
 
 ## Do not read this when
-- TUI 起動処理そのものを変更または調査するときは、TUI 起動を担当する別 module を先に読む
-- Codex subprocess の共通的な環境・エラー分類・schema 準備などの詳細だけを変更または調査するときは、runtime_codex_profile 側を直接読む
-- 設定読み込み、git status、path 生成などの共通機能だけを変更または調査するときは、それぞれの runtime 共通 module を直接読む
+- TUI 起動処理そのものを変更・調査するときは、TUI を担当する別 module を直接読む
+- Codex subprocess の環境・path・エラー分類など個別 helper の実装だけを確認する場合は、runtime_codex_profile など該当 helper module を直接読む
 
 ## hash
-- 5ee008af197b9904c749b6fe31e40e38d06fd023c7509290639fe0c3f2df0176
+- a27112ff09569ed991f93fa6c668e518629ed15addbc5871b7138d15d9d5b3e3
 
 # `runtime_codex_logging.py`
 
@@ -156,19 +154,20 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。起動時の sandbox・cwd・CODEX_HOME・argv/env・provider/schema 配置と、child process の追跡・停止、JSONL 出力の解析、capacity/quota/予期せぬエラー判定を扱う。Codex CLI の実行環境または機械的な実行結果の解釈を変更・調査するときの入口。
+- Codex CLI subprocess 境界の実装。起動前後の sandbox・cwd・argv・CODEX_HOME・環境変数・Structured Output schema 配置を扱い、apply 実行時の child process tracking と安全な process group 停止も提供する。Codex の JSONL 出力から resume token、診断メッセージ、capacity/quota/予期せぬエラーを判定する。
 
 ## Read this when
-- Codex CLI に渡すファイルアクセス権、作業ディレクトリ、設定 override、環境変数を変更・確認するとき。
-- Codex subprocess の process group 追跡・停止、pid 再利用対策、apply 中断処理を変更・調査するとき。
-- Structured Output schema の配置、Codex JSONL 出力の読み取り、resume token や error/retry 判定を変更・調査するとき。
+- Codex CLI の起動引数、sandbox または cwd の決定を変更・調査するとき
+- CODEX_HOME、managed Ollama provider、schema 配置、subprocess 環境を扱うとき
+- apply の child process tracking、pidfd、process group 停止、SIGTERM/SIGKILL 処理を変更・調査するとき
+- Codex JSONL 出力のエラー詳細化、resume token、retry 判定を変更・調査するとき
 
 ## Do not read this when
-- Codex CLI へ渡すプロンプト本文やその構築規則だけを変更・調査するとき。
-- Codex の呼び出し元である subcommand の業務フローや設定定義だけを変更・調査するときは、まず該当する上位モジュールを読む。
+- Codex CLI 呼び出し元の業務フローやサブコマンド固有の仕様だけを調べるとき
+- Codex subprocess の境界外にある設定定義、プロンプト生成、一般的な runtime path・error 定義を直接調べるとき
 
 ## hash
-- 66ba885d704679c73e5e029b10c53f1755d69ddc9217a9f1ff8f57cc725875e4
+- 68e446fdb1641a5d3cec11bd7a23143730eecd852e912ca89131db2570cfaca4
 
 # `runtime_codex_tui.py`
 

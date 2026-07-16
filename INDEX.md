@@ -1,3 +1,23 @@
+# `AGENTS.md`
+
+## Summary
+- cmoc 自己開発時に恒常的に適用するリポジトリ固有の指示を定める補足文書。動的生成プロンプトの権限や作業範囲は変更せず、Python 環境、設計、テストの判断時に参照すべき oracle file への入口を提供する。
+
+## Read this when
+- cmoc リポジトリ固有の開発ルールや、動的生成プロンプトとの関係を確認するとき
+- Python の実行環境・環境構築・pip の扱いを判断するとき
+- realization implementation の配置・責務境界を判断するとき
+- realization test の実装・実行・変更後の検証方法を判断するとき
+
+## Do not read this when
+- 具体的な Python 環境手順を確認する場合は、直接 development_environment.md を読むとき
+- 実装の設計責務を確認する場合は、直接 design_rule.md を読むとき
+- テスト手順を確認する場合は、直接 test_rule.md を読むとき
+- 動的生成プロンプトで指定された作業範囲や権限を確認する場合
+
+## hash
+- b168e9259b1693105309f460d4ef248fd19978f0bae5fab8e1617b0f3aeac112
+
 # `LICENSE`
 
 ## Summary
@@ -75,26 +95,19 @@
 # `oracle`
 
 ## Summary
-- cmoc のアプリケーション仕様断片を収める領域。CLI、サブコマンド、実行前処理、session・run の状態境界、ログ、agent call、provider、run isolation、利用手順、Python 実装・CLI・テスト規則などの詳細仕様へ進む入口。
-- ACP builder と prompt builder、設定・ルートパス解決、規範文書・構造化 markdown 処理など、agent call と共通実行基盤の正本仕様を扱う領域。個別実装へ進む前に、共通基盤の仕様確認が必要な場合の入口。
+- cmoc の正本仕様を集約する oracle ディレクトリ。アプリケーション仕様は doc、共通基盤の実装仕様は src へ進むための入口であり、個別の仕様確認は下位対象で行う。
 
 ## Read this when
-- cmoc の CLI 挙動、サブコマンド、実行前処理、状態管理、ログ、agent call、Ollama provider、run isolation の仕様を調べるとき。
-- session や run の branch・worktree 境界を確認するとき。
-- 採用しなかった設計案、Python 実装、CLI 構成、テストの共通規則を確認するとき。
-- agent call のモデル・推論強度・ファイルアクセス・Structured Output・作業ディレクトリ、prompt 構成、設定、パス解決、構造化 markdown 処理を確認するとき。
-- 複数の仕様領域から、作業対象に直接関係する下位文書や共通基盤を選ぶ必要があるとき。
+- cmoc の正本仕様を調査・実装・レビューするとき。
+- アプリケーション仕様と共通基盤仕様のどちらを参照すべきか判断するとき。
 
 ## Do not read this when
-- INDEX.md の生成・更新規則だけを確認したいとき。
-- git、branch、状態ファイルなどの基礎概念だけを確認したいとき。
-- 特定仕様の詳細や個別実装が明らかな場合。
-- 個別サブコマンドの実行フロー、CLI 入出力、ファイル探索、生成物保存の詳細だけを調べるとき。
-- 特定の oracle file や realization file の具体的な仕様・実装だけを確認するとき。
-- 採用しなかった設計案だけを確認したいとき。
+- INDEX.md の生成・更新ルールだけを確認したいとき。
+- Python の開発環境、設計、テスト実行規則だけを確認したいとき。
+- 特定の下位文書や実装の内容が明らかで、oracle 全体の入口を読む必要がないとき。
 
 ## hash
-- 0278044c1d0548ffb1b36734eab5eae1170a9e372170ef1341d6ac9ca97c4609
+- 750d53d4b2185cc73b2324c253773da4fbdfcf2733ce33d1c6b3e4cf8f29034a
 
 # `pyproject.toml`
 
@@ -115,32 +128,35 @@
 # `src`
 
 ## Summary
-- cmoc の realization source tree。CLI の最上位入口、サブコマンド、共有 runtime、設定・基本 API の互換 import shim、oracle 名前空間への解決境界を扱い、各下位領域の実装へ進むための入口となる。
+- cmoc の realization 実装を収める `src` 配下の入口。ACP 互換 import、共有 runtime、設定、CLI 本体、oracle 名前空間の解決、各サブコマンド実装へ進むための上位境界を提供する。
 
 ## Read this when
-- cmoc CLI の起動経路、サブコマンド登録、共有 runtime、互換 import、または oracle 名前空間の解決方法を調査・変更するとき。
-- apply、indexing、review、session、TUI などのサブコマンド実装や、それらが利用する共通処理の入口を探すとき。
+- `src` 配下で担当モジュールを特定したいとき。
+- cmoc CLI の入口、互換 import 経路、共有 runtime、設定、oracle 名前空間解決、サブコマンド実装の配置を確認したいとき。
+- 特定機能の実装を読む前に、対応する下位ディレクトリやモジュールを選びたいとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime helper の詳細を確認したいときは、対応する下位モジュールを直接読む。
-- oracle の正本仕様・個別実装、または realization test の内容だけを確認したいとき。
+- 特定サブコマンドや共有 helper の詳細な挙動が明らかなときは、対応する下位実装を直接読む。
+- 正本仕様や oracle 側の実装内容だけを確認したいときは、対応する `oracle` ツリーを直接読む。
+- 実装と関係しないテスト、開発手順、仕様断片を調査するとき。
 
 ## hash
-- c41286120bec57043e6cdb188f552a91dd37fd81c5af7f066129f597999a5bc1
+- 8485a067b31dea3f997f20d5265fcdb07539889530fa3e39b0fe6b25f5bd9138
 
 # `test`
 
 ## Summary
-- テストコードと共通テスト補助を集約するディレクトリ。ACP builder、CLI サブコマンド、Codex runtime、Git/worktree、indexing、oracle review、session/apply state などの外部挙動・制御ロジックを検証する。各機能の回帰テストや関連 fixture・helper を探す入口。
+- テストコード全体を収めるディレクトリ。ACP builder、CLI、Codex runtime、apply/session/review、indexing、設定・状態・Git・Ollama など、cmoc の外部挙動と制御ロジックを pytest で検証する。個別機能の回帰テストや共通テスト補助へ進む入口となる。
 
 ## Read this when
-- テストの追加・修正・失敗原因の調査で、対象機能の回帰テストや共通テスト補助を探すとき
-- CLI、Codex 実行、indexing、oracle review、session/apply、Git/worktree、設定、Ollama の挙動をテストから確認したいとき
+- cmoc の既存テストを機能領域から探すとき
+- CLI、Codex runtime、apply/session/review、indexing、ACP builder、設定または基盤 runtime の挙動を変更・検証するとき
+- 複数テストで共有される repository、CLI、Codex、Git、Ollama などの fixture・helper を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle ファイルを直接読む
-- 実装の詳細や単体ロジックを確認するときは、対応する src ファイルを直接読む
-- Codex CLI や LLM の出力品質そのものを評価したいとき
+- 正本仕様や schema の内容を確認したいときは、対応する oracle ファイルを直接読む
+- 実装の詳細を変更・調査するときは、対応する src ファイルを先に読む
+- 単一の機能と無関係なテスト全体を読む必要がないときは、該当する個別テストまたは共通補助ファイルへ直接進む
 
 ## hash
-- 41cf128c7fd1834370bea8640f8c5c2375024b108d52dfec053dbcc0b34e779e
+- 842e2c8b8b1e0b8b63d351424e4d45c75279f74804c0b7830479e555bb209006
