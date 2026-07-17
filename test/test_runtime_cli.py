@@ -17,6 +17,8 @@ import json
 import shutil
 import subprocess
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -70,6 +72,29 @@ def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
     assert second.path.name == "2026-06-27_10-00_00_000002000.jsonl"
     assert [line for line in first.path.read_text().splitlines() if line]
     assert [line for line in second.path.read_text().splitlines() if line]
+
+
+def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
+    tmp_path: Path,
+) -> None:
+    """共有 logger へ並列 worker が記録しても event と待機時間を失わない。"""
+    logger = SubcommandLogger(tmp_path, "indexing")
+    worker_count = 8
+    barrier = threading.Barrier(worker_count)
+
+    def record_worker_event(index: int) -> None:
+        """共有 logger への並列書き込みを再現する。"""
+        barrier.wait()
+        logger.add_quota_wait(0.25)
+        logger.event("worker", index=index)
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        list(executor.map(record_worker_event, range(worker_count)))
+
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    assert len(events) == worker_count
+    assert all(event["event"] == "worker" for event in events)
+    assert logger.quota_wait_sec == pytest.approx(worker_count * 0.25)
 
 
 def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
