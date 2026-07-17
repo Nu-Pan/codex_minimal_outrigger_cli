@@ -208,6 +208,22 @@ def test_verify_ollama_gpu_accepts_runtime_vram(
     ollama_module._verify_ollama_gpu("model")
 
 
+@pytest.mark.parametrize("body", [b"[]", b"null", b'"done"'])
+def test_load_ollama_model_rejects_non_object_response(
+    monkeypatch: pytest.MonkeyPatch, body: bytes
+) -> None:
+    """objectでないload応答を利用者向けエラーとして扱う。"""
+    response = _Response(body)
+    monkeypatch.setattr(
+        ollama_module.urllib.request,
+        "urlopen",
+        lambda *_args, **_kwargs: response,
+    )
+
+    with pytest.raises(CmocError, match="load できませんでした"):
+        ollama_module._load_ollama_model("model")
+
+
 @pytest.mark.parametrize(
     "body", [b'{"models":[]}', b'{"models":[{"name":"model","size_vram":0}]}']
 )

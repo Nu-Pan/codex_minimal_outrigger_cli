@@ -1,3 +1,4 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
 import os
 from pathlib import Path
 

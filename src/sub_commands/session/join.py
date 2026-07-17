@@ -1,3 +1,4 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 import json
 from dataclasses import replace
 from pathlib import Path

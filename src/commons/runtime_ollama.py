@@ -439,7 +439,7 @@ def _load_ollama_model(model: str) -> None:
             ["ollama service の状態を確認してください。"],
             f"model: {model}\nresponse: {response_body[:500]!r}",
         ) from exc
-    if payload.get("done") is not True:
+    if not isinstance(payload, dict) or payload.get("done") is not True:
         raise CmocError(
             "ollama SLM model を load できませんでした。",
             ["ollama service の状態を確認してください。"],

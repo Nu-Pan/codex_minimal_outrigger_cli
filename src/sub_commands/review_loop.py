@@ -1,3 +1,4 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
 import json
 from dataclasses import dataclass, replace
 from pathlib import Path

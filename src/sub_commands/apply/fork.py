@@ -5,6 +5,8 @@
 apply state、worktree、再キュー、commit subject は同じ loop の失敗時復旧条件を
 共有するため、分割すると fork 中の読み取り文脈がかえって分散する。
 現状は apply fork の orchestration として一箇所に保つ方が凝集性が高い。
+
+根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
 """
 
 import os

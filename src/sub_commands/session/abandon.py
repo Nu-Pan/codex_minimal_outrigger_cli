@@ -1,3 +1,4 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
 import typer
 
 from cmoc_runtime import (
