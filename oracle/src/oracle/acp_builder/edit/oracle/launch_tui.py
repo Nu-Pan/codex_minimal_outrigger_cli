@@ -62,12 +62,12 @@ def build_edit_oracle_launch_tui_parameter(
     with open(complete_prompt_path, "w", encoding="utf-8") as f:
         f.write(render_as_markdown(complete_prompt))
 
-    # realization file を読む indexing preflight なしで TUI を起動する
+    # TUI を起動する
     return AgentCallParameter(
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
         structured_output_schema_path=None,
-        run_indexing_preflight=False,
+        run_indexing_preflight=True,
     )
