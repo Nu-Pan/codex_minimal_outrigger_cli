@@ -197,40 +197,38 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- `apply abandon` CLI の外部挙動を検証するテスト。worktree・branch・state の cleanup、実行位置の切り替え、tracked process の停止、警告・失敗条件を扱う。低レベル process helper の契約は対象外で、`test_runtime_apply.py` が入口となる。
+- apply abandon CLI の外部挙動を検証するテスト。worktree・branch・state の cleanup、警告扱い、process 停止、実行位置の切替、linked session の dirty 状態、破損・不整合状態の拒否を対象とする。低レベルな process helper の契約は別テストに委譲する。
 
 ## Read this when
-- `apply abandon` の成功時 cleanup や警告出力を変更・検証するとき
-- apply process の停止順序、実行中 state の扱い、process identity 欠落時の失敗を確認するとき
-- repo root・linked session worktree・apply worktree からの実行位置に関する挙動を確認するとき
-- 不正な apply branch、別 session の branch、stale branch、linked session の dirty 状態に対する拒否条件を確認するとき
+- `apply abandon` サブコマンドの成功・警告・失敗条件を変更または確認するとき
+- apply run の worktree、branch、state、process cleanup や実行位置に関する CLI 挙動を調査するとき
 
 ## Do not read this when
-- 低レベルな process helper 自体の契約や実装を確認するときは `test_runtime_apply.py` を直接読む
-- `apply abandon` 以外の apply サブコマンドの挙動だけを確認するとき
-- CLI 外部挙動ではなく、oracle の一般的な realization 方針を確認するときは参照されている oracle file を直接読む
+- 低レベルな process helper 単体の契約だけを確認するときは、`test_runtime_apply.py` を直接読む
+- `apply abandon` 以外の apply サブコマンドの外部挙動だけを確認するとき
 
 ## hash
-- a5cc9797dc823424804cb06fac7b1605d60ebe3772374af9311f8470ea611661
+- 64baefce08c0901cafd6caea588e51acc73068d7678219b3d827db838fe7a1b6
 
 # `test_apply_fork_cli.py`
 
 ## Summary
-- `apply fork` CLI の回帰テスト群。Codex loop、apply state・branch・worktree のライフサイクル、割り込み・初期化失敗からの復旧、doctor 前処理、gitignore 更新、設定エラー、linked worktree 起点などの外部挙動を検証する。apply fork の実装や仕様変更時に、同一 fixture を共有する lifecycle シナリオ全体の回帰確認へ進む入口となる。
+- apply fork CLI のライフサイクル、状態遷移、worktree・branch 管理、割り込み時の後処理を検証する回帰テスト。
+- doctor 前処理、gitignore の自動修復、設定エラー、state/PID 初期化失敗、abandon による復旧、.gitignore 編集対象の扱いも確認する。
+- apply fork の実装や仕様、関連する repository/session fixture・state・worktree 挙動を変更または調査するときのテスト入口。
 
 ## Read this when
-- `apply fork` の state、branch、worktree、report、PID 管理を変更または調査するとき
-- apply fork の割り込み、設定エラー、初期化失敗、abandon 復旧の挙動を確認するとき
-- doctor 前処理や gitignore の自動修正が apply fork に与える影響を検証するとき
-- linked worktree からの apply fork 開始や snapshot 起点を確認するとき
+- apply fork の正常完了・中断・失敗・復旧時の外部挙動を確認するとき
+- apply run の state、branch、worktree、PID ファイル、report、ログのライフサイクルを変更するとき
+- doctor 前処理や .gitignore/config の apply fork 連携を変更するとき
 
 ## Do not read this when
-- 対象正規化の仕様やテストだけを確認したいときは、独立した対象正規化テストを直接読む
-- apply fork の実装責務や実行順序の正本仕様を確認したいときは、指定された apply fork の oracle 文書を直接読む
-- apply fork と無関係な CLI、session、設定、worktree 機能を調査するとき
+- 対象正規化だけを変更・検証するとき
+- apply fork 以外のサブコマンドの lifecycle や state を扱うとき
+- 実装詳細ではなく apply fork の仕様本文を確認したいときは、先に oracle の apply fork 仕様を読むべき
 
 ## hash
-- 700d3313fb7916ef7a320ce7e3dd7d5b16b40d7b379e847668f2a927c7be759a
+- 15b82a8699705cdd7a011b2b6f02f1932ba0bccb76510b61facf68c7e51f2ab8
 
 # `test_apply_fork_report_cli.py`
 
@@ -665,18 +663,16 @@
 # `test_runtime_apply.py`
 
 ## Summary
-- apply runtime の process tracking と停止契約を、CLI を介さず低レベル API で検証するテスト。pid file の child PID 読み込み、advisory lock 待機、pidfd による PID identity 検証、process group 停止、親終了後の再読込、競合終了や stale PID の警告・signal 抑止を扱う。apply abandon CLI の外部挙動ではなく、runtime 実装の直接テストへの入口。
+- apply 実行時のプロセス追跡・停止契約を、CLI を介さず低レベル API で検証するテスト。PID ファイル、advisory lock、agent-read runtime state、pidfd、PID reuse 防止、process group 停止、親終了後の child 再読込、競合終了時の扱いを対象とする。apply abandon の CLI 外部挙動は扱わず、対応する CLI テストへ進むための基盤テスト入口である。
 
 ## Read this when
-- apply runtime の pid file、advisory lock、pidfd、process group、PID reuse、停止順序や停止時 warning の挙動を変更・検証するとき
-- 親 apply process と記録済み Codex child process の追跡・停止契約を確認するとき
+- apply runtime のプロセス追跡、PID ファイルや lock の配置・同期、pidfd による停止、child process group の停止、PID reuse や競合終了時の制御を変更・検証するとき。
 
 ## Do not read this when
-- apply abandon コマンドの CLI 入出力や外部挙動を確認するときは、CLI 用テストを直接読む
-- apply runtime の実装詳細ではなく、別のサブコマンドや一般的な process 管理を扱うとき
+- apply abandon コマンドの引数・終了コード・CLI 出力など外部挙動を確認するときは、直接 `test_apply_abandon_cli.py` を読む。
 
 ## hash
-- 66bd4aef4faaae09a81cee7be72f31a9040152276048393d364f29b6b87f1726
+- 31cb4884b8071f5f1aff87d25c22cbaa96db9c1adeaa859a3181217fefc45d4e
 
 # `test_runtime_cli.py`
 

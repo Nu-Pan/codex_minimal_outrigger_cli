@@ -126,35 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization source tree。Typer CLI のルート、サブコマンド、共通 runtime、互換 import shim、設定・ACP 公開入口を含み、各機能の実装や下位モジュールへ進むための入口となる。
+- cmoc の realization 実装をまとめる src ディレクトリ。CLI ルート、サブコマンド、共通 runtime、互換 import shim、設定入口、ACP builder など、実行コードの主要な入口から下位実装へ進むための起点となる。
 
 ## Read this when
-- cmoc の realization 側で CLI、サブコマンド、共通 runtime、互換 import 経路の構成を把握するとき。
-- 変更対象の実装ファイルや下位パッケージを特定するとき。
-- 特定機能の入口から、対応するサブコマンドまたは共通 runtime 実装へ読み進めるとき。
+- cmoc の realization 実装全体の構成や、CLI・runtime・互換入口・サブコマンドの実装先を確認するとき。
+- 対象機能の実装ファイルを特定し、該当する下位パッケージへ読み進めるとき。
 
 ## Do not read this when
-- oracle 側の正本仕様や canonical な実装を確認したいとき。
-- 特定サブコマンド・runtime module の具体的な処理だけを調査するときは、対応する下位対象を直接読む。
-- 互換 import shim と無関係な個別機能の詳細を確認するとき。
+- 正本仕様や canonical な実装を確認したいときは、対応する oracle 配下を直接読む。
+- 特定サブコマンド、runtime 機能、builder の具体的な処理が分かっているときは、対応する下位実装を直接読む。
+- テストや開発環境の規則だけを確認したいとき。
 
 ## hash
-- 4f5ac4acf4bd386a980497149eed9473b70d70cfb7864a6542d34d69b25684a3
+- e18c79a857be30396159e40386c793000040847581061d1e6306c7004e5e5177
 
 # `test`
 
 ## Summary
-- テストコード群のディレクトリ。ACP builder、CLI、runtime、Codex、indexing、review oracle、session/apply、設定、worktree などの外部挙動・契約・回帰を検証し、各共有テスト補助モジュールが共通準備の入口となる。
+- cmoc の realization test を集約するディレクトリ。ACP builder、CLI、runtime、Codex、indexing、session/apply、doctor、review oracle などの外部挙動・制御契約を pytest で検証し、共有テスト補助も提供する。各機能の回帰テストや、実装変更後に対応するテスト範囲を選ぶ入口となる。
 
 ## Read this when
-- 対象機能の pytest 回帰テストや外部契約を確認・追加・修正するとき。
-- 複数のサブシステムにまたがる CLI、runtime、Codex、Git/worktree、state の挙動をテスト観点から調査するとき。
-- 個別テストの共通 fixture・runner・fake command・Git/Ollama/Codex helper を確認するとき。
+- cmoc の CLI、runtime、Codex 実行、indexing、session/apply、doctor、review oracle、ACP builder の挙動や回帰テストを変更・調査するとき。
+- 複数のテストで共有される Git、CliRunner、fake command、Ollama、Codex、worktree 用 fixture・helper の利用方法を確認するとき。
+- 本番同等の CLI 経路や複数コンポーネント間の統合挙動を検証するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認するときは、対応する oracle 文書・schema を直接読む。
-- 実装詳細のみを調査するときは、対応する src モジュールを直接読む。
-- 一般的な pytest 実行方法や、対象機能と無関係なテスト補助を確認するとき。
+- 正本仕様、schema、設計、開発環境、テスト規約そのものを確認するときは、対応する oracle 文書や開発規約を直接読む。
+- 単一の実装モジュールの内部構造だけを調査するときは、対応する src ファイルを直接読む。
+- 対象機能と無関係なテストや共有補助の詳細を確認するとき。
 
 ## hash
-- 541e0fa5d164f2ccffa3f0bff2a9dae8602d9b70acbf4cdd034cb512179dadca
+- 99cfbc2e3a3ff6f947a12731d9a69079c416b3952255fe6d409ff1018fbbe890

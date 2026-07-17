@@ -50,20 +50,18 @@
 # `runtime_apply.py`
 
 ## Summary
-- apply 実行に関する共通ランタイム処理を提供するモジュール。branch から worktree を解決し、apply process と Codex child process の PID・開始時刻・process group を追跡、排他、停止、stale 状態の cleanup までを扱う。apply/abandon の process lifecycle 実装を読む際の入口。
+- cmoc apply の linked worktree 特定と、apply プロセスおよび Codex 子プロセスの同一性確認・追跡・停止・cleanup を担う共通ランタイム処理。apply/abandon のプロセス状態管理を確認する入口。
 
 ## Read this when
-- cmoc apply の実行中 process 管理、abandon による停止、PID file の読み書きや cleanup を変更・調査するとき。
-- apply branch と managed worktree の対応付け、worktree lookup、process 同一性確認、process group 停止の挙動を確認するとき。
-- apply state の公開と abandon cleanup の競合防止、Codex subprocess tracking の環境変数連携を確認するとき。
+- apply または abandon の process ID file、PID 再利用対策、プロセスグループ停止、子プロセス追跡を変更・調査するとき
+- session branch や apply branch から linked worktree のパスを解決する処理を変更・調査するとき
 
 ## Do not read this when
-- apply の CLI 引数や利用者向け仕様だけを確認したいときは、対応する subcommand の oracle doc を先に読む。
-- 一般的な process 実行・signal・git 操作の共通実装を調べる場合は、ここではなく cmoc_runtime 側の定義を直接読む。
-- apply と無関係な worktree、PID、process group 管理を扱う場合。
+- CLI の apply/abandon の利用者向け仕様や状態遷移を確認したいとき
+- プロセス管理や worktree 解決を使わないサブコマンドの実装を調査するとき
 
 ## hash
-- 777ef88da7816a6ae26dc6cb4223eb37f946cdf42401eab770ce56942f4797a5
+- cfb232f9ad8bc672cd032a565f3911658c8c6394d6688e5c8e6cad1e4c1aa3e4
 
 # `runtime_cli.py`
 
