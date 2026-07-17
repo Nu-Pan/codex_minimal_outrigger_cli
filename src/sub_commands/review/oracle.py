@@ -76,8 +76,8 @@ def cmoc_review_oracle_impl(scope: str) -> None:
         _cmoc_review_oracle_body,
         scope,
         run_codex_exec,
-        command_name="review oracle",
-        command_argv=["cmoc", "review", "oracle", "--scope", scope],
+        command_name="oracle review",
+        command_argv=["cmoc", "oracle", "review", "--scope", scope],
         total_steps=8,
     )
 
@@ -93,7 +93,7 @@ def _cmoc_review_oracle_body(
     session_id, _state_path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/") or state.session.state != "active":
         raise CmocError(
-            "review oracle は active session branch 上で実行してください。", [], branch
+            "oracle review は active session branch 上で実行してください。", [], branch
         )
     _require_clean_worktree(current_root)
     ensure_cmoc_ignored(current_root)
@@ -210,13 +210,13 @@ def _record_review_oracle_interruption() -> None:
     """review 中断要求を console とサブコマンドログへ記録する。"""
     typer.echo(
         "# ユーザー中断要求を受け付けました\n"
-        "- 確定済みの部分結果で review oracle を完了します。"
+        "- 確定済みの部分結果で oracle review を完了します。"
     )
     logger = current_subcommand_logger()
     if logger is not None:
         logger.event(
             "user_interruption",
-            command="review oracle",
+            command="oracle review",
             result="interrupted",
         )
 
@@ -228,7 +228,7 @@ def _require_clean_worktree(root: Path) -> None:
     )
     if statuses:
         raise CmocError(
-            "review oracle は git 未コミット差分がある状態では実行できません。",
+            "oracle review は git 未コミット差分がある状態では実行できません。",
             ["差分を commit または退避してから再実行してください。"],
             "\n".join(str(path.relative_to(root)) for _status, path in statuses),
         )

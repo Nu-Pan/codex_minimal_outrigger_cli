@@ -72,7 +72,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -120,7 +120,7 @@ def test_review_oracle_rejects_uncommitted_worktree_changes(
     )
     (root / relative_path).write_text(content)
 
-    result = runner.invoke(app, ["review", "oracle"])
+    result = runner.invoke(app, ["oracle", "review"])
 
     assert result.exit_code != 0
     assert "git 未コミット差分" in result.output
@@ -173,7 +173,7 @@ def test_review_oracle_merges_review_index_changes(
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -239,7 +239,7 @@ def test_review_oracle_merges_preflight_committed_index_changes(
     )
 
     result = runner.invoke(
-        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -330,9 +330,9 @@ def test_review_oracle_rejects_non_index_worktree_changes(
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
-    result = runner.invoke(app, ["review", "oracle", "--scope", "full"])
+    result = runner.invoke(app, ["oracle", "review", "--scope", "full"])
 
     assert result.exit_code != 0
-    assert "review oracle が INDEX.md 以外の差分を作成しました。" in result.output
+    assert "oracle review が INDEX.md 以外の差分を作成しました。" in result.output
     assert (root / "README.md").read_text() == "# repo\n"
     assert not (root / "generated.txt").exists()

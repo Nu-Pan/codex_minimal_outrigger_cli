@@ -58,7 +58,7 @@ PRODUCTION_SCENARIO_COMMANDS = {
     ("doctor",),
     ("eval-oracle",),
     ("indexing",),
-    ("review", "oracle"),
+    ("oracle", "review"),
     ("session", "abandon"),
     ("session", "fork"),
     ("session", "join"),
@@ -431,7 +431,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert session_branch.startswith("cmoc/session/")
     review_dir = root / ".cmoc" / "gu" / "ar" / "report" / "review_oracle"
     review_reports = set(review_dir.glob("*.md"))
-    _run_without_codex_call(cmoc, root, environment, "review", "oracle")
+    _run_without_codex_call(cmoc, root, environment, "oracle", "review")
     review_report = next(iter(set(review_dir.glob("*.md")) - review_reports))
     assert "result: no_targets" in review_report.read_text()
     review_reports = set(review_dir.glob("*.md"))

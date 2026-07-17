@@ -103,10 +103,10 @@ class _CmocTyperGroup(typer.core.TyperGroup):
 app = typer.Typer(cls=_CmocTyperGroup, no_args_is_help=True)
 session_app = typer.Typer(no_args_is_help=True)
 apply_app = typer.Typer(no_args_is_help=True)
-review_app = typer.Typer(no_args_is_help=True)
+oracle_app = typer.Typer(no_args_is_help=True)
 app.add_typer(session_app, name="session")
 app.add_typer(apply_app, name="apply")
-app.add_typer(review_app, name="review")
+app.add_typer(oracle_app, name="oracle")
 
 
 @app.command()
@@ -167,7 +167,7 @@ def apply_abandon() -> None:
     cmoc_apply_abandon_impl()
 
 
-@review_app.command("oracle")
+@oracle_app.command("review")
 def review_oracle(
     scope: ReviewOracleScope = typer.Option(ReviewOracleScope.session, "--scope", "-s"),
 ) -> None:

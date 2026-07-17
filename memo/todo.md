@@ -1,10 +1,5 @@
 # 現在進行中
 
-- そんなの１回でも実行すれば分かるだろ系のバグがいまだに再現する
-    - cmoc apply fork のデッドロックの話
-    - 各サブコマンドの本物での実行を仕様で確定させないと話にならない
-- state/apply_processes が `.cmoc/gu`, `.cmoc/gu/ar` に分かれて存在している…？
-- python-dev-skill が呼び出されすぎに見える
 
 # cmoc の作業品質
 

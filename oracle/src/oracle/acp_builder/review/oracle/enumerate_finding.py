@@ -1,4 +1,4 @@
-"""`cmoc review oracle` の新規所見列挙 prompt 正本。"""
+"""`cmoc oracle review` の新規所見列挙 prompt 正本。"""
 
 # std
 from pathlib import Path
@@ -20,7 +20,7 @@ def build_review_oracle_enumerate_finding_parameter(
     related_findings: str,
 ) -> AgentCallParameter:
     """
-    `cmoc review oracle` サブコマンド、新規所見列挙用。
+    `cmoc oracle review` サブコマンド、新規所見列挙用。
     AI エージェント呼び出しパラメータを構築する。
 
     oracle_path: Path

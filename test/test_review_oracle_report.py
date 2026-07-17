@@ -74,7 +74,7 @@ def test_review_oracle_interrupt_reports_only_completed_enumerations(
 
     result = runner.invoke(
         app,
-        ["review", "oracle", "--scope", "full"],
+        ["oracle", "review", "--scope", "full"],
         catch_exceptions=False,
     )
 
@@ -151,7 +151,7 @@ def test_review_oracle_writes_report(
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -161,7 +161,7 @@ def test_review_oracle_writes_report(
     assert report_path.is_file()
     rendered = report_path.read_text()
     required_sections = [
-        "# cmoc review oracle report",
+        "# cmoc oracle review report",
         "## Verdict",
         "## Evaluated oracle file",
         "## Fatal findings",
@@ -244,7 +244,7 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -451,7 +451,7 @@ def test_review_oracle_accepts_short_scope_option(
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["review", "oracle", "-s", "full"], catch_exceptions=False
+        app, ["oracle", "review", "-s", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -508,7 +508,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
 
     monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
 
-    result = runner.invoke(app, ["review", "oracle", "--scope", "full"])
+    result = runner.invoke(app, ["oracle", "review", "--scope", "full"])
 
     assert result.exit_code != 0
     report_path = Path(

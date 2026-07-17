@@ -1,4 +1,4 @@
-"""`cmoc review oracle` の所見否定理由列挙 prompt 正本。"""
+"""`cmoc oracle review` の所見否定理由列挙 prompt 正本。"""
 
 # std
 from pathlib import Path
@@ -21,7 +21,7 @@ def build_review_oracle_validate_finding_challenger_parameter(
     known_challenger_reasons: str,
 ) -> AgentCallParameter:
     """
-    `cmoc review oracle` サブコマンド、所見が妥当ではない理由の列挙用。
+    `cmoc oracle review` サブコマンド、所見が妥当ではない理由の列挙用。
     AI エージェント呼び出しパラメータを構築する。
 
     finding: str

@@ -1,4 +1,4 @@
-"""`cmoc review oracle` の所見採否判定 prompt 正本。"""
+"""`cmoc oracle review` の所見採否判定 prompt 正本。"""
 
 # std
 from pathlib import Path
@@ -21,7 +21,7 @@ def build_review_oracle_judge_finding_parameter(
     challenger_reasons: str,
 ) -> AgentCallParameter:
     """
-    `cmoc review oracle` サブコマンド、所見採否判定用。
+    `cmoc oracle review` サブコマンド、所見採否判定用。
     AI エージェント呼び出しパラメータを構築する。
 
     finding: str

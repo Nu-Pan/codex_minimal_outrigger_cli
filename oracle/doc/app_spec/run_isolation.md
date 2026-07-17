@@ -19,19 +19,19 @@
 
 - run 開始時点での `{{cmoc-session-branch}}` HEAD を元に `{{cmoc-run-branch}}` を作成する
 - `{{cmoc-run-branch}}` は抽象概念であり、具体的なブランチ名はサブコマンドによって異なる
-    - e.g. `cmoc review oracle` --> `{{cmoc-review-branch}}`
+    - e.g. `cmoc oracle review` --> `{{cmoc-review-branch}}`
     - e.g. `cmoc apply fork` --> `{{cmoc-apply-branch}}`
 - run の作業は全て `{{cmoc-run-branch}}` 上で記録される
 - run の作業完了後の `{{cmoc-run-branch}}` --> `{{cmoc-session-branch}}` マージ規則
     - サブコマンドによって、マージ規則は異なる
     - e.g. `cmoc apply join` により、半自動ワークフローで慎重にマージされる
-    - e.g. `cmoc review oracle` により自動でマージされる
+    - e.g. `cmoc oracle review` により自動でマージされる
 
 ## git worktree
 
 - cmoc の run 作業は、必ず `{{cmoc-run-worktree}}` 上で行う
 - `{{cmoc-run-worktree}}` は抽象概念であり、具体的なブランチ名はサブコマンドによって異なる
-    - e.g. `cmoc review oracle` --> `{{cmoc-review-worktree}}`
+    - e.g. `cmoc oracle review` --> `{{cmoc-review-worktree}}`
     - e.g. `cmoc apply fork` --> `{{cmoc-apply-worktree}}`
 - cmoc の run 作業は `{{cmoc-run-worktree}}` 上で `{{cmoc-run-branch}}` を checkout した状態で行う
 

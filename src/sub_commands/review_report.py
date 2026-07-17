@@ -110,7 +110,7 @@ def render_review_oracle_report(
         row_lines.append(f"| {idx} | `{path_display(root, path)}` | {finding_count} |")
     rows = "\n".join(row_lines)
     frontmatter = [
-        ("command", "review oracle"),
+        ("command", "oracle review"),
         ("generated_at", timestamp()),
         ("repo_root", root),
         ("scope", scope),
@@ -132,7 +132,7 @@ def render_review_oracle_report(
             "---",
             *(_render_frontmatter_field(name, value) for name, value in frontmatter),
             "---",
-            "# cmoc review oracle report",
+            "# cmoc oracle review report",
             "## Verdict",
             verdict,
             "## Evaluated oracle file",

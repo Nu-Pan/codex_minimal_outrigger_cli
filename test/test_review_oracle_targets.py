@@ -134,7 +134,7 @@ def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -179,7 +179,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
 
     monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
 
-    result = runner.invoke(app, ["review", "oracle"], catch_exceptions=False)
+    result = runner.invoke(app, ["oracle", "review"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert calls == []
@@ -230,7 +230,7 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
-    result = runner.invoke(app, ["review", "oracle"], catch_exceptions=False)
+    result = runner.invoke(app, ["oracle", "review"], catch_exceptions=False)
 
     assert result.exit_code == 0
     enumerate_calls = [

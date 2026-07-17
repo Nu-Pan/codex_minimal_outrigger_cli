@@ -208,7 +208,7 @@ def test_cli_parse_error_report_is_written_to_stdout() -> None:
     ("argv", "allowed"),
     [
         (["apply", "fork", "--scope", "bad"], ["rolling", "session", "full"]),
-        (["review", "oracle", "--scope", "rolling"], ["session", "full"]),
+        (["oracle", "review", "--scope", "rolling"], ["session", "full"]),
     ],
 )
 def test_scope_options_are_rejected_by_cli_parser(

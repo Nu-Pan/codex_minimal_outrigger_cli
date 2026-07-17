@@ -1,4 +1,4 @@
-"""`cmoc review oracle` の所見リストマージ prompt 正本。"""
+"""`cmoc oracle review` の所見リストマージ prompt 正本。"""
 
 # std
 from pathlib import Path
@@ -19,7 +19,7 @@ def build_review_oracle_merge_finding_parameter(
     findings: str,
 ) -> AgentCallParameter:
     """
-    `cmoc review oracle` サブコマンド、所見リストマージ用。
+    `cmoc oracle review` サブコマンド、所見リストマージ用。
     AI エージェント呼び出しパラメータを構築する。
 
     findings: str
