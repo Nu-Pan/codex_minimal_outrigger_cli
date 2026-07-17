@@ -39,15 +39,17 @@
 # `prompt_builder`
 
 ## Summary
-- oracle と realization、アクセス規則、レビュー基準、ルーティング規則などをプロンプト部品として構造化するソース群。プレースホルダ型、完全な agent 用プロンプトの組み立て、各 standard の注入処理を確認する入口。
+- agent call 用の完全なプロンプトを組み立てる実装と、プレースホルダ対応型、oracle／realization やルーティング規範などをプロンプトへ変換する部品群を収録する。プロンプト構成全体や個別 standard の注入処理、プレースホルダ表現を調査・変更するときの入口となる。
 
 ## Read this when
-- oracle・realization の定義や standard、レビュー基準、ファイルアクセス規則、ルーティング規則を確認または変更するとき
-- 完全な agent 用プロンプトの構成、standard の依存関係・注入順序、プレースホルダの扱いを調査するとき
+- 完全な agent 用プロンプトの構成や、静的・動的プロンプトの統合方法を確認したいとき。
+- oracle／realization の定義・standard、アクセス規則、INDEX.md ルーティング規則を prompt に組み込む処理を調査・変更するとき。
+- プレースホルダ展開に使う型や、各 standard の個別 build 処理を確認したいとき。
 
 ## Do not read this when
-- 個別の oracle file・realization file の具体的な仕様や実装を調査するとき
-- CLI の実行フロー、ファイル探索、入出力形式、生成済み文書の保存・表示処理を調べるとき
+- CLI コマンドの処理、ファイル探索、実際の読み書き、agent の業務ロジックを調査するとき。
+- 個別の oracle file や realization file の仕様・実装そのものを確認するとき。
+- レビュー結果の保存・表示形式や JSON schema、prompt builder 全体の呼び出し側を確認したいとき。
 
 ## hash
-- 31af1f9fbf5bd64b0d1ff4e5f6dd527ab86afb79a3121e2039b2ab277272b1dc
+- f9d742947ac0f7005fc9eaf397ee3bdc7ced921e1551f6c05017d48b8b87b07b

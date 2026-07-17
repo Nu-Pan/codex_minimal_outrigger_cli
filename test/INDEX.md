@@ -235,20 +235,21 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 統合テスト。レビュー・修正ループの収束／未収束／エラー、変更ファイルの再検査、report 生成、変更要約、commit、session state 更新、rolling fork の対象範囲を検証する。
+- apply fork の CLI 統合テストを集約し、レビュー・修正ループ、収束判定、変更ファイルの再検査、rolling fork、commit、join、session state 更新を検証する。
+- report の生成内容と front matter、所見推移、変更内容要約、converged・unconverged・error の結果を確認する。
+- 変更要約について、未追跡ファイルの扱い、削除済み追跡ファイルの除外、Codex 要約が空の場合の fallback を検証する。
 
 ## Read this when
-- apply fork の終了状態、所見ループ、変更ファイル再検査、report 内容を変更・調査するとき
-- apply fork の未追跡・削除済みファイルを含む変更要約や fallback 挙動を確認するとき
-- rolling apply fork が前回 join 後の変更だけを対象にする制御を確認するとき
+- apply fork の report schema、収束・未収束・error 判定、再検査ループを変更または調査するとき
+- apply fork による commit・join・rolling 対象・session state 更新の CLI 挙動を変更または検証するとき
+- 変更内容要約の差分抽出や fallback 挙動を変更または検証するとき
 
 ## Do not read this when
-- apply fork の内部実装そのものを変更する場合は、まず対応する src の実装と oracle file を読むとき
-- apply fork report 以外の CLI コマンドや一般的な session fork の挙動だけを調査するとき
-- Codex CLI や LLM の出力品質自体を検証するテストを探しているとき
+- apply fork の実装詳細だけを調査し、CLI 統合挙動や report 出力の確認が不要なとき
+- session fork や apply join 単体の挙動だけを確認し、apply fork report との連携を扱わないとき
 
 ## hash
-- ba1beda9c3af63714cad3d740f030aeedfdbf7df9756c836c466ba01a5c19e2c
+- 2763b008774e7044600325664fc0a803eb7b3a7f94dcc60beb28ca65b9929fa8
 
 # `test_apply_fork_target_normalization.py`
 
@@ -269,19 +270,22 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply join の CLI 結合処理を、成功条件・後片付け・state/report 更新・異常検出・競合処理まで含む統合テストで検証する。
+- apply join CLI の統合テスト。apply run の session への結合、worktree・branch・state・report の後片付け、実行場所による挙動を検証する。
+- dirty worktree、想定外の apply/session 差分、realization・oracle・設定・memo 等の分類、tracked/ignored path、rename・delete、merge conflict、force-resolve、lock 中の state 再読込、error process 停止を検証する。
+- apply join の成功条件・拒否条件と差分分類の実装・仕様を確認するための入口であり、テスト対象の実装や正本仕様は直接参照先で確認する。
 
 ## Read this when
-- apply join の実装、仕様、テストを変更・調査するとき
-- apply worktree や branch の cleanup、session への merge、state 更新、report 生成の挙動を確認するとき
-- dirty worktree、想定外差分、symlink、rename/delete、merge conflict、force-resolve の扱いを確認するとき
+- apply join の外部挙動、終了条件、cleanup、state 更新、report 内容を変更または検証するとき
+- apply と session の差分分類、realization file 判定、force-resolve、merge conflict 処理を調査するとき
+- apply join の worktree・branch・lock・process 状態に関する回帰を調べるとき
 
 ## Do not read this when
-- apply fork や apply join 以外のサブコマンドだけを調査するとき
-- apply join の内部実装ではなく、個別の共通テストヘルパーを直接確認すべきとき
+- apply join 以外のサブコマンドの挙動だけを調査するとき
+- 単純な CLI 共通 runner、git fixture、または doctor の実装だけを確認するときは、それぞれの専用テスト・実装を直接読む
+- apply join の正本仕様や実装詳細を確認することが目的で、テストケース一覧が不要なとき
 
 ## hash
-- 0fe4aaee90ee2140a830bbe14c0772f656b98a3d7b0279bebbb6d4ca7924dfc6
+- da0f1cb98c5d99c029c3b1beb7581642ec00087471243f625b34f3295c0abcf5
 
 # `test_basic_runtime.py`
 

@@ -1,35 +1,39 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション仕様断片をまとめたディレクトリ。CLI の補完・通常実行・サブコマンド、ログとエラー処理、セッション状態、run 隔離、Codex CLI 呼び出し、managed ollama などの個別仕様へ進む入口。
+- cmoc の正本文書群を分野別に収録するディレクトリ。アプリケーション仕様、branch・worktree モデル、採用しなかった代替案、開発規則を確認する際の入口となる。
 
 ## Read this when
-- cmoc の利用者向け挙動、CLI 実行条件、状態遷移、ログ・エラー処理、agent call、managed ollama の仕様を確認するとき。
-- 複数のアプリケーション仕様候補から、対象機能に対応する正本仕様断片を選ぶとき。
+- cmoc の仕様・設計判断・開発手順に関する oracle doc を探すとき。
+- 対象文書の分野が、アプリケーション仕様、branch モデル、設計上の不採用案、Python・CLI・テストなどの開発規則に該当するとき。
 
 ## Do not read this when
-- INDEX.md の自動生成・更新規則だけを確認したいとき。
-- Python 実行環境、設計ルール、テスト手順など開発規則だけを確認したいとき。
-- 個別仕様が明らかで、対象ファイルへ直接アクセスすれば足りるとき。
+- 対象の仕様文書や開発規則が既に特定できており、下位の個別文書へ直接進めるとき。
+- realization code の具体的な実装詳細や INDEX.md のルーティング規則を調査するとき。
 
 ## hash
-- de45440fefb270c49b4c914d7cbaa34ed23e56aa27574c630ab877d9eb2482ad
+- 93a29b2dd58656d436d1f2348cf47df3f7a0ad36270f7f5256ebcdb693c3dedb
 
 # `src`
 
 ## Summary
-- ACP builder の agent call パラメータ、prompt builder の構成・依存注入、設定・ルートパス解決、規範文書や構造化 markdown を扱う共通 oracle src の領域。個別サブディレクトリの仕様・実装へ進むための入口。
+- ACP builder の oracle src をまとめる領域。AI エージェント呼び出しパラメータ、cmoc の各サブコマンド向け prompt・Structured Output 設定、実行時のファイルアクセス方針を扱う。
+- cmoc の設定モデル、既定値、ルートパス解決、規範文書のデータ化、構造化 markdown の処理など、複数機能から利用される共通基盤を確認する入口。
+- 完全な agent 用 prompt の組み立て、静的・動的 prompt の統合、oracle／realization の規範や各 standard の注入、プレースホルダ展開を扱う。
 
 ## Read this when
-- agent call のモデル、推論強度、ファイルアクセス、Structured Output、作業ディレクトリの型を確認するとき。
-- prompt の組み立て、standard・プレースホルダ・ファイルアクセス規則・routing rule の注入を調査するとき。
-- cmoc 設定、ループ回数、JSON 保存、ルートパスプレースホルダ解決、構造化 markdown の検査・レンダリングを確認するとき。
-- 個別実装を読む前に、ACP builder、prompt builder、その他の共通基盤のどこへ進むべきか判断するとき。
+- ACP builder の agent call パラメータやファイルアクセスモードを確認・変更するとき。
+- cmoc apply fork、indexing、review oracle、session join、tui の prompt 構築や Structured Output 設定を調査するとき。
+- 設定モデル、既定値、保存方針、ルートパスのプレースホルダ解決を確認するとき。
+- 規範文書のデータ構造、markdown 変換、構造化 markdown のレンダリング・検査・正規化を調査するとき。
+- agent 用 prompt の構成、prompt 統合、standard の注入、oracle／realization 定義の組み込みを調査するとき。
 
 ## Do not read this when
-- 個別サブコマンドの実行フロー、CLI 入出力、ファイル探索、生成物の保存処理を調査するとき。
-- 個別の oracle file や realization file の具体的な仕様・実装を確認するとき。
-- 下位ディレクトリの責務が明確で、共通の agent call、prompt、設定、パス、構造化文書基盤を確認する必要がないとき。
+- ACP builder の実行本体、下流の realization 実装・テスト、CLI の実行手順や入出力を調査するとき。
+- 共通 prompt builder、パス解決、構造化文書処理の実装詳細を直接確認するときは、該当する下位要素へ進む。
+- 個別の oracle file や realization file の仕様・実装そのものを確認するとき。
+- レビュー結果の保存・表示形式、JSON schema、prompt builder 全体の呼び出し側を確認するとき。
+- oracle と realization の一般的な責務定義や INDEX.md の生成規則だけを確認したいとき。
 
 ## hash
-- 653d8ccb890d140a59a10aad0e8996dca6bbccecc3405aa44c76baa19f0965f3
+- 01b799a6dbf45ad4c2b87ade2bfd772c87c8969fcf29151bc65d93b438bf8a30

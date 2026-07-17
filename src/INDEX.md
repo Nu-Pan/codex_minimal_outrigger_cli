@@ -48,21 +48,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群を提供する commons パッケージ。CLI 実行、Codex、設定、Git、パス、ログ、状態、doctor、Ollama、INDEX 更新など、複数機能から利用される共通実装への入口。
-- 個別 runtime モジュールと、Codex 実行 API の再エクスポート窓口を含む。対象機能の実装詳細や公開 API の利用箇所を調べる際に、配下の該当モジュールへ進むための起点となる。
+- cmoc 共通 runtime helper を提供する commons パッケージ。CLI 実行、Codex、設定、Git、パス、ログ、状態、Ollama、INDEX 更新などの個別 runtime 実装と、横断 API の再公開窓口を含む。commons 配下の共通実行時機能を調査・変更する際の入口。
 
 ## Read this when
-- cmoc の複数機能にまたがる共通 runtime 処理の所在を確認するとき
-- CLI 実行、Codex 起動、設定、Git、パス、ログ、状態、doctor、Ollama、INDEX 更新の共通実装を調査・変更するとき
-- commons 配下で対象となる個別 runtime モジュールを特定したいとき
+- commons 配下の共通 runtime 機能の責務や実装箇所を特定するとき
+- CLI、Codex、設定、Git、パス、ログ、状態、Ollama、INDEX 更新など複数の runtime 機能にまたがる変更影響を確認するとき
+- 個別 runtime モジュールへ進む前に、commons パッケージ全体の構成を把握するとき
 
 ## Do not read this when
-- 特定サブコマンド固有の業務処理や CLI 引数定義だけを確認したいとき
-- 利用者向けの正本仕様を確認したいときは、対応する oracle 文書を直接読む
-- 特定機能の実装箇所が明確な場合は、このディレクトリ全体ではなく該当する runtime モジュールを直接読む
+- 特定の runtime 機能の実装詳細だけを確認したいとき
+- 特定サブコマンドの業務処理や利用者向け仕様だけを調査するときは、対応する実装または oracle 文書を直接読むとき
 
 ## hash
-- cd62c309e0a5a9605272b389a5bd5833973061e491e1ca46dc0b6c729f349de6
+- 4a403c82687ea37c9d88409c6621acb69f0baa989f34f7cf0ab1b0f1765f9aef
 
 # `config`
 
@@ -118,15 +116,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装領域。session／apply の fork・join・abandon、review oracle の実行・対象列挙・評価ループ・レポート・INDEX commit、indexing・doctor・eval_oracle・tui の実行入口と補助処理を扱う。各サブパッケージおよび個別モジュールへの入口。
+- cmoc のサブコマンド実装をまとめたパッケージ。apply、doctor、indexing、review、session、tui などの CLI 実行入口と、各サブコマンド固有の lifecycle、対象選定、レポート、Git・worktree 操作への入口を提供する。
 
 ## Read this when
-- サブコマンドの実行フロー、状態遷移、worktree／branch 操作、Codex 実行、レポート生成、INDEX 更新の実装を確認・変更するとき。
-- session または apply のライフサイクル、review oracle の対象選定・finding 評価・merge、TUI や preprocess の CLI 入口を調査するとき。
+- サブコマンドの CLI 実装や package 構成を確認・変更するとき。
+- 複数サブコマンドにまたがる実装入口や、目的のサブコマンド配下の処理へ進む先を判断するとき。
 
 ## Do not read this when
-- 共通 CLI runtime、Git／state／process tracking、indexing 共通処理、Codex parameter builder などの共通実装だけを調査するときは、対応する定義元を直接読む。
-- 特定サブコマンド内の prompt／parameter、レポート描画、対象列挙など単一機能だけを調査するときは、該当する個別実装を直接読む。
+- 共通 CLI runtime、Git、worktree、Codex 実行基盤などの共通実装だけを調査・変更するとき。
+- 特定サブコマンドの個別機能、下位モジュール、プロンプト生成、レポート生成だけを扱うときは、対応する下位実装を直接読む。
 
 ## hash
-- 6c0a0b17389a1d2816e579bf27c3dccb379a7d4006b53b0c6f3c7d639767615e
+- 3d6afa336f198361e8c8188c2d7a1aef6863d12546520a3cd38619852beacda8

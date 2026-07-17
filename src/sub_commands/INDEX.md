@@ -1,20 +1,19 @@
 # `apply`
 
 ## Summary
-- apply サブコマンドの実装パッケージ。apply run の abandon・fork・join、fork report、および各処理の状態管理・Git worktree/branch・process tracking・レポート生成を扱う。apply サブコマンドの実装を確認・変更するときの入口。
+- apply サブコマンドの実装パッケージ。abandon、fork、fork report、join の処理を扱い、apply run の開始からレビュー・修正、差分 commit、merge、report 保存、state 更新、process・worktree・branch cleanup までの実装入口となる。
 
 ## Read this when
-- `cmoc apply` の abandon、fork、join の実行フローや失敗時処理を確認・変更するとき。
-- apply branch・worktree・session state・process tracking・report のライフサイクルや相互作用を調査するとき。
-- apply fork の対象ファイル列挙・Codex review-and-fix ループ、fork report の差分要約、apply join の merge・conflict 解決・想定外差分判定を確認するとき。
+- apply サブコマンドの実装を確認または変更するとき。
+- apply run の lifecycle、state・process tracking、worktree・branch 操作、差分処理、report 生成、join・abandon の挙動を調査するとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドを扱うとき。
-- 共通 CLI runtime、session state、Git 操作、process lock などの一般実装だけを変更・確認するときは、対応する共通モジュールを直接読む。
-- apply fork 内の prompt／parameter 詳細や、fork report の描画詳細だけを確認するときは、該当する個別実装を直接読む。
+- apply 以外のサブコマンドだけを扱うとき。
+- 共通 runtime、Git、worktree、Codex 実行基盤の実装だけを変更・調査するときは、対応する共通実装を直接読む。
+- apply fork 内のレビュー・修正プロンプト生成や report 内容だけを扱うときは、対応する下位実装を直接読む。
 
 ## hash
-- a8d4b62f6d4790dcf00c3db0b0d53547cb35b05c332e2cc563e89a57c1b18ef8
+- 5f2275d9b011172ec29ff2fb2afa5fe73a6fa692c5de562481b35860e11e2fa4
 
 # `doctor.py`
 

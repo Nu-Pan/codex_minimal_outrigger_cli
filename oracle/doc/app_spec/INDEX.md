@@ -143,21 +143,20 @@
 # `misc_spec.md`
 
 ## Summary
-- cmoc がリポジトリ全体に対して前提として置く運用規則をまとめた案内。実装ファイルの列挙方法、作業時のカレントディレクトリ前提、タイムスタンプ形式、`cmoc-managed-branch` の解釈を確認したいときに読む。
-- この文書は個別機能の仕様ではなく、cmoc が他の文書や実装を読む前に共有すべき共通前提を定義する。作業対象の範囲判定や、時刻・ブランチ・列挙ルールの解釈を揃える役割を持つ。
+- cmoc の雑多な仕様を定義する oracle 文書。oracle file・realization file の列挙方法、work-root の前提、実行時カレントディレクトリ、タイムスタンプ形式、cmoc-managed-branch の対象範囲を扱う。misc 系仕様を確認する際の入口。
 
 ## Read this when
-- リポジトリ全体をまたぐ cmoc の作業前提を確認したいとき。
-- ファイル列挙、作業ディレクトリ、タイムスタンプ、ブランチ解釈の基準を揃えたいとき。
-- 個別の実装や機能仕様ではなく、cmoc 共通の運用ルールを先に確認したいとき。
+- oracle file または realization file の列挙方法を確認するとき
+- work-root の前提や cmoc 実行時のカレントディレクトリを確認するとき
+- タイムスタンプ形式を確認するとき
+- cmoc-managed-branch 上の変更範囲の定義を確認するとき
 
 ## Do not read this when
-- 個別機能の入出力や挙動を知りたいときは、より直接の仕様文書を読む。
-- 既に作業前提が確定していて、ファイル選定や時刻・ブランチ解釈の確認が不要なとき。
-- `INDEX.md` のルーティング先として、より具体的な下位文書が明らかなとき。
+- 特定の oracle file や realization file の実装内容を確認したいとき
+- 開発環境、設計ルール、テストルールなど個別の開発手順を確認したいとき
 
 ## hash
-- 71b43ecc5c13c5360c32cd86aa230e0b1570780c5ebf75bda47569998a58599a
+- 35f26f304c23fb77c0a46fd13bc01989e8fc2629fc8ea3db7ee5dba90cdc5d3c
 
 # `prompt_standard.md`
 
@@ -216,20 +215,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンドごとの正本仕様断片をまとめたディレクトリ。apply、session、doctor、indexing、review、tui などの実行条件・状態遷移・入出力・失敗時挙動を扱い、各サブコマンド仕様への入口となる。
+- cmoc の主要サブコマンドに関する正本仕様断片を収録する入口。apply、session、doctor、indexing、review oracle、tui の実行条件・状態遷移・後処理・終了条件を扱い、各コマンドの詳細仕様へ案内する。
 
 ## Read this when
-- cmoc の特定サブコマンドの実装・テスト・挙動を確認するとき。
-- サブコマンドの引数、事前条件、状態遷移、終了処理、エラーや中断時の扱いを調べるとき。
-- apply、session、doctor、indexing、review、tui のどの正本仕様を読むべきか選ぶとき。
+- cmoc のサブコマンド仕様を実装・レビュー・検証するとき。
+- apply や session の fork・join・abandon、doctor、indexing、review oracle、tui の挙動を確認するとき。
+- 対象コマンドに対応する正本仕様断片の入口を探すとき。
 
 ## Do not read this when
-- サブコマンド共通基盤、run isolation、agent call parameter などの共通仕様だけを調べるときは、それぞれの共通仕様を直接読む。
-- 特定サブコマンドの仕様ではなく、INDEX.md の生成やルーティング情報だけを更新するとき。
-- git、branch、state file など基礎概念の一般仕様だけを確認したいときは、対応する基礎仕様を直接読む。
+- run isolation や agent call parameter など、サブコマンド共通または個別の下位仕様だけを確認したいとき。
+- realization file の実装詳細だけを調査するとき。
+- 一般的な git 操作や、対象外の CLI サブコマンドの仕様を確認するとき。
 
 ## hash
-- ef52981d6f947db52fd10ee8302e3d8353ccc9cadda8d42e7c560614fffbcdc4
+- 14599aec4517528fff426fc4205de69c3c1ae95594b6fd943c9c65d1e6cc7f7e
 
 # `subcommand_interruption.md`
 

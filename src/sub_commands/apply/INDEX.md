@@ -34,20 +34,19 @@
 # `fork.py`
 
 ## Summary
-- apply fork の一連の実行制御を担う実装。session branch の検証、隔離 worktree と apply state の初期化、対象ファイルの列挙、Codex によるレビュー・修正ループ、commit、完了・中断・エラー時の state／report／process tracking／resource cleanup を扱う。apply fork の orchestration と失敗時復旧の入口。
+- apply fork の実行オーケストレーションを担う。session branch 上で隔離 worktree と apply branch を作成し、対象ファイルの列挙、Codex によるレビュー・修正、差分 commit、finding の再キュー、収束判定、report 出力、apply state・process tracking の更新までを一つの apply run として制御する。中断・初期化失敗・cleanup 失敗時の復旧も扱う。
 
 ## Read this when
-- apply fork サブコマンドの実行フロー、対象スコープ、apply loop、commit subject、完了・中断・エラー時の復旧を変更または調査するとき。
-- apply branch、apply worktree、apply state、report、PID tracking のライフサイクルや相互作用を確認するとき。
-- apply 対象ファイルの列挙・正規化や、Codex review-and-fix 呼び出しの起点を確認するとき。
+- apply fork の開始条件、worktree／branch lifecycle、apply loop、対象ファイル列挙、commit subject、state 更新、完了・中断・失敗時の復旧を変更または調査するとき。
+- apply run の finding 再キュー、差分の realization／oracle file 判定、前回 join commit からの対象決定を確認するとき。
 
 ## Do not read this when
-- apply fork 内の Codex review-and-fix 用 prompt／parameter の詳細だけを確認したいときは、専用の builder 実装を直接読む。
-- apply report の出力内容や生成処理だけを確認したいときは、fork report 実装を直接読む。
-- apply abandon の cleanup 処理そのものだけを確認したいときは、abandon サブコマンドの実装と関連仕様を直接読む。
+- apply fork 内のファイル単位レビュー・修正プロンプトの生成や実行仕様だけを確認したいときは、レビュー・修正用モジュールを直接読む。
+- apply fork の report 内容だけを確認したいときは、fork report の実装を直接読む。
+- apply state、共通 git 操作、worktree 操作、Codex 実行基盤そのものだけを確認したいときは、各共通 runtime 実装を直接読む。
 
 ## hash
-- 72421d07a8a30cc0d811a413c08f8e6caf2a55f041c78b082ae0fb786a7199da
+- 4efd0ae892570526be92bd87ebde40e8f2aca0bafeb06768603ab6cb49717d96
 
 # `fork_report.py`
 
@@ -71,16 +70,15 @@
 # `join.py`
 
 ## Summary
-- `cmoc apply join` の一連の実行単位を担う実装。apply/session branch の事前条件と差分を確認し、必要に応じて想定外変更を force-resolve し、apply branch を session branch に merge する。
-- merge 結果に応じて apply state の更新、Markdown report の保存、apply process・worktree・branch の後始末、CLI 結果と警告の出力までを扱う。merge conflict、rename、tracked/ignored path、INDEX.md・oracle・memo の許可差分判定もこのファイルから追える。
+- apply join の実行単位を担い、apply branch と session branch の差分確認、想定外変更の force-resolve、merge、state 更新、report 保存、process 停止、worktree・branch 後始末を一体で処理する。apply join の CLI 実装と、差分分類・rename 復元・INDEX.md conflict の機械解決などの内部処理への入口である。
 
 ## Read this when
-- `cmoc apply join` の挙動、失敗条件、`--force-resolve`、merge conflict、report、state 更新、process 停止、worktree/branch cleanup を変更・調査するとき
-- apply/session branch の想定外差分分類、rename 復元、INDEX.md conflict の自動解決を確認するとき
+- `cmoc apply join` の挙動、事前条件、merge conflict、想定外差分、`--force-resolve`、apply state 更新、report、process 停止、worktree または branch cleanup を変更・調査するとき。
+- apply/session branch の managed diff 判定、rename path の復元、INDEX.md conflict の自動解決を確認するとき。
 
 ## Do not read this when
-- apply join 以外のサブコマンドの処理を調査するとき
-- 共通の CLI runtime、session state、Git 操作、apply process lock の一般実装を確認するときは、それぞれの共通モジュールを直接読む
+- apply join 以外のサブコマンドの実装や、一般的な CLI 実行基盤だけを調査するとき。
+- apply join の仕様・出力・状態遷移を確認することが目的で、実装詳細を読む必要がないときは、対応する oracle 文書を先に読む。
 
 ## hash
-- de1aa378a9a1f623bbfe00473a289e710e8799fed4b4ed0c12a09fdc521242f1
+- a83d8a4687f82871d60589fe8627e94d22e23f574dc34aaab2106a524671e06e

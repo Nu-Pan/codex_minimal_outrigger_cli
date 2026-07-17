@@ -1,18 +1,24 @@
 # `oracle`
 
 ## Summary
-- ACP builder の agent call パラメータ型、prompt builder の構成・依存注入、設定モデル、ルートパス解決、規範文書と構造化 markdown の共通 oracle src をまとめる領域。各サブディレクトリの仕様・実装へ進むための入口。
+- ACP builder の oracle src をまとめる領域。AI エージェント呼び出しパラメータ、cmoc サブコマンドごとの prompt・Structured Output 設定、実行時のファイルアクセス方針を扱う。下位要素で各仕様を確認するための入口。
+- cmoc の設定モデル、ルートパス解決、規範文書のデータ化、構造化 markdown 処理など、複数機能から利用される共通基盤をまとめる領域。個別の共通処理を選ぶ前に確認する入口。
+- agent call 用の完全なプロンプトを組み立てる実装と、その構成要素を扱う領域。oracle／realization の規範、ルーティング規則、プレースホルダ展開、standard の prompt への注入処理を確認する入口。
 
 ## Read this when
-- agent call のモデル・推論強度・ファイルアクセス・Structured Output・作業ディレクトリの論理型を確認するとき。
-- prompt の組み立て、standard の依存関係、プレースホルダ、ファイルアクセス規則や routing rule の注入を調査するとき。
-- cmoc 設定のモデル・ループ回数・JSON 保存方針、ルートパスプレースホルダの解決、構造化 markdown の検査・レンダリングを確認するとき。
-- 個別の実装や設定を読む前に、acp_builder、prompt_builder、other のどの共通基盤へ進むべきか判断するとき。
+- ACP builder の agent call パラメータやファイルアクセスモードを確認するとき。
+- cmoc apply fork、indexing、review oracle、session join、tui の prompt 構築や Structured Output 設定を調査するとき。
+- 設定モデル、既定値、保存方針、ルートパスのプレースホルダ解決を確認するとき。
+- 規範文書のデータ構造や markdown への変換、構造化 markdown のレンダリング・検査・正規化を確認するとき。
+- 完全な agent 用プロンプトの構成、静的・動的 prompt の統合、各 standard の注入処理を調査・変更するとき。
+- プレースホルダ展開に使う型や、oracle／realization の定義を prompt に組み込む処理を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの実行フロー、CLI 入出力、ファイル探索や生成物の保存処理を調査するとき。
-- 個別の oracle file・realization file の具体的な仕様や実装を確認するとき。
-- 下位ディレクトリの責務が明確で、agent call パラメータ、prompt 構築、設定・パス・構造化文書の共通基盤を確認する必要がないとき。
+- ACP builder の実行本体、下流の realization 実装・テスト、CLI の実行手順や入出力を調査するとき。
+- 共通 prompt builder、パス解決、構造化文書処理の実装詳細を直接調査するとき。
+- 個別の oracle file や realization file の仕様・実装そのものを確認するとき。
+- レビュー結果の保存・表示形式、JSON schema、prompt builder 全体の呼び出し側を確認するとき。
+- oracle と realization の一般的な責務定義や INDEX.md の生成規則だけを確認したいとき。
 
 ## hash
-- e778f3022e0ed9e076a012f28b041ea5e9eeabd6ea940e77b7e284b3b41236b0
+- cd37019dd3d3de2c0d8fc9415269342cacc44691186e5fe5f29fad7b8f4b74d6

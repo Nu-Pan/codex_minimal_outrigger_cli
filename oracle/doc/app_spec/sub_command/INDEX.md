@@ -23,37 +23,36 @@
 # `apply_fork.md`
 
 ## Summary
-- `cmoc apply fork` の正本仕様断片。apply ループの引数、事前条件、隔離実行、調査待ちファイル管理、agent call、状態遷移、割り込み、レポート、終了コードを定義する。apply fork の実装や挙動、関連する状態管理・スコープ選択・作業結果レポートを確認する際の入口。
+- `cmoc apply fork` は、隔離された作業用ブランチ上で Codex CLI のファイル単位レビュー・修正・検証ループを実行し、実装と oracle の一致を目指すサブコマンド。スコープ選択、事前条件、状態遷移、割り込み、差分コミット、作業レポート、終了コードを定義する。apply の実行制御や結果報告の仕様を確認する入口であり、run 隔離や agent call の詳細仕様そのものではない。
 
 ## Read this when
-- `cmoc apply fork` の実装またはテストを変更・レビューするとき
-- apply のスコープ、ループ収束、ファイル再投入、コミット、割り込み動作を確認するとき
-- apply 状態の遷移、終了区分、作業レポート仕様を確認するとき
-- apply fork が利用する agent call や run 隔離実行との連携を調査するとき
+- `cmoc apply fork` の引数、事前条件、apply ループ、スコープ、状態遷移、割り込み動作を実装・レビューするとき
+- apply 実行時のブランチ差分、agent call の再投入条件、自動コミット、収束・未収束・エラー判定を確認するとき
+- apply fork の作業レポート形式や終了コードを変更・検証するとき
 
 ## Do not read this when
-- `cmoc apply join` や `cmoc apply abandon` の固有仕様だけを確認するとき
-- run の隔離実行の詳細だけを確認するときは、run isolation の正本仕様を直接読む
-- apply fork の agent call パラメータ詳細だけを確認するときは、対応する parameter 仕様を直接読む
+- run の隔離実行の詳細だけを確認したいときは、指定された run isolation の正本を直接読む
+- ファイル単位レビュー agent call のパラメータ詳細だけを確認したいときは、対応する parameter 仕様を直接読む
+- apply fork 以外のサブコマンドの仕様や、個別の realization file の実装詳細を調査するとき
 
 ## hash
-- 9c30c0a4a6af1f6999c6214103e3b1f7411d7dac98ac1bfa6b9accf0c577e00f
+- fccbe3f974ac0a672cded52b2a56f4f5acb4382c99771769eb1e8c9fd3f53887
 
 # `apply_join.md`
 
 ## Summary
-- `cmoc apply join` の実行条件と分岐を確認したいときに読む。apply の成果物を session 本流へマージする責務があり、通常モードと強制モード、`apply.state = error`、ユーザー中断済み apply、merge conflict、使用済み branch/worktree の削除条件を扱うため、実行時の制御と失敗時挙動を実装・修正するときの入口になる。
+- `cmoc apply fork` の成果物をセッション本流へマージするサブコマンドの仕様。事前条件、通常・強制モードの差分処理、状態更新、マージコンフリクト、使用済みブランチ削除までを定義する。
 
 ## Read this when
-- `cmoc apply join` の引数、事前条件、モード分岐、マージ時の conflict 扱い、state 更新、branch/worktree 削除条件を確認したいとき。
-- apply 実行後に session 側へ結果を取り込む処理や、想定外の差分を通常モードで止めるか強制モードで revert するかを判断したいとき。
+- `cmoc apply join` の挙動、実行条件、差分処理、マージ結果、ブランチ削除条件を実装・検証するとき。
+- apply セッション状態や apply ブランチからセッション本流へのマージ処理を確認するとき。
 
 ## Do not read this when
-- apply の実行本体や fork 側の処理を調べたいときは、そちらの対象を読む。
-- session/state file の保存形式そのものだけを確認したいときは、より直接その state 定義を扱う対象を読む。
+- `cmoc apply fork` 自体の処理や、fork 側で積み上げる対象の詳細だけを確認したいとき。
+- apply サブコマンド以外の CLI 仕様を調べるとき。
 
 ## hash
-- 2257bce933ed9cf50c749288ed9bf496ef760adf394c22ae37af3690928cf675
+- 08610c8a3d7335b41a61385e3e26888bef9d618126e18fb072024f79b6f7d936
 
 # `doctor.md`
 

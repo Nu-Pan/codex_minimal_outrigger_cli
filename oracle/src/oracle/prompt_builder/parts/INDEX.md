@@ -55,20 +55,18 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- `oracle` と `realization` の基本区分を定義する説明部品です。人間が責任を持つ正本仕様断片と、AI が具体化する実装・補助ファイルの境界を確認したいときに読む入口です。
-- `oracle file` / `realization file` の定義、役割、下位概念を最小限に整理しており、用語の混同や責務の取り違えを避けるための基礎参照として使います。
+- oracle file と realization file の定義・役割・下位概念を構築する prompt builder の一部。oracle、realization の責務境界と配置先を説明する StructDoc を返す。
 
 ## Read this when
-- `oracle file` と `realization file` の違いを確認したいとき。
-- oracle 側に書くべきことと、realization 側に実装すべきことの境界を揃えたいとき。
-- `oracle doc` / `oracle src` / `oracle test` や `realization implementation` / `realization test` / `realization ancillary` の分類を確認したいとき。
+- oracle file と realization file の分類、責務、配置先を確認するとき
+- oracle と realization に関する基本説明文の生成処理を変更・調査するとき
 
 ## Do not read this when
-- 既に対象ファイルの役割と置き場所が明確で、個別の仕様本文へ直接進めるべきとき。
-- 特定の実装内容、CLI 挙動、設定値、テスト内容などの詳細を知りたいときは、この基礎説明ではなく該当する具体の oracle 側本文を読むべきです。
+- 個別の oracle doc・src・test の仕様や実装を確認したいとき
+- prompt builder 全体の構成や、基本説明以外の prompt 部品を確認したいとき
 
 ## hash
-- f077d5d9668061293d7908155b6eee427999097f2244076edc9501534f706b86
+- 52d5324d5a026e9a98b5f944af4b667e19d4b114dd9cf1e66a40c111d3521ea6
 
 # `oracle_review_standard.py`
 
