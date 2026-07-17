@@ -210,8 +210,10 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
         raise _unmanaged_worktree_error(worktree, base)
     # {{work-root}}/oracle/doc/branch_model.md
     # 命名規則だけでは不十分であり、削除は Git linked worktree に限定する。
-    if candidate.exists() and resolved not in _registered_worktree_paths(root):
-        raise _unmanaged_worktree_error(worktree, base)
+    if candidate.exists():
+        registered = resolved in _registered_worktree_paths(root)
+        if not registered or not _has_linked_worktree_metadata(root, candidate):
+            raise _unmanaged_worktree_error(worktree, base)
     return resolved
 
 
@@ -255,6 +257,42 @@ def _registered_worktree_paths(root: Path) -> set[Path]:
         for line in output.splitlines()
         if line.startswith("worktree ")
     }
+
+
+def _has_linked_worktree_metadata(root: Path, worktree: Path) -> bool:
+    """worktree path と Git linked worktree metadata の相互参照を検証する。"""
+    # {{work-root}}/oracle/src/oracle/other/path_model.py
+    # linked worktree の root は直下に .git file を持つ。Git の登録だけでは、
+    # worktree directory が置換された stale entry と区別できないため、metadata の
+    # 相互参照まで確認して fallback の再帰削除を許可する。
+    dot_git = worktree / ".git"
+    if not worktree.is_dir() or dot_git.is_symlink() or not dot_git.is_file():
+        return False
+    try:
+        gitdir_line = dot_git.read_text().strip()
+        prefix = "gitdir: "
+        if (
+            not gitdir_line.startswith(prefix)
+            or "\n" in gitdir_line
+            or "\r" in gitdir_line
+        ):
+            return False
+        gitdir = Path(gitdir_line.removeprefix(prefix))
+        if not gitdir.is_absolute():
+            gitdir = worktree / gitdir
+        gitdir = gitdir.resolve()
+        relative_gitdir = gitdir.relative_to(git_common_dir(root) / "worktrees")
+        if not relative_gitdir.parts:
+            return False
+        metadata_gitdir = gitdir / "gitdir"
+        if metadata_gitdir.is_symlink() or not metadata_gitdir.is_file():
+            return False
+        back_reference = Path(metadata_gitdir.read_text().strip())
+        if not back_reference.is_absolute():
+            back_reference = gitdir / back_reference
+        return back_reference.resolve() == dot_git.resolve()
+    except (OSError, UnicodeError, ValueError):
+        return False
 
 
 def _unmanaged_worktree_error(worktree: Path, base: Path) -> CmocError:

@@ -264,3 +264,29 @@ def test_remove_worktree_rejects_unregistered_managed_path(
         remove_worktree(root, target)
 
     assert (target / "keep.txt").read_text() == "keep\n"
+
+
+def test_remove_worktree_rejects_replaced_registered_path(
+    tmp_path: Path,
+) -> None:
+    """staleなGit登録だけを根拠に通常directoryを削除しないことを検証する。"""
+    root = make_repo(tmp_path)
+    target = root / ".cmoc" / "gu" / "worktree" / "session" / "run"
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        "cmoc/apply/session/run",
+        str(target),
+        "HEAD",
+    )
+    moved = tmp_path / "moved-worktree"
+    target.rename(moved)
+    target.mkdir(parents=True)
+    (target / "keep.txt").write_text("keep\n")
+
+    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+        remove_worktree(root, target)
+
+    assert (target / "keep.txt").read_text() == "keep\n"
