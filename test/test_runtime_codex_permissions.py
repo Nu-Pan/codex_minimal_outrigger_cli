@@ -18,6 +18,8 @@ from commons.runtime_codex_profile import (
 )
 from config.cmoc_config import CmocConfig
 
+_CODEX_CLI = shutil.which("codex")
+
 
 def _parameter(mode: FileAccessMode) -> AgentCallParameter:
     """指定modeの最小AgentCallParameterを作る。"""
@@ -110,13 +112,13 @@ def test_codex_overrides_are_invariant_to_worktree_contents(
         FileAccessMode.NO_RULE,
     ],
 )
+@pytest.mark.skipif(_CODEX_CLI is None, reason="codex CLI is not installed")
 def test_sandbox_argument_is_accepted_by_codex_cli(
     tmp_path: Path, mode: FileAccessMode
 ) -> None:
     """生成 argv の専用 sandbox 引数を実 Codex CLI parser に通す。"""
-    codex = shutil.which("codex")
-    if codex is None:
-        pytest.skip("codex CLI is not installed")
+    assert _CODEX_CLI is not None
+    codex = _CODEX_CLI
 
     root = tmp_path / "repo"
     root.mkdir()

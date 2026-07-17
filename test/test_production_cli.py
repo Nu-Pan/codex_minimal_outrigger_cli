@@ -43,6 +43,13 @@ from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
 from main import app
 
+_CMOC_CONSOLE = Path(sys.executable).with_name("cmoc")
+_REAL_CODEX = shutil.which("codex")
+pytestmark = pytest.mark.skipif(
+    not _CMOC_CONSOLE.is_file() or _REAL_CODEX is None,
+    reason="production process test requires installed cmoc and real Codex CLI",
+)
+
 PRODUCTION_SCENARIO_COMMANDS = {
     ("apply", "abandon"),
     ("apply", "fork"),
@@ -136,13 +143,10 @@ def _production_environment(
     tmp_path: Path,
 ) -> tuple[Path, dict[str, str], Path]:
     """実 CLI と隔離済み Codex home を使う subprocess 環境を準備する。"""
-    # 実在する console script と Codex executable が無い環境では理由付きで skip する。
-    cmoc = Path(sys.executable).with_name("cmoc")
-    real_codex = shutil.which("codex")
-    if not cmoc.is_file():
-        pytest.skip(f"installed cmoc console script is unavailable: {cmoc}")
-    if real_codex is None:
-        pytest.skip("real Codex CLI is not installed")
+    assert _CMOC_CONSOLE.is_file()
+    assert _REAL_CODEX is not None
+    cmoc = _CMOC_CONSOLE
+    real_codex = _REAL_CODEX
 
     # Codex の利用者 session と test session を混ぜず、認証以外の設定も持ち込まない。
     codex_home = tmp_path / "codex-home"

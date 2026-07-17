@@ -25,6 +25,8 @@ from commons.runtime_codex_profile import prepare_codex_override_args
 from commons.runtime_doctor import run_doctor_preprocess
 from config.cmoc_config import CmocConfig
 
+_REAL_CODEX = shutil.which("codex")
+
 
 def _prepare_production_managed_ollama(root: Path, config: CmocConfig) -> None:
     """production Codex call が使う実 per-user managed service を要求する。"""
@@ -58,13 +60,13 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
     assert not list(codex_home.glob("*.config.toml"))
 
 
+@pytest.mark.skipif(_REAL_CODEX is None, reason="real Codex CLI is not installed")
 def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Real Codex CLI と cmoc managed ollama の結合動作を検証する。"""
-    real_codex = shutil.which("codex")
-    if real_codex is None:
-        pytest.skip("real Codex CLI is not installed")
+    assert _REAL_CODEX is not None
+    real_codex = _REAL_CODEX
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     config = CmocConfig()
