@@ -133,6 +133,20 @@ def test_render_error_fills_empty_next_actions() -> None:
     assert "原因が実装不具合または仕様不足に見える場合" in next_actions
 
 
+def test_render_error_uses_passed_exception_traceback() -> None:
+    """報告対象の例外と現在の例外が異なっても対象の stack を出す。"""
+    try:
+        raise ValueError("reported error")
+    except ValueError as reported:
+        try:
+            raise RuntimeError("unrelated active error")
+        except RuntimeError:
+            rendered = render_error(reported)
+
+    assert "ValueError: reported error" in rendered
+    assert "RuntimeError: unrelated active error" not in rendered
+
+
 def test_cli_error_report_is_written_to_stdout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
