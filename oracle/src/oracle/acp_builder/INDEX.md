@@ -32,41 +32,6 @@
 ## hash
 - f91c2bdf4465ac41f25992aa68d2b5dd683ae48609a6bb4abae4fdc63a1dbe73
 
-# `common`
-
-## Summary
-- oracle ACP builder の共通部品を定義する oracle src 群への入口。ACP builder の各生成処理で共有される状態、ルール、出力結果の正本仕様断片を扱う。
-- 個別の builder 実装ではなく、builder 間で共有される概念や型の仕様を確認するためのまとまり。
-
-## Read this when
-- ACP builder 全体で共通して使う状態、ルール、結果表現の正本仕様断片を確認したいとき。
-- ACP builder の複数領域にまたがる挙動を実装・テストへ反映する前に、共有概念の境界を確認したいとき。
-- 下位要素のどれを読むべきか、共通部品の責務から絞り込みたいとき。
-
-## Do not read this when
-- 特定の builder の個別仕様だけを確認したいとき。
-- realization code 側の実装詳細やテスト構成を確認したいとき。
-- ACP builder と無関係な oracle src の仕様を探しているとき。
-
-## hash
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-
-# `edit`
-
-## Summary
-- `cmoc oracle edit` の TUI 起動パラメータを構築する実装。ユーザー指示を組み込んだ完全プロンプトを保存し、固定のモデル・推論強度・ファイルアクセス・実行前インデックス設定を持つ `AgentCallParameter` を返す。
-
-## Read this when
-- `cmoc oracle edit` の TUI 起動条件、プロンプト生成、ユーザー指示の組み込み、起動パラメータの固定値を変更・確認するとき。
-- 完全プロンプトの保存先や oracle 専用ファイルアクセス設定との連携を確認するとき。
-
-## Do not read this when
-- `cmoc oracle edit` の編集プロンプト本文や oracle 編集規則そのものを確認したいとき。
-- TUI 起動以外の agent call パラメータ構築や一般的な prompt builder の挙動だけを調べるとき。
-
-## hash
-- 79050f6a20d5e9e5eac5d9a1925591b3976ac1d0d06bfbd59452344cfd99077b
-
 # `indexing`
 
 ## Summary
@@ -83,23 +48,23 @@
 ## hash
 - 05d354f9306a4d79e5cdde86862b45fca33f2443725b3db2a3a55045ad235bb7
 
-# `review`
+# `oracle`
 
 ## Summary
-- oracle review の Structured Output schema と prompt 構築実装をまとめたディレクトリ。所見の生成・採否判定・重複整理・妥当性検証における出力契約とエージェント呼び出し設定の入口。
+- oracle 用 ACP builder の実装と Structured Output schema をまとめるディレクトリです。`edit` は oracle file 編集 TUI の起動パラメータと完全プロンプト保存を、`review` は所見の列挙・擁護・反証・採否判定・統合を扱います。各処理の agent call 設定と入出力契約への入口です。
 
 ## Read this when
-- `cmoc oracle review` の所見生成、採否判定、重複整理、賛否理由検証の出力契約を確認するとき。
-- レビュー用 prompt の入力、oracle-only 読み取り制約、モデル設定、Structured Output の接続を調査・変更するとき。
-- 所見の重複排除・統合、既知理由との差分抽出、所見がない場合の出力境界を確認するとき。
+- `cmoc oracle edit` の TUI 起動、完全プロンプト、ログ保存、固定モデル・推論強度・ファイルアクセス設定を確認または変更するとき。
+- `cmoc oracle review` の所見列挙、擁護理由・反証理由の検証、採否判定、重複・矛盾の統合を確認または変更するとき。
+- oracle review 用 agent call の prompt と Structured Output schema の対応を追跡するとき。
 
 ## Do not read this when
-- oracle review の所見探索手順や判定基準そのものを確認するとき。
-- agent call parameter の共通生成処理や共通 Structured Output 定義だけを確認するとき。
-- レビュー結果の CLI 表示、永続化、実際のファイル編集処理を調査するとき。
+- 共有 ACP パラメータ型、モデル設定、ファイルアクセスモード、パス解決の一般仕様だけを確認するとき。
+- 完全プロンプトの共通構成や oracle review の一般基準を確認するとき。
+- 個別の処理実装または schema が特定できており、このディレクトリ全体の構成を確認する必要がないとき。
 
 ## hash
-- b23b0373eb00b94bd0b62153a55976a236986732df4bbf20330d8be2b3c7ee9e
+- 1d6b5f91edd69ffeb12a9c41d8764b842a6837b3a347e2389a53f91e0d22b0df
 
 # `session`
 
@@ -120,21 +85,14 @@
 # `tui`
 
 ## Summary
-- `launch_tui.py` は `cmoc tui` 起動時の呼び出し条件を組み立てる入口で、編集後プロンプトの保存や起動用 `AgentCallParameter` の生成に関心があるときに読む。TUI 本体や画面制御ではなく、起動前に固定されるモデル・推論強度・ファイルアクセス方針を確認するための位置づけ。
-- `resolve_parameter.json` は AI Agent CLI/TUI に渡す実行条件の構造と検証基準を定める。役割・概要・ゴール・ファイルアクセスモード、そして読むべき標準文書の要否判定を変更・確認するときに読む。
-- `resolve_parameter.py` は `cmoc tui` の実行パラメータ決定の正本で、TUI から AI 呼び出しへ渡すモデル選択、推論強度、ファイル参照方針、生成プロンプトの組み立てを追うときに読む。
+- cmoc tui の AI エージェント呼び出しに関する oracle src 群をまとめた領域。TUI 用の構造化パラメータスキーマ、実行プロンプトとアクセス規則の解決、起動パラメータ生成を扱う。
 
 ## Read this when
-- `cmoc tui` の起動パラメータ、保存される完全プロンプト、または起動時に固定されるモデル・推論強度・ファイルアクセス方針を変えたいとき。
-- 元プロンプトを共通プロンプトへどう束ねて、どのファイルへ保存してからエージェント呼び出しに渡すかを確認したいとき。
-- AI Agent CLI/TUI の実行条件を構造化する JSON Schema、またはそれに基づく判定結果を扱うとき。
-- `cmoc tui` の実行パラメータ決定の根拠や、固定で強制している方針を追いたいとき。
+- cmoc tui のプロンプト構成、AgentCallParameter、モデル・推論設定、ファイルアクセスモード、標準フラグ、または関連する構造化スキーマを変更・調査するとき。
 
 ## Do not read this when
-- `cmoc tui` の実行本体、エディタ選択、対話 UI の制御を追いたいだけのとき。
-- 実行パラメータ解決や別の prompt 構築経路ではなく、TUI 起動用の呼び出し条件そのものを見たいとき。
-- INDEX.md 用エントリーの書き方やルーティング文の品質基準だけを確認したいときは、別の標準定義を直接読む。
-- oracle file と realization file の一般的な責務境界だけを確認したいときは、個別の実装定義ではなく基本定義側を読む。
+- 共通の完全プロンプト生成規則だけを調査するときは、共通プロンプトビルダーを直接読む。
+- TUI の画面表示・対話処理・エージェント実行処理だけを調査するときは、それぞれの担当実装を直接読む。
 
 ## hash
-- b215db884778a47f38c78337213eb69d402dcc2dc53ec27964b91c7a4d7c0507
+- 13d2ed4368c319ae10cc7524b05177e2950a04539cf0a17f7bb7b06baceea2cc

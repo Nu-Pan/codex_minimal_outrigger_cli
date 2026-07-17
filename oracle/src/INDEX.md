@@ -1,17 +1,17 @@
 # `oracle`
 
 ## Summary
-- ACP builder、設定・共通データ構造、プロンプト builder など、cmoc の oracle src を構成する主要な仕様・生成部品への入口。エージェント呼び出し条件、設定や文書モデル、プロンプトへ注入する標準・規則を扱う。
+- cmoc の oracle src を構成する実装群。ACP agent call パラメータ、oracle review・apply・indexing の prompt と Structured Output schema、共通 prompt 規範、設定・パス・構造化文書モデルを扱う。各サブディレクトリは、個別機能の prompt 実装や共通モデルへ進む入口になる。
 
 ## Read this when
-- ACP builder の oracle 正本仕様や、呼び出しパラメータ・prompt・Structured Output schema・実行設定を調査するとき。
-- cmoc の設定モデル、パス解決、規範データ、StructDoc、Markdown 文書生成の仕様を確認するとき。
-- oracle / realization の定義、各種 standard、レビュー・ファイルアクセス・ルーティング規則を確認するとき。
+- oracle src 全体の責務分担や、ACP builder・prompt builder・共通モデルの関係を確認するとき。
+- oracle review、apply fork、indexing、session join などの agent call 設定や Structured Output schema の実装を調査するとき。
+- cmoc 設定、モデル・推論強度、ファイルアクセス、パス解決、構造化文書変換の実装を確認するとき。
 
 ## Do not read this when
-- realization code の実装・テスト、CLI の実行フロー、表示、永続化、実際のファイル編集処理だけを調査するとき。
-- 個別の Enum、StructDoc、標準文書、Requirement など、下位対象の定義そのものだけを確認したいとき。
-- oracle file の配置・命名といった上位方針や、対象本文の具体的な INDEX.md 要約だけを確認するとき。
+- 特定の oracle review 操作、prompt 部品、設定モデル、パスモデルの詳細だけを調べるとき。
+- CLI サブコマンドの呼び出し経路や永続化処理など、oracle src 外の上位実装を直接確認すべきとき。
+- 既存の Structured Output schema や prompt 本文を変更せず、realization 側の実装だけを調査するとき。
 
 ## hash
-- 2e2ead4621cf467e901bc0d50a24d92dd1aa36831f5b7c36afccafac8649da84
+- 868b694c9695f17727eaa6a3f3b27ddef23f695a4d07e3d6865318228bede101

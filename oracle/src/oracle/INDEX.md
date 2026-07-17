@@ -1,55 +1,55 @@
 # `acp_builder`
 
 ## Summary
-- ACP builder の oracle src 群をまとめるディレクトリ。エージェント呼び出しパラメータ、共通部品、各サブコマンド向けの prompt・Structured Output schema・実行設定を扱い、下位の個別 builder 仕様へ進む入口。
+- oracle 用 ACP builder の実装と Structured Output schema を扱うディレクトリ。`cmoc oracle edit` と `cmoc oracle review` の agent call 設定、完全プロンプト、ログ保存、所見の検証・統合、入出力契約を確認する入口。
 
 ## Read this when
-- ACP builder の oracle 正本仕様を調査・変更するとき。
-- エージェント呼び出し条件、prompt、Structured Output schema、ファイルアクセス方針、モデル設定のいずれかを確認するとき。
-- 下位の個別 builder や共通部品のどれを読むべきかを、ACP builder の責務から絞り込みたいとき。
+- `cmoc oracle edit` の TUI 起動条件、完全プロンプト、ログ保存、モデル・推論強度・ファイルアクセス設定を確認または変更するとき。
+- `cmoc oracle review` の所見列挙、擁護・反証、採否判定、重複・矛盾の統合を確認または変更するとき。
+- oracle review 用 agent call の prompt と Structured Output schema の対応を追跡するとき。
 
 ## Do not read this when
-- realization code 側の ACP builder 実装やテストの詳細を確認するとき。
-- ACP builder の前後にある実行フロー、CLI 表示、永続化、実際のファイル編集処理だけを調査するとき。
-- ACP builder と無関係な oracle 仕様を探しているとき。
+- 共有 ACP パラメータ型、モデル設定、ファイルアクセスモード、パス解決の一般仕様だけを確認するとき。
+- 完全プロンプトの共通構成や oracle review の一般基準だけを確認するとき。
+- 個別の処理実装または schema が特定できており、このディレクトリ全体の構成を確認する必要がないとき。
 
 ## hash
-- 41a3209195eb4b46a34acc3be0fd117c39da08e22717d25468dde53b88c8423b
+- 1af78704400be823d007d8cfabfd2651babfe205b98721d0ba934ac4276ed3ea
 
 # `other`
 
 ## Summary
-- cmoc の設定モデル、パス解決、規範データ構造、構造化 Markdown 文書生成を担う実装群。設定値やルート表記、規範の変換、文書レンダリングの挙動を確認するための入口。
+- cmoc の設定モデル、パス解決、規範文書モデル、構造化文書の Markdown 変換を担う oracle src 群。設定・パス・標準文書・Markdown レンダリングの仕様確認における入口。
 
 ## Read this when
-- cmoc の設定項目・既定値・モデル設定・処理上限を確認するとき
-- ルートパスのプレースホルダ解決や実パス変換の仕様を確認するとき
-- 規範データの構造や StructDoc への変換を確認するとき
-- Markdown の構造化・参照検証・正規化・レンダリング挙動を確認するとき
+- cmoc 固有設定や Codex CLI の実行上限を確認するとき
+- ルートパスのプレースホルダ解決・相互変換を確認するとき
+- 規範文書のデータ構造や構造化文書の Markdown 出力を確認するとき
 
 ## Do not read this when
-- 設定 JSON の生成・同期処理だけを確認したいとき
-- 個別サブコマンドの入出力や業務ロジックを確認したいとき
-- 各 Enum や StructDoc、個別標準文書の定義そのものだけを確認したいとき
-- oracle file の配置・命名など上位方針を確認したいとき
+- 設定 JSON の永続化や doctor による同期処理だけを調べるとき
+- CLI サブコマンドの個別入出力や業務ロジックを調べるとき
+- 個別の標準文書の内容や Markdown 以外の文書形式を直接調べるとき
 
 ## hash
-- f276f1e2313374f8ecfca66e0cd40596db4c89891ffe03aaa47ece4001c8a0a4
+- 70e9314013e0b3c2656bb4e1aaf3f6bddbe79b9d04362a3eb2c83cc5c56b0b4e
 
 # `prompt_builder`
 
 ## Summary
-- oracle と realization の定義、各種 standard、レビュー基準、ファイルアクセス規則、ルーティング規則をプロンプト builder 部品として管理するディレクトリ。個別の規範文面や、それらを構造化プロンプトへ変換する処理を調査・変更する際の入口となる。
+- プレースホルダ名と実パス・文字列の対応を表す型定義を提供する。置換対象の表現を確認する入口。
+- 固定・動的パーツ、プレースホルダ、標準ルール設定からエージェント呼び出し用の完全なプロンプトを構築する。全体構造や組み立てを調査するときの入口。
+- oracle・realization、INDEX.md、ファイルアクセス規則、レビュー基準など、プロンプト生成に注入する標準ルールの部品をまとめる。各規範の本文や構成を変更・確認するときの入口。
 
 ## Read this when
-- oracle / realization の基本定義や責務境界を確認・変更するとき。
-- oracle standard、realization standard、レビュー基準、ファイルアクセス規則、INDEX.md の routing 規範を確認・変更するとき。
-- 複数の標準・規則を agent 用プロンプトへ注入する部品の構成を調査するとき。
+- プレースホルダ展開用の型や、文字列とPathを含む置換対象の表現を確認するとき。
+- 完全なプロンプトの構造、標準ルールの依存関係、動的プロンプトやプレースホルダの組み立てを調査・変更するとき。
+- oracle・realization、INDEX.md、ファイルアクセス規則、レビュー基準、prompt builder部品の生成内容を調査・変更するとき。
 
 ## Do not read this when
-- 個別の oracle file、realization file、CLI 実行処理、実際のファイル操作を調査するとき。
-- StructDoc や Requirement など共通データ構造の定義だけを確認したいとき。
-- 対象本文の具体的な INDEX.md 要約だけを作成するときは、対象本文を直接読む。
+- プロンプト本文の生成手順や置換ロジックの詳細だけを調べるとき。
+- 特定の注入パーツや個別標準ルールの本文だけを調べるとき。
+- 個別のoracle file・realization file、CLIコマンド、実際のファイル操作、prompt builderの生成処理やファイル探索処理だけを調べるとき。
 
 ## hash
-- aadaf4690ecb57aa6f380b264e7722bbe6be24f0c56c455754313ceb1df535f4
+- 824e06f5f482694f3ac1d41a92029bb7cfb1ed304a449f4e07ed8111d0f96b98

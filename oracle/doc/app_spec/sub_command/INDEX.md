@@ -70,24 +70,6 @@
 ## hash
 - 8354ebcd7f732dcf70eb06ee6ed33abe6093b06e6effe5dcf1084dc3dce1f39c
 
-# `edit_oracle.md`
-
-## Summary
-- `cmoc oracle edit` の実行仕様を定義する。エディタから oracle file の最終状態に関する指示を受け取り、doctor preprocess と起動パラメータ構築を経て Codex CLI の TUI を起動する。入力規則、TUI 起動時の委譲、Codex CLI 起動方法、変更を自動 commit しない扱いを確認するための入口。
-
-## Read this when
-- `cmoc oracle edit` の引数・実行手順・エディタ入力初期値を確認するとき
-- oracle file 編集用 TUI の起動パラメータや Codex CLI 起動条件を確認するとき
-- oracle file の変更が自動 commit されるか確認するとき
-
-## Do not read this when
-- 通常の `cmoc tui` の実行仕様を確認したいとき
-- エディタ入力の共通仕様そのものを確認したいときは、指定された prompt editor input の正本を直接読む
-- TUI 起動パラメータの実装詳細を確認したいときは、`build_edit_oracle_launch_tui_parameter` の正本実装を直接読む
-
-## hash
-- 9c5b71cef2897b1546fb6e993d6da30b3ed735d289a3b9587c3a23cb732b2069
-
 # `indexing.md`
 
 ## Summary
@@ -108,21 +90,43 @@
 ## hash
 - 00122849aac5fb7274dffd1fdeadb48c89c3dc735f7dfc6668c3a2fa8fe02b15
 
-# `review_oracle.md`
+# `oracle_edit.md`
 
 ## Summary
-- oracle ファイルの致命的問題をレビューし、所見を反復的に列挙・統合・検証・判定して Markdown レポートとして保存する `cmoc oracle review` の仕様を定義する。セッション／フルスコープ、隔離実行、中断処理、レポート形式と責務境界を扱う。
+- `cmoc oracle edit` の仕様を定義するサブコマンド文書。エディタで oracle file への指示を受け取り、指定のパラメータで Codex CLI の TUI を起動する流れ、入力コメント、起動条件、変更の扱いを確認する入口。
 
 ## Read this when
-- oracle のレビュー機能、レビュー対象スコープ、所見の列挙・統合・検証・採否判定を変更または確認するとき
-- レビューの中断時挙動、隔離実行、レポートの frontmatter や本文構成を確認するとき
+- `cmoc oracle edit` の実行手順や引数・事前条件を確認するとき
+- oracle file 編集指示の入力方法や自動注入コメントを確認するとき
+- Codex CLI TUI の起動方法、起動パラメータの扱い、変更の自動 commit 方針を確認するとき
 
 ## Do not read this when
-- oracle 全般の開発環境・設計・テスト規則を確認したいとき
-- 実装ファイルの詳細や自動生成 INDEX.md のレビュー仕様だけを確認したいとき
+- エディタ入力仕様の詳細だけを確認したいときは、指定された prompt editor input の正本を直接読む
+- TUI 起動パラメータの詳細だけを確認したいときは、指定された launch_tui 実装を直接読む
+- Codex CLI 共通の起動規則だけを確認したいときは、指定された codex exec rule を直接読む
 
 ## hash
-- 59cc50e955c6263a8d1bc382e2615a98bc61c2e6ee63950bfd33f4873e47784e
+- ebe20b04c9e643c0cb230260488286864dbcddbbbb96d7b220a42d11af72bd1c
+
+# `oracle_review.md`
+
+## Summary
+- `cmoc oracle review` の責務・引数・事前条件・実行手順を定義する正本仕様。oracle file のレビュー、所見の列挙・マージ・検証・判定、中断処理、Markdown レポート生成と保存条件を扱う。
+
+## Read this when
+- oracle review サブコマンドの挙動、スコープ、レビュー対象、所見ライフサイクルを確認するとき
+- oracle file のレビュー処理や agent call の役割分担を変更・検証するとき
+- レビュー結果の frontmatter、本文構成、判定値、保存先を確認するとき
+- ユーザー中断時の部分結果の扱いを確認するとき
+
+## Do not read this when
+- oracle file 自体の内容をレビューするだけで、oracle review サブコマンドの仕様やレポート形式を確認する必要がないとき
+- 実装ファイルを交えたレビューや Codex CLI の出力品質を検証するとき
+- INDEX.md など cmoc が自動生成するファイルのレビュー方法を確認するとき
+- レビュー結果を受けて次に何をするべきか判断するとき
+
+## hash
+- d495188324876e0e14dc178db85e923e257ebdf21571b61489cc0c609dd61d34
 
 # `session_abandon.md`
 

@@ -1,20 +1,18 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ固有設定を集約する dataclass 定義。並列数、Codex CLI のモデル・推論設定、`apply fork` と `oracle review` のループ上限を扱い、設定 JSON への永続化対象となる構造の入口。
+- cmoc のリポジトリ固有設定を集約する dataclass 群を定義する oracle src。並列数、Codex CLI のモデル・推論設定と復旧回数、apply fork の処理上限、oracle review の各ループ上限を扱う。設定 JSON の永続化・同期仕様を確認する際の入口。
 
 ## Read this when
-- cmoc の設定項目、既定値、モデル指定、Codex CLI 向け変換元を確認するとき
-- `cmoc apply fork` または `cmoc oracle review` の処理上限設定を変更・参照するとき
-- 設定クラスの構造や Enum 値の扱いを確認するとき
+- CmocConfig や CodexModelSpec の設定項目・既定値・Enum の JSON 化規則を変更または確認するとき
+- cmoc apply fork、cmoc oracle review、Codex CLI 呼び出しの設定上限を調査するとき
 
 ## Do not read this when
-- 設定 JSON の生成・同期処理そのものを確認するとき
-- 各サブコマンドの実装やループ処理の詳細を確認するとき
-- `ModelClass` や `ReasoningEffort` の定義・意味だけを確認するとき
+- 設定値の永続化処理や doctor による同期処理の実装を調べるとき
+- モデル種別や推論 effort の Enum 定義そのものを調べるとき
 
 ## hash
-- 01e9d47d1436cac67abf031a90d8f91007e7414e93ccd572677dc214184e47eb
+- 22455da013612acebfd49d4042bcb2f927ccd04bc0ae8fbcfeb5bdbee60ffc67
 
 # `path_model.py`
 
@@ -56,18 +54,17 @@
 # `struct_doc.py`
 
 ## Summary
-- 階層付きの markdown 文書を組み立ててレンダリングするための基盤。見出し深さの自動決定、`cmoc_block` と `cmoc_ref` の整合性検査、コードブロックや文字列本文の正規化を扱う。
-- `StructDoc` / `StructBlock` / `StructCodeBlock` の構造や、レンダリング前検査・改行圧縮・インデント正規化の振る舞いを確認したいときに読む。
+- 構造化された文書ツリーを Markdown に変換するヘルパー実装。見出し深度、入れ子文書、ブロック、コードブロック、文字列本文を扱い、cmoc_block 参照の検証や空行・インデントの正規化も提供する。
 
 ## Read this when
-- markdown 生成時の見出し階層、ブロック参照の検証、コードブロックの埋め込み方針を変えたい。
-- `cmoc_ref` の解決条件や `cmoc_block` の重複検出、空行圧縮の境界を確認したい。
-- 構造化文書のノード型や、文字列本文の正規化方法を追いたい。
+- 構造化文書の Markdown レンダリング処理を変更・調査するとき
+- StructDoc、StructBlock、StructCodeBlock の構造や cmoc_ref 検証を確認するとき
+- Markdown 出力の見出し深度、空行、コードブロック、インデント正規化を確認するとき
 
 ## Do not read this when
-- 単なる CLI 入出力や他サブコマンドのルーティングを見たい。
-- markdown 以外の汎用テキスト処理や別フォーマットのレンダリングを探している。
-- 構造化文書の仕様そのものを読むだけなら、根拠として近接する正本仕様断片の方が直接的だが、この実装の詳細挙動だけを見たいわけではない。
+- CLI の実行経路やプロンプト生成全体を調査するとき
+- このモジュールを利用する呼び出し側の仕様だけを確認するとき
+- Markdown 以外の文書形式のレンダリングを調査するとき
 
 ## hash
-- fbb3959c4420a6d1ec2b263170dcc6b478bef13c1007507b957cc6c2f8a4f198
+- 672fa1d47b8aff4554c00a24c3cb667b8eaf9fa8f8d50253e0778486b84a822e

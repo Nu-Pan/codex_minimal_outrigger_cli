@@ -71,19 +71,18 @@
 # `oracle_review_standard.py`
 
 ## Summary
-- `cmoc oracle review` が oracle file の所見列挙に用いるレビュー規範を構築する。fatal・minor 所見の判定基準と、問題扱いしない仕様上の隙間を StructDoc として定義する。
+- `cmoc oracle review`で所見を列挙する際の規範文章を構築する。fatal・minorとして扱う問題の基準と、所見にしない範囲を`StructDoc`として定義する。
 
 ## Read this when
-- oracle review の所見判定基準や fatal/minor の分類を変更・確認するとき
-- oracle file のレビュー用プロンプト規範を調査するとき
+- `cmoc oracle review`の所見判定基準を確認・変更するとき
+- fatal、minor、または所見対象外の判断規則を実装・テストするとき
 
 ## Do not read this when
-- oracle file の一般原則そのものを確認するときは oracle standard の該当文書を読む
-- StructDoc や Requirement などの共通データ構造の実装を確認するときは、それぞれの定義元を直接読む
-- レビュー実行処理やプロンプト全体の組み立てを調査するときは、対応する呼び出し元・プロンプト構築処理を読む
+- oracle fileの一般的な記述規則を確認したいとき
+- レビュー所見の生成以外のprompt builder部分を変更するとき
 
 ## hash
-- 4ae889f0a7dae508c4a4fbbc4d555ec6e3af97d6d0c1f86f5d6d097a4c6dfcfd
+- a84628e17c9d2f93457418439a1a7404523b54ba27f7adcb2c93e9514b2af776
 
 # `oracle_standard.py`
 
