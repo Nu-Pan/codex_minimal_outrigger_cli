@@ -39,28 +39,40 @@ def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
         # commit にまとめる。
         synced_config = sync_config(root)
 
-        repairs: list[tuple[Path, str, bool, bool]] = []
-        for repair_root in repair_roots:
-            include_config = repair_root == root
-            restored_index_tree = _restored_index_tree(
-                repair_root,
-                include_config=include_config,
-            )
-            ensure_cmoc_ignored(repair_root)
-            agents_gitkeep_added = _ensure_agents_tracked(repair_root)
-            repairs.append(
-                (
+        repairs: list[tuple[Path, str, str, bool, bool]] = []
+        original_indexes: list[tuple[Path, str]] = []
+        try:
+            for repair_root in repair_roots:
+                include_config = repair_root == root
+                original_index_tree = _current_index_tree(repair_root)
+                original_indexes.append((repair_root, original_index_tree))
+                restored_index_tree = _restored_index_tree(
                     repair_root,
-                    restored_index_tree,
-                    agents_gitkeep_added,
-                    include_config,
+                    include_config=include_config,
                 )
-            )
+                # ensure_cmoc_ignored と _ensure_agents_tracked は通常 index を
+                # 変更するため、Ollama 失敗時も元の staged 状態へ戻せるようにする。
+                ensure_cmoc_ignored(repair_root)
+                agents_gitkeep_added = _ensure_agents_tracked(repair_root)
+                repairs.append(
+                    (
+                        repair_root,
+                        original_index_tree,
+                        restored_index_tree,
+                        agents_gitkeep_added,
+                        include_config,
+                    )
+                )
 
-        ensure_ollama_serves_local_slm(root, config or synced_config)
+            ensure_ollama_serves_local_slm(root, config or synced_config)
+        except BaseException:
+            for repair_root, original_index_tree in original_indexes:
+                _restore_index(repair_root, original_index_tree)
+            raise
 
         for (
             repair_root,
+            original_index_tree,
             restored_index_tree,
             agents_gitkeep_added,
             include_config,
@@ -68,6 +80,7 @@ def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
             _commit_doctor_repairs(
                 repair_root,
                 restored_index_tree,
+                original_index_tree,
                 agents_gitkeep_added,
                 include_config=include_config,
             )
@@ -138,20 +151,40 @@ def _validate_config_tracked(root: Path) -> None:
 def _commit_doctor_repairs(
     root: Path,
     restored_index_tree: str,
+    original_index_tree: str,
     agents_gitkeep_added: bool,
     *,
     include_config: bool,
 ) -> None:
     """doctorの修復差分をcommitし、呼び出し元のGit indexを復元する。"""
-    _commit_doctor_repairs_from_head(
-        root,
-        agents_gitkeep_added,
-        include_config=include_config,
-    )
+    try:
+        _commit_doctor_repairs_from_head(
+            root,
+            agents_gitkeep_added,
+            include_config=include_config,
+        )
+    except BaseException:
+        _restore_index(root, original_index_tree)
+        raise
+    else:
+        _restore_index(root, restored_index_tree)
+
+
+def _restore_index(root: Path, restored_index_tree: str) -> None:
+    """指定した tree へ Git index を戻す。"""
     try:
         run_git(["reset", "-q", "HEAD"], root)
     finally:
         run_git(["read-tree", restored_index_tree], root)
+
+
+def _current_index_tree(root: Path) -> str:
+    """現在の Git index を tree object として保存する。"""
+    index_path = _copy_current_index(root)
+    try:
+        return _run_git_with_index(["write-tree"], root, index_path).stdout.strip()
+    finally:
+        index_path.unlink(missing_ok=True)
 
 
 def _commit_doctor_repairs_from_head(

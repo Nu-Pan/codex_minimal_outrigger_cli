@@ -256,6 +256,55 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
             process.join()
 
 
+@pytest.mark.parametrize("failure_stage", ["managed_ollama", "repair_commit"])
+def test_doctor_restores_preexisting_index_when_repair_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_stage: str,
+) -> None:
+    """doctor の修復失敗時も、呼び出し前の staged index を保持する。"""
+
+    root = make_repo(tmp_path)
+    staged_file = root / "staged.txt"
+    staged_file.write_text("staged\n")
+    run_git(root, "add", "staged.txt")
+    expected_index_tree = run_git(root, "write-tree").stdout.strip()
+
+    if failure_stage == "managed_ollama":
+
+        def fail_ollama(_root: Path, _config: CmocConfig | None) -> None:
+            """managed Ollama の失敗を再現する。"""
+            raise RuntimeError("managed ollama failure")
+
+        monkeypatch.setattr(
+            doctor_module, "ensure_ollama_serves_local_slm", fail_ollama
+        )
+        expected_error = "managed ollama failure"
+    else:
+
+        def fail_commit(
+            _root: Path,
+            _agents_gitkeep_added: bool,
+            *,
+            include_config: bool,
+        ) -> None:
+            """repair commit の失敗を再現する。"""
+            raise RuntimeError("repair commit failure")
+
+        monkeypatch.setattr(
+            doctor_module, "_commit_doctor_repairs_from_head", fail_commit
+        )
+        expected_error = "repair commit failure"
+
+    with pytest.raises(RuntimeError, match=expected_error):
+        doctor_module.run_doctor_preprocess(root)
+
+    assert run_git(root, "write-tree").stdout.strip() == expected_index_tree
+    assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
+        "staged.txt"
+    ]
+
+
 def test_doctor_generates_and_tracks_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
