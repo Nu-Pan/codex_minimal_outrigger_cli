@@ -265,19 +265,19 @@
 # `runtime_git.py`
 
 ## Summary
-- Git 操作、branch・HEAD・worktree の管理、`.cmoc/gu` の ignore 状態、oracle file 判定を担う共通ランタイム helper。Git subprocess のエラーを `CmocError` に統一し、cmoc 管理領域外の worktree や symlink 経由の操作を拒否する。関連する Git 状態判定や path 安全性検証の実装へ進む入口。
+- Git 操作と cmoc 管理対象の判定を担う共通ランタイムモジュール。branch・commit・status の取得、worktree の作成/削除、branch 操作、Git ignore 状態、oracle file 判定を提供し、CLI 各機能から利用される実装上の共通入口。
 
 ## Read this when
-- Git コマンド実行、branch 判定、HEAD 取得、未コミット差分検査を変更・調査するとき
-- cmoc の managed worktree 作成・削除、branch 削除、worktree path 検証を扱うとき
-- `.cmoc/gu` の ignore 設定・検査や oracle file 判定の挙動を確認するとき
+- Git branch、commit、status、worktree の取得・検証・作成・削除を変更または調査するとき
+- cmoc 管理領域、linked worktree、symlink、安全な削除条件の挙動を確認するとき
+- `.cmoc/gu` の ignore 設定や oracle file 判定など、Git 状態に基づく repository 判定を変更するとき
 
 ## Do not read this when
-- CLI のサブコマンド固有の処理や session/apply の業務フローだけを調査するとき
-- Git や worktree、ignore、oracle/realization file 判定に関係しない共通処理を調査するとき
+- 特定の CLI サブコマンド固有の処理だけを調査し、Git 共通 helper の挙動に関係しないとき
+- Git 操作ではなく、runtime error・path・result 型そのものの定義を確認するときは、それぞれの共通モジュールを直接読む
 
 ## hash
-- 8a23fa03b1277eff01583ca053888de81d7f00aae78e56cce3187cd08b1ff1cb
+- c0230d9da060cfad1c952f184ebc3d27c6c51d73c64b41f70f0b3c36dcc86843
 
 # `runtime_logging.py`
 
