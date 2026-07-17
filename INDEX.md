@@ -127,35 +127,33 @@
 # `src`
 
 ## Summary
-- src は cmoc CLI の実装領域で、Typer による起動入口、session/apply/review などのサブコマンド、共通 runtime、ACP builder、互換 import shim を扱う。
-- 上位の公開入口から機能別の下位実装へ進むためのルーティング対象であり、個別機能の詳細は各担当モジュールで確認する。
+- `src` の realization 実装全体を扱うルート。cmoc CLI、共通 runtime、ACP builder、互換 import shim、サブコマンド実装など、機能領域ごとの下位要素へ進むための入口となる。
 
 ## Read this when
-- cmoc CLI のコマンド階層や起動経路を確認するとき。
-- 共通 runtime、ACP builder、互換 import、またはサブコマンド実装の担当領域を特定するとき。
-- 複数の src 配下領域にまたがる実装変更や公開境界を調査するとき。
+- cmoc の実装構成を確認し、CLI・共通 runtime・ACP builder・サブコマンドの調査先を選ぶとき。
+- 対象機能がまだ特定できず、src 配下の主要な実装領域を把握するとき。
 
 ## Do not read this when
-- 特定のサブコマンドや builder の具体的な処理を確認するときは、該当する下位実装を直接読む。
-- 正本仕様を確認するときは、src ではなく対応する oracle ファイルを読む。
+- 特定のコマンド、runtime helper、builder、または互換 shim の詳細を調査するときは、対応する下位ファイルやディレクトリを直接読む。
+- 正本仕様を確認するときは、src ではなく対応する oracle file を読む。
 
 ## hash
-- 96978552cac0702a5dd7c2495099d3a45d710240af17a25a39b86f8bb91ce712
+- b268730fd6e868573074e79322eb24e01add5314c503d2ceddeb095309d6b4ee
 
 # `test`
 
 ## Summary
-- cmoc のテストコードを集約するディレクトリ。CLI サブコマンド、Codex 実行ランタイム、ACP builder、INDEX 生成、review oracle、session/apply、設定・Git・Ollama・worktree などの外部挙動と契約を検証する。各機能の回帰テストおよび共有テストヘルパーへの入口となる。
+- `test` 配下の pytest テストと共有テスト補助モジュールを集約するディレクトリ。ACP builder、CLI、runtime、Codex、indexing、review oracle、session/apply、Ollama、設定などの外部挙動・契約・回帰を検証する各テストへの入口となる。
 
 ## Read this when
-- cmoc の機能変更に対応する回帰テストや契約テストを探すとき。
-- CLI、runtime、Codex、ACP builder、indexing、review oracle、session/apply などの外部挙動を検証するテストの所在を確認するとき。
-- 複数のテストで共有される Git、Codex、Ollama、CLI 実行補助の役割を確認するとき。
+- cmoc のテスト全体から、変更対象の機能に対応する realization test や共有 fixture を探すとき。
+- CLI、runtime、Codex 実行、indexing、review oracle、session/apply、ACP builder、設定、Ollama の挙動をテストから確認するとき。
+- 複数テストで利用される Git、CliRunner、Codex、Ollama、外部コマンド用の共有補助を確認するとき。
 
 ## Do not read this when
-- 特定機能の実装責務や正本仕様そのものを確認したいときは、対応する src または oracle の本文を直接読む。
-- テスト対象と無関係な機能の変更で、より直接的な個別テストや実装ファイルが特定できているとき。
-- 一般的な pytest 実行方法や Python 開発環境だけを確認したいとき。
+- 正本仕様や schema の内容を確認・変更するときは、対応する `oracle` 配下の文書・ソースを直接読む。
+- 実装責務や内部ロジックを変更・調査するときは、対応する `src` 配下の実装を直接読む。
+- テスト対象と無関係な機能を調査するときは、このディレクトリ全体ではなく対応する個別テストまたは実装へ進む。
 
 ## hash
-- 59f0351b10296e45616a90d570bc7300d6bba300484fe0c3d221836e7440e401
+- e8ca5eca1127c1c9c889777645c5b06d4966a40d1fda55ca76f14868442accc4

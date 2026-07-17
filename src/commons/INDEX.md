@@ -282,18 +282,20 @@
 # `runtime_logging.py`
 
 ## Summary
-- サブコマンド単位の JSON Lines ログ記録と step timing・quota 待機時間の集約を担う runtime logging モジュール。logger の context 間共有機能も提供する。
+- サブコマンド単位の JSON Lines ログ出力と step/quota 待機時間の計測を担当する runtime logging モジュール。ContextVar による現在の logger の設定・復元・参照も提供し、ログ記録や実行時間集計を行う実装の入口となる。
 
 ## Read this when
-- サブコマンドのイベントログ形式、ログファイル生成、step の開始・完了計測、経過時間や quota 待機時間の集計を変更・調査するとき
-- 深い runtime helper から現在のサブコマンド logger を参照・差し替え・復元する処理を変更するとき
+- サブコマンドのイベントログ、step timing、quota 待機時間の集計を変更・調査するとき
+- runtime helper から現在のサブコマンド logger を取得する処理を変更・調査するとき
+- 並列実行時のログ追記や集計の同期を確認するとき
 
 ## Do not read this when
-- ログ仕様そのものや console 表示との互換性を確認したい場合は、先に対応する oracle 文書を読むとき
-- ログディレクトリや timestamp 付きパス予約の共通処理だけを調査する場合は、runtime paths の実装を直接読むとき
+- コンソール表示形式やログ仕様そのものを確認したいときは、対応する oracle 文書を先に読む
+- ログ保存先や timestamped path の生成だけを変更・調査するときは、runtime paths の実装を直接読む
+- サブコマンド固有の処理や Codex event の生成を変更・調査するときは、その呼び出し元を直接読む
 
 ## hash
-- 01fababfe41483ba8194c1aec614beda27fe55ad5010a54e0b61e8a190f71a09
+- 6242674523c98429906ea81fe6ab017cb54110f18d1b979ca099099f831630bb
 
 # `runtime_ollama.py`
 
