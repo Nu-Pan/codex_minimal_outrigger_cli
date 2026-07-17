@@ -88,6 +88,10 @@ def console_timestamp() -> str:
 
 def format_duration(seconds: float) -> str:
     """ログと console の duration 表示を丸めず 0.1 秒単位へそろえる。"""
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md は経過時間の正規化表示を
+    # 定めるため、負値を剰余計算で別の時刻へ変換せず入力エラーにする。
+    if seconds < 0:
+        raise ValueError("duration must be non-negative")
     total_tenths = int(seconds * 10)
     hours = total_tenths // 36000
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md は hour field を 2 桁に

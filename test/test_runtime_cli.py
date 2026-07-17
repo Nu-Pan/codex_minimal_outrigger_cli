@@ -48,6 +48,8 @@ def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> Non
     assert format_duration(99 * 3600 + 59 * 60 + 59.99) == "99h 59m 59.9s"
     with pytest.raises(ValueError, match="two-digit hour"):
         format_duration(100 * 3600)
+    with pytest.raises(ValueError, match="non-negative"):
+        format_duration(-0.1)
 
 
 def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
