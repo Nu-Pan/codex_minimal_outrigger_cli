@@ -162,7 +162,7 @@ def build_realization_standard() -> tuple[PlaceholderMap, StructDoc]:
                 ),
                 Requirement(
                     "必須",
-                    "対応する oracle file が存在する場合は、コメントにプレースホルダ `<work-root>` 起点の oracle file path を書く",
+                    "対応する oracle file が存在する場合は、コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く",
                 ),
                 Requirement(
                     "必須",
@@ -182,7 +182,7 @@ def build_realization_standard() -> tuple[PlaceholderMap, StructDoc]:
                 ),
             ],
             examples=[
-                "oracle file の明示要求に対応する処理には、必要に応じて `<work-root>/oracle/doc/...` のように根拠 path を近くに残す",
+                "oracle file の明示要求に対応する処理には、必要に応じて `{{work-root}}/oracle/doc/...` のように根拠 path を近くに残す",
                 "単純な代入や関数呼び出しには `値を代入する` のようなコメントを書かない",
                 "一見自然なライブラリ利用を避けている場合は、依存増加や失敗時挙動の違いなど、避けた理由を短く書く",
             ],
@@ -518,7 +518,7 @@ def build_realization_standard() -> tuple[PlaceholderMap, StructDoc]:
                 ),
                 Requirement(
                     "禁止",
-                    "未使用の import、定数、fixture、helper を残してはいけない",
+                    "未使用の定数、fixture、helper を残してはいけない",
                 ),
                 Requirement(
                     "禁止",
@@ -531,7 +531,7 @@ def build_realization_standard() -> tuple[PlaceholderMap, StructDoc]:
             ],
             examples=[
                 "実装中に作った確認用 helper は、最終コードから呼ばれないなら完了前に削除する",
-                "新しい共通関数へ移行した後は、旧 helper 本体だけでなく import と専用テストも削除対象として確認する",
+                "新しい共通関数へ移行した後は、旧 helper 本体だけでなく専用テストも削除対象として確認する",
                 "仕様理解に寄与しない `念のため残す` だけの TODO は、現行仕様の説明ではないので残さない",
             ],
         ),

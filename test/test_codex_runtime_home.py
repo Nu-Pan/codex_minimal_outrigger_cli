@@ -1,21 +1,37 @@
 import json
 from pathlib import Path
 
+import pytest
+from _codex_support import stub_codex_overrides
+from _command_support import write_python_executable
+from _git_support import make_repo
+
+import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError
-from config.cmoc_config import CmocConfig
-import pytest
-
-from _support import (
-    make_repo,
-    stub_codex_profile,
-    write_python_executable,
-)
 from commons.runtime_codex import run_codex_exec
+from config.cmoc_config import CmocConfig
+
+
+# {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+def _spy_codex_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[tuple[tuple[object, ...], dict[str, object]]]:
+    """Codex subprocess call を記録し、preflight failure で起動数が zero になることを検証する。"""
+    calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+    def record_call(*args: object, **kwargs: object) -> None:
+        """Codex subprocess invocation を起動せずに記録する。"""
+        calls.append((args, kwargs))
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", record_call)
+    return calls
+
 
 def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """既定 home を使い、それを Codex subprocess へ渡す。"""
     root = make_repo(tmp_path)
     home = tmp_path / "home"
     codex_home = home / ".codex"
@@ -23,7 +39,7 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.delenv("CODEX_HOME", raising=False)
     monkeypatch.setattr(Path, "home", lambda: home)
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -36,7 +52,11 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
             "args = __import__('sys').argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "output.write_text('done\\n')",
-            "record.write_text(json.dumps({'codex_home': os.environ.get('CODEX_HOME'), 'args': args}))",
+            "payload = {",
+            "    'codex_home': os.environ.get('CODEX_HOME'),",
+            "    'args': args,",
+            "}",
+            "record.write_text(json.dumps(payload))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
@@ -55,23 +75,19 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
 
     recorded = json.loads(recorder.read_text())
     assert recorded["codex_home"] == str(codex_home)
-    assert (
-        recorded["args"][recorded["args"].index("--profile") + 1]
-        == result.profile_name
-    )
     assert result.codex_home == codex_home
-    assert result.profile_path.parent == codex_home
 
 
 def test_run_codex_exec_preserves_configured_codex_home_env_value(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """設定された home value を保持し、解決済み path を記録する。"""
     root = make_repo(tmp_path)
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -84,7 +100,11 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
             "args = __import__('sys').argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "output.write_text('done\\n')",
-            "record.write_text(json.dumps({'codex_home': os.environ.get('CODEX_HOME'), 'args': args}))",
+            "payload = {",
+            "    'codex_home': os.environ.get('CODEX_HOME'),",
+            "    'args': args,",
+            "}",
+            "record.write_text(json.dumps(payload))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
@@ -104,7 +124,6 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
     recorded = json.loads(recorder.read_text())
     assert recorded["codex_home"] == "relative_codex_home"
     assert result.codex_home == codex_home
-    assert result.profile_path.parent == codex_home
     call_log = json.loads(result.call_log_path.read_text())
     assert call_log["codex_home"] == str(codex_home)
 
@@ -112,12 +131,13 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
 def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """相対 home を Codex subprocess の working directory から解決する。"""
     root = make_repo(tmp_path)
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
-    stub_codex_profile(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -157,13 +177,14 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
     assert Path(recorded["cwd"]) == root
     assert Path(recorded["resolved_home"]) == codex_home
     assert result.codex_home == codex_home
-    assert result.profile_path.parent == codex_home
 
 
 def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Codex subprocess の起動前に欠落した home を拒否する。"""
     root = make_repo(tmp_path)
+    codex_calls = _spy_codex_subprocess(monkeypatch)
     missing_home = tmp_path / "missing_codex_home"
     monkeypatch.setenv("CODEX_HOME", str(missing_home))
     parameter = AgentCallParameter(
@@ -186,12 +207,15 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
     assert error.summary == "Codex home が存在しません。"
     assert str(missing_home) in error.detail
     assert "Codex CLI の通常利用環境を初期化してください。" in error.next_actions
+    assert codex_calls == []
 
 
 def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Codex subprocess の起動前に file を指す home を拒否する。"""
     root = make_repo(tmp_path)
+    codex_calls = _spy_codex_subprocess(monkeypatch)
     codex_home = tmp_path / "codex_home_file"
     codex_home.write_text("not a directory\n")
     monkeypatch.setenv("CODEX_HOME", str(codex_home))
@@ -215,15 +239,24 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
     assert error.summary == "Codex home がディレクトリではありません。"
     assert str(codex_home) in error.detail
     assert "CODEX_HOME のファイル種別を確認してください。" in error.next_actions
+    assert codex_calls == []
 
 
-def test_run_codex_exec_fails_before_codex_when_auth_json_missing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("auth_json_is_directory", [False, True])
+def test_run_codex_exec_fails_before_codex_when_auth_json_is_not_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    auth_json_is_directory: bool,
 ) -> None:
+    """Codex 起動前に欠落または file でない auth.json を拒否する。"""
     root = make_repo(tmp_path)
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
+    auth_path = codex_home / "auth.json"
+    if auth_json_is_directory:
+        auth_path.mkdir()
     monkeypatch.setenv("CODEX_HOME", str(codex_home))
+    codex_calls = _spy_codex_subprocess(monkeypatch)
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
@@ -241,6 +274,11 @@ def test_run_codex_exec_fails_before_codex_when_auth_json_missing(
     else:
         raise AssertionError("run_codex_exec should fail before invoking Codex CLI")
 
+    assert codex_calls == []
+
     assert error.summary == "Codex CLI 認証情報が存在しません。"
     assert str(codex_home / "auth.json") in error.detail
-    assert "既存の Codex home を指すように CODEX_HOME を設定してください。" in error.next_actions
+    assert (
+        "既存の Codex home を指すように CODEX_HOME を設定してください。"
+        in error.next_actions
+    )

@@ -19,19 +19,19 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     #   work-root 外の書き込み禁止は、言わなくてもわかりそう。
     #   だが、ルール文章としての整合性を優先して明示する。
     # NOTE
-    #   ログ関係だけは例外的に `<run-root>` で作業していようと cmoc が `<repo-root>/.cmoc/local/log` に書きに行く。
-    #   その関係で、agent が `<run-root>` での作業中に `<repo-root>/.cmoc/local/log` を読みに行きたくなる事がある。
-    #   更に log から `<repo-root>/.cmoc/local` ツリー内を読みに行きたくなるはずである (report とか)。
-    #   よって、`<repo-root>/.cmoc/local` だけは例外的にアクセスを許可する。
+    #   ログ関係だけは例外的に `{{run-root}}` で作業していようと cmoc が `{{repo-root}}/.cmoc/gu/ar/log` に書きに行く。
+    #   その関係で、agent が `{{run-root}}` での作業中に `{{repo-root}}/.cmoc/gu/ar/log` を読みに行きたくなる事がある。
+    #   更に log から `{{repo-root}}/.cmoc` ツリー内を読みに行きたくなるはずである (report とか)。
+    #   よって、`{{repo-root}}/.cmoc/g*/ar` だけは例外的にアクセスを許可する。
     repo_root = resolve_repo_root()
     work_root = resolve_work_root()
     if repo_root == work_root:
         out_repo_deny_rule = [
-            "`<repo-root>` ツリー外は読み書き禁止",
+            "`{{repo-root}}` ツリー外は読み書き禁止",
         ]
     else:
         out_repo_deny_rule = [
-            "`<work-root>` ツリー外は読み書き禁止だが、例外的に `<repo-root>/.cmoc/local` ツリー内は読み込み可能",
+            "`{{work-root}}` ツリー外は読み書き禁止だが、例外的に `{{repo-root}}/.cmoc/g*/ar` ツリー内は読み込み可能",
         ]
     # 基礎 deny ルール
     # NOTE
@@ -48,12 +48,13 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     #   memo は agent 不可視のユーザーワークスペースとするので読み書き禁止で固定
     base_deny_rule = [
         *out_repo_deny_rule,
-        "`<work-root>/.git` ツリー内は書き込み禁止",
-        "`<work-root>/.agents` ツリー内は書き込み禁止",
-        "`<work-root>/.codex` ツリー内は書き込み禁止",
+        "`{{work-root}}/.git` ツリー内は書き込み禁止",
+        "`{{work-root}}/.agents` ツリー内は書き込み禁止",
+        "`{{work-root}}/.codex` ツリー内は書き込み禁止",
+        "`{{work-root}}/.cmoc/g*/ar` ツリー内は書き込み禁止",
         "`AGENTS.md` は書き込み禁止",
         "`INDEX.md` は書き込み禁止",
-        "`<work-root>/memo` は読み書き禁止",
+        "`{{work-root}}/memo` は読み書き禁止",
     ]
     # モード別ルール設定
     # NOTE
@@ -61,16 +62,15 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     #   そもそも「書いてない＝リポジトリ全体規則が適用される」なので、暗に分かるはず。
     #   ということで、ルール文には「例外的に〇〇は許可」は書かず、補足コメントだけを書く。
     # NOTE
-    #   Codex CLI が使用するサンドボックスは permission profile を `:read-only` に設定しても __pycache_ とかは通してしまう。
-    #   つまり、本当に純粋な read-only ではなく、しかもその例外リストは具体的に何なのかはよくわからない。
-    #   よって、意味的に read-only なモードでも Codex CLI permission profile は `:workspace` で固定とする。
-    #   代わりに cmoc が注入するプロンプトと cmoc による事後チェックでカバーする。
+    #   Codex CLI sandbox への対応は `oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
+    #   この関数が生成する詳細な規則はプロンプトとしてのみ使用し、permission profile や
+    #   path 単位の sandbox 設定へ変換してはならない。
     match mode:
         case FileAccessMode.READONLY:
             # NOTE
             #   リポジトリ全体の **cmoc 上の論理的な意味での** 読み取り専用
             #   主要な編集対象である oracle file, realization file を読み取り専用にする
-            #   ルール上言及されていない隙間は `__pycache__` のような一時ファイルを想定しており、そこは読み書き自由とする
+            #   ルール上言及されていない一時ファイル用の path 例外は生成しない
             #   調査系タスク、cmoc が書き込みを代行するケースで使われる想定
             deny_rule = [
                 *base_deny_rule,

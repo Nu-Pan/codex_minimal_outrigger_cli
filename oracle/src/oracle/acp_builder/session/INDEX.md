@@ -1,18 +1,15 @@
 # `join`
 
 ## Summary
-- `cmoc session join` の merge conflict marker 解消専用の agent call parameter を組み立てる正本実装を含む領域。conflict 対象パス一覧、追加の oracle file 編集許可、prompt、モデル・推論強度・書き込み権限・preflight 抑制の設定へ進む入口。
+- `cmoc session join` の merge conflict 解消用に、AI 呼び出しへ渡すパラメータを組み立てる入口。競合ファイルの実パスを正規化し、conflict 解消に必要な範囲だけを扱う prompt と実行設定を返す。
 
 ## Read this when
-- session join の conflict marker 解消用 agent 呼び出しで使う prompt、権限、モデル設定を確認したいとき。
-- conflict 対象ファイル一覧を prompt に渡す方法を確認したいとき。
-- conflict marker 解消時だけ oracle file 編集を許可する境界を確認したいとき。
-- merge conflict marker 解消時に indexing preflight を実行しない理由や設定を確認したいとき。
+- `cmoc session join` で merge conflict marker を解消する呼び出し条件や、AI に渡す指示内容・実行設定を確認したいとき。
+- 競合ファイルの扱いを変えたいとき、または conflict 解消時に許される編集範囲や品質設定の根拠を確認したいとき。
 
 ## Do not read this when
-- session join 全体の通常処理、merge 実行、run 管理、または conflict 検出の実装を探しているとき。
-- prompt builder や agent call parameter 型そのものの一般仕様を確認したいとき。
-- conflict marker 解消以外のサブコマンド用 prompt や agent 呼び出し設定を調べたいとき。
+- session join の通常の接続や同期処理を探しているときは、join 本体の実装や周辺の session モジュールを先に読む。
+- merge conflict 解消の実行結果そのものや後段の適用処理を知りたいときは、このパラメータ生成ではなく、呼び出し先の実行経路を読む。
 
 ## hash
-- a0246bdae18cfbf8f1044ad88301e003c6292d9c0c5005b6118086f0411d2816
+- 6a35517220794414368499c04b978d9e1d772bbd2ab1be4e16c2ae72da14a4c9

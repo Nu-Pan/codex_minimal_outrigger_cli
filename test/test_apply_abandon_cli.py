@@ -1,49 +1,35 @@
-"""apply abandon の cleanup と process 停止を CLI 経由で検証する。
+"""apply abandon の CLI 外部挙動を検証する。
 
-このファイルは 16,000 文字を超えるが、責務境界は active apply run を破棄する
-外部挙動の検証に閉じている。worktree/branch/state cleanup、実行位置の判定、
-running process の停止は同じ abandon 操作の成功・警告・失敗条件を共有するため、
-分割すると同じ state fixture と境界条件を複数ファイルで読み直すことになる。
-現状は apply abandon の読み取り文脈を一箇所に保つ方が凝集性が高い。
-根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+worktree・branch・state の cleanup、実行位置、process 停止を、CLI が返す
+成功・警告・失敗として検証する。低レベルな process helper の契約は
+`test_runtime_apply.py` に分離している。
+
+根拠:
+- {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
 import subprocess
-import threading
-import time
-from multiprocessing import Pipe, Process
 from pathlib import Path
 
 import pytest
+from _apply_support import apply_worktree_from_state
+from _cli_support import runner
+from _git_support import make_repo, run_git
+from _ollama_support import run_doctor
 
-from _support import (
-    apply_worktree_from_state,
-    make_repo,
-    run_git,
-    runner,
-    run_doctor,
-)
-from main import app
+import commons.runtime_apply as apply_runtime
 import sub_commands.apply.abandon as apply_abandon_module
 import sub_commands.apply.fork as apply_fork_module
-import commons.runtime_apply as apply_runtime
-
-
-def hold_apply_process_id_lock(path: Path, ready: object, release: object) -> None:
-    """別 process で advisory lock を保持するテスト用 helper。"""
-    from commons.runtime_codex_profile import apply_process_id_file_lock
-
-    with apply_process_id_file_lock(path):
-        ready.send(True)
-        release.recv()
+from main import app
 
 
 def setup_linked_session_apply(
     root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Path, Path, str, Path]:
     """linked session 上の active apply run を abandon 境界条件用に作る。"""
-    linked = root / ".cmoc" / "local" / "worktree" / "linked-session-abandon"
+    linked = root / ".cmoc" / "gu" / "worktree" / "linked-session-abandon"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
     assert (
@@ -51,10 +37,10 @@ def setup_linked_session_apply(
     )
     session_branch = run_git(linked, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = f"cmoc/apply/{session_id}/manual"
-    apply_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "manual"
+    apply_worktree = root / ".cmoc" / "gu" / "worktree" / session_id / "manual"
     run_git(
         root,
         "worktree",
@@ -97,7 +83,7 @@ def test_apply_abandon_removes_apply_worktree_and_branch(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
@@ -106,11 +92,12 @@ def test_apply_abandon_removes_apply_worktree_and_branch(
     result = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert f"- apply_branch: `{apply_branch}`" in result.output
-    assert f"- apply_worktree: `{apply_worktree}`" in result.output
-    assert "- before: `completed`" in result.output
-    assert "- after: `ready`" in result.output
-    assert "- warnings:" in result.output
+    assert f"- apply_branch: `{apply_branch}`" in result.stdout
+    assert f"- apply_worktree: `{apply_worktree}`" in result.stdout
+    assert "- before: `completed`" in result.stdout
+    assert "- after: `ready`" in result.stdout
+    assert "- warnings:" in result.stdout
+    assert result.stderr == ""
     assert not apply_worktree.exists()
     assert (
         subprocess.run(
@@ -148,7 +135,7 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
@@ -158,19 +145,21 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
     result = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert f"apply worktree already missing: {apply_worktree}" in result.output
-    assert f"apply branch already missing: {apply_branch}" in result.output
-    assert f"- apply_worktree: `{apply_worktree}`" in result.output
+    assert f"apply worktree already missing: {apply_worktree}" in result.stdout
+    assert f"apply branch already missing: {apply_branch}" in result.stdout
+    assert f"- apply_worktree: `{apply_worktree}`" in result.stdout
+    assert result.stderr == ""
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
     assert state["apply"]["apply_branch"] is None
     assert "apply_worktree" not in state["apply"]
 
 
-def test_apply_abandon_stops_running_apply_process_before_cleanup(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("apply_state", ["running", "completed", "error"])
+def test_apply_abandon_stops_tracked_apply_process_before_cleanup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, apply_state: str
 ) -> None:
-    """running apply process を停止してから git cleanup へ進む順序を固定する。"""
+    """tracked process を止めてから cleanup へ進む。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -191,14 +180,14 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
-    state["apply"]["state"] = "running"
+    state["apply"]["state"] = apply_state
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
     process_id_path = (
-        root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
+        root / ".cmoc" / "gu" / "ar" / "state" / "apply_processes" / f"{session_id}.pid"
     )
     process_id_path.parent.mkdir(parents=True, exist_ok=True)
     process_id_path.write_text("12345 67890\n")
@@ -224,259 +213,17 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     result = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0
+    assert f"- before: `{apply_state}`" in result.stdout
     assert stopped == [12345]
-    assert "apply child process already stopped: 23456" in result.output
-    assert "apply process already stopped: 12345" in result.output
+    assert "apply child process already stopped: 23456" in result.stdout
+    assert "apply process already stopped: 12345" in result.stdout
+    assert result.stderr == ""
     assert not apply_worktree.exists()
     deleted = subprocess.run(["git", "rev-parse", "--verify", apply_branch], cwd=root)
     assert deleted.returncode != 0
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
-    assert "apply_process_id" not in state["apply"]
     assert not process_id_path.exists()
-
-
-def test_stop_apply_process_rereads_child_groups_after_parent_exit(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """親終了後の pid file 再読込で後発 Codex child group も止める。"""
-    order: list[str] = []
-
-    def fake_stop_child(process: apply_runtime.ProcessIdentity) -> None:
-        order.append(f"child:{process.process_id}")
-
-    def fake_send_signal(process_fd: int, process_id: int, sig: int) -> None:
-        order.append(f"parent:{process_id}:{sig}")
-
-    monkeypatch.setattr(apply_runtime, "stop_child_process_group", fake_stop_child)
-    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id: 10)
-    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 20)
-    monkeypatch.setattr(apply_runtime, "send_process_signal", fake_send_signal)
-    monkeypatch.setattr(
-        apply_runtime, "wait_process_fd_exit", lambda process_fd, timeout: True
-    )
-    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
-
-    warning = apply_runtime.stop_apply_process(
-        apply_runtime.ApplyProcessIdentity(
-            12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
-        ),
-        lambda: apply_runtime.ApplyProcessIdentity(
-            12345, 20, (apply_runtime.ProcessIdentity(34567, 40),)
-        ),
-    )
-
-    assert warning is None
-    assert order == [f"parent:12345:{apply_runtime.signal.SIGTERM}", "child:34567"]
-
-
-def test_stop_apply_process_keeps_child_warning_when_parent_is_stale(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """親 process 側の warning 後も child 停止 warning を破棄しない。"""
-    monkeypatch.setattr(
-        apply_runtime,
-        "stop_child_process_group",
-        lambda process: "apply child process already stopped: 23456",
-    )
-    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id: 10)
-    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 99)
-    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
-
-    warning = apply_runtime.stop_apply_process(
-        apply_runtime.ApplyProcessIdentity(
-            12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
-        )
-    )
-
-    assert warning == (
-        "stale apply process id ignored: 12345; "
-        "apply child process already stopped: 23456"
-    )
-
-
-def test_apply_process_id_reads_tracked_child_processes(tmp_path: Path) -> None:
-    """running abandon が親 PID と同時に記録済み Codex child PID を読める。"""
-    root = tmp_path
-    path = root / ".cmoc" / "local" / "state" / "apply_processes" / "session.pid"
-    path.parent.mkdir(parents=True)
-    path.write_text("12345 20\nchild 23456 30\n")
-
-    process = apply_runtime.read_apply_process_id(root, "session")
-
-    assert process == apply_runtime.ApplyProcessIdentity(
-        12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
-    )
-
-
-def test_apply_process_id_read_waits_for_tracking_lock(tmp_path: Path) -> None:
-    """abandon は child pid file 更新中の中間状態を読まない。"""
-    root = tmp_path
-    path = apply_runtime.apply_process_id_path(root, "session")
-    path.parent.mkdir(parents=True)
-    path.write_text("12345 20\nchild 23456 30\n")
-    ready_parent, ready_child = Pipe()
-    release_parent, release_child = Pipe()
-    lock_holder = Process(
-        target=hold_apply_process_id_lock,
-        args=(path, ready_child, release_child),
-    )
-    result: list[apply_runtime.ApplyProcessIdentity | None] = []
-    reader = threading.Thread(
-        target=lambda: result.append(
-            apply_runtime.read_apply_process_id(root, "session")
-        )
-    )
-
-    lock_holder.start()
-    assert ready_parent.recv() is True
-    reader.start()
-    time.sleep(0.1)
-    assert result == []
-    release_parent.send(True)
-    reader.join(2)
-    lock_holder.join(2)
-
-    assert not reader.is_alive()
-    assert not lock_holder.is_alive()
-    assert result == [
-        apply_runtime.ApplyProcessIdentity(
-            12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
-        )
-    ]
-
-
-def test_stop_child_process_group_accepts_exited_zombie_leader(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """終了済み child が親の reap 待ちで group に残っても親停止へ進める。"""
-    sent: list[int] = []
-
-    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 30)
-    monkeypatch.setattr(apply_runtime.os, "getpgid", lambda process_id: process_id)
-    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id, name: 10)
-    monkeypatch.setattr(
-        apply_runtime,
-        "send_process_group_signal",
-        lambda process_group_id, sig: sent.append(sig),
-    )
-    monkeypatch.setattr(
-        apply_runtime,
-        "wait_process_group_exit",
-        lambda process_group_id, timeout: False,
-    )
-    monkeypatch.setattr(
-        apply_runtime,
-        "process_group_has_no_running_members",
-        lambda process_fd, pgid: True,
-    )
-    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
-
-    warning = apply_runtime.stop_child_process_group(
-        apply_runtime.ProcessIdentity(23456, 30)
-    )
-
-    assert warning is None
-    assert sent == [apply_runtime.signal.SIGTERM]
-
-
-def test_stop_apply_process_treats_raced_exit_as_stopped(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """SIGTERM 後に先に終了した process を正常停止として扱う。"""
-    sent: list[int] = []
-
-    def fake_send_signal(process_fd: int, process_id: int, sig: int) -> None:
-        """送信した signal だけを観測し、process 実体には触れない。"""
-        sent.append(sig)
-
-    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id: 10)
-    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 20)
-    monkeypatch.setattr(apply_runtime, "send_process_signal", fake_send_signal)
-    monkeypatch.setattr(
-        apply_runtime, "wait_process_fd_exit", lambda process_fd, timeout: True
-    )
-    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
-
-    warning = apply_runtime.stop_apply_process(
-        apply_runtime.ApplyProcessIdentity(12345, 20)
-    )
-
-    assert warning is None
-    assert sent == [apply_runtime.signal.SIGTERM]
-
-
-def test_send_process_signal_ignores_already_exited_process(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """pidfd signal 時点で終了済みの process を cleanup 失敗にしない。"""
-
-    def fake_pidfd_send_signal(process_fd: int, sig: int) -> None:
-        """Linux pidfd API が返す終了済み process の例外だけを再現する。"""
-        raise ProcessLookupError
-
-    monkeypatch.setattr(
-        apply_runtime.signal, "pidfd_send_signal", fake_pidfd_send_signal
-    )
-
-    apply_runtime.send_process_signal(10, 12345, apply_runtime.signal.SIGTERM)
-
-
-def test_stop_apply_process_does_not_signal_reused_pid(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """保存時と開始時刻が異なる PID reuse では signal を送らない。"""
-    sent: list[int] = []
-
-    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id: 10)
-    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 99)
-    monkeypatch.setattr(
-        apply_runtime,
-        "send_process_signal",
-        lambda process_fd, process_id, sig: sent.append(sig),
-    )
-    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
-
-    warning = apply_runtime.stop_apply_process(
-        apply_runtime.ApplyProcessIdentity(12345, 20)
-    )
-
-    assert warning == "stale apply process id ignored: 12345"
-    assert sent == []
-
-
-def test_stop_child_process_group_opens_pidfd_before_identity_check(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """child PID reuse 確認前に pidfd を握り、別 group への signal を避ける。"""
-    order: list[str] = []
-    sent: list[int] = []
-
-    def fake_open_process_fd(process_id: int, name: str) -> int:
-        order.append(f"open:{process_id}:{name}")
-        return 10
-
-    def fake_process_start_time(process_id: int) -> int:
-        order.append(f"start:{process_id}")
-        return 99
-
-    monkeypatch.setattr(apply_runtime, "open_process_fd", fake_open_process_fd)
-    monkeypatch.setattr(apply_runtime, "process_start_time", fake_process_start_time)
-    monkeypatch.setattr(apply_runtime.os, "getpgid", lambda process_id: process_id)
-    monkeypatch.setattr(
-        apply_runtime,
-        "send_process_group_signal",
-        lambda process_group_id, sig: sent.append(sig),
-    )
-    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
-
-    warning = apply_runtime.stop_child_process_group(
-        apply_runtime.ProcessIdentity(23456, 30)
-    )
-
-    assert warning == "stale apply child process id ignored: 23456"
-    assert order == ["open:23456:Codex subprocess", "start:23456"]
-    assert sent == []
 
 
 def test_apply_abandon_rejects_running_state_without_process_id(
@@ -503,25 +250,27 @@ def test_apply_abandon_rejects_running_state_without_process_id(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
     state["apply"]["state"] = "running"
-    state["apply"].pop("apply_process_id", None)
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+    process_id_path = apply_runtime.apply_process_id_path(root, session_id)
+    process_id_path.unlink(missing_ok=True)
+    assert not process_id_path.exists()
 
     result = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "実行中 apply process を特定できません。" in result.output
+    assert "実行中 apply process を特定できません。" in result.stdout
+    assert result.stderr == ""
     assert apply_worktree.is_dir()
     remaining = subprocess.run(["git", "rev-parse", "--verify", apply_branch], cwd=root)
     assert remaining.returncode == 0
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "running"
     assert state["apply"]["apply_branch"] == apply_branch
-    assert "apply_process_id" not in state["apply"]
 
 
 def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(
@@ -536,7 +285,7 @@ def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(
     )
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     state["apply"]["state"] = "completed"
     state["apply"]["apply_branch"] = "cmoc/apply/malformed"
@@ -545,7 +294,8 @@ def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(
     result = runner.invoke(app, ["apply", "abandon"])
 
     assert result.exit_code != 0
-    assert "apply branch 名から session-id を特定できません。" in result.output
+    assert "apply branch 名から session-id を特定できません。" in result.stdout
+    assert result.stderr == ""
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"] == "cmoc/apply/malformed"
@@ -563,11 +313,11 @@ def test_apply_abandon_rejects_other_session_apply_branch_from_session_branch(
     )
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
     other_session_id = "other-session"
     other_apply_branch = f"cmoc/apply/{other_session_id}/manual"
     other_apply_worktree = (
-        root / ".cmoc" / "local" / "worktree" / other_session_id / "manual"
+        root / ".cmoc" / "gu" / "worktree" / other_session_id / "manual"
     )
     run_git(
         root,
@@ -586,9 +336,10 @@ def test_apply_abandon_rejects_other_session_apply_branch_from_session_branch(
     result = runner.invoke(app, ["apply", "abandon"])
 
     assert result.exit_code != 0
-    assert "破棄対象 apply run の補助情報を特定できません。" in result.output
-    assert f"session_id: {session_id}" in result.output
-    assert f"apply_branch: {other_apply_branch}" in result.output
+    assert "破棄対象 apply run の補助情報を特定できません。" in result.stdout
+    assert f"session_id: {session_id}" in result.stdout
+    assert f"apply_branch: {other_apply_branch}" in result.stdout
+    assert result.stderr == ""
     assert other_apply_worktree.is_dir()
     assert run_git(root, "rev-parse", "--verify", other_apply_branch).returncode == 0
     state = json.loads(state_path.read_text())
@@ -620,7 +371,7 @@ def test_apply_abandon_can_run_from_apply_worktree(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
@@ -717,12 +468,12 @@ def test_apply_abandon_rejects_stale_apply_branch(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "gu" / "ar" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
     stale_branch = f"cmoc/apply/{session_id}/stale"
-    stale_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "stale"
+    stale_worktree = root / ".cmoc" / "gu" / "worktree" / session_id / "stale"
     run_git(
         root,
         "worktree",
@@ -737,9 +488,13 @@ def test_apply_abandon_rejects_stale_apply_branch(
     result = runner.invoke(app, ["apply", "abandon"])
 
     assert result.exit_code != 0
-    assert "現在の apply branch は破棄対象の active apply run ではありません。" in result.output
-    assert f"current_branch: {stale_branch}" in result.output
-    assert f"apply_branch: {apply_branch}" in result.output
+    assert (
+        "現在の apply branch は破棄対象の active apply run ではありません。"
+        in result.stdout
+    )
+    assert f"current_branch: {stale_branch}" in result.stdout
+    assert f"apply_branch: {apply_branch}" in result.stdout
+    assert result.stderr == ""
     assert apply_worktree.is_dir()
     assert run_git(root, "rev-parse", "--verify", apply_branch).returncode == 0
     state = json.loads(state_path.read_text())

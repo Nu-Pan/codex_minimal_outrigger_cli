@@ -1,22 +1,65 @@
+# 現在進行中
+
+- そんなの１回でも実行すれば分かるだろ系のバグがいまだに再現する
+    - cmoc apply fork のデッドロックの話
+    - 各サブコマンドの本物での実行を仕様で確定させないと話にならない
+- state/apply_processes が `.cmoc/gu`, `.cmoc/gu/ar` に分かれて存在している…？
+- python-dev-skill が呼び出されすぎに見える
 
 # cmoc の作業品質
-    
-## OpenAI 公式のベストプラクティスを取り入れる
 
-- [Reasoning best practices | OpenAI API](https://developers.openai.com/api/docs/guides/reasoning-best-practices)
-- [Prompt guidance | OpenAI API](https://developers.openai.com/api/docs/guides/prompt-guidance)
-- [Customization – Codex | OpenAI Developers](https://developers.openai.com/codex/concepts/customization?utm_source=chatgpt.com)
-- [Best practices – Codex | OpenAI Developers](https://developers.openai.com/codex/learn/best-practices?utm_source=chatgpt.com)
-- [Prompt Caching 201](https://developers.openai.com/cookbook/examples/prompt_caching_201?utm_source=chatgpt.com)
-- [Prompt caching | OpenAI API](https://developers.openai.com/api/docs/guides/prompt-caching?utm_source=chatgpt.com)
-- [Prompt engineering | OpenAI API](https://developers.openai.com/api/docs/guides/prompt-engineering)
-- [Best practices for prompt engineering with the OpenAI API | OpenAI Help Center](https://help.openai.com/en/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api)
+## ファイル別をやる前に、差分ベースの全体 apply をやったほうが良いかも
 
-## AGENTS.md 復活させる
+- リポジトリ全体に対する「oracle file にこういう修正いれたから追従させて」を先にやる
+    - 一発でうまくいくわけ無いので、所見リストアップ --> 実装を繰り返し実行
+    - もう所見ないよって言われるまで繰り返し
+    - その後で、仕上げにファイル単位の網羅的チェックを行う
+- 気持ち
+    - ファイル単位調査だと、ファイル個別の事情に釣られやすそう
+    なので「抜け漏れは有るかもしれないが、大筋対応出来ている」な状態を先に作る
+    - その後であれば、ファイル単位修正が多少近視眼的でも大きな問題にはならないはず
+    - 実際、人力での開発の時も、大抵はそんな流れのはず
+- せっかく GPT-5.6 が来るので
+    - Sol による自動オーケストレーションを試しても良いかも
+- ていうか、ファイル単位の虱潰しと、差分ベースの追従とは別のコマンドにすべきかも
+    - 性質がまるで違う
+    - oracle 編集して realization を追従させて・・・のワークフローを回すのには、差分ベース追従の方が都合がいい (毎回 cmoc tui で指示書くのダルい)
+    - 指示をディティールまできっちり反映させるのはファイル単位適用が必要なので、それはそれで必要
+    - 枠フロー回すという意味では oracle edit の実装も優先度が高い
 
-- cmoc 自体の説明とか、ディレクトリ構成とか、テストコマンドとか、いろいろ書ける余地はありそう
-- これはつまり `<repo-root>` が cmoc の開発対象としての用件を満たしているかのチェックの話なので `cmoc doctor scaffold` みたいなの用意して自動チェック化したい
-- 既存の `cmoc doctor` は `cmoc doctor fundamental` とかだろうか
+## `cmoc oracle edit`
+
+- cmoc tui で毎回ちまちま打ち込むのがめんどくさいので、
+
+## 各プロンプトをきっちり仕様化
+
+- 今は指定が雑なので AI エージェントの仕事も雑
+- AI エージェントがサボれないよう、きっちり組む必要がある
+- 多分 oracle 上に python 関数として書いたほうが良い
+- まだ抜け漏れがあるはず
+- realization 書き換えを伴うので apply fork 停止後にやる
+
+## 検証コマンドを拡充したい
+
+- ごく基本的なコマンドしか用意してない
+- もっと高尚なコマンドとかを入れたら開発効率・品質が上がるのでは？
+
+## 場当たり的修正を避けさせたい
+
+- 修正作業の価値基準として、場当たり的修正よりも根本的修正を尊ぶ事をプロンプトに組み込んどいた方が良さそう
+- あと、優先順位の話しも重要かも
+
+## cmoc が生成するプロンプトと、リポジトリ固有指示との整合性チェックが欲しい
+
+- 「リポジトリ側の `AGENTS.md` なり oracle ファイルなりで書いた指示」と「cmoc のプロンプト由来の指示」とが矛盾する可能性は当然ある
+- この矛盾が発生しているかどうかは cmoc 側でチェックしてほしい
+- `cmoc review oracle` とかだろうか？
+- しかし `AGENTS.md` は oracle ファイルに含まれないので、別のサブコマンドが必要か？
+
+## oracle file の隙間を埋められる根拠を言わせるべき
+
+- 具体的にどういう隙間があって、それをどう埋められるか、あるいは埋められないか
+- これを述べさせないと、適当にダイジョウブダヨって言いそう
 
 ## コメントをめっちゃ書かせたい
 
@@ -30,18 +73,6 @@
     - この実装でなければならない根拠
     - あえて取らなかった実装方針とその根拠
     - 対応する oracle file が存在するなら、そのファイルパス (`<work-root>` 起点で)
-
-## ファイル別をやる前に、差分ベースの普通の apply をやったほうが良いかも
-
-- リポジトリ全体に対する「oracle file にこういう修正いれたから追従させて」を先にやる
-    - 一発でうまくいくわけ無いので、所見リストアップ --> 実装を繰り返し実行
-    - もう所見ないよって言われるまで繰り返し
-    - その後で、仕上げにファイル単位の網羅的チェックを行う
-- 気持ち
-    - ファイル単位調査だと、ファイル個別の事情に釣られやすそう
-    なので「抜け漏れは有るかもしれないが、大筋対応出来ている」な状態を先に作る
-    - その後であれば、ファイル単位修正が多少近視眼的でも大きな問題にはならないはず
-    - 実際、人力での開発の時も、大抵はそんな流れのはず
 
 ## ファイル配置の階層化を組み込む
 
@@ -61,13 +92,6 @@
 - かなり類似しているので、お互いに良いところを真似したり、共通化出来るところは共通化したい
 - e.g. 所見のマージとか
 - 差が出るのがしょうがない部分もあるので一定程度は妥協する
-
-## 各プロンプトをきっちり仕様化
-
-- 今は指定が雑なので AI エージェントの仕事も雑
-- AI エージェントがサボれないよう、きっちり組む必要がある
-- 多分 oracle 上に python 関数として書いたほうが良い
-- まだ抜け漏れがあるはず
 
 ## 無茶な仕様を調べる方法が欲しい
 
@@ -101,13 +125,6 @@
     - LLM の調査漏れを防ぐ
 - 削除に対する追従も必要な事を考えると git diff の結果を流し込むべきか
     - oracle スナップショット参照原則と真正面から衝突するので、ここは原則の方を組み直す必要がある
-
-## cmoc が生成するプロンプトと、リポジトリ固有指示との整合性チェックが欲しい
-
-- 「リポジトリ側の `AGENTS.md` なり oracle ファイルなりで書いた指示」と「cmoc のプロンプト由来の指示」とが矛盾する可能性は当然ある
-- この矛盾が発生しているかどうかは cmoc 側でチェックしてほしい
-- `cmoc review oracle` とかだろうか？
-- しかし `AGENTS.md` は oracle ファイルに含まれないので、別のサブコマンドが必要か？
 
 ## 用語は英語での定義が必要
 
@@ -154,11 +171,6 @@
 - 複数エージェントに全く同じ作業をやらせて、その結果を１つにマージすれば、調子がいい時の結果を得られる確率が上がるはず、みいたいなやつ
 - 当然ながら、トークン消費は激しい
 - SLM バックエンドでできるだけ高い性能を得たいならこれか？
-
-## `AGENTS.md` の扱いが宙ぶらりん
-
-- 今は `cmoc tui` からの起動を前提として、`AGENTS.md` を消している
-- 若干の気持ち悪さがある
 
 # トークン消費効率
 
@@ -245,6 +257,9 @@
     - 機械的処理で陳腐化したルーティング情報を全削除してから、ルーティング情報の再生成に進む
     - そうすれば、ルーティング情報の生成用に読んだ `INDEX.md` に陳腐化した情報が含まれてて、陳腐化した情報が伝播してしまうパターンを防止できる
     - ＋INDEX.mdは参照しても良い＋末端側から順番に
+- 難易度に応じて手段を変えるという手もある
+    - MINIMUM, EFFICIENCY を使い分けるとか
+    - 機械的に生成するとか
 
 ## `review oracle` で読むべきファイルのリストをより正確にリストアップしたい
 
@@ -296,21 +311,11 @@
 - 普通のプログラミングで言う所の「コード書いてビルドエラー読んで…」みたいなイテレーションを高速で回せるようにする
 - 細かい話は `memo/oracle_file_maintenance_strategry.md` を参照
 
-## `cmoc apply fork` の途中停止 が欲しい
-
-- Ctrl+C で安全に途中停止みたいなの
-- apply は小さいバグ修正を繰り返しているのだから、中断しても何ら問題はないはず
-
-## `.cmoc/config.json` が .gitignore の対象になっている
-
-- 設定ファイルなので git でトラックしたい
-- `.gitignore` の対象は `<repo-root>/.cmoc/untrack`, `<repo-root>/.cmoc/track` に分けるのが丸いか
-
 ## Codex CLI が oracle を触っちゃったら話
 
 - `ownership_and_safety.md` で書いてる内容、他の箇所でも言及していた気がする
 - サンドボックスで強固にガードしたい
-- codex cli のサンドボックスってちゃんと動くようになったんだろうか？
+- codex cli のサンドボックスが experimental を卒業しない限り無理
 
 ## 通知
 

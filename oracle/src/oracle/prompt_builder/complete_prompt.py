@@ -1,5 +1,5 @@
 # cmoc
-from oracle.other.struct_doc import StructDoc
+from oracle.other.struct_doc import StructBlock, StructDoc
 from copy import deepcopy
 from typing import Callable
 
@@ -31,7 +31,7 @@ def build_complete_prompt(
     review_oracle_standard: bool = False,
     apply_review_standard: bool = False,
     index_entry_standard: bool = False,
-) -> list[StructDoc]:
+) -> list[StructDoc | StructBlock]:
     """agent call にそのまま渡すことができる完全なプロンプトを構築する
 
     入力プロンプトキャッシュヒット率の観点から、以下の工夫を取り入れている
@@ -40,7 +40,7 @@ def build_complete_prompt(
     - 呼び出し内容次第で変わりうるプロンプトパーツを「動的プロンプト」として後半にまとめる
     - 静的プロンプトのうち、出現頻度の高いものを前半側に持ってくる
     - プロンプトパーツの順序は一定にする
-    - 先頭の固定プロンプトパーツで、今回の用件などの重要情報への参照を明言する
+    - 完全固定文言の「プロンプト内地図」を先頭に置き、今回の用件などの重要情報を参照する
     - 変動要素を可能な限りプレースホルダ化し、実際の値との対応関係を動的プロンプト側で書くことで、変動要素だけを動的プロンプト側に押しやる
 
     role:
@@ -93,8 +93,20 @@ def build_complete_prompt(
     else:
         ph_map = dict()
 
-    # 構築先プロンプト
-    prompt = []
+    # 動的プロンプトの参照先
+    role_block = StructBlock("role", StructDoc("role", role))
+    summary_block = StructBlock("summary", StructDoc("summary", summary))
+    goal_block = StructBlock("goal", StructDoc("goal", goal))
+
+    # 構築先プロンプト。先頭要素の文言と順序は入力に依存させない。
+    prompt: list[StructDoc | StructBlock] = [
+        StructDoc(
+            "プロンプト内地図",
+            StructDoc("あなたの役割", '<cmoc_ref target="role"/>'),
+            StructDoc("依頼の概要", '<cmoc_ref target="summary"/>'),
+            StructDoc("作業の完了条件", '<cmoc_ref target="goal"/>'),
+        )
+    ]
 
     # 構築ユーティリティ
     def _extend_static_prompt(build_fn: Callable, *args, **kwargs):
@@ -143,31 +155,14 @@ def build_complete_prompt(
     _extend_static_prompt(build_routing_rule)
 
     # 動的プロンプトを構築
-    prompt.append(
-        StructDoc(
-            "role",
-            role,
-        )
-    )
-    prompt.append(
-        StructDoc(
-            "summary",
-            summary,
-        )
-    )
-    prompt.append(
-        StructDoc(
-            "goal",
-            goal,
-        )
-    )
+    prompt.extend((role_block, summary_block, goal_block))
     prompt.extend(aux_dynamic_prompt)
 
     # プレースホルダマップを構築
     prompt.append(
         StructDoc(
             "place holder definition",
-            "\n".join(f"- <{k}> = {v}" for k, v in ph_map.items()),
+            "\n".join(f"- {{{{{k}}}}} = {v}" for k, v in ph_map.items()),
         )
     )
 

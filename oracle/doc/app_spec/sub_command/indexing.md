@@ -3,7 +3,7 @@
 
 ## 概要
 
-- `cmoc indexing` は現在の `<work-root>` に対してインデクシングを実行する
+- `cmoc indexing` は現在の `{{work-root}}` に対してインデクシングを実行する
 - インデクシングの結果は自動的に git にコミットされる
 
 ## 引数
@@ -24,4 +24,4 @@
 
 ## インデクシングとは
 
-- `<cmoc-root>/oracle/doc/app_specs/indexing.md` を参照
+- `{{cmoc-root}}/oracle/doc/app_specs/indexing.md` を参照

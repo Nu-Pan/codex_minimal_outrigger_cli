@@ -1,1 +1,1 @@
-"""apply subcommand implementations."""
+"""apply subcommand の実装 package。"""

@@ -1,7 +1,5 @@
 import os
-import select
 import signal
-import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -11,11 +9,17 @@ from cmoc_runtime import (
     APPLY_PROCESS_TRACKING_ENV,
     CmocError,
     apply_process_id_file_lock,
+    open_process_fd,
+    process_group_has_running_member,
     process_start_time,
     run_git,
+    send_process_signal,
     set_apply_process_tracking_path,
+    stop_process_group,
+    wait_process_fd_exit,
     worktrees_dir,
 )
+from commons.runtime_paths import generated_agent_read_dir
 
 
 class ProcessIdentity(NamedTuple):
@@ -23,6 +27,7 @@ class ProcessIdentity(NamedTuple):
 
     process_id: int
     start_time: int | None
+    process_group_id: int | None = None
 
 
 class ApplyProcessIdentity(NamedTuple):
@@ -40,7 +45,9 @@ def worktree_for_branch(root: Path, branch: str) -> Path:
         return path
     raise CmocError(
         "session branch の worktree を特定できません。",
-        ["git worktree list を確認し、session branch の worktree から再実行してください。"],
+        [
+            "git worktree list を確認し、session branch の worktree から再実行してください。"
+        ],
         f"branch: {branch}",
     )
 
@@ -76,7 +83,23 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
 
 def apply_process_id_path(root: Path, session_id: str) -> Path:
     """session ごとの apply process pid file path を一箇所で決める。"""
-    return root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    return (
+        generated_agent_read_dir(root)
+        / "state"
+        / "apply_processes"
+        / f"{session_id}.pid"
+    )
+
+
+@contextmanager
+def apply_run_lock(root: Path, session_id: str) -> Iterator[None]:
+    """apply state の公開と abandon cleanup を同じ run 単位で直列化する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # PID tracking は Codex child 起動中にも取得するため、lifecycle lock は別鍵にする。
+    lock_key = apply_process_id_path(root, session_id).with_name(f"{session_id}.run")
+    with apply_process_id_file_lock(lock_key):
+        yield
 
 
 def write_apply_process_id(root: Path, session_id: str, process_id: int) -> None:
@@ -98,9 +121,9 @@ def apply_process_tracking(root: Path, session_id: str) -> Iterator[None]:
     """Codex subprocess 追跡先を apply 実行中だけ有効化する。"""
     path = apply_process_id_path(root, session_id)
     old_value = os.environ.get(APPLY_PROCESS_TRACKING_ENV)
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
-    # Env is restored for compatibility, but the active tracking decision stays
-    # process-local so a parent shell cannot force unrelated Codex calls into it.
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # Env は compatibility のため復元するが、active tracking の判断は process-local に
+    # 保つ。これにより親 shell が無関係な Codex call をそこへ向けることを防ぐ。
     old_tracking_path = set_apply_process_tracking_path(path)
     os.environ[APPLY_PROCESS_TRACKING_ENV] = str(path)
     try:
@@ -113,42 +136,57 @@ def apply_process_tracking(root: Path, session_id: str) -> Iterator[None]:
             os.environ[APPLY_PROCESS_TRACKING_ENV] = old_value
 
 
+def _read_apply_process_id_file(path: Path) -> ApplyProcessIdentity | None:
+    """pid fileを検証し、壊れていれば停止対象なしとして返す。"""
+    if not path.is_file():
+        return None
+    try:
+        lines = [line.split() for line in path.read_text().splitlines() if line.strip()]
+        if not lines:
+            return None
+        parts = lines[0]
+        if len(parts) not in {1, 2}:
+            return None
+        process_id = int(parts[0])
+        if process_id <= 0:
+            return None
+        start_time = int(parts[1]) if len(parts) == 2 else None
+        children: list[ProcessIdentity] = []
+        for child_parts in lines[1:]:
+            if len(child_parts) not in {3, 4} or child_parts[0] != "child":
+                return None
+            child_id = int(child_parts[1])
+            child_start_time = int(child_parts[2])
+            if child_id <= 0 or child_start_time < 0:
+                return None
+            group_id = int(child_parts[3]) if len(child_parts) == 4 else None
+            if group_id is not None and group_id <= 0:
+                return None
+            children.append(ProcessIdentity(child_id, child_start_time, group_id))
+        return ApplyProcessIdentity(process_id, start_time, tuple(children))
+    except (IndexError, OSError, ValueError):
+        return None
+
+
 def read_apply_process_id(root: Path, session_id: str) -> ApplyProcessIdentity | None:
     """壊れた pid file を停止対象にせず、読める場合だけ識別子を返す。"""
     path = apply_process_id_path(root, session_id)
     with apply_process_id_file_lock(path):
-        if not path.is_file():
-            return None
-        try:
-            lines = [
-                line.split() for line in path.read_text().splitlines() if line.strip()
-            ]
-            if not lines:
-                return None
-            parts = lines[0]
-            if len(parts) not in {1, 2}:
-                return None
-            process_id = int(parts[0])
-            if process_id <= 0:
-                return None
-            start_time = int(parts[1]) if len(parts) == 2 else None
-            children: list[ProcessIdentity] = []
-            for child_parts in lines[1:]:
-                if len(child_parts) != 3 or child_parts[0] != "child":
-                    return None
-                child_id = int(child_parts[1])
-                if child_id <= 0:
-                    return None
-                children.append(ProcessIdentity(child_id, int(child_parts[2])))
-            return ApplyProcessIdentity(process_id, start_time, tuple(children))
-        except (IndexError, ValueError):
-            return None
+        return _read_apply_process_id_file(path)
 
 
 def delete_apply_process_id(root: Path, session_id: str) -> None:
-    """apply cleanup 後に stale な停止対象を残さないよう pid file を消す。"""
+    """Codex group が空になるまで stale tracking を残して cleanup 競合を防ぐ。"""
     path = apply_process_id_path(root, session_id)
     with apply_process_id_file_lock(path):
+        process = _read_apply_process_id_file(path)
+        if process is None:
+            return
+        if any(
+            process_group_has_running_member(child.process_group_id or child.process_id)
+            for child in process.child_processes
+        ):
+            return
         path.unlink(missing_ok=True)
 
 
@@ -156,10 +194,11 @@ def stop_apply_process(
     process: ApplyProcessIdentity,
     read_after_parent_exit: Callable[[], ApplyProcessIdentity | None] | None = None,
 ) -> str | None:
-    """running abandon では cleanup 前に apply process が消えたことを確認する。"""
+    """abandon では cleanup 前に apply process が消えたことを確認する。"""
     warnings: list[str] = []
 
     def joined_warnings(*extra: str) -> str | None:
+        """蓄積したwarningと追加warningを一つの表示用文字列へまとめる。"""
         combined = [*warnings, *extra]
         return "; ".join(combined) if combined else None
 
@@ -174,7 +213,7 @@ def stop_apply_process(
     if parent_warning:
         warnings.append(parent_warning)
 
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     # 親 apply process の終了後に pid file を読み直す。親が snapshot 取得後に
     # start_new_session=True の Codex child を増やしても cleanup 前に止めるため。
     child_source = read_after_parent_exit() if read_after_parent_exit else process
@@ -189,6 +228,7 @@ def stop_apply_process(
 
 
 def _stop_parent_apply_process(process: ApplyProcessIdentity) -> str | None:
+    """保存済み同一性を確認して親apply processを停止する。"""
     process_id = process.process_id
     process_fd = open_process_fd(process_id)
     if process_fd is None:
@@ -221,157 +261,33 @@ def _stop_parent_apply_process(process: ApplyProcessIdentity) -> str | None:
 
 
 def stop_child_process_group(process: ProcessIdentity) -> str | None:
-    """Codex subprocess を専用 process group 単位で停止する。"""
+    """Codex group を安定した group ID と個別 pidfd で停止する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # leader 終了後も数値 PID/PGID の再取得をせず、保存済み group を member pidfd で止める。
     process_id = process.process_id
+    process_group_id = process.process_group_id or process_id
     process_fd = open_process_fd(process_id, "Codex subprocess")
-    if process_fd is None:
-        return f"apply child process already stopped: {process_id}"
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
-    # pidfd を先に握り、PID reuse で別 group を止める余地を減らしてから
-    # Codex CLI を apply の実作業として親 cmoc process より先に group ごと止める。
-    try:
+    if process_fd is not None:
+        try:
+            current_start_time = process_start_time(process_id)
+            if current_start_time is not None:
+                if process.start_time is None:
+                    raise CmocError(
+                        "実行中 Codex subprocess の同一性を確認できません。",
+                        ["apply process を確認し、停止後に再実行してください。"],
+                        f"pid: {process_id}",
+                    )
+                if current_start_time != process.start_time:
+                    return f"stale apply child process id ignored: {process_id}"
+        finally:
+            os.close(process_fd)
+    else:
+        # leader が消えても、保存済み group ID の descendant を cleanup 前に止める。
         current_start_time = process_start_time(process_id)
-        if current_start_time is None:
+        if current_start_time is not None and process.start_time is not None:
+            if current_start_time != process.start_time:
+                return f"stale apply child process id ignored: {process_id}"
+        if not process_group_has_running_member(process_group_id):
             return f"apply child process already stopped: {process_id}"
-        if process.start_time is None:
-            raise CmocError(
-                "実行中 Codex subprocess の同一性を確認できません。",
-                ["apply process と pid file を確認し、停止後に再実行してください。"],
-                f"pid: {process_id}",
-            )
-        if current_start_time != process.start_time:
-            return f"stale apply child process id ignored: {process_id}"
-        try:
-            process_group_id = os.getpgid(process_id)
-        except ProcessLookupError:
-            return f"apply child process already stopped: {process_id}"
-        if process_group_id != process_id:
-            raise CmocError(
-                "実行中 Codex subprocess の process group を確認できません。",
-                ["Codex subprocess を手動で停止してから再実行してください。"],
-                f"pid: {process_id}\npgid: {process_group_id}",
-            )
-        send_process_group_signal(process_group_id, signal.SIGTERM)
-        if (
-            wait_process_group_exit(process_group_id, 5.0)
-            or process_group_has_no_running_members(process_fd, process_group_id)
-        ):
-            return None
-        send_process_group_signal(process_group_id, signal.SIGKILL)
-        if (
-            wait_process_group_exit(process_group_id, 5.0)
-            or process_group_has_no_running_members(process_fd, process_group_id)
-        ):
-            return None
-        raise CmocError(
-            "実行中 Codex subprocess を停止できません。",
-            ["Codex subprocess を確認して停止後に再実行してください。"],
-            f"pid: {process_id}\npgid: {process_group_id}",
-        )
-    finally:
-        os.close(process_fd)
-
-
-def open_process_fd(process_id: int, process_name: str = "apply process") -> int | None:
-    """pidfd 対応環境でだけ race を避けた process 参照を開く。"""
-    if not (hasattr(os, "pidfd_open") and hasattr(signal, "pidfd_send_signal")):
-        raise CmocError(
-            f"{process_name} の同一性を安全に確認できません。",
-            [f"{process_name} を手動で停止してから再実行してください。"],
-            f"pid: {process_id}",
-        )
-    try:
-        return os.pidfd_open(process_id)
-    except ProcessLookupError:
-        return None
-    except PermissionError as exc:
-        raise CmocError(
-            f"実行中 {process_name} の確認権限がありません。",
-            [f"{process_name} を手動で確認し、停止後に再実行してください。"],
-            f"pid: {process_id}",
-        ) from exc
-
-
-def send_process_signal(process_fd: int, process_id: int, sig: signal.Signals) -> None:
-    """pidfd 経由で apply process へ signal を送り、権限失敗を cmoc 化する。"""
-    try:
-        signal.pidfd_send_signal(process_fd, sig)
-    except ProcessLookupError:
-        return
-    except PermissionError as exc:
-        raise CmocError(
-            "実行中 apply process を停止する権限がありません。",
-            ["apply process を手動で停止してから再実行してください。"],
-            f"pid: {process_id}",
-        ) from exc
-
-
-def wait_process_fd_exit(process_fd: int, timeout_sec: float) -> bool:
-    """pidfd の readable 化を process 終了として待つ。"""
-    readable, _, _ = select.select([process_fd], [], [], timeout_sec)
-    return bool(readable)
-
-
-def process_group_has_no_running_members(
-    leader_process_fd: int, process_group_id: int
-) -> bool:
-    """leader 終了済みで、同じ group に非 zombie が残っていないことを確認する。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
-    # child は親 apply process が reap するまで zombie として group に残り得る。
-    # killpg(pgid, 0) だけで待つと、その正常な停止過程で親停止へ進めなくなる。
-    return (
-        wait_process_fd_exit(leader_process_fd, 0)
-        and not process_group_has_running_member(process_group_id)
-    )
-
-
-def process_group_has_running_member(process_group_id: int) -> bool:
-    """Linux /proc から process group 内の非 zombie process を探す。"""
-    proc = Path("/proc")
-    if not proc.is_dir():
-        return True
-    for path in proc.iterdir():
-        if not path.name.isdigit():
-            continue
-        try:
-            after_name = (path / "stat").read_text().rsplit(") ", 1)[1].split()
-            state = after_name[0]
-            member_group_id = int(after_name[2])
-        except (FileNotFoundError, IndexError, PermissionError, ValueError):
-            continue
-        if member_group_id == process_group_id and state != "Z":
-            return True
-    return False
-
-
-def send_process_group_signal(process_group_id: int, sig: signal.Signals) -> None:
-    """Codex subprocess group へ signal を送り、権限失敗を cmoc 化する。"""
-    try:
-        os.killpg(process_group_id, sig)
-    except ProcessLookupError:
-        return
-    except PermissionError as exc:
-        raise CmocError(
-            "実行中 Codex subprocess を停止する権限がありません。",
-            ["Codex subprocess を手動で停止してから再実行してください。"],
-            f"pgid: {process_group_id}",
-        ) from exc
-
-
-def wait_process_group_exit(process_group_id: int, timeout_sec: float) -> bool:
-    """process group が消えるまで短い polling で待つ。"""
-    deadline = time.monotonic() + timeout_sec
-    while True:
-        try:
-            os.killpg(process_group_id, 0)
-        except ProcessLookupError:
-            return True
-        except PermissionError as exc:
-            raise CmocError(
-                "実行中 Codex subprocess の確認権限がありません。",
-                ["Codex subprocess を手動で確認し、停止後に再実行してください。"],
-                f"pgid: {process_group_id}",
-            ) from exc
-        if time.monotonic() >= deadline:
-            return False
-        time.sleep(0.05)
+    stop_process_group(process_group_id)
+    return None

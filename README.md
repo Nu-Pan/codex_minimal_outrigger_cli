@@ -21,18 +21,23 @@
     /usr/bin/python3 -m venv .venv
     ./.venv/bin/python -m pip install -e .
     ```
-3. （任意） `cmoc` コマンドにパスを通す
-    - `~/.bashrc` を手動編集するのがおすすめ
-    - e.g. コマンドで書くなら
+3. `cmoc` コマンドにパスを通す
+    - 現在のシェルで使う場合
+        ```bash
+        export PATH="$PWD/bin:$PATH"
+        ```
+    - 永続化する場合は `~/.bashrc` を手動編集するのがおすすめ
+    - e.g. コマンドで追記するなら、実行後に `source ~/.bashrc` も実行する
         ```bash
         cat <<EOF >> ~/.bashrc
         export PATH="$PWD/bin:\$PATH"
         EOF
+        source ~/.bashrc
         ```
 
 ## 基本ワークフロー
 
-- `<cmoc-root>/oracle/doc/app_spec/usage.md` を参照
+- `{{cmoc-root}}/oracle/doc/app_spec/usage.md` を参照
 
 ## Tips
 

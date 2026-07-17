@@ -19,18 +19,17 @@
 # `oracle`
 
 ## Summary
-- review oracle 向け agent call parameter builder 群のうち、旧 import 経路を維持する互換入口と、正本 builder 由来 prompt の既知 typo を最小補正する薄い adapter を含む。
-- 実処理の多くは canonical oracle path または oracle src 側へ委譲され、この階層は移行中 caller との互換性、削除条件、review finding merge / validate finding advocate の限定補正境界を確認する入口になる。
+- review/oracle builder の互換 import 経路と、canonical builder への委譲・限定的な prompt typo 補正を扱うディレクトリ。review finding の enumeration、judgment、merge、advocate、challenger validation に関する各入口を確認するためのルーティング先。
 
 ## Read this when
-- review oracle の旧 import 経路から canonical oracle path への移行状況、互換 shim の再 export 対象、または削除可否を確認する。
-- merge finding や validate finding advocate の agent call parameter が、正本 builder から取得された後にどの範囲だけ realization 側で補正されるかを確認する。
-- 正本 prompt に残る oracle root 表記 typo への一時的な補正、補正の削除条件、動的入力を改変しない境界を確認する。
+- review/oracle builder の旧 import 経路、canonical 実装への移行、削除条件を確認するとき
+- review finding の AgentCallParameter 生成や、oracle root placeholder の既知 typo 補正を調査・変更するとき
+- 絶対 symlink の oracle path、dynamic input の保持、prompt の限定的な補正挙動を確認するとき
 
 ## Do not read this when
-- review oracle の正本仕様や正本 prompt の内容そのものを確認したい場合は、oracle 側の該当本文を読む。
-- review finding enumeration、judgment、challenger validation の実処理や parameter 構築ロジックを確認したい場合は、canonical oracle path 側を読む。
-- review oracle 以外の builder、agent call parameter 全般、path model、INDEX.md エントリー生成、または一般的な oracle file 定義を調べたい場合。
+- canonical oracle builder の本体仕様や prompt 本文だけを確認したいとき
+- review routing、finding 検証ロジック、その他の新しい実装責務を調査するとき
+- 旧 import 経路や prompt 補正と無関係な一般的な AgentCallParameter 処理を扱うとき
 
 ## hash
-- 6b45aca0d34cdb64421456268debbca8e84f943b865d71f94b81ab3d36d65030
+- 6d40679bba0a21f795e69479ffbfcbef367fc6e23eaf9f9902335c614aede8b4

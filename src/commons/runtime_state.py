@@ -1,9 +1,13 @@
+import fcntl
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
 from commons.runtime_errors import CmocError
+from commons.runtime_git import git_common_dir
 from commons.runtime_paths import sessions_dir
 
 
@@ -15,8 +19,8 @@ class SessionPart:
     session_home_branch: str | None = None
     session_start_commit: str | None = None
     last_joined_apply_oracle_snapshot_commit: str | None = None
-    # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
-    # session abandon requires this field to remain serialized as JSON null.
+    # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+    # session abandon ではこの field を JSON null として serialize したままにする必要がある。
     joined_at: str | None = None
 
 
@@ -40,10 +44,16 @@ class SessionState:
     def from_dict(
         cls: type["SessionState"], data: dict[str, Any], source: Path | None = None
     ) -> "SessionState":
-        # <work-root>/oracle/doc/app_spec/session_state.md
+        """永続stateのJSON objectを検証し、欠落値を補わずに復元する。
+
+        根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+        """
+        # {{work-root}}/oracle/doc/app_spec/session_state.md
         # JSON 読み込み時は、新規作成用 default で欠落 field を active/ready に補わない。
         if not isinstance(data, dict):
-            raise _invalid_state(source, "top-level JSON は object である必要があります。")
+            raise _invalid_state(
+                source, "top-level JSON は object である必要があります。"
+            )
         session_data = _part_data(data, "session", SessionPart, source)
         apply_data = _part_data(data, "apply", ApplyPart, source)
         _require_state(
@@ -67,6 +77,21 @@ class SessionState:
 def state_path(root: Path, session_id: str) -> Path:
     """session_id に対応する session state file の保存先を返す。"""
     return sessions_dir(root) / f"{session_id}.json"
+
+
+@contextmanager
+def session_fork_lock(root: Path) -> Iterator[None]:
+    """repository 共通の session fork 排他 lock を保持する。"""
+    lock_path = git_common_dir(root) / "cmoc-session-fork.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock_file:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+        # active state の確認から branch/state 作成までを linked worktree 間で直列化する。
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def branch_session_id(branch: str, kind: str = "session") -> str:
@@ -151,6 +176,7 @@ def _part_data(
     part_type: type[SessionPart] | type[ApplyPart],
     source: Path | None,
 ) -> dict[str, Any]:
+    """stateのpartをdataclass fieldだけのdictへ検証して取り出す。"""
     part = data.get(key)
     if not isinstance(part, dict):
         raise _invalid_state(source, f"`{key}` は object である必要があります。")
@@ -166,6 +192,7 @@ def _part_data(
 def _require_state(
     part: dict[str, Any], key: str, allowed: set[str], source: Path | None
 ) -> None:
+    """state partのstate値が許可集合に含まれることを検証する。"""
     state = part["state"]
     if not isinstance(state, str) or state not in allowed:
         raise _invalid_state(
@@ -177,15 +204,17 @@ def _require_state(
 def _require_nullable_strings(
     part: dict[str, Any], key: str, source: Path | None
 ) -> None:
-    for field, value in part.items():
-        if field != "state" and value is not None and not isinstance(value, str):
+    """state partのstate以外のfieldがstringまたはnullであることを検証する。"""
+    for field_name, value in part.items():
+        if field_name != "state" and value is not None and not isinstance(value, str):
             raise _invalid_state(
                 source,
-                f"`{key}.{field}` は string または null である必要があります: {value!r}",
+                f"`{key}.{field_name}` は string または null である必要があります: {value!r}",
             )
 
 
 def _invalid_state(source: Path | None, reason: str) -> CmocError:
+    """state fileのpathと理由を含む共通エラーを作る。"""
     detail = f"{source}\n{reason}" if source else reason
     return CmocError(
         "session state file が不正です。",

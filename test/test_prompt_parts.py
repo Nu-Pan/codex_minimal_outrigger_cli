@@ -1,14 +1,11 @@
 """標準 prompt parts と complete prompt の組み立て結果を検証する。
 
-分割根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 from pathlib import Path
 
 import pytest
-
-from basic.acp import FileAccessMode
-from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 from oracle.prompt_builder.parts.apply_review_standard import (
     build_apply_review_standard as _build_apply_review_standard,
@@ -29,32 +26,42 @@ from oracle.prompt_builder.parts.routing_rule import (
     build_routing_rule as _build_routing_rule,
 )
 
+from basic.acp import FileAccessMode
+from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
+
 
 def build_apply_review_standard() -> StructDoc:
+    """canonical apply review standardの本文だけを返す。"""
     return _build_apply_review_standard()[1]
 
 
 def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
+    """canonical file access ruleの本文だけを返す。"""
     return _build_file_access_rule(mode)[1]
 
 
 def build_index_entry_standard() -> StructDoc:
+    """canonical index entry standardの本文だけを返す。"""
     return _build_index_entry_standard()[1]
 
 
 def build_review_oracle_standard() -> StructDoc:
+    """canonical review oracle standardの本文だけを返す。"""
     return _build_review_oracle_standard()[1]
 
 
 def build_realization_standard() -> StructDoc:
+    """canonical realization standardの本文だけを返す。"""
     return _build_realization_standard()[1]
 
 
 def build_routing_rule() -> StructDoc:
+    """canonical routing ruleの本文だけを返す。"""
     return _build_routing_rule()[1]
 
 
 def test_build_apply_review_standard_renders_core_review_aspects() -> None:
+    """apply review standardの主要な所見境界がrenderされることを検証する。"""
     doc = build_apply_review_standard()
 
     assert isinstance(doc, StructDoc)
@@ -68,6 +75,7 @@ def test_build_apply_review_standard_renders_core_review_aspects() -> None:
 
 
 def test_build_routing_rule_renders_core_reading_rules() -> None:
+    """routing ruleがINDEX案内の主要な見出しをrenderすることを検証する。"""
     doc = build_routing_rule()
 
     assert isinstance(doc, StructDoc)
@@ -83,6 +91,7 @@ def test_build_routing_rule_renders_core_reading_rules() -> None:
 
 
 def test_complete_prompt_always_includes_routing_rule() -> None:
+    """complete promptが常にrouting ruleを含むことを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -96,6 +105,7 @@ def test_complete_prompt_always_includes_routing_rule() -> None:
 
 
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:
+    """各file access modeに対応する標準ruleの内容を検証する。"""
     expected = {
         FileAccessMode.READONLY: [
             "ツリー外は読み書き禁止",
@@ -139,6 +149,7 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
 
 
 def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
+    """NO_RULE時に標準file access ruleを挿入しないことを検証する。"""
     prompt = build_complete_prompt(
         role="role",
         summary="summary",
@@ -151,6 +162,7 @@ def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
 
 
 def test_complete_prompt_can_include_apply_review_standard() -> None:
+    """complete promptへapply review standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -166,6 +178,7 @@ def test_complete_prompt_can_include_apply_review_standard() -> None:
 
 
 def test_complete_prompt_preserves_injected_standard_terms() -> None:
+    """complete promptが注入した各standardの主要語とplaceholderを保持することを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -184,11 +197,14 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
     assert "`oracle spec`" in rendered
     assert "`仕様ファイル`" in rendered
     assert "`oracles file` のような typo" in rendered
-    for forbidden in ["<cmoc-root>", "<run-root>"]:
+    for forbidden in ["{{cmoc-root}}", "{{run-root}}"]:
         assert forbidden not in rendered
-    assert "<repo-root>" in rendered
-    assert "コメントにプレースホルダ `<work-root>` 起点の oracle file path を書く" in rendered
-    assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
+    assert "{{repo-root}}" in rendered
+    assert (
+        "コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く"
+        in rendered
+    )
+    assert "`{{work-root}}/oracle/doc/...` のように根拠 path" in rendered
     for expected in [
         "oracle and realization basic",
         "oracle standard",
@@ -206,6 +222,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
 def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """complete promptが入力root tokenを保持し、実pathの定義行を追加することを検証する。"""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     (repo_root / ".git").mkdir()
@@ -213,19 +230,19 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
 
     prompt = build_complete_prompt(
         role="- cmoc から呼び出された AI Agent です",
-        summary="- <repo-root> ツリー内の realization file を修正すること",
+        summary="- {{repo-root}} ツリー内の realization file を修正すること",
         goal="- realization standard と oracle standard に従うこと",
         file_access_mode=FileAccessMode.READONLY,
         aux_dynamic_prompt=[
             StructDoc(
                 "aux realization file",
-                "- <cmoc-root> と <run-root> と <work-root> 配下を確認すること",
+                "- {{cmoc-root}} と {{run-root}} と {{work-root}} 配下を確認すること",
             ),
             StructDoc(
                 "所見本文",
                 StructCodeBlock(
                     "json",
-                    '{"summary": "realization file and <repo-root> stay in code block"}',
+                    '{"summary": "realization file and {{repo-root}} stay in code block"}',
                 ),
             ),
         ],
@@ -236,16 +253,19 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     assert "- realization standard と oracle standard に従うこと" in rendered
     assert "# aux realization file" in rendered
     assert "cmoc から呼び出された" in rendered
-    assert "<repo-root> ツリー内の realization file" in rendered
-    assert "<cmoc-root> と <run-root> と <work-root> 配下" in rendered
-    assert '"summary": "realization file and <repo-root> stay in code block"' in rendered
-    assert f"- <repo-root> = {repo_root}" in rendered
-    assert f"- <work-root> = {repo_root}" in rendered
+    assert "{{repo-root}} ツリー内の realization file" in rendered
+    assert "{{cmoc-root}} と {{run-root}} と {{work-root}} 配下" in rendered
+    assert (
+        '"summary": "realization file and {{repo-root}} stay in code block"' in rendered
+    )
+    assert f"- {{{{repo-root}}}} = {repo_root}" in rendered
+    assert f"- {{{{work-root}}}} = {repo_root}" in rendered
 
 
 def test_complete_prompt_keeps_literal_root_token_comment_requirement(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """literal work-root tokenとコメント根拠規則がpromptに残ることを検証する。"""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     (repo_root / ".git").mkdir()
@@ -253,7 +273,7 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
 
     prompt = build_complete_prompt(
         role="- role",
-        summary="- <work-root>/src/app.py を確認すること",
+        summary="- {{work-root}}/src/app.py を確認すること",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
         aux_dynamic_prompt=[],
@@ -262,13 +282,17 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
 
     rendered = render_as_markdown(prompt)
 
-    assert "- <work-root>/src/app.py を確認すること" in rendered
-    assert "コメントにプレースホルダ `<work-root>` 起点の oracle file path を書く" in rendered
-    assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
-    assert f"- <work-root> = {repo_root}" in rendered
+    assert "- {{work-root}}/src/app.py を確認すること" in rendered
+    assert (
+        "コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く"
+        in rendered
+    )
+    assert "`{{work-root}}/oracle/doc/...` のように根拠 path" in rendered
+    assert f"- {{{{work-root}}}} = {repo_root}" in rendered
 
 
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
+    """既定のcomplete promptがapply review standardを含めないことを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -282,6 +306,7 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
 
 
 def test_build_realization_standard_renders_file_split_and_merge_rules() -> None:
+    """realization standardのfile分割・統合規則がrenderされることを検証する。"""
     doc = build_realization_standard()
 
     assert isinstance(doc, StructDoc)
@@ -300,6 +325,7 @@ def test_build_realization_standard_renders_file_split_and_merge_rules() -> None
 
 
 def test_complete_prompt_can_include_realization_standard() -> None:
+    """complete promptへrealization standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -316,6 +342,7 @@ def test_complete_prompt_can_include_realization_standard() -> None:
 
 
 def test_build_index_entry_standard_renders_core_output_rules() -> None:
+    """index entry standardの出力境界がrenderされることを検証する。"""
     doc = build_index_entry_standard()
 
     assert isinstance(doc, StructDoc)
@@ -325,7 +352,10 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
     assert "読むべき対象へのルーティング情報" in rendered
     assert "対象内容に根拠" in rendered
     assert "機械的に補える情報" in rendered
-    assert "ファイル・ディレクトリの識別子、ハッシュ、出力形式は、この agent call の外側" in rendered
+    assert (
+        "ファイル・ディレクトリの識別子、ハッシュ、出力形式は、この agent call の外側"
+        in rendered
+    )
     assert "ファイル名・ディレクトリ名・ハッシュ値" in rendered
     assert "Structured Output schema を読めば分かる出力項目名・型・形式" in rendered
     assert "関連しそうという理由だけ" in rendered
@@ -335,6 +365,7 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
 
 
 def test_complete_prompt_can_include_index_entry_standard() -> None:
+    """complete promptへindex entry standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -349,6 +380,7 @@ def test_complete_prompt_can_include_index_entry_standard() -> None:
 
 
 def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
+    """既定のcomplete promptがindex entry standardを含めないことを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -362,6 +394,7 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
 
 
 def test_build_review_oracle_standard_renders_core_review_rules() -> None:
+    """review oracle standardのseverityと所見境界がrenderされることを検証する。"""
     doc = build_review_oracle_standard()
 
     assert isinstance(doc, StructDoc)
@@ -380,6 +413,7 @@ def test_build_review_oracle_standard_renders_core_review_rules() -> None:
 
 
 def test_complete_prompt_can_include_review_oracle_standard() -> None:
+    """complete promptへreview oracle standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -395,6 +429,7 @@ def test_complete_prompt_can_include_review_oracle_standard() -> None:
 
 
 def test_complete_prompt_omits_review_oracle_standard_by_default() -> None:
+    """既定のcomplete promptがreview oracle standardを含めないことを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",

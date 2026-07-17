@@ -42,12 +42,12 @@ def build_tui_resolve_parameter_parameter(
     prompt = build_complete_prompt(
         role="- あなたは AI Agent CLI/TUI の実行パラメータ選定担当です",
         summary="""
-        - `<repo-root>` ツリー内で、後述する「オリジナルプロンプト」を AI Agent CLI/TUI で実行します
+        - `{{repo-root}}` ツリー内で、後述する「オリジナルプロンプト」を AI Agent CLI/TUI で実行します
         - この AI Agent CLI/TUI 実行に与えるべきパラメータを選択して下さい
         """,
         goal="""
         - Structured Output schema に従ってパラメータ選択結果を返していること
-        - パラメータ選択の根拠として、オリジナルプロンプトの該当行、あるいは `<work-root>` ツリー内のファイルの該当行が具体的に示されていること
+        - パラメータ選択の根拠として、オリジナルプロンプトの該当行、あるいは `{{work-root}}` ツリー内のファイルの該当行が具体的に示されていること
         """,
         file_access_mode=FileAccessMode.READONLY,
         aux_dynamic_prompt=[
@@ -76,9 +76,13 @@ def build_tui_resolve_parameter_parameter(
         index_entry_standard=True,
     )
     # パラメータを生成して返す
+    # NOTE
+    #   性質的にはかなり簡単なタスクなので、品質を切り詰めやすい
+    #   しかし、ここで間違えられると、後続の本命作業がパーになってキレそうになる
+    #   経済性重視系の最高性能を使用する
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
-        ReasoningEffort.MEDIUM,
+        ReasoningEffort.MAX,
         FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),

@@ -2,17 +2,17 @@ import json
 from pathlib import Path
 from typing import Any, TypeVar
 
+from oracle.other.cmoc_config import CodexModelSpec
+
 from basic.acp import ModelClass, ReasoningEffort
+from commons.runtime_errors import CmocError
+from commons.runtime_paths import config_path
 from config.cmoc_config import (
     CmocConfig,
     CmocConfigApplyFork,
     CmocConfigCodex,
     CmocConfigReviewOracle,
 )
-from oracle.other.cmoc_config import CodexModelSpec
-
-from commons.runtime_errors import CmocError
-from commons.runtime_paths import config_path
 
 ConfigKey = TypeVar("ConfigKey", ModelClass, ReasoningEffort)
 
@@ -30,8 +30,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
                 for key, value in config.codex.model.items()
             },
             "reasoning_effort": {
-                key.value: value
-                for key, value in config.codex.reasoning_effort.items()
+                key.value: value for key, value in config.codex.reasoning_effort.items()
             },
             "num_try_falv_recovery": config.codex.num_try_falv_recovery,
         },
@@ -56,8 +55,8 @@ def _enum_str_map_from_dict(
     if not isinstance(data, dict):
         raise TypeError
     for key, value in data.items():
-        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` maps
-        # ReasoningEffort to Codex CLI names; blank names are invalid JSON edits.
+        # `{{work-root}}/oracle/src/oracle/other/cmoc_config.py` は ReasoningEffort を
+        # Codex CLI 名へ変換するため、空名は不正な JSON 編集として扱う。
         if not isinstance(value, str) or not value.strip():
             raise TypeError
         restored[key_type(key)] = value
@@ -77,8 +76,8 @@ def _model_spec_map_from_dict(
             raise TypeError
         provider = value.get("model_provider")
         model = value.get("model")
-        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` forbids undefined
-        # Codex model names; blank human-edited JSON values fail at this boundary.
+        # `{{work-root}}/oracle/src/oracle/other/cmoc_config.py` は未定義の Codex
+        # model 名を許可しないため、人手編集による空値はこの境界で失敗させる。
         if (
             provider not in {"codex", "cmoc"}
             or not isinstance(model, str)
@@ -102,8 +101,8 @@ def _section(data: dict[str, Any], key: str) -> dict[str, Any]:
 def _int_value(data: dict[str, Any], key: str, default: int) -> int:
     """JSON の bool 混入を拒否しつつ int config 値を復元する。"""
     value = data.get(key, default)
-    # `<work-root>/oracle/src/oracle/other/cmoc_config.py` defines these as
-    # int fields; JSON bool/string values are human edit errors, not numbers.
+    # `{{work-root}}/oracle/src/oracle/other/cmoc_config.py` では int field なので、
+    # JSON の bool/string 値は数値ではなく人手編集エラーとして扱う。
     if type(value) is not int:
         raise TypeError
     return value
@@ -166,7 +165,9 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
     except (TypeError, ValueError) as exc:
         raise CmocError(
             "cmoc config が不正です。",
-            ["<repo-root>/.cmoc/config.json を確認してから再実行してください。"],
+            [
+                "{{work-root}}/.cmoc/gt/ar/config.json を確認してから再実行してください。"
+            ],
             json.dumps(data, ensure_ascii=False, indent=2),
         ) from exc
 
@@ -185,7 +186,9 @@ def load_config(root: Path) -> CmocConfig:
     if not path.exists():
         raise CmocError(
             "cmoc config が存在しません。",
-            ["cmoc doctor を実行して <repo-root>/.cmoc/config.json を生成してください。"],
+            [
+                "cmoc doctor を実行して {{work-root}}/.cmoc/gt/ar/config.json を生成してください。"
+            ],
             str(path),
         )
     try:
@@ -193,13 +196,13 @@ def load_config(root: Path) -> CmocConfig:
     except json.JSONDecodeError as exc:
         raise CmocError(
             "cmoc config JSON を読み込めません。",
-            ["<repo-root>/.cmoc/config.json の JSON 構文を確認してください。"],
+            ["{{work-root}}/.cmoc/gt/ar/config.json の JSON 構文を確認してください。"],
             str(path),
         ) from exc
     if not isinstance(data, dict):
         raise CmocError(
             "cmoc config の top-level は object である必要があります。",
-            ["<repo-root>/.cmoc/config.json を object に修正してください。"],
+            ["{{work-root}}/.cmoc/gt/ar/config.json を object に修正してください。"],
             str(path),
         )
     return config_from_dict(data)

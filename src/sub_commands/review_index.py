@@ -29,9 +29,9 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
     return False
 
 
-# <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md requires the
-# review branch to merge at isolation end, including INDEX commits already made
-# by the preflight in <work-root>/oracle/doc/app_spec/indexing.md.
+# {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md は、
+# {{work-root}}/oracle/doc/app_spec/indexing.md の preflight が作った INDEX commit
+# も含め、隔離終了時に review branch を merge することを求めている。
 def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> bool:
     """base commit 以降の review branch 差分が INDEX.md だけか確認する。"""
     changed_paths = run_git(
@@ -48,6 +48,7 @@ def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> 
 
 
 def review_worktree_status_paths(review_worktree: Path) -> list[str]:
+    """review worktreeのtracked、staged、untracked変更pathを列挙する。"""
     return [
         str(path.relative_to(review_worktree))
         for _status, path in status_path_statuses(
@@ -70,6 +71,7 @@ def merge_review_branch(root: Path, review_branch: str) -> str:
 
 
 def resolve_review_index_conflicts(root: Path) -> bool:
+    """INDEX.mdだけのmerge conflictをoursまたは削除で解決してcommitする。"""
     conflicted = run_git(
         ["diff", "--name-only", "--diff-filter=U"], root
     ).stdout.splitlines()
@@ -88,5 +90,6 @@ def resolve_review_index_conflicts(root: Path) -> bool:
 
 
 def _has_ours_stage(root: Path, path: str) -> bool:
+    """unmerged pathにours stageが存在するかを返す。"""
     unmerged = run_git(["ls-files", "-u", "--", path], root).stdout.splitlines()
     return any(line.split(maxsplit=3)[2] == "2" for line in unmerged)

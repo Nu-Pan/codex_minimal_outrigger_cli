@@ -7,7 +7,7 @@ class Standard:
     """
     「何らかの事柄が従うべき規範」のフォーマットを定義するクラス
     e.g. oracle file は oracle standard に従うし、oracle standard は `Standard` を元に生成される
-    `Stnadrd` は `<cmoc-root>` ツリー内に対して適用されるものであり、`<work-root>` ツリー内は対象外である
+    `Stnadrd` は `{{cmoc-root}}` ツリー内に対して適用されるものであり、`{{work-root}}` ツリー内は対象外である
     """
 
     def __init__(

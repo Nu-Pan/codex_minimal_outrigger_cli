@@ -32,10 +32,6 @@ def build_apply_review_standard() -> tuple[PlaceholderMap, StructDoc]:
                     "禁止",
                     "oracle file を根拠にせずに realization file だけから正本仕様を推測してはいけない",
                 ),
-                Requirement(
-                    "許容",
-                    "仕様文言から推測可能な意図と realization file が著しく乖離する場合は、所見として扱ってよい",
-                ),
             ],
         ),
         Standard(
@@ -56,7 +52,7 @@ def build_apply_review_standard() -> tuple[PlaceholderMap, StructDoc]:
                 ),
                 Requirement(
                     "許容",
-                    "oracle file で定義されていない部分は一般的なベストプラクティスに従って埋めて良い",
+                    "oracle file で定義されていない部分は一般的なベストプラクティスに従って埋めてよい",
                 ),
                 Requirement(
                     "必須",
@@ -64,15 +60,15 @@ def build_apply_review_standard() -> tuple[PlaceholderMap, StructDoc]:
                 ),
                 Requirement(
                     "禁止",
-                    "oracle file で定義されていないが realization file 上存在する要素は正本仕様として扱ってはいけない",
+                    "oracle file で定義されていないが realization file 上に存在する要素は正本仕様として扱ってはいけない",
                 ),
                 Requirement(
                     "許容",
-                    "oracle file から推測可能な意図と realization file とが著しく乖離乖離する場合は所見として扱ってよい",
+                    "oracle file から推測可能な意図と realization file とが著しく乖離する場合は所見として扱ってよい",
                 ),
                 Requirement(
                     "許容",
-                    "oracle file で定義されておらず、realization file 上存在し、realization file に残す必要がないこと明確な要素は所見として扱って良い",
+                    "oracle file で定義されておらず、realization file 上に存在し、realization file に残す必要がないことが明確な要素は所見として扱ってよい",
                 ),
             ],
             examples=[
@@ -84,7 +80,7 @@ def build_apply_review_standard() -> tuple[PlaceholderMap, StructDoc]:
         Standard(
             title="realization file だけから見た明確な致命的問題を所見として扱う",
             backgrounds=[
-                "realization file には、oracle file との不整合ではなく、実装成果物の品質として発生している可能性がある",
+                "realization file には、oracle file との不整合ではなく、実装成果物の品質上の問題が発生している可能性がある",
                 "realization file は oracle file との整合性を保ちつつ、正常動作可能な状態を保たなければいけない",
                 "AI agent に解かせる問題の規模を小さく保つために realization file の肥大化を防がなければいけない",
             ],

@@ -73,7 +73,8 @@ def build_tui_launch_tui_parameter(
     complete_prompt_path = (
         resolve_repo_root()
         / ".cmoc"
-        / "local"
+        / "gu"
+        / "ar"
         / "log"
         / "tui"
         / f"{time_stamp}_cmpl.md"
@@ -81,9 +82,13 @@ def build_tui_launch_tui_parameter(
     with open(complete_prompt_path, "w") as f:
         f.write(render_as_markdown(complete_prompt))
     # パラメータを生成して返す
+    # NOTE
+    #   TUI による対話的作業では人間の認知コスト的な負荷が大きいので、最大限 AI に頑張ってもらいたい
+    #   入力タスクの難易度を正確に測るには最高性能モデルを使わざるを得ないし、だったら最初から最高性能モデルで作業させたほうが安い
+    #   過剰になりうることは割り切って、最高品質設定にする
     return AgentCallParameter(
-        ModelClass.MAINSTREAM,
-        ReasoningEffort.MEDIUM,
+        ModelClass.FLAGSHIP,
+        ReasoningEffort.MAX,
         file_access_mode,
         f"{complete_prompt_path} を読んで、その指示に従って下さい",
         Path(__file__).with_suffix(".json"),

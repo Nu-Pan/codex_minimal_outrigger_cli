@@ -1,9 +1,9 @@
-"""Compatibility import path for review finding judgment.
+"""review finding judgment の互換 import 経路。
 
-Kept while callers import from `acp.builder.review.oracle.judge_finding`;
-the canonical implementation is
-`<work-root>/oracle/src/oracle/acp_builder/review/oracle/judge_finding.py`.
-Delete this module after all callers use the canonical oracle path directly.
+`acp.builder.review.oracle.judge_finding` から import する caller が残る間だけ維持する。
+canonical 実装は
+`{{work-root}}/oracle/src/oracle/acp_builder/review/oracle/judge_finding.py`。
+全 caller が canonical oracle path を直接使うようになったら削除する。
 """
 
 from oracle.acp_builder.review.oracle.judge_finding import (

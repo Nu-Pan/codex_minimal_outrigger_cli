@@ -8,9 +8,40 @@
 
 ## agent call に渡すプロンプトは、oracle src 定義の関数を使用する
 
-- agent call に渡すプロンプトは `<cmoc-root>/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
+- agent call に渡すプロンプトは `{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
 - 原則として、この動的構築された　プロンプトをそのまま agent call 側に渡す事し、realization file 側でプロンプトを加工するのは禁止
 - 例外として、oracle src 側にバグがあって realization file 側でフォローする必要がある場合は、必要最低限の範囲内での加工を許容する
+
+## 記法
+
+### ベース記法
+
+- プロンプトのベース記法は Markdown とし、採用する Markdown 方言は GitHub Flavored Markdown（GFM）とする
+- 以下で定めるプレースホルダとプロンプト上の参照関係は、GFM に加える cmoc 固有の記法とする
+
+### プレースホルダ
+
+- プレースホルダは、`{{repo-root}}` のように名前を二重波括弧で囲って表記する
+
+### プロンプト上の参照関係
+
+- 参照される対象は、次の XML タグ風の記法で囲う
+
+    ```xml
+    <cmoc_block id="target-1">
+    ...
+    </cmoc_block>
+    ```
+
+- 対象への参照は、次の XML タグ風の記法で表す
+
+    ```xml
+    <cmoc_ref target="target-1"/>
+    ```
+
+- `cmoc_block`、`id`、`cmoc_ref`、`target` は固定の名前とし、`target-1` は参照先を対応付ける可変値とする
+- 動的なプロンプト構築では、`cmoc_block` を参照対象の `StructDoc` を子に持つ構造として表し、`cmoc_ref` は参照元のプロンプト文字列内に直接記述する
+- Markdown へのレンダリング時に、各 `cmoc_ref` の参照対象が構築結果内に一つだけ存在することを検査し、参照対象の欠落、`cmoc_block` の `id` 重複、または不正な `cmoc_ref` 記法を検出した場合はプロンプト構築を失敗させる
 
 ## 言語
 

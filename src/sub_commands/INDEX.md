@@ -1,242 +1,191 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行本体をまとめる実装ディレクトリ。apply run の開始、破棄、join、レポート生成など、apply state・worktree・branch・process・差分検査を伴う制御を扱う。
-- apply fork の対象ファイル選定、Codex 呼び出し、収束判定、失敗時復旧、apply join の conflict 処理や cleanup など、apply workflow の主要な状態遷移を追う入口になる。
+- apply サブコマンドの実装パッケージ。abandon、fork、fork report、join の処理を扱い、apply run の開始からレビュー・修正、差分 commit、merge、report 保存、state 更新、process・worktree・branch cleanup までの実装入口となる。
 
 ## Read this when
-- apply サブコマンドの実行条件、状態遷移、branch/worktree/process 管理、cleanup、警告出力を確認または変更したいとき。
-- apply fork が調査対象ファイルをどう決め、finding 列挙・適用・再キュー・commit・report 生成をどう制御するかを調べるとき。
-- apply join の差分分類、force-resolve、merge conflict、INDEX.md conflict の自動解決、join 後の状態更新や後片付けを扱うとき。
-- apply abandon による未 join apply run の破棄、実行中 process 停止、apply worktree・branch・process id の削除条件を確認したいとき。
-- apply fork の成功・失敗レポート、frontmatter、本文構成、変更要約、未収束時表示などを変更したいとき。
+- apply サブコマンドの実装を確認または変更するとき。
+- apply run の lifecycle、state・process tracking、worktree・branch 操作、差分処理、report 生成、join・abandon の挙動を調査するとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、CLI 全体の Typer 登録、外側のコマンドルーティングだけを調べたいとき。
-- worktree 検索、git wrapper、状態ファイル読み書き、oracle file 判定、path model などの共通 runtime API 自体を変更したいとき。
-- Codex に渡す prompt、parameter schema、finding 列挙・適用・変更要約の builder 詳細だけを確認したいとき。
-- oracle file や realization file の定義、INDEX.md 生成規則、path model の正本仕様を確認したいとき。
-- 具体的な apply workflow の制御ではなく、パッケージ説明や import 時副作用の有無だけを確認したいとき。
+- apply 以外のサブコマンドだけを扱うとき。
+- 共通 runtime、Git、worktree、Codex 実行基盤の実装だけを変更・調査するときは、対応する共通実装を直接読む。
+- apply fork 内のレビュー・修正プロンプト生成や report 内容だけを扱うときは、対応する下位実装を直接読む。
 
 ## hash
-- 9ed4fc11fa0bcc0f2d99496dd75fab85283e82bf5aec8b66dd75b5631ac8a908
+- 5f2275d9b011172ec29ff2fb2afa5fe73a6fa692c5de562481b35860e11e2fa4
 
 # `doctor.py`
 
 ## Summary
-- doctor サブコマンドの実処理として、CLI runtime の preprocess 実行経路へ処理を委譲する薄い入口。doctor 固有の処理内容はここでは持たず、明示的に doctor preprocess を起動する責務だけを持つ。
+- doctor サブコマンドの実装。CLI runtime を介して doctor 用の preprocess 処理を明示的に実行する。
 
 ## Read this when
-- doctor サブコマンドが呼ばれた時に、どの runtime preprocess 名へ委譲されるかを確認したいとき。
-- doctor サブコマンドの実装入口と、runtime preprocess 実行処理との接続を変更または確認したいとき。
+- doctor サブコマンドの動作や preprocess 呼び出しを確認・変更するとき。
 
 ## Do not read this when
-- preprocess command の実行方法、失敗時挙動、runtime 側の制御を調べたいときは、preprocess 実行を担う commons 側の実装を読む。
-- doctor preprocess の中身や診断項目を調べたいときは、その preprocess 本体を読む。
+- doctor 以外のサブコマンドを扱うとき。preprocess の共通実装自体を確認するときは、共通 runtime preprocess command の実装を直接読む。
 
 ## hash
-- 13b0493ce99287b1643522676065d9b8d003da0fc0cc55a3423864c0541091a8
+- 9324a8b1f2f1bbd3a83adfb61690e64ff7e1f6502e165e208c84e2cefbd35980
 
 # `eval_oracle.py`
 
 ## Summary
-- want を書き出した oracle 評価を、review oracle と同じ実装経路へ委譲する薄い入口。eval oracle 側に独自の評価処理を持たせず、評価本体は review oracle 実装に集約する。
+- `want` を書き出した oracle を、review oracle と同じ評価経路へ渡すための入口。評価対象の scope を受けて review 側の実行に委譲するので、oracle の評価フローを辿りたいときに読む。
 
 ## Read this when
-- eval oracle サブコマンドがどの評価実装へ接続されるかを確認したいとき。
-- want を書き出した oracle の評価経路と review oracle の評価経路が同一であることを確認したいとき。
-- eval oracle 用の入口関数や委譲先を変更する必要があるとき。
+- oracle の評価を review oracle と同じ経路で実行したいとき。
+- scope を指定して、書き出した oracle を評価対象に乗せたいとき。
 
 ## Do not read this when
-- review oracle の評価処理本体、出力、検査内容を確認したいときは、委譲先の review oracle 実装を読む。
-- oracle 評価の根拠となる正本仕様や working plan review の意図を確認したいときは、対応する oracle doc を読む。
-- CLI の引数定義やサブコマンド登録を確認したいだけのときは、CLI 構成側の実装を読む。
+- oracle の実体を生成・修正したいだけのときは、直接その生成元や review 側の実装を読む。
+- review の集約・レポート生成・対象列挙を知りたいだけなら、この薄い委譲層ではなく review 側の実装を読む。
 
 ## hash
-- aa69d5ae36aec1c3d31050a5ce5880c23ecaa6c7edd6a3d605751ccaf75a2501
+- d2c72efffe412278a6207afbd665dfc79c3aba3444ba20b94bfddab2a5a70d70
 
 # `indexing.py`
 
 ## Summary
-- cmoc の indexing サブコマンド実行入口を定義し、CLI runtime 経由で現在の work root に対する INDEX.md maintenance を起動する実装を扱う。
-- indexing 実行前の preflight、安全条件の検査、index 更新の排他実行、更新結果の commit、CLI 向けの更新件数出力までを結びつける薄い orchestration 層である。
-- INDEX.md の生成・更新ロジックそのものではなく、既存の indexing 共通処理をサブコマンドとして呼び出すための接続点として読む。
+- `cmoc indexing` サブコマンドの CLI 実行入口。worktree の安全条件を確認し、ロック下で INDEX.md の更新と差分 commit を実行する。
 
 ## Read this when
-- cmoc indexing サブコマンドの実行フロー、CLI runtime への渡し方、command 名や argv、work root runtime の指定を確認・変更したいとき。
-- indexing 実行前に clean worktree や cmoc ignore 条件をどこで検査しているかを確認したいとき。
-- INDEX.md maintenance がどの root に対して lock 付きで実行され、更新後にどのように commit と件数出力へ進むかを追いたいとき。
-- indexing サブコマンドが Codex exec 実行関数や indexing 共通処理へどのように依存しているかを確認したいとき。
+- `cmoc indexing` の実行フロー、worktree 前提条件、インデックス更新・commit 処理を変更または調査するとき。
 
 ## Do not read this when
-- INDEX.md の内容生成、差分検出、更新対象探索、commit 処理、lock 実装などの詳細ロジックを調べたいときは、ここではなく indexing 共通処理側を読む。
-- work root の定義、CLI runtime の一般的な実行規約、clean worktree 判定、cmoc ignore 判定の詳細を調べたいときは、それぞれの runtime helper 側を読む。
-- Typer app へのサブコマンド登録やトップレベル CLI 配線を確認したいだけなら、CLI entrypoint や subcommand 登録側を読む。
-- oracle 上の indexing サブコマンド仕様そのものを確認したいときは、実装ではなく対応する oracle doc を読む。
+- インデックス更新の具体的な処理や commit の実装自体を調査するときは、`commons.indexing` の実装を直接読む。
+- 他のサブコマンドの CLI 実行フローだけを調査するとき。
 
 ## hash
-- 300dd7538efb7a60cb06753149ee3b7f779bd687acbf6cc8a567083f8e6fa0a8
+- 648fe512e7039f2060fbe5969945f9992a0b8b3697e92d2cbbf949083d8804ce
 
 # `review`
 
 ## Summary
-- review 系サブコマンド群の実装を置く package。package 境界だけを示す初期化モジュールと、review oracle サブコマンドの実行入口・全体制御を担う module を含む。
-- review oracle workflow では、active session branch と clean worktree の検証、isolated review worktree の作成、oracle 対象列挙、review loop 実行、INDEX 変更の commit/merge、作業用 worktree/branch の後始末、review report 出力を接続する。
+- review 系サブコマンド群の Python package。oracle 実行入口と、関連するレビュー処理モジュールへの入口を含む。
 
 ## Read this when
-- review 系サブコマンド群の package 境界や、この階層が review 系サブコマンド用 Python package として扱われる根拠を確認したいとき。
-- review oracle サブコマンドの実行順序、前提条件、作業用 branch/worktree のライフサイクル、失敗時 report 出力を確認したいとき。
-- oracle review workflow が下位 module を呼び出す流れや、INDEX 変更の commit/merge と report 作成のタイミングを追いたいとき。
-- 未コミット差分がある場合や active session branch 以外での実行を拒否する制御を確認したいとき。
+- review oracle の CLI 実行フロー、worktree・branch 管理、レビュー対象選定、割り込み・例外処理を調査するとき
+- review 系サブコマンドの package 構成や関連モジュールへの入口を確認するとき
 
 ## Do not read this when
-- review oracle の個別処理だけを確認したいときは、対象列挙、review loop、review report、INDEX 操作を担う下位 module を直接読む。
-- review 系サブコマンドの具体的な CLI 挙動、引数、出力、制御フローのうち、この階層の実行入口以外に閉じた詳細を調べたいとき。
-- package 初期化時の import、副作用、公開シンボルを調べたいとき。ただし現在内容からはそのような責務は読み取れない。
+- 判定ループ、対象列挙、レポート形式、INDEX の commit・merge 処理など、個別機能だけを調査するときは対応する実装モジュールを直接読む
+- package 初期化の import や公開シンボルだけを調査するときは、具体的な処理を持たない初期化モジュールを読む必要はない
 
 ## hash
-- 5eb0e18b30d330973e0e2740952884fec3b20ec52f89beb14128d849de33d21a
+- 261d8f5ae9ec1180763418a7bfa77e257cfbad56d74bc7b1a72d8903d6c04c43
 
 # `review_index.py`
 
 ## Summary
-- review 用 worktree/branch に生じた差分を INDEX.md のみに制限し、必要な INDEX.md 変更だけを commit する処理を扱う。
-- review branch を session branch へ merge し、競合が INDEX.md だけの場合に ours 側採用または削除で自動解決して merge commit を完了させる処理を扱う。
-- git status、diff、merge、checkout、rm、commit を通じて review oracle indexing の差分検査・確定・取り込みを行う入口である。
+- review oracle 用 worktree の INDEX.md 変更を検証・commitし、INDEX.md のみからなる review branch を session branch に merge するための Git 操作を扱う。変更 path の検査、競合解決、merge 後の commit 取得が下位処理への入口となる。
 
 ## Read this when
-- review oracle が作った差分に INDEX.md 以外が混ざった場合のエラー条件や確認方法を調べるとき。
-- review worktree 上の INDEX.md 変更を commit する条件、commit しない条件、戻り値を確認するとき。
-- base commit 以降の review branch 差分が INDEX.md だけであることを検査する処理を確認するとき。
-- review branch の merge 失敗時に、INDEX.md 競合だけを自動解決する挙動を変更・確認するとき。
-- review oracle indexing と review branch merge の git コマンド呼び出し順や失敗時の CmocError を追うとき。
+- review oracle の INDEX.md 変更を commit または merge する処理を確認するとき
+- review branch に INDEX.md 以外の差分がないことの検証や、INDEX.md の merge conflict 解決を調べるとき
 
 ## Do not read this when
-- INDEX.md エントリー本文の生成規則や preflight indexing 全体の仕様を確認したいだけの場合は、対応する oracle doc を読む。
-- git コマンド実行ラッパー、HEAD commit 取得、status path 収集の共通処理そのものを変更したい場合は、それらの runtime/helper 側を読む。
-- review oracle のプロンプト、分離 worktree の作成、または subcommand 全体の制御フローを調べたい場合は、上位の review command 実装を読む。
-- INDEX.md 以外の通常ファイル差分を merge・解決する汎用的な仕組みを探している場合は、この対象ではない。
+- 通常のアプリケーション機能や review oracle の内容自体を調べるとき
+- INDEX.md 変更以外の Git 操作、または一般的な worktree 状態管理を直接確認したいとき
 
 ## hash
-- 500e71a4ff36cb5a35cbc12a4bb56b76f82c137800554580654c20e984e4fc66
+- ffbcec8958ff3f1466d4fe84e3f1be83be150a4ea79cd32761b2cf7dfbfc4673
 
 # `review_loop.py`
 
 ## Summary
-- review oracle の finding 抽出、統合、検証、判定を Codex 呼び出しで反復実行する制御ロジックを扱う。
-- finding list に対する merge/delete/replace 操作の検証と適用、および semantic retry 失敗時のエラー化を担う。
+- レビュー対象の oracle file 群に対して、finding の列挙・意味的マージ・反証/擁護による検証・採否判定を反復実行する review oracle loop の実装。
+- 中断時には確定済み finding と評価済みファイルを専用例外で呼び出し元へ返し、merge operation の形式・対象 ID・重複を検証して不正な Structured Output を再試行する。
 
 ## Read this when
-- review oracle の finding enumerate/merge/validate/judge の実行順序、反復条件、dirty 管理を確認・変更したいとき。
-- finding merge の Structured Output operation の許容条件、finding_id の採番、重複・未知 ID・不正 kind の扱いを確認・変更したいとき。
-- review oracle loop が Codex 実行パラメータ builder、設定値、log root、worktree、oracle path とどう連携するかを追いたいとき。
+- review oracle の実行フロー、進捗保持、KeyboardInterrupt 時の部分結果、finding の検証・判定を変更または調査するとき
+- finding の merge operation 契約や、列挙・マージ・反証・擁護・judge の Codex 呼び出し連携を確認するとき
 
 ## Do not read this when
-- review 対象の oracle file 一覧作成や finding から oracle path を取り出す処理だけを確認したいときは、より直接その責務の対象を読む。
-- Codex 実行パラメータのプロンプト内容や Structured Output schema 自体を確認したいときは、各 builder 側を読む。
-- review oracle 以外の review workflow、CLI 引数、設定定義を確認したいだけのときは、それぞれの責務を持つ対象を読む。
+- review コマンド全体の CLI 入出力やパス定義だけを確認したいときは、対応する review command/path の実装を直接読む
+- review oracle の各 agent prompt の内容だけを変更・確認するときは、各 build parameter の実装を直接読む
 
 ## hash
-- e905f9cf7705c92dbd8fbbdd55db0080f23e60a8bc26b5a4ca8987880fc5b237
+- a818d7636b9973397e8b7b34f401427387d1d7a45e6d767a29bb182175c210fb
 
 # `review_paths.py`
 
 ## Summary
-- review finding に含まれる oracle_path を、隔離 worktree 上で照合可能な実パスへ変換する補助処理を扱う。
-- 空値・非文字列・未対応プレースホルダを None に落とし、絶対パス、<oracle-root> alias、path_model が解決できるプレースホルダ付きパスを区別して解決する。
+- oracle_path を解決して絶対パスへ変換する処理と、oracle file のパスを repository-relative key へ変換する処理を提供する。通常の repository root、oracle root alias、既知の managed worktree を扱い、対象外のパスは無視する。symlink を追跡しないパス正規化 helper も含む。
 
 ## Read this when
-- review finding の oracle_path を Path に変換する挙動を確認・変更したいとき。
-- <oracle-root> alias や <work-root> などのプレースホルダ付きパスを、review 用の隔離 worktree 基準で扱う処理を調べるとき。
-- finding 内の oracle_path が不正または未解決の場合に None になる境界を確認したいとき。
+- review report や finding に含まれる oracle_path の解決・正規化・キー化を変更または調査するとき
+- oracle root、worktree 境界、symlink の扱いに関係するパス処理を確認するとき
 
 ## Do not read this when
-- 一般的な path keyword の定義や resolve_real_path の解決規則そのものを確認したいだけのときは、path_model 側を読む。
-- review finding を生成する prompt や oracle_path の入力仕様を確認したいときは、finding 生成側の oracle 定義を読む。
-- カレントディレクトリを一時変更する pushd の実装や副作用を調べたいだけのときは、runtime paths 側を読む。
+- review report の生成ロジックや oracle_path の入力仕様そのものを確認するときは、参照されている oracle 文書・実装を直接読む
+- パス処理と無関係な sub-command の実装を変更するとき
 
 ## hash
-- bf2334572baffb103819312c0414528aedfa5242943a0e4d60965d2541914102
+- 2174112c8b159a6683cf0a66278af86d213bbef2c9b6e25917fb93d0e72299c6
 
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を Markdown レポートとして保存・描画する処理を担う。
-- 評価対象 oracle file の一覧、findings の採否・重大度別集計、frontmatter、表示用 path、最終 verdict 文言を組み立てる。
-- review oracle の report 出力形式や findings 表示順、oracle path の表示変換を確認する入口となる。
+- review oracle の結果を Markdown レポートとして生成・保存する実装。レポートの保存先、YAML frontmatter、Verdict、対象 oracle 一覧、Fatal/Minor 所見の分類・順序、エラーや中断時の結果判定、finding と path の描画を扱う。review oracle レポート出力の実装を変更・調査する際の入口。
 
 ## Read this when
-- review oracle が生成する Markdown レポートの構成、frontmatter、見出し、表、verdict 文言を確認・変更したいとき。
-- accepted/rejected findings や fatal/minor findings の分類、集計、表示順を追いたいとき。
-- review oracle の出力で oracle file path がどのように相対表示されるかを確認したいとき。
-- review oracle の途中失敗、対象 0 件、fatal/minor/ok の各結果が report 上でどう表現されるかを確認したいとき。
+- review oracle サブコマンドのレポート形式、保存処理、Verdict 判定、finding の表示順を変更・検証するとき
+- レビュー結果の frontmatter や Markdown セクション構成が期待どおりか調査するとき
+- 所見の severity・verdict 分類、oracle path 表示、エラー・中断・対象なしの扱いを確認するとき
 
 ## Do not read this when
-- review oracle の対象 oracle file をどう探索・選定するかを確認したいだけのとき。
-- finding の生成、判定、採否決定そのもののロジックを確認したいとき。
-- review oracle 以外の report 生成や、汎用的な report 保存先の規則だけを確認したいとき。
+- レビュー処理そのものの対象探索、oracle 内容の評価、git branch 操作を調査するときは、対応するレビュー実行・探索処理を直接読む
+- 一般的なレポート生成や他サブコマンドの出力を調査するとき
 
 ## hash
-- 5a2499fad6f56637148a2a518aa7b69c30e6ea400a3a65e93a871335de8564b7
+- 05e364b8ace32c3e484f56c08353323b1de9befbf8a066acd22af1d43106b742
 
 # `review_targets.py`
 
 ## Summary
-- review oracle の対象となる oracle file を、指定 scope と session 状態に基づいて列挙する実装。full scope では全 oracle file、session scope では session 開始 commit から review fork commit までに変更された oracle file だけを返す。
-- oracle file 判定と git diff 結果を組み合わせ、review 対象候補の全件列挙と scope による絞り込みの入口になる。
+- review oracle の scope に応じてレビュー対象の oracle file を列挙する。full scope では oracle ツリー全体を対象にし、session scope ではセッション開始コミットから review fork commit までに変更された oracle file に限定する。
 
 ## Read this when
-- review oracle がどの oracle file を対象にするかを確認・変更したいとき。
-- full scope と session scope の対象範囲の違い、または session 開始 commit が無い場合の挙動を確認したいとき。
-- oracle ツリー内のファイルから review 対象候補を列挙する条件を確認したいとき。
+- review oracle の対象ファイル列挙処理を変更・確認するとき
+- full scope と session scope の対象範囲やコミット差分の扱いを確認するとき
 
 ## Do not read this when
-- review 結果の表示形式、診断内容、プロンプト内容を確認したいとき。
-- oracle file かどうかの共通判定そのものを確認したいとき。
-- session 状態の保存・復元や review fork commit の作成処理を確認したいとき。
+- oracle file の内容やレビュー実行そのものを変更・確認するとき
+- review 対象列挙と無関係なサブコマンドの処理を変更・確認するとき
 
 ## hash
-- 6348e3e7183b868e00c08b13eb27e550cf440e14e718b53dcc3599c73657aaca
+- 5ec510cfdccdb608eb26afaabebb8e9075b417b1a87c3300026bf06703324b02
 
 # `session`
 
 ## Summary
-- session 系サブコマンド実装をまとめるディレクトリ。package 初期化に加え、session branch の作成、home branch への join、merge しない破棄など、session lifecycle の具体的な CLI 処理へ進む入口となる。
-- 各サブコマンドは CLI runtime、git 操作、session state、worktree 条件、利用者向け出力や失敗時復旧を扱うが、共通 helper や正本仕様そのものはこの階層の主責務ではない。
+- session サブコマンドの実装パッケージ。fork、join、abandon の各 session 操作に関する CLI 実装を確認する入口。
 
 ## Read this when
-- session 系サブコマンドの実装ファイルを探し、fork、join、abandon のどれを読むべきか判断したいとき。
-- session branch の作成、home branch への merge 完了、merge しない破棄など、session lifecycle の外部挙動や状態更新を確認または変更したいとき。
-- session 操作での事前条件、clean worktree 要求、branch/state の確認、成功時出力、失敗時エラーや rollback 方針の実装入口を探すとき。
-- session join の merge conflict 自動解消や、conflict 解消後の差分検査、marker 残存判定、merge commit 完了処理を調べたいとき。
+- session サブコマンドの実装や構成を確認・変更するとき。
+- session branch、session state、cleanup、merge、rollback など session 操作の挙動を調査するとき。
 
 ## Do not read this when
-- session 以外のサブコマンド、共通 CLI ルーティング、サブコマンド登録の実装を調べたいとき。
-- git 実行 wrapper、CLI runtime、worktree 検査、branch 判定、state file schema、path model などの共通実装そのものを確認したいとき。
-- session 系サブコマンドの正本仕様断片を確認したいとき。その場合は対応する oracle doc を読む。
-- 個別サブコマンドがすでに特定できており、その処理だけを詳しく確認したいとき。その場合は該当する実装モジュールを直接読む。
+- session 以外のサブコマンドを扱うとき。
+- 共通の git 操作、state 操作、Codex 実行規則、session データモデル自体を直接確認するとき。
 
 ## hash
-- a4c55dddea5656ceda9a0db4e06f5c0d783a2cba9c5e0b4df1666b59de815c53
+- fd4b0da87a48090397a866c729c2b89e9e18e7a38833e92107be89c7220385bd
 
 # `tui.py`
 
 ## Summary
-- 対話的な依頼文編集から実行パラメータ解決、Codex TUI 起動までをつなぐ `cmoc tui` の実装を担う。
-- TUI 用ログ領域への元 prompt 作成、利用可能なエディタ選択、HTML コメント除去、解決済み JSON からの起動パラメータ構築、TUI で許可される file access mode の検証を扱う。
-- CLI runtime から現在の repository/context を取得して TUI 本体処理へ渡し、ログ作成前に必要な `.cmoc` ignore を保証する入口でもある。
+- `cmoc tui` サブコマンドの実行フローと補助処理を担う実装ファイル。利用者向けプロンプトの初期化・編集・読み込み、実行パラメータの解決、Codex TUI の起動、TUI 用ファイルアクセスモードの検証を扱う。TUI サブコマンドの挙動変更や関連するパラメータ構築・エディタ選択・ignore 保証を調べる際の入口。
 
 ## Read this when
-- `cmoc tui` の実行フロー、エディタ起動、prompt ファイル作成、TUI 起動前の parameter 解決を変更したいとき。
-- TUI サブコマンドで利用する file access mode、role・summary・goal・各標準フラグの既定値や resolved JSON の読み取り方を確認したいとき。
-- TUI 実行時のログ保存先、元 prompt と完成 prompt の扱い、`.cmoc` ignore 保証の挙動を調べたいとき。
-- TUI 起動前の Codex exec 呼び出しと TUI 起動呼び出しの引数、cwd、purpose、config の渡し方を確認したいとき。
+- `cmoc tui` の起動処理、プロンプト編集、TUI 起動パラメータ、ファイルアクセスモード検証を変更または調査するとき
+- TUI 実行前の `.cmoc` ignore 保証やエディタ選択・終了エラーの挙動を確認するとき
 
 ## Do not read this when
-- TUI 用 prompt の標準文面や agent call parameter の最終的な本文構築そのものを確認したいだけなら、TUI 起動パラメータを組み立てる builder 側を読む。
-- resolved JSON を生成するためのプロンプトや schema、TUI で指定可能な解決項目を確認したいだけなら、parameter resolve の builder 側を読む。
-- CLI runtime 共通の subcommand 実行、config 読み込み、log path、repository root 判定、Codex 実行 wrapper の詳細を調べたいだけなら、runtime 共通処理を読む。
-- TUI 以外のサブコマンドの挙動や CLI 全体の command routing を調べたい場合は、そのサブコマンドまたは CLI entrypoint を読む。
+- TUI 以外のサブコマンドの実装を調べるとき
+- 共通 CLI ランタイム、設定、ログ、パラメータビルダー自体の詳細を直接調べるときは、それらの定義元を読む
 
 ## hash
-- ec33c67348f84c67cb37c97936f7d21ff0b8f53fe546f3169c70732bb149c750
+- 66edc6a24c58eeba12a447d3a68e8c7bdada3c440e6ff9fd788f8ae5daff1a84

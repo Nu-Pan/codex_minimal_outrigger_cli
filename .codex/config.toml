@@ -1,31 +1,64 @@
-# ----
-# グローバル設定
-# ----
+
+# NOTE
+#   - `#key = ...` 形式の表記は「明示的にデフォルト値に委ねてます」の意
+#   - ここに書いた設定が丸ごと使われるのは、cmoc を介さない TUI 起動時の時だけ
+#   - cmoc を介した起動の場合は、cmoc によって一部設定がオーバーライドされる
 
 # 基本設定
-model = "gpt-5.5"
-model_reasoning_effort = "medium"
-plan_mode_reasoning_effort = "medium"
-personality = "pragmatic"
-project_root_markers = [".git"]
+# NOTE
+#   TUI ユースでは人間の認知コストを最小化したいので品質最優先の設定にしている
+model = "gpt-5.6-sol"
+#review_model = ...
+model_reasoning_effort = "max"
+plan_mode_reasoning_effort = "max"
+#model_context_window = ...
+#model_auto_compact_token_limit = ...
+#tool_output_token_limit = ...
+#model_verbosity = ... 
+#personality = ...
+
+# ルートディレクトリ設定
+#project_root_markers = ...
 
 # 権限関係
-approval_policy = "on-request"
+# NOTE
+#   個別の設定は困ってから調整する
+# TODO
+#   default_permissions に乗り換えたほうが良い？
 sandbox_mode = "workspace-write"
+#sandbox_workspace_write.exclude_slash_tmp = ...
+#sandbox_workspace_write.exclude_tmpdir_env_var	 = ...
+#sandbox_workspace_write.network_access = ...
+#sandbox_workspace_write.writable_roots = ...
+
+# 承認関係
+# NOTE
+#   TUI ユースでは柔軟な実行を可能にしたい＋承認の手間は省きたい、ということでこの設定に落ち着いた
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
 
 # Web検索モード
-sandbox_workspace_write.network_access = true
-web_search = "cached"
-tools.web_search.context_size = "high"
+# NOTE
+#   常に最新情報を見てほしいので live にする
+web_search = "live"
+#tools.web_search.context_size = ...
 
 # 参照リンクは vscode フレンドリーにする
+# NOTE
+#   このリポジトリは vscode 前提なので明示する
 file_opener = "vscode"
 
-# 基本指示は使わない
+# 基本指示
+# NOTE
+#   cmoc で自己開発を行うということはつまり、プロンプトは動的生成されるということ
+#   ここにプロンプトを書くことはコンセプトに反する
 #developer_instructions = ...
+#model_instructions_file = ...
 
 # 履歴関係
-history.persistence = "save-all"
-model_reasoning_summary = "detailed"
-model_verbosity = "high"
-hide_agent_reasoning = false
+# NOTE
+#   困ることがあったら調整する
+#history.persistence = ...
+#model_reasoning_summary = ...
+#hide_agent_reasoning = ...
+#show_raw_agent_reasoning = ...

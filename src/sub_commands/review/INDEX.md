@@ -19,19 +19,17 @@
 # `oracle.py`
 
 ## Summary
-- review oracle サブコマンドの実行入口と全体制御を担う。active session branch と clean worktree を前提条件として検証し、isolated review worktree の作成、oracle 対象列挙、review loop 実行、INDEX 変更の commit/merge、作業用 worktree/branch の後始末、review report 出力までを接続する。
-- review 対象列挙、review loop、report 描画、INDEX 競合解決などの個別処理は下位 module に委譲し、この対象はそれらを CLI runtime 上の一連の workflow として組み立てる位置づけである。
+- review oracle サブコマンドの実行入口と本体を実装するモジュール。active session branch の検証、隔離 review worktree の作成、oracle 対象の列挙・レビュー実行、INDEX 変更のマージ、割り込み・例外処理、レビュー結果レポート出力までを統括する。review サブコマンドの oracle 実行フローや、関連する review_loop・review_index・review_report・review_targets への入口として読む。
 
 ## Read this when
-- review oracle サブコマンドの実行順序、前提条件、作業用 branch/worktree のライフサイクル、失敗時 report 出力を確認したいとき。
-- oracle review workflow がどの下位 module を呼び出し、INDEX 変更の commit/merge と report 作成をどのタイミングで行うかを追いたいとき。
-- 未コミット差分がある場合や active session branch 以外での実行を拒否する制御を確認したいとき。
+- review oracle の CLI 実行フロー、worktree・branch のライフサイクル、レビュー対象選定、割り込み・例外時のレポート処理を変更または調査するとき
+- review oracle が active session branch と clean worktree を要求する理由や、レビュー後の INDEX 変更マージ処理を確認するとき
 
 ## Do not read this when
-- oracle file の列挙条件や scope ごとの対象選択だけを確認したいときは、review target 列挙を担う module を読む。
-- review loop 内で Codex に渡す指示、finding の解釈、merge operation の適用だけを確認したいときは、review loop を担う module を読む。
-- review report の文面、section 表現、report file の書き込み形式だけを確認したいときは、review report を担う module を読む。
-- INDEX 変更の検出、commit、merge、競合解決の詳細だけを確認したいときは、review index 操作を担う module を読む。
+- レビュー判定ループの詳細だけを変更・調査する場合は review_loop の実装を直接読む
+- レビュー対象の列挙規則だけを確認する場合は review_targets を直接読む
+- 所見レポートの形式だけを確認する場合は review_report を直接読む
+- レビュー用 INDEX の commit・merge・conflict 解決だけを確認する場合は review_index を直接読む
 
 ## hash
-- 6ec5af26c01ade97f16328fa10bdb21f6480824d061dc5c8776718ead3214b78
+- ddfea47ce6ecdf8719fd28931cc2d29a280000123696a9a3463d92c366f1df2c

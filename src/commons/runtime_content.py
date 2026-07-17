@@ -22,17 +22,6 @@ def write_hashed_file(directory: Path, prefix: str, suffix: str, content: str) -
     return path
 
 
-def write_hashed_file_in_existing_dir(
-    directory: Path, prefix: str, suffix: str, content: str
-) -> Path:
-    """既存 directory に、内容 hash を名前に含む file を保存する。"""
-    digest = text_sha256(content)
-    path = directory / f"{prefix}{digest}{suffix}"
-    if not path.exists() or path.read_text() != content:
-        path.write_text(content)
-    return path
-
-
 def is_binary(path: Path) -> bool:
     """先頭 chunk の NUL byte と読み取り可否で binary file を粗く判定する。"""
     try:

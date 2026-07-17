@@ -4,7 +4,7 @@
 ## パス表記の基本ルール
 
 - cmoc 上では、ファイル・ディレクトリパスを絶対パス・相対パスどちらで書いても良い
-- 相対パスを書く時は、そのルートディレクトリパスを `<place-holder>/relative/path/to/file` のように、プレースホルダ＋相対パスの形式で表記する
+- 相対パスを書く時は、そのルートディレクトリパスを `{{place-holder}}/relative/path/to/file` のように、プレースホルダ＋相対パスの形式で表記する
 - `src/foo.py` のようなプレースホルダを持たない相対パスでの表記は禁止
 
 ## ルートパスプレースホルダ一覧
@@ -13,11 +13,11 @@
 
 ## パスの表記例
 
-- ユーザーは `<repo-root>` をカレントとして `<cmoc-root>/bin/cmoc` を呼び出す
-- `cmoc apply fork` は `<repo-root>` を pwd として呼び出されて、 run の作業隔離のために `<run-root>` を git linked worktree として作成する
-- run の作業隔離のための linked worktree は `<repo-root>` 内に作成されるから、「`<repo-root>` のフルパス」は「`<run-root>` のフルパス」の部分文字列となる
-- `<run-root>` 内で cmoc を起動した場合 `<run-root>` と同値
-- `<run-root>` 外の `<repo-root>` 内で cmoc を起動した場合 `<repo-root>` と同値
+- ユーザーは `{{repo-root}}` をカレントとして `{{cmoc-root}}/bin/cmoc` を呼び出す
+- `cmoc apply fork` は `{{repo-root}}` を pwd として呼び出されて、 run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
+- run の作業隔離のための linked worktree は `{{repo-root}}` 内に作成されるから、「`{{repo-root}}` のフルパス」は「`{{run-root}}` のフルパス」の部分文字列となる
+- `{{run-root}}` 内で cmoc を起動した場合 `{{run-root}}` と同値
+- `{{run-root}}` 外の `{{repo-root}}` 内で cmoc を起動した場合 `{{repo-root}}` と同値
 """
 
 # std
@@ -34,20 +34,20 @@ class RootPathPlaceHolder(StrEnum):
 
     # cmoc 自体のリポジトリのルートディレクトリ
     # cmoc 自体のソースコード・ドキュメントを指す時に使う
-    CMOC = "<cmoc-root>"
+    CMOC = "{{cmoc-root}}"
 
     # cmoc を用いた開発を行う対象となる git リポジトリの main worktree のルートディレクトリ
     # より平易に git リポジトリ本体のルートディレクトリとも言える
     # 直下に `.git` ディレクトリを持つ
-    REPO = "<repo-root>"
+    REPO = "{{repo-root}}"
 
     # cmoc が run の隔離作業用に作る linked worktree のルートを指す
     # 直下に `.git` ファイルを持つ
-    RUN = "<run-root>"
+    RUN = "{{run-root}}"
 
     # ユーザーが cmoc を呼び出した cwd から最近傍の `.git` ディレクトリ・ファイルで解決される worktree root
     # 直下に `.git` ディレクトリ・ファイルを持つ
-    WORK = "<work-root>"
+    WORK = "{{work-root}}"
 
 
 def resolve_real_path(source: RootPathPlaceHolder | str | Path) -> Path:
@@ -96,7 +96,7 @@ def resolve_cmoc_root(
     start_path: Path | None = None,
 ) -> Path:
     """
-    `<cmoc-root>` を返す。
+    `{{cmoc-root}}` を返す。
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
     自身の絶対パスを起点として
 
@@ -112,14 +112,14 @@ def resolve_cmoc_root(
         elif (candidate / "bin" / "cmoc").is_file():
             return candidate
     else:
-        raise ValueError("`<cmoc-root>` was not found")
+        raise ValueError("`{{cmoc-root}}` was not found")
 
 
 def resolve_repo_root(
     start_path: Path | None = None,
 ) -> Path:
     """
-    `<repo-root>` を返す。
+    `{{repo-root}}` を返す。
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
     cwd を起点として「`.git` ディレクトリを直下に持つディレクトリ」を探索する。
     """
@@ -136,7 +136,7 @@ def resolve_repo_root(
         start_dir = start_path.resolve().parent
     # git コマンドからの特定を試みる
     # NOTE
-    #   `<run-root>` が `<repo-root>` の外にある場合向けの処理
+    #   `{{run-root}}` が `{{repo-root}}` の外にある場合向けの処理
     git_result = subprocess.run(
         ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
         cwd=start_dir,
@@ -148,14 +148,14 @@ def resolve_repo_root(
         if common_dir:
             return Path(common_dir).parent
     # 全部ダメだったら例外
-    raise ValueError("`<repo-root>` was not found")
+    raise ValueError("`{{repo-root}}` was not found")
 
 
 def resolve_run_root(
     start_path: Path | None = None,
 ) -> Path:
     """
-    `<run-root>` を返す。
+    `{{run-root}}` を返す。
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
     cwd を起点として「`.git` ファイルを直下に持つディレクトリ」を探索する。
     """
@@ -164,14 +164,14 @@ def resolve_run_root(
         if (candidate / ".git").is_file():
             return candidate
     else:
-        raise ValueError("`<run-root>` was not found")
+        raise ValueError("`{{run-root}}` was not found")
 
 
 def resolve_work_root(
     start_path: Path | None = None,
 ) -> Path:
     """
-    `<work-root>` を返す。
+    `{{work-root}}` を返す。
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
     cwd を起点として「`.git` ファイル・ディレクトリを直下に持つディレクトリ」を探索する。
     """
@@ -181,7 +181,7 @@ def resolve_work_root(
         if dot_git_path.is_dir() or dot_git_path.is_file():
             return candidate
     else:
-        raise ValueError("`<work-root>` was not found")
+        raise ValueError("`{{work-root}}` was not found")
 
 
 def resolve_ph_path(real_path: Path, rpph: RootPathPlaceHolder) -> Path:

@@ -1,1 +1,1 @@
-"""cmoc shared runtime helpers."""
+"""cmoc 共通 runtime helper。"""

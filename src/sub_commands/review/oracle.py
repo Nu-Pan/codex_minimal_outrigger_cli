@@ -1,5 +1,5 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
 from pathlib import Path
-from typing import Callable
 
 import typer
 
@@ -7,6 +7,7 @@ from cmoc_runtime import (
     CmocError,
     create_run_worktree,
     current_branch,
+    current_subcommand_logger,
     delete_branch,
     ensure_cmoc_ignored,
     head_commit,
@@ -17,18 +18,23 @@ from cmoc_runtime import (
     repo_root,
     run_cli_subcommand,
     run_codex_exec,
+    start_subcommand_step,
     timestamp,
     work_root,
     worktrees_dir,
 )
+from commons.indexing import enable_indexing_preflight
+from commons.runtime_git import status_path_statuses
+from commons.runtime_results import CodexExecCallable
 from sub_commands.review_index import (
     commit_review_index_changes,
     merge_review_branch,
-    review_branch_has_index_changes,
     resolve_review_index_conflicts,
+    review_branch_has_index_changes,
     review_worktree_status_paths,
 )
 from sub_commands.review_loop import (
+    ReviewOracleInterrupted,
     apply_finding_merge_operations,
     run_review_oracle_loop,
 )
@@ -42,11 +48,8 @@ from sub_commands.review_targets import (
     enumerate_review_all_oracle_files,
     enumerate_review_oracle_targets,
 )
-from commons.indexing import enable_indexing_preflight
-from commons.runtime_git import status_path_statuses
 
-
-CodexExec = Callable[..., object]
+CodexExec = CodexExecCallable
 
 __all__ = [
     "CodexExec",
@@ -75,6 +78,7 @@ def cmoc_review_oracle_impl(scope: str) -> None:
         run_codex_exec,
         command_name="review oracle",
         command_argv=["cmoc", "review", "oracle", "--scope", scope],
+        total_steps=8,
     )
 
 
@@ -88,10 +92,12 @@ def _cmoc_review_oracle_body(
     branch = current_branch(current_root)
     session_id, _state_path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/") or state.session.state != "active":
-        raise CmocError("review oracle は active session branch 上で実行してください。", [], branch)
+        raise CmocError(
+            "review oracle は active session branch 上で実行してください。", [], branch
+        )
     _require_clean_worktree(current_root)
     ensure_cmoc_ignored(current_root)
-    config = load_config(root)
+    config = load_config(current_root)
     run_id = timestamp()
     review_branch = f"cmoc/run/{session_id}/{run_id}"
     review_worktree = worktrees_dir(root) / session_id / run_id
@@ -99,19 +105,38 @@ def _cmoc_review_oracle_body(
     review_join_commit = None
     all_oracle_files: list[Path] = []
     oracle_files: list[Path] = []
+    evaluated_oracle_files: list[Path] = []
     findings: list[dict] = []
     worktree_created = False
+    interrupted = False
     try:
+        start_subcommand_step(2, "run の隔離実行を開始", "start isolated review")
         create_run_worktree(current_root, review_branch, review_worktree, "HEAD")
         worktree_created = True
         try:
+            start_subcommand_step(3, "所見リストを初期化", "initialize findings")
             with pushd(review_worktree):
                 all_oracle_files = enumerate_review_all_oracle_files(review_worktree)
                 oracle_files = enumerate_review_oracle_targets(
                     review_worktree, scope, state, review_fork_commit
                 )
-                findings = run_review_oracle_loop(
-                    root, review_worktree, oracle_files, config, codex_exec
+                try:
+                    findings = run_review_oracle_loop(
+                        root,
+                        review_worktree,
+                        oracle_files,
+                        config,
+                        codex_exec,
+                        step_callback=start_subcommand_step,
+                    )
+                    evaluated_oracle_files = list(oracle_files)
+                except ReviewOracleInterrupted as interruption:
+                    interrupted = True
+                    findings = interruption.findings
+                    evaluated_oracle_files = interruption.evaluated_files
+                    _record_review_oracle_interruption()
+                start_subcommand_step(
+                    7, "run の隔離実行を終了", "finish isolated review"
                 )
                 commit_review_index_changes(review_worktree)
                 review_has_index_changes = review_branch_has_index_changes(
@@ -123,18 +148,45 @@ def _cmoc_review_oracle_body(
             if worktree_created:
                 remove_worktree(current_root, review_worktree)
                 delete_branch(current_root, review_branch, force=True)
+                worktree_created = False
+        start_subcommand_step(8, "所見リストをレポート", "write review report")
         report_path = write_review_oracle_report(
             root,
             scope,
             branch,
             state,
             len(all_oracle_files),
-            oracle_files,
+            evaluated_oracle_files,
             findings,
             review_branch,
             review_fork_commit,
             review_join_commit,
+            interrupted=interrupted,
         )
+    except KeyboardInterrupt:
+        # loop 外の中断も、確定済みとして記録済みの範囲だけで正常完了する。
+        if not interrupted:
+            interrupted = True
+            _record_review_oracle_interruption()
+        if worktree_created:
+            remove_worktree(current_root, review_worktree)
+            delete_branch(current_root, review_branch, force=True)
+            worktree_created = False
+        report_path = write_review_oracle_report(
+            root,
+            scope,
+            branch,
+            state,
+            len(all_oracle_files),
+            evaluated_oracle_files,
+            findings,
+            review_branch,
+            review_fork_commit,
+            review_join_commit,
+            interrupted=True,
+        )
+        typer.echo(str(report_path.resolve()))
+        return
     except Exception as exc:
         report_path = write_review_oracle_report(
             root,
@@ -154,7 +206,23 @@ def _cmoc_review_oracle_body(
     typer.echo(str(report_path.resolve()))
 
 
+def _record_review_oracle_interruption() -> None:
+    """review 中断要求を console とサブコマンドログへ記録する。"""
+    typer.echo(
+        "# ユーザー中断要求を受け付けました\n"
+        "- 確定済みの部分結果で review oracle を完了します。"
+    )
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "user_interruption",
+            command="review oracle",
+            result="interrupted",
+        )
+
+
 def _require_clean_worktree(root: Path) -> None:
+    """git status を検査し、未コミット差分があれば CmocError を送出する。"""
     statuses = status_path_statuses(
         root, untracked_all=True, include_rename_sources=True
     )

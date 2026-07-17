@@ -33,7 +33,7 @@ def build_indexing_index_entry_parameter(
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェアリポジトリのルーティング文書作成担当です",
-        summary="- `<target-path>` の `INDEX.md` 用エントリーを生成すること",
+        summary="- `{{target-path}}` の `INDEX.md` 用エントリーを生成すること",
         goal="- 指定された Structured Output schema に従ってエントリーを返すこと",
         file_access_mode=FileAccessMode.READONLY,
         aux_dynamic_prompt=[
@@ -42,11 +42,11 @@ def build_indexing_index_entry_parameter(
                 """
                 - 必ずオリジナルの本文のみを根拠にエントリーを生成すること
                 - 既存の `INDEX.md` を読むのは禁止
-                - `<target-path>` 以外の文章も必要に応じて参照すること
+                - `{{target-path}}` 以外の文章も必要に応じて参照すること
                 """,
             ),
             StructDoc(
-                "`<target-path>` の内容",
+                "`{{target-path}}` の内容",
                 StructCodeBlock(
                     None,
                     target_content,
@@ -62,8 +62,12 @@ def build_indexing_index_entry_parameter(
     # NOTE
     #   この agent call は indexing preflight そのもの。
     #   よって run_indexing_preflight=False が正しい。
+    # NOTE
+    #   呼び出し回数がとにかく多いので、経済性がとても大事
+    #   非常に単純な要約タスクなので、かなり品質を下げても成立しやすい
+    #   cmoc 上の下限設定を採用
     return AgentCallParameter(
-        ModelClass.EFFICIENCY,
+        ModelClass.MINIMUM,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
         render_as_markdown(prompt),

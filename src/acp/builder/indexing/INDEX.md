@@ -1,35 +1,31 @@
 # `__init__.py`
 
 ## Summary
-- 正本側の indexing 実装を既存の公開名から参照できるようにする互換入口。実体は正本側に保ちつつ、既存利用者や realization 側に残る旧参照を成立させるための境界を示す。
-- 互換コードを残す理由と削除条件を説明するだけの小さな入口であり、indexing の実処理や仕様本体はここには置かれない。
+- `acp.builder.indexing` を既存の参照点として維持し、正本実装 `oracle.acp_builder.indexing` への互換入口だけを提供するための層。実体の実装内容ではなく、既存の利用者がこの名前空間を通して index 関連機能へ到達する必要がある場合に読む。
 
 ## Read this when
-- 旧来の公開名から正本側の indexing 実装へ到達させる互換経路を確認したいとき。
-- 互換入口を削除できるか判断するために、残存参照の有無や削除条件を確認したいとき。
-- 正本側に実装を集約しながら、既存の利用者向け参照を壊さないための薄い公開面を調べるとき。
+- `acp.builder.indexing.*` という既存参照を壊さずに index 関連機能へ進む必要がある。
+- 正本側の実装をそのまま移すのではなく、互換入口としてどこに残すべきかを判断したい。
 
 ## Do not read this when
-- indexing の具体的な生成処理、探索処理、データ構造、入出力仕様を確認したいとき。この入口ではなく正本側の実装を読む。
-- 新しい indexing 機能を追加または変更したいとき。互換入口ではなく実体を持つ実装側を読む。
-- 単にパッケージ配下の通常モジュール構成や汎用的な import 規約を調べたいとき。
+- index 関連の正本実装そのものを変更したい場合は、互換入口ではなく `oracle.acp_builder.indexing` 側を読む。
+- この名前空間をもう参照しない前提で整理・削除したい場合は、互換維持ではなく利用側の参照先を確認する。
 
 ## hash
-- e4bcedd304d889b5a766dee3920c560154c0ad58215560788a4427d8835a1da8
+- fd4b0dd11238195b4ce76273d3ffc692eb9e441764952be0b436ba20f60452bf
 
 # `index_entry.py`
 
 ## Summary
-- oracle 側の indexing index entry builder を旧 acp.builder 名前空間から再公開する互換入口。
-- 既存利用者が旧参照で build_indexing_index_entry_parameter を import し続けられるようにする薄い転送層。
+- `acp.builder.indexing.index_entry` の互換入口を保つための再公開層。実体ではなく、既存参照を切らさずに oracle 側の実装へつなぐ役割を持つ。
 
 ## Read this when
-- 旧 acp.builder.indexing.index_entry 参照の維持・削除条件を確認したいとき。
-- indexing index entry builder の import 経路互換性を調べるとき。
+- `acp.builder.indexing.index_entry` への既存の利用経路を維持したいとき。
+- 互換入口として残すか、削除条件を判断したいとき。
 
 ## Do not read this when
-- builder 本体の実装や引数構築ロジックを確認したいときは、再公開先を読む。
-- 新規機能追加や index entry 生成仕様そのものを調べたいとき。
+- 実体の実装内容や振る舞いを確認したいときは、再公開先の oracle 側を読む。
+- 新しい機能追加や索引処理の設計変更を考えるだけなら、この互換入口ではなく実装側を読む。
 
 ## hash
-- 0942f373b620da2b885fbc99301d410e8eb54a141bea9edc93310c4ff55fbbeb
+- e9117a11bed4e8ab8054372ace27e1b8b6a68446bd98cdd03ad65d4dcd81ea24

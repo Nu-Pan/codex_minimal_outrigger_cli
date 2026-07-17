@@ -61,7 +61,7 @@ def build_review_oracle_judge_finding_parameter(
             ),
         ],
         aux_placeholder_def={
-            "oracle-root": resolve_real_path("<work-root>/oracle"),
+            "oracle-root": resolve_real_path("{{work-root}}/oracle"),
         },
         oracle_standard=True,
         review_oracle_standard=True,
@@ -69,7 +69,7 @@ def build_review_oracle_judge_finding_parameter(
     # パラメータを生成して返す
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
-        ReasoningEffort.MEDIUM,
+        ReasoningEffort.MAX,
         FileAccessMode.PURE_ORACLE_READ,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),

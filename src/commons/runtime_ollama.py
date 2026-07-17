@@ -1,5 +1,16 @@
+"""cmoc managed Ollama の単一 preflight を実装する。
+
+archive install、user systemd、procfs による所有者確認、model/API/GPU 確認は、
+同じ `ensure_ollama_serves_local_slm` の lock 内で同じ executable・service・model
+を順序どおりに修復・検証する一連の処理である。独立した再利用入口もないため、
+分割すると失敗時の停止条件と前後関係を理解するために複数 module を同時に読む
+必要が生じ、単一の managed Ollama preflight という責務の凝集性を損なう。
+根拠: {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
+"""
+
 import fcntl
 import json
+import math
 import os
 import subprocess
 import time
@@ -13,7 +24,7 @@ from config.cmoc_config import CmocConfig
 
 from .runtime_config import load_config
 from .runtime_errors import CmocError
-from .runtime_paths import config_path, repo_root
+from .runtime_paths import config_path
 
 _OLLAMA_ARCHIVE_URL = "https://ollama.com/download/ollama-linux-amd64.tar.zst"
 _OLLAMA_HOST = "127.0.0.1:11434"
@@ -27,7 +38,7 @@ def ensure_ollama_serves_local_slm(
     root: Path, config: CmocConfig | None = None
 ) -> None:
     """cmoc provider の local SLM を managed Ollama で serve 可能にする。"""
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
     # cmoc provider を要求する model がある場合だけ、user service として 11434 固定で扱う。
     models = _cmoc_managed_model_names(root, config)
     if not models:
@@ -45,13 +56,12 @@ def _cmoc_managed_model_names(
 ) -> list[str]:
     """config から cmoc managed Ollama が扱う model 名を重複なく取り出す。"""
     if config is None:
-        # <work-root>/oracle/src/oracle/other/cmoc_config.py
-        # config は worktree ではなく main worktree の repo 単位で所有される。
-        config_root = repo_root(root)
-        if not config_path(config_root).exists():
+        # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+        # config は呼び出し対象の worktree ごとに追跡される。
+        if not config_path(root).exists():
             config = CmocConfig()
         else:
-            config = load_config(config_root)
+            config = load_config(root)
     models: list[str] = []
     seen: set[str] = set()
     for spec in config.codex.model.values():
@@ -75,11 +85,7 @@ def _ollama_executable() -> Path:
 def _ollama_service_file() -> Path:
     """systemd user service file の配置先を返す。"""
     return (
-        Path.home()
-        / ".config"
-        / "systemd"
-        / "user"
-        / f"{_OLLAMA_SERVICE_NAME}.service"
+        Path.home() / ".config" / "systemd" / "user" / f"{_OLLAMA_SERVICE_NAME}.service"
     )
 
 
@@ -153,20 +159,29 @@ def _download_ollama_archive(path: Path) -> None:
 
 
 def _ensure_ollama_service(executable: Path) -> None:
-    """managed Ollama の systemd user service を現在の executable で起動する。"""
-    _write_ollama_service_file(executable)
+    """managed Ollama の unit と active process を同期して起動する。"""
+    service_changed = _write_ollama_service_file(executable)
     reload_result = _run_systemctl(["daemon-reload"])
     if reload_result.returncode != 0:
         _raise_systemctl_error(
             "ollama service 設定を再読み込みできませんでした。", reload_result
         )
+    service_was_active = _service_active()
     start_result = _run_systemctl(["enable", "--now", _OLLAMA_SERVICE_NAME])
     if start_result.returncode != 0:
         _raise_systemctl_error("ollama service を起動できませんでした。", start_result)
+    if service_was_active and (
+        service_changed or not _service_process_matches(executable)
+    ):
+        restart_result = _run_systemctl(["restart", _OLLAMA_SERVICE_NAME])
+        if restart_result.returncode != 0:
+            _raise_systemctl_error(
+                "ollama service を再起動できませんでした。", restart_result
+            )
 
 
-def _write_ollama_service_file(executable: Path) -> None:
-    """固定 port と管理 model store を使う user service file を同期する。"""
+def _write_ollama_service_file(executable: Path) -> bool:
+    """固定 port と管理 model store を使う unit を同期し、変更有無を返す。"""
     models_dir = executable.parents[1] / "models"
     models_dir.mkdir(parents=True, exist_ok=True)
     service_path = _ollama_service_file()
@@ -177,17 +192,27 @@ def _write_ollama_service_file(executable: Path) -> None:
             "Description=cmoc managed ollama",
             "",
             "[Service]",
-            f"ExecStart={executable} serve",
+            "ExecStart=%h/.cmoc/ollama/bin/ollama serve",
             f"Environment=OLLAMA_HOST={_OLLAMA_HOST}",
             "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
+            "Restart=on-failure",
+            "RestartSec=2s",
             "",
             "[Install]",
             "WantedBy=default.target",
             "",
         ]
     )
-    if not service_path.exists() or service_path.read_text() != text:
+    changed = not service_path.exists() or service_path.read_text() != text
+    if changed:
         service_path.write_text(text)
+    return changed
+
+
+def _service_process_matches(executable: Path) -> bool:
+    """active service の MainPID が期待する managed Ollama executable か調べる。"""
+    main_pid = _service_main_pid()
+    return main_pid is not None and _process_argv_uses_executable(main_pid, executable)
 
 
 def _verify_ollama_service(executable: Path) -> None:
@@ -255,13 +280,13 @@ def _service_main_pid() -> int | None:
 
 def _listener_matches_service(main_pid: int, executable: Path) -> bool:
     """11434 の listener が期待する MainPID 系列と executable に属するか調べる。"""
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
     # service file は設定の正しさだけを示すため、11434 の現 listener を
     # /proc で MainPID 系列の cmoc managed ollama process と直接対応付ける。
     for process_id in _ollama_listener_process_ids():
-        if _process_is_descendant(process_id, main_pid) and _process_argv_uses_executable(
-            process_id, executable
-        ):
+        if _process_is_descendant(
+            process_id, main_pid
+        ) and _process_argv_uses_executable(process_id, executable):
             return True
     return False
 
@@ -362,6 +387,24 @@ def _ollama_http_ok() -> bool:
         return False
 
 
+# {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
+def _ollama_model_name_with_default_tag(name: str) -> str:
+    """Ollama model 名の省略された default tag を canonical 表記へそろえる。"""
+    model_part = name.rsplit("/", 1)[-1]
+    if "@" in name or ":" in model_part:
+        return name
+    return f"{name}:latest"
+
+
+def _ollama_model_name_matches(candidate: object, configured: str) -> bool:
+    """API 応答の model 名が設定 model と同一か、tag 省略を考慮して判定する。"""
+    if not isinstance(candidate, str):
+        return False
+    return _ollama_model_name_with_default_tag(
+        candidate
+    ) == _ollama_model_name_with_default_tag(configured)
+
+
 def _ensure_ollama_model(executable: Path, model: str) -> None:
     """指定 model が store に存在し、managed service 上で load 済みになるようにする。"""
     show = _run_ollama(executable, ["show", model])
@@ -381,11 +424,12 @@ def _ensure_ollama_model(executable: Path, model: str) -> None:
             f"model: {model}\nstdout:\n{show.stdout}\nstderr:\n{show.stderr}",
         )
     _load_ollama_model(model)
+    _verify_ollama_gpu(model)
 
 
 def _load_ollama_model(model: str) -> None:
     """managed Ollama service に model を memory load させる。"""
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
     # Ollama は空 prompt の /api/generate を load 操作として定義している。
     body = json.dumps({"model": model, "stream": False}).encode()
     request = urllib.request.Request(
@@ -414,10 +458,74 @@ def _load_ollama_model(model: str) -> None:
             ["ollama service の状態を確認してください。"],
             f"model: {model}\nresponse: {response_body[:500]!r}",
         ) from exc
-    if payload.get("done") is not True:
+    if not isinstance(payload, dict) or payload.get("done") is not True:
         raise CmocError(
             "ollama SLM model を load できませんでした。",
             ["ollama service の状態を確認してください。"],
+            f"model: {model}\nresponse: {payload!r}",
+        )
+
+
+def _gpu_verification_error(model: str, detail: str) -> CmocError:
+    """GPU 推論検証の失敗を、model と詳細付きの CmocError にする。"""
+    return CmocError(
+        "ollama SLM model の GPU 推論を確認できませんでした。",
+        ["ollama service の /api/ps 応答と GPU 利用状況を確認してください。"],
+        f"model: {model}\n{detail}",
+    )
+
+
+def _verify_ollama_gpu(model: str) -> None:
+    """実行中 model の VRAM 使用を managed Ollama の runtime 情報で確認する。"""
+    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # /api/ps の size_vram が正であることを、検出だけでなく offload の確認とする。
+    endpoint = f"http://{_OLLAMA_HOST}/api/ps"
+    try:
+        with urllib.request.urlopen(
+            endpoint,
+            timeout=_OLLAMA_CONNECT_TIMEOUT_SEC,
+        ) as response:
+            response_body = response.read()
+            status = getattr(response, "status", 200)
+            if not 200 <= status < 300:
+                raise _gpu_verification_error(
+                    model, f"endpoint: {endpoint}\nstatus: {status}"
+                )
+    except (OSError, urllib.error.URLError) as exc:
+        raise _gpu_verification_error(model, f"endpoint: {endpoint}") from exc
+    try:
+        payload = json.loads(response_body.decode())
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise _gpu_verification_error(
+            model, f"response: {response_body[:500]!r}"
+        ) from exc
+    models = payload.get("models") if isinstance(payload, dict) else None
+    running_model = (
+        next(
+            (
+                item
+                for item in models
+                if isinstance(item, dict)
+                and (
+                    _ollama_model_name_matches(item.get("name"), model)
+                    or _ollama_model_name_matches(item.get("model"), model)
+                )
+            ),
+            None,
+        )
+        if isinstance(models, list)
+        else None
+    )
+    size_vram = running_model.get("size_vram") if running_model else None
+    if (
+        not isinstance(size_vram, (int, float))
+        or isinstance(size_vram, bool)
+        or (isinstance(size_vram, float) and not math.isfinite(size_vram))
+        or size_vram <= 0
+    ):
+        raise CmocError(
+            "ollama SLM model の GPU 推論を確認できませんでした。",
+            ["CPU のみの推論へ切り替えず、GPU と Ollama の状態を確認してください。"],
             f"model: {model}\nresponse: {payload!r}",
         )
 

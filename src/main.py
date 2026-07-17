@@ -1,6 +1,7 @@
 import os
 from collections.abc import Sequence
 from enum import Enum
+from typing import Any, cast
 
 import click
 import typer
@@ -37,6 +38,20 @@ class ReviewOracleScope(str, Enum):
     full = "full"
 
 
+def _click_exception_types() -> tuple[type[BaseException], ...]:
+    """Typer の版によって異なる Click 例外クラスを安全に集める。"""
+    compatibility_module = getattr(typer.core, "_click", None)
+    compatibility_exception = getattr(compatibility_module, "ClickException", None)
+    if isinstance(compatibility_exception, type) and issubclass(
+        compatibility_exception, BaseException
+    ):
+        return (click.ClickException, compatibility_exception)
+    return (click.ClickException,)
+
+
+_CLICK_EXCEPTION_TYPES = _click_exception_types()
+
+
 class _CmocTyperGroup(typer.core.TyperGroup):
     """通常の CLI 引数解析エラーを cmoc のエラーレポートへ変換する。"""
 
@@ -47,8 +62,8 @@ class _CmocTyperGroup(typer.core.TyperGroup):
         complete_var: str | None = None,
         standalone_mode: bool = True,
         windows_expand_args: bool = True,
-        **extra: object,
-    ) -> object:
+        **extra: Any,
+    ) -> Any:
         """補完時以外の Click 例外を cmoc 形式に変換して実行する。"""
         click_kwargs = {
             "args": args,
@@ -61,18 +76,24 @@ class _CmocTyperGroup(typer.core.TyperGroup):
             return super().main(standalone_mode=standalone_mode, **click_kwargs)
         try:
             result = super().main(standalone_mode=False, **click_kwargs)
-        except click.ClickException as exc:
+        # {{work-root}}/oracle/doc/app_spec/error_handling.md
+        # Typer 0.27 は Click compatibility module を通じて parse するため、version に
+        # 依存しない error-handling contract のため両方の exception class に対応する。
+        except _CLICK_EXCEPTION_TYPES as exc:
+            click_exception = cast(click.ClickException, exc)
             typer.echo(
                 render_error(
                     CmocError(
                         "CLI 引数解析に失敗しました。",
-                        ["コマンド名、サブコマンド名、option、引数を確認して再実行してください。"],
-                        exc.format_message(),
+                        [
+                            "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
+                        ],
+                        click_exception.format_message(),
                     )
                 )
             )
             if standalone_mode:
-                raise SystemExit(exc.exit_code) from exc
+                raise SystemExit(click_exception.exit_code) from exc
             raise
         if standalone_mode and isinstance(result, int):
             raise SystemExit(result)
@@ -97,7 +118,7 @@ def doctor() -> None:
 @app.command("dector")
 def dector_alias() -> None:
     """usage 手順の `cmoc dector` を doctor 実装へ接続する CLI 入口。"""
-    # <work-root>/oracle/doc/app_spec/usage.md
+    # {{work-root}}/oracle/doc/app_spec/usage.md
     cmoc_doctor_impl()
 
 
@@ -130,7 +151,7 @@ def apply_fork(
     scope: ApplyForkScope = typer.Option(ApplyForkScope.rolling, "--scope", "-s"),
 ) -> None:
     """finding 適用用の apply run を開始する CLI 入口。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
     cmoc_apply_fork_impl(scope.value)
 
 
@@ -151,7 +172,7 @@ def review_oracle(
     scope: ReviewOracleScope = typer.Option(ReviewOracleScope.session, "--scope", "-s"),
 ) -> None:
     """oracle review を隔離 worktree で実行する CLI 入口。"""
-    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     cmoc_review_oracle_impl(scope.value)
 
 
@@ -160,7 +181,7 @@ def eval_oracle(
     scope: ReviewOracleScope = typer.Option(ReviewOracleScope.session, "--scope", "-s"),
 ) -> None:
     """want を書き出した oracle を AI review する CLI 入口。"""
-    # <work-root>/oracle/doc/considered_alternative/working_plan_review.md
+    # {{work-root}}/oracle/doc/considered_alternative/working_plan_review.md
     cmoc_eval_oracle_impl(scope.value)
 
 

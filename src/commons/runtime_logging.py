@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
@@ -6,8 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from commons.runtime_paths import logs_dir, timestamp
-
+from commons.runtime_paths import _reserve_timestamped_path, logs_dir, timestamp
 
 _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
     "CURRENT_SUBCOMMAND_LOGGER",
@@ -35,17 +35,14 @@ class SubcommandLogger:
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
         self.step_timings: list[StepTiming] = []
+        # ContextVar の worker context から同じ logger object が共有されるため、並列 Codex
+        # event の追記と quota 待機時間の集計を直列化する。
+        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        self._lock = threading.Lock()
         log_dir = logs_dir(root)
         log_dir.mkdir(parents=True, exist_ok=True)
-        while True:
-            self.path = log_dir / f"{timestamp()}.jsonl"
-            try:
-                # <work-root>/oracle/doc/app_spec/console_and_file_log.md requires
-                # one <time-stamp>.jsonl per subcommand; reserve it atomically.
-                self.path.open("x").close()
-                break
-            except FileExistsError:
-                time.sleep(0.000001)
+        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        _, self.path = _reserve_timestamped_path(log_dir, ".jsonl", timestamp)
 
     def event(self, kind: str, **payload: Any) -> None:
         """実行時に後から検査したい event を安定した JSON record として残す。"""
@@ -55,17 +52,18 @@ class SubcommandLogger:
             "timestamp": datetime.now().isoformat(),
             **payload,
         }
-        with self.path.open("a") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
-            f.flush()
+        with self._lock:
+            with self.path.open("a") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                f.flush()
 
     def start_step(
         self, index: str, description: str, log_description: str | None = None
     ) -> None:
         """完了サマリー用の step 実測値を開始 event と同じ単位で保持する。
 
-        根拠: <work-root>/oracle/doc/app_spec/console_and_file_log.md
-        `<work-root>/oracle/doc/dev_rule/coding_rule.md` が log message を英語に
+        根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        `{{work-root}}/oracle/doc/dev_rule/coding_rule.md` が log message を英語に
         限るため、console 表示名と JSON Lines の step 名は分けられる。
         """
         self.finish_current_step()
@@ -88,7 +86,8 @@ class SubcommandLogger:
 
     def add_quota_wait(self, seconds: float) -> None:
         """Codex quota 待機をサブコマンド全体の待機時間として合算する。"""
-        self.quota_wait_sec += seconds
+        with self._lock:
+            self.quota_wait_sec += seconds
 
 
 def set_current_subcommand_logger(

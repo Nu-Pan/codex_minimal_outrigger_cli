@@ -1,84 +1,62 @@
 # `__init__.py`
 
 ## Summary
-- 旧来の apply fork 系 import との互換性を保つためだけに残された package。実装本体ではなく、既存参照を壊さないための公開面維持と削除条件を示す。
+- `oracle.acp_builder.apply.fork` の正本 builder を realization 側から呼び出す package。ファイル単位レビュー・修正と変更要約の公開入口をまとめる。
 
 ## Read this when
-- 旧来の apply fork 系 import 経路を維持する必要があるか判断するとき。
-- 互換 package を削除できるか確認するため、realization 側と利用者向け公開面に同参照が残っているか調べるとき。
+- apply fork の realization 側 builder package の役割を確認するとき。
+- 正本 builder への委譲入口を追加・削除するとき。
 
 ## Do not read this when
-- apply fork の実処理や挙動を調べたいとき。
-- 互換 import 経路ではなく、現行の実装責務や制御ロジックを変更したいとき。
+- apply fork のループ制御や state 遷移を調べたいとき。
+- prompt や schema の正本仕様そのものを確認したいとき。
 
 ## hash
-- 9fbe41ef7b1f6461c182c9c72161a713cf2ce6cd068519b03772412301ad1bc7
+- 41c42a6aa5bded6005a7579fe2cd55249da6f57871e7ac83b67f41c8c65e24cc
 
 # `_common.py`
 
 ## Summary
-- apply fork の ACP builder 群で共通利用する補助をまとめる実装ファイル。repo root 解決、oracle builder import 経路の準備、oracle 側 ACP parameter を realization 側公開型として受け渡す境界を扱う。
+- apply fork ACP builder が共通利用する補助関数を提供する。repo root の解決、oracle 側ソースの import 可否確認と開発・パッケージ layout 対応、oracle が返す ACP parameter の realization 公開型としての受け渡しを扱う。
 
 ## Read this when
-- apply fork の ACP builder が oracle 側 builder を呼び出す前処理を確認・変更したいとき。
-- packaged layout と開発 tree layout の両方で oracle builder を import 可能にする処理を確認したいとき。
-- oracle 側から返る ACP parameter と realization 側の公開型の受け渡し境界を確認したいとき。
+- apply fork の ACP builder を実装・修正するとき
+- oracle builder の import 経路や repo root 解決を確認するとき
+- oracle 側の ACP parameter を realization 側へ渡す処理を確認するとき
 
 ## Do not read this when
-- apply fork 以外の ACP builder の個別ロジックを確認したいとき。
-- ACP parameter のデータ構造や公開型そのものの定義を確認したいとき。
-- oracle builder の具体的な parameter 生成内容を確認したいとき。
+- apply fork 以外の ACP builder の具体的な処理を確認するとき
+- ACP parameter や oracle builder の実装本体を直接確認したいとき
 
 ## hash
-- 065b46638098a92fc0239c40d1f390156b48ed492dee52caa72e04a2badfbe17
+- 29e5f7a547c83fd6e23281a62a320c81a33bca76b7921ba6d9638a45821bf195
 
 # `change_summary.py`
 
 ## Summary
-- `cmoc apply fork` の作業レポート向け変更要約を組み立てる実装。agent call parameter の生成は対応する oracle 実装へ委譲し、生成結果を realization 側の型へ変換する。
+- `cmoc apply fork` の変更要約用 agent call parameter を組み立てる入口。作業レポート向けの変更要約を作るときに読む。正本側の `oracle.acp_builder.apply.fork.change_summary` を参照して実体を委譲するため、ここでは委譲の流れだけを確認すればよい。
 
 ## Read this when
-- `cmoc apply fork` の変更要約 agent call parameter 生成、oracle builder への委譲、または oracle parameter から realization parameter への変換経路を確認・変更したいとき。
+- `cmoc apply fork` の変更要約を作る処理の入出力や、どの正本実装に渡しているかを確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体の実行フロー、fork 作成、branch 操作、または diff 生成そのものを調べたいときは、より上位の apply fork 実装へ進む。
-- 変更要約の正本仕様や agent prompt の人間意図を確認したいときは、対応する oracle 側の builder を読む。
-- 汎用的な git 操作 helper、path model、または ACP 共通型の定義を調べたいだけなら、それぞれの共通実装・基本型定義へ進む。
+- `cmoc apply fork` の変更要約の正本仕様そのものを確認したいときは、対応する oracle 側を見る。変更要約以外の fork 系変換や共通処理を追いたいときも、まずはそれぞれの直接の入口を読む。
 
 ## hash
-- 953844150e43aae9519c0790bc24357d2ab0b3efe4e05ac9ceb1064eb2c902db
+- 83474b219a58ee86b8aa07876c6e7e7ca83df70e821edef6a6e35e15cc907aa9
 
-# `file_finding_enumeration.py`
+# `file_review_and_fix.py`
 
 ## Summary
-- `cmoc apply fork` でファイル単位の所見列挙を行うための agent call parameter を構築する薄い realization 側 builder。
-- 実処理は oracle 側の同目的 builder に委譲し、repo root 解決、oracle src の import 準備、oracle parameter から realization 側 `AgentCallParameter` への変換だけを担う。
+- `cmoc apply fork` のファイル単位レビュー・修正用 parameter を正本 builder へ委譲する realization 入口。所見調査、修正、検証を一つの agent call で行う parameter を返す。
 
 ## Read this when
-- `cmoc apply fork` のファイル単位所見列挙 agent を呼ぶための parameter 構築経路を確認したいとき。
-- realization 側 builder が oracle 側 builder をどのように呼び出し、戻り値を `AgentCallParameter` に適合させるかを確認したいとき。
-- `target_path` がファイル単位所見列挙用 parameter 構築に渡される境界だけを確認したいとき。
+- ファイル単位レビュー・修正用 parameter の realization import 経路を確認するとき。
+- packaged layout と開発 tree の双方から正本 builder を呼び出す委譲を変更するとき。
 
 ## Do not read this when
-- 所見列挙のプロンプト内容、出力条件、正本仕様を確認したいときは、委譲先の oracle 側 builder を読む。
-- repo root 解決、oracle src import 準備、oracle parameter 変換の共通挙動を確認したいときは、共通 helper の定義を読む。
-- `cmoc apply fork` コマンド全体の制御フロー、CLI 引数処理、またはテスト観点を調べたいときは、それぞれの呼び出し元やテストを読む。
+- レビュー・修正 prompt や schema の内容を確認したいときは、対応する oracle src を読む。
+- apply ループの再投入・commit 制御を調べたいときは、サブコマンド実装を読む。
 
 ## hash
-- 7f348f0ca54f4b074d5e43be005498ea92f45db03c66c9725e905c528f9bba40
-
-# `finding_application.py`
-
-## Summary
-- `cmoc apply fork` の所見適用用 agent call parameter を構築する realization 側の薄い builder。repo root 解決と oracle src の import 準備を行い、対応する oracle builder の結果を realization 側の `AgentCallParameter` へ適合して返す入口を担う。
-
-## Read this when
-- `cmoc apply fork` の所見適用で、findings から agent call parameter を得る realization 側の呼び出し入口を確認したいとき。
-- 対応する oracle builder を realization 実装からどのように呼び出し、戻り値を `AgentCallParameter` に変換しているか確認したいとき。
-
-## Do not read this when
-- 所見適用プロンプトや agent call parameter の正本仕様そのものを確認したいときは、対応する oracle 側の実装を読む。
-- repo root 解決、oracle src の import 可能化、oracle parameter の適合処理という共通 helper の詳細を確認したいだけのときは、共通処理側を読む。
-
-## hash
-- f20f8f2dab686c194560fba1c68209b00301cb133ebd3bb06f1b4437124840f4
+- 47d7279d95aafad8f2be16f343f89b5436eed9348b5d961719a0b79c1a0e264f

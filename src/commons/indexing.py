@@ -1,10 +1,10 @@
 import fcntl
-from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+from contextvars import copy_context
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Callable
 
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from cmoc_runtime import (
@@ -19,14 +19,18 @@ from cmoc_runtime import (
     text_sha256,
 )
 from commons.runtime_codex_preflight import configure_indexing_preflight
+from commons.runtime_git import git_common_dir
+from commons.runtime_paths import cwd_override_active
+from commons.runtime_results import CodexExecCallable
 
-
-CodexExec = Callable[..., object]
+CodexExec = CodexExecCallable
 INDEX_ENTRY_KEYS = {"summary", "read_this_when", "do_not_read_this_when"}
 
 
 @dataclass
 class _IndexDirectoryPlan:
+    """一つのdirectoryで再利用または生成するINDEX entryの計画。"""
+
     directory: Path
     entries: list[str | None]
     missing_children: list[tuple[int, Path, str]]
@@ -39,7 +43,7 @@ def enable_indexing_preflight() -> None:
     )
 
 
-def run_indexing_preflight(root: Path, codex_exec: CodexExec) -> None:
+def run_indexing_preflight(root: Path, codex_exec: CodexExecCallable) -> None:
     """Codex 呼び出し前に INDEX.md を最新化し、必要な更新 commit を作る。"""
     with indexing_lock(root):
         commit_index_updates(root, update_indexes(root, codex_exec))
@@ -60,10 +64,9 @@ def indexing_lock(root: Path) -> Iterator[None]:
 
 def indexing_lock_path(root: Path) -> Path:
     """Git 管理領域内の indexing 用 lock file path を取得する。"""
-    path = run_git(
-        ["rev-parse", "--git-path", "cmoc-indexing.lock"], root
-    ).stdout.strip()
-    return root / path
+    # {{work-root}}/oracle/doc/app_spec/indexing.md の INDEX 更新と commit を
+    # linked worktree 間でも一つの indexing 処理として直列化する。
+    return git_common_dir(root) / "cmoc-indexing.lock"
 
 
 def commit_index_updates(root: Path, updated: list[Path]) -> None:
@@ -73,14 +76,29 @@ def commit_index_updates(root: Path, updated: list[Path]) -> None:
         run_git(["add", "--", *index_paths], root)
     if not index_paths:
         return
-    diff = run_git(["diff", "--cached", "--quiet", "--", *index_paths], root, check=False)
+    diff_args = ["diff", "--cached", "--quiet", "--", *index_paths]
+    diff = run_git(diff_args, root, check=False)
+    if diff.returncode == 0:
+        return
     if diff.returncode == 1:
         run_git(["commit", "-m", "cmoc indexing", "--", *index_paths], root)
+        return
+    if diff.returncode != 0:
+        # {{work-root}}/oracle/doc/app_spec/indexing.md は Git failure で indexing を
+        # 失敗させることを求める。`git diff --quiet` の status 1 だけを「差分あり」とする。
+        raise CmocError(
+            "INDEX.md 差分の確認に失敗しました。",
+            ["git の状態を確認してから、同じ cmoc コマンドを再実行してください。"],
+            f"command: git {' '.join(diff_args)}\n"
+            f"stdout:\n{diff.stdout}\nstderr:\n{diff.stderr}",
+        )
 
 
-def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path]:
+def update_indexes(
+    root: Path, codex_exec: CodexExecCallable | None = None
+) -> list[Path]:
     """INDEX.md を深い directory から順に検査・再生成する。"""
-    config_root = repo_root(root)
+    config_root = root
     dirs = indexable_directories(root)
     dirs.append(root)
     updated: list[Path] = []
@@ -90,8 +108,7 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
         dirs_by_depth.setdefault(depth, []).append(directory)
     for depth in sorted(dirs_by_depth, reverse=True):
         plans = [
-            _plan_index_directory(root, directory)
-            for directory in dirs_by_depth[depth]
+            _plan_index_directory(root, directory) for directory in dirs_by_depth[depth]
         ]
         missing = [(plan, item) for plan in plans for item in plan.missing_children]
         if missing:
@@ -101,6 +118,7 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
             def build_missing(
                 missing_item: tuple[_IndexDirectoryPlan, tuple[int, Path, str]],
             ) -> tuple[_IndexDirectoryPlan, int, str]:
+                """不足しているentryを一件生成し、配置先情報と返す。"""
                 plan, (index, child, digest) = missing_item
                 return (
                     plan,
@@ -113,17 +131,35 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
                     ),
                 )
 
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                for plan, index, entry in executor.map(build_missing, missing):
+            if cwd_override_active():
+                # pushd は scope 全体で process-global cwd lock を保持する。
+                # この thread が worker を待つ間に worker が repo_root/work_root で
+                # block しないよう、isolated run worktree は lock 所有 thread で作る。
+                # pushd の外では並列性を維持する。
+                results = map(build_missing, missing)
+                for plan, index, entry in results:
                     plan.entries[index] = entry
+            else:
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    # ContextVars は worker thread に継承されない。submit 前に caller
+                    # context をコピーし、Codex event を親 command の subcommand log
+                    # へ届ける。
+                    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+                    futures = [
+                        executor.submit(copy_context().run, build_missing, item)
+                        for item in missing
+                    ]
+                    for future in futures:
+                        plan, index, entry = future.result()
+                        plan.entries[index] = entry
         for plan in plans:
             entries = [entry for entry in plan.entries if entry is not None]
             content = "\n\n".join(entries)
             if content:
                 content += "\n"
             index_path = plan.directory / "INDEX.md"
-            if not index_path.exists() or index_path.read_text() != content:
-                index_path.write_text(content)
+            if _read_existing_index_content(index_path) != content:
+                _write_index_file(index_path, content)
                 updated.append(index_path)
     return updated
 
@@ -162,12 +198,13 @@ def indexable_directories(root: Path) -> list[Path]:
 
 def parse_index_entries(index_path: Path) -> dict[str, dict[str, str]]:
     """既存 INDEX.md から entry 名、本文、hash を抽出する。"""
-    if not index_path.exists():
+    content = _read_existing_index_content(index_path)
+    if content is None:
         return {}
     entries: dict[str, dict[str, str]] = {}
     current_name: str | None = None
     current_lines: list[str] = []
-    for line in index_path.read_text().splitlines():
+    for line in content.splitlines():
         if line.startswith("# `") and line.endswith("`"):
             if current_name is not None:
                 text = "\n".join(current_lines).rstrip()
@@ -188,6 +225,37 @@ def parse_index_entries(index_path: Path) -> dict[str, dict[str, str]]:
     return entries
 
 
+def _read_existing_index_content(index_path: Path) -> str | None:
+    """既存 INDEX.md の通常ファイル内容を読み、再利用可能なら返す。"""
+    # {{work-root}}/oracle/doc/app_spec/indexing.md は INDEX.md を work-root 上の
+    # 生成物として扱う。symlink のリンク先や不正な encoding は再利用しない。
+    if index_path.is_symlink() or not index_path.exists():
+        return None
+    if not index_path.is_file():
+        raise CmocError(
+            "INDEX.md が通常ファイルではありません。",
+            [
+                "該当 path のファイル種別を確認してください。",
+                "通常ファイルとして再作成してから cmoc を再実行してください。",
+            ],
+            str(index_path),
+        )
+    try:
+        return index_path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _write_index_file(index_path: Path, content: str) -> None:
+    """INDEX.md を work-root 内の通常ファイルとして書き出す。"""
+    # symlink を write_text で開くとリンク先を変更するため、先にリンク自体を
+    # 取り除く。{{work-root}}/oracle/doc/app_spec/indexing.md の対象外 path へ
+    # indexing 内容を流出させない。
+    if index_path.is_symlink():
+        index_path.unlink()
+    index_path.write_text(content)
+
+
 def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
     """必須形式を満たす INDEX.md entry から hash 文字列を得る。"""
     lines = entry_text.splitlines()
@@ -206,15 +274,19 @@ def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
         section_positions
     ):
         return ""
-    # <work-root>/oracle/doc/app_spec/indexing.md defines an entry as title plus
-    # fixed sections; preserving fresh malformed text here would skip regeneration.
+    # {{work-root}}/oracle/doc/app_spec/indexing.md は entry を title と固定 section
+    # で定義する。fresh でも malformed な text を残すと再生成を飛ばしてしまう。
     if any(line.strip() for line in lines[1 : section_positions[0]]):
         return ""
     for start, end in zip(section_positions[:3], section_positions[1:]):
-        section_lines = [line.strip() for line in lines[start + 1 : end] if line.strip()]
-        # <work-root>/oracle/doc/app_spec/indexing.md requires each entry
-        # section to be bullet-only.
-        if not section_lines or any(not line.startswith("- ") for line in section_lines):
+        section_lines = [
+            line.strip() for line in lines[start + 1 : end] if line.strip()
+        ]
+        # {{work-root}}/oracle/doc/app_spec/indexing.md は各 entry section を
+        # bullet-only にすることを求めている。
+        if not section_lines or any(
+            not line.startswith("- ") for line in section_lines
+        ):
             return ""
     for idx, line in enumerate(lines):
         if line == "## hash":
@@ -237,24 +309,29 @@ def indexable_children(root: Path, directory: Path) -> list[Path]:
     for child in sorted(directory.iterdir(), key=lambda p: p.name):
         if child.name == "INDEX.md" or child.name.startswith("."):
             continue
-        # <work-root>/oracle/doc/app_spec/indexing.md requires indexing
-        # maintenance to finish before agent calls; symlink cycles cannot be
-        # valid traversal targets for that contract.
-        if child.is_symlink():
-            continue
-        if is_root_memo(root, child):
-            continue
-        if is_git_ignored(root, child) or (child.is_file() and is_binary(child)):
+        if not _is_indexable_child(root, child):
             continue
         children.append(child)
     return children
+
+
+def _is_indexable_child(root: Path, child: Path) -> bool:
+    """symlink、特殊 file、仕様上の除外対象を INDEX から除く。"""
+    # {{work-root}}/oracle/doc/app_spec/indexing.md はファイル・ディレクトリだけを
+    # 目次対象とする。symlink は循環や root 外の実体を持ち得るため、特殊 file と
+    # 同じく hash・agent call の対象にしない。
+    if child.is_symlink() or not (child.is_file() or child.is_dir()):
+        return False
+    if is_root_memo(root, child) or is_git_ignored(root, child):
+        return False
+    return not (child.is_file() and is_binary(child))
 
 
 def build_index_entry(
     root: Path,
     path: Path,
     digest: str | None = None,
-    codex_exec: CodexExec | None = None,
+    codex_exec: CodexExecCallable | None = None,
 ) -> str:
     """Codex CLI に対象 1 件の INDEX.md entry を生成させる。"""
     if codex_exec is None:
@@ -268,13 +345,13 @@ def build_index_entry(
     parameter = replace(build_indexing_index_entry_parameter(path, content), cwd=root)
     result = codex_exec(
         parameter,
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-        # <work-root>/oracle/doc/app_spec/run_isolation.md
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/oracle/doc/app_spec/run_isolation.md
         # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は
         # run worktree 側へ流れないよう repo root に固定する。
         root=log_root,
         cwd=root,
-        config=load_config(log_root),
+        config=load_config(root),
         purpose=f"indexing index entry for {path}",
     ).output_json
     return render_index_entry(root, path, result or {}, digest=digest).rstrip()
@@ -287,7 +364,9 @@ def target_content_for_indexing(path: Path) -> str:
     index_path = path / "INDEX.md"
     if index_path.exists():
         return index_path.read_text(errors="ignore")
-    return "\n".join(child.name for child in sorted(path.iterdir(), key=lambda p: p.name))
+    return "\n".join(
+        child.name for child in sorted(path.iterdir(), key=lambda p: p.name)
+    )
 
 
 def index_target_hash(root: Path, path: Path) -> str:
@@ -298,9 +377,7 @@ def index_target_hash(root: Path, path: Path) -> str:
     for child in indexable_children(root, path):
         child_hash = index_target_hash(root, child)
         kind = "dir" if child.is_dir() else "file"
-        parts.append(
-            f"{kind}\0{child.relative_to(root)}\0{child_hash}\n"
-        )
+        parts.append(f"{kind}\0{child.relative_to(root)}\0{child_hash}\n")
     return text_sha256("".join(parts))
 
 
@@ -344,9 +421,9 @@ def render_index_entry(
 def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str]:
     """Structured Output の必須 list[str] 項目を検証して取り出す。"""
     value = entry.get(key) if isinstance(entry, dict) else None
-    # <work-root>/oracle/doc/app_spec/indexing.md and
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py
-    # require bullet-only semantic entries that are useful before reading the target.
+    # {{work-root}}/oracle/doc/app_spec/indexing.md と
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py は、
+    # 対象を読む前に役立つ bullet-only の semantic entry を求める。
     if (
         isinstance(value, list)
         and value

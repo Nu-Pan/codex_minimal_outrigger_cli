@@ -1,9 +1,9 @@
-## `<cmoc-session-state-file>`
+## `{{cmoc-session-state-file}}`
 
 ## 概要
 
 - cmoc ワ―フロー上発生する fork, join の挙動を一意に定めるための情報をファイル永続化するための json ファイル
-- 保存先は `<repo-root>/.cmoc/local/session/<session-id>.json`
+- 保存先は `{{repo-root}}/.cmoc/gu/ar/session/{{session-id}}.json`
 
 
 ## スキーマ設計の基本原則
@@ -41,7 +41,7 @@
 ### `session.session_home_branch`
 
 - そのセッションの fork 元ブランチ名であり join 先でもある
-- セッション新規作成直後、`cmoc session fork` が現在 checkout している `<local-branch>` 名で初期化する
+- セッション新規作成直後、`cmoc session fork` が現在 checkout している `{{local-branch}}` 名で初期化する
 
 ### `session_start_commit`
 
@@ -49,7 +49,7 @@
 
 ### `session.last_joined_apply_oracle_snapshot_commit`
 
-- そのセッション上で最後に join した apply の `<oracle-snapshot-commit>`
+- そのセッション上で最後に join した apply の `{{oracle-snapshot-commit}}`
 - セッション新規作成直後の初期値は null
 - `cmoc apply join` によって適切な値に更新される
 

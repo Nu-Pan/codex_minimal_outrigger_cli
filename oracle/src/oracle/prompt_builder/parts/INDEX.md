@@ -1,48 +1,36 @@
 # `apply_review_standard.py`
 
 ## Summary
-- oracle file の内容を realization file に適用する際、レビューで何を所見として列挙するかの規範文章を組み立てる部品。
-- oracle file と realization file の明確な不整合、仕様断片の隙間を理由にした過剰な指摘の禁止、realization file 単体で明らかな致命的問題の扱いを定義する。
-- 所見の根拠を oracle file の仕様と realization file の実装の対応関係に置きつつ、oracle file に未定義な部分や単なる品質改善提案を所見から外す境界を確認する入口になる。
+- oracle と realization の適用レビュー基準を構築する正本ソース。明確な仕様不整合、仕様断片の隙間だけでは問題にしない境界、realization 単独で明らかな致命的問題を所見として扱う条件を、背景・要求・例として定義し、構造化文書へ変換する。
 
 ## Read this when
-- oracle file の仕様を realization file に適用するレビューで、どの差分や問題を所見として扱うべきか判断したいとき。
-- oracle file に明記されていない挙動を、仕様違反として指摘してよいか迷うとき。
-- realization file だけを見るとバグに見える問題を、oracle file との不整合ではない所見として扱えるか確認したいとき。
-- レビュー所見に、どの oracle file の仕様とどの realization file の実装が不整合なのかという根拠を求める規範を確認したいとき。
-- 一般的なベストプラクティス、実装上の不要要素、旧仕様の残骸をレビュー所見に含める境界を確認したいとき。
+- oracle file と realization file の整合性レビュー基準を確認・変更するとき
+- 所見として扱う不整合、仕様の未定義部分、致命的実装問題の判断境界を確認するとき
+- apply review standard の構造化プロンプト生成処理を変更するとき
 
 ## Do not read this when
-- oracle file や realization file の基本概念そのもの、所有責任、配置場所を確認したいだけのとき。
-- レビュー所見の出力形式、プロンプト全体の組み立て順、placeholder の具体的な差し込み処理を調べたいとき。
-- 特定の CLI 機能、状態ファイル、パスモデル、テスト方針など個別仕様の内容を確認したいとき。
-- 単なるコード品質改善やリファクタリング方針を調べたいだけで、oracle file 適用レビューの所見判定に関係しないとき。
-- INDEX.md エントリーの書き方やルーティング文書の一般規範を確認したいとき。
+- 個別の oracle file や realization file の実装内容そのものを調査するとき
+- レビュー基準ではなく、CLI やプロンプト生成の別領域を変更するとき
 
 ## hash
-- 65d7fa95504cb9bc06a0d024ca7d982b73ca5f845e6611f760e0fa13c4ed7433
+- 66324f5c139ac3f4e08c85133ecc275307f13f81fc2f01d6dabf8f18813b1e46
 
 # `file_access_rule.py`
 
 ## Summary
-- AI エージェントへ注入するファイル読み書き規則文を、アクセスモードごとの deny list として組み立てる処理を扱う。
-- リポジトリルートとワークルートの関係に応じた外部アクセス制限、共通の書き込み禁止対象、oracle file と realization file に対するモード別制限をまとめ、プレースホルダ値と構造化文書として返す。
-- 通常の規則生成を行わない特別モードでは空のプレースホルダと空文書を返し、不正なモードは例外として扱う。
+- ファイル読み書きモードごとのアクセス規則プロンプトを構築する。リポジトリ外、保護対象ツリー、oracle file、realization file などの deny ルールをモードに応じて組み立て、プレースホルダーと構造化文書を返す。ファイルアクセス規則やプロンプト生成処理を変更・調査する際の入口。
 
 ## Read this when
-- AI エージェントに渡すファイル読み書き規則プロンプトの内容や生成条件を確認・変更したいとき。
-- 読み取り専用、oracle 専用、realization 追従、リポジトリ書き込みなど、アクセスモードごとの禁止規則の差分を確認したいとき。
-- リポジトリルートとワークルートが異なる場合の例外的な読み取り許可や、プロンプトへ埋め込むルートプレースホルダの扱いを確認したいとき。
-- oracle file、realization file、管理用メタ領域、補助ワークスペースに対するアクセス禁止文面の根拠を追いたいとき。
+- FileAccessMode ごとの読み書き禁止範囲を確認・変更するとき
+- ファイルアクセス規則プロンプトの生成内容、プレースホルダー、StructDoc の返却を調査するとき
+- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE、NO_RULE の挙動を確認するとき
 
 ## Do not read this when
-- ルートパスの解決方法そのものを確認したいだけのときは、パスモデルを扱う対象を読む。
-- アクセスモードの列挙値や意味の正本定義を確認したいだけのときは、モード定義を扱う対象を読む。
-- 構造化文書やプレースホルダ表現のデータ構造を確認したいだけのときは、それぞれの基礎型を扱う対象を読む。
-- 実際のサンドボックス実装や事後チェック機構の詳細を確認したいだけのときは、この規則文を利用する上位処理を読む。
+- CLI の個別コマンドや実際のファイル操作の実装を調査するとき
+- アクセス規則以外のプロンプト部品や oracle の定義を直接確認するとき
 
 ## hash
-- 0651d22964749172c16e03de93c63deb85a5b95dfaa3ce44a75144f17fa0b49d
+- 810849959c6a3099a77a4ddf2a6a173946fe3058e81f6a5869a6fa07e928a8fb
 
 # `index_entry_standard.py`
 
@@ -67,24 +55,18 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- oracle file と realization file の定義・役割・下位概念を説明するプロンプト部品を構築する。
-- oracle file を人間所有の正本仕様断片、realization file を oracle file の意図を AI が具体化した非正本ファイルとして区別する基本知識を扱う。
-- oracle doc/src/test と realization code/implementation/test/ancillary の分類、および配置先の基本を確認する入口になる。
+- oracle file と realization file の定義・役割・下位概念を構築する prompt builder の一部。oracle、realization の責務境界と配置先を説明する StructDoc を返す。
 
 ## Read this when
-- oracle file と realization file の責務境界や所有者の違いを確認したいとき。
-- oracle 配下と非 oracle 配下のファイルを、正本仕様断片か実装成果物かに分類する必要があるとき。
-- oracle doc、oracle src、oracle test、realization implementation、realization test、realization ancillary などの基本分類と配置先を確認したいとき。
-- realization file が oracle file を正本として生成され、その逆方向の正本化は禁止されるという前提を確認したいとき。
+- oracle file と realization file の分類、責務、配置先を確認するとき
+- oracle と realization に関する基本説明文の生成処理を変更・調査するとき
 
 ## Do not read this when
-- oracle file や realization file の品質基準、記述量、コメント方針、テスト肥大化抑制などの詳細な作業標準を確認したいとき。
-- 具体的なパスキーワードの意味や解決規則を確認したいとき。
-- 個別サブコマンド、CLI 出力、実装処理、テストケースの仕様を調べたいとき。
-- INDEX.md エントリーの生成規則やルーティング文書の書き方を確認したいとき。
+- 個別の oracle doc・src・test の仕様や実装を確認したいとき
+- prompt builder 全体の構成や、基本説明以外の prompt 部品を確認したいとき
 
 ## hash
-- c0530e70cfe7491a14741dd786d862fce92e871e9a5cd28688b5bbb48a172a7a
+- 52d5324d5a026e9a98b5f944af4b667e19d4b114dd9cf1e66a40c111d3521ea6
 
 # `oracle_review_standard.py`
 
@@ -107,68 +89,57 @@
 # `oracle_standard.py`
 
 ## Summary
-- oracle file が従うべき基本規範を StructDoc として構築する対象。人間の認知負荷の節約、正本仕様断片としての扱い、未定義部分の許容、文字数最小化、論理矛盾の禁止、実装から仕様への逆流禁止、用語・命名の統一、oracle file 優先、goal/non-goal 境界の記述といった規範群を定義する。
-- prompt builder が出力する oracle standard 文書の根拠であり、oracle file の書き方・保守方針・仕様断片としての境界を確認する入口になる。
+- `oracle file` に関する規範文面のうち、標準そのものを組み立てる入口。`oracle` の役割や文量・未定義許容・用語統一・命名など、oracle 側の記述方針をまとめて確認したいときに読む。
+- 同じ `parts` 配下でも、`oracle` と `realization` の基本概念、`INDEX.md` のルーティング規則、レビューやアクセス規則を確認したいだけなら別の部品を読む方が直接的。
 
 ## Read this when
-- oracle file に書くべき内容と AI 裁量に任せてよい内容の境界を確認したいとき。
-- oracle file を小さく保つ、重複を避ける、未定義部分を許容する、矛盾を避けるといった規範を確認したいとき。
-- oracle file と既存実装・既存テストの関係、特に実装から仕様へ逆流させてよいかを判断したいとき。
-- oracle file 内の用語統一、命名、ベストプラクティスより oracle file を優先する判断、goal と non-goal の書き分けを確認したいとき。
-- oracle standard の StructDoc 生成内容や、各 Standard/Requirement の構成を変更・確認したいとき。
+- `oracle file` に書くべき規範や、oracle 側の記述方針を確認したいとき。
+- oracle 向けの標準文面を生成・調整したいとき。
+- 人間の認知負荷を抑える、正本仕様断片として扱う、未定義部分を許容する、用語や命名を統一する、といった oracle 側の判断基準を見直したいとき。
 
 ## Do not read this when
-- realization file の実装品質、テスト肥大化、依存追加、公開面増加など、実装側の規範だけを確認したいとき。
-- oracle file と realization file の定義や配置上の分類だけを確認したいとき。
-- 特定コマンドの入出力仕様や個別機能の正本仕様断片を探しているとき。
-- INDEX.md エントリーの生成規範そのものを確認したいとき。
-- StructDoc、Standard、Requirement、PlaceholderMap などのデータ構造や変換処理の実装詳細を確認したいとき。
+- `oracle` と `realization` の定義や責務境界そのものを確認したいときは、基本概念を説明する部品を読む。
+- `INDEX.md` の読み方やルーティング規則を調整したいときは、ルーティング規則の部品を読む。
+- レビュー基準、ファイルアクセス規則、realization 側の標準を確認したいときは、それぞれの専用部品を読む。
 
 ## hash
-- 79ba7326ddbddb60db66b8f2f933f29644dbd962fdc5dad23a17e7c3890e1ba2
+- ecb88e6faf0a7d7142d91d60afea5298c5d40c9412e5d111a5d9fd2c281bb8db
 
 # `realization_standard.py`
 
 ## Summary
-- realization file 全般の規範文書を構築する対象。realization file、realization code、realization test、補助ファイルの肥大化抑制、品質、コメント、分割統合、抽象化、公開面、依存、変更完了時の整理確認に関する標準をまとめて扱う。
-- 実装担当 AI が現行仕様を満たす最小で保守しやすい realization を作るための判断基準を生成する入口であり、コード追加・テスト追加・依存追加・公開面追加の前後に確認すべき規範を束ねる。
+- realization file 全般の規範を組み立てる部品。総文字数の抑制、旧仕様向け実装や重複の整理、コメントや docstring に残す意図、責務分割、抽象化の追加条件、公開面・永続状態・テスト・補助ファイルの増加抑制を見直すときに読む入口になる。
 
 ## Read this when
-- realization file の総量を減らす方針、重複実装や旧仕様向け実装の削除、不要なテストや補助ファイルの整理について確認したいとき。
-- realization code の責務分割、コメントや docstring に残すべき意図・根拠、過度な圧縮や将来用抽象化の禁止条件を確認したいとき。
-- realization file の分割・統合判断、8,000 文字や 16,000 文字を超えるファイルの扱い、巨大ファイルを放置しない基準を確認したいとき。
-- 新しい関数・クラス・モジュール・共有 helper を追加する前に、既存実装の修正や統合で足りるか、共通化してよい重複かを判断したいとき。
-- CLI 引数、サブコマンド、設定、環境変数、出力項目、状態ファイルなどの公開面や永続状態を増やしてよい条件を確認したいとき。
+- realization file の量を減らしたい、重複実装や旧仕様向け実装を整理したい、不要なテストや補助ファイルを削減したいとき。
+- realization code の責務分割、コメントや docstring に残すべき意図・根拠、過度な圧縮や将来用抽象化を避ける基準を確認したいとき。
+- realization file の分割・統合、巨大ファイルの扱い、追加した実装を既存実装と統合できるかを判断したいとき。
+- CLI 引数、設定、環境変数、出力項目、状態ファイルなどの公開面や永続状態を増やしてよい条件を確認したいとき。
 - realization test の追加・整理で、外部挙動や制御ロジックを検証する範囲、重複テストや過大 fixture の抑制を確認したいとき。
 - 外部依存、補助スクリプト、テンプレート、生成物、キャッシュ、ログ、一時ファイルを realization として追加・管理してよいか判断したいとき。
 
 ## Do not read this when
-- oracle file 自体の責務、正本仕様断片の扱い、人間判断と AI 裁量の境界など、oracle 側の一般規範を確認したいだけのとき。
-- パスキーワードや oracle file、realization file の基本定義だけを確認したいときは、基本概念を定義する文書を読む方が直接的である。
-- 特定の CLI 挙動、出力 schema、状態ファイル形式、個別コマンド仕様など、具体的なプロダクト仕様を探しているとき。
+- oracle file 側の責務、正本仕様断片の扱い、人間判断と AI 裁量の境界を確認したいだけのとき。
+- oracle / realization の基本定義だけを確認したいときは、より基礎的な概念説明を読む方が直接的なとき。
+- 特定の CLI 挙動、出力形式、状態ファイル形式、個別コマンド仕様など、具体的なプロダクト仕様を探しているとき。
 - realization の実装ファイルやテストファイルそのものを修正するために、対象コードの現在構造や既存テストを調べたいだけのとき。
 - INDEX.md エントリーの書き方やルーティング文書の規範だけを確認したいとき。
 
 ## hash
-- 70a575ce2ed7c73343dade21db24a5f3956c5da825f8ee42f4cfa22d2ff5a5ec
+- b10977f2789953a75c714c9f4a1ae906418b2486ade30a9924be347e91bcea1f
 
 # `routing_rule.py`
 
 ## Summary
-- INDEX.md を本文の代替ではなく読む先を選ぶ案内として扱うための、プロンプト用ルーティング規則を構築する部品。
-- 作業開始時に近い階層のルーティング情報から読み進め、判断できない場合だけ候補本文を確認する、という探索順序と判断基準を定義する。
+- `INDEX.md` を使って次に読む本文を選ぶための案内文を組み立てる。ルーティング方針の骨格を返すだけで、本文そのものは持たない。
 
 ## Read this when
-- AI が作業前にどの文章・ファイルへ進むべきかを判断するためのプロンプト規則を確認したいとき。
-- INDEX.md の Summary、Read this when、Do not read this when をどのように使って読む先を選ぶかを確認したいとき。
-- 対象領域が推定できる場合とできない場合で、どの階層のルーティング情報から読み始めるかを確認したいとき。
-- ルーティング情報と本文が食い違う可能性がある場合に、どちらを根拠として扱うかを確認したいとき。
+- `INDEX.md` の扱い方や、どの階層の文書を読むべきかという案内文を作るとき。
+- ルーティング規則の文面を、他の案内文の部品と組み合わせて出力するとき。
 
 ## Do not read this when
-- 個別ファイルや個別ディレクトリの具体的なルーティングエントリー内容を確認したいだけのとき。
-- パス語彙や work root の解決規則そのものを確認したいとき。
-- StructDoc やプレースホルダー展開の汎用的な仕組みを確認したいとき。
-- oracle file と realization file の定義や責務分担を確認したいとき。
+- `INDEX.md` 自体の内容を編集・評価したいとき。
+- 個別機能の仕様本文や実装内容を直接扱いたいとき。
 
 ## hash
-- 8f80f160290402887206332cf110cee5e25abf56ea8f64c2e77b4a7ecb246732
+- ddd2f19bf69e9acb2b20d1ec6b21626a93b9a6e9084ac2f96671c8981ca6e029

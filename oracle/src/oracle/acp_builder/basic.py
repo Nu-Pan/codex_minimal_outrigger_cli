@@ -41,18 +41,22 @@ class ModelClass(StrEnum):
 class ReasoningEffort(StrEnum):
     """
     cmoc 上の論理的な Reasoning effort
-    バックエンドが受理可能な Reasoning Effort 名への解決は realization src の責任
+    バックエンドに対応する Reasoning Effort 名が存在しない場合、realization src の責任で近い名前に丸めても良い
     """
 
     LOW = auto()
     MEDIUM = auto()
     HIGH = auto()
+    XHIGH = auto()
+    MAX = auto()
 
 
 class FileAccessMode(StrEnum):
     """cmoc 上の論理的なファイルアクセスモード
 
     各モードの詳細は `build_file_access_rule` を参照
+    Codex CLI sandbox への対応と permission profile の禁止規則は
+    `oracle/doc/app_spec/codex_exec_rule.md` を正本とする
     """
 
     READONLY = auto()
@@ -93,5 +97,5 @@ class AgentCallParameter:
     run_indexing_preflight: bool = field(default=True)
 
     # agent call 時のカレントパス
-    # 通常は `<work-root>` のままで良い
+    # 通常は `{{work-root}}` のままで良い
     cwd: Path = field(default_factory=lambda: resolve_work_root())

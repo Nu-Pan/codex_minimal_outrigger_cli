@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-# `<work-root>/oracle/src` is intentionally outside the packaged realization
-# tree, but existing compatibility modules re-export canonical oracle modules.
+# `{{work-root}}/oracle/src` は packaged realization tree の外にあるが、既存の
+# compatibility module は canonical oracle module を再公開する。
 _oracle_package = Path(__file__).resolve().parents[1] / "oracle" / "src" / "oracle"
 
 if not _oracle_package.is_dir():

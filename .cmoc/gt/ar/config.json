@@ -4,25 +4,27 @@
     "model": {
       "mainstream": {
         "model_provider": "codex",
-        "model": "gpt-5.5"
+        "model": "gpt-5.6-terra"
       },
       "flagship": {
         "model_provider": "codex",
-        "model": "gpt-5.5"
+        "model": "gpt-5.6-sol"
       },
       "efficiency": {
         "model_provider": "codex",
-        "model": "gpt-5.4-mini"
+        "model": "gpt-5.6-luna"
       },
       "minimum": {
         "model_provider": "codex",
-        "model": "gpt-5.4-mini"
+        "model": "gpt-5.6-luna"
       }
     },
     "reasoning_effort": {
       "low": "low",
       "medium": "medium",
-      "high": "high"
+      "high": "high",
+      "xhigh": "xhigh",
+      "max": "max"
     },
     "num_try_falv_recovery": 1
   },

@@ -1,6 +1,18 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Protocol
+
+
+class CodexExecOutput(Protocol):
+    """Codex exec 利用側が structured output から参照する最小契約。"""
+
+    @property
+    def output_json(self) -> Any:
+        """Codex Structured Output の検証済み JSON 値。"""
+        ...
+
+
+CodexExecCallable = Callable[..., CodexExecOutput]
 
 
 @dataclass(frozen=True)
@@ -25,8 +37,6 @@ class CodexExecResult:
     stderr_log_path: Path
     output_path: Path
     codex_home: Path
-    profile_name: str
-    profile_path: Path
     schema_path: Path | None
     elapsed_sec: float = 0.0
     quota_wait_sec: float = 0.0
