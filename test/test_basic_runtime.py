@@ -33,6 +33,7 @@ def test_path_model_resolves_token_path_inside_repo() -> None:
 def test_make_repo_ignores_global_commit_signing_and_hooks(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """test repositoryがglobal signingとhook設定に依存しないことを検証する。"""
     hooks = tmp_path / "hooks"
     hooks.mkdir()
     hook = hooks / "pre-commit"
@@ -78,11 +79,13 @@ def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
     release_first = threading.Event()
 
     def hold_first_directory() -> None:
+        """最初のpushdを保持して次のthreadを待たせる。"""
         with pushd(first):
             first_ready.set()
             release_first.wait(5)
 
     def enter_second_directory() -> None:
+        """二つ目のpushdへ入り、lock解放後に進めることを記録する。"""
         first_ready.wait(5)
         second_started.set()
         with pushd(second):
@@ -121,6 +124,7 @@ def test_run_root_placeholder_rejects_main_worktree(
 def test_create_run_worktree_rejects_path_outside_managed_worktrees(
     tmp_path: Path,
 ) -> None:
+    """管理領域外のpathでrun worktreeを作成しないことを検証する。"""
     root = make_repo(tmp_path)
     target = tmp_path / "unrelated"
     target.mkdir()
@@ -135,6 +139,7 @@ def test_create_run_worktree_rejects_path_outside_managed_worktrees(
 def test_create_run_worktree_rejects_path_not_matching_branch(
     tmp_path: Path,
 ) -> None:
+    """branchと一致しないmanaged pathをrun worktreeとして作成しないことを検証する。"""
     root = make_repo(tmp_path)
     target = root / ".cmoc" / "gu" / "worktree" / "session" / "other-run"
     target.mkdir(parents=True)
@@ -150,6 +155,7 @@ def test_create_run_worktree_rejects_path_not_matching_branch(
 def test_create_run_worktree_rejects_symlink_components(
     tmp_path: Path, symlink_component: str
 ) -> None:
+    """symlink componentを経由したrun worktree作成を拒否することを検証する。"""
     root = make_repo(tmp_path)
     managed = root / ".cmoc" / "gu" / "worktree"
     external = tmp_path / "external"
@@ -179,6 +185,7 @@ def test_create_run_worktree_rejects_symlink_components(
 def test_create_run_worktree_rejects_unregistered_managed_path(
     tmp_path: Path,
 ) -> None:
+    """Git未登録のmanaged pathをrun worktreeとして扱わないことを検証する。"""
     root = make_repo(tmp_path)
     target = root / ".cmoc" / "gu" / "worktree" / "session" / "run"
     target.mkdir(parents=True)
@@ -193,6 +200,7 @@ def test_create_run_worktree_rejects_unregistered_managed_path(
 def test_remove_worktree_rejects_path_outside_managed_worktrees(
     tmp_path: Path,
 ) -> None:
+    """管理領域外のpathをworktree削除対象にしないことを検証する。"""
     root = make_repo(tmp_path)
     target = tmp_path / "unrelated"
     target.mkdir()
@@ -208,6 +216,7 @@ def test_remove_worktree_rejects_path_outside_managed_worktrees(
 def test_remove_worktree_rejects_symlink_components(
     tmp_path: Path, symlink_component: str
 ) -> None:
+    """symlink componentを経由したworktree削除を拒否することを検証する。"""
     root = make_repo(tmp_path)
     managed = root / ".cmoc" / "gu" / "worktree"
     external = tmp_path / "external"
@@ -245,8 +254,35 @@ def test_remove_worktree_rejects_symlink_components(
 def test_remove_worktree_rejects_unregistered_managed_path(
     tmp_path: Path,
 ) -> None:
+    """Git未登録のmanaged pathをworktree削除対象にしないことを検証する。"""
     root = make_repo(tmp_path)
     target = root / ".cmoc" / "gu" / "worktree" / "session" / "run"
+    target.mkdir(parents=True)
+    (target / "keep.txt").write_text("keep\n")
+
+    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+        remove_worktree(root, target)
+
+    assert (target / "keep.txt").read_text() == "keep\n"
+
+
+def test_remove_worktree_rejects_replaced_registered_path(
+    tmp_path: Path,
+) -> None:
+    """staleなGit登録だけを根拠に通常directoryを削除しないことを検証する。"""
+    root = make_repo(tmp_path)
+    target = root / ".cmoc" / "gu" / "worktree" / "session" / "run"
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        "cmoc/apply/session/run",
+        str(target),
+        "HEAD",
+    )
+    moved = tmp_path / "moved-worktree"
+    target.rename(moved)
     target.mkdir(parents=True)
     (target / "keep.txt").write_text("keep\n")
 

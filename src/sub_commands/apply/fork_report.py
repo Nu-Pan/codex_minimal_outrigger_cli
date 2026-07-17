@@ -1,3 +1,4 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
 from dataclasses import replace
 from pathlib import Path
 
@@ -109,8 +110,9 @@ def build_change_summary(
     *,
     allow_codex_summary: bool = True,
 ) -> list[dict]:
+    """apply forkの差分をCodex要約または決定論的fallbackでまとめる。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
-    # Initialization errors can be reported before the linked worktree exists.
+    # linked worktree が存在する前でも initialization error は報告できる。
     if not apply_worktree.is_dir():
         return [
             {
@@ -154,8 +156,9 @@ def build_change_summary(
 
 
 def changed_diff_since_fork(apply_worktree: Path, fork_commit: str) -> str:
-    # {{work-root}}/oracle/doc/app_spec/misc_spec.md excludes deleted paths from
-    # managed-branch event scope and classifies renames by their new path.
+    """fork時点以降のtracked、staged、untracked差分を一つのdiffへまとめる。"""
+    # {{work-root}}/oracle/doc/app_spec/misc_spec.md は deleted path を managed-branch
+    # event scope から除外し、rename を新しい path で分類する。
     commands = (
         [
             ["diff", *MANAGED_CHANGE_DIFF_OPTIONS, f"{fork_commit}..HEAD"],
@@ -177,15 +180,17 @@ def changed_diff_since_fork(apply_worktree: Path, fork_commit: str) -> str:
 
 
 def untracked_paths(apply_worktree: Path) -> list[str]:
+    """apply worktreeにある未追跡pathをGitの標準除外込みで列挙する。"""
     return run_git(
         ["ls-files", "--others", "--exclude-standard"], apply_worktree
     ).stdout.splitlines()
 
 
 def untracked_file_diffs(apply_worktree: Path) -> list[str]:
-    # `{{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md` requires all
-    # apply-branch changes; `{{work-root}}/oracle/doc/app_spec/misc_spec.md` makes
-    # untracked worktree files part of that.
+    """未追跡fileを/dev/nullとの差分として収集する。"""
+    # `{{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md` は apply-branch の全変更を
+    # 求め、`{{work-root}}/oracle/doc/app_spec/misc_spec.md` は untracked worktree file も
+    # その対象に含める。
     diffs: list[str] = []
     for path in untracked_paths(apply_worktree):
         result = run_git(
@@ -201,6 +206,7 @@ def untracked_file_diffs(apply_worktree: Path) -> list[str]:
 def fallback_change_summary(
     apply_worktree: Path, fork_commit: str, category: str
 ) -> list[dict]:
+    """Codex要約を使えない場合に変更pathだけの要約を返す。"""
     paths = changed_paths_since_fork(apply_worktree, fork_commit)
     if not paths:
         return [
@@ -220,6 +226,7 @@ def fallback_change_summary(
 
 
 def changed_paths_since_fork(apply_worktree: Path, fork_commit: str) -> list[str]:
+    """fork時点以降の変更pathを重複なく安定した順序で列挙する。"""
     commands = (
         [
             [
@@ -264,7 +271,7 @@ def render_apply_fork_report(
 ) -> str:
     """apply fork report を Markdown + YAML frontmatter で描画する。"""
     result_text = {
-        "converged": "収束: 検出された所見リストが空によりループを終了しました。",
+        "converged": "収束: 調査待ちファイルリストが空になったことによりループを終了しました。",
         "unconverged": (
             "未収束: ユーザー中断要求を受け付けたためループを終了しました。"
             if interrupted
@@ -275,8 +282,8 @@ def render_apply_fork_report(
     count_line_items = [
         f"- ループ {idx}: {count}" for idx, count in enumerate(finding_counts, 1)
     ] or ["- 所見列挙ループは実行されませんでした"]
-    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md requires this
-    # warning in the finding-count transition section, not only in the result.
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md はこの warning を result
+    # だけでなく finding-count transition section にも出すことを求める。
     if result_label == "unconverged":
         count_line_items.append(UNCONVERGED_FINDINGS_NOTE)
     if interrupted:

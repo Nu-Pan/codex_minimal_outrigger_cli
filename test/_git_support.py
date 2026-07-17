@@ -3,19 +3,19 @@ from pathlib import Path
 
 
 def run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    """Run a git command in the test repository and fail on command errors."""
+    """テスト repository で git command を実行し、command error なら失敗させる。"""
     return subprocess.run(
         ["git", *args], cwd=root, text=True, capture_output=True, check=True
     )
 
 
 def current_branch(root: Path) -> str:
-    """Return the checked-out branch name for git-state assertions."""
+    """git-state assertion 用に checkout 済み branch 名を返す。"""
     return run_git(root, "branch", "--show-current").stdout.strip()
 
 
 def make_repo(tmp_path: Path) -> Path:
-    """Create the smallest committed repository that cmoc CLI tests can target."""
+    """cmoc CLI test が対象にできる最小の commit 済み repository を作る。"""
     root = tmp_path / "repo"
     root.mkdir()
     run_git(root, "init")
@@ -34,7 +34,7 @@ def make_repo(tmp_path: Path) -> Path:
 
 
 def add_tracked_ignored_oracle_file(root: Path) -> None:
-    """Create a tracked oracle file that is also ignored by repository rules."""
+    """repository rule では ignore されるが追跡対象でもある oracle file を作る。"""
     (root / ".gitignore").write_text("oracle/ignored.md\n")
     (root / "oracle" / "ignored.md").write_text("# ignored\n")
     run_git(root, "add", "-f", ".gitignore", "oracle/ignored.md")

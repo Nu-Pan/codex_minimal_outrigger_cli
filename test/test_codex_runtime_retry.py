@@ -144,7 +144,7 @@ def test_run_codex_exec_logs_keyboard_interrupt(
             subcommand_logger=logger,
         )
 
-    console = capsys.readouterr().out
+    console = capsys.readouterr().err
     assert "- Exit code: `not started`" in console
     assert "- Error: `KeyboardInterrupt()`" in console
     call_logs = list(

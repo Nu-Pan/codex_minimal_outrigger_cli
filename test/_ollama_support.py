@@ -6,20 +6,20 @@ from click.testing import Result
 
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
-# Tests use the production per-user service; fake service lifecycle is not
-# part of the test boundary.
+# テストは production の per-user service を使い、fake service lifecycle はテスト境界に
+# 含めない。
 
 TEST_SLM_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 
 
 def run_doctor(root: Path) -> Result:
-    """Run doctor in root against the managed Ollama service shared with production."""
+    """production と共有する managed Ollama service に対して root で doctor を実行する。"""
     from main import app
 
     # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # Keep production HOME, PATH, and the fixed 127.0.0.1:11434 endpoint.
+    # production の HOME、PATH、固定 endpoint 127.0.0.1:11434 を維持する。
     # {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
-    # doctor has no root option; its cwd must identify the requested worktree.
+    # doctor に root option はないため、cwd で対象 worktree を指定する。
     with chdir(root):
         result = runner.invoke(app, ["doctor"], catch_exceptions=False)
     assert result.exit_code == 0, result.output

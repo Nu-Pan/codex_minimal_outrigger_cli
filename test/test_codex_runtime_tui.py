@@ -27,7 +27,7 @@ from config.cmoc_config import CmocConfig
 
 
 def _tui_call_logs(root: Path) -> list[Path]:
-    """Return the TUI call logs written for a repository."""
+    """repository に書き込まれた TUI call log を返す。"""
     directory = root / ".cmoc" / "gu" / "ar" / "log" / "codex"
     return list(directory.glob("*_tui_call.json"))
 
@@ -238,7 +238,7 @@ def test_run_codex_tui_logs_missing_cli_failure(
     finally:
         reset_current_subcommand_logger(token)
 
-    console = capsys.readouterr().out
+    console = capsys.readouterr().err
     call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1
     assert str(call_logs[0]) in console
@@ -275,7 +275,7 @@ def test_run_codex_tui_logs_keyboard_interrupt(
     finally:
         reset_current_subcommand_logger(token)
 
-    console = capsys.readouterr().out
+    console = capsys.readouterr().err
     assert "- Exit code: `not started`" in console
     call_logs = _tui_call_logs(root)
     assert len(call_logs) == 1

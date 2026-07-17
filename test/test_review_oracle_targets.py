@@ -171,6 +171,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     calls: list[str] = []
 
     def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
+        """対象なしのsession scopeからCodexが呼ばれた場合に失敗させる。"""
         calls.append(kwargs["purpose"])
         raise AssertionError(
             "no session-scope oracle targets should skip review Codex calls"

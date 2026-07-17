@@ -1,36 +1,34 @@
 # `apply`
 
 ## Summary
-- `cmoc apply` サブコマンド群の実装ディレクトリ。abandon・fork・join と、fork のレポート生成を通じて、apply run の開始から cleanup・merge・結果報告までのライフサイクルを扱う。具体的な挙動を調べる際は、対象サブコマンドまたはレポート実装へ進む入口となる。
+- apply サブコマンドの実装パッケージ。apply run の abandon・fork・join、fork report、および各処理の状態管理・Git worktree/branch・process tracking・レポート生成を扱う。apply サブコマンドの実装を確認・変更するときの入口。
 
 ## Read this when
-- `cmoc apply` のサブコマンド構成や apply run 全体のライフサイクルを把握したいとき。
-- apply の開始・レビュー修正・commit・収束判定・merge・report・abandon・cleanup のいずれかを変更または調査するとき。
-- apply branch、worktree、process 追跡、session state の連携を、具体的な apply 処理の文脈で確認したいとき。
+- `cmoc apply` の abandon、fork、join の実行フローや失敗時処理を確認・変更するとき。
+- apply branch・worktree・session state・process tracking・report のライフサイクルや相互作用を調査するとき。
+- apply fork の対象ファイル列挙・Codex review-and-fix ループ、fork report の差分要約、apply join の merge・conflict 解決・想定外差分判定を確認するとき。
 
 ## Do not read this when
-- apply と無関係なサブコマンドや共通 runtime、Git 操作、session state、process lock の一般実装だけを調査するとき。
-- 特定のサブコマンドの詳細を直接確認する場合は、対象の実装ファイルへ進めるとき。
-- apply 対象ファイル単位の review/fix パラメータや finding schema だけを確認したいとき。
+- apply 以外のサブコマンドを扱うとき。
+- 共通 CLI runtime、session state、Git 操作、process lock などの一般実装だけを変更・確認するときは、対応する共通モジュールを直接読む。
+- apply fork 内の prompt／parameter 詳細や、fork report の描画詳細だけを確認するときは、該当する個別実装を直接読む。
 
 ## hash
-- 59ca6d80686f81c5cfc04a10ade1c00fa81122e2848bbc35220570b7394bdef6
+- a8d4b62f6d4790dcf00c3db0b0d53547cb35b05c332e2cc563e89a57c1b18ef8
 
 # `doctor.py`
 
 ## Summary
-- doctor サブコマンドの実処理として、CLI runtime の preprocess 実行経路へ処理を委譲する薄い入口。doctor 固有の処理内容はここでは持たず、明示的に doctor preprocess を起動する責務だけを持つ。
+- doctor サブコマンドの実装。CLI runtime を介して doctor 用の preprocess 処理を明示的に実行する。
 
 ## Read this when
-- doctor サブコマンドが呼ばれた時に、どの runtime preprocess 名へ委譲されるかを確認したいとき。
-- doctor サブコマンドの実装入口と、runtime preprocess 実行処理との接続を変更または確認したいとき。
+- doctor サブコマンドの動作や preprocess 呼び出しを確認・変更するとき。
 
 ## Do not read this when
-- preprocess command の実行方法、失敗時挙動、runtime 側の制御を調べたいときは、preprocess 実行を担う commons 側の実装を読む。
-- doctor preprocess の中身や診断項目を調べたいときは、その preprocess 本体を読む。
+- doctor 以外のサブコマンドを扱うとき。preprocess の共通実装自体を確認するときは、共通 runtime preprocess command の実装を直接読む。
 
 ## hash
-- 13b0493ce99287b1643522676065d9b8d003da0fc0cc55a3423864c0541091a8
+- 9324a8b1f2f1bbd3a83adfb61690e64ff7e1f6502e165e208c84e2cefbd35980
 
 # `eval_oracle.py`
 
@@ -51,101 +49,99 @@
 # `indexing.py`
 
 ## Summary
-- `cmoc indexing` サブコマンドの実行入口。現在の work root を対象に、前提条件の検査、排他ロック下での INDEX.md 更新、更新差分の commit、更新件数の表示を行う。
+- `cmoc indexing` サブコマンドの CLI 実行入口。worktree の安全条件を確認し、ロック下で INDEX.md の更新と差分 commit を実行する。
 
 ## Read this when
-- INDEX.md の maintenance 処理、`cmoc indexing` の CLI 実行条件、INDEX.md 更新の commit 処理を変更・調査するとき。
+- `cmoc indexing` の実行フロー、worktree 前提条件、インデックス更新・commit 処理を変更または調査するとき。
 
 ## Do not read this when
-- 個別の INDEX.md エントリー内容や、インデックス生成ロジック自体を調べるとき。前者は対象の INDEX.md、後者は `commons.indexing` を直接読む。
+- インデックス更新の具体的な処理や commit の実装自体を調査するときは、`commons.indexing` の実装を直接読む。
+- 他のサブコマンドの CLI 実行フローだけを調査するとき。
 
 ## hash
-- 1a10ace893665790d49691c5787a004cd8de79848adf472caa5099c64a4599b6
+- 648fe512e7039f2060fbe5969945f9992a0b8b3697e92d2cbbf949083d8804ce
 
 # `review`
 
 ## Summary
-- review 系サブコマンド群をまとめる Python package。review oracle の CLI 実行ライフサイクルと、所見検出・対象列挙・INDEX 統合・レポート生成へ進むための入口を提供する。
+- review 系サブコマンド群の Python package。oracle 実行入口と、関連するレビュー処理モジュールへの入口を含む。
 
 ## Read this when
-- review 系サブコマンド群の package 境界や構成を確認したいとき。
-- review oracle の実行ライフサイクルを調べるときは oracle.py を読む。
-- 所見検出、oracle 対象列挙、INDEX 統合、レポート生成の具体的な処理を調べるときは、この階層内の各担当モジュールを読む。
+- review oracle の CLI 実行フロー、worktree・branch 管理、レビュー対象選定、割り込み・例外処理を調査するとき
+- review 系サブコマンドの package 構成や関連モジュールへの入口を確認するとき
 
 ## Do not read this when
-- review oracle の具体的な所見検出ループだけを調べるとき。
-- oracle 対象ファイルの列挙規則だけを調べるとき。
-- review report の表示形式やファイル書き込みだけを調べるとき。
-- review branch の INDEX 変更の commit・merge・conflict 解決だけを調べるとき。
+- 判定ループ、対象列挙、レポート形式、INDEX の commit・merge 処理など、個別機能だけを調査するときは対応する実装モジュールを直接読む
+- package 初期化の import や公開シンボルだけを調査するときは、具体的な処理を持たない初期化モジュールを読む必要はない
 
 ## hash
-- d0b68039591eb520040c7a01c7dcb12b6d27b65a6108ca7bdf6becb9892758fd
+- 261d8f5ae9ec1180763418a7bfa77e257cfbad56d74bc7b1a72d8903d6c04c43
 
 # `review_index.py`
 
 ## Summary
-- review 実行の最後に `INDEX.md` だけを commit し、review branch を session branch へ merge する処理を扱う。`INDEX.md` 以外の差分を拒否する制御や、merge 時の `INDEX.md` conflict 解決の境界を確認したいときに読む。
+- review oracle 用 worktree の INDEX.md 変更を検証・commitし、INDEX.md のみからなる review branch を session branch に merge するための Git 操作を扱う。変更 path の検査、競合解決、merge 後の commit 取得が下位処理への入口となる。
 
 ## Read this when
-- review の隔離 worktree で発生した差分を commit する条件や、review branch を session branch に取り込む条件を確認したい。
-- merge conflict が `INDEX.md` だけのときに自動解決してよいか、どの差分を許容しないかを確認したい。
+- review oracle の INDEX.md 変更を commit または merge する処理を確認するとき
+- review branch に INDEX.md 以外の差分がないことの検証や、INDEX.md の merge conflict 解決を調べるとき
 
 ## Do not read this when
-- review 対象の列挙や report の描画を追いたい場合は、対象選択・レポート側の文書を読む。
-- review 実行全体のフローや CLI 入り口を追いたいだけなら、subcommand 全体の本文を先に読む。
+- 通常のアプリケーション機能や review oracle の内容自体を調べるとき
+- INDEX.md 変更以外の Git 操作、または一般的な worktree 状態管理を直接確認したいとき
 
 ## hash
-- 114fcb70e72c2d3d48d04ca130852a6142148c4f61ea9504529d356f7666dc93
+- ffbcec8958ff3f1466d4fe84e3f1be83be150a4ea79cd32761b2cf7dfbfc4673
 
 # `review_loop.py`
 
 ## Summary
-- レビュー対象 oracle file の finding 列挙・マージ・妥当性検証・採否判定を連続実行する中核ループ。進捗管理、中断時の部分結果保持、merge operation の検証と適用も担う。
+- レビュー対象の oracle file 群に対して、finding の列挙・意味的マージ・反証/擁護による検証・採否判定を反復実行する review oracle loop の実装。
+- 中断時には確定済み finding と評価済みファイルを専用例外で呼び出し元へ返し、merge operation の形式・対象 ID・重複を検証して不正な Structured Output を再試行する。
 
 ## Read this when
-- review oracle のループ制御、finding の enumerate/merge/validate/judge 処理を変更・調査するとき
-- KeyboardInterrupt 時の部分結果や評価済みファイルの扱いを確認するとき
-- finding merge operation の適用条件・ID 管理・意味的リトライを確認するとき
+- review oracle の実行フロー、進捗保持、KeyboardInterrupt 時の部分結果、finding の検証・判定を変更または調査するとき
+- finding の merge operation 契約や、列挙・マージ・反証・擁護・judge の Codex 呼び出し連携を確認するとき
 
 ## Do not read this when
-- review oracle の個別 agent call parameter 生成だけを変更・調査するとき
-- review command のパス解決や CLI 入出力など、ループ本体以外を直接扱うとき
-- review oracle と無関係なサブコマンドの実装を扱うとき
+- review コマンド全体の CLI 入出力やパス定義だけを確認したいときは、対応する review command/path の実装を直接読む
+- review oracle の各 agent prompt の内容だけを変更・確認するときは、各 build parameter の実装を直接読む
 
 ## hash
-- d6b04ff683fc8b3f1d106f15426561f9dc2b2d3dbd406c492f7867bd21be3ab6
+- a818d7636b9973397e8b7b34f401427387d1d7a45e6d767a29bb182175c210fb
 
 # `review_paths.py`
 
 ## Summary
-- oracle ファイルのパスを安全に解決し、評価対象のリポジトリ相対キーへ変換する補助関数群。絶対パス、oracle-root エイリアス、既知のルートプレースホルダーを扱い、シンボリックリンクを追跡しない正規化を行う。
+- oracle_path を解決して絶対パスへ変換する処理と、oracle file のパスを repository-relative key へ変換する処理を提供する。通常の repository root、oracle root alias、既知の managed worktree を扱い、対象外のパスは無視する。symlink を追跡しないパス正規化 helper も含む。
 
 ## Read this when
-- oracle_path の解決や oracle file のリポジトリ相対キー化を変更・確認するとき
-- main worktree と cmoc 管理下の isolated worktree のパス境界を確認するとき
+- review report や finding に含まれる oracle_path の解決・正規化・キー化を変更または調査するとき
+- oracle root、worktree 境界、symlink の扱いに関係するパス処理を確認するとき
 
 ## Do not read this when
-- review report の生成ロジックや oracle 内容そのものを確認したいとき
-- パス解決・oracle キー変換に関係しないサブコマンド処理を変更するとき
+- review report の生成ロジックや oracle_path の入力仕様そのものを確認するときは、参照されている oracle 文書・実装を直接読む
+- パス処理と無関係な sub-command の実装を変更するとき
 
 ## hash
-- 64d912c294cf5559590fc131006b59474f97885375f456e5050ff1a2e38d80f9
+- 2174112c8b159a6683cf0a66278af86d213bbef2c9b6e25917fb93d0e72299c6
 
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を Markdown レポートとして保存・描画するモジュール。レポートの保存先、YAML frontmatter、Verdict、評価対象 oracle 一覧、Fatal/Minor 所見の表示を扱う。
+- review oracle の結果を Markdown レポートとして生成・保存する実装。レポートの保存先、YAML frontmatter、Verdict、対象 oracle 一覧、Fatal/Minor 所見の分類・順序、エラーや中断時の結果判定、finding と path の描画を扱う。review oracle レポート出力の実装を変更・調査する際の入口。
 
 ## Read this when
-- review oracle のレポート形式、判定結果、所見の分類・表示順、評価対象 oracle の一覧を変更または確認するとき
-- review oracle 実行後に生成されるレポートの保存処理やパス表示を変更するとき
+- review oracle サブコマンドのレポート形式、保存処理、Verdict 判定、finding の表示順を変更・検証するとき
+- レビュー結果の frontmatter や Markdown セクション構成が期待どおりか調査するとき
+- 所見の severity・verdict 分類、oracle path 表示、エラー・中断・対象なしの扱いを確認するとき
 
 ## Do not read this when
-- review oracle の対象 oracle file の選定・評価ロジック自体を変更または確認するとき
-- 他のサブコマンドのレポート形式や、レビュー以外の永続化処理を扱うとき
+- レビュー処理そのものの対象探索、oracle 内容の評価、git branch 操作を調査するときは、対応するレビュー実行・探索処理を直接読む
+- 一般的なレポート生成や他サブコマンドの出力を調査するとき
 
 ## hash
-- fc68feb20231a9c0576da203d66683c72b8b4b67eec4b70d57e3fdd7f98b9c72
+- 05e364b8ace32c3e484f56c08353323b1de9befbf8a066acd22af1d43106b742
 
 # `review_targets.py`
 
@@ -166,18 +162,18 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装パッケージ。session の fork、join、abandon と、パッケージ初期化モジュールを下位要素として収める入口。
+- session サブコマンドの実装パッケージ。fork、join、abandon の各 session 操作に関する CLI 実装を確認する入口。
 
 ## Read this when
-- session サブコマンド全体の構成や、fork・join・abandon のどの実装へ進むべきかを確認したいとき。
-- session branch、session state、merge、破棄処理のいずれかを調査・変更するとき。
+- session サブコマンドの実装や構成を確認・変更するとき。
+- session branch、session state、cleanup、merge、rollback など session 操作の挙動を調査するとき。
 
 ## Do not read this when
-- 共通 CLI ルーティングや session 以外のサブコマンドを調べるとき。
-- 特定の session サブコマンドの詳細な挙動だけを調べるとき。その場合は対応する下位実装を直接読む。
+- session 以外のサブコマンドを扱うとき。
+- 共通の git 操作、state 操作、Codex 実行規則、session データモデル自体を直接確認するとき。
 
 ## hash
-- 2ddc936b16739248793392ee38e5ae623a8c4422f180d881c9019185f1e1f834
+- fd4b0da87a48090397a866c729c2b89e9e18e7a38833e92107be89c7220385bd
 
 # `tui.py`
 

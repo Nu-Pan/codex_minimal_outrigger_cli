@@ -9,6 +9,7 @@ CLI を呼ばず、pid file、advisory lock、pidfd、process group の低レベ
 import threading
 import time
 from multiprocessing import Pipe, Process
+from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
@@ -16,7 +17,9 @@ import pytest
 import commons.runtime_apply as apply_runtime
 
 
-def hold_apply_process_id_lock(path: Path, ready: object, release: object) -> None:
+def hold_apply_process_id_lock(
+    path: Path, ready: Connection, release: Connection
+) -> None:
     """別 process で advisory lock を保持するテスト用 helper。"""
     from commons.runtime_codex_profile import apply_process_id_file_lock
 
@@ -32,9 +35,11 @@ def test_stop_apply_process_rereads_child_groups_after_parent_exit(
     order: list[str] = []
 
     def fake_stop_child(process: apply_runtime.ProcessIdentity) -> None:
+        """停止対象childのPIDを順序付きで記録する。"""
         order.append(f"child:{process.process_id}")
 
     def fake_send_signal(process_fd: int, process_id: int, sig: int) -> None:
+        """親processへ送るsignalを順序付きで記録する。"""
         order.append(f"parent:{process_id}:{sig}")
 
     monkeypatch.setattr(apply_runtime, "stop_child_process_group", fake_stop_child)
@@ -235,10 +240,12 @@ def test_stop_child_process_group_opens_pidfd_before_identity_check(
     stopped: list[int] = []
 
     def fake_open_process_fd(process_id: int, name: str) -> int:
+        """pidfd取得を記録し、固定fdを返す。"""
         order.append(f"open:{process_id}:{name}")
         return 10
 
     def fake_process_start_time(process_id: int) -> int:
+        """固定start timeを返し、identity確認を記録する。"""
         order.append(f"start:{process_id}")
         return 99
 

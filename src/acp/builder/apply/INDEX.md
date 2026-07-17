@@ -16,17 +16,18 @@
 # `fork`
 
 ## Summary
-- `cmoc apply fork` の realization 側 builder package。正本側 builder への委譲入口と、repo root・oracle import 解決などの共通処理を扱い、ファイル単位レビュー・修正および変更要約の agent call parameter を構築する。
+- 対象ディレクトリは、apply fork 用の realization 側 ACP builder 入口と、その共通委譲処理・変更要約・ファイルレビュー／修正用 builder をまとめる。各ファイルは正本側 builder を呼び出し、realization 側で利用する parameter を公開する薄い境界層である。
 
 ## Read this when
-- `cmoc apply fork` の realization 側 builder の責務や、正本 builder への委譲経路を確認するとき。
-- fork 系 builder の repo root 解決、oracle import、ACP parameter の受け渡しを変更するとき。
-- ファイル単位レビュー・修正または変更要約の parameter 構築入口を変更するとき。
+- apply fork の builder package の責務や、realization 側から正本 builder へ委譲する入口を確認・変更するとき。
+- repo root 解決、oracle builder の import、ACP parameter の受け渡しを確認するときは共通処理を読む。
+- 変更要約の agent call parameter を確認するときは変更要約 builder を読む。
+- ファイル単位のレビュー・修正・検証用 parameter の委譲経路を確認するときは file review and fix builder を読む。
 
 ## Do not read this when
-- `cmoc apply fork` のループ制御、再投入、commit、state 遷移を調べたいとき。
-- レビュー・修正や変更要約の prompt・schema など、正本仕様そのものを確認したいとき。
-- `cmoc apply fork` 以外のサブコマンドの実装や、fork builder と無関係な import 解決を変更したいとき。
+- apply fork のループ制御や state 遷移を調べる場合は、対応するサブコマンド実装を直接読む。
+- prompt、schema、変更要約、レビュー・修正の正本仕様を確認する場合は、対応する oracle 側の実装を直接読む。
+- apply fork 以外の ACP builder の具体的な処理を確認する場合は、対象の builder package を直接読む。
 
 ## hash
-- a54a5a0855c60c8416edffeb93bfae4bdd9f7c780aec7743f8eb4d75eda73e06
+- cc011deeb76dfdb4bf74083832c3c3ae0533bc3dd45d5aaab951d185b67bfedb

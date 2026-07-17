@@ -115,8 +115,8 @@ def apply_process_tracking(root: Path, session_id: str) -> Iterator[None]:
     path = apply_process_id_path(root, session_id)
     old_value = os.environ.get(APPLY_PROCESS_TRACKING_ENV)
     # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
-    # Env is restored for compatibility, but the active tracking decision stays
-    # process-local so a parent shell cannot force unrelated Codex calls into it.
+    # Env は compatibility のため復元するが、active tracking の判断は process-local に
+    # 保つ。これにより親 shell が無関係な Codex call をそこへ向けることを防ぐ。
     old_tracking_path = set_apply_process_tracking_path(path)
     os.environ[APPLY_PROCESS_TRACKING_ENV] = str(path)
     try:
@@ -130,6 +130,7 @@ def apply_process_tracking(root: Path, session_id: str) -> Iterator[None]:
 
 
 def _read_apply_process_id_file(path: Path) -> ApplyProcessIdentity | None:
+    """pid fileを検証し、壊れていれば停止対象なしとして返す。"""
     if not path.is_file():
         return None
     try:
@@ -190,6 +191,7 @@ def stop_apply_process(
     warnings: list[str] = []
 
     def joined_warnings(*extra: str) -> str | None:
+        """蓄積したwarningと追加warningを一つの表示用文字列へまとめる。"""
         combined = [*warnings, *extra]
         return "; ".join(combined) if combined else None
 
@@ -219,6 +221,7 @@ def stop_apply_process(
 
 
 def _stop_parent_apply_process(process: ApplyProcessIdentity) -> str | None:
+    """保存済み同一性を確認して親apply processを停止する。"""
     process_id = process.process_id
     process_fd = open_process_fd(process_id)
     if process_fd is None:

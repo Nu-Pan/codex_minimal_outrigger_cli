@@ -5,6 +5,8 @@
 apply state、worktree、再キュー、commit subject は同じ loop の失敗時復旧条件を
 共有するため、分割すると fork 中の読み取り文脈がかえって分散する。
 現状は apply fork の orchestration として一箇所に保つ方が凝集性が高い。
+
+根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
 """
 
 import os
@@ -93,8 +95,8 @@ def _cmoc_apply_fork_body(
     require_clean_worktree(current_root)
     config = load_config(current_root)
     # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
-    # Re-read the mutable state while holding the lifecycle lock. Otherwise two
-    # callers can both observe ready and publish different apply runs.
+    # lifecycle lock の保持中に mutable state を読み直す。そうしないと二つの caller が
+    # どちらも ready を観測し、異なる apply run を公開できてしまう。
     finding_counts: list[int] = []
     result_label = "error"
     report_path: Path | None = None
@@ -131,8 +133,8 @@ def _cmoc_apply_fork_body(
                 apply_branch=apply_branch,
                 oracle_snapshot_commit=oracle_snapshot_commit,
             )
-            # Publish the cleanup target before creating it. The lifecycle lock keeps
-            # abandon from observing a running state without its PID/worktree.
+            # cleanup target を作成前に公開する。lifecycle lock により、abandon が PID や
+            # worktree のない running state を観測することを防ぐ。
             state_published = True
             write_state(path, state)
             create_run_worktree(
@@ -251,8 +253,8 @@ def _cmoc_apply_fork_body(
                 )
     except BaseException as exc:
         # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
-        # An interrupted Codex call may outlive this apply process. Preserve
-        # its child identity so error-state abandon can stop it before cleanup.
+        # 中断された Codex call はこの apply process より長く生存し得る。
+        # error state の abandon が cleanup 前に停止できるよう child identity を保持する。
         if state_published:
             error_state_saved = False
             try:
@@ -292,15 +294,15 @@ def _cmoc_apply_fork_body(
                         exc.add_note(f"apply resource rollback failed: {failure}")
                     if not rollback_failures:
                         try:
-                            # Immediate rollback leaves no active run for abandon.
+                            # 即時 rollback では abandon が扱う active run が残らない。
                             state.apply = ApplyPart()
                             write_state(path, state)
                         except BaseException as reset_error:
                             exc.add_note(f"apply state reset failed: {reset_error}")
                 exc.add_note(f"apply run recovery failed: {recovery_error}")
         raise
-    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md requires the
-    # generated report path on stdout; common runtime logs are emitted around it.
+    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md は生成した report path を
+    # stdout に出すことを求める。common runtime log はその前後に出力する。
     return CliRunResult(
         returncode=2 if result_label == "unconverged" else 0,
         stdout=str(report_path.resolve()),

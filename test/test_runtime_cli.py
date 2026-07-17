@@ -17,6 +17,8 @@ import json
 import shutil
 import subprocess
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -46,6 +48,8 @@ def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> Non
     assert format_duration(99 * 3600 + 59 * 60 + 59.99) == "99h 59m 59.9s"
     with pytest.raises(ValueError, match="two-digit hour"):
         format_duration(100 * 3600)
+    with pytest.raises(ValueError, match="non-negative"):
+        format_duration(-0.1)
 
 
 def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
@@ -70,6 +74,29 @@ def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
     assert second.path.name == "2026-06-27_10-00_00_000002000.jsonl"
     assert [line for line in first.path.read_text().splitlines() if line]
     assert [line for line in second.path.read_text().splitlines() if line]
+
+
+def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
+    tmp_path: Path,
+) -> None:
+    """共有 logger へ並列 worker が記録しても event と待機時間を失わない。"""
+    logger = SubcommandLogger(tmp_path, "indexing")
+    worker_count = 8
+    barrier = threading.Barrier(worker_count)
+
+    def record_worker_event(index: int) -> None:
+        """共有 logger への並列書き込みを再現する。"""
+        barrier.wait()
+        logger.add_quota_wait(0.25)
+        logger.event("worker", index=index)
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        list(executor.map(record_worker_event, range(worker_count)))
+
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    assert len(events) == worker_count
+    assert all(event["event"] == "worker" for event in events)
+    assert logger.quota_wait_sec == pytest.approx(worker_count * 0.25)
 
 
 def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
@@ -131,6 +158,20 @@ def test_render_error_fills_empty_next_actions() -> None:
     assert sum(line.startswith("- ") for line in next_actions.splitlines()) >= 2
     assert "入力、実行場所、設定、作業ツリー状態に問題がある場合" in next_actions
     assert "原因が実装不具合または仕様不足に見える場合" in next_actions
+
+
+def test_render_error_uses_passed_exception_traceback() -> None:
+    """報告対象の例外と現在の例外が異なっても対象の stack を出す。"""
+    try:
+        raise ValueError("reported error")
+    except ValueError as reported:
+        try:
+            raise RuntimeError("unrelated active error")
+        except RuntimeError:
+            rendered = render_error(reported)
+
+    assert "ValueError: reported error" in rendered
+    assert "RuntimeError: unrelated active error" not in rendered
 
 
 def test_cli_error_report_is_written_to_stdout(

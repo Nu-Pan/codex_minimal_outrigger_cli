@@ -10,14 +10,15 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 
 
 class FakeCodexResult:
-    """apply fork tests' minimal structured Codex result double."""
+    """apply fork test 用の最小 Structured Codex result double。"""
 
     def __init__(self, output_json: object | None = None) -> None:
+        """structured outputの検証対象を初期化する。"""
         self.output_json = output_json
 
 
 def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Prepare a minimal authenticated Codex home for fake CLI execution."""
+    """fake CLI 実行用の最小 authenticated Codex home を準備する。"""
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
     (codex_home / "auth.json").write_text("{}\n")
@@ -26,11 +27,11 @@ def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def stub_managed_ollama_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Skip managed Ollama setup while testing fake Codex subprocess argv."""
+    """fake Codex subprocess argv のテスト中は managed Ollama setup を省略する。"""
     import commons.runtime_doctor as doctor_module
 
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    # Fake Codex tests verify cmoc's argv construction, not the shared service.
+    # fake Codex test は cmoc の argv construction を検証し、共有 service は検証しない。
     monkeypatch.setattr(
         doctor_module,
         "ensure_ollama_serves_local_slm",
@@ -41,7 +42,7 @@ def stub_managed_ollama_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
 def codex_parameter(
     mode: FileAccessMode = FileAccessMode.READONLY, *, cwd: Path | None = None
 ) -> AgentCallParameter:
-    """Build the small default Codex parameter used by runtime wrapper tests."""
+    """runtime wrapper test で使う小さな既定 Codex parameter を作る。"""
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
@@ -56,15 +57,16 @@ def codex_parameter(
 
 
 def codex_arg_value(args: list[str], flag: str) -> str | None:
-    """Return the value following a single-value Codex CLI flag."""
+    """単一値 Codex CLI flag の直後にある value を返す。"""
     return args[args.index(flag) + 1] if flag in args else None
 
 
 def codex_override_config(args: list[str]) -> dict[str, object]:
-    """Merge repeated Codex `--config key=value` arguments for assertions."""
+    """assertion 用に繰り返された Codex `--config key=value` argument を merge する。"""
     result: dict[str, object] = {}
 
     def merge(target: dict[str, object], source: dict[str, object]) -> None:
+        """nested dictを再帰的にmergeする。"""
         for key, value in source.items():
             current = target.get(key)
             if isinstance(current, dict) and isinstance(value, dict):
@@ -79,7 +81,7 @@ def codex_override_config(args: list[str]) -> dict[str, object]:
 
 
 def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Use stable Codex override argv in tests that target subprocess control."""
+    """subprocess control を対象にする test で安定した Codex override argv を使う。"""
     import commons.runtime_codex_exec as exec_module
     import commons.runtime_codex_tui as tui_module
 
@@ -97,6 +99,7 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     ]
 
     def fake_prepare(*_args: object, **_kwargs: object) -> list[str]:
+        """Codex overrideを固定値で返す。"""
         return list(override_args)
 
     monkeypatch.setattr(exec_module, "prepare_codex_override_args", fake_prepare)

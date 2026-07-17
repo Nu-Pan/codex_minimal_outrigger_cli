@@ -31,30 +31,37 @@ from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 
 
 def build_apply_review_standard() -> StructDoc:
+    """canonical apply review standardの本文だけを返す。"""
     return _build_apply_review_standard()[1]
 
 
 def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
+    """canonical file access ruleの本文だけを返す。"""
     return _build_file_access_rule(mode)[1]
 
 
 def build_index_entry_standard() -> StructDoc:
+    """canonical index entry standardの本文だけを返す。"""
     return _build_index_entry_standard()[1]
 
 
 def build_review_oracle_standard() -> StructDoc:
+    """canonical review oracle standardの本文だけを返す。"""
     return _build_review_oracle_standard()[1]
 
 
 def build_realization_standard() -> StructDoc:
+    """canonical realization standardの本文だけを返す。"""
     return _build_realization_standard()[1]
 
 
 def build_routing_rule() -> StructDoc:
+    """canonical routing ruleの本文だけを返す。"""
     return _build_routing_rule()[1]
 
 
 def test_build_apply_review_standard_renders_core_review_aspects() -> None:
+    """apply review standardの主要な所見境界がrenderされることを検証する。"""
     doc = build_apply_review_standard()
 
     assert isinstance(doc, StructDoc)
@@ -68,6 +75,7 @@ def test_build_apply_review_standard_renders_core_review_aspects() -> None:
 
 
 def test_build_routing_rule_renders_core_reading_rules() -> None:
+    """routing ruleがINDEX案内の主要な見出しをrenderすることを検証する。"""
     doc = build_routing_rule()
 
     assert isinstance(doc, StructDoc)
@@ -83,6 +91,7 @@ def test_build_routing_rule_renders_core_reading_rules() -> None:
 
 
 def test_complete_prompt_always_includes_routing_rule() -> None:
+    """complete promptが常にrouting ruleを含むことを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -96,6 +105,7 @@ def test_complete_prompt_always_includes_routing_rule() -> None:
 
 
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:
+    """各file access modeに対応する標準ruleの内容を検証する。"""
     expected = {
         FileAccessMode.READONLY: [
             "ツリー外は読み書き禁止",
@@ -139,6 +149,7 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
 
 
 def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
+    """NO_RULE時に標準file access ruleを挿入しないことを検証する。"""
     prompt = build_complete_prompt(
         role="role",
         summary="summary",
@@ -151,6 +162,7 @@ def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
 
 
 def test_complete_prompt_can_include_apply_review_standard() -> None:
+    """complete promptへapply review standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -166,6 +178,7 @@ def test_complete_prompt_can_include_apply_review_standard() -> None:
 
 
 def test_complete_prompt_preserves_injected_standard_terms() -> None:
+    """complete promptが注入した各standardの主要語とplaceholderを保持することを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -209,6 +222,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
 def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """complete promptが入力root tokenを保持し、実pathの定義行を追加することを検証する。"""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     (repo_root / ".git").mkdir()
@@ -251,6 +265,7 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
 def test_complete_prompt_keeps_literal_root_token_comment_requirement(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """literal work-root tokenとコメント根拠規則がpromptに残ることを検証する。"""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     (repo_root / ".git").mkdir()
@@ -277,6 +292,7 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
 
 
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
+    """既定のcomplete promptがapply review standardを含めないことを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -290,6 +306,7 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
 
 
 def test_build_realization_standard_renders_file_split_and_merge_rules() -> None:
+    """realization standardのfile分割・統合規則がrenderされることを検証する。"""
     doc = build_realization_standard()
 
     assert isinstance(doc, StructDoc)
@@ -308,6 +325,7 @@ def test_build_realization_standard_renders_file_split_and_merge_rules() -> None
 
 
 def test_complete_prompt_can_include_realization_standard() -> None:
+    """complete promptへrealization standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -324,6 +342,7 @@ def test_complete_prompt_can_include_realization_standard() -> None:
 
 
 def test_build_index_entry_standard_renders_core_output_rules() -> None:
+    """index entry standardの出力境界がrenderされることを検証する。"""
     doc = build_index_entry_standard()
 
     assert isinstance(doc, StructDoc)
@@ -346,6 +365,7 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
 
 
 def test_complete_prompt_can_include_index_entry_standard() -> None:
+    """complete promptへindex entry standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -360,6 +380,7 @@ def test_complete_prompt_can_include_index_entry_standard() -> None:
 
 
 def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
+    """既定のcomplete promptがindex entry standardを含めないことを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -373,6 +394,7 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
 
 
 def test_build_review_oracle_standard_renders_core_review_rules() -> None:
+    """review oracle standardのseverityと所見境界がrenderされることを検証する。"""
     doc = build_review_oracle_standard()
 
     assert isinstance(doc, StructDoc)
@@ -391,6 +413,7 @@ def test_build_review_oracle_standard_renders_core_review_rules() -> None:
 
 
 def test_complete_prompt_can_include_review_oracle_standard() -> None:
+    """complete promptへreview oracle standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -406,6 +429,7 @@ def test_complete_prompt_can_include_review_oracle_standard() -> None:
 
 
 def test_complete_prompt_omits_review_oracle_standard_by_default() -> None:
+    """既定のcomplete promptがreview oracle standardを含めないことを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",

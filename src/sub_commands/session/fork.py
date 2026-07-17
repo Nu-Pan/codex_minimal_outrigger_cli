@@ -1,3 +1,4 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
 from pathlib import Path
 
 import typer
@@ -141,6 +142,7 @@ def _cmoc_session_fork_body() -> None:
 
 
 def _new_session_id(root: Path) -> str:
+    """既存stateとbranchに衝突しないsession idを生成する。"""
     # 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
     # 根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
     # state file が残った joined/abandoned session との衝突も session-id 衝突として扱う。

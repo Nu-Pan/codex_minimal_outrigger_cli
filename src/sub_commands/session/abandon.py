@@ -1,3 +1,4 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
 import typer
 
 from cmoc_runtime import (
@@ -57,7 +58,7 @@ def _cmoc_session_abandon_body() -> None:
         state.session.joined_at = None
         write_state(path, state)
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
-        # requires preserving the home branch while deleting only the session branch.
+        # home branch を保持したまま session branch だけを削除する必要がある。
         delete_result = delete_branch(repo, branch, force=True)
         if delete_result.returncode != 0:
             raise CmocError(
@@ -67,8 +68,8 @@ def _cmoc_session_abandon_body() -> None:
             )
     except BaseException as error:
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
-        # treats user interruption during cleanup as a cleanup failure that must
-        # return the session to a rerunnable state.
+        # cleanup 中の利用者中断は cleanup failure として扱い、session を再実行可能な
+        # state へ戻さなければならない。
         cleanup_detail = error.detail if isinstance(error, CmocError) else repr(error)
         rollback_errors: list[str] = []
         state.session.state = "active"

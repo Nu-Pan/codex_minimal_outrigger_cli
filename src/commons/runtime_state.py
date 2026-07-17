@@ -20,7 +20,7 @@ class SessionPart:
     session_start_commit: str | None = None
     last_joined_apply_oracle_snapshot_commit: str | None = None
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
-    # session abandon requires this field to remain serialized as JSON null.
+    # session abandon ではこの field を JSON null として serialize したままにする必要がある。
     joined_at: str | None = None
 
 
@@ -44,6 +44,10 @@ class SessionState:
     def from_dict(
         cls: type["SessionState"], data: dict[str, Any], source: Path | None = None
     ) -> "SessionState":
+        """永続stateのJSON objectを検証し、欠落値を補わずに復元する。
+
+        根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+        """
         # {{work-root}}/oracle/doc/app_spec/session_state.md
         # JSON 読み込み時は、新規作成用 default で欠落 field を active/ready に補わない。
         if not isinstance(data, dict):
@@ -172,6 +176,7 @@ def _part_data(
     part_type: type[SessionPart] | type[ApplyPart],
     source: Path | None,
 ) -> dict[str, Any]:
+    """stateのpartをdataclass fieldだけのdictへ検証して取り出す。"""
     part = data.get(key)
     if not isinstance(part, dict):
         raise _invalid_state(source, f"`{key}` は object である必要があります。")
@@ -187,6 +192,7 @@ def _part_data(
 def _require_state(
     part: dict[str, Any], key: str, allowed: set[str], source: Path | None
 ) -> None:
+    """state partのstate値が許可集合に含まれることを検証する。"""
     state = part["state"]
     if not isinstance(state, str) or state not in allowed:
         raise _invalid_state(
@@ -198,6 +204,7 @@ def _require_state(
 def _require_nullable_strings(
     part: dict[str, Any], key: str, source: Path | None
 ) -> None:
+    """state partのstate以外のfieldがstringまたはnullであることを検証する。"""
     for field_name, value in part.items():
         if field_name != "state" and value is not None and not isinstance(value, str):
             raise _invalid_state(
@@ -207,6 +214,7 @@ def _require_nullable_strings(
 
 
 def _invalid_state(source: Path | None, reason: str) -> CmocError:
+    """state fileのpathと理由を含む共通エラーを作る。"""
     detail = f"{source}\n{reason}" if source else reason
     return CmocError(
         "session state file が不正です。",

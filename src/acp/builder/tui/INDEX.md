@@ -34,17 +34,15 @@
 # `resolve_parameter.py`
 
 ## Summary
-- TUI の `resolve_parameter` 生成を、既存の TUI 呼び出し経路からたどるための互換入口。正本の実装へ移る前に、この薄い転送層と公開している選択肢だけ確認したいときに読む。
+- TUI の resolve-parameter builder に対する互換 import shim。既存の `acp.builder.tui.resolve_parameter` caller 向けに canonical builder と TUI 用の FileAccessMode 選択肢を再公開する。
 
 ## Read this when
-- `acp.builder.tui.resolve_parameter` を import している呼び出し元を直すか確認したいとき。
-- TUI から resolve-parameter 用の builder を使う経路が、どの canonical 実装に委譲されているかを知りたいとき。
-- TUI 側で公開している `FileAccessMode` の利用可能な選択肢が、どの制約で絞られているかを確認したいとき。
+- 既存 TUI import surface の互換性を確認・変更するとき
+- 互換 shim の削除条件や `TUI_FILE_ACCESS_MODES` の利用箇所を調べるとき
 
 ## Do not read this when
-- TUI resolve-parameter の実際の生成ロジックを変更したいときは、canonical な oracle 側の builder を読む。
-- ファイルアクセスモードの定義そのものを変えたいときは、この互換入口ではなく正本の定義を読む。
-- 新しい TUI 機能を設計したいだけで、既存の互換 import 経路を維持する必要がないとき。
+- resolve-parameter builder 本体を実装・変更するときは canonical oracle path を読む
+- 互換 import 経路に関係しない TUI builder の処理を調べるとき
 
 ## hash
-- 96fdbba75b80c4af522536f9bd1b5af9efaad1b5698c436de5ea5fce2e84b1f0
+- ecaa0fc136f723fdcd9ead1add141c738130ab8500136c11f8290979d1721879

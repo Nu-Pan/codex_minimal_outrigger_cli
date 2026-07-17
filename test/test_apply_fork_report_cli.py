@@ -499,6 +499,7 @@ def test_apply_fork_change_summary_excludes_deleted_tracked_files(
     def fake_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
+        """要約promptを記録し、変更要約の固定結果を返す。"""
         nonlocal captured_prompt
         captured_prompt = parameter.prompt
         return FakeCodexResult(
@@ -543,6 +544,7 @@ def test_apply_fork_change_summary_fallback_keeps_paths(
     def fake_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
+        """指定した空または欠落要約をCodex結果として返す。"""
         return FakeCodexResult(codex_output)
 
     summary = build_change_summary(
@@ -586,6 +588,10 @@ def test_apply_fork_report_does_not_invent_loop_when_no_targets(
     assert result.exit_code == 0
     rendered = report_path_from_stdout(result.stdout).read_text()
     assert "result: converged" in rendered
+    assert (
+        "収束: 調査待ちファイルリストが空になったことによりループを終了しました。"
+        in rendered
+    )
     assert "- 所見列挙ループは実行されませんでした" in rendered
     assert "- ループ 1: 0" not in rendered
 

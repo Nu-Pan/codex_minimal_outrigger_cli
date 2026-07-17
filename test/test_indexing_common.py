@@ -9,6 +9,7 @@ CLI lifecycle から分離して検証する。根拠は
 """
 
 import json
+import os
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -16,7 +17,7 @@ from pathlib import Path
 import pytest
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
-from _git_support import make_repo
+from _git_support import make_repo, run_git
 
 import cmoc_runtime
 import commons.indexing as indexing_common
@@ -29,6 +30,7 @@ from commons.runtime_logging import (
 
 
 def _render_test_entry(root: Path, path: Path, digest: str | None = None) -> str:
+    """テスト用の最小valid INDEX entryをrenderする。"""
     return indexing_common.render_index_entry(
         root,
         path,
@@ -264,8 +266,8 @@ def test_update_indexes_creates_empty_index_for_empty_directory(
 
     updated = indexing_common.update_indexes(root)
 
-    # {{work-root}}/oracle/doc/app_spec/indexing.md requires INDEX.md placement
-    # per target directory, even when there are no indexable children.
+    # {{work-root}}/oracle/doc/app_spec/indexing.md は indexable child がなくても、対象
+    # directory ごとに INDEX.md を配置することを求める。
     assert empty_dir / "INDEX.md" in updated
     assert (empty_dir / "INDEX.md").read_text() == ""
 
@@ -404,9 +406,11 @@ def test_update_indexes_avoids_worker_threads_during_pushd(
         """pushd 中に worker pool が作られた時点で回帰を検出する。"""
 
         def __init__(self, *_args: object, **_kwargs: object) -> None:
+            """worker poolが作られた時点で回帰を検出する。"""
             raise AssertionError("pushd must not submit INDEX work to another thread")
 
     def fake_codex_exec(_parameter: object, **_kwargs: object) -> FakeCodexResult:
+        """固定Structured Outputを返し、呼び出しthreadを記録する。"""
         call_threads.append(threading.get_ident())
         return FakeCodexResult()
 
@@ -485,3 +489,66 @@ def test_update_indexes_skips_directory_symlink_cycle(
     assert root / "INDEX.md" in updated
     assert root / "loop" not in calls
     assert "# `loop`" not in (root / "INDEX.md").read_text()
+
+
+def test_update_indexes_skips_special_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """INDEX 更新が FIFO を directory として辿らずに除外する。"""
+    root = make_repo(tmp_path)
+    os.mkfifo(root / "pipe")
+    cmoc_runtime.sync_config(root)
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        """INDEX entry 生成結果を固定する fake。"""
+        return _render_test_entry(update_root, path, digest)
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    indexing_common.update_indexes(root)
+
+    assert "# `pipe`" not in (root / "INDEX.md").read_text()
+
+
+def test_update_indexes_replaces_index_symlink_without_writing_link_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """INDEX.md symlink をリンク先へ書き込まず、work-root 内の file に置換する。"""
+    root = make_repo(tmp_path)
+    external_index = tmp_path / "external-index.md"
+    external_index.write_text("external\n")
+    (root / "INDEX.md").symlink_to(external_index)
+    cmoc_runtime.sync_config(root)
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        """INDEX entry 生成結果を固定する fake。"""
+        return _render_test_entry(update_root, path, digest)
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    indexing_common.update_indexes(root)
+
+    assert (root / "INDEX.md").is_file()
+    assert not (root / "INDEX.md").is_symlink()
+    assert external_index.read_text() == "external\n"
+
+
+def test_indexing_lock_path_is_shared_across_linked_worktrees(tmp_path: Path) -> None:
+    """linked worktree 間で INDEX 更新 lock を共有する。"""
+    root = make_repo(tmp_path)
+    linked = tmp_path / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-indexing-lock", str(linked), "HEAD")
+
+    assert indexing_common.indexing_lock_path(
+        root
+    ) == indexing_common.indexing_lock_path(linked)

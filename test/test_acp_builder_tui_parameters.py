@@ -14,6 +14,7 @@ from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
 
 
 def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
+    """TUI parameter builderが元promptと標準promptを埋め込むことを検証する。"""
     original_prompt = "# 依頼\n\nsrc の実装を調べて必要なら修正して下さい。"
 
     parameter = build_tui_resolve_parameter_parameter(original_prompt)
@@ -37,6 +38,7 @@ def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
 
 
 def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
+    """TUI parameter schemaがlogical enumと必須項目を表すことを検証する。"""
     parameter = build_tui_resolve_parameter_parameter("調査して下さい。")
     assert parameter.structured_output_schema_path is not None
 
@@ -83,6 +85,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
 
 
 def test_tui_resolve_parameter_module_exports_only_required_names() -> None:
+    """TUI resolve互換moduleが必要な公開名だけを持つことを検証する。"""
     assert tui_resolve_parameter_module.__all__ == [
         "build_tui_resolve_parameter_parameter",
         "TUI_FILE_ACCESS_MODES",

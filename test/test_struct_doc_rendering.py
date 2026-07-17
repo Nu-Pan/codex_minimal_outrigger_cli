@@ -12,6 +12,7 @@ from basic.struct_doc import (
 
 
 def test_render_as_markdown_collapses_consecutive_blank_lines() -> None:
+    """Markdown rendererが連続blank lineを一つへ縮約することを検証する。"""
     doc = StructDoc(
         "root",
         "first\n\n\n   \nsecond",
@@ -24,6 +25,7 @@ def test_render_as_markdown_collapses_consecutive_blank_lines() -> None:
 
 
 def test_render_as_markdown_collapses_code_block_blank_lines() -> None:
+    """Markdown rendererがcode block内の連続blank lineも縮約することを検証する。"""
     doc = StructDoc("root", StructCodeBlock("text", "first\n\n\nsecond"))
 
     rendered = render_as_markdown(doc)

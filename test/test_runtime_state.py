@@ -164,5 +164,6 @@ def test_session_fork_lock_is_shared_across_processes(tmp_path: Path) -> None:
 
 
 def _acquire_session_fork_lock(root: Path, acquired: threading.Event) -> None:
+    """session fork lockを保持して取得済みeventを通知する。"""
     with session_fork_lock(root):
         acquired.set()

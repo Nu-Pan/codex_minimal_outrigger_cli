@@ -84,6 +84,8 @@ def test_indexing_uninitialized_clean_repo_runs_doctor_and_generates_config(
     monkeypatch.chdir(root)
 
     class FakeCodexResult:
+        """index entry用の固定Structured Outputを返すdouble。"""
+
         output_json = {
             "summary": ["summary"],
             "read_this_when": ["read"],
@@ -304,6 +306,7 @@ def test_commit_index_updates_rejects_git_diff_failure(
     calls: list[tuple[list[str], bool]] = []
 
     def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
+        """index commitのGit結果を固定し、diff失敗を再現する。"""
         calls.append((args, check))
         if args[0] == "add":
             return CommandResult(0, "", "")

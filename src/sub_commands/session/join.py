@@ -1,3 +1,4 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -74,8 +75,8 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
         start_subcommand_step(4, "後始末と結果を表示", "finish session join")
         write_state(path, state)
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
-        # delete only when the local session branch itself is reachable from
-        # the merge target HEAD; remote-tracking refs must not prove safety.
+        # 削除するのは local session branch 自体が merge target HEAD から到達可能な場合だけ。
+        # remote-tracking ref で安全性を証明してはならない。
         reachable = (
             git(
                 ["merge-base", "--is-ancestor", branch, "HEAD"],
@@ -92,8 +93,8 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
             )
     except BaseException as exc:
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
-        # post-precondition failures can require manual git resolution, so their
-        # error report must go to stderr instead of the default stdout path.
+        # precondition 後の failure では手動の git resolution が必要になり得るため、
+        # error report は既定の stdout path ではなく stderr に出す。
         setattr(exc, "cmoc_error_to_stderr", True)
         raise
     warnings: list[str] = []
@@ -137,7 +138,7 @@ def resolve_session_join_conflict(
             cwd=root,
         ),
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md:
-        # config/logs stay in repo-root while Codex edits this worktree.
+        # Codex がこの worktree を編集しても config/log は repo-root に残す。
         root=repo_root(root),
         cwd=root,
         purpose="session join conflict resolution",
@@ -174,8 +175,9 @@ def resolve_session_join_conflict(
 
 
 def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
+    """Gitのunmerged pathをNUL framingで安全に読み取る。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
-    # Git paths can contain newlines, so conflict targets must use NUL framing.
+    # Git path には改行が含まれ得るため、conflict target は NUL framing を使う。
     fields = git(["diff", "--name-only", "-z", "--diff-filter=U"], root).stdout.split(
         "\0"
     )
@@ -183,20 +185,22 @@ def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:
 
 
 def _absolute_path(path: Path) -> Path:
+    """相対Git pathを現在のworktree基準の絶対pathへ変換する。"""
     return path if path.is_absolute() else path.absolute()
 
 
 def _has_conflict_marker_block(text: str) -> bool:
+    """text内に未解決conflict marker blockが残っているか判定する。"""
     state = 0
     for line in text.splitlines():
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
-        # reject every residual conflict fragment, while a bare `=======`
-        # remains valid Markdown unless an opening marker is still active.
+        # 残った conflict fragment はすべて拒否する。ただし bare `=======` は opening
+        # marker が active でない限り有効な Markdown として扱う。
         if line.startswith("<<<<<<<"):
             state = 1
         elif line.startswith(("|||||||", ">>>>>>>")):
             return True
-        # Git allows conflict-marker-size to exceed the default seven chars.
+        # Git は conflict-marker-size が既定の 7 文字を超えることを許可する。
         elif state == 1 and len(line) >= 7 and set(line) == {"="}:
             state = 2
     return state != 0

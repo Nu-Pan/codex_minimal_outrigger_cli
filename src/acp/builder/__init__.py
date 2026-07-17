@@ -13,9 +13,9 @@ _oracle_spec = find_spec("oracle.acp_builder")
 if _oracle_spec is None or _oracle_spec.submodule_search_locations is None:
     raise ModuleNotFoundError("oracle.acp_builder package was not found")
 
-# `{{work-root}}/oracle/src/oracle/acp_builder` supplies canonical modules such
-# as `basic.py`; local wrappers stay first in `__path__` so they can adapt
-# oracle outputs where compatibility still needs it.
+# `{{work-root}}/oracle/src/oracle/acp_builder` は `basic.py` などの canonical module を
+# 提供する。local wrapper を `__path__` の先頭に置き、compatibility が必要な場合に
+# oracle output を適合させる。
 for _path in _oracle_spec.submodule_search_locations:
     if _path not in __path__:
         __path__.append(_path)

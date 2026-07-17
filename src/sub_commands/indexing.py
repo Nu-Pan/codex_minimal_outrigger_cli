@@ -30,7 +30,7 @@ def cmoc_indexing_impl() -> None:
         command_argv=["cmoc", "indexing"],
         total_steps=3,
         # `{{work-root}}/oracle/doc/app_spec/sub_command/indexing.md`
-        # requires the current worktree, not the main worktree, to be clean.
+        # main worktree ではなく current worktree が clean であることを求める。
         use_work_root_runtime=True,
     )
 

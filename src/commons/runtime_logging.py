@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
@@ -34,6 +35,10 @@ class SubcommandLogger:
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
         self.step_timings: list[StepTiming] = []
+        # ContextVar の worker context から同じ logger object が共有されるため、並列 Codex
+        # event の追記と quota 待機時間の集計を直列化する。
+        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        self._lock = threading.Lock()
         log_dir = logs_dir(root)
         log_dir.mkdir(parents=True, exist_ok=True)
         # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
@@ -47,9 +52,10 @@ class SubcommandLogger:
             "timestamp": datetime.now().isoformat(),
             **payload,
         }
-        with self.path.open("a") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
-            f.flush()
+        with self._lock:
+            with self.path.open("a") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                f.flush()
 
     def start_step(
         self, index: str, description: str, log_description: str | None = None
@@ -80,7 +86,8 @@ class SubcommandLogger:
 
     def add_quota_wait(self, seconds: float) -> None:
         """Codex quota 待機をサブコマンド全体の待機時間として合算する。"""
-        self.quota_wait_sec += seconds
+        with self._lock:
+            self.quota_wait_sec += seconds
 
 
 def set_current_subcommand_logger(

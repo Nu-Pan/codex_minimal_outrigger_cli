@@ -40,21 +40,20 @@
 # `README.md`
 
 ## Summary
-- この文書はリポジトリ全体の入口で、cmoc の概要、初期セットアップ、最初に押さえるべき使い方を短く案内する。新規導入時や、まず全体像と実行開始手順を確認したいときに読む。
-- 詳細な運用手順はここではなく、基本ワークフローを定義する正本へ進むための起点として扱う。
+- Codex Minimal Outrigger CLI（cmoc）の概要、初期セットアップ、基本ワークフロー、ターミナルロック対策を案内するプロジェクト入口。詳細な開発指示は AGENTS.md、運用手順は oracle/doc/app_spec/usage.md へ進むための起点。
 
 ## Read this when
-- このリポジトリを初めてセットアップするとき。
-- cmoc の役割と、最初に何を行うかを短く把握したいとき。
-- 基本的な使い方の入口を探していて、詳細仕様へ進む前段階にいるとき。
+- cmoc の目的や略称を確認したいとき
+- 初期セットアップや PATH 設定の手順を確認したいとき
+- 基本ワークフローの参照先を知りたいとき
+- Ctrl+S によるターミナルロックを防ぎたいとき
 
 ## Do not read this when
-- 個別コマンドの詳細な振る舞いを知りたいだけのときは、該当する仕様文書を直接読む。
-- リポジトリ固有の開発ルールや補助規約だけを確認したいときは、この文書ではなくそれらの正本を読む。
-- すでにセットアップ済みで、目的の操作手順も分かっているときは再読しなくてよい。
+- 詳細な開発規約や恒常的なリポジトリ指示を確認したいときは AGENTS.md を読む
+- 基本ワークフローの具体的な運用手順を確認したいときは oracle/doc/app_spec/usage.md を直接読む
 
 ## hash
-- e4571c78602bbcf0bc912efbea8f14f9fd0494760f2a334e3affef69cb32741b
+- aee9654cfb1c4d0d9aa963e9f03b8a56f4e5b6cdc7aac1ebeeb478b914f88f11
 
 # `bin`
 
@@ -128,35 +127,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装を収める `src` 配下の入口。ACP 互換 import、共有 runtime、設定、CLI 本体、oracle 名前空間の解決、各サブコマンド実装へ進むための上位境界を提供する。
+- cmoc の realization 実装を構成する src ツリー。CLI ルート、互換 import shim、共通 runtime、設定公開入口、ACP builder、各サブコマンド実装への入口を扱う。
+- 公開入口や互換 import 経路から、CLI 実行、共通 runtime、session/apply/review、indexing、TUI などの具体的な実装領域へ進むための上位ルーティング対象。
 
 ## Read this when
-- `src` 配下で担当モジュールを特定したいとき。
-- cmoc CLI の入口、互換 import 経路、共有 runtime、設定、oracle 名前空間解決、サブコマンド実装の配置を確認したいとき。
-- 特定機能の実装を読む前に、対応する下位ディレクトリやモジュールを選びたいとき。
+- cmoc の実装全体の構成や、対象機能に対応する src 配下の入口を特定するとき。
+- CLI ルート、互換公開面、共通 runtime、ACP builder、またはサブコマンド実装の調査・変更を始めるとき。
 
 ## Do not read this when
-- 特定サブコマンドや共有 helper の詳細な挙動が明らかなときは、対応する下位実装を直接読む。
-- 正本仕様や oracle 側の実装内容だけを確認したいときは、対応する `oracle` ツリーを直接読む。
-- 実装と関係しないテスト、開発手順、仕様断片を調査するとき。
+- 特定サブコマンドや runtime module の実装箇所が明確な場合は、対応する下位対象を直接読む。
+- 利用者向けの正本仕様や canonical な挙動を確認したい場合は、src ではなく対応する oracle file を読む。
 
 ## hash
-- 8485a067b31dea3f997f20d5265fcdb07539889530fa3e39b0fe6b25f5bd9138
+- dd709a326ccc47bb9512c98cecdf96536dc83810c10dae0265e93036b3788566
 
 # `test`
 
 ## Summary
-- テストコード全体を収めるディレクトリ。ACP builder、CLI、Codex runtime、apply/session/review、indexing、設定・状態・Git・Ollama など、cmoc の外部挙動と制御ロジックを pytest で検証する。個別機能の回帰テストや共通テスト補助へ進む入口となる。
+- cmoc の pytest テスト群を集約するディレクトリ。ACP builder、CLI、runtime、session/apply、indexing、review oracle、Codex/Ollama 連携などの外部挙動・制御ロジックを検証し、各機能の回帰テストへの入口となる。
 
 ## Read this when
-- cmoc の既存テストを機能領域から探すとき
-- CLI、Codex runtime、apply/session/review、indexing、ACP builder、設定または基盤 runtime の挙動を変更・検証するとき
-- 複数テストで共有される repository、CLI、Codex、Git、Ollama などの fixture・helper を確認するとき
+- cmoc の機能変更や不具合調査で、対応する pytest 回帰テストを探すとき。
+- CLI、runtime、worktree/state lifecycle、indexing、review oracle、ACP builder、Codex/Ollama 連携の契約をテスト側から確認するとき。
+- 本番同等の独立 process・PTY 経路を含む受け入れテストの対象を確認するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認したいときは、対応する oracle ファイルを直接読む
-- 実装の詳細を変更・調査するときは、対応する src ファイルを先に読む
-- 単一の機能と無関係なテスト全体を読む必要がないときは、該当する個別テストまたは共通補助ファイルへ直接進む
+- 正本仕様や schema の内容を確認するときは、各テストが参照する oracle 文書・schema を直接読む。
+- 実装詳細や共通テスト補助の内部処理だけを確認するときは、対応する src または support module を直接読む。
+- Codex や LLM の出力品質そのものを評価したいとき。
 
 ## hash
-- 842e2c8b8b1e0b8b63d351424e4d45c75279f74804c0b7830479e555bb209006
+- 1cb635cf42c950c8bfbc5480bab095e6e31d48afcaca2b8f166c34eb35e6acfe

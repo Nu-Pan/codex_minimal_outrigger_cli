@@ -1,3 +1,4 @@
+# {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
 from pathlib import Path
 
 from cmoc_runtime import SessionState, reports_dir, timestamp
@@ -196,9 +197,8 @@ def _render_ordered_finding_tail(
     Fatal/Minor の H2 節順を保ったまま、所見の採否・severity 順を維持する。
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
     """
-    # {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md requires the
-    # finding detail stream to be ordered by verdict first, while also requiring
-    # the Fatal and Minor H2 anchors in that order.
+    # {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md は finding detail
+    # stream を verdict 順にし、同時に Fatal と Minor の H2 anchor もその順にすることを求める。
     return "\n".join(
         [
             _render_finding_group("Accepted minor findings", minor_accepted),

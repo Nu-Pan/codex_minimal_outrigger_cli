@@ -359,7 +359,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
         )
 
     assert calls == ["prompt", probe_prompt]
-    console = capsys.readouterr().out
+    console = capsys.readouterr().err
     assert "- Purpose: `quota availability probe`" in console
     assert "- Error: `KeyboardInterrupt()`" in console
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
@@ -931,6 +931,7 @@ def test_quota_polling_state_is_cleared_when_progress_output_fails(
         )
 
     def fail_print(*_args: object, **_kwargs: object) -> None:
+        """quota待機通知の出力をBrokenPipeErrorで失敗させる。"""
         raise BrokenPipeError("closed output")
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)

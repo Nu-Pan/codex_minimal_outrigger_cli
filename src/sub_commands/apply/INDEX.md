@@ -1,72 +1,72 @@
 # `__init__.py`
 
 ## Summary
-- サブコマンド実装パッケージの入口として、パッケージの役割を短い docstring で示すだけの対象。
-- 具体的な処理、公開 API、import 副作用、設定値は持たないため、実装詳細への入口ではなく、パッケージ単位の責務確認に限って使う。
+- apply サブコマンドの実装パッケージ。apply サブコマンドの処理内容を確認・変更するときの入口。
 
 ## Read this when
-- サブコマンド実装パッケージそのものに、パッケージ説明や初期化時の処理があるかを確認したいとき。
-- パッケージ import 時に実行される処理や再 export が存在しないことを本文で確認したいとき。
+- apply サブコマンドの実装を確認または変更するとき。
 
 ## Do not read this when
-- 具体的なサブコマンドの引数定義、実行処理、入出力、エラー処理を調べたいとき。
-- 実装変更やテスト追加のために、実際の制御ロジックを読む必要があるとき。
-- パッケージ説明の文言確認以外が目的で、同階層または下位の具体的な実装対象へ直接進めるとき。
+- apply 以外のサブコマンドを扱うとき。
 
 ## hash
-- e5354bb58c94a87f51093db4681c6f341202c07abf4b77772fb37b788f40b7b1
+- 0153b6c682ac5e698798223fa6bd60c41cc130afc2127bcf09139fd4d30136e3
 
 # `abandon.py`
 
 ## Summary
-- `cmoc apply abandon` の CLI 実装。active な apply run を検証し、実行中プロセス・apply worktree・apply branch・process 追跡情報を整理して、session state の apply 状態を `ready` に戻す。
+- 未 join の apply run を破棄し、関連する apply process・worktree・branch・process tracking を整理して apply state を ready に戻す CLI 実装。
+- session branch または対象 apply branch 上での実行を検証し、session state と apply branch の対応を確認したうえで cleanup と結果表示を行う。
+- apply サブコマンドの abandon 動作や、apply run の cleanup 対象検証を変更・確認するときの入口。
 
 ## Read this when
-- `cmoc apply abandon` の挙動、cleanup 対象の検証、apply process の停止、worktree・branch 削除、state 更新を変更または調査するとき。
-- apply branch と session branch の実行位置による分岐、lock 中の再検証、cleanup 警告や CLI 出力を確認するとき。
+- `cmoc apply abandon` の実装やエラー条件を変更するとき。
+- apply run の停止、worktree・branch 削除、state 初期化、process tracking 消去の流れを確認するとき。
+- 現在の branch と保存済み session state から cleanup 対象を検証する処理を確認するとき。
 
 ## Do not read this when
-- apply の開始・実行・完了・join など、abandon 以外のサブコマンドの挙動だけを扱うとき。
-- 共通の process lock、worktree 解決、process ID 操作の詳細を確認することが目的で、このファイルの abandon フローを読む必要がないとき。
+- apply の開始・実行・join・fork など、abandon 以外のサブコマンドだけを変更・確認するとき。
+- apply process の共通 lock や process ID 操作そのものを変更するときは、まず共通 runtime 実装を読む。
 
 ## hash
-- 723d1243b709cbcaa1f10f9dd9aa8ba241e6e0e279a10a629fb90689617f7523
+- e6861669b16654fe11d2f69151115e40083c14f489e4dacba8df601f136d7fd1
 
 # `fork.py`
 
 ## Summary
-- apply fork の単一実行を制御するオーケストレーション実装。session branch の検証、隔離 worktree と apply state の準備、対象ファイルの列挙、Codex によるレビュー・修正、差分 commit、収束判定、レポート生成、完了・中断・失敗時の復旧までを扱う。apply fork の実行ライフサイクルや再実行・中断・cleanup 条件を確認する入口。
+- apply fork の一連の実行制御を担う実装。session branch の検証、隔離 worktree と apply state の初期化、対象ファイルの列挙、Codex によるレビュー・修正ループ、commit、完了・中断・エラー時の state／report／process tracking／resource cleanup を扱う。apply fork の orchestration と失敗時復旧の入口。
 
 ## Read this when
-- `cmoc apply fork` の実行開始条件、対象 scope、apply loop、commit、収束判定を変更・調査するとき
-- apply state、apply branch/worktree、プロセス追跡、完了レポートの更新や失敗時 rollback を変更・調査するとき
-- apply 対象の正規化・重複排除・列挙、Codex による対象レビューと修正の呼び出しを確認するとき
+- apply fork サブコマンドの実行フロー、対象スコープ、apply loop、commit subject、完了・中断・エラー時の復旧を変更または調査するとき。
+- apply branch、apply worktree、apply state、report、PID tracking のライフサイクルや相互作用を確認するとき。
+- apply 対象ファイルの列挙・正規化や、Codex review-and-fix 呼び出しの起点を確認するとき。
 
 ## Do not read this when
-- apply 対象ファイル単位の Codex review/fix パラメータ生成や finding schema の詳細だけを確認したいときは、`file_review_and_fix` の実装を直接読む
-- apply 完了後の report 内容や abandon 専用の cleanup 挙動だけを確認したいときは、対応する report または abandon 実装を直接読む
-- apply fork 以外の subcommand の実行制御や共通 runtime の一般仕様だけを調査するとき
+- apply fork 内の Codex review-and-fix 用 prompt／parameter の詳細だけを確認したいときは、専用の builder 実装を直接読む。
+- apply report の出力内容や生成処理だけを確認したいときは、fork report 実装を直接読む。
+- apply abandon の cleanup 処理そのものだけを確認したいときは、abandon サブコマンドの実装と関連仕様を直接読む。
 
 ## hash
-- 0575102b1ad2e157603fc18a065c5edc702078440a953bce72d0c823b9fe6a8d
+- 72421d07a8a30cc0d811a413c08f8e6caf2a55f041c78b082ae0fb786a7199da
 
 # `fork_report.py`
 
 ## Summary
-- cmoc apply fork の実行結果・失敗結果を Markdown レポートとして生成する実装。所見数の推移、結果状態、変更内容要約を扱い、apply fork の差分・未追跡ファイルの収集とフォールバック要約も提供する。
+- apply fork の実行結果レポートを生成・描画する実装。Git の fork 時点以降の変更差分や未追跡ファイルを収集し、Codex 要約または機械的 fallback で変更内容をまとめる。
+- 収束・未収束・中断・エラーの結果、所見数の推移、ブランチや worktree 情報を Markdown + YAML frontmatter のレポートとして保存する。
 
 ## Read this when
-- apply fork の成功・未収束・中断・エラー時レポートの形式や生成処理を変更・調査するとき
-- fork 起点からの変更差分、変更 path、未追跡ファイルの収集範囲を確認するとき
-- 変更要約生成の Codex 呼び出し、失敗時・中断時のフォールバック挙動を確認するとき
+- apply fork の成功・未収束・中断・エラー時レポートの形式や生成処理を変更するとき
+- fork 時点からの tracked、staged、untracked 差分や変更 path の収集挙動を調査するとき
+- Codex 要約失敗時や中断時の fallback 変更要約を変更・検証するとき
 
 ## Do not read this when
-- apply fork のループ制御や所見検出そのものを変更・調査するとき
-- apply fork 以外のサブコマンドのレポート生成や一般的なレポート基盤だけを確認するとき
-- レポート内容や差分収集に関係しない CLI 設定・Git 操作を変更するとき
+- apply fork のループ制御や所見列挙そのものを変更するとき
+- 他のサブコマンドのレポート形式だけを調査するとき
+- Git 差分収集やレポート描画に関係しない設定・CLI 入出力を変更するとき
 
 ## hash
-- 1a0dcfbd8cc16c137d9d018b79234774644436fa260ecb69958dbfc39d497705
+- 3140342de603dcbbe390791f47ae2033cf82c87d5429d71f98ee012633515914
 
 # `join.py`
 

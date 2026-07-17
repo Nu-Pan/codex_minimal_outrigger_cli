@@ -15,8 +15,8 @@ def resolve_repo_root() -> Path:
 
 def ensure_oracle_src_importable(repo_root: Path) -> None:
     """packaged layout と開発 tree layout の両方で oracle builder を import 可能にする。"""
-    # `{{work-root}}/oracle/src/oracle/acp_builder/apply/fork/*.py` are packaged
-    # as `oracle.*`; installed layouts do not necessarily retain `oracle/src`.
+    # `{{work-root}}/oracle/src/oracle/acp_builder/apply/fork/*.py` は `oracle.*` として
+    # package 化される。installed layout では `oracle/src` が残るとは限らない。
     try:
         if importlib.util.find_spec("oracle.acp_builder") is not None:
             return
@@ -38,6 +38,6 @@ def ensure_oracle_src_importable(repo_root: Path) -> None:
 
 def adapt_oracle_parameter(parameter: AgentCallParameter) -> AgentCallParameter:
     """oracle 側が返した ACP parameter を realization 側公開型として受け渡す。"""
-    # `{{work-root}}/oracle/src/oracle/acp_builder/basic.py` owns the runtime ACP
-    # type; `basic.acp` re-exports that same class instead of keeping a copy.
+    # `{{work-root}}/oracle/src/oracle/acp_builder/basic.py` が runtime ACP type を所有する。
+    # `basic.acp` は copy を保持せず、同じ class を再公開する。
     return parameter

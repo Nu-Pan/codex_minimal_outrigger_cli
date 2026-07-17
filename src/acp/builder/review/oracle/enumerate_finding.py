@@ -21,6 +21,7 @@ def build_review_oracle_enumerate_finding_parameter(
     oracle_path: Path,
     related_findings: str,
 ) -> AgentCallParameter:
+    """canonical builderのparameterを作り、symlinkのlexical pathを保持する。"""
     parameter = _build_enumerate_parameter(oracle_path, related_findings)
     if not oracle_path.is_absolute() or not oracle_path.is_symlink():
         return parameter
@@ -30,12 +31,12 @@ def build_review_oracle_enumerate_finding_parameter(
     resolved = str(oracle_path.resolve())
     lexical = os.path.abspath(oracle_path)
     marker = f"- {{{{oracle-path}}}} = {resolved}"
+    prefix, separator, suffix = parameter.prompt.rpartition(marker)
+    if not separator:
+        return parameter
     return replace(
         parameter,
-        prompt=parameter.prompt.replace(
-            marker,
-            f"- {{{{oracle-path}}}} = {lexical}",
-        ),
+        prompt=prefix + f"- {{{{oracle-path}}}} = {lexical}" + suffix,
     )
 
 

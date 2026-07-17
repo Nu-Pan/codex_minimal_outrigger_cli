@@ -15,7 +15,7 @@ from commons.runtime_codex_profile import (
 def test_tracked_codex_subprocess_records_dedicated_process_group(
     tmp_path: Path,
 ) -> None:
-    """Records the dedicated process group needed for apply cleanup.
+    """apply cleanup に必要な専用 process group を記録する。
 
     Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     """
@@ -110,16 +110,21 @@ def test_tracked_codex_subprocess_defers_sigterm_until_tracking_is_written(
     previous_handler = signal.getsignal(signal.SIGTERM)
 
     def handler(signum: int, _frame: object) -> None:
+        """受信したSIGTERMを記録する。"""
         received.append(signum)
 
     class ExitedProcess:
+        """すでに終了したsubprocessの最小double。"""
+
         pid = 4321
         returncode = 0
 
         def communicate(self, _input: object) -> tuple[str, str]:
+            """固定stdoutとstderrを返す。"""
             return "ok", ""
 
         def poll(self) -> int:
+            """終了済みreturncodeを返す。"""
             return 0
 
     process = ExitedProcess()
@@ -127,6 +132,7 @@ def test_tracked_codex_subprocess_defers_sigterm_until_tracking_is_written(
     try:
 
         def popen(*_args: object, **_kwargs: object) -> ExitedProcess:
+            """SIGTERMを受信した後に終了済みprocessを返す。"""
             signal.raise_signal(signal.SIGTERM)
             return process
 
@@ -157,13 +163,17 @@ def test_tracked_codex_subprocess_keeps_group_tracking_after_leader_exit(
     tracking_path.write_text("111 222\n")
 
     class ExitedProcess:
+        """leader終了後もgroup memberが残るsubprocessの最小double。"""
+
         pid = 4321
         returncode = 0
 
         def communicate(self, _input: object) -> tuple[str, str]:
+            """固定stdoutとstderrを返す。"""
             return "ok", ""
 
         def poll(self) -> int:
+            """leader終了を示すreturncodeを返す。"""
             return 0
 
     monkeypatch.setattr(
@@ -186,7 +196,7 @@ def test_tracked_codex_subprocess_keeps_group_tracking_after_leader_exit(
 def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Keeps child tracking when communicate is interrupted.
+    """communicate が中断されても child tracking を保持する。
 
     Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     """
@@ -194,7 +204,7 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
     tracking_path.write_text("111 222\n")
 
     class InterruptedProcess:
-        """Fake process that remains alive after communicate is interrupted.
+        """communicate 中断後も生存する fake process。
 
         Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
         """
@@ -202,11 +212,11 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
         pid = 4321
 
         def communicate(self, _input: object) -> object:
-            """Raise KeyboardInterrupt to model an interrupted communicate."""
+            """中断された communicate を表すため KeyboardInterrupt を送出する。"""
             raise KeyboardInterrupt
 
         def poll(self) -> None:
-            """Report that the fake process is still running."""
+            """fake process が実行中であることを返す。"""
             return None
 
     process = InterruptedProcess()
@@ -228,7 +238,7 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
 def test_run_codex_subprocess_ignores_inherited_apply_tracking_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ignores inherited apply tracking while launching Codex.
+    """Codex 起動時に継承した apply tracking を無視する。
 
     Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
     """

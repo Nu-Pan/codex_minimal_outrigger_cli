@@ -10,6 +10,7 @@ archive install、user systemd、procfs による所有者確認、model/API/GPU
 
 import fcntl
 import json
+import math
 import os
 import subprocess
 import time
@@ -386,6 +387,24 @@ def _ollama_http_ok() -> bool:
         return False
 
 
+# {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
+def _ollama_model_name_with_default_tag(name: str) -> str:
+    """Ollama model 名の省略された default tag を canonical 表記へそろえる。"""
+    model_part = name.rsplit("/", 1)[-1]
+    if "@" in name or ":" in model_part:
+        return name
+    return f"{name}:latest"
+
+
+def _ollama_model_name_matches(candidate: object, configured: str) -> bool:
+    """API 応答の model 名が設定 model と同一か、tag 省略を考慮して判定する。"""
+    if not isinstance(candidate, str):
+        return False
+    return _ollama_model_name_with_default_tag(
+        candidate
+    ) == _ollama_model_name_with_default_tag(configured)
+
+
 def _ensure_ollama_model(executable: Path, model: str) -> None:
     """指定 model が store に存在し、managed service 上で load 済みになるようにする。"""
     show = _run_ollama(executable, ["show", model])
@@ -439,7 +458,7 @@ def _load_ollama_model(model: str) -> None:
             ["ollama service の状態を確認してください。"],
             f"model: {model}\nresponse: {response_body[:500]!r}",
         ) from exc
-    if payload.get("done") is not True:
+    if not isinstance(payload, dict) or payload.get("done") is not True:
         raise CmocError(
             "ollama SLM model を load できませんでした。",
             ["ollama service の状態を確認してください。"],
@@ -487,7 +506,10 @@ def _verify_ollama_gpu(model: str) -> None:
                 item
                 for item in models
                 if isinstance(item, dict)
-                and (item.get("name") == model or item.get("model") == model)
+                and (
+                    _ollama_model_name_matches(item.get("name"), model)
+                    or _ollama_model_name_matches(item.get("model"), model)
+                )
             ),
             None,
         )
@@ -498,6 +520,7 @@ def _verify_ollama_gpu(model: str) -> None:
     if (
         not isinstance(size_vram, (int, float))
         or isinstance(size_vram, bool)
+        or (isinstance(size_vram, float) and not math.isfinite(size_vram))
         or size_vram <= 0
     ):
         raise CmocError(

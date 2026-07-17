@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 from commons.runtime_errors import CmocError
@@ -30,6 +31,7 @@ def emit_codex_call_console(
         lines.append(f"- Error: `{safe_error}`")
     print(
         "\n".join(lines),
+        file=sys.stderr if error is not None else sys.stdout,
         flush=True,
     )
 

@@ -1,62 +1,63 @@
 # `__init__.py`
 
 ## Summary
-- session 系サブコマンド実装を収めるパッケージであることを示す、最小限のパッケージ初期化モジュール。
-- 具体的な処理や公開 API は定義せず、下位モジュールへ進むための入口として位置づく。
+- session サブコマンドの実装パッケージ。session サブコマンドに関する実装を確認する際の入口となる。
 
 ## Read this when
-- session 系サブコマンド実装のパッケージ境界や、パッケージ自体に初期化処理があるかを確認したいとき。
-- session 配下の実装を調べる前に、この階層がサブコマンド実装用のまとまりかだけを確認したいとき。
+- session サブコマンドの実装や構成を確認・変更するとき。
 
 ## Do not read this when
-- 個別の session サブコマンドの処理、引数、入出力、状態操作を調べたいとき。その場合は具体的な実装モジュールを読む。
-- 共通 CLI ルーティング、サブコマンド登録、または session 以外のサブコマンド実装を調べたいとき。
+- session 以外のサブコマンドを扱うとき。
 
 ## hash
-- a2616b13a1c260f66ad6dfda2f7821fc573b581179e92bbad014a023d5958042
+- bfd8539ef9776e0e27e2e2e0d6365626dc832eb3abf90403affec4b29f1f8364
 
 # `abandon.py`
 
 ## Summary
-- active な session branch を home branch に merge せず破棄する CLI サブコマンド実装。事前条件の検証、home branch への切替、session state の abandoned 更新、session branch の削除、失敗時のロールバック、結果表示を扱う。
+- `cmoc session abandon` の CLI 実装。active な session branch の事前条件を検証し、home branch へ切り替えたうえで session state を abandoned に更新し、session branch を削除する。cleanup 失敗時の state・branch rollback と利用者向け結果表示も扱う。
 
 ## Read this when
-- `cmoc session abandon` の挙動、事前条件、state 更新、branch cleanup、失敗時ロールバックを変更または確認するとき。
+- session abandon の実装、事前条件、branch cleanup、state rollback、または結果表示を変更・確認するとき。
 
 ## Do not read this when
-- session の開始・参加・完了など、abandon 以外のサブコマンドを扱うとき。共通 CLI runtime や state 操作の仕様を確認する場合は、それらの実装または正本仕様を直接読むとき。
+- session の開始・参加・完了処理を扱うとき。共通の git 操作や state 操作の仕様を確認する場合は、まずそれぞれの共通実装・仕様を読むとき。
 
 ## hash
-- 28a1100aa48b87a06a5863f1612fff40a710c6e5b79967aec2391feb7ff1c25c
+- 1a597407cf2b4b722889f500fc4b7aaf1781ac8dc2e100ef55319e593821197d
 
 # `fork.py`
 
 ## Summary
-- 現在の local branch から cmoc session branch と session state を作成する CLI 実装。既存 active session の確認、clean worktree 要求、session-id 衝突回避、branch/state 作成時の rollback、作成結果表示を扱う。
+- 通常の local branch から cmoc の session branch と session state を作成する CLI 実装。既存 active session の確認、clean worktree 検証、HEAD 保存、session-id 衝突回避、branch/state 作成、失敗時 rollback、結果表示までを扱う。session 作成処理の実装へ進む入口。
 
 ## Read this when
-- `cmoc session fork` の作成処理、session branch または session state の初期化、作成失敗時の rollback を変更・調査するとき。
-- session-id の一意性確認や home branch 上の active session 競合を調査するとき。
+- `cmoc session fork` の動作、前提条件、session branch/state の生成、session-id の一意性、作成失敗時の rollback を変更・調査するとき。
+- session fork と home branch の競合防止や lock 内での再確認を確認するとき。
 
 ## Do not read this when
-- session の join、abandon、state schema 自体の仕様や処理を確認したいときは、それぞれの専用実装・仕様を直接読む。
-- 共通の git 操作、CLI 実行基盤、session state 操作の一般実装だけを確認したいとき。
+- session の join、abandon、state schema 自体の仕様を確認したいとき。
+- CLI 共通実行基盤や git/state 操作の共通 helper の詳細を直接調べるとき。
 
 ## hash
-- f2404006e55dac3cb99692735a54944ce191f2914e00cb57d0b561d46e4c7bad
+- f68e1c62fc0dffea0410050425b5572fb5ae503c3fc648a5d1178fe42d3c53d6
 
 # `join.py`
 
 ## Summary
-- `cmoc session join` の CLI 実行処理を担う。active な session branch の事前条件を確認し、session home branch へ merge し、必要時は Codex CLI に conflict 解消を依頼する。merge 後の状態保存、session branch 削除判定、警告表示までを扱う。
+- session join サブコマンドの CLI 実装。active な session branch の事前条件を検証し、session home branch へ non-fast-forward merge する。
+- merge conflict 発生時は対象を NUL 区切りで列挙し、Codex CLI に解消を依頼した後、conflict marker・stage 状態・merge 完了を検証して commit する。
+- merge 成功後は状態を joined に更新し、session branch が HEAD から到達可能な場合だけ削除し、結果と警告を表示する。
 
 ## Read this when
-- `cmoc session join` の挙動、事前条件、merge・conflict 解消、branch 削除、結果表示を変更または調査するとき。
-- session join に関係する Git path の扱い、conflict marker 検査、Codex 実行の作業ディレクトリを確認するとき。
+- session join の実行条件、merge・conflict 解消・branch 削除の挙動を変更または確認するとき
+- session join のエラー出力先、状態更新、結果表示を調査するとき
+- conflict 対象の検出や conflict marker 検証の実装を変更するとき
 
 ## Do not read this when
-- session join 以外の session サブコマンドを変更・調査するときは、対象サブコマンドの実装へ直接進む。
-- conflict 解消パラメータの生成仕様だけを確認する場合は、conflict resolution builder の実装を直接読む。
+- session join 以外の session サブコマンドの挙動だけを調べるとき
+- 共通の Codex 実行規則だけを確認する場合は、共通規則の oracle file を直接読むとき
+- session branch や session state のデータモデル自体を変更・確認するときは、その定義元を直接読むとき
 
 ## hash
-- 53cf65b89a6cb47a2c6063a7cf5570a1e39a8b9cf3ed06bc6f0aca651b6aaaaa
+- f80be9db336f02273fa6e326a3214b5abd642deb042a6ded78a3f3e31ebde9c0

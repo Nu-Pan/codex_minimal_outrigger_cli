@@ -13,6 +13,7 @@ from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
 
 
 def test_indexing_index_entry_uses_minimum_model_and_low_reasoning() -> None:
+    """index entry builderがminimum modelとlow reasoningを選ぶことを検証する。"""
     parameter = build_indexing_index_entry_parameter(Path(__file__), "# README")
 
     assert parameter.model_class == ModelClass.MINIMUM
@@ -32,6 +33,7 @@ def test_indexing_index_entry_schema_requires_non_empty_semantic_lists() -> None
 
 
 def test_indexing_index_entry_module_exports_only_compatibility_builder() -> None:
+    """index entry互換moduleがbuilderだけを公開することを検証する。"""
     assert indexing_index_entry_module.__all__ == [
         "build_indexing_index_entry_parameter"
     ]

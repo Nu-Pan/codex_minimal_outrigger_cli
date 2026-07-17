@@ -47,8 +47,8 @@ def run_codex_tui(
     log_dir.mkdir(parents=True, exist_ok=True)
     codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # Match validation to where Codex resolves a relative
-    # CODEX_HOME while keeping the user-provided env value unchanged.
+    # 利用者指定の env value は変更せず、Codex が相対 CODEX_HOME を解決する場所に
+    # validation を合わせる。
     codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
     override_args = prepare_codex_override_args(
