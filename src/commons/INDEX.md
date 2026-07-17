@@ -34,20 +34,18 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の事前更新処理を担うモジュール。リポジトリ内の対象を走査し、Codex によるエントリー生成、内容検証、更新差分の commit までを実行する。
-- 排他 lock、対象ディレクトリの深さ優先処理、既存エントリーの hash による再利用、Git 管理・除外対象の判定を扱う。
+- INDEX.md の自動更新を担う indexing 実装。排他 lock、対象ディレクトリの走査、既存 entry の再利用判定、Codex による不足 entry の生成、Markdown 化、更新 commit までをまとめて扱う。
 
 ## Read this when
-- INDEX.md の自動生成・更新、indexing preflight、生成結果の検証や commit 処理を変更するとき
-- 対象ファイル・ディレクトリの走査条件、hash による鮮度判定、Codex 呼び出しの並列化を確認するとき
-- INDEX.md エントリーの Markdown 形式や Structured Output の検証エラーを調査するとき
+- INDEX.md の preflight、自動生成、entry の鮮度判定、並列生成、Git commit、lock 制御を変更・調査するとき
+- indexing 対象の除外条件や Structured Output の検証・Markdown レンダリングを確認するとき
 
 ## Do not read this when
-- INDEX.md の文章内容やルーティング方針そのものを変更・確認するときは、対応する oracle 文書やプロンプト生成側を読む
-- indexing と無関係な CLI 機能、Git 操作、Codex 実行基盤の一般的な挙動を調査するとき
+- INDEX.md entry の文章方針や仕様断片だけを確認したいときは、indexing の oracle 文書を直接読む
+- Codex 呼び出し全般、実行隔離、ログ仕様だけを調査するときは、対応する runtime または oracle 文書を直接読む
 
 ## hash
-- f936050564a8cb139b62d580bbec9450c9c4a1cb8a476ec74ab135bd62297a3e
+- 84b927ac135dc85f59fb67877f9d52c91f42384b6a41ed60d2fa681c9a566637
 
 # `runtime_apply.py`
 
@@ -308,20 +306,19 @@
 # `runtime_paths.py`
 
 ## Summary
-- cmoc の実行時パスと時刻・所要時間を扱う共通ユーティリティ。repository/worktree/cmoc root の解決、runtime ディレクトリ・設定・ログ・report・schema・worktree の保存先取得、cwd の一時変更、timestamp 予約、表示形式の整形を提供する。パス解決や runtime 状態の保存先を扱う実装・テストの入口。
+- リポジトリ・worktree・cmoc root の解決、実行時 timestamp と duration の整形、session/report/log/schema/config などの runtime path 算出を提供する共通モジュール。cwd の一時切替を process-wide に直列化する `pushd` や、agent の読み取り領域・memo 配下判定も含む。commons の runtime path・実行環境制御を確認する入口。
 
 ## Read this when
-- repository root、worktree root、cmoc root、runtime ディレクトリ、設定・ログ・report・schema・session の保存先を確認または変更するとき
-- timestamp、console timestamp、duration 表示、timestamp 付き path の排他的予約を確認または変更するとき
-- cwd を切り替える処理や、root 解決時の runtime error、memo 判定を確認するとき
+- root placeholder の解決、cmoc の runtime directory 配置、session/report/log/schema/config の保存先を変更・調査するとき
+- timestamp・duration の表示形式や衝突回避、cwd 切替の並行実行制御を確認するとき
+- agent read directory または memo 配下判定の利用箇所を追うとき
 
 ## Do not read this when
-- CLI サブコマンド固有の処理や出力形式だけを調べるとき
-- root placeholder の定義や実パス解決そのものを変更するときは、まず path model の実装を読むとき
-- 設定 JSON の内容や prompt の構築規則だけを調べるとき
+- 特定サブコマンドの処理や出力仕様そのものを確認したいとき
+- path placeholder の定義や root 解決アルゴリズムの正本仕様を確認したいときは、先に対応する oracle file を読むべきとき
 
 ## hash
-- c238d9bab51ff7e5482f5521f8e16824df565c5437077d44667b12e34ddec88f
+- cf11fdbed4ea6ed5fe0c0ead2c32832b10b60c0cd3eed2dcf45d4c62de6ee82f
 
 # `runtime_preprocess_command.py`
 

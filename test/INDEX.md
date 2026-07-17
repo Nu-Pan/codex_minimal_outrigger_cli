@@ -498,18 +498,18 @@
 # `test_indexing_common.py`
 
 ## Summary
-- `commons.indexing` の INDEX エントリー描画・解析・更新とディレクトリ走査を、CLI ライフサイクルから分離して直接検証するテスト。入力スキーマ検証、ハッシュ再利用と不正エントリー再生成、空ディレクトリ、安定した兄弟順序、並列更新、サブコマンドログ伝播、memo 配下の走査方針、シンボリックリンク循環回避を扱う。
+- `commons.indexing` の直接テストをまとめ、INDEX entry の入力検証・再生成・hash 再利用、ディレクトリ traversal、symlink cycle 回避、安定順序、空ディレクトリ処理、並列更新と logger/cwd 制約を検証する。CLI lifecycle から分離された indexing 挙動のテスト入口。
 
 ## Read this when
-- INDEX.md の生成・更新、エントリー入力検証、ハッシュ判定、ディレクトリ traversal、並列 worker、関連ログ伝播の挙動を変更または調査するとき。
-- `commons.indexing` の外部挙動や制御ロジックをテストケースから確認するとき。
+- INDEX.md の render/parse/update_indexes 挙動を変更・調査するとき
+- INDEX entry の schema 検証、malformed entry の再生成、hash、並列 worker、directory traversal、memo 除外を確認するとき
 
 ## Do not read this when
-- CLI の引数解析やサブコマンド lifecycle だけを変更・調査するとき。
-- Codex の出力品質そのものや、INDEX 生成以外のログ機能だけを確認するとき。
+- CLI lifecycle や個別サブコマンドの統合挙動を確認するとき
+- INDEX entry の正本仕様や生成プロンプトを確認するときは、対応する oracle 文書・oracle src を直接読むとき
 
 ## hash
-- e5828e6724da053456ce98b3f1ef2f1af15411f71679509f05db15fb993579ca
+- 7c2c6073d7c4a3c758879cf8fa958a47c8d74c13ac27f186dd3816eedf75d303
 
 # `test_indexing_preflight.py`
 
@@ -544,6 +544,24 @@
 
 ## hash
 - 52612d997cee015efa9da672fc11c668e6ed407722cc2e0d7c56dcab87cd5e1b
+
+# `test_production_cli.py`
+
+## Summary
+- 実 Codex CLI と cmoc managed Ollama を使い、全末端サブコマンドを独立 process の利用者向け本番経路で検証する受け入れテスト。CLI の終了 code、report・state・Git・call log、session/apply の状態遷移、および PTY 上の TUI 応答完了と終了操作を確認する。LLM の回答品質自体は検証対象外。
+
+## Read this when
+- CLI の全末端サブコマンドが本番経路で実行可能か確認するとき
+- 実 Codex CLI、managed Ollama、独立 process、call log の連携を検証するとき
+- session/apply の fork・join・abandon 状態遷移や TUI の PTY 終了処理を確認するとき
+
+## Do not read this when
+- 単一コマンドの内部実装や単体テストを確認したいとき
+- LLM の回答品質やプロンプト内容そのものを評価したいとき
+- Codex や Ollama を使わない通常の CLI テストだけを調べるとき
+
+## hash
+- 90f4efff95d56dcd2b205549bd47e56d761a1882dea4f70a4635aabf1d3af2b2
 
 # `test_prompt_parts.py`
 
