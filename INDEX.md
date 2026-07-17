@@ -127,37 +127,38 @@
 # `src`
 
 ## Summary
-- src は、cmoc の実行用パッケージと互換 import 境界をまとめる領域です。CLI 本体、共通 runtime、サブコマンド、公開 API の再公開 shim、および oracle 名前空間への接続を扱います。
-- トップレベルの CLI や共通 runtime の所在を確認した後、個別機能の詳細は `main.py`、`commons`、`sub_commands`、互換入口モジュールなど該当する下位対象へ進みます。
+- cmoc の CLI 実装と公開入口を収める realization のルート。Typer による CLI 登録、互換 import shim、共通 runtime、ACP builder、設定・基本型、各サブコマンドへの導線を扱う。
+- `acp`、`basic`、`config` は既存の公開 import 経路を保ちながら実体へ接続する互換入口、`commons` は共通 runtime helper、`sub_commands` は CLI サブコマンドの実装群を提供する。
+- CLI 全体の入口や公開コマンドの登録を確認する場合は `main.py`、正本 `oracle.*` の解決を確認する場合は `oracle.py`、個別機能の詳細を確認する場合は対応する下位 package・module へ進む。
 
 ## Read this when
-- cmoc の実行コード全体の構成や、CLI・runtime・サブコマンドの担当領域を把握したいとき
-- CLI の起動入口、共通実行基盤、サブコマンド、互換 import 経路、oracle 実装への接続先を特定したいとき
-- 特定機能の実装を読む前に、src 内での入口と下位ディレクトリを選びたいとき
+- cmoc の CLI 全体のコマンド登録、起動処理、公開 import 入口の構成を確認または変更するとき。
+- ACP builder、共通 runtime、設定・基本型、サブコマンド実装の下位入口を選ぶ必要があるとき。
+- `src` 起動時の `oracle.*` 解決や、既存公開名から canonical 実体への互換接続を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な制御ロジックを調べるときは、対応する `sub_commands` 配下を直接読む
-- 共通 helper の入出力や失敗時挙動を調べるときは、対応する `commons` 配下の担当モジュールを直接読む
-- 互換入口の公開名や委譲先だけを確認したいときは、該当する shim モジュールを直接読む
-- oracle 側の正本仕様や実装内容を確認したいときは、対応する `oracle` 配下を直接読む
+- 特定サブコマンドの処理詳細を調べるときは、`sub_commands` 配下の該当実装を直接読む。
+- runtime helper、設定、Git、状態、パスなど共通機能の詳細を調べるときは、`commons` 配下の対応 module を直接読む。
+- ACP builder の個別処理や基本型・構造化文書 API の仕様を調べるときは、対応する下位実体または `oracle` 側を直接読む。
+- `src` のルート構成と無関係な利用者向け仕様や正本仕様を調べるときは、対応する oracle doc・oracle src を読む。
 
 ## hash
-- 5fbf0c566af1e6e1636bd15e27760afd1b3e3b8a55639995477d887d5396a2d3
+- 459afc88ea3c4ca6c6106f50ee512e635647d045d4fbc7ab3da7b104952f6fc5
 
 # `test`
 
 ## Summary
-- テストコード群と共通テスト補助を集約するディレクトリ。ACP builder、CLI、runtime、Codex、apply/session、indexing、review oracle、doctor、設定、Ollama などの外部挙動・制御ロジックを検証する各 pytest が、対象機能ごとのテスト入口として配置されている。
+- テストコード全体を、ACP builder、CLI サブコマンド、Codex runtime、indexing、review oracle、session/apply、設定・worktree・Ollama などの機能別に検証する pytest 群として構成する。各テストは外部挙動、制御ロジック、Structured Output・path・state・process・Git lifecycle などの契約を確認する入口であり、個別の共通 fixture・support helper は同階層の補助モジュールから参照する。
 
 ## Read this when
-- 特定の機能やサブコマンドの回帰テスト・外部契約・境界条件を確認または変更するとき
-- 複数テストで共有する CLI runner、Git repository、Codex、Ollama、worktree などのテスト補助を確認するとき
-- 対象実装の変更に対応する検証テストを特定するとき
+- 対象機能の実装変更に伴う外部挙動や回帰テストを確認するとき
+- CLI、Codex 実行、indexing、review oracle、session/apply、runtime、設定、Ollama、ACP builder の契約を調査・変更するとき
+- 複数のテスト領域にまたがる本番経路や統合 lifecycle を検証するとき
 
 ## Do not read this when
-- 正本仕様や構造化出力 schema の内容を確認するときは、対応する oracle 文書・schema を直接読む
-- 実装の内部構造を追うときは、対応する src ファイルを直接読む
-- 対象機能と無関係なテストや共通補助の詳細を確認するとき
+- 対象機能の正本仕様や実装詳細だけを確認する場合は、対応する oracle または src を直接読む
+- 特定のテスト共通 helper の実装だけを確認する場合は、対応する support module を直接読む
+- テスト対象と無関係な機能の実装・仕様・テストを調査するとき
 
 ## hash
-- 44bd1f3841bfefc1055df390eb87804aecd56efc4f3502a3cbd6d9dfad40f6df
+- 5c8279f11e20473c9f1e0f3106209ee20d8413b668486f52670d84b294cc5ced

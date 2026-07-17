@@ -19,17 +19,17 @@
 # `oracle`
 
 ## Summary
-- レビュー用 oracle builder の互換 import 経路を集約するディレクトリ。finding の列挙・判定・マージ・擁護・反証用パラメータ生成を扱い、canonical な oracle 実装への橋渡しや、必要な最小補正を担う。各ファイルの互換性維持・移行・削除可否を確認する入口。
+- review/oracle builder の互換 import 経路と、canonical builder に委譲する realization 実装をまとめたディレクトリ。review finding の enumerate・judge・merge・advocate・challenger 向け parameter 生成、および既知の prompt placeholder typo 補正を扱う。各モジュールは旧 caller の移行入口または限定的な prompt 補正の確認先であり、canonical な仕様・実装は委譲先を直接読む。
 
 ## Read this when
-- レビュー finding の互換 import 経路、canonical 実装への委譲、呼び出し元の移行状況を調査するとき。
-- review oracle の prompt やパラメータ生成で、互換層が加える補正とその削除条件を確認するとき。
-- 旧来の import 経路を維持する必要性や、互換 package・shim を削除できるか判断するとき。
+- review/oracle builder の旧 import 経路、canonical 実装への移行状況、互換 package の削除可否を確認するとき
+- review finding の parameter 生成や、既知の oracle-root placeholder typo 補正の挙動を確認・変更するとき
+- prompt への入力保持や、canonical builder への委譲関係をレビューするとき
 
 ## Do not read this when
-- canonical なレビュー finding 列挙・判定・検証処理の仕様や実装詳細だけを確認したいとき。
-- 互換経路と無関係な builder、oracle path 処理、または別サブコマンドのパラメータ生成を調べるとき。
-- 新しいレビュー機能の仕様を確認したいとき。
+- canonical builder の prompt 仕様・本体実装・検証ロジックを確認したいとき
+- review routing、一般的な AgentCallParameter 処理、またはこのディレクトリの対象外の review 処理を調査するとき
+- 旧 import 経路や限定的な prompt 補正に関係しない新しい実装責務・公開 API を確認するとき
 
 ## hash
-- a73562e940351b2377912d69014bd9d9c305f33eacaf5c5ec4f0ea0eaa5c4f0f
+- 613ebe11f0eaefeabd8468d3077a9433529c66dd1ff56df0e586ddeeacfe9cd6

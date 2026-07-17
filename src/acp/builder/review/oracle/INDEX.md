@@ -18,85 +18,78 @@
 # `enumerate_finding.py`
 
 ## Summary
-- レビュー finding 列挙用の互換 import 経路。canonical oracle 実装へ委譲し、symlink 経由でレビューした場合は prompt 内の oracle path を lexical path に戻して呼び出し事実を保持する。既存の互換 import 呼び出し元を調査・変更する際の入口。
+- review finding enumeration の互換 import 経路を提供するモジュール。canonical oracle builder を呼び出し、絶対 symlink が指定された場合は prompt 内の oracle path を解決済み path から lexical path に戻して、レビュー対象の指定を保持する。canonical 実装への移行完了後に削除できる。
 
 ## Read this when
-- `acp.builder.review.oracle.enumerate_finding` の import 経路や呼び出し元を変更するとき
-- symlink 経由の oracle path が review prompt にどう反映されるかを確認するとき
-- canonical builder への移行完了と互換経路の削除可否を判断するとき
+- review finding enumeration の parameter builder の互換 import 経路や symlink 指定時の prompt path 保持を確認・変更するとき
+- `acp.builder.review.oracle.enumerate_finding` からの既存 import を canonical oracle path へ移行するとき
 
 ## Do not read this when
-- canonical な finding 列挙処理そのものの仕様や実装を確認したいとき
-- レビュー finding 列挙と無関係な builder や oracle path の処理を調査するとき
+- canonical な parameter builder の仕様や実装を確認したいときは、参照先の canonical 実装を直接読む
+- review finding enumeration と無関係な review builder や一般的な AgentCallParameter 処理を確認するとき
 
 ## hash
-- 2ffda7572a382caaacc41ce17c74586aea14e3b5d05b26e53c02bd5df8572d34
+- 6061e81cb1410b8a466e350703d2f1c48ac2f5bfd30596c98f8c6124e87f3e65
 
 # `judge_finding.py`
 
 ## Summary
-- `acp.builder.review.oracle.judge_finding` からの既存 import を維持するための互換 shim です。レビュー finding 判定用の正本実装へ進む必要があるか、呼び出し元を整理してこの経路を廃止できるかを判断する入口として使います。
+- review finding judgment の互換 import 経路を提供する薄いラッパー。canonical 実装を再公開し、旧 import caller の移行期間を支える。全 caller が canonical oracle path を直接参照するまでの暫定入口。
 
 ## Read this when
-- この import 経路をたどっている呼び出し元を洗い出したいとき。
-- 互換層を削除できるか確認したいとき。
-- レビュー finding 判定の正本実装そのものを追いたいときは、ここではなく対応する oracle 側へ進むとき。
+- review finding judgment の旧 import 経路や caller の移行状況を確認するとき
+- 互換 import の削除可否を判断するとき
 
 ## Do not read this when
-- レビュー finding 判定の実装詳細を知りたいだけのとき。
-- この互換 import を残す必要がないかを判断するのではなく、正本実装の仕様や挙動だけを確認したいとき。
+- review finding judgment の本体仕様や実装を確認したいときは、canonical oracle 実装を直接読む
+- 旧 import 経路と無関係な review 処理を調査するとき
 
 ## hash
-- 6f61d68f3f224bc69e03ab25a86f2453986f1efb8afe4c63183567815ef49ac7
+- b9e8169ee22552391a2c28b6c095b015d05dca902fac7f122146ee888e7aef4f
 
 # `merge_finding.py`
 
 ## Summary
-- `cmoc review oracle` の所見マージ用パラメータを作る薄い実装層。正本 builder の戻り値に対して、`oracle-root` プレースホルダ定義の既知 typo だけを後処理で直す必要があるときに読む。
+- 正本の review/oracle merge-finding builder を呼び出し、既知 typo に限って生成 prompt の placeholder 定義を補正する realization 実装。補正 helper は対象 marker 内の定義を限定的に置換し、該当しなければ prompt を変更しない。
 
 ## Read this when
-- review oracle の所見マージ用パラメータの実装を追うとき
-- 正本 builder の出力をそのまま使わず、`prompt` だけを最小修正する理由を確認したいとき
-- `oracle-root` のプレースホルダ定義 typo の互換対応や削除条件を確認したいとき
+- merge-finding review 用 agent-call parameter の生成や、既知の oracle-root placeholder typo 補正の挙動を確認・変更するとき。
 
 ## Do not read this when
-- 正本の所見マージ prompt 本体を変更したいときは、まず oracle 側の実装を読む
-- `cmoc review oracle` 以外のサブコマンドのパラメータ生成を追いたいとき
-- prompt の共通組み立てや Structured Output schema 全般を見たいだけのとき
+- 正本 builder の仕様や prompt 本文そのものを確認したいときは、参照先の oracle src を直接読む。merge-finding 以外の review builder を扱うとき。
 
 ## hash
-- a34513231db4381f9b8519b2c7b44b837db8193587fe5de292d9f1ee860852f7
+- 2aa8e85799039efc1a74937d43a4ce1e2ac667e709754c7612882b61e314db3e
 
 # `validate_finding_advocate.py`
 
 ## Summary
-- `cmoc review oracle` の所見を擁護する理由を集めるための `AgentCallParameter` を組み立てる。正本側の prompt を受け取り、実装側で必要な最小の補正を加える薄いラッパーなので、この層を読む。
+- canonical advocate builder のパラメータ生成処理をラップし、生成された prompt に残る oracle root placeholder の既知 typo を一箇所だけ補正する実装。finding と既知の advocate/challenger 理由はそのまま canonical builder に渡し、補正後の AgentCallParameter を返す。
 
 ## Read this when
-- `cmoc review oracle` の擁護側パラメータ生成の流れを追いたいとき。
-- oracle 側の prompt から、実装側でどこだけ補正しているか確認したいとき。
-- 所見本文と既知理由をそのまま保持したまま、返却パラメータだけを整形する責務を確認したいとき。
+- validate finding の advocate 用 AgentCallParameter 生成や prompt の typo 補正を変更・レビューするとき
+- canonical builder との委譲関係、dynamic input の byte-for-byte 保持、oracle root placeholder の補正条件を確認するとき
 
 ## Do not read this when
-- review oracle の所見を新規に生成する本体の仕様を追うなら、対応する oracle 側の実装を先に読む。
-- 補正後 prompt の文字列差分そのものだけを見たいなら、この薄いラッパーより正本側の実装を読む。
-- 擁護側ではなく反証側の入力組み立てを見たいなら、`validate_finding_challenger` 系を読む。
+- advocate builder の canonical prompt 仕様そのものを確認したいときは、委譲先の oracle builder を直接読む
+- review routing や finding の検証ロジック自体を変更・確認するとき
+- prompt の共通仕様を確認するだけで、この補正ラッパーの挙動に関係しないとき
 
 ## hash
-- 57f0c360bd224ea691aad7be0384b972d17d79436a13a6ea3c5a16d24f2dc080
+- c8395a666dc0e65d4a4b7c05858669399d98cee6c32622c90a7bf2d0029dbe6a
 
 # `validate_finding_challenger.py`
 
 ## Summary
-- `acp.builder.review.oracle.validate_finding_challenger` から正本の oracle 実装へ橋渡しする互換エントリ。呼び出し元の移行を終えるまで、この薄い再公開だけを担う。
+- challenger finding validation の互換 import 経路を提供する薄いラッパー。canonical oracle 実装から検証用パラメータ生成関数を再公開する。
 
 ## Read this when
-- 旧い import 経路をまだ使っている呼び出し元があり、どの正本実装に移るべきか確認したいとき。
-- 互換層を削除できる条件や、どの参照先が canonical かを確認したいとき。
+- challenger finding validation の import 経路や互換 caller を調査・変更するとき
+- canonical oracle 実装への移行状況や削除条件を確認するとき
 
 ## Do not read this when
-- 実際の検証ロジックや引数仕様を知りたいときは、正本の oracle 実装を直接読む。
-- 新しい機能追加や挙動変更をこの互換層で行う必要はない。
+- canonical な検証ロジック自体を変更・確認するとき
+- challenger finding validation と無関係な review builder の処理を調査するとき
 
 ## hash
-- 49ae85b7f6188d91ac9ed2f305777a1857bec0b65e41620c62d58ad6bf1c73f7
+- 8db5befdf20ae0fbb8d94f7123529495f2ca943a246a3a07f275907ed242130b

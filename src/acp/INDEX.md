@@ -17,16 +17,16 @@
 # `builder`
 
 ## Summary
-- `acp.builder` の互換入口群をまとめるディレクトリ。旧来の `acp.builder.*` import を維持しながら、`oracle.acp_builder` 側の正本実装や各 realization builder・probe・TUI 入口へ到達するための境界を提供する。
+- 対象ディレクトリは、ACP builder の realization 側入口をまとめる層です。既存の `acp.builder.*` import 互換を維持しつつ、apply・indexing・quota probe・review・session・TUI などの各領域を下位要素へ振り分けます。
 
 ## Read this when
-- `acp.builder` 配下の互換 import 経路、公開名、モジュール探索順を確認するとき。
-- apply、indexing、review、session、TUI、quota probe などの互換入口や canonical 実装への委譲先を調べるとき。
-- 互換層の維持・整理・削除可否を判断するとき。
+- ACP builder の互換 import 経路、canonical/oracle builder への委譲、または下位 builder package の入口を確認するとき。
+- 対象ディレクトリ直下の builder 機能の追加・変更・削除に伴い、どの下位要素へ進むべきか判断するとき。
 
 ## Do not read this when
-- 特定機能の正本仕様や本体実装を確認したいときは、対応する `oracle.acp_builder` 側または委譲先の実体を直接読む。
-- 互換入口と無関係な個別サブコマンドの内部ロジックを調べるとき。
+- 個別 builder の詳細な prompt・schema・処理仕様を確認したいときは、該当する下位 package または oracle 側実装を直接読む。
+- TUI の画面挙動、apply fork のループ制御、session の状態遷移など、builder 入口以外の責務を調べるときは対応する実装箇所へ直接進む。
+- 対象ディレクトリに新たな通常ファイルがないかを確認するだけの場合は、本文ではなくディレクトリ構成を確認する。
 
 ## hash
-- 77153bacc00daaa85ea56f7e60b670507979857153d8b8daa88c48df20c4d02e
+- 73190804eb843eab784b4f8260f3e42ced60cbf2f93215b21b9721343b26dcd4

@@ -1,36 +1,35 @@
 # `__init__.py`
 
 ## Summary
-- `acp.builder` への互換入口を提供する初期化処理。`oracle.acp_builder` を正本として参照しつつ、既存の `acp.builder.*` 呼び出しを成立させる役割を持つ。
+- oracle.acp_builder を acp.builder として公開する互換入口。既存の acp.builder.* 参照を維持し、canonical な basic モジュールを acp.builder.basic として利用可能にする。
 
 ## Read this when
-- `acp.builder` 配下の公開名をどう解決するか確認したいとき。
-- 既存利用者向けの互換性を維持しながら、`oracle.acp_builder` 側の実装を見せる必要があるとき。
-- `basic` モジュールがどこから来るか、`acp.builder` のモジュール探索順を変える必要があるとき。
+- 既存の acp.builder.* 参照との互換性や、acp.builder.basic の公開経路を確認するとき
+- acp.builder パッケージの __path__ 設定や oracle.acp_builder への委譲を変更するとき
 
 ## Do not read this when
-- `acp.builder.*` 以外の個別実装や機能の仕様を知りたいときは、対応する下位モジュールを読む。
-- 互換入口ではなく、正本側の実装そのものを確認したいときは `oracle/acp_builder` 側を読む。
-- `acp.builder` の公開面そのものを変えずに内部ロジックだけを追いたいときは、この入口ではなく対象の実体モジュールを読む。
+- oracle.acp_builder の canonical な実装内容を確認したいとき
+- acp.builder.* 参照の削除可否だけを判断するとき
 
 ## hash
-- 848ff37eb14c8145806e0a19d2da20b284094ae0063abf6c9b7b80623ac29764
+- d6fdb57f4c932cedc07bf55090c3737b61b5ba34a5938f3126501984e040eaa5
 
 # `apply`
 
 ## Summary
-- `acp.builder.apply` の既存 import 互換層と、`cmoc apply fork` の realization 側 builder を含む。fork builder は正本 builder への委譲、共通の repo root・oracle import 解決、レビュー・修正および変更要約用 parameter 構築の入口を担う。
+- `acp.builder.apply` の既存 import 経路を保つ互換パッケージと、apply fork 用の realization 側 ACP builder 入口を提供する。`fork` 配下には、正本側 builder への委譲、変更要約、ファイルレビュー・修正用 builder が含まれる。
 
 ## Read this when
-- `acp.builder.apply` の import 互換経路や、`cmoc apply fork` の builder 委譲・共通 parameter 構築を確認または変更するとき。
+- `acp.builder.apply` の import 入口や apply fork の builder 委譲経路を確認・変更するとき。
+- repo root 解決、oracle builder の利用、ACP parameter の受け渡し、変更要約やファイルレビュー・修正用 parameter の流れを確認するとき。
 
 ## Do not read this when
-- `cmoc apply fork` のループ制御、再投入、commit、state 遷移を調べるとき。
-- レビュー・修正や変更要約の prompt・schema など正本仕様を確認するときは、正本側の apply 実装を直接読む。
-- fork builder と無関係なサブコマンドや import 解決を変更するとき。
+- apply fork のループ制御や state 遷移を調べるときは、対応するサブコマンド実装を直接読む。
+- prompt、schema、変更要約、レビュー・修正の正本仕様を確認するときは、対応する oracle 側実装を読む。
+- apply fork 以外の ACP builder の具体的な処理を調べるときは、対象の builder package を直接読む。
 
 ## hash
-- 948fba5ad80aaea8fd392250eaed0b89e8ac00688150ddabee9004588f566efd
+- 5f4332bfb8ba8ae22f58c9944de681a1740eb0d8352a251be527bcc7f0122a14
 
 # `common`
 
@@ -66,69 +65,67 @@
 # `quota_probe.py`
 
 ## Summary
-- quota availability probe 用の互換入口。任意提供される oracle builder があればそれへ委譲し、未配布時は空 stdin・最小モデル・低推論 effort・読み取り専用の最小 probe を生成する。quota polling を利用する実装や、正本 builder の配布有無に関わる呼び出し経路の確認時に読む。
+- オプションの正本 quota probe builder を呼び出す互換入口。正本 builder が配布されていない場合は、最小モデル・低推論・読み取り専用・空 stdin の probe parameter を生成するフォールバックを提供する。
 
 ## Read this when
-- quota availability probe の AgentCallParameter 生成経路を確認・変更するとき
-- oracle builder が存在しない配布形態での互換 fallback や quota polling の挙動を確認するとき
+- quota availability probe の parameter builder の呼び出し経路や、正本 builder 不在時の互換 fallback を確認・変更するとき。
 
 ## Do not read this when
-- 正本の probe 仕様や canonical builder の内容を確認したいときは、先に oracle 側の対応文書・実装を読む
-- quota probe と無関係な AgentCallParameter builder や CLI 処理を調べるとき
+- quota probe の正本仕様や canonical builder 自体を確認したいときは、oracle 側の quota probe 定義を直接読む。
+- quota polling と無関係な ACP builder や一般的な agent call parameter の仕様を扱うとき。
 
 ## hash
-- f2e851afa17cb6748655efd734212191c964231c0d9bc6cfb608523dbeb99fd9
+- bd4ece6e70b550295d32513160360390ee1574d55e7d89eff3b0237a8da32ec0
 
 # `review`
 
 ## Summary
-- review builder 周辺の互換 import 経路をまとめるディレクトリ。旧来の package 初期化と review oracle の互換層を入口として、canonical 実装への委譲、finding 処理、パラメータ生成、移行・削除可否を確認する。
+- review builder 周辺の互換 import 入口と、canonical builder に委譲する oracle 系実装をまとめたディレクトリ。review finding の各種 parameter 生成と、既知の prompt placeholder typo 補正を扱う。
 
 ## Read this when
-- review builder 周辺の import 互換性や旧来の参照を調査するとき
-- review oracle の互換経路、補正、canonical 実装への橋渡しを確認するとき
-- 互換 package や shim の残存理由・削除条件を判断するとき
+- review/oracle builder の旧 import 経路や canonical 実装への委譲関係を確認するとき
+- review finding の parameter 生成や既知の oracle-root placeholder typo 補正を確認・変更するとき
+- 互換 package の残存理由や削除可否を判断するとき
 
 ## Do not read this when
-- レビュー finding の canonical な実処理や検証ロジックだけを確認したいとき
-- 互換経路と無関係な builder、oracle path 処理、別サブコマンドの実装を調べるとき
-- 新しいレビュー機能や利用者向け公開 API の仕様を確認したいとき
+- canonical builder の prompt 仕様・本体実装・検証ロジックを確認したいとき
+- review routing、一般的な AgentCallParameter 処理、または対象外の review 処理を調査するとき
+- 旧 import 経路や限定的な prompt 補正に関係しない新しい実装責務・公開 API を確認するとき
 
 ## hash
-- 1e1407221a9ce3abcda4fd9dbd7690d10ed9bcaabd4f52fd1811038aaba0be99
+- 224fe812bdf61b4f1b20a257fa47537a22083c79eb4f60ea8c74b3d01cc4aa09
 
 # `session`
 
 ## Summary
-- `acp.builder.session` 互換 package の入口。ここは本体実装ではなく、旧 `acp.builder.session.*` import を維持するための境界だけを案内する。配下の `join` は、session join の互換 import とその削除条件を確認したいときだけ進む。
+- oracle.acp_builder.session と互換性を保つ session package。既存の acp.builder.session.* import 経路と、join 配下の conflict resolution builder への委譲入口を扱う。
 
 ## Read this when
-- `acp.builder.session.*` の互換 import を維持する理由や、どこまで残すかを確認したいとき。
-- `acp.builder.session` から `oracle.acp_builder.session` への移行可否を判断したいとき。
-- 配下の `join` 互換 package を読むべきかを判断したいとき。
+- acp.builder.session.* の互換 import 経路を維持・変更・削除するとき。
+- oracle.acp_builder.session への移行や、互換 package を削除できる条件を確認するとき。
+- session join の conflict resolution builder に関する互換経路を確認するとき。
 
 ## Do not read this when
-- session 実装の処理内容や内部構成を確認したいとき。
-- 新規機能の公開入口や通常の公開 API を探しているとき。
-- `acp.builder.session.join.conflict_resolution` の具体的な本体実装を確認したいとき。
+- session の具体的な処理仕様や canonical 実装を確認したいとき。
+- 互換 import の利用箇所や通常の公開 API を調査したいとき。
 
 ## hash
-- 3c402ed48a4677b3968a008f06a24d8ad06419aad25326ad38fd3d0f43f14139
+- f8abe886ee2d69de06c7edbe11929ce7fac0b3da0c3b4cd3cd86c173f2aa6cfd
 
 # `tui`
 
 ## Summary
-- `acp.builder.tui` の既存 import 互換を保つための薄い入口群で、TUI 起動・parameter 解決の転送先と、残すべき互換層かどうかを判断するときに読む。
+- TUI builder の互換 import 経路を提供する realization package。既存の `acp.builder.tui.*` 参照を維持し、起動パラメータ生成や resolve-parameter builder への委譲・再公開を扱う。canonical 実装や oracle 側 builder を確認するための入口でもある。
 
 ## Read this when
-- 既存の `acp.builder.tui.*` import を維持する必要があるか、置き換えや削除が可能かを確認したい。
-- TUI 起動や parameter 解決の公開経路が、どの実体へ委譲されているかを追いたい。
-- 互換 package として残っている理由や、どこまでが転送層でどこからが実体かを見分けたい。
+- 既存 TUI import 経路の互換維持・削除可否を調査するとき
+- `cmoc tui` の起動パラメータ準備や oracle 側 builder への委譲を確認するとき
+- TUI 用 resolve-parameter builder と FileAccessMode の公開経路を確認するとき
 
 ## Do not read this when
-- TUI の画面構成や挙動そのものを確認したい場合は、委譲先の実体を読む。
-- 新しい公開 API や新規 import 経路を設計したいだけで、既存互換層の維持可否を見ない場合は読む必要がない。
-- TUI 以外のコマンドや機能の入口を調べたい場合は対象外。
+- TUI の画面構成や実装本体の挙動を確認したいとき
+- canonical builder の詳細、TUI 以外の builder、FileAccessMode 定義自体を調べたいとき
+- 新しい公開 API や import 経路を設計したいとき
 
 ## hash
-- 669cddd4070305d26edfbeb549909dedff34daf16e188730e91e7d3f60d6d84c
+- befc41436ec3ae7a7f2b3d8c5fd44243283fee983539940b8fea55a876707c74

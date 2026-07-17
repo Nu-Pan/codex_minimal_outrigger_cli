@@ -17,20 +17,19 @@
 # `_common.py`
 
 ## Summary
-- `cmoc apply fork` の各 builder が共通で使う補助処理を置く。repo root の解決、`oracle/src` を import 可能にするための sys.path 調整、oracle 側の ACP parameter をそのまま受け渡すための薄い変換だけを担当する。
+- apply fork ACP builder が共通利用する補助関数を提供する。repo root の解決、oracle 側ソースの import 可否確認と開発・パッケージ layout 対応、oracle が返す ACP parameter の realization 公開型としての受け渡しを扱う。
 
 ## Read this when
-- `cmoc apply fork` 配下の builder から oracle 実装を呼び出す前に、作業ツリーと packaged layout のどちらでも `oracle` を import できるようにしたいとき。
-- fork 系 builder の中で、repo root の決定方法をそろえたいとき。
-- oracle 側の builder が返した `AgentCallParameter` を realization 側の公開型としてそのまま返す経路を確認したいとき。
+- apply fork の ACP builder を実装・修正するとき
+- oracle builder の import 経路や repo root 解決を確認するとき
+- oracle 側の ACP parameter を realization 側へ渡す処理を確認するとき
 
 ## Do not read this when
-- 個別の fork builder が何を構築するかを知りたいときは、それぞれの builder 本体を読む。
-- `cmoc apply fork` 以外のサブコマンドや、oracle 以外の import 解決を変えたいときは読む対象ではない。
-- `INDEX.md` のルーティング規則そのものを確認したいときは、この補助ファイルではなく該当階層の案内を読む。
+- apply fork 以外の ACP builder の具体的な処理を確認するとき
+- ACP parameter や oracle builder の実装本体を直接確認したいとき
 
 ## hash
-- 921e1b602f59bee1303b21e22c887f86b0f50fd9bffcce8b377fdc2a309ac493
+- 29e5f7a547c83fd6e23281a62a320c81a33bca76b7921ba6d9638a45821bf195
 
 # `change_summary.py`
 
