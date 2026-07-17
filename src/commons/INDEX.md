@@ -33,20 +33,19 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の更新前処理を担うモジュール。対象ツリーを走査し、欠落・変更されたエントリーを生成して保存・コミットするほか、既存エントリーの検証と Structured Output の Markdown 化を行う。
+- INDEX.md のエントリー生成を支える indexing 実装。対象ファイルやディレクトリの内容を検査し、Codex によるエントリー生成、鮮度判定、INDEX.md の更新・コミットを管理する。
 
 ## Read this when
-- INDEX.md の自動生成、更新順序、並列生成、排他ロック、更新コミットの挙動を変更・調査するとき
-- INDEX.md エントリーの解析・ハッシュ鮮度判定・Structured Output 検証・描画処理を変更するとき
-- Codex 呼び出し前の indexing preflight や実行コンテキストの扱いを確認するとき
+- INDEX.md の自動生成・更新・コミット処理を変更または調査するとき
+- indexable なファイル・ディレクトリの判定、既存エントリーの再利用、ハッシュ検証を確認するとき
+- Codex 呼び出しの並列化、排他ロック、worktree 間の実行分離を変更するとき
 
 ## Do not read this when
-- INDEX.md エントリーの文章内容そのものを確認・変更するときは、生成対象のファイルまたはディレクトリを直接読む
-- 一般的な CLI 実行や preflight 以外の処理を調査するときは、対象の実装モジュールを直接読む
-- INDEX.md の仕様上の要件や Codex 実行・ログ保存規則を確認するときは、対応する oracle 文書を読む
+- INDEX.md のエントリー内容の仕様だけを確認したいときは、indexing の oracle 文書を直接読む
+- 特定の CLI サブコマンドの実装を変更するときは、そのサブコマンドの実装ファイルを直接読む
 
 ## hash
-- 7d3ba54486aa619f6e7d1f7ee33dd68dc6127783afba2ae338d8cc400d21c606
+- 26246975f2dccf84ecfc768c704d2ec6d0c715e4a6916086c3904375d088bdfd
 
 # `runtime_apply.py`
 

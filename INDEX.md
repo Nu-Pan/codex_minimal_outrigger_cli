@@ -127,33 +127,32 @@
 # `src`
 
 ## Summary
-- src は cmoc の実装コード領域で、CLI の起動入口、互換 import shim、共通 runtime、設定公開経路、ACP builder、各サブコマンド実装を扱う。機能別の実装確認では、配下の個別パッケージやモジュールへ進むための入口となる。
+- cmoc の realization source package。Typer CLI の起動・コマンド定義、共通 runtime、設定・互換 import shim、ACP builder、各サブコマンド実装を提供し、CLI と内部機能の実装領域への入口となる。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI 入口から共通 runtime・ACP・サブコマンドへ至る責務の分布を確認するとき。
-- 複数の実装領域にまたがる変更で、最初に読むべき下位パッケージや公開入口を判断するとき。
+- cmoc の CLI 起動入口、サブコマンド構成、共通 runtime、設定、ACP builder の実装領域を選ぶとき。
+- 複数のサブコマンドや共通 runtime にまたがる変更影響を調べるとき。
 
 ## Do not read this when
-- 特定の CLI サブコマンド、runtime helper、ACP builder、設定型、または互換 shim の具体的な処理だけを調査・変更するときは、対応する下位モジュールを直接読む。
-- 正本仕様や oracle 側の実装を確認するときは、対応する oracle 文書・ソースを直接読む。
+- 特定機能の正本仕様を確認したいときは、対応する oracle 配下を直接読む。
+- 単一サブコマンドや個別 runtime の具体的な処理だけを調査・変更するときは、対応する下位ディレクトリまたはモジュールへ直接進む。
 
 ## hash
-- 6beb3f3588667eaa672c2b52d21830a8f65c6deb2bfab3112ba2c44002f690b3
+- 825d6fb8d74167fc875283a6407e48bc7e9334a86cce528b3a16db043f5b5ad8
 
 # `test`
 
 ## Summary
-- cmoc の pytest テスト群を集約するディレクトリ。ACP builder、CLI サブコマンド、Codex runtime、indexing、review oracle、session/apply、設定、worktree、Ollama などの外部挙動・制御契約を検証し、各機能別テストと共有テスト補助を下位要素への入口として提供する。
+- cmoc の pytest テスト群を収録するディレクトリ。ACP builder、CLI サブコマンド、Codex runtime、indexing、review oracle、session/apply、設定・状態・Ollama などの外部挙動と制御ロジックを検証する。各機能の回帰テストや契約確認の入口として利用する。
 
 ## Read this when
 - cmoc の機能変更に対応する回帰テストや契約テストを探すとき
-- CLI、Codex runtime、indexing、review oracle、session/apply、設定、worktree、Ollama、ACP builder の挙動をテスト観点から確認するとき
-- テスト用の共有 Git・Ollama・Codex・CLI 補助を利用または変更するとき
+- CLI、Codex 実行、indexing、review oracle、session/apply、runtime の挙動をテストから確認したいとき
+- 共有テスト補助や、Git・Ollama・Codex の fixture を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認するときは、対応する oracle 文書・schema を直接読む
-- 実装詳細だけを確認するときは、対応する src の実装を直接読む
-- 対象機能と無関係なテストや共有補助を読む必要がないときは、このディレクトリを入口にしない
+- 実装の責務や正本仕様そのものを確認するときは、対応する src または oracle 配下を直接読む
+- 特定機能と無関係なテストや、テスト実行環境・一般的な pytest 方針だけを確認するときは、より直接的な文書や実装を読む
 
 ## hash
-- de6e517ef1a053d95f78e7a5fc35cce0103e28510a3953ec022c59fc914a3929
+- bd06cff4bedebfabcc3f0261c0ee4e6d84ed26703f37ac09f58812ca9f2c75de
