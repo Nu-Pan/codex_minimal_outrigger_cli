@@ -158,6 +158,23 @@
 ## hash
 - 35f26f304c23fb77c0a46fd13bc01989e8fc2629fc8ea3db7ee5dba90cdc5d3c
 
+# `prompt_editor_input.md`
+
+## Summary
+- cmoc がユーザー入力用の Markdown プロンプトをエディタで編集させ、編集後の内容を読み取る仕様を定義する。エディタの優先順位、`code --wait` の必須条件、ログファイルの保存先、初期プロンプト、コメント除去と前後空白除去による入力確定処理を扱う。
+
+## Read this when
+- プロンプト入力用エディタの起動順序や `code --wait` の挙動を実装・確認するとき
+- 編集対象ファイル、初期プロンプトの注入、エディタ終了後の入力読み出しを変更・検証するとき
+- Markdown コメントの除去や入力の `strip` 処理を確認するとき
+
+## Do not read this when
+- プロンプト本文の内容や作業指示の設計だけを検討するとき
+- エディタ起動やユーザー入力の読み出しに関係しない cmoc の仕様を調査するとき
+
+## hash
+- a9de57cf63a70278c280dec1d5334cbb25e0a8c16d6c2bde91a463baeb71a1a2
+
 # `prompt_standard.md`
 
 ## Summary
@@ -213,20 +230,18 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンド仕様をまとめた入口。apply、session、oracle、doctor、indexing、tui などの実行条件・状態遷移・後処理・責務境界を確認するための正本仕様断片を扱う。各サブコマンドの実装・テスト時は、対象コマンドに対応する文書から読み始める。
+- cmoc の主要サブコマンドに関する正本仕様断片をまとめたディレクトリ。apply・session の fork/join/abandon、oracle 編集・レビュー、doctor、indexing、tui の実行条件、状態遷移、後処理、終了条件を扱う。各サブコマンド仕様の入口として利用する。
 
 ## Read this when
-- cmoc のサブコマンド仕様を調査・実装・レビューするとき。
-- apply または session の fork、join、abandon における状態遷移、ブランチ・worktree cleanup、merge、終了条件を確認するとき。
-- oracle review/edit、doctor、indexing、tui の実行フローや前提条件を確認するとき。
+- cmoc のサブコマンドの実行条件、状態遷移、ブランチや worktree の cleanup、merge・破棄、TUI 起動、oracle 操作、インデクシング、診断の仕様を確認したいとき。
+- 対象サブコマンドの正本仕様断片を特定し、実装・レビュー・検証の開始点を選びたいとき。
 
 ## Do not read this when
-- 特定サブコマンドの内部処理や agent call パラメータだけを調べる場合は、対応するより詳細な正本仕様を直接読む。
-- サブコマンド共通の開発環境・設計・テスト規則を確認したい場合は、dev_rule 系の文書を読む。
-- 個別の realization file の実装詳細や一般的な git 操作を調べる場合。
+- 個別サブコマンドの内部処理や共通処理の詳細仕様だけを確認したいときは、対応する下位の正本仕様を直接読む。
+- 一般的な git 操作、開発環境、テスト規則、実装ファイルの詳細を調べたいとき。
 
 ## hash
-- 966ebaa4ed304978854d83b82041f492078e71abc3df876f3a3c5c2c03955088
+- 5e0c37ae2bb6e073d94cd5106cb7305f37c6b9664c8ea4d09f4828cbfe8fee0a
 
 # `subcommand_interruption.md`
 

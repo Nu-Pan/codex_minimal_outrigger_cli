@@ -73,20 +73,20 @@
 # `edit_oracle.md`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの仕様を定義する。エディタから oracle file の最終状態に関する指示を受け取り、構築済みパラメータで Codex CLI の TUI を起動する処理、入力規則、起動条件、変更の扱いを扱う。
+- `cmoc oracle edit` の実行仕様を定義する。エディタから oracle file の最終状態に関する指示を受け取り、doctor preprocess と起動パラメータ構築を経て Codex CLI の TUI を起動する。入力規則、TUI 起動時の委譲、Codex CLI 起動方法、変更を自動 commit しない扱いを確認するための入口。
 
 ## Read this when
-- `cmoc oracle edit` の実装・テスト・動作確認を行うとき
-- oracle file の編集指示をエディタ入力から TUI 起動へ渡す流れを確認するとき
-- Codex CLI 起動時の環境変数、preflight validation、設定上書きの扱いを確認するとき
+- `cmoc oracle edit` の引数・実行手順・エディタ入力初期値を確認するとき
+- oracle file 編集用 TUI の起動パラメータや Codex CLI 起動条件を確認するとき
+- oracle file の変更が自動 commit されるか確認するとき
 
 ## Do not read this when
-- `cmoc tui` の一般的なオリジナルプロンプト入力仕様だけを確認したいときは、そちらの仕様を直接読む
-- TUI 起動パラメータの prompt や agent call parameter の正本を確認したいときは、指定された `build_edit_oracle_launch_tui_parameter` の定義を直接読む
-- oracle file の変更を自動 commit する処理を確認したいとき
+- 通常の `cmoc tui` の実行仕様を確認したいとき
+- エディタ入力の共通仕様そのものを確認したいときは、指定された prompt editor input の正本を直接読む
+- TUI 起動パラメータの実装詳細を確認したいときは、`build_edit_oracle_launch_tui_parameter` の正本実装を直接読む
 
 ## hash
-- 0b4732a15b2cb3fe1d1dd348ef5e212788d22a0c6ae8c79f00e0d9fc6687c49a
+- 9c5b71cef2897b1546fb6e993d6da30b3ed735d289a3b9587c3a23cb732b2069
 
 # `indexing.md`
 
@@ -181,19 +181,16 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの起動フロー、ユーザー入力プロンプトの編集先と初期テンプレート、agent call で決める起動パラメータ、Codex CLI 起動時に持ち込む固有要件を確認したいときに読む。
-- この文書は、TUI 起動時の人間入力と自動決定の境界、エディタ選択順、入力読み出しの扱い、バックエンド共通の起動条件を決める役割を持つ。
+- `cmoc tui` サブコマンドの正本仕様。ユーザー入力と自動生成プロンプトを組み合わせ、agent call で決定したパラメータに基づいて AI Agent CLI/TUI を起動する実行手順と、Codex CLI 固有の起動条件を扱う。
 
 ## Read this when
-- `cmoc tui` の起動手順、入力テンプレート、または起動パラメータの正本を確認したいとき。
-- AI Agent CLI/TUI の起動条件や、Codex CLI を使う場合に追加で引き継ぐ要素を確認したいとき。
-- ユーザーが入力するオリジナルプロンプトの編集場所、初期文面、読み出し時の整形規則を変更したいとき。
+- `cmoc tui` の実行手順、引数・事前条件、プロンプト入力、agent call によるパラメータ決定を確認するとき
+- AI Agent CLI/TUI の起動パラメータや、Codex CLI 起動時の環境変数・preflight validation・引数上書きを確認するとき
 
 ## Do not read this when
-- TUI 以外のサブコマンドの仕様を知りたいときは、より直接の対象を読む。
-- agent call の個別の解決仕様だけを知りたいときは、`build_tui_resolve_parameter_parameter` の正本を読む。
-- 全バックエンド共通の launch パラメータだけを知りたいときは、`build_tui_launch_tui_parameter` の正本を読む。
-- Codex CLI 固有の preflight validation や環境変数の正本だけを知りたいときは、`codex_exec_rule.md` を読む。
+- プロンプトエディタ入力の詳細仕様だけを確認したいときは、指定された prompt editor input の正本を直接読む
+- agent call によるパラメータ決定の詳細だけを確認したいときは、build_tui_resolve_parameter_parameter を直接読む
+- 共通の TUI 起動パラメータだけを確認したいときは、build_tui_launch_tui_parameter を直接読む
 
 ## hash
-- b28837a3690a3d1a2fceae1388d903d29067e4a4990400dbf0a66ae1da2fa57b
+- c0710e4864ebf312dd63aeef74d3d58b555e606cded00770dfa4125ec568ffed

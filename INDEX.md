@@ -94,23 +94,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の人間管理下にある oracle 仕様群への入口。利用者向け挙動、状態モデル、設計方針、開発規則を文書群で扱う。
-- 実行可能な正本仕様や生成部品への入口。ACP builder、設定・共通データ構造、プロンプト、Structured Output schema、実行設定などを扱う。
+- cmoc の人間管理による正本仕様ツリー。アプリケーション仕様・開発規則をまとめた oracle doc と、ACP builder、設定、共通データ構造、prompt、Structured Output schema などの実行可能な oracle src への入口。
 
 ## Read this when
-- cmoc の CLI 挙動、状態遷移、エラー処理、ログ、補完、モデルサービス、プロンプト生成を確認するとき。
-- session・run と branch・worktree の関係や、採用しなかった設計案の背景を調査するとき。
-- Python 開発環境、CLI の設計・配置、テスト方針を確認するとき。
-- ACP builder、設定モデル、パス解決、StructDoc、Markdown 生成、oracle と realization の境界を確認するとき。
+- cmoc の機能仕様、session・run・branch・worktree のモデル、採用しなかった設計案、Python・CLI・テスト規則を調べるとき。
+- ACP builder の呼び出し条件や prompt、Structured Output schema、実行設定を確認するとき。
+- 設定モデル、パス解決、規範データ、StructDoc、Markdown 文書生成、oracle と realization の境界を確認するとき。
 
 ## Do not read this when
-- realization code の実装・テスト、CLI の実行フロー、表示、永続化、実際のファイル編集処理を調査するとき。
-- 個別機能の詳細仕様や、下位の Enum・StructDoc・標準文書・Requirement の定義へ直接進めるとき。
-- 通常の git 運用や cmoc と無関係なリポジトリ方針を確認するとき。
-- oracle file の配置・命名方針や、対象本文の INDEX.md 要約だけを確認するとき。
+- 既に対象の仕様文書や下位定義が特定できており、その本文だけを読めばよいとき。
+- realization code の具体的な実装・テスト、CLI の実行フロー、表示、永続化、ファイル編集処理を調査するとき。
+- 通常の git 運用やリポジトリ固有の実装方針だけを確認するとき。
 
 ## hash
-- 08f344af15af057879fe61dda01f5962e6fc3d4125c2935cdb58eb736dd44718
+- 92f1978e52633139560c6ed5238a6eb76e9ea963834219d13942968c351f1881
 
 # `pyproject.toml`
 

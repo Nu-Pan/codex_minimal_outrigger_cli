@@ -1,21 +1,21 @@
 # `doc`
 
 ## Summary
-- cmoc の oracle 文書群への入口。アプリケーション仕様、branch/session/run モデル、設計上の不採用案、開発規則を扱い、各詳細文書へルーティングする。
+- cmoc のアプリケーション仕様と開発規則を分野別にまとめた oracle doc 群。機能仕様、branch/session/run のモデル、不採用案、Python・CLI・テストなどの開発規則へ進む入口。
 
 ## Read this when
-- cmoc の利用者向け挙動、CLI フロー、状態遷移、エラー処理、ログ、補完、モデルサービス、プロンプト生成を確認するとき。
-- session・run と branch・worktree の境界を確認するとき。
-- 採用しなかった設計案の背景や理由を調査するとき。
-- Python 開発環境、CLI 設計・配置、テスト方針などの開発規則を確認するとき。
+- cmoc の個別機能や共通アプリケーション仕様の正本文書を探すとき。
+- session・run・branch・worktree の境界や運用を確認するとき。
+- 採用しなかった設計案とその理由を調べるとき。
+- Python 実装、CLI 配置、開発環境、realization test の規則を確認するとき。
 
 ## Do not read this when
-- 個別 realization file の実装詳細を確認したいとき。
-- 通常の git 運用や cmoc と無関係なリポジトリ方針を確認したいとき。
-- 個別機能の詳細仕様を直接確認できる対象文書が分かっているとき。
+- 既に対象仕様文書が特定できており、その本文だけを確認すればよいとき。
+- 実装ファイルの具体的な処理や個別テストの実装詳細を確認したいとき。
+- cmoc 以外の通常の git 運用やリポジトリ固有の実装方針だけを確認したいとき。
 
 ## hash
-- 9bb2d1e094d7c704ba3812e524a6c8b96aa2568d555ca697268bf2fefdd3cd76
+- 2baf3efdc11b9fbc5526ce5f036b07ef8741c2c985c331b70998b2297d0bb980
 
 # `src`
 
