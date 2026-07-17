@@ -451,20 +451,20 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の統合テスト。CLI と直接呼び出しの両方で、config・Git 状態・linked worktree・共有 lock・managed Ollama の修復 lifecycle と、既存 Git index の staged/unstaged 変更保持を検証する。doctor の外部契約を一体的に確認するテスト入口。
+- doctor preprocess の外部契約を検証する統合テスト。CLI と直接呼び出しの双方で、Git の共通状態修復、config の生成・同期、managed Ollama の準備、linked worktree と共有 lock の扱い、修復 commit の境界を確認する。
+- 修復失敗時や既存の staged・unstaged 差分、rename、`.cmoc/gu` の既存追跡ファイルを保持する Git index のライフサイクルも検証する。doctor 関連の外部挙動と回帰テストの入口となる。
 
 ## Read this when
-- doctor または互換 alias `dector` の挙動を変更・調査するとき
-- doctor preprocess の config 生成・同期、Git 修復 commit、ignore、tracked/untracked 状態を確認するとき
-- linked worktree、共有 doctor lock、managed Ollama の model/service 準備を変更・検証するとき
-- 既存の staged 変更、unstaged 差分、rename、削除を doctor が保持する契約を確認するとき
+- doctor または `dector` の CLI 挙動を変更・レビューするとき
+- doctor preprocess の Git 修復、config、managed Ollama、linked worktree、lock、修復 commit を調査するとき
+- 既存の staged/unstaged 差分や index 保持に関する回帰を調べるとき
 
 ## Do not read this when
-- doctor preprocess と無関係な CLI、設定、Git、Ollama 機能を調査するとき
-- doctor の内部実装詳細や正本仕様を確認したいときは、対応する実装または oracle 文書を直接読む
+- doctor preprocess と無関係な CLI、設定、Ollama、Git 操作だけを調査するとき
+- doctor の内部実装や正本仕様を確認する場合。このテストから実装責務や仕様全体を推測せず、対応する oracle 文書や実装を直接読むこと
 
 ## hash
-- bfac4be0bdb1d27ce444e661b9b70df994e9e7715546d6e767f8da67662f2cf8
+- e4546f907dc0ad47ab6967c145e3d3c844bac5a1c3a6e2337432b095960fb357
 
 # `test_indexing_cli.py`
 

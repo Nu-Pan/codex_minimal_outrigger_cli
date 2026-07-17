@@ -229,22 +229,22 @@
 # `runtime_doctor.py`
 
 ## Summary
-- doctor 前処理として、worktree と main worktree の共有修復を排他実行し、cmoc ignore 規則、`.agents/.gitkeep`、worktree 設定、Ollama 状態を整える。
-- Git の一時 index を使って doctor の修復差分だけを commit し、呼び出し元の index を復元する。Git common directory 単位の lock、index/tree 操作、blob staging、設定追跡確認などの内部処理を含む。
-- doctor 前処理の実行経路、Git 修復差分の分離・commit、worktree 間の修復、設定や Ollama の同期挙動を確認するための実装入口。
+- doctor 前処理を担当する実装モジュール。current worktree と main worktree をロック下で処理し、設定同期、Git ignore・.agents 追跡・Ollama 準備、修復差分の commit、元の index 復元までを行う。
+- 一時 Git index を使って利用者の staged 状態を保護しながら修復を分離し、設定追跡や Git 操作の失敗を CmocError として扱う。doctor の排他制御、修復対象、index 操作、commit 挙動を確認するための実装入口。
 
 ## Read this when
-- doctor 前処理や修復処理の実装・変更を行うとき
-- Git index の保護、一時 index による修復 commit、worktree 間の差分分離を調査するとき
-- `.gitignore`、`.agents/.gitkeep`、cmoc 設定の追跡状態、Ollama 起動状態が doctor でどう扱われるか確認するとき
+- doctor サブコマンドの前処理、修復 commit、設定同期、Ollama 準備を変更・レビューするとき
+- worktree 間の doctor 排他制御や Git common directory の lock file を調査するとき
+- doctor 実行前後の Git index 復元、一時 index、staged 差分分離の挙動を確認するとき
+- .gitignore、.agents/.gitkeep、cmoc 設定の追跡処理や失敗時の CmocError を調査するとき
 
 ## Do not read this when
-- doctor の利用者向け仕様や修復条件の正本を確認したい場合は、対応する oracle 文書を先に読むとき
-- doctor 以外の CLI サブコマンドや一般的な Git・設定処理だけを調査するとき
-- 単に Ollama の実装や設定同期の詳細を確認する場合は、それぞれの専用モジュールを直接読むとき
+- doctor の CLI 引数や利用者向け仕様だけを確認したいときは、まず該当する command 実装または oracle doc を読む
+- 一般的な Git 操作、設定同期、Ollama 接続処理の詳細だけを調査するときは、この orchestration module ではなく各 commons.runtime_* モジュールを直接読む
+- doctor 前処理と無関係なサブコマンドや通常の worktree 操作を変更するとき
 
 ## hash
-- e4d3dda80587e676bf3e56a5b21a96f6c0fe54a3816de495f6fb8f937c00e191
+- a5250231069b6f1aeeefd31fef4b92165a42f375876296ad15746e6080e9fed3
 
 # `runtime_errors.py`
 

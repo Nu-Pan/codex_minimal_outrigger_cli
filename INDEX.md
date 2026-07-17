@@ -127,33 +127,31 @@
 # `src`
 
 ## Summary
-- cmoc の実装パッケージ領域。Typer CLI の起動入口、サブコマンド、共通 runtime、ACP builder、設定・互換 import shim、正本 oracle パッケージ解決を扱う。機能別の実装や公開 import 経路を確認する際の上位入口で、具体的な処理は対応する下位パッケージ・モジュールへ進む。
+- cmoc の realization 実装をまとめる src ディレクトリ。CLI の起動入口、互換 import shim、共通 runtime、設定公開入口、ACP builder、各サブコマンド実装を扱い、機能別の実装領域へ進むための入口となる。
 
 ## Read this when
-- cmoc の CLI 実装全体の構成や、機能ごとの実装入口を探すとき。
-- CLI 起動、サブコマンド、共通 runtime、ACP builder、設定、互換 import 経路の担当領域を確認するとき。
+- cmoc の realization 実装全体の構成や、CLI・共通 runtime・ACP・サブコマンドの責務分担を確認するとき。
+- 対象機能の実装ファイルが src 配下のどの領域にあるかを特定するとき。
 
 ## Do not read this when
-- 特定機能の具体的な処理や内部挙動を調査するときは、対応する下位パッケージ・モジュールを直接読む。
-- 利用者向け仕様や正本仕様を確認するときは、対応する oracle 文書・ソースを直接読む。
+- 特定の CLI サブコマンド、runtime helper、ACP builder、互換 shim の具体的な処理だけを確認したいとき。対応する下位ファイルやディレクトリを直接読む。
+- 正本仕様や oracle 側の実装を確認したいとき。src ではなく oracle 配下の該当ファイルを読む。
 
 ## hash
-- 50e998bdb70f3919932048807922731da2acaace9645b21caaffc56d69ccf4f8
+- 5f5f2b000d62f184da8fc4dac74c52bc21f5e8844cb8a5c07bccc7edb75d6c1b
 
 # `test`
 
 ## Summary
-- `test` ディレクトリは、cmoc の CLI、runtime、ACP builder、indexing、review oracle、session/apply、Codex/Ollama 連携などを対象とする pytest の入口である。共有テスト補助、機能別の回帰・統合テスト、実 Codex を使う受け入れテストに分かれる。
+- pytest による cmoc の realization test 群を収めるディレクトリ。ACP builder、CLI、Codex runtime、indexing、review oracle、session/apply、設定、Git/worktree、Ollama などの外部挙動・制御ロジックを検証する。各テストファイルおよび共有 test helper への入口。
 
 ## Read this when
-- cmoc の外部 CLI 挙動、runtime 契約、worktree・Git・state lifecycle を変更または検証するとき。
-- ACP builder、INDEX 生成、review oracle、session/apply、Codex、Ollama、TUI の仕様に対応するテスト入口を探すとき。
-- 共有 fixture やテスト用コマンド・Git repository・CliRunner の準備方法を確認するとき。
-- 本番同等の独立 process・PTY・実 Codex 経路を検証するとき。
+- cmoc の機能変更に対応する回帰テストや、既存の外部契約・制御ロジックの検証対象を探すとき。
+- CLI、Codex 実行、indexing、review oracle、session/apply、runtime、ACP builder のテスト範囲を確認するとき。
 
 ## Do not read this when
-- 実装や正本仕様そのものを確認する場合は、対応する `src` または `oracle` 配下を直接読む。
-- 特定機能と無関係なテストや、Codex の回答品質自体を評価する作業のとき。
+- 実装や正本仕様そのものを確認したいときは、対応する src または oracle のファイルを直接読む。
+- テスト対象と無関係な機能や、共通 helper を使わない処理だけを調査するとき。
 
 ## hash
-- 3b0f5479095c52cf4f042a4e28dbd6223b52560c5f2b01ffe783ab4db253151d
+- d16cf0131021b00f1a716da5f57955d6e31b08e0019883a7d214e57de0669ae5
