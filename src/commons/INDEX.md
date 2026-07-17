@@ -317,20 +317,16 @@
 # `runtime_paths.py`
 
 ## Summary
-- リポジトリ、worktree、cmoc の各 root 解決と、実行時の timestamp・duration 表示を提供する共通 runtime path/時刻ユーティリティ。session、report、log、schema、config、worktree などの保存先を一元化し、cwd の一時切替をスレッド安全に管理する。
+- リポジトリ・worktree root、時刻、経過時間、各種 runtime directory/path を解決する共通ユーティリティ。cwd の一時切替を排他制御し、root 解決失敗を CmocError に変換する。
 
 ## Read this when
-- runtime directory や設定ファイル、session/report/log/schema/worktree の保存先を確認または変更するとき
-- root placeholder の解決、cwd 起点の path 解決、timestamp・duration 表示、pushd の動作を確認するとき
-- 複数の runtime path helper や agent 読み取り用 directory 判定の入口を探すとき
+- root path、runtime の保存先、timestamp・duration 表記、cwd 切替、agent 読み取りディレクトリの扱いを変更または確認するとき。
 
 ## Do not read this when
-- 特定のサブコマンドの処理や出力仕様だけを調べるとき
-- root 解決元の enum・path model 自体を変更または確認するときは、先に path model の実装を読むべき場合
-- config JSON の内容や prompt/file access の規則そのものを確認するとき
+- 特定のサブコマンドの処理や、root 解決・runtime path・cwd 制御を直接扱わない機能を変更するとき。
 
 ## hash
-- d64cab99562de13d029af8bc2ede34c6dded3394c30bf5f1ee9ec0cfe6c2f64a
+- 89e875751c526a76452c8635292807bb73828e1d42cb22c090cd71b04fe556c0
 
 # `runtime_preprocess_command.py`
 
