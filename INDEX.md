@@ -127,33 +127,35 @@
 # `src`
 
 ## Summary
-- `src` の realization 実装全体を扱うルート。cmoc CLI、共通 runtime、ACP builder、互換 import shim、サブコマンド実装など、機能領域ごとの下位要素へ進むための入口となる。
+- cmoc の realization 実装ルート。Typer CLI の起動入口、互換 import shim、共通 runtime、設定公開入口、ACP builder、各サブコマンド実装を含み、CLI と内部機能の具体的な実装へ進むための入口となる。
 
 ## Read this when
-- cmoc の実装構成を確認し、CLI・共通 runtime・ACP builder・サブコマンドの調査先を選ぶとき。
-- 対象機能がまだ特定できず、src 配下の主要な実装領域を把握するとき。
+- cmoc の CLI 起動経路やトップレベル構成を把握するとき。
+- 共通 runtime、互換 import、ACP builder、またはサブコマンド実装の配置先を探すとき。
+- 対象機能の具体的な realization implementation へ進む前に、src 配下の責務分担を確認するとき。
 
 ## Do not read this when
-- 特定のコマンド、runtime helper、builder、または互換 shim の詳細を調査するときは、対応する下位ファイルやディレクトリを直接読む。
-- 正本仕様を確認するときは、src ではなく対応する oracle file を読む。
+- 利用者向け CLI 仕様や正本仕様だけを確認したいときは、対応する oracle file を直接読む。
+- 特定の runtime module、builder、またはサブコマンド実装が明確なときは、その対象を直接読む。
+- src 配下に含まれないテストや補助ファイルを調査するとき。
 
 ## hash
-- b268730fd6e868573074e79322eb24e01add5314c503d2ceddeb095309d6b4ee
+- 0ee8f592ddd8d7d20cfbcf431f357d9de7304526c3466438d587c74ec5ed72d5
 
 # `test`
 
 ## Summary
-- `test` 配下の pytest テストと共有テスト補助モジュールを集約するディレクトリ。ACP builder、CLI、runtime、Codex、indexing、review oracle、session/apply、Ollama、設定などの外部挙動・契約・回帰を検証する各テストへの入口となる。
+- `test` ディレクトリは、cmoc の realization test を集約する。CLI、runtime、Codex 実行、ACP builder、indexing、review oracle、session/apply、設定、worktree、Ollama などの外部挙動・制御契約を pytest で検証し、各機能の回帰テストへの入口を提供する。
+- 配下には、複数テストで共有する Git、CLI、Codex、Ollama、外部コマンド、state、worktree 関連の補助モジュールも含まれる。個別機能の挙動を確認する場合は対応する `test_*.py`、共有 fixture や準備処理を確認する場合は `_*.py` の support module に進む。
 
 ## Read this when
-- cmoc のテスト全体から、変更対象の機能に対応する realization test や共有 fixture を探すとき。
-- CLI、runtime、Codex 実行、indexing、review oracle、session/apply、ACP builder、設定、Ollama の挙動をテストから確認するとき。
-- 複数テストで利用される Git、CliRunner、Codex、Ollama、外部コマンド用の共有補助を確認するとき。
+- cmoc の CLI、runtime、Codex、ACP builder、indexing、review oracle、session/apply、設定、worktree、Ollama の外部契約や回帰テストを変更・調査するとき。
+- 複数の機能領域にまたがる統合テスト、本番相当の受け入れテスト、共有テスト補助の構成を確認するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する `oracle` 配下の文書・ソースを直接読む。
-- 実装責務や内部ロジックを変更・調査するときは、対応する `src` 配下の実装を直接読む。
-- テスト対象と無関係な機能を調査するときは、このディレクトリ全体ではなく対応する個別テストまたは実装へ進む。
+- 正本仕様、schema、実装責務そのものを確認したいときは、対応する `oracle` または `src` の本文を直接読む。
+- 一般的な pytest 実行方法や Python 開発環境だけを確認したいときは、開発規約・テスト規約を読む。
+- 特定機能と無関係なテストを調査するときは、このディレクトリ全体ではなく対応する個別テストまたは support module に直接進む。
 
 ## hash
-- e8ca5eca1127c1c9c889777645c5b06d4966a40d1fda55ca76f14868442accc4
+- b27e216cd67d86614e84ae94574ef2f53650a47a1663edae4e33ea7f10148882

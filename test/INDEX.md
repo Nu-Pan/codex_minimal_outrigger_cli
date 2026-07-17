@@ -795,19 +795,19 @@
 # `test_runtime_ollama.py`
 
 ## Summary
-- Ollama ランタイム管理のテストを集約し、systemd ユーザーサービスの更新・起動・再起動条件、実行プロセスと listener の検証、HTTP 応答によるサービス検証、モデルの pull/load、GPU runtime の VRAM 確認を検証する。Ollama 関連の実装挙動やエラー条件を変更・調査する際のテスト入口となる。
+- Ollama の systemd サービス復旧、サービスプロセス検証、HTTP 応答、listener のプロセス整合性、モデルのロード順序、GPU 推論確認に関する pytest。commons.runtime_ollama の内部制御をモックし、成功条件と利用者向けエラー条件を検証する。
 
 ## Read this when
-- Ollama サービスの systemd 管理、プロセス検証、起動確認を変更または調査するとき
-- Ollama モデルのロード、pull、GPU 実行確認、VRAM 判定を変更または調査するとき
-- Ollama ランタイムの HTTP 応答や利用者向けエラー処理に関するテストを確認するとき
+- Ollama の systemd サービス起動・再起動条件や実行ファイル指定を変更するとき
+- Ollama のサービス検証、listener 判定、HTTP 応答処理、モデルロード、GPU VRAM 確認を変更するとき
+- runtime_ollama の関連テストケースや失敗条件を確認するとき
 
 ## Do not read this when
-- Ollama 以外のランタイムや共通エラー処理だけを変更・調査するとき
-- 実装ではなく、Ollama の正本仕様そのものを確認するときは oracle の仕様文書を直接読む
+- Ollama と無関係な CLI 機能や runtime モジュールを変更するとき
+- 正本仕様そのものを確認する必要があるときは、コメントに示された oracle 文書を直接読む
 
 ## hash
-- 48b3bd4f5ffe7c4418dd15449808c1fc11e91af88fce370acb7d4be9d5d2dea1
+- 3d3ac726ec0be07c8ab3502926915bdb31bbed782c75d70802388d4830bec4f1
 
 # `test_runtime_state.py`
 

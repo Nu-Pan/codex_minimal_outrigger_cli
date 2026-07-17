@@ -300,20 +300,19 @@
 # `runtime_ollama.py`
 
 ## Summary
-- cmoc が管理する Ollama の単一 preflight を担うモジュール。cmoc provider 用モデルの抽出から、Ollama archive の導入、systemd user service の同期・起動、procfs によるプロセス／listener 所有者確認、HTTP 応答、モデル取得・load、GPU 使用確認までを同一 lock 内で順序どおりに実行する。
+- cmoc が管理する Ollama の単一 preflight 実装。設定された cmoc provider 用モデルを対象に、lock 内で archive install、user systemd service の生成・起動・所有者確認、127.0.0.1:11434 の API 応答確認、model の pull/load、GPU 用 VRAM 使用確認までを順序どおりに実行する。runtime 共通処理から呼び出される managed Ollama の実装入口であり、Ollama の service・procfs・HTTP・model 検証の詳細を確認するための対象。
 
 ## Read this when
-- cmoc provider の local SLM を Ollama で提供する処理を変更・調査するとき
-- Ollama の archive install、systemd user service、固定 endpoint、モデル pull/load、GPU 検証の挙動を確認するとき
-- managed Ollama の起動失敗・所有者不一致・API 応答失敗・GPU 未使用エラーを追跡するとき
+- cmoc provider の local SLM が利用できない、または Ollama の install・起動・model pull/load・GPU 検証を調査・変更するとき
+- managed Ollama の systemd user service、固定 endpoint 127.0.0.1:11434、procfs による process/listener 所有者確認を確認するとき
+- Ollama 関連の lock、managed environment、CmocError 変換、設定からの対象 model 抽出を確認するとき
 
 ## Do not read this when
-- Ollama 以外の provider や一般的な設定読み込みだけを変更・調査するとき
-- Ollama の正本仕様を確認したいときは、先に oracle/doc/app_spec/cmoc_managed_ollama.md を読む
-- runtime path、runtime error、config の共通実装だけを確認する場合は、それぞれの直接担当ファイルを読む
+- Ollama 以外の provider、一般的な runtime 設定の読み込み、または CLI の上位 command routing だけを調べるとき
+- Ollama の正本仕様や利用条件を確認したい場合は、この実装ではなく対応する oracle doc を直接読むとき
 
 ## hash
-- baaeb5ace3ecda0e9dcd841aa96e6301077bf539e09750fea44bf549a1481323
+- 7e1826673ee1b45f02ae4cc798e8d9711c966392967ddc60bbcf664354a34910
 
 # `runtime_paths.py`
 
