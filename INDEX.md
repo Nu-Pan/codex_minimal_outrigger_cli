@@ -127,33 +127,32 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装ルート。Typer によるコマンド入口、共通 runtime、互換 import shim、basic/acp/config 公開入口、サブコマンド群を下位要素へ案内する。
+- `src` は cmoc realization の実装ルート。Typer CLI の起動・コマンド定義、session/apply/review などのサブコマンド、ACP builder、共通 runtime、互換 import 入口を扱う。
+- 下位の `commons`、`acp`、`sub_commands`、`basic`、`config` などへ進むための最上位ルーティング入口。
 
 ## Read this when
-- cmoc の CLI 起動入口、トップレベル／サブコマンド構成、引数解析エラー処理を確認するとき。
-- src 配下の runtime 共通処理、互換 import path、またはサブコマンド実装の入口を特定するとき。
+- cmoc の CLI 全体構成、起動入口、サブコマンドへの接続を確認するとき。
+- 共通 runtime、ACP builder、互換 import、設定・基礎 API、またはサブコマンド実装の調査対象を選ぶとき。
 
 ## Do not read this when
-- 特定サブコマンドの業務ロジック、runtime helper の詳細、または互換入口の実体を確認したいときは、対応する下位ファイルやディレクトリへ直接進む。
-- 正本仕様や oracle 側実装を確認するときは、src 配下ではなく対応する oracle ツリーを読む。
+- 特定のサブコマンドや helper の実装詳細だけを確認したいときは、該当する下位モジュールを直接読む。
+- 正本仕様や oracle 側の実装を確認したいときは、対応する `oracle` 配下を直接読む。
 
 ## hash
-- 323c71c4c7f2cd3115f8e56a5a9c43dd9a5a785b37841d536d5821d41747a524
+- 18def081b0c00dfcb5fde413b7665fe2cf89b1601e6f7cb321f7009519c1057f
 
 # `test`
 
 ## Summary
-- テストコードから参照される共有補助モジュール、ACP builder、CLI、Codex runtime、indexing、review oracle、session/apply、設定・worktree などの pytest をまとめたテストディレクトリ。各ファイルは対応する機能の外部挙動・制御契約・回帰条件を確認する入口であり、個別機能の実装や正本仕様へ進む前のルーティング対象となる。
+- cmoc の pytest テストスイート。CLI サブコマンド、Codex 実行ランタイム、ACP builder、indexing、review oracle、session/apply lifecycle、Git/worktree、設定、Ollama などの外部挙動と制御ロジックを検証する。各テストファイルおよび共有 support module が個別機能の入口となる。
 
 ## Read this when
-- 複数の cmoc 機能にまたがるテストの所在や、対象機能に対応する pytest ファイルを探すとき。
-- CLI、Codex runtime、indexing、review oracle、session/apply、設定、worktree などの挙動をテスト観点から調査するとき。
-- 共有テスト helper や packaged layout の import 境界を確認するとき。
+- cmoc の機能変更に対応する回帰テストや、既存の外部契約・失敗条件・状態遷移を確認するとき。
+- 対象機能に対応する個別テストファイルを特定し、実装変更後の検証範囲を判断するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle 文書・schema・oracle source を直接読む。
-- 実装内部の責務や処理詳細を確認・変更するときは、対応する src モジュールを直接読む。
-- テスト対象と無関係な機能や、一般的な pytest 実行方法だけを確認するとき。
+- 正本仕様や実装の詳細を確認する場合は、対応する oracle または src のファイルを直接読む。
+- 一般的な pytest 実行方法や、対象機能と無関係なテストの挙動を調査するとき。
 
 ## hash
-- 5d7fc54e7087f89b876732b951b16190626cd9e89fa1b9c5e684f4b28711cc2c
+- c85de7c48acaef5bea1250520b03ffca03e78f5f887782ec7e540c7d6b28706c

@@ -140,18 +140,20 @@
 # `runtime_codex_preflight.py`
 
 ## Summary
-- Codex exec/TUI 実行前に indexing preflight を挟む共通ランタイム層。preflight の登録・解除、再入抑止、直列実行、実行対象からの indexing root 決定を扱い、実際の Codex 呼び出しは runtime_codex へ委譲する。
+- Codex exec/TUI 呼び出し前に INDEX 更新 preflight を挟む共通ランタイム制御を提供する。preflight の登録・解除、再入抑止、スレッド直列化、呼び出し設定からの indexing 起点決定を扱い、実際の Codex 実行は runtime_codex へ委譲する。
 
 ## Read this when
-- Codex exec または TUI の実行前 indexing 処理、preflight の設定・解除、再入防止や実行順序を変更・調査するとき。
-- Codex 呼び出し設定から preflight の起点 root が決まる仕組みを確認するとき。
+- Codex exec または TUI 実行時の INDEX 更新 preflight の呼び出し条件・実行順序を変更するとき
+- indexing preflight の登録、解除、再入防止、スレッド間の直列化を確認するとき
+- Codex 呼び出し設定から preflight の起点 root を決定する処理を変更するとき
 
 ## Do not read this when
-- Codex の実行本体やコマンド結果の詳細を変更・調査するときは、委譲先の runtime_codex または runtime_results を直接読む。
-- リポジトリや作業ディレクトリの root 解決そのものを変更・調査するときは、runtime_paths を直接読む。
+- Codex 実行本体の subprocess 処理や TUI 実装を変更するときは runtime_codex を直接読む
+- リポジトリ root・work root の解決規則だけを確認するときは runtime_paths を読む
+- Codex 実行結果の型や結果変換だけを確認するときは runtime_results を読む
 
 ## hash
-- 050693a5a2472180e927055cc8255f07e16e96627d7f16e6877a50b002eacfd4
+- 9c401fd077a0fc1e1781739a0b1dac7b0d6c01c245b3351c5a907f0d3de749c8
 
 # `runtime_codex_profile.py`
 
@@ -248,17 +250,16 @@
 # `runtime_errors.py`
 
 ## Summary
-- cmoc の実行時例外と利用者向け Markdown エラーレポート生成を担当する。CmocError が概要・次の行動・詳細を保持し、render_error が未知の例外も含めて Summary、Next actions、Detail、Call stack の共通形式へ変換する。
+- cmoc の実行時エラーを利用者向け Markdown レポートへ統一変換する実装。CmocError の概要・復旧案・詳細の保持、既定の Next actions 補完、未知の例外の要約・詳細化、Call stack の出力を扱う。
 
 ## Read this when
-- 実行時エラーの構造、利用者向けエラーレポートの出力形式、復旧案の補完、コールスタックの扱いを変更・調査するとき。
+- cmoc のエラー報告形式、CmocError の生成・利用、Next actions の補完、例外発生時の Markdown 出力を変更または調査するとき。
 
 ## Do not read this when
-- 特定の CLI コマンドの入力検証や業務処理だけを変更・調査するとき。
-- エラーレポートの表示先や呼び出し側の制御を確認したいときは、まずその呼び出し側を直接読む。
+- エラー報告の正本仕様や利用者向け文面を確認したいだけのときは、対応する oracle/doc の仕様を先に読む。エラー処理と無関係な CLI、設定、永続化、業務ロジックを変更するとき。
 
 ## hash
-- 152fcb4b8030f5fb2be82569787d2862effba44076d46afbc39bdb088b736e9a
+- 9aa2a62b5d16f6050dae80940272adea036fabed6bb694e2790823974254e831
 
 # `runtime_git.py`
 
@@ -296,20 +297,20 @@
 # `runtime_ollama.py`
 
 ## Summary
-- cmoc provider の local SLM を managed Ollama で利用可能にする単一の preflight 実装。Ollama の archive install、user systemd service の同期・起動、procfs による listener と executable の所有者確認、model の取得・load、GPU 使用確認までを一連の処理として扱う。
+- cmoc が管理する Ollama の単一 preflight を担うモジュール。cmoc provider 用モデルの抽出から、Ollama archive の導入、systemd user service の同期・起動、procfs によるプロセス／listener 所有者確認、HTTP 応答、モデル取得・load、GPU 使用確認までを同一 lock 内で順序どおりに実行する。
 
 ## Read this when
-- cmoc provider の model を Ollama で serve・load する処理を変更または調査するとき
-- Ollama の archive install、systemd user service、127.0.0.1:11434 の検証、procfs による process/socket 確認を扱うとき
-- Ollama model の pull、API 応答、VRAM 使用確認や、それらの失敗時エラーを扱うとき
+- cmoc provider の local SLM を Ollama で提供する処理を変更・調査するとき
+- Ollama の archive install、systemd user service、固定 endpoint、モデル pull/load、GPU 検証の挙動を確認するとき
+- managed Ollama の起動失敗・所有者不一致・API 応答失敗・GPU 未使用エラーを追跡するとき
 
 ## Do not read this when
-- cmoc provider の model を使用しない処理を扱うとき
-- Ollama 以外の provider、一般的な runtime config、runtime path、runtime error の実装だけを扱うとき
-- 既存の managed Ollama preflight の内部順序・検証・失敗条件を確認する必要がなく、別の上位処理を直接調べるとき
+- Ollama 以外の provider や一般的な設定読み込みだけを変更・調査するとき
+- Ollama の正本仕様を確認したいときは、先に oracle/doc/app_spec/cmoc_managed_ollama.md を読む
+- runtime path、runtime error、config の共通実装だけを確認する場合は、それぞれの直接担当ファイルを読む
 
 ## hash
-- de8547c0be605cfb5d80c3dce084e41a92885ad5d7ccce48e162927b3e692d30
+- baaeb5ace3ecda0e9dcd841aa96e6301077bf539e09750fea44bf549a1481323
 
 # `runtime_paths.py`
 

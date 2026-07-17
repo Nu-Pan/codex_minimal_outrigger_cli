@@ -1,39 +1,34 @@
 # `apply`
 
 ## Summary
-- apply サブコマンドの実装パッケージ。abandon、fork、fork_report、join の各処理を扱い、apply の実行制御、状態遷移、Git worktree・branch・process の管理、report 生成、cleanup を確認・変更する入口。
+- apply サブコマンドの実装パッケージ。apply run の abandon・fork・join、fork report、および各処理の状態管理・Git worktree/branch・process tracking・レポート生成を扱う。apply サブコマンドの実装を確認・変更するときの入口。
 
 ## Read this when
-- apply サブコマンドの実装を確認または変更するとき。
-- apply fork の orchestration、レビュー・修正ループ、commit、report、復旧処理を調査するとき。
-- apply join の merge、force-resolve、conflict、状態更新、cleanup を調査するとき。
-- apply abandon の run 検証、process 停止、worktree・branch 削除、state reset を調査するとき。
-- apply fork のレポート形式や差分収集を変更するときは、レポート生成の実装を確認するとき。
+- `cmoc apply` の abandon、fork、join の実行フローや失敗時処理を確認・変更するとき。
+- apply branch・worktree・session state・process tracking・report のライフサイクルや相互作用を調査するとき。
+- apply fork の対象ファイル列挙・Codex review-and-fix ループ、fork report の差分要約、apply join の merge・conflict 解決・想定外差分判定を確認するとき。
 
 ## Do not read this when
 - apply 以外のサブコマンドを扱うとき。
-- apply の共通 runtime、lock、process 操作、session state、Git 操作の一般実装だけを調査するときは、対応する共通モジュールへ直接進む。
-- レビュー・修正処理の Codex 呼び出しパラメータだけを調査するときは、file review/fix builder の実装へ直接進む。
-- apply fork の report 内容だけを調査するときは、レポート実装へ直接進む。
+- 共通 CLI runtime、session state、Git 操作、process lock などの一般実装だけを変更・確認するときは、対応する共通モジュールを直接読む。
+- apply fork 内の prompt／parameter 詳細や、fork report の描画詳細だけを確認するときは、該当する個別実装を直接読む。
 
 ## hash
-- d78dd475c8107a9ac4ce6edb243e4e16d48a7ca04ee776713da29228f4dd783b
+- a8d4b62f6d4790dcf00c3db0b0d53547cb35b05c332e2cc563e89a57c1b18ef8
 
 # `doctor.py`
 
 ## Summary
-- doctor サブコマンドの実処理として、CLI runtime の preprocess 実行経路へ処理を委譲する薄い入口。doctor 固有の処理内容はここでは持たず、明示的に doctor preprocess を起動する責務だけを持つ。
+- doctor サブコマンドの実装。CLI runtime を介して doctor 用の preprocess 処理を明示的に実行する。
 
 ## Read this when
-- doctor サブコマンドが呼ばれた時に、どの runtime preprocess 名へ委譲されるかを確認したいとき。
-- doctor サブコマンドの実装入口と、runtime preprocess 実行処理との接続を変更または確認したいとき。
+- doctor サブコマンドの動作や preprocess 呼び出しを確認・変更するとき。
 
 ## Do not read this when
-- preprocess command の実行方法、失敗時挙動、runtime 側の制御を調べたいときは、preprocess 実行を担う commons 側の実装を読む。
-- doctor preprocess の中身や診断項目を調べたいときは、その preprocess 本体を読む。
+- doctor 以外のサブコマンドを扱うとき。preprocess の共通実装自体を確認するときは、共通 runtime preprocess command の実装を直接読む。
 
 ## hash
-- 13b0493ce99287b1643522676065d9b8d003da0fc0cc55a3423864c0541091a8
+- 9324a8b1f2f1bbd3a83adfb61690e64ff7e1f6502e165e208c84e2cefbd35980
 
 # `eval_oracle.py`
 
@@ -69,21 +64,18 @@
 # `review`
 
 ## Summary
-- review 系サブコマンド群をまとめる Python package。review oracle の CLI 実行ライフサイクルと、所見検出・対象列挙・INDEX 統合・レポート生成へ進むための入口を提供する。
+- review 系サブコマンド群の Python package。oracle 実行入口と、関連するレビュー処理モジュールへの入口を含む。
 
 ## Read this when
-- review 系サブコマンド群の package 境界や構成を確認したいとき。
-- review oracle の実行ライフサイクルを調べるときは oracle.py を読む。
-- 所見検出、oracle 対象列挙、INDEX 統合、レポート生成の具体的な処理を調べるときは、この階層内の各担当モジュールを読む。
+- review oracle の CLI 実行フロー、worktree・branch 管理、レビュー対象選定、割り込み・例外処理を調査するとき
+- review 系サブコマンドの package 構成や関連モジュールへの入口を確認するとき
 
 ## Do not read this when
-- review oracle の具体的な所見検出ループだけを調べるとき。
-- oracle 対象ファイルの列挙規則だけを調べるとき。
-- review report の表示形式やファイル書き込みだけを調べるとき。
-- review branch の INDEX 変更の commit・merge・conflict 解決だけを調べるとき。
+- 判定ループ、対象列挙、レポート形式、INDEX の commit・merge 処理など、個別機能だけを調査するときは対応する実装モジュールを直接読む
+- package 初期化の import や公開シンボルだけを調査するときは、具体的な処理を持たない初期化モジュールを読む必要はない
 
 ## hash
-- d0b68039591eb520040c7a01c7dcb12b6d27b65a6108ca7bdf6becb9892758fd
+- 261d8f5ae9ec1180763418a7bfa77e257cfbad56d74bc7b1a72d8903d6c04c43
 
 # `review_index.py`
 
@@ -104,20 +96,19 @@
 # `review_loop.py`
 
 ## Summary
-- review oracle の finding 列挙・マージ・妥当性検証・採否判定ループを実行する実装。中断時には確定済みの finding と評価済みファイルを保持して呼び出し元へ返す。
-- Codex 実行結果を用いた finding 操作の検証、意味的マージの再試行、重複・削除・置換・統合操作の適用を担当する。
+- レビュー対象の oracle file 群に対して、finding の列挙・意味的マージ・反証/擁護による検証・採否判定を反復実行する review oracle loop の実装。
+- 中断時には確定済み finding と評価済みファイルを専用例外で呼び出し元へ返し、merge operation の形式・対象 ID・重複を検証して不正な Structured Output を再試行する。
 
 ## Read this when
-- review oracle のループ制御、中断時の進捗保持、step callback 通知を変更・調査するとき
-- finding の列挙・マージ・検証・judge の呼び出し条件や反復処理を確認するとき
-- merge operation の target_ids 検証、finding の削除・置換・統合処理を変更・調査するとき
+- review oracle の実行フロー、進捗保持、KeyboardInterrupt 時の部分結果、finding の検証・判定を変更または調査するとき
+- finding の merge operation 契約や、列挙・マージ・反証・擁護・judge の Codex 呼び出し連携を確認するとき
 
 ## Do not read this when
-- review oracle の個別 prompt や Structured Output 定義だけを確認したいときは、対応する oracle builder または oracle 仕様を直接読む
-- review サブコマンドのパス解決や CLI 入出力を確認したいときは、review の呼び出し元やパス管理モジュールを直接読む
+- review コマンド全体の CLI 入出力やパス定義だけを確認したいときは、対応する review command/path の実装を直接読む
+- review oracle の各 agent prompt の内容だけを変更・確認するときは、各 build parameter の実装を直接読む
 
 ## hash
-- 67c2950e4ce2eb16548da9ed66719586ad5908331c69fe60081a725f768d8696
+- a818d7636b9973397e8b7b34f401427387d1d7a45e6d767a29bb182175c210fb
 
 # `review_paths.py`
 
@@ -138,20 +129,19 @@
 # `review_report.py`
 
 ## Summary
-- レビュー結果を Markdown レポートとして保存・描画するモジュール。frontmatter、レビュー判定、対象 oracle file 一覧、fatal/minor 所見の分類・順序付け、finding の Markdown 表示、パス表示を担当する。レビュー報告の出力形式や判定規則を確認・変更するときの入口。
+- review oracle の結果を Markdown レポートとして生成・保存する実装。レポートの保存先、YAML frontmatter、Verdict、対象 oracle 一覧、Fatal/Minor 所見の分類・順序、エラーや中断時の結果判定、finding と path の描画を扱う。review oracle レポート出力の実装を変更・調査する際の入口。
 
 ## Read this when
-- review oracle サブコマンドのレポート生成・保存処理を変更するとき
-- レビュー結果の verdict、frontmatter、finding 表示順、対象ファイル一覧の出力を確認するとき
-- Markdown レポートのパス表示や所見整形を調査するとき
+- review oracle サブコマンドのレポート形式、保存処理、Verdict 判定、finding の表示順を変更・検証するとき
+- レビュー結果の frontmatter や Markdown セクション構成が期待どおりか調査するとき
+- 所見の severity・verdict 分類、oracle path 表示、エラー・中断・対象なしの扱いを確認するとき
 
 ## Do not read this when
-- レビュー対象の探索・oracle path 判定そのものを変更するときは、review_paths の実装を先に読む
-- レビュー仕様や出力契約を確認するだけの場合は、対応する oracle 文書を直接読む
-- CLI コマンドの引数処理やレビュー実行制御を変更する場合は、コマンド実装を直接読む
+- レビュー処理そのものの対象探索、oracle 内容の評価、git branch 操作を調査するときは、対応するレビュー実行・探索処理を直接読む
+- 一般的なレポート生成や他サブコマンドの出力を調査するとき
 
 ## hash
-- 5f4a38d52d7100ed102c0e28b394ded64b805217b67077066243d9fc80aadcfd
+- 05e364b8ace32c3e484f56c08353323b1de9befbf8a066acd22af1d43106b742
 
 # `review_targets.py`
 
@@ -172,22 +162,18 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session の各ライフサイクル処理を確認するための入口。
-- abandon は active session の破棄、home branch への切替、state 更新、branch 削除、失敗時 rollback を扱う。
-- fork は通常 branch と clean worktree を検証し、session branch/state の作成、衝突防止、失敗時 rollback を扱う。
-- join は session branch の merge、状態更新、branch 削除、および merge conflict の検出・自動解消を扱う。
+- session サブコマンドの実装パッケージ。fork、join、abandon の各 session 操作に関する CLI 実装を確認する入口。
 
 ## Read this when
-- session サブコマンドの実装構成やライフサイクル処理を確認・変更するとき。
-- session の abandon、fork、join の個別動作や失敗時 rollback を調査するとき。
-- session join の merge conflict 解消や Git の unmerged path 処理を確認するとき。
+- session サブコマンドの実装や構成を確認・変更するとき。
+- session branch、session state、cleanup、merge、rollback など session 操作の挙動を調査するとき。
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき。
-- session の共通 state schema、Git 操作 helper、CLI runtime の一般仕様だけを調査するときは、それぞれの定義元を直接読む。
+- 共通の git 操作、state 操作、Codex 実行規則、session データモデル自体を直接確認するとき。
 
 ## hash
-- 55c0997d6e359952976c795adc9259566d48dbe5d7f618561f47d0987d431e8e
+- fd4b0da87a48090397a866c729c2b89e9e18e7a38833e92107be89c7220385bd
 
 # `tui.py`
 

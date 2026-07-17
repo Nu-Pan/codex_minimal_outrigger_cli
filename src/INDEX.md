@@ -48,18 +48,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex、設定、Git、パス、ログ、状態、Ollama、INDEX.md 更新などの実装入口を提供する。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行、Codex、設定、Git、パス、ログ、状態、Ollama、INDEX 更新などの横断的な実装と公開窓口を扱う。個別の共通機能を調査・変更する際の入口となる。
 
 ## Read this when
-- commons 配下の共通 runtime 機能の構成や、対象となる個別 helper の入口を確認するとき
-- 複数の runtime 機能にまたがる公開 API、実行ライフサイクル、共通状態管理の実装を調査するとき
+- commons 配下の共通 runtime 機能の責務や実装箇所を確認するとき
+- CLI、Codex、設定、Git、パス、ログ、状態、Ollama、INDEX 更新など複数の共通機能にまたがる変更影響を調べるとき
+- 共通 runtime API の公開窓口や関連モジュールの構成を把握するとき
 
 ## Do not read this when
-- 特定機能の詳細を調べる場合は、commons 配下の対応する個別 runtime モジュールを直接読むとき
-- CLI サブコマンド固有の業務処理や利用者向け仕様だけを調べるとき
+- 特定の runtime helper の実装詳細だけを確認したいときは、対応する個別モジュールを直接読む
+- 特定サブコマンドの業務処理や利用者向け仕様だけを調べたいとき
+- 正本仕様や Codex・Ollama・state schema などの仕様を確認したいときは、対応する oracle 文書を直接読む
 
 ## hash
-- 9289ee2311354fc904692590199976cdf4622b42111263f57e1c04634d00d60d
+- f328318f2e3d4608870f4489f8941e278261a47202a96eaf9788233d7b31fcc9
 
 # `config`
 
@@ -115,15 +117,15 @@
 # `sub_commands`
 
 ## Summary
-- 複数の CLI サブコマンド実装と review 系処理を収める `src/sub_commands` の入口。apply、doctor、indexing、review、session、tui の各サブコマンドについて、実行制御やライフサイクル処理を確認する際に進む対象を示す。
+- CLI サブコマンドの実装領域。session／apply の fork・join・abandon、review oracle の実行・対象列挙・評価ループ・レポート・INDEX commit、indexing・doctor・eval_oracle・tui の実行入口と補助処理を扱う。各サブパッケージおよび個別モジュールへの入口。
 
 ## Read this when
-- apply、doctor、indexing、review、session、tui のサブコマンド実装を確認または変更するとき。
-- サブコマンドごとの実行フローや、review の対象列挙・finding 処理・レポート生成・INDEX 統合を調査するとき。
+- サブコマンドの実行フロー、状態遷移、worktree／branch 操作、Codex 実行、レポート生成、INDEX 更新の実装を確認・変更するとき。
+- session または apply のライフサイクル、review oracle の対象選定・finding 評価・merge、TUI や preprocess の CLI 入口を調査するとき。
 
 ## Do not read this when
-- サブコマンド共通の runtime、設定、lock、process、session state、Git 操作の一般実装だけを調査するときは、対応する共通モジュールへ直接進む。
-- 特定サブコマンドの詳細処理だけを調査するときは、この階層全体ではなく該当する実装ファイルまたは下位 package へ直接進む。
+- 共通 CLI runtime、Git／state／process tracking、indexing 共通処理、Codex parameter builder などの共通実装だけを調査するときは、対応する定義元を直接読む。
+- 特定サブコマンド内の prompt／parameter、レポート描画、対象列挙など単一機能だけを調査するときは、該当する個別実装を直接読む。
 
 ## hash
-- de7fc4ec0d6cb1e16afdae354b831d945084676d2c67aea364dc51066adba52e
+- 6c0a0b17389a1d2816e579bf27c3dccb379a7d4006b53b0c6f3c7d639767615e
