@@ -1,18 +1,24 @@
 # `acp`
 
 ## Summary
-- `acp` の互換公開入口と、ACP builder realization 層への導線を扱う。`acp.*` 参照の存続判断や builder 下位要素へのルーティングが必要な場合に使う。
+- `acp` 互換の公開入口を扱い、既存の `acp.*` 参照を `oracle.*` または実体モジュールへ移す際の判断材料を提供する。互換入口の存廃や canonical 実体への切り替え導線を確認するための入口。
+- `acp.builder` 配下の互換 builder package と canonical builder への委譲入口を扱う。apply、indexing、review、session、TUI、quota probe などの既存 import 経路を維持し、個別 builder の委譲経路や fallback を確認するための入口。
 
 ## Read this when
-- `acp` 互換公開名の存廃や、`oracle` 側実体への移行導線を確認するとき。
-- ACP builder の互換 import、canonical/oracle builder への委譲、または下位 builder package の入口を確認するとき。
+- `acp` という公開名を維持・削除するか判断したいとき。
+- 既存利用者向け参照を壊さず `oracle` 側の実体へ切り替える導線を確認したいとき。
+- `acp.builder.*` の import 互換性、canonical builder への委譲、builder parameter の公開経路を調査・変更するとき。
+- apply、review、session、TUI、indexing、quota probe など特定 builder の互換入口や fallback を確認したいとき。
 
 ## Do not read this when
-- `acp` 配下の具体的な実装や移行先の詳細を確認したいときは、該当する実体モジュールを直接読む。
-- TUI の挙動、apply fork のループ制御、session の状態遷移など、builder 入口以外の詳細を調べたいときは対応する実装箇所へ進む。
+- `acp` 配下の具体的な実装内容や移行先の詳細だけを知りたいときは、直接その実体モジュールを読む。
+- 互換入口の存廃ではなく `acp.*` の内部挙動そのものを変更したいとき。
+- canonical builder の仕様・prompt・処理本体を確認したいときは、対応する `oracle.acp_builder` 側の実装を直接読む。
+- TUI の画面挙動、apply fork のループ制御、session の具体的な状態遷移など、builder 入口以外の処理を調査するとき。
+- 既存の互換 import 経路と無関係な新規公開 API や設計を検討するとき。
 
 ## hash
-- 575819effad444213cb4b79b85e77091992dbbb71ff8f15ad2625f7069aec538
+- bbf0f8cde7f23e66da921982f6d607aee4da90fc914fcb01e5c2488779871e19
 
 # `basic`
 

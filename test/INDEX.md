@@ -145,20 +145,20 @@
 # `test_acp_builder_review_oracle_parameters.py`
 
 ## Summary
-- review oracle ACP builder の parameter builder、JSON Schema、互換公開面を検証するテストファイル。enumerate、judge、merge、advocate/challenger validation のモデル設定・ファイルアクセス・prompt placeholder・動的入力保持・schema 整合性を確認し、review oracle 実装の回帰検証の入口となる。
+- review oracle ACP builder の parameter、schema、モデル設定、ファイルアクセスモード、互換公開面を検証する pytest テスト群。enumerate、merge、judge、advocate/challenger validation の canonical/互換 builder 間の一致、schema の oracle source との一致、placeholder・symlink・動的入力保持を確認する。
 
 ## Read this when
-- review oracle の ACP builder、parameter、structured output schema、prompt placeholder、互換 module の公開 API を変更または調査するとき
-- review oracle の builder が oracle source の schema や canonical builder と一致するか確認するとき
-- symlink path や動的 finding テキストの保持など、review prompt の path/input 変換を検証するとき
+- review oracle builder の parameter や structured output schema を変更・追加・検証するとき
+- review oracle 互換 module の公開 API、モデル選択、reasoning effort、file access mode を確認するとき
+- oracle path placeholder、symlink entry path、既知 finding や動的入力の保持に関する挙動を調査するとき
 
 ## Do not read this when
-- review oracle 以外の ACP builder の実装やテストを扱うとき
-- oracle source の仕様そのものを確認したいときは、対応する oracle 配下の実装・schema を直接読む
-- 一般的な review 処理や finding の業務ロジックを調査するとき
+- review oracle builder 以外の ACP builder や、builder の実装詳細そのものを直接調査するとき
+- schema の正本定義を確認する場合は、このテストではなく対応する oracle schema を読むとき
+- テスト実行方法や Python 環境の確認だけが目的のとき
 
 ## hash
-- 6c6aa47f3f11ee247a13c73c79810235bb101aacba2fe1f189301dbd70c74178
+- 2aef081f6cc54d60e540b9ad798d3b0d6ab4b4012356a4012c0195a52b17226f
 
 # `test_acp_builder_session_join_parameters.py`
 

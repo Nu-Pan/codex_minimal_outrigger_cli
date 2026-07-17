@@ -127,32 +127,45 @@
 # `src`
 
 ## Summary
-- `src` は cmoc realization の実装ルート。Typer CLI の起動・コマンド定義、session/apply/review などのサブコマンド、ACP builder、共通 runtime、互換 import 入口を扱う。
-- 下位の `commons`、`acp`、`sub_commands`、`basic`、`config` などへ進むための最上位ルーティング入口。
+- `acp` は既存の `acp.*` 参照を維持する互換入口で、`oracle` 側の canonical 実装や builder 群への移行経路を扱う。
+- `basic` は ACP 型、path model、構造化文書 API を canonical 実装から再公開する互換入口で、実装や正本仕様は複製しない。
+- `cmoc_runtime.py` は `commons.cmoc_runtime` の公開名を再公開する互換 import shim。
+- `commons` は CLI、Codex、設定、Git、path、logging、state、Ollama、INDEX 更新などの共通 runtime 実装をまとめるパッケージ。
+- `config` は canonical 設定定義を再公開する互換 import 入口。
+- `main.py` は Typer ベースの cmoc CLI ルートで、共通エラー変換、トップレベル command、session/apply/review command、起動入口を定義する。
+- `oracle.py` は `src` 単体起動時に `oracle.*` パッケージを解決する互換 package shim。
+- `sub_commands` は session、apply、review、indexing、doctor、eval-oracle、TUI などの CLI サブコマンド実装をまとめる領域。
 
 ## Read this when
-- cmoc の CLI 全体構成、起動入口、サブコマンドへの接続を確認するとき。
-- 共通 runtime、ACP builder、互換 import、設定・基礎 API、またはサブコマンド実装の調査対象を選ぶとき。
+- `acp.*`、`basic.*`、`config.*`、`cmoc_runtime` の公開 import 互換性や canonical 実装への移行を調べるとき。
+- 共通 runtime helper の実装や、複数サブコマンドにまたがる CLI・Codex・Git・state・logging の影響を確認するとき。
+- cmoc の command 階層、option、Typer/Click のエラー処理、CLI 起動入口を変更・調査するとき。
+- session、apply、review、indexing、doctor、eval-oracle、TUI の実行フローや状態操作を調べるとき。
+- `src` 起動時の `oracle.*` パッケージ解決を確認するとき。
 
 ## Do not read this when
-- 特定のサブコマンドや helper の実装詳細だけを確認したいときは、該当する下位モジュールを直接読む。
-- 正本仕様や oracle 側の実装を確認したいときは、対応する `oracle` 配下を直接読む。
+- 互換入口の内部実体、canonical builder、設定仕様、構造化文書仕様の詳細だけを確認したいときは、対応する定義元を直接読む。
+- 特定の runtime helper やサブコマンド単体の実装だけを調査するときは、該当する個別モジュールを直接読む。
+- oracle の正本仕様や oracle 側実装を確認するときは、`oracle` ツリーを直接読む。
+- CLI の公開入口やサブコマンド接続と無関係な新規 API・設計を検討するとき。
 
 ## hash
-- 18def081b0c00dfcb5fde413b7665fe2cf89b1601e6f7cb321f7009519c1057f
+- 2c56a7a3f75f848c62c0fe2b7e6e391ac63873ab72eed849ebfef794b0e41f21
 
 # `test`
 
 ## Summary
-- cmoc の pytest テストスイート。CLI サブコマンド、Codex 実行ランタイム、ACP builder、indexing、review oracle、session/apply lifecycle、Git/worktree、設定、Ollama などの外部挙動と制御ロジックを検証する。各テストファイルおよび共有 support module が個別機能の入口となる。
+- cmoc の pytest テスト群を集約するディレクトリ。ACP builder、CLI サブコマンド、Codex runtime、indexing、review oracle、session/apply、設定、worktree、Ollama などの外部挙動・制御契約を検証し、各機能別テストと共有テスト補助を下位要素への入口として提供する。
 
 ## Read this when
-- cmoc の機能変更に対応する回帰テストや、既存の外部契約・失敗条件・状態遷移を確認するとき。
-- 対象機能に対応する個別テストファイルを特定し、実装変更後の検証範囲を判断するとき。
+- cmoc の機能変更に対応する回帰テストや契約テストを探すとき
+- CLI、Codex runtime、indexing、review oracle、session/apply、設定、worktree、Ollama、ACP builder の挙動をテスト観点から確認するとき
+- テスト用の共有 Git・Ollama・Codex・CLI 補助を利用または変更するとき
 
 ## Do not read this when
-- 正本仕様や実装の詳細を確認する場合は、対応する oracle または src のファイルを直接読む。
-- 一般的な pytest 実行方法や、対象機能と無関係なテストの挙動を調査するとき。
+- 正本仕様や schema の内容自体を確認するときは、対応する oracle 文書・schema を直接読む
+- 実装詳細だけを確認するときは、対応する src の実装を直接読む
+- 対象機能と無関係なテストや共有補助を読む必要がないときは、このディレクトリを入口にしない
 
 ## hash
-- c85de7c48acaef5bea1250520b03ffca03e78f5f887782ec7e540c7d6b28706c
+- de6e517ef1a053d95f78e7a5fc35cce0103e28510a3953ec022c59fc914a3929

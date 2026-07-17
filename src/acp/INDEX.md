@@ -17,16 +17,16 @@
 # `builder`
 
 ## Summary
-- 対象ディレクトリは、ACP builder の realization 側入口をまとめる層です。既存の `acp.builder.*` import 互換を維持しつつ、apply・indexing・quota probe・review・session・TUI などの各領域を下位要素へ振り分けます。
+- `acp.builder` 配下の互換 builder package と、各 builder の canonical 実装への委譲入口を扱うディレクトリ。apply、indexing、review、session、TUI、quota probe などの既存 import 経路を維持し、必要に応じて各下位要素から個別の委譲経路や fallback を確認する。
 
 ## Read this when
-- ACP builder の互換 import 経路、canonical/oracle builder への委譲、または下位 builder package の入口を確認するとき。
-- 対象ディレクトリ直下の builder 機能の追加・変更・削除に伴い、どの下位要素へ進むべきか判断するとき。
+- 既存の `acp.builder.*` import 互換性、canonical builder への委譲、builder parameter の公開経路を調査・変更するとき。
+- apply、review、session、TUI、indexing、quota probe など特定 builder の互換入口や fallback の位置を確認するとき。
 
 ## Do not read this when
-- 個別 builder の詳細な prompt・schema・処理仕様を確認したいときは、該当する下位 package または oracle 側実装を直接読む。
-- TUI の画面挙動、apply fork のループ制御、session の状態遷移など、builder 入口以外の責務を調べるときは対応する実装箇所へ直接進む。
-- 対象ディレクトリに新たな通常ファイルがないかを確認するだけの場合は、本文ではなくディレクトリ構成を確認する。
+- canonical な builder の仕様・prompt・処理本体を確認したいときは、対応する `oracle.acp_builder` 側の実装を直接読む。
+- TUI の画面挙動、apply fork のループ制御、session の具体的な状態遷移など、builder 入口以外の処理を調査するとき。
+- 既存の互換 import 経路と無関係な新規公開 API や設計を検討するとき。
 
 ## hash
-- 73190804eb843eab784b4f8260f3e42ced60cbf2f93215b21b9721343b26dcd4
+- 6dca84f0cced70681653adf3eca49a8b8f2812abc52fa7d05d1729a66d82d9f4

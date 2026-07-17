@@ -18,18 +18,18 @@
 # `enumerate_finding.py`
 
 ## Summary
-- review finding enumeration の互換 import 経路を提供するモジュール。canonical oracle builder を呼び出し、絶対 symlink が指定された場合は prompt 内の oracle path を解決済み path から lexical path に戻して、レビュー対象の指定を保持する。canonical 実装への移行完了後に削除できる。
+- review finding enumeration 用の互換 import 経路。canonical oracle builder を呼び出し、絶対 symlink の場合は prompt 内の oracle path を lexical path に戻してレビュー対象の事実を保持する。全呼び出し元が canonical path を直接使うまでの移行入口。
 
 ## Read this when
-- review finding enumeration の parameter builder の互換 import 経路や symlink 指定時の prompt path 保持を確認・変更するとき
-- `acp.builder.review.oracle.enumerate_finding` からの既存 import を canonical oracle path へ移行するとき
+- review finding enumeration の AgentCallParameter 構築や、旧 import 経路との互換性を変更・調査するとき
+- symlink の oracle path が prompt にどう保持されるかを確認するとき
 
 ## Do not read this when
-- canonical な parameter builder の仕様や実装を確認したいときは、参照先の canonical 実装を直接読む
-- review finding enumeration と無関係な review builder や一般的な AgentCallParameter 処理を確認するとき
+- canonical な enumeration builder 自体の仕様・実装を確認するときは、oracle 側の canonical 実装を直接読む
+- review finding enumeration と無関係な review builder や一般的な AgentCallParameter の変更を扱うとき
 
 ## hash
-- 6061e81cb1410b8a466e350703d2f1c48ac2f5bfd30596c98f8c6124e87f3e65
+- 232d65b615a7bff64ceb4a32f2e80ecd1a04e8ebee54ad49404a0ffe4d5ab0c3
 
 # `judge_finding.py`
 

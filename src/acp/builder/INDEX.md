@@ -80,20 +80,20 @@
 # `review`
 
 ## Summary
-- review builder 周辺の互換 import 入口と、canonical builder に委譲する oracle 系実装をまとめたディレクトリ。review finding の各種 parameter 生成と、既知の prompt placeholder typo 補正を扱う。
+- review builder の旧 import 互換 package。配下に review finding の enumeration・judgment・merge・advocate/challenger validation の互換入口を持ち、canonical builder への委譲と限定的な prompt 補正を担う。
 
 ## Read this when
-- review/oracle builder の旧 import 経路や canonical 実装への委譲関係を確認するとき
-- review finding の parameter 生成や既知の oracle-root placeholder typo 補正を確認・変更するとき
-- 互換 package の残存理由や削除可否を判断するとき
+- review/oracle builder の旧 import 経路や canonical 実装への委譲を確認・変更するとき
+- review finding builder の prompt 補正、symlink path、dynamic input 保持を調査するとき
+- 互換 package を削除できる条件を判断するとき
 
 ## Do not read this when
-- canonical builder の prompt 仕様・本体実装・検証ロジックを確認したいとき
-- review routing、一般的な AgentCallParameter 処理、または対象外の review 処理を調査するとき
-- 旧 import 経路や限定的な prompt 補正に関係しない新しい実装責務・公開 API を確認するとき
+- canonical builder の本体仕様や prompt 本文だけを確認したいとき
+- review finding の実処理・検証ロジック自体を調査するとき
+- 旧 import 互換性と無関係な builder 実装を変更するとき
 
 ## hash
-- 224fe812bdf61b4f1b20a257fa47537a22083c79eb4f60ea8c74b3d01cc4aa09
+- ec57d036e74919b6cb6412359b9f8d413054a6633ee180829c0737c93a2d182a
 
 # `session`
 
