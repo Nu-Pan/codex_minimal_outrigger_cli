@@ -127,23 +127,18 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 実装と公開入口を収める realization のルート。Typer による CLI 登録、互換 import shim、共通 runtime、ACP builder、設定・基本型、各サブコマンドへの導線を扱う。
-- `acp`、`basic`、`config` は既存の公開 import 経路を保ちながら実体へ接続する互換入口、`commons` は共通 runtime helper、`sub_commands` は CLI サブコマンドの実装群を提供する。
-- CLI 全体の入口や公開コマンドの登録を確認する場合は `main.py`、正本 `oracle.*` の解決を確認する場合は `oracle.py`、個別機能の詳細を確認する場合は対応する下位 package・module へ進む。
+- cmoc CLI の realization 実装ルート。Typer によるコマンド入口、共通 runtime、互換 import shim、basic/acp/config 公開入口、サブコマンド群を下位要素へ案内する。
 
 ## Read this when
-- cmoc の CLI 全体のコマンド登録、起動処理、公開 import 入口の構成を確認または変更するとき。
-- ACP builder、共通 runtime、設定・基本型、サブコマンド実装の下位入口を選ぶ必要があるとき。
-- `src` 起動時の `oracle.*` 解決や、既存公開名から canonical 実体への互換接続を確認するとき。
+- cmoc の CLI 起動入口、トップレベル／サブコマンド構成、引数解析エラー処理を確認するとき。
+- src 配下の runtime 共通処理、互換 import path、またはサブコマンド実装の入口を特定するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理詳細を調べるときは、`sub_commands` 配下の該当実装を直接読む。
-- runtime helper、設定、Git、状態、パスなど共通機能の詳細を調べるときは、`commons` 配下の対応 module を直接読む。
-- ACP builder の個別処理や基本型・構造化文書 API の仕様を調べるときは、対応する下位実体または `oracle` 側を直接読む。
-- `src` のルート構成と無関係な利用者向け仕様や正本仕様を調べるときは、対応する oracle doc・oracle src を読む。
+- 特定サブコマンドの業務ロジック、runtime helper の詳細、または互換入口の実体を確認したいときは、対応する下位ファイルやディレクトリへ直接進む。
+- 正本仕様や oracle 側実装を確認するときは、src 配下ではなく対応する oracle ツリーを読む。
 
 ## hash
-- 459afc88ea3c4ca6c6106f50ee512e635647d045d4fbc7ab3da7b104952f6fc5
+- 323c71c4c7f2cd3115f8e56a5a9c43dd9a5a785b37841d536d5821d41747a524
 
 # `test`
 

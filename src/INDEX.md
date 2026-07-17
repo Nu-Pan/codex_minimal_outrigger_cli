@@ -83,20 +83,19 @@
 # `main.py`
 
 ## Summary
-- cmoc の Typer CLI アプリケーション本体。doctor、tui、indexing、eval-oracle と、session/apply/review 配下の fork・join・abandon・oracle コマンドを登録し、各実装へ接続する。CLI 引数解析エラーを cmoc 形式で表示し、列挙型で一部 option 値を定義する。
+- Typer ベースの cmoc CLI のルート定義。共通エラー変換、トップレベルコマンド、session/apply/review のサブコマンド、console script の起動入口を扱う。CLI コマンドの追加・変更、引数や option の定義、コマンド実装への接続を調べる際の入口。
 
 ## Read this when
-- cmoc の CLI コマンド、サブコマンド、option、起動処理の入口を確認するとき
-- Typer/Click の引数解析エラー変換や console script の起動経路を確認するとき
-- 新しい CLI 入口の追加・既存コマンドの登録変更を行うとき
+- cmoc の CLI コマンド一覧、サブコマンド階層、option の既定値や列挙値を確認するとき
+- Typer・Click の引数解析エラー処理や CLI 起動方法を変更するとき
+- CLI 入口から各サブコマンド実装への接続を追うとき
 
 ## Do not read this when
-- 特定サブコマンドの実際の処理内容を調査するときは、対応する sub_commands 配下の実装を直接読む
-- CLI の仕様上の詳細な利用方法やエラー契約を確認するときは、参照コメントに示された oracle doc を読む
-- INDEX.md 更新処理の内部実装を確認するときは、indexing 実装を直接読む
+- 特定サブコマンドの処理内容や業務ロジックだけを調べるときは、対応する sub_commands 配下の実装を直接読む
+- oracle のエラー処理・usage・サブコマンド仕様そのものを確認するときは、参照コメントに示された oracle file を読む
 
 ## hash
-- 0940b9fc7c2735e20110d5a425932aee37af5058fd4b59202dda8733f38662fc
+- 81225c8de9d313ba42585b37881ac6abea55daa56d41186a024931538e368802
 
 # `oracle.py`
 
