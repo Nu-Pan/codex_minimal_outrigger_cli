@@ -337,21 +337,18 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行と cmoc 管理 Ollama の統合テストを扱うテストファイル。実際の Codex 呼び出し、argv・stdin・schema・ログ・出力、ローカル SLM 用 override、Ollama preflight、CODEX_HOME 設定ファイル非生成を検証する。Codex 実行経路や関連設定の挙動を確認する際のテスト入口。
+- Codex CLI 実行ランタイムの結合・契約テスト。実 Codex またはスタブ Codex に対する argv、stdin、sandbox、approval、override 設定、ローカル SLM 用 managed Ollama provider、出力スキーマ、ログ、CODEX_HOME 非変更、リポジトリ書き込み結果を検証する。
 
 ## Read this when
-- Codex CLI の argv、sandbox、approval、model、output schema、stdin 渡しを変更または検証するとき
-- cmoc 管理 Ollama を利用する local SLM 実行や preflight の統合挙動を確認するとき
-- Codex 実行時の call log、prompt log、schema 出力、リポジトリ書き込み結果を検証するとき
-- CODEX_HOME に利用者設定を生成しない契約を変更または確認するとき
+- Codex exec の呼び出し契約、override 引数、ローカル SLM / managed Ollama 連携を変更または調査するとき。
+- Codex 実行結果、出力スキーマ配置、プロンプトログ、CODEX_HOME の副作用を検証するとき。
 
 ## Do not read this when
-- Codex 実行処理の実装詳細を直接調査する場合は、対応する src の runtime_codex 実装や override 実装を先に読むとき
-- Codex 以外の CLI 機能、設定読み込み、Ollama サービス単体の挙動だけを調査するとき
-- テスト共通 helper や fixture の実装だけを調べるときは、対応する test support ファイルを直接読む場合
+- Codex 実行ランタイムの挙動やテスト契約を扱わず、他の CLI 機能・設定・テストだけを変更または調査するとき。
+- 単体の補助関数の内部実装を確認するだけで、Codex exec の外部契約を確認する必要がないとき。
 
 ## hash
-- 5ff76f39bdd68e2c0d5b549a3876acfe7e7e6e613b33d9a95218966730754fbd
+- 7810bcd202e133caeaf3feb8cb249161c595f6f7c981bcaa337292bf7061256d
 
 # `test_codex_runtime_home.py`
 
@@ -542,20 +539,21 @@
 # `test_production_cli.py`
 
 ## Summary
-- 実 Codex CLI と cmoc managed Ollama を用いた、全末端サブコマンドの本番経路受け入れ試験。独立 process・PTY 実行を通じて、終了 code、report・state・Git 状態、Codex call log、TUI の応答完了と終了操作を検証する。
+- 実 Codex CLI と cmoc managed ollama を使い、独立 process・PTY 上で全末端サブコマンドの本番経路を検証する受け入れテスト。終了 code、report・state・Git の状態、Codex call log、TUI の応答完了と終了を確認し、LLM の回答品質自体は判定しない。
 
 ## Read this when
-- 利用者向け CLI の全末端サブコマンドが本番相当の外部環境で完了するか確認するとき
-- 独立 process、実 Codex CLI、managed Ollama、PTY 上の TUI 経路を検証するとき
-- CLI 実行後の report・永続 state・Git・call log の外部観測結果を確認するとき
+- CLI の全末端サブコマンドが本番同等の独立 process 経路で動作するか確認するとき
+- Codex 呼び出し、managed ollama 設定、call log、report、session/apply の状態遷移を検証するとき
+- 実 Codex TUI の PTY 操作、応答完了、正常終了を検証するとき
+- 新しい公開末端 command の本番経路試験への反映漏れを確認するとき
 
 ## Do not read this when
+- 個別コマンドの内部実装や単体ロジックだけを変更・調査するとき
 - LLM の回答品質やプロンプト内容そのものを評価するとき
-- 単一機能の内部ロジックや unit test のみを変更・調査するとき
-- 本番経路を使わない parser・helper の局所的なテストを確認するとき
+- 実 Codex CLI・managed ollama・独立 process・PTY を使わないテストを確認するとき
 
 ## hash
-- cb2199c1ab521ff83bdf63bb2730a165424b4d210437a467ca8da5f5560dc3e8
+- e0bc129486b94a059dff92999096aeffa3ee1e67786bd62162fbbc5652c9aa74
 
 # `test_prompt_parts.py`
 
@@ -711,19 +709,19 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- Codex の sandbox argv が permission profile や path 別権限設定に依存しないことを検証する pytest。全 FileAccessMode で専用 sandbox 引数、profile/config 注入の不在、builder API の引数制限、worktree 内容への不変性、実 Codex CLI parser での受理を確認する。
+- Codex CLI の sandbox argv 生成を検証する pytest。全 FileAccessMode で permission profile や path 別例外を注入しないこと、作業ツリー内容に依存しないこと、生成された sandbox 引数を実 Codex CLI が受理することを確認する。
 
 ## Read this when
-- Codex override argv の sandbox、permission profile、権限関連 config を変更・調査するとき
-- build_codex_override_args または prepare_codex_override_args の API や worktree 内容への依存性を変更・調査するとき
-- Codex CLI の sandbox 引数互換性に関するテストを確認するとき
+- Codex の sandbox argv、permission profile、path 別 read/write 例外の扱いを変更・検証するとき
+- build_codex_override_args または prepare_codex_override_args の API・出力を変更するとき
+- Codex CLI parser との sandbox 引数互換性を確認するとき
 
 ## Do not read this when
-- Codex argv や runtime permission の挙動を扱わず、別のサブシステムの実装・テストだけを変更するとき
-- 権限仕様そのものを確認する必要があり、先に指定された oracle 文書を読むべきとき
+- Codex sandbox argv や permission profile に関係しない機能のテストを調査するとき
+- 実装本体の一般的な設定処理や、個別の CLI サブコマンドの挙動を直接確認するとき
 
 ## hash
-- 39e1e48dbe3bb04f3010b865eef245026a1c402bdcfba8b10a795cb5c2058aa3
+- d69dabe02e2acbadf3e6a25fde436391e442f073d3b5393199757f65daf8c5fd
 
 # `test_runtime_codex_profile.py`
 
