@@ -1,7 +1,7 @@
 """`cmoc oracle edit` の TUI 起動 prompt 正本。"""
 
 # cmoc
-from oracle.other.struct_doc import StructDoc, render_as_markdown
+from oracle.other.struct_doc import StructDoc, StructBlock, render_as_markdown
 from oracle.other.path_model import resolve_repo_root
 from oracle.acp_builder.basic import (
     AgentCallParameter,
@@ -30,8 +30,7 @@ def build_oracle_edit_launch_tui_parameter(
     complete_prompt = build_complete_prompt(
         role="- あなたは oracle file の編集担当です",
         summary="""
-        - ユーザー指示が要求する最終状態を `{{work-root}}/oracle` ツリー内の oracle file に反映すること
-        - realization file を読み書きせず、oracle file だけを正本として作業すること
+        - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/> が要求する最終状態を `{{work-root}}/oracle` ツリー内の oracle file に反映すること
         """,
         goal="""
         - ユーザー指示が要求する最終状態が oracle file 上で満たされていること
@@ -40,10 +39,13 @@ def build_oracle_edit_launch_tui_parameter(
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         aux_dynamic_prompt=[
-            StructDoc(
-                "ユーザー指示",
-                user_instruction,
-            ),
+            StructBlock(
+                "original_user_instruction",
+                StructDoc(
+                    "ユーザー指示",
+                    user_instruction,
+                ),
+            )
         ],
         oracle_and_realization_basic=True,
         oracle_standard=True,
@@ -56,7 +58,7 @@ def build_oracle_edit_launch_tui_parameter(
         / "gu"
         / "ar"
         / "log"
-        / "tui"
+        / "editor_input"
         / f"{time_stamp}_cmpl.md"
     )
     with open(complete_prompt_path, "w", encoding="utf-8") as f:

@@ -76,7 +76,7 @@ def build_tui_launch_tui_parameter(
         / "gu"
         / "ar"
         / "log"
-        / "tui"
+        / "editor_input"
         / f"{time_stamp}_cmpl.md"
     )
     with open(complete_prompt_path, "w") as f:
