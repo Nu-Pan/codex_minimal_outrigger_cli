@@ -658,18 +658,18 @@
 # `test_runtime_apply.py`
 
 ## Summary
-- apply 実行時の process tracking と停止契約を、CLI を介さず低レベル API で検証するテスト。pid file の child PID 読み込みと advisory lock 待機、pidfd による PID identity 検証、process group 停止、親終了後の再読込、競合終了や PID reuse の扱いを対象とする。apply abandon の CLI 外部挙動を確認するテストへの入口ではない。
+- apply runtime の process tracking と停止契約を、CLI を介さず低レベル API で検証するテスト。pid file の child PID 読み込み、advisory lock 待機、pidfd による PID identity 検証、process group 停止、親終了後の再読込、競合終了や stale PID の警告・signal 抑止を扱う。apply abandon CLI の外部挙動ではなく、runtime 実装の直接テストへの入口。
 
 ## Read this when
-- apply 実行プロセスの追跡情報、pid file、advisory lock、pidfd、process group、停止時の warning や PID reuse 防止を変更・調査するとき。
-- commons.runtime_apply の低レベル停止処理が、親 process と記録済み Codex child process を安全に扱うことを検証するとき。
+- apply runtime の pid file、advisory lock、pidfd、process group、PID reuse、停止順序や停止時 warning の挙動を変更・検証するとき
+- 親 apply process と記録済み Codex child process の追跡・停止契約を確認するとき
 
 ## Do not read this when
-- apply abandon コマンドの CLI 入出力や外部挙動を変更・調査するときは、test_apply_abandon_cli.py を直接読む。
-- apply runtime の process tracking や停止処理に関係しない機能を変更・調査するとき。
+- apply abandon コマンドの CLI 入出力や外部挙動を確認するときは、CLI 用テストを直接読む
+- apply runtime の実装詳細ではなく、別のサブコマンドや一般的な process 管理を扱うとき
 
 ## hash
-- 67147ef59cbbd27fbe91af2efc727e8d5f74d139a8392b69cb7ca83817a86a29
+- 66bd4aef4faaae09a81cee7be72f31a9040152276048393d364f29b6b87f1726
 
 # `test_runtime_cli.py`
 
