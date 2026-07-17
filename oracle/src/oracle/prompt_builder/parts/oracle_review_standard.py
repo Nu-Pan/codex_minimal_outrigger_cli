@@ -141,7 +141,7 @@ def build_review_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
     return (
         {},
         StructDoc(
-            "review oracle standard",
+            "oracle review standard",
             *[standard_to_struct_doc(ros) for ros in standards],
         ),
     )

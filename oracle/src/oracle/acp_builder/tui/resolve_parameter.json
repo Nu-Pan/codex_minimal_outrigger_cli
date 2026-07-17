@@ -157,11 +157,11 @@
             "properties": {
                 "value": {
                     "type": "boolean",
-                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `review oracle standard` を読む必要があるのなら True を設定する。"
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `oracle review standard` を読む必要があるのなら True を設定する。"
                 },
                 "reason": {
                     "type": "string",
-                    "description": "`review oracle standard` を読む必要がある・ないとする事の説明・根拠。"
+                    "description": "`oracle review standard` を読む必要がある・ないとする事の説明・根拠。"
                 }
             }
         },

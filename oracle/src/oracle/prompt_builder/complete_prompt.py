@@ -76,7 +76,7 @@ def build_complete_prompt(
         True の時、realization standard をプロンプトに注入する
 
     review_oracle_standard:
-        True の時、review oracle standard をプロンプトに注入する
+        True の時、oracle review standard をプロンプトに注入する
 
     apply_review_standard:
         True の時、apply review standard をプロンプトに注入する
