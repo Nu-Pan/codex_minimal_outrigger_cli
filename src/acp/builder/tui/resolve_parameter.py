@@ -12,7 +12,7 @@ from oracle.acp_builder.tui.resolve_parameter import (
     build_tui_resolve_parameter_parameter,
 )
 
-TUI_FILE_ACCESS_MODES = tuple(
+TUI_FILE_ACCESS_MODES: tuple[FileAccessMode, ...] = tuple(
     mode for mode in FileAccessMode if mode != FileAccessMode.NO_RULE
 )
 
