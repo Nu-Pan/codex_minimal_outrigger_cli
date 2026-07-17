@@ -83,19 +83,17 @@
 # `main.py`
 
 ## Summary
-- Typer ベースの cmoc CLI のルート定義。共通エラー変換、トップレベルコマンド、session/apply/review のサブコマンド、console script の起動入口を扱う。CLI コマンドの追加・変更、引数や option の定義、コマンド実装への接続を調べる際の入口。
+- Typer を用いた cmoc CLI のアプリケーション定義と起動入口。共通エラー変換、トップレベル command、session/apply/oracle のサブコマンド、各実装関数への接続、scope option を扱う。下位サブコマンドの CLI 入口や全体の command 構成を確認する際の起点となる。
 
 ## Read this when
-- cmoc の CLI コマンド一覧、サブコマンド階層、option の既定値や列挙値を確認するとき
-- Typer・Click の引数解析エラー処理や CLI 起動方法を変更するとき
-- CLI 入口から各サブコマンド実装への接続を追うとき
+- cmoc のトップレベル command、サブコマンド構成、CLI option、Typer/Click のエラー処理を変更・調査するとき
+- console script またはモジュール実行時の CLI 起動経路を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの処理内容や業務ロジックだけを調べるときは、対応する sub_commands 配下の実装を直接読む
-- oracle のエラー処理・usage・サブコマンド仕様そのものを確認するときは、参照コメントに示された oracle file を読む
+- 特定サブコマンドの処理本体や branch 操作、doctor、TUI、indexing の詳細な挙動を調査するときは、対応する sub_commands 配下の実装を直接読む
 
 ## hash
-- 81225c8de9d313ba42585b37881ac6abea55daa56d41186a024931538e368802
+- 9b7a3a4c03d63245486277dfc1529a5fb4d3762221561d93d68eba46846c93cc
 
 # `oracle.py`
 
@@ -115,15 +113,15 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装をまとめたパッケージ。apply、doctor、indexing、review、session、tui などの CLI 実行入口と、各サブコマンド固有の lifecycle、対象選定、レポート、Git・worktree 操作への入口を提供する。
+- cmoc の各サブコマンド実装を収めるディレクトリ。apply、doctor、indexing、review、session、tui などの CLI 実行入口と、review 系の対象列挙・ループ・レポート・パス処理を扱う下位実装への入口となる。
 
 ## Read this when
-- サブコマンドの CLI 実装や package 構成を確認・変更するとき。
-- 複数サブコマンドにまたがる実装入口や、目的のサブコマンド配下の処理へ進む先を判断するとき。
+- サブコマンドの CLI 実装や構成を確認・変更するとき。
+- apply、doctor、indexing、review、session、tui の実行フローや、review 関連の対象列挙・finding 処理・レポート・INDEX 更新を調査するとき。
 
 ## Do not read this when
-- 共通 CLI runtime、Git、worktree、Codex 実行基盤などの共通実装だけを調査・変更するとき。
-- 特定サブコマンドの個別機能、下位モジュール、プロンプト生成、レポート生成だけを扱うときは、対応する下位実装を直接読む。
+- 共通 runtime、Git、worktree、Codex 実行基盤など、サブコマンド横断の実装だけを扱うとき。
+- 特定サブコマンド内の詳細処理だけを変更・調査するときは、対応する下位実装を直接読む。
 
 ## hash
-- 3d6afa336f198361e8c8188c2d7a1aef6863d12546520a3cd38619852beacda8
+- e834b9003a731b0e9e2df6d552f13c80c596d8438922bfbc47bc2462d610a19e

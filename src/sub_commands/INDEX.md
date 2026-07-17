@@ -63,34 +63,35 @@
 # `review`
 
 ## Summary
-- review 系サブコマンド群の Python package。oracle 実行入口と、関連するレビュー処理モジュールへの入口を含む。
+- review 系サブコマンドの Python package。package 初期化モジュールと、session branch の検証から隔離 worktree でのレビュー実行、finding のマージ、後始末、レポート出力までを統括する oracle review 実装を含む。個別の対象列挙・レビュー loop・レポート・INDEX 更新の詳細実装への入口でもある。
 
 ## Read this when
-- review oracle の CLI 実行フロー、worktree・branch 管理、レビュー対象選定、割り込み・例外処理を調査するとき
-- review 系サブコマンドの package 構成や関連モジュールへの入口を確認するとき
+- review 系サブコマンド全体の package 境界や構成を確認したいとき。
+- oracle review の起動条件、session branch 検証、隔離 worktree のライフサイクル、レビュー結果の統合を確認・変更するとき。
+- review 系サブコマンドの具体的な処理へ進む入口を判断したいとき。
 
 ## Do not read this when
-- 判定ループ、対象列挙、レポート形式、INDEX の commit・merge 処理など、個別機能だけを調査するときは対応する実装モジュールを直接読む
-- package 初期化の import や公開シンボルだけを調査するときは、具体的な処理を持たない初期化モジュールを読む必要はない
+- 対象列挙、レビュー loop、finding 操作、レポート生成、INDEX 更新の個別実装だけを確認・変更したいときは、対応する下位実装を直接読む。
+- package 初期化時の import、副作用、公開シンボルだけを調べたいとき。ただし初期化モジュールからはその責務は読み取れない。
 
 ## hash
-- 261d8f5ae9ec1180763418a7bfa77e257cfbad56d74bc7b1a72d8903d6c04c43
+- fc7e7aae9781f01c4e2ebd8ee4346cceb9e349fdf2441422539a790d7354bebd
 
 # `review_index.py`
 
 ## Summary
-- review oracle 用 worktree の INDEX.md 変更を検証・commitし、INDEX.md のみからなる review branch を session branch に merge するための Git 操作を扱う。変更 path の検査、競合解決、merge 後の commit 取得が下位処理への入口となる。
+- INDEX.md の変更だけを対象に、レビュー用 worktree の差分検証・commit・review branch の merge を行う処理をまとめたモジュール。INDEX.md 以外の差分拒否や、INDEX.md 限定の競合解決も扱う。
 
 ## Read this when
-- review oracle の INDEX.md 変更を commit または merge する処理を確認するとき
-- review branch に INDEX.md 以外の差分がないことの検証や、INDEX.md の merge conflict 解決を調べるとき
+- oracle review による INDEX.md 更新の commit や review branch の merge 処理を変更・確認するとき。
+- レビュー差分の対象制限、commit 判定、INDEX.md 限定の merge conflict 解決を確認するとき。
 
 ## Do not read this when
-- 通常のアプリケーション機能や review oracle の内容自体を調べるとき
-- INDEX.md 変更以外の Git 操作、または一般的な worktree 状態管理を直接確認したいとき
+- 通常の INDEX.md 生成・内容解析を変更するとき。
+- レビュー以外の git 操作や、INDEX.md 以外のファイルを扱う commit 処理を確認するとき。
 
 ## hash
-- ffbcec8958ff3f1466d4fe84e3f1be83be150a4ea79cd32761b2cf7dfbfc4673
+- c7170abeb443d0c1825c25dae7baef0bd238c5e0205370db443e8f139878b029
 
 # `review_loop.py`
 
@@ -128,19 +129,17 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の結果を Markdown レポートとして生成・保存する実装。レポートの保存先、YAML frontmatter、Verdict、対象 oracle 一覧、Fatal/Minor 所見の分類・順序、エラーや中断時の結果判定、finding と path の描画を扱う。review oracle レポート出力の実装を変更・調査する際の入口。
+- Oracle review の結果を timestamp 名の Markdown レポートとして保存・描画する実装。レポートの frontmatter、判定、評価対象一覧、severity・採否別の所見表示、パス表示を扱う。
 
 ## Read this when
-- review oracle サブコマンドのレポート形式、保存処理、Verdict 判定、finding の表示順を変更・検証するとき
-- レビュー結果の frontmatter や Markdown セクション構成が期待どおりか調査するとき
-- 所見の severity・verdict 分類、oracle path 表示、エラー・中断・対象なしの扱いを確認するとき
+- oracle review のレポート保存、Markdown/YAML frontmatter の形式、Verdict 判定、所見の分類・表示順を変更または確認するとき。
 
 ## Do not read this when
-- レビュー処理そのものの対象探索、oracle 内容の評価、git branch 操作を調査するときは、対応するレビュー実行・探索処理を直接読む
-- 一般的なレポート生成や他サブコマンドの出力を調査するとき
+- oracle review の対象探索や finding の生成・判定ロジックを変更するとき。
+- レビュー実行フローや session branch の操作を確認するときは、対応する実行・状態管理の実装を直接読む。
 
 ## hash
-- 05e364b8ace32c3e484f56c08353323b1de9befbf8a066acd22af1d43106b742
+- d1b607f4227847c8dcbac22c7aee6cb0a9660b8a9447acafb684ae684d10ebff
 
 # `review_targets.py`
 

@@ -36,19 +36,21 @@
 # `parts`
 
 ## Summary
-- oracle と realization、レビュー基準、アクセス規則、ルーティング規範などの prompt builder 部品を収録するディレクトリ。各ファイルは対応する正本文書や規範を構造化プロンプトへ変換する入口であり、個別部品の調査・変更時に参照する。
+- oracle と realization、レビュー基準、ファイルアクセス規則、ルーティング規範などの prompt builder 部品を集約するディレクトリ。各 Python ファイルが特定の正本仕様・標準文面・構造化プロンプト生成責務を担い、該当するプロンプト規範や生成処理を変更・調査する際の入口となる。
 
 ## Read this when
-- oracle と realization の基本定義や標準を prompt に組み込む処理を確認・変更するとき
-- oracle／realization のレビュー基準やファイルアクセス規則を確認・変更するとき
-- INDEX.md エントリーやルーティング規則の生成方針を確認・変更するとき
-- prompt builder の構造化文書生成部品を調査するとき
+- oracle と realization の基本定義や責務境界を確認・変更するとき
+- oracle standard または realization standard の規範文面を確認・変更するとき
+- oracle review や apply review の所見判定基準を確認・変更するとき
+- FileAccessMode ごとのアクセス規則プロンプトを調査・変更するとき
+- INDEX.md エントリーの規範や routing rule の生成処理を確認するとき
+- これらの標準・規則を構造化プロンプトへ変換する部品を変更するとき
 
 ## Do not read this when
-- CLI の個別コマンド、ファイル探索、実際の読み書き処理を調査するとき
-- 個別の oracle file や realization file の仕様・実装内容そのものを確認するとき
-- レビュー結果の保存・表示形式や JSON schema だけを確認したいとき
-- prompt builder 全体の結合処理や、このディレクトリ以外の実装詳細を調査するとき
+- 個別の oracle file や realization file の具体的な仕様・実装を調査するとき
+- CLI の実行処理、実際のファイル操作、レビュー実行処理そのものを調査するとき
+- StructDoc、Requirement など共通データ構造の定義を確認するとき
+- 対象本文に対する INDEX.md エントリーの具体的な要約だけを作成するとき
 
 ## hash
-- a8775d72dc9b1d87ac1e7665a3264652badd0ee16b8e35a1ddc88534df5a65ea
+- 7179177f7600e2e0e9792aefa7e7b5426a207392915d4408dddb07421468f488

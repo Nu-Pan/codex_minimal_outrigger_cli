@@ -1,23 +1,20 @@
 # `cmoc_config.py`
 
 ## Summary
-- `CmocConfig` 系の永続設定を扱う入口。リポジトリごとに変わる cmoc の挙動設定、Codex CLI 向けモデル対応、`cmoc apply fork` と `cmoc review oracle` の個別設定、json への保存方針を確認したいときに読む。
-- この設定の直下で、どの項目が既定値として固定され、どの項目を人間が調整する前提かを把握するための案内に向く。
+- cmoc のリポジトリ固有設定を集約する dataclass 定義。並列数、Codex CLI のモデル・推論設定、`apply fork` と `oracle review` のループ上限を扱い、設定 JSON への永続化対象となる構造の入口。
 
 ## Read this when
-- cmoc のリポジトリ別設定を追加・変更したい。
-- Codex CLI 向けのモデル名や reasoning effort の対応を確認したい。
-- `cmoc apply fork` や `cmoc review oracle` の既定動作を調べたい。
-- 設定の json 永続化や enum の value 化の扱いを確認したい。
+- cmoc の設定項目、既定値、モデル指定、Codex CLI 向け変換元を確認するとき
+- `cmoc apply fork` または `cmoc oracle review` の処理上限設定を変更・参照するとき
+- 設定クラスの構造や Enum 値の扱いを確認するとき
 
 ## Do not read this when
-- `cmoc` のコマンド実装や各サブコマンドの処理手順を追いたい。
-- 設定の読み書きロジックそのものや保存先の実装詳細を探したい。
-- 個別の UI・出力・テストの挙動を見たい。
-- この設定に含まれない他の永続状態や別機能の設定を探したい。
+- 設定 JSON の生成・同期処理そのものを確認するとき
+- 各サブコマンドの実装やループ処理の詳細を確認するとき
+- `ModelClass` や `ReasoningEffort` の定義・意味だけを確認するとき
 
 ## hash
-- 5f4ca222620328fcea1e325566bb80a9d5cb0a39c6f72ad42821d539cf2d3564
+- 01e9d47d1436cac67abf031a90d8f91007e7414e93ccd572677dc214184e47eb
 
 # `path_model.py`
 
