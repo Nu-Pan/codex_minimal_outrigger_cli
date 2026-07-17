@@ -39,10 +39,10 @@ def report_path_from_stdout(stdout: str) -> Path:
     return Path(lines[-1])
 
 
-def test_apply_fork_writes_report_with_change_summary(
+def test_apply_fork_writes_report_and_joins_realization_changes(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """未収束 report に Codex 由来の変更要約と機械生成 commit message が反映される。"""
+    """fork の README/test/ancillary 差分を report 後に通常 join できる。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -91,7 +91,14 @@ def test_apply_fork_writes_report_with_change_summary(
         )
         if purpose.startswith("apply fork review and fix"):
             review_count += 1
-            (Path.cwd() / "README.md").write_text(f"# updated {review_count}\n")
+            worktree = Path.cwd()
+            (worktree / "README.md").write_text(f"# updated {review_count}\n")
+            generated_test = worktree / "test" / "test_generated.py"
+            generated_test.parent.mkdir(exist_ok=True)
+            generated_test.write_text(f"VALUE = {review_count}\n")
+            (worktree / ".gitignore").write_text(
+                f"/.cmoc/gu/\n# updated {review_count}\n"
+            )
             return FakeCodexResult({"findings": [finding]})
         if schema == "change_summary.json":
             return FakeCodexResult(
@@ -99,8 +106,12 @@ def test_apply_fork_writes_report_with_change_summary(
                     "changes": [
                         {
                             "category": "ドキュメント",
-                            "summary": "README を更新した",
-                            "changed_paths": ["README.md"],
+                            "summary": "realization file を更新した",
+                            "changed_paths": [
+                                ".gitignore",
+                                "README.md",
+                                "test/test_generated.py",
+                            ],
                         }
                     ]
                 }
@@ -125,7 +136,10 @@ def test_apply_fork_writes_report_with_change_summary(
         "\n## 変更内容要約", 1
     )[0]
     assert "まだ所見が残っている可能性があります。" in count_section
-    assert "ドキュメント: README を更新した (README.md)" in rendered
+    assert (
+        "ドキュメント: realization file を更新した "
+        "(.gitignore, README.md, test/test_generated.py)" in rendered
+    )
     assert "apply fork change summary" in calls
     assert "apply fork commit message" not in calls
     state = json.loads(state_path.read_text())
@@ -151,6 +165,11 @@ def test_apply_fork_writes_report_with_change_summary(
         run_git(root, "log", "-1", "--pretty=%s", apply_branch).stdout.strip()
         == "Apply finding: Update README"
     )
+    joined = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+    assert joined.exit_code == 0
+    assert (root / "README.md").read_text().startswith("# updated ")
+    assert (root / "test" / "test_generated.py").read_text().startswith("VALUE = ")
+    assert "# updated " in (root / ".gitignore").read_text()
 
 
 def test_apply_fork_rechecks_changed_files_until_converged(

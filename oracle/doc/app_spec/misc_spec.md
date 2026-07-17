@@ -1,14 +1,9 @@
 
 # cmoc の雑多な仕様
 
-## 実装ファイルの列挙方法
+## oracle file と realization file の列挙方法
 
-- 「実装ファイルを列挙」と言った場合、以下の方法で機械的に列挙する
-    - `{{work-root}}` 配下の全てのファイルを glob する（拡張子で制限しない）
-    - `{{work-root}}/oracle` は除外
-    - `{{work-root}}/.gitignore` の対象は除外
-    - `.git` は対象外
-    - `INDEX.md` は除外
+- 「oracle file を列挙」または「realization file を列挙」と言った場合、`{{work-root}}` 配下の全てのファイルを拡張子で制限せず glob し、`build_oracle_and_realization_basic` が定める各定義で分類する
 
 ## `{{work-root}}` に対する仮定
 

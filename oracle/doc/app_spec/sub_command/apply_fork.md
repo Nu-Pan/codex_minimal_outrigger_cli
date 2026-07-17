@@ -40,6 +40,13 @@
 5. `{{cmoc-session-state-file}}` の状態を更新
 6. 作業結果をレポートする
 
+## `{{cmoc-apply-branch}}` の想定内差分
+
+- apply ループが `{{cmoc-apply-branch}}` に積み上げてよい差分は以下とする
+    - ファイル単位レビュー・修正 prompt が変更を許可する realization file
+    - cmoc が自動生成する任意階層の `INDEX.md`
+- agent call は realization file だけを変更し、`INDEX.md` の生成は cmoc が担う
+
 ## `cmoc apply fork` の責務境界
 
 - `cmoc apply fork` の責務は、指定された最大回数の範囲で apply ループを実行し、その結果を人間が判断できる形でレポートすることである

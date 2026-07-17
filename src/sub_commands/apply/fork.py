@@ -31,7 +31,6 @@ from cmoc_runtime import (
     ensure_cmoc_ignored_in_exclude,
     head_commit,
     is_oracle_file_path,
-    is_untracked_git_ignored,
     load_config,
     load_state_for_branch,
     pushd,
@@ -57,6 +56,7 @@ from commons.runtime_apply import (
     write_apply_process_id,
 )
 from commons.runtime_codex_exec import changed_worktree_paths
+from commons.runtime_git import is_realization_file_path
 from commons.runtime_results import CodexExecCallable
 from config.cmoc_config import CmocConfig
 from sub_commands.apply.fork_report import (
@@ -499,14 +499,10 @@ def normalize_apply_targets(
             continue
         if not rel_parts:
             continue
-        if rel_parts[0] in {".git", ".agents", ".codex", ".cmoc", "memo"}:
-            continue
-        if rel_parts[0] == "oracle":
-            if not include_oracle or not is_oracle_file_path(root, path):
+        if is_oracle_file_path(root, path):
+            if not include_oracle:
                 continue
-        elif path.name in {"AGENTS.md", "INDEX.md"}:
-            continue
-        elif is_untracked_git_ignored(root, path):
+        elif not is_realization_file_path(root, path):
             continue
         # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
         # oracle/ と realization/ は同じ実体を指す symlink でも別 file である。

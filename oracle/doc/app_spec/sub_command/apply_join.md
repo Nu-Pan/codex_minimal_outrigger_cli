@@ -2,7 +2,7 @@
 
 ## 概要
 
-- `cmo apply fork` によってキックされた処理の成果物をセッション本流にマージする
+- `cmoc apply fork` によってキックされた処理の成果物をセッション本流にマージする
 - 言い換えると `{{cmoc-apply-branch}}` を `{{cmoc-session-branch}}` にマージするということ
 
 ## 引数
@@ -22,15 +22,14 @@
 
 ## モード分岐
 
-- 想定外の差分に対する対する対応方法がモードによって異なる
+- 想定外の差分に対する対応方法がモードによって異なる
 - 想定外の差分とは、以下に述べる想定から外れる差分の事を指す
     - `{{cmoc-session-branch}}` 上で apply が実行している裏で変更して良いのは
         - oracle file 
         - `memo`
         - `INDEX.md`
-    - `{{cmoc-apply-branch}}` 上で cmoc が積み上げて良い対象は
-        - 実装ファイル
-        - `INDEX.md`
+    - `{{cmoc-apply-branch}}` 上で cmoc が積み上げて良い対象は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/apply_fork.md` を参照
+    - realization file の定義は `build_oracle_and_realization_basic` を正本とし、`cmoc apply fork` と同じ分類を使う
 - 通常モード
     - 特に指定がない場合はこちら
     - 想定外の差分があったことをレポートして処理を中止する
@@ -61,7 +60,7 @@
     1. `{{cmoc-session-branch}}` を checkout
     2. `{{oracle-snapshot-commit}}` から `{{cmoc-session-branch}}` HEAD までの間にあった (i.e. apply 実行中にユーザーが発生させた) 想定外の差分を…
         - 通常モード : レポート用に記録
-        - 強制モード : rever して、その事をレポート用に記録
+        - 強制モード : revert して、その事をレポート用に記録
 5. 通常モード : レポート用の変更の有無が記録されている場合、それらをレポートしてコマンド終了
 6. `{{cmoc-session-branch}}` 上で `git merge --no-ff {{cmoc-apply-branch}}` を実行する。
 7. `{{cmoc-session-state-file}}` を更新する (e.g. `apply.state` を `ready` に遷移)

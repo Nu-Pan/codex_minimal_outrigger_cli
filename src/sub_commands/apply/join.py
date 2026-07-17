@@ -19,7 +19,6 @@ from cmoc_runtime import (
     delete_branch,
     ensure_cmoc_ignored,
     is_oracle_file_path,
-    is_untracked_git_ignored,
     load_state_for_branch,
     remove_worktree,
     repo_root,
@@ -41,6 +40,7 @@ from commons.runtime_apply import (
     worktree_for_branch,
     worktree_for_branch_optional,
 )
+from commons.runtime_git import is_realization_file_path
 
 
 def cmoc_apply_join_impl(force_resolve: bool) -> None:
@@ -460,39 +460,14 @@ def is_expected_apply_change(
     apply_worktree: Path | None = None,
 ) -> bool:
     """apply branch 上で許可される差分かどうかを判定する。"""
-    p = Path(path)
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-    # は全階層の AGENTS.md を realization file の対象外と定めている。
-    if p.name == "AGENTS.md":
-        return False
-    if p.name == "INDEX.md":
+    if Path(path).name == "INDEX.md":
         return True
-    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md は apply branch の
-    # 成果物を実装 file と INDEX.md に限定している。
-    if not path.startswith("src/"):
-        return False
     if apply_worktree is not None:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md に従い、tracked
-        # file は apply branch 自身の state で分類する。
-        return not is_untracked_git_ignored(apply_worktree, apply_worktree / path)
-    if apply_branch and is_tracked_on_branch(root, apply_branch, path):
-        # 復旧中は apply worktree が無い場合もあるが、session worktree の ignore
-        # に関係なく branch の tree にある path は tracked と判定する。
-        return True
-    return not is_untracked_git_ignored(root, root / path)
-
-
-def is_tracked_on_branch(root: Path, branch: str, path: str) -> bool:
-    """apply branch の tree に path が tracked で存在するか確認する。
-
-    apply worktree が復旧中に無くても branch の tree を正として判定する。
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/apply_join.md
-    """
-    return bool(
-        run_git(
-            ["ls-tree", "-r", "--name-only", branch, "--", path],
-            root,
-        ).stdout.splitlines()
+        return is_realization_file_path(apply_worktree, apply_worktree / path)
+    return is_realization_file_path(
+        root,
+        root / path,
+        branch=apply_branch,
     )
 
 

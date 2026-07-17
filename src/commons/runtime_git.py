@@ -427,6 +427,39 @@ def is_untracked_git_ignored(root: Path, path: Path) -> bool:
     return run_git(["check-ignore", "-q", str(rel)], root, check=False).returncode == 0
 
 
+def is_realization_file_path(
+    root: Path,
+    path: Path,
+    *,
+    branch: str | None = None,
+) -> bool:
+    """repository path と Git 状態から realization file か判定する。
+
+    apply worktree が無い復旧経路では branch の tree を追跡状態の正本にする。
+    根拠:
+    {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    """
+    try:
+        candidate = path if path.is_absolute() else root / path
+        relative = candidate.absolute().relative_to(root.absolute())
+    except ValueError:
+        return False
+    if (
+        not relative.parts
+        or relative.parts[0] in {"oracle", "memo", ".git", ".agents", ".codex", ".cmoc"}
+        or candidate.name in {"AGENTS.md", "INDEX.md"}
+    ):
+        return False
+    if (
+        branch
+        and run_git(
+            ["ls-tree", "-r", "--name-only", branch, "--", str(relative)], root
+        ).stdout.splitlines()
+    ):
+        return True
+    return not is_untracked_git_ignored(root, candidate)
+
+
 def is_oracle_file_path(root: Path, path: Path) -> bool:
     """repository pathと追跡状態からoracle fileに該当するか判定する。"""
     # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py

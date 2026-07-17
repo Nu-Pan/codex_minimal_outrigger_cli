@@ -452,11 +452,21 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
     (apply_worktree / "README.md").write_text("# apply\n")
+    generated_test = apply_worktree / "test" / "test_apply_result.py"
+    generated_test.parent.mkdir()
+    generated_test.write_text("VALUE = 'apply'\n")
     (apply_worktree / "oracle" / "spec.md").write_text("# changed oracle in apply\n")
     broken_link = apply_worktree / ".codex" / "broken"
     broken_link.parent.mkdir(exist_ok=True)
     broken_link.symlink_to("missing-target")
-    run_git(apply_worktree, "add", "README.md", "oracle/spec.md", ".codex/broken")
+    run_git(
+        apply_worktree,
+        "add",
+        "README.md",
+        "test/test_apply_result.py",
+        "oracle/spec.md",
+        ".codex/broken",
+    )
     run_git(apply_worktree, "commit", "-m", "unexpected oracle change")
 
     normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
@@ -470,14 +480,15 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     report = report_path.read_text()
     assert "join を中止しました" in report
     assert "## 想定外差分" in report
-    assert "- apply: .codex/broken, README.md, oracle/spec.md" in report
+    assert "- apply: .codex/broken, oracle/spec.md" in report
     assert "## マージコンフリクト" in report
     assert "- なし" in report
     forced = runner.invoke(
         app, ["apply", "join", "--force-resolve"], catch_exceptions=False
     )
     assert forced.exit_code == 0
-    assert (root / "README.md").read_text() == "# repo\n"
+    assert (root / "README.md").read_text() == "# apply\n"
+    assert (root / "test" / "test_apply_result.py").read_text() == "VALUE = 'apply'\n"
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
     assert not (root / ".codex" / "broken").exists()
     assert not (root / ".codex" / "broken").is_symlink()
@@ -571,12 +582,12 @@ def test_apply_join_reports_session_oracle_agents_diff_and_force_reverts(
 
 
 @pytest.mark.parametrize("side", ["apply", "session"])
-def test_apply_join_force_reverts_unexpected_rename_source(
+def test_apply_join_classifies_renamed_realization_by_branch_role(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     side: str,
 ) -> None:
-    """apply/session 側の予期しない rename 元を force モードで戻す。"""
+    """apply の realization rename は取り込み、session 側なら force で戻す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -597,6 +608,11 @@ def test_apply_join_force_reverts_unexpected_rename_source(
 
     normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
+    if side == "apply":
+        assert normal.exit_code == 0
+        assert not (root / "README.md").exists()
+        assert (root / "docs" / "README.md").read_text() == "# repo\n"
+        return
     assert normal.exit_code == 1
     report_line = [
         line for line in normal.output.splitlines() if "保存済み report" in line
@@ -698,10 +714,12 @@ def test_apply_join_allows_session_oracle_symlink_to_outside_root(
     [
         "AGENTS.md",
         "src/AGENTS.md",
+        "oracle/spec.md",
+        "memo/note.md",
+        ".agents/skills/example.md",
         ".codex/config.toml",
-        ".gitignore",
-        "README.md",
-        "test/test_app.py",
+        ".cmoc/gt/ar/config.json",
+        ".git/config",
     ],
 )
 def test_apply_join_rejects_non_realization_apply_paths(
@@ -714,15 +732,48 @@ def test_apply_join_rejects_non_realization_apply_paths(
     assert apply_module.is_expected_apply_change(root, path) is False
 
 
-def test_apply_join_allows_tracked_ignored_src_apply_diff(
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".gitignore",
+        "README.md",
+        "test/test_app.py",
+        "bin/cmoc",
+        "docs/.agents/rule.md",
+        "src/.codex/template.toml",
+        "INDEX.md",
+        "docs/INDEX.md",
+    ],
+)
+def test_apply_join_accepts_realization_files_and_generated_indexes(
+    tmp_path: Path,
+    path: str,
+) -> None:
+    """fork が積める realization file と任意階層 INDEX.md を受け入れる。"""
+    root = make_repo(tmp_path)
+
+    assert apply_module.is_expected_apply_change(root, path) is True
+
+
+def test_apply_join_rejects_untracked_ignored_apply_path(tmp_path: Path) -> None:
+    """git 未追跡 ignore 対象は realization file として受け入れない。"""
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("generated/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore generated files")
+
+    assert apply_module.is_expected_apply_change(root, "generated/result.txt") is False
+
+
+def test_apply_join_allows_tracked_ignored_realization_without_apply_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """apply branch で新規追加した tracked ignored src path を許可する。"""
+    """apply worktree 不在でも branch 上の tracked ignored 成果を許可する。"""
     root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("src/ignored.py\n")
+    (root / ".gitignore").write_text("generated/ignored.txt\n")
     run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "ignore src implementation")
+    run_git(root, "commit", "-m", "ignore generated realization")
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     assert (
@@ -741,19 +792,23 @@ def test_apply_join_allows_tracked_ignored_src_apply_diff(
     )
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
-    (apply_worktree / "src").mkdir()
-    (apply_worktree / "src" / "ignored.py").write_text("value = 2\n")
-    run_git(apply_worktree, "add", "-f", "src/ignored.py")
-    run_git(apply_worktree, "commit", "-m", "apply ignored implementation change")
+    ignored_result = apply_worktree / "generated" / "ignored.txt"
+    ignored_result.parent.mkdir()
+    ignored_result.write_text("apply result\n")
+    run_git(apply_worktree, "add", "-f", "generated/ignored.txt")
+    run_git(apply_worktree, "commit", "-m", "apply ignored realization change")
+    run_git(root, "worktree", "remove", "--force", str(apply_worktree))
     assert apply_module.is_expected_apply_change(
-        root, "src/ignored.py", apply_branch=state["apply"]["apply_branch"]
+        root,
+        "generated/ignored.txt",
+        apply_branch=state["apply"]["apply_branch"],
     )
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert "想定外差分" not in result.output
-    assert (root / "src" / "ignored.py").read_text() == "value = 2\n"
+    assert (root / "generated" / "ignored.txt").read_text() == "apply result\n"
 
 
 def test_apply_join_reports_unresolved_non_index_conflict(
