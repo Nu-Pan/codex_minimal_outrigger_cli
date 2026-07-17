@@ -62,7 +62,10 @@ class _CmocTyperGroup(typer.core.TyperGroup):
             return super().main(standalone_mode=standalone_mode, **click_kwargs)
         try:
             result = super().main(standalone_mode=False, **click_kwargs)
-        except click.ClickException as exc:
+        # {{work-root}}/oracle/doc/app_spec/error_handling.md
+        # Typer 0.27 parses through its Click compatibility module; support both
+        # exception classes so the error-handling contract is version-stable.
+        except (click.ClickException, typer.core._click.ClickException) as exc:
             typer.echo(
                 render_error(
                     CmocError(

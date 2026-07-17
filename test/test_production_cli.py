@@ -97,9 +97,10 @@ def _registered_leaf_commands(
 ) -> set[tuple[str, ...]]:
     """Click command tree から実行可能な末端 command path を列挙する。"""
     # 新しい公開末端の追加時に、本番経路試験の追加漏れを同じ変更で検出する。
-    if isinstance(command, click.Group):
+    commands = getattr(command, "commands", None)
+    if commands is not None:
         leaves: set[tuple[str, ...]] = set()
-        for name, child in command.commands.items():
+        for name, child in commands.items():
             leaves.update(_registered_leaf_commands(child, (*prefix, name)))
         return leaves
     return {prefix}
