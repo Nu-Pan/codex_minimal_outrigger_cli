@@ -1,20 +1,21 @@
 # `apply`
 
 ## Summary
-- `cmoc apply` サブコマンド群の実装ディレクトリ。abandon・fork・join と、fork のレポート生成を通じて、apply run の開始から cleanup・merge・結果報告までのライフサイクルを扱う。具体的な挙動を調べる際は、対象サブコマンドまたはレポート実装へ進む入口となる。
+- apply サブコマンド群の実装ディレクトリ。apply の abandon、fork、fork_report、join と、パッケージ入口を含み、実行ライフサイクル、cleanup、merge、レポート生成を確認するための入口。
 
 ## Read this when
-- `cmoc apply` のサブコマンド構成や apply run 全体のライフサイクルを把握したいとき。
-- apply の開始・レビュー修正・commit・収束判定・merge・report・abandon・cleanup のいずれかを変更または調査するとき。
-- apply branch、worktree、process 追跡、session state の連携を、具体的な apply 処理の文脈で確認したいとき。
+- apply サブコマンドの実行制御、状態更新、worktree・branch・process の管理、cleanup 条件を調査または変更するとき。
+- apply fork のレビュー・修正ループ、commit、収束判定、レポート生成を調査するとき。
+- apply join の merge、force-resolve、想定外差分、conflict 処理、完了後の後始末を調査するとき。
+- apply fork の完了・中断・失敗レポートの内容や変更差分の収集方法を調査するとき。
 
 ## Do not read this when
-- apply と無関係なサブコマンドや共通 runtime、Git 操作、session state、process lock の一般実装だけを調査するとき。
-- 特定のサブコマンドの詳細を直接確認する場合は、対象の実装ファイルへ進めるとき。
-- apply 対象ファイル単位の review/fix パラメータや finding schema だけを確認したいとき。
+- apply 以外のサブコマンドだけを扱うとき。
+- 共通の CLI runtime、session state、Git 操作、process lock などの一般実装だけを確認したいときは、対応する共通モジュールを直接読む。
+- 具体的なサブコマンドの制御ロジックやレポート処理を読む必要がなく、パッケージの説明や import 時の挙動だけを確認したいときは、パッケージ入口を直接読む。
 
 ## hash
-- 59ca6d80686f81c5cfc04a10ade1c00fa81122e2848bbc35220570b7394bdef6
+- d2dc9738d9c5b901b844d4b187faff2376b777411a9943dc5eb7dc1edb0e9a22
 
 # `doctor.py`
 

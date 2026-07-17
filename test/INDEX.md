@@ -237,21 +237,20 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 統合テスト。レビュー・修正ループの収束／未収束／error、変更ファイルの再検査、rolling fork の対象 commit 制御を検証する。
-- 生成される report の front matter、所見数推移、変更内容要約、変更 path、commit 前の差分、未追跡ファイルの扱いを検証する。
-- apply fork の report schema や変更要約の挙動を確認・変更する作業の入口となる。
+- apply fork の CLI 統合テスト。レビュー・修正ループ、収束・未収束・error 判定、変更ファイルの再検査、commit と session state 更新、report 生成および変更要約を検証する。rolling apply fork の対象差分や、未追跡・削除ファイルを含む変更要約の扱いも確認する。
 
 ## Read this when
-- apply fork の収束判定、再検査対象、rolling fork の差分範囲を確認するとき
-- apply fork report の内容、変更要約、error 時の未 commit 差分を確認するとき
-- apply fork CLI の統合挙動や関連テストを変更するとき
+- apply fork の report 内容、終了コード、収束判定を変更または調査するとき
+- レビュー・修正後の変更ファイル再検査、rolling fork、apply commit、session state 更新を変更または調査するとき
+- 変更要約の差分抽出、fallback、未追跡・削除ファイルの扱いを変更または調査するとき
 
 ## Do not read this when
-- apply fork のレビュー・修正実装そのものを確認する場合は、先に対応する src の実装を読むとき
-- apply fork と無関係な CLI、session、report の挙動を調査するとき
+- apply fork 以外の CLI や report のテストだけを扱うとき
+- Codex の所見 schema やレビュー処理そのものを単体で変更・調査するときは、対応する実装・単体テストを直接読む
+- 一般的な session fork、apply join、設定読み込みの挙動だけを扱い、このテストの apply fork report 統合挙動に関係しないとき
 
 ## hash
-- 78637b02f45adb548cbd4c0811d41b33089410f9a09a23ce9d8116fdd6a02b14
+- 856dbfcff4de23ec832a27b09f60c31734de35197f7add5de49da190f3856f1a
 
 # `test_apply_fork_target_normalization.py`
 

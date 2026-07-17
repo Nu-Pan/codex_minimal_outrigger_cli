@@ -127,34 +127,37 @@
 # `src`
 
 ## Summary
-- cmoc の Python パッケージ本体。Typer による CLI 入口、session/apply/review などのサブコマンド、共有 runtime helper、ACP・basic・config の互換 import 入口、oracle 正本へ接続する shim を扱う。各機能の詳細は対応する下位ディレクトリまたはモジュールへ進む。
+- src は、cmoc の実行用パッケージと互換 import 境界をまとめる領域です。CLI 本体、共通 runtime、サブコマンド、公開 API の再公開 shim、および oracle 名前空間への接続を扱います。
+- トップレベルの CLI や共通 runtime の所在を確認した後、個別機能の詳細は `main.py`、`commons`、`sub_commands`、互換入口モジュールなど該当する下位対象へ進みます。
 
 ## Read this when
-- cmoc の CLI コマンド、サブコマンド、option、起動処理、引数解析エラー変換を確認したいとき。
-- 共有 runtime の担当領域や、ACP・basic・config・oracle の import 境界を特定したいとき。
-- session、apply、review、indexing、TUI、doctor、oracle 評価の実装入口を探したいとき。
+- cmoc の実行コード全体の構成や、CLI・runtime・サブコマンドの担当領域を把握したいとき
+- CLI の起動入口、共通実行基盤、サブコマンド、互換 import 経路、oracle 実装への接続先を特定したいとき
+- 特定機能の実装を読む前に、src 内での入口と下位ディレクトリを選びたいとき
 
 ## Do not read this when
-- 特定サブコマンドや runtime helper の詳細な挙動を調査するときは、対応する下位ディレクトリまたは実装モジュールを直接読む。
-- 正本仕様や oracle 側の実装内容を確認するときは、対応する oracle ツリーを読む。
-- 互換 import に関係しない個別機能の内部処理だけを調べるとき。
+- 特定サブコマンドの詳細な制御ロジックを調べるときは、対応する `sub_commands` 配下を直接読む
+- 共通 helper の入出力や失敗時挙動を調べるときは、対応する `commons` 配下の担当モジュールを直接読む
+- 互換入口の公開名や委譲先だけを確認したいときは、該当する shim モジュールを直接読む
+- oracle 側の正本仕様や実装内容を確認したいときは、対応する `oracle` 配下を直接読む
 
 ## hash
-- 3e663a4ffd2c5ca9f4d02036dbaa8b765aa79a1a2954b4efc60e5da556b18598
+- 5fbf0c566af1e6e1636bd15e27760afd1b3e3b8a55639995477d887d5396a2d3
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収めるディレクトリ。ACP builder、CLI サブコマンド、Codex runtime、indexing、review oracle、session/apply、設定・状態・Git・Ollama などの外部挙動や制御ロジックを検証する個別テストと、共有 fixture・実行補助を提供する。機能別の回帰テストや共通テスト基盤を探す際の入口。
+- テストコード群と共通テスト補助を集約するディレクトリ。ACP builder、CLI、runtime、Codex、apply/session、indexing、review oracle、doctor、設定、Ollama などの外部挙動・制御ロジックを検証する各 pytest が、対象機能ごとのテスト入口として配置されている。
 
 ## Read this when
-- 特定機能の realization test、回帰条件、外部契約、共通 fixture またはテスト用 helper を探すとき
-- CLI、Codex 実行、indexing、review oracle、session/apply、設定・runtime の変更影響をテスト側から確認するとき
+- 特定の機能やサブコマンドの回帰テスト・外部契約・境界条件を確認または変更するとき
+- 複数テストで共有する CLI runner、Git repository、Codex、Ollama、worktree などのテスト補助を確認するとき
+- 対象実装の変更に対応する検証テストを特定するとき
 
 ## Do not read this when
 - 正本仕様や構造化出力 schema の内容を確認するときは、対応する oracle 文書・schema を直接読む
-- 実装本体の責務や内部処理を確認するときは、対応する src ファイルを直接読む
-- Codex や LLM の出力品質そのものを評価するとき
+- 実装の内部構造を追うときは、対応する src ファイルを直接読む
+- 対象機能と無関係なテストや共通補助の詳細を確認するとき
 
 ## hash
-- eed7536cf2e1af82d3d204e8476711ffecec9c3a8914c8bc8f19da23edbb5323
+- 44bd1f3841bfefc1055df390eb87804aecd56efc4f3502a3cbd6d9dfad40f6df

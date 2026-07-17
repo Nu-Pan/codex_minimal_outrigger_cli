@@ -122,17 +122,17 @@
 # `sub_commands`
 
 ## Summary
-- `cmoc` のサブコマンド実装を収めるディレクトリ。apply、doctor、eval_oracle、indexing、review、session、tui などの CLI 入口と、review の対象選定・ループ・パス処理・レポート生成・INDEX 統合を扱う下位要素への入口となる。
+- サブコマンド実装をまとめるディレクトリ。apply、review、session などの実行入口と個別処理、INDEX 更新、TUI・doctor の起動処理を下位要素への入口として提供する。
 
 ## Read this when
-- サブコマンドの構成や、特定の CLI サブコマンドの実行入口を調査・変更するとき。
-- apply、review、session、tui などのサブコマンド固有のライフサイクルや処理範囲を確認するとき。
-- review oracle の対象列挙、評価ループ、パス解決、レポート生成、INDEX 統合の担当モジュールを探すとき。
+- サブコマンド全体の構成や、対象となるサブコマンド実装の入口を確認したいとき。
+- apply、review、session、TUI、doctor、indexing などのサブコマンドの実行制御や責務分担を調査・変更するとき。
+- 特定のサブコマンドについて、配下の個別モジュールへ進む前に実装の所在を把握したいとき。
 
 ## Do not read this when
-- 共通 runtime、Git 操作、session state、process lock など、サブコマンド固有でない実装だけを調査するとき。
-- 特定サブコマンドの詳細が明らかな場合は、このディレクトリ全体ではなく対応する下位実装を直接読むとき。
-- oracle 内容、対象ファイル単位の review/fix パラメータ、finding schema など、別の担当領域だけを確認したいとき。
+- 共通 CLI runtime、設定、Git 操作、session state、process lock などの共通実装だけを調べたいとき。
+- 特定のサブコマンドの詳細な制御ロジック、パス処理、レポート生成、対象列挙を調べる場合は、この階層の案内を経由せず担当モジュールを直接読むとき。
+- サブコマンド実装と無関係な oracle、テスト、ドキュメントだけを扱うとき。
 
 ## hash
-- 7f5b4b7c72a383dc55037a82a9f313d4ae3f205a70da24e52bd8c4518c1aa9dd
+- 2d812820441b93872001052d66a5cfad4b30e1dbd794758999d261a7d3b29747
