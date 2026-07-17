@@ -89,10 +89,43 @@ def test_stop_apply_process_keeps_child_warning_when_parent_is_stale(
     )
 
 
+def test_apply_process_tracking_uses_agent_read_runtime_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PID、child tracking、lock を agent-read runtime state に集約する。"""
+    root = tmp_path
+    path = apply_runtime.apply_process_id_path(root, "session")
+    expected = (
+        root / ".cmoc" / "gu" / "ar" / "state" / "apply_processes" / "session.pid"
+    )
+    legacy_directory = root / ".cmoc" / "gu" / "state" / "apply_processes"
+    monkeypatch.setattr(apply_runtime, "process_start_time", lambda _pid: 20)
+    monkeypatch.delenv(apply_runtime.APPLY_PROCESS_TRACKING_ENV, raising=False)
+
+    assert path == expected
+    apply_runtime.write_apply_process_id(root, "session", 12345)
+    assert path.read_text() == "12345 20\n"
+    assert path.with_name("session.pid.lock").is_file()
+
+    with apply_runtime.apply_process_tracking(root, "session"):
+        assert apply_runtime.os.environ[
+            apply_runtime.APPLY_PROCESS_TRACKING_ENV
+        ] == str(expected)
+    with apply_runtime.apply_run_lock(root, "session"):
+        assert path.with_name("session.run.lock").is_file()
+
+    apply_runtime.delete_apply_process_id(root, "session")
+
+    assert not path.exists()
+    assert path.with_name("session.pid.lock").is_file()
+    assert path.with_name("session.run.lock").is_file()
+    assert not legacy_directory.exists()
+
+
 def test_apply_process_id_reads_tracked_child_processes(tmp_path: Path) -> None:
     """running abandon が親 PID と同時に記録済み Codex child PID を読める。"""
     root = tmp_path
-    path = root / ".cmoc" / "gu" / "state" / "apply_processes" / "session.pid"
+    path = apply_runtime.apply_process_id_path(root, "session")
     path.parent.mkdir(parents=True)
     path.write_text("12345 20\nchild 23456 30 34567\n")
 

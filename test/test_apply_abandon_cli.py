@@ -187,7 +187,7 @@ def test_apply_abandon_stops_tracked_apply_process_before_cleanup(
     state["apply"]["state"] = apply_state
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
     process_id_path = (
-        root / ".cmoc" / "gu" / "state" / "apply_processes" / f"{session_id}.pid"
+        root / ".cmoc" / "gu" / "ar" / "state" / "apply_processes" / f"{session_id}.pid"
     )
     process_id_path.parent.mkdir(parents=True, exist_ok=True)
     process_id_path.write_text("12345 67890\n")

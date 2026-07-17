@@ -78,7 +78,7 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     assert "apply_worktree" not in state["apply"]
     assert "apply_process_id" not in state["apply"]
     assert not (
-        root / ".cmoc" / "gu" / "state" / "apply_processes" / f"{session_id}.pid"
+        root / ".cmoc" / "gu" / "ar" / "state" / "apply_processes" / f"{session_id}.pid"
     ).exists()
     assert calls
     assert any(call.startswith("apply fork review and fix") for call in calls)
@@ -172,7 +172,7 @@ def test_apply_fork_interrupt_keeps_commits_and_discards_current_unit(
     assert "ユーザー中断要求を受け付けたため" in rendered
     assert "apply fork change summary" not in purposes
     assert not (
-        root / ".cmoc" / "gu" / "state" / "apply_processes" / f"{session_id}.pid"
+        root / ".cmoc" / "gu" / "ar" / "state" / "apply_processes" / f"{session_id}.pid"
     ).exists()
     logs = sorted(
         (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
@@ -381,7 +381,7 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     assert state["apply"]["state"] == "ready"
     assert "apply_process_id" not in state["apply"]
     assert not (
-        root / ".cmoc" / "gu" / "state" / "apply_processes" / f"{session_id}.pid"
+        root / ".cmoc" / "gu" / "ar" / "state" / "apply_processes" / f"{session_id}.pid"
     ).exists()
     assert run_git(root, "branch", "--list", f"cmoc/apply/{session_id}/*").stdout == ""
 
@@ -422,7 +422,7 @@ def test_apply_fork_missing_config_is_repaired_before_starting_apply_run(
     assert state["apply"]["apply_branch"].startswith(f"cmoc/apply/{session_id}/")
     assert (root / ".cmoc" / "gu" / "worktree" / session_id).is_dir()
     assert not (
-        root / ".cmoc" / "gu" / "state" / "apply_processes" / f"{session_id}.pid"
+        root / ".cmoc" / "gu" / "ar" / "state" / "apply_processes" / f"{session_id}.pid"
     ).exists()
     assert run_git(root, "branch", "--list", f"cmoc/apply/{session_id}/*").stdout
 

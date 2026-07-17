@@ -19,6 +19,7 @@ from cmoc_runtime import (
     wait_process_fd_exit,
     worktrees_dir,
 )
+from commons.runtime_paths import generated_agent_read_dir
 
 
 class ProcessIdentity(NamedTuple):
@@ -82,7 +83,13 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
 
 def apply_process_id_path(root: Path, session_id: str) -> Path:
     """session ごとの apply process pid file path を一箇所で決める。"""
-    return root / ".cmoc" / "gu" / "state" / "apply_processes" / f"{session_id}.pid"
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    return (
+        generated_agent_read_dir(root)
+        / "state"
+        / "apply_processes"
+        / f"{session_id}.pid"
+    )
 
 
 @contextmanager
