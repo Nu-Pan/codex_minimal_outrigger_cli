@@ -10,8 +10,8 @@ from commons.runtime_results import CommandResult
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/apply/", "cmoc/run/")
 CMOC_IGNORE_PATTERN = "/.cmoc/gu/"
 # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
-# Keep a broad user .cmoc/ rule effective for other children while making the
-# tracked repository config reachable while keeping other `.cmoc` data ignored.
+# 他の child には広い user .cmoc/ rule を効かせつつ、追跡対象の repository config を
+# 到達可能にし、その他の `.cmoc` data は ignore されたままにする。
 CMOC_CONFIG_IGNORE_EXCEPTIONS = (
     "!/.cmoc/",
     "/.cmoc/*",
@@ -145,7 +145,7 @@ def create_run_worktree(
     candidate.parent.mkdir(parents=True, exist_ok=True)
     if candidate.exists():
         # {{work-root}}/oracle/doc/branch_model.md
-        # A matching path is not evidence of a cmoc-created linked worktree; never delete it implicitly.
+        # path が一致しても cmoc 作成の linked worktree とは限らないため、暗黙に削除しない。
         raise CmocError(
             "run worktree path は既に存在します。",
             ["既存の directory または worktree を確認してから再実行してください。"],
@@ -175,6 +175,7 @@ def delete_branch(root: Path, branch: str, force: bool = False) -> CommandResult
 
 
 def _expected_managed_worktree(root: Path, branch: str) -> Path:
+    """管理branch名から許可されたrun worktree pathを求める。"""
     parts = branch.split("/")
     if (
         len(parts) != 4
@@ -192,6 +193,7 @@ def _expected_managed_worktree(root: Path, branch: str) -> Path:
 
 
 def _require_managed_worktree(root: Path, worktree: Path) -> Path:
+    """削除対象が管理領域内の登録済みworktreeであることを検証する。"""
     base = worktrees_dir(_main_worktree_root(root))
     candidate = _absolute_path(worktree)
     if _first_managed_worktree_symlink(root, candidate) is not None:
@@ -203,11 +205,11 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
     except ValueError as exc:
         raise _unmanaged_worktree_error(worktree, base) from exc
     # {{work-root}}/oracle/src/oracle/other/path_model.py
-    # work-root deletion is limited to .cmoc/gu/worktree/{{parent-run-id}}/{{run-id}}.
+    # work-root の削除は .cmoc/gu/worktree/{{parent-run-id}}/{{run-id}} に限定する。
     if len(relative.parts) != 2 or not all(relative.parts):
         raise _unmanaged_worktree_error(worktree, base)
     # {{work-root}}/oracle/doc/branch_model.md
-    # The naming convention is not enough: deletion is limited to Git linked worktrees.
+    # 命名規則だけでは不十分であり、削除は Git linked worktree に限定する。
     if candidate.exists() and resolved not in _registered_worktree_paths(root):
         raise _unmanaged_worktree_error(worktree, base)
     return resolved
@@ -246,6 +248,7 @@ def _first_managed_worktree_symlink(root: Path, *paths: Path) -> Path | None:
 
 
 def _registered_worktree_paths(root: Path) -> set[Path]:
+    """Gitに登録されたlinked worktreeの絶対pathを列挙する。"""
     output = run_git(["worktree", "list", "--porcelain"], root).stdout
     return {
         Path(line.removeprefix("worktree ")).resolve()
@@ -255,6 +258,7 @@ def _registered_worktree_paths(root: Path) -> set[Path]:
 
 
 def _unmanaged_worktree_error(worktree: Path, base: Path) -> CmocError:
+    """管理外worktreeを拒否するための共通エラーを作る。"""
     return CmocError(
         "cmoc 管理外の worktree は削除できません。",
         ["worktree path と session state file を確認してください。"],
@@ -271,6 +275,7 @@ def git_common_dir(root: Path) -> Path:
 
 
 def _main_worktree_root(root: Path) -> Path:
+    """linked worktreeからmain worktreeのrootを求める。"""
     return git_common_dir(root).parent
 
 
@@ -375,20 +380,22 @@ def is_git_ignored(root: Path, path: Path) -> bool:
 
 
 def is_untracked_git_ignored(root: Path, path: Path) -> bool:
+    """未追跡pathがGitの通常のignore判定に一致するかを返す。"""
     # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-    # oracle/realization file definitions use normal git check-ignore behavior:
-    # tracked files remain targets even when they match an ignore pattern.
+    # oracle/realization file の定義は通常の git check-ignore 挙動を使う。
+    # ignore pattern に一致しても、追跡済み file は対象に残す。
     candidate = path if path.is_absolute() else root / path
     rel = candidate.absolute().relative_to(root.absolute())
     return run_git(["check-ignore", "-q", str(rel)], root, check=False).returncode == 0
 
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:
+    """repository pathと追跡状態からoracle fileに該当するか判定する。"""
     # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-    # Keep the oracle file definition in one runtime helper because it is used by
-    # both Codex access checks and apply/session diff classification.
-    # Oracle ownership is defined by the repository path, so tracked symlinks
-    # under oracle/ remain oracle files even when their targets are outside root.
+    # oracle file の定義は Codex access check と apply/session の差分分類の両方から
+    # 使うため、一つの runtime helper に集約する。
+    # Oracle の所有範囲は repository path で決まり、oracle/ 配下の追跡済み symlink は
+    # link 先が root 外でも oracle file として扱う。
     try:
         candidate = path if path.is_absolute() else root / path
         relative = candidate.absolute().relative_to(root.absolute())

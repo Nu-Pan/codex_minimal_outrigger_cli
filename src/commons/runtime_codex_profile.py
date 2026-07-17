@@ -93,6 +93,7 @@ def wait_process_fd_exit(process_fd: int, timeout_sec: float) -> bool:
 
 
 def _process_stat(process_id: int) -> list[str] | None:
+    """Linux proc statを読み、検証可能なfield列だけを返す。"""
     try:
         stat = Path(f"/proc/{process_id}/stat").read_text()
     except OSError:
@@ -227,8 +228,8 @@ def parameter_codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) ->
     if parameter_cwd.is_relative_to(work):
         return parameter_cwd
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # Older call paths may still pass the repo root while launching against a
-    # linked worktree; Codex must run inside the target work root.
+    # 古い call path は linked worktree に対して repo root を渡すことがあるが、Codex は
+    # target work root 内で実行しなければならない。
     return work
 
 
@@ -247,9 +248,9 @@ def _ollama_provider_override_args() -> list[str]:
     provider_key = f"model_providers.{_OLLAMA_PROVIDER_ID}"
     return [
         # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
-        # Codex enables non-function web-search and multi-agent tool types by
-        # default, while Ollama's Responses endpoint accepts function tools.
-        # Keep the managed local provider on their common tool subset.
+        # Codex は既定で non-function web-search と multi-agent tool type を有効にするが、
+        # Ollama の Responses endpoint は function tool を受け付ける。managed local provider
+        # は両者に共通する tool subset に保つ。
         "--disable",
         "multi_agent",
         *_config_override("web_search", _toml_string("disabled")),
@@ -363,8 +364,8 @@ def run_codex_subprocess(
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
     try:
         # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
-        # Tracking is apply-run internal state; an inherited env var alone must
-        # not redirect unrelated Codex calls to a stale or foreign pid file.
+        # tracking は apply-run の内部 state なので、継承した env var だけで無関係な Codex
+        # call を stale または別 process の pid file へ向けてはならない。
         if _active_apply_process_tracking_path is not None and argv[:1] == ["codex"]:
             return run_tracked_codex_subprocess(
                 argv, _active_apply_process_tracking_path, **kwargs
@@ -411,6 +412,7 @@ def run_tracked_codex_subprocess(
     sigterm_pending = False
 
     def defer_sigterm(_signum: int, _frame: Any) -> None:
+        """tracking情報の登録が終わるまでSIGTERMを保留する。"""
         nonlocal sigterm_pending
         sigterm_pending = True
 
@@ -484,6 +486,7 @@ def record_tracked_child_process(
 def _record_tracked_child_process(
     path: Path, process_id: int, process_group_id: int | None = None
 ) -> None:
+    """Codex childのPID、start time、process groupをtracking fileへ保存する。"""
     start_time = process_start_time(process_id)
     if start_time is None:
         raise OSError(f"process {process_id} start time is unavailable")
@@ -536,14 +539,14 @@ def codex_error_text(stdout_text: str, stderr_text: str) -> str:
             item = json.loads(line)
         except json.JSONDecodeError:
             # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # Keep the original line visible even when it is blank; malformed
-            # stdout is a protocol failure, not an ignorable diagnostic.
+            # blank でも元の line を表示できるようにする。malformed stdout は無視できる
+            # diagnostic ではなく protocol failure である。
             fragments.append(f"malformed JSONL event (invalid JSON): {line}")
             continue
         if not isinstance(item, dict):
             # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # Known JSONL events are objects; preserve malformed output in
-            # error detail so the caller takes the non-retryable failure path.
+            # 既知の JSONL event は object なので、malformed output を error detail に残して
+            # caller が non-retryable failure path を選ぶようにする。
             fragments.append(f"malformed JSONL event (expected object): {line}")
             continue
         message = item.get("message")
@@ -564,7 +567,7 @@ def extract_resume_token(stdout_text: str) -> str | None:
             continue
         if not isinstance(item, dict):
             # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # A non-object event cannot carry a resume token.
+            # non-object event は resume token を持てない。
             continue
         if item.get("type") != "thread.started":
             continue
@@ -582,13 +585,13 @@ def _codex_jsonl_error_messages(stdout_text: str) -> list[str | None]:
             item = json.loads(line)
         except json.JSONDecodeError:
             # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # A JSONL protocol violation is unexpected even when the process
-            # returned zero and the output-last-message file is valid.
+            # process が zero を返し output-last-message file が有効でも、JSONL protocol
+            # violation は unexpected error である。
             messages.append(None)
             continue
         if not isinstance(item, dict):
             # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # A malformed event is an unexpected error, never a retry signal.
+            # malformed event は unexpected error であり、retry signal にはならない。
             messages.append(None)
             continue
         if item.get("type") == "error":
@@ -630,8 +633,8 @@ def is_quota_error(stdout_text: str) -> bool:
 def is_unexpected_error(stdout_text: str) -> bool:
     """既知の capacity/quota 以外の Codex JSONL error を検出する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # Only capacity and quota events have recovery paths; malformed or other
-    # error events must not be hidden by a zero subprocess return code.
+    # recovery path があるのは capacity と quota event だけである。malformed またはその他の
+    # error event を subprocess の zero return code で隠してはならない。
     return any(
         not isinstance(message, str)
         or (

@@ -27,7 +27,7 @@ from config.cmoc_config import CmocConfig
 
 
 def _tui_call_logs(root: Path) -> list[Path]:
-    """Return the TUI call logs written for a repository."""
+    """repository に書き込まれた TUI call log を返す。"""
     directory = root / ".cmoc" / "gu" / "ar" / "log" / "codex"
     return list(directory.glob("*_tui_call.json"))
 

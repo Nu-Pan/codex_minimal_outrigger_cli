@@ -93,6 +93,7 @@ def doctor_lock_path(root: Path) -> Path:
 
 
 def _ensure_agents_tracked(root: Path) -> bool:
+    """.agentsの追跡用placeholderを準備し、追加したかを返す。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # .agents は agent 操作禁止領域なので、tracked file がない場合だけ
     # placeholder を追加して差分が出る余地を小さくする。
@@ -141,6 +142,7 @@ def _commit_doctor_repairs(
     *,
     include_config: bool,
 ) -> None:
+    """doctorの修復差分をcommitし、呼び出し元のGit indexを復元する。"""
     _commit_doctor_repairs_from_head(
         root,
         agents_gitkeep_added,
@@ -158,6 +160,7 @@ def _commit_doctor_repairs_from_head(
     *,
     include_config: bool,
 ) -> None:
+    """HEAD起点の一時indexでdoctor修復だけをcommitする。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # repair commit は doctor の作業差分だけなので、通常 index ではなく
     # HEAD 起点の一時 index で user staged hunks と同一 path 上でも分離する。
@@ -187,6 +190,7 @@ def _commit_doctor_repairs_from_head(
 
 
 def _stage_gitignore_repair(root: Path, index_path: Path) -> None:
+    """HEADの.gitignoreへcmoc ignore規則を一時index上で反映する。"""
     head = run_git(["show", "HEAD:.gitignore"], root, check=False)
     head_content = head.stdout if head.returncode == 0 else ""
     repaired = with_cmoc_ignore_pattern(head_content)
@@ -197,6 +201,7 @@ def _stage_gitignore_repair(root: Path, index_path: Path) -> None:
 def _stage_agents_gitkeep_repair(
     root: Path, index_path: Path, agents_gitkeep_added: bool
 ) -> None:
+    """doctorが追加した.agents placeholderを修復用indexへ載せる。"""
     # 現在 index に doctor が追加した repair を HEAD 起点の index にも載せる。
     # HEAD に既存の .gitkeep があれば、その blob と mode を repair commit に使う。
     if agents_gitkeep_added:
@@ -204,6 +209,7 @@ def _stage_agents_gitkeep_repair(
 
 
 def _restored_index_tree(root: Path, *, include_config: bool) -> str:
+    """doctor修復後に戻すべきGit index treeを一時indexから作る。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # 復元対象は path 列挙ではなく index 全体で扱う。rename や同一 path の
     # unstaged hunk を壊さず、doctor 優先の修復だけを合成した tree を戻す。
@@ -224,6 +230,7 @@ def _restored_index_tree(root: Path, *, include_config: bool) -> str:
 
 
 def _copy_current_index(root: Path) -> Path:
+    """現在のGit indexを一時ファイルへコピーして返す。"""
     fd, index_name = tempfile.mkstemp(prefix="cmoc-doctor-restore-index-")
     os.close(fd)
     index_path = Path(index_name)
@@ -238,6 +245,7 @@ def _copy_current_index(root: Path) -> Path:
 
 
 def _stage_gitignore_repair_from_index(root: Path, index_path: Path) -> None:
+    """現在のindexにある.gitignoreへcmoc ignore規則を反映する。"""
     current = _index_text(root, index_path, ".gitignore")
     repaired = with_cmoc_ignore_pattern(current or "")
     if repaired != (current or ""):
@@ -245,6 +253,7 @@ def _stage_gitignore_repair_from_index(root: Path, index_path: Path) -> None:
 
 
 def _stage_agents_gitkeep_repair_from_index(root: Path, index_path: Path) -> None:
+    """.agentsがindexにない場合にplaceholderをindexへ追加する。"""
     agents = _run_git_with_index(
         ["ls-files", "--", ".agents"], root, index_path
     ).stdout.strip()
@@ -253,6 +262,7 @@ def _stage_agents_gitkeep_repair_from_index(root: Path, index_path: Path) -> Non
 
 
 def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
+    """既存blobを優先して.agents placeholderを一時indexへ載せる。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # HEAD に既存の placeholder がある場合は、復元用 index と repair commit 用
     # index の双方で同じ blob/mode を参照する。新規作成時だけ空 blob にする。
@@ -271,6 +281,7 @@ def _stage_config_repair(root: Path, index_path: Path) -> None:
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:
+    """一時indexからpathの内容を読み、未登録ならNoneを返す。"""
     result = _run_git_with_index(["show", f":{path}"], root, index_path, check=False)
     if result.returncode != 0:
         return None
@@ -278,6 +289,7 @@ def _index_text(root: Path, index_path: Path, path: str) -> str | None:
 
 
 def _stage_text(root: Path, index_path: Path, path: str, content: str) -> None:
+    """テキスト内容をblob化して一時indexへ登録する。"""
     blob = _run_git_with_index(
         ["hash-object", "-w", "--stdin"], root, index_path, input_text=content
     ).stdout.strip()
@@ -289,6 +301,7 @@ def _stage_text(root: Path, index_path: Path, path: str, content: str) -> None:
 
 
 def _stage_blob(root: Path, index_path: Path, path: str, mode: str, blob: str) -> None:
+    """指定blobとmodeを一時indexのpathへ登録する。"""
     _run_git_with_index(
         ["update-index", "--add", "--cacheinfo", mode, blob, path],
         root,
@@ -303,6 +316,7 @@ def _run_git_with_index(
     input_text: str | None = None,
     check: bool = True,
 ) -> subprocess.CompletedProcess[str]:
+    """指定した一時Git indexでコマンドを実行する。"""
     env = os.environ.copy()
     env["GIT_INDEX_FILE"] = str(index_path)
     result = subprocess.run(
@@ -323,6 +337,7 @@ def _run_git_with_index(
 
 
 def _head_entry(root: Path, path: str) -> tuple[str, str] | None:
+    """HEAD treeからpathのmodeとblobを取得する。"""
     result = run_git(["ls-tree", "HEAD", "--", path], root, check=False)
     metadata = result.stdout.split("\t", 1)[0].split()
     if result.returncode != 0 or len(metadata) < 3:
@@ -331,6 +346,7 @@ def _head_entry(root: Path, path: str) -> tuple[str, str] | None:
 
 
 def _index_mode(root: Path, index_path: Path, path: str) -> str | None:
+    """一時indexに登録されたpathのfile modeを返す。"""
     result = _run_git_with_index(
         ["ls-files", "--stage", "--", path], root, index_path, check=False
     )

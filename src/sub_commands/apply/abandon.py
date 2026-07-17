@@ -163,8 +163,8 @@ def _validate_apply_run(
             str(path),
         )
     # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
-    # The state file is mutable local state, so cleanup must prove the stored
-    # apply branch still belongs to the current session before deleting it.
+    # state file は mutable local state なので、cleanup 前に保存済み apply branch が
+    # current session に属することを証明してから削除する。
     if apply_branch_session_id(apply_branch) != session_id:
         raise CmocError(
             "破棄対象 apply run の補助情報を特定できません。",

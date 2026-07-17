@@ -36,6 +36,7 @@ class ReviewOracleInterrupted(KeyboardInterrupt):
         findings: list[dict],
         evaluated_files: list[Path],
     ) -> None:
+        """中断時に確定済みfindingと評価済みfileを例外へ保持する。"""
         super().__init__("review oracle was interrupted by the user")
         self.findings = findings
         self.evaluated_files = evaluated_files
@@ -322,8 +323,8 @@ def _merge_findings_with_semantic_retry(
             last_error = exc
             continue
         return merged, added_count, True
-    # `{{work-root}}/oracle/doc/app_spec/codex_exec_rule.md` treats merge
-    # operation contract violations as semantic response failures.
+    # `{{work-root}}/oracle/doc/app_spec/codex_exec_rule.md` は merge operation contract
+    # violation を semantic response failure として扱う。
     raise CmocError(
         "review oracle merge finding の Structured Output 検証に失敗しました。",
         ["merge finding の Codex 出力と対象 finding_id を確認してください。"],

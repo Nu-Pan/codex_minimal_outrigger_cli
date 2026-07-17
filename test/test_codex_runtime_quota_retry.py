@@ -931,6 +931,7 @@ def test_quota_polling_state_is_cleared_when_progress_output_fails(
         )
 
     def fail_print(*_args: object, **_kwargs: object) -> None:
+        """quota待機通知の出力をBrokenPipeErrorで失敗させる。"""
         raise BrokenPipeError("closed output")
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)

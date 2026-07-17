@@ -65,15 +65,15 @@ _LAST_CODEX_LOG_TIMESTAMP: str | None = None
 def _write_prompt_log(path: Path, prompt: str) -> None:
     """Codex に渡した完全 prompt を再実行可能な stdin log として保存する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # The prompt log is the replayable stdin source itself, not metadata.
+    # prompt log 自体を再実行可能な stdin source とし、metadata にはしない。
     path.write_text(prompt)
 
 
 def _read_required_output_json(path: Path) -> Any:
     """Structured Output の必須 JSON を semantic retry 用に厳格に読み取る。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # Structured Output parse failure is semantic failure; schema permissiveness
-    # must not turn missing, empty, or malformed output into success.
+    # Structured Output の parse failure は semantic failure である。schema の寛容さにより
+    # 欠落、空、malformed な output を成功に変えてはならない。
     try:
         text = path.read_text()
     except FileNotFoundError as exc:
@@ -89,8 +89,8 @@ def _read_required_output_json(path: Path) -> Any:
 def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
     """失敗した Codex session の永続 JSONL log から resume token を取り出す。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # quota resume must be based on the persisted JSONL log for the failed
-    # Codex session; if it is unreadable, retry without `resume`.
+    # quota resume は失敗した Codex session の永続 JSONL log を根拠にする。
+    # 読み取れない場合は `resume` なしで retry する。
     try:
         return extract_resume_token(path.read_text())
     except (OSError, UnicodeError):
@@ -100,8 +100,8 @@ def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
 def _base_exec_argv(override_args: list[str], codex_cwd: Path) -> list[str]:
     """cmoc 側で検査済みの cwd と設定上書きを Codex exec argv にする。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # cmoc may run Codex from linked worktrees or generated roots; repo
-    # validation belongs to cmoc's own preflight, not to Codex CLI startup.
+    # cmoc は linked worktree や生成 root から Codex を実行し得るため、repo の検証は
+    # Codex CLI startup ではなく cmoc 自身の preflight が担う。
     # `--ask-for-approval` は Codex の root parser だけが受理するため、
     # 共通の設定上書きは `exec` より前へ置く。
     return [
@@ -117,6 +117,7 @@ def _base_exec_argv(override_args: list[str], codex_cwd: Path) -> list[str]:
 def _quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
+    """quota判定用のprobe parameterをcanonical builderから作る。"""
     try:
         from acp.builder.quota_probe import build_quota_availability_probe_parameter
 
@@ -191,8 +192,8 @@ def run_codex_exec(
     log_dir.mkdir(parents=True, exist_ok=True)
     codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # Relative CODEX_HOME is still passed through unchanged, so preflight must
-    # target the path Codex resolves from its real cwd.
+    # 相対 CODEX_HOME は変更せず渡すため、preflight は Codex が実際の cwd から解決する
+    # path を対象にする。
     codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
@@ -202,8 +203,8 @@ def run_codex_exec(
         codex_work_root,
     )
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # `--output-schema` must point at the repo-root local schema store, even
-    # when Codex itself runs inside a linked worktree.
+    # `--output-schema` は Codex 自身が linked worktree 内で動く場合も repo-root の
+    # local schema store を指さなければならない。
     schema_path = (
         prepare_schema(root, parameter.structured_output_schema_path)
         if parameter.structured_output_schema_path
@@ -229,9 +230,8 @@ def run_codex_exec(
     def new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # Reserve the call path with O_EXCL before deriving its sibling paths;
-        # the process-local timestamp lock alone cannot protect parallel cmoc
-        # processes.
+        # sibling path を導出する前に O_EXCL で call path を予約する。process-local の
+        # timestamp lock だけでは並列 cmoc process を保護できない。
         run_ts, run_call_path = _reserve_timestamped_path(
             log_dir, "_call.json", _next_codex_log_timestamp
         )
@@ -262,8 +262,9 @@ def run_codex_exec(
         run_codex_cwd: Path = codex_cwd,
         run_codex_env: dict[str, str] = codex_env,
     ) -> subprocess.CompletedProcess[str]:
+        """prompt logをstdinとしてCodex subprocessを起動する。"""
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # The prompt log file is the stdin source for `codex exec ... -`.
+        # prompt log file は `codex exec ... -` の stdin source である。
         with run_prompt_path.open() as prompt_file:
             return run_codex_subprocess(
                 run_argv,
@@ -364,6 +365,7 @@ def run_codex_exec(
         run_output_path: Path,
         run_schema_path: Path | None = schema_path,
     ) -> CodexExecResult:
+        """保存済みlog pathから一回分のCodex結果を組み立てる。"""
         output_text = run_output_path.read_text() if run_output_path.exists() else ""
         return CodexExecResult(
             returncode=result.returncode,
@@ -431,8 +433,8 @@ def run_codex_exec(
         stderr_path.write_text(result.stderr)
         error_text = codex_error_text(result.stdout, result.stderr)
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # JSONL events determine retry/wait behavior; exit status is only the
-        # fallback failure signal when no known event was emitted.
+        # retry/wait 挙動は JSONL event で決め、既知の event がない場合だけ exit status を
+        # fallback の failure signal とする。
         capacity_error = is_capacity_error(result.stdout)
         quota_error = is_quota_error(result.stdout)
         unexpected_error = is_unexpected_error(result.stdout)
@@ -519,7 +521,7 @@ def run_codex_exec(
                 except BaseException as exc:
                     with _QUOTA_CONDITION:
                         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                        # Waiters must be released when polling cannot start.
+                        # polling を開始できない場合は waiter を解放する。
                         _QUOTA_PROBE_ERROR = exc
                         _QUOTA_POLLING = False
                         _QUOTA_CONDITION.notify_all()
@@ -548,8 +550,8 @@ def run_codex_exec(
                         quota_polls += 1
                         if capacity_retry_pending:
                             # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                            # Capacity retry already waited its own backoff;
-                            # do not add the regular quota polling interval.
+                            # capacity retry は自身の backoff をすでに待っているため、通常の
+                            # quota polling interval を追加しない。
                             capacity_retry_pending = False
                         else:
                             if logger is not None:
@@ -563,8 +565,8 @@ def run_codex_exec(
                             quota_probe_parameter, codex_work_root
                         )
                         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                        # quota probe is a separate Codex call; its minimal
-                        # AgentCallParameter must drive argv/cwd/env too.
+                        # quota probe は別の Codex call なので、最小の AgentCallParameter も
+                        # argv/cwd/env を駆動しなければならない。
                         probe_codex_home = resolve_codex_home(probe_codex_cwd)
                         validate_codex_home(probe_codex_home)
                         probe_codex_env = codex_subprocess_env(probe_codex_home)
@@ -697,8 +699,8 @@ def run_codex_exec(
                                 run_codex_home=probe_codex_home,
                             )
                             # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                            # A probe is still `codex exec`; non-quota failure is
-                            # not recoverable by waiting for quota reset.
+                            # probe も `codex exec` であり、quota 以外の failure は quota reset
+                            # を待っても回復しない。
                             raise CmocError(
                                 "Codex CLI quota availability probe が失敗しました。",
                                 [
@@ -734,8 +736,8 @@ def run_codex_exec(
                 finally:
                     with _QUOTA_CONDITION:
                         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-                        # Waiters may resume only after the representative probe
-                        # proved quota availability; probe failure is shared.
+                        # waiter は代表 probe が quota availability を証明した後だけ再開できる。
+                        # probe failure は共有する。
                         _QUOTA_PROBE_AVAILABLE = probe_available
                         _QUOTA_PROBE_ERROR = probe_error
                         _QUOTA_POLLING = False
@@ -859,6 +861,6 @@ def changed_worktree_paths(root: Path) -> list[Path]:
 def _changed_worktree_path_statuses(root: Path) -> list[tuple[str, Path]]:
     """worktree 上の変更 path と git status code を absolute path として返す。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
-    # apply requeue needs file-level paths after an agent call; default status
-    # can collapse untracked directories into one directory path.
+    # apply requeue は agent call 後に file-level path を必要とするため、default status が
+    # untracked directory を一つの directory path に畳み込まないようにする。
     return status_path_statuses(root, untracked_all=True)

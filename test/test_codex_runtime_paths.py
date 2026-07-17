@@ -41,8 +41,8 @@ def run_fixed_codex_exec(root: Path, barrier: Barrier, connection: object) -> No
         return f"{_FIXED_CODEX_TIMESTAMP}_retry_{attempts}"
 
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # Force both production calls through the same initial timestamp so the
-    # reservation is exercised at the run_codex_exec boundary.
+    # reservation が run_codex_exec boundary で検証されるよう、両 production call の
+    # 初期 timestamp を同じに固定する。
     exec_module.timestamp = timestamp_factory
     try:
         result = run_codex_exec(

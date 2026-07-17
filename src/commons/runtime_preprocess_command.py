@@ -6,6 +6,7 @@ from commons.runtime_paths import repo_root, work_root
 
 
 def run_preprocess_command(command_name: str) -> None:
+    """共通preprocess bodyをCLI commandとして実行する。"""
     run_cli_subcommand(
         _preprocess_body,
         command_name=command_name,
@@ -17,6 +18,7 @@ def run_preprocess_command(command_name: str) -> None:
 
 
 def _preprocess_body(command_heading: str) -> None:
+    """doctor preprocessを実行し、command見出しを出力する。"""
     current_work_root = work_root()
     current_repo_root = repo_root()
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md

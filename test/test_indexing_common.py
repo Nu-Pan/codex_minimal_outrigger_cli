@@ -29,6 +29,7 @@ from commons.runtime_logging import (
 
 
 def _render_test_entry(root: Path, path: Path, digest: str | None = None) -> str:
+    """テスト用の最小valid INDEX entryをrenderする。"""
     return indexing_common.render_index_entry(
         root,
         path,
@@ -264,8 +265,8 @@ def test_update_indexes_creates_empty_index_for_empty_directory(
 
     updated = indexing_common.update_indexes(root)
 
-    # {{work-root}}/oracle/doc/app_spec/indexing.md requires INDEX.md placement
-    # per target directory, even when there are no indexable children.
+    # {{work-root}}/oracle/doc/app_spec/indexing.md は indexable child がなくても、対象
+    # directory ごとに INDEX.md を配置することを求める。
     assert empty_dir / "INDEX.md" in updated
     assert (empty_dir / "INDEX.md").read_text() == ""
 
@@ -404,9 +405,11 @@ def test_update_indexes_avoids_worker_threads_during_pushd(
         """pushd 中に worker pool が作られた時点で回帰を検出する。"""
 
         def __init__(self, *_args: object, **_kwargs: object) -> None:
+            """worker poolが作られた時点で回帰を検出する。"""
             raise AssertionError("pushd must not submit INDEX work to another thread")
 
     def fake_codex_exec(_parameter: object, **_kwargs: object) -> FakeCodexResult:
+        """固定Structured Outputを返し、呼び出しthreadを記録する。"""
         call_threads.append(threading.get_ident())
         return FakeCodexResult()
 

@@ -13,6 +13,7 @@ def build_review_oracle_validate_finding_advocate_parameter(
     known_advocate_reasons: str,
     known_challenger_reasons: str,
 ) -> _AgentCallParameter:
+    """canonical advocate builderのparameterを作り、既知のtypoだけを補正する。"""
     parameter = _build_parameter(
         finding,
         known_advocate_reasons,
@@ -25,11 +26,12 @@ def build_review_oracle_validate_finding_advocate_parameter(
 
 
 def _fix_oracle_root_goal_typo(prompt: str) -> str:
+    """canonical promptに残るoracle root placeholderのtypoを一箇所だけ補正する。"""
     # Oracle: {{work-root}}/oracle/src/oracle/acp_builder/review/oracle/validate_finding_advocate.py
-    # {{work-root}}/oracle/doc/app_spec/prompt_standard.md permits only the
-    # minimum correction needed for the oracle src static goal typo; findings
-    # and known reasons are dynamic input and must stay byte-for-byte intact.
-    # Delete this helper and its tests once oracle src uses "`{{oracle-root}}`".
+    # {{work-root}}/oracle/doc/app_spec/prompt_standard.md は oracle src の static goal typo
+    # に必要な最小 correction だけを許可する。finding と known reason は dynamic input
+    # なので byte-for-byte で保持する。
+    # oracle src が "`{{oracle-root}}`" を使うようになったら、この helper と test を削除する。
     return prompt.replace(
         "`{{oracle_root}}` ツリー内の oracle file を具体的な根拠とし",
         "`{{oracle-root}}` ツリー内の oracle file を具体的な根拠とし",

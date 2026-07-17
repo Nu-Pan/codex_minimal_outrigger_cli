@@ -33,6 +33,7 @@ _SANDBOX_BY_MODE = {
 
 
 def _parameter(mode: FileAccessMode) -> AgentCallParameter:
+    """指定modeの最小AgentCallParameterを作る。"""
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
@@ -90,6 +91,7 @@ def test_prepare_codex_overrides_does_not_scan_worktree(
     root.mkdir()
 
     def fail_scan(*_args: object, **_kwargs: object) -> object:
+        """worktree走査が呼ばれた場合にテストを失敗させる。"""
         raise AssertionError("worktree scan must not be used to build Codex argv")
 
     monkeypatch.setattr(Path, "iterdir", fail_scan)
@@ -103,6 +105,7 @@ def test_prepare_codex_overrides_does_not_scan_worktree(
 
 
 def test_codex_overrides_use_cmoc_ollama_provider_for_local_slm() -> None:
+    """minimum modelがcmoc managed Ollama providerへ変換されることを検証する。"""
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
 

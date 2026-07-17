@@ -27,7 +27,7 @@ from config.cmoc_config import CmocConfig
 
 
 def _prepare_production_managed_ollama(root: Path, config: CmocConfig) -> None:
-    """Require the real per-user managed service used by production Codex calls."""
+    """production Codex call が使う実 per-user managed service を要求する。"""
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
     # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
     # 本番と同じサービスと永続モデルストアを検証するため、HOME、PATH、systemctl、

@@ -120,6 +120,7 @@ def break_preprocess_invariants(work: Path) -> Path:
 def test_session_fork_creates_session_branch_and_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """session forkがbranchとactive stateを作ることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     home_branch = current_branch(root)
@@ -155,6 +156,7 @@ def test_session_fork_rolls_back_when_state_save_fails(
     monkeypatch.setattr(session_fork_module, "timestamp", lambda: session_id)
 
     def fail_write_state(_path: Path, _state: cmoc_runtime.SessionState) -> None:
+        """state保存を失敗させ、fork rollback経路を検証する。"""
         raise OSError("state write failed")
 
     monkeypatch.setattr(session_fork_module, "write_state", fail_write_state)
@@ -179,6 +181,7 @@ def test_session_fork_rolls_back_when_state_save_fails(
 def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """session id衝突時に既存abandoned stateを上書きしないことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     session_id = "2026-06-27_01-02_03_000000000"
@@ -206,6 +209,7 @@ def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
 def test_session_fork_retries_session_id_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """session id衝突後に次のtimestampでforkを再試行することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     collision_id = "2026-06-27_01-02_03_000000000"
@@ -227,6 +231,7 @@ def test_session_fork_retries_session_id_collision(
 def test_session_fork_rejects_corrupt_state_without_active_session_message(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """壊れたstateをactive session未存在として誤報しないことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     home_branch = current_branch(root)
@@ -248,6 +253,7 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
 def test_session_fork_initializes_cmoc_ignore_before_logging(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """session forkがlog作成前にcmoc ignoreを初期化することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     home_branch = current_branch(root)
@@ -278,6 +284,7 @@ def test_session_fork_initializes_cmoc_ignore_before_logging(
 def test_session_fork_uses_linked_worktree_branch_and_head(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked worktree上のbranchとHEADからsessionをforkすることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -305,6 +312,7 @@ def test_session_fork_uses_linked_worktree_branch_and_head(
 def test_session_abandon_switches_home_and_marks_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """session abandonがhome branchへ戻りstateをabandonedにすることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -337,6 +345,7 @@ def test_session_abandon_switches_home_and_marks_state(
 def test_session_abandon_uses_linked_worktree_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked worktree上のsession abandonが対応home branchを使うことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -409,6 +418,7 @@ def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
 def test_session_abandon_requires_existing_home_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """home branchが存在しないsession abandonを拒否することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -466,6 +476,7 @@ def test_session_abandon_requires_existing_home_branch(
 def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cleanup_error: BaseException
 ) -> None:
+    """cleanup失敗時にsession branchとactive stateを復元することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -490,6 +501,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     original_delete_branch = session_module.delete_branch
 
     def fake_delete_branch(root: Path, branch: str, force: bool = False) -> None:
+        """対象session branchの削除だけを指定exceptionで失敗させる。"""
         if branch == session_branch:
             raise cleanup_error
         return original_delete_branch(root, branch, force)
@@ -521,6 +533,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
 def test_session_completion_rejects_missing_state_fields(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command: str
 ) -> None:
+    """session completionが必須state field欠落を拒否することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -617,6 +630,7 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
 def test_session_join_handles_conflict_path_containing_newline(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """改行を含むconflict pathをNUL framingで解消できることを検証する。"""
     root = make_repo(tmp_path)
     target = root / "src" / "line\nbreak.txt"
     target.parent.mkdir()
@@ -640,9 +654,12 @@ def test_session_join_handles_conflict_path_containing_newline(
     run_git(root, "switch", session_branch)
 
     class FakeCodexResult:
+        """conflict resolution成功を表す最小結果double。"""
+
         output_json = None
 
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
+        """conflict pathをpromptに含め、解消済み内容を書き込む。"""
         assert set(kwargs) == {"root", "cwd", "purpose"}
         assert str(target) in parameter.prompt
         target.write_text("resolved change\n")
@@ -659,16 +676,19 @@ def test_session_join_handles_conflict_path_containing_newline(
 
 
 def test_session_join_reports_unmerged_path_as_absolute(tmp_path: Path) -> None:
+    """unmerged pathを絶対pathでerror detailへ出すことを検証する。"""
     root = tmp_path
     target = root / "src" / "unmerged.py"
     target.parent.mkdir()
 
     def fake_git(args: list[str], cwd: Path) -> cmoc_runtime.CommandResult:
+        """unmerged pathをNUL区切りで返すGit double。"""
         if args == ["diff", "--name-only", "-z", "--diff-filter=U"]:
             return cmoc_runtime.CommandResult(0, "src/unmerged.py\0", "")
         return cmoc_runtime.CommandResult(0, "", "")
 
     def fake_codex_exec(parameter: object, **kwargs: object) -> object:
+        """Codex呼び出しが不要な経路のための最小double。"""
         return object()
 
     with pytest.raises(CmocError) as error:
@@ -692,12 +712,14 @@ def test_session_join_reports_unmerged_path_as_absolute(tmp_path: Path) -> None:
     ],
 )
 def test_session_join_conflict_marker_detection(text: str, expected: bool) -> None:
+    """conflict marker blockの残存判定が各入力に一致することを検証する。"""
     assert session_join_module._has_conflict_marker_block(text) is expected
 
 
 def test_session_join_uses_linked_worktree_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked worktree上のsession joinが対応home branchを使うことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -765,6 +787,7 @@ def test_session_join_preprocesses_linked_worktree_before_preconditions(
 def test_session_join_stages_delete_conflict_resolution(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Codexが解決した削除をstageしてsession joinできることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -783,9 +806,12 @@ def test_session_join_stages_delete_conflict_resolution(
     run_git(root, "switch", session_branch)
 
     class FakeCodexResult:
+        """conflict resolution成功を表す最小結果double。"""
+
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """conflict対象を削除して解消済み結果を返す。"""
         (root / "README.md").unlink()
         return FakeCodexResult()
 
@@ -802,6 +828,7 @@ def test_session_join_stages_delete_conflict_resolution(
 def test_session_join_warns_when_session_branch_cannot_be_deleted(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """session branch削除失敗をwarningとしてjoin成功に含めることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -813,6 +840,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     original_run_git = session_join_module.run_git
 
     def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> object:
+        """session branch削除だけを失敗させ、他のGit操作は委譲する。"""
         if args == ["branch", "-d", session_branch]:
             return cmoc_runtime.CommandResult(1, "", "branch is checked out elsewhere")
         return original_run_git(args, cwd, check=check)
@@ -836,6 +864,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
 def test_session_join_does_not_delete_when_local_branch_reachability_check_fails(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """local session branchのreachability確認失敗時に削除しないことを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -848,6 +877,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
     delete_calls = 0
 
     def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> object:
+        """reachability確認を失敗させ、他のGit操作は委譲する。"""
         nonlocal delete_calls
         if args == ["merge-base", "--is-ancestor", session_branch, "HEAD"]:
             return cmoc_runtime.CommandResult(1, "", "")
@@ -875,6 +905,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
 def test_session_join_error_report_is_written_to_stdout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """事前条件error reportをstdoutへ出力することを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -896,6 +927,7 @@ def test_session_join_error_report_is_written_to_stdout(
 def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """merge後の予期せぬconflict error reportをstderrへ出力することを検証する。"""
     root = make_repo(tmp_path)
     target = root / "README.md"
     monkeypatch.chdir(root)
@@ -915,9 +947,12 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     run_git(root, "switch", session_branch)
 
     class FakeCodexResult:
+        """conflict resolution結果だけを提供する最小double。"""
+
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """未解決markerを残した結果を返し、後段errorを発生させる。"""
         target.write_text("<<<<<<< HEAD\nhome\n========\nsession\n>>>>>>> branch\n")
         return FakeCodexResult()
 

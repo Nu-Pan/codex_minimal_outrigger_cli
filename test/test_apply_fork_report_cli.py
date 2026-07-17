@@ -499,6 +499,7 @@ def test_apply_fork_change_summary_excludes_deleted_tracked_files(
     def fake_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
+        """要約promptを記録し、変更要約の固定結果を返す。"""
         nonlocal captured_prompt
         captured_prompt = parameter.prompt
         return FakeCodexResult(
@@ -543,6 +544,7 @@ def test_apply_fork_change_summary_fallback_keeps_paths(
     def fake_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
+        """指定した空または欠落要約をCodex結果として返す。"""
         return FakeCodexResult(codex_output)
 
     summary = build_change_summary(

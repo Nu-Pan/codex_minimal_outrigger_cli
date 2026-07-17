@@ -19,6 +19,7 @@ from commons.runtime_content import is_binary
 def test_is_binary_distinguishes_text_and_nul_bytes(
     tmp_path: Path, content: bytes, expected: bool
 ) -> None:
+    """NUL byteを含む内容だけをbinaryとして判定することを検証する。"""
     path = tmp_path / "content"
     path.write_bytes(content)
 

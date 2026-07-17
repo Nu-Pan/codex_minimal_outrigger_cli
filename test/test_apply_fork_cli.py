@@ -1,17 +1,17 @@
-"""Apply fork CLI regression tests for lifecycle, state, and gitignore behavior.
+"""apply fork CLI の lifecycle、state、gitignore 挙動を検証する回帰テスト。
 
-Target normalization has an independent test module because it does not need the
-CLI lifecycle or its repository fixtures. The execution order follows
+対象正規化は CLI lifecycle や repository fixture を必要としないため、独立した test
+module に分けている。実行順は
 {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md.
 
-Although this file exceeds 16,000 characters, its scenarios share the same
-repository/session fixtures and apply state/worktree context, so splitting them
-would scatter the lifecycle read context without a natural responsibility boundary.
-This size decision follows
+この file は 16,000 文字を超えるが、各 scenario は同じ repository/session fixture と apply
+state/worktree context を共有するため、分割すると自然な責務境界なしに lifecycle の読解
+context が分散する。このサイズ判断は
 {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py.
 """
 
 import json
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -524,6 +524,7 @@ def test_apply_fork_marks_state_completed_before_report(
     monkeypatch.setattr(apply_fork_module, "enumerate_apply_targets", lambda *args: [])
 
     def fake_write_report(*args: object, **kwargs: object) -> Path:
+        """report生成前に保存済みapply stateを記録する。"""
         seen_states.append(json.loads(state_path.read_text())["apply"]["state"])
         report_path = (
             root / ".cmoc" / "gu" / "ar" / "report" / "apply" / "fork" / "state.md"
@@ -559,7 +560,8 @@ def test_apply_fork_rechecks_ready_state_before_creating_run(
     created: list[Path] = []
 
     @contextmanager
-    def fake_apply_run_lock(_root: Path, _session_id: str):
+    def fake_apply_run_lock(_root: Path, _session_id: str) -> Iterator[None]:
+        """初回lock取得時に競合したrunning stateを公開する。"""
         nonlocal lock_entries
         lock_entries += 1
         if lock_entries == 1:
@@ -578,6 +580,7 @@ def test_apply_fork_rechecks_ready_state_before_creating_run(
     def fake_create_run_worktree(
         _root: Path, _branch: str, worktree: Path, _start_point: str
     ) -> Path:
+        """run worktreeを作成したと記録し、対象directoryを用意する。"""
         created.append(worktree)
         worktree.mkdir(parents=True)
         return worktree
@@ -617,6 +620,7 @@ def test_apply_fork_initialization_failure_is_recoverable_by_abandon(
     if failure == "pid":
 
         def fail_write_pid(*args: object, **kwargs: object) -> None:
+            """PID保存を失敗させ、初期化失敗経路を検証する。"""
             raise OSError("pid save failed")
 
         monkeypatch.setattr(apply_fork_module, "write_apply_process_id", fail_write_pid)
@@ -625,6 +629,7 @@ def test_apply_fork_initialization_failure_is_recoverable_by_abandon(
         write_count = 0
 
         def fail_completed_state(path: Path, state: object) -> None:
+            """completed stateの保存だけを失敗させる。"""
             nonlocal write_count
             write_count += 1
             if write_count == 2:

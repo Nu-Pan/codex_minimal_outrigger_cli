@@ -1,1 +1,1 @@
-"""session subcommand implementations."""
+"""session subcommand の実装 package。"""

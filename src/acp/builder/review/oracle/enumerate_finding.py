@@ -21,6 +21,7 @@ def build_review_oracle_enumerate_finding_parameter(
     oracle_path: Path,
     related_findings: str,
 ) -> AgentCallParameter:
+    """canonical builderのparameterを作り、symlinkのlexical pathを保持する。"""
     parameter = _build_enumerate_parameter(oracle_path, related_findings)
     if not oracle_path.is_absolute() or not oracle_path.is_symlink():
         return parameter

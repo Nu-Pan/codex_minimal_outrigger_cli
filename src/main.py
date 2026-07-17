@@ -63,8 +63,8 @@ class _CmocTyperGroup(typer.core.TyperGroup):
         try:
             result = super().main(standalone_mode=False, **click_kwargs)
         # {{work-root}}/oracle/doc/app_spec/error_handling.md
-        # Typer 0.27 parses through its Click compatibility module; support both
-        # exception classes so the error-handling contract is version-stable.
+        # Typer 0.27 は Click compatibility module を通じて parse するため、version に
+        # 依存しない error-handling contract のため両方の exception class に対応する。
         except (click.ClickException, typer.core._click.ClickException) as exc:
             typer.echo(
                 render_error(

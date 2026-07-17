@@ -27,15 +27,14 @@ def build_quota_availability_probe_parameter(
     except ModuleNotFoundError as exc:
         if exc.name != "oracle.acp_builder.quota_probe":
             raise
-        # Keep this compatibility fallback for distributions that omit the
-        # optional oracle builder. Remove this entry and migrate all callers
-        # to the canonical builder once every supported distribution ships
-        # oracle.acp_builder.quota_probe and no caller imports this path.
+        # optional oracle builder を含まない distribution のため、この compatibility
+        # fallback を保持する。すべての supported distribution が
+        # oracle.acp_builder.quota_probe を提供し、この path を import する caller が
+        # なくなったら、この entry を削除して全 caller を canonical builder へ移行する。
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # The current oracle tree specifies only a minimal availability call and
-        # has no dedicated builder. Empty stdin avoids copying a prompt into the
-        # realization layer while keeping quota polling executable in packages
-        # that do not ship an optional oracle builder.
+        # 現在の oracle tree は最小 availability call だけを定義し、専用 builder を持たない。
+        # 空 stdin により prompt を realization layer へコピーせず、optional oracle builder
+        # を含まない package でも quota polling を実行可能にする。
         return AgentCallParameter(
             ModelClass.MINIMUM,
             ReasoningEffort.LOW,

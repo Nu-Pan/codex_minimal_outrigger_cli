@@ -17,11 +17,11 @@ from config.cmoc_config import CmocConfig
 def _spy_codex_subprocess(
     monkeypatch: pytest.MonkeyPatch,
 ) -> list[tuple[tuple[object, ...], dict[str, object]]]:
-    """Record Codex subprocess calls so preflight failures prove zero starts."""
+    """Codex subprocess call を記録し、preflight failure で起動数が zero になることを検証する。"""
     calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
 
     def record_call(*args: object, **kwargs: object) -> None:
-        """Record a Codex subprocess invocation without starting it."""
+        """Codex subprocess invocation を起動せずに記録する。"""
         calls.append((args, kwargs))
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", record_call)
@@ -31,7 +31,7 @@ def _spy_codex_subprocess(
 def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Uses the default home and passes it to the Codex subprocess."""
+    """既定 home を使い、それを Codex subprocess へ渡す。"""
     root = make_repo(tmp_path)
     home = tmp_path / "home"
     codex_home = home / ".codex"
@@ -81,7 +81,7 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
 def test_run_codex_exec_preserves_configured_codex_home_env_value(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Preserves a configured home value and records its resolved path."""
+    """設定された home value を保持し、解決済み path を記録する。"""
     root = make_repo(tmp_path)
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
@@ -131,7 +131,7 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
 def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Resolves a relative home from the Codex subprocess working directory."""
+    """相対 home を Codex subprocess の working directory から解決する。"""
     root = make_repo(tmp_path)
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
@@ -182,7 +182,7 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
 def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Rejects a missing home before starting the Codex subprocess."""
+    """Codex subprocess の起動前に欠落した home を拒否する。"""
     root = make_repo(tmp_path)
     codex_calls = _spy_codex_subprocess(monkeypatch)
     missing_home = tmp_path / "missing_codex_home"
@@ -213,7 +213,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
 def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Rejects a file-valued home before starting the Codex subprocess."""
+    """Codex subprocess の起動前に file を指す home を拒否する。"""
     root = make_repo(tmp_path)
     codex_calls = _spy_codex_subprocess(monkeypatch)
     codex_home = tmp_path / "codex_home_file"
@@ -248,7 +248,7 @@ def test_run_codex_exec_fails_before_codex_when_auth_json_is_not_file(
     monkeypatch: pytest.MonkeyPatch,
     auth_json_is_directory: bool,
 ) -> None:
-    """Rejects missing or non-file auth.json before starting Codex."""
+    """Codex 起動前に欠落または file でない auth.json を拒否する。"""
     root = make_repo(tmp_path)
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()

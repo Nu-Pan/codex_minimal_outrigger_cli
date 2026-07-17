@@ -28,6 +28,8 @@ INDEX_ENTRY_KEYS = {"summary", "read_this_when", "do_not_read_this_when"}
 
 @dataclass
 class _IndexDirectoryPlan:
+    """一つのdirectoryで再利用または生成するINDEX entryの計画。"""
+
     directory: Path
     entries: list[str | None]
     missing_children: list[tuple[int, Path, str]]
@@ -82,8 +84,8 @@ def commit_index_updates(root: Path, updated: list[Path]) -> None:
         run_git(["commit", "-m", "cmoc indexing", "--", *index_paths], root)
         return
     if diff.returncode != 0:
-        # {{work-root}}/oracle/doc/app_spec/indexing.md requires Git failures to
-        # fail indexing; only `git diff --quiet` status 1 means “changes exist”.
+        # {{work-root}}/oracle/doc/app_spec/indexing.md は Git failure で indexing を
+        # 失敗させることを求める。`git diff --quiet` の status 1 だけを「差分あり」とする。
         raise CmocError(
             "INDEX.md 差分の確認に失敗しました。",
             ["git の状態を確認してから、同じ cmoc コマンドを再実行してください。"],
@@ -116,6 +118,7 @@ def update_indexes(
             def build_missing(
                 missing_item: tuple[_IndexDirectoryPlan, tuple[int, Path, str]],
             ) -> tuple[_IndexDirectoryPlan, int, str]:
+                """不足しているentryを一件生成し、配置先情報と返す。"""
                 plan, (index, child, digest) = missing_item
                 return (
                     plan,
@@ -129,18 +132,18 @@ def update_indexes(
                 )
 
             if cwd_override_active():
-                # pushd keeps the process-global cwd lock for its whole scope.
-                # A worker would block in repo_root/work_root while this thread
-                # waits for that worker, so isolated run worktrees must build on
-                # the lock-owning thread. Outside pushd, parallelism is preserved.
+                # pushd は scope 全体で process-global cwd lock を保持する。
+                # この thread が worker を待つ間に worker が repo_root/work_root で
+                # block しないよう、isolated run worktree は lock 所有 thread で作る。
+                # pushd の外では並列性を維持する。
                 results = map(build_missing, missing)
                 for plan, index, entry in results:
                     plan.entries[index] = entry
             else:
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    # ContextVars are not inherited by worker threads. Copy each
-                    # caller context before submit so Codex events reach the
-                    # subcommand log used by the parent command.
+                    # ContextVars は worker thread に継承されない。submit 前に caller
+                    # context をコピーし、Codex event を親 command の subcommand log
+                    # へ届ける。
                     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
                     futures = [
                         executor.submit(copy_context().run, build_missing, item)
@@ -239,16 +242,16 @@ def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
         section_positions
     ):
         return ""
-    # {{work-root}}/oracle/doc/app_spec/indexing.md defines an entry as title plus
-    # fixed sections; preserving fresh malformed text here would skip regeneration.
+    # {{work-root}}/oracle/doc/app_spec/indexing.md は entry を title と固定 section
+    # で定義する。fresh でも malformed な text を残すと再生成を飛ばしてしまう。
     if any(line.strip() for line in lines[1 : section_positions[0]]):
         return ""
     for start, end in zip(section_positions[:3], section_positions[1:]):
         section_lines = [
             line.strip() for line in lines[start + 1 : end] if line.strip()
         ]
-        # {{work-root}}/oracle/doc/app_spec/indexing.md requires each entry
-        # section to be bullet-only.
+        # {{work-root}}/oracle/doc/app_spec/indexing.md は各 entry section を
+        # bullet-only にすることを求めている。
         if not section_lines or any(
             not line.startswith("- ") for line in section_lines
         ):
@@ -274,9 +277,9 @@ def indexable_children(root: Path, directory: Path) -> list[Path]:
     for child in sorted(directory.iterdir(), key=lambda p: p.name):
         if child.name == "INDEX.md" or child.name.startswith("."):
             continue
-        # {{work-root}}/oracle/doc/app_spec/indexing.md requires indexing
-        # maintenance to finish before agent calls; symlink cycles cannot be
-        # valid traversal targets for that contract.
+        # {{work-root}}/oracle/doc/app_spec/indexing.md は agent call 前に indexing
+        # maintenance を完了することを求めるため、symlink cycle は有効な走査対象に
+        # できない。
         if child.is_symlink():
             continue
         if is_root_memo(root, child):
@@ -381,9 +384,9 @@ def render_index_entry(
 def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str]:
     """Structured Output の必須 list[str] 項目を検証して取り出す。"""
     value = entry.get(key) if isinstance(entry, dict) else None
-    # {{work-root}}/oracle/doc/app_spec/indexing.md and
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py
-    # require bullet-only semantic entries that are useful before reading the target.
+    # {{work-root}}/oracle/doc/app_spec/indexing.md と
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py は、
+    # 対象を読む前に役立つ bullet-only の semantic entry を求める。
     if (
         isinstance(value, list)
         and value

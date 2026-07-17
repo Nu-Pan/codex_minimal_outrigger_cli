@@ -280,6 +280,7 @@ def test_apply_join_reloads_state_inside_lifecycle_lock(
 
     @contextmanager
     def fake_apply_run_lock(_root: Path, _session_id: str) -> Iterator[None]:
+        """lock内でapply stateをreadyへ戻してjoinの事前条件を検証する。"""
         state = json.loads(state_path.read_text())
         state["apply"]["state"] = "ready"
         state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
@@ -324,6 +325,7 @@ def test_apply_join_stops_error_process_before_clean_check(
     def fake_stop_apply_process(
         process: object, _read_after_parent_exit: object
     ) -> str:
+        """tracked processを停止した記録を残し、dirty fileを削除する。"""
         stopped.append(process)
         dirty.unlink()
         return "stopped fake apply process"

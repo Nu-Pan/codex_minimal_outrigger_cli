@@ -60,6 +60,7 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 def test_review_compatibility_modules_export_only_builders(
     module: object, exported_name: str
 ) -> None:
+    """review互換moduleが指定されたbuilderだけを公開することを検証する。"""
     assert module.__all__ == [exported_name]
     for internal_name in [
         "Path",
@@ -74,6 +75,7 @@ def test_review_compatibility_modules_export_only_builders(
 
 
 def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
+    """merge finding builderがefficiency modelとmax reasoningを選ぶことを検証する。"""
     parameter = build_review_oracle_merge_finding_parameter("[]")
 
     assert parameter.model_class == ModelClass.EFFICIENCY
@@ -83,6 +85,7 @@ def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
 
 
 def test_review_oracle_judge_finding_uses_max_reasoning() -> None:
+    """judge finding builderがefficiency modelとmax reasoningを選ぶことを検証する。"""
     parameter = build_review_oracle_judge_finding_parameter(
         "finding", "advocate", "challenger"
     )
@@ -93,6 +96,7 @@ def test_review_oracle_judge_finding_uses_max_reasoning() -> None:
 
 
 def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
+    """enumerate finding builderのschemaがoracle sourceと一致することを検証する。"""
     parameter = build_review_oracle_enumerate_finding_parameter(
         Path("{{work-root}}/oracle/spec.md"),
         "[]",
@@ -129,6 +133,7 @@ def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
 
 
 def test_review_oracle_enumerate_parameter_matches_oracle_builder() -> None:
+    """enumerate finding互換builderがcanonical builderと同じparameterを返すことを検証する。"""
     oracle_path = Path("{{work-root}}/oracle/doc/sample.md")
     related_findings = "[]"
 
@@ -161,6 +166,7 @@ def test_review_oracle_enumerate_parameter_keeps_symlink_entry_path(
 
 
 def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
+    """merge finding builderのschemaとplaceholder補正を検証する。"""
     parameter = build_review_oracle_merge_finding_parameter("[]")
     assert "<{{oracle-root}}>" not in parameter.prompt
     assert "{{oracle-root}}" in parameter.prompt
@@ -199,6 +205,7 @@ def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
 
 
 def test_review_oracle_merge_finding_preserves_known_findings_text() -> None:
+    """merge finding builderが既知findingの動的文字列を保持することを検証する。"""
     known_findings = (
         '[{"finding_id":"finding-0001","reason":"literal <{{oracle-root}}>"}]'
         "\n- <{{oracle-root}}> = literal"
@@ -224,6 +231,7 @@ def test_review_oracle_merge_finding_preserves_known_findings_text() -> None:
 def test_review_oracle_validate_finding_schema_matches_oracle_source(
     builder: Callable[[str, str, str], AgentCallParameter], schema_name: str
 ) -> None:
+    """validate finding builderのschemaと動的入力保持を検証する。"""
     parameter = builder("finding", "known advocate", "known challenger")
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MAX
@@ -247,6 +255,7 @@ def test_review_oracle_validate_finding_schema_matches_oracle_source(
 
 
 def test_review_oracle_validate_finding_advocate_preserves_dynamic_text() -> None:
+    """advocate builderが動的入力内のplaceholderを補正せず保持することを検証する。"""
     finding = "finding literal `{{oracle_root}}` ツリー内 should stay"
     known_advocate = "known advocate literal `{{oracle_root}}` ツリー内 should stay"
     known_challenger = "known challenger literal `{{oracle_root}}` ツリー内 should stay"

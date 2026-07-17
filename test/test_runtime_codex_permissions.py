@@ -20,6 +20,7 @@ from config.cmoc_config import CmocConfig
 
 
 def _parameter(mode: FileAccessMode) -> AgentCallParameter:
+    """指定modeの最小AgentCallParameterを作る。"""
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,

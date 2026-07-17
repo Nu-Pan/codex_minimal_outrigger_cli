@@ -19,7 +19,7 @@ def finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
     if path.is_absolute():
         return _absolute_without_symlink(path)
     if path.parts and path.parts[0] == "{{oracle-root}}":
-        # enumerate_finding prompt exposes this shorthand as an oracle root alias.
+        # enumerate_finding prompt はこの略記を oracle root alias として公開する。
         # symlink は oracle 配下の repository path として扱う。
         return _absolute_without_symlink(worktree / "oracle" / Path(*path.parts[1:]))
     if path.parts:

@@ -30,9 +30,9 @@ def _fix_oracle_root_placeholder_definition(prompt: str) -> str:
         `{{work-root}}/oracle/src/oracle/acp_builder/review/oracle/merge_finding.py`
     """
     # Oracle: {{work-root}}/oracle/src/oracle/acp_builder/review/oracle/merge_finding.py
-    # {{work-root}}/oracle/doc/app_spec/prompt_standard.md permits only the
-    # minimum correction needed for an oracle src bug; known findings are input.
-    # Delete this helper and its tests once oracle src emits "- {{oracle-root}} =".
+    # {{work-root}}/oracle/doc/app_spec/prompt_standard.md は oracle src の bug に必要な
+    # 最小 correction だけを許可する。既知の finding は input のまま扱う。
+    # oracle src が "- {{oracle-root}} =" を出すようになったら、この helper と test を削除する。
     marker = "\n# place holder definition\n"
     marker_index = prompt.rfind(marker)
     if marker_index == -1:

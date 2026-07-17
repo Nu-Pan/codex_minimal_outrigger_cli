@@ -1,11 +1,10 @@
-"""Compatibility import path for TUI resolve-parameter building.
+"""TUI resolve-parameter building の互換 import 経路。
 
-Kept while callers import from `acp.builder.tui.resolve_parameter`; the
-canonical builder is
-`{{work-root}}/oracle/src/oracle/acp_builder/tui/resolve_parameter.py`, while
-`TUI_FILE_ACCESS_MODES` exposes the canonical `FileAccessMode` choices for the
-existing TUI import surface. Delete this module after callers use the canonical
-oracle path and no longer need this exported mode tuple.
+`acp.builder.tui.resolve_parameter` から import する caller が残る間だけ維持する。
+canonical builder は
+`{{work-root}}/oracle/src/oracle/acp_builder/tui/resolve_parameter.py` であり、
+`TUI_FILE_ACCESS_MODES` は既存 TUI import surface のため canonical `FileAccessMode` 選択肢を
+公開する。caller が canonical oracle path を使い、この exported mode tuple を不要としたら削除する。
 """
 
 from oracle.acp_builder.basic import FileAccessMode
