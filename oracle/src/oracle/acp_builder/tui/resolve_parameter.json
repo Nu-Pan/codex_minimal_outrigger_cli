@@ -9,7 +9,7 @@
         "oracle_and_realization_basic",
         "oracle_standard",
         "realization_standard",
-        "review_oracle_standard",
+        "oracle_review_standard",
         "apply_review_standard",
         "index_entry_standard"
     ],
@@ -147,7 +147,7 @@
                 }
             }
         },
-        "review_oracle_standard": {
+        "oracle_review_standard": {
             "type": "object",
             "additionalProperties": false,
             "required": [

@@ -15,7 +15,7 @@ from oracle.acp_builder.basic import (
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_review_oracle_enumerate_finding_parameter(
+def build_oracle_review_enumerate_finding_parameter(
     oracle_path: Path,
     related_findings: str,
 ) -> AgentCallParameter:
@@ -57,7 +57,7 @@ def build_review_oracle_enumerate_finding_parameter(
         },
         oracle_and_realization_basic=True,
         oracle_standard=True,
-        review_oracle_standard=True,
+        oracle_review_standard=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

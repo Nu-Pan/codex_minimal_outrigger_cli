@@ -16,7 +16,7 @@
 
 1. doctor preprocess を呼び出す
 2. oracle file の最終状態に関するユーザー指示をエディタから受け取る
-3. `build_edit_oracle_launch_tui_parameter` で TUI 起動パラメータを構築する
+3. `build_oracle_edit_launch_tui_parameter` で TUI 起動パラメータを構築する
 4. 構築したパラメータで Codex CLI の TUI を起動する
 
 ## ユーザー指示の入力
@@ -35,8 +35,8 @@
 
 ## TUI 起動パラメータ
 
-- TUI に渡す prompt と agent call parameter の詳細は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/edit/oracle/launch_tui.py` の `build_edit_oracle_launch_tui_parameter` を正本とし、この文書では重ねて定義しない
-- `build_edit_oracle_launch_tui_parameter` が返したパラメータを変更せずに TUI 起動へ渡す
+- TUI に渡す prompt と agent call parameter の詳細は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_tui.py` の `build_oracle_edit_launch_tui_parameter` を正本とし、この文書では重ねて定義しない
+- `build_oracle_edit_launch_tui_parameter` が返したパラメータを変更せずに TUI 起動へ渡す
 - `cmoc tui` のような実行パラメータ決定用 agent call は行わない
 
 ## Codex CLI の起動

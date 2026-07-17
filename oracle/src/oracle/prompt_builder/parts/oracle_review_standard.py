@@ -8,7 +8,7 @@ from oracle.other.standard import (
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_review_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
+def build_oracle_review_standard() -> tuple[PlaceholderMap, StructDoc]:
     """
     `cmoc oracle review` における「所見を列挙する作業」の規範文章を構築する
     """

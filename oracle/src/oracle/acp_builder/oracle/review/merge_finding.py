@@ -15,7 +15,7 @@ from oracle.acp_builder.basic import (
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_review_oracle_merge_finding_parameter(
+def build_oracle_review_merge_finding_parameter(
     findings: str,
 ) -> AgentCallParameter:
     """
@@ -46,7 +46,7 @@ def build_review_oracle_merge_finding_parameter(
             "{{oracle-root}}": resolve_real_path("{{work-root}}/oracle"),
         },
         oracle_standard=True,
-        review_oracle_standard=True,
+        oracle_review_standard=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

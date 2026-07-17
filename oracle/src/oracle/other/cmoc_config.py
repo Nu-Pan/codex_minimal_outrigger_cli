@@ -38,8 +38,8 @@ class CmocConfig:
     )
 
     # `cmoc oracle review` サブコマンドの挙動設定
-    review_oracle: "CmocConfigReviewOracle" = field(
-        default_factory=lambda: CmocConfigReviewOracle()
+    oracle_review: "CmocConfigOracleReview" = field(
+        default_factory=lambda: CmocConfigOracleReview()
     )
 
 
@@ -104,7 +104,7 @@ class CmocConfigApplyFork:
 
 
 @dataclass(frozen=True)
-class CmocConfigReviewOracle:
+class CmocConfigOracleReview:
     """
     `cmoc oracle review` サブコマンドの挙動に関する設定を集約したクラス
     """

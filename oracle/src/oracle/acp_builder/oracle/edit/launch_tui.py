@@ -12,7 +12,7 @@ from oracle.acp_builder.basic import (
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_edit_oracle_launch_tui_parameter(
+def build_oracle_edit_launch_tui_parameter(
     time_stamp: str,
     user_instruction: str,
 ) -> AgentCallParameter:

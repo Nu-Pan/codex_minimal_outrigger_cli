@@ -71,7 +71,7 @@ def build_tui_resolve_parameter_parameter(
         oracle_and_realization_basic=True,
         oracle_standard=True,
         realization_standard=True,
-        review_oracle_standard=True,
+        oracle_review_standard=True,
         apply_review_standard=True,
         index_entry_standard=True,
     )

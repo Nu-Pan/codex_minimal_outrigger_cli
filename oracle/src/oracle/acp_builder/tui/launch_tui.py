@@ -25,7 +25,7 @@ def build_tui_launch_tui_parameter(
     oracle_and_realization_basic: bool,
     oracle_standard: bool,
     realization_standard: bool,
-    review_oracle_standard: bool,
+    oracle_review_standard: bool,
     apply_review_standard: bool,
     index_entry_standard: bool,
 ) -> AgentCallParameter:
@@ -42,7 +42,7 @@ def build_tui_launch_tui_parameter(
     oracle_and_realization_basic: bool
     oracle_standard: bool
     realization_standard: bool
-    review_oracle_standard: bool
+    oracle_review_standard: bool
     apply_review_standard: bool
     index_entry_standard: bool
         関数 `build_complete_prompt` の docstring を参照
@@ -66,7 +66,7 @@ def build_tui_launch_tui_parameter(
         oracle_and_realization_basic=oracle_and_realization_basic,
         oracle_standard=oracle_standard,
         realization_standard=realization_standard,
-        review_oracle_standard=review_oracle_standard,
+        oracle_review_standard=oracle_review_standard,
         apply_review_standard=apply_review_standard,
         index_entry_standard=index_entry_standard,
     )

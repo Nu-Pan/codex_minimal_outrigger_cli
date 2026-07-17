@@ -15,7 +15,7 @@ from oracle.acp_builder.basic import (
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_review_oracle_validate_finding_challenger_parameter(
+def build_oracle_review_validate_finding_challenger_parameter(
     finding: str,
     known_advocate_reasons: str,
     known_challenger_reasons: str,
@@ -69,7 +69,7 @@ def build_review_oracle_validate_finding_challenger_parameter(
             "oracle-root": resolve_real_path("{{work-root}}/oracle"),
         },
         oracle_standard=True,
-        review_oracle_standard=True,
+        oracle_review_standard=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(
