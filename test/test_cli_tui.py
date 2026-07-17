@@ -61,7 +61,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
             "oracle_and_realization_basic": {"value": True, "reason": "needed"},
             "oracle_standard": {"value": False, "reason": "not needed"},
             "realization_standard": {"value": True, "reason": "needed"},
-            "review_oracle_standard": {"value": False, "reason": "not needed"},
+            "oracle_review_standard": {"value": False, "reason": "not needed"},
             "apply_review_standard": {"value": False, "reason": "not needed"},
             "index_entry_standard": {"value": False, "reason": "not needed"},
         }
@@ -100,15 +100,17 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert result.exit_code == 0
     assert len(exec_calls) == 1
     assert len(tui_calls) == 1
-    orig_files = list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))
+    orig_files = list(
+        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_orig.md")
+    )
     assert len(orig_files) == 1
     original_prompt = orig_files[0].read_text()
     assert "基本的な考え方は以下の通り" in original_prompt
-    assert "手順の過剰固定" in original_prompt
-    assert "# 目的" in original_prompt
-    assert "# 裁量範囲" in original_prompt
+    assert "解き方の指示は最小限度" in original_prompt
+    assert "# ゴール" in original_prompt
+    assert "# 制約境界" in original_prompt
     complete_files = list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md")
+        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
     assert len(complete_files) == 1
     complete_prompt = complete_files[0].read_text()
@@ -129,7 +131,9 @@ def test_tui_uses_default_file_access_mode_for_empty_resolved_value(
     """空の解決値が TUI の readonly 既定値へ戻ることを検証する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    (root / ".cmoc" / "gu" / "ar" / "log" / "tui").mkdir(parents=True, exist_ok=True)
+    (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").mkdir(
+        parents=True, exist_ok=True
+    )
     parameter = tui_module.build_tui_codex_parameter(
         "確認して下さい。",
         {"file_access_mode": {"value": "", "reason": "default accepted"}},
@@ -178,7 +182,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
             "    'oracle_and_realization_basic',",
             "    'oracle_standard',",
             "    'realization_standard',",
-            "    'review_oracle_standard',",
+            "    'oracle_review_standard',",
             "    'apply_review_standard',",
             "    'index_entry_standard',",
             "]}",
@@ -208,12 +212,21 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     assert tui_calls[0][1]["root"] == root.resolve()
     assert tui_calls[0][1]["cwd"] == linked.resolve()
     assert (
-        len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))) == 1
+        len(
+            list(
+                (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob(
+                    "*_orig.md"
+                )
+            )
+        )
+        == 1
     )
     complete_files = list(
-        (root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md")
+        (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
-    assert not list((linked / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))
+    assert not list(
+        (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
+    )
     assert len(complete_files) == 1
     assert str(complete_files[0]) in tui_calls[0][0].prompt
     assert "extra_read_paths" not in tui_calls[0][1]
@@ -273,11 +286,27 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
         == 1
     )
     assert (
-        len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_orig.md"))) == 1
+        len(
+            list(
+                (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob(
+                    "*_orig.md"
+                )
+            )
+        )
+        == 1
     )
     assert (
-        len(list((root / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))) == 1
+        len(
+            list(
+                (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob(
+                    "*_cmpl.md"
+                )
+            )
+        )
+        == 1
     )
-    assert not list((linked / ".cmoc" / "gu" / "ar" / "log" / "tui").glob("*_cmpl.md"))
+    assert not list(
+        (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
+    )
     assert run_git(root, "status", "--short", "--", ".cmoc/gu").stdout.strip() == ""
     assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""

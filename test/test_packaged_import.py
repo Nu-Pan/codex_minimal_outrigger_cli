@@ -34,15 +34,15 @@ def _run_from_packaged_layout(
     )
 
 
-def test_review_oracle_enumerate_builder_imports_from_packaged_layout(
+def test_oracle_review_enumerate_builder_imports_from_packaged_layout(
     tmp_path: Path,
 ) -> None:
-    """review oracle builder の packaged import と出力契約を検証する。
+    """oracle review builder の packaged import と出力契約を検証する。
 
     正本 builder が packaged layout でも schema と prompt を参照し、期待する
     parameter を生成できることを確認する。
-    根拠: {{work-root}}/oracle/src/oracle/acp_builder/review/oracle/enumerate_finding.py
-    {{work-root}}/oracle/src/oracle/acp_builder/review/oracle/enumerate_finding.json
+    根拠: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.py
+    {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.json
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
     root = Path(__file__).parents[1]
@@ -62,13 +62,38 @@ def test_review_oracle_enumerate_builder_imports_from_packaged_layout(
         (
             "import json; "
             "from pathlib import Path; "
-            "from acp.builder.review.oracle.enumerate_finding import "
-            "build_review_oracle_enumerate_finding_parameter as build; "
+            "from acp.builder.oracle.review.enumerate_finding import "
+            "build_oracle_review_enumerate_finding_parameter as build; "
             "p = build(Path('{{work-root}}/oracle/spec.md'), '[]'); "
             "assert p.structured_output_schema_path.name == 'enumerate_finding.json'; "
             "schema = json.loads(p.structured_output_schema_path.read_text()); "
             "assert schema['required'] == ['findings']; "
-            "assert '# review oracle standard' in p.prompt"
+            "assert '# oracle review standard' in p.prompt"
+        ),
+        tmp_path,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_oracle_edit_builder_imports_from_packaged_layout(tmp_path: Path) -> None:
+    """oracle edit adapter が packaged layout で完全 prompt を保存する。"""
+    root = Path(__file__).parents[1]
+    target = tmp_path / "site"
+    for package in ("acp", "basic", "commons"):
+        shutil.copytree(root / "src" / package, target / package)
+    shutil.copytree(root / "oracle" / "src" / "oracle", target / "oracle")
+
+    result = _run_from_packaged_layout(
+        target,
+        (
+            "from acp.builder.oracle.edit.launch_tui import "
+            "build_oracle_edit_launch_tui_parameter as build; "
+            "p = build('2026-07-18_00-00-00_000000000', 'oracle を編集する'); "
+            "assert p.structured_output_schema_path is None; "
+            "assert p.file_access_mode.value == 'pure_oracle_write'; "
+            "path = p.prompt.split(' を読んで', 1)[0]; "
+            "assert 'oracle を編集する' in open(path, encoding='utf-8').read()"
         ),
         tmp_path,
     )
@@ -123,7 +148,7 @@ def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
         (
             "import config.cmoc_config as c; "
             "expected = ['CmocConfig', 'CmocConfigApplyFork', "
-            "'CmocConfigCodex', 'CmocConfigReviewOracle']; "
+            "'CmocConfigCodex', 'CmocConfigOracleReview']; "
             "assert c.__all__ == expected; "
             "assert sorted(n for n in vars(c) if not n.startswith('_')) == expected"
         ),

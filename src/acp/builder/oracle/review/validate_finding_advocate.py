@@ -1,14 +1,14 @@
 from dataclasses import replace
 
 from oracle.acp_builder.basic import AgentCallParameter as _AgentCallParameter
-from oracle.acp_builder.review.oracle.validate_finding_advocate import (
-    build_review_oracle_validate_finding_advocate_parameter as _build_parameter,
+from oracle.acp_builder.oracle.review.validate_finding_advocate import (
+    build_oracle_review_validate_finding_advocate_parameter as _build_parameter,
 )
 
-__all__ = ["build_review_oracle_validate_finding_advocate_parameter"]
+__all__ = ["build_oracle_review_validate_finding_advocate_parameter"]
 
 
-def build_review_oracle_validate_finding_advocate_parameter(
+def build_oracle_review_validate_finding_advocate_parameter(
     finding: str,
     known_advocate_reasons: str,
     known_challenger_reasons: str,
@@ -27,7 +27,7 @@ def build_review_oracle_validate_finding_advocate_parameter(
 
 def _fix_oracle_root_goal_typo(prompt: str) -> str:
     """canonical promptに残るoracle root placeholderのtypoを一箇所だけ補正する。"""
-    # Oracle: {{work-root}}/oracle/src/oracle/acp_builder/review/oracle/validate_finding_advocate.py
+    # Oracle: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.py
     # {{work-root}}/oracle/doc/app_spec/prompt_standard.md は oracle src の static goal typo
     # に必要な最小 correction だけを許可する。finding と known reason は dynamic input
     # なので byte-for-byte で保持する。

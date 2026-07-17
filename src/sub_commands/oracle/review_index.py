@@ -29,7 +29,7 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
     return False
 
 
-# {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md は、
+# {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md は、
 # {{work-root}}/oracle/doc/app_spec/indexing.md の preflight が作った INDEX commit
 # も含め、隔離終了時に review branch を merge することを求めている。
 def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> bool:

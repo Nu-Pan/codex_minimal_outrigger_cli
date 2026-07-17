@@ -152,7 +152,7 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
         parameter,
         root=root,
         cwd=codex_cwd,
-        purpose="review oracle enumerate findings",
+        purpose="oracle review enumerate findings",
     )
 
     assert isinstance(result, FakeCodexResult)

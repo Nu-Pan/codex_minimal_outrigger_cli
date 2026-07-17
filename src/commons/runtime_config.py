@@ -11,7 +11,7 @@ from config.cmoc_config import (
     CmocConfig,
     CmocConfigApplyFork,
     CmocConfigCodex,
-    CmocConfigReviewOracle,
+    CmocConfigOracleReview,
 )
 
 ConfigKey = TypeVar("ConfigKey", ModelClass, ReasoningEffort)
@@ -37,10 +37,10 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
         "apply_fork": {
             "num_apply_files": config.apply_fork.num_apply_files,
         },
-        "review_oracle": {
-            "num_enumerate_findings_loop": config.review_oracle.num_enumerate_findings_loop,
-            "num_merge_findings_loop": config.review_oracle.num_merge_findings_loop,
-            "num_validate_findings_loop": config.review_oracle.num_validate_findings_loop,
+        "oracle_review": {
+            "num_enumerate_findings_loop": config.oracle_review.num_enumerate_findings_loop,
+            "num_merge_findings_loop": config.oracle_review.num_merge_findings_loop,
+            "num_validate_findings_loop": config.oracle_review.num_validate_findings_loop,
         },
     }
 
@@ -124,7 +124,7 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
         )
 
         apply_fork_data = _section(data, "apply_fork")
-        review_oracle_data = _section(data, "review_oracle")
+        oracle_review_data = _section(data, "oracle_review")
 
         return CmocConfig(
             num_parallel=_int_value(data, "num_parallel", default.num_parallel),
@@ -144,21 +144,21 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
                     default.apply_fork.num_apply_files,
                 ),
             ),
-            review_oracle=CmocConfigReviewOracle(
+            oracle_review=CmocConfigOracleReview(
                 num_enumerate_findings_loop=_int_value(
-                    review_oracle_data,
+                    oracle_review_data,
                     "num_enumerate_findings_loop",
-                    default.review_oracle.num_enumerate_findings_loop,
+                    default.oracle_review.num_enumerate_findings_loop,
                 ),
                 num_merge_findings_loop=_int_value(
-                    review_oracle_data,
+                    oracle_review_data,
                     "num_merge_findings_loop",
-                    default.review_oracle.num_merge_findings_loop,
+                    default.oracle_review.num_merge_findings_loop,
                 ),
                 num_validate_findings_loop=_int_value(
-                    review_oracle_data,
+                    oracle_review_data,
                     "num_validate_findings_loop",
-                    default.review_oracle.num_validate_findings_loop,
+                    default.oracle_review.num_validate_findings_loop,
                 ),
             ),
         )

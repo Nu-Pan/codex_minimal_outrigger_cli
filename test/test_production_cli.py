@@ -58,6 +58,7 @@ PRODUCTION_SCENARIO_COMMANDS = {
     ("doctor",),
     ("eval-oracle",),
     ("indexing",),
+    ("oracle", "edit"),
     ("oracle", "review"),
     ("session", "abandon"),
     ("session", "fork"),
@@ -129,8 +130,8 @@ def _write_local_slm_config(root: Path) -> None:
             reasoning_effort={effort: "low" for effort in ReasoningEffort},
         ),
         apply_fork=replace(config.apply_fork, num_apply_files=1),
-        review_oracle=replace(
-            config.review_oracle,
+        oracle_review=replace(
+            config.oracle_review,
             num_enumerate_findings_loop=1,
             num_merge_findings_loop=1,
             num_validate_findings_loop=1,
@@ -322,14 +323,15 @@ def _run_cmoc_tui(
     root: Path,
     environment: dict[str, str],
     codex_home: Path,
+    *args: str,
 ) -> tuple[str, str]:
-    """PTY 上の TUI 応答完了を待ち、二度の Ctrl-C で正常終了する。"""
+    """指定した cmoc TUI 経路を PTY 上で応答完了まで実行する。"""
     # Codex TUI は terminal を必須とするため、24x100 の実 PTY を渡す。
     master_fd, slave_fd = pty.openpty()
     fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 100, 0, 0))
     os.set_blocking(master_fd, False)
     process = subprocess.Popen(
-        [str(cmoc), "tui"],
+        [str(cmoc), *args],
         cwd=root,
         env=environment,
         stdin=slave_fd,
@@ -429,7 +431,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     _run_without_codex_call(cmoc, root, environment, "session", "fork")
     session_branch = current_branch(root)
     assert session_branch.startswith("cmoc/session/")
-    review_dir = root / ".cmoc" / "gu" / "ar" / "report" / "review_oracle"
+    review_dir = root / ".cmoc" / "gu" / "ar" / "report" / "oracle_review"
     review_reports = set(review_dir.glob("*.md"))
     _run_without_codex_call(cmoc, root, environment, "oracle", "review")
     review_report = next(iter(set(review_dir.glob("*.md")) - review_reports))
@@ -486,9 +488,21 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     )
 
 
+@pytest.mark.parametrize(
+    ("command", "tui_purpose", "expects_resolver"),
+    [
+        (("tui",), "tui codex", True),
+        (("oracle", "edit"), "oracle edit codex", False),
+    ],
+)
 @pytest.mark.timeout(300)
-def test_tui_uses_real_codex_response_over_production_pty(tmp_path: Path) -> None:
-    """TUI を PTY 上で起動し、実 local SLM response 後まで完了する。"""
+def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
+    tmp_path: Path,
+    command: tuple[str, ...],
+    tui_purpose: str,
+    expects_resolver: bool,
+) -> None:
+    """全 TUI 末端を実 local SLM response 後まで本番経路で完了する。"""
     root = make_repo(tmp_path)
     _write_local_slm_config(root)
     cmoc, environment, codex_home = _production_environment(tmp_path)
@@ -499,18 +513,26 @@ def test_tui_uses_real_codex_response_over_production_pty(tmp_path: Path) -> Non
     calls_before = _codex_call_logs(root)
 
     # editor 自動化以外は、本番と同じ TUI、Codex executable、provider を使う。
-    response, transcript = _run_cmoc_tui(cmoc, root, environment, codex_home)
+    response, transcript = _run_cmoc_tui(
+        cmoc,
+        root,
+        environment,
+        codex_home,
+        *command,
+    )
     assert response.strip()
     assert "Shutting down" in transcript
     new_calls = _codex_call_logs(root) - calls_before
     tui_calls = {path for path in new_calls if path.name.endswith("_tui_call.json")}
     exec_calls = new_calls - tui_calls
     assert len(tui_calls) == 1
-    assert exec_calls
-    _assert_local_codex_call(next(iter(tui_calls)), tui=True)
-    assert any(
+    tui_payload = _assert_local_codex_call(next(iter(tui_calls)), tui=True)
+    assert tui_payload["purpose"] == tui_purpose
+    has_tui_resolver = any(
         _assert_local_codex_call(path).get("purpose") == "tui resolve parameter"
         for path in exec_calls
     )
+    assert has_tui_resolver is expects_resolver
+    assert bool(exec_calls) is expects_resolver
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert run_git(root, "status", "--short").stdout == status_before

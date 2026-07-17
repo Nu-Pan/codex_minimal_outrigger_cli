@@ -6,7 +6,7 @@
 - {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/indexing.md
 - {{work-root}}/oracle/doc/app_spec/indexing.md
 - {{work-root}}/oracle/doc/app_spec/misc_spec.md

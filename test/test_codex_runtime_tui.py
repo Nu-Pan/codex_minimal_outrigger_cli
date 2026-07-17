@@ -44,7 +44,9 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     """PURE_ORACLE_READ で完成済み prompt を読み、CLI 引数を制約どおり渡すことを確認する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    prompt_path = root / ".cmoc" / "gu" / "ar" / "log" / "tui" / "20260101_cmpl.md"
+    prompt_path = (
+        root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / "20260101_cmpl.md"
+    )
     prompt_path.parent.mkdir(parents=True)
     prompt_path.write_text("complete prompt\n")
     bin_dir = tmp_path / "bin"
@@ -100,7 +102,9 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-tui-runtime", str(linked), "HEAD")
-    prompt_path = root / ".cmoc" / "gu" / "ar" / "log" / "tui" / "20260101_cmpl.md"
+    prompt_path = (
+        root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / "20260101_cmpl.md"
+    )
     prompt_path.parent.mkdir(parents=True)
     prompt_path.write_text("complete prompt\n")
     bin_dir = tmp_path / "bin"

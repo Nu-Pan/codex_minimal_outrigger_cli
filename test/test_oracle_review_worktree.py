@@ -1,6 +1,6 @@
-"""review oracle の worktree と INDEX 統合を検証する。
+"""oracle review の worktree と INDEX 統合を検証する。
 
-仕様根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md、
+仕様根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md、
 {{work-root}}/oracle/doc/app_spec/run_isolation.md、
 {{work-root}}/oracle/doc/branch_model.md、
 {{work-root}}/oracle/doc/app_spec/indexing.md。
@@ -16,14 +16,14 @@ from _ollama_support import run_doctor
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
-import sub_commands.review.oracle as review_module
+import sub_commands.oracle.review as review_module
 from main import app
 
 
 class _FakeCodexResult:
-    """review oracle が読む構造化出力だけを保持する fake。
+    """oracle review が読む構造化出力だけを保持する fake。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
 
     def __init__(self, output_json: dict[str, object]) -> None:
@@ -31,7 +31,7 @@ class _FakeCodexResult:
         self.output_json = output_json
 
 
-def test_review_oracle_uses_linked_worktree_branch_and_oracle(
+def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree の session branch と oracle を review 対象にする。
@@ -59,7 +59,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         """finding 列挙の応答と review worktree を記録する。
 
-        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md。
+        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
         """
 
         review_worktrees.append(Path.cwd())
@@ -101,7 +101,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
         ("README.md", "dirty\n"),
     ],
 )
-def test_review_oracle_rejects_uncommitted_worktree_changes(
+def test_oracle_review_rejects_uncommitted_worktree_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     relative_path: str,
@@ -109,7 +109,7 @@ def test_review_oracle_rejects_uncommitted_worktree_changes(
 ) -> None:
     """session fork 後に未コミット差分がある worktree を拒否する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md。
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
     """
 
     root = make_repo(tmp_path)
@@ -127,12 +127,12 @@ def test_review_oracle_rejects_uncommitted_worktree_changes(
     assert relative_path in result.output
 
 
-def test_review_oracle_merges_review_index_changes(
+def test_oracle_review_merges_review_index_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """review worktree で生成された INDEX.md だけを session に統合する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md、
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md、
     {{work-root}}/oracle/doc/app_spec/indexing.md。
     """
 
@@ -152,7 +152,7 @@ def test_review_oracle_merges_review_index_changes(
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         """finding 検証を空結果にし、review worktree の INDEX を更新する。
 
-        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md、
+        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md、
         {{work-root}}/oracle/doc/app_spec/indexing.md。
         """
 
@@ -192,7 +192,7 @@ def test_review_oracle_merges_review_index_changes(
     assert all(not path.exists() for path in review_worktrees)
 
 
-def test_review_oracle_merges_preflight_committed_index_changes(
+def test_oracle_review_merges_preflight_committed_index_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """preflight が review worktree にコミットした INDEX.md を統合する。
@@ -225,7 +225,7 @@ def test_review_oracle_merges_preflight_committed_index_changes(
     def fake_runtime_run_codex_exec(parameter: object, **kwargs: object) -> object:
         """preflight 中の finding 列挙を空結果に置き換える。
 
-        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md。
+        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
         """
 
         schema_name = parameter.structured_output_schema_path.name
@@ -255,12 +255,12 @@ def test_review_oracle_merges_preflight_committed_index_changes(
     assert "review_join_commit: null" not in rendered
 
 
-def test_review_oracle_resolves_index_conflict_when_session_deleted_index(
+def test_oracle_review_resolves_index_conflict_when_session_deleted_index(
     tmp_path: Path,
 ) -> None:
     """session 側で削除された INDEX.md の merge conflict を解決する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md。
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
     """
 
     root = make_repo(tmp_path)
@@ -293,14 +293,14 @@ def test_review_oracle_resolves_index_conflict_when_session_deleted_index(
 
 
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])
-def test_review_oracle_rejects_non_index_worktree_changes(
+def test_oracle_review_rejects_non_index_worktree_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     change_kind: str,
 ) -> None:
     """review worktree が INDEX.md 以外を変更した場合に失敗させる。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md、
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md、
     {{work-root}}/oracle/doc/app_spec/indexing.md。
     """
 
@@ -314,7 +314,7 @@ def test_review_oracle_rejects_non_index_worktree_changes(
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         """finding 列挙時に指定された種類の不正な差分を作る。
 
-        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md。
+        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
         """
 
         schema_name = parameter.structured_output_schema_path.name

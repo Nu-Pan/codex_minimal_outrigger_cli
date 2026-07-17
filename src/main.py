@@ -16,7 +16,8 @@ from sub_commands.apply.join import cmoc_apply_join_impl
 from sub_commands.doctor import cmoc_doctor_impl
 from sub_commands.eval_oracle import cmoc_eval_oracle_impl
 from sub_commands.indexing import cmoc_indexing_impl
-from sub_commands.review.oracle import cmoc_review_oracle_impl
+from sub_commands.oracle.edit import cmoc_oracle_edit_impl
+from sub_commands.oracle.review import cmoc_oracle_review_impl
 from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
 from sub_commands.session.join import cmoc_session_join_impl
@@ -31,8 +32,8 @@ class ApplyForkScope(str, Enum):
     full = "full"
 
 
-class ReviewOracleScope(str, Enum):
-    """review oracle の調査対象範囲を CLI option 値として表す。"""
+class OracleReviewScope(str, Enum):
+    """oracle review の調査対象範囲を CLI option 値として表す。"""
 
     session = "session"
     full = "full"
@@ -168,17 +169,24 @@ def apply_abandon() -> None:
 
 
 @oracle_app.command("review")
-def review_oracle(
-    scope: ReviewOracleScope = typer.Option(ReviewOracleScope.session, "--scope", "-s"),
+def oracle_review(
+    scope: OracleReviewScope = typer.Option(OracleReviewScope.session, "--scope", "-s"),
 ) -> None:
     """oracle review を隔離 worktree で実行する CLI 入口。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
-    cmoc_review_oracle_impl(scope.value)
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    cmoc_oracle_review_impl(scope.value)
+
+
+@oracle_app.command("edit")
+def oracle_edit() -> None:
+    """oracle の最終状態を Codex TUI で編集する CLI 入口。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+    cmoc_oracle_edit_impl()
 
 
 @app.command("eval-oracle")
 def eval_oracle(
-    scope: ReviewOracleScope = typer.Option(ReviewOracleScope.session, "--scope", "-s"),
+    scope: OracleReviewScope = typer.Option(OracleReviewScope.session, "--scope", "-s"),
 ) -> None:
     """want を書き出した oracle を AI review する CLI 入口。"""
     # {{work-root}}/oracle/doc/considered_alternative/working_plan_review.md

@@ -9,12 +9,12 @@ from oracle.other.cmoc_config import (
     CmocConfig,
     CmocConfigApplyFork,
     CmocConfigCodex,
-    CmocConfigReviewOracle,
+    CmocConfigOracleReview,
 )
 
 __all__ = [
     "CmocConfig",
     "CmocConfigApplyFork",
     "CmocConfigCodex",
-    "CmocConfigReviewOracle",
+    "CmocConfigOracleReview",
 ]

@@ -1,11 +1,11 @@
-# {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+# {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 from pathlib import Path
 
 from cmoc_runtime import SessionState, reports_dir, timestamp
-from sub_commands.review_paths import finding_oracle_path, oracle_path_key
+from sub_commands.oracle.review_paths import finding_oracle_path, oracle_path_key
 
 
-def write_review_oracle_report(
+def write_oracle_review_report(
     root: Path,
     scope: str,
     session_branch: str,
@@ -37,13 +37,13 @@ def write_review_oracle_report(
     Returns:
         作成した report file の path。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
-    report_dir = reports_dir(root, "review_oracle")
+    report_dir = reports_dir(root, "oracle_review")
     report_dir.mkdir(parents=True, exist_ok=True)
     report_path = report_dir / f"{timestamp()}.md"
     report_path.write_text(
-        render_review_oracle_report(
+        render_oracle_review_report(
             root,
             scope,
             session_branch,
@@ -61,7 +61,7 @@ def write_review_oracle_report(
     return report_path
 
 
-def render_review_oracle_report(
+def render_oracle_review_report(
     root: Path,
     scope: str,
     session_branch: str,
@@ -76,10 +76,10 @@ def render_review_oracle_report(
     *,
     interrupted: bool = False,
 ) -> str:
-    """review oracle report を Markdown と YAML frontmatter で描画する。
+    """oracle review report を Markdown と YAML frontmatter で描画する。
 
     レポートの frontmatter、必須セクション、所見の表示順をまとめて生成する。
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
@@ -161,7 +161,7 @@ def _findings_with(findings: list[dict], severity: str) -> list[dict]:
     Returns:
         指定 severity に一致する所見のリスト。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     return [finding for finding in findings if finding.get("severity") == severity]
 
@@ -175,7 +175,7 @@ def _render_finding_group(title: str, findings: list[dict]) -> str:
     Returns:
         見出しと所見一覧を結合した Markdown。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     return "\n".join([f"### {title}", render_finding_section(findings)])
 
@@ -195,9 +195,9 @@ def _render_ordered_finding_tail(
         3 つの finding group を順序どおりに結合した Markdown。
 
     Fatal/Minor の H2 節順を保ったまま、所見の採否・severity 順を維持する。
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
-    # {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md は finding detail
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md は finding detail
     # stream を verdict 順にし、同時に Fatal と Minor の H2 anchor もその順にすることを求める。
     return "\n".join(
         [
@@ -227,7 +227,7 @@ def _review_report_verdict(
         result と本文の verdict を組み合わせた tuple。
 
     エラー、対象なし、fatal、minor、問題なしの優先順位で判定する。
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     if error_message is not None:
         return (
@@ -264,7 +264,7 @@ def _render_frontmatter_field(name: str, value: object) -> str:
         name: value 形式の frontmatter 行。
 
     None を YAML の null として出力し、不明な実行情報も項目として保持する。
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     return f"{name}: {'null' if value is None else value}"
 
@@ -278,7 +278,7 @@ def render_finding_section(findings: list[dict]) -> str:
         所見が無ければ なし、それ以外は finding ごとの Markdown 行。
 
     各行に finding ID、判定、タイトル、理由を含める。
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     if not findings:
         return "なし"
@@ -297,7 +297,7 @@ def render_finding_section(findings: list[dict]) -> str:
 def path_display(root: Path, path: Path) -> str:
     """report 内の oracle file 表示名を repository-relative key に揃える。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     key = oracle_path_key(root, path)
     if key is not None:

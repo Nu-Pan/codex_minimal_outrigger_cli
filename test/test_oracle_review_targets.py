@@ -1,9 +1,9 @@
-"""review oracle の finding path と対象列挙を検証する。
+"""oracle review の finding path と対象列挙を検証する。
 
 根拠:
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
-- {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/dev_rule/coding_rule.md
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md
 """
@@ -15,15 +15,15 @@ from _cli_support import runner
 from _git_support import add_tracked_ignored_oracle_file, make_repo, run_git
 from _ollama_support import run_doctor
 
-import sub_commands.review.oracle as review_module
+import sub_commands.oracle.review as review_module
 from cmoc_runtime import SessionState
 from main import app
-from sub_commands.review_paths import finding_oracle_path, oracle_path_key
-from sub_commands.review_targets import enumerate_review_all_oracle_files
+from sub_commands.oracle.review_paths import finding_oracle_path, oracle_path_key
+from sub_commands.oracle.review_targets import enumerate_review_all_oracle_files
 
 
 class _FakeCodexResult:
-    """Structured Output payload だけを保持する review oracle fake。"""
+    """Structured Output payload だけを保持する oracle review fake。"""
 
     def __init__(self, output_json: dict[str, object]) -> None:
         """Codex fake が返す JSON payload を保存する。"""
@@ -88,7 +88,7 @@ def test_oracle_path_key_rejects_external_oracle_suffix(tmp_path: Path) -> None:
     assert oracle_path_key(root, external) is None
 
 
-def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
+def test_oracle_review_full_scope_keeps_tracked_ignored_oracle_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -152,12 +152,12 @@ def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     assert "oracle/untracked-ignored.md" not in rendered
     assert "memo/oracle/draft.md" not in rendered
     enumerate_calls = [
-        call for call in calls if call.startswith("review oracle enumerate findings")
+        call for call in calls if call.startswith("oracle review enumerate findings")
     ]
     assert len(enumerate_calls) == 6
 
 
-def test_review_oracle_session_scope_reports_total_and_no_targets(
+def test_oracle_review_session_scope_reports_total_and_no_targets(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -194,7 +194,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     assert "レビュー対象 oracle が 0 件でした。" in rendered
 
 
-def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
+def test_oracle_review_session_scope_keeps_changed_tracked_ignored_oracle_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -234,7 +234,7 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
 
     assert result.exit_code == 0
     enumerate_calls = [
-        call for call in calls if call.startswith("review oracle enumerate findings")
+        call for call in calls if call.startswith("oracle review enumerate findings")
     ]
     assert len(enumerate_calls) == 2
     rendered = Path(
@@ -246,7 +246,7 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     assert "`oracle/ignored.md`" in rendered
 
 
-def test_review_oracle_session_scope_uses_review_fork_commit(
+def test_oracle_review_session_scope_uses_review_fork_commit(
     tmp_path: Path,
 ) -> None:
     """session scope の差分終点は実行時 HEAD ではなく review fork commit に固定する。"""
@@ -263,14 +263,14 @@ def test_review_oracle_session_scope_uses_review_fork_commit(
     run_git(root, "add", "oracle/after.md")
     run_git(root, "commit", "-m", "after review fork")
 
-    targets = review_module.enumerate_review_oracle_targets(
+    targets = review_module.enumerate_oracle_review_targets(
         root, "session", state, review_fork_commit
     )
 
     assert targets == [(root / "oracle" / "fork.md").resolve()]
 
 
-def test_review_oracle_target_enumeration_excludes_agents_and_index(
+def test_oracle_review_target_enumeration_excludes_agents_and_index(
     tmp_path: Path,
 ) -> None:
     """oracle file 定義から外れる AGENTS.md と INDEX.md をレビュー対象にしない。"""
@@ -285,7 +285,7 @@ def test_review_oracle_target_enumeration_excludes_agents_and_index(
     assert enumerate_review_all_oracle_files(root) == [spec.resolve()]
 
 
-def test_review_oracle_target_enumeration_classifies_oracle_symlink_by_repo_path(
+def test_oracle_review_target_enumeration_classifies_oracle_symlink_by_repo_path(
     tmp_path: Path,
 ) -> None:
     """oracle 配下 symlink は link 先ではなく repository path で分類する。"""

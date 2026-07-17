@@ -1,8 +1,8 @@
-"""review oracle の finding loop を検証する。
+"""oracle review の finding loop を検証する。
 
 テストの根拠:
 
-- {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md
 - {{work-root}}/oracle/doc/dev_rule/coding_rule.md
@@ -14,10 +14,10 @@ from pathlib import Path
 import pytest
 from _git_support import make_repo
 
-import sub_commands.review.oracle as review_module
-import sub_commands.review_loop as review_loop_module
+import sub_commands.oracle.review as review_module
+import sub_commands.oracle.review_loop as review_loop_module
 from cmoc_runtime import CmocError
-from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
+from config.cmoc_config import CmocConfig, CmocConfigOracleReview
 
 
 class _FakeCodexResult:
@@ -39,7 +39,7 @@ def _make_review_context(
     根拠:
 
     - {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    - {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     repo_root = make_repo(tmp_path)
     review_parent = tmp_path / "review"
@@ -57,7 +57,7 @@ def _assert_review_call_context(
 ) -> None:
     """review agent call が隔離 worktree を実行基準にすることを検証する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     assert Path.cwd() == review_worktree
     assert kwargs["root"] == repo_root
@@ -65,19 +65,19 @@ def _assert_review_call_context(
     assert getattr(parameter, "cwd") == review_worktree
 
 
-def test_review_oracle_enumerate_receives_only_related_findings(
+def test_oracle_review_enumerate_receives_only_related_findings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """対象 oracle ごとに関連する finding だけを次の prompt へ渡す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     repo_root, review_worktree = _make_review_context(tmp_path, monkeypatch)
     (review_worktree / "oracle" / "a.md").write_text("# a\n")
     (review_worktree / "oracle" / "b.md").write_text("# b\n")
     prompts_by_target: dict[str, list[str]] = {}
     config = CmocConfig(
-        review_oracle=CmocConfigReviewOracle(
+        oracle_review=CmocConfigOracleReview(
             num_enumerate_findings_loop=2,
             num_merge_findings_loop=0,
             num_validate_findings_loop=1,
@@ -93,7 +93,7 @@ def test_review_oracle_enumerate_receives_only_related_findings(
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             target = Path(
-                kwargs["purpose"].removeprefix("review oracle enumerate findings for ")
+                kwargs["purpose"].removeprefix("oracle review enumerate findings for ")
             ).name
             prompts_by_target.setdefault(target, []).append(parameter.prompt)
             if target == "a.md" and len(prompts_by_target[target]) == 1:
@@ -119,7 +119,7 @@ def test_review_oracle_enumerate_receives_only_related_findings(
             return _FakeCodexResult({"verdict": "reject", "reason": "no finding"})
         raise AssertionError(schema_name)
 
-    review_module.run_review_oracle_loop(
+    review_module.run_oracle_review_loop(
         repo_root,
         review_worktree,
         [review_worktree / "oracle" / "a.md", review_worktree / "oracle" / "b.md"],
@@ -131,18 +131,18 @@ def test_review_oracle_enumerate_receives_only_related_findings(
     assert "a finding" in prompts_by_target["a.md"][1]
 
 
-def test_review_oracle_advocate_receives_same_round_challenger_reasons(
+def test_oracle_review_advocate_receives_same_round_challenger_reasons(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """同じ検証周回で得た challenger reason を advocate prompt に渡す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     repo_root, review_worktree = _make_review_context(tmp_path, monkeypatch)
     advocate_prompts: list[str] = []
     config = CmocConfig(
-        review_oracle=CmocConfigReviewOracle(
+        oracle_review=CmocConfigOracleReview(
             num_enumerate_findings_loop=1,
             num_merge_findings_loop=0,
             num_validate_findings_loop=1,
@@ -178,7 +178,7 @@ def test_review_oracle_advocate_receives_same_round_challenger_reasons(
             return _FakeCodexResult({"verdict": "reject", "reason": "rejected"})
         raise AssertionError(schema_name)
 
-    review_module.run_review_oracle_loop(
+    review_module.run_oracle_review_loop(
         repo_root,
         review_worktree,
         [review_worktree / "oracle" / "spec.md"],
@@ -190,14 +190,14 @@ def test_review_oracle_advocate_receives_same_round_challenger_reasons(
     assert "same-round challenger reason" in advocate_prompts[0]
 
 
-def test_review_oracle_interrupt_keeps_only_completed_judgements(
+def test_oracle_review_interrupt_keeps_only_completed_judgements(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """judge 中断時は完了済み verdict だけを部分結果として保持する。"""
     repo_root, review_worktree = _make_review_context(tmp_path, monkeypatch)
     oracle_path = review_worktree / "oracle" / "spec.md"
     config = CmocConfig(
-        review_oracle=CmocConfigReviewOracle(
+        oracle_review=CmocConfigOracleReview(
             num_enumerate_findings_loop=1,
             num_merge_findings_loop=0,
             num_validate_findings_loop=1,
@@ -243,8 +243,8 @@ def test_review_oracle_interrupt_keeps_only_completed_judgements(
             return _FakeCodexResult({"verdict": "accept", "reason": "accepted"})
         raise AssertionError(schema_name)
 
-    with pytest.raises(review_loop_module.ReviewOracleInterrupted) as exc_info:
-        review_module.run_review_oracle_loop(
+    with pytest.raises(review_loop_module.OracleReviewInterrupted) as exc_info:
+        review_module.run_oracle_review_loop(
             repo_root,
             review_worktree,
             [oracle_path],
@@ -262,18 +262,18 @@ def test_review_oracle_interrupt_keeps_only_completed_judgements(
     assert purposes[-1].endswith("finding-0002")
 
 
-def test_review_oracle_advocate_keeps_existing_challenger_reasons(
+def test_oracle_review_advocate_keeps_existing_challenger_reasons(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """既存と同じ周回の challenger reason をともに保持して渡す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     repo_root, review_worktree = _make_review_context(tmp_path, monkeypatch)
     advocate_prompts: list[str] = []
     config = CmocConfig(
-        review_oracle=CmocConfigReviewOracle(
+        oracle_review=CmocConfigOracleReview(
             num_enumerate_findings_loop=1,
             num_merge_findings_loop=0,
             num_validate_findings_loop=1,
@@ -322,7 +322,7 @@ def test_review_oracle_advocate_keeps_existing_challenger_reasons(
     assert "same-round challenger reason" in advocate_prompts[0]
 
 
-def test_review_oracle_retries_semantic_merge_finding_failure(
+def test_oracle_review_retries_semantic_merge_finding_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -333,7 +333,7 @@ def test_review_oracle_retries_semantic_merge_finding_failure(
     repo_root, review_worktree = _make_review_context(tmp_path, monkeypatch)
     merge_calls = 0
     config = CmocConfig(
-        review_oracle=CmocConfigReviewOracle(
+        oracle_review=CmocConfigOracleReview(
             num_enumerate_findings_loop=1,
             num_merge_findings_loop=1,
             num_validate_findings_loop=1,
@@ -406,7 +406,7 @@ def test_review_oracle_retries_semantic_merge_finding_failure(
             return _FakeCodexResult({"verdict": "reject", "reason": "rejected"})
         raise AssertionError(schema_name)
 
-    findings = review_module.run_review_oracle_loop(
+    findings = review_module.run_oracle_review_loop(
         repo_root,
         review_worktree,
         [review_worktree / "oracle" / "spec.md"],
@@ -419,7 +419,7 @@ def test_review_oracle_retries_semantic_merge_finding_failure(
     assert findings[0]["title"] == "merged"
 
 
-def test_review_oracle_fails_after_merge_finding_semantic_retries(
+def test_oracle_review_fails_after_merge_finding_semantic_retries(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -430,7 +430,7 @@ def test_review_oracle_fails_after_merge_finding_semantic_retries(
     repo_root, review_worktree = _make_review_context(tmp_path, monkeypatch)
     merge_calls = 0
     config = CmocConfig(
-        review_oracle=CmocConfigReviewOracle(
+        oracle_review=CmocConfigOracleReview(
             num_enumerate_findings_loop=1,
             num_merge_findings_loop=1,
             num_validate_findings_loop=1,
@@ -474,7 +474,7 @@ def test_review_oracle_fails_after_merge_finding_semantic_retries(
         raise AssertionError(schema_name)
 
     with pytest.raises(CmocError, match="merge finding"):
-        review_module.run_review_oracle_loop(
+        review_module.run_oracle_review_loop(
             repo_root,
             review_worktree,
             [review_worktree / "oracle" / "spec.md"],

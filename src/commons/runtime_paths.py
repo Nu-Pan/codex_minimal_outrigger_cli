@@ -120,6 +120,11 @@ def logs_dir(root: Path) -> Path:
     return generated_agent_read_dir(root) / "log" / "sub_command"
 
 
+def editor_input_dir(root: Path) -> Path:
+    """エディタ入力と、その完全 prompt の保存先 directory を返す。"""
+    return generated_agent_read_dir(root) / "log" / "editor_input"
+
+
 def worktrees_dir(root: Path) -> Path:
     """cmoc 管理 worktree の保存先 directory を返す。"""
     return root / ".cmoc" / "gu" / "worktree"

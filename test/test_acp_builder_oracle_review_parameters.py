@@ -1,6 +1,6 @@
-"""review oracle ACP builder の parameter、schema、互換公開面を検証する。
+"""oracle review ACP builder の parameter、schema、adapter 公開面を検証する。
 
-対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/review/oracle/
+対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/
 """
 
 import json
@@ -10,28 +10,28 @@ from typing import Callable
 import pytest
 from _acp_builder_support import oracle_schema_path
 from jsonschema import validate
-from oracle.acp_builder.review.oracle.enumerate_finding import (
-    build_review_oracle_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
+from oracle.acp_builder.oracle.review.enumerate_finding import (
+    build_oracle_review_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
 )
 
-import acp.builder.review.oracle.judge_finding as review_judge_finding_module
-import acp.builder.review.oracle.merge_finding as review_merge_finding_module
-import acp.builder.review.oracle.validate_finding_advocate as review_validate_advocate_module
-import acp.builder.review.oracle.validate_finding_challenger as review_validate_challenger_module
-from acp.builder.review.oracle.enumerate_finding import (
-    build_review_oracle_enumerate_finding_parameter,
+import acp.builder.oracle.review.judge_finding as review_judge_finding_module
+import acp.builder.oracle.review.merge_finding as review_merge_finding_module
+import acp.builder.oracle.review.validate_finding_advocate as review_validate_advocate_module
+import acp.builder.oracle.review.validate_finding_challenger as review_validate_challenger_module
+from acp.builder.oracle.review.enumerate_finding import (
+    build_oracle_review_enumerate_finding_parameter,
 )
-from acp.builder.review.oracle.judge_finding import (
-    build_review_oracle_judge_finding_parameter,
+from acp.builder.oracle.review.judge_finding import (
+    build_oracle_review_judge_finding_parameter,
 )
-from acp.builder.review.oracle.merge_finding import (
-    build_review_oracle_merge_finding_parameter,
+from acp.builder.oracle.review.merge_finding import (
+    build_oracle_review_merge_finding_parameter,
 )
-from acp.builder.review.oracle.validate_finding_advocate import (
-    build_review_oracle_validate_finding_advocate_parameter,
+from acp.builder.oracle.review.validate_finding_advocate import (
+    build_oracle_review_validate_finding_advocate_parameter,
 )
-from acp.builder.review.oracle.validate_finding_challenger import (
-    build_review_oracle_validate_finding_challenger_parameter,
+from acp.builder.oracle.review.validate_finding_challenger import (
+    build_oracle_review_validate_finding_challenger_parameter,
 )
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 
@@ -41,19 +41,19 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
     [
         (
             review_judge_finding_module,
-            "build_review_oracle_judge_finding_parameter",
+            "build_oracle_review_judge_finding_parameter",
         ),
         (
             review_merge_finding_module,
-            "build_review_oracle_merge_finding_parameter",
+            "build_oracle_review_merge_finding_parameter",
         ),
         (
             review_validate_advocate_module,
-            "build_review_oracle_validate_finding_advocate_parameter",
+            "build_oracle_review_validate_finding_advocate_parameter",
         ),
         (
             review_validate_challenger_module,
-            "build_review_oracle_validate_finding_challenger_parameter",
+            "build_oracle_review_validate_finding_challenger_parameter",
         ),
     ],
 )
@@ -74,9 +74,9 @@ def test_review_compatibility_modules_export_only_builders(
         assert not hasattr(module, internal_name)
 
 
-def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
+def test_oracle_review_merge_finding_uses_efficiency_model() -> None:
     """merge finding builderがefficiency modelとmax reasoningを選ぶことを検証する。"""
-    parameter = build_review_oracle_merge_finding_parameter("[]")
+    parameter = build_oracle_review_merge_finding_parameter("[]")
 
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MAX
@@ -84,9 +84,9 @@ def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
     assert parameter.run_indexing_preflight is True
 
 
-def test_review_oracle_judge_finding_uses_max_reasoning() -> None:
+def test_oracle_review_judge_finding_uses_max_reasoning() -> None:
     """judge finding builderがefficiency modelとmax reasoningを選ぶことを検証する。"""
-    parameter = build_review_oracle_judge_finding_parameter(
+    parameter = build_oracle_review_judge_finding_parameter(
         "finding", "advocate", "challenger"
     )
 
@@ -95,9 +95,9 @@ def test_review_oracle_judge_finding_uses_max_reasoning() -> None:
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
 
 
-def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
+def test_oracle_review_enumerate_finding_schema_matches_oracle_source() -> None:
     """enumerate finding builderのschemaがoracle sourceと一致することを検証する。"""
-    parameter = build_review_oracle_enumerate_finding_parameter(
+    parameter = build_oracle_review_enumerate_finding_parameter(
         Path("{{work-root}}/oracle/spec.md"),
         "[]",
     )
@@ -106,7 +106,7 @@ def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
-        oracle_schema_path("review", "oracle", "enumerate_finding.json").read_text()
+        oracle_schema_path("oracle", "review", "enumerate_finding.json").read_text()
     )
 
     assert schema == oracle_schema
@@ -132,12 +132,12 @@ def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
     )
 
 
-def test_review_oracle_enumerate_parameter_matches_oracle_builder() -> None:
+def test_oracle_review_enumerate_parameter_matches_oracle_builder() -> None:
     """enumerate finding互換builderがcanonical builderと同じparameterを返すことを検証する。"""
     oracle_path = Path("{{work-root}}/oracle/doc/sample.md")
     related_findings = "[]"
 
-    parameter = build_review_oracle_enumerate_finding_parameter(
+    parameter = build_oracle_review_enumerate_finding_parameter(
         oracle_path,
         related_findings,
     )
@@ -149,7 +149,7 @@ def test_review_oracle_enumerate_parameter_matches_oracle_builder() -> None:
     assert parameter == oracle_parameter
 
 
-def test_review_oracle_enumerate_parameter_keeps_symlink_entry_path(
+def test_oracle_review_enumerate_parameter_keeps_symlink_entry_path(
     tmp_path: Path,
 ) -> None:
     """enumerate prompt の `{{oracle-path}}` が symlink entry を指す。"""
@@ -159,13 +159,13 @@ def test_review_oracle_enumerate_parameter_keeps_symlink_entry_path(
     link = tmp_path / "oracle" / "memo-link.md"
     link.symlink_to("../memo.md")
 
-    parameter = build_review_oracle_enumerate_finding_parameter(link, "[]")
+    parameter = build_oracle_review_enumerate_finding_parameter(link, "[]")
 
     assert f"- {{{{oracle-path}}}} = {link}" in parameter.prompt
     assert f"- {{{{oracle-path}}}} = {link.resolve()}" not in parameter.prompt
 
 
-def test_review_oracle_enumerate_parameter_preserves_related_findings_text(
+def test_oracle_review_enumerate_parameter_preserves_related_findings_text(
     tmp_path: Path,
 ) -> None:
     """symlink補正が動的な既知所見を書き換えないことを検証する。"""
@@ -176,7 +176,7 @@ def test_review_oracle_enumerate_parameter_preserves_related_findings_text(
     link.symlink_to("../memo.md")
     related_findings = f"- {{{{oracle-path}}}} = {link.resolve()}"
 
-    parameter = build_review_oracle_enumerate_finding_parameter(
+    parameter = build_oracle_review_enumerate_finding_parameter(
         link,
         related_findings,
     )
@@ -185,16 +185,16 @@ def test_review_oracle_enumerate_parameter_preserves_related_findings_text(
     assert f"- {{{{oracle-path}}}} = {link}" in parameter.prompt
 
 
-def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
+def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
     """merge finding builderのschemaとplaceholder補正を検証する。"""
-    parameter = build_review_oracle_merge_finding_parameter("[]")
+    parameter = build_oracle_review_merge_finding_parameter("[]")
     assert "<{{oracle-root}}>" not in parameter.prompt
     assert "{{oracle-root}}" in parameter.prompt
     assert "- {{oracle-root}} =" in parameter.prompt
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
-        oracle_schema_path("review", "oracle", "merge_finding.json").read_text()
+        oracle_schema_path("oracle", "review", "merge_finding.json").read_text()
     )
     finding = {
         "severity": "fatal",
@@ -224,13 +224,13 @@ def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
     )
 
 
-def test_review_oracle_merge_finding_preserves_known_findings_text() -> None:
+def test_oracle_review_merge_finding_preserves_known_findings_text() -> None:
     """merge finding builderが既知findingの動的文字列を保持することを検証する。"""
     known_findings = (
         '[{"finding_id":"finding-0001","reason":"literal <{{oracle-root}}>"}]'
         "\n- <{{oracle-root}}> = literal"
     )
-    parameter = build_review_oracle_merge_finding_parameter(known_findings)
+    parameter = build_oracle_review_merge_finding_parameter(known_findings)
     assert known_findings in parameter.prompt
     assert "- {{oracle-root}} =" in parameter.prompt
 
@@ -239,16 +239,16 @@ def test_review_oracle_merge_finding_preserves_known_findings_text() -> None:
     ("builder", "schema_name"),
     [
         (
-            build_review_oracle_validate_finding_advocate_parameter,
+            build_oracle_review_validate_finding_advocate_parameter,
             "validate_finding_advocate.json",
         ),
         (
-            build_review_oracle_validate_finding_challenger_parameter,
+            build_oracle_review_validate_finding_challenger_parameter,
             "validate_finding_challenger.json",
         ),
     ],
 )
-def test_review_oracle_validate_finding_schema_matches_oracle_source(
+def test_oracle_review_validate_finding_schema_matches_oracle_source(
     builder: Callable[[str, str, str], AgentCallParameter], schema_name: str
 ) -> None:
     """validate finding builderのschemaと動的入力保持を検証する。"""
@@ -265,7 +265,7 @@ def test_review_oracle_validate_finding_schema_matches_oracle_source(
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
-        oracle_schema_path("review", "oracle", schema_name).read_text()
+        oracle_schema_path("oracle", "review", schema_name).read_text()
     )
 
     assert parameter.structured_output_schema_path.name == schema_name
@@ -274,13 +274,13 @@ def test_review_oracle_validate_finding_schema_matches_oracle_source(
     validate({"reasons": ["oracle file の記述に基づく理由"]}, schema)
 
 
-def test_review_oracle_validate_finding_advocate_preserves_dynamic_text() -> None:
+def test_oracle_review_validate_finding_advocate_preserves_dynamic_text() -> None:
     """advocate builderが動的入力内のplaceholderを補正せず保持することを検証する。"""
     finding = "finding literal `{{oracle_root}}` ツリー内 should stay"
     known_advocate = "known advocate literal `{{oracle_root}}` ツリー内 should stay"
     known_challenger = "known challenger literal `{{oracle_root}}` ツリー内 should stay"
 
-    parameter = build_review_oracle_validate_finding_advocate_parameter(
+    parameter = build_oracle_review_validate_finding_advocate_parameter(
         finding,
         known_advocate,
         known_challenger,

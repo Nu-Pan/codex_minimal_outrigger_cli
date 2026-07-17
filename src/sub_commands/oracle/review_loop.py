@@ -1,36 +1,36 @@
-# {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+# {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 import json
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
-from acp.builder.review.oracle.enumerate_finding import (
-    build_review_oracle_enumerate_finding_parameter,
+from acp.builder.oracle.review.enumerate_finding import (
+    build_oracle_review_enumerate_finding_parameter,
 )
-from acp.builder.review.oracle.judge_finding import (
-    build_review_oracle_judge_finding_parameter,
+from acp.builder.oracle.review.judge_finding import (
+    build_oracle_review_judge_finding_parameter,
 )
-from acp.builder.review.oracle.merge_finding import (
-    build_review_oracle_merge_finding_parameter,
+from acp.builder.oracle.review.merge_finding import (
+    build_oracle_review_merge_finding_parameter,
 )
-from acp.builder.review.oracle.validate_finding_advocate import (
-    build_review_oracle_validate_finding_advocate_parameter,
+from acp.builder.oracle.review.validate_finding_advocate import (
+    build_oracle_review_validate_finding_advocate_parameter,
 )
-from acp.builder.review.oracle.validate_finding_challenger import (
-    build_review_oracle_validate_finding_challenger_parameter,
+from acp.builder.oracle.review.validate_finding_challenger import (
+    build_oracle_review_validate_finding_challenger_parameter,
 )
 from cmoc_runtime import CmocError
 from commons.runtime_results import CodexExecCallable
 from config.cmoc_config import CmocConfig
-from sub_commands.review_paths import finding_oracle_path, oracle_path_key
+from sub_commands.oracle.review_paths import finding_oracle_path, oracle_path_key
 
 _MAX_MERGE_FINDING_SEMANTIC_RETRIES = 2
 
 StepCallback = Callable[[int | str, str, str | None], None]
 
 
-class ReviewOracleInterrupted(KeyboardInterrupt):
-    """中断までに確定した review oracle の部分結果を運ぶ。"""
+class OracleReviewInterrupted(KeyboardInterrupt):
+    """中断までに確定した oracle review の部分結果を運ぶ。"""
 
     def __init__(
         self,
@@ -38,7 +38,7 @@ class ReviewOracleInterrupted(KeyboardInterrupt):
         evaluated_files: list[Path],
     ) -> None:
         """中断時に確定済みfindingと評価済みfileを例外へ保持する。"""
-        super().__init__("review oracle was interrupted by the user")
+        super().__init__("oracle review was interrupted by the user")
         self.findings = findings
         self.evaluated_files = evaluated_files
 
@@ -59,13 +59,13 @@ def _report_step(
 ) -> None:
     """step callback が指定された場合だけ手順開始を通知する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     if step_callback is not None:
         step_callback(index, description, log_description)
 
 
-def run_review_oracle_loop(
+def run_oracle_review_loop(
     log_root: Path,
     worktree: Path,
     oracle_files: list[Path],
@@ -73,10 +73,10 @@ def run_review_oracle_loop(
     codex_exec: CodexExecCallable,
     step_callback: StepCallback | None = None,
 ) -> list[dict]:
-    """review oracle の finding enumerate/merge/validate/judge loop を実行する。"""
+    """oracle review の finding enumerate/merge/validate/judge loop を実行する。"""
     progress = _ReviewProgress([], [])
     try:
-        return _run_review_oracle_loop(
+        return _run_oracle_review_loop(
             log_root,
             worktree,
             oracle_files,
@@ -88,13 +88,13 @@ def run_review_oracle_loop(
     except KeyboardInterrupt as exc:
         # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
         # 未完了 agent call の出力を捨て、既に反映済みの結果だけを呼び出し元へ渡す。
-        raise ReviewOracleInterrupted(
+        raise OracleReviewInterrupted(
             list(progress.findings),
             list(progress.evaluated_files),
         ) from exc
 
 
-def _run_review_oracle_loop(
+def _run_oracle_review_loop(
     log_root: Path,
     worktree: Path,
     oracle_files: list[Path],
@@ -103,12 +103,12 @@ def _run_review_oracle_loop(
     step_callback: StepCallback | None,
     progress: _ReviewProgress,
 ) -> list[dict]:
-    """進捗を外部保持しながら review oracle loop 本体を実行する。"""
+    """進捗を外部保持しながら oracle review loop 本体を実行する。"""
     _report_step(step_callback, 4, "所見リスト列挙ループ", "enumerate findings loop")
     findings = progress.findings
     dirty_files = set(oracle_files)
     next_id = 1
-    for _ in range(config.review_oracle.num_enumerate_findings_loop):
+    for _ in range(config.oracle_review.num_enumerate_findings_loop):
         if not dirty_files:
             break
         _report_step(
@@ -120,7 +120,7 @@ def _run_review_oracle_loop(
         for oracle_path in sorted(dirty_files):
             result = codex_exec(
                 replace(
-                    build_review_oracle_enumerate_finding_parameter(
+                    build_oracle_review_enumerate_finding_parameter(
                         oracle_path,
                         json.dumps(
                             _findings_related_to_oracle_path(
@@ -135,7 +135,7 @@ def _run_review_oracle_loop(
                 root=log_root,
                 cwd=worktree,
                 config=config,
-                purpose=f"review oracle enumerate findings for {oracle_path}",
+                purpose=f"oracle review enumerate findings for {oracle_path}",
             )
             if oracle_path not in progress.evaluated_files:
                 progress.evaluated_files.append(oracle_path)
@@ -153,7 +153,7 @@ def _run_review_oracle_loop(
         if not dirty_files:
             break
         _report_step(step_callback, "4/8, 2/2", "所見リストをマージ", "merge findings")
-        for _ in range(config.review_oracle.num_merge_findings_loop):
+        for _ in range(config.oracle_review.num_merge_findings_loop):
             findings, added_count, changed = _merge_findings_with_semantic_retry(
                 log_root, worktree, findings, next_id, config, codex_exec
             )
@@ -172,7 +172,7 @@ def _findings_related_to_oracle_path(
 ) -> list[dict]:
     """対象 oracle file と同じ repository path の finding だけを返す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     target_key = oracle_path_key(worktree, oracle_path)
     if target_key is None:
@@ -202,11 +202,11 @@ def _validate_and_judge_findings(
     所見に judge の verdict と理由を付与する。
 
     根拠:
-        {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+        {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     _report_step(step_callback, 5, "所見リスト検証ループ", "validate findings loop")
     dirty_findings = {finding["finding_id"] for finding in findings}
-    for _ in range(config.review_oracle.num_validate_findings_loop):
+    for _ in range(config.oracle_review.num_validate_findings_loop):
         if not dirty_findings:
             break
         next_dirty: set[str] = set()
@@ -222,7 +222,7 @@ def _validate_and_judge_findings(
             finding_text = json.dumps(finding, ensure_ascii=False, indent=2)
             challenger = codex_exec(
                 replace(
-                    build_review_oracle_validate_finding_challenger_parameter(
+                    build_oracle_review_validate_finding_challenger_parameter(
                         finding_text,
                         "\n".join(finding["advocate_reasons"]),
                         "\n".join(finding["challenger_reasons"]),
@@ -232,7 +232,7 @@ def _validate_and_judge_findings(
                 root=log_root,
                 cwd=worktree,
                 config=config,
-                purpose=f"review oracle validate challenger {finding['finding_id']}",
+                purpose=f"oracle review validate challenger {finding['finding_id']}",
             ).output_json
             challenger_reasons = list((challenger or {}).get("reasons", []))
             _report_step(
@@ -243,7 +243,7 @@ def _validate_and_judge_findings(
             )
             advocate = codex_exec(
                 replace(
-                    build_review_oracle_validate_finding_advocate_parameter(
+                    build_oracle_review_validate_finding_advocate_parameter(
                         finding_text,
                         "\n".join(finding["advocate_reasons"]),
                         "\n".join(finding["challenger_reasons"] + challenger_reasons),
@@ -253,7 +253,7 @@ def _validate_and_judge_findings(
                 root=log_root,
                 cwd=worktree,
                 config=config,
-                purpose=f"review oracle validate advocate {finding['finding_id']}",
+                purpose=f"oracle review validate advocate {finding['finding_id']}",
             ).output_json
             advocate_reasons = list((advocate or {}).get("reasons", []))
             finding["challenger_reasons"].extend(challenger_reasons)
@@ -265,7 +265,7 @@ def _validate_and_judge_findings(
     for finding in findings:
         judge = codex_exec(
             replace(
-                build_review_oracle_judge_finding_parameter(
+                build_oracle_review_judge_finding_parameter(
                     json.dumps(finding, ensure_ascii=False, indent=2),
                     "\n".join(finding["advocate_reasons"]),
                     "\n".join(finding["challenger_reasons"]),
@@ -275,7 +275,7 @@ def _validate_and_judge_findings(
             root=log_root,
             cwd=worktree,
             config=config,
-            purpose=f"review oracle judge finding {finding['finding_id']}",
+            purpose=f"oracle review judge finding {finding['finding_id']}",
         ).output_json
         finding["verdict"] = (judge or {}).get("verdict", "reject")
         finding["judge_reason"] = (judge or {}).get("reason", "")
@@ -296,14 +296,14 @@ def _merge_findings_with_semantic_retry(
     再試行した後にレビュー全体を失敗させる。
 
     根拠:
-        {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+        {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     """
     last_error: ValueError | None = None
     for _ in range(_MAX_MERGE_FINDING_SEMANTIC_RETRIES + 1):
         operations = codex_exec(
             replace(
-                build_review_oracle_merge_finding_parameter(
+                build_oracle_review_merge_finding_parameter(
                     json.dumps(findings, ensure_ascii=False, indent=2)
                 ),
                 cwd=worktree,
@@ -311,7 +311,7 @@ def _merge_findings_with_semantic_retry(
             root=log_root,
             cwd=worktree,
             config=config,
-            purpose="review oracle merge findings",
+            purpose="oracle review merge findings",
         ).output_json
         edits = list((operations or {}).get("operations", []))
         if not edits:
@@ -327,7 +327,7 @@ def _merge_findings_with_semantic_retry(
     # `{{work-root}}/oracle/doc/app_spec/codex_exec_rule.md` は merge operation contract
     # violation を semantic response failure として扱う。
     raise CmocError(
-        "review oracle merge finding の Structured Output 検証に失敗しました。",
+        "oracle review merge finding の Structured Output 検証に失敗しました。",
         ["merge finding の Codex 出力と対象 finding_id を確認してください。"],
         str(last_error),
     ) from last_error
@@ -383,7 +383,7 @@ def _validate_finding_merge_operation(
     確認し、適用対象 ID の集合を返す。契約違反は ValueError として通知する。
 
     根拠:
-        {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+        {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     kind = operation.get("kind")
     target_ids = operation.get("target_ids")

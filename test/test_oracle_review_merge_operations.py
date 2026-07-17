@@ -1,20 +1,20 @@
-"""review oracle の merge operation 適用契約を検証する。
+"""oracle review の merge operation 適用契約を検証する。
 
 テストの根拠:
 
-- {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md
 """
 
 import pytest
 
-import sub_commands.review.oracle as review_module
+import sub_commands.oracle.review as review_module
 
 
 def test_apply_finding_merge_operations_enforces_kind_contract() -> None:
     """delete/replace/merge の kind 契約を検証して finding を更新する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     findings = [
         {"finding_id": "finding-0001", "title": "delete"},
@@ -105,7 +105,7 @@ def test_apply_finding_merge_operations_rejects_invalid_operations(
 ) -> None:
     """対象や payload が不正な merge operation を拒否する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     with pytest.raises(ValueError):
         review_module.apply_finding_merge_operations(
@@ -145,7 +145,7 @@ def test_apply_finding_merge_operations_rejects_reused_targets(
 ) -> None:
     """複数 operation に同じ finding_id を再利用する入力を拒否する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
     with pytest.raises(ValueError):
         review_module.apply_finding_merge_operations(

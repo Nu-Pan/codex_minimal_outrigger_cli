@@ -9,7 +9,7 @@ def finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
     """finding の oracle_path を symlink を追跡しない絶対 path に変換する。
 
     根拠:
-    - {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     """
     raw_path = finding.get("oracle_path")
@@ -41,7 +41,7 @@ def oracle_path_key(root: Path, path: Path) -> str | None:
     worktree だけを既知の root として扱い、それ以外の path は無視する。
 
     根拠:
-    - {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+    - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     """
 

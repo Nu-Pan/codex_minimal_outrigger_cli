@@ -1,7 +1,7 @@
-"""review oracle の report と CLI 出力を検証する。
+"""oracle review の report と CLI 出力を検証する。
 
 根拠:
-- `{{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md`
+- `{{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md`
 - `{{work-root}}/oracle/doc/app_spec/codex_exec_rule.md`
 - `{{work-root}}/oracle/doc/dev_rule/test_rule.md`
 - `{{work-root}}/oracle/doc/dev_rule/coding_rule.md`
@@ -16,9 +16,9 @@ from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
 
 import sub_commands.eval_oracle as eval_oracle_module
-import sub_commands.review.oracle as review_module
+import sub_commands.oracle.review as review_module
 from cmoc_runtime import SessionState
-from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
+from config.cmoc_config import CmocConfig, CmocConfigOracleReview
 from main import app
 
 
@@ -30,7 +30,7 @@ class _FakeCodexResult:
         self.output_json = output_json
 
 
-def test_review_oracle_interrupt_reports_only_completed_enumerations(
+def test_oracle_review_interrupt_reports_only_completed_enumerations(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Ctrl+C 後は列挙完了済み oracle だけを interrupted report に含める。"""
@@ -47,7 +47,7 @@ def test_review_oracle_interrupt_reports_only_completed_enumerations(
         review_module,
         "load_config",
         lambda _root: CmocConfig(
-            review_oracle=CmocConfigReviewOracle(
+            oracle_review=CmocConfigOracleReview(
                 num_enumerate_findings_loop=1,
                 num_merge_findings_loop=0,
                 num_validate_findings_loop=1,
@@ -99,18 +99,18 @@ def test_review_oracle_interrupt_reports_only_completed_enumerations(
     assert '"event": "user_interruption"' in logs[-1].read_text()
 
 
-def test_eval_oracle_delegates_to_review_oracle_impl(
+def test_eval_oracle_delegates_to_oracle_review_impl(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`eval-oracle` が scope を review oracle 実装へ渡すことを検証する。"""
+    """`eval-oracle` が scope を oracle review 実装へ渡すことを検証する。"""
     calls: list[str] = []
 
-    def fake_review_oracle_impl(scope: str) -> None:
+    def fake_oracle_review_impl(scope: str) -> None:
         """委譲された scope を記録する fake callback。"""
         calls.append(scope)
 
     monkeypatch.setattr(
-        eval_oracle_module, "cmoc_review_oracle_impl", fake_review_oracle_impl
+        eval_oracle_module, "cmoc_oracle_review_impl", fake_oracle_review_impl
     )
 
     result = runner.invoke(app, ["eval-oracle", "-s", "full"], catch_exceptions=False)
@@ -119,7 +119,7 @@ def test_eval_oracle_delegates_to_review_oracle_impl(
     assert calls == ["full"]
 
 
-def test_review_oracle_writes_report(
+def test_oracle_review_writes_report(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """空の所見結果から report の節順と実行情報を検証する。"""
@@ -174,11 +174,11 @@ def test_review_oracle_writes_report(
     assert "`oracle/spec.md`" in rendered
     assert "review_join_commit: null" in rendered
     assert "session_id:" not in rendered
-    assert any(call.startswith("review oracle enumerate findings") for call in calls)
-    assert "review oracle merge findings" not in calls
+    assert any(call.startswith("oracle review enumerate findings") for call in calls)
+    assert "oracle review merge findings" not in calls
 
 
-def test_review_oracle_report_outputs_accepted_and_rejected_findings(
+def test_oracle_review_report_outputs_accepted_and_rejected_findings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """accepted/rejected finding が severity 別の report 節へ分類されることを検証する。"""
@@ -289,7 +289,7 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
         ("minor", 0, 1),
     ],
 )
-def test_review_oracle_report_includes_rejected_findings(
+def test_oracle_review_report_includes_rejected_findings(
     tmp_path: Path,
     severity: str,
     expected_fatal_count: int,
@@ -297,7 +297,7 @@ def test_review_oracle_report_includes_rejected_findings(
 ) -> None:
     """rejected finding が severity 別の節と件数へ出力されることを検証する。"""
     root = tmp_path
-    rendered = review_module.render_review_oracle_report(
+    rendered = review_module.render_oracle_review_report(
         root,
         "full",
         "cmoc/session/session-1",
@@ -349,12 +349,12 @@ def test_review_oracle_report_includes_rejected_findings(
     assert "session_id:" not in rendered
 
 
-def test_review_oracle_report_counts_oracle_root_alias_findings(
+def test_oracle_review_report_counts_oracle_root_alias_findings(
     tmp_path: Path,
 ) -> None:
     """`{{oracle-root}}` alias の finding が report の path 件数へ反映されることを検証する。"""
     root = tmp_path
-    rendered = review_module.render_review_oracle_report(
+    rendered = review_module.render_oracle_review_report(
         root,
         "full",
         "cmoc/session/session-1",
@@ -388,7 +388,7 @@ def test_review_oracle_report_counts_oracle_root_alias_findings(
     assert "| 1 | `oracle/a.md` | 1 |" in rendered
 
 
-def test_review_oracle_report_counts_symlink_findings_by_repository_path(
+def test_oracle_review_report_counts_symlink_findings_by_repository_path(
     tmp_path: Path,
 ) -> None:
     """oracle 配下 symlink の finding を link 先ではなく対象行へ集計する。"""
@@ -398,7 +398,7 @@ def test_review_oracle_report_counts_symlink_findings_by_repository_path(
     target.write_text("# memo\n")
     oracle_link = root / "oracle" / "memo-link.md"
     oracle_link.symlink_to("../memo.md")
-    rendered = review_module.render_review_oracle_report(
+    rendered = review_module.render_oracle_review_report(
         root,
         "full",
         "cmoc/session/session-1",
@@ -423,7 +423,7 @@ def test_review_oracle_report_counts_symlink_findings_by_repository_path(
     assert "| 1 | `oracle/memo-link.md` | 1 |" in rendered
 
 
-def test_review_oracle_accepts_short_scope_option(
+def test_oracle_review_accepts_short_scope_option(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """短縮 `-s` option が report の scope に反映されることを検証する。"""
@@ -462,13 +462,13 @@ def test_review_oracle_accepts_short_scope_option(
     assert "scope: full" in rendered
 
 
-def test_review_oracle_writes_error_report_on_processing_failure(
+def test_oracle_review_writes_error_report_on_processing_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """judge 失敗時の error report 保存・提示と未判定 finding の扱いを検証する。
 
     根拠:
-        {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+        {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
         {{work-root}}/oracle/doc/dev_rule/coding_rule.md
     """
     root = make_repo(tmp_path)
