@@ -127,31 +127,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる src ディレクトリ。CLI の起動入口、互換 import shim、共通 runtime、設定公開入口、ACP builder、各サブコマンド実装を扱い、機能別の実装領域へ進むための入口となる。
+- cmoc の realization 実装を集約する src パッケージ。Typer CLI のルート、サブコマンド、共通 runtime helper、ACP builder、互換 import shim、oracle パッケージ接続を扱い、機能別の実装領域へ進む入口となる。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・共通 runtime・ACP・サブコマンドの責務分担を確認するとき。
-- 対象機能の実装ファイルが src 配下のどの領域にあるかを特定するとき。
+- cmoc の realization 実装全体の構成や、CLI・共通 runtime・ACP builder・互換入口の配置を確認するとき。
+- 変更対象となる機能別パッケージや個別モジュールへの入口を選ぶとき。
 
 ## Do not read this when
-- 特定の CLI サブコマンド、runtime helper、ACP builder、互換 shim の具体的な処理だけを確認したいとき。対応する下位ファイルやディレクトリを直接読む。
-- 正本仕様や oracle 側の実装を確認したいとき。src ではなく oracle 配下の該当ファイルを読む。
+- 特定サブコマンドや runtime helper の詳細だけを調査・変更するときは、対応する下位パッケージや個別モジュールを直接読む。
+- 正本仕様や oracle 側の実装を確認するときは、src ではなく対応する oracle 配下を読む。
 
 ## hash
-- 5f5f2b000d62f184da8fc4dac74c52bc21f5e8844cb8a5c07bccc7edb75d6c1b
+- f1dab1cb48a2efa180877135a3e399c62e4ca86733534f045b12dcfeb72c2b7c
 
 # `test`
 
 ## Summary
-- pytest による cmoc の realization test 群を収めるディレクトリ。ACP builder、CLI、Codex runtime、indexing、review oracle、session/apply、設定、Git/worktree、Ollama などの外部挙動・制御ロジックを検証する。各テストファイルおよび共有 test helper への入口。
+- cmoc の CLI・runtime・Codex・ACP builder・indexing・review oracle・session/apply・Ollama などを対象とする pytest テスト群と、共有テスト補助を収録する。個別機能の外部挙動・制御ロジック・公開契約を確認する際の入口。
 
 ## Read this when
-- cmoc の機能変更に対応する回帰テストや、既存の外部契約・制御ロジックの検証対象を探すとき。
-- CLI、Codex 実行、indexing、review oracle、session/apply、runtime、ACP builder のテスト範囲を確認するとき。
+- cmoc のテスト対象を特定し、CLI、runtime、Codex、indexing、review oracle、session/apply、ACP builder などの回帰テストを探すとき。
+- 複数のテストで共有される Git、Ollama、Codex、CliRunner、fake command などのテスト補助を確認するとき。
+- 実装変更後に、対象機能の外部挙動や制御ロジックを検証するテスト範囲を判断するとき。
 
 ## Do not read this when
-- 実装や正本仕様そのものを確認したいときは、対応する src または oracle のファイルを直接読む。
-- テスト対象と無関係な機能や、共通 helper を使わない処理だけを調査するとき。
+- 正本仕様、schema、prompt、実装責務を確認することが目的のときは、対応する oracle または src の本文を直接読む。
+- 特定のテスト補助や個別機能が明らかな場合は、このディレクトリ全体ではなく該当するテストファイルまたは support module へ直接進む。
+- Codex CLI や LLM の出力品質そのものを評価する目的のとき。
 
 ## hash
-- d16cf0131021b00f1a716da5f57955d6e31b08e0019883a7d214e57de0669ae5
+- 89b8ad4005fd618ce1c0cfbedfc4142fb7f02765a49ede0304609bc6142fc3d7

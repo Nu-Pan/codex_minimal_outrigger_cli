@@ -249,16 +249,18 @@
 # `runtime_errors.py`
 
 ## Summary
-- cmoc の実行時エラーを利用者向け Markdown レポートへ統一変換する実装。CmocError の概要・復旧案・詳細の保持、既定の Next actions 補完、未知の例外の要約・詳細化、Call stack の出力を扱う。
+- cmoc の実行時エラーを共通 Markdown レポートへ変換する実装。
+- CmocError にエラー概要・復旧案・詳細を保持させ、通常例外には既定の案内を適用する。
+- Next actions を最低 2 件に補完し、Summary、Detail、Call stack を含む利用者向けエラー出力を組み立てる。
 
 ## Read this when
-- cmoc のエラー報告形式、CmocError の生成・利用、Next actions の補完、例外発生時の Markdown 出力を変更または調査するとき。
+- cmoc の実行時例外、利用者向けエラーレポート、復旧案、スタックトレースの出力を確認・変更するとき。
 
 ## Do not read this when
-- エラー報告の正本仕様や利用者向け文面を確認したいだけのときは、対応する oracle/doc の仕様を先に読む。エラー処理と無関係な CLI、設定、永続化、業務ロジックを変更するとき。
+- 特定のサブコマンド固有のエラー発生条件や、エラー原因となる個別機能の実装だけを調査するとき。
 
 ## hash
-- 9aa2a62b5d16f6050dae80940272adea036fabed6bb694e2790823974254e831
+- 19293509934218345593f574c4afed40ab4c72ae4d921b9864a95b3fa9f8cf66
 
 # `runtime_git.py`
 
