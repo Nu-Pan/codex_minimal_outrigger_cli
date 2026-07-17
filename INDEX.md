@@ -128,33 +128,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装における Python パッケージ領域。互換 import 入口、共有 runtime、CLI 最上位入口、サブコマンド、正本 oracle への接続を扱い、各機能の実装・公開面・委譲関係を下位要素へ案内する。
+- cmoc の Python パッケージ本体。Typer による CLI 入口、session/apply/review などのサブコマンド、共有 runtime helper、ACP・basic・config の互換 import 入口、oracle 正本へ接続する shim を扱う。各機能の詳細は対応する下位ディレクトリまたはモジュールへ進む。
 
 ## Read this when
-- cmoc の realization 側で、CLI 起動経路、サブコマンド登録、互換 import、共有 runtime、または oracle 名前空間への接続先を確認・変更するとき。
-- apply、indexing、review、session、TUI、doctor、eval-oracle などの実装入口や担当領域を特定するとき。
+- cmoc の CLI コマンド、サブコマンド、option、起動処理、引数解析エラー変換を確認したいとき。
+- 共有 runtime の担当領域や、ACP・basic・config・oracle の import 境界を特定したいとき。
+- session、apply、review、indexing、TUI、doctor、oracle 評価の実装入口を探したいとき。
 
 ## Do not read this when
-- 特定機能の詳細な仕様や本体実装だけを確認したいときは、対応する下位モジュールまたは oracle 側を直接読む。
-- CLI と無関係な正本仕様、利用者向け手順、個別テストの詳細だけを調べたいとき。
+- 特定サブコマンドや runtime helper の詳細な挙動を調査するときは、対応する下位ディレクトリまたは実装モジュールを直接読む。
+- 正本仕様や oracle 側の実装内容を確認するときは、対応する oracle ツリーを読む。
+- 互換 import に関係しない個別機能の内部処理だけを調べるとき。
 
 ## hash
-- 5965be03e4d15e642b989d0947aab8ac47b3b3229d790401e9cf53e8a2919276
+- 3e663a4ffd2c5ca9f4d02036dbaa8b765aa79a1a2954b4efc60e5da556b18598
 
 # `test`
 
 ## Summary
-- ACP builder、CLI、Codex runtime、apply/session、indexing、review oracle、doctor、Git/worktree などの pytest テスト群を収録するテスト領域。各テストファイルは対応する機能の外部挙動・制御ロジック・回帰条件を確認する入口となる。
+- cmoc の realization test 群を収めるディレクトリ。ACP builder、CLI サブコマンド、Codex runtime、indexing、review oracle、session/apply、設定・状態・Git・Ollama などの外部挙動や制御ロジックを検証する個別テストと、共有 fixture・実行補助を提供する。機能別の回帰テストや共通テスト基盤を探す際の入口。
 
 ## Read this when
-- 対象機能の回帰テスト、外部契約、失敗条件、状態遷移、CLI 統合挙動を確認・変更するとき
-- どのテストが特定の runtime、subcommand、ACP builder、indexing、review oracle の挙動を検証するかを探すとき
-- 共通テスト補助や packaged layout、実 Codex/Ollama を使う受け入れテストの構成を確認するとき
+- 特定機能の realization test、回帰条件、外部契約、共通 fixture またはテスト用 helper を探すとき
+- CLI、Codex 実行、indexing、review oracle、session/apply、設定・runtime の変更影響をテスト側から確認するとき
 
 ## Do not read this when
-- 正本仕様や prompt・schema の内容自体を確認するときは、対応する oracle 文書・schema・実装を直接読む
-- テスト対象の実装詳細だけを追うときは、対応する src ファイルを先に読む
-- 対象機能と無関係なテストや、LLM の回答品質そのものを評価するとき
+- 正本仕様や構造化出力 schema の内容を確認するときは、対応する oracle 文書・schema を直接読む
+- 実装本体の責務や内部処理を確認するときは、対応する src ファイルを直接読む
+- Codex や LLM の出力品質そのものを評価するとき
 
 ## hash
-- aaffcdfaec20f4162fb995b0896af954b464ab9739a6f289b265e52d14d9cf23
+- eed7536cf2e1af82d3d204e8476711ffecec9c3a8914c8bc8f19da23edbb5323

@@ -548,20 +548,20 @@
 # `test_production_cli.py`
 
 ## Summary
-- 実 Codex CLI と cmoc managed Ollama を使い、全末端サブコマンドを独立 process の利用者向け本番経路で検証する受け入れテスト。CLI の終了 code、report・state・Git・call log、session/apply の状態遷移、および PTY 上の TUI 応答完了と終了操作を確認する。LLM の回答品質自体は検証対象外。
+- 実 Codex CLI と cmoc managed Ollama を用いた、全末端サブコマンドの本番経路受け入れ試験。独立 process・PTY 実行を通じて、終了 code、report・state・Git 状態、Codex call log、TUI の応答完了と終了操作を検証する。
 
 ## Read this when
-- CLI の全末端サブコマンドが本番経路で実行可能か確認するとき
-- 実 Codex CLI、managed Ollama、独立 process、call log の連携を検証するとき
-- session/apply の fork・join・abandon 状態遷移や TUI の PTY 終了処理を確認するとき
+- 利用者向け CLI の全末端サブコマンドが本番相当の外部環境で完了するか確認するとき
+- 独立 process、実 Codex CLI、managed Ollama、PTY 上の TUI 経路を検証するとき
+- CLI 実行後の report・永続 state・Git・call log の外部観測結果を確認するとき
 
 ## Do not read this when
-- 単一コマンドの内部実装や単体テストを確認したいとき
-- LLM の回答品質やプロンプト内容そのものを評価したいとき
-- Codex や Ollama を使わない通常の CLI テストだけを調べるとき
+- LLM の回答品質やプロンプト内容そのものを評価するとき
+- 単一機能の内部ロジックや unit test のみを変更・調査するとき
+- 本番経路を使わない parser・helper の局所的なテストを確認するとき
 
 ## hash
-- 90f4efff95d56dcd2b205549bd47e56d761a1882dea4f70a4635aabf1d3af2b2
+- cb2199c1ab521ff83bdf63bb2730a165424b4d210437a467ca8da5f5560dc3e8
 
 # `test_prompt_parts.py`
 

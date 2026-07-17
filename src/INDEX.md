@@ -86,20 +86,22 @@
 # `main.py`
 
 ## Summary
-- Typer/Click による cmoc CLI の最上位エントリー。doctor、tui、indexing、eval-oracle と session/apply/review 配下の各サブコマンドを登録し、対応する実装へ委譲する。CLI 引数解析エラーの cmoc 形式への変換と scope option の定義も扱う。サブコマンドの具体的な処理を調べる際の入口。
+- cmoc の Typer CLI アプリケーション本体。トップレベルおよび session、apply、review 配下のサブコマンドを定義し、各処理実装へ振り分ける。
+- CLI 引数解析エラーを cmoc 共通のエラーレポートへ変換し、補完処理や終了コードも制御する。
+- CLI option の scope enum と console script からの起動入口も扱う。
 
 ## Read this when
-- cmoc のトップレベルコマンド、サブコマンド名、option、scope の既定値や選択肢を確認するとき
-- CLI 引数解析エラーの表示・終了処理を変更または調査するとき
-- 新しいサブコマンドの登録先や console script の起動経路を確認するとき
+- cmoc のコマンド名、サブコマンド、option、scope の定義を確認するとき
+- CLI 引数解析エラーの変換やアプリケーション起動処理を変更・調査するとき
+- doctor、tui、indexing、eval-oracle、session、apply、review の CLI 接続先を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの業務処理や分岐を調査するときは、対応する sub_commands 配下の実装を直接読む
-- oracle の詳細仕様や利用手順を確認するときは、コメントに示された oracle 文書を直接読む
-- CLI とは無関係な内部処理や共通ランタイムの実装を調査するとき
+- 個別サブコマンドの処理内容や内部状態遷移を調査するときは、各サブコマンド実装を直接読む
+- エラー内容の正本仕様を確認するときは、参照されている error_handling の oracle file を読む
+- CLI ルーティングと無関係な共通ランタイムや個別機能の実装を調査するとき
 
 ## hash
-- 69fb1bf5b1b12340db48a63f99de040ba4942cc13103ba131f4d2123f8f1cdb0
+- f1b5909218e631af903858d2cb1bcd9ece673fae06127d35f2622169e8431015
 
 # `oracle.py`
 
