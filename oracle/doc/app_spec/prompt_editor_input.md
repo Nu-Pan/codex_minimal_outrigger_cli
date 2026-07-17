@@ -3,7 +3,7 @@
 - cmoc がエディタを起動して、そこにユーザーがプロンプトを入力する
 - 起動するエディタは (高優先度) `code` --> `nano` --> `vim` --> `vi` (低優先度) の順でフォールバックする
 - `code` で起動する場合は必ず `--wait` を付けること
-- エディタの編集対象は `{{repo-root}}/.cmoc/gu/ar/log/tui/{{time-stamp}}_orig.md` とする
+- エディタの編集対象は `{{repo-root}}/.cmoc/gu/ar/log/editor_input/{{time-stamp}}_orig.md` とする
 - 編集対象は、呼び出し元の oracle file で定める初期プロンプトを初期値として持つ
 - 編集対象の初期値として、以下の文面を注入する
     ```markdown
