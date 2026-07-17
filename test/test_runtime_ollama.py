@@ -195,17 +195,25 @@ def test_ensure_ollama_model_loads_after_store_is_ready(
     assert verified == ["model"]
 
 
+@pytest.mark.parametrize(
+    ("configured_model", "reported_model"),
+    [("model", "model"), ("model", "model:latest")],
+)
 def test_verify_ollama_gpu_accepts_runtime_vram(
     monkeypatch: pytest.MonkeyPatch,
+    configured_model: str,
+    reported_model: str,
 ) -> None:
     """positive size_vramのmodelがGPU runtime確認を通ることを検証する。"""
-    response = _Response(b'{"models":[{"name":"model","size_vram":1}]}')
+    response = _Response(
+        f'{{"models":[{{"name":"{reported_model}","size_vram":1}}]}}'.encode()
+    )
     monkeypatch.setattr(
         ollama_module.urllib.request,
         "urlopen",
         lambda *_args, **_kwargs: response,
     )
-    ollama_module._verify_ollama_gpu("model")
+    ollama_module._verify_ollama_gpu(configured_model)
 
 
 @pytest.mark.parametrize("body", [b"[]", b"null", b'"done"'])
@@ -225,7 +233,13 @@ def test_load_ollama_model_rejects_non_object_response(
 
 
 @pytest.mark.parametrize(
-    "body", [b'{"models":[]}', b'{"models":[{"name":"model","size_vram":0}]}']
+    "body",
+    [
+        b'{"models":[]}',
+        b'{"models":[{"name":"model","size_vram":0}]}',
+        b'{"models":[{"name":"model","size_vram":NaN}]}',
+        b'{"models":[{"name":"model","size_vram":Infinity}]}',
+    ],
 )
 def test_verify_ollama_gpu_rejects_unconfirmed_runtime(
     monkeypatch: pytest.MonkeyPatch, body: bytes
