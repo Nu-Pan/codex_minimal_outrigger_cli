@@ -115,17 +115,15 @@
 # `tui`
 
 ## Summary
-- TUI builder の互換 import 経路を提供する realization package。既存の `acp.builder.tui.*` 参照を維持し、起動パラメータ生成や resolve-parameter builder への委譲・再公開を扱う。canonical 実装や oracle 側 builder を確認するための入口でもある。
+- 既存の `acp.builder.tui.*` import 互換性を保つための TUI 用互換 package。起動パラメータ入口と resolve-parameter の互換 shim を含み、実体の TUI builder 処理は oracle 側へ委譲する。
 
 ## Read this when
-- 既存 TUI import 経路の互換維持・削除可否を調査するとき
-- `cmoc tui` の起動パラメータ準備や oracle 側 builder への委譲を確認するとき
-- TUI 用 resolve-parameter builder と FileAccessMode の公開経路を確認するとき
+- 既存 TUI import 経路の互換性、削除可否、または `cmoc tui` 起動時の互換入口を確認するとき。
+- TUI 用 resolve-parameter の再公開内容や保存先準備を確認するとき。
 
 ## Do not read this when
-- TUI の画面構成や実装本体の挙動を確認したいとき
-- canonical builder の詳細、TUI 以外の builder、FileAccessMode 定義自体を調べたいとき
-- 新しい公開 API や import 経路を設計したいとき
+- TUI の画面構成・実装本体の挙動を調べるとき。
+- canonical な builder 本体や新規公開 API・import 経路を設計するとき。
 
 ## hash
-- befc41436ec3ae7a7f2b3d8c5fd44243283fee983539940b8fea55a876707c74
+- ca67257afbe4087d443747a094ee30d617f7e11f7a1d5dc7b98c14609acabd24

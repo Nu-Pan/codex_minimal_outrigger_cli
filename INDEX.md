@@ -127,30 +127,18 @@
 # `src`
 
 ## Summary
-- `acp` は既存の `acp.*` 参照を維持する互換入口で、`oracle` 側の canonical 実装や builder 群への移行経路を扱う。
-- `basic` は ACP 型、path model、構造化文書 API を canonical 実装から再公開する互換入口で、実装や正本仕様は複製しない。
-- `cmoc_runtime.py` は `commons.cmoc_runtime` の公開名を再公開する互換 import shim。
-- `commons` は CLI、Codex、設定、Git、path、logging、state、Ollama、INDEX 更新などの共通 runtime 実装をまとめるパッケージ。
-- `config` は canonical 設定定義を再公開する互換 import 入口。
-- `main.py` は Typer ベースの cmoc CLI ルートで、共通エラー変換、トップレベル command、session/apply/review command、起動入口を定義する。
-- `oracle.py` は `src` 単体起動時に `oracle.*` パッケージを解決する互換 package shim。
-- `sub_commands` は session、apply、review、indexing、doctor、eval-oracle、TUI などの CLI サブコマンド実装をまとめる領域。
+- src は cmoc の実装コード領域で、CLI の起動入口、互換 import shim、共通 runtime、設定公開経路、ACP builder、各サブコマンド実装を扱う。機能別の実装確認では、配下の個別パッケージやモジュールへ進むための入口となる。
 
 ## Read this when
-- `acp.*`、`basic.*`、`config.*`、`cmoc_runtime` の公開 import 互換性や canonical 実装への移行を調べるとき。
-- 共通 runtime helper の実装や、複数サブコマンドにまたがる CLI・Codex・Git・state・logging の影響を確認するとき。
-- cmoc の command 階層、option、Typer/Click のエラー処理、CLI 起動入口を変更・調査するとき。
-- session、apply、review、indexing、doctor、eval-oracle、TUI の実行フローや状態操作を調べるとき。
-- `src` 起動時の `oracle.*` パッケージ解決を確認するとき。
+- cmoc の realization 実装全体の構成や、CLI 入口から共通 runtime・ACP・サブコマンドへ至る責務の分布を確認するとき。
+- 複数の実装領域にまたがる変更で、最初に読むべき下位パッケージや公開入口を判断するとき。
 
 ## Do not read this when
-- 互換入口の内部実体、canonical builder、設定仕様、構造化文書仕様の詳細だけを確認したいときは、対応する定義元を直接読む。
-- 特定の runtime helper やサブコマンド単体の実装だけを調査するときは、該当する個別モジュールを直接読む。
-- oracle の正本仕様や oracle 側実装を確認するときは、`oracle` ツリーを直接読む。
-- CLI の公開入口やサブコマンド接続と無関係な新規 API・設計を検討するとき。
+- 特定の CLI サブコマンド、runtime helper、ACP builder、設定型、または互換 shim の具体的な処理だけを調査・変更するときは、対応する下位モジュールを直接読む。
+- 正本仕様や oracle 側の実装を確認するときは、対応する oracle 文書・ソースを直接読む。
 
 ## hash
-- 2c56a7a3f75f848c62c0fe2b7e6e391ac63873ab72eed849ebfef794b0e41f21
+- 6beb3f3588667eaa672c2b52d21830a8f65c6deb2bfab3112ba2c44002f690b3
 
 # `test`
 

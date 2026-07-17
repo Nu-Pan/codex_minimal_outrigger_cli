@@ -17,16 +17,15 @@
 # `builder`
 
 ## Summary
-- `acp.builder` 配下の互換 builder package と、各 builder の canonical 実装への委譲入口を扱うディレクトリ。apply、indexing、review、session、TUI、quota probe などの既存 import 経路を維持し、必要に応じて各下位要素から個別の委譲経路や fallback を確認する。
+- ACP builder の互換入口と各種 builder 実装をまとめるディレクトリ。`acp.builder` 名前空間を維持しつつ、apply、review、session、TUI、indexing、quota probe などの下位 builder へ進むための入口を提供する。
 
 ## Read this when
-- 既存の `acp.builder.*` import 互換性、canonical builder への委譲、builder parameter の公開経路を調査・変更するとき。
-- apply、review、session、TUI、indexing、quota probe など特定 builder の互換入口や fallback の位置を確認するとき。
+- ACP builder の互換 import 経路、下位 builder package の構成、または builder 関連機能の入口を確認・変更するとき。
+- apply、review、session、TUI、indexing、quota probe のいずれかを対象とする作業で、適切な下位要素への入口を判断するとき。
 
 ## Do not read this when
-- canonical な builder の仕様・prompt・処理本体を確認したいときは、対応する `oracle.acp_builder` 側の実装を直接読む。
-- TUI の画面挙動、apply fork のループ制御、session の具体的な状態遷移など、builder 入口以外の処理を調査するとき。
-- 既存の互換 import 経路と無関係な新規公開 API や設計を検討するとき。
+- 特定の builder の canonical な仕様や具体的な処理を確認したいときは、対応する oracle 側実装または下位の対象を直接読む。
+- apply のループ制御、session の状態遷移、TUI の画面構成など、builder 以外の処理本体だけを調べるとき。
 
 ## hash
-- 6dca84f0cced70681653adf3eca49a8b8f2812abc52fa7d05d1729a66d82d9f4
+- 4355f2e0bdbc811fa3499b63272f199c8feaac3e436a55ce04277b29d101c7b0
