@@ -9,6 +9,7 @@ CLI lifecycle から分離して検証する。根拠は
 """
 
 import json
+import os
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -16,7 +17,7 @@ from pathlib import Path
 import pytest
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
-from _git_support import make_repo
+from _git_support import make_repo, run_git
 
 import cmoc_runtime
 import commons.indexing as indexing_common
@@ -488,3 +489,66 @@ def test_update_indexes_skips_directory_symlink_cycle(
     assert root / "INDEX.md" in updated
     assert root / "loop" not in calls
     assert "# `loop`" not in (root / "INDEX.md").read_text()
+
+
+def test_update_indexes_skips_special_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """INDEX 更新が FIFO を directory として辿らずに除外する。"""
+    root = make_repo(tmp_path)
+    os.mkfifo(root / "pipe")
+    cmoc_runtime.sync_config(root)
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        """INDEX entry 生成結果を固定する fake。"""
+        return _render_test_entry(update_root, path, digest)
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    indexing_common.update_indexes(root)
+
+    assert "# `pipe`" not in (root / "INDEX.md").read_text()
+
+
+def test_update_indexes_replaces_index_symlink_without_writing_link_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """INDEX.md symlink をリンク先へ書き込まず、work-root 内の file に置換する。"""
+    root = make_repo(tmp_path)
+    external_index = tmp_path / "external-index.md"
+    external_index.write_text("external\n")
+    (root / "INDEX.md").symlink_to(external_index)
+    cmoc_runtime.sync_config(root)
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        """INDEX entry 生成結果を固定する fake。"""
+        return _render_test_entry(update_root, path, digest)
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    indexing_common.update_indexes(root)
+
+    assert (root / "INDEX.md").is_file()
+    assert not (root / "INDEX.md").is_symlink()
+    assert external_index.read_text() == "external\n"
+
+
+def test_indexing_lock_path_is_shared_across_linked_worktrees(tmp_path: Path) -> None:
+    """linked worktree 間で INDEX 更新 lock を共有する。"""
+    root = make_repo(tmp_path)
+    linked = tmp_path / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-indexing-lock", str(linked), "HEAD")
+
+    assert indexing_common.indexing_lock_path(
+        root
+    ) == indexing_common.indexing_lock_path(linked)

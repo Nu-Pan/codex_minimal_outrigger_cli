@@ -19,6 +19,7 @@ from cmoc_runtime import (
     text_sha256,
 )
 from commons.runtime_codex_preflight import configure_indexing_preflight
+from commons.runtime_git import git_common_dir
 from commons.runtime_paths import cwd_override_active
 from commons.runtime_results import CodexExecCallable
 
@@ -63,10 +64,9 @@ def indexing_lock(root: Path) -> Iterator[None]:
 
 def indexing_lock_path(root: Path) -> Path:
     """Git 管理領域内の indexing 用 lock file path を取得する。"""
-    path = run_git(
-        ["rev-parse", "--git-path", "cmoc-indexing.lock"], root
-    ).stdout.strip()
-    return root / path
+    # {{work-root}}/oracle/doc/app_spec/indexing.md の INDEX 更新と commit を
+    # linked worktree 間でも一つの indexing 処理として直列化する。
+    return git_common_dir(root) / "cmoc-indexing.lock"
 
 
 def commit_index_updates(root: Path, updated: list[Path]) -> None:
@@ -158,8 +158,8 @@ def update_indexes(
             if content:
                 content += "\n"
             index_path = plan.directory / "INDEX.md"
-            if not index_path.exists() or index_path.read_text() != content:
-                index_path.write_text(content)
+            if _read_existing_index_content(index_path) != content:
+                _write_index_file(index_path, content)
                 updated.append(index_path)
     return updated
 
@@ -198,12 +198,13 @@ def indexable_directories(root: Path) -> list[Path]:
 
 def parse_index_entries(index_path: Path) -> dict[str, dict[str, str]]:
     """既存 INDEX.md から entry 名、本文、hash を抽出する。"""
-    if not index_path.exists():
+    content = _read_existing_index_content(index_path)
+    if content is None:
         return {}
     entries: dict[str, dict[str, str]] = {}
     current_name: str | None = None
     current_lines: list[str] = []
-    for line in index_path.read_text().splitlines():
+    for line in content.splitlines():
         if line.startswith("# `") and line.endswith("`"):
             if current_name is not None:
                 text = "\n".join(current_lines).rstrip()
@@ -222,6 +223,37 @@ def parse_index_entries(index_path: Path) -> dict[str, dict[str, str]]:
             "hash": extract_valid_index_entry_hash(text, current_name),
         }
     return entries
+
+
+def _read_existing_index_content(index_path: Path) -> str | None:
+    """既存 INDEX.md の通常ファイル内容を読み、再利用可能なら返す。"""
+    # {{work-root}}/oracle/doc/app_spec/indexing.md は INDEX.md を work-root 上の
+    # 生成物として扱う。symlink のリンク先や不正な encoding は再利用しない。
+    if index_path.is_symlink() or not index_path.exists():
+        return None
+    if not index_path.is_file():
+        raise CmocError(
+            "INDEX.md が通常ファイルではありません。",
+            [
+                "該当 path のファイル種別を確認してください。",
+                "通常ファイルとして再作成してから cmoc を再実行してください。",
+            ],
+            str(index_path),
+        )
+    try:
+        return index_path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _write_index_file(index_path: Path, content: str) -> None:
+    """INDEX.md を work-root 内の通常ファイルとして書き出す。"""
+    # symlink を write_text で開くとリンク先を変更するため、先にリンク自体を
+    # 取り除く。{{work-root}}/oracle/doc/app_spec/indexing.md の対象外 path へ
+    # indexing 内容を流出させない。
+    if index_path.is_symlink():
+        index_path.unlink()
+    index_path.write_text(content)
 
 
 def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
@@ -277,17 +309,22 @@ def indexable_children(root: Path, directory: Path) -> list[Path]:
     for child in sorted(directory.iterdir(), key=lambda p: p.name):
         if child.name == "INDEX.md" or child.name.startswith("."):
             continue
-        # {{work-root}}/oracle/doc/app_spec/indexing.md は agent call 前に indexing
-        # maintenance を完了することを求めるため、symlink cycle は有効な走査対象に
-        # できない。
-        if child.is_symlink():
-            continue
-        if is_root_memo(root, child):
-            continue
-        if is_git_ignored(root, child) or (child.is_file() and is_binary(child)):
+        if not _is_indexable_child(root, child):
             continue
         children.append(child)
     return children
+
+
+def _is_indexable_child(root: Path, child: Path) -> bool:
+    """symlink、特殊 file、仕様上の除外対象を INDEX から除く。"""
+    # {{work-root}}/oracle/doc/app_spec/indexing.md はファイル・ディレクトリだけを
+    # 目次対象とする。symlink は循環や root 外の実体を持ち得るため、特殊 file と
+    # 同じく hash・agent call の対象にしない。
+    if child.is_symlink() or not (child.is_file() or child.is_dir()):
+        return False
+    if is_root_memo(root, child) or is_git_ignored(root, child):
+        return False
+    return not (child.is_file() and is_binary(child))
 
 
 def build_index_entry(
