@@ -378,6 +378,50 @@ def test_update_indexes_generates_non_ancestor_indexes_in_parallel(
     assert sorted(calls) == [("first", "a.txt"), ("second", "b.txt")]
 
 
+def test_update_indexes_avoids_worker_threads_during_pushd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """隔離 run の cwd lock と INDEX worker が循環待ちにならない。"""
+    root = make_repo(tmp_path)
+    docs = root / "docs"
+    docs.mkdir()
+    (docs / "a.txt").write_text("a\n")
+    (docs / "b.txt").write_text("b\n")
+    cmoc_runtime.sync_config(root)
+    calling_thread = threading.get_ident()
+    call_threads: list[int] = []
+
+    class FakeCodexResult:
+        """INDEX entry 用の固定 Structured Output を返す。"""
+
+        output_json = {
+            "summary": ["summary"],
+            "read_this_when": ["read"],
+            "do_not_read_this_when": ["skip"],
+        }
+
+    class RejectingThreadPoolExecutor:
+        """pushd 中に worker pool が作られた時点で回帰を検出する。"""
+
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            raise AssertionError("pushd must not submit INDEX work to another thread")
+
+    def fake_codex_exec(_parameter: object, **_kwargs: object) -> FakeCodexResult:
+        call_threads.append(threading.get_ident())
+        return FakeCodexResult()
+
+    monkeypatch.setattr(
+        indexing_common, "ThreadPoolExecutor", RejectingThreadPoolExecutor
+    )
+
+    with cmoc_runtime.pushd(root):
+        updated = indexing_common.update_indexes(root, fake_codex_exec)
+
+    assert docs / "INDEX.md" in updated
+    assert call_threads
+    assert set(call_threads) == {calling_thread}
+
+
 def test_update_indexes_indexes_nested_memo_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

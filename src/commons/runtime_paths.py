@@ -3,6 +3,7 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from basic.path_model import RootPathPlaceHolder, resolve_real_path
 from commons.runtime_errors import CmocError
 
 _CWD_LOCK = threading.RLock()
+_CWD_OVERRIDE_DEPTH: ContextVar[int] = ContextVar("CWD_OVERRIDE_DEPTH", default=0)
 
 
 def repo_root(cwd: Path | None = None) -> Path:
@@ -159,6 +161,11 @@ def is_root_memo(root: Path, path: Path) -> bool:
     return resolved == memo or memo in resolved.parents
 
 
+def cwd_override_active() -> bool:
+    """現在の context が ``pushd`` による cwd 切替区間内かを返す。"""
+    return _CWD_OVERRIDE_DEPTH.get() > 0
+
+
 @contextmanager
 def pushd(path: Path) -> Iterator[None]:
     """外部 API が cwd 前提を持つ区間を process-wide に直列化する。"""
@@ -166,9 +173,11 @@ def pushd(path: Path) -> Iterator[None]:
     with _CWD_LOCK:
         previous = Path.cwd()
         os.chdir(path)
+        token = _CWD_OVERRIDE_DEPTH.set(_CWD_OVERRIDE_DEPTH.get() + 1)
         try:
             yield
         finally:
+            _CWD_OVERRIDE_DEPTH.reset(token)
             os.chdir(previous)
 
 

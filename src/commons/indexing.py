@@ -19,6 +19,7 @@ from cmoc_runtime import (
     text_sha256,
 )
 from commons.runtime_codex_preflight import configure_indexing_preflight
+from commons.runtime_paths import cwd_override_active
 from commons.runtime_results import CodexExecCallable
 
 CodexExec = CodexExecCallable
@@ -127,18 +128,27 @@ def update_indexes(
                     ),
                 )
 
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                # ContextVars are not inherited by worker threads. Copy each
-                # caller context before submit so Codex events reach the
-                # subcommand log used by the parent command.
-                # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-                futures = [
-                    executor.submit(copy_context().run, build_missing, item)
-                    for item in missing
-                ]
-                for future in futures:
-                    plan, index, entry = future.result()
+            if cwd_override_active():
+                # pushd keeps the process-global cwd lock for its whole scope.
+                # A worker would block in repo_root/work_root while this thread
+                # waits for that worker, so isolated run worktrees must build on
+                # the lock-owning thread. Outside pushd, parallelism is preserved.
+                results = map(build_missing, missing)
+                for plan, index, entry in results:
                     plan.entries[index] = entry
+            else:
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    # ContextVars are not inherited by worker threads. Copy each
+                    # caller context before submit so Codex events reach the
+                    # subcommand log used by the parent command.
+                    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+                    futures = [
+                        executor.submit(copy_context().run, build_missing, item)
+                        for item in missing
+                    ]
+                    for future in futures:
+                        plan, index, entry = future.result()
+                        plan.entries[index] = entry
         for plan in plans:
             entries = [entry for entry in plan.entries if entry is not None]
             content = "\n\n".join(entries)
