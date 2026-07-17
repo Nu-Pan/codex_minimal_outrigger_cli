@@ -123,18 +123,18 @@
 # `runtime_codex_logging.py`
 
 ## Summary
-- Codex CLI 呼び出し時の console 通知と、その失敗理由を console/event で共通化する error text 変換を扱う。
+- Codex CLI 呼び出しの利用者向け console 通知と、起動失敗時の共通エラーテキスト変換を担う。呼び出し目的・ログパス・経過時間・終了コード・エラーを整形して出力し、CmocError と一般例外を処理する実装への入口。
 
 ## Read this when
-- Codex 呼び出しの開始通知、経過時間、終了コード、起動失敗メッセージの表示を変えたいときに読む。
-- Codex 固有の失敗情報を、人間向け console 表示とイベント記録で同じ文面に揃えたいときに読む。
+- Codex CLI 呼び出し通知の出力内容、出力先、エラー表示を確認・変更するとき
+- Codex CLI 起動失敗時のエラーテキスト変換を確認・変更するとき
 
 ## Do not read this when
-- 一般的なログ出力の整形や保存先を変えたいだけなら、汎用の runtime logging 側を読む。
-- `codex exec` の引数構成、プロンプト生成、実行制御を変えたいだけなら、呼び出し本体の実装を読む。
+- Codex CLI の実際の起動処理やイベントログ保存の実装を確認するとき
+- 時刻や経過時間のフォーマット規則そのものを確認するとき
 
 ## hash
-- 6ca8648503df249ad1c39cf3d01e3c95496fd6762ca7d903a9caaa7b39b6f9d6
+- 05b23e2ca6cdd39b230b9972c682ac09f9ffefed8a27e0537e7a34a627f19ee4
 
 # `runtime_codex_preflight.py`
 

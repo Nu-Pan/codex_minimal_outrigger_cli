@@ -383,36 +383,36 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota exceeded 後の quota probe・待機・resume・再実行を検証する回帰テスト群。resume token の復元、代表 probe の共有、並行呼び出し、失敗伝播、poll 上限、ログ・出力・CODEX_HOME・cwd の観測可能な挙動を扱う。Codex exec の quota 復帰制御に関するテストの入口。
+- Codex quota exceeded 後の probe・待機・resume・再実行を検証する回帰テスト群。quota probe の共有、resume token 復元、並行呼び出し、失敗伝播、ログ・出力・CODEX_HOME・cwd の観測を扱う。Codex 実行の quota retry 制御を変更・調査する際の入口。
 
 ## Read this when
-- Codex quota exceeded 後の待機、quota availability probe、resume または prompt 再実行の挙動を変更・調査するとき
-- quota 復帰処理の並行実行、probe 失敗、KeyboardInterrupt、poll 上限、状態解除を検証するとき
-- Codex 呼び出しログ、subcommand log、resume token、CODEX_HOME、cwd の回帰を確認するとき
+- Codex exec の quota 待機、quota availability probe、resume または prompt 再実行の挙動を変更・検証するとき
+- quota retry の並行実行、probe 失敗、poll 上限、KeyboardInterrupt、ログ記録を調査するとき
+- Codex 呼び出しの call log、subcommand log、CODEX_HOME、cwd の回帰を確認するとき
 
 ## Do not read this when
-- quota 復帰制御や Codex runtime のテスト対象ではなく、通常の Codex exec 実行仕様だけを確認するとき
-- quota probe の実装そのものを変更・調査する場合は、まず対応する実装モジュールと正本仕様を読むとき
+- quota retry 以外の Codex exec 基本仕様や単独の CLI 入出力を調査するときは、対応する実装・仕様・テストを直接読む
+- quota probe の prompt 構築そのものだけを変更・調査するときは、probe builder の実装と専用テストを先に読む
 
 ## hash
-- 2970fe3aba0cf7fdfbf11d69eade3439e847e4a5c7181c3436deef02c0fb5ce9
+- 0878c1655899b637441b6e8000e83f2c44e4938bb46920073410521819e3544c
 
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex exec の retry と失敗時ログを検証するテスト。Structured Output の意味的失敗・解析失敗、capacity retry、未知の JSONL error、中断、agent diff 保持、stdout JSONL 外のエラーマーカー、retry 上限と backoff を、最終結果・subprocess 呼び出し回数・call log・subcommand event の外部挙動として確認する。
+- Codex exec の再試行・失敗処理と関連ログを外部挙動として検証するテスト。Structured Output の意味的失敗や解析失敗、capacity retry、未知の JSONL error、中断、retry 上限、差分保持、stdout 外エラーマーカーの扱いを対象とする。run_codex_exec の状態、subprocess 呼び出し回数、call log、subcommand event を一続きの責務として確認する。
 
 ## Read this when
-- Codex exec の retry 条件、失敗分類、retry 上限や backoff を変更・調査するとき
-- Codex exec の call log、subcommand event、失敗時コンソール出力を変更・調査するとき
-- Structured Output の検証失敗、JSONL error、中断、capacity failure の挙動を確認するとき
+- run_codex_exec の retry 条件、backoff、上限、失敗結果を変更または調査するとき
+- Codex 呼び出しの call log や subcommand event の schema・status・保存内容を変更または検証するとき
+- Structured Output の検証失敗、JSONL error、KeyboardInterrupt、capacity failure、agent diff 保持の挙動を確認するとき
 
 ## Do not read this when
-- Codex exec の retry や失敗時ログに関係しない機能を変更・調査するとき
-- Codex exec の通常成功時の引数構築や出力変換だけを確認するときは、まず対応する実装・仕様を直接読む
+- Codex exec の通常成功経路だけを変更・調査するとき
+- retry や失敗時ログに関係しない Codex 実行設定・プロンプト生成を扱うとき
 
 ## hash
-- e872132d06a77346516caa6a6c6f6319d1cbb4006a7cecb59aeea97387a696dd
+- cba7a9b0499545ecf4b9e9033c6ac6718506e48f75b4f79ea047e303360367de
 
 # `test_codex_runtime_subprocess.py`
 
@@ -434,20 +434,19 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 実行ランタイムの統合テスト。prompt 読み込み、ファイルアクセスモード、Codex CLI 引数、作業ディレクトリ、call log、サブコマンドイベント、コンソール要約、終了コード、CLI 不在・割り込み・非 0 終了時の失敗処理を検証する。Codex 呼び出しやログ仕様に関する実装変更・テスト追加の入口となる。
+- Codex TUI 実行ラッパーの振る舞いを検証する pytest。prompt の読み込みとアクセス境界、Codex CLI 引数、成功・失敗時の call log／サブコマンドイベント／コンソール出力、timestamp 衝突時のログ保持、CLI 不在・KeyboardInterrupt・非 0 終了を扱う。TUI 実行や Codex 呼び出しログの変更を検証するテスト入口。
 
 ## Read this when
-- Codex TUI 実行、Codex CLI の引数や sandbox 設定、prompt のアクセス境界を変更・レビューするとき
-- Codex 呼び出しの成功・失敗ログ、終了コード、コンソール出力の挙動を変更・検証するとき
-- TUI call log の保存、timestamp 衝突回避、サブコマンドイベント記録を調査するとき
+- `run_codex_tui` の prompt 読み込み、sandbox／approval 引数、worktree 対応を変更または調査するとき
+- Codex TUI 呼び出しの成功・失敗ログ、終了コード、例外処理、コンソール要約を変更または検証するとき
+- TUI call log のファイル名衝突や保存内容を扱うとき
 
 ## Do not read this when
-- TUI 以外の Codex 実行経路だけを変更・調査するとき
-- prompt 生成仕様そのものを確認する場合は oracle の prompt 仕様を直接読むとき
-- 一般的な Git 操作、設定読み込み、または TUI と無関係なテストを扱うとき
+- Codex TUI の実装詳細そのものを変更・調査する場合は、まず対応する `src` 実装を読む
+- TUI 以外の Codex 実行経路や、Codex 出力品質そのものを扱う場合
 
 ## hash
-- a173eaad0fbac41ecd8fc0abe233b2f27fd0af962bc7db97945acd03427bd9cf
+- fae628de6565f8b56407d6ab5f3016ac86da600072856e165d760970ae624202
 
 # `test_doctor_cli.py`
 

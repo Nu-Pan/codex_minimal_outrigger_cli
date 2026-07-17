@@ -127,31 +127,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization source package。Typer CLI の起動・コマンド定義、共通 runtime、設定・互換 import shim、ACP builder、各サブコマンド実装を提供し、CLI と内部機能の実装領域への入口となる。
+- cmoc の実装パッケージ領域。Typer CLI の起動入口、サブコマンド、共通 runtime、ACP builder、設定・互換 import shim、正本 oracle パッケージ解決を扱う。機能別の実装や公開 import 経路を確認する際の上位入口で、具体的な処理は対応する下位パッケージ・モジュールへ進む。
 
 ## Read this when
-- cmoc の CLI 起動入口、サブコマンド構成、共通 runtime、設定、ACP builder の実装領域を選ぶとき。
-- 複数のサブコマンドや共通 runtime にまたがる変更影響を調べるとき。
+- cmoc の CLI 実装全体の構成や、機能ごとの実装入口を探すとき。
+- CLI 起動、サブコマンド、共通 runtime、ACP builder、設定、互換 import 経路の担当領域を確認するとき。
 
 ## Do not read this when
-- 特定機能の正本仕様を確認したいときは、対応する oracle 配下を直接読む。
-- 単一サブコマンドや個別 runtime の具体的な処理だけを調査・変更するときは、対応する下位ディレクトリまたはモジュールへ直接進む。
+- 特定機能の具体的な処理や内部挙動を調査するときは、対応する下位パッケージ・モジュールを直接読む。
+- 利用者向け仕様や正本仕様を確認するときは、対応する oracle 文書・ソースを直接読む。
 
 ## hash
-- 825d6fb8d74167fc875283a6407e48bc7e9334a86cce528b3a16db043f5b5ad8
+- 50e998bdb70f3919932048807922731da2acaace9645b21caaffc56d69ccf4f8
 
 # `test`
 
 ## Summary
-- cmoc の pytest テスト群を収録するディレクトリ。ACP builder、CLI サブコマンド、Codex runtime、indexing、review oracle、session/apply、設定・状態・worktree・Ollama などの外部挙動と契約を検証する。各テスト用共有 helper も含み、対象機能の回帰テストへ進む入口となる。
+- `test` ディレクトリは、cmoc の CLI、runtime、ACP builder、indexing、review oracle、session/apply、Codex/Ollama 連携などを対象とする pytest の入口である。共有テスト補助、機能別の回帰・統合テスト、実 Codex を使う受け入れテストに分かれる。
 
 ## Read this when
-- cmoc の機能変更に対応する既存の pytest テスト、回帰テスト、または共有テスト helper を探すとき。
-- CLI、Codex 実行、indexing、review oracle、session/apply、runtime、ACP builder の挙動をテストから確認するとき。
+- cmoc の外部 CLI 挙動、runtime 契約、worktree・Git・state lifecycle を変更または検証するとき。
+- ACP builder、INDEX 生成、review oracle、session/apply、Codex、Ollama、TUI の仕様に対応するテスト入口を探すとき。
+- 共有 fixture やテスト用コマンド・Git repository・CliRunner の準備方法を確認するとき。
+- 本番同等の独立 process・PTY・実 Codex 経路を検証するとき。
 
 ## Do not read this when
-- 実装詳細や正本仕様だけを確認したいときは、対応する src または oracle のファイルを直接読む。
-- pytest 共通方針や Python 実行環境だけを確認したいときは、リポジトリの開発・テスト規約を直接読む。
+- 実装や正本仕様そのものを確認する場合は、対応する `src` または `oracle` 配下を直接読む。
+- 特定機能と無関係なテストや、Codex の回答品質自体を評価する作業のとき。
 
 ## hash
-- ddef2ab97bafcd1eb5ba4bfc4bad80f06973a21b4ed36e2997be79038749ac20
+- 3b0f5479095c52cf4f042a4e28dbd6223b52560c5f2b01ffe783ab4db253151d
