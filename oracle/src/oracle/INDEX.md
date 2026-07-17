@@ -1,19 +1,20 @@
 # `acp_builder`
 
 ## Summary
-- ACP builder の oracle src 群をまとめるディレクトリ。agent 呼び出しパラメータ、Structured Output schema、prompt、モデル・アクセス設定など、各種 cmoc 操作の呼び出し条件に関する正本仕様断片への入口。
-- 共通部品と、apply fork・indexing・oracle review・session join・tui など個別処理向けの builder 定義に分かれる。特定の呼び出し条件や出力契約を調査する際は、該当する下位要素へ進む。
+- ACP builder の oracle src 群をまとめるディレクトリ。エージェント呼び出しパラメータ、共通部品、各サブコマンド向けの prompt・Structured Output schema・実行設定を扱い、下位の個別 builder 仕様へ進む入口。
 
 ## Read this when
-- ACP builder の呼び出し条件、prompt、Structured Output schema、モデル設定、ファイルアクセス方針を確認・変更するとき。
-- 対象の cmoc 操作に対応する oracle src や、builder 間で共有される状態・結果表現の仕様を探すとき。
+- ACP builder の oracle 正本仕様を調査・変更するとき。
+- エージェント呼び出し条件、prompt、Structured Output schema、ファイルアクセス方針、モデル設定のいずれかを確認するとき。
+- 下位の個別 builder や共通部品のどれを読むべきかを、ACP builder の責務から絞り込みたいとき。
 
 ## Do not read this when
-- 差分取得、fork の作成・適用、session の通常同期、レビュー探索手順、TUI 本体など、agent 呼び出しパラメータ構築より前後の実行フローを調査するとき。
-- realization code の実装・テスト詳細、共通 prompt builder やパス解決など別領域の実装詳細だけを確認したいとき。
+- realization code 側の ACP builder 実装やテストの詳細を確認するとき。
+- ACP builder の前後にある実行フロー、CLI 表示、永続化、実際のファイル編集処理だけを調査するとき。
+- ACP builder と無関係な oracle 仕様を探しているとき。
 
 ## hash
-- db2d089c09f353354398c8b7f604923bf5b3e0522140ea83bb23cabc5580cc73
+- 41a3209195eb4b46a34acc3be0fd117c39da08e22717d25468dde53b88c8423b
 
 # `other`
 

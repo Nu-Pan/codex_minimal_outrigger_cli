@@ -213,20 +213,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンド仕様をまとめた正本文書群。apply、session、doctor、indexing、oracle review、TUI などの実行条件・状態遷移・後処理・責務境界を確認する入口であり、個別サブコマンドの仕様調査時に対象文書へ進む。
+- cmoc の主要サブコマンド仕様をまとめた入口。apply、session、oracle、doctor、indexing、tui などの実行条件・状態遷移・後処理・責務境界を確認するための正本仕様断片を扱う。各サブコマンドの実装・テスト時は、対象コマンドに対応する文書から読み始める。
 
 ## Read this when
-- cmoc のサブコマンドの実装・変更・検証で、実行条件、状態遷移、終了処理、cleanup、merge、レビュー、TUI 起動フローの正本仕様を確認するとき。
-- apply または session の fork、join、abandon の処理境界や相互の前提条件を調べるとき。
-- サブコマンド入口の仕様と、個別処理・agent call の詳細仕様を切り分けて読む対象を選ぶとき。
+- cmoc のサブコマンド仕様を調査・実装・レビューするとき。
+- apply または session の fork、join、abandon における状態遷移、ブランチ・worktree cleanup、merge、終了条件を確認するとき。
+- oracle review/edit、doctor、indexing、tui の実行フローや前提条件を確認するとき。
 
 ## Do not read this when
-- サブコマンドに共通する開発環境・設計・テスト規則を確認したいとき。
-- 個別サブコマンド内部の realization 実装や、run isolation・parameter などの詳細正本だけを調べたいときは、対応するより直接の文書を読む。
-- 一般的な git 操作や CLI 設計を調べるだけで、cmoc サブコマンドの正本仕様が関係しないとき。
+- 特定サブコマンドの内部処理や agent call パラメータだけを調べる場合は、対応するより詳細な正本仕様を直接読む。
+- サブコマンド共通の開発環境・設計・テスト規則を確認したい場合は、dev_rule 系の文書を読む。
+- 個別の realization file の実装詳細や一般的な git 操作を調べる場合。
 
 ## hash
-- e67ee954c143d861c9b55025ad11a775e7e66c088d97c7eed92e928a66100547
+- 966ebaa4ed304978854d83b82041f492078e71abc3df876f3a3c5c2c03955088
 
 # `subcommand_interruption.md`
 
@@ -249,17 +249,17 @@
 # `usage.md`
 
 ## Summary
-- cmoc のエンドユーザー向け利用手順を定義する文書。PATH 設定と初回準備、セッション fork、oracle の記述・レビュー・commit、apply fork/join、session join までの標準ワークフローを示す。cmoc の基本的な呼び出し方と、各ブランチ・スナップショットの役割を確認する入口となる。
+- cmoc の導入からセッション開始、oracle の記述・レビュー、実装追従、変更の統合、最終的なブランチ統合までの標準ワークフローを説明する利用者向けガイド。cmoc の呼び出し準備、ブランチ運用、各 fork/join 操作の入口となる。
 
 ## Read this when
-- cmoc の初回セットアップ方法を確認するとき
-- session fork から oracle の反映、セッション終了までの標準手順を確認するとき
-- cmoc の各コマンドを実行する順序やブランチ運用を確認するとき
+- cmoc を初めて利用するとき
+- cmoc session fork、cmoc apply fork/join、cmoc session join の手順を確認するとき
+- oracle の変更を実装へ反映する一連の運用を確認するとき
 
 ## Do not read this when
-- cmoc の内部実装やコマンド仕様の詳細を調査するとき
-- oracle の設計原則や開発環境・テスト規則を確認するとき
-- 特定の apply 処理やセッション処理の実装を変更するとき
+- 特定の cmoc サブコマンドの詳細仕様だけを確認したいとき
+- oracle の設計・レビュー規則を確認したいとき
+- 実装追従処理の内部設計やテスト方法を調べるとき
 
 ## hash
-- 110f1757462ca73f72f5111eb4164464c38fb14990a4f9429e5801a87235316d
+- 96e5c50f784c0c655f7ad485b3e6c77a66dcb04efeb70effa99f61d0b9a818ea

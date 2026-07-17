@@ -70,6 +70,24 @@
 ## hash
 - 8354ebcd7f732dcf70eb06ee6ed33abe6093b06e6effe5dcf1084dc3dce1f39c
 
+# `edit_oracle.md`
+
+## Summary
+- `cmoc oracle edit` サブコマンドの仕様を定義する。エディタから oracle file の最終状態に関する指示を受け取り、構築済みパラメータで Codex CLI の TUI を起動する処理、入力規則、起動条件、変更の扱いを扱う。
+
+## Read this when
+- `cmoc oracle edit` の実装・テスト・動作確認を行うとき
+- oracle file の編集指示をエディタ入力から TUI 起動へ渡す流れを確認するとき
+- Codex CLI 起動時の環境変数、preflight validation、設定上書きの扱いを確認するとき
+
+## Do not read this when
+- `cmoc tui` の一般的なオリジナルプロンプト入力仕様だけを確認したいときは、そちらの仕様を直接読む
+- TUI 起動パラメータの prompt や agent call parameter の正本を確認したいときは、指定された `build_edit_oracle_launch_tui_parameter` の定義を直接読む
+- oracle file の変更を自動 commit する処理を確認したいとき
+
+## hash
+- 0b4732a15b2cb3fe1d1dd348ef5e212788d22a0c6ae8c79f00e0d9fc6687c49a
+
 # `indexing.md`
 
 ## Summary

@@ -1,34 +1,36 @@
 # `doc`
 
 ## Summary
-- cmoc の正本ドキュメント群への入口。アプリケーション仕様、branch・run モデル、開発規則、設計上の代替案など、実装や利用手順の判断根拠となる文書へ振り分ける。
+- cmoc の oracle 文書群への入口。アプリケーション仕様、branch/session/run モデル、設計上の不採用案、開発規則を扱い、各詳細文書へルーティングする。
 
 ## Read this when
-- cmoc の利用者向け挙動や CLI の正本仕様を調査するとき。
-- session・run の branch 境界や worktree の扱いを確認するとき。
-- Python 開発環境、CLI 設計・配置、テスト規則などの開発手順を確認するとき。
-- 採用しなかった設計案と、その不採用理由を確認するとき。
+- cmoc の利用者向け挙動、CLI フロー、状態遷移、エラー処理、ログ、補完、モデルサービス、プロンプト生成を確認するとき。
+- session・run と branch・worktree の境界を確認するとき。
+- 採用しなかった設計案の背景や理由を調査するとき。
+- Python 開発環境、CLI 設計・配置、テスト方針などの開発規則を確認するとき。
 
 ## Do not read this when
-- 個別仕様文書の所在が明確で、その本文を直接確認できるとき。
-- 個別モジュールの実装詳細や既存テストの内容だけを確認したいとき。
-- INDEX.md の構成や生成結果だけを確認したいとき。
+- 個別 realization file の実装詳細を確認したいとき。
+- 通常の git 運用や cmoc と無関係なリポジトリ方針を確認したいとき。
+- 個別機能の詳細仕様を直接確認できる対象文書が分かっているとき。
 
 ## hash
-- 5253e15d1477d0d63e5a63f8c5faacfd37aeb45598976a40348688f610e20af1
+- 9bb2d1e094d7c704ba3812e524a6c8b96aa2568d555ca697268bf2fefdd3cd76
 
 # `src`
 
 ## Summary
-- cmoc の oracle src を構成する主要な正本仕様断片への入口。ACP builder、設定・パス解決、規範、Markdown 処理、agent 用 prompt builder などの下位要素を扱う。
+- cmoc の oracle src を構成する実行可能な正本仕様・生成部品への入口。ACP builder、設定・共通データ構造、プロンプト builder などを扱い、エージェント呼び出しに必要なパラメータ、prompt、Structured Output schema、実行設定、文書生成関連の定義を確認する起点となる。
 
 ## Read this when
-- agent 呼び出し条件、設定・パス解決、規範データ、Markdown 文書処理、oracle／realization の標準や routing 規則を調査・変更するとき。
-- 対象領域に対応する oracle src の下位要素を選び、個別の正本仕様断片へ進む必要があるとき。
+- ACP builder の呼び出し条件、パラメータ、prompt、Structured Output schema、実行設定を調査するとき
+- cmoc の設定モデル、パス解決、規範データ、StructDoc、Markdown 文書生成の定義を確認するとき
+- oracle と realization の境界、標準規則、ファイルアクセスやルーティングに関する実行可能な定義を確認するとき
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、通常の実行フロー、realization code の実装・テスト詳細だけを調査するとき。
-- 対象となる個別の下位要素が既に特定できており、その本文だけを確認すればよいとき。
+- realization code の実装・テスト、CLI の実行フロー、表示、永続化、実際のファイル編集処理だけを調査するとき
+- 個別の Enum、StructDoc、標準文書、Requirement など下位対象の定義だけを確認したいとき
+- oracle file の配置・命名に関する上位方針や、対象本文の INDEX.md 要約だけを確認したいとき
 
 ## hash
-- a8c6f509da48fd3295af4332cd126e6ee29bb854ac5b9af28d84f1541c7bae12
+- f460fa8b855ffcc96b1c4218afe5a6fa90492d2811ec93855e192248a0954cf5

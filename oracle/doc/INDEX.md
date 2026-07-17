@@ -1,19 +1,18 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を収める正本文書群への入口。自動補完、managed ollama、Codex CLI 呼び出し、ログ、doctor 前処理、エラー処理、インデックス生成、run isolation、session 状態、サブコマンド、中断、利用手順などの個別仕様へ振り分ける。
+- cmoc のアプリケーション仕様を定める oracle 文書群への入口。CLI の自動補完、サブコマンド、doctor、session、run 隔離、ログ、Codex 呼び出し、managed ollama、INDEX 生成など、個別機能の正本仕様を確認する際に対象文書へ進む。
 
 ## Read this when
-- cmoc の利用者向け挙動、CLI 呼び出し、サブコマンド、状態管理、ログ、前処理、補完、インデックス生成などの正本仕様を調査するとき。
-- 対象機能に対応する個別仕様文書がどれか判断するとき。
+- cmoc の利用者向け挙動、CLI 実行フロー、状態遷移、エラー処理、ログ、補完、モデルサービス、プロンプト生成などのアプリケーション仕様を調査・実装・レビューするとき。
+- 対象機能に対応する詳細な oracle 文書がどれか判断したいとき。
 
 ## Do not read this when
-- Python 開発環境、設計規則、テスト規則など開発手順だけを確認したいとき。
-- 個別仕様が明確で、対応する文書を直接読めるとき。
-- 既存の INDEX.md の構成や生成結果だけを確認したいとき。
+- Python の開発環境、設計ルール、テストルールなど開発手順だけを確認したいとき。
+- 個別 realization file の実装詳細や、既存 INDEX.md の内容そのものを確認したいとき。
 
 ## hash
-- 50a45f10aaad4c3f4d49cc2f41a7c1102deb4167344d16cdd98ed5bca5a0071e
+- e96062bbe50c2bfae7f130a6d6d049a1f4fe8ad70744b9c37ceded582df37dd6
 
 # `branch_model.md`
 
