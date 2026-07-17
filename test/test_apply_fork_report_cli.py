@@ -586,6 +586,10 @@ def test_apply_fork_report_does_not_invent_loop_when_no_targets(
     assert result.exit_code == 0
     rendered = report_path_from_stdout(result.stdout).read_text()
     assert "result: converged" in rendered
+    assert (
+        "収束: 調査待ちファイルリストが空になったことによりループを終了しました。"
+        in rendered
+    )
     assert "- 所見列挙ループは実行されませんでした" in rendered
     assert "- ループ 1: 0" not in rendered
 

@@ -264,7 +264,7 @@ def render_apply_fork_report(
 ) -> str:
     """apply fork report を Markdown + YAML frontmatter で描画する。"""
     result_text = {
-        "converged": "収束: 検出された所見リストが空によりループを終了しました。",
+        "converged": "収束: 調査待ちファイルリストが空になったことによりループを終了しました。",
         "unconverged": (
             "未収束: ユーザー中断要求を受け付けたためループを終了しました。"
             if interrupted
