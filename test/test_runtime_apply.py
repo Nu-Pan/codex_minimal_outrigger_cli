@@ -9,6 +9,7 @@ CLI を呼ばず、pid file、advisory lock、pidfd、process group の低レベ
 import threading
 import time
 from multiprocessing import Pipe, Process
+from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
@@ -16,7 +17,9 @@ import pytest
 import commons.runtime_apply as apply_runtime
 
 
-def hold_apply_process_id_lock(path: Path, ready: object, release: object) -> None:
+def hold_apply_process_id_lock(
+    path: Path, ready: Connection, release: Connection
+) -> None:
     """別 process で advisory lock を保持するテスト用 helper。"""
     from commons.runtime_codex_profile import apply_process_id_file_lock
 
