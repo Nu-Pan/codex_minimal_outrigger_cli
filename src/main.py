@@ -1,7 +1,7 @@
 import os
 from collections.abc import Sequence
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 import click
 import typer
@@ -38,6 +38,20 @@ class ReviewOracleScope(str, Enum):
     full = "full"
 
 
+def _click_exception_types() -> tuple[type[BaseException], ...]:
+    """Typer の版によって異なる Click 例外クラスを安全に集める。"""
+    compatibility_module = getattr(typer.core, "_click", None)
+    compatibility_exception = getattr(compatibility_module, "ClickException", None)
+    if isinstance(compatibility_exception, type) and issubclass(
+        compatibility_exception, BaseException
+    ):
+        return (click.ClickException, compatibility_exception)
+    return (click.ClickException,)
+
+
+_CLICK_EXCEPTION_TYPES = _click_exception_types()
+
+
 class _CmocTyperGroup(typer.core.TyperGroup):
     """通常の CLI 引数解析エラーを cmoc のエラーレポートへ変換する。"""
 
@@ -65,7 +79,8 @@ class _CmocTyperGroup(typer.core.TyperGroup):
         # {{work-root}}/oracle/doc/app_spec/error_handling.md
         # Typer 0.27 は Click compatibility module を通じて parse するため、version に
         # 依存しない error-handling contract のため両方の exception class に対応する。
-        except (click.ClickException, typer.core._click.ClickException) as exc:
+        except _CLICK_EXCEPTION_TYPES as exc:
+            click_exception = cast(click.ClickException, exc)
             typer.echo(
                 render_error(
                     CmocError(
@@ -73,12 +88,12 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                         [
                             "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
                         ],
-                        exc.format_message(),
+                        click_exception.format_message(),
                     )
                 )
             )
             if standalone_mode:
-                raise SystemExit(exc.exit_code) from exc
+                raise SystemExit(click_exception.exit_code) from exc
             raise
         if standalone_mode and isinstance(result, int):
             raise SystemExit(result)
