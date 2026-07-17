@@ -359,7 +359,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
         )
 
     assert calls == ["prompt", probe_prompt]
-    console = capsys.readouterr().out
+    console = capsys.readouterr().err
     assert "- Purpose: `quota availability probe`" in console
     assert "- Error: `KeyboardInterrupt()`" in console
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
