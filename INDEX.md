@@ -128,34 +128,36 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめるトップレベルの入口。Typer CLI のコマンド登録と起動、互換 import shim、共通 runtime、サブコマンド、ACP/basic/config 関連実装へのルーティングを担う。
+- cmoc の realization 実装本体を配置する src ディレクトリ。ACP・basic・config・oracle の互換入口、共通 runtime、CLI 本体、各サブコマンド実装へのルーティング起点を含む。
 
 ## Read this when
-- cmoc の CLI コマンド・サブコマンド登録、option、引数解析エラー処理、補完時の起動経路を調査・変更するとき。
-- トップレベルの互換 import path や package shim の責務を確認するとき。
-- 共通 runtime またはサブコマンド、ACP builder、basic/config 実装へ進む入口を選ぶとき。
+- cmoc の CLI 起動入口、トップレベルおよびサブコマンドの登録、引数解析、補完動作を調査・変更するとき。
+- ACP・設定・oracle package の互換 import や公開入口を確認するとき。
+- 複数サブコマンドに共通する runtime、Git、設定、パス、ログ、状態、Codex 実行基盤の実装箇所を選ぶとき。
+- 特定サブコマンドの実装入口や、src 配下の package 構成を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime helper、ACP builder、basic/config API の実装詳細だけを確認したいときは、対応する下位要素を直接読む。
-- canonical な oracle 仕様や oracle 側の実装を確認したいときは、対応する oracle ツリーを直接読む。
+- canonical な正本仕様や具体的な実装詳細だけを確認したいときは、対応する oracle または下位実装を直接読む。
+- 特定サブコマンドの業務処理だけを調査するときは、対応する sub_commands 配下を直接読む。
+- 共通 runtime と関係しない特定機能の詳細だけを確認するときは、該当する個別モジュールを直接読む。
 
 ## hash
-- 26ffe053715d680f577b089afc8e2beb0de8aab3bdfee072466409d2983aa04f
+- dc092ed6e040d9362231fec15c75c8582485ba1c9d0e40d27d46c586841626c0
 
 # `test`
 
 ## Summary
-- テストコードから正本 schema を参照する path helper、CLI・Git・Ollama・Codex などの共有テスト補助、各種 runtime／session／apply／oracle review／indexing／TUI／prompt の pytest および受け入れテストを提供する。実装や正本仕様を変更・調査する際に、対応する外部挙動・制御ロジック・公開 API の検証入口として利用するディレクトリ。
+- pytest による realization test と共有テスト補助モジュールを集約するディレクトリ。ACP builder、CLI、runtime、Codex、indexing、oracle review、session/apply、設定や Ollama などの外部挙動・制御契約を検証する入口であり、個別領域のテストへ進むために読む。
 
 ## Read this when
-- 対象機能の外部挙動、回帰条件、公開 API、CLI lifecycle、runtime 制御をテスト側から確認・変更するとき。
-- 共有 fixture や fake command、Codex／Git／Ollama／CLI runner のテスト準備方法を確認するとき。
-- indexing、apply、session、oracle review、Codex runtime、設定、TUI などの対応テストケースを絞り込むとき。
+- 実装変更に対応する回帰テストや外部契約の検証先を探すとき
+- CLI、runtime、Codex、indexing、oracle review、session/apply などのテスト挙動を調査するとき
+- 共有テスト fixture、CliRunner、Git repository、fake command、Ollama、Codex 用 helper の所在を確認するとき
 
 ## Do not read this when
-- 正本仕様、schema の内容、実装責務や内部構造を確認することが目的のときは、対応する oracle または src の本文を直接読む。
-- 対象機能と無関係なテスト補助や、別サブコマンド・別 runtime 領域のテストを読む必要がないとき。
-- LLM の回答品質そのものを評価したいとき。
+- 正本仕様や実装詳細そのものを確認する場合は、対応する oracle または src のファイルを直接読む
+- 特定領域と無関係なテストを総当たりで確認する必要がなく、対象機能に対応する個別テストへ直接進めるとき
+- Codex や LLM の回答品質自体を評価することが目的のとき
 
 ## hash
-- aeabac72b9bb68c400c10bbf9a7930b80acbbe0dda0b59cdc0e39d226742ac5b
+- 2c85d47ac20d553db352d50880d49114f94cb9aa779e2efde964ad7616c9a5c5

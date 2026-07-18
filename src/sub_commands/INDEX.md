@@ -62,19 +62,18 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。編集・レビューの CLI 入口と、レビュー対象列挙、パス解決、ループ判定、INDEX 限定マージ、レポート生成の下位実装への入口を提供する。
+- oracle 系サブコマンドの実装をまとめる package。oracle 編集・レビューの CLI 入口と、レビュー対象列挙、パス解決、finding 処理、レポート生成、INDEX 差分の commit・merge を担う下位実装への入口を提供する。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や入口を確認するとき。
-- oracle review の実行フロー、レビュー対象、finding 処理、パス解決、INDEX 更新、レポート出力の連携箇所を確認するとき。
-- cmoc oracle edit の起動フローや入力収集、TUI 実行前処理を確認するとき。
+- oracle 系サブコマンドの package 構成や、編集・レビュー CLI の入口を確認するとき。
+- oracle review の実行フロー、対象範囲、finding 処理、パス解決、レポート出力、INDEX 差分の commit・mergeのいずれかを変更・調査するとき。
 
 ## Do not read this when
-- 個別の oracle サブコマンドやレビュー下位処理の詳細だけを変更・調査するときは、該当する実装を直接読む。
-- oracle 編集用 TUI パラメータ、プロンプト入力収集、レビュー対象列挙、finding ループ、パス解決、レポート形式、INDEX 限定マージの単独仕様を確認するときは、各担当実装を直接読む。
+- 特定のレビュー処理だけを変更・調査する場合は、対象列挙、review loop、パス解決、レポート、review index など該当する下位実装を直接読む。
+- oracle 編集用 TUI のパラメータ構築や prompt 入力の詳細だけを確認したい場合は、対応する下位実装を直接読む。
 
 ## hash
-- 6d1e1f39fad7bc3b2a59da6f49ca998960826befa4bced38a46f015db04a5d82
+- bbc67e14884379d4270d9b04e7c27030cf31b925739aec8f89afa2b5997b6f67
 
 # `review`
 
