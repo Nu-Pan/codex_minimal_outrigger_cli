@@ -629,20 +629,19 @@
 # `test_packaged_import.py`
 
 ## Summary
-- packaged layout 上で主要な ACP、oracle、config モジュールの import 境界と公開 API を検証するテスト。隔離した一時環境へパッケージをコピーし、設定定義・schema・prompt・file access mode・再公開された型の互換性を確認する。
+- packaged layout 上での import 境界と公開 API を検証するテスト。oracle review/edit builder、ACP basic、cmoc config の packaged import、schema・prompt・設定定義の公開契約を確認する。
 
 ## Read this when
-- パッケージ配置や setuptools の package-dir/packages 設定を変更するとき
-- ACP builder、oracle review/edit adapter、config の公開 import や再公開 API を変更するとき
-- packaged layout、PYTHONPATH、外部 site-packages 分離、prompt/schema 参照のテスト挙動を確認するとき
+- packaged layout での Python import が失敗する問題を調査するとき
+- oracle review/edit builder の packaged import や生成 parameter の契約を変更・検証するとき
+- ACP basic または cmoc config の canonical 定義再公開・公開 namespace を変更するとき
 
 ## Do not read this when
-- 単一の oracle builder 実装や schema 定義の詳細だけを変更し、packaged import 境界や公開 API に影響しないとき
-- 通常の CLI 実行フローや packaged layout と無関係なテストを調査するとき
-- 対象モジュールの正本仕様や実装詳細を直接確認すべき場合。このファイルは import と出力契約の統合検証が入口である
+- packaged layout や import 境界に関係しない機能のテストを調査するとき
+- 個別 builder や設定定義の実装詳細を直接確認すべき場合
 
 ## hash
-- 411babcfda3fec2e1ed9b441a1a0760642b9c17ecd4e09a4b88575e408f687a4
+- 3ca3743f10a51530b49bc50c64a76b8376aef9e1aefedf7a12597c93f52e700f
 
 # `test_production_cli.py`
 
