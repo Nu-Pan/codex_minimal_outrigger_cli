@@ -18,17 +18,25 @@ def _run_from_packaged_layout(
 
     `-S` と `PYTHONNOUSERSITE` で外部 site-packages の影響を除き、
     `PYTHONPATH` でコピーした tree だけを import 対象にする。空の `.git` は
-    作業ルート探索が一時ディレクトリ外へ逃げないように置く。
+    作業ルート探索が一時ディレクトリ外へ逃げないように置く。HOME も一時
+    ディレクトリ内へ向け、実行者の設定や認証情報を持ち込まない。
     根拠: {{work-root}}/oracle/doc/dev_rule/coding_rule.md
     {{work-root}}/oracle/doc/dev_rule/test_rule.md
     """
     work = tmp_path / "work"
     work.mkdir(exist_ok=True)
     (work / ".git").mkdir()
+    home = tmp_path / "home"
+    home.mkdir()
     return subprocess.run(
         [sys.executable, "-S", "-c", code],
         cwd=work,
-        env={**os.environ, "PYTHONPATH": str(target), "PYTHONNOUSERSITE": "1"},
+        env={
+            **os.environ,
+            "HOME": str(home),
+            "PYTHONPATH": str(target),
+            "PYTHONNOUSERSITE": "1",
+        },
         text=True,
         capture_output=True,
     )
