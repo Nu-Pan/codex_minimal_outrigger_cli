@@ -17,6 +17,7 @@ from _ollama_support import run_doctor
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.review as review_module
+from basic.acp import AgentCallParameter
 from main import app
 
 
@@ -29,6 +30,17 @@ class _FakeCodexResult:
     def __init__(self, output_json: dict[str, object]) -> None:
         """Codex CLI を起動せず、テスト用の構造化出力を保持する。"""
         self.output_json = output_json
+
+
+def _schema_name(parameter: AgentCallParameter) -> str:
+    """fake callback が検証する Structured Output schema 名を返す。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
+    """
+    schema_path = parameter.structured_output_schema_path
+    if schema_path is None:
+        raise AssertionError("oracle review requires a Structured Output schema")
+    return schema_path.name
 
 
 def test_oracle_review_uses_linked_worktree_branch_and_oracle(
@@ -56,15 +68,17 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     calls: list[str] = []
     review_worktrees: list[Path] = []
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """finding 列挙の応答と review worktree を記録する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
         """
 
         review_worktrees.append(Path.cwd())
-        calls.append(kwargs["purpose"])
-        schema_name = parameter.structured_output_schema_path.name
+        calls.append(str(kwargs["purpose"]))
+        schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             return _FakeCodexResult({"findings": []})
         raise AssertionError(schema_name)
@@ -131,9 +145,11 @@ def test_oracle_review_forks_from_snapshot_commit(
         advance_session_before_run_creation,
     )
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """review の構造化出力を空にして、fork point の検証だけを行う。"""
-        assert parameter.structured_output_schema_path.name == "enumerate_finding.json"
+        assert _schema_name(parameter) == "enumerate_finding.json"
         return _FakeCodexResult({"findings": []})
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
@@ -202,7 +218,9 @@ def test_oracle_review_merges_review_index_changes(
     )
     review_worktrees: list[Path] = []
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """finding 検証を空結果にし、review worktree の INDEX を更新する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md、
@@ -210,7 +228,7 @@ def test_oracle_review_merges_review_index_changes(
         """
 
         review_worktrees.append(Path.cwd())
-        schema_name = parameter.structured_output_schema_path.name
+        schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             (Path.cwd() / "INDEX.md").write_text("# generated review index\n")
             return _FakeCodexResult({"findings": []})
@@ -275,13 +293,15 @@ def test_oracle_review_merges_preflight_committed_index_changes(
         index_path.write_text("# preflight review index\n")
         return [index_path]
 
-    def fake_runtime_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_runtime_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """preflight 中の finding 列挙を空結果に置き換える。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
         """
 
-        schema_name = parameter.structured_output_schema_path.name
+        schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             return _FakeCodexResult({"findings": []})
         raise AssertionError(schema_name)
@@ -385,13 +405,15 @@ def test_oracle_review_rejects_non_index_worktree_changes(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """finding 列挙時に指定された種類の不正な差分を作る。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
         """
 
-        schema_name = parameter.structured_output_schema_path.name
+        schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             if change_kind == "untracked":
                 (Path.cwd() / "generated.txt").write_text("unexpected\n")
