@@ -52,7 +52,7 @@ def review_worktree_status_paths(review_worktree: Path) -> list[str]:
     return [
         str(path.relative_to(review_worktree))
         for _status, path in status_path_statuses(
-            review_worktree, include_rename_sources=True
+            review_worktree, untracked_all=True, include_rename_sources=True
         )
     ]
 

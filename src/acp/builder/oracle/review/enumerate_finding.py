@@ -6,21 +6,21 @@
 全呼び出し元が canonical oracle path を直接使うようになったら削除できる。
 """
 
-import os
-from dataclasses import replace
-from pathlib import Path
+import os as _os
+from dataclasses import replace as _replace
+from pathlib import Path as _Path
 
 from oracle.acp_builder.oracle.review.enumerate_finding import (
     build_oracle_review_enumerate_finding_parameter as _build_enumerate_parameter,
 )
 
-from basic.acp import AgentCallParameter
+from basic.acp import AgentCallParameter as _AgentCallParameter
 
 
 def build_oracle_review_enumerate_finding_parameter(
-    oracle_path: Path,
+    oracle_path: _Path,
     related_findings: str,
-) -> AgentCallParameter:
+) -> _AgentCallParameter:
     """canonical builderのparameterを作り、symlinkのlexical pathを保持する。"""
     parameter = _build_enumerate_parameter(oracle_path, related_findings)
     if not oracle_path.is_absolute() or not oracle_path.is_symlink():
@@ -29,12 +29,12 @@ def build_oracle_review_enumerate_finding_parameter(
     # canonical builder は絶対 path を resolve するため、symlink entry をレビュー
     # した事実が prompt から失われないよう、動的な定義行だけ lexical path に戻す。
     resolved = str(oracle_path.resolve())
-    lexical = os.path.abspath(oracle_path)
+    lexical = _os.path.abspath(oracle_path)
     marker = f"- {{{{oracle-path}}}} = {resolved}"
     prefix, separator, suffix = parameter.prompt.rpartition(marker)
     if not separator:
         return parameter
-    return replace(
+    return _replace(
         parameter,
         prompt=prefix + f"- {{{{oracle-path}}}} = {lexical}" + suffix,
     )

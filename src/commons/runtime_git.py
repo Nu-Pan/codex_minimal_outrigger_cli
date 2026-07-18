@@ -189,12 +189,12 @@ def _expected_managed_worktree(root: Path, branch: str) -> Path:
             ["cmoc apply/run branch 名を確認してください。"],
             f"branch: {branch}",
         )
-    return worktrees_dir(_main_worktree_root(root)) / parts[2] / parts[3]
+    return worktrees_dir(main_worktree_root(root)) / parts[2] / parts[3]
 
 
 def _require_managed_worktree(root: Path, worktree: Path) -> Path:
     """削除対象が管理領域内の登録済みworktreeであることを検証する。"""
-    base = worktrees_dir(_main_worktree_root(root))
+    base = worktrees_dir(main_worktree_root(root))
     candidate = _absolute_path(worktree)
     if _first_managed_worktree_symlink(root, candidate) is not None:
         raise _unmanaged_worktree_error(worktree, base)
@@ -243,7 +243,7 @@ def _first_managed_worktree_symlink(root: Path, *paths: Path) -> Path | None:
     # {{work-root}}/oracle/doc/branch_model.md
     # resolve() だけでは repo 外の実体が managed path に見えるため、canonicalize 前に
     # lexical path の component を検査して、作成・削除の両方で symlink 経由を拒否する。
-    for path in (worktrees_dir(_main_worktree_root(root)), *paths):
+    for path in (worktrees_dir(main_worktree_root(root)), *paths):
         if symlink := _first_symlink_component(path):
             return symlink
     return None
@@ -312,7 +312,7 @@ def git_common_dir(root: Path) -> Path:
     return Path(common).resolve()
 
 
-def _main_worktree_root(root: Path) -> Path:
+def main_worktree_root(root: Path) -> Path:
     """linked worktreeからmain worktreeのrootを求める。"""
     return git_common_dir(root).parent
 

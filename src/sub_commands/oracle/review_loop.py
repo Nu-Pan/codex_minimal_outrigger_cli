@@ -72,9 +72,16 @@ def run_oracle_review_loop(
     config: CmocConfig,
     codex_exec: CodexExecCallable,
     step_callback: StepCallback | None = None,
+    evaluated_files: list[Path] | None = None,
 ) -> list[dict]:
-    """oracle review の finding enumerate/merge/validate/judge loop を実行する。"""
-    progress = _ReviewProgress([], [])
+    """oracle review の finding enumerate/merge/validate/judge loop を実行する。
+
+    ``evaluated_files`` が指定された場合は、列挙 agent call の完了実績を
+    呼び出し元へ反映する。
+    """
+    progress = _ReviewProgress(
+        [], evaluated_files if evaluated_files is not None else []
+    )
     try:
         return _run_oracle_review_loop(
             log_root,
@@ -124,7 +131,7 @@ def _run_oracle_review_loop(
                         oracle_path,
                         json.dumps(
                             _findings_related_to_oracle_path(
-                                findings, oracle_path, worktree
+                                findings, oracle_path, worktree, log_root
                             ),
                             ensure_ascii=False,
                             indent=2,
@@ -168,13 +175,16 @@ def _run_oracle_review_loop(
 
 
 def _findings_related_to_oracle_path(
-    findings: list[dict], oracle_path: Path, worktree: Path
+    findings: list[dict],
+    oracle_path: Path,
+    worktree: Path,
+    repo_root: Path,
 ) -> list[dict]:
     """対象 oracle file と同じ repository path の finding だけを返す。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
-    target_key = oracle_path_key(worktree, oracle_path)
+    target_key = _review_oracle_path_key(repo_root, worktree, oracle_path)
     if target_key is None:
         return []
     related: list[dict] = []
@@ -182,10 +192,18 @@ def _findings_related_to_oracle_path(
         finding_path = finding_oracle_path(finding, worktree)
         if (
             finding_path is not None
-            and oracle_path_key(worktree, finding_path) == target_key
+            and _review_oracle_path_key(repo_root, worktree, finding_path) == target_key
         ):
             related.append(finding)
     return related
+
+
+def _review_oracle_path_key(repo_root: Path, worktree: Path, path: Path) -> str | None:
+    """review worktree と main repository のどちらの path でも正規化する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    """
+    return oracle_path_key(worktree, path) or oracle_path_key(repo_root, path)
 
 
 def _validate_and_judge_findings(
@@ -235,6 +253,10 @@ def _validate_and_judge_findings(
                 purpose=f"oracle review validate challenger {finding['finding_id']}",
             ).output_json
             challenger_reasons = list((challenger or {}).get("reasons", []))
+            # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+            # challenger call は完了済みなので、続く advocate call の中断時にも
+            # その結果だけを確定済み部分結果として残す。
+            finding["challenger_reasons"].extend(challenger_reasons)
             _report_step(
                 step_callback,
                 "5/8, 2/2",
@@ -246,7 +268,7 @@ def _validate_and_judge_findings(
                     build_oracle_review_validate_finding_advocate_parameter(
                         finding_text,
                         "\n".join(finding["advocate_reasons"]),
-                        "\n".join(finding["challenger_reasons"] + challenger_reasons),
+                        "\n".join(finding["challenger_reasons"]),
                     ),
                     cwd=worktree,
                 ),
@@ -256,7 +278,6 @@ def _validate_and_judge_findings(
                 purpose=f"oracle review validate advocate {finding['finding_id']}",
             ).output_json
             advocate_reasons = list((advocate or {}).get("reasons", []))
-            finding["challenger_reasons"].extend(challenger_reasons)
             finding["advocate_reasons"].extend(advocate_reasons)
             if challenger_reasons or advocate_reasons:
                 next_dirty.add(finding["finding_id"])

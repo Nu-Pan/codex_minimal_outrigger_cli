@@ -17,6 +17,7 @@ from _ollama_support import run_doctor
 
 import sub_commands.eval_oracle as eval_oracle_module
 import sub_commands.oracle.review as review_module
+from basic.acp import AgentCallParameter
 from cmoc_runtime import SessionState
 from config.cmoc_config import CmocConfig, CmocConfigOracleReview
 from main import app
@@ -28,6 +29,22 @@ class _FakeCodexResult:
     def __init__(self, output_json: dict[str, object]) -> None:
         """review 処理が読む JSON payload を保存する。"""
         self.output_json = output_json
+
+
+def _schema_name(parameter: AgentCallParameter) -> str:
+    """fake callback が検証する Structured Output schema 名を返す。"""
+    schema_path = parameter.structured_output_schema_path
+    if schema_path is None:
+        raise AssertionError("oracle review requires a Structured Output schema")
+    return schema_path.name
+
+
+def _purpose(kwargs: dict[str, object]) -> str:
+    """Codex callback の purpose が文字列であることを検証して返す。"""
+    purpose = kwargs.get("purpose")
+    if not isinstance(purpose, str):
+        raise AssertionError("oracle review requires a string purpose")
+    return purpose
 
 
 def test_oracle_review_interrupt_reports_only_completed_enumerations(
@@ -57,7 +74,7 @@ def test_oracle_review_interrupt_reports_only_completed_enumerations(
     calls: list[str] = []
 
     def interrupt_second_enumeration(
-        parameter: object, **kwargs: object
+        parameter: AgentCallParameter, **kwargs: object
     ) -> _FakeCodexResult:
         """最初の列挙だけ完了させ、二つ目の agent call を中断する。"""
         purpose = str(kwargs["purpose"])
@@ -133,10 +150,12 @@ def test_oracle_review_writes_report(
     assert fork_result.exit_code == 0
     calls: list[str] = []
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> _FakeCodexResult:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """Structured Output schema に対応する最小の fake 応答を返す。"""
-        calls.append(kwargs["purpose"])
-        schema_name = parameter.structured_output_schema_path.name
+        calls.append(_purpose(kwargs))
+        schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             return _FakeCodexResult({"findings": []})
         if schema_name in {
@@ -190,10 +209,12 @@ def test_oracle_review_report_outputs_accepted_and_rejected_findings(
     )
     enumerated = False
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> _FakeCodexResult:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """Structured Output schema に対応する最小の fake 応答を返す。"""
         nonlocal enumerated
-        schema_name = parameter.structured_output_schema_path.name
+        schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             if enumerated:
                 return _FakeCodexResult({"findings": []})
@@ -236,7 +257,7 @@ def test_oracle_review_report_outputs_accepted_and_rejected_findings(
         if schema_name == "merge_finding.json":
             return _FakeCodexResult({"operations": []})
         if schema_name == "judge_finding.json":
-            if kwargs["purpose"].endswith(("finding-0001", "finding-0003")):
+            if _purpose(kwargs).endswith(("finding-0001", "finding-0003")):
                 return _FakeCodexResult({"verdict": "accept", "reason": "accepted"})
             return _FakeCodexResult({"verdict": "reject", "reason": "rejected"})
         raise AssertionError(schema_name)
@@ -434,9 +455,11 @@ def test_oracle_review_accepts_short_scope_option(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> _FakeCodexResult:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """Structured Output schema に対応する最小の fake 応答を返す。"""
-        schema_name = parameter.structured_output_schema_path.name
+        schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             return _FakeCodexResult({"findings": []})
         if schema_name in {
@@ -478,9 +501,11 @@ def test_oracle_review_writes_error_report_on_processing_failure(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
-    def fail_run_codex_exec(parameter: object, **kwargs: object) -> _FakeCodexResult:
+    def fail_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """列挙・検証は成功させ、judge 呼び出しだけを失敗させる fake callback。"""
-        schema_name = parameter.structured_output_schema_path.name
+        schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
             return _FakeCodexResult(
                 {
@@ -523,3 +548,58 @@ def test_oracle_review_writes_error_report_on_processing_failure(
     assert "Error: `judge failed`" in rendered
     assert "# ERROR" in result.stdout
     assert "# ERROR" not in result.stderr
+
+
+def test_oracle_review_error_report_lists_only_completed_enumerations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """列挙途中の失敗では、完了済み oracle だけを error report に載せる。"""
+    root = make_repo(tmp_path)
+    (root / "oracle" / "z.md").write_text("# z\n")
+    run_git(root, "add", "oracle/z.md")
+    run_git(root, "commit", "-m", "add second oracle")
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    monkeypatch.setattr(
+        review_module,
+        "load_config",
+        lambda _root: CmocConfig(
+            oracle_review=CmocConfigOracleReview(
+                num_enumerate_findings_loop=1,
+                num_merge_findings_loop=0,
+                num_validate_findings_loop=1,
+            )
+        ),
+    )
+    enumeration_calls = 0
+
+    def fail_second_enumeration(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """最初の列挙だけ完了させ、次の列挙で処理を失敗させる。"""
+        nonlocal enumeration_calls
+        assert _schema_name(parameter) == "enumerate_finding.json"
+        enumeration_calls += 1
+        if enumeration_calls == 1:
+            return _FakeCodexResult({"findings": []})
+        raise RuntimeError("enumeration failed")
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fail_second_enumeration)
+
+    result = runner.invoke(
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code != 0
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    rendered = report_path.read_text()
+    assert "result: error" in rendered
+    assert "oracle_count_total: 2" in rendered
+    assert "oracle_count_evaluated: 1" in rendered
+    assert "`oracle/spec.md`" in rendered
+    assert "`oracle/z.md`" not in rendered

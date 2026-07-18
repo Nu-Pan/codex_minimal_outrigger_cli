@@ -13,6 +13,7 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
+from _git_support import make_repo, run_git
 
 import commons.runtime_apply as apply_runtime
 
@@ -120,6 +121,22 @@ def test_apply_process_tracking_uses_agent_read_runtime_state(
     assert path.with_name("session.pid.lock").is_file()
     assert path.with_name("session.run.lock").is_file()
     assert not legacy_directory.exists()
+
+
+def test_apply_worktree_lookup_rejects_external_registered_path(
+    tmp_path: Path,
+) -> None:
+    """apply branch が管理領域外で checkout されていても採用しない。"""
+    root = make_repo(tmp_path)
+    external = tmp_path / "external-apply-worktree"
+    branch = "cmoc/apply/session/run"
+    run_git(root, "worktree", "add", "-b", branch, str(external), "HEAD")
+
+    assert apply_runtime.expected_apply_worktree(external, branch) == (
+        root / ".cmoc" / "gu" / "worktree" / "session" / "run"
+    )
+    assert apply_runtime.worktree_for_branch_optional(root, branch) is None
+    assert external.exists()
 
 
 def test_apply_process_id_reads_tracked_child_processes(tmp_path: Path) -> None:

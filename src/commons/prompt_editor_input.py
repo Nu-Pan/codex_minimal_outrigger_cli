@@ -7,7 +7,12 @@ from pathlib import Path
 
 from commons.runtime_errors import CmocError
 from commons.runtime_git import ensure_cmoc_ignored
-from commons.runtime_paths import editor_input_dir, timestamp, work_root
+from commons.runtime_paths import (
+    _reserve_timestamped_path,
+    editor_input_dir,
+    timestamp,
+    work_root,
+)
 
 # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
 PROMPT_EDITOR_INPUT_TEMPLATE = """<!--
@@ -85,9 +90,10 @@ def collect_prompt_editor_input(
     additional_template: str = "",
 ) -> tuple[Path, str]:
     """初期 prompt を保存・編集し、コメント除去済み入力と path を返す。"""
-    # 同じ timestamp を完全 prompt のファイル名にも引き継げるよう path を返す。
-    path = editor_input_dir(root) / f"{timestamp()}_orig.md"
-    path.parent.mkdir(parents=True, exist_ok=True)
+    # 同じ timestamp の呼び出しでも入力を上書きしないよう先に path を予約する。
+    editor_dir = editor_input_dir(root)
+    editor_dir.mkdir(parents=True, exist_ok=True)
+    _, path = _reserve_timestamped_path(editor_dir, "_orig.md", timestamp)
     parts = [
         part.strip()
         for part in (additional_template, PROMPT_EDITOR_INPUT_TEMPLATE)

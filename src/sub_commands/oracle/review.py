@@ -111,7 +111,9 @@ def _cmoc_oracle_review_body(
     interrupted = False
     try:
         start_subcommand_step(2, "run の隔離実行を開始", "start isolated review")
-        create_run_worktree(current_root, review_branch, review_worktree, "HEAD")
+        create_run_worktree(
+            current_root, review_branch, review_worktree, review_fork_commit
+        )
         worktree_created = True
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")
@@ -128,8 +130,8 @@ def _cmoc_oracle_review_body(
                         config,
                         codex_exec,
                         step_callback=start_subcommand_step,
+                        evaluated_files=evaluated_oracle_files,
                     )
-                    evaluated_oracle_files = list(oracle_files)
                 except OracleReviewInterrupted as interruption:
                     interrupted = True
                     findings = interruption.findings
@@ -194,7 +196,7 @@ def _cmoc_oracle_review_body(
             branch,
             state,
             len(all_oracle_files),
-            oracle_files,
+            evaluated_oracle_files,
             findings,
             review_branch,
             review_fork_commit,

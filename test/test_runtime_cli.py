@@ -271,6 +271,21 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     assert not (root / ".cmoc").exists()
 
 
+def test_cli_empty_completion_marker_skips_normal_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """空の補完 marker でも通常の command callback を実行しない。"""
+    calls: list[str] = []
+    monkeypatch.setenv("_CMOC_COMPLETE", "")
+    monkeypatch.setattr(main_module, "cmoc_doctor_impl", lambda: calls.append("doctor"))
+
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert calls == []
+    assert result.output == ""
+
+
 def test_pre_log_check_failure_writes_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

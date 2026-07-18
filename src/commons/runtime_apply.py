@@ -19,6 +19,7 @@ from cmoc_runtime import (
     wait_process_fd_exit,
     worktrees_dir,
 )
+from commons.runtime_git import main_worktree_root
 from commons.runtime_paths import generated_agent_read_dir
 
 
@@ -66,7 +67,7 @@ def expected_apply_worktree(root: Path, apply_branch: str) -> Path:
             ["session state file の apply.apply_branch を確認してください。"],
             f"apply_branch: {apply_branch}",
         )
-    return worktrees_dir(root) / parts[2] / parts[3]
+    return worktrees_dir(main_worktree_root(root)) / parts[2] / parts[3]
 
 
 def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
@@ -75,8 +76,16 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
     current_path: Path | None = None
     for line in output.splitlines():
         if line.startswith("worktree "):
-            current_path = Path(line.removeprefix("worktree ")).resolve()
+            registered_path = Path(line.removeprefix("worktree ")).absolute()
+            current_path = registered_path.resolve()
         elif line == f"branch refs/heads/{branch}" and current_path is not None:
+            if branch.startswith("cmoc/apply/"):
+                # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+                # apply run は Git の登録先だけでなく、管理領域の lexical path と
+                # canonical path の双方が一致した場合だけ隔離 worktree として扱う。
+                expected = expected_apply_worktree(root, branch)
+                if registered_path != expected or current_path != expected:
+                    return None
             return current_path
     return None
 

@@ -65,22 +65,18 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization package。oracle command builder 関連のパッケージ入口で、oracle edit と oracle review の builder adapter を下位要素として扱う。
-- `edit` は `cmoc oracle edit` の builder adapter として、実装入口、TUI 起動時の AgentCallParameter 生成、editor input 保存先の準備を扱う。
-- `review` は `cmoc oracle review` の realization adapter として、各 parameter builder への互換入口、canonical builder への委譲、限定的な prompt 補正を扱う。
+- oracle command builder の realization package。`cmoc oracle edit` と `cmoc oracle review` の builder adapter を収め、各機能の realization 側の実装入口を提供する。
 
 ## Read this when
 - oracle command builder の realization package の責務や構成を確認するとき。
-- `cmoc oracle edit` の builder adapter、TUI 起動パラメータ生成、editor input 保存先準備を確認・変更するとき。
-- `cmoc oracle review` の realization adapter、canonical builder への委譲、既存 caller との互換性、prompt 補正や旧 import 経路の移行状況を調査するとき。
+- `cmoc oracle edit` または `cmoc oracle review` の builder adapter、canonical builder への委譲、TUI 起動パラメータ生成、prompt 補正、互換 import の入口を確認するとき。
 
 ## Do not read this when
-- oracle edit の具体的な編集処理や CLI 全体の動作を確認するとき。
-- oracle review の正本仕様や canonical builder 本体を確認するとき。
-- builder 以外の CLI 実装や oracle command builder と無関係な処理を調査するとき。
+- oracle command builder の正本仕様や canonical builder 本体の実装を確認するとき。
+- oracle command builder と無関係な CLI、validation、その他の処理を確認するとき。
 
 ## hash
-- d927056a5d7969196478f1ddffaa3cc695ddf20153a776c8580352689d89edf2
+- 8d37b4fc4a817536babefb33ee368cb3318e98cdb2ddfa83cd3681e00adacd23
 
 # `quota_probe.py`
 

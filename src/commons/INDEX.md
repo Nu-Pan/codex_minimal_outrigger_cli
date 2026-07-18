@@ -50,34 +50,35 @@
 # `prompt_editor_input.py`
 
 ## Summary
-- AI Agent CLI/TUI 向けの初期プロンプトをエディタで作成し、HTMLコメントを除去した利用者入力を返す共通境界。プロンプトテンプレート、エディタ選択、編集用ディレクトリの ignore 保証も扱う。
+- エディタまたはTUIからAI Agent用Markdownプロンプトを受け取り、テンプレート保存、エディタ選択・起動、入力読み込み、HTMLコメント除去、`.cmoc` ignore保証を担う共通境界。プロンプト編集フロー、エディタ選択仕様、入力完了時のエラー処理を確認する入口。
 
 ## Read this when
-- プロンプトのエディタ入力フロー、初期テンプレート、入力のコメント除去、利用可能エディタの選択を変更・調査するとき
-- CLI/TUI のプロンプト編集用ファイルや `.cmoc` ignore の準備処理を確認するとき
+- プロンプト編集入力の保存・読み込み・コメント除去を変更または調査するとき
+- code、nano、vim、viの選択順やエディタ起動失敗を確認するとき
+- editor/TUI用ディレクトリの`.cmoc` ignore保証やtimestamp付きパス予約を確認するとき
 
 ## Do not read this when
-- エディタ入力後のプロンプト生成・実行処理だけを調査するとき
-- 一般的な runtime path、git ignore、エラー型の実装を直接調査するときは、それぞれの担当モジュールを先に読む
+- AI Agentへのプロンプト内容やテンプレート仕様だけを確認したいときは、対応するoracle文書を直接読む
+- プロンプト編集後のCLI/TUI全体の実行フローや呼び出し元の責務を調査するときは、該当する上位実装を直接読む
 
 ## hash
-- 16a6c3943f64e7fad5bd9c588e50189079550dbea41048ad114d06c3b85fa48f
+- 5b4c8b92cfd723b9bd31e33b234cc9809fdc7e597e4129aa31e3007a5af482d1
 
 # `runtime_apply.py`
 
 ## Summary
-- cmoc apply の linked worktree 特定と、apply プロセスおよび Codex 子プロセスの同一性確認・追跡・停止・cleanup を担う共通ランタイム処理。apply/abandon のプロセス状態管理を確認する入口。
+- apply 実行と abandon のための process/worktree 管理ユーティリティ。branch から linked worktree を検証・解決し、apply process の PID・開始時刻・子 Codex process group を安全に記録・追跡・削除する。process 同一性を確認した停止、子 process group の cleanup、run 単位の lock、tracking 用環境変数の lifecycle を扱う。
 
 ## Read this when
-- apply または abandon の process ID file、PID 再利用対策、プロセスグループ停止、子プロセス追跡を変更・調査するとき
-- session branch や apply branch から linked worktree のパスを解決する処理を変更・調査するとき
+- cmoc apply の実行中 process、子 Codex process、abandon cleanup、PID file、process 同一性検証、worktree 隔離の挙動を変更・調査するとき。
+- apply branch に対応する worktree の解決や、process 停止時の stale PID・PID 再利用・終了待機の扱いを確認するとき。
 
 ## Do not read this when
-- CLI の apply/abandon の利用者向け仕様や状態遷移を確認したいとき
-- プロセス管理や worktree 解決を使わないサブコマンドの実装を調査するとき
+- apply/abandon の CLI 引数や利用者向けエラー仕様だけを確認する場合は、対応するサブコマンド実装・oracle 文書を直接読む。
+- 一般的な Git worktree 操作、process utility 全体、または apply と無関係な runtime helper を調査する場合。
 
 ## hash
-- cfb232f9ad8bc672cd032a565f3911658c8c6394d6688e5c8e6cad1e4c1aa3e4
+- a1e8db79b58e4707b5a4a28c83075e55b3b705b1752ebd86ae023b78a3a37e30
 
 # `runtime_cli.py`
 
@@ -277,19 +278,21 @@
 # `runtime_git.py`
 
 ## Summary
-- Git 操作、branch 判定、linked worktree の安全な作成・削除、.cmoc/gu の ignore 管理、oracle/realization file 判定を担う共通ランタイム helper。Git 境界のエラー変換や管理対象 path の安全性検証もここに集約される。
+- Git 操作、branch・commit・worktree の検証と作成・削除、`.cmoc/gu` の ignore 状態管理、oracle/realization file 判定を担う共通 runtime helper。Git を使う CLI 処理や worktree ライフサイクル、ファイル分類ロジックの実装を確認する入口。
 
 ## Read this when
-- Git subprocess の呼び出し、branch・commit・worktree 操作を変更または調査するとき
-- cmoc 管理領域の path 検証、symlink 防止、worktree 削除条件を確認するとき
-- .cmoc/gu の ignore 設定や oracle/realization file の分類判定を変更するとき
+- Git subprocess の失敗を CmocError に変換する処理を変更するとき
+- branch、linked worktree、worktree path の安全性検証や作成・削除動作を変更するとき
+- `.cmoc/gu` の ignore 設定・検査や Git status path の解析を変更するとき
+- oracle file または realization file のパス判定規則を変更するとき
 
 ## Do not read this when
-- CLI サブコマンド固有の処理や state/report の仕様だけを確認するとき
-- Git や file 分類の共通 helper を利用するだけで、実装方針を変更しないとき
+- 特定の CLI サブコマンドの業務フローだけを変更し、Git 共通 helper の挙動に影響しないとき
+- prompt 構築や state/report の形式だけを変更するとき
+- Git と無関係な commons の runtime 機能を調査するとき
 
 ## hash
-- 192565eae91a021558e915dff0f243a426c37e5bf21b69c6d1dfa9c58568414e
+- 4e39f5ef3f3326e964f55700a59ee945593f30e2d30cd1fef48bf211549f4fa2
 
 # `runtime_logging.py`
 
@@ -329,22 +332,19 @@
 # `runtime_paths.py`
 
 ## Summary
-- cmoc の実行時パスと作業環境を扱う共通ユーティリティ。repository/worktree/cmoc root の解決、cwd の一時切替、timestamp・duration の整形、session・report・log・schema・config などの保存先 path 生成、memo 判定を提供する。runtime path や cwd 制御、保存先ディレクトリの入口として参照する。
+- 実行時の repository/worktree/cmoc root 解決、cwd の一時切替、timestamp・duration の整形、runtime 用ディレクトリおよび設定 path の算出を担う共通ユーティリティ。パス解決や実行時保存先、cwd 制御を変更・調査する際の入口。
 
 ## Read this when
-- repository root、worktree root、cmoc root の解決処理を変更・調査するとき
-- cmoc の runtime ディレクトリ、session/report/log/schema/config の保存先を変更・調査するとき
-- cwd の一時切替や process-wide な排他制御を変更・調査するとき
-- timestamp、console timestamp、duration 表示の生成規則を変更・調査するとき
-- root 配下の memo 判定や agent read directory の扱いを確認するとき
+- repository root・worktree root・cmoc root の解決処理を変更または調査するとき
+- session、report、log、schema、worktree、設定ファイルなどの runtime path を変更または調査するとき
+- cwd の一時切替、timestamp、duration 表示、memo 配下判定を変更または調査するとき
 
 ## Do not read this when
-- 特定サブコマンドの処理内容や入出力仕様だけを調べるとき
-- 保存先で実際に読み書きする session・report・log の個別処理を調べるとき
-- root placeholder の定義や path 解決アルゴリズム自体を変更・調査するときは、path model の実装を直接読むとき
+- 個別サブコマンドの処理や出力形式だけを変更・調査するとき
+- root placeholder の定義や path 解決の正本仕様を確認するときは、対応する path model の oracle を直接読む
 
 ## hash
-- f186d0ad95d9679a259afab43e3df2ce72f9e393bd1a0c5081b9c780ab6e1aa6
+- c83cfa8c6116686289c53449a9d8a3084f07b693a919791421498ba2c51cdcbd
 
 # `runtime_preprocess_command.py`
 

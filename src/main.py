@@ -74,6 +74,12 @@ class _CmocTyperGroup(typer.core.TyperGroup):
             **extra,
         }
         if "_CMOC_COMPLETE" in os.environ:
+            # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+            # 空の marker も通常実行ではなく補完 probe として扱い、副作用を防ぐ。
+            if not os.environ["_CMOC_COMPLETE"]:
+                if standalone_mode:
+                    raise SystemExit(0)
+                return 0
             return super().main(standalone_mode=standalone_mode, **click_kwargs)
         try:
             result = super().main(standalone_mode=False, **click_kwargs)

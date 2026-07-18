@@ -6,6 +6,7 @@
 import json
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from _cli_support import runner
@@ -14,6 +15,7 @@ from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
 
+import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.tui as tui_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
@@ -26,6 +28,53 @@ def reset_indexing_preflight() -> Iterator[None]:
     codex_preflight_module.disable_indexing_preflight()
     yield
     codex_preflight_module.disable_indexing_preflight()
+
+
+def test_editor_input_keeps_timestamp_collisions_in_separate_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """同じ timestamp の editor input を上書きせず保持する。"""
+    timestamps = iter(
+        [
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000002000",
+        ]
+    )
+    opened: list[Path] = []
+
+    monkeypatch.setattr(
+        prompt_editor_input_module,
+        "timestamp",
+        lambda: next(timestamps),
+    )
+    monkeypatch.setattr(
+        prompt_editor_input_module,
+        "_select_editor",
+        lambda: ["fake-editor"],
+    )
+
+    def fake_run(argv: list[str]) -> SimpleNamespace:
+        path = Path(argv[-1])
+        opened.append(path)
+        path.write_text(f"input-{len(opened)}\n", encoding="utf-8")
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
+
+    first_path, first_input = prompt_editor_input_module.collect_prompt_editor_input(
+        tmp_path
+    )
+    second_path, second_input = prompt_editor_input_module.collect_prompt_editor_input(
+        tmp_path
+    )
+
+    assert first_path.name == "2026-06-27_10-00_00_000001000_orig.md"
+    assert second_path.name == "2026-06-27_10-00_00_000002000_orig.md"
+    assert first_path != second_path
+    assert first_input == "input-1"
+    assert second_input == "input-2"
 
 
 def test_tui_runs_editor_resolves_parameters_and_launches_codex(
@@ -75,6 +124,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.model_class == ModelClass.EFFICIENCY
         assert parameter.reasoning_effort == ReasoningEffort.MAX
         assert parameter.file_access_mode == FileAccessMode.READONLY
+        assert parameter.structured_output_schema_path is not None
         assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
         assert "remove me" not in parameter.prompt
         assert "src を確認して必要なら直す" in parameter.prompt

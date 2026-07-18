@@ -5,6 +5,7 @@
 
 import json
 from pathlib import Path
+from types import ModuleType
 from typing import Callable
 
 import pytest
@@ -14,6 +15,7 @@ from oracle.acp_builder.oracle.review.enumerate_finding import (
     build_oracle_review_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
 )
 
+import acp.builder.oracle.review.enumerate_finding as review_enumerate_finding_module
 import acp.builder.oracle.review.judge_finding as review_judge_finding_module
 import acp.builder.oracle.review.merge_finding as review_merge_finding_module
 import acp.builder.oracle.review.validate_finding_advocate as review_validate_advocate_module
@@ -40,6 +42,10 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
     ("module", "exported_name"),
     [
         (
+            review_enumerate_finding_module,
+            "build_oracle_review_enumerate_finding_parameter",
+        ),
+        (
             review_judge_finding_module,
             "build_oracle_review_judge_finding_parameter",
         ),
@@ -58,20 +64,13 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
     ],
 )
 def test_review_compatibility_modules_export_only_builders(
-    module: object, exported_name: str
+    module: ModuleType, exported_name: str
 ) -> None:
     """review互換moduleが指定されたbuilderだけを公開することを検証する。"""
-    assert module.__all__ == [exported_name]
-    for internal_name in [
-        "Path",
-        "StructDoc",
-        "StructCodeBlock",
-        "render_as_markdown",
-        "resolve_real_path",
-        "build_complete_prompt",
-        "AgentCallParameter",
-    ]:
-        assert not hasattr(module, internal_name)
+    assert getattr(module, "__all__", None) == [exported_name]
+    assert {name for name in vars(module) if not name.startswith("_")} == {
+        exported_name
+    }
 
 
 def test_oracle_review_merge_finding_uses_efficiency_model() -> None:
@@ -187,7 +186,7 @@ def test_oracle_review_enumerate_parameter_preserves_related_findings_text(
 
 def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
     """merge finding builderのschemaとplaceholder補正を検証する。"""
-    parameter = build_oracle_review_merge_finding_parameter("[]")
+    parameter = build_oracle_review_merge_finding_parameter(findings="[]")
     assert "<{{oracle-root}}>" not in parameter.prompt
     assert "{{oracle-root}}" in parameter.prompt
     assert "- {{oracle-root}} =" in parameter.prompt
