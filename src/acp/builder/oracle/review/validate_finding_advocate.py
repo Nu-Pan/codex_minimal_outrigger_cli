@@ -1,4 +1,4 @@
-from dataclasses import replace
+from dataclasses import replace as _replace
 
 from oracle.acp_builder.basic import AgentCallParameter as _AgentCallParameter
 from oracle.acp_builder.oracle.review.validate_finding_advocate import (
@@ -19,7 +19,7 @@ def build_oracle_review_validate_finding_advocate_parameter(
         known_advocate_reasons,
         known_challenger_reasons,
     )
-    return replace(
+    return _replace(
         parameter,
         prompt=_fix_oracle_root_goal_typo(parameter.prompt),
     )

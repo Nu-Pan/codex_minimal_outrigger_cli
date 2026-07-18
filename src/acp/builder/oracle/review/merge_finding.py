@@ -1,4 +1,4 @@
-from dataclasses import replace
+from dataclasses import replace as _replace
 
 from oracle.acp_builder.basic import AgentCallParameter as _AgentCallParameter
 from oracle.acp_builder.oracle.review.merge_finding import (
@@ -17,7 +17,7 @@ def build_oracle_review_merge_finding_parameter(
         `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py`
     """
     parameter = _build_parameter(findings)
-    return replace(
+    return _replace(
         parameter,
         prompt=_fix_oracle_root_placeholder_definition(parameter.prompt),
     )
