@@ -128,35 +128,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる src ディレクトリ。CLI ルート、サブコマンド、共通 runtime、互換 import shim、ACP/basic/config の公開入口を扱い、具体的な処理は各下位要素へ委譲する。
+- cmoc の realization 実装をまとめるトップレベルの入口。Typer CLI のコマンド登録と起動、互換 import shim、共通 runtime、サブコマンド、ACP/basic/config 関連実装へのルーティングを担う。
 
 ## Read this when
-- cmoc CLI の実装構成や公開入口を確認するとき。
-- CLI ルート、サブコマンド、共通 runtime、互換 import 経路の読む先を選ぶとき。
-- src 配下の実装責務と下位ディレクトリの関係を確認するとき。
+- cmoc の CLI コマンド・サブコマンド登録、option、引数解析エラー処理、補完時の起動経路を調査・変更するとき。
+- トップレベルの互換 import path や package shim の責務を確認するとき。
+- 共通 runtime またはサブコマンド、ACP builder、basic/config 実装へ進む入口を選ぶとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime helper の詳細だけを調査するときは、対応する下位実装を直接読む。
-- canonical な正本仕様や具体的な仕様定義を確認するときは、対応する oracle 側を直接読む。
-- realization test や INDEX 更新の詳細だけを扱うときは、対応する test または indexing の実装を直接読む。
+- 特定サブコマンド、runtime helper、ACP builder、basic/config API の実装詳細だけを確認したいときは、対応する下位要素を直接読む。
+- canonical な oracle 仕様や oracle 側の実装を確認したいときは、対応する oracle ツリーを直接読む。
 
 ## hash
-- eee19faa9b707cb99f363b8831b99c9783e61f13a9f3aab0c3689e06dee87b94
+- 26ffe053715d680f577b089afc8e2beb0de8aab3bdfee072466409d2983aa04f
 
 # `test`
 
 ## Summary
-- cmoc の Python テストを集約するディレクトリ。共有 fixture・CLI/Git/Codex/Ollama 補助、runtime・indexing・oracle review・session/apply などの回帰・統合テストを扱い、各機能の外部挙動や制御契約を確認する入口となる。
+- テストコードから正本 schema を参照する path helper、CLI・Git・Ollama・Codex などの共有テスト補助、各種 runtime／session／apply／oracle review／indexing／TUI／prompt の pytest および受け入れテストを提供する。実装や正本仕様を変更・調査する際に、対応する外部挙動・制御ロジック・公開 API の検証入口として利用するディレクトリ。
 
 ## Read this when
-- cmoc のテスト対象を特定するとき
-- 複数のサブコマンド、runtime、indexing、oracle review、session/apply の統合挙動を調査するとき
-- 共有テスト補助や、特定機能の専用テストへ進む入口を探すとき
+- 対象機能の外部挙動、回帰条件、公開 API、CLI lifecycle、runtime 制御をテスト側から確認・変更するとき。
+- 共有 fixture や fake command、Codex／Git／Ollama／CLI runner のテスト準備方法を確認するとき。
+- indexing、apply、session、oracle review、Codex runtime、設定、TUI などの対応テストケースを絞り込むとき。
 
 ## Do not read this when
-- 実装や正本仕様そのものを確認したいときは、対応する src または oracle のファイルを直接読む
-- 単一機能の詳細を確認する場合は、このディレクトリ全体ではなく対応する専用テストへ進む
-- 一般的な pytest 実行方法や、対象機能と無関係なテスト補助を確認するとき
+- 正本仕様、schema の内容、実装責務や内部構造を確認することが目的のときは、対応する oracle または src の本文を直接読む。
+- 対象機能と無関係なテスト補助や、別サブコマンド・別 runtime 領域のテストを読む必要がないとき。
+- LLM の回答品質そのものを評価したいとき。
 
 ## hash
-- 20ced1f36a8faaeb7b4de24faf00ec6e9e0266247cb671ed1a966359ff1d3b38
+- aeabac72b9bb68c400c10bbf9a7930b80acbbe0dda0b59cdc0e39d226742ac5b

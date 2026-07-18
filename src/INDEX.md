@@ -82,19 +82,17 @@
 # `main.py`
 
 ## Summary
-- Typer/Click を用いた cmoc CLI のルートアプリケーション定義。共通の CLI 引数解析エラーを cmoc 形式へ変換し、doctor、tui、session/apply/oracle の各サブコマンド、eval-oracle、indexing の公開入口を下位実装へ接続する。
+- cmoc の Typer CLI アプリケーション定義。トップレベルおよび session、apply、oracle 配下のサブコマンドを登録し、各実装モジュールへ委譲する実行入口。CLI 引数解析エラーの共通変換、補完時の副作用抑制、scope option と console script 起動も扱う。
 
 ## Read this when
-- cmoc の CLI コマンド、サブコマンド、option、列挙型、Typer/Click のエラー処理を変更または確認するとき。
-- CLI 入口から各サブコマンド実装への接続関係を確認するとき。
-- `cmoc` の console script 起動や補完時の Click 例外処理を確認するとき。
+- cmoc の CLI コマンド、サブコマンド、option、scope 値、引数解析エラー処理、補完動作、または console script の起動経路を変更・調査するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理本体、ブランチ操作、oracle 編集、TUI 起動、INDEX 更新の詳細を確認したいときは、対応する `sub_commands` 配下の実装を直接読む。
-- oracle の仕様やエラー処理の正本を確認したいときは、参照コメントに示された `oracle/doc` の文書を読む。
+- 特定サブコマンドの業務処理や branch・worktree 操作の詳細を調査するときは、対応する sub_commands 配下の実装を直接読む。
+- oracle review、oracle edit、apply fork などの仕様詳細だけを確認するときは、参照されている oracle 文書を直接読む。
 
 ## hash
-- a9f1d5f48b7a59503d89c92100778c38f406dfbc3bb67168ac4890185ba3f1e7
+- ccb042da55c6aa724f6c6810135c48c7ecaee2dfc4da1ead01512324a4c4387f
 
 # `oracle.py`
 
