@@ -124,6 +124,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.model_class == ModelClass.EFFICIENCY
         assert parameter.reasoning_effort == ReasoningEffort.MAX
         assert parameter.file_access_mode == FileAccessMode.READONLY
+        assert parameter.structured_output_schema_path is not None
         assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
         assert "remove me" not in parameter.prompt
         assert "src を確認して必要なら直す" in parameter.prompt
