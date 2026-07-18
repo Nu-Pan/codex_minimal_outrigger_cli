@@ -1,59 +1,3 @@
-# `apply_abandon.md`
-
-## Summary
-- `cmoc apply abandon` の正本仕様断片。未 join の apply run を破棄し、`{{cmoc-apply-branch}}` と `{{cmoc-apply-worktree}}` の cleanup、`{{cmoc-session-state-file}}` の `apply.state` を `ready` へ戻す処理を扱う。
-- `cmoc apply fork` で作られた apply 成果物を取り消したいとき、または session を破棄する前に active / completed / error の apply run を先に片付けたいときに読む。
-- `cmoc apply join` のような merge ではなく破棄を行う場面、`cmoc session abandon` の前提となる apply 側 cleanup を実装・確認したい場面で読む。
-
-## Read this when
-- 現在の session に紐づく未 join の apply run を破棄する挙動を実装・確認するとき。
-- `{{cmoc-apply-branch}}` や `{{cmoc-apply-worktree}}` を削除する正規手順と、その前提条件・警告・終了コードを確認したいとき。
-- `cmoc apply fork` の結果を取り消したいが、`cmoc apply join` は行わず、session 本体は維持したいとき。
-- `cmoc session abandon` 実行前に、残っている apply run を先に片付ける必要があるかを確認したいとき。
-
-## Do not read this when
-- apply 成果物を `{{cmoc-session-branch}}` に取り込む処理を知りたいときは、`cmoc apply join` を読む。
-- session 自体を破棄したいときは、`cmoc session abandon` を読む。
-- apply の実行や探索、差分反映のループを知りたいときは、`cmoc apply fork` を読む。
-- report 保存や merge 後のブランチ削除など、join 側の後処理を知りたいときは、この対象ではなく `cmoc apply join` を読む。
-
-## hash
-- 5b0680f4bce466a631f035f15800d028b8a60a4a1da5f0aa3f16bc9bbd349289
-
-# `apply_fork.md`
-
-## Summary
-- `cmoc apply fork` は、隔離された作業用ブランチ上で Codex CLI のファイル単位レビュー・修正・検証ループを実行し、実装と oracle の一致を目指すサブコマンド。スコープ選択、事前条件、状態遷移、割り込み、差分コミット、作業レポート、終了コードを定義する。apply の実行制御や結果報告の仕様を確認する入口であり、run 隔離や agent call の詳細仕様そのものではない。
-
-## Read this when
-- `cmoc apply fork` の引数、事前条件、apply ループ、スコープ、状態遷移、割り込み動作を実装・レビューするとき
-- apply 実行時のブランチ差分、agent call の再投入条件、自動コミット、収束・未収束・エラー判定を確認するとき
-- apply fork の作業レポート形式や終了コードを変更・検証するとき
-
-## Do not read this when
-- run の隔離実行の詳細だけを確認したいときは、指定された run isolation の正本を直接読む
-- ファイル単位レビュー agent call のパラメータ詳細だけを確認したいときは、対応する parameter 仕様を直接読む
-- apply fork 以外のサブコマンドの仕様や、個別の realization file の実装詳細を調査するとき
-
-## hash
-- fccbe3f974ac0a672cded52b2a56f4f5acb4382c99771769eb1e8c9fd3f53887
-
-# `apply_join.md`
-
-## Summary
-- `cmoc apply fork` の成果物をセッション本流へマージするサブコマンドの仕様。事前条件、通常・強制モードの差分処理、状態更新、マージコンフリクト、使用済みブランチ削除までを定義する。
-
-## Read this when
-- `cmoc apply join` の挙動、実行条件、差分処理、マージ結果、ブランチ削除条件を実装・検証するとき。
-- apply セッション状態や apply ブランチからセッション本流へのマージ処理を確認するとき。
-
-## Do not read this when
-- `cmoc apply fork` 自体の処理や、fork 側で積み上げる対象の詳細だけを確認したいとき。
-- apply サブコマンド以外の CLI 仕様を調べるとき。
-
-## hash
-- 08610c8a3d7335b41a61385e3e26888bef9d618126e18fb072024f79b6f7d936
-
 # `doctor.md`
 
 ## Summary
@@ -145,59 +89,107 @@
 ## hash
 - d495188324876e0e14dc178db85e923e257ebdf21571b61489cc0c609dd61d34
 
+# `realization_apply.md`
+
+## Summary
+- `cmoc realization apply fork|join|abandon` の仕様を定義する oracle doc。oracle file の変更を realization file へ追従させる fork の差分範囲・実行手順・Codex CLI 呼び出し・エラー処理・report と、join/abandon の正本参照先を扱う。realization apply の各サブコマンド仕様を確認する入口。
+
+## Read this when
+- `cmoc realization apply fork` の差分追従、TUI 起動、作業範囲、終了処理、report または終了コードを変更・確認するとき。
+- `cmoc realization apply join` または `abandon` の引数・事前条件・merge・状態更新・cleanup の正本参照先を確認するとき。
+
+## Do not read this when
+- ファイル単位の網羅的な realization 追従やリファクタリング方針を確認したいときは、`cmoc realization refactor` の仕様を直接読む。
+- join または abandon の詳細手順を確認したいときは、共通仕様を定義する `oracle/doc/app_spec/sub_command/realization_run.md` を直接読む。
+
+## hash
+- a7c05415f89c6debdc0a5a62e490247414ac497e298fa1fcbe744dac70c1771f
+
+# `realization_refactor.md`
+
+## Summary
+- realization file の oracle 追従調査を、未調査ファイルがなくなるまで反復する refactor workload の仕様を定める。fork の状態管理・調査ループ・中断・エラー・report と、join／abandon の責務および共通仕様への委譲を扱う。
+
+## Read this when
+- realization refactor の fork、join、abandon の挙動を実装・変更・検証するとき
+- refactor state、run branch、worktree、agent call、commit、report のライフサイクルを確認するとき
+- 中断・再開・エラー時の状態遷移や終了コードを確認するとき
+
+## Do not read this when
+- 短い変更ループを担う realization apply の仕様だけを扱うとき
+- realization run 共通の fork／join／abandon 手順だけを確認する場合は、参照先の realization_run.md を直接読むとき
+- 中断処理の共通仕様だけを確認する場合は、subcommand_interruption.md を直接読むとき
+
+## hash
+- b25af504cfca983d94759344080a6e77de03846daa8ba95a9f43413ee94c154d
+
+# `realization_run.md`
+
+## Summary
+- realization run の共通仕様を定義する正本文書。apply/refactor run の fork・join・abandon における同時実行制約、事前条件、branch/worktree 管理、想定内外差分、merge conflict、cleanup、report の共通ルールを扱う。各 run の具体的な作業内容は個別仕様へ委ねる。
+
+## Read this when
+- realization apply または realization refactor の fork・join・abandon の共通挙動を実装・変更・レビューするとき
+- run の状態管理、snapshot、branch、worktree、未コミット差分、join/abandon の cleanup 条件を確認するとき
+- run の report、想定外差分、merge conflict、使用済み branch の削除ルールを確認するとき
+
+## Do not read this when
+- apply run 固有の作業内容や report file・終了コードを確認するときは realization_apply.md を読む
+- refactor run 固有の作業内容を確認するときは realization_refactor.md を読む
+- 共通仕様と無関係な realization 機能や通常の CLI サブコマンドを扱うとき
+
+## hash
+- db16530a6d3bff5509d5880aab7912afe8f8b7511144841588908be32868daaa
+
 # `session_abandon.md`
 
 ## Summary
-- `cmoc session abandon` の実行条件、破棄してよい対象、失敗時の扱いを読むための入口。`session join` との差分や、`session` と `apply` の状態制約を確認したいときに読む。
+- `cmoc session abandon` の仕様を定義する文書。session branch を home branch に取り込まず破棄するための引数、事前条件、破棄対象、実行手順、状態遷移、失敗時の扱いを扱う。session の破棄処理や関連する realization abandon との責務境界を確認する入口。
 
 ## Read this when
-- `cmoc session abandon` の引数、事前条件、終了時の状態遷移を確認したいとき。
-- session を破棄する正規手段と、手作業でのブランチ削除や rollback との違いを確認したいとき。
-- `session.state` と `apply.state` の整合条件、またはクリーンアップ中の失敗時に何をロールバックするかを確認したいとき。
+- `cmoc session abandon` の実装・テスト・仕様確認を行うとき
+- session の事前検証、branch・state file の更新と削除、cleanup 失敗時のロールバックを確認するとき
+- `cmoc session fork` や `cmoc session join` との状態遷移上の関係を確認するとき
 
 ## Do not read this when
-- session を本流へ取り込む処理を知りたいときは、`cmoc session join` を読む。
-- すでに `session join` 済みの結果を取り消す処理を探しているときは、この文書ではなく rollback 系の定義を探す。
-- `apply run` の破棄だけを扱いたいときは、`cmoc apply abandon` を読む。
+- session を本流へ取り込む `cmoc session join` の仕様だけを確認するとき
+- 未 join の realization run を破棄する処理だけを確認するときは、対応する realization abandon の仕様を直接読む
+- session の共通状態形式や doctor preprocess の一般仕様だけを確認するときは、対応する共通仕様を直接読む
 
 ## hash
-- 5baf43474a1dee9a372d6b19827f6b24f83b16d07d95d664fdd6812779d45bfe
+- 41be2a31e1651afc34e1f03919c12bfb6aaab6790452ae4bbddfe3f68364d1e2
 
 # `session_fork.md`
 
 ## Summary
-- `cmoc session fork` の実行条件、分岐元の決め方、session ブランチ命名、保存情報、legacy `cmoc branch`/`cmoc_...` を切り捨てる方針を確認したいときに読む。
-- 現在 checkout 中の local branch を session の home branch として扱う点、未コミット差分や既存 active session がある場合のエラー、任意 start point を受け取らない点がこの対象の主眼。
+- `cmoc session fork` の正本仕様。現在のローカルブランチを分岐元・merge 先として session 用ブランチを作成し、session 情報を保存して checkout する。引数、事前条件、実行手順、命名規則、旧仕様の非互換方針を扱う。
 
 ## Read this when
-- `cmoc session fork` の新規実装や挙動変更を確認したい。
-- session fork がどの状態で実行可能か、どの branch 名を作るか、どこに session 情報を保存するかを知りたい。
-- legacy の `cmoc branch` や `cmoc_{{time-stamp}}` 仕様を残す必要があるか判断したい。
+- `cmoc session fork` の実装、テスト、エラー条件、ブランチ命名、session 状態保存を変更または確認するとき。
+- `cmoc session fork` とレガシーな `cmoc branch` や `cmoc_{{time-stamp}}` 形式との関係を確認するとき。
 
 ## Do not read this when
-- session 作成後の別サブコマンドの動作を知りたい場合は、そちらの仕様を読む。
-- branch 管理の一般論だけを確認したい場合は、この対象ではなくより基礎的な branch/session 系の仕様を読む。
-- すでに session が作成された後の apply/review/join の詳細を調べたい場合は、この対象は直接は不要。
+- session fork 以外のサブコマンドの仕様だけを調べるとき。
+- 一般的な session 管理やブランチ操作を確認したいが、`cmoc session fork` の挙動を変更・検証しないとき。
 
 ## hash
-- 40a2393b3f6ec060887750acb08460c93dd460ef65b087713059dcd1d2785dfd
+- 284e843d98e0d94bd9ba52e82b57a3a629c76fff3fc03f5412bbb27dc2851551
 
 # `session_join.md`
 
 ## Summary
-- `cmoc session join` の実行条件と終了までの流れを知りたいときに読む。セッション完了時の merge 先、事前条件、コンフリクト時の扱い、完了後の後始末がこの文書の責務である。
+- `cmoc session join` の正本仕様。セッションブランチの事前条件、ホームブランチへの merge、conflict 解消、状態更新、ブランチ削除、安全な失敗処理を定義する。session join の CLI 実装・テスト・エラー処理を確認する入口。
 
 ## Read this when
-- `cmoc session join` の入力なしコマンドとしての仕様、実行前の検証条件、merge 手順、コンフリクト解消の流れ、セッション終了時の状態更新やブランチ削除条件を確認したいとき。
-- `cmoc session join` と旧名の `cmoc merge` の関係、あるいは `home branch` が session 作成後に進んでいた場合の扱いを確認したいとき。
+- `cmoc session join` の実装、引数、事前検証、merge 手順、conflict 解消、セッション状態更新を変更またはレビューするとき。
+- `cmoc merge` の廃止や後方互換性方針を確認するとき。
 
 ## Do not read this when
-- session 開始や状態取得など、`cmoc session join` 以外の session コマンドの仕様を知りたいとき。
-- 一般的な git merge の使い方や汎用 merge wrapper の設計を知りたいとき。
-- conflict marker 解消用 agent call の詳細そのものを知りたいときは、そちらの正本仕様断片を直接読むべきである。
+- 通常の git merge wrapper や、session join 以外のサブコマンドを扱うとき。
+- conflict 解消 agent call の詳細仕様だけを確認する場合は、`build_session_join_conflict_resolution_parameter` の正本を直接読む。
 
 ## hash
-- a6250333e1b9d484a7a7dd1a4da58cd32fd47c1462b561544fb274afb7277742
+- 65937a8759844560b7335de8a09063f95a562c306eb0fff62388c9488b1cfd6e
 
 # `tui.md`
 

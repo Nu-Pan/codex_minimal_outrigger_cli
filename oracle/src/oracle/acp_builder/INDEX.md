@@ -1,20 +1,16 @@
 # `apply`
 
 ## Summary
-- `cmoc apply fork` に関する変更要約、ファイル単位レビュー・修正の AgentCallParameter と、それらに対応する正本スキーマを扱う。変更要約の出力契約、レビュー・修正用 prompt、モデル・アクセス設定を確認する入口。
+- このディレクトリには、参照可能な正本ソース本文がない。正本ソースの有無を確認するための入口である。
 
 ## Read this when
-- `cmoc apply fork` の変更要約処理を実装・検証するとき。
-- ファイル単位レビュー・修正の prompt、出力スキーマ、AgentCall 設定を調査するとき。
-- 変更要約やファイルレビュー・修正に対応する oracle src とスキーマの関係を確認するとき。
+- このディレクトリの内容や、参照可能な正本ソースの有無を確認するとき。
 
 ## Do not read this when
-- 差分取得、fork の作成・適用など、要約・レビューの前後にある実行フローを調査するとき。
-- レビュー対象ファイルの具体的な realization 実装やテストを確認するとき。
-- 共通 prompt builder、パス解決、構造化文書処理の実装詳細だけを調査するとき。
+- 実装仕様や処理内容を確認したいとき。
 
 ## hash
-- adc698de6dbcc5483d43c421a5a0449363c2f17026a4fd3abbae9c385e9f2f6a
+- 0af302f7be7ef5db5b5b3790733cdc5b9d23e3de43be05b57a4287af7ea9be0d
 
 # `basic.py`
 
@@ -65,6 +61,24 @@
 
 ## hash
 - b1b1b746e4b7e045b8b7df9033ac277af178355e499f4bc5440956e6b24423ae
+
+# `realization`
+
+## Summary
+- fork 経路の TUI 起動パラメータ構築と、oracle 差分追従 agent 向け prompt 生成に関する定義を扱う入口。通常の apply 処理と fork 以外の起動経路は対象外。
+- refactor fork の変更要約、およびファイル単位の realization review・fix に用いる AgentCallParameter と Structured Output schema、prompt・モデル・権限・検証設定を定義する入口。実際の処理や共通 prompt builder、fork 全体の状態遷移は対象外。
+
+## Read this when
+- cmoc realization apply fork の TUI 起動処理、差分追従 prompt、対象 commit 範囲、raw oracle diff の受け渡し、AgentCallParameter 設定を変更・検証するとき。
+- refactor fork の変更要約出力、単一ファイルの realization review・fix の構造化出力、prompt 構成、対象・権限・モデル設定を確認するとき。
+
+## Do not read this when
+- 通常の realization apply 処理や fork 以外の起動経路を調べるとき。
+- prompt の共通部品や構造化文書の実装を直接確認するとき。
+- 実際の review・fix 処理、共通 prompt builder、refactor fork 全体の状態遷移や候補ファイルの処理順を確認するとき。
+
+## hash
+- 5f9eff959253efcfea2fbfa4caddb51e6a4a8fdd2964168607ee19ba9e6961fa
 
 # `session`
 

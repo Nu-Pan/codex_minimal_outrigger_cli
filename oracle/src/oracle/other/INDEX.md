@@ -1,37 +1,35 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ固有設定を集約する dataclass 群を定義する oracle src。並列数、Codex CLI のモデル・推論設定と復旧回数、apply fork の処理上限、oracle review の各ループ上限を扱う。設定 JSON の永続化・同期仕様を確認する際の入口。
+- cmoc のリポジトリ固有設定を集約する dataclass 群。並列実行数、Codex CLI のモデル・推論強度・復旧試行回数、oracle review の各ループ上限を定義し、JSON 永続化される設定構造の入口となる。
 
 ## Read this when
-- CmocConfig や CodexModelSpec の設定項目・既定値・Enum の JSON 化規則を変更または確認するとき
-- cmoc apply fork、cmoc oracle review、Codex CLI 呼び出しの設定上限を調査するとき
+- cmoc の設定項目、既定値、Codex CLI 向けモデル対応、oracle review のループ回数を変更または確認するとき。
+- CmocConfig の JSON 化対象や設定 dataclass の構造を調べるとき。
 
 ## Do not read this when
-- 設定値の永続化処理や doctor による同期処理の実装を調べるとき
-- モデル種別や推論 effort の Enum 定義そのものを調べるとき
+- 実際の設定ファイル生成・同期や人間による設定調整の手順を確認したいときは、指定された JSON 設定ファイルと doctor 関連実装を直接読む。
+- ModelClass や ReasoningEffort 自体の定義・意味を確認したいときは、それらを定義するモジュールを直接読む。
+- Codex CLI の呼び出し処理や oracle review の実行ロジックを調べるときは、各処理の実装モジュールを直接読む。
 
 ## hash
-- 22455da013612acebfd49d4042bcb2f927ccd04bc0ae8fbcfeb5bdbee60ffc67
+- 122c507614e38cc44ad2d5866223d25b53966296f1adc3cb96aec754d9cee519
 
 # `path_model.py`
 
 ## Summary
-- `oracle/src/oracle/other/path_model.py` の、`{{cmoc-root}}`・`{{repo-root}}`・`{{run-root}}`・`{{work-root}}` の解決規則と、実パスとプレースホルダ表記の相互変換を扱う入口。パス解決の境界条件や例外を確認したいときに読む。
+- パス表記のルールと、`{{cmoc-root}}`・`{{repo-root}}`・`{{run-root}}`・`{{work-root}}` の各プレースホルダを実パスへ解決する機能を定義する。プレースホルダ表記への逆変換、git とディレクトリ探索による各ルートの特定も扱う。
 
 ## Read this when
-- ルートパスプレースホルダの意味や解決方法を変えるとき
-- 絶対パス・相対パス・プレースホルダ付きパスの受け入れ条件を確認したいとき
-- `work-root` / `repo-root` / `run-root` / `cmoc-root` の見つけ方や失敗時挙動を調べたいとき
-- 実パスをプレースホルダ表記へ戻す変換の仕様を確認したいとき
+- パスのプレースホルダ表記、実パス解決、worktree やリポジトリルートの特定処理を変更・調査するとき。
+- `resolve_real_path`、各 `resolve_*_root` 関数、または実パスとプレースホルダの相互変換の挙動を確認するとき。
 
 ## Do not read this when
-- CLI のサブコマンド全体や他の設定モデルを探したいとき
-- 個別コマンドの入出力や業務ロジックを確認したいとき
-- パス解決以外の共通ユーティリティや別の `oracle/other` ファイルを見たいとき
+- 特定の CLI 機能やパス操作の実装を調査しており、プレースホルダ解決やルート探索の挙動に関係しないとき。
+- 対象機能の責務が別の oracle src または oracle doc に直接定義されているとき。
 
 ## hash
-- a3d1106f01ca2a08139a30ecb7f60467f1f40b8071f1cf99cd77897d53dca932
+- 2b5999ec6bd2c7cae52565994d96eb2348be7e3f788632a76944d8e883838f88
 
 # `standard.py`
 

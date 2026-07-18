@@ -1,37 +1,34 @@
 # `acp_builder`
 
 ## Summary
-- cmoc の各サブコマンド向け ACP エージェント呼び出しパラメータを構築する oracle src のディレクトリ。apply fork、oracle、session、tui、indexing などの prompt、Structured Output schema、モデル・推論・アクセス設定を扱う下位領域への入口。
+- ACP 呼び出しに関する基礎パラメータ、indexing・oracle・realization・session・tui 向けの agent call 構築定義を含む oracle src ディレクトリ。各サブ領域の呼び出し条件、プロンプト、権限設定、Structured Output 契約を確認する入口。
 
 ## Read this when
-- cmoc のサブコマンドがエージェントへ渡す AgentCallParameter、prompt、Structured Output schema、モデル・推論強度、ファイルアクセス設定を調査・変更するとき。
-- 特定サブコマンドの agent call 構成を確認し、対応する下位ディレクトリを選ぶとき。
+- ACP builder 配下の agent call パラメータ、プロンプト、モデル・推論強度、ファイルアクセス権、Structured Output schema を調査・変更するとき。
+- indexing、oracle、realization、session、tui の各 agent call 構築定義の担当領域や参照先を特定するとき。
 
 ## Do not read this when
-- ACP パラメータの共通型や既定値だけを確認するときは、basic.py を直接読む。
-- agent call の実行本体、TUI 画面処理、差分適用や conflict 解消などの後段処理を調査するとき。
-- 特定サブコマンドの実装や schema だけを確認でき、ディレクトリ全体の構成を知る必要がないとき。
+- 実際の agent 呼び出し実行、サブコマンド本体、TUI 画面処理、共通 prompt builder の実装だけを調査するとき。
+- oracle file の編集内容やレビュー基準など、agent call パラメータ以外の正本仕様を確認するとき。
 
 ## hash
-- 2eac1a91a98e1c1fcf11063eb4d67262cc8f8e33b8bfb3cd64b2e33c4ed29650
+- ff4aa39bc258ff493eedba7c281f26f348e196a5ba5e85ef52b26b7b0c5b9050
 
 # `other`
 
 ## Summary
-- cmoc の設定モデル、パス解決、規範文書モデル、構造化文書の Markdown 変換を担う oracle src 群。設定・パス・標準文書・Markdown レンダリングの仕様確認における入口。
+- cmoc の設定・パス解決・規範データ構造・構造化 Markdown 文書化を担う oracle 実装群。設定定義、プレースホルダ付きパスの解決、Standard/Requirement の構造化、StructDoc の Markdown 変換を確認するための入口。
 
 ## Read this when
-- cmoc 固有設定や Codex CLI の実行上限を確認するとき
-- ルートパスのプレースホルダ解決・相互変換を確認するとき
-- 規範文書のデータ構造や構造化文書の Markdown 出力を確認するとき
+- cmoc の設定 dataclass や既定値、パス表記と各ルート解決、規範データ構造、構造化文書の Markdown 出力を変更・調査するとき。
+- 複数の oracle 実装にまたがる設定・パス・規範文書・レンダリングの連携を確認するとき。
 
 ## Do not read this when
-- 設定 JSON の永続化や doctor による同期処理だけを調べるとき
-- CLI サブコマンドの個別入出力や業務ロジックを調べるとき
-- 個別の標準文書の内容や Markdown 以外の文書形式を直接調べるとき
+- 個別の CLI 実行経路、設定ファイルの生成・同期手順、Codex CLI 呼び出し、oracle review の実行ロジックを調べるとき。
+- ModelClass、ReasoningEffort、StructDoc の利用側、個別の標準文書、Markdown 以外の文書形式だけを調べるときは、各定義元・利用側・個別文書を直接読む。
 
 ## hash
-- 70e9314013e0b3c2656bb4e1aaf3f6bddbe79b9d04362a3eb2c83cc5c56b0b4e
+- e4a26d1052ac747c36b4b112e2b6587e774ce5e6d5668a64ad67b48982fe9195
 
 # `prompt_builder`
 
