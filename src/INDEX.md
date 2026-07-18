@@ -115,17 +115,16 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの realization 実装を集約するディレクトリ。apply、doctor、indexing、oracle、session、tui などの実行入口と、各サブコマンド実装へ進むための上位ルーティングを担う。review は現在実装本文のない配置先。
+- サブコマンド実装をまとめるディレクトリ。apply、doctor、oracle、session、tui などの CLI 実行入口と関連処理への入口を提供し、indexing や eval_oracle も含む。review は現時点で実装本文を持たない。
 
 ## Read this when
-- サブコマンドの CLI 実行入口、構成、ライフサイクル処理の担当実装を特定するとき。
-- apply、doctor、indexing、oracle、session、tui の実装を確認・変更するとき。
-- 特定サブコマンドの下位実装へ進む前に、公開入口と責務の境界を把握するとき。
+- サブコマンドの CLI 実装の構成や担当モジュールを確認・変更するとき。
+- apply、oracle、session、tui などの実行フロー、状態管理、レビュー、worktree 操作、プロンプト処理の入口を探すとき。
+- 特定サブコマンドの実装ファイルを追加する場所を確認するとき。
 
 ## Do not read this when
-- 共通 runtime、Git、worktree、Codex 実行基盤など、サブコマンド横断の実装だけを調査するとき。
-- 個別サブコマンドの専門処理、レビュー・修正プロンプト、report、INDEX 更新など単一責務の詳細を直接調査するとき。
-- サブコマンド実装の追加場所だけを確認する場合を除き、現在本文のない review の詳細を調査するとき。
+- 共通 runtime、Git、worktree、Codex 実行基盤、prompt builder などの共通実装だけを調査・変更するとき。
+- 特定サブコマンドの下位実装や oracle 仕様の詳細だけを確認したいときは、対応する個別モジュールや oracle file を直接読む。
 
 ## hash
-- d9a740e64302aca394a5e6b973bb7b6d3ce40cd4d4ffa7bbef22c4e49867cb98
+- 9f69dece50326923aff39e690de38afd06ad30005a29dbd49199f2e3b72fdca9

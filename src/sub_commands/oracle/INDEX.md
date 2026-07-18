@@ -30,20 +30,20 @@
 # `review.py`
 
 ## Summary
-- oracle review サブコマンドの CLI 実装。active session branch 上で対象 oracle file を隔離 worktree でレビューし、所見・INDEX 更新を処理してレポートを生成する。関連するレビュー処理・対象列挙・レポート生成の公開入口も提供する。
+- oracle review サブコマンドの CLI 実行入口。active session branch 上で、oracle ファイルを隔離 worktree でレビューし、所見の収集・中断処理・レビュー用 INDEX.md の反映・レポート出力までを統括する。
 
 ## Read this when
-- oracle review サブコマンドの実行フロー、session branch の事前条件、隔離 worktree の作成・後処理、レビュー結果の統合やレポート出力を変更・調査するとき。
-- レビュー中断時や未コミット差分がある場合のエラー・終了挙動を確認するとき。
+- oracle review サブコマンドの実行条件、隔離 worktree のライフサイクル、レビュー処理の全体フローを確認するとき。
+- レビュー中断時の扱い、未コミット差分の検査、レビュー結果レポートの生成契約を確認するとき。
 
 ## Do not read this when
-- レビュー対象ファイルの列挙条件だけを変更・調査する場合は review_targets.py を読む。
-- レビューの反復処理だけを変更・調査する場合は review_loop.py を読む。
-- 所見の表示形式やレポート書き込みだけを変更・調査する場合は review_report.py を読む。
-- INDEX 更新の commit・merge・conflict 解決だけを変更・調査する場合は review_index.py を読む。
+- レビュー対象ファイルの列挙条件だけを確認したいときは review_targets の実装を読む。
+- レビュー所見のループ処理だけを確認したいときは review_loop の実装を読む。
+- 所見レポートの表示形式だけを確認したいときは review_report の実装を読む。
+- レビュー用 INDEX.md のコミット・マージ・競合解決だけを確認したいときは review_index の実装を読む。
 
 ## hash
-- f229bef1b88f1584ea6921632364b9b3d11ddcff01ccbfa206a3bd4a3273ee49
+- 59320e2db73efe87a69c7c10a28f1831d7d3775c12606659fec0cb5dae5b755c
 
 # `review_index.py`
 
