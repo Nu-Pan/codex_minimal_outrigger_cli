@@ -9,14 +9,14 @@ __all__ = ["build_oracle_review_merge_finding_parameter"]
 
 
 def build_oracle_review_merge_finding_parameter(
-    known_findings: str,
+    findings: str,
 ) -> _AgentCallParameter:
     """正本 builder の parameter へ、既知 typo の prompt 補正だけを適用する。
 
     Oracle:
         `{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py`
     """
-    parameter = _build_parameter(known_findings)
+    parameter = _build_parameter(findings)
     return replace(
         parameter,
         prompt=_fix_oracle_root_placeholder_definition(parameter.prompt),

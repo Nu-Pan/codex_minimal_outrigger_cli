@@ -187,7 +187,7 @@ def test_oracle_review_enumerate_parameter_preserves_related_findings_text(
 
 def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
     """merge finding builderのschemaとplaceholder補正を検証する。"""
-    parameter = build_oracle_review_merge_finding_parameter("[]")
+    parameter = build_oracle_review_merge_finding_parameter(findings="[]")
     assert "<{{oracle-root}}>" not in parameter.prompt
     assert "{{oracle-root}}" in parameter.prompt
     assert "- {{oracle-root}} =" in parameter.prompt
