@@ -19,7 +19,7 @@
 - 現在のブランチが `{{cmoc-session-branch}}` ではない
 - 対応する `{{cmoc-session-state-file}}` が存在しない
 - 対応する `{{cmoc-session-state-file}}` の `session.state` が `active` ではない
-- 対応する `{{cmoc-session-state-file}}` の `apply.state` が `ready` ではない
+- 対応する `{{cmoc-session-state-file}}` の `realization_run.state` が `ready` ではない
 - 対応する `{{cmoc-session-state-file}}` から `{{cmoc-session-home-branch}}` を特定出来ない
 - `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分が存在する
 

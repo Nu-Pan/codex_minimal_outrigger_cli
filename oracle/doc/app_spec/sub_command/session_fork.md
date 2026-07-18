@@ -18,7 +18,7 @@
 
 - detached HEAD 上で実行された
 - `{{remote-tracking-branch}}` や commit hash など、`{{local-branch}}` ではない場所から実行された
-- `cmoc/session/...` や `cmoc/apply/...` など `{{cmoc-managed-branch}}` 上で実行された
+- `cmoc/session/...` や `cmoc/realization/...` など `{{cmoc-managed-branch}}` 上で実行された
 - git 未コミット差分が存在する
 - 現在の `{{cmoc-session-home-branch}}` に active な `{{cmoc-session-branch}}` が既に存在する
 

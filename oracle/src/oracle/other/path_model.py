@@ -14,17 +14,17 @@
 ## パスの表記例
 
 - ユーザーは `{{repo-root}}` をカレントとして `{{cmoc-root}}/bin/cmoc` を呼び出す
-- `cmoc apply fork` は `{{repo-root}}` を pwd として呼び出されて、 run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
+- `cmoc realization apply fork` と `cmoc realization refactor fork` は `{{repo-root}}` を pwd として呼び出されて、run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
 - run の作業隔離のための linked worktree は `{{repo-root}}` 内に作成されるから、「`{{repo-root}}` のフルパス」は「`{{run-root}}` のフルパス」の部分文字列となる
 - `{{run-root}}` 内で cmoc を起動した場合 `{{run-root}}` と同値
 - `{{run-root}}` 外の `{{repo-root}}` 内で cmoc を起動した場合 `{{repo-root}}` と同値
 """
 
 # std
-from pathlib import Path
-from enum import StrEnum
-from typing import Generator
 import subprocess
+from enum import StrEnum
+from pathlib import Path
+from typing import Generator
 
 
 class RootPathPlaceHolder(StrEnum):

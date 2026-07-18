@@ -40,7 +40,7 @@
               "properties": {
                 "path": {
                   "type": "string",
-                  "description": "所見の根拠となるファイルの絶対パス。"
+                  "description": "所見の根拠となる file の絶対 path。"
                 },
                 "line_start": {
                   "type": [

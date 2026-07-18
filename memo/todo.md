@@ -1,11 +1,68 @@
 # 現在進行中
 
+- `{{cmoc-run-branch}}` を分ける必要性はないような気がするか？
+- run 系の abandon も統合して良さそうに見える
+- というか、run 系の諸々は分ける必要は無いように思える
+- `{{realization-oracle-snapshot-commit}}` は無くても良いのでは
+- `cmoc realization apply fork` は TUI じゃなくて exec でいいかも
+    - fork, join 式を維持するほうが
+- repository file って何
+    > 候補 file は、run branch 上で git 追跡されている全 repository file とする。削除済み file と refactor state 自身は候補に含めない。
+- `cmoc realization refactor`
+    - 順序の概念はもう要らないか？　最終チェック日時を持たせて、古い順に…とかだろうか。
+    - 何言ってるか分からない
+        > 1 件以上の所見が返り、調査対象が引き続き候補 file である場合は、調査対象を state の末尾へ再投入する。
+    - git tracked な `state.json` で状態をもちこせるのだから、同一 git branch 上での 中断・再開は無くても良くて、fork --> Ctrl+C --> join --> fork で十分なのでは
+- cmoc oracle edit 含めて、Codex CLI による編集作業は原則 fork join 式にしたい
+    - `realization_run.md` は fork, join, abandon 系サブコマンドの共通仕様くらいに拡大しても良いかも
+- 旧サブコマンドについての話は considered_alternative 内だけに書く
+- プロンプト内の参照関係には `StructBlock` を使ってほしい
+    - e.g.
+        > - 後述する commit 差分から読み取れる oracle file の変更を、`{{work-root}}` リポジトリ全体の realization file に反映すること
+
+## コマンド体系整理
+
+### `cmoc apply ...` サブコマンド
+
+- `cmoc apply fork`, `cmoc apply join`, `cmoc apply abandon` のこと
+- これは廃止して `cmoc realization apply ...`, `cmoc realization refactor ...` に分化させる
+    - `cmoc realization apply fork`, `cmoc realization apply join`, `cmoc realization apply abandon`
+    - `cmoc realization refactor fork`, `cmoc realization refactor join`, `cmoc realization refactor abandon`
+
+### `cmoc realization apply fork` サブコマンド
+
+- 根本的な要件
+    - 元々`cmoc tui` 経由で「git commit XXX で oracle file に編集入れたから、それに追従して」を依頼していたが、これを少ない記述量で繰り返せるヘルパーが欲しい
+    - `cmoc realization apply ...` が終わった時、少なくとも git commit 上から分かる変更内容について、oracle file, realization file に齟齬がない
+- `codex exec` 呼び出し
+    - この `cmoc realization apply ...` 呼び出しで追従するべき差分情報を注入
+    - 追従対象はリポジトリ全体
+    - cmoc による codex の繰り返し呼び出しはしない（いらなさそう）
+    - TUI を起動する
+- ファイル単位の追従は non-goal
+    - 分け方
+        - ファイル単位の追従指示は `cmoc realization refactor ...` サブコマンドに譲る
+        - `cmoc realization apply ...` は `cmoc oracle edit` と交互に呼び出すことを想定
+    - 気持ち
+        - 普通に考えて、仕様にどういう変更があったか？　に基づいて実装に変更を加えるのが合理的
+        - この仕様変更・実装変更ループは１０～３０分程度の短いスパンで素早く回したい
+        - 一方、それだけだと考慮漏れが出るので、ファイル単位調査も欲しいが、これは時間がかかるし、ファイル個別の事情に引っ張られやすいし、トークン消費的にも無駄が出やすい
+        - これらはまるで性質が違うのだから、ワークロード・サブコマンド的に別にしよう、ということ
+
+## `cmoc realization refactor fork` サブコマンド
+
+- 根本的な要件
+    - ファイル単位での oracle file 追従を収束するまで繰り返す
+    - 差分情報は渡さず、realization file, oracle file, standard だけから修正するべき点を見つけさせる
+    - ファイル単位でチェックをすることで網羅性を担保する
+    - どのファイルが追従済みで、どのファイルがそうでないかは `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` でトラックする
+    - Ctrl+C で任意のタイミングで中断が可能
+    - 中断後、再度 `cmoc realization refactor fork` した場合、既存の refactor branch を使って再開する
+    - `state.json` が空になったら完了
+    - `state.json` がからの状態で  `cmoc realization refactor fork` が呼び出された場合、リポジトリ上の全ファイルを要調査対象として追加する
+    - 旧 `cmoc apply fork` とかなり近い仕様となることを想定
+
 # cmoc の作業品質
-
-## `cmoc oracle investigation`
-
-- cmoc tui で毎回ちまちま打ち込むのがめんどくさいので、固定できるところは固定しよう系
-- oracle file を編集する前に事実関係を調査したい時に使う
 
 ## いい加減、`codex`, `codex exec` の仕様記述の棲み分けをどうにかしたい
 
@@ -28,50 +85,6 @@
 
 - ２箇所に同じ事を書くのではなく、書いてある箇所への参照を書く
     - 周辺仕様が目に入るというメリットが有る
-
-## コマンド体系整理
-
-
-## `cmoc apply fork` 再定義
-
-- `cmoc apply ...` --> `cmoc realization apply ...`
-- 根本的な要件
-    - `cmoc tui` 経由で「git commit XXX で oracle file に編集いれたらから、それに追従して」を依頼する操作のヘルパーが欲しい
-    - `cmoc realization apply fork` が終わった = oracle file, realization file に齟齬がない
-- 適用処理を２フェーズに分ける
-    1. リポジトリ全体適用処理
-    2. ファイル単位の適用処理
-- リポジトリ全体フェーズ
-    - この `cmoc apply fork` 呼び出しで追従するべき差分情報をすべて注入
-    - 追従対象はリポジトリ全体
-    - 再実行はしない（いらなさそう）
-- ファイル単位フェーズ
-    - 
-- フェーズ問わず
-    - 見るべき差分情報 (主に git commit hash) を渡す
-
-- リポジトリ全体に対する「oracle file にこういう修正いれたから追従させて」を先にやる
-    - 一発でうまくいくわけ無いので、所見リストアップ --> 実装を繰り返し実行
-    - もう所見ないよって言われるまで繰り返し
-    - その後で、仕上げにファイル単位の網羅的チェックを行う
-- 気持ち
-    - ファイル単位調査だと、ファイル個別の事情に釣られやすそう
-    なので「抜け漏れは有るかもしれないが、大筋対応出来ている」な状態を先に作る
-    - その後であれば、ファイル単位修正が多少近視眼的でも大きな問題にはならないはず
-    - 実際、人力での開発の時も、大抵はそんな流れのはず
-- ていうか、ファイル単位の虱潰しと、差分ベースの追従とは別のコマンドにすべきかも
-    - 性質がまるで違う
-    - oracle 編集して realization を追従させて・・・のワークフローを回すのには、差分ベース追従の方が都合がいい (毎回 cmoc tui で指示書くのダルい)
-    - 指示をディティールまできっちり反映させるのはファイル単位適用が必要なので、それはそれで必要
-    - 枠フロー回すという意味では oracle edit の実装も優先度が高い
-
-## `cmoc realization refactor` コマンド
-
-- 昔の `cmoc apply fork --full` サブコマンド
-- 差分情報を渡さずに、ファイル単位の oracle file 追従を収束するまで繰り返す
-- 逐次的な適用処理は `cmoc realization apply fork` コマンドがあるので、`--rolling`, `--session` は不要
-- 進行状況は `cmoc realization apply fork` と共用
-- oracle file との整合性を保ちつつ、規範と適合するようにリファクタを行うためのコマンド
 
 ## 各プロンプトをきっちり仕様化
 
@@ -349,6 +362,10 @@
 なし
 
 # cmoc ワークフロー
+
+## run branch --> session branch のコンフリクト解決戦略もうちょっとなんとかしたい
+
+- 普通に AI に任せたい…
 
 ## コマンドの並び順がおかしい
 

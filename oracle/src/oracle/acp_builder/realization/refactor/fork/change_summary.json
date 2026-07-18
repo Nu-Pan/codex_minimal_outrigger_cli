@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "changes"
+  ],
+  "properties": {
+    "changes": {
+      "type": "array",
+      "description": "差分を、変更内容の意味論に基づいて分類した要約。空配列は想定しない。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "category",
+          "summary",
+          "changed_paths"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "変更内容の意味論に基づくカテゴリ名。"
+          },
+          "summary": {
+            "type": "string",
+            "description": "何をどう変更したかを表す人間向け要約。"
+          },
+          "changed_paths": {
+            "type": "array",
+            "description": "要約の根拠となる主な変更 file の repository 相対 path。",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

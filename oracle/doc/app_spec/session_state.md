@@ -2,14 +2,14 @@
 
 ## 概要
 
-- cmoc ワ―フロー上発生する fork, join の挙動を一意に定めるための情報をファイル永続化するための json ファイル
-- 保存先は `{{repo-root}}/.cmoc/gu/ar/session/{{session-id}}.json`
-
+- cmoc workflow 上の session と realization run の fork, join, abandon を一意に定めるための JSON file である。
+- 保存先は `{{repo-root}}/.cmoc/gu/ar/session/{{session-id}}.json` とする。
 
 ## スキーマ設計の基本原則
 
-- ファイルに永続化する情報は必要最小限度に留める
-- プログラム上の「その場その場で解決可能な情報」はステートに持たせることはしない
+- 永続化する情報は必要最小限に留める。
+- その場で確実に解決できる情報は state に持たせない。
+- 1 session に未 join の realization run は高々 1 つとする。
 
 ## スキーマ定義
 
@@ -19,13 +19,13 @@
     "state": "active | joined | abandoned | error",
     "session_home_branch": "...",
     "session_start_commit": "...",
-    "last_joined_apply_oracle_snapshot_commit": "...",
-
+    "last_joined_realization_apply_oracle_snapshot_commit": "... | null"
   },
-  "apply": {
-    "state": "ready | running | completed | error",
-    "apply_branch": "cmoc/apply/.../...",
-    "oracle_snapshot_commit": "..."    
+  "realization_run": {
+    "state": "ready | running | paused | completed | error",
+    "kind": "apply | refactor | null",
+    "branch": "... | null",
+    "oracle_snapshot_commit": "... | null"
   }
 }
 ```
@@ -34,36 +34,55 @@
 
 ### `session.state`
 
-- 現在のセッションのステート
-- セッション新規作成直後の初期値は `active`
-- `cmoc session` 系サブコマンドによって遷移する
+- 現在の session の状態である。
+- session 新規作成直後の初期値は `active` とする。
+- `cmoc session` 系サブコマンドによって遷移する。
 
 ### `session.session_home_branch`
 
-- そのセッションの fork 元ブランチ名であり join 先でもある
-- セッション新規作成直後、`cmoc session fork` が現在 checkout している `{{local-branch}}` 名で初期化する
+- session の fork 元 branch であり join 先でもある。
+- `cmoc session fork` が、その時点で checkout している `{{local-branch}}` 名で初期化する。
 
-### `session_start_commit`
+### `session.session_start_commit`
 
-- そのセッションの fork 元コミット
+- session の fork 元 commit である。
 
-### `session.last_joined_apply_oracle_snapshot_commit`
+### `session.last_joined_realization_apply_oracle_snapshot_commit`
 
-- そのセッション上で最後に join した apply の `{{oracle-snapshot-commit}}`
-- セッション新規作成直後の初期値は null
-- `cmoc apply join` によって適切な値に更新される
+- その session で最後に join した apply run の `{{realization-oracle-snapshot-commit}}` である。
+- session 新規作成直後の初期値は `null` とする。
+- `cmoc realization apply join` が merge に成功した場合だけ更新する。
+- `cmoc realization refactor join` は更新しない。
 
-### `apply.state`
+### `realization_run.state`
 
-- その apply 処理のステート
-- セッション新規作成直後の初期値は `ready`
+- 未 join の realization run の状態である。
+- session 新規作成直後の初期値は `ready` とする。
+- `paused` は、ユーザー中断された refactor run だけに使用する。
 
-### `apply.apply_branch`
+### `realization_run.kind`
 
-- その apply 処理で修正内容を積み上げる先となるブランチ名
-- `apply.state` が `ready` に遷移した時に null で初期化される
+- active な realization run の workload を表す。
+- apply run は `apply`、refactor run は `refactor` とする。
+- `realization_run.state` が `ready` の場合は `null` とする。
 
-### `apply.oracle_snapshot_commit`
+### `realization_run.branch`
 
-- その apply で oracle file の参照に使用するコミットのハッシュ
-- `apply.state` が `ready` に遷移した時に null で初期化される
+- realization の修正内容を積み上げる run branch 名である。
+- `realization_run.state` が `ready` の場合は `null` とする。
+
+### `realization_run.oracle_snapshot_commit`
+
+- run 開始時点の `{{cmoc-session-branch}}` HEAD である。
+- apply run では注入差分の終点にも使用する。
+- refactor run では差分情報として agent に渡さず、join 時の想定外差分検査にだけ使用する。
+- `realization_run.state` が `ready` の場合は `null` とする。
+
+## 状態遷移
+
+- `ready` から apply または refactor の fork を開始すると `running` になる。
+- apply fork が正常終了すると `completed` になる。
+- refactor state が空になると `completed` になる。
+- refactor fork がユーザー中断されると `paused` になる。
+- run が続行不能なエラーで停止すると `error` になる。
+- 対応する join または abandon が正常終了すると `ready` になり、`kind`, `branch`, `oracle_snapshot_commit` を `null` に初期化する。

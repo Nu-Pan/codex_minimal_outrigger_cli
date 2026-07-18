@@ -14,8 +14,9 @@
 1. `{{work-root}}/.cmoc/gu` が git 追跡対象外であることを保証する
 2. `{{work-root}}/.agents` が git 追跡対象であることを保証する
 3. `{{work-root}}/.cmoc/gt/ar/config.json` が git 追跡対象である事を保証する
-4. cmoc managed ollama を使用する場合、その利用可能性を保証する
-5. ここまでの作業で発生した差分を git commit する
+4. `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が git 追跡対象であることを保証する
+5. cmoc managed ollama を使用する場合、その利用可能性を保証する
+6. ここまでの作業で発生した差分を git commit する
 
 ## 「`{{repo-root}}/.cmoc/gu` が git 追跡対象外であることを保証する」の詳細
 
@@ -67,6 +68,20 @@
 
 - `{{work-root}}/.cmoc/gt/ar/config.json` が存在しなければ作成する
 - `{{work-root}}/.cmoc/gt/ar/config.json` を git 追跡対象に追加する
+
+## 「`{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が git 追跡対象であることを保証する」の詳細
+
+### 検証
+
+- `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が存在していること
+- 同 file が git 追跡対象であること
+- JSON のトップレベルが配列であり、各要素が `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の refactor state 仕様を満たすこと
+
+### 修復
+
+- file が存在しなければ、空の refactor state である `[]` を保存する
+- file を git 追跡対象に追加する
+- file が存在するものの refactor state 仕様を満たさない場合は、既存の調査状態を破棄せずエラー終了する
 
 ## 「cmoc managed ollama を使用する場合、その利用可能性を保証する」の詳細
 

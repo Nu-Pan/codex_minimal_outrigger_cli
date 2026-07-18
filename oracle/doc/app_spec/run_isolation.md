@@ -3,13 +3,13 @@
 
 ## 概要
 
-- comc サブコマンドが実際に実行する作業のことを run と呼ぶ
+- cmoc サブコマンドが実際に実行する作業のことを run と呼ぶ
 - この run が他の何者か（大抵は人間）の操作と衝突しないように、cmoc は作業環境の隔離を行う
 - 具体的には作業用に git branch, worktree を利用する
 
 ## 前提
 
-- comc サブコマンド呼び出し 1 つに対して run 1 つが存在する
+- cmoc サブコマンド呼び出し 1 つに対して run 1 つが存在する
 - `{{repo-root}}` は git で管理されている
 - 人間が直接触るのは `{{repo-root}}` だけである
 - 人間が `{{run-root}}` を直接触ることはない
@@ -20,11 +20,12 @@
 - run 開始時点での `{{cmoc-session-branch}}` HEAD を元に `{{cmoc-run-branch}}` を作成する
 - `{{cmoc-run-branch}}` は抽象概念であり、具体的なブランチ名はサブコマンドによって異なる
     - e.g. `cmoc oracle review` --> `{{cmoc-review-branch}}`
-    - e.g. `cmoc apply fork` --> `{{cmoc-apply-branch}}`
+    - e.g. `cmoc realization apply fork` --> `{{cmoc-realization-apply-branch}}`
+    - e.g. `cmoc realization refactor fork` --> `{{cmoc-realization-refactor-branch}}`
 - run の作業は全て `{{cmoc-run-branch}}` 上で記録される
 - run の作業完了後の `{{cmoc-run-branch}}` --> `{{cmoc-session-branch}}` マージ規則
     - サブコマンドによって、マージ規則は異なる
-    - e.g. `cmoc apply join` により、半自動ワークフローで慎重にマージされる
+    - e.g. `cmoc realization apply join`, `cmoc realization refactor join` により、半自動ワークフローで慎重にマージされる
     - e.g. `cmoc oracle review` により自動でマージされる
 
 ## git worktree
@@ -32,7 +33,8 @@
 - cmoc の run 作業は、必ず `{{cmoc-run-worktree}}` 上で行う
 - `{{cmoc-run-worktree}}` は抽象概念であり、具体的なブランチ名はサブコマンドによって異なる
     - e.g. `cmoc oracle review` --> `{{cmoc-review-worktree}}`
-    - e.g. `cmoc apply fork` --> `{{cmoc-apply-worktree}}`
+    - e.g. `cmoc realization apply fork` --> `{{cmoc-realization-apply-worktree}}`
+    - e.g. `cmoc realization refactor fork` --> `{{cmoc-realization-refactor-worktree}}`
 - cmoc の run 作業は `{{cmoc-run-worktree}}` 上で `{{cmoc-run-branch}}` を checkout した状態で行う
 
 ## `{{run-root}}` 外への書き込み例外規則

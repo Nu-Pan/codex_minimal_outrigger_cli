@@ -2,34 +2,43 @@
 
 ## エンドユーザーが cmoc を呼び出す方法
 
-- `{{cmoc-root}}/bin` を環境変数 `PATH` に追加し `cmoc` コマンドで呼び出すものとする
+- `{{cmoc-root}}/bin` を環境変数 `PATH` に追加し、`cmoc` コマンドで呼び出す。
 
-## 最初に 1 回だけのおまじない
+## 最初に 1 回だけ行うこと
 
-1. 人間が `cmoc dector` を呼び出す
+1. 人間が `cmoc doctor` を呼び出す。
 
-## 想定ワークフロー
+## 想定 workflow
 
-1. 人間が `{{local-branch}}` に移動する
-   - 例: `issue/123-fix-login`
-   - `main` / `master` である必要はない
-2. 人間が `cmoc session fork` を呼び出す
-   - cmoc は現在のブランチを `{{cmoc-session-home-branch}}` として記録する
-   - cmoc は `{{cmoc-session-branch}}` を作成して checkout する
-3. 記述・実装ループ
-   1. 人間がやってほしいと思っている事を `{{repo-root}}/oracle` に反映する
-      - 必要に応じて `cmoc oracle investigation` で既存の oracle file を調査する
-      - 必要に応じて `cmoc oracle edit` を使う
-   2. 人間が `cmoc oracle review` を呼び出して、レビューレポートを読む
-   3. 人間が必要に応じて `{{repo-root}}/oracle` を修正する
-   4. 人間が `{{repo-root}}/oracle` の変更を commit する
-   5. 人間が `cmoc apply fork` を呼び出す
-      - cmoc は、呼び出された時点の `{{oracle-snapshot-commit}}` 上の `{{run-root}}/oracle` を正本として、実装を追従させる作業を行う
-      - 実装追従作業は apply worktree 上で長時間作業かけて行われる
-      - 通常系においては、 `cmoc apply fork` が完了した時点で、作業結果が `{{cmoc-apply-branch}}` にコミットされている
-      - `cmoc apply fork` 実行中も、人間は `{{cmoc-session-branch}}` 側で `{{repo-root}}/oracle` の改訂を進めてよいが、その内容は既に実行を開始した `cmoc apply fork` には反映されない（よって、普通はもう１周必要）
-   6. 人間が `cmoc apply join` を呼び出す
-      - cmoc は `{{cmoc-apply-branch}}` を `{{cmoc-session-branch}}` へマージする
-   5. 人間が現状の実装で問題なしと判断したら、ループ終了
-4. 人間が `{{cmoc-session-branch}}` 上で `cmoc session join` を呼び出す
-   - cmoc は `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へマージする
+1. 人間が `{{local-branch}}` に移動する。
+    - e.g. `issue/123-fix-login`
+    - `main` / `master` である必要はない。
+2. 人間が `cmoc session fork` を呼び出す。
+    - cmoc は現在の branch を `{{cmoc-session-home-branch}}` として記録する。
+    - cmoc は `{{cmoc-session-branch}}` を作成して checkout する。
+3. 短い仕様変更・実装変更ループを繰り返す。
+    1. 人間が、やってほしいことを `{{repo-root}}/oracle` に反映する。
+        - 必要に応じて `cmoc oracle investigation`, `cmoc oracle edit` を使う。
+    2. 人間が `cmoc oracle review` を呼び出し、必要なら oracle file を修正する。
+    3. 人間が oracle file の変更を commit する。
+    4. 人間が `cmoc realization apply fork` を呼び出す。
+        - cmoc は前回 join 済み apply から現在までの commit 差分を注入し、TUI 1 セッションでリポジトリ全体の realization を追従させる。
+        - 作業結果は `{{cmoc-realization-apply-branch}}` に commit される。
+    5. 人間が `cmoc realization apply join` を呼び出す。
+        - cmoc は apply branch を `{{cmoc-session-branch}}` へ merge する。
+    6. 人間が現状の実装で問題ないと判断するまで繰り返す。
+4. 必要に応じて、ファイル単位の網羅的な追従を行う。
+    1. 人間が `cmoc realization refactor fork` を呼び出す。
+        - cmoc は refactor state にある全候補 file を、差分情報を渡さずに 1 file ずつ調査する。
+        - `Ctrl+C` で中断しても、次回の同じ fork で既存 branch から再開できる。
+    2. refactor state が空になるまで fork を続行または再開する。
+    3. 人間が `cmoc realization refactor join` を呼び出す。
+        - cmoc は refactor branch と空になった refactor state を `{{cmoc-session-branch}}` へ merge する。
+5. 人間が `{{cmoc-session-branch}}` 上で `cmoc session join` を呼び出す。
+    - cmoc は `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge する。
+
+## workload の使い分け
+
+- `cmoc realization apply` は、直近の oracle 変更を短い loop で素早く realization へ反映するときに使う。
+- `cmoc realization refactor` は、変更差分に引っ張られず、全候補 file の追従状況を収束させるときに使う。
+- `cmoc apply ...` は廃止済みであり、使用しない。

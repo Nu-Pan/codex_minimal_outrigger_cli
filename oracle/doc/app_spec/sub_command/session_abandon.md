@@ -20,8 +20,8 @@
 - 現在のブランチが `{{cmoc-session-branch}}` ではない
 - 対応する `{{cmoc-session-state-file}}` が存在しない
 - 対応する `{{cmoc-session-state-file}}` の `session.state` が `active` ではない
-- 対応する `{{cmoc-session-state-file}}` の `apply.state` が `ready` ではない
-    - active, completed, error などの apply run が残っている場合は、先に `cmoc apply abandon` で apply run を破棄する
+- 対応する `{{cmoc-session-state-file}}` の `realization_run.state` が `ready` ではない
+    - 未 join の realization run が残っている場合は、その種類に対応する `cmoc realization apply abandon` または `cmoc realization refactor abandon` で先に破棄する
 - `{{cmoc-session-home-branch}}` が存在しない
 - `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分が存在する
 
@@ -40,8 +40,8 @@
 - `{{cmoc-session-home-branch}}` 上の commit
 - `{{cmoc-session-state-file}}` 自体
 - 既に保存済みの report
-- active apply run
-    - active apply run が残っている場合は `cmoc session abandon` では処理せず、先に `cmoc apply abandon` を要求する
+- 未 join の realization run
+    - realization run が残っている場合は `cmoc session abandon` では処理せず、その種類に対応する abandon を要求する
 
 ## 実行手順
 
