@@ -524,16 +524,18 @@
 # `test_indexing_preflight.py`
 
 ## Summary
-- Codex 呼び出し前の indexing preflight を検証する統合テスト。exec/TUI 経路での実行順序、対象 root と linked worktree の選択、git commit・作業ツリー clean 状態、repository lock 待機、パラメータによる preflight 無効化、file access violation 後に recovery indexing を行わない制御を扱う。
+- Codex 呼び出し前の indexing preflight を検証する pytest 集。exec/TUI 経路での実行順序、linked worktree の選択、repository lock 待機、パラメータによる無効化、file access violation 後に recovery indexing を行わない制約を扱う。indexing や Codex 実行は fake に差し替え、git commit・作業ツリー状態・呼び出し回数も確認する。
 
 ## Read this when
-- indexing preflight、Codex exec/TUI 呼び出し前処理、linked worktree の indexing 対象選択、repository lock、recovery indexing の挙動を変更・レビュー・検証するとき。
+- Codex exec または TUI 呼び出し直前の indexing preflight の挙動を変更・調査するとき
+- preflight の lock 制御、worktree 判定、無効化条件、recovery 禁止を検証するとき
 
 ## Do not read this when
-- indexing preflight や Codex 呼び出し前処理ではなく、通常の indexing 実装、Codex 実行本体、または一般的な CLI 入出力だけを調べるとき。
+- INDEX.md 生成ロジック自体や Codex preflight の実装詳細を確認したいときは、対応する realization implementation を直接読む
+- preflight と無関係な CLI 機能や一般的な indexing テストを扱うとき
 
 ## hash
-- 35c2adf8b7396a5784a59bf79ae209b4d169a3f8c49624b543f55839716c587a
+- 7e920e91e709ef697599353052752757cd365e3d5cdbdabd50e15fc082ca7a13
 
 # `test_oracle_review_loop.py`
 
