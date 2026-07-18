@@ -681,16 +681,18 @@
 # `test_runtime_apply.py`
 
 ## Summary
-- apply 実行時のプロセス追跡・停止契約を、CLI を介さず低レベル API で検証するテスト。PID ファイル、advisory lock、agent-read runtime state、pidfd、PID reuse 防止、process group 停止、親終了後の child 再読込、競合終了時の扱いを対象とする。apply abandon の CLI 外部挙動は扱わず、対応する CLI テストへ進むための基盤テスト入口である。
+- apply 実行時のプロセス追跡と停止契約を、CLI を介さず低レベル API で検証するテスト。PID file、advisory lock、agent-read runtime state、pidfd、PID 再利用防止、process group 停止、親終了後の child 再読込、worktree 境界を扱う。apply abandon の CLI 外部挙動ではなく、runtime 実装の回帰確認への入口となる。
 
 ## Read this when
-- apply runtime のプロセス追跡、PID ファイルや lock の配置・同期、pidfd による停止、child process group の停止、PID reuse や競合終了時の制御を変更・検証するとき。
+- apply runtime のプロセス追跡、PID file、lock、pidfd、process group 停止、child process 管理を変更・調査するとき
+- 親 process や Codex child process の終了競合、PID 再利用、停止 warning、管理領域外 worktree の扱いを検証するとき
 
 ## Do not read this when
-- apply abandon コマンドの引数・終了コード・CLI 出力など外部挙動を確認するときは、直接 `test_apply_abandon_cli.py` を読む。
+- apply abandon コマンドの CLI 入出力や外部挙動を確認するときは、専用の CLI テストを直接読む
+- apply runtime の実装詳細や正本仕様を確認するときは、このテストではなく対応する実装または oracle file を読む
 
 ## hash
-- 31cb4884b8071f5f1aff87d25c22cbaa96db9c1adeaa859a3181217fefc45d4e
+- ad39aa82458a56fef40e717a53a7227a77d0e1b72a4c76be09d1c765831f4a5b
 
 # `test_runtime_cli.py`
 
