@@ -17,16 +17,15 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization 実装をまとめるディレクトリ。`acp.builder` の互換入口、apply・indexing・session・TUI の互換層、oracle command builder の adapter、quota probe の fallback 入口を含む。各下位要素から、対応する builder の具体的な互換経路や委譲処理へ進む。
+- ACP builder の realization 側入口をまとめるパッケージ。canonical な oracle builder への委譲、既存 `acp.builder.*` import の互換維持、TUI・oracle review/edit・apply fork・session join・indexing・quota probe の parameter builder を扱う。各サブパッケージが機能別の実装入口となる。
 
 ## Read this when
-- `acp.builder` 配下の互換 import 経路、canonical builder への委譲、builder adapter、または quota probe builder の fallback を調査・変更するとき。
-- apply、indexing、session、TUI、oracle command builder の realization 側入口を横断して構成や責務の境界を確認するとき。
+- ACP parameter builder の realization 側入口、canonical builder への委譲、互換 import 経路を調査・変更するとき。
+- TUI、oracle edit/review、apply fork、session join、indexing、quota probe のいずれかの builder を探すとき。
 
 ## Do not read this when
-- canonical な builder の正本仕様や具体的な実装内容を確認したいときは、対応する `oracle` 側の実装を直接読む。
-- apply fork や session join のループ制御・state 遷移、TUI の画面実装、builder 以外の CLI 処理を調査するときは、対応するサブコマンドや実装を直接読む。
-- 生成済み Python キャッシュの内容だけを調査する場合を除き、review 配下へ進む必要はない。
+- canonical な builder の仕様や実装内容を確認したいときは、対応する `oracle.acp_builder` 側を読む。
+- CLI のループ制御、state 遷移、TUI 起動後の処理など、builder parameter 構築以外の挙動を調査するときは、対応する上位実装を直接読む。
 
 ## hash
-- d927f586d0f9f5776d1f5b193e02c67fab386c1bdd3334862151cf65221e809e
+- 9639a6d764d311dcc41f5a792de4f2d6d06b0a51eaf952c750cdd70fe55365a5

@@ -15,18 +15,17 @@
 # `enumerate_finding.py`
 
 ## Summary
-- oracle review finding enumeration の canonical builder を呼び出す互換 adapter。絶対 symlink の lexical path を prompt に保持し、既存呼び出し元が残る間の入口となる。全呼び出し元が canonical oracle path を直接利用した後は削除可能。
+- oracle review finding enumeration の canonical builder を呼び出す互換アダプター。絶対 symlink の lexical path を prompt に保持し、旧 import 呼び出し元がなくなった時点で削除できる。
 
 ## Read this when
-- oracle review finding enumeration の parameter builder の呼び出し元や移行状況を調査するとき
-- symlink された oracle path が prompt にどう表示されるかを変更・確認するとき
+- oracle review finding enumeration の parameter builder、symlink path の prompt 表現、または旧 import 呼び出し元の整理を変更・調査するとき。
 
 ## Do not read this when
-- canonical な prompt 生成仕様や builder 本体を確認したいときは、oracle 側の canonical 実装を直接読む
-- oracle review enumeration と無関係な adapter や CLI 機能を調査するとき
+- canonical な oracle review enumeration 実装そのものを変更・調査するとき。
+- oracle review finding enumeration と無関係な builder や CLI 処理を扱うとき。
 
 ## hash
-- db90ae9f2d7a42c57d3ee6bebd2f3863c01d8c422e9be775279f74a294e586ad
+- 312e2350beab9bb38e80ad249bd1b4377321bf7dcc613becc4b156abf61ea484
 
 # `judge_finding.py`
 
@@ -46,35 +45,32 @@
 # `merge_finding.py`
 
 ## Summary
-- Oracle の merge-finding parameter builder を呼び出し、生成 prompt に含まれる既知の oracle-root placeholder typo だけを補正する realization implementation。補正 helper は oracle src の typo が解消されたら削除対象。
+- Oracle の merge-finding parameter builder を呼び出し、生成された prompt に既知の oracle-root placeholder typo の限定的な補正を適用する realization 実装。入力 finding は変更せず、prompt の placeholder 定義部分だけを対象にする。
 
 ## Read this when
-- merge-finding 用 agent call parameter の生成や prompt placeholder の typo 補正を変更・調査するとき
-- oracle review builder の realization 側の互換処理と対応テストを確認するとき
+- merge-finding 用 agent call parameter の生成や prompt 補正の挙動を変更・確認するとき
+- oracle builder の出力に含まれる既知 placeholder typo への互換補正を調査するとき
 
 ## Do not read this when
-- merge-finding builder の正本仕様や prompt 本文を変更するときは、まず対応する oracle src を直接読む
-- 他の review builder や prompt 補正処理を調査するとき
-- agent call parameter と無関係な CLI・永続化・実行処理を扱うとき
+- merge-finding の正本仕様や builder 本体の定義を確認したいときは、参照されている oracle source を直接読む
+- merge-finding 以外の agent call parameter や一般的な prompt 規約を扱うとき
 
 ## hash
-- 5a1fe8107957aa9004ce504b5b97afafa5c68a2f4e0659764e97026db43ba2de
+- 3b6a5b70b2dd6e2f4f9814aeb3213984433a0d490676f65dc6b5755325c43911
 
 # `validate_finding_advocate.py`
 
 ## Summary
-- oracle review の finding advocate 用 AgentCallParameter を構築する。canonical builder の結果を基に、prompt 内に残る oracle root placeholder の既知 typo を一箇所だけ補正し、finding と既知理由は変更せず保持する。
+- oracle review の finding advocate 用 AgentCallParameter を生成する canonical builder を呼び出し、prompt 内の既知の oracle root placeholder typo だけを補正する。finding と既知の advocate/challenger 理由はそのまま保持する。
 
 ## Read this when
-- oracle review の finding advocate 用 parameter 生成や prompt 補正の実装を変更・検証するとき。
-- canonical builder と、既知 typo の限定的な補正境界を確認するとき。
+- oracle review の finding advocate 用パラメータ生成や、canonical prompt の typo 補正を確認・変更するとき。
 
 ## Do not read this when
-- 他の agent call parameter の生成規則だけを確認したいとき。
-- prompt の正本仕様や canonical builder 本体を直接調査することが目的のときは、それぞれ対応する oracle file を読む。
+- challenger 用 builder の実装や、canonical advocate prompt 自体の仕様を確認したいとき。
 
 ## hash
-- 104d25ced8a0f0a7333c53215facedb8016d1c2847de23f4c863e8efc5fabedf
+- 0403ae214e76b31656c2f69e32e94e0ce6946e35e1c28eb0d38e408ee50bd749
 
 # `validate_finding_challenger.py`
 

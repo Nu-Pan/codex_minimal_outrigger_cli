@@ -65,20 +65,18 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization package。oracle command builder 関連のパッケージ入口で、oracle edit と oracle review の builder adapter を含む。
-- oracle edit adapter は TUI 起動時の AgentCallParameter 生成と editor input 保存先の準備を扱い、oracle review adapter 群は canonical builder への委譲、既存 caller 互換性、限定的な prompt typo 補正を扱う。
+- oracle command builder の realization package。`cmoc oracle edit` と `cmoc oracle review` の builder adapter を収め、各機能の realization 側の実装入口を提供する。
 
 ## Read this when
-- oracle command builder realization package の責務や構成を確認するとき。
-- cmoc oracle edit または cmoc oracle review の builder adapter の入口・委譲経路・TUI 起動パラメータ生成を調査するとき。
+- oracle command builder の realization package の責務や構成を確認するとき。
+- `cmoc oracle edit` または `cmoc oracle review` の builder adapter、canonical builder への委譲、TUI 起動パラメータ生成、prompt 補正、互換 import の入口を確認するとき。
 
 ## Do not read this when
-- canonical な oracle review builder の正本仕様や builder 本体を確認するとき。
-- builder 以外の CLI 実装、永続化、実行処理、具体的な編集処理を確認するとき。
-- 特定の adapter の詳細だけを確認する場合。
+- oracle command builder の正本仕様や canonical builder 本体の実装を確認するとき。
+- oracle command builder と無関係な CLI、validation、その他の処理を確認するとき。
 
 ## hash
-- f36a72327a226138ca338a51ea40e9e6bc95bd5ddbe9259dd2e53814883f5453
+- 8d37b4fc4a817536babefb33ee368cb3318e98cdb2ddfa83cd3681e00adacd23
 
 # `quota_probe.py`
 
