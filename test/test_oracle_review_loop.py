@@ -262,6 +262,65 @@ def test_oracle_review_interrupt_keeps_only_completed_judgements(
     assert purposes[-1].endswith("finding-0002")
 
 
+def test_oracle_review_interrupt_keeps_completed_challenger_reason(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """advocate 中断時も、完了済み challenger の理由だけを部分結果へ残す。"""
+    repo_root, review_worktree = _make_review_context(tmp_path, monkeypatch)
+    oracle_path = review_worktree / "oracle" / "spec.md"
+    config = CmocConfig(
+        oracle_review=CmocConfigOracleReview(
+            num_enumerate_findings_loop=1,
+            num_merge_findings_loop=0,
+            num_validate_findings_loop=1,
+        ),
+    )
+    calls: list[str] = []
+
+    def interrupt_advocate(parameter: object, **kwargs: object) -> object:
+        """challenger を完了させ、advocate の開始時に中断する。"""
+        schema_name = parameter.structured_output_schema_path.name
+        calls.append(schema_name)
+        if schema_name == "enumerate_finding.json":
+            return _FakeCodexResult(
+                {
+                    "findings": [
+                        {
+                            "oracle_path": "{{oracle-root}}/spec.md",
+                            "severity": "fatal",
+                            "title": "finding",
+                            "reason": "reason",
+                        }
+                    ]
+                }
+            )
+        if schema_name == "validate_finding_challenger.json":
+            return _FakeCodexResult({"reasons": ["completed challenger reason"]})
+        if schema_name == "validate_finding_advocate.json":
+            raise KeyboardInterrupt
+        raise AssertionError(schema_name)
+
+    with pytest.raises(review_loop_module.OracleReviewInterrupted) as exc_info:
+        review_module.run_oracle_review_loop(
+            repo_root,
+            review_worktree,
+            [oracle_path],
+            config,
+            interrupt_advocate,
+        )
+
+    interruption = exc_info.value
+    assert calls == [
+        "enumerate_finding.json",
+        "validate_finding_challenger.json",
+        "validate_finding_advocate.json",
+    ]
+    assert interruption.findings[0]["challenger_reasons"] == [
+        "completed challenger reason"
+    ]
+    assert interruption.findings[0]["advocate_reasons"] == []
+
+
 def test_oracle_review_advocate_keeps_existing_challenger_reasons(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

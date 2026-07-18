@@ -242,6 +242,10 @@ def _validate_and_judge_findings(
                 purpose=f"oracle review validate challenger {finding['finding_id']}",
             ).output_json
             challenger_reasons = list((challenger or {}).get("reasons", []))
+            # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+            # challenger call は完了済みなので、続く advocate call の中断時にも
+            # その結果だけを確定済み部分結果として残す。
+            finding["challenger_reasons"].extend(challenger_reasons)
             _report_step(
                 step_callback,
                 "5/8, 2/2",
@@ -253,7 +257,7 @@ def _validate_and_judge_findings(
                     build_oracle_review_validate_finding_advocate_parameter(
                         finding_text,
                         "\n".join(finding["advocate_reasons"]),
-                        "\n".join(finding["challenger_reasons"] + challenger_reasons),
+                        "\n".join(finding["challenger_reasons"]),
                     ),
                     cwd=worktree,
                 ),
@@ -263,7 +267,6 @@ def _validate_and_judge_findings(
                 purpose=f"oracle review validate advocate {finding['finding_id']}",
             ).output_json
             advocate_reasons = list((advocate or {}).get("reasons", []))
-            finding["challenger_reasons"].extend(challenger_reasons)
             finding["advocate_reasons"].extend(advocate_reasons)
             if challenger_reasons or advocate_reasons:
                 next_dirty.add(finding["finding_id"])
