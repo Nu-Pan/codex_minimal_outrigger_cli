@@ -48,21 +48,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行ライフサイクル、Codex exec/TUI、設定、Git、パス、ログ、状態、エラー、doctor、Ollama、INDEX.md 更新など、複数のサブコマンドで共有される実行時機能を扱う。
-- commons パッケージの初期化・公開 API、個別 runtime helper の実装、共通処理間の連携を確認・変更する際の入口。
+- cmoc 共通 runtime helper を集約する commons パッケージ。CLI 実行ライフサイクル、Codex exec/TUI、設定、Git、パス、ログ、状態、エラー、doctor、Ollama、INDEX 更新などの共通機能を扱い、commons 配下の個別 runtime 実装を確認・変更する際の入口となる。
 
 ## Read this when
-- 複数の cmoc サブコマンドにまたがる runtime 機能の実装箇所を探すとき
-- Codex 実行、CLI 共通ライフサイクル、設定・Git・パス・ログ・状態・エラーなどの共通処理を変更または調査するとき
-- commons パッケージの公開窓口や個別 runtime module の責務を確認するとき
+- 複数のサブコマンドや実行方式にまたがる共通 runtime 機能の責務や公開 API を確認するとき
+- CLI 実行、Codex 呼び出し、設定・Git・パス・ログ・状態管理などの共通処理の実装箇所を選ぶとき
+- commons 配下の個別 runtime helper を利用・変更する前に、関連する共通境界を確認するとき
 
 ## Do not read this when
-- 特定サブコマンド固有の業務処理や CLI 引数だけを調査するとき
-- 利用者向けの正本仕様だけを確認したいときは、対応する oracle 文書を直接読むとき
-- 対象となる個別 runtime module が明確な場合は、commons 全体ではなくその module を直接読むとき
+- 特定の runtime helper の実装詳細だけを確認したいときは、対応する個別 runtime モジュールを直接読む
+- 特定サブコマンドの業務処理や利用者向け仕様だけを調査するときは、該当する command 実装または oracle 文書を直接読む
+- INDEX.md のエントリー内容や正本仕様だけを確認したいときは、indexing の oracle 文書を読む
 
 ## hash
-- c78f6f33f2eb62690b47e4f704db0aad47646f1d3d77341a3c20a7b642844d86
+- 36ba5e3b8613a16d7c1980911d2d096735819099b052147b55d8a0cec7b6c7f2
 
 # `config`
 

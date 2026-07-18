@@ -330,22 +330,19 @@
 # `runtime_paths.py`
 
 ## Summary
-- cmoc の実行時パスと作業環境を扱う共通ユーティリティ。repository/worktree/cmoc root の解決、cwd の一時切替、timestamp・duration の整形、session・report・log・schema・config などの保存先 path 生成、memo 判定を提供する。runtime path や cwd 制御、保存先ディレクトリの入口として参照する。
+- 実行時の repository/worktree/cmoc root 解決、cwd の一時切替、timestamp・duration の整形、runtime 用ディレクトリおよび設定 path の算出を担う共通ユーティリティ。パス解決や実行時保存先、cwd 制御を変更・調査する際の入口。
 
 ## Read this when
-- repository root、worktree root、cmoc root の解決処理を変更・調査するとき
-- cmoc の runtime ディレクトリ、session/report/log/schema/config の保存先を変更・調査するとき
-- cwd の一時切替や process-wide な排他制御を変更・調査するとき
-- timestamp、console timestamp、duration 表示の生成規則を変更・調査するとき
-- root 配下の memo 判定や agent read directory の扱いを確認するとき
+- repository root・worktree root・cmoc root の解決処理を変更または調査するとき
+- session、report、log、schema、worktree、設定ファイルなどの runtime path を変更または調査するとき
+- cwd の一時切替、timestamp、duration 表示、memo 配下判定を変更または調査するとき
 
 ## Do not read this when
-- 特定サブコマンドの処理内容や入出力仕様だけを調べるとき
-- 保存先で実際に読み書きする session・report・log の個別処理を調べるとき
-- root placeholder の定義や path 解決アルゴリズム自体を変更・調査するときは、path model の実装を直接読むとき
+- 個別サブコマンドの処理や出力形式だけを変更・調査するとき
+- root placeholder の定義や path 解決の正本仕様を確認するときは、対応する path model の oracle を直接読む
 
 ## hash
-- f186d0ad95d9679a259afab43e3df2ce72f9e393bd1a0c5081b9c780ab6e1aa6
+- c83cfa8c6116686289c53449a9d8a3084f07b693a919791421498ba2c51cdcbd
 
 # `runtime_preprocess_command.py`
 
