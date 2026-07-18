@@ -16,6 +16,7 @@ from _git_support import add_tracked_ignored_oracle_file, make_repo, run_git
 from _ollama_support import run_doctor
 
 import sub_commands.oracle.review as review_module
+from basic.acp import AgentCallParameter
 from cmoc_runtime import SessionState
 from main import app
 from sub_commands.oracle.review_paths import finding_oracle_path, oracle_path_key
@@ -30,9 +31,12 @@ class _FakeCodexResult:
         self.output_json = output_json
 
 
-def _empty_finding_response(parameter: object) -> _FakeCodexResult:
+def _empty_finding_response(parameter: AgentCallParameter) -> _FakeCodexResult:
     """enumerate_finding 用の空 Structured Output 応答を返す。"""
-    schema_name = parameter.structured_output_schema_path.name
+    schema_path = parameter.structured_output_schema_path
+    if schema_path is None:
+        raise AssertionError("enumerate_finding requires a Structured Output schema")
+    schema_name = schema_path.name
     if schema_name != "enumerate_finding.json":
         raise AssertionError(schema_name)
     return _FakeCodexResult({"findings": []})
@@ -126,9 +130,11 @@ def test_oracle_review_full_scope_keeps_tracked_ignored_oracle_files(
     )
     calls: list[str] = []
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """呼び出し目的を記録し、対象列挙には空の finding を返す。"""
-        calls.append(kwargs["purpose"])
+        calls.append(str(kwargs["purpose"]))
         return _empty_finding_response(parameter)
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
@@ -170,9 +176,9 @@ def test_oracle_review_session_scope_reports_total_and_no_targets(
     )
     calls: list[str] = []
 
-    def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
+    def fail_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> None:
         """対象なしのsession scopeからCodexが呼ばれた場合に失敗させる。"""
-        calls.append(kwargs["purpose"])
+        calls.append(str(kwargs["purpose"]))
         raise AssertionError(
             "no session-scope oracle targets should skip review Codex calls"
         )
@@ -223,9 +229,11 @@ def test_oracle_review_session_scope_keeps_changed_tracked_ignored_oracle_files(
     run_git(root, "commit", "-m", "change ignored oracle")
     calls: list[str] = []
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
         """呼び出し目的を記録し、対象列挙には空の finding を返す。"""
-        calls.append(kwargs["purpose"])
+        calls.append(str(kwargs["purpose"]))
         return _empty_finding_response(parameter)
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
