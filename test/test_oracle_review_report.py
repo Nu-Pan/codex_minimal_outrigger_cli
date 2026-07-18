@@ -523,3 +523,58 @@ def test_oracle_review_writes_error_report_on_processing_failure(
     assert "Error: `judge failed`" in rendered
     assert "# ERROR" in result.stdout
     assert "# ERROR" not in result.stderr
+
+
+def test_oracle_review_error_report_lists_only_completed_enumerations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """列挙途中の失敗では、完了済み oracle だけを error report に載せる。"""
+    root = make_repo(tmp_path)
+    (root / "oracle" / "z.md").write_text("# z\n")
+    run_git(root, "add", "oracle/z.md")
+    run_git(root, "commit", "-m", "add second oracle")
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    monkeypatch.setattr(
+        review_module,
+        "load_config",
+        lambda _root: CmocConfig(
+            oracle_review=CmocConfigOracleReview(
+                num_enumerate_findings_loop=1,
+                num_merge_findings_loop=0,
+                num_validate_findings_loop=1,
+            )
+        ),
+    )
+    enumeration_calls = 0
+
+    def fail_second_enumeration(
+        parameter: object, **kwargs: object
+    ) -> _FakeCodexResult:
+        """最初の列挙だけ完了させ、次の列挙で処理を失敗させる。"""
+        nonlocal enumeration_calls
+        assert parameter.structured_output_schema_path.name == "enumerate_finding.json"
+        enumeration_calls += 1
+        if enumeration_calls == 1:
+            return _FakeCodexResult({"findings": []})
+        raise RuntimeError("enumeration failed")
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fail_second_enumeration)
+
+    result = runner.invoke(
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code != 0
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    rendered = report_path.read_text()
+    assert "result: error" in rendered
+    assert "oracle_count_total: 2" in rendered
+    assert "oracle_count_evaluated: 1" in rendered
+    assert "`oracle/spec.md`" in rendered
+    assert "`oracle/z.md`" not in rendered

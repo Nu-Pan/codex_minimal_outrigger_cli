@@ -72,9 +72,16 @@ def run_oracle_review_loop(
     config: CmocConfig,
     codex_exec: CodexExecCallable,
     step_callback: StepCallback | None = None,
+    evaluated_files: list[Path] | None = None,
 ) -> list[dict]:
-    """oracle review の finding enumerate/merge/validate/judge loop を実行する。"""
-    progress = _ReviewProgress([], [])
+    """oracle review の finding enumerate/merge/validate/judge loop を実行する。
+
+    ``evaluated_files`` が指定された場合は、列挙 agent call の完了実績を
+    呼び出し元へ反映する。
+    """
+    progress = _ReviewProgress(
+        [], evaluated_files if evaluated_files is not None else []
+    )
     try:
         return _run_oracle_review_loop(
             log_root,

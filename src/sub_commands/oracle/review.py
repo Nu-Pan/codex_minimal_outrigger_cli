@@ -130,8 +130,8 @@ def _cmoc_oracle_review_body(
                         config,
                         codex_exec,
                         step_callback=start_subcommand_step,
+                        evaluated_files=evaluated_oracle_files,
                     )
-                    evaluated_oracle_files = list(oracle_files)
                 except OracleReviewInterrupted as interruption:
                     interrupted = True
                     findings = interruption.findings
@@ -196,7 +196,7 @@ def _cmoc_oracle_review_body(
             branch,
             state,
             len(all_oracle_files),
-            oracle_files,
+            evaluated_oracle_files,
             findings,
             review_branch,
             review_fork_commit,
