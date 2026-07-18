@@ -94,6 +94,59 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     assert any("linked.md" in call for call in calls)
 
 
+def test_oracle_review_forks_from_snapshot_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """session branch が進んでも review run は取得済み snapshot から fork する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/run_isolation.md。
+    """
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    snapshot_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    original_create_run_worktree = review_module.create_run_worktree
+    start_points: list[str] = []
+    forked_commits: list[str] = []
+
+    def advance_session_before_run_creation(
+        root_arg: Path, branch: str, worktree: Path, start_point: str
+    ) -> Path:
+        """run worktree 作成直前に session branch を進めて fork point を検証する。"""
+        (root / "README.md").write_text("# session advanced\n")
+        run_git(root, "add", "README.md")
+        run_git(root, "commit", "-m", "advance session before review run")
+        start_points.append(start_point)
+        created = original_create_run_worktree(root_arg, branch, worktree, start_point)
+        forked_commits.append(run_git(worktree, "rev-parse", "HEAD").stdout.strip())
+        return created
+
+    monkeypatch.setattr(
+        review_module,
+        "create_run_worktree",
+        advance_session_before_run_creation,
+    )
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """review の構造化出力を空にして、fork point の検証だけを行う。"""
+        assert parameter.structured_output_schema_path.name == "enumerate_finding.json"
+        return _FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0, result.output
+    assert start_points == [snapshot_commit]
+    assert forked_commits == [snapshot_commit]
+
+
 @pytest.mark.parametrize(
     ("relative_path", "content"),
     [

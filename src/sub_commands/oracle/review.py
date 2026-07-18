@@ -111,7 +111,9 @@ def _cmoc_oracle_review_body(
     interrupted = False
     try:
         start_subcommand_step(2, "run の隔離実行を開始", "start isolated review")
-        create_run_worktree(current_root, review_branch, review_worktree, "HEAD")
+        create_run_worktree(
+            current_root, review_branch, review_worktree, review_fork_commit
+        )
         worktree_created = True
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")
