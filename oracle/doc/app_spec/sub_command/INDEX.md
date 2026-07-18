@@ -108,6 +108,23 @@
 ## hash
 - ebe20b04c9e643c0cb230260488286864dbcddbbbb96d7b220a42d11af72bd1c
 
+# `oracle_investigation.md`
+
+## Summary
+- `cmoc oracle investigation` のサブコマンド仕様。エディタから oracle file に関する調査指示を受け取り、doctor preprocess と専用の起動パラメータ構築を経て Codex CLI の TUI で調査結果を回答する。入力コメント、TUI 起動、Codex CLI 設定、調査結果や変更禁止の扱いを定める。
+
+## Read this when
+- oracle file を根拠に調査する `cmoc oracle investigation` の動作、入力方法、Codex CLI TUI の起動条件を確認するとき。
+- oracle investigation の起動パラメータ、Codex CLI の環境変数・preflight validation・設定上書き、または読み書き制約を変更・検証するとき。
+
+## Do not read this when
+- oracle file の具体的な仕様や規約そのものを調査する場合は、このサブコマンド仕様ではなく対象の oracle file を直接読む。
+- エディタ入力の共通仕様を確認する場合は、指定された prompt editor input の正本を読む。
+- TUI 起動パラメータの実装詳細を確認する場合は、専用 builder の正本実装を直接読む。
+
+## hash
+- f9ad127a8fbfb4aeef8eaed77a0ca6f796b897127149f964bccce3df7a2a292a
+
 # `oracle_review.md`
 
 ## Summary

@@ -51,20 +51,20 @@
 # `oracle`
 
 ## Summary
-- oracle 用 ACP builder の実装と Structured Output schema をまとめるディレクトリです。`edit` は oracle file 編集 TUI の起動パラメータと完全プロンプト保存を、`review` は所見の列挙・擁護・反証・採否判定・統合を扱います。各処理の agent call 設定と入出力契約への入口です。
+- `cmoc oracle edit`、`investigation`、`review` 各サブコマンドの agent call 構築を担う oracle src のディレクトリ。完全プロンプトの生成・保存、TUI 起動パラメータ、レビュー用 Structured Output 契約への入口を提供する。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動、完全プロンプト、ログ保存、固定モデル・推論強度・ファイルアクセス設定を確認または変更するとき。
-- `cmoc oracle review` の所見列挙、擁護理由・反証理由の検証、採否判定、重複・矛盾の統合を確認または変更するとき。
-- oracle review 用 agent call の prompt と Structured Output schema の対応を追跡するとき。
+- `cmoc oracle` 配下の TUI 起動パラメータ、完全プロンプト保存、モデル・推論強度・ファイルアクセス設定を確認または変更するとき。
+- `cmoc oracle review` の所見列挙・判定・理由検証・マージ処理や Structured Output schema を調査するとき。
+- edit、investigation、review の agent call 構成と、それぞれの入力・出力契約の対応関係を確認するとき。
 
 ## Do not read this when
-- 共有 ACP パラメータ型、モデル設定、ファイルアクセスモード、パス解決の一般仕様だけを確認するとき。
-- 完全プロンプトの共通構成や oracle review の一般基準を確認するとき。
-- 個別の処理実装または schema が特定できており、このディレクトリ全体の構成を確認する必要がないとき。
+- 共通 ACP パラメータ定義、パス解決、共通 prompt builder の仕様だけを確認するとき。
+- oracle file の編集内容、編集担当 agent のプロンプト仕様、またはレビュー基準そのものを確認するとき。
+- 特定のサブコマンドの実装や schema だけを確認でき、ディレクトリ全体の構成を知る必要がないとき。
 
 ## hash
-- 1d6b5f91edd69ffeb12a9c41d8764b842a6837b3a347e2389a53f91e0d22b0df
+- b1b1b746e4b7e045b8b7df9033ac277af178355e499f4bc5440956e6b24423ae
 
 # `session`
 

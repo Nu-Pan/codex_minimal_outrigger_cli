@@ -229,20 +229,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンド仕様をまとめた正本文書群。apply、session、doctor、indexing、oracle、tui の実行条件・状態遷移・入出力・後処理を扱う。各文書は個別サブコマンド仕様の入口であり、共通処理や詳細実装仕様は参照先へ委ねる。
+- cmoc の主要サブコマンドに関する正本仕様断片を収録するディレクトリ。apply、session、oracle、doctor、indexing、tui などの実行条件・状態遷移・入出力・後処理を扱う各文書への入口である。
 
 ## Read this when
-- cmoc サブコマンドの仕様を調査・実装・レビューするとき。
-- apply または session の fork・join・abandon における状態制約、ブランチ処理、cleanup を確認するとき。
-- doctor、indexing、oracle edit/review、tui の実行手順や事前条件を確認するとき。
+- cmoc のサブコマンド仕様を実装・変更・検証するとき。
+- apply または session の fork、join、abandon に関する状態・ブランチ・クリーンアップの仕様を調べるとき。
+- oracle review/edit/investigation、doctor、indexing、tui の実行手順や事前条件を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドに属する共通処理・agent call・TUI 起動などの詳細仕様だけを確認したいときは、各文書が示す参照先を直接読む。
-- サブコマンド仕様ではなく、実装ファイルや Codex CLI の出力品質を調査するとき。
-- INDEX.md やその他の自動生成ファイルのレビュー方法を確認するとき。
+- 特定サブコマンドの内部実装詳細だけを調べるときは、対応する realization file や専用の下位仕様を直接読む。
+- サブコマンドではなく、共通の agent call、TUI 起動、prompt editor、run isolation などの仕様だけを調べるとき。
+- session や apply の個別操作を必要とせず、一般的な CLI・git 運用を確認したいとき。
 
 ## hash
-- d46e0aaee0f5acd84f7e2e63b2f9a040cd3f46df276a2e16c647cf960009d4e5
+- b1a72282db6aca3c826840554626986af8daf0edab7b2bc70537b4cf46df1b03
 
 # `subcommand_interruption.md`
 
@@ -265,17 +265,16 @@
 # `usage.md`
 
 ## Summary
-- cmoc の導入からセッション開始、oracle の記述・レビュー、実装追従、変更の統合、最終的なブランチ統合までの標準ワークフローを説明する利用者向けガイド。cmoc の呼び出し準備、ブランチ運用、各 fork/join 操作の入口となる。
+- cmoc のエンドユーザー向け利用手順を定める文書。初回設定、セッション分岐、oracle の記述・レビュー・commit、実装追従、変更の統合、最終的なセッション統合までの標準ワークフローを案内する。
 
 ## Read this when
-- cmoc を初めて利用するとき
-- cmoc session fork、cmoc apply fork/join、cmoc session join の手順を確認するとき
-- oracle の変更を実装へ反映する一連の運用を確認するとき
+- cmoc の初回セットアップ方法を確認するとき
+- cmoc session fork/join や apply fork/join の実行順序を確認するとき
+- oracle の変更から実装反映、ブランチ統合までの運用を確認するとき
 
 ## Do not read this when
-- 特定の cmoc サブコマンドの詳細仕様だけを確認したいとき
-- oracle の設計・レビュー規則を確認したいとき
-- 実装追従処理の内部設計やテスト方法を調べるとき
+- cmoc の内部実装や CLI サブコマンドの詳細仕様を調べるとき
+- oracle の編集・レビュー規則そのものを確認するときは、該当する oracle 文書を直接読む
 
 ## hash
-- 96e5c50f784c0c655f7ad485b3e6c77a66dcb04efeb70effa99f61d0b9a818ea
+- e416ab7d8609c5a0bc60fd5349e3bd50dd1432dd1299c1a8c1fe1d657c60f21b

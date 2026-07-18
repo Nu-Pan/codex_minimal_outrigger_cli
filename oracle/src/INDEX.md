@@ -1,17 +1,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の oracle src を構成する実装群。ACP agent call パラメータ、oracle review・apply・indexing の prompt と Structured Output schema、共通 prompt 規範、設定・パス・構造化文書モデルを扱う。各サブディレクトリは、個別機能の prompt 実装や共通モデルへ進む入口になる。
+- cmoc のサブコマンド別 ACP エージェント呼び出しパラメータを構築する oracle src の領域。apply fork、oracle、session、TUI、indexing などの prompt、Structured Output schema、モデル・推論・アクセス設定を扱う下位領域への入口。
+- cmoc の設定モデル、パス解決、規範文書モデル、構造化文書の Markdown 変換を担う oracle src の領域。設定・パス・標準文書・Markdown レンダリングを確認する入口。
+- プレースホルダ展開用の型、完全なプロンプトの組み立て、oracle・realization・INDEX.md・ファイルアクセス規則・レビュー基準などの標準ルール部品を扱う oracle src の領域。プロンプト生成に注入する共通要素を確認・変更する入口。
 
 ## Read this when
-- oracle src 全体の責務分担や、ACP builder・prompt builder・共通モデルの関係を確認するとき。
-- oracle review、apply fork、indexing、session join などの agent call 設定や Structured Output schema の実装を調査するとき。
-- cmoc 設定、モデル・推論強度、ファイルアクセス、パス解決、構造化文書変換の実装を確認するとき。
+- サブコマンドがエージェントへ渡す AgentCallParameter、prompt、Structured Output schema、モデル・推論強度、ファイルアクセス設定を調査・変更するとき。
+- cmoc 固有設定、Codex CLI の実行上限、ルートパスのプレースホルダ解決、規範文書のデータ構造、構造化文書の Markdown 出力を確認するとき。
+- プレースホルダ展開、完全なプロンプトの構造、動的プロンプト、標準ルールの依存関係や注入内容を調査・変更するとき。
 
 ## Do not read this when
-- 特定の oracle review 操作、prompt 部品、設定モデル、パスモデルの詳細だけを調べるとき。
-- CLI サブコマンドの呼び出し経路や永続化処理など、oracle src 外の上位実装を直接確認すべきとき。
-- 既存の Structured Output schema や prompt 本文を変更せず、realization 側の実装だけを調査するとき。
+- ACP パラメータの共通型や既定値だけを確認するときは、共通定義を直接読む。
+- agent call の実行本体、TUI 画面処理、差分適用、conflict 解消、設定 JSON の永続化や doctor 同期だけを調べるとき。
+- 特定サブコマンドの実装・schema、個別標準文書、個別注入パーツ、プロンプト置換ロジックやファイル探索処理だけを確認するとき。
 
 ## hash
-- 868b694c9695f17727eaa6a3f3b27ddef23f695a4d07e3d6865318228bede101
+- 2f8eceb3cffcd7843012e61019d2fdfe16a351531cdd598adaa744052d4c5acd

@@ -1,20 +1,19 @@
 # `acp_builder`
 
 ## Summary
-- oracle 用 ACP builder の実装と Structured Output schema を扱うディレクトリ。`cmoc oracle edit` と `cmoc oracle review` の agent call 設定、完全プロンプト、ログ保存、所見の検証・統合、入出力契約を確認する入口。
+- cmoc の各サブコマンド向け ACP エージェント呼び出しパラメータを構築する oracle src のディレクトリ。apply fork、oracle、session、tui、indexing などの prompt、Structured Output schema、モデル・推論・アクセス設定を扱う下位領域への入口。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動条件、完全プロンプト、ログ保存、モデル・推論強度・ファイルアクセス設定を確認または変更するとき。
-- `cmoc oracle review` の所見列挙、擁護・反証、採否判定、重複・矛盾の統合を確認または変更するとき。
-- oracle review 用 agent call の prompt と Structured Output schema の対応を追跡するとき。
+- cmoc のサブコマンドがエージェントへ渡す AgentCallParameter、prompt、Structured Output schema、モデル・推論強度、ファイルアクセス設定を調査・変更するとき。
+- 特定サブコマンドの agent call 構成を確認し、対応する下位ディレクトリを選ぶとき。
 
 ## Do not read this when
-- 共有 ACP パラメータ型、モデル設定、ファイルアクセスモード、パス解決の一般仕様だけを確認するとき。
-- 完全プロンプトの共通構成や oracle review の一般基準だけを確認するとき。
-- 個別の処理実装または schema が特定できており、このディレクトリ全体の構成を確認する必要がないとき。
+- ACP パラメータの共通型や既定値だけを確認するときは、basic.py を直接読む。
+- agent call の実行本体、TUI 画面処理、差分適用や conflict 解消などの後段処理を調査するとき。
+- 特定サブコマンドの実装や schema だけを確認でき、ディレクトリ全体の構成を知る必要がないとき。
 
 ## hash
-- 1af78704400be823d007d8cfabfd2651babfe205b98721d0ba934ac4276ed3ea
+- 2eac1a91a98e1c1fcf11063eb4d67262cc8f8e33b8bfb3cd64b2e33c4ed29650
 
 # `other`
 

@@ -14,6 +14,23 @@
 ## hash
 - 595423ea0a51245864528aca035f041aebed65b16237cf81e6d7e1027565db07
 
+# `investigation`
+
+## Summary
+- `cmoc oracle investigation` の TUI 起動用パラメータを構築する実装。ユーザー調査指示を含む完全プロンプトを生成・保存し、モデルやアクセス権限などの固定起動設定とともに返す。
+
+## Read this when
+- `cmoc oracle investigation` の TUI 起動処理を変更・調査するとき
+- 完全プロンプトの構築・保存処理を変更・調査するとき
+- モデルやアクセス権限などの起動時固定値を確認するとき
+
+## Do not read this when
+- 調査用プロンプトの本文構成や共通プロンプト生成規則だけを確認したいとき
+- oracle investigation 以外の agent call パラメータや TUI 起動処理を調査するとき
+
+## hash
+- c5f3cd682c896b600f5ce3188f406ef7f52e4cb1dceeda6062955ba7b19c0076
+
 # `review`
 
 ## Summary

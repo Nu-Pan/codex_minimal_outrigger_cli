@@ -94,20 +94,25 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を担う oracle 文書・実装群。`doc` はアプリケーション仕様と開発規則、`src` は ACP agent call、prompt、Structured Output schema、設定・パス・構造化文書モデルを扱う。各下位ディレクトリへの入口として利用する。
+- cmoc の正本仕様を収録する oracle ツリー。利用者向け挙動、CLI・session/run 境界、開発規則、設計判断、および ACP 呼び出し・設定・prompt 構築に関する仕様断片への入口を提供する。
+- 利用者向け挙動やサブコマンド仕様、CLI 前処理・補完・ログ・エラー処理、session 状態、実行隔離、prompt 生成、session/run の branch/worktree 境界、Python 開発環境やテスト規則を確認するための文書領域。個別機能の詳細は対応する仕様文書を直接参照する。
+- ACP エージェント呼び出しの prompt、Structured Output schema、モデル・推論・アクセス設定、cmoc 設定・パス解決・規範文書モデル・Markdown 変換、プレースホルダ展開と標準ルール注入を扱う実装仕様領域。共通型や特定サブコマンドの個別実装、実行本体・TUI・差分適用などは対象の直接定義を参照する。
 
 ## Read this when
-- cmoc の仕様または開発規則の入口を探すとき。
-- 利用者向け挙動、session・run、サブコマンド、状態管理、ログ、prompt、外部モデルサービス、Python、テスト規則を調査するとき。
-- oracle src の prompt、Structured Output schema、ACP agent call、設定・パス・構造化文書モデルの責務分担を確認するとき。
+- cmoc の利用者向け挙動、CLI サブコマンド、session/run の branch・worktree 境界を実装・変更・検証するとき。
+- CLI の前処理、補完、ログ、エラー処理、session 状態、実行隔離、prompt 生成などの正本仕様を探すとき。
+- Python 開発環境、CLI 実装の配置、realization test の開発・検証規則を確認するとき。
+- ACP 呼び出しの AgentCallParameter、prompt、Structured Output schema、モデル・推論強度、ファイルアクセス設定を調査・変更するとき。
+- cmoc 固有設定、実行上限、ルートパス解決、規範文書モデル、Markdown 出力、プレースホルダ展開、標準ルールの依存関係や注入内容を確認するとき。
 
 ## Do not read this when
-- 個別仕様や実装の対象が特定できている場合は、`doc` または `src` 配下の該当対象を直接読む。
-- CLI の呼び出し経路、永続化、realization 側の実装を調査するとき。
-- 既存仕様や prompt を変更せず、realization 側だけを調査するとき。
+- 具体的な実装コードやテストコードの責務・配置だけを確認したいとき。
+- 個別機能の詳細仕様、特定サブコマンドの実装・schema、個別標準文書や注入パーツを確認したいときは対応する対象を直接読む。
+- ACP パラメータの共通型・既定値、agent call の実行本体、TUI、差分適用、conflict 解消、設定 JSON の永続化や doctor 同期だけを調べるとき。
+- 一般的な利用手順や、現行仕様ではなく通常の git 運用・リポジトリ本流の方針だけを確認したいとき。
 
 ## hash
-- 17a5caa25a8dde6c8e412ff140d31fca63f9368d79f2a59520a00c1e75a938d9
+- 06b2cdb3975f7d446eb210baba7527e426b4725df769ced009987ad4ead44bc9
 
 # `pyproject.toml`
 
