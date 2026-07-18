@@ -37,19 +37,18 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- Codex CLI の `codex exec` 呼び出しに関する正本仕様断片。環境変数、preflight validation、argv による設定上書き、sandbox、permission profile 禁止、モデル・推論設定、プロンプト・ログ・Structured Output の受け渡し、並列実行、失敗時の再試行・待機・復帰方針を定める。Codex CLI 呼び出し処理や AgentCallParameter builder の仕様を確認する際の入口。
+- cmoc から `codex exec` を呼び出す際の正本規約。CODEX_HOME の解決と preflight、argv による設定上書き、sandbox・権限・モデル指定、stdin 経由のプロンプト渡し、ログ・Structured Output・並列数・失敗時リトライを定める。Codex CLI 呼び出し実装やその設定を変更・検証する際の入口となる。
 
 ## Read this when
-- cmoc または AgentCallParameter による Codex CLI 呼び出しを実装・変更・レビューするとき
-- Codex CLI の sandbox、承認設定、モデル、reasoning effort、Structured Output、ログ保存方法を確認するとき
-- Codex CLI の quota 枯渇、レートリミット、サーバー一時障害などの失敗時処理を確認するとき
+- cmoc の Codex CLI 呼び出し、AgentCallParameter の設定反映、sandbox や CODEX_HOME の扱いを変更・確認するとき
+- Codex CLI のログ保存、Structured Output、リトライ、quota・一時障害時の復旧動作を確認するとき
 
 ## Do not read this when
-- Codex CLI 呼び出しやその周辺仕様を扱わず、別の機能領域だけを調査するとき
-- AgentCallParameter builder の具体的な個別設定値だけを確認する場合は、対応する builder の正本仕様を直接読むとき
+- Codex CLI 呼び出しや cmoc の実行規約に関係しない機能を変更・調査するとき
+- AgentCallParameter builder の具体的な設定値や実装責務を確認する場合は、先に指定された oracle/src/oracle/acp_builder ツリーを直接読むとき
 
 ## hash
-- a38c37009467d95f2fe561bcdeae11572051847b304d1f4e0fca74a1a9217463
+- e7c51f221739cd9ea62c33fb53d84ced387b5a21e57b7235b9de41328841f242
 
 # `console_and_file_log.md`
 

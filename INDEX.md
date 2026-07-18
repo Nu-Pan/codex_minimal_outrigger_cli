@@ -94,20 +94,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を担う oracle 文書・実装群への入口。アプリケーション機能、branch モデル、設計判断、開発規則、および ACP agent call・prompt・Structured Output schema・共通モデルの oracle src を扱う。
+- cmoc の正本仕様を担う oracle 文書・実装群。`doc` はアプリケーション仕様と開発規則、`src` は ACP agent call、prompt、Structured Output schema、設定・パス・構造化文書モデルを扱う。各下位ディレクトリへの入口として利用する。
 
 ## Read this when
-- cmoc の利用者向け機能、CLI、run・session、branch・worktree、prompt、Codex CLI 呼び出し、ログ、補完、managed ollama などの正本仕様を調査・実装・レビューするとき。
-- cmoc が採用した設計の背景や不採用案、Python 開発・CLI 配置・環境構築・テスト規則を確認するとき。
-- oracle review・apply・indexing・session join などの ACP agent call 設定、Structured Output schema、共通 prompt、設定・パス・構造化文書モデルを調査するとき。
+- cmoc の仕様または開発規則の入口を探すとき。
+- 利用者向け挙動、session・run、サブコマンド、状態管理、ログ、prompt、外部モデルサービス、Python、テスト規則を調査するとき。
+- oracle src の prompt、Structured Output schema、ACP agent call、設定・パス・構造化文書モデルの責務分担を確認するとき。
 
 ## Do not read this when
-- 対象の機能、コマンド、prompt、schema、モデル、実装詳細が明確な場合は、このディレクトリ全体ではなく該当する個別文書または下位ディレクトリを直接読む。
-- realization 側の具体的なコードや INDEX.md 生成方法だけを確認したい場合は、oracle ではなく対応する実装本文または専用 routing 文書を読む。
-- cmoc 以外の通常の git 運用や、現在の file access rule・差分検査・permission profile を確認したい場合は、該当する直接の仕様・実装対象を読む。
+- 個別仕様や実装の対象が特定できている場合は、`doc` または `src` 配下の該当対象を直接読む。
+- CLI の呼び出し経路、永続化、realization 側の実装を調査するとき。
+- 既存仕様や prompt を変更せず、realization 側だけを調査するとき。
 
 ## hash
-- 53d6425447ea4e02008eee869997dbccbf2e25fb7c2b47ca47ca4fad66b52689
+- 17a5caa25a8dde6c8e412ff140d31fca63f9368d79f2a59520a00c1e75a938d9
 
 # `pyproject.toml`
 
