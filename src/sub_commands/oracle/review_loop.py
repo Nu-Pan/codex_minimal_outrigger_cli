@@ -131,7 +131,7 @@ def _run_oracle_review_loop(
                         oracle_path,
                         json.dumps(
                             _findings_related_to_oracle_path(
-                                findings, oracle_path, worktree
+                                findings, oracle_path, worktree, log_root
                             ),
                             ensure_ascii=False,
                             indent=2,
@@ -175,13 +175,16 @@ def _run_oracle_review_loop(
 
 
 def _findings_related_to_oracle_path(
-    findings: list[dict], oracle_path: Path, worktree: Path
+    findings: list[dict],
+    oracle_path: Path,
+    worktree: Path,
+    repo_root: Path,
 ) -> list[dict]:
     """対象 oracle file と同じ repository path の finding だけを返す。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
-    target_key = oracle_path_key(worktree, oracle_path)
+    target_key = _review_oracle_path_key(repo_root, worktree, oracle_path)
     if target_key is None:
         return []
     related: list[dict] = []
@@ -189,10 +192,18 @@ def _findings_related_to_oracle_path(
         finding_path = finding_oracle_path(finding, worktree)
         if (
             finding_path is not None
-            and oracle_path_key(worktree, finding_path) == target_key
+            and _review_oracle_path_key(repo_root, worktree, finding_path) == target_key
         ):
             related.append(finding)
     return related
+
+
+def _review_oracle_path_key(repo_root: Path, worktree: Path, path: Path) -> str | None:
+    """review worktree と main repository のどちらの path でも正規化する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    """
+    return oracle_path_key(worktree, path) or oracle_path_key(repo_root, path)
 
 
 def _validate_and_judge_findings(

@@ -131,6 +131,62 @@ def test_oracle_review_enumerate_receives_only_related_findings(
     assert "a finding" in prompts_by_target["a.md"][1]
 
 
+def test_oracle_review_enumerate_matches_main_worktree_finding_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """main repository 側の絶対 oracle_path も関連 finding として渡す。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    """
+    repo_root, review_worktree = _make_review_context(tmp_path, monkeypatch)
+    prompts: list[str] = []
+    config = CmocConfig(
+        oracle_review=CmocConfigOracleReview(
+            num_enumerate_findings_loop=2,
+            num_merge_findings_loop=0,
+            num_validate_findings_loop=1,
+        ),
+    )
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        _assert_review_call_context(parameter, kwargs, repo_root, review_worktree)
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            prompts.append(parameter.prompt)
+            if len(prompts) == 1:
+                return _FakeCodexResult(
+                    {
+                        "findings": [
+                            {
+                                "oracle_path": str(repo_root / "oracle" / "spec.md"),
+                                "severity": "fatal",
+                                "title": "main-root finding",
+                                "reason": "main-root reason",
+                            }
+                        ]
+                    }
+                )
+            return _FakeCodexResult({"findings": []})
+        if schema_name in {
+            "validate_finding_challenger.json",
+            "validate_finding_advocate.json",
+        }:
+            return _FakeCodexResult({"reasons": []})
+        if schema_name == "judge_finding.json":
+            return _FakeCodexResult({"verdict": "reject", "reason": "no finding"})
+        raise AssertionError(schema_name)
+
+    review_module.run_oracle_review_loop(
+        repo_root,
+        review_worktree,
+        [review_worktree / "oracle" / "spec.md"],
+        config,
+        fake_run_codex_exec,
+    )
+
+    assert "main-root finding" in prompts[1]
+
+
 def test_oracle_review_advocate_receives_same_round_challenger_reasons(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
