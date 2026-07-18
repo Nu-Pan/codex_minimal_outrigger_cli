@@ -46,18 +46,19 @@
 # `merge_finding.py`
 
 ## Summary
-- 正本の merge-finding parameter builder を呼び出し、生成された prompt の既知の placeholder 定義 typo だけを補正する realization implementation。補正 helper は将来の正本修正時に削除する前提で、関連テストと対応する。
+- Oracle の merge-finding parameter builder を呼び出し、生成 prompt に含まれる既知の oracle-root placeholder typo だけを補正する realization implementation。補正 helper は oracle src の typo が解消されたら削除対象。
 
 ## Read this when
-- merge-finding 用の agent call parameter 生成や prompt の placeholder 定義 typo を修正・検証するとき
-- 正本 builder への補正処理と、既知の finding をそのまま扱う境界を確認するとき
+- merge-finding 用 agent call parameter の生成や prompt placeholder の typo 補正を変更・調査するとき
+- oracle review builder の realization 側の互換処理と対応テストを確認するとき
 
 ## Do not read this when
-- merge-finding の正本仕様や基本 builder の挙動だけを確認したいときは、対応する oracle source を直接読む
-- merge-finding 以外の agent call parameter や一般的な prompt 定義を扱うとき
+- merge-finding builder の正本仕様や prompt 本文を変更するときは、まず対応する oracle src を直接読む
+- 他の review builder や prompt 補正処理を調査するとき
+- agent call parameter と無関係な CLI・永続化・実行処理を扱うとき
 
 ## hash
-- dbfe8ebc5309cb44bc3ee30433ccfe0ba773a53f2886e07eb6a0249fc165cb44
+- 5a1fe8107957aa9004ce504b5b97afafa5c68a2f4e0659764e97026db43ba2de
 
 # `validate_finding_advocate.py`
 

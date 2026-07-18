@@ -31,15 +31,16 @@
 # `review`
 
 ## Summary
-- `cmoc oracle review` builder の realization adapter package。oracle review の各 parameter builder への互換入口と、限定的な prompt 補正を提供する。
+- `cmoc oracle review` builder の realization adapter 群。canonical な oracle review builder への委譲、既存 import caller との互換性維持、限定的な prompt typo 補正を扱う。各ファイルは finding enumeration・judgment・merge・advocate・challenger validation の個別入口となる。
 
 ## Read this when
-- `cmoc oracle review` builder の realization adapter の責務、canonical builder への委譲、既存 caller との互換性を確認するとき
-- oracle review の prompt 補正や旧 import 経路の移行状況を調査するとき
+- `cmoc oracle review` builder の realization adapter 全体の責務や、既存 caller から canonical 実装への移行状況を確認するとき
+- oracle review の各 finding 処理における互換 import、委譲経路、限定的な prompt 補正を調査するとき
 
 ## Do not read this when
-- oracle review の正本仕様や canonical builder 本体を確認するとき
-- builder 以外の CLI 実装や oracle review と無関係な処理を調査するとき
+- canonical な oracle review の正本仕様や builder 本体の実装を確認するとき
+- builder 以外の CLI 実装、永続化、実行処理を調査するとき
+- 特定の adapter の詳細だけを確認する場合は、対象の個別ファイルを直接読む
 
 ## hash
-- b8ed1c1626b03f415e22503a796214f8f91df23cc6fbec613d4659ad45a1093c
+- ec47f1e8454013376ba50df7a47eeed780fae79bdb70aed929b1704cb3690be3

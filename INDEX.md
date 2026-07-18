@@ -128,31 +128,33 @@
 # `src`
 
 ## Summary
-- `src` 配下の realization package 群を束ねる cmoc CLI 実装の入口。ルート CLI 定義、互換 import shim、共通 runtime、設定公開入口、サブコマンド実装を下位要素へ案内する。
+- cmoc CLI の realization 実装をまとめる src ディレクトリ。CLI ルート、サブコマンド、共通 runtime、互換 import shim、設定・ACP 関連の公開入口を提供し、各機能の具体的な実装へ進むための上位入口となる。
 
 ## Read this when
-- `src` 配下で cmoc CLI の実装構成や、共通 runtime・互換入口・サブコマンド実装の担当箇所を特定するとき。
-- 複数の CLI 機能にまたがる実装入口や、`src` から `oracle` 側 package を参照する構成を確認するとき。
+- cmoc の CLI 全体構成、公開入口、サブコマンドと共通 runtime の責務分担を確認するとき。
+- 特定機能の実装箇所を特定し、main、sub_commands、commons、互換 shim などの下位要素へ進むとき。
 
 ## Do not read this when
-- 利用者向けの正本仕様や具体的な API 契約だけを確認したいときは、対応する `oracle` 配下を直接読む。
-- 特定の runtime module、互換 shim、または個別サブコマンドの実装詳細が明確なときは、`src` 全体ではなく該当する下位要素を直接読む。
+- 正本仕様や oracle 側の実装内容だけを確認したいときは、対応する oracle ツリーを直接読む。
+- 特定サブコマンド、runtime helper、builder、設定、互換 import の実装箇所が明確なときは、対応する下位要素を直接読む。
 
 ## hash
-- 0fb637530e3458e55960513ac0ae3c7d6e19063e70d417042a0c0f39021edd50
+- 60b400305e28c32523d4fd97c2371afb070677329aae0bec82cf2058eefd6bea
 
 # `test`
 
 ## Summary
-- cmoc の pytest テスト群を収めるディレクトリ。ACP builder、CLI、Codex runtime、indexing、oracle review、session/apply、共通 runtime などの外部挙動・制御契約・回帰を検証し、対象機能の実装変更時に対応するテストへ進む入口となる。
+- テストコードから正本 schema、CLI・Codex 実行、apply/session lifecycle、indexing、oracle review、runtime、設定、Ollama などの共有補助と pytest 契約を確認するためのテスト群。各テストファイルが担当する外部挙動・制御ロジックの入口となる。
 
 ## Read this when
-- cmoc の機能変更や不具合調査で、既存の外部挙動・制御ロジック・回帰テストを確認するとき。
-- 対象が ACP builder、CLI、Codex 実行、indexing、oracle review、session/apply、runtime のいずれかで、対応するテストケースの範囲を把握するとき。
+- 対象機能の外部挙動や回帰テストを変更・調査するとき。
+- CLI、Codex runtime、apply/session、indexing、oracle review、設定、Git、Ollama、prompt、schema、worktree lifecycle のテスト契約を確認するとき。
+- テスト用の CliRunner、Git repository、fake external command、Codex/Ollama helper の共有仕様を確認するとき。
 
 ## Do not read this when
-- 正本仕様、schema、prompt、実装責務そのものを確認することが目的のときは、対応する oracle または src の本文を直接読む。
-- 単一のテスト補助 helper や特定機能の実装詳細だけを確認する場合は、ディレクトリ全体ではなく該当ファイルへ直接進む。
+- 正本仕様や実装詳細そのものを確認する場合は、対応する oracle または src のファイルを直接読む。
+- 対象機能と無関係なテストや共有 helper を調査するとき。
+- pytest の一般的な実行方法や、LLM の回答品質自体を評価するとき。
 
 ## hash
-- be48f0449c3794ef4afdda0eb99f554b316af839142e08e35432f5ef4132946f
+- 9ed8eda89deb692b0c930e82160886876eb87516e75ad46563630be46596a865
