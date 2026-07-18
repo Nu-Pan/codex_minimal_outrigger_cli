@@ -30,20 +30,21 @@
 # `review.py`
 
 ## Summary
-- oracle review サブコマンドの CLI 実行入口。active session branch 上で、oracle ファイルを隔離 worktree でレビューし、所見の収集・中断処理・レビュー用 INDEX.md の反映・レポート出力までを統括する。
+- CLI の `oracle review` サブコマンドを実行するためのランタイム実装。active session branch の検証、隔離 review worktree の作成・レビュー実行・中断処理・差分マージ・レポート出力までを統括する。レビュー対象列挙、所見処理、INDEX 更新、レポート生成など下位モジュールへの入口でもある。
 
 ## Read this when
-- oracle review サブコマンドの実行条件、隔離 worktree のライフサイクル、レビュー処理の全体フローを確認するとき。
-- レビュー中断時の扱い、未コミット差分の検査、レビュー結果レポートの生成契約を確認するとき。
+- `oracle review` の実行フロー、active session や clean worktree の前提、隔離 worktree と review branch のライフサイクルを変更・調査するとき。
+- oracle review の中断時処理、エラー時レポート、INDEX 差分のマージ、サブコマンド進捗記録を確認するとき。
+- レビュー対象列挙・レビュー loop・レポート生成・review branch 操作の連携箇所を確認するとき。
 
 ## Do not read this when
-- レビュー対象ファイルの列挙条件だけを確認したいときは review_targets の実装を読む。
-- レビュー所見のループ処理だけを確認したいときは review_loop の実装を読む。
-- 所見レポートの表示形式だけを確認したいときは review_report の実装を読む。
-- レビュー用 INDEX.md のコミット・マージ・競合解決だけを確認したいときは review_index の実装を読む。
+- レビュー対象の列挙規則だけを変更・調査する場合は、対象列挙を担う下位モジュールを直接読む。
+- レビュー loop の判定・所見マージだけを変更・調査する場合は、review loop の実装を直接読む。
+- レビュー結果レポートの表示・保存形式だけを変更・調査する場合は、review report の実装を直接読む。
+- INDEX 更新や review branch の commit・merge・conflict 解決だけを変更・調査する場合は、review index の実装を直接読む。
 
 ## hash
-- 59320e2db73efe87a69c7c10a28f1831d7d3775c12606659fec0cb5dae5b755c
+- 94a5626e4e4687d276799bce9e48f34fa1324106a9db94865f9715fc39d67828
 
 # `review_index.py`
 
@@ -66,21 +67,20 @@
 # `review_loop.py`
 
 ## Summary
-- oracle review の所見列挙・マージ・妥当性検証・採否判定を反復実行するループ実装。中断時には確定済み所見と評価済みファイルを専用例外で返し、merge operation の形式・対象 ID・finding 内容を検証して所見リストへ適用する。
-- oracle review のサブコマンド処理で、レビュー進捗通知、Codex 実行、所見の再試行、評価済みファイル管理、Structured Output の検証が必要な場合に読む。
+- oracle review の所見列挙・マージ・妥当性検証・採否判定を反復実行する制御ロジック。中断時の確定済み進捗保持、Structured Output のマージ操作検証、再試行、step 通知も扱う。oracle review の実行フローや finding 操作の挙動を変更・調査するときの実装入口。
 
 ## Read this when
-- oracle review の列挙・マージ・validate・judge ループを変更または調査するとき
-- レビュー処理の KeyboardInterrupt 時の部分結果保持や step callback 通知を確認するとき
-- finding merge operation の適用規則、ID 重複・未知 ID・kind 別入力検証を確認するとき
+- oracle review のループ制御、中断時の部分結果、進捗通知を変更・調査するとき。
+- finding の列挙・マージ・検証・judge の呼び出し順や反復条件を確認するとき。
+- merge operation の target_ids、kind、finding の検証や semantic retry を確認するとき。
 
 ## Do not read this when
-- oracle review の各 agent prompt の内容だけを変更するときは、対応する builder 実装を直接読む
-- oracle review のファイルパス解決だけを変更するときは、review_paths 実装を直接読む
-- 共通の Codex 実行規則だけを確認するときは、codex_exec_rule の oracle file を読む
+- 個別 agent call の prompt 内容や Structured Output schema 自体を変更・調査するときは、対応する oracle review builder を直接読む。
+- oracle review のパス解決や finding の oracle path 判定だけを確認するときは、review_paths の実装を直接読む。
+- 一般的な Codex 実行規則や中断仕様を確認するときは、参照されている oracle 文書を直接読む。
 
 ## hash
-- 84fb42512cbc6c877bb71fc55fa3e7e94369be94cff4c6a72117a8c947961802
+- a6977438ed5d3435e24e83ae2c6222c1f19fb5b02aeb878cc9e77ae910f49b7b
 
 # `review_paths.py`
 

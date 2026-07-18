@@ -572,19 +572,19 @@
 # `test_oracle_review_report.py`
 
 ## Summary
-- oracle review の report 生成と CLI 出力を検証するテスト。レビュー対象の列挙、中断・失敗時の report、finding の受理・棄却分類、severity 別集計、oracle path alias や symlink の扱い、scope オプション、eval-oracle からの委譲を確認する。
+- oracle review の report 生成と CLI 実行を検証するテスト。中断・処理失敗時の report、finding の severity・判定別分類と件数、対象 oracle file の集計、scope オプション、`eval-oracle` の委譲、出力節順を確認する。
 
 ## Read this when
-- oracle review または eval-oracle の report 形式・出力内容を変更または検証するとき
-- oracle review の中断・エラー処理、finding の判定結果、件数集計を変更または検証するとき
-- oracle path の alias、symlink、scope オプションの挙動を確認するとき
+- oracle review または eval-oracle の report 出力・失敗時挙動・中断時挙動を変更または検証するとき
+- finding の accepted/rejected 分類、severity 別件数、oracle path・symlink の集計を変更または検証するとき
+- oracle review CLI の scope オプションや実行委譲を変更または検証するとき
 
 ## Do not read this when
-- oracle review の実装内部だけを調査し、report や CLI 出力の挙動を確認する必要がないとき
-- oracle review と無関係なサブコマンドやテストを扱うとき
+- oracle review の実装や report 生成処理そのものを変更する場合は、まず対応する実装モジュールと oracle 仕様を読むとき
+- oracle review と無関係な CLI、report、oracle file 列挙機能を変更または検証するとき
 
 ## hash
-- e3833e029054f99e2018b14ebf74cadc6db83e48451d78f7bb9b76c64f1627d3
+- 162913f2977c477a8317990c41aad04040608c9f75dc85fe481c8c6d4861fcb1
 
 # `test_oracle_review_targets.py`
 
