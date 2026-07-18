@@ -157,12 +157,6 @@ def tracked_agent_read_dir(root: Path) -> Path:
     return root / ".cmoc" / "gt" / "ar"
 
 
-def agent_read_dirs(root: Path) -> tuple[Path, Path]:
-    """agent が読み取れる `.cmoc/g*/ar` directory 群を返す。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    return generated_agent_read_dir(root), tracked_agent_read_dir(root)
-
-
 def is_root_memo(root: Path, path: Path) -> bool:
     """`{{work-root}}/memo` 自体またはその配下か判定する。"""
     memo = (root / "memo").resolve()
