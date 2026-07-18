@@ -94,18 +94,18 @@
 # `_ollama_support.py`
 
 ## Summary
-- doctor テストから共有の managed Ollama service を利用するための共通定数・実行 helper。指定 root を cwd にして CLI の doctor を呼び出し、成功結果を返す。
+- doctor CLI のテスト実行を補助する共有ヘルパー。production と共有する managed Ollama service に対し、指定した worktree を cwd として doctor を起動し、成功結果を返す。SLM モデル名と固定 endpoint・production 環境を前提とする。
 
 ## Read this when
-- managed Ollama を使う doctor テストを追加・修正するとき
-- doctor 実行時の worktree 指定、production service、固定 endpoint、テスト用モデルの扱いを確認するとき
+- doctor サブコマンドの CLI テストを追加・変更するとき
+- managed Ollama service、production の HOME/PATH、または固定 endpoint を使うテスト境界を確認するとき
 
 ## Do not read this when
-- doctor コマンド自体の実装や仕様を確認するときは、doctor の実装・oracle spec を直接読む
-- fake service lifecycle や Ollama service の起動・停止処理を変更するとき
+- doctor 以外のサブコマンドのテスト実装を調べるとき
+- managed Ollama service の仕様や doctor の詳細な出力契約を確認するときは、対応する oracle ドキュメントや doctor テストを直接読む
 
 ## hash
-- 142e4d277c91d98d33dec1ec0fcad02b1118bd3a681727a41753c016980684ed
+- 90a73f1e5e9334d867cad3c2e512f3de842d1b85b5426c83803d986aa80491a2
 
 # `test_acp_builder_apply_parameters.py`
 
