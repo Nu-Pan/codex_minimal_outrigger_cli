@@ -1,5 +1,6 @@
 import json
 import subprocess
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
@@ -225,7 +226,7 @@ def test_run_codex_tui_logs_missing_cli_failure(
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    real_run = subprocess.run
+    real_run: Callable[..., object] = subprocess.run
 
     def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
         """Codex の実行だけを CLI 不在に差し替え、他の subprocess は通す fake。"""
