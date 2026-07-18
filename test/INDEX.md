@@ -540,21 +540,20 @@
 # `test_oracle_review_loop.py`
 
 ## Summary
-- oracle review の finding loop を対象に、対象 oracle ごとの finding 分離、main worktree のパス照合、validator 間の理由共有、中断時の部分結果保持、merge response の意味検証と再試行を検証する pytest テスト。
-- fake Codex 実行を用いて、隔離 worktree・repo root・cwd・Structured Output schema、および各 loop の呼び出し順と prompt 内容を検証する。
+- oracle review の finding loop を検証するテスト群。対象 oracle ごとの finding 絞り込み、worktree 実行コンテキスト、challenger/advocate の reason 連携、割り込み時の部分結果保持、merge response の意味検証と再試行・失敗を確認する。
 
 ## Read this when
-- oracle review の finding 列挙・merge・validate・judge loop の挙動を変更または調査するとき
-- oracle review の中断時結果、finding path の関連付け、validator prompt の理由引き継ぎ、merge の意味的失敗時 retry を確認するとき
-- oracle review 実装に対する realization test の追加・修正や、関連する oracle review / Codex exec 仕様を確認するとき
+- oracle review の finding 列挙・検証・judge・merge loop の挙動を変更または調査するとき
+- oracle review の worktree 分離、finding path の関連付け、割り込み時の結果保持を確認するとき
+- merge の意味的な不正 response に対する再試行条件や上限を確認するとき
 
 ## Do not read this when
-- oracle review 以外のサブコマンドや、finding loop と無関係な CLI 機能を変更・調査するとき
-- oracle review の正本仕様そのものを確認する必要があり、対応する oracle 文書を直接読むべきとき
-- Codex 実行共通仕様だけを確認する場合は、対応する codex exec rule や実装・schema を直接読むとき
+- oracle review の実装詳細ではなく、正本仕様そのものを確認したいときは oracle/doc/app_spec/sub_command/oracle_review.md を読む
+- Codex 実行や Structured Output の一般規則だけを確認したいときは oracle/doc/app_spec/codex_exec_rule.md を直接読む
+- finding loop と無関係なサブコマンドやテストの挙動を調査するとき
 
 ## hash
-- 8ee4552296a917dae528830d83130ee7efe0e81c91b984c50881ae4e68530386
+- 394574d8cff57158e33461e3fc952a467746b59691c50a8c024c8a1fd807243b
 
 # `test_oracle_review_merge_operations.py`
 
@@ -575,19 +574,19 @@
 # `test_oracle_review_report.py`
 
 ## Summary
-- oracle review の report 生成と CLI 実行を検証するテスト。中断・処理失敗時の report、finding の severity・判定別分類と件数、対象 oracle file の集計、scope オプション、`eval-oracle` の委譲、出力節順を確認する。
+- oracle review の中断・失敗時を含む report 生成、評価対象の列挙、finding の受理・棄却分類、scope オプション、eval-oracle からの委譲、および CLI 出力を検証する realization test。oracle review の report 仕様や処理を変更・調査するときの直接のテスト入口。
 
 ## Read this when
-- oracle review または eval-oracle の report 出力・失敗時挙動・中断時挙動を変更または検証するとき
-- finding の accepted/rejected 分類、severity 別件数、oracle path・symlink の集計を変更または検証するとき
-- oracle review CLI の scope オプションや実行委譲を変更または検証するとき
+- oracle review の report 内容、finding の分類・件数、評価済み oracle file の扱いを変更または検証するとき
+- oracle review の中断・処理失敗時の report と終了結果を調査するとき
+- `oracle review` または `eval-oracle` の CLI オプションと委譲動作を確認するとき
 
 ## Do not read this when
-- oracle review の実装や report 生成処理そのものを変更する場合は、まず対応する実装モジュールと oracle 仕様を読むとき
-- oracle review と無関係な CLI、report、oracle file 列挙機能を変更または検証するとき
+- report 以外の oracle review 内部実装だけを調査する場合は、対応する realization implementation を直接読む
+- oracle review の正本仕様を確認する場合は、このテストではなく oracle/doc の仕様ファイルを読む
 
 ## hash
-- 162913f2977c477a8317990c41aad04040608c9f75dc85fe481c8c6d4861fcb1
+- 8622977a9a8b4e693744f5d581c3d545dde1e56606f05a722caa7aeecee2a189
 
 # `test_oracle_review_targets.py`
 

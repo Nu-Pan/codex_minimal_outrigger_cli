@@ -147,15 +147,15 @@
 # `test`
 
 ## Summary
-- テストコードから利用する共有補助モジュールと、ACP builder、CLI、Codex runtime、apply/session、indexing、oracle review などの pytest テストを収録する。各テストは対応する機能の外部挙動・parameter/schema 契約・状態遷移・失敗条件を検証する入口であり、個別実装や正本仕様の代替ではない。
+- テストコードから参照される共有補助モジュールと、ACP builder、CLI、Codex runtime、indexing、oracle review、session/apply などの pytest・受け入れテストを集約するディレクトリ。各テストは対応する機能の外部挙動、設定・schema 契約、状態遷移、エラー処理、実行境界を検証する入口であり、機能領域ごとの詳細テストへ進むために使う。
 
 ## Read this when
-- 対象機能の pytest 回帰テスト、外部挙動、CLI lifecycle、runtime 契約、parameter/schema、Git・worktree・state の検証観点を確認または変更するとき。
-- テストで共有される Git repository、CliRunner、Codex、Ollama、fake command などの準備方法を確認するとき。
+- 特定の機能の回帰テスト、外部挙動、設定・schema 契約、CLI lifecycle、runtime 境界を確認または変更するとき。
+- 共有テスト helper、ACP builder、CLI、Codex runtime、indexing、oracle review、session/apply、Git・Ollama 連携のテスト対象を探すとき。
 
 ## Do not read this when
-- 実装詳細や正本仕様そのものを確認する場合は、対応する src または oracle ファイルを直接読むとき。
-- テスト対象と無関係な機能、一般的な pytest 実行方法、Codex 出力品質の評価を調べるとき。
+- 正本仕様や実装詳細そのものを確認するときは、対応する oracle または src のファイルを直接読む。
+- 一般的な pytest 実行方法や、対象機能と無関係なテスト補助の詳細だけを確認したいとき。
 
 ## hash
-- 2c9e09b48446c0c9d5e9b1a53b8118620de3f39f303c0204e71ae1aaff572fde
+- 7d67060ae9661089c5cda342a082d54ad8a1d569cd0a0278e7022c3f18890214
