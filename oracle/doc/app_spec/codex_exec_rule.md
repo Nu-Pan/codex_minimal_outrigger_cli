@@ -87,8 +87,8 @@
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意
 味内容を変更しない範囲に限って許可する
 - プロンプト本文を argv に載せてはならない
-- `codex exec` にわたすプロンプト全文は一度 `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_prompt.jsonl` に出力すること
-- プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で `{{time-stamp}}_prompt.jsonl` をリダイレクト入力すること
+- `codex exec` にわたすプロンプト全文は一度 `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_prompt.md` に出力すること
+- プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で `{{time-stamp}}_prompt.md` をリダイレクト入力すること
 - argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする
 
 ## Codex CLI 呼び出し情報の保存
