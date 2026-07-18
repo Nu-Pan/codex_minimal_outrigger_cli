@@ -18,6 +18,7 @@
    - cmoc は `{{cmoc-session-branch}}` を作成して checkout する
 3. 記述・実装ループ
    1. 人間がやってほしいと思っている事を `{{repo-root}}/oracle` に反映する
+      - 必要に応じて `cmoc oracle investigation` で既存の oracle file を調査する
       - 必要に応じて `cmoc oracle edit` を使う
    2. 人間が `cmoc oracle review` を呼び出して、レビューレポートを読む
    3. 人間が必要に応じて `{{repo-root}}/oracle` を修正する
