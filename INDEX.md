@@ -128,33 +128,33 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめる src ディレクトリ。CLI ルート、サブコマンド、共通 runtime、互換 import shim、設定・ACP 関連の公開入口を提供し、各機能の具体的な実装へ進むための上位入口となる。
+- cmoc の realization 実装をまとめる src ディレクトリ。CLI ルート、サブコマンド、共通 runtime、ACP・設定などの互換入口を下位要素へ案内する。
 
 ## Read this when
-- cmoc の CLI 全体構成、公開入口、サブコマンドと共通 runtime の責務分担を確認するとき。
-- 特定機能の実装箇所を特定し、main、sub_commands、commons、互換 shim などの下位要素へ進むとき。
+- cmoc の realization 実装全体の構成や、CLI 入口から各サブコマンド・共通 runtime へのルーティングを確認するとき。
+- 複数のサブコマンドにまたがる処理、公開 import shim、または src 配下の実装配置を調査するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装内容だけを確認したいときは、対応する oracle ツリーを直接読む。
-- 特定サブコマンド、runtime helper、builder、設定、互換 import の実装箇所が明確なときは、対応する下位要素を直接読む。
+- 正本仕様や canonical な実装を確認したいときは、対応する oracle 配下を直接読む。
+- 特定のサブコマンド、runtime helper、builder、互換 shim の詳細が明確な場合は、src 全体ではなく対応する下位要素を直接読む。
 
 ## hash
-- 60b400305e28c32523d4fd97c2371afb070677329aae0bec82cf2058eefd6bea
+- d065d2aeabeceb4473a27488fda55b00b33055f0fcb5d569122b0836986ab298
 
 # `test`
 
 ## Summary
-- テストコードから正本 schema、CLI・Codex 実行、apply/session lifecycle、indexing、oracle review、runtime、設定、Ollama などの共有補助と pytest 契約を確認するためのテスト群。各テストファイルが担当する外部挙動・制御ロジックの入口となる。
+- cmoc の Python テストを集約するディレクトリ。共有 fixture・CLI/Git/Codex/Ollama 補助、runtime・indexing・oracle review・session/apply などの回帰・統合テストを扱い、各機能の外部挙動や制御契約を確認する入口となる。
 
 ## Read this when
-- 対象機能の外部挙動や回帰テストを変更・調査するとき。
-- CLI、Codex runtime、apply/session、indexing、oracle review、設定、Git、Ollama、prompt、schema、worktree lifecycle のテスト契約を確認するとき。
-- テスト用の CliRunner、Git repository、fake external command、Codex/Ollama helper の共有仕様を確認するとき。
+- cmoc のテスト対象を特定するとき
+- 複数のサブコマンド、runtime、indexing、oracle review、session/apply の統合挙動を調査するとき
+- 共有テスト補助や、特定機能の専用テストへ進む入口を探すとき
 
 ## Do not read this when
-- 正本仕様や実装詳細そのものを確認する場合は、対応する oracle または src のファイルを直接読む。
-- 対象機能と無関係なテストや共有 helper を調査するとき。
-- pytest の一般的な実行方法や、LLM の回答品質自体を評価するとき。
+- 実装や正本仕様そのものを確認したいときは、対応する src または oracle のファイルを直接読む
+- 単一機能の詳細を確認する場合は、このディレクトリ全体ではなく対応する専用テストへ進む
+- 一般的な pytest 実行方法や、対象機能と無関係なテスト補助を確認するとき
 
 ## hash
-- 9ed8eda89deb692b0c930e82160886876eb87516e75ad46563630be46596a865
+- 20ced1f36a8faaeb7b4de24faf00ec6e9e0266247cb671ed1a966359ff1d3b38
