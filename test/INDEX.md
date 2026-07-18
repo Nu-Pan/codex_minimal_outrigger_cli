@@ -539,19 +539,19 @@
 # `test_oracle_review_loop.py`
 
 ## Summary
-- oracle review の finding loop を対象とするテスト群。対象 oracle ごとの finding 分離、validator 間の reason 引き継ぎ、隔離 worktree の実行コンテキスト、judge 中断時の部分結果保持、merge の意味的失敗に対する再試行と上限到達時のエラーを検証する。
+- oracle review の finding loop に対するテスト群。対象 oracle ごとの finding 分離、検証 prompt への理由引き継ぎ、隔離 worktree の実行コンテキスト、割り込み時の部分結果保持、merge 応答の意味検証と再試行・失敗を検証する。
 
 ## Read this when
-- oracle review の finding 列挙・統合・検証・judge loop の挙動を変更または調査するとき
-- oracle review の worktree 隔離、Structured Output 呼び出し、KeyboardInterrupt 時の結果保持を確認するとき
-- merge response の意味検証や再試行ロジックを変更するとき
+- oracle review の finding 列挙・merge・challenger/advocate 検証・judge の制御を変更またはレビューするとき
+- Codex 実行コンテキスト、worktree 分離、割り込み時の復旧可能な部分結果を確認するとき
+- merge や finding validation の再試行・意味的不正応答の扱いを変更するとき
 
 ## Do not read this when
-- oracle review 本体の単純な CLI 引数処理や、finding loop と無関係な設定処理だけを変更するとき
-- 他のサブコマンドのテストや、Codex 実行基盤そのものの一般仕様を確認するときは、対応する実装・oracle 文書を直接読む
+- oracle review の prompt 定義や設定値そのものを変更・確認するだけのときは、対応する oracle 文書や設定実装を直接読む
+- finding loop と無関係な CLI サブコマンド、永続化、一般的なテスト規約を調べるとき
 
 ## hash
-- e2708faf1b3fff86b27710861c1a53c5a8089a69b5cadbaf5d13a12e9448cc4b
+- 9b6f3674162f7b9aa1f44ce4f242461cfda1c187db51fba3d6887e6d2ddb4ecc
 
 # `test_oracle_review_merge_operations.py`
 
