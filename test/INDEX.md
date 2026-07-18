@@ -592,20 +592,21 @@
 # `test_oracle_review_targets.py`
 
 ## Summary
-- oracle review の対象列挙と finding path 解決を検証するテスト。相対・絶対・{{work-root}} パス、symlink、tracked/ignored oracle file、session/full scope、fork commit 固定、AGENTS.md・INDEX.md の除外を扱う。
+- oracle review の対象列挙と finding path 解決を検証するテスト。相対・絶対・{{work-root}}・{{oracle-root}} パス、symlink、外部 oracle パスの扱いを確認する。
+- session/full scope における追跡済み oracle file、ignored file、symlink、対象外の AGENTS.md・INDEX.md の選別を検証する。
+- 対象なし時の no_targets 出力、レビュー fork commit 基準の差分範囲、各対象に対する finding 列挙呼び出しを確認する。
 
 ## Read this when
-- oracle review の対象範囲や oracle path 解決を変更・検証するとき
-- session/full scope における tracked・ignored・symlink ファイルの扱いを確認するとき
-- oracle review の対象列挙テストを追加・修正するとき
+- oracle review の対象範囲・oracle file 列挙条件・scope 別の対象選定を変更または調査するとき
+- finding の oracle path 解決、placeholder、symlink、repository 外パスの扱いを変更または調査するとき
+- oracle review のレポート件数、no_targets 結果、Codex 呼び出し回数を検証するとき
 
 ## Do not read this when
-- oracle review の finding 内容生成や prompt 構築だけを変更するとき
-- 対象列挙・path 解決と無関係な CLI サブコマンドを調査するとき
-- oracle review の実装詳細を直接確認する必要があり、まず review_paths.py や review_targets.py を読むべきとき
+- oracle review の finding 内容判定や Structured Output schema 自体を変更・調査するときは、レビュー実装や schema の対象を直接読む
+- 一般的な CLI 実行、session fork、git 操作の共通仕様だけを調査するときは、このテストではなく対応する実装・oracle 文書を読む
 
 ## hash
-- 93ace4b4fa06c2ba5a16042aa94f4994c434b6b61e79e113fc15e2c767f9453a
+- 84d0ede13c04455c6601bae0493aa2974fd54359a6a27c0dd50930a1c176523c
 
 # `test_oracle_review_worktree.py`
 

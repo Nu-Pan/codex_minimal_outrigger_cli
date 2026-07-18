@@ -144,17 +144,16 @@
 # `test`
 
 ## Summary
-- pytest による realization test 群を収めるディレクトリ。ACP builder、CLI、Codex runtime、indexing、oracle review、session/apply、runtime 共通機能などの外部挙動・制御契約・回帰を検証する。各機能の変更時に、対応する個別テストまたは共有テスト補助へ進む入口となる。
+- テストコードから、ACP builder、CLI、Codex runtime、indexing、oracle review、session/apply、runtime 共通機能などの外部契約・制御ロジックを検証する pytest 群へ進むための入口。共有テスト補助と、機能別・責務別の回帰テストを含む。
 
 ## Read this when
-- 複数のサブシステムにまたがる回帰や、どのテストファイルが対象かを特定するとき
-- CLI、Codex 実行、indexing、oracle review、session/apply、runtime の外部契約をテストから確認するとき
-- テスト用の共有 helper、Git fixture、Ollama fixture、Codex stub の利用方法を確認するとき
+- 対象機能の外部挙動、CLI lifecycle、Codex 実行境界、indexing、oracle review、session/apply、runtime 契約のテストケースを確認・変更するとき。
+- テストで利用する共有 fixture や fake external command、Git repository、CliRunner などの補助実装を確認するとき。
 
 ## Do not read this when
-- 対象機能が明確な場合は、このディレクトリ全体を読まず、該当する個別テストファイルへ直接進むとき
-- 実装責務や正本仕様を確認することが目的の場合は、対応する src または oracle 文書を直接読むとき
-- 一般的な pytest 実行方法や、対象機能と無関係なテスト契約を確認するとき
+- 正本仕様や実装の詳細だけを確認する場合は、対応する oracle または src の本文を直接読む。
+- 対象機能と無関係なテスト領域を調査する場合は、このディレクトリ全体ではなく機能別のテストまたは共有 support module を直接読む。
+- Codex や LLM の回答品質そのものを評価する場合。
 
 ## hash
-- b240c1af3e46f840fbab76ec036f1aa9a808b104932b07b67fba7995627589d5
+- 25e17e70fe8ae10e5bbd80ff74d9eeded8c8f553affc39d81a80a2bc64ec197d
