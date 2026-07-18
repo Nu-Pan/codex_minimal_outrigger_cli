@@ -144,16 +144,18 @@
 # `test`
 
 ## Summary
-- テストコードから、ACP builder、CLI、Codex runtime、indexing、oracle review、session/apply、runtime 共通機能などの外部契約・制御ロジックを検証する pytest 群へ進むための入口。共有テスト補助と、機能別・責務別の回帰テストを含む。
+- pytest による cmoc の realization test 群を集約するディレクトリ。CLI サブコマンド、runtime、Codex 実行、ACP builder、indexing、oracle review、session/apply lifecycle などの外部挙動・制御契約を検証し、各機能の変更時に対応するテストへ進む入口となる。
 
 ## Read this when
-- 対象機能の外部挙動、CLI lifecycle、Codex 実行境界、indexing、oracle review、session/apply、runtime 契約のテストケースを確認・変更するとき。
-- テストで利用する共有 fixture や fake external command、Git repository、CliRunner などの補助実装を確認するとき。
+- cmoc の CLI サブコマンドや runtime の外部挙動・失敗条件・状態 lifecycle を変更または調査するとき
+- Codex subprocess、TUI、sandbox、retry、quota、ログ、worktree、state の契約を確認するとき
+- ACP builder、indexing、oracle review、session/apply に関する仕様変更の回帰テストを追加・修正するとき
+- 共通テスト helper、Git/Ollama fixture、packaged import、prompt や StructDoc のテスト基盤を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装の詳細だけを確認する場合は、対応する oracle または src の本文を直接読む。
-- 対象機能と無関係なテスト領域を調査する場合は、このディレクトリ全体ではなく機能別のテストまたは共有 support module を直接読む。
-- Codex や LLM の回答品質そのものを評価する場合。
+- 正本仕様、schema、prompt 本文、または実装詳細そのものを確認したいときは、対応する oracle や realization implementation を直接読む
+- 対象機能と無関係なテスト領域を調査するとき
+- Codex や LLM の回答品質自体を評価したいとき
 
 ## hash
-- 25e17e70fe8ae10e5bbd80ff74d9eeded8c8f553affc39d81a80a2bc64ec197d
+- aecb6ce231f47473c95afb3e4a53c582dd71002d356fe165cf98d9514b776a81

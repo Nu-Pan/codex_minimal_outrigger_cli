@@ -611,20 +611,20 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- oracle review の worktree 分離、snapshot commit からの fork、未コミット差分の拒否、INDEX.md のみの統合、競合解決、不要な差分の拒否を検証するテスト群。oracle review の run isolation・branch model・indexing 仕様に対応する挙動テストへの入口。
+- oracle review の worktree 分離、snapshot commit 起点、未コミット差分拒否、INDEX.md のみの統合、競合解決を検証する pytest テスト群。oracle review 実装や関連する run isolation・branch model・indexing 仕様の挙動確認に使うテスト入口。
 
 ## Read this when
-- oracle review の worktree 作成元、session branch、snapshot commit、review worktree の後処理を変更・調査するとき
-- oracle review による INDEX.md の統合、preflight 生成物、merge conflict 解決を変更・調査するとき
-- review worktree が INDEX.md 以外の差分を拒否する条件や、未コミット変更の扱いを確認するとき
+- oracle review の worktree 作成元、対象 oracle、session branch、run worktree の分離を変更・調査するとき
+- review worktree から INDEX.md だけを session 側へ統合する処理、INDEX.md の merge conflict 解決、不要な差分の拒否を変更・調査するとき
+- oracle review の Structured Output 呼び出し、preflight による INDEX 更新、report の fork/join commit 記録を検証するとき
 
 ## Do not read this when
-- oracle review の finding 判定ロジックや Codex 出力 schema 自体を変更・調査するときは、対応する oracle review 実装・schema テストを直接読む
-- 通常の INDEX.md 生成処理だけを変更・調査するときは、indexing 実装・テストを直接読む
-- session fork や branch model 全般を変更・調査し、oracle review 固有の worktree 統合挙動を確認する必要がないとき
+- oracle review の実装詳細や正本仕様を確認することが目的で、テストケースの期待挙動を確認する必要がないとき
+- INDEX.md の生成アルゴリズムだけを変更・調査するときは、indexing の実装・仕様を直接読む
+- 一般的な CLI、git、session fork の挙動だけを調査し、oracle review 固有の結合動作を扱わないとき
 
 ## hash
-- 645648f5edfeeb1524865a0ca87665d1ed4a66584ffb87faf6eb3a8a299a0ac9
+- ceb42cb2504b9ce7e09464f1e1b9a802735e1449c99e3cecf0fd521fd5d1fa2a
 
 # `test_packaged_import.py`
 
