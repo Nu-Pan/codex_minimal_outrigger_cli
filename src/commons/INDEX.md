@@ -47,6 +47,22 @@
 ## hash
 - 26246975f2dccf84ecfc768c704d2ec6d0c715e4a6916086c3904375d088bdfd
 
+# `prompt_editor_input.py`
+
+## Summary
+- AI Agent CLI/TUI 向けの初期プロンプトをエディタで作成し、HTMLコメントを除去した利用者入力を返す共通境界。プロンプトテンプレート、エディタ選択、編集用ディレクトリの ignore 保証も扱う。
+
+## Read this when
+- プロンプトのエディタ入力フロー、初期テンプレート、入力のコメント除去、利用可能エディタの選択を変更・調査するとき
+- CLI/TUI のプロンプト編集用ファイルや `.cmoc` ignore の準備処理を確認するとき
+
+## Do not read this when
+- エディタ入力後のプロンプト生成・実行処理だけを調査するとき
+- 一般的な runtime path、git ignore、エラー型の実装を直接調査するときは、それぞれの担当モジュールを先に読む
+
+## hash
+- 16a6c3943f64e7fad5bd9c588e50189079550dbea41048ad114d06c3b85fa48f
+
 # `runtime_apply.py`
 
 ## Summary
@@ -190,20 +206,18 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc 設定を JSON と runtime の CmocConfig 間で変換・永続化するモジュール。設定値の既定値補完、型・enum・model 検証、不正設定や JSON 構文の利用者向けエラー化、設定ファイルの生成・読み込み・同期を担う。
+- cmoc 設定 JSON の永続化境界を担当する。設定型と JSON object の相互変換、既定値補完、型・enum・model 値の検証、不正設定時の CmocError 化、設定ファイルの生成・読込・同期を扱う。設定ファイル入出力や runtime 設定復元の実装を確認するときの入口となる。
 
 ## Read this when
-- cmoc 設定 JSON の形式や復元処理を変更・確認するとき
-- 設定ファイルの読み込み、書き込み、既定値補完、入力検証の挙動を調べるとき
-- config doctor や設定同期処理から設定永続化の入口を確認するとき
+- cmoc config の JSON 保存形式、読込時の検証、既定値補完、設定ファイルの生成・同期を変更または調査するとき。
+- 不正な設定値に対する利用者向けエラー境界を確認するとき。
 
 ## Do not read this when
-- CmocConfig の型定義や既定値そのものを確認したいときは、直接 config.cmoc_config を読む
-- Codex の model 名や reasoning effort の正本定義を確認したいときは、直接 oracle.other.cmoc_config を読む
-- 設定値を利用する個別の CLI 処理だけを調べるとき
+- 設定型そのものや既定値の定義を確認したい場合は、設定型を定義する対象を直接読む。
+- Codex model 名や reasoning effort の正本変換規則だけを確認したい場合は、対応する oracle 定義を直接読む。
 
 ## hash
-- 20d30041bf2f6efe5bfe928fd329d2516a685e7e13bbb6f258fb512a19c1bbc3
+- 945b0d80cc61d086e8481e0462ed542c2a5c068fdc26419d084d8da2c174fdd1
 
 # `runtime_content.py`
 
@@ -315,16 +329,22 @@
 # `runtime_paths.py`
 
 ## Summary
-- リポジトリ・worktree root、時刻、経過時間、各種 runtime directory/path を解決する共通ユーティリティ。cwd の一時切替を排他制御し、root 解決失敗を CmocError に変換する。
+- cmoc の実行時パスと作業環境を扱う共通ユーティリティ。repository/worktree/cmoc root の解決、cwd の一時切替、timestamp・duration の整形、session・report・log・schema・config などの保存先 path 生成、memo 判定を提供する。runtime path や cwd 制御、保存先ディレクトリの入口として参照する。
 
 ## Read this when
-- root path、runtime の保存先、timestamp・duration 表記、cwd 切替、agent 読み取りディレクトリの扱いを変更または確認するとき。
+- repository root、worktree root、cmoc root の解決処理を変更・調査するとき
+- cmoc の runtime ディレクトリ、session/report/log/schema/config の保存先を変更・調査するとき
+- cwd の一時切替や process-wide な排他制御を変更・調査するとき
+- timestamp、console timestamp、duration 表示の生成規則を変更・調査するとき
+- root 配下の memo 判定や agent read directory の扱いを確認するとき
 
 ## Do not read this when
-- 特定のサブコマンドの処理や、root 解決・runtime path・cwd 制御を直接扱わない機能を変更するとき。
+- 特定サブコマンドの処理内容や入出力仕様だけを調べるとき
+- 保存先で実際に読み書きする session・report・log の個別処理を調べるとき
+- root placeholder の定義や path 解決アルゴリズム自体を変更・調査するときは、path model の実装を直接読むとき
 
 ## hash
-- 89e875751c526a76452c8635292807bb73828e1d42cb22c090cd71b04fe556c0
+- f186d0ad95d9679a259afab43e3df2ce72f9e393bd1a0c5081b9c780ab6e1aa6
 
 # `runtime_preprocess_command.py`
 

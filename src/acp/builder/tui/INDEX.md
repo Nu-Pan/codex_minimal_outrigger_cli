@@ -18,18 +18,17 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc tui` の起動パラメータを組み立てる互換入口。実体の生成は oracle 側に委譲し、この層では実行時に必要な `tui` 保存先だけ先に用意する。
+- TUI 起動用 AgentCallParameter を構築する realization adapter。oracle builder に処理を委譲する前に、runtime 側の editor input directory を作成する。
 
 ## Read this when
-- TUI 起動時の `AgentCallParameter` の作り方と、実行前に必要な保存先の準備を確認したいとき。
-- realization 側の入口が oracle 側の builder をどう包んでいるかを見たいとき。
+- cmoc tui の起動 parameter 構築や editor input directory の準備処理を確認・変更するとき。
 
 ## Do not read this when
-- `cmoc tui` の引数解釈や出力内容そのものを知りたいときは、委譲先の oracle 側 builder を読む。
-- TUI 以外のコマンドの起動パラメータを調べたいとき。
+- oracle 側の TUI launch parameter 仕様や builder 本体の実装を確認するとき。
+- TUI 以外の parameter builder や、起動後の TUI 処理を確認するとき。
 
 ## hash
-- 544414fb16a433336a20d2d8feb385b3b15697d08a23768a5aa47fafd3bcc734
+- 3502d9873b62abbf0ec153c7df8ea429ef1077ec35f72fec75785f7748c2dac5
 
 # `resolve_parameter.py`
 
