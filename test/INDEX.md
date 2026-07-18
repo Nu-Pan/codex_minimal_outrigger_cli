@@ -538,19 +538,21 @@
 # `test_oracle_review_loop.py`
 
 ## Summary
-- oracle review の finding loop に対するテスト群。対象 oracle ごとの finding 分離、検証 prompt への理由引き継ぎ、隔離 worktree の実行コンテキスト、割り込み時の部分結果保持、merge 応答の意味検証と再試行・失敗を検証する。
+- oracle review の finding loop を対象に、対象 oracle ごとの finding 分離、main worktree のパス照合、validator 間の理由共有、中断時の部分結果保持、merge response の意味検証と再試行を検証する pytest テスト。
+- fake Codex 実行を用いて、隔離 worktree・repo root・cwd・Structured Output schema、および各 loop の呼び出し順と prompt 内容を検証する。
 
 ## Read this when
-- oracle review の finding 列挙・merge・challenger/advocate 検証・judge の制御を変更またはレビューするとき
-- Codex 実行コンテキスト、worktree 分離、割り込み時の復旧可能な部分結果を確認するとき
-- merge や finding validation の再試行・意味的不正応答の扱いを変更するとき
+- oracle review の finding 列挙・merge・validate・judge loop の挙動を変更または調査するとき
+- oracle review の中断時結果、finding path の関連付け、validator prompt の理由引き継ぎ、merge の意味的失敗時 retry を確認するとき
+- oracle review 実装に対する realization test の追加・修正や、関連する oracle review / Codex exec 仕様を確認するとき
 
 ## Do not read this when
-- oracle review の prompt 定義や設定値そのものを変更・確認するだけのときは、対応する oracle 文書や設定実装を直接読む
-- finding loop と無関係な CLI サブコマンド、永続化、一般的なテスト規約を調べるとき
+- oracle review 以外のサブコマンドや、finding loop と無関係な CLI 機能を変更・調査するとき
+- oracle review の正本仕様そのものを確認する必要があり、対応する oracle 文書を直接読むべきとき
+- Codex 実行共通仕様だけを確認する場合は、対応する codex exec rule や実装・schema を直接読むとき
 
 ## hash
-- 9b6f3674162f7b9aa1f44ce4f242461cfda1c187db51fba3d6887e6d2ddb4ecc
+- 8ee4552296a917dae528830d83130ee7efe0e81c91b984c50881ae4e68530386
 
 # `test_oracle_review_merge_operations.py`
 
