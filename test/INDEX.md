@@ -455,20 +455,19 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 実行の統合テスト。完成済み prompt の読み込み、作業ディレクトリと sandbox・アクセス設定、Codex CLI 引数を検証する。
-- 成功・CLI 不在・KeyboardInterrupt・非 0 終了時について、TUI call log、サブコマンドイベント、コンソール要約、エラー処理を検証する。
-- timestamp 衝突時に call log を上書きせず保持する挙動も検証する。
+- Codex TUI 実行ラッパーの統合テスト。完成済み prompt の読み込み、ファイルアクセスモードと CLI 引数、作業ディレクトリ、call log・サブコマンドイベント・コンソール要約の出力、timestamp 衝突時のログ保持、CLI 不在・KeyboardInterrupt・非 0 終了時の失敗処理を検証する。Codex 実行境界や TUI ログ仕様を変更・確認する際の realization test の入口。
 
 ## Read this when
-- Codex TUI の実行引数、prompt 読み込み、アクセスモード、linked worktree 対応を変更・調査するとき
-- Codex 呼び出しのログ、終了状態、例外・失敗時のコンソール出力を変更・検証するとき
+- Codex TUI の subprocess 呼び出し、sandbox・approval・作業ディレクトリ引数を変更または確認するとき
+- TUI の call log、サブコマンドイベント、コンソール出力、失敗時の例外処理を変更または確認するとき
+- Codex CLI 不在、割り込み、非 0 終了、timestamp 衝突へのテスト影響を確認するとき
 
 ## Do not read this when
-- Codex TUI 以外のサブコマンドや、Codex 呼び出し実装そのものの詳細を直接調査するとき
-- prompt 生成規則や設定仕様の正本を確認するときは、対応する oracle file を先に読むべき場合
+- Codex TUI 以外のサブコマンドや、TUI の prompt 生成仕様そのものを調査するときは、対応する実装または oracle 文書を直接読む
+- 単にリポジトリ全体のテスト構成や共通テスト補助関数を確認したいだけのとき
 
 ## hash
-- fe6c8c0fb3724bfe888d68982f70e32fdaa0281aa1aac3d7b9f691a0b99add1d
+- 1f8c2d8abf12c3d353dccae586906aa5d3ba923673b9344ee3f2f14923ddbf56
 
 # `test_doctor_cli.py`
 
