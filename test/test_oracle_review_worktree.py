@@ -345,6 +345,27 @@ def test_oracle_review_resolves_index_conflict_when_session_deleted_index(
     assert "Merge branch 'review'" in run_git(root, "log", "-1", "--pretty=%B").stdout
 
 
+def test_commit_review_index_changes_accepts_nested_untracked_index(
+    tmp_path: Path,
+) -> None:
+    """未追跡 directory 配下でも INDEX.md だけなら commit する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md、
+    {{work-root}}/oracle/doc/app_spec/indexing.md。
+    """
+
+    root = make_repo(tmp_path)
+    generated_index = root / "generated" / "INDEX.md"
+    generated_index.parent.mkdir()
+    generated_index.write_text("# generated\n")
+
+    assert review_module.commit_review_index_changes(root) is True
+    assert (
+        run_git(root, "show", "--format=", "--name-only", "HEAD").stdout.strip()
+        == "generated/INDEX.md"
+    )
+
+
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])
 def test_oracle_review_rejects_non_index_worktree_changes(
     tmp_path: Path,
