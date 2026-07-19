@@ -115,7 +115,7 @@ def render_oracle_review_report(
         ("repo_root", root),
         ("scope", scope),
         ("session_branch", session_branch),
-        ("session_fork_commit", state.session.session_start_commit),
+        ("session_fork_commit", state.session.session_fork_commit),
         ("review_branch", review_branch),
         ("review_fork_commit", review_fork_commit),
         ("review_join_commit", review_join_commit),

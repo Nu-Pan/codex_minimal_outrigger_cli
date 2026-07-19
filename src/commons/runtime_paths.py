@@ -145,6 +145,12 @@ def config_path(root: Path) -> Path:
     return tracked_agent_read_dir(root) / "config.json"
 
 
+def refactor_state_path(root: Path) -> Path:
+    """realization refactor の追跡 state 保存 path を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    return tracked_agent_read_dir(root) / "realization" / "refactor" / "state.json"
+
+
 def generated_agent_read_dir(root: Path) -> Path:
     """git 非追跡かつ agent 読み取り専用の runtime directory を返す。"""
     # {{work-root}}/oracle/doc/app_spec/run_isolation.md

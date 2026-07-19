@@ -9,7 +9,6 @@ from commons.runtime_errors import CmocError
 from commons.runtime_paths import config_path
 from config.cmoc_config import (
     CmocConfig,
-    CmocConfigApplyFork,
     CmocConfigCodex,
     CmocConfigOracleReview,
 )
@@ -33,9 +32,6 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
                 key.value: value for key, value in config.codex.reasoning_effort.items()
             },
             "num_try_falv_recovery": config.codex.num_try_falv_recovery,
-        },
-        "apply_fork": {
-            "num_apply_files": config.apply_fork.num_apply_files,
         },
         "oracle_review": {
             "num_enumerate_findings_loop": config.oracle_review.num_enumerate_findings_loop,
@@ -123,7 +119,6 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             ReasoningEffort,
         )
 
-        apply_fork_data = _section(data, "apply_fork")
         oracle_review_data = _section(data, "oracle_review")
 
         return CmocConfig(
@@ -135,13 +130,6 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
                     codex_data,
                     "num_try_falv_recovery",
                     default.codex.num_try_falv_recovery,
-                ),
-            ),
-            apply_fork=CmocConfigApplyFork(
-                num_apply_files=_int_value(
-                    apply_fork_data,
-                    "num_apply_files",
-                    default.apply_fork.num_apply_files,
                 ),
             ),
             oracle_review=CmocConfigOracleReview(

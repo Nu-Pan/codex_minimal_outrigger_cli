@@ -39,7 +39,7 @@ def _cmoc_session_abandon_body() -> None:
         raise CmocError(
             "session abandon は session branch 上で実行してください。", [], branch
         )
-    if state.session.state != "active" or state.apply.state != "ready":
+    if state.session.state != "active" or state.run.state != "ready":
         raise CmocError("session abandon の事前条件を満たしていません。", [], str(path))
     require_clean_worktree(work)
     home = state.session.session_home_branch
@@ -55,7 +55,6 @@ def _cmoc_session_abandon_body() -> None:
     try:
         run_git(["switch", home], work)
         state.session.state = "abandoned"
-        state.session.joined_at = None
         write_state(path, state)
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
         # home branch を保持したまま session branch だけを削除する必要がある。

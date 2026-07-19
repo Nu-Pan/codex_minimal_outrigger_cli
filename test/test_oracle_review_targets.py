@@ -260,7 +260,7 @@ def test_oracle_review_session_scope_uses_review_fork_commit(
     """session scope の差分終点は実行時 HEAD ではなく review fork commit に固定する。"""
     root = make_repo(tmp_path)
     state = SessionState()
-    state.session.session_start_commit = run_git(
+    state.session.session_fork_commit = run_git(
         root, "rev-parse", "HEAD"
     ).stdout.strip()
     (root / "oracle" / "fork.md").write_text("# fork\n")

@@ -15,7 +15,6 @@ from _cli_support import runner
 from _git_support import make_repo, run_git
 from _ollama_support import run_doctor
 
-import sub_commands.eval_oracle as eval_oracle_module
 import sub_commands.oracle.review as review_module
 from basic.acp import AgentCallParameter
 from cmoc_runtime import SessionState
@@ -114,26 +113,6 @@ def test_oracle_review_interrupt_reports_only_completed_enumerations(
         (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
     )
     assert '"event": "user_interruption"' in logs[-1].read_text()
-
-
-def test_eval_oracle_delegates_to_oracle_review_impl(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """`eval-oracle` が scope を oracle review 実装へ渡すことを検証する。"""
-    calls: list[str] = []
-
-    def fake_oracle_review_impl(scope: str) -> None:
-        """委譲された scope を記録する fake callback。"""
-        calls.append(scope)
-
-    monkeypatch.setattr(
-        eval_oracle_module, "cmoc_oracle_review_impl", fake_oracle_review_impl
-    )
-
-    result = runner.invoke(app, ["eval-oracle", "-s", "full"], catch_exceptions=False)
-
-    assert result.exit_code == 0
-    assert calls == ["full"]
 
 
 def test_oracle_review_writes_report(

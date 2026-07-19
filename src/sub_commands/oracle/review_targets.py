@@ -14,7 +14,7 @@ def enumerate_oracle_review_targets(
     all_oracle_files = enumerate_review_all_oracle_files(root)
     if scope == "full":
         return all_oracle_files
-    start = state.session.session_start_commit
+    start = state.session.session_fork_commit
     if not start:
         return []
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md

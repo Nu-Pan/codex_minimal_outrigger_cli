@@ -85,7 +85,7 @@ def test_oracle_review_enumerate_builder_imports_from_packaged_layout(
 
 
 def test_oracle_edit_builder_imports_from_packaged_layout(tmp_path: Path) -> None:
-    """oracle edit adapter が packaged layout で完全 prompt を保存する。"""
+    """oracle edit fork adapter が packaged layout で完全 prompt を返す。"""
     root = Path(__file__).parents[1]
     target = tmp_path / "site"
     for package in ("acp", "basic", "commons"):
@@ -95,13 +95,14 @@ def test_oracle_edit_builder_imports_from_packaged_layout(tmp_path: Path) -> Non
     result = _run_from_packaged_layout(
         target,
         (
-            "from acp.builder.oracle.edit.launch_tui import "
-            "build_oracle_edit_launch_tui_parameter as build; "
-            "p = build('2026-07-18_00-00-00_000000000', 'oracle を編集する'); "
+            "from pathlib import Path; "
+            "from acp.builder.oracle.edit.fork.launch_exec import "
+            "build_oracle_edit_fork_launch_exec_parameter as build; "
+            "p = build('oracle を編集する', Path.cwd()); "
             "assert p.structured_output_schema_path is None; "
             "assert p.file_access_mode.value == 'pure_oracle_write'; "
-            "path = p.prompt.split(' を読んで', 1)[0]; "
-            "assert 'oracle を編集する' in open(path, encoding='utf-8').read()"
+            "assert 'oracle を編集する' in p.prompt; "
+            "assert p.cwd == Path.cwd()"
         ),
         tmp_path,
     )
@@ -155,8 +156,8 @@ def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
         target,
         (
             "import config.cmoc_config as c; "
-            "expected = ['CmocConfig', 'CmocConfigApplyFork', "
-            "'CmocConfigCodex', 'CmocConfigOracleReview']; "
+            "expected = ['CmocConfig', 'CmocConfigCodex', "
+            "'CmocConfigOracleReview', 'CodexModelSpec']; "
             "assert c.__all__ == expected; "
             "assert sorted(n for n in vars(c) if not n.startswith('_')) == expected"
         ),

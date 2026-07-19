@@ -73,7 +73,7 @@ def _cmoc_session_fork_body() -> None:
         path = state_path(root, session_id)
         state = SessionState()
         state.session.session_home_branch = branch
-        state.session.session_start_commit = start_commit
+        state.session.session_fork_commit = start_commit
         start_subcommand_step(
             5, "session branch を作成して checkout", "create session branch"
         )

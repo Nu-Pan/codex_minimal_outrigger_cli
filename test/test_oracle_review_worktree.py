@@ -60,11 +60,11 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     (linked / "oracle" / "linked.md").write_text("# linked oracle\n")
     run_git(linked, "add", "oracle/linked.md")
     run_git(linked, "commit", "-m", "linked oracle change")
-    linked_commit = run_git(linked, "rev-parse", "HEAD").stdout.strip()
     monkeypatch.chdir(linked)
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
+    session_head = run_git(linked, "rev-parse", "HEAD").stdout.strip()
     calls: list[str] = []
     review_worktrees: list[Path] = []
 
@@ -96,7 +96,7 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     assert report_path.is_relative_to(root / ".cmoc" / "gu" / "ar" / "report")
     assert not report_path.is_relative_to(linked)
     rendered = report_path.read_text()
-    assert f"review_fork_commit: {linked_commit}" in rendered
+    assert f"review_fork_commit: {session_head}" in rendered
     assert "`oracle/linked.md`" in rendered
     branch = run_git(linked, "branch", "--show-current").stdout.strip()
     assert branch.startswith("cmoc/session/")

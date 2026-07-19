@@ -26,18 +26,18 @@ from commons.runtime_errors import CmocError
 from commons.runtime_paths import schema_store_dir
 from config.cmoc_config import CmocConfig
 
-APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
-_active_apply_process_tracking_path: Path | None = None
+RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
+_active_run_process_tracking_path: Path | None = None
 _OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
 
 
 @contextmanager
-def apply_process_id_file_lock(path: Path) -> Iterator[None]:
-    """apply process pid file の読み書きを直列化する。"""
+def run_process_id_file_lock(path: Path) -> Iterator[None]:
+    """editing run の process tracking file を直列化する。"""
     lock_path = path.with_name(f"{path.name}.lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # abandon が Codex child 起動直後の未記録状態を読まないよう、
         # parent/child pid file 操作は同じ advisory lock に集約する。
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
@@ -47,7 +47,7 @@ def apply_process_id_file_lock(path: Path) -> Iterator[None]:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-def open_process_fd(process_id: int, process_name: str = "apply process") -> int | None:
+def open_process_fd(process_id: int, process_name: str = "run process") -> int | None:
     """pidfd 対応環境でだけ race を避けた process 参照を開く。"""
     if not (hasattr(os, "pidfd_open") and hasattr(signal, "pidfd_send_signal")):
         raise CmocError(
@@ -71,7 +71,7 @@ def send_process_signal(
     process_fd: int,
     process_id: int,
     sig: signal.Signals,
-    process_name: str = "apply process",
+    process_name: str = "run process",
 ) -> None:
     """pidfd 経由で process へ signal を送り、PID reuse を避ける。"""
     try:
@@ -190,7 +190,7 @@ def signal_process_group_members(process_group_id: int, sig: signal.Signals) -> 
 
 def stop_process_group(process_group_id: int) -> None:
     """Codex group を個別 pidfd で SIGTERM、必要なら SIGKILL する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
     signal_process_group_members(process_group_id, signal.SIGTERM)
     if wait_process_group_exit(process_group_id, 5.0):
@@ -363,12 +363,12 @@ def run_codex_subprocess(
 ) -> subprocess.CompletedProcess[Any]:
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
     try:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
-        # tracking は apply-run の内部 state なので、継承した env var だけで無関係な Codex
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # tracking は editing run の内部 state なので、継承した env var だけで無関係な Codex
         # call を stale または別 process の pid file へ向けてはならない。
-        if _active_apply_process_tracking_path is not None and argv[:1] == ["codex"]:
+        if _active_run_process_tracking_path is not None and argv[:1] == ["codex"]:
             return run_tracked_codex_subprocess(
-                argv, _active_apply_process_tracking_path, **kwargs
+                argv, _active_run_process_tracking_path, **kwargs
             )
         return subprocess.run(argv, **kwargs)
     except FileNotFoundError as exc:
@@ -383,18 +383,18 @@ def run_codex_subprocess(
         ) from exc
 
 
-def set_apply_process_tracking_path(path: Path | None) -> Path | None:
-    """apply 実行中だけ有効な process-local tracking path を差し替える。"""
-    global _active_apply_process_tracking_path
-    old_path = _active_apply_process_tracking_path
-    _active_apply_process_tracking_path = path
+def set_run_process_tracking_path(path: Path | None) -> Path | None:
+    """editing run 実行中だけ有効な process-local tracking path を差し替える。"""
+    global _active_run_process_tracking_path
+    old_path = _active_run_process_tracking_path
+    _active_run_process_tracking_path = path
     return old_path
 
 
 def run_tracked_codex_subprocess(
     argv: list[str], tracking_path: Path, **kwargs: Any
 ) -> subprocess.CompletedProcess[Any]:
-    """apply abandon が止められるよう Codex subprocess group を pid file に記録する。"""
+    """run abandon が止められるよう Codex subprocess group を記録する。"""
     input_data = kwargs.pop("input", None)
     capture_output = kwargs.pop("capture_output", False)
     check = kwargs.pop("check", False)
@@ -406,7 +406,7 @@ def run_tracked_codex_subprocess(
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
     process: subprocess.Popen[Any] | None = None
-    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # Popen と child 行の登録だけを遅延させ、exec 後の child は通常の SIGTERM を受ける。
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
     sigterm_pending = False
@@ -419,7 +419,7 @@ def run_tracked_codex_subprocess(
     signal.signal(signal.SIGTERM, defer_sigterm)
     try:
         try:
-            with apply_process_id_file_lock(tracking_path):
+            with run_process_id_file_lock(tracking_path):
                 process = subprocess.Popen(argv, start_new_session=True, **kwargs)
                 _record_tracked_child_process(
                     tracking_path, process.pid, process_group_id=process.pid
@@ -431,16 +431,16 @@ def run_tracked_codex_subprocess(
                 stop_process_group(process.pid)
             except CmocError as cleanup_exc:
                 raise CmocError(
-                    "apply process tracking を更新できません。",
+                    "run process tracking を更新できません。",
                     [
-                        "apply process pid file の権限と保存先を確認してください。",
+                        "run process tracking file の権限と保存先を確認してください。",
                         "Codex subprocess の停止にも失敗しました。",
                     ],
                     f"path: {tracking_path}\nerror: {exc}\ncleanup: {cleanup_exc}",
                 ) from exc
             raise CmocError(
-                "apply process tracking を更新できません。",
-                ["apply process pid file の権限と保存先を確認してください。"],
+                "run process tracking を更新できません。",
+                ["run process tracking file の権限と保存先を確認してください。"],
                 f"path: {tracking_path}\nerror: {exc}",
             ) from exc
     finally:
@@ -460,7 +460,7 @@ def run_tracked_codex_subprocess(
             )
         return result
     finally:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # leader 終了後も descendant が group に残る間は tracking を保持する。
         if process.poll() is not None and not process_group_has_running_member(
             process.pid
@@ -469,8 +469,8 @@ def run_tracked_codex_subprocess(
                 remove_tracked_child_process(tracking_path, process.pid)
             except OSError as exc:
                 raise CmocError(
-                    "apply process tracking を更新できません。",
-                    ["apply process pid file の権限と保存先を確認してください。"],
+                    "run process tracking を更新できません。",
+                    ["run process tracking file の権限と保存先を確認してください。"],
                     f"path: {tracking_path}\nerror: {exc}",
                 ) from exc
 
@@ -478,8 +478,8 @@ def run_tracked_codex_subprocess(
 def record_tracked_child_process(
     path: Path, process_id: int, process_group_id: int | None = None
 ) -> None:
-    """apply process pid file へ Codex child process の同一性情報を追記する。"""
-    with apply_process_id_file_lock(path):
+    """run process tracking file へ Codex child の同一性情報を追記する。"""
+    with run_process_id_file_lock(path):
         _record_tracked_child_process(path, process_id, process_group_id)
 
 
@@ -501,8 +501,8 @@ def _record_tracked_child_process(
 
 
 def remove_tracked_child_process(path: Path, process_id: int) -> None:
-    """終了した Codex child process を apply process pid file から除く。"""
-    with apply_process_id_file_lock(path):
+    """終了した Codex child process を run process tracking file から除く。"""
+    with run_process_id_file_lock(path):
         if not path.exists():
             return
         lines = [

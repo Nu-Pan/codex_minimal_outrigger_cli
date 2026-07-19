@@ -76,14 +76,14 @@ def write_abandoned_state(root: Path, session_id: str) -> Path:
                 "session": {
                     "state": "abandoned",
                     "session_home_branch": "old-home",
-                    "session_start_commit": "old-commit",
-                    "last_joined_apply_oracle_snapshot_commit": None,
-                    "joined_at": None,
+                    "session_fork_commit": "old-commit",
+                    "last_joined_apply_fork_commit": None,
                 },
-                "apply": {
+                "run": {
                     "state": "ready",
-                    "apply_branch": None,
-                    "oracle_snapshot_commit": None,
+                    "kind": None,
+                    "branch": None,
+                    "fork_commit": None,
                 },
             },
             ensure_ascii=False,
@@ -135,9 +135,14 @@ def test_session_fork_creates_session_branch_and_state(
     state = json.loads(session_state_path(root, branch).read_text())
     assert state["session"]["state"] == "active"
     assert state["session"]["session_home_branch"] == home_branch
-    assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is None
-    assert state["session"]["joined_at"] is None
-    assert state["apply"]["state"] == "ready"
+    assert state["session"]["last_joined_apply_fork_commit"] is None
+    assert state["session"]["session_fork_commit"]
+    assert state["run"] == {
+        "state": "ready",
+        "kind": None,
+        "branch": None,
+        "fork_commit": None,
+    }
 
 
 def test_session_fork_rolls_back_when_state_save_fails(
@@ -238,8 +243,7 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
     path = root / ".cmoc" / "gu" / "ar" / "session" / "broken.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps({"session": {"session_home_branch": home_branch}, "apply": {}})
-        + "\n"
+        json.dumps({"session": {"session_home_branch": home_branch}, "run": {}}) + "\n"
     )
 
     result = runner.invoke(app, ["session", "fork"])
@@ -305,7 +309,7 @@ def test_session_fork_uses_linked_worktree_branch_and_head(
     assert current_branch(root) == root_branch
     state = json.loads(session_state_path(root, session_branch).read_text())
     assert state["session"]["session_home_branch"] == "linked-home"
-    assert state["session"]["session_start_commit"] == linked_commit
+    assert state["session"]["session_fork_commit"] == linked_commit
     assert run_git(linked, "rev-parse", session_branch).stdout.strip() == linked_commit
 
 
@@ -337,7 +341,6 @@ def test_session_abandon_switches_home_and_marks_state(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "abandoned"
-    assert state["session"]["joined_at"] is None
     assert f"- abandoned_branch: `{session_branch}`" in result.output
     assert "- session_state: `abandoned`" in result.output
 
@@ -375,7 +378,6 @@ def test_session_abandon_uses_linked_worktree_branch(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "abandoned"
-    assert state["session"]["joined_at"] is None
     assert f"- abandoned_branch: `{session_branch}`" in result.output
 
 
@@ -523,7 +525,6 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "active"
-    assert state["session"]["joined_at"] is None
     assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
     assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == ""
     assert run_git(root, "status", "--short").stdout.strip() == ""
@@ -744,7 +745,6 @@ def test_session_join_uses_linked_worktree_branch(
     assert (linked / "README.md").read_text() == "linked session change\n"
     state = json.loads(session_state_path(root, session_branch).read_text())
     assert state["session"]["state"] == "joined"
-    assert state["session"]["joined_at"] is None
 
 
 def test_session_join_preprocesses_linked_worktree_before_preconditions(

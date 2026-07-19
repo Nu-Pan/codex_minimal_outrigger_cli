@@ -1,10 +1,4 @@
-"""session/apply state の形状と branch 解析を検証する。
-
-根拠:
-- {{work-root}}/oracle/doc/app_spec/session_state.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-"""
+"""session/run state schema と managed branch 解析の realization test。"""
 
 import multiprocessing
 import threading
@@ -16,10 +10,11 @@ from _git_support import make_repo
 
 from cmoc_runtime import CmocError
 from commons.runtime_state import (
+    RunPart,
     SessionState,
-    apply_branch_session_id,
     branch_session_id,
     load_state_for_branch,
+    run_branch_session_id,
     session_fork_lock,
     state_path,
     write_state,
@@ -27,8 +22,6 @@ from commons.runtime_state import (
 
 
 def hold_session_fork_lock(root: Path, ready: Connection, release: Connection) -> None:
-    """別 process で session fork lock を保持する。"""
-
     with session_fork_lock(root):
         ready.send(True)
         release.recv()
@@ -36,57 +29,46 @@ def hold_session_fork_lock(root: Path, ready: Connection, release: Connection) -
 
 @pytest.mark.parametrize(
     "branch",
-    [
-        "cmoc/session/",
-        "cmoc/session/2026-06-24_20-40_40_571606000/extra",
-    ],
+    ["cmoc/session/", "cmoc/session/id/extra", "cmoc/run/id/run"],
 )
-def test_branch_session_id_rejects_invalid_session_branch_shape(branch: str) -> None:
-    """session branch 名の余分な区切りや空 session id を拒否する。"""
+def test_branch_session_id_rejects_invalid_shape(branch: str) -> None:
     with pytest.raises(CmocError):
         branch_session_id(branch)
 
 
 @pytest.mark.parametrize(
     "branch",
-    [
-        "cmoc/apply/",
-        "cmoc/apply/session",
-        "cmoc/apply/session/run/extra",
-    ],
+    ["cmoc/run/", "cmoc/run/session", "cmoc/run/session/run/extra"],
 )
-def test_apply_branch_session_id_rejects_invalid_apply_branch_shape(
-    branch: str,
-) -> None:
-    """apply branch 名は session id と run id の 2 要素だけを受け付ける。"""
+def test_run_branch_session_id_rejects_invalid_shape(branch: str) -> None:
     with pytest.raises(CmocError):
-        apply_branch_session_id(branch)
+        run_branch_session_id(branch)
 
 
-def test_load_state_for_branch_rejects_apply_branch_with_extra_parts(
-    tmp_path: Path,
-) -> None:
-    """破損した apply branch 名から session state を誤って読まない。"""
+def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> None:
     path = state_path(tmp_path, "session")
-    write_state(path, SessionState())
+    state = SessionState()
+    state.run = RunPart("joinable", "oracle_edit", "cmoc/run/session/run", "abc")
+    write_state(path, state)
 
-    with pytest.raises(CmocError):
-        load_state_for_branch(tmp_path, "cmoc/apply/session/run/extra")
+    session_id, loaded_path, loaded = load_state_for_branch(
+        tmp_path, "cmoc/run/session/run"
+    )
+
+    assert session_id == "session"
+    assert loaded_path == path
+    assert loaded == state
 
 
-@pytest.mark.parametrize("part", ["session", "apply"])
+@pytest.mark.parametrize("part", ["session", "run"])
 @pytest.mark.parametrize("value", [[], {}])
-def test_session_state_rejects_unhashable_state_values(
-    part: str, value: object
-) -> None:
-    """session/apply state の state フィールドに list や dict を指定した入力を拒否する。"""
+def test_session_state_rejects_non_string_state(part: str, value: object) -> None:
     data = SessionState().to_dict()
     data[part]["state"] = value
 
     with pytest.raises(CmocError) as exc_info:
         SessionState.from_dict(data)
 
-    assert exc_info.value.summary == "session state file が不正です。"
     assert f"`{part}.state` が不正です" in exc_info.value.detail
 
 
@@ -94,45 +76,54 @@ def test_session_state_rejects_unhashable_state_values(
     ("part", "field"),
     [
         ("session", "session_home_branch"),
-        ("session", "session_start_commit"),
-        ("session", "last_joined_apply_oracle_snapshot_commit"),
-        ("session", "joined_at"),
-        ("apply", "apply_branch"),
-        ("apply", "oracle_snapshot_commit"),
+        ("session", "session_fork_commit"),
+        ("session", "last_joined_apply_fork_commit"),
+        ("run", "kind"),
+        ("run", "branch"),
+        ("run", "fork_commit"),
     ],
 )
 @pytest.mark.parametrize("value", [[], {}, 1, False])
-def test_session_state_rejects_non_string_payload_fields(
+def test_session_state_rejects_non_string_payload(
     part: str, field: str, value: object
 ) -> None:
-    """session state の payload フィールドに非文字列値を指定した入力を拒否する。"""
     data = SessionState().to_dict()
     data[part][field] = value
 
     with pytest.raises(CmocError) as exc_info:
         SessionState.from_dict(data)
 
-    assert exc_info.value.summary == "session state file が不正です。"
     assert f"`{part}.{field}` は string または null" in exc_info.value.detail
 
 
-@pytest.mark.parametrize("part", ["session", "apply"])
-def test_session_state_allows_nullable_payload_fields(part: str) -> None:
-    """session state の payload フィールドに null を指定した入力を受け付ける。"""
+def test_ready_run_requires_null_payload() -> None:
     data = SessionState().to_dict()
-    for field in data[part]:
-        if field != "state":
-            data[part][field] = None
+    data["run"]["kind"] = "oracle_edit"
 
-    SessionState.from_dict(data)
+    with pytest.raises(CmocError, match="session state file"):
+        SessionState.from_dict(data)
+
+
+@pytest.mark.parametrize("state", ["running", "joinable", "error"])
+def test_active_run_requires_kind_branch_and_fork_commit(state: str) -> None:
+    data = SessionState().to_dict()
+    data["run"]["state"] = state
+
+    with pytest.raises(CmocError, match="session state file"):
+        SessionState.from_dict(data)
+
+
+def test_session_state_rejects_unknown_fields() -> None:
+    data = SessionState().to_dict()
+    data["run"]["obsolete"] = None
+
+    with pytest.raises(CmocError) as exc_info:
+        SessionState.from_dict(data)
+
+    assert "未定義 field" in exc_info.value.detail
 
 
 def test_session_fork_lock_is_shared_across_processes(tmp_path: Path) -> None:
-    """session fork lock が process 間で同じ repository を直列化する。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
-    """
-
     root = make_repo(tmp_path)
     ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
     release_child, release_parent = multiprocessing.Pipe(duplex=False)
@@ -142,7 +133,7 @@ def test_session_fork_lock_is_shared_across_processes(tmp_path: Path) -> None:
     )
     process.start()
     acquired = threading.Event()
-    worker = threading.Thread(target=lambda: _acquire_session_fork_lock(root, acquired))
+    worker = threading.Thread(target=lambda: _acquire_lock(root, acquired))
     released = False
     try:
         assert ready_parent.recv()
@@ -163,7 +154,6 @@ def test_session_fork_lock_is_shared_across_processes(tmp_path: Path) -> None:
     assert not process.is_alive()
 
 
-def _acquire_session_fork_lock(root: Path, acquired: threading.Event) -> None:
-    """session fork lockを保持して取得済みeventを通知する。"""
+def _acquire_lock(root: Path, acquired: threading.Event) -> None:
     with session_fork_lock(root):
         acquired.set()

@@ -114,7 +114,7 @@ def test_config_rejects_non_object_codex_name_maps(field: str, value: object) ->
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
-@pytest.mark.parametrize("section", ["codex", "apply_fork", "oracle_review"])
+@pytest.mark.parametrize("section", ["codex", "oracle_review"])
 @pytest.mark.parametrize("value", [None, [], "invalid"])
 def test_config_rejects_non_object_sections(section: str, value: object) -> None:
     """各設定 section にオブジェクト以外を指定した config を拒否する。"""
@@ -131,8 +131,6 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
         {"num_parallel": "3"},
         {"codex": {"num_try_falv_recovery": True}},
         {"codex": {"num_try_falv_recovery": "1"}},
-        {"apply_fork": {"num_apply_files": True}},
-        {"apply_fork": {"num_apply_files": "200"}},
         {"oracle_review": {"num_enumerate_findings_loop": False}},
         {"oracle_review": {"num_enumerate_findings_loop": "2"}},
         {"oracle_review": {"num_merge_findings_loop": True}},
