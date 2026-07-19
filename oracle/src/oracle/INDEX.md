@@ -15,18 +15,20 @@
 # `other`
 
 ## Summary
-- cmoc の設定、ルートパスモデル、規範データ構造、構造化文書の Markdown 変換を担う基盤モジュール群。設定・パス解決・標準文書モデル・文書レンダリングの各実装を調べる入口。
+- cmoc の oracle source における設定・パスモデル・規範データ構造・構造化文書レンダリングを扱うディレクトリ。設定値やルートパス解決、Standard/Requirement の構造、StructDoc の Markdown 変換を確認する下位ファイルへの入口。
 
 ## Read this when
-- cmoc の設定 dataclass、ルートパスプレースホルダ、規範文書モデル、StructDoc の Markdown 出力を変更または調査するとき。
-- 設定永続化対象やルート探索規則、標準文書の構造、見出し・コードブロック・cmoc_ref の扱いを確認するとき。
+- cmoc のリポジトリ固有設定、既定値、Codex CLI・Ollama・oracle review の制御値を調査するとき。
+- cmoc のルートパスプレースホルダ、パス探索、パス検証の仕様を調査するとき。
+- 規範文書のデータ構造や構造化文書の Markdown レンダリングを調査するとき。
 
 ## Do not read this when
-- 設定ファイルの生成・同期手順や doctor の処理を調べるとき。
-- ModelClass、ReasoningEffort、StructDoc の利用側、CLI 実行経路、oracle file の配置・命名方針、個別の標準文書内容を確認するときは、それぞれの定義元・呼び出し元・標準文書を直接読む。
+- CLI コマンドの具体的な実行経路や入出力処理だけを調査するとき。
+- Codex CLI、Ollama、Markdown の一般的な利用方法を調査するとき。
+- oracle review の所見生成・統合・検証ロジックや、個別の標準文書の内容を調査するとき。
 
 ## hash
-- 0b174c0c78c774c9a947eba32eee441d0cacd7ae4f8e3393c8f850b1695a6f88
+- 885c94fa036f66b343c98269740e8cc246ae8ed92529cf5a44e654618e1b6c5d
 
 # `prompt_builder`
 

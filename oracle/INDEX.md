@@ -20,13 +20,20 @@
 # `src`
 
 ## Summary
-- 参照可能な正本ソース本文を含まない空の入口ディレクトリです。正本ソースの有無を確認するために使用します。
+- `oracle/src` は、cmoc の正本ソースを集約する入口です。
+- `oracle/acp_builder` は、各種 agent call・TUI・レビュー・fork 用パラメータと Structured Output schema を扱います。
+- `oracle/other` は、設定、パス解決、規範データ構造、構造化 Markdown の基盤を扱います。
+- `oracle/prompt_builder` は、完全なプロンプト構築と、アクセス規則・標準規則・ルーティング規則などの注入部品を扱います。
 
 ## Read this when
-- このディレクトリに参照可能な正本ソースが存在するか確認するとき。
+- cmoc の正本実装や Structured Output schema の定義箇所を特定するとき。
+- agent call、TUI、oracle review、realization の fork 処理に対応する正本ソースを調査するとき。
+- 設定値、パスモデル、構造化文書、完全なプロンプト生成や注入規則を調査するとき。
 
 ## Do not read this when
-- 実装仕様や処理内容を確認したいとき。
+- CLI の具体的な実行経路や入出力処理だけを調査するとき。
+- oracle/doc の自然言語仕様、oracle/test のテスト、または realization 側の実装を直接調査するとき。
+- 個別のプロンプト本文や標準規則の内容だけを確認する場合は、該当する下位ディレクトリを直接読むとき。
 
 ## hash
-- d8568a23bb49ca22feeeb7515fdb87fd40bef87ad2adb419fb43af5dfa64ef3c
+- bb980daff461288cf45247499c8374d1f8e35bce6358b4d3364fef7c2ff48e52
