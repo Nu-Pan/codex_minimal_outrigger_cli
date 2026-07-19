@@ -1,15 +1,15 @@
-# `launch_tui.py`
+# `launch_exec.py`
 
 ## Summary
-- `cmoc realization apply fork` 用 TUI 起動パラメータを構築する oracle source。oracle 差分追従の完全 prompt を生成してログへ保存し、最高品質設定の AgentCallParameter を返す。
+- Oracle 側で定義された差分追従用 `codex exec` の AgentCallParameter 構築処理。oracle file の raw git diff と commit 範囲を prompt に埋め込み、realization file 全体への反映を委譲するための prompt・実行設定・linked worktree を組み立てる。
 
 ## Read this when
-- `cmoc realization apply fork` の TUI 起動処理、差分追従 prompt、AgentCallParameter の設定を変更・検証するとき。
-- 対象 commit 範囲や raw oracle diff を realization 追従 agent へ渡す流れを確認するとき。
+- `cmoc realization apply fork` の実行 prompt、realization 追従処理、または oracle 差分を realization file へ反映する AgentCallParameter の動作を変更・調査するとき。
+- 対象 agent call のモデル、推論強度、ファイルアクセスモード、作業ディレクトリ、indexing preflight の設定を確認するとき。
 
 ## Do not read this when
-- 通常の realization apply 処理や fork 以外の起動経路を調べるとき。
-- 完全 prompt の各構成要素や prompt 共通処理を直接調べる場合は、対象の prompt builder・構造化文書実装を先に読むとき。
+- 通常の realization 実装やテストの内容を変更・調査するとき。
+- prompt の一般的な組み立て規則だけを確認したいときは、prompt builder の実装を直接読む。
 
 ## hash
-- 444724c9d11124d39d74254cedb12a34e5b3527646ec50bc629cc80f4279bdf4
+- 2f62a61956371b2154da3ededf6103c79ec999bfcabdae2983231f9f9364b97b

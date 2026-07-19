@@ -15,16 +15,17 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の作業差分を人間向けに要約するための agent call パラメータを構築する。差分を動的 prompt に埋め込み、readonly で実行する変更要約処理への入口となる。
+- cmoc の realization refactor fork 差分を要約する agent call パラメータを構築する oracle src。差分を埋め込んだ読み取り専用 prompt、モデル・推論設定、Structured Output schema、事前インデックス処理を定義する。
 
 ## Read this when
-- refactor fork の差分要約 prompt の構築方法、使用するモデル・推論設定、Structured Output schema の指定方法を確認するとき。
+- realization refactor fork の変更要約 prompt の構築方法、入力差分の渡し方、モデル設定、出力 schema の指定を確認するとき。
 
 ## Do not read this when
-- refactor 差分そのものの内容や要約結果を確認したいとき。prompt の共通構築処理を変更したいときは、まず共通 prompt builder の実装を読む。
+- refactor 差分そのものの内容を確認したいとき。
+- 変更要約の Structured Output schema の詳細だけを確認したいとき。
 
 ## hash
-- d89c323079e06eaf51b8e276168087332b10c5bfe7078ae1278962b744ce4f92
+- 7dc4a8a193cda8108332d73c5038399de0a3799a17f0df4437990b657150489f
 
 # `file_review_and_fix.json`
 
@@ -45,17 +46,15 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- cmoc の realization refactor fork における、単一ファイルのレビュー・修正用 AgentCallParameter を構築する oracle src。対象ファイルを起点に完全プロンプトを生成し、効率モデル・最大推論・realization write 権限・構造化出力・索引付け事前処理を設定する。
+- `cmoc realization refactor fork` における、指定ファイルを起点としたファイル単位レビュー・修正用の AgentCallParameter を構築する。完全プロンプト、アクセス権、モデル設定、構造化出力スキーマ、インデックス事前処理を定義する。
 
 ## Read this when
-- ファイル単位の realization review／fix 用 agent call のプロンプト構成を変更するとき
-- レビュー対象、アクセスモード、モデル設定、構造化出力 schema、placeholder の設定を確認するとき
-- complete prompt に渡す oracle standard・realization standard・apply review standard の適用条件を確認するとき
+- ファイル単位の realization review・修正処理の prompt 構築を変更または確認するとき
+- レビュー対象のパス、プロンプト生成、oracle・realization standard、出力スキーマの設定を追跡するとき
 
 ## Do not read this when
-- 実際のレビュー・修正処理の実装を確認したいとき
-- レビュー結果の構造化出力 schema 自体を確認したいとき
-- 一般的な prompt builder の共通仕様だけを確認したいとき
+- 実際のレビュー・修正処理の実装詳細だけを調査するとき
+- 他の prompt builder や path model の一般仕様だけを確認するときは、それぞれの対象ファイルを直接読む
 
 ## hash
-- 16438a1787da7b1e1a09fb9c7cafbe6babca798489d9068d2ddc1f8ebdcd8709
+- 3a6667d04d6984eda8f72ed3878d68e0ad780fecede3fdb44535261b1f655c53

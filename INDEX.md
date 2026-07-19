@@ -94,19 +94,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を担う oracle tree の入口。アプリケーション仕様を定める oracle doc と、ACP 呼び出し構築・設定・パス処理・ルール処理・Markdown 変換・prompt 構築などの正本実装を扱う oracle src へ案内する。
+- cmoc の正本仕様を収録する oracle ディレクトリ。アプリケーション仕様と、参照可能な正本ソースの有無を確認する入口を提供する。
+- doc は CLI 挙動、ログ、エラー処理、プロンプト、サービス管理、session/run、branch・worktree、サブコマンドなどの利用者向け仕様と、関連する開発規則・refactor 方針への入口。
+- src は参照可能な正本ソースを含まない空の入口ディレクトリ。
 
 ## Read this when
-- cmoc のアプリケーション挙動や開発規則の正本仕様を探すとき。
-- ACP 構築、設定・パス処理、ルール・文書処理、Markdown 変換、prompt 生成などの oracle 実装領域を特定するとき。
-- 個別の oracle file の場所が特定できず、doc と src を横断して入口を探すとき。
+- cmoc の複数領域にまたがる正本仕様の所在や、個別仕様・開発規則への入口を確認するとき。
+- oracle 配下に参照可能な正本ソースが存在するか確認するとき。
 
 ## Do not read this when
-- 対象となる個別の oracle doc または oracle src を直接特定できており、その本文だけを確認すればよいとき。
-- 具体的な CLI 実行経路、agent-call runtime、TUI の挙動など、oracle tree の入口ではなく realization 側の詳細を調べるとき。
+- 具体的な機能仕様、開発環境、設計・テスト規則、実装詳細が特定できている場合は、対応する個別文書や実装本文を直接読む。
+- 現在の realization refactor 運用仕様や agent 呼び出し経路だけを確認したい場合は、現行仕様の直接の参照先を読む。
 
 ## hash
-- 5ca73cba3099dfed5ddeb3a09f8f9cb249174a8334df1f43483368e5fd375dac
+- 0529fd2c14d65f6188016bbd50c58f77c40645d5603d67bcd2cea889a6053ee3
 
 # `pyproject.toml`
 

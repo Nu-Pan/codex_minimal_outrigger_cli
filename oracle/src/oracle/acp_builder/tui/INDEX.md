@@ -33,15 +33,15 @@
 # `resolve_parameter.py`
 
 ## Summary
-- `cmoc tui` の実行パラメータ解決用プロンプトを構築し、元プロンプトとファイルアクセス規則を埋め込んだ AgentCallParameter を返す。TUI 用のモデル、推論強度、読み取り専用アクセス、生成プロンプト、関連 JSON 出力先を定義する。
+- `cmoc tui` の実行パラメータ解決用 AgentCallParameter と、そのための固定プロンプトを構築する。元プロンプト、ファイルアクセス規則、oracle/realization・レビュー・INDEX 規則を組み合わせ、読み取り専用で実行するパラメータ選択タスクの prompt とモデル設定を生成する。
 
 ## Read this when
-- `cmoc tui` の AI エージェント呼び出しパラメータ、実行プロンプト、モデル選択、推論強度、ファイルアクセスモードを変更・確認するとき。
-- TUI のパラメータ解決処理が、共通プロンプト生成処理やファイルアクセス規則をどう組み合わせるか確認するとき。
+- `cmoc tui` の実行パラメータ解決 prompt や AgentCallParameter の生成方法を確認するとき
+- 元プロンプトから AI Agent CLI/TUI のモデル、推論強度、ファイルアクセスモード、生成 prompt を決定する処理を変更・調査するとき
 
 ## Do not read this when
-- 共通の完全プロンプト生成仕様だけを確認したいときは、共通プロンプトビルダーを直接読む。
-- TUI の実行処理や画面操作、パラメータ解決後のエージェント実行を確認したいときは、それぞれの実装ファイルを直接読む。
+- `cmoc tui` の通常の UI 実装や、パラメータ解決後の AI Agent CLI/TUI 実行処理を確認するときは、対応する実装ファイルを直接読む
+- prompt の共通構築規則やファイルアクセス規則そのものを確認するときは、各 prompt builder の定義元を直接読む
 
 ## hash
-- 988a07ef6a056a192cce70ca19c3f2f1132aed31c786b323ca188cc085a2842e
+- 4b21b1ed6d72e90c4e269a9117dadb8e88366ca5da2ba12ce834d39aceacac78

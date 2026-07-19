@@ -1,18 +1,18 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` の TUI 起動に必要なパラメータを構築する oracle src を含むディレクトリ。ユーザー指示を埋め込んだ完全プロンプトの生成・ログ保存と、固定設定で Codex CLI を起動するための入力生成が主な責務。
+- oracle file 編集用の agent call 起動設定を構築する実装。ユーザー指示を基に完全 prompt を作成し、実行モデル、権限、作業ディレクトリ、linked worktree などを設定する。oracle file 編集フローの起動パラメータを確認・変更する際の入口。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動処理、完全プロンプトの構成、モデル・推論強度・ファイルアクセス設定を確認または変更するとき。
-- ユーザー指示を含む editor_input ログの保存方法や、TUI 起動用 AgentCallParameter の生成を確認するとき。
+- `cmoc oracle edit fork` の agent call 起動設定を変更・確認するとき
+- oracle file 編集用の完全 prompt、実行モデル、権限、作業ディレクトリ、linked worktree の指定を確認するとき
 
 ## Do not read this when
-- oracle file の編集内容や編集担当 agent のプロンプト仕様を変更するとき。関連する prompt builder または oracle 編集処理を直接読む。
-- 一般的な ACP パラメータ定義やパス解決の仕様だけを確認するとき。各共有モジュールを直接読む。
+- oracle file 編集以外の agent call 起動パラメータを扱うとき
+- 完全 prompt の共通生成規則だけを確認したいとき
 
 ## hash
-- 595423ea0a51245864528aca035f041aebed65b16237cf81e6d7e1027565db07
+- 9b01dafec4bb8323113080263826082ade3e5b4da1a697cd1d6f71a8c1f124f2
 
 # `investigation`
 

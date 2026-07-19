@@ -1,18 +1,20 @@
 # `apply_behavior.md`
 
 ## Summary
-- cmoc realization refactor で採用しなかった作業方式と、その不採用理由を記録する文書。修正点リスト後の事前計画立案を避けた理由と、所見の並列列挙・所見単位の修正を避け、ファイル単位で調査と反映を進める方式にした経緯を扱う。
+- cmoc realization refactor で採用しなかった作業方式と、その不採用理由を記録する文書。事前の作業計画立案や、所見の並列リストアップ・所見単位の修正を避け、永続的な調査要求に従ってファイル単位で調査と反映を進める現行方針との違いを確認するための入口。
 
 ## Read this when
-- cmoc realization refactor の作業フロー設計や、旧方式からの変更理由を確認するとき。
-- 事前計画立案、並列所見調査、ダーティフラグ管理を採用すべきか検討するとき。
+- cmoc realization refactor の作業フローや調査・修正単位の設計理由を確認するとき
+- 事前計画方式、並列所見調査、ダーティフラグ方式を採用しなかった背景を調べるとき
+- 現行の investigation_required の責務と、一時的な queue 管理方式との違いを確認するとき
 
 ## Do not read this when
-- 現在の実装手順や具体的なリファクタリング対象を確認したいとき。
-- cmoc の正本仕様や一般的な開発ルールを確認したいときは、対応する oracle 文書を直接読む。
+- 具体的な realization file の修正方法や実装責務を確認したいとき
+- 現行 refactor state の定義や運用仕様を直接確認したいとき
+- 単に対象ファイルの実装内容やテスト内容を調べたいとき
 
 ## hash
-- a2fc997430e6c3a58f9a96dc43625a0516d06a37c4c041e3d21c5e237cd4a994
+- 4ae063e03f4cee3284619dd468f190be9b8260cf5aaac9493faab0d08024688b
 
 # `file_access_rule_violation_post_validation.md`
 

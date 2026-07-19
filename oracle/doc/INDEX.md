@@ -1,52 +1,55 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を定める oracle doc ディレクトリ。CLI の補完、ログ、エラー処理、doctor 前処理、managed ollama、Codex CLI 呼び出し、プロンプト、セッション状態、run 隔離、各サブコマンドなどの正本仕様への入口を提供する。
+- cmoc のアプリケーション仕様を収録するディレクトリ。CLI 補完、ログ、エラー処理、プロンプト、managed ollama、session/run、サブコマンドなど、利用者向け挙動と主要 workflow の正本仕様を扱う。個別仕様の確認では、該当する仕様ファイルまたはサブコマンド仕様へ進む入口となる。
 
 ## Read this when
-- cmoc の利用者向け挙動、CLI 共通規則、サブコマンドの実行条件や状態遷移を確認するとき。
-- managed ollama、Codex CLI、プロンプト生成、ログ、エラー処理、session/run、INDEX.md 更新の仕様を調査・変更するとき。
-- 個別のアプリケーション仕様文書を探す入口が必要なとき。
+- cmoc の利用者向け挙動、CLI 実行条件、出力・ログ、状態管理、プロンプト、サービス管理、session/run、サブコマンドの正本仕様の所在を確認するとき。
+- 複数のアプリケーション仕様にまたがる workflow や、どの個別仕様を読むべきか判断するとき。
 
 ## Do not read this when
-- Python の開発環境、設計ルール、テストルールなど開発手順だけを確認したいとき。
-- 特定仕様の実装詳細だけを確認したい場合に、対象文書が直接特定できているとき。
-- cmoc のアプリケーション挙動や正本仕様と無関係な一般的な調査を行うとき。
+- 具体的な機能の詳細仕様が特定できる場合は、このディレクトリ全体ではなく対応する個別仕様ファイルを直接読む。
+- 開発環境、設計・テスト規則、oracle/realization の共通定義、または具体的な実装詳細だけを確認するとき。
 
 ## hash
-- 9f2aee3e47e4e3e28ecdc424d76154974a7df4ae8a82c6e9061b2edfa3fc559c
+- 2da92451d745246352797e3a2bae34d705875532d2e75afb53a3882712b561ea
 
 # `branch_model.md`
 
 ## Summary
-- cmoc における branch・commit・worktree の用語と関係を定義する正本文書。session、run、realization の分岐・統合、および関連する命名規則と責務を確認する入口。
+- cmoc の branch・commit・worktree に関する用語と関係を定義する正本仕様。session と run の分岐、各 branch の役割、分岐・merge commit、run 用 linked worktree の位置づけを確認する入口。
 
 ## Read this when
-- cmoc の session fork/join、run fork/join、realization apply/refactor の branch 運用を変更・実装・レビューするとき
-- cmoc 管理 branch、commit、linked worktree の用語や命名規則を確認するとき
+- cmoc の session fork、run の隔離、branch／commit／worktree の命名や責務を変更・調査するとき
+- run report、差分検査、apply、session join などで基準 commit や merge 先を確認するとき
+- workload の種類を branch 名や commit の別名で表す設計を検討するとき
 
 ## Do not read this when
-- branch 運用ではなく、CLI サブコマンド固有の処理仕様や realization 実装の詳細を確認するとき
-- 一般的な Git 操作や repository の既定 branch の情報だけを確認したいとき
+- 特定の CLI サブコマンドの実装詳細だけを調査しており、branch model の用語やライフサイクルを確認する必要がないとき
+- oracle の一般原則や開発環境・テスト手順を確認したいときは、対応する oracle 文書を直接読む
 
 ## hash
-- f5a4f62d0ed0f74d970962ad9b460fe72c29d1fedfa72a0e77fd88f9a3c7df70
+- 60e0fa11a169c939bcecc5b8527c50f43bb563b7365db6f9e3e9d29e0baaba7d
 
 # `considered_alternative`
 
 ## Summary
-- cmoc realization refactor で採用しなかった作業方式・設計案と、その不採用理由を記録する文書群。現行仕様や実装の入口ではなく、過去の判断経緯を確認するための参照先。
+- cmoc realization refactor で採用しなかった作業方式・検査方式・状態管理方式の検討記録をまとめたディレクトリ。事前計画、並列所見管理、事後差分検査、gitignore 連携、AI-generated memory などの不採用理由を確認する入口であり、採用済みの現行仕様や実装の直接の参照先ではない。
 
 ## Read this when
-- refactor の作業フロー、事後検査、permission profile 連携、AI-generated memory、作業計画レビューなど、不採用案の背景や採否理由を確認するとき。
-- oracle と realization の責務分担や、採用済み workflow の設計判断に至った経緯を調べるとき。
+- cmoc realization refactor の作業フローや調査・修正単位の設計理由を確認するとき
+- 事前計画方式、並列所見調査、ダーティフラグ方式、事後検査方式の採否理由を調べるとき
+- AI-generated memory や継続的な自動注入を採用しない根拠を確認するとき
+- .gitignore と permission profile の連携案など、採用しなかった設計案の背景を追うとき
 
 ## Do not read this when
-- 現在の実装手順、file access rule、差分検査、CLI 挙動、正本仕様を確認・変更するとき。
-- 採用済みの workflow や具体的な実装・テスト対象を調査するとき。
+- 現在の realization refactor state、investigation_required、file access rule、差分検査、agent 呼び出し経路の現行仕様を確認・変更するとき
+- 具体的な realization file の修正方法や実装責務を調べるとき
+- 単に対象ファイルの実装内容・テスト内容・CLI 挙動を確認したいとき
+- INDEX、oracle、ログ、実行成果物の具体的な形式や生成手順を調べるとき
 
 ## hash
-- ced5ab864d5828938ecc62365eb3fa96cfe8f948cb1ca21c60dc592bbd746106
+- e8ae09d4765b54ddbb1f85d76ac964f673594e7c13e23286b94d284255689829
 
 # `dev_rule`
 

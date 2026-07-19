@@ -1,31 +1,32 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション仕様を定める oracle doc 群の入口。branch・commit・worktree、refactor の不採用案、開発規則など、個別の正本仕様文書へ案内する。
+- cmoc のアプリケーション仕様を収録するディレクトリ。CLI 補完、ログ、エラー処理、プロンプト、managed ollama、session/run、branch・commit・worktree、サブコマンドなど、利用者向け挙動と主要 workflow の正本仕様への入口。
+- 現行仕様そのものに加え、branch model や realization refactor に関する不採用案、開発規則への導線も含む。
 
 ## Read this when
-- cmoc のアプリケーション挙動、branch 運用、refactor 判断、または Python・CLI・開発環境・テストの正本仕様を探すとき。
-- 個別仕様文書の場所が特定できず、oracle doc の関連領域を横断して入口を探すとき。
+- cmoc の利用者向け挙動、CLI 実行条件、出力・ログ、状態管理、プロンプト、サービス管理、session/run、branch・worktree、サブコマンドの正本仕様の所在を確認するとき。
+- 複数のアプリケーション仕様にまたがる workflow や、読むべき個別仕様・開発規則の入口を判断するとき。
+- realization refactor の作業方式や検査方式について、採用・不採用の理由を確認するとき。
 
 ## Do not read this when
-- 対象となる個別仕様文書を直接特定できており、その本文だけを確認すればよいとき。
-- 実装詳細や一般的な調査など、cmoc の正本仕様に関係しない内容を確認するとき。
+- 具体的な機能の詳細仕様が特定できる場合は、このディレクトリ全体ではなく対応する個別仕様ファイルを直接読む。
+- 開発環境、設計・テスト規則、oracle/realization の共通定義、または具体的な実装詳細だけを確認するときは、対応する専用文書や実装本文を直接読む。
+- 現在の realization refactor state や agent 呼び出し経路など、現行の refactor 運用仕様だけを確認するときは、不採用案の記録ではなく現行仕様の直接の参照先を読む。
 
 ## hash
-- 791bdf395e4924e429a3e74f2073b2477683b9a49b08d0b620a8292baa063887
+- 5534e702758742152e7d16a0938e43b1a4a3907273b4cd7105d4ad7c69b0acd1
 
 # `src`
 
 ## Summary
-- oracle/src contains the source definitions for cmoc’s oracle implementation. It serves as the entry point for ACP call construction, configuration and path handling, rule/document processing, Markdown conversion, prompt construction, and shared standard-rule components; inspect its subdirectories for each responsibility.
+- 参照可能な正本ソース本文を含まない空の入口ディレクトリです。正本ソースの有無を確認するために使用します。
 
 ## Read this when
-- Determining which oracle implementation area handles ACP builders, configuration or paths, rule/document processing, Markdown conversion, prompt generation, or shared standard components.
-- Tracing coordination across multiple oracle implementation responsibilities.
+- このディレクトリに参照可能な正本ソースが存在するか確認するとき。
 
 ## Do not read this when
-- Investigating the concrete CLI execution path, agent-call runtime, or TUI behavior.
-- Inspecting a specific oracle file or realization file; proceed directly to that file or its responsible subdirectory.
+- 実装仕様や処理内容を確認したいとき。
 
 ## hash
-- a1d4ad70bbf454e8df1e90fcd111c39412028e569ea599ae351b1b78996c65b8
+- d8568a23bb49ca22feeeb7515fdb87fd40bef87ad2adb419fb43af5dfa64ef3c
