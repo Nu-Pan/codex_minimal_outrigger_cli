@@ -199,6 +199,9 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         events.append("codex")
         assert call_parameter == parameter
 
+    def pre_launch_check() -> None:
+        events.append("check")
+
     indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
     monkeypatch.setattr(
@@ -207,9 +210,14 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         fake_runtime_run_codex_tui,
     )
 
-    codex_preflight_module.run_codex_tui(parameter, root=root, purpose="tui codex")
+    codex_preflight_module.run_codex_tui(
+        parameter,
+        root=root,
+        purpose="tui codex",
+        pre_launch_check=pre_launch_check,
+    )
 
-    assert events == ["indexing", "codex"]
+    assert events == ["indexing", "check", "codex"]
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
