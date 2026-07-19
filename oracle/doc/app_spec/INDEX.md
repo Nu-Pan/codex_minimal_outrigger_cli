@@ -18,34 +18,37 @@
 # `cmoc_managed_ollama.md`
 
 ## Summary
-- cmoc がユーザー空間で管理するローカル SLM サービスの正本仕様。サービスのライフサイクル、永続ダウンロード資源、preflight のプロセス間排他、GPU 推論を含む利用可能性保証、Codex CLI からの接続方法を定める。cmoc managed ollama の構築・修復・利用条件や関連実装の入口となる。
+- cmoc がユーザー空間で管理する、OS ユーザーごとに 1 つのローカル Ollama サービスの正本仕様。サービスのライフサイクル、systemd 設定、モデル・ダウンロード資源の永続化、preflight 排他、GPU 推論を含む起動保証、Codex CLI からの接続方法を定める。
 
 ## Read this when
-- cmoc managed ollama の準備・起動・サービス管理・モデル pull・資源永続化を実装または確認するとき
-- cmoc の doctor preprocess、利用可能性保証、GPU 推論確認、エラー終了条件を実装または検証するとき
-- 同一ユーザーの cmoc process 間の preflight 排他やサービスのライフサイクルを扱うとき
-- Codex CLI の model provider、argv、base URL、provider 設定を変更または確認するとき
+- cmoc managed ollama の準備・起動・修復・停止方針を実装または確認するとき
+- Ollama の配置先、モデル pull、永続資源、systemd user service の仕様を確認するとき
+- preflight のプロセス間 lock、モデルのロード、GPU 推論確認、CPU フォールバック禁止の挙動を扱うとき
+- Codex CLI の model provider argv や localhost:11434 への接続設定を実装・検証するとき
 
 ## Do not read this when
-- cmoc managed ollama に関係しない一般的な CLI、Codex agent 呼び出し、または別の model provider の実装を扱うとき
-- ollama 自体の一般的な仕様や、cmoc が管理しないサービスの運用を調べるとき
+- Ollama 管理や cmoc managed ollama の起動保証を扱わず、Codex CLI の一般的な実行規則だけを確認したいときは、codex_exec_rule.md を直接読む
+- cmoc managed ollama の仕様ではなく、個別の設定メンバーの詳細挙動を確認したいときは、そのメンバーのコメントを直接読む
 
 ## hash
-- fc1659cd049f2f1c59c7cf92837719fdcc9e04cc663865acdb131b7f4b9f522b
+- 199714c69036d89b61f673e97e7611f85864b6c0ab132929aef44694e328a5dd
 
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc から `codex exec` を呼び出す際の正本規約。CODEX_HOME の解決と preflight、argv による設定上書き、sandbox・権限制御、プロンプト・ログ・Structured Output の受け渡し、並列実行、失敗時の retry・quota 待機を定める。Codex CLI 呼び出し経路や AgentCallParameter builder の仕様を確認する際の入口。
+- Codex CLI を cmoc から呼び出す際の規約を定義する正本仕様文書。CODEX_HOME の扱い、事前検証、argv による設定上書き、sandbox・ネットワーク・権限制約、プロンプト・ログ・Structured Output の受け渡し、並列実行、失敗時のリトライや quota 待機までを扱う。Codex 呼び出し実装やその設定・検証方法を確認する際の入口となる。
 
 ## Read this when
-- cmoc の Codex CLI 呼び出し、AgentCallParameter builder、sandbox や承認設定、プロンプト・ログ保存、Structured Output、並列実行、失敗時 retry の挙動を変更または検証するとき。
+- cmoc の Codex CLI 呼び出し仕様を変更・実装・レビューするとき
+- sandbox、permission profile、ネットワーク、モデル、reasoning effort、Structured Output、ログ保存の規約を確認するとき
+- Codex CLI 呼び出しの失敗時処理や quota・一時障害時のリトライ方針を確認するとき
 
 ## Do not read this when
-- Codex CLI 呼び出し規約と無関係な cmoc の機能を変更・調査するとき。具体的な AgentCallParameter builder の実装詳細を確認する場合は、本文が正本として指定する `oracle/src/oracle/acp_builder` ツリーを直接読む。
+- Codex CLI 呼び出し以外の機能や一般的な CLI 実装だけを確認するとき
+- 個別の AgentCallParameter builder の具体的な実装を直接調査する場合は、まずその builder の正本実装を読むべきとき
 
 ## hash
-- 3e872c2be40c1d582ebccf50ee662376e753018fd4987a713666dfdfed266802
+- 46d977b7bf89d0979292e3bbd9bacb61de85ee92cc70ba46f30cfce868a94ef4
 
 # `console_and_file_log.md`
 
@@ -67,21 +70,19 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- cmoc 実行前にリポジトリ共通の検証・修復を行う doctor preprocess の正本仕様。git ignore・追跡状態、refactor state、managed ollama の可用性を確認し、修復後に差分を commit する。
+- doctor preprocess の責務・実行手順・検証および修復条件を定義する正本仕様。各サブコマンド開始前の共通環境整備、git 追跡状態、refactor state、managed Ollama service の起動保証、差分 commit の扱いを確認する入口。
 
 ## Read this when
-- doctor preprocess の検証・修復条件や実行順序を変更するとき
-- `.cmoc/gu`、`.agents`、agent realization の設定・状態ファイルの追跡状態を扱うとき
-- refactor state の schema・entry 同期・調査要求の扱いを確認するとき
-- cmoc managed ollama の事前条件を確認するとき
+- doctor preprocess の検証・修復処理を実装または変更するとき
+- サブコマンド共通の事前処理、git 追跡状態、refactor state の同期条件を確認するとき
+- cmoc managed ollama service の起動保証を doctor preprocess から扱う条件を確認するとき
 
 ## Do not read this when
-- 個別サブコマンド固有の事前条件や本命処理を実装・確認するとき
-- doctor preprocess と無関係な git 操作、設定、状態管理を扱うとき
-- managed ollama 自体の詳細仕様を確認するときは、参照先の専用 oracle file を直接読む
+- doctor preprocess 正常終了後に行う個別サブコマンド固有の事前条件を確認するとき
+- managed Ollama service が保証するサービス・モデル状態の詳細だけを確認するときは、指定された managed Ollama 仕様を直接読むとき
 
 ## hash
-- 394ed5766264cb38d157d77460eb2a3a1442048c62446e82cd74bd8a07b98549
+- f6edb357f89af1e6385f520923199961158500f262d58b41edee586ab6d986ab
 
 # `error_handling.md`
 

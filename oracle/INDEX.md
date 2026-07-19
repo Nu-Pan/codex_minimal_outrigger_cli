@@ -1,21 +1,21 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション仕様を収録するディレクトリ。CLI 補完、ログ、エラー処理、プロンプト、managed ollama、session/run、branch・commit・worktree、サブコマンドなど、利用者向け挙動と主要 workflow の正本仕様への入口。
-- 現行仕様そのものに加え、branch model や realization refactor に関する不採用案、開発規則への導線も含む。
+- cmoc の正本仕様ドキュメントを収録するディレクトリ。アプリケーション仕様、branch・commit・worktree モデル、不採用案、開発規約などを扱い、機能仕様や開発ルールを確認するための入口となる。
+- app_spec は CLI 補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト、run/session、サブコマンドの仕様を扱う。branch_model.md は session・run の分岐、branch・commit・worktree の関係とライフサイクルを定義する。considered_alternative は不採用となった作業方式・検査方式・状態管理方式の検討記録を扱う。dev_rule は Python 実装、CLI 設計、開発環境、pytest 検証に関する開発規約を扱う。
 
 ## Read this when
-- cmoc の利用者向け挙動、CLI 実行条件、出力・ログ、状態管理、プロンプト、サービス管理、session/run、branch・worktree、サブコマンドの正本仕様の所在を確認するとき。
-- 複数のアプリケーション仕様にまたがる workflow や、読むべき個別仕様・開発規則の入口を判断するとき。
-- realization refactor の作業方式や検査方式について、採用・不採用の理由を確認するとき。
+- cmoc の正本仕様ドキュメントの所在を特定したいとき。
+- CLI や session/run、branch・commit・worktree、開発環境・設計・テスト規則などの仕様を調査するとき。
+- 不採用案の背景や現行設計との違いを確認するとき。
 
 ## Do not read this when
-- 具体的な機能の詳細仕様が特定できる場合は、このディレクトリ全体ではなく対応する個別仕様ファイルを直接読む。
-- 開発環境、設計・テスト規則、oracle/realization の共通定義、または具体的な実装詳細だけを確認するときは、対応する専用文書や実装本文を直接読む。
-- 現在の realization refactor state や agent 呼び出し経路など、現行の refactor 運用仕様だけを確認するときは、不採用案の記録ではなく現行仕様の直接の参照先を読む。
+- 特定機能の詳細仕様が判明しており、対応する仕様本文を直接確認できるとき。
+- 既存 realization 実装の詳細だけを調査したいとき。
+- INDEX.md の読み方やルーティング方針自体を確認したいとき。
 
 ## hash
-- 5534e702758742152e7d16a0938e43b1a4a3907273b4cd7105d4ad7c69b0acd1
+- 6d5ad19d05079b824223d1d2d9f5af47a36533f91b4bb8020c146994c733a09c
 
 # `src`
 

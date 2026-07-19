@@ -58,19 +58,18 @@
 # `test_rule.md`
 
 ## Summary
-- cmoc の realization test に関する正本規約。pytest の配置、決定論的制御ロジックと Real Codex CLI 結合動作の検証範囲、全末端サブコマンドの独立プロセスによる本番経路試験、テスト環境隔離、cmoc managed ollama・テスト用 SLM の利用、クラウドバックエンド禁止、Fake Codex CLI の適用条件を定める。テスト実装・実行方針を確認する入口。
+- pytest による cmoc realization test の実装・検証規約。決定論的な制御ロジック、Real Codex CLI と cmoc managed ollama を使う結合動作、全公開サブコマンドの本番経路試験、テスト隔離、クラウドバックエンド禁止、Fake Codex CLI の利用条件を定める。
 
 ## Read this when
-- cmoc の realization test を追加・変更・レビューするとき
-- pytest の配置、tmp_path によるテスト環境隔離、テスト用リポジトリ構築方針を確認するとき
-- Real Codex CLI 呼び出しを伴うテストで、provider、SLM、cmoc managed ollama、クラウド利用禁止の規約を確認するとき
-- 全サブコマンドの本番経路試験の対象、実行条件、検証内容、完了判定を確認するとき
-- 実装またはテスト変更後に必要な検証範囲と未検証時の扱いを確認するとき
+- pytest の実装・実行方法、テスト対象や検証範囲を判断するとき
+- realization implementation または realization test の変更後に必要な検証を確認するとき
+- Real Codex CLI、cmoc managed ollama、テスト用 SLM、テスト隔離の扱いを確認するとき
+- 全サブコマンドの本番経路試験を追加・更新・実行するとき
 
 ## Do not read this when
-- realization implementation の配置や CLI 実装の責務境界だけを確認したいときは design_rule.md を読む
-- Python 実行環境、仮想環境、依存関係、pytest の実行コマンドだけを確認したいときは development_environment.md を読む
-- LLM の回答品質や Codex CLI 自体の正しさを評価するテスト方針を確認したいときは、この文書ではなく対象外であることを確認する
+- 実装配置や CLI の責務境界だけを判断する場合は design_rule.md を読む
+- Python の実行環境や依存関係の構築方法だけを確認する場合は development_environment.md を読む
+- LLM の回答品質や Codex CLI 自体、外部 provider の正しさを検証する場合
 
 ## hash
-- 4f65994501bce1a23de3b9cf3a6f832a05037450e5ab1f6d62739dc59b0b3692
+- 9e396e4172f615134632e49b6cae88c875c59f7e20ccebf24c7a478ec7aadd66
