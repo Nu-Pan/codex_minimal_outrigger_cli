@@ -94,19 +94,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を担う oracle ツリーの入口。自然言語仕様を収録する doc、正本ソースを収録する src など、アプリケーション仕様・開発規約・Structured Output schema・プロンプト生成の確認先を案内する。
+- cmoc の開発・アプリケーション仕様を定義する oracle doc 群と、設定・パス解決・規範データ構造・Markdown・cmoc_ref 検証、ACP/prompt builder などを担う oracle src 群への入口。個別仕様や共通規約の所在を判断するための上位ルーティング対象。
 
 ## Read this when
-- cmoc の正本仕様や正本実装の所在を確認したいとき。
-- CLI、session/run、branch・commit・worktree、開発規約、agent call、Structured Output schema、プロンプト生成を調査するとき。
+- cmoc の機能仕様、branch・session・run、CLI、Codex、ログ、prompt、Ollama、doctor、サブコマンドを実装・変更・レビュー・検証するとき。
+- 開発環境・設計・テスト規約、設定値、パス解決、規範文書構造、Markdown 変換、cmoc_ref 検証の仕様または実装の入口を探すとき。
+- ACP builder、prompt builder、agent call 構築条件など、複数の下位実装にまたがる責務の所在を特定するとき。
+- 個別仕様が未特定で、oracle doc または oracle src のどこから確認を始めるか判断するとき。
 
 ## Do not read this when
-- 特定機能の詳細仕様や実装箇所が判明しており、下位の doc・src を直接読めるとき。
-- realization 実装やテストの詳細を調査したいとき。
-- INDEX.md の読み方やルーティング方針自体を確認したいとき。
+- 対象の個別 oracle 文書、実装ファイル、schema、または生成成果物が既に特定できており、その本文だけで確認できるとき。
+- 実装内部の具体的な関数・テスト詳細や、既存 realization code の内容だけを調査するとき。
+- CLI の具体的な入出力処理やエージェント呼び出しの実行本体など、より直接的な下位対象を読むべきとき。
 
 ## hash
-- 81f566a79fae1445c3072a4029c688e2c35cad69c3640198923943b3fb144ab4
+- 45b53483624ec231c27d2470dce844c8d914e155e08596dab240b7ca0b33c101
 
 # `pyproject.toml`
 

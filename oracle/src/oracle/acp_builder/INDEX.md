@@ -47,20 +47,22 @@
 # `oracle`
 
 ## Summary
-- oracle の edit・investigation・review 各 agent call に関する起動設定、完全プロンプト、モデル・権限設定、Structured Output schema とレビュー処理の入口をまとめるディレクトリです。
+- `cmoc oracle edit` の TUI 起動関連を扱うディレクトリ。現時点では空の `fork` と、TUI 起動パラメータを構築する `launch_tui.py` を含む。
+- `cmoc oracle investigation` の TUI 起動用パラメータを構築する実装。ユーザー調査指示を含む完全プロンプトの生成・保存と、モデル・アクセス権限などの固定起動設定を扱う。
+- `cmoc oracle review` の所見レビュー用 agent call 定義と Structured Output schema をまとめるディレクトリ。所見列挙、採否判定、理由検証、重複・矛盾整理の入口となる。
 
 ## Read this when
-- oracle file 編集用 agent call の起動設定を変更・確認するとき
-- oracle investigation の TUI 起動、完全プロンプト保存、固定起動設定を調査するとき
-- oracle review の所見列挙・判定・理由検証・マージ処理、または対応する prompt・権限・schema を追跡するとき
+- `cmoc oracle edit` の TUI 起動方法、編集 prompt、モデル・権限・作業ディレクトリなどの起動設定を確認または変更するとき。
+- `cmoc oracle investigation` の TUI 起動処理、完全プロンプトの構築・保存、モデルやアクセス権限の固定値を確認または変更するとき。
+- `cmoc oracle review` の所見処理、agent call の prompt・読み取り権限・モデル設定、Structured Output schema、入力出力形式や重複排除条件を確認または変更するとき。
 
 ## Do not read this when
-- oracle investigation のプロンプト本文構成や共通プロンプト生成規則だけを確認したいとき
-- oracle review の個別 schema や実装だけを確認でき、ディレクトリ構成の把握が不要なとき
-- oracle file のレビュー基準そのものや、oracle review 以外の ACP builder・agent call 起動処理を調査するとき
+- oracle file の編集処理そのもの、prompt 共通生成規則、パス解決、構造化文書のレンダリングを確認または変更するとき。
+- 調査用プロンプトの本文構成や共通プロンプト生成規則だけを確認したいとき。
+- 通常の ACP builder 実装、oracle review 以外の prompt 構築、または個別に確認できるレビュー schema・実装だけを調べるとき。
 
 ## hash
-- 240928abd61aa25423260716cc2b2a9e4674dcb11ecd5f853b8b06ba0f1610fd
+- f6e74f11290a047cc12858dce98edb4f93c2c87eecc564ab03e1d39058ceb23c
 
 # `realization`
 

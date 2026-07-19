@@ -17,20 +17,22 @@
 # `editing_run.md`
 
 ## Summary
-- workload 固有の編集 run に共通する lifecycle 仕様を定義する正本文書。対象 workload、同時実行境界、fork の事前条件・開始処理、編集差分、join/abandon の処理、report と cleanup の要件を扱う。編集 run lifecycle の実装・検証における共通仕様への入口。
+- 編集 run を開始する workload 固有 fork と、`cmoc run join` / `cmoc run abandon` による終了 lifecycle の共通仕様を定義する正本文書。
+- session 単位の同時実行制約、fork・join・abandon の事前条件、state 管理、差分検査、merge、cleanup、report 要件を扱う。
+- 編集 run lifecycle の実装・レビューでは本書を入口として参照し、workload 固有仕様や session lifecycle の確認はそれぞれの正本文書へ進む。
 
 ## Read this when
-- `cmoc oracle edit fork`、`cmoc realization apply fork`、`cmoc realization refactor fork` の fork 処理を実装・変更するとき
-- `cmoc run join` または `cmoc run abandon` の事前条件、差分検査、merge、cleanup、state 更新を実装・検証するとき
-- 編集 run の session state、branch/worktree、report の共通ライフサイクルを確認するとき
+- realization apply/refactor の fork、run join、run abandon の挙動を実装・変更・レビューするとき
+- 編集 run の state、branch/worktree、想定内差分、merge conflict、cleanup、report 形式を確認するとき
+- 複数の編集 run の同時実行境界や fork 共通処理を確認するとき
 
 ## Do not read this when
-- `cmoc session join` や `cmoc session abandon` など、外側の session lifecycle だけを扱うとき
-- read-only の investigation/review、cmoc による機械的更新、session join の conflict 解消だけを扱うとき
-- workload 固有の編集内容や join 後 hook の詳細だけを確認する場合は、対応する workload 固有仕様を直接読むとき
+- `cmoc session join` や `cmoc session abandon` など外側の session lifecycle だけを扱うとき
+- `cmoc oracle edit`、read-only investigation/review、cmoc の機械的更新だけを扱うとき
+- workload 固有の編集内容や join 後 hook の詳細だけを確認するときは、対応する workload 固有仕様を直接読む
 
 ## hash
-- 678ef175aabe7d50244e8d4c4130e10332165adf70b5a4714551be01924e1c74
+- 76969e326f23fb26b657950058ecd8d28206799f0c14986258f9627523c9a85e
 
 # `indexing.md`
 
@@ -55,19 +57,21 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit fork` の目的・入力・agent call・oracle file のみを対象とする編集権限・fork report・エラー処理・join 後 hook を定義する workload 仕様。oracle 編集 run の実装や動作確認時の入口となる。
+- oracle file をユーザー指示に基づき Codex CLI TUI で直接編集する `cmoc oracle edit` サブコマンドの正本仕様。引数、入力注入、起動前提条件・パラメータ、実行順序、編集境界、終了後の差分維持、中断・排他制御、ログ方針を扱う。oracle edit の挙動や起動条件、oracle file 編集権限を確認する際の入口。
 
 ## Read this when
-- `cmoc oracle edit fork` の引数、ユーザー指示入力、Codex CLI 実行、file access mode、run lifecycle、report、終了コードを確認するとき。
-- oracle file を隔離 run で編集する workload の仕様を調査・変更するとき。
+- `cmoc oracle edit` の実行フローや引数仕様を確認するとき
+- oracle file 編集用 TUI の起動条件、builder パラメータ、file access mode を確認するとき
+- TUI agent の編集対象・禁止操作、終了後の差分や indexing の扱いを確認するとき
+- 中断、排他制御、並行編集、ログの仕様を確認するとき
 
 ## Do not read this when
-- fork/join/abandon の共通 lifecycle だけを確認したいときは、指定された共通 editing run 仕様を直接読む。
-- エディタ入力、Codex CLI 共通実行規則、doctor preprocess など個別の共通仕様だけを確認したいときは、それぞれの正本ファイルを直接読む。
-- 他の oracle edit workload や realization 実装の詳細を調査するとき。
+- realization file の実装配置や CLI 責務境界を確認したいとき
+- oracle file の調査専用サブコマンドの仕様を確認したいとき
+- Codex CLI の一般的な起動規則だけを確認したいときは、参照されている共通規則を直接読む
 
 ## hash
-- 26367ca76d5e05b8b1b334fbd4a48a89019f43c9085df6611cc6830b45cfa8f0
+- 13bdca10481604c07cf3bba64b6cb48c1533173e70d6841a7bf1a5b7207f967f
 
 # `oracle_investigation.md`
 

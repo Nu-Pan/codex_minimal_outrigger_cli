@@ -53,19 +53,21 @@
 # `console_and_file_log.md`
 
 ## Summary
-- コンソール出力とサブコマンドログの正本仕様。時間・フルパス・JSON Lines ログ・イベント・即時 flush・Markdown コンソールログ・ステップ通知・Codex CLI 通知・完了サマリーの形式と必須項目を定義する。これらの出力仕様やログ記録仕様を実装・変更・検証するときの入口。
+- コンソール・ファイル・ログ出力に関する共通仕様を定義する文書。時間・パスの表示形式、サブコマンドログの保存場所・JSON Lines形式・必須イベント、コンソールログの出力先・Markdown形式・開始通知・ステップ通知・Codex CLI通知・完了サマリーを扱う。これらの出力仕様を実装・検証する際の入口となる。
 
 ## Read this when
-- stdout/stderr の時間表示やパス表示を実装・変更するとき
-- サブコマンドログの保存先、形式、イベント、flush 方針を確認するとき
-- サブコマンドのコンソール通知、ステップ表示、Codex CLI 呼び出し通知、完了サマリーを実装・検証するとき
+- コンソールに表示する時間やパスの形式を確認するとき
+- サブコマンドログの保存先、形式、イベント、flush要件を実装・検証するとき
+- サブコマンドのコンソールログに必要な通知項目やステップ番号の形式を確認するとき
+- Codex CLI呼び出し通知やサブコマンド完了サマリーの出力要件を確認するとき
 
 ## Do not read this when
-- コンソール出力やサブコマンドログの仕様に関係しない機能を変更・調査するとき
-- 具体的な実装配置やテスト手順だけを確認したいときは、対応する実装・テストや開発規則を直接読む
+- ログ出力やコンソール表示の仕様に関係しない機能の実装・調査を行うとき
+- 個別サブコマンドの処理手順やCodex CLI呼び出し内容そのものを確認したいときは、対象サブコマンドの仕様・実装を先に読むとき
+- 既存ログの具体的な実行結果や履歴を確認したいときは、定義文書ではなく生成されたログファイルを読むとき
 
 ## hash
-- 672e8bce0b5fc088b52b3a3c0c12c1fa5aff211b5869b1245674c714462f94f7
+- bd596f8c1d6116a4049645b525a29daf9b75e415e30437e1b627d537b19503ef
 
 # `doctor_preprocess.md`
 
@@ -211,37 +213,37 @@
 # `session_state.md`
 
 ## Summary
-- cmoc workflow における session と編集 run の lifecycle を一意に定める永続 JSON state の仕様。最小限の session/run 状態、branch、fork commit を管理し、session 操作と run の fork・join・abandon による状態遷移を扱う。
+- cmoc workflow における session と、明示的な join を必要とする realization 編集 run の lifecycle を定義する JSON state file。session/run の最小スキーマ、各 field の意味、状態遷移、保存場所を正本として扱う。
 
 ## Read this when
-- session state の JSON schema、初期値、field の意味を確認するとき
-- cmoc session 系または cmoc run join/abandon の状態遷移・更新条件を実装または検証するとき
-- 編集 run の workload kind、branch、fork commit の解決方法を確認するとき
+- session の新規作成、fork、join、abandon、run 状態管理を実装・変更するとき
+- session state JSON の schema、field の初期値・更新条件、run の状態遷移を確認するとき
+- realization apply または realization refactor run と session の lifecycle の関係を確認するとき
 
 ## Do not read this when
-- 個別 workload の処理内容や realization の実装詳細を確認したいとき
-- session state 以外の CLI 出力形式や git 操作の仕様だけを確認したいとき
+- session/run の lifecycle や state JSON schema に関係しない機能を調査・変更するとき
+- 具体的な CLI サブコマンドの実装詳細だけを確認したいときは、該当する realization implementation や test を直接読む
 
 ## hash
-- 379e4e60f660c83f2fbd7fca04b4247a136c70bcd5c1e0031bef99d2fcf17f01
+- 7501ed856adb909badee98dacd09f75e6d2d7330690f8bcea48ed841a11b7aa7
 
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンド仕様を収録するディレクトリ。doctor、indexing、tui、oracle/realization workload、session、run の実行条件・ライフサイクル・状態遷移・レポート要件を扱い、各サブコマンドの実装や検証時に対応する仕様本文へ進む入口となる。
+- cmoc のサブコマンドおよび session・editing run lifecycle の正本仕様文書群を収めるディレクトリ。doctor、indexing、tui、oracle 操作、session 操作、realization apply/refactor、run lifecycle の実装・レビュー時の入口となる。
 
 ## Read this when
-- cmoc のサブコマンド仕様の所在を特定したいとき。
-- doctor、indexing、tui、oracle/realization workload、session、run の実装・テスト・動作条件を調査するとき。
-- 編集 run や session の fork、join、abandon に関する仕様を横断的に確認するとき。
+- cmoc のサブコマンドの実行条件、引数、処理手順、入出力、Codex CLI/TUI 起動仕様を確認するとき。
+- session fork/join/abandon や editing run の fork/join/abandon lifecycle、state、branch、merge、cleanup、report を確認するとき。
+- oracle 操作または realization apply/refactor の仕様を実装・変更・レビューするとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細だけを確認したい場合は、一覧を参照した後に対応する仕様本文を直接読むとき。
-- oracle file の個別仕様や realization の実装詳細だけを調査するとき。
-- 共通処理の内部実装、agent call parameter、prompt editor input の詳細だけを確認するとき。
+- 個別処理の内部実装やテスト詳細だけを確認したいとき。
+- 共通 lifecycle や共通起動パラメータなど、本文から参照される専用の正本仕様を直接確認すべきとき。
+- 対象サブコマンドと無関係な一般的な git 運用や Codex CLI の仕様だけを確認したいとき。
 
 ## hash
-- bcdeca443d1eb9e3932979badd8288d307870d99d9211a0305f0690e78cfac74
+- fbb4bf5183262d937475144174e65e91b404ef1c28856015635f1a7b1a7d0cfe
 
 # `subcommand_interruption.md`
 
@@ -263,16 +265,16 @@
 # `usage.md`
 
 ## Summary
-- cmoc の初回セットアップ、セッション fork/join、oracle 編集・レビュー、realization apply/refactor を含む標準的な開発 workflow と workload の使い分けを説明する利用手順。
+- cmoc の基本的な利用手順を定義する文書。doctor、session fork/join、oracle の調査・編集・レビュー、realization apply/refactor、run の join/abandon までの標準 workflow と、各 workload の使い分けを案内する。
 
 ## Read this when
-- cmoc の導入方法や基本的な呼び出し手順を確認したいとき
-- oracle 編集から realization 反映、セッション統合までの workflow を確認したいとき
-- realization apply と realization refactor の使い分けを判断したいとき
+- cmoc の初回セットアップや標準 workflow を確認するとき
+- oracle 変更の realization 反映方法や、apply と refactor の違いを確認するとき
+- session・run の fork、join、abandon の手順を確認するとき
 
 ## Do not read this when
-- 個別の oracle file の仕様や編集方針を確認したいとき
-- realization 実装の詳細や具体的なコマンド内部動作を調査したいとき
+- 特定の oracle file の仕様内容を確認したいとき
+- 実装やテストの詳細、個別コマンドの内部仕様を調べたいとき
 
 ## hash
-- e6467918c9504bd156a6d03b0c7f077e5bbd1496bb7700447db2a8182b221dcf
+- 224a77bd1f12361f99843cfc4d03a769350badf342f4dbcf41d8a73896002f96

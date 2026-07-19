@@ -1,39 +1,36 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様ドキュメントを収録するディレクトリ。アプリケーション仕様、branch・commit・worktree モデル、不採用案、開発規約などを扱い、機能仕様や開発ルールを確認するための入口となる。
-- app_spec は CLI 補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト、run/session、サブコマンドの仕様を扱う。branch_model.md は session・run の分岐、branch・commit・worktree の関係とライフサイクルを定義する。considered_alternative は不採用となった作業方式・検査方式・状態管理方式の検討記録を扱う。dev_rule は Python 実装、CLI 設計、開発環境、pytest 検証に関する開発規約を扱う。
+- cmoc の開発・アプリケーション仕様を定義する oracle doc 群を収めるディレクトリ。branch、session/run、CLI、Codex、ログ、prompt、Ollama、doctor、サブコマンドなどの個別仕様と、開発環境・設計・テスト規約への入口を提供する。
 
 ## Read this when
-- cmoc の正本仕様ドキュメントの所在を特定したいとき。
-- CLI や session/run、branch・commit・worktree、開発環境・設計・テスト規則などの仕様を調査するとき。
-- 不採用案の背景や現行設計との違いを確認するとき。
+- cmoc の機能仕様、branch・session・run のモデル、CLI の挙動、または開発規約を実装・変更・レビュー・検証するとき。
+- 対象機能の個別 oracle 文書や、複数機能にまたがる共通仕様の所在を探すとき。
+- 不採用案の背景や realization refactor の検討記録を確認するとき。
 
 ## Do not read this when
-- 特定機能の詳細仕様が判明しており、対応する仕様本文を直接確認できるとき。
-- 既存 realization 実装の詳細だけを調査したいとき。
-- INDEX.md の読み方やルーティング方針自体を確認したいとき。
+- 対象の個別仕様文書が特定できており、その本文だけを直接確認すれば足りるとき。
+- 実装内部の具体的な関数・テスト詳細だけを調査するとき。
+- 一般的な仕様と無関係に、既存 realization code の実装内容だけを確認するとき。
 
 ## hash
-- 6d5ad19d05079b824223d1d2d9f5af47a36533f91b4bb8020c146994c733a09c
+- bd61a89a3e98df140343cc9c3ebf38c394b9c861638eab63b79f3616e80d2b14
 
 # `src`
 
 ## Summary
-- `oracle/src` は、cmoc の正本ソースを集約する入口です。
-- `oracle/acp_builder` は、各種 agent call・TUI・レビュー・fork 用パラメータと Structured Output schema を扱います。
-- `oracle/other` は、設定、パス解決、規範データ構造、構造化 Markdown の基盤を扱います。
-- `oracle/prompt_builder` は、完全なプロンプト構築と、アクセス規則・標準規則・ルーティング規則などの注入部品を扱います。
+- oracle の設定、パス解決、規範データ構造、Markdown レンダリング、cmoc_ref 検証を担う実装群への入口。ACP builder や prompt builder など、エージェント呼び出し条件とプロンプト構築を支える下位実装も含む。
 
 ## Read this when
-- cmoc の正本実装や Structured Output schema の定義箇所を特定するとき。
-- agent call、TUI、oracle review、realization の fork 処理に対応する正本ソースを調査するとき。
-- 設定値、パスモデル、構造化文書、完全なプロンプト生成や注入規則を調査するとき。
+- cmoc の設定値や既定値、Codex・Ollama・oracle review の制御を確認・変更するとき。
+- プレースホルダを含むパス解決や、cmoc・repo・run・work ルートの探索を調査するとき。
+- 規範文書の構造化、Markdown 変換、cmoc_ref 検証を調査するとき。
+- ACP builder、prompt builder、agent call 構築条件の担当箇所を特定するとき。
 
 ## Do not read this when
-- CLI の具体的な実行経路や入出力処理だけを調査するとき。
-- oracle/doc の自然言語仕様、oracle/test のテスト、または realization 側の実装を直接調査するとき。
-- 個別のプロンプト本文や標準規則の内容だけを確認する場合は、該当する下位ディレクトリを直接読むとき。
+- CLI 機能の具体的な実装や入出力処理だけを調査するとき。
+- エージェント呼び出しの実行本体や、生成済み文書などの成果物を確認するとき。
+- 個別ファイルや schema の所在が既に特定でき、その本文だけを確認すればよいとき。
 
 ## hash
-- bb980daff461288cf45247499c8374d1f8e35bce6358b4d3364fef7c2ff48e52
+- 4d4b2e90612f2ff769bbc13f144b5f1f13b4f98efdc51047728006458d7524b6

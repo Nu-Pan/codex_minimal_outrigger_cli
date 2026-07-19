@@ -1,20 +1,19 @@
 # `oracle`
 
 ## Summary
-- `acp_builder` は参照可能な正本ソースがない空の入口です。
-- `other` は設定・パスモデル・規範データ構造・構造化文書レンダリングを扱います。
-- `prompt_builder` はプレースホルダ、プロンプト構築、標準ルール注入の定義を扱います。
+- oracle の設定・パス解決・規範データ構造・構造化文書レンダリングを担う実装群をまとめたディレクトリ。cmoc 固有設定、ルートパスモデル、標準文書の構造化、Markdown 変換、cmoc_ref 検証の実装への入口を提供する。
+- ACP builder、prompt builder など、エージェント呼び出し条件やプロンプト構築を支える下位実装への入口を含む。
 
 ## Read this when
-- 正本ソースの有無を確認するときは `acp_builder` を読む。
-- 設定値、パス解決、規範データ構造、Markdown レンダリングを調査するときは `other` を読む。
-- プレースホルダ定義、プロンプト全体の構築、注入する標準ルールを調査するときは `prompt_builder` を読む。
+- cmoc の設定値、既定値、Codex・Ollama・oracle review の制御を確認・変更するとき。
+- プレースホルダを含むパス解決、cmoc・repo・run・work ルートの探索を調査するとき。
+- 規範文書のデータ構造、構造化文書の Markdown レンダリング、cmoc_ref 検証を調査するとき。
+- ACP builder や prompt builder の共通設定、agent call 構築条件、プロンプト部品の担当箇所を特定するとき。
 
 ## Do not read this when
-- CLI の具体的な実行経路や入出力処理だけを調査するとき。
-- Codex CLI、Ollama、Markdown の一般的な利用方法を調査するとき。
-- oracle review の所見生成・統合・検証や個別標準文書の内容を調査するとき。
-- 個別の注入パーツ、個別標準ルール、プロンプト本文の生成手順や置換ロジックだけを調査するとき。
+- CLI 機能の具体的な実装や入出力処理だけを調査するとき。
+- エージェント呼び出しの実行本体や、生成済みの INDEX.md・oracle file・realization file などの成果物を確認するとき。
+- 個別ファイルの実装詳細や schema の内容が既に特定できており、その本文だけを確認すればよいとき。
 
 ## hash
-- e8933810e7b46365cb558fa89a4d8282cc669512d4dd472b50b08c9297f75d97
+- 524a86d3b9ca9913986844c5586e48a69c50bc65e664a29ee8e2f702ef6f159f

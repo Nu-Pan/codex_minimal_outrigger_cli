@@ -1,18 +1,19 @@
 # `edit`
 
 ## Summary
-- oracle file 編集用の agent call 起動設定を構築する実装。ユーザー指示を基に完全 prompt を作成し、実行モデル、権限、作業ディレクトリ、linked worktree などを設定する。oracle file 編集フローの起動パラメータを確認・変更する際の入口。
+- `cmoc oracle edit` の TUI 起動関連を扱うディレクトリです。現時点では空の `fork` と、TUI 起動パラメータを構築する `launch_tui.py` を含みます。
 
 ## Read this when
-- `cmoc oracle edit fork` の agent call 起動設定を変更・確認するとき
-- oracle file 編集用の完全 prompt、実行モデル、権限、作業ディレクトリ、linked worktree の指定を確認するとき
+- `cmoc oracle edit` の TUI 起動方法、編集 prompt、モデル・権限・作業ディレクトリなどの起動設定を確認または変更するとき。
+- このディレクトリに追加されたファイルの内容や用途を確認するとき。
 
 ## Do not read this when
-- oracle file 編集以外の agent call 起動パラメータを扱うとき
-- 完全 prompt の共通生成規則だけを確認したいとき
+- oracle file の編集処理そのものを確認または変更するとき。
+- prompt 共通生成規則、パス解決、構造化文書のレンダリングを確認または変更するとき。
+- `launch_tui.py` など対象ファイルを直接確認できるとき。
 
 ## hash
-- 9b01dafec4bb8323113080263826082ade3e5b4da1a697cd1d6f71a8c1f124f2
+- c2d7be308c0da03ba02dc172c32c84646643a7b7356b27d85318fccd6beb2462
 
 # `investigation`
 
