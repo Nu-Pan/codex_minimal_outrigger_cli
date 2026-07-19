@@ -14,8 +14,9 @@
 ## パスの表記例
 
 - ユーザーは `{{repo-root}}` をカレントとして `{{cmoc-root}}/bin/cmoc` を呼び出す
-- `cmoc oracle edit fork`, `cmoc realization apply fork`, `cmoc realization refactor fork` は `{{repo-root}}` を pwd として呼び出され、run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
-- 各 fork が起動する編集用 `codex exec` は `{{run-root}}` を cwd とする
+- `cmoc oracle edit` は main worktree から呼び出され、`{{repo-root}}` を cwd として Codex CLI の TUI を起動する
+- `cmoc realization apply fork`, `cmoc realization refactor fork` は `{{repo-root}}` を pwd として呼び出され、run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
+- realization の各 fork が起動する編集用 `codex exec` は `{{run-root}}` を cwd とする
 - run の作業隔離のための linked worktree は `{{repo-root}}` 内に作成されるから、「`{{repo-root}}` のフルパス」は「`{{run-root}}` のフルパス」の部分文字列となる
 - `{{run-root}}` 内で cmoc を起動した場合 `{{run-root}}` と同値
 - `{{run-root}}` 外の `{{repo-root}}` 内で cmoc を起動した場合 `{{repo-root}}` と同値

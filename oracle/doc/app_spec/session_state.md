@@ -23,7 +23,7 @@
   },
   "run": {
     "state": "ready | running | joinable | error",
-    "kind": "oracle_edit | realization_apply | realization_refactor | null",
+    "kind": "realization_apply | realization_refactor | null",
     "branch": "... | null",
     "fork_commit": "... | null"
   }
@@ -65,9 +65,10 @@
 
 ### `run.kind`
 
-- active な編集 run の workload を表す。
+- active な realization 編集 run の workload を表す。
 - `run.state` が `ready` の場合は `null` とする。
 - join と abandon はこの値から workload を解決する。
+- `cmoc oracle edit` は run ではなく、この field の値にならない。
 
 ### `run.branch`
 
