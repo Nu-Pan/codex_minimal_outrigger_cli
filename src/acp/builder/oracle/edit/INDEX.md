@@ -12,17 +12,18 @@
 ## hash
 - aceb2892c60c365c1ab63b37a6a8264fbaf18cc2d0e146e7f8d370741f78ac55
 
-# `launch_tui.py`
+# `fork`
 
 ## Summary
-- oracle edit TUI 用の realization adapter。実行時の editor input 保存先ディレクトリを作成したうえで、正本 builder に完全な AgentCallParameter の生成を委譲する。
+- `cmoc oracle edit fork` の builder adapter を提供するディレクトリ。fork 編集処理の入口と、launch_exec 用 builder の realization 側再公開経路を扱う。
 
 ## Read this when
-- oracle edit TUI の起動パラメータ生成や、editor input 保存先の準備処理を変更・確認するとき。
+- `cmoc oracle edit fork` の builder adapter の責務や実装入口を確認するとき。
+- launch_exec パラメータ builder の realization 側エントリーや再公開経路を確認するとき。
 
 ## Do not read this when
-- 正本 builder の prompt 構築仕様そのものを確認するときは、対応する oracle builder を直接読む。
-- editor input ディレクトリのパス定義を確認するときは、runtime path 定義を直接読む。
+- `cmoc oracle edit fork` 以外のコマンドを確認するとき。
+- builder adapter 以外の処理、builder の正本仕様・実装詳細、launch_exec 以外の builder や fork 処理を調べるとき。
 
 ## hash
-- 31d0d75fce702d13def856b79200196a9b7a355c4b5005759a219dfea26c3618
+- 68269ac1918c240cd4d2b95c70a62b0dbb5068d06824f52c0c325f8b7d987a9f

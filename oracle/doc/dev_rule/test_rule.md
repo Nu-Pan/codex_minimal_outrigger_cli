@@ -41,8 +41,10 @@
 ## ollama バックエンド
 
 - Real Codex CLI 呼び出しを伴うテストを実行する際は、原則として cmoc managed ollama を Codex CLI の model provider として使用する
-- テスト用の SLM としては `qwen3:4b-instruct-2507-q4_K_M` を使うこと
+- テスト用 SLM は `{{cmoc-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md` の定義を正本とする
 - テスト目的の場合は `AgentCallParameter.model_class` に対応する Codex CLI provider/model を cmoc managed ollama とテスト用 SLM に切り替えてよい
+- テストは、外側の `{{cmoc-root}}/.cmoc/gt/ar/config.json` にある `cmoc_managed_ollama_service_launch_behavior` が `force` であることを仮定してよい
+- 被テスト cmoc の実行では、外側の設定値に関わらず、被テスト環境の `CmocConfig.cmoc_managed_ollama_service_launch_behavior` を `bypass` とする。外側の config file を `bypass` へ書き換えてはならない
 
 ### Codex agent sandbox からの実行
 

@@ -1,19 +1,20 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ固有設定を集約する dataclass 群。並列実行数、Codex CLI のモデル・推論強度・復旧試行回数、oracle review の各ループ上限を定義し、JSON 永続化される設定構造の入口となる。
+- cmoc のリポジトリ固有設定を表す frozen dataclass 群を定義する oracle source。並列数、Codex CLI のモデル・推論設定、managed Ollama 起動方針、oracle review のループ上限を扱い、設定の既定値と JSON 永続化に関する設計意図を確認する入口となる。
 
 ## Read this when
-- cmoc の設定項目、既定値、Codex CLI 向けモデル対応、oracle review のループ回数を変更または確認するとき。
-- CmocConfig の JSON 化対象や設定 dataclass の構造を調べるとき。
+- cmoc の設定項目、既定値、Codex CLI 用モデル指定、推論 effort、managed Ollama 起動方針を変更・調査するとき。
+- cmoc oracle review の列挙・マージ・検証ループ上限を変更・調査するとき。
+- CmocConfig とそのネストした設定 dataclass の構造や Enum の設定値変換を確認するとき。
 
 ## Do not read this when
-- 実際の設定ファイル生成・同期や人間による設定調整の手順を確認したいときは、指定された JSON 設定ファイルと doctor 関連実装を直接読む。
-- ModelClass や ReasoningEffort 自体の定義・意味を確認したいときは、それらを定義するモジュールを直接読む。
-- Codex CLI の呼び出し処理や oracle review の実行ロジックを調べるときは、各処理の実装モジュールを直接読む。
+- CLI コマンドの具体的な実装や入出力処理だけを調査するとき。
+- Codex CLI や Ollama 自体の一般的な利用方法を調査するとき。
+- oracle review の所見生成・統合・検証ロジックそのものを調査するときは、該当する実装・仕様を直接読む。
 
 ## hash
-- 122c507614e38cc44ad2d5866223d25b53966296f1adc3cb96aec754d9cee519
+- 106156981624f685daad073178e44421fee18594b8cb9d417ea3112f4308d895
 
 # `path_model.py`
 

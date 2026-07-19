@@ -15,18 +15,35 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` builder の realization adapter パッケージ。oracle edit 用 builder の実装入口と、TUI 起動時の AgentCallParameter 生成を扱う。
+- `cmoc oracle edit` builder adapter package。oracle edit 用 builder 実装への入口を提供する。
+- `cmoc oracle edit fork` の builder adapter。fork 編集処理の入口と、launch_exec 用 builder の realization 側再公開経路を扱う。
 
 ## Read this when
 - `cmoc oracle edit` の builder adapter の責務や実装入口を確認するとき。
-- oracle edit TUI の起動パラメータ生成や editor input 保存先の準備処理を確認・変更するとき。
+- `cmoc oracle edit fork` の builder adapter、または launch_exec パラメータ builder の realization 側エントリーを確認するとき。
 
 ## Do not read this when
-- oracle edit の具体的な編集処理や CLI 全体の動作を確認するとき。
-- 正本 builder の prompt 構築仕様や editor input ディレクトリのパス定義を確認するとき。
+- oracle edit の具体的な編集処理や CLI 全体の動作を確認したいとき。対象の実装ファイルや上位の CLI 関連ファイルを直接読む。
+- `cmoc oracle edit fork` 以外のコマンド、builder の正本仕様・実装詳細、launch_exec 以外の builder、または fork 処理そのものを調べるとき。
 
 ## hash
-- 0848653168fbe8bcbe22d1c7b5ca6180c2887b94a61b532b657ca5ff92b6cbcc
+- a2841f4adcac956cdde1e8dc8d70f6361aedad920090deac67dc5407aff3072f
+
+# `investigation`
+
+## Summary
+- oracle investigation 用 builder adapter の入口と launch TUI 向け realization adapter を含むパッケージ。下位実装や adapter の引数生成を確認する際の入口となる。
+
+## Read this when
+- oracle investigation 用 builder adapter の責務や構成を確認するとき
+- launch TUI 用 adapter のパラメータ生成や editor input directory 準備を確認するとき
+
+## Do not read this when
+- prompt 内容や AgentCallParameter の組み立て規則そのものを確認したいとき
+- oracle investigation 以外の builder、ACP 実装、runtime path の一般仕様を調べるとき
+
+## hash
+- 6af54e3acf71f9bdbfaae8c4381164c9395406dca92d9396642915fff83be2e0
 
 # `review`
 

@@ -17,19 +17,16 @@
 # `apply`
 
 ## Summary
-- `acp.builder.apply` の既存 import 経路を保つ互換パッケージと、apply fork 用の realization 側 ACP builder 入口を提供する。`fork` 配下には、正本側 builder への委譲、変更要約、ファイルレビュー・修正用 builder が含まれる。
+- 現時点では INDEX.md・AGENTS.md 以外のファイルや下位要素がなく、具体的な実装責務は確認できない。
 
 ## Read this when
-- `acp.builder.apply` の import 入口や apply fork の builder 委譲経路を確認・変更するとき。
-- repo root 解決、oracle builder の利用、ACP parameter の受け渡し、変更要約やファイルレビュー・修正用 parameter の流れを確認するとき。
+- このディレクトリに新しいファイルや下位要素が追加され、その責務を確認する必要があるとき。
 
 ## Do not read this when
-- apply fork のループ制御や state 遷移を調べるときは、対応するサブコマンド実装を直接読む。
-- prompt、schema、変更要約、レビュー・修正の正本仕様を確認するときは、対応する oracle 側実装を読む。
-- apply fork 以外の ACP builder の具体的な処理を調べるときは、対象の builder package を直接読む。
+- このディレクトリ以外の apply 処理や fork 機能の実装を調べるとき。
 
 ## hash
-- 5f4332bfb8ba8ae22f58c9944de681a1740eb0d8352a251be527bcc7f0122a14
+- 478f508acec80deb9c1a94b8057621e030919b5dbb1e3b7bc0927ec773be6a7b
 
 # `common`
 
@@ -65,18 +62,19 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization package。`cmoc oracle edit` と `cmoc oracle review` の builder adapter を収め、各機能の realization 側の実装入口を提供する。
+- oracle command builder の realization package。oracle edit、investigation、review などの builder adapter 群への入口として機能する。
+- 下位 package には、oracle edit の fork・launch_exec 経路、investigation の launch TUI adapter、review の finding 処理や canonical builder 委譲を含む。
 
 ## Read this when
-- oracle command builder の realization package の責務や構成を確認するとき。
-- `cmoc oracle edit` または `cmoc oracle review` の builder adapter、canonical builder への委譲、TUI 起動パラメータ生成、prompt 補正、互換 import の入口を確認するとき。
+- oracle command builder realization package の構成や、配下の builder adapter への入口を確認するとき。
+- oracle edit、oracle investigation、oracle review の realization adapter の所在を判断するとき。
 
 ## Do not read this when
-- oracle command builder の正本仕様や canonical builder 本体の実装を確認するとき。
-- oracle command builder と無関係な CLI、validation、その他の処理を確認するとき。
+- oracle command builder の正本仕様や canonical builder 本体の実装詳細を確認するとき。
+- builder adapter 以外の CLI、ACP、runtime path、具体的な編集・調査・レビュー処理を確認するとき。
 
 ## hash
-- 8d37b4fc4a817536babefb33ee368cb3318e98cdb2ddfa83cd3681e00adacd23
+- 3863319214972154659c695dafe70b7550ff4de51fccab7aff6cdb39cab699fb
 
 # `quota_probe.py`
 
@@ -92,6 +90,23 @@
 
 ## hash
 - bd4ece6e70b550295d32513160360390ee1574d55e7d89eff3b0237a8da32ec0
+
+# `realization`
+
+## Summary
+- realization workload の builder adapter 群をまとめるパッケージ。realization apply と realization refactor の builder 連携実装への入口を提供する。
+- apply 配下では apply 処理および fork 適用向け builder adapter、refactor 配下では fork 用の change summary parameter builder と file review parameter builder の公開入口を扱う。
+
+## Read this when
+- realization workload の builder adapter の責務や配置を確認・変更するとき。
+- realization apply または realization refactor の fork 用 builder の公開入口・接続先を辿るとき。
+
+## Do not read this when
+- builder の共通処理や具体的な生成ロジックを直接確認・変更するとき。
+- builder adapter 以外の realization workload や apply・refactor 処理を調査するとき。
+
+## hash
+- 6377b0e34b1a04f8b8b2462403fd218412cbb2fca391a75f4d8829a0640aece8
 
 # `review`
 

@@ -1,18 +1,18 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を収録するディレクトリ。CLI 補完、ログ、エラー処理、プロンプト、managed ollama、session/run、サブコマンドなど、利用者向け挙動と主要 workflow の正本仕様を扱う。個別仕様の確認では、該当する仕様ファイルまたはサブコマンド仕様へ進む入口となる。
+- cmoc のアプリケーション仕様を収録するディレクトリ。CLI 補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト、run/session 状態、サブコマンドなどの正本仕様を扱い、該当機能の実装・検証時に対応する仕様本文へ進む入口となる。
 
 ## Read this when
-- cmoc の利用者向け挙動、CLI 実行条件、出力・ログ、状態管理、プロンプト、サービス管理、session/run、サブコマンドの正本仕様の所在を確認するとき。
-- 複数のアプリケーション仕様にまたがる workflow や、どの個別仕様を読むべきか判断するとき。
+- cmoc のアプリケーション仕様の所在を特定したいとき。
+- CLI 補完、Codex 呼び出し、ログ、doctor preprocess、プロンプト、run/session、サブコマンドの仕様を調査するとき。
 
 ## Do not read this when
-- 具体的な機能の詳細仕様が特定できる場合は、このディレクトリ全体ではなく対応する個別仕様ファイルを直接読む。
-- 開発環境、設計・テスト規則、oracle/realization の共通定義、または具体的な実装詳細だけを確認するとき。
+- 特定仕様の詳細が判明している場合は、対応する仕様本文を直接読むとき。
+- 開発環境・設計・テスト規則や realization 実装の詳細だけを確認したいとき。
 
 ## hash
-- 2da92451d745246352797e3a2bae34d705875532d2e75afb53a3882712b561ea
+- 1194d30811d7a6d91ec2487debe2876fa78ea0db2607d8ee1de44d17fa5e3a47
 
 # `branch_model.md`
 
@@ -54,18 +54,18 @@
 # `dev_rule`
 
 ## Summary
-- cmoc の開発規則に関する正本ドキュメント群。Python コーディング、CLI の設計・配置、開発環境、realization test の方針を確認するための入口。
+- cmoc の開発規約をまとめた oracle doc 群。Python コーディング規則、CLI の設計・配置、開発環境、pytest によるテスト方針を確認するための入口。
 
 ## Read this when
-- Python 実装の書き方や命名・型ヒント・import 方針を確認するとき。
-- CLI のエントリーポイント、サブコマンド、共有処理の配置を判断するとき。
-- Python/venv、依存関係、ファイル命名など開発環境の運用を確認するとき。
-- pytest、Real Codex CLI 結合、テスト環境隔離、検証範囲など realization test の方針を確認するとき。
+- Python 実装の型ヒント、import、docstring、コメント、命名規則を確認したいとき。
+- CLI のエントリーポイント、サブコマンド、共有モジュールの責務や配置を判断するとき。
+- Python/venv、依存関係、ファイル命名などの開発環境ルールを確認したいとき。
+- pytest の実装・実行、Real Codex CLI や managed ollama を使う結合テスト、変更後の検証範囲を確認したいとき。
 
 ## Do not read this when
-- 個別機能やコマンドの挙動仕様を確認したいときは、対象機能の oracle doc を直接読む。
-- 個別モジュールの実装詳細を確認したいときは、その実装本文を読む。
-- INDEX.md の読み方やルーティング方針を確認したいときは、専用の routing 文書を読む。
+- 個別機能や CLI の挙動・出力仕様を確認したいときは、app_spec 配下などの対象機能の oracle doc を直接読む。
+- 既存実装の詳細を確認したいときは、対応する realization code を読む。
+- INDEX.md の読み方やルーティング方針自体を確認したいときは、routing 文書を読む。
 
 ## hash
-- 2eadee0de716c3689527ae67aef5aeae48aedf5689c90b9bc197be8d5fa9cc60
+- cdd11b15ce76fbd84fc4219e060b144ab402ced571902bf18f8429d9ae1c91d3

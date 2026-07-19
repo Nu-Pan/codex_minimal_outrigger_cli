@@ -47,6 +47,16 @@
 - `$CODEX_HOME/config.toml` や project config の sandbox 設定に依存してはならない
 - sandbox は専用引数で指定し、`--config` で上書きしてはならない
 
+### Codex sandbox のネットワークアクセス
+
+- 全ての Codex CLI 呼び出しで、Codex sandbox 内から cmoc managed ollama の `127.0.0.1:11434` へアクセスできるように、以下と同じ意味の設定を呼び出し単位の argv で明示的に上書きする
+    ```text
+    --config 'sandbox_workspace_write.network_access=true'
+    --config 'features.network_proxy.enabled=true'
+    --config 'features.network_proxy.domains={"127.0.0.1"="allow"}'
+    ```
+- `$CODEX_HOME/config.toml` や project config のネットワーク設定に依存してはならない
+
 ### 詳細なファイルアクセス制限
 
 - 個別の AgentCallParameter builder は論理的な file access mode を選択する正本とする
