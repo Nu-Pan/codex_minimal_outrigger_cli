@@ -28,6 +28,7 @@
     },
     "num_try_falv_recovery": 1
   },
+  "cmoc_managed_ollama_service_launch_behavior": "default",
   "oracle_review": {
     "num_enumerate_findings_loop": 2,
     "num_merge_findings_loop": 2,
