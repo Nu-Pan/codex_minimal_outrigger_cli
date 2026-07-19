@@ -44,20 +44,20 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。oracle edit、investigation、review の各サブコマンド実装と、review の対象列挙・パス解決・処理ループ・差分マージ・レポート生成を下位要素として提供する。
+- oracle 系サブコマンドの実行入口と、oracle review の対象探索・パス解決・処理ループ・レポート生成・INDEX.md マージを担う実装群をまとめるディレクトリ。各サブコマンドや review 機能の詳細実装へ進むための入口。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や入口を確認するとき。
-- oracle edit、oracle investigation、oracle review の実行フローや責務の入口を確認するとき。
-- oracle review の対象列挙、パス解決、所見処理、INDEX.md のマージ、レポート生成を調査するとき。
+- oracle サブコマンド群の構成や実行入口を確認するとき
+- oracle review の対象列挙、パス解決、レビュー処理、レポート、INDEX.md の commit・merge の関係を調査するとき
+- oracle edit・investigation・review の CLI オーケストレーションを変更・調査するとき
 
 ## Do not read this when
-- 個別サブコマンドの詳細実装だけを確認したいときは、該当する下位ファイルを直接読む。
-- 調査指示テンプレートや正本仕様を確認したいときは、対応する oracle doc を直接読む。
-- 共通 CLI runtime、TUI 起動、prompt 入力などの共通処理だけを確認したいときは、各共通モジュールを直接読む。
+- 個別サブコマンドの内部ロジックだけを確認したいときは、該当するサブコマンド実装を直接読む
+- oracle investigation の prompt や正本仕様を確認したいときは、対応する oracle doc を直接読む
+- 共通 CLI runtime、TUI 起動、一般的な git・runtime helper の詳細だけを調査するときは、対応する共通モジュールを直接読む
 
 ## hash
-- 22b1cf882ab987ae56c677503357e4b5c934306ea35ba843b1f33085b526852d
+- 104ad71b2fe4b77c57dcabfa7b92a95b62de74dd45f5a894c59e56ffc9b10f0a
 
 # `realization`
 
@@ -92,18 +92,19 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドと基盤処理をまとめるパッケージ。abandon・join の実行、共通 lifecycle、レポート生成を確認する入口。
+- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。abandon・join の実装、共通 lifecycle、fork／lifecycle report を扱い、関連する run サブコマンドの実装や共通処理を確認する入口となる。
 
 ## Read this when
-- editing run の開始・join・abandon、run worktree／branch の管理、state 更新、差分処理、cleanup、lifecycle report の生成を調査・変更するとき。
+- editing run の開始・join・abandon などの lifecycle や、run worktree／branch の作成・cleanup・状態更新を調査または変更するとき
+- run の merge、競合解決、変更 path の許可判定、INDEX.md 更新、oracle diff 抽出を確認するとき
+- fork／join／abandon に伴う lifecycle report の生成・保存形式を変更または調査するとき
 
 ## Do not read this when
-- editing run 以外のサブコマンドを扱うとき。
-- 特定の lifecycle 実装やレポート形式だけを確認する場合は、配下の該当ファイルを直接読む。
-- run state の永続化、process tracking、一般的な runtime 処理だけを確認する場合は、対応する runtime モジュールを直接読む。
+- editing run 以外のサブコマンドを扱うとき
+- 特定の lifecycle 実装、report 形式、runtime state、run process 管理などの詳細だけを確認したいときは、配下または参照先の該当モジュールを直接読む
 
 ## hash
-- f6e735f4a033dee57428c327662e4a8473bc648a18290afce5d338683025d5d2
+- 13d386c8373f201b5803c82c30f7b86694b7ef78358d8f9d9d2ea4e1623e9bf4
 
 # `session`
 

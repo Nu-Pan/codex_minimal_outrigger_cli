@@ -52,7 +52,7 @@ pytestmark = pytest.mark.skipif(
 PRODUCTION_SCENARIO_COMMANDS = {
     ("doctor",),
     ("indexing",),
-    ("oracle", "edit", "fork"),
+    ("oracle", "edit"),
     ("oracle", "investigation"),
     ("oracle", "review"),
     ("realization", "apply", "fork"),
@@ -465,9 +465,8 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     review_report = next(iter(set(review_dir.glob("*.md")) - review_reports))
     assert "result: no_targets" in review_report.read_text()
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # 3 workload と共通 join/abandon を本番 Codex 経路で観測する。
+    # 2 workload と共通 join/abandon を本番 Codex 経路で観測する。
     for command, kind in [
-        (("oracle", "edit", "fork"), "oracle_edit"),
         (("realization", "apply", "fork"), "realization_apply"),
         (("realization", "refactor", "fork"), "realization_refactor"),
     ]:
@@ -489,7 +488,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         }
         assert not joined_worktree.exists()
 
-    _run_cmoc(cmoc, root, environment, "oracle", "edit", "fork")
+    _run_cmoc(cmoc, root, environment, "realization", "apply", "fork")
     _state_path, abandoned_state = _load_session_state(root, session_branch)
     abandoned_worktree = _run_worktree_from_state(root, abandoned_state)
     abandon_result = _run_without_codex_call(cmoc, root, environment, "run", "abandon")
@@ -522,6 +521,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     ("command", "tui_purpose", "expects_resolver"),
     [
         (("tui",), "tui codex", True),
+        (("oracle", "edit"), "oracle edit", False),
         (("oracle", "investigation"), "oracle investigation", False),
     ],
 )
@@ -538,6 +538,8 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     cmoc, environment, codex_home = _production_environment(tmp_path)
     _run_without_codex_call(cmoc, root, environment, "doctor")
     _run_cmoc(cmoc, root, environment, "indexing")
+    # oracle edit も同じ TUI harness で検証できる active main-worktree session を作る。
+    _run_without_codex_call(cmoc, root, environment, "session", "fork")
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
     status_before = run_git(root, "status", "--short").stdout
     calls_before = _codex_call_logs(root)

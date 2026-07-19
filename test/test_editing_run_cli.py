@@ -11,7 +11,6 @@ from _git_support import current_branch, make_repo, run_git
 from _ollama_support import run_doctor
 
 import commons.runtime_codex_preflight as codex_preflight_module
-import sub_commands.oracle.edit.fork as oracle_edit_module
 import sub_commands.oracle.investigation as investigation_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
@@ -180,51 +179,6 @@ def test_run_join_rolls_back_merge_when_post_join_sync_fails(
 
     assert joined.exit_code == 0
     assert (root / "README.md").read_text() == "realized\n"
-
-
-def test_oracle_edit_fork_uses_editor_instruction_and_run_abandon(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    editor_path = root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / "x.md"
-    monkeypatch.setattr(
-        oracle_edit_module,
-        "collect_prompt_editor_input",
-        lambda *_args: (editor_path, "oracle spec を更新する"),
-    )
-    monkeypatch.setattr(oracle_edit_module, "refresh_indexes", _no_index_refresh)
-    parameters: list[AgentCallParameter] = []
-
-    def fake_edit(parameter: AgentCallParameter, **kwargs: object) -> SimpleNamespace:
-        parameters.append(parameter)
-        cwd = Path(str(kwargs["cwd"]))
-        (cwd / "oracle" / "spec.md").write_text("# edited spec\n")
-        return SimpleNamespace(returncode=0, output_json=None)
-
-    monkeypatch.setattr(oracle_edit_module, "run_codex_exec", fake_edit)
-
-    fork = runner.invoke(
-        app,
-        ["oracle", "edit", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert fork.exit_code == 0
-    state = _state(state_path)
-    assert state["run"]["state"] == "joinable"
-    assert state["run"]["kind"] == "oracle_edit"
-    run_branch = state["run"]["branch"]
-    assert parameters[0].file_access_mode == FileAccessMode.PURE_ORACLE_WRITE
-    assert "oracle spec を更新する" in parameters[0].prompt
-    assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
-
-    abandoned = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
-
-    assert abandoned.exit_code == 0
-    assert _state(state_path)["run"]["state"] == "ready"
-    assert run_git(root, "branch", "--list", run_branch).stdout == ""
-    assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
 
 
 def test_oracle_investigation_has_no_session_precondition(

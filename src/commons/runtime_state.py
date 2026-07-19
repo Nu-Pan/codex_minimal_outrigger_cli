@@ -12,7 +12,7 @@ from commons.runtime_paths import sessions_dir
 
 SESSION_STATES = {"active", "joined", "abandoned", "error"}
 RUN_STATES = {"ready", "running", "joinable", "error"}
-RUN_KINDS = {"oracle_edit", "realization_apply", "realization_refactor"}
+RUN_KINDS = {"realization_apply", "realization_refactor"}
 
 
 @dataclass
@@ -122,6 +122,28 @@ def load_state_for_branch(root: Path, branch: str) -> tuple[str, Path, SessionSt
             f"current branch: {branch}",
         )
     path = state_path(root, session_id)
+    data = _read_state_data(path)
+    return session_id, path, SessionState.from_dict(data, path)
+
+
+def load_session_part_for_branch(
+    root: Path, branch: str
+) -> tuple[str, Path, SessionPart]:
+    """session branch に対応する session 部分だけを検証して読み込む。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+    """
+    session_id = branch_session_id(branch)
+    path = state_path(root, session_id)
+    data = _read_state_data(path)
+    session_data = _part_data(data, "session", SessionPart, path)
+    _require_state(session_data, "session", SESSION_STATES, path)
+    _require_nullable_strings(session_data, "session", path)
+    return session_id, path, SessionPart(**session_data)
+
+
+def _read_state_data(path: Path) -> dict[str, Any]:
+    """session state file を JSON object として読み込む。"""
     if not path.is_file():
         raise CmocError(
             "session state file が存在しません。",
@@ -132,7 +154,9 @@ def load_state_for_branch(root: Path, branch: str) -> tuple[str, Path, SessionSt
         data = json.loads(path.read_text())
     except json.JSONDecodeError as exc:
         raise _invalid_state(path, "JSON 構文が不正です。") from exc
-    return session_id, path, SessionState.from_dict(data, path)
+    if not isinstance(data, dict):
+        raise _invalid_state(path, "top-level JSON は object である必要があります。")
+    return data
 
 
 def write_state(path: Path, state: SessionState) -> None:

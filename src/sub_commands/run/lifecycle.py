@@ -438,8 +438,6 @@ def _is_agent_expected_path(
     path: str,
     branch: str,
 ) -> bool:
-    if kind == "oracle_edit":
-        return _is_oracle_path(path)
     if kind in {"realization_apply", "realization_refactor"}:
         return is_realization_file_path(root, root / path, branch=branch)
     return False

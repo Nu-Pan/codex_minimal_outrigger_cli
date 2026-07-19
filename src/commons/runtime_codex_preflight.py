@@ -42,10 +42,20 @@ def run_codex_exec(parameter: AgentCallParameter, **kwargs: Any) -> CodexExecRes
     return runtime_run_codex_exec(parameter, **kwargs)
 
 
-def run_codex_tui(parameter: AgentCallParameter, **kwargs: Any) -> CommandResult:
-    """INDEX 更新 preflight を挟んで Codex TUI 実行本体へ委譲する。"""
+def run_codex_tui(
+    parameter: AgentCallParameter,
+    *,
+    pre_launch_check: Callable[[], None] | None = None,
+    **kwargs: Any,
+) -> CommandResult:
+    """INDEX 更新と任意の直前検査を挟んで Codex TUI 実行本体へ委譲する。"""
     if parameter.run_indexing_preflight:
         _run_indexing_before_codex(_indexing_root_for_codex(parameter, kwargs))
+    if pre_launch_check is not None:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+        # indexing が作る commit を事前条件へ反映し、検査後は TUI 起動まで
+        # workload 固有処理を挟まない。
+        pre_launch_check()
     return runtime_run_codex_tui(parameter, **kwargs)
 
 

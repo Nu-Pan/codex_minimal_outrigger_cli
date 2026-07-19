@@ -47,20 +47,22 @@
 # `lifecycle.py`
 
 ## Summary
-- 明示的な join を必要とする editing run のライフサイクル共通処理を提供する。session の事前条件確認、run worktree・branch の作成と state 管理、active run 解決、state 更新、差分の commit・rollback、INDEX 更新、Git tree change の解析、許可外 path の検出を扱う。run 関連の各 workload 実装から利用される共通基盤である。
+- editing run の開始・解決・状態更新を担う共通ライフサイクル処理。session/run の事前条件検査、専用 branch・worktree の作成と後始末、state file の更新を扱う。
+- worktree 差分の rollback・commit、INDEX.md 更新、Git tree change の列挙、agent・run・session が変更可能な path の検証、oracle diff の抽出も提供する。
+- editing run の各サブコマンドでライフサイクル管理、worktree commit、変更 path の許可判定、INDEX 更新の実装を確認する入口。
 
 ## Read this when
-- editing run の開始・終了・joinable/error 遷移、session state と run worktree の整合性検証を変更または調査するとき
-- run worktree の commit、rollback、INDEX 更新、Git rename/copy を含む差分解析を変更または調査するとき
-- oracle・realization・INDEX・memo の path 制約や workload の変更許可判定を変更または調査するとき
+- editing run の開始、active run の解決、joinable/error state への遷移を変更または調査するとき
+- run worktree や session worktree の作成・削除、rollback・commit、INDEX 更新の挙動を確認するとき
+- Git の rename/copy を含む差分解析、oracle・realization・refactor state の変更許可判定を確認するとき
 
 ## Do not read this when
-- 個別の editing run workload の業務処理だけを変更・調査する場合
-- session state のデータ構造や永続化形式だけを確認する場合は、まず runtime_state の実装を読む
-- CLI のサブコマンド入口や利用者向け引数の挙動だけを確認する場合は、対応する command 実装を直接読む
+- 特定の editing run サブコマンド固有の workload 処理だけを変更または調査するとき
+- session state のデータ構造や永続化形式そのものを確認するときは、runtime state の実装を直接読むとき
+- 一般的な Git 操作や INDEX 生成の詳細だけを確認し、この共通 lifecycle 処理を利用していないとき
 
 ## hash
-- 1344955ed33a92f1dbf8f4fbfb008bf3b8e3ba77f5cbdb92a51db02e2e7a5aa3
+- 11524e925bbf5c52e99d1ef92c463ee25d05244e7f42a9d18658ca0122ca75c8
 
 # `report.py`
 

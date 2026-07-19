@@ -139,20 +139,18 @@
 # `runtime_codex_preflight.py`
 
 ## Summary
-- Codex exec/TUI 呼び出し前に INDEX 更新 preflight を挟む共通ランタイム制御を提供する。preflight の登録・解除、再入抑止、スレッド直列化、呼び出し設定からの indexing 起点決定を扱い、実際の Codex 実行は runtime_codex へ委譲する。
+- Codex exec/TUI 実行前に INDEX 更新 preflight を挟むランタイム連携を担当する。preflight の登録・解除、再入抑止と直列実行、実行対象からの indexing 起点 root 算出、実行本体への委譲を扱う。
 
 ## Read this when
-- Codex exec または TUI 実行時の INDEX 更新 preflight の呼び出し条件・実行順序を変更するとき
-- indexing preflight の登録、解除、再入防止、スレッド間の直列化を確認するとき
-- Codex 呼び出し設定から preflight の起点 root を決定する処理を変更するとき
+- Codex exec または TUI の起動前処理、INDEX 更新 preflight、preflight の有効化・無効化を変更するとき。
+- Codex 呼び出し設定から作業 root を決める処理や、preflight の再入・並列実行制御を確認するとき。
 
 ## Do not read this when
-- Codex 実行本体の subprocess 処理や TUI 実装を変更するときは runtime_codex を直接読む
-- リポジトリ root・work root の解決規則だけを確認するときは runtime_paths を読む
-- Codex 実行結果の型や結果変換だけを確認するときは runtime_results を読む
+- Codex 実行本体の subprocess・TUI 実装を変更または調査するときは、runtime_codex の実装を直接読む。
+- INDEX の生成規則や oracle 編集サブコマンド固有の仕様を確認するときは、対応する oracle 文書を直接読む。
 
 ## hash
-- 9c401fd077a0fc1e1781739a0b1dac7b0d6c01c245b3351c5a907f0d3de749c8
+- 9a17bb577fe0ed64e036ca1f99b85af81357514dd6f87db9bde3a1d7bbe25e19
 
 # `runtime_codex_profile.py`
 
@@ -402,18 +400,16 @@
 # `runtime_state.py`
 
 ## Summary
-- session state の永続化・検証・復元を担うランタイム共通モジュール。session/run の状態 schema、branch からの session-id 解決、state file の読み書き、home branch に紐づく active session の検索、session fork 用排他 lock を扱う。
+- session state の JSON schema、状態値、不変条件、読み書き処理を提供する共通ランタイムモジュール。session/run branch から state を特定し、検証・保存・active session 検索を行う。session fork 用の repository 共通排他 lock と branch 名解析も扱う。
 
 ## Read this when
-- session state の JSON schema、状態値や run field の不変条件を確認したいとき
-- session branch または run branch から state を読み込む処理を変更・調査するとき
-- session state file の保存・復元・検証や active session の検索を変更するとき
-- repository 共通の session fork 排他 lock の挙動を確認するとき
+- session state の schema、状態遷移、JSON の検証・保存・読み込みを変更または調査するとき
+- cmoc session branch / run branch と session state file の対応付けを調査するとき
+- session fork の排他制御や active session の検索処理を確認するとき
 
 ## Do not read this when
-- CLI サブコマンド固有の session 操作手順や利用者向け仕様を確認したいときは、対応する oracle doc やサブコマンド実装を直接読む
-- git branch の作成・join・apply など、state の低レベルな表現を超える処理を調査するとき
-- 一般的な runtime error、git 操作、path 解決の実装だけを確認したいときは、各担当モジュールを直接読む
+- CLI サブコマンド固有の処理や lifecycle の正本仕様を確認したいときは、対応する oracle doc とそのサブコマンド実装を直接読む
+- git 操作、path 解決、エラー型そのものの仕様だけを調査するときは、各責務の専用モジュールを読む
 
 ## hash
-- 90df33de780017aa2ee8e8a191090fc6396cf9c3d0b054602649fc740a8e0dec
+- 09af13c435640db15738af2c6fc628b05bac76a3255b63c79c8e981ce2fb56ee

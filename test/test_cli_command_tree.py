@@ -24,7 +24,7 @@ def test_public_cli_leaf_commands_match_oracle() -> None:
     assert _leaves(get_command(app)) == {
         ("doctor",),
         ("indexing",),
-        ("oracle", "edit", "fork"),
+        ("oracle", "edit"),
         ("oracle", "investigation"),
         ("oracle", "review"),
         ("realization", "apply", "fork"),

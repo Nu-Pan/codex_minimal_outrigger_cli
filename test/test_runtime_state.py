@@ -1,5 +1,6 @@
 """session/run state schema と managed branch 解析の realization test。"""
 
+import json
 import multiprocessing
 import threading
 from multiprocessing.connection import Connection
@@ -11,8 +12,10 @@ from _git_support import make_repo
 from cmoc_runtime import CmocError
 from commons.runtime_state import (
     RunPart,
+    SessionPart,
     SessionState,
     branch_session_id,
+    load_session_part_for_branch,
     load_state_for_branch,
     run_branch_session_id,
     session_fork_lock,
@@ -48,7 +51,7 @@ def test_run_branch_session_id_rejects_invalid_shape(branch: str) -> None:
 def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> None:
     path = state_path(tmp_path, "session")
     state = SessionState()
-    state.run = RunPart("joinable", "oracle_edit", "cmoc/run/session/run", "abc")
+    state.run = RunPart("joinable", "realization_apply", "cmoc/run/session/run", "abc")
     write_state(path, state)
 
     session_id, loaded_path, loaded = load_state_for_branch(
@@ -98,10 +101,50 @@ def test_session_state_rejects_non_string_payload(
 
 def test_ready_run_requires_null_payload() -> None:
     data = SessionState().to_dict()
-    data["run"]["kind"] = "oracle_edit"
+    data["run"]["kind"] = "realization_apply"
 
     with pytest.raises(CmocError, match="session state file"):
         SessionState.from_dict(data)
+
+
+def test_oracle_edit_is_not_a_run_kind() -> None:
+    data = SessionState().to_dict()
+    data["run"] = {
+        "state": "running",
+        "kind": "oracle_edit",
+        "branch": "cmoc/run/session/run",
+        "fork_commit": "abc",
+    }
+
+    with pytest.raises(CmocError, match="session state file"):
+        SessionState.from_dict(data)
+
+
+def test_load_session_part_does_not_validate_run_section(tmp_path: Path) -> None:
+    path = state_path(tmp_path, "session")
+    path.parent.mkdir(parents=True)
+    session = SessionPart("active", "main", "abc", None)
+    path.write_text(
+        json.dumps(
+            {
+                "session": {
+                    "state": session.state,
+                    "session_home_branch": session.session_home_branch,
+                    "session_fork_commit": session.session_fork_commit,
+                    "last_joined_apply_fork_commit": None,
+                },
+                "run": {"not_inspected": True},
+            }
+        )
+    )
+
+    session_id, loaded_path, loaded = load_session_part_for_branch(
+        tmp_path, "cmoc/session/session"
+    )
+
+    assert session_id == "session"
+    assert loaded_path == path
+    assert loaded == session
 
 
 @pytest.mark.parametrize("state", ["running", "joinable", "error"])

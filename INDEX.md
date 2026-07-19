@@ -129,33 +129,32 @@
 # `src`
 
 ## Summary
-- src は cmoc の realization 実装ルートで、最上位 CLI エントリー、互換 import shim、共通 runtime、設定公開入口、CLI サブコマンド実装を含む。個別機能の調査では、ここから対応する package または module へ進む。
+- cmoc の realization 実装ルート。Typer CLI の入口、サブコマンド、共通 runtime、設定・基礎 API、互換 import shim、ACP builder adapter 群を含み、各担当ディレクトリへの入口となる。
 
 ## Read this when
-- cmoc の realization 側における CLI 起動経路、公開入口、共通 runtime、設定互換層、またはサブコマンド実装の配置を確認するとき。
-- 対象機能の実装箇所が未特定で、最上位の実装構成から読む先を選ぶ必要があるとき。
+- cmoc の CLI 構成や realization 実装の配置を確認するとき。
+- 共通 runtime、設定、基礎 API、互換 import、ACP adapter、各サブコマンドの担当箇所を探すとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime 機能、互換 shim、または設定クラスの詳細が対象なら、対応する下位 module を直接読む。
-- oracle 側の正本仕様や canonical 実装を確認したい場合は、src ではなく対応する oracle 配下を読む。
+- 正本仕様や oracle 側の実装詳細を確認するときは、対応する oracle 配下を直接読む。
+- 特定機能の内部挙動を調査するときは、このルートではなく該当する下位モジュールを直接読む。
 
 ## hash
-- 39596bb414ad2c60af8c96874be17aa8bcd210c5c134f0bd351ac8688ff2c4f2
+- e48230abc33b8f19c143c46d49148ec818c925a08f78544503dcd3540bb29931
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群をまとめたディレクトリ。CLI サブコマンド、ACP builder、Codex/Ollama runtime、INDEX 更新、oracle review、session・worktree・state lifecycle などの外部挙動と制御契約を検証し、各機能の変更時に対応するテストを入口として参照する。
+- Python の realization test と共有 test helper を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/worktree、設定・Ollama などの外部挙動と制御ロジックを検証する。各テストファイルおよび helper が具体的な変更領域への入口となる。
 
 ## Read this when
-- cmoc の realization test を追加・修正・実行するとき。
-- 特定機能の外部挙動、失敗条件、CLI lifecycle、runtime 契約をテストから確認するとき。
-- 対応する実装変更の回帰範囲や、既存テストへケースを統合できるか確認するとき。
+- Python テストの対象領域を特定し、該当する CLI・runtime・builder・indexing・state・worktree テストへ進むとき。
+- 共有 fixture や fake external command、Git repository、Codex/Ollama test helper の利用方法を確認するとき。
 
 ## Do not read this when
-- 正本仕様や Structured Output schema の内容自体を確認・変更するときは、対応する oracle 文書・schema を直接読む。
-- 実装の責務や内部構造を調査するときは、対応する src の実装ファイルを直接読む。
-- Codex や Ollama の出力品質そのものを評価するとき。
+- 実装や正本仕様そのものを確認する場合は、対応する src または oracle 配下を直接読む。
+- テスト対象が明確な場合は、このディレクトリ全体を読まず、該当するテストファイルへ直接進む。
+- Codex CLI や LLM の出力品質自体を評価する目的では、このテストディレクトリを読む必要はない。
 
 ## hash
-- 4adfb7d32e3685f3333b35db20b2dc90a8dad25044f75ea074feb21887419241
+- 1195c34e5698e0cee38bc77e7bb314288404593e6e89b41f4637b30756dfd121

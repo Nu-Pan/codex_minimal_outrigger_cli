@@ -85,7 +85,7 @@ def test_oracle_review_enumerate_builder_imports_from_packaged_layout(
 
 
 def test_oracle_edit_builder_imports_from_packaged_layout(tmp_path: Path) -> None:
-    """oracle edit fork adapter が packaged layout で完全 prompt を返す。"""
+    """oracle edit TUI adapter が packaged layout で完全 prompt を保存する。"""
     root = Path(__file__).parents[1]
     target = tmp_path / "site"
     for package in ("acp", "basic", "commons"):
@@ -96,12 +96,16 @@ def test_oracle_edit_builder_imports_from_packaged_layout(tmp_path: Path) -> Non
         target,
         (
             "from pathlib import Path; "
-            "from acp.builder.oracle.edit.fork.launch_exec import "
-            "build_oracle_edit_fork_launch_exec_parameter as build; "
-            "p = build('oracle を編集する', Path.cwd()); "
+            "from acp.builder.oracle.edit.launch_tui import "
+            "build_oracle_edit_launch_tui_parameter as build; "
+            "log = Path.cwd() / '.cmoc/gu/ar/log/editor_input/test_cmpl.md'; "
+            "log.parent.mkdir(parents=True); "
+            "p = build('test', 'oracle を編集する'); "
             "assert p.structured_output_schema_path is None; "
             "assert p.file_access_mode.value == 'pure_oracle_write'; "
-            "assert 'oracle を編集する' in p.prompt; "
+            "assert p.run_indexing_preflight; "
+            "assert p.prompt == f'{log} を読んで、その指示に従って下さい'; "
+            "assert 'oracle を編集する' in log.read_text(); "
             "assert p.cwd == Path.cwd()"
         ),
         tmp_path,
