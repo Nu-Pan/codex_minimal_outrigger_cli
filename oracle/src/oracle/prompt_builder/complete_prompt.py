@@ -9,7 +9,7 @@ from .parts.oracle_standard import build_oracle_standard
 from .parts.realization_standard import build_realization_standard
 from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
 from .parts.apply_review_standard import build_apply_review_standard
-from .parts.oracle_review_standard import build_review_oracle_standard
+from .parts.oracle_review_standard import build_oracle_review_standard
 from .parts.index_entry_standard import build_index_entry_standard
 from .parts.routing_rule import build_routing_rule
 from .basic import PlaceholderMap
@@ -22,13 +22,13 @@ def build_complete_prompt(
     summary: str,
     goal: str,
     file_access_mode: FileAccessMode,
-    aux_static_prompt: list[StructDoc] = list(),
-    aux_dynamic_prompt: list[StructDoc] = list(),
+    aux_static_prompt: list[StructDoc | StructBlock] = list(),
+    aux_dynamic_prompt: list[StructDoc | StructBlock] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
     oracle_and_realization_basic: bool = False,
     oracle_standard: bool = False,
     realization_standard: bool = False,
-    review_oracle_standard: bool = False,
+    oracle_review_standard: bool = False,
     apply_review_standard: bool = False,
     index_entry_standard: bool = False,
 ) -> list[StructDoc | StructBlock]:
@@ -75,8 +75,8 @@ def build_complete_prompt(
     realization_standard:
         True の時、realization standard をプロンプトに注入する
 
-    review_oracle_standard:
-        True の時、review oracle standard をプロンプトに注入する
+    oracle_review_standard:
+        True の時、oracle review standard をプロンプトに注入する
 
     apply_review_standard:
         True の時、apply review standard をプロンプトに注入する
@@ -124,7 +124,7 @@ def build_complete_prompt(
         oracle_and_realization_basic = True
     if realization_standard:
         oracle_and_realization_basic = True
-    if review_oracle_standard:
+    if oracle_review_standard:
         oracle_and_realization_basic = True
         oracle_standard = True
     if apply_review_standard:
@@ -144,8 +144,8 @@ def build_complete_prompt(
         _extend_static_prompt(build_realization_standard)
     if apply_review_standard:
         _extend_static_prompt(build_apply_review_standard)
-    if review_oracle_standard:
-        _extend_static_prompt(build_review_oracle_standard)
+    if oracle_review_standard:
+        _extend_static_prompt(build_oracle_review_standard)
     if index_entry_standard:
         _extend_static_prompt(build_index_entry_standard)
     if aux_static_prompt:

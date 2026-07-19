@@ -9,7 +9,7 @@
 ## agent call に渡すプロンプトは、oracle src 定義の関数を使用する
 
 - agent call に渡すプロンプトは `{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
-- 原則として、この動的構築された　プロンプトをそのまま agent call 側に渡す事し、realization file 側でプロンプトを加工するのは禁止
+- 原則として、この動的構築されたプロンプトをそのまま agent call 側に渡すこととし、realization file 側でプロンプトを加工するのは禁止
 - 例外として、oracle src 側にバグがあって realization file 側でフォローする必要がある場合は、必要最低限の範囲内での加工を許容する
 
 ## 記法

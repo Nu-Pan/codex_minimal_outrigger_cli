@@ -55,10 +55,10 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
         raise CmocError(
             "session join は session branch 上で実行してください。", [], branch
         )
-    if state.session.state != "active" or state.apply.state != "ready":
+    if state.session.state != "active" or state.run.state != "ready":
         raise CmocError(
             "session join の事前条件を満たしていません。",
-            ["session.state と apply.state を確認してください。"],
+            ["session.state と run.state を確認してください。"],
             json.dumps(state.to_dict(), ensure_ascii=False, indent=2),
         )
     require_clean_worktree(work)

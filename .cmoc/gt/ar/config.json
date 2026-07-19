@@ -28,10 +28,7 @@
     },
     "num_try_falv_recovery": 1
   },
-  "apply_fork": {
-    "num_apply_files": 200
-  },
-  "review_oracle": {
+  "oracle_review": {
     "num_enumerate_findings_loop": 2,
     "num_merge_findings_loop": 2,
     "num_validate_findings_loop": 2

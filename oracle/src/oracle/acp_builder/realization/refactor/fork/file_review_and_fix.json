@@ -1,0 +1,109 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "findings"
+  ],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "description": "この agent call で発見した realization file の要修正点。呼び出し内で解消した所見も含む。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "evidences",
+          "oracle_requirement",
+          "observed_implementation",
+          "reason",
+          "resolution"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "所見の短い見出し。"
+          },
+          "evidences": {
+            "type": "array",
+            "description": "調査時点の所見の根拠となる文言の位置情報。空配列は許容しない。",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "line_start",
+                "line_end",
+                "summary"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "所見の根拠となる file の絶対 path。"
+                },
+                "line_start": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "所見の根拠となる記述の開始行。行番号を特定できない場合は null。"
+                },
+                "line_end": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "所見の根拠となる記述の終了行。行番号を特定できない場合は null。"
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "該当箇所の短い要約。修正による位置情報の変化を判別するための情報。"
+                }
+              }
+            }
+          },
+          "oracle_requirement": {
+            "type": "string",
+            "description": "oracle file または apply review standard が要求している仕様・規範。"
+          },
+          "observed_implementation": {
+            "type": "string",
+            "description": "調査時点の実装が実際にどうなっていたか。"
+          },
+          "reason": {
+            "type": "string",
+            "description": "なぜ明確に問題があり、修正が必要であると言えるのか。推測や未確認事項は含めない。"
+          },
+          "resolution": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "summary",
+              "verification"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "fixed",
+                  "unresolved"
+                ],
+                "description": "所見を解消して検証できた場合は fixed、それ以外は unresolved。"
+              },
+              "summary": {
+                "type": "string",
+                "description": "実施した修正、または未解消となった理由の要約。"
+              },
+              "verification": {
+                "type": "string",
+                "description": "修正後に実施した検証と、その結果の要約。"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -5,8 +5,8 @@
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 - {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/review_oracle.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/indexing.md
 - {{work-root}}/oracle/doc/app_spec/indexing.md
 - {{work-root}}/oracle/doc/app_spec/misc_spec.md
@@ -205,14 +205,22 @@ def test_cli_parse_error_report_is_written_to_stdout() -> None:
 
 
 @pytest.mark.parametrize(
-    ("argv", "allowed"),
+    ("argv", "parse_error", "allowed"),
     [
-        (["apply", "fork", "--scope", "bad"], ["rolling", "session", "full"]),
-        (["review", "oracle", "--scope", "rolling"], ["session", "full"]),
+        (
+            ["realization", "apply", "fork", "--scope", "bad"],
+            "No such option: --scope",
+            [],
+        ),
+        (
+            ["oracle", "review", "--scope", "rolling"],
+            "Invalid value for '--scope'",
+            ["session", "full"],
+        ),
     ],
 )
 def test_scope_options_are_rejected_by_cli_parser(
-    argv: list[str], allowed: list[str]
+    argv: list[str], parse_error: str, allowed: list[str]
 ) -> None:
     """scope の公開値制約はサブコマンド実行前の CLI 解析で拒否する。"""
     result = runner.invoke(app, argv)
@@ -220,8 +228,9 @@ def test_scope_options_are_rejected_by_cli_parser(
     assert result.exit_code != 0
     assert "# ERROR" in result.stdout
     assert "CLI 引数解析に失敗しました。" in result.stdout
-    assert "Invalid value for '--scope'" in result.stdout
-    assert argv[-1] in result.stdout
+    assert parse_error in result.stdout
+    if allowed:
+        assert argv[-1] in result.stdout
     for value in allowed:
         assert value in result.stdout
     assert "# ERROR" not in result.stderr
@@ -269,6 +278,21 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     assert "完了 doctor" not in completion_output
     assert not (root / ".gitignore").exists()
     assert not (root / ".cmoc").exists()
+
+
+def test_cli_empty_completion_marker_skips_normal_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """空の補完 marker でも通常の command callback を実行しない。"""
+    calls: list[str] = []
+    monkeypatch.setenv("_CMOC_COMPLETE", "")
+    monkeypatch.setattr(main_module, "cmoc_doctor_impl", lambda: calls.append("doctor"))
+
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert calls == []
+    assert result.output == ""
 
 
 def test_pre_log_check_failure_writes_subcommand_log(
@@ -353,6 +377,11 @@ def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_patte
         "!/.cmoc/gt/ar/\n"
         "/.cmoc/gt/ar/*\n"
         "!/.cmoc/gt/ar/config.json\n"
+        "!/.cmoc/gt/ar/realization/\n"
+        "/.cmoc/gt/ar/realization/*\n"
+        "!/.cmoc/gt/ar/realization/refactor/\n"
+        "/.cmoc/gt/ar/realization/refactor/*\n"
+        "!/.cmoc/gt/ar/realization/refactor/state.json\n"
         "/.cmoc/gu/\n"
     )
     assert run_git(root, "status", "--short").stdout.strip() == "M .gitignore"

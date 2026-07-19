@@ -235,7 +235,7 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
     assert tracking_path.read_text() == "111 222\nchild 4321 333 4321\n"
 
 
-def test_run_codex_subprocess_ignores_inherited_apply_tracking_env(
+def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Codex 起動時に継承した apply tracking を無視する。
@@ -247,7 +247,7 @@ def test_run_codex_subprocess_ignores_inherited_apply_tracking_env(
     bin_dir.mkdir()
     write_python_executable(bin_dir / "codex", ["print('ok')"])
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    monkeypatch.setenv(cmoc_runtime.APPLY_PROCESS_TRACKING_ENV, str(tracking_path))
+    monkeypatch.setenv(cmoc_runtime.RUN_PROCESS_TRACKING_ENV, str(tracking_path))
 
     result = run_codex_subprocess(["codex"], text=True, capture_output=True)
 

@@ -860,7 +860,7 @@ def changed_worktree_paths(root: Path) -> list[Path]:
 
 def _changed_worktree_path_statuses(root: Path) -> list[tuple[str, Path]]:
     """worktree 上の変更 path と git status code を absolute path として返す。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/apply_fork.md
-    # apply requeue は agent call 後に file-level path を必要とするため、default status が
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # refactor state は agent call 後に file-level path を必要とするため、default status が
     # untracked directory を一つの directory path に畳み込まないようにする。
     return status_path_statuses(root, untracked_all=True)

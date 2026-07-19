@@ -62,6 +62,22 @@
 ## hash
 - e131b4693f423253e686c3d74b6f6a880be3d8227b2da0c4f95986b6e16fc6b1
 
+# `oracle`
+
+## Summary
+- oracle command builder の realization package。`cmoc oracle edit` と `cmoc oracle review` の builder adapter を収め、各機能の realization 側の実装入口を提供する。
+
+## Read this when
+- oracle command builder の realization package の責務や構成を確認するとき。
+- `cmoc oracle edit` または `cmoc oracle review` の builder adapter、canonical builder への委譲、TUI 起動パラメータ生成、prompt 補正、互換 import の入口を確認するとき。
+
+## Do not read this when
+- oracle command builder の正本仕様や canonical builder 本体の実装を確認するとき。
+- oracle command builder と無関係な CLI、validation、その他の処理を確認するとき。
+
+## hash
+- 8d37b4fc4a817536babefb33ee368cb3318e98cdb2ddfa83cd3681e00adacd23
+
 # `quota_probe.py`
 
 ## Summary
@@ -80,20 +96,17 @@
 # `review`
 
 ## Summary
-- review builder の旧 import 互換 package。配下に review finding の enumeration・judgment・merge・advocate/challenger validation の互換入口を持ち、canonical builder への委譲と限定的な prompt 補正を担う。
+- review builder の finding 判定・検証・列挙・マージに関する Python 実行時キャッシュを含むディレクトリです。対応する実装の実行痕跡を確認する入口ですが、正本仕様や編集対象の実装ではありません。
 
 ## Read this when
-- review/oracle builder の旧 import 経路や canonical 実装への委譲を確認・変更するとき
-- review finding builder の prompt 補正、symlink path、dynamic input 保持を調査するとき
-- 互換 package を削除できる条件を判断するとき
+- review builder の finding 関連処理について、生成済み Python キャッシュの存在や内容を調査するとき。
 
 ## Do not read this when
-- canonical builder の本体仕様や prompt 本文だけを確認したいとき
-- review finding の実処理・検証ロジック自体を調査するとき
-- 旧 import 互換性と無関係な builder 実装を変更するとき
+- 正本仕様を確認するとき。
+- 実装やテストを変更・レビューするとき。
 
 ## hash
-- ec57d036e74919b6cb6412359b9f8d413054a6633ee180829c0737c93a2d182a
+- b1818f8a7aa5b2f07cbd5c874c5e933a628678b56e0cf5f597975ca387544989
 
 # `session`
 
@@ -115,15 +128,17 @@
 # `tui`
 
 ## Summary
-- 既存の `acp.builder.tui.*` import 互換性を保つための TUI 用互換 package。起動パラメータ入口と resolve-parameter の互換 shim を含み、実体の TUI builder 処理は oracle 側へ委譲する。
+- TUI builder の互換 import 層。既存の `acp.builder.tui.*` 経路を維持するため、canonical builder の再公開と起動前準備を担う。各ファイルは互換性確認・削除判断や TUI 起動 parameter 構築の入口となる。
 
 ## Read this when
-- 既存 TUI import 経路の互換性、削除可否、または `cmoc tui` 起動時の互換入口を確認するとき。
-- TUI 用 resolve-parameter の再公開内容や保存先準備を確認するとき。
+- 既存の `acp.builder.tui.*` import 互換性や互換層の削除可否を確認するとき。
+- cmoc tui の起動 parameter 構築や editor input directory 準備を確認・変更するとき。
+- TUI の resolve-parameter builder と FileAccessMode の再公開経路を確認するとき。
 
 ## Do not read this when
-- TUI の画面構成・実装本体の挙動を調べるとき。
-- canonical な builder 本体や新規公開 API・import 経路を設計するとき。
+- TUI 実装本体の挙動や画面構成を確認したいとき。
+- oracle 側の builder 本体や新規公開 API・import 経路を設計するとき。
+- TUI 起動後の処理や TUI 以外の parameter builder を調べるとき。
 
 ## hash
-- ca67257afbe4087d443747a094ee30d617f7e11f7a1d5dc7b98c14609acabd24
+- 41ec5786e69afcddd59bf54569d9584b03331498a4eca34f099cd6e0c16ae760

@@ -7,14 +7,14 @@
 
 from oracle.other.cmoc_config import (
     CmocConfig,
-    CmocConfigApplyFork,
     CmocConfigCodex,
-    CmocConfigReviewOracle,
+    CmocConfigOracleReview,
+    CodexModelSpec,
 )
 
 __all__ = [
     "CmocConfig",
-    "CmocConfigApplyFork",
     "CmocConfigCodex",
-    "CmocConfigReviewOracle",
+    "CmocConfigOracleReview",
+    "CodexModelSpec",
 ]

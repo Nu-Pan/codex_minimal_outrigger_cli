@@ -17,7 +17,7 @@ from oracle.prompt_builder.parts.index_entry_standard import (
     build_index_entry_standard as _build_index_entry_standard,
 )
 from oracle.prompt_builder.parts.oracle_review_standard import (
-    build_review_oracle_standard as _build_review_oracle_standard,
+    build_oracle_review_standard as _build_oracle_review_standard,
 )
 from oracle.prompt_builder.parts.realization_standard import (
     build_realization_standard as _build_realization_standard,
@@ -45,9 +45,9 @@ def build_index_entry_standard() -> StructDoc:
     return _build_index_entry_standard()[1]
 
 
-def build_review_oracle_standard() -> StructDoc:
-    """canonical review oracle standardの本文だけを返す。"""
-    return _build_review_oracle_standard()[1]
+def build_oracle_review_standard() -> StructDoc:
+    """canonical oracle review standardの本文だけを返す。"""
+    return _build_oracle_review_standard()[1]
 
 
 def build_realization_standard() -> StructDoc:
@@ -187,7 +187,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         aux_dynamic_prompt=[],
         oracle_standard=True,
         realization_standard=True,
-        review_oracle_standard=True,
+        oracle_review_standard=True,
         apply_review_standard=True,
         index_entry_standard=True,
     )
@@ -209,7 +209,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         "oracle and realization basic",
         "oracle standard",
         "realization standard",
-        "review oracle standard",
+        "oracle review standard",
         "apply review standard",
         "index entry standard",
         "oracle file",
@@ -393,12 +393,12 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
     assert "index entry standard" not in rendered
 
 
-def test_build_review_oracle_standard_renders_core_review_rules() -> None:
-    """review oracle standardのseverityと所見境界がrenderされることを検証する。"""
-    doc = build_review_oracle_standard()
+def test_build_oracle_review_standard_renders_core_review_rules() -> None:
+    """oracle review standardのseverityと所見境界がrenderされることを検証する。"""
+    doc = build_oracle_review_standard()
 
     assert isinstance(doc, StructDoc)
-    assert doc.title == "review oracle standard"
+    assert doc.title == "oracle review standard"
 
     rendered = render_as_markdown(doc)
     assert "fatal" in rendered
@@ -409,27 +409,27 @@ def test_build_review_oracle_standard_renders_core_review_rules() -> None:
     assert "用語の不統一" in rendered
     assert "oracle file だけからは問題だとは言い切れない" in rendered
     assert "仕様からは実装が一意に定まらない" in rendered
-    assert "`cmoc review oracle`" in rendered
+    assert "`cmoc oracle review`" in rendered
 
 
-def test_complete_prompt_can_include_review_oracle_standard() -> None:
-    """complete promptへreview oracle standardを追加できることを検証する。"""
+def test_complete_prompt_can_include_oracle_review_standard() -> None:
+    """complete promptへoracle review standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
         aux_dynamic_prompt=[],
-        review_oracle_standard=True,
+        oracle_review_standard=True,
     )
 
     rendered = render_as_markdown(prompt)
     assert "# oracle and realization basic" in rendered
-    assert "# review oracle standard" in rendered
+    assert "# oracle review standard" in rendered
 
 
-def test_complete_prompt_omits_review_oracle_standard_by_default() -> None:
-    """既定のcomplete promptがreview oracle standardを含めないことを検証する。"""
+def test_complete_prompt_omits_oracle_review_standard_by_default() -> None:
+    """既定のcomplete promptがoracle review standardを含めないことを検証する。"""
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -439,4 +439,4 @@ def test_complete_prompt_omits_review_oracle_standard_by_default() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "review oracle standard" not in rendered
+    assert "oracle review standard" not in rendered

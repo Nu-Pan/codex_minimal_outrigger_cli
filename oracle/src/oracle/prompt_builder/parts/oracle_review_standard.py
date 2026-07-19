@@ -8,9 +8,9 @@ from oracle.other.standard import (
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_review_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
+def build_oracle_review_standard() -> tuple[PlaceholderMap, StructDoc]:
     """
-    `cmoc review oracle` における「所見を列挙する作業」の規範文章を構築する
+    `cmoc oracle review` における「所見を列挙する作業」の規範文章を構築する
     """
     standards = [
         Standard(
@@ -99,7 +99,7 @@ def build_review_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
             backgrounds=[
                 "oracle file は正本仕様断片であり、仕様全体を網羅するものではない",
                 "oracle file に書かれていない仕様の隙間は、実装者である AI の裁量で補われる",
-                "`cmoc review oracle` は、リポジトリ固有の事情に依存しない汎用的なレビュー観点で oracle file を評価する",
+                "`cmoc oracle review` は、リポジトリ固有の事情に依存しない汎用的なレビュー観点で oracle file を評価する",
             ],
             requirements=[
                 Requirement(
@@ -141,7 +141,7 @@ def build_review_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
     return (
         {},
         StructDoc(
-            "review oracle standard",
+            "oracle review standard",
             *[standard_to_struct_doc(ros) for ros in standards],
         ),
     )

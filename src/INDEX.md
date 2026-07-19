@@ -1,18 +1,18 @@
 # `acp`
 
 ## Summary
-- `acp` 互換の公開入口と ACP builder 群を扱う。互換 import 経路を維持しながら、apply、review、session、TUI、indexing、quota probe などの下位 builder へ進むための入口となる。
+- ACP 互換の公開入口と、ACP parameter builder の realization 側入口をまとめるパッケージ。canonical builder への委譲や既存 import の互換維持、機能別 builder への導線を扱う。
 
 ## Read this when
-- `acp` 公開名や互換 import 経路の存廃を判断するとき。
-- ACP builder の構成や、対象機能に対応する下位 builder の入口を確認するとき。
+- `acp` 公開入口の存廃や既存参照の互換維持を判断するとき。
+- ACP parameter builder の realization 側入口、canonical builder への委譲、または機能別 builder を調査・変更するとき。
 
 ## Do not read this when
-- 特定 builder の具体的な処理や canonical な仕様だけを確認したいとき。
-- 互換入口ではなく、個別の builder 実装や内部挙動を直接変更・調査したいとき。
+- canonical な builder の仕様・実装内容だけを確認したいとき。対応する `oracle.acp_builder` 側を読む。
+- CLI のループ制御、state 遷移、TUI 起動後の処理など、ACP の公開入口や parameter builder 以外の挙動を調査するとき。対応する上位実装または実体モジュールを直接読む。
 
 ## hash
-- 3d90c81e3e3d3fe0dde392931009adf26ab57acf4a73344cf8072a768dcc68fa
+- ad852e72b72fda5b0728c292e6c863f8024e25a526244d93299652f0269328ee
 
 # `basic`
 
@@ -48,55 +48,50 @@
 # `commons`
 
 ## Summary
-- cmoc 共通 runtime helper を提供する commons パッケージ。CLI 実行、Codex、設定、Git、パス、ログ、状態、Ollama、INDEX 更新などの個別 runtime 実装と、横断 API の再公開窓口を含む。commons 配下の共通実行時機能を調査・変更する際の入口。
+- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex、設定、Git、パス、ログ、状態、Ollama、INDEX 更新など、複数のサブコマンドから利用される横断的な実行時機能を扱う。配下の個別 runtime モジュールや公開 API を確認するための入口。
 
 ## Read this when
-- commons 配下の共通 runtime 機能の責務や実装箇所を特定するとき
-- CLI、Codex、設定、Git、パス、ログ、状態、Ollama、INDEX 更新など複数の runtime 機能にまたがる変更影響を確認するとき
-- 個別 runtime モジュールへ進む前に、commons パッケージ全体の構成を把握するとき
+- 複数の CLI サブコマンドにまたがる runtime helper の責務や構成を確認するとき
+- commons 配下の個別実装へ進む前に、共通 runtime 機能の全体像と適切な入口を把握したいとき
+- Codex 実行、設定、Git、パス、ログ、状態、Ollama、INDEX 更新などの共通機能を調査するとき
 
 ## Do not read this when
-- 特定の runtime 機能の実装詳細だけを確認したいとき
-- 特定サブコマンドの業務処理や利用者向け仕様だけを調査するときは、対応する実装または oracle 文書を直接読むとき
+- 特定の runtime helper の実装詳細だけを調べるときは、対応する個別 runtime モジュールを直接読む
+- 特定サブコマンドの業務処理や利用者向け仕様だけを調査するときは、そのサブコマンド実装または oracle 文書を直接読む
 
 ## hash
-- 4a403c82687ea37c9d88409c6621acb69f0baa989f34f7cf0ab1b0f1765f9aef
+- e9f59e01914fb431b259940e67dd6cee776357502ddf6d8c2b030ea82ce2adce
 
 # `config`
 
 ## Summary
-- `config.*` 参照を既存利用者向けに維持するための互換入口群。ここでは設定の実体を持たず、正本の oracle src を再公開する経路だけを確認する。
-- `config.cmoc_config` から Cmoc 設定型を再公開する入口。設定定義そのものではなく、既存の公開参照を壊さないための接続点として読む。
+- 設定定義を直接実装せず、oracle 側の設定型を `config.*` として再公開する互換入口。既存利用者向けの import 面を確認するためのディレクトリ。
 
 ## Read this when
-- `config` からの import 経路を維持・確認したいとき。
-- `config.cmoc_config` 経由で Cmoc 系の設定型を参照したいとき。
-- 設定の正本を変更せず、互換入口の有無だけを確認したいとき。
+- `config` または `config.cmoc_config` の import・公開 API を維持、変更、確認するとき。
+- oracle 側の設定定義と realization 側の互換ブリッジの関係を確認するとき。
 
 ## Do not read this when
-- 設定仕様そのものを確認したいときは、正本側の oracle src を読む。
-- `config.*` 以外の公開面や新規設定追加を扱いたいとき。
-- 設定定義の項目意味や保存仕様を調べたいとき。
+- 設定仕様や設定定義そのものを確認するときは、oracle 側の設定定義を直接読む。
+- 設定を利用する個別機能だけを変更するときは、該当する利用側コードを直接読む。
 
 ## hash
-- c121a67917bdcc7850097d1a5fc153afb19f375da55ada79794c9c5739b22514
+- daa5ed72b11813f850abdb829e763dbf883b1abeace1419ea40a5fd5a555af2f
 
 # `main.py`
 
 ## Summary
-- Typer ベースの cmoc CLI のルート定義。共通エラー変換、トップレベルコマンド、session/apply/review のサブコマンド、console script の起動入口を扱う。CLI コマンドの追加・変更、引数や option の定義、コマンド実装への接続を調べる際の入口。
+- cmoc の Typer CLI アプリケーション定義。トップレベルおよび session、apply、oracle 配下のサブコマンドを登録し、各実装モジュールへ委譲する実行入口。CLI 引数解析エラーの共通変換、補完時の副作用抑制、scope option と console script 起動も扱う。
 
 ## Read this when
-- cmoc の CLI コマンド一覧、サブコマンド階層、option の既定値や列挙値を確認するとき
-- Typer・Click の引数解析エラー処理や CLI 起動方法を変更するとき
-- CLI 入口から各サブコマンド実装への接続を追うとき
+- cmoc の CLI コマンド、サブコマンド、option、scope 値、引数解析エラー処理、補完動作、または console script の起動経路を変更・調査するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理内容や業務ロジックだけを調べるときは、対応する sub_commands 配下の実装を直接読む
-- oracle のエラー処理・usage・サブコマンド仕様そのものを確認するときは、参照コメントに示された oracle file を読む
+- 特定サブコマンドの業務処理や branch・worktree 操作の詳細を調査するときは、対応する sub_commands 配下の実装を直接読む。
+- oracle review、oracle edit、apply fork などの仕様詳細だけを確認するときは、参照されている oracle 文書を直接読む。
 
 ## hash
-- 81225c8de9d313ba42585b37881ac6abea55daa56d41186a024931538e368802
+- ccb042da55c6aa724f6c6810135c48c7ecaee2dfc4da1ead01512324a4c4387f
 
 # `oracle.py`
 
@@ -116,15 +111,15 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装をまとめたパッケージ。apply、doctor、indexing、review、session、tui などの CLI 実行入口と、各サブコマンド固有の lifecycle、対象選定、レポート、Git・worktree 操作への入口を提供する。
+- サブコマンド実装を配置するパッケージ。apply、doctor、oracle、review、session、indexing、tui などの CLI 実行入口と、各処理の下位実装への導線を扱う。
 
 ## Read this when
-- サブコマンドの CLI 実装や package 構成を確認・変更するとき。
-- 複数サブコマンドにまたがる実装入口や、目的のサブコマンド配下の処理へ進む先を判断するとき。
+- サブコマンドの実装構成や CLI 実行入口を確認・変更するとき。
+- apply、oracle、session、tui など特定サブコマンドの lifecycle、state、worktree、report、起動処理の入口を調査するとき。
 
 ## Do not read this when
-- 共通 CLI runtime、Git、worktree、Codex 実行基盤などの共通実装だけを調査・変更するとき。
-- 特定サブコマンドの個別機能、下位モジュール、プロンプト生成、レポート生成だけを扱うときは、対応する下位実装を直接読む。
+- 共通 runtime、Git、worktree、Codex 実行基盤、indexing の具体的更新処理など、下位または共通実装そのものを直接調査するとき。
+- 特定サブコマンドの下位責務だけを扱うときは、対応する下位実装を直接読む。
 
 ## hash
-- 3d6afa336f198361e8c8188c2d7a1aef6863d12546520a3cd38619852beacda8
+- 57fe313fa0ed4e183ebdb529bac3a9798e04558b95faff7cd33f5200069c2390

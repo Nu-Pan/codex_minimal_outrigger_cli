@@ -152,7 +152,7 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
         parameter,
         root=root,
         cwd=codex_cwd,
-        purpose="review oracle enumerate findings",
+        purpose="oracle review enumerate findings",
     )
 
     assert isinstance(result, FakeCodexResult)
@@ -238,6 +238,16 @@ def test_indexing_preflight_waits_for_repository_lock(
         events.append("updated")
         return []
 
+    class FakeCodexResult:
+        """preflight callback の型契約を満たす最小 fake。"""
+
+        output_json = None
+
+    def fake_codex_exec(*args: object, **kwargs: object) -> FakeCodexResult:
+        """lock test では呼び出されない Codex result を返す fake。"""
+
+        return FakeCodexResult()
+
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
     lock_attempted = threading.Event()
@@ -258,7 +268,7 @@ def test_indexing_preflight_waits_for_repository_lock(
             future = executor.submit(
                 indexing_module.run_indexing_preflight,
                 root,
-                lambda *args, **kwargs: None,
+                fake_codex_exec,
             )
             try:
                 assert lock_attempted.wait(timeout=3)
@@ -312,7 +322,9 @@ def test_command_codex_call_skips_indexing_when_parameter_disables_preflight(
     ) -> FakeCodexResult:
         """preflight を省略して Codex exec へ進んだ呼び出しを記録する fake。"""
 
-        calls.append(kwargs["purpose"])
+        purpose = kwargs["purpose"]
+        assert isinstance(purpose, str)
+        calls.append(purpose)
         return FakeCodexResult()
 
     indexing_module.enable_indexing_preflight()

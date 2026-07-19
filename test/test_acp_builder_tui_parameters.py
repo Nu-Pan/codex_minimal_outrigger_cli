@@ -32,7 +32,7 @@ def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
     assert "# oracle and realization basic" in parameter.prompt
     assert "# oracle standard" in parameter.prompt
     assert "# realization standard" in parameter.prompt
-    assert "# review oracle standard" in parameter.prompt
+    assert "# oracle review standard" in parameter.prompt
     assert "# apply review standard" in parameter.prompt
     assert "# index entry standard" in parameter.prompt
 
@@ -52,7 +52,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         "oracle_and_realization_basic",
         "oracle_standard",
         "realization_standard",
-        "review_oracle_standard",
+        "oracle_review_standard",
         "apply_review_standard",
         "index_entry_standard",
     ]
@@ -75,7 +75,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         "oracle_and_realization_basic",
         "oracle_standard",
         "realization_standard",
-        "review_oracle_standard",
+        "oracle_review_standard",
         "apply_review_standard",
         "index_entry_standard",
     ]:

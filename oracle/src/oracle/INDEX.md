@@ -1,55 +1,49 @@
 # `acp_builder`
 
 ## Summary
-- ACP builder の oracle src をまとめる領域。AI エージェント呼び出しパラメータの基礎型、各 cmoc サブコマンド向けの prompt・Structured Output 設定、実行時のファイルアクセス方針を扱う。
-- 変更要約・ファイルレビュー修正、indexing、oracle review、session join の conflict 解消、TUI 起動・実行パラメータ解決の各仕様を下位要素から確認するための入口。
+- 参照可能な正本ソース本文を含まない空の入口ディレクトリです。正本ソースの有無を確認するために使用します。
 
 ## Read this when
-- ACP builder の agent call パラメータやファイルアクセスモードの仕様を確認するとき。
-- `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join`、`cmoc tui` の prompt 構築や Structured Output 設定を調査するとき。
-- oracle review の所見列挙・擁護・反証・採否判定・統合のどの処理を読むべきか判断するとき。
+- このディレクトリに参照可能な正本ソースが存在するか確認するとき。
 
 ## Do not read this when
-- ACP builder を呼び出す実行本体や、下流の realization 実装・テストを調査するとき。
-- 共通 prompt builder、パス解決、構造化文書処理そのものの実装詳細を調査するとき。
-- INDEX.md の生成規則や、oracle と realization の一般的な責務定義だけを確認したいとき。
+- 実装仕様や処理内容を確認したいとき。
 
 ## hash
-- 1f706c9a7496b6a242cc44ea00dd5b2da3430b3d16cf5ae6bf5d2df0ca8b070b
+- af14647647bde4a7fcfb3715b7c95ff89038f5004f0e89357b460a53dd25ba64
 
 # `other`
 
 ## Summary
-- `oracle/src/oracle/other` 配下の、cmoc の設定モデル、ルートパス解決、規範文書のデータ化、構造化 markdown 組み立てをまとめて扱う入口。個別ファイルを選ぶ前に、この層でどの共通基盤を読むべきかを判断したいときに使う。
+- cmoc の設定、ルートパスモデル、規範データ構造、構造化文書の Markdown 変換を担う基盤モジュール群。設定・パス解決・標準文書モデル・文書レンダリングの各実装を調べる入口。
 
 ## Read this when
-- cmoc の永続設定モデルや、その既定値・保存方針を確認したい。
-- ルートパスのプレースホルダ解決や、実パスとの相互変換を確認したい。
-- 規範文書を保持するデータ構造や、markdown への落とし込み方を確認したい。
-- 階層付き markdown のレンダリング、`cmoc_ref` と `cmoc_block` の検査、文字列やコードブロックの正規化を確認したい。
+- cmoc の設定 dataclass、ルートパスプレースホルダ、規範文書モデル、StructDoc の Markdown 出力を変更または調査するとき。
+- 設定永続化対象やルート探索規則、標準文書の構造、見出し・コードブロック・cmoc_ref の扱いを確認するとき。
 
 ## Do not read this when
-- `cmoc` の各サブコマンドの実行手順や CLI の入出力を追いたい。
-- 設定読み書きの具体的な永続化処理や、サブコマンド固有の業務ロジックを見たい。
-- 構造化文書やパス解決以外の別系統の共通処理を探したい。
+- 設定ファイルの生成・同期手順や doctor の処理を調べるとき。
+- ModelClass、ReasoningEffort、StructDoc の利用側、CLI 実行経路、oracle file の配置・命名方針、個別の標準文書内容を確認するときは、それぞれの定義元・呼び出し元・標準文書を直接読む。
 
 ## hash
-- 6139c507e1f8a0fcd13dc8bbffa88ee7e994d18d1b93d3403a866d084f29eca8
+- 0b174c0c78c774c9a947eba32eee441d0cacd7ae4f8e3393c8f850b1695a6f88
 
 # `prompt_builder`
 
 ## Summary
-- agent call 用の完全なプロンプトを組み立てる実装と、プレースホルダ対応型、oracle／realization やルーティング規範などをプロンプトへ変換する部品群を収録する。プロンプト構成全体や個別 standard の注入処理、プレースホルダ表現を調査・変更するときの入口となる。
+- プレースホルダ名と実パス・文字列の対応を表す型定義を提供する。置換対象の表現を確認する入口。
+- 固定・動的パーツ、プレースホルダ、標準ルール設定からエージェント呼び出し用の完全なプロンプトを構築する。全体構造や組み立てを調査するときの入口。
+- oracle・realization、INDEX.md、ファイルアクセス規則、レビュー基準など、プロンプト生成に注入する標準ルールの部品をまとめる。各規範の本文や構成を変更・確認するときの入口。
 
 ## Read this when
-- 完全な agent 用プロンプトの構成や、静的・動的プロンプトの統合方法を確認したいとき。
-- oracle／realization の定義・standard、アクセス規則、INDEX.md ルーティング規則を prompt に組み込む処理を調査・変更するとき。
-- プレースホルダ展開に使う型や、各 standard の個別 build 処理を確認したいとき。
+- プレースホルダ展開用の型や、文字列とPathを含む置換対象の表現を確認するとき。
+- 完全なプロンプトの構造、標準ルールの依存関係、動的プロンプトやプレースホルダの組み立てを調査・変更するとき。
+- oracle・realization、INDEX.md、ファイルアクセス規則、レビュー基準、prompt builder部品の生成内容を調査・変更するとき。
 
 ## Do not read this when
-- CLI コマンドの処理、ファイル探索、実際の読み書き、agent の業務ロジックを調査するとき。
-- 個別の oracle file や realization file の仕様・実装そのものを確認するとき。
-- レビュー結果の保存・表示形式や JSON schema、prompt builder 全体の呼び出し側を確認したいとき。
+- プロンプト本文の生成手順や置換ロジックの詳細だけを調べるとき。
+- 特定の注入パーツや個別標準ルールの本文だけを調べるとき。
+- 個別のoracle file・realization file、CLIコマンド、実際のファイル操作、prompt builderの生成処理やファイル探索処理だけを調べるとき。
 
 ## hash
-- f9d742947ac0f7005fc9eaf397ee3bdc7ced921e1551f6c05017d48b8b87b07b
+- 824e06f5f482694f3ac1d41a92029bb7cfb1ed304a449f4e07ed8111d0f96b98

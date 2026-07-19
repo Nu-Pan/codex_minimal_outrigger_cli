@@ -1,4 +1,4 @@
-"""TUI 起動 parameter builder の realization 側互換入口。"""
+"""TUI 起動 parameter builder の realization adapter。"""
 
 from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
 from oracle.acp_builder.tui.launch_tui import (
@@ -6,7 +6,7 @@ from oracle.acp_builder.tui.launch_tui import (
 )
 
 from basic.path_model import RootPathPlaceHolder, resolve_real_path
-from commons.runtime_paths import logs_dir
+from commons.runtime_paths import editor_input_dir
 
 
 def build_tui_launch_tui_parameter(
@@ -19,7 +19,7 @@ def build_tui_launch_tui_parameter(
     oracle_and_realization_basic: bool,
     oracle_standard: bool,
     realization_standard: bool,
-    review_oracle_standard: bool,
+    oracle_review_standard: bool,
     apply_review_standard: bool,
     index_entry_standard: bool,
 ) -> AgentCallParameter:
@@ -28,7 +28,7 @@ def build_tui_launch_tui_parameter(
     # oracle builder が正本だが保存先 directory を作らないため、呼び出し前に
     # runtime 側の配置だけ保証する。oracle 側で作成されるようになれば削除できる。
     repo = resolve_real_path(RootPathPlaceHolder.REPO)
-    (logs_dir(repo).parent / "tui").mkdir(parents=True, exist_ok=True)
+    editor_input_dir(repo).mkdir(parents=True, exist_ok=True)
     return _oracle_build_tui_launch_tui_parameter(
         time_stamp,
         role,
@@ -39,7 +39,7 @@ def build_tui_launch_tui_parameter(
         oracle_and_realization_basic,
         oracle_standard,
         realization_standard,
-        review_oracle_standard,
+        oracle_review_standard,
         apply_review_standard,
         index_entry_standard,
     )

@@ -71,20 +71,18 @@
 # `oracle_review_standard.py`
 
 ## Summary
-- `cmoc review oracle` が oracle file をレビューして所見を列挙する際の判定規範を構築する。fatal 所見、minor 所見、所見にしないものの境界を、正本仕様断片同士の矛盾・実装者裁量で解消不能な問題・表記上の単純誤り・oracle file だけでは問題と言い切れない事項に分けて定義する。
+- `cmoc oracle review`で所見を列挙する際の規範文章を構築する。fatal・minorとして扱う問題の基準と、所見にしない範囲を`StructDoc`として定義する。
 
 ## Read this when
-- `cmoc review oracle` のレビュー観点として、どの問題を fatal 所見または minor 所見に分類するか確認したいとき。
-- oracle file の矛盾、実装者裁量では解消不能な仕様問題、日本語上の誤り、typo、用語の不統一を所見として扱う条件を確認したいとき。
-- 仕様の隙間、実装方針の複数性、好み、一般的なベストプラクティスだけを根拠に所見を作ってよいか判断したいとき。
+- `cmoc oracle review`の所見判定基準を確認・変更するとき
+- fatal、minor、または所見対象外の判断規則を実装・テストするとき
 
 ## Do not read this when
-- `cmoc review oracle` の CLI 引数、入出力形式、ファイル探索、実行フローなど、所見分類以外の実装詳細を確認したいとき。
-- oracle file そのものの一般原則、realization file の実装品質基準、または INDEX.md エントリー生成基準を確認したいだけのとき。
-- 特定のレビュー結果の保存形式、表示形式、JSON schema、または他の prompt 部品との結合方法を確認したいとき。
+- oracle fileの一般的な記述規則を確認したいとき
+- レビュー所見の生成以外のprompt builder部分を変更するとき
 
 ## hash
-- a83d32e646c0e234ec9b344c7fa0e9f23db19d26f6f6cd2967c613962abf93c3
+- a84628e17c9d2f93457418439a1a7404523b54ba27f7adcb2c93e9514b2af776
 
 # `oracle_standard.py`
 

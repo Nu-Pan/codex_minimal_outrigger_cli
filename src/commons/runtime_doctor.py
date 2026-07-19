@@ -16,11 +16,17 @@ from commons.runtime_git import (
     with_cmoc_ignore_pattern,
 )
 from commons.runtime_ollama import ensure_ollama_serves_local_slm
-from commons.runtime_paths import config_path, repo_root
+from commons.runtime_paths import config_path, refactor_state_path, repo_root
+from commons.runtime_refactor import sync_refactor_state
 from config.cmoc_config import CmocConfig
 
 
-def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
+def run_doctor_preprocess(
+    root: Path,
+    config: CmocConfig | None = None,
+    *,
+    sync_refactor_entries: bool = True,
+) -> None:
     """current と main worktree の共通修復を排他実行し、修復差分だけを commit する。"""
     root = root.resolve()
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -38,18 +44,15 @@ def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
         # index にはまだ触れず、後続の一時 index で他の doctor 修復と同じ
         # commit にまとめる。
         synced_config = sync_config(root)
+        sync_refactor_state(root, sync_entries=sync_refactor_entries)
 
-        repairs: list[tuple[Path, str, str, bool, bool]] = []
+        repairs: list[tuple[Path, str, bool, bool]] = []
         original_indexes: list[tuple[Path, str]] = []
         try:
             for repair_root in repair_roots:
                 include_config = repair_root == root
                 original_index_tree = _current_index_tree(repair_root)
                 original_indexes.append((repair_root, original_index_tree))
-                restored_index_tree = _restored_index_tree(
-                    repair_root,
-                    include_config=include_config,
-                )
                 # ensure_cmoc_ignored と _ensure_agents_tracked は通常 index を
                 # 変更するため、Ollama 失敗時も元の staged 状態へ戻せるようにする。
                 ensure_cmoc_ignored(repair_root)
@@ -58,12 +61,15 @@ def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
                     (
                         repair_root,
                         original_index_tree,
-                        restored_index_tree,
                         agents_gitkeep_added,
                         include_config,
                     )
                 )
 
+            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+            # 初回 doctor が作る .gitignore も realization file 集合へ含め、doctor
+            # 完了時点で refactor entry と実 file を一致させる。
+            sync_refactor_state(root, sync_entries=sync_refactor_entries)
             ensure_ollama_serves_local_slm(root, config or synced_config)
         except BaseException:
             for repair_root, original_index_tree in original_indexes:
@@ -73,10 +79,13 @@ def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
         for (
             repair_root,
             original_index_tree,
-            restored_index_tree,
             agents_gitkeep_added,
             include_config,
         ) in repairs:
+            restored_index_tree = _restored_index_tree(
+                repair_root,
+                include_config=include_config,
+            )
             _commit_doctor_repairs(
                 repair_root,
                 restored_index_tree,
@@ -84,7 +93,7 @@ def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
                 agents_gitkeep_added,
                 include_config=include_config,
             )
-        _validate_config_tracked(root)
+        _validate_tracked_runtime_files(root)
 
 
 @contextmanager
@@ -136,15 +145,20 @@ def _ensure_agents_tracked(root: Path) -> bool:
     return True
 
 
-def _validate_config_tracked(root: Path) -> None:
-    """同期済み worktree config が Git index に存在することを検証する。"""
-    config = str(config_path(root).relative_to(root))
-    tracked = run_git(["ls-files", "--", config], root).stdout.strip()
-    if tracked != config:
+def _validate_tracked_runtime_files(root: Path) -> None:
+    """同期済み config と refactor state が Git index に存在するか検証する。"""
+    expected = {
+        str(config_path(root).relative_to(root)),
+        str(refactor_state_path(root).relative_to(root)),
+    }
+    tracked = set(
+        run_git(["ls-files", "--", *sorted(expected)], root).stdout.splitlines()
+    )
+    if tracked != expected:
         raise CmocError(
-            "cmoc config を git 追跡対象にできませんでした。",
-            ["git index と .gitignore の状態を確認してください。"],
-            f"path: {root / config}\ntracked: {tracked}",
+            "cmoc の追跡対象 state を git index に登録できませんでした。",
+            ["config、refactor state、git index、.gitignore を確認してください。"],
+            f"expected: {sorted(expected)}\ntracked: {sorted(tracked)}",
         )
 
 
@@ -205,7 +219,7 @@ def _commit_doctor_repairs_from_head(
         _stage_gitignore_repair(root, index_path)
         _stage_agents_gitkeep_repair(root, index_path, agents_gitkeep_added)
         if include_config:
-            _stage_config_repair(root, index_path)
+            _stage_tracked_runtime_repair(root, index_path)
         _run_git_with_index(
             ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
             root,
@@ -251,7 +265,7 @@ def _restored_index_tree(root: Path, *, include_config: bool) -> str:
         _stage_gitignore_repair_from_index(root, index_path)
         _stage_agents_gitkeep_repair_from_index(root, index_path)
         if include_config:
-            _stage_config_repair(root, index_path)
+            _stage_tracked_runtime_repair(root, index_path)
         _run_git_with_index(
             ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
             root,
@@ -307,10 +321,10 @@ def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
     _stage_blob(root, index_path, ".agents/.gitkeep", mode, blob)
 
 
-def _stage_config_repair(root: Path, index_path: Path) -> None:
-    """同期済み config を ignore 規則に左右されず一時 index へ載せる。"""
-    path = config_path(root)
-    _stage_text(root, index_path, str(path.relative_to(root)), path.read_text())
+def _stage_tracked_runtime_repair(root: Path, index_path: Path) -> None:
+    """同期済み config/state を ignore 規則に左右されず一時 index へ載せる。"""
+    for path in (config_path(root), refactor_state_path(root)):
+        _stage_text(root, index_path, str(path.relative_to(root)), path.read_text())
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:

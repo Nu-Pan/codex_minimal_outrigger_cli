@@ -10,7 +10,6 @@ import re
 import textwrap
 from xml.sax.saxutils import quoteattr
 
-
 _CMOC_REF_PATTERN = re.compile(r'<cmoc_ref target="([^"]+)"/>')
 
 
@@ -61,6 +60,8 @@ class StructDoc:
 class StructBlock:
     """
     `cmoc_block` としてレンダリングする親要素
+
+    プロンプト内でこのブロック参照するには `<cmoc_ref target="..."/>` の形式で記述する
     """
 
     def __init__(self, block_id: str, child: StructDoc):

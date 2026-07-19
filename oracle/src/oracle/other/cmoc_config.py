@@ -12,9 +12,7 @@
 
 # std
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Literal
-from enum import StrEnum, auto
 
 # cmoc
 from oracle.acp_builder.basic import ModelClass, ReasoningEffort
@@ -32,14 +30,9 @@ class CmocConfig:
     # Codex CLI 関係の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())
 
-    # `cmoc apply fork` サブコマンドの挙動設定
-    apply_fork: "CmocConfigApplyFork" = field(
-        default_factory=lambda: CmocConfigApplyFork()
-    )
-
-    # `cmoc review oracle` サブコマンドの挙動設定
-    review_oracle: "CmocConfigReviewOracle" = field(
-        default_factory=lambda: CmocConfigReviewOracle()
+    # `cmoc oracle review` サブコマンドの挙動設定
+    oracle_review: "CmocConfigOracleReview" = field(
+        default_factory=lambda: CmocConfigOracleReview()
     )
 
 
@@ -94,19 +87,9 @@ class CmocConfigCodex:
 
 
 @dataclass(frozen=True)
-class CmocConfigApplyFork:
+class CmocConfigOracleReview:
     """
-    `cmoc apply fork` サブコマンドの挙動に関する設定を集約したクラス
-    """
-
-    # apply ループの最大処理ファイル数
-    num_apply_files: int = field(default=200)
-
-
-@dataclass(frozen=True)
-class CmocConfigReviewOracle:
-    """
-    `cmoc review oracle` サブコマンドの挙動に関する設定を集約したクラス
+    `cmoc oracle review` サブコマンドの挙動に関する設定を集約したクラス
     """
 
     # 所見リスト列挙ループの上限回数

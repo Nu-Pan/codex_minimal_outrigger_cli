@@ -103,6 +103,7 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
     assert ".gitignore" in repair_commit_paths
     assert ".agents/.gitkeep" in repair_commit_paths
     assert ".cmoc/gt/ar/config.json" in repair_commit_paths
+    assert ".cmoc/gt/ar/realization/refactor/state.json" in repair_commit_paths
     assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout.strip() == ""
     assert (
         run_git(
@@ -328,20 +329,6 @@ def test_doctor_generates_and_tracks_config(
     )
 
 
-def test_dector_alias_runs_doctor(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """互換 alias `dector` が doctor と同じ config 生成を実行することを検証する。"""
-
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-
-    result = runner.invoke(app, ["dector"], catch_exceptions=False)
-
-    assert result.exit_code == 0
-    assert (root / ".cmoc" / "gt" / "ar" / "config.json").is_file()
-
-
 def test_doctor_generates_config_under_broad_cmoc_ignore(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -459,7 +446,7 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["codex"]["reasoning_effort"]["xhigh"] == "xhigh"
     assert data["codex"]["reasoning_effort"]["max"] == "max"
-    assert data["apply_fork"]["num_apply_files"] == 200
+    assert "apply_fork" not in data
 
 
 def test_doctor_preprocess_untracks_existing_cmoc_local_files(

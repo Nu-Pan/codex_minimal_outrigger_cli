@@ -131,7 +131,7 @@ def test_create_run_worktree_rejects_path_outside_managed_worktrees(
     (target / "keep.txt").write_text("keep\n")
 
     with pytest.raises(CmocError, match="run worktree path"):
-        create_run_worktree(root, "cmoc/apply/session/run", target)
+        create_run_worktree(root, "cmoc/run/session/run", target)
 
     assert (target / "keep.txt").read_text() == "keep\n"
 
@@ -146,7 +146,7 @@ def test_create_run_worktree_rejects_path_not_matching_branch(
     (target / "keep.txt").write_text("keep\n")
 
     with pytest.raises(CmocError, match="run worktree path"):
-        create_run_worktree(root, "cmoc/apply/session/run", target)
+        create_run_worktree(root, "cmoc/run/session/run", target)
 
     assert (target / "keep.txt").read_text() == "keep\n"
 
@@ -177,7 +177,7 @@ def test_create_run_worktree_rejects_symlink_components(
 
     target = managed / "session" / "run"
     with pytest.raises(CmocError, match="run worktree path"):
-        create_run_worktree(root, "cmoc/apply/session/run", target)
+        create_run_worktree(root, "cmoc/run/session/run", target)
 
     assert not (external / "session" / "run").exists()
 
@@ -192,7 +192,7 @@ def test_create_run_worktree_rejects_unregistered_managed_path(
     (target / "keep.txt").write_text("keep\n")
 
     with pytest.raises(CmocError, match="run worktree path"):
-        create_run_worktree(root, "cmoc/apply/session/run", target)
+        create_run_worktree(root, "cmoc/run/session/run", target)
 
     assert (target / "keep.txt").read_text() == "keep\n"
 
@@ -227,7 +227,7 @@ def test_remove_worktree_rejects_symlink_components(
         "worktree",
         "add",
         "-b",
-        "cmoc/apply/session/run",
+        "cmoc/run/session/run",
         str(actual),
         "HEAD",
     )
@@ -277,7 +277,7 @@ def test_remove_worktree_rejects_replaced_registered_path(
         "worktree",
         "add",
         "-b",
-        "cmoc/apply/session/run",
+        "cmoc/run/session/run",
         str(target),
         "HEAD",
     )

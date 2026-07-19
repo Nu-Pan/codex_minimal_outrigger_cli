@@ -30,7 +30,6 @@ from typing import Any
 
 import click
 import pytest
-from _apply_support import apply_worktree_from_state
 from _codex_support import codex_arg_value, codex_override_config
 from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
@@ -51,14 +50,15 @@ pytestmark = pytest.mark.skipif(
 )
 
 PRODUCTION_SCENARIO_COMMANDS = {
-    ("apply", "abandon"),
-    ("apply", "fork"),
-    ("apply", "join"),
-    ("dector",),
     ("doctor",),
-    ("eval-oracle",),
     ("indexing",),
-    ("review", "oracle"),
+    ("oracle", "edit", "fork"),
+    ("oracle", "investigation"),
+    ("oracle", "review"),
+    ("realization", "apply", "fork"),
+    ("realization", "refactor", "fork"),
+    ("run", "abandon"),
+    ("run", "join"),
     ("session", "abandon"),
     ("session", "fork"),
     ("session", "join"),
@@ -128,15 +128,30 @@ def _write_local_slm_config(root: Path) -> None:
             },
             reasoning_effort={effort: "low" for effort in ReasoningEffort},
         ),
-        apply_fork=replace(config.apply_fork, num_apply_files=1),
-        review_oracle=replace(
-            config.review_oracle,
+        oracle_review=replace(
+            config.oracle_review,
             num_enumerate_findings_loop=1,
             num_merge_findings_loop=1,
             num_validate_findings_loop=1,
         ),
     )
     write_config(root / ".cmoc" / "gt" / "ar" / "config.json", config)
+
+
+def _write_noninteractive_fixture_instructions(root: Path) -> None:
+    """SLM の意味判断を試験対象から外す fixture instruction を追加する。"""
+    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    # 本番経路との差として許される決定論的入力で、cmoc の制御だけを検証する。
+    (root / "AGENTS.md").write_text(
+        """# Production-path test fixture
+
+This is an intentionally minimal and internally consistent test repository.
+For a realization-refactor file review, report `findings` as an empty array and
+do not modify files. For every other call, follow its explicit prompt exactly.
+"""
+    )
+    run_git(root, "add", "AGENTS.md")
+    run_git(root, "commit", "-m", "add deterministic agent instructions")
 
 
 def _production_environment(
@@ -251,6 +266,15 @@ def _load_session_state(root: Path, branch: str) -> tuple[Path, dict[str, Any]]:
     return path, state
 
 
+def _run_worktree_from_state(root: Path, state: dict[str, Any]) -> Path:
+    """共通 run branch 名から仕様上の managed worktree path を復元する。"""
+    branch = state["run"]["branch"]
+    assert isinstance(branch, str)
+    parts = branch.split("/")
+    assert len(parts) == 4 and parts[:2] == ["cmoc", "run"]
+    return root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+
+
 def _completed_tui_message(codex_home: Path) -> str | None:
     """Codex TUI session が保存した完了済み assistant response を探す。"""
     # session file の originator で resolver の `codex exec` と TUI を区別する。
@@ -322,14 +346,15 @@ def _run_cmoc_tui(
     root: Path,
     environment: dict[str, str],
     codex_home: Path,
+    *args: str,
 ) -> tuple[str, str]:
-    """PTY 上の TUI 応答完了を待ち、二度の Ctrl-C で正常終了する。"""
+    """指定した cmoc TUI 経路を PTY 上で応答完了まで実行する。"""
     # Codex TUI は terminal を必須とするため、24x100 の実 PTY を渡す。
     master_fd, slave_fd = pty.openpty()
     fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 100, 0, 0))
     os.set_blocking(master_fd, False)
     process = subprocess.Popen(
-        [str(cmoc), "tui"],
+        [str(cmoc), *args],
         cwd=root,
         env=environment,
         stdin=slave_fd,
@@ -394,20 +419,18 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     # CLI 登録と固定シナリオを比較し、新しい末端 command の追加漏れを検出する。
     assert _registered_leaf_commands(get_command(app)) == PRODUCTION_SCENARIO_COMMANDS
     root = make_repo(tmp_path)
-    dector_parent = tmp_path / "dector"
-    dector_parent.mkdir()
-    dector_root = make_repo(dector_parent)
+    _write_noninteractive_fixture_instructions(root)
     _write_local_slm_config(root)
-    _write_local_slm_config(dector_root)
     cmoc, environment, _codex_home = _production_environment(tmp_path)
 
-    # doctor と互換 alias は、それぞれ共有 Ollama を含む本番 preprocess を完了する。
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # doctor は共有 Ollama を含む本番 preprocess を完了する。
     _run_without_codex_call(cmoc, root, environment, "doctor")
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert run_git(root, "ls-files", ".cmoc/gt/ar/config.json").stdout.strip()
-    _run_without_codex_call(cmoc, dector_root, environment, "dector")
-    assert run_git(dector_root, "status", "--short").stdout.strip() == ""
-    assert run_git(dector_root, "ls-files", ".cmoc/gt/ar/config.json").stdout.strip()
+    assert run_git(
+        root, "ls-files", ".cmoc/gt/ar/realization/refactor/state.json"
+    ).stdout.strip()
 
     # indexing は実推論 response を INDEX.md と commit に反映する。
     before_indexing_calls = _codex_call_logs(root)
@@ -429,42 +452,44 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     _run_without_codex_call(cmoc, root, environment, "session", "fork")
     session_branch = current_branch(root)
     assert session_branch.startswith("cmoc/session/")
-    review_dir = root / ".cmoc" / "gu" / "ar" / "report" / "review_oracle"
+    review_dir = root / ".cmoc" / "gu" / "ar" / "report" / "oracle_review"
     review_reports = set(review_dir.glob("*.md"))
-    _run_without_codex_call(cmoc, root, environment, "review", "oracle")
+    _run_without_codex_call(cmoc, root, environment, "oracle", "review")
     review_report = next(iter(set(review_dir.glob("*.md")) - review_reports))
     assert "result: no_targets" in review_report.read_text()
-    review_reports = set(review_dir.glob("*.md"))
-    _run_without_codex_call(cmoc, root, environment, "eval-oracle")
-    eval_report = next(iter(set(review_dir.glob("*.md")) - review_reports))
-    assert "result: no_targets" in eval_report.read_text()
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # 3 workload と共通 join/abandon を本番 Codex 経路で観測する。
+    for command, kind in [
+        (("oracle", "edit", "fork"), "oracle_edit"),
+        (("realization", "apply", "fork"), "realization_apply"),
+        (("realization", "refactor", "fork"), "realization_refactor"),
+    ]:
+        before_calls = _codex_call_logs(root)
+        _run_cmoc(cmoc, root, environment, *command)
+        assert _codex_call_logs(root) - before_calls
+        _state_path, completed_state = _load_session_state(root, session_branch)
+        assert completed_state["run"]["state"] == "joinable"
+        assert completed_state["run"]["kind"] == kind
+        joined_worktree = _run_worktree_from_state(root, completed_state)
+        assert joined_worktree.is_dir()
+        _run_cmoc(cmoc, root, environment, "run", "join")
+        _state_path, joined_state = _load_session_state(root, session_branch)
+        assert joined_state["run"] == {
+            "state": "ready",
+            "kind": None,
+            "branch": None,
+            "fork_commit": None,
+        }
+        assert not joined_worktree.exists()
 
-    # 変更なし apply を join と abandon の両 lifecycle へ進める。
-    _run_without_codex_call(
-        cmoc, root, environment, "apply", "fork", "--scope", "session"
-    )
-    _state_path, completed_state = _load_session_state(root, session_branch)
-    assert completed_state["apply"]["state"] == "completed"
-    joined_apply_worktree = apply_worktree_from_state(root, completed_state)
-    assert joined_apply_worktree.is_dir()
-    _run_without_codex_call(cmoc, root, environment, "apply", "join")
-    _state_path, joined_state = _load_session_state(root, session_branch)
-    assert joined_state["apply"]["state"] == "ready"
-    assert not joined_apply_worktree.exists()
-
-    _run_without_codex_call(
-        cmoc, root, environment, "apply", "fork", "--scope", "session"
-    )
-    _state_path, abandoned_apply_state = _load_session_state(root, session_branch)
-    abandoned_apply_worktree = apply_worktree_from_state(root, abandoned_apply_state)
-    abandon_result = _run_without_codex_call(
-        cmoc, root, environment, "apply", "abandon"
-    )
+    _run_cmoc(cmoc, root, environment, "oracle", "edit", "fork")
+    _state_path, abandoned_state = _load_session_state(root, session_branch)
+    abandoned_worktree = _run_worktree_from_state(root, abandoned_state)
+    abandon_result = _run_without_codex_call(cmoc, root, environment, "run", "abandon")
     _state_path, ready_state = _load_session_state(root, session_branch)
-    assert ready_state["apply"]["state"] == "ready"
-    assert not abandoned_apply_worktree.exists()
-    assert "- before: `completed`" in abandon_result.stdout
-    assert "- after: `ready`" in abandon_result.stdout
+    assert ready_state["run"]["state"] == "ready"
+    assert not abandoned_worktree.exists()
+    assert "cleanup: `completed`" in abandon_result.stdout
 
     # 同じ home branch で join と abandon の両 session 完了経路を観測する。
     state_path, _state = _load_session_state(root, session_branch)
@@ -486,9 +511,21 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     )
 
 
+@pytest.mark.parametrize(
+    ("command", "tui_purpose", "expects_resolver"),
+    [
+        (("tui",), "tui codex", True),
+        (("oracle", "investigation"), "oracle investigation", False),
+    ],
+)
 @pytest.mark.timeout(300)
-def test_tui_uses_real_codex_response_over_production_pty(tmp_path: Path) -> None:
-    """TUI を PTY 上で起動し、実 local SLM response 後まで完了する。"""
+def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
+    tmp_path: Path,
+    command: tuple[str, ...],
+    tui_purpose: str,
+    expects_resolver: bool,
+) -> None:
+    """全 TUI 末端を実 local SLM response 後まで本番経路で完了する。"""
     root = make_repo(tmp_path)
     _write_local_slm_config(root)
     cmoc, environment, codex_home = _production_environment(tmp_path)
@@ -499,18 +536,26 @@ def test_tui_uses_real_codex_response_over_production_pty(tmp_path: Path) -> Non
     calls_before = _codex_call_logs(root)
 
     # editor 自動化以外は、本番と同じ TUI、Codex executable、provider を使う。
-    response, transcript = _run_cmoc_tui(cmoc, root, environment, codex_home)
+    response, transcript = _run_cmoc_tui(
+        cmoc,
+        root,
+        environment,
+        codex_home,
+        *command,
+    )
     assert response.strip()
     assert "Shutting down" in transcript
     new_calls = _codex_call_logs(root) - calls_before
     tui_calls = {path for path in new_calls if path.name.endswith("_tui_call.json")}
     exec_calls = new_calls - tui_calls
     assert len(tui_calls) == 1
-    assert exec_calls
-    _assert_local_codex_call(next(iter(tui_calls)), tui=True)
-    assert any(
+    tui_payload = _assert_local_codex_call(next(iter(tui_calls)), tui=True)
+    assert tui_payload["purpose"] == tui_purpose
+    has_tui_resolver = any(
         _assert_local_codex_call(path).get("purpose") == "tui resolve parameter"
         for path in exec_calls
     )
+    assert has_tui_resolver is expects_resolver
+    assert bool(exec_calls) is expects_resolver
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert run_git(root, "status", "--short").stdout == status_before

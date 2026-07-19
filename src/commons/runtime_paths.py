@@ -120,6 +120,11 @@ def logs_dir(root: Path) -> Path:
     return generated_agent_read_dir(root) / "log" / "sub_command"
 
 
+def editor_input_dir(root: Path) -> Path:
+    """エディタ入力と、その完全 prompt の保存先 directory を返す。"""
+    return generated_agent_read_dir(root) / "log" / "editor_input"
+
+
 def worktrees_dir(root: Path) -> Path:
     """cmoc 管理 worktree の保存先 directory を返す。"""
     return root / ".cmoc" / "gu" / "worktree"
@@ -140,6 +145,12 @@ def config_path(root: Path) -> Path:
     return tracked_agent_read_dir(root) / "config.json"
 
 
+def refactor_state_path(root: Path) -> Path:
+    """realization refactor の追跡 state 保存 path を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    return tracked_agent_read_dir(root) / "realization" / "refactor" / "state.json"
+
+
 def generated_agent_read_dir(root: Path) -> Path:
     """git 非追跡かつ agent 読み取り専用の runtime directory を返す。"""
     # {{work-root}}/oracle/doc/app_spec/run_isolation.md
@@ -150,12 +161,6 @@ def tracked_agent_read_dir(root: Path) -> Path:
     """git 追跡かつ agent 読み取り専用の設定 directory を返す。"""
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     return root / ".cmoc" / "gt" / "ar"
-
-
-def agent_read_dirs(root: Path) -> tuple[Path, Path]:
-    """agent が読み取れる `.cmoc/g*/ar` directory 群を返す。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-    return generated_agent_read_dir(root), tracked_agent_read_dir(root)
 
 
 def is_root_memo(root: Path, path: Path) -> bool:
