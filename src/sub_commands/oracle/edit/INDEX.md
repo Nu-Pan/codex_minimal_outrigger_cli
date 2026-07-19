@@ -1,29 +1,16 @@
 # `__init__.py`
 
 ## Summary
-- oracle edit サブコマンドの workload を扱うパッケージ。
+- `cmoc oracle edit` サブコマンドの main worktree 向け TUI 起動処理を担当する実装。プロンプト編集入力の収集、oracle 編集用 TUI パラメータ構築、indexing preflight、Codex TUI 起動までをオーケストレーションする。
+- 起動前に main worktree、active な `cmoc/session/` branch、active session、clean worktree を検証するため、oracle edit の CLI 実行経路や TUI 起動条件を確認する際の入口となる。
 
 ## Read this when
-- oracle edit サブコマンドの workload に関する実装や責務を確認するとき。
+- `cmoc oracle edit` の CLI runtime、TUI 起動、プロンプト入力、起動前提条件を変更・調査するとき
+- main worktree と session branch の検証、oracle 編集 instruction の受け渡しを確認するとき
 
 ## Do not read this when
-- oracle edit 以外のサブコマンドを扱うとき。
+- oracle 編集対象の選択・編集ロジック自体を調査するときは、oracle edit 用の builder や対象側の実装を直接読む
+- 共通 CLI runtime、git 状態検証、runtime state の詳細だけを調査するときは、それぞれの共通モジュールを直接読む
 
 ## hash
-- 76a5965a24abb48a2f5ce594bcecdb391b2dcb29b37067d5f857fcbad7e3ff43
-
-# `fork.py`
-
-## Summary
-- `cmoc oracle edit fork` サブコマンドの実行制御を担う実装。編集指示の収集、isolated editing run の作成、Codex agent の実行、oracle 差分の検証・commit、run 状態更新、fork report 保存までを一連のワークフローとして扱う。
-
-## Read this when
-- `cmoc oracle edit fork` の実行フロー、事前条件、agent 差分の検証、commit、joinable/error 状態、fork report の挙動を変更・調査するとき。
-
-## Do not read this when
-- oracle 編集 agent の prompt 生成仕様だけを確認したいときは、launch parameter builder や oracle prompt の正本を直接読む。
-- run 共通ライフサイクルの詳細だけを確認したいときは、`sub_commands.run.lifecycle` を直接読む。
-- fork report の出力形式だけを確認したいときは、`sub_commands.run.report` を直接読む。
-
-## hash
-- 2a34b81bf5e5603a3833e41e5d7384251d3eb2f1922609a5cdfc8cbfc5dcb4dd
+- 34626c438ec6e03563f6a3c961b665d563a901b1c12514f8047b0ad33eddc235

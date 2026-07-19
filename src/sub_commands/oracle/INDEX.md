@@ -15,21 +15,19 @@
 # `edit`
 
 ## Summary
-- oracle edit サブコマンドの workload を扱うパッケージ。
-- fork.py は `cmoc oracle edit fork` の編集指示収集から isolated editing run、Codex agent 実行、oracle 差分検証・commit、run 状態更新、fork report 保存までの実行フローを担う。
+- `cmoc oracle edit` サブコマンドで、main worktree 向け TUI の起動をオーケストレーションする実装。プロンプト入力の収集、oracle 編集用パラメータ構築、indexing preflight、Codex TUI 起動を扱う。
+- main worktree、active な session branch・session、clean worktree などの起動前提条件を検証するための入口。
 
 ## Read this when
-- oracle edit サブコマンドの workload や実行責務を確認するとき。
-- `cmoc oracle edit fork` の実行フロー、事前条件、差分検証、commit、状態更新、fork report の挙動を変更・調査するとき。
+- `cmoc oracle edit` の CLI runtime、TUI 起動、プロンプト入力、起動前提条件を変更・調査するとき
+- main worktree や session branch の検証、oracle 編集 instruction の受け渡しを確認するとき
 
 ## Do not read this when
-- oracle 編集 agent の prompt 生成仕様だけを確認したいとき。
-- run 共通ライフサイクルの詳細だけを確認したいとき。
-- fork report の出力形式だけを確認したいとき。
-- oracle edit 以外のサブコマンドを扱うとき。
+- oracle 編集対象の選択・編集ロジック自体を調査するとき
+- 共通 CLI runtime、git 状態検証、runtime state の詳細だけを調査するとき
 
 ## hash
-- 7123f8105b871765fac0aab68915be583d8021aa42b9adc2c0e8ea2c76f9be01
+- 99fe6a83f2e498107c96577726f81954d9450edc5ac116049c82d97f4c8d9d56
 
 # `investigation.py`
 

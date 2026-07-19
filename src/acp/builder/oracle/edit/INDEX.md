@@ -15,15 +15,27 @@
 # `fork`
 
 ## Summary
-- `cmoc oracle edit fork` の builder adapter を提供するディレクトリ。fork 編集処理の入口と、launch_exec 用 builder の realization 側再公開経路を扱う。
+- 内容がない空ディレクトリで、現時点では案内対象となる実装・テスト・補助ファイルを含まない。
 
 ## Read this when
-- `cmoc oracle edit fork` の builder adapter の責務や実装入口を確認するとき。
-- launch_exec パラメータ builder の realization 側エントリーや再公開経路を確認するとき。
+- このディレクトリにファイルが追加されたか確認するとき。
 
 ## Do not read this when
-- `cmoc oracle edit fork` 以外のコマンドを確認するとき。
-- builder adapter 以外の処理、builder の正本仕様・実装詳細、launch_exec 以外の builder や fork 処理を調べるとき。
+- 既存の実装やテストを調査するとき。
 
 ## hash
-- 68269ac1918c240cd4d2b95c70a62b0dbb5068d06824f52c0c325f8b7d987a9f
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+# `launch_tui.py`
+
+## Summary
+- oracle edit の TUI 起動パラメータ builder を oracle の正本実装から再公開する realization adapter。
+
+## Read this when
+- oracle edit の TUI 起動パラメータ builder の公開入口や import 経路を確認・変更するとき。
+
+## Do not read this when
+- oracle 側の builder 本体の仕様や実装を確認する場合は、直接 oracle の正本実装を読むとよい。
+
+## hash
+- 0cfe42d14a4624298d95f1a192252781087ef7a15afec2ef5e6a4e743f391516

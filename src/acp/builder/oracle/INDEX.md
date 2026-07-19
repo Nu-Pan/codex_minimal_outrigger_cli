@@ -15,19 +15,17 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` builder adapter package。oracle edit 用 builder 実装への入口を提供する。
-- `cmoc oracle edit fork` の builder adapter。fork 編集処理の入口と、launch_exec 用 builder の realization 側再公開経路を扱う。
+- oracle edit の TUI 起動パラメータ builder を realization adapter として公開するパッケージ。builder の公開入口と import 経路を扱い、現時点では空の fork ディレクトリも含む。
 
 ## Read this when
-- `cmoc oracle edit` の builder adapter の責務や実装入口を確認するとき。
-- `cmoc oracle edit fork` の builder adapter、または launch_exec パラメータ builder の realization 側エントリーを確認するとき。
+- `cmoc oracle edit` の builder adapter の責務、公開入口、または TUI 起動パラメータ builder の import 経路を確認するとき。
 
 ## Do not read this when
-- oracle edit の具体的な編集処理や CLI 全体の動作を確認したいとき。対象の実装ファイルや上位の CLI 関連ファイルを直接読む。
-- `cmoc oracle edit fork` 以外のコマンド、builder の正本仕様・実装詳細、launch_exec 以外の builder、または fork 処理そのものを調べるとき。
+- oracle edit の具体的な編集処理や builder 本体の仕様を確認するとき。oracle 側の正本実装や対象の実装ファイルを直接読む。
+- CLI 全体の動作を確認するとき。上位の CLI 関連ファイルを直接読む。
 
 ## hash
-- a2841f4adcac956cdde1e8dc8d70f6361aedad920090deac67dc5407aff3072f
+- da843393a46d7d9c9a6be898ff1af60318dd215160bb60bfc7fcf4866d48ff06
 
 # `investigation`
 
