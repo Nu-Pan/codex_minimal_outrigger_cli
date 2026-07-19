@@ -127,32 +127,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側 `src` パッケージ群をまとめる入口。CLI 最上位エントリー、サブコマンド、共通 runtime、互換 import shim、設定・ACP・basic 関連の公開入口を扱い、各責務の実装へルーティングする。
+- src は cmoc の realization 実装ルートで、最上位 CLI エントリー、互換 import shim、共通 runtime、設定公開入口、CLI サブコマンド実装を含む。個別機能の調査では、ここから対応する package または module へ進む。
 
 ## Read this when
-- `src` 配下の実装構成や、CLI 起動経路・サブコマンド・共通 runtime の担当箇所を探すとき。
-- 互換 import path、realization 側の公開入口、または対象機能の実装モジュールへの導線を確認するとき。
+- cmoc の realization 側における CLI 起動経路、公開入口、共通 runtime、設定互換層、またはサブコマンド実装の配置を確認するとき。
+- 対象機能の実装箇所が未特定で、最上位の実装構成から読む先を選ぶ必要があるとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime 機能、builder、TUI、設定、ACP 型などの詳細が分かっているときは、該当する下位モジュールを直接読む。
-- 正本仕様や canonical 実装を確認したいときは、対応する `oracle` 側を直接読む。
+- 特定のサブコマンド、runtime 機能、互換 shim、または設定クラスの詳細が対象なら、対応する下位 module を直接読む。
+- oracle 側の正本仕様や canonical 実装を確認したい場合は、src ではなく対応する oracle 配下を読む。
 
 ## hash
-- a78bc770294d91db324bba4096047bb49d5465a26d9ae3aa99becc027e2aa86a
+- 39596bb414ad2c60af8c96874be17aa8bcd210c5c134f0bd351ac8688ff2c4f2
 
 # `test`
 
 ## Summary
-- テストコードから、ACP builder、CLI、Codex runtime、doctor、indexing、oracle review、session、設定、worktree などの実装契約と外部挙動を検証する pytest 群、および共有テスト補助モジュールへ進むための入口。各テストは対応する機能領域の回帰・統合・公開 API・状態遷移を確認する。
+- cmoc の realization test 群をまとめたディレクトリ。CLI サブコマンド、ACP builder、Codex/Ollama runtime、INDEX 更新、oracle review、session・worktree・state lifecycle などの外部挙動と制御契約を検証し、各機能の変更時に対応するテストを入口として参照する。
 
 ## Read this when
-- 対象機能の外部挙動、CLI lifecycle、Codex 実行境界、builder parameter、indexing、oracle review、session/run 状態、設定、worktree のテスト契約を調査・変更するとき。
-- テストで共有される CliRunner、fake Codex、fake external command、Git repository、Ollama、oracle schema path の準備方法を確認するとき。
+- cmoc の realization test を追加・修正・実行するとき。
+- 特定機能の外部挙動、失敗条件、CLI lifecycle、runtime 契約をテストから確認するとき。
+- 対応する実装変更の回帰範囲や、既存テストへケースを統合できるか確認するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容そのものを確認・変更するときは、対応する oracle 文書・schema を直接読む。
-- 実装内部の責務や生成ロジックだけを調査するときは、対応する src の実装ファイルを直接読む。
-- 特定の機能領域と無関係なテストや、対象テストの外部契約に影響しない一般的な実装を扱うとき。
+- 正本仕様や Structured Output schema の内容自体を確認・変更するときは、対応する oracle 文書・schema を直接読む。
+- 実装の責務や内部構造を調査するときは、対応する src の実装ファイルを直接読む。
+- Codex や Ollama の出力品質そのものを評価するとき。
 
 ## hash
-- 95cf5adb5313fb4f054f40af2295b8c373727887b254fbc7c0fe64dff0ea33a4
+- 4adfb7d32e3685f3333b35db20b2dc90a8dad25044f75ea074feb21887419241
