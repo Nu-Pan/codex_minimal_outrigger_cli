@@ -9,6 +9,8 @@
 ## 用語定義
 
 - `CodexModelSpec.model` を `{{slm-name}}` とする
+- テスト用 SLM は `qwen3:4b-instruct-2507-q4_K_M` とする
+- モデルをロードするとは、必要ならモデルを pull したうえで、そのモデルを使う推論リクエストを cmoc managed ollama に行い、実行時情報から GPU 推論を確認できる状態にすることを指す
 - GPU 推論とは、モデルの推論計算の一部以上を GPU へ offload して実行することを指す。GPU の検出だけでは GPU 推論とはみなさない
 
 ## 管理主体・ライフサイクル
@@ -38,16 +40,17 @@
 
 ## 利用可能性の保証
 
-- `CodexModelSpec.model_provider=="cmoc"` の場合、cmoc は Codex CLI の agent call を開始する前に、doctor preprocess で cmoc managed ollama の利用可能性を保証する
-- 利用可能性の保証は本番実行とテストのどちらからでも繰り返し実行可能とし、以下を満たす状態へ必要な修復を行う
+- doctor preprocess の cmoc managed ollama service 起動保証処理は、`CmocConfig.cmoc_managed_ollama_service_launch_behavior` によって挙動を切り替える。各設定値の詳細は同メンバーのコメントを正本とする
+- 起動保証処理を実行する場合は、本番実行とテストのどちらからでも繰り返し実行可能とし、以下を満たす状態へ必要な修復を行う
     - サービスが起動していること
     - 127.0.0.1:11434 を listen しているのが cmoc managed ollama であること
-    - 使用するモデルが `CmocConfigCodex.model` の要求を満たすこと
-    - cmoc managed ollama へのリクエストが通ること
-    - 使用するモデルが GPU 推論を行っていることを、cmoc managed ollama の実行時情報から確認できること
+    - `CodexModelSpec.model_provider=="cmoc"` の使用対象モデルとテスト用 SLM がロードされていること
+    - ロード対象モデルを使う cmoc managed ollama へのリクエストが通ること
+    - ロード対象モデルが GPU 推論を行っていることを、cmoc managed ollama の実行時情報から確認できること
+- テスト用 SLM は、`CmocConfigCodex.model` で指定されているかどうかに関わらず、起動保証処理で必ずロードする
 - 要求を満たすサービスとダウンロード資源が既に存在する場合は、cmoc の実行間、テストケース間、および pytest の実行間で再利用し、実行ごとの再起動、再ダウンロード、または再度の pull をしてはならない
 - サービスの新規構築・修復およびダウンロード資源の取得・修復は、既存のものが要求を満たさない場合に限る
-- 使用可能な GPU がない場合、使用するモデルの推論計算が GPU へ offload されない場合、または GPU 推論を確認できない場合は、CPU のみの推論へ切り替えず、Codex CLI からの推論リクエストを開始する前にエラー終了する
+- 使用可能な GPU がない場合、ロード対象モデルの推論計算が GPU へ offload されない場合、または GPU 推論を確認できない場合は、CPU のみの推論へ切り替えず、Codex CLI からの推論リクエストを開始する前にエラー終了する
 
 ## Codex CLI からの ollama の使用方法
 
@@ -63,3 +66,4 @@
 - `--profile` (`-p`) を使って cmoc managed ollama の設定を注入してはならない
 - cmoc は `codex exec` の argv に `--oss` や `--local-provider` を指定しない
 - cmoc は Codex CLI の組み込み `ollama` provider ID に依存しない
+- Codex sandbox から `127.0.0.1:11434` へ接続するための argv は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` のネットワークアクセス仕様を正本とする
