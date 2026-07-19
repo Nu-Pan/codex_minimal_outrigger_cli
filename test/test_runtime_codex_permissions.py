@@ -58,7 +58,13 @@ def test_codex_overrides_do_not_inject_permission_profile(
     parsed = codex_override_config(args)
     assert "permissions" not in parsed
     assert "default_permissions" not in parsed
-    assert "sandbox_workspace_write" not in parsed
+    assert parsed["sandbox_workspace_write"] == {"network_access": True}
+    assert parsed["features"] == {
+        "network_proxy": {
+            "enabled": True,
+            "domains": {"127.0.0.1": "allow"},
+        }
+    }
 
 
 def test_path_based_permission_inputs_are_absent_from_builder_api() -> None:

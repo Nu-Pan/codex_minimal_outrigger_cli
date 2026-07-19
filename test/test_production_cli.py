@@ -33,7 +33,7 @@ import pytest
 from _codex_support import codex_arg_value, codex_override_config
 from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
-from _ollama_support import TEST_SLM_MODEL
+from _ollama_support import TEST_SLM_MODEL, bypass_managed_ollama_launch
 from oracle.other.cmoc_config import CodexModelSpec
 from typer.main import get_command
 
@@ -117,7 +117,7 @@ def _write_local_slm_config(root: Path) -> None:
     """全 model class を本番共有のテスト用 local SLM へ向ける。"""
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
     # 回答品質に依存せず短時間で制御経路を検証するため、推論強度も low に固定する。
-    config = CmocConfig(num_parallel=1)
+    config = bypass_managed_ollama_launch(CmocConfig(num_parallel=1))
     config = replace(
         config,
         codex=replace(
@@ -246,6 +246,13 @@ def _assert_local_codex_call(path: Path, *, tui: bool = False) -> dict[str, obje
     assert ("exec" in argv) is not tui
     assert codex_arg_value(argv, "--model") == TEST_SLM_MODEL
     override = codex_override_config(argv)
+    assert override["sandbox_workspace_write"] == {"network_access": True}
+    assert override["features"] == {
+        "network_proxy": {
+            "enabled": True,
+            "domains": {"127.0.0.1": "allow"},
+        }
+    }
     assert override["model_provider"] == "cmoc_managed_ollama"
     providers = override["model_providers"]
     assert isinstance(providers, dict)

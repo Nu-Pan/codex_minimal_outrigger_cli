@@ -157,19 +157,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界を担当し、起動前の sandbox・argv・cwd・CODEX_HOME・環境変数・schema 配置と、起動後の process tracking・停止制御・JSON/JSONL 出力および capacity/quota/error 判定をまとめる。Codex 実行環境の構築と機械的な実行結果の解釈に関する実装・エラー処理の入口。
+- Codex CLI subprocess 境界を担い、実行前後の argv・sandbox・cwd・CODEX_HOME・環境変数・Structured Output schema 配置を扱う。
+- Codex child process の pidfd/process group による追跡・停止と、tracking file の排他更新を提供する。
+- Codex の JSONL 出力から thread token、エラー詳細、capacity/quota/unexpected error を判定する下位実装への入口である。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox または file access mode の変換、model provider 設定、cwd/CODEX_HOME/env の扱いを変更・調査するとき
-- Codex subprocess の PID/process group tracking、pidfd による停止、SIGTERM/SIGKILL、abandon 対応を変更・調査するとき
-- Structured Output schema の配置、Codex の JSON/JSONL 出力解析、resume token や capacity/quota/unexpected error 判定を変更・調査するとき
+- Codex CLI の起動引数、sandbox、model/provider、network 設定を変更・調査するとき
+- CODEX_HOME、cwd、subprocess 環境、schema 配置、Codex CLI 不在時のエラーを扱うとき
+- editing run の child process tracking、停止、PID 再利用対策を変更・調査するとき
+- Codex の JSONL 出力解析、resume token、capacity/quota/retry 判定を変更・調査するとき
 
 ## Do not read this when
-- Codex CLI 境界の外側にある editing run の業務フローや利用者向けコマンド仕様だけを確認するときは、対応する app_spec または上位 orchestration 実装を直接読む
-- 一般的な process 管理や JSON 処理の実装を確認するだけで、cmoc の Codex subprocess 入出力境界に関係しないとき
+- Codex CLI の上位コマンド制御、editing run 全体のライフサイクル、利用者向け CLI 引数仕様を確認したいだけのとき
+- Codex 以外の subprocess 実行や一般的な runtime path・schema store の仕様だけを扱うとき
 
 ## hash
-- 2c92ef3c235cda1242818e645d8ceacf344e4671dfc33ff5d551991c94d2a759
+- c3c65451eb46168e6efbbb6ac8d5d859f7e5d8e71ad817ef173205bc3ceea5c2
 
 # `runtime_codex_tui.py`
 
@@ -191,16 +194,20 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc 設定を runtime 型と永続化 JSON の間で相互変換する実装。設定値の型・enum・model provider を検証し、不足項目は既定値で補完する。設定ファイルの読み込み、書き込み、未作成時の生成までを担う。
+- 設定オブジェクトを永続化 JSON と runtime の CmocConfig 型の間で相互変換するモジュール。enum キー、モデル仕様、整数値、起動動作を検証し、不足項目は既定値で補完する。設定ファイルの読み込み・書き込み・初期生成・同期も担当する。
 
 ## Read this when
-- cmoc 設定 JSON の schema、読み込み・保存処理、設定値の検証や既定値補完を変更・調査するとき。
+- cmoc config の JSON スキーマ、既定値補完、編集値の検証、設定ファイルの読み込み・保存動作を変更または確認するとき
+- 設定不正・JSON 構文エラー・設定ファイル未存在時の CmocError 境界を調査するとき
+- config_path を介した設定ファイルの生成や同期処理を追跡するとき
 
 ## Do not read this when
-- CLI の設定項目そのものや runtime 型の定義だけを確認したいときは、それぞれの設定型・正本定義を直接読む。設定以外の runtime path やエラー処理を調査するとき。
+- runtime の設定型そのものや既定値の定義を確認したい場合は config.cmoc_config を直接読むとき
+- 設定ファイルのパス定義だけを確認したい場合は commons.runtime_paths を直接読むとき
+- 設定値を利用する個別の CLI 処理や oracle review の実行ロジックを調査するとき
 
 ## hash
-- d44b19cec1a20d911104f6b3b0c7d79a872d92e74ce8edfa849a2eb9bb05a250
+- d61091135d0e0a5fe74e3e0f684c164aee0adb184ec73c8cd14de9054de49a4f
 
 # `runtime_content.py`
 
@@ -224,22 +231,20 @@
 # `runtime_doctor.py`
 
 ## Summary
-- Git common directory 単位のロックを使い、設定・refactor state・ignore 規則・`.agents` placeholder・Ollama 状態を同期・修復する doctor 前処理を提供する。
-- 一時 Git index を用いて doctor の修復差分だけを commit し、利用者の staged 状態や元の index を復元する。
-- Git index の保存・復元、blob 登録、修復対象ファイルの検証など、doctor 前処理に必要な内部補助処理を含む。
+- doctor 前処理の実装を担うモジュール。Git common directory 単位の排他制御下で、設定・refactor state・ignore 規則・.agents placeholder・Ollama 状態を同期し、doctor による修復だけを一時 index から commit する。Git index の保存・復元、修復対象の staging、tracked runtime file の検証も含む。
 
 ## Read this when
-- doctor 前処理の修復対象、排他制御、commit、index 復元の挙動を変更・調査するとき
-- config や refactor state の同期、`.agents` の追跡、`.gitignore` 修復、Ollama 起動確認との連携を確認するとき
-- doctor 実行時の staged 状態保護や一時 Git index の扱いを確認するとき
+- doctor 前処理の動作、修復 commit、Git index の保存・復元、doctor lock の競合制御を変更・調査するとき
+- doctor が設定・refactor state・.gitignore・.agents・Ollama をどの条件で同期するか確認するとき
+- 一時 Git index を用いた修復差分の分離や、doctor 完了後の tracked runtime file 検証を確認するとき
 
 ## Do not read this when
-- 通常の設定値や設定ファイルの仕様だけを確認したいときは、runtime config の実装・仕様を直接読む
-- refactor state の内容や同期規則だけを確認したいときは、runtime refactor の実装・仕様を直接読む
-- Ollama の提供状態だけを確認したいときは、runtime ollama の実装・仕様を直接読む
+- doctor 前処理の正本仕様や利用者向け要件を確認する場合は、まず対応する oracle doc を読むとき
+- 設定値の定義自体を変更・調査する場合は、設定実装または oracle src を直接読むとき
+- Git 操作や Ollama 同期の共通仕様だけを確認する場合は、それぞれの共通 runtime モジュールを直接読むとき
 
 ## hash
-- e268fba035da2adf3fea3b9b279a5d9db36f799827308279c0892fd625f90cab
+- a26674859efb3437f1d2e11a6ff081eb2374e40bd4bf31ec8293447cf1200f2b
 
 # `runtime_errors.py`
 
@@ -297,19 +302,18 @@
 # `runtime_ollama.py`
 
 ## Summary
-- cmoc が管理する Ollama の単一 preflight 実装。設定された cmoc provider 用モデルを対象に、lock 内で archive install、user systemd service の生成・起動・所有者確認、127.0.0.1:11434 の API 応答確認、model の pull/load、GPU 用 VRAM 使用確認までを順序どおりに実行する。runtime 共通処理から呼び出される managed Ollama の実装入口であり、Ollama の service・procfs・HTTP・model 検証の詳細を確認するための対象。
+- managed Ollama の単一 preflight を担当し、archive からの executable 配置、systemd user service の同期・起動、procfs による listener 所有者確認、HTTP 応答確認、設定対象 model の pull・load・GPU 利用確認を一つの lock 内で順序制御する。runtime の Ollama 関連処理を読む入口。
 
 ## Read this when
-- cmoc provider の local SLM が利用できない、または Ollama の install・起動・model pull/load・GPU 検証を調査・変更するとき
-- managed Ollama の systemd user service、固定 endpoint 127.0.0.1:11434、procfs による process/listener 所有者確認を確認するとき
-- Ollama 関連の lock、managed environment、CmocError 変換、設定からの対象 model 抽出を確認するとき
+- managed Ollama の install、service 起動・再起動、127.0.0.1:11434 の所有者検証、model の取得・load、GPU 推論確認を変更または調査するとき。
+- cmoc provider model やテスト用 SLM の起動保証、Ollama の systemd user unit、procfs の process/socket 判定を確認するとき。
 
 ## Do not read this when
-- Ollama 以外の provider、一般的な runtime 設定の読み込み、または CLI の上位 command routing だけを調べるとき
-- Ollama の正本仕様や利用条件を確認したい場合は、この実装ではなく対応する oracle doc を直接読むとき
+- Ollama 以外の runtime 設定、path、error 定義だけを調査するときは、それぞれの専用 module を直接読む。
+- CLI の公開仕様や managed Ollama の正本要件を確認するときは、対応する oracle 文書を先に読む。
 
 ## hash
-- 7e1826673ee1b45f02ae4cc798e8d9711c966392967ddc60bbcf664354a34910
+- f115ad6071dd487c6c1f8b2cbebcadc1010b3d56c976304a440cda35d7e367fd
 
 # `runtime_paths.py`
 

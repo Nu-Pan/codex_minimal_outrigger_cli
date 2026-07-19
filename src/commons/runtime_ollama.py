@@ -32,17 +32,17 @@ _OLLAMA_CONNECT_TIMEOUT_SEC = 0.5
 _OLLAMA_LOAD_TIMEOUT_SEC = 600.0
 _OLLAMA_START_TIMEOUT_SEC = 30.0
 _OLLAMA_SERVICE_NAME = "cmoc-ollama"
+# {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
+_TEST_SLM_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 
 
 def ensure_ollama_serves_local_slm(
     root: Path, config: CmocConfig | None = None
 ) -> None:
-    """cmoc provider の local SLM を managed Ollama で serve 可能にする。"""
+    """起動保証対象の local SLM を managed Ollama で serve 可能にする。"""
     # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # cmoc provider を要求する model がある場合だけ、user service として 11434 固定で扱う。
+    # 起動保証を行う場合は、テスト用 SLM と cmoc provider model を同じ service で扱う。
     models = _cmoc_managed_model_names(root, config)
-    if not models:
-        return
     with _ollama_lock():
         executable = _ensure_ollama_installed()
         _ensure_ollama_service(executable)
@@ -54,7 +54,7 @@ def ensure_ollama_serves_local_slm(
 def _cmoc_managed_model_names(
     root: Path, config: CmocConfig | None = None
 ) -> list[str]:
-    """config から cmoc managed Ollama が扱う model 名を重複なく取り出す。"""
+    """テスト用 SLM と config の cmoc model 名を重複なく取り出す。"""
     if config is None:
         # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
         # config は呼び出し対象の worktree ごとに追跡される。
@@ -62,8 +62,8 @@ def _cmoc_managed_model_names(
             config = CmocConfig()
         else:
             config = load_config(root)
-    models: list[str] = []
-    seen: set[str] = set()
+    models = [_TEST_SLM_MODEL]
+    seen = {_TEST_SLM_MODEL}
     for spec in config.codex.model.values():
         if spec.model_provider == "cmoc":
             if spec.model not in seen:

@@ -10,34 +10,19 @@ from _codex_support import (
     codex_override_config,
     codex_parameter,
     setup_codex_home,
-    stub_managed_ollama_preflight,
 )
 from _command_support import write_python_executable
 from _git_support import make_repo
-from _ollama_support import TEST_SLM_MODEL
+from _ollama_support import TEST_SLM_MODEL, bypass_managed_ollama_launch
 from oracle.other.cmoc_config import CodexModelSpec
 
 import commons.runtime_doctor as doctor_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
-from commons.runtime_doctor import run_doctor_preprocess
 from config.cmoc_config import CmocConfig
 
 _REAL_CODEX = shutil.which("codex")
-
-
-def _prepare_production_managed_ollama(root: Path, config: CmocConfig) -> None:
-    """production Codex call が使う実 per-user managed service を要求する。"""
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # 本番と同じサービスと永続モデルストアを検証するため、HOME、PATH、systemctl、
-    # ~/.cmoc/ollama は差し替えない。
-    try:
-        run_doctor_preprocess(root, config)
-    except (CmocError, OSError) as exc:
-        pytest.skip(f"production cmoc managed ollama is unavailable: {exc}")
 
 
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -51,7 +36,15 @@ def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     assert "-p" not in args
     assert codex_arg_value(args, "--sandbox") in {"read-only", "workspace-write"}
     assert codex_arg_value(args, "--ask-for-approval") == "on-request"
-    assert codex_override_config(args)["approvals_reviewer"] == "auto_review"
+    override = codex_override_config(args)
+    assert override["approvals_reviewer"] == "auto_review"
+    assert override["sandbox_workspace_write"] == {"network_access": True}
+    assert override["features"] == {
+        "network_proxy": {
+            "enabled": True,
+            "domains": {"127.0.0.1": "allow"},
+        }
+    }
 
 
 def _assert_no_codex_home_config(codex_home: Path) -> None:
@@ -69,7 +62,7 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     real_codex = _REAL_CODEX
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    config = CmocConfig()
+    config = bypass_managed_ollama_launch(CmocConfig())
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
     schema_source = tmp_path / "schema.json"
     schema_source.write_text(
@@ -87,7 +80,6 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         '{"result":"cmoc-real-codex-provider"}'
     )
 
-    _prepare_production_managed_ollama(root, config)
     monkeypatch.setenv(
         "PATH", f"{Path(real_codex).parent}:{os.environ.get('PATH', '')}"
     )
@@ -211,8 +203,7 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
     """local SLM 用 override と組み込み Ollama フラグの不使用を検証する。"""
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
-    stub_managed_ollama_preflight(monkeypatch)
-    config = CmocConfig()
+    config = bypass_managed_ollama_launch(CmocConfig())
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()

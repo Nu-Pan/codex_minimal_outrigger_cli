@@ -49,18 +49,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を提供する commons パッケージ。パッケージ入口と、Codex 実行、CLI lifecycle、設定、Git、path、state、logging、indexing などの共通実装へのルーティング起点。
+- cmoc の共通 runtime 機能をまとめる commons パッケージ。Codex 実行、CLI ライフサイクル、設定、Git、パス、ログ、状態、エラー、Ollama、INDEX 更新など、複数のサブコマンドで共有する実装への入口。
+- Codex 実行系、設定・状態管理、Git/worktree 操作、ログ・エラー処理、path/content helper、doctor・preprocess・indexing などの個別 runtime モジュールへ進むためのディレクトリ。
 
 ## Read this when
-- commons の共通 runtime API、パッケージ初期化、または配下の共通機能の担当モジュールを確認・変更するとき
-- 特定の runtime 領域について、対応する実装モジュールの入口を探すとき
+- 複数の CLI サブコマンドで共有される runtime helper の実装箇所を探すとき
+- Codex 実行、設定、Git/worktree、path、ログ、状態、エラー、Ollama、doctor、INDEX 更新の共通処理を確認・変更するとき
+- commons 配下の個別 runtime モジュールの責務や、公開 API の入口を確認するとき
 
 ## Do not read this when
-- 特定モジュールの実装詳細が既に分かっているときは、その個別 runtime モジュールを直接読む
-- CLI サブコマンド固有の業務処理や、実装ではなく正本仕様だけを確認したいとき
+- 特定サブコマンド固有の業務処理や CLI 引数定義だけを変更・調査するとき
+- 利用者向けの正本仕様や retry・quota・出力形式などの要件だけを確認したいとき
+- 対象が commons 配下の特定モジュールに明確に対応している場合は、その個別モジュールを直接読むとき
 
 ## hash
-- 266606118673bc9889703cdf004da8e714f7f7e516865dda13fa9d391e0f1d23
+- 5d1ff907c0cd22f146120515ecec20fd47489698c2c53fd466e76414dd4e6ea0
 
 # `config`
 

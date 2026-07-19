@@ -70,7 +70,19 @@ def run_doctor_preprocess(
             # 初回 doctor が作る .gitignore も realization file 集合へ含め、doctor
             # 完了時点で refactor entry と実 file を一致させる。
             sync_refactor_state(root, sync_entries=sync_refactor_entries)
-            ensure_ollama_serves_local_slm(root, config or synced_config)
+            effective_config = config or synced_config
+            launch_behavior = (
+                effective_config.cmoc_managed_ollama_service_launch_behavior
+            )
+            # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+            if launch_behavior == "force" or (
+                launch_behavior == "default"
+                and any(
+                    spec.model_provider == "cmoc"
+                    for spec in effective_config.codex.model.values()
+                )
+            ):
+                ensure_ollama_serves_local_slm(root, effective_config)
         except BaseException:
             for repair_root, original_index_tree in original_indexes:
                 _restore_index(repair_root, original_index_tree)
