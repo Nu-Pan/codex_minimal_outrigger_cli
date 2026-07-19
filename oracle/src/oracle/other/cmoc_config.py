@@ -30,6 +30,22 @@ class CmocConfig:
     # Codex CLI 関係の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())
 
+    # cmoc managed ollama 起動の挙動
+    # default:
+    #   エンドユーザー環境で使用する通常モード。
+    #   `CodexModelSpec.model_provider=="cmoc"` が存在する場合のみ、cmoc managed ollama service の起動保証を実行する。
+    # bypass:
+    #   「cmoc を用いた cmoc の自己開発」シナリオで使用する開発用モード。
+    #   cmoc managed ollama service の起動保証処理をバイパスする。
+    #   サンドボックス環境内からでは `~/.cmoc/ollama` を触れない (cmoc managed ollama service を起動できない) ので、それをバイパスするために使う。
+    # force:
+    #   「cmoc を用いた cmoc の自己開発」シナリオで使用する開発用モード。
+    #   cmoc managed ollama service の起動保証を必ず実行する。
+    #   サンドボックス環境内からでは cmoc managed ollama service を起動できないため、サンドボックス外で強制起動するために使う。
+    cmoc_managed_ollama_service_launch_behavior: Literal[
+        "default", "bypass", "force"
+    ] = field(default="default")
+
     # `cmoc oracle review` サブコマンドの挙動設定
     oracle_review: "CmocConfigOracleReview" = field(
         default_factory=lambda: CmocConfigOracleReview()
