@@ -138,6 +138,22 @@ def _write_local_slm_config(root: Path) -> None:
     write_config(root / ".cmoc" / "gt" / "ar" / "config.json", config)
 
 
+def _write_noninteractive_fixture_instructions(root: Path) -> None:
+    """SLM の意味判断を試験対象から外す fixture instruction を追加する。"""
+    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    # 本番経路との差として許される決定論的入力で、cmoc の制御だけを検証する。
+    (root / "AGENTS.md").write_text(
+        """# Production-path test fixture
+
+This is an intentionally minimal and internally consistent test repository.
+For a realization-refactor file review, report `findings` as an empty array and
+do not modify files. For every other call, follow its explicit prompt exactly.
+"""
+    )
+    run_git(root, "add", "AGENTS.md")
+    run_git(root, "commit", "-m", "add deterministic agent instructions")
+
+
 def _production_environment(
     tmp_path: Path,
 ) -> tuple[Path, dict[str, str], Path]:
@@ -403,6 +419,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     # CLI 登録と固定シナリオを比較し、新しい末端 command の追加漏れを検出する。
     assert _registered_leaf_commands(get_command(app)) == PRODUCTION_SCENARIO_COMMANDS
     root = make_repo(tmp_path)
+    _write_noninteractive_fixture_instructions(root)
     _write_local_slm_config(root)
     cmoc, environment, _codex_home = _production_environment(tmp_path)
 
