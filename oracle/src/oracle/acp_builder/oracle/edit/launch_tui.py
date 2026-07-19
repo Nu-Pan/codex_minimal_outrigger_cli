@@ -1,7 +1,4 @@
-"""`cmoc oracle edit fork` の `codex exec` prompt 正本。"""
-
-# std
-from pathlib import Path
+"""`cmoc oracle edit` の TUI 起動 prompt 正本。"""
 
 # cmoc
 from oracle.acp_builder.basic import (
@@ -10,19 +7,23 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
+from oracle.other.path_model import resolve_repo_root
 from oracle.other.struct_doc import StructBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_oracle_edit_fork_launch_exec_parameter(
+def build_oracle_edit_launch_tui_parameter(
+    time_stamp: str,
     user_instruction: str,
-    run_worktree: Path,
 ) -> AgentCallParameter:
-    """oracle edit run の AgentCallParameter を構築する。
+    """`cmoc oracle edit` の TUI 起動パラメータを構築する。
 
     Args:
+        time_stamp: この `cmoc oracle edit` 呼び出しのタイムスタンプ文字列。
         user_instruction: oracle file の最終状態に関するユーザー指示。
-        run_worktree: `codex exec` の cwd とする linked worktree。
+
+    Returns:
+        Codex CLI の TUI 起動に使う固定パラメータ。
     """
     # ユーザー指示以外を固定した完全 prompt を構築する。
     complete_prompt = build_complete_prompt(
@@ -34,6 +35,8 @@ def build_oracle_edit_fork_launch_exec_parameter(
         - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/> が要求する最終状態が oracle file 上で満たされていること
         - 関連する oracle file と論理的に整合していること
         - ユーザー指示の実現に必要な箇所以外の既存仕様の意味論が維持されていること
+        - oracle file だけを編集し、realization file、`INDEX.md`、`AGENTS.md` を編集していないこと
+        - `git add`、`git commit`、`git stash`、branch 切替、worktree 操作を行わず、変更を未コミットのまま残していること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         aux_dynamic_prompt=[
@@ -49,13 +52,26 @@ def build_oracle_edit_fork_launch_exec_parameter(
         oracle_standard=True,
     )
 
-    # 完全 prompt と run worktree を `codex exec` 用パラメータへ直接設定する。
+    # cmoc が管理する TUI ログへ完全 prompt を保存する。
+    complete_prompt_path = (
+        resolve_repo_root()
+        / ".cmoc"
+        / "gu"
+        / "ar"
+        / "log"
+        / "editor_input"
+        / f"{time_stamp}_cmpl.md"
+    )
+    with open(complete_prompt_path, "w", encoding="utf-8") as file:
+        file.write(render_as_markdown(complete_prompt))
+
+    # main worktree で対話型 TUI を起動するパラメータを返す。
     return AgentCallParameter(
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
-        prompt=render_as_markdown(complete_prompt),
+        prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
         structured_output_schema_path=None,
         run_indexing_preflight=True,
-        cwd=run_worktree.resolve(),
+        cwd=resolve_repo_root(),
     )

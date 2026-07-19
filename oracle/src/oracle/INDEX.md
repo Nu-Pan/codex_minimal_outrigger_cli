@@ -1,34 +1,39 @@
 # `acp_builder`
 
 ## Summary
-- 参照可能な正本ソース本文を含まない空の入口ディレクトリです。正本ソースの有無を確認するために使用します。
+- エージェント呼び出し用の基礎パラメータ、indexing・oracle・realization・session・TUI 各用途の呼び出し設定を構築する正本ソース群を含むディレクトリ。モデル、推論強度、ファイルアクセス権、プロンプト、Structured Output schema、作業ディレクトリなどの定義から、各サブコマンド固有の agent call 条件までを扱う。
+- 各用途の実装詳細を確認する際は、対応する下位ディレクトリまたはファイルが入口となる。
 
 ## Read this when
-- このディレクトリに参照可能な正本ソースが存在するか確認するとき。
+- ACP builder の共通パラメータや既定値を確認・変更するとき。
+- indexing、oracle、realization、session、TUI の agent call 構築条件や Structured Output schema の担当箇所を特定するとき。
+- 各サブコマンド向けの prompt、モデル、推論強度、ファイルアクセス、作業ディレクトリ設定を調査するとき。
 
 ## Do not read this when
-- 実装仕様や処理内容を確認したいとき。
+- エージェント呼び出しの実行本体を調査するとき。
+- 生成された INDEX.md、oracle file、realization file、レビュー結果などの成果物そのものを確認するとき。
+- 個別ファイルの実装詳細や schema の内容が既に特定できており、その本文だけを確認すればよいとき。
 
 ## hash
-- af14647647bde4a7fcfb3715b7c95ff89038f5004f0e89357b460a53dd25ba64
+- 6fb6e69298181d6718ebdbb53daa8a5e2729e4b5c936bebc548bf48938f620ea
 
 # `other`
 
 ## Summary
-- cmoc の oracle source における設定・パスモデル・規範データ構造・構造化文書レンダリングを扱うディレクトリ。設定値やルートパス解決、Standard/Requirement の構造、StructDoc の Markdown 変換を確認する下位ファイルへの入口。
+- oracle の設定・パスモデル・規範データ構造・構造化文書レンダリングを担う実装群をまとめたディレクトリ。cmoc の設定値、ルートパス解決、標準文書の構造化、Markdown 変換の実装へ進む入口となる。
 
 ## Read this when
-- cmoc のリポジトリ固有設定、既定値、Codex CLI・Ollama・oracle review の制御値を調査するとき。
-- cmoc のルートパスプレースホルダ、パス探索、パス検証の仕様を調査するとき。
-- 規範文書のデータ構造や構造化文書の Markdown レンダリングを調査するとき。
+- cmoc のリポジトリ固有設定や既定値、Codex・Ollama・oracle review の制御を調査するとき。
+- プレースホルダを含むパス解決や cmoc・repo・run・work ルートの探索を調査するとき。
+- 規範文書のデータ構造、構造化文書の Markdown レンダリング、cmoc_ref 検証を調査するとき。
 
 ## Do not read this when
-- CLI コマンドの具体的な実行経路や入出力処理だけを調査するとき。
+- CLI 機能の具体的な実装や入出力処理だけを調査するとき。
 - Codex CLI、Ollama、Markdown の一般的な利用方法を調査するとき。
-- oracle review の所見生成・統合・検証ロジックや、個別の標準文書の内容を調査するとき。
+- oracle review の所見生成・統合・検証ロジックなど、このディレクトリの定義を利用する個別機能だけを調査するとき。
 
 ## hash
-- 885c94fa036f66b343c98269740e8cc246ae8ed92529cf5a44e654618e1b6c5d
+- bf71c04445202355b44b4cd52767830fb91c56fccfda3589dd7767e5513bcc81
 
 # `prompt_builder`
 
