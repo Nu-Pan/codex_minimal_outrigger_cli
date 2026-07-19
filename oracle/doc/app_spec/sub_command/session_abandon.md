@@ -20,8 +20,8 @@
 - 現在のブランチが `{{cmoc-session-branch}}` ではない
 - 対応する `{{cmoc-session-state-file}}` が存在しない
 - 対応する `{{cmoc-session-state-file}}` の `session.state` が `active` ではない
-- 対応する `{{cmoc-session-state-file}}` の `realization_run.state` が `ready` ではない
-    - 未 join の realization run が残っている場合は、その種類に対応する `cmoc realization apply abandon` または `cmoc realization refactor abandon` で先に破棄する
+- 対応する `{{cmoc-session-state-file}}` の `run.state` が `ready` ではない
+    - 未 join の編集 run が残っている場合は、先に `cmoc run abandon` で破棄する
 - `{{cmoc-session-home-branch}}` が存在しない
 - `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分が存在する
 
@@ -40,8 +40,8 @@
 - `{{cmoc-session-home-branch}}` 上の commit
 - `{{cmoc-session-state-file}}` 自体
 - 既に保存済みの report
-- 未 join の realization run
-    - realization run が残っている場合は `cmoc session abandon` では処理せず、その種類に対応する abandon を要求する
+- 未 join の編集 run
+    - editing run が残っている場合は `cmoc session abandon` では処理せず、`cmoc run abandon` を要求する
 
 ## 実行手順
 
@@ -51,8 +51,7 @@
 3. クリーンアップ
     1. `git switch {{cmoc-session-home-branch}}` を実行する。
     2. `{{cmoc-session-state-file}}` の `session.state` を `abandoned` に更新する。
-    3. `session.joined_at` は `null` のままとする。
-    4. `{{cmoc-session-branch}}` を強制削除する。
+    3. `{{cmoc-session-branch}}` を強制削除する。
 4. 結果を stdout に表示する。
 
 ## 状態遷移

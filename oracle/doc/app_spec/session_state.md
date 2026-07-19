@@ -1,15 +1,15 @@
-## `{{cmoc-session-state-file}}`
+# `{{cmoc-session-state-file}}`
 
 ## 概要
 
-- cmoc workflow 上の session と realization run の fork, join, abandon を一意に定めるための JSON file である。
+- cmoc workflow 上の session と、明示的な join を必要とする編集 run の lifecycle を一意に定める JSON file である。
 - 保存先は `{{repo-root}}/.cmoc/gu/ar/session/{{session-id}}.json` とする。
 
 ## スキーマ設計の基本原則
 
 - 永続化する情報は必要最小限に留める。
 - その場で確実に解決できる情報は state に持たせない。
-- 1 session に未 join の realization run は高々 1 つとする。
+- 1 session に未 join の編集 run は高々 1 つとする。
 
 ## スキーマ定義
 
@@ -18,19 +18,19 @@
   "session": {
     "state": "active | joined | abandoned | error",
     "session_home_branch": "...",
-    "session_start_commit": "...",
-    "last_joined_realization_apply_oracle_snapshot_commit": "... | null"
+    "session_fork_commit": "...",
+    "last_joined_apply_fork_commit": "... | null"
   },
-  "realization_run": {
-    "state": "ready | running | paused | completed | error",
-    "kind": "apply | refactor | null",
+  "run": {
+    "state": "ready | running | joinable | error",
+    "kind": "oracle_edit | realization_apply | realization_refactor | null",
     "branch": "... | null",
-    "oracle_snapshot_commit": "... | null"
+    "fork_commit": "... | null"
   }
 }
 ```
 
-## フィールドの説明
+## session field
 
 ### `session.state`
 
@@ -43,46 +43,47 @@
 - session の fork 元 branch であり join 先でもある。
 - `cmoc session fork` が、その時点で checkout している `{{local-branch}}` 名で初期化する。
 
-### `session.session_start_commit`
+### `session.session_fork_commit`
 
-- session の fork 元 commit である。
+- session の `{{cmoc-session-fork-commit}}` である。
 
-### `session.last_joined_realization_apply_oracle_snapshot_commit`
+### `session.last_joined_apply_fork_commit`
 
-- その session で最後に join した apply run の `{{realization-oracle-snapshot-commit}}` である。
+- その session で最後に merge へ成功した realization apply run の `{{cmoc-run-fork-commit}}` である。
 - session 新規作成直後の初期値は `null` とする。
-- `cmoc realization apply join` が merge に成功した場合だけ更新する。
-- `cmoc realization refactor join` は更新しない。
+- active run の kind が `realization_apply` である `cmoc run join` が merge に成功した場合だけ更新する。
 
-### `realization_run.state`
+## run field
 
-- 未 join の realization run の状態である。
+### `run.state`
+
+- `ready` は未 join の編集 run がない状態である。
+- `running` は workload の処理が実行中である状態である。
+- `joinable` は正常終了、または整合した処理単位でのユーザー中断後で、`cmoc run join` または `cmoc run abandon` を待つ状態である。
+- `error` は続行不能な失敗後で、確定済み成果物に対する `cmoc run join` または run 全体に対する `cmoc run abandon` を待つ状態である。
 - session 新規作成直後の初期値は `ready` とする。
-- `paused` は、ユーザー中断された refactor run だけに使用する。
 
-### `realization_run.kind`
+### `run.kind`
 
-- active な realization run の workload を表す。
-- apply run は `apply`、refactor run は `refactor` とする。
-- `realization_run.state` が `ready` の場合は `null` とする。
+- active な編集 run の workload を表す。
+- `run.state` が `ready` の場合は `null` とする。
+- join と abandon はこの値から workload を解決する。
 
-### `realization_run.branch`
+### `run.branch`
 
-- realization の修正内容を積み上げる run branch 名である。
-- `realization_run.state` が `ready` の場合は `null` とする。
+- active run の `{{cmoc-run-branch}}` 名である。
+- `run.state` が `ready` の場合は `null` とする。
 
-### `realization_run.oracle_snapshot_commit`
+### `run.fork_commit`
 
-- run 開始時点の `{{cmoc-session-branch}}` HEAD である。
-- apply run では注入差分の終点にも使用する。
-- refactor run では差分情報として agent に渡さず、join 時の想定外差分検査にだけ使用する。
-- `realization_run.state` が `ready` の場合は `null` とする。
+- active run の `{{cmoc-run-fork-commit}}` である。
+- apply の差分終点と run join の差分検査にも使用する。
+- `run.state` が `ready` の場合は `null` とする。
 
 ## 状態遷移
 
-- `ready` から apply または refactor の fork を開始すると `running` になる。
-- apply fork が正常終了すると `completed` になる。
-- refactor state が空になると `completed` になる。
-- refactor fork がユーザー中断されると `paused` になる。
-- run が続行不能なエラーで停止すると `error` になる。
-- 対応する join または abandon が正常終了すると `ready` になり、`kind`, `branch`, `oracle_snapshot_commit` を `null` に初期化する。
+- workload 固有の fork が新しい編集 run を開始すると、`ready` から `running` へ遷移する。
+- workload が正常終了すると `joinable` へ遷移する。
+- 中断可能な workload が整合した処理単位でユーザー中断を完了すると `joinable` へ遷移する。
+- workload が続行不能な失敗で停止すると `error` へ遷移する。
+- `cmoc run join` または `cmoc run abandon` が正常終了すると `ready` へ遷移し、`kind`, `branch`, `fork_commit` を `null` に初期化する。

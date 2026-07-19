@@ -14,7 +14,7 @@
 1. `{{work-root}}/.cmoc/gu` が git 追跡対象外であることを保証する
 2. `{{work-root}}/.agents` が git 追跡対象であることを保証する
 3. `{{work-root}}/.cmoc/gt/ar/config.json` が git 追跡対象である事を保証する
-4. `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が git 追跡対象であることを保証する
+4. `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が git 追跡対象であり、schema と entry 集合が同期済みであることを保証する
 5. cmoc managed ollama を使用する場合、その利用可能性を保証する
 6. ここまでの作業で発生した差分を git commit する
 
@@ -69,19 +69,28 @@
 - `{{work-root}}/.cmoc/gt/ar/config.json` が存在しなければ作成する
 - `{{work-root}}/.cmoc/gt/ar/config.json` を git 追跡対象に追加する
 
-## 「`{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が git 追跡対象であることを保証する」の詳細
+## 「refactor state が git 追跡対象であり、schema と entry 集合が同期済みであることを保証する」の詳細
 
 ### 検証
 
 - `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が存在していること
 - 同 file が git 追跡対象であること
-- JSON のトップレベルが配列であり、各要素が `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の refactor state 仕様を満たすこと
+- JSON のトップレベルが object であり、各 key と value が `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の refactor state 仕様を満たすこと
+- 同期完了時点で、entry が全 oracle file と全 realization file の和集合に過不足なく対応すること
+- 現在の file の SHA256 が最後に調査した hash と異なる entry で `investigation_required=true` であること
 
 ### 修復
 
-- file が存在しなければ、空の refactor state である `[]` を保存する
+- file が存在しなければ、空の object `{}` を保存する
 - file を git 追跡対象に追加する
-- file が存在するものの refactor state 仕様を満たさない場合は、既存の調査状態を破棄せずエラー終了する
+- 新規 file の entry 作成、削除 file の entry 削除、および hash 変更時の調査要求設定により entry 集合を同期する
+- file が存在するものの schema を満たさない場合は、既存の調査履歴を破棄せずエラー終了する
+
+### `cmoc run join` での同期時点
+
+- active run の kind が `realization_refactor` の場合、merge 前の doctor preprocess では追跡状態と schema だけを検証し、entry 集合の同期を merge 後まで遅延する。
+- これは session branch と run branch が同じ refactor state を独立に更新して merge conflict を起こすことを避けるためである。
+- merge 後は kind にかかわらず、最終的な session tree に対して entry 集合を同期する。
 
 ## 「cmoc managed ollama を使用する場合、その利用可能性を保証する」の詳細
 

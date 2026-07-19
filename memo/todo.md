@@ -1,48 +1,12 @@
 # 現在進行中
 
-git commit acfcea367412040e95650cae89eb2e151cab346c で行われた oracle file の修正に対する渡しの所見は以下のとおりです。
-これをもとに oracle file をどう修正するべきか、意見を下さい。
-
-- `{{cmoc-run-branch}}` を分ける必要性はないような気がするか？
-    - run 系の abandon も統合して良さそうに見える
-    - というか、run 系の諸々は分ける必要は無いように思える
-- `{{realization-oracle-snapshot-commit}}` は無くても良いのでは
-    - １つの概念を表す複数ワードというのは避けたほうが良いように思える
-- `cmoc realization apply fork` は TUI じゃなくて exec でいいかも
-    - 別 worktree 上で TUI 起動って微妙では
-    - TUI を優先して `{{repo-root}}` 上で作業させるよりも、`codex exec` にして fork, join 式を維持するほうがマシに思える
-- repository file って何
-    - > 候補 file は、run branch 上で git 追跡されている全 repository file とする。削除済み file と refactor state 自身は候補に含めない。
-    - 謎用語生やすと定義が曖昧になる
-- `cmoc realization refactor`
-    - `state.json` 周りの仕様は説明がたりてなかった
-        - ファイルごとにエントリーを持つ
-            - 調査要求の有無 (あり・なし)
-            - 最後に調査した時の結果 (調査実績なし、調査して所見なし、調査して所見あり)
-            - 最後に調査した時の、ファイルの sha256 ハッシュ値
-            - 最後に調査した時の日時
-        - 「ファイルごと」っていうのはつまり、oracle file, realization file 全てのファイルについて対応するエントリーを持つということ（過不足はあってはいけない）
-        - エントリーの削除は `{{work-root}}` からそのファイルが消えた時だし、ファイルが増えていればエントリーを増やす
-        - `cmoc realization refactor ...` の「全部追加」は「すべてのエントリーを調査要求ありにする」に変わる (エントリーのフラグ操作)
-        - リストへの再追加もエントリーのフラグ操作で置き換わる
-        - 今の仕様だと、リスト上の順序の存在が仮定されているが、これは無くして代わりに最終調査日時でソートして最も古いものから優先して調査ということになる
-    - 何言ってるか分からない
-        - > 1 件以上の所見が返り、調査対象が引き続き候補 file である場合は、調査対象を state の末尾へ再投入する。
-    - git tracked な `state.json` で状態をもちこせるのだから、同一 git branch 上での 中断・再開は無くても良くて、fork --> Ctrl+C --> join --> fork で十分なのでは
-- `cmoc oracle edit` 含めて、Codex CLI による編集作業は原則 fork join 式にしたい
-    - `realization_run.md` は fork, join, abandon 系サブコマンドの共通仕様くらいに拡大しても良いかも
-- 旧サブコマンドについての話は considered_alternative 内だけに書いた方がいい
-    - 今は、各サブコマンドの説明に旧サブコマンドの影がチラつく
-- プロンプト内の参照関係には `StructBlock` を使ってほしい
-    > - 後述する commit 差分から読み取れる oracle file の変更を、`{{work-root}}` リポジトリ全体の realization file に反映すること
-
-
-> 公開 CLI も統合するなら、開始は cmoc realization apply fork、cmoc realization refactor fork、条件付きで cmoc oracle edit fork、終了は cmoc run join / cmoc run abandon が最も素直です。
-
-公開 CLI も統合する方向で。
-
-それ以外は全て提案の内容で問題有りません。
-`cmoc oracle edit` に作業を依頼するので、
+- `state.json` のマージコンフリクトの問題は要調整
+    - 確実に run branch, session branch 両方で編集が発生する
+    - `state.json` だけは機械的なマージコンフリクト解消ルールを組み込むべきかも
+- oracle file 差分の注入方法
+    - cmoc で diff 取ってそれを注入するのがありかどうかは検討の余地がある
+    - 取得コマンドと固定のパラメーターだけを渡してエージェントに渡したほうが良い気もする
+- サブコマンド固有の初期プロンプトが TODO のまま
 
 ## コマンド体系整理
 

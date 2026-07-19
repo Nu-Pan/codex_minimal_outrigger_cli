@@ -21,7 +21,7 @@ def build_realization_refactor_fork_change_summary_parameter(
     """refactor fork report 用の変更要約パラメータを構築する。
 
     Args:
-        raw_git_diff: refactor branch 上の作業差分。
+        raw_git_diff: run branch 上の refactor 作業差分。
     """
     # 確定済み差分だけを入力とする変更要約 prompt を構築する。
     prompt = build_complete_prompt(
@@ -35,7 +35,7 @@ def build_realization_refactor_fork_change_summary_parameter(
         file_access_mode=FileAccessMode.READONLY,
         aux_dynamic_prompt=[
             StructDoc(
-                "refactor branch 上の差分",
+                "run branch 上の refactor 差分",
                 StructCodeBlock("diff", raw_git_diff),
             ),
         ],

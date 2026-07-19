@@ -3,7 +3,7 @@
 ## 概要
 
 - `cmoc session join` は、session を完了して `{{cmoc-session-home-branch}}` へ戻すためのコマンドである。
-- i.e. `cmoc session join` は、現在 checkout している `{{cmoc-session-branch}}`を `{{cmoc-session-home-branch}}`」へ merge する
+- i.e. `cmoc session join` は、現在 checkout している `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge する。
 - 通常の git branch 同士の汎用 merge wrapper ではない。
 - `{{repository-default-branch}}` は特別扱いしない。
 
@@ -19,7 +19,7 @@
 - 現在のブランチが `{{cmoc-session-branch}}` ではない
 - 対応する `{{cmoc-session-state-file}}` が存在しない
 - 対応する `{{cmoc-session-state-file}}` の `session.state` が `active` ではない
-- 対応する `{{cmoc-session-state-file}}` の `realization_run.state` が `ready` ではない
+- 対応する `{{cmoc-session-state-file}}` の `run.state` が `ready` ではない
 - 対応する `{{cmoc-session-state-file}}` から `{{cmoc-session-home-branch}}` を特定出来ない
 - `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分が存在する
 
@@ -73,9 +73,3 @@ merge conflict が発生した場合は通常の conflict として扱う。
 
 - 安全であること（ブランチ削除により作業結果が失われないこと）の裏付けが取れた場合のみ `{{cmoc-session-branch}}` の削除を実行する
 - 確認に失敗した場合 `{{cmoc-managed-branch}}` は削除せず、 warning 扱いでユーザーに通知して続行する
-
-## `cmoc merge`
-
-- レガシーサブコマンドで `cmoc session join` の旧名である
-- これに対する後方互換性を cmoc として保つ必要は無い
-- `cmoc merge` の痕跡を実装・テストに残してはいけない

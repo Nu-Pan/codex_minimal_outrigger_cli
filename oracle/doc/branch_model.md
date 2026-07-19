@@ -1,9 +1,10 @@
-# cmoc branch model
+# cmoc の branch model
 
 ## 概要
 
 - cmoc は `{{local-branch}}` から `{{cmoc-session-branch}}` を作る。
-- realization 作業では、`{{cmoc-session-branch}}` から workload ごとの `{{cmoc-realization-run-branch}}` を作る。
+- run は `{{cmoc-session-branch}}` から共通の `{{cmoc-run-branch}}` を作る。
+- workload の種類は branch、commit、worktree の別名ではなく、run state と report で表す。
 - `{{repository-default-branch}}` は特別扱いしない。
 - `cmoc session fork` 実行時に checkout されている `{{local-branch}}` を `{{cmoc-session-home-branch}}` とする。
 
@@ -30,7 +31,7 @@
 
 - `cmoc session fork` が作成する `{{cmoc-managed-branch}}` である。
 - 命名規則は `cmoc/session/{{session-id}}` とする。
-- ユーザーはこの branch 上で oracle を編集・commit し、各種サブコマンドを呼び出す。
+- ユーザーはこの branch 上で oracle の変更を確認し、各種サブコマンドを呼び出す。
 
 ### `{{cmoc-session-home-branch}}`
 
@@ -39,29 +40,10 @@
 
 ### `{{cmoc-run-branch}}`
 
-- 1 回のサブコマンド実行を `{{cmoc-session-branch}}` から隔離するための `{{cmoc-managed-branch}}` である。
-- 個別仕様が具体名を定めない場合の命名規則は `cmoc/run/{{session-id}}/{{run-id}}` とする。
+- run を `{{cmoc-session-branch}}` から隔離するための `{{cmoc-managed-branch}}` である。
+- 命名規則は workload にかかわらず `cmoc/run/{{session-id}}/{{run-id}}` とする。
 - run の差分を git commit として積み上げ、ユーザーが直接作業する branch にはしない。
-- 抽象概念であり、具体名はサブコマンドごとに定める。
-    - `{{cmoc-[sub-command-name]-branch}}` とする。
-    - e.g. review run: `{{cmoc-review-branch}}`
-
-### `{{cmoc-realization-run-branch}}`
-
-- realization run における `{{cmoc-run-branch}}` の総称である。
-- apply run では `{{cmoc-realization-apply-branch}}` を指す。
-- refactor run では `{{cmoc-realization-refactor-branch}}` を指す。
-
-### `{{cmoc-realization-apply-branch}}`
-
-- `cmoc realization apply fork` が新規作成する branch である。
-- 命名規則は `cmoc/realization/apply/{{session-id}}/{{run-id}}` とする。
-
-### `{{cmoc-realization-refactor-branch}}`
-
-- `cmoc realization refactor fork` が新規作成する branch である。
-- 命名規則は `cmoc/realization/refactor/{{session-id}}/{{run-id}}` とする。
-- refactor fork のユーザー中断後は削除せず、次回 fork で再利用する。
+- 1 つの branch は 1 つの run instance だけに対応する。
 
 ## git commit
 
@@ -77,20 +59,14 @@
 ### `{{cmoc-run-fork-commit}}`
 
 - `{{cmoc-run-branch}}` の分岐元 commit である。
-- 通常は run 開始時点の `{{cmoc-session-branch}}` HEAD である。
-- サブコマンドごとの具体名は `{{cmoc-[sub-command-name]-fork-commit}}` とする。
-- realization workload ごとの具体名は `{{cmoc-realization-apply-fork-commit}}`, `{{cmoc-realization-refactor-fork-commit}}` とする。
+- run 開始時点の `{{cmoc-session-branch}}` HEAD である。
+- apply が注入する差分の終点、run join 時の差分検査、および run report は、この名前を一貫して使用する。
+- 同じ commit に workload ごとの別名を割り当ててはいけない。
 
 ### `{{cmoc-run-join-commit}}`
 
 - `{{cmoc-run-branch}}` を `{{cmoc-session-branch}}` へ merge した commit である。
-- サブコマンドごとの具体名は `{{cmoc-[sub-command-name]-join-commit}}` とする。
-- realization workload ごとの具体名は `{{cmoc-realization-apply-join-commit}}`, `{{cmoc-realization-refactor-join-commit}}` とする。
-
-### `{{realization-oracle-snapshot-commit}}`
-
-- realization run 開始時点の `{{cmoc-session-branch}}` HEAD である。
-- `{{cmoc-run-fork-commit}}` と同じ commit を指すが、oracle の参照 snapshot という責務を明示する名前である。
+- workload ごとの別名を割り当ててはいけない。
 
 ## git worktree
 
@@ -98,12 +74,5 @@
 
 - run を `{{repo-root}}` から隔離するための git linked worktree である。
 - `{{run-root}}` は `{{repo-root}}/.cmoc/gu/worktree/{{session-id}}/{{run-id}}` とする。
-- 抽象概念であり、具体名はサブコマンドごとに定める。
-    - `{{cmoc-[sub-command-name]-worktree}}` とする。
-    - e.g. review run: `{{cmoc-review-worktree}}`
-
-### `{{cmoc-realization-run-worktree}}`
-
-- realization run における `{{cmoc-run-worktree}}` の総称である。
-- apply run では `{{cmoc-realization-apply-worktree}}` を指す。
-- refactor run では `{{cmoc-realization-refactor-worktree}}` を指す。
+- `{{cmoc-run-branch}}` を checkout し、run の workload を実行する。
+- workload ごとの別名を割り当ててはいけない。

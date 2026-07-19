@@ -79,15 +79,13 @@
 
 ## プロンプトの渡し方
 
-- AgentCallParameter builder が生成した `AgentCallParameter.prompt` は、Codex CLI に渡すプ
-  ロンプト本文の正本とする
+- AgentCallParameter builder が生成した `AgentCallParameter.prompt` は、Codex CLI に渡すプロンプト本文の正本とする
+- exec 用 builder は完全 prompt を `AgentCallParameter.prompt` として直接返す。editor-input log など別 file の path を読む指示だけを間接 prompt として返してはいけない
 - cmoc は `AgentCallParameter.prompt` を、可能な限りそのまま Codex CLI に渡すこと
-- cmoc は Codex CLI へ渡す直前の段階で、`AgentCallParameter.prompt` に指示文、注意書き、説
-明、整形、要約、翻訳、補助文脈、モデル・reasoning effort 情報を追加してはならない
-- Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意
-味内容を変更しない範囲に限って許可する
+- cmoc は Codex CLI へ渡す直前の段階で、`AgentCallParameter.prompt` に指示文、注意書き、説明、整形、要約、翻訳、補助文脈、モデル・reasoning effort 情報を追加してはならない
+- Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する
 - プロンプト本文を argv に載せてはならない
-- `codex exec` にわたすプロンプト全文は一度 `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_prompt.md` に出力すること
+- `codex exec` に渡すプロンプト全文は一度 `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_prompt.md` に出力すること
 - プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で `{{time-stamp}}_prompt.md` をリダイレクト入力すること
 - argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする
 

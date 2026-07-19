@@ -1,31 +1,22 @@
-# `cmoc oracle edit`
+# `cmoc oracle edit fork`
 
-## 概要
+## 目的
 
-- oracle file の最終状態に関するユーザー指示をエディタから受け取り、その指示を渡して Codex CLI の TUI を起動する
+- oracle file の最終状態に関するユーザー指示を受け取り、隔離された編集 run で oracle file へ反映する workload である。
+- fork, join, abandon の共通 lifecycle は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` を正本とする。
 
 ## 引数
 
-- なし
-
-## 事前条件
-
-- なし
-
-## 実行手順
-
-1. doctor preprocess を呼び出す
-2. oracle file の最終状態に関するユーザー指示をエディタから受け取る
-3. `build_oracle_edit_launch_tui_parameter` で TUI 起動パラメータを構築する
-4. 構築したパラメータで Codex CLI の TUI を起動する
+- 引数なし。
 
 ## ユーザー指示の入力
 
-- エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする
-- エディタ編集対象ファイルの初期値として、以下に示す `cmoc oracle edit` 固有コメントを追加注入する
+- エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする。
+- エディタ編集対象 file の初期値へ、以下の workload 固有コメントを追加注入する。
+
     ```markdown
     <!--
-    以下の指示は `cmoc oracle edit` で自動注入されるため、このファイルに書いてはいけない。
+    以下の指示は cmoc が自動注入するため、この file に書いてはいけない。
 
     - realization file の読み書き禁止
     - oracle file の規約・規範
@@ -33,21 +24,43 @@
     -->
     ```
 
-## TUI 起動パラメータ
+## agent call と file access
 
-- TUI に渡す prompt と agent call parameter の詳細は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_tui.py` の `build_oracle_edit_launch_tui_parameter` を正本とし、この文書では重ねて定義しない
-- `build_oracle_edit_launch_tui_parameter` が返したパラメータを変更せずに TUI 起動へ渡す
-- `cmoc tui` のような実行パラメータ決定用 agent call は行わない
+- `build_oracle_edit_fork_launch_exec_parameter` が、ユーザー指示を含む完全 prompt を `AgentCallParameter.prompt` として直接返す。
+- `{{cmoc-run-worktree}}` を cwd とする `codex exec` を 1 回だけ本命 agent call として実行する。Codex CLI の TUI は起動しない。
+- 実行パラメータ決定用の追加 agent call は行わない。
+- file access mode は `PURE_ORACLE_WRITE` とし、agent は oracle file だけを変更する。
+- Codex CLI の共通実行規則は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
 
-## Codex CLI の起動
+## 想定内差分
 
-- 起動コマンドは `codex` とする
-- `codex exec` は使用しない
-- `cmoc tui` の「Codex CLI の場合」と同じく、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` から以下の要素を持ち込む
-    - 環境変数 `$CODEX_HOME`
-    - preflight validation
-    - Codex CLI 引数による設定上書き
+- agent が変更する oracle file。
+- cmoc が生成する任意階層の `INDEX.md`。
+- agent は `INDEX.md` を変更せず、cmoc が生成する。
 
-## 変更の扱い
+## 実行手順
 
-- Codex CLI の TUI が行った oracle file の変更は自動で commit しない
+1. doctor preprocess と編集 run の共通事前条件検査を行う。
+2. oracle file の最終状態に関するユーザー指示をエディタから受け取る。
+3. 編集 run の共通 fork 開始処理を行う。
+4. `build_oracle_edit_fork_launch_exec_parameter` で AgentCallParameter を構築する。
+5. その AgentCallParameter を変更せず、`{{cmoc-run-worktree}}` を cwd とする `codex exec` で実行する。
+6. agent の oracle file 差分と cmoc が生成した `INDEX.md` を検査し、run branch に commit する。
+7. `run.state` を `joinable` にして結果を report する。
+
+## エラー
+
+- 本命 agent call を正常に開始または終了できない場合、差分を整合した単位へ commit または rollback できない場合、あるいは後処理に失敗した場合は `run.state` を `error` にする。
+- エラー後は `cmoc run join` で確定済み成果物を取り込むか、`cmoc run abandon` で run を破棄する。
+
+## fork report と終了コード
+
+- report は Markdown + YAML Front Matter とする。
+- 共通 run 項目に加え、Codex CLI の終了結果と変更 path を含める。
+- AI による意味的な変更要約は生成しない。
+- `{{repo-root}}/.cmoc/gu/ar/report/oracle/edit/fork/{{time-stamp}}.md` に保存する。report 本文は stdout に流さず、保存先のフル path を表示する。
+- `joinable` での終了は終了コード 0、`error` での終了は非 0 とする。
+
+## join 後 hook
+
+- workload 固有の hook は持たない。

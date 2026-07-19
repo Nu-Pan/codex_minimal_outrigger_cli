@@ -57,7 +57,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         apply_review_standard=True,
     )
 
-    # 全候補 file に適用するため、効率モデルの最大推論を使う。
+    # 全 oracle file と realization file に適用するため、効率モデルの最大推論を使う。
     return AgentCallParameter(
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.MAX,
