@@ -21,6 +21,7 @@ def test_config_defaults_match_logical_model_classes() -> None:
     config = CmocConfig()
 
     assert config.num_parallel == 8
+    assert config.cmoc_managed_ollama_service_launch_behavior == "default"
     assert config.codex.model[ModelClass.MAINSTREAM] == CodexModelSpec(
         "codex", "gpt-5.6-terra"
     )
@@ -34,6 +35,12 @@ def test_config_json_preserves_oracle_member_order() -> None:
     """config の JSON 化で model と reasoning effort の定義順を保つ。"""
     data = config_to_dict(CmocConfig())
 
+    assert list(data) == [
+        "num_parallel",
+        "codex",
+        "cmoc_managed_ollama_service_launch_behavior",
+        "oracle_review",
+    ]
     assert list(data["codex"]) == [
         "model",
         "reasoning_effort",
@@ -145,6 +152,28 @@ def test_config_rejects_non_integer_int_values(data: dict[str, object]) -> None:
         config_from_dict(data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+@pytest.mark.parametrize("value", [None, False, "", "invalid"])
+def test_config_rejects_invalid_managed_ollama_launch_behavior(
+    value: object,
+) -> None:
+    """managed Ollama 起動保証の未定義モードを拒否する。"""
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({"cmoc_managed_ollama_service_launch_behavior": value})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+@pytest.mark.parametrize("value", ["default", "bypass", "force"])
+def test_config_preserves_managed_ollama_launch_behavior(value: str) -> None:
+    """managed Ollama 起動保証モードを読み込みと JSON 化で保持する。"""
+    config = config_from_dict({"cmoc_managed_ollama_service_launch_behavior": value})
+
+    assert config.cmoc_managed_ollama_service_launch_behavior == value
+    assert (
+        config_to_dict(config)["cmoc_managed_ollama_service_launch_behavior"] == value
+    )
 
 
 def test_config_preserves_codex_falv_recovery_try_count() -> None:

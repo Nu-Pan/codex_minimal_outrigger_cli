@@ -33,6 +33,9 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             },
             "num_try_falv_recovery": config.codex.num_try_falv_recovery,
         },
+        "cmoc_managed_ollama_service_launch_behavior": (
+            config.cmoc_managed_ollama_service_launch_behavior
+        ),
         "oracle_review": {
             "num_enumerate_findings_loop": config.oracle_review.num_enumerate_findings_loop,
             "num_merge_findings_loop": config.oracle_review.num_merge_findings_loop,
@@ -120,6 +123,13 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
         )
 
         oracle_review_data = _section(data, "oracle_review")
+        launch_behavior = data.get(
+            "cmoc_managed_ollama_service_launch_behavior",
+            default.cmoc_managed_ollama_service_launch_behavior,
+        )
+        # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+        if launch_behavior not in {"default", "bypass", "force"}:
+            raise TypeError
 
         return CmocConfig(
             num_parallel=_int_value(data, "num_parallel", default.num_parallel),
@@ -132,6 +142,7 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
                     default.codex.num_try_falv_recovery,
                 ),
             ),
+            cmoc_managed_ollama_service_launch_behavior=launch_behavior,
             oracle_review=CmocConfigOracleReview(
                 num_enumerate_findings_loop=_int_value(
                     oracle_review_data,

@@ -67,7 +67,13 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     )
     assert "permissions" not in parsed
     assert "default_permissions" not in parsed
-    assert "sandbox_workspace_write" not in parsed
+    assert parsed["sandbox_workspace_write"] == {"network_access": True}
+    assert parsed["features"] == {
+        "network_proxy": {
+            "enabled": True,
+            "domains": {"127.0.0.1": "allow"},
+        }
+    }
     assert "--profile" not in args
     assert "-p" not in args
 

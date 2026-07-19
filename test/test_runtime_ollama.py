@@ -2,9 +2,13 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from _ollama_support import TEST_SLM_MODEL
+from oracle.other.cmoc_config import CodexModelSpec
 
 import commons.runtime_ollama as ollama_module
+from basic.acp import ModelClass
 from commons.runtime_errors import CmocError
+from config.cmoc_config import CmocConfig
 
 
 class _Response:
@@ -26,6 +30,20 @@ class _Response:
     def __exit__(self, *_args: object) -> None:
         """response context managerを正常終了する。"""
         return None
+
+
+def test_managed_model_names_always_include_test_slm_once(tmp_path: Path) -> None:
+    """起動保証では設定された cmoc model とテスト用 SLM を重複なく扱う。"""
+    config = CmocConfig()
+    assert ollama_module._cmoc_managed_model_names(tmp_path, config) == [TEST_SLM_MODEL]
+
+    config.codex.model[ModelClass.MAINSTREAM] = CodexModelSpec("cmoc", "model")
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
+
+    assert ollama_module._cmoc_managed_model_names(tmp_path, config) == [
+        TEST_SLM_MODEL,
+        "model",
+    ]
 
 
 # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md

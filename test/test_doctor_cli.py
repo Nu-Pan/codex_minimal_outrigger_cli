@@ -23,9 +23,9 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing.connection import Connection
 from pathlib import Path
+from typing import Literal
 
 import pytest
-from _cli_support import runner
 from _git_support import make_repo, run_git
 from _ollama_support import (
     TEST_SLM_MODEL,
@@ -38,7 +38,6 @@ import commons.runtime_ollama as ollama_module
 from basic.acp import ModelClass
 from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
-from main import app
 
 
 def hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
@@ -54,11 +53,11 @@ def hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) ->
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
+def test_doctor_preprocess_repairs_git_state_and_reuses_shared_managed_ollama(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """doctor が Git の共通状態を修復し、共有 Ollama を再利用可能にすることを検証する。"""
+    """doctor が Git 状態を修復し、外側で保証済みの共有 Ollama を保持する。"""
 
     root = make_repo(tmp_path)
     config = CmocConfig()
@@ -155,8 +154,8 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
 
     doctor_module.run_doctor_preprocess(root)
 
-    assert len(pulled) == 2
-    assert set(pulled) == {"alpha", "beta"}
+    assert len(pulled) == 3
+    assert set(pulled) == {TEST_SLM_MODEL, "alpha", "beta"}
 
 
 def test_doctor_preprocess_in_linked_worktree_uses_worktree_config(
@@ -201,7 +200,7 @@ def test_doctor_preprocess_in_linked_worktree_uses_worktree_config(
 
     doctor_module.run_doctor_preprocess(linked)
 
-    assert pulled == ["worktree-model"]
+    assert pulled == [TEST_SLM_MODEL, "worktree-model"]
     assert (linked / ".cmoc" / "gt" / "ar" / "config.json").exists()
     assert (
         json.loads(config_path.read_text())["codex"]["model"]["minimum"]["model"]
@@ -242,7 +241,11 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
     try:
         assert ready_parent.recv() is True
         with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(doctor_module.run_doctor_preprocess, linked)
+            future = executor.submit(
+                doctor_module.run_doctor_preprocess,
+                linked,
+                CmocConfig(cmoc_managed_ollama_service_launch_behavior="bypass"),
+            )
             assert lock_attempted.wait(timeout=3)
             assert not future.done()
             release_parent.send(True)
@@ -272,6 +275,7 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
     expected_index_tree = run_git(root, "write-tree").stdout.strip()
 
     if failure_stage == "managed_ollama":
+        config = CmocConfig(cmoc_managed_ollama_service_launch_behavior="force")
 
         def fail_ollama(_root: Path, _config: CmocConfig | None) -> None:
             """managed Ollama の失敗を再現する。"""
@@ -282,6 +286,7 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
         )
         expected_error = "managed ollama failure"
     else:
+        config = CmocConfig(cmoc_managed_ollama_service_launch_behavior="bypass")
 
         def fail_commit(
             _root: Path,
@@ -298,12 +303,47 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
         expected_error = "repair commit failure"
 
     with pytest.raises(RuntimeError, match=expected_error):
-        doctor_module.run_doctor_preprocess(root)
+        doctor_module.run_doctor_preprocess(root, config)
 
     assert run_git(root, "write-tree").stdout.strip() == expected_index_tree
     assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
         "staged.txt"
     ]
+
+
+@pytest.mark.parametrize(
+    ("behavior", "uses_cmoc_model", "expected"),
+    [
+        ("default", False, False),
+        ("default", True, True),
+        ("bypass", True, False),
+        ("force", False, True),
+    ],
+)
+def test_doctor_respects_managed_ollama_launch_behavior(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    behavior: Literal["default", "bypass", "force"],
+    uses_cmoc_model: bool,
+    expected: bool,
+) -> None:
+    """設定モードと cmoc provider の有無から起動保証の実行要否を決める。"""
+    root = make_repo(tmp_path)
+    config = CmocConfig(cmoc_managed_ollama_service_launch_behavior=behavior)
+    if uses_cmoc_model:
+        config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "model")
+    calls: list[tuple[Path, CmocConfig]] = []
+    monkeypatch.setattr(
+        doctor_module,
+        "ensure_ollama_serves_local_slm",
+        lambda actual_root, actual_config: calls.append((actual_root, actual_config)),
+    )
+
+    doctor_module.run_doctor_preprocess(root, config)
+
+    assert bool(calls) is expected
+    if expected:
+        assert calls == [(root.resolve(), config)]
 
 
 def test_doctor_generates_and_tracks_config(
@@ -315,7 +355,7 @@ def test_doctor_generates_and_tracks_config(
     config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
     monkeypatch.chdir(root)
 
-    run_doctor(root)
+    run_doctor(root, bypass_managed_ollama=False)
 
     assert config_path.is_file()
     assert (
@@ -323,6 +363,12 @@ def test_doctor_generates_and_tracks_config(
         == ".cmoc/gt/ar/config.json"
     )
     assert json.loads(config_path.read_text())["codex"]["num_try_falv_recovery"] == 1
+    assert (
+        json.loads(config_path.read_text())[
+            "cmoc_managed_ollama_service_launch_behavior"
+        ]
+        == "default"
+    )
     assert (
         ".cmoc/gt/ar/config.json"
         in run_git(root, "show", "--name-only", "--format=", "HEAD").stdout.splitlines()
@@ -340,7 +386,7 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
     run_git(root, "commit", "-m", "ignore cmoc working data")
     monkeypatch.chdir(root)
 
-    run_doctor(root)
+    run_doctor(root, bypass_managed_ollama=False)
 
     assert (
         run_git(root, "ls-files", "--", ".cmoc/gt/ar/config.json").stdout.strip()
@@ -364,7 +410,7 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
 
-    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+    result = run_doctor(linked)
 
     assert result.exit_code == 0
     assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
@@ -431,7 +477,7 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     )
     monkeypatch.chdir(root)
 
-    run_doctor(root)
+    run_doctor(root, bypass_managed_ollama=False)
     data = json.loads(config_path.read_text())
     assert data["num_parallel"] == 3
     assert data["codex"]["model"]["mainstream"] == {
@@ -446,6 +492,7 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["codex"]["reasoning_effort"]["xhigh"] == "xhigh"
     assert data["codex"]["reasoning_effort"]["max"] == "max"
+    assert data["cmoc_managed_ollama_service_launch_behavior"] == "default"
     assert "apply_fork" not in data
 
 
@@ -508,7 +555,10 @@ def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_delet
     run_git(root, "add", "-u", ".agents")
     monkeypatch.chdir(root)
 
-    doctor_module.run_doctor_preprocess(root)
+    doctor_module.run_doctor_preprocess(
+        root,
+        CmocConfig(cmoc_managed_ollama_service_launch_behavior="bypass"),
+    )
 
     gitkeep = root / ".agents" / ".gitkeep"
     assert gitkeep.is_file()

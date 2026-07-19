@@ -281,6 +281,13 @@ def build_codex_override_args(
         sandbox_mode,
         *_config_override("approvals_reviewer", _toml_string("auto_review")),
         *_config_override("model_reasoning_effort", _toml_string(reasoning_effort)),
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        *_config_override("sandbox_workspace_write.network_access", "true"),
+        *_config_override("features.network_proxy.enabled", "true"),
+        *_config_override(
+            "features.network_proxy.domains",
+            '{"127.0.0.1"="allow"}',
+        ),
     ]
     use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"
     if use_cmoc_managed_ollama:

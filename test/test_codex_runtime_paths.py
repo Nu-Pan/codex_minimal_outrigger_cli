@@ -192,7 +192,13 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     assert record["cwd"] == str(expected_cwd)
     override_config = codex_override_config(record["args"])
     assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
-    assert "sandbox_workspace_write" not in override_config
+    assert override_config["sandbox_workspace_write"] == {"network_access": True}
+    assert override_config["features"] == {
+        "network_proxy": {
+            "enabled": True,
+            "domains": {"127.0.0.1": "allow"},
+        }
+    }
     assert "default_permissions" not in override_config
     assert "permissions" not in override_config
 

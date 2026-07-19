@@ -149,7 +149,13 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     )
     assert "permissions" not in override_config
     assert "default_permissions" not in override_config
-    assert "sandbox_workspace_write" not in override_config
+    assert override_config["sandbox_workspace_write"] == {"network_access": True}
+    assert override_config["features"] == {
+        "network_proxy": {
+            "enabled": True,
+            "domains": {"127.0.0.1": "allow"},
+        }
+    }
     assert "--profile" not in call_data["argv"]
 
 
