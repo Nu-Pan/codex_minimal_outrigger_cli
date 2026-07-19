@@ -521,13 +521,7 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "src/acp/builder/oracle/edit/fork/__init__.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "src/acp/builder/oracle/edit/fork/launch_exec.py": {
+  "src/acp/builder/oracle/edit/launch_tui.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -893,12 +887,6 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "src/sub_commands/oracle/edit/fork.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
   "src/sub_commands/oracle/investigation.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
@@ -1188,6 +1176,12 @@
     "last_investigated_at": null
   },
   "test/test_indexing_preflight.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "test/test_oracle_edit_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
