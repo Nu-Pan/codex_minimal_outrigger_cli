@@ -1,6 +1,6 @@
 """TUI 起動 parameter builder の realization adapter。"""
 
-from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
+from oracle.acp_builder.basic import AgentCallParameter
 from oracle.acp_builder.tui.launch_tui import (
     build_tui_launch_tui_parameter as _oracle_build_tui_launch_tui_parameter,
 )
@@ -11,17 +11,11 @@ from commons.runtime_paths import editor_input_dir
 
 def build_tui_launch_tui_parameter(
     time_stamp: str,
-    role: str,
-    summary: str,
-    goal: str,
-    file_access_mode: FileAccessMode,
     original_prompt: str,
-    oracle_and_realization_basic: bool,
     oracle_standard: bool,
     realization_standard: bool,
     oracle_review_standard: bool,
     apply_review_standard: bool,
-    index_entry_standard: bool,
 ) -> AgentCallParameter:
     """`cmoc tui` の TUI 起動用 AgentCallParameter を構築する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
@@ -30,18 +24,12 @@ def build_tui_launch_tui_parameter(
     repo = resolve_real_path(RootPathPlaceHolder.REPO)
     editor_input_dir(repo).mkdir(parents=True, exist_ok=True)
     return _oracle_build_tui_launch_tui_parameter(
-        time_stamp,
-        role,
-        summary,
-        goal,
-        file_access_mode,
-        original_prompt,
-        oracle_and_realization_basic,
-        oracle_standard,
-        realization_standard,
-        oracle_review_standard,
-        apply_review_standard,
-        index_entry_standard,
+        time_stamp=time_stamp,
+        original_prompt=original_prompt,
+        oracle_standard=oracle_standard,
+        realization_standard=realization_standard,
+        oracle_review_standard=oracle_review_standard,
+        apply_review_standard=apply_review_standard,
     )
 
 

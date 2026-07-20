@@ -198,16 +198,16 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの正本仕様。ユーザー入力と自動生成プロンプトを組み合わせ、agent call で決定したパラメータに基づいて AI Agent CLI/TUI を起動する実行手順と、Codex CLI 固有の起動条件を扱う。
+- `cmoc tui` サブコマンドの正本仕様。プロンプト入力、agent call による起動パラメータ決定、AI Agent CLI/TUI 起動までの手順と、Codex CLI 固有の起動条件を扱う。
 
 ## Read this when
-- `cmoc tui` の実行手順、引数・事前条件、プロンプト入力、agent call によるパラメータ決定を確認するとき
-- AI Agent CLI/TUI の起動パラメータや、Codex CLI 起動時の環境変数・preflight validation・引数上書きを確認するとき
+- `cmoc tui` の実行手順、プロンプト入力、agent call のパラメータ決定、または AI Agent CLI/TUI の起動仕様を確認するとき。
+- Codex CLI 起動時の `$CODEX_HOME`、preflight validation、CLI 引数による設定上書きの扱いを確認するとき。
 
 ## Do not read this when
-- プロンプトエディタ入力の詳細仕様だけを確認したいときは、指定された prompt editor input の正本を直接読む
-- agent call によるパラメータ決定の詳細だけを確認したいときは、build_tui_resolve_parameter_parameter を直接読む
-- 共通の TUI 起動パラメータだけを確認したいときは、build_tui_launch_tui_parameter を直接読む
+- エディタ入力の詳細仕様だけを確認したい場合は、`prompt_editor_input.md` を直接読む。
+- agent call で決定するパラメータの詳細だけを確認したい場合は、`build_tui_resolve_parameter_parameter` の正本を直接読む。
+- TUI 起動パラメータの詳細だけを確認したい場合は、`build_tui_launch_tui_parameter` の正本を直接読む。
 
 ## hash
-- c0710e4864ebf312dd63aeef74d3d58b555e606cded00770dfa4125ec568ffed
+- be9faf25edcb1c5a094206c1ad538e66195cd6dcaef06552ae63ef8375d6229d

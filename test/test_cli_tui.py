@@ -106,13 +106,10 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         """parameter 解決 call が返す最小の fake result。"""
 
         output_json = {
-            "file_access_mode": {"value": "repo_write", "reason": "repo wide task"},
-            "oracle_and_realization_basic": {"value": True, "reason": "needed"},
             "oracle_standard": {"value": False, "reason": "not needed"},
             "realization_standard": {"value": True, "reason": "needed"},
             "oracle_review_standard": {"value": False, "reason": "not needed"},
             "apply_review_standard": {"value": False, "reason": "not needed"},
-            "index_entry_standard": {"value": False, "reason": "not needed"},
         }
 
     def fake_run_codex_exec(
@@ -165,6 +162,13 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert len(complete_files) == 1
     complete_prompt = complete_files[0].read_text()
     assert "# file read write rule - repo_write" in complete_prompt
+    assert "# oracle and realization basic" in complete_prompt
+    assert "\n# oracle standard\n" not in complete_prompt
+    assert "# realization standard" in complete_prompt
+    assert "\n# oracle review standard\n" not in complete_prompt
+    assert "\n# apply review standard\n" not in complete_prompt
+    assert "# index entry standard" not in complete_prompt
+    assert '<cmoc_ref target="original_prompt"/>' in complete_prompt
     assert "# オリジナルプロンプト" in complete_prompt
     assert "src を確認して必要なら直す" in complete_prompt
     assert "remove me" not in complete_prompt
@@ -174,24 +178,43 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
-def test_tui_uses_default_file_access_mode_for_empty_resolved_value(
+def test_tui_launch_parameter_uses_fixed_access_and_prompt_contract(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """空の解決値が TUI の readonly 既定値へ戻ることを検証する。"""
+    """TUI 起動設定の固定値と選択対象の standard だけを反映する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").mkdir(
-        parents=True, exist_ok=True
-    )
     parameter = tui_module.build_tui_codex_parameter(
         "確認して下さい。",
-        {"file_access_mode": {"value": "", "reason": "default accepted"}},
+        {
+            "oracle_standard": {"value": True, "reason": "needed"},
+            "realization_standard": {"value": False, "reason": "not needed"},
+            "oracle_review_standard": {"value": False, "reason": "not needed"},
+            "apply_review_standard": {"value": False, "reason": "not needed"},
+        },
+        launch_timestamp="2026-07-20_12-00-00_000000000",
     )
 
-    assert parameter.file_access_mode == FileAccessMode.READONLY
+    assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert parameter.structured_output_schema_path is not None
     assert parameter.structured_output_schema_path.name == "launch_tui.json"
+    complete_prompt = (
+        root
+        / ".cmoc"
+        / "gu"
+        / "ar"
+        / "log"
+        / "editor_input"
+        / "2026-07-20_12-00-00_000000000_cmpl.md"
+    ).read_text()
+    assert "# oracle and realization basic" in complete_prompt
+    assert "# oracle standard" in complete_prompt
+    assert "\n# realization standard\n" not in complete_prompt
+    assert "\n# oracle review standard\n" not in complete_prompt
+    assert "\n# apply review standard\n" not in complete_prompt
+    assert "# index entry standard" not in complete_prompt
+    assert "確認して下さい。" in complete_prompt
 
 
 def test_tui_saves_complete_prompt_in_linked_worktree(
@@ -229,17 +252,11 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "data = {key: {'value': False, 'reason': 'test'} for key in [",
-            "    'oracle_and_realization_basic',",
             "    'oracle_standard',",
             "    'realization_standard',",
             "    'oracle_review_standard',",
             "    'apply_review_standard',",
-            "    'index_entry_standard',",
             "]}",
-            "data['file_access_mode'] = {'value': 'repo_write', 'reason': 'test'}",
-            "data['role'] = {'value': 'role', 'reason': 'test'}",
-            "data['summary'] = {'value': 'summary', 'reason': 'test'}",
-            "data['goal'] = {'value': 'goal', 'reason': 'test'}",
             "output.write_text(json.dumps(data))",
             "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
             "print(json.dumps({'type': 'turn.completed'}))",
@@ -316,7 +333,15 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     class FakeResolveResult:
         """parameter 解決 call が返す最小の fake result。"""
 
-        output_json = {"file_access_mode": {"value": "readonly", "reason": "test"}}
+        output_json = {
+            name: {"value": False, "reason": "test"}
+            for name in (
+                "oracle_standard",
+                "realization_standard",
+                "oracle_review_standard",
+                "apply_review_standard",
+            )
+        }
 
     monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
     monkeypatch.setattr(

@@ -3,13 +3,9 @@ from dataclasses import replace
 from pathlib import Path
 
 from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
-from acp.builder.tui.resolve_parameter import (
-    TUI_FILE_ACCESS_MODES,
-    build_tui_resolve_parameter_parameter,
-)
-from basic.acp import AgentCallParameter, FileAccessMode
+from acp.builder.tui.resolve_parameter import build_tui_resolve_parameter_parameter
+from basic.acp import AgentCallParameter
 from cmoc_runtime import (
-    CmocError,
     load_config,
     repo_root,
     run_cli_subcommand,
@@ -106,59 +102,17 @@ def build_tui_codex_parameter(
     launch_timestamp: str | None = None,
 ) -> AgentCallParameter:
     """解決済み JSON から TUI 起動用 AgentCallParameter を構築する。"""
-    file_access_mode = FileAccessMode(
-        nested_value(
-            resolved_parameter, "file_access_mode", FileAccessMode.READONLY.value
-        )
-    )
-    if file_access_mode not in TUI_FILE_ACCESS_MODES:
-        raise CmocError(
-            "TUI では使用できないファイルアクセスモードです。",
-            ["プロンプトを保存して `cmoc tui` を再実行してください。"],
-            f"file_access_mode: {file_access_mode.value}",
-        )
-
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     return build_tui_launch_tui_parameter(
         launch_timestamp or timestamp(),
-        role=nested_value(
-            resolved_parameter,
-            "role",
-            "- あなたは AI Agent CLI/TUI として、ユーザーから与えられた依頼を実行します",
-        ),
-        summary=nested_value(
-            resolved_parameter,
-            "summary",
-            "- 後述する詳細指示に従って作業してください",
-        ),
-        goal=nested_value(
-            resolved_parameter,
-            "goal",
-            "- 詳細指示の要求を満たしていること",
-        ),
-        file_access_mode=file_access_mode,
         original_prompt=original_prompt,
-        oracle_and_realization_basic=nested_bool(
-            resolved_parameter, "oracle_and_realization_basic"
-        ),
         oracle_standard=nested_bool(resolved_parameter, "oracle_standard"),
         realization_standard=nested_bool(resolved_parameter, "realization_standard"),
         oracle_review_standard=nested_bool(
             resolved_parameter, "oracle_review_standard"
         ),
         apply_review_standard=nested_bool(resolved_parameter, "apply_review_standard"),
-        index_entry_standard=nested_bool(resolved_parameter, "index_entry_standard"),
     )
-
-
-def nested_value(data: dict[str, object], name: str, default: str) -> str:
-    """TUI parameter JSON で `{value: ...}` 形式の項目から文字列値を取り出す。"""
-    value = data.get(name)
-    if isinstance(value, dict):
-        nested = value.get("value")
-        if isinstance(nested, str) and nested:
-            return nested
-    return default
 
 
 def nested_bool(data: dict[str, object], name: str) -> bool:

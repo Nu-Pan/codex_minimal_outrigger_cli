@@ -1,47 +1,46 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc tui` の TUI 起動時に、動的な役割・概要・完了条件・アクセスモード・各種標準フラグ・ユーザープロンプトから完全なプロンプトを構築し、ログへ保存する処理を担う。生成したプロンプトのパスと固定のモデル・推論設定を含む AI エージェント呼び出しパラメータを返す。
+- `cmoc tui` 起動時に、ユーザー入力を埋め込んだ完全なプロンプトを生成・保存し、Codex CLI/TUI 用の固定実行パラメータを返す正本実装。プロンプト構築、ログファイルの保存先、モデル・推論強度・アクセスモードなどの起動設定を扱う。
 
 ## Read this when
-- `cmoc tui` の起動パラメータ生成、完全なプロンプトの保存先、または TUI 呼び出し時のモデル・推論設定を変更・調査するとき。
-- 動的プロンプトの構成要素や、エディタ入力されたオリジナルプロンプトの受け渡しを確認するとき。
+- `cmoc tui` の起動処理、起動用 AgentCallParameter、完全プロンプトの生成または保存先を変更・調査するとき。
+- TUI 起動時のモデル、推論強度、ファイルアクセスモード、レビュー標準の適用条件を確認するとき。
 
 ## Do not read this when
-- 完全なプロンプトの共通生成規則そのものを調査するときは、プロンプト構築側の実装を直接読む。
-- TUI の画面表示や対話処理、JSON パラメータ定義だけを調査するときは、それぞれの担当実装を直接読む。
+- TUI 以外のサブコマンドのプロンプト構築や起動パラメータを調査するときは、該当する起動実装を直接読む。
+- プロンプト本文の共通構築規則だけを確認したい場合は、共通プロンプト構築モジュールを読む。
 
 ## hash
-- 7c0db24a7b74ab1c08a6efa7046738f3df2fdf60ae813eeb9183471d3d031242
+- 583f8c45266c929434d4e91bf0c53219d9dfad92b3d795d591584e722eab4246
 
 # `resolve_parameter.json`
 
 ## Summary
-- AI Agent CLI/TUI 実行用プロンプトの構造化スキーマを定義する oracle src。役割・作業概要・ゴール・ファイルアクセス権限、および各種標準の適用要否を表現する。
+- このファイルは、AI Agent CLI/TUI 実行時に oracle standard、realization standard、oracle review standard、apply review standard を読む必要があるかを判定する JSON Schema を定義する。各判定には真偽値と理由を求める。
 
 ## Read this when
-- oracle/acp_builder/tui のパラメータ解決やプロンプト生成の仕様を確認するとき
-- この構造化スキーマの項目、必須項目、アクセスモード enum、標準適用フラグを変更・検証するとき
+- AI Agent CLI/TUI の標準文書参照要否を判定する処理や、その入力スキーマを確認するとき。
 
 ## Do not read this when
-- INDEX.md のルーティング方針だけを確認したいとき
-- 実際の TUI パラメータ解決処理やプロンプト生成実装を確認したいときは、対応する realization source を直接読む
+- oracle standard や realization standard の本文そのものを確認するとき。
+- 実装・テストの配置やレビュー適用手順を確認するときは、対応する標準文書または実装・テストを直接読む。
 
 ## hash
-- 12d009e1cfa34942aedce8ffb405c9e9d69e9865325945e69e189f13857506c7
+- 22a4c43bcee0978a70007dbaf2a6487403ce7b2829df218cad8d608141bc0b0e
 
 # `resolve_parameter.py`
 
 ## Summary
-- `cmoc tui` の実行パラメータ解決用 AgentCallParameter と、そのための固定プロンプトを構築する。元プロンプト、ファイルアクセス規則、oracle/realization・レビュー・INDEX 規則を組み合わせ、読み取り専用で実行するパラメータ選択タスクの prompt とモデル設定を生成する。
+- `cmoc tui` の実行パラメータ解決用プロンプトを正本として構築する oracle src。後続 AI Agent CLI/TUI に適用する標準の選択を依頼する完全プロンプトを生成し、効率重視・最大推論の呼び出しパラメータとして返す。
 
 ## Read this when
-- `cmoc tui` の実行パラメータ解決 prompt や AgentCallParameter の生成方法を確認するとき
-- 元プロンプトから AI Agent CLI/TUI のモデル、推論強度、ファイルアクセスモード、生成 prompt を決定する処理を変更・調査するとき
+- `cmoc tui` の実行パラメータ解決プロンプト、適用する標準、読み取り専用の agent call パラメータを変更・確認するとき。
+- `build_tui_resolve_parameter_parameter` の入力プロンプト埋め込み、placeholder、出力 schema パス、モデル・推論設定を確認するとき。
 
 ## Do not read this when
-- `cmoc tui` の通常の UI 実装や、パラメータ解決後の AI Agent CLI/TUI 実行処理を確認するときは、対応する実装ファイルを直接読む
-- prompt の共通構築規則やファイルアクセス規則そのものを確認するときは、各 prompt builder の定義元を直接読む
+- `cmoc tui` の通常の対話実行や、実際の後続 AI Agent CLI/TUI の実装を確認したいとき。
+- 共通プロンプト生成処理の詳細だけを確認したいときは、プロンプトビルダー側の対象を直接読む。
 
 ## hash
-- 4b21b1ed6d72e90c4e269a9117dadb8e88366ca5da2ba12ce834d39aceacac78
+- 7d442f0a37e22042352348e3bbd4eebe1afb38cfea28f5137362d8d698952d33
