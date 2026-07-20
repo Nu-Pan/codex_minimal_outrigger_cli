@@ -35,13 +35,13 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "oracle/doc/app_spec/cmoc_managed_ollama.md": {
+  "oracle/doc/app_spec/codex_exec_rule.md": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "oracle/doc/app_spec/codex_exec_rule.md": {
+  "oracle/doc/app_spec/codex_model_provider.md": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
@@ -60,12 +60,6 @@
     "last_investigated_at": null
   },
   "oracle/doc/app_spec/error_handling.md": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
-  },
-  "oracle/doc/app_spec/external_model_provider.md": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,
