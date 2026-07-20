@@ -4,22 +4,20 @@
 from pathlib import Path
 
 # cmoc
+from oracle.acp_builder.basic import (
+    AgentCallParameter,
+    FileAccessMode,
+    ModelClass,
+    ReasoningEffort,
+)
+from oracle.other.path_model import resolve_repo_root, resolve_work_root
 from oracle.other.struct_doc import (
     StructBlock,
     StructCodeBlock,
     StructDoc,
     render_as_markdown,
 )
-from oracle.other.path_model import resolve_repo_root, resolve_work_root
-from oracle.acp_builder.basic import (
-    AgentCallParameter,
-    ModelClass,
-    ReasoningEffort,
-    FileAccessMode,
-)
-from oracle.prompt_builder.basic import PlaceholderMap
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
-from oracle.prompt_builder.parts.file_access_rule import build_file_access_rule
 
 
 def build_tui_resolve_parameter_parameter(
@@ -33,26 +31,16 @@ def build_tui_resolve_parameter_parameter(
         ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す元プロンプト。
         コメント除去と strip は呼び出し側で完了している想定。
     """
-    # ファイルアクセスモード関係だけ先に処理
-    fam_prompt: list[StructDoc] = list()
-    fam_ph_def: PlaceholderMap = dict()
-    for fam in FileAccessMode:
-        temp_ph_def, temp_fam_prompt = build_file_access_rule(fam)
-        fam_prompt.append(temp_fam_prompt)
-        fam_ph_def.update(fam_ph_def)
-
     # プロンプト
-    # NOTE
-    #   oracle_and_realization_basic 以降の固定プロンプト系フラグは全て True にする
     prompt = build_complete_prompt(
-        role="- あなたは AI Agent CLI/TUI の実行パラメータ選定担当です",
+        role="- あなたの役割は、後続の AI Agent CLI/TUI 実行に必要な情報を選定することです",
         summary="""
-        - `{{repo-root}}` ツリー内で、オリジナルプロンプト <cmoc_ref target="original_prompt"/> を AI Agent CLI/TUI で実行します
-        - この AI Agent CLI/TUI 実行に与えるべきパラメータを選択して下さい
+        - `{{repo-root}}` ツリー内で、オリジナルプロンプト <cmoc_ref target="original_prompt"/> を、このセッションとは別の、後続の AI Agent CLI/TUI で実行する予定です
+        - この実行に `oracle_standard`, `realization_standard`, `oracle_review_standard`, `apply_review_standard` を適用するかどうかを選択して下さい
         """,
         goal="""
-        - Structured Output schema に従ってパラメータ選択結果を返していること
-        - パラメータ選択の根拠として、オリジナルプロンプト <cmoc_ref target="original_prompt"/> の該当行、あるいは `{{work-root}}` ツリー内の file の該当行が具体的に示されていること
+        - Structured Output schema に従って4つの標準の選択結果を返していること
+        - 選択の根拠として、オリジナルプロンプト <cmoc_ref target="original_prompt"/> の該当行、あるいは `{{work-root}}` ツリー内の file の該当行が具体的に示されていること
         """,
         file_access_mode=FileAccessMode.READONLY,
         aux_dynamic_prompt=[
@@ -65,23 +53,18 @@ def build_tui_resolve_parameter_parameter(
                         original_prompt,
                     ),
                 ),
-            ),
-            StructDoc(
-                "ファイルアクセスモード",
-                *fam_prompt,
-            ),
+            )
         ],
         aux_placeholder_def={
             "repo-root": resolve_repo_root(),
             "work-root": resolve_work_root(),
-            **fam_ph_def,
         },
         oracle_and_realization_basic=True,
         oracle_standard=True,
         realization_standard=True,
         oracle_review_standard=True,
         apply_review_standard=True,
-        index_entry_standard=True,
+        index_entry_standard=False,
     )
     # パラメータを生成して返す
     # NOTE

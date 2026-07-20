@@ -2,115 +2,12 @@
     "type": "object",
     "additionalProperties": false,
     "required": [
-        "role",
-        "summary",
-        "goal",
-        "file_access_mode",
-        "oracle_and_realization_basic",
         "oracle_standard",
         "realization_standard",
         "oracle_review_standard",
-        "apply_review_standard",
-        "index_entry_standard"
+        "apply_review_standard"
     ],
     "properties": {
-        "role": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "reason"
-            ],
-            "properties": {
-                "value": {
-                    "type": "string",
-                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際に AI Agent に与える役割。"
-                },
-                "reason": {
-                    "type": "string",
-                    "description": "役割が妥当である事の説明・根拠。"
-                }
-            }
-        },
-        "summary": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "reason"
-            ],
-            "properties": {
-                "value": {
-                    "type": "string",
-                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際に AI Agent に与える作業の概要。"
-                },
-                "reason": {
-                    "type": "string",
-                    "description": "作業の概要が妥当である事の説明・根拠。"
-                }
-            }
-        },
-        "goal": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "reason"
-            ],
-            "properties": {
-                "value": {
-                    "type": "string",
-                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際に AI Agent に与える作業のゴール。"
-                },
-                "reason": {
-                    "type": "string",
-                    "description": "作業のゴールが妥当である事の説明・根拠。"
-                }
-            }
-        },
-        "file_access_mode": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "reason"
-            ],
-            "properties": {
-                "value": {
-                    "type": "string",
-                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際の論理ファイルアクセスモード。過不足の無い権限設定が望ましい。",
-                    "enum": [
-                        "readonly",
-                        "pure_oracle_read",
-                        "repo_write",
-                        "pure_oracle_write",
-                        "realization_write"
-                    ]
-                },
-                "reason": {
-                    "type": "string",
-                    "description": "選択した論理ファイルアクセスモードが妥当である事の説明・根拠。"
-                }
-            }
-        },
-        "oracle_and_realization_basic": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "reason"
-            ],
-            "properties": {
-                "value": {
-                    "type": "boolean",
-                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `oracle and realization basic` を読む必要があるのなら True を設定する。"
-                },
-                "reason": {
-                    "type": "string",
-                    "description": "`oracle and realization basic` を読む必要がある・ないとする事の説明・根拠。"
-                }
-            }
-        },
         "oracle_standard": {
             "type": "object",
             "additionalProperties": false,
@@ -180,24 +77,6 @@
                 "reason": {
                     "type": "string",
                     "description": "`apply review standard` を読む必要がある・ないとする事の説明・根拠。"
-                }
-            }
-        },
-        "index_entry_standard": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "reason"
-            ],
-            "properties": {
-                "value": {
-                    "type": "boolean",
-                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `index entry standard` を読む必要があるのなら True を設定する。"
-                },
-                "reason": {
-                    "type": "string",
-                    "description": "`index entry standard` を読む必要がある・ないとする事の説明・根拠。"
                 }
             }
         }

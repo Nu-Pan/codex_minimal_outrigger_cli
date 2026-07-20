@@ -4,71 +4,62 @@
 from pathlib import Path
 
 # cmoc
-from oracle.other.struct_doc import StructDoc, render_as_markdown
-from oracle.other.path_model import resolve_repo_root
 from oracle.acp_builder.basic import (
     AgentCallParameter,
+    FileAccessMode,
     ModelClass,
     ReasoningEffort,
-    FileAccessMode,
 )
+from oracle.other.path_model import resolve_repo_root
+from oracle.other.struct_doc import StructBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
 def build_tui_launch_tui_parameter(
     time_stamp: str,
-    role: str,
-    summary: str,
-    goal: str,
-    file_access_mode: FileAccessMode,
     original_prompt: str,
-    oracle_and_realization_basic: bool,
     oracle_standard: bool,
     realization_standard: bool,
     oracle_review_standard: bool,
     apply_review_standard: bool,
-    index_entry_standard: bool,
 ) -> AgentCallParameter:
-    """`cmoc tui` サブコマンド、TUI 起動パラメータ解決用。
-    AI エージェント呼び出しパラメータを構築する。
+    """`cmoc tui` サブコマンドの TUI 起動パラメータを構築する。
 
-    time_stamp: str
-        この `cmoc tui` 呼び出しのタイムスタンプ文字列
+    Args:
+        time_stamp: この `cmoc tui` 呼び出しのタイムスタンプ文字列。
+        original_prompt: ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す
+            オリジナルプロンプト。コメント除去と strip は呼び出し側で完了している
+            想定。
+        oracle_standard: oracle standard を適用するかどうか。
+        realization_standard: realization standard を適用するかどうか。
+        oracle_review_standard: oracle review standard を適用するかどうか。
+        apply_review_standard: apply review standard を適用するかどうか。
 
-    role: str
-    summary: str
-    goal: str
-    file_access_mode: str
-    oracle_and_realization_basic: bool
-    oracle_standard: bool
-    realization_standard: bool
-    oracle_review_standard: bool
-    apply_review_standard: bool
-    index_entry_standard: bool
-        関数 `build_complete_prompt` の docstring を参照
-
-    original_prompt: str
-        ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す元プロンプト。
-        コメント除去と strip は呼び出し側で完了している想定。
+    Returns:
+        Codex CLI の TUI 起動に使う固定パラメータ。
     """
     # 完全なプロンプトを生成してファイルに保存
+    original_prompt_ref = '<cmoc_ref target="original_prompt"/>'
     complete_prompt = build_complete_prompt(
-        role=role,
-        summary=summary,
-        goal=goal,
-        file_access_mode=file_access_mode,
+        role=original_prompt_ref,
+        summary=original_prompt_ref,
+        goal=original_prompt_ref,
+        file_access_mode=FileAccessMode.REPO_WRITE,
         aux_dynamic_prompt=[
-            StructDoc(
-                "オリジナルプロンプト",
-                original_prompt,
-            ),
+            StructBlock(
+                "original_prompt",
+                StructDoc(
+                    "オリジナルプロンプト",
+                    original_prompt,
+                ),
+            )
         ],
-        oracle_and_realization_basic=oracle_and_realization_basic,
+        oracle_and_realization_basic=True,
         oracle_standard=oracle_standard,
         realization_standard=realization_standard,
         oracle_review_standard=oracle_review_standard,
         apply_review_standard=apply_review_standard,
-        index_entry_standard=index_entry_standard,
+        index_entry_standard=False,
     )
     complete_prompt_path = (
         resolve_repo_root()
@@ -89,7 +80,7 @@ def build_tui_launch_tui_parameter(
     return AgentCallParameter(
         ModelClass.FLAGSHIP,
         ReasoningEffort.MAX,
-        file_access_mode,
+        FileAccessMode.REPO_WRITE,
         f"{complete_prompt_path} を読んで、その指示に従って下さい",
         Path(__file__).with_suffix(".json"),
         True,

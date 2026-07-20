@@ -27,7 +27,7 @@
 
 ## 「必要なパラメータを agent call で決定」の詳細
 
-- `cmoc tui` で必要になるパラメータの大半は agent call で決定する
+- `build_tui_resolve_parameter_parameter` で構築したパラメータを使用し、`codex exec` の agent call で決定する
 - agent call の詳細仕様は `build_tui_resolve_parameter_parameter` を正本とする
 
 ## 「AI Agent CLI/TUI を起動」の詳細
