@@ -1,14 +1,14 @@
 """`cmoc oracle investigation` の TUI 起動 prompt 正本。"""
 
 # cmoc
-from oracle.other.struct_doc import StructDoc, StructBlock, render_as_markdown
-from oracle.other.path_model import resolve_repo_root
 from oracle.acp_builder.basic import (
     AgentCallParameter,
+    FileAccessMode,
     ModelClass,
     ReasoningEffort,
-    FileAccessMode,
 )
+from oracle.other.path_model import resolve_repo_root
+from oracle.other.struct_doc import StructBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 

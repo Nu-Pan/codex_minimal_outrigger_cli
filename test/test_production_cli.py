@@ -30,7 +30,11 @@ from typing import Any, Iterator
 
 import click
 import pytest
-from _codex_support import codex_arg_value, codex_override_config
+from _codex_support import (
+    codex_arg_value,
+    codex_override_config,
+    configure_codex_home_for_test_local_ollama,
+)
 from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
 from _ollama_support import (
@@ -173,6 +177,7 @@ def _production_environment(
     # Codex の利用者 session/config と test session を混ぜない。
     codex_home = tmp_path / "codex-home"
     codex_home.mkdir()
+    configure_codex_home_for_test_local_ollama(codex_home)
     editor_dir = tmp_path / "editor-bin"
     editor_dir.mkdir()
     write_python_executable(

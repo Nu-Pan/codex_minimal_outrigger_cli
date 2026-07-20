@@ -9,6 +9,7 @@ from _codex_support import (
     codex_arg_value,
     codex_override_config,
     codex_parameter,
+    configure_codex_home_for_test_local_ollama,
     setup_codex_home,
 )
 from _command_support import write_python_executable
@@ -56,7 +57,8 @@ def test_run_codex_exec_invokes_real_codex_with_test_local_ollama_provider(
     assert _REAL_CODEX is not None
     real_codex = _REAL_CODEX
     root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
+    configure_codex_home_for_test_local_ollama(codex_home)
     schema_source = tmp_path / "schema.json"
     schema_source.write_text(
         json.dumps(

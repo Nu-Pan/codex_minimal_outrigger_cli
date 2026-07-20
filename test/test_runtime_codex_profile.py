@@ -138,6 +138,29 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
     assert "permissions" not in parsed
 
 
+def test_codex_overrides_leave_bare_toml_key_segments_unquoted() -> None:
+    """Codex CLI の dotted path parser が読む bare provider key を検証する。"""
+    config = CmocConfig()
+    provider_id = "test-local_provider"
+    config.codex.model_providers[provider_id] = CodexModelProviderConfig(
+        {"name": "local provider"}
+    )
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(provider_id, "local-model")
+
+    args = build_codex_override_args(
+        AgentCallParameter(
+            ModelClass.MINIMUM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
+            None,
+        ),
+        config,
+    )
+
+    assert 'model_providers.test-local_provider.name="local provider"' in args
+
+
 def test_codex_overrides_reject_undefined_selected_provider() -> None:
     """選択 provider の定義欠落を Codex 起動前の argv 構築で失敗させる。"""
     config = CmocConfig()

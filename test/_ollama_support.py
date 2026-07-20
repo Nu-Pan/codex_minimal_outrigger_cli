@@ -113,6 +113,8 @@ def local_ollama(tmp_path: Path) -> Iterator[LocalOllama]:
         runtime.mkdir()
         host = f"127.0.0.1:{_unused_loopback_port()}"
         executable = install / "bin" / "ollama"
+        # Codex の built-in instructions/tool schema は Ollama の CPU 既定 4096 token を
+        # 超えるため、実プロンプトも収まる test-local context を明示する。
         environment = {
             **{
                 key: value
@@ -125,6 +127,7 @@ def local_ollama(tmp_path: Path) -> Iterator[LocalOllama]:
             "XDG_CONFIG_HOME": str(home / ".config"),
             "NO_PROXY": "127.0.0.1,localhost",
             "no_proxy": "127.0.0.1,localhost",
+            "OLLAMA_CONTEXT_LENGTH": "32768",
             "OLLAMA_HOST": host,
             "OLLAMA_MODELS": str(models),
         }

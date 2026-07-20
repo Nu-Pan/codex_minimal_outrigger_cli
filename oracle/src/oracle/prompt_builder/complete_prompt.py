@@ -1,19 +1,21 @@
 # cmoc
-from oracle.other.struct_doc import StructBlock, StructDoc
 from copy import deepcopy
 from typing import Callable
 
+from oracle.acp_builder.basic import FileAccessMode
+from oracle.other.struct_doc import StructBlock, StructDoc
+
+from .basic import PlaceholderMap
+from .parts.apply_review_standard import build_apply_review_standard
+
 # local
 from .parts.file_access_rule import build_file_access_rule
+from .parts.index_entry_standard import build_index_entry_standard
+from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
+from .parts.oracle_review_standard import build_oracle_review_standard
 from .parts.oracle_standard import build_oracle_standard
 from .parts.realization_standard import build_realization_standard
-from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
-from .parts.apply_review_standard import build_apply_review_standard
-from .parts.oracle_review_standard import build_oracle_review_standard
-from .parts.index_entry_standard import build_index_entry_standard
 from .parts.routing_rule import build_routing_rule
-from .basic import PlaceholderMap
-from oracle.acp_builder.basic import FileAccessMode
 
 
 def build_complete_prompt(

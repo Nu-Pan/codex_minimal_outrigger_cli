@@ -16,7 +16,6 @@ from dataclasses import dataclass, field
 # cmoc
 from oracle.acp_builder.basic import ModelClass, ReasoningEffort
 
-
 # JSON と TOML の両方で表現できる設定値
 type JsonTomlValue = (
     str | int | float | bool | list[JsonTomlValue] | dict[str, JsonTomlValue]

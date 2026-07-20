@@ -170,7 +170,7 @@ def _render_as_markdown(
         if struct_doc.children.info:
             result += f"```{struct_doc.children.info}\n"
         else:
-            result += f"```\n"
+            result += "```\n"
         result += ntqs(struct_doc.children.body) + "\n"
         result += "```\n"
     elif isinstance(struct_doc.children, str):

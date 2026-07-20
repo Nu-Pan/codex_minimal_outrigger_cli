@@ -25,6 +25,16 @@ def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return codex_home
 
 
+def configure_codex_home_for_test_local_ollama(codex_home: Path) -> None:
+    """Ollama 非対応の Codex 組み込み tool type を実経路試験だけで無効化する。"""
+    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    # 現行 Codex が既定で送る namespace/web_search tool は Ollama の Responses
+    # endpoint が受理しないため、test-local provider に必要な差だけを隔離 home に置く。
+    (codex_home / "config.toml").write_text(
+        'web_search = "disabled"\n\n[features]\nmulti_agent = false\n'
+    )
+
+
 def codex_parameter(
     mode: FileAccessMode = FileAccessMode.READONLY, *, cwd: Path | None = None
 ) -> AgentCallParameter:

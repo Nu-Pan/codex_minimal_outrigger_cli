@@ -11,6 +11,7 @@ subprocess 境界の不変条件を共有するため、分割すると呼び出
 import fcntl
 import json
 import os
+import re
 import select
 import signal
 import subprocess
@@ -241,7 +242,11 @@ def _toml_string(value: str) -> str:
 
 
 def _toml_key_segment(value: str) -> str:
-    """任意の provider ID/key を単一の quoted TOML key segment にする。"""
+    """provider ID/key を意味を保つ単一の TOML key segment にする。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # Codex CLI の dotted override path は bare key を引用せず渡す必要がある。
+    if re.fullmatch(r"[A-Za-z0-9_-]+", value):
+        return value
     return _toml_string(value)
 
 
