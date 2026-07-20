@@ -19,6 +19,7 @@ from cmoc_runtime import (
     text_sha256,
 )
 from commons.runtime_codex_preflight import configure_indexing_preflight
+from commons.runtime_codex_profile import run_process_tracking_active
 from commons.runtime_git import git_common_dir
 from commons.runtime_paths import cwd_override_active
 from commons.runtime_results import CodexExecCallable
@@ -131,11 +132,13 @@ def update_indexes(
                     ),
                 )
 
-            if cwd_override_active():
+            if cwd_override_active() or run_process_tracking_active():
                 # pushd は scope 全体で process-global cwd lock を保持する。
                 # この thread が worker を待つ間に worker が repo_root/work_root で
                 # block しないよう、isolated run worktree は lock 所有 thread で作る。
-                # pushd の外では並列性を維持する。
+                # tracked Codex subprocess は process-global signal handler を一時変更
+                # するため、editing run 中も handler を変更できる呼び出し thread で作る。
+                # どちらの制約もない場合は並列性を維持する。
                 results = map(build_missing, missing)
                 for plan, index, entry in results:
                     plan.entries[index] = entry

@@ -398,6 +398,11 @@ def set_run_process_tracking_path(path: Path | None) -> Path | None:
     return old_path
 
 
+def run_process_tracking_active() -> bool:
+    """editing run の Codex subprocess tracking が有効か返す。"""
+    return _active_run_process_tracking_path is not None
+
+
 def run_tracked_codex_subprocess(
     argv: list[str], tracking_path: Path, **kwargs: Any
 ) -> subprocess.CompletedProcess[Any]:

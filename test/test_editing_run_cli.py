@@ -7,9 +7,12 @@ from types import SimpleNamespace
 
 import pytest
 from _cli_support import runner
+from _codex_support import setup_codex_home, stub_codex_overrides
+from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
 from _ollama_support import run_doctor
 
+import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.investigation as investigation_module
 import sub_commands.realization.apply.fork as apply_module
@@ -270,6 +273,106 @@ def test_refactor_fork_completes_persistent_full_cycle(
     )
     assert summary_calls == 1
     assert "natural_completion" in result.output or "fork report" in result.output
+
+
+def test_refactor_fork_refreshes_changed_file_index_during_process_tracking(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """refactor の file 変更後も tracked INDEX subprocess を安全に実行する。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            'output.write_text(\'{"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]}\')',
+            'print(\'{"type":"turn.completed"}\')',
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    readme_reviews = 0
+
+    def fake_refactor(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """README の初回調査だけ file を修正し、他は固定応答を返す。"""
+        nonlocal readme_reviews
+        purpose = str(kwargs["purpose"])
+        if purpose == "realization refactor change summary":
+            return SimpleNamespace(
+                returncode=0,
+                output_json={
+                    "changes": [
+                        {
+                            "category": "realization",
+                            "summary": "README と INDEX entry を更新",
+                            "changed_paths": [
+                                ".cmoc/gt/ar/realization/refactor/state.json",
+                                "INDEX.md",
+                                "README.md",
+                            ],
+                        }
+                    ]
+                },
+            )
+        if purpose == "realization refactor: README.md":
+            readme_reviews += 1
+            if readme_reviews == 1:
+                worktree = Path(str(kwargs["cwd"]))
+                (worktree / "README.md").write_text("# repo\n\nfixed\n")
+                return SimpleNamespace(
+                    returncode=0,
+                    output_json={
+                        "findings": [
+                            {
+                                "title": "README finding",
+                                "resolution": {"status": "fixed"},
+                            }
+                        ]
+                    },
+                )
+        return SimpleNamespace(returncode=0, output_json={"findings": []})
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    state = _state(state_path)
+    assert state["run"]["state"] == "joinable"
+    parts = state["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    readme = worktree / "README.md"
+    assert readme.read_text() == "# repo\n\nfixed\n"
+    readme_entry = indexing_module.parse_index_entries(worktree / "INDEX.md")[
+        "README.md"
+    ]
+    assert readme_entry["hash"] == indexing_module.index_target_hash(worktree, readme)
+    readme_commit = run_git(
+        worktree, "log", "-1", "--format=%H", "--", "README.md"
+    ).stdout.strip()
+    committed_paths = set(
+        run_git(worktree, "show", "--format=", "--name-only", readme_commit)
+        .stdout.strip()
+        .splitlines()
+    )
+    assert {
+        ".cmoc/gt/ar/realization/refactor/state.json",
+        "INDEX.md",
+        "README.md",
+    } <= committed_paths
+    assert readme_reviews == 2
 
 
 def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
