@@ -129,32 +129,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装ルート。Typer CLI の入口、サブコマンド、共通 runtime、設定・基礎 API、互換 import shim、ACP builder adapter 群を含み、各担当ディレクトリへの入口となる。
+- cmoc の realization 実装をまとめる src ディレクトリ。CLI 入口、サブコマンド、共通 runtime、互換 import shim、設定・型・API の公開入口を扱い、各責務の実装や下位パッケージへの入口を提供する。
 
 ## Read this when
-- cmoc の CLI 構成や realization 実装の配置を確認するとき。
-- 共通 runtime、設定、基礎 API、互換 import、ACP adapter、各サブコマンドの担当箇所を探すとき。
+- cmoc の realization 側で CLI 構成、公開 import 経路、サブコマンド実装、共通 runtime の配置を確認・変更するとき。
+- 対象機能の実装箇所を特定し、main.py、sub_commands、commons、または互換 shim 配下へ進むとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装詳細を確認するときは、対応する oracle 配下を直接読む。
-- 特定機能の内部挙動を調査するときは、このルートではなく該当する下位モジュールを直接読む。
+- 正本仕様や canonical implementation を確認したいときは、対応する oracle 配下を直接読む。
+- 特定機能の内部挙動だけを調査するときは、src 全体ではなく該当する下位モジュールを直接読む。
 
 ## hash
-- e48230abc33b8f19c143c46d49148ec818c925a08f78544503dcd3540bb29931
+- ade7b577d76a7dc077f900f2d9db7228d60939279b2ba5431dafffd21b577527
 
 # `test`
 
 ## Summary
-- Python の realization test と共有 test helper を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/worktree、設定・Ollama などの外部挙動と制御ロジックを検証する。各テストファイルおよび helper が具体的な変更領域への入口となる。
+- `test` ディレクトリは、cmoc の realization test を集約するテスト領域。ACP builder、Codex runtime、CLI、indexing、oracle review、session/worktree、設定・状態管理など、実装の外部挙動と制御契約を pytest で検証する。各テストファイルが機能別の直接の入口となる。
 
 ## Read this when
-- Python テストの対象領域を特定し、該当する CLI・runtime・builder・indexing・state・worktree テストへ進むとき。
-- 共有 fixture や fake external command、Git repository、Codex/Ollama test helper の利用方法を確認するとき。
+- 既存テストの配置先や、変更対象の機能に対応する回帰テストを探すとき。
+- CLI、Codex 実行、indexing、oracle review、session/worktree、設定・状態管理などの外部契約を検証または変更するとき。
+- 共有テスト helper、fixture、fake external command、Git repository、managed Ollama のテスト準備方法を確認するとき。
 
 ## Do not read this when
-- 実装や正本仕様そのものを確認する場合は、対応する src または oracle 配下を直接読む。
-- テスト対象が明確な場合は、このディレクトリ全体を読まず、該当するテストファイルへ直接進む。
-- Codex CLI や LLM の出力品質自体を評価する目的では、このテストディレクトリを読む必要はない。
+- 実装本体の責務や正本仕様を確認したいときは、対応する `src` または `oracle` のファイルを直接読む。
+- 対象機能が明確で、対応する個別テストファイルへ直接進めるとき。
+- Codex や LLM の回答品質そのものを評価したいとき。
 
 ## hash
-- 1195c34e5698e0cee38bc77e7bb314288404593e6e89b41f4637b30756dfd121
+- ef200c559b7fb95275d55aa2540c9a4682c3428d20d3e26a10ed1add4ec6f812

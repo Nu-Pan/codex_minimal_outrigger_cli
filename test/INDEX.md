@@ -379,18 +379,20 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 CLI テストを扱う。セッション開始、realization apply/refactor fork、run join の状態遷移・ブランチ統合・ロールバック・強制解決・中断時挙動を検証する。oracle investigation のセッション前提や preflight、出力レポート、永続状態も対象にする。
+- workload fork と共通 run join/abandon の統合 realization test。realization apply fork、refactor fork、run join の状態遷移・worktree 統合・予期しない差分の強制解決・同期失敗時ロールバック・割り込み処理を検証する。oracle investigation のセッション前提なし動作と、refactor 中の INDEX 更新追跡も対象とする。
 
 ## Read this when
-- realization apply または refactor の fork 実行、run join、run 状態管理、マージ失敗時のロールバックを変更・調査するとき。
-- unexpected run paths の強制解決、中断処理、refactor の永続サイクル、oracle investigation の前提条件を確認するとき。
+- realization apply fork または realization refactor fork の統合フローを変更・検証するとき
+- run join の状態管理、差分検出、force-resolve、ロールバック、完了処理を変更するとき
+- refactor fork の調査履歴、INDEX 更新、割り込み時の joinable 遷移を確認するとき
+- oracle investigation のセッション前提や Codex 呼び出し権限を変更するとき
 
 ## Do not read this when
-- 単一の内部 helper や、これらの fork/join 統合シナリオに関係しない CLI 機能だけを変更・調査するとき。
-- テスト対象の個別実装を直接確認する必要があり、この統合テストの外部挙動を参照する必要がないとき。
+- 単一の run lifecycle helper や個別サブコマンドの局所実装だけを変更し、fork/join 統合挙動に影響しないとき
+- INDEX エントリー生成や一般的な fixture・テスト支援処理だけを調査するとき
 
 ## hash
-- b707624abac068b39dead3e02fdf288a7e56a0fb6af6ed47d5a1526d2b4d4754
+- eb7a4396e0e9ee8783db98579c02e563da2df1d20d6ceac894d0f5bfa48f7639
 
 # `test_indexing_cli.py`
 

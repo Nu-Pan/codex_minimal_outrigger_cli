@@ -48,20 +48,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 機能をまとめる commons パッケージ。CLI 実行ライフサイクル、Codex exec/TUI、設定、Git/worktree、パス、ログ、状態、エラー、Ollama、INDEX 更新など、複数サブコマンドで共有する実装への入口。各機能の詳細確認は配下の担当 runtime モジュールへ進む。
+- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI ライフサイクル、設定、Git、パス、ログ、状態、エラー、Ollama、INDEX 更新など、複数のサブコマンドで共有される実行時機能を提供する。各 runtime_* モジュールが個別領域の実装入口で、公開 API の入口は cmoc_runtime.py と runtime_codex.py。
 
 ## Read this when
-- 複数の CLI サブコマンドにまたがる共通 runtime 処理の担当箇所を探すとき
-- Codex 実行、設定、Git/worktree、パス、ログ、状態、エラー、Ollama、INDEX 更新の共通実装を調査・変更するとき
-- commons 配下の個別 runtime モジュールへ進む前に、共通機能の構成と入口を把握するとき
+- 複数の CLI サブコマンドにまたがる runtime helper の責務や実装箇所を探すとき
+- Codex 実行、設定、Git、パス、ログ、session/run state、doctor、Ollama、INDEX 更新の共通処理を変更・調査するとき
+- commons 配下の個別 runtime モジュールへ進む前に、共有 API やパッケージ構成を把握するとき
 
 ## Do not read this when
-- 特定サブコマンド固有の業務処理や公開 CLI 仕様を調査するとき
-- 正本仕様や retry・quota などの要件を確認するときは、対応する oracle 文書を直接読むとき
-- 対象が明確な個別 runtime モジュールの実装詳細を確認するときは、そのモジュールを直接読むとき
+- 特定の runtime 領域の詳細実装を確認したいときは、対応する runtime_* モジュールを直接読む
+- 特定 CLI サブコマンド固有の制御フローや公開引数を調査するとき
+- 正本仕様や利用者向け要件を確認するときは、対応する oracle 文書を先に読む
 
 ## hash
-- f2b7058bbffc831d5459925c493c535a326f7dd53942c93934c34e41a1db239e
+- 1ee6cc6a61e9a6a77db285ca0a851fd7fa43e8ebd6dd361cd0049c6639e8cc35
 
 # `config`
 

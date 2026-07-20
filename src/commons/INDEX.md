@@ -34,19 +34,20 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md のエントリー生成を支える indexing 実装。対象ファイルやディレクトリの内容を検査し、Codex によるエントリー生成、鮮度判定、INDEX.md の更新・コミットを管理する。
+- INDEX.md を対象ファイル・ディレクトリごとに生成・更新する indexing 処理を提供する。
+- 既存 entry の再利用判定、対象 hash の計算、Structured Output の検証と Markdown 化、更新差分の commit、並列生成と排他制御を担う。
 
 ## Read this when
-- INDEX.md の自動生成・更新・コミット処理を変更または調査するとき
-- indexable なファイル・ディレクトリの判定、既存エントリーの再利用、ハッシュ検証を確認するとき
-- Codex 呼び出しの並列化、排他ロック、worktree 間の実行分離を変更するとき
+- INDEX.md の自動生成・更新、entry の鮮度判定、indexing 用 lock、生成結果の検証を変更するとき
+- Codex 呼び出し前の indexing preflight、並列処理、worktree や process-global 制約を調査するとき
+- INDEX.md entry の Markdown 形式や対象ファイルの列挙・除外条件を確認するとき
 
 ## Do not read this when
-- INDEX.md のエントリー内容の仕様だけを確認したいときは、indexing の oracle 文書を直接読む
-- 特定の CLI サブコマンドの実装を変更するときは、そのサブコマンドの実装ファイルを直接読む
+- 特定の CLI サブコマンドの実装や一般的な Codex 実行規則だけを調べるとき
+- INDEX.md の正本仕様や prompt の定義を変更するときは、対応する oracle 文書・oracle source を先に読む
 
 ## hash
-- 26246975f2dccf84ecfc768c704d2ec6d0c715e4a6916086c3904375d088bdfd
+- c2036b77730c939744ffd6c1152de3017fb5cddeba96a3f7330ebb0357c2fbae
 
 # `prompt_editor_input.py`
 
@@ -155,22 +156,20 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界を担い、実行前後の argv・sandbox・cwd・CODEX_HOME・環境変数・Structured Output schema 配置を扱う。
-- Codex child process の pidfd/process group による追跡・停止と、tracking file の排他更新を提供する。
-- Codex の JSONL 出力から thread token、エラー詳細、capacity/quota/unexpected error を判定する下位実装への入口である。
+- Codex CLI subprocess 境界を一括して扱う実装。sandbox・argv・cwd・CODEX_HOME の設定、schema 配置、process group の追跡と安全な停止、Codex subprocess の実行、JSONL 出力の解析および capacity/quota/予期しないエラー判定を担う。Codex 起動条件や実行結果の解釈を変更・確認する際の入口。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox、model/provider、network 設定を変更・調査するとき
-- CODEX_HOME、cwd、subprocess 環境、schema 配置、Codex CLI 不在時のエラーを扱うとき
-- editing run の child process tracking、停止、PID 再利用対策を変更・調査するとき
-- Codex の JSONL 出力解析、resume token、capacity/quota/retry 判定を変更・調査するとき
+- Codex CLI の argv、sandbox、model/provider、network、cwd、CODEX_HOME、環境変数を変更または調査するとき
+- Codex subprocess の起動、process tracking、PID reuse 対策、SIGTERM/SIGKILL、process group 停止を変更または調査するとき
+- Structured Output schema の配置、Codex JSONL 出力、resume token、capacity/quota/error 判定を変更または調査するとき
 
 ## Do not read this when
-- Codex CLI の上位コマンド制御、editing run 全体のライフサイクル、利用者向け CLI 引数仕様を確認したいだけのとき
-- Codex 以外の subprocess 実行や一般的な runtime path・schema store の仕様だけを扱うとき
+- Codex CLI のプロンプト生成や agent call の組み立てだけを変更するとき
+- editing run の利用者向けライフサイクル仕様そのものを確認するときは、先に対応する oracle doc を読む
+- 一般的な runtime path、設定定義、エラー型の実装だけを変更するときは、それぞれの直接担当ファイルを読む
 
 ## hash
-- c3c65451eb46168e6efbbb6ac8d5d859f7e5d8e71ad817ef173205bc3ceea5c2
+- 7ff6cb13c077bf5a64e9df606d289c64ed792690bb97e321530dc82b0e5b5e57
 
 # `runtime_codex_tui.py`
 
