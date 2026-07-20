@@ -10,11 +10,10 @@ from types import SimpleNamespace
 
 import oracle.acp_builder.tui.launch_tui as tui_launch_oracle_module
 import pytest
-from _cli_support import runner
+from _cli_support import run_doctor, runner
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
-from _ollama_support import run_doctor
 
 import acp.builder.tui.launch_tui as tui_launch_adapter_module
 import commons.prompt_editor_input as prompt_editor_input_module

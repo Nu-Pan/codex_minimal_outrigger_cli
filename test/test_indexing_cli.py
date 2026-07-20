@@ -12,9 +12,8 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
-from _cli_support import runner
+from _cli_support import run_doctor, runner
 from _git_support import make_repo, run_git
-from _ollama_support import run_doctor
 from oracle.other.cmoc_config import CodexModelSpec
 
 import cmoc_runtime
@@ -187,7 +186,7 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     config = cmoc_runtime.sync_config(root)
-    custom_model = CodexModelSpec("codex", "CUSTOM-INDEXING-EFFICIENCY")
+    custom_model = CodexModelSpec(None, "CUSTOM-INDEXING-EFFICIENCY")
     config.codex.model[ModelClass.EFFICIENCY] = custom_model
     cmoc_runtime.write_config(
         root / ".cmoc" / "gt" / "ar" / "config.json",

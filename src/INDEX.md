@@ -50,36 +50,37 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI ライフサイクル、設定、Git、パス、ログ、状態、エラー、Ollama、INDEX 更新など、複数のサブコマンドで共有される実行時機能を提供する。各 runtime_* モジュールが個別領域の実装入口で、公開 API の入口は cmoc_runtime.py と runtime_codex.py。
+- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI lifecycle、設定、Git、パス、状態、ログ、エラー、結果、INDEX 更新など、複数の CLI サブコマンドで共有する基盤機能への入口。
+- 個別の責務は配下の runtime_* モジュールに分かれているため、具体的な挙動の変更・調査では該当モジュールへ進む。
 
 ## Read this when
-- 複数の CLI サブコマンドにまたがる runtime helper の責務や実装箇所を探すとき
-- Codex 実行、設定、Git、パス、ログ、session/run state、doctor、Ollama、INDEX 更新の共通処理を変更・調査するとき
-- commons 配下の個別 runtime モジュールへ進む前に、共有 API やパッケージ構成を把握するとき
+- 複数の CLI サブコマンドで共有される runtime helper の配置や責務を確認するとき
+- Codex 実行、設定、Git、パス、状態、ログ、エラー、結果、INDEX 更新の共通実装を探すとき
+- commons 配下の個別モジュールを利用・変更する前に、共通 runtime API の構成を把握するとき
 
 ## Do not read this when
-- 特定の runtime 領域の詳細実装を確認したいときは、対応する runtime_* モジュールを直接読む
-- 特定 CLI サブコマンド固有の制御フローや公開引数を調査するとき
-- 正本仕様や利用者向け要件を確認するときは、対応する oracle 文書を先に読む
+- 特定の runtime helper の実装詳細を直接確認したいときは、対応する runtime_* モジュールへ進む
+- CLI サブコマンド固有の業務処理や入出力を調査するとき
+- oracle に定義された仕様や Codex 実行方式固有の詳細を確認するときは、対応する oracle 文書または専用実装を直接読む
 
 ## hash
-- 1ee6cc6a61e9a6a77db285ca0a851fd7fa43e8ebd6dd361cd0049c6639e8cc35
+- 5b9f8e2f104746fac23f16603214de57c84c1ff56cc8d60a7f43cd60bbb9bb9f
 
 # `config`
 
 ## Summary
-- 設定の正本を保持せず、oracle 側の cmoc 設定クラスを realization 側から再公開する互換入口。`config.*` および `config.cmoc_config` の既存参照を維持するためのディレクトリ。
+- 設定モジュールの互換入口を提供するディレクトリ。`__init__.py` は `config.*` 参照を成立させ、`cmoc_config.py` は oracle 側の設定型を定義せず realization 側から再公開する。設定仕様の確認先ではない。
 
 ## Read this when
-- `config` からの import 互換性や、cmoc 設定クラスの realization 側での公開入口を確認するとき。
-- 互換モジュールの整理可否や `config.cmoc_config` 参照の削除影響を検討するとき。
+- 既存利用者の `config` または `config.cmoc_config` 参照を維持・確認するとき。
+- 設定型の import 経路や互換入口の有無を調べるとき。
 
 ## Do not read this when
-- 設定項目の具体的な定義・仕様を確認したいときは、oracle 側の設定定義を直接読む。
-- 設定を利用する機能の挙動を確認したいときは、各利用側の実装やテストを直接読む。
+- 設定定義の内容や仕様そのものを確認するときは、oracle 側の設定定義を直接読む。
+- 設定参照を新規に追加する実装判断では、利用側の参照経路を直接確認する。
 
 ## hash
-- c44790bfc0570bbed52fd98756b3c67ec1812034c8255ae3564f84b88719020a
+- fbc828970884bf16f7e7e6174e3461888e3c4000d754454ba9794e1d2c99d6f2
 
 # `main.py`
 

@@ -15,15 +15,12 @@ from commons.runtime_git import (
     run_git,
     with_cmoc_ignore_pattern,
 )
-from commons.runtime_ollama import ensure_ollama_serves_local_slm
 from commons.runtime_paths import config_path, refactor_state_path, repo_root
 from commons.runtime_refactor import sync_refactor_state
-from config.cmoc_config import CmocConfig
 
 
 def run_doctor_preprocess(
     root: Path,
-    config: CmocConfig | None = None,
     *,
     sync_refactor_entries: bool = True,
 ) -> None:
@@ -43,7 +40,7 @@ def run_doctor_preprocess(
         # config は worktree ごとの設定なので current work-root だけを同期する。
         # index にはまだ触れず、後続の一時 index で他の doctor 修復と同じ
         # commit にまとめる。
-        synced_config = sync_config(root)
+        sync_config(root)
         sync_refactor_state(root, sync_entries=sync_refactor_entries)
 
         repairs: list[tuple[Path, str, bool, bool]] = []
@@ -70,19 +67,6 @@ def run_doctor_preprocess(
             # 初回 doctor が作る .gitignore も realization file 集合へ含め、doctor
             # 完了時点で refactor entry と実 file を一致させる。
             sync_refactor_state(root, sync_entries=sync_refactor_entries)
-            effective_config = config or synced_config
-            launch_behavior = (
-                effective_config.cmoc_managed_ollama_service_launch_behavior
-            )
-            # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
-            if launch_behavior == "force" or (
-                launch_behavior == "default"
-                and any(
-                    spec.model_provider == "cmoc"
-                    for spec in effective_config.codex.model.values()
-                )
-            ):
-                ensure_ollama_serves_local_slm(root, effective_config)
         except BaseException:
             for repair_root, original_index_tree in original_indexes:
                 _restore_index(repair_root, original_index_tree)

@@ -15,40 +15,39 @@
 ## hash
 - c6c8f4184e5a5408e45d6fc796612c986a7954e7b2002b30e42c241fd1b590e2
 
-# `cmoc_managed_ollama.md`
-
-## Summary
-- cmoc がユーザー空間で管理する、OS ユーザーごとに 1 つのローカル Ollama サービスの正本仕様。サービスのライフサイクル、systemd 設定、モデル・ダウンロード資源の永続化、preflight 排他、GPU 推論を含む起動保証、Codex CLI からの接続方法を定める。
-
-## Read this when
-- cmoc managed ollama の準備・起動・修復・停止方針を実装または確認するとき
-- Ollama の配置先、モデル pull、永続資源、systemd user service の仕様を確認するとき
-- preflight のプロセス間 lock、モデルのロード、GPU 推論確認、CPU フォールバック禁止の挙動を扱うとき
-- Codex CLI の model provider argv や localhost:11434 への接続設定を実装・検証するとき
-
-## Do not read this when
-- Ollama 管理や cmoc managed ollama の起動保証を扱わず、Codex CLI の一般的な実行規則だけを確認したいときは、codex_exec_rule.md を直接読む
-- cmoc managed ollama の仕様ではなく、個別の設定メンバーの詳細挙動を確認したいときは、そのメンバーのコメントを直接読む
-
-## hash
-- 199714c69036d89b61f673e97e7611f85864b6c0ab132929aef44694e328a5dd
-
 # `codex_exec_rule.md`
 
 ## Summary
-- Codex CLI を cmoc から呼び出す際の規約を定義する正本仕様文書。CODEX_HOME の扱い、事前検証、argv による設定上書き、sandbox・ネットワーク・権限制約、プロンプト・ログ・Structured Output の受け渡し、並列実行、失敗時のリトライや quota 待機までを扱う。Codex 呼び出し実装やその設定・検証方法を確認する際の入口となる。
+- `codex exec` を用いた Codex CLI 呼び出しの正本規約。環境変数、事前検証、CLI 引数による設定上書き、sandbox とファイルアクセス、モデル・provider、プロンプト・ログ・Structured Output、並列実行、失敗時の再試行や待機を定める。Codex CLI 呼び出し実装や AgentCallParameter builder の仕様を確認する際の入口。
 
 ## Read this when
-- cmoc の Codex CLI 呼び出し仕様を変更・実装・レビューするとき
-- sandbox、permission profile、ネットワーク、モデル、reasoning effort、Structured Output、ログ保存の規約を確認するとき
-- Codex CLI 呼び出しの失敗時処理や quota・一時障害時のリトライ方針を確認するとき
+- cmoc の Codex CLI 呼び出し方法、argv、sandbox、approval 設定を変更・検証するとき
+- CODEX_HOME の扱い、モデル/provider/reasoning effort の解決、プロンプトやログの保存方法を確認するとき
+- Structured Output、並列呼び出し、quota・一時障害・想定外エラー時の処理を確認するとき
 
 ## Do not read this when
-- Codex CLI 呼び出し以外の機能や一般的な CLI 実装だけを確認するとき
-- 個別の AgentCallParameter builder の具体的な実装を直接調査する場合は、まずその builder の正本実装を読むべきとき
+- Codex CLI 呼び出し規約ではなく、AgentCallParameter builder の個別実装仕様そのものを調べるときは、builder の oracle tree を直接読む
+- 一般的な Codex CLI の使い方や、cmoc と無関係な CLI 実行方法を確認したいとき
 
 ## hash
-- 46d977b7bf89d0979292e3bbd9bacb61de85ee92cc70ba46f30cfce868a94ef4
+- a3ddaab73e0d4a54626c683048067698fb20b21bc442d72f7d96065cd688d6fd
+
+# `codex_model_provider.md`
+
+## Summary
+- Codex CLI の model provider 設定仕様と、cmoc が担う責務境界を定義する正本文書。`CmocConfigCodex`、provider-local 設定、値の制約、secret 保存禁止、および provider 管理を行わない方針を確認する入口。
+
+## Read this when
+- Codex CLI 呼び出しの model/provider 設定、provider ID の検証、provider-local key の扱いを変更・確認するとき
+- cmoc が model provider の管理・保証・自動起動を担うか判断するとき
+- Codex 設定に保存できる値や secret の扱いを確認するとき
+
+## Do not read this when
+- model provider の argv への具体的な反映方法だけを確認したいときは、指定された codex_exec_rule.md を直接読む
+- Codex CLI や provider 自体の稼働、認証、推論品質、model pull、cache 管理を調査するとき
+
+## hash
+- 928d25ace53f88c12fadd5a3b8fd311001343c040e43aa5dd25945d939bb0d82
 
 # `console_and_file_log.md`
 
@@ -72,19 +71,19 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- doctor preprocess の責務・実行手順・検証および修復条件を定義する正本仕様。各サブコマンド開始前の共通環境整備、git 追跡状態、refactor state、managed Ollama service の起動保証、差分 commit の扱いを確認する入口。
+- doctor preprocess の責務、実行順序、共通前提の検証・修復、および修復不能時の終了条件を定義する正本文書。git 追跡状態、設定・refactor state の同期、修復内容と `cmoc run join` における同期時点を確認する入口。
 
 ## Read this when
-- doctor preprocess の検証・修復処理を実装または変更するとき
-- サブコマンド共通の事前処理、git 追跡状態、refactor state の同期条件を確認するとき
-- cmoc managed ollama service の起動保証を doctor preprocess から扱う条件を確認するとき
+- doctor preprocess の検証・修復仕様を確認するとき
+- `.cmoc/gu`、`.agents`、`config.json`、refactor state の追跡状態や同期条件を変更・調査するとき
+- `cmoc run join` における refactor state 同期のタイミングを確認するとき
 
 ## Do not read this when
-- doctor preprocess 正常終了後に行う個別サブコマンド固有の事前条件を確認するとき
-- managed Ollama service が保証するサービス・モデル状態の詳細だけを確認するときは、指定された managed Ollama 仕様を直接読むとき
+- 個別サブコマンド固有の事前条件だけを確認するとき
+- doctor preprocess と無関係な CLI 処理や実装詳細を調査するとき
 
 ## hash
-- f6edb357f89af1e6385f520923199961158500f262d58b41edee586ab6d986ab
+- 489c8d13dcfb1d48f595820b7646abb2df6c6ab43097c531db338b9756163451
 
 # `error_handling.md`
 
@@ -103,20 +102,6 @@
 
 ## hash
 - bfaceea1701755cbe1f24db75ea9044ad4d4ed7dc98edef844bc94e39c3bbdf8
-
-# `external_model_provider.md`
-
-## Summary
-- 本文が空のため、このファイル単体からは根拠のある routing entry を生成できない。
-
-## Read this when
-- このファイルに実仕様が追記され、外部 model provider の扱いが本文で明示されたとき。
-
-## Do not read this when
-- cmoc managed ollama の具体的な保証条件や手順だけを確認したいときは、より直接の正本である `{{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md` を読む。
-
-## hash
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 # `indexing.md`
 

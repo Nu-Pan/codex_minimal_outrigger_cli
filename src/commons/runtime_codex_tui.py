@@ -54,7 +54,6 @@ def run_codex_tui(
     override_args = prepare_codex_override_args(
         parameter,
         config,
-        codex_work_root,
     )
     argv = [
         "codex",

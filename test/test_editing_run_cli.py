@@ -6,11 +6,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from _cli_support import runner
+from _cli_support import run_doctor, runner
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
-from _ollama_support import run_doctor
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module

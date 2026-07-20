@@ -1,6 +1,6 @@
 """全末端サブコマンドを利用者向け entrypoint の本番経路で検証する。
 
-独立 process、実 Codex CLI、cmoc managed ollama を使用し、CLI の終了 code と
+独立 process、実 Codex CLI、case-local Ollama を使用し、CLI の終了 code と
 外部から観測できる report・state・Git・call log を確認する。LLM の回答品質は
 判定せず、応答を受けた後の cmoc の制御だけを検証対象にする。
 
@@ -26,18 +26,22 @@ import termios
 import time
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import click
 import pytest
 from _codex_support import codex_arg_value, codex_override_config
 from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
-from _ollama_support import TEST_SLM_MODEL, bypass_managed_ollama_launch
-from oracle.other.cmoc_config import CodexModelSpec
+from _ollama_support import (
+    TEST_SLM_MODEL,
+    LocalOllama,
+    local_ollama,
+    use_test_local_ollama,
+)
 from typer.main import get_command
 
-from basic.acp import ModelClass, ReasoningEffort
+from basic.acp import ReasoningEffort
 from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
 from main import app
@@ -113,19 +117,22 @@ def _registered_leaf_commands(
     return {prefix}
 
 
-def _write_local_slm_config(root: Path) -> None:
-    """全 model class を本番共有のテスト用 local SLM へ向ける。"""
+@pytest.fixture
+def ollama_instance(tmp_path: Path) -> Iterator[LocalOllama]:
+    """test case ごとに専用 Ollama process group を起動する。"""
+    with local_ollama(tmp_path) as instance:
+        yield instance
+
+
+def _write_local_slm_config(root: Path, ollama: LocalOllama) -> None:
+    """全 model class を case-local test provider の SLM へ向ける。"""
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
     # 回答品質に依存せず短時間で制御経路を検証するため、推論強度も low に固定する。
-    config = bypass_managed_ollama_launch(CmocConfig(num_parallel=1))
+    config = use_test_local_ollama(CmocConfig(num_parallel=1), ollama)
     config = replace(
         config,
         codex=replace(
             config.codex,
-            model={
-                model_class: CodexModelSpec("cmoc", TEST_SLM_MODEL)
-                for model_class in ModelClass
-            },
             reasoning_effort={effort: "low" for effort in ReasoningEffort},
         ),
         oracle_review=replace(
@@ -163,10 +170,9 @@ def _production_environment(
     cmoc = _CMOC_CONSOLE
     real_codex = _REAL_CODEX
 
-    # Codex の利用者 session と test session を混ぜず、認証以外の設定も持ち込まない。
+    # Codex の利用者 session/config と test session を混ぜない。
     codex_home = tmp_path / "codex-home"
     codex_home.mkdir()
-    (codex_home / "auth.json").write_text("{}\n")
     editor_dir = tmp_path / "editor-bin"
     editor_dir.mkdir()
     write_python_executable(
@@ -180,6 +186,8 @@ def _production_environment(
         **os.environ,
         "CODEX_HOME": str(codex_home),
         "OPENAI_API_KEY": "cmoc-local-test",
+        "NO_PROXY": "127.0.0.1,localhost",
+        "no_proxy": "127.0.0.1,localhost",
         "PATH": f"{editor_dir}:{os.environ.get('PATH', '')}",
         "TERM": "xterm-256color",
     }
@@ -232,8 +240,10 @@ def _run_without_codex_call(
     return result
 
 
-def _assert_local_codex_call(path: Path, *, tui: bool = False) -> dict[str, object]:
-    """call log が実 CLI と managed Ollama 用 argv を記録したことを確認する。"""
+def _assert_local_codex_call(
+    path: Path, ollama: LocalOllama, *, tui: bool = False
+) -> dict[str, object]:
+    """call log が実 CLI と case-local provider argv を記録したことを確認する。"""
     payload = json.loads(path.read_text())
     assert isinstance(payload, dict)
     raw_argv = payload.get("argv")
@@ -241,24 +251,18 @@ def _assert_local_codex_call(path: Path, *, tui: bool = False) -> dict[str, obje
     assert all(isinstance(value, str) for value in raw_argv)
     argv: list[str] = raw_argv
 
-    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
     assert argv[0] == "codex"
     assert ("exec" in argv) is not tui
     assert codex_arg_value(argv, "--model") == TEST_SLM_MODEL
     override = codex_override_config(argv)
-    assert override["sandbox_workspace_write"] == {"network_access": True}
-    assert override["features"] == {
-        "network_proxy": {
-            "enabled": True,
-            "domains": {"127.0.0.1": "allow"},
-        }
-    }
-    assert override["model_provider"] == "cmoc_managed_ollama"
+    assert "sandbox_workspace_write" not in override
+    assert "features" not in override
+    assert override["model_provider"] == ollama.provider_id
     providers = override["model_providers"]
     assert isinstance(providers, dict)
-    assert providers["cmoc_managed_ollama"] == {
-        "name": "cmoc managed ollama",
-        "base_url": "http://127.0.0.1:11434/v1",
+    assert providers[ollama.provider_id] == {
+        "name": "test-local Ollama",
+        "base_url": f"http://{ollama.host}/v1",
         "wire_api": "responses",
     }
     return payload
@@ -418,20 +422,21 @@ def _run_cmoc_tui(
     return message, transcript.decode(errors="replace")
 
 
-@pytest.mark.timeout(360)
+@pytest.mark.timeout(3600)
 def test_all_noninteractive_leaf_commands_use_production_process_paths(
     tmp_path: Path,
+    ollama_instance: LocalOllama,
 ) -> None:
     """非対話の全末端を独立 process の代表正常系で完了させる。"""
     # CLI 登録と固定シナリオを比較し、新しい末端 command の追加漏れを検出する。
     assert _registered_leaf_commands(get_command(app)) == PRODUCTION_SCENARIO_COMMANDS
     root = make_repo(tmp_path)
     _write_noninteractive_fixture_instructions(root)
-    _write_local_slm_config(root)
+    _write_local_slm_config(root, ollama_instance)
     cmoc, environment, _codex_home = _production_environment(tmp_path)
 
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    # doctor は共有 Ollama を含む本番 preprocess を完了する。
+    # doctor は provider lifecycle に触れず本番 preprocess を完了する。
     _run_without_codex_call(cmoc, root, environment, "doctor")
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert run_git(root, "ls-files", ".cmoc/gt/ar/config.json").stdout.strip()
@@ -445,7 +450,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     indexing_calls = _codex_call_logs(root) - before_indexing_calls
     assert indexing_calls
     for path in indexing_calls:
-        payload = _assert_local_codex_call(path)
+        payload = _assert_local_codex_call(path, ollama_instance)
         assert str(payload.get("purpose", "")).startswith("indexing index entry for ")
         output_path = Path(str(payload["output_path"]))
         assert output_path.is_file()
@@ -525,16 +530,17 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         (("oracle", "investigation"), "oracle investigation", False),
     ],
 )
-@pytest.mark.timeout(300)
+@pytest.mark.timeout(3600)
 def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     tmp_path: Path,
+    ollama_instance: LocalOllama,
     command: tuple[str, ...],
     tui_purpose: str,
     expects_resolver: bool,
 ) -> None:
     """全 TUI 末端を実 local SLM response 後まで本番経路で完了する。"""
     root = make_repo(tmp_path)
-    _write_local_slm_config(root)
+    _write_local_slm_config(root, ollama_instance)
     cmoc, environment, codex_home = _production_environment(tmp_path)
     _run_without_codex_call(cmoc, root, environment, "doctor")
     _run_cmoc(cmoc, root, environment, "indexing")
@@ -558,10 +564,13 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     tui_calls = {path for path in new_calls if path.name.endswith("_tui_call.json")}
     exec_calls = new_calls - tui_calls
     assert len(tui_calls) == 1
-    tui_payload = _assert_local_codex_call(next(iter(tui_calls)), tui=True)
+    tui_payload = _assert_local_codex_call(
+        next(iter(tui_calls)), ollama_instance, tui=True
+    )
     assert tui_payload["purpose"] == tui_purpose
     has_tui_resolver = any(
-        _assert_local_codex_call(path).get("purpose") == "tui resolve parameter"
+        _assert_local_codex_call(path, ollama_instance).get("purpose")
+        == "tui resolve parameter"
         for path in exec_calls
     )
     assert has_tui_resolver is expects_resolver

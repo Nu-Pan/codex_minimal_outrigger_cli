@@ -5,9 +5,8 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from _cli_support import runner
+from _cli_support import run_doctor, runner
 from _git_support import current_branch, make_repo, run_git
-from _ollama_support import run_doctor
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module

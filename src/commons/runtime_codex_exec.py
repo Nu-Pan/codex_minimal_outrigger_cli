@@ -200,7 +200,6 @@ def run_codex_exec(
     override_args = prepare_codex_override_args(
         parameter,
         config,
-        codex_work_root,
     )
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # `--output-schema` は Codex 自身が linked worktree 内で動く場合も repo-root の
@@ -573,7 +572,6 @@ def run_codex_exec(
                         probe_override_args = prepare_codex_override_args(
                             quota_probe_parameter,
                             config,
-                            codex_work_root,
                         )
                         probe_call_data = call_data(
                             quota_probe_parameter,

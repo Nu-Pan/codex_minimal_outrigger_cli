@@ -94,21 +94,24 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本 oracle 文書と正本ソースをまとめる入口。アプリケーション仕様、開発規約、ACP・設定・パスモデル・プロンプト・TUI・レビュー・refactor/apply などを扱い、各個別文書・実装へ案内する。
+- cmoc の正本仕様を担う oracle 文書・ソース群への入口。アプリケーション仕様、開発規約、ACP builder、プロンプト生成、TUI、oracle review、realization・session 処理、設定・モデル・ルート探索などを扱う。
+- 配下の doc と src から、共通仕様・開発方針および正本ソースの責務別実装へ進むためのルーティング起点となる。
 
 ## Read this when
-- cmoc の利用者向け機能やサブコマンドの正本仕様を調査・実装・検証するとき。
-- 複数仕様にまたがる実行順序、状態管理、出力、エラー処理、session／run／branch／worktree の関係を確認するとき。
-- Python 開発環境、CLI 設計、テスト方針などの開発規約を確認するとき。
-- ACP 呼び出し条件、設定・パス解決、構造化文書、完全なエージェントプロンプト、TUI、レビュー、refactor/apply の正本を探索するとき。
+- cmoc の共通仕様、CLI 利用者向け挙動、状態管理、ログ、プロンプト、run/session lifecycle を確認するとき
+- session fork、run の隔離、branch・commit・worktree、基準 commit の関係を調査するとき
+- Python 実装規約、CLI の責務配置、開発環境、pytest 方針を確認するとき
+- ACP 呼び出し、TUI、oracle・realization 操作、設定、ルート探索、構造化文書や完全なプロンプト生成の正本実装を探すとき
+- realization refactor や不採用設計案の理由を調査するとき
 
 ## Do not read this when
-- 個別仕様や個別の prompt builder、schema、設定クラス、パス操作の対象が明確で、対応する下位文書・ソースを直接読めるとき。
-- realization code や realization test の内部実装だけを調査するとき。
-- oracle の一般原則や INDEX.md のルーティング方針自体を確認するとき。
+- 特定の realization code または realization test の内部実装だけを調査するとき
+- 個別機能の具体的な挙動・出力仕様を確認するときは、doc/app_spec 配下の対応文書を直接読むとき
+- 単一のプロンプト部品、特定の ACP 呼び出しパラメータ、個別の標準文書だけを調べるときは、対応する下位対象を直接読むとき
+- 一般的な INDEX.md の読み方やルーティング方針を確認するとき
 
 ## hash
-- 90357e3a9a51c5c7f26da2801c4738fe93fd929e6e1ac8bc1940942bd6172b58
+- 221d37c212a9323de33595c30495e6e44af426e1cf6460b8a177d7d70251486e
 
 # `pyproject.toml`
 
@@ -129,33 +132,37 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装を収める src ディレクトリ。Typer のルート定義、サブコマンド、共通 runtime、互換 import shim、設定・型の再公開入口を扱う。
-- CLI の実行入口やサブコマンド構成を確認したい場合は main.py と sub_commands から読み進め、横断的な実行時機能は commons、互換 import の挙動は各 shim を入口に確認する。
+- cmoc の realization 実装ルート。Typer CLI の起動入口、互換 import shim、共通 runtime helper、CLI サブコマンド実装を含む。
+- CLI 入口から doctor・indexing・tui、session／oracle／realization／run の各ワークフローへ委譲し、共通処理は Codex 実行、Git、設定、状態、パス、ログ、結果、INDEX 更新などの runtime module に分担されている。
+- acp・basic・config・cmoc_runtime・oracle の各 shim は既存 import 経路を保ち、canonical な oracle または共通実体を再公開する。具体的な機能変更では、対応するサブパッケージまたは runtime module が下位要素への入口になる。
 
 ## Read this when
-- cmoc CLI の realization 側の全体構成や公開入口を把握するとき。
-- トップレベル CLI、サブコマンド、共通 runtime、互換 import 経路の調査・変更箇所を判断するとき。
+- cmoc CLI のトップレベル構成、サブコマンド登録、起動時の引数エラー処理を確認するとき。
+- 特定の session・oracle review／edit／investigation・realization apply／refactor・run lifecycle の実行フローを調査・変更するとき。
+- 共通 runtime helper の配置や、互換 import shim から canonical 実装への委譲関係を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理だけを調査するときは sub_commands 配下を直接読む。
-- 共通 runtime や設定、正本 oracle の具体的な仕様だけを確認したいときは、それぞれの対応モジュールや oracle 側を直接読む。
+- 個別 runtime helper の詳細だけを確認したいときは、対応する commons module を直接読む。
+- canonical な正本仕様や oracle 実装そのものを確認したいときは、oracle 配下を直接読む。
+- 特定サブコマンドの内部処理だけを調査するときは、対応する sub_commands 配下へ直接進む。
 
 ## hash
-- 869289b883012002eeae5ee76d1082dae4d1f29d830dd50b1f6764e52ce321e2
+- 607df3687b88c449341de20977bc7a5af8fd1d4d00133239a867c079fc55915c
 
 # `test`
 
 ## Summary
-- テストコードから、ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、Ollama、prompt、worktree など cmoc の主要機能を検証する pytest 群を提供する。共有 fixture・fake command・Git/Ollama/Codex test helper も含み、各機能の外部契約や回帰挙動を確認する入口となる。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex 実行、CLI、doctor、indexing、oracle review、session/run state、設定、prompt、worktree などの外部挙動・制御ロジックを検証する。個別機能の回帰テストや共通テスト支援を探す入口であり、実装や正本仕様そのものは対応する src または oracle を読む。
 
 ## Read this when
-- cmoc の機能変更に伴う realization test の対象、既存の外部挙動、回帰テスト、fixture や共有テスト helper を確認するとき。
-- CLI、Codex 実行、indexing、oracle review、session、runtime 設定・state・worktree などの検証観点を横断的に探すとき。
+- cmoc の realization test を追加・修正・調査するとき
+- 対象機能の外部挙動、CLI lifecycle、Git/worktree 副作用、Codex subprocess、状態遷移の検証範囲を把握するとき
+- 共通テスト支援や、対象機能に対応する既存テストを探すとき
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle 文書・schema・source を直接読む。
-- 実装詳細だけを調査するときは、対応する src の実装ファイルを直接読む。
-- 対象機能と無関係なテストや、Codex・Ollama を使わない単体テストの詳細を確認するとき。
+- 実装の責務や内部処理を確認するときは、対応する src の実装を直接読む
+- 正本仕様、schema、prompt、file access 規則を確認するときは、対応する oracle file を直接読む
+- テスト対象が明確な場合は、このディレクトリ全体を読むのではなく該当するテストファイルへ進む
 
 ## hash
-- 1e7c9518ef8ab8fec3bfbb18e472064143c329ea0652da7c351e98fa63b6f9ed
+- 990ceb4b84649efb4df5d029528bb418adaff7ab960db23ac54441feb6dd242d

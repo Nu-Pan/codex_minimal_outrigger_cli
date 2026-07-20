@@ -405,7 +405,6 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     probe_codex_home = root / "relative_codex_home"
     for codex_home in {initial_codex_home, probe_codex_home}:
         codex_home.mkdir()
-        (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
