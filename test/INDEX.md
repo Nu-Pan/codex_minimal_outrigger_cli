@@ -212,7 +212,7 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理を対象とする統合テスト。エディタ入力の timestamp 衝突回避、prompt の解決・補完、Codex TUI 起動パラメータ、linked worktree でのログ保存、`.cmoc` の ignore 設定を検証する。
+- TUI 起動直前の CLI 前処理を対象とする統合テスト。canonical builder の直接再公開、エディタ入力の timestamp 衝突回避、prompt の解決・補完、Codex TUI 起動パラメータ、linked worktree でのログ保存、`.cmoc` の ignore 設定を検証する。
 
 ## Read this when
 - `tui` サブコマンドの editor input 処理や prompt 生成を変更・調査するとき
@@ -225,7 +225,7 @@
 - 個別の prompt 編集 helper の内部実装だけを確認する場合は、まず対応する実装モジュールを直接読むとき
 
 ## hash
-- 688926420ca09ad0574308e9026712068bb01db9b12433cb88a42577e55222e7
+- 2661b4aabc111560e8810168de9f60bf82e12804a96e0f54decb9ea8e14416b7
 
 # `test_codex_runtime_errors.py`
 

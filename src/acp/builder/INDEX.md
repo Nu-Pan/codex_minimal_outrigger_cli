@@ -143,11 +143,11 @@
 # `tui`
 
 ## Summary
-- TUI 起動用の AgentCallParameter 構築アダプターと、旧 `acp.builder.tui.*` import 経路を維持する互換ラッパーを収めるディレクトリ。
-- TUI 起動 parameter の生成は `launch_tui.py`、resolve-parameter builder の互換公開は `resolve_parameter.py` が入口となる。
+- TUI 起動用と resolve-parameter 用の canonical builder を、旧 `acp.builder.tui.*` import 経路から再公開する互換ラッパーを収めるディレクトリ。
+- TUI 起動 builder の互換公開は `launch_tui.py`、resolve-parameter builder の互換公開は `resolve_parameter.py` が入口となる。
 
 ## Read this when
-- `cmoc tui` の起動 parameter 構築、editor input directory の事前作成、runtime path 解決を確認・変更するとき。
+- `cmoc tui` builder の realization 側 import 経路と canonical builder への委譲を確認・変更するとき。
 - 既存の `acp.builder.tui.*` import 互換性や `oracle.acp_builder.tui` 互換層の削除可否を確認するとき。
 - TUI resolve-parameter builder の公開経路を確認するとき。
 
@@ -158,4 +158,4 @@
 - 新しい公開 API や新規 import 経路を設計するとき。
 
 ## hash
-- 526d859ceb48fe2f2178f88c97a251667489c2edde11d0782865f9fef7f75d0b
+- 6098b161f291b7087abc48173d6c780f0e6399a733ea4aee9a34aefd5dd7566d

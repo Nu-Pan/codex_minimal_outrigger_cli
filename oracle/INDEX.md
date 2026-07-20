@@ -44,4 +44,4 @@
 - 個別の prompt builder 部品、レビュー schema、設定クラス、パス操作の詳細だけを確認したいときは、該当する配下ファイルを直接読む。
 
 ## hash
-- 56193f22c9ecb0f8836c1162c1e22b0c5c1d8cee1afdfeafdb2276cfeb2687c3
+- ac0bf0334cfed4bc8970b013a1899cf1b3ffc38e2f7a8f1bd504e4fb5be06398

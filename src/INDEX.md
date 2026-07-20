@@ -14,7 +14,7 @@
 - canonical な正本仕様や実体モジュールそのものを確認したいとき。
 
 ## hash
-- 773931fc029c53ba24bd28680bb695f705825192b1b6c6dc5a2f11a44055f630
+- 64311522fa0e3a0c66afe888a9acff7a45f737437301fe6908a1b9b1c87016ff
 
 # `basic`
 

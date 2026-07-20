@@ -1,36 +1,5 @@
-"""TUI 起動 parameter builder の realization adapter。"""
+"""TUI 起動 parameter builder の互換 import 経路。"""
 
-from oracle.acp_builder.basic import AgentCallParameter
-from oracle.acp_builder.tui.launch_tui import (
-    build_tui_launch_tui_parameter as _oracle_build_tui_launch_tui_parameter,
-)
-
-from basic.path_model import RootPathPlaceHolder, resolve_real_path
-from commons.runtime_paths import editor_input_dir
-
-
-def build_tui_launch_tui_parameter(
-    time_stamp: str,
-    original_prompt: str,
-    oracle_standard: bool,
-    realization_standard: bool,
-    oracle_review_standard: bool,
-    apply_review_standard: bool,
-) -> AgentCallParameter:
-    """`cmoc tui` の TUI 起動用 AgentCallParameter を構築する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
-    # oracle builder が正本だが保存先 directory を作らないため、呼び出し前に
-    # runtime 側の配置だけ保証する。oracle 側で作成されるようになれば削除できる。
-    repo = resolve_real_path(RootPathPlaceHolder.REPO)
-    editor_input_dir(repo).mkdir(parents=True, exist_ok=True)
-    return _oracle_build_tui_launch_tui_parameter(
-        time_stamp=time_stamp,
-        original_prompt=original_prompt,
-        oracle_standard=oracle_standard,
-        realization_standard=realization_standard,
-        oracle_review_standard=oracle_review_standard,
-        apply_review_standard=apply_review_standard,
-    )
-
+from oracle.acp_builder.tui.launch_tui import build_tui_launch_tui_parameter
 
 __all__ = ["build_tui_launch_tui_parameter"]

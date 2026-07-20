@@ -108,7 +108,7 @@
 - oracle の一般原則や INDEX.md のルーティング方針自体を確認するとき。
 
 ## hash
-- 77a5b1e6219647eeeb1e70a37b02a8e184270ae54c87329c575e3e5db85682d2
+- 90357e3a9a51c5c7f26da2801c4738fe93fd929e6e1ac8bc1940942bd6172b58
 
 # `pyproject.toml`
 
@@ -141,7 +141,7 @@
 - 共通 runtime や設定、正本 oracle の具体的な仕様だけを確認したいときは、それぞれの対応モジュールや oracle 側を直接読む。
 
 ## hash
-- 002706ed5bb2c03a8ae2545803ea0c4bdbf5ec90b5b71f26a37b721333fcd9e0
+- 869289b883012002eeae5ee76d1082dae4d1f29d830dd50b1f6764e52ce321e2
 
 # `test`
 
@@ -158,4 +158,4 @@
 - 対象機能と無関係なテストや、Codex・Ollama を使わない単体テストの詳細を確認するとき。
 
 ## hash
-- 9619f43ae8fc44f77b1ed2edeae35e8b8ad6f2c628c338770fb77258fb58fac5
+- 1e7c9518ef8ab8fec3bfbb18e472064143c329ea0652da7c351e98fa63b6f9ed

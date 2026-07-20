@@ -18,20 +18,19 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動時に使用する AgentCallParameter を構築する realization adapter。oracle 側の parameter builder を呼び出しつつ、runtime 側の editor input directory を事前作成する。TUI 起動 parameter の生成処理を確認・変更するときの入口。
+- TUI 起動用 canonical builder を `acp.builder.tui.launch_tui` から利用できるようにする互換 import 経路。realization 側でシグネチャや処理を複製せず、oracle 側の関数をそのまま再公開する。
 
 ## Read this when
-- `cmoc tui` の起動 parameter 構築を確認・変更するとき
-- TUI 起動前の editor input directory 作成や runtime path 解決の挙動を確認するとき
-- oracle builder と realization adapter の連携を調査するとき
+- `acp.builder.tui.launch_tui` の既存 import 互換性や公開名を確認・変更するとき
+- realization 側が oracle builder を直接再公開していることを確認するとき
 
 ## Do not read this when
 - TUI 以外のサブコマンドの AgentCallParameter を調査するとき
 - parameter の正本仕様や oracle 側の構築内容そのものを確認するときは、対応する oracle builder を直接読む
-- runtime path や editor input directory の共通実装だけを調査するとき
+- complete prompt の保存先作成やファイル出力を調査するときは、oracle 側の canonical builder を読む
 
 ## hash
-- 645f234862e66ff62ad5e8eedf0db78ac5054fe882afeeeae48ff0cedcba243e
+- 9fcd4a278d7b94d9922919adaceba5a56f4c2651959e9f388956de4e70557ecb
 
 # `resolve_parameter.py`
 

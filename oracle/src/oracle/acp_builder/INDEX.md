@@ -113,4 +113,4 @@
 - 共通プロンプト構築規則、標準文書本文、実際の後続 AI Agent CLI/TUI 実装だけを確認したいとき。
 
 ## hash
-- a86f9ff19eac21b319181b860b34bd22e570ac9a8657ea960a23507e32f83db6
+- 7746b9c3f3debfda158128b34c5b8bf25fcc5c934e27473ef7a8f234e5ad3975

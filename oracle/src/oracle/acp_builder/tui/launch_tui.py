@@ -70,8 +70,11 @@ def build_tui_launch_tui_parameter(
         / "editor_input"
         / f"{time_stamp}_cmpl.md"
     )
-    with open(complete_prompt_path, "w") as f:
-        f.write(render_as_markdown(complete_prompt))
+    complete_prompt_path.parent.mkdir(parents=True, exist_ok=True)
+    complete_prompt_path.write_text(
+        render_as_markdown(complete_prompt),
+        encoding="utf-8",
+    )
     # パラメータを生成して返す
     # NOTE
     #   TUI による対話的作業では人間の認知コスト的な負荷が大きいので、最大限 AI に頑張ってもらいたい
