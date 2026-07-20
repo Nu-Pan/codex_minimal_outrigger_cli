@@ -1,21 +1,17 @@
 # `acp_builder`
 
 ## Summary
-- エージェント呼び出し用の基礎パラメータ、indexing・oracle・realization・session・TUI 各用途の呼び出し設定を構築する正本ソース群を含むディレクトリ。モデル、推論強度、ファイルアクセス権、プロンプト、Structured Output schema、作業ディレクトリなどの定義から、各サブコマンド固有の agent call 条件までを扱う。
-- 各用途の実装詳細を確認する際は、対応する下位ディレクトリまたはファイルが入口となる。
+- 参照可能な正本ソース本文は含まれず、ACP 呼び出し設定に関する正本ソースの有無を確認する入口。配下には基礎パラメータ、indexing、oracle、realization、session、tui の各領域がある。
 
 ## Read this when
-- ACP builder の共通パラメータや既定値を確認・変更するとき。
-- indexing、oracle、realization、session、TUI の agent call 構築条件や Structured Output schema の担当箇所を特定するとき。
-- 各サブコマンド向けの prompt、モデル、推論強度、ファイルアクセス、作業ディレクトリ設定を調査するとき。
+- ACP builder 配下に参照可能な正本ソースが存在するか確認するとき。
+- ACP 呼び出し条件に関係する正本ソースの配置先を探索するとき。
 
 ## Do not read this when
-- エージェント呼び出しの実行本体を調査するとき。
-- 生成された INDEX.md、oracle file、realization file、レビュー結果などの成果物そのものを確認するとき。
-- 個別ファイルの実装詳細や schema の内容が既に特定できており、その本文だけを確認すればよいとき。
+- 具体的な実装仕様、処理内容、呼び出しパラメータの詳細を確認したいときは、該当する配下ファイルを直接読む。
 
 ## hash
-- 6fb6e69298181d6718ebdbb53daa8a5e2729e4b5c936bebc548bf48938f620ea
+- 5fbad40cd6edff0c3061cdd487f2176f4df9ebcd969842441092f815ab441721
 
 # `other`
 

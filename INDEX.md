@@ -94,21 +94,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の開発・アプリケーション仕様を定義する oracle doc 群と、設定・パス解決・規範データ構造・Markdown・cmoc_ref 検証、ACP/prompt builder などを担う oracle src 群への入口。個別仕様や共通規約の所在を判断するための上位ルーティング対象。
+- cmoc の正本 oracle 文書と正本ソースをまとめる入口。アプリケーション仕様、開発規約、ACP・設定・パスモデル・プロンプト・TUI・レビュー・refactor/apply などを扱い、各個別文書・実装へ案内する。
 
 ## Read this when
-- cmoc の機能仕様、branch・session・run、CLI、Codex、ログ、prompt、Ollama、doctor、サブコマンドを実装・変更・レビュー・検証するとき。
-- 開発環境・設計・テスト規約、設定値、パス解決、規範文書構造、Markdown 変換、cmoc_ref 検証の仕様または実装の入口を探すとき。
-- ACP builder、prompt builder、agent call 構築条件など、複数の下位実装にまたがる責務の所在を特定するとき。
-- 個別仕様が未特定で、oracle doc または oracle src のどこから確認を始めるか判断するとき。
+- cmoc の利用者向け機能やサブコマンドの正本仕様を調査・実装・検証するとき。
+- 複数仕様にまたがる実行順序、状態管理、出力、エラー処理、session／run／branch／worktree の関係を確認するとき。
+- Python 開発環境、CLI 設計、テスト方針などの開発規約を確認するとき。
+- ACP 呼び出し条件、設定・パス解決、構造化文書、完全なエージェントプロンプト、TUI、レビュー、refactor/apply の正本を探索するとき。
 
 ## Do not read this when
-- 対象の個別 oracle 文書、実装ファイル、schema、または生成成果物が既に特定できており、その本文だけで確認できるとき。
-- 実装内部の具体的な関数・テスト詳細や、既存 realization code の内容だけを調査するとき。
-- CLI の具体的な入出力処理やエージェント呼び出しの実行本体など、より直接的な下位対象を読むべきとき。
+- 個別仕様や個別の prompt builder、schema、設定クラス、パス操作の対象が明確で、対応する下位文書・ソースを直接読めるとき。
+- realization code や realization test の内部実装だけを調査するとき。
+- oracle の一般原則や INDEX.md のルーティング方針自体を確認するとき。
 
 ## hash
-- 45b53483624ec231c27d2470dce844c8d914e155e08596dab240b7ca0b33c101
+- 77a5b1e6219647eeeb1e70a37b02a8e184270ae54c87329c575e3e5db85682d2
 
 # `pyproject.toml`
 
