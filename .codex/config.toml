@@ -22,18 +22,25 @@ plan_mode_reasoning_effort = "max"
 
 # 権限関係
 # NOTE
-#   個別の設定は困ってから調整する
+#   cmoc は agent call ごとに --sandbox を明示し、permission profile を使用しない (oracle/doc/app_spec/codex_exec_rule.md) 。
+#   そのため、この用途では default_permissions は使わない。
 # NOTE
-#   サンドボックス内から cmoc managed ollama にアクセスしたいので、ネットワークアクセス制限を緩めている。
-# TODO
-#   default_permissions に乗り換えたほうが良い？
+#   個別の許可設定は実際困ってから慎重に書き足していくこと。
 sandbox_mode = "workspace-write"
 #sandbox_workspace_write.exclude_slash_tmp = ...
 #sandbox_workspace_write.exclude_tmpdir_env_var	 = ...
 sandbox_workspace_write.network_access = true
 #sandbox_workspace_write.writable_roots = ...
 features.network_proxy.enabled = true
-features.network_proxy.domains = { "127.0.0.1" = "allow" }
+# NOTE
+#   テスト時にサンドボックス内から ollama にアクセスする用の許可
+features.network_proxy.domains."127.0.0.1" = "allow"
+# NOTE
+#   テスト用の ollama をダウンロードする用の許可
+#   model blob 配信先が変わった場合は都度修正が必要
+features.network_proxy.domains."ollama.com" = "allow"
+features.network_proxy.domains."registry.ollama.ai" = "allow"
+features.network_proxy.domains."dd20bb891979d25aebc8bec07b2b3bbc.r2.cloudflarestorage.com" = "allow"
 
 # 承認関係
 # NOTE
