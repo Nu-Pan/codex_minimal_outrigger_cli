@@ -21,14 +21,14 @@ from pathlib import Path
 from typing import Any
 
 from basic.acp import AgentCallParameter, FileAccessMode
+from commons.runtime_config import validate_json_toml_value
 from commons.runtime_content import write_hashed_file
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import schema_store_dir
-from config.cmoc_config import CmocConfig
+from config.cmoc_config import CmocConfig, JsonTomlValue
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
 _active_run_process_tracking_path: Path | None = None
-_OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
 
 
 @contextmanager
@@ -235,7 +235,35 @@ def parameter_codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) ->
 
 def _toml_string(value: str) -> str:
     """TOML string として安全な JSON 互換 quote へ寄せる。"""
-    return json.dumps(value, ensure_ascii=False)
+    validate_json_toml_value(value)
+    # JSON が raw のまま残す DEL は TOML basic string では escape が必要になる。
+    return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007F")
+
+
+def _toml_key_segment(value: str) -> str:
+    """任意の provider ID/key を単一の quoted TOML key segment にする。"""
+    return _toml_string(value)
+
+
+def _toml_value(value: JsonTomlValue) -> str:
+    """null 以外の JSON value を一意な TOML value へ変換する。"""
+    value = validate_json_toml_value(value)
+    if isinstance(value, str):
+        return _toml_string(value)
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return repr(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_toml_value(item) for item in value) + "]"
+    return (
+        "{"
+        + ", ".join(
+            f"{_toml_key_segment(key)} = {_toml_value(item)}"
+            for key, item in value.items()
+        )
+        + "}"
+    )
 
 
 def _config_override(key: str, toml_value: str) -> list[str]:
@@ -243,25 +271,55 @@ def _config_override(key: str, toml_value: str) -> list[str]:
     return ["--config", f"{key}={toml_value}"]
 
 
-def _ollama_provider_override_args() -> list[str]:
-    """cmoc managed ollama provider を argv config override にする。"""
-    provider_key = f"model_providers.{_OLLAMA_PROVIDER_ID}"
-    return [
-        # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
-        # Codex は既定で non-function web-search と multi-agent tool type を有効にするが、
-        # Ollama の Responses endpoint は function tool を受け付ける。managed local provider
-        # は両者に共通する tool subset に保つ。
-        "--disable",
-        "multi_agent",
-        *_config_override("web_search", _toml_string("disabled")),
-        *_config_override("model_provider", _toml_string(_OLLAMA_PROVIDER_ID)),
-        *_config_override(f"{provider_key}.name", _toml_string("cmoc managed ollama")),
-        *_config_override(
-            f"{provider_key}.base_url",
-            _toml_string("http://127.0.0.1:11434/v1"),
-        ),
-        *_config_override(f"{provider_key}.wire_api", _toml_string("responses")),
-    ]
+def _model_provider_override_args(
+    provider_id: str,
+    config: CmocConfig,
+) -> list[str]:
+    """選択した provider と provider-local 設定だけを argv にする。"""
+    try:
+        provider = config.codex.model_providers[provider_id]
+    except KeyError as exc:
+        raise CmocError(
+            "Codex model provider が未定義です。",
+            [
+                "{{work-root}}/.cmoc/gt/ar/config.json の codex.model_providers を確認してください。"
+            ],
+            f"model provider ID: {provider_id!r}",
+        ) from exc
+    try:
+        provider_key = f"model_providers.{_toml_key_segment(provider_id)}"
+        provider_value = _toml_string(provider_id)
+    except TypeError as exc:
+        raise CmocError(
+            "Codex model provider ID が不正です。",
+            [
+                "model provider ID を Codex CLI が解釈できる TOML key/value に修正してください。"
+            ],
+            f"model provider ID: {provider_id!r}",
+        ) from exc
+    args = _config_override("model_provider", provider_value)
+    for key, value in provider.settings.items():
+        if not isinstance(key, str):
+            raise CmocError(
+                "Codex model provider 設定が不正です。",
+                [
+                    "{{work-root}}/.cmoc/gt/ar/config.json の provider-local key を確認してください。"
+                ],
+                f"model provider ID: {provider_id!r}\nkey: {key!r}",
+            )
+        try:
+            key_segment = _toml_key_segment(key)
+            toml_value = _toml_value(value)
+        except TypeError as exc:
+            raise CmocError(
+                "Codex model provider 設定が不正です。",
+                [
+                    "provider-local setting を null 以外の JSON/TOML 共通値へ修正してください。"
+                ],
+                f"model provider ID: {provider_id!r}\nkey: {key!r}",
+            ) from exc
+        args.extend(_config_override(f"{provider_key}.{key_segment}", toml_value))
+    return args
 
 
 def build_codex_override_args(
@@ -281,17 +339,9 @@ def build_codex_override_args(
         sandbox_mode,
         *_config_override("approvals_reviewer", _toml_string("auto_review")),
         *_config_override("model_reasoning_effort", _toml_string(reasoning_effort)),
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        *_config_override("sandbox_workspace_write.network_access", "true"),
-        *_config_override("features.network_proxy.enabled", "true"),
-        *_config_override(
-            "features.network_proxy.domains",
-            '{"127.0.0.1"="allow"}',
-        ),
     ]
-    use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"
-    if use_cmoc_managed_ollama:
-        args.extend(_ollama_provider_override_args())
+    if model_spec.model_provider is not None:
+        args.extend(_model_provider_override_args(model_spec.model_provider, config))
     return args
 
 
@@ -305,7 +355,7 @@ def resolve_codex_home(cwd: Path | None = None) -> Path:
 
 
 def validate_codex_home(codex_home: Path) -> None:
-    """Codex 起動前に通常利用に必要な home と auth.json の存在を検査する。"""
+    """Codex 起動前に CODEX_HOME が directory であることだけを検査する。"""
     if not codex_home.exists():
         raise CmocError(
             "Codex home が存在しません。",
@@ -324,36 +374,14 @@ def validate_codex_home(codex_home: Path) -> None:
             ],
             f"CODEX_HOME: {codex_home}\nfailed condition: CODEX_HOME is directory",
         )
-    auth_path = codex_home / "auth.json"
-    if not auth_path.is_file():
-        raise CmocError(
-            "Codex CLI 認証情報が存在しません。",
-            [
-                "Codex CLI の通常利用環境を初期化してください。",
-                "既存の Codex home を指すように CODEX_HOME を設定してください。",
-            ],
-            f"CODEX_HOME: {codex_home}\nfailed condition: {auth_path} is file",
-        )
 
 
 def prepare_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig | None = None,
-    root: Path | None = None,
 ) -> list[str]:
-    """必要なら local provider を準備し、path 非依存の Codex argv を返す。
-
-    root は managed local provider の事前準備だけに使い、sandbox や詳細な
-    ファイルアクセス設定の組み立てには使わない。
-    """
+    """CmocConfig だけから path 非依存の Codex argv を返す。"""
     resolved_config = config or CmocConfig()
-    if (
-        resolved_config.codex.model[parameter.model_class].model_provider == "cmoc"
-        and root is not None
-    ):
-        from commons.runtime_doctor import run_doctor_preprocess
-
-        run_doctor_preprocess(root, resolved_config)
     return build_codex_override_args(parameter, resolved_config)
 
 

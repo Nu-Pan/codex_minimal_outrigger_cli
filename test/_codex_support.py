@@ -18,25 +18,11 @@ class FakeCodexResult:
 
 
 def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """fake CLI 実行用の最小 authenticated Codex home を準備する。"""
+    """provider 固有の認証を仮定しない空の Codex home を準備する。"""
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
-    (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", str(codex_home))
     return codex_home
-
-
-def stub_managed_ollama_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
-    """fake Codex subprocess argv のテスト中は managed Ollama setup を省略する。"""
-    import commons.runtime_doctor as doctor_module
-
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    # fake Codex test は cmoc の argv construction を検証し、共有 service は検証しない。
-    monkeypatch.setattr(
-        doctor_module,
-        "ensure_ollama_serves_local_slm",
-        lambda *_args, **_kwargs: None,
-    )
 
 
 def codex_parameter(

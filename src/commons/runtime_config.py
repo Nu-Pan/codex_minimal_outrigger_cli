@@ -1,8 +1,13 @@
 import json
+import math
 from pathlib import Path
 from typing import Any, TypeVar
 
-from oracle.other.cmoc_config import CodexModelSpec
+from oracle.other.cmoc_config import (
+    CodexModelProviderConfig,
+    CodexModelSpec,
+    JsonTomlValue,
+)
 
 from basic.acp import ModelClass, ReasoningEffort
 from commons.runtime_errors import CmocError
@@ -18,9 +23,24 @@ ConfigKey = TypeVar("ConfigKey", ModelClass, ReasoningEffort)
 
 def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     """正本 config 型を、永続化 JSON の object 境界へ変換する。"""
+    model_providers: dict[str, dict[str, dict[str, JsonTomlValue]]] = {}
+    for provider_id, provider in config.codex.model_providers.items():
+        if not isinstance(provider_id, str) or not isinstance(
+            provider, CodexModelProviderConfig
+        ):
+            raise TypeError("invalid Codex model provider definition")
+        validate_json_toml_value(provider_id)
+        settings: dict[str, JsonTomlValue] = {}
+        for key, value in provider.settings.items():
+            if not isinstance(key, str):
+                raise TypeError("invalid Codex model provider setting key")
+            validate_json_toml_value(key)
+            settings[key] = validate_json_toml_value(value)
+        model_providers[provider_id] = {"settings": settings}
     return {
         "num_parallel": config.num_parallel,
         "codex": {
+            "model_providers": model_providers,
             "model": {
                 key.value: {
                     "model_provider": value.model_provider,
@@ -33,15 +53,78 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             },
             "num_try_falv_recovery": config.codex.num_try_falv_recovery,
         },
-        "cmoc_managed_ollama_service_launch_behavior": (
-            config.cmoc_managed_ollama_service_launch_behavior
-        ),
         "oracle_review": {
             "num_enumerate_findings_loop": config.oracle_review.num_enumerate_findings_loop,
             "num_merge_findings_loop": config.oracle_review.num_merge_findings_loop,
             "num_validate_findings_loop": config.oracle_review.num_validate_findings_loop,
         },
     }
+
+
+def validate_json_toml_value(value: Any) -> JsonTomlValue:
+    """JSON と TOML の双方へ意味を変えず保存できる値を検証する。"""
+
+    def validate(item: Any, active_containers: set[int]) -> JsonTomlValue:
+        """循環 container も拒否しながら再帰的な値を検証する。"""
+        if isinstance(item, str):
+            # TOML string は Unicode scalar value だけを受理する。
+            if any(0xD800 <= ord(character) <= 0xDFFF for character in item):
+                raise TypeError
+            return item
+        if isinstance(item, bool):
+            return item
+        if type(item) is int:
+            # TOML 1.0 の integer は signed 64 bit に限定される。
+            if not -(2**63) <= item < 2**63:
+                raise TypeError
+            return item
+        if isinstance(item, float):
+            # NaN と infinity は JSON value ではない。
+            if not math.isfinite(item):
+                raise TypeError
+            return item
+        if isinstance(item, (list, dict)):
+            identity = id(item)
+            if identity in active_containers:
+                raise TypeError
+            active_containers.add(identity)
+            try:
+                if isinstance(item, list):
+                    return [validate(element, active_containers) for element in item]
+                restored: dict[str, JsonTomlValue] = {}
+                for key, element in item.items():
+                    if not isinstance(key, str):
+                        raise TypeError
+                    validate(key, active_containers)
+                    restored[key] = validate(element, active_containers)
+                return restored
+            finally:
+                active_containers.remove(identity)
+        raise TypeError
+
+    return validate(value, set())
+
+
+def _model_provider_map_from_dict(data: Any) -> dict[str, CodexModelProviderConfig]:
+    """provider-local 設定を型検証済みの正本設定型へ戻す。"""
+    if not isinstance(data, dict):
+        raise TypeError
+    restored: dict[str, CodexModelProviderConfig] = {}
+    for provider_id, value in data.items():
+        if not isinstance(provider_id, str) or not isinstance(value, dict):
+            raise TypeError
+        validate_json_toml_value(provider_id)
+        settings = value.get("settings", {})
+        if not isinstance(settings, dict):
+            raise TypeError
+        restored_settings: dict[str, JsonTomlValue] = {}
+        for key, setting in settings.items():
+            if not isinstance(key, str):
+                raise TypeError
+            validate_json_toml_value(key)
+            restored_settings[key] = validate_json_toml_value(setting)
+        restored[provider_id] = CodexModelProviderConfig(restored_settings)
+    return restored
 
 
 def _enum_str_map_from_dict(
@@ -78,11 +161,13 @@ def _model_spec_map_from_dict(
         # `{{work-root}}/oracle/src/oracle/other/cmoc_config.py` は未定義の Codex
         # model 名を許可しないため、人手編集による空値はこの境界で失敗させる。
         if (
-            provider not in {"codex", "cmoc"}
+            (provider is not None and not isinstance(provider, str))
             or not isinstance(model, str)
             or not model.strip()
         ):
             raise TypeError
+        if isinstance(provider, str):
+            validate_json_toml_value(provider)
         restored[ModelClass(key)] = CodexModelSpec(provider, model)
     return restored
 
@@ -112,6 +197,9 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
     default = CmocConfig()
     try:
         codex_data = _section(data, "codex")
+        model_providers = _model_provider_map_from_dict(
+            codex_data.get("model_providers", {})
+        )
         model = _model_spec_map_from_dict(
             default.codex.model,
             codex_data.get("model", {}),
@@ -123,17 +211,10 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
         )
 
         oracle_review_data = _section(data, "oracle_review")
-        launch_behavior = data.get(
-            "cmoc_managed_ollama_service_launch_behavior",
-            default.cmoc_managed_ollama_service_launch_behavior,
-        )
-        # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
-        if launch_behavior not in {"default", "bypass", "force"}:
-            raise TypeError
-
         return CmocConfig(
             num_parallel=_int_value(data, "num_parallel", default.num_parallel),
             codex=CmocConfigCodex(
+                model_providers=model_providers,
                 model=model,
                 reasoning_effort=reasoning_effort,
                 num_try_falv_recovery=_int_value(
@@ -142,7 +223,6 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
                     default.codex.num_try_falv_recovery,
                 ),
             ),
-            cmoc_managed_ollama_service_launch_behavior=launch_behavior,
             oracle_review=CmocConfigOracleReview(
                 num_enumerate_findings_loop=_int_value(
                     oracle_review_data,
@@ -162,12 +242,16 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             ),
         )
     except (TypeError, ValueError) as exc:
+        try:
+            detail = json.dumps(data, ensure_ascii=False, indent=2, default=repr)
+        except (TypeError, ValueError):
+            detail = repr(data)
         raise CmocError(
             "cmoc config が不正です。",
             [
                 "{{work-root}}/.cmoc/gt/ar/config.json を確認してから再実行してください。"
             ],
-            json.dumps(data, ensure_ascii=False, indent=2),
+            detail,
         ) from exc
 
 
@@ -175,7 +259,14 @@ def write_config(path: Path, config: CmocConfig) -> None:
     """config JSON を人間が確認しやすい安定した表現で保存する。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(config_to_dict(config), ensure_ascii=False, indent=2) + "\n"
+        json.dumps(
+            config_to_dict(config),
+            ensure_ascii=False,
+            indent=2,
+            allow_nan=False,
+        )
+        + "\n",
+        encoding="utf-8",
     )
 
 

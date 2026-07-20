@@ -58,13 +58,8 @@ def test_codex_overrides_do_not_inject_permission_profile(
     parsed = codex_override_config(args)
     assert "permissions" not in parsed
     assert "default_permissions" not in parsed
-    assert parsed["sandbox_workspace_write"] == {"network_access": True}
-    assert parsed["features"] == {
-        "network_proxy": {
-            "enabled": True,
-            "domains": {"127.0.0.1": "allow"},
-        }
-    }
+    assert "sandbox_workspace_write" not in parsed
+    assert "features" not in parsed
 
 
 def test_path_based_permission_inputs_are_absent_from_builder_api() -> None:
@@ -73,6 +68,7 @@ def test_path_based_permission_inputs_are_absent_from_builder_api() -> None:
     prepare_parameters = inspect.signature(prepare_codex_override_args).parameters
 
     assert tuple(build_parameters) == ("parameter", "config")
+    assert tuple(prepare_parameters) == ("parameter", "config")
     for name in (
         "extra_read_paths",
         "extra_writable_paths",
@@ -80,31 +76,6 @@ def test_path_based_permission_inputs_are_absent_from_builder_api() -> None:
         "allow_oracle_conflict_writes",
     ):
         assert name not in prepare_parameters
-
-
-@pytest.mark.parametrize("mode", list(FileAccessMode))
-def test_codex_overrides_are_invariant_to_worktree_contents(
-    tmp_path: Path, mode: FileAccessMode
-) -> None:
-    """実在 path、一覧、gitignore の変化を sandbox argv の入力にしない。"""
-    root = tmp_path / "repo"
-    root.mkdir()
-    parameter = _parameter(mode)
-    config = CmocConfig()
-    baseline = prepare_codex_override_args(parameter, config, root)
-
-    (root / ".gitignore").write_text("/generated/\n")
-    generated = root / "generated"
-    for directory_index in range(5):
-        directory = generated / f"part-{directory_index}"
-        directory.mkdir(parents=True)
-        for file_index in range(10):
-            (directory / f"artifact-{file_index}.bin").write_text("generated\n")
-    outside = tmp_path / "outside"
-    outside.mkdir()
-    (root / "external").symlink_to(outside, target_is_directory=True)
-
-    assert prepare_codex_override_args(parameter, config, root) == baseline
 
 
 @pytest.mark.parametrize(

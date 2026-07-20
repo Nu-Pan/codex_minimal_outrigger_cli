@@ -23,9 +23,8 @@ from pathlib import Path
 
 import pytest
 import typer
-from _cli_support import runner
+from _cli_support import run_doctor, runner
 from _git_support import make_repo, run_git
-from _ollama_support import run_doctor
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_logging as runtime_logging

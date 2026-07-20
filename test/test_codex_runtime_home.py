@@ -10,6 +10,7 @@ import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_codex_profile import validate_codex_home
 from config.cmoc_config import CmocConfig
 
 
@@ -36,7 +37,6 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     home = tmp_path / "home"
     codex_home = home / ".codex"
     codex_home.mkdir(parents=True)
-    (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.delenv("CODEX_HOME", raising=False)
     monkeypatch.setattr(Path, "home", lambda: home)
     stub_codex_overrides(monkeypatch)
@@ -85,7 +85,6 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
     root = make_repo(tmp_path)
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
-    (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -135,7 +134,6 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
     root = make_repo(tmp_path)
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
-    (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -243,42 +241,15 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
 
 
 @pytest.mark.parametrize("auth_json_is_directory", [False, True])
-def test_run_codex_exec_fails_before_codex_when_auth_json_is_not_file(
+def test_codex_home_validation_does_not_assume_provider_auth_schema(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     auth_json_is_directory: bool,
 ) -> None:
-    """Codex 起動前に欠落または file でない auth.json を拒否する。"""
-    root = make_repo(tmp_path)
+    """auth.json の欠落・種別を model provider 非依存の preflight に含めない。"""
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
     auth_path = codex_home / "auth.json"
     if auth_json_is_directory:
         auth_path.mkdir()
-    monkeypatch.setenv("CODEX_HOME", str(codex_home))
-    codex_calls = _spy_codex_subprocess(monkeypatch)
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-    )
 
-    try:
-        run_codex_exec(
-            parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
-        )
-    except CmocError as exc:
-        error = exc
-    else:
-        raise AssertionError("run_codex_exec should fail before invoking Codex CLI")
-
-    assert codex_calls == []
-
-    assert error.summary == "Codex CLI 認証情報が存在しません。"
-    assert str(codex_home / "auth.json") in error.detail
-    assert (
-        "既存の Codex home を指すように CODEX_HOME を設定してください。"
-        in error.next_actions
-    )
+    validate_codex_home(codex_home)

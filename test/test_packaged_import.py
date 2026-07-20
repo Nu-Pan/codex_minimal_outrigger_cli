@@ -161,7 +161,8 @@ def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
         (
             "import config.cmoc_config as c; "
             "expected = ['CmocConfig', 'CmocConfigCodex', "
-            "'CmocConfigOracleReview', 'CodexModelSpec']; "
+            "'CmocConfigOracleReview', 'CodexModelProviderConfig', "
+            "'CodexModelSpec', 'JsonTomlValue']; "
             "assert c.__all__ == expected; "
             "assert sorted(n for n in vars(c) if not n.startswith('_')) == expected"
         ),
