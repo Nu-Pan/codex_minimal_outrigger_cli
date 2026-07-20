@@ -17,15 +17,18 @@ from dataclasses import dataclass, field
 from oracle.acp_builder.basic import ModelClass, ReasoningEffort
 
 
-# model provider-local 設定で使用できる JSON/TOML 共通の値型
-type CodexModelProviderConfigValue = (
-    str
-    | int
-    | float
-    | bool
-    | list[CodexModelProviderConfigValue]
-    | dict[str, CodexModelProviderConfigValue]
+# JSON と TOML の両方で表現できる設定値
+type JsonTomlValue = (
+    str | int | float | bool | list[JsonTomlValue] | dict[str, JsonTomlValue]
 )
+
+
+@dataclass(frozen=True)
+class CodexModelProviderConfig:
+    """単一 model provider の provider-local Codex config。"""
+
+    # provider-local key --> JSON/TOML 共通の設定値
+    settings: dict[str, JsonTomlValue] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -63,10 +66,8 @@ class CmocConfigCodex:
     cmoc の設定 (config) のうち Codex CLI 向けの設定を集約したクラス
     """
 
-    # model provider ID --> provider-local な Codex config 値
-    model_providers: dict[str, dict[str, CodexModelProviderConfigValue]] = field(
-        default_factory=dict
-    )
+    # model provider ID --> provider-local な Codex config
+    model_providers: dict[str, CodexModelProviderConfig] = field(default_factory=dict)
 
     # `ModelClass` --> Codex CLI が受理可能な Model 名
     # NOTE

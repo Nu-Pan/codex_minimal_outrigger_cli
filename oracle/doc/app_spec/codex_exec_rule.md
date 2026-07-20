@@ -85,7 +85,7 @@
     ```text
     --config 'model_provider={{provider ID の TOML value}}'
     ```
-- 選択した provider の provider-local 設定は、各 key/value を次と同じ形の argv により呼び出し単位で明示的に上書きする
+- 選択した provider の `CodexModelProviderConfig.settings` は、各 key/value を次と同じ形の argv により呼び出し単位で明示的に上書きする
     ```text
     --config 'model_providers.{{provider ID の TOML key segment}}.{{provider-local key の TOML key segment}}={{provider-local setting の TOML value}}'
     ```

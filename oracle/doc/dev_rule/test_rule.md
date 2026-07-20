@@ -17,7 +17,7 @@
 
 - LLM の回答品質や、Codex CLI に依頼した仕事の意味的な成功は cmoc の自動テストの目的としない
 - Codex CLI 自体、model provider、有料クラウド backend の正しさや安定性を保証することは目的としない
-- GPU 推論を必須とせず、CPU 推論を許容する
+- GPU 推論の成功または確認を test の成功条件とせず、CPU 推論への fallback を許容する
 
 ## 実経路統合テスト
 
@@ -34,10 +34,15 @@
 - Codex CLI 呼び出しを行う各 test case は、専用の Ollama process を `{{test-root}}` 内で都度起動する
 - Ollama の process runtime directory、HOME、model working directory、binary、PID、log、および port は test case ごとに独立させる
 - Ollama は loopback interface の動的空き port で listen させ、固定 port または既存の Ollama service に依存してはならない
+- 同じ cache root を使用する実経路統合テスト全体で、同時に稼働する test-local Ollama process は最大 1 つとする
+- 各 test case は Ollama 起動前に排他的な Ollama execution lock を取得し、process group の teardown が完了するまで保持する。並列実行された別の test case は lock の解放を待つ
+- Ollama execution lock は同時実行数を制限するものであり、異なる test case 間で Ollama process を共有するために使用してはならない
 - 同じ test case 内の複数 Codex CLI 呼び出しに限り、その test case の Ollama process を共有してよい
 - test case は Ollama を専用 process group として起動し、success、failure、timeout のいずれでも、その test case が起動した process group だけを teardown する
 - test-local Ollama は `CmocConfig` の通常の model provider 設定によって Codex CLI 呼び出し単位で選択し、test 専用の特殊な provider ID または provider 起動機能を cmoc に追加してはならない
 - テスト用 SLM は `qwen3:4b-instruct-2507-q4_K_M` とする
+- test-local Ollama は利用可能な GPU による推論をベストエフォートで優先し、GPU が利用できない場合、GPU 推論を開始できない場合、または GPU 推論を確認できない場合は CPU 推論へ fallback する
+- GPU 利用の失敗だけを理由に test を skip または failure としてはならない
 
 ## test-local Ollama cache
 
