@@ -16,20 +16,22 @@
 # `other`
 
 ## Summary
-- oracle の設定・パスモデル・規範データ構造・構造化文書レンダリングを担う実装群をまとめたディレクトリ。cmoc の設定値、ルートパス解決、標準文書の構造化、Markdown 変換の実装へ進む入口となる。
+- cmoc の oracle 実装で使う設定・パスモデル・規範データ構造・構造化 Markdown 文書化を定義するファイル群。設定値やルート探索、規範文書の構造化、Markdown 変換を確認する入口。
 
 ## Read this when
-- cmoc のリポジトリ固有設定や既定値、Codex・Ollama・oracle review の制御を調査するとき。
-- プレースホルダを含むパス解決や cmoc・repo・run・work ルートの探索を調査するとき。
-- 規範文書のデータ構造、構造化文書の Markdown レンダリング、cmoc_ref 検証を調査するとき。
+- cmoc の設定項目、既定値、Codex CLI 設定、provider 設定、oracle review の上限を確認・変更するとき
+- cmoc・repo・run・work のルート探索、パスプレースホルダ変換、git worktree 対応を確認するとき
+- 規範文書のデータ構造、Requirement の制約、Standard の構造化文書変換を確認するとき
+- StructDoc の Markdown レンダリング、見出し・入れ子・コードブロック・空行やインデントの処理を確認するとき
 
 ## Do not read this when
-- CLI 機能の具体的な実装や入出力処理だけを調査するとき。
-- Codex CLI、Ollama、Markdown の一般的な利用方法を調査するとき。
-- oracle review の所見生成・統合・検証ロジックなど、このディレクトリの定義を利用する個別機能だけを調査するとき。
+- CLI の設定読み書き、doctor による生成・同期、または設定利用側の個別機能を確認したいとき
+- モデル分類や推論 effort の Enum 定義だけを確認したいとき
+- 個別の標準文書の内容や、oracle file の配置・命名規則を確認したいとき
+- CLI の実行経路やプロンプト生成全体、Markdown 以外の文書レンダリングを確認したいとき
 
 ## hash
-- bf71c04445202355b44b4cd52767830fb91c56fccfda3589dd7767e5513bcc81
+- 4baf81dea861dbe6930a286191d9c7ebe2230b45fd29d2f63515f19e804ec50b
 
 # `prompt_builder`
 

@@ -58,18 +58,19 @@
 # `test_rule.md`
 
 ## Summary
-- pytest による cmoc realization test の実装・検証規約。決定論的な制御ロジック、Real Codex CLI と cmoc managed ollama を使う結合動作、全公開サブコマンドの本番経路試験、テスト隔離、クラウドバックエンド禁止、Fake Codex CLI の利用条件を定める。
+- pytest による cmoc の realization test の正本規約。決定論的制御ロジック、Codex CLI を含む実経路統合テスト、test-local Ollama、キャッシュ隔離、クラウド backend 禁止、Fake Codex CLI の利用境界を定義する。
 
 ## Read this when
-- pytest の実装・実行方法、テスト対象や検証範囲を判断するとき
-- realization implementation または realization test の変更後に必要な検証を確認するとき
-- Real Codex CLI、cmoc managed ollama、テスト用 SLM、テスト隔離の扱いを確認するとき
-- 全サブコマンドの本番経路試験を追加・更新・実行するとき
+- pytest や realization test の実装・修正・実行方法を判断するとき
+- CLI の実経路統合テスト、公開サブコマンドと test case の対応、終了 code や外部観測結果の検証を扱うとき
+- test-local Ollama の起動、隔離、process teardown、GPU/CPU fallback、cache 管理を扱うとき
+- 実装またはテスト変更後の検証条件や、Real Codex CLI・実推論の利用要否を判断するとき
 
 ## Do not read this when
-- 実装配置や CLI の責務境界だけを判断する場合は design_rule.md を読む
-- Python の実行環境や依存関係の構築方法だけを確認する場合は development_environment.md を読む
-- LLM の回答品質や Codex CLI 自体、外部 provider の正しさを検証する場合
+- テスト対象の具体的な実装責務や配置を判断するだけの場合は、対応する realization implementation の本文を直接読む
+- Python の実行環境や依存関係の一般的な手順だけを確認する場合は、開発環境の oracle file を読む
+- 設計上の責務境界や realization implementation の配置先だけを判断する場合は、設計規約の oracle file を読む
+- LLM の回答品質、Codex CLI 自体や model provider の正しさ、GPU 推論成功そのものを評価する場合
 
 ## hash
-- 9e396e4172f615134632e49b6cae88c875c59f7e20ccebf24c7a478ec7aadd66
+- d72752bf4799399507c78e36bdd4f04704d0c5a00c1e02150e10e1379a0ed5d3

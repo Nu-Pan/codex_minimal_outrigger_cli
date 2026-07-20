@@ -1,20 +1,18 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を定義する oracle 文書群。CLI 補完、Codex／Ollama 実行、ログ、doctor preprocess、prompt、run・session lifecycle、サブコマンドなどの個別仕様への入口を提供する。
+- cmoc のアプリケーション仕様をまとめた oracle 文書群。CLI 自動補完、Codex 呼び出し・provider 設定、ログ、doctor preprocess、エラー処理、プロンプト、run/session lifecycle、サブコマンド、中断処理、標準 workflow などの正本仕様へ進むための入口。
 
 ## Read this when
-- cmoc の利用者向け機能やサブコマンドの正本仕様を調査・実装・検証するとき
-- 複数のアプリケーション仕様にまたがる実行順序、状態管理、出力、エラー処理の関係を確認するとき
-- 対象機能に対応する個別仕様文書を特定したいとき
+- cmoc の利用者向け挙動、共通仕様、CLI 呼び出し、状態管理、ログ、プロンプト、run/session lifecycle を実装・検証するとき
+- 対象機能に対応する個別仕様文書を選び、仕様上の責務や制約を確認したいとき
 
 ## Do not read this when
-- 開発環境、設計ルール、テストルールなど開発手順だけを確認したいとき
-- 個別仕様が明確で、対象文書を直接読む方が適切なとき
-- realization code や realization test の内部実装だけを調査するとき
+- 対象が特定の realization code または realization test の内部実装だけであるとき
+- 一般的な開発環境・設計・テスト手順を確認したいときは、対応する開発規約を直接読む
 
 ## hash
-- f37fd3a64b6a3c3495816be39ae5b56fce5b46fe6bf8c547e4b273a5897c5378
+- 5c2c236902481e52c10a217fde3bd6e7fcfa9bf5e28d91865167b7e24b6d0a5e
 
 # `branch_model.md`
 
@@ -56,18 +54,18 @@
 # `dev_rule`
 
 ## Summary
-- cmoc の開発規約をまとめた oracle doc 群。Python コーディング規則、CLI の設計・配置、開発環境、pytest によるテスト方針を確認するための入口。
+- cmoc の開発規約をまとめた oracle doc 群。Python コーディング、CLI の責務配置、開発環境、pytest による realization test の方針を確認するための入口。
 
 ## Read this when
-- Python 実装の型ヒント、import、docstring、コメント、命名規則を確認したいとき。
-- CLI のエントリーポイント、サブコマンド、共有モジュールの責務や配置を判断するとき。
+- Python 実装の書き方や命名・型ヒント・コメント規則を確認したいとき。
+- CLI のエントリーポイント、サブコマンド、共有処理の配置方針を判断したいとき。
 - Python/venv、依存関係、ファイル命名などの開発環境ルールを確認したいとき。
-- pytest の実装・実行、Real Codex CLI や managed ollama を使う結合テスト、変更後の検証範囲を確認したいとき。
+- pytest、実経路統合テスト、test-local Ollama、キャッシュ隔離などのテスト規約を確認したいとき。
 
 ## Do not read this when
-- 個別機能や CLI の挙動・出力仕様を確認したいときは、app_spec 配下などの対象機能の oracle doc を直接読む。
-- 既存実装の詳細を確認したいときは、対応する realization code を読む。
-- INDEX.md の読み方やルーティング方針自体を確認したいときは、routing 文書を読む。
+- 個別機能や CLI の具体的な挙動・出力仕様を確認したいときは、app_spec 配下の対応する oracle doc を読む。
+- 個別モジュールの実装詳細を確認したいときは、対応する realization implementation を直接読む。
+- INDEX.md の読み方やルーティング方針を確認したいときは、別の routing 文書を読む。
 
 ## hash
-- cdd11b15ce76fbd84fc4219e060b144ab402ced571902bf18f8429d9ae1c91d3
+- 1432317a33591d4375f1ae8f4fd20238371162235a3687052f18c53ee7d0be72
