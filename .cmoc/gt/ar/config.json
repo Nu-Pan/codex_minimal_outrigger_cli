@@ -4,19 +4,19 @@
     "model_providers": {},
     "model": {
       "mainstream": {
-        "model_provider": "codex",
+        "model_provider": null,
         "model": "gpt-5.6-terra"
       },
       "flagship": {
-        "model_provider": "codex",
+        "model_provider": null,
         "model": "gpt-5.6-sol"
       },
       "efficiency": {
-        "model_provider": "codex",
+        "model_provider": null,
         "model": "gpt-5.6-luna"
       },
       "minimum": {
-        "model_provider": "codex",
+        "model_provider": null,
         "model": "gpt-5.6-luna"
       }
     },
