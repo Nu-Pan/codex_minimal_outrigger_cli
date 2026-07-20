@@ -1,56 +1,62 @@
-
 # cmoc テスト実装規約
 
 ## 基本
 
 - pytest を使用する
 - realization test は `{{cmoc-root}}/test` に実装する
+- `python-dev-skill` が pytest の隔離に使用する `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
 
 ## goal
 
 - cmoc の決定論的な制御ロジックが仕様どおりに動作する事を検証する
     - e.g. git 状態の検査、作業ディレクトリの決定、対象ファイルの列挙、設定生成、ログ保存、状態更新、エラー処理、…
-- Real Codex CLI 呼び出しを伴う経路では、cmoc managed ollama を provider として使用し、cmoc が責任を持つ結合動作を検証対象に含める
-    - e.g. profile 生成、prompt 渡し、出力保存、schema 指定、…
+- Codex CLI 呼び出しを伴う経路では、実在の Codex CLI executable と実推論を使い、cmoc が責任を持つ結合動作を検証する
+    - e.g. prompt 渡し、argv による設定、出力保存、schema 指定、response 後の処理、…
 
 ## non-goal
 
 - LLM の回答品質や、Codex CLI に依頼した仕事の意味的な成功は cmoc の自動テストの目的としない
-- Codex CLI 自体、外部 provider、有料クラウド backend の正しさや安定性を保証することは目的としない
+- Codex CLI 自体、model provider、有料クラウド backend の正しさや安定性を保証することは目的としない
+- GPU 推論を必須とせず、CPU 推論を許容する
 
-## 全サブコマンドの本番経路試験
+## 実経路統合テスト
 
-- 本番経路試験とは、利用者向け CLI entrypoint を独立した process で起動し、代表的な正常系を本番と同じ code path と外部 process で完了させる realization test である
-- 実行時点で公開されている全末端サブコマンドを対象とし、成功を示す終了 code と、コマンド固有の外部から観測可能な結果を検証する
-- 本番経路で発生するすべての Codex CLI 呼び出しには、実在の Codex CLI executable と cmoc managed ollama による実推論を使用し、response を受けた後の処理まで完了させる。Fake、mock、stub、記録済み response、または起動確認だけでは代替できない
-- 本番との差は、`{{test-root}}` による隔離、決定論的な入力と対話操作の自動化、テスト用 SLM、およびクラウドバックエンド禁止のために必要な範囲だけ許容する
-- `--help`、shell completion、不正入力、事前条件違反、handler の直接呼び出し、または process を分離しない確認は、本番経路試験とはみなさない
-- realization implementation または realization test の変更後は全件を fresh に実行する。新規サブコマンドには同じ作業で試験を追加し、実行結果、Real Codex CLI 呼び出し、本番との差を報告する。未実行、未検証、失敗、または許容外の差があれば作業を完了扱いにしない
+- 実経路統合テストとは、利用者向け CLI entrypoint を独立 process で実行し、本番と同じ code path、実在の外部 executable、および必要な実推論を使って、response 後の処理と外部から観測可能な結果まで検証する realization test である
+- 実行時点で公開されている全末端サブコマンドを対象とし、各 test case は終了 code とコマンド固有の外部から観測可能な結果を検証する
+- 公開末端サブコマンドと test case の対応は機械的に比較可能にする。公開末端サブコマンドの追加または rename に対して対応する test case がなければ test を失敗させる
+- Codex CLI 呼び出しには、実在の Codex CLI executable、実在の Ollama executable、および test-local Ollama による実推論を使用する。Fake、mock、stub、記録済み response、または起動確認だけでは実経路統合テストを代替できない
+- 本番との差は、`{{test-root}}` による隔離、決定論的な入力と対話操作の自動化、test-local Ollama、テスト用 SLM、および有料クラウド backend 禁止のために必要な範囲だけ許容する
+- `--help`、shell completion、不正入力、事前条件違反、handler の直接呼び出し、または process を分離しない確認は、実経路統合テストとはみなさない
+- realization implementation または realization test の変更後は全件を fresh に実行する。新規サブコマンドには同じ作業で test case を追加し、実行結果、Real Codex CLI 呼び出し、および本番との差を報告する。未実行、未検証、失敗、または許容外の差があれば作業を完了扱いにしない
 
-## テスト用開発対象リポジトリパス
+## test-local Ollama
 
-- `python-dev-skill` が pytest の隔離に使用する `tmp_path` を `{{test-root}}` とし、被テスト cmoc が動作する環境全体をそのツリー内に構築する
-- cmoc managed ollama のサービス、サービス設定、および永続化したダウンロード資源はこの隔離の対象外とし、本番実行とテストで共有する
-- cmoc managed ollama の管理・ライフサイクル・配置先は `{{cmoc-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md` を正本とする
-- 前項の例外を除いてテストが `{{test-root}}` ツリー内で収まりさえすれば、それ以外は agent の裁量で決めて良い
+- Codex CLI 呼び出しを行う各 test case は、専用の Ollama process を `{{test-root}}` 内で都度起動する
+- Ollama の process runtime directory、HOME、model working directory、binary、PID、log、および port は test case ごとに独立させる
+- Ollama は loopback interface の動的空き port で listen させ、固定 port または既存の Ollama service に依存してはならない
+- 同じ test case 内の複数 Codex CLI 呼び出しに限り、その test case の Ollama process を共有してよい
+- test case は Ollama を専用 process group として起動し、success、failure、timeout のいずれでも、その test case が起動した process group だけを teardown する
+- test-local Ollama は `CmocConfig` の通常の model provider 設定によって Codex CLI 呼び出し単位で選択し、test 専用の特殊な provider ID または provider 起動機能を cmoc に追加してはならない
+- テスト用 SLM は `qwen3:4b-instruct-2507-q4_K_M` とする
 
-## クラウドバックエンド
+## test-local Ollama cache
 
-- テスト目的での Real Codex CLI 呼び出しで、ChatGPT サブスクリプション枠や従量課金のクラウド API などの「お金がかかるモデル」を使用するのは禁止
+- Ollama archive、versioned binary、および pull 済み model は、system temporary directory 上の test 専用 cache にベストエフォートで半永続化する
+- cache の既定 root は、`tempfile.gettempdir()` で得た system temporary directory 配下で、OS user と cache schema version によって namespacing した directory とする
+- 明示的な test 専用環境変数による cache root の override を許容する
+- cache root に `{{cmoc-root}}` または `{{work-root}}` の配下を使用してはならず、cache path を `CmocConfig` に追加してはならない
+- cache root は使用前に、owner、directory であること、symlink でないこと、permission、読み書き、atomic rename、および file lock の利用可能性を検証する
+- system temporary directory が sandbox 内で利用できない場合は pytest session 用一時 directory へ fallback する。cache 永続化だけを理由に sandbox 外実行または追加の writable root を要求してはならない
+- system reboot、OS cleanup、利用者操作などによる cache の欠落、削除、または破損は正常な cache miss として扱い、必要な内容を再構築する。test の正しさを cache の存在に依存させてはならない
+- 通常の test teardown では cache を能動的に削除しない
+- cache の更新は排他的 lock の保持中に staging directory で構築し、完成後に atomic publish する。不完全な内容を cache hit として観測可能にしてはならない
+- 各 test case は cache から `{{test-root}}` 内へ独立した working set を materialize し、その working set から Ollama を起動する。cache を Ollama の live working directory として直接共有してはならない
+- materialize は、test case が共有 cache を変更せず、test 中に cache が消えても working set が影響を受けない方式とする。これを満たす具体的な方式は realization の裁量とする
 
-## ollama バックエンド
+## クラウド backend
 
-- Real Codex CLI 呼び出しを伴うテストを実行する際は、原則として cmoc managed ollama を Codex CLI の model provider として使用する
-- テスト用 SLM は `{{cmoc-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md` の定義を正本とする
-- テスト目的の場合は `AgentCallParameter.model_class` に対応する Codex CLI provider/model を cmoc managed ollama とテスト用 SLM に切り替えてよい
-- テストは、外側の `{{cmoc-root}}/.cmoc/gt/ar/config.json` にある `cmoc_managed_ollama_service_launch_behavior` が `force` であることを仮定してよい
-- 被テスト cmoc の実行では、外側の設定値に関わらず、被テスト環境の `CmocConfig.cmoc_managed_ollama_service_launch_behavior` を `bypass` とする。外側の config file を `bypass` へ書き換えてはならない
-
-### Codex agent sandbox からの実行
-
-- cmoc managed ollama を使用する test command は、`{{cmoc-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md` の sandbox 外実行規則に従う
-- sandbox 外実行が承認されない、または必要な実環境へ access できない場合は、該当テストを成功または失敗とみなさず、未検証の理由を報告する
+- テスト目的の Real Codex CLI 呼び出しで、ChatGPT subscription 枠や従量課金の cloud API などの有料クラウド backend を使用してはならない
 
 ## Fake Codex CLI
 
-- Fake Codex CLI は、本番経路試験以外で Real Codex CLI が不要な場合に限り、決定論的な制御ロジックの検証に使用してよい
+- Fake Codex CLI は、実経路統合テスト以外で Real Codex CLI が不要な場合に限り、決定論的な制御ロジックの検証に使用してよい

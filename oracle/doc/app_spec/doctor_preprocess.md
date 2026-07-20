@@ -15,8 +15,7 @@
 2. `{{work-root}}/.agents` が git 追跡対象であることを保証する
 3. `{{work-root}}/.cmoc/gt/ar/config.json` が git 追跡対象である事を保証する
 4. `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が git 追跡対象であり、schema と entry 集合が同期済みであることを保証する
-5. `CmocConfig.cmoc_managed_ollama_service_launch_behavior` に従って、cmoc managed ollama service の起動保証処理を扱う
-6. ここまでの作業で発生した差分を git commit する
+5. ここまでの作業で発生した差分を git commit する
 
 ## 「`{{repo-root}}/.cmoc/gu` が git 追跡対象外であることを保証する」の詳細
 
@@ -91,8 +90,3 @@
 - active run の kind が `realization_refactor` の場合、merge 前の doctor preprocess では追跡状態と schema だけを検証し、entry 集合の同期を merge 後まで遅延する。
 - これは session branch と run branch が同じ refactor state を独立に更新して merge conflict を起こすことを避けるためである。
 - merge 後は kind にかかわらず、最終的な session tree に対して entry 集合を同期する。
-
-## 「cmoc managed ollama service の起動保証処理を扱う」の詳細
-
-- 起動保証処理を実行するかバイパスするかの条件は、`CmocConfig.cmoc_managed_ollama_service_launch_behavior` のコメントを正本とする
-- 起動保証処理で保証するサービスとモデルの状態は、`{{cmoc-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md` を正本とする

@@ -12,10 +12,20 @@
 
 # std
 from dataclasses import dataclass, field
-from typing import Literal
 
 # cmoc
 from oracle.acp_builder.basic import ModelClass, ReasoningEffort
+
+
+# model provider-local 設定で使用できる JSON/TOML 共通の値型
+type CodexModelProviderConfigValue = (
+    str
+    | int
+    | float
+    | bool
+    | list[CodexModelProviderConfigValue]
+    | dict[str, CodexModelProviderConfigValue]
+)
 
 
 @dataclass(frozen=True)
@@ -30,22 +40,6 @@ class CmocConfig:
     # Codex CLI 関係の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())
 
-    # cmoc managed ollama 起動の挙動
-    # default:
-    #   エンドユーザー環境で使用する通常モード。
-    #   `CodexModelSpec.model_provider=="cmoc"` が存在する場合のみ、cmoc managed ollama service の起動保証を実行する。
-    # bypass:
-    #   「cmoc を用いた cmoc の自己開発」シナリオで使用する開発用モード。
-    #   cmoc managed ollama service の起動保証処理をバイパスする。
-    #   サンドボックス環境内からでは `~/.cmoc/ollama` を触れない (cmoc managed ollama service を起動できない) ので、それをバイパスするために使う。
-    # force:
-    #   「cmoc を用いた cmoc の自己開発」シナリオで使用する開発用モード。
-    #   cmoc managed ollama service の起動保証を必ず実行する。
-    #   サンドボックス環境内からでは cmoc managed ollama service を起動できないため、サンドボックス外で強制起動するために使う。
-    cmoc_managed_ollama_service_launch_behavior: Literal[
-        "default", "bypass", "force"
-    ] = field(default="default")
-
     # `cmoc oracle review` サブコマンドの挙動設定
     oracle_review: "CmocConfigOracleReview" = field(
         default_factory=lambda: CmocConfigOracleReview()
@@ -56,13 +50,8 @@ class CmocConfig:
 class CodexModelSpec:
     """Codex CLI 上のモデル指定"""
 
-    # model provider 設定
-    # codex:
-    #   Codex CLI 標準のモデル設定を使う
-    #   いわば未指定 (default)
-    # cmoc:
-    #   cmoc managed ollama を使う
-    model_provider: Literal["codex", "cmoc"]
+    # model provider ID。None の場合は Codex CLI の既定値を使う
+    model_provider: str | None
 
     # モデル名
     model: str
@@ -74,16 +63,21 @@ class CmocConfigCodex:
     cmoc の設定 (config) のうち Codex CLI 向けの設定を集約したクラス
     """
 
+    # model provider ID --> provider-local な Codex config 値
+    model_providers: dict[str, dict[str, CodexModelProviderConfigValue]] = field(
+        default_factory=dict
+    )
+
     # `ModelClass` --> Codex CLI が受理可能な Model 名
     # NOTE
     #   モデル名の未定義は禁止
     #   モデル名は case sensitive なので注意
     model: dict[ModelClass, CodexModelSpec] = field(
         default_factory=lambda: {
-            ModelClass.MAINSTREAM: CodexModelSpec("codex", "gpt-5.6-terra"),
-            ModelClass.FLAGSHIP: CodexModelSpec("codex", "gpt-5.6-sol"),
-            ModelClass.EFFICIENCY: CodexModelSpec("codex", "gpt-5.6-luna"),
-            ModelClass.MINIMUM: CodexModelSpec("codex", "gpt-5.4-mini"),
+            ModelClass.MAINSTREAM: CodexModelSpec(None, "gpt-5.6-terra"),
+            ModelClass.FLAGSHIP: CodexModelSpec(None, "gpt-5.6-sol"),
+            ModelClass.EFFICIENCY: CodexModelSpec(None, "gpt-5.6-luna"),
+            ModelClass.MINIMUM: CodexModelSpec(None, "gpt-5.4-mini"),
         }
     )
 

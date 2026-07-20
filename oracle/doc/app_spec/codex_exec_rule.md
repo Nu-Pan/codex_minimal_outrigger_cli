@@ -13,9 +13,8 @@
 ## preflight validation
 
 - cmoc は Codex CLI 呼び出し前に「Codex CLI が実際に参照する `$CODEX_HOME`」に対する preflight validation を行う
-- preflight validation では以下のことを確かめる
-    - `$CODEX_HOME` がディレクトリとして存在すること
-    - `$CODEX_HOME/auth.json` がファイルとして存在すること
+- preflight validation では `$CODEX_HOME` がディレクトリとして存在することを確かめる
+- model provider 固有の認証要件を cmoc が一律に検証してはならない
 - preflight validation に失敗した場合、cmoc の実行を即時失敗させる
 
 ## Codex CLI 引数による設定上書き
@@ -47,15 +46,11 @@
 - `$CODEX_HOME/config.toml` や project config の sandbox 設定に依存してはならない
 - sandbox は専用引数で指定し、`--config` で上書きしてはならない
 
-### Codex sandbox のネットワークアクセス
+### model provider transport と Codex sandbox のネットワークアクセス
 
-- 全ての Codex CLI 呼び出しで、Codex sandbox 内から cmoc managed ollama の `127.0.0.1:11434` へアクセスできるように、以下と同じ意味の設定を呼び出し単位の argv で明示的に上書きする
-    ```text
-    --config 'sandbox_workspace_write.network_access=true'
-    --config 'features.network_proxy.enabled=true'
-    --config 'features.network_proxy.domains={"127.0.0.1"="allow"}'
-    ```
-- `$CODEX_HOME/config.toml` や project config のネットワーク設定に依存してはならない
+- Codex CLI と model provider の間の transport は、Codex agent が sandbox 内で実行する command のネットワークアクセスとは別のものとして扱う
+- model provider の選択または provider-local 設定を理由に、Codex sandbox のネットワークアクセス設定を追加または変更してはならない
+- agent が実行する command にネットワークアクセスが必要な場合は、model provider 設定とは独立して扱う
 
 ### 詳細なファイルアクセス制限
 
@@ -77,15 +72,28 @@
 
 - agent call が発生させた差分がファイルアクセス制限に違反していないかの事後検証は禁止とする
 
-## Model, Reasoning Effort
+## Model provider, Model, Reasoning Effort
 
 - Codex CLI に対する Model, Reasoning Effort は、全ての呼び出しで以下の argv により明示的に上書きする
     - Model: `--model`, `{{model-name}}`
     - Reasoning Effort: `--config`, `model_reasoning_effort="{{reasoning-effort}}"`
 - `{{model-name}}` は `AgentCallParameter.model_class` を `CmocConfigCodex.model` で解決したモデル名とする
 - `{{reasoning-effort}}` は `AgentCallParameter.reasoning_effort` を `CmocConfigCodex.reasoning_effort` で解決した値とする
-- 具体的な設定は AgentCallParameter builder を正本とする
-- cmoc は Model, Reasoning Effort 設定についての情報を Codex CLI プロンプトに注入しない
+- `AgentCallParameter.model_class` から解決した `CodexModelSpec.model_provider` が `None` の場合は、model provider に関する argv override を渡さない
+- null でない model provider ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` に従って Codex CLI 起動前に解決し、解決できなければエラーとする
+- null でない model provider ID は、次と同じ形の argv により呼び出し単位で明示的に上書きする
+    ```text
+    --config 'model_provider={{provider ID の TOML value}}'
+    ```
+- 選択した provider の provider-local 設定は、各 key/value を次と同じ形の argv により呼び出し単位で明示的に上書きする
+    ```text
+    --config 'model_providers.{{provider ID の TOML key segment}}.{{provider-local key の TOML key segment}}={{provider-local setting の TOML value}}'
+    ```
+- model provider ID、provider-local key、および provider-local setting は、意味を変えず Codex CLI が解釈できる TOML key/value として符号化する
+- 選択していない provider の設定を argv に渡してはならない
+- model provider の選択と provider-local 設定に `--profile`、`$CODEX_HOME/config.toml`、または project config を使用してはならない
+- AgentCallParameter builder は model class と reasoning effort の選択を正本とし、実際の model provider、model、および reasoning effort の値は `CmocConfigCodex` から解決する
+- cmoc は Model provider, Model, Reasoning Effort 設定についての情報を Codex CLI プロンプトに注入しない
 
 ## プロンプトの渡し方
 
