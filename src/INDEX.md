@@ -1,18 +1,20 @@
 # `acp`
 
 ## Summary
-- `acp` 互換公開入口を扱うディレクトリ。`oracle.acp_builder` の canonical builder を再公開・委譲し、既存の `acp.*` import 経路を維持する。quota probe や TUI、oracle review、realization workload などの adapter 群を下位項目へ案内する。
+- `acp` 互換公開入口をまとめるパッケージ。`acp.*` の既存参照を維持しつつ、`oracle.*` または canonical 実体へ委譲する導線を提供する。
+- `acp.builder` 配下には、TUI、session、indexing、realization、oracle、quota probe などのビルダー関連互換入口が含まれる。
 
 ## Read this when
-- `acp.*` の互換 import 経路や公開面を確認・変更するとき。
-- canonical builder への委譲、互換 fallback、TUI・review・realization adapter の配置を確認するとき。
+- `acp` 公開名や互換入口の存廃を判断するとき。
+- 既存の `acp.*` または `acp.builder.*` import 経路を維持・変更するとき。
+- ビルダー関連サブパッケージの canonical 実装への委譲経路を辿るとき。
 
 ## Do not read this when
-- canonical な仕様や実装の詳細を確認したいときは、対応する `oracle.acp_builder` 側を直接読む。
-- 特定 adapter の内部挙動だけを調査するときは、該当する下位モジュールを直接読む。
+- 具体的な TUI、session、apply、refactor などの内部実装を直接調査・変更したいとき。
+- canonical な正本仕様や実体モジュールそのものを確認したいとき。
 
 ## hash
-- 583ed1b465ccef74aa9be205e0ec9b5a0a7a8813961bce7f603526a269a2dbc0
+- 773931fc029c53ba24bd28680bb695f705825192b1b6c6dc5a2f11a44055f630
 
 # `basic`
 
@@ -114,17 +116,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめるディレクトリ。doctor、indexing、oracle、realization、review、run、session、tui などの各実行入口と、関連する下位パッケージへ進むための案内を含む。apply は実装未配置で、review も現在は実装本文がない。
+- CLI サブコマンド実装をまとめるディレクトリ。doctor・indexing・oracle・realization・run・session・tui などの実行入口と、各サブコマンド実装へ進むためのルーティング対象。apply・review は現時点で実装本文がない。
 
 ## Read this when
-- CLI サブコマンドの実装構成や実行入口を確認するとき。
-- oracle・realization・run などのサブコマンド群の処理箇所を特定するとき。
-- 特定サブコマンドの実行フローや、対応する下位パッケージへの入口を探すとき。
+- CLI サブコマンドの構成や実行入口を確認するとき。
+- 特定サブコマンドの実行フロー、worktree 条件、ライフサイクル、TUI 起動、oracle／realization 処理を調査・変更するとき。
 
 ## Do not read this when
-- 共通 CLI runtime、git、runtime helper、indexing の具体的処理など、より直接の共通実装だけを調査するとき。
-- 特定サブコマンドの内部ロジック、prompt、state、report、findings schema だけを確認したいとき。
-- oracle や realization の正本仕様を確認するとき。
+- 共通 runtime、git 操作、INDEX 更新、prompt、state、report などの内部処理だけを確認したいときは、対応する共通モジュールや下位実装を直接読む。
+- サブコマンド実装の追加先だけを確認する場合は、該当する下位ディレクトリを直接読む。
 
 ## hash
-- f578241840ab81ea5626241c0cfe0b87ebf87e4e20a655dd07dad337eb229ec5
+- 92eaa66dfc9816a329e70e18681bc7f99c647a6c616b598b26bf78a26e3e4922

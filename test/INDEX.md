@@ -162,18 +162,18 @@
 # `test_acp_builder_tui_parameters.py`
 
 ## Summary
-- TUI resolve parameter builder の出力内容、生成 schema の必須項目・enum・boolean flag、互換 module の公開名を検証するテスト。対応する builder と schema の変更時に、外部挙動と公開面を確認する入口となる。
+- TUI の resolve parameter builder について、生成されるパラメータの標準設定・prompt 埋め込み・schema ファイルの内容・公開 API を検証するテスト。元の依頼文や標準 prompt の一部が含まれること、4 つの standard 選択項目だけを持つ schema であること、互換 module の公開名が限定されていることを確認する。
 
 ## Read this when
-- TUI resolve parameter builder の prompt 埋め込み、実行パラメータ、structured output schema を変更・検証するとき
-- TUI resolve parameter module の __all__ や公開 API を変更するとき
+- TUI の resolve parameter builder、生成 prompt、structured output schema、またはその公開 API を変更・調査するとき
+- TUI parameter builder の標準設定や schema の互換性を検証するとき
 
 ## Do not read this when
-- builder や schema の実装自体を調査・変更する作業で、まず対応する oracle または src ファイルを読むべきとき
-- TUI の resolve parameter と無関係な ACP builder、CLI、または一般的なテストを扱うとき
+- TUI の resolve parameter builder や resolve parameter schema に関係しないテスト・実装を扱うとき
+- builder の実装詳細を直接確認したいときは、対応する oracle または realization implementation を先に読む
 
 ## hash
-- c48e18310f467dc6a42b19d889bb157b958f3f5f6a908deebaa512a96df32a66
+- bc1e1ccdda8e103b81a6cec702713901f8eb27a51b5db9420a99ab2ccdc3fa95
 
 # `test_basic_runtime.py`
 
@@ -212,19 +212,20 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動前の CLI 前処理を外部挙動で検証するテスト。エディタ入力の保存、prompt 解決、Codex TUI 起動パラメータ、既定のファイルアクセスモード、linked worktree でのログ・schema・ignore 配置を扱う。TUI サブコマンドの前処理や linked worktree 対応を変更・調査する際のテスト入口。
+- TUI 起動直前の CLI 前処理を対象とする統合テスト。エディタ入力の timestamp 衝突回避、prompt の解決・補完、Codex TUI 起動パラメータ、linked worktree でのログ保存、`.cmoc` の ignore 設定を検証する。
 
 ## Read this when
-- TUI サブコマンドの起動フロー、prompt 編集・解決、Codex 実行パラメータを変更または検証するとき
-- editor input の timestamp 衝突時の保存や complete prompt の生成先を確認するとき
-- linked worktree におけるログ・schema・`.gitignore` の挙動を確認するとき
+- `tui` サブコマンドの editor input 処理や prompt 生成を変更・調査するとき
+- Codex exec/TUI 呼び出しの固定パラメータ、schema、prompt 内容を確認するとき
+- linked worktree におけるログ・schema 保存先や `.gitignore` 更新を変更・調査するとき
 
 ## Do not read this when
-- TUI 以外のサブコマンドや、TUI 実装内部の単体ロジックだけを調査するときは、対応する実装・専用テストを直接読む
-- Codex 出力品質や一般的な CLI テスト基盤の挙動を調査するとき
+- TUI 起動後の対話処理や Codex 自体の出力品質を調査するとき
+- TUI 以外のサブコマンドの CLI 前処理を変更・調査するとき
+- 個別の prompt 編集 helper の内部実装だけを確認する場合は、まず対応する実装モジュールを直接読むとき
 
 ## hash
-- e0ad03d2444b7defa570eb2a283385da622b13543e3d892e3ff4328ffe4e009e
+- 688926420ca09ad0574308e9026712068bb01db9b12433cb88a42577e55222e7
 
 # `test_codex_runtime_errors.py`
 

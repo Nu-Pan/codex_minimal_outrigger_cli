@@ -143,17 +143,19 @@
 # `tui`
 
 ## Summary
-- TUI builder の互換 import 層。既存の `acp.builder.tui.*` 経路を維持するため、canonical builder の再公開と起動前準備を担う。各ファイルは互換性確認・削除判断や TUI 起動 parameter 構築の入口となる。
+- TUI 起動用の AgentCallParameter 構築アダプターと、旧 `acp.builder.tui.*` import 経路を維持する互換ラッパーを収めるディレクトリ。
+- TUI 起動 parameter の生成は `launch_tui.py`、resolve-parameter builder の互換公開は `resolve_parameter.py` が入口となる。
 
 ## Read this when
-- 既存の `acp.builder.tui.*` import 互換性や互換層の削除可否を確認するとき。
-- cmoc tui の起動 parameter 構築や editor input directory 準備を確認・変更するとき。
-- TUI の resolve-parameter builder と FileAccessMode の再公開経路を確認するとき。
+- `cmoc tui` の起動 parameter 構築、editor input directory の事前作成、runtime path 解決を確認・変更するとき。
+- 既存の `acp.builder.tui.*` import 互換性や `oracle.acp_builder.tui` 互換層の削除可否を確認するとき。
+- TUI resolve-parameter builder の公開経路を確認するとき。
 
 ## Do not read this when
 - TUI 実装本体の挙動や画面構成を確認したいとき。
-- oracle 側の builder 本体や新規公開 API・import 経路を設計するとき。
-- TUI 起動後の処理や TUI 以外の parameter builder を調べるとき。
+- TUI 以外のサブコマンドの parameter 構築を調査するとき。
+- parameter の正本仕様や canonical builder の実装を確認したいときは、対応する oracle builder を直接読む。
+- 新しい公開 API や新規 import 経路を設計するとき。
 
 ## hash
-- 41ec5786e69afcddd59bf54569d9584b03331498a4eca34f099cd6e0c16ae760
+- 526d859ceb48fe2f2178f88c97a251667489c2edde11d0782865f9fef7f75d0b

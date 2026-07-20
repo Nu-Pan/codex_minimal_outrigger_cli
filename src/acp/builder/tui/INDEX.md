@@ -18,30 +18,31 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動用 AgentCallParameter を構築する realization adapter。oracle builder に処理を委譲する前に、runtime 側の editor input directory を作成する。
+- TUI 起動時に使用する AgentCallParameter を構築する realization adapter。oracle 側の parameter builder を呼び出しつつ、runtime 側の editor input directory を事前作成する。TUI 起動 parameter の生成処理を確認・変更するときの入口。
 
 ## Read this when
-- cmoc tui の起動 parameter 構築や editor input directory の準備処理を確認・変更するとき。
+- `cmoc tui` の起動 parameter 構築を確認・変更するとき
+- TUI 起動前の editor input directory 作成や runtime path 解決の挙動を確認するとき
+- oracle builder と realization adapter の連携を調査するとき
 
 ## Do not read this when
-- oracle 側の TUI launch parameter 仕様や builder 本体の実装を確認するとき。
-- TUI 以外の parameter builder や、起動後の TUI 処理を確認するとき。
+- TUI 以外のサブコマンドの AgentCallParameter を調査するとき
+- parameter の正本仕様や oracle 側の構築内容そのものを確認するときは、対応する oracle builder を直接読む
+- runtime path や editor input directory の共通実装だけを調査するとき
 
 ## hash
-- 3502d9873b62abbf0ec153c7df8ea429ef1077ec35f72fec75785f7748c2dac5
+- 645f234862e66ff62ad5e8eedf0db78ac5054fe882afeeeae48ff0cedcba243e
 
 # `resolve_parameter.py`
 
 ## Summary
-- TUI の resolve-parameter builder に対する互換 import shim。既存の `acp.builder.tui.resolve_parameter` caller 向けに canonical builder と TUI 用の FileAccessMode 選択肢を再公開する。
+- TUI の resolve-parameter builder への互換 import 経路を提供する薄いラッパー。実装本体は持たず、canonical builder を再エクスポートする。
 
 ## Read this when
-- 既存 TUI import surface の互換性を確認・変更するとき
-- 互換 shim の削除条件や `TUI_FILE_ACCESS_MODES` の利用箇所を調べるとき
+- `acp.builder.tui.resolve_parameter` からの既存 import 互換性や、TUI resolve-parameter builder の公開経路を確認するとき。
 
 ## Do not read this when
-- resolve-parameter builder 本体を実装・変更するときは canonical oracle path を読む
-- 互換 import 経路に関係しない TUI builder の処理を調べるとき
+- builder の実装仕様や挙動を確認するときは、canonical builder である `oracle/src/oracle/acp_builder/tui/resolve_parameter.py` を直接読む。
 
 ## hash
-- ecaa0fc136f723fdcd9ead1add141c738130ab8500136c11f8290979d1721879
+- 5a1726a83d818e2933883355f8427c93a5e2456269cb4f1663cbd524552df945
