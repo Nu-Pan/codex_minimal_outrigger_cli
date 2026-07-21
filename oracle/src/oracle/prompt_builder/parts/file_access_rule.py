@@ -10,6 +10,7 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     AI エージェントによるファイル読み書き規則のプロンプトを構築する
 
     規則は、原則として、リポジトリ全体 repo-write をベースとした deny list 形式で記述する。
+    規則は、任意の repository に適用できる汎用的なものに限定される。
 
     mode:
         読み書きモードプリセット

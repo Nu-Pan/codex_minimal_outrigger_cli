@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run cmoc Tests"
+  short_description: "Run cmoc quality gates with scoped GPU tests"
+  default_prompt: "Use $run-cmoc-tests to run cmoc quality gates and escalate only GPU integration tests."

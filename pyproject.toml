@@ -38,6 +38,9 @@ where = ["src", "oracle/src"]
 [tool.pytest.ini_options]
 pythonpath = ["src", "oracle/src"]
 timeout = 120
+markers = [
+    "gpu_integration: requires GPU-only inference with test-local Ollama",
+]
 
 [tool.ruff]
 target-version = "py312"

@@ -5,6 +5,7 @@
 - pytest を使用する
 - realization test は `{{cmoc-root}}/test` に実装する
 - `python-dev-skill` が pytest の隔離に使用する `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
+- agent が test・品質検査を実行する具体的な手順は repository local の `run-cmoc-tests` skill に委ね、この文書では test が満たすべき要件だけを定める
 
 ## goal
 
@@ -42,7 +43,19 @@
 - test-local Ollama は `CmocConfig` の通常の model provider 設定によって Codex CLI 呼び出し単位で選択し、test 専用の特殊な provider ID または provider 起動機能を cmoc に追加してはならない
 - テスト用 SLM は `qwen3:4b-instruct-2507-q4_K_M` とする
 - test-local Ollama は GPU だけで推論を実行し、CPU 推論への fallback を許容しない
-- GPU が利用できない場合、GPU 推論を開始できない場合、または GPU 推論を確認できない場合は、test-local Ollama を必要とする test case を skip する
+- test-local Ollama を必要とする test case には `gpu_integration` marker を付け、それ以外の test case へこの marker を付けてはならない
+- host 実行環境で GPU が利用できない場合、GPU 推論を開始できない場合、または GPU 推論を確認できない場合は、test-local Ollama を必要とする test case を skip する
+- Codex sandbox から GPU device が不可視でも、sandbox 外の同じ host 実行環境で GPU が利用可能なら、GPU が利用できない場合とはみなさない
+
+## agent による GPU test 実行
+
+- agent が full test を実行する場合、`gpu_integration` 以外の全 test を repository 所定の sandbox 内で実行し、`gpu_integration` の全 test だけを command 単位の sandbox escalation により実行する。この 2 command の和集合を full test とする
+- `gpu_integration` の test command は sandbox 内での失敗を事前条件とせず、最初の実行から sandbox escalation を要求する
+- escalation は `gpu_integration` を選択する pytest command とその descendant process だけへ限定し、Ruff、mypy、およびそれ以外の pytest を sandbox 外で実行してはならない
+- agent call 全体へ `danger-full-access` を指定してはならず、GPU test のための永続的な prefix allow rule を要求してはならない
+- escalation が利用不能または拒否された場合、sandbox 内で CPU fallback または skip を発生させて代替せず、GPU test は未検証であり full test が完了していないと報告する
+- GPU test command が sandbox 外の host 実行環境でも GPU 利用不能を理由に skip した場合は、その事実と理由を報告する
+- GPU test の sandbox escalation は GPU device と実推論を使用するためだけの例外とし、cache の利用、再構築、または永続化を理由に適用範囲を広げてはならない
 
 ## timeout
 
@@ -53,11 +66,13 @@
 
 - Ollama archive、versioned binary、および pull 済み model は、system temporary directory 上の test 専用 cache にベストエフォートで半永続化する
 - cache の既定 root は、`tempfile.gettempdir()` で得た system temporary directory 配下で、OS user と cache schema version によって namespacing した directory とする
-- 明示的な test 専用環境変数による cache root の override を許容する
+- cache root の override に使用する test 専用環境変数は `CMOC_TEST_OLLAMA_CACHE` とする
+- cache root の選択は pytest の case/session 用一時領域の隔離から独立させ、利用可能な間は test run と agent call をまたいで同じ root を再利用可能にする
 - cache root に `{{cmoc-root}}` または `{{work-root}}` の配下を使用してはならず、cache path を `CmocConfig` に追加してはならない
 - cache root は使用前に、owner、directory であること、symlink でないこと、permission、読み書き、atomic rename、および file lock の利用可能性を検証する
-- system temporary directory が sandbox 内で利用できない場合は pytest session 用一時 directory へ fallback する。cache 永続化だけを理由に sandbox 外実行または追加の writable root を要求してはならない
-- system reboot、OS cleanup、利用者操作などによる cache の欠落、削除、または破損は正常な cache miss として扱い、必要な内容を再構築する。test の正しさを cache の存在に依存させてはならない
+- system temporary directory が sandbox 内で利用できない場合は pytest session 用一時 directory へ fallback する
+- system reboot、OS cleanup、利用者操作などによる cache の欠落、削除、または破損は正常な cache miss として扱い、cold-cache から archive、versioned binary、および pull 済み model を再構築する。test の正しさを cache の存在に依存させてはならない
+- cache の利用または cold-cache からの再構築は repository 所定の test 用 sandbox 内で完了可能にする。cache 永続化だけを理由に sandbox 外実行（sandbox escape）、追加の writable root、または `danger-full-access` を要求してはならない
 - 通常の test teardown では cache を能動的に削除しない
 - cache の更新は排他的 lock の保持中に staging directory で構築し、完成後に atomic publish する。不完全な内容を cache hit として観測可能にしてはならない
 - 各 test case は cache から `{{test-root}}` 内へ独立した working set を materialize し、その working set から Ollama を起動する。cache を Ollama の live working directory として直接共有してはならない

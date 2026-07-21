@@ -48,6 +48,7 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
     assert not list(codex_home.glob("*.config.toml"))
 
 
+@pytest.mark.gpu_integration
 @pytest.mark.skipif(_REAL_CODEX is None, reason="real Codex CLI is not installed")
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 # GPU 正常系の実測 86 秒に、cache miss と実行環境の揺らぎを加えた timeout。

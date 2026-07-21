@@ -46,6 +46,15 @@
 - `$CODEX_HOME/config.toml` や project config の sandbox 設定に依存してはならない
 - sandbox は専用引数で指定し、`--config` で上書きしてはならない
 
+### command 単位の sandbox 外実行
+
+- `--sandbox` は agent call 内で実行する command の既定境界を定めるものとし、承認済みの command 単位 sandbox escalation まで禁止するものではない
+- command 単位 sandbox escalation は、作業固有の oracle file が sandbox 外実行を必要条件として明示し、agent が対象 command と理由を限定して要求する場合に限り許容する
+- escalation は対象 command とその descendant process だけへ適用し、agent call 全体の sandbox mode、`AgentCallParameter.file_access_mode`、または詳細なファイルアクセス制限を変更しない
+- command 単位 escalation のために `--sandbox danger-full-access` または `--dangerously-bypass-approvals-and-sandbox` を agent call 全体へ指定してはならない
+- cmoc 自己開発の GPU test に必要な escalation は `{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする
+- cmoc は command 単位 escalation のための Codex exec rule を生成せず、永続的な prefix allow rule に依存しない
+
 ### model provider transport と Codex sandbox のネットワークアクセス
 
 - Codex CLI と model provider の間の transport は、Codex agent が sandbox 内で実行する command のネットワークアクセスとは別のものとして扱う

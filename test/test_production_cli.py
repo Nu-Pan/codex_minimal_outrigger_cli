@@ -453,6 +453,7 @@ def _run_cmoc_tui(
 
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 # 複数の GPU 推論、cache miss、実行環境の揺らぎを case timeout に含める。
+@pytest.mark.gpu_integration
 @pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
 def test_all_noninteractive_leaf_commands_use_production_process_paths(
     tmp_path: Path,
@@ -567,6 +568,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 )
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 # indexing と TUI の各 GPU 推論、cache miss、実行環境の揺らぎを含める。
+@pytest.mark.gpu_integration
 @pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
 def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     tmp_path: Path,
