@@ -54,18 +54,20 @@
 # `dev_rule`
 
 ## Summary
-- cmoc の開発規約をまとめた oracle doc 群。Python コーディング、CLI の責務配置、開発環境、pytest による realization test の方針を確認するための入口。
+- Python 開発規則、CLI 設計、開発環境、テスト規約を扱う oracle 文書群。Python 実装・共通処理配置・環境運用・pytest テストの判断に進むための入口。
 
 ## Read this when
-- Python 実装の書き方や命名・型ヒント・コメント規則を確認したいとき。
-- CLI のエントリーポイント、サブコマンド、共有処理の配置方針を判断したいとき。
-- Python/venv、依存関係、ファイル命名などの開発環境ルールを確認したいとき。
-- pytest、実経路統合テスト、test-local Ollama、キャッシュ隔離などのテスト規約を確認したいとき。
+- Python の型ヒント、import、docstring、コメント、命名規則を確認するとき。
+- CLI のエントリーポイント、サブコマンド、共有モジュールの配置方針を決めるとき。
+- Python・venv・依存関係・ファイル命名など開発環境の運用を確認するとき。
+- pytest による realization test の対象、実行経路、隔離、timeout、外部 backend 制約を確認するとき。
 
 ## Do not read this when
-- 個別機能や CLI の具体的な挙動・出力仕様を確認したいときは、app_spec 配下の対応する oracle doc を読む。
-- 個別モジュールの実装詳細を確認したいときは、対応する realization implementation を直接読む。
-- INDEX.md の読み方やルーティング方針を確認したいときは、別の routing 文書を読む。
+- 個別機能や CLI の挙動・出力仕様を確認したいときは、対象機能の oracle doc を直接読む。
+- 個別モジュールの実装詳細を知りたいときは、その realization code を直接読む。
+- INDEX.md の読み方やルーティング方針を確認したいときは、routing 文書を読む。
+- README だけで足りる一般的な利用方法を知りたいとき。
+- pytest を使わない実装変更で、テスト仕様や検証方法に関係しないとき。
 
 ## hash
-- 1432317a33591d4375f1ae8f4fd20238371162235a3687052f18c53ee7d0be72
+- 00c5dabf7d282c9fc56ab0eed05a624d5d6520edd7590db10f84ea9c2427249a

@@ -1,12 +1,16 @@
 """実経路統合テスト専用の case-local Ollama を準備する。
 
-cache の検証・atomic publish・materialize は case working set を決め、install
-cache の利用開始から process teardown まで execution lock を保持するため一箇所に保つ。
+この file は 16,000 文字を超えるが、cache の検証・atomic publish・materialize、
+GPU-only model の構築・確認、process teardown は、同じ working set と execution
+lock のライフサイクルを共有する一つの責務である。分割すると、失敗時にも cache を
+変更せず case の process group だけを停止する不変条件を複数 file で追う必要がある。
+
 根拠: {{work-root}}/oracle/doc/dev_rule/test_rule.md
 """
 
 import fcntl
 import hashlib
+import json
 import os
 import shutil
 import signal
@@ -23,6 +27,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+import pytest
+
 from basic.acp import ModelClass
 from commons.runtime_paths import repo_root
 from config.cmoc_config import (
@@ -36,6 +42,9 @@ TEST_SLM_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 TEST_OLLAMA_CACHE_ENV = "CMOC_TEST_OLLAMA_CACHE"
 _CACHE_SCHEMA_VERSION = 1
 _ARCHIVE_URL = "https://ollama.com/download/ollama-linux-amd64.tar.zst"
+_GPU_LAYER_COUNT = 999
+_MAX_OUTPUT_TOKENS = 4096
+_GPU_INFERENCE_TIMEOUT = 120
 _WORK_ROOT = Path(__file__).resolve().parents[1]
 _CMOC_ROOT = repo_root(_WORK_ROOT)
 
@@ -113,8 +122,8 @@ def local_ollama(tmp_path: Path) -> Iterator[LocalOllama]:
         runtime.mkdir()
         host = f"127.0.0.1:{_unused_loopback_port()}"
         executable = install / "bin" / "ollama"
-        # Codex の built-in instructions/tool schema は Ollama の CPU 既定 4096 token を
-        # 超えるため、実プロンプトも収まる test-local context を明示する。
+        # Codex の built-in instructions/tool schema が小さい既定 context を超えるため、
+        # 実プロンプトも収まる test-local context を明示する。
         environment = {
             **{
                 key: value
@@ -147,10 +156,15 @@ def local_ollama(tmp_path: Path) -> Iterator[LocalOllama]:
                 )
                 _wait_for_server(process, host, log_path)
                 cache_changed = _ensure_model(
-                    executable, environment, process, log_path
+                    executable,
+                    environment,
+                    process,
+                    log_path,
+                    runtime,
                 )
                 if cache_changed:
                     _publish_models(cache_root, models)
+                _require_gpu_inference(process, host, log_path)
                 yield LocalOllama(case_root, executable, host, process.pid)
             finally:
                 _stop_process_group(process)
@@ -361,21 +375,152 @@ def _ensure_model(
     environment: dict[str, str],
     process: subprocess.Popen[bytes],
     log_path: Path,
+    runtime: Path,
 ) -> bool:
-    """working set の cache miss/corruption を実在 Ollama pull で修復する。"""
+    """model cache を修復し、GPU-only と有限な応答量を model に固定する。"""
     show = _run_ollama(executable, ["show", TEST_SLM_MODEL], environment, 120)
-    if show.returncode == 0:
-        return False
-    pull = _run_ollama(executable, ["pull", TEST_SLM_MODEL], environment, 1800)
-    show = _run_ollama(executable, ["show", TEST_SLM_MODEL], environment, 120)
-    if pull.returncode != 0 or show.returncode != 0 or process.poll() is not None:
+    changed = show.returncode != 0
+    if changed:
+        pull = _run_ollama(executable, ["pull", TEST_SLM_MODEL], environment, 1800)
+        show = _run_ollama(executable, ["show", TEST_SLM_MODEL], environment, 120)
+        if pull.returncode != 0 or show.returncode != 0 or process.poll() is not None:
+            log = log_path.read_text(errors="replace") if log_path.exists() else ""
+            raise RuntimeError(
+                "test-local Ollama model pull failed\n"
+                f"pull stdout:\n{pull.stdout}\npull stderr:\n{pull.stderr}\n"
+                f"server log:\n{log[-4000:]}"
+            )
+
+    parameters = _run_ollama(
+        executable,
+        ["show", "--parameters", TEST_SLM_MODEL],
+        environment,
+        120,
+    )
+    required_settings = {
+        ("num_gpu", str(_GPU_LAYER_COUNT)),
+        ("num_predict", str(_MAX_OUTPUT_TOKENS)),
+    }
+    actual_settings = {tuple(line.split()) for line in parameters.stdout.splitlines()}
+    if parameters.returncode == 0 and required_settings <= actual_settings:
+        return changed
+
+    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    # Ollama に CPU fallback 禁止 flag はないため、全 layer より大きい num_gpu を
+    # 固定する。LLM 回答品質は non-goal のため、正常時を十分上回る num_predict で
+    # 暴走生成も timeout より先に止める。
+    modelfile = _run_ollama(
+        executable,
+        ["show", "--modelfile", TEST_SLM_MODEL],
+        environment,
+        120,
+    )
+    if modelfile.returncode != 0:
+        raise RuntimeError(
+            f"test-local Ollama Modelfile export failed: {modelfile.stderr[-4000:]}"
+        )
+    modelfile_path = runtime / "gpu-only.Modelfile"
+    content = "\n".join(
+        line
+        for line in modelfile.stdout.splitlines()
+        if not line.startswith(("PARAMETER num_gpu ", "PARAMETER num_predict "))
+    )
+    modelfile_path.write_text(
+        f"{content}\n"
+        f"PARAMETER num_gpu {_GPU_LAYER_COUNT}\n"
+        f"PARAMETER num_predict {_MAX_OUTPUT_TOKENS}\n",
+        encoding="utf-8",
+    )
+    try:
+        create = _run_ollama(
+            executable,
+            ["create", TEST_SLM_MODEL, "-f", str(modelfile_path)],
+            environment,
+            300,
+        )
+    finally:
+        modelfile_path.unlink(missing_ok=True)
+    if create.returncode != 0 or process.poll() is not None:
         log = log_path.read_text(errors="replace") if log_path.exists() else ""
         raise RuntimeError(
-            "test-local Ollama model pull failed\n"
-            f"pull stdout:\n{pull.stdout}\npull stderr:\n{pull.stderr}\n"
+            "test-local Ollama GPU-only model creation failed\n"
+            f"stdout:\n{create.stdout[-4000:]}\nstderr:\n{create.stderr[-4000:]}\n"
             f"server log:\n{log[-4000:]}"
         )
     return True
+
+
+def _require_gpu_inference(
+    process: subprocess.Popen[bytes], host: str, log_path: Path
+) -> None:
+    """GPU-only load と短い実推論を確認し、利用不能なら test case を skip する。"""
+    log_hint = f"; server log: {log_path}"
+    try:
+        _request_json(
+            host,
+            "/api/generate",
+            {"model": TEST_SLM_MODEL, "keep_alive": -1, "stream": False},
+        )
+        if process.poll() is not None or not _model_is_fully_on_gpu(host):
+            pytest.skip(
+                f"test-local Ollama could not load the test SLM fully on GPU{log_hint}"
+            )
+        result = _request_json(
+            host,
+            "/api/generate",
+            {
+                "model": TEST_SLM_MODEL,
+                "prompt": "GPU preflight",
+                "keep_alive": -1,
+                "stream": False,
+                "options": {"num_predict": 1},
+            },
+        )
+        if result.get("done") is not True or not _model_is_fully_on_gpu(host):
+            pytest.skip(
+                f"test-local Ollama GPU inference could not be confirmed{log_hint}"
+            )
+    except (OSError, TimeoutError) as exc:
+        pytest.skip(f"test-local Ollama GPU inference is unavailable: {exc}{log_hint}")
+
+
+def _model_is_fully_on_gpu(host: str) -> bool:
+    """唯一の loaded model が CPU offload なしで VRAM に常駐するか確認する。"""
+    payload = _request_json(host, "/api/ps")
+    models = payload.get("models")
+    if not isinstance(models, list) or len(models) != 1:
+        return False
+    model = models[0]
+    if not isinstance(model, dict):
+        return False
+    size = model.get("size")
+    size_vram = model.get("size_vram")
+    return (
+        isinstance(size, int)
+        and size > 0
+        and isinstance(size_vram, int)
+        and size_vram >= size
+    )
+
+
+def _request_json(
+    host: str,
+    path: str,
+    payload: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """proxy を使わず case-local Ollama API の JSON object を取得する。"""
+    data = None if payload is None else json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        f"http://{host}{path}",
+        data=data,
+        headers={"Content-Type": "application/json"} if data is not None else {},
+    )
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(request, timeout=_GPU_INFERENCE_TIMEOUT) as response:
+        result = json.loads(response.read())
+    if not isinstance(result, dict):
+        raise RuntimeError(f"test-local Ollama returned non-object JSON for {path}")
+    return result
 
 
 def _run_ollama(

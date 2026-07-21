@@ -31,6 +31,7 @@ from typing import Any, Iterator
 import click
 import pytest
 from _codex_support import (
+    FakeCodexResult,
     codex_arg_value,
     codex_override_config,
     configure_codex_home_for_test_local_ollama,
@@ -46,12 +47,17 @@ from _ollama_support import (
 from typer.main import get_command
 
 from basic.acp import ReasoningEffort
+from commons.indexing import commit_index_updates, update_indexes
 from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
 from main import app
 
 _CMOC_CONSOLE = Path(sys.executable).with_name("cmoc")
 _REAL_CODEX = shutil.which("codex")
+# {{work-root}}/oracle/doc/dev_rule/test_rule.md
+# GPU 正常系で 172 秒を要した実測に、同じ実行環境の揺らぎを加えた上限。
+_PRODUCTION_COMMAND_TIMEOUT = 300
+_PRODUCTION_CASE_TIMEOUT = 600
 pytestmark = pytest.mark.skipif(
     not _CMOC_CONSOLE.is_file() or _REAL_CODEX is None,
     reason="production process test requires installed cmoc and real Codex CLI",
@@ -165,6 +171,24 @@ do not modify files. For every other call, follow its explicit prompt exactly.
     run_git(root, "commit", "-m", "add deterministic agent instructions")
 
 
+def _write_fresh_index_fixture(root: Path) -> None:
+    """TUI 本体と無関係な indexing 推論を deterministic fixture に置き換える。"""
+
+    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    # indexing 末端の実推論は非対話 scenario で検証し、TUI case は fresh INDEX の
+    # 正規 preflight と各 TUI 自身の実推論だけを対象にする。
+    def fixed_index_entry(*_args: object, **_kwargs: object) -> FakeCodexResult:
+        return FakeCodexResult(
+            {
+                "summary": ["Minimal production-path test fixture."],
+                "read_this_when": ["Testing the isolated production path."],
+                "do_not_read_this_when": ["Working outside this fixture."],
+            }
+        )
+
+    commit_index_updates(root, update_indexes(root, fixed_index_entry))
+
+
 def _production_environment(
     tmp_path: Path,
 ) -> tuple[Path, dict[str, str], Path]:
@@ -217,7 +241,7 @@ def _run_cmoc(
         env=environment,
         text=True,
         capture_output=True,
-        timeout=180,
+        timeout=_PRODUCTION_COMMAND_TIMEOUT,
         check=False,
     )
     assert result.returncode == 0, (
@@ -385,7 +409,7 @@ def _run_cmoc_tui(
     probe_buffer = b""
     answered_queries: set[bytes] = set()
     trust_confirmed = False
-    deadline = time.monotonic() + 180
+    deadline = time.monotonic() + _PRODUCTION_COMMAND_TIMEOUT
     try:
         # TUI session の永続 event で、stream 表示ではなく応答完了を判定する。
         while time.monotonic() < deadline:
@@ -427,7 +451,9 @@ def _run_cmoc_tui(
     return message, transcript.decode(errors="replace")
 
 
-@pytest.mark.timeout(3600)
+# {{work-root}}/oracle/doc/dev_rule/test_rule.md
+# 複数の GPU 推論、cache miss、実行環境の揺らぎを case timeout に含める。
+@pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
 def test_all_noninteractive_leaf_commands_use_production_process_paths(
     tmp_path: Path,
     ollama_instance: LocalOllama,
@@ -454,10 +480,14 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     _run_cmoc(cmoc, root, environment, "indexing")
     indexing_calls = _codex_call_logs(root) - before_indexing_calls
     assert indexing_calls
-    for path in indexing_calls:
+    latest_output_by_purpose: dict[str, Path] = {}
+    for path in sorted(indexing_calls):
         payload = _assert_local_codex_call(path, ollama_instance)
-        assert str(payload.get("purpose", "")).startswith("indexing index entry for ")
-        output_path = Path(str(payload["output_path"]))
+        purpose = str(payload.get("purpose", ""))
+        assert purpose.startswith("indexing index entry for ")
+        latest_output_by_purpose[purpose] = Path(str(payload["output_path"]))
+    # LLM 品質は non-goal。失敗 attempt の log も残るため、retry 後の最終応答を検証する。
+    for output_path in latest_output_by_purpose.values():
         assert output_path.is_file()
         assert json.loads(output_path.read_text())
     assert (root / "INDEX.md").is_file()
@@ -535,7 +565,9 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         (("oracle", "investigation"), "oracle investigation", False),
     ],
 )
-@pytest.mark.timeout(3600)
+# {{work-root}}/oracle/doc/dev_rule/test_rule.md
+# indexing と TUI の各 GPU 推論、cache miss、実行環境の揺らぎを含める。
+@pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
 def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     tmp_path: Path,
     ollama_instance: LocalOllama,
@@ -548,7 +580,7 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     _write_local_slm_config(root, ollama_instance)
     cmoc, environment, codex_home = _production_environment(tmp_path)
     _run_without_codex_call(cmoc, root, environment, "doctor")
-    _run_cmoc(cmoc, root, environment, "indexing")
+    _write_fresh_index_fixture(root)
     # oracle edit も同じ TUI harness で検証できる active main-worktree session を作る。
     _run_without_codex_call(cmoc, root, environment, "session", "fork")
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()

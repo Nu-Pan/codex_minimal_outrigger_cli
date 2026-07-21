@@ -49,7 +49,9 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
 
 
 @pytest.mark.skipif(_REAL_CODEX is None, reason="real Codex CLI is not installed")
-@pytest.mark.timeout(1800)
+# {{work-root}}/oracle/doc/dev_rule/test_rule.md
+# GPU 正常系の実測 86 秒に、cache miss と実行環境の揺らぎを加えた timeout。
+@pytest.mark.timeout(600)
 def test_run_codex_exec_invokes_real_codex_with_test_local_ollama_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

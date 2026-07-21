@@ -58,19 +58,18 @@
 # `test_rule.md`
 
 ## Summary
-- pytest による cmoc の realization test の正本規約。決定論的制御ロジック、Codex CLI を含む実経路統合テスト、test-local Ollama、キャッシュ隔離、クラウド backend 禁止、Fake Codex CLI の利用境界を定義する。
+- pytest による cmoc realization test の正本規約。決定論的制御ロジック、Real Codex CLI と test-local Ollama を使う実経路統合テスト、隔離・キャッシュ・timeout・クラウド backend 禁止などのテスト境界を定める。
 
 ## Read this when
-- pytest や realization test の実装・修正・実行方法を判断するとき
-- CLI の実経路統合テスト、公開サブコマンドと test case の対応、終了 code や外部観測結果の検証を扱うとき
-- test-local Ollama の起動、隔離、process teardown、GPU/CPU fallback、cache 管理を扱うとき
-- 実装またはテスト変更後の検証条件や、Real Codex CLI・実推論の利用要否を判断するとき
+- cmoc の realization test を追加・変更・実行するとき
+- 実経路統合テストの対象、Real Codex CLI/Ollama の要件、終了 code や外部観測結果の検証方法を確認するとき
+- test-local Ollama の起動、GPU 推論、process teardown、排他 lock、cache materialize の設計を確認するとき
+- テストの timeout、隔離された test-root、Fake Codex CLI の利用範囲を判断するとき
 
 ## Do not read this when
-- テスト対象の具体的な実装責務や配置を判断するだけの場合は、対応する realization implementation の本文を直接読む
-- Python の実行環境や依存関係の一般的な手順だけを確認する場合は、開発環境の oracle file を読む
-- 設計上の責務境界や realization implementation の配置先だけを判断する場合は、設計規約の oracle file を読む
-- LLM の回答品質、Codex CLI 自体や model provider の正しさ、GPU 推論成功そのものを評価する場合
+- pytest を使わない一般的な実装変更で、テスト仕様や検証方法に関係しないとき
+- LLM の回答品質、Codex CLI 自体、model provider、クラウド backend、GPU 性能そのものを評価するとき
+- `--help`、shell completion、不正入力、事前条件違反、handler 直接呼び出しなど、実経路統合テストに該当しない確認だけを行うとき
 
 ## hash
-- d72752bf4799399507c78e36bdd4f04704d0c5a00c1e02150e10e1379a0ed5d3
+- 336c44009f0120771d3234654a5ba8217660cc98b968f3d08a94934540f47858
