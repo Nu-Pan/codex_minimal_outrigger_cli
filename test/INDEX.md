@@ -78,20 +78,20 @@
 # `_ollama_support.py`
 
 ## Summary
-- 実経路統合テスト用に、case-local Ollama のインストール・モデル cache を安全に再利用し、独立した作業領域へ materialize して起動・設定・終了まで管理する支援モジュール。cache の検証、排他ロック、atomic publish、モデル取得、process group の teardown を一体で扱い、テスト設定から Ollama provider を選択できるようにする。
+- 実経路統合テスト向けに、case-local Ollama の cache 準備・安全性検証・atomic publish・モデル materialize・GPU-only 推論確認・process group teardown を一体で提供するテスト支援モジュール。統合テストが専用 Ollama provider を必要とする場合の入口。
 
 ## Read this when
-- Ollama を使う実経路統合テストの追加・修正・失敗調査を行うとき
-- テスト用 Ollama cache、モデル working set、provider 設定、起動待機、process cleanup の挙動を確認するとき
-- 統合テストの実行環境分離や cache の atomic 更新・排他制御を変更するとき
+- Ollama を使う実経路統合テストの実行環境や test provider を確認・変更するとき
+- Ollama の cache、モデル取得・再利用、GPU-only 条件、case ごとの process lifecycle を調査するとき
+- 統合テストの失敗時に cache isolation、atomic publish、server 起動、推論可否、process teardown を調べるとき
 
 ## Do not read this when
-- Ollama を使わない単体テストや一般的なテスト fixture の変更を行うとき
-- 本番 CLI の model provider 実装や通常の設定読み込みを変更するときは、まず該当する本番実装を読む
-- Ollama の内部実装やモデル品質そのものを検証するとき
+- 通常の Ollama 設定や本番 provider 実装を確認したいとき
+- Ollama を使わない単体テストや一般的な pytest fixture の実装を調べるとき
+- Codex の model provider 定義そのものを変更・確認する場合は、まず設定実装や対応する oracle を読むべきとき
 
 ## hash
-- 6e665977b95784c51fe6ca36a240c9c33d5f2aa2d9795a6b7b817bb627e43525
+- 51f828693f90a2f79d04aa298982b904ffe13bd3b626a4e2fd1d238c809fb04f
 
 # `test_acp_builder_editing_run_parameters.py`
 
@@ -248,20 +248,19 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ランタイムの結合・契約テスト。実 Codex または記録用ダミー実行ファイルを使い、argv、stdin、作業ディレクトリ、出力、ログ、スキーマ配置、リポジトリ書き込みを検証する。
-- モデル provider override と汎用 provider の伝播、および CODEX_HOME に設定ファイルを生成しない動作を確認する。関連する runtime、設定、テスト用 Ollama・Codex 実行支援の変更を追う入口。
+- Codex CLI 実行ランタイムの結合・契約テスト。実 CLI またはスタブ CLI を用いて、argv、stdin、sandbox、approval、model/provider override、schema 配置、出力、リポジトリ書き込み、CODEX_HOME 非変更を検証する。
 
 ## Read this when
-- run_codex_exec の呼び出し・argv 契約・stdin 渡し・出力スキーマ・実行ログを変更または調査するとき
-- Codex の model provider、sandbox、approval、model、reasoning override の伝播を変更または検証するとき
-- Codex 実行時の CODEX_HOME 設定生成や test-local Ollama 連携を変更するとき
+- Codex exec の起動方法、引数・stdin・出力 schema の契約を変更または確認するとき
+- model provider、Ollama、Codex override、sandbox 権限の連携を変更または確認するとき
+- run_codex_exec の実 CLI 結合動作やリポジトリ書き込み結果を検証するとき
 
 ## Do not read this when
-- Codex 実行ランタイムや provider 設定に関係しない機能の実装・テストを読むとき
-- Codex CLI の一般的な出力品質やモデル性能を検証したいときは、このテストではなく対象のアプリケーション処理を確認するとき
+- Codex CLI 実行ランタイム以外の機能を変更・調査するとき
+- 単体の設定モデルや provider 定義の詳細を直接確認する場合は、対応する実装・oracle test を読むとき
 
 ## hash
-- ae14c923af343b0de8490f5f6135d5e94a07fd612e2a8048b791272c3db9f745
+- 9a5cf12b796b04334d4187088c57b357f7a6226f6034de3f0f3e619a559be93c
 
 # `test_codex_runtime_home.py`
 
@@ -577,20 +576,21 @@
 # `test_production_cli.py`
 
 ## Summary
-- 利用者向け CLI の全末端サブコマンドを、独立 process・実 Codex CLI・case-local Ollama で検証する受け入れテスト。非対話 command の終了、report・state・Git・call log、および TUI の PTY 上の応答完了と終了操作を確認する。LLM の回答品質自体は評価しない。
+- 実 Codex CLI と case-local Ollama を使い、全末端サブコマンドを独立 process の本番経路で検証する受け入れテスト。終了 code、report・state・Git・call log、TUI の応答完了と終了操作を確認し、LLM の回答品質自体は判定しない。非対話 command 群と TUI command 群の共通環境・隔離・状態遷移・PTY 操作を一続きの責務として扱う。
 
 ## Read this when
-- CLI の末端サブコマンドを追加・変更し、本番 executable 経路での回帰を確認するとき
-- Codex CLI、local Ollama、隔離済み Codex home、Git state、call log の統合的な検証方法を確認するとき
-- TUI の PTY 操作や応答完了後の終了処理を変更するとき
+- CLI の全末端サブコマンドを本番相当の独立 process で検証・追加・変更するとき
+- 実 Codex CLI、case-local Ollama、call log、report/state、Git 状態の検証方法を確認するとき
+- TUI の PTY 起動、端末 capability query、応答完了、終了操作を確認するとき
+- session/run の fork・join・abandon 状態遷移を外部挙動として確認するとき
 
 ## Do not read this when
-- 内部 helper 単体や LLM の回答品質だけを検証したいとき
-- 本番 process、実 Codex CLI、local Ollama を使わない単体テストを変更するとき
-- 特定サブコマンドの実装詳細を直接調べる場合は、対応する src や専用テストを先に読むべきとき
+- 単一サブコマンドの内部実装や単体テストだけを変更・調査するとき
+- LLM の回答品質やプロンプト内容そのものを評価するとき
+- 本番 process、実 Codex CLI、Ollama、PTY を使わないテストを扱うとき
 
 ## hash
-- f1d105ec07ff9ebe36825d2ba67d7d1181669d4edeffe8f8ee9bfe36b73702db
+- 492a3909ee2261b2b26e3fe6179e44fa5960f3c7129b78d0db8a3e4d18d5d9b2
 
 # `test_prompt_parts.py`
 

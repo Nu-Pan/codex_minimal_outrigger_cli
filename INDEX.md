@@ -149,15 +149,16 @@
 # `test`
 
 ## Summary
-- テストコード群と共有テストヘルパーを収めるディレクトリ。CLI、Codex runtime、ACP builder、INDEX 更新、oracle review、session/run state、設定、Git/worktree などの外部挙動・契約テストへの入口となる。
+- cmoc の realization test を集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、INDEX 生成、oracle review、session/run lifecycle など、実装の外部挙動・制御ロジック・公開契約を検証するテストと、複数テストで共有する Git・Codex・Ollama・コマンド実行ヘルパーを扱う。特定機能の挙動や回帰を調査する際は、該当するテストファイルを入口として読む。
 
 ## Read this when
-- テスト対象の機能について、既存の回帰テストや外部契約を確認・追加・修正するとき。
-- 共有 fixture や fake command、Git repository、Codex/Ollama 実行環境など、複数テストで使う支援機構を確認するとき。
+- cmoc のテスト構成や、変更対象機能に対応する realization test の入口を探すとき
+- CLI、runtime、Codex 実行、INDEX、oracle review、session/run、ACP builder の外部契約や回帰検証を確認するとき
+- 複数のテストで共有される Git、Codex、Ollama、fake command などのテスト支援を確認するとき
 
 ## Do not read this when
-- 実装の責務や正本仕様そのものを確認するときは、対応する src または oracle の本文を直接読む。
-- テスト対象と無関係な機能を調査するときや、単一実装の内部構造だけを確認するとき。
+- 実装本体や正本仕様の詳細だけを確認したいときは、対応する src または oracle を直接読む
+- LLM の回答品質そのものや、対象機能と無関係なテスト実装を調査するとき
 
 ## hash
-- b5c9b592a577686f1e310e4e89e5208042fe4c02633cb6c4dd86c53e3e46f42b
+- 3ab89651ad1e2cf74f66b2d6474b659f36abf052508ddeb865a165085a0658aa
