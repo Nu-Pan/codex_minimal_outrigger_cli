@@ -18,34 +18,33 @@
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動用パラメータを構築する実装。ユーザー調査指示を含む完全プロンプトを生成・保存し、モデルやアクセス権限などの固定起動設定とともに返す。
+- `cmoc oracle investigation` 用の TUI 起動パラメータを構築し、oracle file 調査向けの完全プロンプトと editor_input ログ保存を扱う実装。固定モデル、推論設定、oracle 読み取り権限、インデックス事前処理を指定した起動情報を返す。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動処理を変更・調査するとき
-- 完全プロンプトの構築・保存処理を変更・調査するとき
-- モデルやアクセス権限などの起動時固定値を確認するとき
+- `cmoc oracle investigation` の TUI 起動条件を変更・確認するとき
+- 調査プロンプトの構成や editor_input ログ保存を変更・確認するとき
 
 ## Do not read this when
-- 調査用プロンプトの本文構成や共通プロンプト生成規則だけを確認したいとき
-- oracle investigation 以外の agent call パラメータや TUI 起動処理を調査するとき
+- oracle 調査プロンプトの共通生成規則を変更するときは、まず共通 prompt builder を読む
+- TUI 起動後の agent 実行処理や oracle file の内容を調査するときは、対応する実行処理または oracle file を直接読む
 
 ## hash
-- c5f3cd682c896b600f5ce3188f406ef7f52e4cb1dceeda6062955ba7b19c0076
+- 7f380ea9b83f602cfad5fcf5e4fdcc220fc6968b7ee974a4b056845a14440eef
 
 # `review`
 
 ## Summary
-- `cmoc oracle review` の所見レビュー用エージェント呼び出し定義と Structured Output スキーマをまとめたディレクトリです。新規所見の列挙、所見の採否判定、賛否理由の検証、所見リストの重複・矛盾整理を扱い、それぞれの処理実装と入出力契約の入口になります。
+- `cmoc oracle review` の所見生成・判定・統合・擁護・反証に関する AgentCallParameter 実装と Structured Output schema をまとめた領域です。各ファイルは、レビュー用プロンプト、oracle file の読み取り制約、関連所見や理由の受け渡し、出力契約を担います。
 
 ## Read this when
-- `cmoc oracle review` の所見列挙・判定・擁護理由・反証理由・マージ処理を変更または追跡するとき。
-- レビュー用 agent call の prompt、読み取り権限、モデル設定、Structured Output schema の対応関係を確認するとき。
-- レビュー所見の入力・出力形式、重複排除や既知理由の除外条件を確認するとき。
+- `cmoc oracle review` の所見列挙、採否判定、重複・矛盾の統合、擁護理由や反証理由の生成を変更・調査するとき。
+- レビュー用 AgentCall のモデル設定、推論強度、Structured Output schema、oracle-only のアクセス制約を確認するとき。
+- 所見や判定結果の JSON 入出力契約を確認するとき。
 
 ## Do not read this when
-- 通常の ACP builder 実装や、oracle review 以外の prompt 構築を調べるとき。
-- レビュー結果の schema または実装を個別に確認でき、ディレクトリ全体の構成を知る必要がないとき。
-- 実際の oracle file のレビュー基準そのものを確認するとき。
+- 通常の ACP builder 実装、一般的な prompt 生成基盤、CLI の通常サブコマンドを調査するとき。
+- oracle review の判定基準や仕様文書そのものを確認するときは、対応する oracle review 文書を直接読む。
+- INDEX.md のルーティング情報だけを確認するとき。
 
 ## hash
-- 2c05a5aaf7bf06cba4d019c69706e8ba87dd9d3dbbb630ff813dd5afcdc2bd57
+- e7392e500943f545331ada0aa4b8457d3310bf8d52b4a0839d543f7e6e715f60

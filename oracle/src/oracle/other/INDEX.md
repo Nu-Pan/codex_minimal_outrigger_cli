@@ -1,18 +1,18 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ固有設定を表す dataclass 群を定義する oracle src。並列数、Codex CLI のモデル・provider・推論設定、oracle review のループ上限、および JSON/TOML 共通値の型を扱う。
+- cmoc のリポジトリ固有設定を集約するデータクラス群。並列数、Codex のモデル・provider・reasoning 設定、oracle review の各ループ上限を扱い、JSON/TOML 設定値や永続化対象の構造を定義する。
 
 ## Read this when
-- cmoc の設定項目、既定値、Codex CLI 向けモデル設定、provider-local 設定、oracle review のループ回数を変更・確認するとき
-- 設定のシリアライズ対象となる型や Enum の扱いを確認するとき
+- CmocConfig の項目、デフォルト値、Codex CLI 向け設定、oracle review のループ回数を変更・参照するとき
+- 設定の JSON シリアライズ対象や model provider 設定の型を確認するとき
 
 ## Do not read this when
-- CLI の設定読み書き処理や doctor による生成・同期動作を確認したいとき
-- モデル分類や推論 effort の Enum 定義そのものを確認したいとき
+- CLI コマンドの実行フローや設定ファイルの生成・同期処理を調べるとき
+- ModelClass や ReasoningEffort 自体の定義・意味を調べるときは、直接その定義元を読む
 
 ## hash
-- 82b2b2d6a4f0ec05c05422a969c4d2e961f13844569bbb3fdbe811208fedcf88
+- e7003c50485257f7fa16a0acaaf5ce70905c423e51d5a4c28ab9ab99113bc4eb
 
 # `path_model.py`
 
@@ -35,35 +35,34 @@
 # `standard.py`
 
 ## Summary
-- `Standard` と `Requirement` の定義、および `standard_to_struct_doc` を扱う。規範文書の見出し・背景・要求・判断例をどの形で保持し、`StructDoc` に落とすかを読む入口にする。
+- 規範（Standard）とその要求（Requirement）のデータ構造、および Standard を StructDoc に変換する処理を定義する。oracle standard などの規範文書を構造化文書へ変換する実装の入口。
 
 ## Read this when
-- 規範を表すデータ構造の必須項目や検証条件を確認したいとき。
-- `Requirement` のラベル制約や、`examples` に何を書いてよいかの境界を確認したいとき。
-- `Standard` を `StructDoc` に変換する際の章立てや、どのフィールドが出力に使われるかを確認したいとき。
+- Standard や Requirement のフィールド検証・公開プロパティを変更するとき
+- 規範オブジェクトを StructDoc へ変換する処理を確認・変更するとき
+- oracle standard の構造化表現に関わる実装を調査するとき
 
 ## Do not read this when
-- `oracle file` 全体の命名規則や配置方針を知りたいだけのときは、より上位の oracle 標準文書を読む。
-- `StructDoc` 自体の仕様や実装詳細を知りたいだけのときは、このファイルではなく `StructDoc` の定義元を読む。
-- この定義を使う個別の標準文書の内容を確認したいときは、各標準文書を直接読む。
+- 個別の規範本文や文書の内容を確認したいとき
+- StructDoc 自体の仕様や実装だけを調査するとき
+- oracle standard と無関係な CLI や realization 実装を変更するとき
 
 ## hash
-- d19edf009065fcbd4a29ea2693bccd0f09a9860ab31fba30d25aaaa1f0108eaf
+- a030f66eb8db892df78b4e0246d71fcfb3a99d49a56a37ddd8ea96705340bf2f
 
 # `struct_doc.py`
 
 ## Summary
-- 構造化された文書ツリーを Markdown に変換するヘルパー実装。見出し深度、入れ子文書、ブロック、コードブロック、文字列本文を扱い、cmoc_block 参照の検証や空行・インデントの正規化も提供する。
+- 階層構造を持つ文章を Markdown にレンダリングするクラスと補助関数を定義する。見出し深度、cmoc_block 参照の検証、コードブロック、空行、インデント正規化を扱う。
 
 ## Read this when
-- 構造化文書の Markdown レンダリング処理を変更・調査するとき
-- StructDoc、StructBlock、StructCodeBlock の構造や cmoc_ref 検証を確認するとき
-- Markdown 出力の見出し深度、空行、コードブロック、インデント正規化を確認するとき
+- 構造化文章の生成・編集・Markdown レンダリングを変更するとき
+- StructDoc、StructBlock、StructCodeBlock のデータ構造や cmoc_ref 検証を確認するとき
+- Markdown 出力の見出し深度、空行、コードブロック、インデント処理を確認するとき
 
 ## Do not read this when
-- CLI の実行経路やプロンプト生成全体を調査するとき
-- このモジュールを利用する呼び出し側の仕様だけを確認するとき
-- Markdown 以外の文書形式のレンダリングを調査するとき
+- この構造化文章レンダラーの挙動やデータ構造に関係しない処理を変更・調査するとき
+- 単に他の oracle 文書や実装の仕様を確認したいだけで、Markdown レンダリング処理を通らないとき
 
 ## hash
-- 672fa1d47b8aff4554c00a24c3cb667b8eaf9fa8f8d50253e0778486b84a822e
+- a920e827d70debca2724d15ef4c6b998c684a458b2d73d79f8ec8cd9ebeb4b98

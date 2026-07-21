@@ -15,54 +15,54 @@
 # `basic.py`
 
 ## Summary
-- エージェント呼び出しに渡すモデル種別、推論強度、ファイルアクセス権、プロンプト、Structured Output schema、作業ディレクトリなどのパラメータ型と既定値を定義する基礎モジュール。ACP 呼び出し条件やファイルアクセスモードの意味を確認する際の入口。
+- AI コーディングエージェント呼び出し用の論理パラメータとデフォルト値を定義する。モデルクラス、推論負荷、ファイルアクセスモード、プロンプト、Structured Output schema、indexing preflight、作業ディレクトリを扱う。関連する agent call 設定の入口。
 
 ## Read this when
-- エージェント呼び出しパラメータの構造、モデルクラス、推論強度、ファイルアクセスモード、既定の作業ディレクトリを変更・確認するとき。
-- ACP builder が受け取るパラメータや Structured Output schema の指定方法を調査するとき。
+- Agent call のパラメータ構造、モデル選択区分、推論負荷、ファイルアクセスモード、preflight 実行方針、cwd の既定値を確認するとき
+- Agent Call Parameter の生成・受け渡し処理を変更または調査するとき
 
 ## Do not read this when
-- 具体的なバックエンドモデル名への解決や実際のエージェント呼び出し処理を調べるとき。
-- 各ファイルアクセスモードの詳細な実行規則や Codex CLI の制約を確認するときは、対応する正本仕様を直接読む。
+- バックエンドが受理する具体的なモデル名への解決方法を確認したいとき
+- 各ファイルアクセスモードの詳細規則や Codex CLI sandbox の仕様を確認したいとき
+- パス解決そのものの仕様を確認したいとき
 
 ## hash
-- f91c2bdf4465ac41f25992aa68d2b5dd683ae48609a6bb4abae4fdc63a1dbe73
+- 5bfd68846014d69f50ee19162dd738616d5814856daa60487cce0322b5da12e9
 
 # `indexing`
 
 ## Summary
-- indexing 用の agent 呼び出しパラメータを構築するファイルと、INDEX.md エントリーの JSON Schema を定義するファイルを含む。`cmoc indexing` の呼び出し条件、入力の渡し方、出力形式を確認するための入口。
+- `cmoc indexing` の目次エントリー生成に関する正本実装と、その呼び出しパラメータ用 JSON Schema を扱うディレクトリ。対象本文を埋め込んだ読み取り専用プロンプトの構築、構造化出力によるルーティングエントリー生成、モデル・推論・設定の指定を確認する入口。
 
 ## Read this when
-- `cmoc indexing` の目次情報生成用 agent 呼び出しの構築方法を確認するとき。
-- indexing 用エントリーの入力・出力形式や検証条件を確認するとき。
+- `cmoc indexing` のエントリー生成プロンプト、対象本文の埋め込み、構造化出力設定を変更・調査するとき
+- 目次エントリー生成に使う呼び出しパラメータや JSON Schema を確認するとき
 
 ## Do not read this when
-- indexing の実行本体や生成された目次情報そのものを確認するとき。
-- prompt の共通組み立てや、他サブコマンド向けの呼び出し設定だけを確認したいとき。
+- 目次エントリーの一般的なルーティング基準や記述形式だけを確認したいとき
+- 実際の indexing 実行処理、対象ファイルの探索、モデル呼び出しの実行経路を調べるとき
 
 ## hash
-- 05d354f9306a4d79e5cdde86862b45fca33f2443725b3db2a3a55045ad235bb7
+- a52af7824ce6dae69368045f30fc19b36ce54e0ddf050a1d601d51933aec63b5
 
 # `oracle`
 
 ## Summary
-- `cmoc oracle edit` の TUI 起動関連を扱うディレクトリ。現時点では空の `fork` と、TUI 起動パラメータを構築する `launch_tui.py` を含む。
-- `cmoc oracle investigation` の TUI 起動用パラメータを構築する実装。ユーザー調査指示を含む完全プロンプトの生成・保存と、モデル・アクセス権限などの固定起動設定を扱う。
-- `cmoc oracle review` の所見レビュー用 agent call 定義と Structured Output schema をまとめるディレクトリ。所見列挙、採否判定、理由検証、重複・矛盾整理の入口となる。
+- `cmoc oracle` 配下の TUI 起動・調査・レビュー向け AgentCall 設定を扱うディレクトリです。編集、調査、所見生成・判定などの用途別に、プロンプト、モデル・権限設定、Structured Output 契約を提供します。各用途の詳細確認への入口となる領域です。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動方法、編集 prompt、モデル・権限・作業ディレクトリなどの起動設定を確認または変更するとき。
-- `cmoc oracle investigation` の TUI 起動処理、完全プロンプトの構築・保存、モデルやアクセス権限の固定値を確認または変更するとき。
-- `cmoc oracle review` の所見処理、agent call の prompt・読み取り権限・モデル設定、Structured Output schema、入力出力形式や重複排除条件を確認または変更するとき。
+- `cmoc oracle edit`、`investigation`、`review` の TUI 起動条件や AgentCall パラメータを確認・変更するとき。
+- oracle file の調査プロンプト、レビュー所見の生成・判定、関連する入出力契約を確認・変更するとき。
+- 用途別のプロンプト、モデル設定、oracle-only の読み取り制約、Structured Output schema の実装箇所を探すとき。
 
 ## Do not read this when
-- oracle file の編集処理そのもの、prompt 共通生成規則、パス解決、構造化文書のレンダリングを確認または変更するとき。
-- 調査用プロンプトの本文構成や共通プロンプト生成規則だけを確認したいとき。
-- 通常の ACP builder 実装、oracle review 以外の prompt 構築、または個別に確認できるレビュー schema・実装だけを調べるとき。
+- oracle file の編集・調査・レビュー基準そのものを確認するとき。
+- 共通 prompt builder、パス解決、構造化文書レンダリングなどの共通基盤を確認するとき。
+- TUI 起動後の agent 実行処理や通常の CLI サブコマンド実装を確認するとき。
+- 対象の用途別ファイルを直接特定できているとき。
 
 ## hash
-- f6e74f11290a047cc12858dce98edb4f93c2c87eecc564ab03e1d39058ceb23c
+- b2d150d4338a6271423e46b39026956cb5bebdbe2b3ab9f606b3f03f77e49a7b
 
 # `realization`
 
@@ -86,18 +86,17 @@
 # `session`
 
 ## Summary
-- `cmoc session join` の merge conflict 解消に向けて、AI 呼び出しへ渡す入力条件・指示内容・実行設定を組み立てる入口。競合ファイルの正規化と、conflict 解消に必要な範囲の制御が中心。
+- `cmoc session join` の merge conflict marker 解消用 AgentCallParameter を構築する正本ソース。競合対象パスを実パスへ解決して prompt に列挙し、conflict 解消時の役割・目標・追加アクセス規則・モデルおよび推論設定を定義する。
 
 ## Read this when
-- `cmoc session join` で merge conflict marker を解消する呼び出し条件や、AI に渡す指示内容・実行設定を確認したいとき。
-- 競合ファイルの扱いを変えたいとき、または conflict 解消時に許される編集範囲や品質設定の根拠を確認したいとき。
+- `cmoc session join` の conflict marker 解消 prompt の内容、対象ファイル指定、AgentCallParameter のモデル・推論・アクセス設定を変更または確認するとき。
 
 ## Do not read this when
-- session join の通常の接続や同期処理を探しているときは、join 本体の実装や周辺の session モジュールを先に読む。
-- merge conflict 解消の実行結果そのものや後段の適用処理を知りたいときは、このパラメータ生成ではなく、呼び出し先の実行経路を読む。
+- 通常の `session join` 実装や conflict 解消処理そのものを調べるときは、該当するサブコマンド実装・テストを直接読む。
+- prompt 全体の共通構築規則を調べるときは、prompt builder や共通 prompt 定義を直接読む。
 
 ## hash
-- bf40a25ab5021c33ab48527dccecbcbea01a82485dd3232f13b96888e803c66f
+- 3c6b42e6170984ac75d89b0faddac0bb84751e6f83dc374948e382fecd729dfa
 
 # `tui`
 

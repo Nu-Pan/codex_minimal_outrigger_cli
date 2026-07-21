@@ -155,20 +155,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界を担う実装。file access policy の sandbox argv 変換、cwd/CODEX_HOME/env 準備、model/provider 設定の TOML override、schema 配置、process group の安全な追跡・停止、Codex JSONL 出力・error・retry 判定をまとめる。
+- Codex CLI subprocess 境界を担当し、起動前の sandbox・cwd・CODEX_HOME・argv/config override・schema 配置と、起動中の process tracking・安全な停止、起動後の JSON/JSONL 出力・error・capacity/quota 判定をまとめる。Codex CLI との実行環境および機械的結果の解釈を扱う下位実装への入口。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox、cwd、CODEX_HOME、provider 設定、Structured Output schema 配置を変更・調査するとき
-- editing run の child process tracking、PID reuse 回避、process group 停止、signal 処理を変更・調査するとき
-- Codex subprocess の JSONL 出力、malformed event、capacity/quota/unexpected error の判定を変更・調査するとき
+- Codex CLI の起動引数、sandbox、cwd、CODEX_HOME、model provider、reasoning 設定を変更・調査するとき
+- Codex subprocess の process group tracking、PID reuse 対策、停止・signal・abandon 処理を変更・調査するとき
+- Structured Output schema の配置、JSONL error、resume token、capacity/quota retry 判定を変更・調査するとき
 
 ## Do not read this when
-- Codex CLI の上位 orchestration や editing run 全体の状態遷移を調査するときは、対応する subcommand 実装・oracle doc を直接読む
-- Codex の prompt 内容や prompt builder の組み立てだけを調査するときは、prompt builder の該当実装を直接読む
-- 一般的な subprocess 呼び出しではなく、Codex 境界の argv/env/schema/error 不変条件に関係しない処理を変更するとき
+- Codex CLI を呼び出さない通常の設定処理や、Codex のプロンプト本文生成だけを変更・調査するとき
+- 編集 run 全体の状態遷移や CLI サブコマンドの責務を確認したい場合は、対応する app_spec の oracle または上位実装を先に読むとき
 
 ## hash
-- e9f96aee471df180718152ae4a88b8e5e5d5e6f3c1e6c3cc19345ebea047eaed
+- d05b39c70db0cb3030d6fb85c6e8e3ee06563bae47084a3663a3bb5743ed1e77
 
 # `runtime_codex_tui.py`
 
