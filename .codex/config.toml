@@ -39,6 +39,8 @@ features.network_proxy.domains."127.0.0.1" = "allow"
 #   テスト用の ollama をダウンロードする用の許可
 #   model blob 配信先が変わった場合は都度修正が必要
 features.network_proxy.domains."ollama.com" = "allow"
+features.network_proxy.domains."github.com" = "allow"
+features.network_proxy.domains."release-assets.githubusercontent.com" = "allow"
 features.network_proxy.domains."registry.ollama.ai" = "allow"
 features.network_proxy.domains."dd20bb891979d25aebc8bec07b2b3bbc.r2.cloudflarestorage.com" = "allow"
 
