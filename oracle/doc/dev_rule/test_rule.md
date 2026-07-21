@@ -17,7 +17,7 @@
 
 - LLM の回答品質や、Codex CLI に依頼した仕事の意味的な成功は cmoc の自動テストの目的としない
 - Codex CLI 自体、model provider、有料クラウド backend の正しさや安定性を保証することは目的としない
-- GPU 推論の成功または確認を test の成功条件とせず、CPU 推論への fallback を許容する
+- GPU の性能または推論速度そのものの評価は test の目的としない
 
 ## 実経路統合テスト
 
@@ -41,8 +41,13 @@
 - test case は Ollama を専用 process group として起動し、success、failure、timeout のいずれでも、その test case が起動した process group だけを teardown する
 - test-local Ollama は `CmocConfig` の通常の model provider 設定によって Codex CLI 呼び出し単位で選択し、test 専用の特殊な provider ID または provider 起動機能を cmoc に追加してはならない
 - テスト用 SLM は `qwen3:4b-instruct-2507-q4_K_M` とする
-- test-local Ollama は利用可能な GPU による推論をベストエフォートで優先し、GPU が利用できない場合、GPU 推論を開始できない場合、または GPU 推論を確認できない場合は CPU 推論へ fallback する
-- GPU 利用の失敗だけを理由に test を skip または failure としてはならない
+- test-local Ollama は GPU だけで推論を実行し、CPU 推論への fallback を許容しない
+- GPU が利用できない場合、GPU 推論を開始できない場合、または GPU 推論を確認できない場合は、test-local Ollama を必要とする test case を skip する
+
+## timeout
+
+- test-local Ollama を必要とする test case の timeout は、テスト用 SLM を GPU で実行した正常時の実測時間と実行環境の揺らぎに基づいて設定する
+- CPU 推論または CPU 推論への fallback に要する時間を timeout の余裕に含めてはならない
 
 ## test-local Ollama cache
 
