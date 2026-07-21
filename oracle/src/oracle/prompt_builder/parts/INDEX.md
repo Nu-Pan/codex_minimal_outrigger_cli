@@ -17,18 +17,17 @@
 # `file_access_rule.py`
 
 ## Summary
-- cmoc のファイルアクセス規則プロンプトを構築する。アクセスモードに応じた deny rule と、repo-root/work-root のプレースホルダー値を生成する。各モードの規則分岐と、特別な NO_RULE の空出力を確認する入口となる。
+- cmoc のファイル読み書き規則プロンプトを、アクセスモード別に構築する。リポジトリ外や保護対象ツリーの deny ルール、oracle file・realization file の読み書き制限を扱い、プロンプト生成時のファイルアクセス制御の入口となる。
 
 ## Read this when
-- ファイル読み書き規則の生成内容を変更・確認するとき
-- FileAccessMode ごとのアクセス制約やプレースホルダー展開を調査するとき
+- ファイルアクセス規則の生成内容、FileAccessMode ごとの読み書き制限、repo-root/work-root のプレースホルダーを変更・確認するとき。
 
 ## Do not read this when
-- 実際の CLI 処理やプロンプト全体の組み立てを調べるとき
-- oracle の設計・テスト規則だけを確認したいとき
+- 具体的な Codex CLI sandbox 設定や実行権限の仕様を確認するとき。
+- プロンプト全体の構築や別の prompt builder 部品だけを変更・確認するとき。
 
 ## hash
-- 8f9a2394a870d7a8de6759fd731a09e870aede864dfeddc1c5f832d5bb1aa84c
+- 489b78b56036f1ae03614cb1633e6c2e43a407febffb3e4330834b4dbcc70a09
 
 # `index_entry_standard.py`
 

@@ -33,18 +33,17 @@
 # `parts`
 
 ## Summary
-- cmoc のプロンプト生成部品群。oracle／realization の基本定義・各種標準規範・ファイルアクセス規則・INDEX.md ルーティング規則を構造化文書として構築する実装を含む。個別のプロンプト規範やルーティング挙動を調査する際の入口。
+- cmoc のプロンプトを構成する部品群。oracle・realization の基本定義、各種標準規範、ファイルアクセス規則、ルーティング規則などを個別に構築し、上位の prompt builder から利用される入口。
 
 ## Read this when
-- oracle と realization の定義・責務境界・配置規則を確認するとき
-- oracle standard、realization standard、レビュー基準、INDEX.md エントリー規範を変更・確認するとき
-- ファイルアクセス制約や INDEX.md による文書ルーティングのプロンプト生成を調査するとき
-- 対象となるプロンプト部品の具体的な生成内容を確認するとき
+- oracle と realization の定義・責務境界をプロンプトへ組み込む処理を確認するとき
+- oracle standard、realization standard、レビュー基準、INDEX.md 規範などの生成内容を変更・調査するとき
+- ファイルアクセス制限や INDEX.md による文書ルーティング規則の生成処理を確認するとき
 
 ## Do not read this when
-- 実際の oracle file や realization file の個別仕様・実装を調査するとき
-- cmoc の CLI 処理やプロンプト全体の組み立て、StructDoc など共通基盤だけを調査するとき
-- INDEX.md の実際のエントリー内容を確認・編集するとき
+- 個別の oracle file や realization file の具体的な仕様・実装を調査するとき
+- プロンプト全体の組み立てや StructDoc などの共通基盤を直接確認するとき
+- Codex CLI の実行環境や sandbox 設定そのものを確認するとき
 
 ## hash
-- 914a4fc7b63e99da5a2121c3b4d9088987cff7c9715a13d478573e7a6ed07712
+- 353c2c29a4c90221c9c7645e08c2d46e464ce344db5a7a798541a63bd9580f2a

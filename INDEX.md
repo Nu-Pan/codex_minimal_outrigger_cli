@@ -94,25 +94,22 @@
 # `oracle`
 
 ## Summary
-- cmoc のアプリケーション仕様、状態管理、branch・commit・worktree、Python 開発規則などを扱う oracle 文書群への入口です。共通仕様や個別機能の正本文書を確認する際に参照します。
-- 参照可能な正本ソースの有無を確認するための入口です。具体的な実装仕様や処理内容の確認先ではありません。
+- cmoc のアプリケーション仕様と開発規約をまとめた oracle doc 群。CLI の利用者向け挙動、状態管理、branch・commit・worktree、開発環境、設計・テスト方針を確認するための入口。
+- 参照可能な正本ソースの有無を確認するための入口。実装仕様や具体的な処理内容は扱わない。
 
 ## Read this when
-- cmoc の共通挙動、CLI、状態管理、ログ、プロンプト、run/session lifecycle を調査するとき
-- session fork、run 隔離、branch・commit・worktree の責務やライフサイクルを確認するとき
-- Python 実装、CLI 配置、開発環境、pytest テストの規約を確認するとき
-- realization refactor で採用しなかった作業方式や設計案の理由を確認するとき
-- 参照可能な正本ソースの有無を確認するとき
+- cmoc の共通的な利用者向け挙動、状態管理、CLI、branch model、Python 開発環境、設計、テスト方針を確認するとき
+- 対象機能に対応する oracle doc や branch・session・run の責務を選択・確認するとき
+- このディレクトリ内に参照可能な正本ソースがあるか確認するとき
 
 ## Do not read this when
-- 特定の realization code や realization test の内部実装だけを調査するとき
-- 個別機能の詳細仕様を確認する場合は、対象機能の oracle 文書を直接読むとき
-- 一般的な INDEX.md の読み方やルーティング方針を確認するとき
-- README だけで足りる一般的な利用方法を知りたいとき
-- 具体的な実装仕様や処理内容を確認したいとき
+- 特定の realization code または realization test の内部実装だけを調査するとき
+- 採用されなかった設計案や realization refactor の検討経緯だけを確認するとき
+- 個別機能の詳細仕様だけを確認したいとき
+- 実装仕様や具体的な処理内容を確認したいとき
 
 ## hash
-- cce14f1e525f9016575ebeeb252b9cbe7f36068d17e9587bca37b332c7b7b173
+- 914630dc045053d903d80eacf059ebc979b8c6b47f24921dc68e326546a1b206
 
 # `pyproject.toml`
 
