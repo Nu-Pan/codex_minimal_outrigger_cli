@@ -248,19 +248,19 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ランタイムの結合・契約テスト。実 CLI またはスタブ CLI を用いて、argv、stdin、sandbox、approval、model/provider override、schema 配置、出力、リポジトリ書き込み、CODEX_HOME 非変更を検証する。
+- Codex CLI 実行ランタイムの統合テストを扱う。実 CLI の argv、stdin、override 設定、provider/model 選択、出力 schema の配置、リポジトリ書き込み、CODEX_HOME 設定未生成を検証する。
 
 ## Read this when
-- Codex exec の起動方法、引数・stdin・出力 schema の契約を変更または確認するとき
-- model provider、Ollama、Codex override、sandbox 権限の連携を変更または確認するとき
-- run_codex_exec の実 CLI 結合動作やリポジトリ書き込み結果を検証するとき
+- Codex exec の起動方法、権限・sandbox 引数、prompt の stdin 渡しを変更または確認するとき
+- model provider、local Ollama、model class、reasoning effort の override 連携を変更または確認するとき
+- Codex 実行結果・schema・call log・リポジトリ書き込みの統合挙動を検証するとき
 
 ## Do not read this when
-- Codex CLI 実行ランタイム以外の機能を変更・調査するとき
-- 単体の設定モデルや provider 定義の詳細を直接確認する場合は、対応する実装・oracle test を読むとき
+- Codex 実行ランタイムの実装詳細を変更する場合は、まず対応する src 側の runtime モジュールを読むとよい
+- Codex CLI 以外のサブコマンドや、単体の設定モデル・fixture・外部コマンド helper の挙動だけを確認するとき
 
 ## hash
-- 9a5cf12b796b04334d4187088c57b357f7a6226f6034de3f0f3e619a559be93c
+- 1637c90a41b22a05907a55a22967f3737a27a461918f099b2fc1479d869f8da3
 
 # `test_codex_runtime_home.py`
 
@@ -576,21 +576,16 @@
 # `test_production_cli.py`
 
 ## Summary
-- 実 Codex CLI と case-local Ollama を使い、全末端サブコマンドを独立 process の本番経路で検証する受け入れテスト。終了 code、report・state・Git・call log、TUI の応答完了と終了操作を確認し、LLM の回答品質自体は判定しない。非対話 command 群と TUI command 群の共通環境・隔離・状態遷移・PTY 操作を一続きの責務として扱う。
+- 実 Codex CLI と case-local Ollama を使い、全末端サブコマンドの利用者向け本番経路を独立 process・PTY で検証する受け入れテスト。終了 code、report・state・Git 状態、call log、TUI の応答完了と終了を確認し、LLM の回答品質は評価しない。
 
 ## Read this when
-- CLI の全末端サブコマンドを本番相当の独立 process で検証・追加・変更するとき
-- 実 Codex CLI、case-local Ollama、call log、report/state、Git 状態の検証方法を確認するとき
-- TUI の PTY 起動、端末 capability query、応答完了、終了操作を確認するとき
-- session/run の fork・join・abandon 状態遷移を外部挙動として確認するとき
+- 全末端 CLI サブコマンドの本番経路、独立 process 実行、実 Codex 呼び出し、Ollama 隔離、状態遷移、Git 副作用、call log、または TUI の PTY 終了処理を変更・検証するとき。
 
 ## Do not read this when
-- 単一サブコマンドの内部実装や単体テストだけを変更・調査するとき
-- LLM の回答品質やプロンプト内容そのものを評価するとき
-- 本番 process、実 Codex CLI、Ollama、PTY を使わないテストを扱うとき
+- 単一サブコマンドの内部実装や通常の単体テストだけを変更・確認するとき。Codex/ Ollama を使わない前処理や、LLM の回答品質自体を評価するとき。
 
 ## hash
-- 492a3909ee2261b2b26e3fe6179e44fa5960f3c7129b78d0db8a3e4d18d5d9b2
+- 56803f47f9d2f3c5f51cf1d21bd547cc977156eb8e10a1f685bfe5791ed7c417
 
 # `test_prompt_parts.py`
 

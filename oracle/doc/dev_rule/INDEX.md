@@ -58,18 +58,16 @@
 # `test_rule.md`
 
 ## Summary
-- cmoc の realization test に関する正本規約。pytest の配置・隔離、検証対象と非対象、実経路統合テスト、test-local Ollama、キャッシュ、timeout、クラウド backend、Fake Codex CLI の利用境界を定める。テスト実装やテスト環境の判断における入口。
+- pytest による cmoc realization test の正本規約。決定論的制御ロジック、Real Codex CLI と test-local Ollama を使う実経路統合テスト、GPU test、cache、timeout、cloud backend 制約を定める。テスト実装・実行方針を確認する際の入口。
 
 ## Read this when
-- cmoc のテストを新規作成・変更・レビューするとき
-- 実経路統合テストや公開サブコマンドとの対応を確認するとき
-- test-local Ollama、GPU 推論、キャッシュ、lock、timeout の扱いを判断するとき
-- テストで Real Codex CLI、Fake Codex CLI、外部 backend のどれを使うか判断するとき
+- cmoc の realization test を追加・変更・レビューするとき
+- 実経路統合テスト、Real Codex CLI、test-local Ollama、GPU marker、cache、timeout の要件を確認するとき
+- 実装またはテスト変更後の full test 検証条件を確認するとき
 
 ## Do not read this when
-- 実装配置や CLI 実装の責務境界だけを判断するときは design_rule.md を読む
-- Python 実行環境や依存関係、pytest の具体的な実行手順だけを確認するときは development_environment.md または run-cmoc-tests skill を読む
-- テストと無関係な CLI 機能の実装詳細を調べるとき
+- cmoc の realization implementation の責務や配置だけを確認するとき
+- CLI の設計・仕様や開発環境の手順を確認するときは、対応する design_rule または development_environment を直接読む
 
 ## hash
-- b5a198bd7090f0a4aa69dfc47c1bf4632008dcaacbba37c1e6b3d20667da148a
+- 64df10101d72683cb65d504537d5a267a58131f6567a762ecc8cdb72de9ff1db

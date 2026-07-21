@@ -94,38 +94,33 @@
 # `oracle`
 
 ## Summary
-- cmoc のアプリケーション仕様と開発規約をまとめた oracle doc 群。CLI の利用者向け挙動、状態管理、branch・commit・worktree、開発環境、設計・テスト方針を確認するための入口。
-- 参照可能な正本ソースの有無を確認するための入口。実装仕様や具体的な処理内容は扱わない。
+- cmoc の正本仕様を集約するディレクトリ。アプリケーション仕様、branch・commit・worktree、run・session lifecycle、Python・CLI・開発環境・テストの開発ルールを扱い、下位の oracle 文書や正本ソースへの入口となる。
 
 ## Read this when
-- cmoc の共通的な利用者向け挙動、状態管理、CLI、branch model、Python 開発環境、設計、テスト方針を確認するとき
-- 対象機能に対応する oracle doc や branch・session・run の責務を選択・確認するとき
-- このディレクトリ内に参照可能な正本ソースがあるか確認するとき
+- cmoc の仕様、設計判断、開発ルール、または正本ソースの有無を確認するとき。
 
 ## Do not read this when
-- 特定の realization code または realization test の内部実装だけを調査するとき
-- 採用されなかった設計案や realization refactor の検討経緯だけを確認するとき
-- 個別機能の詳細仕様だけを確認したいとき
-- 実装仕様や具体的な処理内容を確認したいとき
+- 特定機能の実装詳細やテスト内容だけを確認したいときは、対応する realization code や個別 oracle 文書へ直接進む。
+- INDEX.md の読み方やルーティング方針自体を確認したいときは、対応する routing 文書を読む。
 
 ## hash
-- 914630dc045053d903d80eacf059ebc979b8c6b47f24921dc68e326546a1b206
+- 39bfae3adadbd9f0d0b22dd02fb146f1ce8a6a770151a6dcc4a572744838c9e7
 
 # `pyproject.toml`
 
 ## Summary
-- Python プロジェクトのパッケージ metadata、依存関係、CLI エントリポイント、ビルド設定、パッケージ探索、pytest・Ruff・mypy の設定を定義する。プロジェクトの実行・配布・開発ツール設定への入口。
+- プロジェクトの Python パッケージメタデータ、依存関係、CLI エントリーポイント、ビルド設定を定義する設定ファイル。pytest・Ruff・mypy の実行対象や Python バージョン要件も確認できる。
 
 ## Read this when
-- 依存関係、対応 Python バージョン、`cmoc` CLI のエントリポイント、パッケージ配置やビルド設定を確認・変更するとき
-- pytest、Ruff、mypy のプロジェクト共通設定を確認・変更するとき
+- 依存関係、対応 Python バージョン、`cmoc` コマンドのエントリーポイント、パッケージ探索、ビルド設定を確認するとき。
+- pytest・Ruff・mypy のプロジェクト共通設定や GPU integration テストのマーカーを確認するとき。
 
 ## Do not read this when
-- CLI の具体的な処理や実装を確認するときは `src` 配下を直接読む
-- 正本仕様や oracle 側の実装・テストを確認するときは `oracle` 配下を直接読む
+- CLI の具体的な処理や実装責務を確認したいときは、`src` 配下の実装を直接読む。
+- 正本仕様や開発環境・テスト手順を確認したいときは、`oracle` 配下の該当文書を読む。
 
 ## hash
-- 41be0de2208bc52d124bffe4dc0a086623184f709aa1d049d18a22ce5601aae2
+- b2f7a17a58e3aa7aac375d93ebf50b342e13e74c4e9bc5ba3b6e8fd88b78edd4
 
 # `src`
 
@@ -146,16 +141,16 @@
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、INDEX 生成、oracle review、session/run lifecycle など、実装の外部挙動・制御ロジック・公開契約を検証するテストと、複数テストで共有する Git・Codex・Ollama・コマンド実行ヘルパーを扱う。特定機能の挙動や回帰を調査する際は、該当するテストファイルを入口として読む。
+- テストコードを集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、INDEX 更新、oracle review、session/run lifecycle など、realization implementation の外部挙動・制御ロジックを検証する。各機能の変更時に対応するテストファイルへ進む入口となる。
 
 ## Read this when
-- cmoc のテスト構成や、変更対象機能に対応する realization test の入口を探すとき
-- CLI、runtime、Codex 実行、INDEX、oracle review、session/run、ACP builder の外部契約や回帰検証を確認するとき
-- 複数のテストで共有される Git、Codex、Ollama、fake command などのテスト支援を確認するとき
+- 実装変更後に対応する realization test を探すとき
+- CLI、runtime、Codex、INDEX 更新、oracle review、session/run、ACP builder などの挙動をテストから確認するとき
 
 ## Do not read this when
-- 実装本体や正本仕様の詳細だけを確認したいときは、対応する src または oracle を直接読む
-- LLM の回答品質そのものや、対象機能と無関係なテスト実装を調査するとき
+- 正本仕様や schema の内容自体を確認するときは、対応する oracle ファイルを直接読む
+- 実装詳細を確認するときは、対応する src の実装ファイルを直接読む
+- 単一の共通テストヘルパーや特定機能の詳細だけが対象で、ディレクトリ全体のテスト構成を知る必要がないとき
 
 ## hash
-- 3ab89651ad1e2cf74f66b2d6474b659f36abf052508ddeb865a165085a0658aa
+- 249e57a4b274bb24369718f775e89081997c563668a36fb0dc2161dec6153b69

@@ -18,19 +18,19 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- `codex exec` を用いた Codex CLI 呼び出しの正本規約。環境変数、事前検証、CLI 引数による設定上書き、sandbox とファイルアクセス、モデル・provider、プロンプト・ログ・Structured Output、並列実行、失敗時の再試行や待機を定める。Codex CLI 呼び出し実装や AgentCallParameter builder の仕様を確認する際の入口。
+- cmoc が Codex CLI（codex exec）を呼び出す際の正本規約。CODEX_HOME の扱い、preflight validation、argv による設定上書き、sandbox・権限・モデル・provider・プロンプト・Structured Output の指定、ログ保存、並列実行、失敗時の retry／quota 待機、.agents 編集禁止までを定める。Codex CLI 呼び出し実装や AgentCallParameter builder、実行ログ・スキーマ生成、エラー処理の入口となる。
 
 ## Read this when
-- cmoc の Codex CLI 呼び出し方法、argv、sandbox、approval 設定を変更・検証するとき
-- CODEX_HOME の扱い、モデル/provider/reasoning effort の解決、プロンプトやログの保存方法を確認するとき
-- Structured Output、並列呼び出し、quota・一時障害・想定外エラー時の処理を確認するとき
+- cmoc の Codex CLI 呼び出し仕様、argv、sandbox、approval policy、model/provider、reasoning effort、prompt の渡し方を変更・確認するとき
+- Codex exec のログ、Structured Output、並列実行、retry、quota 待機などの運用を実装・検証するとき
+- AgentCallParameter builder や Codex CLI 実行経路の責務境界を判断するとき
 
 ## Do not read this when
-- Codex CLI 呼び出し規約ではなく、AgentCallParameter builder の個別実装仕様そのものを調べるときは、builder の oracle tree を直接読む
-- 一般的な Codex CLI の使い方や、cmoc と無関係な CLI 実行方法を確認したいとき
+- Codex CLI 呼び出しやその周辺の動作を扱わず、別のサブシステムの仕様・実装だけを変更・確認するとき
+- 具体的な builder の定義や provider 解決の詳細を確認する場合は、この規約だけで判断せず、指定された正本実装・関連 oracle file を直接読むとき
 
 ## hash
-- a3ddaab73e0d4a54626c683048067698fb20b21bc442d72f7d96065cd688d6fd
+- 6e3bb4c2b7fcb0346cc1ab3ce2bbefc93addd26b7bd9216fa4af9922a1d15f34
 
 # `codex_model_provider.md`
 

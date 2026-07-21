@@ -1,18 +1,18 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様をまとめた oracle 文書群。CLI 自動補完、Codex 呼び出し・provider 設定、ログ、doctor preprocess、エラー処理、プロンプト、run/session lifecycle、サブコマンド、中断処理、標準 workflow などの正本仕様へ進むための入口。
+- cmoc のアプリケーション仕様を集約する正本文書群。CLI 補完、Codex 呼び出し、ログ、doctor preprocess、プロンプト、run/session lifecycle、サブコマンドなどの仕様確認・実装・検証へ進む入口。
 
 ## Read this when
-- cmoc の利用者向け挙動、共通仕様、CLI 呼び出し、状態管理、ログ、プロンプト、run/session lifecycle を実装・検証するとき
-- 対象機能に対応する個別仕様文書を選び、仕様上の責務や制約を確認したいとき
+- cmoc の利用者向け挙動、CLI 共通処理、Codex 連携、ログ、プロンプト、状態管理、run/session lifecycle の仕様を確認するとき
+- 複数のアプリケーション仕様にまたがる変更や、該当する個別仕様文書の入口を判断するとき
 
 ## Do not read this when
-- 対象が特定の realization code または realization test の内部実装だけであるとき
-- 一般的な開発環境・設計・テスト手順を確認したいときは、対応する開発規約を直接読む
+- Python 実行環境、設計ルール、テストルールなど開発手順だけを確認するとき
+- 個別仕様と無関係な実装詳細や生成済みログを直接調査するとき
 
 ## hash
-- 5c2c236902481e52c10a217fde3bd6e7fcfa9bf5e28d91865167b7e24b6d0a5e
+- 90481fd8719ae24fc600080dfa1f617cb48fdd0ee2a2e11498551a80ce63d1c4
 
 # `branch_model.md`
 
@@ -54,18 +54,19 @@
 # `dev_rule`
 
 ## Summary
-- cmoc の開発規約をまとめた oracle doc 群。Python コーディング規則、CLI の設計・配置、開発環境、テスト方針を確認するための入口。
+- Python 実装のコーディング規則、CLI の設計・配置方針、開発環境の運用ルール、pytest による realization test 規約をまとめた開発ルール文書群。実装・テスト・環境設定に関する判断の入口。
 
 ## Read this when
-- Python 実装の書き方や命名・型ヒント・コメント規則を確認するとき。
-- CLI のエントリーポイント、サブコマンド、共有処理の配置を判断するとき。
-- Python/venv、依存関係、ファイル命名やエンコードなど開発環境の運用を確認するとき。
-- pytest、実経路統合テスト、test-local Ollama、Fake Codex CLI などのテスト方針を確認するとき。
+- cmoc の Python 実装方針、型ヒント、import、docstring、コメント、命名を確認するとき。
+- CLI のエントリーポイント、サブコマンド、共有モジュールの責務や配置を決めるとき。
+- Python、venv、依存関係、ファイル命名・エンコードなど開発環境のルールを確認するとき。
+- realization test の追加・変更・レビュー、実経路統合テストや GPU test の実行条件を確認するとき。
 
 ## Do not read this when
-- 個別機能や CLI コマンドの挙動仕様を確認したいときは、対象機能の oracle doc を直接読む。
-- 個別モジュールの実装詳細を知りたいときは、その実装ファイルを読む。
-- INDEX.md の読み方やルーティング方針を確認したいときは、別の routing 文書を読む。
+- 個別機能や CLI の具体的な挙動・出力仕様を確認するときは、対象機能の oracle doc を直接読む。
+- 個別モジュールの実装詳細を確認するときは、その realization code を読む。
+- INDEX.md の読み方やルーティング方針自体を確認するときは、対応する routing 文書を読む。
+- 一般的な利用方法だけを確認する場合は、README などの利用者向け文書を優先する。
 
 ## hash
-- c4b1c94c4351f97401c095b248cfe8a442f56dbfa93fb0a234d9efe4b80b5df8
+- 17eeb3926e0e5d1fd2b71d2a19bc50fab24083ae35e7b5612a6c65e333d67346
