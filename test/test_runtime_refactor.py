@@ -79,6 +79,8 @@ def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
         }
     )
     assert select_refactor_target(state) == "README.md"
+    assert select_refactor_target(state, {"README.md"}) == "oracle/spec.md"
+    assert select_refactor_target(state, set(state)) is None
 
 
 def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:

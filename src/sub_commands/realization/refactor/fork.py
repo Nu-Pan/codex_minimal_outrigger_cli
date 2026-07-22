@@ -1,4 +1,10 @@
-"""`cmoc realization refactor fork` の full-cycle workload。"""
+"""`cmoc realization refactor fork` の full-cycle workload。
+
+この file は 16,000 文字を超えるが、target 選択、処理単位の確定、current fork
+だけの unresolved 管理、完了判定、および report は同じ進捗状態を共有する。
+分割すると、この一時状態と完了不変条件を複数 file 間で受け渡す必要があるため、
+単一 workload の lifecycle として保つ。
+"""
 
 from pathlib import Path
 
@@ -48,9 +54,7 @@ from sub_commands.run.lifecycle import (
 )
 from sub_commands.run.report import write_fork_report
 
-
-class UnresolvedFindingsError(CmocError):
-    """current fork で再試行してはいけない unresolved finding。"""
+_UnresolvedFinding = tuple[str, str, Path]
 
 
 def cmoc_realization_refactor_fork_impl() -> None:
@@ -67,6 +71,7 @@ def cmoc_realization_refactor_fork_impl() -> None:
 def _cmoc_realization_refactor_fork_body() -> None:
     context: EditingRunContext | None = None
     units: list[tuple[str, int]] = []
+    unresolved_findings: dict[str, list[_UnresolvedFinding]] = {}
     try:
         start_subcommand_step(2, "realization refactor run を作成", "create run")
         context = start_editing_run("realization_refactor")
@@ -75,19 +80,18 @@ def _cmoc_realization_refactor_fork_body() -> None:
         start_subcommand_step(4, "file 単位の調査と修正を実行", "run refactor loop")
         with run_process_tracking(context.repo, context.session_id):
             while target := select_refactor_target(
-                load_refactor_state(context.run_worktree)
+                load_refactor_state(context.run_worktree), unresolved_findings
             ):
                 unit_target, finding_count, unresolved = _run_refactor_unit(
                     context, target
                 )
                 units.append((unit_target, finding_count))
                 if unresolved:
-                    raise UnresolvedFindingsError(
-                        "unresolved finding が残ったため refactor loop を停止しました。",
-                        ["確定済み処理単位の report を確認してください。"],
-                        f"target: {target}\nunresolved: {unresolved}",
-                    )
-            summary = _natural_change_summary(context)
+                    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+                    # commit 済みの対象だけを current fork 内で保留し、次の対象へ進む。
+                    unresolved_findings[target] = unresolved
+            reason = _completion_reason(context.run_worktree, unresolved_findings)
+            summary = _completion_change_summary(context)
     except KeyboardInterrupt:
         if context is None:
             raise
@@ -96,11 +100,12 @@ def _cmoc_realization_refactor_fork_body() -> None:
         report = _write_refactor_report(
             context,
             "joinable",
-            "interrupted",
+            "user_interruption",
             units,
+            unresolved_findings,
             summary=None,
         )
-        typer.echo(f"- fork report: `{report}`")
+        typer.echo(_completion_log("user_interruption", unresolved_findings, report))
         return
     except BaseException as exc:
         if context is None:
@@ -114,12 +119,12 @@ def _cmoc_realization_refactor_fork_body() -> None:
             set_run_state(context, "error")
         except BaseException as state_error:
             cleanup_errors.append(f"state update failed: {state_error!r}")
-        reason = "unresolved" if isinstance(exc, UnresolvedFindingsError) else "error"
         report = _write_refactor_report(
             context,
             "error",
-            reason,
+            "error",
             units,
+            unresolved_findings,
             summary=None,
             error=exc,
             cleanup_errors=cleanup_errors,
@@ -132,7 +137,9 @@ def _cmoc_realization_refactor_fork_body() -> None:
             ],
             f"report: {report}\nerror: {exc!r}",
         )
-        setattr(error, "cmoc_stdout", f"- fork report: `{report}`")
+        setattr(
+            error, "cmoc_stdout", _completion_log("error", unresolved_findings, report)
+        )
         raise error from exc
     start_subcommand_step(5, "run を joinable に更新", "publish joinable")
     set_run_state(context, "joinable")
@@ -140,11 +147,12 @@ def _cmoc_realization_refactor_fork_body() -> None:
     report = _write_refactor_report(
         context,
         "joinable",
-        "natural_completion",
+        reason,
         units,
+        unresolved_findings,
         summary=summary,
     )
-    typer.echo(f"- fork report: `{report}`")
+    typer.echo(_completion_log(reason, unresolved_findings, report))
 
 
 def _initialize_cycle(context: EditingRunContext) -> None:
@@ -163,7 +171,7 @@ def _initialize_cycle(context: EditingRunContext) -> None:
 def _run_refactor_unit(
     context: EditingRunContext,
     target: str,
-) -> tuple[str, int, int]:
+) -> tuple[str, int, list[_UnresolvedFinding]]:
     target_path = context.run_worktree / target
     if not (target_path.is_file() or target_path.is_symlink()):
         sync_refactor_state(context.run_worktree)
@@ -171,7 +179,7 @@ def _run_refactor_unit(
             context.run_worktree,
             f"cmoc realization refactor sync {target}",
         )
-        return target, 0, 0
+        return target, 0, []
     investigated_hash = file_sha256(target_path)
     with pushd(context.run_worktree):
         parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
@@ -241,7 +249,15 @@ def _run_refactor_unit(
         context.run_worktree,
         f"cmoc realization refactor {target}",
     )
-    return target, len(findings), len(unresolved)
+    unresolved_details = [
+        (
+            str(finding.get("title", "")),
+            str(finding.get("resolution", {}).get("summary", "")),
+            result.call_log_path.resolve(),
+        )
+        for finding in unresolved
+    ]
+    return target, len(findings), unresolved_details
 
 
 def _status_change(path: str) -> GitChange:
@@ -295,7 +311,29 @@ def _validated_findings(output: object, target: str) -> list[dict]:
     return findings
 
 
-def _natural_change_summary(context: EditingRunContext) -> list[dict] | None:
+def _completion_reason(
+    root: Path,
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+) -> str:
+    """loop 完了時の state 不変条件を検査して完了理由を返す。"""
+    required = {
+        path
+        for path, entry in load_refactor_state(root).items()
+        if entry["investigation_required"]
+    }
+    unresolved_targets = set(unresolved_findings)
+    if required != unresolved_targets:
+        raise CmocError(
+            "realization refactor の完了状態が不正です。",
+            ["run report と refactor state を確認してください。"],
+            f"investigation_required: {sorted(required)}\n"
+            f"unresolved targets: {sorted(unresolved_targets)}",
+        )
+    return "completed_with_unresolved" if unresolved_targets else "natural_completion"
+
+
+def _completion_change_summary(context: EditingRunContext) -> list[dict] | None:
+    """正常完了した refactor fork の tree 差分を要約する。"""
     diff = run_git(
         ["diff", "--binary", context.run_fork_commit, "HEAD"],
         context.run_worktree,
@@ -330,6 +368,7 @@ def _write_refactor_report(
     state_after: str,
     reason: str,
     units: list[tuple[str, int]],
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
     *,
     summary: list[dict] | None,
     error: BaseException | None = None,
@@ -338,12 +377,26 @@ def _write_refactor_report(
     state = _safe_refactor_state(context.run_worktree)
     counts = _state_counts(state)
     changes = tree_changes(context.run_worktree, context.run_fork_commit)
+    unresolved_targets = set(unresolved_findings)
+    uninvestigated_targets = sum(
+        entry["investigation_required"] and path not in unresolved_targets
+        for path, entry in state.items()
+    )
     body = [
+        "## Current fork",
+        f"- processed targets: {len({target for target, _count in units})}",
+        f"- uninvestigated targets: {uninvestigated_targets}",
         "## Processing units",
         *(
             [f"- `{target}`: {count} finding(s)" for target, count in units]
             or ["- none"]
         ),
+        "## Unresolved targets",
+        f"- count: {len(unresolved_targets)}",
+        "- paths:",
+        *([f"  - `{target}`" for target in sorted(unresolved_targets)] or ["  - none"]),
+        "## Unresolved findings",
+        *_render_unresolved_findings(unresolved_findings),
         "## Refactor state",
         f"- entries: {counts['entries']}",
         f"- investigation_required: {counts['required']}",
@@ -351,7 +404,7 @@ def _write_refactor_report(
         f"- no_findings: {counts['no_findings']}",
         f"- findings: {counts['findings']}",
         "## Change summary",
-        *_render_summary(summary, flattened_change_paths(changes), reason),
+        *_render_summary(summary, flattened_change_paths(changes)),
     ]
     if error is not None:
         body.extend(["## Error", repr(error)])
@@ -406,7 +459,6 @@ def _state_counts(state: RefactorState) -> dict[str, int]:
 def _render_summary(
     summary: list[dict] | None,
     changed_paths: list[str],
-    reason: str,
 ) -> list[str]:
     if summary is not None:
         lines = []
@@ -419,6 +471,36 @@ def _render_summary(
         return lines or ["- none"]
     if not changed_paths:
         return ["- none"]
-    if reason != "natural_completion":
-        return [f"- committed path: `{path}`" for path in changed_paths]
-    return ["- none"]
+    return [f"- committed path: `{path}`" for path in changed_paths]
+
+
+def _render_unresolved_findings(
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+) -> list[str]:
+    """unresolved 所見の理由と追跡可能な Codex call log を表示する。"""
+    lines = []
+    for target in sorted(unresolved_findings):
+        for title, summary, call_log_path in unresolved_findings[target]:
+            lines.extend(
+                [
+                    f"- `{target}`: {title}",
+                    f"  - resolution.summary: {summary}",
+                    f"  - Codex call log: `{call_log_path}`",
+                ]
+            )
+    return lines or ["- none"]
+
+
+def _completion_log(
+    reason: str,
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+    report: Path,
+) -> str:
+    """fork 固有の完了理由、unresolved 件数、report path を出力する。"""
+    return "\n".join(
+        [
+            f"- completion_reason: `{reason}`",
+            f"- unresolved targets: `{len(unresolved_findings)}`",
+            f"- fork report: `{report}`",
+        ]
+    )

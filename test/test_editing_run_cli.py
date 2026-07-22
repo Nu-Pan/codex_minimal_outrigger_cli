@@ -1,4 +1,9 @@
-"""workload fork と共通 run join/abandon の統合 realization test。"""
+"""workload fork と共通 run join/abandon の統合 realization test。
+
+この file は 16,000 文字を超えるが、editing run の session state、run worktree、
+fork report、および join/abandon は同じ lifecycle fixture を共有する。分割すると、
+同じ branch・state 遷移の準備と検証を複数 file で重複させるため、一続きに保つ。
+"""
 
 import json
 from collections.abc import Iterator
@@ -271,7 +276,104 @@ def test_refactor_fork_completes_persistent_full_cycle(
         for entry in refactor_state.values()
     )
     assert summary_calls == 1
-    assert "natural_completion" in result.output or "fork report" in result.output
+    assert "- completion_reason: `natural_completion`" in result.output
+    assert "- unresolved targets: `0`" in result.output
+
+
+def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+    reviewed: list[str] = []
+    summary_calls = 0
+    call_log = (tmp_path / "unresolved_call.json").resolve()
+    call_log.write_text("{}\n")
+
+    def fake_refactor(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        nonlocal summary_calls
+        purpose = str(kwargs["purpose"])
+        if purpose == "realization refactor change summary":
+            summary_calls += 1
+            return SimpleNamespace(
+                returncode=0,
+                output_json={
+                    "changes": [
+                        {
+                            "category": "state",
+                            "summary": "調査履歴を更新",
+                            "changed_paths": [
+                                ".cmoc/gt/ar/realization/refactor/state.json"
+                            ],
+                        }
+                    ]
+                },
+            )
+        target = purpose.removeprefix("realization refactor: ")
+        reviewed.append(target)
+        if target == "README.md":
+            return SimpleNamespace(
+                returncode=0,
+                call_log_path=call_log,
+                output_json={
+                    "findings": [
+                        {
+                            "title": "README unresolved finding",
+                            "resolution": {
+                                "status": "unresolved",
+                                "summary": "人間の判断が必要",
+                            },
+                        }
+                    ]
+                },
+            )
+        return SimpleNamespace(returncode=0, output_json={"findings": []})
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    state = _state(state_path)
+    assert state["run"]["state"] == "joinable"
+    parts = state["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    refactor_state = load_refactor_state(worktree)
+    assert reviewed == sorted(refactor_state)
+    assert reviewed.count("README.md") == 1
+    assert reviewed.index("oracle/spec.md") > reviewed.index("README.md")
+    assert {
+        path
+        for path, entry in refactor_state.items()
+        if entry["investigation_required"]
+    } == {"README.md"}
+    assert refactor_state["README.md"]["last_investigation_result"] == "findings"
+    assert summary_calls == 1
+    assert "- completion_reason: `completed_with_unresolved`" in result.output
+    assert "- unresolved targets: `1`" in result.output
+    report_line = next(
+        line
+        for line in result.output.splitlines()
+        if line.startswith("- fork report: `")
+    )
+    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    report_text = report.read_text()
+    assert 'completion_reason: "completed_with_unresolved"' in report_text
+    assert f"- processed targets: {len(refactor_state)}" in report_text
+    assert "- uninvestigated targets: 0" in report_text
+    assert "- count: 1" in report_text
+    assert "`README.md`" in report_text
+    assert "README unresolved finding" in report_text
+    assert "resolution.summary: 人間の判断が必要" in report_text
+    assert f"Codex call log: `{call_log}`" in report_text
 
 
 def test_refactor_fork_refreshes_changed_file_index_during_process_tracking(
@@ -400,4 +502,6 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
         if line.startswith("- fork report: `")
     )
     report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
-    assert 'completion_reason: "interrupted"' in report.read_text()
+    assert 'completion_reason: "user_interruption"' in report.read_text()
+    assert "- completion_reason: `user_interruption`" in result.output
+    assert "- unresolved targets: `0`" in result.output
