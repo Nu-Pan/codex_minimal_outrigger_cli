@@ -27,7 +27,8 @@
 4. 必要に応じて、ファイル単位の網羅的な追従を行う。
     1. 人間が `cmoc realization refactor fork` を呼び出す。
         - cmoc は refactor state の調査要求に従い、差分情報を渡さずに 1 file ずつ調査する。
-        - 自然完了または `Ctrl+C` による整合した中断まで処理する。
+        - unresolved target は current fork 内で保留し、それ以外の調査要求がなくなるまで処理する。
+        - `natural_completion` による完全な自然完了、`completed_with_unresolved` による unresolved 付き完了、または `Ctrl+C` による整合した中断まで処理する。
     2. 人間が `cmoc run join` で確定済み成果物を取り込むか、`cmoc run abandon` で破棄する。
     3. 調査要求が残っている場合は、join 後に新しい `cmoc realization refactor fork` を開始する。
 5. 人間が `{{cmoc-session-branch}}` 上で `cmoc session join` を呼び出す。
