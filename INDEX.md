@@ -130,32 +130,33 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめる src ディレクトリ。CLI ルート、サブコマンド、共通 runtime、設定、互換 import shim、canonical 実体への公開入口を含み、各下位パッケージ・モジュールへのルーティング起点となる。
+- cmoc の実装パッケージと CLI 入口を収めるディレクトリ。互換 import shim、共通 runtime、設定入口、トップレベル CLI、サブコマンド実装など、実行時コードの主要な入口を扱う。各領域の具体的な実装へ進むための起点。
 
 ## Read this when
-- cmoc の CLI 構成や realization 側の主要モジュールを探すとき。
-- CLI 入口、サブコマンド、共通 runtime、互換 import 経路の調査・変更先を判断するとき。
+- cmoc の実装全体の構成や主要な import 入口を確認するとき。
+- トップレベル CLI、共通 runtime、互換パッケージ、またはサブコマンド実装の入口を探すとき。
 
 ## Do not read this when
-- 特定機能の詳細実装や正本仕様を直接確認したいときは、対応する下位モジュールまたは oracle 側を直接読む。
-- src 配下と無関係な仕様・テスト・開発環境を調査するとき。
+- 特定サブコマンドの内部処理や個別 runtime module の詳細を直接調査するとき。
+- canonical な正本仕様・実体モジュールを確認するときは、対応する oracle 側または具体的な下位モジュールを直接読む。
 
 ## hash
-- 680f97f590a521779e79abcd6e71a2ae69eab353b4e7d81c02c8325c3321d3b2
+- 9c2c36206a274433c89fd5fa09f44584d90a42986ed992dad410f09e79eb50af
 
 # `test`
 
 ## Summary
-- テストコードを集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、INDEX 更新、oracle review、session/run lifecycle など、realization implementation の外部挙動・制御ロジックを検証する。各機能の変更時に対応するテストファイルへ進む入口となる。
+- テストコードから共通ヘルパー、ACP builder、Codex runtime、CLI、indexing、oracle review、session/run lifecycle、設定・状態管理などの realization test へ進むための入口。各テストは対応する外部挙動、制御ロジック、公開 API、失敗時処理を検証する。
 
 ## Read this when
-- 実装変更後に対応する realization test を探すとき
-- CLI、runtime、Codex、INDEX 更新、oracle review、session/run、ACP builder などの挙動をテストから確認するとき
+- テスト対象の実装変更に伴い、対応する外部契約や回帰範囲を確認するとき。
+- CLI、Codex 実行、indexing、oracle review、session/run、設定・状態管理などのテスト入口を選ぶとき。
+- 複数テストで共有される Git、Codex、Ollama、fake command、schema path helper の利用方法を確認するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認するときは、対応する oracle ファイルを直接読む
-- 実装詳細を確認するときは、対応する src の実装ファイルを直接読む
-- 単一の共通テストヘルパーや特定機能の詳細だけが対象で、ディレクトリ全体のテスト構成を知る必要がないとき
+- 正本仕様や実装詳細そのものを確認したい場合は、各テストではなく対応する oracle または src を直接読む。
+- LLM の回答品質や Codex CLI の画面操作自体を評価したい場合。
+- 対象機能と無関係なテストの詳細を確認したい場合。
 
 ## hash
-- 249e57a4b274bb24369718f775e89081997c563668a36fb0dc2161dec6153b69
+- e4a0ba75b9d1731bd367e32131b8d9f89d807259adf3b42254d4f2c17beeb2f0

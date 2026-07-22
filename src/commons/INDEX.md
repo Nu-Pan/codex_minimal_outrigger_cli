@@ -330,20 +330,18 @@
 # `runtime_refactor.py`
 
 ## Summary
-- oracle/realization file の refactor state を管理する共通ランタイムモジュール。state の読み込み・schema 検証・安定保存、対象 file 集合との同期、調査対象の選択、調査要求の一括設定を扱う。refactor 状態管理や対象 file 列挙の実装を確認する際の入口。
+- oracle/realization file の調査状態を管理する共通モジュール。状態ファイルの読み込み・schema 検証・安定した保存、対象ファイル集合との同期、調査対象の選択と状態更新を提供する。リファクタリング調査の状態管理や対象選定の実装を確認する入口。
 
 ## Read this when
-- refactor state の schema、保存形式、調査履歴の検証を変更・確認するとき
-- oracle/realization file の列挙や調査対象選択の挙動を変更・確認するとき
-- refactor cycle の開始や investigation required の更新処理を確認するとき
+- リファクタリング対象の state file の形式や検証規則を確認するとき
+- oracle/realization file の列挙・同期、未調査対象の選定、調査済み状態の更新を変更・調査するとき
 
 ## Do not read this when
-- 特定の oracle/realization file の内容や refactor 対象そのものを調査するとき
-- refactor state の file path 定義だけを確認するときは、path 定義を担当するモジュールを直接読む場合
-- CLI の表示・実行処理や個別 runtime helper の仕様を確認するとき
+- INDEX.md のルーティングだけを確認するとき
+- リファクタリング state や調査対象選定に関係しない共通ランタイム処理を調査するとき
 
 ## hash
-- 3e2c22c73de04a17eb0f7ba7cf25608e17336a0c5db8934c0aa069a8db0ba907
+- f5180a45e710978106ad3dda593313044aa051381e82bd45263b027f4e7e5dda
 
 # `runtime_results.py`
 

@@ -386,21 +386,20 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と run join/abandon に関する統合 realization test。realization apply fork、refactor fork、run join の状態共有・差分解決・マージ失敗時ロールバック・割り込み復旧を検証する。oracle investigation のセッション前提や refactor 中の INDEX 更新・再レビューも確認する。関連する run lifecycle、fork、refactor、INDEX 更新の挙動を横断して検証する入口。
+- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、join/abandon のライフサイクルを、共通 fixture と実 Git リポジトリ上で検証する。
+- realization apply fork の join、想定外差分の force-resolve、join 後同期失敗時のロールバック、oracle investigation の session 前提、refactor fork の完了・未解決・INDEX 更新・割り込み時挙動を扱う。
 
 ## Read this when
-- realization apply fork または refactor fork の統合フローを変更・調査するとき
-- run join の状態遷移、force-resolve、マージ失敗時ロールバック、再実行を変更・調査するとき
-- refactor fork の永続サイクル、割り込み復旧、変更ファイルの INDEX 再更新を確認するとき
-- oracle investigation のセッション前提や AgentCallParameter のアクセスモードを変更するとき
+- realization apply fork や realization refactor fork の run lifecycle、join、force-resolve、ロールバック、fork report を変更または検証するとき
+- session state、run branch/worktree、refactor state、INDEX 更新、Codex 呼び出しの統合挙動を確認するとき
+- oracle investigation の session 前提や割り込み・未解決 target の完了条件を確認するとき
 
 ## Do not read this when
-- 単一の lifecycle helper や fork 実装の内部ロジックだけを変更し、その外部統合挙動を確認する必要がないとき
-- CLI の一般的な起動・doctor・session fork のみを調査するとき
-- INDEX 更新処理そのものの単体仕様を確認するときは、対応する実装・単体テストを直接読む
+- run lifecycle と fork/join の統合挙動に関係せず、個別 command の単体実装や専用 helper だけを調査するとき
+- INDEX 生成や一般的な Git ユーティリティの詳細を直接確認したいときは、対象の実装または専用テストを読む
 
 ## hash
-- 0229d64386e71c34fc389b5156eaf51694465d086d491f66dbd195b6abc38f22
+- 4a333451aa9d2f0fde911bb42dc04afa61ca86e60e17042db268f5e5a4400db4
 
 # `test_indexing_cli.py`
 
@@ -726,19 +725,19 @@
 # `test_runtime_refactor.py`
 
 ## Summary
-- realization refactor の永続 state について、oracle・realization 対象集合との同期、調査履歴の保持、変更ファイルの再調査化、調査対象の優先選択、パス逸脱の拒否を検証するテスト。runtime_refactor の state 管理・対象選択実装を変更または検証する際の入口。
+- realization refactor の永続 state について、oracle・realization ファイル集合との同期、既存履歴の保持と変更ファイルの再調査化、調査対象の優先選択、親ディレクトリ外へのパス逸脱拒否を検証するテスト。
 
 ## Read this when
-- refactor state の同期や読み書き、調査履歴の更新規則を変更・検証するとき
-- 未調査対象や最古の調査対象を選ぶ優先順位を変更・検証するとき
-- refactor state におけるパス逸脱などの不正入力処理を変更・検証するとき
+- refactor state の同期・読み書き・対象選択規則を変更または検証するとき
+- state の履歴保持、SHA256 変更検出、未調査・最古対象の優先順位を確認するとき
+- state ファイルの不正な相対パス入力に対するエラー処理を確認するとき
 
 ## Do not read this when
-- runtime_refactor の実装詳細を直接変更・調査する場合は、まず対応する実装ファイルを読むとき
-- refactor state と無関係な CLI 機能やテストを扱うとき
+- refactor state と無関係な機能のテストを調べるとき
+- 実装の詳細を直接確認したいときは、対応する runtime_refactor 実装を先に読む
 
 ## hash
-- 9be17fbe6f0e1d3b704f7ba152cf8595674ecb695314d803d247b3a4ebd9a135
+- cb86a1572aac39be8764fef2a2d2f2aeb0d3f802c06f6f34e6fc787353de02e9
 
 # `test_runtime_state.py`
 
