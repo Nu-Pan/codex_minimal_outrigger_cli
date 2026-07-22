@@ -129,20 +129,20 @@
 # `realization_refactor.md`
 
 ## Summary
-- realization refactor fork の目的、状態管理、調査ループ、完了・中断・エラー時のライフサイクル、および fork report の要件を定義する正本仕様。realization refactor fork の実装や仕様確認時の入口となる。
+- realization refactor fork の目的、refactor state の保存・同期規則、current fork の unresolved target 管理、調査ループ、完了・中断・エラー処理、report 生成を定義する正本仕様。realization refactor の fork 実装や state lifecycle、処理単位の確定条件を確認する入口。
 
 ## Read this when
-- realization refactor fork の処理フロー、refactor state の同期・選択・更新、調査単位、完了条件を確認するとき
-- fork の中断、unresolved、その他エラー時の状態遷移や commit・rollback 条件を確認するとき
-- fork report の形式、保存先、終了コード、join 後 hook の有無を確認するとき
+- realization refactor fork の実装、調査対象の選択、state 同期、処理単位の commit、unresolved target の扱いを変更・検証するとき
+- refactor fork の完了理由、ユーザー中断、エラー処理、report や終了 log の仕様を確認するとき
+- realization refactor の fork lifecycle と共通 run lifecycle の接続を調査するとき
 
 ## Do not read this when
-- realization apply など別 workload の短い変更ループを扱うとき
-- fork、join、abandon に共通する lifecycle の詳細だけを確認したいときは、指定された共通 lifecycle の正本を直接読む
-- 個別の実装コードやテストの詳細を確認したいとき
+- realization apply の短い変更ループだけを調査するとき
+- fork・join・abandon に共通する一般 lifecycle の詳細だけを確認するときは、指定された共通 lifecycle の正本文書を直接読む
+- refactor state 以外の doctor preprocess や run join の共通処理だけを調査するときは、該当する共通仕様を直接読む
 
 ## hash
-- 0c85730a3abda7cf3f9efd2824023360567ad6a342e05eb7057947ad8d36f84f
+- d83fcb91bd2a83f208179f8b7e313d1b1f968b74bd5ebae436a609b1a6731860
 
 # `session_abandon.md`
 

@@ -215,20 +215,19 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンド仕様を集約する正本文書群。doctor、indexing、tui、oracle 操作、session lifecycle、編集 run の共通・個別仕様へ進むための入口。
+- cmoc の主要サブコマンドと、session・編集 run の lifecycle を定義する正本文書群。doctor、indexing、tui、oracle 操作、realization apply/refactor、session fork/join/abandon の仕様確認への入口となる。
 
 ## Read this when
-- cmoc サブコマンドの実行条件、引数、処理手順、状態遷移、出力やエラー仕様を確認したいとき。
-- oracle 操作、session lifecycle、realization apply/refactor、編集 run の仕様を調査・実装・レビューするとき。
-- 複数サブコマンドに共通する fork、join、abandon、doctor preprocess の責務境界を確認したいとき。
+- cmoc サブコマンドの実行条件、引数、処理手順、出力や状態遷移を確認したいとき。
+- session や編集 run の fork・join・abandon lifecycle、差分、merge、cleanup を実装・レビューするとき。
+- oracle 操作、realization apply/refactor、doctor、indexing、TUI の個別仕様を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの内部実装やテスト詳細だけを確認したいときは、対応する realization code または realization test を直接読む。
-- 共通 lifecycle や agent call parameter の詳細だけを確認したいときは、本文書群から参照される共通仕様・parameter 定義を直接読む。
-- インデクシングや oracle file の具体的な意味そのものだけを調査したいときは、対応する正本文書を直接読む。
+- 個別サブコマンドの内部処理や共通 lifecycle の詳細だけを確認したい場合は、各文書内で指定された専用の正本文書へ直接進む。
+- oracle file の具体的な規約や、Codex CLI の共通起動規則だけを調べる場合は、対応する参照先を直接読む。
 
 ## hash
-- 1e5d9b589e23ed85ef52e86313f38e80cbffe98a7245cb5067e8cfca1b532124
+- 0d909acf49086825aee8214ab7477dbc52980305cd69c5df8609ed61f405b272
 
 # `subcommand_interruption.md`
 
@@ -250,16 +249,16 @@
 # `usage.md`
 
 ## Summary
-- cmoc の基本的な利用手順を定義する文書。doctor、session fork/join、oracle の調査・編集・レビュー、realization apply/refactor、run の join/abandon までの標準 workflow と、各 workload の使い分けを案内する。
+- cmoc の基本的な呼び出し方法、初回準備、通常の session・oracle・realization の workflow、および apply と refactor の使い分けを説明する利用手順書。cmoc を使った開発 lifecycle の入口にあたる。
 
 ## Read this when
-- cmoc の初回セットアップや標準 workflow を確認するとき
-- oracle 変更の realization 反映方法や、apply と refactor の違いを確認するとき
-- session・run の fork、join、abandon の手順を確認するとき
+- cmoc の初回セットアップや基本的な呼び出し方法を確認するとき
+- session fork/join、oracle 編集・レビュー、realization apply/refactor の手順を確認するとき
+- realization apply と realization refactor の使い分けを判断するとき
 
 ## Do not read this when
-- 特定の oracle file の仕様内容を確認したいとき
-- 実装やテストの詳細、個別コマンドの内部仕様を調べたいとき
+- 特定の oracle file の仕様や編集内容を確認したいとき
+- cmoc の内部実装や個別コマンドの詳細な技術仕様を調査するときは、対象コマンドまたは実装の文書を直接読む
 
 ## hash
-- 224a77bd1f12361f99843cfc4d03a769350badf342f4dbcf41d8a73896002f96
+- 67c1e11a5d4ebc3936273d706933419f4e789856bd1afb62c8baeed5896e0296

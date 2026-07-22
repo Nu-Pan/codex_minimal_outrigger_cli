@@ -1,18 +1,18 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を集約する正本文書群。CLI 補完、Codex 呼び出し、ログ、doctor preprocess、プロンプト、run/session lifecycle、サブコマンドなどの仕様確認・実装・検証へ進む入口。
+- cmoc のアプリケーション仕様をまとめた正本文書群。CLI 補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト、run/session lifecycle、サブコマンドなどの仕様確認に進むための入口。
 
 ## Read this when
-- cmoc の利用者向け挙動、CLI 共通処理、Codex 連携、ログ、プロンプト、状態管理、run/session lifecycle の仕様を確認するとき
-- 複数のアプリケーション仕様にまたがる変更や、該当する個別仕様文書の入口を判断するとき
+- cmoc のアプリケーション仕様を横断的に調査するとき
+- 対象機能に対応する正本仕様文書を特定し、詳細確認を始めるとき
 
 ## Do not read this when
-- Python 実行環境、設計ルール、テストルールなど開発手順だけを確認するとき
-- 個別仕様と無関係な実装詳細や生成済みログを直接調査するとき
+- 特定の仕様文書が既に分かっており、その本文を直接確認できるとき
+- 実装コードやテストの詳細だけを調査するとき
 
 ## hash
-- 90481fd8719ae24fc600080dfa1f617cb48fdd0ee2a2e11498551a80ce63d1c4
+- ab2597085b59259114026a2290ff5c7a561888cf9f579a7b7863924f761e51eb
 
 # `branch_model.md`
 
