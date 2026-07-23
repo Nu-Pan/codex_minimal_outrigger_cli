@@ -265,9 +265,9 @@
   },
   "oracle/src/oracle/acp_builder/oracle/edit/launch_tui.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "8fb4ccce29dcf1b377a317fb58eaa990e443a90e5b1125f03c3e104593d8bcaf",
+    "last_investigated_at": "2026-07-24_03-19_20_022272000"
   },
   "oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py": {
     "investigation_required": true,

@@ -128,31 +128,32 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization 側 Python 実装ルート。CLI エントリーポイント、共通 runtime、互換 import shim、各サブコマンド、builder 関連 adapter への入口を提供する。
+- cmoc CLI の realization 実装をまとめる src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、ACP 互換入口、設定・正本パッケージの shim を下位要素への入口として扱う。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・共通 runtime・互換入口・サブコマンドの配置を確認するとき。
-- 特定の実装を読む前に、`src` 直下の責務分担と下位要素への入口を把握するとき。
+- cmoc の realization 側で CLI 全体、サブコマンド構成、共通 runtime、ACP・設定・正本パッケージの互換 import 経路を確認・変更するとき。
+- 目的の実装ファイルが特定できず、src 配下の責務分担や下位ディレクトリへの入口を把握するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装を確認するときは、`oracle` 配下を直接読む。
-- 特定サブコマンド、共通 helper、builder adapter の内部実装だけを調査するときは、対応する下位モジュールを直接読む。
+- 特定サブコマンド、共通 helper、canonical builder、正本仕様の詳細を確認したい場合は、src 全体ではなく対応する下位モジュールまたは oracle 側を直接読む。
+- src の realization 実装や CLI と無関係な処理を調査するとき。
 
 ## hash
-- 9fce1881e9d4c107aab74ac78ac029fb49236577cea258eb9e7051a67820b7a9
+- b91490e9f510bb99810687ae5e8c08464e9da9468eb7bc56e755d1d75fa17a9d
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群と共有テストヘルパーを収めるディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定・権限・worktree などの外部挙動と契約を検証する。各テストファイルおよび `_支援モジュール` が、対象機能の変更時に読む入口となる。
+- テスト用の共有サポートモジュール群と、ACP builder・Codex runtime・CLI・indexing・oracle review・session lifecycle などを対象とする pytest テストを収録するディレクトリ。各テストファイルは対応する機能の外部挙動・契約・異常系・統合動作を検証する入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test の所在や、関連するテスト観点を選定するとき
-- 複数のサブコマンド・runtime・builder にまたがる回帰テスト、共有 fixture、テスト用外部コマンドや Git/Ollama 環境を調査するとき
+- テスト対象の機能変更に伴い、対応する realization test や共通テストヘルパーを特定するとき。
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run state、設定、worktree などの回帰テストを追加・修正するとき。
 
 ## Do not read this when
-- 単一機能の正本仕様や実装詳細を確認する場合は、対応する oracle file または src 配下の実装を直接読む
-- テスト対象と無関係な機能を調査する場合は、このディレクトリ全体を読まず、該当するテストファイルへ直接進む
+- 正本仕様や schema の内容を確認したいときは、対応する oracle doc・oracle src・oracle schema を直接読む。
+- 実装詳細を調査したいときは、テストではなく対応する src の realization implementation を直接読む。
+- 単一機能と無関係なテストヘルパーや統合テストを総覧する必要がないときは、対象テストファイルへ直接進む。
 
 ## hash
-- 15cd540168f984d84090100dad38a1c3dfe9d30a8db694f8f1110d05c1da485c
+- 4b4ba8c28261b9c3eafc3c108e6d099610a070dfc2b332f886a101b9ef0eb7bf

@@ -558,20 +558,19 @@
 # `test_packaged_import.py`
 
 ## Summary
-- packaged layout 上での import 境界と公開 API を検証するテスト。oracle review/edit builder、ACP basic、cmoc config の実装を隔離環境から読み込み、パッケージ配置、prompt・schema・設定値、正本定義の再公開、公開 namespace を確認する。
+- packaged layout における Python パッケージの import 境界と公開 API を検証するテスト。oracle review/edit builder、ACP basic、cmoc config の正本定義参照、prompt・schema・設定値・再公開オブジェクト・__all__ の契約を、隔離した一時実行環境で確認する。
 
 ## Read this when
-- packaged layout での Python import が失敗する場合
-- oracle review または oracle edit builder の prompt・schema・実行パラメータを変更する場合
-- ACP basic の canonical 定義再公開や config の公開面を変更する場合
-- setuptools の package discovery または package-dir 設定を変更する場合
+- パッケージング構成、oracle 配下の import、builder の packaged layout 対応を変更または調査するとき
+- ACP basic や cmoc config の公開 import、canonical 定義の再公開、公開シンボル制限を変更または検証するとき
+- oracle review/edit builder の prompt、schema、実行パラメータ契約を変更または検証するとき
 
 ## Do not read this when
-- 単一の builder 内部処理や prompt 内容そのものを変更する場合は、まず対応する実装・oracle source・schema を直接読む
-- packaged import、公開 API、setuptools 設定に関係しないテストや機能を変更する場合
+- 通常の builder 実装や config 実装の内部ロジックだけを変更し、packaged layout や公開 import に影響しないとき
+- 対象の契約を直接確認する必要があり、対応する oracle source または実装ファイルを先に読むべきとき
 
 ## hash
-- 276c9c30b57445950f6f3243de461281796d36a9a7d8278ef62adf1402e88a28
+- ffcfebf423f7cf6a993c973c753929c18596b82a3b657d5e36cd0d8fb45fd36c
 
 # `test_production_cli.py`
 
