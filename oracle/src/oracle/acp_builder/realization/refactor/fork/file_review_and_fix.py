@@ -40,8 +40,10 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
                 "作業上の注意点",
                 """
                 - commit 差分、変更 commit の列、変更要約は入力として与えられていない。最近の差分を推測して作業範囲を狭めてはいけない
+                - 調査開始時点の既存実装ですでに解消されている問題を所見に含めてはいけない
                 - 所見の調査、修正、修正後の検証を同一の agent call 内で行う
-                - 修正後に解消した所見も、この agent call で発見した所見として `findings` に含める
+                - `resolution.status=fixed` は、この agent call 内で所見に対応する realization file を実際に変更し、修正後の検証まで行った場合だけ使用する
+                - この agent call で realization file を変更して解消した所見も、この agent call で発見した所見として `findings` に含める
                 - 所見が見つからなかった場合は `findings` を空にし、file に差分を発生させない
                 - file に加える全ての差分を、`findings` のいずれかと対応させる
                 - git add と git commit は実行禁止

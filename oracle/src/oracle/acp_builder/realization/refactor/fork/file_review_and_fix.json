@@ -7,7 +7,7 @@
   "properties": {
     "findings": {
       "type": "array",
-      "description": "この agent call で発見した realization file の要修正点。呼び出し内で解消した所見も含む。",
+      "description": "この agent call の調査開始時点で存在した realization file の要修正点。既存実装ですでに解消されている問題は含めない。この agent call 内で realization file を変更して解消した所見は含める。",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -90,7 +90,7 @@
                   "fixed",
                   "unresolved"
                 ],
-                "description": "所見を解消して検証できた場合は fixed、それ以外は unresolved。"
+                "description": "この agent call 内で所見に対応する realization file を実際に変更し、修正後の検証まで行った場合だけ fixed とする。この agent call 内で解消できなかった所見は unresolved とする。"
               },
               "summary": {
                 "type": "string",

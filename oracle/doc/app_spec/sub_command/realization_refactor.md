@@ -86,19 +86,28 @@
 
 1. 調査対象 file の現在の SHA256 を調査時点の hash として取得する。
 2. `build_realization_refactor_fork_file_review_and_fix_parameter` に調査対象 path だけを渡し、所見調査、realization file の修正、および検証を 1 回の agent call で行う。
-3. agent call が正常終了した場合、調査時点の hash、日時、および所見有無を対象 entry に保存する。
+3. agent call が正常終了した後、返された Structured Output と、その agent call による realization file の差分から処理結果を決定する。
+    - `findings` が空の場合は、所見なしとする。
+    - `findings` が 1 件以上あり、全所見の `resolution.status` が `fixed` であり、agent call 後の realization file の差分が空の場合は、処理結果を所見なしへ正規化する。
+    - それ以外の場合は、返された所見を処理結果の所見とする。
+4. 調査時点の hash、日時、および正規化後の所見有無を対象 entry に保存する。
     - 所見なし: `last_investigation_result=no_findings`, `investigation_required=false`
     - 所見あり: `last_investigation_result=findings`, `investigation_required=true`
     - `resolution.status=unresolved` の所見が 1 件以上ある場合も所見ありとして扱い、`investigation_required=true` を維持する。
-4. agent call が変更した全 realization file を `investigation_required=true` にする。
-5. 追加、rename、削除後の entry 集合を同じ処理単位で同期する。
-6. realization file の差分、refactor state の更新、および cmoc が生成した `INDEX.md` を同じ処理単位の commit として確定する。
-7. response に `resolution.status=unresolved` の所見が 1 件以上ある場合は、処理単位の確定後に対象 path を current fork の unresolved target 集合へ追加する。
-8. unresolved target 集合を除いた調査対象が残っていれば、次の対象を選ぶ。
+5. agent call が変更した全 realization file を `investigation_required=true` にする。
+6. 追加、rename、削除後の entry 集合を同じ処理単位で同期する。
+7. realization file の差分、refactor state の更新、および cmoc が生成した `INDEX.md` を同じ処理単位の commit として確定する。
+8. 正規化後の処理結果に `resolution.status=unresolved` の所見が 1 件以上ある場合は、処理単位の確定後に対象 path を current fork の unresolved target 集合へ追加する。
+9. unresolved target 集合を除いた調査対象が残っていれば、次の対象を選ぶ。
 
 - 所見が空の場合、agent は差分を発生させてはいけない。
 - agent の差分は返却した所見のいずれかに対応しなければならない。
 - agent call には commit 差分、変更 commit の列、または変更要約を注入してはいけない。
+- `resolution.status=fixed` は agent の自己申告であり、その申告だけを修正の意味的な正しさを証明する情報として扱ってはいけない。
+- 所見なしへの正規化は cmoc の処理判定だけに適用する。agent が返した元の Structured Output と Codex call log は破棄または改変せず、調査可能な実行記録として保持する。
+- 所見なしへ正規化した所見を current fork の unresolved target 集合へ追加してはいけない。synthetic `unresolved` への変換や、人間による判断、手動修正、手動承認を要求する workflow の追加も行わない。
+- 所見なしへの正規化を理由に run を error state にしてはいけない。処理単位を確定し、残りの target の処理を継続する。
+- 所見なしへの正規化は、想定外 path の変更、変更禁止対象への書き込み、説明のない realization file の差分、または処理単位の commit・rollback 失敗に対する検査を緩和しない。
 - unresolved を含むことだけを理由に、処理単位を rollback したり refactor loop を停止したりしてはいけない。
 - unresolved を含む処理単位でも、realization file の差分、refactor state、および `INDEX.md` を整合した単位として確定する。
 
@@ -110,9 +119,10 @@
 - `natural_completion` と `completed_with_unresolved` では、`run.state` を `joinable` にする。
 - `completed_with_unresolved` は正常系とする。Python 例外、エラー用 call stack、または `run.state=error` を使用してはいけない。
 - state object は空にせず、各 file の調査履歴を保持する。
+- 所見なしへ正規化した処理単位は、agent が空の `findings` を返した処理単位と同じく、所見なしとして完了条件を判定する。
 - `natural_completion` は、全 oracle file と realization file に調査要求が残っていないことを表す。
 - `completed_with_unresolved` は、current fork で調査可能な target をすべて処理し、未解決の調査要求だけを次回 fork へ残したことを表す。
-- いずれの完了も、ファイル単位調査で全問題を発見できることや LLM の回答品質を保証しない。
+- いずれの完了も、ファイル単位調査で全問題を発見できること、LLM の回答品質、または agent の申告や作業内容の意味的な正しさを保証しない。
 
 ## ユーザー中断
 
@@ -139,7 +149,7 @@
     - `resolution.status=unresolved` の所見ごとの title、`resolution.summary` による未解決理由、および対応する Codex call log または Structured Output のフル path。
     - current fork で処理した target の件数。1 回以上処理単位を確定した target path を重複なく数える。
     - 未調査 target の件数。`investigation_required=true` であり、current fork の unresolved target 集合に含まれない entry を数える。
-    - 処理単位ごとの所見数。
+    - 正規化後の処理結果に基づく処理単位ごとの所見数。所見なしへ正規化した処理単位は 0 件とする。
     - entry 総数、調査要求あり件数、および各 `last_investigation_result` の件数。
     - run branch 上の変更内容の要約。
 - `completed_with_unresolved` の report では、未調査 target の件数を 0 とする。調査要求あり件数は unresolved target の件数と一致しなければならない。
