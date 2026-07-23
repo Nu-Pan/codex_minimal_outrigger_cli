@@ -15,36 +15,32 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドで、main worktree 向け TUI の起動をオーケストレーションする実装。プロンプト入力の収集、oracle 編集用パラメータ構築、indexing preflight、Codex TUI 起動を扱う。
-- main worktree、active な session branch・session、clean worktree などの起動前提条件を検証するための入口。
+- `cmoc oracle edit` サブコマンドの実行入口。入力された oracle 編集指示を受け取り、起動条件を検証したうえで Codex TUI を main worktree から起動する。
 
 ## Read this when
-- `cmoc oracle edit` の CLI runtime、TUI 起動、プロンプト入力、起動前提条件を変更・調査するとき
-- main worktree や session branch の検証、oracle 編集 instruction の受け渡しを確認するとき
+- `cmoc oracle edit` の CLI 起動経路、入力収集、TUI 起動パラメータ、起動前検証を変更・調査するとき。
 
 ## Do not read this when
-- oracle 編集対象の選択・編集ロジック自体を調査するとき
-- 共通 CLI runtime、git 状態検証、runtime state の詳細だけを調査するとき
+- oracle 編集指示の具体的な仕様や TUI パラメータ生成処理だけを確認したいときは、参照されている oracle 仕様または `launch_tui` 実装を直接読む。
 
 ## hash
-- 99fe6a83f2e498107c96577726f81954d9450edc5ac116049c82d97f4c8d9d56
+- 0346bbb279262e9497ffbfd8648d775278688a391de6cf2da8096bc8515b4fe0
 
 # `investigation.py`
 
 ## Summary
-- `cmoc oracle investigation` サブコマンドの read-only TUI workload を実装するエントリポイント。インデックス事前処理、調査指示の入力、Codex TUI 起動パラメータの構築、設定済みランタイムでの TUI 起動を担当する。
+- `cmoc oracle investigation` サブコマンドの read-only TUI workload を実装する。入力された oracle 調査指示を編集・収集し、TUI 起動パラメータを構築して Codex TUI を起動する。
 
 ## Read this when
-- `cmoc oracle investigation` の CLI 実行フロー、調査指示入力、Codex TUI 起動処理を変更・調査するとき。
-- oracle investigation サブコマンドのステップ構成や実行時コンテキストを確認するとき。
+- `cmoc oracle investigation` の CLI 実行フロー、入力テンプレート、TUI 起動処理を確認・変更するとき。
+- oracle 調査指示の入力前処理や indexing preflight、実行ステップの構成を確認するとき。
 
 ## Do not read this when
-- Oracle investigation の調査指示テンプレートや正本仕様を確認したいときは、対応する oracle doc を直接読む。
-- TUI 起動パラメータの詳細実装を確認したいときは、`acp.builder.oracle.investigation.launch_tui` を直接読む。
-- 共通 CLI ランタイム、プロンプトエディタ入力、インデックス事前処理の仕様だけを確認したいときは、各共通モジュールを直接読む。
+- 他の oracle サブコマンドや、TUI 起動パラメータの具体的な構築ロジックだけを確認したいときは、それぞれの実装先を直接読む。
+- Codex TUI 自体の実装や共通 CLI runtime の詳細だけを調べるとき。
 
 ## hash
-- 7ea8e16b7d631e28f1e208d4683ec600dd20c333046f5eae32e94aca5e25d58b
+- 82d05024db9f62a0c049f64b3f6163d532cdfe1b8d691142961abcf9e49b3c10
 
 # `review.py`
 

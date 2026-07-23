@@ -1,7 +1,5 @@
 """明示的な join を必要とする editing run の共通処理。"""
 
-from __future__ import annotations
-
 import os
 from collections.abc import Collection
 from dataclasses import dataclass
@@ -446,6 +444,7 @@ def raw_oracle_diff(worktree: Path, base: str, end: str) -> str:
 
 
 def _new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
+    """衝突しない run branch と管理 worktree path を予約候補として選ぶ。"""
     for _ in range(MAX_RUN_ID_ATTEMPTS):
         run_id = timestamp()
         branch = f"cmoc/run/{session_id}/{run_id}"
@@ -465,6 +464,7 @@ def _is_agent_expected_path(
     path: str,
     branch: str,
 ) -> bool:
+    """path が workload agent に許可された realization file か判定する。"""
     if kind in {"realization_apply", "realization_refactor"}:
         return is_realization_file_path(root, root / path, branch=branch)
     return False
@@ -476,6 +476,7 @@ def _is_run_expected_path(
     path: str,
     branch: str,
 ) -> bool:
+    """path が run branch の管理対象差分か判定する。"""
     if _is_index_path(path):
         return True
     if kind == "realization_refactor" and _is_refactor_state_path(root, path):
@@ -484,6 +485,7 @@ def _is_run_expected_path(
 
 
 def _is_oracle_path(path: str) -> bool:
+    """repository 相対 path が INDEX/AGENTS 以外の oracle file か判定する。"""
     parts = Path(path).parts
     return (
         bool(parts)
@@ -497,8 +499,10 @@ def _is_oracle_path(path: str) -> bool:
 
 
 def _is_index_path(path: str) -> bool:
+    """repository 相対 path が INDEX.md か判定する。"""
     return Path(path).name == "INDEX.md"
 
 
 def _is_refactor_state_path(root: Path, path: str) -> bool:
+    """repository 相対 path が refactor state file か判定する。"""
     return Path(path) == refactor_state_path(root).relative_to(root)

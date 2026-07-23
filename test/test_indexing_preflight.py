@@ -200,6 +200,7 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         assert call_parameter == parameter
 
     def pre_launch_check() -> None:
+        """TUI 起動前の pre-launch 検査を記録する。"""
         events.append("check")
 
     indexing_module.enable_indexing_preflight()

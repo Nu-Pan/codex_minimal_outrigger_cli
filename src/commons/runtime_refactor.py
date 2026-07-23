@@ -18,6 +18,8 @@ InvestigationResult = Literal["not_investigated", "no_findings", "findings"]
 
 
 class RefactorEntry(TypedDict):
+    """単一の oracle または realization file の調査履歴。"""
+
     investigation_required: bool
     last_investigation_result: InvestigationResult
     last_investigated_sha256: str | None
@@ -142,6 +144,7 @@ def mark_all_refactor_targets_required(state: RefactorState) -> None:
 
 
 def _valid_relative_path(value: str) -> bool:
+    """state key として許可される repository 相対 path か判定する。"""
     path = Path(value)
     return (
         bool(path.parts)
@@ -152,6 +155,7 @@ def _valid_relative_path(value: str) -> bool:
 
 
 def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
+    """JSON の entry を検証し、型付けされた refactor entry として返す。"""
     if not isinstance(value, dict):
         raise _invalid_refactor_state(path, f"entry は object ではありません: {key}")
     expected = {
@@ -199,6 +203,7 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
 
 
 def _invalid_refactor_state(path: Path, reason: str) -> CmocError:
+    """不正な refactor state を利用者向け例外へ変換する。"""
     return CmocError(
         "realization refactor state が不正です。",
         ["既存の調査履歴を保持したまま state file を修復してください。"],

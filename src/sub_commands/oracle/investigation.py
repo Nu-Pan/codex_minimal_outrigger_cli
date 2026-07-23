@@ -41,6 +41,7 @@ def cmoc_oracle_investigation_impl() -> None:
 
 
 def _cmoc_oracle_investigation_body() -> None:
+    """入力された oracle 調査指示から Codex TUI を起動する。"""
     root = repo_root()
     current_root = work_root()
     start_subcommand_step(2, "oracle 調査指示を入力", "edit investigation")

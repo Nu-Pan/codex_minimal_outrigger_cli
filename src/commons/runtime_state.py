@@ -213,6 +213,7 @@ def _part_data(
 def _require_state(
     part: dict[str, Any], key: str, allowed: set[str], source: Path | None
 ) -> None:
+    """state part の状態値が許可された集合に含まれることを検証する。"""
     value = part["state"]
     if not isinstance(value, str) or value not in allowed:
         raise _invalid_state(
@@ -224,6 +225,7 @@ def _require_state(
 def _require_nullable_strings(
     part: dict[str, Any], key: str, source: Path | None
 ) -> None:
+    """state part の payload が string または null だけであることを検証する。"""
     for name, value in part.items():
         if name != "state" and value is not None and not isinstance(value, str):
             raise _invalid_state(
@@ -262,6 +264,7 @@ def _validate_run_fields(run: dict[str, Any], source: Path | None) -> None:
 
 
 def _invalid_state(source: Path | None, reason: str) -> CmocError:
+    """不正な session state を利用者向け例外へ変換する。"""
     detail = f"{source}\n{reason}" if source else reason
     return CmocError(
         "session state file が不正です。",

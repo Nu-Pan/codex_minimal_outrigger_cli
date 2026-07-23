@@ -15,6 +15,7 @@ from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
 
 
 def test_realization_apply_builder_embeds_commit_range_and_raw_diff() -> None:
+    """apply builder が commit 範囲と oracle raw diff を prompt に含めることを確認する。"""
     parameter = build_realization_apply_fork_launch_exec_parameter(
         "base-commit",
         "fork-commit",
@@ -30,6 +31,7 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff() -> None:
 
 
 def test_refactor_builders_use_canonical_structured_output_schemas() -> None:
+    """refactor builder が canonical schema と要求された実行設定を使うことを確認する。"""
     review = build_realization_refactor_fork_file_review_and_fix_parameter(
         Path(__file__)
     )

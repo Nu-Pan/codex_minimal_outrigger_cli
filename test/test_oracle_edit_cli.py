@@ -25,6 +25,7 @@ from main import app
 
 @pytest.fixture(autouse=True)
 def reset_indexing_preflight() -> Iterator[None]:
+    """各 test の前後で indexing preflight の process-local state を初期化する。"""
     codex_preflight_module.disable_indexing_preflight()
     yield
     codex_preflight_module.disable_indexing_preflight()
@@ -36,6 +37,7 @@ def _activate_session(
     session_state: str = "active",
     run: RunPart | None = None,
 ) -> tuple[str, Path]:
+    """隔離 repository に oracle edit 用の session state を作成する。"""
     home_branch = current_branch(root)
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     session_id = "oracle-edit-test"
@@ -56,6 +58,7 @@ def _prepared_repo(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
+    """doctor 済みの隔離 repository を準備する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     run_doctor(root)
@@ -68,6 +71,7 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     monkeypatch: pytest.MonkeyPatch,
     tui_fails: bool,
 ) -> None:
+    """oracle edit が run lifecycle を使わず TUI の oracle 差分を保持する。"""
     root = _prepared_repo(tmp_path, monkeypatch)
     active_run = RunPart(
         "running",
@@ -99,12 +103,14 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         update_root: Path,
         _codex_exec: object,
     ) -> None:
+        """oracle edit 前の indexing preflight 呼び出しを記録する。"""
         assert update_root == root
         events.append("indexing")
 
     real_require_clean = oracle_edit_module.require_clean_worktree
 
     def record_clean_check(check_root: Path) -> None:
+        """oracle edit の clean worktree 検査を記録して本来の検査へ委譲する。"""
         events.append("check")
         real_require_clean(check_root)
 
@@ -112,6 +118,7 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         parameter: AgentCallParameter,
         **kwargs: object,
     ) -> CommandResult:
+        """TUI の代わりに oracle 差分を書き込み、指定時は失敗させる。"""
         events.append("tui")
         calls.append((parameter, kwargs))
         (root / "oracle" / "spec.md").write_text("# edited spec\n")
@@ -180,6 +187,7 @@ def test_oracle_edit_launch_preconditions(
     case: str,
     message: str,
 ) -> None:
+    """oracle edit の各起動前提違反を利用者向け例外として検証する。"""
     root = _prepared_repo(tmp_path, monkeypatch)
     current_root = root
     if case != "non_session":

@@ -25,6 +25,7 @@ from commons.runtime_state import (
 
 
 def hold_session_fork_lock(root: Path, ready: Connection, release: Connection) -> None:
+    """別 process で session fork lock を保持し、解放指示を待つ。"""
     with session_fork_lock(root):
         ready.send(True)
         release.recv()
@@ -43,6 +44,7 @@ def _valid_state() -> SessionState:
     ["cmoc/session/", "cmoc/session/id/extra", "cmoc/run/id/run"],
 )
 def test_branch_session_id_rejects_invalid_shape(branch: str) -> None:
+    """session branch の不正な形を拒否する。"""
     with pytest.raises(CmocError):
         branch_session_id(branch)
 
@@ -52,11 +54,13 @@ def test_branch_session_id_rejects_invalid_shape(branch: str) -> None:
     ["cmoc/run/", "cmoc/run/session", "cmoc/run/session/run/extra"],
 )
 def test_run_branch_session_id_rejects_invalid_shape(branch: str) -> None:
+    """run branch の不正な形を拒否する。"""
     with pytest.raises(CmocError):
         run_branch_session_id(branch)
 
 
 def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> None:
+    """run branch の session component から state file を解決する。"""
     path = state_path(tmp_path, "session")
     state = _valid_state()
     state.run = RunPart("joinable", "realization_apply", "cmoc/run/session/run", "abc")
@@ -74,6 +78,7 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
 @pytest.mark.parametrize("part", ["session", "run"])
 @pytest.mark.parametrize("value", [[], {}])
 def test_session_state_rejects_non_string_state(part: str, value: object) -> None:
+    """session/run state が string でない payload を拒否する。"""
     data = _valid_state().to_dict()
     data[part]["state"] = value
 
@@ -98,6 +103,7 @@ def test_session_state_rejects_non_string_state(part: str, value: object) -> Non
 def test_session_state_rejects_non_string_payload(
     part: str, field: str, value: object
 ) -> None:
+    """state payload の string または null 以外の値を拒否する。"""
     data = _valid_state().to_dict()
     data[part][field] = value
 
@@ -108,6 +114,7 @@ def test_session_state_rejects_non_string_payload(
 
 
 def test_ready_run_requires_null_payload() -> None:
+    """ready run が active run payload を持つ state を拒否する。"""
     data = _valid_state().to_dict()
     data["run"]["kind"] = "realization_apply"
 
@@ -116,6 +123,7 @@ def test_ready_run_requires_null_payload() -> None:
 
 
 def test_oracle_edit_is_not_a_run_kind() -> None:
+    """oracle edit を editing run kind として受け入れない。"""
     data = _valid_state().to_dict()
     data["run"] = {
         "state": "running",
@@ -129,6 +137,7 @@ def test_oracle_edit_is_not_a_run_kind() -> None:
 
 
 def test_load_session_part_does_not_validate_run_section(tmp_path: Path) -> None:
+    """session 部分の読み込みが未検証の run 部分に依存しない。"""
     path = state_path(tmp_path, "session")
     path.parent.mkdir(parents=True)
     session = SessionPart("active", "main", "abc", None)
@@ -157,6 +166,7 @@ def test_load_session_part_does_not_validate_run_section(tmp_path: Path) -> None
 
 @pytest.mark.parametrize("field", ["session_home_branch", "session_fork_commit"])
 def test_session_state_requires_session_identity(field: str) -> None:
+    """session identity の必須 field が null の state を拒否する。"""
     data = _valid_state().to_dict()
     data["session"][field] = None
 
@@ -170,6 +180,7 @@ def test_session_state_requires_session_identity(field: str) -> None:
 def test_load_session_part_requires_session_identity(
     tmp_path: Path, field: str
 ) -> None:
+    """session 部分の読み込みでも session identity を要求する。"""
     path = state_path(tmp_path, "session")
     path.parent.mkdir(parents=True)
     data = _valid_state().to_dict()
@@ -184,6 +195,7 @@ def test_load_session_part_requires_session_identity(
 
 
 def test_write_state_rejects_invalid_session_identity(tmp_path: Path) -> None:
+    """不完全な session state を file へ書き込まない。"""
     path = state_path(tmp_path, "session")
 
     with pytest.raises(CmocError):
@@ -194,6 +206,7 @@ def test_write_state_rejects_invalid_session_identity(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("state", ["running", "joinable", "error"])
 def test_active_run_requires_kind_branch_and_fork_commit(state: str) -> None:
+    """active run state が kind・branch・fork commit を必要とする。"""
     data = _valid_state().to_dict()
     data["run"]["state"] = state
 
@@ -202,6 +215,7 @@ def test_active_run_requires_kind_branch_and_fork_commit(state: str) -> None:
 
 
 def test_session_state_rejects_unknown_fields() -> None:
+    """session state の未定義 field を拒否する。"""
     data = _valid_state().to_dict()
     data["run"]["obsolete"] = None
 
@@ -212,6 +226,7 @@ def test_session_state_rejects_unknown_fields() -> None:
 
 
 def test_session_fork_lock_is_shared_across_processes(tmp_path: Path) -> None:
+    """session fork lock が process 間で共有されることを確認する。"""
     root = make_repo(tmp_path)
     ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
     release_child, release_parent = multiprocessing.Pipe(duplex=False)
@@ -243,5 +258,6 @@ def test_session_fork_lock_is_shared_across_processes(tmp_path: Path) -> None:
 
 
 def _acquire_lock(root: Path, acquired: threading.Event) -> None:
+    """lock を取得して worker 側の event を通知する。"""
     with session_fork_lock(root):
         acquired.set()

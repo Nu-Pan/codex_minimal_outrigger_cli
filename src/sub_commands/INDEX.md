@@ -44,40 +44,32 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめる package。oracle edit・investigation・review の CLI 入口と、review に関する対象列挙、パス解決、ループ、INDEX 差分統合、レポート生成の各処理への入口を提供する。
+- oracle 系サブコマンドをまとめる package。各サブコマンドの CLI 入口に加え、oracle review の対象列挙・パス解決・ループ・差分統合・レポート生成を下位モジュールへの入口として提供する。
 
 ## Read this when
-- oracle サブコマンドの実装構成や、各サブコマンド・review 関連処理の入口を確認するとき
-- oracle edit・investigation・review の実行フローや責務分担を調査するとき
-- oracle review の対象列挙、パス解決、ループ、INDEX 統合、レポート生成の実装を調査するとき
+- oracle 系サブコマンドの構成や package の入口を確認するとき。
+- oracle review の実行フロー、対象選定、finding 処理、INDEX.md 統合、レポート生成の担当モジュールを特定するとき。
 
 ## Do not read this when
-- 個別サブコマンドの詳細実装だけを確認したいときは、該当するサブコマンド実装を直接読む
-- oracle review の対象列挙、パス解決、処理ループ、INDEX 統合、レポート生成の詳細だけを確認したいときは、該当するモジュールを直接読む
+- 個別サブコマンドや review の詳細実装を調査するときは、該当する下位モジュールを直接読む。
+- Codex TUI や共通 CLI runtime の詳細だけを調べるとき。
 
 ## hash
-- cff9bffee2a0446ce2e577968d8ac346978415b89cd353520fa01b25b940c960
+- 70c0eeb423abba2065aa653c708573da3c9cd047c868cf19621135805eac4b67
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。
-- realization の apply 処理と refactor 処理を扱う下位モジュール群への入口。
-- apply では `cmoc realization apply fork` の差分適用、agent 実行、検査、状態更新、report 保存までを扱う。
-- refactor では fork の target 処理、調査・修正、unresolved 管理、完了検証、cleanup、summary/report 生成を扱う。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の実行処理への導線を提供する。
 
 ## Read this when
 - realization workload サブコマンドの実装や構成を確認するとき。
-- realization apply fork の実行フロー、失敗時処理、差分検証を調査・変更するとき。
-- realization refactor fork のライフサイクル、target 処理、unresolved finding、完了判定を調査・変更するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply workload 以外の処理だけを扱うときは apply の下位モジュールへ直接進む。
-- refactor の target 選択、state 同期、prompt 構築、共通 lifecycle・report・process tracking だけを扱うときは対応する専用実装へ直接進む。
 
 ## hash
-- 5ec95214d78237dabc07f53dd3c97f4a1237218c4a2772d8a3090177aca2d3e9
+- 36caddb4ff81b39a1fbd53dba51ab268ecaf247153f35f7753f78d4c8e33d8d6
 
 # `review`
 
@@ -96,16 +88,21 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージの入口。abandon・join・lifecycle・report の各実装へ進む起点となる。
+- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。run の開始・参加・放棄、共通 lifecycle 処理、merge・cleanup、report 保存を確認する入口。
+- 個別コマンドの実装に加え、active run の解決、state 更新、Git 差分検査、worktree・branch 操作、INDEX.md conflict 処理、ライフサイクルレポート生成を扱う。
 
 ## Read this when
-- editing run の共通 lifecycle、開始・状態遷移・cleanup、run report、または配下実装の責務を調査・変更するとき。
+- editing run の開始・join・abandon の動作や、共通 lifecycle の変更・調査を行うとき
+- run の state 遷移、worktree・branch・process tracking の cleanup、merge、rollback、report 保存を確認するとき
+- run lifecycle と doctor preprocess、refactor state 同期、INDEX.md 更新の連携を確認するとき
 
 ## Do not read this when
-- editing run 以外のサブコマンドを扱うとき。特定処理の詳細を確認する場合は、配下の該当ファイルを直接読む。
+- editing run 以外のサブコマンドを扱うとき
+- state データ構造や永続化形式そのものを確認するときは runtime_state と対応する oracle を読む
+- Git・path・INDEX 更新の低レベル utility、または report 保存先の規則だけを確認するときは各専用 module を直接読む
 
 ## hash
-- e259c3c33b8292f555320e71ac084412b88736a4fb8bd10a075d3b49880e3b0a
+- 4fe0a4f49f2675ca3252c2e652da0c2b82bf2041f8e866d0f65cb428dafff9fd
 
 # `session`
 

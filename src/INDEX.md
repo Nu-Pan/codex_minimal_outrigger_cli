@@ -50,18 +50,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI ライフサイクル、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新など、複数の CLI サブコマンドで共有される下位機能への入口。
+- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI ライフサイクル、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新など、複数の CLI サブコマンドで共有される実行時機能を提供する。
+- commons 配下の共通 runtime API・実装を調査または変更する際の入口であり、目的に応じて個別の runtime_* モジュールへ進む。
 
 ## Read this when
-- 共有 runtime API や commons パッケージの初期化を確認・変更するとき
-- Codex subprocess、CLI 共通実行、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新の実装箇所を探すとき
+- 複数の CLI サブコマンドにまたがる runtime helper の責務や公開 API を確認するとき
+- Codex 実行、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新などの共通処理を変更・調査するとき
+- commons 配下で対象となる個別 runtime モジュールを選ぶ必要があるとき
 
 ## Do not read this when
-- 特定サブコマンド固有の業務処理や引数定義だけを変更・調査するとき
-- 利用者向け仕様や正本仕様を確認するときは、対応する oracle 文書を直接読むとき
+- 特定の runtime helper の実装詳細が明確な場合は、対応する個別の runtime_* モジュールを直接読むとき
+- CLI サブコマンド固有の制御フローや入出力を確認するとき
+- 正本仕様や prompt の定義を確認するときは、対応する oracle 文書・oracle source を直接読むとき
 
 ## hash
-- b84aa0be1c6d1a641ce3ca8f035a01b2b7eee9fec8fc6877eb7d5f484db5557f
+- 9ef138d7ddbc0bb8296026c752785501f769805a8164b24991ed41dedc1813fc
 
 # `config`
 
@@ -113,15 +116,16 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装パッケージへの入口。doctor、indexing、oracle、realization、review、run、session、tui などの CLI 実行フローと責務分担を確認するためのディレクトリ。未実装の apply も実装追加時の配置先として示す。
+- CLI サブコマンドの実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの各サブコマンド実装への入口を提供し、個別機能の実装確認先を示す。
+- apply と review は現在実装本文がなく、将来の実装追加先として位置づけられている。
 
 ## Read this when
-- cmoc のサブコマンド実装の構成や、特定サブコマンドの実行入口を確認するとき
-- 複数のサブコマンドにまたがる実装配置や責務分担を調査するとき
+- CLI サブコマンドの実装構成や、対象サブコマンドの実装ファイルを特定するとき。
+- doctor、indexing、oracle review、realization workload、editing run、session、または tui の実行フローを調査・変更するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理だけを調査するときは、対応する下位パッケージまたは実装ファイルを直接読む
-- 共通 runtime、indexing、Git 操作、状態 schema、prompt editor など専用実装の詳細だけを確認するときは、それぞれの実装や仕様文書を直接読む
+- サブコマンドに共通する runtime、低レベル utility、state の永続化、INDEX 更新、Git 操作などの専用実装だけを調査するとき。
+- 対象サブコマンドの詳細実装が明確な場合は、このディレクトリ全体ではなく該当する実装ファイルを直接読むとき。
 
 ## hash
-- 36c6c405a4b5a4c96fa96a4227d502bd19b8ffc500eaa261e0e72351dd506065
+- c46550228cadd07bf089a4b9eaf07714c1edd1f2ca209f0e167254570bddc61e

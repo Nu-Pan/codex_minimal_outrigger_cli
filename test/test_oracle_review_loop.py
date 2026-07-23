@@ -170,6 +170,7 @@ def test_oracle_review_enumerate_matches_main_worktree_finding_paths(
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> _FakeCodexResult:
+        """oracle review builder ごとの deterministic response を返す。"""
         _assert_review_call_context(parameter, kwargs, repo_root, review_worktree)
         schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":

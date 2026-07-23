@@ -99,6 +99,7 @@ def write_lifecycle_report(
 
 
 def _yaml_scalar(value: object) -> str:
+    """report の YAML scalar として安全に表現する。"""
     if value is None:
         return "null"
     if isinstance(value, bool):

@@ -10,6 +10,7 @@ def _leaves(
     command: click.Command,
     prefix: tuple[str, ...] = (),
 ) -> set[tuple[str, ...]]:
+    """Click command tree から末端 command の path 集合を抽出する。"""
     commands = getattr(command, "commands", None)
     if commands is None:
         return {prefix}
@@ -21,6 +22,7 @@ def _leaves(
 
 
 def test_public_cli_leaf_commands_match_oracle() -> None:
+    """公開 CLI の末端 command 集合が正本の列挙と一致することを確認する。"""
     assert _leaves(get_command(app)) == {
         ("doctor",),
         ("indexing",),
@@ -39,6 +41,7 @@ def test_public_cli_leaf_commands_match_oracle() -> None:
 
 
 def test_help_renders_without_typer_click_compatibility_error() -> None:
+    """Typer/Click の互換性エラーなく help が描画されることを確認する。"""
     command = get_command(app)
     context = click.Context(command, info_name="cmoc")
 

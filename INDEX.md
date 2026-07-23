@@ -128,33 +128,35 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装を集約する src ディレクトリ。主要 CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・ACP 関連の公開入口を扱う。各機能の実装配置と下位パッケージへの入口を確認するための起点。
+- cmoc の実装側 Python パッケージと CLI エントリーポイントをまとめるディレクトリ。互換 import shim、共通 runtime、設定入口、サブコマンド実装、正本 oracle パッケージへの接続を扱い、実装側の入口を選ぶために読む。
 
 ## Read this when
-- cmoc の realization 側 CLI 構成、主要エントリーポイント、サブコマンド配置を確認・変更するとき。
-- 共通 runtime、互換 import 経路、設定・ACP 関連の公開入口を探すとき。
-- 特定サブコマンドや共通機能の下位実装へ進む前に、対応する入口と委譲関係を確認するとき。
+- cmoc CLI の主要エントリーポイント、サブコマンド登録、互換 import 経路、共通 runtime、または実装側パッケージの構成を確認するとき。
+- 対象機能の実装ファイルが未特定で、CLI・共通処理・互換入口のどこから調査を始めるか判断するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装を確認したいときは、対応する oracle 配下を直接読む。
-- 特定サブコマンド、runtime helper、設定型、builder などの詳細処理だけを調査するときは、対応する下位実装を直接読む。
-- TUI や CLI と無関係な処理を調査するとき。
+- 特定サブコマンドや runtime helper の実装箇所が明確な場合は、対応する下位ファイルを直接読む。
+- 正本仕様や oracle 側の実装内容を確認するときは、oracle 配下を直接読む。
+- TUI、永続化、Git 操作など特定機能の詳細だけを調査する場合は、該当する下位実装を直接読む。
 
 ## hash
-- 6643891e309460fccaed6e5b442d2f668c06babdfa592ac52c79a012119e5542
+- b53d8bbbe88ab5f3b2f08c99065dd4bcecdf18a0e76335f7747c5f76b548f7be
 
 # `test`
 
 ## Summary
-- テストコード全体の入口。ACP builder、Codex runtime、CLI、indexing、oracle review、session、設定・状態永続化など、cmoc の主要機能に対する realization test を扱う。機能別の個別テストへ進むための上位ルーティング対象。
+- cmoc の realization test を集約するディレクトリ。CLI、Codex runtime、ACP builder、indexing、oracle review、session、設定・状態・worktree など、外部挙動や制御ロジックを検証するテストと共有テストヘルパーを扱う。
+- 変更対象の機能に対応する個別テストを選ぶための入口であり、共通 fixture や統合実行環境を確認する場合は補助モジュールも参照する。
 
 ## Read this when
-- cmoc のテスト対象領域がまだ特定できず、機能別テストの入口を探すとき。
-- 複数のサブコマンドや runtime・builder・設定にまたがる回帰テストの範囲を確認するとき。
+- 実装変更に対応する realization test の所在や検証観点を特定するとき
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session、runtime state などの回帰テストを追加・修正するとき
+- 複数テストで共有される Git、Codex、Ollama、外部コマンド、doctor 実行環境の準備方法を確認するとき
 
 ## Do not read this when
-- 対象機能が明確な場合は、このディレクトリ全体ではなく該当する個別テストファイルを直接読む。
-- 実装責務や正本仕様を確認する場合は、対応する src または oracle ファイルを読む。
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle file を直接読む
+- 実装責務や内部処理の詳細だけを調査するときは、対応する src の実装を直接読む
+- LLM の回答品質や prompt の評価自体を目的とするとき
 
 ## hash
-- 1f42712a6858db6c13e437ea6bb3462325d3538010a14258233894ad3c4620e7
+- ac4302aed1180b961b87dcb7f1b8b04e26d1e0c0f3d501aa9d72787c3c234884

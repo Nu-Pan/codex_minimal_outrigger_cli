@@ -65,6 +65,7 @@ def test_editor_input_keeps_timestamp_collisions_in_separate_files(
     )
 
     def fake_run(argv: list[str]) -> SimpleNamespace:
+        """editor subprocess の代わりに入力 file を作成する。"""
         path = Path(argv[-1])
         opened.append(path)
         path.write_text(f"input-{len(opened)}\n", encoding="utf-8")

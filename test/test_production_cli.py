@@ -178,6 +178,7 @@ def _write_fresh_index_fixture(root: Path) -> None:
     # indexing 末端の実推論は非対話 scenario で検証し、TUI case は fresh INDEX の
     # 正規 preflight と各 TUI 自身の実推論だけを対象にする。
     def fixed_index_entry(*_args: object, **_kwargs: object) -> FakeCodexResult:
+        """production test の indexing preflight 用に固定 schema response を返す。"""
         return FakeCodexResult(
             {
                 "summary": ["Minimal production-path test fixture."],

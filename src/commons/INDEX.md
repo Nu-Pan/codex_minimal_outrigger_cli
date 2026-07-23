@@ -330,18 +330,18 @@
 # `runtime_refactor.py`
 
 ## Summary
-- oracle/realization file のリファクタリング調査状態を管理する共通ランタイム機能。状態ファイルの読み込み・厳密な schema 検証・安定した JSON 保存・対象ファイル集合との同期・未調査対象の選択・調査要求の一括設定を扱う。
+- oracle/realization file の調査履歴を表す state を読み込み、検証・同期・保存する共通処理を提供する。対象 file の列挙、未調査 target の選択、調査必須状態の一括設定、path・entry・SHA256・時刻形式の検証を扱う。
 
 ## Read this when
-- refactor state の schema、履歴保持、JSON 保存形式、調査対象ファイルの列挙や選択優先順位を変更・確認するとき
-- oracle file または realization file の変更に伴うリファクタリング調査状態の同期処理を変更・確認するとき
+- refactor state の schema、読み書き、履歴同期、調査対象選択の挙動を変更・調査するとき
+- oracle/realization file の列挙条件や、state entry の妥当性検証を確認するとき
 
 ## Do not read this when
-- 個別の oracle/realization file の内容やリファクタリング実施方法だけを確認したいとき
-- refactor state と無関係な CLI、パス処理、エラー処理の実装を確認するとき
+- 個別の oracle/realization file の内容や調査ロジックだけを確認するとき
+- refactor state を利用する上位処理の CLI 挙動を調べるときは、まずその呼び出し元を読むべき場合
 
 ## hash
-- a7e16f2c283ac51e458a1d41fca8642cc394b724915d7104e42876c0760fad07
+- c34d722f7f4d8a30123df58f4bd13a6430a171c5846b55d3e0cc67db25e049fe
 
 # `runtime_results.py`
 
@@ -378,16 +378,18 @@
 # `runtime_state.py`
 
 ## Summary
-- cmoc の session state を表す dataclass、JSON schema 検証、state file の読み書き、branch と session の対応付け、session fork 用排他 lock を提供する共通 runtime モジュール。session/run の lifecycle、branch 名、fork 情報、run payload の不変条件を扱い、session 関連サブコマンドが利用する下位実装への入口となる。
+- cmoc の session state を表す dataclass、JSON schema 検証、保存・読み込み、branch からの session 特定、session fork 用排他 lock を提供する共通 runtime モジュール。session/run の lifecycle state、不変条件、不正 state の利用者向け例外変換を扱う。
+- session state の永続化仕様や session/run branch との対応を確認する際の、commons 層からの実装入口。
 
 ## Read this when
-- session state の schema、検証、永続化、読み込みエラーを変更または調査するとき
-- cmoc session branch・run branch から session state を特定する処理を変更または調査するとき
-- home branch に紐づく active session の検索や session fork 排他を扱うとき
+- session state JSON の schema、読み書き、検証、不変条件を変更・調査するとき
+- cmoc session branch または run branch から state を解決する処理を変更・調査するとき
+- session fork の repository 共通 lock や state file の保存先を確認するとき
 
 ## Do not read this when
-- oracle の session state 仕様そのものを確認したいときは、先に対応する oracle 文書を読む場合
-- 特定の session サブコマンドの業務フローだけを変更・調査し、state の読み書きや検証の責務に触れない場合
+- session や run の CLI 操作手順・利用者向け仕様だけを確認したいとき
+- oracle edit や session fork の正本仕様を確認することが目的のときは、対応する oracle doc を先に読むべき場合
+- runtime state と無関係な git 操作、path 処理、CLI 出力の実装を調査するとき
 
 ## hash
-- 0334e4521f90f260020a9da3d7f298c4645d0160b356c418c7a5c7953c4f657f
+- 2153d5db1c52ba9f0c0abb938b35fe691ca0315c265844e35a4303471bb05467

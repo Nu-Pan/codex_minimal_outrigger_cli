@@ -48,6 +48,7 @@ def cmoc_realization_apply_fork_impl() -> None:
 
 
 def _cmoc_realization_apply_fork_body() -> None:
+    """realization apply agent を実行し、差分を joinable run として公開する。"""
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
     diff_base_commit: str | None = None
@@ -148,6 +149,7 @@ def _cmoc_realization_apply_fork_body() -> None:
 
 
 def _validate_agent_changes(context: EditingRunContext) -> None:
+    """apply agent が変更した path が許可範囲内か検証する。"""
     unexpected = unexpected_agent_paths(
         context,
         worktree_change_paths(
@@ -160,6 +162,7 @@ def _validate_agent_changes(context: EditingRunContext) -> None:
 
 
 def _unexpected_change_error(paths: list[str]) -> CmocError:
+    """想定外の apply 差分を共通の利用者向け例外へ変換する。"""
     return CmocError(
         "realization apply run に想定外差分があります。",
         ["run report を確認し、run を join または abandon してください。"],
@@ -185,6 +188,7 @@ def _record_error(
     codex_returncode: int | None,
     exc: BaseException,
 ) -> Path:
+    """apply run の差分を戻し、error state と fork report を保存する。"""
     cleanup_errors: list[str] = []
     try:
         rollback_work_unit(context.run_worktree)

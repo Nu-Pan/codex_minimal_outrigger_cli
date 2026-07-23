@@ -40,6 +40,7 @@ def cmoc_run_abandon_impl() -> None:
 
 
 def _cmoc_run_abandon_body() -> None:
+    """active run を停止し、worktree・branch・state を cleanup する。"""
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # abandon は run branch を merge しないため、entry 集合を通常どおり同期する。
@@ -105,6 +106,7 @@ def _stop_running_run(
     context: EditingRunContext,
     warnings: list[str],
 ) -> str:
+    """running run の追跡 process を停止し、警告を収集する。"""
     process = read_run_process_id(context.repo, context.session_id)
     if process is None:
         warnings.append("run process tracking was absent or stale")
@@ -122,6 +124,7 @@ def _remove_run_worktree(
     context: EditingRunContext,
     warnings: list[str],
 ) -> bool:
+    """active run の worktree を削除し、削除結果を返す。"""
     if not context.run_worktree.exists():
         warnings.append("run worktree was already absent")
     result = remove_worktree(context.repo, context.run_worktree)
@@ -135,6 +138,7 @@ def _remove_run_branch(
     context: EditingRunContext,
     warnings: list[str],
 ) -> bool:
+    """active run の branch を強制削除し、削除結果を返す。"""
     if not branch_exists(context.repo, context.run_branch):
         warnings.append("run branch was already absent")
         return True

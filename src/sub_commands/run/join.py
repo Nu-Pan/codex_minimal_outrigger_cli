@@ -63,6 +63,7 @@ def cmoc_run_join_impl(force_resolve: bool = False) -> None:
 
 
 def _cmoc_run_join_body(force_resolve: bool) -> None:
+    """active run の差分を検査して merge、post-join 処理、cleanup を行う。"""
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
     doctor_state_paths = _doctor_preprocess_for_join()
     start_subcommand_step(2, "active run と差分を検査", "validate active run")
@@ -326,6 +327,7 @@ def _record_join_failure(
 
 
 def _stop_error_run(context: EditingRunContext, warnings: list[str]) -> None:
+    """error state の run process tracking を停止して削除する。"""
     process = read_run_process_id(context.repo, context.session_id)
     if process is None:
         warnings.append("run process tracking was absent or stale")
@@ -344,6 +346,7 @@ def _revert_unexpected_run_paths(
     context: EditingRunContext,
     paths: list[str],
 ) -> None:
+    """force-resolve 対象の想定外 path を fork commit へ戻して commit する。"""
     run_git(
         [
             "restore",
@@ -364,6 +367,7 @@ def _resolve_index_only_conflict_or_fail(
     state: SessionState,
     warnings: list[str],
 ) -> str:
+    """INDEX.md だけの conflict を再生成し、それ以外は error report へ移す。"""
     fields = run_git(
         ["diff", "--name-only", "-z", "--diff-filter=U"],
         context.session_worktree,
@@ -406,6 +410,7 @@ def _cleanup_joined_run(
     context: EditingRunContext,
     warnings: list[str],
 ) -> str:
+    """merge 済み run の worktree と branch を安全条件付きで削除する。"""
     reachable = (
         run_git(
             [
@@ -442,6 +447,7 @@ def _raise_unexpected(
     paths: list[str],
     warnings: list[str],
 ) -> None:
+    """想定外差分を report に記録して join failure として送出する。"""
     report = write_lifecycle_report(
         context,
         "join",

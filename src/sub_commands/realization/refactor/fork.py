@@ -74,6 +74,7 @@ def cmoc_realization_refactor_fork_impl() -> None:
 
 
 def _cmoc_realization_refactor_fork_body() -> None:
+    """realization file を順に調査・修正し、結果を joinable run として公開する。"""
     context: EditingRunContext | None = None
     units: list[tuple[str, int]] = []
     unresolved_findings: dict[str, list[_UnresolvedFinding]] = {}
@@ -261,6 +262,7 @@ def _recover_started_run() -> EditingRunContext | None:
 
 
 def _initialize_cycle(context: EditingRunContext) -> None:
+    """refactor state と INDEX を同期して新しい cycle の commit を作る。"""
     state = sync_refactor_state(context.run_worktree)
     if not any(entry["investigation_required"] for entry in state.values()):
         mark_all_refactor_targets_required(state)
@@ -277,6 +279,7 @@ def _run_refactor_unit(
     context: EditingRunContext,
     target: str,
 ) -> tuple[str, int, list[_UnresolvedFinding]]:
+    """単一 target の agent call、差分検証、state 更新、commit を実行する。"""
     target_path = context.run_worktree / target
     if not (target_path.is_file() or target_path.is_symlink()):
         sync_refactor_state(context.run_worktree)
@@ -383,6 +386,7 @@ def _update_refactor_state(
     has_findings: bool,
     changed_realization: list[str],
 ) -> None:
+    """調査結果と変更された realization の再調査要求を state に保存する。"""
     state = load_refactor_state(context.run_worktree)
     entry = state.get(target)
     if entry is None:
@@ -404,6 +408,7 @@ def _update_refactor_state(
 
 
 def _validated_findings(output: object, target: str) -> list[dict]:
+    """agent の Structured Output が findings object か検証して返す。"""
     if not isinstance(output, dict) or set(output) != {"findings"}:
         raise CmocError(
             "refactor agent の Structured Output が不正です。",
@@ -485,6 +490,7 @@ def _write_refactor_report(
     error: BaseException | None = None,
     cleanup_errors: list[str] | None = None,
 ) -> Path:
+    """refactor cycle の state、findings、変更概要を report として保存する。"""
     state = _safe_refactor_state(context.run_worktree)
     counts = _state_counts(state)
     changes = tree_changes(context.run_worktree, context.run_fork_commit)
@@ -543,6 +549,7 @@ def _write_refactor_report(
 
 
 def _safe_refactor_state(root: Path) -> RefactorState:
+    """report 用に refactor state を読み、壊れていれば空 state を返す。"""
     try:
         return load_refactor_state(root)
     except BaseException:
@@ -550,6 +557,7 @@ def _safe_refactor_state(root: Path) -> RefactorState:
 
 
 def _state_counts(state: RefactorState) -> dict[str, int]:
+    """refactor state の entry 数と調査結果別の件数を集計する。"""
     return {
         "entries": len(state),
         "required": sum(entry["investigation_required"] for entry in state.values()),
@@ -571,6 +579,7 @@ def _render_summary(
     summary: list[dict] | None,
     changed_paths: list[str],
 ) -> list[str]:
+    """change summary を report 用 Markdown 行へ変換する。"""
     if summary is not None:
         # {{work-root}}/oracle/doc/app_spec/misc_spec.md
         # Structured Output の path は、実際の managed branch 差分の変更対象に限定する。
