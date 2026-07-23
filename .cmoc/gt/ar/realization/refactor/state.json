@@ -199,9 +199,9 @@
   },
   "oracle/doc/considered_alternative/file_access_rule_violation_post_validation.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "6c1b9b5c04251202f8528be8834a5298c099c670559952955f3909d4125dd8dc",
+    "last_investigated_at": "2026-07-23_23-52_27_393940000"
   },
   "oracle/doc/considered_alternative/gitignore_to_permission_profile.md": {
     "investigation_required": true,

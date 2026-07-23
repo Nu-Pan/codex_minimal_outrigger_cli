@@ -128,34 +128,33 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装を集約する `src` ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・公開 API の入口を扱い、各機能の下位実装へ進むための起点となる。
+- cmoc CLI の realization 実装を集約する src ディレクトリ。主要 CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・ACP 関連の公開入口を扱う。各機能の実装配置と下位パッケージへの入口を確認するための起点。
 
 ## Read this when
-- cmoc の CLI 実装全体の構成や、主要エントリーポイントから委譲先を確認したいとき。
-- サブコマンド、共通 runtime、互換 import 経路、公開 API の realization 配置を探すとき。
+- cmoc の realization 側 CLI 構成、主要エントリーポイント、サブコマンド配置を確認・変更するとき。
+- 共通 runtime、互換 import 経路、設定・ACP 関連の公開入口を探すとき。
+- 特定サブコマンドや共通機能の下位実装へ進む前に、対応する入口と委譲関係を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime 機能の詳細が明確な場合は、対応する下位パッケージや実装ファイルを直接読む。
-- 正本仕様や oracle 側の実装を確認するときは、`oracle` 配下を直接読む。
-- `src` と無関係なテスト、開発環境、文書の内容を調査するとき。
+- 正本仕様や oracle 側の実装を確認したいときは、対応する oracle 配下を直接読む。
+- 特定サブコマンド、runtime helper、設定型、builder などの詳細処理だけを調査するときは、対応する下位実装を直接読む。
+- TUI や CLI と無関係な処理を調査するとき。
 
 ## hash
-- a9160f40de53499089c154decc051cef6191f8d694fe98918cb8c4f22a1be1df
+- 6643891e309460fccaed6e5b442d2f668c06babdfa592ac52c79a012119e5542
 
 # `test`
 
 ## Summary
-- cmoc の realization test 一式を収録するディレクトリ。共有テストヘルパーと、ACP builder、Codex runtime、CLI、indexing、oracle review、session、state などの外部挙動・制御ロジックを検証する pytest テスト群を扱う。各機能のテスト入口として、対象機能の回帰検証やテスト支援の確認に進む。
+- テストコード全体の入口。ACP builder、Codex runtime、CLI、indexing、oracle review、session、設定・状態永続化など、cmoc の主要機能に対する realization test を扱う。機能別の個別テストへ進むための上位ルーティング対象。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test を追加・修正・実行するとき
-- CLI、Codex 実行、indexing、oracle review、session、state、builder などの外部挙動や制御ロジックの回帰テストを調査するとき
-- Git repository、fake external command、case-local Ollama、Codex 実行などの共有テストヘルパーを利用・変更するとき
+- cmoc のテスト対象領域がまだ特定できず、機能別テストの入口を探すとき。
+- 複数のサブコマンドや runtime・builder・設定にまたがる回帰テストの範囲を確認するとき。
 
 ## Do not read this when
-- 実装本体の責務や処理詳細を確認したいときは、対応する src の実装を直接読む
-- 正本仕様、schema、prompt、file access 規則を確認したいときは、対応する oracle file を直接読む
-- Codex や LLM の回答品質そのものを評価したいとき
+- 対象機能が明確な場合は、このディレクトリ全体ではなく該当する個別テストファイルを直接読む。
+- 実装責務や正本仕様を確認する場合は、対応する src または oracle ファイルを読む。
 
 ## hash
-- 051d7105c60d62dd67039ded45baed8c3c2ec34f1bc9fd2976388b340144153f
+- 1f42712a6858db6c13e437ea6bb3462325d3538010a14258233894ad3c4620e7

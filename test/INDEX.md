@@ -365,21 +365,19 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の統合テスト。CLI と直接呼び出しを通じて、Git 状態・config・refactor state・`.agents`・`.cmoc/gu` の修復、repair commit、lock 待機、linked worktree 対応を検証する。
-- preprocess 実行前の staged index、unstaged hunk、rename、既存 staged deletion、既存 `.cmoc/gu` ファイルを保持・非追跡化する外部契約も検証する。
-- doctor preprocess の挙動、修復対象、Git index 保全、共有 lock、config 同期を変更・レビュー・デバッグするときの統合テスト入口。
+- doctor preprocess の統合テスト。CLI と直接呼び出しを通じて、Git 状態・設定・refactor state・共有 doctor lock の lifecycle を検証する。
+- 修復 commit が事前の staged/unstaged 変更、rename、`.cmoc/gu` の既存ローカルファイルを不適切に上書き・取り込みせず保持することも確認する。
 
 ## Read this when
-- doctor preprocess の外部挙動や lifecycle を確認するとき
-- doctor による Git 修復 commit、config 生成・同期、`.cmoc/gu` の非追跡化を変更するとき
-- linked worktree、共有 doctor lock、既存 staged/unstaged 差分の保持を検証するとき
+- doctor preprocess の実装や外部契約を変更・レビューするとき
+- doctor の Git 修復、config 生成・同期、linked worktree、lock 待機、index 保持に関するテストを追加・修正するとき
 
 ## Do not read this when
-- doctor preprocess の内部実装や正本仕様を確認する場合は、対応する `src` または `oracle/doc/app_spec` を先に読むとき
-- doctor 以外の CLI サブコマンドや、単独の Git ヘルパー・CLI 実行ヘルパーを変更・検証するとき
+- doctor preprocess と無関係な CLI、設定、Git 操作の実装やテストを扱うとき
+- doctor の正本仕様や実装責務を確認することが目的で、まず oracle 文書または実装本体を読むべきとき
 
 ## hash
-- 51f7c052a60ed2ddf2b0d8caf3725e3cd75eadc2e784fe155b8559a3a4a5b80c
+- aac4d38ab98c24c3e3fe88510b2930d22ce950c11e935057c92047a06062bddc
 
 # `test_editing_run_cli.py`
 
@@ -673,19 +671,21 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig の既定値、JSON 化時のメンバー順、設定ファイル読み込み、入力検証、provider-local 設定値の保持・拒否、recovery 試行回数を検証するテスト。ランタイム設定の挙動や設定エラーを確認する際の入口。
+- CmocConfig の既定値、JSON 形式のメンバー順、設定ファイル欠落時の案内、入力値の型・値検証、provider-local 設定の保持、永続化境界の検証をテストする realization test。設定モデルや config_from_dict・config_to_dict・load_config の挙動を変更・調査するときの入口。
 
 ## Read this when
-- CmocConfig の既定値や設定の永続化形式を変更・確認するとき
-- codex、oracle_review、model provider、reasoning effort の入力検証を変更・確認するとき
-- 設定ファイル欠落時や不正値のエラー挙動を変更・確認するとき
+- CmocConfig の既定値や論理 model class・reasoning effort の対応を確認するとき
+- 設定の読み込み・JSON 化・provider 定義・model 定義・oracle_review の入力検証を変更または調査するとき
+- 不正設定時の CmocError や、設定ファイル欠落時の doctor 案内を検証するとき
+- provider-local の JSON/TOML 共通値や legacy FALV 設定の扱いを確認するとき
 
 ## Do not read this when
-- 設定実装そのものを調査するときは、対応する runtime/config 実装と oracle の設定仕様を直接読む
-- 設定以外の CLI 動作、oracle review 処理、一般的なテスト基盤を調査するとき
+- 設定実装そのものの責務や正本仕様を確認する場合は、記載された oracle src・oracle doc を直接読むとき
+- 設定以外のランタイム機能、CLI コマンド、モデル実行処理だけを変更・調査するとき
+- CodexConfig 以外のテスト対象を確認するとき
 
 ## hash
-- 30520fe82d8308e91f103ff23937d1215bba93e5bde8376a667f0b18768c9e23
+- d825514c82911ad94fe09169dedec4a188e5df777f7c20e4a7aa9e2f3cdfd4ba
 
 # `test_runtime_content.py`
 
