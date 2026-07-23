@@ -82,16 +82,18 @@
 # `merge_finding.py`
 
 ## Summary
-- `cmoc oracle review` における所見リストマージ用のプロンプト正本を定義する。入力所見を補助情報として完全プロンプトへ組み込み、oracle file のレビュー結果を整理する AI 呼び出しパラメータを生成する。
+- `cmoc oracle review` における、oracle file の所見リストを整理する agent call 用パラメータを構築する正本実装。入力所見を埋め込んだレビュー prompt、oracle-only のファイルアクセス制約、Structured Output schema の参照先をまとめる。
 
 ## Read this when
-- oracle review の所見統合・重複排除・相互矛盾解消に関するプロンプトや AI 呼び出し設定を変更・確認するとき。
+- `cmoc oracle review` の所見リストマージ処理を変更・調査するとき。
+- 所見の重複・矛盾を解消するための prompt 生成条件、モデル設定、oracle-only 読み取り制約を確認するとき。
 
 ## Do not read this when
-- 所見マージ以外の oracle review 処理、一般的なプロンプト構築、または Structured Output の schema 定義だけを確認するとき。
+- 所見リストの編集操作 schema 自体を確認したい場合は、prompt が参照する JSON schema 定義を直接読む。
+- `cmoc oracle review` の所見検出・レビュー実行など、所見マージ以外の処理を調査するときは、該当する prompt builder やサブコマンド実装を直接読む。
 
 ## hash
-- d87b25f8a9567a03b9e403f19283ccfd133d6e7f2697684e0f619f27aee048a9
+- badab8d57d521725a64f57bec1cb4d5898fd4edcddf156bb2e0819cea1a691bd
 
 # `validate_finding_advocate.json`
 

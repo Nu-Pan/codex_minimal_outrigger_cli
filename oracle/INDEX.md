@@ -20,13 +20,16 @@
 # `src`
 
 ## Summary
-- 参照可能な正本ソースの有無を確認するための入口です。実装仕様や具体的な処理内容は扱いません。
+- oracle の実行時正本ソース群。設定・パス・構造化文書などの共通定義、AgentCallParameter と各サブコマンド向け prompt/Structured Output schema の構築、prompt 部品と完全 prompt の組み立てを扱う。`other`、`acp_builder`、`prompt_builder` が主な下位領域。
 
 ## Read this when
-- このディレクトリ内の内容や、参照可能な正本ソースの有無を確認するとき。
+- cmoc の設定、ルートパス、Standard、StructDoc などの共通定義を調べるとき。
+- AgentCall のモデル・推論負荷・ファイルアクセス設定や、indexing、tui、oracle、realization、session join 向けの呼び出しパラメータ構築を調べるとき。
+- 完全 prompt の生成、prompt 部品、プレースホルダ、oracle/realization 標準、ファイルアクセス規則を調べるとき。
 
 ## Do not read this when
-- 実装仕様や具体的な処理内容を確認したいとき。
+- サブコマンドの実行経路、ファイル探索、実際のモデル呼び出しを調べるとき。
+- 特定の prompt 部品、Structured Output schema、共通定義、個別サブコマンドの AgentCall 構築だけを確認したいときは、対応する下位領域へ直接進む。
 
 ## hash
-- ede395b8782baefa21af26f3149ccf8021c4806d0acff442d36e09ca18299999
+- fa8aeff5b44224b2ed27eb099784d579af225a149c4349aa7cb3b13b02c95307

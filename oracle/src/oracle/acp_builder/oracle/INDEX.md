@@ -34,17 +34,17 @@
 # `review`
 
 ## Summary
-- `cmoc oracle review` の所見生成・判定・統合・擁護・反証に関する AgentCallParameter 実装と Structured Output schema をまとめた領域です。各ファイルは、レビュー用プロンプト、oracle file の読み取り制約、関連所見や理由の受け渡し、出力契約を担います。
+- `cmoc oracle review`の所見検出・擁護・反証・採否判定・重複整理に使うAgentCallパラメータ実装と、各処理のStructured Output用JSON Schemaをまとめたディレクトリ。レビュー所見のプロンプト、oracle-onlyの読み取り制約、モデル設定、入出力契約を確認するための入口。
 
 ## Read this when
-- `cmoc oracle review` の所見列挙、採否判定、重複・矛盾の統合、擁護理由や反証理由の生成を変更・調査するとき。
-- レビュー用 AgentCall のモデル設定、推論強度、Structured Output schema、oracle-only のアクセス制約を確認するとき。
-- 所見や判定結果の JSON 入出力契約を確認するとき。
+- `cmoc oracle review`の所見列挙、擁護理由・反証理由の生成、採否判定、所見リストのマージ処理を変更または調査するとき。
+- レビュー用AgentCallのプロンプト埋め込み、oracle fileアクセス制約、モデル・推論設定、Structured Output schemaの対応を確認するとき。
+- 所見の重大度、見出し、根拠oracle file、理由、編集操作などの出力形式を確認するとき。
 
 ## Do not read this when
-- 通常の ACP builder 実装、一般的な prompt 生成基盤、CLI の通常サブコマンドを調査するとき。
-- oracle review の判定基準や仕様文書そのものを確認するときは、対応する oracle review 文書を直接読む。
-- INDEX.md のルーティング情報だけを確認するとき。
+- 通常のACP builder実装や、oracle review以外のAgentCall構築を調査するとき。
+- oracle reviewの一般的な判定基準・レビュー規則を確認したいときは、対応するoracle review仕様文書を直接読む。
+- JSON Schema自体の詳細な実装・検証方法だけを確認したいときは、対象schemaを直接読む。
 
 ## hash
-- e7392e500943f545331ada0aa4b8457d3310bf8d52b4a0839d543f7e6e715f60
+- 55d4e6eb1fcb230017789d0368fa03dc22f9bc8fe61bccd55385d32e926f2007

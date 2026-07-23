@@ -1,16 +1,18 @@
 # `acp_builder`
 
 ## Summary
-- 参照可能な正本ソースが存在するかを確認するための入口です。実装仕様や具体的な処理内容は扱いません。
+- AI Agent 呼び出しパラメータの正本ソースをまとめたディレクトリ。論理モデル・推論負荷・ファイルアクセスモードなどの共通定義に加え、indexing と tui の呼び出しパラメータ構築および Structured Output schema を下位領域への入口として扱う。
 
 ## Read this when
-- このディレクトリ内の内容や、参照可能な正本ソースの有無を確認するとき。
+- AgentCallParameter の共通定義、モデルクラス、推論負荷、ファイルアクセスモード、Structured Output schema、indexing preflight、cwd の既定値を確認するとき。
+- indexing の目次エントリー生成、または tui の実行パラメータ解決・TUI 起動パラメータ構築を変更・調査するとき。
 
 ## Do not read this when
-- 実装仕様や具体的な処理内容を確認したいとき。
+- 実際のサブコマンド実行処理、ファイル探索、モデル呼び出しの実行経路を確認したいとき。
+- 共通パラメータ定義や indexing・tui 固有の AgentCall 構築ではなく、prompt 共通生成規則、パス解決、アクセス規則、各 Structured Output schema の詳細だけを確認したいとき。
 
 ## hash
-- 8222010c681083a028be75dd5758c6b070ce6cb2abaaa642caebe374cdb3dfc5
+- f9006e163c27c0b362d17028f911a17a4b3436f6d81cefb487ecc0d15f093698
 
 # `other`
 

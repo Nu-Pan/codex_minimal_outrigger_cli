@@ -48,21 +48,19 @@
 # `oracle`
 
 ## Summary
-- `cmoc oracle` 配下の TUI 起動・調査・レビュー向け AgentCall 設定を扱うディレクトリです。編集、調査、所見生成・判定などの用途別に、プロンプト、モデル・権限設定、Structured Output 契約を提供します。各用途の詳細確認への入口となる領域です。
+- `cmoc oracle edit`、`investigation`、`review` 各処理の AgentCall 構築に関する実装をまとめたディレクトリ。TUI 起動設定、oracle 調査用プロンプトとログ保存、レビュー所見処理および各種 Structured Output schema を下位ファイルへの入口として扱う。
 
 ## Read this when
-- `cmoc oracle edit`、`investigation`、`review` の TUI 起動条件や AgentCall パラメータを確認・変更するとき。
-- oracle file の調査プロンプト、レビュー所見の生成・判定、関連する入出力契約を確認・変更するとき。
-- 用途別のプロンプト、モデル設定、oracle-only の読み取り制約、Structured Output schema の実装箇所を探すとき。
+- `cmoc oracle` の TUI 起動条件、oracle 調査用プロンプト、editor_input ログ保存、またはレビュー所見の生成・判定・統合を変更・調査するとき。
+- oracle 専用のファイルアクセス制約、モデル・推論設定、Structured Output の入出力契約を確認するとき。
+- このディレクトリに含まれる個別処理の実装や用途を確認するとき。
 
 ## Do not read this when
-- oracle file の編集・調査・レビュー基準そのものを確認するとき。
-- 共通 prompt builder、パス解決、構造化文書レンダリングなどの共通基盤を確認するとき。
-- TUI 起動後の agent 実行処理や通常の CLI サブコマンド実装を確認するとき。
-- 対象の用途別ファイルを直接特定できているとき。
+- oracle file の編集・調査そのものの実行処理や、oracle review の一般的な判定基準を確認するとき。
+- prompt 共通生成規則、パス解決、通常の ACP builder、または JSON schema の詳細実装だけを確認するときは、対応する共通実装・仕様文書・schema ファイルを直接読む。
 
 ## hash
-- b2d150d4338a6271423e46b39026956cb5bebdbe2b3ab9f606b3f03f77e49a7b
+- a9d071bc749ef34ecbb92855a6e7c88c76af2353cd083d2f637cc983f78f2883
 
 # `realization`
 
