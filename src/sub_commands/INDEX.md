@@ -44,37 +44,46 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実行入口と、oracle review の対象探索・パス解決・処理ループ・レポート生成・INDEX.md マージを担う実装群をまとめるディレクトリ。各サブコマンドや review 機能の詳細実装へ進むための入口。
+- oracle 系サブコマンドをまとめる package の境界を示し、各 oracle サブコマンド実装への入口を提供する。
+- `cmoc oracle edit` の main worktree 向け TUI 起動、入力収集、起動前提条件検証を実装する。
+- `cmoc oracle investigation` の read-only TUI workload、調査指示入力、起動パラメータ構築を実装する。
+- oracle review の実行入口として、session branch 検証、隔離 worktree、レビュー、結果マージ、後始末、レポート出力をオーケストレーションする。
+- oracle review の worktree 差分を検査し、INDEX.md だけを commit・merge する処理を実装する。
+- oracle review の finding 列挙、統合、妥当性検証、採否判定、割り込み時の進捗保持、Structured Output の再試行を実装する。
+- oracle review の検出結果に含まれるパスを安全に解決し、worktree 境界を検証してリポジトリ相対キーへ変換する。
+- oracle review の結果を Markdown レポートとして保存・描画し、metadata、Verdict、severity・verdict 別の所見表示を扱う。
+- oracle review の scope に応じてレビュー対象の oracle file を列挙し、全件または session 間の変更分に絞り込む。
 
 ## Read this when
-- oracle サブコマンド群の構成や実行入口を確認するとき
-- oracle review の対象列挙、パス解決、レビュー処理、レポート、INDEX.md の commit・merge の関係を調査するとき
-- oracle edit・investigation・review の CLI オーケストレーションを変更・調査するとき
+- oracle 系サブコマンドの package 構成や入口を確認するとき。
+- `cmoc oracle edit` の CLI runtime、TUI 起動、プロンプト入力、main worktree・session branch の前提条件を変更・調査するとき。
+- `cmoc oracle investigation` の実行フロー、調査指示入力、TUI 起動処理を変更・調査するとき。
+- oracle review の実行フロー、レビュー対象、finding 処理、worktree 管理、INDEX.md の commit・merge、パス解決、レポート形式を変更・調査するとき。
 
 ## Do not read this when
-- 個別サブコマンドの内部ロジックだけを確認したいときは、該当するサブコマンド実装を直接読む
-- oracle investigation の prompt や正本仕様を確認したいときは、対応する oracle doc を直接読む
-- 共通 CLI runtime、TUI 起動、一般的な git・runtime helper の詳細だけを調査するときは、対応する共通モジュールを直接読む
+- 個別 oracle サブコマンドの内部実装詳細だけを確認したいときは、該当する実装を直接読む。
+- oracle 編集対象の選択・編集ロジックや、調査指示テンプレートなどの正本仕様だけを確認したいときは、対応する下位モジュールまたは oracle doc を直接読む。
+- 共通 CLI runtime、git 状態検証、プロンプトエディタ、インデックス事前処理、TUI 起動パラメータの詳細だけを調べるときは、各共通モジュールを直接読む。
+- レビュー対象の列挙、finding ループ、パス解決、レポート描画の詳細だけを調べるときは、対応する review helper を直接読む。
 
 ## hash
-- 104ad71b2fe4b77c57dcabfa7b92a95b62de74dd45f5a894c59e56ffc9b10f0a
+- 7d0e3b98ddd5d1d144cf2013e19530ae973d1ec24c6395830f46af35b63adb57
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。
-- apply workload と refactor 処理の下位パッケージへの入口であり、各サブコマンドの実行フローを確認する際の起点となる。
+- realization workload サブコマンドのパッケージ入口と、apply・refactor などの workload 処理への導入点を提供するディレクトリ。各サブディレクトリから、対応する realization 処理の実行フローや構成を確認できる。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- realization の apply workload または refactor 処理の実行フローを調査・変更するとき。
+- realization workload サブコマンドの実装構成や入口を確認するとき。
+- realization の apply workload または refactor workload の処理フローを調査・変更するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply fork の launch parameter 構築、run lifecycle の共通処理、report 形式、refactor の state 操作や parameter 定義だけを確認するとき。
+- apply fork の launch parameter 構築、run lifecycle の共通処理、report 形式、refactor state など、下位の専用モジュールを直接確認すべきとき。
 
 ## hash
-- 5db6e965680ed52ef8a98673d3b5a16b97b170a1a9f61321aeb246b2c4801b23
+- 1bd0d386f2bc525575de0196ddbcfd2fde4d00e63c9aad80c6c8c7006415f3fc
 
 # `review`
 
@@ -93,19 +102,17 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。abandon・join の実装、共通 lifecycle、fork／lifecycle report を扱い、関連する run サブコマンドの実装や共通処理を確認する入口となる。
+- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。abandon、join、開始・状態更新などの lifecycle 処理、レポート生成を扱い、関連する run サブコマンド実装への入口となる。
 
 ## Read this when
-- editing run の開始・join・abandon などの lifecycle や、run worktree／branch の作成・cleanup・状態更新を調査または変更するとき
-- run の merge、競合解決、変更 path の許可判定、INDEX.md 更新、oracle diff 抽出を確認するとき
-- fork／join／abandon に伴う lifecycle report の生成・保存形式を変更または調査するとき
+- editing run の共通 lifecycle、abandon・join の処理、run の状態・worktree・branch 管理、lifecycle report の生成を調査・変更するとき。
 
 ## Do not read this when
-- editing run 以外のサブコマンドを扱うとき
-- 特定の lifecycle 実装、report 形式、runtime state、run process 管理などの詳細だけを確認したいときは、配下または参照先の該当モジュールを直接読む
+- editing run 以外のサブコマンドを扱うとき。
+- 特定の処理の詳細だけを確認する場合は、この入口ではなく配下の該当実装ファイルを直接読む。
 
 ## hash
-- 13d386c8373f201b5803c82c30f7b86694b7ef78358d8f9d9d2ea4e1623e9bf4
+- ddac6796777fbeaeff2381682f174bb9db957c11e6a96be9549c82806b4279dd
 
 # `session`
 

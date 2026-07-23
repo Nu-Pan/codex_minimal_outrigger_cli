@@ -32,17 +32,17 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を扱うパッケージ。リファクタリング関連 CLI の入口と、fork の実行ライフサイクルを提供する。
-- fork モジュールでは、refactor run の初期化から realization file 単位の調査・修正、state 同期、commit、完了判定、変更要約、fork report 保存までを一連の処理として実装する。
+- realization のリファクタリング処理を扱うパッケージで、関連処理への入口を提供する。
+- fork.py は、refactor run の初期化から対象ファイルの調査・修正、検証、commit、所見追跡、完了判定、状態更新、レポート出力までの full-cycle CLI lifecycle を実装する。
 
 ## Read this when
-- realization のリファクタリング処理の構成や実行フローを確認・変更するとき。
-- refactor fork の unresolved finding 管理、state 更新、report 生成、割り込み・例外時の処理を確認するとき。
+- realization のリファクタリング処理の構成や入口を確認するとき。
+- refactor fork の CLI 実行フロー、状態遷移、対象ファイル処理、unresolved 所見、rollback、完了条件、fork report を調査・変更するとき。
 
 ## Do not read this when
-- realization refactor の state 操作だけを変更・調査する場合。
-- 一般的な run lifecycle や report 共通処理だけを確認する場合。
-- file 単位の agent parameter や change summary parameter の定義だけを確認する場合。
+- refactor state のデータ構造や target 選択ロジックだけを扱うときは、commons.runtime_refactor を直接読む。
+- file 単位の review agent parameter や change summary parameter の生成だけを扱うときは、対応する builder module を直接読む。
+- 一般的な run lifecycle、commit、差分分類、共通 report 処理だけを扱うときは、sub_commands.run の共通 module を直接読む。
 
 ## hash
-- 526fa2f23cd4b2e4506c55fd5ac012cf911f732ef4da68276a54376f9e47002e
+- 8d526c9abc790303ffa1c8f10b81f63600ae4793ecc61e06d6af6062c987bc06

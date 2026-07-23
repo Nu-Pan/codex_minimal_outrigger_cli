@@ -47,22 +47,19 @@
 # `lifecycle.py`
 
 ## Summary
-- editing run の開始・解決・状態更新を担う共通ライフサイクル処理。session/run の事前条件検査、専用 branch・worktree の作成と後始末、state file の更新を扱う。
-- worktree 差分の rollback・commit、INDEX.md 更新、Git tree change の列挙、agent・run・session が変更可能な path の検証、oracle diff の抽出も提供する。
-- editing run の各サブコマンドでライフサイクル管理、worktree commit、変更 path の許可判定、INDEX 更新の実装を確認する入口。
+- editing run の開始・解決・状態更新、worktree 差分の commit/rollback、INDEX 更新、Git 変更 path の検査を担う共通ライフサイクル処理。run/session state、branch、worktree の整合性確認と、oracle・realization・INDEX の変更許可判定を提供する。
 
 ## Read this when
-- editing run の開始、active run の解決、joinable/error state への遷移を変更または調査するとき
-- run worktree や session worktree の作成・削除、rollback・commit、INDEX 更新の挙動を確認するとき
-- Git の rename/copy を含む差分解析、oracle・realization・refactor state の変更許可判定を確認するとき
+- editing run の開始、active run の解決、joinable/error への状態遷移を変更・調査するとき。
+- run worktree の作成・削除、work unit の commit/rollback、INDEX 更新 commit の挙動を確認するとき。
+- Git の rename/copy を含む変更列挙、agent/run/session の想定外 path 検出、oracle diff の扱いを変更・調査するとき。
 
 ## Do not read this when
-- 特定の editing run サブコマンド固有の workload 処理だけを変更または調査するとき
-- session state のデータ構造や永続化形式そのものを確認するときは、runtime state の実装を直接読むとき
-- 一般的な Git 操作や INDEX 生成の詳細だけを確認し、この共通 lifecycle 処理を利用していないとき
+- 個別の editing run サブコマンドの業務処理だけを確認する場合。
+- state schema、Git 実行、path 解決、INDEX 生成の詳細実装を直接確認する場合は、それぞれの commons モジュールを読む。
 
 ## hash
-- 11524e925bbf5c52e99d1ef92c463ee25d05244e7f42a9d18658ca0122ca75c8
+- e8a5a8b7f53d61a24d8d87c004ea6f5f36391d070903c1e303ecec7cb28ff02e
 
 # `report.py`
 

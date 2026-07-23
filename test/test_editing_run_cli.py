@@ -26,9 +26,12 @@ from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_refactor import load_refactor_state
 from main import app
 from sub_commands.run.lifecycle import (
+    GitChange,
     commit_work_unit,
+    flattened_change_paths,
     set_run_state,
     start_editing_run,
+    worktree_change_paths,
 )
 
 
@@ -60,6 +63,40 @@ def _state(path: Path) -> dict:
 
 def _no_index_refresh(_root: Path, *, commit: bool) -> list[Path]:
     return []
+
+
+def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None:
+    """fork reportの変更pathは削除とrename元を含めない。"""
+    assert flattened_change_paths(
+        [
+            GitChange("D", ("deleted.md",)),
+            GitChange("R100", ("old.md", "new.md")),
+            GitChange("M", ("modified.md",)),
+        ]
+    ) == ["modified.md", "new.md"]
+
+
+def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> None:
+    """未commit renameの変更pathはrename後だけを返す。"""
+    root = make_repo(tmp_path)
+    (root / "README.md").rename(root / "renamed.md")
+    run_git(root, "add", "-A")
+
+    assert worktree_change_paths(root) == ["renamed.md"]
+
+
+def test_refactor_change_summary_keeps_only_actual_changed_paths() -> None:
+    """change summaryのpathを実際の変更対象へ制限する。"""
+    assert refactor_module._render_summary(
+        [
+            {
+                "category": "rename",
+                "summary": "file renamed",
+                "changed_paths": ["old.md", "new.md", "outside.md"],
+            }
+        ],
+        ["new.md"],
+    ) == ["- rename: file renamed", "  - `new.md`"]
 
 
 def test_realization_apply_fork_and_run_join_use_common_state(

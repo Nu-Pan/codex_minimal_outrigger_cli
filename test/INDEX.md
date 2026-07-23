@@ -387,20 +387,23 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、join/abandon のライフサイクルを、共通 fixture と実 Git リポジトリ上で検証する。
-- realization apply fork の join、想定外差分の force-resolve、join 後同期失敗時のロールバック、oracle investigation の session 前提、refactor fork の完了・未解決・INDEX 更新・割り込み時挙動を扱う。
+- editing run の fork、join、abandon に関する realization test をまとめた統合テスト。
+- 変更パスの集計、run state の共有、join 時の差分検証・強制解決・ロールバック、oracle investigation の前提条件、refactor fork の完了・未解決・中断・INDEX 更新を検証する。
+- 共通 lifecycle fixture を使うため、session state・run worktree・fork report の一連の状態遷移を確認する入口となる。
 
 ## Read this when
-- realization apply fork や realization refactor fork の run lifecycle、join、force-resolve、ロールバック、fork report を変更または検証するとき
-- session state、run branch/worktree、refactor state、INDEX 更新、Codex 呼び出しの統合挙動を確認するとき
-- oracle investigation の session 前提や割り込み・未解決 target の完了条件を確認するとき
+- realization apply fork または realization refactor fork の run lifecycle を変更・調査するとき。
+- run join の通常処理、強制解決、失敗時ロールバック、state 更新を検証するとき。
+- fork report の変更パスや refactor の完了理由・未解決 target・調査履歴を確認するとき。
+- oracle investigation の session 前提条件や INDEX 更新を伴う refactor 処理を変更するとき。
 
 ## Do not read this when
-- run lifecycle と fork/join の統合挙動に関係せず、個別 command の単体実装や専用 helper だけを調査するとき
-- INDEX 生成や一般的な Git ユーティリティの詳細を直接確認したいときは、対象の実装または専用テストを読む
+- editing run の lifecycle や fork/join/abandon に関係しない機能を変更するとき。
+- 個別の CLI 実装詳細を直接確認する必要があり、対応する src ファイルやより限定的なテストを読む方が適切なとき。
+- Codex や CLI の出力品質そのものを調査するとき。
 
 ## hash
-- 4a333451aa9d2f0fde911bb42dc04afa61ca86e60e17042db268f5e5a4400db4
+- b7903a1081ac3de395cc0ceb51fd7cecbb4071f5c698f0f5ece8bcb7da7b6e38
 
 # `test_indexing_cli.py`
 
@@ -524,18 +527,20 @@
 # `test_oracle_review_targets.py`
 
 ## Summary
-- oracle review の対象パス解決と対象列挙を検証するテスト。finding path の placeholder・絶対パス・symlink 処理、oracle 配下の追跡状態や除外規則、session/full scope の対象数とレポート、review fork 基準の差分を扱う。oracle review の対象選定ロジック変更時に確認する入口となる。
+- oracle review の対象列挙と finding path 解決を検証するテスト。相対・絶対・placeholder 付きパス、symlink、外部 oracle path の扱いを確認し、session/full scope における追跡済み oracle file の選定、除外条件、review fork 基準、対象なし時の出力を検証する。
 
 ## Read this when
-- oracle review の finding path 解決や oracle file 列挙を変更・調査するとき
-- session/full scope、追跡済み ignored file、symlink、AGENTS.md・INDEX.md の除外挙動を確認するとき
+- oracle review の対象ファイル列挙、scope 別のレビュー対象選定、finding path 解決を変更・調査するとき
+- oracle file の定義に基づく AGENTS.md・INDEX.md・ignored file・symlink の分類を確認するとき
+- oracle review の対象数、no_targets、review fork commit 固定に関するテストを確認するとき
 
 ## Do not read this when
-- oracle review のレポート本文生成や finding 内容の判定だけを変更するとき
-- 対象列挙・パス解決と無関係な CLI コマンドや共通テスト支援を変更するとき
+- oracle review のレポート生成形式や finding の内容検証だけを変更・調査するとき
+- oracle review と無関係な CLI サブコマンドや一般的な git 操作を扱うとき
+- 実装の対象列挙・path 解決ではなく、別の oracle review テストの観点を直接確認できるとき
 
 ## hash
-- 81f7c2e30158c0e470deb0eaee4253e9ac068a527feb0492405bf34490b9aabc
+- 5ff7c6bd4e39ef65acfe8a0626aa25af35e24f7829c3eb37d04fb290a049d430
 
 # `test_oracle_review_worktree.py`
 

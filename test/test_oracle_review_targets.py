@@ -305,3 +305,18 @@ def test_oracle_review_target_enumeration_classifies_oracle_symlink_by_repo_path
     run_git(root, "commit", "-m", "add oracle symlink")
 
     assert oracle_link.absolute() in enumerate_review_all_oracle_files(root)
+
+
+def test_oracle_review_target_enumeration_keeps_tracked_dangling_oracle_symlink(
+    tmp_path: Path,
+) -> None:
+    """link先が存在しない追跡済みsymlinkもoracle fileとして列挙する。"""
+    root = make_repo(tmp_path)
+    oracle_link = root / "oracle" / "dangling.md"
+    oracle_link.symlink_to("../missing.md")
+    run_git(root, "add", "oracle/dangling.md")
+    run_git(root, "commit", "-m", "add dangling oracle symlink")
+
+    assert not oracle_link.exists()
+    assert oracle_link.is_symlink()
+    assert oracle_link.absolute() in enumerate_review_all_oracle_files(root)

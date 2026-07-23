@@ -132,13 +132,16 @@
 # `review_targets.py`
 
 ## Summary
-- oracle review の scope に応じてレビュー対象となる oracle file を列挙する実装。全件列挙と、セッション開始時点からの変更分に限定する列挙を扱う。
+- oracle review の scope に応じてレビュー対象の oracle file を列挙する。full では全件、session 相当ではセッション fork から review fork までに oracle 配下で変更されたファイルに絞り込む。
+- oracle 配下の候補を repository path として列挙し、通常ファイルと symlink を含めて oracle file 判定を適用する。
 
 ## Read this when
-- oracle review の対象範囲、scope 判定、oracle file の列挙条件、セッションスコープの変更差分を確認・変更するとき。
+- oracle review の対象範囲や scope 別のファイル列挙条件を確認するとき
+- oracle file の全件列挙、変更差分による絞り込み、symlink の扱いを変更・調査するとき
 
 ## Do not read this when
-- 個別の oracle file の内容やレビュー処理そのものを確認したいとき。対象ファイルの列挙後に実行されるレビュー処理の実装を直接読むべき場合。
+- oracle review の実行処理やレビュー内容の判定を変更するとき
+- 対象ファイルの列挙を介さない一般的な CLI や runtime 処理を確認するとき
 
 ## hash
-- 34257a1d97f8acf23267a1c66587837067e891aa3e3e8d30045979517fe357bd
+- e8cdb38c1e3701308cc7d8c4a4e022ea46066b283f91931b79f8b0f3f7a34eb4

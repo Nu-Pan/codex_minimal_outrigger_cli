@@ -461,13 +461,20 @@ def _render_summary(
     changed_paths: list[str],
 ) -> list[str]:
     if summary is not None:
+        # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+        # Structured Output の path は、実際の managed branch 差分の変更対象に限定する。
+        changed_path_set = set(changed_paths)
         lines = []
         for change in summary:
             category = change.get("category", "change")
             description = change.get("summary", "")
             paths = change.get("changed_paths", [])
             lines.append(f"- {category}: {description}")
-            lines.extend(f"  - `{path}`" for path in paths if isinstance(path, str))
+            lines.extend(
+                f"  - `{path}`"
+                for path in paths
+                if isinstance(path, str) and path in changed_path_set
+            )
         return lines or ["- none"]
     if not changed_paths:
         return ["- none"]

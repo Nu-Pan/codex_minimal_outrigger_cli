@@ -29,8 +29,10 @@ def enumerate_oracle_review_targets(
 
 def enumerate_review_all_oracle_files(root: Path) -> list[Path]:
     """review 対象候補となる oracle file 全件を列挙する。"""
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # symlink は link 先ではなく repository path 上の oracle file として扱う。
     return [
         path
         for path in sorted((root / "oracle").rglob("*"))
-        if path.is_file() and is_oracle_file_path(root, path)
+        if (path.is_file() or path.is_symlink()) and is_oracle_file_path(root, path)
     ]

@@ -302,11 +302,12 @@ def refresh_indexes(worktree: Path, *, commit: bool) -> list[Path]:
 
 
 def worktree_change_paths(worktree: Path) -> list[str]:
-    """未 commit 差分の rename source を含む repository 相対 path を返す。"""
+    """未 commit 差分の変更対象を repository 相対 path で返す。"""
+    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # rename は status の新しい path だけを agent の変更対象として扱う。
     paths = status_path_statuses(
         worktree,
         untracked_all=True,
-        include_rename_sources=True,
     )
     return sorted(
         {str(path.absolute().relative_to(worktree.absolute())) for _, path in paths}
@@ -340,8 +341,19 @@ def tree_changes(worktree: Path, base: str, end: str = "HEAD") -> list[GitChange
 
 
 def flattened_change_paths(changes: list[GitChange]) -> list[str]:
-    """tree change の全 endpoint を重複なしで返す。"""
-    return sorted({path for change in changes for path in change.paths})
+    """managed branch の変更 file path を重複なしで返す。"""
+    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # 削除 path と rename 元 path は変更対象の集合に含めず、rename 後だけを残す。
+    paths: set[str] = set()
+    for change in changes:
+        if not change.paths or change.status.startswith("D"):
+            continue
+        paths.add(
+            change.paths[-1]
+            if change.status.startswith(("R", "C"))
+            else change.paths[0]
+        )
+    return sorted(paths)
 
 
 def unexpected_agent_paths(
