@@ -18,7 +18,7 @@ from cmoc_runtime import (
 )
 from commons.indexing import enable_indexing_preflight
 from commons.runtime_run import run_process_tracking
-from sub_commands.run.lifecycle import (
+from commons.runtime_run_lifecycle import (
     EditingRunContext,
     commit_work_unit,
     flattened_change_paths,
@@ -33,7 +33,7 @@ from sub_commands.run.lifecycle import (
     unexpected_run_paths,
     worktree_change_paths,
 )
-from sub_commands.run.report import write_fork_report
+from commons.runtime_run_report import write_fork_report
 
 
 def cmoc_realization_apply_fork_impl() -> None:

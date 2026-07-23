@@ -15,16 +15,19 @@
 # `fork.py`
 
 ## Summary
-- `cmoc realization apply fork` サブコマンドの実行処理を担う。oracle の差分を基準に realization apply agent を起動し、変更検証・INDEX 更新・commit・joinable 状態への遷移・fork report 保存までを一連の workload として管理する。
-- agent 実行失敗や想定外差分などのエラー時には、作業差分の rollback、error state 更新、エラーレポート保存を行う。
+- `cmoc realization apply fork` の CLI 実行を担当し、oracle 差分を基準に realization apply agent を起動する。
+- agent の変更範囲を検証し、INDEX 更新を含む差分の commit、run の joinable/error 更新、fork report の保存までを管理する。
+- realization apply fork の実行制御、失敗時の rollback・error 記録・実行済み run の復旧処理を確認する入口。
 
 ## Read this when
-- `cmoc realization apply fork` の処理フロー、run state、差分検証、commit、fork report の挙動を確認または変更するとき
-- realization apply agent の起動パラメータや、apply run の成功・失敗時処理との連携を調査するとき
+- `cmoc realization apply fork` の実行フローや run lifecycle を変更・調査するとき。
+- oracle 差分の構築、Codex agent の起動、agent 差分の許可範囲検証を確認するとき。
+- 正常終了時の commit・joinable 化・fork report、または失敗時の rollback と error report を確認するとき。
 
 ## Do not read this when
-- realization apply agent の起動パラメータ生成だけを確認する場合は、専用の launch parameter 実装を直接読む
-- run の共通ライフサイクルや report 生成の汎用処理だけを確認する場合は、対応する lifecycle・report 実装を直接読む
+- realization apply agent の起動パラメータ生成だけを調査する場合は、専用の launch parameter 実装を直接読む。
+- run 状態管理、差分計算、INDEX 更新、report 生成の共通仕様だけを調査する場合は、それぞれの共通 runtime module を直接読む。
+- 別の realization apply サブコマンドの処理を調査する場合。
 
 ## hash
-- cd332bc5435fa570cdf99cb785668c8970a65bc8e5a7e38a20f431b1d2b490ff
+- 157f220280d3e4aa9b1b1daeb90518a0948fa64b855af716fce162ce389972f9

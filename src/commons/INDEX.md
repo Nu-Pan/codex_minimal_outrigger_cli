@@ -375,6 +375,42 @@
 ## hash
 - ff7be4b16bff140e3accc5272a9ab50e5e166aa6e1664227f12ba94eead8d86c
 
+# `runtime_run_lifecycle.py`
+
+## Summary
+- editing run の開始・解決・状態更新・worktree 差分管理を担う共通ランタイム。session/run の lifecycle 検証、branch/worktree 操作、commit・rollback、INDEX 更新、oracle・realization path の変更許可判定を提供する。editing run の各サブコマンド実装や、run lifecycle の状態遷移・差分検査の入口として読む。
+
+## Read this when
+- editing run の開始、active run の解決、joinable/error 状態への更新を変更または調査するとき
+- run branch/worktree の作成・削除、commit・rollback、INDEX 更新を扱うとき
+- agent・run・session が変更できる path の判定、rename を含む差分列挙、oracle diff の取得を調査するとき
+
+## Do not read this when
+- 特定の editing run サブコマンドの個別仕様やユーザー向け挙動だけを確認したいときは、先に対応する app_spec またはサブコマンド実装を読む
+- session state のデータ構造や永続化形式だけを変更・調査するときは、runtime_state の実装を直接読む
+- 一般的な git 操作や path 判定で editing run lifecycle との連携がないときは、この共通モジュールを読む必要はない
+
+## hash
+- c1edb49a866e82370102259d3fb717dc62cb56d1f2788f5b3afbde7572d1d499
+
+# `runtime_run_report.py`
+
+## Summary
+- editing run と run lifecycle の処理結果を Markdown + YAML Front Matter の report として保存する共通モジュール。fork report と lifecycle report の生成、YAML scalar の安全な表現を扱う。
+
+## Read this when
+- editing run の fork report 保存処理を変更・調査するとき
+- run の join/abandon など lifecycle report の保存処理を変更・調査するとき
+- report の共通メタデータ、変更パス、警告、YAML scalar 表現を確認するとき
+
+## Do not read this when
+- 実行時パスや timestamp の定義だけを確認したいとき
+- EditingRunContext の状態管理や lifecycle 自体の仕様を確認したいとき
+- report を利用する個別コマンドの処理だけを変更・調査するとき
+
+## hash
+- b1fdda23ac29567dd637aff0ac007b781e09ee044050c7859d8c544a8436a9e3
+
 # `runtime_state.py`
 
 ## Summary

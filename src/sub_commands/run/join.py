@@ -33,7 +33,7 @@ from commons.runtime_run import (
     run_lifecycle_lock,
     stop_run_process,
 )
-from sub_commands.run.lifecycle import (
+from commons.runtime_run_lifecycle import (
     EditingRunContext,
     commit_work_unit,
     refresh_indexes,
@@ -42,7 +42,7 @@ from sub_commands.run.lifecycle import (
     unexpected_run_paths,
     unexpected_session_paths,
 )
-from sub_commands.run.report import write_lifecycle_report
+from commons.runtime_run_report import write_lifecycle_report
 
 
 def cmoc_run_join_impl(force_resolve: bool = False) -> None:

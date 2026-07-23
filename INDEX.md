@@ -128,35 +128,34 @@
 # `src`
 
 ## Summary
-- cmoc の実装側 Python パッケージと CLI エントリーポイントをまとめるディレクトリ。互換 import shim、共通 runtime、設定入口、サブコマンド実装、正本 oracle パッケージへの接続を扱い、実装側の入口を選ぶために読む。
+- cmoc の realization 実装をまとめる src ディレクトリ。CLI の主要エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・正本パッケージへの接続を下位要素への入口として提供する。
 
 ## Read this when
-- cmoc CLI の主要エントリーポイント、サブコマンド登録、互換 import 経路、共通 runtime、または実装側パッケージの構成を確認するとき。
-- 対象機能の実装ファイルが未特定で、CLI・共通処理・互換入口のどこから調査を始めるか判断するとき。
+- cmoc の realization 実装構成や CLI の主要な入口を確認するとき。
+- 特定のサブコマンド、共通 runtime、互換 import 経路、設定・正本パッケージへの接続先を探すとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime helper の実装箇所が明確な場合は、対応する下位ファイルを直接読む。
-- 正本仕様や oracle 側の実装内容を確認するときは、oracle 配下を直接読む。
-- TUI、永続化、Git 操作など特定機能の詳細だけを調査する場合は、該当する下位実装を直接読む。
+- 正本仕様や oracle 側の実装内容を確認したいときは、oracle 配下を直接読む。
+- 特定サブコマンドや runtime helper の詳細だけを確認したいときは、対応する下位要素を直接読む。
+- テスト実装や CLI と無関係な処理を調査するとき。
 
 ## hash
-- b53d8bbbe88ab5f3b2f08c99065dd4bcecdf18a0e76335f7747c5f76b548f7be
+- 2b9a620c5689c703bc7e7bbaaba92299946d08bf3571b6cc3e5dcccc48cd3050
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。CLI、Codex runtime、ACP builder、indexing、oracle review、session、設定・状態・worktree など、外部挙動や制御ロジックを検証するテストと共有テストヘルパーを扱う。
-- 変更対象の機能に対応する個別テストを選ぶための入口であり、共通 fixture や統合実行環境を確認する場合は補助モジュールも参照する。
+- cmoc の realization test ディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session、state、設定、prompt、Git/worktree などの外部挙動と制御契約を検証するテスト群、および共有 test helper を含む。各機能の実装変更時に対応する回帰テストへ進む入口となる。
 
 ## Read this when
-- 実装変更に対応する realization test の所在や検証観点を特定するとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session、runtime state などの回帰テストを追加・修正するとき
-- 複数テストで共有される Git、Codex、Ollama、外部コマンド、doctor 実行環境の準備方法を確認するとき
+- cmoc の実装または仕様変更に伴う回帰テストの追加・修正先を判断するとき
+- CLI、Codex 実行、indexing、oracle review/edit、session lifecycle、runtime state、設定、prompt、ACP builder の挙動を検証するとき
+- 複数テストで共有される Git、Codex、Ollama、外部コマンド、schema path などの test helper を確認するとき
 
 ## Do not read this when
 - 正本仕様や schema の内容を確認・変更するときは、対応する oracle file を直接読む
-- 実装責務や内部処理の詳細だけを調査するときは、対応する src の実装を直接読む
-- LLM の回答品質や prompt の評価自体を目的とするとき
+- 単一の実装詳細や prompt 定義を確認するだけのときは、対応する src または oracle source を直接読む
+- LLM の回答品質そのものを評価するとき
 
 ## hash
-- ac4302aed1180b961b87dcb7f1b8b04e26d1e0c0f3d501aa9d72787c3c234884
+- 354631f2a5164ee950ced4b60d9e69d45d2e5d8c7e2a5f74e4dc874c686db503

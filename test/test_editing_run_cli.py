@@ -18,19 +18,17 @@ from _git_support import current_branch, make_repo, run_git
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
+import commons.runtime_run_lifecycle as lifecycle_module
 import sub_commands.oracle.investigation as investigation_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.join as run_join_module
-import sub_commands.run.lifecycle as lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import timestamp
 from commons.runtime_refactor import load_refactor_state
-from commons.runtime_state import SessionState
-from main import app
-from sub_commands.run.lifecycle import (
+from commons.runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,
     commit_work_unit,
@@ -39,6 +37,8 @@ from sub_commands.run.lifecycle import (
     start_editing_run,
     worktree_change_paths,
 )
+from commons.runtime_state import SessionState
+from main import app
 
 
 @pytest.fixture(autouse=True)

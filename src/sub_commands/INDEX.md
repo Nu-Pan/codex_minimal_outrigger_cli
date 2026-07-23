@@ -60,16 +60,16 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply と refactor の実行処理への導線を提供する。
+- realization workload サブコマンドのパッケージ入口。apply workload と refactor workload の構成・実行処理へ進むための起点となる。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
+- realization workload サブコマンドの実装やパッケージ構成を確認するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
 
 ## hash
-- 36caddb4ff81b39a1fbd53dba51ab268ecaf247153f35f7753f78d4c8e33d8d6
+- bc3fd8d5c2380c41ac7834055c94955a94f3f1924ac0aa2c140c5918c6b64d00
 
 # `review`
 
@@ -88,21 +88,18 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。run の開始・参加・放棄、共通 lifecycle 処理、merge・cleanup、report 保存を確認する入口。
-- 個別コマンドの実装に加え、active run の解決、state 更新、Git 差分検査、worktree・branch 操作、INDEX.md conflict 処理、ライフサイクルレポート生成を扱う。
+- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。run の abandon・join 実装と、lifecycle・report の旧 import path 互換 shim を含む。各 run サブコマンドの共通処理や配下実装への入口。
 
 ## Read this when
-- editing run の開始・join・abandon の動作や、共通 lifecycle の変更・調査を行うとき
-- run の state 遷移、worktree・branch・process tracking の cleanup、merge、rollback、report 保存を確認するとき
-- run lifecycle と doctor preprocess、refactor state 同期、INDEX.md 更新の連携を確認するとき
+- editing run の lifecycle、abandon、join、report 関連の実装を調査・変更するとき
+- run の停止・統合・cleanup・失敗復旧・レポート出力・旧 import path 互換性を確認するとき
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき
-- state データ構造や永続化形式そのものを確認するときは runtime_state と対応する oracle を読む
-- Git・path・INDEX 更新の低レベル utility、または report 保存先の規則だけを確認するときは各専用 module を直接読む
+- 特定の処理の詳細だけを調べるとき。配下の該当ファイルまたは canonical な commons 実装を直接読む
 
 ## hash
-- 4fe0a4f49f2675ca3252c2e652da0c2b82bf2041f8e866d0f65cb428dafff9fd
+- a75a95bc102b67ca9e07dce41f71f8712fe8e42a6702e5c2b4e32863542fcceb
 
 # `session`
 

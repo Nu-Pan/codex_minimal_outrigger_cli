@@ -24,8 +24,8 @@ from commons.runtime_run import (
     run_lifecycle_lock,
     stop_run_process,
 )
-from sub_commands.run.lifecycle import EditingRunContext, resolve_active_run
-from sub_commands.run.report import write_lifecycle_report
+from commons.runtime_run_lifecycle import EditingRunContext, resolve_active_run
+from commons.runtime_run_report import write_lifecycle_report
 
 
 def cmoc_run_abandon_impl() -> None:

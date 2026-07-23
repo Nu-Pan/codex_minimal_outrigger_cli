@@ -229,9 +229,9 @@
   },
   "oracle/doc/dev_rule/design_rule.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "e08b233e78e0aa9ec5de1cc287b99c15f953e430fe3626ef2f73f2f533df6c72",
+    "last_investigated_at": "2026-07-24_01-21_07_642822000"
   },
   "oracle/doc/dev_rule/development_environment.md": {
     "investigation_required": true,
@@ -816,6 +816,18 @@
     "last_investigated_at": null
   },
   "src/commons/runtime_run.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_run_lifecycle.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_run_report.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,

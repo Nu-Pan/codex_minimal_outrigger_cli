@@ -50,21 +50,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI ライフサイクル、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新など、複数の CLI サブコマンドで共有される実行時機能を提供する。
-- commons 配下の共通 runtime API・実装を調査または変更する際の入口であり、目的に応じて個別の runtime_* モジュールへ進む。
+- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI ライフサイクル、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新など、複数の CLI サブコマンドで共有される実行時機能への入口。個別機能の詳細は配下の対応する runtime_* モジュールで確認する。
 
 ## Read this when
-- 複数の CLI サブコマンドにまたがる runtime helper の責務や公開 API を確認するとき
-- Codex 実行、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新などの共通処理を変更・調査するとき
-- commons 配下で対象となる個別 runtime モジュールを選ぶ必要があるとき
+- 複数の CLI サブコマンドにまたがる runtime 共通処理の実装箇所を探すとき
+- Codex 実行、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新の共有機能を調査・変更するとき
+- commons パッケージの初期化や公開 API の入口を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の実装詳細が明確な場合は、対応する個別の runtime_* モジュールを直接読むとき
-- CLI サブコマンド固有の制御フローや入出力を確認するとき
-- 正本仕様や prompt の定義を確認するときは、対応する oracle 文書・oracle source を直接読むとき
+- 特定の runtime helper の実装詳細だけを確認したいとき
+- 特定サブコマンド固有の制御フローや入出力を調査するとき
+- 正本仕様や Structured Output の定義を確認するとき
 
 ## hash
-- 9ef138d7ddbc0bb8296026c752785501f769805a8164b24991ed41dedc1813fc
+- 9ea38d40d83433531438f1d194f70df914e7785b0ba0b4a85ae7de5730dbfb54
 
 # `config`
 
@@ -116,16 +115,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの各サブコマンド実装への入口を提供し、個別機能の実装確認先を示す。
-- apply と review は現在実装本文がなく、将来の実装追加先として位置づけられている。
+- CLI サブコマンドの realization 実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの各サブコマンド入口と関連パッケージを下位要素への入口として提供する。apply・review は現在実装本文がない。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、対象サブコマンドの実装ファイルを特定するとき。
-- doctor、indexing、oracle review、realization workload、editing run、session、または tui の実行フローを調査・変更するとき。
+- CLI サブコマンドの実装構成や、特定サブコマンドの実行入口を確認・変更するとき。
+- oracle review、realization workload、editing run、session、tui の責務分担や詳細実装の参照先を特定するとき。
 
 ## Do not read this when
-- サブコマンドに共通する runtime、低レベル utility、state の永続化、INDEX 更新、Git 操作などの専用実装だけを調査するとき。
-- 対象サブコマンドの詳細実装が明確な場合は、このディレクトリ全体ではなく該当する実装ファイルを直接読むとき。
+- サブコマンド共通 runtime、commons にある共通処理、または個別サブコマンドの詳細実装だけを調査するとき。該当する下位モジュールや共通実装を直接読む。
+- 現在実装がない apply・review の具体的な処理を調査するとき。
 
 ## hash
-- c46550228cadd07bf089a4b9eaf07714c1edd1f2ca209f0e167254570bddc61e
+- 2b3ce078a8fcdcac9742bec280b84222e1de1a9d0c048267fff8844b4b1b47d4

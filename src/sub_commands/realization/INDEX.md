@@ -15,33 +15,32 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装を確認する入口であり、配下に apply の共通処理と fork サブコマンド処理がある。
-- fork は `cmoc realization apply fork` の実行フローを担い、oracle 差分を基準とした agent 起動、変更検証、INDEX 更新、commit、状態遷移、report 保存、および失敗時の rollback・error state 更新を扱う。
+- realization の apply 処理に関する workload を扱うディレクトリ。apply workload 実装の確認入口であり、fork サブコマンドの実行制御や run lifecycle の実装へ進む起点となる。
 
 ## Read this when
-- realization の apply workload の内容を調査・変更するとき
-- `cmoc realization apply fork` の処理フロー、状態管理、差分検証、commit、fork report、成功・失敗時の挙動を確認するとき
+- realization の apply workload の内容を調査・変更するとき。
+- `cmoc realization apply fork` の実行フロー、oracle 差分を基準にした agent 起動、変更範囲検証、commit、run 状態更新、fork report 保存、失敗時 rollback を調査・変更するとき。
 
 ## Do not read this when
-- apply workload 以外の処理を扱うとき
-- apply agent の起動パラメータ生成だけを確認する場合
-- run の共通ライフサイクルや report 生成の汎用処理だけを確認する場合
+- apply workload 以外の処理を扱うとき。
+- realization apply agent の起動パラメータ生成だけを調査する場合。
+- run 状態管理、差分計算、INDEX 更新、report 生成の共通仕様だけを調査する場合。
+- 別の realization apply サブコマンドの処理を調査する場合。
 
 ## hash
-- 8500437c78ea8062326ea97df740d0c9310eb18d04da07fe68509b847dcaa1d9
+- 9aba22ebe989d266f79868e8c7e5bec34e5ee842f417b462c92d9fa774723844
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を扱うパッケージ。refactor fork の実行フロー、状態管理、差分検証、commit、report 保存など、関連する処理への入口となる。
+- realization のリファクタリング処理をまとめるパッケージ。リファクタリング関連 CLI の実行入口と、個別処理へ進むための構成を提供する。
 
 ## Read this when
-- realization refactor の実行フローや処理構成を確認するとき。
-- refactor fork の対象選択、agent 調査・修正、未解決所見、完了判定、中断時の report 処理を調査・変更するとき。
+- realization のリファクタリング処理の実行フローやパッケージ構成を確認するとき。
 
 ## Do not read this when
-- realization refactor 以外の処理を確認するとき。
-- agent parameter の構築、refactor state のデータ操作、一般的な run lifecycle・差分分類・report 共通処理だけを確認するとき。
+- realization のリファクタリング以外の処理を確認するとき。
+- 個別 realization file のレビュー・修正、変更概要生成、共通 lifecycle・state・差分分類・report 処理だけを調べるとき。
 
 ## hash
-- 04d961e363b178b36df13b5d89e8dfb812ff839e4d1d9df1be607031ea7ccb7b
+- 3c3d46bee05cbed94f87b79904e586471efa1cf9f691988c01489d643d3f98b4

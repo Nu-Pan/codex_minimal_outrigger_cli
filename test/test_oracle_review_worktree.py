@@ -17,8 +17,8 @@ import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.review as review_module
 from basic.acp import AgentCallParameter
+from commons.runtime_run_lifecycle import set_run_state, start_editing_run
 from main import app
-from sub_commands.run.lifecycle import set_run_state, start_editing_run
 
 
 class _FakeCodexResult:
