@@ -40,7 +40,16 @@ class RunProcessIdentity(NamedTuple):
 def expected_run_worktree(root: Path, run_branch: str) -> Path:
     """run branch 名から managed worktree path を復元する。"""
     parts = run_branch.split("/")
-    if len(parts) != 4 or parts[:2] != ["cmoc", "run"] or not parts[2] or not parts[3]:
+    # {{work-root}}/oracle/doc/branch_model.md
+    # dot component は run-root の2階層配置を崩すため、path component として許可しない。
+    if (
+        len(parts) != 4
+        or parts[:2] != ["cmoc", "run"]
+        or not parts[2]
+        or not parts[3]
+        or parts[2] in {".", ".."}
+        or parts[3] in {".", ".."}
+    ):
         raise CmocError(
             "run worktree を特定できません。",
             ["session state file の run.branch を確認してください。"],
