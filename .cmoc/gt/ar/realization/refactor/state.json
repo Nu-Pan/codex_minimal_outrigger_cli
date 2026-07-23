@@ -253,9 +253,9 @@
   },
   "oracle/src/oracle/acp_builder/indexing/index_entry.json": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "c3c1774e0701b503e36d145179eae32bee846e2ba685e8052d82c1fa177bfaff",
+    "last_investigated_at": "2026-07-24_02-35_28_294419000"
   },
   "oracle/src/oracle/acp_builder/indexing/index_entry.py": {
     "investigation_required": true,

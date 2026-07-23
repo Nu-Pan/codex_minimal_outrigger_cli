@@ -128,34 +128,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる src ディレクトリ。CLI の主要エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・正本パッケージへの接続を下位要素への入口として提供する。
+- cmoc の realization 側ソースルート。CLI エントリーポイント、共通 runtime、サブコマンド、互換 import shim、公開 API の再公開入口を扱い、各下位実装へ進むための入口となる。
 
 ## Read this when
-- cmoc の realization 実装構成や CLI の主要な入口を確認するとき。
-- 特定のサブコマンド、共通 runtime、互換 import 経路、設定・正本パッケージへの接続先を探すとき。
+- cmoc の CLI 全体構成やサブコマンドの登録・委譲先を確認したいとき。
+- 共通 runtime、サブコマンド実装、互換 import 経路、公開 API の realization 側入口を調査・変更したいとき。
+- 特定の下位機能の実装へ進む前に、対応するパッケージやモジュールの入口を選びたいとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装内容を確認したいときは、oracle 配下を直接読む。
-- 特定サブコマンドや runtime helper の詳細だけを確認したいときは、対応する下位要素を直接読む。
-- テスト実装や CLI と無関係な処理を調査するとき。
+- 特定サブコマンド、共通 helper、oracle 仕様、canonical API 実装の詳細を確認したいときは、対応する下位実装または oracle 側を直接読む。
+- CLI や realization 側の import 入口と無関係な正本仕様・内部挙動だけを調査するとき。
 
 ## hash
-- 2b9a620c5689c703bc7e7bbaaba92299946d08bf3571b6cc3e5dcccc48cd3050
+- 2b2749bd5f85611d149b73a57e66f9cb87bee6eac52872312b0888f568936e9b
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収録するディレクトリ。CLI、Codex 実行、ACP builder、indexing、oracle review、session/run state、設定、Git/worktree lifecycle などの外部挙動・制御ロジックを検証し、共通テストヘルパーも提供する。各機能のテスト追加・修正時に、対象責務に対応する個別テストへ進む入口。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、prompt、テスト用 Ollama・Git・外部コマンド補助など、実装の外部挙動と制御契約を検証する。各機能の回帰テストを探す際の入口であり、個別の詳細は対応するテストファイルへ進む。
 
 ## Read this when
-- cmoc の実装変更に伴う回帰テストの追加・修正箇所を探すとき
-- CLI、Codex runtime、indexing、oracle review、session/run lifecycle、設定、worktree の外部契約や制御ロジックを検証するとき
-- 複数テストで共有される Git、Codex、Ollama、外部コマンドなどのテスト準備を確認するとき
+- cmoc の realization test の対象や、機能別の回帰テストの入口を探すとき
+- CLI、Codex 実行、indexing、oracle review/edit、session/run lifecycle、設定、state、prompt、ACP builder の外部契約を検証・変更するとき
+- テスト共通 helper や test-local Ollama、隔離 Git repository、fake external command の準備方法を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装責務そのものを確認したいときは、対応する oracle または src の本文を直接読む
-- 単一機能の実装詳細だけを調査するときは、このディレクトリ全体ではなく対応する個別テストまたは実装へ進む
-- LLM の回答品質自体を評価するとき
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle 文書・schema を直接読む
+- 実装の責務や内部ロジックを確認したいときは、対応する src の実装を直接読む
+- 特定の機能と無関係なテスト全体を調査するときは、このディレクトリを総当たりせず対象テストへ直接進む
 
 ## hash
-- 72a33526145510ebe3d8a95d9e676a9068d346d7347a67f7176a7bb2bb2159a0
+- c32c1c1a62173f35606eba4bf1f359d3d8626f67b2fc119c5f04befd682494bd

@@ -34,20 +34,19 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md を対象ファイル・ディレクトリごとに生成・更新する indexing 処理を提供する。
-- 既存 entry の再利用判定、対象 hash の計算、Structured Output の検証と Markdown 化、更新差分の commit、並列生成と排他制御を担う。
+- INDEX.md を深いディレクトリから更新し、必要なエントリーを Codex で生成して Git commit まで行う indexing 処理を提供するモジュール。排他制御、対象判定、既存エントリー再利用、ハッシュによる鮮度確認、並列生成、Structured Output の検証を扱う。
 
 ## Read this when
-- INDEX.md の自動生成・更新、entry の鮮度判定、indexing 用 lock、生成結果の検証を変更するとき
-- Codex 呼び出し前の indexing preflight、並列処理、worktree や process-global 制約を調査するとき
-- INDEX.md entry の Markdown 形式や対象ファイルの列挙・除外条件を確認するとき
+- INDEX.md の自動生成・更新・commit の挙動を変更または調査するとき
+- indexing の排他制御、対象ファイル判定、ハッシュ、並列 Codex 呼び出しを確認するとき
+- INDEX.md entry の形式検証や生成結果のエラー処理を確認するとき
 
 ## Do not read this when
-- 特定の CLI サブコマンドの実装や一般的な Codex 実行規則だけを調べるとき
-- INDEX.md の正本仕様や prompt の定義を変更するときは、対応する oracle 文書・oracle source を先に読む
+- INDEX.md の内容を利用する側のルーティングや個別機能の挙動だけを調べるとき
+- indexing と無関係な CLI 機能やランタイム処理を変更するとき
 
 ## hash
-- c2036b77730c939744ffd6c1152de3017fb5cddeba96a3f7330ebb0357c2fbae
+- cbf36ec59d1cd239eb45be33f09f226261b0aa1231f859aec58d1401c55540e6
 
 # `prompt_editor_input.py`
 
