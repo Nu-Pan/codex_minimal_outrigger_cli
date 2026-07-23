@@ -168,10 +168,10 @@
     "last_investigated_at": "2026-07-23_21-50_01_603420000"
   },
   "oracle/doc/app_spec/sub_command/tui.md": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "be9faf25edcb1c5a094206c1ad538e66195cd6dcaef06552ae63ef8375d6229d",
+    "last_investigated_at": "2026-07-23_22-02_21_657291000"
   },
   "oracle/doc/app_spec/subcommand_interruption.md": {
     "investigation_required": true,
