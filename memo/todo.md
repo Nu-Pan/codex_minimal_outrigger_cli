@@ -18,6 +18,9 @@
     - その「解決不能な問題」がレポートに出てこないので、レポート読んでも何も分からない
 - スキルから oracle file を参照しちゃってる
     - このリポジトリ固有とは言え、スキルは自己完結性をもたせたい
+- `cmoc realization refactor` の unresolved の扱い方が微妙
+    - git 履歴上残らないので、再実行時に毎回 unresolved の再調査が入る
+    - unresolved も `state.json` に含めたい
 
 # cmoc の作業品質
 
