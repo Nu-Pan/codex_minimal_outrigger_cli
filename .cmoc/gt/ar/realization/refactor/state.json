@@ -1,9 +1,9 @@
 {
   ".gitignore": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "7e68a1c06a9d5e8582a5943fe8ea4e06c581f9217c8bec7356394ac03a13be1b",
+    "last_investigated_at": "2026-07-23_13-14_01_992567000"
   },
   "LICENSE": {
     "investigation_required": true,
