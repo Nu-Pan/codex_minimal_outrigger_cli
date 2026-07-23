@@ -50,20 +50,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI lifecycle、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新などの共有処理への入口であり、個別 runtime モジュールへ進むためのルーティング対象。
+- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI ライフサイクル、設定、Git、パス、ログ、状態、エラー、結果、INDEX 更新など、複数の CLI サブコマンドで共有する実行時機能を扱う。各 runtime_* モジュールの実装へ進むための入口。
 
 ## Read this when
-- 複数の CLI サブコマンドや Codex 実行系で共有される runtime 処理の担当箇所を探すとき
-- 設定、Git、パス、ログ、状態、エラー、結果、INDEX 更新、Codex subprocess などの共通機能を変更・調査するとき
-- commons 配下の個別 runtime モジュールを利用・変更する前に、共有 API や責務境界を確認するとき
+- 複数サブコマンドにまたがる共通 runtime API や実行基盤を調査・変更するとき
+- Codex exec/TUI、CLI 実行ライフサイクル、設定、Git、path、logging、session state、error、結果型、INDEX 更新の担当実装を探すとき
 
 ## Do not read this when
-- 特定の runtime 領域の実装詳細が明確な場合は、対応する個別 runtime モジュールを直接読むとき
-- 特定 CLI サブコマンド固有の業務処理や入出力を調査するとき
-- 正本仕様や prompt の定義を確認するときは、対応する oracle 文書・oracle source を直接読むとき
+- 特定サブコマンド固有の業務処理や引数定義を調査するとき
+- 特定の runtime 領域の詳細実装を直接確認できる場合
+- oracle に定義された正本仕様や Codex exec の仕様根拠を確認するとき
 
 ## hash
-- b58a2f961407c886143a67380d8f6263e0527f3fadf00792828e33fd66697b73
+- cef037b2c6cae2eb57a1b112e52546b4f9fdb985187323fb91e62bad0221bf84
 
 # `config`
 
@@ -116,15 +115,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめるディレクトリ。doctor・indexing・oracle・realization・run・session・tui などの実行入口と、各サブコマンド実装へ進むためのルーティング対象。apply・review は現時点で実装本文がない。
+- サブコマンド実装をまとめるディレクトリ。apply、doctor、indexing、oracle、realization、review、run、session、tui の各実装入口を扱い、個別サブコマンドや関連する下位処理へ進むためのルーティング起点となる。
 
 ## Read this when
-- CLI サブコマンドの構成や実行入口を確認するとき。
-- 特定サブコマンドの実行フロー、worktree 条件、ライフサイクル、TUI 起動、oracle／realization 処理を調査・変更するとき。
+- 複数のサブコマンドにまたがる実装構成や、対象サブコマンドの実装入口を確認するとき。
+- apply、doctor、indexing、oracle、realization、review、run、session、tui のいずれかのサブコマンド実装を調査・変更するとき。
 
 ## Do not read this when
-- 共通 runtime、git 操作、INDEX 更新、prompt、state、report などの内部処理だけを確認したいときは、対応する共通モジュールや下位実装を直接読む。
-- サブコマンド実装の追加先だけを確認する場合は、該当する下位ディレクトリを直接読む。
+- 特定サブコマンドの内部ロジック、共通 runtime、個別の oracle 仕様、または下位モジュールの詳細だけを確認したいときは、該当する実装・仕様文書を直接読む。
+- 対象サブコマンド以外の処理を扱うとき。
 
 ## hash
-- 92eaa66dfc9816a329e70e18681bc7f99c647a6c616b598b26bf78a26e3e4922
+- bc67c838e557d6e23be21ee91f36faac6ae038ec3cbba70ce27e1a77c2b9220b

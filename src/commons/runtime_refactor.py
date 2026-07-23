@@ -1,5 +1,6 @@
 import json
 import string
+from collections.abc import Collection
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -111,12 +112,15 @@ def new_refactor_entry() -> RefactorEntry:
     }
 
 
-def select_refactor_target(state: RefactorState) -> str | None:
+def select_refactor_target(
+    state: RefactorState,
+    excluded_paths: Collection[str] = (),
+) -> str | None:
     """正本の優先順位で次の investigation target を選ぶ。"""
     candidates = [
         (path, entry)
         for path, entry in state.items()
-        if entry["investigation_required"]
+        if entry["investigation_required"] and path not in excluded_paths
     ]
     if not candidates:
         return None
