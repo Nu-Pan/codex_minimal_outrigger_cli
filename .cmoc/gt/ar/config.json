@@ -26,8 +26,7 @@
       "high": "high",
       "xhigh": "xhigh",
       "max": "max"
-    },
-    "num_try_falv_recovery": 1
+    }
   },
   "oracle_review": {
     "num_enumerate_findings_loop": 2,
