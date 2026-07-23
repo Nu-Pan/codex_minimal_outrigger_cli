@@ -25,6 +25,16 @@ from config.cmoc_config import CmocConfig
 _REAL_CODEX = shutil.which("codex")
 
 
+def test_setup_codex_home_isolates_home_and_codex_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """共通 Codex 環境 helper が両方の home を test-root 内へ置く。"""
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
+
+    assert Path(os.environ["HOME"]) == tmp_path / "home"
+    assert Path(os.environ["CODEX_HOME"]) == codex_home
+
+
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     """Codex exec の必須 argv と prompt の stdin 渡しを検証する。"""

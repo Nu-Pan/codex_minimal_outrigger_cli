@@ -32,16 +32,18 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex 実行経路をテストするための共通ヘルパー群。fake 結果、隔離した CODEX_HOME、Codex パラメータ、CLI 引数・設定の解析、実行時 override の固定化を提供する。
+- Codex 実行経路を検証するテスト向けの共通ヘルパーを提供する。Codex の一時ホーム準備、test-local Ollama 用設定、既定パラメータ生成、CLI 引数・設定値の解析、Codex override のスタブ化をまとめた、関連テストの入口となる補助モジュール。
 
 ## Read this when
-- Codex runtime wrapper、apply fork、test-local Ollama 経路、Codex CLI override のテストを追加・修正するとき。
+- Codex runtime wrapper、apply fork、TUI の subprocess 制御、または test-local Ollama 経路のテストを追加・修正するとき
+- テスト用 Codex 環境、AgentCallParameter、CLI override 引数の共通処理を確認するとき
 
 ## Do not read this when
-- Codex 実装本体や oracle の仕様を確認したいとき。単一テストの固有 fixture だけを扱うとき。
+- プロダクションコードの Codex 実行仕様や ACP builder の実装を確認するとき
+- Codex 実行と無関係なテストを変更するときは、この共通テストヘルパーではなく対象テストを直接読む
 
 ## hash
-- 054a356acb5f2c0245d877b7d8d4a9c8dfee983608c94c76cd566f19bdeaafb8
+- 068d30dcbee6bdda393c479d4ee2ed381574f80023e8cc67994def4e0e95b230
 
 # `_command_support.py`
 
@@ -246,20 +248,22 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI の実行ランタイムを検証するテスト。実 Codex CLI と test-local Ollama を用いた GPU 統合テストに加え、Codex の argv、stdin、作業ディレクトリ、出力スキーマ、model provider override、CODEX_HOME 設定未生成、リポジトリ書き込みをモック実行で検証する。Codex 実行経路や override 引数の挙動を確認する際のテスト入口。
+- Codex CLI 実行ランタイムの結合テストと契約テストを担う。Codex exec の argv、stdin、override、provider 設定、出力 schema、作業ディレクトリ、生成結果、CODEX_HOME の設定ファイル非生成を検証する。Codex 実行処理や関連するテスト helper の挙動を確認する際の入口となる。
 
 ## Read this when
-- run_codex_exec の実行仕様、Codex CLI 引数、prompt の stdin 渡し、output schema の配置や内容を変更・調査するとき
-- model provider、model class、reasoning effort、sandbox、approval 設定の Codex override 連携を変更・検証するとき
-- Codex HOME に設定ファイルを生成しない制約や、実 Codex CLI と test-local Ollama の統合動作を確認するとき
+- Codex exec の起動引数、sandbox・approval 設定、prompt の stdin 渡しを変更・調査するとき
+- model provider、local Ollama、model class、reasoning effort の override 連携を変更・調査するとき
+- output schema の配置・ハッシュ化、call log、Codex の出力結果を変更・調査するとき
+- Codex 実行時のリポジトリ書き込み、作業ディレクトリ、HOME/CODEX_HOME の分離を検証するとき
+- Codex runtime の GPU integration test または test-local Ollama を使う結合動作を確認するとき
 
 ## Do not read this when
-- Codex 実行ランタイムの実装詳細そのものを変更・調査する場合は、まず対応する src 側の実装を読むとき
-- Codex 以外のサブコマンド、provider 設定一般、または Ollama の補助機能だけを扱うとき
-- Codex CLI 出力品質や LLM の応答内容そのものを検証したいとき
+- Codex CLI 実行ランタイムの実装詳細ではなく、一般的な Codex 設定仕様だけを確認したいときは、対応する oracle doc を直接読む
+- Codex runtime と無関係なサブコマンド、設定、テスト helper の変更を扱うとき
+- Codex exec の外部挙動や制御ロジックを検証する必要がなく、単なるテスト環境・fixture の整理だけを行うとき
 
 ## hash
-- 4903c028bb01578f54c6efb5981e484f3f12e94bf7c9fb94871aae6100143894
+- 2c274231d96e7e854c3ba24ed7523ec22da598405640a9f130a6c820d3eaf34d
 
 # `test_codex_runtime_home.py`
 
@@ -570,18 +574,21 @@
 # `test_production_cli.py`
 
 ## Summary
-- 実 Codex CLI と case-local Ollama を使う独立 process の本番経路受け入れ試験。全末端サブコマンドについて、終了 code、report・state・Git 状態、Codex call log、TUI の応答完了と終了操作を検証する。LLM の回答品質は判定対象外で、cmoc の制御と外部から観測できる副作用を確認する。
+- 実 Codex CLI と case-local Ollama を使い、独立 process・PTY 上で全末端サブコマンドの本番経路を検証する受け入れテスト。CLI 終了 code、report・state・Git・Codex call log、TUI の応答完了と終了を確認し、LLM の回答品質自体は判定しない。
 
 ## Read this when
-- 末端 CLI サブコマンドの本番経路、実 Codex 呼び出し、local Ollama 利用、状態遷移、Git・report・call log の検証を変更または調査するとき。
-- TUI の PTY 操作、端末 capability query、応答完了後の終了処理を確認するとき。
+- 本番相当の独立 process で CLI サブコマンドの正常系を検証・変更するとき
+- 全末端コマンドの登録漏れ、session/run の状態遷移、Git・state・report の外部副作用を確認するとき
+- Codex TUI の PTY 操作、端末 capability query、応答完了、終了処理を調査するとき
+- 実 Codex CLI、case-local Ollama、隔離された Codex home と test repository を用いる GPU integration test を実行するとき
 
 ## Do not read this when
-- LLM の回答品質やプロンプト内容そのものを評価するとき。
-- 単体の内部 helper や非本番経路だけを変更・調査するときは、対応する実装テストを直接読む。
+- 単体の CLI 実装や内部 helper のロジックだけを変更・調査するときは、対応する src または通常の realization test を直接読む
+- LLM の回答品質やプロンプト内容そのものを評価するとき
+- Codex CLI や Ollama を使わない軽量な unit test を確認するとき
 
 ## hash
-- eaf3857b454c2e09befb1d89d2bf25bcad69656f3b71437cd1244c04930182a6
+- 2571c81c78cdc3a6b0d7aea9208002d4ff16e4d02b755f1d165d91255c54d9bd
 
 # `test_prompt_parts.py`
 

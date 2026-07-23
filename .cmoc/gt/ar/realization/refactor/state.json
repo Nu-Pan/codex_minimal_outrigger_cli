@@ -241,9 +241,9 @@
   },
   "oracle/doc/dev_rule/test_rule.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "64df10101d72683cb65d504537d5a267a58131f6567a762ecc8cdb72de9ff1db",
+    "last_investigated_at": "2026-07-24_02-06_41_368194000"
   },
   "oracle/src/oracle/acp_builder/basic.py": {
     "investigation_required": true,

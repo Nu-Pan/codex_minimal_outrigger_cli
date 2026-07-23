@@ -145,17 +145,17 @@
 # `test`
 
 ## Summary
-- cmoc の realization test ディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session、state、設定、prompt、Git/worktree などの外部挙動と制御契約を検証するテスト群、および共有 test helper を含む。各機能の実装変更時に対応する回帰テストへ進む入口となる。
+- cmoc の realization test 群を収録するディレクトリ。CLI、Codex 実行、ACP builder、indexing、oracle review、session/run state、設定、Git/worktree lifecycle などの外部挙動・制御ロジックを検証し、共通テストヘルパーも提供する。各機能のテスト追加・修正時に、対象責務に対応する個別テストへ進む入口。
 
 ## Read this when
-- cmoc の実装または仕様変更に伴う回帰テストの追加・修正先を判断するとき
-- CLI、Codex 実行、indexing、oracle review/edit、session lifecycle、runtime state、設定、prompt、ACP builder の挙動を検証するとき
-- 複数テストで共有される Git、Codex、Ollama、外部コマンド、schema path などの test helper を確認するとき
+- cmoc の実装変更に伴う回帰テストの追加・修正箇所を探すとき
+- CLI、Codex runtime、indexing、oracle review、session/run lifecycle、設定、worktree の外部契約や制御ロジックを検証するとき
+- 複数テストで共有される Git、Codex、Ollama、外部コマンドなどのテスト準備を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle file を直接読む
-- 単一の実装詳細や prompt 定義を確認するだけのときは、対応する src または oracle source を直接読む
-- LLM の回答品質そのものを評価するとき
+- 正本仕様や実装責務そのものを確認したいときは、対応する oracle または src の本文を直接読む
+- 単一機能の実装詳細だけを調査するときは、このディレクトリ全体ではなく対応する個別テストまたは実装へ進む
+- LLM の回答品質自体を評価するとき
 
 ## hash
-- 354631f2a5164ee950ced4b60d9e69d45d2e5d8c7e2a5f74e4dc874c686db503
+- 72a33526145510ebe3d8a95d9e676a9068d346d7347a67f7176a7bb2bb2159a0

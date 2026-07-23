@@ -63,11 +63,9 @@ pytestmark = pytest.mark.skipif(
     reason="production process test requires installed cmoc and real Codex CLI",
 )
 
-PRODUCTION_SCENARIO_COMMANDS = {
+NONINTERACTIVE_SCENARIO_COMMANDS = {
     ("doctor",),
     ("indexing",),
-    ("oracle", "edit"),
-    ("oracle", "investigation"),
     ("oracle", "review"),
     ("realization", "apply", "fork"),
     ("realization", "refactor", "fork"),
@@ -76,7 +74,16 @@ PRODUCTION_SCENARIO_COMMANDS = {
     ("session", "abandon"),
     ("session", "fork"),
     ("session", "join"),
-    ("tui",),
+}
+
+TUI_SCENARIOS = (
+    (("tui",), "tui codex", True),
+    (("oracle", "edit"), "oracle edit", False),
+    (("oracle", "investigation"), "oracle investigation", False),
+)
+
+PRODUCTION_SCENARIO_COMMANDS = NONINTERACTIVE_SCENARIO_COMMANDS | {
+    scenario[0] for scenario in TUI_SCENARIOS
 }
 
 TUI_PROMPT = """# 目的
@@ -200,6 +207,9 @@ def _production_environment(
     real_codex = _REAL_CODEX
 
     # Codex の利用者 session/config と test session を混ぜない。
+    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    home = tmp_path / "home"
+    home.mkdir()
     codex_home = tmp_path / "codex-home"
     codex_home.mkdir()
     configure_codex_home_for_test_local_ollama(codex_home)
@@ -214,6 +224,7 @@ def _production_environment(
     )
     environment = {
         **os.environ,
+        "HOME": str(home),
         "CODEX_HOME": str(codex_home),
         "OPENAI_API_KEY": "cmoc-local-test",
         "NO_PROXY": "127.0.0.1,localhost",
@@ -467,10 +478,21 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     _write_noninteractive_fixture_instructions(root)
     _write_local_slm_config(root, ollama_instance)
     cmoc, environment, _codex_home = _production_environment(tmp_path)
+    executed_commands: set[tuple[str, ...]] = set()
+
+    def run_production(*args: str) -> subprocess.CompletedProcess[str]:
+        """実行した非対話 leaf を記録して production process を起動する。"""
+        executed_commands.add(args)
+        return _run_cmoc(cmoc, root, environment, *args)
+
+    def run_without_codex(*args: str) -> subprocess.CompletedProcess[str]:
+        """Codex 不要の leaf も実行済み集合へ記録する。"""
+        executed_commands.add(args)
+        return _run_without_codex_call(cmoc, root, environment, *args)
 
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # doctor は provider lifecycle に触れず本番 preprocess を完了する。
-    _run_without_codex_call(cmoc, root, environment, "doctor")
+    run_without_codex("doctor")
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert run_git(root, "ls-files", ".cmoc/gt/ar/config.json").stdout.strip()
     assert run_git(
@@ -479,7 +501,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 
     # indexing は実推論 response を INDEX.md と commit に反映する。
     before_indexing_calls = _codex_call_logs(root)
-    _run_cmoc(cmoc, root, environment, "indexing")
+    run_production("indexing")
     indexing_calls = _codex_call_logs(root) - before_indexing_calls
     assert indexing_calls
     latest_output_by_purpose: dict[str, Path] = {}
@@ -498,12 +520,12 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 
     # active session 上の no-target review も report を生成する正常系である。
     home_branch = current_branch(root)
-    _run_without_codex_call(cmoc, root, environment, "session", "fork")
+    run_without_codex("session", "fork")
     session_branch = current_branch(root)
     assert session_branch.startswith("cmoc/session/")
     review_dir = root / ".cmoc" / "gu" / "ar" / "report" / "oracle_review"
     review_reports = set(review_dir.glob("*.md"))
-    _run_without_codex_call(cmoc, root, environment, "oracle", "review")
+    run_without_codex("oracle", "review")
     review_report = next(iter(set(review_dir.glob("*.md")) - review_reports))
     assert "result: no_targets" in review_report.read_text()
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
@@ -513,14 +535,14 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         (("realization", "refactor", "fork"), "realization_refactor"),
     ]:
         before_calls = _codex_call_logs(root)
-        _run_cmoc(cmoc, root, environment, *command)
+        run_production(*command)
         assert _codex_call_logs(root) - before_calls
         _state_path, completed_state = _load_session_state(root, session_branch)
         assert completed_state["run"]["state"] == "joinable"
         assert completed_state["run"]["kind"] == kind
         joined_worktree = _run_worktree_from_state(root, completed_state)
         assert joined_worktree.is_dir()
-        _run_cmoc(cmoc, root, environment, "run", "join")
+        run_production("run", "join")
         _state_path, joined_state = _load_session_state(root, session_branch)
         assert joined_state["run"] == {
             "state": "ready",
@@ -530,10 +552,10 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         }
         assert not joined_worktree.exists()
 
-    _run_cmoc(cmoc, root, environment, "realization", "apply", "fork")
+    run_production("realization", "apply", "fork")
     _state_path, abandoned_state = _load_session_state(root, session_branch)
     abandoned_worktree = _run_worktree_from_state(root, abandoned_state)
-    abandon_result = _run_without_codex_call(cmoc, root, environment, "run", "abandon")
+    abandon_result = run_without_codex("run", "abandon")
     _state_path, ready_state = _load_session_state(root, session_branch)
     assert ready_state["run"]["state"] == "ready"
     assert not abandoned_worktree.exists()
@@ -541,15 +563,15 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 
     # 同じ home branch で join と abandon の両 session 完了経路を観測する。
     state_path, _state = _load_session_state(root, session_branch)
-    _run_without_codex_call(cmoc, root, environment, "session", "join")
+    run_without_codex("session", "join")
     assert current_branch(root) == home_branch
     assert json.loads(state_path.read_text())["session"]["state"] == "joined"
     assert run_git(root, "branch", "--list", session_branch).stdout.strip() == ""
 
-    _run_without_codex_call(cmoc, root, environment, "session", "fork")
+    run_without_codex("session", "fork")
     abandoned_session_branch = current_branch(root)
     abandoned_state_path, _state = _load_session_state(root, abandoned_session_branch)
-    _run_without_codex_call(cmoc, root, environment, "session", "abandon")
+    run_without_codex("session", "abandon")
     assert current_branch(root) == home_branch
     assert json.loads(abandoned_state_path.read_text())["session"]["state"] == (
         "abandoned"
@@ -557,16 +579,10 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert (
         run_git(root, "branch", "--list", abandoned_session_branch).stdout.strip() == ""
     )
+    assert executed_commands == NONINTERACTIVE_SCENARIO_COMMANDS
 
 
-@pytest.mark.parametrize(
-    ("command", "tui_purpose", "expects_resolver"),
-    [
-        (("tui",), "tui codex", True),
-        (("oracle", "edit"), "oracle edit", False),
-        (("oracle", "investigation"), "oracle investigation", False),
-    ],
-)
+@pytest.mark.parametrize(("command", "tui_purpose", "expects_resolver"), TUI_SCENARIOS)
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 # indexing と TUI の各 GPU 推論、cache miss、実行環境の揺らぎを含める。
 @pytest.mark.gpu_integration
