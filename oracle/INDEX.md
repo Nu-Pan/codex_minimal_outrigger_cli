@@ -1,35 +1,34 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様ドキュメント群を収録するディレクトリ。アプリケーション仕様、branch・commit・worktree のモデル、不採用案、開発ルールなど、個別の仕様・開発判断を確認するための入口。
+- cmoc の正本仕様文書を集約するディレクトリ。CLI 自動補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト、run・session lifecycle、サブコマンドなどの仕様を横断的に確認する入口で、詳細は各文書または下位ディレクトリへ進む。
 
 ## Read this when
-- cmoc の仕様を横断的に調査するとき
-- 対象機能に対応する oracle doc を特定するとき
-- Python 実装、CLI 配置、開発環境、realization test の規則を確認するとき
-- branch・session・run・worktree の関係や、不採用となった設計案の背景を調べるとき
+- cmoc の正本仕様を横断的に探すとき
+- CLI 起動、Codex CLI 呼び出し、ログ、プロンプト、run・session、サブコマンドの仕様上の入口を確認するとき
+- 複数機能に共通する仕様文書の所在を判断するとき
 
 ## Do not read this when
-- 確認対象の仕様文書が既に特定できており、その本文を直接読めるとき
-- 実装コードやテストコードの詳細だけを調査するとき
-- INDEX.md の読み方や一般的なルーティング規則を確認したいとき
+- 特定機能の詳細仕様が明らかな場合は、対応する個別文書または下位ディレクトリを直接読むとき
+- realization の実装・テスト詳細だけを調査するとき
+- cmoc の一般的な利用手順だけを確認するとき
 
 ## hash
-- b7baf783ec2598bf68caa8b9623828d3e07294aee16a2d2ba4181c21f9cfd107
+- 6d6060b0bb507d1d9e461a10f290ce69491c4105e87c19cc57608d412756cec4
 
 # `src`
 
 ## Summary
-- oracle の実行時正本ソース群。設定・パス・構造化文書などの共通定義、AgentCallParameter と各サブコマンド向け prompt/Structured Output schema の構築、prompt 部品と完全 prompt の組み立てを扱う。`other`、`acp_builder`、`prompt_builder` が主な下位領域。
+- cmoc の正本ソース群への入口。AI エージェント呼び出しパラメータと実行作業単位、設定・パス解決・構造化文書・規範表現、エージェントプロンプトの組み立てを扱う。
+- 下位では、エージェント呼び出し関連を acp_builder、共通モデルと構造化文書を other、プロンプト部品と完全なプロンプト生成を prompt_builder が担当する。
 
 ## Read this when
-- cmoc の設定、ルートパス、Standard、StructDoc などの共通定義を調べるとき。
-- AgentCall のモデル・推論負荷・ファイルアクセス設定や、indexing、tui、oracle、realization、session join 向けの呼び出しパラメータ構築を調べるとき。
-- 完全 prompt の生成、prompt 部品、プレースホルダ、oracle/realization 標準、ファイルアクセス規則を調べるとき。
+- 正本ソースの責務分担や下位モジュールへの入口を確認するとき
+- AI エージェント呼び出しの抽象パラメータ、設定・パス表現、構造化 Markdown、プロンプト構成を調べるとき
 
 ## Do not read this when
-- サブコマンドの実行経路、ファイル探索、実際のモデル呼び出しを調べるとき。
-- 特定の prompt 部品、Structured Output schema、共通定義、個別サブコマンドの AgentCall 構築だけを確認したいときは、対応する下位領域へ直接進む。
+- 個別のプロンプト規範や ModelClass、ReasoningEffort、StructDoc の定義元を直接確認したいとき
+- CLI の実行フローや設定ファイルの生成・同期処理を調べるとき
 
 ## hash
-- fa8aeff5b44224b2ed27eb099784d579af225a149c4349aa7cb3b13b02c95307
+- b191ce07b20539bc25977f115e5998bec913eafe1199653f2ec755a640ddf4fd

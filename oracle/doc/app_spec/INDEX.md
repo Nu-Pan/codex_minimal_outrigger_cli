@@ -215,19 +215,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンドと、session・編集 run の lifecycle を定義する正本文書群。doctor、indexing、tui、oracle 操作、realization apply/refactor、session fork/join/abandon の仕様確認への入口となる。
+- cmoc の主要サブコマンドおよび session・編集 run lifecycle の正本仕様をまとめたディレクトリ。doctor、indexing、oracle 操作、tui、session 操作、realization apply/refactor の実行条件・状態管理・終了処理を確認するための入口であり、各機能の詳細は対応する文書へ進む。
 
 ## Read this when
-- cmoc サブコマンドの実行条件、引数、処理手順、出力や状態遷移を確認したいとき。
-- session や編集 run の fork・join・abandon lifecycle、差分、merge、cleanup を実装・レビューするとき。
-- oracle 操作、realization apply/refactor、doctor、indexing、TUI の個別仕様を確認するとき。
+- cmoc のサブコマンド仕様のうち、doctor、indexing、oracle edit/investigation/review、tui の挙動を確認するとき。
+- session fork/join/abandon または realization apply/refactor の lifecycle、state、merge、cleanup、report を確認するとき。
+- 複数の編集 run に共通する fork・join・abandon の仕様を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの内部処理や共通 lifecycle の詳細だけを確認したい場合は、各文書内で指定された専用の正本文書へ直接進む。
-- oracle file の具体的な規約や、Codex CLI の共通起動規則だけを調べる場合は、対応する参照先を直接読む。
+- 特定サブコマンドの内部実装やテスト配置だけを確認したいときは、対応する realization file またはテストを直接読む。
+- doctor preprocess、prompt editor input、agent call parameter、TUI 起動 parameter など、本文中で参照される共通仕様の詳細だけを確認したいときは、その正本文書を直接読む。
+- oracle file の具体的な内容や realization の個別編集内容だけを調査するときは、このディレクトリのサブコマンド概要を入口にせず、対象の正本文書へ進む。
 
 ## hash
-- 0d909acf49086825aee8214ab7477dbc52980305cd69c5df8609ed61f405b272
+- 55ce188308ef4ab8e7f2e0a8be1d404053bef020bc330de4dc41ba11da61d5dd
 
 # `subcommand_interruption.md`
 

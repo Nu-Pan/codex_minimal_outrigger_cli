@@ -1,18 +1,23 @@
 # `acp`
 
 ## Summary
-- ACP 互換の公開入口と parameter builder adapter を扱うディレクトリ。`acp.*` 参照の互換維持や canonical な `oracle` 側実装への委譲を確認するための入口であり、具体的な builder 処理は下位パッケージ・個別モジュールから確認する。
+- `acp` 互換の公開入口を扱い、既存の `acp.*` 参照を `oracle.*` または実体モジュールへ移行する際の判断材料を提供する。公開名の存廃や互換導線の確認に使い、具体的な実装・移行先の詳細は下位の実体モジュールを参照する。
+- ACP builder の互換入口と parameter builder adapter をまとめ、canonical な oracle 実装の再公開および indexing、quota probe、oracle、realization、session、TUI 系の下位要素への入口を提供する。builder の互換 import 経路や parameter 構築を横断的に調査するときに読む。
 
 ## Read this when
-- `acp` 公開入口の存廃や互換 import 経路を確認・変更するとき。
-- canonical builder への委譲、または TUI・session・indexing・quota probe・oracle・realization builder の配置を確認するとき。
+- `acp` という公開名を残すべきか、削除できるか判断したいとき。
+- 既存の利用者向け `acp.*` 参照を壊さず、`oracle` 側の実体へ切り替える導線を確認したいとき。
+- `acp.builder` 配下の builder 互換 import 経路や parameter 構築処理の配置を確認したいとき。
+- indexing、quota probe、oracle、realization、session、TUI の builder adapter を横断して調査したいとき。
 
 ## Do not read this when
-- canonical な `oracle.acp_builder` の実装仕様や prompt 内容を確認したいとき。
-- TUI 本体、CLI 処理、一般的な ACP parameter の仕様、または個別 builder の具体的な挙動だけを調査したいとき。
+- `acp` 配下の具体的な実装内容や移行先の詳細だけを知りたいときは、直接その実体モジュールを読む。
+- 互換入口の存廃ではなく、`acp.*` の内部挙動そのものを変更したいときは、ここではなく対象の実装を読む。
+- canonical な builder の具体的な仕様・実装だけを確認したいときは、対応する oracle 実装を直接読む。
+- builder 以外の ACP 実装や、個別 adapter の詳細だけを調査したいときは、対応する下位要素へ直接進む。
 
 ## hash
-- 928a14e4323b621f589c432b96cf04b7113d45c918534a0118a968cc5d3c7ae4
+- 57fcfc3cbd0997698c674bb5b6e2868ffb01fa171247abd58731284d30546a14
 
 # `basic`
 
@@ -111,15 +116,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの realization 実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの各サブコマンド入口と関連パッケージを下位要素への入口として提供する。apply・review は現在実装本文がない。
+- CLI サブコマンドの実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの各サブコマンド入口と、review・apply の実装配置先を提供する。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、特定サブコマンドの実行入口を確認・変更するとき。
-- oracle review、realization workload、editing run、session、tui の責務分担や詳細実装の参照先を特定するとき。
+- CLI サブコマンドの実装構成や、対象サブコマンドの実行入口を確認するとき。
+- oracle review、realization workload、run lifecycle、session 操作、TUI 起動などのサブコマンド実装へ進む先を特定するとき。
 
 ## Do not read this when
-- サブコマンド共通 runtime、commons にある共通処理、または個別サブコマンドの詳細実装だけを調査するとき。該当する下位モジュールや共通実装を直接読む。
-- 現在実装がない apply・review の具体的な処理を調査するとき。
+- 特定サブコマンドの詳細処理、共通 runtime、共通 indexing、Git 操作、state schema、prompt editor、TUI builder などを直接調査するとき。対応する下位実装または共通実装を直接読む。
+- apply や review の実装本文を調べるとき。現在は実装がなく、追加後に対象ファイルを読む。
 
 ## hash
-- 2b3ce078a8fcdcac9742bec280b84222e1de1a9d0c048267fff8844b4b1b47d4
+- 9f1d4ac471518c5a7ebbf23c261a5cb18dcf854d18d3c9a3a3d7c0156142c115

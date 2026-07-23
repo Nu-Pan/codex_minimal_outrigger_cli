@@ -504,7 +504,23 @@ def test_refactor_fork_completes_persistent_full_cycle(
                     ]
                 },
             )
-        reviewed.append(purpose.removeprefix("realization refactor: "))
+        target = purpose.removeprefix("realization refactor: ")
+        reviewed.append(target)
+        if target == "README.md":
+            return SimpleNamespace(
+                returncode=0,
+                output_json={
+                    "findings": [
+                        {
+                            "title": "差分のない fixed 自己申告",
+                            "resolution": {
+                                "status": "fixed",
+                                "summary": "agent は修正済みと申告した",
+                            },
+                        }
+                    ]
+                },
+            )
         return SimpleNamespace(returncode=0, output_json={"findings": []})
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
@@ -532,6 +548,13 @@ def test_refactor_fork_completes_persistent_full_cycle(
     assert summary_calls == 1
     assert "- completion_reason: `natural_completion`" in result.output
     assert "- unresolved targets: `0`" in result.output
+    report_line = next(
+        line
+        for line in result.output.splitlines()
+        if line.startswith("- fork report: `")
+    )
+    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    assert "- `README.md`: 0 finding(s)" in report.read_text()
 
 
 def test_refactor_interrupt_after_run_publish_is_joinable(

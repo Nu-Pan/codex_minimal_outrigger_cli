@@ -149,11 +149,11 @@ def test_oracle_review_enumerate_parameter_matches_oracle_builder() -> None:
 
 
 def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
-    """merge finding builderのschemaとplaceholder補正を検証する。"""
+    """merge finding builder の schema と work-root placeholder を検証する。"""
     parameter = build_oracle_review_merge_finding_parameter(findings="[]")
-    assert "<{{oracle-root}}>" not in parameter.prompt
-    assert "{{oracle-root}}" in parameter.prompt
-    assert "- {{oracle-root}} =" in parameter.prompt
+    assert "{{oracle-root}}" not in parameter.prompt
+    assert "`{{work-root}}/oracle` ツリー内" in parameter.prompt
+    assert "- {{work-root}} =" in parameter.prompt
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
@@ -185,17 +185,6 @@ def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
         },
         schema,
     )
-
-
-def test_oracle_review_merge_finding_preserves_known_findings_text() -> None:
-    """merge finding builderが既知findingの動的文字列を保持することを検証する。"""
-    known_findings = (
-        '[{"finding_id":"finding-0001","reason":"literal <{{oracle-root}}>"}]'
-        "\n- <{{oracle-root}}> = literal"
-    )
-    parameter = build_oracle_review_merge_finding_parameter(known_findings)
-    assert known_findings in parameter.prompt
-    assert "- {{oracle-root}} =" in parameter.prompt
 
 
 @pytest.mark.parametrize(

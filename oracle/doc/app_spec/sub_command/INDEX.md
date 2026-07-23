@@ -129,20 +129,18 @@
 # `realization_refactor.md`
 
 ## Summary
-- realization refactor fork の目的、refactor state の保存・同期規則、current fork の unresolved target 管理、調査ループ、完了・中断・エラー処理、report 生成を定義する正本仕様。realization refactor の fork 実装や state lifecycle、処理単位の確定条件を確認する入口。
+- realization refactor fork の目的、refactor state の JSON schema と同期規則、current fork の unresolved target 管理、調査ループ、完了・中断・エラー時の lifecycle、report と終了 log の要件を定める oracle doc。realization refactor fork の実装や仕様確認における正本として、関連する下位実装・テストへの入口となる。
 
 ## Read this when
-- realization refactor fork の実装、調査対象の選択、state 同期、処理単位の commit、unresolved target の扱いを変更・検証するとき
-- refactor fork の完了理由、ユーザー中断、エラー処理、report や終了 log の仕様を確認するとき
-- realization refactor の fork lifecycle と共通 run lifecycle の接続を調査するとき
+- realization refactor fork の挙動、state 管理、調査対象選択、unresolved target、完了条件を確認するとき
+- fork の中断・エラー処理、report、終了コード、join 後の動作を変更または検証するとき
 
 ## Do not read this when
-- realization apply の短い変更ループだけを調査するとき
-- fork・join・abandon に共通する一般 lifecycle の詳細だけを確認するときは、指定された共通 lifecycle の正本文書を直接読む
-- refactor state 以外の doctor preprocess や run join の共通処理だけを調査するときは、該当する共通仕様を直接読む
+- realization refactor fork 以外の workload や共通 lifecycle の詳細だけを確認するときは、各 workload または共通 lifecycle の正本文書を直接読む
+- 実装・テストの具体的な配置や開発環境の規則だけを確認するときは、対応する realization file や開発規則を直接読む
 
 ## hash
-- d83fcb91bd2a83f208179f8b7e313d1b1f968b74bd5ebae436a609b1a6731860
+- 49ed124e4e4d48ea9baee1d3014cf98ad0b8240d7a3720d9b9a1474ed26853a8
 
 # `session_abandon.md`
 

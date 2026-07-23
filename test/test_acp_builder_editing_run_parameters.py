@@ -1,5 +1,6 @@
 """editing run workload の canonical builder adapter を検証する。"""
 
+import json
 from pathlib import Path
 
 from acp.builder.realization.apply.fork.launch_exec import (
@@ -45,6 +46,15 @@ def test_refactor_builders_use_canonical_structured_output_schemas() -> None:
     assert review.structured_output_schema_path is not None
     assert review.structured_output_schema_path.name == "file_review_and_fix.json"
     assert str(Path(__file__).resolve()) in review.prompt
+    assert "調査開始時点の既存実装ですでに解消されている問題" in review.prompt
+    assert "`resolution.status=fixed` は、この agent call 内で" in review.prompt
+    review_schema = json.loads(review.structured_output_schema_path.read_text())
+    findings_schema = review_schema["properties"]["findings"]
+    status_schema = findings_schema["items"]["properties"]["resolution"]["properties"][
+        "status"
+    ]
+    assert "調査開始時点で存在した" in findings_schema["description"]
+    assert "実際に変更" in status_schema["description"]
     assert summary.file_access_mode == FileAccessMode.READONLY
     assert summary.structured_output_schema_path is not None
     assert summary.structured_output_schema_path.name == "change_summary.json"
