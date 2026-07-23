@@ -15,17 +15,18 @@
 # `enumerate_finding.py`
 
 ## Summary
-- oracle review finding enumeration の canonical builder を呼び出す互換アダプター。絶対 symlink の lexical path を prompt に保持し、旧 import 呼び出し元がなくなった時点で削除できる。
+- oracle review の finding enumeration 用 canonical builder を再公開する互換アダプター。既存の旧 import 呼び出し元を維持し、処理本体は oracle 側の実装へ委譲する。全呼び出し元の移行後は削除可能。
 
 ## Read this when
-- oracle review finding enumeration の parameter builder、symlink path の prompt 表現、または旧 import 呼び出し元の整理を変更・調査するとき。
+- oracle review の finding enumeration builder の旧 import 経路を維持・移行・削除するとき
+- canonical oracle 実装への委譲や旧呼び出し元の互換性を確認するとき
 
 ## Do not read this when
-- canonical な oracle review enumeration 実装そのものを変更・調査するとき。
-- oracle review finding enumeration と無関係な builder や CLI 処理を扱うとき。
+- canonical な builder の仕様や実装詳細を確認したいとき
+- oracle review の別機能を調査するときは、対応する oracle 実装を直接読む
 
 ## hash
-- 312e2350beab9bb38e80ad249bd1b4377321bf7dcc613becc4b156abf61ea484
+- 8b9b36fc04d35cc98f97d8ccb70ef670f831d8bf5a404485e69ebbae393097ba
 
 # `judge_finding.py`
 

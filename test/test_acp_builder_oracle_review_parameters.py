@@ -148,42 +148,6 @@ def test_oracle_review_enumerate_parameter_matches_oracle_builder() -> None:
     assert parameter == oracle_parameter
 
 
-def test_oracle_review_enumerate_parameter_keeps_symlink_entry_path(
-    tmp_path: Path,
-) -> None:
-    """enumerate prompt の `{{oracle-path}}` が symlink entry を指す。"""
-    (tmp_path / "oracle").mkdir()
-    target = tmp_path / "memo.md"
-    target.write_text("# memo\n")
-    link = tmp_path / "oracle" / "memo-link.md"
-    link.symlink_to("../memo.md")
-
-    parameter = build_oracle_review_enumerate_finding_parameter(link, "[]")
-
-    assert f"- {{{{oracle-path}}}} = {link}" in parameter.prompt
-    assert f"- {{{{oracle-path}}}} = {link.resolve()}" not in parameter.prompt
-
-
-def test_oracle_review_enumerate_parameter_preserves_related_findings_text(
-    tmp_path: Path,
-) -> None:
-    """symlink補正が動的な既知所見を書き換えないことを検証する。"""
-    (tmp_path / "oracle").mkdir()
-    target = tmp_path / "memo.md"
-    target.write_text("# memo\n")
-    link = tmp_path / "oracle" / "memo-link.md"
-    link.symlink_to("../memo.md")
-    related_findings = f"- {{{{oracle-path}}}} = {link.resolve()}"
-
-    parameter = build_oracle_review_enumerate_finding_parameter(
-        link,
-        related_findings,
-    )
-
-    assert related_findings in parameter.prompt
-    assert f"- {{{{oracle-path}}}} = {link}" in parameter.prompt
-
-
 def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
     """merge finding builderのschemaとplaceholder補正を検証する。"""
     parameter = build_oracle_review_merge_finding_parameter(findings="[]")

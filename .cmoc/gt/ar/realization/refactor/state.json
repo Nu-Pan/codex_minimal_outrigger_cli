@@ -85,9 +85,9 @@
   },
   "oracle/doc/app_spec/prompt_standard.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "9e3766aebf04cc43deaa8ca92d848217c208025881860ab522ff1882a870f126",
+    "last_investigated_at": "2026-07-23_17-07_26_135385000"
   },
   "oracle/doc/app_spec/run_isolation.md": {
     "investigation_required": true,

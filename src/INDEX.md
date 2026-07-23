@@ -1,20 +1,20 @@
 # `acp`
 
 ## Summary
-- `acp` 互換公開入口をまとめるパッケージ。`acp.*` の既存参照を維持しつつ、`oracle.*` または canonical 実体へ委譲する導線を提供する。
-- `acp.builder` 配下には、TUI、session、indexing、realization、oracle、quota probe などのビルダー関連互換入口が含まれる。
+- `acp` 互換公開入口と、旧 `acp.builder.*` import 経路を canonical 実装へ委譲する builder 互換パッケージを扱う。`acp` 公開名や builder 関連の下位実装・公開経路を確認する際の入口。
 
 ## Read this when
-- `acp` 公開名や互換入口の存廃を判断するとき。
-- 既存の `acp.*` または `acp.builder.*` import 経路を維持・変更するとき。
-- ビルダー関連サブパッケージの canonical 実装への委譲経路を辿るとき。
+- `acp` 互換公開名の存廃や oracle 側実体への移行導線を確認したいとき。
+- `acp.builder` の互換 import 経路、公開入口、canonical builder 実装への委譲関係を確認・変更したいとき。
+- builder に関連する oracle、realization、TUI、session、indexing などの下位パッケージの入口を選びたいとき。
 
 ## Do not read this when
-- 具体的な TUI、session、apply、refactor などの内部実装を直接調査・変更したいとき。
-- canonical な正本仕様や実体モジュールそのものを確認したいとき。
+- 個別 builder の canonical 実装や正本仕様を確認したいときは、対応する下位実装または oracle 側を直接読む。
+- TUI 画面本体、CLI 全体の動作、builder と無関係な処理を調査するとき。
+- 互換入口の存廃ではなく、`acp.*` の内部挙動そのものを変更したいときは、具体的な実体モジュールを直接読む。
 
 ## hash
-- 64311522fa0e3a0c66afe888a9acff7a45f737437301fe6908a1b9b1c87016ff
+- 7b02a4bee63eef899d0a6db5d5d80cf5efb922d0c39053b11447f9ed5a7af2bb
 
 # `basic`
 

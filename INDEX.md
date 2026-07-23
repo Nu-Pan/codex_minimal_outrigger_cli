@@ -128,33 +128,35 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側 Python ソースをまとめるディレクトリ。CLI エントリーポイント、サブコマンド実装、共有 runtime、互換 import shim などを含み、実際の処理や公開入口を下位要素へ辿るための上位ルーティング地点。
+- cmoc CLI の realization 実装を集約する src ルート。Typer による CLI 登録、サブコマンド実装、共通 runtime、互換 import shim、ACP・basic・config 関連の公開入口を扱い、個別機能を調査・変更する際の上位ルーティング地点となる。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・runtime・互換入口の担当箇所を確認するとき。
-- 特定の実装を探し、main.py、sub_commands、commons、互換 shim などの下位要素へ進むとき。
+- cmoc の CLI 全体の登録構成、主要エントリーポイント、サブコマンド委譲先を確認するとき。
+- 共通 runtime や互換 import path を横断的に調査するとき。
+- 特定機能の実装箇所を探し、acp、basic、commons、config、sub_commands などの下位領域へ進むとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装内容を確認するときは、oracle ツリーを直接読む。
-- 特定サブコマンドや runtime helper の詳細が分かっている場合は、対応する下位要素を直接読む。
+- 特定サブコマンド、runtime helper、builder、session、TUI の内部処理を確認したいときは、対応する下位実装を直接読む。
+- 正本仕様や oracle 側実装を確認するときは、oracle ツリーを直接読む。
+- CLI や src 配下の realization 実装に関係しない調査を行うとき。
 
 ## hash
-- 20107d581d80b13d675aba0716f832a3310a0e43a4ce75976e7ecbb06f8c01a2
+- 67cd46cd0b7d6d35a5eab5c1360fea08244dda3b082af65858c9637f9ff47cdd
 
 # `test`
 
 ## Summary
-- テストコード向けの共有ヘルパーと、cmoc の各機能・CLI・Codex/Ollama 実行経路を検証する realization test 群を収録するディレクトリ。ACP builder、runtime、indexing、oracle review、session、editing run、TUI、doctor などの機能別テストへの入口となる。
+- cmoc の realization test 群を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Markdown renderer などの外部挙動・制御ロジックを検証し、各機能の実装変更時に対応するテストへ進む入口となる。共通 fixture・fake command・Git repository・Ollama・Codex 実行補助も含む。
 
 ## Read this when
-- cmoc の機能変更に伴う realization test の対象や既存の検証観点を特定するとき
-- CLI、runtime、Codex 実行、indexing、oracle review、session、editing run、TUI、doctor の外部挙動をテストまたは回帰調査するとき
-- Git repository、fake external command、Codex、Ollama などのテスト共通ヘルパーの利用方法を確認するとき
+- cmoc の realization test を追加・修正・調査するとき
+- CLI サブコマンド、Codex 実行、indexing、oracle review、session lifecycle、設定、state、ACP builder の挙動をテスト側から確認するとき
+- テスト共通ヘルパーや外部コマンド・Git・Ollama・Codex の隔離実行基盤を確認するとき
 
 ## Do not read this when
-- 実装本体や正本仕様の詳細を確認したいときは、対応する src または oracle 配下を直接読む
-- 特定機能と無関係なテスト全体を調査するとき
-- Codex や LLM の応答品質そのものを評価したいとき
+- 正本仕様や実装責務そのものを確認したいときは、対応する oracle または src を直接読む
+- LLM の回答品質や Codex CLI の出力内容自体を評価したいとき
+- 対象機能と無関係なテスト領域や共通 helper を読む必要がないとき
 
 ## hash
-- 6f439ef870bf16845bf6c88e8c827dfe83286919692b89fc8e2787992c7e34ad
+- e78576b7d8bde3a8001c3270ea75f240ea64524d8477c3c0edbfe8f13aca966e
