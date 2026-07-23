@@ -198,6 +198,8 @@ def test_cli_parse_error_report_is_written_to_stdout() -> None:
     assert "# ERROR" in result.stdout
     assert "CLI 引数解析に失敗しました。" in result.stdout
     assert "No such option: --bad-option" in result.stdout
+    assert "Traceback (most recent call last):" in result.stdout
+    assert "main.py" in result.stdout
     assert "# ERROR" not in result.stderr
     assert "CLI 引数解析に失敗しました。" not in result.stderr
     assert "No such option: --bad-option" not in result.stderr

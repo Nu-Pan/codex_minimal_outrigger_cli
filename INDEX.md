@@ -128,34 +128,35 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側公開入口。Typer による CLI ルートとサブコマンド登録、互換 import shim、共有 runtime・設定・基本型への入口を提供する。
-- サブコマンド実装、ACP／session／oracle／realization builder の互換入口、共有 commons runtime、設定・path model・構造化文書 API へ進むための起点。
+- cmoc CLI の realization 実装をまとめる src ツリー。CLI エントリーポイント、サブコマンド、共有 runtime、互換 import shim を扱い、各領域の実装入口として機能する。
 
 ## Read this when
-- cmoc CLI のトップレベル構成、サブコマンド登録、引数解析エラーや自動補完の挙動を確認・変更するとき。
-- 既存の互換 import path、共有 runtime API、設定・基本型の realization 側公開入口を調査するとき。
-- 特定サブコマンドや共有処理の実装入口を特定するとき。
+- cmoc の CLI 全体構成や実装入口を確認するとき。
+- サブコマンド、共有 runtime、互換 import 経路の実装を調査・変更するとき。
+- 対象実装の下位モジュールへ進む前に、src 内の責務分割と入口を把握するとき。
 
 ## Do not read this when
-- 特定サブコマンドの業務処理、共有 runtime の詳細、正本仕様や canonical 実装そのものを確認したいとき。
-- 互換 import や CLI ルートに関係しない個別処理を調査・変更するとき。
+- 正本仕様や canonical 実装そのものを確認したいときは、対応する oracle 側を直接読む。
+- 特定サブコマンドや runtime helper の詳細が明らかな場合は、src 配下の担当モジュールを直接読む。
+- CLI や realization 実装に関係しない調査をするとき。
 
 ## hash
-- 0f5a85089e4f6ad84e13e9c9332dfaf004c55f70ed3cf3954a641320c18e2848
+- aebc4199c8925eddbb4c611516c13044c9d27f3926b87aa026027a805398fdfe
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。共通テスト支援、runtime・設定・Codex 実行、CLI、INDEX 生成、oracle review、session/run lifecycle、各種 ACP builder の外部契約と統合挙動を検証する。個別機能の変更時に、該当するテストファイルへ進むための入口。
+- テストコード群の入口。CLI、runtime、Codex 実行、ACP builder、indexing、oracle review、session、worktree、state など、cmoc の主要な外部挙動・制御ロジック・公開 API を検証する。個別機能の回帰テストに加え、共有テスト helper と実 Codex/Ollama を用いる統合・受け入れテストも含む。
 
 ## Read this when
-- cmoc の実装や仕様変更に伴い、対応する realization test の範囲・検証契約・回帰テストを特定するとき。
-- CLI、Codex runtime、INDEX indexing、oracle review、session/run、ACP builder、共通 fixture のテストを追加・修正・実行するとき。
+- cmoc の機能変更に伴う回帰テストの対象や、既存の外部契約を確認するとき。
+- CLI、Codex runtime、indexing、oracle review、session、state、ACP builder などのテスト範囲を把握するとき。
+- 該当機能の専用テスト、共通 fixture、または実経路統合テストを探すとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle ファイルを直接読む。
-- 特定機能の実装詳細だけを調査するときは、関連する src 側の実装を直接読む。
-- Codex や LLM の出力品質そのものを評価するとき。
+- 正本仕様や実装詳細そのものを確認するときは、対応する oracle または src を直接読む。
+- 単一機能の具体的な挙動を調べる場合は、このディレクトリ全体ではなく該当する専用テストを読む。
+- Codex や Ollama を使わない単純なテスト基盤だけを確認する場合は、該当する共有 helper を直接読む。
 
 ## hash
-- 46dca0f9672a865dc021fadc6aba3c761cdefe6fb48a7be12f9e61ba95cc7fdd
+- bfe6d1c090e87558e645c627ab73640236dbaeac09421a9af3587857f736d242

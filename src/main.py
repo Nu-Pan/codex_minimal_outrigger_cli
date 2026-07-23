@@ -81,17 +81,19 @@ class _CmocTyperGroup(typer.core.TyperGroup):
         # 依存しない error-handling contract のため両方の exception class に対応する。
         except _CLICK_EXCEPTION_TYPES as exc:
             click_exception = cast(click.ClickException, exc)
-            typer.echo(
-                render_error(
-                    CmocError(
-                        "CLI 引数解析に失敗しました。",
-                        [
-                            "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
-                        ],
-                        click_exception.format_message(),
-                    )
-                )
-            )
+            # {{work-root}}/oracle/doc/app_spec/error_handling.md
+            # 未 raise の例外を render_error すると Call stack が概要だけになるため、
+            # parser error を cause にした report exception を raise してから描画する。
+            try:
+                raise CmocError(
+                    "CLI 引数解析に失敗しました。",
+                    [
+                        "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
+                    ],
+                    click_exception.format_message(),
+                ) from exc
+            except CmocError as report_error:
+                typer.echo(render_error(report_error))
             if standalone_mode:
                 raise SystemExit(click_exception.exit_code) from exc
             raise

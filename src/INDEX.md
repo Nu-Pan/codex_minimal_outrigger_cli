@@ -84,19 +84,18 @@
 # `main.py`
 
 ## Summary
-- Typer を使った cmoc CLI のルート定義。doctor・tui・indexing と、session／oracle／realization／run 配下のサブコマンドを登録し、各処理を対応する実装関数へ委譲する。CLI 引数解析エラーの cmoc 形式への変換、補完 probe の扱い、oracle review の scope 定義も含む。各サブコマンドの具体的な処理を確認する場合は、登録先の sub_commands 実装を読む。
+- Typer を用いた cmoc CLI の主要エントリーポイント。doctor、tui、indexing と、session・oracle・realization・run の各サブコマンドを登録し、対応する実装関数へ委譲する。CLI 引数解析エラーは cmoc 形式のエラーレポートへ変換し、自動補完時は副作用を抑制する。各サブコマンド実装や CLI 全体の構成を確認する際の入口。
 
 ## Read this when
-- cmoc の CLI 入口、サブコマンド構成、Typer のアプリ階層を確認するとき
-- CLI 引数解析エラーや自動補完時の起動挙動を変更・調査するとき
-- 新しいトップレベルまたは既存階層のサブコマンドを登録するとき
+- cmoc の CLI コマンド、サブコマンド、option、Typer/Click の引数解析、エラー変換、自動補完の挙動を変更・調査するとき
+- 特定のサブコマンド実装へ進む前に、CLI からの登録名と委譲先を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの業務処理や状態変更の実装を調査するとき
-- oracle review、session、run など個別機能の仕様・テストを確認するときは、対応する sub_commands 実装や oracle 文書を直接読む
+- 個別サブコマンドの処理内容や永続化・worktree 操作の詳細を確認したいとき。対応する sub_commands 配下の実装を直接読む
+- CLI とは無関係な runtime、oracle、realization の内部処理を調査するとき
 
 ## hash
-- e54ca99e6da1e630eed277aea1d7adc7187cc96ba4e8c9071a285090d8a2845a
+- 2fc467906ef010b3f9c4d51a1600ba115332880dd4658767606f556b60c8e8d7
 
 # `oracle.py`
 
