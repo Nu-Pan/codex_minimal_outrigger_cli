@@ -15,15 +15,18 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の CLI 実行全体を管理する workload。対象の選択、file 単位の agent 調査・修正、差分検証、refactor state 更新、commit、unresolved 所見の追跡、完了判定、joinable/error report の生成を一つの lifecycle として扱う。
+- realization refactor fork の一連の処理を担い、対象選択、file 単位の agent 実行、差分検証、refactor state 更新、commit、完了判定、unresolved 管理、joinable/error report 生成までを単一の lifecycle として実装する。
+- 中断時の child process 停止・rollback・state 更新・report 保存、および異常時の error state への遷移も扱う。関連する refactor state、editing run、git 差分、report の実装をつなぐ上位 orchestration の入口である。
 
 ## Read this when
-- realization refactor fork の実行フロー、処理単位、current fork 内の unresolved 管理、完了条件、割り込み・エラー時の cleanup、report 内容を変更または調査するとき。
+- realization refactor fork の全体 lifecycle、処理単位の進行、完了条件、unresolved finding の扱いを変更・調査するとき
+- agent call 後の差分検証、refactor state 同期、commit、run state、report 生成の連携を確認するとき
+- KeyboardInterrupt や処理失敗時の cleanup、rollback、error report の挙動を確認するとき
 
 ## Do not read this when
-- 個別 realization file のレビュー・修正ロジックだけを調べるときは file_review_and_fix を読む。
-- refactor 実行結果の変更概要生成だけを調べるときは change_summary を読む。
-- 共通の run lifecycle、state 管理、差分分類、report 書き込みの詳細だけを調べるときは、それぞれの commons 実装を直接読む。
+- refactor agent の Structured Output parameter や file review 固有の処理だけを変更・調査するときは、対応する builder または file review module を直接読む
+- refactor state のデータ構造や target 同期だけを確認するときは、commons.runtime_refactor を直接読む
+- editing run の git 差分分類・state 遷移・report 共通処理だけを確認するときは、対応する commons runtime module を直接読む
 
 ## hash
-- 8be2007d9ce2d1b5c1078f4ed63897b9d16e2795ee72f69d42690f8820024bf3
+- 073415da4f0872bd8a931bccd3db9fa1b54686d879d18207d9cdc08a1150a06d

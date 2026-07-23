@@ -98,19 +98,18 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- editing run workload 用の realization apply/refactor builder adapter を検証するテスト。apply builder の commit 範囲・oracle raw diff の prompt 埋め込みと実行設定、refactor builder の canonical structured output schema・モデル設定・ファイルアクセスモードを確認する。
+- editing run workload の canonical builder adapter を検証するテスト。realization apply builder が commit 範囲と oracle raw diff を prompt に埋め込むこと、refactor builders が canonical structured-output schema と所定の実行設定を使うことを確認する。
 
 ## Read this when
-- realization apply または refactor の fork launch-exec parameter builder を変更・レビューするとき
-- commit range や oracle raw diff の prompt 反映を検証するとき
-- refactor 用 structured output schema や実行設定の接続を確認するとき
+- realization apply または refactor の fork builder の prompt、ファイルアクセスモード、モデル設定、structured-output schema の利用を変更・検証するとき。
+- editing run parameter builder の回帰テストや canonical schema との整合性を確認するとき。
 
 ## Do not read this when
-- builder の実装詳細や prompt 定義そのものを調査する場合は、対応する src の builder 実装を直接読む
-- editing run と無関係な ACP builder や一般的なテスト実行方法を調べる場合
+- builder 実装そのものの詳細や prompt 生成ロジックを変更する作業で、実装ファイルを直接確認すれば足りるとき。
+- apply/refactor builder と無関係な ACP builder、CLI、またはテスト領域を扱うとき。
 
 ## hash
-- c0aafbd858ae8c179ae7e51d4bc257cd732f65c4b063d65e4e4c28c86fc9290d
+- d5e163443975b512c8148d8fafdae963636c5cae8276ffa92aa0d0af05150c93
 
 # `test_acp_builder_indexing_parameters.py`
 
@@ -133,16 +132,18 @@
 # `test_acp_builder_oracle_review_parameters.py`
 
 ## Summary
-- oracle review ACP builder の parameter、schema、adapter 公開面を検証するテスト。各 review builder の公開関数、モデル・推論設定・ファイルアクセス設定、oracle source との schema 一致、placeholder 補正、動的入力保持、canonical builder との互換性を確認する。
+- oracle review ACP builder の parameter builder、schema、互換 adapter の公開面と設定値を検証するテスト。oracle source との schema 一致、model・reasoning・file access 設定、動的 prompt 入力保持、module export 制約を扱う。review builder や対応する oracle schema の変更時に読むべきテスト入口。
 
 ## Read this when
-- oracle review の ACP builder、parameter 設定、structured output schema、互換 adapter の公開面を変更・調査するとき。
+- oracle review 関連の ACP builder、parameter、structured output schema、互換 module の公開 API を変更・検証するとき。
+- enumerate、judge、merge、validate finding の model 設定、prompt placeholder、schema 互換性を確認するとき。
 
 ## Do not read this when
-- oracle review 以外の ACP builder を扱うとき。実装本体や oracle source の仕様を直接確認する必要がある場合は、対応する oracle または realization 実装・schema を先に読むとき。
+- oracle review 以外の ACP builder や、builder の実装詳細そのものを変更・調査するときは、対応する実装ファイルや oracle source を先に読む。
+- 一般的なテスト実行方法やリポジトリ全体のテスト方針だけを確認したいとき。
 
 ## hash
-- 23c3d444daff832799471366a74db102cc64090eed9379618407ca32bc7f43c8
+- bc3a68113c5bb305a79d41c6084660f68d9f36ca96c8c124e05f8041398d18a0
 
 # `test_acp_builder_session_join_parameters.py`
 
@@ -388,19 +389,20 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。editing run の session state・run worktree・fork report・join/abandon lifecycle を対象とし、変更 path、rename 制約、apply/refactor fork、run join の merge・rollback・force-resolve、oracle investigation の起動条件を検証する。関連する lifecycle fixture と state 遷移を共有する統合テストの入口。
+- workload fork と共通 run join/abandon の realization test。editing run の session state、run worktree、fork report、oracle/realization 変更制約、join・force-resolve・rollback、および refactor fork の継続・中断・失敗時ライフサイクルを検証する。関連する lifecycle fixture と state 遷移を共有する統合テストの入口。
 
 ## Read this when
-- editing run、realization apply/refactor fork、run join の lifecycle や session state を変更・調査するとき
-- fork report、変更 path、rename、merge、rollback、force-resolve、割り込み処理の挙動を確認するとき
-- run worktree と session branch 間の成果物統合や doctor/refactor state 同期を検証するとき
+- realization apply fork、realization refactor fork、run join の変更や不具合を調査するとき
+- editing run の state、worktree 差分、branch merge、fork report、rollback の挙動を検証するとき
+- refactor fork の target 処理、INDEX 更新、unresolved・interruption・cleanup failure を確認するとき
 
 ## Do not read this when
-- 単一の実装関数や CLI 単体の挙動だけを確認する場合
-- INDEX 生成処理そのものや oracle 文書の仕様だけを調査する場合は、対応する実装・oracle file を直接読む
+- oracle investigation 単体の仕様や実装だけを確認する場合
+- run lifecycle の共通実装を直接修正・調査する場合は、まず対応する runtime module とその専用テストを読むとき
+- fork・join・refactor の lifecycle に関係しない CLI 機能のテストを調査するとき
 
 ## hash
-- 6bcc5c7dc1d0ff90546b2ce0d844da969a45caa03440972f3388978632bc0198
+- eec7b40fc20b68924936c37a2146208454c2aec14a3cb42c82011788d59d7e24
 
 # `test_indexing_cli.py`
 

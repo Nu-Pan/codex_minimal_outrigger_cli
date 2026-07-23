@@ -46,18 +46,17 @@
 # `merge_finding.py`
 
 ## Summary
-- Oracle の merge-finding parameter builder を呼び出し、生成された prompt に既知の oracle-root placeholder typo の限定的な補正を適用する realization 実装。入力 finding は変更せず、prompt の placeholder 定義部分だけを対象にする。
+- Exports the oracle review merge-finding parameter builder from the corresponding implementation module. Serves as a thin package-level entry point for accessing that builder; read the implementation module for its behavior and parameter details.
 
 ## Read this when
-- merge-finding 用 agent call parameter の生成や prompt 補正の挙動を変更・確認するとき
-- oracle builder の出力に含まれる既知 placeholder typo への互換補正を調査するとき
+- You need to import or route to the oracle review merge-finding parameter builder.
 
 ## Do not read this when
-- merge-finding の正本仕様や builder 本体の定義を確認したいときは、参照されている oracle source を直接読む
-- merge-finding 以外の agent call parameter や一般的な prompt 規約を扱うとき
+- You need the builder's implementation details; read the underlying implementation module directly.
+- You are working on a different oracle review builder or unrelated ACP builder functionality.
 
 ## hash
-- 3b6a5b70b2dd6e2f4f9814aeb3213984433a0d490676f65dc6b5755325c43911
+- abb8adcda51c943e0b81f402f1078f246ad36fae1e92266c750abb61280b0305
 
 # `validate_finding_advocate.py`
 
