@@ -128,33 +128,32 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側ソースコードを集約するディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import 入口、設定・正本パッケージへの shim など、実行時の主要実装への入口を提供する。
+- cmoc CLI の realization 実装をまとめる src ディレクトリ。主要 CLI エントリーポイント、サブコマンド、共通 runtime、互換 import 入口を下位パッケージへ案内する。
 
 ## Read this when
-- cmoc の CLI 構成、サブコマンド実装、共通 runtime、互換 import 経路の配置を確認するとき。
-- 対象機能の realization implementation を探し、対応する下位パッケージやモジュールへ進む入口を選ぶとき。
+- CLI の全体構成や主要エントリーポイントを確認したいとき。
+- 特定サブコマンド、共通 runtime、互換 import 経路の実装入口を選びたいとき。
 
 ## Do not read this when
+- 個別サブコマンドや runtime の詳細が明確な場合は、対応する下位実装を直接読む。
 - 正本仕様や oracle 側の実装を確認したいときは、対応する oracle 配下を直接読む。
-- 特定のサブコマンド、runtime 機能、互換 shim の実装箇所が明確な場合は、その下位対象を直接読む。
-- TUI や builder など特定領域の内部挙動だけを調査するとき。
 
 ## hash
-- cd5b3fd442143c9c9ead5cdeb4a7ae2e014fdba4d6578ed1059faa8ed5563791
+- 24708ba47a42f52e18384017999882689e801f75ddd52495f086c4310f40b386
 
 # `test`
 
 ## Summary
-- テストコード群を収めるディレクトリ。CLI、runtime、Codex 実行、INDEX/oracle review、session/run lifecycle、builder、設定、状態永続化など、cmoc の外部挙動と制御ロジックを検証する realization test の入口となる。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、TUI など、実装の外部挙動・制御ロジック・統合 lifecycle を検証する pytest テストと共有テストヘルパーを扱う。各機能のテスト観点を確認する入口であり、実装詳細や正本仕様は対応する src または oracle を直接読む。
 
 ## Read this when
-- cmoc の機能変更に伴う realization test の追加・修正・検証対象を探すとき
-- CLI、Codex runtime、INDEX/oracle review、session/run、設定・状態管理などの回帰テストを調査するとき
+- cmoc の実装変更に伴う回帰テスト、テスト対象の選定、既存の外部契約・失敗時挙動・統合 lifecycle の検証範囲を確認するとき。
+- Codex 実行、CLI、indexing、oracle review、session/run、TUI、ACP builder などの realization test を追加・修正するとき。
 
 ## Do not read this when
-- 正本仕様や実装責務を確認したい場合は、対応する oracle または src のファイルを直接読むとき
-- テスト共通 helper だけを確認したい場合は、対象の `_support.py` ファイルを直接読むとき
-- Codex や Ollama の出力品質そのものを評価するとき
+- 単一機能の実装詳細や正本仕様そのものを確認したいときは、対応する src または oracle file を直接読む。
+- Codex CLI や LLM の回答品質自体を評価するとき。
+- 対象機能と無関係なテストの詳細を調べるときは、ディレクトリ全体ではなく該当するテストファイルへ進む。
 
 ## hash
-- 9867fa5270a57d9928a78da687965f40a64800981778c75bbb34ee16409ac258
+- 00178f24d3d70de7aecae6dede272b636767d35b2b914ef1388dc24bb172e29e

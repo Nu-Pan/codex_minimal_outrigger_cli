@@ -41,7 +41,9 @@ def cmoc_run_abandon_impl() -> None:
 
 def _cmoc_run_abandon_body() -> None:
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
-    run_doctor_preprocess(work_root(), sync_refactor_entries=False)
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # abandon は run branch を merge しないため、entry 集合を通常どおり同期する。
+    run_doctor_preprocess(work_root())
     start_subcommand_step(2, "active run を特定", "resolve active run")
     initial_context, _ = resolve_active_run(
         {"running", "joinable", "error"},

@@ -11,9 +11,13 @@ from cmoc_runtime import (
     RunPart,
     SessionState,
     branch_exists,
+    current_branch,
     delete_branch,
     head_commit,
+    load_state_for_branch,
+    refactor_state_path,
     remove_worktree,
+    repo_root,
     require_clean_worktree,
     run_cli_subcommand,
     run_doctor_preprocess,
@@ -60,12 +64,23 @@ def cmoc_run_join_impl(force_resolve: bool = False) -> None:
 
 def _cmoc_run_join_body(force_resolve: bool) -> None:
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
-    run_doctor_preprocess(work_root(), sync_refactor_entries=False)
+    doctor_state_paths = _doctor_preprocess_for_join()
     start_subcommand_step(2, "active run と差分を検査", "validate active run")
     initial_context, _ = resolve_active_run({"joinable", "error"})
     with run_lifecycle_lock(initial_context.repo, initial_context.session_id):
         context, state = resolve_active_run({"joinable", "error"})
         warnings: list[str] = []
+        current_worktree = work_root().resolve()
+        session_doctor_state_paths = (
+            doctor_state_paths
+            if current_worktree == context.session_worktree.resolve()
+            else set()
+        )
+        run_doctor_state_paths = (
+            doctor_state_paths
+            if current_worktree == context.run_worktree.resolve()
+            else set()
+        )
         if state.run.state == "error":
             _stop_error_run(context, warnings)
         require_clean_worktree(context.session_worktree)
@@ -81,6 +96,7 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
         session_unexpected = unexpected_session_paths(
             context.session_worktree,
             session_changes,
+            ignored_paths=session_doctor_state_paths,
         )
         if session_unexpected:
             _raise_unexpected(
@@ -89,7 +105,11 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 session_unexpected,
                 warnings,
             )
-        run_unexpected = unexpected_run_paths(context, run_changes)
+        run_unexpected = unexpected_run_paths(
+            context,
+            run_changes,
+            ignored_paths=run_doctor_state_paths,
+        )
         if run_unexpected and not force_resolve:
             _raise_unexpected(
                 context,
@@ -107,7 +127,11 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 context.run_worktree,
                 context.run_fork_commit,
             )
-            remaining = unexpected_run_paths(context, run_changes)
+            remaining = unexpected_run_paths(
+                context,
+                run_changes,
+                ignored_paths=run_doctor_state_paths,
+            )
             if remaining:
                 _raise_unexpected(
                     context,
@@ -156,6 +180,36 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
             ]
         )
     )
+
+
+def _doctor_preprocess_for_join() -> set[str]:
+    """join 前の refactor state 同期を active run kind に合わせる。"""
+    root = work_root()
+    before = head_commit(root)
+    sync_refactor_entries = True
+    try:
+        branch = current_branch(root)
+        _, _, state = load_state_for_branch(repo_root(root), branch)
+    except CmocError:
+        # active run の詳細な事前条件は doctor 後の resolve_active_run で報告する。
+        pass
+    else:
+        # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+        # merge 前の entry 同期遅延は refactor run だけに限定する。
+        sync_refactor_entries = state.run.kind != "realization_refactor"
+    run_doctor_preprocess(root, sync_refactor_entries=sync_refactor_entries)
+    after = head_commit(root)
+    if before == after:
+        return set()
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # doctor 自身が merge 前に同期した refactor state だけを session の差分から除外する。
+    refactor_state = refactor_state_path(root).relative_to(root)
+    return {
+        path
+        for change in tree_changes(root, before, after)
+        for path in change.paths
+        if Path(path) == refactor_state
+    }
 
 
 def _merge_and_finalize(

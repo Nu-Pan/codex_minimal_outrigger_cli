@@ -23,9 +23,14 @@ import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.join as run_join_module
 from basic.acp import AgentCallParameter, FileAccessMode
+from commons.runtime_content import file_sha256
+from commons.runtime_errors import CmocError
+from commons.runtime_paths import timestamp
 from commons.runtime_refactor import load_refactor_state
+from commons.runtime_state import SessionState
 from main import app
 from sub_commands.run.lifecycle import (
+    EditingRunContext,
     GitChange,
     commit_work_unit,
     flattened_change_paths,
@@ -61,6 +66,21 @@ def _state(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
+def _mark_refactor_target_no_findings(root: Path, target: str) -> None:
+    """state sync が既存 target の変更を検出できる履歴を作る。"""
+    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    state = json.loads(path.read_text())
+    state[target] = {
+        "investigation_required": False,
+        "last_investigation_result": "no_findings",
+        "last_investigated_sha256": file_sha256(root / target),
+        "last_investigated_at": timestamp(),
+    }
+    path.write_text(json.dumps(state, indent=2) + "\n")
+    run_git(root, "add", str(path.relative_to(root)))
+    run_git(root, "commit", "-m", "record refactor investigation")
+
+
 def _no_index_refresh(_root: Path, *, commit: bool) -> list[Path]:
     return []
 
@@ -83,6 +103,52 @@ def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> N
     run_git(root, "add", "-A")
 
     assert worktree_change_paths(root) == ["renamed.md"]
+    assert worktree_change_paths(root, include_rename_sources=True) == [
+        "README.md",
+        "renamed.md",
+    ]
+
+
+def test_apply_rejects_rename_from_oracle_to_realization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "oracle" / "spec.md").rename(
+        context.run_worktree / "moved.md"
+    )
+    run_git(context.run_worktree, "add", "-A")
+
+    with pytest.raises(CmocError):
+        apply_module._validate_agent_changes(context)
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected_sync"),
+    [
+        ("realization_apply", True),
+        ("realization_refactor", False),
+    ],
+)
+def test_run_join_doctor_sync_depends_on_active_run_kind(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    kind: str,
+    expected_sync: bool,
+) -> None:
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    start_editing_run(kind)
+    calls: list[bool] = []
+    monkeypatch.setattr(
+        run_join_module,
+        "run_doctor_preprocess",
+        lambda _root, *, sync_refactor_entries: calls.append(sync_refactor_entries),
+    )
+
+    run_join_module._doctor_preprocess_for_join()
+
+    assert calls == [expected_sync]
 
 
 def test_refactor_change_summary_keeps_only_actual_changed_paths() -> None:
@@ -152,6 +218,47 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert f"- run_branch: `{run_branch}`" in joined.output
     assert "cmoc run join" in joined.output
     assert current_branch(root) == session_branch
+
+
+def test_run_join_allows_oracle_change_on_session_branch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    _mark_refactor_target_no_findings(root, "oracle/spec.md")
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    (root / "oracle" / "spec.md").write_text("session oracle change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "session oracle change")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert (root / "README.md").read_text() == "realized\n"
+    assert (root / "oracle" / "spec.md").read_text() == "session oracle change\n"
+
+
+def test_run_join_from_run_worktree_allows_doctor_state_sync(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    _mark_refactor_target_no_findings(root, "README.md")
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    monkeypatch.chdir(context.run_worktree)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert (root / "README.md").read_text() == "realized\n"
 
 
 def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
@@ -543,3 +650,50 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     assert 'completion_reason: "user_interruption"' in report.read_text()
     assert "- completion_reason: `user_interruption`" in result.output
     assert "- unresolved targets: `0`" in result.output
+
+
+def test_refactor_interrupt_during_completion_is_joinable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "_initialize_cycle", lambda _context: None)
+    monkeypatch.setattr(
+        refactor_module,
+        "select_refactor_target",
+        lambda _state, _excluded: None,
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "_completion_reason",
+        lambda _root, _unresolved: "natural_completion",
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "_completion_change_summary",
+        lambda _context: None,
+    )
+    original_set_run_state = refactor_module.set_run_state
+    interrupted = False
+
+    def interrupt_once(
+        context: EditingRunContext,
+        run_state: str,
+    ) -> SessionState:
+        nonlocal interrupted
+        if not interrupted:
+            interrupted = True
+            raise KeyboardInterrupt()
+        return original_set_run_state(context, run_state)
+
+    monkeypatch.setattr(refactor_module, "set_run_state", interrupt_once)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert _state(state_path)["run"]["state"] == "joinable"
+    assert "- completion_reason: `user_interruption`" in result.output

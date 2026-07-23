@@ -72,18 +72,18 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口と、apply・refactor などの workload 処理への導入点を提供するディレクトリ。各サブディレクトリから、対応する realization 処理の実行フローや構成を確認できる。
+- realization workload サブコマンドのパッケージ入口。apply workload と refactor workload の実装への導線を提供する。
 
 ## Read this when
-- realization workload サブコマンドの実装構成や入口を確認するとき。
-- realization の apply workload または refactor workload の処理フローを調査・変更するとき。
+- realization workload サブコマンドの構成や実装入口を確認するとき。
+- realization apply または realization refactor の処理を調査・変更するとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき。
-- apply fork の launch parameter 構築、run lifecycle の共通処理、report 形式、refactor state など、下位の専用モジュールを直接確認すべきとき。
+- realization workload に関係しない処理を確認するとき。
+- apply や refactor の個別実装・共通 lifecycle・report 仕様を直接確認したいとき。
 
 ## hash
-- 1bd0d386f2bc525575de0196ddbcfd2fde4d00e63c9aad80c6c8c7006415f3fc
+- 776b7b9132eafb0359eff3dbb307ccb8cc262558f70b31a16c251e73d3ed9942
 
 # `review`
 
@@ -102,18 +102,16 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。run の開始・join・abandon、共通ライフサイクル、レポート生成の実装への入口となる。
+- editing run の共通 lifecycle サブコマンドをまとめるパッケージの入口。abandon・join・lifecycle・report の各実装へ進む起点となる。
 
 ## Read this when
-- editing run サブコマンドの lifecycle、状態遷移、worktree・branch cleanup、レポート生成を調査・変更するとき。
-- abandon、join、共通 lifecycle、report のいずれかの実装を確認するとき。
+- editing run の共通 lifecycle、開始・状態遷移・cleanup、run report、または配下実装の責務を調査・変更するとき。
 
 ## Do not read this when
-- editing run 以外のサブコマンドを扱うとき。
-- 特定の処理の詳細だけを確認する場合は、このパッケージ入口ではなく配下の該当ファイルを直接読むとき。
+- editing run 以外のサブコマンドを扱うとき。特定処理の詳細を確認する場合は、配下の該当ファイルを直接読む。
 
 ## hash
-- ae014cdedc87bcb2c763fbad2c2c59fa2f59ff96a52852cda68bdd96bb11324f
+- e259c3c33b8292f555320e71ac084412b88736a4fb8bd10a075d3b49880e3b0a
 
 # `session`
 

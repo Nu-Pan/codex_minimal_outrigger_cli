@@ -144,7 +144,10 @@ def _cmoc_realization_apply_fork_body() -> None:
 def _validate_agent_changes(context: EditingRunContext) -> None:
     unexpected = unexpected_agent_paths(
         context,
-        worktree_change_paths(context.run_worktree),
+        worktree_change_paths(
+            context.run_worktree,
+            include_rename_sources=True,
+        ),
     )
     if unexpected:
         raise _unexpected_change_error(unexpected)

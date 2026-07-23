@@ -92,6 +92,18 @@ def _cmoc_realization_refactor_fork_body() -> None:
                     unresolved_findings[target] = unresolved
             reason = _completion_reason(context.run_worktree, unresolved_findings)
             summary = _completion_change_summary(context)
+        start_subcommand_step(5, "run を joinable に更新", "publish joinable")
+        set_run_state(context, "joinable")
+        start_subcommand_step(6, "fork report を保存", "write fork report")
+        report = _write_refactor_report(
+            context,
+            "joinable",
+            reason,
+            units,
+            unresolved_findings,
+            summary=summary,
+        )
+        typer.echo(_completion_log(reason, unresolved_findings, report))
     except KeyboardInterrupt:
         if context is None:
             raise
@@ -141,18 +153,6 @@ def _cmoc_realization_refactor_fork_body() -> None:
             error, "cmoc_stdout", _completion_log("error", unresolved_findings, report)
         )
         raise error from exc
-    start_subcommand_step(5, "run を joinable に更新", "publish joinable")
-    set_run_state(context, "joinable")
-    start_subcommand_step(6, "fork report を保存", "write fork report")
-    report = _write_refactor_report(
-        context,
-        "joinable",
-        reason,
-        units,
-        unresolved_findings,
-        summary=summary,
-    )
-    typer.echo(_completion_log(reason, unresolved_findings, report))
 
 
 def _initialize_cycle(context: EditingRunContext) -> None:
@@ -199,7 +199,10 @@ def _run_refactor_unit(
             f"target: {target}\nreturncode: {result.returncode}",
         )
     findings = _validated_findings(result.output_json, target)
-    changed_realization = worktree_change_paths(context.run_worktree)
+    changed_realization = worktree_change_paths(
+        context.run_worktree,
+        include_rename_sources=True,
+    )
     unexpected = unexpected_agent_paths(context, changed_realization)
     if unexpected:
         raise CmocError(
@@ -232,7 +235,10 @@ def _run_refactor_unit(
         changed_realization,
     )
     refresh_indexes(context.run_worktree, commit=False)
-    all_unit_paths = worktree_change_paths(context.run_worktree)
+    all_unit_paths = worktree_change_paths(
+        context.run_worktree,
+        include_rename_sources=True,
+    )
     unexpected = unexpected_run_paths(
         context,
         # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md

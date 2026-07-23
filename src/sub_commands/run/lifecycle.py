@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -301,13 +302,19 @@ def refresh_indexes(worktree: Path, *, commit: bool) -> list[Path]:
         return updated
 
 
-def worktree_change_paths(worktree: Path) -> list[str]:
+def worktree_change_paths(
+    worktree: Path,
+    *,
+    include_rename_sources: bool = False,
+) -> list[str]:
     """未 commit 差分の変更対象を repository 相対 path で返す。"""
     # {{work-root}}/oracle/doc/app_spec/misc_spec.md
-    # rename は status の新しい path だけを agent の変更対象として扱う。
+    # report 用の既定値は rename 後の path だけを返し、agent 権限検査だけが
+    # rename 元も明示的に含める。
     paths = status_path_statuses(
         worktree,
         untracked_all=True,
+        include_rename_sources=include_rename_sources,
     )
     return sorted(
         {str(path.absolute().relative_to(worktree.absolute())) for _, path in paths}
@@ -376,14 +383,18 @@ def unexpected_agent_paths(
 def unexpected_run_paths(
     context: EditingRunContext,
     changes: list[GitChange],
+    *,
+    ignored_paths: Collection[str] = (),
 ) -> list[str]:
     """run branch の workload 想定外 path を返す。"""
+    ignored = set(ignored_paths)
     return sorted(
         {
             path
             for change in changes
             for path in change.paths
-            if not _is_run_expected_path(
+            if path not in ignored
+            and not _is_run_expected_path(
                 context.run_worktree,
                 context.kind,
                 path,
@@ -396,14 +407,18 @@ def unexpected_run_paths(
 def unexpected_session_paths(
     session_worktree: Path,
     changes: list[GitChange],
+    *,
+    ignored_paths: Collection[str] = (),
 ) -> list[str]:
     """run 開始後の session branch にある想定外 path を返す。"""
+    ignored = set(ignored_paths)
     return sorted(
         {
             path
             for change in changes
             for path in change.paths
-            if not (
+            if path not in ignored
+            and not (
                 _is_oracle_path(path)
                 or _is_index_path(path)
                 or is_root_memo(session_worktree, session_worktree / path)

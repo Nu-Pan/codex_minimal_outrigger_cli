@@ -15,34 +15,35 @@
 # `apply`
 
 ## Summary
-- realization の apply workload を扱うディレクトリ。apply workload の入口と、`cmoc realization apply fork` の実行フローを確認するために読む。
+- realization の apply 処理に関する workload を扱うディレクトリ。apply workload 実装への入口であり、配下の apply fork 実行本体も確認できる。
 
 ## Read this when
-- realization の apply workload を調査・変更するとき。
-- `cmoc realization apply fork` の処理フロー、agent 実行、差分検査、commit、run 状態遷移、fork report を確認するとき。
+- realization の apply workload の内容を調査・変更するとき。
+- `cmoc realization apply fork` の実行フロー、agent 起動、変更検査、commit、run state、fork report の挙動を確認・変更するとき。
 
 ## Do not read this when
-- apply fork の launch parameter 構築だけを調査・変更するとき。
-- run lifecycle の共通処理や report 形式だけを確認するとき。
-- realization apply fork 以外のサブコマンドの実行フローを調査するとき。
+- apply workload 以外の処理を扱うとき。
+- realization apply fork の agent 起動パラメータ生成だけを変更するとき。
+- run の共通ライフサイクルや report 生成の仕様だけを確認するとき。
 
 ## hash
-- 3d86a47945ffd9b4cd81539a13dabff57ad1d09ca9730bbc46edef03f283b31c
+- a72ad755ca8f8bc0679176e8189c25d6ee3a6708ea3a74176f488274d859907a
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を扱うパッケージで、関連処理への入口を提供する。
-- fork.py は、refactor run の初期化から対象ファイルの調査・修正、検証、commit、所見追跡、完了判定、状態更新、レポート出力までの full-cycle CLI lifecycle を実装する。
+- realization のリファクタリング処理を扱うパッケージ。一般的なリファクタリング処理の入口と、fork による一連のリファクタリング lifecycle の実装を含む。
+- fork の full-cycle CLI workload では、対象選択、調査・修正、state 同期、差分検証・commit、unresolved 所見の管理、完了判定、change summary と fork report の生成までを扱う。
 
 ## Read this when
-- realization のリファクタリング処理の構成や入口を確認するとき。
-- refactor fork の CLI 実行フロー、状態遷移、対象ファイル処理、unresolved 所見、rollback、完了条件、fork report を調査・変更するとき。
+- realization のリファクタリング処理の構成や CLI 動作を確認・変更するとき。
+- realization refactor fork の対象選択、処理順序、state、unresolved 所見、commit、rollback、error、report 生成を確認するとき。
+- refactor agent の findings または change summary の Structured Output 検証を調査するとき。
 
 ## Do not read this when
-- refactor state のデータ構造や target 選択ロジックだけを扱うときは、commons.runtime_refactor を直接読む。
-- file 単位の review agent parameter や change summary parameter の生成だけを扱うときは、対応する builder module を直接読む。
-- 一般的な run lifecycle、commit、差分分類、共通 report 処理だけを扱うときは、sub_commands.run の共通 module を直接読む。
+- realization refactor の一般仕様だけを確認したいときは、対応する oracle の仕様を先に読む。
+- file 単位の agent パラメータ生成、個別 review・fix、共通 lifecycle・runtime・report の実装を確認するときは、対応する下位モジュールを直接読む。
+- fork 以外の realization refactor サブコマンドを調査するとき。
 
 ## hash
-- 8d526c9abc790303ffa1c8f10b81f63600ae4793ecc61e06d6af6062c987bc06
+- ec788adfe2114b410ca7ba71b37fd55a9c7cde3e2a0d1d27e33399a80035a07b

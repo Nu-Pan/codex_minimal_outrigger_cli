@@ -15,50 +15,54 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc run abandon` の実装。active editing run を特定し、実行中プロセスを停止したうえで run worktree と branch を削除し、状態・process tracking・lifecycle report を更新する。cleanup 結果と警告を CLI に表示する。
+- `cmoc run abandon` の実行処理を担当する。active editing run を特定し、必要に応じて実行中プロセスを停止したうえで、run worktree と branch を削除し、状態と lifecycle report を更新して結果を表示する。
 
 ## Read this when
-- `cmoc run abandon` の cleanup lifecycle、実行中 run の停止、run worktree／branch の破棄、abandon 後の状態更新やレポート出力を変更・調査するとき。
+- `cmoc run abandon` の cleanup 処理、実行中 run の停止、run worktree・branch の破棄、abandon 後の状態更新や結果表示を変更・調査するとき。
 
 ## Do not read this when
-- run の開始・join・完了など abandon 以外の lifecycle を変更するときは、各 lifecycle 実装を直接読む。
-- workload 固有の処理や一般的な run 状態解決の仕様だけを調査するときは、対応する lifecycle・runtime モジュールを直接読む。
+- run の開始・join・完了など、abandon 以外の lifecycle 処理だけを変更・調査するとき。
+- workload 自体の実行処理、doctor preprocess の詳細、プロセス停止や lifecycle report の共通実装を直接確認するとき。
 
 ## hash
-- cc9af9effc51e1e2874b0175611f454c70ad1f35b7b7edb468818c3ee3788f5a
+- 524b743af9433d81d2887928d0b52f21d7ed8935add1c15e82d362c153534edf
 
 # `join.py`
 
 ## Summary
-- `cmoc run join` の workload 非依存な merge lifecycle を実装する。active run と session の差分・競合を検査し、run branch の merge、post-join hook、refactor state 同期、結果 report 保存、worktree・branch cleanup までを一連の処理として扱う。
+- `cmoc run join` の workload 非依存な merge lifecycle を実装する。active run の検証、run branch の merge、INDEX.md 競合の限定的解決、post-join hook と state 同期、report 保存、worktree・branch cleanup、失敗時の error state 化を扱う。
 
 ## Read this when
-- `cmoc run join` の merge、force-resolve、INDEX.md 競合処理、post-join 失敗時の復旧を変更・調査するとき。
-- run lifecycle の error state、process 停止、report 保存、join 後 cleanup の挙動を確認するとき。
+- `cmoc run join` の merge、force-resolve、post-join 処理、state 同期、cleanup、失敗復旧の挙動を変更・調査するとき。
+- run branch と session branch の想定外差分、INDEX.md 以外の merge conflict、run lifecycle report の生成を確認するとき。
 
 ## Do not read this when
-- run の開始・編集・abandon など、join lifecycle 以外の処理だけを変更・調査するとき。
-- workload 固有の実装や一般的な run lifecycle helper の詳細を直接確認する必要があるとき。
+- run の開始・実行・abandon など join 以外の lifecycle を変更するときは、それぞれの専用実装を直接読む。
+- workload 固有の merge 処理や report 内容だけを変更する場合は、関連する workload・report 実装を直接確認する。
 
 ## hash
-- d46de047a915be589a45352ee72bf8788a1b7ac5f0d09bd2b4afac43dbe524c7
+- 49c123afc8cee23b47da533f483716162dacb72c5cf6e936526112c613410efc
 
 # `lifecycle.py`
 
 ## Summary
-- editing run の開始・解決・状態更新、worktree 差分の commit/rollback、INDEX 更新、Git 変更 path の検査を担う共通ライフサイクル処理。run/session state、branch、worktree の整合性確認と、oracle・realization・INDEX の変更許可判定を提供する。
+- editing run の開始・active run 解決・状態遷移・worktree 管理を共通化するライフサイクル処理を提供する。
+- work unit の rollback/commit、INDEX.md 更新、Git 差分・変更 path の抽出、oracle・agent 想定外 path の検査も扱う。
+- run lifecycle や変更 path の検査を実装・修正・調査する際の共通処理への入口となる。
 
 ## Read this when
-- editing run の開始、active run の解決、joinable/error への状態遷移を変更・調査するとき。
-- run worktree の作成・削除、work unit の commit/rollback、INDEX 更新 commit の挙動を確認するとき。
-- Git の rename/copy を含む変更列挙、agent/run/session の想定外 path 検出、oracle diff の扱いを変更・調査するとき。
+- editing run の開始、joinable/error 遷移、session/run state の検証を変更または調査するとき
+- run worktree・branch の生成、解決、削除や process id 管理の挙動を確認するとき
+- work unit の commit/rollback、INDEX 更新、Git rename/copy を含む差分 path 処理を変更するとき
+- agent・run・session が変更できる path の許可検査や oracle diff 抽出を確認するとき
 
 ## Do not read this when
-- 個別の editing run サブコマンドの業務処理だけを確認する場合。
-- state schema、Git 実行、path 解決、INDEX 生成の詳細実装を直接確認する場合は、それぞれの commons モジュールを読む。
+- 個別の editing run サブコマンドの利用者向け仕様だけを確認したいときは、対応する app_spec を直接読む
+- session state のデータ構造や永続化形式そのものを変更・調査するときは、runtime_state の実装を直接読む
+- INDEX.md の生成アルゴリズム自体を変更するときは、commons.indexing の実装を直接読む
 
 ## hash
-- e8a5a8b7f53d61a24d8d87c004ea6f5f36391d070903c1e303ecec7cb28ff02e
+- f521916f0ab09518498271c81e47c2e667aab9b605435002a9c8ba871b9d8a97
 
 # `report.py`
 
