@@ -128,33 +128,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側ソースツリー。CLI エントリーポイント、サブコマンド実装、共通 runtime、互換 import shim、設定・型の再公開入口を扱い、各機能の実装箇所へ進むための上位ルーティング地点。
+- cmoc CLI の realization 実装を収める src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import 入口を扱い、各責務別モジュールへのルーティング起点となる。
 
 ## Read this when
-- cmoc の CLI 構成、サブコマンド実装、共通 runtime、または互換 import 経路の入口を探すとき。
-- 対象機能の具体的な realization 実装へ進む前に、登録箇所や上位の委譲関係を確認したいとき。
+- cmoc の CLI 構成や realization 実装の入口を特定するとき。
+- サブコマンド、共通 runtime、互換 import 経路の下位実装へ進む先を選ぶとき。
 
 ## Do not read this when
-- 個別サブコマンド、runtime helper、設定定義、正本 oracle の詳細を確認するときは、対応する下位実装または oracle 側を直接読む。
-- TUI や builder など対象モジュールが明確な場合は、このソースツリー全体を読む必要はない。
+- 特定サブコマンドや runtime module が明確な場合は、対応する下位ディレクトリまたはモジュールを直接読む。
+- 正本仕様や oracle 側実装を確認するときは、src ではなく対応する oracle 側を読む。
 
 ## hash
-- 6ec8b4b00b974c14975d842aecc2a4732ebebded271fef8502f76db95d9e2315
+- e226614d2947a5d9cc9e46c72db94f9f49214997d501580f295db882b0a812bf
 
 # `test`
 
 ## Summary
-- テストコードから正本 schema や共通実行環境を参照する helper と、cmoc の各機能を検証する realization test を収録する。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、TUI などの局所的・統合的な契約を確認するための入口であり、対象機能の実装変更時に対応するテストを選んで読む。
+- `test` 配下の realization test と共有テストヘルパーを、機能領域ごとの検証入口として案内する。CLI、Codex runtime、indexing、oracle review、session/run、TUI、設定・状態などの外部挙動や契約を扱う。
 
 ## Read this when
-- cmoc の実装変更に伴う回帰テストの追加・修正・実行対象を判断するとき
-- CLI、Codex runtime、indexing、oracle review、session、state、TUI、設定などの外部挙動や制御ロジックを検証するとき
-- テスト用 Git repository、fake external command、Codex、Ollama、schema path などの共通テスト支援を確認するとき
+- 変更対象の機能に対応する realization test を特定し、回帰観点や既存の外部契約を確認するとき。
+- 共有 fixture・fake command・Git repository・Codex/Ollama 実行環境など、複数テストで使うテスト支援を変更・利用するとき。
+- CLI、Codex runtime、indexing、oracle review、session/run、TUI、設定・状態の挙動をテストで検証するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認するときは、対応する oracle file を直接読む
-- 単一機能の実装詳細を調査するときは、対応する src 側の実装を直接読む
-- 対象機能と無関係なテスト基盤や別サブコマンドの挙動を調べるとき
+- 実装本体や正本仕様そのものを確認することが目的で、対応する `src` または `oracle` を直接読めば足りるとき。
+- LLM や Codex の回答品質自体を評価するとき。
+- 対象機能と無関係なテスト領域や、別の責務を持つ共有 helper を調査するとき。
 
 ## hash
-- ca1f3e2ba1718106ecfdad89a6d792bbaebe9951eb7ac15156f7e342f0e0f014
+- 2ca0fe6817dc9720c3e01ae22097cc1c3af021d3d5870e96c21b05cbe5739201

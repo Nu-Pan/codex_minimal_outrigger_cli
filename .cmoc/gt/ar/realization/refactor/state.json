@@ -175,9 +175,9 @@
   },
   "oracle/doc/app_spec/subcommand_interruption.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "78af86a4a5d1502db95696ef32c9b1a89a509acea0e398fd210537a50aecf86b",
+    "last_investigated_at": "2026-07-23_22-29_32_446278000"
   },
   "oracle/doc/app_spec/usage.md": {
     "investigation_required": true,

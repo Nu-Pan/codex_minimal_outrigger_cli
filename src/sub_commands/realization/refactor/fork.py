@@ -37,7 +37,11 @@ from commons.runtime_refactor import (
     sync_refactor_state,
     write_refactor_state,
 )
-from commons.runtime_run import run_process_tracking
+from commons.runtime_run import (
+    read_run_process_id,
+    run_process_tracking,
+    stop_child_process_group,
+)
 from sub_commands.run.lifecycle import (
     EditingRunContext,
     GitChange,
@@ -105,21 +109,57 @@ def _cmoc_realization_refactor_fork_body() -> None:
             summary=summary,
         )
         typer.echo(_completion_log(reason, unresolved_findings, report))
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as interruption:
         if context is None:
             context = _recover_started_run()
             if context is None:
                 raise
-        rollback_work_unit(context.run_worktree)
-        set_run_state(context, "joinable")
-        report = _write_refactor_report(
-            context,
-            "joinable",
-            "user_interruption",
-            units,
-            unresolved_findings,
-            summary=None,
-        )
+        cleanup_errors: list[str] = []
+        try:
+            _stop_tracked_codex_children(context)
+        except BaseException as cleanup_error:
+            cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
+        try:
+            rollback_work_unit(context.run_worktree)
+        except BaseException as cleanup_error:
+            cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
+        if cleanup_errors:
+            _raise_refactor_interruption_error(
+                context,
+                units,
+                unresolved_findings,
+                interruption,
+                cleanup_errors,
+            )
+        try:
+            set_run_state(context, "joinable")
+        except BaseException as state_error:
+            cleanup_errors.append(f"state update failed: {state_error!r}")
+            _raise_refactor_interruption_error(
+                context,
+                units,
+                unresolved_findings,
+                interruption,
+                cleanup_errors,
+            )
+        try:
+            report = _write_refactor_report(
+                context,
+                "joinable",
+                "user_interruption",
+                units,
+                unresolved_findings,
+                summary=None,
+            )
+        except BaseException as report_error:
+            cleanup_errors.append(f"interruption report failed: {report_error!r}")
+            _raise_refactor_interruption_error(
+                context,
+                units,
+                unresolved_findings,
+                interruption,
+                cleanup_errors,
+            )
         typer.echo(_completion_log("user_interruption", unresolved_findings, report))
         return
     except BaseException as exc:
@@ -127,37 +167,87 @@ def _cmoc_realization_refactor_fork_body() -> None:
             context = _recover_started_run()
             if context is None:
                 raise
-        cleanup_errors: list[str] = []
+        error_cleanup_errors: list[str] = []
         try:
             rollback_work_unit(context.run_worktree)
         except BaseException as cleanup_error:
-            cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
+            error_cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
         try:
             set_run_state(context, "error")
         except BaseException as state_error:
-            cleanup_errors.append(f"state update failed: {state_error!r}")
-        report = _write_refactor_report(
+            error_cleanup_errors.append(f"state update failed: {state_error!r}")
+        _raise_refactor_error(
             context,
-            "error",
-            "error",
             units,
             unresolved_findings,
-            summary=None,
-            error=exc,
-            cleanup_errors=cleanup_errors,
+            exc,
+            error_cleanup_errors,
         )
-        error = CmocError(
-            "realization refactor fork は error state で停止しました。",
-            [
-                "確定済み成果物を取り込む場合は `cmoc run join` を実行してください。",
-                "run 全体を破棄する場合は `cmoc run abandon` を実行してください。",
-            ],
-            f"report: {report}\nerror: {exc!r}",
-        )
-        setattr(
-            error, "cmoc_stdout", _completion_log("error", unresolved_findings, report)
-        )
-        raise error from exc
+
+
+def _stop_tracked_codex_children(context: EditingRunContext) -> None:
+    """中断時に editing run が追跡している Codex child group を停止する。"""
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    tracked = read_run_process_id(context.repo, context.session_id)
+    if tracked is None:
+        return
+    for child in tracked.child_processes:
+        stop_child_process_group(child)
+
+
+def _raise_refactor_interruption_error(
+    context: EditingRunContext,
+    units: list[tuple[str, int]],
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+    interruption: BaseException,
+    cleanup_errors: list[str],
+) -> None:
+    """中断後の cleanup failure を error state/report へ変換する。"""
+    try:
+        set_run_state(context, "error")
+    except BaseException as state_error:
+        cleanup_errors.append(f"error state update failed: {state_error!r}")
+    _raise_refactor_error(
+        context,
+        units,
+        unresolved_findings,
+        interruption,
+        cleanup_errors,
+    )
+
+
+def _raise_refactor_error(
+    context: EditingRunContext,
+    units: list[tuple[str, int]],
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+    error: BaseException,
+    cleanup_errors: list[str],
+) -> None:
+    """error state の refactor report と CLI error を一貫して生成する。"""
+    report = _write_refactor_report(
+        context,
+        "error",
+        "error",
+        units,
+        unresolved_findings,
+        summary=None,
+        error=error,
+        cleanup_errors=cleanup_errors,
+    )
+    cmoc_error = CmocError(
+        "realization refactor fork は error state で停止しました。",
+        [
+            "確定済み成果物を取り込む場合は `cmoc run join` を実行してください。",
+            "run 全体を破棄する場合は `cmoc run abandon` を実行してください。",
+        ],
+        f"report: {report}\nerror: {error!r}",
+    )
+    setattr(
+        cmoc_error,
+        "cmoc_stdout",
+        _completion_log("error", unresolved_findings, report),
+    )
+    raise cmoc_error from error
 
 
 def _recover_started_run() -> EditingRunContext | None:

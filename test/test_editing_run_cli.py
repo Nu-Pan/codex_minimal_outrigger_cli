@@ -763,6 +763,78 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     assert "- unresolved targets: `0`" in result.output
 
 
+def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+    child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
+    tracked = SimpleNamespace(child_processes=(child,))
+    stopped: list[object] = []
+    monkeypatch.setattr(
+        refactor_module,
+        "read_run_process_id",
+        lambda *_args: tracked,
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "stop_child_process_group",
+        lambda process: stopped.append(process),
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert stopped == [child]
+    assert _state(state_path)["run"]["state"] == "joinable"
+
+
+def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+    monkeypatch.setattr(
+        refactor_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "rollback_work_unit",
+        lambda _worktree: (_ for _ in ()).throw(RuntimeError("rollback failed")),
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    report_line = next(
+        line
+        for line in result.output.splitlines()
+        if line.startswith("- fork report: `")
+    )
+    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    report_text = report.read_text()
+    assert 'completion_reason: "error"' in report_text
+    assert "rollback failed" in report_text
+
+
 def test_refactor_interrupt_during_completion_is_joinable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

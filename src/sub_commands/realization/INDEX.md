@@ -30,17 +30,18 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージ。`fork.py` を中心に、refactor fork の実行ライフサイクル、対象処理、状態同期、commit、完了判定、report、cleanup を扱う。
+- realization のリファクタリング処理を扱うパッケージ。fork のライフサイクル実行と関連処理への入口を提供する。
+- fork は、run 初期化から target 選択、調査・修正・commit、unresolved 管理、完了検証、summary/report 生成、中断・例外時の cleanup までを一つのフローとして実装する。
 
 ## Read this when
-- realization のリファクタリング処理の構成や入口を確認するとき。
-- refactor fork の実行フロー、対象選択、commit、unresolved 管理、完了条件、report、割り込み・エラー時の cleanup を調査・変更するとき。
-- refactor agent の Structured Output と、差分・state・index の整合性を確認するとき。
+- realization refactor fork の CLI 実行フロー、target 処理、unresolved finding、完了判定を確認・変更するとき。
+- 中断・例外時の cleanup、run state、fork report、change summary、worktree や agent 出力の整合性を調査するとき。
+- realization のリファクタリング作業全体の構成や入口を確認するとき。
 
 ## Do not read this when
-- 通常の realization refactor 仕様や agent prompt の内容を確認したいとき。対応する oracle 文書を直接読む。
-- refactor state のデータ構造や対象同期処理を変更・調査するとき。`commons.runtime_refactor` の実装を直接読む。
-- run の一般的な lifecycle、差分分類、report 共通処理を変更・調査するとき。`sub_commands.run` 配下の責務モジュールを直接読む。
+- target 選択や state 同期だけを変更・調査する場合。
+- file 単位の調査・修正 agent の prompt 構築だけを変更する場合。
+- 一般的な run lifecycle、report 出力、process tracking の共通実装だけを確認する場合。
 
 ## hash
-- 9dbac15295d20373e096a258bead5681fdb361870dd941aa205692f7b01697e2
+- a4e80e064346eb0492ad620f30f739fca349cd4a88d53da14baec64b3d4607e5

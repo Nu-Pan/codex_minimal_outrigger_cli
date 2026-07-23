@@ -62,17 +62,23 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。配下に apply workload と realization refactor の実装群があり、それぞれの処理へ進むための上位入口となる。
+- realization workload サブコマンドのパッケージ入口と、apply workload および realization refactor fork の実装へのルーティング情報を提供する。
+- apply は agent 起動、差分検証、commit・rollback、run state、fork report を含む apply workload 実装の入口である。
+- refactor は fork のライフサイクル、target 処理、unresolved 管理、完了検証、cleanup、summary/report 生成を含む realization リファクタリング処理の入口である。
 
 ## Read this when
-- realization workload サブコマンドの実装構成や、apply・refactor 配下の処理へ進む入口を確認するとき。
+- realization workload サブコマンドの実装や構成を確認するとき。
+- apply workload の実行フロー、agent 起動、差分検証、commit・rollback、run state、fork report を調査・変更するとき。
+- realization refactor fork の CLI 実行フロー、target 処理、unresolved finding、完了判定、cleanup、run state、fork report、change summary、worktree や agent 出力の整合性を確認・変更するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply workload または realization refactor の具体的な実行フローや状態管理だけを調査・変更するとき。 соответствする配下の実装を直接読む。
+- apply workload 以外の処理を扱うときは apply へ進まない。
+- agent 起動パラメータ、run の共通 lifecycle・差分計算・状態管理、fork report の形式だけを変更・調査するときは apply へ進まない。
+- target 選択や state 同期だけ、file 単位の調査・修正 agent の prompt 構築だけ、または一般的な run lifecycle・report 出力・process tracking の共通実装だけを扱うときは refactor へ進まない。
 
 ## hash
-- fc8ca5f6ce00407cdfd9c9fdff820013d7642e9496a4b945be12a2b6e7d2945c
+- 913461b885d9d514b7cf0956fb5da50f3675ee74d0b860540c42995269368c33
 
 # `review`
 
