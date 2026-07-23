@@ -128,33 +128,34 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization 実装ルート。CLI 本体、互換 import shim、共通 runtime、サブコマンド実装を含み、各機能の実装入口として機能する。
+- cmoc の realization 側公開入口。Typer による CLI ルートとサブコマンド登録、互換 import shim、共有 runtime・設定・基本型への入口を提供する。
+- サブコマンド実装、ACP／session／oracle／realization builder の互換入口、共有 commons runtime、設定・path model・構造化文書 API へ進むための起点。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・互換入口・共通基盤・サブコマンドの実装配置を確認するとき。
-- 複数の実装領域にまたがる変更で、適切な下位パッケージの入口を探すとき。
+- cmoc CLI のトップレベル構成、サブコマンド登録、引数解析エラーや自動補完の挙動を確認・変更するとき。
+- 既存の互換 import path、共有 runtime API、設定・基本型の realization 側公開入口を調査するとき。
+- 特定サブコマンドや共有処理の実装入口を特定するとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime 機能、互換 shim、または正本仕様の詳細が明確なときは、対応する下位実装や oracle 文書を直接読む。
-- 正本仕様そのものや INDEX 更新規則を確認したいとき。
+- 特定サブコマンドの業務処理、共有 runtime の詳細、正本仕様や canonical 実装そのものを確認したいとき。
+- 互換 import や CLI ルートに関係しない個別処理を調査・変更するとき。
 
 ## hash
-- eb3cc0c622b208d32b47d35f567abed0c315642ffc74a2242a813a1db9246970
+- 0f5a85089e4f6ad84e13e9c9332dfaf004c55f70ed3cf3954a641320c18e2848
 
 # `test`
 
 ## Summary
-- cmoc の realization test ディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定などの外部挙動・制御ロジックを検証するテストと、複数テストで共有する Git・Codex・Ollama・CLI 支援ヘルパーを収録する。個別機能の回帰テストや共通テスト基盤を探す際の入口。
+- cmoc の realization test を集約するディレクトリ。共通テスト支援、runtime・設定・Codex 実行、CLI、INDEX 生成、oracle review、session/run lifecycle、各種 ACP builder の外部契約と統合挙動を検証する。個別機能の変更時に、該当するテストファイルへ進むための入口。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや制御ロジックの検証範囲を確認するとき
-- CLI、Codex 実行、indexing、oracle review、session、state、設定、worktree などのテスト契約を調べるとき
-- テストで共有される fake command、Git repository、Codex、Ollama、schema path 解決ヘルパーを確認するとき
+- cmoc の実装や仕様変更に伴い、対応する realization test の範囲・検証契約・回帰テストを特定するとき。
+- CLI、Codex runtime、INDEX indexing、oracle review、session/run、ACP builder、共通 fixture のテストを追加・修正・実行するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle 文書・source・test を直接読む
-- 実装本体の責務や内部処理を確認するときは、対応する src 側の実装を先に読む
-- 特定の機能やテスト基盤と無関係な変更を調査するときは、このディレクトリ全体を読む必要はない
+- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle ファイルを直接読む。
+- 特定機能の実装詳細だけを調査するときは、関連する src 側の実装を直接読む。
+- Codex や LLM の出力品質そのものを評価するとき。
 
 ## hash
-- c116aaf1e682f0d99b74d058dcf8ea65163af8e34173aba046ceb834c655b6b4
+- 46dca0f9672a865dc021fadc6aba3c761cdefe6fb48a7be12f9e61ba95cc7fdd

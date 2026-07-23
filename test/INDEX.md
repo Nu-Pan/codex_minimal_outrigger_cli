@@ -725,19 +725,18 @@
 # `test_runtime_refactor.py`
 
 ## Summary
-- realization refactor の永続 state について、oracle・realization ファイル集合との同期、既存履歴の保持と変更ファイルの再調査化、調査対象の優先選択、親ディレクトリ外へのパス逸脱拒否を検証するテスト。
+- realization refactor の永続 state について、oracle と realization の対象集合との同期、既存履歴の保持、変更ファイルの再調査要求化を検証するテスト。未調査対象や調査日時に基づく選択優先順位、および対象除外時の挙動も確認する。state の親ディレクトリ脱出、非正規 path、無効な timestamp を拒否する検証の入口でもある。
 
 ## Read this when
-- refactor state の同期・読み書き・対象選択規則を変更または検証するとき
-- state の履歴保持、SHA256 変更検出、未調査・最古対象の優先順位を確認するとき
-- state ファイルの不正な相対パス入力に対するエラー処理を確認するとき
+- realization refactor の state 同期・保存・読み込み規則を変更または調査するとき
+- 再調査対象の選択優先順位や state schema の path・timestamp 検証を確認するとき
 
 ## Do not read this when
-- refactor state と無関係な機能のテストを調べるとき
-- 実装の詳細を直接確認したいときは、対応する runtime_refactor 実装を先に読む
+- INDEX.md のルーティング情報だけを確認したいとき
+- state の実装詳細ではなく、oracle の正本仕様そのものを確認するときは、指定された oracle 文書を直接読む
 
 ## hash
-- cb86a1572aac39be8764fef2a2d2f2aeb0d3f802c06f6f34e6fc787353de02e9
+- 4e2ed9d7acc40f788112d01e0441ca689dd8f8394ce1ef8e6eeb555f1fefd385
 
 # `test_runtime_state.py`
 

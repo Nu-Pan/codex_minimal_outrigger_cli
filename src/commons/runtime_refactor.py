@@ -1,4 +1,5 @@
 import json
+import re
 import string
 from collections.abc import Collection
 from pathlib import Path
@@ -142,7 +143,12 @@ def mark_all_refactor_targets_required(state: RefactorState) -> None:
 
 def _valid_relative_path(value: str) -> bool:
     path = Path(value)
-    return bool(path.parts) and not path.is_absolute() and ".." not in path.parts
+    return (
+        bool(path.parts)
+        and not path.is_absolute()
+        and ".." not in path.parts
+        and path.as_posix() == value
+    )
 
 
 def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
@@ -172,7 +178,13 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
         or any(character not in string.hexdigits for character in digest)
     ):
         raise _invalid_refactor_state(path, f"SHA256 が不正です: {key}")
-    if investigated_at is not None and not isinstance(investigated_at, str):
+    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # state の履歴時刻は、file name と同じ固定幅の {{time-stamp}} にそろえる。
+    if investigated_at is not None and (
+        not isinstance(investigated_at, str)
+        or re.fullmatch(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_\d{2}_\d{9}", investigated_at)
+        is None
+    ):
         raise _invalid_refactor_state(path, f"調査日時が不正です: {key}")
     if result == "not_investigated" and (
         digest is not None or investigated_at is not None

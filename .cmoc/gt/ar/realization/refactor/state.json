@@ -55,9 +55,9 @@
   },
   "oracle/doc/app_spec/doctor_preprocess.md": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "489c8d13dcfb1d48f595820b7646abb2df6c6ab43097c531db338b9756163451",
+    "last_investigated_at": "2026-07-23_15-29_06_077871000"
   },
   "oracle/doc/app_spec/error_handling.md": {
     "investigation_required": true,
