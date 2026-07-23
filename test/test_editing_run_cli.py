@@ -216,6 +216,7 @@ def test_run_join_rolls_back_merge_when_post_join_sync_fails(
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_head
     assert (root / "README.md").read_text() == "# repo\n"
     assert _state(state_path)["run"]["state"] == "error"
+    assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
     monkeypatch.setattr(run_join_module, "sync_refactor_state", lambda _root: None)

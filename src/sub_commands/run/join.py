@@ -1,6 +1,7 @@
 """`cmoc run join` の workload 非依存 merge lifecycle。"""
 
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import typer
@@ -175,8 +176,12 @@ def _merge_and_finalize(
         run_join_commit = head_commit(context.session_worktree)
     start_subcommand_step(4, "post-join hook と state 同期", "run post-join")
     hook_result = "none"
+    # {{work-root}}/oracle/doc/app_spec/session_state.md
+    # post-join 処理の失敗時は merge を戻して error state にするため、成功確定まで
+    # last_joined_apply_fork_commit を state object へ書き戻さない。
+    last_joined_apply_fork_commit = state.session.last_joined_apply_fork_commit
     if context.kind == "realization_apply":
-        state.session.last_joined_apply_fork_commit = context.run_fork_commit
+        last_joined_apply_fork_commit = context.run_fork_commit
         hook_result = f"session.last_joined_apply_fork_commit={context.run_fork_commit}"
     refresh_indexes(context.session_worktree, commit=True)
     sync_refactor_state(context.session_worktree)
@@ -184,8 +189,15 @@ def _merge_and_finalize(
         context.session_worktree,
         "cmoc refactor state sync after run join",
     )
-    state.run = RunPart()
-    write_state(context.state_path, state)
+    state_after_join = replace(
+        state,
+        session=replace(
+            state.session,
+            last_joined_apply_fork_commit=last_joined_apply_fork_commit,
+        ),
+        run=RunPart(),
+    )
+    write_state(context.state_path, state_after_join)
     delete_run_process_id(context.repo, context.session_id)
     start_subcommand_step(5, "結果を保存して run 資源を cleanup", "cleanup run")
     report = write_lifecycle_report(

@@ -128,34 +128,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側 Python ソースを集約する実装ルート。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、oracle パッケージ解決など、実行コード全体への入口を提供する。
+- cmoc の realization 側ソースコードを集約するディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import 入口、設定・正本パッケージへの shim など、実行時の主要実装への入口を提供する。
 
 ## Read this when
-- cmoc の realization 実装の配置や全体構成を確認するとき。
-- CLI の登録・委譲先、サブコマンド実装、共通 runtime、互換 import 経路の読む先を特定するとき。
+- cmoc の CLI 構成、サブコマンド実装、共通 runtime、互換 import 経路の配置を確認するとき。
+- 対象機能の realization implementation を探し、対応する下位パッケージやモジュールへ進む入口を選ぶとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側実装を確認するときは、対応する oracle 配下を直接読む。
-- 特定の処理責務が明確な場合は、src 全体ではなく対応する下位パッケージまたは実装ファイルを直接読む。
-- テスト実装や実行手順を確認するときは、対応する test 配下または開発ルールを読む。
+- 正本仕様や oracle 側の実装を確認したいときは、対応する oracle 配下を直接読む。
+- 特定のサブコマンド、runtime 機能、互換 shim の実装箇所が明確な場合は、その下位対象を直接読む。
+- TUI や builder など特定領域の内部挙動だけを調査するとき。
 
 ## hash
-- 028bbb128f86bc8ee692f3eb192ebaaa432d8233128662f66ebef770caee70c1
+- cd5b3fd442143c9c9ead5cdeb4a7ae2e014fdba4d6578ed1059faa8ed5563791
 
 # `test`
 
 ## Summary
-- テストコードから正本 schema を参照する path helper、CLI・Codex・Ollama・Git の共通テスト支援、ACP builder、runtime、doctor、indexing、oracle review/edit、editing run、session、TUI など cmoc の主要機能に対する realization test を収録する。各テストは対応する外部挙動、状態遷移、CLI 契約、実行時制約を検証するための入口となる。
+- テストコード群を収めるディレクトリ。CLI、runtime、Codex 実行、INDEX/oracle review、session/run lifecycle、builder、設定、状態永続化など、cmoc の外部挙動と制御ロジックを検証する realization test の入口となる。
 
 ## Read this when
-- cmoc の CLI、runtime、Codex 実行、indexing、oracle review/edit、editing run、session、TUI、設定、状態管理などの挙動をテスト側から確認・変更するとき。
-- テスト共通 helper、fake external command、Git repository fixture、case-local Ollama、Codex 実行環境を利用するテストを追加・修正するとき。
-- 特定機能の回帰テスト、外部契約、失敗処理、並列実行、worktree 分離を調査するとき。
+- cmoc の機能変更に伴う realization test の追加・修正・検証対象を探すとき
+- CLI、Codex runtime、INDEX/oracle review、session/run、設定・状態管理などの回帰テストを調査するとき
 
 ## Do not read this when
-- 正本仕様、schema の内容、実装詳細を確認することが目的の場合は、対応する oracle または src の本文を直接読む。
-- Codex や LLM の回答品質そのものを評価したい場合。
-- 対象機能と無関係なテスト基盤や別サブコマンドの挙動を調査する場合。
+- 正本仕様や実装責務を確認したい場合は、対応する oracle または src のファイルを直接読むとき
+- テスト共通 helper だけを確認したい場合は、対象の `_support.py` ファイルを直接読むとき
+- Codex や Ollama の出力品質そのものを評価するとき
 
 ## hash
-- d7619c78caebf8e582ef6924309b665ff56874c24bae0fb9d2d29b6679a8545a
+- 9867fa5270a57d9928a78da687965f40a64800981778c75bbb34ee16409ac258

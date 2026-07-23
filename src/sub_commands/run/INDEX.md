@@ -30,19 +30,18 @@
 # `join.py`
 
 ## Summary
-- `cmoc run join` の実行本体を担い、active editing run の検査、run branch の session branch への merge、INDEX.md 限定の競合解決、post-join 処理、state 同期、report 保存、worktree・branch cleanup を管理する。join 前後の異常時には run を error 状態へ記録し、必要に応じて process 停止や force resolve を行う。
+- `cmoc run join` の workload 非依存な merge lifecycle を実装する。active run と session の差分・競合を検査し、run branch の merge、post-join hook、refactor state 同期、結果 report 保存、worktree・branch cleanup までを一連の処理として扱う。
 
 ## Read this when
-- `cmoc run join` の merge lifecycle、force resolve、post-join hook、run resource cleanup の挙動を変更・調査するとき。
-- run branch と session branch の差分検査、INDEX.md 競合の扱い、join failure report、error run の復旧を確認するとき。
+- `cmoc run join` の merge、force-resolve、INDEX.md 競合処理、post-join 失敗時の復旧を変更・調査するとき。
+- run lifecycle の error state、process 停止、report 保存、join 後 cleanup の挙動を確認するとき。
 
 ## Do not read this when
-- join lifecycle の共通 context 解決、差分判定、commit、index refresh の詳細だけを確認したいときは、参照先の `sub_commands.run.lifecycle` を直接読む。
-- lifecycle report の出力形式だけを確認したいときは、`sub_commands.run.report` を直接読む。
-- run process の PID 管理やロックの実装だけを確認したいときは、`commons.runtime_run` を直接読む。
+- run の開始・編集・abandon など、join lifecycle 以外の処理だけを変更・調査するとき。
+- workload 固有の実装や一般的な run lifecycle helper の詳細を直接確認する必要があるとき。
 
 ## hash
-- d113167ba8a8481769d8f7e3568a9bba4b415820d0b524303b7a988b448c72d2
+- d46de047a915be589a45352ee72bf8788a1b7ac5f0d09bd2b4afac43dbe524c7
 
 # `lifecycle.py`
 

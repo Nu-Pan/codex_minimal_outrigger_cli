@@ -384,23 +384,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の fork、join、abandon に関する realization test をまとめた統合テスト。
-- 変更パスの集計、run state の共有、join 時の差分検証・強制解決・ロールバック、oracle investigation の前提条件、refactor fork の完了・未解決・中断・INDEX 更新を検証する。
-- 共通 lifecycle fixture を使うため、session state・run worktree・fork report の一連の状態遷移を確認する入口となる。
+- editing run の realization test。workload fork と共通 run join/abandon のライフサイクルを対象に、変更 path の集約、fork の状態管理、join の成功・強制解決・ロールバック、oracle investigation の前提条件、refactor fork の完了・未解決・中断時挙動を検証する。
 
 ## Read this when
-- realization apply fork または realization refactor fork の run lifecycle を変更・調査するとき。
-- run join の通常処理、強制解決、失敗時ロールバック、state 更新を検証するとき。
-- fork report の変更パスや refactor の完了理由・未解決 target・調査履歴を確認するとき。
-- oracle investigation の session 前提条件や INDEX 更新を伴う refactor 処理を変更するとき。
+- session fork 後の realization apply fork と run join の連携を変更・調査するとき
+- run state、run worktree、fork report、join/abandon の成功・失敗・復旧処理を変更するとき
+- refactor fork の対象追跡、未解決 finding、INDEX 更新、中断処理を変更するとき
+- 関連する lifecycle fixture や変更 path 集約のテスト方針を確認するとき
 
 ## Do not read this when
-- editing run の lifecycle や fork/join/abandon に関係しない機能を変更するとき。
-- 個別の CLI 実装詳細を直接確認する必要があり、対応する src ファイルやより限定的なテストを読む方が適切なとき。
-- Codex や CLI の出力品質そのものを調査するとき。
+- 単独の CLI コマンド実装や内部 helper の詳細だけを変更・調査するとき
+- editing run や fork/join のライフサイクルに関係しない oracle・realization 機能を扱うとき
+- 既存テストの実行方法だけを確認したいときは、テスト実行手順の文書を直接読む
 
 ## hash
-- b7903a1081ac3de395cc0ceb51fd7cecbb4071f5c698f0f5ece8bcb7da7b6e38
+- 8988530b238bc4724f97c0c58d80473b1965f592db0b416461f198feda7dedd8
 
 # `test_indexing_cli.py`
 
@@ -743,21 +741,16 @@
 # `test_runtime_state.py`
 
 ## Summary
-- session/run state schema の不正入力検証と managed branch からの state/session 読み込みを検証する realization test。状態値・payload・run kind・未知 field の拒否、run branch の session ID 解決、run section を限定的に検証する session 読み込みを扱う。
-- session fork lock がプロセス間・スレッド間で共有され、排他されることも検証する。
+- session/run state の永続化スキーマ検証と、managed branch からの session ID・state 読み込みを検証する realization test。状態値・payload・未知 field・識別情報のバリデーション、run branch の session component 解決、session 部分のみの読み込み、state 書き込み失敗時の挙動、および session fork lock のプロセス間共有を扱う。
 
 ## Read this when
-- session/run state の schema 検証や JSON 復元処理を変更・レビューするとき
-- managed branch の session ID 解析、branch からの state 読み込み、session 部分読み込みを変更・レビューするとき
-- session fork lock のプロセス間排他を変更・レビューするとき
-- これらの挙動に関するテストケースや失敗条件を確認するとき
+- session/run state の schema、branch 解析、状態ファイル読み込み・書き込み、または session fork lock の挙動を変更・検証するとき。
 
 ## Do not read this when
-- CLI 出力、oracle file、実装本体以外のテストを確認したいとき
-- session/run state や managed branch 解析の実装詳細を確認したい場合は、まず対応する realization implementation を読むとき
+- CLI 出力や session/run state の実装詳細そのものを調査するだけのとき。対応する realization implementation と正本仕様を直接読むこと。
 
 ## hash
-- 7c04a4207948a053c72fc4182779904eeec7176497341266ac166b5a0099a118
+- d58fe4132e888529a9bf9629feaf4ffa7cbd11f03d88f1dc1b17169c16f59a44
 
 # `test_session_cli.py`
 
