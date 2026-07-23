@@ -192,10 +192,10 @@
     "last_investigated_at": "2026-07-23_23-19_58_403594000"
   },
   "oracle/doc/considered_alternative/apply_behavior.md": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "4ae063e03f4cee3284619dd468f190be9b8260cf5aaac9493faab0d08024688b",
+    "last_investigated_at": "2026-07-23_23-36_37_862080000"
   },
   "oracle/doc/considered_alternative/file_access_rule_violation_post_validation.md": {
     "investigation_required": true,
