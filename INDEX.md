@@ -128,18 +128,21 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめる src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、ACP 互換入口、設定・正本パッケージの shim を下位要素への入口として扱う。
+- cmoc の realization 実装ルート。Typer CLI の公開入口、各サブコマンド、共通 runtime、ACP・basic・config・oracle の互換 shim と builder adapter をまとめ、目的別の下位ディレクトリ・モジュールへ進むための入口となる。
 
 ## Read this when
-- cmoc の realization 側で CLI 全体、サブコマンド構成、共通 runtime、ACP・設定・正本パッケージの互換 import 経路を確認・変更するとき。
-- 目的の実装ファイルが特定できず、src 配下の責務分担や下位ディレクトリへの入口を把握するとき。
+- cmoc CLI の全体構成、公開サブコマンド、入口から委譲される実装を確認するとき。
+- 複数サブコマンドで共有される runtime、Git・path・設定・状態・Codex 実行・結果・エラー処理の配置を確認するとき。
+- `acp.*`、`basic.*`、`config.*`、`cmoc_runtime`、`oracle.*` などの互換 import 経路や、ACP parameter builder adapter の配置を確認するとき。
+- session、oracle、realization、run、tui、indexing、doctor の実装へ進む先を特定するとき。
 
 ## Do not read this when
-- 特定サブコマンド、共通 helper、canonical builder、正本仕様の詳細を確認したい場合は、src 全体ではなく対応する下位モジュールまたは oracle 側を直接読む。
-- src の realization 実装や CLI と無関係な処理を調査するとき。
+- 正本仕様や canonical な oracle 実装の内容を確認したいときは、対応する `oracle` 配下を直接読む。
+- 特定サブコマンド、runtime helper、builder の具体的な挙動だけを調査・変更するときは、`src` 全体ではなく該当する下位要素へ直接進む。
+- CLI と無関係な正本データや一般的なテスト実装を調査するとき。
 
 ## hash
-- b91490e9f510bb99810687ae5e8c08464e9da9468eb7bc56e755d1d75fa17a9d
+- 71573347bf4de952664f355326e5cefd2b3c9d7a9c7915525f0f8bcef6d00d3e
 
 # `test`
 

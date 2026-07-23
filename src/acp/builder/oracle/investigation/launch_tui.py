@@ -13,7 +13,10 @@ def build_oracle_investigation_launch_tui_parameter(
     time_stamp: str,
     user_instruction: str,
 ) -> AgentCallParameter:
-    """正本 builder が完全 prompt を保存する directory を準備する。"""
+    """正本 builder が完全 prompt を保存する directory を準備する。
+
+    根拠: {{work-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py
+    """
     repo = resolve_real_path(RootPathPlaceHolder.REPO)
     editor_input_dir(repo).mkdir(parents=True, exist_ok=True)
     return _build_parameter(time_stamp, user_instruction)
