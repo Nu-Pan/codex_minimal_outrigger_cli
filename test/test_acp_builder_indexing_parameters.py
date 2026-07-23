@@ -32,6 +32,15 @@ def test_indexing_index_entry_schema_requires_non_empty_semantic_lists() -> None
         assert schema["properties"][key]["minItems"] == 1
 
 
+def test_indexing_index_entry_keeps_nested_code_fences_in_target_content() -> None:
+    """対象本文内の三連 backtick が prompt の本文境界を閉じないことを検証する。"""
+    target_content = "before\n```\ninside\n```\nafter"
+
+    parameter = build_indexing_index_entry_parameter(Path(__file__), target_content)
+
+    assert "````\nbefore\n```\ninside\n```\nafter\n````" in parameter.prompt
+
+
 def test_indexing_index_entry_module_exports_only_compatibility_builder() -> None:
     """index entry互換moduleがbuilderだけを公開することを検証する。"""
     assert indexing_index_entry_module.__all__ == [

@@ -45,19 +45,19 @@
 # `indexing`
 
 ## Summary
-- `acp.builder.indexing` の既存参照を保つための互換入口層。索引関連の正本実装へ到達するための名前空間維持が必要なときに読む。
-- `acp.builder.indexing.index_entry` の再公開層。既存の利用経路を切らさずに正本側へつなぐ必要があるときに読む。
+- `acp.builder.indexing` の既存参照を維持する互換入口をまとめた層。正本実装への到達点と、index entry 生成用パラメータの再公開・prompt fence 保護を扱う。
 
 ## Read this when
-- 既存の `acp.builder.indexing.*` 参照を壊さずに索引関連機能へ進む必要がある。
-- 互換入口として残すべきか、削除条件を判断したい。
+- 既存の `acp.builder.indexing.*` 参照を維持または変更するとき
+- index entry 生成処理の互換入口や、対象本文を埋め込む prompt の fence 保護を確認するとき
 
 ## Do not read this when
-- 索引関連の正本実装そのものを変更したい場合は、互換入口ではなく `oracle.acp_builder.indexing` 側を読む。
-- この名前空間をもう参照しない前提で整理・削除したい場合は、互換維持ではなく利用側の参照先を確認する。
+- index 関連の正本実装そのものを変更するとき
+- 互換入口を削除・整理し、利用側の参照先を確認するとき
+- ACP builder や一般的な indexing 処理を調べるとき
 
 ## hash
-- e131b4693f423253e686c3d74b6f6a880be3d8227b2da0c4f95986b6e16fc6b1
+- e653407d91388c8128db709a19057df67b7751bbc8da16bf782ef22dc6e53d98
 
 # `oracle`
 

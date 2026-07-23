@@ -115,19 +115,20 @@
 # `test_acp_builder_indexing_parameters.py`
 
 ## Summary
-- indexing 用 INDEX エントリービルダーのパラメータ設定、Structured Output schema の必須条件、互換モジュールの公開面を検証するテスト。indexing のパラメータや schema、互換 export を変更・確認する際の入口。
+- indexing index entry builder のパラメータ生成、Structured Output schema の必須条件、入れ子のコードフェンス処理、互換公開面を検証するテスト。対応する正本実装・schema の変更時に確認する入口。
 
 ## Read this when
-- indexing 用 INDEX エントリービルダーの model、reasoning、file access、preflight 設定を変更するとき
-- INDEX エントリーの Structured Output schema の必須項目や配列制約を変更するとき
-- indexing の互換モジュール公開 API を変更・確認するとき
+- indexing index entry builder のモデル、推論設定、ファイルアクセス設定、preflight 設定を変更するとき
+- index entry 用 Structured Output schema の semantic 配列や最小要素数を変更するとき
+- 対象本文を prompt に埋め込む際のコードフェンス境界処理を変更するとき
+- index entry 互換 module の公開シンボルを変更するとき
 
 ## Do not read this when
-- INDEX エントリーの生成ロジック自体を変更・確認するときは、対応する realization implementation や正本を直接読む
-- indexing と無関係な builder、schema、公開 API の変更を扱うとき
+- INDEX.md のルーティング文書そのものを編集・検証するときは、対象の INDEX.md を直接読む
+- indexing index entry builder 以外の builder parameter や出力品質を確認するときは、対応する実装・テストへ進む
 
 ## hash
-- 970cc49aa2c0d2e2141dc376ed218d3ab7cd81a7016068d67403061821059631
+- f5e5fdf0703d260c87b2b3a21c4ac4c1321d63210b241742c433986bbee3b05a
 
 # `test_acp_builder_oracle_review_parameters.py`
 
