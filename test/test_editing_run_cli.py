@@ -220,6 +220,57 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert current_branch(root) == session_branch
 
 
+def test_apply_failure_rolls_back_index_with_realization_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    calls: list[bool] = []
+    before_index: str | None = None
+
+    def fake_apply(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        nonlocal before_index
+        worktree = Path(str(kwargs["cwd"]))
+        index_path = worktree / "INDEX.md"
+        before_index = index_path.read_text() if index_path.exists() else None
+        (worktree / "README.md").write_text("realized\n")
+        return SimpleNamespace(returncode=0, output_json=None)
+
+    def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
+        calls.append(commit)
+        (worktree / "INDEX.md").write_text("generated for realized\n")
+        if commit:
+            run_git(worktree, "add", "INDEX.md")
+            run_git(worktree, "commit", "-m", "fake indexing")
+        return [worktree / "INDEX.md"]
+
+    def fail_commit(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("commit failed")
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
+    monkeypatch.setattr(apply_module, "refresh_indexes", fake_refresh)
+    monkeypatch.setattr(apply_module, "commit_work_unit", fail_commit)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert calls == [False]
+    state = _state(state_path)
+    assert state["run"]["state"] == "error"
+    parts = state["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (worktree / "README.md").read_text() == "# repo\n"
+    index_path = worktree / "INDEX.md"
+    assert (index_path.read_text() if index_path.exists() else None) == before_index
+
+
 def test_run_join_allows_oracle_change_on_session_branch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

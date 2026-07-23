@@ -62,18 +62,23 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply workload と refactor workload の実装への導線を提供する。
+- realization workload サブコマンドのパッケージ入口。apply workload と refactor 処理の下位実装へ進むためのディレクトリ。
 
 ## Read this when
-- realization workload サブコマンドの構成や実装入口を確認するとき。
-- realization apply または realization refactor の処理を調査・変更するとき。
+- realization workload サブコマンドの実装や構成を確認するとき。
+- realization apply workload の実行フロー、agent 起動、差分検証、commit・rollback、run state、fork report を調査・変更するとき。
+- realization のリファクタリング処理や refactor fork の lifecycle、state、所見、commit、report 生成を確認・変更するとき。
 
 ## Do not read this when
-- realization workload に関係しない処理を確認するとき。
-- apply や refactor の個別実装・共通 lifecycle・report 仕様を直接確認したいとき。
+- realization workload サブコマンドに関係しない処理を確認するとき。
+- apply workload 以外の処理だけを扱うとき。
+- agent 起動パラメータ、run の共通 lifecycle・差分計算・状態管理、fork report の形式だけを変更・調査するとき。
+- realization refactor の一般仕様だけを確認するとき。対応する oracle の仕様を先に読む。
+- file 単位の agent パラメータ生成、個別 review・fix、共通 lifecycle・runtime・report の実装を確認するとき。対応する下位モジュールを直接読む。
+- fork 以外の realization refactor サブコマンドを調査するとき。
 
 ## hash
-- 776b7b9132eafb0359eff3dbb307ccb8cc262558f70b31a16c251e73d3ed9942
+- 954aa8fa1eafe99c4a8b8e066a29bbaf93d8b4da7a565f07ba0fa35a20fa0b40
 
 # `review`
 

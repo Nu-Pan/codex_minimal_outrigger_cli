@@ -97,7 +97,10 @@ def _cmoc_realization_apply_fork_body() -> None:
             )
         start_subcommand_step(5, "realization 差分を検査して commit", "commit changes")
         _validate_agent_changes(context)
-        refresh_indexes(context.run_worktree, commit=True)
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # agent の realization 差分と cmoc が生成する INDEX.md を同じ処理単位に
+        # 含め、後続の commit/rollback が両方へ同じように適用されるようにする。
+        refresh_indexes(context.run_worktree, commit=False)
         commit_work_unit(
             context.run_worktree,
             "cmoc realization apply fork",

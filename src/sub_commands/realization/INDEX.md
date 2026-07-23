@@ -15,19 +15,17 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うディレクトリ。apply workload 実装への入口であり、配下の apply fork 実行本体も確認できる。
+- realization apply の workload 実装を扱うディレクトリ。apply workload 全体の調査・変更時に、配下の各実装へ進む入口となる。
 
 ## Read this when
-- realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の実行フロー、agent 起動、変更検査、commit、run state、fork report の挙動を確認・変更するとき。
+- realization apply workload の実行フロー、agent 起動、差分検証、commit・rollback、run state、fork report の挙動を調査・変更するとき。
 
 ## Do not read this when
 - apply workload 以外の処理を扱うとき。
-- realization apply fork の agent 起動パラメータ生成だけを変更するとき。
-- run の共通ライフサイクルや report 生成の仕様だけを確認するとき。
+- agent 起動パラメータ、run の共通 lifecycle・差分計算・状態管理、fork report の形式だけを変更・調査するとき。
 
 ## hash
-- a72ad755ca8f8bc0679176e8189c25d6ee3a6708ea3a74176f488274d859907a
+- b01abe2a06082d4c8096e120594ec68328dcac5efc628f9af6800bddd4c4486b
 
 # `refactor`
 
