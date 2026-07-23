@@ -476,6 +476,66 @@ def test_refactor_fork_completes_persistent_full_cycle(
     assert "- unresolved targets: `0`" in result.output
 
 
+def test_refactor_interrupt_after_run_publish_is_joinable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    original_start = refactor_module.start_editing_run
+
+    def interrupt_after_start(kind: str) -> EditingRunContext:
+        original_start(kind)
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(refactor_module, "start_editing_run", interrupt_after_start)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert _state(state_path)["run"]["state"] == "joinable"
+    report_line = next(
+        line
+        for line in result.output.splitlines()
+        if line.startswith("- fork report: `")
+    )
+    report = Path(report_line.removeprefix("- fork report: ").strip("`"))
+    assert 'completion_reason: "user_interruption"' in report.read_text()
+
+
+def test_refactor_start_failure_after_run_publish_is_reported(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    original_start = refactor_module.start_editing_run
+
+    def fail_after_start(kind: str) -> EditingRunContext:
+        original_start(kind)
+        raise RuntimeError("start failed after publish")
+
+    monkeypatch.setattr(refactor_module, "start_editing_run", fail_after_start)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    report_line = next(
+        line
+        for line in result.output.splitlines()
+        if line.startswith("- fork report: `")
+    )
+    report = Path(report_line.removeprefix("- fork report: ").strip("`"))
+    assert 'completion_reason: "error"' in report.read_text()
+
+
 def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

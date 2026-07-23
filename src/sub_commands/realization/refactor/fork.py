@@ -44,6 +44,7 @@ from sub_commands.run.lifecycle import (
     commit_work_unit,
     flattened_change_paths,
     refresh_indexes,
+    resolve_active_run,
     rollback_work_unit,
     set_run_state,
     start_editing_run,
@@ -106,7 +107,9 @@ def _cmoc_realization_refactor_fork_body() -> None:
         typer.echo(_completion_log(reason, unresolved_findings, report))
     except KeyboardInterrupt:
         if context is None:
-            raise
+            context = _recover_started_run()
+            if context is None:
+                raise
         rollback_work_unit(context.run_worktree)
         set_run_state(context, "joinable")
         report = _write_refactor_report(
@@ -121,7 +124,9 @@ def _cmoc_realization_refactor_fork_body() -> None:
         return
     except BaseException as exc:
         if context is None:
-            raise
+            context = _recover_started_run()
+            if context is None:
+                raise
         cleanup_errors: list[str] = []
         try:
             rollback_work_unit(context.run_worktree)
@@ -153,6 +158,16 @@ def _cmoc_realization_refactor_fork_body() -> None:
             error, "cmoc_stdout", _completion_log("error", unresolved_findings, report)
         )
         raise error from exc
+
+
+def _recover_started_run() -> EditingRunContext | None:
+    """start 後の context 代入前に公開された run を cleanup 対象として回収する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    try:
+        context, _state = resolve_active_run({"running", "error"})
+    except CmocError:
+        return None
+    return context if context.kind == "realization_refactor" else None
 
 
 def _initialize_cycle(context: EditingRunContext) -> None:

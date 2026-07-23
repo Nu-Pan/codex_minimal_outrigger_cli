@@ -128,33 +128,33 @@
 # `src`
 
 ## Summary
-- cmoc の実行可能な CLI 実装を収める src ツリー。Typer によるコマンド入口、共通 runtime、互換 import shim、各サブコマンド実装への入口を提供する。
+- cmoc CLI の realization 実装をまとめる src ディレクトリ。CLI エントリーポイント、互換 import shim、共通 runtime、設定再公開、サブコマンド実装への入口を提供する。
 
 ## Read this when
-- cmoc の CLI 全体構成や src 直下の主要実装領域を確認するとき。
-- CLI 入口、共通 runtime、互換パッケージ、サブコマンド実装のどこから調査を始めるべきか判断するとき。
+- cmoc の realization 側にある CLI 全体の構成や、対象機能に対応する実装パッケージの入口を選びたいとき。
+- CLI エントリーポイント、共通 runtime、互換 import、各サブコマンドの実装箇所を横断して確認するとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime helper、互換 shim の詳細が明確な場合は、対応する下位ファイルまたはディレクトリを直接読む。
-- 正本仕様や oracle 側の実装を確認するとき。
+- 利用者向け仕様や正本仕様を確認したいときは、対応する oracle 文書を直接読む。
+- 特定のサブコマンド、runtime module、互換 shim の責務が明確な場合は、対応する下位対象を直接読む。
 
 ## hash
-- acdc65bec8b120d9a3230db86768fd6238fee16a0e8271f3e2ed9e478171a02c
+- f59322818458bcf04906083343f9435a08ab70ec05b2d3f581c168b5fef15acd
 
 # `test`
 
 ## Summary
-- テストコードで共有される補助ヘルパーと、cmoc の各機能・CLI・Codex/Ollama 統合経路を検証する realization test 群を収録する。個別テストは対応する実装や仕様へ進む前の、外部挙動・制御契約ごとの入口となる。
+- テストコード全体の入口。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、TUI、設定・権限・worktree など、cmoc の実装および外部挙動を検証する pytest テスト群と共有テストヘルパーを含む。対象機能の回帰テストや仕様変更時に、個別テストまたは共通支援モジュールへ進むための起点。
 
 ## Read this when
-- 対象機能の外部挙動、回帰条件、CLI lifecycle、Codex 実行、INDEX 更新、oracle review、session/run state などのテスト範囲を把握したいとき
-- 既存の共通テストヘルパー、Git repository fixture、fake command、Codex/Ollama 実行環境を利用・変更するとき
-- 変更対象に対応するテストファイルを特定し、検証観点を絞り込みたいとき
+- cmoc の機能変更に伴う回帰テストの対象範囲や既存検証を確認するとき
+- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、TUI、設定、worktree の外部挙動を検証するとき
+- 複数テストで利用される Git、Codex、Ollama、fake command、schema path 解決ヘルパーを確認するとき
 
 ## Do not read this when
-- 実装の責務や正本仕様そのものを確認したいときは、対応する src または oracle file を直接読む
-- LLM の応答品質自体を評価したいとき
-- 対象機能と無関係なテストや共通ヘルパーを読む必要があるとき
+- 正本仕様や実装責務そのものを確認したいときは、対応する oracle または src を直接読む
+- LLM の回答品質や Codex CLI の出力内容そのものを評価したいとき
+- 対象機能と無関係なテストや共有ヘルパーを読む必要がないとき
 
 ## hash
-- dd1316843ad900d22c34ecd4de34e62d5aa4918f397a3e172580ccd04e1fc299
+- dc981ff517d9cb231e37ac3cef04958105e9b7b7ade4ddaedeed884271403e34
