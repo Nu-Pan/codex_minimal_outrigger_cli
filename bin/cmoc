@@ -7,6 +7,12 @@ venv_python="$cmoc_root/.venv/bin/python"
 # User-facing path reports follow {{work-root}}/oracle/src/oracle/other/path_model.py.
 display_script_path="{{cmoc-root}}/bin/cmoc"
 
+# interpreter が通常の実行可能ファイルでない場合も wrapper のエラー報告へ送る。
+# {{work-root}}/oracle/doc/dev_rule/development_environment.md
+is_usable_venv_python() {
+    [ -f "$venv_python" ] && [ -x "$venv_python" ]
+}
+
 line_number_of() {
     pattern=$1
     awk -v pattern="$pattern" '$0 ~ pattern { print NR; exit }' "$0"
@@ -34,7 +40,7 @@ print_missing_venv_error() {
 }
 
 require_venv_python() {
-    if [ -x "$venv_python" ]; then
+    if is_usable_venv_python; then
         return 0
     fi
     print_missing_venv_error
@@ -46,7 +52,7 @@ is_completion_probe() {
 }
 
 if is_completion_probe; then
-    if [ -x "$venv_python" ]; then
+    if is_usable_venv_python; then
         exec "$venv_python" "$cmoc_root/src/main.py" "$@"
     fi
     exit 1

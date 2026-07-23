@@ -58,19 +58,17 @@
 # `bin`
 
 ## Summary
-- `cmoc` の起動ラッパー。仮想環境の Python を確認し、補完要求か通常起動かを切り替えて `src/main.py` へ渡す。
+- cmoc コマンドの実行ラッパー。仮想環境の Python を検証し、通常実行では CLI 本体へ引数を渡す。仮想環境が使えない場合の案内と、シェル補完プローブ時の実行可能性確認を扱う。
 
 ## Read this when
-- `cmoc` の実行前提、特に `.venv` の存在確認と、欠落時に出す案内を確認したいとき。
-- シェル補完のときだけ別経路で起動する条件を確認したいとき。
-- `cmoc` から実際の CLI 実装へどう入るかを追いたいが、各サブコマンドの処理本体までは不要なとき。
+- cmoc の起動経路、仮想環境 Python の検証、起動失敗時のエラー表示、シェル補完プローブの挙動を確認するとき。
 
 ## Do not read this when
-- 各サブコマンドの引数解釈や業務ロジックを知りたいときは `src/main.py` や該当サブコマンド実装を読む。
-- 仮想環境のセットアップ手順そのものや、利用者向けの運用説明だけが目的なら、このラッパーではなく上位の利用案内を読む。
+- cmoc のサブコマンドや CLI 本体の処理内容を確認するときは、CLI 本体の実装を直接読む。
+- Python 仮想環境の作成、依存関係、開発環境の正本仕様を確認するときは、対応する oracle ドキュメントを読む。
 
 ## hash
-- ca144e1b915722cdfe8a460aa67f416f69bc3eac2aea5de84869eaa1f907025e
+- 9a9a99329708cba2a6d2e35d6a087d2b5b3f3a130027abbf4b6a5fa0696e1e35
 
 # `codex_minimal_outrigger_cli.code-workspace`
 
@@ -146,17 +144,17 @@
 # `test`
 
 ## Summary
-- テストコードから共通ヘルパー、ACP builder、Codex runtime、CLI、indexing、oracle review、session/run lifecycle、設定・状態管理などの realization test へ進むための入口。各テストは対応する外部挙動、制御ロジック、公開 API、失敗時処理を検証する。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、テスト共通 helper など、実装の外部挙動と制御契約を pytest で検証する。各テストファイルが機能領域ごとの具体的な確認入口となる。
 
 ## Read this when
-- テスト対象の実装変更に伴い、対応する外部契約や回帰範囲を確認するとき。
-- CLI、Codex 実行、indexing、oracle review、session/run、設定・状態管理などのテスト入口を選ぶとき。
-- 複数テストで共有される Git、Codex、Ollama、fake command、schema path helper の利用方法を確認するとき。
+- cmoc の実装変更に対応する回帰テストや契約テストを追加・修正するとき
+- 対象機能の外部挙動、失敗条件、CLI lifecycle、Git/worktree 副作用をテスト側から確認するとき
+- 共通 fixture や fake command、Codex/Ollama 統合テスト支援の使い方を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装詳細そのものを確認したい場合は、各テストではなく対応する oracle または src を直接読む。
-- LLM の回答品質や Codex CLI の画面操作自体を評価したい場合。
-- 対象機能と無関係なテストの詳細を確認したい場合。
+- 正本仕様や schema の内容自体を確認するときは、対応する oracle file を直接読む
+- 実装の責務や内部処理を確認するときは、対応する src 側の realization implementation を直接読む
+- 対象機能と無関係なテスト領域を調査するときは、このディレクトリ全体ではなく対応する個別テストまたは helper を読む
 
 ## hash
-- e4a0ba75b9d1731bd367e32131b8d9f89d807259adf3b42254d4f2c17beeb2f0
+- 36692b18b11aba7b70e5c690c542f36a5b6914bff2b97abad1c811091679e355

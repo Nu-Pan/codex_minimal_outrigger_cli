@@ -607,21 +607,20 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の実行境界と runtime 共通処理を外部挙動から検証するテスト。duration・サブコマンドログ・並列イベント記録、CmocError の Markdown 出力、stdout/stderr、CLI 引数解析、work root 制約、completion probe、preflight、gitignore 更新、worktree 単位の doctor 処理を扱う。runtime CLI・logging・error handling・completion・doctor・関連サブコマンド仕様の実装変更や回帰調査におけるテスト入口。
+- CLI の error、log、preflight、completion 境界を検証するテスト。duration 表示、サブコマンドログの並列記録・衝突回避、構造化 error report、stdout 出力、CLI 引数解析、work root 制約、completion の副作用抑制、gitignore 更新、worktree ごとの preflight 対象を扱う。
 
 ## Read this when
-- CLI のエラー報告、終了コード、stdout/stderr 出力、引数解析を変更または調査するとき
-- サブコマンドログ、並列 logger、quota wait、duration 表示を変更または調査するとき
-- completion probe、work root 制約、preflight/doctor の副作用や失敗時処理を変更または調査するとき
-- cmoc の gitignore 更新、worktree 対応、関連する CLI 境界の回帰を検証するとき
+- CLI のエラー報告形式、終了コード、stdout/stderr 出力を変更・検証するとき
+- サブコマンドログ、duration、並列 worker 記録、pre-log check の挙動を変更・検証するとき
+- doctor preflight、work root 制約、shell completion の副作用や実行経路を変更・検証するとき
+- cmoc 用 gitignore の追加・更新や linked worktree 対応を変更・検証するとき
 
 ## Do not read this when
-- CLI runtime の実装詳細を確認するだけなら、まず対応する src の runtime CLI・logging・error handling 実装を読むとき
-- 個別サブコマンドの内部ロジックや oracle/indexing の仕様だけを確認し、CLI 境界・共通 runtime 挙動を扱わないとき
-- completion や doctor の仕様本文を確認する必要があるときは、対応する oracle doc を直接読むとき
+- CLI の個別サブコマンド固有ロジックだけを変更・検証するときは、対応するサブコマンドのテストを直接読む
+- oracle や INDEX の内容・生成処理自体を変更・検証するときは、対応する oracle または indexing 領域を直接読む
 
 ## hash
-- 785f2ff1a888d5e6374d1ffa8f3a9c1d26322e39cd385f4c1edd9d4a07304232
+- e8a495780798dc78d53f100d22f6905e637c3746f84c2da98095edc25fc1fe23
 
 # `test_runtime_codex_conflicts.py`
 

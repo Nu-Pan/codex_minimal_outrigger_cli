@@ -342,6 +342,28 @@ def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -
     assert "(bin/cmoc:" not in result.stdout
 
 
+def test_bin_cmoc_non_file_venv_path_uses_error_report(tmp_path: Path) -> None:
+    """通常ファイルでない venv path も wrapper の error report で通知する。"""
+    fake_cmoc_root = tmp_path / "cmoc"
+    fake_bin = fake_cmoc_root / "bin"
+    fake_bin.mkdir(parents=True)
+    (fake_cmoc_root / ".venv" / "bin" / "python").mkdir(parents=True)
+    shutil.copy2(Path(__file__).parents[1] / "bin" / "cmoc", fake_bin / "cmoc")
+
+    result = subprocess.run(
+        ["./bin/cmoc"],
+        cwd=fake_cmoc_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "# ERROR" in result.stdout
+    assert "## Call stack" in result.stdout
+    assert result.stderr == ""
+
+
 def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
     """cmoc/local が未 ignore の repo では literal ignore pattern を追加する。"""
     root = make_repo(tmp_path)

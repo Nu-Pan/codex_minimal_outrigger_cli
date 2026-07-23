@@ -19,9 +19,9 @@
   },
   "bin/cmoc": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "68f18ea8563c2310f904a8bc93babf7473f40bd1e8be1bfd2d2d710b7620365c",
+    "last_investigated_at": "2026-07-23_13-51_20_646721000"
   },
   "codex_minimal_outrigger_cli.code-workspace": {
     "investigation_required": true,
