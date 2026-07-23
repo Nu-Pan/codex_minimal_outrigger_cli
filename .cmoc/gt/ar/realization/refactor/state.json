@@ -300,10 +300,10 @@
     "last_investigated_at": "2026-07-24_04-22_43_581249000"
   },
   "oracle/src/oracle/acp_builder/oracle/review/merge_finding.json": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "0966bfdbee83e16727ad5010f02f8010e46f6ea9121624f7093757678ed500eb",
+    "last_investigated_at": "2026-07-24_04-36_48_252077000"
   },
   "oracle/src/oracle/acp_builder/oracle/review/merge_finding.py": {
     "investigation_required": true,
