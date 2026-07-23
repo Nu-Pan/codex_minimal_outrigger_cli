@@ -65,21 +65,19 @@
 # `realization`
 
 ## Summary
-- Oracle 側の差分を realization file 全体へ反映する `codex exec` 用 AgentCallParameter を構築する処理を扱う。raw git diff、commit 範囲、実行設定、linked worktree を prompt に組み込む `apply` 領域への入口。
-- realization refactor fork の変更要約およびファイル単位レビュー・修正用の prompt 構築処理と Structured Output schema を扱う。差分要約、レビュー対象の調査・修正・検証へ進む `refactor` 領域への入口。
+- Oracle 側の差分を realization file 全体へ反映する `codex exec` 用 AgentCallParameter の構築処理を扱う。raw git diff、commit 範囲、実行設定、linked worktree を prompt に組み込む。
+- 変更要約とファイル単位レビュー・修正を行う agent call の oracle source と Structured Output schema を扱う。
 
 ## Read this when
-- `cmoc realization apply fork` の実行 prompt、モデルや推論強度、ファイルアクセス、作業ディレクトリ、indexing preflight を変更・調査するとき。
-- realization refactor fork の変更要約 agent call、またはファイル単位レビュー・修正 agent call の入力、設定、対象パス、検証要件を確認するとき。
+- `cmoc realization apply fork` の実行 prompt、realization 追従処理、対象 agent call の実行設定を変更・調査するとき。
+- refactor fork の change_summary または file_review_and_fix の出力形式、prompt、入力差分、対象パス、アクセスモード、モデル設定、検証要件、schema 指定を確認するとき。
 
 ## Do not read this when
-- 通常の realization 実装・テストを変更または調査するとき。
-- prompt の一般的な組み立て規則だけを確認したいとき。
-- refactor fork の差分内容、候補ファイルの処理順、レビュー対象ファイルの実装詳細を確認したいとき。
-- 変更要約またはレビュー・修正の Structured Output schema の詳細だけを確認したいとき。対応する JSON schema を直接読む。
+- 通常の realization 実装・テストの挙動を変更または調査するとき。
+- prompt の一般的な組み立て規則や、refactor 差分そのもの・レビュー対象の realization 実装を調査するとき。
 
 ## hash
-- 842a1a8ab6566485c410c86e186af84ac17370ed791c40275008f6a3e23ab998
+- dd96a0937830b0d39dca023f54862aaf6883aa6baf7212231b44e6428fa68827
 
 # `session`
 

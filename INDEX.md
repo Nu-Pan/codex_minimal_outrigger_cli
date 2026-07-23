@@ -92,20 +92,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を担う oracle ツリー。自然言語の仕様・開発ルールを収録する `doc` と、実行時に参照される共通定義・AgentCall パラメータ・prompt 構築の正本ソースを収録する `src` が主な入口。
+- cmoc の正本仕様ファイルを集約するディレクトリ。CLI 自動補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト、run・session lifecycle、サブコマンドなど、複数機能にまたがる仕様確認の入口を提供する。
+- 下位の doc は自然言語による仕様、src は正本ソースを扱う。特定機能の詳細や個別定義を調べる場合は、該当する下位ディレクトリまたはファイルへ進む。
 
 ## Read this when
-- cmoc の仕様や開発ルールを調査するとき
-- 対象機能に対応する oracle doc または oracle src を特定するとき
-- 設定、prompt、Structured Output schema、AgentCall 構築の正本を確認するとき
+- cmoc の正本仕様を横断的に探すとき
+- CLI 起動、Codex CLI 呼び出し、ログ、プロンプト、run・session lifecycle、サブコマンドなどの仕様の入口を確認するとき
+- 正本ソースの責務分担や、エージェント呼び出し・設定・パス・構造化文書・プロンプト関連の下位領域を確認するとき
 
 ## Do not read this when
-- 確認対象の仕様文書やソースが既に特定できており、対象ファイルを直接読めるとき
-- 実装コードやテストコードの詳細だけを調査するとき
-- INDEX.md の読み方や一般的なルーティング規則を確認するとき
+- 特定機能の詳細仕様や個別定義が明らかなとき
+- realization の実装・テスト詳細だけを調査するとき
+- cmoc の一般的な利用手順だけを確認するとき
 
 ## hash
-- b38bd375bc27e6091f7e8bd85ab2e3fc695c82075c2bff8e1b34e482af92dbc1
+- 6877728871b1241f4ff9e1a35daadd176707bd10caacf4aeefb6c43e9b318157
 
 # `pyproject.toml`
 

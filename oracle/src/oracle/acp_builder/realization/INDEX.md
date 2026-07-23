@@ -17,16 +17,15 @@
 # `refactor`
 
 ## Summary
-- realization refactor fork の変更要約と、ファイル単位レビュー・修正に関する prompt 構築処理および Structured Output schema をまとめる領域。差分要約とレビュー対象の調査・修正・検証に進む入口。
+- 変更要約とファイル単位レビュー・修正を行う agent call の oracle source および Structured Output schema を扱うディレクトリ。変更要約は change_summary、ファイル単位レビュー・修正は file_review_and_fix を入口に確認する。
 
 ## Read this when
-- realization refactor fork の変更要約 agent call の入力、モデル設定、アクセス権、出力形式を確認するとき
-- ファイル単位レビュー・修正 agent call の対象パス、prompt、修正方針、検証要件、所見 schema を確認するとき
+- refactor fork の変更要約の出力形式・検証項目、prompt、入力差分、実行設定、schema 指定を確認するとき
+- ファイル単位レビュー・修正の出力形式、prompt、対象パス、アクセスモード、モデル設定、検証要件を確認するとき
 
 ## Do not read this when
-- refactor fork の差分内容や候補ファイルの処理順を確認したいとき
-- レビュー対象ファイルの実装詳細を調査したいとき
-- 変更要約またはレビュー・修正の Structured Output schema の詳細だけを確認したいときは、対応する JSON schema を直接読む
+- refactor 差分そのものやレビュー対象の realization 実装を調査・修正するとき
+- 特定の Structured Output schema に関係しない実装挙動を調査するとき
 
 ## hash
-- 334d143dc97e803e7a15bc5ba906e800523440036ef01d806d0fd9d5c99176fc
+- 0d86a9a99db3a4145a82b427cf6aaf60523fec85bb902f9ad010208776f2b2ad
