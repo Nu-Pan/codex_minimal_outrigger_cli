@@ -24,6 +24,7 @@ from sub_commands.run.lifecycle import (
     flattened_change_paths,
     raw_oracle_diff,
     refresh_indexes,
+    resolve_active_run,
     rollback_work_unit,
     set_run_state,
     start_editing_run,
@@ -124,7 +125,9 @@ def _cmoc_realization_apply_fork_body() -> None:
         )
     except BaseException as exc:
         if context is None:
-            raise
+            context = _recover_started_run()
+            if context is None:
+                raise
         report = _record_error(
             context,
             diff_base_commit,
@@ -162,6 +165,18 @@ def _unexpected_change_error(paths: list[str]) -> CmocError:
         ["run report を確認し、run を join または abandon してください。"],
         "\n".join(paths),
     )
+
+
+def _recover_started_run() -> EditingRunContext | None:
+    """start 後の context 代入前に公開された apply run を回収する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
+    """
+    try:
+        context, _state = resolve_active_run({"running", "error"})
+    except CmocError:
+        return None
+    return context if context.kind == "realization_apply" else None
 
 
 def _record_error(

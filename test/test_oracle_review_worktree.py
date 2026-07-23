@@ -18,6 +18,7 @@ import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.review as review_module
 from basic.acp import AgentCallParameter
 from main import app
+from sub_commands.run.lifecycle import set_run_state, start_editing_run
 
 
 class _FakeCodexResult:
@@ -193,6 +194,43 @@ def test_oracle_review_rejects_uncommitted_worktree_changes(
     assert result.exit_code != 0
     assert "git 未コミット差分" in result.output
     assert relative_path in result.output
+
+
+def test_oracle_review_allows_active_editing_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """read-only review は active editing run 中でも実行できる。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md、
+    {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md。
+    """
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    context = start_editing_run("realization_apply")
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """review の所見列挙を空結果にして lifecycle の許可だけを検証する。"""
+
+        assert _schema_name(parameter) == "enumerate_finding.json"
+        return _FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0, result.output
+    set_run_state(context, "joinable")
+    abandon = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+    assert abandon.exit_code == 0, abandon.output
 
 
 def test_oracle_review_merges_review_index_changes(

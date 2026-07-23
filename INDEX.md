@@ -128,33 +128,34 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装を収める src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import 入口を扱い、各責務別モジュールへのルーティング起点となる。
+- cmoc CLI の realization 実装を集約する `src` ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・公開 API の入口を扱い、各機能の下位実装へ進むための起点となる。
 
 ## Read this when
-- cmoc の CLI 構成や realization 実装の入口を特定するとき。
-- サブコマンド、共通 runtime、互換 import 経路の下位実装へ進む先を選ぶとき。
+- cmoc の CLI 実装全体の構成や、主要エントリーポイントから委譲先を確認したいとき。
+- サブコマンド、共通 runtime、互換 import 経路、公開 API の realization 配置を探すとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime module が明確な場合は、対応する下位ディレクトリまたはモジュールを直接読む。
-- 正本仕様や oracle 側実装を確認するときは、src ではなく対応する oracle 側を読む。
+- 特定サブコマンドや runtime 機能の詳細が明確な場合は、対応する下位パッケージや実装ファイルを直接読む。
+- 正本仕様や oracle 側の実装を確認するときは、`oracle` 配下を直接読む。
+- `src` と無関係なテスト、開発環境、文書の内容を調査するとき。
 
 ## hash
-- e226614d2947a5d9cc9e46c72db94f9f49214997d501580f295db882b0a812bf
+- a9160f40de53499089c154decc051cef6191f8d694fe98918cb8c4f22a1be1df
 
 # `test`
 
 ## Summary
-- `test` 配下の realization test と共有テストヘルパーを、機能領域ごとの検証入口として案内する。CLI、Codex runtime、indexing、oracle review、session/run、TUI、設定・状態などの外部挙動や契約を扱う。
+- cmoc の realization test 一式を収録するディレクトリ。共有テストヘルパーと、ACP builder、Codex runtime、CLI、indexing、oracle review、session、state などの外部挙動・制御ロジックを検証する pytest テスト群を扱う。各機能のテスト入口として、対象機能の回帰検証やテスト支援の確認に進む。
 
 ## Read this when
-- 変更対象の機能に対応する realization test を特定し、回帰観点や既存の外部契約を確認するとき。
-- 共有 fixture・fake command・Git repository・Codex/Ollama 実行環境など、複数テストで使うテスト支援を変更・利用するとき。
-- CLI、Codex runtime、indexing、oracle review、session/run、TUI、設定・状態の挙動をテストで検証するとき。
+- cmoc の実装変更に対応する realization test を追加・修正・実行するとき
+- CLI、Codex 実行、indexing、oracle review、session、state、builder などの外部挙動や制御ロジックの回帰テストを調査するとき
+- Git repository、fake external command、case-local Ollama、Codex 実行などの共有テストヘルパーを利用・変更するとき
 
 ## Do not read this when
-- 実装本体や正本仕様そのものを確認することが目的で、対応する `src` または `oracle` を直接読めば足りるとき。
-- LLM や Codex の回答品質自体を評価するとき。
-- 対象機能と無関係なテスト領域や、別の責務を持つ共有 helper を調査するとき。
+- 実装本体の責務や処理詳細を確認したいときは、対応する src の実装を直接読む
+- 正本仕様、schema、prompt、file access 規則を確認したいときは、対応する oracle file を直接読む
+- Codex や LLM の回答品質そのものを評価したいとき
 
 ## hash
-- 2ca0fe6817dc9720c3e01ae22097cc1c3af021d3d5870e96c21b05cbe5739201
+- 051d7105c60d62dd67039ded45baed8c3c2ec34f1bc9fd2976388b340144153f

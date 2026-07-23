@@ -91,11 +91,7 @@ def _cmoc_oracle_review_body(
     current_root = work_root()
     branch = current_branch(current_root)
     session_id, _state_path, state = load_state_for_branch(root, branch)
-    if (
-        not branch.startswith("cmoc/session/")
-        or state.session.state != "active"
-        or state.run.state != "ready"
-    ):
+    if not branch.startswith("cmoc/session/") or state.session.state != "active":
         raise CmocError(
             "oracle review は active session branch 上で実行してください。", [], branch
         )

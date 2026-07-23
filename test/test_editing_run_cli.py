@@ -22,6 +22,7 @@ import sub_commands.oracle.investigation as investigation_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.join as run_join_module
+import sub_commands.run.lifecycle as lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
@@ -269,6 +270,43 @@ def test_apply_failure_rolls_back_index_with_realization_changes(
     assert (worktree / "README.md").read_text() == "# repo\n"
     index_path = worktree / "INDEX.md"
     assert (index_path.read_text() if index_path.exists() else None) == before_index
+
+
+def test_apply_start_failure_after_run_publish_is_reported(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """run state 公開後の初期化失敗でも apply fork report を残す。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
+    """
+
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+
+    def fail_process_tracking(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("process tracking setup failed")
+
+    monkeypatch.setattr(
+        lifecycle_module,
+        "write_run_process_id",
+        fail_process_tracking,
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    reports = list(
+        (
+            root / ".cmoc" / "gu" / "ar" / "report" / "realization" / "apply" / "fork"
+        ).glob("*.md")
+    )
+    assert len(reports) == 1
+    assert f"- fork report: `{reports[0]}" in result.output
 
 
 def test_run_join_allows_oracle_change_on_session_branch(

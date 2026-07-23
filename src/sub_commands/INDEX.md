@@ -44,41 +44,40 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。oracle edit・investigation・review の CLI 入口と、review の対象列挙、パス解決、反復処理、INDEX 更新、レポート生成を扱う。各サブコマンドの詳細実装や補助モジュールへ進むための入口。
+- oracle 系サブコマンドの実装をまとめる package。oracle edit・investigation・review の CLI 入口と、review に関する対象列挙、パス解決、ループ、INDEX 差分統合、レポート生成の各処理への入口を提供する。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や CLI 入口を確認するとき
-- oracle edit、investigation、review の実行フローを調査・変更するとき
-- oracle review の対象選定、パス解決、所見処理、INDEX 更新、レポート生成の担当箇所を特定するとき
+- oracle サブコマンドの実装構成や、各サブコマンド・review 関連処理の入口を確認するとき
+- oracle edit・investigation・review の実行フローや責務分担を調査するとき
+- oracle review の対象列挙、パス解決、ループ、INDEX 統合、レポート生成の実装を調査するとき
 
 ## Do not read this when
-- 個別サブコマンドの詳細実装だけを確認したいときは、該当するモジュールを直接読む
-- oracle 編集・調査の正本仕様や instruction template を確認したいときは、対応する oracle doc を直接読む
-- 共通 CLI runtime、TUI 起動、git 状態検証などの共通処理だけを確認したいときは、各共通モジュールを直接読む
+- 個別サブコマンドの詳細実装だけを確認したいときは、該当するサブコマンド実装を直接読む
+- oracle review の対象列挙、パス解決、処理ループ、INDEX 統合、レポート生成の詳細だけを確認したいときは、該当するモジュールを直接読む
 
 ## hash
-- b3890e0aa774a45c53815adb55a25a19e04175fce4238458bb2fc1d89356c18a
+- cff9bffee2a0446ce2e577968d8ac346978415b89cd353520fa01b25b940c960
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口と、apply workload および realization refactor fork の実装へのルーティング情報を提供する。
-- apply は agent 起動、差分検証、commit・rollback、run state、fork report を含む apply workload 実装の入口である。
-- refactor は fork のライフサイクル、target 処理、unresolved 管理、完了検証、cleanup、summary/report 生成を含む realization リファクタリング処理の入口である。
+- realization workload サブコマンドのパッケージ入口。
+- realization の apply 処理と refactor 処理を扱う下位モジュール群への入口。
+- apply では `cmoc realization apply fork` の差分適用、agent 実行、検査、状態更新、report 保存までを扱う。
+- refactor では fork の target 処理、調査・修正、unresolved 管理、完了検証、cleanup、summary/report 生成を扱う。
 
 ## Read this when
 - realization workload サブコマンドの実装や構成を確認するとき。
-- apply workload の実行フロー、agent 起動、差分検証、commit・rollback、run state、fork report を調査・変更するとき。
-- realization refactor fork の CLI 実行フロー、target 処理、unresolved finding、完了判定、cleanup、run state、fork report、change summary、worktree や agent 出力の整合性を確認・変更するとき。
+- realization apply fork の実行フロー、失敗時処理、差分検証を調査・変更するとき。
+- realization refactor fork のライフサイクル、target 処理、unresolved finding、完了判定を調査・変更するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply workload 以外の処理を扱うときは apply へ進まない。
-- agent 起動パラメータ、run の共通 lifecycle・差分計算・状態管理、fork report の形式だけを変更・調査するときは apply へ進まない。
-- target 選択や state 同期だけ、file 単位の調査・修正 agent の prompt 構築だけ、または一般的な run lifecycle・report 出力・process tracking の共通実装だけを扱うときは refactor へ進まない。
+- apply workload 以外の処理だけを扱うときは apply の下位モジュールへ直接進む。
+- refactor の target 選択、state 同期、prompt 構築、共通 lifecycle・report・process tracking だけを扱うときは対応する専用実装へ直接進む。
 
 ## hash
-- 913461b885d9d514b7cf0956fb5da50f3675ee74d0b860540c42995269368c33
+- 5ec95214d78237dabc07f53dd3c97f4a1237218c4a2772d8a3090177aca2d3e9
 
 # `review`
 
