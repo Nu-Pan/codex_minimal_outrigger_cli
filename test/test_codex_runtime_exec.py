@@ -188,6 +188,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
     assert Path(record["stdin_fd"]).resolve() == result.prompt_log_path.resolve()
+    assert result.prompt_log_path.name.endswith("_prompt.md")
     assert codex_arg_value(record["args"], "--sandbox") == "workspace-write"
     override_config = codex_override_config(record["args"])
     assert override_config["model_reasoning_effort"] == "low"

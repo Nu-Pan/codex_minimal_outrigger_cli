@@ -128,33 +128,33 @@
 # `src`
 
 ## Summary
-- cmoc の実装パッケージと CLI 入口を収めるディレクトリ。互換 import shim、共通 runtime、設定入口、トップレベル CLI、サブコマンド実装など、実行時コードの主要な入口を扱う。各領域の具体的な実装へ進むための起点。
+- `src` は cmoc の realization 実装ルート。CLI 本体、互換 import shim、共通 runtime、サブコマンド実装を含み、各機能の実装入口として機能する。
 
 ## Read this when
-- cmoc の実装全体の構成や主要な import 入口を確認するとき。
-- トップレベル CLI、共通 runtime、互換パッケージ、またはサブコマンド実装の入口を探すとき。
+- cmoc の realization 実装全体の構成や、CLI・互換入口・共通基盤・サブコマンドの実装配置を確認するとき。
+- 複数の実装領域にまたがる変更で、適切な下位パッケージの入口を探すとき。
 
 ## Do not read this when
-- 特定サブコマンドの内部処理や個別 runtime module の詳細を直接調査するとき。
-- canonical な正本仕様・実体モジュールを確認するときは、対応する oracle 側または具体的な下位モジュールを直接読む。
+- 特定サブコマンド、runtime 機能、互換 shim、または正本仕様の詳細が明確なときは、対応する下位実装や oracle 文書を直接読む。
+- 正本仕様そのものや INDEX 更新規則を確認したいとき。
 
 ## hash
-- 9c2c36206a274433c89fd5fa09f44584d90a42986ed992dad410f09e79eb50af
+- eb3cc0c622b208d32b47d35f567abed0c315642ffc74a2242a813a1db9246970
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、テスト共通 helper など、実装の外部挙動と制御契約を pytest で検証する。各テストファイルが機能領域ごとの具体的な確認入口となる。
+- cmoc の realization test ディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定などの外部挙動・制御ロジックを検証するテストと、複数テストで共有する Git・Codex・Ollama・CLI 支援ヘルパーを収録する。個別機能の回帰テストや共通テスト基盤を探す際の入口。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや契約テストを追加・修正するとき
-- 対象機能の外部挙動、失敗条件、CLI lifecycle、Git/worktree 副作用をテスト側から確認するとき
-- 共通 fixture や fake command、Codex/Ollama 統合テスト支援の使い方を確認するとき
+- cmoc の実装変更に対応する回帰テストや制御ロジックの検証範囲を確認するとき
+- CLI、Codex 実行、indexing、oracle review、session、state、設定、worktree などのテスト契約を調べるとき
+- テストで共有される fake command、Git repository、Codex、Ollama、schema path 解決ヘルパーを確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認するときは、対応する oracle file を直接読む
-- 実装の責務や内部処理を確認するときは、対応する src 側の realization implementation を直接読む
-- 対象機能と無関係なテスト領域を調査するときは、このディレクトリ全体ではなく対応する個別テストまたは helper を読む
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle 文書・source・test を直接読む
+- 実装本体の責務や内部処理を確認するときは、対応する src 側の実装を先に読む
+- 特定の機能やテスト基盤と無関係な変更を調査するときは、このディレクトリ全体を読む必要はない
 
 ## hash
-- 36692b18b11aba7b70e5c690c542f36a5b6914bff2b97abad1c811091679e355
+- c116aaf1e682f0d99b74d058dcf8ea65163af8e34173aba046ceb834c655b6b4

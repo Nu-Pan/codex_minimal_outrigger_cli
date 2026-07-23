@@ -50,19 +50,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI ライフサイクル、設定、Git、パス、ログ、状態、エラー、結果、INDEX 更新など、複数の CLI サブコマンドで共有する実行時機能を扱う。各 runtime_* モジュールの実装へ進むための入口。
+- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI lifecycle、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新など、複数のサブコマンドや実行方式で共有される基盤処理への入口。
+- パッケージ初期化と共有 API の再公開に加え、runtime の責務ごとに分割された実装モジュールを含む。個別機能の詳細確認は対応する runtime_* モジュールへ進む。
 
 ## Read this when
-- 複数サブコマンドにまたがる共通 runtime API や実行基盤を調査・変更するとき
-- Codex exec/TUI、CLI 実行ライフサイクル、設定、Git、path、logging、session state、error、結果型、INDEX 更新の担当実装を探すとき
+- CLI サブコマンドや Codex exec/TUI の共通実行基盤を変更・調査するとき
+- 設定、Git/worktree、パス、ログ、session/run state、結果、エラー、INDEX 更新などの共通処理の入口を探すとき
+- 複数の上位機能から利用される runtime API の公開境界や責務分割を確認するとき
 
 ## Do not read this when
-- 特定サブコマンド固有の業務処理や引数定義を調査するとき
-- 特定の runtime 領域の詳細実装を直接確認できる場合
-- oracle に定義された正本仕様や Codex exec の仕様根拠を確認するとき
+- 特定サブコマンド固有の業務処理、引数定義、入出力を確認したいとき
+- Codex 実行方式や runtime 領域の個別実装が明確な場合は、対応する runtime_* モジュールを直接読むとき
+- 正本仕様や INDEX 更新規則そのものを確認したいときは、対応する oracle 文書・source を先に読むとき
 
 ## hash
-- cef037b2c6cae2eb57a1b112e52546b4f9fdb985187323fb91e62bad0221bf84
+- 3e0d84b8d82e5b0e612b87d50ca0078bde43e911b1e1b45260a1422e7e3e90d8
 
 # `config`
 

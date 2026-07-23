@@ -104,21 +104,22 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを実行制御するモジュール。Codex subprocess の起動、prompt・stdout・stderr・output・call log の保存、Structured Output の JSON/schema 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume token による継続、console/subcommand event 記録を一体の状態機械として扱う。併せて、worktree の変更 path と git status の取得も提供する。
+- Codex exec の単一試行ループを実装し、prompt・stdout・stderr・output・call log の保存、Structured Output の JSON/schema 検証、capacity retry、quota 回復待機と代表 probe、resume token による継続、subcommand event 記録を一体的に制御する。
+- 同じ実行状態とログ・イベントを共有するため、quota 処理を含む exec 実行制御の変更・調査における中心的な入口となる。
+- 変更 path の取得では、git status の結果をファイル単位の絶対 path として返す。
 
 ## Read this when
-- Codex exec の起動条件、cwd・CODEX_HOME・設定上書き・output schema の準備を確認するとき
-- Structured Output 検証失敗、capacity error、quota error、unexpected error の再試行・待機・失敗処理を変更または調査するとき
-- Codex call log、prompt/stdout/stderr/output log、subcommand event、resume token の記録や関連する失敗診断を確認するとき
-- Codex exec 後の worktree 変更 path と git status の取得処理を確認するとき
+- Codex exec の再試行、Structured Output 検証、quota/capacity error、resume 継続の挙動を変更・調査するとき
+- Codex call log、prompt/output log、subcommand event、quota 待機状態の記録を変更・調査するとき
+- exec 後の worktree 変更 path の収集処理を変更・調査するとき
 
 ## Do not read this when
-- TUI の起動や TUI 固有の分岐を変更・調査するときは、TUI を扱う別 module を直接読む
-- Codex subprocess 共通の環境構築、エラー分類、path・logging・config の詳細実装だけを確認したいときは、対応する commons module を直接読む
-- oracle に定義された Codex exec の仕様根拠を確認するときは、対応する oracle 文書を先に読む
+- TUI 起動処理だけを変更・調査するとき
+- Codex subprocess の低レベル実行、設定・profile 判定、path・logging の共通処理そのものを変更・調査するときは、対応する commons module を直接読む
+- exec の呼び出し側や結果型の定義だけを変更・調査するとき
 
 ## hash
-- 354f4a8a63b57279f7c9c111af3283e0ee2cf61873c337c98c771007ea011b3b
+- a89c9f1220e0e42f56abd7d173ce605c8342574e696fc11d47eae9d1295ccef3
 
 # `runtime_codex_logging.py`
 

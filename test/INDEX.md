@@ -248,19 +248,20 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ランタイムの統合テストを扱う。実 CLI の argv、stdin、override 設定、provider/model 選択、出力 schema の配置、リポジトリ書き込み、CODEX_HOME 設定未生成を検証する。
+- Codex CLI の実行ランタイムを検証するテスト。実 Codex CLI と test-local Ollama を用いた GPU 統合テストに加え、Codex の argv、stdin、作業ディレクトリ、出力スキーマ、model provider override、CODEX_HOME 設定未生成、リポジトリ書き込みをモック実行で検証する。Codex 実行経路や override 引数の挙動を確認する際のテスト入口。
 
 ## Read this when
-- Codex exec の起動方法、権限・sandbox 引数、prompt の stdin 渡しを変更または確認するとき
-- model provider、local Ollama、model class、reasoning effort の override 連携を変更または確認するとき
-- Codex 実行結果・schema・call log・リポジトリ書き込みの統合挙動を検証するとき
+- run_codex_exec の実行仕様、Codex CLI 引数、prompt の stdin 渡し、output schema の配置や内容を変更・調査するとき
+- model provider、model class、reasoning effort、sandbox、approval 設定の Codex override 連携を変更・検証するとき
+- Codex HOME に設定ファイルを生成しない制約や、実 Codex CLI と test-local Ollama の統合動作を確認するとき
 
 ## Do not read this when
-- Codex 実行ランタイムの実装詳細を変更する場合は、まず対応する src 側の runtime モジュールを読むとよい
-- Codex CLI 以外のサブコマンドや、単体の設定モデル・fixture・外部コマンド helper の挙動だけを確認するとき
+- Codex 実行ランタイムの実装詳細そのものを変更・調査する場合は、まず対応する src 側の実装を読むとき
+- Codex 以外のサブコマンド、provider 設定一般、または Ollama の補助機能だけを扱うとき
+- Codex CLI 出力品質や LLM の応答内容そのものを検証したいとき
 
 ## hash
-- 1637c90a41b22a05907a55a22967f3737a27a461918f099b2fc1479d869f8da3
+- 4903c028bb01578f54c6efb5981e484f3f12e94bf7c9fb94871aae6100143894
 
 # `test_codex_runtime_home.py`
 

@@ -236,7 +236,7 @@ def run_codex_exec(
         )
         return (
             run_ts,
-            log_dir / f"{run_ts}_prompt.jsonl",
+            log_dir / f"{run_ts}_prompt.md",
             log_dir / f"{run_ts}_stdout.jsonl",
             log_dir / f"{run_ts}_stderr.log",
             log_dir / f"{run_ts}_output.json",
