@@ -95,7 +95,7 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     assert report_path.is_relative_to(root / ".cmoc" / "gu" / "ar" / "report")
     assert not report_path.is_relative_to(linked)
     rendered = report_path.read_text()
-    assert f"review_fork_commit: {session_head}" in rendered
+    assert f"run_fork_commit: {session_head}" in rendered
     assert "`oracle/linked.md`" in rendered
     branch = run_git(linked, "branch", "--show-current").stdout.strip()
     assert branch.startswith("cmoc/session/")
@@ -251,7 +251,7 @@ def test_oracle_review_merges_review_index_changes(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "review_join_commit: null" not in rendered
+    assert "run_join_commit: null" not in rendered
     assert review_worktrees
     for review_worktree in review_worktrees:
         assert review_worktree.parent == root / ".cmoc" / "gu" / "worktree" / session_id
@@ -324,7 +324,7 @@ def test_oracle_review_merges_preflight_committed_index_changes(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "review_join_commit: null" not in rendered
+    assert "run_join_commit: null" not in rendered
 
 
 def test_oracle_review_resolves_index_conflict_when_session_deleted_index(

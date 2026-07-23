@@ -103,10 +103,10 @@ def _cmoc_oracle_review_body(
     ensure_cmoc_ignored(current_root)
     config = load_config(current_root)
     run_id = timestamp()
-    review_branch = f"cmoc/run/{session_id}/{run_id}"
+    run_branch = f"cmoc/run/{session_id}/{run_id}"
     review_worktree = worktrees_dir(root) / session_id / run_id
-    review_fork_commit = head_commit(current_root)
-    review_join_commit = None
+    run_fork_commit = head_commit(current_root)
+    run_join_commit = None
     all_oracle_files: list[Path] = []
     oracle_files: list[Path] = []
     evaluated_oracle_files: list[Path] = []
@@ -115,16 +115,14 @@ def _cmoc_oracle_review_body(
     interrupted = False
     try:
         start_subcommand_step(2, "run の隔離実行を開始", "start isolated review")
-        create_run_worktree(
-            current_root, review_branch, review_worktree, review_fork_commit
-        )
+        create_run_worktree(current_root, run_branch, review_worktree, run_fork_commit)
         worktree_created = True
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")
             with pushd(review_worktree):
                 all_oracle_files = enumerate_review_all_oracle_files(review_worktree)
                 oracle_files = enumerate_oracle_review_targets(
-                    review_worktree, scope, state, review_fork_commit
+                    review_worktree, scope, state, run_fork_commit
                 )
                 try:
                     findings = run_oracle_review_loop(
@@ -146,14 +144,14 @@ def _cmoc_oracle_review_body(
                 )
                 commit_review_index_changes(review_worktree)
                 review_has_index_changes = review_branch_has_index_changes(
-                    review_worktree, review_fork_commit
+                    review_worktree, run_fork_commit
                 )
             if review_has_index_changes:
-                review_join_commit = merge_review_branch(current_root, review_branch)
+                run_join_commit = merge_review_branch(current_root, run_branch)
         finally:
             if worktree_created:
                 remove_worktree(current_root, review_worktree)
-                delete_branch(current_root, review_branch, force=True)
+                delete_branch(current_root, run_branch, force=True)
                 worktree_created = False
         start_subcommand_step(8, "所見リストをレポート", "write review report")
         report_path = write_oracle_review_report(
@@ -164,9 +162,9 @@ def _cmoc_oracle_review_body(
             len(all_oracle_files),
             evaluated_oracle_files,
             findings,
-            review_branch,
-            review_fork_commit,
-            review_join_commit,
+            run_branch,
+            run_fork_commit,
+            run_join_commit,
             interrupted=interrupted,
         )
     except KeyboardInterrupt:
@@ -176,7 +174,7 @@ def _cmoc_oracle_review_body(
             _record_oracle_review_interruption()
         if worktree_created:
             remove_worktree(current_root, review_worktree)
-            delete_branch(current_root, review_branch, force=True)
+            delete_branch(current_root, run_branch, force=True)
             worktree_created = False
         report_path = write_oracle_review_report(
             root,
@@ -186,9 +184,9 @@ def _cmoc_oracle_review_body(
             len(all_oracle_files),
             evaluated_oracle_files,
             findings,
-            review_branch,
-            review_fork_commit,
-            review_join_commit,
+            run_branch,
+            run_fork_commit,
+            run_join_commit,
             interrupted=True,
         )
         typer.echo(str(report_path.resolve()))
@@ -202,9 +200,9 @@ def _cmoc_oracle_review_body(
             len(all_oracle_files),
             evaluated_oracle_files,
             findings,
-            review_branch,
-            review_fork_commit,
-            review_join_commit,
+            run_branch,
+            run_fork_commit,
+            run_join_commit,
             error_message=str(exc) or exc.__class__.__name__,
         )
         typer.echo(str(report_path.resolve()))

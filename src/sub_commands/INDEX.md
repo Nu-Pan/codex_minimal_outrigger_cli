@@ -44,30 +44,20 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package の境界を示し、各 oracle サブコマンド実装への入口を提供する。
-- `cmoc oracle edit` の main worktree 向け TUI 起動、入力収集、起動前提条件検証を実装する。
-- `cmoc oracle investigation` の read-only TUI workload、調査指示入力、起動パラメータ構築を実装する。
-- oracle review の実行入口として、session branch 検証、隔離 worktree、レビュー、結果マージ、後始末、レポート出力をオーケストレーションする。
-- oracle review の worktree 差分を検査し、INDEX.md だけを commit・merge する処理を実装する。
-- oracle review の finding 列挙、統合、妥当性検証、採否判定、割り込み時の進捗保持、Structured Output の再試行を実装する。
-- oracle review の検出結果に含まれるパスを安全に解決し、worktree 境界を検証してリポジトリ相対キーへ変換する。
-- oracle review の結果を Markdown レポートとして保存・描画し、metadata、Verdict、severity・verdict 別の所見表示を扱う。
-- oracle review の scope に応じてレビュー対象の oracle file を列挙し、全件または session 間の変更分に絞り込む。
+- oracle 系サブコマンドをまとめる package。oracle edit・investigation・review の CLI 入口と、review の対象列挙、パス解決、反復処理、INDEX 更新、レポート生成を扱う。各サブコマンドの詳細実装や補助モジュールへ進むための入口。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や入口を確認するとき。
-- `cmoc oracle edit` の CLI runtime、TUI 起動、プロンプト入力、main worktree・session branch の前提条件を変更・調査するとき。
-- `cmoc oracle investigation` の実行フロー、調査指示入力、TUI 起動処理を変更・調査するとき。
-- oracle review の実行フロー、レビュー対象、finding 処理、worktree 管理、INDEX.md の commit・merge、パス解決、レポート形式を変更・調査するとき。
+- oracle 系サブコマンドの package 構成や CLI 入口を確認するとき
+- oracle edit、investigation、review の実行フローを調査・変更するとき
+- oracle review の対象選定、パス解決、所見処理、INDEX 更新、レポート生成の担当箇所を特定するとき
 
 ## Do not read this when
-- 個別 oracle サブコマンドの内部実装詳細だけを確認したいときは、該当する実装を直接読む。
-- oracle 編集対象の選択・編集ロジックや、調査指示テンプレートなどの正本仕様だけを確認したいときは、対応する下位モジュールまたは oracle doc を直接読む。
-- 共通 CLI runtime、git 状態検証、プロンプトエディタ、インデックス事前処理、TUI 起動パラメータの詳細だけを調べるときは、各共通モジュールを直接読む。
-- レビュー対象の列挙、finding ループ、パス解決、レポート描画の詳細だけを調べるときは、対応する review helper を直接読む。
+- 個別サブコマンドの詳細実装だけを確認したいときは、該当するモジュールを直接読む
+- oracle 編集・調査の正本仕様や instruction template を確認したいときは、対応する oracle doc を直接読む
+- 共通 CLI runtime、TUI 起動、git 状態検証などの共通処理だけを確認したいときは、各共通モジュールを直接読む
 
 ## hash
-- 7d0e3b98ddd5d1d144cf2013e19530ae973d1ec24c6395830f46af35b63adb57
+- b3890e0aa774a45c53815adb55a25a19e04175fce4238458bb2fc1d89356c18a
 
 # `realization`
 

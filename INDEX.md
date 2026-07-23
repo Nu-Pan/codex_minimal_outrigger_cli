@@ -128,32 +128,35 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめる src ディレクトリ。主要 CLI エントリーポイント、サブコマンド、共通 runtime、互換 import 入口を下位パッケージへ案内する。
+- cmoc の realization 実装ルート。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・ACP 関連の公開入口を扱う。配下の個別実装や互換経路へ進むための起点。
 
 ## Read this when
-- CLI の全体構成や主要エントリーポイントを確認したいとき。
-- 特定サブコマンド、共通 runtime、互換 import 経路の実装入口を選びたいとき。
+- cmoc の CLI 構成、サブコマンド実装、共通 runtime、公開 import 経路の読む先を選ぶとき。
+- CLI エントリーポイントから各サブコマンドや commons の実装へ進む前に、対象領域を特定するとき。
+- ACP、basic、config、oracle などの互換入口や realization 側の公開経路を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドや runtime の詳細が明確な場合は、対応する下位実装を直接読む。
-- 正本仕様や oracle 側の実装を確認したいときは、対応する oracle 配下を直接読む。
+- 特定サブコマンド、runtime helper、builder、設定、正本 oracle の詳細が明確な場合は、対応する下位実装または oracle 側を直接読む。
+- 利用者向け仕様や正本仕様そのものを確認するとき。
+- TUI や builder と無関係な個別処理の内部挙動だけを調査するとき。
 
 ## hash
-- 24708ba47a42f52e18384017999882689e801f75ddd52495f086c4310f40b386
+- 7f17c13323671684ae04375c2763b5bd3a21db5561f4ac827402a64c7d6b45a7
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、TUI など、実装の外部挙動・制御ロジック・統合 lifecycle を検証する pytest テストと共有テストヘルパーを扱う。各機能のテスト観点を確認する入口であり、実装詳細や正本仕様は対応する src または oracle を直接読む。
+- cmoc の realization test 群を収めるディレクトリ。CLI サブコマンド、Codex 実行ランタイム、ACP builder、INDEX/oracle review、session/run state、worktree、設定、共通テストヘルパーなど、外部挙動と制御契約を検証する。各テストファイルが機能領域ごとの入口となる。
 
 ## Read this when
-- cmoc の実装変更に伴う回帰テスト、テスト対象の選定、既存の外部契約・失敗時挙動・統合 lifecycle の検証範囲を確認するとき。
-- Codex 実行、CLI、indexing、oracle review、session/run、TUI、ACP builder などの realization test を追加・修正するとき。
+- 対象機能の realization test、回帰テスト、外部挙動の検証範囲を探すとき
+- CLI、Codex runtime、indexing、oracle review、session、editing run、設定、worktree のテスト対象を特定するとき
+- テスト共通ヘルパーや統合テスト環境の責務を確認するとき
 
 ## Do not read this when
-- 単一機能の実装詳細や正本仕様そのものを確認したいときは、対応する src または oracle file を直接読む。
-- Codex CLI や LLM の回答品質自体を評価するとき。
-- 対象機能と無関係なテストの詳細を調べるときは、ディレクトリ全体ではなく該当するテストファイルへ進む。
+- 実装本体の責務や正本仕様を確認するときは、対応する src または oracle を直接読む
+- LLM の回答品質や Codex CLI 自体の出力品質を評価するとき
+- 対象機能と無関係なテスト領域を調査するときは、このディレクトリ全体を読む必要はない
 
 ## hash
-- 00178f24d3d70de7aecae6dede272b636767d35b2b914ef1388dc24bb172e29e
+- d838d407017d04ffde710154349c7a18471c9c48568479f41c825db81d3dd9a4

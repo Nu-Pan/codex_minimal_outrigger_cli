@@ -49,18 +49,20 @@
 # `review.py`
 
 ## Summary
-- oracle review サブコマンドの実行入口と orchestration を担う実装。active session branch の検証、隔離 review worktree の作成・レビュー実行・結果マージ・後始末・レポート出力をまとめ、関連する review helper の公開入口も提供する。
+- oracle review サブコマンドの CLI 実行入口と本体を担うモジュール。active session branch の検証、隔離 review worktree の作成・実行・後処理、所見のマージ、レビュー報告生成、中断・失敗時の処理を統括する。関連する review_targets、review_loop、review_index、review_report の公開要素も再エクスポートする。
 
 ## Read this when
-- oracle review の CLI 実行フロー、session branch の前提条件、隔離 worktree のライフサイクル、レビュー中断・失敗時のレポート処理を確認または変更するとき。
-- oracle review 関連の review index、review loop、review report、review target 機能への実行入口を確認するとき。
+- oracle review サブコマンドの実行フロー、worktree 分離、ブランチ検証、レビュー結果の統合や報告処理を変更・調査するとき。
+- oracle review の中断時・例外時の挙動や未コミット差分の扱いを確認するとき。
 
 ## Do not read this when
-- レビュー対象の列挙、所見ループ、INDEX 変更のコミット・マージ、レポートの描画や保存の詳細だけを調べるときは、対応する review helper モジュールを直接読む。
-- oracle review 以外の CLI サブコマンドや一般的な runtime/git helper の実装を調べるとき。
+- レビュー対象ファイルの列挙条件だけを変更・調査する場合は review_targets を直接読む。
+- レビュー反復処理や所見適用の詳細だけを変更・調査する場合は review_loop を直接読む。
+- INDEX 更新のコミット・マージ・競合解決だけを変更・調査する場合は review_index を直接読む。
+- レビュー報告の表示内容や書き込みだけを変更・調査する場合は review_report を直接読む。
 
 ## hash
-- 4529cf1ace449dfe0cd653408c2bd4131964112acfc4a3786fc320cecc5cf2e1
+- ba2912fe91746f77201bc2337c28c7b3904f34cd76d29d8d3ba3749dffe4df86
 
 # `review_index.py`
 
@@ -116,18 +118,18 @@
 # `review_report.py`
 
 ## Summary
-- oracle review の結果を Markdown レポートとして保存・描画する実装。レポートの保存先、YAML frontmatter、Verdict、対象 oracle 一覧、severity/verdict 別の所見表示を扱う。レビュー結果の判定、所見抽出・整形、repository-relative path 表示の補助関数も含む。
+- oracle review の結果を Markdown と YAML frontmatter のレポートとして生成・保存する実装。レビュー対象、実行状態、所見、判定結果を記録し、所見の分類・順序・表示形式と repository-relative な oracle file 表示を担う。
 
 ## Read this when
-- oracle review レポートの保存形式、本文構成、Verdict 判定、所見の分類・表示順を変更または確認するとき
-- レビュー実行状態、対象 oracle 数、branch/commit 情報などのレポート metadata の扱いを確認するとき
+- oracle review レポートの生成内容、frontmatter、verdict 判定、finding の分類・表示順を変更または確認するとき
+- レビュー結果の保存先、ファイル名、対象 oracle file の表示方法を調査するとき
 
 ## Do not read this when
-- oracle review の対象探索や path 解決だけを変更するときは、review_paths の実装を直接読む
-- レビュー処理そのものや session 状態管理を変更するときは、このレポート描画モジュールではなく該当する実装を直接読む
+- oracle review の対象 oracle file の選定やパス解決だけを調査するとき
+- レビュー処理本体や session 制御を変更するときは、まずそれぞれの責務を持つ実装を直接読む場合
 
 ## hash
-- fec2c9e349afb412bb9901bdef02636cf8f6c91fe81b250bff887dba37db22df
+- 5d4fa434393103e8b269c934319904745378dbfc5706f46038f85be1abe647fc
 
 # `review_targets.py`
 

@@ -505,19 +505,17 @@
 # `test_oracle_review_report.py`
 
 ## Summary
-- oracle review の report 生成と CLI 出力を検証するテスト。レビュー中断・処理失敗時の report、所見の accepted/rejected 分類、severity 別集計、oracle path alias・symlink の扱い、scope option、Structured Output schema 呼び出し、エラーメッセージやログを確認する。
+- oracle review の report 生成と CLI 出力を検証するテスト。空・accepted/rejected・中断・処理失敗時の report 内容、finding の分類・件数・評価済み oracle 範囲、scope オプション、path alias や symlink の集計、Structured Output 呼び出しを確認する。
 
 ## Read this when
-- oracle review サブコマンドの report 形式、所見判定、レビュー中断・失敗時の挙動を変更または調査するとき
-- oracle review の CLI option、Structured Output callback、完了済み oracle の集計を変更または検証するとき
-- oracle review の report 出力テストを追加・修正するとき
+- oracle review の report 形式、finding の verdict 分類、エラー・中断時の出力、評価対象 oracle file の集計、または `oracle review` CLI の回帰テストを変更・調査するとき。
 
 ## Do not read this when
-- oracle review 以外のサブコマンドや report の実装を扱うとき
-- CLI 共通 runner、git fixture、設定定義そのものを直接変更・調査するときは、それぞれの実装・テストを先に読む
+- oracle review の実装詳細そのものを変更・調査する場合は、まず対応する実装ファイルと oracle 仕様を読む。
+- oracle review と無関係な CLI、report、oracle file 列挙の作業では、このテストを直接読む必要はない。
 
 ## hash
-- 28a96f53f60518457cd69a7d10c5f06e088a4830038456d193a8abb4bba27e53
+- 9c4057723901124f788038c4cc6ce15d7be9e6dcf8d7561b0ebda00259787788
 
 # `test_oracle_review_targets.py`
 
@@ -540,20 +538,20 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- oracle review の worktree 分離、session branch の snapshot 起点、未コミット差分の拒否、INDEX.md のみの統合と競合解決を検証するテスト。oracle review の実行経路や INDEX 更新の統合挙動を確認するための realization test。
+- oracle review の worktree 分離と INDEX.md 統合を検証するテスト。session branch の snapshot から review worktree を作成すること、未コミット差分や INDEX.md 以外の変更を拒否すること、review 側および preflight が生成した INDEX.md だけを統合すること、INDEX.md 削除時の競合解決と nested INDEX.md の commit を確認する。
 
 ## Read this when
-- oracle review が対象 worktree・branch・oracle を正しく選ぶか確認するとき
-- review 実行後に INDEX.md だけを session 側へ統合する処理、preflight の INDEX 更新、merge conflict 解決を変更・検証するとき
-- review worktree に INDEX.md 以外の変更を許可しない制御を確認するとき
+- oracle review の run worktree、session snapshot、branch 分離、または review 結果の統合挙動を変更・調査するとき
+- INDEX.md の生成・commit・merge conflict 解決を伴う oracle review のテストを確認するとき
+- oracle review が不正な作業ツリー差分を拒否する条件を確認するとき
 
 ## Do not read this when
-- oracle review の実装詳細ではなく、通常の INDEX.md 生成規則だけを確認したいときは indexing の oracle doc を直接読む
-- session fork や run isolation の一般仕様だけを確認したいときは対応する oracle doc を直接読む
-- oracle review と無関係な CLI サブコマンドやテストを変更・調査するとき
+- oracle review 以外のサブコマンドの一般的な worktree 実装を調査するとき
+- INDEX.md の通常の生成ロジックだけを変更・調査するときは、まず indexing 関連の実装・テストを読む
+- Codex 出力品質や個別の finding 判定ロジックだけを変更・調査するとき
 
 ## hash
-- 61d7fa994f2e4af81afbd80e4fbec21cb3487ffe5a55b0aacbcb7b95a8733e07
+- 2a395ef4d3d3c13fe44b06d4726226a45927b61d22335936953b71b843782f6c
 
 # `test_packaged_import.py`
 
