@@ -12,10 +12,10 @@
     "last_investigated_at": "2026-07-23_13-23_57_335168000"
   },
   "README.md": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "aee9654cfb1c4d0d9aa963e9f03b8a56f4e5b6cdc7aac1ebeeb478b914f88f11",
+    "last_investigated_at": "2026-07-23_13-36_15_853926000"
   },
   "bin/cmoc": {
     "investigation_required": true,
