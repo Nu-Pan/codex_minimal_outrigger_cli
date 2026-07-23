@@ -324,22 +324,29 @@ def _run_refactor_unit(
             ["Codex call log と run worktree の差分を確認してください。"],
             "\n".join(changed_realization),
         )
+    normalized_findings = findings
+    if (
+        findings
+        and not changed_realization
+        and all(
+            finding.get("resolution", {}).get("status") == "fixed"
+            for finding in findings
+        )
+    ):
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # net 差分のない fixed 自己申告は、実行記録を保ったまま処理判定だけを
+        # 所見なしへ正規化する。
+        normalized_findings = []
     unresolved = [
         finding
-        for finding in findings
+        for finding in normalized_findings
         if finding.get("resolution", {}).get("status") == "unresolved"
     ]
-    if findings and not changed_realization and not unresolved:
-        raise CmocError(
-            "fixed 所見に対応する realization 差分がありません。",
-            ["Codex call log と Structured Output を確認してください。"],
-            f"target: {target}",
-        )
     _update_refactor_state(
         context,
         target,
         investigated_hash,
-        bool(findings),
+        bool(normalized_findings),
         changed_realization,
     )
     refresh_indexes(context.run_worktree, commit=False)
@@ -371,7 +378,7 @@ def _run_refactor_unit(
         )
         for finding in unresolved
     ]
-    return target, len(findings), unresolved_details
+    return target, len(normalized_findings), unresolved_details
 
 
 def _status_change(path: str) -> GitChange:
