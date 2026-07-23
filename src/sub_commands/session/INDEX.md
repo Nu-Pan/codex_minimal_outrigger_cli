@@ -15,18 +15,16 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc session abandon` サブコマンドの実装。active な session branch の事前条件を検証し、home branch へ切り替えたうえで session state を abandoned に更新し、session branch を削除する。cleanup 失敗時の state・branch ロールバックとエラー報告、および完了結果の CLI 表示を扱う。
+- `cmoc session abandon` サブコマンドの実装。active session を検証し、home branch へ切り替えた後に session branch と state を abandoned としてクリーンアップする。失敗時は state・branch を可能な限りロールバックし、結果または cleanup error を表示する。
 
 ## Read this when
-- `cmoc session abandon` の挙動、事前条件、branch 切り替え・削除、session state 更新を変更または確認するとき。
-- cleanup 失敗時のロールバック処理やエラー詳細の出力を調査するとき。
+- `cmoc session abandon` の事前条件、branch 切り替え・削除、state 更新、cleanup 失敗時の復旧処理を変更・調査するとき。
 
 ## Do not read this when
-- session の作成・完了・通常の状態管理だけを扱い、abandon 操作に関係しないとき。
-- 共通の Git 操作や state 読み書きの実装自体を調査する場合は、まずそれぞれの共通実装を直接読む。
+- session の開始・継続・完了など、abandon 処理以外の session サブコマンドを変更・調査するときは、各サブコマンドの実装を直接読む。
 
 ## hash
-- 9cf413933851d9243f3611b732bb8f8a5c1dd6611071c4b30f32b9d020982e65
+- 4409f62cddd5b057e30bd1769b75c2bbddcfdcb40636b89b68e7075effa1c815
 
 # `fork.py`
 

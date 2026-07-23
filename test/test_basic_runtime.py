@@ -20,6 +20,7 @@ from cmoc_runtime import (
     repo_root,
     work_root,
 )
+from commons.runtime_run import expected_run_worktree
 
 
 def test_path_model_resolves_token_path_inside_repo() -> None:
@@ -149,6 +150,19 @@ def test_create_run_worktree_rejects_path_not_matching_branch(
         create_run_worktree(root, "cmoc/run/session/run", target)
 
     assert (target / "keep.txt").read_text() == "keep\n"
+
+
+@pytest.mark.parametrize("branch", ["cmoc/run/../run", "cmoc/run/session/.."])
+def test_run_worktree_rejects_dot_path_components(tmp_path: Path, branch: str) -> None:
+    """run branch の dot component が managed path の外へ解決されないことを検証する。"""
+    root = make_repo(tmp_path)
+
+    with pytest.raises(CmocError, match="run worktree"):
+        expected_run_worktree(root, branch)
+    with pytest.raises(CmocError, match="run worktree"):
+        create_run_worktree(
+            root, branch, root / ".cmoc" / "gu" / "worktree" / "session" / "run"
+        )
 
 
 @pytest.mark.parametrize("symlink_component", ["base", "session", "target"])

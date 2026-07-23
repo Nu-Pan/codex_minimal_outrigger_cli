@@ -187,7 +187,7 @@ def test_doctor_generates_and_tracks_config(
         run_git(root, "ls-files", "--", ".cmoc/gt/ar/config.json").stdout.strip()
         == ".cmoc/gt/ar/config.json"
     )
-    assert json.loads(config_path.read_text())["codex"]["num_try_falv_recovery"] == 1
+    assert "num_try_falv_recovery" not in json.loads(config_path.read_text())["codex"]
     assert json.loads(config_path.read_text())["codex"]["model_providers"] == {}
     assert (
         ".cmoc/gt/ar/config.json"
@@ -310,7 +310,7 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
         "model_provider": None,
         "model": "gpt-5.6-luna",
     }
-    assert data["codex"]["num_try_falv_recovery"] == 4
+    assert "num_try_falv_recovery" not in data["codex"]
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["codex"]["reasoning_effort"]["xhigh"] == "xhigh"
     assert data["codex"]["reasoning_effort"]["max"] == "max"

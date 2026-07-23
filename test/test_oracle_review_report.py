@@ -169,7 +169,7 @@ def test_oracle_review_writes_report(
     h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
     assert h2_sections[: len(required_sections) - 1] == required_sections[1:]
     assert "`oracle/spec.md`" in rendered
-    assert "review_join_commit: null" in rendered
+    assert "run_join_commit: null" in rendered
     assert "session_id:" not in rendered
     assert any(call.startswith("oracle review enumerate findings") for call in calls)
     assert "oracle review merge findings" not in calls

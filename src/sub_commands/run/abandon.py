@@ -24,8 +24,8 @@ from commons.runtime_run import (
     run_lifecycle_lock,
     stop_run_process,
 )
-from sub_commands.run.lifecycle import EditingRunContext, resolve_active_run
-from sub_commands.run.report import write_lifecycle_report
+from commons.runtime_run_lifecycle import EditingRunContext, resolve_active_run
+from commons.runtime_run_report import write_lifecycle_report
 
 
 def cmoc_run_abandon_impl() -> None:
@@ -40,8 +40,11 @@ def cmoc_run_abandon_impl() -> None:
 
 
 def _cmoc_run_abandon_body() -> None:
+    """active run を停止し、worktree・branch・state を cleanup する。"""
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
-    run_doctor_preprocess(work_root(), sync_refactor_entries=False)
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # abandon は run branch を merge しないため、entry 集合を通常どおり同期する。
+    run_doctor_preprocess(work_root())
     start_subcommand_step(2, "active run を特定", "resolve active run")
     initial_context, _ = resolve_active_run(
         {"running", "joinable", "error"},
@@ -103,6 +106,7 @@ def _stop_running_run(
     context: EditingRunContext,
     warnings: list[str],
 ) -> str:
+    """running run の追跡 process を停止し、警告を収集する。"""
     process = read_run_process_id(context.repo, context.session_id)
     if process is None:
         warnings.append("run process tracking was absent or stale")
@@ -120,6 +124,7 @@ def _remove_run_worktree(
     context: EditingRunContext,
     warnings: list[str],
 ) -> bool:
+    """active run の worktree を削除し、削除結果を返す。"""
     if not context.run_worktree.exists():
         warnings.append("run worktree was already absent")
     result = remove_worktree(context.repo, context.run_worktree)
@@ -133,6 +138,7 @@ def _remove_run_branch(
     context: EditingRunContext,
     warnings: list[str],
 ) -> bool:
+    """active run の branch を強制削除し、削除結果を返す。"""
     if not branch_exists(context.repo, context.run_branch):
         warnings.append("run branch was already absent")
         return True

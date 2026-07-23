@@ -1,4 +1,5 @@
 import json
+import re
 import string
 from collections.abc import Collection
 from pathlib import Path
@@ -17,6 +18,8 @@ InvestigationResult = Literal["not_investigated", "no_findings", "findings"]
 
 
 class RefactorEntry(TypedDict):
+    """単一の oracle または realization file の調査履歴。"""
+
     investigation_required: bool
     last_investigation_result: InvestigationResult
     last_investigated_sha256: str | None
@@ -141,11 +144,18 @@ def mark_all_refactor_targets_required(state: RefactorState) -> None:
 
 
 def _valid_relative_path(value: str) -> bool:
+    """state key として許可される repository 相対 path か判定する。"""
     path = Path(value)
-    return bool(path.parts) and not path.is_absolute() and ".." not in path.parts
+    return (
+        bool(path.parts)
+        and not path.is_absolute()
+        and ".." not in path.parts
+        and path.as_posix() == value
+    )
 
 
 def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
+    """JSON の entry を検証し、型付けされた refactor entry として返す。"""
     if not isinstance(value, dict):
         raise _invalid_refactor_state(path, f"entry は object ではありません: {key}")
     expected = {
@@ -172,7 +182,13 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
         or any(character not in string.hexdigits for character in digest)
     ):
         raise _invalid_refactor_state(path, f"SHA256 が不正です: {key}")
-    if investigated_at is not None and not isinstance(investigated_at, str):
+    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # state の履歴時刻は、file name と同じ固定幅の {{time-stamp}} にそろえる。
+    if investigated_at is not None and (
+        not isinstance(investigated_at, str)
+        or re.fullmatch(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_\d{2}_\d{9}", investigated_at)
+        is None
+    ):
         raise _invalid_refactor_state(path, f"調査日時が不正です: {key}")
     if result == "not_investigated" and (
         digest is not None or investigated_at is not None
@@ -187,6 +203,7 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
 
 
 def _invalid_refactor_state(path: Path, reason: str) -> CmocError:
+    """不正な refactor state を利用者向け例外へ変換する。"""
     return CmocError(
         "realization refactor state が不正です。",
         ["既存の調査履歴を保持したまま state file を修復してください。"],

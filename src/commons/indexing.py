@@ -365,7 +365,10 @@ def target_content_for_indexing(path: Path) -> str:
     if path.is_file():
         return path.read_text(errors="ignore")
     index_path = path / "INDEX.md"
-    if index_path.exists():
+    # {{work-root}}/oracle/doc/app_spec/indexing.md の生成対象は work-root 内に
+    # 限る。INDEX.md symlink は _read_existing_index_content と同じく再利用せず、
+    # リンク先の内容を agent prompt へ読み込まない。
+    if index_path.is_file() and not index_path.is_symlink():
         return index_path.read_text(errors="ignore")
     return "\n".join(
         child.name for child in sorted(path.iterdir(), key=lambda p: p.name)

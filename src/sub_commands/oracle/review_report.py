@@ -13,9 +13,9 @@ def write_oracle_review_report(
     oracle_count_total: int,
     oracle_files: list[Path],
     findings: list[dict],
-    review_branch: str | None,
-    review_fork_commit: str | None,
-    review_join_commit: str | None,
+    run_branch: str | None,
+    run_fork_commit: str | None,
+    run_join_commit: str | None,
     error_message: str | None = None,
     *,
     interrupted: bool = False,
@@ -30,9 +30,9 @@ def write_oracle_review_report(
         oracle_count_total: 対象候補となった oracle file の総数。
         oracle_files: 実際に評価した oracle file。
         findings: レビューで得た所見。
-        review_branch: review branch 名。不明なら None。
-        review_fork_commit: review fork commit。不明なら None。
-        review_join_commit: review join commit。不明なら None。
+        run_branch: run branch 名。不明なら None。
+        run_fork_commit: run fork commit。不明なら None。
+        run_join_commit: run join commit。不明なら None。
         error_message: レビュー失敗時のエラーメッセージ。
     Returns:
         作成した report file の path。
@@ -51,9 +51,9 @@ def write_oracle_review_report(
             oracle_count_total,
             oracle_files,
             findings,
-            review_branch,
-            review_fork_commit,
-            review_join_commit,
+            run_branch,
+            run_fork_commit,
+            run_join_commit,
             error_message=error_message,
             interrupted=interrupted,
         )
@@ -69,9 +69,9 @@ def render_oracle_review_report(
     oracle_count_total: int,
     oracle_files: list[Path],
     findings: list[dict],
-    review_branch: str | None,
-    review_fork_commit: str | None,
-    review_join_commit: str | None,
+    run_branch: str | None,
+    run_fork_commit: str | None,
+    run_join_commit: str | None,
     error_message: str | None = None,
     *,
     interrupted: bool = False,
@@ -116,9 +116,9 @@ def render_oracle_review_report(
         ("scope", scope),
         ("session_branch", session_branch),
         ("session_fork_commit", state.session.session_fork_commit),
-        ("review_branch", review_branch),
-        ("review_fork_commit", review_fork_commit),
-        ("review_join_commit", review_join_commit),
+        ("run_branch", run_branch),
+        ("run_fork_commit", run_fork_commit),
+        ("run_join_commit", run_join_commit),
         ("oracle_count_total", oracle_count_total),
         ("oracle_count_evaluated", len(oracle_files)),
         ("fatal_findings_accepted_count", len(fatal_accepted)),

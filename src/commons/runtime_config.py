@@ -37,6 +37,9 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             validate_json_toml_value(key)
             settings[key] = validate_json_toml_value(value)
         model_providers[provider_id] = {"settings": settings}
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # Post-call file-access validation and recovery are prohibited; do not
+    # expose the legacy FALV recovery setting in persisted user config.
     return {
         "num_parallel": config.num_parallel,
         "codex": {
@@ -51,7 +54,6 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             "reasoning_effort": {
                 key.value: value for key, value in config.codex.reasoning_effort.items()
             },
-            "num_try_falv_recovery": config.codex.num_try_falv_recovery,
         },
         "oracle_review": {
             "num_enumerate_findings_loop": config.oracle_review.num_enumerate_findings_loop,
@@ -211,17 +213,15 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
         )
 
         oracle_review_data = _section(data, "oracle_review")
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # Ignore the legacy FALV recovery key when reading older config files;
+        # unknown keys are not carried into the current persisted shape.
         return CmocConfig(
             num_parallel=_int_value(data, "num_parallel", default.num_parallel),
             codex=CmocConfigCodex(
                 model_providers=model_providers,
                 model=model,
                 reasoning_effort=reasoning_effort,
-                num_try_falv_recovery=_int_value(
-                    codex_data,
-                    "num_try_falv_recovery",
-                    default.codex.num_try_falv_recovery,
-                ),
             ),
             oracle_review=CmocConfigOracleReview(
                 num_enumerate_findings_loop=_int_value(

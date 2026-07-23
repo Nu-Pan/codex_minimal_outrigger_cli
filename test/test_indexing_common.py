@@ -543,6 +543,26 @@ def test_update_indexes_replaces_index_symlink_without_writing_link_target(
     assert external_index.read_text() == "external\n"
 
 
+def test_target_content_for_indexing_does_not_follow_index_symlink(
+    tmp_path: Path,
+) -> None:
+    """INDEX.md symlink のリンク先を agent prompt の本文に含めない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/indexing.md
+    """
+    root = make_repo(tmp_path)
+    directory = root / "docs"
+    directory.mkdir()
+    (directory / "visible.txt").write_text("inside\n")
+    external_index = tmp_path / "external-index.md"
+    external_index.write_text("outside-only\n")
+    (directory / "INDEX.md").symlink_to(external_index)
+
+    assert indexing_common.target_content_for_indexing(directory) == (
+        "INDEX.md\nvisible.txt"
+    )
+
+
 def test_indexing_lock_path_is_shared_across_linked_worktrees(tmp_path: Path) -> None:
     """linked worktree 間で INDEX 更新 lock を共有する。"""
     root = make_repo(tmp_path)

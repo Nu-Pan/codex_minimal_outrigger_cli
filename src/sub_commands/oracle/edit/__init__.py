@@ -45,6 +45,7 @@ def cmoc_oracle_edit_impl() -> None:
 
 
 def _cmoc_oracle_edit_body() -> None:
+    """入力された oracle 編集指示から Codex TUI を起動する。"""
     repository = repo_root()
     current_root = work_root()
     start_subcommand_step(2, "oracle 最終状態の指示を入力", "edit instruction")
@@ -60,6 +61,7 @@ def _cmoc_oracle_edit_body() -> None:
     start_subcommand_step(4, "TUI 起動前 indexing", "indexing preflight")
 
     def validate_and_start_launch_step() -> None:
+        """oracle edit TUI の起動前提を検証し、最後の step を開始する。"""
         start_subcommand_step(5, "TUI 起動の事前条件を確認", "validate TUI launch")
         _require_oracle_edit_launch_preconditions(repository, current_root)
         start_subcommand_step(6, "Codex TUI を起動", "launch Codex TUI")

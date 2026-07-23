@@ -15,69 +15,61 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc run abandon` の実装。active editing run を特定し、実行中プロセスを停止したうえで run worktree と branch を削除し、状態・process tracking・lifecycle report を更新する。cleanup 結果と警告を CLI に表示する。
+- `cmoc run abandon` の実行本体を担当する。active editing run を特定し、running 状態なら追跡プロセスを停止したうえで、run worktree・branch・state・process ID を cleanup し、ライフサイクルレポートと結果を表示する。run abandon の cleanup 挙動を確認する入口。
 
 ## Read this when
-- `cmoc run abandon` の cleanup lifecycle、実行中 run の停止、run worktree／branch の破棄、abandon 後の状態更新やレポート出力を変更・調査するとき。
+- `cmoc run abandon` の実装、active run の停止、worktree・branch・state の cleanup、abandon レポートや表示結果を調査・変更するとき。
 
 ## Do not read this when
-- run の開始・join・完了など abandon 以外の lifecycle を変更するときは、各 lifecycle 実装を直接読む。
-- workload 固有の処理や一般的な run 状態解決の仕様だけを調査するときは、対応する lifecycle・runtime モジュールを直接読む。
+- run の作成・開始・join・通常完了の処理を調べるとき。プロセス追跡やライフサイクルレポートの共通処理そのものを調べる場合は、対応する `commons` モジュールを直接読む。
 
 ## hash
-- cc9af9effc51e1e2874b0175611f454c70ad1f35b7b7edb468818c3ee3788f5a
+- 5270f073a167a652b085c5c13b05e520fdc704e36d2f603e3fc03110e6a0674d
 
 # `join.py`
 
 ## Summary
-- `cmoc run join` の実行本体を担い、active editing run の検査、run branch の session branch への merge、INDEX.md 限定の競合解決、post-join 処理、state 同期、report 保存、worktree・branch cleanup を管理する。join 前後の異常時には run を error 状態へ記録し、必要に応じて process 停止や force resolve を行う。
+- `cmoc run join` の active run を session branch に統合する CLI 実装。merge 前の doctor 処理、差分検査、想定外変更の拒否または `--force-resolve` による復元、merge conflict 処理を担う。
+- merge 後の post-join hook、INDEX と refactor state の同期、state・report の保存、run process tracking の削除、worktree と branch の cleanup、および失敗時の error state への復旧を一連の lifecycle として実装している。
+- `run join` の挙動、merge・cleanup・失敗復旧・想定外差分・INDEX.md conflict の変更や調査を行う際の主要な入口である。
 
 ## Read this when
-- `cmoc run join` の merge lifecycle、force resolve、post-join hook、run resource cleanup の挙動を変更・調査するとき。
-- run branch と session branch の差分検査、INDEX.md 競合の扱い、join failure report、error run の復旧を確認するとき。
+- `cmoc run join` の実装や active run の merge lifecycle を変更・調査するとき
+- run branch と session branch の差分検査、`--force-resolve`、merge conflict の扱いを確認するとき
+- post-join の state 同期、report 保存、process tracking、worktree・branch cleanup、失敗時復旧を確認するとき
 
 ## Do not read this when
-- join lifecycle の共通 context 解決、差分判定、commit、index refresh の詳細だけを確認したいときは、参照先の `sub_commands.run.lifecycle` を直接読む。
-- lifecycle report の出力形式だけを確認したいときは、`sub_commands.run.report` を直接読む。
-- run process の PID 管理やロックの実装だけを確認したいときは、`commons.runtime_run` を直接読む。
+- run の開始・実行・abandon など、join lifecycle 以外の処理だけを扱うとき
+- 共通の run state、git 操作、report 生成の詳細だけを調べる場合は、直接それぞれの共通 runtime module を読むとき
+- INDEX.md の生成・更新ロジック自体だけを調べるとき
 
 ## hash
-- d113167ba8a8481769d8f7e3568a9bba4b415820d0b524303b7a988b448c72d2
+- 765e0b05ef27b90e0ad42e701b9fee191738960f402109ea0639eb722624047a
 
 # `lifecycle.py`
 
 ## Summary
-- editing run の開始・解決・状態更新を担う共通ライフサイクル処理。session/run の事前条件検査、専用 branch・worktree の作成と後始末、state file の更新を扱う。
-- worktree 差分の rollback・commit、INDEX.md 更新、Git tree change の列挙、agent・run・session が変更可能な path の検証、oracle diff の抽出も提供する。
-- editing run の各サブコマンドでライフサイクル管理、worktree commit、変更 path の許可判定、INDEX 更新の実装を確認する入口。
+- editing run のライフサイクル共通処理を旧 import path から利用できるようにする薄い互換 shim。実装本体は commons.runtime_run_lifecycle にあり、このファイルは公開対象の名前を再エクスポートする入口である。
 
 ## Read this when
-- editing run の開始、active run の解決、joinable/error state への遷移を変更または調査するとき
-- run worktree や session worktree の作成・削除、rollback・commit、INDEX 更新の挙動を確認するとき
-- Git の rename/copy を含む差分解析、oracle・realization・refactor state の変更許可判定を確認するとき
+- editing run lifecycle の旧 import path との互換性や、ここから再エクスポートされる実行状態・変更管理 API を確認するとき。
 
 ## Do not read this when
-- 特定の editing run サブコマンド固有の workload 処理だけを変更または調査するとき
-- session state のデータ構造や永続化形式そのものを確認するときは、runtime state の実装を直接読むとき
-- 一般的な Git 操作や INDEX 生成の詳細だけを確認し、この共通 lifecycle 処理を利用していないとき
+- 共通処理の実装詳細を確認したいときは、直接 commons.runtime_run_lifecycle を読む。run コマンド固有の処理や CLI 動作を調べるときは、対応する上位モジュールを読む。
 
 ## hash
-- 11524e925bbf5c52e99d1ef92c463ee25d05244e7f42a9d18658ca0122ca75c8
+- ac74f8c26aea9338a8142da59b7160da9c35f4dbaa8a5a97290d6743d6308ee7
 
 # `report.py`
 
 ## Summary
-- editing run の fork report と lifecycle report を Markdown + YAML Front Matter として保存するモジュール。共通メタデータ、完了理由、変更パス、警告、詳細項目を組み立て、レポートの出力先・ファイル名・YAML scalar 表現を管理する。
+- run report writer の旧 import path として、commons.runtime_run_report の fork/lifecycle レポート出力関数を再公開する薄い互換 shim。独自のレポート処理は持たず、canonical 実装への入口を提供する。
 
 ## Read this when
-- run の fork、join、abandon に伴うレポート生成や保存先を変更するとき
-- レポートの Front Matter 項目、本文構成、警告・変更パスの出力形式を確認するとき
-- レポート値の YAML scalar 変換や生成時刻の扱いを変更するとき
+- run サブコマンドのレポート出力関数の旧 import path、互換性、または commons 側の canonical 実装への委譲関係を確認するとき。
 
 ## Do not read this when
-- run のライフサイクル状態遷移や EditingRunContext 自体の仕様を確認したいときは、ライフサイクル実装を直接読む
-- レポート生成後の CLI 表示やレポートの利用側だけを変更するときは、対応する呼び出し元・利用側を直接読む
-- 一般的なパス解決や時刻生成の仕様だけを確認するときは、commons.runtime_paths を直接読む
+- レポート出力の具体的な処理内容を確認するときは、直接 commons.runtime_run_report を読む。run レポート以外のサブコマンド実装を調査するとき。
 
 ## hash
-- 688ec81dbc99f58cbc14cc334ffdf3f86001b8903469d479c200d709621d158a
+- 0a058d7e3b3fd263920ff32392c54d0a4ce3509672ac59ce07a5e30f78e1aac7

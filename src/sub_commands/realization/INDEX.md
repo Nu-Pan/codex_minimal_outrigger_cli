@@ -15,34 +15,32 @@
 # `apply`
 
 ## Summary
-- realization の apply workload を扱うディレクトリ。apply workload の入口と、`cmoc realization apply fork` の実行フローを確認するために読む。
+- realization の apply 処理に関する workload を扱うディレクトリ。apply workload 実装の確認入口であり、fork サブコマンドの実行制御や run lifecycle の実装へ進む起点となる。
 
 ## Read this when
-- realization の apply workload を調査・変更するとき。
-- `cmoc realization apply fork` の処理フロー、agent 実行、差分検査、commit、run 状態遷移、fork report を確認するとき。
+- realization の apply workload の内容を調査・変更するとき。
+- `cmoc realization apply fork` の実行フロー、oracle 差分を基準にした agent 起動、変更範囲検証、commit、run 状態更新、fork report 保存、失敗時 rollback を調査・変更するとき。
 
 ## Do not read this when
-- apply fork の launch parameter 構築だけを調査・変更するとき。
-- run lifecycle の共通処理や report 形式だけを確認するとき。
-- realization apply fork 以外のサブコマンドの実行フローを調査するとき。
+- apply workload 以外の処理を扱うとき。
+- realization apply agent の起動パラメータ生成だけを調査する場合。
+- run 状態管理、差分計算、INDEX 更新、report 生成の共通仕様だけを調査する場合。
+- 別の realization apply サブコマンドの処理を調査する場合。
 
 ## hash
-- 3d86a47945ffd9b4cd81539a13dabff57ad1d09ca9730bbc46edef03f283b31c
+- 9aba22ebe989d266f79868e8c7e5bec34e5ee842f417b462c92d9fa774723844
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を扱うパッケージ。リファクタリング関連 CLI の入口と、fork の実行ライフサイクルを提供する。
-- fork モジュールでは、refactor run の初期化から realization file 単位の調査・修正、state 同期、commit、完了判定、変更要約、fork report 保存までを一連の処理として実装する。
+- realization のリファクタリング処理をまとめるパッケージ。リファクタリング関連 CLI の実行入口と、個別処理へ進むための構成を提供する。
 
 ## Read this when
-- realization のリファクタリング処理の構成や実行フローを確認・変更するとき。
-- refactor fork の unresolved finding 管理、state 更新、report 生成、割り込み・例外時の処理を確認するとき。
+- realization のリファクタリング処理の実行フローやパッケージ構成を確認するとき。
 
 ## Do not read this when
-- realization refactor の state 操作だけを変更・調査する場合。
-- 一般的な run lifecycle や report 共通処理だけを確認する場合。
-- file 単位の agent parameter や change summary parameter の定義だけを確認する場合。
+- realization のリファクタリング以外の処理を確認するとき。
+- 個別 realization file のレビュー・修正、変更概要生成、共通 lifecycle・state・差分分類・report 処理だけを調べるとき。
 
 ## hash
-- 526fa2f23cd4b2e4506c55fd5ac012cf911f732ef4da68276a54376f9e47002e
+- 3c3d46bee05cbed94f87b79904e586471efa1cf9f691988c01489d643d3f98b4

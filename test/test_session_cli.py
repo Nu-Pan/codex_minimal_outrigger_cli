@@ -529,6 +529,40 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
+def test_session_abandon_restores_branch_if_delete_is_interrupted_after_side_effect(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """branch削除後の中断でも元のsession branchとstateを復元する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    state_path = session_state_path(root, session_branch)
+    original_delete_branch = session_module.delete_branch
+
+    def delete_then_interrupt(
+        repository: Path, branch: str, force: bool = False
+    ) -> None:
+        """branchを削除した直後にcleanup中断を再現する。"""
+        result = original_delete_branch(repository, branch, force)
+        assert result.returncode == 0
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(session_module, "delete_branch", delete_then_interrupt)
+
+    result = runner.invoke(app, ["session", "abandon"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == session_branch
+    assert run_git(root, "rev-parse", session_branch).stdout.strip() == session_commit
+    state = json.loads(state_path.read_text())
+    assert state["session"]["state"] == "active"
+
+
 @pytest.mark.parametrize("command", ["abandon", "join"])
 def test_session_completion_rejects_missing_state_fields(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command: str

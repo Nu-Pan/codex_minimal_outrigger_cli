@@ -99,7 +99,6 @@ def test_oracle_edit_builder_imports_from_packaged_layout(tmp_path: Path) -> Non
             "from acp.builder.oracle.edit.launch_tui import "
             "build_oracle_edit_launch_tui_parameter as build; "
             "log = Path.cwd() / '.cmoc/gu/ar/log/editor_input/test_cmpl.md'; "
-            "log.parent.mkdir(parents=True); "
             "p = build('test', 'oracle を編集する'); "
             "assert p.structured_output_schema_path is None; "
             "assert p.file_access_mode.value == 'pure_oracle_write'; "

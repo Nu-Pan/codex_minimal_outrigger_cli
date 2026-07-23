@@ -18,12 +18,13 @@ from cmoc_runtime import (
 )
 from commons.indexing import enable_indexing_preflight
 from commons.runtime_run import run_process_tracking
-from sub_commands.run.lifecycle import (
+from commons.runtime_run_lifecycle import (
     EditingRunContext,
     commit_work_unit,
     flattened_change_paths,
     raw_oracle_diff,
     refresh_indexes,
+    resolve_active_run,
     rollback_work_unit,
     set_run_state,
     start_editing_run,
@@ -32,7 +33,7 @@ from sub_commands.run.lifecycle import (
     unexpected_run_paths,
     worktree_change_paths,
 )
-from sub_commands.run.report import write_fork_report
+from commons.runtime_run_report import write_fork_report
 
 
 def cmoc_realization_apply_fork_impl() -> None:
@@ -47,6 +48,7 @@ def cmoc_realization_apply_fork_impl() -> None:
 
 
 def _cmoc_realization_apply_fork_body() -> None:
+    """realization apply agent を実行し、差分を joinable run として公開する。"""
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
     diff_base_commit: str | None = None
@@ -97,7 +99,10 @@ def _cmoc_realization_apply_fork_body() -> None:
             )
         start_subcommand_step(5, "realization 差分を検査して commit", "commit changes")
         _validate_agent_changes(context)
-        refresh_indexes(context.run_worktree, commit=True)
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # agent の realization 差分と cmoc が生成する INDEX.md を同じ処理単位に
+        # 含め、後続の commit/rollback が両方へ同じように適用されるようにする。
+        refresh_indexes(context.run_worktree, commit=False)
         commit_work_unit(
             context.run_worktree,
             "cmoc realization apply fork",
@@ -121,7 +126,9 @@ def _cmoc_realization_apply_fork_body() -> None:
         )
     except BaseException as exc:
         if context is None:
-            raise
+            context = _recover_started_run()
+            if context is None:
+                raise
         report = _record_error(
             context,
             diff_base_commit,
@@ -142,20 +149,37 @@ def _cmoc_realization_apply_fork_body() -> None:
 
 
 def _validate_agent_changes(context: EditingRunContext) -> None:
+    """apply agent が変更した path が許可範囲内か検証する。"""
     unexpected = unexpected_agent_paths(
         context,
-        worktree_change_paths(context.run_worktree),
+        worktree_change_paths(
+            context.run_worktree,
+            include_rename_sources=True,
+        ),
     )
     if unexpected:
         raise _unexpected_change_error(unexpected)
 
 
 def _unexpected_change_error(paths: list[str]) -> CmocError:
+    """想定外の apply 差分を共通の利用者向け例外へ変換する。"""
     return CmocError(
         "realization apply run に想定外差分があります。",
         ["run report を確認し、run を join または abandon してください。"],
         "\n".join(paths),
     )
+
+
+def _recover_started_run() -> EditingRunContext | None:
+    """start 後の context 代入前に公開された apply run を回収する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
+    """
+    try:
+        context, _state = resolve_active_run({"running", "error"})
+    except CmocError:
+        return None
+    return context if context.kind == "realization_apply" else None
 
 
 def _record_error(
@@ -164,6 +188,7 @@ def _record_error(
     codex_returncode: int | None,
     exc: BaseException,
 ) -> Path:
+    """apply run の差分を戻し、error state と fork report を保存する。"""
     cleanup_errors: list[str] = []
     try:
         rollback_work_unit(context.run_worktree)

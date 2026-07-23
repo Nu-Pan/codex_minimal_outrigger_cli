@@ -182,12 +182,16 @@ def delete_branch(root: Path, branch: str, force: bool = False) -> CommandResult
 def _expected_managed_worktree(root: Path, branch: str) -> Path:
     """管理branch名から許可されたrun worktree pathを求める。"""
     parts = branch.split("/")
+    # {{work-root}}/oracle/doc/branch_model.md
+    # dot component は run-root の2階層配置を崩すため、path component として許可しない。
     if (
         len(parts) != 4
         or parts[0] != "cmoc"
         or parts[1] != "run"
         or not parts[2]
         or not parts[3]
+        or parts[2] in {".", ".."}
+        or parts[3] in {".", ".."}
     ):
         raise CmocError(
             "run worktree を作成できない branch 名です。",

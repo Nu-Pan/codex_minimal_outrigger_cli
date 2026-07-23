@@ -17,6 +17,7 @@ import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.review as review_module
 from basic.acp import AgentCallParameter
+from commons.runtime_run_lifecycle import set_run_state, start_editing_run
 from main import app
 
 
@@ -95,7 +96,7 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     assert report_path.is_relative_to(root / ".cmoc" / "gu" / "ar" / "report")
     assert not report_path.is_relative_to(linked)
     rendered = report_path.read_text()
-    assert f"review_fork_commit: {session_head}" in rendered
+    assert f"run_fork_commit: {session_head}" in rendered
     assert "`oracle/linked.md`" in rendered
     branch = run_git(linked, "branch", "--show-current").stdout.strip()
     assert branch.startswith("cmoc/session/")
@@ -195,6 +196,43 @@ def test_oracle_review_rejects_uncommitted_worktree_changes(
     assert relative_path in result.output
 
 
+def test_oracle_review_allows_active_editing_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """read-only review は active editing run 中でも実行できる。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md、
+    {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md。
+    """
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    context = start_editing_run("realization_apply")
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """review の所見列挙を空結果にして lifecycle の許可だけを検証する。"""
+
+        assert _schema_name(parameter) == "enumerate_finding.json"
+        return _FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0, result.output
+    set_run_state(context, "joinable")
+    abandon = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+    assert abandon.exit_code == 0, abandon.output
+
+
 def test_oracle_review_merges_review_index_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -251,7 +289,7 @@ def test_oracle_review_merges_review_index_changes(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "review_join_commit: null" not in rendered
+    assert "run_join_commit: null" not in rendered
     assert review_worktrees
     for review_worktree in review_worktrees:
         assert review_worktree.parent == root / ".cmoc" / "gu" / "worktree" / session_id
@@ -324,7 +362,7 @@ def test_oracle_review_merges_preflight_committed_index_changes(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "review_join_commit: null" not in rendered
+    assert "run_join_commit: null" not in rendered
 
 
 def test_oracle_review_resolves_index_conflict_when_session_deleted_index(

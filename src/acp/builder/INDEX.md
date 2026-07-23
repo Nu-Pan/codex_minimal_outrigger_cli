@@ -45,36 +45,36 @@
 # `indexing`
 
 ## Summary
-- `acp.builder.indexing` の既存参照を保つための互換入口層。索引関連の正本実装へ到達するための名前空間維持が必要なときに読む。
-- `acp.builder.indexing.index_entry` の再公開層。既存の利用経路を切らさずに正本側へつなぐ必要があるときに読む。
+- `acp.builder.indexing` の既存参照を維持する互換入口をまとめた層。正本実装への到達点と、index entry 生成用パラメータの再公開・prompt fence 保護を扱う。
 
 ## Read this when
-- 既存の `acp.builder.indexing.*` 参照を壊さずに索引関連機能へ進む必要がある。
-- 互換入口として残すべきか、削除条件を判断したい。
+- 既存の `acp.builder.indexing.*` 参照を維持または変更するとき
+- index entry 生成処理の互換入口や、対象本文を埋め込む prompt の fence 保護を確認するとき
 
 ## Do not read this when
-- 索引関連の正本実装そのものを変更したい場合は、互換入口ではなく `oracle.acp_builder.indexing` 側を読む。
-- この名前空間をもう参照しない前提で整理・削除したい場合は、互換維持ではなく利用側の参照先を確認する。
+- index 関連の正本実装そのものを変更するとき
+- 互換入口を削除・整理し、利用側の参照先を確認するとき
+- ACP builder や一般的な indexing 処理を調べるとき
 
 ## hash
-- e131b4693f423253e686c3d74b6f6a880be3d8227b2da0c4f95986b6e16fc6b1
+- e653407d91388c8128db709a19057df67b7751bbc8da16bf782ef22dc6e53d98
 
 # `oracle`
 
 ## Summary
-- oracle command builder の realization package。oracle command builder 関連のパッケージ入口として機能する。
-- oracle edit、investigation、review 向けの builder adapter をまとめる上位パッケージで、各サブパッケージへの入口を提供する。
+- oracle command builder の realization adapter 群をまとめるパッケージ階層。oracle edit・investigation・review の各 builder 入口と、正本 builder への委譲、起動パラメータ生成、互換性対応などの下位実装へ進むためのルーティング起点。
 
 ## Read this when
-- oracle command builder の realization package の責務やサブパッケージ構成を確認するとき
-- oracle edit、investigation、review の builder adapter の入口を確認するとき
+- oracle command builder の realization adapter 構成や、edit・investigation・review builder の担当領域を確認するとき。
+- oracle builder の下位実装へ進む前に、対象サブパッケージの入口を選ぶとき。
+- oracle investigation の起動パラメータ生成や editor input 準備、oracle review の finding 関連 adapter・互換性対応を調査するとき。
 
 ## Do not read this when
-- oracle command builder 以外の処理を確認するとき
-- 各 builder の正本仕様や具体的な canonical 実装を確認するときは、対応する oracle 側または下位実装を直接読む
+- oracle builder の具体的な prompt 内容や個別処理の実装詳細を確認したいときは、該当する下位パッケージまたは正本 builder を直接読む。
+- oracle command builder 以外の ACP builder、TUI 実装、CLI 処理、共通パス解決のみを調査するとき。
 
 ## hash
-- 3f3c7f0f27913083af9c09fff45b21c856b1aba060fae155327d18e22a7bd504
+- 785845dac745ab0e8fd160658f6ddd8b5096db9328379dbfb4ea1bf3f17437a7
 
 # `quota_probe.py`
 

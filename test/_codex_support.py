@@ -18,9 +18,13 @@ class FakeCodexResult:
 
 
 def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """provider 固有の認証を仮定しない空の Codex home を準備する。"""
+    """test-root 内に provider 固有の認証を仮定しない Codex 環境を準備する。"""
+    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    home = tmp_path / "home"
+    home.mkdir()
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("CODEX_HOME", str(codex_home))
     return codex_home
 

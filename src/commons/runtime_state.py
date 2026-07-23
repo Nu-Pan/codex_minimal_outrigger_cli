@@ -56,6 +56,7 @@ class SessionState:
         _require_state(session_data, "session", SESSION_STATES, source)
         _require_state(run_data, "run", RUN_STATES, source)
         _require_nullable_strings(session_data, "session", source)
+        _require_session_identity(session_data, source)
         _require_nullable_strings(run_data, "run", source)
         _validate_run_fields(run_data, source)
         return cls(SessionPart(**session_data), RunPart(**run_data))
@@ -139,6 +140,7 @@ def load_session_part_for_branch(
     session_data = _part_data(data, "session", SessionPart, path)
     _require_state(session_data, "session", SESSION_STATES, path)
     _require_nullable_strings(session_data, "session", path)
+    _require_session_identity(session_data, path)
     return session_id, path, SessionPart(**session_data)
 
 
@@ -161,9 +163,10 @@ def _read_state_data(path: Path) -> dict[str, Any]:
 
 def write_state(path: Path, state: SessionState) -> None:
     """session state を安定した JSON 表現で保存する。"""
+    validated = SessionState.from_dict(state.to_dict(), path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(state.to_dict(), ensure_ascii=False, indent=2) + "\n",
+        json.dumps(validated.to_dict(), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
@@ -210,6 +213,7 @@ def _part_data(
 def _require_state(
     part: dict[str, Any], key: str, allowed: set[str], source: Path | None
 ) -> None:
+    """state part の状態値が許可された集合に含まれることを検証する。"""
     value = part["state"]
     if not isinstance(value, str) or value not in allowed:
         raise _invalid_state(
@@ -221,11 +225,25 @@ def _require_state(
 def _require_nullable_strings(
     part: dict[str, Any], key: str, source: Path | None
 ) -> None:
+    """state part の payload が string または null だけであることを検証する。"""
     for name, value in part.items():
         if name != "state" and value is not None and not isinstance(value, str):
             raise _invalid_state(
                 source,
                 f"`{key}.{name}` は string または null である必要があります: {value!r}",
+            )
+
+
+def _require_session_identity(session: dict[str, Any], source: Path | None) -> None:
+    """永続 state に必要な session の fork 元情報を検証する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    """
+    for name in ("session_home_branch", "session_fork_commit"):
+        if not isinstance(session[name], str):
+            raise _invalid_state(
+                source,
+                f"`session.{name}` は string である必要があります: {session[name]!r}",
             )
 
 
@@ -246,6 +264,7 @@ def _validate_run_fields(run: dict[str, Any], source: Path | None) -> None:
 
 
 def _invalid_state(source: Path | None, reason: str) -> CmocError:
+    """不正な session state を利用者向け例外へ変換する。"""
     detail = f"{source}\n{reason}" if source else reason
     return CmocError(
         "session state file が不正です。",

@@ -15,17 +15,15 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の full-cycle CLI workload を実装する。refactor run の初期化、realization file 単位の調査・修正、state 同期、commit、完了判定、変更要約、fork report 保存までを単一の lifecycle として扱う。
-- current fork 内の unresolved finding を対象ごとに管理し、処理済み対象、未調査対象、finding 数、変更 path、Codex call log を report と標準出力へ反映する。
+- realization refactor fork の CLI 実行全体を管理する workload。対象の選択、file 単位の agent 調査・修正、差分検証、refactor state 更新、commit、unresolved 所見の追跡、完了判定、joinable/error report の生成を一つの lifecycle として扱う。
 
 ## Read this when
-- realization refactor fork の実行フロー、処理単位、完了条件、unresolved 管理、refactor state 更新を変更・調査するとき。
-- fork report の生成内容や change summary、割り込み・例外時の rollback と run state 更新を確認するとき。
+- realization refactor fork の実行フロー、処理単位、current fork 内の unresolved 管理、完了条件、割り込み・エラー時の cleanup、report 内容を変更または調査するとき。
 
 ## Do not read this when
-- 通常の realization refactor の state 操作だけを変更する場合は、直接 commons.runtime_refactor を読む。
-- 一般的な run lifecycle や report 共通処理だけを変更する場合は、直接 sub_commands.run.lifecycle または sub_commands.run.report を読む。
-- file 単位の agent parameter や change summary parameter の定義だけを確認する場合は、対応する builder module を直接読む。
+- 個別 realization file のレビュー・修正ロジックだけを調べるときは file_review_and_fix を読む。
+- refactor 実行結果の変更概要生成だけを調べるときは change_summary を読む。
+- 共通の run lifecycle、state 管理、差分分類、report 書き込みの詳細だけを調べるときは、それぞれの commons 実装を直接読む。
 
 ## hash
-- 268826701af4edb46f8b677d55ce247d29da630ed8962d824d334d1698da1cda
+- 8be2007d9ce2d1b5c1078f4ed63897b9d16e2795ee72f69d42690f8820024bf3

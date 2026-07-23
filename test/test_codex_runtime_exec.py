@@ -25,6 +25,16 @@ from config.cmoc_config import CmocConfig
 _REAL_CODEX = shutil.which("codex")
 
 
+def test_setup_codex_home_isolates_home_and_codex_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """共通 Codex 環境 helper が両方の home を test-root 内へ置く。"""
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
+
+    assert Path(os.environ["HOME"]) == tmp_path / "home"
+    assert Path(os.environ["CODEX_HOME"]) == codex_home
+
+
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     """Codex exec の必須 argv と prompt の stdin 渡しを検証する。"""
@@ -188,6 +198,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
     assert Path(record["stdin_fd"]).resolve() == result.prompt_log_path.resolve()
+    assert result.prompt_log_path.name.endswith("_prompt.md")
     assert codex_arg_value(record["args"], "--sandbox") == "workspace-write"
     override_config = codex_override_config(record["args"])
     assert override_config["model_reasoning_effort"] == "low"

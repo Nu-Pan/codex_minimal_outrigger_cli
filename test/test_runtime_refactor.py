@@ -1,5 +1,10 @@
-"""realization refactor 永続 state の同期・選択規則を検証する。"""
+"""realization refactor 永続 state の同期・選択規則を検証する。
 
+正本仕様: `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`,
+`{{work-root}}/oracle/doc/app_spec/misc_spec.md`。
+"""
+
+import json
 from pathlib import Path
 
 import pytest
@@ -17,6 +22,7 @@ from commons.runtime_refactor import (
 def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
     tmp_path: Path,
 ) -> None:
+    """refactor state が oracle と realization の正確な file 集合を追跡する。"""
     root = make_repo(tmp_path)
 
     state = sync_refactor_state(root)
@@ -33,6 +39,7 @@ def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     tmp_path: Path,
 ) -> None:
+    """state 同期が調査履歴を保持し、変更 file を再調査対象へ戻す。"""
     root = make_repo(tmp_path)
     state = sync_refactor_state(root)
     entry = state["README.md"]
@@ -41,7 +48,7 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
             "investigation_required": False,
             "last_investigation_result": "no_findings",
             "last_investigated_sha256": file_sha256(root / "README.md"),
-            "last_investigated_at": "2026-07-19_00-00-00_000000000",
+            "last_investigated_at": "2026-07-19_00-00_00_000000000",
         }
     )
     write_refactor_state(root, state)
@@ -52,20 +59,21 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     changed = synchronized["README.md"]
     assert changed["investigation_required"] is True
     assert changed["last_investigation_result"] == "no_findings"
-    assert changed["last_investigated_at"] == "2026-07-19_00-00-00_000000000"
+    assert changed["last_investigated_at"] == "2026-07-19_00-00_00_000000000"
     assert changed["last_investigated_sha256"] != file_sha256(root / "README.md")
 
 
 def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
     tmp_path: Path,
 ) -> None:
+    """target 選択が未調査 entry と古い調査時刻を優先する。"""
     root = make_repo(tmp_path)
     state = sync_refactor_state(root)
     state["README.md"].update(
         {
             "last_investigation_result": "findings",
             "last_investigated_sha256": file_sha256(root / "README.md"),
-            "last_investigated_at": "2026-01-01_00-00-00_000000000",
+            "last_investigated_at": "2026-01-01_00-00_00_000000000",
         }
     )
 
@@ -75,7 +83,7 @@ def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
         {
             "last_investigation_result": "no_findings",
             "last_investigated_sha256": file_sha256(root / "oracle" / "spec.md"),
-            "last_investigated_at": "2026-02-01_00-00-00_000000000",
+            "last_investigated_at": "2026-02-01_00-00_00_000000000",
         }
     )
     assert select_refactor_target(state) == "README.md"
@@ -84,6 +92,7 @@ def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
 
 
 def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:
+    """refactor state の親 path escape を拒否する。"""
     root = make_repo(tmp_path)
     path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
     path.parent.mkdir(parents=True)
@@ -93,6 +102,37 @@ def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:
         '"last_investigation_result": "not_investigated", '
         '"last_investigated_sha256": null, '
         '"last_investigated_at": null}}\n'
+    )
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+
+
+@pytest.mark.parametrize(
+    ("key", "investigated_at"),
+    [("./README.md", "2026-07-19_00-00_00_000000000"), ("README.md", "invalid")],
+)
+def test_refactor_state_rejects_noncanonical_path_or_timestamp(
+    tmp_path: Path,
+    key: str,
+    investigated_at: str,
+) -> None:
+    """正規化されていない path と timestamp を state schema で拒否する。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json.dumps(
+            {
+                key: {
+                    "investigation_required": False,
+                    "last_investigation_result": "no_findings",
+                    "last_investigated_sha256": "0" * 64,
+                    "last_investigated_at": investigated_at,
+                }
+            }
+        )
+        + "\n"
     )
 
     with pytest.raises(CmocError, match="refactor state"):

@@ -33,7 +33,6 @@ def test_config_defaults_match_logical_model_classes() -> None:
     assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
     assert config.codex.reasoning_effort[ReasoningEffort.XHIGH] == "xhigh"
     assert config.codex.reasoning_effort[ReasoningEffort.MAX] == "max"
-    assert config.codex.num_try_falv_recovery == 1
 
 
 def test_config_json_preserves_oracle_member_order() -> None:
@@ -49,7 +48,6 @@ def test_config_json_preserves_oracle_member_order() -> None:
         "model_providers",
         "model",
         "reasoning_effort",
-        "num_try_falv_recovery",
     ]
     assert list(data["codex"]["model"]) == [
         "mainstream",
@@ -160,8 +158,6 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
     [
         {"num_parallel": True},
         {"num_parallel": "3"},
-        {"codex": {"num_try_falv_recovery": True}},
-        {"codex": {"num_try_falv_recovery": "1"}},
         {"oracle_review": {"num_enumerate_findings_loop": False}},
         {"oracle_review": {"num_enumerate_findings_loop": "2"}},
         {"oracle_review": {"num_merge_findings_loop": True}},
@@ -248,9 +244,8 @@ def test_config_to_dict_rejects_invalid_in_memory_provider_setting() -> None:
         config_to_dict(config)
 
 
-def test_config_preserves_codex_falv_recovery_try_count() -> None:
-    """codex の recovery 試行回数を読み込みと JSON 化の両方で保持する。"""
+def test_config_ignores_legacy_falv_recovery_setting() -> None:
+    """旧 FALV recovery 設定を現行の persisted config へ持ち越さない。"""
     config = config_from_dict({"codex": {"num_try_falv_recovery": 4}})
 
-    assert config.codex.num_try_falv_recovery == 4
-    assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 4
+    assert "num_try_falv_recovery" not in config_to_dict(config)["codex"]
