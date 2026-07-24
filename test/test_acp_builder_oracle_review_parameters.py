@@ -148,18 +148,26 @@ def test_oracle_review_enumerate_parameter_matches_oracle_builder() -> None:
     assert parameter == oracle_parameter
 
 
+@pytest.mark.parametrize("use_placeholder", [False, True])
 def test_oracle_review_enumerate_parameter_keeps_symlink_entry_path(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    use_placeholder: bool,
 ) -> None:
     """enumerate prompt の oracle-path が symlink entry を指すことを検証する。"""
+    (tmp_path / ".git").mkdir()
     (tmp_path / "oracle").mkdir()
     target = tmp_path / "memo.md"
     target.write_text("# memo\n")
     link = tmp_path / "oracle" / "memo-link.md"
     link.symlink_to("../memo.md")
+    monkeypatch.chdir(tmp_path)
     related_findings = f"- {{{{oracle-path}}}} = {link.resolve()}"
+    oracle_path = Path("{{work-root}}/oracle/memo-link.md") if use_placeholder else link
 
-    parameter = build_oracle_review_enumerate_finding_parameter(link, related_findings)
+    parameter = build_oracle_review_enumerate_finding_parameter(
+        oracle_path, related_findings
+    )
 
     assert f"- {{{{oracle-path}}}} = {link}" in parameter.prompt
     assert related_findings in parameter.prompt

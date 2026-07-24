@@ -63,20 +63,20 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization adapter 群を収めるディレクトリ。oracle command builder の各サブコマンド別パッケージへの入口で、builder adapter の構成と実装領域を確認するためのルーティング先。
+- oracle command builder の realization adapter 群をまとめるパッケージ領域。oracle edit・investigation・review の各 builder 入口と、対応する起動パラメータ生成・finding 処理へのルーティングを提供する。
 
 ## Read this when
-- oracle command builder の realization adapter の構成や責務を確認するとき
-- oracle edit、investigation、review の builder adapter を調査・変更するとき
-- 各サブコマンドの TUI 起動パラメータ生成、AgentCallParameter 構築、canonical builder への委譲経路を確認するとき
+- oracle command builder の realization adapter の構成や、edit・investigation・review の実装入口を確認するとき。
+- 対象 command の builder adapter、AgentCallParameter 生成、TUI 起動処理の呼び出し経路を調査・変更するとき。
+- oracle review の finding 処理や動的 prompt の path 補正・コードフェンス保護を確認するとき。
 
 ## Do not read this when
-- canonical な oracle builder の正本仕様や prompt 内容を確認したいとき
-- builder adapter の具体的な実装詳細を確認したいときは、該当する下位パッケージ内の実装ファイルを直接読む
-- oracle command builder 以外の builder、TUI 本体、または builder 以外の CLI 処理を調査するとき
+- oracle command builder の正本仕様や canonical builder の具体的な prompt 内容を確認したいとき。
+- builder adapter の個別実装詳細を確認したいときは、該当する下位パッケージの実装を直接読む。
+- oracle command builder と無関係な ACP builder、CLI 実装、TUI 実装を調査するとき。
 
 ## hash
-- 5b20b71fa4ac6c45e97f6c2f173f49c3f9dbfbe43fe14f7b9747e90080f7d265
+- 8c4c5426002d8ca1043493779a4722332ca4018e54cbb503eebcc688b67f4e47
 
 # `quota_probe.py`
 

@@ -547,9 +547,9 @@
   },
   "src/acp/builder/oracle/review/enumerate_finding.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "d26bac7a449c5f25417526af46468c065a91cf919b532f94fe2851dc8842a61a",
+    "last_investigated_at": "2026-07-24_18-24_54_607800000"
   },
   "src/acp/builder/oracle/review/judge_finding.py": {
     "investigation_required": true,
