@@ -127,18 +127,19 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめる src ディレクトリ。主要 CLI エントリーポイント、互換 import shim、共通 runtime、設定入口、oracle 解決 shim、個別サブコマンド実装を扱い、CLI 構成や実装配置を確認するための入口。
+- cmoc CLI の実装ルート。主要エントリーポイント、互換 import shim、共通 runtime、設定、CLI サブコマンド、ACP builder を提供する。
+- CLI 登録と引数処理は主要エントリーポイント、個別の業務処理は sub_commands、横断的な実行基盤は commons、ACP prompt・parameter 構築は acp 配下を入口として確認する。
 
 ## Read this when
-- cmoc の CLI 全体構成、主要エントリーポイント、サブコマンド実装の配置を調査・変更するとき。
-- 互換 import 経路、共通 runtime、設定入口、oracle パッケージ解決 shim の実装を確認するとき。
+- cmoc の CLI 全体構成、公開 import 経路、サブコマンド実装の配置を確認・変更するとき。
+- 主要エントリーポイントから委譲される処理、共通 runtime、ACP builder の責務分担を把握するとき。
 
 ## Do not read this when
+- 特定サブコマンドや共通 helper の詳細だけを確認したいときは、該当する下位ディレクトリまたはモジュールを直接読む。
 - 正本仕様や oracle 側の実装内容だけを確認したいとき。
-- 特定サブコマンドや共通 runtime の詳細が明らかな場合は、src 全体ではなく該当する下位ファイル・ディレクトリを直接読む。
 
 ## hash
-- 0f2a47ffa4f3ee040372a8c5176d90c6a7f5c94747f7624e21810772bf8537ea
+- dd8474f87e240c8b86e295ab25c6afd22b805034abe5b5e1f9080dc20d2ac8b3
 
 # `test`
 
