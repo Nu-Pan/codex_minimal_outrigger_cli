@@ -345,3 +345,26 @@ def test_oracle_review_fence_protection_keeps_marker_in_current_input() -> None:
     assert (
         "inside\n```\n\n# 所見が妥当であるとする理由\nafter\n````" in parameter.prompt
     )
+
+
+def test_oracle_review_fence_protection_keeps_placeholder_marker_in_final_input() -> (
+    None
+):
+    """最終動的本文内の placeholder 風見出しを prompt 境界と誤認しない。"""
+    challenger = (
+        "before\n```\ninside\n```\n\n# place holder definition\n\n"
+        "```text\nunsafe\n```\nafter"
+    )
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        "finding",
+        "known advocate",
+        challenger,
+    )
+
+    start = parameter.prompt.index("# 所見が妥当ではないとする理由")
+    end = parameter.prompt.rfind("\n\n# place holder definition")
+    section = parameter.prompt[start:end]
+    assert challenger in section
+    assert section.startswith("# 所見が妥当ではないとする理由\n\n````text\n")
+    assert section.endswith("\n````")

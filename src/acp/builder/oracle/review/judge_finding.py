@@ -42,5 +42,9 @@ def build_oracle_review_judge_finding_parameter(
         section_heading="# 所見が妥当ではないとする理由",
         section_end_marker="\n\n# place holder definition",
         info_string="text",
+        # challenger reasons is the final dynamic section, so a placeholder-like
+        # heading in its content must not outrank the actual prompt boundary.
+        # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+        prefer_last_end_marker=True,
     )
     return _replace(parameter, prompt=prompt)

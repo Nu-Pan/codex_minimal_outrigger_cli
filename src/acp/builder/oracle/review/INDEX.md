@@ -31,18 +31,16 @@
 # `judge_finding.py`
 
 ## Summary
-- Oracle review finding の判定用 parameter builder を再公開する互換アダプター。canonical 実装へ委譲した後、動的に埋め込まれる3つの所見関連セクション内のコードフェンスを保護して prompt を返す。
+- Oracle review finding の canonical builder を呼び出す realization adapter。動的な所見・賛成理由・反対理由を含む prompt のコードフェンスを保護し、既存 caller 向けに parameter builder を再公開する。canonical 実装への移行完了後は削除対象。
 
 ## Read this when
-- `acp.builder.oracle.review.judge_finding` からの既存 import や互換経路を調査・変更するとき
-- oracle review finding judgment の prompt 生成やコードフェンス保護の挙動を確認するとき
+- oracle review finding の parameter 生成や prompt fence 保護、既存 caller との互換維持を変更・調査するとき。
 
 ## Do not read this when
-- canonical な oracle review judge_finding の仕様・実装を確認したいときは、oracle 側の canonical 実装を直接読む
-- oracle review finding と無関係な builder や prompt 処理を変更するとき
+- canonical な oracle review judge finding の仕様や実装自体を確認したいときは、直接 canonical oracle path を読む。prompt fence 共通処理だけを調べるときは prompt_fence の実装を読む。
 
 ## hash
-- 894edf7d0ae7a78f22c44fc496e1ea826ead283eec9dfd7d966d41dd7c209468
+- c597d7bb4d8910b78bf5dd5e1bd7de26f18f2b9df8528870b95bb486fa788737
 
 # `merge_finding.py`
 
