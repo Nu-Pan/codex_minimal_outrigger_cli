@@ -380,20 +380,19 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run のライフサイクル全体を管理する共通モジュール。session から isolated run worktree を開始し、active run の解決、state 遷移、work unit の rollback/commit、INDEX 更新、Git 差分分類、agent/run/session の変更 path 検査、oracle diff、cleanup 判定に必要な処理を提供する。run branch の不変条件と lifecycle lock を共有するため、editing run lifecycle の実装入口として扱う。
+- editing run の開始から state 遷移、commit、差分分類、INDEX 更新、cleanup 判定までを担う共通 lifecycle 実装。EditingRunContext と lifecycle lock を共有し、session/run branch と worktree の整合性、許可された変更 path、oracle 差分を管理する。
 
 ## Read this when
-- editing run の開始、active run の解決、joinable/error への state 遷移を変更または調査するとき
-- run worktree の commit・rollback、INDEX 更新、差分 path の分類や許可範囲検査を変更または調査するとき
-- run/session branch の変更検証、oracle diff、refactor state path の扱いを確認するとき
+- editing run の開始、active run の解決、joinable/error 遷移を変更するとき
+- run worktree の commit、rollback、INDEX 更新、差分分類や変更 path の許可判定を確認するとき
+- session branch と run branch の worktree/state 整合性や cleanup 対象を調査するとき
 
 ## Do not read this when
-- CLI の個別サブコマンド仕様や利用者向け editing run の契約だけを確認する場合は、対応する oracle doc を先に読む
-- Git 操作や session state の低レベル共通処理そのものを変更する場合は、各 commons モジュールを直接読む
-- INDEX 更新機構だけを調査する場合は、indexing モジュールを直接読む
+- 単一の CLI サブコマンド固有の処理や、state schema 自体の定義を確認したいとき
+- INDEX 更新処理そのもの、Git 操作の低レベル実装、run state の永続化実装を直接変更・調査するときは、それぞれの専用 module を先に読む
 
 ## hash
-- c0b14b1a9edb6b34185d024b2f90d3b4497fea34189f7ebde749e818824fdccc
+- ab5c8fdf8e82b063133213dd34ed9d3439b330ea3e40f6ccee74c7398b619331
 
 # `runtime_run_report.py`
 

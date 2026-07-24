@@ -398,6 +398,50 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
     assert (root / "README.md").read_text() == "realized\n"
 
 
+@pytest.mark.parametrize("change", ["rename", "delete"])
+def test_run_join_accepts_realization_rename_and_delete(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    change: str,
+) -> None:
+    """run join が fork 時点の realization path の rename と削除を許可する。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    readme = context.run_worktree / "README.md"
+    if change == "rename":
+        readme.rename(context.run_worktree / "renamed.md")
+    else:
+        readme.unlink()
+    commit_work_unit(context.run_worktree, f"run {change}")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert not (root / "README.md").exists()
+    assert (root / "renamed.md").exists() is (change == "rename")
+
+
+def test_resolve_active_run_rejects_run_branch_from_another_session(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """active run の branch が state の session と異なる場合は拒否する。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    state = _state(state_path)
+    state["run"] = {
+        "state": "running",
+        "kind": "realization_apply",
+        "branch": "cmoc/run/another-session/run-id",
+        "fork_commit": state["session"]["session_fork_commit"],
+    }
+    state_path.write_text(json.dumps(state, indent=2) + "\n")
+
+    with pytest.raises(CmocError, match="branch が session state と一致しません"):
+        lifecycle_module.resolve_active_run({"running"})
+
+
 def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

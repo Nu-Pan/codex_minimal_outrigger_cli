@@ -127,33 +127,33 @@
 # `src`
 
 ## Summary
-- cmoc の実装コードを配置する src 直下のルート。CLI エントリーポイント、互換 import shim、共通 runtime、設定、サブコマンド、正本 oracle への接続をまとめ、各領域の下位モジュールへ進むための入口となる。
+- cmoc の realization 実装をまとめる src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、oracle パッケージ解決を扱い、各機能の実装へ進むための上位入口となる。
 
 ## Read this when
-- src 配下の実装構成や、CLI・共通 runtime・互換層・サブコマンドの担当範囲を横断して確認したいとき。
-- 変更対象の実装ファイルが不明で、CLI の登録入口や各パッケージへのルーティングを確認してから進みたいとき。
+- cmoc の CLI 全体構成、サブコマンド登録、共通 runtime、互換 import 経路を横断して確認したいとき。
+- 個別の CLI サブコマンドや runtime 実装へ進む前に、実装の上位構成と入口を把握したいとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime helper、互換 shim、または oracle 実装の詳細だけを調査・変更したいときは、対応する下位ディレクトリやモジュールを直接読む。
-- 正本仕様や oracle 側の実装内容を確認したいときは、src の入口ではなく oracle 配下の対象を直接読む。
+- 特定サブコマンド、runtime 機能、互換 shim の詳細だけを調査・変更したいときは、対応する下位モジュールを直接読む。
+- 正本仕様や oracle 側の実装内容を確認したいときは、oracle ツリーの対象を直接読む。
 
 ## hash
-- 833243bf7a52b4143862d4330e358ae5cc3a9efb701fa815b09e1afa90922aa0
+- 5b9c5f096b83b3649728d7c79eb16a20dd96a70c97cd7098eb00a75c716ae0d2
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、INDEX 生成、oracle review、session/run state などの外部挙動・制御ロジックを検証するテストと、複数テストで共有する実行・fixture helper を含む。各機能の実装や正本仕様を確認する際のテスト側の入口となる。
+- cmoc の realization test を集約するディレクトリ。CLI 各サブコマンド、Codex runtime、ACP builder、INDEX 生成、oracle review、session/run state、共通テスト支援などの外部挙動・契約・異常系・統合経路を検証する。個別機能のテストや共有 fixture/helper を探す入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや外部挙動の検証対象を探すとき
-- CLI、runtime、Codex、INDEX、oracle review、session/run、ACP builder などのテスト契約を確認するとき
-- 複数テストで共有される Git、Ollama、Codex、CLI 実行 helper の責務を確認するとき
+- 実装変更に対応する realization test を特定するとき
+- CLI、Codex 実行、worktree・session・run state、INDEX 生成、oracle review、ACP builder の挙動をテストから確認するとき
+- テスト共通 helper、case-local Ollama、隔離 Git repository、Codex test 環境の準備方法を確認するとき
 
 ## Do not read this when
-- 実装の責務や正本仕様そのものを確認するときは、対応する src または oracle file を直接読む
-- 対象機能と無関係なテストを調査するときは、このディレクトリ全体ではなく対応するテストファイルへ直接進む
-- テスト実行環境や品質検査の手順だけを確認するときは、対応する開発・テスト手順を読む
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle file を直接読む
+- 実装の責務や内部ロジックを確認するときは、対応する src の実装を直接読む
+- テスト対象と無関係な機能の変更で、個別テストや共通 helper を参照する必要がないとき
 
 ## hash
-- 3f327a2d7449839f183b47cb9df9b7d86d3ca0fa6a78f027d6b236c141f8d3d5
+- c5309da531bea8779a1ba4e69209eb0f7c4e4edb3c30db11a1e75e8ccd73b191

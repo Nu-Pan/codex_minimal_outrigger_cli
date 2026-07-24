@@ -386,19 +386,20 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の fork・join・abandon に関する統合 realization test。apply/refactor fork、共通 run state、worktree 差分、report、rollback、interrupt、error handling、および oracle investigation の主要な lifecycle 挙動を検証する。
+- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、join/abandon、rollback、割り込み・失敗時の lifecycle を、apply fork と refactor fork の両方について検証する。
 
 ## Read this when
-- realization apply または refactor fork の run lifecycle を変更・調査するとき
-- run join の state 同期、差分解決、merge rollback、force-resolve を変更・調査するとき
-- fork report、change summary、interrupt・cleanup・失敗時の state 遷移を変更・調査するとき
+- realization apply fork や realization refactor fork の run lifecycle を変更・検証するとき
+- run join の state 遷移、worktree 差分の merge、rename/delete、想定外 path の force-resolve を確認するとき
+- fork report、change summary、refactor state 同期、割り込み・cleanup・rollback の挙動を確認するとき
 
 ## Do not read this when
-- INDEX 生成や通常の oracle investigation 実装だけを変更するとき
-- run lifecycle と無関係な CLI、設定、単体 helper の挙動を変更するときは、まず対象実装とより直接的なテストを読む
+- INDEX 生成や単一機能の実装詳細だけを確認する場合
+- run lifecycle、fork、join、refactor の統合挙動に関係しないテストを探している場合
+- oracle investigation の単独の仕様や、個別 module の実装を直接確認すべき場合
 
 ## hash
-- 066de4390bed527f49cf368b1d23494553dbd08337b8cf680c39c15046c8a4e5
+- 44eb930cf21a404ec131c25078661e590ccef2c7052c3a7af136bccf2b792bf9
 
 # `test_indexing_cli.py`
 
