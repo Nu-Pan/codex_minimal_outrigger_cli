@@ -468,10 +468,10 @@
     "last_investigated_at": "2026-07-24_14-58_40_598830000"
   },
   "oracle/src/oracle/prompt_builder/parts/routing_rule.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "0264980cdd927da5be0d9580428c1d9fb3a129f66b254b0d462d7be9cbd1af5b",
+    "last_investigated_at": "2026-07-24_15-14_59_704104000"
   },
   "pyproject.toml": {
     "investigation_required": true,
