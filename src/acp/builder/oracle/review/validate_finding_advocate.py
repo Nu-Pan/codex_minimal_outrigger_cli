@@ -5,6 +5,8 @@ from oracle.acp_builder.oracle.review.validate_finding_advocate import (
     build_oracle_review_validate_finding_advocate_parameter as _build_parameter,
 )
 
+from acp.builder.common.prompt_fence import _protect_code_block_fence
+
 __all__ = ["build_oracle_review_validate_finding_advocate_parameter"]
 
 
@@ -13,16 +15,32 @@ def build_oracle_review_validate_finding_advocate_parameter(
     known_advocate_reasons: str,
     known_challenger_reasons: str,
 ) -> _AgentCallParameter:
-    """canonical advocate builderのparameterを作り、既知のtypoだけを補正する。"""
+    """canonical parameterを作り、既知のtypoと動的所見の fence だけを補正する。"""
     parameter = _build_parameter(
         finding,
         known_advocate_reasons,
         known_challenger_reasons,
     )
-    return _replace(
-        parameter,
-        prompt=_fix_oracle_root_goal_typo(parameter.prompt),
+    prompt = _fix_oracle_root_goal_typo(parameter.prompt)
+    prompt = _protect_code_block_fence(
+        prompt,
+        section_heading="# 対象所見",
+        section_end_marker="\n\n# 既知の妥当であるとする理由",
+        info_string="text",
     )
+    prompt = _protect_code_block_fence(
+        prompt,
+        section_heading="# 既知の妥当であるとする理由",
+        section_end_marker="\n\n# 既知の妥当ではないとする理由",
+        info_string="text",
+    )
+    prompt = _protect_code_block_fence(
+        prompt,
+        section_heading="# 既知の妥当ではないとする理由",
+        section_end_marker="\n\n# place holder definition",
+        info_string="text",
+    )
+    return _replace(parameter, prompt=prompt)
 
 
 def _fix_oracle_root_goal_typo(prompt: str) -> str:

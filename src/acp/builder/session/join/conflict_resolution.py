@@ -6,8 +6,30 @@ canonical 実装は
 全 caller が canonical oracle path を直接使うようになったら削除する。
 """
 
+from dataclasses import replace as _replace
+from pathlib import Path as _Path
+
+from oracle.acp_builder.basic import AgentCallParameter as _AgentCallParameter
 from oracle.acp_builder.session.join.conflict_resolution import (
-    build_session_join_conflict_resolution_parameter,
+    build_session_join_conflict_resolution_parameter as _build_parameter,
 )
 
+from acp.builder.common.prompt_fence import _protect_code_block_fence
+
 __all__ = ["build_session_join_conflict_resolution_parameter"]
+
+
+def build_session_join_conflict_resolution_parameter(
+    conflicted_paths: list[_Path],
+) -> _AgentCallParameter:
+    """canonical parameterを再公開し、競合 path の fence を保護する。"""
+    parameter = _build_parameter(conflicted_paths)
+    return _replace(
+        parameter,
+        prompt=_protect_code_block_fence(
+            parameter.prompt,
+            section_heading="# conflict 対象ファイル",
+            section_end_marker="\n\n# additional file access rule",
+            info_string="text",
+        ),
+    )

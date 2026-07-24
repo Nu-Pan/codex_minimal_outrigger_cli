@@ -133,36 +133,36 @@
 # `test_acp_builder_oracle_review_parameters.py`
 
 ## Summary
-- oracle review ACP builder の parameter builder、schema、互換 adapter の公開面と設定値を検証するテスト。oracle source との schema 一致、model・reasoning・file access 設定、動的 prompt 入力保持、module export 制約を扱う。review builder や対応する oracle schema の変更時に読むべきテスト入口。
+- oracle review 向け ACP builder のテスト。enumerate、judge、merge、advocate/challenger validation の parameter builder、公開 API、model/reasoning/file access 設定、schema 一致、動的入力保持、コードフェンス保護を検証する。関連する oracle review schema・builder 実装の互換性確認に進む入口。
 
 ## Read this when
-- oracle review 関連の ACP builder、parameter、structured output schema、互換 module の公開 API を変更・検証するとき。
-- enumerate、judge、merge、validate finding の model 設定、prompt placeholder、schema 互換性を確認するとき。
+- oracle review の ACP builder や互換 adapter の parameter 仕様を変更・確認するとき
+- review builder の structured output schema、動的 prompt、placeholder 置換、入力境界保護を変更・確認するとき
+- review builder の公開 export や model class、reasoning effort、file access mode を変更・確認するとき
 
 ## Do not read this when
-- oracle review 以外の ACP builder や、builder の実装詳細そのものを変更・調査するときは、対応する実装ファイルや oracle source を先に読む。
-- 一般的なテスト実行方法やリポジトリ全体のテスト方針だけを確認したいとき。
+- oracle review 以外の ACP builder を扱うとき
+- review builder の実装変更を伴わない一般的なテスト基盤や別領域の schema を扱うとき
+- 個別の oracle schema や canonical builder の正本仕様を直接確認する必要がある場合は、このテストより対応する oracle review 配下のファイルへ進む
 
 ## hash
-- bc3a68113c5bb305a79d41c6084660f68d9f36ca96c8c124e05f8041398d18a0
+- 465430ea051b670a335fa4393d22b6d75ad8f5e9a79ec2367396564ad53990db
 
 # `test_acp_builder_session_join_parameters.py`
 
 ## Summary
-- session join の conflict resolution 用パラメータ生成に関する契約を検証するテスト群。公開モジュールの公開面と、生成されるパラメータの権限・モデル選択・索引前提の有無を確認したいときに読む。
+- session join の conflict resolution builder 契約を検証するテスト。公開 export の限定、repo write 権限・モデル・推論設定・プロンプト内容、indexing preflight 無効化、および conflict path 内の三連 backtick を含むコードフェンスの安全な生成を確認する。
 
 ## Read this when
-- session join の conflict resolution builder の公開 API が何を返すべきか確認したいとき。
-- conflict 対象ファイルを渡したときの生成パラメータの権限、推論強度、モデル選択、プロンプト条件を確認したいとき。
-- 公開モジュールが内部実装を露出していないか、エクスポート境界を点検したいとき。
+- session join の conflict resolution 用パラメータ生成を変更・レビューするとき
+- 公開 API、実行権限、モデル設定、プロンプト構造、コードフェンスのエスケープ挙動を検証するとき
 
 ## Do not read this when
-- session join の通常 join 処理や別の builder の契約を確認したいとき。
-- conflict resolution の実装詳細や prompt 組み立ての内部構造を追いたいときは、対応する実装側の本文を直接読むべきとき。
-- ファイルアクセス方針やモデル選択の共通定義そのものを確認したいときは、テストではなく基礎となる定義ファイルを読むべきとき。
+- session join 以外の builder や conflict resolution 本体の実装だけを調査するとき
+- テスト実行方法や共通の開発環境を確認するときは、対応する開発・テスト手順を直接読む
 
 ## hash
-- f1b9f037d93dce9aed913c05500c19041aae57dc069365c274a9e4a73e4f6d51
+- 3d699182eea4768a184a5970b38ab535057d4cd0c23436bce6e756891daec77c
 
 # `test_acp_builder_tui_parameters.py`
 

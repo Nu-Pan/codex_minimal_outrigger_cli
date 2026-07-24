@@ -421,9 +421,9 @@
   },
   "oracle/src/oracle/prompt_builder/complete_prompt.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "228aa875afd37fcfc08b6c86c7b1558d2d319a19df2951bb2efd1d4191545811",
+    "last_investigated_at": "2026-07-24_12-51_54_326397000"
   },
   "oracle/src/oracle/prompt_builder/parts/apply_review_standard.py": {
     "investigation_required": true,

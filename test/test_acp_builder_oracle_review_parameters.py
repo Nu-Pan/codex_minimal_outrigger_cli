@@ -243,3 +243,45 @@ def test_oracle_review_validate_finding_advocate_preserves_dynamic_text() -> Non
     assert known_challenger in parameter.prompt
     assert parameter.prompt.count("`{{oracle_root}}` ツリー内") == 3
     assert "`{{oracle-root}}` ツリー内" in parameter.prompt
+
+
+@pytest.mark.parametrize(
+    ("builder", "arguments", "block_count"),
+    [
+        (
+            build_oracle_review_enumerate_finding_parameter,
+            (Path("{{work-root}}/oracle/spec.md"), "before\n```\ninside\n```\nafter"),
+            1,
+        ),
+        (
+            build_oracle_review_judge_finding_parameter,
+            ("before\n```\ninside\n```\nafter",) * 3,
+            3,
+        ),
+        (
+            build_oracle_review_merge_finding_parameter,
+            ("before\n```\ninside\n```\nafter",),
+            1,
+        ),
+        (
+            build_oracle_review_validate_finding_advocate_parameter,
+            ("before\n```\ninside\n```\nafter",) * 3,
+            3,
+        ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            ("before\n```\ninside\n```\nafter",) * 3,
+            3,
+        ),
+    ],
+)
+def test_oracle_review_builders_protect_nested_dynamic_code_fences(
+    builder: Callable[..., AgentCallParameter],
+    arguments: tuple[object, ...],
+    block_count: int,
+) -> None:
+    """review入力内の三連 backtick が各動的本文の境界を閉じないことを検証する。"""
+    parameter = builder(*arguments)
+
+    assert parameter.prompt.count("````text\nbefore\n") == block_count
+    assert parameter.prompt.count("\nafter\n````") == block_count

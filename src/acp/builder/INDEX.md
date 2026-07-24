@@ -63,18 +63,20 @@
 # `oracle`
 
 ## Summary
-- oracle command builder realization package。oracle edit・investigation・review の各 builder adapter を下位要素として案内するパッケージ入口。
+- oracle command builder realization package。oracle command builder 関連の各 builder adapter と、oracle edit・investigation・review の下位実装への入口を提供する。
+- oracle edit、investigation、review の builder adapter を含み、各機能の起動パラメータ生成や canonical builder への委譲経路を扱う。
 
 ## Read this when
-- oracle command builder realization package の構成や、oracle 配下の builder adapter への入口を確認するとき。
-- oracle edit、oracle investigation、または oracle review の builder adapter の責務・呼び出し経路を調査するとき。
+- oracle command builder の realization package 構成や、oracle edit・investigation・review builder adapter への入口を確認するとき。
+- oracle investigation の launch TUI 用パラメータ生成、リポジトリ解決、editor input ディレクトリ準備を調査するとき。
+- oracle review の finding 関連 parameter builder、canonical 実装への委譲、既存 caller 互換、動的 prompt のコードフェンス保護を調査するとき。
 
 ## Do not read this when
-- oracle builder の正本仕様や具体的な prompt 構築内容を確認したいとき。
-- oracle builder 以外の ACP builder、TUI 実装、または共通処理だけを調査するとき。
+- oracle builder の具体的な prompt 構築仕様や編集・investigation・review 処理の詳細を確認したいとき。対応する下位実装または正本 builder を直接読む。
+- oracle command builder 以外の ACP builder、TUI 実装、CLI 実装、共通パス解決処理だけを調査するとき。
 
 ## hash
-- d4375e21f5fb071002d6cdb5beb5a1b6c0fdf3e9a426a6fba4fae265e22feb6b
+- 43ca265732ed1951dcd4392225f53dd29d346215a1785768a8421035d9e6e7d4
 
 # `quota_probe.py`
 
@@ -125,19 +127,21 @@
 # `session`
 
 ## Summary
-- oracle.acp_builder.session と互換性を保つ session package。既存の acp.builder.session.* import 経路と、join 配下の conflict resolution builder への委譲入口を扱う。
+- oracle.acp_builder.session との互換性を保つための package 群。既存の acp.builder.session.* import 経路を維持し、canonical 実装への互換入口を提供する。
+- session 本体の互換初期化と、join における競合解決関連の互換 import 経路を扱う。
 
 ## Read this when
-- acp.builder.session.* の互換 import 経路を維持・変更・削除するとき。
-- oracle.acp_builder.session への移行や、互換 package を削除できる条件を確認するとき。
-- session join の conflict resolution builder に関する互換経路を確認するとき。
+- acp.builder.session.* の import 互換性や公開面を確認するとき。
+- session join の競合解決パラメータ生成や prompt 内の競合 path 処理について、旧来の import 経路から調査するとき。
+- oracle.acp_builder.session 参照への移行や、互換 package を削除できる条件を確認するとき。
 
 ## Do not read this when
-- session の具体的な処理仕様や canonical 実装を確認したいとき。
-- 互換 import の利用箇所や通常の公開 API を調査したいとき。
+- session の canonical な実装内容や具体的な挙動を確認したいとき。
+- 新規機能の入口や通常の公開 API を探しているとき。
+- session join と無関係な builder 処理を調査するとき。
 
 ## hash
-- f8abe886ee2d69de06c7edbe11929ce7fac0b3da0c3b4cd3cd86c173f2aa6cfd
+- ee79651acdf3f8b095b9fbd2c05579c47bf26bc5810a20d6bfb70f9d8f192b8c
 
 # `tui`
 

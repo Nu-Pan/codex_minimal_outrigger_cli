@@ -127,33 +127,33 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 実装と互換 import 入口をまとめる src ディレクトリ。主要 CLI エントリーポイント、個別サブコマンド、共有 runtime、ACP・設定・oracle などの互換 shim を扱う。各実装の詳細へ進むための起点。
+- cmoc の realization 側 Python ソースをまとめるディレクトリ。CLI エントリーポイント、サブコマンド、互換 import shim、共通 runtime、builder adapter など、実行時の主要実装へのルーティング起点となる。
 
 ## Read this when
-- cmoc の CLI 全体の構成や主要エントリーポイントを確認するとき。
-- 個別サブコマンド、共通 runtime、または互換 import 入口の実装を探すとき。
+- cmoc の realization 実装の構成や、CLI・サブコマンド・共通 runtime・互換入口の配置を確認するとき。
+- 特定の実装へ進む前に、src 直下の公開入口や下位ディレクトリを選ぶとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime helper の詳細だけを確認したいときは、対応する下位モジュールを直接読む。
-- oracle 側の正本仕様や実装を確認するときは、src ではなく oracle 配下を読む。
+- 正本仕様や oracle 側の実装を確認するとき。対応する oracle 配下を直接読む。
+- 特定サブコマンド、runtime helper、builder adapter の詳細だけを調査・変更するとき。該当する下位実装を直接読む。
 
 ## hash
-- a86cf3d1b2bf952d56c6d6f0658c749da1387ce40577269303e11f3d587c0571
+- d3ea1dcaffe6ee18542a77220237e848c49116a3104f485b0a20fcc721a5d26f
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、TUI、設定、Git/worktree、Ollama などの外部挙動・契約・異常系を検証する。各テストファイルが機能領域ごとの具体的な変更・調査入口となる。
+- cmoc の realization test を集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、indexing、oracle review、session/run state、設定、worktree などの外部挙動・契約・異常系を検証する。共通テスト helper と機能別テストが、実装や対応する oracle/schema の変更時の入口になる。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test の対象を選ぶとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session、runtime state などの回帰テストを追加・修正するとき
-- テスト共通 helper や実経路統合環境の仕組みを確認するとき
+- cmoc の実装変更に対応する realization test を探すとき
+- CLI、runtime、Codex、ACP builder、indexing、oracle review、session/run state、設定、worktree の挙動や契約を検証するとき
+- テスト共通 helper、case-local Ollama、fake external command、Git repository fixture の準備方法を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは対応する oracle file を直接読む
-- 実装詳細だけを調査するときは対応する src ファイルを直接読む
-- 対象機能と無関係なテストや、一般的なテスト実行手順だけを確認するとき
+- 正本仕様、schema、prompt の本文を確認・変更するときは、対応する oracle 文書または oracle schema を直接読む
+- 実装詳細だけを確認するときは、対応する src ファイルを直接読む
+- 対象機能と関係しないテストや一般的な開発環境・テスト実行手順だけを確認するとき
 
 ## hash
-- a8d14ca2f8ef25d4ee33a157ee2b96774f4fe98e3d4ef2ed8fcbd9cf9a242ef2
+- d4bdcd974f8a650fe0d6a2afc54570df5a45fa2b6f2a1afb1fbda4e8b5e6d044
