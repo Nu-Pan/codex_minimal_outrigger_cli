@@ -317,6 +317,23 @@ def test_oracle_review_builders_protect_nested_dynamic_code_fences(
     assert parameter.prompt.count("\nafter\n````") == block_count
 
 
+def test_oracle_review_merge_keeps_placeholder_marker_in_findings() -> None:
+    """merge findings 内の placeholder 風見出しを prompt 境界と誤認しない。"""
+    findings = (
+        "before\n```\ninside\n```\n\n# place holder definition\n\n"
+        "```text\nunsafe\n```\nafter"
+    )
+
+    parameter = build_oracle_review_merge_finding_parameter(findings)
+
+    start = parameter.prompt.index("# 現状の所見リスト")
+    end = parameter.prompt.rfind("\n\n# place holder definition")
+    section = parameter.prompt[start:end]
+    assert findings in section
+    assert section.startswith("# 現状の所見リスト\n\n````text\n")
+    assert section.endswith("\n````")
+
+
 def test_oracle_review_fence_protection_ignores_marker_in_later_input() -> None:
     """後続の動的入力に終了マーカーがあっても先行 section を保護する。"""
     nested = "before\n```\ninside\n```\nafter"

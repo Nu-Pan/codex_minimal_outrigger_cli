@@ -63,22 +63,26 @@
 # `oracle`
 
 ## Summary
-- oracle command builder realization の各 adapter package へのルーティング入口。oracle edit・investigation・review の builder adapter の責務と下位実装の参照先を示す。
+- oracle command builder の realization package。oracle command builder 関連のパッケージ入口。
+- `cmoc oracle edit` builder の realization adapter パッケージ。oracle edit 用 TUI 起動パラメータ生成の入口と配置領域を扱う。
+- `cmoc oracle investigation` 用 builder adapter パッケージ。正本 builder への委譲、リポジトリ解決、editor input ディレクトリ準備、launch TUI 用パラメータ生成への入口を提供する。
+- `cmoc oracle review` builder の realization adapter package。finding 用 AgentCallParameter builder の互換入口として、canonical builder の再利用、path 補正、動的 prompt のコードフェンス保護を扱う。
 
 ## Read this when
-- oracle command builder realization の package 構成や、edit・investigation・review adapter の担当範囲を確認するとき。
-- oracle investigation の起動パラメータ生成、editor input directory 準備、builder 委譲経路を調査するとき。
-- oracle review の finding builder、canonical builder への委譲、prompt のコードフェンス保護や oracle path 補正を調査するとき。
-- oracle edit の TUI 起動パラメータ生成入口や関連配置領域を確認するとき。
+- oracle command builder realization package の責務や構成を確認するとき。
+- `cmoc oracle edit` の builder adapter や TUI 起動パラメータ生成の入口を確認するとき。
+- oracle investigation の builder adapter、launch TUI 用 builder、AgentCallParameter 生成、editor input ディレクトリ準備を調査・変更するとき。
+- `cmoc oracle review` の realization adapter、finding 用 parameter builder、prompt のコードフェンス保護、canonical builder との互換・移行経路を確認・変更するとき。
 
 ## Do not read this when
-- oracle builder の正本仕様や canonical builder 本体を確認したいとき。
-- oracle edit の具体的な prompt 構築仕様・編集処理を確認したいとき。
-- builder adapter の実装詳細を確認したいときは、該当する下位実装を直接読む。
-- investigation・review・edit に関係しない ACP builder、TUI、CLI 処理を調査するとき。
+- oracle edit の具体的な prompt 構築仕様や編集処理を確認したいとき。
+- 他の ACP builder、TUI 以外の起動処理、investigation 以外の builder を調査するとき。
+- builder adapter の具体的な実装詳細を確認したいときは、該当パッケージ内の実装ファイルを直接読む。
+- 正本 builder の prompt 内容や investigation 起動仕様、oracle review の正本仕様や canonical builder 自体を確認したいとき。
+- oracle builder と無関係な CLI 実装や一般的な prompt fence 処理だけを調査するとき。
 
 ## hash
-- 155dd7d18b90c3c52981e1cdf8a12cb40c77c1aed54b9121982c36f1a57c12b2
+- 1343706ccd5bcb893b0c4c4d900255e614feb7b67d5832aaacf47eb529d08587
 
 # `quota_probe.py`
 

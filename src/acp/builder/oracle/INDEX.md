@@ -50,15 +50,14 @@
 # `review`
 
 ## Summary
-- `cmoc oracle review` builder の realization adapter package。finding の列挙・判定・merge・妥当性検証に用いる AgentCallParameter builder の互換再公開、canonical 実装への委譲、prompt 内の動的入力に対するコードフェンス保護や oracle path 補正を扱う実装への入口。
+- `cmoc oracle review` builder の realization adapter package。finding の列挙・判定・merge・妥当性検証に関する AgentCallParameter builder の互換入口を提供し、canonical builder の再利用、path 補正、動的 prompt のコードフェンス保護を扱う。
 
 ## Read this when
-- `cmoc oracle review` の finding builder を変更・調査するとき。
-- canonical builder と realization adapter の委譲、互換性維持、prompt のコードフェンス保護、oracle path 補正を確認するとき。
+- `cmoc oracle review` の realization adapter、finding 用 parameter builder、prompt のコードフェンス保護、canonical builder との互換・移行経路を確認または変更するとき。
 
 ## Do not read this when
-- oracle review の正本仕様や canonical builder 本体を確認するときは、対応する oracle 実装を直接読む。
-- oracle review の finding builder や prompt 補正に関係しない CLI・builder 処理を調査するとき。
+- oracle review の正本仕様や canonical builder 自体を確認するときは、対応する oracle 側の実装を直接読む。
+- oracle review と無関係な builder、CLI 実装、または一般的な prompt fence 処理だけを調査するとき。
 
 ## hash
-- 9fd1642e9b587674ec6c1d883acaf7429afa990c74f447b3ae9fb47e9e27a02e
+- 071dea52191bd244b27ab0dd0bd7b00b89d66087baa215eea43bc09bb0dca961
