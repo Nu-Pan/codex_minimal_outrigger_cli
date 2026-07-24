@@ -1,18 +1,18 @@
 # `__init__.py`
 
 ## Summary
-- oracle.acp_builder を acp.builder として公開する互換入口。既存の acp.builder.* 参照を維持し、canonical な basic モジュールを acp.builder.basic として利用可能にする。
+- oracle.acp_builder を acp.builder として公開する互換入口。canonical な oracle 実装を参照し、既存の acp.builder.* 参照を維持するためのパッケージ初期化と basic モジュールの公開を担う。
 
 ## Read this when
-- 既存の acp.builder.* 参照との互換性や、acp.builder.basic の公開経路を確認するとき
-- acp.builder パッケージの __path__ 設定や oracle.acp_builder への委譲を変更するとき
+- acp.builder パッケージの互換性や公開入口を調査するとき
+- acp.builder.basic の import 経路、oracle 実装との接続、既存参照の削除条件を確認するとき
 
 ## Do not read this when
-- oracle.acp_builder の canonical な実装内容を確認したいとき
-- acp.builder.* 参照の削除可否だけを判断するとき
+- oracle.acp_builder の canonical 実装そのものを変更・調査するときは、oracle 側の対象を直接読む
+- acp.builder.* の利用箇所や利用者向け公開面を調査するときは、各参照元を直接読む
 
 ## hash
-- d6fdb57f4c932cedc07bf55090c3737b61b5ba34a5938f3126501984e040eaa5
+- 22b403da7bbad2f49a0a9a1b257c111160e9fe04c9e5918cdffbaa8f91fcfcfb
 
 # `apply`
 

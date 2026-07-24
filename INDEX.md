@@ -127,33 +127,33 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装を収める src ディレクトリ。Typer の主要エントリーポイント、CLI サブコマンド、共通 runtime、互換 import shim、設定・ACP・oracle 参照経路を扱い、各責務の詳細実装へ進む入口となる。
+- 対象ディレクトリの責務を、直下の公開入口とサブパッケージへのルーティング先として要約します。
 
 ## Read this when
-- cmoc の realization CLI 全体の構成、主要エントリーポイント、サブコマンド実装、共通 runtime の配置を確認・変更するとき。
-- CLI から各サブコマンドや runtime・互換入口へ委譲される経路を把握するとき。
+- src 配下の CLI エントリーポイント、互換 shim、共通 runtime、サブコマンド実装の配置を確認するとき。
+- 特定の公開 import 経路やサブコマンド実装へ進む前に、src 直下の入口構成を把握したいとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime helper、設定、ACP builder、oracle・session・TUI 実装の詳細だけを確認したいときは、対応する下位ディレクトリまたは直接の実装へ進む。
-- 正本仕様や canonical な oracle 実装を確認したいときは、src ではなく oracle 側を直接読む。
+- 特定サブパッケージの実装詳細だけを調査するときは、該当する直接のファイルまたは下位ディレクトリへ進む。
+- 正本 oracle の仕様・実装を確認するときは、src の realization 入口ではなく oracle 配下を直接読む。
 
 ## hash
-- 127d42eeeceb2831351fda25900ec81893847755d1d7301dc4f88ee6c7c02fa4
+- 67bf21d2ef9a910b44f0f77d284f12014a19867104b4d3547af9f7a88b462dbe
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、indexing、oracle review、session/run state などの外部挙動・契約・異常系を検証し、各機能の実装変更時に対応テストへ進む入口となる。
+- cmoc の realization test を集約するディレクトリ。CLI サブコマンド、Codex 実行、ACP builder、runtime state・設定・path、indexing、oracle review、session/run lifecycle などの外部挙動と制御契約を検証する。個別機能の回帰テストや共通テスト helper へ進む入口となる。
 
 ## Read this when
-- cmoc の realization test を探すとき
-- CLI、runtime、Codex、ACP builder、indexing、oracle review、session/run state の挙動をテストから確認するとき
-- 実装変更後の回帰テストや統合テストの対象を選ぶとき
+- cmoc の実装変更に対応する realization test の所在や、検証対象となる外部挙動・制御ロジックを探すとき
+- CLI、Codex runtime、ACP builder、indexing、oracle review、session/run state、設定、worktree の回帰テストを追加・修正・調査するとき
+- 複数の機能にまたがる統合テストや、本番相当・GPU integration test の対象を確認するとき
 
 ## Do not read this when
-- 正本仕様や oracle schema の内容を確認するときは、対応する oracle file を直接読む
-- 特定機能の実装詳細だけを確認するときは、対応する src の実装へ直接進む
-- テスト共通 helper の詳細だけを確認するときは、対象の support module を直接読む
+- 正本仕様や oracle test の内容を確認するときは、対応する oracle 配下の文書・テストを直接読む
+- 実装の責務や内部ロジックを確認したいときは、対応する src 配下の実装を直接読む
+- 対象機能が明確な場合は、このディレクトリ全体を読むのではなく、該当する個別テストまたは共通 helper へ直接進む
 
 ## hash
-- 52502fe50e6eec35b09fed6e65936b26219f1bc49be27111c23baf81f76f4821
+- f46d8e43bfbba2ebb9388a6fd8f4ca5585aa1bf6e9dd2a0be7d59a57596350e2

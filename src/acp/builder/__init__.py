@@ -5,11 +5,13 @@
 利用者向け公開面から `acp.builder.*` 参照がなくなること。
 """
 
-import sys
-from importlib import import_module
-from importlib.util import find_spec
+import sys as _sys
+from importlib import import_module as _import_module
+from importlib.util import find_spec as _find_spec
 
-_oracle_spec = find_spec("oracle.acp_builder")
+__all__ = ["basic"]
+
+_oracle_spec = _find_spec("oracle.acp_builder")
 if _oracle_spec is None or _oracle_spec.submodule_search_locations is None:
     raise ModuleNotFoundError("oracle.acp_builder package was not found")
 
@@ -20,6 +22,6 @@ for _path in _oracle_spec.submodule_search_locations:
     if _path not in __path__:
         __path__.append(_path)
 
-_basic_module = import_module("oracle.acp_builder.basic")
-sys.modules[f"{__name__}.basic"] = _basic_module
-setattr(sys.modules[__name__], "basic", _basic_module)
+_basic_module = _import_module("oracle.acp_builder.basic")
+_sys.modules[f"{__name__}.basic"] = _basic_module
+setattr(_sys.modules[__name__], "basic", _basic_module)

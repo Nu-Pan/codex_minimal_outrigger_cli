@@ -17,17 +17,17 @@
 # `builder`
 
 ## Summary
-- ACP builder の互換入口と realization adapter 群をまとめるディレクトリ。`acp.builder` 名前空間の公開、共通 prompt 処理、indexing・oracle・realization・session・TUI 向け adapter、quota probe の互換経路を確認するための入口。
+- ACP builder の互換入口と realization adapter 群をまとめるパッケージ。canonical な oracle 実装への委譲、prompt の code fence 保護、indexing・session・TUI・quota probe・realization・command builder 向けの下位入口を扱う。各機能の詳細調査は対応する下位ディレクトリへ進む。
 
 ## Read this when
-- 既存の `acp.builder.*` import 互換性や、canonical 実装への委譲経路を調査するとき
-- ACP builder の prompt code fence 保護、quota probe、oracle command builder、realization workload builder の構成を確認・変更するとき
-- このディレクトリ直下の builder adapter の責務や下位パッケージへの進み先を判断するとき
+- acp.builder の互換 import 経路や公開入口を調査するとき
+- ACP builder の prompt 補正、quota probe、session、TUI、indexing、realization adapter の構成を確認するとき
+- oracle command builder の realization adapter 群への入口や下位パッケージの責務を把握するとき
 
 ## Do not read this when
-- canonical な oracle builder・session・TUI 実装や prompt 正本仕様の詳細を確認したいとき
-- builder 以外の CLI 処理、TUI 本体、fork 適用処理を調査するとき
-- 新しい公開 API や新規 import 経路を設計するときは、互換入口ではなく対応する正本実装と仕様を直接確認する
+- canonical な oracle builder の仕様・実装や prompt 内容を確認するときは oracle 側の対象を直接読む
+- 具体的な adapter の実装詳細を確認するときは該当する下位ディレクトリのファイルを直接読む
+- TUI 本体、fork 適用処理、builder 以外の CLI 処理を調査するとき
 
 ## hash
-- dd721281b03bcca2d678370cd224e67a947046e79060fbf2f1e3d8680c31b2ae
+- a7d6580d49decf1962f4690ff055bf3312dd0070334eec45080cce8f7e0917a2

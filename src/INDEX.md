@@ -1,22 +1,20 @@
 # `acp`
 
 ## Summary
-- `acp` 互換の公開入口を扱い、既存の `acp.*` 参照を `oracle.*` または実体モジュールへ移す際の確認起点となる。
-- ACP builder の互換入口と realization adapter 群をまとめ、prompt 処理、quota probe、oracle・realization・session・TUI 向け adapter の互換経路を扱う。
+- ACP互換の公開入口と、ACP builderの互換入口・realization adapter群を扱うパッケージ。canonicalなoracle実装への委譲、prompt補正、quota probe、session、TUI、indexing、realization、command builderへの下位入口を提供する。
 
 ## Read this when
-- `acp` 公開名や `acp.*` import 互換性の存廃を判断するとき。
-- ACP builder の互換経路、prompt code fence 保護、quota probe、oracle command builder、realization workload builder を調査・変更するとき。
-- builder 直下の adapter の責務や下位パッケージへの進み先を判断するとき。
+- acp.builderの互換import経路や公開入口を調査するとき。
+- ACP builderのprompt補正、quota probe、session、TUI、indexing、realization adapterの構成を確認するとき。
+- acpという公開名の存続・削除や、既存参照をoracle側の実体へ移行する導線を判断するとき。
 
 ## Do not read this when
-- `acp` 配下の具体的な実装内容や canonical な移行先の詳細だけを知りたいとき。
-- canonical な oracle builder・session・TUI 実装や prompt 正本仕様を確認したいとき。
-- builder 以外の CLI 処理、TUI 本体、fork 適用処理を調査するとき。
-- 新しい公開 API や import 経路を設計するとき。
+- canonicalなoracle builderの仕様・実装やprompt内容を確認したいとき。
+- 具体的なadapterの実装詳細を確認したいとき。
+- TUI本体、fork適用処理、builder以外のCLI処理を調査するとき。
 
 ## hash
-- b74ce78614883c8556e67b981d8e2961f8186e4203ffe9270c32cb5996498236
+- 0624ce5cab2c14e8847ea504594605e88a117827caeffb3be635935ae2de67d0
 
 # `basic`
 
