@@ -38,5 +38,8 @@ def build_realization_apply_fork_launch_exec_parameter(
             section_heading="# oracle file の raw git diff",
             section_end_marker="\n\n</cmoc_block>",
             info_string="diff",
+            # raw diff can contain the same marker; the final one closes the outer block.
+            # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+            prefer_last_end_marker=True,
         ),
     )

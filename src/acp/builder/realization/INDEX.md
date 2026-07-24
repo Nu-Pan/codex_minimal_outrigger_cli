@@ -15,20 +15,19 @@
 # `apply`
 
 ## Summary
-- realization apply 用の builder adapter を提供するディレクトリ。apply 処理の builder 実装や、fork 適用時の接続点・prompt 加工を確認する入口。
+- realization apply 用の builder adapter を提供するモジュール群。apply 処理の builder 実装と、fork 適用時の agent call parameter 生成や prompt 保護処理への入口となる。
 
 ## Read this when
 - realization apply の builder adapter の責務や実装を確認するとき
-- `cmoc realization apply fork` の builder 接続点、launch_exec 呼び出し元、raw oracle diff のコードフェンス保護を変更・検証するとき
+- `cmoc realization apply fork` の builder adapter、launch_exec 用 agent call parameter の生成経路、raw oracle git diff のコードフェンス保護処理を確認・変更するとき
 
 ## Do not read this when
 - apply 処理以外の builder 実装を確認するとき
-- fork 適用処理そのものの実装詳細を調査するとき
-- 正本 builder の仕様や prompt 内容を変更するとき
-- builder adapter の詳細実装を直接確認する場合
+- 正本 builder の仕様や prompt 本文そのものを確認するとき
+- fork 適用処理の実装詳細を直接確認するとき
 
 ## hash
-- b300ffea7c1e9d9e098684d987aa02f5555f4558f2b09da1e59fe175d59c9f17
+- a93c125b6cf7864a2fdd5ea1f652e666190df316134a469fa642f1f3cc7315d7
 
 # `refactor`
 

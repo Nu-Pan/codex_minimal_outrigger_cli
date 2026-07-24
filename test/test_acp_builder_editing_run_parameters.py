@@ -44,7 +44,7 @@ def test_realization_apply_builder_keeps_nested_diff_fences() -> None:
     parameter = build_realization_apply_fork_launch_exec_parameter(
         "base-commit",
         "fork-commit",
-        "diff --git a/oracle/a.md b/oracle/a.md\n```\n</cmoc_block>\n```\n",
+        "diff --git a/oracle/a.md b/oracle/a.md\n```\n\n</cmoc_block>\n\n```\n",
         Path.cwd(),
     )
 
@@ -52,7 +52,7 @@ def test_realization_apply_builder_keeps_nested_diff_fences() -> None:
     end = parameter.prompt.rfind("\n\n</cmoc_block>", start)
     section = parameter.prompt[start:end]
     assert section.startswith("# oracle file の raw git diff\n\n````diff\n")
-    assert "```\n</cmoc_block>\n```" in section
+    assert "```\n\n</cmoc_block>\n\n```" in section
     assert section.endswith("\n````")
 
 

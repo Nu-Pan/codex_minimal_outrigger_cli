@@ -1,18 +1,19 @@
 # `acp`
 
 ## Summary
-- ACP互換の公開入口と、canonicalなoracle実装を再公開するbuilder adapter群を扱うパッケージ。prompt境界補正、indexing・session・TUI・oracle・realization向けadapter、quota probeのfallbackを下位機能領域へ案内する。
+- `src/acp` は ACP 互換層の入口で、既存の `acp.*` 参照を canonical な `oracle.*` または実体モジュールへ接続するための公開入口と builder 互換経路を扱う。配下の互換入口や builder adapter の責務を確認するための起点。
 
 ## Read this when
-- ACP builderのパッケージ構成や互換import経路を確認するとき。
-- prompt補正、quota probe、oracle・realization workload、session、TUI builderの調査・変更を始めるとき。
+- `acp` 公開名前空間の存廃、既存 import 経路との互換性、canonical 実装への委譲方針を調査するとき。
+- ACP builder の互換入口、prompt 境界補正、indexing、oracle・realization・session・TUI 向け adapter、quota probe の fallback を横断して確認するとき。
 
 ## Do not read this when
-- canonicalなoracle実装や具体的なprompt仕様を確認したいときは、対応するoracle側を直接読む。
-- 個別adapterの詳細や利用箇所だけを調査したいときは、該当する下位パッケージまたは参照元へ直接進む。
+- canonical な正本実装や prompt 仕様そのものを調査・変更するときは、対応する `oracle` 側の対象を直接読む。
+- 特定の builder adapter、内部挙動、移行先の詳細だけを確認したいときは、配下の該当モジュールまたは参照元を直接読む。
+- ACP と無関係な TUI、session、realization workload、一般的な parameter 処理を調査するとき。
 
 ## hash
-- a342020a3326b4d5f5feffa5a9e6972c42b74f9bd71eedcd6b69b3515dfa71ce
+- 560b98856d9317d7a0a6729e1badc23f38a4bf0351e315e366fd24ae7b1ffb16
 
 # `basic`
 

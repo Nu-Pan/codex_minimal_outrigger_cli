@@ -601,9 +601,9 @@
   },
   "src/acp/builder/realization/apply/fork/launch_exec.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "ad8b6414faf5db7a582c40bdb0497e77e238bd5567989f66edc9483a8608a9fe",
+    "last_investigated_at": "2026-07-24_20-41_43_684764000"
   },
   "src/acp/builder/realization/refactor/__init__.py": {
     "investigation_required": true,
