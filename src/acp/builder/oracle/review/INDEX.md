@@ -59,18 +59,20 @@
 # `validate_finding_advocate.py`
 
 ## Summary
-- oracle の canonical parameter を生成した後、prompt 内の oracle root typo を補正し、動的入力を含む3つのセクションを text コードフェンスで保護する builder。oracle src の意図に基づく最小限の補正と入力保持を担う。
+- Oracle review の所見検証用 agent call parameter を生成する補助モジュール。canonical parameter を基に、oracle root の typo を限定的に補正し、動的入力セクションのコードフェンスを保護する。関連する oracle review prompt builder への実装上の入口となる。
 
 ## Read this when
-- oracle review の validate finding advocate 用 AgentCallParameter の生成・補正処理を変更または調査するとき
-- 対象所見や既知理由の prompt 埋め込み、コードフェンス保護、oracle root typo 補正の挙動を確認するとき
+- oracle review の finding、advocate/challenger reason を受け取る agent call prompt の生成・補正を変更または調査するとき
+- 動的プロンプト内のコードフェンス保護や oracle root placeholder typo の補正挙動を確認するとき
+- validate finding advocate 用 parameter builder と canonical builder の接続を追跡するとき
 
 ## Do not read this when
-- canonical parameter の正本定義そのものを確認したいときは、参照先の oracle src を直接読む
-- validate finding advocate と無関係な prompt builder やレビュー処理を調査するとき
+- oracle review の canonical prompt 定義そのものを確認したい場合は、参照先の oracle builder を直接読む
+- 一般的な prompt fence 保護処理だけを調査する場合は、共通 prompt fence helper を直接読む
+- 他の agent call parameter や oracle review 機能に関する作業で、この補助モジュールの typo 補正・動的セクション保護に関係しない場合
 
 ## hash
-- 3c505361f5ca3e8afc942827e46a265a413e244063e4a5180ad08345a0ee138e
+- a1bd2fe9a2f5a6424b0c8a103fc3f0babf9eafdb9f1a224b7414f207578871ce
 
 # `validate_finding_challenger.py`
 
