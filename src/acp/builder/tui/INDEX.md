@@ -34,14 +34,15 @@
 # `resolve_parameter.py`
 
 ## Summary
-- TUI の resolve-parameter 用 realization adapter。正本 builder を呼び出し、互換 import 向けの公開関数として prompt 内のコードフェンスを保護した AgentCallParameter を返す。
+- TUI の resolve-parameter builder に残る互換 import 向けアダプター。正本 builder を呼び出し、入力プロンプト内のコードフェンスを保護した AgentCallParameter を返す。
 
 ## Read this when
-- TUI の resolve-parameter builder の互換 adapter、正本 builder の再公開、または prompt のコードフェンス保護処理を変更・調査するとき。
+- TUI の resolve-parameter parameter 生成や prompt のコードフェンス保護を調査・変更するとき
+- acp.builder.tui.resolve_parameter からの互換 import を確認するとき
 
 ## Do not read this when
-- canonical builder の仕様や実装自体を調べるときは、指定された oracle の正本ファイルを直接読む。
-- TUI の resolve-parameter と無関係な builder、prompt 生成、または ACP パラメータ処理を調べるとき。
+- canonical builder 自体の仕様や実装を確認したいときは、oracle/src/oracle/acp_builder/tui/resolve_parameter.py を直接読む
+- TUI の resolve-parameter と無関係な builder や prompt 処理を調査するとき
 
 ## hash
-- 001d3dfc77bcb76b9488254ed4dedcc4c92befb275886d4dbf7894ababff8521
+- d30285bea79b4ac949db9a43a11a65b04c3943ad732ff5749180c76cbd0cbdff

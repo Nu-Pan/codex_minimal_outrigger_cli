@@ -49,6 +49,20 @@ def test_tui_resolve_parameter_keeps_nested_prompt_fences() -> None:
     assert section.endswith("\n````")
 
 
+def test_tui_resolve_parameter_ignores_marker_inside_nested_prompt_fence() -> None:
+    """元prompt内の終了マーカー風文字列を外側の境界と誤認しないことを確認する。"""
+    original_prompt = "before\n```\ninside\n```\n</cmoc_block>\n\n```\nafter\n```"
+
+    parameter = build_tui_resolve_parameter_parameter(original_prompt)
+
+    start = parameter.prompt.index("# オリジナルプロンプト")
+    end = parameter.prompt.rfind("\n</cmoc_block>", start)
+    section = parameter.prompt[start:end]
+    assert section.startswith("# オリジナルプロンプト\n\n````markdown\n")
+    assert original_prompt in section
+    assert section.endswith("\n````")
+
+
 def test_tui_resolve_parameter_schema_contains_only_standard_flags() -> None:
     """TUI parameter schema が4つの standard 選択だけを求めることを検証する。"""
     parameter = build_tui_resolve_parameter_parameter("調査して下さい。")
