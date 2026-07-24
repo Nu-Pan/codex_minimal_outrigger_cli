@@ -534,10 +534,10 @@
     "last_investigated_at": "2026-07-24_17-44_28_692016000"
   },
   "src/acp/builder/oracle/investigation/launch_tui.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "07ca68e21555887974b0773ecaf88d5e8e751de8df8ad6f5bb2839a7ce6d86a6",
+    "last_investigated_at": "2026-07-24_17-56_46_965678000"
   },
   "src/acp/builder/oracle/review/__init__.py": {
     "investigation_required": true,
