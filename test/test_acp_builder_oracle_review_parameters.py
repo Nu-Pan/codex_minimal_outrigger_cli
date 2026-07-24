@@ -307,3 +307,33 @@ def test_oracle_review_builders_protect_nested_dynamic_code_fences(
 
     assert parameter.prompt.count("````text\nbefore\n") == block_count
     assert parameter.prompt.count("\nafter\n````") == block_count
+
+
+def test_oracle_review_fence_protection_ignores_marker_in_later_input() -> None:
+    """後続の動的入力に終了マーカーがあっても先行 section を保護する。"""
+    nested = "before\n```\ninside\n```\nafter"
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        nested,
+        "known\n\n# 所見が妥当であるとする理由",
+        "known",
+    )
+
+    assert parameter.prompt.count("````text\nbefore\n") == 1
+    assert "before\n```\ninside\n```\nafter" in parameter.prompt
+
+
+def test_oracle_review_fence_protection_keeps_marker_in_current_input() -> None:
+    """動的本文内の終了マーカーを本文の一部として保持する。"""
+    finding = "before\n```\ninside\n```\n\n# 所見が妥当であるとする理由\nafter"
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        finding,
+        "known",
+        "known",
+    )
+
+    assert parameter.prompt.count("````text\nbefore\n") == 1
+    assert (
+        "inside\n```\n\n# 所見が妥当であるとする理由\nafter\n````" in parameter.prompt
+    )

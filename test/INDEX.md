@@ -133,21 +133,18 @@
 # `test_acp_builder_oracle_review_parameters.py`
 
 ## Summary
-- oracle review 用 ACP builder の parameter、schema、adapter 公開面を検証するテスト。各 builder のモデル・推論・ファイルアクセス設定、canonical builder との互換性、oracle schema との一致、動的入力とコードフェンスの保持を確認する。review builder の実装や oracle review schema、対応する parameter 仕様を調査する際の入口。
+- oracle review ACP builder の parameter、schema、adapter 公開面を検証する realization test。enumerate、judge、merge、advocate/challenger validate 各 builder の model・reasoning・file access 設定、oracle schema との一致、互換 builder、動的入力保持、symlink path、placeholder、nested code fence 保護を確認する。
 
 ## Read this when
-- oracle review の ACP builder を変更・レビューするとき
-- review 用 parameter の model、reasoning、file access、schema、prompt 生成を検証するとき
-- 互換 adapter の公開名や canonical builder との一致を確認するとき
-- 動的入力内の placeholder、symlink path、nested code fence の扱いを確認するとき
+- oracle review 用 ACP builder の parameter 生成や schema、互換 adapter の公開面を変更・調査するとき。
+- review builder の prompt placeholder、動的入力の保持、code fence 境界保護、model・reasoning・file access 設定の回帰を確認するとき。
 
 ## Do not read this when
-- oracle review 以外の ACP builder を扱うとき
-- builder の実装詳細ではなく oracle review の正本仕様そのものを確認するときは、対応する oracle source や schema を直接読む
-- 一般的な ACP parameter の定義や共有基盤を調べるときは、basic ACP の実装・テストを直接読む
+- oracle review 以外の ACP builder や、builder 本体の実装責務だけを調査するとき。
+- schema の正本定義そのものを変更・確認する場合は、対応する oracle schema と builder 実装を直接読む。
 
 ## hash
-- 25472c03fad92d364d3dd1fc7694f71c319c628e1e405ade7e72663fb1e9f0e5
+- 494cf9bcf6dec1fe316350655cf078483d9b2808a3968463c1b44d98b270dfbe
 
 # `test_acp_builder_session_join_parameters.py`
 

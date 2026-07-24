@@ -1,20 +1,18 @@
 # `acp`
 
 ## Summary
-- ACP互換の公開入口と、ACP builderの互換入口・realization adapter群を扱うパッケージ。canonicalなoracle実装への委譲、prompt補正、quota probe、session、TUI、indexing、realization、command builderへの下位入口を提供する。
+- `acp` 互換の公開入口と、ACP builder の互換入口・realization adapter 群を扱うディレクトリ。canonical な oracle 実装への委譲や各種 builder 接続の入口を提供する。
 
 ## Read this when
-- acp.builderの互換import経路や公開入口を調査するとき。
-- ACP builderのprompt補正、quota probe、session、TUI、indexing、realization adapterの構成を確認するとき。
-- acpという公開名の存続・削除や、既存参照をoracle側の実体へ移行する導線を判断するとき。
+- `acp.*` の公開参照を維持・削除・移行する判断が必要なとき。
+- ACP builder の互換 import 経路、adapter 構成、canonical 実装への委譲を確認するとき。
 
 ## Do not read this when
-- canonicalなoracle builderの仕様・実装やprompt内容を確認したいとき。
-- 具体的なadapterの実装詳細を確認したいとき。
-- TUI本体、fork適用処理、builder以外のCLI処理を調査するとき。
+- canonical な oracle 実装や prompt の正本を確認したいとき。
+- 具体的な adapter の内部実装、TUI 本体、CLI 処理を直接調査したいとき。
 
 ## hash
-- 0624ce5cab2c14e8847ea504594605e88a117827caeffb3be635935ae2de67d0
+- f3730f4f042a80bd5a276110aefdd7f4a1a56ababa764b2c2751aab2aed4205b
 
 # `basic`
 

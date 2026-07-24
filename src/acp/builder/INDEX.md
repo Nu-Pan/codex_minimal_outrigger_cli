@@ -31,18 +31,18 @@
 # `common`
 
 ## Summary
-- ACP builder 共通処理として、動的 Markdown 本文内のバッククォート列を調べ、外側の code fence を必要に応じて延長する補正を担う。prompt の該当セクションを安全に扱うための入口。
+- ACP builder が共有利用する Markdown code fence 補正処理。動的本文に含まれるバッククォート列に応じて外側 fence を調整し、prompt のセクション境界を維持する。
 
 ## Read this when
-- ACP builder の prompt 生成で、動的な code block 内容による Markdown code fence の破壊を調査・修正するとき。
-- section heading、終了マーカー、info string を指定して既存 prompt のセクションを補正する処理を確認するとき。
+- ACP builder の prompt 生成で、動的本文中の code fence や長いバッククォート列を扱う処理を確認・変更するとき。
+- prompt 内の指定セクション検出や code block の fence 長置換を調査するとき。
 
 ## Do not read this when
-- prompt の正本仕様や固定長 fence の定義を確認するときは、参照される oracle 文書を直接読む。
-- ACP builder 共通処理以外の prompt 生成や Markdown 解析を変更するとき。
+- ACP builder の正本 prompt 仕様や固定長 fence の定義を確認するとき。
+- 共有 fence 補正以外の prompt 生成処理や CLI 挙動を調査するとき。
 
 ## hash
-- d9346d36aa6f84b28b83285502651d1aec565f1a2b7b055c4710c8c368feafc8
+- 5b00b25a5e5eb70c7c3e6f963417bc66821abcdf697c3005c3b2c7002407609a
 
 # `indexing`
 
