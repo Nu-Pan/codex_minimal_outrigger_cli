@@ -582,10 +582,10 @@
     "last_investigated_at": "2026-07-24_19-52_06_939368000"
   },
   "src/acp/builder/realization/__init__.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "cd24953f9993d22add52453bee8a2c6dd9c2fc85ecd238c962f1cc82066eec92",
+    "last_investigated_at": "2026-07-24_20-03_25_812378000"
   },
   "src/acp/builder/realization/apply/__init__.py": {
     "investigation_required": true,
