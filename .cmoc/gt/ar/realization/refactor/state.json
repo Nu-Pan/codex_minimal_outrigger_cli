@@ -337,9 +337,9 @@
   },
   "oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "2f62a61956371b2154da3ededf6103c79ec999bfcabdae2983231f9f9364b97b",
+    "last_investigated_at": "2026-07-24_09-02_32_738601000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.json": {
     "investigation_required": true,

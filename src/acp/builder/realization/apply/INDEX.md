@@ -17,15 +17,14 @@
 # `fork`
 
 ## Summary
-- `cmoc realization apply fork` 用の builder adapter を提供するディレクトリ。fork 適用処理の builder 接続点と、launch_exec builder の import 入口を確認する際の入口となる。
+- `cmoc realization apply fork` 向けの builder adapter を収めるディレクトリ。fork 適用時の launch_exec 用 builder の公開接続点を提供する。
 
 ## Read this when
-- `cmoc realization apply fork` の builder adapter の責務や配置を確認するとき。
-- realization apply fork の launch_exec builder の import 入口や公開 API を確認するとき。
+- `cmoc realization apply fork` の builder adapter の責務や、launch_exec parameter builder の prompt 生成・公開 API を確認または変更するとき。
 
 ## Do not read this when
-- fork 適用処理や builder の具体的な構築ロジック・仕様を調査するとき。再公開元の oracle 実装を直接読む。
-- `cmoc realization apply fork` 以外の builder adapter を調査するとき。
+- oracle 側の正本 builder の仕様や prompt 構成を確認するとき。
+- fork 適用処理そのもの、または fork 以外の apply 処理を調査するとき。
 
 ## hash
-- fdd93fd1ce8600a5f91a3e3ec3d8028ed92f26521a4d3b02cb086de5a36a8923
+- ba21f080ee2dd6d1eda4888435f503adee257f4aff6d97e30080a2befd36e3d4

@@ -31,6 +31,23 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff() -> None:
     assert "diff --git a/oracle/a.md b/oracle/a.md" in parameter.prompt
 
 
+def test_realization_apply_builder_keeps_nested_diff_fences() -> None:
+    """raw diff 内の三連 backtick が prompt の境界を閉じないことを確認する。"""
+    parameter = build_realization_apply_fork_launch_exec_parameter(
+        "base-commit",
+        "fork-commit",
+        "diff --git a/oracle/a.md b/oracle/a.md\n```\n</cmoc_block>\n```\n",
+        Path.cwd(),
+    )
+
+    start = parameter.prompt.index("# oracle file の raw git diff")
+    end = parameter.prompt.rfind("\n\n</cmoc_block>", start)
+    section = parameter.prompt[start:end]
+    assert section.startswith("# oracle file の raw git diff\n\n````diff\n")
+    assert "```\n</cmoc_block>\n```" in section
+    assert section.endswith("\n````")
+
+
 def test_refactor_builders_use_canonical_structured_output_schemas() -> None:
     """refactor builder が canonical schema と要求された実行設定を使うことを確認する。"""
     review = build_realization_refactor_fork_file_review_and_fix_parameter(
