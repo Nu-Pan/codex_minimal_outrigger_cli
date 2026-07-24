@@ -1,5 +1,6 @@
 import hashlib
 import os
+import tempfile
 from pathlib import Path
 
 
@@ -17,7 +18,7 @@ def file_sha256(path: Path) -> str:
 
 def text_sha256(text: str) -> str:
     """文字列を UTF-8 として扱った SHA-256 digest を返す。"""
-    return hashlib.sha256(text.encode()).hexdigest()
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def write_hashed_file(directory: Path, prefix: str, suffix: str, content: str) -> Path:
@@ -25,8 +26,26 @@ def write_hashed_file(directory: Path, prefix: str, suffix: str, content: str) -
     digest = text_sha256(content)
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{prefix}{digest}{suffix}"
-    if not path.exists() or path.read_text() != content:
-        path.write_text(content)
+    content_bytes = content.encode("utf-8")
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の schema store は、
+    # symlink のリンク先ではなく、指定された hash path 自体へ保存する。
+    if not path.is_symlink():
+        if path.is_dir():
+            raise IsADirectoryError(path)
+        if path.is_file() and path.read_bytes() == content_bytes:
+            return path
+
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb", dir=directory, prefix=f".{path.name}.", delete=False
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+            temporary_file.write(content_bytes)
+        os.replace(temporary_path, path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
     return path
 
 

@@ -693,18 +693,18 @@
 # `test_runtime_content.py`
 
 ## Summary
-- `is_binary` が通常のテキスト内容と NUL バイトを含む内容を正しく判定することを検証するテスト。indexing における binary file 除外判定の挙動確認への入口。
+- runtime_content の補助関数を検証するテスト。内容が NUL byte を含むかによる binary 判定と、hash ベースの保存時に既存 symlink のリンク先を上書きせず置換する挙動を扱う。runtime_content の保存処理や binary 判定を変更・調査するときのテスト入口。
 
 ## Read this when
-- indexing の content 判定や binary file 除外処理を変更・検証するとき
-- `is_binary` のテキスト／binary 判定に関するテストを確認するとき
+- runtime_content の is_binary または write_hashed_file を変更・レビュー・デバッグするとき
+- テキスト／binary 判定や、hash path が symlink の場合の安全な保存挙動を確認するとき
 
 ## Do not read this when
-- indexing の仕様根拠そのものを確認したいときは、参照先の oracle doc を直接読む
-- `is_binary` の実装詳細を確認したいときは、実装モジュールを直接読む
+- runtime_content の実装詳細を確認したいだけで、テストケースや期待挙動の確認が不要なとき
+- runtime_content と無関係な機能の実装・テストを調査するとき
 
 ## hash
-- c6132bad711dc59ae537534245564ab610bea5f1cbf873635394d54ee99c8046
+- 1d7cd925d0b731ec53366c6eb796bed8c9be466df205b88ae5f6b9f8f07ad5c3
 
 # `test_runtime_file_access.py`
 

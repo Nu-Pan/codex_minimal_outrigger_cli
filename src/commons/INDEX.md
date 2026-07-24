@@ -204,19 +204,19 @@
 # `runtime_content.py`
 
 ## Summary
-- ファイル内容の SHA-256 計算、ハッシュ付きファイルの生成、バイナリ判定を担う共通ランタイム処理。通常ファイルと symlink を区別して内容を取得し、symlink のリンク文字列や dangling symlink も扱う。
+- ファイル内容の SHA-256 ハッシュ計算、UTF-8 文字列のハッシュ計算、内容ハッシュを含む一時ファイルの安全な保存、バイナリ判定を提供する共通ランタイム処理。symlink や dangling symlink、既存ファイルとの整合性、原子的な置換を扱う。
 
 ## Read this when
-- ファイル内容または UTF-8 文字列の SHA-256 digest 計算を変更・利用するとき
-- 内容ハッシュを名前に含むファイルの生成処理を確認するとき
-- バイナリ判定や symlink の扱い、特に dangling symlink の状態同期を調査するとき
+- ファイル分類や状態同期で、通常ファイルと symlink のハッシュ方法を確認するとき
+- 内容ハッシュ付きファイルの生成・再利用・原子的な保存処理を変更するとき
+- ファイルのバイナリ判定ロジックを変更または利用するとき
 
 ## Do not read this when
-- プロンプト構築や oracle/realization file の分類規則そのものを確認したいときは、参照先の oracle 文書を直接読む
-- この共通処理を利用する機能の具体的な入出力や CLI 挙動だけを確認するとき
+- 特定のプロンプト生成処理や oracle/realization の仕様を確認したいとき
+- この共通ランタイム処理を利用する上位機能の挙動だけを調査するとき
 
 ## hash
-- 0bbad2eac79645e0b66816bef881d429c1eb3139fad0aeab9972ca332682642a
+- ddf0f66390f4aaf71281fa12bd36f060b80ff0d272148ee758ccd73e2714c1c6
 
 # `runtime_doctor.py`
 
