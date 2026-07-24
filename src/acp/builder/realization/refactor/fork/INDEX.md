@@ -31,14 +31,15 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- realization refactor における file review 用 fork parameter builder の公開 adapter。実体は oracle 側の builder を再公開するだけで、下位実装へ進む入口となる。
+- realization refactor の fork において、file review and fix の oracle builder を realization 側から再公開する薄い adapter。詳細な parameter 定義は対応する oracle file に委譲する。
 
 ## Read this when
-- realization refactor の file review・fix 処理で、fork parameter builder の公開入口を確認したいとき。
+- realization refactor fork の file review and fix parameter builder の参照先や公開 API を確認するとき。
+- 対応する oracle builder の実装または JSON 定義との接続を確認するとき。
 
 ## Do not read this when
-- file review・fix の builder と無関係な処理を調査するとき。
-- builder の具体的な生成ロジックを確認したいときは、再公開元の oracle 実装を直接読む場合。
+- file review and fix 以外の builder を扱うとき。
+- parameter 定義そのものを確認・変更するとき。この場合は対応する oracle file を直接読む。
 
 ## hash
-- 65717d928604ea224b2ea9290e707d41385c8235fd63b6fb4d96bbe744915382
+- a051f806eb19e9b73542f4bde735c17f507b6f008cf69e3c9c6a6b7e8c9d02b3

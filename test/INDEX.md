@@ -98,16 +98,19 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- editing run workload の canonical builder adapter を検証するテスト。realization apply builder が commit 範囲・oracle raw diff・ネストしたコードフェンスを prompt に埋め込むこと、および refactor builder が canonical structured-output schema と指定されたモデル・権限設定を使うことを確認する。
+- editing run workload の canonical builder adapter を検証するテスト。apply builder が commit 範囲・oracle raw diff・入れ子のコードフェンスを prompt に保持すること、refactor builder が canonical structured output schema と実行設定を使用することを確認する。対応する builder 実装および schema の変更・検証時に読む入口となる。
 
 ## Read this when
-- realization apply/refactor fork の builder parameter 生成、prompt の diff 埋め込み、structured-output schema、実行設定を変更・検証するとき。
+- editing run の apply または refactor builder の挙動を変更・レビュー・検証するとき
+- builder が生成する prompt、structured output schema、モデル設定、file access mode を確認するとき
+- raw diff 内のコードフェンスや resolution status の扱いを調査するとき
 
 ## Do not read this when
-- builder 以外の ACP 実装や、実際の fork 実行・CLI 挙動だけを調査するとき。
+- builder の実装や canonical schema 自体を変更せず、他の ACP 機能だけを調査するとき
+- 単に一般的なテスト実行方法を確認したいときは、テスト環境や開発ルールの文書を直接読む
 
 ## hash
-- 1b1854137251af5d4494a6b2c35c03bdc0f92dfd54ed503693bb402b1cc429ba
+- 7a3f754dc52ecfd38a0a482a82b3de11ed8b445a1b000a4476366db988ff5141
 
 # `test_acp_builder_indexing_parameters.py`
 
