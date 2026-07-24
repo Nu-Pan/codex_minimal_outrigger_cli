@@ -498,10 +498,10 @@
     "last_investigated_at": "2026-07-24_16-24_44_749849000"
   },
   "src/acp/builder/indexing/__init__.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "fd4b0dd11238195b4ce76273d3ffc692eb9e441764952be0b436ba20f60452bf",
+    "last_investigated_at": "2026-07-24_16-37_18_750347000"
   },
   "src/acp/builder/indexing/index_entry.py": {
     "investigation_required": true,
