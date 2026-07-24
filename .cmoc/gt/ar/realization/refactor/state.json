@@ -360,10 +360,10 @@
     "last_investigated_at": "2026-07-24_10-08_25_722341000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "4a1ffe3d0db1a8dd9cbb1ea93c798d3afd70bc36a8f31df9fbcf7ac9fb008195",
+    "last_investigated_at": "2026-07-24_10-23_15_175746000"
   },
   "oracle/src/oracle/acp_builder/session/join/conflict_resolution.py": {
     "investigation_required": true,
