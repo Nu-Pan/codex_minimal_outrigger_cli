@@ -402,10 +402,10 @@
     "last_investigated_at": "2026-07-24_11-53_56_754732000"
   },
   "oracle/src/oracle/other/standard.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "a030f66eb8db892df78b4e0246d71fcfb3a99d49a56a37ddd8ea96705340bf2f",
+    "last_investigated_at": "2026-07-24_12-07_33_192017000"
   },
   "oracle/src/oracle/other/struct_doc.py": {
     "investigation_required": true,
