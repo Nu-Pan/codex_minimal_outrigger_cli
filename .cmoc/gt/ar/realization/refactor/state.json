@@ -846,10 +846,10 @@
     "last_investigated_at": "2026-07-25_06-28_50_531651000"
   },
   "src/config/__init__.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "2df099916bfadae1547b9bb803be4606e032bc2d738c77e453dddf5756e2dece",
+    "last_investigated_at": "2026-07-25_06-40_26_790302000"
   },
   "src/config/cmoc_config.py": {
     "investigation_required": true,
