@@ -142,16 +142,18 @@
 # `tui`
 
 ## Summary
-- TUI builder の互換 import 経路を提供するパッケージで、既存の `acp.builder.tui.*` 参照を維持するための薄いラッパー群を含む。実装本体や正本仕様は持たず、canonical builder への再公開に専念する。
-- パッケージ入口は互換層の位置づけと削除条件を示し、個別モジュールは起動 parameter builder と resolve-parameter builder の公開経路を提供する。
+- 既存の `acp.builder.tui.*` import との互換性を維持するための TUI builder adapter package。`oracle.acp_builder.tui` の正本実装を再公開・呼び出しし、TUI 起動 parameter と resolve-parameter builder の互換入口を提供する。
 
 ## Read this when
-- 既存の `acp.builder.tui.*` import 互換性や互換 package の削除可否を確認するとき。
-- TUI 起動 parameter builder または resolve-parameter builder の公開 import 経路を確認するとき。
+- 既存の `acp.builder.tui.*` import 経路の互換性や削除可否を確認するとき。
+- TUI 起動 parameter builder または resolve-parameter builder の互換 adapter と公開名を調査・変更するとき。
+- resolve-parameter adapter における prompt のコードフェンス保護処理を確認するとき。
 
 ## Do not read this when
-- TUI 実装本体の挙動、生成ロジック、画面構成を確認したいとき。
-- 新しい公開 API や新規 import 経路を設計したいとき。
+- TUI 実装本体の挙動や画面構成を確認したいとき。
+- canonical builder の仕様・具体的な生成ロジックを確認したいとき。
+- TUI と無関係な builder、prompt 生成、ACP parameter 処理を調査するとき。
+- 新しい公開 API や新規 import 経路を設計するとき。
 
 ## hash
-- 07325cdacef9fbbf069095a09313290138c8d470e00e9570cea197be2eceaee3
+- dde6940495ab123f6aa961d878adcf222c619fe6a2845e840ca34809659ca7d5

@@ -167,18 +167,16 @@
 # `test_acp_builder_tui_parameters.py`
 
 ## Summary
-- TUI の resolve parameter builder について、生成されるパラメータの標準設定・prompt 埋め込み・schema ファイルの内容・公開 API を検証するテスト。元の依頼文や標準 prompt の一部が含まれること、4 つの standard 選択項目だけを持つ schema であること、互換 module の公開名が限定されていることを確認する。
+- TUI の resolve parameter builder を検証するテスト。生成されるパラメータのモデル・推論設定・読み取り専用モード、標準 prompt と元 prompt の埋め込み、入れ子のコードフェンス保持、4つの標準フラグ בלבדを定義する structured output schema、公開 API の制限を確認する。
 
 ## Read this when
-- TUI の resolve parameter builder、生成 prompt、structured output schema、またはその公開 API を変更・調査するとき
-- TUI parameter builder の標準設定や schema の互換性を検証するとき
+- TUI の resolve parameter builder、標準 prompt の構成、structured output schema、または互換 module の公開名を変更・検証するとき。
 
 ## Do not read this when
-- TUI の resolve parameter builder や resolve parameter schema に関係しないテスト・実装を扱うとき
-- builder の実装詳細を直接確認したいときは、対応する oracle または realization implementation を先に読む
+- TUI 以外の parameter builder や、builder 実装そのものの詳細を調べるときは、対応する実装・正本ファイルを直接読む。
 
 ## hash
-- bc1e1ccdda8e103b81a6cec702713901f8eb27a51b5db9420a99ab2ccdc3fa95
+- 635c715ba86b979b7a194c9e701546baa263f7c0f395d5da4d6eb0c1bc989be2
 
 # `test_basic_runtime.py`
 

@@ -35,6 +35,20 @@ def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
     assert "# index entry standard" not in parameter.prompt
 
 
+def test_tui_resolve_parameter_keeps_nested_prompt_fences() -> None:
+    """元prompt内の三連backtickが外側の境界を閉じないことを確認する。"""
+    original_prompt = "before\n```\ninside\n```\nafter"
+
+    parameter = build_tui_resolve_parameter_parameter(original_prompt)
+
+    start = parameter.prompt.index("# オリジナルプロンプト")
+    end = parameter.prompt.rfind("\n</cmoc_block>", start)
+    section = parameter.prompt[start:end]
+    assert section.startswith("# オリジナルプロンプト\n\n````markdown\n")
+    assert "```\ninside\n```" in section
+    assert section.endswith("\n````")
+
+
 def test_tui_resolve_parameter_schema_contains_only_standard_flags() -> None:
     """TUI parameter schema が4つの standard 選択だけを求めることを検証する。"""
     parameter = build_tui_resolve_parameter_parameter("調査して下さい。")

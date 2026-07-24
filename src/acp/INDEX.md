@@ -17,15 +17,15 @@
 # `builder`
 
 ## Summary
-- ACP builder の prompt・parameter 構築を担うパッケージ。oracle、realization、session、TUI、indexing の各 builder adapter と、共通の prompt fence 補正・quota probe を下位要素として案内する。
+- ACP builder の互換・委譲層をまとめるパッケージ。既存の `acp.builder.*` import 経路を維持し、oracle 側の canonical builder、共通 prompt 補正、indexing、session、TUI、realization などへの入口を提供する。下位ディレクトリは各 builder 領域の互換 adapter として案内される。
 
 ## Read this when
-- ACP builder の公開 import 経路、各 workload 用 builder adapter、prompt 生成、session join、TUI 起動、index entry 生成を調査・変更するとき。
-- oracle または realization の edit・investigation・review・apply・refactor builder の呼び出し経路を確認するとき。
+- ACP builder の互換 import 経路、canonical builder への委譲、または builder adapter の構成を調査・変更するとき。
+- prompt の code fence 保護、quota probe、oracle・realization・session・TUI builder の接続先を確認するとき。
 
 ## Do not read this when
-- canonical な正本仕様や具体的な builder 実装内容を確認したいとき。
-- TUI 本体、fork 適用処理、一般的な Markdown 解析など、builder adapter の責務外を調査するとき。
+- oracle 側の canonical builder の正本仕様や具体的な実装内容だけを確認したいとき。
+- TUI 本体、fork 適用処理、または ACP builder と無関係な実装を調査するとき。
 
 ## hash
-- 7d62a474801724ccc519c2f4d96ebd2f94ad8e2b69407b0483ff612cf896ff85
+- 859cb07cdefc8d0d38acf78c1798b8f31fc7657b091cf110ff77ca2ccb5dde39
