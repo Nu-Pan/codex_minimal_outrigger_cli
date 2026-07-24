@@ -477,6 +477,7 @@ def _completion_change_summary(context: EditingRunContext) -> list[dict] | None:
         or not isinstance(output, dict)
         or set(output) != {"changes"}
         or not isinstance(output["changes"], list)
+        or not output["changes"]
     ):
         raise CmocError(
             "refactor change summary を生成できません。",

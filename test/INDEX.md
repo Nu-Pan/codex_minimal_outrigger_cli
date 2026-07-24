@@ -98,16 +98,16 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- editing run workload の canonical builder adapter を検証するテスト。realization apply builder が commit 範囲・oracle raw diff・ネストしたコードフェンスを prompt に埋め込むこと、および refactor builders が canonical structured-output schema と所定の実行設定を使うことを確認する。
+- editing run workload の canonical builder adapter を検証するテスト。realization apply builder が commit 範囲・oracle raw diff・ネストしたコードフェンスを prompt に埋め込むこと、および refactor builder が canonical structured-output schema と指定されたモデル・権限設定を使うことを確認する。
 
 ## Read this when
-- realization apply/refactor builder の prompt 生成、raw diff の埋め込み、structured-output schema、モデル・推論・file access 設定を変更または検証するとき。
+- realization apply/refactor fork の builder parameter 生成、prompt の diff 埋め込み、structured-output schema、実行設定を変更・検証するとき。
 
 ## Do not read this when
-- builder 以外の ACP 実装や、実際の realization fork 実行処理だけを調査するとき。
+- builder 以外の ACP 実装や、実際の fork 実行・CLI 挙動だけを調査するとき。
 
 ## hash
-- 8aa034de7b9a67ee112c42f5a586b0e82f596aa762f0c2e0a8d96cbc0bb913e8
+- 1b1854137251af5d4494a6b2c35c03bdc0f92dfd54ed503693bb402b1cc429ba
 
 # `test_acp_builder_indexing_parameters.py`
 
@@ -387,20 +387,19 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の realization test。editing run の session state、run worktree、fork report、oracle/realization 変更制約、join・force-resolve・rollback、および refactor fork の継続・中断・失敗時ライフサイクルを検証する。関連する lifecycle fixture と state 遷移を共有する統合テストの入口。
+- editing run の fork・join・abandon に関する統合 realization test。apply/refactor fork、共通 run state、worktree 差分、report、rollback、interrupt、error handling、および oracle investigation の主要な lifecycle 挙動を検証する。
 
 ## Read this when
-- realization apply fork、realization refactor fork、run join の変更や不具合を調査するとき
-- editing run の state、worktree 差分、branch merge、fork report、rollback の挙動を検証するとき
-- refactor fork の target 処理、INDEX 更新、unresolved・interruption・cleanup failure を確認するとき
+- realization apply または refactor fork の run lifecycle を変更・調査するとき
+- run join の state 同期、差分解決、merge rollback、force-resolve を変更・調査するとき
+- fork report、change summary、interrupt・cleanup・失敗時の state 遷移を変更・調査するとき
 
 ## Do not read this when
-- oracle investigation 単体の仕様や実装だけを確認する場合
-- run lifecycle の共通実装を直接修正・調査する場合は、まず対応する runtime module とその専用テストを読むとき
-- fork・join・refactor の lifecycle に関係しない CLI 機能のテストを調査するとき
+- INDEX 生成や通常の oracle investigation 実装だけを変更するとき
+- run lifecycle と無関係な CLI、設定、単体 helper の挙動を変更するときは、まず対象実装とより直接的なテストを読む
 
 ## hash
-- eec7b40fc20b68924936c37a2146208454c2aec14a3cb42c82011788d59d7e24
+- 066de4390bed527f49cf368b1d23494553dbd08337b8cf680c39c15046c8a4e5
 
 # `test_indexing_cli.py`
 

@@ -15,18 +15,19 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の一連の処理を担い、対象選択、file 単位の agent 実行、差分検証、refactor state 更新、commit、完了判定、unresolved 管理、joinable/error report 生成までを単一の lifecycle として実装する。
-- 中断時の child process 停止・rollback・state 更新・report 保存、および異常時の error state への遷移も扱う。関連する refactor state、editing run、git 差分、report の実装をつなぐ上位 orchestration の入口である。
+- realization refactor fork の CLI 実行ライフサイクルを統括する。editing run と refactor state を初期化し、対象 realization file ごとの agent 調査・修正・差分検証・commit を順に実行する。
+- current fork 内の unresolved finding、state の investigation_required、完了理由を整合させ、正常完了・中断・エラー時の cleanup、run state 更新、fork report 出力、完了ログ生成までを一貫して扱う。
+- ファイル単位の処理は関連する agent parameter builder に委譲し、Git 差分分類、INDEX 更新、state 集計、変更概要、未解決所見の report 表示を補助関数で構成する。
 
 ## Read this when
-- realization refactor fork の全体 lifecycle、処理単位の進行、完了条件、unresolved finding の扱いを変更・調査するとき
-- agent call 後の差分検証、refactor state 同期、commit、run state、report 生成の連携を確認するとき
-- KeyboardInterrupt や処理失敗時の cleanup、rollback、error report の挙動を確認するとき
+- cmoc realization refactor fork の実行順序、対象選択、処理単位の commit、unresolved 管理、完了判定を変更・調査するとき
+- realization refactor の中断・エラー時における child process 停止、rollback、run state、report の挙動を確認するとき
+- refactor state と managed branch の差分から fork report や completion log を生成する処理を確認するとき
 
 ## Do not read this when
-- refactor agent の Structured Output parameter や file review 固有の処理だけを変更・調査するときは、対応する builder または file review module を直接読む
-- refactor state のデータ構造や target 同期だけを確認するときは、commons.runtime_refactor を直接読む
-- editing run の git 差分分類・state 遷移・report 共通処理だけを確認するときは、対応する commons runtime module を直接読む
+- realization refactor の agent 入力 parameter 自体を変更するときは、各 parameter builder を直接読む
+- refactor state のデータモデルや対象選択ロジックだけを変更するときは、commons.runtime_refactor を直接読む
+- run の共通ライフサイクル、Git 差分、INDEX 更新の汎用仕様だけを確認するときは、対応する commons runtime module を直接読む
 
 ## hash
-- 073415da4f0872bd8a931bccd3db9fa1b54686d879d18207d9cdc08a1150a06d
+- 0811ff1ad232e10140ea3a80205f9ab71e9136ca4fabc546385b93211095ea75

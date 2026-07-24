@@ -17,15 +17,15 @@
 # `builder`
 
 ## Summary
-- acp.builder 配下の互換入口と builder adapter をまとめる realization package。既存の acp.builder.* import 経路を維持し、indexing・oracle・realization・session・TUI・quota probe などの下位要素へ案内する。
+- ACP builder の realization 層。oracle 側の canonical builder を旧来の `acp.builder.*` import 経路へ互換公開し、oracle・realization・TUI・session などの builder adapter への入口を提供する。
 
 ## Read this when
-- acp.builder の互換 import 経路やパッケージ構成を確認するとき
-- 配下の builder adapter、indexing、session、TUI、quota probe の接続先を調査・変更するとき
+- `acp.builder` 配下の互換 import 経路、builder adapter の配置、または canonical builder への委譲関係を確認するとき。
+- oracle、realization、session、TUI、indexing など特定の builder adapter の責務や呼び出し経路を調査するとき。
 
 ## Do not read this when
-- canonical な oracle builder の具体的な実装内容を確認したいとき
-- TUI 本体、realization workload、または個別 builder の詳細挙動だけを調査するときは、対応する下位要素を直接読む
+- canonical な builder の仕様・実装内容そのものを確認するときは、対応する `oracle` 側の実装を直接読む。
+- TUI 本体、fork 適用処理、一般的な indexing 処理など、builder の互換公開層に関係しない機能を調査するとき。
 
 ## hash
-- 88db9974dfc4f688d283b3c3e55aece54d4172ec982ca6ee835a0a7a9dace0a8
+- 5b15edfbe559d1ec453b47900831f4836ca043dcbbe0641f88a283a4ba85a710

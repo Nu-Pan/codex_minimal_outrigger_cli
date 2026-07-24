@@ -1,18 +1,18 @@
 # `acp`
 
 ## Summary
-- `acp` 互換の公開入口と builder 関連の realization package を扱う。既存の `acp.*` 参照を維持しつつ、canonical な oracle 実体や下位の builder adapter、indexing、session、TUI、quota probe へ進むための入口。
+- ACP 互換層の入口を提供するディレクトリ。旧来の `acp` import 経路から、oracle 側の canonical 実装や各種 builder adapter へ進むための導線を扱う。
 
 ## Read this when
-- `acp` という公開名や互換 import 経路の存廃を判断するとき。
-- `acp.builder` 配下の package 構成、互換入口、下位要素への接続先を確認するとき。
+- `acp` 名前空間の互換公開範囲や、canonical builder への委譲経路を確認したいとき。
+- oracle、realization、session、TUI、indexing などの builder adapter の入口を調査するとき。
 
 ## Do not read this when
-- canonical な oracle builder の具体的な実装を確認したいとき。
-- TUI 本体、realization workload、個別 builder、または `acp.*` 内部挙動の詳細だけを調査・変更したいとき。
+- canonical な builder の仕様・実装そのものを確認したいとき。
+- TUI 本体、fork 適用処理、一般的な indexing 処理など、ACP 互換層に関係しない機能を調査するとき。
 
 ## hash
-- 535169f8b8bc5824d8a8c1236017aa0b4a51598fab1d4c9490000525fe96769e
+- a3c65f7861fe2d53787621b6fd2593d364762711622fb8732c732d688d7a5152
 
 # `basic`
 
@@ -111,15 +111,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの各サブコマンド入口と、review・apply の実装配置先を提供する。
+- CLI サブコマンドの実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの個別入口と、apply・review の実装配置先を提供する。各サブコマンドの構成や実行フローを調査・変更する際のルーティング起点となる。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、対象サブコマンドの実行入口を確認するとき。
-- oracle review、realization workload、run lifecycle、session 操作、TUI 起動などのサブコマンド実装へ進む先を特定するとき。
+- CLI サブコマンドの実装構成を確認・変更するとき。
+- 特定のサブコマンドの実装入口や、配下の詳細実装を探すとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理、共通 runtime、共通 indexing、Git 操作、state schema、prompt editor、TUI builder などを直接調査するとき。対応する下位実装または共通実装を直接読む。
-- apply や review の実装本文を調べるとき。現在は実装がなく、追加後に対象ファイルを読む。
+- サブコマンドに属さない共通 runtime、共通 lifecycle、INDEX 更新、Git 操作、状態 schema などの詳細だけを調査するとき。
+- 特定の処理の詳細を直接確認したい場合は、このディレクトリの概観ではなく該当する下位実装を読むとき。
 
 ## hash
-- 9f1d4ac471518c5a7ebbf23c261a5cb18dcf854d18d3c9a3a3d7c0156142c115
+- 9a84e87fb14333de650f544252d2652bf2519765008a4367f62108f802174822

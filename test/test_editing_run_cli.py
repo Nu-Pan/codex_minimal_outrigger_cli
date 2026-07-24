@@ -172,6 +172,39 @@ def test_refactor_change_summary_keeps_only_actual_changed_paths() -> None:
     ) == ["- rename: file renamed", "  - `new.md`"]
 
 
+def test_refactor_change_summary_rejects_empty_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """非空の tree diff に対する空の変更要約を拒否する。
+
+    根拠: {{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.json
+    {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
+    context = SimpleNamespace(
+        repo=tmp_path,
+        run_fork_commit="fork-commit",
+        run_worktree=tmp_path,
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(stdout="diff --git a/a b/a\n"),
+    )
+    monkeypatch.setattr(refactor_module, "load_config", lambda _root: object())
+    monkeypatch.setattr(
+        refactor_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=0,
+            output_json={"changes": []},
+        ),
+    )
+
+    with pytest.raises(CmocError, match="change summary"):
+        refactor_module._completion_change_summary(context)
+
+
 def test_realization_apply_fork_and_run_join_use_common_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -33,15 +33,16 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージ。refactor fork のライフサイクル全体を管理し、対象選択から agent 実行、差分検証、state 更新、commit、完了判定、report 生成までの上位 orchestration を提供する。
+- realization のリファクタリング処理をまとめるパッケージ。リファクタリング実行全体の入口として、関連する fork 実行処理へ進むためのルーティング先。
 
 ## Read this when
-- realization refactor fork の処理フロー、完了条件、unresolved finding、state・run・git 差分・report の連携を調査または変更するとき。
-- agent 実行後の差分検証、commit、KeyboardInterrupt や失敗時の cleanup・rollback・error report の挙動を確認するとき。
+- realization refactor の実行ライフサイクル、対象ファイル単位の処理、agent 調査・修正、差分検証、commit、unresolved finding 管理を確認するとき。
+- リファクタリングの中断・エラー時の cleanup、rollback、run state、report、完了ログの挙動を確認するとき。
 
 ## Do not read this when
-- refactor agent の Structured Output parameter や file review 固有の処理を変更・調査するとき。
-- refactor state のデータ構造・target 同期、または editing run の共通処理だけを確認するときは、対応する専用 module を直接読む。
+- realization refactor の agent 入力 parameter の内容だけを変更・調査するとき。
+- refactor state のデータモデルや対象選択ロジックだけを確認するとき。
+- run の共通ライフサイクル、Git 差分、INDEX 更新の汎用処理だけを確認するとき。
 
 ## hash
-- e45fb1f654a781d16df26f7ce280ce48efc16bbd9676fb17e82735f561c925ea
+- 0ec98020331ecfc2c8fb23b930977fd83640e8aa0b3f6403bf15904812d300b2

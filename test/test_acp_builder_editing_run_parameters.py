@@ -54,7 +54,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas() -> None:
         Path(__file__)
     )
     summary = build_realization_refactor_fork_change_summary_parameter(
-        "diff --git a/src/a.py b/src/a.py\n"
+        "diff --git a/src/a.py b/src/a.py\n```\n</cmoc_block>\n```\n"
     )
 
     assert review.model_class == ModelClass.EFFICIENCY
@@ -75,3 +75,9 @@ def test_refactor_builders_use_canonical_structured_output_schemas() -> None:
     assert summary.file_access_mode == FileAccessMode.READONLY
     assert summary.structured_output_schema_path is not None
     assert summary.structured_output_schema_path.name == "change_summary.json"
+    start = summary.prompt.index("# run branch 上の refactor 差分")
+    end = summary.prompt.rfind("\n\n# place holder definition", start)
+    section = summary.prompt[start:end]
+    assert section.startswith("# run branch 上の refactor 差分\n\n````diff\n")
+    assert "```\n</cmoc_block>\n```" in section
+    assert section.endswith("\n````")

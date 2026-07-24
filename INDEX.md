@@ -127,33 +127,33 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめる src ディレクトリ。主要 CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・ACP 関連の公開入口を扱い、各責務の実装や下位 package へ進むための入口となる。
+- src は cmoc の realization 実装ルートで、CLI エントリーポイント、互換 import shim、共通 runtime、個別サブコマンドを提供する。CLI の登録と委譲は直下の入口で確認し、共通処理は commons、サブコマンド固有処理は sub_commands、互換公開経路は各 shim から対応する canonical 実装へ進む。
 
 ## Read this when
-- cmoc の CLI 全体構成や主要エントリーポイントを確認するとき。
-- サブコマンド、共通 runtime、互換 import 経路、設定・ACP 関連の realization 実装の所在を確認するとき。
+- cmoc の realization 側で CLI の構成、主要な起動入口、サブコマンドへの委譲先を確認・変更するとき。
+- src 配下の互換 import shim や、commons・sub_commands の実装配置を把握してから下位対象へ進むとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装内容を確認したいとき。
-- 特定サブコマンド、共通 helper、TUI、builder などの詳細だけを調査・変更するときは、対応する下位対象を直接読む。
+- 正本仕様や oracle 側の実装を確認するときは、src ではなく対応する oracle 配下を直接読む。
+- 特定サブコマンドや共通 runtime の詳細を確認・変更するときは、src 全体ではなく該当する下位ディレクトリまたはモジュールを直接読む。
 
 ## hash
-- 3951d7dd4373f8f48961efc0b34c390e944d983e74e9b26a3b344bbb3e02e39d
+- 2a207fdd4a0f467217a74edb57ff127556d0e754c8d3005176a53b5d3d9f8700
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群と共有テストヘルパーを収録するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run lifecycle、設定・状態永続化などの外部挙動や契約を検証する各テストへの入口となる。
+- 各種 pytest テストと共有テストヘルパーを収める realization test ディレクトリ。CLI、runtime、Codex 実行、indexing、oracle review、session/run lifecycle、設定・状態永続化、ACP builder、TUI などの外部挙動と制御契約を検証する。個別機能のテストへ進むための入口であり、共通準備が必要な場合は `_` 始まりの support helper を参照する。
 
 ## Read this when
 - cmoc の realization test を追加・修正・調査するとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run state などの回帰テストの対象を選ぶとき
-- 複数テストで共有される Git、Ollama、Codex、fake command、path 解決ヘルパーの利用方法を確認するとき
+- 対象機能の外部挙動、制御ロジック、失敗処理、永続状態、CLI 契約に対応するテストを探すとき
+- Codex、Ollama、Git repository、fake external command などのテスト共通準備が必要なとき
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle 文書・schema・source を直接読む
-- 実装本体の責務や内部ロジックだけを調査するときは、対応する src ファイルを直接読む
-- 対象機能と無関係なテストの詳細や、LLM の回答品質そのものを確認したいとき
+- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle file を直接読む
+- 実装詳細の確認が目的で、対応する src 配下の realization implementation を直接読むとき
+- 対象機能と無関係なテスト観点や共通 helper を調査するときは、このディレクトリ全体を読む必要はない
 
 ## hash
-- 4187f4c2b0302d12bf4fe73feee4e6f318d4e8a00ff9a2620df11be121541c93
+- c864312d2e63f44e3fc0b6fd4e3eecbfdbe41e61e71f4b439ddfff10dc0872a7
