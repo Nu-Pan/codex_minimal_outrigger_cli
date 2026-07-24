@@ -125,6 +125,67 @@ def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:
         load_refactor_state(root)
 
 
+@pytest.mark.parametrize("result", [[], {}])
+def test_refactor_state_rejects_non_string_result(
+    tmp_path: Path,
+    result: object,
+) -> None:
+    """entry の調査結果が JSON string 以外なら schema error にする。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json.dumps(
+            {
+                "README.md": {
+                    "investigation_required": False,
+                    "last_investigation_result": result,
+                    "last_investigated_sha256": "0" * 64,
+                    "last_investigated_at": "2026-07-19_00-00_00_000000000",
+                }
+            }
+        )
+        + "\n"
+    )
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+
+
+def test_refactor_state_rejects_non_utf8_content(tmp_path: Path) -> None:
+    """UTF-8 として読めない state は schema error にする。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b'{"README.md": \xff}\n')
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+
+
+def test_refactor_state_rejects_nul_in_path_key(tmp_path: Path) -> None:
+    """NUL を含む path key は file path として拒否する。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json.dumps(
+            {
+                "\x00": {
+                    "investigation_required": True,
+                    "last_investigation_result": "not_investigated",
+                    "last_investigated_sha256": None,
+                    "last_investigated_at": None,
+                }
+            }
+        )
+        + "\n"
+    )
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+
+
 @pytest.mark.parametrize(
     ("key", "investigated_at"),
     [("./README.md", "2026-07-19_00-00_00_000000000"), ("README.md", "invalid")],

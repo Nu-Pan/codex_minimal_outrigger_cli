@@ -3,7 +3,7 @@ import re
 import string
 from collections.abc import Collection
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, cast
 
 from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
@@ -30,13 +30,16 @@ RefactorState = dict[str, RefactorEntry]
 
 
 def load_refactor_state(root: Path) -> RefactorState:
-    """refactor state を読み、履歴を破棄せず schema を検証する。"""
+    """refactor state を読み、履歴を破棄せず schema を検証する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    """
     path = refactor_state_path(root)
     if not path.exists():
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise _invalid_refactor_state(path, "JSON を読み込めません。") from exc
     if not isinstance(data, dict):
         raise _invalid_refactor_state(
@@ -144,10 +147,14 @@ def mark_all_refactor_targets_required(state: RefactorState) -> None:
 
 
 def _valid_relative_path(value: str) -> bool:
-    """state key として許可される repository 相対 path か判定する。"""
+    """state key として許可される repository 相対 path か判定する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
     path = Path(value)
     return (
         bool(path.parts)
+        and "\x00" not in value
         and not path.is_absolute()
         and ".." not in path.parts
         and path.as_posix() == value
@@ -155,7 +162,10 @@ def _valid_relative_path(value: str) -> bool:
 
 
 def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
-    """JSON の entry を検証し、型付けされた refactor entry として返す。"""
+    """JSON の entry を検証し、型付けされた refactor entry として返す。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
     if not isinstance(value, dict):
         raise _invalid_refactor_state(path, f"entry は object ではありません: {key}")
     expected = {
@@ -170,12 +180,18 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
     result = value["last_investigation_result"]
     digest = value["last_investigated_sha256"]
     investigated_at = value["last_investigated_at"]
-    if type(required) is not bool or result not in {
-        "not_investigated",
-        "no_findings",
-        "findings",
-    }:
+    if (
+        type(required) is not bool
+        or not isinstance(result, str)
+        or result
+        not in {
+            "not_investigated",
+            "no_findings",
+            "findings",
+        }
+    ):
         raise _invalid_refactor_state(path, f"entry value が不正です: {key}")
+    validated_result = cast(InvestigationResult, result)
     if digest is not None and (
         not isinstance(digest, str)
         or len(digest) != 64
@@ -196,7 +212,7 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
         raise _invalid_refactor_state(path, f"未調査 entry に履歴があります: {key}")
     return {
         "investigation_required": required,
-        "last_investigation_result": result,
+        "last_investigation_result": validated_result,
         "last_investigated_sha256": digest,
         "last_investigated_at": investigated_at,
     }
