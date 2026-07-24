@@ -744,19 +744,20 @@
 # `test_runtime_state.py`
 
 ## Summary
-- session/run state の永続化 schema 検証と、managed branch からの session ID・state file 解決を検証する realization test。状態 payload の型・必須項目・未定義 field・run kind の拒否、session 部分の単独読み込み、state 書き込み時の検証、process 間で共有される session fork lock を扱う。
+- session/run state の永続化スキーマと managed branch 解析を検証する realization test。state の型・必須項目・未知 field・不正な run kind、session/run branch からの state 解決、session 部分の部分読み込み、無効 state の書き込み拒否を扱う。session fork lock が process・thread 間で共有されることも確認する。
 
 ## Read this when
-- session/run state の schema 検証や永続化のテストを変更・追加するとき
-- session branch・run branch の解析、branch からの state 読み込み、session fork lock の挙動を確認するとき
-- runtime state 実装の変更後に、異常系や process 間ロックの回帰を確認するとき
+- session/run state の schema 検証や永続化時のエラー挙動を変更・調査するとき
+- managed branch から session ID や state file を解決する処理を変更・調査するとき
+- session fork lock の process 間共有や競合制御を変更・調査するとき
 
 ## Do not read this when
-- runtime state の実装詳細そのものを変更・調査する場合は、対応する src の実装を先に読むとき
-- CLI の一般的な入出力や、session state と無関係なテストを扱うとき
+- session/run state の実装詳細そのものを確認したい場合は、対応する runtime state 実装を直接読む
+- CLI の出力や Codex/LLM の品質を調査する場合
+- session state と無関係な branch 操作やロックを調査する場合
 
 ## hash
-- 230615a6de84c403b6f62a62c9877daa6669d1cc56d86607634e506154c6021c
+- b5636f4a0e9a59b6893094bf492c6061297d0cdbd2f19333daadd4a763e325e8
 
 # `test_session_cli.py`
 

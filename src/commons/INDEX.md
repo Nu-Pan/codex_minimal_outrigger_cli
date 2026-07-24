@@ -413,18 +413,19 @@
 # `runtime_state.py`
 
 ## Summary
-- cmoc の session state を表す dataclass、JSON schema 検証、保存・読み込み、branch からの session 特定、session fork 用排他 lock を提供する共通 runtime モジュール。session/run の lifecycle state、不変条件、不正 state の利用者向け例外変換を扱う。
-- session state の永続化仕様や session/run branch との対応を確認する際の、commons 層からの実装入口。
+- session と run の永続状態を表す dataclass、状態値と payload の schema 検証、JSON state file の読み書きを提供する。
+- session branch / run branch から session-id と対応する state file を解決し、branch 単位で state または session 部分を読み込む。
+- repository 共通の lock による session fork 排他制御、home branch に紐づく active session の検索、不正 state の CmocError 変換を扱う。
 
 ## Read this when
-- session state JSON の schema、読み書き、検証、不変条件を変更・調査するとき
-- cmoc session branch または run branch から state を解決する処理を変更・調査するとき
-- session fork の repository 共通 lock や state file の保存先を確認するとき
+- session または run state の schema、状態遷移用 payload、不正値の検証条件を変更・確認するとき
+- session branch / run branch と state file の対応付け、state の永続化や読み込み処理を調査するとき
+- session fork の排他 lock、active session の検索、state file 起因のエラー処理を確認するとき
 
 ## Do not read this when
-- session や run の CLI 操作手順・利用者向け仕様だけを確認したいとき
-- oracle edit や session fork の正本仕様を確認することが目的のときは、対応する oracle doc を先に読むべき場合
-- runtime state と無関係な git 操作、path 処理、CLI 出力の実装を調査するとき
+- oracle の session state 仕様や fork 排他の正本を確認したいとき
+- 個別の CLI サブコマンドの session/run lifecycle 操作そのものを調査するときは、対応する app_spec またはサブコマンド実装を先に読むとき
+- 一般的な git branch 操作、パス解決、利用者向けエラー形式だけを調査するとき
 
 ## hash
-- 2153d5db1c52ba9f0c0abb938b35fe691ca0315c265844e35a4303471bb05467
+- 4e4bc973556d30feb8270c7a031ed20a4892d627207bb4b2e54de939cf9d1464
