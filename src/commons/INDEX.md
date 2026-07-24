@@ -397,20 +397,18 @@
 # `runtime_run_report.py`
 
 ## Summary
-- editing run と run lifecycle の処理結果を Markdown + YAML Front Matter の report として保存する共通モジュール。fork report と lifecycle report の生成、YAML scalar の安全な表現を扱う。
+- editing run の fork report と lifecycle report を Markdown + YAML Front Matter 形式で保存する共通処理を提供する。実行コンテキスト、状態遷移、完了理由、変更パス、警告、詳細情報を記録し、timestamped path の予約によって report の上書きを防ぐ。YAML scalar の安全な文字列表現も担当する。
 
 ## Read this when
-- editing run の fork report 保存処理を変更・調査するとき
-- run の join/abandon など lifecycle report の保存処理を変更・調査するとき
-- report の共通メタデータ、変更パス、警告、YAML scalar 表現を確認するとき
+- editing run の fork report または run の join/abandon lifecycle report の生成・保存処理を変更するとき
+- report の Front Matter 項目、本文構成、timestamped path の予約、YAML scalar 変換を確認するとき
 
 ## Do not read this when
-- 実行時パスや timestamp の定義だけを確認したいとき
-- EditingRunContext の状態管理や lifecycle 自体の仕様を確認したいとき
-- report を利用する個別コマンドの処理だけを変更・調査するとき
+- report の正本仕様や編集 run の状態遷移仕様を確認したいときは、記載された oracle document を直接読む
+- runtime path の構築や EditingRunContext の定義自体を変更・調査するとき
 
 ## hash
-- b1fdda23ac29567dd637aff0ac007b781e09ee044050c7859d8c544a8436a9e3
+- 37b70b344bbdcff0b02251e6fa3eb6eb63b0f1b6e46fa48aa9d4b10494fc97bf
 
 # `runtime_state.py`
 

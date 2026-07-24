@@ -19,6 +19,7 @@ from _git_support import current_branch, make_repo, run_git
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_run_lifecycle as lifecycle_module
+import commons.runtime_run_report as run_report_module
 import sub_commands.oracle.investigation as investigation_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
@@ -99,6 +100,69 @@ def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None
             GitChange("M", ("modified.md",)),
         ]
     ) == ["modified.md", "new.md"]
+
+
+def test_run_reports_keep_distinct_files_on_timestamp_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """同一 timestamp の fork/lifecycle report を相互に上書きしない。"""
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path,
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=tmp_path,
+    )
+    timestamps = iter(
+        [
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000002000",
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000002000",
+        ]
+    )
+    monkeypatch.setattr(run_report_module, "timestamp", lambda: next(timestamps))
+
+    fork_paths = [
+        run_report_module.write_fork_report(
+            context,
+            "realization/apply/fork",
+            state_after="joinable",
+            completion_reason="completed",
+            changed_paths=[],
+        )
+        for _ in range(2)
+    ]
+    lifecycle_paths = [
+        run_report_module.write_lifecycle_report(
+            context,
+            "join",
+            state_after="ready",
+            warnings=[],
+            details={},
+        )
+        for _ in range(2)
+    ]
+
+    assert [path.stem for path in fork_paths] == [
+        "2026-06-27_10-00_00_000001000",
+        "2026-06-27_10-00_00_000002000",
+    ]
+    assert [path.stem for path in lifecycle_paths] == [
+        "2026-06-27_10-00_00_000001000",
+        "2026-06-27_10-00_00_000002000",
+    ]
+    assert all(
+        f'generated_at: "{path.stem}"' in path.read_text()
+        for path in [*fork_paths, *lifecycle_paths]
+    )
 
 
 def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> None:

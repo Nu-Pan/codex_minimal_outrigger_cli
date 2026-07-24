@@ -7,7 +7,11 @@
 import json
 from pathlib import Path
 
-from commons.runtime_paths import reports_dir, timestamp
+from commons.runtime_paths import (
+    _reserve_timestamped_path,
+    reports_dir,
+    timestamp,
+)
 from commons.runtime_run_lifecycle import EditingRunContext
 
 
@@ -25,8 +29,10 @@ def write_fork_report(
     """workload 共通項目を持つ fork report を保存する。"""
     directory = reports_dir(context.repo, command_path)
     directory.mkdir(parents=True, exist_ok=True)
-    generated_at = timestamp()
-    path = directory / f"{generated_at}.md"
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # report を書き始める前に path を予約し、同一 timestamp の run report を
+    # 別 run が上書きしないようにする。
+    generated_at, path = _reserve_timestamped_path(directory, ".md", timestamp)
     fields: list[tuple[str, object]] = [
         ("run_kind", context.kind),
         ("session_branch", context.session_branch),
@@ -71,7 +77,14 @@ def write_lifecycle_report(
     if report_path is None:
         directory = reports_dir(context.repo, f"run/{operation}")
         directory.mkdir(parents=True, exist_ok=True)
-        report_path = directory / f"{timestamp()}.md"
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # report を書き始める前に path を予約し、同一 timestamp の run report を
+        # 別 run が上書きしないようにする。
+        generated_at, report_path = _reserve_timestamped_path(
+            directory, ".md", timestamp
+        )
+    else:
+        generated_at = timestamp()
     fields: list[tuple[str, object]] = [
         ("operation", operation),
         ("run_kind", context.kind),
@@ -82,7 +95,7 @@ def write_lifecycle_report(
         ("run_worktree", context.run_worktree),
         ("state_before", context.state_before),
         ("state_after", state_after),
-        ("generated_at", timestamp()),
+        ("generated_at", generated_at),
         *details.items(),
     ]
     report_path.write_text(
