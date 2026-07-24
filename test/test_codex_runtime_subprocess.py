@@ -235,6 +235,54 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
     assert tracking_path.read_text() == "111 222\nchild 4321 333 4321\n"
 
 
+def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """追跡情報の破損時も、登録不能な child を残さない。
+
+    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_bytes(b"\xff")
+    stopped: list[int] = []
+
+    class RunningProcess:
+        """tracking 更新失敗後も生存している fake process。"""
+
+        pid = 4321
+        returncode: int | None = None
+
+        def poll(self) -> int | None:
+            """fake process がまだ動作中であることを返す。"""
+            return self.returncode
+
+        def wait(self) -> int:
+            """cleanup 後に process を reap したことを記録する。"""
+            self.returncode = 0
+            return 0
+
+    process = RunningProcess()
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: process,
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "stop_process_group",
+        lambda process_group_id: stopped.append(process_group_id),
+    )
+
+    with pytest.raises(UnicodeDecodeError):
+        run_tracked_codex_subprocess(
+            ["codex"], tracking_path, text=True, capture_output=True
+        )
+
+    assert stopped == [4321]
+    assert process.returncode == 0
+
+
 def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

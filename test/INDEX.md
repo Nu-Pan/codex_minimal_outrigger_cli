@@ -334,18 +334,20 @@
 # `test_codex_runtime_subprocess.py`
 
 ## Summary
-- Codex サブプロセス実行と apply 用プロセス追跡のテスト。専用 process group の記録、member pidfd によるシグナル送信、SIGTERM の遅延、leader 終了後や割り込み後の追跡保持、継承 tracking 環境変数の無視を検証する。
+- Codex subprocess の process group tracking と終了処理を検証するテスト。child tracking の登録・維持、pidfd を用いた group signal、SIGTERM の遅延、leader 終了後や割り込み時の追跡継続、tracking 失敗時の停止・reap、継承 tracking 環境変数の無視を扱う。runtime の subprocess 実装や apply の abandon/cleanup 挙動を確認する入口となる。
 
 ## Read this when
-- Codex subprocess の process group 管理や apply abandon の cleanup 挙動を変更・検証するとき
-- run_codex_subprocess または run_tracked_codex_subprocess の追跡・シグナル処理を確認するとき
+- Codex subprocess の起動、process group・PID tracking、停止や cleanup の挙動を変更・調査するとき
+- apply の abandon 処理、割り込み、子孫プロセスの残存、tracking file の異常系を検証するとき
+- Codex 起動時の process tracking 環境変数の扱いを確認するとき
 
 ## Do not read this when
-- Codex subprocess の実装詳細ではなく、apply abandon の正本仕様を確認したいときは oracle 側の仕様を直接読む
-- 対象が CLI 出力や別の subprocess 機能に限定されるとき
+- Codex subprocess tracking や process group cleanup と無関係な CLI 機能・テストを扱うとき
+- apply の仕様そのものを確認する場合。先に oracle の apply/abandon 仕様を読むべきとき
+- runtime の別機能の単体テストだけを調査するとき
 
 ## hash
-- 6fbaec44d70c3932f12b659e286f214d9b64ea297b9a60bb8cd3198020bc1549
+- a64cb4f02f4c197c7f251bad98428b2ba2ec1a0021b3f57d0ef199070988435f
 
 # `test_codex_runtime_tui.py`
 
