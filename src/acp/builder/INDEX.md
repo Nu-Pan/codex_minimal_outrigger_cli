@@ -97,18 +97,18 @@
 # `realization`
 
 ## Summary
-- realization workload を builder に適応するための adapter 群。realization の apply と refactor に関する builder 連携実装への入口。
+- realization workload を builder に適応する adapter 群。各 realization 処理の builder 連携実装へ進むための入口。
 
 ## Read this when
-- realization workload の builder adapter を確認・変更するとき。
-- realization apply または refactor の builder 連携、関連する prompt 生成や agent call parameter 生成経路を調査するとき。
+- realization workload の builder adapter や builder 連携を確認・変更するとき。
+- realization apply または realization refactor の builder 実装入口を調査するとき。
 
 ## Do not read this when
-- builder の共通処理や realization workload 自体の実装を直接確認・変更するとき。
-- oracle 側の正本仕様や prompt 本文、builder adapter 以外の apply・refactor 処理を確認するとき。
+- builder の共通処理や正本 builder の仕様・JSON・parameter 定義を確認するとき。
+- realization apply/refactor の fork 処理そのものや、builder adapter 以外の実装を直接確認するとき。
 
 ## hash
-- c57218292a9d3126558589fd11c39955da3c3544685878a877da5bca83bb6c7c
+- e974fb367825c60584a527cf7ddda2009463b2f1f0f455495c30b3b2c1607b86
 
 # `review`
 

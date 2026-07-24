@@ -31,5 +31,9 @@ def build_realization_refactor_fork_change_summary_parameter(
             section_heading="# run branch 上の refactor 差分",
             section_end_marker="\n\n# place holder definition",
             info_string="diff",
+            # raw diff can contain this heading followed by a code block; the
+            # final marker is the actual prompt boundary.
+            # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+            prefer_last_end_marker=True,
         ),
     )

@@ -32,15 +32,18 @@
 # `refactor`
 
 ## Summary
-- realization refactor 用の builder adapter パッケージ。refactor 処理の builder 関連実装への入口で、fork 向けの builder adapter を下位要素として含む。
+- realization refactor の builder adapter パッケージ。refactor 処理における builder 実装への入口。
+- fork 配下では、fork 差分向け change summary と file review and fix の builder adapter を扱う。
 
 ## Read this when
 - realization refactor の builder adapter の責務や実装入口を確認するとき。
-- realization refactor fork の builder adapter、change summary の prompt 生成、file review and fix の oracle builder 接続を調査・変更するとき。
+- fork 差分向けの change summary builder または file review and fix builder を調査・変更するとき。
 
 ## Do not read this when
 - builder adapter 以外の refactor 処理を確認するとき。
-- oracle 側の正本仕様や parameter 定義、fork 以外の builder 実装、一般的な prompt fence 処理を確認するとき。
+- fork 以外の builder 実装を調査するとき。
+- 正本 builder の仕様・JSON 定義・parameter 定義を確認または変更するとき。
+- fork 処理全般や、change summary・file review and fix 以外の prompt builder を調査するとき。
 
 ## hash
-- 09a4c6e29ef35e2beb3fb39ff297012a89995ad889430bef54a6ad46f9ec983c
+- 467e6fe8bbfb49d24c9208e09d7a73117883de2a5a8f36d556c01a8467594118

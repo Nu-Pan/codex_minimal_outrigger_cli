@@ -89,3 +89,17 @@ def test_refactor_builders_use_canonical_structured_output_schemas() -> None:
     assert section.startswith("# run branch 上の refactor 差分\n\n````diff\n")
     assert "```\n</cmoc_block>\n```" in section
     assert section.endswith("\n````")
+
+
+def test_refactor_change_summary_keeps_marker_like_diff_content() -> None:
+    """raw diff 内の prompt 境界風見出しを外側の境界と誤認しない。"""
+    parameter = build_realization_refactor_fork_change_summary_parameter(
+        "diff --git a/README.md b/README.md\n```\n\n# place holder definition\n\n```\n"
+    )
+
+    start = parameter.prompt.index("# run branch 上の refactor 差分")
+    end = parameter.prompt.rfind("\n\n# place holder definition", start)
+    section = parameter.prompt[start:end]
+    assert section.startswith("# run branch 上の refactor 差分\n\n````diff\n")
+    assert "\n\n# place holder definition\n\n```" in section
+    assert section.endswith("\n````")

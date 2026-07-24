@@ -17,17 +17,16 @@
 # `builder`
 
 ## Summary
-- ACP builder の互換入口をまとめるパッケージ。oracle 側の canonical builder を既存の `acp.builder.*` import 経路へ接続し、共通の prompt 境界補正、indexing、oracle・realization・session・TUI 向け adapter、quota probe の fallback を提供する。各下位要素の責務を確認するための入口。
+- ACP builder realization の互換 adapter 群をまとめるディレクトリ。oracle 実装への互換入口、prompt の code fence 補正、oracle command・realization・session・TUI 向け builder adapter、quota probe fallback を扱う。各機能の詳細は対応する下位ディレクトリまたはモジュールへの入口となる。
 
 ## Read this when
-- ACP builder realization の全体構成や、既存 `acp.builder.*` import 経路を調査するとき。
-- canonical builder への委譲、互換 adapter、prompt の code fence 補正、oracle・realization・session・TUI builder の配置を確認するとき。
-- quota probe を含む builder parameter 生成の互換経路を横断的に確認するとき。
+- 既存の acp.builder.* import 経路、互換 adapter、canonical oracle builder への委譲を調査・変更するとき
+- ACP builder の prompt 境界補正、oracle command builder、realization builder、session、TUI、quota probe の構成を確認するとき
 
 ## Do not read this when
-- canonical な正本実装や prompt 仕様そのものを変更・調査するときは、対応する oracle 側の対象を直接読む。
-- 特定の builder adapter、共通補正、利用箇所の詳細を確認するときは、対応する下位要素または参照元を直接読む。
-- ACP builder と無関係な TUI、session、realization workload、一般的な ACP parameter 処理を調査するとき。
+- canonical な oracle builder の仕様や具体的な実装を確認するときは oracle 側の対象を直接読む
+- 個別 builder の実装詳細を確認するときは対応する下位ディレクトリまたはモジュールを直接読む
+- builder と無関係な TUI 本体、fork 処理、利用側の公開面を調査するとき
 
 ## hash
-- 37e11a4974f7df63d93efca5455742329ee0ae8060b6cbbfd3b85bfda80e607f
+- f740e7285e7ba8338662bc641e9fcb1592761b551d0d52d011d35a5221ae7afa
