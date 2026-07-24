@@ -17,15 +17,14 @@
 # `index_entry.py`
 
 ## Summary
-- 既存の `acp.builder.indexing.index_entry` 参照を維持する互換入口。正本 builder が生成した agent call parameter を再公開し、対象本文に含まれる連続 backtick が外側の fence を閉じないよう prompt の本文 fence を調整する。
+- 正本の index entry builder を互換入口として再公開し、既存の `acp.builder.indexing.index_entry` 参照を維持するモジュール。対象本文をプロンプトへ埋め込む際にコードフェンスを保護する。
 
 ## Read this when
-- index entry 生成処理の互換入口や既存参照の維持条件を確認するとき
-- 対象本文を埋め込む prompt の fence 保護処理を変更・検証するとき
+- index entry 生成処理の互換入口、正本 builder の再公開、または対象本文のコードフェンス保護を変更・調査するとき。
 
 ## Do not read this when
-- 正本の index entry parameter 生成仕様そのものを確認したいときは、対応する oracle builder を直接読む
-- index entry 生成とは無関係な ACP builder や一般的な indexing 処理を調べるとき
+- 正本 builder 自体の仕様や実装を確認したいときは、この互換入口ではなく oracle 側の index entry builder を直接読む。
+- index entry 生成と無関係な ACP builder や prompt fence 処理を調査するとき。
 
 ## hash
-- a1005ece30faba73ae96f6965a5954e9f85a4a0d720a2726b9a15b0e234fa312
+- 0e020616ad4552c8af03a682a96792fd0f240cf4d1599abe1ed34c2d4e6308c5

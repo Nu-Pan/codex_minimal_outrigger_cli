@@ -1,18 +1,18 @@
 # `acp`
 
 ## Summary
-- ACP 互換層の入口を提供するディレクトリ。旧来の `acp` import 経路から、oracle 側の canonical 実装や各種 builder adapter へ進むための導線を扱う。
+- acp 互換の公開入口と ACP builder 関連の realization package を扱うディレクトリ。旧 acp.* import 経路から oracle または canonical builder への移行・互換性を確認する入口であり、builder 配下の workload 別 adapter へ進む起点でもある。
 
 ## Read this when
-- `acp` 名前空間の互換公開範囲や、canonical builder への委譲経路を確認したいとき。
-- oracle、realization、session、TUI、indexing などの builder adapter の入口を調査するとき。
+- acp 互換公開入口の存廃や、既存 acp.* 参照から実体モジュールへの移行経路を確認するとき。
+- ACP builder の互換 import、canonical builder への委譲、または workload 別 builder adapter の入口を探すとき。
 
 ## Do not read this when
-- canonical な builder の仕様・実装そのものを確認したいとき。
-- TUI 本体、fork 適用処理、一般的な indexing 処理など、ACP 互換層に関係しない機能を調査するとき。
+- canonical builder の正本仕様や具体的な prompt 構築内容だけを確認したいとき。
+- TUI、session、oracle、realization、indexing など個別 adapter の内部実装だけを調査したいときは、該当する下位対象を直接読む。
 
 ## hash
-- a3c65f7861fe2d53787621b6fd2593d364762711622fb8732c732d688d7a5152
+- b41192c082f1e7a7f9ea961e6264cb268c3aa251c5f78b7612805f42f94883ea
 
 # `basic`
 

@@ -349,9 +349,9 @@
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "7dc4a8a193cda8108332d73c5038399de0a3799a17f0df4437990b657150489f",
+    "last_investigated_at": "2026-07-24_09-52_06_155714000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json": {
     "investigation_required": true,
@@ -486,6 +486,12 @@
     "last_investigated_at": null
   },
   "src/acp/builder/__init__.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/acp/builder/common/prompt_fence.py": {
     "investigation_required": true,
     "last_investigation_result": "not_investigated",
     "last_investigated_sha256": null,

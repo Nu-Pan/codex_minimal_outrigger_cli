@@ -31,33 +31,34 @@
 # `common`
 
 ## Summary
-- 共通ビルダー処理を置くためのディレクトリだが、現在は対象本文となる通常ファイルを含まない。
+- ACP builder 共通処理として、動的 Markdown 本文内のバッククォート列を調べ、外側の code fence を必要に応じて延長する補正を担う。prompt の該当セクションを安全に扱うための入口。
 
 ## Read this when
-- 共通ビルダー処理の置き場所を確認しており、この階層に本文ファイルが追加されているかを確かめる必要があるとき。
+- ACP builder の prompt 生成で、動的な code block 内容による Markdown code fence の破壊を調査・修正するとき。
+- section heading、終了マーカー、info string を指定して既存 prompt のセクションを補正する処理を確認するとき。
 
 ## Do not read this when
-- 既存の共通ビルダー処理の実装詳細を探しているとき。現時点ではこの対象から読める本文がないため、より直接の実装ファイルまたは下位要素へ進む。
+- prompt の正本仕様や固定長 fence の定義を確認するときは、参照される oracle 文書を直接読む。
+- ACP builder 共通処理以外の prompt 生成や Markdown 解析を変更するとき。
 
 ## hash
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- d9346d36aa6f84b28b83285502651d1aec565f1a2b7b055c4710c8c368feafc8
 
 # `indexing`
 
 ## Summary
-- `acp.builder.indexing` の既存参照を維持する互換入口をまとめた層。正本実装への到達点と、index entry 生成用パラメータの再公開・prompt fence 保護を扱う。
+- `acp.builder.indexing` の既存参照を維持する互換層。正本実装への入口と、index entry 生成時のコードフェンス保護を扱う。
 
 ## Read this when
-- 既存の `acp.builder.indexing.*` 参照を維持または変更するとき
-- index entry 生成処理の互換入口や、対象本文を埋め込む prompt の fence 保護を確認するとき
+- 既存の `acp.builder.indexing` 参照を維持・変更したいとき。
+- 互換入口から正本 builder を再公開する処理や、対象本文のコードフェンス保護を調査するとき。
 
 ## Do not read this when
-- index 関連の正本実装そのものを変更するとき
-- 互換入口を削除・整理し、利用側の参照先を確認するとき
-- ACP builder や一般的な indexing 処理を調べるとき
+- index 関連の正本仕様・実装を変更するときは、互換層ではなく oracle 側を読む。
+- この名前空間を削除・整理する場合は、まず利用側の参照を確認する。
 
 ## hash
-- e653407d91388c8128db709a19057df67b7751bbc8da16bf782ef22dc6e53d98
+- d8a11f5a9e018be580b01ab46429e435572ec2d4dc434d9d90951e68d51dd4c6
 
 # `oracle`
 
@@ -93,18 +94,20 @@
 # `realization`
 
 ## Summary
-- realization workload を builder に適応する adapter 群を収めるディレクトリ。apply と refactor の処理から、対応する builder 実装へ進む入口を提供する。
+- realization workload を builder に適応する adapter 群をまとめたディレクトリ。apply と refactor の builder 連携実装への入口を提供する。
 
 ## Read this when
 - realization workload の builder adapter を確認・変更するとき
-- realization apply または refactor の fork 処理で、builder 連携や prompt 生成の入口を辿るとき
+- realization apply の builder 接続点や prompt 加工を調査するとき
+- realization refactor の fork 向け builder adapter、change summary、file review/fix の parameter 生成経路を調査するとき
 
 ## Do not read this when
-- builder の共通処理や具体的な生成ロジックを直接確認するとき
-- realization workload 自体、apply・refactor の fork 適用処理そのもの、または oracle 側の正本仕様を確認するとき
+- builder の共通処理や正本仕様を確認するとき
+- realization apply または refactor の処理本体を直接確認・変更するとき
+- builder adapter の具体的な生成ロジックだけを確認するとき
 
 ## hash
-- 4c3583adbd480b2afb928c36a80f90a2f63f89b808d16ad10264bc8f0e03f397
+- bdfe39bad0f52afe24736b758abba9f99dca174e4f0c107b82ae569fe0fe7dc0
 
 # `review`
 

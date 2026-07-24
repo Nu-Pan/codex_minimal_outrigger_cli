@@ -16,13 +16,15 @@
 # `launch_exec.py`
 
 ## Summary
-- realization apply fork の launch_exec 用 builder を再公開する adapter。oracle 側の builder を利用し、raw git diff に含まれる backtick が外側の Markdown fence を閉じないよう prompt の diff セクションだけを補正する。
+- realization apply fork 用の正本 builder を再公開する adapter。正本 builder が生成した agent call parameter の prompt に含まれる raw oracle diff のコードフェンスを保護する。
 
 ## Read this when
-- realization apply fork の launch_exec parameter builder の公開 API、prompt 生成、または raw git diff の Markdown fence 保護を確認・変更するとき。
+- realization apply fork の launch_exec builder の呼び出し元や prompt 加工を確認するとき
+- raw oracle diff のコードフェンス保護の挙動を変更・検証するとき
 
 ## Do not read this when
-- oracle 側の正本 builder の仕様や prompt 構成自体を確認したいときは、対応する oracle source を直接読む。fork 以外の apply 処理や一般的な builder の責務を調べる場合。
+- 正本 builder 自体の仕様や prompt 内容を変更するときは、対応する oracle source を直接読む
+- apply fork 以外の builder や一般的な prompt fence 処理を調べるとき
 
 ## hash
-- f0a7de5b661960c37f2e8c724b5c8f6839c617a762a1e0d0feddce78ff10c2e7
+- ad8b6414faf5db7a582c40bdb0497e77e238bd5567989f66edc9483a8608a9fe

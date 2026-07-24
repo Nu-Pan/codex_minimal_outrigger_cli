@@ -127,18 +127,19 @@
 # `src`
 
 ## Summary
-- src は cmoc の realization 実装ルートで、CLI エントリーポイント、互換 import shim、共通 runtime、個別サブコマンドを提供する。CLI の登録と委譲は直下の入口で確認し、共通処理は commons、サブコマンド固有処理は sub_commands、互換公開経路は各 shim から対応する canonical 実装へ進む。
+- cmoc の realization 実装をまとめる src ルート。Typer CLI の入口、互換 import shim、共通 runtime、ACP builder adapter、サブコマンド実装を扱い、CLI から個別処理へ進むための起点となる。
 
 ## Read this when
-- cmoc の realization 側で CLI の構成、主要な起動入口、サブコマンドへの委譲先を確認・変更するとき。
-- src 配下の互換 import shim や、commons・sub_commands の実装配置を把握してから下位対象へ進むとき。
+- cmoc の CLI 全体構成、公開 import 経路、共通 runtime、ACP builder、またはサブコマンド実装の入口を探すとき。
+- 特定の処理が CLI エントリーポイントからどの実装へ委譲されるか確認するとき。
+- 共通 runtime helper と個別サブコマンド実装の責務境界を確認するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装を確認するときは、src ではなく対応する oracle 配下を直接読む。
-- 特定サブコマンドや共通 runtime の詳細を確認・変更するときは、src 全体ではなく該当する下位ディレクトリまたはモジュールを直接読む。
+- 正本仕様や oracle 側の builder・型・path model・構造化文書の内容だけを確認したいとき。
+- 個別 builder adapter、runtime helper、またはサブコマンドの内部処理を直接調査したいときは、対応する下位対象を読む。
 
 ## hash
-- 2a207fdd4a0f467217a74edb57ff127556d0e754c8d3005176a53b5d3d9f8700
+- 207e1e39eef098cd99c9510a6244e978d0f018cb76470f7cc6356b8f38a4737c
 
 # `test`
 
