@@ -229,7 +229,17 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
     if process_fd is not None:
         try:
             current_start_time = process_start_time(process.process_id)
-            if current_start_time is not None:
+            if current_start_time is None:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # pidfd が開けても stat を読めない実行中 process は、数値 PGID だけで
+                # 停止すると別 process group を巻き込む可能性があるため fail closed にする。
+                if not wait_process_fd_exit(process_fd, 0):
+                    raise CmocError(
+                        "実行中 Codex subprocess の同一性を確認できません。",
+                        ["run process を確認し、停止後に再実行してください。"],
+                        f"pid: {process.process_id}",
+                    )
+            else:
                 if process.start_time is None:
                     raise CmocError(
                         "実行中 Codex subprocess の同一性を確認できません。",
