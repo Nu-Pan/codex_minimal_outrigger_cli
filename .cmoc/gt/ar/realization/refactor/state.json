@@ -858,10 +858,10 @@
     "last_investigated_at": "2026-07-25_06-50_44_901970000"
   },
   "src/main.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "2fc467906ef010b3f9c4d51a1600ba115332880dd4658767606f556b60c8e8d7",
+    "last_investigated_at": "2026-07-25_07-03_13_361785000"
   },
   "src/oracle.py": {
     "investigation_required": true,
