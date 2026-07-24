@@ -17,14 +17,15 @@
 # `index_entry.py`
 
 ## Summary
-- 正本の index entry builder を互換入口として再公開し、既存の `acp.builder.indexing.index_entry` 参照を維持するモジュール。対象本文をプロンプトへ埋め込む際にコードフェンスを保護する。
+- `oracle.acp_builder.indexing.index_entry` の builder を互換入口として再公開する薄いラッパー。既存の `acp.builder.indexing.index_entry` 参照を維持しつつ、生成された prompt の対象本文セクションに含まれるコードフェンスを保護する。
 
 ## Read this when
-- index entry 生成処理の互換入口、正本 builder の再公開、または対象本文のコードフェンス保護を変更・調査するとき。
+- インデックスエントリー生成用 builder の互換入口や再公開処理を変更・調査するとき
+- 対象本文のコードフェンス保護や prompt 境界の扱いを確認するとき
 
 ## Do not read this when
-- 正本 builder 自体の仕様や実装を確認したいときは、この互換入口ではなく oracle 側の index entry builder を直接読む。
-- index entry 生成と無関係な ACP builder や prompt fence 処理を調査するとき。
+- 正本 builder 自体の仕様や実装を確認したいときは、再公開元の `oracle.acp_builder.indexing.index_entry` を直接読む
+- インデックス生成以外の builder や一般的な prompt 処理だけを調査するとき
 
 ## hash
-- 0e020616ad4552c8af03a682a96792fd0f240cf4d1599abe1ed34c2d4e6308c5
+- 30dcff94d180dd53dc10991b5d4ad184e44508ba2463dfcb9f43c23560850a7f

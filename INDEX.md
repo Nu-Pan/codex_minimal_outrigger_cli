@@ -127,34 +127,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側実装を集約する src ディレクトリ。CLI の主要エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・ACP 関連の公開入口を扱い、各責務別の実装への入口を提供する。
+- 対象ディレクトリの公開入口・互換 shim・共通 runtime・CLI サブコマンド実装を下位領域へ案内する。
+- 配下には `acp`、`basic`、`commons`、`config`、`sub_commands` などのパッケージと、CLI および互換 import 用のモジュールがある。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI から各サブコマンド・runtime への委譲関係を確認するとき。
-- CLI エントリーポイント、サブコマンド、共通 runtime、互換 import 経路の配置や責務を調査するとき。
+- 対象ディレクトリ全体の構成を把握し、目的別の下位パッケージや CLI 入口へ進む必要があるとき。
+- 公開 import 経路、cmoc CLI の登録入口、共通 runtime、サブコマンド実装の配置を確認するとき。
 
 ## Do not read this when
-- 正本仕様や canonical な oracle 実装を確認したいときは、oracle 配下を直接読む。
-- 特定のサブコマンド、runtime helper、adapter の内部処理だけを調査するときは、対応する下位対象へ直接進む。
-- src と無関係なテスト、設定仕様、開発手順を確認するとき。
+- 特定のサブパッケージ、runtime helper、CLI サブコマンド、または互換 shim の内部処理を直接調査する場合は、該当する下位対象へ進む。
+- 正本仕様や oracle 側実装そのものを確認する場合は、`oracle` ツリーを直接読む。
 
 ## hash
-- 9006e993715c8a36a4e0fb1198663d57f70f37821ab1f224df49681f09e92e63
+- 5bd0488f1ed1ffa28c04162ff3e338d3a9e789299f66308400f1b88561bc0855
 
 # `test`
 
 ## Summary
-- テストコードから正本 schema を参照する helper、CLI・runtime・builder・indexing・oracle review・session など cmoc の主要機能を検証する realization test 群を収録する。各ファイルは特定機能の外部契約、状態遷移、エラー処理、Codex/Ollama 統合、または共通テスト準備の確認入口となる。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、StructDoc などの外部挙動・制御ロジックを検証する。個別テストは機能領域ごとの具体的な回帰観点への入口となる。
 
 ## Read this when
-- cmoc の CLI、runtime、session、editing run、indexing、oracle review、Codex 実行、ACP builder、設定、StructDoc の挙動を変更・検証するとき
-- 対象機能に対応する統合テスト、契約テスト、異常系テスト、または共通テスト helper の責務を確認するとき
-- 実 Codex CLI、case-local Ollama、Git worktree、永続 state、process lifecycle を含む統合経路を調査するとき
+- cmoc のテスト対象を機能領域から探すとき
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run state、設定などの回帰テストを追加・修正するとき
+- テスト共通 helper や実経路統合テストの実行条件を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle file を直接読む
-- 実装詳細だけを確認したいときは、対応する src 配下の実装ファイルを直接読む
-- 対象機能と無関係なテスト領域や、一般的なテスト実行手順だけを確認するとき
+- 実装や正本仕様そのものを確認したいときは、対応する src または oracle file を直接読む
+- テスト対象が明確な場合は、このディレクトリ内の対象機能に対応する個別テストへ直接進む
+- Codex や Ollama を使わない単純な単体テストの実行方法だけを確認したいときは、開発・テスト手順を直接読む
 
 ## hash
-- 729bde936858c7574d9666cc4f89f1230feefb8face755c819bb78b60017b540
+- 61233a5152b7e7c7f7eb5b8342f0d77cf5aaa52765d659a581dd6690bc252120

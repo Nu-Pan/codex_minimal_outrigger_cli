@@ -31,34 +31,34 @@
 # `common`
 
 ## Summary
-- ACP builder が共有利用する Markdown code fence 補正処理。動的本文に含まれるバッククォート列に応じて外側 fence を調整し、prompt のセクション境界を維持する。
+- ACP builder 間で共有する Markdown code fence 補正処理を提供するディレクトリ。動的本文に含まれるバッククォート列やセクション終了マーカーを考慮し、prompt 内の対象セクションを安全に囲むための処理が入口となる。
 
 ## Read this when
-- ACP builder の prompt 生成で、動的本文中の code fence や長いバッククォート列を扱う処理を確認・変更するとき。
-- prompt 内の指定セクション検出や code block の fence 長置換を調査するとき。
+- ACP builder の prompt 生成で、動的本文に code fence やセクション終了マーカーが含まれる場合の補正処理を変更・調査するとき。
+- prompt の code block 境界検出、終了マーカーの選択、fence 長の決定ロジックを確認するとき。
 
 ## Do not read this when
-- ACP builder の正本 prompt 仕様や固定長 fence の定義を確認するとき。
-- 共有 fence 補正以外の prompt 生成処理や CLI 挙動を調査するとき。
+- ACP builder の個別 prompt 構成や正本の prompt 仕様だけを確認したいとき。
+- code fence 補正を直接利用しない他領域の ACP 実装を変更するとき。
 
 ## hash
-- 5b00b25a5e5eb70c7c3e6f963417bc66821abcdf697c3005c3b2c7002407609a
+- f50a062f030f1209abf7382a0abe3809fa71f747b2405107c3879bff97d3bb70
 
 # `indexing`
 
 ## Summary
-- `acp.builder.indexing` の既存参照を維持する互換層。正本実装への入口と、index entry 生成時のコードフェンス保護を扱う。
+- `acp.builder.indexing` を既存参照向けの互換入口として提供する層。正本実装への再公開と、index エントリー生成時の対象本文のコードフェンス保護を扱う。
 
 ## Read this when
-- 既存の `acp.builder.indexing` 参照を維持・変更したいとき。
-- 互換入口から正本 builder を再公開する処理や、対象本文のコードフェンス保護を調査するとき。
+- 既存の `acp.builder.indexing` 参照を維持・変更するとき
+- index エントリー生成用 builder の互換ラッパーや prompt 境界を調査するとき
 
 ## Do not read this when
-- index 関連の正本仕様・実装を変更するときは、互換層ではなく oracle 側を読む。
-- この名前空間を削除・整理する場合は、まず利用側の参照を確認する。
+- 正本の index 関連実装や builder の仕様を変更・調査するとき
+- 互換入口を廃止・整理し、利用側の参照先を確認するとき
 
 ## hash
-- d8a11f5a9e018be580b01ab46429e435572ec2d4dc434d9d90951e68d51dd4c6
+- 7b4f30d341127e87b90fba42a33c5a83c98a69f61b5ab4678cc062e32593b5a4
 
 # `oracle`
 

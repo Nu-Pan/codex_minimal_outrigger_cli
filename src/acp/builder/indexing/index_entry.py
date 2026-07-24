@@ -32,5 +32,9 @@ def build_indexing_index_entry_parameter(
             section_heading="# `{{target-path}}` の内容",
             section_end_marker="\n\n# place holder definition",
             info_string=None,
+            # target content is the final dynamic section, so its own placeholder-like
+            # heading must not outrank the actual prompt boundary.
+            # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+            prefer_last_end_marker=True,
         ),
     )

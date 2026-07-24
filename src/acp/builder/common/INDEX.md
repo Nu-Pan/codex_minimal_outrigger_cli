@@ -1,15 +1,15 @@
 # `prompt_fence.py`
 
 ## Summary
-- ACP builder が共有して利用する Markdown code fence 補正処理を提供する。動的本文中のバッククォート列に応じて code block の外側 fence を調整し、prompt の構造化されたセクション境界を維持する。
+- ACP builder 間で共有する Markdown code fence 補正処理を提供する。動的本文中のバッククォート列に応じて外側 fence を調整し、prompt 内の対象セクションを安全に囲むための共通実装。
 
 ## Read this when
-- ACP builder の prompt 生成で、動的本文に code fence や長いバッククォート列が含まれる場合の補正処理を確認するとき。
-- prompt 内の指定セクションを検出し、code block の fence 長を安全に置換する処理を変更するとき。
+- ACP builder の prompt 生成で、動的本文に code fence やセクション終了マーカーが含まれる場合の補正処理を変更・調査するとき。
+- prompt の code block 境界検出、終了マーカーの選択、fence 長の決定ロジックを確認するとき。
 
 ## Do not read this when
-- ACP builder の正本となる prompt 仕様や固定長 fence の定義を確認したいときは、参照先の oracle 文書を直接読む。
-- ACP builder の共有補正以外の prompt 生成処理や CLI 挙動を調査するとき。
+- ACP builder の個別 prompt 構成や正本の prompt 仕様を確認したいだけの場合。
+- code fence 補正を直接利用しない他領域の ACP 実装を変更するとき。
 
 ## hash
-- 847469d6bfedd14a4a31fb8ab7b50bb58bfde1be4595408f10622d127894af4c
+- 33f0c0d417163cde880933bb3d45067f64f278156a5533e0cb36c7e6b192c685

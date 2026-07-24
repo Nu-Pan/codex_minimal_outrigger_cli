@@ -41,6 +41,22 @@ def test_indexing_index_entry_keeps_nested_code_fences_in_target_content() -> No
     assert "````\nbefore\n```\ninside\n```\nafter\n````" in parameter.prompt
 
 
+def test_indexing_index_entry_keeps_placeholder_like_heading_in_target_content() -> (
+    None
+):
+    """対象本文内の placeholder 風見出しを prompt の境界と誤認しないことを検証する。"""
+    target_content = "before\n```\n\n# place holder definition\n\n```\nafter"
+
+    parameter = build_indexing_index_entry_parameter(Path(__file__), target_content)
+
+    start = parameter.prompt.index("# `{{target-path}}` の内容")
+    end = parameter.prompt.rfind("\n\n# place holder definition")
+    section = parameter.prompt[start:end]
+    assert target_content in section
+    assert section.startswith("# `{{target-path}}` の内容\n\n````\n")
+    assert section.endswith("\n````")
+
+
 def test_indexing_index_entry_module_exports_only_compatibility_builder() -> None:
     """index entry互換moduleがbuilderだけを公開することを検証する。"""
     assert indexing_index_entry_module.__all__ == [

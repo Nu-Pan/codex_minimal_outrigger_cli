@@ -9,6 +9,7 @@ def _protect_code_block_fence(
     section_heading: str,
     section_end_marker: str,
     info_string: str | None,
+    prefer_last_end_marker: bool = False,
 ) -> str:
     """動的本文を含む code block の外側 fence を本文より長くする。
 
@@ -37,7 +38,7 @@ def _protect_code_block_fence(
                     candidate = (candidate_start, candidate_end, candidate_section)
                     fallback_section = candidate
                     # StructDoc の次の code block が続く境界を優先する。
-                    if prompt.startswith(
+                    if not prefer_last_end_marker and prompt.startswith(
                         "\n\n```", candidate_end + len(section_end_marker)
                     ):
                         selected_section = candidate
