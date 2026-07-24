@@ -43,21 +43,21 @@ def run_doctor_preprocess(
         sync_config(root)
         sync_refactor_state(root, sync_entries=sync_refactor_entries)
 
-        repairs: list[tuple[Path, str, bool, bool]] = []
-        original_indexes: list[tuple[Path, str]] = []
+        repairs: list[tuple[Path, Path, bool, bool]] = []
+        original_indexes: list[tuple[Path, Path]] = []
         try:
             for repair_root in repair_roots:
                 include_config = repair_root == root
-                original_index_tree = _current_index_tree(repair_root)
-                original_indexes.append((repair_root, original_index_tree))
+                original_index_path = _copy_current_index(repair_root)
+                original_indexes.append((repair_root, original_index_path))
                 # ensure_cmoc_ignored と _ensure_agents_tracked は通常 index を
-                # 変更するため、Ollama 失敗時も元の staged 状態へ戻せるようにする。
+                # 変更するため、後続処理の失敗時も元の staged 状態へ戻せるようにする。
                 ensure_cmoc_ignored(repair_root)
                 agents_gitkeep_added = _ensure_agents_tracked(repair_root)
                 repairs.append(
                     (
                         repair_root,
-                        original_index_tree,
+                        original_index_path,
                         agents_gitkeep_added,
                         include_config,
                     )
@@ -68,27 +68,40 @@ def run_doctor_preprocess(
             # 完了時点で refactor entry と実 file を一致させる。
             sync_refactor_state(root, sync_entries=sync_refactor_entries)
         except BaseException:
-            for repair_root, original_index_tree in original_indexes:
-                _restore_index(repair_root, original_index_tree)
+            for repair_root, original_index_path in original_indexes:
+                try:
+                    _restore_index(repair_root, original_index_path)
+                finally:
+                    original_index_path.unlink(missing_ok=True)
             raise
 
         for (
             repair_root,
-            original_index_tree,
+            original_index_path,
             agents_gitkeep_added,
             include_config,
         ) in repairs:
-            restored_index_tree = _restored_index_tree(
-                repair_root,
-                include_config=include_config,
-            )
-            _commit_doctor_repairs(
-                repair_root,
-                restored_index_tree,
-                original_index_tree,
-                agents_gitkeep_added,
-                include_config=include_config,
-            )
+            restored_index_path: Path | None = None
+            try:
+                restored_index_path = _restored_index(
+                    repair_root,
+                    include_config=include_config,
+                )
+                _commit_doctor_repairs(
+                    repair_root,
+                    restored_index_path,
+                    original_index_path,
+                    agents_gitkeep_added,
+                    include_config=include_config,
+                )
+            except BaseException:
+                if restored_index_path is None:
+                    _restore_index(repair_root, original_index_path)
+                raise
+            finally:
+                if restored_index_path is not None:
+                    restored_index_path.unlink(missing_ok=True)
+                original_index_path.unlink(missing_ok=True)
         _validate_tracked_runtime_files(root)
 
 
@@ -160,8 +173,8 @@ def _validate_tracked_runtime_files(root: Path) -> None:
 
 def _commit_doctor_repairs(
     root: Path,
-    restored_index_tree: str,
-    original_index_tree: str,
+    restored_index_path: Path,
+    original_index_path: Path,
     agents_gitkeep_added: bool,
     *,
     include_config: bool,
@@ -174,27 +187,16 @@ def _commit_doctor_repairs(
             include_config=include_config,
         )
     except BaseException:
-        _restore_index(root, original_index_tree)
+        _restore_index(root, original_index_path)
         raise
     else:
-        _restore_index(root, restored_index_tree)
+        _restore_index(root, restored_index_path)
 
 
-def _restore_index(root: Path, restored_index_tree: str) -> None:
-    """指定した tree へ Git index を戻す。"""
-    try:
-        run_git(["reset", "-q", "HEAD"], root)
-    finally:
-        run_git(["read-tree", restored_index_tree], root)
-
-
-def _current_index_tree(root: Path) -> str:
-    """現在の Git index を tree object として保存する。"""
-    index_path = _copy_current_index(root)
-    try:
-        return _run_git_with_index(["write-tree"], root, index_path).stdout.strip()
-    finally:
-        index_path.unlink(missing_ok=True)
+def _restore_index(root: Path, index_path: Path) -> None:
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # tree 化では index 固有状態が失われるため、一時 index file 自体を復元する。
+    shutil.copyfile(index_path, _current_index_path(root))
 
 
 def _commit_doctor_repairs_from_head(
@@ -251,11 +253,10 @@ def _stage_agents_gitkeep_repair(
         _stage_agents_gitkeep(root, index_path)
 
 
-def _restored_index_tree(root: Path, *, include_config: bool) -> str:
-    """doctor修復後に戻すべきGit index treeを一時indexから作る。"""
+def _restored_index(root: Path, *, include_config: bool) -> Path:
+    """doctor 修復を合成した一時 index file を作る。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    # 復元対象は path 列挙ではなく index 全体で扱う。rename や同一 path の
-    # unstaged hunk を壊さず、doctor 優先の修復だけを合成した tree を戻す。
+    # 復元対象は path 列挙ではなく index 全体で扱い、rename や unstaged hunk を保つ。
     index_path = _copy_current_index(root)
     try:
         _stage_gitignore_repair_from_index(root, index_path)
@@ -267,24 +268,31 @@ def _restored_index_tree(root: Path, *, include_config: bool) -> str:
             root,
             index_path,
         )
-        return _run_git_with_index(["write-tree"], root, index_path).stdout.strip()
-    finally:
+        _run_git_with_index(["write-tree"], root, index_path)
+        return index_path
+    except BaseException:
         index_path.unlink(missing_ok=True)
+        raise
 
 
 def _copy_current_index(root: Path) -> Path:
-    """現在のGit indexを一時ファイルへコピーして返す。"""
     fd, index_name = tempfile.mkstemp(prefix="cmoc-doctor-restore-index-")
     os.close(fd)
     index_path = Path(index_name)
-    current_index = (
-        root / run_git(["rev-parse", "--git-path", "index"], root).stdout.strip()
-    )
-    if current_index.exists():
-        shutil.copy2(current_index, index_path)
-    else:
-        _run_git_with_index(["read-tree", "HEAD"], root, index_path)
-    return index_path
+    try:
+        current_index = _current_index_path(root)
+        if current_index.exists():
+            shutil.copy2(current_index, index_path)
+        else:
+            _run_git_with_index(["read-tree", "HEAD"], root, index_path)
+        return index_path
+    except BaseException:
+        index_path.unlink(missing_ok=True)
+        raise
+
+
+def _current_index_path(root: Path) -> Path:
+    return root / run_git(["rev-parse", "--git-path", "index"], root).stdout.strip()
 
 
 def _stage_gitignore_repair_from_index(root: Path, index_path: Path) -> None:

@@ -369,19 +369,19 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の共有 lifecycle を検証する統合テスト。CLI と直接呼び出しの両方を通じて、Git 状態・設定・refactor state の修復、共有 doctor lock の待機、linked worktree 対応、修復 commit と既存の staged/unstaged 差分の保持を確認する。doctor preprocess の外部契約と副作用を検証するテストの入口。
+- doctor preprocess の統合テスト。CLI と直接呼び出しの両方で、Git 状態・config・refactor state・共有 doctor lock の修復 lifecycle を検証する。
+- 修復 commit が既存の staged/unstaged 差分、index flag、intent-to-add、rename を保持し、`.cmoc/gu` の追跡解除や `.agents/.gitkeep`・config の生成を正しく行うことを確認する。
 
 ## Read this when
-- doctor preprocess の外部挙動、修復 commit、config 生成・同期、Git index の保持を変更または調査するとき。
-- repository と linked worktree の間で共有される doctor lock や状態修復を確認するとき。
-- 既存の staged changes、unstaged hunks、rename、追跡済み `.cmoc/gu` ファイルへの影響を検証するとき。
+- doctor preprocess の外部挙動、修復 commit、config 同期、linked worktree 対応を変更または検証するとき
+- doctor が共有 repository lock を待機する動作や、既存 Git index の状態保持を調査するとき
 
 ## Do not read this when
-- doctor preprocess の内部実装や CLI 引数の詳細を確認したいだけで、まず正本仕様や実装本体を読むべきとき。
-- doctor 以外のサブコマンド、または doctor preprocess と無関係な Git・設定処理を調査するとき。
+- doctor preprocess 以外のサブコマンドや、内部 helper 単体の実装だけを変更・確認するとき
+- Git・config・refactor state の修復 lifecycle と無関係なテストを調査するとき
 
 ## hash
-- 51f7c052a60ed2ddf2b0d8caf3725e3cd75eadc2e784fe155b8559a3a4a5b80c
+- 4ea4177673451a41ad983338d829152d71fdf209336e75a82145799dc971037e
 
 # `test_editing_run_cli.py`
 

@@ -221,21 +221,20 @@
 # `runtime_doctor.py`
 
 ## Summary
-- Git index と common directory 単位のロックを使い、doctor 前処理の修復を排他実行する runtime 実装。設定・refactor state・ignore 規則・.agents placeholder を同期し、ユーザーの staged 状態を保ったまま修復差分だけを一時 index から commit する。
-- doctor 用ロック、index の保存・復元、一時 index 操作、Git blob staging、修復対象の検証など、doctor 前処理に必要な内部 helper 群を提供する。
+- doctor 前処理の実装を担い、Git common directory 単位の排他ロック下で設定・refactor state・ignore 規則・`.agents` 追跡状態を同期し、修復差分だけを一時 index 経由で commit する。
+- current/index の退避・復元、worktree 間の修復範囲分離、一時 Git index 操作、修復後の追跡状態検証までを扱う。
 
 ## Read this when
-- doctor 前処理の実行、排他制御、修復 commit、Git index の保存・復元に関する挙動を変更または調査するとき
-- config や refactor state、.gitignore、.agents placeholder の doctor による同期・追跡処理を確認するとき
-- 一時 GIT_INDEX_FILE を使った Git 操作や、修復後にユーザーの staged 状態を復元する処理を確認するとき
+- doctor サブコマンドの前処理、修復 commit、Git index の退避・復元、linked worktree 対応を変更または調査するとき。
+- `.gitignore`、`.agents/.gitkeep`、config、refactor state の doctor による同期や追跡状態検証を確認するとき。
+- doctor の並行実行防止や、一時 index を用いた staged 状態保全の挙動を確認するとき。
 
 ## Do not read this when
-- doctor 前処理ではなく、通常の設定同期や refactor state の具体的な仕様だけを調査するときは、対応する commons モジュールや oracle 文書を直接読む
-- CLI の doctor サブコマンドの引数・表示・上位の実行フローだけを確認するときは、CLI command 実装を直接読む
-- 一般的な Git 操作や repository path 解決の実装だけを確認するときは、このファイルではなく runtime_git または runtime_paths を読む
+- doctor 前処理以外の一般的な設定同期、refactor state の仕様、Git コマンド共通処理だけを調べるときは、それぞれの専用モジュールや oracle 文書を先に読む。
+- doctor の利用者向け仕様やエラー文言の正本を確認するだけの場合は、実装ではなく対応する oracle 文書を読む。
 
 ## hash
-- 9f5ad372719dc0e231356db2541ddd15380233534818de36294088bdecc144cd
+- 6faa06d58117c257cad1d99551bed4fa4b1c1086fd76df7d3ee82db5669c6e96
 
 # `runtime_errors.py`
 

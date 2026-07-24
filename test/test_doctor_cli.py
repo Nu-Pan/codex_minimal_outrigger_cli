@@ -171,6 +171,38 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
     ]
 
 
+@pytest.mark.parametrize("index_flag", ["--assume-unchanged", "--skip-worktree"])
+def test_doctor_preserves_preexisting_index_flags(
+    tmp_path: Path,
+    index_flag: str,
+) -> None:
+    """doctor が内容以外の Git index flag も保持する。"""
+
+    root = make_repo(tmp_path)
+    run_git(root, "update-index", index_flag, "README.md")
+    before = run_git(root, "ls-files", "-v", "README.md").stdout
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert run_git(root, "ls-files", "-v", "README.md").stdout == before
+
+
+def test_doctor_preserves_preexisting_intent_to_add_index_entry(tmp_path: Path) -> None:
+    """doctor が intent-to-add の index entry を通常の未追跡へ戻さない。"""
+
+    root = make_repo(tmp_path)
+    path = root / "new.txt"
+    path.write_text("new\n")
+    run_git(root, "add", "-N", "new.txt")
+    before_entry = run_git(root, "ls-files", "--stage", "new.txt").stdout
+    before_status = run_git(root, "status", "--short").stdout
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert run_git(root, "ls-files", "--stage", "new.txt").stdout == before_entry
+    assert run_git(root, "status", "--short").stdout == before_status
+
+
 def test_doctor_generates_and_tracks_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
