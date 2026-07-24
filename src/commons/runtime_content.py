@@ -1,10 +1,18 @@
 import hashlib
+import os
 from pathlib import Path
 
 
 def file_sha256(path: Path) -> str:
-    """ファイル内容の SHA-256 digest を返す。"""
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    """ファイル内容の SHA-256 digest を返す。
+
+    Git が保持する symlink の内容はリンク先 path なので、リンク先を追跡せず
+    その文字列を hash する。{{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    が symlink を oracle/realization file として分類するため、dangling symlink
+    も state 同期で扱える必要がある。
+    """
+    content = os.fsencode(os.readlink(path)) if path.is_symlink() else path.read_bytes()
+    return hashlib.sha256(content).hexdigest()
 
 
 def text_sha256(text: str) -> str:

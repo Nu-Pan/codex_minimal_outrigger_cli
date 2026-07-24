@@ -205,21 +205,19 @@
 # `runtime_content.py`
 
 ## Summary
-- ファイル内容または文字列内容から SHA-256 digest を計算し、digest をファイル名に含めた内容アドレス型ファイルを書き出す小さな runtime content helper 群。
-- 出力先 directory の作成有無が異なる 2 種類の書き出し関数と、先頭 chunk の NUL byte と読み取り可否による簡易 binary 判定を扱う。
+- ファイル内容の SHA-256 計算、ハッシュ付きファイルの生成、バイナリ判定を担う共通ランタイム処理。通常ファイルと symlink を区別して内容を取得し、symlink のリンク文字列や dangling symlink も扱う。
 
 ## Read this when
-- 内容 hash を使った成果物ファイル名の生成、重複書き込み回避、または内容アドレス型の一時・補助ファイル保存を確認・変更するとき。
-- ファイル内容や文字列内容の SHA-256 digest 計算処理を使う箇所を探すとき。
-- テキスト対象と binary 対象を粗く分けるための簡易判定ロジックを確認・変更するとき。
+- ファイル内容または UTF-8 文字列の SHA-256 digest 計算を変更・利用するとき
+- 内容ハッシュを名前に含むファイルの生成処理を確認するとき
+- バイナリ判定や symlink の扱い、特に dangling symlink の状態同期を調査するとき
 
 ## Do not read this when
-- path model、run/work/root の意味、またはパス表記そのものの仕様を確認したいとき。
-- CLI 引数、サブコマンド、標準出力、終了コードなど利用者向けの公開面を確認したいとき。
-- hash 値を使わない通常のファイル読み書き、設定読み込み、永続状態管理の実装を探しているとき。
+- プロンプト構築や oracle/realization file の分類規則そのものを確認したいときは、参照先の oracle 文書を直接読む
+- この共通処理を利用する機能の具体的な入出力や CLI 挙動だけを確認するとき
 
 ## hash
-- d121b59cd941f68e101d0bf9b1eb0f0fdd2fe8c928d89dd6447b3079581fb905
+- 0bbad2eac79645e0b66816bef881d429c1eb3139fad0aeab9972ca332682642a
 
 # `runtime_doctor.py`
 

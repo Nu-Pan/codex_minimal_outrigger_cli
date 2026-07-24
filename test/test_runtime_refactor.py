@@ -4,11 +4,12 @@
 `{{work-root}}/oracle/doc/app_spec/misc_spec.md`。
 """
 
+import hashlib
 import json
 from pathlib import Path
 
 import pytest
-from _git_support import make_repo
+from _git_support import make_repo, run_git
 
 from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_refactor import (
@@ -34,6 +35,22 @@ def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
         for entry in state.values()
     )
     assert load_refactor_state(root) == state
+
+
+def test_refactor_state_sync_hashes_dangling_oracle_symlink(
+    tmp_path: Path,
+) -> None:
+    """定義上の oracle file である dangling symlink を state 同期できる。"""
+    root = make_repo(tmp_path)
+    link = root / "oracle" / "dangling.md"
+    link.symlink_to("../missing.md")
+    run_git(root, "add", "oracle/dangling.md")
+    run_git(root, "commit", "-m", "add dangling oracle symlink")
+
+    state = sync_refactor_state(root)
+
+    assert "oracle/dangling.md" in state
+    assert file_sha256(link) == hashlib.sha256(b"../missing.md").hexdigest()
 
 
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
