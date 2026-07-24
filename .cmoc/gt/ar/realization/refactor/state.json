@@ -816,10 +816,10 @@
     "last_investigated_at": "2026-07-25_04-59_45_951493000"
   },
   "src/commons/runtime_results.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "9f6e365d5335be51796785b3abc187d63c1d32111ecb9b0ad30308780df063e4",
+    "last_investigated_at": "2026-07-25_05-11_34_269366000"
   },
   "src/commons/runtime_run.py": {
     "investigation_required": true,
