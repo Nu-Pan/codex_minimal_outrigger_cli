@@ -702,10 +702,10 @@
     "last_investigated_at": "2026-07-24_23-51_40_540341000"
   },
   "src/commons/cmoc_runtime.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "b5cc7caba70403189a082bb2808982aa6794f01f1553bc93b9c08706a2af16d5",
+    "last_investigated_at": "2026-07-25_00-06_38_016316000"
   },
   "src/commons/indexing.py": {
     "investigation_required": true,
