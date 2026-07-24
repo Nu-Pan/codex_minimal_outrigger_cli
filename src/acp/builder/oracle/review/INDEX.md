@@ -77,14 +77,15 @@
 # `validate_finding_challenger.py`
 
 ## Summary
-- oracle review の finding challenger 検証用 canonical builder を再公開する互換アダプター。既存 caller 向けの parameter 生成を委譲し、動的な所見・既知理由をコードフェンスで保護した prompt を返す。canonical 実装へ移行するまでの入口。
+- oracle review の finding challenger 検証用パラメータ生成を再公開する互換アダプター。canonical oracle 実装を呼び出し、動的な所見・既知理由の各プロンプト部分をコードフェンスで保護して返す。
 
 ## Read this when
-- oracle review の finding challenger 検証 parameter builder の既存 caller 互換性や prompt のコードフェンス保護を確認・変更するとき。
+- oracle review の finding challenger 検証用 parameter builder の呼び出し元や互換維持を確認するとき
+- 動的プロンプトのコードフェンス保護や、canonical oracle 実装への委譲を変更するとき
 
 ## Do not read this when
-- canonical な parameter 仕様や prompt 本体を確認したいときは、oracle 側の canonical builder を直接読む。
-- oracle review 以外の builder や、一般的な prompt fence 処理を調査するとき。
+- canonical な parameter 生成仕様そのものを確認するときは、oracle 側の実装を直接読む
+- oracle review や finding challenger と無関係な builder・prompt 処理を調査するとき
 
 ## hash
-- a8f05b5b4b0c6c6f8020479bd56ed87627c466ae631a28d2a855c7001f0bcb0d
+- a7295819927b3bdcf5b421917610f438c846d4a6751b84eb47cbfde822895a8f

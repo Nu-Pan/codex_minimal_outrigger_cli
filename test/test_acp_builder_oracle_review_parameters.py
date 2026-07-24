@@ -375,6 +375,10 @@ def test_oracle_review_fence_protection_keeps_marker_in_current_input() -> None:
             build_oracle_review_validate_finding_advocate_parameter,
             "# 既知の妥当ではないとする理由",
         ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            "# 既知の妥当ではないとする理由",
+        ),
     ],
 )
 def test_oracle_review_fence_protection_keeps_placeholder_marker_in_final_input(

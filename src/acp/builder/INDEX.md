@@ -63,19 +63,21 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization adapter 群をまとめるパッケージ領域。oracle edit・investigation・review 各コマンドの builder 入口と、canonical builder への委譲経路を扱う。
-- 下位の各 adapter から、TUI 起動パラメータ生成、investigation 実行準備、review finding 用 parameter builder など、対象コマンド固有の実装へ進むためのルーティング入口。
+- oracle command builder realization のパッケージ群。`oracle edit`、`oracle investigation`、`oracle review` の各 builder adapter を入口として、TUI 起動パラメータ、AgentCallParameter、finding 処理、canonical builder 委譲、互換補正などを扱う。
 
 ## Read this when
-- oracle command builder の realization adapter の構成や担当コマンドを確認するとき。
-- oracle edit・investigation・review の builder 起動経路や、各下位 adapter の責務を判断するとき。
+- oracle command builder realization の構成や各サブパッケージの責務を確認するとき
+- `cmoc oracle edit` の TUI 起動パラメータ生成入口を調査・変更するとき
+- `cmoc oracle investigation` の builder adapter、リポジトリ解決、editor input 準備、launch TUI 用 parameter 生成を調査・変更するとき
+- `cmoc oracle review` の finding 処理、検証用 parameter builder、canonical builder との委譲、path・prompt 補正、互換経路を調査・変更するとき
 
 ## Do not read this when
-- 個別 adapter の具体的な実装詳細を調査するときは、該当する下位項目を直接読む。
-- canonical builder の正本仕様・prompt 内容、共通 TUI 実装、oracle command builder 以外の処理を確認するとき。
+- oracle builder の正本仕様や具体的な prompt 定義を確認するとき
+- builder adapter の個別実装詳細を確認するときは、対象サブパッケージ内の実装ファイルを直接読む
+- oracle command builder 以外の ACP builder、TUI 実装、共通パス解決処理を調査するとき
 
 ## hash
-- d3f3b0f055366dbf3b1e3ca86fc9d72ed5fad26bc05a611b81fbad5faa68a7c4
+- bb280a914bfec6a466bc9cdff9cb69b6b8d5fdcf45ea0aa832d8500b650fd349
 
 # `quota_probe.py`
 
