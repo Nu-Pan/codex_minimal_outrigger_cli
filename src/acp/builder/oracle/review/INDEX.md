@@ -15,18 +15,18 @@
 # `enumerate_finding.py`
 
 ## Summary
-- oracle review finding enumeration の canonical builder を呼び出す互換 adapter。関連所見セクション内の動的内容を code fence から保護し、既存の呼び出し元へ parameter builder を再公開する。全呼び出し元が canonical oracle path を直接利用した後は削除対象となる。
+- oracle review の finding enumeration 用 canonical builder を呼び出し元向けに再公開する互換 adapter。動的所見のコードフェンス保護と、symlink 経由時の lexical な oracle path の維持を補う。canonical 実装の入口ではなく、既存 import の移行期間に使うファイル。
 
 ## Read this when
-- oracle review finding enumeration の agent call parameter 生成や、関連所見の prompt fence 保護を変更・調査するとき
-- canonical builder への移行状況や、この adapter の削除可否を確認するとき
+- oracle review の finding enumeration parameter builder の呼び出し互換性、symlink 経由のパス埋め込み、または動的所見の prompt fence 保護を変更・調査するとき。
+- canonical oracle builder から realization 側 adapter への委譲や、旧 import の削除可否を確認するとき。
 
 ## Do not read this when
-- oracle review 以外の builder や、canonical implementation 自体の仕様・挙動を直接調査するとき
-- prompt fence 保護と無関係な agent call parameter の処理を調べるとき
+- oracle review の enumeration 仕様や canonical builder の実装を確認したいときは、oracle 側の canonical 実装を直接読む。
+- finding enumeration と無関係な prompt builder や agent parameter の変更を扱うとき。
 
 ## hash
-- 85f4eb71e0ff1cedaa438f279d41716ff6c791f6a9cdf066c8b4deb30e47d460
+- d26bac7a449c5f25417526af46468c065a91cf919b532f94fe2851dc8842a61a
 
 # `judge_finding.py`
 
