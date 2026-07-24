@@ -141,7 +141,7 @@ def create_run_worktree(
     root: Path, branch: str, worktree: Path, start_point: str = "HEAD"
 ) -> Path:
     """未使用 path に run 用 linked worktree を作る。"""
-    expected_worktree = _expected_managed_worktree(root, branch)
+    expected_worktree = expected_run_worktree(root, branch)
     candidate = _absolute_path(worktree)
     if _first_managed_worktree_symlink(root, candidate, expected_worktree) is not None:
         raise CmocError(
@@ -189,8 +189,8 @@ def delete_branch(root: Path, branch: str, force: bool = False) -> CommandResult
     return run_git(["branch", "-D" if force else "-d", branch], root, check=False)
 
 
-def _expected_managed_worktree(root: Path, branch: str) -> Path:
-    """管理branch名から許可されたrun worktree pathを求める。"""
+def expected_run_worktree(root: Path, branch: str) -> Path:
+    """run branch 名から許可された run worktree path を求める。"""
     parts = branch.split("/")
     # {{work-root}}/oracle/doc/branch_model.md
     # dot component は run-root の2階層配置を崩すため、path component として許可しない。
@@ -228,11 +228,13 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
     if len(relative.parts) != 2 or not all(relative.parts):
         raise _unmanaged_worktree_error(worktree, base)
     # {{work-root}}/oracle/doc/branch_model.md
-    # 命名規則だけでは不十分であり、削除は Git linked worktree に限定する。
-    if candidate.exists():
-        registered = resolved in _registered_worktree_paths(root)
-        if not registered or not _has_linked_worktree_metadata(root, candidate):
-            raise _unmanaged_worktree_error(worktree, base)
+    # 命名規則だけでは不十分であり、削除は対応する Git linked worktree に限定する。
+    expected_branch = f"cmoc/run/{relative.parts[0]}/{relative.parts[1]}"
+    registered_branch = _registered_worktree_branches(root).get(resolved)
+    if registered_branch != expected_branch:
+        raise _unmanaged_worktree_error(worktree, base)
+    if candidate.exists() and not _has_linked_worktree_metadata(root, candidate):
+        raise _unmanaged_worktree_error(worktree, base)
     return resolved
 
 
@@ -268,14 +270,17 @@ def _first_managed_worktree_symlink(root: Path, *paths: Path) -> Path | None:
     return None
 
 
-def _registered_worktree_paths(root: Path) -> set[Path]:
-    """Gitに登録されたlinked worktreeの絶対pathを列挙する。"""
+def _registered_worktree_branches(root: Path) -> dict[Path, str]:
+    """Git に登録された worktree と checkout branch の対応を返す。"""
     output = run_git(["worktree", "list", "--porcelain"], root).stdout
-    return {
-        Path(line.removeprefix("worktree ")).resolve()
-        for line in output.splitlines()
-        if line.startswith("worktree ")
-    }
+    registered: dict[Path, str] = {}
+    worktree: Path | None = None
+    for line in output.splitlines():
+        if line.startswith("worktree "):
+            worktree = Path(line.removeprefix("worktree ")).resolve()
+        elif worktree is not None and line.startswith("branch refs/heads/"):
+            registered[worktree] = line.removeprefix("branch refs/heads/")
+    return registered
 
 
 def _has_linked_worktree_metadata(root: Path, worktree: Path) -> bool:

@@ -255,20 +255,21 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行、branch・HEAD・status・worktree の作成／削除、Git ignore 判定、oracle／realization file の分類を担う共通境界。path の正規化、symlink 検査、managed worktree の安全性検証もここで扱う。
+- Git コマンド実行、branch・HEAD・worktree の検証と管理、Git ignore 状態の更新・検査、および oracle/realization file の path 分類を担う共通境界。Git repository の path 正規化、安全な worktree 操作、追跡状態判定が必要な処理から参照する。
 
 ## Read this when
-- Git の状態取得や clean worktree 前提を実装・変更するとき
-- cmoc 管理 branch／linked worktree の作成・削除や安全性検証を調べるとき
-- `.cmoc/gu` の ignore 設定や Git exclude、追跡状態を扱うとき
-- oracle file／realization file の path 分類や Git 状態判定を変更・確認するとき
+- Git の状態取得、clean worktree 判定、branch 判定、commit 取得を変更・調査するとき
+- cmoc 管理 worktree の作成・削除、branch と worktree path の対応、安全性検証を扱うとき
+- `.cmoc/gu` の ignore 設定や Git index・exclude の更新を扱うとき
+- oracle file または realization file の分類条件、Git の追跡・ignore 判定を確認するとき
 
 ## Do not read this when
-- 特定の CLI サブコマンドの業務フローだけを確認する場合は、そのサブコマンドの実装や対応する oracle 文書を直接読む
-- Git と無関係な path 操作、実行時エラー、結果型の詳細だけを確認する場合は、それぞれの専用共通 module を読む
+- 個別の CLI サブコマンドの業務ロジックだけを変更・調査する場合
+- Git や worktree、ignore、oracle/realization 分類に関係しない runtime helper を扱う場合
+- prompt の仕様や path model の正本を確認することが目的で、実装境界の挙動を調べる必要がない場合
 
 ## hash
-- b82639b183c8387b636c54303818d9f4cd1805d922cfb6f58e3325b6ec695ff3
+- 875bf3459a8308ef9bf93dc16dd4f6c5fbffc3e987a972c3e6ef144a1956b50d
 
 # `runtime_logging.py`
 
@@ -356,18 +357,20 @@
 # `runtime_run.py`
 
 ## Summary
-- editing run の process identity と managed worktree を扱うランタイム共通処理。run branch から worktree を検証・解決し、session 単位の tracking file とロックで run 本体および Codex child process group の追跡・削除・安全な停止を提供する。
+- Git worktree 上の branch と対応する worktree の解決、editing run の process identity tracking、run lifecycle lock、tracking file の読み書き・削除、run 本体および Codex child process group の安全な停止を担うランタイム共通モジュール。run 管理や abandon 処理の実装へ進む入口。
 
 ## Read this when
-- cmoc run の abandon、join、lifecycle lock、process tracking、run process の停止処理を変更・調査するとき
-- run branch と managed worktree の対応検証や、PID 再利用を避けた process 同一性確認を扱うとき
+- branch から worktree を解決する処理を変更・調査するとき
+- editing run の process ID、開始時刻、child process group の追跡や lifecycle lock を扱うとき
+- run abandon、親 process や Codex subprocess group の停止、PID 再利用対策を変更・調査するとき
 
 ## Do not read this when
-- 通常の CLI コマンド定義や run のユーザー向け出力形式だけを変更・調査するとき
-- git worktree の作成・削除処理そのものを扱うときは、worktree 操作を直接実装する対象を先に確認する
+- 通常の git 操作、worktree 作成手順、branch 命名規則そのものを確認したいときは、branch model や git runtime の仕様・実装を直接読む
+- Codex subprocess の起動・追跡情報の登録処理だけを調べる場合は、process tracking を提供する runtime profile 側を直接読む
+- run process とは無関係な CLI 入出力、session state、一般的なエラー型の変更を扱うとき
 
 ## hash
-- ff7be4b16bff140e3accc5272a9ab50e5e166aa6e1664227f12ba94eead8d86c
+- cc8cce96c1176d044bcbf2a07a5ed385cd987239e330c596e91dea4648e2b70b
 
 # `runtime_run_lifecycle.py`
 

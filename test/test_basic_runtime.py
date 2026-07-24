@@ -280,6 +280,22 @@ def test_remove_worktree_rejects_unregistered_managed_path(
     assert (target / "keep.txt").read_text() == "keep\n"
 
 
+def test_remove_worktree_rejects_non_run_branch_at_managed_path(
+    tmp_path: Path,
+) -> None:
+    """管理領域内でもrun branchと対応しないworktreeを削除しない。"""
+    root = make_repo(tmp_path)
+    target = root / ".cmoc" / "gu" / "worktree" / "session" / "run"
+    run_git(root, "worktree", "add", "-b", "ordinary", str(target), "HEAD")
+
+    try:
+        with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+            remove_worktree(root, target)
+        assert target.exists()
+    finally:
+        run_git(root, "worktree", "remove", "--force", str(target))
+
+
 def test_remove_worktree_rejects_replaced_registered_path(
     tmp_path: Path,
 ) -> None:

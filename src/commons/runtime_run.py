@@ -17,8 +17,8 @@ from commons.runtime_codex_profile import (
     wait_process_fd_exit,
 )
 from commons.runtime_errors import CmocError
-from commons.runtime_git import main_worktree_root, run_git
-from commons.runtime_paths import generated_agent_read_dir, worktrees_dir
+from commons.runtime_git import expected_run_worktree, run_git
+from commons.runtime_paths import generated_agent_read_dir
 
 
 class ProcessIdentity(NamedTuple):
@@ -35,27 +35,6 @@ class RunProcessIdentity(NamedTuple):
     process_id: int
     start_time: int | None
     child_processes: tuple[ProcessIdentity, ...] = ()
-
-
-def expected_run_worktree(root: Path, run_branch: str) -> Path:
-    """run branch 名から managed worktree path を復元する。"""
-    parts = run_branch.split("/")
-    # {{work-root}}/oracle/doc/branch_model.md
-    # dot component は run-root の2階層配置を崩すため、path component として許可しない。
-    if (
-        len(parts) != 4
-        or parts[:2] != ["cmoc", "run"]
-        or not parts[2]
-        or not parts[3]
-        or parts[2] in {".", ".."}
-        or parts[3] in {".", ".."}
-    ):
-        raise CmocError(
-            "run worktree を特定できません。",
-            ["session state file の run.branch を確認してください。"],
-            f"run_branch: {run_branch}",
-        )
-    return worktrees_dir(main_worktree_root(root)) / parts[2] / parts[3]
 
 
 def worktree_for_branch(root: Path, branch: str) -> Path:
