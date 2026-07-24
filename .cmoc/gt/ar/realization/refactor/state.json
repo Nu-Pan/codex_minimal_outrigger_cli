@@ -648,10 +648,10 @@
     "last_investigated_at": "2026-07-24_22-07_18_078508000"
   },
   "src/acp/builder/tui/__init__.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "9e5ae7e28c1e80b5ffa414ac5eea7dd08927b7977f87292b3afa9b714a894d0a",
+    "last_investigated_at": "2026-07-24_22-17_48_203954000"
   },
   "src/acp/builder/tui/launch_tui.py": {
     "investigation_required": true,
