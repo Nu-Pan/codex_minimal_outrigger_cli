@@ -5,6 +5,7 @@ import typer
 
 from cmoc_runtime import (
     CmocError,
+    branch_exists,
     create_run_worktree,
     current_branch,
     current_subcommand_logger,
@@ -109,6 +110,7 @@ def _cmoc_oracle_review_body(
     findings: list[dict] = []
     worktree_created = False
     interrupted = False
+    cleanup_error: CmocError | None = None
     try:
         start_subcommand_step(2, "run の隔離実行を開始", "start isolated review")
         create_run_worktree(current_root, run_branch, review_worktree, run_fork_commit)
@@ -146,9 +148,14 @@ def _cmoc_oracle_review_body(
                 run_join_commit = merge_review_branch(current_root, run_branch)
         finally:
             if worktree_created:
-                remove_worktree(current_root, review_worktree)
-                delete_branch(current_root, run_branch, force=True)
-                worktree_created = False
+                try:
+                    cleanup_error = _cleanup_review_run(
+                        current_root, review_worktree, run_branch
+                    )
+                finally:
+                    worktree_created = False
+        if cleanup_error is not None:
+            raise cleanup_error
         start_subcommand_step(8, "所見リストをレポート", "write review report")
         report_path = write_oracle_review_report(
             root,
@@ -165,13 +172,32 @@ def _cmoc_oracle_review_body(
         )
     except KeyboardInterrupt:
         # loop 外の中断も、確定済みとして記録済みの範囲だけで正常完了する。
+        if worktree_created:
+            try:
+                cleanup_error = _cleanup_review_run(
+                    current_root, review_worktree, run_branch
+                )
+            finally:
+                worktree_created = False
+        if cleanup_error is not None:
+            report_path = write_oracle_review_report(
+                root,
+                scope,
+                branch,
+                state,
+                len(all_oracle_files),
+                evaluated_oracle_files,
+                findings,
+                run_branch,
+                run_fork_commit,
+                run_join_commit,
+                error_message=cleanup_error.detail,
+            )
+            typer.echo(str(report_path.resolve()))
+            raise cleanup_error
         if not interrupted:
             interrupted = True
             _record_oracle_review_interruption()
-        if worktree_created:
-            remove_worktree(current_root, review_worktree)
-            delete_branch(current_root, run_branch, force=True)
-            worktree_created = False
         report_path = write_oracle_review_report(
             root,
             scope,
@@ -188,6 +214,9 @@ def _cmoc_oracle_review_body(
         typer.echo(str(report_path.resolve()))
         return
     except Exception as exc:
+        error_message = str(exc) or exc.__class__.__name__
+        if cleanup_error is not None and cleanup_error is not exc:
+            error_message = f"{error_message}\ncleanup: {cleanup_error.detail}"
         report_path = write_oracle_review_report(
             root,
             scope,
@@ -199,7 +228,7 @@ def _cmoc_oracle_review_body(
             run_branch,
             run_fork_commit,
             run_join_commit,
-            error_message=str(exc) or exc.__class__.__name__,
+            error_message=error_message,
         )
         typer.echo(str(report_path.resolve()))
         raise
@@ -219,6 +248,56 @@ def _record_oracle_review_interruption() -> None:
             command="oracle review",
             result="interrupted",
         )
+
+
+def _cleanup_review_run(
+    root: Path, review_worktree: Path, run_branch: str
+) -> CmocError | None:
+    """review run の worktree と branch を削除し、失敗を report 可能にする。
+
+    `remove_worktree` と `delete_branch` は失敗を returncode で返すため、結果を
+    無視すると隔離 run が残ったまま成功扱いになる。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    """
+    errors: list[str] = []
+    try:
+        removal = remove_worktree(root, review_worktree)
+        if review_worktree.exists():
+            errors.append(
+                "worktree removal failed: "
+                + (
+                    removal.stderr.strip()
+                    or (
+                        f"returncode: {removal.returncode}"
+                        if removal.returncode != 0
+                        else "path still exists"
+                    )
+                )
+            )
+    except BaseException as exc:
+        errors.append(f"worktree removal failed: {exc!r}")
+    try:
+        deletion = delete_branch(root, run_branch, force=True)
+        if deletion.returncode != 0:
+            errors.append(
+                "run branch deletion failed: "
+                + (deletion.stderr.strip() or f"returncode: {deletion.returncode}")
+            )
+        elif branch_exists(root, run_branch):
+            errors.append("run branch deletion failed: branch still exists")
+    except BaseException as exc:
+        errors.append(f"run branch deletion failed: {exc!r}")
+    if not errors:
+        return None
+    return CmocError(
+        "oracle review の隔離 run の cleanup に失敗しました。",
+        [
+            "review worktree と run branch の状態を確認してください。",
+            "残った隔離 run の資源を整理してから再実行してください。",
+        ],
+        "\n".join(errors),
+    )
 
 
 def _require_clean_worktree(root: Path) -> None:
