@@ -44,18 +44,19 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。各サブコマンドの CLI 入口に加え、oracle review の対象列挙・パス解決・ループ・差分統合・レポート生成を下位モジュールへの入口として提供する。
+- oracle 系サブコマンドをまとめる package。oracle の edit・investigation・review と、review の対象列挙、処理、パス解決、レポート、INDEX 統合に関する実装への入口を提供する。
 
 ## Read this when
-- oracle 系サブコマンドの構成や package の入口を確認するとき。
-- oracle review の実行フロー、対象選定、finding 処理、INDEX.md 統合、レポート生成の担当モジュールを特定するとき。
+- oracle 系サブコマンドの package 構成や実装入口を確認するとき。
+- oracle review の実行、対象列挙、finding 処理、パス解決、レポート生成、INDEX 変更統合のいずれかを変更・調査するとき。
 
 ## Do not read this when
-- 個別サブコマンドや review の詳細実装を調査するときは、該当する下位モジュールを直接読む。
-- Codex TUI や共通 CLI runtime の詳細だけを調べるとき。
+- 個別サブコマンドの詳細実装を確認したいときは、該当するサブコマンド実装を直接読む。
+- Codex TUI 自体や共通 CLI runtime の詳細を確認するとき。
+- oracle review の仕様そのものを確認するときは、対応する oracle 文書を先に読む。
 
 ## hash
-- 70c0eeb423abba2065aa653c708573da3c9cd047c868cf19621135805eac4b67
+- f1a7b0e827d80db28abaed3a640e2d2dd75143e1faa6444f466c1a6768519ea8
 
 # `realization`
 
@@ -89,18 +90,18 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。run の abandon・join 実装と、lifecycle・report の旧 import path 互換 shim を含む。各 run サブコマンドの共通処理や配下実装への入口。
+- editing run に関する lifecycle サブコマンドと、その共通処理への互換入口をまとめるパッケージ。run の abandon・join、ライフサイクルおよびレポート関連の実装へ進む起点。
 
 ## Read this when
-- editing run の lifecycle、abandon、join、report 関連の実装を調査・変更するとき
-- run の停止・統合・cleanup・失敗復旧・レポート出力・旧 import path 互換性を確認するとき
+- editing run の abandon・join の挙動、cleanup、merge、rollback、report、state 同期を調査・変更するとき。
+- editing run lifecycle や report の旧 import path、または共通 canonical 実装への委譲関係を確認するとき。
 
 ## Do not read this when
-- editing run 以外のサブコマンドを扱うとき
-- 特定の処理の詳細だけを調べるとき。配下の該当ファイルまたは canonical な commons 実装を直接読む
+- editing run 以外のサブコマンドを扱うとき。
+- run 共通処理の具体的な実装詳細や外部仕様だけを確認する場合は、配下の該当ファイルまたは oracle doc・CLI テストを直接読む。
 
 ## hash
-- a75a95bc102b67ca9e07dce41f71f8712fe8e42a6702e5c2b4e32863542fcceb
+- 2b17de494eefc966366658c5f5a45b751272817436a159473180d76da5b6dd19
 
 # `session`
 

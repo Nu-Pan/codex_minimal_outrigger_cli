@@ -2,6 +2,13 @@
 
 共通処理の canonical な配置は {{work-root}}/oracle/doc/dev_rule/design_rule.md
 に従っている。
+
+この file は 16,000 文字を超えるが、run の開始・state 遷移・commit、差分分類、
+INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を共有する一つの
+責務である。分割すると、run branch の不変条件と差分許可範囲を複数 file で追う必要が
+生じるため、現状は editing run lifecycle として一箇所に保つ。
+
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import os

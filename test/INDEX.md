@@ -423,20 +423,19 @@
 # `test_indexing_common.py`
 
 ## Summary
-- `commons.indexing` の INDEX entry 生成・検証とディレクトリ traversal を直接テストする。入力 schema の拒否、malformed entry の再生成、hash 再利用、空ディレクトリや nested memo の扱い、安定順序・並列実行・logger 伝播を検証する。symlink cycle、特殊ファイル、INDEX symlink、linked worktree 間の lock 共有など、安全性と実行環境上の境界も対象にする。
+- `commons.indexing` の INDEX.md 生成・解析・更新処理を直接検証するテスト。入力検証、ハッシュによる再利用と再生成、空ディレクトリやネストした memo の traversal、symlink・特殊ファイルの除外、安定した描画順、並列更新、logger の伝播、pushd 中の実行、linked worktree 間の lock 共有を扱う。
 
 ## Read this when
-- INDEX.md の render/parse/update や indexing traversal の挙動を変更・調査するとき
-- INDEX entry の入力検証、再生成判定、hash、並列処理、logger 伝播を変更・検証するとき
-- symlink、特殊ファイル、memo directory、pushd、linked worktree lock の indexing 方針を確認するとき
+- INDEX.md の entry schema 検証や render/parse/update の挙動を変更・調査するとき
+- ディレクトリ traversal、symlink、特殊ファイル、memo 除外、並列更新、lock の回帰を確認するとき
+- INDEX 更新時の Codex worker と subcommand logger の連携を確認するとき
 
 ## Do not read this when
-- CLI lifecycle 全体や indexing 以外のサブコマンド動作を確認するとき
-- INDEX entry の正本 schema や仕様文書そのものを確認するときは、対応する oracle 文書・oracle schema を直接読む
-- Codex 出力品質そのものではなく、INDEX 更新の制御や外部挙動を扱わないテストを探しているとき
+- CLI lifecycle や indexing サブコマンド全体の統合挙動を確認したいときは、対応するサブコマンド実装・テストを直接読む
+- INDEX entry の正本仕様や生成 prompt の規約を確認したいときは、参照されている oracle 文書・oracle source を読む
 
 ## hash
-- d0e5754e48eb31d1ca12fd47dec4a5de3b396889435a5687116dc05194ecefae
+- 02521388eea0b35228ea7766094f0d5cf4725829704b503e335011e53b184550
 
 # `test_indexing_preflight.py`
 
@@ -475,18 +474,20 @@
 # `test_oracle_review_loop.py`
 
 ## Summary
-- oracle review の finding loop を検証するテスト。対象 oracle ごとの finding 分離、main worktree のパス照合、challenger/advocate 間の理由引き継ぎ、割り込み時の部分結果保持、merge 応答の意味検証と再試行・失敗上限を、fake Codex callback と隔離 worktree で確認する。
+- oracle review の finding loop に対する回帰テスト。finding の対象別引き継ぎ、main worktree のパス照合、challenger/advocate の理由伝播、割り込み時の部分結果保持、semantic merge retry と上限到達時の失敗を検証する。
+- 同一 review round と fake Codex call 列を通じて、列挙・検証・judge の外部契約をまとめて確認するテスト入口。
 
 ## Read this when
-- oracle review の finding 列挙・検証・判定 loop を変更またはレビューするとき
-- oracle review の worktree、prompt、Structured Output、割り込み時状態、merge retry のテストを追加・修正するとき
+- oracle review の finding 列挙・統合・検証・judge loop を変更または調査するとき
+- challenger/advocate の prompt 内容や round 間の finding state 引き継ぎを確認するとき
+- KeyboardInterrupt 復旧、部分結果、semantic retry の挙動を変更または検証するとき
 
 ## Do not read this when
-- oracle review 以外のサブコマンドや finding loop と無関係なテストを扱うとき
-- oracle review の実装詳細だけを確認したい場合は、まず対応する realization implementation と oracle 仕様を読むとき
+- oracle review 以外のサブコマンドや、finding loop に関係しない一般的なテスト基盤を調査するとき
+- 正本仕様そのものを確認する場合。対応する oracle doc と開発ルールを直接読むこと
 
 ## hash
-- 7fd44528a6ab3fa927b89f0e7112ae8e7cab64c738892c0e9fd2ed608fe2c8ac
+- d45fa314f9859cebd6809f9e0d38bb754159fb248f4c14b019c9f0a48b2b4b42
 
 # `test_oracle_review_merge_operations.py`
 
@@ -507,17 +508,19 @@
 # `test_oracle_review_report.py`
 
 ## Summary
-- oracle review の report 生成と CLI 出力を検証するテスト。空・accepted/rejected・中断・処理失敗時の report 内容、finding の分類・件数・評価済み oracle 範囲、scope オプション、path alias や symlink の集計、Structured Output 呼び出しを確認する。
+- oracle review の report 構築と CLI 出力を検証する回帰テスト。所見の受理・棄却、severity 別分類、件数集計、oracle path・symlink の扱い、scope 短縮指定を対象とする。
+- 列挙・判定処理の正常終了だけでなく、中断・途中失敗時の report 保存、完了済み oracle のみの表示、error summary、終了出力も検証する。
 
 ## Read this when
-- oracle review の report 形式、finding の verdict 分類、エラー・中断時の出力、評価対象 oracle file の集計、または `oracle review` CLI の回帰テストを変更・調査するとき。
+- oracle review の report schema、finding 表示、CLI 出力、件数集計を変更または調査するとき
+- oracle review の中断・エラー時挙動や未完了 finding の扱いを確認するとき
 
 ## Do not read this when
-- oracle review の実装詳細そのものを変更・調査する場合は、まず対応する実装ファイルと oracle 仕様を読む。
-- oracle review と無関係な CLI、report、oracle file 列挙の作業では、このテストを直接読む必要はない。
+- oracle review の実装処理そのものを変更・調査する場合は、まず対応する実装モジュールを読むとき
+- oracle review と無関係なサブコマンドや一般的なテスト基盤だけを変更・調査するとき
 
 ## hash
-- 9c4057723901124f788038c4cc6ce15d7be9e6dcf8d7561b0ebda00259787788
+- cc289cb4cc9fa68eb7a508f5ddfb7993688df3f82662aabb415a5bcb7c377303
 
 # `test_oracle_review_targets.py`
 
@@ -540,21 +543,18 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- oracle review の worktree 分離、snapshot commit からの fork、未コミット差分の拒否、active editing run 中の実行可否を検証するテスト。
-- review worktree で生成された INDEX.md のみを session に統合し、preflight 由来の INDEX.md、削除競合、入れ子の未追跡 INDEX.md を扱えることを確認する。
-- INDEX.md 以外の差分を review worktree から統合せず、エラーとして報告することを検証する。
+- oracle review の review worktree lifecycle を検証する統合テスト。linked worktree・session snapshot からの fork、未コミット差分の拒否、active editing run 中の実行、INDEX.md だけの統合、preflight commit、INDEX conflict 解決、不要な差分の拒否と後始末を確認する。
 
 ## Read this when
-- oracle review の worktree 作成元、session branch、snapshot commit、worktree cleanup の挙動を変更・調査するとき。
-- oracle review における INDEX.md の生成・統合・commit・merge conflict 解決を変更・調査するとき。
-- oracle review が未コミット差分、非 INDEX.md 差分、active editing run をどう扱うか確認するとき。
+- oracle review の worktree、branch、snapshot commit、preflight commit、差分検証、merge、INDEX.md 統合の挙動を変更または調査するとき。
+- oracle review の回帰テストを追加・修正するとき。
 
 ## Do not read this when
-- oracle review の実装詳細だけを確認したい場合は、対応する sub_commands の実装と oracle review 仕様を直接読む。
-- 一般的な INDEX.md 生成規則や通常の indexing 処理だけを調査する場合は、indexing の仕様・実装・テストを直接読む。
+- oracle review の通常の所見列挙・判定 schema や、worktree lifecycle と無関係な CLI 機能だけを調べるとき。
+- INDEX.md の生成ロジック自体を変更・調査する場合は、まず indexing の実装・仕様を直接読むとき。
 
 ## hash
-- 66dd75b853341fc33dae7b95f2eec1d159f10170273d3399fc99da42d7c96d9b
+- 31d3ad0ba2bd135b451537b0a5a6e094e5101bd54ad06ce90789e8ef0e4dd84d
 
 # `test_packaged_import.py`
 
@@ -595,38 +595,38 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 標準 prompt parts と complete prompt の組み立て結果を検証するテストファイル。各 standard のタイトル・主要文言・出力内容、file access mode ごとの規則、complete prompt への標準文書の注入可否、root placeholder の保持、既定値での省略を確認する。prompt parts や complete prompt の挙動を変更・調査する際のテスト側の入口となる。
+- 標準 prompt parts の StructDoc rendering と complete prompt の組み立て結果を検証する回帰テスト群。各標準ルールの見出し・主要文面、file access mode ごとの内容、標準ルールの包含条件、root placeholder の保持と展開を扱う。prompt builder や標準 prompt 文面の変更時に確認する入口となる。
 
 ## Read this when
-- prompt parts の本文・タイトル・主要規則を変更したとき
-- complete prompt の標準文書注入、省略、root token 展開の挙動を変更・検証するとき
-- file access mode、routing rule、index entry standard、oracle/realization standard のテストを確認するとき
+- prompt parts の rendering や complete prompt の包含・除外条件を変更または調査するとき
+- file access mode、root placeholder、標準ルール注入の挙動を変更または検証するとき
+- prompt builder 周辺の回帰テストを確認するとき
 
 ## Do not read this when
-- prompt の実装詳細だけを調査し、テスト期待値の変更が不要なとき
-- このテストが対象とする標準文書や complete prompt と無関係な機能を変更するとき
-- 具体的な standard の正本仕様を確認したいとき（対応する oracle source を直接読む）
+- prompt builder の実装詳細や標準 prompt 文面そのものを確認したいときは、対応する src の実装へ直接進む
+- StructDoc の一般的な rendering 仕様を確認したいときは、StructDoc の定義・専用テストへ進む
+- prompt parts や complete prompt と無関係な CLI 機能・テストを扱うとき
 
 ## hash
-- 1b9212587256b870f1375a0ac202ce570f593d22eafa867ae62059809c0b0530
+- e9a44a7913150d1e8a5aa5716df9ccb6df25db99fe210633d91e4b8452906b32
 
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の error、log、preflight、completion 境界を検証するテスト。duration 表示、サブコマンドログの衝突・並列書き込み、doctor/pre-log 失敗時の記録、構造化 Markdown error 出力、CLI 解析エラー、scope 制約、work root 検証、completion の副作用抑制、起動 wrapper の失敗報告、.gitignore 更新、worktree ごとの doctor 対象を扱う。runtime CLI や error/logging 実装の挙動を変更・検証するときの入口。
+- CLI の error、log、preflight、completion 境界を検証するランタイム CLI 回帰テスト。
+- duration 表示、サブコマンドログの衝突・並列記録、doctor/pre-log 失敗時のログ、構造化 error report、CLI 解析エラー、work root 制約、completion の副作用抑止、起動 wrapper の失敗、gitignore 更新を扱う。
 
 ## Read this when
-- CLI のエラー出力、終了コード、stdout/stderr 境界を変更または検証するとき
-- サブコマンドログ、doctor preflight、pre-log check の失敗処理を変更または検証するとき
-- shell completion の preflight・副作用抑制や起動 wrapper の error report を変更または検証するとき
-- cmoc の .gitignore 更新や worktree 対象 root の扱いを変更または検証するとき
+- CLI の error report、終了コード、stdout/stderr 出力、call stack、引数解析失敗を変更・調査するとき。
+- サブコマンドログ、logger の並列性・timestamp 衝突、quota wait、preflight または doctor preprocess の失敗処理を変更・調査するとき。
+- work root 判定、shell completion probe、起動 wrapper の venv エラー、cmoc 用 gitignore 更新を変更・調査するとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務処理や indexing/oracle review/editing の内部ロジックだけを変更するときは、対応する実装・テストを直接読む
-- CLI の出力や runtime の error/logging 境界に関係しないテストを調査するとき
+- 個別サブコマンドの業務ロジックや固有の入出力だけを変更・調査する場合は、対応するサブコマンドのテストを直接読む。
+- CLI lifecycle の error、log、preflight、completion に関係しない parser、oracle、realization の単体挙動を調査する場合。
 
 ## hash
-- e65c0ee1deaef5d73e7e793ce610ce7bf80997a85ffdd71afa42067135adb814
+- e05c2fcc7f97b369cc93efda460acded3190797c379bdb0546382994a5f5e016
 
 # `test_runtime_codex_conflicts.py`
 

@@ -127,37 +127,33 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装ルート。Typer による CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP adapter 群を含む。
-- CLI の登録と引数解析は `main.py`、共通処理は `commons`、サブコマンド実装は `sub_commands`、ACP 互換経路は `acp`、互換公開入口は `basic`・`config`・`cmoc_runtime`・`oracle.py` から辿る。
+- cmoc CLI の realization 実装を収める src ディレクトリ。Typer の主要エントリーポイント、CLI サブコマンド、共通 runtime、互換 import shim、設定・ACP・oracle 参照経路を扱い、各責務の詳細実装へ進む入口となる。
 
 ## Read this when
-- cmoc の CLI 全体構成、公開サブコマンド、Typer の引数解析やエラー処理を調査・変更するとき。
-- 共通 runtime helper、ACP adapter、互換 import 経路、または CLI サブコマンドの実装配置を特定するとき。
-- 個別の処理を読む前に、`commons`・`sub_commands`・`acp` などの担当領域と入口を確認するとき。
+- cmoc の realization CLI 全体の構成、主要エントリーポイント、サブコマンド実装、共通 runtime の配置を確認・変更するとき。
+- CLI から各サブコマンドや runtime・互換入口へ委譲される経路を把握するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細実装だけを確認したいときは、`sub_commands` 配下の該当実装を直接読む。
-- 共通 runtime の具体的な挙動だけを確認したいときは、`commons` 配下の担当モジュールを直接読む。
-- 正本仕様や oracle 側の実装内容を確認したいときは、`oracle` ツリーを直接読む。
-- 互換 import と無関係な個別 API の実装詳細を調査するとき。
+- 特定のサブコマンド、runtime helper、設定、ACP builder、oracle・session・TUI 実装の詳細だけを確認したいときは、対応する下位ディレクトリまたは直接の実装へ進む。
+- 正本仕様や canonical な oracle 実装を確認したいときは、src ではなく oracle 側を直接読む。
 
 ## hash
-- daa0f190530e7e2bfbb85205b5940c512e7c414862703b352157da778f9fff2e
+- 127d42eeeceb2831351fda25900ec81893847755d1d7301dc4f88ee6c7c02fa4
 
 # `test`
 
 ## Summary
-- テストコードから、ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Git/worktree、prompt、Ollama など cmoc の主要機能に関する外部挙動と制御契約を検証するディレクトリ。共通テストヘルパーと機能別の realization test が、対応する実装・oracle 仕様を読む入口を提供する。
+- cmoc の realization test を集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、indexing、oracle review、session/run state などの外部挙動・契約・異常系を検証し、各機能の実装変更時に対応テストへ進む入口となる。
 
 ## Read this when
-- cmoc の実装変更に伴う回帰テストや契約テストの対象を探すとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run lifecycle、設定、worktree、prompt の挙動をテストまたは調査するとき
-- テスト用の Codex、Ollama、Git repository、fake external command など共通 fixture・helper の利用方法を確認するとき
+- cmoc の realization test を探すとき
+- CLI、runtime、Codex、ACP builder、indexing、oracle review、session/run state の挙動をテストから確認するとき
+- 実装変更後の回帰テストや統合テストの対象を選ぶとき
 
 ## Do not read this when
-- 正本仕様や schema の内容そのものを確認・変更するときは、対応する oracle file を直接読む
-- 特定機能の実装詳細だけを調査するときは、まず対応する src または sub_commands 配下の実装を読む
-- テスト対象と無関係な機能や、一般的な開発環境・テスト実行手順だけを確認するとき
+- 正本仕様や oracle schema の内容を確認するときは、対応する oracle file を直接読む
+- 特定機能の実装詳細だけを確認するときは、対応する src の実装へ直接進む
+- テスト共通 helper の詳細だけを確認するときは、対象の support module を直接読む
 
 ## hash
-- e39685caf530102ffde9fb5fdc8639b67b4189baa0d5bae6433a4a471ff795db
+- 52502fe50e6eec35b09fed6e65936b26219f1bc49be27111c23baf81f76f4821

@@ -34,19 +34,19 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md を深いディレクトリから更新し、必要なエントリーを Codex で生成して Git commit まで行う indexing 処理を提供するモジュール。排他制御、対象判定、既存エントリー再利用、ハッシュによる鮮度確認、並列生成、Structured Output の検証を扱う。
+- INDEX.md の検査・生成・再利用・鮮度検証・書き込み・Git commit を一貫して扱う indexing lifecycle の共通実装。directory traversal、entry 生成、並列実行、排他制御、Structured Output 検証を提供する。
 
 ## Read this when
-- INDEX.md の自動生成・更新・commit の挙動を変更または調査するとき
-- indexing の排他制御、対象ファイル判定、ハッシュ、並列 Codex 呼び出しを確認するとき
-- INDEX.md entry の形式検証や生成結果のエラー処理を確認するとき
+- INDEX.md の自動更新、entry の生成または再利用条件を変更するとき
+- INDEX.md の hash 鮮度判定、Markdown 構造検証、書き込み、indexing commit を調査するとき
+- indexing の並列実行、Codex context 継承、worktree 間 lock、preflight 動作を変更または検証するとき
 
 ## Do not read this when
-- INDEX.md の内容を利用する側のルーティングや個別機能の挙動だけを調べるとき
-- indexing と無関係な CLI 機能やランタイム処理を変更するとき
+- 通常の CLI サブコマンド処理や INDEX.md 以外のファイル生成を調査するとき
+- INDEX.md entry の意味内容そのものを定義・変更するときは、まず対応する oracle 文書または entry 生成処理を確認するとき
 
 ## hash
-- cbf36ec59d1cd239eb45be33f09f226261b0aa1231f859aec58d1401c55540e6
+- c7f948d005811a6a2336a9f8077428c43b275afa74627744481d483fd40bdbb0
 
 # `prompt_editor_input.py`
 
@@ -257,21 +257,20 @@
 # `runtime_git.py`
 
 ## Summary
-- Git 操作、branch・commit・worktree の検証と作成・削除、Git ignore 状態、oracle/realization file 判定を担う共通 runtime helper。cmoc の session/run 処理や repository path 分類で Git 境界・安全性を確認する入口。
+- Git コマンド実行、branch・HEAD・status・worktree の作成／削除、Git ignore 判定、oracle／realization file の分類を担う共通境界。path の正規化、symlink 検査、managed worktree の安全性検証もここで扱う。
 
 ## Read this when
-- Git subprocess の実行結果や利用者向けエラー変換を変更するとき
-- managed branch、linked worktree の作成・削除・安全な path 検証を変更するとき
-- `.cmoc/gu` の ignore 設定や oracle/realization file の分類ロジックを変更するとき
-- Git status、branch、commit、common directory の取得 helper の利用箇所を調査するとき
+- Git の状態取得や clean worktree 前提を実装・変更するとき
+- cmoc 管理 branch／linked worktree の作成・削除や安全性検証を調べるとき
+- `.cmoc/gu` の ignore 設定や Git exclude、追跡状態を扱うとき
+- oracle file／realization file の path 分類や Git 状態判定を変更・確認するとき
 
 ## Do not read this when
-- 特定の CLI サブコマンド固有の session・run 業務フローだけを変更するとき
-- Git や file 分類を介さない runtime path・result 型の定義を確認するとき
-- worktree や ignore の安全性ではなく、oracle 文書に定義された仕様そのものを確認するとき
+- 特定の CLI サブコマンドの業務フローだけを確認する場合は、そのサブコマンドの実装や対応する oracle 文書を直接読む
+- Git と無関係な path 操作、実行時エラー、結果型の詳細だけを確認する場合は、それぞれの専用共通 module を読む
 
 ## hash
-- cb039903662a4790595648b7bc06df613e2e6339e3aa19a1804861658b32e4d9
+- b82639b183c8387b636c54303818d9f4cd1805d922cfb6f58e3325b6ec695ff3
 
 # `runtime_logging.py`
 
@@ -375,20 +374,20 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run の開始・解決・状態更新・worktree 差分管理を担う共通ランタイム。session/run の lifecycle 検証、branch/worktree 操作、commit・rollback、INDEX 更新、oracle・realization path の変更許可判定を提供する。editing run の各サブコマンド実装や、run lifecycle の状態遷移・差分検査の入口として読む。
+- editing run のライフサイクル全体を管理する共通モジュール。session から isolated run worktree を開始し、active run の解決、state 遷移、work unit の rollback/commit、INDEX 更新、Git 差分分類、agent/run/session の変更 path 検査、oracle diff、cleanup 判定に必要な処理を提供する。run branch の不変条件と lifecycle lock を共有するため、editing run lifecycle の実装入口として扱う。
 
 ## Read this when
-- editing run の開始、active run の解決、joinable/error 状態への更新を変更または調査するとき
-- run branch/worktree の作成・削除、commit・rollback、INDEX 更新を扱うとき
-- agent・run・session が変更できる path の判定、rename を含む差分列挙、oracle diff の取得を調査するとき
+- editing run の開始、active run の解決、joinable/error への state 遷移を変更または調査するとき
+- run worktree の commit・rollback、INDEX 更新、差分 path の分類や許可範囲検査を変更または調査するとき
+- run/session branch の変更検証、oracle diff、refactor state path の扱いを確認するとき
 
 ## Do not read this when
-- 特定の editing run サブコマンドの個別仕様やユーザー向け挙動だけを確認したいときは、先に対応する app_spec またはサブコマンド実装を読む
-- session state のデータ構造や永続化形式だけを変更・調査するときは、runtime_state の実装を直接読む
-- 一般的な git 操作や path 判定で editing run lifecycle との連携がないときは、この共通モジュールを読む必要はない
+- CLI の個別サブコマンド仕様や利用者向け editing run の契約だけを確認する場合は、対応する oracle doc を先に読む
+- Git 操作や session state の低レベル共通処理そのものを変更する場合は、各 commons モジュールを直接読む
+- INDEX 更新機構だけを調査する場合は、indexing モジュールを直接読む
 
 ## hash
-- c1edb49a866e82370102259d3fb717dc62cb56d1f2788f5b3afbde7572d1d499
+- c0b14b1a9edb6b34185d024b2f90d3b4497fea34189f7ebde749e818824fdccc
 
 # `runtime_run_report.py`
 

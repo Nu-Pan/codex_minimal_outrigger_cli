@@ -4,6 +4,13 @@
 {{work-root}}/oracle/doc/app_spec/run_isolation.md、
 {{work-root}}/oracle/doc/branch_model.md、
 {{work-root}}/oracle/doc/app_spec/indexing.md。
+
+この file は 16,000 文字を超えるが、review fork、linked worktree、preflight commit、
+差分検証、merge は同じ review worktree lifecycle を検証する一つの責務である。分割
+すると、review branch と INDEX 差分の外部契約を複数 file で追う必要があるため、現状
+は review worktree 回帰として一箇所に保つ。
+
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import subprocess

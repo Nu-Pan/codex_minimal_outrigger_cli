@@ -1,3 +1,13 @@
+"""Git repository の状態・worktree・path 分類を扱う共通境界。
+
+この file は 16,000 文字を超えるが、Git command、branch/worktree、ignore、
+oracle/realization file の分類は、同じ repository path・Git index・安全性の不変条件を
+共有する一つの境界である。分割すると、path の正規化と Git 状態検証を各 module で
+重複して追う必要が生じるため、現状は Git 境界として一箇所に保つ。
+
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
+
 import shutil
 import subprocess
 from pathlib import Path
