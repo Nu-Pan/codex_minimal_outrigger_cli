@@ -1104,10 +1104,10 @@
     "last_investigated_at": "2026-07-26_05-46_25_019214000"
   },
   "test/test_cli_tui.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "cc674c06ce3ee6624821fab5a637443857a04e6378ab08667f24315a6dedb5c8",
+    "last_investigated_at": "2026-07-26_06-00_26_711920000"
   },
   "test/test_codex_runtime_errors.py": {
     "investigation_required": true,
