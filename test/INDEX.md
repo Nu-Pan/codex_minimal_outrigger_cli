@@ -490,18 +490,18 @@
 # `test_oracle_review_merge_operations.py`
 
 ## Summary
-- oracle review の merge operation 適用処理を対象とするテスト。delete・replace・merge の kind 契約、finding 更新と採番、追加件数、不正な payload・対象・重複 target の拒否を検証する。
+- oracle review の finding merge operation について、delete・replace・merge の kind 契約、finding 更新、採番を検証する pytest。対象 ID・payload の不正、ID の重複利用も拒否されることを確認する。
 
 ## Read this when
-- oracle review の finding merge operation の契約や適用結果を変更・確認するとき
-- apply_finding_merge_operations の入力検証、対象再利用防止、finding 生成をテストするとき
+- oracle review の merge operation の仕様変更や実装変更を検証するとき
+- finding の削除・置換・統合、採番、入力検証のテストを確認するとき
 
 ## Do not read this when
-- oracle review の merge operation 以外の処理を変更・確認するとき
-- 実装本体の責務や CLI 全体の仕様を確認するときは、まず対応する oracle 仕様または実装ファイルを読む
+- oracle review の通常の CLI 入出力や merge operation 以外の処理を確認するとき
+- 正本仕様そのものを確認するときは、参照されている oracle review 文書を直接読む
 
 ## hash
-- eaa1dc20ee2f54edab5af2bf2d23511177ba13df99ac87b446831e01aaf747f8
+- 8e42fe28e2b74c0ad87780ea4beaa26109a196a0df587aa2d7ec155cf8296478
 
 # `test_oracle_review_report.py`
 

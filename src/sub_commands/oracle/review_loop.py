@@ -433,7 +433,9 @@ def _validate_finding_merge_operation(
             "merge finding operation target_ids include unknown finding_id: "
             + ", ".join(sorted(unknown_ids))
         )
-    finding = operation.get("finding")
+    if "finding" not in operation:
+        raise ValueError("merge finding operation requires a finding field")
+    finding = operation["finding"]
     if kind == "delete":
         if not target_ids or finding is not None:
             raise ValueError("delete operation requires targets and finding null")

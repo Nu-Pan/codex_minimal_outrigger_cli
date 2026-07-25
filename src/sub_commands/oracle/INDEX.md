@@ -81,23 +81,20 @@
 # `review_loop.py`
 
 ## Summary
-- oracle review の finding 列挙、関連 finding の抽出、merge、反証・擁護による検証、採否判定を一連のループとして実行する。
-- review 中断時には、完了済み agent call の結果と評価済みファイルを部分結果として保持する。
-- merge operation の形式・対象 ID・重複を検証し、意味的な Structured Output 検証失敗だけを規定回数まで再試行する。
-- oracle review サブコマンドの review 状態管理と finding 操作の実装入口である。
+- oracle review の所見列挙・マージ・妥当性検証・採否判定を一連のループとして実行する実装。レビュー進捗、finding の関連付け、semantic retry、KeyboardInterrupt 時の部分結果保存、merge operation の契約検証を扱う。
 
 ## Read this when
-- oracle review の finding 列挙・merge・検証・judge の挙動を変更または調査するとき
-- review の中断時部分保存、semantic retry、finding merge operation の検証を確認するとき
-- review progress や評価済み oracle file の追跡処理を変更するとき
+- oracle review の enumerate／merge／validate／judge のループ動作を変更・調査するとき
+- レビュー中断時の確定済み所見や評価済みファイルの扱いを確認するとき
+- finding の merge operation、ID、重複、対象妥当性、semantic retry の挙動を確認するとき
 
 ## Do not read this when
-- oracle review の prompt parameter 生成だけを変更するときは、各 prompt builder の対象ファイルを直接読む
-- review 対象 path の定義だけを確認するときは、review_paths の対象ファイルを直接読む
-- oracle review 全体の CLI 入出力や仕様だけを確認するときは、対応する oracle review の仕様文書を先に読む
+- oracle review の prompt parameter 構築だけを変更・調査するときは、各 review parameter builder を直接読む
+- oracle review のファイルパス解決だけを変更・調査するときは、review_paths の実装を直接読む
+- oracle review 以外のサブコマンドのループや所見処理を扱うとき
 
 ## hash
-- 52a56d1e0463dcd5aff5069d1e8e6d151553ef229caee15299f3b6a8336032cf
+- fb099dd2b6671a992b5f01c1942f062d345e5b1c6972408f4408da05df098ab1
 
 # `review_paths.py`
 
