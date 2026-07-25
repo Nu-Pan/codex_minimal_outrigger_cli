@@ -996,10 +996,10 @@
     "last_investigated_at": "2026-07-25_13-09_10_405336000"
   },
   "src/sub_commands/session/__init__.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "bfd8539ef9776e0e27e2e2e0d6365626dc832eb3abf90403affec4b29f1f8364",
+    "last_investigated_at": "2026-07-25_13-21_30_876093000"
   },
   "src/sub_commands/session/abandon.py": {
     "investigation_required": true,
