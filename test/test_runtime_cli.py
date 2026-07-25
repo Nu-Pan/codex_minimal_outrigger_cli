@@ -11,6 +11,13 @@
 - {{work-root}}/oracle/doc/app_spec/indexing.md
 - {{work-root}}/oracle/doc/app_spec/misc_spec.md
 - {{work-root}}/oracle/src/oracle/other/path_model.py
+
+この file は 16,000 文字を超えるが、CLI lifecycle の error、log、preflight、completion
+は同じ runner、work root、subcommand event を共有する一つの外部契約である。分割すると
+共通 fixture と終了処理の観測文脈が複数 file に分散するため、現状は runtime CLI 回帰
+として一箇所に保つ。
+
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json

@@ -1,4 +1,12 @@
-"""`cmoc run join` の workload 非依存 merge lifecycle。"""
+"""`cmoc run join` の workload 非依存 merge lifecycle。
+
+この file は 16,000 文字を超えるが、差分検査、merge、post-join state 同期、report、
+cleanup は同じ active run の状態と failure rollback を共有する一つの責務である。
+分割すると、join の成功・失敗・cleanup pending の不変条件を複数 file で追う必要が
+生じるため、現状は run join lifecycle として一箇所に保つ。
+
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
 
 import os
 from dataclasses import replace
@@ -148,7 +156,12 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 state_sync_commit,
                 cleanup,
                 report,
-            ) = _merge_and_finalize(context, state, warnings)
+            ) = _merge_and_finalize(
+                context,
+                state,
+                warnings,
+                session_head_before_join,
+            )
         except BaseException as exc:
             if getattr(exc, "cmoc_stdout", None) is not None:
                 raise
@@ -217,6 +230,7 @@ def _merge_and_finalize(
     context: EditingRunContext,
     state: SessionState,
     warnings: list[str],
+    session_head_before_join: str,
 ) -> tuple[str, str, str | None, str, Path]:
     """merge、hook、state 同期、結果保存、cleanup を一続きで確定する。"""
     start_subcommand_step(3, "run branch を session へ merge", "merge run")
@@ -226,7 +240,12 @@ def _merge_and_finalize(
         check=False,
     )
     if merge.returncode != 0:
-        run_join_commit = _resolve_index_only_conflict_or_fail(context, state, warnings)
+        run_join_commit = _resolve_index_only_conflict_or_fail(
+            context,
+            state,
+            warnings,
+            session_head_before_join,
+        )
     else:
         run_join_commit = head_commit(context.session_worktree)
     start_subcommand_step(4, "post-join hook と state 同期", "run post-join")
@@ -292,18 +311,7 @@ def _record_join_failure(
     session_head_before_join: str,
 ) -> Path:
     """未確定 post-join 差分を除き、active run を error として report する。"""
-    merge_head = run_git(
-        ["rev-parse", "-q", "--verify", "MERGE_HEAD"],
-        context.session_worktree,
-        check=False,
-    )
-    if merge_head.returncode == 0:
-        run_git(["merge", "--abort"], context.session_worktree, check=False)
-    run_git(
-        ["reset", "--hard", session_head_before_join],
-        context.session_worktree,
-    )
-    run_git(["clean", "-fd"], context.session_worktree)
+    _restore_session_after_join_failure(context, session_head_before_join)
     state.run = RunPart(
         state="error",
         kind=context.kind,
@@ -324,6 +332,25 @@ def _record_join_failure(
             "error": repr(exc),
         },
     )
+
+
+def _restore_session_after_join_failure(
+    context: EditingRunContext,
+    session_head_before_join: str,
+) -> None:
+    """merge/post-join 失敗後に session worktree を開始時点へ戻す。"""
+    merge_head = run_git(
+        ["rev-parse", "-q", "--verify", "MERGE_HEAD"],
+        context.session_worktree,
+        check=False,
+    )
+    if merge_head.returncode == 0:
+        run_git(["merge", "--abort"], context.session_worktree, check=False)
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # merge --abort が失敗しても、join 開始前の clean tree へ戻せなければ
+    # error state から join/abandon を再実行できない。
+    run_git(["reset", "--hard", session_head_before_join], context.session_worktree)
+    run_git(["clean", "-fd"], context.session_worktree)
 
 
 def _stop_error_run(context: EditingRunContext, warnings: list[str]) -> None:
@@ -366,6 +393,7 @@ def _resolve_index_only_conflict_or_fail(
     context: EditingRunContext,
     state: SessionState,
     warnings: list[str],
+    session_head_before_join: str,
 ) -> str:
     """INDEX.md だけの conflict を再生成し、それ以外は error report へ移す。"""
     fields = run_git(
@@ -381,7 +409,7 @@ def _resolve_index_only_conflict_or_fail(
         refresh_indexes(context.session_worktree, commit=True)
         warnings.append("INDEX.md conflicts were regenerated")
         return merge_commit
-    run_git(["merge", "--abort"], context.session_worktree, check=False)
+    _restore_session_after_join_failure(context, session_head_before_join)
     state.run.state = "error"
     write_state(context.state_path, state)
     report = write_lifecycle_report(
@@ -430,12 +458,16 @@ def _cleanup_joined_run(
     if Path.cwd().resolve() == context.run_worktree.resolve():
         os.chdir(context.session_worktree)
     removal = remove_worktree(context.repo, context.run_worktree)
-    if removal.returncode != 0 and context.run_worktree.exists():
+    if (
+        removal.returncode != 0
+        or context.run_worktree.exists()
+        or context.run_worktree.is_symlink()
+    ):
         warnings.append("run worktree cleanup failed")
         return "preserved"
     if branch_exists(context.repo, context.run_branch):
         deletion = delete_branch(context.repo, context.run_branch)
-        if deletion.returncode != 0:
+        if deletion.returncode != 0 or branch_exists(context.repo, context.run_branch):
             warnings.append("run branch cleanup failed")
             return "branch_preserved"
     return "completed"

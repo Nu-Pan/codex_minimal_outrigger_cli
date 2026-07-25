@@ -31,18 +31,24 @@ def test_path_model_resolves_token_path_inside_repo() -> None:
     assert token_path == Path("{{cmoc-root}}") / "src"
 
 
-def test_make_repo_ignores_global_commit_signing_and_hooks(
+def test_make_repo_ignores_global_git_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """test repositoryがglobal signingとhook設定に依存しないことを検証する。"""
+    """test repository が global Git 設定に依存しないことを検証する。"""
     hooks = tmp_path / "hooks"
     hooks.mkdir()
     hook = hooks / "pre-commit"
     hook.write_text("#!/bin/sh\nexit 1\n")
     hook.chmod(0o755)
+    template = tmp_path / "git-template"
+    template.mkdir()
+    (template / ".gitignore").write_text("README.md\noracle/spec.md\n")
+    global_ignore = tmp_path / "gitignore"
+    global_ignore.write_text("README.md\noracle/spec.md\n")
     global_config = tmp_path / "gitconfig"
     global_config.write_text(
         f"[commit]\n\tgpgsign = true\n[core]\n\thooksPath = {hooks}\n"
+        f"\texcludesFile = {global_ignore}\n[init]\n\ttemplateDir = {template}\n"
     )
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(global_config))
 
@@ -50,6 +56,9 @@ def test_make_repo_ignores_global_commit_signing_and_hooks(
 
     assert run_git(root, "config", "--local", "commit.gpgsign").stdout == "false\n"
     assert run_git(root, "config", "--local", "core.hooksPath").stdout == "/dev/null\n"
+    assert (
+        run_git(root, "config", "--local", "core.excludesFile").stdout == "/dev/null\n"
+    )
     assert run_git(root, "rev-parse", "--verify", "HEAD").stdout.strip()
 
 
@@ -278,6 +287,22 @@ def test_remove_worktree_rejects_unregistered_managed_path(
         remove_worktree(root, target)
 
     assert (target / "keep.txt").read_text() == "keep\n"
+
+
+def test_remove_worktree_rejects_non_run_branch_at_managed_path(
+    tmp_path: Path,
+) -> None:
+    """管理領域内でもrun branchと対応しないworktreeを削除しない。"""
+    root = make_repo(tmp_path)
+    target = root / ".cmoc" / "gu" / "worktree" / "session" / "run"
+    run_git(root, "worktree", "add", "-b", "ordinary", str(target), "HEAD")
+
+    try:
+        with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+            remove_worktree(root, target)
+        assert target.exists()
+    finally:
+        run_git(root, "worktree", "remove", "--force", str(target))
 
 
 def test_remove_worktree_rejects_replaced_registered_path(

@@ -1,3 +1,13 @@
+"""oracle review の finding 列挙・判定・merge loop を扱う。
+
+この file は 16,000 文字を超えるが、review progress、同一 round の finding、semantic
+retry、interrupt 時の部分保存は同じ review loop 状態を共有する一つの責務である。
+分割すると、judgement と merge operation の再開・失敗条件を複数 file で追う必要が
+生じるため、現状は oracle review loop として一箇所に保つ。
+
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
+
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 import json
 from dataclasses import dataclass, replace
@@ -423,7 +433,9 @@ def _validate_finding_merge_operation(
             "merge finding operation target_ids include unknown finding_id: "
             + ", ".join(sorted(unknown_ids))
         )
-    finding = operation.get("finding")
+    if "finding" not in operation:
+        raise ValueError("merge finding operation requires a finding field")
+    finding = operation["finding"]
     if kind == "delete":
         if not target_ids or finding is not None:
             raise ValueError("delete operation requires targets and finding null")

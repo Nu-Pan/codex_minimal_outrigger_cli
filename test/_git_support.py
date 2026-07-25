@@ -18,13 +18,14 @@ def make_repo(tmp_path: Path) -> Path:
     """cmoc CLI test が対象にできる最小の commit 済み repository を作る。"""
     root = tmp_path / "repo"
     root.mkdir()
-    run_git(root, "init")
+    run_git(root, "init", "--template=/dev/null")
     run_git(root, "config", "user.email", "cmoc@example.invalid")
     run_git(root, "config", "user.name", "cmoc test")
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md: cmoc の制御ロジック実行前に、
-    # テストリポジトリが user Git signing や hook 設定へ依存しないようにする。
+    # テスト repository が user Git の template、signing、hook、ignore 設定へ依存しないようにする。
     run_git(root, "config", "commit.gpgsign", "false")
     run_git(root, "config", "core.hooksPath", "/dev/null")
+    run_git(root, "config", "core.excludesFile", "/dev/null")
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
     (root / "oracle" / "spec.md").write_text("# spec\n")

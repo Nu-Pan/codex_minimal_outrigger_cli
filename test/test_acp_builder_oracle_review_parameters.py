@@ -148,6 +148,36 @@ def test_oracle_review_enumerate_parameter_matches_oracle_builder() -> None:
     assert parameter == oracle_parameter
 
 
+@pytest.mark.parametrize("use_placeholder", [False, True])
+def test_oracle_review_enumerate_parameter_keeps_symlink_entry_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    use_placeholder: bool,
+) -> None:
+    """enumerate prompt の oracle-path が symlink entry を指すことを検証する。"""
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "oracle").mkdir()
+    target = tmp_path / "memo.md"
+    target.write_text("# memo\n")
+    link = tmp_path / "oracle" / "memo-link.md"
+    link.symlink_to("../memo.md")
+    monkeypatch.chdir(tmp_path)
+    related_findings = f"- {{{{oracle-path}}}} = {link.resolve()}"
+    oracle_path = Path("{{work-root}}/oracle/memo-link.md") if use_placeholder else link
+
+    parameter = build_oracle_review_enumerate_finding_parameter(
+        oracle_path, related_findings
+    )
+
+    assert f"- {{{{oracle-path}}}} = {link}" in parameter.prompt
+    assert related_findings in parameter.prompt
+    placeholder_definition = parameter.prompt.split(
+        "# place holder definition", maxsplit=1
+    )[1]
+    assert f"- {{{{oracle-path}}}} = {link}" in placeholder_definition
+    assert f"- {{{{oracle-path}}}} = {link.resolve()}" not in placeholder_definition
+
+
 def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
     """merge finding builder の schema と work-root placeholder を検証する。"""
     parameter = build_oracle_review_merge_finding_parameter(findings="[]")
@@ -243,3 +273,160 @@ def test_oracle_review_validate_finding_advocate_preserves_dynamic_text() -> Non
     assert known_challenger in parameter.prompt
     assert parameter.prompt.count("`{{oracle_root}}` ツリー内") == 3
     assert "`{{oracle-root}}` ツリー内" in parameter.prompt
+
+
+@pytest.mark.parametrize(
+    ("builder", "arguments", "block_count"),
+    [
+        (
+            build_oracle_review_enumerate_finding_parameter,
+            (Path("{{work-root}}/oracle/spec.md"), "before\n```\ninside\n```\nafter"),
+            1,
+        ),
+        (
+            build_oracle_review_judge_finding_parameter,
+            ("before\n```\ninside\n```\nafter",) * 3,
+            3,
+        ),
+        (
+            build_oracle_review_merge_finding_parameter,
+            ("before\n```\ninside\n```\nafter",),
+            1,
+        ),
+        (
+            build_oracle_review_validate_finding_advocate_parameter,
+            ("before\n```\ninside\n```\nafter",) * 3,
+            3,
+        ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            ("before\n```\ninside\n```\nafter",) * 3,
+            3,
+        ),
+    ],
+)
+def test_oracle_review_builders_protect_nested_dynamic_code_fences(
+    builder: Callable[..., AgentCallParameter],
+    arguments: tuple[object, ...],
+    block_count: int,
+) -> None:
+    """review入力内の三連 backtick が各動的本文の境界を閉じないことを検証する。"""
+    parameter = builder(*arguments)
+
+    assert parameter.prompt.count("````text\nbefore\n") == block_count
+    assert parameter.prompt.count("\nafter\n````") == block_count
+
+
+def test_oracle_review_merge_keeps_placeholder_marker_in_findings() -> None:
+    """merge findings 内の placeholder 風見出しを prompt 境界と誤認しない。"""
+    findings = (
+        "before\n```\ninside\n```\n\n# place holder definition\n\n"
+        "```text\nunsafe\n```\nafter"
+    )
+
+    parameter = build_oracle_review_merge_finding_parameter(findings)
+
+    start = parameter.prompt.index("# 現状の所見リスト")
+    end = parameter.prompt.rfind("\n\n# place holder definition")
+    section = parameter.prompt[start:end]
+    assert findings in section
+    assert section.startswith("# 現状の所見リスト\n\n````text\n")
+    assert section.endswith("\n````")
+
+
+def test_oracle_review_fence_protection_ignores_marker_in_later_input() -> None:
+    """後続の動的入力に終了マーカーがあっても先行 section を保護する。"""
+    nested = "before\n```\ninside\n```\nafter"
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        nested,
+        "known\n\n# 所見が妥当であるとする理由",
+        "known",
+    )
+
+    assert parameter.prompt.count("````text\nbefore\n") == 1
+    assert "before\n```\ninside\n```\nafter" in parameter.prompt
+
+
+def test_oracle_review_fence_protection_keeps_marker_in_current_input() -> None:
+    """動的本文内の終了マーカーを本文の一部として保持する。"""
+    finding = "before\n```\ninside\n```\n\n# 所見が妥当であるとする理由\nafter"
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        finding,
+        "known",
+        "known",
+    )
+
+    assert parameter.prompt.count("````text\nbefore\n") == 1
+    assert (
+        "inside\n```\n\n# 所見が妥当であるとする理由\nafter\n````" in parameter.prompt
+    )
+
+
+@pytest.mark.parametrize(
+    ("builder", "next_section_heading"),
+    [
+        (
+            build_oracle_review_judge_finding_parameter,
+            "# 所見が妥当であるとする理由",
+        ),
+        (
+            build_oracle_review_validate_finding_advocate_parameter,
+            "# 既知の妥当であるとする理由",
+        ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            "# 既知の妥当であるとする理由",
+        ),
+    ],
+)
+def test_oracle_review_fence_protection_handles_marker_like_first_input(
+    builder: Callable[[str, str, str], AgentCallParameter],
+    next_section_heading: str,
+) -> None:
+    """先頭動的本文内の次 section 風 code block を本文として保持する。"""
+    finding = (
+        f"before\n```\ninside\n```\n\n{next_section_heading}\n\n"
+        "```text\nunsafe\n```\nafter"
+    )
+
+    parameter = builder(finding, "known", "known")
+
+    assert f"````text\n{finding}\n````" in parameter.prompt
+
+
+@pytest.mark.parametrize(
+    ("builder", "section_heading"),
+    [
+        (
+            build_oracle_review_judge_finding_parameter,
+            "# 所見が妥当ではないとする理由",
+        ),
+        (
+            build_oracle_review_validate_finding_advocate_parameter,
+            "# 既知の妥当ではないとする理由",
+        ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            "# 既知の妥当ではないとする理由",
+        ),
+    ],
+)
+def test_oracle_review_fence_protection_keeps_placeholder_marker_in_final_input(
+    builder: Callable[[str, str, str], AgentCallParameter], section_heading: str
+) -> None:
+    """最終動的本文内の placeholder 風見出しを prompt 境界と誤認しない。"""
+    challenger = (
+        "before\n```\ninside\n```\n\n# place holder definition\n\n"
+        "```text\nunsafe\n```\nafter"
+    )
+
+    parameter = builder("finding", "known advocate", challenger)
+
+    start = parameter.prompt.index(section_heading)
+    end = parameter.prompt.rfind("\n\n# place holder definition")
+    section = parameter.prompt[start:end]
+    assert challenger in section
+    assert section.startswith(f"{section_heading}\n\n````text\n")
+    assert section.endswith("\n````")

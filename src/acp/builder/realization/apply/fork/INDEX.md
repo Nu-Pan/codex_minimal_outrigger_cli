@@ -16,13 +16,13 @@
 # `launch_exec.py`
 
 ## Summary
-- realization apply fork 用の launch_exec builder を oracle 側の正本実装から再公開する薄い adapter。呼び出し側がこのモジュール経由で builder を利用するための入口を提供する。
+- realization apply fork 用の launch_exec builder を再公開する adapter。正本 builder で生成した AgentCallParameter の prompt に対し、raw oracle git diff のコードフェンスを保護する。
 
 ## Read this when
-- realization apply fork の launch_exec builder の import 入口や公開 API を確認するとき。
+- realization apply fork の launch_exec builder の挙動、prompt 生成、または raw oracle git diff の埋め込みを変更・調査するとき。
 
 ## Do not read this when
-- builder の具体的な構築ロジックや仕様を確認するときは、再公開元の oracle 実装を直接読む。
+- apply fork 以外の builder を扱うとき。正本 builder 自体の仕様や実装を確認する場合は、対応する oracle file を直接読む。
 
 ## hash
-- 9061ec63223d4ab9de66f345dac0bd26b409eae976b89ac27f8c73e1086ed548
+- edf6e79c8004629ae426c74f51846e1c3291f4285ddcc771db1c6d9ce4a79a3d

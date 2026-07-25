@@ -17,15 +17,16 @@
 # `join`
 
 ## Summary
-- oracle.acp_builder.session.join 互換の session join package。既存 import 経路を維持するための初期化入口と、conflict resolution builder への薄い委譲経路を含む。
+- oracle.acp_builder.session.join 互換の package 初期化ファイル。既存の acp.builder.session.join.* import を維持するための互換入口で、実装本体は持たない。
+- session join の競合解決パラメータ生成関数を旧来の import 経路へ提供する互換モジュール。canonical 実装呼び出し後、競合ファイル一覧を code fence を保護して prompt に追加する。
 
 ## Read this when
-- acp.builder.session.join 配下の互換 import 経路を維持・変更・削除するとき。
-- session join の conflict resolution builder の canonical 実装や caller の移行状況を確認するとき。
+- acp.builder.session.join の import 互換性や公開面維持を確認するとき。
+- oracle 側の session join から realization 側への互換配置、または競合 path prompt 生成の互換経路を調べるとき。
 
 ## Do not read this when
 - session join の具体的な処理仕様や canonical 実装を確認したいとき。
-- 互換 import の利用箇所や公開面からの参照有無を調査したいとき。
+- 互換 import の利用箇所や、互換経路を削除できるかを実際の参照元から判断したいとき。
 
 ## hash
-- d78771836a227f47b04324ae77ae1d2d397b5711294d372ce6341f3bc19c694b
+- 4ce7051bdd408e58ebb58322b1cbc07c051365db6dd3043bb08413fa9acf7d09

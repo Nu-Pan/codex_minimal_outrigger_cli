@@ -132,6 +132,8 @@ def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
             "import acp.builder; "
             "from acp.builder.basic import AgentCallParameter, ModelClass; "
             "from oracle.acp_builder.basic import AgentCallParameter as Canonical; "
+            "assert acp.builder.__all__ == ['basic']; "
+            "assert sorted(n for n in vars(acp.builder) if not n.startswith('_')) == ['basic']; "
             "assert acp.builder.basic.AgentCallParameter is Canonical; "
             "assert AgentCallParameter is Canonical; "
             "assert ModelClass.MAINSTREAM.value == 'mainstream'"

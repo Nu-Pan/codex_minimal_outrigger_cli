@@ -2,6 +2,13 @@
 
 共通処理の canonical な配置は {{work-root}}/oracle/doc/dev_rule/design_rule.md
 に従っている。
+
+この file は 16,000 文字を超えるが、run の開始・state 遷移・commit、差分分類、
+INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を共有する一つの
+責務である。分割すると、run branch の不変条件と差分許可範囲を複数 file で追う必要が
+生じるため、現状は editing run lifecycle として一箇所に保つ。
+
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import os
@@ -43,6 +50,7 @@ from commons.runtime_state import (
     RunPart,
     SessionState,
     load_state_for_branch,
+    run_branch_session_id,
     write_state,
 )
 
@@ -206,6 +214,12 @@ def resolve_active_run(
     assert run_branch is not None
     assert fork_commit is not None
     assert session_fork_commit is not None
+    if run_branch_session_id(run_branch) != session_id:
+        raise CmocError(
+            "active editing run の branch が session state と一致しません。",
+            ["session state file と run branch の対応を確認してください。"],
+            f"session_id: {session_id}\nrun_branch: {run_branch}",
+        )
     session_branch = f"cmoc/session/{session_id}"
     if branch not in {session_branch, run_branch}:
         raise CmocError(
@@ -401,6 +415,7 @@ def unexpected_run_paths(
                 context.kind,
                 path,
                 context.run_branch,
+                context.run_fork_commit,
             )
         }
     )
@@ -479,13 +494,19 @@ def _is_run_expected_path(
     kind: str,
     path: str,
     branch: str,
+    fork_commit: str,
 ) -> bool:
     """path が run branch の管理対象差分か判定する。"""
     if _is_index_path(path):
         return True
     if kind == "realization_refactor" and _is_refactor_state_path(root, path):
         return True
-    return _is_agent_expected_path(root, kind, path, branch)
+    if _is_agent_expected_path(root, kind, path, branch):
+        return True
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # rename 元と削除 path は run branch の HEAD から消えるため、fork 時点の tree でも
+    # realization file であることを確認して、agent の許可範囲を失わないようにする。
+    return _is_agent_expected_path(root, kind, path, fork_commit)
 
 
 def _is_oracle_path(path: str) -> bool:

@@ -18,7 +18,9 @@ from _git_support import current_branch, make_repo, run_git
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
+import commons.runtime_codex_profile as codex_profile_module
 import commons.runtime_run_lifecycle as lifecycle_module
+import commons.runtime_run_report as run_report_module
 import sub_commands.oracle.investigation as investigation_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
@@ -101,6 +103,69 @@ def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None
     ) == ["modified.md", "new.md"]
 
 
+def test_run_reports_keep_distinct_files_on_timestamp_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """同一 timestamp の fork/lifecycle report を相互に上書きしない。"""
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path,
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=tmp_path,
+    )
+    timestamps = iter(
+        [
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000002000",
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000002000",
+        ]
+    )
+    monkeypatch.setattr(run_report_module, "timestamp", lambda: next(timestamps))
+
+    fork_paths = [
+        run_report_module.write_fork_report(
+            context,
+            "realization/apply/fork",
+            state_after="joinable",
+            completion_reason="completed",
+            changed_paths=[],
+        )
+        for _ in range(2)
+    ]
+    lifecycle_paths = [
+        run_report_module.write_lifecycle_report(
+            context,
+            "join",
+            state_after="ready",
+            warnings=[],
+            details={},
+        )
+        for _ in range(2)
+    ]
+
+    assert [path.stem for path in fork_paths] == [
+        "2026-06-27_10-00_00_000001000",
+        "2026-06-27_10-00_00_000002000",
+    ]
+    assert [path.stem for path in lifecycle_paths] == [
+        "2026-06-27_10-00_00_000001000",
+        "2026-06-27_10-00_00_000002000",
+    ]
+    assert all(
+        f'generated_at: "{path.stem}"' in path.read_text()
+        for path in [*fork_paths, *lifecycle_paths]
+    )
+
+
 def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> None:
     """未commit renameの変更pathはrename後だけを返す。"""
     root = make_repo(tmp_path)
@@ -172,6 +237,39 @@ def test_refactor_change_summary_keeps_only_actual_changed_paths() -> None:
     ) == ["- rename: file renamed", "  - `new.md`"]
 
 
+def test_refactor_change_summary_rejects_empty_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """非空の tree diff に対する空の変更要約を拒否する。
+
+    根拠: {{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.json
+    {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
+    context = SimpleNamespace(
+        repo=tmp_path,
+        run_fork_commit="fork-commit",
+        run_worktree=tmp_path,
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(stdout="diff --git a/a b/a\n"),
+    )
+    monkeypatch.setattr(refactor_module, "load_config", lambda _root: object())
+    monkeypatch.setattr(
+        refactor_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=0,
+            output_json={"changes": []},
+        ),
+    )
+
+    with pytest.raises(CmocError, match="change summary"):
+        refactor_module._completion_change_summary(context)
+
+
 def test_realization_apply_fork_and_run_join_use_common_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -227,6 +325,69 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert f"- run_branch: `{run_branch}`" in joined.output
     assert "cmoc run join" in joined.output
     assert current_branch(root) == session_branch
+
+
+def test_run_abandon_accepts_already_removed_run_worktree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """既に削除された run worktree を warning 扱いで cleanup できる。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    run_git(root, "worktree", "remove", "--force", str(context.run_worktree))
+
+    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert _state(state_path)["run"] == {
+        "state": "ready",
+        "kind": None,
+        "branch": None,
+        "fork_commit": None,
+    }
+    assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
+    reports = list(
+        (root / ".cmoc" / "gu" / "ar" / "report" / "run" / "abandon").glob("*.md")
+    )
+    assert len(reports) == 1
+    assert "run worktree was already absent" in reports[0].read_text()
+
+
+def test_apply_fork_tracks_indexing_codex_calls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """apply の INDEX 再生成中も Codex child tracking を有効にする。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    tracking_states: list[bool] = []
+
+    def fake_apply(
+        _parameter: AgentCallParameter,
+        **_kwargs: object,
+    ) -> SimpleNamespace:
+        """apply agent の正常終了を再現する。"""
+        return SimpleNamespace(returncode=0, output_json=None)
+
+    def fake_refresh(_worktree: Path, *, commit: bool) -> list[Path]:
+        """INDEX 更新時の process tracking 状態を記録する。"""
+        assert not commit
+        tracking_states.append(codex_profile_module.run_process_tracking_active())
+        return []
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
+    monkeypatch.setattr(apply_module, "refresh_indexes", fake_refresh)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert _state(state_path)["run"]["state"] == "joinable"
+    assert tracking_states == [True]
 
 
 def test_apply_failure_rolls_back_index_with_realization_changes(
@@ -322,6 +483,50 @@ def test_apply_start_failure_after_run_publish_is_reported(
     assert f"- fork report: `{reports[0]}" in result.output
 
 
+def test_apply_start_failure_does_not_recover_existing_error_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """新しい apply fork の事前条件失敗で既存 error run を変更しない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "error")
+    (context.run_worktree / "README.md").write_text("existing error run\n")
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    assert (context.run_worktree / "README.md").read_text() == "existing error run\n"
+    assert current_branch(root) == context.session_branch
+
+
+def test_refactor_start_failure_does_not_recover_existing_error_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """新しい refactor fork の事前条件失敗で既存 error run を変更しない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_refactor")
+    set_run_state(context, "error")
+    (context.run_worktree / "README.md").write_text("existing error run\n")
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    assert (context.run_worktree / "README.md").read_text() == "existing error run\n"
+    assert current_branch(root) == context.session_branch
+
+
 def test_run_join_allows_oracle_change_on_session_branch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -365,6 +570,50 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
     assert (root / "README.md").read_text() == "realized\n"
 
 
+@pytest.mark.parametrize("change", ["rename", "delete"])
+def test_run_join_accepts_realization_rename_and_delete(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    change: str,
+) -> None:
+    """run join が fork 時点の realization path の rename と削除を許可する。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    readme = context.run_worktree / "README.md"
+    if change == "rename":
+        readme.rename(context.run_worktree / "renamed.md")
+    else:
+        readme.unlink()
+    commit_work_unit(context.run_worktree, f"run {change}")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert not (root / "README.md").exists()
+    assert (root / "renamed.md").exists() is (change == "rename")
+
+
+def test_resolve_active_run_rejects_run_branch_from_another_session(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """active run の branch が state の session と異なる場合は拒否する。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    state = _state(state_path)
+    state["run"] = {
+        "state": "running",
+        "kind": "realization_apply",
+        "branch": "cmoc/run/another-session/run-id",
+        "fork_commit": state["session"]["session_fork_commit"],
+    }
+    state_path.write_text(json.dumps(state, indent=2) + "\n")
+
+    with pytest.raises(CmocError, match="branch が session state と一致しません"):
+        lifecycle_module.resolve_active_run({"running"})
+
+
 def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -403,6 +652,158 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
             ][0]
         ).read_text()
     )
+
+
+def test_run_join_cleanup_preserves_worktree_when_removal_leaves_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """worktree removal 後も path が残る場合は branch を削除しない。"""
+    run_worktree = tmp_path / "run"
+    run_worktree.mkdir()
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path / "session",
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=run_worktree,
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "remove_worktree",
+        lambda *_args: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "branch_exists",
+        lambda *_args: pytest.fail("branch must not be deleted"),
+    )
+
+    warnings: list[str] = []
+    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+
+    assert cleanup == "preserved"
+    assert warnings == ["run worktree cleanup failed"]
+
+
+def test_run_join_cleanup_checks_branch_deletion_postcondition(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """branch 削除が成功を返しても残存を検出して warning にする。"""
+    run_worktree = tmp_path / "run"
+    session_worktree = tmp_path / "session"
+    session_worktree.mkdir()
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=session_worktree,
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=run_worktree,
+    )
+    branch_checks = iter([True, True])
+    deleted: list[str] = []
+    monkeypatch.setattr(
+        run_join_module,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "remove_worktree",
+        lambda *_args: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "branch_exists",
+        lambda *_args: next(branch_checks),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "delete_branch",
+        lambda _repo, branch: deleted.append(branch) or SimpleNamespace(returncode=0),
+    )
+
+    warnings: list[str] = []
+    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+
+    assert cleanup == "branch_preserved"
+    assert deleted == [context.run_branch]
+    assert warnings == ["run branch cleanup failed"]
+
+
+def test_run_join_conflict_abort_failure_still_restores_session_tree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """merge --abort の失敗時も join 開始前の clean tree へ戻す。"""
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path / "session",
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=tmp_path / "run",
+    )
+    state = SessionState()
+    commands: list[list[str]] = []
+
+    def fake_run_git(
+        args: list[str],
+        _cwd: Path,
+        check: bool = True,
+    ) -> SimpleNamespace:
+        commands.append(args)
+        if args[:2] == ["diff", "--name-only"]:
+            return SimpleNamespace(returncode=0, stdout="README.md\0")
+        if args[:2] == ["rev-parse", "-q"]:
+            return SimpleNamespace(returncode=0, stdout="")
+        if args == ["merge", "--abort"]:
+            return SimpleNamespace(returncode=1, stdout="")
+        return SimpleNamespace(returncode=0, stdout="")
+
+    report = tmp_path / "report.md"
+    monkeypatch.setattr(run_join_module, "run_git", fake_run_git)
+    monkeypatch.setattr(
+        run_join_module,
+        "write_state",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "write_lifecycle_report",
+        lambda *_args, **_kwargs: report,
+    )
+
+    with pytest.raises(CmocError, match="INDEX.md 以外"):
+        run_join_module._resolve_index_only_conflict_or_fail(
+            context,
+            state,
+            [],
+            "session-head-before-join",
+        )
+
+    assert ["reset", "--hard", "session-head-before-join"] in commands
+    assert ["clean", "-fd"] in commands
 
 
 def test_run_join_rolls_back_merge_when_post_join_sync_fails(

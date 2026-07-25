@@ -1,3 +1,13 @@
+"""INDEX.md の検査・生成・commit lifecycle を扱う共通実装。
+
+この file は 16,000 文字を超えるが、directory traversal、entry の再利用・生成、
+hash 検証、書き込み、commit は同じ index plan・lock・Codex context を共有する一つの
+責務である。分割すると、深さ順更新と entry の鮮度不変条件を複数 file で追う必要が
+生じるため、現状は indexing lifecycle として一箇所に保つ。
+
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
+
 import fcntl
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor

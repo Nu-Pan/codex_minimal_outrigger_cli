@@ -15,61 +15,64 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc run abandon` の実行本体を担当する。active editing run を特定し、running 状態なら追跡プロセスを停止したうえで、run worktree・branch・state・process ID を cleanup し、ライフサイクルレポートと結果を表示する。run abandon の cleanup 挙動を確認する入口。
+- `cmoc run abandon` の CLI 実装。active editing run を特定し、実行中プロセスを停止したうえで run worktree・branch・state・process tracking を cleanup し、ライフサイクルレポートと結果を表示する。run の停止・cleanup 警告や失敗も扱う。
 
 ## Read this when
-- `cmoc run abandon` の実装、active run の停止、worktree・branch・state の cleanup、abandon レポートや表示結果を調査・変更するとき。
+- `cmoc run abandon` の挙動、active run の停止処理、run worktree/branch の削除、cleanup 後の state 更新やレポート出力を変更・調査するとき。
 
 ## Do not read this when
-- run の作成・開始・join・通常完了の処理を調べるとき。プロセス追跡やライフサイクルレポートの共通処理そのものを調べる場合は、対応する `commons` モジュールを直接読む。
+- run の開始・join・完了など、abandon 以外の editing run lifecycle を変更・調査するとき。
+- 共通の process tracking、active run 解決、worktree 操作の汎用実装そのものを確認するときは、対応する `commons` または runtime 実装を直接読む。
 
 ## hash
-- 5270f073a167a652b085c5c13b05e520fdc704e36d2f603e3fc03110e6a0674d
+- ecf34cd6c11152d99d80cfef1f1267561bbff147d1d5d378646849dfda35fe25
 
 # `join.py`
 
 ## Summary
-- `cmoc run join` の active run を session branch に統合する CLI 実装。merge 前の doctor 処理、差分検査、想定外変更の拒否または `--force-resolve` による復元、merge conflict 処理を担う。
-- merge 後の post-join hook、INDEX と refactor state の同期、state・report の保存、run process tracking の削除、worktree と branch の cleanup、および失敗時の error state への復旧を一連の lifecycle として実装している。
-- `run join` の挙動、merge・cleanup・失敗復旧・想定外差分・INDEX.md conflict の変更や調査を行う際の主要な入口である。
+- `cmoc run join` の active run 統合ライフサイクルを担当する。run branch と session branch の差分検査、merge、INDEX.md conflict の解決、post-join state 同期、report 保存、worktree・branch cleanup、および失敗時 rollback/error 化を扱う。run join の処理全体を確認する入口であり、個別の git・state・report helper の実装そのものを調べる対象ではない。
 
 ## Read this when
-- `cmoc run join` の実装や active run の merge lifecycle を変更・調査するとき
-- run branch と session branch の差分検査、`--force-resolve`、merge conflict の扱いを確認するとき
-- post-join の state 同期、report 保存、process tracking、worktree・branch cleanup、失敗時復旧を確認するとき
+- `cmoc run join` の成功・失敗時の制御フローを調査または変更するとき
+- run branch の想定外差分、merge conflict、`--force-resolve` の挙動を確認するとき
+- post-join hook、state 同期、lifecycle report、run 資源 cleanup の連携を確認するとき
+- merge または post-join 処理の失敗後に session を復元して error state にする挙動を確認するとき
 
 ## Do not read this when
-- run の開始・実行・abandon など、join lifecycle 以外の処理だけを扱うとき
-- 共通の run state、git 操作、report 生成の詳細だけを調べる場合は、直接それぞれの共通 runtime module を読むとき
-- INDEX.md の生成・更新ロジック自体だけを調べるとき
+- run join 以外のサブコマンドのライフサイクルだけを調べるとき
+- git 操作、state 操作、process tracking、report 出力の共通実装だけを調べるときは、それぞれの helper module を直接読む
+- join の利用者向け仕様や state の正本定義を確認するときは、対応する oracle doc を先に読む
 
 ## hash
-- 765e0b05ef27b90e0ad42e701b9fee191738960f402109ea0639eb722624047a
+- 7df92d2ceb682e728f9430beec54b772292d83a7d9d6df570b62cd52f276b8a8
 
 # `lifecycle.py`
 
 ## Summary
-- editing run のライフサイクル共通処理を旧 import path から利用できるようにする薄い互換 shim。実装本体は commons.runtime_run_lifecycle にあり、このファイルは公開対象の名前を再エクスポートする入口である。
+- editing run のライフサイクル共通 helper を旧 import path から再エクスポートする互換 shim。実装本体は commons 側にあり、旧利用者の移行完了後に削除される対象。
 
 ## Read this when
-- editing run lifecycle の旧 import path との互換性や、ここから再エクスポートされる実行状態・変更管理 API を確認するとき。
+- 旧 import path の互換性や、editing run helper の再エクスポートを確認するとき。
 
 ## Do not read this when
-- 共通処理の実装詳細を確認したいときは、直接 commons.runtime_run_lifecycle を読む。run コマンド固有の処理や CLI 動作を調べるときは、対応する上位モジュールを読む。
+- ライフサイクル共通処理の実装や仕様を確認するときは、commons 側の canonical 実装を直接読む。
+- 旧 import path の利用状況や削除可否に関係しない作業。
 
 ## hash
-- ac74f8c26aea9338a8142da59b7160da9c35f4dbaa8a5a97290d6743d6308ee7
+- 3de456333531bc878de445ccbaf683410ad0990c75f16028b6bcab36ac7d5939
 
 # `report.py`
 
 ## Summary
-- run report writer の旧 import path として、commons.runtime_run_report の fork/lifecycle レポート出力関数を再公開する薄い互換 shim。独自のレポート処理は持たず、canonical 実装への入口を提供する。
+- editing run report writer の旧 import path を維持する薄い互換 shim。共通実装を再公開し、対応する INDEX entry は互換性が不要になった時点で削除対象となる。
 
 ## Read this when
-- run サブコマンドのレポート出力関数の旧 import path、互換性、または commons 側の canonical 実装への委譲関係を確認するとき。
+- 旧 import path から run report writer を利用するコードの互換性や移行を確認するとき。
+- fork report または lifecycle report の writer の参照先を確認するとき。
 
 ## Do not read this when
-- レポート出力の具体的な処理内容を確認するときは、直接 commons.runtime_run_report を読む。run レポート以外のサブコマンド実装を調査するとき。
+- canonical な report writer の実装詳細を確認したいときは、commons 側の実装を直接読む。
+- run サブコマンドの実行フローや report 生成仕様を調査するとき。
 
 ## hash
-- 0a058d7e3b3fd263920ff32392c54d0a4ce3509672ac59ce07a5e30f78e1aac7
+- 633bf26dd4d3ab3155dcddf2eb46c2b39b1617fa4914e30aeeca6e9cc0975d48

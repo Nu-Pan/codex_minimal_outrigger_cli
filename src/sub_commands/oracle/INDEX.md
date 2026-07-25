@@ -45,22 +45,22 @@
 # `review.py`
 
 ## Summary
-- oracle review サブコマンドの CLI 実行入口。active session branch の検証、隔離 worktree での oracle review loop 実行、所見・INDEX 変更の統合、レポート生成、中断・失敗時の処理を統括する。
-- レビュー対象の列挙、レビュー処理、INDEX 変更の commit/merge/conflict 解決、レポート描画の公開入口もまとめて提供する。
+- oracle review サブコマンドの実行責務を担う実装。active session branch 上で隔離 review run を作成し、対象 oracle のレビュー、INDEX 更新の統合、worktree・branch の cleanup、レビュー結果レポートの出力までを統括する。
+- レビューの中断・例外・cleanup 失敗を含む終了経路、未コミット差分の拒否、サブコマンド進捗ログ、レビュー関連の公開関数を扱う。レビュー対象列挙・ループ・レポート描画の詳細実装は、インポート先の専用モジュールが入口となる。
 
 ## Read this when
-- `cmoc oracle review` の実行フロー、前提条件、worktree/branch 生命周期を確認するとき
-- oracle review の中断・例外時にレポートやログがどう扱われるか確認するとき
-- oracle review に伴う INDEX 変更の統合処理の入口を確認するとき
+- `cmoc oracle review` のCLI実行フロー、隔離worktree/run branchのライフサイクル、レビュー結果の統合またはレポート出力を変更・調査するとき。
+- oracle review の中断時・例外時・cleanup失敗時の挙動、または実行前のworktree状態検査を確認するとき。
+- oracle review 関連の公開関数がどのモジュールから提供されるかを確認するとき。
 
 ## Do not read this when
-- レビュー対象の列挙規則だけを確認したい場合は review_targets の実装を直接読む
-- レビュー loop の所見判定や反復処理だけを確認したい場合は review_loop の実装を直接読む
-- レポートの整形・出力形式だけを確認したい場合は review_report の実装を直接読む
-- oracle review 以外のサブコマンドの実行フローを確認するとき
+- レビュー対象ファイルの列挙条件だけを変更・調査する場合は、対象列挙を担当する専用モジュールを直接読む。
+- レビュー反復処理や所見マージの詳細だけを変更・調査する場合は、review loop担当モジュールを直接読む。
+- 所見の描画・レポートファイル生成だけを変更・調査する場合は、review report担当モジュールを直接読む。
+- INDEX更新のcommit・merge・conflict解決だけを変更・調査する場合は、review index担当モジュールを直接読む。
 
 ## hash
-- 44f989f8b969aa8c77755c6ffa2529d050f0a5e29ce51ce266af416795faeff8
+- 12bf93f8e1a60f45f400a67b6b8b62633e458dea3a2978e3afbccefd6aac3a85
 
 # `review_index.py`
 
@@ -81,20 +81,20 @@
 # `review_loop.py`
 
 ## Summary
-- oracle review の finding 列挙・マージ・妥当性検証・採否判定ループを実装する中核モジュール。中断時の確定済み進捗保持、対象 oracle file の関連付け、Structured Output のマージ操作検証と再試行も扱う。
+- oracle review の所見列挙・マージ・妥当性検証・採否判定を一連のループとして実行する実装。レビュー進捗、finding の関連付け、semantic retry、KeyboardInterrupt 時の部分結果保存、merge operation の契約検証を扱う。
 
 ## Read this when
-- oracle review の処理フロー、finding の列挙・統合・検証・判定を変更または調査するとき
-- KeyboardInterrupt 発生時の部分結果の扱いを確認するとき
-- merge operation の target_ids、kind、finding の妥当性検証や semantic retry を確認するとき
+- oracle review の enumerate／merge／validate／judge のループ動作を変更・調査するとき
+- レビュー中断時の確定済み所見や評価済みファイルの扱いを確認するとき
+- finding の merge operation、ID、重複、対象妥当性、semantic retry の挙動を確認するとき
 
 ## Do not read this when
-- oracle review の各 agent call 用パラメータ生成文面だけを変更または調査するときは、対応する builder モジュールを直接読む
-- oracle review の path 解決規則だけを確認するときは、review_paths モジュールを直接読む
-- ステップ通知の表示やサブコマンド全体の割り込み制御だけを確認するときは、呼び出し元や割り込み仕様を直接読む
+- oracle review の prompt parameter 構築だけを変更・調査するときは、各 review parameter builder を直接読む
+- oracle review のファイルパス解決だけを変更・調査するときは、review_paths の実装を直接読む
+- oracle review 以外のサブコマンドのループや所見処理を扱うとき
 
 ## hash
-- 9f698fcd963ee8773aae1a36385c4f0b0f19d111af1c92f6144341d26b9d480d
+- fb099dd2b6671a992b5f01c1942f062d345e5b1c6972408f4408da05df098ab1
 
 # `review_paths.py`
 
@@ -116,32 +116,27 @@
 # `review_report.py`
 
 ## Summary
-- oracle review の結果を Markdown と YAML frontmatter のレポートとして生成・保存する実装。レビュー対象、実行状態、所見、判定結果を記録し、所見の分類・順序・表示形式と repository-relative な oracle file 表示を担う。
+- oracle review の結果を Markdown レポートとして保存・描画する実装。YAML frontmatter、レビュー判定、評価対象 oracle file の一覧、severity・採否別の所見表示、YAML scalar とパスの整形を担当する。
 
 ## Read this when
-- oracle review レポートの生成内容、frontmatter、verdict 判定、finding の分類・表示順を変更または確認するとき
-- レビュー結果の保存先、ファイル名、対象 oracle file の表示方法を調査するとき
+- oracle review レポートの生成形式、判定ロジック、所見の分類・表示順、frontmatter の値の整形を変更または確認するとき。
 
 ## Do not read this when
-- oracle review の対象 oracle file の選定やパス解決だけを調査するとき
-- レビュー処理本体や session 制御を変更するときは、まずそれぞれの責務を持つ実装を直接読む場合
+- oracle review の実行フロー、対象 oracle file の探索、レビュー判定そのものの仕様を確認したいときは、呼び出し元や oracle review の仕様文書を先に読む。
 
 ## hash
-- 5d4fa434393103e8b269c934319904745378dbfc5706f46038f85be1abe647fc
+- 3182414e5eb5fadeecfbd3ddafb31173120335632375792e1afb70b4c25ffc2d
 
 # `review_targets.py`
 
 ## Summary
-- oracle review の scope に応じてレビュー対象の oracle file を列挙する。full では全件、session 相当ではセッション fork から review fork までに oracle 配下で変更されたファイルに絞り込む。
-- oracle 配下の候補を repository path として列挙し、通常ファイルと symlink を含めて oracle file 判定を適用する。
+- oracle review の scope に応じてレビュー対象の oracle file を列挙する処理。full scope では全件、session scope ではセッション開始時点から review fork までに変更された oracle 配下のファイルだけを対象にする。対象判定には repository path 上の oracle file 判定を用い、symlink も扱う。
 
 ## Read this when
-- oracle review の対象範囲や scope 別のファイル列挙条件を確認するとき
-- oracle file の全件列挙、変更差分による絞り込み、symlink の扱いを変更・調査するとき
+- oracle review の対象ファイル列挙、scope 別の対象範囲、session fork 間の差分判定を変更・確認するとき。
 
 ## Do not read this when
-- oracle review の実行処理やレビュー内容の判定を変更するとき
-- 対象ファイルの列挙を介さない一般的な CLI や runtime 処理を確認するとき
+- oracle review の実行処理や、oracle file の内容そのものを確認したいとき。対象列挙後の処理や各 oracle file を直接読む方が適切。
 
 ## hash
-- e8cdb38c1e3701308cc7d8c4a4e022ea46066b283f91931b79f8b0f3f7a34eb4
+- 95936d0c2a0e48b4b1d262160a9446dea0d9cb6d80f6fa8fe673a825e6e5ade3

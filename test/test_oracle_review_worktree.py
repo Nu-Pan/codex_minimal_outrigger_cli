@@ -4,6 +4,13 @@
 {{work-root}}/oracle/doc/app_spec/run_isolation.md、
 {{work-root}}/oracle/doc/branch_model.md、
 {{work-root}}/oracle/doc/app_spec/indexing.md。
+
+この file は 16,000 文字を超えるが、review fork、linked worktree、preflight commit、
+差分検証、merge は同じ review worktree lifecycle を検証する一つの責務である。分割
+すると、review branch と INDEX 差分の外部契約を複数 file で追う必要があるため、現状
+は review worktree 回帰として一箇所に保つ。
+
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import subprocess
@@ -17,6 +24,7 @@ import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.review as review_module
 from basic.acp import AgentCallParameter
+from commons.runtime_results import CommandResult
 from commons.runtime_run_lifecycle import set_run_state, start_editing_run
 from main import app
 
@@ -469,3 +477,40 @@ def test_oracle_review_rejects_non_index_worktree_changes(
     assert "oracle review が INDEX.md 以外の差分を作成しました。" in result.output
     assert (root / "README.md").read_text() == "# repo\n"
     assert not (root / "generated.txt").exists()
+
+
+def test_oracle_review_reports_cleanup_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """隔離 worktree または run branch の削除失敗を成功扱いにしない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """review の列挙を完了させ、cleanup の失敗検査まで進める。"""
+        assert _schema_name(parameter) == "enumerate_finding.json"
+        return _FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+    failed_cleanup = CommandResult(1, "", "cleanup failed")
+    monkeypatch.setattr(review_module, "remove_worktree", lambda *args: failed_cleanup)
+    monkeypatch.setattr(
+        review_module, "delete_branch", lambda *args, **kwargs: failed_cleanup
+    )
+
+    result = runner.invoke(app, ["oracle", "review", "--scope", "full"])
+
+    assert result.exit_code != 0
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    rendered = report_path.read_text()
+    assert "result: error" in rendered
+    assert "oracle review の隔離 run の cleanup に失敗しました。" in rendered
+    assert "cleanup failed" in result.output

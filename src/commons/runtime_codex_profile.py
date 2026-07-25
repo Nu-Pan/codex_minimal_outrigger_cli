@@ -469,12 +469,16 @@ def run_tracked_codex_subprocess(
                 _record_tracked_child_process(
                     tracking_path, process.pid, process_group_id=process.pid
                 )
-        except OSError as exc:
+        except BaseException as exc:
             if process is None:
                 raise
             try:
                 stop_process_group(process.pid)
-            except CmocError as cleanup_exc:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # Popen must be reaped after tracking registration fails; otherwise
+                # a failed tracking update leaves a zombie even after the group is stopped.
+                process.wait()
+            except BaseException as cleanup_exc:
                 raise CmocError(
                     "run process tracking を更新できません。",
                     [
@@ -483,11 +487,13 @@ def run_tracked_codex_subprocess(
                     ],
                     f"path: {tracking_path}\nerror: {exc}\ncleanup: {cleanup_exc}",
                 ) from exc
-            raise CmocError(
-                "run process tracking を更新できません。",
-                ["run process tracking file の権限と保存先を確認してください。"],
-                f"path: {tracking_path}\nerror: {exc}",
-            ) from exc
+            if isinstance(exc, OSError):
+                raise CmocError(
+                    "run process tracking を更新できません。",
+                    ["run process tracking file の権限と保存先を確認してください。"],
+                    f"path: {tracking_path}\nerror: {exc}",
+                ) from exc
+            raise
     finally:
         signal.signal(signal.SIGTERM, previous_sigterm_handler)
     if sigterm_pending and previous_sigterm_handler != signal.SIG_IGN:

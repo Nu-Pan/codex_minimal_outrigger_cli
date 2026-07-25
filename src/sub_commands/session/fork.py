@@ -77,13 +77,18 @@ def _cmoc_session_fork_body() -> None:
         start_subcommand_step(
             5, "session branch を作成して checkout", "create session branch"
         )
+        branch_created = False
         try:
             run_git(["switch", "-c", session_branch], work)
+            branch_created = True
             start_subcommand_step(6, "session state を保存", "write session state")
             write_state(path, state)
         except BaseException as error:
             rollback_errors: list[str] = []
-            if branch_exists(root, session_branch):
+            # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+            # branch_exists は switch -c の前から存在する衝突 branch も返すため、
+            # この invocation で作成できた branch だけを削除する。
+            if branch_created:
                 try:
                     run_git(["switch", branch], work)
                 except BaseException as rollback_error:

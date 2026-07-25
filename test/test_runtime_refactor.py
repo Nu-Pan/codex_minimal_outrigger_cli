@@ -4,11 +4,12 @@
 `{{work-root}}/oracle/doc/app_spec/misc_spec.md`。
 """
 
+import hashlib
 import json
 from pathlib import Path
 
 import pytest
-from _git_support import make_repo
+from _git_support import make_repo, run_git
 
 from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_refactor import (
@@ -34,6 +35,22 @@ def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
         for entry in state.values()
     )
     assert load_refactor_state(root) == state
+
+
+def test_refactor_state_sync_hashes_dangling_oracle_symlink(
+    tmp_path: Path,
+) -> None:
+    """定義上の oracle file である dangling symlink を state 同期できる。"""
+    root = make_repo(tmp_path)
+    link = root / "oracle" / "dangling.md"
+    link.symlink_to("../missing.md")
+    run_git(root, "add", "oracle/dangling.md")
+    run_git(root, "commit", "-m", "add dangling oracle symlink")
+
+    state = sync_refactor_state(root)
+
+    assert "oracle/dangling.md" in state
+    assert file_sha256(link) == hashlib.sha256(b"../missing.md").hexdigest()
 
 
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
@@ -102,6 +119,67 @@ def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:
         '"last_investigation_result": "not_investigated", '
         '"last_investigated_sha256": null, '
         '"last_investigated_at": null}}\n'
+    )
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+
+
+@pytest.mark.parametrize("result", [[], {}])
+def test_refactor_state_rejects_non_string_result(
+    tmp_path: Path,
+    result: object,
+) -> None:
+    """entry の調査結果が JSON string 以外なら schema error にする。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json.dumps(
+            {
+                "README.md": {
+                    "investigation_required": False,
+                    "last_investigation_result": result,
+                    "last_investigated_sha256": "0" * 64,
+                    "last_investigated_at": "2026-07-19_00-00_00_000000000",
+                }
+            }
+        )
+        + "\n"
+    )
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+
+
+def test_refactor_state_rejects_non_utf8_content(tmp_path: Path) -> None:
+    """UTF-8 として読めない state は schema error にする。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b'{"README.md": \xff}\n')
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+
+
+def test_refactor_state_rejects_nul_in_path_key(tmp_path: Path) -> None:
+    """NUL を含む path key は file path として拒否する。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json.dumps(
+            {
+                "\x00": {
+                    "investigation_required": True,
+                    "last_investigation_result": "not_investigated",
+                    "last_investigated_sha256": None,
+                    "last_investigated_at": None,
+                }
+            }
+        )
+        + "\n"
     )
 
     with pytest.raises(CmocError, match="refactor state"):

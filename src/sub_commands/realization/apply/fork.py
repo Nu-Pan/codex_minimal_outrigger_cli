@@ -9,12 +9,15 @@ from acp.builder.realization.apply.fork.launch_exec import (
 )
 from cmoc_runtime import (
     CmocError,
+    current_branch,
     load_config,
     load_state_for_branch,
     pushd,
+    repo_root,
     run_cli_subcommand,
     run_codex_exec,
     start_subcommand_step,
+    work_root,
 )
 from commons.indexing import enable_indexing_preflight
 from commons.runtime_run import run_process_tracking
@@ -52,8 +55,12 @@ def _cmoc_realization_apply_fork_body() -> None:
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
     diff_base_commit: str | None = None
+    start_attempted = False
+    start_was_ready = False
     try:
         start_subcommand_step(2, "realization apply run を作成", "create editing run")
+        start_was_ready = _session_run_was_ready()
+        start_attempted = True
         context = start_editing_run("realization_apply")
         _, _, state = load_state_for_branch(context.repo, context.session_branch)
         diff_base_commit = (
@@ -79,39 +86,42 @@ def _cmoc_realization_apply_fork_body() -> None:
             context.run_worktree,
         )
         start_subcommand_step(4, "realization 追従 agent を実行", "run apply agent")
-        with (
-            run_process_tracking(context.repo, context.session_id),
-            pushd(context.run_worktree),
-        ):
-            result = run_codex_exec(
-                parameter,
-                root=context.repo,
-                cwd=context.run_worktree,
-                config=load_config(context.run_worktree),
-                purpose="realization apply fork",
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # INDEX 再生成も run 中の Codex call なので、abandon が停止できるよう
+        # agent call から処理単位の commit 検査まで同じ tracking scope に含める。
+        with run_process_tracking(context.repo, context.session_id):
+            with pushd(context.run_worktree):
+                result = run_codex_exec(
+                    parameter,
+                    root=context.repo,
+                    cwd=context.run_worktree,
+                    config=load_config(context.run_worktree),
+                    purpose="realization apply fork",
+                )
+            codex_returncode = result.returncode
+            if result.returncode != 0:
+                raise CmocError(
+                    "realization apply agent が正常終了しませんでした。",
+                    ["run report と Codex call log を確認してください。"],
+                    f"returncode: {result.returncode}",
+                )
+            start_subcommand_step(
+                5, "realization 差分を検査して commit", "commit changes"
             )
-        codex_returncode = result.returncode
-        if result.returncode != 0:
-            raise CmocError(
-                "realization apply agent が正常終了しませんでした。",
-                ["run report と Codex call log を確認してください。"],
-                f"returncode: {result.returncode}",
+            _validate_agent_changes(context)
+            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+            # agent の realization 差分と cmoc が生成する INDEX.md を同じ処理単位に
+            # 含め、後続の commit/rollback が両方へ同じように適用されるようにする。
+            refresh_indexes(context.run_worktree, commit=False)
+            commit_work_unit(
+                context.run_worktree,
+                "cmoc realization apply fork",
+                allow_empty=True,
             )
-        start_subcommand_step(5, "realization 差分を検査して commit", "commit changes")
-        _validate_agent_changes(context)
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-        # agent の realization 差分と cmoc が生成する INDEX.md を同じ処理単位に
-        # 含め、後続の commit/rollback が両方へ同じように適用されるようにする。
-        refresh_indexes(context.run_worktree, commit=False)
-        commit_work_unit(
-            context.run_worktree,
-            "cmoc realization apply fork",
-            allow_empty=True,
-        )
-        changes = tree_changes(context.run_worktree, context.run_fork_commit)
-        unexpected = unexpected_run_paths(context, changes)
-        if unexpected:
-            raise _unexpected_change_error(unexpected)
+            changes = tree_changes(context.run_worktree, context.run_fork_commit)
+            unexpected = unexpected_run_paths(context, changes)
+            if unexpected:
+                raise _unexpected_change_error(unexpected)
         start_subcommand_step(6, "run を joinable に更新", "publish joinable")
         set_run_state(context, "joinable")
         start_subcommand_step(7, "fork report を保存", "write fork report")
@@ -126,7 +136,12 @@ def _cmoc_realization_apply_fork_body() -> None:
         )
     except BaseException as exc:
         if context is None:
-            context = _recover_started_run()
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # 共通事前条件の CmocError では、既存 run をこの fork の失敗として
+            # 回収してはいけない。非 CmocError は start 後の公開処理失敗、または
+            # start 処理が context を呼び出し側へ返す前に送出した失敗だけを回収する。
+            if start_attempted and start_was_ready and not isinstance(exc, CmocError):
+                context = _recover_started_run()
             if context is None:
                 raise
         report = _record_error(
@@ -168,6 +183,15 @@ def _unexpected_change_error(paths: list[str]) -> CmocError:
         ["run report を確認し、run を join または abandon してください。"],
         "\n".join(paths),
     )
+
+
+def _session_run_was_ready() -> bool:
+    """fork 開始前の session が新しい run を公開できる状態か確認する。"""
+    try:
+        _, _, state = load_state_for_branch(repo_root(), current_branch(work_root()))
+    except CmocError:
+        return False
+    return state.session.state == "active" and state.run.state == "ready"
 
 
 def _recover_started_run() -> EditingRunContext | None:

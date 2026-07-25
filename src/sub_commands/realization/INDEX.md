@@ -15,33 +15,36 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うディレクトリ。apply workload 実装の確認入口であり、fork サブコマンドの実行制御や run lifecycle の実装へ進む起点となる。
+- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装を確認する入口となる。
+- `cmoc realization apply fork` の CLI 実行処理を担当し、apply fork の run lifecycle、agent 実行、差分検証、commit、状態遷移、report 保存、失敗時 rollback を扱う。
 
 ## Read this when
 - realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の実行フロー、oracle 差分を基準にした agent 起動、変更範囲検証、commit、run 状態更新、fork report 保存、失敗時 rollback を調査・変更するとき。
+- `cmoc realization apply fork` の CLI 挙動、run lifecycle、agent 実行、差分検証、commit、joinable/error state、fork report、失敗時 rollback を調査・変更するとき。
 
 ## Do not read this when
 - apply workload 以外の処理を扱うとき。
-- realization apply agent の起動パラメータ生成だけを調査する場合。
-- run 状態管理、差分計算、INDEX 更新、report 生成の共通仕様だけを調査する場合。
-- 別の realization apply サブコマンドの処理を調査する場合。
+- realization apply agent のプロンプトや起動パラメータ生成だけを扱うとき。
+- run 状態管理、差分取得、commit、INDEX 更新、report 生成の共通仕様・実装だけを確認するとき。
+- `cmoc realization apply fork` 以外のサブコマンドの CLI 本体を扱うとき。
 
 ## hash
-- 9aba22ebe989d266f79868e8c7e5bec34e5ee842f417b462c92d9fa774723844
+- 8fcac3ceac4121ef9caeffdcd6f3f3b6d866432259fc7803d12301b2838d7520
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージ。refactor fork のライフサイクル全体を管理し、対象選択から agent 実行、差分検証、state 更新、commit、完了判定、report 生成までの上位 orchestration を提供する。
+- realization のリファクタリング処理をまとめたパッケージ。リファクタリング関連 CLI の入口と、対象ファイルの調査・修正から完了判定までの処理を扱う。
+- refactor fork のライフサイクル全体を実行する CLI 実装。state 管理、realization file の調査・修正、差分検証、commit、所見管理、完了・中断・エラー処理、report 生成を担う。
 
 ## Read this when
-- realization refactor fork の処理フロー、完了条件、unresolved finding、state・run・git 差分・report の連携を調査または変更するとき。
-- agent 実行後の差分検証、commit、KeyboardInterrupt や失敗時の cleanup・rollback・error report の挙動を確認するとき。
+- realization のリファクタリング機能の構成や入口を確認するときは、まずこのディレクトリを読む。
+- refactor fork の実行フロー、state 遷移、agent の調査・修正、差分検証、cleanup、report 生成を変更・調査するときは fork の実装を読む。
 
 ## Do not read this when
-- refactor agent の Structured Output parameter や file review 固有の処理を変更・調査するとき。
-- refactor state のデータ構造・target 同期、または editing run の共通処理だけを確認するときは、対応する専用 module を直接読む。
+- realization のリファクタリング以外の処理を確認するとき。
+- 単一ファイルの調査・修正 agent の詳細だけを確認するとき。
+- 変更概要の Structured Output や一般的な run lifecycle の共通処理だけを確認するとき。
 
 ## hash
-- e45fb1f654a781d16df26f7ce280ce48efc16bbd9676fb17e82735f561c925ea
+- 970cfb9d7ce69e19acf82e0d51fba1c941ed4aa6a467d13254ad27a8777ebf9e

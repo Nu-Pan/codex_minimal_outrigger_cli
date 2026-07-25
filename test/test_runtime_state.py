@@ -225,6 +225,17 @@ def test_session_state_rejects_unknown_fields() -> None:
     assert "未定義 field" in exc_info.value.detail
 
 
+def test_session_state_rejects_unknown_top_level_fields() -> None:
+    """session state の top-level 未定義 field を拒否する。"""
+    data = _valid_state().to_dict()
+    data["obsolete"] = None
+
+    with pytest.raises(CmocError) as exc_info:
+        SessionState.from_dict(data)
+
+    assert "top-level に未定義 field" in exc_info.value.detail
+
+
 def test_session_fork_lock_is_shared_across_processes(tmp_path: Path) -> None:
     """session fork lock が process 間で共有されることを確認する。"""
     root = make_repo(tmp_path)

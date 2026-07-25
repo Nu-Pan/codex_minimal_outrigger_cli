@@ -42,3 +42,17 @@ def test_session_join_conflict_resolution_uses_repo_write_mode() -> None:
     assert "conflict 対象ファイル" in parameter.prompt
     assert str(conflicted_path) in parameter.prompt
     assert parameter.run_indexing_preflight is False
+
+
+def test_session_join_conflict_paths_protect_nested_code_fences() -> None:
+    """競合 path 内の三連 backtick が code block の境界を閉じないことを検証する。"""
+    conflicted_path = Path("{{work-root}}/conflict" + "```" + ".txt")
+
+    parameter = build_session_join_conflict_resolution_parameter([conflicted_path])
+
+    start = parameter.prompt.index("# conflict 対象ファイル")
+    end = parameter.prompt.index("\n\n# additional file access rule", start)
+    section = parameter.prompt[start:end]
+    assert section.startswith("# conflict 対象ファイル\n\n````text\n")
+    assert "conflict```" in section
+    assert section.endswith("\n````")

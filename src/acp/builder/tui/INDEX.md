@@ -18,30 +18,29 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動用 canonical builder を `acp.builder.tui.launch_tui` から利用できるようにする互換 import 経路。realization 側でシグネチャや処理を複製せず、oracle 側の関数をそのまま再公開する。
+- TUI 起動 parameter builder の互換 import 経路を提供する薄いモジュール。実体の実装や正本仕様は持たず、正本側で定義された builder を再公開する。
 
 ## Read this when
-- `acp.builder.tui.launch_tui` の既存 import 互換性や公開名を確認・変更するとき
-- realization 側が oracle builder を直接再公開していることを確認するとき
+- TUI 起動 parameter builder の import 経路や互換性を確認するとき。
+- TUI 起動 parameter builder の公開名を参照するコードの入口を確認するとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンドの AgentCallParameter を調査するとき
-- parameter の正本仕様や oracle 側の構築内容そのものを確認するときは、対応する oracle builder を直接読む
-- complete prompt の保存先作成やファイル出力を調査するときは、oracle 側の canonical builder を読む
+- builder の具体的な生成ロジックや仕様を確認したいときは、正本として示された oracle 側の実装を直接読む。
+- TUI 起動処理全体や別の parameter builder を調査するとき。
 
 ## hash
-- 9fcd4a278d7b94d9922919adaceba5a56f4c2651959e9f388956de4e70557ecb
+- 6e9784f7e8505819488f5b54a774a719a4f662ab87693b9fbecc5a080f79477a
 
 # `resolve_parameter.py`
 
 ## Summary
-- TUI の resolve-parameter builder への互換 import 経路を提供する薄いラッパー。実装本体は持たず、canonical builder を再エクスポートする。
+- TUI の resolve-parameter builder を再公開する互換アダプター。canonical builder の生成結果を利用し、入力プロンプト内のコードフェンスを保護した AgentCallParameter を返す。
 
 ## Read this when
-- `acp.builder.tui.resolve_parameter` からの既存 import 互換性や、TUI resolve-parameter builder の公開経路を確認するとき。
+- TUI の resolve-parameter builder の import 互換性や、入力プロンプトのコードフェンス保護処理を確認・変更するとき。
 
 ## Do not read this when
-- builder の実装仕様や挙動を確認するときは、canonical builder である `oracle/src/oracle/acp_builder/tui/resolve_parameter.py` を直接読む。
+- canonical builder の仕様や生成内容だけを確認したいとき。oracle 側の builder を直接読む。
 
 ## hash
-- 5a1726a83d818e2933883355f8427c93a5e2456269cb4f1663cbd524552df945
+- 7e8901cc79447e31dc390e44d0368b2a377aeea5d13b58a4d44a8283d32670a7

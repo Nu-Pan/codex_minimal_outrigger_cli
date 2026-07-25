@@ -23,6 +23,7 @@ from commons.runtime_run import (
     read_run_process_id,
     run_lifecycle_lock,
     stop_run_process,
+    worktree_for_branch_optional,
 )
 from commons.runtime_run_lifecycle import EditingRunContext, resolve_active_run
 from commons.runtime_run_report import write_lifecycle_report
@@ -125,8 +126,12 @@ def _remove_run_worktree(
     warnings: list[str],
 ) -> bool:
     """active run の worktree を削除し、削除結果を返す。"""
-    if not context.run_worktree.exists():
+    if not context.run_worktree.exists() and not context.run_worktree.is_symlink():
         warnings.append("run worktree was already absent")
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # Git の登録も消えている場合は、管理外 path として扱わず cleanup 済みとする。
+        if worktree_for_branch_optional(context.repo, context.run_branch) is None:
+            return True
     result = remove_worktree(context.repo, context.run_worktree)
     if result.returncode != 0 and context.run_worktree.exists():
         warnings.append(result.stderr.strip() or "run worktree removal failed")

@@ -15,28 +15,31 @@
 # `change_summary.py`
 
 ## Summary
-- realization refactor の fork 用 change summary parameter builder を oracle 側の実装から再公開する薄い adapter。呼び出し側がこの realization builder を入口として利用するためのファイル。
+- realization refactor の change summary builder を適合させる adapter。正本 builder で生成した AgentCallParameter を再公開し、raw Git diff のコードフェンスを保護した prompt に置き換える。
 
 ## Read this when
-- realization refactor の fork における change summary parameter builder の公開入口や import 経路を確認するとき。
+- realization refactor の fork における change summary 用 agent call parameter の生成経路を確認するとき
+- raw Git diff の prompt 埋め込み時にコードフェンスを保護する処理を確認するとき
 
 ## Do not read this when
-- change summary parameter の具体的な生成ロジックを確認・変更するときは、再公開元の oracle 実装を直接読む。
+- 正本の builder 仕様や change summary JSON 定義を確認したいときは、対応する oracle file を直接読む
+- prompt fence 保護の共通実装自体を確認したいときは、prompt_fence の実装を直接読む
 
 ## hash
-- 2d0aa02653f4f579de9055d709c3b1b21366834fc9fcc0681c8a4bd8036fa7a6
+- c391f6d029f6910ef4a9a33b670c6b8614f64b7ca440cf823831a8e11133bbbe
 
 # `file_review_and_fix.py`
 
 ## Summary
-- realization refactor における file review 用 fork parameter builder の公開 adapter。実体は oracle 側の builder を再公開するだけで、下位実装へ進む入口となる。
+- realization refactor の fork において、file review and fix の oracle builder を realization 側から再公開する薄い adapter。詳細な parameter 定義は対応する oracle file に委譲する。
 
 ## Read this when
-- realization refactor の file review・fix 処理で、fork parameter builder の公開入口を確認したいとき。
+- realization refactor fork の file review and fix parameter builder の参照先や公開 API を確認するとき。
+- 対応する oracle builder の実装または JSON 定義との接続を確認するとき。
 
 ## Do not read this when
-- file review・fix の builder と無関係な処理を調査するとき。
-- builder の具体的な生成ロジックを確認したいときは、再公開元の oracle 実装を直接読む場合。
+- file review and fix 以外の builder を扱うとき。
+- parameter 定義そのものを確認・変更するとき。この場合は対応する oracle file を直接読む。
 
 ## hash
-- 65717d928604ea224b2ea9290e707d41385c8235fd63b6fb4d96bbe744915382
+- a051f806eb19e9b73542f4bde735c17f507b6f008cf69e3c9c6a6b7e8c9d02b3

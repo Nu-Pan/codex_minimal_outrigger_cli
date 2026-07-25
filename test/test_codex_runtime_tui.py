@@ -314,7 +314,9 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
     finally:
         reset_current_subcommand_logger(token)
 
-    console = capsys.readouterr().out
+    captured = capsys.readouterr()
+    console = captured.err
+    assert captured.out == ""
     assert "- Purpose: `codex tui`" in console
     assert "- Exit code: `7`" in console
     call_logs = _tui_call_logs(root)

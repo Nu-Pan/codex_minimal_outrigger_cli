@@ -29,9 +29,12 @@ def emit_codex_call_console(
     if error is not None:
         safe_error = error.replace("\n", " ")
         lines.append(f"- Error: `{safe_error}`")
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # 非 0 終了も Codex 呼び出しのエラーなので、起動後の失敗も stderr に出す。
+    is_error = error is not None or returncode not in (None, 0)
     print(
         "\n".join(lines),
-        file=sys.stderr if error is not None else sys.stdout,
+        file=sys.stderr if is_error else sys.stdout,
         flush=True,
     )
 

@@ -51,6 +51,12 @@ class SessionState:
             raise _invalid_state(
                 source, "top-level JSON は object である必要があります。"
             )
+        extra = [name for name in data if name not in {"session", "run"}]
+        if extra:
+            raise _invalid_state(
+                source,
+                "top-level に未定義 field があります: " + ", ".join(extra),
+            )
         session_data = _part_data(data, "session", SessionPart, source)
         run_data = _part_data(data, "run", RunPart, source)
         _require_state(session_data, "session", SESSION_STATES, source)

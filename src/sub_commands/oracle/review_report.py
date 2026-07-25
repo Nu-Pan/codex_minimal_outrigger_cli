@@ -1,8 +1,13 @@
-# {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+import json
+import re
 from pathlib import Path
 
 from cmoc_runtime import SessionState, reports_dir, timestamp
+from commons.runtime_paths import _reserve_timestamped_path
 from sub_commands.oracle.review_paths import finding_oracle_path, oracle_path_key
+
+_PLAIN_YAML_SCALAR = re.compile(r"(?:[A-Za-z0-9_][A-Za-z0-9_./-]*|/[A-Za-z0-9_./-]+)\Z")
+_YAML_STRING_LITERALS = {"null", "true", "false", "yes", "no", "on", "off", "~"}
 
 
 def write_oracle_review_report(
@@ -41,7 +46,9 @@ def write_oracle_review_report(
     """
     report_dir = reports_dir(root, "oracle_review")
     report_dir.mkdir(parents=True, exist_ok=True)
-    report_path = report_dir / f"{timestamp()}.md"
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    # path を予約してから本文を書くことで、同一 timestamp の report を上書きしない。
+    generated_at, report_path = _reserve_timestamped_path(report_dir, ".md", timestamp)
     report_path.write_text(
         render_oracle_review_report(
             root,
@@ -56,7 +63,9 @@ def write_oracle_review_report(
             run_join_commit,
             error_message=error_message,
             interrupted=interrupted,
-        )
+            generated_at=generated_at,
+        ),
+        encoding="utf-8",
     )
     return report_path
 
@@ -75,6 +84,7 @@ def render_oracle_review_report(
     error_message: str | None = None,
     *,
     interrupted: bool = False,
+    generated_at: str | None = None,
 ) -> str:
     """oracle review report を Markdown と YAML frontmatter で描画する。
 
@@ -111,7 +121,7 @@ def render_oracle_review_report(
     rows = "\n".join(row_lines)
     frontmatter = [
         ("command", "oracle review"),
-        ("generated_at", timestamp()),
+        ("generated_at", timestamp() if generated_at is None else generated_at),
         ("repo_root", root),
         ("scope", scope),
         ("session_branch", session_branch),
@@ -266,7 +276,24 @@ def _render_frontmatter_field(name: str, value: object) -> str:
     None を YAML の null として出力し、不明な実行情報も項目として保持する。
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     """
-    return f"{name}: {'null' if value is None else value}"
+    if value is None:
+        scalar = "null"
+    elif isinstance(value, bool):
+        scalar = "true" if value else "false"
+    elif isinstance(value, (int, float)):
+        scalar = str(value)
+    else:
+        text = str(value)
+        # 単純な値は既存の可読な表記を保ち、それ以外は JSON quoting で YAML scalar にする。
+        if (
+            _PLAIN_YAML_SCALAR.fullmatch(text) is not None
+            and not text.isdigit()
+            and text.casefold() not in _YAML_STRING_LITERALS
+        ):
+            scalar = text
+        else:
+            scalar = json.dumps(text, ensure_ascii=False)
+    return f"{name}: {scalar}"
 
 
 def render_finding_section(findings: list[dict]) -> str:
