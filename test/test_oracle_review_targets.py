@@ -277,6 +277,28 @@ def test_oracle_review_session_scope_uses_review_fork_commit(
     assert targets == [(root / "oracle" / "fork.md").resolve()]
 
 
+def test_oracle_review_session_scope_preserves_newline_in_git_path(
+    tmp_path: Path,
+) -> None:
+    """session scope が改行を含む Git path を対象から落とさない。"""
+    root = make_repo(tmp_path)
+    state = SessionState()
+    state.session.session_fork_commit = run_git(
+        root, "rev-parse", "HEAD"
+    ).stdout.strip()
+    target = root / "oracle" / "line\nbreak.md"
+    target.write_text("# newline\n")
+    run_git(root, "add", "oracle/line\nbreak.md")
+    run_git(root, "commit", "-m", "add newline oracle path")
+    review_fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    targets = review_module.enumerate_oracle_review_targets(
+        root, "session", state, review_fork_commit
+    )
+
+    assert targets == [target.resolve()]
+
+
 def test_oracle_review_target_enumeration_excludes_agents_and_index(
     tmp_path: Path,
 ) -> None:

@@ -19,11 +19,15 @@ def enumerate_oracle_review_targets(
         return []
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
     # session scope は review fork 時点の oracle snapshot を対象に固定する。
-    changed = set(
-        run_git(
-            ["diff", "--name-only", start, review_fork_commit, "--", "oracle"], root
-        ).stdout.splitlines()
-    )
+    # 通常の name-only 出力は改行を quote するため、NUL 区切りで path を保つ。
+    changed = {
+        path
+        for path in run_git(
+            ["diff", "--name-only", "-z", start, review_fork_commit, "--", "oracle"],
+            root,
+        ).stdout.split("\0")
+        if path
+    }
     return [path for path in all_oracle_files if str(path.relative_to(root)) in changed]
 
 

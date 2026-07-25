@@ -522,20 +522,20 @@
 # `test_oracle_review_targets.py`
 
 ## Summary
-- oracle review の対象列挙と finding path 解決を検証するテスト。相対・絶対・placeholder 付きパス、symlink、外部 oracle path の扱いを確認し、session/full scope における追跡済み oracle file の選定、除外条件、review fork 基準、対象なし時の出力を検証する。
+- oracle review の対象ファイル列挙と finding path 解決を検証する realization test。placeholder 付きパス、symlink、repository 内の oracle 判定、tracked/ignored file、session/full scope、fork commit 基準、除外対象、対象なしレポートを扱う。oracle review の対象選定・パス解決ロジックを確認する入口である。
 
 ## Read this when
-- oracle review の対象ファイル列挙、scope 別のレビュー対象選定、finding path 解決を変更・調査するとき
-- oracle file の定義に基づく AGENTS.md・INDEX.md・ignored file・symlink の分類を確認するとき
-- oracle review の対象数、no_targets、review fork commit 固定に関するテストを確認するとき
+- oracle review の対象列挙や finding の oracle path 解決を変更・調査するとき
+- session/full scope、tracked ignored file、symlink、fork commit 基準の挙動を確認するとき
+- oracle review CLI の対象なし結果や Codex 呼び出し回数を検証するとき
 
 ## Do not read this when
-- oracle review のレポート生成形式や finding の内容検証だけを変更・調査するとき
-- oracle review と無関係な CLI サブコマンドや一般的な git 操作を扱うとき
-- 実装の対象列挙・path 解決ではなく、別の oracle review テストの観点を直接確認できるとき
+- oracle review 以外のサブコマンドや、対象列挙・パス解決と無関係な CLI 処理を変更するとき
+- Codex CLI の実推論や出力品質を検証する実経路統合テストを探しているとき
+- oracle review の所見マージ・妥当性検証・採否判定の詳細実装を直接確認したいとき
 
 ## hash
-- 5ff7c6bd4e39ef65acfe8a0626aa25af35e24f7829c3eb37d04fb290a049d430
+- 9113e685069c202fce5d8a6896ad9e71cbe5268f33057e218a8d36c42cce0271
 
 # `test_oracle_review_worktree.py`
 
