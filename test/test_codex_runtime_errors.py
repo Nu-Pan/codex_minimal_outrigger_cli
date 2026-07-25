@@ -73,7 +73,9 @@ def test_codex_runtime_rejects_non_object_jsonl_event(
 
 
 def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_output(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """returncode 0 と valid output があっても不正 stdout は失敗にする。"""
     root = make_repo(tmp_path)
@@ -103,6 +105,10 @@ def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_outp
         )
 
     assert "malformed JSONL event (invalid JSON): not-json" not in exc_info.value.detail
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "- Exit code: `0`" in captured.err
+    assert "not-json" not in captured.err
 
 
 def test_codex_runtime_reports_missing_codex_cli(

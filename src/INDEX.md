@@ -48,20 +48,22 @@
 # `commons`
 
 ## Summary
-- commons パッケージの初期化と、cmoc 全体で共有する runtime helper 群を提供するディレクトリ。Codex 実行、CLI lifecycle、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新などの共通実装への入口となる。各個別 helper の詳細確認時は、該当する runtime_* モジュールへ進む。
+- cmoc の共通 runtime helper を集約する commons パッケージ。Codex 実行、CLI lifecycle、設定、Git/worktree、パス、ログ、状態、エラー、INDEX 更新など、複数のサブコマンドから共有される実行基盤への入口となる。
+- 個別の runtime モジュールが各領域の実装を担い、パッケージ初期化と runtime API の再公開から、Codex subprocess、設定・コンテンツ、doctor、refactor、run lifecycle、report、state 管理までを扱う。
 
 ## Read this when
-- 複数の CLI サブコマンドや runtime 機能で共有される処理の入口を確認するとき
-- Codex 実行、設定、Git、パス、ログ、状態、結果、エラー、INDEX 更新の共通実装を変更・調査するとき
-- commons パッケージの初期化や公開 runtime API の境界を確認するとき
+- 複数の CLI サブコマンドにまたがる共通 runtime 機能の実装箇所を探すとき
+- Codex exec/TUI の起動・再試行・quota・process 制御や、実行結果・ログの共通契約を確認するとき
+- 設定、Git/worktree、path、content hash、logging、error、state、run lifecycle、report、INDEX indexing の共通処理を変更・調査するとき
+- commons パッケージの公開 API や、目的に対応する個別 runtime モジュールへの入口を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部実装だけを確認したいとき
-- 特定サブコマンドの業務処理や個別の引数定義を調査するとき
-- 利用者向け仕様や正本仕様を確認することが目的のとき
+- 特定の CLI サブコマンド固有の業務処理や引数定義だけを調査するとき
+- 利用者向け仕様・出力形式・状態遷移などの正本を確認するときは、対応する oracle 文書を直接読むとき
+- 特定領域の実装詳細が明確な場合は、このディレクトリ全体ではなく対応する個別 runtime モジュールを直接読むとき
 
 ## hash
-- bdd7b1f7a3d9b49a7eb2b5013b98d76544151cf0bba6232508198529e2fc5ae8
+- debfde6032f050dce3da6005dd0a954904f3788f10bd74fffe11b1827814101d
 
 # `config`
 

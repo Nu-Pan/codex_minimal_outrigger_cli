@@ -330,6 +330,16 @@ def run_codex_exec(
     ) -> None:
         """console と subcommand log の両方へ Codex call 結果を記録する。"""
         elapsed_sec = time.perf_counter() - started_at
+        if console_error is None:
+            # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+            # returncode 0 でも malformed JSONL や最終 schema failure は error である。
+            # stdout/stderr 本文を console へ漏らさず、固定メッセージだけ stderr へ出す。
+            console_error = {
+                "failed": "Codex CLI 呼び出しが失敗しました。",
+                "schema_validation_failed": (
+                    "Codex CLI の Structured Output 検証に失敗しました。"
+                ),
+            }.get(status)
         emit_codex_call_console(
             run_purpose, run_call_path, elapsed_sec, returncode, console_error
         )
