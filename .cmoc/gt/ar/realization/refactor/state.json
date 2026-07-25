@@ -1014,10 +1014,10 @@
     "last_investigated_at": "2026-07-25_13-51_04_179946000"
   },
   "src/sub_commands/session/join.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "2ce0e70c7995d370def7ddf0c590650e3d76a7f63306d18629dcf3481c04f98d",
+    "last_investigated_at": "2026-07-25_14-06_37_566732000"
   },
   "src/sub_commands/tui.py": {
     "investigation_required": true,
