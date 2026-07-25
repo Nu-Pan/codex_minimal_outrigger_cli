@@ -64,13 +64,15 @@
 # `report.py`
 
 ## Summary
-- run report writer の旧 import path として、commons.runtime_run_report の fork/lifecycle レポート出力関数を再公開する薄い互換 shim。独自のレポート処理は持たず、canonical 実装への入口を提供する。
+- editing run report writer の旧 import path を維持する薄い互換 shim。共通実装を再公開し、対応する INDEX entry は互換性が不要になった時点で削除対象となる。
 
 ## Read this when
-- run サブコマンドのレポート出力関数の旧 import path、互換性、または commons 側の canonical 実装への委譲関係を確認するとき。
+- 旧 import path から run report writer を利用するコードの互換性や移行を確認するとき。
+- fork report または lifecycle report の writer の参照先を確認するとき。
 
 ## Do not read this when
-- レポート出力の具体的な処理内容を確認するときは、直接 commons.runtime_run_report を読む。run レポート以外のサブコマンド実装を調査するとき。
+- canonical な report writer の実装詳細を確認したいときは、commons 側の実装を直接読む。
+- run サブコマンドの実行フローや report 生成仕様を調査するとき。
 
 ## hash
-- 0a058d7e3b3fd263920ff32392c54d0a4ce3509672ac59ce07a5e30f78e1aac7
+- 633bf26dd4d3ab3155dcddf2eb46c2b39b1617fa4914e30aeeca6e9cc0975d48
