@@ -17,7 +17,7 @@ def test_tracked_codex_subprocess_records_dedicated_process_group(
 ) -> None:
     """apply cleanup に必要な専用 process group を記録する。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
@@ -198,7 +198,7 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
 ) -> None:
     """communicate が中断されても child tracking を保持する。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
@@ -206,7 +206,7 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
     class InterruptedProcess:
         """communicate 中断後も生存する fake process。
 
-        Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+        Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         """
 
         pid = 4321
@@ -288,7 +288,7 @@ def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
 ) -> None:
     """Codex 起動時に継承した apply tracking を無視する。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/apply_abandon.md
+    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "external" / "apply.pid"
     bin_dir = tmp_path / "bin"

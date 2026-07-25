@@ -145,17 +145,18 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 集合。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session/editing run、設定・state・StructDoc など、主要機能の外部挙動・制御ロジック・公開契約を検証する。各機能領域の個別テストへ進むための入口。
+- `test` ディレクトリは、cmoc の realization test とテスト共通 helper を集約する。CLI、runtime、Codex 実行、ACP builder、INDEX 生成、oracle review、session/editing run、設定・状態永続化などの外部挙動と制御ロジックを、単体・統合・実経路テストで検証する入口である。
+- 共通 helper は、隔離 Git repository、Codex/Ollama 環境、fake external command、CLI 実行、schema path 解決など、複数領域のテスト基盤を提供する。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや外部契約の確認先を探すとき
-- CLI、Codex 実行、worktree・Git lifecycle、state 永続化、indexing、oracle review、builder、設定などの挙動をテスト観点から調査するとき
-- 共通テスト支援、test-local Ollama、fake external command、隔離 Git repository などのテスト基盤を確認するとき
+- cmoc の実装変更に対応する realization test や、該当する CLI・runtime・Codex・ACP・INDEX・oracle review・session の回帰テストを探すとき
+- 複数テスト領域で共有される Git、Codex/Ollama、fake command、CLI 実行などのテスト支援を確認するとき
+- 変更後に通常の pytest、Codex/Ollama を使う統合テスト、Ruff・mypy などの検証対象を選ぶとき
 
 ## Do not read this when
-- 正本仕様や開発・テスト手順を確認するときは、対応する oracle 文書や開発ルールを直接読む
-- 実装の内部詳細だけを調査するときは、対応する src の実装ファイルを直接読む
-- 特定領域と無関係なテストを総覧する必要がないときは、該当する個別テストへ直接進む
+- 正本仕様や設計・開発・テスト手順そのものを確認するときは、対応する oracle 文書を直接読む
+- 実装の詳細だけを調査するときは、対応する `src` の実装ファイルを直接読む
+- 対象機能と関係しないテスト領域や共通 helper を総覧する必要がないときは、該当する下位テストまたは helper へ直接進む
 
 ## hash
-- 201f08486cef59a024c3ed71aa56932fb0540b1957c6e073e380b2650c104d06
+- 7f41025305a2e84bc442448a3843cc3b9093bfcecb2fe23d4530c6cdfb992d77
