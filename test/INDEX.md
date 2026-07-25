@@ -16,18 +16,18 @@
 # `_cli_support.py`
 
 ## Summary
-- doctor CLI を対象 worktree のカレントディレクトリで実行するための、テスト共通ヘルパー。Typer の CliRunner による実行結果取得と成功終了の検証を提供する。
+- doctor CLI を対象 worktree のカレントディレクトリで実行するテスト支援関数を提供する。doctor サブコマンドの CLI テストで、実行結果の成功確認と参照に使う共通入口。
 
 ## Read this when
-- doctor CLI のテストを追加・修正するとき
-- CLI を特定の worktree を cwd として実行するテスト支援を確認するとき
+- doctor CLI の実行結果をテストから取得したいとき
+- 対象 worktree をカレントディレクトリとして CLI を実行するテストを追加・変更するとき
 
 ## Do not read this when
-- doctor CLI の実装や仕様を確認したいとき
-- doctor 以外の CLI テスト固有の検証ロジックを確認したいとき
+- doctor CLI の仕様や前処理の正本を確認したいときは、対応する oracle doc を直接読む
+- doctor CLI 以外のテスト支援や CLI 実行処理を変更するとき
 
 ## hash
-- 4dc5c2cabc4b6e9d6ed90b6bedb5c1f94030cb30e4bef06293c8248a330ba923
+- 04ee47c861ffe5b25223ffec1083362f42f865aca8b550498bd0a06378362cf0
 
 # `_codex_support.py`
 

@@ -146,17 +146,16 @@
 # `test`
 
 ## Summary
-- テスト共通ヘルパー、ACP builder、Codex runtime、CLI、indexing、oracle review、session、state など、cmoc の実装・CLI・統合動作を検証する pytest テスト群を収録する。各テストファイルは対応する機能の外部契約や制御ロジックを確認する入口となる。
+- cmoc の realization test 群を収めるディレクトリ。CLI、runtime、Codex 実行、ACP builder、INDEX 更新、oracle review、session/run lifecycle などの外部挙動・制御ロジックを検証し、対応する機能領域のテストへ進む入口となる。
 
 ## Read this when
-- cmoc の実装変更に対して、対応する外部挙動・制御ロジック・回帰テストの所在を探すとき
-- CLI、Codex runtime、ACP builder、indexing、oracle review、session、state、worktree のテストを追加・修正するとき
-- テスト共通の Git、Ollama、Codex、CLI 実行ヘルパーの責務を確認するとき
+- 実装変更後に、対象機能の外部契約や制御ロジックを検証するテストを探すとき
+- CLI、runtime、Codex、builder、indexing、oracle review、session/run などのテスト対象を横断して確認するとき
 
 ## Do not read this when
-- 正本仕様や実装そのものを確認したいときは、対応する oracle または src のファイルを直接読む
-- 特定機能と無関係なテストを調査するとき
-- LLM の回答品質自体を評価したいとき
+- 正本仕様や実装詳細だけを確認したいときは、対応する oracle または src を直接読む
+- 共通テスト補助の実装だけを確認したいときは、対象の support module を直接読む
+- 対象機能が明確な場合は、このディレクトリ全体ではなく対応するテストファイルへ直接進む
 
 ## hash
-- f2c858d7419c08ce6a6e8f3bb77bae9c5ad99474e625f96163d484cc3c4d5fbb
+- 961ad33e8ee06554a37d8a88f8cf4c93eb92aed8e3c066d6d64e1f732c8c1e7c
