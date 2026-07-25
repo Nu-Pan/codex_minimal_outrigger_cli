@@ -60,20 +60,19 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply workload と refactor 実行処理へのルーティングを提供する。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の実行処理へ進むためのルーティング先。
 
 ## Read this when
 - realization workload サブコマンドの実装や構成を確認するとき。
-- realization の apply workload を調査・変更するとき。
-- realization refactor の実行ライフサイクル、対象処理、agent 調査・修正、差分検証、commit、状態管理、cleanup、rollback、report、完了ログを確認するとき。
+- realization apply または realization refactor の実行ライフサイクル、agent 処理、差分検証、commit、状態遷移、report、失敗時 cleanup・rollback を調査・変更するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- realization refactor の agent 入力 parameter、state データモデル、対象選択ロジックだけを確認するとき。
-- run の共通ライフサイクル、Git 差分、INDEX 更新の汎用処理だけを確認するとき。
+- apply または refactor の agent 入力 parameter、状態データモデル、対象選択ロジックだけを扱うとき。
+- run lifecycle、Git 差分、INDEX 更新などの共通処理だけを確認するとき。
 
 ## hash
-- 0076ffa5195811ffc2c86bde08aa3622ea200fbc0d544db5a7dbb5bbf96fbe9c
+- b6d44f01ac4dbda94718e162c2c33798a31bc6b6eedaace8ec2410dfa07146e9
 
 # `review`
 

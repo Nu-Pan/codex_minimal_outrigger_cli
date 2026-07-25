@@ -9,12 +9,15 @@ from acp.builder.realization.apply.fork.launch_exec import (
 )
 from cmoc_runtime import (
     CmocError,
+    current_branch,
     load_config,
     load_state_for_branch,
     pushd,
+    repo_root,
     run_cli_subcommand,
     run_codex_exec,
     start_subcommand_step,
+    work_root,
 )
 from commons.indexing import enable_indexing_preflight
 from commons.runtime_run import run_process_tracking
@@ -52,8 +55,12 @@ def _cmoc_realization_apply_fork_body() -> None:
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
     diff_base_commit: str | None = None
+    start_attempted = False
+    start_was_ready = False
     try:
         start_subcommand_step(2, "realization apply run を作成", "create editing run")
+        start_was_ready = _session_run_was_ready()
+        start_attempted = True
         context = start_editing_run("realization_apply")
         _, _, state = load_state_for_branch(context.repo, context.session_branch)
         diff_base_commit = (
@@ -129,7 +136,12 @@ def _cmoc_realization_apply_fork_body() -> None:
         )
     except BaseException as exc:
         if context is None:
-            context = _recover_started_run()
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # 共通事前条件の CmocError では、既存 run をこの fork の失敗として
+            # 回収してはいけない。非 CmocError は start 後の公開処理失敗、または
+            # start 処理が context を呼び出し側へ返す前に送出した失敗だけを回収する。
+            if start_attempted and start_was_ready and not isinstance(exc, CmocError):
+                context = _recover_started_run()
             if context is None:
                 raise
         report = _record_error(
@@ -171,6 +183,15 @@ def _unexpected_change_error(paths: list[str]) -> CmocError:
         ["run report を確認し、run を join または abandon してください。"],
         "\n".join(paths),
     )
+
+
+def _session_run_was_ready() -> bool:
+    """fork 開始前の session が新しい run を公開できる状態か確認する。"""
+    try:
+        _, _, state = load_state_for_branch(repo_root(), current_branch(work_root()))
+    except CmocError:
+        return False
+    return state.session.state == "active" and state.run.state == "ready"
 
 
 def _recover_started_run() -> EditingRunContext | None:
