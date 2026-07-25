@@ -18,6 +18,7 @@ from _git_support import current_branch, make_repo, run_git
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
+import commons.runtime_codex_profile as codex_profile_module
 import commons.runtime_run_lifecycle as lifecycle_module
 import commons.runtime_run_report as run_report_module
 import sub_commands.oracle.investigation as investigation_module
@@ -324,6 +325,41 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert f"- run_branch: `{run_branch}`" in joined.output
     assert "cmoc run join" in joined.output
     assert current_branch(root) == session_branch
+
+
+def test_apply_fork_tracks_indexing_codex_calls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """apply の INDEX 再生成中も Codex child tracking を有効にする。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    tracking_states: list[bool] = []
+
+    def fake_apply(
+        _parameter: AgentCallParameter,
+        **_kwargs: object,
+    ) -> SimpleNamespace:
+        """apply agent の正常終了を再現する。"""
+        return SimpleNamespace(returncode=0, output_json=None)
+
+    def fake_refresh(_worktree: Path, *, commit: bool) -> list[Path]:
+        """INDEX 更新時の process tracking 状態を記録する。"""
+        assert not commit
+        tracking_states.append(codex_profile_module.run_process_tracking_active())
+        return []
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
+    monkeypatch.setattr(apply_module, "refresh_indexes", fake_refresh)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert _state(state_path)["run"]["state"] == "joinable"
+    assert tracking_states == [True]
 
 
 def test_apply_failure_rolls_back_index_with_realization_changes(

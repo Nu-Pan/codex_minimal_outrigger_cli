@@ -15,20 +15,16 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うディレクトリ。apply workload 実装の確認入口であり、fork サブコマンドの実行制御や run lifecycle の実装へ進む起点となる。
+- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装を確認する入口となる。
 
 ## Read this when
 - realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の実行フロー、oracle 差分を基準にした agent 起動、変更範囲検証、commit、run 状態更新、fork report 保存、失敗時 rollback を調査・変更するとき。
 
 ## Do not read this when
 - apply workload 以外の処理を扱うとき。
-- realization apply agent の起動パラメータ生成だけを調査する場合。
-- run 状態管理、差分計算、INDEX 更新、report 生成の共通仕様だけを調査する場合。
-- 別の realization apply サブコマンドの処理を調査する場合。
 
 ## hash
-- 9aba22ebe989d266f79868e8c7e5bec34e5ee842f417b462c92d9fa774723844
+- d742e2738c6dc5fc0cc572635793c28bbd68af6e9d0d258e9d398897b643766a
 
 # `refactor`
 
