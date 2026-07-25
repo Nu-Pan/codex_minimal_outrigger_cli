@@ -30,7 +30,7 @@ from _git_support import make_repo, run_git
 import commons.runtime_doctor as doctor_module
 
 
-def hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
+def _hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
     """別プロセスで共有 doctor lock を保持し、解放通知まで待機する。"""
 
     import fcntl
@@ -102,7 +102,7 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
     ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
     release_child, release_parent = multiprocessing.Pipe(duplex=False)
     process = multiprocessing.Process(
-        target=hold_doctor_lock,
+        target=_hold_doctor_lock,
         args=(lock_path, ready_child, release_child),
     )
     lock_attempted = threading.Event()

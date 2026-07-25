@@ -145,18 +145,17 @@
 # `test`
 
 ## Summary
-- `test` ディレクトリは、cmoc の realization test とテスト共通 helper を集約する。CLI、runtime、Codex 実行、ACP builder、INDEX 生成、oracle review、session/editing run、設定・状態永続化などの外部挙動と制御ロジックを、単体・統合・実経路テストで検証する入口である。
-- 共通 helper は、隔離 Git repository、Codex/Ollama 環境、fake external command、CLI 実行、schema path 解決など、複数領域のテスト基盤を提供する。
+- テストコードから正本 schema、CLI、Codex/Ollama 実行、Git・worktree・state、INDEX、oracle review、session/editing run、設定、prompt、StructDoc などの各機能契約を検証するテスト群を収録する。個別機能の realization test と共通テスト支援モジュールへの入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test や、該当する CLI・runtime・Codex・ACP・INDEX・oracle review・session の回帰テストを探すとき
-- 複数テスト領域で共有される Git、Codex/Ollama、fake command、CLI 実行などのテスト支援を確認するとき
-- 変更後に通常の pytest、Codex/Ollama を使う統合テスト、Ruff・mypy などの検証対象を選ぶとき
+- 対象機能の外部挙動、制御ロジック、永続 state、CLI lifecycle、Codex 実行、worktree、INDEX 更新、oracle review、session/editing run のテストを追加・変更・調査するとき。
+- テスト用 Git repository、fake external command、隔離 Codex/Ollama 環境、共通実行 helper の利用方法を確認するとき。
+- 本番相当の CLI 受け入れテストや GPU integration test の実行対象を確認するとき。
 
 ## Do not read this when
-- 正本仕様や設計・開発・テスト手順そのものを確認するときは、対応する oracle 文書を直接読む
-- 実装の詳細だけを調査するときは、対応する `src` の実装ファイルを直接読む
-- 対象機能と関係しないテスト領域や共通 helper を総覧する必要がないときは、該当する下位テストまたは helper へ直接進む
+- 正本仕様、schema、開発環境、テスト実行規約そのものを確認するときは、対応する oracle 文書・schema・開発手順を直接読む。
+- 実装詳細のみを調査するときは、対応する src の実装を直接読む。
+- 対象機能と無関係なテスト領域や、Codex/Ollama を使わない軽量テストだけを扱うとき。
 
 ## hash
-- 7f41025305a2e84bc442448a3843cc3b9093bfcecb2fe23d4530c6cdfb992d77
+- efa4f4c5f94aa1f0a679f77c4d02b8379a8c98e1c95488df705cf865571bde48

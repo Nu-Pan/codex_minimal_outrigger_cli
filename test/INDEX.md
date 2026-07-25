@@ -369,19 +369,19 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の統合テスト。CLI と直接呼び出しの両方で、Git 状態・config・refactor state・共有 doctor lock の修復 lifecycle を検証する。
-- 修復 commit が既存の staged/unstaged 差分、index flag、intent-to-add、rename を保持し、`.cmoc/gu` の追跡解除や `.agents/.gitkeep`・config の生成を正しく行うことを確認する。
+- doctor preprocess の統合テスト。Git 状態、config、refactor state、共有 doctor lock、linked worktree を含む preprocess lifecycle の外部挙動を、CLI 呼び出しと直接呼び出しの両方で検証する。
+- 修復 commit と pre-existing な staged/unstaged 差分、index flag、intent-to-add、rename、既存の `.cmoc/gu` 追跡ファイルを保持または適切に解除する契約を検証する。doctor preprocess の実装や仕様を変更・調査する際の入口となる。
 
 ## Read this when
-- doctor preprocess の外部挙動、修復 commit、config 同期、linked worktree 対応を変更または検証するとき
-- doctor が共有 repository lock を待機する動作や、既存 Git index の状態保持を調査するとき
+- doctor preprocess の lifecycle、修復 commit、Git index 保持、config 同期、lock 待機、linked worktree 対応を変更または検証するとき
+- doctor CLI の統合テストや、修復処理が利用者の既存 staged/unstaged 差分へ与える影響を調査するとき
 
 ## Do not read this when
-- doctor preprocess 以外のサブコマンドや、内部 helper 単体の実装だけを変更・確認するとき
-- Git・config・refactor state の修復 lifecycle と無関係なテストを調査するとき
+- doctor preprocess 以外の CLI サブコマンドや、単体の Git helper の実装・テストだけを調査するとき
+- doctor の正本仕様を確認することが目的の場合は、先に対応する oracle 文書を読むべきとき
 
 ## hash
-- 4ea4177673451a41ad983338d829152d71fdf209336e75a82145799dc971037e
+- 395afbaa30f30932a5d35ae9f7a51a4bfb37eb61e8084cb57cad268de4f53b2f
 
 # `test_editing_run_cli.py`
 
