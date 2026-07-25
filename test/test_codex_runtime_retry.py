@@ -465,7 +465,9 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
         except CmocError as exc:
             assert exc.summary == "Codex CLI 呼び出しが失敗しました。"
             assert expected_detail not in exc.detail
-            assert expected_detail not in capsys.readouterr().out
+            captured = capsys.readouterr()
+            assert expected_detail not in captured.out
+            assert expected_detail not in captured.err
         else:
             raise AssertionError(f"{name} marker outside JSONL should fail directly")
         assert counter.read_text() == "1"
