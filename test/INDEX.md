@@ -32,18 +32,18 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex 実行経路を検証するテスト向けの共通ヘルパーを提供する。Codex の一時ホーム準備、test-local Ollama 用設定、既定パラメータ生成、CLI 引数・設定値の解析、Codex override のスタブ化をまとめた、関連テストの入口となる補助モジュール。
+- Codex 実行経路のテストで共用する補助関数と fake result を定義するテストサポートモジュール。隔離された Codex/Ollama 用環境の準備、Codex パラメータ生成、CLI 引数・設定の解析、Codex override の stub 化を下位テストから利用する入口。
 
 ## Read this when
-- Codex runtime wrapper、apply fork、TUI の subprocess 制御、または test-local Ollama 経路のテストを追加・修正するとき
-- テスト用 Codex 環境、AgentCallParameter、CLI override 引数の共通処理を確認するとき
+- Codex runtime wrapper、TUI、Structured Output、CLI override のテストを追加・変更するとき
+- テスト内で隔離 Codex home、既定 AgentCallParameter、Codex 引数解析の共通処理が必要なとき
 
 ## Do not read this when
-- プロダクションコードの Codex 実行仕様や ACP builder の実装を確認するとき
-- Codex 実行と無関係なテストを変更するときは、この共通テストヘルパーではなく対象テストを直接読む
+- Codex 実行経路の実装自体を変更・調査するとき
+- このモジュールの共通テストヘルパーを使わない別領域のテストを扱うとき
 
 ## hash
-- 068d30dcbee6bdda393c479d4ee2ed381574f80023e8cc67994def4e0e95b230
+- 6698e05b59d5277c59d5808c9ebf1aa58b962fe0dcd2d39630961bc262839119
 
 # `_command_support.py`
 

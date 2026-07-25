@@ -10,7 +10,7 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 
 
 class FakeCodexResult:
-    """apply fork test 用の最小 Structured Codex result double。"""
+    """INDEX entry test 用の最小 Structured Codex result double。"""
 
     def __init__(self, output_json: object | None = None) -> None:
         """structured outputの検証対象を初期化する。"""
