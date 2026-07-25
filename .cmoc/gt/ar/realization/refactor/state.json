@@ -1134,10 +1134,10 @@
     "last_investigated_at": "2026-07-26_07-05_15_650385000"
   },
   "test/test_codex_runtime_quota_retry.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "645232d5da1dca8a4753e1f697c26ebb881e6139509e48a8beac0684299617dc",
+    "last_investigated_at": "2026-07-26_07-20_01_671823000"
   },
   "test/test_codex_runtime_retry.py": {
     "investigation_required": true,
