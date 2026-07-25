@@ -21,7 +21,6 @@ import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_codex_profile as codex_profile_module
 import commons.runtime_run_lifecycle as lifecycle_module
 import commons.runtime_run_report as run_report_module
-import sub_commands.oracle.investigation as investigation_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.join as run_join_module
@@ -838,38 +837,6 @@ def test_run_join_rolls_back_merge_when_post_join_sync_fails(
 
     assert joined.exit_code == 0
     assert (root / "README.md").read_text() == "realized\n"
-
-
-def test_oracle_investigation_has_no_session_precondition(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """oracle investigation が session なしの main worktree でも起動できる。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
-    editor_path = root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / "x.md"
-    monkeypatch.setattr(
-        investigation_module,
-        "collect_prompt_editor_input",
-        lambda *_args: (editor_path, "oracle の根拠を調査する"),
-    )
-    calls: list[AgentCallParameter] = []
-    monkeypatch.setattr(
-        investigation_module,
-        "run_codex_tui",
-        lambda parameter, **_kwargs: calls.append(parameter),
-    )
-
-    result = runner.invoke(
-        app,
-        ["oracle", "investigation"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    assert calls[0].file_access_mode == FileAccessMode.PURE_ORACLE_READ
-    assert calls[0].prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
 
 
 def test_refactor_fork_completes_persistent_full_cycle(

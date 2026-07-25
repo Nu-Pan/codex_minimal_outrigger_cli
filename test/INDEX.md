@@ -386,22 +386,19 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の fork・join・abandon lifecycle を横断して検証する realization test。
-- apply/refactor fork と共通 run state、worktree、branch、report、INDEX 同期、rollback、cleanup、interrupt、conflict 処理を扱う。
-- 実際の CLI 呼び出しと隔離 Git repository を用いて、成功・失敗・中断時の外部挙動を検証する統合テストの入口。
+- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、apply/refactor fork、join・abandon の正常系・失敗時・中断時・rollback・cleanup・変更 path 検証を、共通 lifecycle fixture で確認する。
 
 ## Read this when
-- realization apply または refactor の fork 実行、run join/abandon、editing run state の変更を実装・調査するとき。
-- run worktree や branch の作成・merge・cleanup、fork/lifecycle report、変更 path の扱いを確認するとき。
-- apply/refactor の rollback、Codex child tracking、INDEX 更新、doctor 同期、interrupt/error 処理に関するテストを追加・修正するとき。
+- realization apply/refactor の fork、run join/abandon、editing run state 遷移を変更または調査するとき
+- run worktree の変更 path、rename/delete、oracle・realization 境界、fork/lifecycle report、INDEX 同期、Codex child tracking のテスト範囲を確認するとき
+- join・abandon の cleanup、merge conflict、rollback、error/interruption 後の再開可能性を検証するとき
 
 ## Do not read this when
-- oracle investigation 単体の仕様や実装だけを確認する場合。
-- run lifecycle と無関係な CLI、parser、設定、INDEX routing の変更を扱う場合は、対象機能に直接対応する実装・テストへ進む。
-- Codex 出力内容そのものの品質を検証する必要がある場合。
+- 対象機能の実装詳細や正本仕様を確認することが目的で、対応する src または oracle ファイルを直接読むべきとき
+- editing run、fork、join/abandon の挙動と無関係な CLI・テストを変更または調査するとき
 
 ## hash
-- fd4a22c12823f53cfb4190ab3da4e1651d52ea234ae39982b8c083685a46671e
+- 5618f5e657a0181d901168035ba19916493fa9c48732a9ea7be547ea0f1a2161
 
 # `test_indexing_cli.py`
 
@@ -470,6 +467,22 @@
 
 ## hash
 - 713a3077054c43157af509c46b729b57ce58fa2c67183673db67df9bf0fe47cf
+
+# `test_oracle_investigation_cli.py`
+
+## Summary
+- `cmoc oracle investigation` CLI の起動条件を検証するテスト。セッション前提なしで main worktree から起動できること、oracle 専用のファイルアクセスモードと調査指示を含む prompt が渡されることを確認する。
+
+## Read this when
+- oracle investigation サブコマンドの起動条件や session 前提を変更・確認するとき
+- oracle investigation から Codex TUI へ渡すファイルアクセスモードや prompt の検証を確認するとき
+
+## Do not read this when
+- oracle investigation 以外のサブコマンドの CLI 起動条件を調べるとき
+- oracle investigation の実装詳細や oracle 仕様本文を確認することが目的のときは、対応する実装または oracle 文書を直接読む
+
+## hash
+- cc83e904333f6e395618532c5f0b7e5972e5b46b426d468c0e1c44b7db03eeda
 
 # `test_oracle_review_loop.py`
 
