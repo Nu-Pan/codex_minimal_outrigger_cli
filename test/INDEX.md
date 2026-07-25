@@ -64,18 +64,18 @@
 # `_git_support.py`
 
 ## Summary
-- テスト用 Git repository の初期化・設定・commit と、現在の branch 取得を支援する共有ヘルパー。cmoc CLI の Git 状態や repository 構成を検証するテストから利用する入口。
+- テスト用 Git リポジトリを初期化する共通ヘルパーと、現在のブランチ名を取得する関数を提供する。Git のユーザー設定・署名・フック・ignore 設定をテスト環境向けに固定し、最小のコミット済みリポジトリや、ignore 対象だが追跡済みの oracle ファイルを作成するテストの入口となる。
 
 ## Read this when
-- cmoc CLI のテストで一時 Git repository を作成する必要があるとき
-- テスト対象 repository の checkout 済み branch 名や、追跡対象かつ ignore された oracle file の準備方法を確認するとき
+- cmoc CLI の Git 状態やリポジトリ初期化を検証するテストを追加・変更するとき。
+- テスト用リポジトリの作成条件や Git の環境依存設定を確認するとき。
 
 ## Do not read this when
-- Git repository テストの共通準備や branch 状態の確認を扱わないテストのとき
-- cmoc の制御ロジックや oracle 仕様そのものを確認したいときは、対応する実装・oracle file を直接読む
+- Git テスト用リポジトリを使わないテストを扱うとき。
+- 個別の CLI 実装や oracle 仕様の詳細を確認したいとき。
 
 ## hash
-- e696cf9522455dcc18230828a049a03171d40dbec77215b3e8599a53611a21e2
+- 1ecaade4dee17221fe4bca8c1837bef8e9d28957fd6bee025a6b52c299aea9e1
 
 # `_ollama_support.py`
 
@@ -176,19 +176,19 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- Root/worktree と path model の runtime 契約を検証するテスト。placeholder path の解決、repo root と linked worktree の区別、並列 pushd の cwd 保護、run worktree の作成・削除における管理領域・branch 対応・symlink・Git 登録状態の検証を扱う。runtime や path model の変更時に、破壊的な worktree 操作を拒否する境界を確認する入口となる。
+- Root/worktree と path model の runtime 契約を検証するテスト。root placeholder の解決、repo root と linked worktree の識別、process-global cwd 変更の直列化、run worktree の生成・削除時における管理領域・branch 対応・Git 登録・symlink・dot component の安全性を扱う。runtime や path model の変更時に参照するテスト入口。
 
 ## Read this when
-- path placeholder の解決規則や repo/work/run root の扱いを変更・調査するとき
-- pushd の並列実行時に process-global な cwd を安全に扱えるか確認するとき
-- run worktree の作成・削除に関する path 検証、symlink 拒否、branch 対応、Git 登録状態を変更・調査するとき
+- RootPathPlaceHolder、repo_root、work_root、pushd の挙動を変更または確認するとき
+- run worktree の生成・削除に関する path 検証や安全性を変更または確認するとき
+- runtime の linked worktree 対応や並列 cwd 操作を調査するとき
 
 ## Do not read this when
-- runtime や path model、worktree の挙動を扱わず、他の CLI 機能や独立したテストだけを変更・調査するとき
-- テスト対象の具体的な実装責務を確認する必要があり、対応する runtime または path model の実装を直接読むべきとき
+- runtime の実装詳細を確認したい場合は、まず対応する実装モジュールを直接読むとき
+- runtime と path model に関係しないテストや機能を扱うとき
 
 ## hash
-- 002807b994de92bea8bb6227d0d30db59e74dcfb3c5011dc1e69ca3102c53b02
+- 46fa527525ce251d4f1352405700bf4960e9f6b88d1ef50b225c72302004b114
 
 # `test_cli_command_tree.py`
 

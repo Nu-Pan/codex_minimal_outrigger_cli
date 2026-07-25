@@ -1051,9 +1051,9 @@
   },
   "test/_git_support.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "e696cf9522455dcc18230828a049a03171d40dbec77215b3e8599a53611a21e2",
+    "last_investigated_at": "2026-07-25_15-31_11_389440000"
   },
   "test/_ollama_support.py": {
     "investigation_required": true,
