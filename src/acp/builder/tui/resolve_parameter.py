@@ -29,9 +29,6 @@ def build_tui_resolve_parameter_parameter(
             section_heading="# オリジナルプロンプト",
             section_end_marker="\n</cmoc_block>",
             info_string="markdown",
-            # The original prompt is the final dynamic block; marker-like text
-            # in it must not be selected as the block boundary.
-            # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
-            prefer_last_end_marker=True,
+            section_body=original_prompt,
         ),
     )

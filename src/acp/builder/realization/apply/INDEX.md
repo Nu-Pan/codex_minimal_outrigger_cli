@@ -17,15 +17,16 @@
 # `fork`
 
 ## Summary
-- `cmoc realization apply fork` 用の builder adapter を含むディレクトリ。fork 適用処理の builder 接続点を確認する入口。
+- `cmoc realization apply fork` 用の builder adapter を収める初期化モジュール群。fork 適用処理の builder 接続点と、launch_exec builder の prompt 生成・raw oracle git diff 埋め込みを確認する入口。
 
 ## Read this when
-- `cmoc realization apply fork` の builder adapter の責務や、launch_exec 用 agent call parameter の生成経路を確認・変更するとき。
-- raw oracle git diff を含む prompt のコードフェンス保護処理を調査するとき。
+- `cmoc realization apply fork` の builder adapter の責務や配置を確認するとき。
+- realization apply fork の launch_exec builder の挙動、prompt 生成、または raw oracle git diff の埋め込みを変更・調査するとき。
 
 ## Do not read this when
-- 正本 builder の仕様や prompt 本文そのものを確認するとき。
-- fork 適用処理そのものの実装詳細、または apply fork 以外の builder を調査するとき。
+- fork 適用処理そのものの実装詳細を調査するとき。
+- `cmoc realization apply fork` 以外の builder adapter を調査するとき。
+- 正本 builder 自体の仕様や実装を確認するとき。対応する oracle file を直接読む。
 
 ## hash
-- 3fd45141dec0067cc29da7c47da04675b1529ac709fbef15afb4bc0e2713e85f
+- 1bb3a9b7c555d706b37165e3009620a3b3c866dc1d6b0a822117135a18780d61

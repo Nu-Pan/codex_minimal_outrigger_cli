@@ -15,16 +15,19 @@
 # `fork`
 
 ## Summary
-- cmoc realization refactor fork 向けの builder adapter パッケージ。fork 関連の realization builder 接続処理への入口で、change summary と file review and fix の adapter を扱う。
+- cmoc realization refactor fork 用の builder adapter パッケージ。fork 関連の realization builder 接続処理への入口。
+- realization refactor の change summary builder adapter。正本 builder の AgentCallParameter を再公開し、raw Git diff のコードフェンスを保護した prompt を生成する。
+- realization refactor fork の file review and fix oracle builder を再公開する薄い adapter。詳細な parameter 定義は対応する oracle file に委譲する。
 
 ## Read this when
 - cmoc realization refactor fork の builder adapter を変更・調査するとき。
-- fork 差分向け change summary builder のパラメータ生成、raw git diff の prompt fence 保護、または file review and fix builder の公開 API を確認するとき。
+- realization refactor fork の change summary 用 agent call parameter 生成経路や、raw Git diff の prompt 埋め込み処理を確認するとき。
+- realization refactor fork の file review and fix parameter builder の参照先・公開 API・oracle builder との接続を確認するとき。
 
 ## Do not read this when
 - fork 以外の builder 実装を調査するとき。
-- 正本 builder の仕様・JSON 定義や parameter 定義そのものを確認・変更するときは、対応する oracle file を直接読む。
-- realization refactor の fork 処理全般や、change summary・file review and fix 以外の prompt builder を調査するとき。
+- 正本の builder 仕様、change summary JSON 定義、file review and fix の parameter 定義を確認・変更するとき。
+- prompt fence 保護の共通実装自体を確認するとき。
 
 ## hash
-- 12223a874757db5d15a6a2b298794184dc7377e8236411d4d67c2f0752bef2b4
+- 684a048028b0f9ce11a6310d0c9f1813e085e3726980c2b5bceb6da83e4f331f

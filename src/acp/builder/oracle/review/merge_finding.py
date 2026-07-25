@@ -28,9 +28,6 @@ def build_oracle_review_merge_finding_parameter(
             section_heading="# 現状の所見リスト",
             section_end_marker="\n\n# place holder definition",
             info_string="text",
-            # findings is dynamic and may contain a placeholder-like heading;
-            # the final marker is the canonical prompt boundary.
-            # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
-            prefer_last_end_marker=True,
+            section_body=findings,
         ),
     )

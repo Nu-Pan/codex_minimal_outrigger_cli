@@ -15,77 +15,76 @@
 # `enumerate_finding.py`
 
 ## Summary
-- Oracle review の finding 列挙用 parameter builder を再公開する互換アダプター。canonical oracle 実装を利用しつつ、symlink 経由の oracle path 表記を補正し、関連所見内のコードフェンスを保護する。
+- oracle review finding enumeration の canonical builder を再公開する互換 adapter。動的な関連所見を prompt fence で保護し、symlink 使用時は oracle path の lexical entry を prompt に保持する。
 
 ## Read this when
-- Oracle review の finding 列挙処理や、その AgentCallParameter の生成・再公開経路を変更するとき。
-- canonical builder と realization adapter の path 変換、symlink 対応、関連所見の prompt fence 保護を確認するとき。
+- `build_oracle_review_enumerate_finding_parameter` の呼び出し元、互換維持、または削除条件を調査するとき
+- oracle path の symlink 処理や関連所見の prompt 埋め込みを変更・検証するとき
 
 ## Do not read this when
-- canonical な oracle 側の finding 列挙仕様・実装自体を変更または確認するときは、参照先の oracle 実装を直接読む。
-- Oracle review の finding 列挙や parameter 生成に関係しない処理を変更するとき。
+- canonical な finding enumeration builder の仕様や実装を確認するときは、oracle 側の canonical path を直接読む
+- oracle review finding enumeration と無関係な builder や prompt 処理を調査するとき
 
 ## hash
-- b1e070698eb70c3565c628cbe6649bd4ffaab074bd0c32bf98ec7b7ff477c2e8
+- 7ea11d71d1bce267516b7c1f950207696e42e0da9c58619216534d5e3da457ed
 
 # `judge_finding.py`
 
 ## Summary
-- Oracle review finding の canonical builder を呼び出す realization adapter。動的な所見・賛成理由・反対理由を含む prompt のコードフェンスを保護し、既存 caller 向けに parameter builder を再公開する。canonical 実装への移行完了後は削除対象。
+- Oracle review finding の判定用 parameter builder を再公開する互換アダプター。canonical builder の結果に対し、所見・賛成理由・反対理由へ動的に挿入されるコードフェンスを保護する。既存 caller の移行期間に限って使用され、canonical 実装への移行完了後は削除対象。
 
 ## Read this when
-- oracle review finding の parameter 生成や prompt fence 保護、既存 caller との互換維持を変更・調査するとき。
+- oracle review finding の判定用 parameter builder の既存 caller や互換経路を調査・変更するとき
+- 所見や賛成・反対理由を prompt に埋め込む際のコードフェンス保護を確認するとき
 
 ## Do not read this when
-- canonical な oracle review judge finding の仕様や実装自体を確認したいときは、直接 canonical oracle path を読む。prompt fence 共通処理だけを調べるときは prompt_fence の実装を読む。
+- canonical な oracle review judge_finding 実装を直接利用する caller の処理だけを確認するとき
+- oracle review finding の判定や prompt 構築と無関係な処理を調査するとき
 
 ## hash
-- c597d7bb4d8910b78bf5dd5e1bd7de26f18f2b9df8528870b95bb486fa788737
+- 784c17b9ecc63fc63170fcc07a3635a72e6d6f350b363dc32d920cce51065c12
 
 # `merge_finding.py`
 
 ## Summary
-- oracle review finding merge の realization adapter。canonical builder を再利用し、動的な所見リストを含む prompt のコードフェンスを保護する。
+- oracle review finding merge の canonical builder を呼び出す realization adapter。動的な所見リストを含む prompt の code fence を保護し、AgentCallParameter を再公開する。
 
 ## Read this when
-- oracle review finding merge の realization 側 adapter の挙動や prompt fence 保護を確認・変更するとき。
+- oracle review finding merge の agent call parameter 生成や、所見リストの prompt 埋め込み・code fence 保護を変更するとき。
 
 ## Do not read this when
-- canonical builder の仕様や prompt 本文を確認するときは、oracle 側の実装を直接読む。
+- canonical な prompt 定義や parameter 生成ロジック自体を変更するときは、まず oracle 側の canonical 実装を読む。
+- review finding merge 以外の agent call builder や prompt fence 処理を変更するとき。
 
 ## hash
-- f9019a97d3570e7fcee15ac9fae3d941bbbafcff3ff7f3b325e12a59901f596c
+- 5ec78a1a67d3a9a6ac0d791531475b252b54bcd50893b5464bd2ea003fc3f783
 
 # `validate_finding_advocate.py`
 
 ## Summary
-- Oracle review の所見検証用 agent call parameter を生成する補助モジュール。canonical parameter を基に、oracle root の typo を限定的に補正し、動的入力セクションのコードフェンスを保護する。関連する oracle review prompt builder への実装上の入口となる。
+- Oracle review の finding advocate 用 agent call parameter を構築する実装。canonical parameter を生成した後、oracle-root の typo を補正し、finding と既知理由をコードフェンスで保護した prompt に置換する。内部 helper は typo 補正を一箇所に限定し、動的入力を byte-for-byte で保持する。
 
 ## Read this when
-- oracle review の finding、advocate/challenger reason を受け取る agent call prompt の生成・補正を変更または調査するとき
-- 動的プロンプト内のコードフェンス保護や oracle root placeholder typo の補正挙動を確認するとき
-- validate finding advocate 用 parameter builder と canonical builder の接続を追跡するとき
+- oracle review の finding advocate 用 prompt 生成・補正・コードフェンス保護の挙動を変更または確認するとき。
 
 ## Do not read this when
-- oracle review の canonical prompt 定義そのものを確認したい場合は、参照先の oracle builder を直接読む
-- 一般的な prompt fence 保護処理だけを調査する場合は、共通 prompt fence helper を直接読む
-- 他の agent call parameter や oracle review 機能に関する作業で、この補助モジュールの typo 補正・動的セクション保護に関係しない場合
+- 他の oracle review 以外の agent call parameter を扱うとき。canonical prompt の正本仕様や typo の根拠を確認する場合は、参照されている oracle src・oracle doc を直接読む。
 
 ## hash
-- a1bd2fe9a2f5a6424b0c8a103fc3f0babf9eafdb9f1a224b7414f207578871ce
+- 251be73f2e71e07f527febb373e8176c16e6a4126240aef74937fefd255209d6
 
 # `validate_finding_challenger.py`
 
 ## Summary
-- oracle review の finding challenger 検証用パラメータ生成を再公開する互換アダプター。canonical oracle 実装を呼び出し、動的な所見・既知理由の各プロンプト部分をコードフェンスで保護して返す。
+- oracle review の finding challenger 検証用 parameter builder を再公開する互換アダプター。canonical oracle 実装から parameter を取得し、動的に埋め込む finding・既知理由のコードフェンスを保護する。caller が canonical oracle path を直接使うまでの移行入口。
 
 ## Read this when
-- oracle review の finding challenger 検証用 parameter builder の呼び出し元や互換維持を確認するとき
-- 動的プロンプトのコードフェンス保護や、canonical oracle 実装への委譲を変更するとき
+- oracle review の finding challenger 検証用 parameter builder の caller や import 互換性を調べるとき
+- finding、既知の妥当であるとする理由、既知の妥当ではないとする理由の prompt 埋め込み時の fence 保護を変更・確認するとき
 
 ## Do not read this when
-- canonical な parameter 生成仕様そのものを確認するときは、oracle 側の実装を直接読む
-- oracle review や finding challenger と無関係な builder・prompt 処理を調査するとき
+- canonical な parameter 生成仕様や prompt 本文を確認したいときは、直接 oracle 側の実装を読む
+- oracle review の finding challenger 以外の builder や prompt fence 処理を調べるとき
 
 ## hash
-- a7295819927b3bdcf5b421917610f438c846d4a6751b84eb47cbfde822895a8f
+- 75579da2d2d72c9fa2b30669c1547b4d81cf253260db82bdcce81f7a61ad47fe

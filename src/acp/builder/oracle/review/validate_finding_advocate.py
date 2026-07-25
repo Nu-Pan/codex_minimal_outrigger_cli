@@ -27,22 +27,21 @@ def build_oracle_review_validate_finding_advocate_parameter(
         section_heading="# 対象所見",
         section_end_marker="\n\n# 既知の妥当であるとする理由",
         info_string="text",
+        section_body=finding,
     )
     prompt = _protect_code_block_fence(
         prompt,
         section_heading="# 既知の妥当であるとする理由",
         section_end_marker="\n\n# 既知の妥当ではないとする理由",
         info_string="text",
+        section_body=known_advocate_reasons,
     )
     prompt = _protect_code_block_fence(
         prompt,
         section_heading="# 既知の妥当ではないとする理由",
         section_end_marker="\n\n# place holder definition",
         info_string="text",
-        # challenger reasons is the final dynamic section, so a placeholder-like
-        # heading in its content must not outrank the actual prompt boundary.
-        # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
-        prefer_last_end_marker=True,
+        section_body=known_challenger_reasons,
     )
     return _replace(parameter, prompt=prompt)
 

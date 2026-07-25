@@ -365,6 +365,38 @@ def test_oracle_review_fence_protection_keeps_marker_in_current_input() -> None:
 
 
 @pytest.mark.parametrize(
+    ("builder", "next_section_heading"),
+    [
+        (
+            build_oracle_review_judge_finding_parameter,
+            "# 所見が妥当であるとする理由",
+        ),
+        (
+            build_oracle_review_validate_finding_advocate_parameter,
+            "# 既知の妥当であるとする理由",
+        ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            "# 既知の妥当であるとする理由",
+        ),
+    ],
+)
+def test_oracle_review_fence_protection_handles_marker_like_first_input(
+    builder: Callable[[str, str, str], AgentCallParameter],
+    next_section_heading: str,
+) -> None:
+    """先頭動的本文内の次 section 風 code block を本文として保持する。"""
+    finding = (
+        f"before\n```\ninside\n```\n\n{next_section_heading}\n\n"
+        "```text\nunsafe\n```\nafter"
+    )
+
+    parameter = builder(finding, "known", "known")
+
+    assert f"````text\n{finding}\n````" in parameter.prompt
+
+
+@pytest.mark.parametrize(
     ("builder", "section_heading"),
     [
         (

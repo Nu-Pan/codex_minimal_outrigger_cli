@@ -642,7 +642,7 @@
     "last_investigated_at": "2026-07-24_21-56_24_592457000"
   },
   "src/acp/builder/session/join/conflict_resolution.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "4dcfb44b13ca6c1fe3331adce20cd02ca3ec0d0ae3da8b8d44e7c95fffacd882",
     "last_investigated_at": "2026-07-24_22-07_18_078508000"
@@ -1075,9 +1075,9 @@
   },
   "test/test_acp_builder_oracle_review_parameters.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "c34085bba3bd12891120d896287def47fdc8b609f24afdd2b73ea08678204f32",
+    "last_investigated_at": "2026-07-25_16-45_02_056762000"
   },
   "test/test_acp_builder_session_join_parameters.py": {
     "investigation_required": true,

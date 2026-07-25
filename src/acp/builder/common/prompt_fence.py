@@ -2,6 +2,8 @@
 
 import re as _re
 
+from basic.struct_doc import ntqs as _ntqs
+
 
 def _protect_code_block_fence(
     prompt: str,
@@ -9,7 +11,7 @@ def _protect_code_block_fence(
     section_heading: str,
     section_end_marker: str,
     info_string: str | None,
-    prefer_last_end_marker: bool = False,
+    section_body: str,
 ) -> str:
     """動的本文を含む code block の外側 fence を本文より長くする。
 
@@ -22,37 +24,30 @@ def _protect_code_block_fence(
     if not section_end_marker:
         return prompt
 
-    # 動的本文に同じ見出しや終了マーカーが現れても、code block の境界を探し続ける。
+    # Dynamic input may contain the next heading and a code block, so identify
+    # the exact rendered body before changing its outer fence.
+    # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+    body = _ntqs(section_body)
+    section_start = -1
+    section_end = -1
     heading_search_start = 0
-    selected_section: tuple[int, int, str] | None = None
     while (heading_start := prompt.find(heading, heading_search_start)) != -1:
         candidate_start = heading_start + len(heading)
         if prompt.startswith(prefix, candidate_start):
-            end_search_start = candidate_start
-            fallback_section: tuple[int, int, str] | None = None
-            while (
-                candidate_end := prompt.find(section_end_marker, end_search_start)
-            ) != -1:
-                candidate_section = prompt[candidate_start:candidate_end]
-                if candidate_section.endswith(suffix):
-                    candidate = (candidate_start, candidate_end, candidate_section)
-                    fallback_section = candidate
-                    # StructDoc の次の code block が続く境界を優先する。
-                    if not prefer_last_end_marker and prompt.startswith(
-                        "\n\n```", candidate_end + len(section_end_marker)
-                    ):
-                        selected_section = candidate
-                        break
-                end_search_start = candidate_end + len(section_end_marker)
-            if selected_section is None:
-                selected_section = fallback_section
-            if selected_section is not None:
+            body_start = candidate_start + len(prefix)
+            candidate_end = body_start + len(body)
+            if (
+                prompt.startswith(body, body_start)
+                and prompt.startswith(suffix, candidate_end)
+                and prompt.startswith(section_end_marker, candidate_end + len(suffix))
+            ):
+                section_start = candidate_start
+                section_end = candidate_end + len(suffix)
                 break
         heading_search_start = candidate_start
-
-    if selected_section is None:
+    if section_start == -1:
         return prompt
-    section_start, section_end, section = selected_section
+    section = prompt[section_start:section_end]
 
     body = section[len(prefix) : -len(suffix)]
     longest_backtick_run = max(

@@ -30,21 +30,20 @@ def build_oracle_review_judge_finding_parameter(
         section_heading="# 所見の内容",
         section_end_marker="\n\n# 所見が妥当であるとする理由",
         info_string="text",
+        section_body=finding,
     )
     prompt = _protect_code_block_fence(
         prompt,
         section_heading="# 所見が妥当であるとする理由",
         section_end_marker="\n\n# 所見が妥当ではないとする理由",
         info_string="text",
+        section_body=advocate_reasons,
     )
     prompt = _protect_code_block_fence(
         prompt,
         section_heading="# 所見が妥当ではないとする理由",
         section_end_marker="\n\n# place holder definition",
         info_string="text",
-        # challenger reasons is the final dynamic section, so a placeholder-like
-        # heading in its content must not outrank the actual prompt boundary.
-        # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
-        prefer_last_end_marker=True,
+        section_body=challenger_reasons,
     )
     return _replace(parameter, prompt=prompt)

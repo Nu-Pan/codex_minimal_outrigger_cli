@@ -52,6 +52,7 @@ def build_oracle_review_enumerate_finding_parameter(
             section_heading="# 既知の関連所見",
             section_end_marker="\n\n# place holder definition",
             info_string="text",
+            section_body=related_findings,
         ),
     )
 

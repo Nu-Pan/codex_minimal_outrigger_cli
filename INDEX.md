@@ -127,36 +127,35 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめる `src` のルート。Typer による CLI エントリーポイント、互換 import shim、共有 runtime helper、ACP builder、各サブコマンド実装を下位要素への入口として提供する。
+- cmoc CLI の realization 実装をまとめる src ディレクトリ。ACP・basic・config などの互換入口、共有 runtime、CLI 本体、oracle shim、各サブコマンド実装への入口を提供する。
 
 ## Read this when
-- cmoc の CLI 全体の登録・委譲構造を確認したいとき。
-- session、oracle、realization、run、doctor、indexing、tui などのサブコマンド実装の配置を探すとき。
-- 共有 runtime、ACP builder、互換 import の実装へ進む入口を確認したいとき。
+- CLI 全体の構成やエントリーポイント、サブコマンドへの委譲先を確認するとき。
+- 互換 import shim、共有 runtime、またはサブコマンド実装の配置を探すとき。
+- doctor・indexing・oracle・realization・run・session・tui の実行フローを調査するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理詳細を調査・変更したいときは、対応する `sub_commands` 配下を直接読む。
-- 共有 helper の個別仕様や実装詳細を確認したいときは、対応する `commons` 配下を直接読む。
-- oracle の正本仕様や canonical 実装の内容を確認したいときは、`oracle` 配下を直接読む。
-- 特定の ACP builder の生成ロジックだけを調査したいときは、対応する `acp/builder` 配下を直接読む。
+- 特定サブコマンドの詳細実装を確認したいとき。対応する sub_commands 配下を直接読む。
+- 共有 runtime helper の内部処理だけを確認したいとき。該当する commons の runtime モジュールを直接読む。
+- oracle の正本仕様や実装、TUI 専用 builder・prompt editor の詳細を確認したいとき。対応する下位実体を直接読む。
 
 ## hash
-- b0b824e00be32c86e4cf2d012c0b1b952022b02136b1f0f26268329b046592e2
+- d00029ea9a0564c91464ec61e94a191b65f71995595805f26691c03918a5f766
 
 # `test`
 
 ## Summary
-- cmoc の realization test を収録するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/editing run、設定・状態・StructDoc などの外部挙動と制御ロジックを検証し、各機能の実装変更時に対応テストへ進む入口となる。共通の Git、Ollama、Codex、外部コマンド、CLI 実行支援も提供する。
+- cmoc の realization test ディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/editing run、設定・状態・StructDoc などの外部挙動と制御ロジックを検証するテスト、および Git・Ollama・Codex 実行を隔離する共通テスト支援を集約している。各機能の実装変更時に、対応する契約・異常系・ライフサイクルの回帰テストへ進む入口となる。
 
 ## Read this when
-- cmoc の実装やテストを変更・調査し、対象機能に対応する realization test と共通テスト支援を探すとき。
-- CLI、Codex 実行、worktree・Git・永続 state、indexing、oracle review、session/editing run、設定、prompt、StructDoc の外部契約を確認するとき。
-- test-local Ollama、GPU 統合テスト、隔離 Codex 環境、fake external command などのテスト基盤を変更・調査するとき。
+- cmoc の realization 実装、CLI、runtime、状態管理、indexing、oracle review、session/editing run の挙動を変更または調査するとき
+- Codex/Ollama を使う統合テスト、Git worktree・branch・lock、process cleanup、設定・sandbox・Structured Output の契約を確認するとき
+- 対象機能に対応する回帰テストや共通テスト helper の利用条件を探すとき
 
 ## Do not read this when
-- 正本仕様、schema、開発環境、テスト実行規約を確認することが目的のときは、対応する oracle 文書・schema・開発手順を直接読む。
-- 実装詳細だけを確認したいときは、対象機能の src を直接読む。
-- 対象機能の外部挙動や制御ロジックと無関係なテスト支援を調査するときは、該当する個別テストまたは支援モジュールへ直接進む。
+- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc・oracle src・oracle test を直接読む
+- 実装詳細だけを調査し、外部挙動や制御ロジックの検証が不要なときは、対応する src を直接読む
+- 対象がここで扱う cmoc の runtime、CLI、builder、state、worktree、Codex/Ollama、StructDoc 領域と無関係なとき
 
 ## hash
-- d314388dec5fec4d2855e33f686e60fb5321177ea95b5427cf1bc483367d3f60
+- 5090819a46d074dcd7891de5c750037fbb2cf8466aa5c58f8d5af46122a958ae

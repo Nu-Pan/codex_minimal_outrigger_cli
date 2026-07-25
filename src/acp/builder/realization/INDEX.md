@@ -15,35 +15,32 @@
 # `apply`
 
 ## Summary
-- realization apply 用の builder adapter を提供するモジュール群。apply 処理の builder 実装と、fork 適用時の agent call parameter 生成や prompt 保護処理への入口となる。
+- realization apply 用の builder adapter を提供するモジュール群。apply の共通入口と、fork 適用時の builder 接続・launch_exec の prompt 生成および raw oracle git diff 埋め込みを扱う。
 
 ## Read this when
-- realization apply の builder adapter の責務や実装を確認するとき
-- `cmoc realization apply fork` の builder adapter、launch_exec 用 agent call parameter の生成経路、raw oracle git diff のコードフェンス保護処理を確認・変更するとき
+- realization apply の builder adapter の責務や配置を確認するとき
+- `cmoc realization apply fork` の builder adapter、launch_exec builder の挙動、prompt 生成、または raw oracle git diff 埋め込みを調査・変更するとき
 
 ## Do not read this when
-- apply 処理以外の builder 実装を確認するとき
-- 正本 builder の仕様や prompt 本文そのものを確認するとき
-- fork 適用処理の実装詳細を直接確認するとき
+- apply 処理そのものの実装詳細を調査するとき
+- realization apply fork 以外の builder adapter を調査するとき
+- 正本 builder の仕様や実装を確認するとき（対応する oracle file を直接読む）
 
 ## hash
-- a93c125b6cf7864a2fdd5ea1f652e666190df316134a469fa642f1f3cc7315d7
+- 18b45cb27d4e2b32d14c8e0ed99ac43b897c37b88ad434dd7216e412e09a341e
 
 # `refactor`
 
 ## Summary
-- realization refactor の builder adapter パッケージ。refactor 処理における builder 実装への入口。
-- fork 配下では、fork 差分向け change summary と file review and fix の builder adapter を扱う。
+- realization refactor の builder adapter パッケージ。refactor 処理における builder 関連実装への入口で、fork 用 adapter を下位要素として含む。
 
 ## Read this when
 - realization refactor の builder adapter の責務や実装入口を確認するとき。
-- fork 差分向けの change summary builder または file review and fix builder を調査・変更するとき。
+- realization refactor fork の builder adapter、change summary 用 parameter 生成、または file review and fix parameter builder の接続を確認するとき。
 
 ## Do not read this when
 - builder adapter 以外の refactor 処理を確認するとき。
-- fork 以外の builder 実装を調査するとき。
-- 正本 builder の仕様・JSON 定義・parameter 定義を確認または変更するとき。
-- fork 処理全般や、change summary・file review and fix 以外の prompt builder を調査するとき。
+- 正本 builder 仕様、change summary JSON 定義、file review and fix の parameter 定義、または prompt fence 保護の共通実装を確認するとき。
 
 ## hash
-- 467e6fe8bbfb49d24c9208e09d7a73117883de2a5a8f36d556c01a8467594118
+- db19447baaeb6057a30ad381abb56478455cefdf2accdd949ba3c6b0bd47cf2c
