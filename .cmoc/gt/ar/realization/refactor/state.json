@@ -925,9 +925,9 @@
   },
   "src/sub_commands/oracle/review_report.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "5d4fa434393103e8b269c934319904745378dbfc5706f46038f85be1abe647fc",
+    "last_investigated_at": "2026-07-25_09-55_52_345165000"
   },
   "src/sub_commands/oracle/review_targets.py": {
     "investigation_required": true,
