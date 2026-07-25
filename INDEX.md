@@ -127,20 +127,20 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側ソースコードをまとめるディレクトリ。CLI の主要入口、サブコマンド、共有 runtime、設定・互換 shim、各種 builder adapter への入口を提供する。
-- CLI 登録と委譲は主要入口・サブコマンド群が担い、共通処理は commons、互換 import は basic・config・cmoc_runtime・oracle などに分かれている。
+- cmoc CLI の主要実装ディレクトリ。CLI エントリーポイント、サブコマンド、共有 runtime、互換 import shim、oracle パッケージ解決など、src 起点で実行される realization 実装への入口をまとめる。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI 入口から個別サブコマンド・共通 runtime へ進む経路を確認したいとき。
-- 主要 CLI、サブコマンド、共有 helper、互換 import の配置先を判断したいとき。
+- cmoc の CLI 構成、サブコマンド実装の所在、共有 runtime の入口を確認したいとき。
+- 互換 import path や src 起動時の oracle パッケージ解決を調査するとき。
+- 特定のサブコマンドや共通 helper の詳細を読む前に、対応する下位ディレクトリ・モジュールへの経路を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの詳細処理を調査・変更したいときは、sub_commands 配下の対応モジュールを直接読む。
-- 共通 runtime helper の内部実装を確認したいときは、commons 配下の該当モジュールを直接読む。
-- 正本仕様や oracle 実装の内容を確認したいときは、oracle 側の対象を直接読む。
+- 個別サブコマンドの詳細処理を調査するときは、対応する sub_commands 配下を直接読む。
+- 共有 helper の内部実装を調査するときは、commons 配下の該当 runtime module を直接読む。
+- 正本仕様や oracle 実装の内容を確認するときは、oracle 側の対象を直接読む。
 
 ## hash
-- 62b13c548a1a516694aafea34506816bec1c902ee2f657b0c639ffbfd892a38f
+- dbb3f0467318458aa30918be7fe09839dcf87c7a28d35e81fcc50c00b124c764
 
 # `test`
 

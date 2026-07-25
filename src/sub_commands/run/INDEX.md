@@ -49,16 +49,17 @@
 # `lifecycle.py`
 
 ## Summary
-- editing run のライフサイクル共通処理を旧 import path から利用できるようにする薄い互換 shim。実装本体は commons.runtime_run_lifecycle にあり、このファイルは公開対象の名前を再エクスポートする入口である。
+- editing run のライフサイクル共通 helper を旧 import path から再エクスポートする互換 shim。実装本体は commons 側にあり、旧利用者の移行完了後に削除される対象。
 
 ## Read this when
-- editing run lifecycle の旧 import path との互換性や、ここから再エクスポートされる実行状態・変更管理 API を確認するとき。
+- 旧 import path の互換性や、editing run helper の再エクスポートを確認するとき。
 
 ## Do not read this when
-- 共通処理の実装詳細を確認したいときは、直接 commons.runtime_run_lifecycle を読む。run コマンド固有の処理や CLI 動作を調べるときは、対応する上位モジュールを読む。
+- ライフサイクル共通処理の実装や仕様を確認するときは、commons 側の canonical 実装を直接読む。
+- 旧 import path の利用状況や削除可否に関係しない作業。
 
 ## hash
-- ac74f8c26aea9338a8142da59b7160da9c35f4dbaa8a5a97290d6743d6308ee7
+- 3de456333531bc878de445ccbaf683410ad0990c75f16028b6bcab36ac7d5939
 
 # `report.py`
 
