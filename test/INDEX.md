@@ -80,20 +80,22 @@
 # `_ollama_support.py`
 
 ## Summary
-- 実経路統合テスト向けに、case-local Ollama の cache 準備・安全性検証・atomic publish・モデル materialize・GPU-only 推論確認・process group teardown を一体で提供するテスト支援モジュール。統合テストが専用 Ollama provider を必要とする場合の入口。
+- 実経路統合テスト向けに、case-local Ollama の cache 準備・安全性検証・atomic publish・model materialize・GPU-only 推論確認・provider 設定・process group teardown を一体で提供するテスト支援モジュール。
 
 ## Read this when
-- Ollama を使う実経路統合テストの実行環境や test provider を確認・変更するとき
-- Ollama の cache、モデル取得・再利用、GPU-only 条件、case ごとの process lifecycle を調査するとき
-- 統合テストの失敗時に cache isolation、atomic publish、server 起動、推論可否、process teardown を調べるとき
+- 実経路統合テストで Ollama を起動・接続する仕組みを変更または調査するとき
+- Ollama の cache、archive 展開、model cache の publish、case-local working set の分離を確認するとき
+- GPU-only model の構築・事前推論確認・GPU 常駐判定を変更または調査するとき
+- テスト終了時の Ollama process group の停止や失敗時 cleanup を確認するとき
+- 通常の model provider 設定を test-local Ollama に向ける処理を変更するとき
 
 ## Do not read this when
-- 通常の Ollama 設定や本番 provider 実装を確認したいとき
-- Ollama を使わない単体テストや一般的な pytest fixture の実装を調べるとき
-- Codex の model provider 定義そのものを変更・確認する場合は、まず設定実装や対応する oracle を読むべきとき
+- Ollama を使用しない単体テストや統合テストの実装を調べるとき
+- 本番の Ollama provider や CLI の一般的な model 設定を変更するとき
+- テスト対象の業務ロジック、API 応答、Codex 出力内容だけを調査するとき
 
 ## hash
-- 51f828693f90a2f79d04aa298982b904ffe13bd3b626a4e2fd1d238c809fb04f
+- ee41ffb13d684c63af95390214c70e4ad80f054756681b02343fead259dbe506
 
 # `test_acp_builder_editing_run_parameters.py`
 

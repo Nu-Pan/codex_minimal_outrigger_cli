@@ -398,8 +398,8 @@ def _ensure_model(
         120,
     )
     required_settings = {
-        ("num_gpu", str(_GPU_LAYER_COUNT)),
-        ("num_predict", str(_MAX_OUTPUT_TOKENS)),
+        ("PARAMETER", "num_gpu", str(_GPU_LAYER_COUNT)),
+        ("PARAMETER", "num_predict", str(_MAX_OUTPUT_TOKENS)),
     }
     actual_settings = {tuple(line.split()) for line in parameters.stdout.splitlines()}
     if parameters.returncode == 0 and required_settings <= actual_settings:
