@@ -94,18 +94,19 @@
 # `run`
 
 ## Summary
-- editing run の lifecycle サブコマンド実装をまとめるパッケージ。abandon・join の CLI 処理と、旧 import path 向けの lifecycle/report 互換 shim を下位実装への入口として提供する。
+- editing run の共通 lifecycle サブコマンドと、関連する互換 shim をまとめるパッケージ。abandon・join の CLI 実装、および lifecycle・report の canonical 実装への旧 import path を扱う。
 
 ## Read this when
-- editing run の開始後の停止・終了・cleanup・report 出力など、lifecycle サブコマンドの挙動を調査・変更するとき。
-- run lifecycle の旧 import path や canonical な共通実装への委譲関係を確認するとき。
+- editing run の abandon・join のライフサイクル処理を調査・変更するとき。
+- editing run lifecycle や report の旧 import path、互換 shim、commons 側実装への委譲関係を確認するとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- 共通処理や個別コマンドの詳細を確認する場合は、配下の該当実装または commons 側の canonical 実装を直接読む。
+- 共通の git・state・process tracking・report 実装の詳細だけを調べるときは、配下の対応する canonical helper を直接読む。
+- run の利用者向け仕様や state の正本定義を確認するときは、対応する oracle doc を読む。
 
 ## hash
-- 9ab62ee32757a22102c1c9e3cec5162ffeaaf5972fa26469712a4787eecf8830
+- 5fcc8a059f59ffe04763e7365c749c8b96a04dc7f78c20c485e5bb22047a7050
 
 # `session`
 

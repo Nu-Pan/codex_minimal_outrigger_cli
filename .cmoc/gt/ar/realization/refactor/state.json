@@ -979,9 +979,9 @@
   },
   "src/sub_commands/run/join.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "39c5bd25b13f6c27fc7ea9035556a0d743552959812391329b54db549b6cb89b",
+    "last_investigated_at": "2026-07-25_12-38_23_953712000"
   },
   "src/sub_commands/run/lifecycle.py": {
     "investigation_required": true,

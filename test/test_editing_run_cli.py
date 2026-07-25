@@ -654,6 +654,158 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
     )
 
 
+def test_run_join_cleanup_preserves_worktree_when_removal_leaves_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """worktree removal 後も path が残る場合は branch を削除しない。"""
+    run_worktree = tmp_path / "run"
+    run_worktree.mkdir()
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path / "session",
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=run_worktree,
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "remove_worktree",
+        lambda *_args: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "branch_exists",
+        lambda *_args: pytest.fail("branch must not be deleted"),
+    )
+
+    warnings: list[str] = []
+    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+
+    assert cleanup == "preserved"
+    assert warnings == ["run worktree cleanup failed"]
+
+
+def test_run_join_cleanup_checks_branch_deletion_postcondition(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """branch 削除が成功を返しても残存を検出して warning にする。"""
+    run_worktree = tmp_path / "run"
+    session_worktree = tmp_path / "session"
+    session_worktree.mkdir()
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=session_worktree,
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=run_worktree,
+    )
+    branch_checks = iter([True, True])
+    deleted: list[str] = []
+    monkeypatch.setattr(
+        run_join_module,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "remove_worktree",
+        lambda *_args: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "branch_exists",
+        lambda *_args: next(branch_checks),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "delete_branch",
+        lambda _repo, branch: deleted.append(branch) or SimpleNamespace(returncode=0),
+    )
+
+    warnings: list[str] = []
+    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+
+    assert cleanup == "branch_preserved"
+    assert deleted == [context.run_branch]
+    assert warnings == ["run branch cleanup failed"]
+
+
+def test_run_join_conflict_abort_failure_still_restores_session_tree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """merge --abort の失敗時も join 開始前の clean tree へ戻す。"""
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path / "session",
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=tmp_path / "run",
+    )
+    state = SessionState()
+    commands: list[list[str]] = []
+
+    def fake_run_git(
+        args: list[str],
+        _cwd: Path,
+        check: bool = True,
+    ) -> SimpleNamespace:
+        commands.append(args)
+        if args[:2] == ["diff", "--name-only"]:
+            return SimpleNamespace(returncode=0, stdout="README.md\0")
+        if args[:2] == ["rev-parse", "-q"]:
+            return SimpleNamespace(returncode=0, stdout="")
+        if args == ["merge", "--abort"]:
+            return SimpleNamespace(returncode=1, stdout="")
+        return SimpleNamespace(returncode=0, stdout="")
+
+    report = tmp_path / "report.md"
+    monkeypatch.setattr(run_join_module, "run_git", fake_run_git)
+    monkeypatch.setattr(
+        run_join_module,
+        "write_state",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "write_lifecycle_report",
+        lambda *_args, **_kwargs: report,
+    )
+
+    with pytest.raises(CmocError, match="INDEX.md 以外"):
+        run_join_module._resolve_index_only_conflict_or_fail(
+            context,
+            state,
+            [],
+            "session-head-before-join",
+        )
+
+    assert ["reset", "--hard", "session-head-before-join"] in commands
+    assert ["clean", "-fd"] in commands
+
+
 def test_run_join_rolls_back_merge_when_post_join_sync_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
