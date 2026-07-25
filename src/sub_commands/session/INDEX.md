@@ -29,20 +29,16 @@
 # `fork.py`
 
 ## Summary
-- 現在の local branch から cmoc 管理対象外の session branch と session state を作成する `session fork` の実装。既存 session の確認、clean worktree 検証、branch/state 作成、失敗時の rollback、session-id 衝突回避、結果表示までを扱う。session fork の branch 作成フローを確認する際の実装上の入口。
+- 通常の local branch から cmoc session branch を作成し、session state を保存する `cmoc session fork` の実装。既存 active session の検査、clean worktree 要求、session-id 衝突回避、branch/state 作成失敗時の rollback、結果表示を扱う。
 
 ## Read this when
-- `cmoc session fork` の作成手順、事前条件、競合防止、rollback 挙動を調査・変更するとき
-- session-id の生成条件や session state 保存のタイミングを確認するとき
-- session branch 作成後のエラー処理やユーザー向け出力を確認するとき
+- `cmoc session fork` の branch 作成、session state 保存、session-id 生成、競合防止、失敗時 rollback の挙動を変更・調査するとき。
 
 ## Do not read this when
-- session state の schema やライフサイクル仕様そのものを確認したいとき
-- git 操作や CLI 共通実行基盤の詳細を直接確認したいとき
-- session fork 以外の session サブコマンドを調査するとき
+- session の join、abandon、state schema の詳細、または session branch の一般的な lifecycle だけを調べるとき。
 
 ## hash
-- 4cc3a37312cbc50d87b0fb69045b934f49dac12fd1365812cc4e3b3d0193f1ee
+- 55018934e7237d68f097a1a48c7c81a65ddd89c93202027155e4c43046f1337d
 
 # `join.py`
 

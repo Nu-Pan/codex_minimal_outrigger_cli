@@ -182,6 +182,37 @@ def test_session_fork_rolls_back_when_state_save_fails(
     assert "session_state_file_exists: False" in result.stdout
 
 
+def test_session_fork_does_not_delete_branch_from_id_collision_race(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """branch 作成前に同名 branch が現れても既存 branch を削除しない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    home_branch = current_branch(root)
+    session_id = "2026-06-27_01-02_03-000000000"
+    session_branch = f"cmoc/session/{session_id}"
+    protected_commit = ""
+
+    def reserve_colliding_id(_root: Path) -> str:
+        """session-id 検査後に外部 branch が作られる競合を再現する。"""
+        nonlocal protected_commit
+        run_git(root, "branch", session_branch)
+        protected_commit = run_git(root, "rev-parse", session_branch).stdout.strip()
+        return session_id
+
+    monkeypatch.setattr(session_fork_module, "_new_session_id", reserve_colliding_id)
+
+    result = runner.invoke(app, ["session", "fork"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert run_git(root, "rev-parse", session_branch).stdout.strip() == protected_commit
+    assert "session fork の作成に失敗しました。" in result.stdout
+
+
 def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
