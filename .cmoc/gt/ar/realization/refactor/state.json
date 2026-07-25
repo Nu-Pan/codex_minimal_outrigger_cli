@@ -1063,9 +1063,9 @@
   },
   "test/test_acp_builder_editing_run_parameters.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "c422d7488df4ee445a44cea9dfd8d6cdad546df65a96b0a31024e1bae6b08781",
+    "last_investigated_at": "2026-07-25_16-09_49_284357000"
   },
   "test/test_acp_builder_indexing_parameters.py": {
     "investigation_required": true,
