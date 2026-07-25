@@ -48,6 +48,7 @@ from commons.runtime_run_lifecycle import (
     commit_work_unit,
     flattened_change_paths,
     refresh_indexes,
+    require_ready_session,
     resolve_active_run,
     rollback_work_unit,
     set_run_state,
@@ -78,8 +79,12 @@ def _cmoc_realization_refactor_fork_body() -> None:
     context: EditingRunContext | None = None
     units: list[tuple[str, int]] = []
     unresolved_findings: dict[str, list[_UnresolvedFinding]] = {}
+    start_attempted = False
+    start_was_ready = False
     try:
         start_subcommand_step(2, "realization refactor run を作成", "create run")
+        start_was_ready = _session_run_was_ready()
+        start_attempted = True
         context = start_editing_run("realization_refactor")
         start_subcommand_step(3, "full refactor cycle を初期化", "initialize cycle")
         _initialize_cycle(context)
@@ -112,7 +117,12 @@ def _cmoc_realization_refactor_fork_body() -> None:
         typer.echo(_completion_log(reason, unresolved_findings, report))
     except KeyboardInterrupt as interruption:
         if context is None:
-            context = _recover_started_run()
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # fork の共通事前条件失敗では、既存の error run をこの fork の
+            # 中断対象として回収してはならない。context 返却前の start failure
+            # だけを、公開済み run の回収対象にする。
+            if start_attempted and start_was_ready:
+                context = _recover_started_run()
             if context is None:
                 raise
         cleanup_errors: list[str] = []
@@ -165,7 +175,12 @@ def _cmoc_realization_refactor_fork_body() -> None:
         return
     except BaseException as exc:
         if context is None:
-            context = _recover_started_run()
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # CmocError は共通事前条件の失敗として既存 run を変更せず再送出する。
+            # 非 CmocError の start failure だけを、context 返却前に公開された
+            # run の回収対象とする。
+            if start_attempted and start_was_ready and not isinstance(exc, CmocError):
+                context = _recover_started_run()
             if context is None:
                 raise
         error_cleanup_errors: list[str] = []
@@ -194,6 +209,15 @@ def _stop_tracked_codex_children(context: EditingRunContext) -> None:
         return
     for child in tracked.child_processes:
         stop_child_process_group(child)
+
+
+def _session_run_was_ready() -> bool:
+    """新しい run を開始できる状態だったかを回収判定用に確認する。"""
+    try:
+        require_ready_session()
+    except CmocError:
+        return False
+    return True
 
 
 def _raise_refactor_interruption_error(

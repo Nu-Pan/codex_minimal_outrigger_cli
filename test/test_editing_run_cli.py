@@ -477,6 +477,28 @@ def test_apply_start_failure_does_not_recover_existing_error_run(
     assert current_branch(root) == context.session_branch
 
 
+def test_refactor_start_failure_does_not_recover_existing_error_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """新しい refactor fork の事前条件失敗で既存 error run を変更しない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_refactor")
+    set_run_state(context, "error")
+    (context.run_worktree / "README.md").write_text("existing error run\n")
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    assert (context.run_worktree / "README.md").read_text() == "existing error run\n"
+    assert current_branch(root) == context.session_branch
+
+
 def test_run_join_allows_oracle_change_on_session_branch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

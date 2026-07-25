@@ -961,9 +961,9 @@
   },
   "src/sub_commands/realization/refactor/fork.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "0811ff1ad232e10140ea3a80205f9ab71e9136ca4fabc546385b93211095ea75",
+    "last_investigated_at": "2026-07-25_11-29_32_003016000"
   },
   "src/sub_commands/run/__init__.py": {
     "investigation_required": true,
