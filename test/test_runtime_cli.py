@@ -137,6 +137,29 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
     assert "doctor failed" in json.dumps(events[-1], ensure_ascii=False)
 
 
+def test_cli_nonzero_impl_result_is_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """callback の非0 returnも共通error reportと終了コードへ変換する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            lambda: 7,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+            doctor_preprocess=False,
+        )
+
+    captured = capsys.readouterr()
+    assert exc_info.value.exit_code == 7
+    assert "# ERROR" in captured.out
+    assert "returncode: 7" in captured.out
+    assert "## Call stack" in captured.out
+    assert captured.err == ""
+
+
 def test_render_error_uses_structured_markdown() -> None:
     """CmocError は利用者が読む Markdown report として整形される。"""
     try:

@@ -2,7 +2,6 @@ import subprocess
 import time
 
 from commons.runtime_cli import (
-    CliRunResult,
     require_current_directory_is_work_root,
     run_cli_subcommand,
     start_subcommand_step,
@@ -113,7 +112,6 @@ __all__ = (
     "RUN_PROCESS_TRACKING_ENV",
     "RUN_STATES",
     "RunPart",
-    "CliRunResult",
     "CmocError",
     "CodexExecResult",
     "CommandResult",
