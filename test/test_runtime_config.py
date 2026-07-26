@@ -79,6 +79,31 @@ def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
     ]
 
 
+@pytest.mark.parametrize("payload", [b"{", b"\xff"])
+def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
+    """JSON 構文または UTF-8 が壊れた config を利用者向けエラーへ変換する。"""
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_bytes(payload)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
+
+
+def test_load_config_rejects_non_file_config_path(tmp_path: Path) -> None:
+    """config path が通常ファイルでない場合も読み込みエラーへ変換する。"""
+    root = make_repo(tmp_path)
+    (root / ".cmoc" / "gt" / "ar" / "config.json").mkdir(parents=True)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
+
+
 @pytest.mark.parametrize("value", [False, None, [], "gpt"])
 def test_config_rejects_non_object_codex_model_specs(value: object) -> None:
     """model の値にオブジェクト以外を指定した config を拒否する。"""
@@ -113,6 +138,14 @@ def test_config_rejects_non_string_reasoning_effort_names(value: object) -> None
     """reasoning effort 名に文字列以外や空文字列を指定した config を拒否する。"""
     with pytest.raises(CmocError) as exc_info:
         config_from_dict({"codex": {"reasoning_effort": {"low": value}}})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+def test_config_rejects_non_toml_reasoning_effort_name() -> None:
+    """TOML string として符号化できない reasoning effort 名を拒否する。"""
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({"codex": {"reasoning_effort": {"low": "\ud800"}}})
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 

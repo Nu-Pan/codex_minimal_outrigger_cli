@@ -691,19 +691,19 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig の既定値、JSON 変換時のメンバー順、設定ファイル読み込み、入力検証、provider-local 設定値の保持・拒否を検証するテスト。設定ランタイムの仕様変更や不正設定のエラー挙動を確認する際の入口。
+- CmocConfig の既定値、JSON 化時のメンバー順、設定ファイルの読み込み失敗、各設定項目の型・値検証、model provider の汎用設定保持、recovery 試行回数の永続化を検証するテスト。cmoc config の実行時設定境界やエラー挙動を確認する際の入口。
 
 ## Read this when
-- CmocConfig の既定値や論理 model class・reasoning effort の対応を変更するとき
-- config_from_dict、config_to_dict、load_config の入出力・永続化・エラー挙動を変更または検証するとき
-- Codex model provider、model spec、provider-local JSON/TOML 値の検証を変更するとき
+- CmocConfig の既定値や JSON 出力順を変更・確認するとき
+- config_from_dict または load_config の入力検証・エラー処理を変更・確認するとき
+- model provider 設定や Codex model/reasoning effort の永続化挙動を変更・確認するとき
 
 ## Do not read this when
-- 設定処理ではなく、CLI コマンドの実行制御や設定以外のランタイム機能を変更するとき
-- CmocConfig の実装詳細を直接確認したいときは、対応する実装ファイルを先に読む
+- 設定の実装詳細そのものを変更・確認する場合は、対応する設定実装と oracle source を直接読む
+- cmoc config と無関係な CLI 機能や oracle review の動作だけを調べる場合
 
 ## hash
-- 30520fe82d8308e91f103ff23937d1215bba93e5bde8376a667f0b18768c9e23
+- 46049b72e1ee337a81d18e857bd9facff3ff00931ce8fb837192c8756182bfbb
 
 # `test_runtime_content.py`
 

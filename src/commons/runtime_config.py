@@ -142,6 +142,10 @@ def _enum_str_map_from_dict(
         # Codex CLI 名へ変換するため、空名は不正な JSON 編集として扱う。
         if not isinstance(value, str) or not value.strip():
             raise TypeError
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # Codex CLI へ --config の TOML string として渡す値なので、JSON だけでなく
+        # TOML の Unicode scalar 制約も設定読み込み時に満たす必要がある。
+        validate_json_toml_value(value)
         restored[key_type(key)] = value
     return restored
 
@@ -283,8 +287,8 @@ def load_config(root: Path) -> CmocConfig:
             str(path),
         )
     try:
-        data = json.loads(path.read_text())
-    except json.JSONDecodeError as exc:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise CmocError(
             "cmoc config JSON を読み込めません。",
             ["{{work-root}}/.cmoc/gt/ar/config.json の JSON 構文を確認してください。"],
