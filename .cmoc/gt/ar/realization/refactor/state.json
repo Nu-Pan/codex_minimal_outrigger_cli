@@ -1212,10 +1212,10 @@
     "last_investigated_at": "2026-07-26_10-28_44_066175000"
   },
   "test/test_oracle_review_report.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "26a418c0c7b41721e192d90f129898c8ae09dbfc704e246494420baa7a8b43e0",
+    "last_investigated_at": "2026-07-26_10-46_00_524979000"
   },
   "test/test_oracle_review_targets.py": {
     "investigation_required": true,
