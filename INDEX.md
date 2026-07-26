@@ -58,17 +58,17 @@
 # `bin`
 
 ## Summary
-- cmoc コマンドの実行ラッパー。仮想環境の Python を検証し、通常実行では CLI 本体へ引数を渡す。仮想環境が使えない場合の案内と、シェル補完プローブ時の実行可能性確認を扱う。
+- プロジェクトの仮想環境 Python を検証し、通常実行時および補完プローブ時に CLI の実行入口へ引数を渡す起動ラッパー。仮想環境が利用できない場合のセットアップ手順付きエラーも扱う。
 
 ## Read this when
-- cmoc の起動経路、仮想環境 Python の検証、起動失敗時のエラー表示、シェル補完プローブの挙動を確認するとき。
+- cmoc コマンドの起動経路、仮想環境 Python の検証、補完プローブ時の挙動、起動失敗時のエラー表示を確認するとき。
 
 ## Do not read this when
-- cmoc のサブコマンドや CLI 本体の処理内容を確認するときは、CLI 本体の実装を直接読む。
-- Python 仮想環境の作成、依存関係、開発環境の正本仕様を確認するときは、対応する oracle ドキュメントを読む。
+- CLI サブコマンドの実装や引数処理そのものを調べるときは、直接 src/main.py と該当する実装を読む。
+- 開発環境の正本仕様やセットアップ規則を確認するときは、対応する oracle ドキュメントを直接読む。
 
 ## hash
-- 9a9a99329708cba2a6d2e35d6a087d2b5b3f3a130027abbf4b6a5fa0696e1e35
+- b871bfb0955e588c6b6b7c1ffaadc49609acccff1208cd93ace6f067970ca774
 
 # `codex_minimal_outrigger_cli.code-workspace`
 
@@ -143,17 +143,17 @@
 # `test`
 
 ## Summary
-- テストコード全体を収めるディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session lifecycle、設定・状態管理など、cmoc の外部挙動と制御契約を検証する realization test の入口である。各テストファイルは対象機能ごとの詳細な回帰・統合テストを提供する。
+- cmoc の realization test を集約するディレクトリ。CLI、runtime、Codex 実行、worktree・session lifecycle、oracle review、indexing、設定、共通テスト支援など、実装の外部挙動と制御契約を検証する。個別領域のテストへ進むための入口。
 
 ## Read this when
-- cmoc の機能変更に伴い、対応する外部挙動・状態遷移・エラー処理の既存テストを探すとき。
-- 対象機能のテスト範囲や、関連する共通テスト helper・fixture の利用方法を確認するとき。
-- CLI、Codex 実行、worktree、INDEX.md、oracle review、session/run state の回帰を調査するとき。
+- cmoc の既存挙動をテストで確認・変更するとき
+- CLI、runtime、Codex、worktree、session、indexing、oracle review などの回帰テスト対象を探すとき
+- 共通の Git・Ollama・Codex・外部コマンド用テスト支援を利用または変更するとき
 
 ## Do not read this when
-- 正本仕様や実装責務を確認することが目的の場合は、対応する oracle または src のファイルを直接読む。
-- テスト対象と無関係な機能を調査する場合は、ディレクトリ全体を読まず対象機能のテストへ直接進む。
-- テスト実行手順や Python 開発環境を確認する場合は、対応する開発・テスト手順を直接読む。
+- 実装の詳細を確認・変更するときは、対応する src の実装ファイルを直接読む
+- 正本仕様や schema の内容を確認するときは、対応する oracle 文書・oracle source を直接読む
+- テスト対象と無関係な領域を調査するとき
 
 ## hash
-- f0de46088d8b5db2047569118722b9019a194546e8f396983e562798b76ed73e
+- a8b9fd07248d4d8d8fd8eeda23c94caf1760889d609451bebbade7a900a9f8ca

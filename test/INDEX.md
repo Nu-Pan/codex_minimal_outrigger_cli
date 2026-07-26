@@ -624,20 +624,19 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の error、log、preflight、completion 境界を検証するランタイム CLI 回帰テスト。
-- duration 表示、サブコマンドログの衝突・並列記録、doctor/pre-log 失敗時のログ、構造化 error report、CLI 解析エラー、work root 制約、completion の副作用抑止、起動 wrapper の失敗、gitignore 更新を扱う。
+- CLI の duration 表示、サブコマンドログ、並列イベント記録、doctor/pre-log の前処理、error report、work root 制約、shell completion、起動 wrapper、.gitignore 更新を検証する runtime 回帰テスト。CLI lifecycle の共通 runner・work root・終了処理を横断して確認するため、error/log/preflight/completion の外部契約を一つのテスト入口に集約している。
 
 ## Read this when
-- CLI の error report、終了コード、stdout/stderr 出力、call stack、引数解析失敗を変更・調査するとき。
-- サブコマンドログ、logger の並列性・timestamp 衝突、quota wait、preflight または doctor preprocess の失敗処理を変更・調査するとき。
-- work root 判定、shell completion probe、起動 wrapper の venv エラー、cmoc 用 gitignore 更新を変更・調査するとき。
+- CLI のエラー出力、終了コード、stdout/stderr 分離、Markdown error report を変更または調査するとき。
+- サブコマンドログの生成、衝突回避、並列書き込み、quota wait、doctor/pre-log の失敗処理を変更または調査するとき。
+- work root 判定、completion probe の副作用抑制、CLI 起動 wrapper、.gitignore の cmoc ignore 設定を変更または調査するとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックや固有の入出力だけを変更・調査する場合は、対応するサブコマンドのテストを直接読む。
-- CLI lifecycle の error、log、preflight、completion に関係しない parser、oracle、realization の単体挙動を調査する場合。
+- 特定サブコマンド固有の処理や業務ロジックだけを変更・調査する場合。
+- CLI lifecycle の error、log、preflight、completion に関係せず、対象実装やその専用テストを直接確認できる場合。
 
 ## hash
-- e05c2fcc7f97b369cc93efda460acded3190797c379bdb0546382994a5f5e016
+- 37f42f74812a4e39be86fb91660dd9386db175dc6d925f06fbb44f8603502296
 
 # `test_runtime_codex_conflicts.py`
 
