@@ -252,13 +252,24 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
             os.close(process_fd)
     else:
         current_start_time = process_start_time(process.process_id)
-        if (
-            current_start_time is not None
-            and process.start_time is not None
-            and current_start_time != process.start_time
-        ):
+        if current_start_time is None:
+            if not process_group_has_running_member(process_group_id):
+                return f"run child process already stopped: {process.process_id}"
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # leader が消えた後に PGID だけで停止すると、再利用された PGID の別 group
+            # へ signal を送るため、対応関係を確認できない場合は fail closed にする。
+            raise CmocError(
+                "実行中 Codex subprocess の同一性を確認できません。",
+                ["run process を確認し、停止後に再実行してください。"],
+                f"pid: {process.process_id}\npgid: {process_group_id}",
+            )
+        if process.start_time is None:
+            raise CmocError(
+                "実行中 Codex subprocess の同一性を確認できません。",
+                ["run process を確認し、停止後に再実行してください。"],
+                f"pid: {process.process_id}\npgid: {process_group_id}",
+            )
+        if current_start_time != process.start_time:
             return f"stale run child process id ignored: {process.process_id}"
-        if not process_group_has_running_member(process_group_id):
-            return f"run child process already stopped: {process.process_id}"
     stop_process_group(process_group_id)
     return None

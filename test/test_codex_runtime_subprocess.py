@@ -6,10 +6,12 @@ from _command_support import write_python_executable
 
 import cmoc_runtime
 import commons.runtime_codex_profile as runtime_codex_profile
+import commons.runtime_run as runtime_run
 from commons.runtime_codex_profile import (
     run_codex_subprocess,
     run_tracked_codex_subprocess,
 )
+from commons.runtime_errors import CmocError
 
 
 def test_tracked_codex_subprocess_records_dedicated_process_group(
@@ -301,3 +303,27 @@ def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
 
     assert result.stdout == "ok\n"
     assert not tracking_path.exists()
+
+
+def test_stop_child_process_group_fails_closed_when_leader_is_gone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """leader消滅後に再利用された可能性のあるPGIDへsignalを送らない。
+
+    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    child = runtime_run.ProcessIdentity(123, 456, 789)
+    stopped: list[int] = []
+    monkeypatch.setattr(runtime_run, "open_process_fd", lambda *_args: None)
+    monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: None)
+    monkeypatch.setattr(
+        runtime_run, "process_group_has_running_member", lambda _pgid: True
+    )
+    monkeypatch.setattr(
+        runtime_run, "stop_process_group", lambda pgid: stopped.append(pgid)
+    )
+
+    with pytest.raises(CmocError, match="同一性を確認できません"):
+        runtime_run.stop_child_process_group(child)
+
+    assert stopped == []

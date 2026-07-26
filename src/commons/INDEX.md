@@ -362,22 +362,20 @@
 # `runtime_run.py`
 
 ## Summary
-- editing run の worktree 解決とプロセス追跡・停止を担う共通ランタイムモジュール。
-- branch から worktree を検証付きで特定し、session 単位の tracking file と lifecycle lock で run 本体および Codex 子プロセス群を管理する。
-- PID の再利用を避けるため開始時刻や process group を検証し、安全側に倒して run の停止・tracking file の削除を行う。
+- editing run の worktree 解決、プロセス識別情報の保存・読取・削除、実行中 run と Codex subprocess group の安全な停止を担うランタイム補助モジュール。run abandon や実行ライフサイクル制御の実装を調べる際の入口となる。
 
 ## Read this when
-- editing run の worktree 解決、run process の追跡、abandon 時の停止処理を変更・調査するとき。
-- PID、process group、pidfd、process start time を用いたプロセス同一性検証や停止失敗時の挙動を確認するとき。
-- session ごとの run lifecycle lock、tracking file の読み書き・削除条件を確認するとき。
+- editing run の process tracking、lifecycle lock、abandon 処理を変更・調査するとき
+- PID 再利用対策、start time や pidfd によるプロセス同一性検証、process group 停止の挙動を確認するとき
+- branch から worktree を解決する処理や run process tracking file の形式を確認するとき
 
 ## Do not read this when
-- Codex subprocess 自体の起動や tracking 情報の登録形式を変更する作業で、呼び出し元や runtime_codex_profile の実装を直接確認すべきとき。
-- git worktree の配置規則そのものを変更する作業で、branch model の oracle 文書や expected_run_worktree の実装を直接確認すべきとき。
-- 一般的な git 操作、パス処理、エラー型の仕様だけを調べるとき。
+- 一般的な git worktree 操作だけを調べるときは、worktree 管理を直接実装する対象を読む
+- Codex subprocess の起動・追跡登録処理そのものを調べるときは、subprocess 起動側の実装を直接読む
+- CLI の利用者向け編集 run 仕様やコマンド引数を確認するときは、対応する oracle doc またはサブコマンド実装を読む
 
 ## hash
-- 1e5a555654f260ca2de6edeb06a9e081bb043266bd9690d7c22b3d8853999729
+- e3e9ed3c6385e566e0c5ad094352ea9d1a466fdac38bc44785f678a5dfa6667c
 
 # `runtime_run_lifecycle.py`
 
