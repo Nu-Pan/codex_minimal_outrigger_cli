@@ -263,7 +263,7 @@ def _cleanup_review_run(
     errors: list[str] = []
     try:
         removal = remove_worktree(root, review_worktree)
-        if review_worktree.exists():
+        if removal.returncode != 0 or review_worktree.exists():
             errors.append(
                 "worktree removal failed: "
                 + (

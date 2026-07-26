@@ -499,7 +499,13 @@ def test_oracle_review_reports_cleanup_failure(
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
     failed_cleanup = CommandResult(1, "", "cleanup failed")
-    monkeypatch.setattr(review_module, "remove_worktree", lambda *args: failed_cleanup)
+
+    def fail_remove_worktree(_root: Path, worktree: Path) -> CommandResult:
+        """削除 command が失敗しつつ path だけ消えた cleanup を再現する。"""
+        worktree.rename(worktree.with_name(f"{worktree.name}.removed"))
+        return failed_cleanup
+
+    monkeypatch.setattr(review_module, "remove_worktree", fail_remove_worktree)
     monkeypatch.setattr(
         review_module, "delete_branch", lambda *args, **kwargs: failed_cleanup
     )
@@ -513,4 +519,5 @@ def test_oracle_review_reports_cleanup_failure(
     rendered = report_path.read_text()
     assert "result: error" in rendered
     assert "oracle review の隔離 run の cleanup に失敗しました。" in rendered
+    assert "worktree removal failed: cleanup failed" in result.output
     assert "cleanup failed" in result.output

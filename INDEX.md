@@ -127,35 +127,53 @@
 # `src`
 
 ## Summary
-- `src` is the realization-side Python source tree for the cmoc CLI. It contains the top-level CLI entry point, compatibility shims, shared runtime helpers, configuration compatibility paths, and subcommand implementations.
-- Use this directory as the routing entry to locate CLI registration and delegation, shared runtime infrastructure, compatibility import paths, and the concrete doctor/indexing/oracle/realization/run/session/TUI subcommands.
+- ACP互換層の公開入口と、`acp.builder.*` の互換入口・realization adapterをまとめるディレクトリ。canonicalなoracle実装への接続や、builder adapterの下位要素へ進む起点となる。
+- `basic.*` の互換importを維持する公開入口群。ACP型、path model、構造化文書APIを実体定義から再公開する。
+- `commons.cmoc_runtime` の公開名を互換的に再公開する薄いimport shim。`cmoc_runtime`公開名からruntime moduleへ移行するための入口。
+- 複数のCLIサブコマンドで共有するruntime helperを集約するcommonsパッケージ。Codex実行、CLI lifecycle、設定、Git/worktree、path、logging、state、error、report、INDEX更新などの共通実行基盤を扱う。
+- 設定モジュールの互換入口を提供するディレクトリ。`config.*`参照を成立させ、設定型をrealization側から再公開する。
+- Typerを用いたcmoc CLIの主要エントリーポイント。doctor、tui、indexing、session、oracle、realization、runなどのサブコマンドを登録し、対応する実装へ委譲する。
+- `src`起動時に正本側`oracle.*`パッケージを解決するための互換用package shim。正本ソースのパッケージパスを再公開する。
+- CLIサブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tuiなどの実装への入口を提供する。
 
 ## Read this when
-- cmoc の realization 側ソース全体の構成や、目的に応じた実装モジュールの入口を確認するとき。
-- CLI の登録・委譲先、共有 runtime、互換 import shim、またはサブコマンド実装の配置を特定するとき。
+- ACP公開名の互換維持、builder adapter、canonical実装への接続、またはprompt補正・workload・command・TUI・session関連の実装を調査するとき。
+- `basic.*`経由の公開名や互換import、またはACP型・path model・構造化文書APIの再公開関係を確認するとき。
+- `cmoc_runtime`の互換import pathやruntime moduleへの移行状況を確認するとき。
+- 複数のCLIサブコマンドにまたがる共通runtime機能、Codex exec/TUI起動、設定、Git/worktree、path、logging、state、error、run lifecycle、report、INDEX更新を調査・変更するとき。
+- `config`または`config.cmoc_config`の参照経路や設定型の互換入口を確認するとき。
+- cmocのCLIコマンド、サブコマンド、option、Typer/Click引数解析、エラー変換、自動補完、またはCLIからの委譲先を調査・変更するとき。
+- `src`起動時の`oracle.*`パッケージ解決や互換importの挙動を確認するとき。
+- CLIサブコマンドの実装構成やdoctor、indexing、oracle、realization、run、session、tuiの実行フローを確認・変更するとき。
 
 ## Do not read this when
-- 利用者向けの正本仕様や oracle 実装を確認するとき。`oracle` ツリーを直接読む。
-- 特定のサブコマンドや runtime 領域の実装箇所が分かっているとき。対応する下位モジュールを直接読む。
-- `src` に含まれる個別の互換 shim の挙動だけを確認するとき。対象ファイルを直接読む。
+- 個別のbuilder、TUI、session、oracle、realization実装の詳細だけを確認したいときは、対応する下位実体を直接読む。
+- 利用側の参照や利用者向け公開面だけを調査するときは、各参照元を直接読む。
+- ACP APIの正本仕様や実装本体を確認したいときは、対応するoracle側または実体モジュールを直接読む。
+- runtimeの詳細実装や責務別moduleを確認するときは、`commons.cmoc_runtime`または該当runtime moduleを直接読む。
+- 設定定義の内容や仕様そのものを確認するときは、oracle側の設定定義を直接読む。
+- 個別サブコマンドの処理内容、永続化、worktree操作の詳細を確認するときは、`sub_commands`配下の該当実装を直接読む。
+- 正本側`oracle.*`の実装内容を確認するときは、`oracle/src/oracle`配下を直接読む。
+- 特定サブコマンドの限定された共通処理や詳細実装だけを確認するときは、該当する下位実装を直接読む。
+- applyまたはreviewの具体的な実装を確認するときは、実装追加後に該当箇所を読む。
 
 ## hash
-- cd51dd5c6295d5573ec206d2a006fa344ce738f8ec792e3a637e2e40a4093081
+- fce6f07b42d6aa5183bab69d1d1b2797387c041fefb300c8e6e41d276959dd14
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を集約するディレクトリ。ACP builder、Codex runtime、CLI、INDEX.md indexing、oracle review、session/run lifecycle、設定・状態永続化などの外部挙動と制御ロジックを検証し、共通テスト支援モジュールも提供する。各機能のテストを探す際の入口となる。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session lifecycle、runtime state/config などの外部挙動・制御ロジックを検証するテストと、共通テスト支援モジュールを含む。各機能の実装変更時に対応するテストへ進む入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test の所在や検証範囲を探すとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run、runtime state などの回帰テストを追加・変更するとき
-- 複数の機能領域にまたがる統合テスト、実経路テスト、共通テスト helper の利用箇所を確認するとき
+- cmoc の実装変更に対応する realization test の所在や、検証対象となる外部挙動・制御ロジックを探すとき
+- 複数のサブコマンド、Codex 実行経路、Git/worktree lifecycle、永続 state、INDEX 更新の回帰テストを横断して確認するとき
+- テスト用の Codex/Ollama、Git repository、fake external command、CLI 実行支援を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle ファイルを直接読む
-- 特定機能の実装詳細を確認するときは、対応する src ファイルを直接読む
-- テスト対象と無関係な領域の実装や開発手順だけを調べるときは、このディレクトリ全体ではなく対象ファイルへ直接進む
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc または oracle source を直接読む
+- 特定機能の実装詳細を確認するときは、対応する src の実装ファイルを直接読む
+- テスト実行環境や品質検査の手順だけを確認するときは、開発・テスト手順の文書を直接読む
 
 ## hash
-- 08eb7f361e6c42c648270644536b344d17d62c23715c9e2c593bd1b27d7cd268
+- 3a3635eb450f67e514757a04ac9350a5be200d6791ab484f9167626d41e63749

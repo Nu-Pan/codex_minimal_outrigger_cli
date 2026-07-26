@@ -45,22 +45,20 @@
 # `review.py`
 
 ## Summary
-- oracle review サブコマンドの実行責務を担う実装。active session branch 上で隔離 review run を作成し、対象 oracle のレビュー、INDEX 更新の統合、worktree・branch の cleanup、レビュー結果レポートの出力までを統括する。
-- レビューの中断・例外・cleanup 失敗を含む終了経路、未コミット差分の拒否、サブコマンド進捗ログ、レビュー関連の公開関数を扱う。レビュー対象列挙・ループ・レポート描画の詳細実装は、インポート先の専用モジュールが入口となる。
+- oracle review サブコマンドの CLI 実行入口と実行本体を提供する。active session branch の検証、隔離 worktree・run branch の作成と cleanup、oracle 対象列挙、レビュー実行、結果の merge、レポート出力、中断・例外処理を束ねる。oracle review の実行フローや cleanup、公開 import を確認する際の入口となる。
 
 ## Read this when
-- `cmoc oracle review` のCLI実行フロー、隔離worktree/run branchのライフサイクル、レビュー結果の統合またはレポート出力を変更・調査するとき。
-- oracle review の中断時・例外時・cleanup失敗時の挙動、または実行前のworktree状態検査を確認するとき。
-- oracle review 関連の公開関数がどのモジュールから提供されるかを確認するとき。
+- oracle review サブコマンドの実行フロー、隔離 run、レビュー結果の merge、レポート出力を変更・調査するとき
+- oracle review の中断処理、cleanup 失敗、未コミット差分検査、active session branch 制約を確認するとき
 
 ## Do not read this when
-- レビュー対象ファイルの列挙条件だけを変更・調査する場合は、対象列挙を担当する専用モジュールを直接読む。
-- レビュー反復処理や所見マージの詳細だけを変更・調査する場合は、review loop担当モジュールを直接読む。
-- 所見の描画・レポートファイル生成だけを変更・調査する場合は、review report担当モジュールを直接読む。
-- INDEX更新のcommit・merge・conflict解決だけを変更・調査する場合は、review index担当モジュールを直接読む。
+- レビュー対象の列挙条件だけを確認したいときは review_targets.py を読む
+- レビュー loop の所見評価や merge 操作だけを確認したいときは review_loop.py を読む
+- レポートの表示形式や保存処理だけを確認したいときは review_report.py を読む
+- INDEX.md の生成・commit・conflict 解決だけを確認したいときは review_index.py を読む
 
 ## hash
-- 12bf93f8e1a60f45f400a67b6b8b62633e458dea3a2978e3afbccefd6aac3a85
+- 9a45b986ed3bf9025e541836bc5f554cbfc48577c43a0bb1a0ceac474d9a4d1c
 
 # `review_index.py`
 

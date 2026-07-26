@@ -115,17 +115,17 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui の各サブコマンドおよび関連パッケージへの入口を提供する。apply と review は現在実装がなく、将来の配置先として示されている。
+- CLI サブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの各サブコマンド実装への入口を提供する。apply と review は現時点で実装本文がない。
+- realization、run、session には、各 workload・lifecycle・状態管理・差分処理などの関連実装が集約されている。
 
 ## Read this when
-- サブコマンド実装の構成や入口を確認するとき。
-- doctor、indexing、oracle、realization、run、session、tui の実行フローや実装箇所を探すとき。
-- apply または review の実装を追加する場所を確認するとき。
+- CLI サブコマンドの実装構成や、対象サブコマンドの実行フローを確認・変更するとき。
+- doctor、indexing、oracle、realization、run、session、tui のいずれかを調査するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細実装を直接調査したいときは、対応する下位モジュールを読む。
-- 共通 runtime、preprocess、indexing、report、commit などの具体的な共通処理だけを調査するときは、対応する共通実装を直接読む。
-- oracle の仕様そのものや、TUI の専用 builder・prompt editor の詳細を確認するとき。
+- 特定サブコマンドのより限定された共通処理や詳細実装だけを確認するときは、該当する下位実装を直接読む。
+- apply または review の具体的な実装を確認したいときは、実装追加後に該当箇所を読む。
+- このディレクトリに属さない共通 runtime、builder、oracle 文書の仕様だけを確認するとき。
 
 ## hash
-- e2512771d459576f5b9ff215ca685fc4009189bdc5c2b050b7ad404ec57a3f6a
+- 3216ea22f49e286b31f8e35552db99b7788acfba601720f36b821593a139d986
