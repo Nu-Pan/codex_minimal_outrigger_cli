@@ -654,10 +654,10 @@
     "last_investigated_at": "2026-07-24_22-17_48_203954000"
   },
   "src/acp/builder/tui/launch_tui.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "6e9784f7e8505819488f5b54a774a719a4f662ab87693b9fbecc5a080f79477a",
-    "last_investigated_at": "2026-07-24_22-29_21_459069000"
+    "last_investigated_sha256": "2e19ef7b2bbcbcd68134e7bb99c529ff44530bdae06fb7c954f0e99f7190f9ee",
+    "last_investigated_at": "2026-07-27_06-21_47_534518000"
   },
   "src/acp/builder/tui/resolve_parameter.py": {
     "investigation_required": true,
