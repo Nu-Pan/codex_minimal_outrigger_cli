@@ -54,10 +54,10 @@
     "last_investigated_at": "2026-07-23_15-10_13_829602000"
   },
   "oracle/doc/app_spec/doctor_preprocess.md": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
     "last_investigated_sha256": "489c8d13dcfb1d48f595820b7646abb2df6c6ab43097c531db338b9756163451",
-    "last_investigated_at": "2026-07-23_15-29_06_077871000"
+    "last_investigated_at": "2026-07-26_17-01_04_482793000"
   },
   "oracle/doc/app_spec/error_handling.md": {
     "investigation_required": true,
