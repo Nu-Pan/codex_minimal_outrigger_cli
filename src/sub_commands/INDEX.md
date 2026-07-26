@@ -59,22 +59,18 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply workload と refactor workload の実装へのルーティングを提供する。
-- apply workload は `cmoc realization apply fork` の実行ライフサイクル、agent 実行、差分検証、commit、状態遷移、report 保存、失敗時 rollback を扱う。
-- refactor workload はリファクタリング関連 CLI の入口と、対象ファイルの調査・修正、差分検証、commit、所見管理、完了・中断・エラー処理、report 生成を扱う。
+- realization workload サブコマンドのパッケージ入口。apply workload と refactor workload の実装、および各 fork の実行ライフサイクルへの入口を提供する。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- `cmoc realization apply fork` の実行フロー、状態遷移、agent 実行、差分検証、commit、report、rollback を調査・変更するとき。
-- realization のリファクタリング機能や refactor fork のライフサイクル、調査・修正、完了判定、report 生成を調査・変更するとき。
+- realization workload サブコマンドの構成や実装入口を確認するとき。
+- realization の apply または refactor fork のライフサイクル、状態遷移、commit、cleanup、report 保存を調査・変更するとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき。
-- apply workload や refactor workload の個別 agent、run 状態管理、差分取得、commit、INDEX 更新、report 生成など、より限定された共通処理だけを確認するとき。
-- `cmoc realization apply fork` 以外のサブコマンドの CLI 本体だけを確認するとき。
+- realization workload に関係しない処理を確認するとき。
+- apply または refactor の個別実装だけを確認したいときは、各 workload の下位対象を直接読む。
 
 ## hash
-- 4959038c5bf90e20e28f2c2c62228774dd99289c691b51ce23551377c93b1b17
+- 95a314c001e249afd7ea2331182a3a7ac67e09b1b61a5c33f49944895d861b5e
 
 # `review`
 
@@ -93,20 +89,19 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。abandon・join の実装と、旧 import path 向けの lifecycle・report 互換 shim を扱う。配下の具体的な run lifecycle、cleanup、report、互換性処理を調べる際の入口。
+- editing run の共通 lifecycle サブコマンドと、関連する互換 shim をまとめるパッケージ。abandon・join の処理全体や、旧 import path の互換性を確認する入口であり、個別 helper の詳細は配下の該当ファイルを直接読む。
 
 ## Read this when
-- editing run の abandon または join の処理全体を調査・変更するとき
-- editing run の lifecycle、cleanup、state 同期、report 生成の連携を確認するとき
-- 旧 import path の lifecycle・report 互換 shim や移行状況を確認するとき
+- editing run サブコマンドの共通 lifecycle、abandon、join、または旧 import path の互換 shim を調査・変更するとき
+- run の process、worktree、branch、state、report の cleanup・同期・互換性を確認するとき
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき
-- git・state・process tracking・report writer など共通 helper の実装詳細を調べるときは、対応する commons 側の実装を直接読む
-- 利用者向け仕様や state の正本定義を確認するときは、対応する oracle doc を先に読む
+- git 操作、state 操作、process tracking、report 出力などの共通 helper の実装詳細を確認するとき
+- join や report の利用者向け仕様、state の正本定義、canonical な共通実装を確認するとき
 
 ## hash
-- 97e703cfe2632c6ea3b348a5b3ba93ca97964a13b5d2b0fbcea31e15146f7887
+- 086e4b17ca6db22c382c89b1b693a3fb9801bf5f3fc30950917566198730b370
 
 # `session`
 

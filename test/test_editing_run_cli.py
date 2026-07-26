@@ -92,6 +92,30 @@ def _no_index_refresh(_root: Path, *, commit: bool) -> list[Path]:
     return []
 
 
+def test_refresh_indexes_builds_prompts_for_requested_worktree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """INDEX builder の work-root を明示された worktree に揃える。"""
+    root = make_repo(tmp_path)
+    caller = tmp_path.resolve()
+    monkeypatch.chdir(caller)
+    observed: list[Path] = []
+
+    def fake_update_indexes(worktree: Path, _codex_exec: object) -> list[Path]:
+        """対象 worktree で index builder が呼ばれることを記録する。"""
+        observed.append(Path.cwd().resolve())
+        assert worktree == root
+        return []
+
+    monkeypatch.setattr(lifecycle_module, "update_indexes", fake_update_indexes)
+
+    lifecycle_module.refresh_indexes(root, commit=False)
+
+    assert observed == [root.resolve()]
+    assert Path.cwd().resolve() == caller
+
+
 def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None:
     """fork reportの変更pathは削除とrename元を含めない。"""
     assert flattened_change_paths(
@@ -179,20 +203,35 @@ def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> N
     ]
 
 
-def test_apply_rejects_rename_from_oracle_to_realization(
+def test_apply_rolls_back_unexpected_oracle_change(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """apply agent の oracle から realization への rename を拒否する。"""
-    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
-    context = start_editing_run("realization_apply")
-    (context.run_worktree / "oracle" / "spec.md").rename(
-        context.run_worktree / "moved.md"
-    )
-    run_git(context.run_worktree, "add", "-A")
+    """run branch の想定外差分を commit 後に rollback する。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
 
-    with pytest.raises(CmocError):
-        apply_module._validate_agent_changes(context)
+    def fake_apply(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """apply agent が oracle file を変更した状態を再現する。"""
+        worktree = Path(str(kwargs["cwd"]))
+        (worktree / "oracle" / "unexpected.md").write_text("unexpected\n")
+        return SimpleNamespace(returncode=0, output_json=None)
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
+    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    state = _state(state_path)
+    assert state["run"]["state"] == "error"
+    assert not (root / "oracle" / "unexpected.md").exists()
 
 
 @pytest.mark.parametrize(
@@ -325,6 +364,59 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert f"- run_branch: `{run_branch}`" in joined.output
     assert "cmoc run join" in joined.output
     assert current_branch(root) == session_branch
+
+
+def test_apply_builder_uses_run_worktree_as_prompt_work_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """apply builder の prompt 内 work-root と exec cwd を一致させる。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    original_builder = apply_module.build_realization_apply_fork_launch_exec_parameter
+    observed: list[tuple[Path, Path, str]] = []
+
+    def capture_builder(
+        diff_base_commit: str,
+        run_fork_commit: str,
+        raw_oracle_git_diff: str,
+        run_worktree: Path,
+    ) -> AgentCallParameter:
+        """builder 構築時の cwd と prompt を記録する。"""
+        parameter = original_builder(
+            diff_base_commit,
+            run_fork_commit,
+            raw_oracle_git_diff,
+            run_worktree,
+        )
+        observed.append(
+            (Path.cwd().resolve(), run_worktree.resolve(), parameter.prompt)
+        )
+        return parameter
+
+    monkeypatch.setattr(
+        apply_module,
+        "build_realization_apply_fork_launch_exec_parameter",
+        capture_builder,
+    )
+    monkeypatch.setattr(
+        apply_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
+    )
+    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert _state(state_path)["run"]["state"] == "joinable"
+    assert len(observed) == 1
+    build_cwd, run_worktree, prompt = observed[0]
+    assert build_cwd == run_worktree
+    assert f"- {{{{work-root}}}} = {run_worktree}" in prompt
 
 
 def test_run_abandon_accepts_already_removed_run_worktree(
@@ -500,6 +592,7 @@ def test_apply_start_failure_after_run_publish_is_reported(
     )
     assert len(reports) == 1
     assert f"- fork report: `{reports[0]}" in result.output
+    assert 'state_before: "ready"' in reports[0].read_text()
 
 
 def test_apply_start_failure_does_not_recover_existing_error_run(
@@ -1007,6 +1100,7 @@ def test_refactor_start_failure_after_run_publish_is_reported(
     )
     report = Path(report_line.removeprefix("- fork report: ").strip("`"))
     assert 'completion_reason: "error"' in report.read_text()
+    assert 'state_before: "ready"' in report.read_text()
 
 
 def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(

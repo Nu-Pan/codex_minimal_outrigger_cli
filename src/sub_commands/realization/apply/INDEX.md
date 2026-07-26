@@ -15,17 +15,15 @@
 # `fork.py`
 
 ## Summary
-- `cmoc realization apply fork` の CLI 実行処理を担当する。realization apply agent を実行し、許可差分を検証・commit して run を joinable に更新し、fork report を保存する。失敗時は差分を rollback して error state と report を記録する。
-- realization apply の run 作成、oracle 差分構築、Codex 実行、INDEX 更新、差分検査、状態遷移、エラー回収までの制御フローと補助処理への入口である。
+- `cmoc realization apply fork` サブコマンドの実行制御を担う実装。realization apply agent の起動、oracle 差分の構築、run worktree の変更検査・commit、joinable/error state 更新、fork report 保存、失敗時の rollback と run 回収を扱う。
 
 ## Read this when
-- `cmoc realization apply fork` の CLI 挙動、run lifecycle、agent 実行、差分検証、commit、joinable/error state、fork report の処理を変更・調査するとき。
-- apply fork の失敗時 rollback、開始直後の run 回収、想定外差分の扱いを確認するとき。
+- `cmoc realization apply fork` のライフサイクル、agent 実行、差分 commit、joinable/error 遷移を変更・調査するとき。
+- apply fork の想定外差分、起動失敗、cleanup、fork report の挙動を確認するとき。
 
 ## Do not read this when
-- realization apply agent のプロンプトや起動パラメータ生成だけを変更・調査するときは、起動パラメータ実装を直接読む。
-- run 状態管理、差分取得、commit、INDEX 更新、report 生成の共通仕様や実装だけを確認するときは、対応する `commons.runtime_run*` または report 実装を直接読む。
-- `cmoc realization apply fork` 以外のサブコマンドの CLI 本体を変更・調査するとき。
+- realization apply agent の prompt 構築だけを変更・調査する場合は、launch parameter builder を直接読む。
+- run の一般的な join・abandon 処理や共通 state 操作だけを確認する場合は、対応する runtime lifecycle 実装を直接読む。
 
 ## hash
-- fe6bf6326ac8a21538a5397a1c2f8814950b4e36b760cc95c08df010617a09b8
+- d8ab5c807e8b7b94113a2e08b503dae6dd225bf8dcd4b0f01f748f427a53b866

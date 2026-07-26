@@ -127,33 +127,35 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側 Python ソースツリー。Typer CLI の主要エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP・basic builder 入口を扱い、個別機能の実装へ進むための上位ルーティングとなる。
+- cmoc CLI の realization 実装ルート。Typer によるコマンド登録と引数解析、互換 import shim、共通 runtime、設定入口、ACP/basic builder、個別サブコマンド実装を下位対象へ分けて提供する。
+- CLI 全体の入口とサブコマンド登録は直下の main 実装、横断 runtime は commons、ACP/basic/config/oracle の互換・再公開経路は各対応ディレクトリまたは shim、個別処理は sub_commands から確認できる。
 
 ## Read this when
-- cmoc の CLI 全体構成、サブコマンド登録、互換 import 経路、共通 runtime の担当領域を確認するとき。
-- 特定のサブコマンドや runtime 機能の実装へ進む前に、対応する realization 側の入口を選ぶとき。
+- cmoc CLI のコマンド構成、登録名、引数解析、エラー変換、自動補完、または console script の入口を調査・変更するとき。
+- CLI 実装が利用する共通 runtime、互換 import 経路、builder adapter、設定再公開、または oracle package shim の配置を確認するとき。
+- 特定サブコマンドの実装入口を選ぶ必要があり、doctor・indexing・oracle・realization・run・session・tui の下位対象へ進むとき。
 
 ## Do not read this when
-- 正本仕様や canonical な oracle 実装そのものを確認したいとき。
-- 特定サブコマンド、builder、runtime helper の詳細処理だけを調査するときは、対応する下位モジュールへ直接進む。
+- canonical な oracle package や正本仕様の内容を確認したいときは、oracle 側の対応対象を直接読む。
+- 特定サブコマンドの詳細な実行フローや helper の実装だけを確認したいときは、sub_commands 配下の対応対象を直接読む。
+- 共通 runtime の特定機能だけを調査するときは、commons 配下の担当モジュールを直接読む。
 
 ## hash
-- b2b3da88314005f0be3918028136f30e1ba4716f5eeb802d89fcf81b3ce0bafe
+- 19bf08ef6294b625cce95bbfe63194a7c1f51a84b526deaf1818d39b17232f21
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群と共通テスト支援モジュールを収めるディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session/editing run、runtime state/config などの外部挙動・制御ロジックを、単体・統合・実経路テストで検証する入口となる。
+- cmoc の realization test ディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、TUI、Git/Ollama 連携などの外部挙動と制御ロジックを pytest で検証する。配下の共通テスト支援モジュールと機能別テストが、変更対象に応じた入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する pytest テストや共通 fixture・fake command・Git/Ollama/Codex テスト環境を探すとき
-- 対象機能の CLI lifecycle、Codex 実行、worktree/state、structured output、INDEX 更新、oracle review の回帰テストを確認するとき
-- テスト対象に応じて個別テストファイルへ進み、必要なら共通支援モジュールを確認するとき
+- cmoc の実装や仕様変更に対して、対応する外部挙動・制御ロジックのテスト範囲を特定するとき。
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run lifecycle、テスト用 Git/Ollama 環境の検証を追加・変更するとき。
 
 ## Do not read this when
-- 正本仕様や開発・テスト実行手順を確認することが目的の場合は、対応する oracle 文書や開発ルールを直接読む
-- 実装本体の責務・内部設計を調査する場合は、対応する src モジュールを先に読む
-- 対象機能と無関係なテスト領域や、Codex/Ollama を起動しない単純なテスト環境整理だけを扱う場合
+- テスト対象が明確な場合は、このディレクトリ全体ではなく対応する個別テストまたは共通テスト支援モジュールへ直接進む。
+- 正本仕様や実装詳細の確認が目的の場合は、対応する oracle 文書・oracle source・src 配下を読む。
+- LLM の回答品質自体を評価する場合は、このテスト群を読む対象にしない。
 
 ## hash
-- 837dd17dcc48e53b36015a2bb48137cf5ebff2b0da7611bd50a980188925017c
+- 20360ae90dfb7f491002167102129acd27ef3a107d789c83815d17f5bdc09ab1

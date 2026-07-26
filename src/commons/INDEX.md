@@ -380,19 +380,21 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run の開始から state 遷移、commit、差分分類、INDEX 更新、cleanup 判定までを担う共通 lifecycle 実装。EditingRunContext と lifecycle lock を共有し、session/run branch と worktree の整合性、許可された変更 path、oracle 差分を管理する。
+- 明示的な join を必要とする editing run のライフサイクル共通処理を担う。session の事前条件確認、run worktree の作成・状態管理・終了、work unit の rollback/commit、INDEX 更新、Git 差分の分類と許可範囲検査、cleanup 判定に必要な関数群を提供する。
 
 ## Read this when
-- editing run の開始、active run の解決、joinable/error 遷移を変更するとき
-- run worktree の commit、rollback、INDEX 更新、差分分類や変更 path の許可判定を確認するとき
-- session branch と run branch の worktree/state 整合性や cleanup 対象を調査するとき
+- editing run の開始・join・状態遷移・終了処理を変更または調査するとき
+- run branch/worktree の作成、commit、rollback、cleanup、process ID 管理を確認するとき
+- realization file・oracle file・INDEX.md の差分許可範囲や rename を含む Git 差分分類を確認するとき
+- run worktree から INDEX.md を更新・commit する処理を変更するとき
 
 ## Do not read this when
-- 単一の CLI サブコマンド固有の処理や、state schema 自体の定義を確認したいとき
-- INDEX 更新処理そのもの、Git 操作の低レベル実装、run state の永続化実装を直接変更・調査するときは、それぞれの専用 module を先に読む
+- editing run lifecycle や Git 差分検査ではなく、個別サブコマンドの処理だけを変更するとき
+- session state のデータ構造や永続化形式そのものを確認したい場合は、state 定義・永続化を直接扱うモジュールを読むとき
+- INDEX.md の生成規則そのものを確認したい場合は、index 更新機構や対応する oracle 文書を直接読むとき
 
 ## hash
-- ab5c8fdf8e82b063133213dd34ed9d3439b330ea3e40f6ccee74c7398b619331
+- 73f162b9c1921c7eb01151772739dd591be7209e56159ae363abc615666ca030
 
 # `runtime_run_report.py`
 

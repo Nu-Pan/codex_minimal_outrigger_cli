@@ -1,5 +1,6 @@
 """`cmoc realization apply fork` の差分追従 workload。"""
 
+from dataclasses import replace
 from pathlib import Path
 
 import typer
@@ -32,9 +33,7 @@ from commons.runtime_run_lifecycle import (
     set_run_state,
     start_editing_run,
     tree_changes,
-    unexpected_agent_paths,
     unexpected_run_paths,
-    worktree_change_paths,
 )
 from commons.runtime_run_report import write_fork_report
 
@@ -79,12 +78,16 @@ def _cmoc_realization_apply_fork_body() -> None:
             diff_base_commit,
             context.run_fork_commit,
         )
-        parameter = build_realization_apply_fork_launch_exec_parameter(
-            diff_base_commit,
-            context.run_fork_commit,
-            oracle_diff,
-            context.run_worktree,
-        )
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # canonical builder は prompt 内の work-root を cwd から解決するため、
+        # AgentCallParameter の cwd だけでなく構築時の cwd も run worktree に揃える。
+        with pushd(context.run_worktree):
+            parameter = build_realization_apply_fork_launch_exec_parameter(
+                diff_base_commit,
+                context.run_fork_commit,
+                oracle_diff,
+                context.run_worktree,
+            )
         start_subcommand_step(4, "realization 追従 agent を実行", "run apply agent")
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # INDEX 再生成も run 中の Codex call なので、abandon が停止できるよう
@@ -108,7 +111,6 @@ def _cmoc_realization_apply_fork_body() -> None:
             start_subcommand_step(
                 5, "realization 差分を検査して commit", "commit changes"
             )
-            _validate_agent_changes(context)
             # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
             # agent の realization 差分と cmoc が生成する INDEX.md を同じ処理単位に
             # 含め、後続の commit/rollback が両方へ同じように適用されるようにする。
@@ -163,19 +165,6 @@ def _cmoc_realization_apply_fork_body() -> None:
     typer.echo(f"- fork report: `{report}`")
 
 
-def _validate_agent_changes(context: EditingRunContext) -> None:
-    """apply agent が変更した path が許可範囲内か検証する。"""
-    unexpected = unexpected_agent_paths(
-        context,
-        worktree_change_paths(
-            context.run_worktree,
-            include_rename_sources=True,
-        ),
-    )
-    if unexpected:
-        raise _unexpected_change_error(unexpected)
-
-
 def _unexpected_change_error(paths: list[str]) -> CmocError:
     """想定外の apply 差分を共通の利用者向け例外へ変換する。"""
     return CmocError(
@@ -203,7 +192,9 @@ def _recover_started_run() -> EditingRunContext | None:
         context, _state = resolve_active_run({"running", "error"})
     except CmocError:
         return None
-    return context if context.kind == "realization_apply" else None
+    if context.kind != "realization_apply":
+        return None
+    return replace(context, state_before="ready")
 
 
 def _record_error(

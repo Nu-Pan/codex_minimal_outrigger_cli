@@ -15,36 +15,35 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装を確認する入口となる。
-- `cmoc realization apply fork` の CLI 実行処理を担当し、apply fork の run lifecycle、agent 実行、差分検証、commit、状態遷移、report 保存、失敗時 rollback を扱う。
+- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装を確認する入口であり、apply fork の実行制御を含む。
 
 ## Read this when
 - realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の CLI 挙動、run lifecycle、agent 実行、差分検証、commit、joinable/error state、fork report、失敗時 rollback を調査・変更するとき。
+- `cmoc realization apply fork` のライフサイクル、agent 実行、oracle 差分、差分 commit、state 遷移、fork report、失敗時 cleanup を調査・変更するとき。
 
 ## Do not read this when
 - apply workload 以外の処理を扱うとき。
-- realization apply agent のプロンプトや起動パラメータ生成だけを扱うとき。
-- run 状態管理、差分取得、commit、INDEX 更新、report 生成の共通仕様・実装だけを確認するとき。
-- `cmoc realization apply fork` 以外のサブコマンドの CLI 本体を扱うとき。
+- realization apply agent の prompt 構築だけを変更・調査する場合。
+- run の一般的な join・abandon 処理や共通 state 操作だけを確認する場合。
 
 ## hash
-- 8fcac3ceac4121ef9caeffdcd6f3f3b6d866432259fc7803d12301b2838d7520
+- 5294150fc290468bf937c4e1117bc512d3abd21dad07817a77e69eb2513166b6
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめたパッケージ。リファクタリング関連 CLI の入口と、対象ファイルの調査・修正から完了判定までの処理を扱う。
-- refactor fork のライフサイクル全体を実行する CLI 実装。state 管理、realization file の調査・修正、差分検証、commit、所見管理、完了・中断・エラー処理、report 生成を担う。
+- realization のリファクタリング処理を扱うパッケージ。リファクタリング関連実装への入口となる。
+- realization refactor fork の CLI lifecycle を管理し、editing run の初期化、対象ファイルの調査・修正、所見・状態更新、commit、完了判定、cleanup、状態遷移、fork report 保存までを扱う。
 
 ## Read this when
-- realization のリファクタリング機能の構成や入口を確認するときは、まずこのディレクトリを読む。
-- refactor fork の実行フロー、state 遷移、agent の調査・修正、差分検証、cleanup、report 生成を変更・調査するときは fork の実装を読む。
+- realization のリファクタリング処理の構成や入口を確認するとき。
+- realization refactor fork の lifecycle、対象選択、commit、unresolved finding、完了条件を調査・変更するとき。
+- 中断・エラー時の cleanup、状態遷移、fork report、refactor state と worktree 差分の連携を確認するとき。
 
 ## Do not read this when
-- realization のリファクタリング以外の処理を確認するとき。
-- 単一ファイルの調査・修正 agent の詳細だけを確認するとき。
-- 変更概要の Structured Output や一般的な run lifecycle の共通処理だけを確認するとき。
+- 単一ファイルの調査・修正 agent call の入出力仕様だけを確認したいとき。
+- 変更概要の Structured Output や report の共通保存処理だけを確認したいとき。
+- realization refactor 以外の editing run、run join、abandon の仕様だけを調査するとき。
 
 ## hash
-- 970cfb9d7ce69e19acf82e0d51fba1c941ed4aa6a467d13254ad27a8777ebf9e
+- 4cdc0f4390ff0ce07095f3d3440209c2ed75138affe3c25354babeda246f6d95

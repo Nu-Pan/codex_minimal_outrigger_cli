@@ -33,6 +33,7 @@ from commons.runtime_git import (
 )
 from commons.runtime_paths import (
     is_root_memo,
+    pushd,
     refactor_state_path,
     repo_root,
     timestamp,
@@ -312,10 +313,14 @@ def commit_work_unit(
 def refresh_indexes(worktree: Path, *, commit: bool) -> list[Path]:
     """run worktree の INDEX.md を再生成し、必要なら独立 commit にする。"""
     with indexing_lock(worktree):
-        updated = update_indexes(worktree, run_indexing_codex_exec)
-        if commit:
-            commit_index_updates(worktree, updated)
-        return updated
+        # INDEX builder は `{{work-root}}` を process cwd から解決するため、対象
+        # worktree を明示引数へ渡すだけでは不十分である。join を run worktree
+        # から実行する場合も、session worktree 用 prompt を正しい root で作る。
+        with pushd(worktree):
+            updated = update_indexes(worktree, run_indexing_codex_exec)
+            if commit:
+                commit_index_updates(worktree, updated)
+            return updated
 
 
 def worktree_change_paths(
@@ -325,8 +330,8 @@ def worktree_change_paths(
 ) -> list[str]:
     """未 commit 差分の変更対象を repository 相対 path で返す。"""
     # {{work-root}}/oracle/doc/app_spec/misc_spec.md
-    # report 用の既定値は rename 後の path だけを返し、agent 権限検査だけが
-    # rename 元も明示的に含める。
+    # report 用の既定値は rename 後の path だけを返し、差分の有無を判定する
+    # 呼び出し側だけが rename 元も明示的に含める。
     paths = status_path_statuses(
         worktree,
         untracked_all=True,
@@ -377,23 +382,6 @@ def flattened_change_paths(changes: list[GitChange]) -> list[str]:
             else change.paths[0]
         )
     return sorted(paths)
-
-
-def unexpected_agent_paths(
-    context: EditingRunContext,
-    paths: list[str],
-) -> list[str]:
-    """workload agent が変更を許可されていない path を返す。"""
-    return sorted(
-        path
-        for path in paths
-        if not _is_agent_expected_path(
-            context.run_worktree,
-            context.kind,
-            path,
-            context.run_branch,
-        )
-    )
 
 
 def unexpected_run_paths(

@@ -6,6 +6,7 @@
 単一 workload の lifecycle として保つ。
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import typer
@@ -54,7 +55,6 @@ from commons.runtime_run_lifecycle import (
     set_run_state,
     start_editing_run,
     tree_changes,
-    unexpected_agent_paths,
     unexpected_run_paths,
     worktree_change_paths,
 )
@@ -282,7 +282,9 @@ def _recover_started_run() -> EditingRunContext | None:
         context, _state = resolve_active_run({"running", "error"})
     except CmocError:
         return None
-    return context if context.kind == "realization_refactor" else None
+    if context.kind != "realization_refactor":
+        return None
+    return replace(context, state_before="ready")
 
 
 def _initialize_cycle(context: EditingRunContext) -> None:
@@ -335,13 +337,6 @@ def _run_refactor_unit(
         context.run_worktree,
         include_rename_sources=True,
     )
-    unexpected = unexpected_agent_paths(context, changed_realization)
-    if unexpected:
-        raise CmocError(
-            "refactor agent が想定外 path を変更しました。",
-            ["run report を確認し、run を join または abandon してください。"],
-            "\n".join(unexpected),
-        )
     if not findings and changed_realization:
         raise CmocError(
             "所見が空の refactor agent call に差分があります。",
