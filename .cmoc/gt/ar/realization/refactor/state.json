@@ -1243,9 +1243,9 @@
   },
   "test/test_prompt_parts.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "e9a44a7913150d1e8a5aa5716df9ccb6df25db99fe210633d91e4b8452906b32",
+    "last_investigated_at": "2026-07-26_12-42_25_626653000"
   },
   "test/test_runtime_cli.py": {
     "investigation_required": true,

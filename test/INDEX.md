@@ -607,20 +607,19 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 標準 prompt parts の StructDoc rendering と complete prompt の組み立て結果を検証する回帰テスト群。各標準ルールの見出し・主要文面、file access mode ごとの内容、標準ルールの包含条件、root placeholder の保持と展開を扱う。prompt builder や標準 prompt 文面の変更時に確認する入口となる。
+- 標準 prompt parts と complete prompt の組み立て結果を検証するテスト。各標準文書の主要内容、file access mode ごとの規則、標準文書の注入・省略、root token と oracle path placeholder の保持を確認する。prompt builder の標準文書や complete prompt の変更時に参照するテスト入口。
 
 ## Read this when
-- prompt parts の rendering や complete prompt の包含・除外条件を変更または調査するとき
-- file access mode、root placeholder、標準ルール注入の挙動を変更または検証するとき
-- prompt builder 周辺の回帰テストを確認するとき
+- prompt parts の標準文書を変更するとき
+- complete prompt の構成、標準文書の注入条件、root token の扱いを変更するとき
+- prompt builder 関連のテスト失敗を調査するとき
 
 ## Do not read this when
-- prompt builder の実装詳細や標準 prompt 文面そのものを確認したいときは、対応する src の実装へ直接進む
-- StructDoc の一般的な rendering 仕様を確認したいときは、StructDoc の定義・専用テストへ進む
-- prompt parts や complete prompt と無関係な CLI 機能・テストを扱うとき
+- prompt builder や標準文書の挙動に関係しない機能を変更するとき
+- 個別の標準文書本文の仕様を確認する必要があり、対応する oracle source を直接読むべきとき
 
 ## hash
-- e9a44a7913150d1e8a5aa5716df9ccb6df25db99fe210633d91e4b8452906b32
+- 0e7ab9d22fd2acd00ab35918bc03c965b8b6399bfaa83f7b55e2cf29c8fb56dd
 
 # `test_runtime_cli.py`
 
