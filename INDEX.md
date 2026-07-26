@@ -127,33 +127,33 @@
 # `src`
 
 ## Summary
-- src 配下の主要な realization 実装と互換入口をまとめるルートディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、設定・ACP の互換 shim、および oracle 参照用 shim への入口を提供する。
+- `src` は cmoc の realization 実装ルート。CLI エントリーポイント、共通 runtime、互換 import 入口、サブコマンド実装、oracle パッケージ解決 shim を下位要素へ案内する。
 
 ## Read this when
-- cmoc の CLI 全体構成、主要実装領域、または src 配下のどの下位ディレクトリ・ファイルから調査を始めるか判断するとき。
-- CLI エントリーポイント、サブコマンド、共通 runtime、互換 import 経路の関係を概観するとき。
+- cmoc の実装全体の構成や、変更対象の CLI・runtime・互換入口・サブコマンドを特定するとき。
+- src 配下で調査を始めるべき下位要素を判断するとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime helper、builder adapter、設定定義などの詳細だけを確認したいときは、対応する下位実体を直接読む。
-- 利用者向け仕様や正本実装そのものを確認するときは、src の概観ではなく対応する oracle 文書・oracle source を直接読む。
+- 特定領域の詳細が分かっているときは、対応する下位要素を直接読む。
+- 正本仕様や利用者向け出力形式を確認するときは、対応する oracle 文書や利用側を読む。
 
 ## hash
-- 0ef7f70890c3730b6240ba82a9ff8d5473c0a7ff00d111bd6a7850ecc294bd7c
+- 9799b3edde60cc8a91a9a323d9b0cd4ea342771bd9d947043424bca3fa5da657
 
 # `test`
 
 ## Summary
-- テストコードで共有する補助モジュールと、ACP builder、Codex runtime、CLI、INDEX.md indexing、oracle review、session lifecycle、設定・状態永続化などの realization test を含むテスト領域。各機能の外部挙動・実行契約・失敗時処理を確認する入口であり、個別領域の調査では対応するテストへ進む。
+- テストコード全体を収めるディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session lifecycle、設定・状態管理など、cmoc の外部挙動と制御契約を検証する realization test の入口である。各テストファイルは対象機能ごとの詳細な回帰・統合テストを提供する。
 
 ## Read this when
-- 対象機能の realization test、回帰テスト、統合テストの範囲や検証される外部契約を確認するとき。
-- Codex/Ollama 実行、CLI lifecycle、worktree・Git・state、INDEX.md、oracle review、session、builder などのテスト対象を特定するとき。
-- テスト共通 helper、fake external command、Git repository、Ollama、Codex 隔離環境の利用方法を確認するとき。
+- cmoc の機能変更に伴い、対応する外部挙動・状態遷移・エラー処理の既存テストを探すとき。
+- 対象機能のテスト範囲や、関連する共通テスト helper・fixture の利用方法を確認するとき。
+- CLI、Codex 実行、worktree、INDEX.md、oracle review、session/run state の回帰を調査するとき。
 
 ## Do not read this when
-- 実装本体や正本仕様そのものを確認することが目的の場合は、対応する src または oracle 文書・schema を直接読む。
-- 特定の機能と無関係なテストや共通 helper を総覧する必要がない場合は、この領域を一括して読まず対象テストへ直接進む。
-- Codex や Ollama を起動しない単体実装の詳細、または LLM の回答品質自体を調査する場合。
+- 正本仕様や実装責務を確認することが目的の場合は、対応する oracle または src のファイルを直接読む。
+- テスト対象と無関係な機能を調査する場合は、ディレクトリ全体を読まず対象機能のテストへ直接進む。
+- テスト実行手順や Python 開発環境を確認する場合は、対応する開発・テスト手順を直接読む。
 
 ## hash
-- 4fd93a0177c88dddba96473efad7bb2c17c4266dbd82d88e3fd6600425fbd007
+- f0de46088d8b5db2047569118722b9019a194546e8f396983e562798b76ed73e

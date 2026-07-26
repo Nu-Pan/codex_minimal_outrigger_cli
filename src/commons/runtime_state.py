@@ -158,10 +158,14 @@ def _read_state_data(path: Path) -> dict[str, Any]:
             ["対象 session が正しく作成されているか確認してください。"],
             str(path),
         )
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # 壊れた永続 JSON を raw read exception として漏らさず、CmocError に統一する。
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise _invalid_state(path, "JSON 構文が不正です。") from exc
+    except (OSError, UnicodeError) as exc:
+        raise _invalid_state(path, "JSON を読み込めません。") from exc
     if not isinstance(data, dict):
         raise _invalid_state(path, "top-level JSON は object である必要があります。")
     return data
@@ -180,10 +184,7 @@ def write_state(path: Path, state: SessionState) -> None:
 def active_session_for_home(root: Path, home_branch: str) -> Path | None:
     """home branch に紐づく active session state file を探す。"""
     for path in sessions_dir(root).glob("*.json"):
-        try:
-            data = json.loads(path.read_text())
-        except json.JSONDecodeError as exc:
-            raise _invalid_state(path, "JSON 構文が不正です。") from exc
+        data = _read_state_data(path)
         state = SessionState.from_dict(data, path)
         if (
             state.session.state == "active"

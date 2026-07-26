@@ -75,6 +75,19 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
     assert loaded == state
 
 
+@pytest.mark.parametrize("payload", [b"{", b"\xff"])
+def test_load_state_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
+    """壊れた JSON または UTF-8 の state file を利用者向けエラーへ変換する。"""
+    path = state_path(tmp_path, "session")
+    path.parent.mkdir(parents=True)
+    path.write_bytes(payload)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_state_for_branch(tmp_path, "cmoc/session/session")
+
+    assert "session state file が不正です。" == exc_info.value.summary
+
+
 @pytest.mark.parametrize("part", ["session", "run"])
 @pytest.mark.parametrize("value", [[], {}])
 def test_session_state_rejects_non_string_state(part: str, value: object) -> None:
