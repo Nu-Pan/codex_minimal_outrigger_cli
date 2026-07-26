@@ -124,18 +124,19 @@
 # `test_acp_builder_oracle_review_parameters.py`
 
 ## Summary
-- oracle review ACP builder の parameter、schema、adapter 公開面を検証する回帰テスト。各 review builder のモデル・推論設定・ファイルアクセス権限、oracle schema との一致、canonical builder 互換性、動的 prompt の placeholder と code fence 保護を扱う。
+- oracle review ACP builder 群の parameter、model・reasoning・file access 設定、structured output schema、公開 API、動的 prompt の placeholder と code fence 保護を検証する pytest。review builder 間の互換契約を一箇所で扱う。
 
 ## Read this when
-- oracle review builder の parameter 設定、structured output schema、互換 adapter の公開面を変更・検証するとき
-- review builder に渡す動的 prompt の code fence、placeholder、section 境界の挙動を確認するとき
+- oracle review の ACP builder 実装や schema を変更・レビューするとき
+- review builder の公開 export、parameter 設定、schema 一致、動的入力保持を確認するとき
+- prompt 内の nested code fence や section marker 保護の回帰を調査するとき
 
 ## Do not read this when
-- review builder 以外の ACP builder を扱うとき
-- builder の実装詳細ではなく oracle schema 定義そのものを確認するときは、対応する oracle schema を直接読む
+- review builder 以外の ACP builder の挙動だけを確認するとき
+- 実装や正本 schema の詳細を直接確認したいときは、対応する oracle source または realization implementation を読むとき
 
 ## hash
-- 98c908c200c9b94044a4129f65a43ac360cfcf850403f6163a8fedc00fd3f3f1
+- c7b6965500c2a1f525bbfbdf44ad0527208437ef0016ea7271d6c70c60c9c5ca
 
 # `test_acp_builder_session_join_parameters.py`
 

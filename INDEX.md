@@ -127,33 +127,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側 Python パッケージをまとめる実装ルート。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・正本パッケージへの接続を提供し、各機能の実装下位要素へ進む入口となる。
+- `src` の実装ツリー。cmoc CLI の主要エントリーポイント、サブコマンド実装、共通 runtime、互換 import shim を含み、CLI の実装配置と利用側から実体へ進むための入口となる。
 
 ## Read this when
-- cmoc の realization 側実装の配置や、CLI・サブコマンド・共通 runtime の入口を横断して確認するとき。
-- 特定機能の実装へ進む前に、公開 import 経路や CLI からの委譲先を確認するとき。
+- cmoc の realization 側 CLI 実装の全体構成や、src 配下で特定の実装・サブコマンドの入口を探すとき。
+- CLI エントリーポイント、サブコマンド、共通 runtime、互換 import の実装配置を確認するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装内容を確認したいときは、対応する oracle 配下を直接読む。
-- 特定サブコマンド、runtime helper、互換 shim の詳細実装が明確な場合は、対応する下位要素を直接読む。
+- 正本仕様や oracle 側の実装内容だけを確認したいときは、対応する oracle 配下を直接読む。
+- 特定サブコマンドや runtime helper の詳細が既に明確なときは、src 配下の対応する実体を直接読む。
+- CLI 実装と無関係なテスト、正本仕様、生成物を調査するとき。
 
 ## hash
-- 642e09f517ae9bf067412fc22634c30c34c651217f287a4490edb8ea6f927870
+- 533874de3d5e7200692d3883955df63c57bf2d9074bfb11f652bba8f23891ceb
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、prompt、StructDoc などの外部挙動・制御ロジックを検証するテストと、分野別の共通テスト支援モジュールを扱う。各機能の実装・仕様変更時に、対応する個別テストへ進む入口となる。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、prompt、StructDoc などの外部挙動・制御ロジックを検証する。各テストファイルが対応する実装領域の変更時に読む入口となる。
 
 ## Read this when
-- cmoc の実装またはテスト変更に伴い、対応する realization test の所在を探すとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session、runtime、prompt の外部契約や回帰テストを確認するとき
-- 複数のテスト領域にまたがる共通 fixture・Git・Ollama・Codex 支援の利用箇所を調べるとき
+- cmoc のテスト対象や回帰テストの所在を確認するとき
+- CLI、Codex 実行、indexing、oracle review、session lifecycle、runtime state などの挙動を変更・検証するとき
+- 共通テスト支援モジュールや実経路統合テストの利用方法を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc または oracle source を直接読む
-- 実装内部の責務やアルゴリズムだけを調査するときは、対応する src の実装ファイルを直接読む
-- テスト実行手順や Python 品質ゲートを確認するときは、開発・テスト手順の文書を読む
+- テスト対象の実装詳細や正本仕様だけを確認したいときは、対応する realization implementation または oracle file を直接読む
+- cmoc と無関係なテストや、LLM の回答品質そのものを評価するテストを探しているとき
+- 特定領域のテスト内容が明らかな場合は、ディレクトリ全体ではなく対応する個別テストファイルを読む
 
 ## hash
-- 8e4ddcf65a770352d4c36589e41ca08286980e3bcb3b2f236b3c37297dec8f96
+- 93a7676484e1dc3cfcd0a4d125ba9bdb39f859648126d4f7829fd4b6ecf23332

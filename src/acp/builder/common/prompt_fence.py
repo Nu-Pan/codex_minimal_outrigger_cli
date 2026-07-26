@@ -12,6 +12,7 @@ def _protect_code_block_fence(
     section_end_marker: str,
     info_string: str | None,
     section_body: str,
+    section_heading_start: int | None = None,
 ) -> str:
     """動的本文を含む code block の外側 fence を本文より長くする。
 
@@ -31,8 +32,24 @@ def _protect_code_block_fence(
     body = _rendered_code_block_body(info_string, section_body)
     section_start = -1
     section_end = -1
-    heading_search_start = 0
-    while (heading_start := prompt.find(heading, heading_search_start)) != -1:
+    # 複数の動的 section を持つ caller は canonical prompt 上の見出し位置を
+    # 固定できる。入力本文に後続 section そっくりの文字列があっても、実際の
+    # section を補正するための指定である。
+    # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+    if section_heading_start is None:
+        heading_starts: list[int] = []
+        heading_search_start = 0
+        while (heading_start := prompt.find(heading, heading_search_start)) != -1:
+            heading_starts.append(heading_start)
+            heading_search_start = heading_start + len(heading)
+    elif 0 <= section_heading_start <= len(prompt) and prompt.startswith(
+        heading, section_heading_start
+    ):
+        heading_starts = [section_heading_start]
+    else:
+        heading_starts = []
+
+    for heading_start in heading_starts:
         candidate_start = heading_start + len(heading)
         if prompt.startswith(prefix, candidate_start):
             body_start = candidate_start + len(prefix)
@@ -45,7 +62,6 @@ def _protect_code_block_fence(
                 section_start = candidate_start
                 section_end = candidate_end + len(suffix)
                 break
-        heading_search_start = candidate_start
     if section_start == -1:
         return prompt
     section = prompt[section_start:section_end]

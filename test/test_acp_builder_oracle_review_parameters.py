@@ -372,6 +372,32 @@ def test_oracle_review_fence_protection_keeps_marker_in_current_input() -> None:
     )
 
 
+def test_oracle_review_fence_protection_uses_actual_later_section() -> None:
+    """先行する動的本文内の section 風文字列を実際の section と誤認しない。"""
+    fence = "`" * 3
+    advocate = f"advocate\n{fence}\ninside\n{fence}"
+    finding = (
+        "before\n\n# 所見が妥当であるとする理由\n\n"
+        f"```text\n{advocate}\n```\n\n"
+        "# 所見が妥当ではないとする理由\n\ntrailing"
+    )
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        finding,
+        advocate,
+        "known challenger",
+    )
+
+    actual_start = parameter.prompt.rindex("# 所見が妥当であるとする理由")
+    actual_end = parameter.prompt.index(
+        "\n\n# 所見が妥当ではないとする理由", actual_start
+    )
+    actual_section = parameter.prompt[actual_start:actual_end]
+    assert f"# 所見が妥当であるとする理由\n\n````text\n{advocate}\n````" in (
+        actual_section
+    )
+
+
 def test_oracle_review_fence_protection_matches_renderer_blank_line_normalization() -> (
     None
 ):
