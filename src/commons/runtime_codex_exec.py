@@ -41,7 +41,6 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_config import load_config
 from commons.runtime_errors import CmocError
-from commons.runtime_git import status_path_statuses
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
     _reserve_timestamped_path,
@@ -859,16 +858,3 @@ def run_codex_exec(
             quota_polls=quota_polls,
         )
         return exec_result
-
-
-def changed_worktree_paths(root: Path) -> list[Path]:
-    """worktree 上の変更 path を absolute path として返す。"""
-    return [path for _status, path in _changed_worktree_path_statuses(root)]
-
-
-def _changed_worktree_path_statuses(root: Path) -> list[tuple[str, Path]]:
-    """worktree 上の変更 path と git status code を absolute path として返す。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    # refactor state は agent call 後に file-level path を必要とするため、default status が
-    # untracked directory を一つの directory path に畳み込まないようにする。
-    return status_path_statuses(root, untracked_all=True)

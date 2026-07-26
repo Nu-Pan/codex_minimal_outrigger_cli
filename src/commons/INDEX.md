@@ -104,20 +104,20 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを実装する中核モジュール。subprocess 実行、Structured Output の JSON/schema 検証、capacity retry、quota availability probe と待機、resume 継続、call log・stdout/stderr・prompt・subcommand event の記録を一つの状態機械として扱う。
-- Codex 実行結果の失敗分類・再試行・quota 待機や、変更された worktree path の取得を担う。TUI 起動など exec 実行制御以外の責務は扱わない。
+- Codex exec の単一試行と再試行を制御する状態機械。Structured Output の JSON/schema 検証、capacity retry、quota availability probe と待機、resume token による継続、Codex subprocess の cwd・環境・設定・ログ管理、console/subcommand event 記録を一体で扱う。
 
 ## Read this when
-- Codex exec の起動引数、cwd/CODEX_HOME、schema、prompt または各種実行ログの扱いを変更・調査するとき
-- Structured Output 検証、semantic retry、capacity retry、quota polling、代表 probe、resume token 継続の挙動を変更・調査するとき
-- Codex call の console/subcommand event、失敗分類、実行結果、worktree 変更 path の実装を確認するとき
+- Codex exec の実行失敗、Structured Output 検証、capacity retry、quota 待機・probe、resume 継続の挙動を変更または調査するとき。
+- Codex subprocess の argv、cwd、CODEX_HOME、prompt/stdout/stderr/output/call log、実行イベントの記録方法を確認するとき。
+- Codex exec の retry counter、quota wait 状態、代表 probe、schema validation の制御ロジックを追うとき。
 
 ## Do not read this when
-- TUI の起動や画面制御を変更・調査するとき
-- Codex exec の共通 path・profile・subprocess・設定・結果型の詳細だけを確認したいときは、対応する commons/runtime_codex_profile.py、runtime_paths.py、runtime_results.py などを直接読む
+- TUI の起動や TUI 固有の分岐を変更・調査するときは、TUI 起動を担当する別 module を読む。
+- Codex 呼び出し元の prompt 生成や AgentCallParameter の定義だけを確認したいときは、該当する builder または parameter 定義を直接読む。
+- 一般的な runtime logging、path、profile、config の共通実装だけを確認したいときは、対応する commons module を直接読む。
 
 ## hash
-- ad7f7e3321152ad6471732406951479c59a8dae16477dbc2d17f99e5e4158b34
+- 5efe48afeab7b47779262e7a22324567df11f7327132395b260f504d7dea88a0
 
 # `runtime_codex_logging.py`
 
