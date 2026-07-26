@@ -364,6 +364,26 @@ def test_oracle_review_fence_protection_keeps_marker_in_current_input() -> None:
     )
 
 
+def test_oracle_review_fence_protection_matches_renderer_blank_line_normalization() -> (
+    None
+):
+    """連続空行で renderer が本文を正規化しても nested fence を保護する。"""
+    finding = "before\n```\ninside\n```\n\n\n\nafter"
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        finding,
+        "known advocate",
+        "known challenger",
+    )
+
+    start = parameter.prompt.index("# 所見の内容")
+    end = parameter.prompt.index("\n\n# 所見が妥当であるとする理由", start)
+    section = parameter.prompt[start:end]
+    assert section.startswith("# 所見の内容\n\n````text\n")
+    assert "inside\n```\n\nafter" in section
+    assert section.endswith("\nafter\n````")
+
+
 @pytest.mark.parametrize(
     ("builder", "next_section_heading"),
     [

@@ -2,7 +2,7 @@
 
 import re as _re
 
-from basic.struct_doc import ntqs as _ntqs
+from basic import struct_doc as _struct_doc
 
 
 def _protect_code_block_fence(
@@ -25,9 +25,11 @@ def _protect_code_block_fence(
         return prompt
 
     # Dynamic input may contain the next heading and a code block, so identify
-    # the exact rendered body before changing its outer fence.
+    # the exact rendered body before changing its outer fence.  Rendering the
+    # body through the canonical renderer also preserves its blank-line
+    # collapsing and indentation normalization.
     # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
-    body = _ntqs(section_body)
+    body = _rendered_code_block_body(info_string, section_body)
     section_start = -1
     section_end = -1
     heading_search_start = 0
@@ -61,3 +63,19 @@ def _protect_code_block_fence(
     opening = f"{fence}{info_string or ''}\n"
     replacement = f"{opening}{body}\n{fence}"
     return prompt[:section_start] + replacement + prompt[section_end:]
+
+
+def _rendered_code_block_body(info_string: str | None, section_body: str) -> str:
+    """Return the body text after canonical Markdown rendering normalization."""
+    title = "__cmoc_prompt_fence_body__"
+    rendered = _struct_doc.render_as_markdown(
+        _struct_doc.StructDoc(
+            title,
+            _struct_doc.StructCodeBlock(info_string, section_body),
+        )
+    )
+    prefix = f"# {title}\n\n```{info_string or ''}\n"
+    suffix = "\n```\n"
+    if not rendered.startswith(prefix) or not rendered.endswith(suffix):
+        raise ValueError("Unexpected canonical code block rendering")
+    return rendered[len(prefix) : -len(suffix)]

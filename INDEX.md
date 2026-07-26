@@ -127,32 +127,33 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装を集約する `src` ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP・設定・oracle 関連の入口を含み、個別実装へ進むための起点となる。
+- src は cmoc CLI の realization 実装入口で、トップレベルの互換 shim、共通 runtime、設定・ACP/basic adapter、CLI エントリーポイント、サブコマンド実装を収める。CLI の登録から各サブコマンドや共通処理へ進むための起点。
 
 ## Read this when
-- cmoc の CLI 全体構成や、主要エントリーポイントから個別サブコマンド・共通 runtime へ進む経路を確認するとき。
-- ACP、設定、oracle、互換 import、サブコマンド実装の配置を選ぶとき。
+- cmoc の realization 実装全体の構成や、CLI エントリーポイントから個別実装への入口を確認するとき。
+- トップレベルの互換 import、共通 runtime、設定 adapter、ACP/basic adapter、またはサブコマンド実装の所在を選ぶ必要があるとき。
 
 ## Do not read this when
-- 特定モジュールの実装詳細が明らかな場合は、該当する `src` 配下のファイルや下位ディレクトリを直接読む。
-- 正本仕様や oracle 実装そのものを確認したい場合は、対応する `oracle` 配下を直接読む。
+- 正本仕様や oracle 側の実装を確認したいときは、oracle 配下を直接読む。
+- 特定のサブコマンド・runtime helper・adapter の詳細が明らかなときは、対応する下位ファイルやディレクトリへ直接進む。
 
 ## hash
-- 1750704c259471f5cbeabc3d7d0b0265e9246d6f99bc95379e0321c9b422e4b6
+- 6a72a07487f875483fedad95402a311f2092d26e794a5b857634834135278962
 
 # `test`
 
 ## Summary
-- cmoc の realization test 集約ディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session lifecycle、設定・状態・path model などの外部契約と制御ロジックを pytest で検証する。各機能領域の実装変更時に対応するテストへ進む入口。
+- テストコード群を収めたディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session lifecycle、runtime state/config など、cmoc の主要な外部挙動・制御ロジック・正本仕様との整合性を pytest で検証する。各テストファイルが機能領域ごとの具体的な検証入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや外部挙動の検証範囲を探すとき
-- CLI、Codex 実行、indexing、oracle review、session、runtime などの機能別テストの入口を選ぶとき
+- cmoc の実装変更に対応する回帰テストや外部契約の検証対象を探すとき
+- CLI、Codex 実行、worktree、state、indexing、oracle review などの機能別テスト範囲を確認するとき
+- 共通テスト helper や test-local Ollama を使う統合テストの構成を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装詳細を確認したいときは、対応する oracle または src のファイルを直接読む
-- 共通テスト支援の実装を確認したいときは、該当する support module を直接読む
-- LLM の回答品質自体を評価したいとき
+- 正本仕様や設計・開発手順を確認したいときは、対応する oracle 文書や開発ルールを直接読む
+- 特定機能の実装詳細だけを調査するときは、対応する src の実装ファイルを先に読む
+- 対象機能と無関係なテスト領域を調査するとき
 
 ## hash
-- f5dcccb166d97b88e78132d65cdadafca0abcf8227f18425ad69e53ae00fdd59
+- ea4085cebdbe890681a139f6e255383b012cefde65620dd6aefa9155fc185b28
