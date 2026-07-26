@@ -30,6 +30,7 @@ from cmoc_runtime import (
     timestamp,
 )
 from commons.indexing import enable_indexing_preflight
+from commons.runtime_git import is_realization_file_path
 from commons.runtime_refactor import (
     RefactorState,
     load_refactor_state,
@@ -86,10 +87,13 @@ def _cmoc_realization_refactor_fork_body() -> None:
         start_was_ready = _session_run_was_ready()
         start_attempted = True
         context = start_editing_run("realization_refactor")
-        start_subcommand_step(3, "full refactor cycle を初期化", "initialize cycle")
-        _initialize_cycle(context)
-        start_subcommand_step(4, "file 単位の調査と修正を実行", "run refactor loop")
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # 初期化時の INDEX 更新も Codex call を起こすため、fork 全体を同じ
+        # process tracking scope に置き、interrupt/abandon から停止可能にする。
         with run_process_tracking(context.repo, context.session_id):
+            start_subcommand_step(3, "full refactor cycle を初期化", "initialize cycle")
+            _initialize_cycle(context)
+            start_subcommand_step(4, "file 単位の調査と修正を実行", "run refactor loop")
             while target := select_refactor_target(
                 load_refactor_state(context.run_worktree), unresolved_findings
             ):
@@ -337,6 +341,16 @@ def _run_refactor_unit(
         context.run_worktree,
         include_rename_sources=True,
     )
+    unexpected_agent_paths = _unexpected_agent_paths(context, changed_realization)
+    if unexpected_agent_paths:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # state と INDEX.md は cmoc が更新するため、agent call 直後に realization
+        # file 以外の差分を拒否し、agent の変更を cmoc の更新として取り込まない。
+        raise CmocError(
+            "refactor agent が realization file 以外を変更しました。",
+            ["Codex call log と run worktree の差分を確認してください。"],
+            "\n".join(unexpected_agent_paths),
+        )
     if not findings and changed_realization:
         raise CmocError(
             "所見が空の refactor agent call に差分があります。",
@@ -398,6 +412,22 @@ def _run_refactor_unit(
         for finding in unresolved
     ]
     return target, len(normalized_findings), unresolved_details
+
+
+def _unexpected_agent_paths(
+    context: EditingRunContext,
+    changed_paths: list[str],
+) -> list[str]:
+    """agent call 直後に realization file 以外へ生じた差分を返す。"""
+    return sorted(
+        path
+        for path in changed_paths
+        if not is_realization_file_path(
+            context.run_worktree,
+            context.run_worktree / path,
+            branch=context.run_branch,
+        )
+    )
 
 
 def _status_change(path: str) -> GitChange:

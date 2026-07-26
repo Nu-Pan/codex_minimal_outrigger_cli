@@ -501,6 +501,108 @@ def test_apply_fork_tracks_indexing_codex_calls(
     assert tracking_states == [True]
 
 
+def test_refactor_fork_tracks_initialization_indexing_codex_calls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """refactor の初期 cycle から INDEX 用 Codex child tracking を有効にする。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    tracking_states: list[bool] = []
+
+    def fake_refresh(_worktree: Path, *, commit: bool) -> list[Path]:
+        """初期 cycle と各処理単位の tracking 状態を記録する。"""
+        assert not commit
+        tracking_states.append(codex_profile_module.run_process_tracking_active())
+        return []
+
+    def fake_refactor(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """file review と change summary の固定 Structured Output を返す。"""
+        if kwargs["purpose"] == "realization refactor change summary":
+            return SimpleNamespace(
+                returncode=0,
+                output_json={
+                    "changes": [
+                        {
+                            "category": "state",
+                            "summary": "調査履歴を更新",
+                            "changed_paths": [
+                                ".cmoc/gt/ar/realization/refactor/state.json"
+                            ],
+                        }
+                    ]
+                },
+            )
+        return SimpleNamespace(returncode=0, output_json={"findings": []})
+
+    monkeypatch.setattr(refactor_module, "refresh_indexes", fake_refresh)
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert _state(state_path)["run"]["state"] == "joinable"
+    assert tracking_states and all(tracking_states)
+
+
+@pytest.mark.parametrize(
+    "managed_path",
+    ["INDEX.md", ".cmoc/gt/ar/realization/refactor/state.json"],
+)
+def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    managed_path: str,
+) -> None:
+    """refactor agent が cmoc 管理 file を変更した場合は commit しない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+
+    def fake_refactor(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """agent が INDEX または refactor state を変更する状態を再現する。"""
+        worktree = Path(str(kwargs["cwd"]))
+        managed = worktree / managed_path
+        managed.write_text(managed.read_text() + "\n")
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [
+                    {
+                        "title": "managed file change",
+                        "resolution": {"status": "fixed"},
+                    }
+                ]
+            },
+        )
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    parts = _state(state_path)["run"]["branch"].split("/")
+    run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    restored = run_worktree / managed_path
+    original = root / managed_path
+    assert restored.exists() == original.exists()
+    if original.exists():
+        assert restored.read_text() == original.read_text()
+
+
 def test_apply_failure_rolls_back_index_with_realization_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
