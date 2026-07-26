@@ -391,24 +391,19 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。
-- editing run の session state、run worktree、fork report、INDEX 再生成、process tracking、refactor state 同期を検証する。
-- realization apply/refactor fork の成功・失敗・中断、oracle や管理対象ファイルの変更拒否、rollback、join 時の merge・cleanup・競合解決を横断的に扱う。
-- 同じ lifecycle fixture と state 遷移を共有するため、関連する fork と run lifecycle の挙動を確認する統合テストの入口となる。
+- workload fork と共通 run lifecycle の realization test。editing run の session state、run worktree、fork report、INDEX 更新、oracle/managed file 保護、join・abandon・force-resolve・rollback・cleanup、および realization apply/refactor の正常系・失敗系・中断系を統合的に検証する。
 
 ## Read this when
-- realization apply または realization refactor の fork lifecycle を変更・検証するとき
-- run join または run abandon の state 遷移、merge、cleanup、rollback を変更・検証するとき
-- fork report、change summary、INDEX 再生成、Codex child tracking、refactor state 同期の統合挙動を確認するとき
-- 既存の editing run CLI テストが失敗し、共有 session/run fixture に関わる原因を調査するとき
+- realization apply/refactor fork の run lifecycle 挙動を変更・検証するとき
+- run join または abandon の state 遷移、worktree/branch cleanup、merge rollback を調査するとき
+- fork report、change summary、INDEX 再生成、process tracking、managed file 保護のテストケースを確認するとき
 
 ## Do not read this when
-- 単一の低レベル helper や個別サブコマンドの局所実装だけを確認する場合
-- INDEX 生成そのものの詳細仕様や単独の parser 挙動を確認する場合は、対応する実装・仕様・専用テストを直接読む
-- Codex CLI や LLM の出力品質自体を調査する場合
+- 単一の realization apply または refactor 実装内部だけを変更し、run lifecycle や統合挙動を確認する必要がないとき
+- 一般的な session state や run lifecycle の実装仕様を確認する場合は、対応する commons または sub_commands の実装・oracle 文書を直接読む
 
 ## hash
-- 69e651c223094c1381c46d06ff915627762b89f0a6d0f4e39079092e83dcc9f1
+- f52414d679f47b5a784aff18d624addf29a2d6deaa9fdbf8f192425246390dcc
 
 # `test_indexing_cli.py`
 
@@ -565,20 +560,19 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- oracle review の review worktree lifecycle を検証する回帰テスト。linked worktree・session branch・snapshot commit を起点にした隔離、未コミット差分や INDEX.md 以外の変更の拒否、active editing run 中の実行、review 側 INDEX.md の統合と conflict 解決、preflight commit、cleanup 失敗の報告を確認する。oracle review の worktree 分離や INDEX 統合に関わる実装・仕様変更のテスト入口。
+- oracle review の worktree lifecycle と INDEX.md 統合を検証する回帰テスト。linked worktree・session snapshot からの review fork、preflight commit、差分制限、INDEX の merge/conflict 解決、cleanup と失敗報告を対象とする。
 
 ## Read this when
-- oracle review の review worktree 作成元、session branch、snapshot commit、linked worktree の扱いを変更または調査するとき
-- review worktree から INDEX.md を統合する処理、preflight による INDEX 更新、merge conflict 解決を変更または調査するとき
-- oracle review の差分検証、未コミット変更の拒否、cleanup 失敗時のエラー報告を変更または調査するとき
+- oracle review の worktree 分離、branch/snapshot の起点、run lifecycle、または cleanup を変更・調査するとき
+- oracle review による INDEX.md の生成・commit・session への統合や merge conflict 解決を変更・調査するとき
+- review worktree が INDEX.md 以外を変更した場合や cleanup に失敗した場合のエラー挙動を確認するとき
 
 ## Do not read this when
-- oracle review の所見列挙・challenger/advocate 検証・judge 判定だけを変更または調査するとき
-- review worktree lifecycle や INDEX.md 統合に関係しない通常の indexing 実装・テストを扱うとき
-- oracle review の仕様や実装を確認することが目的で、既存の回帰テストケースを直接変更する必要がないとき
+- 通常の INDEX.md 生成ロジックだけを変更・調査するときは indexing の実装・テストを直接読む
+- oracle review の構造化出力や finding 判定だけを変更・調査し、worktree lifecycle や INDEX 統合に関係しないとき
 
 ## hash
-- 7cdac79abdb407a5f021c3efdf5328da65c950e5966dda48e941017a309d2412
+- 82a3ecf62010a86e719442a87a4f8ed7fe48cb2dc52286225d4ccd792494a543
 
 # `test_packaged_import.py`
 

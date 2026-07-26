@@ -1435,6 +1435,79 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     assert "- unresolved targets: `0`" in result.output
 
 
+def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """処理単位の commit 後に中断しても確定済み進捗を report する。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+    call_log = (tmp_path / "unresolved_call.json").resolve()
+    call_log.write_text("{}\n")
+
+    def fake_refactor(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """README の commit 済み処理単位に unresolved finding を返す。"""
+        target = str(kwargs["purpose"]).removeprefix("realization refactor: ")
+        if target == "README.md":
+            worktree = Path(str(kwargs["cwd"]))
+            (worktree / "README.md").write_text("# repo\n\nfixed\n")
+            return SimpleNamespace(
+                returncode=0,
+                call_log_path=call_log,
+                output_json={
+                    "findings": [
+                        {
+                            "title": "README unresolved finding",
+                            "resolution": {
+                                "status": "unresolved",
+                                "summary": "人間の判断が必要",
+                            },
+                        }
+                    ]
+                },
+            )
+        return SimpleNamespace(returncode=0, output_json={"findings": []})
+
+    original_commit = refactor_module.commit_work_unit
+
+    def commit_then_interrupt(
+        worktree: Path,
+        message: str,
+        **kwargs: object,
+    ) -> str | None:
+        """README の処理単位を commit した直後に中断する。"""
+        result = original_commit(worktree, message, **kwargs)
+        if message == "cmoc realization refactor README.md":
+            raise KeyboardInterrupt()
+        return result
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    monkeypatch.setattr(refactor_module, "commit_work_unit", commit_then_interrupt)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert _state(state_path)["run"]["state"] == "joinable"
+    report_line = next(
+        line
+        for line in result.output.splitlines()
+        if line.startswith("- fork report: `")
+    )
+    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    report_text = report.read_text()
+    assert "- processed targets: 2" in report_text
+    assert "- `README.md`: 1 finding(s)" in report_text
+    assert "- count: 1" in report_text
+    assert "README unresolved finding" in report_text
+
+
 def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

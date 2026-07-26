@@ -97,14 +97,12 @@ def _cmoc_realization_refactor_fork_body() -> None:
             while target := select_refactor_target(
                 load_refactor_state(context.run_worktree), unresolved_findings
             ):
-                unit_target, finding_count, unresolved = _run_refactor_unit(
-                    context, target
+                _run_refactor_unit(
+                    context,
+                    target,
+                    units,
+                    unresolved_findings,
                 )
-                units.append((unit_target, finding_count))
-                if unresolved:
-                    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-                    # commit 済みの対象だけを current fork 内で保留し、次の対象へ進む。
-                    unresolved_findings[target] = unresolved
             reason = _completion_reason(context.run_worktree, unresolved_findings)
             summary = _completion_change_summary(context)
         start_subcommand_step(5, "run を joinable に更新", "publish joinable")
@@ -308,16 +306,23 @@ def _initialize_cycle(context: EditingRunContext) -> None:
 def _run_refactor_unit(
     context: EditingRunContext,
     target: str,
-) -> tuple[str, int, list[_UnresolvedFinding]]:
+    units: list[tuple[str, int]],
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+) -> None:
     """単一 target の agent call、差分検証、state 更新、commit を実行する。"""
     target_path = context.run_worktree / target
     if not (target_path.is_file() or target_path.is_symlink()):
         sync_refactor_state(context.run_worktree)
-        commit_work_unit(
-            context.run_worktree,
+        _commit_refactor_unit(
+            context,
+            target,
+            0,
+            [],
+            units,
+            unresolved_findings,
             f"cmoc realization refactor sync {target}",
         )
-        return target, 0, []
+        return
     investigated_hash = file_sha256(target_path)
     with pushd(context.run_worktree):
         parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
@@ -399,10 +404,6 @@ def _run_refactor_unit(
             ["run worktree の差分を確認してください。"],
             "\n".join(unexpected),
         )
-    commit_work_unit(
-        context.run_worktree,
-        f"cmoc realization refactor {target}",
-    )
     unresolved_details = [
         (
             str(finding.get("title", "")),
@@ -411,7 +412,48 @@ def _run_refactor_unit(
         )
         for finding in unresolved
     ]
-    return target, len(normalized_findings), unresolved_details
+    _commit_refactor_unit(
+        context,
+        target,
+        len(normalized_findings),
+        unresolved_details,
+        units,
+        unresolved_findings,
+        f"cmoc realization refactor {target}",
+    )
+
+
+def _commit_refactor_unit(
+    context: EditingRunContext,
+    target: str,
+    finding_count: int,
+    unresolved: list[_UnresolvedFinding],
+    units: list[tuple[str, int]],
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+    message: str,
+) -> None:
+    """commit 済み処理単位の report 進捗を interruption 前に公開する。
+
+    commit 後、呼び出し元へ戻る前にも Ctrl+C が届く。HEAD が進んだ場合は
+    その処理単位を確定済みとして記録してから中断処理へ戻し、report の進捗を
+    実際の run branch と一致させる。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
+    before_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
+    committed = False
+    try:
+        commit_work_unit(context.run_worktree, message)
+        committed = True
+    finally:
+        after_head = run_git(["rev-parse", "HEAD"], context.run_worktree, check=False)
+        if committed or (
+            after_head.returncode == 0 and after_head.stdout.strip() != before_head
+        ):
+            units.append((target, finding_count))
+            if unresolved:
+                # commit 済みの対象だけを current fork 内で保留し、次の対象へ進む。
+                unresolved_findings[target] = unresolved
 
 
 def _unexpected_agent_paths(

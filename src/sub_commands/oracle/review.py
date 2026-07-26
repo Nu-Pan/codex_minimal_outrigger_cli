@@ -104,6 +104,8 @@ def _cmoc_oracle_review_body(
     review_worktree = worktrees_dir(root) / session_id / run_id
     run_fork_commit = head_commit(current_root)
     run_join_commit = None
+    run_branch_existed = branch_exists(root, run_branch)
+    review_worktree_existed = review_worktree.exists()
     all_oracle_files: list[Path] = []
     oracle_files: list[Path] = []
     evaluated_oracle_files: list[Path] = []
@@ -113,7 +115,18 @@ def _cmoc_oracle_review_body(
     cleanup_error: CmocError | None = None
     try:
         start_subcommand_step(2, "run の隔離実行を開始", "start isolated review")
-        create_run_worktree(current_root, run_branch, review_worktree, run_fork_commit)
+        try:
+            create_run_worktree(
+                current_root, run_branch, review_worktree, run_fork_commit
+            )
+        except BaseException:
+            # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+            # worktree add が branch/worktree の作成後に中断されても、今回の作成物だけを
+            # cleanup 対象として後続の終了処理へ渡す。
+            worktree_created = (
+                review_worktree.exists() and not review_worktree_existed
+            ) or (branch_exists(root, run_branch) and not run_branch_existed)
+            raise
         worktree_created = True
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")

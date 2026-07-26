@@ -44,35 +44,34 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。oracle 編集・調査・レビューの各実装への入口として、サブコマンド群の構成を確認する際に読む。
+- oracle 系サブコマンドをまとめる package。oracle の編集・調査・レビューの CLI 入口と、レビュー対象の列挙、パス解決、ループ処理、INDEX 変更の統合、レポート生成を下位実装へ案内する。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や、編集・調査・レビュー実装の入口を確認するとき。
+- oracle 系サブコマンドの構成や、各サブコマンドの実行入口を確認するとき
+- oracle review の実行フロー、対象範囲、所見処理、INDEX 統合、レポート生成の関連実装をたどるとき
 
 ## Do not read this when
-- 個別サブコマンドの詳細な実行フローを確認するときは、該当する実装ファイルを直接読む。
-- レビュー対象の列挙、レビュー処理、パス解決、レポート生成、INDEX.md の commit・merge を個別に確認するときは、それぞれの専用実装を直接読む。
+- 個別サブコマンドの内部処理だけを確認したいときは、該当する下位実装を直接読む
+- Codex TUI 自体や共通 CLI runtime の詳細だけを調べるとき
 
 ## hash
-- 14656324f70fc37c7db274a5624b38931034c7bd191808521fe17b9c18c24f3d
+- e4a80c1ca38bbbde3822491cb59e84974992f53e25ecfbf972716c1f82c01c35
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドの実装をまとめるパッケージ。apply と refactor の実行フローおよび関連する処理単位への入口を提供する。
+- realization workload サブコマンドのパッケージ入口。apply workload と refactor workload の実行フロー、および各処理への入口を扱う。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- realization apply のライフサイクル、agent 実行、差分・state・report 管理、失敗時処理を調査・変更するとき。
-- realization refactor の実行フロー、完了条件、finding 同期、差分検証、commit、中断・エラー処理を調査・変更するとき。
+- realization workload サブコマンドの構成や入口を確認するとき。
+- realization の apply または refactor workload の実行フローを調査・変更するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- agent の prompt 構築や Structured Output 生成だけを調査・変更するとき。
-- run の一般的な join・abandon 処理、共通 state 操作、共通 lifecycle・report 生成だけを確認するとき。
+- workload 共通処理、agent prompt 構築、対象選択、state 永続化など、下位 workload パッケージの責務に直接関係する処理だけを確認するとき。
 
 ## hash
-- 8e9e1d40db4cab3fdd245dd3ec5d2323c9d230075ad0034b0b7dd9e292e31717
+- d687d7004b2da278b614c02d6be63d7ad05bb4b549abed20618e6ef48b0a7f72
 
 # `review`
 
