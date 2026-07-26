@@ -29,6 +29,7 @@ from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import timestamp
 from commons.runtime_refactor import load_refactor_state
+from commons.runtime_run import run_process_id_path
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,
@@ -352,6 +353,25 @@ def test_run_abandon_accepts_already_removed_run_worktree(
     )
     assert len(reports) == 1
     assert "run worktree was already absent" in reports[0].read_text()
+
+
+def test_run_abandon_requires_process_stop_confirmation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """running run の process tracking がない場合は cleanup を開始しない。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    run_process_id_path(root, context.session_id).unlink()
+
+    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code != 0
+    assert "process 停止を確認できません" in result.output
+    assert _state(state_path)["run"]["state"] == "running"
+    assert context.run_worktree.exists()
+    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
 
 def test_apply_fork_tracks_indexing_codex_calls(

@@ -22,6 +22,7 @@ from commons.runtime_run import (
     delete_run_process_id,
     read_run_process_id,
     run_lifecycle_lock,
+    run_process_id_path,
     stop_run_process,
     worktree_for_branch_optional,
 )
@@ -110,8 +111,16 @@ def _stop_running_run(
     """running run の追跡 process を停止し、警告を収集する。"""
     process = read_run_process_id(context.repo, context.session_id)
     if process is None:
-        warnings.append("run process tracking was absent or stale")
-        return "already_stopped"
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # running の process 停止を確認できないまま run 資源を破棄しない。
+        tracking_path = run_process_id_path(context.repo, context.session_id)
+        raise CmocError(
+            "running run の process 停止を確認できません。",
+            [
+                "process tracking file と process の停止を確認してから再実行してください。",
+            ],
+            f"tracking path: {tracking_path}",
+        )
     warning = stop_run_process(
         process,
         lambda: read_run_process_id(context.repo, context.session_id),

@@ -15,17 +15,18 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc run abandon` の CLI 実装。active editing run を特定し、実行中プロセスを停止したうえで run worktree・branch・state・process tracking を cleanup し、ライフサイクルレポートと結果を表示する。run の停止・cleanup 警告や失敗も扱う。
+- `cmoc run abandon` の実装。active editing run を特定し、running process の停止、run worktree と branch の削除、state の ready 化、lifecycle report の出力、結果表示までの cleanup lifecycle を担う。run abandon の挙動や cleanup 失敗時の扱いを確認する入口。
 
 ## Read this when
-- `cmoc run abandon` の挙動、active run の停止処理、run worktree/branch の削除、cleanup 後の state 更新やレポート出力を変更・調査するとき。
+- `cmoc run abandon` の実装・エラー処理・cleanup lifecycle を調査または変更するとき
+- active run の process、worktree、branch、state、report が abandon でどう扱われるか確認するとき
 
 ## Do not read this when
-- run の開始・join・完了など、abandon 以外の editing run lifecycle を変更・調査するとき。
-- 共通の process tracking、active run 解決、worktree 操作の汎用実装そのものを確認するときは、対応する `commons` または runtime 実装を直接読む。
+- run の開始・継続・完了処理を調査するとき
+- 共通の process ID、run lifecycle lock、active run 解決処理そのものを調査するときは、対応する `commons` 実装を直接読む
 
 ## hash
-- ecf34cd6c11152d99d80cfef1f1267561bbff147d1d5d378646849dfda35fe25
+- c0182183cf26c59d5604f4d4b8fba97d01ca381447eba3f52b8bbfc594a01cec
 
 # `join.py`
 
