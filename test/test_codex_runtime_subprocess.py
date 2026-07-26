@@ -327,3 +327,28 @@ def test_stop_child_process_group_fails_closed_when_leader_is_gone(
         runtime_run.stop_child_process_group(child)
 
     assert stopped == []
+
+
+def test_stop_child_process_group_fails_closed_after_pidfd_leader_exit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """pidfd 経路でも leader 消滅後に別 PGID を停止しない。"""
+    child = runtime_run.ProcessIdentity(123, 456, 789)
+    stopped: list[int] = []
+    closed: list[int] = []
+    monkeypatch.setattr(runtime_run, "open_process_fd", lambda *_args: 99)
+    monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: None)
+    monkeypatch.setattr(runtime_run, "wait_process_fd_exit", lambda *_args: True)
+    monkeypatch.setattr(
+        runtime_run, "process_group_has_running_member", lambda _pgid: True
+    )
+    monkeypatch.setattr(
+        runtime_run, "stop_process_group", lambda pgid: stopped.append(pgid)
+    )
+    monkeypatch.setattr(runtime_run.os, "close", lambda fd: closed.append(fd))
+
+    with pytest.raises(CmocError, match="同一性を確認できません"):
+        runtime_run.stop_child_process_group(child)
+
+    assert stopped == []
+    assert closed == [99]
