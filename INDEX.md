@@ -127,35 +127,33 @@
 # `src`
 
 ## Summary
-- `src` は cmoc CLI の realization 実装ルート。Typer の主要エントリーポイント、CLI サブコマンド、共通 runtime、ACP/basic/config/oracle の互換入口を含み、各下位実装へ進む起点となる。
+- src 配下の主要な realization 実装と互換入口をまとめるルートディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、設定・ACP の互換 shim、および oracle 参照用 shim への入口を提供する。
 
 ## Read this when
-- cmoc CLI 全体のエントリーポイント、サブコマンド登録、共有 runtime、互換 import 経路の構成を確認するとき。
-- doctor、indexing、oracle、realization、run、session、tui などのサブコマンド実装へ進む前に、主要な委譲関係を把握するとき。
-- ACP builder、設定、Codex 実行、Git/worktree、状態管理など、`src` 配下の共有実装領域を特定するとき。
+- cmoc の CLI 全体構成、主要実装領域、または src 配下のどの下位ディレクトリ・ファイルから調査を始めるか判断するとき。
+- CLI エントリーポイント、サブコマンド、共通 runtime、互換 import 経路の関係を概観するとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime module の詳細だけを調査・変更したいときは、対応する下位要素を直接読む。
-- 正本仕様や oracle 側の実装内容だけを確認したいときは、対応する `oracle` 配下を直接読む。
-- 利用側の個別参照や利用者向け公開仕様だけを調査したいときは、該当する参照元または oracle 文書を直接読む。
+- 特定サブコマンド、runtime helper、builder adapter、設定定義などの詳細だけを確認したいときは、対応する下位実体を直接読む。
+- 利用者向け仕様や正本実装そのものを確認するときは、src の概観ではなく対応する oracle 文書・oracle source を直接読む。
 
 ## hash
-- e39179fff7146c6a417ffe733a848312a483bc8d459f356d44036b720f39d3b2
+- 0ef7f70890c3730b6240ba82a9ff8d5473c0a7ff00d111bd6a7850ecc294bd7c
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群と共通テスト支援モジュールを集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session lifecycle、設定・state・path model などの外部挙動と制御ロジックを検証する入口であり、Ollama や Git、fake command などのテスト基盤も含む。
+- テストコードで共有する補助モジュールと、ACP builder、Codex runtime、CLI、INDEX.md indexing、oracle review、session lifecycle、設定・状態永続化などの realization test を含むテスト領域。各機能の外部挙動・実行契約・失敗時処理を確認する入口であり、個別領域の調査では対応するテストへ進む。
 
 ## Read this when
-- cmoc の実装変更に対して、対応する外部契約・異常系・状態遷移・統合挙動を検証するテストを探すとき。
-- 対象機能に応じたテスト支援、Git worktree、Codex/Ollama 実行環境、fake external command の共通処理を確認するとき。
-- CLI、Codex runtime、indexing、oracle review、session/editing run、設定・state の回帰テスト範囲を確認するとき。
+- 対象機能の realization test、回帰テスト、統合テストの範囲や検証される外部契約を確認するとき。
+- Codex/Ollama 実行、CLI lifecycle、worktree・Git・state、INDEX.md、oracle review、session、builder などのテスト対象を特定するとき。
+- テスト共通 helper、fake external command、Git repository、Ollama、Codex 隔離環境の利用方法を確認するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容そのものを確認・変更するときは、対応する oracle doc または oracle source を直接読む。
-- 実装詳細の調査だけが目的で、テストケースや外部契約を確認する必要がないときは、対応する src を直接読む。
-- テスト対象と無関係な機能や、Codex/Ollama を起動しない一般的な開発環境の確認をするとき。
+- 実装本体や正本仕様そのものを確認することが目的の場合は、対応する src または oracle 文書・schema を直接読む。
+- 特定の機能と無関係なテストや共通 helper を総覧する必要がない場合は、この領域を一括して読まず対象テストへ直接進む。
+- Codex や Ollama を起動しない単体実装の詳細、または LLM の回答品質自体を調査する場合。
 
 ## hash
-- b4359592b1985c7e69140b0ba0fc6549ef3d3ec6b1c49c17b260ce0527111f6c
+- 4fd93a0177c88dddba96473efad7bb2c17c4266dbd82d88e3fd6600425fbd007

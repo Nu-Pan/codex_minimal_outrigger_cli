@@ -470,6 +470,7 @@ def is_realization_file_path(
         return False
     if (
         not relative.parts
+        or ".." in relative.parts
         or relative.parts[0] in {"oracle", "memo", ".git", ".agents", ".codex", ".cmoc"}
         or candidate.name in {"AGENTS.md", "INDEX.md"}
     ):
@@ -498,6 +499,7 @@ def is_oracle_file_path(root: Path, path: Path) -> bool:
         return False
     return (
         bool(relative.parts)
+        and ".." not in relative.parts
         and relative.parts[0] == "oracle"
         and path.name not in {"AGENTS.md", "INDEX.md"}
         and not is_untracked_git_ignored(root, path)

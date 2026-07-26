@@ -739,19 +739,18 @@
 # `test_runtime_refactor.py`
 
 ## Summary
-- realization refactor の永続 state について、oracle と realization の file 集合の同期、調査履歴の保持、変更 file の再調査化、調査対象の選択規則を検証するテスト。
-- state の path・timestamp・調査結果・UTF-8・NUL を含む path key などの schema 検証も扱う。
+- realization refactor の永続 state について、oracle と realization の追跡対象集合、SHA-256 による変更検出、調査履歴の保持、未調査・古い対象を優先する選択規則を検証するテスト。state の path・UTF-8・JSON schema・timestamp・調査結果の妥当性や、path escape と dangling symlink の扱いも確認する。
 
 ## Read this when
-- realization refactor の state 同期・履歴保持・target 選択の挙動を変更または検証するとき
-- refactor state の不正データ拒否や schema 検証のテストを追加・修正するとき
+- realization refactor の state 同期・対象選択・state schema 検証を変更または調査するとき
+- oracle/realization file の分類や、変更済みファイルの再調査判定を確認するとき
 
 ## Do not read this when
-- refactor state と無関係な runtime 機能や別サブコマンドのテストを扱うとき
-- 実装の詳細を直接確認する必要があり、対応する runtime 実装または正本仕様を読むべきとき
+- INDEX.md の生成や一般的な refactor 実装とは無関係なテストを調査するとき
+- CLI 出力や別の永続状態の仕様を直接確認したいときは、対応する実装・oracle 文書を読む
 
 ## hash
-- ad5b5d69f6ec18b11429f517c1552079b21723aaceb0145f7bf0cc05dd2e0c19
+- 3ae5346922a89b506db7228c67b9651f87f10b35634d7c8d349c1e4b146f2e06
 
 # `test_runtime_state.py`
 

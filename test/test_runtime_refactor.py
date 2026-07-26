@@ -12,6 +12,7 @@ import pytest
 from _git_support import make_repo, run_git
 
 from cmoc_runtime import CmocError, file_sha256
+from commons.runtime_git import is_oracle_file_path, is_realization_file_path
 from commons.runtime_refactor import (
     load_refactor_state,
     select_refactor_target,
@@ -35,6 +36,22 @@ def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
         for entry in state.values()
     )
     assert load_refactor_state(root) == state
+
+
+@pytest.mark.parametrize(
+    "relative", ["nested/../../outside.md", "oracle/../../outside.md"]
+)
+def test_refactor_target_classifiers_reject_parent_path_escape(
+    tmp_path: Path, relative: str
+) -> None:
+    """oracle/realization file classifier が work-root 外の path を拒否する。"""
+    # 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    root = make_repo(tmp_path)
+
+    path = root / relative
+
+    assert not is_oracle_file_path(root, path)
+    assert not is_realization_file_path(root, path)
 
 
 def test_refactor_state_sync_hashes_dangling_oracle_symlink(
