@@ -52,6 +52,7 @@ from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
 from main import app
 
+_WORK_ROOT = Path(__file__).resolve().parents[1]
 _CMOC_CONSOLE = Path(sys.executable).with_name("cmoc")
 _REAL_CODEX = shutil.which("codex")
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
@@ -230,6 +231,16 @@ def _production_environment(
         "NO_PROXY": "127.0.0.1,localhost",
         "no_proxy": "127.0.0.1,localhost",
         "PATH": f"{editor_dir}:{os.environ.get('PATH', '')}",
+        # The shared development venv's console script otherwise imports the
+        # parent session worktree instead of this realization worktree.
+        # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+        "PYTHONPATH": os.pathsep.join(
+            [
+                str(_WORK_ROOT / "src"),
+                str(_WORK_ROOT / "oracle" / "src"),
+                *([os.environ["PYTHONPATH"]] if os.environ.get("PYTHONPATH") else []),
+            ]
+        ),
         "TERM": "xterm-256color",
     }
     assert (

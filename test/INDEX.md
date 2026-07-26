@@ -589,21 +589,20 @@
 # `test_production_cli.py`
 
 ## Summary
-- 実 Codex CLI と case-local Ollama を使い、独立 process・PTY 上で全末端サブコマンドの本番経路を検証する受け入れテスト。CLI 終了 code、report・state・Git・Codex call log、TUI の応答完了と終了を確認し、LLM の回答品質自体は判定しない。
+- 実 Codex CLI と case-local Ollama を用い、独立 process・PTY 上で全末端サブコマンドの本番経路を検証する受け入れテスト。終了 code、report・state・Git 状態、Codex call log、TUI 応答完了と終了処理を確認する。LLM の回答品質自体は判定しない。
 
 ## Read this when
-- 本番相当の独立 process で CLI サブコマンドの正常系を検証・変更するとき
-- 全末端コマンドの登録漏れ、session/run の状態遷移、Git・state・report の外部副作用を確認するとき
-- Codex TUI の PTY 操作、端末 capability query、応答完了、終了処理を調査するとき
-- 実 Codex CLI、case-local Ollama、隔離された Codex home と test repository を用いる GPU integration test を実行するとき
+- CLI の末端サブコマンド追加・変更時に、本番実行経路の網羅性と状態遷移を確認するとき
+- Codex 実行、local Ollama、call log、独立 process、PTY ベースの TUI 動作を検証するとき
+- production integration test の失敗原因や、実行後の report・state・Git・副作用を調査するとき
 
 ## Do not read this when
-- 単体の CLI 実装や内部 helper のロジックだけを変更・調査するときは、対応する src または通常の realization test を直接読む
-- LLM の回答品質やプロンプト内容そのものを評価するとき
-- Codex CLI や Ollama を使わない軽量な unit test を確認するとき
+- 単体テストや内部 helper の実装詳細だけを変更・調査するとき
+- LLM の回答内容・品質そのものを評価するとき
+- Codex や Ollama を起動しない通常の CLI 制御ロジックのテストだけを確認するとき
 
 ## hash
-- 2571c81c78cdc3a6b0d7aea9208002d4ff16e4d02b755f1d165d91255c54d9bd
+- 936c1401b944d1babb8ced20d566153bb8dac77da0cefcdda166036e4bea0f47
 
 # `test_prompt_parts.py`
 
