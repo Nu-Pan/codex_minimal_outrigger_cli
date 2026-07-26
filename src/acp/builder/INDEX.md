@@ -143,18 +143,17 @@
 # `tui`
 
 ## Summary
-- TUI 関連の互換 import 経路を提供する薄い builder package。既存の `acp.builder.tui.*` 参照を維持し、canonical な oracle 側実装を再公開する入口として機能する。
-- 起動 parameter builder と resolve-parameter builder の互換アダプターを含む。resolve-parameter では入力プロンプト内のコードフェンスを保護した `AgentCallParameter` を返す。
+- TUI 向け agent call parameter builder と、既存の `acp.builder.tui.*` import を維持する互換 package。起動用 builder adapter と resolve-parameter builder の再公開を扱う。
 
 ## Read this when
-- 既存の TUI builder import 経路や互換性を確認・変更するとき。
-- TUI 起動 parameter builder または resolve-parameter builder の公開入口を調査するとき。
-- 互換 package を削除できる条件や、canonical builder との責務分担を確認するとき。
+- TUI 起動時の agent call parameter 生成や Structured Output schema path の扱いを確認・変更するとき。
+- TUI の resolve-parameter builder の import 互換性やコードフェンス保護処理を確認・変更するとき。
+- 既存の `acp.builder.tui.*` 互換層の必要性や削除可否を確認するとき。
 
 ## Do not read this when
-- TUI の画面構成や実装本体の挙動を調査するとき。
-- canonical builder の仕様や生成ロジックを確認するときは、oracle 側の実装を直接読む。
-- 新しい公開 API や新規 import 経路を設計するとき。
+- TUI 実装本体の挙動や画面構成を確認したいとき。
+- canonical builder の仕様や生成内容を確認・変更したいとき。
+- 新しい公開 API や新規 import 経路を設計したいとき。
 
 ## hash
-- 801321d9f63ed206ef16d23682e512d09bcea697d6428f92eebb693b2d4048df
+- 6631b1fe88b92e28e4da5cae3f4e1b3d78f14c7b479e0118a900eda596559e3b

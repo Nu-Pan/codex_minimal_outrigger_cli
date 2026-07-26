@@ -211,18 +211,19 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理について、editor input の衝突回避、prompt 解決、Codex TUI 起動パラメータ、linked worktree での保存先、`.cmoc` の ignore 挙動を外部挙動として検証するテスト群。TUI サブコマンドや関連する起動・prompt・worktree ログ処理の変更時に参照する入口。
+- TUI 起動直前の CLI 前処理を外部挙動から検証するテスト。エディタ入力の保存、prompt 解決、Codex TUI 起動パラメータ、完全 prompt の生成、linked worktree でのログ・schema・ignore 配置を扱う。
 
 ## Read this when
-- TUI サブコマンドの起動フロー、editor input 保存、prompt の生成・解決、Codex exec/TUI 呼び出し、linked worktree 対応、`.cmoc` ignore やログ保存の挙動を変更または検証するとき。
-- TUI 起動時の固定アクセスモード、structured output schema、選択された standard の prompt 反映を確認するとき。
+- TUI サブコマンドの起動前処理や Codex 起動設定を変更・検証するとき
+- エディタ入力ファイルの timestamp 衝突、prompt の standard 選択、linked worktree 対応を確認するとき
+- TUI 関連の CLI テスト失敗を調査するとき
 
 ## Do not read this when
-- TUI 以外のサブコマンドの挙動だけを調査するとき。
-- TUI 起動処理の実装詳細ではなく、正本仕様そのものを確認するときは、対応する oracle 文書を直接読む。
+- TUI 以外のサブコマンドや、起動前処理と無関係な共通ユーティリティだけを変更・調査するとき
+- Codex 実行基盤そのものの詳細を確認したい場合は、対応する runtime 実装・テストを直接読むとき
 
 ## hash
-- cc674c06ce3ee6624821fab5a637443857a04e6378ab08667f24315a6dedb5c8
+- 5246687320a9532814fd8c76cbe305e350e1ea2e80de4cc9c7f9fb384c9874cb
 
 # `test_codex_runtime_errors.py`
 

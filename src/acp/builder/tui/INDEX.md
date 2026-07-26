@@ -18,18 +18,16 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動 parameter builder の互換 import 経路を提供する薄いモジュール。実体の実装や正本仕様は持たず、正本側で定義された builder を再公開する。
+- TUI 起動用の agent call parameter builder adapter。正本 builder を呼び出し、TUI が free-form prompt を受ける契約に合わせて Structured Output schema path を無効化する。
 
 ## Read this when
-- TUI 起動 parameter builder の import 経路や互換性を確認するとき。
-- TUI 起動 parameter builder の公開名を参照するコードの入口を確認するとき。
+- TUI 起動時の agent call parameter 生成や、Structured Output schema path の扱いを確認・変更するとき。
 
 ## Do not read this when
-- builder の具体的な生成ロジックや仕様を確認したいときは、正本として示された oracle 側の実装を直接読む。
-- TUI 起動処理全体や別の parameter builder を調査するとき。
+- TUI 以外の parameter builder、または正本 builder の仕様自体を確認・変更するとき。
 
 ## hash
-- 6e9784f7e8505819488f5b54a774a719a4f662ab87693b9fbecc5a080f79477a
+- 2e19ef7b2bbcbcd68134e7bb99c529ff44530bdae06fb7c954f0e99f7190f9ee
 
 # `resolve_parameter.py`
 
