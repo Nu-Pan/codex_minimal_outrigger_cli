@@ -1302,10 +1302,10 @@
     "last_investigated_at": "2026-07-26_15-37_13_955959000"
   },
   "test/test_session_cli.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "f8d44e0136f39a87400c0a9f8cf2e2d04469b28ba1c9cd14128e9e7dc7d1c209",
+    "last_investigated_at": "2026-07-26_15-53_23_519411000"
   },
   "test/test_struct_doc_rendering.py": {
     "investigation_required": true,
