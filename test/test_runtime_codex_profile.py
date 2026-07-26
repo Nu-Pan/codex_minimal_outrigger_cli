@@ -135,6 +135,13 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
             "nested": ["value", {"answer": 42}],
         }
     }
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # dotted override path の quoted segment は Codex CLI parser が受理しないため、
+    # selected provider を inline TOML table として一度に渡す。
+    assert any(
+        argument.startswith('model_providers={"provider.with dot" = {')
+        for argument in args
+    )
     assert "permissions" not in parsed
 
 

@@ -241,11 +241,16 @@ def _toml_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007F")
 
 
+def _is_bare_toml_key_segment(value: str) -> bool:
+    """Codex CLI の dotted override path で bare に渡せる key か判定する。"""
+    return re.fullmatch(r"[A-Za-z0-9_-]+", value) is not None
+
+
 def _toml_key_segment(value: str) -> str:
     """provider ID/key を意味を保つ単一の TOML key segment にする。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # Codex CLI の dotted override path は bare key を引用せず渡す必要がある。
-    if re.fullmatch(r"[A-Za-z0-9_-]+", value):
+    if _is_bare_toml_key_segment(value):
         return value
     return _toml_string(value)
 
@@ -303,6 +308,9 @@ def _model_provider_override_args(
             f"model provider ID: {provider_id!r}",
         ) from exc
     args = _config_override("model_provider", provider_value)
+    normalized_settings: dict[str, JsonTomlValue] = {}
+    has_non_bare_segment = not _is_bare_toml_key_segment(provider_id)
+    encoded_settings: list[tuple[str, str]] = []
     for key, value in provider.settings.items():
         if not isinstance(key, str):
             raise CmocError(
@@ -314,7 +322,8 @@ def _model_provider_override_args(
             )
         try:
             key_segment = _toml_key_segment(key)
-            toml_value = _toml_value(value)
+            normalized_value = validate_json_toml_value(value)
+            toml_value = _toml_value(normalized_value)
         except TypeError as exc:
             raise CmocError(
                 "Codex model provider 設定が不正です。",
@@ -323,6 +332,22 @@ def _model_provider_override_args(
                 ],
                 f"model provider ID: {provider_id!r}\nkey: {key!r}",
             ) from exc
+        normalized_settings[key] = normalized_value
+        encoded_settings.append((key_segment, toml_value))
+        has_non_bare_segment |= not _is_bare_toml_key_segment(key)
+    if has_non_bare_segment and encoded_settings:
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # Codex CLI の dotted override parser は quoted key segment を path として解釈せず、
+        # provider ID/key に dot を含む設定を壊す。inline TOML table なら同じ
+        # provider-local key を一つの config override として意味を保てる。
+        args.extend(
+            _config_override(
+                "model_providers",
+                _toml_value({provider_id: normalized_settings}),
+            )
+        )
+        return args
+    for key_segment, toml_value in encoded_settings:
         args.extend(_config_override(f"{provider_key}.{key_segment}", toml_value))
     return args
 
