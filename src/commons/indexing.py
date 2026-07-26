@@ -9,12 +9,15 @@ hash 検証、書き込み、commit は同じ index plan・lock・Codex context 
 """
 
 import fcntl
+import json
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from contextvars import copy_context
 from dataclasses import dataclass, replace
 from pathlib import Path
+
+from oracle.acp_builder.indexing import index_entry as _index_entry_oracle
 
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from cmoc_runtime import (
@@ -35,7 +38,13 @@ from commons.runtime_paths import cwd_override_active
 from commons.runtime_results import CodexExecCallable
 
 CodexExec = CodexExecCallable
-INDEX_ENTRY_KEYS = {"summary", "read_this_when", "do_not_read_this_when"}
+# {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json
+# Read the canonical required fields instead of duplicating the schema in realization.
+_INDEX_ENTRY_KEYS = frozenset(
+    json.loads(Path(_index_entry_oracle.__file__).with_suffix(".json").read_text())[
+        "required"
+    ]
+)
 
 
 @dataclass
@@ -404,7 +413,7 @@ def render_index_entry(
     digest: str | None = None,
 ) -> str:
     """Structured Output から INDEX.md entry Markdown を生成する。"""
-    if not isinstance(entry, dict) or set(entry) != INDEX_ENTRY_KEYS:
+    if not isinstance(entry, dict) or set(entry) != _INDEX_ENTRY_KEYS:
         raise CmocError(
             "INDEX.md entry 生成結果が不正です。",
             ["cmoc indexing を再実行してください。"],

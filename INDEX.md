@@ -127,19 +127,20 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装を担う src ディレクトリ。ACP 互換入口、共通ランタイム、設定・oracle の互換 shim、CLI 本体、各サブコマンド実装を下位要素として提供する。
+- cmoc の realization 実装を集約する `src` ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP builder などを下位要素への入口として提供する。
 
 ## Read this when
-- cmoc の realization 側の CLI 構成、公開入口、共通 runtime、互換 import、サブコマンド実装の配置を確認するとき。
-- CLI 本体からサブコマンドや共通処理へ進む入口を判断するとき。
+- cmoc CLI の主要エントリーポイント、サブコマンドの配置、または CLI から実装への委譲先を確認するとき。
+- 共通 runtime、ACP builder、互換 import、設定・oracle package shim の realization 実装を調査・変更するとき。
+- 特定の実装領域へ進む前に、`src` 配下の責務分担と下位 package の入口を把握するとき。
 
 ## Do not read this when
-- 正本仕様や canonical な実装を確認したいときは、対応する oracle 配下を直接読む。
-- 単一サブコマンドや個別 runtime helper の詳細を確認したいときは、src 配下の対応するファイルまたはディレクトリを直接読む。
-- 利用者向け仕様、TUI の画面実装、CLI 利用側の参照元だけを調査するとき。
+- 正本仕様や canonical な実装そのものを確認したいときは、対応する `oracle` 配下を直接読む。
+- 単一サブコマンドや runtime helper の詳細だけを調査するときは、`src` 全体ではなく対応する下位要素を直接読む。
+- TUI の画面実装、CLI 利用側、または ACP builder と無関係な処理を調査するとき。
 
 ## hash
-- d705a67b6bbf5d27e0173f8bc9747549cb90028b4d84f039e0caf9c1d3210891
+- c2e1dbf02eb6e08e7473ace46afba72718e7d8c645068fe207b3a0a5e54b727e
 
 # `test`
 
