@@ -1176,10 +1176,10 @@
     "last_investigated_at": "2026-07-26_09-03_07_031429000"
   },
   "test/test_indexing_common.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "02521388eea0b35228ea7766094f0d5cf4725829704b503e335011e53b184550",
+    "last_investigated_at": "2026-07-26_09-15_51_298624000"
   },
   "test/test_indexing_preflight.py": {
     "investigation_required": true,
