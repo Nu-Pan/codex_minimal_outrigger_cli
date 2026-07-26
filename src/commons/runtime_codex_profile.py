@@ -500,8 +500,8 @@ def run_tracked_codex_subprocess(
             try:
                 stop_process_group(process.pid)
                 # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-                # Popen must be reaped after tracking registration fails; otherwise
-                # a failed tracking update leaves a zombie even after the group is stopped.
+                # tracking 登録が失敗した場合も Popen を wait して reaping する。そうしないと
+                # group を停止しても、tracking 更新失敗で zombie process が残る。
                 process.wait()
             except BaseException as cleanup_exc:
                 raise CmocError(

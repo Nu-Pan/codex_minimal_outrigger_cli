@@ -152,21 +152,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。実行前の sandbox・cwd・CODEX_HOME・設定 override argv・schema 配置を準備し、subprocess の環境と起動を管理する。
-- Codex child の PID・start time・process group を追跡し、pidfd と advisory lock を用いた安全な停止・終了待機・tracking 更新を提供する。
-- Codex の JSONL stdout、stderr、構造化出力を読み取り、resume token の抽出と capacity・quota・予期しない error の判定を行う。
+- Codex CLI subprocess 境界の実装。sandbox・cwd・CODEX_HOME・provider/config override などの起動引数と環境を構築し、schema 配置、JSONL 出力解析、capacity/quota/予期せぬエラー判定を担う。editing run の child process tracking、pidfd による安全な signal 送信、process group 停止も扱う。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox、cwd、CODEX_HOME、model provider 設定、schema 配置を変更・調査するとき。
-- editing run における Codex subprocess の PID tracking、process group 停止、SIGTERM/SIGKILL、PID reuse 対策を変更・調査するとき。
-- Codex の JSONL 出力解析、quota/capacity retry、malformed event、error 判定を変更・調査するとき。
+- Codex CLI の起動引数、sandbox mode、cwd、CODEX_HOME、model provider 設定を変更・調査するとき
+- Codex subprocess の process tracking、停止、PID reuse 対策、SIGTERM/SIGKILL 処理を変更・調査するとき
+- Structured Output schema の配置、Codex JSONL 出力、resume token、capacity/quota/error 判定を変更・調査するとき
 
 ## Do not read this when
-- Codex CLI 呼び出し元の editing run 制御や retry orchestration 自体を調査するときは、該当する上位モジュールを先に読む。
-- cmoc の一般的な設定値の定義・検証や runtime path の共通処理だけを調査するときは、それぞれの設定・path モジュールを直接読む。
+- Codex CLI 呼び出し元の編集 run 制御や retry の全体フローを調査する場合
+- 一般的な設定値の定義、runtime path、JSON/TOML 検証、エラー型の実装だけを調査する場合は、それぞれの責務を直接扱うファイルを読む
 
 ## hash
-- 163bf4974d5a509df2f4240c51f47a2f172ccb005627c060829ec5d91d1fd0a5
+- 7f34712c7c764c9181e168bf980dfb1511352256c2df19cb1f897f1825aba16b
 
 # `runtime_codex_tui.py`
 
@@ -224,20 +222,20 @@
 # `runtime_doctor.py`
 
 ## Summary
-- doctor 前処理の実装を担い、Git common directory 単位の排他ロック下で設定・refactor state・ignore 規則・`.agents` 追跡状態を同期し、修復差分だけを一時 index 経由で commit する。
-- current/index の退避・復元、worktree 間の修復範囲分離、一時 Git index 操作、修復後の追跡状態検証までを扱う。
+- doctor 前処理を担う実装。current と main worktree の設定・refactor state・ignore 規則・.agents 追跡状態を修復し、Git index を保全しながら修復差分だけを commit する。doctor の排他ロック、一時 index 操作、復元、追跡状態検証までをまとめて扱う。
 
 ## Read this when
-- doctor サブコマンドの前処理、修復 commit、Git index の退避・復元、linked worktree 対応を変更または調査するとき。
-- `.gitignore`、`.agents/.gitkeep`、config、refactor state の doctor による同期や追跡状態検証を確認するとき。
-- doctor の並行実行防止や、一時 index を用いた staged 状態保全の挙動を確認するとき。
+- doctor 前処理の修復対象、commit 単位、worktree 間処理を確認するとき
+- doctor 実行時の Git index 保全、一時 index、lock、復元動作を変更または検証するとき
+- config・refactor state・.gitignore・.agents の追跡状態に関する doctor の挙動を調べるとき
 
 ## Do not read this when
-- doctor 前処理以外の一般的な設定同期、refactor state の仕様、Git コマンド共通処理だけを調べるときは、それぞれの専用モジュールや oracle 文書を先に読む。
-- doctor の利用者向け仕様やエラー文言の正本を確認するだけの場合は、実装ではなく対応する oracle 文書を読む。
+- doctor の仕様上の修復条件や利用者向け挙動を確認したいだけのときは、対応する oracle 文書を直接読む
+- Git 共通処理、設定同期、refactor state 同期そのものを変更するときは、それぞれの runtime モジュールを直接読む
+- doctor 前処理と無関係な CLI サブコマンドや一般的な Git 操作を調べるとき
 
 ## hash
-- 6faa06d58117c257cad1d99551bed4fa4b1c1086fd76df7d3ee82db5669c6e96
+- f4f8de2567fc3c81f42374ceb76d6e80d498b7d517798ee763b7680bb240aee4
 
 # `runtime_errors.py`
 

@@ -24,10 +24,9 @@ def _protect_code_block_fence(
     if not section_end_marker:
         return prompt
 
-    # Dynamic input may contain the next heading and a code block, so identify
-    # the exact rendered body before changing its outer fence.  Rendering the
-    # body through the canonical renderer also preserves its blank-line
-    # collapsing and indentation normalization.
+    # 動的入力には次の見出しや code block が含まれ得るため、外側の fence を変更する前に
+    # 描画後の本文を正確に特定する。canonical renderer を通すことで、空行の折りたたみと
+    # indentation の正規化も維持する。
     # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
     body = _rendered_code_block_body(info_string, section_body)
     section_start = -1

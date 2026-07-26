@@ -1,18 +1,20 @@
 # `acp`
 
 ## Summary
-- `acp` 互換 import 入口と、canonical な `oracle.acp_builder` へ接続する builder adapter 群を扱う。index、session、TUI、quota probe、oracle command、realization workload の parameter builder と、動的 Markdown code fence 補正を下位要素から確認できる。
+- `acp` 互換の公開入口と、ACP builder の realization adapter を提供するディレクトリ。canonical な oracle 実装への接続、prompt・index entry・oracle/realization workload・TUI・session・quota probe などの builder 経路を下位要素として扱う。
 
 ## Read this when
-- `acp.*` または `acp.builder.*` の互換 import 経路を調査・変更するとき。
-- canonical builder の parameter を再公開する adapter、prompt 補正、TUI・session・oracle・realization builder の接続を確認するとき。
+- `acp` または `acp.builder` の互換 import 経路や canonical 実装への接続を確認するとき。
+- ACP builder の prompt 生成、index entry、oracle・realization workload、TUI・session・quota probe adapter を変更・調査するとき。
+- 下位の builder package や共通の Markdown code fence 補正処理へ進むとき。
 
 ## Do not read this when
-- canonical な `oracle.acp_builder` の仕様や実装そのものを確認したいとき。
-- 個別 builder の利用箇所や、TUI・workload の処理本体だけを調査したいとき。
+- canonical な builder の正本仕様・実装を確認したいとき。
+- TUI の画面実装、CLI 本体、利用側の参照元を調査したいとき。
+- ACP builder と無関係な Markdown 処理や一般的な agent call parameter の仕様を調査したいとき。
 
 ## hash
-- 4b33cdb4725ec1c3fd9d1e24a4c9bf5766a4a857c351e9f67947774cc9f8b757
+- a40a86b0d27675ad43c5b94b814d31d832fb21be41361d18f09f3c736054bb6a
 
 # `basic`
 
@@ -48,22 +50,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 機能をまとめる commons パッケージ。設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果、INDEX 更新など、CLI 実装が横断利用する処理への入口。
-- 各 runtime モジュールは責務ごとの実装を持ち、再エクスポート用モジュール、Codex 実行系、設定・Git・状態管理、ログ・パス・エラー処理などに分かれる。
+- cmoc の共通ランタイム機能をまとめる commons パッケージ。設定、Git、Codex 実行、ログ、パス、状態、結果型、INDEX 管理など、複数の CLI 機能から利用される共通処理への入口。
 
 ## Read this when
-- 複数の CLI サブコマンドで利用される runtime 共通機能の実装箇所を探すとき
-- Codex exec/TUI の起動、ログ、retry、preflight、結果処理を調査するとき
-- 設定、Git、worktree、path、session state、run lifecycle、INDEX 更新などの共通処理を変更・検証するとき
-- 特定機能の担当 runtime モジュールを特定し、その実装へ進む必要があるとき
+- 複数の CLI サブコマンドにまたがるランタイム共通処理の実装箇所を探すとき
+- 共通ランタイム API、Codex 実行基盤、設定・Git・ログ・パス・状態管理、INDEX 更新の構成を確認するとき
+- commons 配下の個別モジュールを利用または変更する前に、担当領域を見極めるとき
 
 ## Do not read this when
-- 特定の runtime 機能の詳細だけを調査する場合は、commons 配下の担当モジュールへ直接進む
-- CLI コマンド固有の処理や引数定義だけを確認する場合は、該当するコマンド実装を直接読む
-- 利用者向けの正本仕様や出力契約そのものを確認する場合は、対応する oracle 文書を先に読む
+- 特定の runtime helper の実装詳細だけを調査するときは、対応する個別モジュールを直接読む
+- 特定サブコマンド固有の処理や引数、利用者向け仕様だけを調査するとき
+- oracle 文書で定義された仕様や、特定機能の出力形式だけを確認するときは、対応する正本文書を先に読む
 
 ## hash
-- 3f90ce8b91c6bc1ff4fb352f08fbd1d65f842e56bfe3262e79ba16894657b960
+- ddd9269e850a1ec69d8d8fa0ac69c605acb1348429afb100c85968e775765cd1
 
 # `config`
 

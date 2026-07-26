@@ -17,17 +17,17 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization adapter と互換入口をまとめたディレクトリ。canonical な oracle builder への接続、Markdown code fence 補正、index・session・TUI・quota probe・realization・oracle command builder の各 adapter を扱う。下位要素から用途別の互換入口や builder adapter の実装へ進める。
+- ACP builder の互換入口と realization adapter をまとめるディレクトリ。canonical な oracle 実装への接続、Markdown code fence 保護、index・oracle・realization・TUI・session などの builder 経路を下位要素として提供する。
 
 ## Read this when
-- acp.builder 配下の互換 import 経路、canonical oracle 実装との接続、または builder adapter 全体の構成を調査・変更するとき。
-- index、session、TUI、quota probe、realization、oracle command builder の parameter・prompt・fork 連携を確認するとき。
-- 動的 Markdown code fence の補正や prompt 内での保護処理の入口を探すとき。
+- acp.builder 配下の互換 import 経路や canonical oracle 実装への接続を調査するとき
+- ACP builder の prompt 生成、index entry、oracle・realization workload、TUI・session・quota probe の adapter を変更・確認するとき
+- 下位の builder package や共通 code fence 補正処理へ調査を進めるとき
 
 ## Do not read this when
-- canonical な oracle builder の仕様・実装や具体的な prompt 内容を確認するときは、oracle 側の対象を直接読む。
-- TUI の画面構成、workload の処理本体、または builder adapter の利用箇所だけを調査するときは、対応する実装・参照元を直接読む。
-- レビュー用の生成キャッシュだけを調査するときは、対応するキャッシュ対象を直接読む。
+- canonical な builder の正本仕様・実装そのものを確認するときは oracle 側の対象を直接読む
+- TUI の画面実装、CLI 本体、利用側の参照元を調査するときは、それぞれの対象を直接読む
+- ACP builder と無関係な Markdown 処理や一般的な agent call parameter の仕様を調査するとき
 
 ## hash
-- 16998dfb32ed797374b6542d993442644c2550c55d125966b0cd10e74d1ae805
+- 37b45a410a3a1d56a4e5b9f87d0b3af73b528e59bc5bea081cb2f48daaeee03a

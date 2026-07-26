@@ -225,7 +225,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "c725d18b649ce36fdca432bb297452492eea1bca900c874e600451769d21d501",
-    "last_investigated_at": "2026-07-24_01-00_38_077736000"
+    "last_investigated_at": "2026-07-26_22-12_50_318467000"
   },
   "oracle/doc/dev_rule/design_rule.md": {
     "investigation_required": true,

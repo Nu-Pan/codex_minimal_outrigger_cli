@@ -48,7 +48,7 @@ def build_oracle_review_validate_finding_advocate_parameter(
 
 def _fix_oracle_root_goal_typo(prompt: str) -> str:
     """canonical promptに残るoracle root placeholderのtypoを一箇所だけ補正する。"""
-    # Oracle: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.py
+    # 正本: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.py
     # {{work-root}}/oracle/doc/app_spec/prompt_standard.md は oracle src の static goal typo
     # に必要な最小 correction だけを許可する。finding と known reason は dynamic input
     # なので byte-for-byte で保持する。

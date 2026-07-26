@@ -31,16 +31,19 @@
 # `common`
 
 ## Summary
-- ACP builder で共有する Markdown code fence 補正処理を扱う。動的本文内のバッククォート列との衝突を避けるため、正規化済み本文に応じて外側 fence の長さを調整する処理への入口。
+- ACP builder で共有する Markdown code fence の補正処理を提供する。動的な section 本文内のバッククォート列に応じて外側 fence を調整し、Markdown code block が途中で閉じないようにする。canonical rendering 後の code block 本文取得も扱う。
 
 ## Read this when
-- ACP builder のプロンプト生成で、動的 Markdown code block の fence 補正や関連する本文レンダリングを変更・調査するとき。
+- ACP builder の prompt 生成で、動的本文を含む Markdown code block の fence 補正を変更・調査するとき
+- section heading、終了 marker、info string、section body に基づく補正対象の探索や置換処理を確認するとき
+- Markdown rendering の normalization や struct_doc 連携を確認するとき
 
 ## Do not read this when
-- ACP builder の共有処理ではなく、プロンプト全体の構成や他の Markdown レンダリング仕様だけを確認するとき。
+- 個別 prompt の内容や正本の prompt 仕様を確認するとき
+- Markdown code fence 補正と無関係な ACP builder 機能、CLI 挙動、一般的な Markdown 処理を調査するとき
 
 ## hash
-- 01d9b8358a895c50ed713af5b7061155b52387071225b07e76ab3071a38d15ba
+- 91e56654c60ea2e30e699706e914facc1a2a66fe556c98213383f2974a3d3dee
 
 # `indexing`
 
@@ -62,19 +65,18 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization adapter 群を収めるディレクトリ。oracle edit・investigation・review 各コマンドの builder adapter への入口を提供する。
-- 各下位パッケージで、TUI 起動パラメータや AgentCallParameter の生成、finding 処理など、コマンド固有の builder adapter 構成を確認できる。
+- oracle command builder の realization adapter 群をまとめるディレクトリ。oracle edit、investigation、review 向けの builder 入口と、各種 AgentCallParameter・TUI 起動パラメータ生成への導線を提供する。
 
 ## Read this when
-- oracle command builder の realization adapter の全体構成や、edit・investigation・review の下位パッケージへの入口を確認するとき。
-- oracle コマンドの builder adapter の呼び出し経路や担当領域を調査・変更するとき。
+- oracle command builder の realization adapter の構成や、edit・investigation・review builder の入口を確認するとき
+- oracle investigation の起動準備や、oracle review の builder・互換経路・prompt 埋め込み処理へ進むとき
 
 ## Do not read this when
-- canonical な oracle builder の仕様や prompt 内容を確認したいとき。
-- oracle builder と無関係な ACP builder、TUI 実装、または具体的な下位実装だけを確認したいときは、対応する対象を直接読む。
+- canonical builder の正本仕様や prompt 本文を確認したいとき
+- builder adapter 以外の CLI 実装、TUI 実装、または共通パス解決処理だけを調査するとき
 
 ## hash
-- b261b96114cd5c553ccb22a0b59f550f7986baaeb80d9ebaccd8eadb84da0816
+- f4a89e1b23e4206396587fa4bb5b96fd9d63f337d5401ffc13f24e81fa96300f
 
 # `quota_probe.py`
 

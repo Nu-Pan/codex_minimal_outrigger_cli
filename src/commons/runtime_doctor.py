@@ -194,6 +194,8 @@ def _commit_doctor_repairs(
 
 
 def _restore_index(root: Path, index_path: Path) -> None:
+    """一時 index の内容を現在の Git index へ復元する。"""
+
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # tree 化では index 固有状態が失われるため、一時 index file 自体を復元する。
     shutil.copyfile(index_path, _current_index_path(root))
@@ -276,6 +278,8 @@ def _restored_index(root: Path, *, include_config: bool) -> Path:
 
 
 def _copy_current_index(root: Path) -> Path:
+    """現在の Git index を一時 file へ退避し、存在しなければ HEAD から作る。"""
+
     fd, index_name = tempfile.mkstemp(prefix="cmoc-doctor-restore-index-")
     os.close(fd)
     index_path = Path(index_name)
@@ -292,6 +296,8 @@ def _copy_current_index(root: Path) -> Path:
 
 
 def _current_index_path(root: Path) -> Path:
+    """Git が現在使用している index file の path を返す。"""
+
     return root / run_git(["rev-parse", "--git-path", "index"], root).stdout.strip()
 
 
