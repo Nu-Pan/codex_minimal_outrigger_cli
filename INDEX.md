@@ -144,17 +144,17 @@
 # `test`
 
 ## Summary
-- cmoc の realization test ディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session、state、設定、worktree、Ollama などの外部挙動・制御ロジックを検証する pytest 群と、複数領域で共有するテスト支援 helper を収録する。個別機能の実装・テストを調べる際の入口。
+- cmoc の realization test 群をまとめたディレクトリ。CLI、Codex runtime、ACP builder、indexing、oracle review、session/run state、設定、Git/worktree、テスト用支援 helper などの外部挙動・制御ロジックを検証する。各機能領域の回帰テストや統合テストへ進む入口。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test や共有テスト helper を特定するとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review/edit、session、runtime state、worktree の挙動をテストから確認するとき
-- テスト用 Git・Ollama・Codex 環境や fake external command の共通設定を確認するとき
+- cmoc の実装変更に対応する realization test を探すとき
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session lifecycle、runtime state の挙動をテストから確認するとき
+- 共通テスト支援 helper や実経路統合テストの構成を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle 文書・oracle source・oracle schema を直接読む
-- 実装本体の詳細を確認するときは、対応する src モジュールを直接読む
-- テスト対象と無関係な機能を調査するときは、このディレクトリを横断的に読まず対象テストまたは実装へ直接進む
+- 正本仕様や実装の詳細だけを確認したいときは、対応する oracle または src のファイルを直接読む
+- テスト対象と無関係な機能を調査するとき
+- INDEX.md のルーティング情報だけを更新・確認するとき
 
 ## hash
-- 90aceb30db9bea22321033859151e714eb98704790d9c85aea74d0ce68eaff10
+- 8c0cf649f14019cfe4c42bead2704daec2b98194fad5f64d3ce86ca0190d37dd

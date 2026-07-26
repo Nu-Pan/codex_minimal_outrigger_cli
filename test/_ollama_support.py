@@ -222,7 +222,8 @@ def _prepare_cache_root(path: Path) -> None:
             os.close(descriptor)
         os.replace(source, target)
         with (path / "cache.lock").open("a+b") as lock_file:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            # 別 test case の cache 更新中は待機し、利用不能な cache と誤判定しない。
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
     finally:
         source.unlink(missing_ok=True)

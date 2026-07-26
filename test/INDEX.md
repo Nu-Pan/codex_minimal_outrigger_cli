@@ -80,22 +80,16 @@
 # `_ollama_support.py`
 
 ## Summary
-- 実経路統合テスト向けに、case-local Ollama の cache 準備・安全性検証・atomic publish・model materialize・GPU-only 推論確認・provider 設定・process group teardown を一体で提供するテスト支援モジュール。
+- 実経路統合テスト向けに、case-local Ollama の導入・モデル準備・GPU-only 推論確認・cache の安全な materialize/atomic publish・process group teardown を一体で扱う支援モジュール。通常のモデル設定を動的なローカル Ollama provider へ差し替える入口も提供する。
 
 ## Read this when
-- 実経路統合テストで Ollama を起動・接続する仕組みを変更または調査するとき
-- Ollama の cache、archive 展開、model cache の publish、case-local working set の分離を確認するとき
-- GPU-only model の構築・事前推論確認・GPU 常駐判定を変更または調査するとき
-- テスト終了時の Ollama process group の停止や失敗時 cleanup を確認するとき
-- 通常の model provider 設定を test-local Ollama に向ける処理を変更するとき
+- 実経路統合テストで case-local Ollama の起動、モデル cache、GPU 利用確認、provider 設定、終了処理を変更・調査するとき。
 
 ## Do not read this when
-- Ollama を使用しない単体テストや統合テストの実装を調べるとき
-- 本番の Ollama provider や CLI の一般的な model 設定を変更するとき
-- テスト対象の業務ロジック、API 応答、Codex 出力内容だけを調査するとき
+- 通常の Ollama やモデル provider の本番実装を変更するとき。個別の統合テスト本体の検証ロジックだけを変更するとき。
 
 ## hash
-- ee41ffb13d684c63af95390214c70e4ad80f054756681b02343fead259dbe506
+- 05a91d9bcaa87673390175fa9a02ca7c11ceaf6d760ad5b472ed0846c7b92019
 
 # `test_acp_builder_editing_run_parameters.py`
 
