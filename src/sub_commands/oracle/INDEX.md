@@ -15,16 +15,30 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの実行入口。入力された oracle 編集指示を受け取り、起動条件を検証したうえで Codex TUI を main worktree から起動する。
+- 編集関連の実装ファイルを含まない空のディレクトリです。現時点で下位要素へのルーティング先はありません。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 起動経路、入力収集、TUI 起動パラメータ、起動前検証を変更・調査するとき。
+- このディレクトリに編集関連ファイルが追加されたか確認するとき。
 
 ## Do not read this when
-- oracle 編集指示の具体的な仕様や TUI パラメータ生成処理だけを確認したいときは、参照されている oracle 仕様または `launch_tui` 実装を直接読む。
+- Oracle サブコマンドの実装を調査するとき。親ディレクトリの実装ファイルを直接確認してください。
 
 ## hash
-- 0346bbb279262e9497ffbfd8648d775278688a391de6cf2da8096bc8515b4fe0
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+# `edit.py`
+
+## Summary
+- `cmoc oracle edit` サブコマンドの実装。oracle 編集指示を収集し、main worktree の active session branch と clean 状態を検証したうえで Codex TUI を起動する。
+
+## Read this when
+- `cmoc oracle edit` の起動処理、入力テンプレート、TUI 起動パラメータ、または起動前提条件を変更・調査するとき。
+
+## Do not read this when
+- oracle 編集処理そのものの仕様や TUI パラメータ構築の詳細を確認したいときは、対応する oracle 文書や `acp/builder/oracle/edit/launch_tui` の実装を直接読む。
+
+## hash
+- 476a738e23265d2f782dbf5646861067f56b647d0f4ad96cdba6ff6e2e541c57
 
 # `investigation.py`
 
