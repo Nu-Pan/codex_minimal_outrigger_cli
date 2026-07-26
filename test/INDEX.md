@@ -724,19 +724,17 @@
 # `test_runtime_file_access.py`
 
 ## Summary
-- FileAccessMode の JSON 永続化値と Codex sandbox mode への変換契約を検証するテスト。READONLY 系と各種 write mode の対応を確認する。
+- FileAccessMode の永続化値が JSON schema 共有用の文字列として定義されていることと、各アクセスモードが Codex sandbox mode へ正しく変換されることを検証するテスト。
 
 ## Read this when
-- FileAccessMode の値、または file_access_to_sandbox_mode の変換結果を変更・調査するとき
-- sandbox モード変換や関連する runtime テストを追加・修正するとき
+- FileAccessMode の値や file access mode から Codex sandbox mode への変換契約を変更・確認するとき。
 
 ## Do not read this when
-- ACP の FileAccessMode 定義そのものを変更・調査するときは、oracle の根拠ファイルを先に読む
-- prompt のファイルアクセス規則を変更・調査するときは、oracle の根拠ファイルを直接読む
-- FileAccessMode や sandbox 変換と無関係なテスト・実装を扱うとき
+- FileAccessMode の実装自体を変更するときは basic.acp の定義を直接確認する場合。
+- Codex 実行時の sandbox 制約全般を確認するときは、対応する実行規則や変換実装を直接読む場合。
 
 ## hash
-- 0f39773aec1b938ee1f0a4dbca60b301082daf452c8f045e08f086ea979eb1d8
+- 4115b2fd0a1a6350e8acec4a57b5a039c8f768d3660b0b75a0579ed96addb571
 
 # `test_runtime_refactor.py`
 
