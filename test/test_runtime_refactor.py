@@ -54,6 +54,26 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
     assert not is_realization_file_path(root, path)
 
 
+def test_refactor_target_classifiers_require_file_entries(
+    tmp_path: Path,
+) -> None:
+    """oracle/realization file classifier が directory と欠落 path を拒否する。"""
+    root = make_repo(tmp_path)
+    realization_directory = root / "src"
+    realization_directory.mkdir()
+    realization_file = realization_directory / "module.py"
+    realization_file.write_text("VALUE = 1\n")
+    run_git(root, "add", "src/module.py")
+    run_git(root, "commit", "-m", "add realization directory")
+
+    assert not is_oracle_file_path(root, root / "oracle")
+    assert not is_oracle_file_path(root, root / "oracle" / "missing.md")
+    assert not is_realization_file_path(root, realization_directory)
+    assert not is_realization_file_path(root, realization_directory, branch="HEAD")
+    assert is_realization_file_path(root, realization_file, branch="HEAD")
+    assert not is_realization_file_path(root, root / "missing.py")
+
+
 def test_refactor_state_sync_hashes_dangling_oracle_symlink(
     tmp_path: Path,
 ) -> None:

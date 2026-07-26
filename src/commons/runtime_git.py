@@ -475,14 +475,16 @@ def is_realization_file_path(
         or candidate.name in {"AGENTS.md", "INDEX.md"}
     ):
         return False
-    if (
-        branch
-        and run_git(
-            ["ls-tree", "-r", "--name-only", branch, "--", str(relative)], root
-        ).stdout.splitlines()
-    ):
-        return True
-    return not is_untracked_git_ignored(root, candidate)
+    if branch:
+        branch_paths = run_git(
+            ["ls-tree", "-r", "-z", "--name-only", branch, "--", str(relative)],
+            root,
+        ).stdout.split("\0")
+        if str(relative) in branch_paths:
+            return True
+    return (
+        candidate.is_file() or candidate.is_symlink()
+    ) and not is_untracked_git_ignored(root, candidate)
 
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:
@@ -501,6 +503,7 @@ def is_oracle_file_path(root: Path, path: Path) -> bool:
         bool(relative.parts)
         and ".." not in relative.parts
         and relative.parts[0] == "oracle"
-        and path.name not in {"AGENTS.md", "INDEX.md"}
+        and candidate.name not in {"AGENTS.md", "INDEX.md"}
+        and (candidate.is_file() or candidate.is_symlink())
         and not is_untracked_git_ignored(root, path)
     )

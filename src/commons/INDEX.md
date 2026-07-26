@@ -256,20 +256,21 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行、branch と commit の取得、worktree の作成・削除・検証、Git ignore 状態の管理、および oracle/realization file の分類を担う共通境界。Git 状態・path 正規化・管理領域の安全性を共有するため、これらの処理を実装または変更するときの入口となる。
+- Git コマンド実行とエラー変換、branch・commit・worktree の状態管理、安全な worktree 作成・削除、Git ignore 判定、oracle/realization file の分類を担う共通境界。Git repository path と index の不変条件を共有するため、これらの挙動を変更・調査する際の実装入口となる。
 
 ## Read this when
-- Git subprocess の実行結果や利用者向けエラー処理を変更するとき
-- branch、linked worktree、worktree path の作成・削除・安全性検証を変更するとき
-- `.cmoc/gu` の ignore 設定や Git index・exclude の扱いを変更するとき
-- oracle file または realization file の path 分類・Git 追跡状態判定を変更するとき
+- Git コマンドの実行結果や CmocError への変換を変更・調査するとき
+- branch、linked worktree、worktree path の作成・削除・安全性検証を変更・調査するとき
+- `.cmoc/gu` の ignore 設定や Git exclude、tracked/untracked 判定を変更・調査するとき
+- oracle file または realization file の path 分類、Git 状態に基づく対象判定を変更・調査するとき
 
 ## Do not read this when
-- Git 境界の挙動を変更せず、個別の CLI command や上位の session 処理だけを変更するとき
-- worktree や Git ignore の具体的な正本仕様を確認することが目的の場合は、対応する oracle 文書を先に読むとき
+- 特定の CLI サブコマンドの業務フローだけを変更・調査する場合は、その command 実装と対応する oracle を先に読む
+- runtime error の型や command result のデータ構造だけを変更・調査する場合は、各 runtime module を直接読む
+- Git と無関係な path 操作や repository 外部の状態管理を変更・調査する場合は、この共通境界を読む必要はない
 
 ## hash
-- 7cb4d8f73237b867609e837ad24e722a0df73c354ad4b215cf7bfe7463530fd0
+- 2968b4c5674ebeb671c8187219d6ae19a886570ee1b1d084d0c7ddfa39884905
 
 # `runtime_logging.py`
 
