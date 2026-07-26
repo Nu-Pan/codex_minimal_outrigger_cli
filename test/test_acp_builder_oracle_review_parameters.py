@@ -1,6 +1,14 @@
 """oracle review ACP builder の parameter、schema、adapter 公開面を検証する。
 
 対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/
+
+この file は 16,000 文字を超えるが、review builder 群の parameter、schema、公開面、
+および動的 prompt の fence 保護は同じ AgentCallParameter と canonical builder の
+互換契約を検証する一つの責務である。分割すると、builder 間で共有する schema・公開面
+の期待値と prompt 境界の検証文脈が複数 file に分散するため、現状は review builder
+回帰として一箇所に保つ。
+
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json

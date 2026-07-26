@@ -124,20 +124,18 @@
 # `test_acp_builder_oracle_review_parameters.py`
 
 ## Summary
-- oracle review ACP builder の parameter builder 群について、公開 export、モデル・推論設定、file access mode、schema の oracle source との一致、動的 prompt 入力、placeholder、nested code fence 保護を検証する pytest。review 関連 builder の互換性と prompt rendering 境界を確認するテスト入口。
+- oracle review ACP builder の parameter、schema、adapter 公開面を検証する回帰テスト。各 review builder のモデル・推論設定・ファイルアクセス権限、oracle schema との一致、canonical builder 互換性、動的 prompt の placeholder と code fence 保護を扱う。
 
 ## Read this when
-- oracle review の parameter builder、schema、互換 module の公開面を変更またはレビューするとき
-- review builder の動的入力、placeholder 置換、symlink path、code fence 保護の挙動を検証するとき
-- oracle review schema と realization builder の一致や AgentCallParameter 設定を確認するとき
+- oracle review builder の parameter 設定、structured output schema、互換 adapter の公開面を変更・検証するとき
+- review builder に渡す動的 prompt の code fence、placeholder、section 境界の挙動を確認するとき
 
 ## Do not read this when
-- oracle review 以外の ACP builder を変更するとき
-- 実装本体の prompt 構築や schema 定義を直接調査する場合は、対応する src または oracle source を先に読むとき
-- review 機能の所見判定ロジック自体や CLI 動作を調査するとき
+- review builder 以外の ACP builder を扱うとき
+- builder の実装詳細ではなく oracle schema 定義そのものを確認するときは、対応する oracle schema を直接読む
 
 ## hash
-- 6e676a491199ca139248d5843f43439af157386a3ab225a401691a0ec0ac2fe1
+- 98c908c200c9b94044a4129f65a43ac360cfcf850403f6163a8fedc00fd3f3f1
 
 # `test_acp_builder_session_join_parameters.py`
 
@@ -588,37 +586,38 @@
 # `test_production_cli.py`
 
 ## Summary
-- 実 Codex CLI と case-local Ollama を用い、独立 process・PTY 上で全末端サブコマンドの本番経路を検証する受け入れテスト。終了 code、report・state・Git 状態、Codex call log、TUI 応答完了と終了処理を確認する。LLM の回答品質自体は判定しない。
+- 利用者向け cmoc の全末端サブコマンドを、独立 process・実 Codex CLI・case-local Ollama を用いた本番経路で検証する受け入れテスト。非対話 command、TUI command、PTY 操作、call log、report・state・Git の外部結果を扱う。LLM の回答品質ではなく、応答後の cmoc 制御と終了状態を検証する。
 
 ## Read this when
-- CLI の末端サブコマンド追加・変更時に、本番実行経路の網羅性と状態遷移を確認するとき
-- Codex 実行、local Ollama、call log、独立 process、PTY ベースの TUI 動作を検証するとき
-- production integration test の失敗原因や、実行後の report・state・Git・副作用を調査するとき
+- cmoc の末端サブコマンド追加・変更に伴い、本番 executable 経路の網羅性を確認するとき
+- 独立 process、実 Codex CLI、local Ollama、Codex call log、report・state・Git の状態遷移を検証するとき
+- TUI の PTY 起動、端末 capability query、応答完了検出、終了操作を調査するとき
 
 ## Do not read this when
-- 単体テストや内部 helper の実装詳細だけを変更・調査するとき
-- LLM の回答内容・品質そのものを評価するとき
-- Codex や Ollama を起動しない通常の CLI 制御ロジックのテストだけを確認するとき
+- 単体の内部 helper や LLM 応答品質だけを検証するとき
+- 本番 process を使わない通常の unit test や非末端処理のテストを変更するとき
+- CLI の登録内容や個別 command の実装を直接調査する場合は、対応する実装・登録箇所を先に読むとき
 
 ## hash
-- 936c1401b944d1babb8ced20d566153bb8dac77da0cefcdda166036e4bea0f47
+- e499d433da7a35d336da5e7b542c8801daca7f1f782afe078f012bb02d4c0fc0
 
 # `test_prompt_parts.py`
 
 ## Summary
-- 標準 prompt parts と complete prompt の組み立て結果を検証するテスト。各標準文書の主要内容、file access mode ごとの規則、標準文書の注入・省略、root token と oracle path placeholder の保持を確認する。prompt builder の標準文書や complete prompt の変更時に参照するテスト入口。
+- 標準 prompt part の StructDoc rendering と complete prompt の組み立てを検証する回帰テスト。各標準文面の主要内容、file access mode ごとの規則、標準文面の包含・省略、root placeholder の保持と展開、prompt builder の統合条件を扱う。
 
 ## Read this when
-- prompt parts の標準文書を変更するとき
-- complete prompt の構成、標準文書の注入条件、root token の扱いを変更するとき
-- prompt builder 関連のテスト失敗を調査するとき
+- prompt builder の標準文面や complete prompt の構成を変更・レビューするとき
+- 標準文面の rendering、placeholder 展開、包含条件、file access mode の挙動を検証するとき
+- prompt builder 回帰テストの失敗原因を調査するとき
 
 ## Do not read this when
-- prompt builder や標準文書の挙動に関係しない機能を変更するとき
-- 個別の標準文書本文の仕様を確認する必要があり、対応する oracle source を直接読むべきとき
+- 個別の標準文面そのものを変更・確認するだけで、prompt builder による統合挙動を扱わないとき
+- prompt builder と無関係な CLI、永続化、外部連携のテストを調査するとき
+- 単一の標準文面の実装詳細を確認したい場合は、対応する prompt part 実装を直接読むとき
 
 ## hash
-- 0e7ab9d22fd2acd00ab35918bc03c965b8b6399bfaa83f7b55e2cf29c8fb56dd
+- e9a44a7913150d1e8a5aa5716df9ccb6df25db99fe210633d91e4b8452906b32
 
 # `test_runtime_cli.py`
 

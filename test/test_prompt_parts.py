@@ -1,5 +1,10 @@
 """標準 prompt parts と complete prompt の組み立て結果を検証する。
 
+この file は 16,000 文字を超えるが、各 prompt part の rendering と complete prompt の
+有効化・placeholder 展開は同じ StructDoc 出力を共有する一つの責務である。分割すると
+標準文面と統合時の包含条件を複数 file で追う必要があるため、現状は prompt builder
+回帰として一箇所に保つ。
+
 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 

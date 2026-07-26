@@ -465,7 +465,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "5dbc1cb4f5d03990e3486c70f90a0bf811d01efbbc2740d4155b8f70d2bc5478",
-    "last_investigated_at": "2026-07-24_14-58_40_598830000"
+    "last_investigated_at": "2026-07-27_03-09_19_835083000"
   },
   "oracle/src/oracle/prompt_builder/parts/routing_rule.py": {
     "investigation_required": false,

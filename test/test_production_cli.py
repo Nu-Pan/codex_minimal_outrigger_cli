@@ -344,7 +344,9 @@ def _completed_tui_message(codex_home: Path) -> str | None:
     for path in codex_home.glob("sessions/**/rollout-*.jsonl"):
         originator: str | None = None
         completed_message: str | None = None
-        for line in path.read_text().splitlines():
+        # The TUI appends this file while polling; the final chunk can end in a
+        # partial UTF-8 sequence, which is not an invalid session event.
+        for line in path.read_bytes().decode("utf-8", errors="ignore").splitlines():
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:

@@ -1,3 +1,14 @@
+"""doctor preprocess の修復・一時 index・commit lifecycle を扱う。
+
+この file は 16,000 文字を超えるが、doctor lock、修復対象の同期、一時 index の
+退避・合成・復元、および修復 commit は同じ Git common directory と index の
+不変条件を共有する一つの lifecycle である。分割すると、失敗時の index 復元と
+commit 対象の対応を複数 file で追う必要が生じるため、現状は doctor preprocess
+の境界として一箇所に保つ。
+
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
+
 import fcntl
 import os
 import shutil
