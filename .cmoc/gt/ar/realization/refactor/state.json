@@ -1200,10 +1200,10 @@
     "last_investigated_at": "2026-07-26_10-00_12_940255000"
   },
   "test/test_oracle_review_loop.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "d45fa314f9859cebd6809f9e0d38bb754159fb248f4c14b019c9f0a48b2b4b42",
+    "last_investigated_at": "2026-07-26_10-13_27_228229000"
   },
   "test/test_oracle_review_merge_operations.py": {
     "investigation_required": true,
