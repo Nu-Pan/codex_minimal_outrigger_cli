@@ -9,7 +9,11 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from _codex_support import codex_arg_value, codex_override_config
+from _codex_support import (
+    codex_arg_value,
+    codex_override_config,
+    setup_codex_home,
+)
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from commons.runtime_codex_profile import (
@@ -91,12 +95,13 @@ def test_path_based_permission_inputs_are_absent_from_builder_api() -> None:
 )
 @pytest.mark.skipif(_CODEX_CLI is None, reason="codex CLI is not installed")
 def test_sandbox_argument_is_accepted_by_codex_cli(
-    tmp_path: Path, mode: FileAccessMode
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mode: FileAccessMode
 ) -> None:
     """生成 argv の専用 sandbox 引数を実 Codex CLI parser に通す。"""
     assert _CODEX_CLI is not None
     codex = _CODEX_CLI
 
+    setup_codex_home(tmp_path, monkeypatch)
     root = tmp_path / "repo"
     root.mkdir()
     args = build_codex_override_args(_parameter(mode), CmocConfig())

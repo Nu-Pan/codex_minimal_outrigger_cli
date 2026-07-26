@@ -658,19 +658,19 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- Codex CLI の sandbox argv が permission profile に依存しないことを検証するテスト。全 FileAccessMode で sandbox 引数だけが適切に生成され、profile や権限関連 config が注入されないことを確認する。
-- argv builder API に path 単位の read/write 例外入力が存在しないことを検証する。Codex CLI が生成された sandbox 引数を受理し、権限エラーではなく schema 読み込みエラーに到達することも確認する。
+- Codex の sandbox argv が permission profile に依存しないことを検証する pytest。全 FileAccessMode で sandbox 引数のみを生成し、profile や権限関連 config・path 別例外入力が存在しないこと、実 Codex CLI が生成 argv を受理することを確認する。
 
 ## Read this when
-- Codex CLI の sandbox 引数生成、permission profile/config 注入禁止、または FileAccessMode ごとの権限制御を変更・検証するとき
-- build_codex_override_args や prepare_codex_override_args の引数を変更するとき
+- Codex override argv の生成・準備処理を変更またはレビューするとき
+- sandbox、permission profile、権限関連 config の回帰を調査するとき
+- Codex CLI に渡す sandbox 引数の互換性を検証するとき
 
 ## Do not read this when
-- Codex CLI の権限 argv や runtime profile と無関係な機能を変更・調査するとき
-- 実装の詳細ではなく、Codex CLI 全体の利用方法や一般的な subprocess テストを確認したいとき
+- Codex override argv や権限設定に関係しない機能を変更・調査するとき
+- Codex CLI の通常の出力品質や、別の実行経路のテストを確認するとき
 
 ## hash
-- 613b6ae1a298d72dcd0f70ee166744147a12c589cd52f915f71c95539fc83128
+- 7ca36ea288b94389652c5e77b19c60368c595ad6e1c51c477b55038b69f646a2
 
 # `test_runtime_codex_profile.py`
 

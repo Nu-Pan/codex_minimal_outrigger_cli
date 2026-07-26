@@ -163,16 +163,17 @@
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。共通テスト支援、runtime・Codex・CLI・indexing・oracle review・session・editing run などの外部挙動と制御ロジックを検証する。個別機能のテスト内容を確認する際の入口となる。
+- cmoc の realization test 群を収めるディレクトリ。CLI、runtime、Codex 実行、Ollama、session lifecycle、oracle review、indexing、各種 builder など、外部挙動と制御ロジックの回帰検証への入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test を探すとき
-- 複数のサブコマンド、runtime、Codex、共通テスト支援にまたがる回帰テストの範囲を確認するとき
+- cmoc のテスト対象や回帰テストの所在を確認するとき
+- CLI、runtime、Codex、session、indexing、oracle review などの外部挙動を検証するテストを追加・変更するとき
+- 共通テスト支援モジュールや実経路統合テストの構成を調べるとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認するときは、対応する oracle ファイルを直接読む
-- 実装詳細を確認するときは、対応する src ファイルを直接読む
-- テスト実行手順や開発環境を確認するときは、対応する開発・テスト手順を読む
+- 実装の責務や内部処理を確認するときは、対応する src 配下の実装ファイルを直接読む
+- 正本仕様、schema、prompt 規約を確認するときは、対応する oracle ファイルを直接読む
+- テスト実行手順や Python 開発環境を確認するときは、対応する開発・テスト手順を直接読む
 
 ## hash
-- 1dc491deb4ff67f015027c570e868f2c08371a7ddd482d71a8543b30134652ca
+- e7a905b385b2fbccb8ae9de39d6bdd533d4c00f50d61535f5f1ff8429773dc99
