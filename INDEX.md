@@ -127,34 +127,34 @@
 # `src`
 
 ## Summary
-- `src` の実装ツリー。cmoc CLI の主要エントリーポイント、サブコマンド実装、共通 runtime、互換 import shim を含み、CLI の実装配置と利用側から実体へ進むための入口となる。
+- cmoc CLI の realization 実装を集約する `src` ディレクトリ。主要エントリーポイント、サブコマンド、共通 runtime helper、互換 import shim を下位要素へ案内する。
 
 ## Read this when
-- cmoc の realization 側 CLI 実装の全体構成や、src 配下で特定の実装・サブコマンドの入口を探すとき。
-- CLI エントリーポイント、サブコマンド、共通 runtime、互換 import の実装配置を確認するとき。
+- cmoc の CLI 全体構成や主要エントリーポイントを確認するとき。
+- 複数サブコマンドの実装配置、共通 runtime、互換 import 経路を横断して調査するとき。
+- 特定のサブコマンドや共通機能の詳細実装へ進む前に、対応する下位要素を選ぶとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装内容だけを確認したいときは、対応する oracle 配下を直接読む。
-- 特定サブコマンドや runtime helper の詳細が既に明確なときは、src 配下の対応する実体を直接読む。
-- CLI 実装と無関係なテスト、正本仕様、生成物を調査するとき。
+- 単一サブコマンドの処理詳細を確認したいときは、`sub_commands` 配下の対応要素を直接読む。
+- 共通 runtime の個別機能、設定、Git、状態管理などの詳細を確認したいときは、`commons` 配下の対応モジュールを直接読む。
+- 正本仕様や oracle 側の実装を確認したいときは、対応する `oracle` ツリーを直接読む。
 
 ## hash
-- 533874de3d5e7200692d3883955df63c57bf2d9074bfb11f652bba8f23891ceb
+- 4ee2e370e39fa89e8e403f07b4c5621157d4d1f36db9b3f1f1accac0d7591ec0
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、prompt、StructDoc などの外部挙動・制御ロジックを検証する。各テストファイルが対応する実装領域の変更時に読む入口となる。
+- cmoc の realization test と共通テスト支援モジュールを集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session/run lifecycle、設定・状態・path model などの外部挙動と制御ロジックを検証する下位テストへの入口。
 
 ## Read this when
-- cmoc のテスト対象や回帰テストの所在を確認するとき
-- CLI、Codex 実行、indexing、oracle review、session lifecycle、runtime state などの挙動を変更・検証するとき
-- 共通テスト支援モジュールや実経路統合テストの利用方法を確認するとき
+- cmoc の実装変更に対応する回帰テスト、統合テスト、テスト用共通 helper の所在を探すとき。
+- CLI、Codex 実行、worktree・Git・state lifecycle、indexing、oracle review、builder 契約の検証対象を選ぶとき。
 
 ## Do not read this when
-- テスト対象の実装詳細や正本仕様だけを確認したいときは、対応する realization implementation または oracle file を直接読む
-- cmoc と無関係なテストや、LLM の回答品質そのものを評価するテストを探しているとき
-- 特定領域のテスト内容が明らかな場合は、ディレクトリ全体ではなく対応する個別テストファイルを読む
+- 正本仕様や schema の内容を確認するときは、対応する oracle doc または oracle source を直接読む。
+- 特定機能の実装詳細だけを調査するときは、このディレクトリ内のテストを総覧せず、対応する実装ファイルを先に読む。
+- 実経路の Ollama/GPU 統合環境やテスト実行手順だけを確認するときは、専用の開発・テスト手順を読む。
 
 ## hash
-- 93a7676484e1dc3cfcd0a4d125ba9bdb39f859648126d4f7829fd4b6ecf23332
+- 5bb29959b2df22ca6a47d3bc4aee5ec31e89294bd04b6babd6cbf8f8dd3eea0a

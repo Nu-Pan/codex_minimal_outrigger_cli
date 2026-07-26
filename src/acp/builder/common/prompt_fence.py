@@ -80,6 +80,66 @@ def _protect_code_block_fence(
     return prompt[:section_start] + replacement + prompt[section_end:]
 
 
+def _find_review_section_heading_starts(
+    prompt: str,
+    section_specs: tuple[tuple[str, str, str], ...],
+) -> tuple[int, ...] | None:
+    """Review prompt 内の連続する動的 section の実体位置を返す。"""
+    # 動的本文に後続 section そっくりの文字列があっても、その本文ではなく
+    # canonical builder が連続して構築した review section を補正対象にする。
+    # {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/judge_finding.py
+    rendered_sections = [
+        (
+            section_heading,
+            f"```text\n{_rendered_code_block_body('text', section_body)}\n```",
+        )
+        for section_heading, _, section_body in section_specs
+    ]
+    rendered_parts = [
+        part
+        for section_heading, block in rendered_sections
+        for part in (section_heading, block)
+    ]
+    rendered_parts.append("# place holder definition")
+    dynamic_region = "\n\n".join(rendered_parts)
+    region_start = prompt.find(dynamic_region)
+    if region_start == -1:
+        return None
+
+    starts: list[int] = []
+    offset = region_start
+    for heading, block in rendered_sections:
+        starts.append(offset)
+        offset += len(heading) + 2 + len(block) + 2
+    return tuple(starts)
+
+
+def _protect_review_sections(
+    prompt: str,
+    section_specs: tuple[tuple[str, str, str], ...],
+) -> str:
+    """Review prompt の動的 section を実体位置に基づいて補正する。"""
+    section_starts = _find_review_section_heading_starts(prompt, section_specs)
+    indices = (
+        range(len(section_specs))
+        if section_starts is None
+        else reversed(range(len(section_specs)))
+    )
+    for index in indices:
+        section_heading, section_end_marker, section_body = section_specs[index]
+        prompt = _protect_code_block_fence(
+            prompt,
+            section_heading=section_heading,
+            section_end_marker=section_end_marker,
+            info_string="text",
+            section_body=section_body,
+            section_heading_start=(
+                None if section_starts is None else section_starts[index]
+            ),
+        )
+    return prompt
+
+
 def _rendered_code_block_body(info_string: str | None, section_body: str) -> str:
     """Return the body text after canonical Markdown rendering normalization."""
     title = "__cmoc_prompt_fence_body__"

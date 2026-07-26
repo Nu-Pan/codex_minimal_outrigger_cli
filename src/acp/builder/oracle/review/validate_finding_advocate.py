@@ -5,7 +5,9 @@ from oracle.acp_builder.oracle.review.validate_finding_advocate import (
     build_oracle_review_validate_finding_advocate_parameter as _build_parameter,
 )
 
-from acp.builder.common.prompt_fence import _protect_code_block_fence
+from acp.builder.common.prompt_fence import (
+    _protect_review_sections,
+)
 
 __all__ = ["build_oracle_review_validate_finding_advocate_parameter"]
 
@@ -21,28 +23,25 @@ def build_oracle_review_validate_finding_advocate_parameter(
         known_advocate_reasons,
         known_challenger_reasons,
     )
+    section_specs = (
+        (
+            "# 対象所見",
+            "\n\n# 既知の妥当であるとする理由",
+            finding,
+        ),
+        (
+            "# 既知の妥当であるとする理由",
+            "\n\n# 既知の妥当ではないとする理由",
+            known_advocate_reasons,
+        ),
+        (
+            "# 既知の妥当ではないとする理由",
+            "\n\n# place holder definition",
+            known_challenger_reasons,
+        ),
+    )
     prompt = _fix_oracle_root_goal_typo(parameter.prompt)
-    prompt = _protect_code_block_fence(
-        prompt,
-        section_heading="# 対象所見",
-        section_end_marker="\n\n# 既知の妥当であるとする理由",
-        info_string="text",
-        section_body=finding,
-    )
-    prompt = _protect_code_block_fence(
-        prompt,
-        section_heading="# 既知の妥当であるとする理由",
-        section_end_marker="\n\n# 既知の妥当ではないとする理由",
-        info_string="text",
-        section_body=known_advocate_reasons,
-    )
-    prompt = _protect_code_block_fence(
-        prompt,
-        section_heading="# 既知の妥当ではないとする理由",
-        section_end_marker="\n\n# place holder definition",
-        info_string="text",
-        section_body=known_challenger_reasons,
-    )
+    prompt = _protect_review_sections(prompt, section_specs)
     return _replace(parameter, prompt=prompt)
 
 

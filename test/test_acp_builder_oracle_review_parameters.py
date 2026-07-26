@@ -398,6 +398,37 @@ def test_oracle_review_fence_protection_uses_actual_later_section() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "builder",
+    [
+        build_oracle_review_validate_finding_advocate_parameter,
+        build_oracle_review_validate_finding_challenger_parameter,
+    ],
+)
+def test_oracle_review_validation_fence_protection_uses_actual_later_section(
+    builder: Callable[[str, str, str], AgentCallParameter],
+) -> None:
+    """validation prompt が本文内の section 風文字列ではなく実体を補正する。"""
+    fence = "`" * 3
+    advocate = f"advocate\n{fence}\ninside\n{fence}"
+    finding = (
+        "before\n\n# 既知の妥当であるとする理由\n\n"
+        f"```text\n{advocate}\n```\n\n"
+        "# 既知の妥当ではないとする理由\n\ntrailing"
+    )
+
+    parameter = builder(finding, advocate, "known challenger")
+
+    actual_start = parameter.prompt.rindex("# 既知の妥当であるとする理由")
+    actual_end = parameter.prompt.index(
+        "\n\n# 既知の妥当ではないとする理由", actual_start
+    )
+    actual_section = parameter.prompt[actual_start:actual_end]
+    assert f"# 既知の妥当であるとする理由\n\n````text\n{advocate}\n````" in (
+        actual_section
+    )
+
+
 def test_oracle_review_fence_protection_matches_renderer_blank_line_normalization() -> (
     None
 ):

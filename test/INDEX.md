@@ -124,19 +124,21 @@
 # `test_acp_builder_oracle_review_parameters.py`
 
 ## Summary
-- oracle review ACP builder 群の parameter、model・reasoning・file access 設定、structured output schema、公開 API、動的 prompt の placeholder と code fence 保護を検証する pytest。review builder 間の互換契約を一箇所で扱う。
+- oracle review ACP builder 群の parameter、structured-output schema、互換 module の公開面、model・reasoning・file access 設定を検証する回帰テスト。
+- enumerate、judge、merge、advocate、challenger 各 builder の oracle schema 一致、動的入力保持、symlink path、placeholder 展開を確認する。
+- 動的 prompt に埋め込む Markdown code fence や section・placeholder 風文字列が実際の prompt 境界と誤認されず保護されることを検証する。
 
 ## Read this when
-- oracle review の ACP builder 実装や schema を変更・レビューするとき
-- review builder の公開 export、parameter 設定、schema 一致、動的入力保持を確認するとき
-- prompt 内の nested code fence や section marker 保護の回帰を調査するとき
+- oracle review builder の parameter や structured-output schema を変更・調査するとき。
+- review builder の公開 API、互換 module の __all__、model class、reasoning effort、file access mode を確認するとき。
+- 動的 prompt の code fence 保護、section 境界、placeholder 展開、入力保持の挙動を変更・検証するとき。
 
 ## Do not read this when
-- review builder 以外の ACP builder の挙動だけを確認するとき
-- 実装や正本 schema の詳細を直接確認したいときは、対応する oracle source または realization implementation を読むとき
+- review builder 以外の ACP builder の実装やテストだけを扱うとき。
+- schema や prompt 境界ではなく、review 実行フロー・所見処理・CLI 統合を直接調査するときは、対応する実装または専用テストを読む。
 
 ## hash
-- c7b6965500c2a1f525bbfbdf44ad0527208437ef0016ea7271d6c70c60c9c5ca
+- 4c5b51431a96b031e804828b21e575faf6b2c36b230a63173b222075c468784b
 
 # `test_acp_builder_session_join_parameters.py`
 

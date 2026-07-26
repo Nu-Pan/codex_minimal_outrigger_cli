@@ -564,7 +564,7 @@
     "last_investigated_at": "2026-07-27_04-50_47_974270000"
   },
   "src/acp/builder/oracle/review/validate_finding_advocate.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "2050c8bc8bb8e0385b091701c296f1dcf8d1fb36e279dfa9af82dbc21633222b",
     "last_investigated_at": "2026-07-27_05-05_12_059093000"
@@ -572,8 +572,8 @@
   "src/acp/builder/oracle/review/validate_finding_challenger.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "a8f05b5b4b0c6c6f8020479bd56ed87627c466ae631a28d2a855c7001f0bcb0d",
-    "last_investigated_at": "2026-07-24_19-38_44_992194000"
+    "last_investigated_sha256": "75579da2d2d72c9fa2b30669c1547b4d81cf253260db82bdcce81f7a61ad47fe",
+    "last_investigated_at": "2026-07-27_05-24_42_815320000"
   },
   "src/acp/builder/quota_probe.py": {
     "investigation_required": false,

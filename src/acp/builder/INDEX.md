@@ -31,17 +31,18 @@
 # `common`
 
 ## Summary
-- ACP builder が共有する Markdown code fence 補正処理を提供する。動的 section 本文を canonical rendering したうえで実体を特定し、本文中のバッククォート列より長い外側 fence に置換して section 境界を保つ。
+- ACP builder で共有する Markdown code fence 補正処理を提供し、動的な prompt/review section の本文位置特定、複数 section の補正、描画後本文の正規化を扱う。動的本文内の backtick による外側 fence の誤終了を防ぐための実装。
 
 ## Read this when
-- ACP builder の prompt 生成で、動的本文を含む Markdown code block の fence 補正、section 特定、canonical rendering との整合性を確認するとき。
+- 動的な prompt section や review section の Markdown code fence が本文中の code fence によって誤って閉じる問題を修正・検証するとき。
+- ACP builder の prompt 生成で、canonical Markdown rendering 後の本文や section の実体位置を基準とする補正処理を確認するとき。
 
 ## Do not read this when
-- ACP builder 共通処理以外の prompt 生成仕様を調べるとき。
-- Markdown code fence の補正や動的 section 本文の正規化に関係しない処理を調べるとき。
+- ACP builder の固定 prompt 内容や review 判定ロジック自体を変更するとき。
+- Markdown code fence や動的 prompt section を扱わない ACP builder の機能を調査するとき。
 
 ## hash
-- b172beb1744f11fc76b5253fc092a0ac2b9819a28ef0c059dd9570ac4ae5c9e8
+- b98458331e2c9f88f28aad3b196064375080182983d3463fc8749e6f7f9d760f
 
 # `indexing`
 
@@ -63,20 +64,19 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization adapter 群をまとめたパッケージ領域。oracle edit・investigation・review の各コマンド向けに、canonical builder への接続、起動パラメータ生成、関連する互換 adapter や prompt 埋め込み処理への入口を提供する。
+- oracle command builder 関連の realization package と、各 oracle サブコマンド向け builder adapter への入口を提供する。
+- edit、investigation、review の adapter パッケージへ進むためのルーティング起点となる。
 
 ## Read this when
-- oracle command builder の realization adapter の構成や、oracle edit・investigation・review の builder 実装への入口を確認するとき
-- oracle investigation の起動パラメータ生成や editor input ディレクトリ準備の呼び出し経路を確認するとき
-- oracle review の finding 関連 builder、互換 adapter、動的 prompt section の fence 保護を調査するとき
+- oracle command builder の realization package の責務や構成を確認するとき。
+- oracle edit、oracle investigation、oracle review の builder adapter の入口や下位実装への進み先を確認するとき。
 
 ## Do not read this when
-- oracle command builder の正本仕様、canonical builder の prompt 本文、または parameter 生成仕様そのものを確認したいとき
-- builder 以外の CLI 実装、TUI 実装、共通パス解決処理だけを調査するとき
-- oracle edit・investigation・review に関係しない ACP builder を調査するとき
+- oracle command builder 以外の処理を確認するとき。
+- 各 adapter の具体的な prompt 構築仕様、TUI 実装、CLI 実装を直接調査するとき。
 
 ## hash
-- 20a5ea7672098d1bbc13aa2382d2f5e751eeb365167ea9d796f88bf22119c060
+- 27fdc0316db6578b0b8fbee5e25779cdff4977e7e685c624ae3907b97a11a2a4
 
 # `quota_probe.py`
 
