@@ -708,10 +708,10 @@
     "last_investigated_at": "2026-07-27_06-49_15_826674000"
   },
   "src/commons/indexing.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "c7f948d005811a6a2336a9f8077428c43b275afa74627744481d483fd40bdbb0",
-    "last_investigated_at": "2026-07-25_00-33_34_514112000"
+    "last_investigated_sha256": "533c696aa274c1d3abb88b101060923ac759bef9852ce5bdd9854e49a8230885",
+    "last_investigated_at": "2026-07-27_07-07_28_559827000"
   },
   "src/commons/prompt_editor_input.py": {
     "investigation_required": false,
