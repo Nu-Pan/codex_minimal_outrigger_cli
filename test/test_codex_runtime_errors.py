@@ -17,6 +17,7 @@ from _git_support import make_repo
 import cmoc_runtime
 from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_codex_logging import emit_codex_call_console
 from commons.runtime_codex_profile import (
     codex_error_text,
     extract_resume_token,
@@ -28,6 +29,21 @@ from commons.runtime_logging import (
     set_current_subcommand_logger,
 )
 from config.cmoc_config import CmocConfig
+
+
+def test_codex_call_console_resolves_relative_call_log_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Codex call 通知の call log path を正本どおりフルパスで表示する。"""
+    monkeypatch.chdir(tmp_path)
+
+    emit_codex_call_console("test", Path("call.json"), 0.0, 0)
+
+    captured = capsys.readouterr()
+    assert f"- Call log: `{tmp_path / 'call.json'}`" in captured.out
+    assert captured.err == ""
 
 
 @pytest.mark.parametrize("line", ["null", "[]", "1"])

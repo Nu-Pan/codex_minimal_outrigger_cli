@@ -19,10 +19,11 @@ def emit_codex_call_console(
 
     根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     """
+    display_call_path = call_path.resolve()
     lines = [
         f"# {console_timestamp()} Codex CLI call",
         f"- Purpose: `{purpose}`",
-        f"- Call log: `{call_path}`",
+        f"- Call log: `{display_call_path}`",
         f"- Elapsed time: `{format_duration(elapsed_sec)}`",
         f"- Exit code: `{returncode if returncode is not None else 'not started'}`",
     ]

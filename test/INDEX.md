@@ -229,19 +229,20 @@
 # `test_codex_runtime_errors.py`
 
 ## Summary
-- Codex JSONL の異常イベント、不正 JSONL、Codex CLI 不在時の実行失敗を検証するテスト。parser のエラー分類、CmocError 化、標準出力抑制、終了コード・失敗内容・codex_call ログの記録を扱う。
+- Codex 実行時の異常系を検証するテスト。JSONL の不正形式・非 object event・CLI 不在を対象に、例外分類、エラー内容、終了コード、コンソール出力、失敗 call log の記録を確認する。Codex 実行処理や関連ログ仕様の変更時に、異常系の外部挙動を確認するための入口となる。
 
 ## Read this when
-- Codex 実行時の JSONL protocol failure や malformed event のテストを追加・変更するとき
-- Codex CLI が存在しない場合の例外処理や失敗ログを確認するとき
-- Codex 実行失敗時の標準出力・標準エラー・終了コードの挙動を検証するとき
+- Codex JSONL parser の不正入力対応を変更・調査するとき
+- Codex CLI が見つからない場合の例外または失敗ログを変更・調査するとき
+- Codex 実行時の異常系におけるコンソール出力や終了コードの挙動を確認するとき
 
 ## Do not read this when
-- Codex の正常系実行や resume token の通常処理だけを調査するときは、対応する runtime 実装・正常系テストを直接読む
-- 一般的なログ仕様全体や Codex 実行仕様全体を確認するだけの場合は、対応する oracle doc を直接読む
+- Codex の正常系実行フローだけを変更・調査するとき
+- Codex のログ実装そのものを変更する場合は、まず対応する実装ファイルと正本仕様を確認するとき
+- Codex 以外のサブコマンドや一般的な JSONL 処理を変更・調査するとき
 
 ## hash
-- 28c3e7f772375cd7a4be6529343536a8af629006201d530ee7cbdf19aecf8804
+- 15826a63a4293467fe0a61265f25764c972d36029b7dfcc306ba0fbcf1e85070
 
 # `test_codex_runtime_exec.py`
 
