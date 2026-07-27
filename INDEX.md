@@ -127,34 +127,31 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装を集約する src ディレクトリ。主要 CLI エントリーポイント、共通 runtime、互換 import shim、各サブコマンド実装への入口を提供する。
+- cmoc の realization 実装を集約する src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP・設定関連の公開入口を扱う。各機能の実装や package 構成を調査する際の上位ルーティング起点。
 
 ## Read this when
-- cmoc の CLI 全体構成、主要エントリーポイント、共通 runtime、互換 import 経路を確認するとき。
-- 特定のサブコマンドや realization 実装へ進む前に、対象の配置と上位入口を確認するとき。
+- cmoc の realization 実装全体の構成や、対象機能の実装入口を特定したいとき。
+- CLI、サブコマンド、共通 runtime、ACP・設定・oracle の互換 import 経路を調査・変更するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理を調査・変更するときは、該当する sub_commands 配下を直接読む。
-- 正本仕様や oracle 実装を確認するときは、oracle 配下を直接読む。
-- 個別の共通 helper、builder adapter、設定定義などの詳細だけを確認したいときは、対応する下位要素を直接読む。
+- 特定機能の詳細処理を直接調査・変更する場合は、対応する下位モジュールを直接読む。
+- 正本仕様や oracle 側の実装内容を確認する場合は、src 配下ではなく対応する oracle の文書・ソースを直接読む。
 
 ## hash
-- 5f4d0495000a6238417a7950216ef0462a716238f46f6fc359eea2b7f125fcd2
+- ab0112eaffe04445b709415a5ca9897f6984e97dddfca4d82b7ceb4a32a5be70
 
 # `test`
 
 ## Summary
-- cmoc のテストコード群。ACP builder、Codex runtime、CLI、INDEX.md indexing、oracle review、session/run state、worktree、設定、prompt、Git/Ollama などの外部挙動・制御ロジックを検証する。各機能別テストへの入口として利用する。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、INDEX indexing、oracle review、session/run state、worktree、設定、prompt、renderer などの外部挙動・制御ロジックを検証する。各テストファイルが機能領域ごとの詳細な確認入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや契約テストを探すとき
-- CLI、Codex 実行、builder、indexing、oracle review、session lifecycle、runtime state など特定機能の挙動を検証するとき
-- テスト用の Git repository、fake command、Ollama、Codex 環境など共通支援を確認するとき
+- 変更・調査対象の機能に対応する realization test を探すとき
+- 実装変更後に、外部契約や制御ロジックを検証するテストの所在を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装詳細そのものを確認するときは、各テストが参照する oracle 文書・schema・実装ファイルを直接読む
-- LLM の回答品質や、テスト対象と無関係な機能を調査するとき
-- テスト実行環境や品質検査の手順だけを確認するときは、対応する開発・テスト手順を読む
+- 実装の詳細や正本仕様だけを確認する場合は、対応する src または oracle のファイルを直接読む
+- 対象機能が明確な場合は、このディレクトリ全体を読むのではなく該当するテストファイルへ進む
 
 ## hash
-- 495ca705d4cc975394235e70de18982318d4602cfb3baf14397dd113db627170
+- 1099b6400cd4cd8c754b206b97c1984655751daabf615190450c11cef9d1096a

@@ -213,6 +213,36 @@ def test_session_fork_does_not_delete_branch_from_id_collision_race(
     assert "session fork の作成に失敗しました。" in result.stdout
 
 
+def test_session_fork_does_not_overwrite_state_from_id_collision_race(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """state file が競合した場合に既存 state を保持する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    session_id = "2026-06-27_01-02_03-000000000"
+    session_branch = f"cmoc/session/{session_id}"
+    path = write_abandoned_state(root, session_id)
+    original = path.read_text()
+    monkeypatch.setattr(
+        session_fork_module, "_new_session_id", lambda _root: session_id
+    )
+
+    result = runner.invoke(app, ["session", "fork"])
+
+    assert result.exit_code != 0
+    assert path.read_text() == original
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch],
+            cwd=root,
+        ).returncode
+        != 0
+    )
+
+
 def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

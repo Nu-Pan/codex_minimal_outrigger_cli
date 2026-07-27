@@ -109,26 +109,19 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session 関連の実装を確認する際の入口。
-- active session を検証し、home branch への切り替え後に session branch と state を abandoned として整理する処理。失敗時の rollback と cleanup error 表示を扱う。
-- local branch から session branch と session state を作成する処理。active session 検査、clean worktree 要求、session-id 衝突回避、失敗時 rollback を扱う。
-- session branch を home branch に merge する処理。conflict 解消依頼、merge 後の state 更新、branch 削除、安全性警告、結果表示を扱う。
+- session サブコマンドの実装パッケージ。session の各ライフサイクル操作を確認する際の入口となる。
+- session の abandon・fork・join サブコマンド実装を含む。
 
 ## Read this when
-- session サブコマンドの実装や構成を確認・変更するとき。
-- session abandon の事前条件、branch/state の cleanup、失敗時復旧を変更・調査するとき。
-- session fork の branch 作成、state 保存、session-id 生成、競合防止、rollback を変更・調査するとき。
-- session join の merge、conflict 解消、merge 完了処理、branch 削除、結果表示を変更・調査するとき。
-- session join における unmerged path・conflict marker 検出、NUL framing、Codex CLI 実行コンテキストを確認するとき。
+- session サブコマンドの実装構成やライフサイクル処理を確認・変更するとき。
+- session の branch 操作、state 管理、merge、cleanup、失敗時復旧の挙動を横断的に調査するとき。
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき。
-- session の開始・継続・完了など、abandon 以外の処理を調査するときは、対象サブコマンドの実装を直接読む。
-- session join 以外の session サブコマンドだけを調査するとき。
-- conflict resolution parameter の生成仕様だけを確認するときは、専用の conflict resolution 実装を直接読む。
+- 特定の session サブコマンドだけを調査・変更する場合は、該当する実装ファイルを直接読む。
 
 ## hash
-- 3cab5ef887935a66c53bb4a5be54300c00e4f790b0353a568f334fd9253c94b1
+- a12b38f37341e0ada494e5c0d04aea1042f7528583228f05e396368a56d18652
 
 # `tui.py`
 
