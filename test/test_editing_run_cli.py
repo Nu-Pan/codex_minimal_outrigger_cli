@@ -19,6 +19,7 @@ from _git_support import current_branch, make_repo, run_git
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_codex_profile as codex_profile_module
+import commons.runtime_run as runtime_run_module
 import commons.runtime_run_lifecycle as lifecycle_module
 import commons.runtime_run_report as run_report_module
 import sub_commands.realization.apply.fork as apply_module
@@ -698,6 +699,51 @@ def test_apply_failure_rolls_back_index_with_realization_changes(
     assert (worktree / "README.md").read_text() == "# repo\n"
     index_path = worktree / "INDEX.md"
     assert (index_path.read_text() if index_path.exists() else None) == before_index
+
+
+def test_apply_failure_stops_tracked_codex_children_before_rollback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """apply error cleanup が追跡中 Codex child を rollback 前に停止する。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
+    tracked = SimpleNamespace(child_processes=(child,))
+    events: list[str] = []
+
+    monkeypatch.setattr(
+        runtime_run_module,
+        "read_run_process_id",
+        lambda *_args: tracked,
+    )
+    monkeypatch.setattr(
+        runtime_run_module,
+        "stop_child_process_group",
+        lambda _process: events.append("stop"),
+    )
+    original_rollback = apply_module.rollback_work_unit
+
+    def record_rollback(worktree: Path) -> None:
+        """rollback の順序を確認してから本来の cleanup を実行する。"""
+        events.append("rollback")
+        original_rollback(worktree)
+
+    monkeypatch.setattr(apply_module, "rollback_work_unit", record_rollback)
+    monkeypatch.setattr(
+        apply_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert events == ["stop", "rollback"]
+    assert _state(state_path)["run"]["state"] == "error"
 
 
 def test_apply_start_failure_after_run_publish_is_reported(
@@ -1561,12 +1607,12 @@ def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
     monkeypatch.setattr(
-        refactor_module,
+        runtime_run_module,
         "read_run_process_id",
         lambda *_args: tracked,
     )
     monkeypatch.setattr(
-        refactor_module,
+        runtime_run_module,
         "stop_child_process_group",
         lambda process: stopped.append(process),
     )

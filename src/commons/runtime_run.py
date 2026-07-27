@@ -278,3 +278,15 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
             return f"stale run child process id ignored: {process.process_id}"
     stop_process_group(process_group_id)
     return None
+
+
+def stop_tracked_codex_children(root: Path, session_id: str) -> None:
+    """追跡中の Codex child group を停止する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # run の cleanup 前に tracking された child を停止し、error 後も実行中 process が
+    # worktree を変更し続ける状態を残さない。
+    tracked = read_run_process_id(root, session_id)
+    if tracked is None:
+        return
+    for child in tracked.child_processes:
+        stop_child_process_group(child)

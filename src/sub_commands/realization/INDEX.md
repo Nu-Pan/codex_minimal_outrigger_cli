@@ -15,35 +15,36 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理を実装するモジュール群。apply workload の入口と、fork サブコマンドの実行フローを確認するためのディレクトリ。
+- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装を確認する入口となる。
+- `cmoc realization apply fork` の実行処理を担当し、agent 起動から差分検査、INDEX 更新、commit、run lifecycle、fork report 保存までを管理する。異常時の cleanup、rollback、error 化にも対応する。
 
 ## Read this when
-- realization の apply workload を調査・変更するとき
-- `cmoc realization apply fork` の実装、差分追従、commit、run 状態更新、fork report 保存を確認するとき
+- realization の apply workload の内容を調査・変更するとき。
+- `cmoc realization apply fork` の挙動、run lifecycle、agent 起動、差分検査、commit、異常時処理、fork report を調査・変更するとき。
 
 ## Do not read this when
-- apply workload 以外の処理を扱うとき
-- apply agent の prompt 生成だけを確認したいとき
-- run 共通状態管理や fork report 共通フォーマットだけを確認したいとき
+- apply workload 以外の処理を扱うとき。
+- apply fork の prompt 構築だけを変更・調査するとき。
+- run の join、abandon、共通 lifecycle 処理、report 形式そのものを変更・調査するとき。
 
 ## hash
-- 4bb03f02951c0b98f5a26985f5c72ed03924b30be9a9877d469444f12f2b7f3b
+- 6fe0dfe0b7c6204fe253087f04ebeae4cea6e52605da9bcc768b9455177adf32
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を提供するパッケージ。パッケージ初期化と、refactor run の開始から完了・中断・エラー処理までを担う CLI 実行フローへの入口。
-- 対象 realization file の選択・調査・修正、findings と unresolved 状態の管理、差分検証、state 更新、処理単位の commit、report 保存を扱う。
+- realization のリファクタリング処理を扱うパッケージ。リファクタリング処理の構成確認や、fork lifecycle 全体の調査・変更に進む入口となる。
 
 ## Read this when
-- realization refactor の CLI 挙動や run lifecycle を確認・変更するとき
-- 対象 file の選択、findings の検証、refactor state、完了条件、fork report を調査するとき
-- 中断・エラー時の子プロセス停止、rollback、run 回収、unresolved findings の整合性を調査するとき
+- realization のリファクタリング作業の内容や構成を確認するとき。
+- realization refactor fork の開始から完了・中断・エラー処理までを調査または変更するとき。
+- 対象ファイル選択、agent 出力検証、state 更新、commit、変更概要、fork report の処理を確認するとき。
 
 ## Do not read this when
-- 個別 realization file のリファクタリング内容を調査・変更するとき
-- refactor state のデータ構造や target 選択ロジックだけを調査するとき
-- 一般的な editing run の join、abandon、report 処理だけを調査するとき
+- 単一ファイルの refactor agent 用 prompt や所見 schema の詳細だけを確認したいとき。
+- refactor state の永続化や target 選択そのものを調査したいとき。
+- run lifecycle の共通操作や report の共通形式だけを確認したいとき。
+- realization のリファクタリング以外の処理を確認するとき。
 
 ## hash
-- 224a154b32b89a8f08c690787c066591dba475d1ba6f9e1a6418b55df2e8d881
+- 9942620495be0ce2cf9d09c1daa98105831dbcf02d85f689c4648fe99d539504

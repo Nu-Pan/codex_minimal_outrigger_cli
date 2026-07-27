@@ -61,18 +61,18 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply と refactor の各サブパッケージへ進むためのルーティング起点。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の処理へ進む起点となる。
 
 ## Read this when
-- realization workload サブコマンドの構成や、apply・refactor のどちらを確認すべきか判断するとき
-- realization の apply または refactor 処理を調査・変更するとき
+- realization workload サブコマンドの実装や構成を確認するとき。
+- realization apply または realization refactor の処理を調査・変更するとき。
 
 ## Do not read this when
-- realization workload に関係しない処理を確認するとき
-- apply または refactor の個別実装を直接確認するときは、対応する下位パッケージへ進む場合
+- realization workload サブコマンドに関係しない処理を確認するとき。
+- apply・refactor の共通 lifecycle や report 形式だけを確認するとき。
 
 ## hash
-- d714885268ff390e5ae8371c0df4ab1518f1f215d6522e3eaf20b7b866aedd73
+- a316111b16aa6e81a0498ea25d82d1d93fa0ab666836d183687f2c4a6b3d1d89
 
 # `review`
 

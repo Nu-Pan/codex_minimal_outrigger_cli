@@ -39,9 +39,8 @@ from commons.runtime_refactor import (
     write_refactor_state,
 )
 from commons.runtime_run import (
-    read_run_process_id,
     run_process_tracking,
-    stop_child_process_group,
+    stop_tracked_codex_children,
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -129,7 +128,7 @@ def _cmoc_realization_refactor_fork_body() -> None:
                 raise
         cleanup_errors: list[str] = []
         try:
-            _stop_tracked_codex_children(context)
+            stop_tracked_codex_children(context.repo, context.session_id)
         except BaseException as cleanup_error:
             cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
         try:
@@ -201,16 +200,6 @@ def _cmoc_realization_refactor_fork_body() -> None:
             exc,
             error_cleanup_errors,
         )
-
-
-def _stop_tracked_codex_children(context: EditingRunContext) -> None:
-    """中断時に editing run が追跡している Codex child group を停止する。"""
-    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    tracked = read_run_process_id(context.repo, context.session_id)
-    if tracked is None:
-        return
-    for child in tracked.child_processes:
-        stop_child_process_group(child)
 
 
 def _session_run_was_ready() -> bool:

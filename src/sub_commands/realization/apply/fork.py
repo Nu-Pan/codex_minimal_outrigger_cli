@@ -21,7 +21,7 @@ from cmoc_runtime import (
     work_root,
 )
 from commons.indexing import enable_indexing_preflight
-from commons.runtime_run import run_process_tracking
+from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
     commit_work_unit,
@@ -214,6 +214,10 @@ def _record_error(
 ) -> Path:
     """apply run の差分を戻し、error state と fork report を保存する。"""
     cleanup_errors: list[str] = []
+    try:
+        stop_tracked_codex_children(context.repo, context.session_id)
+    except BaseException as cleanup_error:
+        cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
     try:
         rollback_work_unit(context.run_worktree)
     except BaseException as cleanup_error:

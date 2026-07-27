@@ -51,20 +51,21 @@
 # `commons`
 
 ## Summary
-- cmoc の CLI 実装が横断的に利用する共通 runtime helper 群を収める commons パッケージ。設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果型、INDEX lifecycle などの共通境界への入口であり、個別機能の調査時は配下の責務別モジュールへ進む。
+- cmoc の共通ランタイム機能をまとめた commons パッケージ。設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果型、INDEX 管理など、複数の CLI 機能から利用される基盤処理を扱う。
+- 個別の責務ごとに実装が分かれており、共通 API の再公開入口と、各ランタイム機能の具体的な実装を確認するための起点となる。
 
 ## Read this when
-- 複数の CLI 機能にまたがる runtime helper の実装や公開 API を調査・変更するとき
-- 設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果型、INDEX 更新の共通処理の担当箇所を探すとき
-- commons パッケージの初期化や runtime API の再公開境界を確認するとき
+- 複数の CLI 機能にまたがるランタイム共通処理を調査・変更するとき
+- 設定、Git、Codex subprocess、INDEX lifecycle、ログ、パス、状態、run lifecycle などの担当実装を特定するとき
+- commons パッケージの公開 API や、共通 helper の責務分担を確認するとき
 
 ## Do not read this when
-- 特定の runtime 機能の詳細が明らかな場合は、commons 配下の対応する個別モジュールを直接読むとき
-- 特定 CLI サブコマンド固有の処理やテストだけを調査するとき
-- 利用者向け仕様や oracle 文書の内容を確認するとき
+- 特定サブコマンド固有の業務ロジックや CLI 引数だけを調査するとき
+- 利用者向け仕様や正本となる oracle 文書だけを確認したいとき
+- commons 内の特定機能が明らかな場合は、このディレクトリ全体ではなく対応する個別実装へ直接進むとき
 
 ## hash
-- 7b3d5891b602d2df9431c09fc0109b41046398e1264dd8e9bcbd7cb61fc1d3ee
+- 46f2763ed535cff70604a99d3ca8c822158e1e0c5022c3836d75404aaab42cd4
 
 # `config`
 
@@ -116,15 +117,17 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの CLI 入口と、review・apply の実装配置先を含む。個別サブコマンドや共通処理の詳細へ進むための起点。
+- 各サブコマンドの CLI 実装パッケージをまとめるディレクトリ。apply・review は現在実装がなく、doctor・indexing・oracle・realization・run・session・tui の実装入口と下位処理へのルーティングを提供する。
 
 ## Read this when
-- cmoc のサブコマンド実装の構成や、対象サブコマンドの実装入口を確認するとき。
-- サブコマンドの実行フロー、worktree・branch・state の lifecycle、TUI 起動、oracle review、realization workload の責務分担を調査するとき。
+- サブコマンドの実装配置や、複数サブコマンドにまたがる CLI 入口の構成を確認するとき。
+- doctor、indexing、oracle、realization、run、session、tui の実行フローや責務分担を調査・変更するとき。
+- apply または review の実装追加先を確認するとき。
 
 ## Do not read this when
-- サブコマンドに関係しない共通 runtime や仕様文書だけを調査するとき。
-- 特定サブコマンドの詳細処理、共通 helper、TUI builder、prompt editor などを直接調査するときは、対応する下位実装へ進む。
+- 特定サブコマンドの詳細処理を調査するときは、対象の実装ファイルまたは下位パッケージを直接読む。
+- 共通 runtime、git・state・report・indexing helper、TUI builder、prompt editor、conflict resolution などの共通実装や仕様だけを調査するとき。
+- サブコマンド以外の CLI 実装を扱うとき。
 
 ## hash
-- 98e8eb389438607d1f7c70376e1c21c73946ce3ef4e6e69bb120122ed083d2a0
+- 5a5f1573cd27ba4eab0d9195807e7a0d9b0bf1934f8cf62e287533118091d8bf
