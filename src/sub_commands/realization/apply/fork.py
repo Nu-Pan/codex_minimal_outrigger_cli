@@ -33,7 +33,9 @@ from commons.runtime_run_lifecycle import (
     set_run_state,
     start_editing_run,
     tree_changes,
+    unexpected_agent_paths,
     unexpected_run_paths,
+    worktree_change_paths,
 )
 from commons.runtime_run_report import write_fork_report
 
@@ -108,6 +110,13 @@ def _cmoc_realization_apply_fork_body() -> None:
                     ["run report と Codex call log を確認してください。"],
                     f"returncode: {result.returncode}",
                 )
+            changed_agent_paths = worktree_change_paths(
+                context.run_worktree,
+                include_rename_sources=True,
+            )
+            unexpected = unexpected_agent_paths(context, changed_agent_paths)
+            if unexpected:
+                raise _unexpected_change_error(unexpected)
             start_subcommand_step(
                 5, "realization 差分を検査して commit", "commit changes"
             )

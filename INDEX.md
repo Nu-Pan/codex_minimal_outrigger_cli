@@ -127,29 +127,35 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization ソースをまとめるトップレベルディレクトリ。CLI エントリーポイント、互換 import shim、共通 runtime、basic/config/acp の互換入口、サブコマンド実装を扱う。各責務の詳細を確認するための下位ディレクトリへの入口。
+- cmoc CLI の realization 実装を収める src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP・basic 系の公開入口を扱い、各責務の具体的な実装へ進むための起点。
 
 ## Read this when
-- cmoc の realization ソース全体の構成や、CLI エントリーポイントから各実装領域への導線を確認するとき。
-- CLI 起動、互換 import、共通 runtime、basic/config/acp、サブコマンドのいずれを調査すべきか判断するとき。
+- cmoc の realization 実装全体の構成や、CLI・サブコマンド・共通 runtime の担当箇所を確認するとき。
+- CLI エントリーポイントからサブコマンド実装、または公開 import 入口の下位要素へ進む先を判断するとき。
+- ACP、oracle、basic、commons、config、sub_commands などの実装配置を横断的に調査するとき。
 
 ## Do not read this when
-- 特定の runtime helper、互換 shim、またはサブコマンドの詳細実装を確認したいときは、該当するファイルや下位ディレクトリを直接読む。
-- 正本仕様や oracle 側の実装を確認するときは、対応する oracle ツリーを直接読む。
+- 特定のサブコマンド、runtime 機能、互換 import shim の詳細が明らかな場合は、対応する下位要素を直接読む。
+- 正本仕様や oracle 側の実装を確認するときは、src ではなく対応する oracle ツリーを読む。
+- CLI や src の realization 実装と無関係な機能を調査するとき。
 
 ## hash
-- 0686e915ab4a8c21d9cfb1eda8a1afcf355ce54499512dcd226d6654e54d1e1f
+- b794db3d1ad648df3a2553d7ecf7e18f6bbc47e63b12dda6ec91288473351ca2
 
 # `test`
 
 ## Summary
-- テスト用の共通サポートモジュール群と、ACP builder・Codex runtime・CLI・indexing・oracle review・session・state など cmoc の各機能を検証する pytest テストを収録するディレクトリ。個別機能の外部契約や回帰挙動を調べる際の入口となる。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session/run state、worktree、設定、prompt、共通テスト支援など、実装の外部挙動・制御ロジック・公開契約を検証する。各テストファイルが機能領域ごとの詳細な入口となる。
 
 ## Read this when
-- cmoc の機能変更に伴う回帰テスト、外部挙動、制御ロジック、テスト用共通 helper の責務を確認するとき。
+- cmoc の実装変更に対応する回帰テストや統合テストの対象ファイルを選ぶとき
+- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、worktree などの外部契約または制御ロジックを検証するとき
+- テスト用の Git、Ollama、Codex、外部コマンドなど共通支援を確認するとき
 
 ## Do not read this when
-- 実装や正本仕様そのものを確認したいときは、対応する src または oracle のファイルを直接読む。
+- 正本仕様や実装詳細そのものを確認することが目的のときは、対応する oracle または src のファイルを直接読む
+- LLM の回答品質や Codex CLI 自体の出力品質を検証するとき
+- 対象機能と無関係なテスト領域を調査するときは、このディレクトリ内を総当たりせず、該当する機能別テストへ直接進む
 
 ## hash
-- e51f03188bfdc8fcf76997c829cd65d86cf6c1d4194b4877f55728abe51efae1
+- 54fba4f2b647066aaaaf63851b0e886f3fb6c6f8544d064691f010ba79e7ef18

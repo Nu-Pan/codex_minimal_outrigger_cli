@@ -342,6 +342,37 @@ def worktree_change_paths(
     )
 
 
+def unexpected_agent_paths(
+    context: EditingRunContext,
+    changed_paths: Collection[str],
+) -> list[str]:
+    """agent call が realization file 以外へ生じさせた差分を返す。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
+    return sorted(
+        {
+            path
+            for path in changed_paths
+            if not (
+                _is_agent_expected_path(
+                    context.run_worktree,
+                    context.kind,
+                    path,
+                    context.run_branch,
+                )
+                or _is_agent_expected_path(
+                    context.run_worktree,
+                    context.kind,
+                    path,
+                    context.run_fork_commit,
+                )
+            )
+        }
+    )
+
+
 def tree_changes(worktree: Path, base: str, end: str = "HEAD") -> list[GitChange]:
     """2 tree 間の変更を NUL framing で安全に列挙する。"""
     fields = run_git(

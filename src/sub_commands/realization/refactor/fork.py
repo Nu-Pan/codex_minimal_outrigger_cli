@@ -30,7 +30,6 @@ from cmoc_runtime import (
     timestamp,
 )
 from commons.indexing import enable_indexing_preflight
-from commons.runtime_git import is_realization_file_path
 from commons.runtime_refactor import (
     RefactorState,
     load_refactor_state,
@@ -56,6 +55,7 @@ from commons.runtime_run_lifecycle import (
     set_run_state,
     start_editing_run,
     tree_changes,
+    unexpected_agent_paths,
     unexpected_run_paths,
     worktree_change_paths,
 )
@@ -346,15 +346,15 @@ def _run_refactor_unit(
         context.run_worktree,
         include_rename_sources=True,
     )
-    unexpected_agent_paths = _unexpected_agent_paths(context, changed_realization)
-    if unexpected_agent_paths:
+    unexpected = unexpected_agent_paths(context, changed_realization)
+    if unexpected:
         # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
         # state と INDEX.md は cmoc が更新するため、agent call 直後に realization
         # file 以外の差分を拒否し、agent の変更を cmoc の更新として取り込まない。
         raise CmocError(
             "refactor agent が realization file 以外を変更しました。",
             ["Codex call log と run worktree の差分を確認してください。"],
-            "\n".join(unexpected_agent_paths),
+            "\n".join(unexpected),
         )
     if not findings and changed_realization:
         raise CmocError(
@@ -454,22 +454,6 @@ def _commit_refactor_unit(
             if unresolved:
                 # commit 済みの対象だけを current fork 内で保留し、次の対象へ進む。
                 unresolved_findings[target] = unresolved
-
-
-def _unexpected_agent_paths(
-    context: EditingRunContext,
-    changed_paths: list[str],
-) -> list[str]:
-    """agent call 直後に realization file 以外へ生じた差分を返す。"""
-    return sorted(
-        path
-        for path in changed_paths
-        if not is_realization_file_path(
-            context.run_worktree,
-            context.run_worktree / path,
-            branch=context.run_branch,
-        )
-    )
 
 
 def _status_change(path: str) -> GitChange:

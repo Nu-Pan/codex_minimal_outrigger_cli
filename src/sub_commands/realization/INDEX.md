@@ -15,33 +15,35 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装を確認する入口であり、apply fork の実行制御を含む。
+- realization の apply 処理を実装するモジュール群。apply workload の入口と、fork サブコマンドの実行フローを確認するためのディレクトリ。
 
 ## Read this when
-- realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` のライフサイクル、agent 実行、oracle 差分、差分 commit、state 遷移、fork report、失敗時 cleanup を調査・変更するとき。
+- realization の apply workload を調査・変更するとき
+- `cmoc realization apply fork` の実装、差分追従、commit、run 状態更新、fork report 保存を確認するとき
 
 ## Do not read this when
-- apply workload 以外の処理を扱うとき。
-- realization apply agent の prompt 構築だけを変更・調査する場合。
-- run の一般的な join・abandon 処理や共通 state 操作だけを確認する場合。
+- apply workload 以外の処理を扱うとき
+- apply agent の prompt 生成だけを確認したいとき
+- run 共通状態管理や fork report 共通フォーマットだけを確認したいとき
 
 ## hash
-- 5294150fc290468bf937c4e1117bc512d3abd21dad07817a77e69eb2513166b6
+- 4bb03f02951c0b98f5a26985f5c72ed03924b30be9a9877d469444f12f2b7f3b
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージ。リファクタリング実行フローの入口と、対象ファイル単位の調査・修正から完了判定・レポート生成までの流れを扱う。
+- realization のリファクタリング処理を提供するパッケージ。パッケージ初期化と、refactor run の開始から完了・中断・エラー処理までを担う CLI 実行フローへの入口。
+- 対象 realization file の選択・調査・修正、findings と unresolved 状態の管理、差分検証、state 更新、処理単位の commit、report 保存を扱う。
 
 ## Read this when
-- realization のリファクタリング処理の構成や入口を確認するとき。
-- realization refactor fork の実行フロー、state 更新、未解決所見、cleanup、完了判定、レポート生成を調査・変更するとき。
+- realization refactor の CLI 挙動や run lifecycle を確認・変更するとき
+- 対象 file の選択、findings の検証、refactor state、完了条件、fork report を調査するとき
+- 中断・エラー時の子プロセス停止、rollback、run 回収、unresolved findings の整合性を調査するとき
 
 ## Do not read this when
-- realization refactor の対象選択や state 永続化の共通処理を調べるとき。
-- file review agent の prompt parameter や change summary の生成仕様を調べるとき。
-- editing run の共通ライフサイクルや report writer の一般仕様を調べるとき。
+- 個別 realization file のリファクタリング内容を調査・変更するとき
+- refactor state のデータ構造や target 選択ロジックだけを調査するとき
+- 一般的な editing run の join、abandon、report 処理だけを調査するとき
 
 ## hash
-- 8fb20074e34f1e44609a1711b7683473e3cc4a53545800efc2d26c7790430fb3
+- 224a154b32b89a8f08c690787c066591dba475d1ba6f9e1a6418b55df2e8d881

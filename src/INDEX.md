@@ -51,20 +51,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果、INDEX 管理など、CLI 実装から横断利用される共通機能への入口を提供する。
+- cmoc の CLI 実装が横断的に利用する共通 runtime helper 群を収める commons パッケージ。設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果型、INDEX lifecycle などの共通境界への入口であり、個別機能の調査時は配下の責務別モジュールへ進む。
 
 ## Read this when
-- 複数の CLI 機能にまたがる runtime helper の責務や公開 API を確認・変更するとき
-- Codex 実行、INDEX lifecycle、設定、Git、worktree、session state、logging、path などの共通処理を調査するとき
-- commons 配下の特定モジュールを読むべき入口を判断するとき
+- 複数の CLI 機能にまたがる runtime helper の実装や公開 API を調査・変更するとき
+- 設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果型、INDEX 更新の共通処理の担当箇所を探すとき
+- commons パッケージの初期化や runtime API の再公開境界を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部実装だけを調査するときは、対応する個別モジュールを直接読む
-- CLI サブコマンド固有の処理や引数定義だけを確認するとき
-- 共通機能の正本仕様や利用者向け挙動だけを確認するときは、対応する oracle 文書や呼び出し元を直接読む
+- 特定の runtime 機能の詳細が明らかな場合は、commons 配下の対応する個別モジュールを直接読むとき
+- 特定 CLI サブコマンド固有の処理やテストだけを調査するとき
+- 利用者向け仕様や oracle 文書の内容を確認するとき
 
 ## hash
-- 12fb8ba566aed5a8a74fc3db697eb463f51f1c7d073c7f2670dd1bedc883cf6a
+- 7b3d5891b602d2df9431c09fc0109b41046398e1264dd8e9bcbd7cb61fc1d3ee
 
 # `config`
 
@@ -116,16 +116,16 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンドごとの CLI 実行入口を配置するディレクトリ。apply・review は現在実装本文がなく、doctor・indexing・oracle・realization・run・session・tui の実装入口を提供する。各サブコマンドの詳細は配下の対応ファイルまたはパッケージを入口として確認する。
+- CLI サブコマンドの realization 実装をまとめるディレクトリ。apply、doctor、indexing、oracle、realization、review、run、session、tui の各入口または関連パッケージへ進むためのルーティング起点。
 
 ## Read this when
-- 複数の cmoc サブコマンドの実装配置や入口を横断して確認するとき。
-- 特定サブコマンドの CLI 実行フロー、パッケージ構成、または実装追加場所を判断するとき。
+- CLI サブコマンドの実装構成や、対象サブコマンドの下位実装へ進む入口を確認するとき。
+- 複数のサブコマンドにまたがる実装配置を調査するとき。
 
 ## Do not read this when
-- 単一サブコマンドの詳細実装を確認したいときは、対応する配下の実装ファイルを直接読む。
-- 共通 runtime、git・state・process・report helper、workload 共通処理などの下位実装詳細を確認したいときは、それぞれの実装を直接読む。
-- サブコマンドの利用者向け仕様や oracle 仕様を確認したいときは、対応する oracle 文書を先に読む。
+- 特定サブコマンドの詳細処理を確認したいときは、対応する実装ファイルまたは下位パッケージを直接読む。
+- 共通 runtime、indexing、git、state、process、report などの下位共通処理を確認したいときは、対応する共通実装を直接読む。
+- サブコマンドの正本仕様を確認したいときは、対応する oracle 文書を先に読む。
 
 ## hash
-- 7b61d4c338ff4c0e57a8276d05e6d707246aca86fc3d8fe1b0216ed43533c3f5
+- c49a6e1bf91ce6e38c394ad15e8fbe702fbb96832f3ebf6c6e88d93fa1dc587d
