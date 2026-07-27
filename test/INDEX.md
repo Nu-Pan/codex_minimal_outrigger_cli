@@ -459,20 +459,20 @@
 # `test_oracle_edit_cli.py`
 
 ## Summary
-- `cmoc oracle edit` の main worktree TUI 制御を検証するテスト。doctor 済みの隔離 Git リポジトリと session state を準備し、indexing preflight、clean worktree 検査、TUI 呼び出し順、AgentCallParameter、oracle 差分保持、失敗時の終了コード、session state 非変更を確認する。
-- `oracle edit` の起動前提として、main worktree、active session branch、clean worktree を要求すること、および linked worktree・非 session branch・inactive session・未コミット差分を利用者向けエラーとして扱うことを検証する。
+- `cmoc oracle edit` の main-worktree TUI 起動を検証するテスト。TUI 実行時のイベント順序、AgentCallParameter、oracle 差分の保持、session state と run lifecycle の非変更、TUI 失敗時の終了を確認する。
+- oracle edit の起動前提として、main worktree、session branch、active session、clean worktree が必要であることを、各違反ケースの利用者向け例外で検証する。
 
 ## Read this when
-- `oracle edit` の CLI 実装、TUI 起動処理、indexing preflight、run lifecycle 非使用の挙動を変更または調査するとき。
-- `oracle edit` の起動前提、session state、worktree の clean 条件に関するテストを追加・修正するとき。
-- TUI 実行成功・失敗時の oracle 差分、終了コード、AgentCallParameter の契約を確認するとき。
+- `cmoc oracle edit` の CLI 起動処理、TUI 呼び出し、oracle 編集後の状態保持を変更または調査するとき。
+- oracle edit の起動前提条件や、indexing preflight・clean worktree 検査・TUI 実行の順序を確認するとき。
+- 関連する oracle edit 実装やテストの挙動を検証するとき。
 
 ## Do not read this when
-- `oracle edit` 以外のサブコマンドや、CLI 全体に共通しない機能のテストを調査するとき。
-- oracle 仕様そのものの編集や、実装ではなく別の session lifecycle の挙動だけを確認するとき。
+- oracle edit 以外のサブコマンドの実装やテストだけを扱うとき。
+- TUI の内部実装そのものや oracle 文書の編集仕様を直接確認したいときは、それぞれの実装ファイルまたは oracle 文書を直接読む。
 
 ## hash
-- 713a3077054c43157af509c46b729b57ce58fa2c67183673db67df9bf0fe47cf
+- a61bdf40a7dbc1e1c1e25b26188714fa9e912825b0d9a8bb53dec26a692ee884
 
 # `test_oracle_investigation_cli.py`
 
@@ -614,20 +614,18 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 標準 prompt part の StructDoc rendering と complete prompt の組み立てを検証する回帰テスト。各標準文面の主要内容、file access mode ごとの規則、標準文面の包含・省略、root placeholder の保持と展開、prompt builder の統合条件を扱う。
+- 標準 prompt parts の rendering と complete prompt の組み立てを検証する回帰テスト。各標準ルールの見出し・主要語、file access mode ごとの内容、prompt への注入条件、placeholder の保持・展開、既定時の省略を確認する。
 
 ## Read this when
-- prompt builder の標準文面や complete prompt の構成を変更・レビューするとき
-- 標準文面の rendering、placeholder 展開、包含条件、file access mode の挙動を検証するとき
-- prompt builder 回帰テストの失敗原因を調査するとき
+- prompt builder の標準ルールや complete prompt の構成を変更・調査するとき
+- prompt parts の StructDoc rendering、root token、placeholder 展開、注入オプションの回帰を確認するとき
 
 ## Do not read this when
-- 個別の標準文面そのものを変更・確認するだけで、prompt builder による統合挙動を扱わないとき
-- prompt builder と無関係な CLI、永続化、外部連携のテストを調査するとき
-- 単一の標準文面の実装詳細を確認したい場合は、対応する prompt part 実装を直接読むとき
+- prompt builder の実装詳細や標準ルール本文そのものを確認したいときは、対応する oracle/src または realization/src の実装を直接読む
+- prompt builder と無関係なテストや一般的なテスト実行方法を調べるとき
 
 ## hash
-- e9a44a7913150d1e8a5aa5716df9ccb6df25db99fe210633d91e4b8452906b32
+- 4596cc03246518c3109d3d161ce34c574965d70ac82ed0368a7e0fb58973a563
 
 # `test_runtime_cli.py`
 

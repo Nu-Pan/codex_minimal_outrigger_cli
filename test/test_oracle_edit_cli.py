@@ -1,4 +1,8 @@
-"""`cmoc oracle edit` の main-worktree TUI 制御を検証する。"""
+"""`cmoc oracle edit` の main-worktree TUI 制御を検証する。
+
+根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+{{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_tui.py
+"""
 
 import json
 from collections.abc import Iterator
