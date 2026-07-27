@@ -86,6 +86,21 @@ def test_doctor_preprocess_repairs_git_state(
         ).returncode
         != 0
     )
+    state_path = (
+        root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    )
+    state = json.loads(state_path.read_text())
+    assert set(state) == {".gitignore", "README.md", "oracle/spec.md"}
+    assert all(
+        entry
+        == {
+            "investigation_required": True,
+            "last_investigation_result": "not_investigated",
+            "last_investigated_sha256": None,
+            "last_investigated_at": None,
+        }
+        for entry in state.values()
+    )
 
 
 def test_doctor_preprocess_waits_for_common_repository_lock(
