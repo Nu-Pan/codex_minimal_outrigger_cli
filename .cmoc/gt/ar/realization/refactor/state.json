@@ -1226,8 +1226,8 @@
   "test/test_oracle_review_worktree.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "b6fd491a938e887a97e6451836cbef0eae10e4ffb75bbe470b6f024a52a0c058",
-    "last_investigated_at": "2026-07-26_11-21_19_003765000"
+    "last_investigated_sha256": "874be021d4729026432dec76df374eb7a93329e47cc53533673a65737d7d36d8",
+    "last_investigated_at": "2026-07-27_20-28_23_565170000"
   },
   "test/test_packaged_import.py": {
     "investigation_required": false,

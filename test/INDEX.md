@@ -559,18 +559,20 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- oracle review の review worktree lifecycle を検証する回帰テスト。linked worktree・snapshot commit からの fork、cleanup、未コミット差分の拒否、INDEX.md のみの統合、merge conflict 解決、異常終了時の report を扱う。
+- oracle review の worktree lifecycle と INDEX.md 統合を検証する pytest テスト群。linked worktree・snapshot fork・run 作成時の例外 cleanup・未コミット差分拒否・active run 中の実行・INDEX 差分の commit/merge/conflict 解決・不正差分と cleanup 失敗の報告を扱う。oracle review の worktree 分離、差分制約、preflight、報告結果を確認するテストの入口。
 
 ## Read this when
-- oracle review の隔離 worktree、session branch、preflight commit、差分検証、INDEX.md 統合の挙動を変更・調査するとき。
-- oracle review の cleanup、割り込み、予期しない例外、merge conflict に関する回帰を確認するとき。
+- oracle review の linked worktree、review branch、snapshot commit からの fork、run lifecycle を変更または検証するとき
+- review worktree で生成された INDEX.md の統合、preflight commit、merge conflict 解決、INDEX.md 以外の差分拒否を変更または検証するとき
+- review 実行時の中断・例外・cleanup 失敗・エラーレポートの挙動を調査するとき
 
 ## Do not read this when
-- oracle review の Structured Output や finding 判定ロジックだけを変更・調査するときは、対応する実装テストを直接読む。
-- INDEX.md の一般的な生成規則だけを確認するときは、indexing の仕様・実装を直接読む。
+- oracle review の所見判定ロジックや Structured Output schema 自体だけを変更・調査するとき
+- INDEX.md 生成一般の実装を変更し、review worktree lifecycle や統合処理を扱わないとき
+- 他のサブコマンドの worktree lifecycle を扱うとき
 
 ## hash
-- 874be021d4729026432dec76df374eb7a93329e47cc53533673a65737d7d36d8
+- a852e5651422e4656284d46071153eeed79133b46ae9e7988637d535a0fb9542
 
 # `test_packaged_import.py`
 

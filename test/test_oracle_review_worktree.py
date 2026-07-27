@@ -14,6 +14,7 @@
 """
 
 import subprocess
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -27,6 +28,17 @@ from basic.acp import AgentCallParameter
 from commons.runtime_results import CommandResult
 from commons.runtime_run_lifecycle import set_run_state, start_editing_run
 from main import app
+
+
+@pytest.fixture(autouse=True)
+def reset_indexing_preflight() -> Iterator[None]:
+    """各テスト前後で process-global な indexing preflight 状態を初期化する。
+
+    根拠: {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    """
+    codex_preflight_module.disable_indexing_preflight()
+    yield
+    codex_preflight_module.disable_indexing_preflight()
 
 
 class _FakeCodexResult:
