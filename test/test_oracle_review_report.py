@@ -647,7 +647,7 @@ def test_oracle_review_reports_reserve_timestamped_paths(
     ]
     assert all(path.is_file() for path in paths)
     assert all(
-        f"generated_at: {path.stem}" in path.read_text(encoding="utf-8")
+        f'generated_at: "{path.stem}"' in path.read_text(encoding="utf-8")
         for path in paths
     )
 
@@ -672,3 +672,24 @@ def test_oracle_review_report_quotes_unsafe_yaml_frontmatter_values(
     )
 
     assert f'repo_root: "{root}"' in rendered
+
+
+def test_oracle_review_report_quotes_numeric_like_yaml_strings(
+    tmp_path: Path,
+) -> None:
+    """数値や日付に見える branch 名を YAML の文字列として保持する。"""
+    rendered = review_module.render_oracle_review_report(
+        tmp_path,
+        "full",
+        "1.0",
+        SessionState(),
+        0,
+        [],
+        [],
+        "2026-06-27",
+        None,
+        None,
+    )
+
+    assert 'session_branch: "1.0"' in rendered
+    assert 'run_branch: "2026-06-27"' in rendered

@@ -290,7 +290,8 @@ def _render_frontmatter_field(name: str, value: object) -> str:
         # 単純な値は既存の可読な表記を保ち、それ以外は JSON quoting で YAML scalar にする。
         if (
             _PLAIN_YAML_SCALAR.fullmatch(text) is not None
-            and not text.isdigit()
+            # Branch names and other string fields may look like YAML numbers or dates.
+            and not text[:1].isdigit()
             and text.casefold() not in _YAML_STRING_LITERALS
         ):
             scalar = text

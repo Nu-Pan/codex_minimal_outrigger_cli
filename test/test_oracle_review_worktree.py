@@ -104,7 +104,10 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     assert report_path.is_relative_to(root / ".cmoc" / "gu" / "ar" / "report")
     assert not report_path.is_relative_to(linked)
     rendered = report_path.read_text()
-    assert f"run_fork_commit: {session_head}" in rendered
+    assert (
+        f"run_fork_commit: {session_head}" in rendered
+        or f'run_fork_commit: "{session_head}"' in rendered
+    )
     assert "`oracle/linked.md`" in rendered
     branch = run_git(linked, "branch", "--show-current").stdout.strip()
     assert branch.startswith("cmoc/session/")

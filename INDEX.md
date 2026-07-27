@@ -127,33 +127,31 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装を集約する src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP・設定関連の公開入口を扱う。各機能の実装や package 構成を調査する際の上位ルーティング起点。
+- cmoc CLI の realization 実装ルート。主要エントリーポイント、サブコマンド実装、共通 runtime、互換 import shim を扱い、CLI の登録から各処理・共有機能へ進む入口となる。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、対象機能の実装入口を特定したいとき。
-- CLI、サブコマンド、共通 runtime、ACP・設定・oracle の互換 import 経路を調査・変更するとき。
+- cmoc の CLI 構成、サブコマンドの実装配置、共通 runtime、互換 import 経路を確認するとき。
+- 特定のサブコマンドや共有機能の下位実装へ進む前に、realization 側の入口を特定するとき。
 
 ## Do not read this when
-- 特定機能の詳細処理を直接調査・変更する場合は、対応する下位モジュールを直接読む。
-- 正本仕様や oracle 側の実装内容を確認する場合は、src 配下ではなく対応する oracle の文書・ソースを直接読む。
+- 正本仕様や oracle 側の実装内容を確認したいとき。
+- 個別サブコマンド、runtime helper、builder などの具体的な処理を調査するときは、対応する下位要素を直接読む。
 
 ## hash
-- ab0112eaffe04445b709415a5ca9897f6984e97dddfca4d82b7ceb4a32a5be70
+- ff211d362abb41558694da7fd49d5802abe8481a726a8e323a73e64c8a167ed2
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収めるディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session lifecycle、state、設定、path、prompt などの外部挙動・制御ロジックを検証する。各機能の回帰テストや、関連テストの入口を探す起点となる。
+- cmoc の realization test 群をまとめたテストディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、prompt などの外部挙動・制御ロジックを検証する。個別機能の変更時に、対応する専用テストを選ぶ入口となる。
 
 ## Read this when
-- 実装変更に対応する realization test や回帰テストを探すとき
-- CLI、Codex 実行、indexing、oracle review、session、runtime などの外部契約・制御ロジックを検証するとき
-- 既存テストの fixture、共通 helper、テスト対象の境界を確認するとき
+- cmoc の実装やテストを変更・調査し、対象機能の回帰テストや外部契約を確認するとき。
+- CLI、Codex 実行、worktree・state 管理、indexing、oracle review、builder、設定など、一覧中の機能に対応するテストを探すとき。
 
 ## Do not read this when
-- 正本仕様や実装の詳細を確認することが目的で、対応する oracle または src のファイルを直接読むべきとき
-- テスト対象と無関係な機能を調査するとき
-- Codex や LLM の応答品質自体を評価するとき
+- 正本仕様や実装詳細だけを確認したいときは、対応する oracle または src のファイルを直接読む。
+- テスト対象外の機能や、テスト実行手順・開発環境のみを確認するとき。
 
 ## hash
-- 87d88b352f16200a416bb6a449273be54841fa845d4959552054f047e22c4d3a
+- abda09e1aa70f040159507b29e9b2d35d7a7f5e85bedb34572aac015fc337404
