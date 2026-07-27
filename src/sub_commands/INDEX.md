@@ -44,19 +44,19 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめる package。edit・investigation・review の CLI 入口に加え、review の対象列挙、パス解決、ループ処理、INDEX 更新、レポート生成を下位モジュールとして提供する。oracle サブコマンド群や oracle review の実行構成を調べる際の入口。
+- oracle 系サブコマンドをまとめる package。編集・調査・レビューの CLI 入口と、レビュー対象列挙、所見ループ、パス解決、レポート、INDEX 更新などの実装への入口を提供する。
 
 ## Read this when
-- oracle 系サブコマンドの構成、CLI 入口、またはサブコマンド間の責務分担を確認するとき。
-- oracle review の実行フローと、対象列挙・パス解決・レビュー処理・INDEX 更新・レポート生成の連携を調査するとき。
+- oracle 系サブコマンドの package 構成や CLI 入口を確認するとき。
+- oracle review の実行フロー、対象列挙、レビュー処理、パス解決、レポート出力、INDEX 更新の責務分担を確認するとき。
 
 ## Do not read this when
-- 特定の oracle サブコマンドの詳細実装だけを確認する場合は、該当する個別実装ファイルを直接読む。
-- review の対象列挙、所見ループ、パス解決、INDEX 更新、レポート生成の単独の詳細だけを調べる場合は、対応する下位モジュールを直接読む。
-- Codex TUI 自体や共通 CLI runtime の実装を調べる場合。
+- 個別サブコマンドの詳細実装を調査するときは、該当する実装ファイルを直接読む。
+- TUI 起動パラメータの具体的な構築や oracle 編集処理の詳細を調査するときは、対応する下位実装を直接読む。
+- oracle review の仕様そのものや、Codex TUI・共通 CLI runtime の詳細だけを調査するとき。
 
 ## hash
-- d4f019d9ffa2e57554192eff57a1b0090dc0c8e79fbb64f6477d2b1fa36a3867
+- 462ccec589780cdba5a5f1fe9925d7294d61a012c7d88cc9e0dada16897c638d
 
 # `realization`
 

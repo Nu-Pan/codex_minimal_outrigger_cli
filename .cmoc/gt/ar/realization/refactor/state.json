@@ -926,8 +926,8 @@
   "src/sub_commands/oracle/review_report.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "5d4fa434393103e8b269c934319904745378dbfc5706f46038f85be1abe647fc",
-    "last_investigated_at": "2026-07-25_09-55_52_345165000"
+    "last_investigated_sha256": "3182414e5eb5fadeecfbd3ddafb31173120335632375792e1afb70b4c25ffc2d",
+    "last_investigated_at": "2026-07-27_13-15_04_573154000"
   },
   "src/sub_commands/oracle/review_targets.py": {
     "investigation_required": true,
@@ -1212,7 +1212,7 @@
     "last_investigated_at": "2026-07-26_10-28_44_066175000"
   },
   "test/test_oracle_review_report.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "26a418c0c7b41721e192d90f129898c8ae09dbfc704e246494420baa7a8b43e0",
     "last_investigated_at": "2026-07-26_10-46_00_524979000"

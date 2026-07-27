@@ -1,3 +1,4 @@
+import html
 import json
 import re
 from pathlib import Path
@@ -117,7 +118,9 @@ def render_oracle_review_report(
     for idx, path in enumerate(oracle_files, 1):
         path_key = oracle_path_key(root, path)
         finding_count = findings_by_path.get(path_key, 0) if path_key is not None else 0
-        row_lines.append(f"| {idx} | `{path_display(root, path)}` | {finding_count} |")
+        row_lines.append(
+            f"| {idx} | {_render_path_cell(root, path)} | {finding_count} |"
+        )
     rows = "\n".join(row_lines)
     frontmatter = [
         ("command", "oracle review"),
@@ -319,6 +322,30 @@ def render_finding_section(findings: list[dict]) -> str:
             line += f" (judge reason: {finding.get('judge_reason')})"
         lines.append(line)
     return "\n".join(lines)
+
+
+def _render_path_cell(root: Path, path: Path) -> str:
+    """評価対象 path を Markdown table の 1 cell として描画する。
+
+    Git path には改行、pipe、backtick を含められるため、通常の code span に
+    そのまま埋め込むと表の行や code span の境界が壊れる。通常の path の出力は
+    既存の可読性を保ち、構造文字を含む場合だけ HTML の code element と文字参照
+    へ切り替える。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    """
+    display = path_display(root, path)
+    if not any(character in display for character in ("`", "|", "\r", "\n")):
+        return f"`{display}`"
+    escaped = html.escape(display, quote=False)
+    escaped = (
+        escaped.replace("`", "&#96;")
+        .replace("|", "&#124;")
+        .replace("\r\n", "&#13;&#10;")
+        .replace("\r", "&#13;")
+        .replace("\n", "&#10;")
+    )
+    return f"<code>{escaped}</code>"
 
 
 def path_display(root: Path, path: Path) -> str:

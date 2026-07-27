@@ -428,6 +428,29 @@ def test_oracle_review_report_counts_symlink_findings_by_repository_path(
     assert "| 1 | `oracle/memo-link.md` | 1 |" in rendered
 
 
+def test_oracle_review_report_escapes_structural_path_characters(
+    tmp_path: Path,
+) -> None:
+    """特殊文字を含む oracle path でも評価対象 table の行を壊さない。"""
+    root = tmp_path
+    unsafe_path = root / "oracle" / "line\n|`break.md"
+
+    rendered = review_module.render_oracle_review_report(
+        root,
+        "full",
+        "cmoc/session/session-1",
+        SessionState(),
+        1,
+        [unsafe_path],
+        [],
+        "cmoc/run/session-1/run-1",
+        "fork",
+        None,
+    )
+
+    assert "| 1 | <code>oracle/line&#10;&#124;&#96;break.md</code> | 0 |" in rendered
+
+
 def test_oracle_review_accepts_short_scope_option(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

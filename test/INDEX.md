@@ -523,18 +523,20 @@
 # `test_oracle_review_report.py`
 
 ## Summary
-- oracle review の report 生成・表示・CLI 出力を検証する回帰テスト。列挙・判定・中断・処理失敗時の report 内容、finding の severity／verdict 別分類と件数、対象 oracle path の集計、scope オプション、timestamp 衝突回避、YAML frontmatter の安全な出力を扱う。oracle review の report contract と CLI 挙動を変更・調査するときの入口。
+- oracle review の report 生成・表示と CLI 出力を検証する回帰テスト。所見の受理・却下、severity 別分類、件数、評価対象 path、scope、Structured Output 呼び出し、timestamp 衝突回避、YAML frontmatter のエスケープを扱う。
+- 正常終了だけでなく、ユーザー中断や列挙・judge 処理の失敗時に、完了済み対象だけを report に反映し、error summary と終了結果を適切に出力する契約を検証する。
 
 ## Read this when
-- oracle review の report schema、finding 表示、CLI 出力、エラー／中断時の挙動を変更または検証するとき
-- oracle review の対象 oracle file 集計、path alias・symlink の扱い、report 保存名を調査するとき
+- oracle review サブコマンドの report schema、所見表示、CLI 出力、エラー・中断時の挙動を変更または調査するとき
+- oracle review の所見分類・件数集計、評価対象 path の扱い、report 保存処理を変更するとき
+- oracle review 関連のテスト失敗が report 内容や CLI 出力に関係するとき
 
 ## Do not read this when
-- oracle review の内部実装そのものを変更するだけで、report または CLI の外部挙動を確認する必要がないとき
-- oracle review 以外のサブコマンドや、単独の共通テスト支援機能を調査するとき
+- oracle review の内部列挙・検証・judge ロジックそのものを変更・調査する場合は、まず対応する実装や専用テストを読む
+- oracle review と無関係な CLI、report、oracle ファイル検証の作業を行う場合
 
 ## hash
-- 26a418c0c7b41721e192d90f129898c8ae09dbfc704e246494420baa7a8b43e0
+- 690c5e29210ceb2a3e7dc56d98600a0aca1fb71913fef02555f366010ca893ad
 
 # `test_oracle_review_targets.py`
 
