@@ -912,10 +912,10 @@
     "last_investigated_at": "2026-07-25_08-56_02_939171000"
   },
   "src/sub_commands/oracle/review_loop.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "52a56d1e0463dcd5aff5069d1e8e6d151553ef229caee15299f3b6a8336032cf",
-    "last_investigated_at": "2026-07-25_09-13_57_073650000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "fb099dd2b6671a992b5f01c1942f062d345e5b1c6972408f4408da05df098ab1",
+    "last_investigated_at": "2026-07-27_12-57_06_837468000"
   },
   "src/sub_commands/oracle/review_paths.py": {
     "investigation_required": false,
