@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from _git_support import make_repo
 
+import commons.runtime_state as runtime_state_module
 from cmoc_runtime import CmocError
 from commons.runtime_state import (
     RunPart,
@@ -24,7 +25,7 @@ from commons.runtime_state import (
 )
 
 
-def hold_session_fork_lock(root: Path, ready: Connection, release: Connection) -> None:
+def _hold_session_fork_lock(root: Path, ready: Connection, release: Connection) -> None:
     """別 process で session fork lock を保持し、解放指示を待つ。"""
     with session_fork_lock(root):
         ready.send(True)
@@ -249,22 +250,36 @@ def test_session_state_rejects_unknown_top_level_fields() -> None:
     assert "top-level に未定義 field" in exc_info.value.detail
 
 
-def test_session_fork_lock_is_shared_across_processes(tmp_path: Path) -> None:
+def test_session_fork_lock_is_shared_across_processes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """session fork lock が process 間で共有されることを確認する。"""
     root = make_repo(tmp_path)
     ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
     release_child, release_parent = multiprocessing.Pipe(duplex=False)
     process = multiprocessing.Process(
-        target=hold_session_fork_lock,
+        target=_hold_session_fork_lock,
         args=(root, ready_child, release_child),
     )
     process.start()
+    lock_attempted = threading.Event()
     acquired = threading.Event()
+
+    original_flock = runtime_state_module.fcntl.flock
+
+    def observe_lock_attempt(fd: int, operation: int) -> None:
+        """worker が排他 lock を試行したことを通知する。"""
+        if operation & runtime_state_module.fcntl.LOCK_EX:
+            lock_attempted.set()
+        original_flock(fd, operation)
+
+    monkeypatch.setattr(runtime_state_module.fcntl, "flock", observe_lock_attempt)
     worker = threading.Thread(target=lambda: _acquire_lock(root, acquired))
     released = False
     try:
         assert ready_parent.recv()
         worker.start()
+        assert lock_attempted.wait(timeout=3)
         assert not acquired.wait(timeout=0.2)
         release_parent.send(True)
         released = True
