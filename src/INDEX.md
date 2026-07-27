@@ -117,17 +117,17 @@
 # `sub_commands`
 
 ## Summary
-- 各サブコマンドの CLI 実装パッケージをまとめるディレクトリ。apply・review は現在実装がなく、doctor・indexing・oracle・realization・run・session・tui の実装入口と下位処理へのルーティングを提供する。
+- cmoc の各サブコマンド実装を配置するディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの CLI 入口と関連パッケージへのルーティングを提供する。apply・review は現時点で実装本文がない。
 
 ## Read this when
-- サブコマンドの実装配置や、複数サブコマンドにまたがる CLI 入口の構成を確認するとき。
-- doctor、indexing、oracle、realization、run、session、tui の実行フローや責務分担を調査・変更するとき。
-- apply または review の実装追加先を確認するとき。
+- サブコマンドの実装構成や、対象サブコマンドの CLI 実行フローを確認・変更するとき。
+- oracle、realization workload、editing run、session など、配下に複数の実装要素を持つサブコマンドの入口や責務分担を確認するとき。
+- 対象サブコマンドの詳細実装へ進む前に、該当する実装ファイルまたは下位パッケージを特定するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理を調査するときは、対象の実装ファイルまたは下位パッケージを直接読む。
-- 共通 runtime、git・state・report・indexing helper、TUI builder、prompt editor、conflict resolution などの共通実装や仕様だけを調査するとき。
-- サブコマンド以外の CLI 実装を扱うとき。
+- 特定サブコマンドの詳細処理を直接調査・変更する場合は、該当する実装ファイルまたは下位パッケージを読むとき。
+- 共通 runtime、git・state・process・report helper、TUI builder、prompt editor、oracle review 仕様など、サブコマンド固有の入口以外を調査するとき。
+- apply または review の実装本文を確認したい場合は、現時点では参照できる実装がない。
 
 ## hash
-- 5a5f1573cd27ba4eab0d9195807e7a0d9b0bf1934f8cf62e287533118091d8bf
+- 2cdcc391ecac0ecb2bdb976f6efd1a0cbb136eec0ae85ff5ff1ad1ad5906a5ae

@@ -127,20 +127,18 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 実装全体を扱う `src` の入口。Typer による主要コマンド、互換 import shim、共通 runtime、サブコマンド実装、設定・ACP 公開入口へのルーティング起点を提供する。
-- CLI の登録構成や、共通 runtime と各サブコマンドの責務分担を確認する際に、下位要素へ進むための最上位入口となる。
+- cmoc の realization 側ソースコードをまとめるディレクトリ。CLI エントリーポイント、サブコマンド、共通ランタイム、互換 import shim、設定・oracle 接続を扱い、具体的な実装領域へ進むための起点となる。
 
 ## Read this when
-- cmoc の実装ツリー全体から、CLI 入口・共通基盤・サブコマンド・互換公開入口の配置を確認するとき。
-- 新しい CLI 機能の実装先や、既存コマンドの登録元・委譲先を特定するとき。
+- cmoc の realization 実装全体の構成や、対象機能に対応するソース領域を特定したいとき。
+- CLI、サブコマンド、共通 runtime、互換 import 経路の調査・変更先を判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理詳細を調査するときは、`sub_commands` 配下の該当実装を直接読む。
-- 共通 runtime の具体的な責務を調査するときは、`commons` 配下の該当モジュールを直接読む。
-- `acp.*`、`config.*`、`cmoc_runtime`、`oracle.*` の互換 import の詳細だけを確認するときは、対応する shim または canonical module を直接読む。
+- 特定ファイルや特定サブコマンドの責務が明らかな場合は、対応する実装ファイルまたは下位ディレクトリを直接読む。
+- 正本仕様や oracle 実装の内容だけを確認したいときは、oracle ツリーを直接読む。
 
 ## hash
-- 12d4e781b4cdccdc7ba344b5376207db8e3442c7a64c76fd5a15aba094f2102b
+- ce6aaa408bacc6a4060f42b83f3a1d79ff9a7b94ebcca38d43888f85d482b62a
 
 # `test`
 

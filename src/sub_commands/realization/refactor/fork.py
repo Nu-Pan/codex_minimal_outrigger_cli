@@ -177,10 +177,10 @@ def _cmoc_realization_refactor_fork_body() -> None:
     except BaseException as exc:
         if context is None:
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-            # CmocError は共通事前条件の失敗として既存 run を変更せず再送出する。
-            # 非 CmocError の start failure だけを、context 返却前に公開された
-            # run の回収対象とする。
-            if start_attempted and start_was_ready and not isinstance(exc, CmocError):
+            # 事前条件が ready でなかった場合は既存 run を回収しない。ready を
+            # 確認した後の start failure は、CmocError でも context 返却前に公開
+            # された run の回収対象にする。
+            if start_attempted and start_was_ready:
                 context = _recover_started_run()
             if context is None:
                 raise
