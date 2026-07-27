@@ -7,6 +7,7 @@
 import hashlib
 import json
 from pathlib import Path
+from typing import cast
 
 import pytest
 from _git_support import make_repo, run_git
@@ -14,6 +15,7 @@ from _git_support import make_repo, run_git
 from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_git import is_oracle_file_path, is_realization_file_path
 from commons.runtime_refactor import (
+    RefactorState,
     load_refactor_state,
     select_refactor_target,
     sync_refactor_state,
@@ -130,6 +132,25 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     assert changed["last_investigation_result"] == "no_findings"
     assert changed["last_investigated_at"] == "2026-07-19_00-00_00_000000000"
     assert changed["last_investigated_sha256"] != file_sha256(root / "README.md")
+
+
+def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
+    """state writer が schema 不正値を保存しない。"""
+    root = make_repo(tmp_path)
+    state = cast(
+        RefactorState,
+        {
+            "README.md": {
+                "investigation_required": True,
+                "last_investigation_result": [],
+                "last_investigated_sha256": None,
+                "last_investigated_at": None,
+            }
+        },
+    )
+
+    with pytest.raises(CmocError, match="refactor state"):
+        write_refactor_state(root, state)
 
 
 def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(

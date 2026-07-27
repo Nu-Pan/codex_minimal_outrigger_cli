@@ -41,24 +41,17 @@ def load_refactor_state(root: Path) -> RefactorState:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise _invalid_refactor_state(path, "JSON を読み込めません。") from exc
-    if not isinstance(data, dict):
-        raise _invalid_refactor_state(
-            path, "top-level は object である必要があります。"
-        )
-    state: RefactorState = {}
-    for raw_path, raw_entry in data.items():
-        if not isinstance(raw_path, str) or not _valid_relative_path(raw_path):
-            raise _invalid_refactor_state(path, f"不正な path key: {raw_path!r}")
-        state[raw_path] = _validated_entry(path, raw_path, raw_entry)
-    return state
+    return _validated_state(path, data)
 
 
 def write_refactor_state(root: Path, state: RefactorState) -> None:
     """refactor state を path 順の安定した JSON 表現で保存する。"""
     path = refactor_state_path(root)
+    validated = _validated_state(path, state)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(dict(sorted(state.items())), ensure_ascii=False, indent=2) + "\n",
+        json.dumps(dict(sorted(validated.items())), ensure_ascii=False, indent=2)
+        + "\n",
         encoding="utf-8",
     )
 
@@ -144,6 +137,23 @@ def mark_all_refactor_targets_required(state: RefactorState) -> None:
     """完了済み state から新しい full refactor cycle を開始する。"""
     for entry in state.values():
         entry["investigation_required"] = True
+
+
+def _validated_state(path: Path, value: object) -> RefactorState:
+    """refactor state 全体を schema 検証し、型付けされた state として返す。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
+    if not isinstance(value, dict):
+        raise _invalid_refactor_state(
+            path, "top-level は object である必要があります。"
+        )
+    state: RefactorState = {}
+    for raw_path, raw_entry in value.items():
+        if not isinstance(raw_path, str) or not _valid_relative_path(raw_path):
+            raise _invalid_refactor_state(path, f"不正な path key: {raw_path!r}")
+        state[raw_path] = _validated_entry(path, raw_path, raw_entry)
+    return state
 
 
 def _valid_relative_path(value: str) -> bool:
