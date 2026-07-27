@@ -1032,10 +1032,10 @@
     "last_investigated_at": "2026-07-25_14-31_43_941219000"
   },
   "test/_cli_support.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "4dc5c2cabc4b6e9d6ed90b6bedb5c1f94030cb30e4bef06293c8248a330ba923",
-    "last_investigated_at": "2026-07-25_14-46_38_552366000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "04ee47c861ffe5b25223ffec1083362f42f865aca8b550498bd0a06378362cf0",
+    "last_investigated_at": "2026-07-27_16-39_55_386747000"
   },
   "test/_codex_support.py": {
     "investigation_required": true,
