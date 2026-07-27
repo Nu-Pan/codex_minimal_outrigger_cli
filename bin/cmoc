@@ -13,7 +13,14 @@ display_script_path="{{cmoc-root}}/bin/cmoc"
 is_usable_venv_python() {
     [ -f "$venv_python" ] \
         && [ -x "$venv_python" ] \
-        && "$venv_python" -c 'import sys; sys.exit(0)' >/dev/null 2>&1
+        || return 1
+
+    # 終了コードだけでは任意の executable を通すため、Python code の marker を照合する。
+    probe_output=$(
+        "$venv_python" -c 'import sys; sys.stdout.write("cmoc-python-probe\n"); sys.exit(0)' \
+            2>/dev/null
+    ) || return 1
+    [ "$probe_output" = "cmoc-python-probe" ]
 }
 
 line_number_of() {

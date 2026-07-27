@@ -58,17 +58,16 @@
 # `bin`
 
 ## Summary
-- プロジェクトの仮想環境 Python を検証し、通常実行時および補完プローブ時に CLI の実行入口へ引数を渡す起動ラッパー。仮想環境が利用できない場合のセットアップ手順付きエラーも扱う。
+- cmoc の起動用シェルラッパー。仮想環境内 Python の存在・実行権限・簡易プローブを検査し、通常実行時は未準備ならセットアップ案内付きエラーを表示する。検査成功時および補完プローブ時には、CLI 本体へ引数を委譲する。
 
 ## Read this when
-- cmoc コマンドの起動経路、仮想環境 Python の検証、補完プローブ時の挙動、起動失敗時のエラー表示を確認するとき。
+- cmoc の起動経路、仮想環境 Python の検査、起動失敗時のエラー表示、補完プローブ時の委譲を変更・調査するとき。
 
 ## Do not read this when
-- CLI サブコマンドの実装や引数処理そのものを調べるときは、直接 src/main.py と該当する実装を読む。
-- 開発環境の正本仕様やセットアップ規則を確認するときは、対応する oracle ドキュメントを直接読む。
+- CLI 本体のコマンド処理や引数解析を変更・調査するときは、src 配下の Python CLI 実装を直接読む。仮想環境の作成、依存関係、開発手順を確認するときは、対応する oracle 文書を読む。
 
 ## hash
-- b871bfb0955e588c6b6b7c1ffaadc49609acccff1208cd93ace6f067970ca774
+- f44a7190c1a126f5b885329a029429a46c46eaa5aec3651d109c86d6856fb19b
 
 # `codex_minimal_outrigger_cli.code-workspace`
 
@@ -143,17 +142,15 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を集約するディレクトリ。runtime、CLI、Codex 実行、ACP builder、indexing、oracle review、session lifecycle などの外部挙動・制御ロジックを検証する各テストと、共通テスト支援モジュールへの入口を提供する。
+- テスト用の共有支援モジュール群と、ACP builder、Codex runtime、CLI、INDEX、oracle review、session、設定・状態管理などの realization test を含むテストディレクトリ。各テストファイルは対応する機能領域の外部契約・制御ロジック・異常系を検証する入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test を探すとき
-- CLI、Codex runtime、ACP builder、indexing、oracle review、session、runtime state などの外部契約や回帰テストを確認するとき
-- テスト用 Git、Ollama、Codex、fake command などの共通支援を利用・変更するとき
+- 対象機能の realization test、回帰テスト、統合テストの所在を判断するとき
+- 複数の機能領域にまたがる CLI・runtime・worktree lifecycle のテスト範囲を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc または oracle schema を直接読む
-- 単一機能の実装詳細だけを調査するときは、対応する src の実装を直接読む
-- 対象領域と無関係なテストや、Codex の回答品質そのものを評価するテストを探すとき
+- 特定機能の実装詳細や正本仕様を確認する場合は、対応する src または oracle 文書を直接読む
+- テスト実行手順や Python 品質検査の方法だけを確認する場合は、対応する開発・テスト手順を読む
 
 ## hash
-- d1fe43e1fd0c03c34587c46c05dbb115d1395301de5d7d6c2c66da799cdd6468
+- 09740aa7f1e2c7215d8582f4e1c90f9356c7065e3242127a646c26b53acb0279

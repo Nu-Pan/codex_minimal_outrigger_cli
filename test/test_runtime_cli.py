@@ -396,14 +396,17 @@ def test_bin_cmoc_non_file_venv_path_uses_error_report(tmp_path: Path) -> None:
     assert result.stderr == ""
 
 
-def test_bin_cmoc_non_python_executable_uses_error_report(tmp_path: Path) -> None:
+@pytest.mark.parametrize("fake_exit_code", [0, 42])
+def test_bin_cmoc_non_python_executable_uses_error_report(
+    tmp_path: Path, fake_exit_code: int
+) -> None:
     """Python として起動できない executable も wrapper の error report で通知する。"""
     fake_cmoc_root = tmp_path / "cmoc"
     fake_bin = fake_cmoc_root / "bin"
     fake_bin.mkdir(parents=True)
     venv_python = fake_cmoc_root / ".venv" / "bin" / "python"
     venv_python.parent.mkdir(parents=True)
-    venv_python.write_text("#!/bin/sh\nexit 42\n")
+    venv_python.write_text(f"#!/bin/sh\nexit {fake_exit_code}\n")
     venv_python.chmod(0o755)
     shutil.copy2(Path(__file__).parents[1] / "bin" / "cmoc", fake_bin / "cmoc")
 
