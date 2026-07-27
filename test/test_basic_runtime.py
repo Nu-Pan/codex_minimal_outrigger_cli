@@ -2,6 +2,7 @@
 
 根拠:
 - {{work-root}}/oracle/src/oracle/other/path_model.py
+- {{work-root}}/oracle/doc/branch_model.md
 - {{work-root}}/oracle/doc/app_spec/run_isolation.md
 """
 
@@ -217,14 +218,17 @@ def test_create_run_worktree_rejects_symlink_components(
     if symlink_component == "base":
         managed.parent.mkdir(parents=True)
         managed.symlink_to(external, target_is_directory=True)
+        symlink_path = managed
     else:
         managed.mkdir(parents=True)
         session = managed / "session"
         if symlink_component == "session":
             session.symlink_to(external / "session", target_is_directory=True)
+            symlink_path = session
         else:
             session.mkdir()
-            (session / "run").symlink_to(
+            symlink_path = session / "run"
+            symlink_path.symlink_to(
                 external / "session" / "run", target_is_directory=True
             )
 
@@ -232,6 +236,7 @@ def test_create_run_worktree_rejects_symlink_components(
     with pytest.raises(CmocError, match="run worktree path"):
         create_run_worktree(root, "cmoc/run/session/run", target)
 
+    assert symlink_path.is_symlink()
     assert not (external / "session" / "run").exists()
 
 
@@ -288,19 +293,23 @@ def test_remove_worktree_rejects_symlink_components(
     if symlink_component == "base":
         managed.parent.mkdir(parents=True)
         managed.symlink_to(external, target_is_directory=True)
+        symlink_path = managed
     else:
         managed.mkdir(parents=True)
         session = managed / "session"
         if symlink_component == "session":
             session.symlink_to(external / "session", target_is_directory=True)
+            symlink_path = session
         else:
             session.mkdir(parents=True)
-            (session / "run").symlink_to(actual, target_is_directory=True)
+            symlink_path = session / "run"
+            symlink_path.symlink_to(actual, target_is_directory=True)
 
     target = managed / "session" / "run"
     with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
         remove_worktree(root, target)
 
+    assert symlink_path.is_symlink()
     assert actual.exists()
 
 
