@@ -109,11 +109,13 @@ def test_tracked_codex_subprocess_defers_sigterm_until_tracking_is_written(
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
     received: list[int] = []
+    tracking_at_signal: list[str] = []
     previous_handler = signal.getsignal(signal.SIGTERM)
 
     def handler(signum: int, _frame: object) -> None:
-        """受信したSIGTERMを記録する。"""
+        """受信時点の tracking を記録する。"""
         received.append(signum)
+        tracking_at_signal.append(tracking_path.read_text())
 
     class ExitedProcess:
         """すでに終了したsubprocessの最小double。"""
@@ -155,6 +157,7 @@ def test_tracked_codex_subprocess_defers_sigterm_until_tracking_is_written(
 
     assert result.stdout == "ok"
     assert received == [signal.SIGTERM]
+    assert tracking_at_signal == ["111 222\nchild 4321 333 4321\n"]
 
 
 def test_tracked_codex_subprocess_keeps_group_tracking_after_leader_exit(
