@@ -331,6 +331,23 @@ def _stage_agents_gitkeep_repair_from_index(root: Path, index_path: Path) -> Non
 
 def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
     """既存blobを優先して.agents placeholderを一時indexへ載せる。"""
+    # doctor が現在の index に追加した内容を repair commit にも使い、既存の
+    # 未追跡 .gitkeep の内容を空 blobへ置き換えない。
+    current = run_git(
+        ["ls-files", "--stage", "--", ".agents/.gitkeep"],
+        root,
+        check=False,
+    )
+    current_fields = current.stdout.split()
+    if current.returncode == 0 and len(current_fields) >= 3:
+        _stage_blob(
+            root,
+            index_path,
+            ".agents/.gitkeep",
+            current_fields[0],
+            current_fields[1],
+        )
+        return
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # HEAD に既存の placeholder がある場合は、復元用 index と repair commit 用
     # index の双方で同じ blob/mode を参照する。新規作成時だけ空 blob にする。

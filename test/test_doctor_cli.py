@@ -422,6 +422,23 @@ def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_delet
     ]
 
 
+def test_doctor_preserves_existing_untracked_gitkeep_content(
+    tmp_path: Path,
+) -> None:
+    """既存の未追跡 `.agents/.gitkeep` を空内容へ置き換えず追跡する。"""
+
+    root = make_repo(tmp_path)
+    gitkeep = root / ".agents" / ".gitkeep"
+    gitkeep.parent.mkdir()
+    gitkeep.write_text("human content\n")
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert run_git(root, "show", "HEAD:.agents/.gitkeep").stdout == "human content\n"
+    assert gitkeep.read_text() == "human content\n"
+    assert run_git(root, "status", "--short").stdout == ""
+
+
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
