@@ -1050,10 +1050,10 @@
     "last_investigated_at": "2026-07-25_15-13_57_929092000"
   },
   "test/_git_support.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "e696cf9522455dcc18230828a049a03171d40dbec77215b3e8599a53611a21e2",
-    "last_investigated_at": "2026-07-25_15-31_11_389440000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "1ecaade4dee17221fe4bca8c1837bef8e9d28957fd6bee025a6b52c299aea9e1",
+    "last_investigated_at": "2026-07-27_17-07_58_869347000"
   },
   "test/_ollama_support.py": {
     "investigation_required": true,
