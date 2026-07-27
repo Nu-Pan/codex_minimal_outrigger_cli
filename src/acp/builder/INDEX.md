@@ -31,18 +31,16 @@
 # `common`
 
 ## Summary
-- ACP builder で共有する Markdown code fence 補正処理を提供し、動的な prompt/review section の本文位置特定、複数 section の補正、描画後本文の正規化を扱う。動的本文内の backtick による外側 fence の誤終了を防ぐための実装。
+- ACP builder の動的 Markdown section を対象に、内側の backtick によって外側の code fence が誤閉鎖しないよう、canonical renderer で本文を正規化して fence 長を補正する共通処理。単一 section と review prompt 内の連続 section の実体位置特定を扱う。
 
 ## Read this when
-- 動的な prompt section や review section の Markdown code fence が本文中の code fence によって誤って閉じる問題を修正・検証するとき。
-- ACP builder の prompt 生成で、canonical Markdown rendering 後の本文や section の実体位置を基準とする補正処理を確認するとき。
+- ACP builder の prompt 生成で、動的 section の code fence 保護や section 実体位置の特定を変更・調査するとき。
 
 ## Do not read this when
-- ACP builder の固定 prompt 内容や review 判定ロジック自体を変更するとき。
-- Markdown code fence や動的 prompt section を扱わない ACP builder の機能を調査するとき。
+- 固定的な prompt 定義や builder 固有の section 内容だけを変更するとき。Markdown code fence の補正処理を直接扱わない場合。
 
 ## hash
-- b98458331e2c9f88f28aad3b196064375080182983d3463fc8749e6f7f9d760f
+- 6d72aa648c1db3dbe426fc72a1ec7b985a823e2671fa93055518cf3142638cea
 
 # `indexing`
 

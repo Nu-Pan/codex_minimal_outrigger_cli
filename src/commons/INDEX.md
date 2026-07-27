@@ -33,19 +33,20 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の検査・生成・更新・commit を一貫して担う indexing lifecycle の共通実装。対象ディレクトリの走査、既存 entry の hash による再利用、Codex による不足 entry の生成、Structured Output の検証、INDEX.md の書き込み、更新差分の commit、排他 lock を扱う。
+- INDEX.md の検査・生成・再利用判定から、hash 検証、ファイル書き込み、更新 commit までの indexing lifecycle を一括して担う共通実装。directory traversal と Codex 呼び出し、並列実行、排他制御も扱う。
 
 ## Read this when
-- INDEX.md の自動生成・鮮度判定・entry 再利用・hash 検証を変更または調査するとき
-- indexing preflight、並列 entry 生成、Codex 実行コンテキスト、linked worktree 間の lock を変更または調査するとき
-- INDEX.md の書き込み、symlink・binary・git ignore・memo の除外、commit 処理を変更または調査するとき
+- INDEX.md の自動生成・更新・commit lifecycle を変更または調査するとき
+- 既存 entry の再利用条件、対象 hash、Structured Output の検証、symlink・binary・除外対象の扱いを確認するとき
+- indexing 処理の並列実行、lock、Codex context、worktree または Git failure の挙動を確認するとき
 
 ## Do not read this when
-- 単一の INDEX.md entry の内容や生成用 Structured Output schema だけを確認したいときは、index entry の oracle 定義または直接の生成処理を読む
-- INDEX.md と無関係な CLI 実装、一般的な git 操作、Codex preflight 以外の runtime 機能を変更または調査するときは、対応する専用モジュールを読む
+- INDEX.md entry の文章内容や schema 定義そのものを変更するときは、対応する oracle src または prompt builder の定義を先に読む
+- 通常の CLI サブコマンドや indexing 以外の Git 操作を変更するとき
+- INDEX.md の個別 entry を確認するだけで、生成 lifecycle の実装を調査しないとき
 
 ## hash
-- 533c696aa274c1d3abb88b101060923ac759bef9852ce5bdd9854e49a8230885
+- 96d04e24f13776c6683bd0158693cfa494c207e3ee43598b2d925e5d88e1a72c
 
 # `prompt_editor_input.py`
 

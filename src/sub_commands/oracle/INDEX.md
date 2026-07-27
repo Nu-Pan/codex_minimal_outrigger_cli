@@ -129,20 +129,18 @@
 # `review_report.py`
 
 ## Summary
-- oracle review の結果を Markdown レポートとして保存・描画する実装。レポートの YAML frontmatter、判定結果、評価対象一覧、finding の分類・順序・表示、path や scalar の安全な整形を担当する。oracle review のレポート形式や verdict、finding 表示を変更・調査するときの入口。
+- oracle review の結果を Markdown レポートとして保存・描画する実装。YAML frontmatter、判定結果、評価対象 oracle file、finding の分類・順序・安全な Markdown 表示を扱う。
 
 ## Read this when
-- oracle review レポートの保存、描画、frontmatter、verdict 判定を変更または調査するとき
-- fatal/minor や accepted/rejected finding の分類・表示順を確認するとき
-- Markdown table、YAML scalar、repository-relative path のエスケープ処理を確認するとき
+- oracle review レポートの保存先、frontmatter、verdict 判定、finding 表示、対象 path 表示の挙動を変更・確認するとき。
+- oracle review の出力形式や、エラー・中断・対象なし・fatal・minor・ok の結果処理を調査するとき。
 
 ## Do not read this when
-- oracle review の対象 oracle file の探索や path 解決だけを調査するとき
-- oracle review の実行フローや CLI 入力処理を調査するとき
-- レポート形式に関係しない他サブコマンドの実装を変更するとき
+- oracle review の対象 oracle file の収集・評価ロジック自体を変更・確認するとき。
+- 他のサブコマンドのレポート形式や、共通の timestamp path 予約処理だけを調査するとき。
 
 ## hash
-- 3fcaad3f4cc4c678b723d22be16773727294980a870f812d579e6f0a8a6d6ebd
+- 975b64084bf01f45bfc91495bde6359f29dca3875d6df4cf23cf9ecb478b2eca
 
 # `review_targets.py`
 

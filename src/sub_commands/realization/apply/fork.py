@@ -229,7 +229,7 @@ def _record_error(
         set_run_state(context, "error")
     except BaseException as state_error:
         cleanup_errors.append(f"state update failed: {state_error!r}")
-    # Error reporting must survive a failure in its final git inspection.
+    # 最終 git inspection が失敗しても error report を保存できるようにする。
     # 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
     try:
         changed_paths = flattened_change_paths(

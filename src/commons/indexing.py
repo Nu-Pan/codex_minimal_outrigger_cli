@@ -39,7 +39,7 @@ from commons.runtime_results import CodexExecCallable
 
 CodexExec = CodexExecCallable
 # {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json
-# Read the canonical required fields instead of duplicating the schema in realization.
+# 正本の必須 field を読み取り、realization 側へ schema を複製しない。
 _INDEX_ENTRY_KEYS = frozenset(
     json.loads(Path(_index_entry_oracle.__file__).with_suffix(".json").read_text())[
         "required"

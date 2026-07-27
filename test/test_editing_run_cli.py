@@ -1314,6 +1314,7 @@ def test_run_join_conflict_abort_failure_still_restores_session_tree(
         _cwd: Path,
         check: bool = True,
     ) -> SimpleNamespace:
+        """join rollback の分岐を確認するための Git 実行結果を返す。"""
         commands.append(args)
         if args[:2] == ["diff", "--name-only"]:
             return SimpleNamespace(returncode=0, stdout="README.md\0")

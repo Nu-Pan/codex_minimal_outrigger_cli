@@ -225,7 +225,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "c725d18b649ce36fdca432bb297452492eea1bca900c874e600451769d21d501",
-    "last_investigated_at": "2026-07-26_22-12_50_318467000"
+    "last_investigated_at": "2026-07-28_02-55_06_611866000"
   },
   "oracle/doc/dev_rule/design_rule.md": {
     "investigation_required": true,
@@ -708,7 +708,7 @@
     "last_investigated_at": "2026-07-27_06-49_15_826674000"
   },
   "src/commons/indexing.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "533c696aa274c1d3abb88b101060923ac759bef9852ce5bdd9854e49a8230885",
     "last_investigated_at": "2026-07-27_07-07_28_559827000"

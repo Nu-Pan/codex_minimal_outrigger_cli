@@ -15,21 +15,19 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload と、`cmoc realization apply fork` の実行制御を扱う。apply workload の調査入口であり、fork では editing run の開始から agent 実行、差分検査、commit・rollback、run 状態更新、report 保存、joinable 公開までを統括する。
+- realization の apply 処理を扱うディレクトリ。apply workload の入口と、`cmoc realization apply fork` による差分追従・run 管理・失敗時処理を確認するための領域。
 
 ## Read this when
-- realization の apply workload の内容を調査・変更するとき
-- `cmoc realization apply fork` の開始から joinable または error までの制御フローを確認するとき
-- apply agent の実行条件、oracle 差分、想定外差分、commit、rollback、run report、例外処理を調査・変更するとき
+- realization の apply workload の内容を調査・変更するとき。
+- `cmoc realization apply fork` の実行フロー、差分検査、commit・rollback、fork report、run 状態遷移を確認するとき。
 
 ## Do not read this when
-- apply workload 以外の処理を扱うとき
-- 共通の editing run ライフサイクル、process tracking、report 生成の一般仕様や実装だけを調査するとき
-- `cmoc realization apply` の通常実行や別の apply サブコマンドだけを調査するとき
-- apply agent の prompt 構築内容だけを確認するとき
+- apply workload 以外の処理を扱うとき。
+- 通常の apply agent の prompt 構築だけを変更するとき。
+- run の共通ライフサイクルや状態管理自体を変更するとき。
 
 ## hash
-- 66f6170c37b0f2633264194384049584f7809db7f2ef2c8455dba3f5466cd08e
+- ffe513eaffcdea50c7bf61af57444c3d303033e63b2129f07eea9872f95dce41
 
 # `refactor`
 

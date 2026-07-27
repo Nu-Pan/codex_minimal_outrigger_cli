@@ -141,7 +141,7 @@ def _protect_review_sections(
 
 
 def _rendered_code_block_body(info_string: str | None, section_body: str) -> str:
-    """Return the body text after canonical Markdown rendering normalization."""
+    """canonical Markdown renderer による正規化後の本文を返す。"""
     title = "__cmoc_prompt_fence_body__"
     rendered = _struct_doc.render_as_markdown(
         _struct_doc.StructDoc(

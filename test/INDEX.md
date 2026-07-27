@@ -390,22 +390,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run の join/abandon に関する統合 realization test。session state、run worktree、fork/lifecycle report、Codex child tracking、rollback、merge、cleanup、refactor cycle の正常系・失敗系・中断系を検証する。
-- realization apply/refactor fork や run join/abandon の lifecycle 挙動、report 内容、state 遷移、worktree/branch の後処理を変更・調査する際のテスト入口。
+- editing run の fork・join・abandon lifecycle に関する統合テスト。apply/refactor fork の run state、worktree、report、INDEX 更新、Codex child tracking、rollback、merge、cleanup、interruption、unresolved target などの外部挙動を検証する。関連する session state と共通 lifecycle fixture の入口となる。
 
 ## Read this when
-- editing run の session state、worktree、branch、report、joinable/error/ready 遷移を確認するとき
-- realization apply/refactor fork の INDEX 更新、agent 変更制約、rollback、process tracking、interrupt 処理を確認するとき
-- run join/abandon の merge、force-resolve、cleanup、doctor 同期、rename/delete 対応を確認するとき
-- 既存テストへ fork・join・abandon の lifecycle ケースを追加または統合するとき
+- realization apply fork または refactor fork の lifecycle 挙動を変更・調査するとき
+- run join、run abandon、worktree cleanup、merge rollback、fork report を変更・調査するとき
+- editing run の state 遷移、Codex process tracking、INDEX refresh、agent の禁止差分検証を確認するとき
+- 上記機能の統合テストを追加・修正するとき
 
 ## Do not read this when
-- INDEX 生成そのものの実装や単独の parsing 仕様だけを調べるときは、対応する実装・oracle file を直接読む
-- run lifecycle と無関係な CLI サブコマンドや独立した unit test の挙動を調べるとき
-- Codex 出力品質や一般的な CLI 動作だけを確認し、editing run の state・worktree・report に関係しないとき
+- 単一の parser、helper、または CLI 出力の局所的な単体挙動だけを確認するとき
+- session や run lifecycle と無関係なサブコマンドを変更・調査するとき
+- 既存の共通 lifecycle 実装や oracle 仕様を直接確認する必要があるときは、それぞれの実装・oracle file を先に読む
 
 ## hash
-- 4fc12cc61e819ea72bf5f55f22da94b2ab8b4fe70a39cd5067b7ec8783148120
+- 46a3eb89c66efe509b82de1833fe80952b913b663d773d09aae19fc527978f99
 
 # `test_indexing_cli.py`
 
@@ -596,20 +595,20 @@
 # `test_production_cli.py`
 
 ## Summary
-- 実 Codex CLI と case-local Ollama を使い、利用者向け本番経路で全末端サブコマンドを独立 process から受け入れ検証するテスト。非対話 command の終了 code・report・state・Git・call log と、TUI command の PTY 応答完了・終了・副作用を確認する。LLM の回答品質ではなく、応答後の cmoc 制御を対象とする。
+- 利用者向け cmoc CLI の全末端サブコマンドを、実 Codex CLI・case-local Ollama・独立 process・PTY を用いた本番経路で検証する受け入れテスト。終了 code、report・state・Git 状態、Codex call log、TUI の応答完了と終了を確認し、LLM の回答品質自体は評価しない。
 
 ## Read this when
-- 全末端サブコマンドの本番経路に対する受け入れテストを変更・追加するとき
-- 独立 process、実 Codex CLI、case-local Ollama、PTY、call log、session/run state の検証方法を確認するとき
-- 新しい CLI 末端 command の登録漏れを検証するテスト範囲を確認するとき
+- CLI の末端サブコマンド追加・変更時に、本番経路の網羅性と制御結果を確認するとき
+- 実 Codex CLI、local Ollama、独立 process、PTY を使う統合テストの挙動を調査するとき
+- session/run の状態遷移、Git branch・worktree の後処理、TUI 終了処理、call log 検証を確認するとき
 
 ## Do not read this when
-- 単一 command の内部実装や単体テストだけを変更するとき
+- 単体の CLI ロジックや内部 helper の実装を確認するだけのとき
 - LLM の回答品質や prompt 内容そのものを評価するとき
-- 本番 process・実 Codex CLI・TUI 経路を対象としないテストを変更するとき
+- 実 Codex CLI や GPU を使わない通常の単体・非本番経路テストだけを調べるとき
 
 ## hash
-- 643476b1b0294448557f138292645c6cd6c35900da9ae111896867e6cf22a2e2
+- 3da13e3445e05e8c85a3c0a78b8f4ec8006b2c85a42221233296531eb5702147
 
 # `test_prompt_parts.py`
 

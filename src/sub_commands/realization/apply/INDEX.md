@@ -15,19 +15,15 @@
 # `fork.py`
 
 ## Summary
-- `cmoc realization apply fork` サブコマンドの実行制御を担うモジュール。realization apply 用 editing run の開始、oracle 差分の構築、Codex agent 実行、想定外変更の検査、INDEX 更新を含む commit、joinable 公開、fork report 保存を統括する。
-- agent 実行時の失敗では子プロセス停止、作業差分の rollback、run の error state 更新、失敗 report 保存までを行う。run 回収や差分始点 commit の解決など、fork 固有のライフサイクル処理も含む。
-- realization apply fork の挙動、run 状態遷移、Codex 実行、差分検査、commit・rollback、report 生成を変更または調査するときの入口となる。共通ライフサイクルや process tracking の詳細実装を変更する場合は、直接それらの共通モジュールを読む。
+- `cmoc realization apply fork` の差分追従処理を実装する CLI モジュール。realization apply agent を実行し、oracle 差分に基づく変更と INDEX 更新を検査・commit して joinable run として公開する。失敗時は子プロセス停止、変更 rollback、error state 更新、fork report 保存まで行う。
 
 ## Read this when
-- `cmoc realization apply fork` の開始から joinable または error までの制御フローを確認するとき
-- realization apply agent の実行条件、oracle 差分、想定外差分、commit、rollback、run report の扱いを変更または調査するとき
-- fork 開始後の例外処理や run 回収の挙動を確認するとき
+- `cmoc realization apply fork` の実行フロー、run の joinable/error 遷移、apply agent の差分検査・commit・rollback を変更または調査するとき。
+- fork report、想定外差分、開始途中の run 回収、Codex 子プロセス追跡の挙動を確認するとき。
 
 ## Do not read this when
-- 共通の editing run ライフサイクル、process tracking、report 生成の一般仕様や実装だけを調査するときは、対応する共通モジュールや oracle 文書を直接読む
-- `cmoc realization apply` の通常実行や別の apply サブコマンドの責務だけを調査するとき
-- realization apply agent の prompt 構築内容だけを確認するときは、launch parameter builder を直接読む
+- 通常の realization apply agent の prompt 構築だけを変更するときは、launch parameter builder を直接読む。
+- run の共通ライフサイクルや状態管理自体を変更するときは、runtime_run_lifecycle の実装・正本仕様を直接読む。
 
 ## hash
-- 71fae81cb4ca2009f3849fa1200204d68fe49bb3034b8ef54ac30b1f38bd964a
+- a0b27674190850f2882e9ebdf4e84f773670ecf1d7349f019f73eb4cad2bf90f

@@ -44,36 +44,34 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめるパッケージ。edit・investigation・review の CLI 入口と、review の対象列挙、パス解決、ループ処理、レポート生成、INDEX 変更の統合処理への入口を提供する。
+- oracle 系サブコマンドの実装をまとめるパッケージ。edit・investigation・review の CLI 入口と、review の対象列挙、所見ループ、パス解決、レポート出力、INDEX 更新処理への入口を提供する。
 
 ## Read this when
-- oracle サブコマンドの構成、CLI 入口、または各サブコマンドの実行経路を確認するとき。
-- oracle review の対象列挙、パス解決、レビュー制御、レポート、INDEX 変更統合の実装先を特定するとき。
+- oracle 系サブコマンドの構成や CLI 入口を確認するとき。
+- oracle review の実行フロー、対象ファイル列挙、所見処理、パス解決、レポート出力、INDEX 更新を変更・調査するとき。
+- oracle edit または oracle investigation の入力処理、起動前提、TUI 実行フローを確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの詳細実装を確認する場合は、該当する実装ファイルを直接読む。
-- 共通 TUI 起動処理や oracle 文書の仕様を確認する場合は、それぞれの対応する実装・oracle 文書を直接読む。
+- 個別サブコマンドの詳細実装だけを確認したいときは、該当する実装ファイルを直接読む。
+- TUI 起動パラメータの具体的な構築だけを確認したいときは、対応する parameter builder を直接読む。
+- oracle review の仕様や Codex TUI 自体、共通 CLI runtime の詳細だけを調べるとき。
 
 ## hash
-- da285b5b1b980ccb2f75a83a8b07ea646691dbf624f8e45eaaadd76167a9da0a
+- ce93d54475bd647b4d5af98520897ab900edb2888321c9d86f50b41ba2e92ff5
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply と refactor の workload、および各 fork 実行フローへの入口を扱う。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の realization 処理への下位入口を提供する。
 
 ## Read this when
-- realization workload サブコマンドの構成や入口を確認するとき。
-- realization apply の workload、fork 実行制御、agent 実行、差分検証、commit・rollback、run 状態、report 保存を調査・変更するとき。
-- realization refactor の fork 実行フロー、対象選択、state 遷移、commit、未解決所見、cleanup、完了判定、report 出力を調査・変更するとき。
+- realization workload サブコマンドの実装構成や、apply・refactor 配下への入口を確認するとき。
 
 ## Do not read this when
-- realization workload に関係しない処理を確認するとき。
-- 共通の editing run lifecycle、process tracking、report 生成、対象選択、state 同期だけを調査するとき。
-- apply agent の prompt 構築、通常の realization apply、単一ファイルの review・修正、変更概要生成だけを確認するとき。
+- realization workload サブコマンドに関係しない処理を確認するとき。
 
 ## hash
-- 96d040aaa9d23ba8140853f063c08ca8998a93713d66f07b18f392658447e6c7
+- 7bd9b8c796eb9c67f414ceb033d2b9b8c398f6762a3176ba79dd5194a415ac97
 
 # `review`
 

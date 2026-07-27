@@ -232,8 +232,8 @@ def _production_environment(
         "NO_PROXY": "127.0.0.1,localhost",
         "no_proxy": "127.0.0.1,localhost",
         "PATH": f"{editor_dir}:{os.environ.get('PATH', '')}",
-        # The shared development venv's console script otherwise imports the
-        # parent session worktree instead of this realization worktree.
+        # 共有 development venv の console script は、この設定がないと親 session
+        # worktree を import するため、現在の realization worktree を指定する。
         # {{work-root}}/oracle/doc/dev_rule/test_rule.md
         "PYTHONPATH": os.pathsep.join(
             [
@@ -345,8 +345,8 @@ def _completed_tui_message(codex_home: Path) -> str | None:
     for path in codex_home.glob("sessions/**/rollout-*.jsonl"):
         originator: str | None = None
         completed_message: str | None = None
-        # The TUI appends this file while polling; the final chunk can end in a
-        # partial UTF-8 sequence, which is not an invalid session event.
+        # TUI は polling 中にこの file を追記するため、最後の chunk が partial UTF-8
+        # sequence で終わっていても、無効な session event とは限らない。
         for line in path.read_bytes().decode("utf-8", errors="ignore").splitlines():
             try:
                 event = json.loads(line)
