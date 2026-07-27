@@ -25,6 +25,7 @@ import commons.runtime_run_report as run_report_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.join as run_join_module
+import sub_commands.run.lifecycle as legacy_lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
@@ -115,6 +116,15 @@ def test_refresh_indexes_builds_prompts_for_requested_worktree(
 
     assert observed == [root.resolve()]
     assert Path.cwd().resolve() == caller
+
+
+def test_legacy_lifecycle_shim_reexports_agent_path_validation() -> None:
+    """旧 run lifecycle import path が canonical helper を再公開する。"""
+    assert (
+        legacy_lifecycle_module.unexpected_agent_paths
+        is lifecycle_module.unexpected_agent_paths
+    )
+    assert "unexpected_agent_paths" in legacy_lifecycle_module.__all__
 
 
 def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None:

@@ -49,17 +49,16 @@
 # `lifecycle.py`
 
 ## Summary
-- editing run のライフサイクル共通型・処理を commons から再エクスポートし、旧 import path との互換性を保つ薄い shim。
+- editing run 共通 helper の旧 import path を維持する互換 shim。実体は commons.runtime_run_lifecycle にあり、関連する型・ライフサイクル操作を再公開する。
 
 ## Read this when
-- editing run の旧 import path の互換性や、ライフサイクル関連の再エクスポート対象を確認するとき。
+- editing run のライフサイクル処理や旧 import path との互換性を確認・変更するとき。
 
 ## Do not read this when
-- canonical な共通実装の挙動や配置規則を確認したいときは、commons 側の実装と関連する oracle を直接読む。
-- 旧 import path の互換性が不要になり、shim の削除可否だけを判断するとき。
+- 共通ライフサイクル処理そのものを実装・変更する場合は、commons 側の canonical 実装を直接読むとよい。
 
 ## hash
-- b5f3d0a269df7dec273e15fca5c9c6c79d2627656b67cc0a2f8cb171d26687ea
+- 3de456333531bc878de445ccbaf683410ad0990c75f16028b6bcab36ac7d5939
 
 # `report.py`
 
