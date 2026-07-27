@@ -409,8 +409,6 @@ def _answer_terminal_queries(
 
 def _stop_tui_process_group(process: subprocess.Popen[bytes]) -> None:
     """失敗時に cmoc と、その Codex TUI child を同じ group から停止する。"""
-    if process.poll() is not None:
-        return
     # start_new_session=True で作った group を leader だけ terminate すると、
     # cmoc が起動した実 Codex CLI が test 後も PTY を保持して残る可能性がある。
     for sig in (signal.SIGTERM, signal.SIGKILL):
