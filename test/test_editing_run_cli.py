@@ -9,6 +9,7 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
+from typing import NoReturn
 
 import pytest
 from _cli_support import run_doctor, runner
@@ -881,6 +882,63 @@ def test_apply_error_report_survives_change_inspection_failure(
     )
     assert len(reports) == 1
     assert "change inspection failed" in reports[0].read_text()
+
+
+@pytest.mark.parametrize("interrupted", [False, True])
+def test_refactor_terminal_report_survives_change_inspection_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    interrupted: bool,
+) -> None:
+    """差分確認に失敗しても refactor の terminal report と state を保存する。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+
+    def fail_agent(*_args: object, **_kwargs: object) -> NoReturn:
+        """agent failure または user interruption を再現する。"""
+        if interrupted:
+            raise KeyboardInterrupt()
+        raise RuntimeError("agent failed")
+
+    monkeypatch.setattr(
+        refactor_module,
+        "run_codex_exec",
+        fail_agent,
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "tree_changes",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            RuntimeError("git diff unavailable")
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    expected_state = "joinable" if interrupted else "error"
+    expected_reason = "user_interruption" if interrupted else "error"
+    assert result.exit_code == (0 if interrupted else 1)
+    assert _state(state_path)["run"]["state"] == expected_state
+    reports = list(
+        (
+            root
+            / ".cmoc"
+            / "gu"
+            / "ar"
+            / "report"
+            / "realization"
+            / "refactor"
+            / "fork"
+        ).glob("*.md")
+    )
+    assert len(reports) == 1
+    report_text = reports[0].read_text()
+    assert "change inspection failed" in report_text
+    assert f'completion_reason: "{expected_reason}"' in report_text
 
 
 def test_apply_failure_stops_tracked_codex_children_before_rollback(

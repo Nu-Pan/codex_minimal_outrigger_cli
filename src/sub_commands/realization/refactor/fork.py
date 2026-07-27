@@ -568,7 +568,17 @@ def _write_refactor_report(
     """refactor cycle の state、findings、変更概要を report として保存する。"""
     state = _safe_refactor_state(context.run_worktree)
     counts = _state_counts(state)
-    changes = tree_changes(context.run_worktree, context.run_fork_commit)
+    report_cleanup_errors = list(cleanup_errors or [])
+    try:
+        changes = tree_changes(context.run_worktree, context.run_fork_commit)
+    except BaseException as change_error:
+        if reason not in {"error", "user_interruption"}:
+            raise
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # error/interruption report は補助的な git inspection の失敗でも保存し、
+        # 確認できない変更 path は空として warning に残す。
+        report_cleanup_errors.append(f"change inspection failed: {change_error!r}")
+        changes = []
     unresolved_targets = set(unresolved_findings)
     uninvestigated_targets = sum(
         entry["investigation_required"] and path not in unresolved_targets
@@ -604,8 +614,8 @@ def _write_refactor_report(
         [
             "## Cleanup warnings",
             *(
-                [f"- {item}" for item in cleanup_errors]
-                if cleanup_errors
+                [f"- {item}" for item in report_cleanup_errors]
+                if report_cleanup_errors
                 else ["- none"]
             ),
         ]

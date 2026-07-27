@@ -147,7 +147,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "49ed124e4e4d48ea9baee1d3014cf98ad0b8240d7a3720d9b9a1474ed26853a8",
-    "last_investigated_at": "2026-07-26_20-33_45_997286000"
+    "last_investigated_at": "2026-07-28_02-16_53_106346000"
   },
   "oracle/doc/app_spec/sub_command/session_abandon.md": {
     "investigation_required": false,

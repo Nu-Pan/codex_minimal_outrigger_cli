@@ -390,19 +390,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、INDEX 更新、Codex child tracking、rollback、merge、cleanup、および apply/refactor fork の正常系・異常系・中断時挙動を検証する。関連する lifecycle fixture と state 遷移を共有するため、これらのテストを一続きで扱う入口。
+- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、Codex child tracking、INDEX 再生成、rollback、join/abandon cleanup、および apply/refactor fork の正常系・異常系・中断時ライフサイクルを検証する。関連する lifecycle fixture と状態遷移を共有するため、これらの統合テストの入口となる。
 
 ## Read this when
-- realization apply fork または realization refactor fork の lifecycle 挙動を変更・検証するとき
-- run join、run abandon、worktree・branch cleanup、merge rollback、force-resolve の挙動を変更・検証するとき
-- fork report、refactor state、INDEX refresh、Codex process tracking、agent の禁止差分検査に関するテストを確認するとき
+- realization apply fork または realization refactor fork の統合挙動を変更・調査するとき
+- run join、run abandon、editing run の state 遷移や worktree・branch cleanup を変更・調査するとき
+- fork report、change summary、INDEX refresh、Codex child tracking、rollback の検証を確認するとき
+- apply/refactor fork の失敗・中断・unresolved target・merge rollback のテストケースを探すとき
 
 ## Do not read this when
-- 単一の実装 helper の詳細だけを調査し、対応する既存の focused test を直接読む方が適切なとき
-- session や editing run と無関係な CLI command のテストを変更・検証するとき
+- 単一の低レベル helper や個別 parser の実装だけを変更・調査するとき
+- 対象の CLI ライフサイクルや fork/join/abandon の統合挙動に関係しないテストを探すとき
+- 共通 lifecycle の詳細ではなく、特定サブコマンドの直接的な仕様や実装だけを確認したいとき
 
 ## hash
-- 3feb12e597c9d6cfb1d098eaaa34fce779040c44562da6aa59b9008e98be7dc1
+- 4c051fe321af744ba7d961a643aceeda25bedb73e11ad16bc5e7f2594201c3c6
 
 # `test_indexing_cli.py`
 
