@@ -74,6 +74,21 @@ def test_refactor_target_classifiers_require_file_entries(
     assert not is_realization_file_path(root, root / "missing.py")
 
 
+def test_refactor_target_classifier_rejects_gitlink_directory(
+    tmp_path: Path,
+) -> None:
+    """realization file classifier が Gitlink の directory entry を拒否する。"""
+    root = make_repo(tmp_path)
+    gitlink = root / "module"
+    gitlink.mkdir()
+    commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "update-index", "--add", "--cacheinfo", f"160000,{commit},module")
+    run_git(root, "commit", "-m", "add gitlink entry")
+
+    assert gitlink.is_dir()
+    assert not is_realization_file_path(root, gitlink, branch="HEAD")
+
+
 def test_refactor_state_sync_hashes_dangling_oracle_symlink(
     tmp_path: Path,
 ) -> None:

@@ -476,12 +476,21 @@ def is_realization_file_path(
     ):
         return False
     if branch:
-        branch_paths = run_git(
-            ["ls-tree", "-r", "-z", "--name-only", branch, "--", str(relative)],
-            root,
+        # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
+        # 含めず blob entry だけを branch の fallback として採用する。
+        branch_entries = run_git(
+            ["ls-tree", "-r", "-z", branch, "--", str(relative)], root
         ).stdout.split("\0")
-        if str(relative) in branch_paths:
-            return True
+        for entry in branch_entries:
+            metadata, separator, entry_path = entry.partition("\t")
+            metadata_fields = metadata.split()
+            if (
+                separator
+                and entry_path == str(relative)
+                and len(metadata_fields) >= 2
+                and metadata_fields[1] == "blob"
+            ):
+                return True
     return (
         candidate.is_file() or candidate.is_symlink()
     ) and not is_untracked_git_ignored(root, candidate)
