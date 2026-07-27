@@ -864,10 +864,10 @@
     "last_investigated_at": "2026-07-25_07-16_07_106865000"
   },
   "src/sub_commands/doctor.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "9324a8b1f2f1bbd3a83adfb61690e64ff7e1f6502e165e208c84e2cefbd35980",
-    "last_investigated_at": "2026-07-25_07-26_17_544641000"
+    "last_investigated_sha256": "48cc149773f0620f64d4650bed55bdb7b42dada088e55d312892186978176836",
+    "last_investigated_at": "2026-07-28_03-24_59_364720000"
   },
   "src/sub_commands/indexing.py": {
     "investigation_required": false,
