@@ -58,16 +58,16 @@
 # `bin`
 
 ## Summary
-- cmoc の起動用シェルラッパー。仮想環境内 Python の存在・実行権限・簡易プローブを検査し、通常実行時は未準備ならセットアップ案内付きエラーを表示する。検査成功時および補完プローブ時には、CLI 本体へ引数を委譲する。
+- cmoc の実行入口を提供するシェルラッパーを含むディレクトリ。仮想環境 Python の存在・実行可能性を検査し、失敗時にはセットアップ手順と呼び出し位置を表示したうえで、成功時は src/main.py を起動する。
 
 ## Read this when
-- cmoc の起動経路、仮想環境 Python の検査、起動失敗時のエラー表示、補完プローブ時の委譲を変更・調査するとき。
+- cmoc コマンドの起動経路、仮想環境 Python の検査、補完プローブ、起動前エラー表示を確認・変更するとき。
 
 ## Do not read this when
-- CLI 本体のコマンド処理や引数解析を変更・調査するときは、src 配下の Python CLI 実装を直接読む。仮想環境の作成、依存関係、開発手順を確認するときは、対応する oracle 文書を読む。
+- Python CLI 本体のコマンド処理や業務ロジックを確認したいとき。起動後の実装は src 側を直接読む。
 
 ## hash
-- f44a7190c1a126f5b885329a029429a46c46eaa5aec3651d109c86d6856fb19b
+- 464142724c5c5ed9b5dfec5aa77b6fb9e839c337859913d6ceced907ae5f5da9
 
 # `codex_minimal_outrigger_cli.code-workspace`
 
@@ -126,31 +126,36 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装ルート。主要エントリーポイント、サブコマンド実装、共通 runtime、互換 import shim を扱い、CLI の登録から各処理・共有機能へ進む入口となる。
+- cmoc CLI の realization 実装ルート。Typer による CLI エントリー、doctor・indexing・tui、oracle・realization・run・session のサブコマンド、共通 runtime helper、互換 import shim、ACP builder adapter を扱う。
+- CLI の公開コマンド構成や委譲先を確認する入口であり、個別機能の詳細は `sub_commands`、横断処理は `commons`、ACP 系の prompt・builder 経路は `acp`、互換公開 API は `basic`・`config` などの下位要素へ進む。
 
 ## Read this when
-- cmoc の CLI 構成、サブコマンドの実装配置、共通 runtime、互換 import 経路を確認するとき。
-- 特定のサブコマンドや共有機能の下位実装へ進む前に、realization 側の入口を特定するとき。
+- cmoc の CLI 全体のエントリー、サブコマンド登録、Typer/Click の引数解析・補完・エラー変換を調査するとき。
+- サブコマンド、共通 runtime、ACP builder、互換 import の実装入口を特定するとき。
+- 複数の下位パッケージにまたがる処理の責務分担を確認するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装内容を確認したいとき。
-- 個別サブコマンド、runtime helper、builder などの具体的な処理を調査するときは、対応する下位要素を直接読む。
+- 特定サブコマンドの処理本体を調査・変更するときは、`sub_commands` 配下の該当実装を直接読む。
+- 共通 runtime の個別機能が明らかな場合は、`commons` 配下の対応モジュールを直接読む。
+- ACP builder の個別 prompt 構築や adapter の詳細、互換 API の正本仕様を確認するときは、対応する下位要素または oracle 側を直接読む。
 
 ## hash
-- ff211d362abb41558694da7fd49d5802abe8481a726a8e323a73e64c8a167ed2
+- 74316c040bda71c507a43cc84f1915d266cce2e8957cc96c585374ee799c0653
 
 # `test`
 
 ## Summary
-- テスト用の共有支援モジュール群と、ACP builder、Codex runtime、CLI、INDEX、oracle review、session、設定・状態管理などの realization test を含むテストディレクトリ。各テストファイルは対応する機能領域の外部契約・制御ロジック・異常系を検証する入口となる。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、oracle review、indexing、session state など、各機能の外部契約・制御ロジック・異常系を検証するテストと共通テスト支援を含む。機能別の挙動や回帰を調査する際の入口となる。
 
 ## Read this when
-- 対象機能の realization test、回帰テスト、統合テストの所在を判断するとき
-- 複数の機能領域にまたがる CLI・runtime・worktree lifecycle のテスト範囲を確認するとき
+- cmoc の実装変更に対応する realization test や共通テスト helper を探すとき
+- CLI、Codex 実行、worktree、state、indexing、oracle review などの外部挙動・制御ロジックを検証するとき
+- 対象機能に対応する専用テストの所在や、実経路統合テストの範囲を確認するとき
 
 ## Do not read this when
-- 特定機能の実装詳細や正本仕様を確認する場合は、対応する src または oracle 文書を直接読む
-- テスト実行手順や Python 品質検査の方法だけを確認する場合は、対応する開発・テスト手順を読む
+- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc または oracle source を直接読む
+- 実装詳細だけを調査するときは、関連する src ファイルを直接読む
+- テスト対象と無関係な機能の調査や、Codex・CLI の出力品質そのものの評価を行うとき
 
 ## hash
-- 09740aa7f1e2c7215d8582f4e1c90f9356c7065e3242127a646c26b53acb0279
+- 1a22d80efd283d935e71ba4637ee1ad85de26c5320cbc6d5b0aeb70bad712481

@@ -99,15 +99,26 @@ def run_cli_subcommand(
     except BaseException as exc:
         failed_returncode = error_returncode if error_returncode is not None else 1
         if logger:
-            logger.finish_current_step()
-            logger.event(
-                "command_finished",
-                returncode=failed_returncode,
-                elapsed_sec=logger.elapsed(),
-                quota_wait_sec=logger.quota_wait_sec,
-                error=str(exc),
-            )
-            _emit_completion_summary(logger, name, failed_returncode)
+            # {{work-root}}/oracle/doc/app_spec/error_handling.md
+            # ログ終了処理自体が失敗しても、元の失敗を stdout の error report へ届ける。
+            try:
+                logger.finish_current_step()
+            except BaseException:
+                pass
+            try:
+                logger.event(
+                    "command_finished",
+                    returncode=failed_returncode,
+                    elapsed_sec=logger.elapsed(),
+                    quota_wait_sec=logger.quota_wait_sec,
+                    error=str(exc),
+                )
+            except BaseException:
+                pass
+            try:
+                _emit_completion_summary(logger, name, failed_returncode)
+            except BaseException:
+                pass
         result_stdout = getattr(exc, "cmoc_stdout", None)
         if result_stdout is not None:
             typer.echo(str(result_stdout))

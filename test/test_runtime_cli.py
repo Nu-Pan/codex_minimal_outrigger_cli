@@ -160,6 +160,43 @@ def test_cli_nonzero_impl_result_is_reported(
     assert captured.err == ""
 
 
+def test_cli_error_report_survives_failed_error_log_flush(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """終了ログの失敗が元の error report を隠さないことを検証する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    original_event = runtime_cli.SubcommandLogger.event
+
+    def fail_finish_event(
+        logger: SubcommandLogger, kind: str, **payload: object
+    ) -> None:
+        """command_finished のログ書き込み失敗を再現する。"""
+        if kind == "command_finished":
+            raise OSError("log flush failed")
+        original_event(logger, kind, **payload)
+
+    def fail_impl() -> None:
+        """callback の失敗を再現する。"""
+        raise ValueError("callback failed")
+
+    monkeypatch.setattr(runtime_cli.SubcommandLogger, "event", fail_finish_event)
+
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            fail_impl,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+            doctor_preprocess=False,
+        )
+
+    captured = capsys.readouterr()
+    assert exc_info.value.exit_code == 1
+    assert "# ERROR" in captured.out
+    assert "callback failed" in captured.out
+    assert captured.err == ""
+
+
 def test_render_error_uses_structured_markdown() -> None:
     """CmocError は利用者が読む Markdown report として整形される。"""
     try:

@@ -29,6 +29,7 @@ line_number_of() {
 }
 
 print_missing_venv_error() {
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
     {
         printf '%s\n' "# ERROR"
         printf '%s\n' "## Summary"
