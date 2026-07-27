@@ -3,6 +3,7 @@
 根拠:
 - {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
 - {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
@@ -195,6 +196,34 @@ def test_cli_error_report_survives_failed_error_log_flush(
     assert "# ERROR" in captured.out
     assert "callback failed" in captured.out
     assert captured.err == ""
+
+
+def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Codex CLI へ委ねる Ctrl+C を cmoc の error report に変換しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    def interrupt() -> None:
+        """子 process から伝播した Ctrl+C を再現する。"""
+        raise KeyboardInterrupt()
+
+    with pytest.raises(KeyboardInterrupt):
+        runtime_cli.run_cli_subcommand(
+            interrupt,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+            doctor_preprocess=False,
+        )
+
+    captured = capsys.readouterr()
+    assert "# ERROR" not in captured.out
+    assert "# ERROR" not in captured.err
+    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 130
 
 
 def test_render_error_uses_structured_markdown() -> None:

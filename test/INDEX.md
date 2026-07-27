@@ -630,22 +630,19 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI のエラー報告、サブコマンドログ、duration 表示、doctor preflight、work root 制約、shell completion、起動 wrapper、gitignore 更新を検証する runtime CLI 回帰テスト。
-- CLI lifecycle に共通する runner・work root・サブコマンドイベントの外部契約を、失敗時の終了コード・stdout 出力・ログ副作用を含めて一体的に扱う。
+- CLI 実行ライフサイクルの外部契約を検証する回帰テスト。duration 表示、サブコマンドログ、並列イベント、doctor/pre-log preflight、error report、終了コード、KeyboardInterrupt、work root 制約、completion probe、起動 wrapper、gitignore 更新を扱う。CLI 共通 runner・work root・subcommand event の挙動を確認する入口であり、個別サブコマンド内部の機能テストの代替ではない。
 
 ## Read this when
-- CLI の想定済みエラー、例外報告、非0終了、stdout/stderr 境界を変更・調査するとき
-- サブコマンドログの生成、flush 失敗、並列イベント、quota wait、timestamp 衝突を変更・調査するとき
-- doctor preflight、pre-log check、work root 判定、linked worktree の実行元を変更・調査するとき
-- shell completion の preflight・副作用抑制や CLI 引数解析を変更・調査するとき
-- bin wrapper の venv 起動失敗や cmoc 用 gitignore 更新を変更・調査するとき
+- CLI のエラー出力、終了コード、stdout/stderr 境界、Call stack、error report を変更・調査するとき
+- サブコマンドログ、ログ flush、並列 worker event、quota wait、pre-log check の挙動を変更・調査するとき
+- doctor preprocess、work root 判定、completion probe、CLI wrapper、gitignore 初期化の変更を検証するとき
 
 ## Do not read this when
-- 個別サブコマンドの主要ロジックや oracle/indexing 固有の挙動だけを変更・調査する場合は、対応するサブコマンドの実装・テストを直接読む
-- CLI lifecycle の error、log、preflight、completion と無関係なライブラリやデータモデルを変更・調査する場合
+- 個別サブコマンドの業務ロジックや専用の入出力だけを変更・調査するときは、対応するサブコマンド実装・テストを直接読む
+- oracle の error、log、completion、preflight 仕様そのものを確認するときは、列挙された oracle 文書・oracle source を直接読む
 
 ## hash
-- 50695ad815ec2be7717167393766260eaf6a0e0290bd54db3aac7c5102bbe33b
+- 71c1872d56ab3ecf79a715d188393075a9637e48306d535e9c9ae13966dddc55
 
 # `test_runtime_codex_conflicts.py`
 

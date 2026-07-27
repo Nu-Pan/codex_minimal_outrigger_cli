@@ -96,29 +96,16 @@ def run_cli_subcommand(
             quota_wait_sec=logger.quota_wait_sec,
         )
         _emit_completion_summary(logger, name, returncode)
+    except KeyboardInterrupt as exc:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+        # 非中断可能な TUI の Ctrl+C は Codex CLI に委ね、cmoc の error report に変換しない。
+        if logger:
+            _finish_failed_subcommand(logger, name, 130, exc)
+        raise
     except BaseException as exc:
         failed_returncode = error_returncode if error_returncode is not None else 1
         if logger:
-            # {{work-root}}/oracle/doc/app_spec/error_handling.md
-            # ログ終了処理自体が失敗しても、元の失敗を stdout の error report へ届ける。
-            try:
-                logger.finish_current_step()
-            except BaseException:
-                pass
-            try:
-                logger.event(
-                    "command_finished",
-                    returncode=failed_returncode,
-                    elapsed_sec=logger.elapsed(),
-                    quota_wait_sec=logger.quota_wait_sec,
-                    error=str(exc),
-                )
-            except BaseException:
-                pass
-            try:
-                _emit_completion_summary(logger, name, failed_returncode)
-            except BaseException:
-                pass
+            _finish_failed_subcommand(logger, name, failed_returncode, exc)
         result_stdout = getattr(exc, "cmoc_stdout", None)
         if result_stdout is not None:
             typer.echo(str(result_stdout))
@@ -134,6 +121,35 @@ def run_cli_subcommand(
             _CURRENT_STEP_TOTAL.reset(step_total_token)
         if logger_token is not None:
             reset_current_subcommand_logger(logger_token)
+
+
+def _finish_failed_subcommand(
+    logger: SubcommandLogger,
+    command_name: str,
+    returncode: int,
+    error: BaseException,
+) -> None:
+    """失敗時の終了 event と summary を、元の例外を隠さず記録する。"""
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # ログ終了処理自体が失敗しても、元の失敗を後続の error path へ届ける。
+    try:
+        logger.finish_current_step()
+    except BaseException:
+        pass
+    try:
+        logger.event(
+            "command_finished",
+            returncode=returncode,
+            elapsed_sec=logger.elapsed(),
+            quota_wait_sec=logger.quota_wait_sec,
+            error=str(error),
+        )
+    except BaseException:
+        pass
+    try:
+        _emit_completion_summary(logger, command_name, returncode)
+    except BaseException:
+        pass
 
 
 def start_subcommand_step(

@@ -721,9 +721,9 @@
   },
   "src/commons/runtime_cli.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "f3980a3980441a68abae7601d30bfce8e6680702831dbea8dc1d295958c667cf",
-    "last_investigated_at": "2026-07-27_07-22_18_149399000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "81dbd2341537a730f373a91002f5e27be0fa190230f5b76d4e662c11c13962d8",
+    "last_investigated_at": "2026-07-28_07-06_38_064024000"
   },
   "src/commons/runtime_codex.py": {
     "investigation_required": false,
