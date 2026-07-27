@@ -786,10 +786,10 @@
     "last_investigated_at": "2026-07-25_03-38_39_786476000"
   },
   "src/commons/runtime_git.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "2968b4c5674ebeb671c8187219d6ae19a886570ee1b1d084d0c7ddfa39884905",
-    "last_investigated_at": "2026-07-27_10-03_51_178851000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "e8bf3d251b34ef21d5d52292f13062557667c94619b1210facae46e15f80a5e7",
+    "last_investigated_at": "2026-07-28_08-57_26_825586000"
   },
   "src/commons/runtime_logging.py": {
     "investigation_required": false,
