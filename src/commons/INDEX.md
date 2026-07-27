@@ -118,16 +118,16 @@
 # `runtime_codex_logging.py`
 
 ## Summary
-- Codex CLI 呼び出しの console 通知と起動エラー文字列の整形を担当する共通ランタイム処理。呼び出し目的、ログパス、経過時間、終了コード、エラーを出力し、呼び出し失敗時の表示形式を統一する。
+- Codex CLI 呼び出しの利用者向け console 通知と、起動失敗時の共通エラーテキスト整形を担当する。呼び出し目的・ログパス・経過時間・終了状態を出力し、異常時は stderr へ通知する。
 
 ## Read this when
-- Codex CLI 呼び出し時の console 出力、終了コード・経過時間・ログパスの通知、起動エラーの整形を変更または調査するとき。
+- Codex CLI 呼び出し時の console 通知、終了コードや起動失敗の表示、エラー文字列の整形を変更または確認するとき。
 
 ## Do not read this when
-- Codex CLI の実行処理そのもの、ログファイルの生成・保存処理、または一般的なパス・時間フォーマット処理だけを変更または調査するとき。
+- Codex CLI の実行処理、呼び出しログの保存形式、runtime path や時間表示の仕様そのものを変更するとき。
 
 ## hash
-- 3f0f59fe655bca924d9a16944547976926b7bbf518f5e18699cb9c5dc95dc742
+- 1398891b8c46be913d7f8bdc8a255c0c8426012bb7f58d0afc2f44bb1b0bd350
 
 # `runtime_codex_preflight.py`
 

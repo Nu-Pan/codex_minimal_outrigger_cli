@@ -46,6 +46,17 @@ def test_codex_call_console_resolves_relative_call_log_path(
     assert captured.err == ""
 
 
+def test_codex_call_console_reports_not_started_as_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """終了コードを得られない呼び出しを stderr のエラーとして表示する。"""
+    emit_codex_call_console("test", tmp_path / "call.json", 0.0, None)
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "- Exit code: `not started`" in captured.err
+
+
 @pytest.mark.parametrize("line", ["null", "[]", "1"])
 def test_codex_jsonl_non_object_events_are_unexpected(line: str) -> None:
     """非 object event を parser 境界で安全に malformed error として扱う。"""

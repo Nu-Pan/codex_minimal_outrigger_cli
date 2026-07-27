@@ -126,31 +126,31 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装を集約する src パッケージ。CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim など、実行機能の実装領域への入口を提供する。
+- cmoc CLI の realization 実装全体への入口。Typer の CLI 登録、互換 import shim、共通 runtime、ACP builder、各サブコマンド実装を含み、個別機能の実装へ進むための上位ルーティングを担う。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・runtime・ACP builder・互換 import の配置を確認するとき。
-- 特定の実装領域へ進む前に、対応する下位ディレクトリやモジュールの入口を特定するとき。
+- cmoc の CLI 全体構成、公開コマンド、互換 import 経路、共通 runtime、ACP builder、またはサブコマンド実装の入口を確認するとき。
+- 特定の下位実装へ進む前に、主要なパッケージと委譲関係を把握するとき。
 
 ## Do not read this when
-- canonical な oracle 仕様や oracle 実装を確認するときは、対応する oracle 側を直接読む。
-- 特定のサブコマンド、runtime 機能、builder、互換 shim の詳細が分かっているときは、対応する下位要素を直接読む。
+- 特定サブコマンド、runtime helper、ACP builder、互換 shim の詳細が明確な場合は、対応する下位ファイルまたはディレクトリを直接読む。
+- canonical な oracle 仕様や oracle 実装を確認するときは、oracle 側を直接読む。
 
 ## hash
-- 12a8b4ada47ef007ff9d03fa0000a1f62a8eb324a498246c0efdb134f00b354c
+- b5980c8ae0602a438ea7fdc38ebf47e6c9f655508b96bdf1ca2b015d51d51794
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、INDEX.md indexing、oracle review、session/run state、各種設定・補助機能の外部挙動と回帰契約を検証する。個別機能の実装変更時に、対応する仕様領域のテスト入口を選ぶための上位ルーティング対象。
+- cmoc の realization test を集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、oracle review、session/run lifecycle、INDEX 生成などの外部挙動・制御ロジックを検証する。各テストファイルが機能領域ごとの具体的な確認入口となる。
 
 ## Read this when
-- cmoc のテスト全体から、変更対象に対応する realization test を探すとき。
-- CLI、Codex 実行、builder、indexing、oracle review、session/run state など複数領域にまたがる回帰影響を確認するとき。
+- cmoc の実装変更に対応する回帰テストや統合テストの入口を探すとき
+- CLI、runtime、Codex、builder、oracle review、session/run、INDEX 生成の挙動をテストから確認するとき
 
 ## Do not read this when
-- 対象機能が明確な場合は、このディレクトリ全体ではなく該当する個別テストを直接読む。
-- 正本仕様、実装詳細、開発環境やテスト実行手順を確認するときは、対応する oracle doc、src、または開発・テスト手順を直接読む。
+- 正本仕様や実装詳細を確認することが目的のときは、対応する oracle または src のファイルを直接読む
+- テスト対象と無関係な機能領域を調査するときは、このディレクトリ全体ではなく対応するテストファイルへ進む
 
 ## hash
-- d08562103e25d3de74c568506c002aaabefc4d09287284ca9b715b7b4d32a83f
+- f80ad21b3db2e6ee3d11fe1a60dc650efa3cbca3ef04fd7efeb36c9be44e416c
