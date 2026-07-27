@@ -37,6 +37,11 @@ def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
         entry["last_investigation_result"] == "not_investigated"
         for entry in state.values()
     )
+    assert all(
+        entry["last_investigated_sha256"] is None
+        and entry["last_investigated_at"] is None
+        for entry in state.values()
+    )
     assert load_refactor_state(root) == state
 
 
@@ -49,6 +54,7 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
     """oracle/realization file classifier が work-root 外の path を拒否する。"""
     # 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     root = make_repo(tmp_path)
+    (tmp_path / "outside.md").write_text("outside\n")
 
     path = root / relative
 
@@ -102,9 +108,26 @@ def test_refactor_state_sync_hashes_dangling_oracle_symlink(
     run_git(root, "commit", "-m", "add dangling oracle symlink")
 
     state = sync_refactor_state(root)
+    expected_digest = hashlib.sha256(b"../missing.md").hexdigest()
 
     assert "oracle/dangling.md" in state
-    assert file_sha256(link) == hashlib.sha256(b"../missing.md").hexdigest()
+    state["oracle/dangling.md"].update(
+        {
+            "investigation_required": False,
+            "last_investigation_result": "no_findings",
+            "last_investigated_sha256": expected_digest,
+            "last_investigated_at": "2026-07-19_00-00_00_000000000",
+        }
+    )
+    write_refactor_state(root, state)
+    link.unlink()
+    link.symlink_to("../different-missing.md")
+
+    synchronized = sync_refactor_state(root)
+
+    changed = synchronized["oracle/dangling.md"]
+    assert changed["investigation_required"] is True
+    assert changed["last_investigated_sha256"] == expected_digest
 
 
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
@@ -114,11 +137,12 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     root = make_repo(tmp_path)
     state = sync_refactor_state(root)
     entry = state["README.md"]
+    previous_digest = file_sha256(root / "README.md")
     entry.update(
         {
             "investigation_required": False,
             "last_investigation_result": "no_findings",
-            "last_investigated_sha256": file_sha256(root / "README.md"),
+            "last_investigated_sha256": previous_digest,
             "last_investigated_at": "2026-07-19_00-00_00_000000000",
         }
     )
@@ -131,7 +155,7 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     assert changed["investigation_required"] is True
     assert changed["last_investigation_result"] == "no_findings"
     assert changed["last_investigated_at"] == "2026-07-19_00-00_00_000000000"
-    assert changed["last_investigated_sha256"] != file_sha256(root / "README.md")
+    assert changed["last_investigated_sha256"] == previous_digest
 
 
 def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
