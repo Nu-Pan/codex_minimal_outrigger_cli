@@ -126,19 +126,18 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめた src の入口。主要 CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim など、実行時コードの下位領域へ進むための案内を提供する。
+- cmoc の realization 実装を配置する src パッケージ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim など、実行時の主要なコード領域への入口を提供する。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・共通 runtime・ACP builder の担当領域を確認するとき。
-- 特定の CLI エントリーポイントやサブコマンド、共通 runtime、互換 import の実装へ進む入口を探すとき。
+- cmoc の realization 実装全体の構成や、CLI・サブコマンド・共通 runtime の配置を確認するとき。
+- 対象の実装ファイルへ進む前に、src 配下の主要なコード領域と責務の境界を把握するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
-- 特定のサブコマンドや runtime module の詳細だけを調査・変更するときは、対応する下位ファイルまたはディレクトリを直接読む。
-- realization のテストや補助ファイルを確認するときは、src ではなく対応する test または ancillary 領域を読む。
+- 特定のサブコマンド、runtime module、互換 import shim の詳細を確認したいときは、対応する下位要素を直接読む。
+- 正本仕様や oracle 側の実装を確認するときは、src ではなく対応する oracle 配下を読む。
 
 ## hash
-- 6fe1c625fff0c7bc5735f3d27c64d2e192415a2347d43fb8c1fb736b1ccf8daa
+- cfbbb9a4a815ad5eeb7d957c3b49c7dff2d0663a70c1b0005b74756f3d34c342
 
 # `test`
 

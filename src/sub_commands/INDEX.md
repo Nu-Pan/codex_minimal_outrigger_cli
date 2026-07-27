@@ -15,16 +15,18 @@
 # `doctor.py`
 
 ## Summary
-- doctor サブコマンドの実装。CLI runtime を介して doctor 用の preprocess 処理を明示的に実行する。
+- `cmoc doctor` サブコマンドの実装。CLI ランタイム経由で doctor preprocess を 1 ステップ実行し、完了後に repo_root を表示する。doctor コマンドの実行経路と preprocess 呼び出しの入口として扱う。
 
 ## Read this when
-- doctor サブコマンドの動作や preprocess 呼び出しを確認・変更するとき。
+- doctor サブコマンドの実装や実行手順を変更・調査するとき
+- doctor preprocess の呼び出し位置、実行ステップ、表示内容を確認するとき
 
 ## Do not read this when
-- doctor 以外のサブコマンドを扱うとき。preprocess の共通実装自体を確認するときは、共通 runtime preprocess command の実装を直接読む。
+- doctor preprocess 自体の仕様や処理内容を確認したいときは、参照される oracle/doc/app_spec/doctor_preprocess.md を直接読む
+- CLI ランタイム共通処理の仕様や実装だけを確認したいとき
 
 ## hash
-- 9324a8b1f2f1bbd3a83adfb61690e64ff7e1f6502e165e208c84e2cefbd35980
+- 48cc149773f0620f64d4650bed55bdb7b42dada088e55d312892186978176836
 
 # `indexing.py`
 

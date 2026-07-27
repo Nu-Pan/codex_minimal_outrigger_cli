@@ -303,22 +303,6 @@
 ## hash
 - 731c950d030dd27d68799c7bc70603ddde37f79b668f94142de0bbbd159459c5
 
-# `runtime_preprocess_command.py`
-
-## Summary
-- doctor preprocess を実行する共通 CLI コマンド処理を提供する。サブコマンド名を受け取り、CLI 実行ラッパー経由で preprocess を実行した後、repo_root を含む cmoc の見出しを出力する。
-
-## Read this when
-- doctor preprocess を実行する CLI サブコマンドの共通処理や、preprocess 実行後の出力を確認・変更するとき。
-- サブコマンドのステップ表示、work_root・repo_root の取得、CLI 実行ラッパーとの接続を調べるとき。
-
-## Do not read this when
-- doctor preprocess 自体の内部仕様や処理内容だけを確認したいときは、doctor preprocess の仕様・実装を直接読む。
-- CLI 共通実行ラッパーの詳細だけを確認したいときは、runtime_cli の実装を直接読む。
-
-## hash
-- 6d6ae7bdbfd820181a212ac092a503f72a70d8955c32fa42d3b4187fb371b691
-
 # `runtime_refactor.py`
 
 ## Summary

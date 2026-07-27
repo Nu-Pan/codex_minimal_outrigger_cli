@@ -49,19 +49,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 機能を提供する commons パッケージ。設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果型など、CLI 実装が横断利用する実行時 API と各機能の実装を含む。配下の個別 runtime module や公開用再エクスポートを確認する入口。
+- cmoc の共通 runtime helper を集約する commons パッケージ。設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果、INDEX lifecycle など、CLI 実装が横断的に利用する機能への入口を提供する。
+- 各 runtime module は個別責務を担当し、パッケージ初期化・公開 API・INDEX 更新・プロンプト編集・CLI lifecycle・Codex 実行・設定・Git・ログ・パス・状態などの実装へ進むための下位入口となる。
 
 ## Read this when
-- 複数の CLI 機能にまたがる runtime helper の実装・公開 API・実行ライフサイクルを調査または変更するとき
-- 設定、Git、Codex、path、state、logging、error、result などの共通 runtime 機能の担当箇所を探すとき
-- commons 配下の個別実装へ進む前に、共通 runtime 構成を把握するとき
+- cmoc の共通 runtime 機能の配置や公開 API の全体像を確認するとき
+- 複数の CLI サブコマンドで共有される設定、Git、Codex、ログ、パス、状態、結果処理の実装箇所を探すとき
+- INDEX 更新、プロンプト編集、editing run、doctor preprocess などの共通 lifecycle を調査するとき
 
 ## Do not read this when
-- 特定の runtime 機能の詳細だけを確認したいときは、対応する commons 配下の個別 module を直接読む
-- CLI サブコマンド固有の処理や、oracle 文書に定義された正本仕様だけを確認したいとき
+- 特定の runtime 機能の実装詳細を確認したいときは、その責務に対応する個別 runtime module を直接読む
+- CLI サブコマンド固有の業務ロジックや引数定義だけを確認したいとき
+- 利用者向け仕様や Structured Output schema などの正本仕様だけを確認したいときは、対応する oracle file を直接読む
 
 ## hash
-- cbe8894dc2b43b07018ca8fdf0c5a917b55324f358552007c7265eafafbd2be1
+- d536cbcd010180fe5d19f5ee87a2f91161905fb944b6417055cbd4331d378221
 
 # `config`
 
@@ -113,15 +115,16 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめるディレクトリ。doctor・indexing・oracle・realization・review・run・session・tui の各サブコマンド入口と、apply の実装配置先を含む。各サブコマンドの詳細確認は対応する下位ファイルまたはディレクトリを入口にする。
+- cmoc の各サブコマンド実装を配置するディレクトリ。doctor、indexing、oracle 系、realization workload、run、session、tui などの CLI 入口と、関連する下位パッケージへのルーティングを提供する。apply と review は現時点で実装本文がない。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、対象サブコマンドの実行入口を確認・変更するとき。
-- 複数サブコマンドにまたがる実装配置や、サブコマンド別の下位入口を確認するとき。
+- サブコマンド全体の実装構成や、特定のサブコマンド実装への入口を確認するとき。
+- doctor、indexing、oracle、realization、run、session、tui の CLI 実行フローを変更・調査するとき。
+- 対象サブコマンドの実装ファイルがどの下位要素にあるかを確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細実装だけを調査・変更する場合は、対応する下位ファイルまたはディレクトリを直接読む。
-- 共通 runtime、共通 indexing、oracle review の具体的処理など、別の共通実装を調査する場合は、その実装を直接読む。
+- 特定サブコマンドの詳細処理を確認する場合は、このディレクトリ全体ではなく該当する実装ファイルまたは下位パッケージを直接読む。
+- CLI 共通 runtime、oracle review の仕様、indexing の具体的な更新処理など、サブコマンドから参照される共通処理だけを調査するとき。
 
 ## hash
-- 7dc355e9bc03e277bd35e45f9ac79182fc4fd28d888f08aa04ebf4d2b4fae59a
+- d8747ddc640f803dc20ce07b70a252161621313c2b254f2badfd23f805897bfe
