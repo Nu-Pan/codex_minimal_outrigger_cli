@@ -20,7 +20,7 @@ from cmoc_runtime import (
     repo_root,
     work_root,
 )
-from commons.runtime_run import expected_run_worktree
+from commons.runtime_run import expected_run_worktree, worktree_for_branch_optional
 
 
 def test_path_model_resolves_token_path_inside_repo() -> None:
@@ -172,6 +172,36 @@ def test_run_worktree_rejects_dot_path_components(tmp_path: Path, branch: str) -
         create_run_worktree(
             root, branch, root / ".cmoc" / "gu" / "worktree" / "session" / "run"
         )
+
+
+@pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
+def test_run_worktree_lookup_rejects_symlink_components(
+    tmp_path: Path, symlink_component: str
+) -> None:
+    """登録後に symlink 化された run worktree を作業 root として扱わない。"""
+    root = make_repo(tmp_path)
+    managed = root / ".cmoc" / "gu" / "worktree"
+    expected = managed / "session" / "run"
+    run_git(
+        root, "worktree", "add", "-b", "cmoc/run/session/run", str(expected), "HEAD"
+    )
+
+    external = tmp_path / "external"
+    moved = external / "worktree"
+    moved.parent.mkdir(parents=True)
+    if symlink_component == "base":
+        managed.rename(moved)
+        managed.symlink_to(moved, target_is_directory=True)
+    elif symlink_component == "session":
+        moved = external / "session"
+        (managed / "session").rename(moved)
+        (managed / "session").symlink_to(moved, target_is_directory=True)
+    else:
+        moved = external / "run"
+        expected.rename(moved)
+        expected.symlink_to(moved, target_is_directory=True)
+
+    assert worktree_for_branch_optional(root, "cmoc/run/session/run") is None
 
 
 @pytest.mark.parametrize("symlink_component", ["base", "session", "target"])

@@ -62,7 +62,9 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
             if branch.startswith("cmoc/run/"):
                 # {{work-root}}/oracle/doc/branch_model.md
                 expected = expected_run_worktree(root, branch)
-                if registered_path != expected or resolved_path != expected.resolve():
+                # run worktree は managed path そのものに限定し、symlink 経由で
+                # run-root 外へ解決される登録を受け入れない。
+                if registered_path != expected or resolved_path != expected:
                     return None
             return resolved_path
     return None
