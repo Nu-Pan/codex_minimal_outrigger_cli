@@ -1736,7 +1736,7 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """current refactor unit の中断時に差分を戻して joinable にする。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.setattr(
         refactor_module,
@@ -1761,6 +1761,18 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     assert 'completion_reason: "user_interruption"' in report.read_text()
     assert "- completion_reason: `user_interruption`" in result.output
     assert "- unresolved targets: `0`" in result.output
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    events = [
+        json.loads(line)
+        for path in (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob(
+            "*.jsonl"
+        )
+        for line in path.read_text().splitlines()
+    ]
+    completion = next(event for event in events if event["event"] == "fork_completed")
+    assert completion["completion_reason"] == "user_interruption"
+    assert completion["unresolved_target_count"] == 0
+    assert completion["report_path"] == str(report.resolve())
 
 
 def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(

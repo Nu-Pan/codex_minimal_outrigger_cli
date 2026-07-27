@@ -19,6 +19,7 @@ from acp.builder.realization.refactor.fork.file_review_and_fix import (
 )
 from cmoc_runtime import (
     CmocError,
+    current_subcommand_logger,
     file_sha256,
     load_config,
     pushd,
@@ -709,6 +710,18 @@ def _completion_log(
     report: Path,
 ) -> str:
     """fork 固有の完了理由、unresolved 件数、report path を出力する。"""
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # 終了 console だけでなく JSON Lines の終了 event にも、後から run の完了理由と
+    # report を追跡できる値を残す。
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "fork_completed",
+            completion_reason=reason,
+            unresolved_target_count=len(unresolved_findings),
+            report_path=str(report.resolve()),
+        )
     return "\n".join(
         [
             f"- completion_reason: `{reason}`",
