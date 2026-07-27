@@ -1238,8 +1238,8 @@
   "test/test_production_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "2571c81c78cdc3a6b0d7aea9208002d4ff16e4d02b755f1d165d91255c54d9bd",
-    "last_investigated_at": "2026-07-26_12-14_47_443835000"
+    "last_investigated_sha256": "e499d433da7a35d336da5e7b542c8801daca7f1f782afe078f012bb02d4c0fc0",
+    "last_investigated_at": "2026-07-27_21-07_24_851879000"
   },
   "test/test_prompt_parts.py": {
     "investigation_required": true,

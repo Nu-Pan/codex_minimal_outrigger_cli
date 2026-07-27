@@ -593,20 +593,20 @@
 # `test_production_cli.py`
 
 ## Summary
-- 利用者向け cmoc の全末端サブコマンドを、独立 process・実 Codex CLI・case-local Ollama を用いた本番経路で検証する受け入れテスト。非対話 command、TUI command、PTY 操作、call log、report・state・Git の外部結果を扱う。LLM の回答品質ではなく、応答後の cmoc 制御と終了状態を検証する。
+- 実 Codex CLI と case-local Ollama を使い、利用者向け本番経路で全末端サブコマンドを独立 process から受け入れ検証するテスト。非対話 command の終了 code・report・state・Git・call log と、TUI command の PTY 応答完了・終了・副作用を確認する。LLM の回答品質ではなく、応答後の cmoc 制御を対象とする。
 
 ## Read this when
-- cmoc の末端サブコマンド追加・変更に伴い、本番 executable 経路の網羅性を確認するとき
-- 独立 process、実 Codex CLI、local Ollama、Codex call log、report・state・Git の状態遷移を検証するとき
-- TUI の PTY 起動、端末 capability query、応答完了検出、終了操作を調査するとき
+- 全末端サブコマンドの本番経路に対する受け入れテストを変更・追加するとき
+- 独立 process、実 Codex CLI、case-local Ollama、PTY、call log、session/run state の検証方法を確認するとき
+- 新しい CLI 末端 command の登録漏れを検証するテスト範囲を確認するとき
 
 ## Do not read this when
-- 単体の内部 helper や LLM 応答品質だけを検証するとき
-- 本番 process を使わない通常の unit test や非末端処理のテストを変更するとき
-- CLI の登録内容や個別 command の実装を直接調査する場合は、対応する実装・登録箇所を先に読むとき
+- 単一 command の内部実装や単体テストだけを変更するとき
+- LLM の回答品質や prompt 内容そのものを評価するとき
+- 本番 process・実 Codex CLI・TUI 経路を対象としないテストを変更するとき
 
 ## hash
-- e499d433da7a35d336da5e7b542c8801daca7f1f782afe078f012bb02d4c0fc0
+- 643476b1b0294448557f138292645c6cd6c35900da9ae111896867e6cf22a2e2
 
 # `test_prompt_parts.py`
 

@@ -19,6 +19,7 @@ import os
 import pty
 import select
 import shutil
+import signal
 import struct
 import subprocess
 import sys
@@ -406,6 +407,27 @@ def _answer_terminal_queries(
     return probe_buffer
 
 
+def _stop_tui_process_group(process: subprocess.Popen[bytes]) -> None:
+    """失敗時に cmoc と、その Codex TUI child を同じ group から停止する。"""
+    if process.poll() is not None:
+        return
+    # start_new_session=True で作った group を leader だけ terminate すると、
+    # cmoc が起動した実 Codex CLI が test 後も PTY を保持して残る可能性がある。
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(process.pid, sig)
+        except ProcessLookupError:
+            return
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            continue
+        try:
+            os.killpg(process.pid, 0)
+        except ProcessLookupError:
+            return
+
+
 def _run_cmoc_tui(
     cmoc: Path,
     root: Path,
@@ -465,13 +487,7 @@ def _run_cmoc_tui(
         _read_pty(master_fd, transcript)
         assert returncode == 0, transcript[-12000:].decode(errors="replace")
     finally:
-        if process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
+        _stop_tui_process_group(process)
         os.close(master_fd)
     return message, transcript.decode(errors="replace")
 
