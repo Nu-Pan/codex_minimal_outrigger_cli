@@ -121,6 +121,8 @@ def test_config_rejects_non_object_codex_model_specs(value: object) -> None:
         {"model_provider": "provider", "model": ""},
         {"model_provider": "provider", "model": "  "},
         {"model_provider": "provider", "model": None},
+        {"model_provider": "provider", "model": "\x00"},
+        {"model_provider": "provider", "model": "\ud800"},
     ],
 )
 def test_config_rejects_invalid_codex_model_specs(
@@ -276,6 +278,16 @@ def test_config_to_dict_rejects_invalid_in_memory_provider_setting() -> None:
     config.codex.model_providers["provider"] = CodexModelProviderConfig(
         {"setting": cast(JsonTomlValue, None)}
     )
+
+    with pytest.raises(TypeError):
+        config_to_dict(config)
+
+
+@pytest.mark.parametrize("model", ["\x00", "\ud800"])
+def test_config_to_dict_rejects_unusable_in_memory_model_name(model: str) -> None:
+    """型注釈を迂回した model 名も永続化境界で拒否する。"""
+    config = CmocConfig()
+    config.codex.model[ModelClass.MAINSTREAM] = CodexModelSpec(None, model)
 
     with pytest.raises(TypeError):
         config_to_dict(config)
