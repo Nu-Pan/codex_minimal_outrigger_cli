@@ -1056,10 +1056,10 @@
     "last_investigated_at": "2026-07-27_17-07_58_869347000"
   },
   "test/_ollama_support.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "51f828693f90a2f79d04aa298982b904ffe13bd3b626a4e2fd1d238c809fb04f",
-    "last_investigated_at": "2026-07-25_15-50_11_072081000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "05a91d9bcaa87673390175fa9a02ca7c11ceaf6d760ad5b472ed0846c7b92019",
+    "last_investigated_at": "2026-07-27_17-25_56_212602000"
   },
   "test/test_acp_builder_editing_run_parameters.py": {
     "investigation_required": true,
