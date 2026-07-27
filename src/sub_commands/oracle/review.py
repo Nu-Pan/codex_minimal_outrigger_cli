@@ -226,7 +226,16 @@ def _cmoc_oracle_review_body(
         )
         typer.echo(str(report_path.resolve()))
         return
-    except Exception as exc:
+    except BaseException as exc:
+        # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+        # create_run_worktree が部分作成後に失敗した場合も、隔離 run を残さない。
+        if worktree_created:
+            try:
+                cleanup_error = _cleanup_review_run(
+                    current_root, review_worktree, run_branch
+                )
+            finally:
+                worktree_created = False
         error_message = str(exc) or exc.__class__.__name__
         if cleanup_error is not None and cleanup_error is not exc:
             error_message = f"{error_message}\ncleanup: {cleanup_error.detail}"

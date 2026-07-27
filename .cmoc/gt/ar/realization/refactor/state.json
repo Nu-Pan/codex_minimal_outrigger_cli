@@ -902,8 +902,8 @@
   "src/sub_commands/oracle/review.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "44f989f8b969aa8c77755c6ffa2529d050f0a5e29ce51ce266af416795faeff8",
-    "last_investigated_at": "2026-07-25_08-40_02_993016000"
+    "last_investigated_sha256": "6c7d53f4296d9c9646b44facb9c2b99376ef4b429011a534be81ae1c000f4fd7",
+    "last_investigated_at": "2026-07-27_12-38_37_874807000"
   },
   "src/sub_commands/oracle/review_index.py": {
     "investigation_required": false,

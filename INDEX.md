@@ -127,35 +127,34 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装を収める src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP・basic 系の公開入口を扱い、各責務の具体的な実装へ進むための起点。
+- cmoc の realization 側 Python 実装を収める主要ソースディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、および各機能の実装へ進むための入口を提供する。
+- CLI の登録や引数解析は主要エントリーポイント、サブコマンド固有の処理は `sub_commands`、横断的な runtime 処理は `commons`、互換 import 経路は対応する shim・互換入口から確認する。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・サブコマンド・共通 runtime の担当箇所を確認するとき。
-- CLI エントリーポイントからサブコマンド実装、または公開 import 入口の下位要素へ進む先を判断するとき。
-- ACP、oracle、basic、commons、config、sub_commands などの実装配置を横断的に調査するとき。
+- cmoc CLI の実装構成、主要エントリーポイント、サブコマンドへの委譲先を確認するとき。
+- サブコマンド、共通 runtime、設定・ACP・oracle 関連の realization 実装の入口を選ぶとき。
+- 既存の公開 import path や互換 shim の配置を調査するとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime 機能、互換 import shim の詳細が明らかな場合は、対応する下位要素を直接読む。
-- 正本仕様や oracle 側の実装を確認するときは、src ではなく対応する oracle ツリーを読む。
-- CLI や src の realization 実装と無関係な機能を調査するとき。
+- 利用者向けの正本仕様や oracle 側の実装を確認したいときは、`oracle` ツリーを直接読む。
+- 特定のサブコマンドや runtime 機能の詳細が判明している場合は、`src` 全体ではなく対応する下位要素を直接読む。
+- CLI 実装と無関係なテスト、開発環境、ドキュメントだけを調査するとき。
 
 ## hash
-- b794db3d1ad648df3a2553d7ecf7e18f6bbc47e63b12dda6ec91288473351ca2
+- fc298a1e6d78706a45a2f0fb600957f188727046d0f2b75f791b45553d67874e
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session/run state、worktree、設定、prompt、共通テスト支援など、実装の外部挙動・制御ロジック・公開契約を検証する。各テストファイルが機能領域ごとの詳細な入口となる。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、worktree、設定、prompt、StructDoc などの外部契約・制御ロジックを検証する各テストと、共通テスト支援モジュールを含む。個別領域の実装変更時に対応するテストへ進むための入口。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや統合テストの対象ファイルを選ぶとき
-- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、worktree などの外部契約または制御ロジックを検証するとき
-- テスト用の Git、Ollama、Codex、外部コマンドなど共通支援を確認するとき
+- cmoc の実装変更に伴う回帰テスト、外部挙動、状態遷移、CLI、Codex 実行経路の検証対象を選ぶとき。
+- 特定機能のテスト範囲や、関連する共通 fixture・テスト helper の所在を確認するとき。
 
 ## Do not read this when
-- 正本仕様や実装詳細そのものを確認することが目的のときは、対応する oracle または src のファイルを直接読む
-- LLM の回答品質や Codex CLI 自体の出力品質を検証するとき
-- 対象機能と無関係なテスト領域を調査するときは、このディレクトリ内を総当たりせず、該当する機能別テストへ直接進む
+- 正本仕様や実装詳細そのものを確認したいときは、対応する oracle または src のファイルを直接読む。
+- テスト対象と無関係な機能を調査するときは、このディレクトリを総覧せず対象領域のテストへ直接進む。
 
 ## hash
-- 54fba4f2b647066aaaaf63851b0e886f3fb6c6f8544d064691f010ba79e7ef18
+- 74057d4706ac9e8f0743c853c171a0b9ad47a47d50853c2375f632a582aaf5fc

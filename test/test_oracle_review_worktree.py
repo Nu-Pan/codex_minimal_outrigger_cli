@@ -214,6 +214,51 @@ def test_oracle_review_interrupt_during_run_creation_cleans_resources(
     assert "result: interrupted" in report_path.read_text()
 
 
+def test_oracle_review_unexpected_base_exception_during_run_creation_cleans_resources(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run 作成後の非通常例外でも review resource を cleanup して error report を残す。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    original_create_run_worktree = review_module.create_run_worktree
+    created: dict[str, Path | str] = {}
+
+    def create_then_exit(
+        root_arg: Path,
+        branch: str,
+        worktree: Path,
+        start_point: str,
+    ) -> Path:
+        """linked worktree 作成後に KeyboardInterrupt 以外の BaseException を送出する。"""
+        created.update(branch=branch, worktree=worktree)
+        original_create_run_worktree(root_arg, branch, worktree, start_point)
+        raise SystemExit("unexpected create failure")
+
+    monkeypatch.setattr(review_module, "create_run_worktree", create_then_exit)
+
+    result = runner.invoke(
+        app,
+        ["oracle", "review", "--scope", "full"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code != 0
+    branch = str(created["branch"])
+    worktree = Path(str(created["worktree"]))
+    assert run_git(root, "branch", "--list", branch).stdout == ""
+    assert not worktree.exists()
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    rendered = report_path.read_text()
+    assert "result: error" in rendered
+    assert "unexpected create failure" in result.output
+
+
 @pytest.mark.parametrize(
     ("relative_path", "content"),
     [
