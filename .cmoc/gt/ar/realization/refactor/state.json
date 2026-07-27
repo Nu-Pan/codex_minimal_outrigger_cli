@@ -1182,10 +1182,10 @@
     "last_investigated_at": "2026-07-26_09-31_11_437936000"
   },
   "test/test_oracle_edit_cli.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "713a3077054c43157af509c46b729b57ce58fa2c67183673db67df9bf0fe47cf",
-    "last_investigated_at": "2026-07-26_09-44_05_334691000"
+    "last_investigated_sha256": "a61bdf40a7dbc1e1c1e25b26188714fa9e912825b0d9a8bb53dec26a692ee884",
+    "last_investigated_at": "2026-07-28_05-14_13_070402000"
   },
   "test/test_oracle_investigation_cli.py": {
     "investigation_required": false,
