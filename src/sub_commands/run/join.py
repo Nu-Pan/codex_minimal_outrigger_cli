@@ -39,6 +39,7 @@ from commons.runtime_run import (
     delete_run_process_id,
     run_lifecycle_lock,
     stop_error_run_process,
+    stop_tracked_codex_children,
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -91,6 +92,10 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
         )
         if state.run.state == "error":
             _stop_error_run(context, warnings)
+        elif state.run.state == "joinable":
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # 既存 state の復旧でも、merge 前に run worktree の descendant を止める。
+            stop_tracked_codex_children(context.repo, context.session_id)
         require_clean_worktree(context.session_worktree)
         require_clean_worktree(context.run_worktree)
         run_changes = tree_changes(

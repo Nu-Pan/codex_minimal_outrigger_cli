@@ -15,36 +15,37 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc run abandon` の active editing run を停止・破棄する CLI runtime 実装。process の停止、run worktree と branch の cleanup、state の ready 化、lifecycle report の出力、結果表示を扱う。
+- `cmoc run abandon` の active editing run を安全に停止・破棄する CLI runtime。run 状態に応じたプロセス停止、run worktree と branch の削除、state の ready 化、process tracking の削除、lifecycle report の出力、結果表示までを一貫して扱う。
 
 ## Read this when
-- `cmoc run abandon` の cleanup lifecycle、running/error state の process 停止、run worktree・branch の削除、abandon 後の state/report を調査・変更するとき。
+- `cmoc run abandon` の停止・cleanup lifecycle を変更または調査するとき
+- running、error、joinable 各状態での process 停止や残存 child cleanup を確認するとき
+- run worktree・branch・state・process tracking・lifecycle report の更新順序や失敗時挙動を確認するとき
 
 ## Do not read this when
-- 通常の run 開始・継続・完了処理を調査するとき。process tracking や lifecycle report の共通仕様だけを確認する場合は、それぞれの commons 実装を直接読む。
+- `run abandon` 以外の run サブコマンドの通常処理だけを調査するとき
+- lifecycle report の共通仕様や active run 解決の詳細を確認することが目的のときは、対応する共通 runtime module を直接読む
 
 ## hash
-- 88b98c33afe0508f2e45f041528d705b178dd7da2d1da16e5127f79bbb26707b
+- 7d64b59a60a2db6142ee9519f505a82d2df36506eb060b52e217971fdc6293c6
 
 # `join.py`
 
 ## Summary
-- `cmoc run join` の active editing run 終了処理を一貫して扱う実装。join 前の doctor 処理、session/run branch の差分検査、想定外差分の拒否または force-resolve、merge、INDEX.md conflict の限定解決、post-join hook と refactor state 同期、report 保存、失敗時 rollback と error state 化、worktree・branch cleanup を担う。run join の lifecycle 不変条件や失敗復旧を確認する際の入口。
+- `cmoc run join` の active editing run を session branch へ統合する一連の lifecycle を担当する。merge 前の差分検査、想定外差分の処理、merge conflict 対応、post-join hook、refactor state 同期、report 保存、run worktree・branch の cleanup、失敗時 rollback と error state 化を扱う。run join の成功・失敗・cleanup pending に関する実装を読む際の入口となる。
 
 ## Read this when
-- `cmoc run join` の実装や CLI 挙動を変更・調査するとき
-- run branch の merge、`--force-resolve`、INDEX.md conflict 処理を確認するとき
-- join 後の state 同期、report、cleanup、失敗時 rollback を追跡するとき
-- active run の joinable/error state と session/run worktree の差分検査を確認するとき
+- `cmoc run join` の挙動、merge、force-resolve、post-join state 同期、report、cleanup を変更・調査するとき
+- run join 失敗時の rollback、error state、INDEX.md 限定 conflict 処理を確認するとき
+- active run の想定外差分検査や run resource cleanup の制御を追うとき
 
 ## Do not read this when
-- run の開始・編集・abandon など join 以外の lifecycle を直接調べるとき
-- workload 固有の処理や merge 対象ファイルの生成ロジックを調べるとき
-- refactor state 同期や lifecycle report の共通実装そのものを変更・調査するときは、各共通モジュールを直接読む場合
-- doctor preprocess の仕様だけを確認するときは、対応する oracle document を直接読む場合
+- run の開始・編集・abandon など join 以外の lifecycle を直接調査するとき
+- 共通の git 操作、state 操作、report 生成の詳細だけを確認したいときは、対応する commons runtime module を先に読む
+- INDEX.md の生成処理そのものや refactor state 同期の一般仕様だけを調査するとき
 
 ## hash
-- 60554582870b8434f16548704c86c92dd43989df15c3d913df64d473fe0e29a4
+- 06c621e4f69c1412a7940e088eb2ea54dccb9b9b7ebcb9f57d940a48f68b4be1
 
 # `lifecycle.py`
 

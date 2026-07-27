@@ -24,6 +24,7 @@ import commons.runtime_run_lifecycle as lifecycle_module
 import commons.runtime_run_report as run_report_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
+import sub_commands.run.abandon as run_abandon_module
 import sub_commands.run.join as run_join_module
 import sub_commands.run.lifecycle as legacy_lifecycle_module
 from basic.acp import AgentCallParameter, FileAccessMode
@@ -383,6 +384,12 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
     monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
     monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    joined_process_stops: list[tuple[Path, str]] = []
+    monkeypatch.setattr(
+        run_join_module,
+        "stop_tracked_codex_children",
+        lambda repo, session_id: joined_process_stops.append((repo, session_id)),
+    )
 
     fork = runner.invoke(
         app,
@@ -404,6 +411,9 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert joined.exit_code == 0
+    assert joined_process_stops == [
+        (root, session_branch.removeprefix("cmoc/session/"))
+    ]
     state = _state(state_path)
     assert state["run"] == {
         "state": "ready",
@@ -481,11 +491,18 @@ def test_run_abandon_accepts_already_removed_run_worktree(
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     context = start_editing_run("realization_apply")
     set_run_state(context, "joinable")
+    process_stops: list[tuple[Path, str]] = []
+    monkeypatch.setattr(
+        run_abandon_module,
+        "stop_tracked_codex_children",
+        lambda repo, session_id: process_stops.append((repo, session_id)),
+    )
     run_git(root, "worktree", "remove", "--force", str(context.run_worktree))
 
     result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
+    assert process_stops == [(root, context.session_id)]
     assert _state(state_path)["run"] == {
         "state": "ready",
         "kind": None,
@@ -588,6 +605,43 @@ def test_apply_fork_tracks_indexing_codex_calls(
     assert tracking_states == [True]
 
 
+def test_apply_fork_stops_tracked_codex_children_before_joinable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """apply は joinable 公開前に残存 Codex child を停止する。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
+    tracked = SimpleNamespace(child_processes=(child,))
+    stopped: list[object] = []
+    monkeypatch.setattr(
+        runtime_run_module,
+        "read_run_process_id",
+        lambda *_args: tracked,
+    )
+    monkeypatch.setattr(
+        runtime_run_module,
+        "stop_child_process_group",
+        lambda process: stopped.append(process),
+    )
+    monkeypatch.setattr(
+        apply_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
+    )
+    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    assert stopped == [child]
+    assert _state(state_path)["run"]["state"] == "joinable"
+
+
 def test_refactor_fork_tracks_initialization_indexing_codex_calls(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -636,6 +690,53 @@ def test_refactor_fork_tracks_initialization_indexing_codex_calls(
     assert result.exit_code == 0
     assert _state(state_path)["run"]["state"] == "joinable"
     assert tracking_states and all(tracking_states)
+
+
+def test_refactor_fork_stops_tracked_codex_children_before_joinable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """refactor は joinable 公開前に残存 Codex child を停止する。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
+    tracked = SimpleNamespace(child_processes=(child,))
+    stopped: list[object] = []
+    monkeypatch.setattr(
+        runtime_run_module,
+        "read_run_process_id",
+        lambda *_args: tracked,
+    )
+    monkeypatch.setattr(
+        runtime_run_module,
+        "stop_child_process_group",
+        lambda process: stopped.append(process),
+    )
+    monkeypatch.setattr(refactor_module, "_initialize_cycle", lambda _context: None)
+    monkeypatch.setattr(
+        refactor_module,
+        "select_refactor_target",
+        lambda *_args: None,
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "_completion_reason",
+        lambda *_args: "natural_completion",
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "_completion_change_summary",
+        lambda *_args: None,
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    assert stopped == [child]
+    assert _state(state_path)["run"]["state"] == "joinable"
 
 
 @pytest.mark.parametrize(

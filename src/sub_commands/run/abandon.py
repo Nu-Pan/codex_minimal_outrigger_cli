@@ -25,6 +25,7 @@ from commons.runtime_run import (
     run_process_id_path,
     stop_error_run_process,
     stop_run_process,
+    stop_tracked_codex_children,
     worktree_for_branch_optional,
 )
 from commons.runtime_run_lifecycle import EditingRunContext, resolve_active_run
@@ -65,6 +66,8 @@ def _cmoc_run_abandon_body() -> None:
             stopped = _stop_running_run(context, warnings)
         elif state.run.state == "error":
             stopped = _stop_error_run(context, warnings)
+        else:
+            stopped = _stop_joinable_run(context)
         start_subcommand_step(3, "run worktree と branch を破棄", "cleanup run")
         if Path.cwd().resolve() == context.run_worktree.resolve():
             os.chdir(context.session_worktree)
@@ -145,6 +148,18 @@ def _stop_error_run(
     if warning:
         warnings.append(warning)
     return "stopped" if tracked else "already_stopped"
+
+
+def _stop_joinable_run(context: EditingRunContext) -> str:
+    """joinable run に残った Codex child を cleanup 前に停止する。"""
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # joinable の通常経路では tracking file が消えるが、既存 state や中断後に
+    # 残った descendant があれば run worktree の破棄前に停止する。
+    tracked = read_run_process_id(context.repo, context.session_id)
+    stop_tracked_codex_children(context.repo, context.session_id)
+    return (
+        "stopped" if tracked is not None and tracked.child_processes else "not_running"
+    )
 
 
 def _remove_run_worktree(

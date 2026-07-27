@@ -60,18 +60,25 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドの構成をまとめるパッケージ入口。apply workload と refactor workload の実装・実行フローへの入口となる。
+- realization workload サブコマンドのパッケージ入口。
+- realization apply の入口と、fork サブコマンドの実行フローを構成するモジュール群。run lifecycle、Codex agent 実行、差分検査、commit、rollback、fork report 生成を扱う。
+- realization のリファクタリング処理と fork 実行フローを管理するパッケージ。対象選択、file 単位の調査・修正、state 更新、commit、完了判定、エラー処理、差分検証、unresolved finding 管理、report 生成を扱う。
 
 ## Read this when
-- realization workload サブコマンドの実装構成や、apply／refactor のどちらを調査すべきか確認するとき。
-- realization apply fork または realization refactor fork の処理を調査・変更するとき。
+- realization workload サブコマンドの実装や構成を確認するとき。
+- realization apply workload、または cmoc realization apply fork の挙動、ライフサイクル、agent 実行、差分検査、commit、rollback、report 生成を調査・変更するとき。
+- realization のリファクタリング処理や cmoc realization refactor fork の実行フロー、進捗管理、割り込み・エラー処理、差分検証、unresolved finding 管理を調査・変更するとき。
 
 ## Do not read this when
-- realization workload に関係しないサブコマンドや処理を扱うとき。
-- apply または refactor の特定処理を直接調査・変更する場合は、該当する下位パッケージを読むとき。
+- realization workload、apply、refactor に関係しない処理を確認するとき。
+- realization apply の join や abandon だけを扱うとき。
+- 共通 run lifecycle や fork 起動パラメータの構築を直接確認するとき。
+- refactor state の保存・同期や target 選択そのものを確認するとき。
+- 単一 realization file の調査・修正用 agent parameter を確認するとき。
+- fork report の共通出力形式だけを確認するとき。
 
 ## hash
-- baa0d31c91708b256b26819f3b22855d7c01f3bcb6b5ed17079da1c2fd01ad8f
+- 02066db9f3ebf6a71a52fb5d93436fa2f2ad26816121b92ec16acb0e61150ad8
 
 # `review`
 
@@ -90,20 +97,18 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドと互換 shim をまとめるパッケージ。abandon・join の実行処理、旧 import path 互換、run report writer 参照の入口として機能する。
+- editing run の共通 lifecycle サブコマンドと互換 shim をまとめるパッケージ。abandon・join の実行フロー、共通 lifecycle/report 実装への入口、旧 import path の互換層を扱う。
 
 ## Read this when
-- editing run の lifecycle を調査・変更するとき。
-- run の abandon、join、merge、cleanup、rollback、state/report 同期を確認するとき。
-- 旧 import path との互換性や report writer の参照先を確認するとき。
+- editing run の abandon、join、共通 lifecycle、report writer、cleanup、state 同期を調査・変更するとき。
+- run サブコマンドから参照される lifecycle・report 関連モジュールの配置と入口を確認するとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- run の具体的な処理や共通 report・lifecycle 実装を確認するときは、配下の該当ファイルまたは canonical な commons 実装を直接読む。
-- workload 固有の処理、merge 対象ファイルの生成、doctor preprocess の仕様だけを確認するとき。
+- 特定サブコマンドや共通 runtime の具体的な実装詳細を確認する場合は、配下または commons 側の該当ファイルを直接読むとき。
 
 ## hash
-- ce1864eadfb5671b516e13aa94599bc99813697a5f67816f3d9ea5e33b4e0e1f
+- b9a071b2953bdcfa3c487bfe1c088b7865cd62d659fb05350fb3aad2767088b2
 
 # `session`
 

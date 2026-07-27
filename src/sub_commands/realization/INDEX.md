@@ -15,36 +15,34 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装を確認する入口となる。
-- `cmoc realization apply fork` の実行処理を担当し、agent 起動から差分検査、INDEX 更新、commit、run lifecycle、fork report 保存までを管理する。異常時の cleanup、rollback、error 化にも対応する。
+- realization の apply 処理を構成するモジュール群。apply workload の入口と、`cmoc realization apply fork` サブコマンドの実行処理を扱う。
 
 ## Read this when
-- realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の挙動、run lifecycle、agent 起動、差分検査、commit、異常時処理、fork report を調査・変更するとき。
+- realization apply workload の内容を調査・変更するとき。
+- `cmoc realization apply fork` の挙動、run lifecycle、Codex agent 実行、差分検査、commit、rollback、fork report 生成を扱うとき。
 
 ## Do not read this when
 - apply workload 以外の処理を扱うとき。
-- apply fork の prompt 構築だけを変更・調査するとき。
-- run の join、abandon、共通 lifecycle 処理、report 形式そのものを変更・調査するとき。
+- realization apply の join や abandon の処理だけを扱うとき。
+- 共通 run lifecycle の詳細や fork 起動パラメータの構築を直接確認するとき。
 
 ## hash
-- 6fe0dfe0b7c6204fe253087f04ebeae4cea6e52605da9bcc768b9455177adf32
+- 03606c2b385311047e1739eb9635cca715ba3102d05729e470faa5de2578c15f
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージで、関連するリファクタリング機能への入口を提供する。
-- realization refactor fork の CLI ライフサイクル全体を管理し、state・INDEX の初期化、対象ファイルごとの調査・修正、差分検証、commit、完了判定、変更概要、fork report 保存を扱う。未解決 finding、処理済み target、investigation_required、および自然完了・未解決付き完了・中断・error の結果を追跡する。
+- realization のリファクタリング処理を扱うパッケージで、関連する fork 実行フローへの入口となる。
+- 対象選択から Codex による file 単位の調査・修正、state 更新、commit、完了判定、エラー処理、report 生成までの realization refactor fork の実行を管理する。
 
 ## Read this when
-- realization のリファクタリング処理の構成や入口を確認するときは、このパッケージを読む。
-- realization refactor fork の CLI 実行フロー、対象ファイル単位の調査・修正、Structured Output 検証、差分拒否、commit、state 更新、完了判定を変更または調査するとき。
-- 中断・例外時の rollback、run state 更新、fork report 生成、未解決 finding の追跡を確認するとき。
+- realization のリファクタリング処理の構成や入口を確認するとき
+- cmoc realization refactor fork の実行フロー、進捗管理、割り込み・エラー処理、差分検証、unresolved finding 管理を調査・変更するとき
 
 ## Do not read this when
-- refactor agent の parameter を変更するときは、file review 用または change summary 用の builder を直接読む。
-- refactor state のデータ構造や target 選択ロジックだけを変更するときは、commons.runtime_refactor を直接読む。
-- run lifecycle、process tracking、report の共通形式だけを確認するときは、対応する commons runtime module を直接読む。
+- refactor state の保存・同期や target 選択そのものを確認するときは commons.runtime_refactor を読む
+- 単一 realization file の調査・修正用 agent parameter を確認するときは file_review_and_fix を読む
+- fork report の共通出力形式だけを確認するときは commons.runtime_run_report を読む
 
 ## hash
-- 940fada598989cb5c09d93422390abb8028c493ae6c2c75d210dc3e422aa061a
+- 59911e629bd635bba903127350bda7894e576dbc4952e9e50ddc41f930d05c7b

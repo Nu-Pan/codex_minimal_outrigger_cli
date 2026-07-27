@@ -15,18 +15,18 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の full-cycle CLI workload を実装する。refactor state と INDEX の初期化、realization file 単位の agent 調査・修正、差分検証、処理単位の commit、完了判定、変更概要生成、fork report 保存までを一つの lifecycle として管理する。
-- current fork 内の unresolved finding、処理済み target、state の investigation_required を追跡し、自然完了・unresolved 付き完了・中断・error の各結果を joinable run と report に反映する。
+- realization refactor fork の一連の実行を担う CLI ランタイム。対象選択、file 単位の Codex 調査・修正、所見と refactor state の更新、処理単位の commit、完了判定、joinable/error 状態および fork report の生成までを同じ進捗状態で管理する。
+- realization refactor fork の実行フロー、割り込み・エラー時の cleanup、想定外差分の拒否、unresolved finding の追跡、変更概要の生成を確認するための入口である。
 
 ## Read this when
-- realization refactor fork の CLI 実行フロー、処理単位の調査・修正、commit、state 更新、完了判定を変更または調査するとき
-- refactor agent の Structured Output 検証、想定外差分の拒否、unresolved finding の追跡を確認するとき
-- 中断・例外時の rollback、run state 更新、fork report 生成の挙動を確認するとき
+- `cmoc realization refactor fork` の実行フローや lifecycle を変更・調査するとき
+- refactor target の選択から処理単位の commit、完了条件、unresolved 管理までを確認するとき
+- fork の割り込み、error state、report、差分検証の挙動を確認するとき
 
 ## Do not read this when
-- realization refactor の agent parameter 自体を変更するときは、file review 用または change summary 用の builder を直接読む
-- refactor state のデータ構造や target 選択ロジックだけを変更するときは、commons.runtime_refactor を直接読む
-- run lifecycle の共通操作、process tracking、report の共通形式だけを確認するときは、対応する commons runtime module を直接読む
+- refactor state の保存・同期・target 選択そのものを変更するときは、`commons.runtime_refactor` の実装を先に読む
+- 単一 realization file の調査・修正用 agent parameter を変更するときは、`file_review_and_fix` の実装を読む
+- fork report の共通出力形式だけを確認するときは、`commons.runtime_run_report` の実装を読む
 
 ## hash
-- 41a67e693843b34286618e1f930951eefd641b0ccfb19e98ddc50f8e093b8dca
+- 103af2d1b998fe896835630d84e6596c7a4113e5fe63a01e136ea17b8322f559

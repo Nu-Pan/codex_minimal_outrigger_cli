@@ -133,6 +133,9 @@ def _cmoc_realization_apply_fork_body() -> None:
             unexpected = unexpected_run_paths(context, changes)
             if unexpected:
                 raise _unexpected_change_error(unexpected)
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # joinable は run worktree を使う Codex descendant の停止後に公開する。
+            stop_tracked_codex_children(context.repo, context.session_id)
         start_subcommand_step(6, "run を joinable に更新", "publish joinable")
         set_run_state(context, "joinable")
         start_subcommand_step(7, "fork report を保存", "write fork report")
