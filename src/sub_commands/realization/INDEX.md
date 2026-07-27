@@ -15,19 +15,21 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理を構成するモジュール群。apply workload の入口と、`cmoc realization apply fork` サブコマンドの実行処理を扱う。
+- realization の apply 処理に関する workload と、`cmoc realization apply fork` の実行制御を扱う。apply workload の調査入口であり、fork では editing run の開始から agent 実行、差分検査、commit・rollback、run 状態更新、report 保存、joinable 公開までを統括する。
 
 ## Read this when
-- realization apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の挙動、run lifecycle、Codex agent 実行、差分検査、commit、rollback、fork report 生成を扱うとき。
+- realization の apply workload の内容を調査・変更するとき
+- `cmoc realization apply fork` の開始から joinable または error までの制御フローを確認するとき
+- apply agent の実行条件、oracle 差分、想定外差分、commit、rollback、run report、例外処理を調査・変更するとき
 
 ## Do not read this when
-- apply workload 以外の処理を扱うとき。
-- realization apply の join や abandon の処理だけを扱うとき。
-- 共通 run lifecycle の詳細や fork 起動パラメータの構築を直接確認するとき。
+- apply workload 以外の処理を扱うとき
+- 共通の editing run ライフサイクル、process tracking、report 生成の一般仕様や実装だけを調査するとき
+- `cmoc realization apply` の通常実行や別の apply サブコマンドだけを調査するとき
+- apply agent の prompt 構築内容だけを確認するとき
 
 ## hash
-- 03606c2b385311047e1739eb9635cca715ba3102d05729e470faa5de2578c15f
+- 66f6170c37b0f2633264194384049584f7809db7f2ef2c8455dba3f5466cd08e
 
 # `refactor`
 

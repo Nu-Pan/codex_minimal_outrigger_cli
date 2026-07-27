@@ -60,25 +60,16 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。
-- realization apply の入口と、fork サブコマンドの実行フローを構成するモジュール群。run lifecycle、Codex agent 実行、差分検査、commit、rollback、fork report 生成を扱う。
-- realization のリファクタリング処理と fork 実行フローを管理するパッケージ。対象選択、file 単位の調査・修正、state 更新、commit、完了判定、エラー処理、差分検証、unresolved finding 管理、report 生成を扱う。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の workload、および各 fork 実行フローへの入口を扱う。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- realization apply workload、または cmoc realization apply fork の挙動、ライフサイクル、agent 実行、差分検査、commit、rollback、report 生成を調査・変更するとき。
-- realization のリファクタリング処理や cmoc realization refactor fork の実行フロー、進捗管理、割り込み・エラー処理、差分検証、unresolved finding 管理を調査・変更するとき。
+- realization workload サブコマンドの実装・構成や、apply/refactor の処理入口を確認するとき。
 
 ## Do not read this when
-- realization workload、apply、refactor に関係しない処理を確認するとき。
-- realization apply の join や abandon だけを扱うとき。
-- 共通 run lifecycle や fork 起動パラメータの構築を直接確認するとき。
-- refactor state の保存・同期や target 選択そのものを確認するとき。
-- 単一 realization file の調査・修正用 agent parameter を確認するとき。
-- fork report の共通出力形式だけを確認するとき。
+- realization workload に関係しない処理を確認するとき。
 
 ## hash
-- 02066db9f3ebf6a71a52fb5d93436fa2f2ad26816121b92ec16acb0e61150ad8
+- 2eb0870e43123179119a1bf7a7dce2dc99c2307ab1e274cb30bd10ffdd2aa14e
 
 # `review`
 

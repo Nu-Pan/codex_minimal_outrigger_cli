@@ -141,7 +141,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "c38be9c0824711d2152006094ff8f7291415ce015e3349c076ebb4442dabb90c",
-    "last_investigated_at": "2026-07-26_20-05_11_009253000"
+    "last_investigated_at": "2026-07-28_01-44_41_591853000"
   },
   "oracle/doc/app_spec/sub_command/realization_refactor.md": {
     "investigation_required": true,

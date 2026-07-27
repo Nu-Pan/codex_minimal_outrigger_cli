@@ -229,13 +229,21 @@ def _record_error(
         set_run_state(context, "error")
     except BaseException as state_error:
         cleanup_errors.append(f"state update failed: {state_error!r}")
-    changes = tree_changes(context.run_worktree, context.run_fork_commit)
+    # Error reporting must survive a failure in its final git inspection.
+    # 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
+    try:
+        changed_paths = flattened_change_paths(
+            tree_changes(context.run_worktree, context.run_fork_commit)
+        )
+    except BaseException as change_error:
+        cleanup_errors.append(f"change inspection failed: {change_error!r}")
+        changed_paths = []
     return write_fork_report(
         context,
         "realization/apply/fork",
         state_after="error",
         completion_reason="error",
-        changed_paths=flattened_change_paths(changes),
+        changed_paths=changed_paths,
         codex_returncode=codex_returncode,
         extra_fields={"diff_base_commit": diff_base_commit},
         body_lines=[

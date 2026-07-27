@@ -846,6 +846,43 @@ def test_apply_failure_rolls_back_index_with_realization_changes(
     assert (index_path.read_text() if index_path.exists() else None) == before_index
 
 
+def test_apply_error_report_survives_change_inspection_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """差分確認に失敗しても apply error report と state を保存する。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+
+    monkeypatch.setattr(
+        apply_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("agent failed")),
+    )
+    monkeypatch.setattr(
+        apply_module,
+        "tree_changes",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            RuntimeError("git diff unavailable")
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    reports = list(
+        (
+            root / ".cmoc" / "gu" / "ar" / "report" / "realization" / "apply" / "fork"
+        ).glob("*.md")
+    )
+    assert len(reports) == 1
+    assert "change inspection failed" in reports[0].read_text()
+
+
 def test_apply_failure_stops_tracked_codex_children_before_rollback(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
