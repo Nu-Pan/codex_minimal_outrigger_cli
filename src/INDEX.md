@@ -51,21 +51,18 @@
 # `commons`
 
 ## Summary
-- cmoc の共通ランタイム機能をまとめた commons パッケージ。設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果型、INDEX 管理など、複数の CLI 機能から利用される基盤処理を扱う。
-- 個別の責務ごとに実装が分かれており、共通 API の再公開入口と、各ランタイム機能の具体的な実装を確認するための起点となる。
+- cmoc の共通 runtime 機能を集約する commons ディレクトリ。設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果型、INDEX 管理など、CLI 複数箇所から利用される実行時補助機能への入口。
 
 ## Read this when
-- 複数の CLI 機能にまたがるランタイム共通処理を調査・変更するとき
-- 設定、Git、Codex subprocess、INDEX lifecycle、ログ、パス、状態、run lifecycle などの担当実装を特定するとき
-- commons パッケージの公開 API や、共通 helper の責務分担を確認するとき
+- 複数の CLI 実装で共有される runtime helper の責務や公開 API を確認・変更するとき
+- 設定、Git、Codex 実行、INDEX lifecycle、プロンプト入力、ログ、パス、状態管理などの共通処理を調査するとき
 
 ## Do not read this when
-- 特定サブコマンド固有の業務ロジックや CLI 引数だけを調査するとき
-- 利用者向け仕様や正本となる oracle 文書だけを確認したいとき
-- commons 内の特定機能が明らかな場合は、このディレクトリ全体ではなく対応する個別実装へ直接進むとき
+- 特定の CLI サブコマンド固有の業務ロジックだけを調査・変更するとき
+- 共通機能の正本仕様や利用者向け挙動を確認したい場合に、対応する oracle 文書や個別実装へ直接進めるとき
 
 ## hash
-- 46f2763ed535cff70604a99d3ca8c822158e1e0c5022c3836d75404aaab42cd4
+- fc4ec0012c4eaa785d39b596b110e305bb9452f0d4c5b38a399415e9385d1104
 
 # `config`
 
@@ -117,17 +114,15 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装を配置するディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの CLI 入口と関連パッケージへのルーティングを提供する。apply・review は現時点で実装本文がない。
+- cmoc の各サブコマンド実装を配置するディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの CLI 入口と関連パッケージへのルーティング起点であり、apply・review は現在実装本文がない。
 
 ## Read this when
-- サブコマンドの実装構成や、対象サブコマンドの CLI 実行フローを確認・変更するとき。
-- oracle、realization workload、editing run、session など、配下に複数の実装要素を持つサブコマンドの入口や責務分担を確認するとき。
-- 対象サブコマンドの詳細実装へ進む前に、該当する実装ファイルまたは下位パッケージを特定するとき。
+- サブコマンドの実装構成や、対象サブコマンドの CLI 実行入口を確認・変更するとき。
+- oracle、realization、run、session など、配下のサブコマンドパッケージをどこから調査するか判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理を直接調査・変更する場合は、該当する実装ファイルまたは下位パッケージを読むとき。
-- 共通 runtime、git・state・process・report helper、TUI builder、prompt editor、oracle review 仕様など、サブコマンド固有の入口以外を調査するとき。
-- apply または review の実装本文を確認したい場合は、現時点では参照できる実装がない。
+- サブコマンド以外の共通実装や、個別サブコマンドの詳細処理を直接調査する場合。
+- 対象サブコマンドが明確な場合は、このディレクトリ全体ではなく該当する実装ファイルまたは下位パッケージを直接読む。
 
 ## hash
-- 2cdcc391ecac0ecb2bdb976f6efd1a0cbb136eec0ae85ff5ff1ad1ad5906a5ae
+- 9c46c69238019ecb18895440e6960811a55067491d7d526c1236d627fa27b6d4

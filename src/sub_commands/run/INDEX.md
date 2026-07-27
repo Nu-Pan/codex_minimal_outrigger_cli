@@ -15,37 +15,36 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc run abandon` の実装。active editing run を特定し、running process の停止、run worktree と branch の削除、state の ready 化、lifecycle report の出力、結果表示までの cleanup lifecycle を担う。run abandon の挙動や cleanup 失敗時の扱いを確認する入口。
+- `cmoc run abandon` の active editing run を停止・破棄する CLI runtime 実装。process の停止、run worktree と branch の cleanup、state の ready 化、lifecycle report の出力、結果表示を扱う。
 
 ## Read this when
-- `cmoc run abandon` の実装・エラー処理・cleanup lifecycle を調査または変更するとき
-- active run の process、worktree、branch、state、report が abandon でどう扱われるか確認するとき
+- `cmoc run abandon` の cleanup lifecycle、running/error state の process 停止、run worktree・branch の削除、abandon 後の state/report を調査・変更するとき。
 
 ## Do not read this when
-- run の開始・継続・完了処理を調査するとき
-- 共通の process ID、run lifecycle lock、active run 解決処理そのものを調査するときは、対応する `commons` 実装を直接読む
+- 通常の run 開始・継続・完了処理を調査するとき。process tracking や lifecycle report の共通仕様だけを確認する場合は、それぞれの commons 実装を直接読む。
 
 ## hash
-- c0182183cf26c59d5604f4d4b8fba97d01ca381447eba3f52b8bbfc594a01cec
+- 88b98c33afe0508f2e45f041528d705b178dd7da2d1da16e5127f79bbb26707b
 
 # `join.py`
 
 ## Summary
-- `cmoc run join` の active run 統合ライフサイクルを担当する。run branch と session branch の差分検査、merge、INDEX.md conflict の解決、post-join state 同期、report 保存、worktree・branch cleanup、および失敗時 rollback/error 化を扱う。run join の処理全体を確認する入口であり、個別の git・state・report helper の実装そのものを調べる対象ではない。
+- `cmoc run join` の active editing run 終了処理を一貫して扱う実装。join 前の doctor 処理、session/run branch の差分検査、想定外差分の拒否または force-resolve、merge、INDEX.md conflict の限定解決、post-join hook と refactor state 同期、report 保存、失敗時 rollback と error state 化、worktree・branch cleanup を担う。run join の lifecycle 不変条件や失敗復旧を確認する際の入口。
 
 ## Read this when
-- `cmoc run join` の成功・失敗時の制御フローを調査または変更するとき
-- run branch の想定外差分、merge conflict、`--force-resolve` の挙動を確認するとき
-- post-join hook、state 同期、lifecycle report、run 資源 cleanup の連携を確認するとき
-- merge または post-join 処理の失敗後に session を復元して error state にする挙動を確認するとき
+- `cmoc run join` の実装や CLI 挙動を変更・調査するとき
+- run branch の merge、`--force-resolve`、INDEX.md conflict 処理を確認するとき
+- join 後の state 同期、report、cleanup、失敗時 rollback を追跡するとき
+- active run の joinable/error state と session/run worktree の差分検査を確認するとき
 
 ## Do not read this when
-- run join 以外のサブコマンドのライフサイクルだけを調べるとき
-- git 操作、state 操作、process tracking、report 出力の共通実装だけを調べるときは、それぞれの helper module を直接読む
-- join の利用者向け仕様や state の正本定義を確認するときは、対応する oracle doc を先に読む
+- run の開始・編集・abandon など join 以外の lifecycle を直接調べるとき
+- workload 固有の処理や merge 対象ファイルの生成ロジックを調べるとき
+- refactor state 同期や lifecycle report の共通実装そのものを変更・調査するときは、各共通モジュールを直接読む場合
+- doctor preprocess の仕様だけを確認するときは、対応する oracle document を直接読む場合
 
 ## hash
-- 7df92d2ceb682e728f9430beec54b772292d83a7d9d6df570b62cd52f276b8a8
+- 60554582870b8434f16548704c86c92dd43989df15c3d913df64d473fe0e29a4
 
 # `lifecycle.py`
 

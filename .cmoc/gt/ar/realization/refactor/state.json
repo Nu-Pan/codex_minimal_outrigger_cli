@@ -974,8 +974,8 @@
   "src/sub_commands/run/abandon.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "5270f073a167a652b085c5c13b05e520fdc704e36d2f603e3fc03110e6a0674d",
-    "last_investigated_at": "2026-07-25_12-08_00_549890000"
+    "last_investigated_sha256": "c0182183cf26c59d5604f4d4b8fba97d01ca381447eba3f52b8bbfc594a01cec",
+    "last_investigated_at": "2026-07-27_15-02_55_332833000"
   },
   "src/sub_commands/run/join.py": {
     "investigation_required": true,

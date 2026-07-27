@@ -23,6 +23,7 @@ from commons.runtime_run import (
     read_run_process_id,
     run_lifecycle_lock,
     run_process_id_path,
+    stop_error_run_process,
     stop_run_process,
     worktree_for_branch_optional,
 )
@@ -62,6 +63,8 @@ def _cmoc_run_abandon_body() -> None:
         stopped = "not_running"
         if state.run.state == "running":
             stopped = _stop_running_run(context, warnings)
+        elif state.run.state == "error":
+            stopped = _stop_error_run(context, warnings)
         start_subcommand_step(3, "run worktree と branch を破棄", "cleanup run")
         if Path.cwd().resolve() == context.run_worktree.resolve():
             os.chdir(context.session_worktree)
@@ -128,6 +131,20 @@ def _stop_running_run(
     if warning:
         warnings.append(warning)
     return "stopped"
+
+
+def _stop_error_run(
+    context: EditingRunContext,
+    warnings: list[str],
+) -> str:
+    """error state の残存 process を停止し、tracking を削除する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    tracked, warning = stop_error_run_process(context.repo, context.session_id)
+    if warning:
+        warnings.append(warning)
+    return "stopped" if tracked else "already_stopped"
 
 
 def _remove_run_worktree(

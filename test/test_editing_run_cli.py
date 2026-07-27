@@ -509,6 +509,40 @@ def test_run_abandon_requires_process_stop_confirmation(
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
 
+def test_run_abandon_stops_tracked_process_for_error_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """error run cleanup が残存 process を停止してから資源を破棄する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "error")
+    tracked = SimpleNamespace(process_id=123, start_time=456, child_processes=())
+    events: list[str] = []
+
+    monkeypatch.setattr(
+        runtime_run_module,
+        "read_run_process_id",
+        lambda *_args: tracked,
+    )
+    monkeypatch.setattr(
+        runtime_run_module,
+        "stop_run_process",
+        lambda *_args, **_kwargs: events.append("stop") or None,
+    )
+
+    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert events == ["stop"]
+    assert _state(state_path)["run"]["state"] == "ready"
+    assert not context.run_worktree.exists()
+    assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
+
+
 def test_apply_fork_tracks_indexing_codex_calls(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

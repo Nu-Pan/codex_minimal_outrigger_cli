@@ -192,6 +192,23 @@ def stop_run_process(
     return "; ".join(warnings) if warnings else None
 
 
+def stop_error_run_process(root: Path, session_id: str) -> tuple[bool, str | None]:
+    """error state の残存 process を停止し、tracking を整理する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    process = read_run_process_id(root, session_id)
+    if process is None:
+        delete_run_process_id(root, session_id)
+        return False, "run process tracking was absent or stale"
+    warning = stop_run_process(
+        process,
+        lambda: read_run_process_id(root, session_id),
+    )
+    delete_run_process_id(root, session_id)
+    return True, warning
+
+
 def _stop_parent_run_process(process: RunProcessIdentity) -> str | None:
     """保存済み start time を確認して親 run process を停止する。"""
     process_fd = open_process_fd(process.process_id)

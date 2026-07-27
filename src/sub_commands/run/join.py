@@ -37,9 +37,8 @@ from cmoc_runtime import (
 from commons.runtime_refactor import sync_refactor_state
 from commons.runtime_run import (
     delete_run_process_id,
-    read_run_process_id,
     run_lifecycle_lock,
-    stop_run_process,
+    stop_error_run_process,
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -355,18 +354,9 @@ def _restore_session_after_join_failure(
 
 def _stop_error_run(context: EditingRunContext, warnings: list[str]) -> None:
     """error state の run process tracking を停止して削除する。"""
-    process = read_run_process_id(context.repo, context.session_id)
-    if process is None:
-        warnings.append("run process tracking was absent or stale")
-        delete_run_process_id(context.repo, context.session_id)
-        return
-    warning = stop_run_process(
-        process,
-        lambda: read_run_process_id(context.repo, context.session_id),
-    )
+    _tracked, warning = stop_error_run_process(context.repo, context.session_id)
     if warning:
         warnings.append(warning)
-    delete_run_process_id(context.repo, context.session_id)
 
 
 def _revert_unexpected_run_paths(
