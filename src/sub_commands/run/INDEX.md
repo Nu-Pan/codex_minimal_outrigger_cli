@@ -30,20 +30,20 @@
 # `join.py`
 
 ## Summary
-- `cmoc run join` の workload 非依存な merge lifecycle を担当する。active run の差分検査、session branch への merge、INDEX.md conflict の処理、post-join state 同期、report 保存、失敗時 rollback、run worktree・branch cleanup までを一続きで扱う。
+- `cmoc run join` の active editing run を session branch に統合する一連の lifecycle を担当する。merge 前の差分検査、想定外差分の強制解決、INDEX.md conflict 処理、post-join hook、refactor state 同期、report 保存、失敗時 rollback、worktree・branch cleanup までを扱う。run join の成功・失敗・cleanup pending に関する状態遷移を確認する実装の入口。
 
 ## Read this when
-- `cmoc run join` の実装や挙動を変更・調査するとき
-- run branch と session branch の差分検査、merge conflict、force-resolve の処理を確認するとき
-- post-join の state 同期、report、失敗時の error state・rollback、cleanup pending を確認するとき
+- `cmoc run join` の merge、force-resolve、post-join 処理、失敗時の error state または rollback を変更・調査するとき
+- run branch と session branch の差分検査、INDEX.md conflict の扱い、join report の内容を確認するとき
+- join 後の refactor state 同期、process tracking、worktree・branch cleanup の挙動を確認するとき
 
 ## Do not read this when
-- `run join` 以外の run lifecycle や workload 固有処理だけを変更・調査するとき
-- run の開始・実行・abandon・status 表示の処理を直接確認したいとき
-- 共通 runtime helper の詳細実装を確認する場合は、まず該当する共通モジュールを読むとき
+- join lifecycle の共通な run 解決・差分計算・commit 処理そのものを変更する場合は、先に対応する `commons.runtime_run_lifecycle` の実装を読む
+- run join 以外の run 操作や workload 固有の編集処理だけを調査する場合
+- doctor preprocess、session state、run report の正本仕様や共通実装を確認することが目的の場合は、それぞれの oracle または共通モジュールを直接読む
 
 ## hash
-- 79d4e6065b62a4a0a604d5350b8d82edcd1022f7cbae557409e4dd9672924430
+- 5e4a74b99923bda2c0188ccb47ddfa9c85bddedfa6e785e7e5440732cbda19d8
 
 # `lifecycle.py`
 

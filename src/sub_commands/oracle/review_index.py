@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from cmoc_runtime import CmocError, head_commit, run_git
-from commons.runtime_git import status_path_statuses
+from commons.runtime_git import literal_pathspec, status_path_statuses
 
 
 def commit_review_index_changes(review_worktree: Path) -> bool:
@@ -19,7 +19,15 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
     ]
     if not changed_index_paths:
         return False
-    run_git(["add", "-A", "--", *changed_index_paths], review_worktree)
+    run_git(
+        [
+            "add",
+            "-A",
+            "--",
+            *[literal_pathspec(path) for path in changed_index_paths],
+        ],
+        review_worktree,
+    )
     staged = run_git(
         ["diff", "--cached", "--name-only"], review_worktree
     ).stdout.splitlines()
@@ -81,15 +89,17 @@ def resolve_review_index_conflicts(root: Path) -> bool:
         return False
     for path in conflicted:
         if _has_ours_stage(root, path):
-            run_git(["checkout", "--ours", "--", path], root)
-            run_git(["add", "--", path], root)
+            run_git(["checkout", "--ours", "--", literal_pathspec(path)], root)
+            run_git(["add", "--", literal_pathspec(path)], root)
         else:
-            run_git(["rm", "-f", "--", path], root)
+            run_git(["rm", "-f", "--", literal_pathspec(path)], root)
     run_git(["commit", "--no-edit"], root)
     return True
 
 
 def _has_ours_stage(root: Path, path: str) -> bool:
     """unmerged pathにours stageが存在するかを返す。"""
-    unmerged = run_git(["ls-files", "-u", "--", path], root).stdout.splitlines()
+    unmerged = run_git(
+        ["ls-files", "-u", "--", literal_pathspec(path)], root
+    ).stdout.splitlines()
     return any(line.split(maxsplit=3)[2] == "2" for line in unmerged)

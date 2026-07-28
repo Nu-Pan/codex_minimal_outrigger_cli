@@ -27,6 +27,7 @@ from commons.runtime_git import (
     delete_branch,
     head_commit,
     is_realization_file_path,
+    literal_pathspec,
     remove_worktree,
     require_clean_worktree,
     run_git,
@@ -522,7 +523,7 @@ def raw_oracle_diff(worktree: Path, base: str, end: str) -> str:
     # Git interprets wildcard characters in pathspecs even after `--`; literal
     # pathspecs prevent one oracle filename from suppressing or broadening the diff.
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    literal_candidates = [f":(literal){path}" for path in candidates]
+    literal_candidates = [literal_pathspec(path) for path in candidates]
     return run_git(
         [
             "diff",

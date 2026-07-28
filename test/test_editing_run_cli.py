@@ -1452,15 +1452,19 @@ def test_resolve_active_run_rejects_run_branch_from_another_session(
         lifecycle_module.resolve_active_run({"running"})
 
 
+@pytest.mark.parametrize(
+    "unexpected_path", ["oracle/unexpected.md", "oracle/unexpected[1].md"]
+)
 def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    unexpected_path: str,
 ) -> None:
     """force-resolve が run branch の想定外 path だけを戻すことを確認する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     context = start_editing_run("realization_apply")
     (context.run_worktree / "README.md").write_text("allowed\n")
-    (context.run_worktree / "oracle" / "unexpected.md").write_text("unexpected\n")
+    (context.run_worktree / unexpected_path).write_text("unexpected\n")
     commit_work_unit(context.run_worktree, "mixed run changes")
     set_run_state(context, "joinable")
     monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
@@ -1479,7 +1483,7 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
 
     assert joined.exit_code == 0
     assert (root / "README.md").read_text() == "allowed\n"
-    assert not (root / "oracle" / "unexpected.md").exists()
+    assert not (root / unexpected_path).exists()
     assert (
         "--force-resolve reverted unexpected run paths"
         in Path(
@@ -1525,6 +1529,48 @@ def test_run_join_cleanup_preserves_worktree_when_removal_leaves_path(
         run_join_module,
         "branch_exists",
         lambda *_args: pytest.fail("branch must not be deleted"),
+    )
+
+    warnings: list[str] = []
+    cleanup = run_join_module._cleanup_joined_run(context, warnings)
+
+    assert cleanup == "preserved"
+    assert warnings == ["run worktree cleanup failed"]
+
+
+def test_run_join_cleanup_warns_when_worktree_removal_raises(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """worktree removal の例外時も run resource を保持して warning にする。"""
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path / "session",
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=tmp_path / "run",
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "remove_worktree",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("cleanup failed")),
+    )
+    monkeypatch.setattr(
+        run_join_module,
+        "branch_exists",
+        lambda *_args: pytest.fail(
+            "branch must not be inspected after removal failure"
+        ),
     )
 
     warnings: list[str] = []

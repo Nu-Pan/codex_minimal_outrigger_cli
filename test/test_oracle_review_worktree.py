@@ -620,14 +620,14 @@ def test_commit_review_index_changes_accepts_nested_untracked_index(
     """
 
     root = make_repo(tmp_path)
-    generated_index = root / "generated" / "INDEX.md"
+    generated_index = root / "generated[1]" / "INDEX.md"
     generated_index.parent.mkdir()
     generated_index.write_text("# generated\n")
 
     assert review_module.commit_review_index_changes(root) is True
     assert (
         run_git(root, "show", "--format=", "--name-only", "HEAD").stdout.strip()
-        == "generated/INDEX.md"
+        == "generated[1]/INDEX.md"
     )
 
 

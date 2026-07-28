@@ -34,6 +34,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
+from commons.runtime_git import literal_pathspec
 from commons.runtime_refactor import sync_refactor_state
 from commons.runtime_run import (
     delete_run_process_id,
@@ -373,6 +374,9 @@ def _revert_unexpected_run_paths(
     paths: list[str],
 ) -> None:
     """force-resolve 対象の想定外 path を fork commit へ戻して commit する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # Git pathspec の wildcard 解釈で別 path を巻き込まないよう、検出済み
+    # repository path を literal として指定する。
     run_git(
         [
             "restore",
@@ -381,7 +385,7 @@ def _revert_unexpected_run_paths(
             "--staged",
             "--worktree",
             "--",
-            *paths,
+            *[literal_pathspec(path) for path in paths],
         ],
         context.run_worktree,
     )
@@ -404,15 +408,21 @@ def _resolve_index_only_conflict_or_fail(
         for path in conflicts:
             if _has_ours_conflict_stage(context.session_worktree, path):
                 run_git(
-                    ["checkout", "--ours", "--", path],
+                    ["checkout", "--ours", "--", literal_pathspec(path)],
                     context.session_worktree,
                 )
-                run_git(["add", "--", path], context.session_worktree)
+                run_git(
+                    ["add", "--", literal_pathspec(path)],
+                    context.session_worktree,
+                )
             else:
                 # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
                 # session 側で削除された INDEX.md には ours stage がないため、削除を
                 # stage してから再生成処理へ渡す。
-                run_git(["rm", "-f", "--", path], context.session_worktree)
+                run_git(
+                    ["rm", "-f", "--", literal_pathspec(path)],
+                    context.session_worktree,
+                )
         run_git(["commit", "--no-edit"], context.session_worktree)
         merge_commit = head_commit(context.session_worktree)
         refresh_indexes(context.session_worktree, commit=True)
@@ -445,7 +455,9 @@ def _resolve_index_only_conflict_or_fail(
 
 def _has_ours_conflict_stage(root: Path, path: str) -> bool:
     """unmerged path に session 側の stage 2 が存在するか判定する。"""
-    fields = run_git(["ls-files", "-u", "-z", "--", path], root).stdout.split("\0")
+    fields = run_git(
+        ["ls-files", "-u", "-z", "--", literal_pathspec(path)], root
+    ).stdout.split("\0")
     for field in fields:
         metadata, separator, _path = field.partition("\t")
         if separator and len(metadata.split()) >= 3 and metadata.split()[2] == "2":
@@ -458,25 +470,37 @@ def _cleanup_joined_run(
     warnings: list[str],
 ) -> str:
     """merge 済み run の worktree と branch を安全条件付きで削除する。"""
-    reachable = (
-        run_git(
-            [
-                "merge-base",
-                "--is-ancestor",
-                context.run_branch,
-                context.session_branch,
-            ],
-            context.session_worktree,
-            check=False,
-        ).returncode
-        == 0
-    )
+    try:
+        reachable = (
+            run_git(
+                [
+                    "merge-base",
+                    "--is-ancestor",
+                    context.run_branch,
+                    context.session_branch,
+                ],
+                context.session_worktree,
+                check=False,
+            ).returncode
+            == 0
+        )
+    except Exception:
+        warnings.append("run branch reachability check failed")
+        return "preserved"
     if not reachable:
         warnings.append("run branch is not reachable from session branch")
         return "preserved"
     if Path.cwd().resolve() == context.run_worktree.resolve():
-        os.chdir(context.session_worktree)
-    removal = remove_worktree(context.repo, context.run_worktree)
+        try:
+            os.chdir(context.session_worktree)
+        except Exception:
+            warnings.append("run worktree cleanup failed")
+            return "preserved"
+    try:
+        removal = remove_worktree(context.repo, context.run_worktree)
+    except Exception:
+        warnings.append("run worktree cleanup failed")
+        return "preserved"
     if (
         removal.returncode != 0
         or context.run_worktree.exists()
@@ -484,9 +508,21 @@ def _cleanup_joined_run(
     ):
         warnings.append("run worktree cleanup failed")
         return "preserved"
-    if branch_exists(context.repo, context.run_branch):
-        deletion = delete_branch(context.repo, context.run_branch)
-        if deletion.returncode != 0 or branch_exists(context.repo, context.run_branch):
+    try:
+        branch_present = branch_exists(context.repo, context.run_branch)
+    except Exception:
+        warnings.append("run branch cleanup failed")
+        return "branch_preserved"
+    if branch_present:
+        try:
+            deletion = delete_branch(context.repo, context.run_branch)
+            branch_present = deletion.returncode != 0 or branch_exists(
+                context.repo, context.run_branch
+            )
+        except Exception:
+            warnings.append("run branch cleanup failed")
+            return "branch_preserved"
+        if branch_present:
             warnings.append("run branch cleanup failed")
             return "branch_preserved"
     return "completed"

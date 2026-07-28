@@ -126,33 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc の CLI と runtime 実装を含む realization 側の src ルート。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim など、実行コードの下位領域へ進むための入口を提供する。
+- cmoc CLI の realization 実装をまとめたソースツリー。CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim など、実際の実行処理へ進むための入口となる。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・サブコマンド・共通 runtime の担当領域を確認するとき。
-- 特定の実装ファイルへ進む前に、src 配下の主要な入口と責務の分布を把握するとき。
+- cmoc の CLI 実装全体の構成や、主要エントリーポイントから各サブコマンド・共通処理への配置を確認するとき。
+- サブコマンド、runtime helper、ACP builder、互換 import の realization 実装を横断して調査するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装を確認するときは、oracle 配下を直接読む。
-- 対象の責務が明確な場合は、src ルートではなく該当する下位モジュールやファイルを直接読む。
+- canonical な仕様や正本実装を確認するときは、対応する oracle ツリーを直接読む。
+- 特定のサブコマンド、runtime helper、builder の詳細処理だけを調査するときは、対応する下位モジュールを直接読む。
+- テスト実装や開発環境の確認が目的のときは、対応する test または開発用文書を読む。
 
 ## hash
-- 7f6129f17f31a2eb8e7de89d6bf060f9a0ccee254f6a79eaa5d026043ff961c2
+- 21b851d9fd802b1319f3e128d00bbad25fd734f03bcd74d26e70f574243c6c7a
 
 # `test`
 
 ## Summary
-- テスト用ヘルパーと cmoc の各機能・実行経路を検証する realization test 群を収録するディレクトリ。ACP builder、Codex runtime、CLI、INDEX 生成、oracle review、session/run state などの領域別テストへの入口となる。
+- `test` ディレクトリは、cmoc の realization test を集約するテスト領域。共通テスト helper、ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review/edit、session、state、worktree、設定、prompt、renderer などの外部契約・制御ロジックを検証する。各テストファイルが機能領域ごとの詳細な回帰テストへの入口となる。
 
 ## Read this when
-- 特定の機能の外部挙動、制御ロジック、異常系、状態遷移、CLI 契約をテストから確認・変更するとき。
-- 共通テストヘルパー、fake 外部コマンド、Git/Ollama/Codex 用隔離環境などのテスト基盤を確認するとき。
-- 実装変更後に対応する回帰テストや統合テストの対象を選ぶとき。
+- cmoc の実装変更に対応する回帰テストや、対象機能の外部挙動・制御ロジックを確認するとき
+- 共通 fixture やテスト用 Git/Codex/Ollama 環境、fake external command の使い方を確認するとき
+- CLI、runtime、indexing、oracle、session、設定など、対象機能に対応する専用テストを探すとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認することが目的の場合は、対応する oracle doc・oracle schema・oracle source を直接読む。
-- テスト対象の実装詳細だけを調査する場合は、対応する realization implementation を直接読む。
-- このディレクトリ内の特定領域と無関係な機能を扱う場合は、個別テストを総覧せず対象実装や対応テストへ直接進む。
+- 正本仕様や設計・開発・テスト手順を確認することが目的のときは、対応する `oracle` 文書・ソースを直接読む
+- 実装詳細の調査だけが目的で、テスト上の期待挙動を確認する必要がないとき
+- 対象機能と無関係なテスト領域を調査するときは、このディレクトリ全体ではなく対応する個別テストへ進む
 
 ## hash
-- 343b2595a41c06d0403ea03f1289cdbc20dde577b547508bf4ffe1aad15e1700
+- c78d34f1e3372398b1e9bbada4356a337cc88f2003cc4e12c40935fd5eefdf87

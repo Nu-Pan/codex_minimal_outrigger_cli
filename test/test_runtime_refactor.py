@@ -97,6 +97,20 @@ def test_refactor_target_classifier_rejects_gitlink_directory(
     assert not is_realization_file_path(root, gitlink, branch="HEAD")
 
 
+def test_refactor_target_classifier_accepts_special_path_from_branch(
+    tmp_path: Path,
+) -> None:
+    """削除された特殊文字 path も branch tree の realization と判定する。"""
+    root = make_repo(tmp_path)
+    realization_file = root / "module[1].py"
+    realization_file.write_text("VALUE = 1\n")
+    run_git(root, "add", "module[1].py")
+    run_git(root, "commit", "-m", "add special realization")
+    realization_file.unlink()
+
+    assert is_realization_file_path(root, realization_file, branch="HEAD")
+
+
 def test_refactor_state_sync_hashes_dangling_oracle_symlink(
     tmp_path: Path,
 ) -> None:

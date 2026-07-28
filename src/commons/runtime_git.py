@@ -39,6 +39,11 @@ CMOC_CONFIG_IGNORE_EXCEPTIONS = (
 CMOC_IGNORE_PROBE = ".cmoc/gu/.__cmoc_ignore_probe__"
 
 
+def literal_pathspec(path: str) -> str:
+    """Git が repository path を wildcard として解釈しない pathspec を返す。"""
+    return f":(literal){path}"
+
+
 def run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
     """git subprocess の失敗を cmoc の利用者向けエラーへそろえる境界。"""
     result = subprocess.run(
@@ -433,7 +438,7 @@ def is_git_ignored(root: Path, path: Path) -> bool:
     rel = candidate.absolute().relative_to(root.absolute())
     return (
         run_git(
-            ["check-ignore", "--no-index", "-q", str(rel)],
+            ["check-ignore", "--no-index", "-q", literal_pathspec(str(rel))],
             root,
             check=False,
         ).returncode
@@ -448,7 +453,14 @@ def is_untracked_git_ignored(root: Path, path: Path) -> bool:
     # ignore pattern に一致しても、追跡済み file は対象に残す。
     candidate = path if path.is_absolute() else root / path
     rel = candidate.absolute().relative_to(root.absolute())
-    return run_git(["check-ignore", "-q", str(rel)], root, check=False).returncode == 0
+    return (
+        run_git(
+            ["check-ignore", "-q", literal_pathspec(str(rel))],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
 
 
 def is_realization_file_path(
@@ -479,7 +491,15 @@ def is_realization_file_path(
         # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
         # 含めず blob entry だけを branch の fallback として採用する。
         branch_entries = run_git(
-            ["ls-tree", "-r", "-z", branch, "--", str(relative)], root
+            [
+                "ls-tree",
+                "-r",
+                "-z",
+                branch,
+                "--",
+                literal_pathspec(str(relative)),
+            ],
+            root,
         ).stdout.split("\0")
         for entry in branch_entries:
             metadata, separator, entry_path = entry.partition("\t")

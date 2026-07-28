@@ -33,20 +33,20 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の検査・生成・再利用判定から、hash 検証、ファイル書き込み、更新 commit までの indexing lifecycle を一括して担う共通実装。directory traversal と Codex 呼び出し、並列実行、排他制御も扱う。
+- INDEX.md の検査・生成・更新・commit を一貫して扱う共通実装。対象ディレクトリの列挙、既存 entry の hash による再利用、不足 entry の Codex 生成、Structured Output の検証、INDEX.md の安全な書き込み、更新 commit、排他制御を提供する。
 
 ## Read this when
-- INDEX.md の自動生成・更新・commit lifecycle を変更または調査するとき
-- 既存 entry の再利用条件、対象 hash、Structured Output の検証、symlink・binary・除外対象の扱いを確認するとき
-- indexing 処理の並列実行、lock、Codex context、worktree または Git failure の挙動を確認するとき
+- INDEX.md の自動生成や鮮度判定の挙動を変更・調査するとき
+- 対象ファイル・ディレクトリの除外条件、hash 計算、entry の再利用条件を確認するとき
+- Codex による entry 生成、並列実行、実行コンテキストや worktree の扱いを確認するとき
+- INDEX.md の書き込み・symlink 対策・Git commit の失敗処理を確認するとき
 
 ## Do not read this when
-- INDEX.md entry の文章内容や schema 定義そのものを変更するときは、対応する oracle src または prompt builder の定義を先に読む
-- 通常の CLI サブコマンドや indexing 以外の Git 操作を変更するとき
-- INDEX.md の個別 entry を確認するだけで、生成 lifecycle の実装を調査しないとき
+- INDEX.md entry の正本 schema や文章上の要件だけを確認したいときは、対応する oracle の schema・standard 文書を読む
+- INDEX.md 更新以外の CLI 処理、一般的な Git 操作、Codex 実行処理だけを調査するときは、各責務の直接実装を読む
 
 ## hash
-- 96d04e24f13776c6683bd0158693cfa494c207e3ee43598b2d925e5d88e1a72c
+- 6232c5928c0b90acf3a1bb16f99d9b24b57a35c6a6c84cc3e464a0dc9f1433f4
 
 # `prompt_editor_input.py`
 
@@ -248,21 +248,19 @@
 # `runtime_git.py`
 
 ## Summary
-- Git repository と worktree を操作する共通境界。Git command 実行、branch/HEAD/status の取得・検証、managed worktree の作成・削除・安全性確認、branch 削除を扱う。.gitignore・exclude・Git index に関する `.cmoc/gu` の ignore 管理と、oracle/realization file の path 分類も提供する。
+- Git コマンド実行とエラー変換、branch・HEAD・worktree の状態管理、managed worktree の安全な作成・削除、Git ignore 状態の保証を担う共通境界。oracle/realization file の分類判定や path 安全性検証も提供し、これらの処理を変更・利用する際の入口となる。
 
 ## Read this when
-- Git command の実行結果を `CmocError` や `CommandResult` に統一したいとき
-- branch、HEAD、worktree、clean worktree、managed branch の検証や操作を変更するとき
-- run worktree の path 対応、安全な削除、symlink・Git metadata 検証を確認するとき
-- `.cmoc/gu` の ignore 設定、Git index、`.gitignore`、info/exclude の扱いを変更するとき
-- oracle file または realization file の Git 状態・path 分類を確認するとき
+- Git subprocess の呼び出し、Git 状態確認、branch または linked worktree の作成・削除を変更するとき
+- `.cmoc/gu` の ignore 設定、Git exclude、oracle/realization file の分類、repository path の安全性判定を扱うとき
+- worktree path、symlink、Git metadata の検証や、管理対象外 path の拒否動作を調査するとき
 
 ## Do not read this when
-- Git 境界や path 分類ではなく、個別の CLI command の業務ロジックだけを変更するとき
-- Git 操作を伴わない runtime error、path、result の共通型そのものを確認するとき
+- 特定の CLI サブコマンドの orchestration や session state の仕様だけを確認する場合
+- Git 境界を利用する側の入出力変換・prompt 生成・設定値の仕様を直接確認する場合は、それぞれの対象 module または oracle file を先に読む
 
 ## hash
-- e8bf3d251b34ef21d5d52292f13062557667c94619b1210facae46e15f80a5e7
+- 3125d83713aea4ee517972a703d3cf8c2526a4a4d4642d7325eee7b4e7ad704e
 
 # `runtime_logging.py`
 
@@ -352,21 +350,19 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run の開始から state 遷移、worktree・branch の管理、commit、差分分類、INDEX 更新、cleanup 判定までを担う共通 lifecycle 実装。EditingRunContext と lifecycle lock を共有し、run/session の不変条件と許可差分を検証する下位機能への入口となる。
+- editing run の開始から state 遷移、work unit の commit・rollback、差分分類、INDEX 更新、cleanup 判定までを担う共通 lifecycle 実装。EditingRunContext と lifecycle/indexing lock を共有し、run branch・worktree・session state の整合性を管理する。
 
 ## Read this when
-- editing run の開始・復旧・終了や state 更新を変更するとき
-- run/session worktree・branch の作成、検証、削除を調査するとき
-- workload 差分、oracle 差分、INDEX 更新、想定外 path の分類規則を確認するとき
-- run worktree の commit、rollback、cleanup 判定の共通処理を変更するとき
+- editing run の開始・復旧・終了状態、run/session worktree の解決や state 更新を変更・調査するとき
+- work unit の commit/rollback、INDEX 更新、agent/run/session の許可差分判定を変更・調査するとき
+- Git tree の rename/copy を含む差分列挙や、想定外 path・oracle diff の判定を確認するとき
 
 ## Do not read this when
-- 特定サブコマンド固有の workload 処理だけを変更するとき
-- state file のデータ構造そのものを変更するときは runtime_state の実装を直接確認する
-- INDEX の生成ロジックだけを変更するときは indexing 関連の実装を直接確認する
+- 特定の CLI サブコマンドの利用者向け仕様だけを確認したいとき
+- state データ構造そのものや Git・path 操作の低レベル共通関数だけを変更・調査するときは、対応する runtime_state または runtime_git の実装を先に読む
 
 ## hash
-- 2563a452693983a9664f9d42e8005c6613cfe05fdaf8ccb21e085aeb385aaa80
+- 08b601583aeafdea99070f7b9ba34989e726fbe07bc21748669cfe84c125a1ef
 
 # `runtime_run_report.py`
 

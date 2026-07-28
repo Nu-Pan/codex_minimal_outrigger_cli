@@ -33,7 +33,7 @@ from cmoc_runtime import (
 )
 from commons.runtime_codex_preflight import configure_indexing_preflight
 from commons.runtime_codex_profile import run_process_tracking_active
-from commons.runtime_git import git_common_dir
+from commons.runtime_git import git_common_dir, literal_pathspec
 from commons.runtime_paths import cwd_override_active
 from commons.runtime_results import CodexExecCallable
 
@@ -92,16 +92,17 @@ def indexing_lock_path(root: Path) -> Path:
 def commit_index_updates(root: Path, updated: list[Path]) -> None:
     """INDEX.md の更新差分だけを indexing commit として保存する。"""
     index_paths = [str(path.relative_to(root)) for path in updated]
+    literal_index_paths = [literal_pathspec(path) for path in index_paths]
     if index_paths:
-        run_git(["add", "--", *index_paths], root)
+        run_git(["add", "--", *literal_index_paths], root)
     if not index_paths:
         return
-    diff_args = ["diff", "--cached", "--quiet", "--", *index_paths]
+    diff_args = ["diff", "--cached", "--quiet", "--", *literal_index_paths]
     diff = run_git(diff_args, root, check=False)
     if diff.returncode == 0:
         return
     if diff.returncode == 1:
-        run_git(["commit", "-m", "cmoc indexing", "--", *index_paths], root)
+        run_git(["commit", "-m", "cmoc indexing", "--", *literal_index_paths], root)
         return
     if diff.returncode != 0:
         # {{work-root}}/oracle/doc/app_spec/indexing.md は Git failure で indexing を

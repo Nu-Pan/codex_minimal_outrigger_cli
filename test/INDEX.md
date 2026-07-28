@@ -385,36 +385,36 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の fork、join、abandon に関する統合テスト。apply/refactor の run lifecycle、共通 session state、worktree・branch・process tracking の管理、report 生成、rollback、merge、cleanup、INDEX 更新、異常系および中断時の状態遷移を検証する。
+- workload fork と共通 run join/abandon の統合 realization test。apply/refactor fork の lifecycle、session state、run worktree、process tracking、INDEX 更新、report、merge/cleanup、rollback、interrupt、error handling を検証する。editing run の共通 fixture と状態遷移を横断して確認する入口。
 
 ## Read this when
-- realization apply/refactor の fork 実装を変更・レビューするとき
-- run join または run abandon の state、worktree、branch、process、report の挙動を確認するとき
-- editing run の rollback、merge conflict、INDEX 管理、Codex child tracking、割り込み・cleanup 失敗を検証するとき
+- realization apply fork または realization refactor fork の lifecycle 挙動を変更・調査するとき
+- run join / run abandon、run state、worktree、branch、process tracking の統合挙動を変更・調査するとき
+- fork report、lifecycle report、INDEX refresh、rollback、merge conflict、interrupt・cleanup failure のテスト対象を確認するとき
 
 ## Do not read this when
-- 単独の INDEX 生成ロジックだけを確認する場合
-- fork/join/abandon と無関係なサブコマンドや、個別 helper の実装詳細だけを調べる場合
+- 単一の実装関数の局所的なロジックだけを確認し、対応する focused test が別にあるとき
+- CLI の一般的な session 操作や editing run と無関係なサブコマンドを調査するとき
+- oracle の正本仕様や実装責務を確認することが目的のときは、先に対応する oracle doc/src を読む
 
 ## hash
-- fdea63b973b81867a35d8c74f02e2e8a18d70a78bff322cd6f1ffcbb3170ebf3
+- 8e90a28506c2df4c9afc3bbf64b08f27d311bea1183fc8ebbd927b2ae751f5bb
 
 # `test_indexing_cli.py`
 
 ## Summary
-- `cmoc indexing` の CLI と preflight、doctor、worktree 対象判定、INDEX.md 更新、Codex structured output、INDEX 専用 commit の外部挙動を検証するテスト。通常の clean/dirty repository、linked worktree、設定継承、hash による再生成省略、Git 異常終了を扱う。
+- `cmoc indexing` の CLI と preflight／commit lifecycle を外部挙動として検証するテスト。doctor による初期化、現在の worktree の選択、dirty 状態の拒否、INDEX.md の生成・更新、Codex の Structured Output 利用、hash による再生成省略、INDEX.md のみの commit、Git 差分失敗処理を扱う。indexing 実装や仕様変更時の回帰確認の入口となる。
 
 ## Read this when
-- `cmoc indexing` の CLI 動作や事前条件を変更・確認するとき
-- INDEX.md の生成・更新・hash 判定・Codex 呼び出しを変更・確認するとき
-- indexing preflight、worktree、doctor、commit 対象パスの挙動を変更・確認するとき
+- `cmoc indexing` の CLI 動作、preflight、worktree 対応、INDEX.md 更新、Codex 呼び出し、commit 条件を変更または調査するとき。
+- indexing の clean／dirty repository、既存差分、linked worktree、設定読み込み、fresh hash の挙動を確認するとき。
 
 ## Do not read this when
-- INDEX.md のルーティング生成ロジック自体を変更・確認するときは、対象の実装・仕様ファイルを直接読む
-- indexing と無関係な CLI サブコマンドや一般的な Git ヘルパーの挙動だけを調べるとき
+- INDEX.md エントリー生成の Structured Output schema 自体を確認したいときは、指定された oracle schema を直接読む。
+- indexing の内部実装や正本仕様の詳細を調べるだけの場合は、対応する実装または oracle 文書を直接読む。
 
 ## hash
-- b63b722197d2f8f3b0e96b65b2a2d26828d20963e4e67ec745cd5f3cadb56f35
+- 3ac50f0119f112ac4b2defefcd24876871abeb65162baee557d3c1d65123e07a
 
 # `test_indexing_common.py`
 
@@ -554,20 +554,22 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- oracle review の review worktree lifecycle を検証するテスト群。linked worktree・snapshot commit からの fork、run target 衝突、割り込みや例外時の cleanup、未コミット差分の拒否、active run 中の実行可否、INDEX.md のみの統合と conflict 解決、禁止差分・cleanup 失敗の報告までを扱う。oracle review の worktree 分離・差分検証・INDEX 統合に関する回帰テストの入口。
+- oracle review の隔離 run lifecycle を検証する回帰テスト。linked worktree・snapshot commit・run target 衝突・中断時 cleanup・未コミット差分検出を扱う。
+- review worktree で生成または preflight が更新した INDEX.md の統合、INDEX.md 以外の差分拒否、merge conflict 解決、cleanup 失敗検出も検証する。
+- oracle review の worktree 分離、branch lifecycle、preflight、INDEX 統合に関する実装や仕様を確認する際のテスト入口である。
 
 ## Read this when
-- oracle review の worktree 作成・branch fork・snapshot commit 利用を変更または検証するとき
-- oracle review の割り込み・例外・cleanup や target 衝突時の挙動を確認するとき
-- review worktree から INDEX.md を統合する処理、差分制限、merge conflict 解決を変更または検証するとき
+- oracle review の worktree 作成・削除、branch fork、snapshot commit、run isolation の挙動を変更または調査するとき
+- review 実行時の未コミット差分、INDEX.md 統合、merge conflict、cleanup・中断・例外処理を確認するとき
+- oracle review の回帰テストや関連する lifecycle/preflight の検証範囲を把握するとき
 
 ## Do not read this when
-- oracle review の通常の所見判定や Structured Output schema 自体だけを確認したいとき
-- INDEX.md の生成ロジックだけを変更し、oracle review の lifecycle 統合を扱わないとき
-- 一般的な run lifecycle や git helper の単体実装を直接確認するとき
+- oracle review の実装詳細そのものを変更・調査する場合は、先に対応する実装と oracle 仕様を読むとき
+- INDEX.md の一般的な生成規則だけを確認したい場合は、indexing 仕様や INDEX.md 生成処理を直接読むとき
+- oracle review と無関係な CLI、run lifecycle、worktree、INDEX 統合の作業を行うとき
 
 ## hash
-- 00170ac9ab304856784e75d032da6962f709324cf5338e331e0c74520651d957
+- 69597ab4771f816518b8e7e6e1134616a24c07e674bf09a5e947c66f33275d8a
 
 # `test_packaged_import.py`
 
@@ -737,18 +739,19 @@
 # `test_runtime_refactor.py`
 
 ## Summary
-- realization refactor の永続 state を対象とするテスト。oracle・realization file 集合の同期、調査履歴の保持と変更時の再調査化、state schema・パス・時刻・UTF-8 の検証、target 選択の優先規則を検証する。refactor state の同期・読み書き・対象選択の挙動を変更または調査するときの入口。
+- realization refactor の永続 state 同期・検証・target 選択をテストするファイル。oracle と realization の対象集合、path 分類、symlink、履歴保持、変更時の再調査、schema 不正値、path escape、UTF-8、NUL、timestamp、優先順位を検証する。refactor state の実装やテスト失敗の原因を調べる際の入口となる。
 
 ## Read this when
-- refactor state の同期、永続化、schema 検証、対象 file の分類、調査対象選択規則を変更または検証するとき
-- oracle・realization file の集合や調査履歴が state にどう反映されるかを確認するとき
+- realization refactor の state 同期・読み書き・検証規則を変更または確認するとき
+- oracle/realization file の分類や target 選択順序を変更または確認するとき
+- refactor state に関するテスト失敗を調査するとき
 
 ## Do not read this when
-- refactor state の実装詳細を直接確認する場合は、まず対応する runtime_refactor 実装を読むとき
-- INDEX.md の生成や他の refactor 機能のテストだけを扱うとき
+- refactor state、file 分類、target 選択に関係しない機能を変更・調査するとき
+- 実装の詳細を直接確認する必要があり、対応する runtime_refactor 実装へ進むのが適切なとき
 
 ## hash
-- 087b8a9b7a06d9ed529fbf6e7d3b11e907f2848479669470fa7649a589794b1a
+- 798754a3884cf852f73c93cc7fe406be89a5e039255025f2171078a6f604b3f7
 
 # `test_runtime_state.py`
 
