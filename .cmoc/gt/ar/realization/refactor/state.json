@@ -1242,10 +1242,10 @@
     "last_investigated_at": "2026-07-28_14-55_33_553385000"
   },
   "test/test_runtime_cli.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "97e4c443a1eea9abb70bc41e3c7e15b7c5db3a5b3c63b0bebe2d09ac2375299c",
-    "last_investigated_at": "2026-07-27_21-39_20_317650000"
+    "last_investigated_sha256": "71c1872d56ab3ecf79a715d188393075a9637e48306d535e9c9ae13966dddc55",
+    "last_investigated_at": "2026-07-28_15-11_16_841427000"
   },
   "test/test_runtime_codex_conflicts.py": {
     "investigation_required": false,
