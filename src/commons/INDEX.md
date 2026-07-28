@@ -248,19 +248,20 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行とエラー変換、branch・HEAD・worktree の状態管理、managed worktree の安全な作成・削除、Git ignore 状態の保証を担う共通境界。oracle/realization file の分類判定や path 安全性検証も提供し、これらの処理を変更・利用する際の入口となる。
+- Git コマンド実行とエラー変換、branch・commit・worktree の管理、Git ignore 状態の操作・検証、oracle/realization file の分類を担う共通境界。Git repository path、index、linked worktree の安全性検証を共有するため、これらの処理を追跡する際の入口となる。
 
 ## Read this when
-- Git subprocess の呼び出し、Git 状態確認、branch または linked worktree の作成・削除を変更するとき
-- `.cmoc/gu` の ignore 設定、Git exclude、oracle/realization file の分類、repository path の安全性判定を扱うとき
-- worktree path、symlink、Git metadata の検証や、管理対象外 path の拒否動作を調査するとき
+- Git subprocess の呼び出し、Git 状態や branch・commit の取得、clean worktree の検証を変更・調査するとき
+- cmoc 管理下の branch・linked worktree の作成、削除、path 安全性検証を変更・調査するとき
+- `.cmoc/gu` の ignore 設定や `.gitignore`・Git exclude の更新・検査を変更・調査するとき
+- oracle file と realization file の path 分類、Git tracking・ignore 判定を変更・調査するとき
 
 ## Do not read this when
-- 特定の CLI サブコマンドの orchestration や session state の仕様だけを確認する場合
-- Git 境界を利用する側の入出力変換・prompt 生成・設定値の仕様を直接確認する場合は、それぞれの対象 module または oracle file を先に読む
+- Git 境界の実装を変更せず、個別の CLI command や上位 workflow の仕様だけを調査するとき
+- worktree や ignore の安全性検証を使う呼び出し側の挙動だけを確認し、共通 helper 自体を追跡する必要がないとき
 
 ## hash
-- 3125d83713aea4ee517972a703d3cf8c2526a4a4d4642d7325eee7b4e7ad704e
+- f3f4a193a40d1d38a86f14bbc2e73636f8bb65c3ca0aadef366d6ce8f632a185
 
 # `runtime_logging.py`
 

@@ -375,10 +375,23 @@ def with_cmoc_ignore_pattern(content: str) -> str:
     return f"{content}{newline}{separator}{added}\n"
 
 
+def _reject_symlinked_path(path: Path, description: str) -> None:
+    """cmoc が更新する ignore file を symlink 経由で扱わない。"""
+    # Path.write_text() は symlink を追従するため、修復対象外への書き込みを防ぐ。
+    if _first_symlink_component(path) is not None:
+        raise CmocError(
+            f"{description} は symlink 経由で更新できません。",
+            ["ignore file の symlink を通常の file に戻してから再実行してください。"],
+            str(path),
+        )
+
+
 def ensure_cmoc_ignored(root: Path) -> None:
     """.gitignore と index を更新できる場面で .cmoc/gu を追跡対象外にする。"""
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     gitignore = root / ".gitignore"
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    _reject_symlinked_path(gitignore, ".gitignore")
     content = gitignore.read_text() if gitignore.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
     if updated_content != content:
@@ -407,6 +420,7 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     exclude_path = (
         root / run_git(["rev-parse", "--git-path", "info/exclude"], root).stdout.strip()
     )
+    _reject_symlinked_path(exclude_path, "Git info/exclude")
     content = exclude_path.read_text() if exclude_path.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
     if updated_content != content:

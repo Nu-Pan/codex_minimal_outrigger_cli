@@ -41,6 +41,7 @@ from cmoc_runtime import (
     CmocError,
     SubcommandLogger,
     ensure_cmoc_ignored,
+    ensure_cmoc_ignored_in_exclude,
     format_duration,
     render_error,
 )
@@ -502,6 +503,39 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
         cwd=root,
     )
     assert ignored.returncode == 0
+
+
+def test_ensure_cmoc_ignored_rejects_symlinked_gitignore(tmp_path: Path) -> None:
+    """.gitignore の symlink 先を cmoc が書き換えないことを検証する。"""
+    root = make_repo(tmp_path)
+    external = tmp_path / "external.gitignore"
+    external.write_text("existing\n")
+    (root / ".gitignore").symlink_to(external)
+
+    with pytest.raises(CmocError, match="symlink"):
+        ensure_cmoc_ignored(root)
+
+    assert external.read_text() == "existing\n"
+
+
+def test_ensure_cmoc_ignored_in_exclude_rejects_symlinked_exclude(
+    tmp_path: Path,
+) -> None:
+    """Git info/exclude の symlink 先を cmoc が書き換えないことを検証する。"""
+    root = make_repo(tmp_path)
+    external = tmp_path / "external.exclude"
+    external.write_text("existing\n")
+    exclude_path = root / Path(
+        run_git(root, "rev-parse", "--git-path", "info/exclude").stdout.strip()
+    )
+    exclude_path.parent.mkdir(parents=True, exist_ok=True)
+    exclude_path.unlink(missing_ok=True)
+    exclude_path.symlink_to(external)
+
+    with pytest.raises(CmocError, match="symlink"):
+        ensure_cmoc_ignored_in_exclude(root)
+
+    assert external.read_text() == "existing\n"
 
 
 def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_pattern(
