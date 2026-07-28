@@ -357,6 +357,44 @@ def test_stop_child_process_group_fails_closed_after_pidfd_leader_exit(
     assert closed == [99]
 
 
+def test_stop_child_process_group_keeps_leader_pidfd_until_group_stop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """leader の pidfd を閉じる前に process group を停止する。
+
+    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    child = runtime_run.ProcessIdentity(123, 456, 123)
+    events: list[str] = []
+    leader_fd_open = False
+
+    def open_fd(*_args: object) -> int:
+        """leader の pidfd を開いた状態を記録する。"""
+        nonlocal leader_fd_open
+        leader_fd_open = True
+        events.append("open")
+        return 99
+
+    def stop_group(process_group_id: int) -> None:
+        """pidfd 保持中の process group 停止だけを許可する。"""
+        assert leader_fd_open
+        events.append(f"stop:{process_group_id}")
+
+    def close_fd(_process_fd: int) -> None:
+        """leader の pidfd が閉じたことを記録する。"""
+        nonlocal leader_fd_open
+        leader_fd_open = False
+        events.append("close")
+
+    monkeypatch.setattr(runtime_run, "open_process_fd", open_fd)
+    monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: 456)
+    monkeypatch.setattr(runtime_run, "stop_process_group", stop_group)
+    monkeypatch.setattr(runtime_run.os, "close", close_fd)
+
+    assert runtime_run.stop_child_process_group(child) is None
+    assert events == ["open", "stop:123", "close"]
+
+
 def test_read_run_process_id_treats_invalid_encoding_as_stale(
     tmp_path: Path,
 ) -> None:

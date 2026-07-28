@@ -270,6 +270,13 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
                     )
                 if current_start_time != process.start_time:
                     return _stale_child_process_warning(process, process_group_id)
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # run_tracked_codex_subprocess は start_new_session child の PID を PGID として
+            # 保存するため、停止完了まで pidfd を保持して leader/PGID の再利用による
+            # 別 process group への signal を防ぐ。
+            if current_start_time == process.start_time:
+                stop_process_group(process_group_id)
+                return None
         finally:
             os.close(process_fd)
     else:
