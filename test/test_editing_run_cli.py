@@ -802,6 +802,60 @@ def test_refactor_fork_tracks_initialization_indexing_codex_calls(
     assert tracking_states and all(tracking_states)
 
 
+def test_refactor_fork_stops_tracked_children_before_each_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """refactor は cycle と各処理単位の commit 前に Codex child を停止する。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+    events: list[str] = []
+    original_commit = refactor_module.commit_work_unit
+
+    def record_stop(*_args: object) -> None:
+        """tracked child の停止位置を記録する。"""
+        events.append("stop")
+
+    def record_commit(
+        worktree: Path,
+        message: str,
+        **kwargs: object,
+    ) -> str | None:
+        """処理単位 commit の位置を記録して本来の commit を実行する。"""
+        events.append("commit")
+        return original_commit(worktree, message, **kwargs)
+
+    def fake_refactor(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """file review と change summary の固定 Structured Output を返す。"""
+        if kwargs["purpose"] == "realization refactor change summary":
+            return SimpleNamespace(
+                returncode=0,
+                output_json={"changes": [{"category": "state", "summary": "更新"}]},
+            )
+        return SimpleNamespace(returncode=0, output_json={"findings": []})
+
+    monkeypatch.setattr(refactor_module, "stop_tracked_codex_children", record_stop)
+    monkeypatch.setattr(refactor_module, "commit_work_unit", record_commit)
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _state(state_path)["run"]["state"] == "joinable"
+    commit_positions = [
+        index for index, event in enumerate(events) if event == "commit"
+    ]
+    assert commit_positions
+    assert all(index > 0 and events[index - 1] == "stop" for index in commit_positions)
+
+
 def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2135,7 +2189,7 @@ def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
     )
 
     assert result.exit_code == 0
-    assert stopped == [child]
+    assert stopped == [child, child]
     assert _state(state_path)["run"]["state"] == "joinable"
 
 

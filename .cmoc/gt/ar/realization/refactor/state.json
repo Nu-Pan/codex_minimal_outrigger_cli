@@ -956,8 +956,8 @@
   "src/sub_commands/realization/refactor/fork.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "1f8fc4996b83bbb7ef1c9e6067fb94e77ff1f6dd6a5592111cb3c7e5e3390432",
-    "last_investigated_at": "2026-07-28_11-10_01_939354000"
+    "last_investigated_sha256": "b6949d89adf029a17ff5adaefd85ff6b17c04f9666ac15ae555196df7c40330c",
+    "last_investigated_at": "2026-07-28_22-13_35_460421000"
   },
   "src/sub_commands/run/__init__.py": {
     "investigation_required": false,

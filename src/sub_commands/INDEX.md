@@ -62,19 +62,24 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply workload と refactor workload の構成・実行フローを確認するための入口となる。
+- realization workload サブコマンドのパッケージ入口。
+- realization apply workload の実行フローと fork サブコマンドを扱う。
+- realization refactor の対象選択、agent 実行、差分検証、状態更新、完了処理を扱う。
 
 ## Read this when
-- realization workload サブコマンド全体の構成や、apply・refactor の実行フローを確認するとき。
-- 対象選択、agent 実行、差分検証、状態更新、commit・rollback、report 保存などの workload 処理を調査・変更するとき。
+- realization workload サブコマンドの構成や実装入口を確認するとき。
+- realization apply の実行フロー、agent 起動、差分検証、状態管理、commit・rollback、report 保存を確認するとき。
+- realization refactor の処理フロー、対象 file の反復、agent 出力検証、完了判定、cleanup を確認するとき。
 
 ## Do not read this when
-- apply workload の prompt 構築や agent parameter の詳細だけを確認したいとき。
-- refactor agent の入力 parameter や所見形式、change summary の Structured Output だけを確認したいとき。
-- run の共通ライフサイクル、プロセス追跡、git 差分操作、report 出力の共通実装だけを確認したいとき。
+- realization workload に関係しない処理を確認するとき。
+- apply の prompt 構築や agent parameter の詳細だけを確認するとき。
+- run の共通ライフサイクルやプロセス追跡、report 出力の共通仕様だけを確認するとき。
+- refactor state のデータ構造や対象選択を変更するとき。
+- file 単位の review agent parameter や change summary の Structured Output 定義だけを確認するとき。
 
 ## hash
-- 8bf38c6a5f18d87b0b236b427f563c1eede0d3ac8f2b3b46146b614f5c1c479a
+- 5b3ce85d36bab7ff0429c334d596a4cd55763e9c6f2406b7f189c549e56765e6
 
 # `review`
 

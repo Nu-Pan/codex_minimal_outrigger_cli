@@ -274,6 +274,10 @@ def _initialize_cycle(context: EditingRunContext) -> None:
         mark_all_refactor_targets_required(state)
         write_refactor_state(context.run_worktree, state)
     refresh_indexes(context.run_worktree, commit=False)
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # INDEX 用 Codex の leader 終了後も descendant が残る場合があるため、cycle の
+    # state と INDEX を commit する前に run worktree への遅延書き込みを止める。
+    stop_tracked_codex_children(context.repo, context.session_id)
     commit_work_unit(
         context.run_worktree,
         "cmoc realization refactor cycle",
@@ -319,6 +323,10 @@ def _run_refactor_unit(
             ["Codex call log を確認してください。"],
             f"target: {target}\nreturncode: {result.returncode}",
         )
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # agent の leader 終了後も descendant が残る場合があるため、agent の差分を
+    # 検査する前に run worktree への遅延書き込みを止める。
+    stop_tracked_codex_children(context.repo, context.session_id)
     findings = _validated_findings(result.output_json, target)
     changed_realization = worktree_change_paths(
         context.run_worktree,
@@ -366,6 +374,9 @@ def _run_refactor_unit(
         changed_realization,
     )
     refresh_indexes(context.run_worktree, commit=False)
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # INDEX 用 Codex の descendant による遅延差分を処理単位の commit に混ぜない。
+    stop_tracked_codex_children(context.repo, context.session_id)
     all_unit_paths = worktree_change_paths(
         context.run_worktree,
         include_rename_sources=True,

@@ -126,31 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装全体への入口。Typer による CLI 登録・引数解析、共通 runtime、ACP builder、サブコマンド実装、互換 import shim を扱い、各下位領域へ進む起点となる。
+- cmoc CLI の realization 実装をまとめるトップレベルの入口。CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim などの下位領域へ進むためのルーティングを提供する。
 
 ## Read this when
-- cmoc の CLI 全体構成や主要な realization 実装領域の所在を確認するとき。
-- CLI 登録、共通 runtime、ACP builder、互換 import、またはサブコマンドの実装入口を調査するとき。
+- cmoc の realization 側で、CLI 構成・サブコマンド・共通 runtime・ACP builder・互換 import の実装入口を確認するとき。
+- 特定の下位実装を読む前に、責務領域と対応するモジュール群を選ぶとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime helper、ACP builder、または互換 shim の詳細だけを調査するときは、対応する下位対象を直接読む。
-- canonical な oracle 仕様や oracle 実装を確認するときは、oracle 側を直接読む。
+- 正本仕様や oracle 側の実装を確認するときは、対応する oracle ツリーを直接読む。
+- 特定の runtime helper、サブコマンド、builder、互換 shim の詳細を確認するときは、対応する下位対象を直接読む。
+- CLI realization と無関係な仕様・処理を調査するとき。
 
 ## hash
-- 9c758b18aaf9f5c4713dbdef22b8a3a6a8ed1fabd51283bbf834dda892d1a773
+- 058737ae837ce5eccd2651d8d1968303faaeaca74b10762de26c4d7bd01df813
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、worktree、設定、renderer などの外部挙動・制御ロジックを検証する。個別機能の回帰テストや共通 test helper を読む際の入口となる。
+- cmoc の実装・CLI・Codex 実行・oracle review・session/run lifecycle などを検証する pytest テスト群と、各テストで共有する Git、Ollama、Codex、外部コマンド、doctor 支援 helper を含む。機能領域ごとの回帰テストを読むための入口であり、実装変更時の対応テストを選ぶ起点となる。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test、回帰テスト、共通テスト helper を探すとき。
-- CLI・Codex 実行・worktree/state・indexing・oracle review などの外部契約や異常系をテストから確認するとき。
+- cmoc の機能変更や不具合調査で、対象領域に対応する pytest テストを特定するとき。
+- CLI、runtime、Codex、indexing、oracle review、session、editing run、設定、path、process cleanup などの外部契約や回帰条件を確認するとき。
+- テスト用 Git リポジトリ、case-local Ollama、Codex 実行環境、fake external command などの共通支援を利用・変更するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認するときは、対応する oracle doc または oracle source を直接読む。
-- 単一機能の実装詳細だけを調査し、既存テストの外部契約を確認する必要がないとき。
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc または oracle source を直接読む。
+- 実装詳細だけを調査するときは、対象の src ファイルを直接読む。
+- 対象領域と無関係なテストや、テスト実行環境そのものの手順だけを確認するとき。
 
 ## hash
-- f1ee0f4867be678265549a56843db39586353feea17d323e6021eae1b5927aff
+- 5426188d4ae594723c9ccac4f0466ff13f6f4fb06ecba10563ad3790f5e1a2da
