@@ -190,6 +190,13 @@ def _cmoc_realization_refactor_fork_body() -> None:
                 raise
         error_cleanup_errors: list[str] = []
         try:
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # rollback 後も Codex descendant が worktree を変更し続けないよう、
+            # error cleanup でも停止を rollback より先に行う。
+            stop_tracked_codex_children(context.repo, context.session_id)
+        except BaseException as cleanup_error:
+            error_cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
+        try:
             rollback_work_unit(context.run_worktree)
         except BaseException as cleanup_error:
             error_cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
@@ -434,13 +441,12 @@ def _commit_refactor_unit(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     """
     before_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
-    committed = False
+    commit_result: str | None = None
     try:
-        commit_work_unit(context.run_worktree, message)
-        committed = True
+        commit_result = commit_work_unit(context.run_worktree, message)
     finally:
         after_head = run_git(["rev-parse", "HEAD"], context.run_worktree, check=False)
-        if committed or (
+        if commit_result is not None or (
             after_head.returncode == 0 and after_head.stdout.strip() != before_head
         ):
             units.append((target, finding_count))
