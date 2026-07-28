@@ -1614,6 +1614,72 @@ def test_refactor_interrupt_after_run_publish_is_joinable(
     assert 'completion_reason: "user_interruption"' in report.read_text()
 
 
+def test_start_run_interrupt_during_worktree_creation_cleans_partial_resources(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """run worktree の作成途中で中断しても未公開 resource を残さない。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    original_create = lifecycle_module.create_run_worktree
+    created_target: dict[str, Path | str] = {}
+
+    def create_then_interrupt(
+        repository: Path,
+        branch: str,
+        worktree: Path,
+        *,
+        start_point: str,
+    ) -> None:
+        """git resource 作成後、lifecycle の ownership 記録前に中断する。"""
+        original_create(repository, branch, worktree, start_point=start_point)
+        created_target.update(branch=branch, worktree=worktree)
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(
+        lifecycle_module,
+        "create_run_worktree",
+        create_then_interrupt,
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        start_editing_run("realization_refactor")
+
+    assert not Path(str(created_target["worktree"])).exists()
+    assert not lifecycle_module.branch_exists(root, str(created_target["branch"]))
+
+
+def test_start_run_interrupt_after_state_write_restores_ready_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """state 公開直後の中断で resource と running state を残さない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    original_write_state = lifecycle_module.write_state
+    write_count = 0
+
+    def write_then_interrupt(path: Path, state: SessionState) -> None:
+        """running state の保存後、公開 flag 更新前に中断する。"""
+        nonlocal write_count
+        original_write_state(path, state)
+        write_count += 1
+        if write_count == 1:
+            raise KeyboardInterrupt()
+
+    monkeypatch.setattr(lifecycle_module, "write_state", write_then_interrupt)
+
+    with pytest.raises(KeyboardInterrupt):
+        start_editing_run("realization_refactor")
+
+    assert _state(state_path)["run"] == {
+        "state": "ready",
+        "kind": None,
+        "branch": None,
+        "fork_commit": None,
+    }
+    run_entries = run_git(root, "branch", "--list", "cmoc/run/*").stdout
+    assert run_entries.strip() == ""
+
+
 def test_refactor_start_failure_after_run_publish_is_reported(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

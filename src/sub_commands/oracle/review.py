@@ -144,6 +144,8 @@ def _cmoc_oracle_review_body(
                 create_run_worktree(
                     current_root, run_branch, review_worktree, run_fork_commit
                 )
+                review_worktree_created = True
+                run_branch_created = True
             except BaseException:
                 # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
                 # worktree add が branch/worktree の作成後に中断されても、今回の作成物だけを
@@ -154,8 +156,6 @@ def _cmoc_oracle_review_body(
                 )
                 run_branch_created = branch_exists(root, run_branch)
                 raise
-            review_worktree_created = True
-            run_branch_created = True
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")
             with pushd(review_worktree):

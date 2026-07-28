@@ -166,8 +166,22 @@ def start_editing_run(kind: str) -> EditingRunContext:
             if published:
                 state.run.state = "error"
                 write_state(path, state)
-            elif created:
-                remove_worktree(repository, run_worktree)
+            else:
+                # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+                # create_run_worktree または state 公開の途中で中断しても、未公開の
+                # branch/worktree と running state を残さない。run target は lock 下で
+                # 新規確保済みなので、ここで扱う state/resource はこの invocation の
+                # 部分作成物である。
+                if state.run.state == "running" and state.run.branch == run_branch:
+                    state.run = RunPart()
+                    write_state(path, state)
+                worktree_created = (
+                    created
+                    or run_worktree.exists()
+                    or run_worktree.is_symlink()
+                )
+                if worktree_created:
+                    remove_worktree(repository, run_worktree)
                 if branch_exists(repository, run_branch):
                     delete_branch(repository, run_branch, force=True)
             raise

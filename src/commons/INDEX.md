@@ -354,21 +354,21 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run の開始から終了までを一貫して扱う共通ライフサイクル処理。run の state・branch・worktree を検証・更新し、work unit の rollback/commit、INDEX 更新、Git 差分の分類、agent や run による想定外変更の検出、oracle 差分取得、cleanup 対象判定を提供する。editing run の状態遷移、差分許可範囲、run branch/worktree 管理を変更・調査するときの入口。
+- editing run の開始から終了までを一貫して扱う共通ライフサイクル実装。session/run の state と branch・worktree を検証・作成・更新・復旧し、work unit の rollback/commit、INDEX 更新、差分分類、oracle・realization の許可範囲判定、cleanup 判定を提供する。editing run の状態遷移や差分管理に関わる下位処理の入口。
 
 ## Read this when
 - editing run の開始、active run の解決、joinable/error への state 遷移を変更・調査するとき
-- run worktree の commit・rollback、INDEX 更新、branch/worktree の生成・cleanup を変更・調査するとき
-- realization file、INDEX、oracle、rename/copy を含む Git 差分の許可判定や分類を変更・調査するとき
-- editing run lifecycle に関する想定外変更の検出や oracle 差分の取得を確認するとき
+- run branch/worktree の作成・削除、session との整合性、lifecycle lock、process ID 管理を確認するとき
+- work unit の commit/rollback、INDEX 更新、run/session/agent の変更 path 検証を変更・調査するとき
+- rename/copy を含む Git 差分分類や realization/oracle/INDEX の許可範囲を確認するとき
 
 ## Do not read this when
-- 個別の session state のデータ構造や永続化仕様だけを確認したい場合は、runtime_state の実装を直接読む
-- editing run の利用者向け CLI 仕様や state 遷移の正本を確認したい場合は、対応する oracle 文書を先に読む
-- INDEX の生成処理そのものだけを変更・調査する場合は、commons.indexing の実装を直接読む
+- session の state schema や state file の永続化仕様そのものを変更・調査するときは runtime_state と対応する oracle file を直接読む
+- Git コマンドの低レベル実装、path 解決、Codex 実行、INDEX 生成の詳細だけを扱うときは各 commons モジュールを直接読む
+- editing run と無関係な CLI サブコマンドや一般的な repository 操作を扱うとき
 
 ## hash
-- 75686698e39a308e0e3ab5bc1c2903d518a7a585d8b3fb1ce38313b97142a68a
+- d535662421f0a1251bc229e1adff6fb84d05fb9fc90b860e6ad463ecfc98703f
 
 # `runtime_run_report.py`
 
