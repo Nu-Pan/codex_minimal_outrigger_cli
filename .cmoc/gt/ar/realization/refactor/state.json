@@ -943,9 +943,9 @@
   },
   "src/sub_commands/realization/apply/fork.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "a0b27674190850f2882e9ebdf4e84f773670ecf1d7349f019f73eb4cad2bf90f",
-    "last_investigated_at": "2026-07-28_10-50_31_339675000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "0f941f4192fc1c2b88e653e278c54c74be7bac14b5d0e162531892e300b691db",
+    "last_investigated_at": "2026-07-28_21-49_05_338128000"
   },
   "src/sub_commands/realization/refactor/__init__.py": {
     "investigation_required": false,

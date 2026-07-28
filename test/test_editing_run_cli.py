@@ -309,9 +309,11 @@ def test_apply_rejects_agent_index_change_before_index_refresh(
     assert not (run_worktree / "INDEX.md").exists()
 
 
+@pytest.mark.parametrize("unexpected_path", ["oracle/unexpected.md", "README.md"])
 def test_apply_rejects_unexpected_refresh_change_before_commit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    unexpected_path: str,
 ) -> None:
     """INDEX refresh の想定外差分を run commit に含めない。
 
@@ -327,9 +329,9 @@ def test_apply_rejects_unexpected_refresh_change_before_commit(
         return SimpleNamespace(returncode=0, output_json=None)
 
     def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
-        """INDEX 更新処理が誤って oracle file を変更した状態を再現する。"""
+        """INDEX 更新処理が誤って管理外 file を変更した状態を再現する。"""
         assert not commit
-        (worktree / "oracle" / "unexpected.md").write_text("unexpected\n")
+        (worktree / unexpected_path).write_text("unexpected\n")
         return []
 
     monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
@@ -346,7 +348,10 @@ def test_apply_rejects_unexpected_refresh_change_before_commit(
     assert state["run"]["state"] == "error"
     parts = state["run"]["branch"].split("/")
     run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-    assert not (run_worktree / "oracle" / "unexpected.md").exists()
+    restored = run_worktree / unexpected_path
+    assert restored.exists() is (unexpected_path == "README.md")
+    if unexpected_path == "README.md":
+        assert restored.read_text() == "# repo\n"
 
 
 @pytest.mark.parametrize(

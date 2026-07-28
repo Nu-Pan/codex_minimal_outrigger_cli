@@ -126,34 +126,31 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめた src パッケージ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定入口など、実行側の主要コード領域への入口を提供する。
+- cmoc CLI の realization 実装全体への入口。Typer による CLI 登録・引数解析、共通 runtime、ACP builder、サブコマンド実装、互換 import shim を扱い、各下位領域へ進む起点となる。
 
 ## Read this when
-- cmoc CLI の実装構成や主要な実行入口を確認するとき。
-- CLI サブコマンド、共通 runtime、互換 import、設定入口のいずれかを調査・変更するとき。
+- cmoc の CLI 全体構成や主要な realization 実装領域の所在を確認するとき。
+- CLI 登録、共通 runtime、ACP builder、互換 import、またはサブコマンドの実装入口を調査するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
-- 特定のサブコマンドや runtime helper の詳細だけを確認するときは、該当する下位ファイル・ディレクトリを直接読む。
-- src の realization 実装と無関係なテストや補助ファイルを調査するとき。
+- 特定のサブコマンド、runtime helper、ACP builder、または互換 shim の詳細だけを調査するときは、対応する下位対象を直接読む。
+- canonical な oracle 仕様や oracle 実装を確認するときは、oracle 側を直接読む。
 
 ## hash
-- bff1526927538263cee317416a4136d1b8c654cc614d6d6b91eec0ee1843d578
+- 9c758b18aaf9f5c4713dbdef22b8a3a6a8ed1fabd51283bbf834dda892d1a773
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群と共通テスト支援モジュールを集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、renderer などの外部契約・制御ロジックを検証する入口であり、対象機能の挙動をテストから確認する。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、worktree、設定、renderer などの外部挙動・制御ロジックを検証する。個別機能の回帰テストや共通 test helper を読む際の入口となる。
 
 ## Read this when
-- cmoc の realization test を追加・変更・調査するとき
-- 対象機能に対応する pytest または共通テスト helper の所在を探すとき
-- CLI、Codex 実行、worktree、Git、state、schema、prompt、indexing、oracle review の回帰挙動を確認するとき
+- cmoc の実装変更に対応する realization test、回帰テスト、共通テスト helper を探すとき。
+- CLI・Codex 実行・worktree/state・indexing・oracle review などの外部契約や異常系をテストから確認するとき。
 
 ## Do not read this when
-- 正本仕様や oracle schema の内容を確認するときは、対応する oracle doc・oracle source・schema を直接読む
-- 実装詳細を調査するときは、対象機能の realization implementation を直接読む
-- テスト対象と無関係な機能の調査では、このディレクトリ全体を読む必要はない
+- 正本仕様や schema の内容を確認するときは、対応する oracle doc または oracle source を直接読む。
+- 単一機能の実装詳細だけを調査し、既存テストの外部契約を確認する必要がないとき。
 
 ## hash
-- d64edc091bba8de7d331235a02701041ae1fc8ecce476e03f4fc354094e01d22
+- f1ee0f4867be678265549a56843db39586353feea17d323e6021eae1b5927aff

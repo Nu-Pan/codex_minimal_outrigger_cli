@@ -128,14 +128,23 @@ def _cmoc_realization_apply_fork_body() -> None:
             stop_tracked_codex_children(context.repo, context.session_id)
             # tree_changes は commit 済みの差分だけを返すため、commit 前は status
             # path を同じ path 分類へ渡してから処理単位を確定する。
-            pending_changes = [
-                GitChange("M", (path,))
-                for path in worktree_change_paths(
-                    context.run_worktree,
-                    include_rename_sources=True,
-                )
-            ]
+            pending_paths = worktree_change_paths(
+                context.run_worktree,
+                include_rename_sources=True,
+            )
+            pending_changes = [GitChange("M", (path,)) for path in pending_paths]
             unexpected = unexpected_run_paths(context, pending_changes)
+            # {{work-root}}/oracle/doc/app_spec/indexing.md
+            # indexing は INDEX.md だけを生成するため、agent 検査後に増えた realization
+            # 差分を agent の許可済み差分へ便乗させない。
+            unexpected.extend(
+                path
+                for path in pending_paths
+                if path not in changed_agent_paths
+                and Path(path).name != "INDEX.md"
+                and path not in unexpected
+            )
+            unexpected.sort()
             if unexpected:
                 raise _unexpected_change_error(unexpected)
             commit_work_unit(
