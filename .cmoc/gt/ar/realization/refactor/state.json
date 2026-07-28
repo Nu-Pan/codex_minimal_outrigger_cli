@@ -1164,10 +1164,10 @@
     "last_investigated_at": "2026-07-29_00-24_50_909127000"
   },
   "test/test_indexing_cli.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "b63b722197d2f8f3b0e96b65b2a2d26828d20963e4e67ec745cd5f3cadb56f35",
-    "last_investigated_at": "2026-07-26_09-03_07_031429000"
+    "last_investigated_sha256": "3ac50f0119f112ac4b2defefcd24876871abeb65162baee557d3c1d65123e07a",
+    "last_investigated_at": "2026-07-29_01-58_36_665799000"
   },
   "test/test_indexing_common.py": {
     "investigation_required": false,
