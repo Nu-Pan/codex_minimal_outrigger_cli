@@ -6,6 +6,7 @@ fork report、および join/abandon は同じ lifecycle fixture を共有する
 """
 
 import json
+import os
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
@@ -39,6 +40,7 @@ from commons.runtime_run_lifecycle import (
     GitChange,
     commit_work_unit,
     flattened_change_paths,
+    raw_oracle_diff,
     set_run_state,
     start_editing_run,
     worktree_change_paths,
@@ -138,6 +140,24 @@ def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None
             GitChange("M", ("modified.md",)),
         ]
     ) == ["modified.md", "new.md"]
+
+
+def test_raw_oracle_diff_treats_changed_paths_as_literal_pathspecs(
+    tmp_path: Path,
+) -> None:
+    """oracle path の glob 文字を raw diff の pathspec として解釈しない。"""
+    root = make_repo(tmp_path)
+    special_path = root / "oracle" / "spec[1].md"
+    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    special_path.write_text("after\n")
+    run_git(root, "add", "-A")
+    run_git(root, "commit", "-m", "add special oracle path")
+    end = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    diff = raw_oracle_diff(root, base, end)
+
+    assert "oracle/spec[1].md" in diff
+    assert "+after" in diff
 
 
 def test_run_reports_keep_distinct_files_on_timestamp_collision(
@@ -1151,6 +1171,55 @@ def test_refactor_start_failure_does_not_recover_existing_error_run(
     assert _state(state_path)["run"]["state"] == "error"
     assert (context.run_worktree / "README.md").read_text() == "existing error run\n"
     assert current_branch(root) == context.session_branch
+
+
+def test_refactor_cmoc_start_error_does_not_recover_competing_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """並行 start の CmocError で別 invocation の run を error にしない。"""
+    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    original_start = refactor_module.start_editing_run
+
+    def competing_start(kind: str) -> EditingRunContext:
+        """別 invocation が lock 内で run を公開した後の競合を再現する。"""
+        original_start(kind)
+        raise CmocError(
+            "別の editing run が先に開始されました。",
+            [],
+            "simulated concurrent start",
+        )
+
+    monkeypatch.setattr(refactor_module, "start_editing_run", competing_start)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "running"
+    assert current_branch(root) == session_branch
+
+
+def test_recover_started_run_rejects_run_owned_by_other_process(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """別 process の tracking を持つ active run を recovery 対象にしない。"""
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_refactor")
+    tracked = SimpleNamespace(
+        process_id=os.getpid() + 1,
+        start_time=None,
+        child_processes=(),
+    )
+    monkeypatch.setattr(lifecycle_module, "read_run_process_id", lambda *_args: tracked)
+
+    assert lifecycle_module.recover_started_run("realization_refactor") is None
+    assert _state(state_path)["run"]["state"] == "running"
+    assert context.run_worktree.exists()
 
 
 def test_run_join_allows_oracle_change_on_session_branch(

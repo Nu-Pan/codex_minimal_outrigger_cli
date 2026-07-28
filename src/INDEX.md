@@ -49,20 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を提供する commons パッケージ。設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果、INDEX lifecycle など、CLI 実装が横断利用する公開入口と個別実装を含む。
+- cmoc の共通 runtime 機能をまとめる commons パッケージ。設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果型、INDEX lifecycle など、CLI 実装が横断利用する実装への入口。
 
 ## Read this when
-- 共通 runtime API の入口や公開再エクスポートを確認するとき
-- CLI 共通実行 lifecycle、Codex exec/TUI、設定、Git/worktree、path、state、logging、error、INDEX 更新などの横断機能を変更・調査するとき
-- 特定の runtime 機能の実装担当モジュールを特定し、その詳細確認を始めるとき
+- 複数の CLI 機能にまたがる runtime helper の責務や公開 API を確認・変更するとき
+- 設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果、INDEX 更新の共通処理を調査するとき
+- commons 配下の個別 runtime module を選ぶための入口が必要なとき
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックや専用テストだけを確認するとき
-- 利用者向け仕様や Structured Output schema などの正本定義そのものを確認するとき
-- 対象が明確な場合に、commons 全体ではなく特定の runtime 実装へ直接進めるとき
+- 特定の runtime helper の実装詳細だけを調査するときは、対応する個別 runtime module を直接読む
+- CLI サブコマンド固有の業務ロジックやテストだけを確認するとき
+- 利用者向け仕様や oracle の正本定義だけを確認するときは、対応する oracle 文書を直接読む
 
 ## hash
-- 59730ce9b84798c91a75a7bc474e324c5cc1ad81170e1ed3cde61f2d142583da
+- df48d6ee97fc91c53aef3b116f760ae8512c481a80e663d5325288a6b9ca4a09
 
 # `config`
 
@@ -114,15 +114,17 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの実行入口と、apply・review の実装追加先を扱う。各サブコマンドの詳細実装や下位責務へ進むための入口。
+- CLI サブコマンド実装の入口をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの実行フローと下位実装へのルーティングを扱い、未実装の apply・review も配置予定場所として示す。
 
 ## Read this when
-- CLI サブコマンド全体の実装構成や、対象サブコマンドの実装ファイルを選ぶとき。
-- doctor、indexing、oracle、realization、run、session、tui の実行フローや、apply・review の実装配置を調査・変更するとき。
+- CLI サブコマンド全体の構成や、対象サブコマンドの実装ファイルを選ぶ入口を確認するとき。
+- doctor、indexing、oracle、realization、run、session、tui の実行フローや責務境界を調査・変更するとき。
+- サブコマンド実装の追加先として apply または review の配置場所を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理、共通 lifecycle、INDEX 更新、prompt 構築などを調査するときは、この階層ではなく該当する下位実装を直接読む。
-- サブコマンド以外の CLI runtime や oracle 文書の仕様だけを確認するとき。
+- 特定サブコマンドの詳細処理を確認する場合は、このディレクトリの入口ではなく該当する下位実装ファイルを直接読む。
+- 共通 CLI runtime、prompt 構築、INDEX 更新処理など、サブコマンド自身が担当しない共通処理だけを調査するときは、それぞれの実体を直接読む。
+- oracle や realization の個別仕様を確認するときは、対応する oracle 文書・実装を直接読む。
 
 ## hash
-- d3e0cc2dc95258aa136603871d47099a6af982bc28ee2b5a24662e06ffe2f037
+- 9744ab45bf52f42af4748a9cb403465123be58e2a8cd1331760823d67b4362a5

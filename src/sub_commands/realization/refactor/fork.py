@@ -181,9 +181,9 @@ def _cmoc_realization_refactor_fork_body() -> None:
         if context is None:
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
             # 事前条件が ready でなかった場合は既存 run を回収しない。ready を
-            # 確認した後の start failure は、CmocError でも context 返却前に公開
-            # された run の回収対象にする。
-            if start_attempted and start_was_ready:
+            # 確認後に別 invocation が先に run を公開すると CmocError になるため、
+            # その run をこの invocation の回収対象として扱わない。
+            if start_attempted and start_was_ready and not isinstance(exc, CmocError):
                 context = recover_started_run("realization_refactor")
             if context is None:
                 raise

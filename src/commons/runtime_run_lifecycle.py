@@ -18,6 +18,7 @@ from pathlib import Path
 
 from commons.indexing import commit_index_updates, indexing_lock, update_indexes
 from commons.runtime_codex import run_codex_exec as run_indexing_codex_exec
+from commons.runtime_codex_profile import process_start_time
 from commons.runtime_errors import CmocError
 from commons.runtime_git import (
     branch_exists,
@@ -42,6 +43,7 @@ from commons.runtime_paths import (
 from commons.runtime_run import (
     delete_run_process_id,
     expected_run_worktree,
+    read_run_process_id,
     run_lifecycle_lock,
     worktree_for_branch,
     worktree_for_branch_optional,
@@ -281,12 +283,20 @@ def resolve_active_run(
 
 def recover_started_run(kind: str) -> EditingRunContext | None:
     """context 公開前に作成された指定 kind の run を回収対象として解決する。"""
-    # {{work-root}}/oracle/doc/dev_rule/design_rule.md
     try:
         context, _state = resolve_active_run({"running", "error"})
     except CmocError:
         return None
     if context.kind != kind:
+        return None
+    tracked = read_run_process_id(context.repo, context.session_id)
+    if tracked is not None and (
+        tracked.process_id != os.getpid()
+        or tracked.start_time is None
+        or process_start_time(os.getpid()) != tracked.start_time
+    ):
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # ready 確認後に別 process が run を公開しても、その run を recovery しない。
         return None
     return replace(context, state_before="ready")
 
@@ -509,8 +519,20 @@ def raw_oracle_diff(worktree: Path, base: str, end: str) -> str:
     )
     if not candidates:
         return ""
+    # Git interprets wildcard characters in pathspecs even after `--`; literal
+    # pathspecs prevent one oracle filename from suppressing or broadening the diff.
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    literal_candidates = [f":(literal){path}" for path in candidates]
     return run_git(
-        ["diff", "--binary", "--find-renames", base, end, "--", *candidates],
+        [
+            "diff",
+            "--binary",
+            "--find-renames",
+            base,
+            end,
+            "--",
+            *literal_candidates,
+        ],
         worktree,
     ).stdout
 
