@@ -356,19 +356,20 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run の開始から state 遷移、commit、差分分類、INDEX 更新、cleanup 判定までを担う共通 lifecycle 実装。EditingRunContext と lifecycle lock を共有し、run branch/worktree、session state、許可された変更範囲の整合性を管理する。
+- editing run の開始から state 遷移、work unit の commit/rollback、差分分類、INDEX 更新、cleanup 判定までを担う共通 lifecycle 実装。EditingRunContext と lifecycle lock を共有し、session/run branch・worktree・state の整合性を検証する。
 
 ## Read this when
-- editing run の開始・復旧・終了状態、run/session の state 整合性を変更または調査するとき
-- run worktree の commit、rollback、差分分類、oracle 差分、許可外 path 判定を変更または調査するとき
-- run worktree での INDEX 更新や branch/worktree cleanup の挙動を確認するとき
+- editing run の開始、active run の解決・復旧、joinable/error state の更新を変更または調査するとき
+- run worktree の commit、rollback、差分 path の分類、agent に許可された変更範囲の判定を確認するとき
+- run worktree での INDEX 更新や oracle/session/realization 差分の扱いを変更または検証するとき
 
 ## Do not read this when
-- editing run lifecycle ではなく、個別の CLI サブコマンド仕様や agent workload の実装だけを確認するとき
-- state schema、git 操作、path 判定の詳細実装を直接確認する必要があり、対応する commons モジュールへ進む方が適切なとき
+- 単一の CLI サブコマンド固有の入力検証や出力変換だけを調べるとき
+- state のデータモデル定義だけを確認するときは、state 実装を直接読む
+- INDEX 生成そのものの規則だけを確認するときは、INDEX builder や対応する oracle 文書を直接読む
 
 ## hash
-- f806a46699cf98cf89b62796e20a0ac2e79447db0a88849df57f17ee3035221f
+- 6919e4a6cfcda5fa86261d2dfa93222c3be33e511bfc73f4f7100f9f7606a6dd
 
 # `runtime_run_report.py`
 

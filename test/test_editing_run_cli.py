@@ -223,6 +223,26 @@ def test_run_reports_keep_distinct_files_on_timestamp_collision(
     )
 
 
+def test_new_run_target_skips_dangling_worktree_symlink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """dangling symlink を空き run worktree として再利用しない。"""
+    root = make_repo(tmp_path)
+    collision_id = "2026-06-27_10-00_00_000001000"
+    free_id = "2026-06-27_10-00_00_000002000"
+    collision = root / ".cmoc" / "gu" / "worktree" / "session" / collision_id
+    collision.parent.mkdir(parents=True)
+    collision.symlink_to(tmp_path / "missing-run-worktree", target_is_directory=True)
+    target_ids = iter([collision_id, free_id])
+    monkeypatch.setattr(lifecycle_module, "timestamp", lambda: next(target_ids))
+
+    branch, worktree = lifecycle_module.new_run_target(root, "session")
+
+    assert branch == f"cmoc/run/session/{free_id}"
+    assert worktree == root / ".cmoc" / "gu" / "worktree" / "session" / free_id
+    assert collision.is_symlink()
+
+
 def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> None:
     """未commit renameの変更pathはrename後だけを返す。"""
     root = make_repo(tmp_path)

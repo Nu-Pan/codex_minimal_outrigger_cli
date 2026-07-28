@@ -544,7 +544,14 @@ def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
         run_id = timestamp()
         branch = f"cmoc/run/{session_id}/{run_id}"
         worktree = expected_run_worktree(repository, branch)
-        if not branch_exists(repository, branch) and not worktree.exists():
+        # {{work-root}}/oracle/doc/branch_model.md
+        # Path.exists() は dangling symlink に false を返すため、symlink を空き
+        # target として create_run_worktree へ渡さない。
+        if (
+            not branch_exists(repository, branch)
+            and not worktree.exists()
+            and not worktree.is_symlink()
+        ):
             return branch, worktree
     raise CmocError(
         "一意な run-id を生成できませんでした。",
