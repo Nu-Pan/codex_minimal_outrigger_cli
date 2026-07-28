@@ -49,21 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 機能をまとめる commons パッケージ。設定、Git、Codex 実行、プロセス・run lifecycle、パス、状態、ログ、結果型、INDEX 更新など、CLI 実装が横断的に利用する実装群への入口。
-- 個別の runtime 機能を担うモジュールと、それらをまとめて再公開する API モジュールで構成される。
+- cmoc の共通 runtime helper を集約する commons パッケージ。設定、Git、Codex 実行、プロセス・run lifecycle、パス、状態、ログ、エラー、結果型、INDEX 更新など、CLI が横断利用する実装への入口を提供する。
 
 ## Read this when
-- CLI 横断の共通 runtime 機能を変更・調査するとき
-- 設定、Git、Codex 実行、process/run lifecycle、path、state、logging、INDEX 更新の実装箇所を探すとき
-- commons パッケージの公開 API や共通 helper の責務境界を確認するとき
+- commons の共通 runtime API やパッケージ入口を確認するとき
+- Codex 実行、INDEX 更新、設定・Git・状態管理、run lifecycle など複数の CLI 機能にまたがる処理を調査・変更するとき
+- 特定の runtime helper の担当領域を特定し、対応する個別モジュールへ進む必要があるとき
 
 ## Do not read this when
-- 特定の機能の詳細が明らかな場合は、commons 配下の対応する個別 runtime モジュールを直接読む
-- 利用者向け仕様や正本 schema を確認する場合は、対応する oracle 文書を読む
-- 個別 CLI サブコマンドの業務ロジックや、その専用テストだけを調査する場合
+- 個別 runtime helper の実装詳細だけを確認したいときは、対象の runtime モジュールを直接読む
+- CLI サブコマンド固有の業務ロジックやテストだけを確認したいとき
+- 共通 runtime API の利用方法ではなく、参照されている oracle の仕様や schema 自体を確認したいとき
 
 ## hash
-- 64d93f118f069a4842308bc3580ceae891d58017d3224c9cfac66fd4d653501f
+- 799355ed7ce85a9df3fb09f1fe5163e6842a10339bc690663d1c0d73a1b7c35e
 
 # `config`
 
@@ -115,15 +114,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装入口をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの実行フローと、各サブコマンド配下の処理へ進むための入口を扱う。apply および review は現時点で実装がなく、将来の実装配置先として示されている。
+- CLI サブコマンド実装をまとめるディレクトリ。doctor・indexing・oracle・realization・run・session・tui などの実行入口と関連パッケージへの下位要素を提供する。apply と review は現時点で実装本文がない。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、対象サブコマンドの実行入口を確認・変更するとき。
-- 複数のサブコマンドにまたがる実装入口や、配下の詳細実装へ進む先を判断するとき。
+- サブコマンドの実装構成や、各サブコマンドの実行入口を確認・変更するとき。
+- doctor、indexing、oracle、realization、run、session、tui の処理フローや責務分担を調査するとき。
 
 ## Do not read this when
-- 特定サブコマンド内部の詳細処理だけを調査するときは、該当する実装ファイルや下位ディレクトリを直接読む。
-- oracle の正本仕様、CLI 共通 runtime、共通 indexing・run 処理、prompt editor、TUI builder などの詳細だけを確認するときは、それぞれの直接の実装または oracle 文書を読む。
+- 個別サブコマンドの詳細処理だけを確認する場合は、該当する実装ファイルや下位パッケージを直接読む。
+- サブコマンド共通処理、参照される oracle 仕様、または専用の補助処理だけを確認する場合は、それぞれの直接の実装・仕様文書を読む。
 
 ## hash
-- f2ec322fcb92b18645f07979fd97564d9c5e1bc9921390590683cfe9e9f51a1c
+- 6831225262057e5a5cddc9ed9b75c93c031f5d0b5f08ce97137e6484dded7690

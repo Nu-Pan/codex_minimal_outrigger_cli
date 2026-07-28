@@ -481,12 +481,12 @@ def run_tracked_codex_subprocess(
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
     sigterm_pending = False
 
-    def defer_sigterm(_signum: int, _frame: Any) -> None:
+    def _defer_sigterm(_signum: int, _frame: Any) -> None:
         """tracking情報の登録が終わるまでSIGTERMを保留する。"""
         nonlocal sigterm_pending
         sigterm_pending = True
 
-    signal.signal(signal.SIGTERM, defer_sigterm)
+    signal.signal(signal.SIGTERM, _defer_sigterm)
     try:
         try:
             with run_process_id_file_lock(tracking_path):

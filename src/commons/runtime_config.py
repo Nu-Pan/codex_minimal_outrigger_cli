@@ -111,7 +111,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
 def validate_json_toml_value(value: Any) -> JsonTomlValue:
     """JSON と TOML の双方へ意味を変えず保存できる値を検証する。"""
 
-    def validate(item: Any, active_containers: set[int]) -> JsonTomlValue:
+    def _validate(item: Any, active_containers: set[int]) -> JsonTomlValue:
         """循環 container も拒否しながら再帰的な値を検証する。"""
         if isinstance(item, str):
             # TOML string は Unicode scalar value だけを受理する。
@@ -137,19 +137,19 @@ def validate_json_toml_value(value: Any) -> JsonTomlValue:
             active_containers.add(identity)
             try:
                 if isinstance(item, list):
-                    return [validate(element, active_containers) for element in item]
+                    return [_validate(element, active_containers) for element in item]
                 restored: dict[str, JsonTomlValue] = {}
                 for key, element in item.items():
                     if not isinstance(key, str):
                         raise TypeError
-                    validate(key, active_containers)
-                    restored[key] = validate(element, active_containers)
+                    _validate(key, active_containers)
+                    restored[key] = _validate(element, active_containers)
                 return restored
             finally:
                 active_containers.remove(identity)
         raise TypeError
 
-    return validate(value, set())
+    return _validate(value, set())
 
 
 def _model_provider_map_from_dict(data: Any) -> dict[str, CodexModelProviderConfig]:

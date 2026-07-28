@@ -29,16 +29,19 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの実装。oracle 編集指示を収集し、main worktree の active session branch と clean 状態を検証したうえで Codex TUI を起動する。
+- `cmoc oracle edit` サブコマンドの実装。oracle 編集指示を収集し、TUI 起動パラメータを構築したうえで、main worktree 上の active session branch から Codex TUI を起動する。indexing、入力ルートの ignore 確認、worktree・branch・session・clean 状態の事前検証も担う。
 
 ## Read this when
-- `cmoc oracle edit` の起動処理、入力テンプレート、TUI 起動パラメータ、または起動前提条件を変更・調査するとき。
+- `cmoc oracle edit` の CLI 動作、oracle 編集指示の入力処理、Codex TUI 起動条件を変更または調査するとき。
+- oracle edit の indexing preflight、prompt editor 入力、session branch と clean worktree の検証経路を確認するとき。
 
 ## Do not read this when
-- oracle 編集処理そのものの仕様や TUI パラメータ構築の詳細を確認したいときは、対応する oracle 文書や `acp/builder/oracle/edit/launch_tui` の実装を直接読む。
+- oracle 編集指示の入力部品そのものを変更する場合は、prompt editor 入力の共通実装を直接読む。
+- TUI 起動パラメータの構築仕様を確認する場合は、oracle edit launch TUI builder を直接読む。
+- 他のサブコマンドの CLI runtime や session 状態処理だけを調査する場合は、このファイルを起点にしない。
 
 ## hash
-- 476a738e23265d2f782dbf5646861067f56b647d0f4ad96cdba6ff6e2e541c57
+- 337fbe660a404600575a320131d1cf1d36b710d08a30c6cb33a2bb332da9809f
 
 # `investigation.py`
 
@@ -59,20 +62,19 @@
 # `review.py`
 
 ## Summary
-- oracle review サブコマンドの CLI 実行入口。active session branch と clean worktree を検証し、隔離 run worktree 上で oracle review loop、INDEX 更新の merge、cleanup、レポート出力までを統括する。
-- oracle review の対象列挙、所見処理、レポート生成、review branch の commit・merge・cleanup など、同サブコマンド実行全体の公開入口を扱う。
+- oracle review サブコマンドの CLI 実行入口と本体を担う実装。active session の検証、隔離 worktree・branch 上での oracle review 実行、所見・INDEX 変更の統合、cleanup・中断・エラーレポートを扱う。関連する review_targets、review_loop、review_index、review_report の上位オーケストレーション入口。
 
 ## Read this when
-- oracle review サブコマンドの実行フロー、隔離 run のライフサイクル、中断・例外時の cleanup、レビュー結果のレポート出力を変更または調査するとき。
-- review 実行前の branch・session・worktree 検証や、review branch の INDEX 変更 merge の呼び出し関係を確認するとき。
+- oracle review サブコマンドの実行フロー、隔離 run の生成・統合・cleanup、中断時の挙動、レポート生成、未コミット差分の扱いを変更・調査するとき。
 
 ## Do not read this when
-- oracle review loop 内の所見判定ロジックだけを変更または調査するときは、review loop の実装を直接読む。
-- 対象 oracle file の列挙規則だけを確認するときは、review targets の実装を直接読む。
-- レビュー結果の表示形式・レポート本文だけを確認するときは、review report の実装を直接読む。
+- oracle review の対象列挙だけを変更・調査するときは review_targets を直接読む。
+- レビュー処理ループだけを変更・調査するときは review_loop を直接読む。
+- INDEX 変更の commit・merge・conflict 解決だけを変更・調査するときは review_index を直接読む。
+- レポートの表示・書き込みだけを変更・調査するときは review_report を直接読む。
 
 ## hash
-- ba192560abb93eae9948c7bc135a45caa79b543a13ff32a063e67753fca5b64f
+- 154f1016d340da7fb5627b18726175f8443fe9727bd45fb9cac206734276af24
 
 # `review_index.py`
 

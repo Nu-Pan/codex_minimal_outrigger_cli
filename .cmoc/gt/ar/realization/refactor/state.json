@@ -225,7 +225,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "c725d18b649ce36fdca432bb297452492eea1bca900c874e600451769d21d501",
-    "last_investigated_at": "2026-07-28_18-24_37_256348000"
+    "last_investigated_at": "2026-07-29_05-01_43_927667000"
   },
   "oracle/doc/dev_rule/design_rule.md": {
     "investigation_required": true,
@@ -732,7 +732,7 @@
     "last_investigated_at": "2026-07-25_01-11_15_652189000"
   },
   "src/commons/runtime_codex_exec.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "5efe48afeab7b47779262e7a22324567df11f7327132395b260f504d7dea88a0",
     "last_investigated_at": "2026-07-28_07-27_21_803839000"
@@ -750,19 +750,19 @@
     "last_investigated_at": "2026-07-25_01-57_44_821813000"
   },
   "src/commons/runtime_codex_profile.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "7f34712c7c764c9181e168bf980dfb1511352256c2df19cb1f897f1825aba16b",
     "last_investigated_at": "2026-07-28_07-59_40_591784000"
   },
   "src/commons/runtime_codex_tui.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "f7c796bb30a6bcfe91a2eb3cbc5323a43341d8262cfac90e0463536299ea8cb9",
     "last_investigated_at": "2026-07-25_02-32_24_323229000"
   },
   "src/commons/runtime_config.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "c78a4ceca303c20a2e74d7af5dd4f2722fe30291462fb572ae1ade2e712556c4",
     "last_investigated_at": "2026-07-28_08-20_23_990597000"
@@ -882,7 +882,7 @@
     "last_investigated_at": "2026-07-25_07-48_18_213857000"
   },
   "src/sub_commands/oracle/edit.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "476a738e23265d2f782dbf5646861067f56b647d0f4ad96cdba6ff6e2e541c57",
     "last_investigated_at": "2026-07-26_22-43_45_528658000"

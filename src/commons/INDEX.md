@@ -100,20 +100,21 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行と再試行を制御する状態機械。Structured Output の JSON/schema 検証、capacity retry、quota availability probe と待機、resume token による継続、Codex subprocess の cwd・環境・設定・ログ管理、console/subcommand event 記録を一体で扱う。
+- Codex exec の単一試行ループを統括する実行制御モジュール。Codex subprocess の起動、prompt・stdout・stderr・output・call log の保存、Structured Output の厳格な JSON/schema 検証、capacity retry、quota 待機と代表 probe、resume token による継続、console/subcommand event 記録、最終的な CodexExecResult の構築を扱う。exec 実行の再試行状態機械を確認するための入口。
 
 ## Read this when
-- Codex exec の実行失敗、Structured Output 検証、capacity retry、quota 待機・probe、resume 継続の挙動を変更または調査するとき。
-- Codex subprocess の argv、cwd、CODEX_HOME、prompt/stdout/stderr/output/call log、実行イベントの記録方法を確認するとき。
-- Codex exec の retry counter、quota wait 状態、代表 probe、schema validation の制御ロジックを追うとき。
+- Codex exec の subprocess 起動条件、cwd・CODEX_HOME・設定上書き、output schema の適用を変更または調査するとき
+- Structured Output の parse/schema 検証、semantic retry、capacity retry、quota 待機・probe・resume 継続の挙動を確認するとき
+- Codex call log、prompt/stdout/stderr/output log、console 出力、subcommand event の記録内容や失敗時の診断を変更または調査するとき
+- CodexExecResult の生成や、1 回の exec 呼び出しから成功・失敗結果が返るまでの制御フローを確認するとき
 
 ## Do not read this when
-- TUI の起動や TUI 固有の分岐を変更・調査するときは、TUI 起動を担当する別 module を読む。
-- Codex 呼び出し元の prompt 生成や AgentCallParameter の定義だけを確認したいときは、該当する builder または parameter 定義を直接読む。
-- 一般的な runtime logging、path、profile、config の共通実装だけを確認したいときは、対応する commons module を直接読む。
+- TUI の起動・対話処理そのものを調査するときは、TUI 起動を担当する別 module を直接読む
+- Codex subprocess の低レベル環境構築、エラー分類、resume token 抽出などの共通処理だけを調査するときは、commons.runtime_codex_profile を直接読む
+- Codex exec が参照する正本仕様や retry・quota・ログ規則を確認することが目的なら、対応する oracle 文書を先に読む
 
 ## hash
-- 5efe48afeab7b47779262e7a22324567df11f7327132395b260f504d7dea88a0
+- 0d4695446ef6c4b679967685b1e0d8617fdcdca4ab91765ccc02614e709e44de
 
 # `runtime_codex_logging.py`
 
@@ -148,54 +149,53 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。sandbox・cwd・CODEX_HOME・provider/config override などの起動引数と環境を構築し、schema 配置、JSONL 出力解析、capacity/quota/予期せぬエラー判定を担う。editing run の child process tracking、pidfd による安全な signal 送信、process group 停止も扱う。
+- Codex CLI subprocess 境界の実行環境・引数・設定・追跡・結果解釈を担う。sandbox と cwd、CODEX_HOME、model/provider の TOML override、schema 配置、process group の安全な停止、JSONL 出力と capacity/quota/error 判定をまとめ、Codex 呼び出し実装の入口となる。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox mode、cwd、CODEX_HOME、model provider 設定を変更・調査するとき
-- Codex subprocess の process tracking、停止、PID reuse 対策、SIGTERM/SIGKILL 処理を変更・調査するとき
-- Structured Output schema の配置、Codex JSONL 出力、resume token、capacity/quota/error 判定を変更・調査するとき
+- Codex CLI の argv、sandbox、cwd、CODEX_HOME、model/provider 設定を変更または調査するとき。
+- Codex child process の追跡・停止、pidfd、process group、editing run の中断処理を変更または調査するとき。
+- Structured Output schema の配置、Codex subprocess の実行、JSON/JSONL 出力、capacity・quota・unexpected error の判定を変更または調査するとき。
 
 ## Do not read this when
-- Codex CLI 呼び出し元の編集 run 制御や retry の全体フローを調査する場合
-- 一般的な設定値の定義、runtime path、JSON/TOML 検証、エラー型の実装だけを調査する場合は、それぞれの責務を直接扱うファイルを読む
+- Codex CLI の上位ユースケースや editing run 全体の制御フローを確認する場合は、対応するサブコマンド実装を直接読む。
+- 一般的な設定モデル、パス、エラー型、JSON/TOML 値検証の定義を確認する場合は、それぞれの専用モジュールを直接読む。
 
 ## hash
-- 7f34712c7c764c9181e168bf980dfb1511352256c2df19cb1f897f1825aba16b
+- 0e52bc1fd3ab2233c58b4dd1952b8ec5b2d5019f008f7759a78d97b2ce36eca0
 
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI の起動処理を担う実装。設定上書き引数、作業ディレクトリ、CODEX_HOME の検証、呼び出しログ、成功・失敗イベント記録、例外変換までを一括して扱う。Codex subprocess の起動や TUI 呼び出し結果の扱いを確認する入口。
+- Codex TUI 呼び出しの実行制御を担うモジュール。設定・作業ディレクトリ・CODEX_HOME・上書き引数を解決し、call log を保存して Codex subprocess を起動する。実行結果や起動失敗をコンソールおよびサブコマンド logger に記録し、失敗を CommandResult または CmocError として返す。
 
 ## Read this when
-- Codex TUI または Codex subprocess の起動条件・引数・作業ディレクトリを変更または調査するとき
-- Codex 呼び出しログ、コンソール通知、logger event、失敗時の例外処理を確認するとき
-- Codex HOME や設定上書きの検証経路を確認するとき
+- Codex TUI の起動引数、作業ディレクトリ、環境変数、CODEX_HOME の検証を変更・調査するとき
+- Codex 呼び出しの call log、実行時間、return code、logger event の記録処理を変更・調査するとき
+- Codex subprocess の失敗処理や CmocError への変換を変更・調査するとき
 
 ## Do not read this when
-- Codex 呼び出し全体のパラメータ型や設定値の定義だけを確認したいときは、AgentCallParameter や CmocConfig の定義を直接読む
-- Codex 実行環境の一般規則やログ仕様の正本を確認したいときは、対応する oracle 文書を直接読む
-- Codex TUI の呼び出し結果ではなく、他の subprocess 実行処理だけを調査するとき
+- Codex の設定値や override argv の生成規則だけを確認したいときは、設定・profile 関連モジュールを直接読む
+- Codex CLI の非 TUI 呼び出し固有の処理だけを確認したいときは、対応する呼び出しモジュールを直接読む
 
 ## hash
-- f7c796bb30a6bcfe91a2eb3cbc5323a43341d8262cfac90e0463536299ea8cb9
+- 1bc74d53df01b76bf196b7f908cf3eec9628e8ab05571f0d6c5ed95f068711bd
 
 # `runtime_config.py`
 
 ## Summary
-- cmoc 設定の永続化境界を担当し、設定オブジェクトと JSON 表現の相互変換、JSON/TOML 互換値・各設定値の検証、設定ファイルの読み込み・書き込み・同期を提供する。設定モデルやパス定義そのものではなく、設定の runtime 入出力処理へ進む入口となる。
+- cmoc 設定の永続化境界を担い、型付き設定と JSON の相互変換、JSON/TOML 互換値の検証、設定ファイルの読み書き・既定値補完・同期を提供する。設定形式や不正値処理を確認する際の入口となる。
 
 ## Read this when
-- cmoc config の JSON 保存形式、設定値の型検証、既定値補完、読み込み・書き込み・同期の挙動を変更または調査するとき
-- 不正な設定値や設定ファイル欠落・JSON 読み込み失敗時の CmocError 境界を確認するとき
+- cmoc 設定の JSON 保存・読み込み・同期を変更または調査するとき
+- Codex モデル、provider、reasoning effort、ループ回数などの設定値検証を確認するとき
+- 不正な設定ファイルに対する CmocError の挙動を確認するとき
 
 ## Do not read this when
-- 設定項目の定義や既定値そのものを確認したいときは設定モデル側を直接読む
-- 設定ファイルのパス定義だけを確認したいときは runtime path 側を直接読む
-- Codex 実行、oracle review、CLI コマンドの処理自体を調査するとき
+- 設定型や既定値そのものを確認したいだけのときは、設定型を定義するモジュールを直接読む
+- Codex 実行処理や CLI 引数変換の実装を確認したいときは、呼び出し先の実行モジュールを直接読む
 
 ## hash
-- c78a4ceca303c20a2e74d7af5dd4f2722fe30291462fb572ae1ade2e712556c4
+- cbb9d54a48da1574e85ca8d129695bd5ac7d4dd9c734729332add84d483f9d2f
 
 # `runtime_content.py`
 
@@ -353,19 +353,19 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run の開始から state 遷移、work unit の commit・rollback、差分分類、INDEX 更新、cleanup 判定までを担う共通 lifecycle 実装。EditingRunContext と lifecycle/indexing lock を共有し、run branch・worktree・session state の整合性を管理する。
+- editing run の開始から state 遷移、commit、差分分類、INDEX 更新、cleanup 判定までを担う共通 lifecycle 実装。EditingRunContext と lifecycle lock を共有し、run branch/worktree、session state、許可された変更範囲の整合性を管理する。
 
 ## Read this when
-- editing run の開始・復旧・終了状態、run/session worktree の解決や state 更新を変更・調査するとき
-- work unit の commit/rollback、INDEX 更新、agent/run/session の許可差分判定を変更・調査するとき
-- Git tree の rename/copy を含む差分列挙や、想定外 path・oracle diff の判定を確認するとき
+- editing run の開始・復旧・終了状態、run/session の state 整合性を変更または調査するとき
+- run worktree の commit、rollback、差分分類、oracle 差分、許可外 path 判定を変更または調査するとき
+- run worktree での INDEX 更新や branch/worktree cleanup の挙動を確認するとき
 
 ## Do not read this when
-- 特定の CLI サブコマンドの利用者向け仕様だけを確認したいとき
-- state データ構造そのものや Git・path 操作の低レベル共通関数だけを変更・調査するときは、対応する runtime_state または runtime_git の実装を先に読む
+- editing run lifecycle ではなく、個別の CLI サブコマンド仕様や agent workload の実装だけを確認するとき
+- state schema、git 操作、path 判定の詳細実装を直接確認する必要があり、対応する commons モジュールへ進む方が適切なとき
 
 ## hash
-- 08b601583aeafdea99070f7b9ba34989e726fbe07bc21748669cfe84c125a1ef
+- f806a46699cf98cf89b62796e20a0ac2e79447db0a88849df57f17ee3035221f
 
 # `runtime_run_report.py`
 

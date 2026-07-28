@@ -209,7 +209,7 @@ def run_codex_exec(
         else None
     )
 
-    def call_data(
+    def _call_data(
         run_parameter: AgentCallParameter,
         run_codex_home: Path,
         run_codex_cwd: Path,
@@ -223,9 +223,9 @@ def run_codex_exec(
             "cwd": str(run_codex_cwd.resolve()),
         }
 
-    base_call_data = call_data(parameter, codex_home, codex_cwd)
+    base_call_data = _call_data(parameter, codex_home, codex_cwd)
 
-    def new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
+    def _new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # sibling path を導出する前に O_EXCL で call path を予約する。process-local の
@@ -242,7 +242,7 @@ def run_codex_exec(
             run_call_path,
         )
 
-    def build_argv(output_path: Path, resume_token: str | None) -> list[str]:
+    def _build_argv(output_path: Path, resume_token: str | None) -> list[str]:
         """schema と resume 状態を反映した `codex exec` の argv を組み立てる。"""
         run_argv = _base_exec_argv(override_args, codex_cwd)
         run_argv.extend(["--json", "--output-last-message", str(output_path)])
@@ -253,7 +253,7 @@ def run_codex_exec(
         run_argv.append("-")
         return run_argv
 
-    def run_with_prompt_file(
+    def _run_with_prompt_file(
         run_argv: list[str],
         run_prompt_path: Path,
         *,
@@ -273,7 +273,7 @@ def run_codex_exec(
                 env=run_codex_env,
             )
 
-    def write_call_log(
+    def _write_call_log(
         path: Path,
         *,
         run_purpose: str,
@@ -311,7 +311,7 @@ def run_codex_exec(
     quota_wait_sec = 0.0
     logger = subcommand_logger or current_subcommand_logger()
 
-    def emit_codex_call_event(
+    def _emit_codex_call_event(
         *,
         run_purpose: str,
         run_call_path: Path,
@@ -363,7 +363,7 @@ def run_codex_exec(
             payload["error"] = error
         logger.event("codex_call", **payload)
 
-    def codex_exec_result_from_paths(
+    def _codex_exec_result_from_paths(
         result: subprocess.CompletedProcess[str],
         *,
         run_call_path: Path,
@@ -400,12 +400,12 @@ def run_codex_exec(
 
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = (
-            new_log_paths()
+            _new_log_paths()
         )
         output_jsonl_path = output_path.with_suffix(".jsonl")
-        current_argv = build_argv(output_path, resume_token)
+        current_argv = _build_argv(output_path, resume_token)
         _write_prompt_log(prompt_path, parameter.prompt)
-        write_call_log(
+        _write_call_log(
             call_path,
             run_purpose=purpose,
             run_ts=ts,
@@ -418,10 +418,10 @@ def run_codex_exec(
         )
         attempt_started_at = time.perf_counter()
         try:
-            result = run_with_prompt_file(current_argv, prompt_path)
+            result = _run_with_prompt_file(current_argv, prompt_path)
         except BaseException as exc:
             startup_error = format_codex_call_error(exc)
-            emit_codex_call_event(
+            _emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
                 run_prompt_path=prompt_path,
@@ -453,7 +453,7 @@ def run_codex_exec(
                 and capacity_attempts < max_capacity_retries
             ):
                 capacity_attempts += 1
-                emit_codex_call_event(
+                _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
                     run_prompt_path=prompt_path,
@@ -471,7 +471,7 @@ def run_codex_exec(
                 continue
             if quota_error and not unexpected_error:
                 global _QUOTA_POLLING, _QUOTA_PROBE_AVAILABLE, _QUOTA_PROBE_ERROR
-                emit_codex_call_event(
+                _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
                     run_prompt_path=prompt_path,
@@ -582,7 +582,7 @@ def run_codex_exec(
                             quota_probe_parameter,
                             config,
                         )
-                        probe_call_data = call_data(
+                        probe_call_data = _call_data(
                             quota_probe_parameter,
                             probe_codex_home,
                             probe_codex_cwd,
@@ -594,7 +594,7 @@ def run_codex_exec(
                             probe_stderr_path,
                             probe_output_path,
                             probe_call_path,
-                        ) = new_log_paths()
+                        ) = _new_log_paths()
                         probe_output_jsonl_path = probe_output_path.with_suffix(
                             ".jsonl"
                         )
@@ -612,7 +612,7 @@ def run_codex_exec(
                         _write_prompt_log(
                             probe_prompt_path, quota_probe_parameter.prompt
                         )
-                        write_call_log(
+                        _write_call_log(
                             probe_call_path,
                             run_purpose="quota availability probe",
                             run_ts=probe_ts,
@@ -626,7 +626,7 @@ def run_codex_exec(
                         )
                         probe_started_at = time.perf_counter()
                         try:
-                            poll = run_with_prompt_file(
+                            poll = _run_with_prompt_file(
                                 probe_argv,
                                 probe_prompt_path,
                                 run_codex_cwd=probe_codex_cwd,
@@ -634,7 +634,7 @@ def run_codex_exec(
                             )
                         except BaseException as exc:
                             startup_error = format_codex_call_error(exc)
-                            emit_codex_call_event(
+                            _emit_codex_call_event(
                                 run_purpose="quota availability probe",
                                 run_call_path=probe_call_path,
                                 run_prompt_path=probe_prompt_path,
@@ -670,7 +670,7 @@ def run_codex_exec(
                         ):
                             capacity_attempts += 1
                             quota_polls -= 1
-                            emit_codex_call_event(
+                            _emit_codex_call_event(
                                 run_purpose="quota availability probe",
                                 run_call_path=probe_call_path,
                                 run_prompt_path=probe_prompt_path,
@@ -691,7 +691,7 @@ def run_codex_exec(
                         if not probe_available and (
                             probe_unexpected_error or not probe_quota_error
                         ):
-                            emit_codex_call_event(
+                            _emit_codex_call_event(
                                 run_purpose="quota availability probe",
                                 run_call_path=probe_call_path,
                                 run_prompt_path=probe_prompt_path,
@@ -721,7 +721,7 @@ def run_codex_exec(
                                     stderr_path=probe_stderr_path,
                                 ),
                             )
-                        emit_codex_call_event(
+                        _emit_codex_call_event(
                             run_purpose="quota availability probe",
                             run_call_path=probe_call_path,
                             run_prompt_path=probe_prompt_path,
@@ -755,7 +755,7 @@ def run_codex_exec(
                 )
                 resume_token = _extract_resume_token_from_jsonl_log(output_jsonl_path)
                 continue
-            emit_codex_call_event(
+            _emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
                 run_prompt_path=prompt_path,
@@ -788,7 +788,7 @@ def run_codex_exec(
             except Exception as exc:
                 if semantic_attempts < max_semantic_retries:
                     semantic_attempts += 1
-                    emit_codex_call_event(
+                    _emit_codex_call_event(
                         run_purpose=purpose,
                         run_call_path=call_path,
                         run_prompt_path=prompt_path,
@@ -802,7 +802,7 @@ def run_codex_exec(
                         error=str(exc),
                     )
                     continue
-                emit_codex_call_event(
+                _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
                     run_prompt_path=prompt_path,
@@ -822,7 +822,7 @@ def run_codex_exec(
                 ) from exc
         else:
             output_json = read_output_json(output_path)
-        emit_codex_call_event(
+        _emit_codex_call_event(
             run_purpose=purpose,
             run_call_path=call_path,
             run_prompt_path=prompt_path,
@@ -834,7 +834,7 @@ def run_codex_exec(
             returncode=result.returncode,
             status="succeeded",
         )
-        exec_result = codex_exec_result_from_paths(
+        exec_result = _codex_exec_result_from_paths(
             result,
             run_call_path=call_path,
             run_prompt_path=prompt_path,

@@ -520,8 +520,8 @@ def raw_oracle_diff(worktree: Path, base: str, end: str) -> str:
     )
     if not candidates:
         return ""
-    # Git interprets wildcard characters in pathspecs even after `--`; literal
-    # pathspecs prevent one oracle filename from suppressing or broadening the diff.
+    # Git は `--` の後も pathspec の wildcard を解釈するため、literal pathspec を使う。
+    # これにより、1つの oracle filename が diff の対象を抑制・拡張することを防ぐ。
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
     literal_candidates = [literal_pathspec(path) for path in candidates]
     return run_git(

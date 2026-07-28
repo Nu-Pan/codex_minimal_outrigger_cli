@@ -106,7 +106,7 @@ def run_codex_tui(
     logger = current_subcommand_logger()
     status = "succeeded" if returncode == 0 else "failed"
 
-    def emit_event(error: str | None = None) -> None:
+    def _emit_event(error: str | None = None) -> None:
         """Codex CLI の成功・失敗 event を logger に記録する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
@@ -129,9 +129,9 @@ def run_codex_tui(
         )
 
     if startup_failure is not None:
-        emit_event(error)
+        _emit_event(error)
         raise startup_failure
-    emit_event()
+    _emit_event()
     if failure is not None:
         raise CmocError(
             "Codex CLI/TUI 呼び出しが失敗しました。",

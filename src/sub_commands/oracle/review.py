@@ -112,7 +112,7 @@ def _cmoc_oracle_review_body(
     interrupted = False
     cleanup_error: CmocError | None = None
 
-    def cleanup_created_resources() -> CmocError | None:
+    def _cleanup_created_resources() -> CmocError | None:
         """今回作成した review resource だけを cleanup して所有権を破棄する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
@@ -185,7 +185,7 @@ def _cmoc_oracle_review_body(
             if review_has_index_changes:
                 run_join_commit = merge_review_branch(current_root, run_branch)
         finally:
-            cleanup_error = cleanup_created_resources()
+            cleanup_error = _cleanup_created_resources()
         if cleanup_error is not None:
             raise cleanup_error
         start_subcommand_step(8, "所見リストをレポート", "write review report")
@@ -204,7 +204,7 @@ def _cmoc_oracle_review_body(
         )
     except KeyboardInterrupt:
         # loop 外の中断も、確定済みとして記録済みの範囲だけで正常完了する。
-        cleanup_error = cleanup_created_resources()
+        cleanup_error = _cleanup_created_resources()
         if cleanup_error is not None:
             report_path = write_oracle_review_report(
                 root,
@@ -242,7 +242,7 @@ def _cmoc_oracle_review_body(
     except BaseException as exc:
         # {{work-root}}/oracle/doc/app_spec/run_isolation.md
         # create_run_worktree が部分作成後に失敗した場合も、隔離 run を残さない。
-        cleanup_error = cleanup_created_resources()
+        cleanup_error = _cleanup_created_resources()
         error_message = str(exc) or exc.__class__.__name__
         if cleanup_error is not None and cleanup_error is not exc:
             error_message = f"{error_message}\ncleanup: {cleanup_error.detail}"
