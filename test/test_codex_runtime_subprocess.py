@@ -406,6 +406,17 @@ def test_read_run_process_id_treats_invalid_encoding_as_stale(
     assert runtime_run.read_run_process_id(tmp_path, "session") is None
 
 
+def test_read_run_process_id_rejects_negative_parent_start_time(
+    tmp_path: Path,
+) -> None:
+    """不正な親 process の start time を停止対象として受け入れない。"""
+    tracking_path = runtime_run.run_process_id_path(tmp_path, "session")
+    tracking_path.parent.mkdir(parents=True)
+    tracking_path.write_text("123 -1\n")
+
+    assert runtime_run.read_run_process_id(tmp_path, "session") is None
+
+
 def test_stop_child_process_group_fails_closed_when_stale_leader_group_is_running(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

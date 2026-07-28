@@ -128,6 +128,8 @@ def _read_run_process_id_file(path: Path) -> RunProcessIdentity | None:
         if process_id <= 0:
             return None
         start_time = int(lines[0][1]) if len(lines[0]) == 2 else None
+        if start_time is not None and start_time < 0:
+            return None
         children: list[ProcessIdentity] = []
         for parts in lines[1:]:
             if len(parts) not in {3, 4} or parts[0] != "child":
