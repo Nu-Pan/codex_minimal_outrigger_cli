@@ -1086,10 +1086,10 @@
     "last_investigated_at": "2026-07-26_05-19_32_904720000"
   },
   "test/test_basic_runtime.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "edec4bce76e3692f6b2b7a6296f09a973b008677e02a280251a328432a08d848",
-    "last_investigated_at": "2026-07-27_18-12_35_390930000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "98e1b1e4d0eb6f862a6a11931411d3d2ea90194268796c91b90f20e81e9535d3",
+    "last_investigated_at": "2026-07-28_12-35_06_375642000"
   },
   "test/test_cli_command_tree.py": {
     "investigation_required": false,
