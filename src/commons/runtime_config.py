@@ -295,8 +295,26 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
         ) from exc
 
 
+def _reject_symlinked_config_path(path: Path) -> None:
+    """config path の symlink 経由アクセスを拒否する。"""
+    # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+    # config は work-root 内の tracked file なので、link 先の設定を読み書きしない。
+    current = path.absolute()
+    while current != current.parent:
+        if current.is_symlink():
+            raise CmocError(
+                "cmoc config path は symlink 経由で扱えません。",
+                [
+                    "config.json と親 directory を通常の file/directory に戻してから再実行してください。"
+                ],
+                str(current),
+            )
+        current = current.parent
+
+
 def write_config(path: Path, config: CmocConfig) -> None:
     """config JSON を人間が確認しやすい安定した表現で保存する。"""
+    _reject_symlinked_config_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
@@ -313,6 +331,7 @@ def write_config(path: Path, config: CmocConfig) -> None:
 def load_config(root: Path) -> CmocConfig:
     """既存 config JSON を読み、利用者向け error 境界で config に復元する。"""
     path = config_path(root)
+    _reject_symlinked_config_path(path)
     if not path.exists():
         raise CmocError(
             "cmoc config が存在しません。",

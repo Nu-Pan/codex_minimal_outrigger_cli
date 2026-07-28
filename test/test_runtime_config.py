@@ -17,7 +17,13 @@ from oracle.other.cmoc_config import (
 )
 
 from basic.acp import ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError, config_from_dict, config_to_dict, load_config
+from cmoc_runtime import (
+    CmocError,
+    config_from_dict,
+    config_to_dict,
+    load_config,
+    write_config,
+)
 from config.cmoc_config import CmocConfig
 
 
@@ -102,6 +108,25 @@ def test_load_config_rejects_non_file_config_path(tmp_path: Path) -> None:
         load_config(root)
 
     assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
+
+
+def test_config_rejects_symlinked_path_without_touching_link_target(
+    tmp_path: Path,
+) -> None:
+    """tracked config の symlink 経由 read/write で link 先を扱わない。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside-config.json"
+    outside.write_text("original\n")
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path.parent.mkdir(parents=True)
+    config_path.symlink_to(outside)
+
+    with pytest.raises(CmocError, match="cmoc config path"):
+        load_config(root)
+    with pytest.raises(CmocError, match="cmoc config path"):
+        write_config(config_path, CmocConfig())
+
+    assert outside.read_text() == "original\n"
 
 
 @pytest.mark.parametrize("value", [False, None, [], "gpt"])

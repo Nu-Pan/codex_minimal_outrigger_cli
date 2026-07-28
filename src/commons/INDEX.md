@@ -186,19 +186,18 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc 設定の永続化境界を担い、型付き設定と JSON の相互変換、JSON/TOML 互換値の検証、設定ファイルの読み書き・既定値補完・同期を提供する。設定形式や不正値処理を確認する際の入口となる。
+- cmoc の設定を JSON として永続化・復元する共通ランタイムモジュール。設定値の JSON/TOML 互換性、型、安全性、既定値補完を検証し、設定ファイルの読み書き・同期と利用者向けエラー変換を担う。Codex モデル、推論努力値、プロバイダー設定、oracle review のループ回数を扱う。
 
 ## Read this when
-- cmoc 設定の JSON 保存・読み込み・同期を変更または調査するとき
-- Codex モデル、provider、reasoning effort、ループ回数などの設定値検証を確認するとき
-- 不正な設定ファイルに対する CmocError の挙動を確認するとき
+- cmoc config の JSON schema、設定値の検証、既定値からの復元、Codex モデル設定の永続化挙動を変更または確認するとき。
+- config.json の読み書き、symlink 拒否、設定未作成時の生成、設定不正時の CmocError を調査するとき。
 
 ## Do not read this when
-- 設定型や既定値そのものを確認したいだけのときは、設定型を定義するモジュールを直接読む
-- Codex 実行処理や CLI 引数変換の実装を確認したいときは、呼び出し先の実行モジュールを直接読む
+- Codex のモデル実行そのもの、CLI 引数解析、設定型の定義や既定値を変更する場合。
+- 設定ファイル以外の runtime path や一般的なエラー処理だけを調査する場合。
 
 ## hash
-- cbb9d54a48da1574e85ca8d129695bd5ac7d4dd9c734729332add84d483f9d2f
+- 494fba26e19d1e33d888b8a9fc7995350af5695ba4f7f2c5f791b6ac05f9baaf
 
 # `runtime_content.py`
 
