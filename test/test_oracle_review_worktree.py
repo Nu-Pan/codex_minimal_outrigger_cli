@@ -229,6 +229,53 @@ def test_oracle_review_interrupt_during_run_creation_cleans_resources(
     assert "result: interrupted" in report_path.read_text()
 
 
+def test_oracle_review_interrupt_after_branch_only_creation_cleans_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run branch だけ作成された中断でも、存在しない worktree を cleanup しない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    created: dict[str, Path | str] = {}
+
+    def create_branch_then_interrupt(
+        root_arg: Path,
+        branch: str,
+        worktree: Path,
+        start_point: str,
+    ) -> Path:
+        """linked worktree 追加の部分完了を run branch だけで再現する。"""
+        created.update(branch=branch, worktree=worktree)
+        run_git(root_arg, "branch", branch, start_point)
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(
+        review_module, "create_run_worktree", create_branch_then_interrupt
+    )
+
+    result = runner.invoke(
+        app,
+        ["oracle", "review", "--scope", "full"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    branch = str(created["branch"])
+    worktree = Path(str(created["worktree"]))
+    assert run_git(root, "branch", "--list", branch).stdout == ""
+    assert not worktree.exists()
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    assert "result: interrupted" in report_path.read_text()
+
+
 def test_oracle_review_unexpected_base_exception_during_run_creation_cleans_resources(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
