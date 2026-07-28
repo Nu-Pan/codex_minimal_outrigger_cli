@@ -24,6 +24,7 @@ from commons.indexing import enable_indexing_preflight
 from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
+    GitChange,
     commit_work_unit,
     flattened_change_paths,
     raw_oracle_diff,
@@ -124,18 +125,28 @@ def _cmoc_realization_apply_fork_body() -> None:
             # agent の realization 差分と cmoc が生成する INDEX.md を同じ処理単位に
             # 含め、後続の commit/rollback が両方へ同じように適用されるようにする。
             refresh_indexes(context.run_worktree, commit=False)
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # 後続 process の遅い書き込みを差分検査・commit に混ぜないよう、最終
+            # snapshot の前に tracked Codex child を停止する。
+            stop_tracked_codex_children(context.repo, context.session_id)
+            # tree_changes は commit 済みの差分だけを返すため、commit 前は status
+            # path を同じ path 分類へ渡してから処理単位を確定する。
+            pending_changes = [
+                GitChange("M", (path,))
+                for path in worktree_change_paths(
+                    context.run_worktree,
+                    include_rename_sources=True,
+                )
+            ]
+            unexpected = unexpected_run_paths(context, pending_changes)
+            if unexpected:
+                raise _unexpected_change_error(unexpected)
             commit_work_unit(
                 context.run_worktree,
                 "cmoc realization apply fork",
                 allow_empty=True,
             )
             changes = tree_changes(context.run_worktree, context.run_fork_commit)
-            unexpected = unexpected_run_paths(context, changes)
-            if unexpected:
-                raise _unexpected_change_error(unexpected)
-            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
-            # joinable は run worktree を使う Codex descendant の停止後に公開する。
-            stop_tracked_codex_children(context.repo, context.session_id)
         start_subcommand_step(6, "run を joinable に更新", "publish joinable")
         set_run_state(context, "joinable")
         start_subcommand_step(7, "fork report を保存", "write fork report")

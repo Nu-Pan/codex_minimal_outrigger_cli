@@ -141,7 +141,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "c38be9c0824711d2152006094ff8f7291415ce015e3349c076ebb4442dabb90c",
-    "last_investigated_at": "2026-07-28_01-44_41_591853000"
+    "last_investigated_at": "2026-07-28_17-14_46_827482000"
   },
   "oracle/doc/app_spec/sub_command/realization_refactor.md": {
     "investigation_required": true,
@@ -942,7 +942,7 @@
     "last_investigated_at": "2026-07-27_13-45_31_414445000"
   },
   "src/sub_commands/realization/apply/fork.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "a0b27674190850f2882e9ebdf4e84f773670ecf1d7349f019f73eb4cad2bf90f",
     "last_investigated_at": "2026-07-28_10-50_31_339675000"
@@ -1158,7 +1158,7 @@
     "last_investigated_at": "2026-07-28_13-30_47_582435000"
   },
   "test/test_editing_run_cli.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "e129c9c04326ff9786711139df79ffa9db76bebfcaf1f877ee6398ff6f58dd2a",
     "last_investigated_at": "2026-07-28_13-47_03_315781000"

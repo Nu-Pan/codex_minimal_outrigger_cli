@@ -289,6 +289,46 @@ def test_apply_rejects_agent_index_change_before_index_refresh(
     assert not (run_worktree / "INDEX.md").exists()
 
 
+def test_apply_rejects_unexpected_refresh_change_before_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """INDEX refresh の想定外差分を run commit に含めない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    """
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+
+    def fake_apply(
+        _parameter: AgentCallParameter,
+        **_kwargs: object,
+    ) -> SimpleNamespace:
+        """apply agent の正常終了を再現する。"""
+        return SimpleNamespace(returncode=0, output_json=None)
+
+    def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
+        """INDEX 更新処理が誤って oracle file を変更した状態を再現する。"""
+        assert not commit
+        (worktree / "oracle" / "unexpected.md").write_text("unexpected\n")
+        return []
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
+    monkeypatch.setattr(apply_module, "refresh_indexes", fake_refresh)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    state = _state(state_path)
+    assert state["run"]["state"] == "error"
+    parts = state["run"]["branch"].split("/")
+    run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert not (run_worktree / "oracle" / "unexpected.md").exists()
+
+
 @pytest.mark.parametrize(
     ("kind", "expected_sync"),
     [
