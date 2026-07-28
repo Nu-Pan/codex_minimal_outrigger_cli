@@ -35,6 +35,7 @@ def load_refactor_state(root: Path) -> RefactorState:
     根拠: {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     """
     path = refactor_state_path(root)
+    _reject_symlinked_state_path(path)
     if not path.exists():
         return {}
     try:
@@ -47,6 +48,7 @@ def load_refactor_state(root: Path) -> RefactorState:
 def write_refactor_state(root: Path, state: RefactorState) -> None:
     """refactor state を path 順の安定した JSON 表現で保存する。"""
     path = refactor_state_path(root)
+    _reject_symlinked_state_path(path)
     validated = _validated_state(path, state)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -137,6 +139,21 @@ def mark_all_refactor_targets_required(state: RefactorState) -> None:
     """完了済み state から新しい full refactor cycle を開始する。"""
     for entry in state.values():
         entry["investigation_required"] = True
+
+
+def _reject_symlinked_state_path(path: Path) -> None:
+    """state path の symlink 経由アクセスを拒否する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # state は cmoc が更新する管理 file なので、親 directory を含めて symlink を
+    # 追跡すると work-root 外の file を読み書きしてしまう。
+    absolute = path.absolute()
+    current = absolute
+    while current != current.parent:
+        if current.is_symlink():
+            raise _invalid_refactor_state(
+                path, "state path は symlink 経由で扱えません。"
+            )
+        current = current.parent
 
 
 def _validated_state(path: Path, value: object) -> RefactorState:

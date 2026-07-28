@@ -191,6 +191,25 @@ def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
         write_refactor_state(root, state)
 
 
+def test_refactor_state_rejects_symlinked_path_without_writing_target(
+    tmp_path: Path,
+) -> None:
+    """state path の symlink 経由更新が work-root 外へ到達しない。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside-state.json"
+    outside.write_text("original\n")
+    state_path = (
+        root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    )
+    state_path.parent.mkdir(parents=True)
+    state_path.symlink_to(outside)
+
+    with pytest.raises(CmocError, match="refactor state"):
+        write_refactor_state(root, {})
+
+    assert outside.read_text() == "original\n"
+
+
 def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(
     tmp_path: Path,
 ) -> None:
