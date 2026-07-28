@@ -126,19 +126,18 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめる src パッケージ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、builder など、実行時コードの主要な入口を提供する。
+- cmoc の realization 実装をまとめる主要な src パッケージ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、builder 関連実装を下位領域へ案内する。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・サブコマンド・共通 runtime の入口を確認するとき。
-- 特定の実装領域へ進む前に、src 配下の主要パッケージと責務の分担を把握するとき。
+- cmoc CLI の実装構成や主要な realization モジュールの入口を確認するとき。
+- CLI 登録、サブコマンド、共通 runtime、互換 import、ACP builder の実装箇所を特定するとき。
 
 ## Do not read this when
-- canonical な oracle 仕様や実装を確認するときは、対応する oracle 側を直接読む。
-- 特定のサブコマンド、runtime module、builder、互換 shim の詳細が明確なときは、該当する下位対象を直接読む。
-- realization 以外の CLI、TUI、apply、refactor などの処理本体だけを調査するときは、対応する実装領域を直接読む。
+- 正本仕様や oracle 側の実装を確認したいときは、対応する oracle ツリーを直接読む。
+- 特定モジュールの詳細処理が明らかな場合は、この入口を経由せず該当ファイルや下位ディレクトリを直接読む。
 
 ## hash
-- 7042c8e49a520bab88be9c0f706be127904f802380f62aa3262e45ce4826de72
+- f14248d4c730e496a61138dece081a0c7d6df9811c67f80e62c2fd9a750e7951
 
 # `test`
 

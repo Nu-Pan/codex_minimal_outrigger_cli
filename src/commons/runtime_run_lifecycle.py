@@ -176,9 +176,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
                     state.run = RunPart()
                     write_state(path, state)
                 worktree_created = (
-                    created
-                    or run_worktree.exists()
-                    or run_worktree.is_symlink()
+                    created or run_worktree.exists() or run_worktree.is_symlink()
                 )
                 if worktree_created:
                     remove_worktree(repository, run_worktree)
