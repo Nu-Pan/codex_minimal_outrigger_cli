@@ -1236,10 +1236,10 @@
     "last_investigated_at": "2026-07-28_14-40_44_135461000"
   },
   "test/test_prompt_parts.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "e9a44a7913150d1e8a5aa5716df9ccb6df25db99fe210633d91e4b8452906b32",
-    "last_investigated_at": "2026-07-27_21-24_36_451643000"
+    "last_investigated_sha256": "4596cc03246518c3109d3d161ce34c574965d70ac82ed0368a7e0fb58973a563",
+    "last_investigated_at": "2026-07-28_14-55_33_553385000"
   },
   "test/test_runtime_cli.py": {
     "investigation_required": true,
