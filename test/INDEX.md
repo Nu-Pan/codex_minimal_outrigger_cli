@@ -334,18 +334,23 @@
 # `test_codex_runtime_subprocess.py`
 
 ## Summary
-- Codex subprocess と process group cleanup の安全性を検証する pytest。tracking file への child 情報記録、SIGTERM 配信順、leader 終了後や communicate 中断時の tracking 維持、不正 tracking の拒否、起動失敗時の child cleanup、継承環境変数の無視、cwd エラー保持を扱う。さらに pidfd と process identity を用いた process group 停止が、PGID 再利用や leader 消滅時に fail-closed となることを検証する。Codex 実行追跡や cleanup 実装を変更・調査する際の realization test の入口。
+- Codex サブプロセス実行とプロセスグループ停止に関する realization test。tracking file への child 情報記録、専用 process group の識別、pidfd を用いた安全な signal 配信、tracking 更新失敗時の cleanup、割り込み時の追跡維持を検証する。
+- run process tracking の不正 encoding・負の start time・symlink・特殊ファイルを拒否または stale として扱う挙動、および missing cwd などの subprocess エラー伝播を検証する。
+- `commons.runtime_codex_profile` または `commons.runtime_run` の Codex 起動、プロセス同一性確認、停止処理、tracking file 保護を変更・レビューするときのテスト入口である。
 
 ## Read this when
-- Codex subprocess の起動、tracking file、SIGTERM、process group、pidfd、child cleanup の挙動を変更・レビュー・デバッグするとき
-- runtime_codex_profile または runtime_run の process identity 検証と停止処理に関するテストを確認するとき
+- Codex subprocess の起動・追跡・終了処理を変更するとき
+- process group、pidfd、signal、leader の再利用防止など cleanup の安全性を確認するとき
+- run process tracking file の読み書き、検証、異常系挙動を変更するとき
+- 関連する runtime 実装の回帰テストや失敗原因を調査するとき
 
 ## Do not read this when
-- Codex subprocess や process group cleanup に関係しない CLI 機能・テストを扱うとき
-- 実装の詳細ではなく、正本仕様そのものを確認する必要があるときは、対応する oracle file を直接読む
+- Codex subprocess や process tracking、process group cleanup と無関係な機能を変更するとき
+- CLI の通常の入出力や別サブコマンドの仕様だけを調査するとき
+- テスト対象の runtime 実装を直接確認する必要がある場合は、まず対応する `commons.runtime_codex_profile` または `commons.runtime_run` を読むべきとき
 
 ## hash
-- daaef0b2be981e99b2af9815a70b582089d6ea3e6222a60a8a7cea8f978e1cd7
+- 4d35998659b89e61eacdf372195dd2b8c09a55be6700f46fce950edf91fb2c04
 
 # `test_codex_runtime_tui.py`
 

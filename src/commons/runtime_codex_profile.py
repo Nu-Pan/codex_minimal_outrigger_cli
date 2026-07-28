@@ -32,9 +32,52 @@ RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
 _active_run_process_tracking_path: Path | None = None
 
 
+def _first_symlink_component(path: Path) -> Path | None:
+    """path を順にたどり、最初に見つかった symlink component を返す。"""
+    absolute = path.absolute()
+    current = Path(absolute.anchor)
+    for part in absolute.parts[1:]:
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            current = current.parent
+            continue
+        current /= part
+        if current.is_symlink():
+            return current
+    return None
+
+
+def _validate_process_tracking_path(path: Path) -> None:
+    """tracking file と lock を管理領域内の通常 file として扱えるか検証する。"""
+    lock_path = path.with_name(f"{path.name}.lock")
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # process tracking は repo-root 側に置く cmoc 管理データなので、symlink 経由の
+    # 外部 read/write と lock の外部化を許可しない。
+    for candidate in (path, lock_path):
+        if symlink := _first_symlink_component(candidate):
+            raise CmocError(
+                "run process tracking path は symlink 経由で扱えません。",
+                [
+                    "tracking file と親 directory を通常の file/directory に戻してから再実行してください。"
+                ],
+                f"path: {candidate}\nsymlink: {symlink}",
+            )
+    for candidate in (path, lock_path):
+        if candidate.exists() and not candidate.is_file():
+            raise CmocError(
+                "run process tracking path は通常 file ではありません。",
+                [
+                    "tracking file と lock file を通常の file に戻してから再実行してください。"
+                ],
+                str(candidate),
+            )
+
+
 @contextmanager
 def run_process_id_file_lock(path: Path) -> Iterator[None]:
     """editing run の process tracking file を直列化する。"""
+    _validate_process_tracking_path(path)
     lock_path = path.with_name(f"{path.name}.lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
@@ -53,7 +96,11 @@ def _validate_tracked_process_file(path: Path) -> None:
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # abandon は壊れた tracking file を停止対象なしとして扱うため、壊れた既存 state に
     # child 行だけを追記すると、実行中 process を cleanup できないまま worktree を破棄する。
-    lines = [line.split() for line in path.read_text().splitlines() if line.strip()]
+    lines = [
+        line.split()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     if not lines or len(lines[0]) not in {1, 2}:
         raise OSError(f"invalid run process tracking file: {path}")
     try:
@@ -680,13 +727,13 @@ def _record_tracked_child_process(
     start_time = process_start_time(process_id)
     if start_time is None:
         raise OSError(f"process {process_id} start time is unavailable")
-    current = path.read_text()
+    current = path.read_text(encoding="utf-8")
     lines = [line for line in current.splitlines() if line.strip()]
     group_id = process_id if process_group_id is None else process_group_id
     child_line = f"child {process_id} {start_time} {group_id}"
     lines = [line for line in lines if not line.startswith(f"child {process_id} ")]
     lines.append(child_line)
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def remove_tracked_child_process(path: Path, process_id: int) -> None:
@@ -696,10 +743,10 @@ def remove_tracked_child_process(path: Path, process_id: int) -> None:
             return
         lines = [
             line
-            for line in path.read_text().splitlines()
+            for line in path.read_text(encoding="utf-8").splitlines()
             if not line.startswith(f"child {process_id} ")
         ]
-        path.write_text(("\n".join(lines) + "\n") if lines else "")
+        path.write_text(("\n".join(lines) + "\n") if lines else "", encoding="utf-8")
 
 
 def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:

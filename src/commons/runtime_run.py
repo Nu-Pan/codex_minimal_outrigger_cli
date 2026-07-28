@@ -118,10 +118,14 @@ def run_process_tracking(root: Path, session_id: str) -> Iterator[None]:
 
 def _read_run_process_id_file(path: Path) -> RunProcessIdentity | None:
     """tracking file を検証し、壊れていれば停止対象なしとして返す。"""
-    if not path.is_file():
+    if path.is_symlink() or not path.is_file():
         return None
     try:
-        lines = [line.split() for line in path.read_text().splitlines() if line.strip()]
+        lines = [
+            line.split()
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
         if not lines or len(lines[0]) not in {1, 2}:
             return None
         process_id = int(lines[0][0])

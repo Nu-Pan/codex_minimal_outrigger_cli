@@ -1,3 +1,4 @@
+import os
 import signal
 from pathlib import Path
 
@@ -497,6 +498,32 @@ def test_read_run_process_id_rejects_negative_parent_start_time(
     tracking_path.write_text("123 -1\n")
 
     assert runtime_run.read_run_process_id(tmp_path, "session") is None
+
+
+@pytest.mark.parametrize("path_kind", ["symlink", "fifo"])
+def test_run_process_tracking_rejects_external_or_special_path(
+    tmp_path: Path, path_kind: str
+) -> None:
+    """tracking file は管理領域外 symlink と blocking な特殊 file を拒否する。"""
+    tracking_path = runtime_run.run_process_id_path(tmp_path, "session")
+    tracking_path.parent.mkdir(parents=True)
+    outside: Path | None = None
+    if path_kind == "symlink":
+        outside = tmp_path / "outside.pid"
+        outside.write_text("123 456\n", encoding="utf-8")
+        tracking_path.symlink_to(outside)
+    else:
+        if not hasattr(os, "mkfifo"):
+            pytest.skip("named pipes are unavailable")
+        os.mkfifo(tracking_path)
+
+    with pytest.raises(CmocError, match="run process tracking path"):
+        runtime_run.read_run_process_id(tmp_path, "session")
+    with pytest.raises(CmocError, match="run process tracking path"):
+        runtime_run.write_run_process_id(tmp_path, "session", 123)
+
+    if outside is not None:
+        assert outside.read_text(encoding="utf-8") == "123 456\n"
 
 
 def test_stop_child_process_group_fails_closed_when_stale_leader_group_is_running(

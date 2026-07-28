@@ -149,22 +149,20 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。file access policy、cwd、CODEX_HOME、argv の TOML/config override、schema 配置、subprocess 環境、実行時エラー変換を扱う。
-- editing run 用の process tracking、pidfd による PID 再利用対策、process group の停止・待機・cleanup を提供する。
-- Codex の JSONL 出力から thread/resume token、capacity/quota、unexpected error、利用者向け error detail を判定する。Codex CLI の起動条件や実行結果の解釈を変更・調査する際の入口。
+- Codex CLI subprocess 境界を担当し、起動前後の実行環境と機械的な実行結果を扱う。sandbox・cwd・CODEX_HOME・argv の構築、Structured Output schema の配置、process tracking と安全な process group 停止、subprocess 実行、JSON/JSONL の読み取り・error・retry 判定をまとめた実装である。
 
 ## Read this when
-- Codex CLI の sandbox、argv、cwd、CODEX_HOME、model/provider 設定、schema 配置を変更・調査するとき
-- editing run の child process tracking、process group 停止、abandon 時の cleanup や PID 再利用対策を変更・調査するとき
-- Codex subprocess の起動失敗、JSONL error、capacity/quota retry、resume token の判定を変更・調査するとき
+- Codex CLI の起動引数、sandbox 権限、cwd、CODEX_HOME、provider 設定、schema 配置を変更または調査するとき。
+- Codex subprocess の tracking、pidfd、process group、signal、abandon 時の停止処理を変更または調査するとき。
+- Codex の stdout/stderr、JSONL event、thread resume token、capacity/quota/unexpected error の判定を変更または調査するとき。
 
 ## Do not read this when
-- Codex CLI 以外の一般的な runtime config、path、content、error 型の責務だけを調べるときは、各専門モジュールを直接読む
-- editing run の上位 command の状態遷移や利用者向け操作仕様だけを調べるときは、対応する app specification と command 実装を直接読む
-- Codex の prompt 本文生成や agent call の orchestration を調べるときは、prompt builder または呼び出し側の実装を読む
+- Codex CLI の上位ユースケースや editing run 全体の状態遷移を調べるときは、対応する app specification または呼び出し側の実装を先に読む。
+- cmoc の一般的な設定値の定義・検証や schema 自体の内容を調べるときは、設定・schema の正本および専用実装を直接読む。
+- Codex CLI と無関係な subprocess、process tracking、JSON/JSONL 処理を変更するとき。
 
 ## hash
-- b020f139805ccf6d1f953b50402afbd6b8d1cbf7b34a4fd9a8b2bc2af1fa4d65
+- 6df4851a79f94ce4f5dd5f662a9b9caeb9ef2266b23aeaf1931ee6e2c98c9fc2
 
 # `runtime_codex_tui.py`
 
@@ -339,18 +337,21 @@
 # `runtime_run.py`
 
 ## Summary
-- editing run の worktree 解決、プロセス追跡、ライフサイクル排他、プロセスおよび Codex 子プロセス群の安全な停止を担うランタイム共通処理。run の abandon・error cleanup や stale PID 検出に関わる入口。
+- editing run の worktree 解決、プロセス追跡、停止、tracking file の検証・削除を担うランタイム共通モジュール。
+- PID の start time、pidfd、process group を用いて対象 process の同一性を確認し、PID・PGID 再利用による誤停止を防ぐ。
+- run lifecycle lock、Codex child process の追跡、異常時の fail-closed cleanup など、run の実行状態管理に必要な処理への入口となる。
 
 ## Read this when
-- editing run の process tracking、abandon、error cleanup、子プロセス停止、worktree 解決の挙動を変更・調査するとき
-- PID 再利用、プロセスグループ、pidfd、tracking file の破損・stale 状態に関する処理を確認するとき
+- editing run の process tracking、abandon、cleanup、Codex subprocess 停止の挙動を変更・調査するとき。
+- run worktree の branch 解決や session 単位の tracking file のライフサイクルを確認するとき。
+- PID 再利用、process group、pidfd、stale process、破損した tracking file に関する停止安全性を調査するとき。
 
 ## Do not read this when
-- 通常の git 操作やパス計算だけを変更・調査するときは、対応する runtime_git または runtime_paths の実装を直接読む
-- editing run の CLI 入出力や状態遷移の仕様を確認したいだけのときは、先に oracle の editing run 仕様を読む
+- 通常の CLI 引数解析、run の状態遷移仕様、worktree 作成・破棄の詳細を確認したいときは、対応する app specification や上位の run 実装を先に読む。
+- git 操作そのものの共通仕様や一般的な path 処理だけを確認したいとき。
 
 ## hash
-- ff4587be210dd7d12e46e6c39f21b57af5e6607acf278939291a51299b4c800f
+- 06b6bb69b6ee317035c4def3b3441523271ce5cad527f361a9db56a5ea01b6c8
 
 # `runtime_run_lifecycle.py`
 
