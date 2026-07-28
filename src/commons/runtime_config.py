@@ -315,6 +315,16 @@ def _reject_symlinked_config_path(path: Path) -> None:
 def write_config(path: Path, config: CmocConfig) -> None:
     """config JSON を人間が確認しやすい安定した表現で保存する。"""
     _reject_symlinked_config_path(path)
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # FIFO などを open して command が停止しないよう、既存 path は regular file に限る。
+    if path.exists() and not path.is_file():
+        raise CmocError(
+            "cmoc config path は通常ファイルではありません。",
+            [
+                "config.json を通常の file に戻してから再実行してください。",
+            ],
+            str(path),
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
@@ -337,6 +347,16 @@ def load_config(root: Path) -> CmocConfig:
             "cmoc config が存在しません。",
             [
                 "cmoc doctor を実行して {{work-root}}/.cmoc/gt/ar/config.json を生成してください。"
+            ],
+            str(path),
+        )
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # 特殊 file を read_text する前に拒否し、設定読み込みを即時に失敗させる。
+    if not path.is_file():
+        raise CmocError(
+            "cmoc config JSON を読み込めません。",
+            [
+                "{{work-root}}/.cmoc/gt/ar/config.json を通常の file に修正してください。"
             ],
             str(path),
         )

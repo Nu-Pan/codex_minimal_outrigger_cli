@@ -186,18 +186,20 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc の設定を JSON として永続化・復元する共通ランタイムモジュール。設定値の JSON/TOML 互換性、型、安全性、既定値補完を検証し、設定ファイルの読み書き・同期と利用者向けエラー変換を担う。Codex モデル、推論努力値、プロバイダー設定、oracle review のループ回数を扱う。
+- cmoc 設定を JSON へ変換・検証・保存し、JSON から実行時設定へ復元するモジュール。Codex のモデル・provider・reasoning effort、各種ループ回数、JSON/TOML 互換値の型検証を扱う。設定ファイルの symlink・特殊ファイル・不正 JSON を拒否し、既定値での復元や未作成時の生成も提供する。
 
 ## Read this when
-- cmoc config の JSON schema、設定値の検証、既定値からの復元、Codex モデル設定の永続化挙動を変更または確認するとき。
-- config.json の読み書き、symlink 拒否、設定未作成時の生成、設定不正時の CmocError を調査するとき。
+- cmoc 設定の JSON 永続化形式、読み込み・書き込み、型検証、既定値補完を変更または調査するとき
+- Codex model/provider や reasoning effort の設定復元、設定値の不正入力時のエラー境界を確認するとき
+- 設定ファイルの path 安全性、symlink・特殊ファイル対策、初期生成や同期処理を確認するとき
 
 ## Do not read this when
-- Codex のモデル実行そのもの、CLI 引数解析、設定型の定義や既定値を変更する場合。
-- 設定ファイル以外の runtime path や一般的なエラー処理だけを調査する場合。
+- 設定型そのものの既定値や enum 定義だけを確認したいときは、参照先の config 定義を直接読む
+- 設定を利用する各 CLI コマンドの振る舞いだけを調査し、設定の保存・復元処理を扱わないとき
+- 一般的な runtime path の生成規則だけを確認したいときは、runtime paths の実装を直接読む
 
 ## hash
-- 494fba26e19d1e33d888b8a9fc7995350af5695ba4f7f2c5f791b6ac05f9baaf
+- 02f81011c489d1b5ee1bd2de47dd22908c41cd26bcc135a1c9650ca63b5586ef
 
 # `runtime_content.py`
 

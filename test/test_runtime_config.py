@@ -5,6 +5,7 @@
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 """
 
+import os
 from pathlib import Path
 from typing import cast
 
@@ -108,6 +109,20 @@ def test_load_config_rejects_non_file_config_path(tmp_path: Path) -> None:
         load_config(root)
 
     assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
+def test_config_rejects_named_pipe_config_path(tmp_path: Path) -> None:
+    """config path が named pipe の場合に read/write で block しない。"""
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path.parent.mkdir(parents=True)
+    os.mkfifo(config_path)
+
+    with pytest.raises(CmocError, match="cmoc config JSON"):
+        load_config(root)
+    with pytest.raises(CmocError, match="cmoc config path"):
+        write_config(config_path, CmocConfig())
 
 
 def test_config_rejects_symlinked_path_without_touching_link_target(

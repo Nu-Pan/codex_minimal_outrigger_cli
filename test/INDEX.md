@@ -693,21 +693,20 @@
 # `test_runtime_config.py`
 
 ## Summary
-- CmocConfig の既定値、JSON 化時のメンバー順、設定ファイルの読み書き、入力検証を検証する pytest。
-- 設定欠落・不正 JSON・非通常ファイル・symlink、不正な型や値、provider 設定、model 名、reasoning effort、recovery 試行回数などの利用者向けエラーと永続化挙動を扱う。
-- cmoc 設定の実装や設定エラー処理のテスト入口として読む。
+- CmocConfig と設定ランタイムのテスト。既定値、JSON 化時のキー順、設定ファイルの読み書き、欠落・破損・非通常ファイル・symlink へのエラー処理を検証する。
+- Codex の model provider、model spec、reasoning effort、各種ループ回数などの入力型・値検証と、provider-local な JSON/TOML 値の保持・拒否を検証する。
+- 設定の永続化境界で不正な in-memory 値を拒否し、recovery 試行回数を読み書きできることも確認する。CmocConfig の設定仕様やエラー処理、設定ランタイムを変更・検証するときの入口となる。
 
 ## Read this when
-- CmocConfig の既定値や JSON 出力順を変更・確認するとき
-- config_from_dict、config_to_dict、load_config、write_config の入力検証・永続化挙動を変更・確認するとき
-- 設定ファイルの欠落、不正値、symlink、provider-local 設定のエラー処理を調査するとき
+- 設定の既定値、JSON 変換、config.json の読み書き、入力検証、設定エラーの挙動を変更または調査するとき
+- Codex model provider・model・reasoning effort の設定形式や provider-local 値の検証を確認するとき
 
 ## Do not read this when
-- 設定機能ではなく、他の runtime 機能や CLI コマンドの挙動だけを調査するとき
-- 設定仕様そのものを確認する場合は、先に oracle の設定仕様・エラー処理文書を読むべきとき
+- 設定ランタイムの実装詳細ではなく、oracle 側の設定仕様そのものを確認するときは oracle/src/oracle/other/cmoc_config.py を読む
+- 設定以外の CLI、ACP、oracle review の挙動だけを扱うとき
 
 ## hash
-- d923bfbcf7b2592883c4f29c27b9e10702084eadaaf6ef7768928636710d08df
+- 24553394eaa0da9549ccc4c238db340ce698abf2916884db1e1acdc7a551859d
 
 # `test_runtime_content.py`
 
