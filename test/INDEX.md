@@ -385,19 +385,22 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と run join/abandon の統合 lifecycle test。apply/refactor fork、共有 session state、run worktree、process tracking、INDEX 更新、report、rollback、merge、cleanup、interrupt、error recovery などの外部挙動を検証する。
+- workload fork と共通 run join/abandon の統合 realization test。apply/refactor fork、session state・run worktree・branch の lifecycle、fork/lifecycle report、Codex child tracking、rollback、join/abandon cleanup、merge conflict、INDEX 更新、refactor cycle の完了・中断・未解決状態を検証する。
 
 ## Read this when
-- realization apply/refactor fork の lifecycle、run join/abandon、worktree・branch・session state の遷移を変更または調査するとき
-- fork report・lifecycle report、INDEX refresh、Codex child tracking、rollback、merge conflict、cleanup の挙動を検証するとき
-- editing run の中断・失敗・競合・復旧処理に関する統合 test を確認するとき
+- realization apply/refactor fork の開始・実行・失敗・中断時の state 遷移を確認するとき
+- run join または abandon の merge、cleanup、process 停止、report 生成を確認するとき
+- run worktree、branch、INDEX、oracle、refactor state の差分制約や rollback 挙動を変更・検証するとき
+- fork report または lifecycle report の内容・衝突回避・失敗時保存を確認するとき
 
 ## Do not read this when
-- 単一 helper や個別 command の実装詳細だけを確認する場合は、対応する src またはより限定的な test を直接読む
-- fork/join lifecycle と無関係な CLI、設定、oracle、INDEX 生成処理を調査する場合
+- 単独の lifecycle helper や report formatter の実装詳細だけを調査する場合
+- apply/refactor の prompt builder や agent 呼び出し仕様だけを確認する場合
+- run join/abandon と無関係な CLI サブコマンドの挙動を調査する場合
+- この統合 lifecycle test の外部挙動を変更しない純粋な INDEX routing 文書の作業を行う場合
 
 ## hash
-- 3c5660d90231304a7a47cfe2d8180e6af5514dc4dabbf2f0c5440701f43953a6
+- 236e049a525fa4cf32497bd86c52345a3032cb741789e37c8c4bdaf081ddbc14
 
 # `test_indexing_cli.py`
 

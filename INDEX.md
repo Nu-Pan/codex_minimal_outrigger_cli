@@ -126,34 +126,32 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめるトップレベルの入口。CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim などの下位領域へ進むためのルーティングを提供する。
+- cmoc の realization 実装をまとめる主要ソースディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim など、実行可能な実装領域への入口を提供する。
 
 ## Read this when
-- cmoc の realization 側で、CLI 構成・サブコマンド・共通 runtime・ACP builder・互換 import の実装入口を確認するとき。
-- 特定の下位実装を読む前に、責務領域と対応するモジュール群を選ぶとき。
+- cmoc の realization 実装全体の構成や、CLI・サブコマンド・共通 runtime の担当領域を確認するとき。
+- 対象となる実装ファイルの所在を特定し、下位ディレクトリやモジュールへ進む必要があるとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装を確認するときは、対応する oracle ツリーを直接読む。
-- 特定の runtime helper、サブコマンド、builder、互換 shim の詳細を確認するときは、対応する下位対象を直接読む。
-- CLI realization と無関係な仕様・処理を調査するとき。
+- canonical な oracle 仕様や oracle 実装を確認するときは、対応する oracle 側を直接読む。
+- 特定のサブコマンドや runtime 機能の詳細が明確な場合は、対応する下位モジュールを直接読む。
+- INDEX 更新やルーティング文書そのものを確認するときは、対象の INDEX.md を読む。
 
 ## hash
-- 058737ae837ce5eccd2651d8d1968303faaeaca74b10762de26c4d7bd01df813
+- 6395ff6cae3d4a15ad08ef6d07faaec067f17853d57c1ae80611c37c4985be3c
 
 # `test`
 
 ## Summary
-- cmoc の実装・CLI・Codex 実行・oracle review・session/run lifecycle などを検証する pytest テスト群と、各テストで共有する Git、Ollama、Codex、外部コマンド、doctor 支援 helper を含む。機能領域ごとの回帰テストを読むための入口であり、実装変更時の対応テストを選ぶ起点となる。
+- テストコードを支える共通 helper と、ACP builder、Codex runtime、CLI、indexing、oracle review、session/run lifecycle、設定・状態・Markdown rendering などの realization test を収録するテスト領域。各テストは対応する実装や oracle 仕様を確認する入口となる。
 
 ## Read this when
-- cmoc の機能変更や不具合調査で、対象領域に対応する pytest テストを特定するとき。
-- CLI、runtime、Codex、indexing、oracle review、session、editing run、設定、path、process cleanup などの外部契約や回帰条件を確認するとき。
-- テスト用 Git リポジトリ、case-local Ollama、Codex 実行環境、fake external command などの共通支援を利用・変更するとき。
+- テスト対象の外部挙動、制御ロジック、永続状態、CLI 契約、Codex 実行経路、worktree/Git lifecycle を変更または調査するとき。
+- 共通テスト helper、case-local Ollama、fake external command、テスト用 Git repository の準備方法を確認するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc または oracle source を直接読む。
-- 実装詳細だけを調査するときは、対象の src ファイルを直接読む。
-- 対象領域と無関係なテストや、テスト実行環境そのものの手順だけを確認するとき。
+- 実装や正本仕様そのものを確認することが目的で、対応する realization implementation または oracle file を直接読む方が適切なとき。
+- 対象領域と無関係なテストや、Codex・CLI・Git・状態管理など特定の外部挙動を伴わない作業のとき。
 
 ## hash
-- 5426188d4ae594723c9ccac4f0466ff13f6f4fb06ecba10563ad3790f5e1a2da
+- c61c4b4cb6cff69017db99e735f6a70cdb4613cf6f2338aa3e7b13730c7556dc

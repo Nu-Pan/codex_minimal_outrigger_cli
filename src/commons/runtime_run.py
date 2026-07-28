@@ -156,6 +156,22 @@ def read_run_process_id(root: Path, session_id: str) -> RunProcessIdentity | Non
         return _read_run_process_id_file(path)
 
 
+def _run_process_tracking_present(root: Path, session_id: str) -> bool:
+    """tracking path に読み取れない file entry が残っているか返す。"""
+    path = run_process_id_path(root, session_id)
+    return path.exists() or path.is_symlink()
+
+
+def _invalid_run_process_tracking_error(root: Path, session_id: str) -> CmocError:
+    """破損した tracking を停止対象なしとして扱わないための error を作る。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    return CmocError(
+        "run process tracking を検証できません。",
+        ["tracking file を確認してから再実行してください。"],
+        str(run_process_id_path(root, session_id)),
+    )
+
+
 def delete_run_process_id(root: Path, session_id: str) -> None:
     """Codex group が空なら editing run の tracking file を削除する。"""
     path = run_process_id_path(root, session_id)
@@ -201,6 +217,8 @@ def stop_error_run_process(root: Path, session_id: str) -> tuple[bool, str | Non
     """
     process = read_run_process_id(root, session_id)
     if process is None:
+        if _run_process_tracking_present(root, session_id):
+            raise _invalid_run_process_tracking_error(root, session_id)
         delete_run_process_id(root, session_id)
         return False, "run process tracking was absent or stale"
     warning = stop_run_process(
@@ -322,13 +340,18 @@ def _stale_child_process_warning(
     return f"stale run child process id ignored: {process.process_id}"
 
 
-def stop_tracked_codex_children(root: Path, session_id: str) -> None:
+def stop_tracked_codex_children(root: Path, session_id: str) -> list[str]:
     """追跡中の Codex child group を停止する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # run の cleanup 前に tracking された child を停止し、error 後も実行中 process が
     # worktree を変更し続ける状態を残さない。
     tracked = read_run_process_id(root, session_id)
     if tracked is None:
-        return
+        if _run_process_tracking_present(root, session_id):
+            raise _invalid_run_process_tracking_error(root, session_id)
+        return []
+    warnings: list[str] = []
     for child in tracked.child_processes:
-        stop_child_process_group(child)
+        if warning := stop_child_process_group(child):
+            warnings.append(warning)
+    return warnings

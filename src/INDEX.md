@@ -49,20 +49,18 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 機能をまとめる commons パッケージ。設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果型、INDEX lifecycle など、CLI 実装が横断利用する実装への入口。
+- cmoc の共通 runtime 機能を集約する commons パッケージ。設定、Git、パス、ログ、状態、エラー、Codex exec/TUI、worktree lifecycle、INDEX 更新など、CLI 実装が横断利用する公開 API と個別実装への入口を提供する。
 
 ## Read this when
-- 複数の CLI 機能にまたがる runtime helper の責務や公開 API を確認・変更するとき
-- 設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果、INDEX 更新の共通処理を調査するとき
-- commons 配下の個別 runtime module を選ぶための入口が必要なとき
+- 複数の CLI 機能にまたがる runtime API、Codex 実行、設定・Git・パス・ログ・状態管理、worktree/session lifecycle、INDEX 更新の実装を調査または変更するとき。
+- 特定の共通 runtime 機能の担当モジュールを特定し、その公開入口または関連する内部実装へ進む必要があるとき。
 
 ## Do not read this when
-- 特定の runtime helper の実装詳細だけを調査するときは、対応する個別 runtime module を直接読む
-- CLI サブコマンド固有の業務ロジックやテストだけを確認するとき
-- 利用者向け仕様や oracle の正本定義だけを確認するときは、対応する oracle 文書を直接読む
+- 個別サブコマンドの業務ロジックや CLI 固有のテストだけを調査するとき。
+- 対象が明確な場合は、commons 配下の該当する個別 runtime モジュールや、関連する oracle 文書を直接読む。
 
 ## hash
-- df48d6ee97fc91c53aef3b116f760ae8512c481a80e663d5325288a6b9ca4a09
+- 6d5789790aa753e8625ab852e7de2e27414d03a8ab0296fac288312d02b5176c
 
 # `config`
 
@@ -114,16 +112,15 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、review、run、session、tui などの CLI 実行入口と、関連する下位実装へのルーティングを担う。apply は現時点で実装ファイルがない。
+- cmoc のサブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、review、run、session、tui など各サブコマンドの実行入口・ライフサイクル処理・専用実装への入口を提供する。apply は現在未実装。
 
 ## Read this when
-- cmoc のサブコマンド構成や各サブコマンド実装の所在を確認するとき
-- サブコマンドの CLI 実行フロー、ライフサイクル処理、worktree 操作、agent 起動、状態管理を調査・変更するとき
+- cmoc のサブコマンド実装の構成や実装ファイルの所在を確認するとき
+- 特定サブコマンドの CLI 実行フロー、ライフサイクル処理、TUI 起動処理などの入口を調査・変更するとき
 
 ## Do not read this when
-- 特定サブコマンドの内部処理を詳しく確認するときは、対応する下位実装ファイルを直接読む
-- oracle や preprocess などの仕様・処理内容を確認するときは、参照される oracle 文書または専用実装を直接読む
-- CLI ランタイム共通処理、prompt 構築、report 生成などの共通処理だけを調査するときは、対応する共通実装を直接読む
+- 特定サブコマンドの内部処理や共通処理の詳細を確認するとき。対応する個別実装または commons 配下の実体を直接読む
+- oracle の仕様・処理内容を確認するとき。対応する oracle の実装や文書を直接読む
 
 ## hash
-- 56ce616f6fe847da8865f53d06cfea0ad348fc60df4c224a96d5dfc868b64ba7
+- 14e718a950c6ce375a78e498e95810e6c610f559df3a6561770f1c18d2abcba4

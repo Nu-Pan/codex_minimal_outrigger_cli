@@ -651,6 +651,56 @@ def test_run_abandon_stops_tracked_process_for_error_run(
     assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
 
 
+@pytest.mark.parametrize("run_state", ["joinable", "error"])
+def test_run_abandon_rejects_unreadable_process_tracking(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    run_state: str,
+) -> None:
+    """破損した process tracking を無視して run 資源を削除しない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    set_run_state(context, run_state)
+    tracking_path = run_process_id_path(root, context.session_id)
+    tracking_path.write_bytes(b"\xff")
+
+    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert "process tracking を検証できません" in result.output
+    assert _state(state_path)["run"]["state"] == run_state
+    assert context.run_worktree.exists()
+    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+    assert tracking_path.read_bytes() == b"\xff"
+
+
+def test_run_abandon_reports_stale_child_stop_warning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """joinable run の child 停止 warning を lifecycle report に残す。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    run_process_id_path(root, context.session_id).write_text(
+        "123 456\nchild 789 1011 789\n"
+    )
+    monkeypatch.setattr(
+        runtime_run_module,
+        "stop_child_process_group",
+        lambda _child: "run child process already stopped: 789",
+    )
+
+    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    reports = list(
+        (root / ".cmoc" / "gu" / "ar" / "report" / "run" / "abandon").glob("*.md")
+    )
+    assert len(reports) == 1
+    assert "run child process already stopped: 789" in reports[0].read_text()
+
+
 def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
