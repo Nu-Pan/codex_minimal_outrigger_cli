@@ -126,33 +126,36 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめた src パッケージ。CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim など、実行側コードの下位領域へ進むための入口。
+- cmoc の realization 実装を収める src の入口。Typer CLI の登録と引数処理、共通 runtime、ACP builder、サブコマンド実装、互換 import shim を扱う。
+- CLI 全体の登録・起動や引数エラー、自動補完の挙動を確認するときは main.py へ進む。共通処理は commons、ACP 関連は acp、サブコマンド本体は sub_commands 配下を読む。
+- basic、config、cmoc_runtime.py、oracle.py は既存 import path や正本側 package を維持する互換入口であり、実体の仕様・実装を定義しない。
 
 ## Read this when
-- cmoc の realization 実装の構成や、CLI・共通 runtime・ACP builder・互換 import の入口を確認するとき。
-- 特定のサブコマンドや実装領域へ進む前に、src 配下の責務分担を把握するとき。
+- cmoc の realization 実装全体の入口や主要な責務領域を確認するとき。
+- CLI の登録構成を確認し、共通 runtime・ACP builder・各サブコマンドの詳細実装へ進む先を判断するとき。
+- 既存の互換 import path と実体 module の関係を確認するとき。
 
 ## Do not read this when
-- canonical な oracle 仕様や oracle 側実装を確認するときは、対応する oracle 配下を直接読む。
-- 特定サブコマンド、runtime module、builder の詳細実装だけを調査するときは、対応する下位対象を直接読む。
+- 特定の共通処理、ACP builder、またはサブコマンドの詳細を調査・変更するときは、対応する下位 module を直接読む。
+- canonical な oracle 仕様や oracle 側の実装を確認するときは、oracle 配下を直接読む。
+- INDEX 更新処理の具体的な挙動だけを確認するときは、対応する indexing 実装を直接読む。
 
 ## hash
-- 6cd6d0d1828f2b5f82ada928c88acd93acb230021485a88ff62e13843f5f7e93
+- 904c5f1b49766043bf625390d384947b6ce00f33cc6219872d495739dcad9776
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state などの外部挙動・制御ロジックを検証するテストと、複数テスト領域で共有する実行・Git・Ollama・Codex 用 helper を含む。各機能の変更時に、対象実装の契約や回帰範囲を確認するための入口となる。
+- cmoc の realization test を集約するテストディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定、worktree、renderer など、実装の外部契約と制御ロジックを検証する。個別テストファイルは各機能領域の回帰テストへの入口となる。
 
 ## Read this when
-- cmoc の実装またはテストを変更し、対応する外部挙動・制御ロジックの回帰テストを探すとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run lifecycle、runtime state などのテスト対象領域を調査するとき
-- 複数テストで共有される Codex、Ollama、Git、外部コマンド、CLI 実行 helper の責務を確認するとき
+- cmoc の実装変更に対応する realization test や、機能領域別の外部挙動・制御ロジックを確認するとき。
+- 対象機能が不明で、複数の CLI・runtime・state・builder テストから関連する検証入口を探すとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認するときは、対応する oracle doc または oracle schema を直接読む
-- 実装の内部詳細だけを調査するときは、対象の src ファイルを直接読む
-- 対象領域が明確な場合は、このディレクトリ内の全テストを読むのではなく、該当する機能テストまたは helper に直接進む
+- 正本仕様や設計・開発手順を確認するときは、対応する oracle 文書や開発ルールを直接読む。
+- 単一機能の実装詳細を確認する場合は、このディレクトリ全体ではなく対応する realization implementation または個別テストを直接読む。
+- Codex や LLM の回答品質そのものを評価したいときは、このテスト群を読む対象にしない。
 
 ## hash
-- 24ea4e790e51076f6b1aa450d3021e84b34086e2a53560518dedd68ae07ff800
+- a334825d0f93d7f8bfe2701ff2d8904c6688b7d61f8fc07ecc6953052df3ed2a

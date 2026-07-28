@@ -174,10 +174,12 @@ def _remove_run_worktree(
         if worktree_for_branch_optional(context.repo, context.run_branch) is None:
             return True
     result = remove_worktree(context.repo, context.run_worktree)
-    if result.returncode != 0 and context.run_worktree.exists():
+    if result.returncode != 0 and (
+        context.run_worktree.exists() or context.run_worktree.is_symlink()
+    ):
         warnings.append(result.stderr.strip() or "run worktree removal failed")
         return False
-    return not context.run_worktree.exists()
+    return not context.run_worktree.exists() and not context.run_worktree.is_symlink()
 
 
 def _remove_run_branch(

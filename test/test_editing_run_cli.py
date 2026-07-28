@@ -571,6 +571,35 @@ def test_run_abandon_stops_tracked_process_for_error_run(
     assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
 
 
+def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """削除失敗後に残った dangling symlink を cleanup 完了と扱わない。"""
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path / "session",
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=tmp_path / "run",
+    )
+    context.run_worktree.symlink_to(tmp_path / "missing", target_is_directory=True)
+    monkeypatch.setattr(
+        run_abandon_module,
+        "remove_worktree",
+        lambda *_args: SimpleNamespace(returncode=1, stderr="removal failed"),
+    )
+
+    warnings: list[str] = []
+    assert not run_abandon_module._remove_run_worktree(context, warnings)
+    assert warnings == ["removal failed"]
+
+
 def test_apply_fork_tracks_indexing_codex_calls(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
