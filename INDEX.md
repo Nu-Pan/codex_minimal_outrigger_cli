@@ -126,36 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装を収める src の入口。Typer CLI の登録と引数処理、共通 runtime、ACP builder、サブコマンド実装、互換 import shim を扱う。
-- CLI 全体の登録・起動や引数エラー、自動補完の挙動を確認するときは main.py へ進む。共通処理は commons、ACP 関連は acp、サブコマンド本体は sub_commands 配下を読む。
-- basic、config、cmoc_runtime.py、oracle.py は既存 import path や正本側 package を維持する互換入口であり、実体の仕様・実装を定義しない。
+- cmoc CLI の realization 実装全体への入口。Typer による CLI 登録、サブコマンド実装、ACP builder、共通 runtime、互換 import shim、設定・基本型を含む。各責務の詳細は対応する下位ディレクトリまたはモジュールへ進む。
 
 ## Read this when
-- cmoc の realization 実装全体の入口や主要な責務領域を確認するとき。
-- CLI の登録構成を確認し、共通 runtime・ACP builder・各サブコマンドの詳細実装へ進む先を判断するとき。
-- 既存の互換 import path と実体 module の関係を確認するとき。
+- cmoc の CLI 全体構成、サブコマンド登録、実行入口を確認するとき。
+- ACP builder、共通 runtime、設定・基本型、互換 import、またはサブコマンド実装の配置先を特定するとき。
 
 ## Do not read this when
-- 特定の共通処理、ACP builder、またはサブコマンドの詳細を調査・変更するときは、対応する下位 module を直接読む。
-- canonical な oracle 仕様や oracle 側の実装を確認するときは、oracle 配下を直接読む。
-- INDEX 更新処理の具体的な挙動だけを確認するときは、対応する indexing 実装を直接読む。
+- 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
+- 特定の runtime helper、ACP builder、またはサブコマンドの詳細処理を調査するときは、対応する下位モジュールを直接読む。
+- INDEX.md の生成・更新処理自体を確認するときは、indexing の実装または対応する oracle 仕様を直接読む。
 
 ## hash
-- 904c5f1b49766043bf625390d384947b6ce00f33cc6219872d495739dcad9776
+- 9ff1ff82dd4bc403ff0b6eeb55850c234048c1b842b86ccc93882d6466cad969
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するテストディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定、worktree、renderer など、実装の外部契約と制御ロジックを検証する。個別テストファイルは各機能領域の回帰テストへの入口となる。
+- cmoc の realization test をまとめたディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、worktree などの外部挙動・制御ロジックを検証する共通テストとテスト支援 helper を扱う。個別機能の実装変更時に、対応する回帰テストへ進むための入口。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test や、機能領域別の外部挙動・制御ロジックを確認するとき。
-- 対象機能が不明で、複数の CLI・runtime・state・builder テストから関連する検証入口を探すとき。
+- cmoc の実装や仕様変更に対応する realization test を探すとき
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session、runtime state などの回帰テスト対象を選ぶとき
+- テスト用 Git repository、fake command、Ollama、Codex 実行環境などの共通 helper を確認するとき
 
 ## Do not read this when
-- 正本仕様や設計・開発手順を確認するときは、対応する oracle 文書や開発ルールを直接読む。
-- 単一機能の実装詳細を確認する場合は、このディレクトリ全体ではなく対応する realization implementation または個別テストを直接読む。
-- Codex や LLM の回答品質そのものを評価したいときは、このテスト群を読む対象にしない。
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc または oracle source を直接読む
+- 対象機能の実装詳細だけを調査するときは、対応する src ファイルを直接読む
+- cmoc と無関係なテストや、ここに含まれない領域の検証方法を調べるとき
 
 ## hash
-- a334825d0f93d7f8bfe2701ff2d8904c6688b7d61f8fc07ecc6953052df3ed2a
+- e8c0eb7ec745bc42e59a40b23bf4b6a67fdc42551da172f8bc56dff338ce1ac2

@@ -260,7 +260,9 @@ def _merge_and_finalize(
     last_joined_apply_fork_commit = state.session.last_joined_apply_fork_commit
     if context.kind == "realization_apply":
         last_joined_apply_fork_commit = context.run_fork_commit
-        hook_result = f"session.last_joined_apply_fork_commit={context.run_fork_commit}"
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # common の run_fork_commit と同じ commit を workload 固有名で重複掲載しない。
+        hook_result = "session.last_joined_apply_fork_commit updated"
     refresh_indexes(context.session_worktree, commit=True)
     sync_refactor_state(context.session_worktree)
     state_sync_commit = commit_work_unit(
@@ -397,8 +399,18 @@ def _resolve_index_only_conflict_or_fail(
     ).stdout.split("\0")
     conflicts = [path for path in fields if path]
     if conflicts and all(Path(path).name == "INDEX.md" for path in conflicts):
-        run_git(["checkout", "--ours", "--", *conflicts], context.session_worktree)
-        run_git(["add", "--", *conflicts], context.session_worktree)
+        for path in conflicts:
+            if _has_ours_conflict_stage(context.session_worktree, path):
+                run_git(
+                    ["checkout", "--ours", "--", path],
+                    context.session_worktree,
+                )
+                run_git(["add", "--", path], context.session_worktree)
+            else:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # session 側で削除された INDEX.md には ours stage がないため、削除を
+                # stage してから再生成処理へ渡す。
+                run_git(["rm", "-f", "--", path], context.session_worktree)
         run_git(["commit", "--no-edit"], context.session_worktree)
         merge_commit = head_commit(context.session_worktree)
         refresh_indexes(context.session_worktree, commit=True)
@@ -427,6 +439,16 @@ def _resolve_index_only_conflict_or_fail(
     )
     setattr(error, "cmoc_stdout", f"- run join report: `{report}`")
     raise error
+
+
+def _has_ours_conflict_stage(root: Path, path: str) -> bool:
+    """unmerged path に session 側の stage 2 が存在するか判定する。"""
+    fields = run_git(["ls-files", "-u", "-z", "--", path], root).stdout.split("\0")
+    for field in fields:
+        metadata, separator, _path = field.partition("\t")
+        if separator and len(metadata.split()) >= 3 and metadata.split()[2] == "2":
+            return True
+    return False
 
 
 def _cleanup_joined_run(

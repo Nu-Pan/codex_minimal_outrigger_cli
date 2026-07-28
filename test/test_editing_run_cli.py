@@ -427,6 +427,21 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert run_git(root, "branch", "--list", run_branch).stdout == ""
     assert f"- run_branch: `{run_branch}`" in joined.output
     assert "cmoc run join" in joined.output
+    assert (
+        "- post_join_hook: `session.last_joined_apply_fork_commit updated`"
+        in joined.output
+    )
+    report_path = Path(
+        next(
+            line
+            for line in joined.output.splitlines()
+            if line.startswith("- report: `")
+        )
+        .removeprefix("- report: `")
+        .removesuffix("`")
+    )
+    report_text = report_path.read_text()
+    assert "session.last_joined_apply_fork_commit=" not in report_text
     assert current_branch(root) == session_branch
 
 
@@ -1316,6 +1331,35 @@ def test_run_join_cleanup_checks_branch_deletion_postcondition(
     assert cleanup == "branch_preserved"
     assert deleted == [context.run_branch]
     assert warnings == ["run branch cleanup failed"]
+
+
+def test_run_join_resolves_deleted_session_index_conflict(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """session 側で削除された INDEX.md の conflict を再生成可能な状態にする。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    index_path = root / "INDEX.md"
+    index_path.write_text("base index\n")
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "add index")
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "INDEX.md").write_text("run index\n")
+    commit_work_unit(context.run_worktree, "run index change")
+    set_run_state(context, "joinable")
+    index_path.unlink()
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "delete session index")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert not index_path.exists()
+    assert _state(state_path)["run"]["state"] == "ready"
 
 
 def test_run_join_conflict_abort_failure_still_restores_session_tree(

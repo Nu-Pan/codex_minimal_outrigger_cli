@@ -973,9 +973,9 @@
   },
   "src/sub_commands/run/join.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "60554582870b8434f16548704c86c92dd43989df15c3d913df64d473fe0e29a4",
-    "last_investigated_at": "2026-07-27_15-24_08_307300000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "06c621e4f69c1412a7940e088eb2ea54dccb9b9b7ebcb9f57d940a48f68b4be1",
+    "last_investigated_at": "2026-07-28_11-53_10_624173000"
   },
   "src/sub_commands/run/lifecycle.py": {
     "investigation_required": true,
