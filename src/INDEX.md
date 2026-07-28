@@ -114,17 +114,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装の入口をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの実行フローと下位実装へのルーティングを扱い、未実装の apply・review も配置予定場所として示す。
+- CLI サブコマンド実装の配置ディレクトリ。doctor、indexing、oracle、realization、review、run、session、tui などの実行入口と、各サブコマンド配下の処理への入口を提供する。
 
 ## Read this when
-- CLI サブコマンド全体の構成や、対象サブコマンドの実装ファイルを選ぶ入口を確認するとき。
-- doctor、indexing、oracle、realization、run、session、tui の実行フローや責務境界を調査・変更するとき。
-- サブコマンド実装の追加先として apply または review の配置場所を確認するとき。
+- CLI サブコマンドの構成や実装ファイルの所在を確認するとき
+- 特定サブコマンドの実行フローを調査・変更するとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理を確認する場合は、このディレクトリの入口ではなく該当する下位実装ファイルを直接読む。
-- 共通 CLI runtime、prompt 構築、INDEX 更新処理など、サブコマンド自身が担当しない共通処理だけを調査するときは、それぞれの実体を直接読む。
-- oracle や realization の個別仕様を確認するときは、対応する oracle 文書・実装を直接読む。
+- サブコマンド共通のランタイム処理や設定読み込みだけを調査するとき
+- 特定サブコマンドの内部処理を詳しく確認する場合は、このディレクトリ全体ではなく該当する実装ファイルまたは下位ディレクトリを直接読むとき
 
 ## hash
-- 9744ab45bf52f42af4748a9cb403465123be58e2a8cd1331760823d67b4362a5
+- f2d0f5fd44ac9de4621076af90cdd93467eddf228d47fbe078aae22aeaf81d76

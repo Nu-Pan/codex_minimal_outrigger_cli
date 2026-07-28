@@ -721,3 +721,28 @@ def test_oracle_review_reports_cleanup_failure(
     assert "oracle review の隔離 run の cleanup に失敗しました。" in rendered
     assert "worktree removal failed: cleanup failed" in result.output
     assert "cleanup failed" in result.output
+
+
+def test_cleanup_review_run_rejects_remaining_dangling_worktree_symlink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cleanup 成功コードでも残った dangling symlink を隔離 run 残存として扱う。"""
+    review_worktree = tmp_path / "review-worktree"
+    review_worktree.symlink_to(tmp_path / "missing-worktree")
+
+    monkeypatch.setattr(
+        review_module,
+        "remove_worktree",
+        lambda _root, _worktree: CommandResult(0, "", ""),
+    )
+
+    cleanup_error = review_module._cleanup_review_run(
+        tmp_path,
+        review_worktree,
+        "cmoc/run/session/run",
+        worktree_created=True,
+        branch_created=False,
+    )
+
+    assert cleanup_error is not None
+    assert "path still exists" in cleanup_error.detail

@@ -126,34 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめる src 入口。ACP builder、共通 runtime、互換 import、設定、CLI エントリーポイント、サブコマンド実装へ進むためのルーティングを提供する。
+- cmoc の realization 実装をまとめた src パッケージ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定入口など、実行側の主要コード領域への入口を提供する。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI エントリーポイント・共通 runtime・サブコマンドの入口を確認するとき。
-- ACP builder、互換 import、設定 shim、oracle package shim、またはサブコマンド実装の読む先を選ぶとき。
+- cmoc CLI の実装構成や主要な実行入口を確認するとき。
+- CLI サブコマンド、共通 runtime、互換 import、設定入口のいずれかを調査・変更するとき。
 
 ## Do not read this when
 - 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
-- 特定の runtime helper、サブコマンド、builder の詳細処理だけを調査するときは、対応する下位モジュールを直接読む。
-- INDEX 更新、CLI 共通処理、または利用者向け仕様など、src の入口情報を必要としない作業のとき。
+- 特定のサブコマンドや runtime helper の詳細だけを確認するときは、該当する下位ファイル・ディレクトリを直接読む。
+- src の realization 実装と無関係なテストや補助ファイルを調査するとき。
 
 ## hash
-- 42f78da59ee27da9566877b8318251f73aa00136ebabd3330cdcf4fb5a9d5c63
+- bff1526927538263cee317416a4136d1b8c654cc614d6d6b91eec0ee1843d578
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。CLI、Codex runtime、ACP builder、INDEX 生成、oracle review、session/run state、設定、worktree、共通 runtime など、外部挙動と制御ロジックの回帰・統合・受け入れテストへの入口を提供する。
+- cmoc の realization test 群と共通テスト支援モジュールを集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、renderer などの外部契約・制御ロジックを検証する入口であり、対象機能の挙動をテストから確認する。
 
 ## Read this when
 - cmoc の realization test を追加・変更・調査するとき
-- CLI、Codex 実行、ACP builder、INDEX 生成、oracle review、session/run lifecycle、runtime state などの外部契約や回帰を確認するとき
-- 対象機能に対応する専用テストの所在を探すとき
+- 対象機能に対応する pytest または共通テスト helper の所在を探すとき
+- CLI、Codex 実行、worktree、Git、state、schema、prompt、indexing、oracle review の回帰挙動を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認するときは、対応する oracle doc・oracle source・oracle schema を直接読む
-- 実装詳細を調査するときは、対象の realization implementation を直接読む
-- テスト実行手順や Python 開発環境を確認するときは、対応する開発・テスト手順を読む
+- 正本仕様や oracle schema の内容を確認するときは、対応する oracle doc・oracle source・schema を直接読む
+- 実装詳細を調査するときは、対象機能の realization implementation を直接読む
+- テスト対象と無関係な機能の調査では、このディレクトリ全体を読む必要はない
 
 ## hash
-- 34865c4b345c947b1acc481756d8e9bbf3248d3d38b7d21ec104cb4861152ce9
+- d64edc091bba8de7d331235a02701041ae1fc8ecce476e03f4fc354094e01d22

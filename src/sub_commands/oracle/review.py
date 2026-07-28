@@ -301,7 +301,11 @@ def _cleanup_review_run(
     if worktree_created:
         try:
             removal = remove_worktree(root, review_worktree)
-            if removal.returncode != 0 or review_worktree.exists():
+            if (
+                removal.returncode != 0
+                or review_worktree.exists()
+                or review_worktree.is_symlink()
+            ):
                 errors.append(
                     "worktree removal failed: "
                     + (
