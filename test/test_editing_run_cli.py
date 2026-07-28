@@ -264,7 +264,9 @@ def test_apply_rolls_back_unexpected_oracle_change(
     assert result.exit_code == 1
     state = _state(state_path)
     assert state["run"]["state"] == "error"
-    assert not (root / "oracle" / "unexpected.md").exists()
+    parts = state["run"]["branch"].split("/")
+    run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert not (run_worktree / "oracle" / "unexpected.md").exists()
 
 
 def test_apply_rejects_agent_index_change_before_index_refresh(
@@ -1854,7 +1856,9 @@ def test_start_run_interrupt_during_worktree_creation_cleans_partial_resources(
     with pytest.raises(KeyboardInterrupt):
         start_editing_run("realization_refactor")
 
-    assert not Path(str(created_target["worktree"])).exists()
+    created_worktree = Path(str(created_target["worktree"]))
+    assert not created_worktree.exists()
+    assert not created_worktree.is_symlink()
     assert not lifecycle_module.branch_exists(root, str(created_target["branch"]))
 
 
@@ -1886,6 +1890,7 @@ def test_start_run_interrupt_after_state_write_restores_ready_state(
         "branch": None,
         "fork_commit": None,
     }
+    assert list((root / ".cmoc" / "gu" / "worktree").glob("*/*")) == []
     run_entries = run_git(root, "branch", "--list", "cmoc/run/*").stdout
     assert run_entries.strip() == ""
 
@@ -2128,10 +2133,20 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     """current refactor unit の中断時に差分を戻して joinable にする。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+
+    def interrupting_agent(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> NoReturn:
+        """差分を作成した処理単位の途中で利用者中断を再現する。"""
+        worktree = Path(str(kwargs["cwd"]))
+        (worktree / "README.md").write_text("interrupted\n")
+        raise KeyboardInterrupt()
+
     monkeypatch.setattr(
         refactor_module,
         "run_codex_exec",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
+        interrupting_agent,
     )
 
     result = runner.invoke(
@@ -2141,7 +2156,11 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     )
 
     assert result.exit_code == 0
-    assert _state(state_path)["run"]["state"] == "joinable"
+    state = _state(state_path)
+    assert state["run"]["state"] == "joinable"
+    parts = state["run"]["branch"].split("/")
+    run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (run_worktree / "README.md").read_text() == "# repo\n"
     report_line = next(
         line
         for line in result.output.splitlines()
@@ -2170,7 +2189,7 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """処理単位の commit 後に中断しても確定済み進捗を report する。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
@@ -2224,7 +2243,17 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
     )
 
     assert result.exit_code == 0
-    assert _state(state_path)["run"]["state"] == "joinable"
+    state = _state(state_path)
+    assert state["run"]["state"] == "joinable"
+    parts = state["run"]["branch"].split("/")
+    run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (run_worktree / "README.md").read_text() == "# repo\n\nfixed\n"
+    assert (
+        run_git(
+            run_worktree, "log", "-1", "--format=%s", "--", "README.md"
+        ).stdout.strip()
+        == "cmoc realization refactor README.md"
+    )
     report_line = next(
         line
         for line in result.output.splitlines()
