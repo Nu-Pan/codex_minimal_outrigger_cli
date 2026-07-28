@@ -6,7 +6,6 @@
 単一 workload の lifecycle として保つ。
 """
 
-from dataclasses import replace
 from pathlib import Path
 
 import typer
@@ -48,10 +47,10 @@ from commons.runtime_run_lifecycle import (
     GitChange,
     commit_work_unit,
     flattened_change_paths,
+    recover_started_run,
     refresh_indexes,
-    require_ready_session,
-    resolve_active_run,
     rollback_work_unit,
+    session_run_was_ready,
     set_run_state,
     start_editing_run,
     tree_changes,
@@ -84,7 +83,7 @@ def _cmoc_realization_refactor_fork_body() -> None:
     start_was_ready = False
     try:
         start_subcommand_step(2, "realization refactor run を作成", "create run")
-        start_was_ready = _session_run_was_ready()
+        start_was_ready = session_run_was_ready()
         start_attempted = True
         context = start_editing_run("realization_refactor")
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
@@ -127,7 +126,7 @@ def _cmoc_realization_refactor_fork_body() -> None:
             # 中断対象として回収してはならない。context 返却前の start failure
             # だけを、公開済み run の回収対象にする。
             if start_attempted and start_was_ready:
-                context = _recover_started_run()
+                context = recover_started_run("realization_refactor")
             if context is None:
                 raise
         cleanup_errors: list[str] = []
@@ -185,7 +184,7 @@ def _cmoc_realization_refactor_fork_body() -> None:
             # 確認した後の start failure は、CmocError でも context 返却前に公開
             # された run の回収対象にする。
             if start_attempted and start_was_ready:
-                context = _recover_started_run()
+                context = recover_started_run("realization_refactor")
             if context is None:
                 raise
         error_cleanup_errors: list[str] = []
@@ -211,15 +210,6 @@ def _cmoc_realization_refactor_fork_body() -> None:
             exc,
             error_cleanup_errors,
         )
-
-
-def _session_run_was_ready() -> bool:
-    """新しい run を開始できる状態だったかを回収判定用に確認する。"""
-    try:
-        require_ready_session()
-    except CmocError:
-        return False
-    return True
 
 
 def _raise_refactor_interruption_error(
@@ -275,18 +265,6 @@ def _raise_refactor_error(
         _completion_log("error", unresolved_findings, report),
     )
     raise cmoc_error from error
-
-
-def _recover_started_run() -> EditingRunContext | None:
-    """start 後の context 代入前に公開された run を cleanup 対象として回収する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    try:
-        context, _state = resolve_active_run({"running", "error"})
-    except CmocError:
-        return None
-    if context.kind != "realization_refactor":
-        return None
-    return replace(context, state_before="ready")
 
 
 def _initialize_cycle(context: EditingRunContext) -> None:

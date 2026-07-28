@@ -49,20 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果型、INDEX lifecycle など、CLI 実装が横断利用する基盤 API と個別実装への入口を提供する。
+- cmoc の共通 runtime helper を集約する commons パッケージ。設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果、INDEX lifecycle など、CLI 実装が横断利用する共通 API と内部実装への入口を提供する。
 
 ## Read this when
-- 複数の CLI 機能にまたがる runtime API や共通処理の入口を確認・変更するとき
-- Codex 実行、設定、Git/worktree、パス、状態、ログ、エラー、INDEX 更新、editing run などの基盤機能を調査するとき
-- commons 配下で対象となる個別 runtime module の責務や実装箇所を特定するとき
+- 複数の CLI 機能にまたがる runtime helper の責務や公開 API を確認するとき
+- 設定、Git、Codex 実行、プロセス管理、状態、ログ、パス、INDEX 更新などの共通実装を変更・調査するとき
+- 特定の runtime 機能の実装箇所を特定し、commons 配下の個別モジュールへ進むとき
 
 ## Do not read this when
-- 特定の runtime helper の実装詳細が明らかな場合は、対応する個別 runtime module を直接読む
-- CLI サブコマンド固有の業務ロジックやテストだけを調査するとき
-- 利用者向け仕様や schema の正本を確認したいだけの場合は、対応する oracle 文書を直接読む
+- 特定の CLI サブコマンド固有の業務ロジックだけを調査するとき
+- 利用者向け仕様や Structured Output schema などの正本定義だけを確認したいとき
+- 特定の runtime 機能の詳細が明確な場合は、このディレクトリ全体ではなく対応する個別モジュールを直接読む
 
 ## hash
-- a3d379e6fe1e8ffaa912f412af4e6a437f9f39db571986128641824c5204130e
+- 216b76200cae349c589ee4ac3e13b998226e17fff9ee2827320c058041ca9772
 
 # `config`
 
@@ -114,15 +114,15 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装をまとめるディレクトリ。apply、doctor、indexing、oracle、realization、review、run、session、tui の各実装または下位パッケージへの入口を提供する。
+- CLI サブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの実行入口と、apply・review の実装追加先を扱う。各サブコマンドの詳細実装や下位責務へ進むための入口。
 
 ## Read this when
-- cmoc のサブコマンド実装の構成や、対象サブコマンドの実装入口を選ぶとき。
-- doctor、indexing、oracle、realization、run、session、tui などの実行フローを調査・変更するとき。
+- CLI サブコマンド全体の実装構成や、対象サブコマンドの実装ファイルを選ぶとき。
+- doctor、indexing、oracle、realization、run、session、tui の実行フローや、apply・review の実装配置を調査・変更するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理を確認する場合は、該当する実装ファイルまたは下位パッケージを直接読む。
-- 共通 CLI runtime、workload 固有処理、oracle 文書など、サブコマンド入口以外の詳細だけを確認するとき。
+- 特定サブコマンドの詳細処理、共通 lifecycle、INDEX 更新、prompt 構築などを調査するときは、この階層ではなく該当する下位実装を直接読む。
+- サブコマンド以外の CLI runtime や oracle 文書の仕様だけを確認するとき。
 
 ## hash
-- aa40d32b74f1d8c62e46f635798fbca2060ef050f24d2681b4807a03e7696315
+- d3e0cc2dc95258aa136603871d47099a6af982bc28ee2b5a24662e06ffe2f037

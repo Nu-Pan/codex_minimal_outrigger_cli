@@ -13,7 +13,7 @@ INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を�
 
 import os
 from collections.abc import Collection
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from commons.indexing import commit_index_updates, indexing_lock, update_indexes
@@ -117,6 +117,16 @@ def require_ready_session() -> tuple[Path, Path, str, Path, SessionState, str]:
         state,
         session_fork_commit,
     )
+
+
+def session_run_was_ready() -> bool:
+    """新しい editing run を開始できる状態だったかを確認する。"""
+    # {{work-root}}/oracle/doc/dev_rule/design_rule.md
+    try:
+        require_ready_session()
+    except CmocError:
+        return False
+    return True
 
 
 def start_editing_run(kind: str) -> EditingRunContext:
@@ -267,6 +277,18 @@ def resolve_active_run(
         ),
         state,
     )
+
+
+def recover_started_run(kind: str) -> EditingRunContext | None:
+    """context 公開前に作成された指定 kind の run を回収対象として解決する。"""
+    # {{work-root}}/oracle/doc/dev_rule/design_rule.md
+    try:
+        context, _state = resolve_active_run({"running", "error"})
+    except CmocError:
+        return None
+    if context.kind != kind:
+        return None
+    return replace(context, state_before="ready")
 
 
 def set_run_state(context: EditingRunContext, run_state: str) -> SessionState:

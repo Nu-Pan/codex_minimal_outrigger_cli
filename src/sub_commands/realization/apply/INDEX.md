@@ -15,17 +15,13 @@
 # `fork.py`
 
 ## Summary
-- `cmoc realization apply fork` の実行本体を担い、realization apply agent の差分追従処理を run として管理する。oracle diff の構築、agent 実行、想定外差分の検査、INDEX 更新を含む commit、joinable/error state への更新、fork report 保存までを扱う。
-- realization apply fork の CLI 制御を確認する際の実装入口であり、run lifecycle、process tracking、差分検査、レポート生成の下位処理へつながる。
+- `cmoc realization apply fork` サブコマンドの実行処理を担う。差分の始点特定、oracle diff 構築、realization apply agent の実行、変更検査・commit、run の joinable 更新、fork report 保存までを管理する。
 
 ## Read this when
-- `cmoc realization apply fork` の実行フロー、成功時の commit・joinable 化、失敗時の rollback・error report を調査または変更するとき
-- realization apply agent の差分範囲検査、Codex child process の停止、run state の復旧処理を確認するとき
+- realization apply fork の実行フロー、run の joinable/error 遷移、agent 差分の検査や commit、fork report の生成を変更・調査するとき。
 
 ## Do not read this when
-- realization apply agent が生成する prompt や launch parameter の詳細だけを確認したいときは、対応する builder を直接読む
-- run の共通状態管理・差分操作・process tracking の実装だけを確認したいときは、`commons.runtime_run*` 系の実装を直接読む
-- 別の realization apply サブコマンドや fork report の一般仕様だけを確認したいときは、該当するサブコマンド実装または oracle 文書を直接読む
+- realization apply の prompt 構築だけを変更・調査するときは、launch parameter builder を直接読む。run の共通ライフサイクルや状態管理だけを変更・調査するときは、commons の runtime lifecycle 実装を直接読む。
 
 ## hash
-- 7a3b08bd650a7b812e47677d18546fe27b2b3c253fa92e96c1baa9d3d87c1c4c
+- 0f941f4192fc1c2b88e653e278c54c74be7bac14b5d0e162531892e300b691db
