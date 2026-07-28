@@ -126,31 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装全体への入口。Typer の CLI 登録、互換 import shim、共通 runtime、ACP builder、各サブコマンド実装を含み、個別機能の実装へ進むための上位ルーティングを担う。
+- cmoc の realization 実装を配置する src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim など、実行可能な実装領域への入口を提供する。
 
 ## Read this when
-- cmoc の CLI 全体構成、公開コマンド、互換 import 経路、共通 runtime、ACP builder、またはサブコマンド実装の入口を確認するとき。
-- 特定の下位実装へ進む前に、主要なパッケージと委譲関係を把握するとき。
+- cmoc の realization 実装全体の構成や、CLI・runtime・builder の実装入口を確認するとき。
+- 特定の実装領域へ進む前に、src 直下のパッケージやモジュールの責務を把握するとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime helper、ACP builder、互換 shim の詳細が明確な場合は、対応する下位ファイルまたはディレクトリを直接読む。
-- canonical な oracle 仕様や oracle 実装を確認するときは、oracle 側を直接読む。
+- 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
+- 特定のサブコマンド、runtime module、builder の詳細処理を調査するときは、src 全体ではなく該当する下位対象を直接読む。
+- テスト実装やテスト固有の検証方法を確認するときは、対応する test 配下を読む。
 
 ## hash
-- b5980c8ae0602a438ea7fdc38ebf47e6c9f655508b96bdf1ca2b015d51d51794
+- e155a626d269befb3d9bdfe0780d0a8da3272e2dcccaf01b14c106b4cb281ae8
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、oracle review、session/run lifecycle、INDEX 生成などの外部挙動・制御ロジックを検証する。各テストファイルが機能領域ごとの具体的な確認入口となる。
+- cmoc の realization test を集約し、ACP builder、Codex runtime、CLI、INDEX 生成、oracle review、session/run state、設定、Git/worktree、prompt などの外部契約・制御ロジックを検証するテスト群への入口。個別機能の回帰テストと、共通テスト支援モジュールを含む。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや統合テストの入口を探すとき
-- CLI、runtime、Codex、builder、oracle review、session/run、INDEX 生成の挙動をテストから確認するとき
+- 実装または仕様変更に対応する realization test の入口を探すとき
+- CLI、Codex 実行、builder、INDEX、oracle review、session/run lifecycle、runtime state などの外部挙動を検証するとき
+- テスト用の Git、Ollama、Codex、fake command、path 解決などの共通支援を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装詳細を確認することが目的のときは、対応する oracle または src のファイルを直接読む
-- テスト対象と無関係な機能領域を調査するときは、このディレクトリ全体ではなく対応するテストファイルへ進む
+- 正本仕様や schema の内容を確認するときは、対応する oracle file を直接読む
+- 実装詳細のみを調査するときは、対応する src の実装を直接読む
+- 対象領域と無関係なテストや、Codex の回答品質そのものを評価するテストを探すとき
 
 ## hash
-- f80ad21b3db2e6ee3d11fe1a60dc650efa3cbca3ef04fd7efeb36c9be44e416c
+- d096a843079d06c1f8779155987810a281a71663ee605f1df663264ac6460bce

@@ -355,3 +355,35 @@ def test_stop_child_process_group_fails_closed_after_pidfd_leader_exit(
 
     assert stopped == []
     assert closed == [99]
+
+
+def test_read_run_process_id_treats_invalid_encoding_as_stale(
+    tmp_path: Path,
+) -> None:
+    """壊れた encoding の tracking file を停止対象なしとして扱う。"""
+    tracking_path = runtime_run.run_process_id_path(tmp_path, "session")
+    tracking_path.parent.mkdir(parents=True)
+    tracking_path.write_bytes(b"\xff")
+
+    assert runtime_run.read_run_process_id(tmp_path, "session") is None
+
+
+def test_stop_child_process_group_fails_closed_when_stale_leader_group_is_running(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """stale leader の group が残る場合は cleanup を続行しない。"""
+    child = runtime_run.ProcessIdentity(123, 456, 789)
+    stopped: list[int] = []
+    monkeypatch.setattr(runtime_run, "open_process_fd", lambda *_args: None)
+    monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: 999)
+    monkeypatch.setattr(
+        runtime_run, "process_group_has_running_member", lambda _pgid: True
+    )
+    monkeypatch.setattr(
+        runtime_run, "stop_process_group", lambda pgid: stopped.append(pgid)
+    )
+
+    with pytest.raises(CmocError, match="同一性を確認できません"):
+        runtime_run.stop_child_process_group(child)
+
+    assert stopped == []
