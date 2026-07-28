@@ -42,9 +42,9 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
 # も含め、隔離終了時に review branch を merge することを求めている。
 def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> bool:
     """base commit 以降の review branch 差分が INDEX.md だけか確認する。"""
-    changed_paths = run_git(
-        ["diff", "--name-only", f"{base_commit}..HEAD"], review_worktree
-    ).stdout.splitlines()
+    changed_paths = _git_name_only_paths(
+        review_worktree, ["diff", "--name-only", f"{base_commit}..HEAD"]
+    )
     non_index = [path for path in changed_paths if Path(path).name != "INDEX.md"]
     if non_index:
         raise CmocError(
@@ -80,9 +80,7 @@ def merge_review_branch(root: Path, review_branch: str) -> str:
 
 def resolve_review_index_conflicts(root: Path) -> bool:
     """INDEX.mdだけのmerge conflictをoursまたは削除で解決してcommitする。"""
-    conflicted = run_git(
-        ["diff", "--name-only", "--diff-filter=U"], root
-    ).stdout.splitlines()
+    conflicted = _git_name_only_paths(root, ["diff", "--name-only", "--diff-filter=U"])
     if not conflicted:
         return False
     if any(Path(path).name != "INDEX.md" for path in conflicted):
@@ -99,7 +97,17 @@ def resolve_review_index_conflicts(root: Path) -> bool:
 
 def _has_ours_stage(root: Path, path: str) -> bool:
     """unmerged pathにours stageが存在するかを返す。"""
-    unmerged = run_git(
-        ["ls-files", "-u", "--", literal_pathspec(path)], root
-    ).stdout.splitlines()
-    return any(line.split(maxsplit=3)[2] == "2" for line in unmerged)
+    fields = run_git(
+        ["ls-files", "-u", "-z", "--", literal_pathspec(path)], root
+    ).stdout.split("\0")
+    for field in fields:
+        metadata, separator, _path = field.partition("\t")
+        metadata_fields = metadata.split()
+        if separator and len(metadata_fields) >= 3 and metadata_fields[2] == "2":
+            return True
+    return False
+
+
+def _git_name_only_paths(root: Path, args: list[str]) -> list[str]:
+    """Git の quote 済み path を壊さず name-only 出力から復元する。"""
+    return [path for path in run_git([*args, "-z"], root).stdout.split("\0") if path]

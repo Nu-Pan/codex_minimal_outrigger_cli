@@ -573,8 +573,9 @@ def test_oracle_review_merges_preflight_committed_index_changes(
     assert "run_join_commit: null" not in rendered
 
 
+@pytest.mark.parametrize("index_relative_path", ["INDEX.md", "日本語[1]/INDEX.md"])
 def test_oracle_review_resolves_index_conflict_when_session_deleted_index(
-    tmp_path: Path,
+    tmp_path: Path, index_relative_path: str
 ) -> None:
     """session 側で削除された INDEX.md の merge conflict を解決する。
 
@@ -582,17 +583,19 @@ def test_oracle_review_resolves_index_conflict_when_session_deleted_index(
     """
 
     root = make_repo(tmp_path)
+    index_path = root / index_relative_path
     home_branch = run_git(root, "branch", "--show-current").stdout.strip()
-    (root / "INDEX.md").write_text("base\n")
-    run_git(root, "add", "INDEX.md")
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    index_path.write_text("base\n")
+    run_git(root, "add", "--", index_relative_path)
     run_git(root, "commit", "-m", "add index")
     run_git(root, "switch", "-c", "review")
-    (root / "INDEX.md").write_text("review\n")
-    run_git(root, "add", "INDEX.md")
+    index_path.write_text("review\n")
+    run_git(root, "add", "--", index_relative_path)
     run_git(root, "commit", "-m", "review index")
     run_git(root, "switch", home_branch)
-    (root / "INDEX.md").unlink()
-    run_git(root, "add", "INDEX.md")
+    index_path.unlink()
+    run_git(root, "add", "--", index_relative_path)
     run_git(root, "commit", "-m", "delete index")
     merge = subprocess.run(
         ["git", "merge", "--no-ff", "review"],
@@ -605,7 +608,7 @@ def test_oracle_review_resolves_index_conflict_when_session_deleted_index(
     resolved = review_module.resolve_review_index_conflicts(root)
 
     assert resolved is True
-    assert not (root / "INDEX.md").exists()
+    assert not index_path.exists()
     assert run_git(root, "diff", "--name-only", "--diff-filter=U").stdout.strip() == ""
     assert "Merge branch 'review'" in run_git(root, "log", "-1", "--pretty=%B").stdout
 
@@ -629,6 +632,25 @@ def test_commit_review_index_changes_accepts_nested_untracked_index(
         run_git(root, "show", "--format=", "--name-only", "HEAD").stdout.strip()
         == "generated[1]/INDEX.md"
     )
+
+
+def test_review_branch_accepts_index_path_with_git_quoted_parent(
+    tmp_path: Path,
+) -> None:
+    """Git が quote する親 directory 配下の INDEX.md も変更として扱う。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
+    """
+    root = make_repo(tmp_path)
+    index_path = root / "日本語[1]" / "INDEX.md"
+    index_path.parent.mkdir()
+    index_path.write_text("# generated\n")
+    run_git(root, "add", "--", str(index_path.relative_to(root)))
+    run_git(root, "commit", "-m", "generated index")
+
+    base_commit = run_git(root, "rev-parse", "HEAD^").stdout.strip()
+
+    assert review_module.review_branch_has_index_changes(root, base_commit) is True
 
 
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])

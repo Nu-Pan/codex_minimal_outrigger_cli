@@ -126,34 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめたソースツリー。CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim など、実際の実行処理へ進むための入口となる。
+- cmoc の realization 実装をまとめる src パッケージ。CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim など、実行可能な製品コードの入口となる。
 
 ## Read this when
-- cmoc の CLI 実装全体の構成や、主要エントリーポイントから各サブコマンド・共通処理への配置を確認するとき。
-- サブコマンド、runtime helper、ACP builder、互換 import の realization 実装を横断して調査するとき。
+- cmoc の realization 実装全体の構成や主要な実装領域の入口を確認するとき。
+- CLI、共通 runtime、ACP builder、互換 import、またはサブコマンドの配置を調査するとき。
 
 ## Do not read this when
-- canonical な仕様や正本実装を確認するときは、対応する oracle ツリーを直接読む。
-- 特定のサブコマンド、runtime helper、builder の詳細処理だけを調査するときは、対応する下位モジュールを直接読む。
-- テスト実装や開発環境の確認が目的のときは、対応する test または開発用文書を読む。
+- 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
+- 特定のサブコマンドや runtime helper の詳細を調査するときは、src 直下ではなく該当する下位モジュールを直接読む。
+- テストの実装や実行方法を確認するときは、test 配下および開発環境・テスト規則の文書を直接読む。
 
 ## hash
-- 21b851d9fd802b1319f3e128d00bbad25fd734f03bcd74d26e70f574243c6c7a
+- 30614dc6ce2b135c2ec18f1fc417a0deae48da64a69334bac8984076150f9f4d
 
 # `test`
 
 ## Summary
-- `test` ディレクトリは、cmoc の realization test を集約するテスト領域。共通テスト helper、ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review/edit、session、state、worktree、設定、prompt、renderer などの外部契約・制御ロジックを検証する。各テストファイルが機能領域ごとの詳細な回帰テストへの入口となる。
+- テストコードから正本 schema、CLI、Codex 実行、Git、Ollama、worktree、state、prompt、各種サブコマンドの契約を検証する共通 helper と pytest テスト群を提供する。実装変更時に、対象機能の外部挙動・制御ロジック・統合 lifecycle を確認するための入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや、対象機能の外部挙動・制御ロジックを確認するとき
-- 共通 fixture やテスト用 Git/Codex/Ollama 環境、fake external command の使い方を確認するとき
-- CLI、runtime、indexing、oracle、session、設定など、対象機能に対応する専用テストを探すとき
+- テスト対象の実装や外部契約を変更・調査するとき
+- 共通テスト helper、fixture、fake external command、Git/Ollama 環境の準備方法を確認するとき
+- CLI、Codex runtime、indexing、oracle review、session、editing run、state などの回帰テストを探すとき
 
 ## Do not read this when
-- 正本仕様や設計・開発・テスト手順を確認することが目的のときは、対応する `oracle` 文書・ソースを直接読む
-- 実装詳細の調査だけが目的で、テスト上の期待挙動を確認する必要がないとき
-- 対象機能と無関係なテスト領域を調査するときは、このディレクトリ全体ではなく対応する個別テストへ進む
+- 正本仕様や schema の内容自体を確認するときは、対応する oracle doc・oracle src・schema を直接読む
+- テスト対象と無関係な実装や、個別機能の詳細をテスト一覧から推測する必要があるとき
+- テスト実行環境や品質検査の手順だけを確認するときは、対応する開発・テスト手順を読む
 
 ## hash
-- c78d34f1e3372398b1e9bbada4356a337cc88f2003cc4e12c40935fd5eefdf87
+- 09566097ce90e7b655dd629d318340fc93f71a6b9e0934ac63ac8fb6566cb305
