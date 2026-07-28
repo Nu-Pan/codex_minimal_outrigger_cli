@@ -756,10 +756,10 @@
     "last_investigated_at": "2026-07-28_07-59_40_591784000"
   },
   "src/commons/runtime_codex_tui.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "f7c796bb30a6bcfe91a2eb3cbc5323a43341d8262cfac90e0463536299ea8cb9",
-    "last_investigated_at": "2026-07-25_02-32_24_323229000"
+    "last_investigated_sha256": "1bc74d53df01b76bf196b7f908cf3eec9628e8ab05571f0d6c5ed95f068711bd",
+    "last_investigated_at": "2026-07-29_05-20_15_886213000"
   },
   "src/commons/runtime_config.py": {
     "investigation_required": true,
