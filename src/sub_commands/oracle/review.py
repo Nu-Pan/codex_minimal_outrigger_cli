@@ -144,18 +144,15 @@ def _cmoc_oracle_review_body(
                 create_run_worktree(
                     current_root, run_branch, review_worktree, run_fork_commit
                 )
-                review_worktree_created = True
-                run_branch_created = True
-            except BaseException:
+            finally:
                 # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-                # worktree add が branch/worktree の作成後に中断されても、今回の作成物だけを
-                # cleanup 対象として後続の終了処理へ渡す。target 選択と作成は lock 下なので、
-                # 検出された resource はこの invocation の部分作成である。
+                # worktree add が作成直後に中断されても、今回の作成物だけを cleanup 対象として
+                # 後続の終了処理へ渡す。target 選択と作成は lock 下なので、検出された resource
+                # はこの invocation の部分作成である。
                 review_worktree_created = (
                     review_worktree.exists() or review_worktree.is_symlink()
                 )
                 run_branch_created = branch_exists(root, run_branch)
-                raise
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")
             with pushd(review_worktree):

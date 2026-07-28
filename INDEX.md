@@ -126,19 +126,18 @@
 # `src`
 
 ## Summary
-- src は cmoc CLI の realization 実装をまとめるトップレベルの入口。CLI エントリーポイント、互換 import shim、共通 runtime、サブコマンド実装、ACP builder などへ進む起点となる。
+- src は cmoc の realization 実装をまとめるトップレベルの Python ソース領域で、CLI エントリーポイント、共通 runtime、互換 import shim、サブコマンド実装を下位領域へ案内する。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・共通 runtime・サブコマンドの入口を確認するとき。
-- 特定の実装領域へ進む前に、src 配下の責務分割と主要な参照先を把握するとき。
+- cmoc の realization 実装全体の構成や、CLI・共通 runtime・互換入口・サブコマンドの配置を確認するとき。
+- 対象となる実装ファイルが特定できておらず、src 配下の下位領域への入口を選ぶ必要があるとき。
 
 ## Do not read this when
 - 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
-- 特定サブコマンド、runtime 機能、ACP builder の詳細を調査・変更するときは、src 配下の該当する下位対象を直接読む。
-- CLI と無関係なテストや補助ファイルだけを調査するとき。
+- 特定の CLI サブコマンド、共通 runtime、builder などの責務が明らかな場合は、src 配下の対応する下位領域を直接読む。
 
 ## hash
-- e951e53941a16e4453b4aa6291345d0b0e642610c5412379db1fe605e483a20f
+- a64d40006e0a203599e6a55b885ebf100f25a74d537805f1364c4a5c6a410b10
 
 # `test`
 
