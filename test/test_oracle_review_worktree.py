@@ -23,6 +23,7 @@ from _git_support import make_repo, run_git
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
+import commons.runtime_run_lifecycle as lifecycle_module
 import sub_commands.oracle.review as review_module
 from basic.acp import AgentCallParameter
 from commons.runtime_results import CommandResult
@@ -184,6 +185,55 @@ def test_oracle_review_forks_from_snapshot_commit(
     assert result.exit_code == 0, result.output
     assert start_points == [snapshot_commit]
     assert forked_commits == [snapshot_commit]
+
+
+def test_oracle_review_retries_run_target_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """既存 run target と timestamp が衝突しても別の target で隔離する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    collision_id = "2026-07-28_00-00-00_000000000"
+    collision_branch = f"cmoc/run/{session_id}/{collision_id}"
+    collision_worktree = root / ".cmoc" / "gu" / "worktree" / session_id / collision_id
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        collision_branch,
+        str(collision_worktree),
+        "HEAD",
+    )
+    target_ids = iter([collision_id, "2026-07-28_00-00-00_000000001"])
+    monkeypatch.setattr(lifecycle_module, "timestamp", lambda: next(target_ids))
+    review_worktrees: list[Path] = []
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """review の構造化出力を空にし、衝突後の worktree を記録する。"""
+        review_worktrees.append(Path.cwd())
+        assert _schema_name(parameter) == "enumerate_finding.json"
+        return _FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0, result.output
+    assert collision_worktree.exists()
+    assert run_git(root, "branch", "--list", collision_branch).stdout.strip()
+    assert review_worktrees
+    assert all(path != collision_worktree for path in review_worktrees)
 
 
 def test_oracle_review_interrupt_during_run_creation_cleans_resources(

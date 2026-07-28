@@ -20,13 +20,13 @@ from cmoc_runtime import (
     run_cli_subcommand,
     run_codex_exec,
     start_subcommand_step,
-    timestamp,
     work_root,
-    worktrees_dir,
 )
 from commons.indexing import enable_indexing_preflight
 from commons.runtime_git import status_path_statuses
 from commons.runtime_results import CodexExecCallable
+from commons.runtime_run import run_lifecycle_lock
+from commons.runtime_run_lifecycle import new_run_target
 from sub_commands.oracle.review_index import (
     commit_review_index_changes,
     merge_review_branch,
@@ -99,13 +99,10 @@ def _cmoc_oracle_review_body(
     _require_clean_worktree(current_root)
     ensure_cmoc_ignored(current_root)
     config = load_config(current_root)
-    run_id = timestamp()
-    run_branch = f"cmoc/run/{session_id}/{run_id}"
-    review_worktree = worktrees_dir(root) / session_id / run_id
+    run_branch = ""
+    review_worktree = root
     run_fork_commit = head_commit(current_root)
     run_join_commit = None
-    run_branch_existed = branch_exists(root, run_branch)
-    review_worktree_existed = review_worktree.exists()
     all_oracle_files: list[Path] = []
     oracle_files: list[Path] = []
     evaluated_oracle_files: list[Path] = []
@@ -137,23 +134,28 @@ def _cmoc_oracle_review_body(
 
     try:
         start_subcommand_step(2, "run の隔離実行を開始", "start isolated review")
-        try:
-            create_run_worktree(
-                current_root, run_branch, review_worktree, run_fork_commit
-            )
-        except BaseException:
-            # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-            # worktree add が branch/worktree の作成後に中断されても、今回の作成物だけを
-            # cleanup 対象として後続の終了処理へ渡す。
-            review_worktree_created = (
-                review_worktree.exists() and not review_worktree_existed
-            )
-            run_branch_created = (
-                branch_exists(root, run_branch) and not run_branch_existed
-            )
-            raise
-        review_worktree_created = True
-        run_branch_created = True
+        # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+        # editing run と review run が同じ branch/worktree namespace を共有するため、
+        # target の選択から linked worktree 作成までを共通 lock 下で行う。
+        with run_lifecycle_lock(root, session_id):
+            run_branch, review_worktree = new_run_target(root, session_id)
+            run_fork_commit = head_commit(current_root)
+            try:
+                create_run_worktree(
+                    current_root, run_branch, review_worktree, run_fork_commit
+                )
+            except BaseException:
+                # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+                # worktree add が branch/worktree の作成後に中断されても、今回の作成物だけを
+                # cleanup 対象として後続の終了処理へ渡す。target 選択と作成は lock 下なので、
+                # 検出された resource はこの invocation の部分作成である。
+                review_worktree_created = (
+                    review_worktree.exists() or review_worktree.is_symlink()
+                )
+                run_branch_created = branch_exists(root, run_branch)
+                raise
+            review_worktree_created = True
+            run_branch_created = True
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")
             with pushd(review_worktree):

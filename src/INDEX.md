@@ -49,20 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果、INDEX lifecycle など、CLI 実装が横断利用する runtime 機能への入口。
+- cmoc の共通 runtime helper を集約する commons パッケージ。設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果型、INDEX lifecycle など、CLI 実装が横断的に利用する実行時機能への入口を提供する。
 
 ## Read this when
-- 複数の CLI 機能にまたがる runtime helper の責務や公開 API を確認するとき
-- 特定の共通 runtime 機能の実装箇所を探すとき
-- INDEX 生成、Codex 実行、設定、Git、状態、ログ、パス、プロセス管理の共通処理を変更・調査するとき
+- 共通 runtime API の公開入口や、commons 配下の機能構成を確認するとき
+- 設定、Git、Codex 実行、INDEX 更新、プロセス管理、状態、ログ、パスなどの共通実装を変更・調査するとき
+- 特定の runtime helper の担当モジュールを選ぶ必要があるとき
 
 ## Do not read this when
-- 特定の CLI サブコマンド固有の業務ロジックだけを確認するとき
-- 利用者向け仕様や Structured Output schema の正本を確認するときは、対応する oracle 文書を直接読む
-- 対象となる個別 runtime module が明確な場合は、その module を直接読む
+- 個別 runtime helper の実装詳細を直接確認したいときは、commons 配下の対応する実装ファイルを読む
+- CLI サブコマンド固有の業務ロジックやテストだけを確認したいときは、該当する上位実装・テストを直接読む
+- 共通機能の正本仕様や Structured Output schema の定義だけを確認したいときは、対応する oracle file を先に読む
 
 ## hash
-- 597cdeba12db21a74e53adea045edba4a3619b8530f8a5e52799553dd4d19245
+- df2db1410c6eb8e8f07a939abf7b974adbf99d8fdb1aa86f19522c129b2588b8
 
 # `config`
 
@@ -114,15 +114,16 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装の配置領域。doctor、indexing、oracle、realization、run、session、tui などの CLI 実行入口と関連パッケージへの入口を提供する。apply と review は現時点で実装本文がない。
+- サブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui の CLI 入口や実行フロー、および apply・review など未実装領域の配置先を確認するための上位ルーティング。
 
 ## Read this when
-- サブコマンドの実装構成や CLI 実行入口を確認・変更するとき。
-- 特定のサブコマンドに対応する実装ファイルや下位パッケージを探すとき。
+- サブコマンドの実装構成や CLI 実行入口を確認するとき
+- doctor、indexing、oracle、realization、run、session、tui の実行フローやライフサイクル処理を調査・変更するとき
+- サブコマンド実装の追加先として apply または review の配置場所を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理だけを調査・変更する場合は、該当する実装ファイルまたは下位ディレクトリを直接読む。
-- サブコマンド共通の runtime、oracle、prompt builder などの実体だけを確認したい場合は、対応する実装領域を直接読む。
+- 特定サブコマンドの詳細実装を調査する場合は、該当する実装ファイルや下位ディレクトリを直接読む
+- 共通 CLI runtime、oracle 文書、workload 固有処理、run lifecycle の canonical 実装だけを確認するときは、それぞれの直接の実装や仕様文書を読む
 
 ## hash
-- 283caf7cabec43a8977b39f658d70e45980846bde48c747a9a20f45c137f49f3
+- c796a924fc409286b6d088e8f871c0c04bf588c7194419b01a0e46dd7243ae56

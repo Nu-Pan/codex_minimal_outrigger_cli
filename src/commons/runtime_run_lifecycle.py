@@ -142,7 +142,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
             )
         require_clean_worktree(session_worktree)
         fork_commit = head_commit(session_worktree)
-        run_branch, run_worktree = _new_run_target(repository, session_id)
+        run_branch, run_worktree = new_run_target(repository, session_id)
         created = False
         published = False
         try:
@@ -481,7 +481,7 @@ def raw_oracle_diff(worktree: Path, base: str, end: str) -> str:
     ).stdout
 
 
-def _new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
+def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
     """衝突しない run branch と管理 worktree path を予約候補として選ぶ。"""
     for _ in range(MAX_RUN_ID_ATTEMPTS):
         run_id = timestamp()
