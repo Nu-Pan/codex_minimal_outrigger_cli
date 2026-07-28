@@ -95,7 +95,9 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
         elif state.run.state == "joinable":
             # {{work-root}}/oracle/doc/app_spec/run_isolation.md
             # 既存 state の復旧でも、merge 前に run worktree の descendant を止める。
-            stop_tracked_codex_children(context.repo, context.session_id)
+            warnings.extend(
+                stop_tracked_codex_children(context.repo, context.session_id) or []
+            )
         require_clean_worktree(context.session_worktree)
         require_clean_worktree(context.run_worktree)
         run_changes = tree_changes(

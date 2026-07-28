@@ -126,32 +126,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる主要ソースディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim など、実行可能な実装領域への入口を提供する。
+- cmoc の CLI と runtime 実装を含む realization 側の src ルート。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim など、実行コードの下位領域へ進むための入口を提供する。
 
 ## Read this when
 - cmoc の realization 実装全体の構成や、CLI・サブコマンド・共通 runtime の担当領域を確認するとき。
-- 対象となる実装ファイルの所在を特定し、下位ディレクトリやモジュールへ進む必要があるとき。
+- 特定の実装ファイルへ進む前に、src 配下の主要な入口と責務の分布を把握するとき。
 
 ## Do not read this when
-- canonical な oracle 仕様や oracle 実装を確認するときは、対応する oracle 側を直接読む。
-- 特定のサブコマンドや runtime 機能の詳細が明確な場合は、対応する下位モジュールを直接読む。
-- INDEX 更新やルーティング文書そのものを確認するときは、対象の INDEX.md を読む。
+- 正本仕様や oracle 側の実装を確認するときは、oracle 配下を直接読む。
+- 対象の責務が明確な場合は、src ルートではなく該当する下位モジュールやファイルを直接読む。
 
 ## hash
-- 6395ff6cae3d4a15ad08ef6d07faaec067f17853d57c1ae80611c37c4985be3c
+- 7f6129f17f31a2eb8e7de89d6bf060f9a0ccee254f6a79eaa5d026043ff961c2
 
 # `test`
 
 ## Summary
-- テストコードを支える共通 helper と、ACP builder、Codex runtime、CLI、indexing、oracle review、session/run lifecycle、設定・状態・Markdown rendering などの realization test を収録するテスト領域。各テストは対応する実装や oracle 仕様を確認する入口となる。
+- cmoc の realization test 群を集約するディレクトリ。CLI、Codex runtime、ACP builder、INDEX 生成、oracle review、session/run state、Git/worktree、設定など、現行仕様に関わる外部挙動・制御ロジックの回帰テストと共通テスト helper を扱う。各機能の変更時に、対応する個別テストへ進むための入口。
 
 ## Read this when
-- テスト対象の外部挙動、制御ロジック、永続状態、CLI 契約、Codex 実行経路、worktree/Git lifecycle を変更または調査するとき。
-- 共通テスト helper、case-local Ollama、fake external command、テスト用 Git repository の準備方法を確認するとき。
+- cmoc の実装変更後に対応する realization test を探すとき
+- CLI、Codex 実行、builder、INDEX、oracle review、session、runtime state などの外部契約や回帰挙動を確認するとき
+- テスト用の Git、Ollama、Codex、fake command、path 解決 helper を利用・変更するとき
 
 ## Do not read this when
-- 実装や正本仕様そのものを確認することが目的で、対応する realization implementation または oracle file を直接読む方が適切なとき。
-- 対象領域と無関係なテストや、Codex・CLI・Git・状態管理など特定の外部挙動を伴わない作業のとき。
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc または oracle source を直接読む
+- 特定機能の実装詳細だけを調査するときは、対応する realization source を直接読む
+- cmoc と無関係なテストや、Codex・LLM の回答品質そのものを評価するとき
 
 ## hash
-- c61c4b4cb6cff69017db99e735f6a70cdb4613cf6f2338aa3e7b13730c7556dc
+- c225efeb729d56ae5689143685aa537046cbe9aeab12a146b2cb8e74a89508aa

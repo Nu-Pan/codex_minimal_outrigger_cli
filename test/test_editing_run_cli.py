@@ -510,6 +510,38 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert current_branch(root) == session_branch
 
 
+def test_run_join_reports_joinable_child_stop_warnings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """joinable run の descendant 停止 warning を join report に残す。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    monkeypatch.setattr(
+        run_join_module,
+        "stop_tracked_codex_children",
+        lambda *_args: ["run child process already stopped: 789"],
+    )
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    report_path = Path(
+        next(
+            line
+            for line in result.output.splitlines()
+            if line.startswith("- report: `")
+        )
+        .removeprefix("- report: `")
+        .removesuffix("`")
+    )
+    assert "run child process already stopped: 789" in report_path.read_text()
+
+
 def test_apply_builder_uses_run_worktree_as_prompt_work_root(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

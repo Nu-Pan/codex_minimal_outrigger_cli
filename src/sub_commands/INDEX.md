@@ -98,19 +98,17 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドと互換 shim をまとめるパッケージ。abandon・join の実装入口、および lifecycle・report の旧 import path 互換層への入口を提供する。
+- editing run の共通 lifecycle サブコマンドと互換 shim をまとめるパッケージ入口。abandon・join の実装、および共通 lifecycle／report writer の旧 import path を確認するための起点。
 
 ## Read this when
-- editing run の abandon・join lifecycle の挙動や、process・worktree・branch cleanup、state 更新、report 保存を調査・変更するとき。
-- editing run の共通 helper や report writer の旧 import path 互換性を確認するとき。
+- editing run の abandon、join、共通 lifecycle、report writer の実装や互換性を調査・変更するとき。
 
 ## Do not read this when
-- run サブコマンド以外を扱うとき。
-- canonical な共通 lifecycle や report writer の実装詳細を確認するときは、commons 配下の実体を直接読む。
-- workload 固有の apply・refactor 処理や、run の開始・実行処理だけを変更するときは、対応する専用実装を直接読む。
+- editing run 以外のサブコマンドを扱うとき。
+- 特定の処理の詳細を確認する場合は、この入口ではなく対応する実装または commons 側の canonical 実装を直接読むとき。
 
 ## hash
-- ce428963ac3b966b5cb81c3d2db4ff93232f4293e6b1f8944a68104937887c92
+- 31db1182a0a7d599a8dffd73fad4be5e803774e2114bed2bb05ba3637a48ccdd
 
 # `session`
 

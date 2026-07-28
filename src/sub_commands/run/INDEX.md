@@ -30,18 +30,20 @@
 # `join.py`
 
 ## Summary
-- `cmoc run join` の workload 非依存 merge lifecycle を実装する。active run の差分検査、merge、INDEX.md conflict 解決、post-join hook、state 同期、report 保存、failure rollback、worktree・branch cleanup を一つの lifecycle として扱う。
+- `cmoc run join` の workload 非依存な merge lifecycle を担当する。active run の差分検査、session branch への merge、INDEX.md conflict の処理、post-join state 同期、report 保存、失敗時 rollback、run worktree・branch cleanup までを一続きで扱う。
 
 ## Read this when
-- `cmoc run join` の動作、merge 前後の差分検査、`--force-resolve`、post-join state 同期、report、cleanup、失敗時の error state と rollback を変更・調査するとき。
-- run branch と session branch の merge conflict、想定外差分、run process tracking、merge 済み run の資源削除を確認するとき。
+- `cmoc run join` の実装や挙動を変更・調査するとき
+- run branch と session branch の差分検査、merge conflict、force-resolve の処理を確認するとき
+- post-join の state 同期、report、失敗時の error state・rollback、cleanup pending を確認するとき
 
 ## Do not read this when
-- workload 固有の apply・refactor 処理そのものを変更するとき。
-- run の開始・実行・abandon など、join lifecycle に直接関係しない処理を変更するときは、対応する専用実装を先に確認する。
+- `run join` 以外の run lifecycle や workload 固有処理だけを変更・調査するとき
+- run の開始・実行・abandon・status 表示の処理を直接確認したいとき
+- 共通 runtime helper の詳細実装を確認する場合は、まず該当する共通モジュールを読むとき
 
 ## hash
-- 91adee51e4d259a0b72b2c9bfae089c0fb9e2c773d025782b56fa501a5123aa9
+- 79d4e6065b62a4a0a604d5350b8d82edcd1022f7cbae557409e4dd9672924430
 
 # `lifecycle.py`
 
