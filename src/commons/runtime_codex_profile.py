@@ -48,6 +48,35 @@ def run_process_id_file_lock(path: Path) -> Iterator[None]:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
+def _validate_tracked_process_file(path: Path) -> None:
+    """Codex child を起動する前に tracking file の形式を検証する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # abandon は壊れた tracking file を停止対象なしとして扱うため、壊れた既存 state に
+    # child 行だけを追記すると、実行中 process を cleanup できないまま worktree を破棄する。
+    lines = [line.split() for line in path.read_text().splitlines() if line.strip()]
+    if not lines or len(lines[0]) not in {1, 2}:
+        raise OSError(f"invalid run process tracking file: {path}")
+    try:
+        parent_id = int(lines[0][0])
+        parent_start_time = int(lines[0][1]) if len(lines[0]) == 2 else None
+        if parent_id <= 0 or (parent_start_time is not None and parent_start_time < 0):
+            raise ValueError
+        for parts in lines[1:]:
+            if len(parts) not in {3, 4} or parts[0] != "child":
+                raise ValueError
+            child_id = int(parts[1])
+            child_start_time = int(parts[2])
+            group_id = int(parts[3]) if len(parts) == 4 else None
+            if (
+                child_id <= 0
+                or child_start_time < 0
+                or (group_id is not None and group_id <= 0)
+            ):
+                raise ValueError
+    except (IndexError, ValueError) as exc:
+        raise OSError(f"invalid run process tracking file: {path}") from exc
+
+
 def open_process_fd(process_id: int, process_name: str = "run process") -> int | None:
     """pidfd 対応環境でだけ race を避けた process 参照を開く。"""
     if not (hasattr(os, "pidfd_open") and hasattr(signal, "pidfd_send_signal")):
@@ -152,25 +181,10 @@ def process_group_has_running_member(process_group_id: int) -> bool:
     return members is None or bool(members)
 
 
-def wait_process_group_exit(process_group_id: int, timeout_sec: float) -> bool:
-    """数値 PGID へ signal を送らず、group が空になるまで待つ。"""
-    deadline = time.monotonic() + timeout_sec
-    while process_group_has_running_member(process_group_id):
-        if time.monotonic() >= deadline:
-            return False
-        time.sleep(0.05)
-    return True
-
-
-def signal_process_group_members(process_group_id: int, sig: signal.Signals) -> None:
-    """group member を個別 pidfd で再検証して signal を送る。"""
-    members = process_group_members(process_group_id)
-    if members is None:
-        raise CmocError(
-            "実行中 Codex subprocess の process group を確認できません。",
-            ["Codex subprocess を手動で停止してから再実行してください。"],
-            f"pgid: {process_group_id}",
-        )
+def _signal_process_members(
+    members: tuple[tuple[int, int], ...], sig: signal.Signals
+) -> None:
+    """snapshot の member を個別 pidfd で再検証して signal を送る。"""
     for process_id, expected_start_time in members:
         process_fd = open_process_fd(process_id, "Codex subprocess")
         if process_fd is None:
@@ -189,15 +203,94 @@ def signal_process_group_members(process_group_id: int, sig: signal.Signals) -> 
             os.close(process_fd)
 
 
-def stop_process_group(process_group_id: int) -> None:
+def signal_process_group_members(process_group_id: int, sig: signal.Signals) -> None:
+    """group member を個別 pidfd で再検証して signal を送る。"""
+    members = process_group_members(process_group_id)
+    if members is None:
+        raise CmocError(
+            "実行中 Codex subprocess の process group を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pgid: {process_group_id}",
+        )
+    _signal_process_members(members, sig)
+
+
+def _wait_tracked_process_group_exit(
+    process_group_id: int,
+    known_members: set[tuple[int, int]],
+    timeout_sec: float,
+) -> bool:
+    """初回 snapshot と同じ group が終了するまで待つ。"""
+    deadline = time.monotonic() + timeout_sec
+    while True:
+        members = process_group_members(process_group_id)
+        if members is None:
+            return False
+        if not any(member in known_members for member in members):
+            return True
+        # group が存続している間に増えた descendant も、同じ group の identity として
+        # 次の signal 対象へ加える。元の全 member が消えた後の PGID 再利用は追加しない。
+        known_members.update(members)
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.05)
+
+
+def _current_tracked_process_group_members(
+    process_group_id: int, known_members: set[tuple[int, int]]
+) -> tuple[tuple[int, int], ...] | None:
+    """既知の group identity が残る場合だけ現在の member snapshot を返す。"""
+    members = process_group_members(process_group_id)
+    if members is None:
+        return None
+    if not any(member in known_members for member in members):
+        return ()
+    known_members.update(members)
+    return members
+
+
+def stop_process_group(
+    process_group_id: int,
+    expected_leader: tuple[int, int] | None = None,
+) -> None:
     """Codex group を個別 pidfd で SIGTERM、必要なら SIGKILL する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
-    signal_process_group_members(process_group_id, signal.SIGTERM)
-    if wait_process_group_exit(process_group_id, 5.0):
+    # 初回 snapshot と同じ group identity が消えた後の PGID 再利用へ signal を送らない。
+    initial_members = process_group_members(process_group_id)
+    if initial_members is None:
+        raise CmocError(
+            "実行中 Codex subprocess の process group を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pgid: {process_group_id}",
+        )
+    if (
+        expected_leader is not None
+        and initial_members
+        and expected_leader not in initial_members
+    ):
+        raise CmocError(
+            "実行中 Codex subprocess の同一性を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pid: {expected_leader[0]}\npgid: {process_group_id}",
+        )
+    known_members = set(initial_members)
+    _signal_process_members(initial_members, signal.SIGTERM)
+    if _wait_tracked_process_group_exit(process_group_id, known_members, 5.0):
         return
-    signal_process_group_members(process_group_id, signal.SIGKILL)
-    if wait_process_group_exit(process_group_id, 5.0):
+    current_members = _current_tracked_process_group_members(
+        process_group_id, known_members
+    )
+    if current_members is None:
+        raise CmocError(
+            "実行中 Codex subprocess の process group を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pgid: {process_group_id}",
+        )
+    if not current_members:
+        return
+    _signal_process_members(current_members, signal.SIGKILL)
+    if _wait_tracked_process_group_exit(process_group_id, known_members, 5.0):
         return
     raise CmocError(
         "実行中 Codex subprocess を停止できません。",
@@ -437,7 +530,7 @@ def run_codex_subprocess(
             )
         return subprocess.run(argv, **kwargs)
     except FileNotFoundError as exc:
-        if argv[:1] != ["codex"]:
+        if not _is_missing_codex_executable(exc, argv, kwargs):
             raise
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # Codex CLI missing は想定外の exec 失敗として即時に利用者向け失敗にする。
@@ -446,6 +539,25 @@ def run_codex_subprocess(
             ["Codex CLI をインストールし、PATH に codex を含めてください。"],
             f"argv: {argv}\nerror: {exc}",
         ) from exc
+
+
+def _is_missing_codex_executable(
+    exc: FileNotFoundError, argv: list[str], kwargs: dict[str, Any]
+) -> bool:
+    """FileNotFoundError が Codex executable の不在を示すか判定する。"""
+    if argv[:1] != ["codex"]:
+        return False
+    if exc.filename is None:
+        # テスト double などが filename を設定しない FileNotFoundError を許容する。
+        return True
+    cwd = kwargs.get("cwd")
+    if cwd is not None and not isinstance(cwd, int):
+        try:
+            if not Path(cwd).is_dir():
+                return False
+        except (OSError, TypeError):
+            return False
+    return os.fsdecode(exc.filename) == argv[0]
 
 
 def set_run_process_tracking_path(path: Path | None) -> Path | None:
@@ -490,6 +602,7 @@ def run_tracked_codex_subprocess(
     try:
         try:
             with run_process_id_file_lock(tracking_path):
+                _validate_tracked_process_file(tracking_path)
                 process = subprocess.Popen(argv, start_new_session=True, **kwargs)
                 _record_tracked_child_process(
                     tracking_path, process.pid, process_group_id=process.pid
@@ -563,11 +676,11 @@ def _record_tracked_child_process(
     path: Path, process_id: int, process_group_id: int | None = None
 ) -> None:
     """Codex childのPID、start time、process groupをtracking fileへ保存する。"""
+    _validate_tracked_process_file(path)
     start_time = process_start_time(process_id)
     if start_time is None:
         raise OSError(f"process {process_id} start time is unavailable")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    current = path.read_text() if path.exists() else ""
+    current = path.read_text()
     lines = [line for line in current.splitlines() if line.strip()]
     group_id = process_id if process_group_id is None else process_group_id
     child_line = f"child {process_id} {start_time} {group_id}"

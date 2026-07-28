@@ -126,32 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめた src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim など、実行コードの下位領域へ進むための入口を提供する。
+- cmoc CLI の realization 実装ルート。Typer による CLI 登録、互換 import shim、共通 runtime、ACP builder、サブコマンド実装をまとめ、各責務別ディレクトリへの入口を提供する。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI エントリーポイントから担当モジュールを特定するとき。
-- CLI サブコマンド、共通 runtime、ACP builder、互換 import の実装領域を調査・変更するとき。
+- cmoc CLI 全体のエントリーポイントやサブコマンド登録を確認するとき。
+- 共通 runtime、ACP builder、basic/config の互換入口、またはサブコマンド実装の配置先を特定するとき。
 
 ## Do not read this when
 - 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
-- 特定のサブコマンドや runtime helper の詳細だけを確認するときは、対応する下位モジュールを直接読む。
-- テストや補助ファイルだけを調査するときは、src ではなく該当する対象を直接読む。
+- 特定サブコマンド、runtime module、builder の詳細処理を確認するときは、対応する下位ファイルやディレクトリを直接読む。
+- INDEX.md の生成・検査処理そのものを調査するときは、共通 indexing 実装を直接読む。
 
 ## hash
-- 0ef78cb02ded07cddf02040d11583a3306ac483e4fa4e7cf091bc7355ba0c7b0
+- 66ccc375d44df702e8c4b10e612dc99a5ddf9e8522c269d02930ee6af512546d
 
 # `test`
 
 ## Summary
-- cmoc の各機能を検証する pytest テスト群と、Codex・Git・Ollama・CLI・runtime・oracle review・indexing などの共通テスト支援モジュールを収録するテストディレクトリ。個別テストは対応する実装や正本仕様の外部契約・制御ロジックを確認する入口となる。
+- `test` 配下の cmoc realization test と共通テスト支援モジュールを、機能領域ごとに案内するルーティング入口。CLI、Codex runtime、ACP builder、indexing、oracle review、session/run state、worktree、設定・renderer などの外部契約と制御ロジックを検証する。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや、対象機能の外部挙動・制御ロジックを確認するとき。
-- どのテストまたは共通 helper が対象領域の検証入口になるかを判断するとき。
+- cmoc の実装変更に対応する回帰テストや共通 fixture・helper の所在を探すとき。
+- CLI lifecycle、Codex 実行、ACP builder、indexing、oracle review、session/run、runtime state など特定領域の挙動を検証するとき。
+- テスト用 Git repository、case-local Ollama、fake external command、Codex stub などの共通支援機能を確認するとき。
 
 ## Do not read this when
-- 正本仕様や実装詳細そのものを確認することが目的で、対応する oracle または src のファイルを直接読む方が適切なとき。
-- Codex や LLM の回答品質自体を評価するとき。
+- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc・oracle source・oracle schema を直接読む。
+- 実装本体の責務や内部処理だけを調査するときは、対応する `src` または oracle file を直接読む。
+- 対象領域が明確な場合は、このディレクトリ全体を読むのではなく、該当する個別テストまたは support module へ進む。
 
 ## hash
-- 5a1eda864889901b75564aedc4c02ac7336cffcc7a12c64ad436b5c5fcb9ef86
+- 14b9bfa83344b2a3652189fa7d133ee5d4d7aedd50a24275b3565b7bf1d3a72c

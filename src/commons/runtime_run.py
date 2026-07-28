@@ -297,7 +297,10 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
             # 保存するため、停止完了まで pidfd を保持して leader/PGID の再利用による
             # 別 process group への signal を防ぐ。
             if current_start_time == process.start_time:
-                stop_process_group(process_group_id)
+                stop_process_group(
+                    process_group_id,
+                    expected_leader=(process.process_id, process.start_time),
+                )
                 return None
         finally:
             os.close(process_fd)
@@ -322,7 +325,10 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
             )
         if current_start_time != process.start_time:
             return _stale_child_process_warning(process, process_group_id)
-    stop_process_group(process_group_id)
+    stop_process_group(
+        process_group_id,
+        expected_leader=(process.process_id, process.start_time),
+    )
     return None
 
 

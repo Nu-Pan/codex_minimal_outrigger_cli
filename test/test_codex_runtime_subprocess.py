@@ -102,6 +102,28 @@ def test_signal_process_group_members_uses_each_member_pidfd(
     assert closed == [1111, 1222]
 
 
+def test_stop_process_group_rejects_reused_group_before_signal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """保存済み leader と異なる PGID member へ signal を送らない。"""
+    sent: list[signal.Signals] = []
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: ((222, 20),),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_signal_process_members",
+        lambda _members, sig: sent.append(sig),
+    )
+
+    with pytest.raises(CmocError, match="同一性を確認できません"):
+        runtime_codex_profile.stop_process_group(111, expected_leader=(111, 10))
+
+    assert sent == []
+
+
 def test_tracked_codex_subprocess_defers_sigterm_until_tracking_is_written(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -240,15 +262,49 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
     assert tracking_path.read_text() == "111 222\nchild 4321 333 4321\n"
 
 
-def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("tracking_bytes", "expected_error"),
+    [(b"\xff", UnicodeDecodeError), (b"111 222\ninvalid line\n", OSError)],
+)
+def test_tracked_codex_subprocess_rejects_invalid_tracking_before_start(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tracking_bytes: bytes,
+    expected_error: type[Exception],
 ) -> None:
-    """追跡情報の破損時も、登録不能な child を残さない。
+    """壊れた tracking file では child を起動しない。
 
     Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
-    tracking_path.write_bytes(b"\xff")
+    tracking_path.write_bytes(tracking_bytes)
+    started: list[bool] = []
+
+    def popen(*_args: object, **_kwargs: object) -> object:
+        """不正 state では subprocess を作成しないことを検証する。"""
+        started.append(True)
+        raise AssertionError("invalid tracking file must fail before Popen")
+
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "Popen",
+        popen,
+    )
+
+    with pytest.raises(expected_error):
+        run_tracked_codex_subprocess(
+            ["codex"], tracking_path, text=True, capture_output=True
+        )
+
+    assert started == []
+
+
+def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """child 起動後の tracking 更新失敗でも child を残さない。"""
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
     stopped: list[int] = []
 
     class RunningProcess:
@@ -267,12 +323,21 @@ def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
             return 0
 
     process = RunningProcess()
+
+    def fail_record(*_args: object, **_kwargs: object) -> None:
+        """child 起動後の tracking 更新失敗を再現する。"""
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid")
+
     monkeypatch.setattr(
         runtime_codex_profile.subprocess,
         "Popen",
         lambda *_args, **_kwargs: process,
     )
-    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_record_tracked_child_process",
+        fail_record,
+    )
     monkeypatch.setattr(
         runtime_codex_profile,
         "stop_process_group",
@@ -306,6 +371,18 @@ def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
 
     assert result.stdout == "ok\n"
     assert not tracking_path.exists()
+
+
+def test_run_codex_subprocess_preserves_missing_cwd_error(
+    tmp_path: Path,
+) -> None:
+    """missing cwd を Codex CLI 不在のエラーへ誤変換しない。"""
+    missing_cwd = tmp_path / "missing-cwd"
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        run_codex_subprocess(["codex"], cwd=missing_cwd)
+
+    assert Path(exc_info.value.filename) == missing_cwd
 
 
 def test_stop_child_process_group_fails_closed_when_leader_is_gone(
@@ -375,9 +452,14 @@ def test_stop_child_process_group_keeps_leader_pidfd_until_group_stop(
         events.append("open")
         return 99
 
-    def stop_group(process_group_id: int) -> None:
+    def stop_group(
+        process_group_id: int,
+        *,
+        expected_leader: tuple[int, int] | None = None,
+    ) -> None:
         """pidfd 保持中の process group 停止だけを許可する。"""
         assert leader_fd_open
+        assert expected_leader == (123, 456)
         events.append(f"stop:{process_group_id}")
 
     def close_fd(_process_fd: int) -> None:
