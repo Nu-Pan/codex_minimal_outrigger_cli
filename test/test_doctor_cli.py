@@ -84,7 +84,7 @@ def test_doctor_preprocess_repairs_git_state(
             cwd=root,
             check=False,
         ).returncode
-        != 0
+        == 1
     )
     state_path = (
         root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
@@ -264,7 +264,7 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
         cwd=root,
         check=False,
     )
-    assert check_ignore.returncode != 0
+    assert check_ignore.returncode == 1
 
 
 def test_doctor_preprocess_targets_current_linked_worktree(
