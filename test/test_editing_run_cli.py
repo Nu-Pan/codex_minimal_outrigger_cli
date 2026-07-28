@@ -1131,6 +1131,33 @@ def test_apply_error_report_survives_change_inspection_failure(
     assert "change inspection failed" in reports[0].read_text()
 
 
+def test_apply_error_preserves_unreadable_process_tracking(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """apply error cleanup が検証不能な process tracking を削除しない。"""
+    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    session_id = session_branch.removeprefix("cmoc/session/")
+    tracking_path = run_process_id_path(root, session_id)
+
+    def fail_agent(*_args: object, **_kwargs: object) -> NoReturn:
+        """Codex failure と破損した tracking を再現する。"""
+        tracking_path.write_bytes(b"\xff")
+        raise RuntimeError("agent failed")
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fail_agent)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    assert tracking_path.read_bytes() == b"\xff"
+
+
 @pytest.mark.parametrize("interrupted", [False, True])
 def test_refactor_terminal_report_survives_change_inspection_failure(
     tmp_path: Path,

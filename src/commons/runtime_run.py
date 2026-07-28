@@ -178,7 +178,9 @@ def delete_run_process_id(root: Path, session_id: str) -> None:
     with run_process_id_file_lock(path):
         process = _read_run_process_id_file(path)
         if process is None:
-            path.unlink(missing_ok=True)
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # unreadable tracking は停止対象を検証できない状態なので、error cleanup
+            # が証跡を消して live process を見失わないよう fail closed に保つ。
             return
         if any(
             process_group_has_running_member(child.process_group_id or child.process_id)

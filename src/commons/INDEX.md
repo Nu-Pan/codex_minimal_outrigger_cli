@@ -335,19 +335,20 @@
 # `runtime_run.py`
 
 ## Summary
-- Git worktree 上の branch と managed run worktree の対応を検証し、session 単位の editing run process tracking、ライフサイクルロック、PID・開始時刻・process group による process 同一性確認を扱う共通ランタイムモジュールです。
-- run process の tracking file の読み書き・削除、Codex child process group の追跡、stale または破損した tracking の fail-closed な処理、親 run と child group の安全な停止および cleanup を提供します。
+- Git worktree 上の branch 解決、editing run の process identity・tracking file 管理、run lifecycle の直列化、親 run と Codex child process group の安全な停止・cleanup を担う共通 runtime モジュール。
 
 ## Read this when
-- editing run の abandon、error cleanup、process tracking、Codex subprocess の停止処理を変更または調査するとき
-- branch から worktree を解決する処理や、PID 再利用・process group 再利用を防ぐ安全性を確認するとき
+- editing run の worktree 解決や branch 対応を調査・変更するとき
+- run process tracking、abandon、error cleanup、Codex child subprocess の停止処理を調査・変更するとき
+- PID 再利用、process start time、pidfd、process group の安全性や fail-closed 挙動を確認するとき
 
 ## Do not read this when
-- 通常の git 操作、worktree 作成そのもの、editing run の CLI 入出力や状態遷移仕様だけを調査するとき
-- process tracking や worktree 解決に関係しない共通ランタイム処理を変更するとき
+- CLI のコマンド定義や利用者向け引数・出力形式だけを調査するとき
+- run process の仕様そのものを確認する必要があり、先に oracle の editing run 仕様を読むべきとき
+- git worktree 一般の操作や他の runtime 共通処理だけを調査し、このモジュールの process lifecycle を扱わないとき
 
 ## hash
-- d03b5bd689349d7dea2ffaa3541f09b04fc03eb534d4b04cf4290f497450702c
+- 0c6f5ff9e1c968bb6b8b38565cb9c41ec04aefea6e2b01bea61b9c8c17da74f0
 
 # `runtime_run_lifecycle.py`
 
