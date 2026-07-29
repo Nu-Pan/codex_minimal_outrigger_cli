@@ -30,6 +30,23 @@ def test_open_process_fd_treats_invalid_pidfd_as_unavailable(
     assert runtime_codex_profile.open_process_fd(123, "Codex subprocess") is None
 
 
+def test_stop_run_process_does_not_treat_live_process_as_stopped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """pidfd が使えない live run process を停止済みとして cleanup しない。
+
+    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    process = runtime_run.RunProcessIdentity(123, 456)
+    monkeypatch.setattr(runtime_run.os, "getpid", lambda: 999)
+    monkeypatch.setattr(runtime_run, "open_process_fd", lambda *_args: None)
+    monkeypatch.setattr(runtime_run.os, "kill", lambda _pid, _signal: None)
+    monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: 456)
+
+    with pytest.raises(CmocError, match="安全に停止できません"):
+        runtime_run.stop_run_process(process)
+
+
 def test_tracked_codex_subprocess_records_dedicated_process_group(
     tmp_path: Path,
 ) -> None:
@@ -138,6 +155,83 @@ def test_stop_process_group_rejects_reused_group_before_signal(
         runtime_codex_profile.stop_process_group(111, expected_members=((111, 10),))
 
     assert sent == []
+
+
+def test_stop_process_group_accepts_descendant_after_leader_exit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """検証済み leader が終了しても同じ snapshot の descendant を停止する。"""
+    snapshots = iter([((222, 20),), ()])
+    sent: list[signal.Signals] = []
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: next(snapshots),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_signal_process_members",
+        lambda _members, sig: sent.append(sig),
+    )
+
+    runtime_codex_profile.stop_process_group(
+        111,
+        expected_leader=(111, 10),
+        expected_members=((111, 10), (222, 20)),
+    )
+
+    assert sent == [signal.SIGTERM]
+
+
+def test_stop_process_group_rejects_unknown_group_after_signal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """停止中に未知の member だけが残った group を成功扱いしない。"""
+    snapshots = iter([((111, 10),), ((222, 20),)])
+    sent: list[signal.Signals] = []
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: next(snapshots),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_signal_process_members",
+        lambda _members, sig: sent.append(sig),
+    )
+
+    with pytest.raises(CmocError, match="同一性を確認できません"):
+        runtime_codex_profile.stop_process_group(111, expected_members=((111, 10),))
+
+    assert sent == [signal.SIGTERM]
+
+
+def test_stop_process_group_rejects_unknown_group_after_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """timeout 後に未知の member だけが残った group を成功扱いしない。"""
+    snapshots = iter([((111, 10),), ((222, 20),)])
+    sent: list[signal.Signals] = []
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: next(snapshots),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_signal_process_members",
+        lambda _members, sig: sent.append(sig),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_wait_tracked_process_group_exit",
+        lambda *_args: False,
+    )
+
+    with pytest.raises(CmocError, match="同一性を確認できません"):
+        runtime_codex_profile.stop_process_group(111)
+
+    assert sent == [signal.SIGTERM]
 
 
 def test_tracked_codex_subprocess_defers_sigterm_until_tracking_is_written(
@@ -481,10 +575,15 @@ def test_stop_child_process_group_keeps_leader_pidfd_until_group_stop(
         process_group_id: int,
         *,
         expected_leader: tuple[int, int] | None = None,
+        expected_members: tuple[tuple[int, int], ...] | None = None,
     ) -> None:
         """pidfd 保持中の process group 停止だけを許可する。"""
         assert leader_fd_open
         assert expected_leader == (123, 456)
+        assert expected_members == ((123, 456), (222, 20))
+        current_members = ((222, 20),)
+        assert expected_leader not in current_members
+        assert any(member in expected_members for member in current_members)
         events.append(f"stop:{process_group_id}")
 
     def close_fd(_process_fd: int) -> None:
@@ -495,6 +594,11 @@ def test_stop_child_process_group_keeps_leader_pidfd_until_group_stop(
 
     monkeypatch.setattr(runtime_run, "open_process_fd", open_fd)
     monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: 456)
+    monkeypatch.setattr(
+        runtime_run,
+        "process_group_members",
+        lambda _group: ((123, 456), (222, 20)),
+    )
     monkeypatch.setattr(runtime_run, "stop_process_group", stop_group)
     monkeypatch.setattr(runtime_run.os, "close", close_fd)
 

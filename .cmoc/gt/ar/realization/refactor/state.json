@@ -816,7 +816,7 @@
     "last_investigated_at": "2026-07-25_05-11_34_269366000"
   },
   "src/commons/runtime_run.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "8175f6fc7e8fc2fc6804b29bcd2681963c14a7ccbac16f714f7b9e3790d882ea",
     "last_investigated_at": "2026-07-30_02-18_25_087062000"
@@ -1141,9 +1141,9 @@
   },
   "test/test_codex_runtime_subprocess.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "4d35998659b89e61eacdf372195dd2b8c09a55be6700f46fce950edf91fb2c04",
-    "last_investigated_at": "2026-07-29_11-15_55_544419000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "c4d8607c84c6df40386a941ed114194fbb2b12203d951d80a5c6dadddf4e9571",
+    "last_investigated_at": "2026-07-30_05-06_49_908920000"
   },
   "test/test_codex_runtime_tui.py": {
     "investigation_required": false,

@@ -240,7 +240,34 @@ def _stop_parent_run_process(process: RunProcessIdentity) -> str | None:
     """保存済み start time を確認して親 run process を停止する。"""
     process_fd = open_process_fd(process.process_id)
     if process_fd is None:
-        return f"run process already stopped: {process.process_id}"
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # open_process_fd は pidfd_open の EINVAL でも None を返す。live process を
+        # already stopped と誤認すると、停止確認前に run worktree を削除してしまうため、
+        # kill(pid, 0) と start time の両方で消滅・stale・検証不能を分ける。
+        try:
+            os.kill(process.process_id, 0)
+        except ProcessLookupError:
+            return f"run process already stopped: {process.process_id}"
+        except OSError as exc:
+            raise CmocError(
+                "実行中 run process の同一性を確認できません。",
+                ["run process と tracking file を確認してください。"],
+                f"pid: {process.process_id}\nerror: {exc}",
+            ) from exc
+        current_start_time = process_start_time(process.process_id)
+        if process.start_time is None or current_start_time is None:
+            raise CmocError(
+                "実行中 run process の同一性を確認できません。",
+                ["run process と tracking file を確認してください。"],
+                f"pid: {process.process_id}",
+            )
+        if current_start_time != process.start_time:
+            return f"stale run process id ignored: {process.process_id}"
+        raise CmocError(
+            "実行中 run process を安全に停止できません。",
+            ["pidfd を利用できる環境で run process を停止してから再実行してください。"],
+            f"pid: {process.process_id}",
+        )
     try:
         current_start_time = process_start_time(process.process_id)
         if current_start_time is None and wait_process_fd_exit(process_fd, 0):
@@ -291,6 +318,10 @@ def _stop_orphaned_child_process_group(
 def stop_child_process_group(process: ProcessIdentity) -> str | None:
     """Codex group を保存済み group ID と member pidfd で停止する。"""
     process_group_id = process.process_group_id or process.process_id
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # identity 検証後に leader が終了しても descendant を停止できるよう、停止前の
+    # group snapshot を渡す。snapshot と現在 group に重なりがなければ停止側が拒否する。
+    expected_members = process_group_members(process_group_id)
     process_fd = open_process_fd(process.process_id, "Codex subprocess")
     if process_fd is not None:
         try:
@@ -320,6 +351,7 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
                 stop_process_group(
                     process_group_id,
                     expected_leader=(process.process_id, process.start_time),
+                    expected_members=expected_members,
                 )
                 return None
         finally:
@@ -339,6 +371,7 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
     stop_process_group(
         process_group_id,
         expected_leader=(process.process_id, process.start_time),
+        expected_members=expected_members,
     )
     return None
 

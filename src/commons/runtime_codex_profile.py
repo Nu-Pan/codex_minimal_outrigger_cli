@@ -283,6 +283,8 @@ def _wait_tracked_process_group_exit(
         if members is None:
             return False
         if not any(member in known_members for member in members):
+            if members:
+                raise _unverified_process_group_error(process_group_id)
             return True
         # group が存続している間に増えた descendant も、同じ group の identity として
         # 次の signal 対象へ加える。元の全 member が消えた後の PGID 再利用は追加しない。
@@ -290,6 +292,18 @@ def _wait_tracked_process_group_exit(
         if time.monotonic() >= deadline:
             return False
         time.sleep(0.05)
+
+
+def _unverified_process_group_error(process_group_id: int) -> CmocError:
+    """既知の member が消えた後に残る未検証 group の error を作る。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    return CmocError(
+        "実行中 Codex subprocess の同一性を確認できません。",
+        ["Codex subprocess を手動で停止してから再実行してください。"],
+        f"pgid: {process_group_id}",
+    )
 
 
 def _current_tracked_process_group_members(
@@ -300,6 +314,8 @@ def _current_tracked_process_group_members(
     if members is None:
         return None
     if not any(member in known_members for member in members):
+        if members:
+            raise _unverified_process_group_error(process_group_id)
         return ()
     known_members.update(members)
     return members
@@ -314,22 +330,14 @@ def stop_process_group(
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
     # 初回 snapshot と同じ group identity が消えた後の PGID 再利用へ signal を送らない。
+    # leader が検証直後に終了しても、停止前 snapshot と現在の member に重なりが
+    # あれば同じ group とみなし、重なりがなければ再利用または検証不能として拒否する。
     initial_members = process_group_members(process_group_id)
     if initial_members is None:
         raise CmocError(
             "実行中 Codex subprocess の process group を確認できません。",
             ["Codex subprocess を手動で停止してから再実行してください。"],
             f"pgid: {process_group_id}",
-        )
-    if (
-        expected_leader is not None
-        and initial_members
-        and expected_leader not in initial_members
-    ):
-        raise CmocError(
-            "実行中 Codex subprocess の同一性を確認できません。",
-            ["Codex subprocess を手動で停止してから再実行してください。"],
-            f"pid: {expected_leader[0]}\npgid: {process_group_id}",
         )
     if (
         expected_members is not None
@@ -340,6 +348,20 @@ def stop_process_group(
             "実行中 Codex subprocess の同一性を確認できません。",
             ["Codex subprocess を手動で停止してから再実行してください。"],
             f"pgid: {process_group_id}",
+        )
+    if (
+        expected_leader is not None
+        and initial_members
+        and expected_leader not in initial_members
+        and (
+            expected_members is None
+            or not any(member in expected_members for member in initial_members)
+        )
+    ):
+        raise CmocError(
+            "実行中 Codex subprocess の同一性を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pid: {expected_leader[0]}\npgid: {process_group_id}",
         )
     known_members = set(initial_members)
     _signal_process_members(initial_members, signal.SIGTERM)
