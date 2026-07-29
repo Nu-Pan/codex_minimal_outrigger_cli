@@ -942,10 +942,10 @@
     "last_investigated_at": "2026-07-27_13-45_31_414445000"
   },
   "src/sub_commands/realization/apply/fork.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "a416cbe2c27091e6cbe07dcd6dbd63591c366cda69ad875f3efb0f0afbac03da",
-    "last_investigated_at": "2026-07-29_09-25_13_071880000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "1f32258d5e27e474668a838a600e2514e30810c5f57d5eda1d845a5e4654f413",
+    "last_investigated_at": "2026-07-30_03-13_58_744590000"
   },
   "src/sub_commands/realization/refactor/__init__.py": {
     "investigation_required": false,
