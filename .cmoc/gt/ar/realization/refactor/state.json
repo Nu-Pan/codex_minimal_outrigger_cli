@@ -918,10 +918,10 @@
     "last_investigated_at": "2026-07-25_09-31_56_290272000"
   },
   "src/sub_commands/oracle/review_report.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "975b64084bf01f45bfc91495bde6359f29dca3875d6df4cf23cf9ecb478b2eca",
-    "last_investigated_at": "2026-07-28_10-32_07_418101000"
+    "last_investigated_sha256": "32d7ee8529ceffacf71e9f434037b3f0122da45b27006de2292036c47036f791",
+    "last_investigated_at": "2026-07-29_21-24_30_984214000"
   },
   "src/sub_commands/oracle/review_targets.py": {
     "investigation_required": false,
