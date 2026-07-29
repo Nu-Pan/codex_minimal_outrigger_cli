@@ -1110,7 +1110,7 @@
     "last_investigated_at": "2026-07-28_12-49_34_106503000"
   },
   "test/test_codex_runtime_exec.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "2c274231d96e7e854c3ba24ed7523ec22da598405640a9f130a6c820d3eaf34d",
     "last_investigated_at": "2026-07-26_06-39_09_236196000"
@@ -1261,9 +1261,9 @@
   },
   "test/test_runtime_codex_profile.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "542b624fa7880aef8adeab46f24328813cc41db9b742fc7f1645361ff45dcfe8",
-    "last_investigated_at": "2026-07-27_22-09_30_999573000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "5433643d0d0bfc480e5e27d4b2707043f38370cb2e376af2f207e563ad348722",
+    "last_investigated_at": "2026-07-30_01-02_22_971531000"
   },
   "test/test_runtime_config.py": {
     "investigation_required": true,

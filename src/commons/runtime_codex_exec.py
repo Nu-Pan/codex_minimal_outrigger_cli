@@ -381,7 +381,13 @@ def run_codex_exec(
         run_schema_path: Path | None = schema_path,
     ) -> CodexExecResult:
         """保存済みlog pathから一回分のCodex結果を組み立てる。"""
-        output_text = run_output_path.read_text() if run_output_path.exists() else ""
+        try:
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # output JSON の parse failure は caller が分類するため、壊れた UTF-8 の
+            # output-last-message でも結果の組み立て自体を UnicodeDecodeError で中断しない。
+            output_text = run_output_path.read_text(encoding="utf-8", errors="replace")
+        except FileNotFoundError:
+            output_text = ""
         return CodexExecResult(
             returncode=result.returncode,
             output_text=output_text,
