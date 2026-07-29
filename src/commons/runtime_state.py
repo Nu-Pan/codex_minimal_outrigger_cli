@@ -51,12 +51,7 @@ class SessionState:
             raise _invalid_state(
                 source, "top-level JSON は object である必要があります。"
             )
-        extra = [name for name in data if name not in {"session", "run"}]
-        if extra:
-            raise _invalid_state(
-                source,
-                "top-level に未定義 field があります: " + ", ".join(extra),
-            )
+        _require_top_level_fields(data, source)
         session_data = _part_data(data, "session", SessionPart, source)
         run_data = _part_data(data, "run", RunPart, source)
         _require_state(session_data, "session", SESSION_STATES, source)
@@ -163,6 +158,7 @@ def load_session_part_for_branch(
     session_id = branch_session_id(branch)
     path = state_path(root, session_id)
     data = _read_state_data(path)
+    _require_top_level_fields(data, path)
     session_data = _part_data(data, "session", SessionPart, path)
     _require_state(session_data, "session", SESSION_STATES, path)
     _require_nullable_strings(session_data, "session", path)
@@ -241,6 +237,24 @@ def _part_data(
     return {name: part[name] for name in fields}
 
 
+def _require_top_level_fields(data: dict[str, Any], source: Path | None) -> None:
+    """session state の top-level field 集合を検証する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    """
+    expected = {"session", "run"}
+    missing = [name for name in expected if name not in data]
+    extra = [name for name in data if name not in expected]
+    if not missing and not extra:
+        return
+    details = []
+    if missing:
+        details.append("必須 field がありません: " + ", ".join(sorted(missing)))
+    if extra:
+        details.append("未定義 field があります: " + ", ".join(extra))
+    raise _invalid_state(source, "top-level に" + " / ".join(details))
+
+
 def _require_state(
     part: dict[str, Any], key: str, allowed: set[str], source: Path | None
 ) -> None:
@@ -256,13 +270,18 @@ def _require_state(
 def _require_nullable_strings(
     part: dict[str, Any], key: str, source: Path | None
 ) -> None:
-    """state part の payload が string または null だけであることを検証する。"""
+    """state part の payload が null または空でない string であることを検証する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    """
     for name, value in part.items():
         if name != "state" and value is not None and not isinstance(value, str):
             raise _invalid_state(
                 source,
                 f"`{key}.{name}` は string または null である必要があります: {value!r}",
             )
+        if name != "state" and value == "":
+            raise _invalid_state(source, f"`{key}.{name}` は空文字にできません。")
 
 
 def _require_session_identity(session: dict[str, Any], source: Path | None) -> None:

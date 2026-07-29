@@ -178,6 +178,27 @@ def test_load_session_part_does_not_validate_run_section(tmp_path: Path) -> None
     assert loaded == session
 
 
+@pytest.mark.parametrize("mutation", ["missing_run", "unknown_top_level"])
+def test_load_session_part_rejects_invalid_top_level(
+    tmp_path: Path, mutation: str
+) -> None:
+    """session 部分だけを読む場合も state の top-level schema を守る。"""
+    path = state_path(tmp_path, "session")
+    path.parent.mkdir(parents=True)
+    data = _valid_state().to_dict()
+    data["run"] = {"not_inspected": True}
+    if mutation == "missing_run":
+        del data["run"]
+    else:
+        data["obsolete"] = None
+    path.write_text(json.dumps(data))
+
+    with pytest.raises(CmocError) as exc_info:
+        load_session_part_for_branch(tmp_path, "cmoc/session/session")
+
+    assert "top-level" in exc_info.value.detail
+
+
 @pytest.mark.parametrize("field", ["session_home_branch", "session_fork_commit"])
 def test_session_state_requires_session_identity(field: str) -> None:
     """session identity の必須 field が null の state を拒否する。"""
@@ -206,6 +227,28 @@ def test_load_session_part_requires_session_identity(
         load_session_part_for_branch(tmp_path, "cmoc/session/session")
 
     assert f"`session.{field}` は string" in exc_info.value.detail
+
+
+@pytest.mark.parametrize(
+    ("part", "field"),
+    [
+        ("session", "session_home_branch"),
+        ("session", "session_fork_commit"),
+        ("session", "last_joined_apply_fork_commit"),
+        ("run", "kind"),
+        ("run", "branch"),
+        ("run", "fork_commit"),
+    ],
+)
+def test_session_state_rejects_empty_payload(part: str, field: str) -> None:
+    """branch・commit などの state payload に空文字を保存しない。"""
+    data = _valid_state().to_dict()
+    data[part][field] = ""
+
+    with pytest.raises(CmocError) as exc_info:
+        SessionState.from_dict(data)
+
+    assert f"`{part}.{field}`" in exc_info.value.detail
 
 
 def test_write_state_rejects_invalid_session_identity(tmp_path: Path) -> None:
