@@ -126,34 +126,33 @@
 # `src`
 
 ## Summary
-- `src` は cmoc CLI の realization 実装本体を収める最上位パッケージ。CLI エントリーポイント、共通 runtime、サブコマンド、ACP builder、互換 import shim など、実行経路の下位領域へ進むための入口を提供する。
+- cmoc CLI の realization 実装をまとめた入口。CLI エントリーポイント、共通 runtime、サブコマンド、ACP builder、互換 import shim など、実行時機能の下位領域へ進むための案内を提供する。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI エントリーポイント・共通 runtime・サブコマンド・ACP builder の配置を確認するとき。
-- 対象機能の実装箇所が未特定で、src 配下の下位パッケージまたは主要モジュールへの入口を探すとき。
+- cmoc の realization 実装全体の構成や、CLI・共通 runtime・サブコマンドの配置を確認するとき。
+- 特定の実装領域へ進む前に、CLI の主要入口、互換公開、共通機能、サブコマンド実装の担当範囲を把握するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
-- 特定の runtime module、サブコマンド、builder、または互換 import shim が明確なときは、その対象を直接読む。
-- テスト、CLI 以外の補助ファイル、または src 配下にない機能を調査するとき。
+- canonical な oracle 仕様や oracle 実装を確認するときは、対応する oracle 側を直接読む。
+- 特定の下位 module の責務や処理詳細が明確なときは、その module を直接読む。
 
 ## hash
-- ae6ec3cdd2746ee185e2a93798af139586ff27cb80879dfe7f219586be3751f6
+- 3911a64981472056d6cb7fa93cb8df54c5e2fb884e99b27000121437c3660661
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群と共通テスト支援モジュールを収録するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定、worktree、StructDoc などの外部挙動・制御ロジックを検証する入口であり、個別領域の回帰テストや関連 helper を探す起点となる。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、prompt などの外部挙動・制御ロジックを検証するテストと、複数領域で共有するテスト支援 helper を提供する。各機能の実装変更や回帰調査時に、対象領域に対応するテストから入るための入口となる。
 
 ## Read this when
-- cmoc のテスト対象や回帰テストの所在を領域別に探すとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run lifecycle、runtime state の挙動をテストから確認するとき
-- テスト用 Git、Ollama、Codex、外部コマンド、CLI 実行 helper の共通処理を確認するとき
+- cmoc の実装変更後に、対象機能の realization test と共通 test helper を特定するとき。
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session、runtime state などの外部契約や失敗時挙動を検証するとき。
+- Git、Ollama、process tracking、worktree など、テスト環境の共通準備や隔離処理を確認するとき。
 
 ## Do not read this when
-- 本番実装の責務や正本仕様を確認したいときは、対応する src または oracle file を直接読む
-- テスト実行手順や Python 開発環境を確認したいときは、対応する開発・テスト手順を読む
-- 対象領域が明確で、特定のテストファイルまたは helper を直接読めるとき
+- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc・oracle src・oracle schema を直接読む。
+- 実装本体の局所的な詳細だけを調査するときは、対象の realization implementation を直接読む。
+- 対象機能と無関係なテスト領域や、テスト支援 helper を使わない変更を扱うとき。
 
 ## hash
-- d3b8adf2c47fdc03b2dd08464f10a6ce940b0d84ad914f775d911c15bcf3eb45
+- 43fc2823db66d013e354eb017792acdf69b3633e012643be291e1984b078dc8b

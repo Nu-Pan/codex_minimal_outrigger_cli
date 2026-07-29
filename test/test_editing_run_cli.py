@@ -500,7 +500,8 @@ def test_realization_apply_fork_and_run_join_use_common_state(
 
     assert joined.exit_code == 0
     assert joined_process_stops == [
-        (root, session_branch.removeprefix("cmoc/session/"))
+        (root, session_branch.removeprefix("cmoc/session/")),
+        (root, session_branch.removeprefix("cmoc/session/")),
     ]
     state = _state(state_path)
     assert state["run"] == {
@@ -562,6 +563,65 @@ def test_run_join_reports_joinable_child_stop_warnings(
         .removesuffix("`")
     )
     assert "run child process already stopped: 789" in report_path.read_text()
+
+
+def test_run_join_tracks_indexing_codex_calls_and_stops_children_after_refresh(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """join 後の INDEX 用 Codex child を追跡し、refresh 後に停止する。"""
+    _root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    events: list[tuple[str, bool]] = []
+
+    def fake_refresh(_worktree: Path, *, commit: bool) -> list[Path]:
+        """INDEX refresh 中の tracking 状態を記録する。"""
+        assert commit
+        events.append(("refresh", codex_profile_module.run_process_tracking_active()))
+        return []
+
+    def record_stop(*_args: object) -> list[str]:
+        """tracked child 停止位置と tracking 状態を記録する。"""
+        events.append(("stop", codex_profile_module.run_process_tracking_active()))
+        return []
+
+    monkeypatch.setattr(run_join_module, "refresh_indexes", fake_refresh)
+    monkeypatch.setattr(run_join_module, "stop_tracked_codex_children", record_stop)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert events == [("stop", False), ("refresh", True), ("stop", True)]
+
+
+def test_run_join_rejects_index_refresh_side_effect(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """INDEX refresh の管理外差分を state sync commit へ混入させない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+
+    def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
+        """INDEX builder の管理外 file 副作用を再現する。"""
+        assert commit
+        (worktree / "index-side-effect.txt").write_text("unexpected\n")
+        return []
+
+    monkeypatch.setattr(run_join_module, "refresh_indexes", fake_refresh)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    assert not (root / "index-side-effect.txt").exists()
+    assert (root / "README.md").read_text() == "# repo\n"
 
 
 def test_apply_builder_uses_run_worktree_as_prompt_work_root(

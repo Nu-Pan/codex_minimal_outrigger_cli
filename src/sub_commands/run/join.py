@@ -39,8 +39,10 @@ from commons.runtime_refactor import sync_refactor_state
 from commons.runtime_run import (
     delete_run_process_id,
     run_lifecycle_lock,
+    run_process_tracking,
     stop_error_run_process,
     stop_tracked_codex_children,
+    write_run_process_id,
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -266,7 +268,7 @@ def _merge_and_finalize(
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # common の run_fork_commit と同じ commit を workload 固有名で重複掲載しない。
         hook_result = "session.last_joined_apply_fork_commit updated"
-    refresh_indexes(context.session_worktree, commit=True)
+    _refresh_join_indexes(context, warnings)
     sync_refactor_state(context.session_worktree)
     state_sync_commit = commit_work_unit(
         context.session_worktree,
@@ -310,6 +312,29 @@ def _merge_and_finalize(
         report_path=report,
     )
     return run_join_commit, hook_result, state_sync_commit, cleanup, report
+
+
+def _refresh_join_indexes(
+    context: EditingRunContext,
+    warnings: list[str],
+) -> None:
+    """post-merge の INDEX 生成を追跡し、INDEX 外の副作用を拒否する。"""
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # join 自身が起動する Codex も run process tracking に登録し、descendant が
+    # session worktree を変更し続ける競合を止めてから clean 状態を検査する。
+    with run_process_tracking(context.repo, context.session_id):
+        write_run_process_id(context.repo, context.session_id, os.getpid())
+        try:
+            refresh_indexes(context.session_worktree, commit=True)
+        finally:
+            try:
+                warnings.extend(
+                    stop_tracked_codex_children(context.repo, context.session_id) or []
+                )
+            finally:
+                delete_run_process_id(context.repo, context.session_id)
+    # INDEX commit が拾わない Codex の副作用を state sync commit へ混入させない。
+    require_clean_worktree(context.session_worktree)
 
 
 def _record_join_failure(
@@ -425,7 +450,7 @@ def _resolve_index_only_conflict_or_fail(
                 )
         run_git(["commit", "--no-edit"], context.session_worktree)
         merge_commit = head_commit(context.session_worktree)
-        refresh_indexes(context.session_worktree, commit=True)
+        _refresh_join_indexes(context, warnings)
         warnings.append("INDEX.md conflicts were regenerated")
         return merge_commit
     _restore_session_after_join_failure(context, session_head_before_join)
