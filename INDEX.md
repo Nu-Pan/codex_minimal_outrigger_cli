@@ -126,34 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装を配置する主要ソースディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim などを扱い、各機能の実装領域への入口となる。
+- `src` は cmoc CLI の realization 実装本体を収める最上位パッケージ。CLI エントリーポイント、共通 runtime、サブコマンド、ACP builder、互換 import shim など、実行経路の下位領域へ進むための入口を提供する。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・サブコマンド・共通 runtime・ACP builder の担当領域を確認するとき。
-- 特定の実装へ進む前に、主要なエントリーポイントや下位ディレクトリの配置を確認するとき。
+- cmoc の realization 実装全体の構成や、CLI エントリーポイント・共通 runtime・サブコマンド・ACP builder の配置を確認するとき。
+- 対象機能の実装箇所が未特定で、src 配下の下位パッケージまたは主要モジュールへの入口を探すとき。
 
 ## Do not read this when
-- canonical な oracle 仕様や実装を確認するときは、対応する oracle 側を直接読む。
-- 特定サブコマンド、共通 runtime、ACP builder、互換 import shim の詳細が明確なときは、対応する下位対象を直接読む。
-- realization 実装と無関係なテストや補助ファイルを調査するとき。
+- 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
+- 特定の runtime module、サブコマンド、builder、または互換 import shim が明確なときは、その対象を直接読む。
+- テスト、CLI 以外の補助ファイル、または src 配下にない機能を調査するとき。
 
 ## hash
-- a94717dec41d55bee31c149c51880d33bdfe6d388e6675c1d4c58eac311a9ea5
+- ae6ec3cdd2746ee185e2a93798af139586ff27cb80879dfe7f219586be3751f6
 
 # `test`
 
 ## Summary
-- cmoc の realization test と共有テスト支援モジュールを集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、TUI などの外部挙動・制御ロジックを検証する。配下の個別テストや helper を選ぶための入口。
+- cmoc の realization test 群と共通テスト支援モジュールを収録するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定、worktree、StructDoc などの外部挙動・制御ロジックを検証する入口であり、個別領域の回帰テストや関連 helper を探す起点となる。
 
 ## Read this when
-- cmoc のテスト対象を特定し、機能領域に対応する pytest ファイルを選ぶとき
-- 複数テストで共用する Git、Codex/Ollama、CLI、fake command、schema path などの fixture・helper を確認するとき
-- 実装変更後に、対象機能の回帰テストや関連する統合テストを探すとき
+- cmoc のテスト対象や回帰テストの所在を領域別に探すとき
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run lifecycle、runtime state の挙動をテストから確認するとき
+- テスト用 Git、Ollama、Codex、外部コマンド、CLI 実行 helper の共通処理を確認するとき
 
 ## Do not read this when
-- 正本仕様や oracle schema の内容を確認するときは、対応する oracle ファイルを直接読む
-- 実装の詳細を変更・調査するときは、対応する src ファイルを直接読む
-- 対象機能が明確で、特定の下位テストまたは共有 helper に直接進めるとき
+- 本番実装の責務や正本仕様を確認したいときは、対応する src または oracle file を直接読む
+- テスト実行手順や Python 開発環境を確認したいときは、対応する開発・テスト手順を読む
+- 対象領域が明確で、特定のテストファイルまたは helper を直接読めるとき
 
 ## hash
-- 7f598ec7e42facf1b16a4743b6b33bd22e86f02616fa3e580f047ac36a482373
+- d3b8adf2c47fdc03b2dd08464f10a6ce940b0d84ad914f775d911c15bcf3eb45

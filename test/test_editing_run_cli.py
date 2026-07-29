@@ -784,6 +784,35 @@ def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
     assert warnings == ["removal failed"]
 
 
+def test_run_abandon_preserves_branch_when_worktree_cleanup_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """worktree cleanup失敗時に再試行用のrun branchを保持する。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    set_run_state(context, "joinable")
+    branch_calls: list[str] = []
+    monkeypatch.setattr(
+        run_abandon_module,
+        "_remove_run_worktree",
+        lambda _context, _warnings: False,
+    )
+    monkeypatch.setattr(
+        run_abandon_module,
+        "_remove_run_branch",
+        lambda _context, _warnings: branch_calls.append("deleted") or True,
+    )
+
+    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert branch_calls == []
+    assert _state(state_path)["run"]["state"] == "joinable"
+    assert context.run_worktree.exists()
+    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+
+
 def test_apply_fork_tracks_indexing_codex_calls(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

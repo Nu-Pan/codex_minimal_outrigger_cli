@@ -72,7 +72,12 @@ def _cmoc_run_abandon_body() -> None:
         if Path.cwd().resolve() == context.run_worktree.resolve():
             os.chdir(context.session_worktree)
         worktree_removed = _remove_run_worktree(context, warnings)
-        branch_removed = _remove_run_branch(context, warnings)
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # worktree が残った場合は branch を保持し、同じ managed target で cleanup を
+        # 再試行できるようにする。
+        branch_removed = (
+            _remove_run_branch(context, warnings) if worktree_removed else False
+        )
         if not worktree_removed or not branch_removed:
             raise CmocError(
                 "active run の cleanup を完了できません。",
