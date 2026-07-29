@@ -9,6 +9,7 @@ from commons.runtime_codex_profile import (
     RUN_PROCESS_TRACKING_ENV,
     open_process_fd,
     process_group_has_running_member,
+    process_group_members,
     process_start_time,
     run_process_id_file_lock,
     send_process_signal,
@@ -267,6 +268,26 @@ def _stop_parent_run_process(process: RunProcessIdentity) -> str | None:
         os.close(process_fd)
 
 
+def _stop_orphaned_child_process_group(
+    process: ProcessIdentity, process_group_id: int
+) -> str | None:
+    """leader 消滅後も残る group を snapshot 検証付きで停止する。"""
+    members = process_group_members(process_group_id)
+    if members is None:
+        raise CmocError(
+            "実行中 Codex subprocess の process group を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pid: {process.process_id}\npgid: {process_group_id}",
+        )
+    if not members:
+        return f"run child process already stopped: {process.process_id}"
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # leader が消えても member が残る専用 PGID は再利用されない。snapshot の一部を
+    # stop_process_group でも確認し、group が一度空になって再利用された race は拒否する。
+    stop_process_group(process_group_id, expected_members=members)
+    return None
+
+
 def stop_child_process_group(process: ProcessIdentity) -> str | None:
     """Codex group を保存済み group ID と member pidfd で停止する。"""
     process_group_id = process.process_group_id or process.process_id
@@ -275,13 +296,8 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
         try:
             current_start_time = process_start_time(process.process_id)
             if current_start_time is None:
-                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-                # pidfd が開けても leader の stat を読めない場合は、終了済みでも
-                # 数値 PGID だけで停止すると別 process group を巻き込むため fail closed にする。
-                if wait_process_fd_exit(
-                    process_fd, 0
-                ) and not process_group_has_running_member(process_group_id):
-                    return f"run child process already stopped: {process.process_id}"
+                if wait_process_fd_exit(process_fd, 0):
+                    return _stop_orphaned_child_process_group(process, process_group_id)
                 raise CmocError(
                     "実行中 Codex subprocess の同一性を確認できません。",
                     ["run process を確認し、停止後に再実行してください。"],
@@ -311,16 +327,7 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
     else:
         current_start_time = process_start_time(process.process_id)
         if current_start_time is None:
-            if not process_group_has_running_member(process_group_id):
-                return f"run child process already stopped: {process.process_id}"
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-            # leader が消えた後に PGID だけで停止すると、再利用された PGID の別 group
-            # へ signal を送るため、対応関係を確認できない場合は fail closed にする。
-            raise CmocError(
-                "実行中 Codex subprocess の同一性を確認できません。",
-                ["run process を確認し、停止後に再実行してください。"],
-                f"pid: {process.process_id}\npgid: {process_group_id}",
-            )
+            return _stop_orphaned_child_process_group(process, process_group_id)
         if process.start_time is None:
             raise CmocError(
                 "実行中 Codex subprocess の同一性を確認できません。",

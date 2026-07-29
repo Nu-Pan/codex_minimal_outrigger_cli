@@ -1,3 +1,4 @@
+import errno
 import os
 import signal
 from pathlib import Path
@@ -13,6 +14,20 @@ from commons.runtime_codex_profile import (
     run_tracked_codex_subprocess,
 )
 from commons.runtime_errors import CmocError
+
+
+def test_open_process_fd_treats_invalid_pidfd_as_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OS が pidfd を開けない child を停止経路の再検証へ渡す。"""
+
+    def invalid_pidfd(_process_id: int) -> int:
+        """production cleanup で観測した pidfd_open の失敗を再現する。"""
+        raise OSError(errno.EINVAL, "Invalid argument")
+
+    monkeypatch.setattr(runtime_codex_profile.os, "pidfd_open", invalid_pidfd)
+
+    assert runtime_codex_profile.open_process_fd(123, "Codex subprocess") is None
 
 
 def test_tracked_codex_subprocess_records_dedicated_process_group(
@@ -106,7 +121,7 @@ def test_signal_process_group_members_uses_each_member_pidfd(
 def test_stop_process_group_rejects_reused_group_before_signal(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """保存済み leader と異なる PGID member へ signal を送らない。"""
+    """保存済み group member と異なる PGID へ signal を送らない。"""
     sent: list[signal.Signals] = []
     monkeypatch.setattr(
         runtime_codex_profile,
@@ -120,7 +135,7 @@ def test_stop_process_group_rejects_reused_group_before_signal(
     )
 
     with pytest.raises(CmocError, match="同一性を確認できません"):
-        runtime_codex_profile.stop_process_group(111, expected_leader=(111, 10))
+        runtime_codex_profile.stop_process_group(111, expected_members=((111, 10),))
 
     assert sent == []
 
@@ -386,52 +401,61 @@ def test_run_codex_subprocess_preserves_missing_cwd_error(
     assert Path(exc_info.value.filename) == missing_cwd
 
 
-def test_stop_child_process_group_fails_closed_when_leader_is_gone(
+def test_stop_child_process_group_stops_group_after_leader_is_gone(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """leader消滅後に再利用された可能性のあるPGIDへsignalを送らない。
+    """leader 消滅後も残る専用 group を snapshot 検証付きで停止する。
 
     Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     child = runtime_run.ProcessIdentity(123, 456, 789)
-    stopped: list[int] = []
+    members = ((222, 20),)
+    stopped: list[tuple[int, tuple[tuple[int, int], ...] | None]] = []
     monkeypatch.setattr(runtime_run, "open_process_fd", lambda *_args: None)
     monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: None)
-    monkeypatch.setattr(
-        runtime_run, "process_group_has_running_member", lambda _pgid: True
-    )
-    monkeypatch.setattr(
-        runtime_run, "stop_process_group", lambda pgid: stopped.append(pgid)
-    )
 
-    with pytest.raises(CmocError, match="同一性を確認できません"):
-        runtime_run.stop_child_process_group(child)
+    monkeypatch.setattr(runtime_run, "process_group_members", lambda _pgid: members)
 
-    assert stopped == []
+    def stop_group(
+        process_group_id: int,
+        *,
+        expected_members: tuple[tuple[int, int], ...] | None = None,
+    ) -> None:
+        """同じ snapshot を確認した停止だけを許可する。"""
+        stopped.append((process_group_id, expected_members))
+
+    monkeypatch.setattr(runtime_run, "stop_process_group", stop_group)
+
+    assert runtime_run.stop_child_process_group(child) is None
+    assert stopped == [(789, members)]
 
 
-def test_stop_child_process_group_fails_closed_after_pidfd_leader_exit(
+def test_stop_child_process_group_stops_group_after_pidfd_leader_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """pidfd 経路でも leader 消滅後に別 PGID を停止しない。"""
+    """pidfd 経路でも leader 消滅後の専用 group を停止する。"""
     child = runtime_run.ProcessIdentity(123, 456, 789)
-    stopped: list[int] = []
+    members = ((222, 20),)
+    stopped: list[tuple[int, tuple[tuple[int, int], ...] | None]] = []
     closed: list[int] = []
     monkeypatch.setattr(runtime_run, "open_process_fd", lambda *_args: 99)
     monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: None)
     monkeypatch.setattr(runtime_run, "wait_process_fd_exit", lambda *_args: True)
-    monkeypatch.setattr(
-        runtime_run, "process_group_has_running_member", lambda _pgid: True
-    )
-    monkeypatch.setattr(
-        runtime_run, "stop_process_group", lambda pgid: stopped.append(pgid)
-    )
+    monkeypatch.setattr(runtime_run, "process_group_members", lambda _pgid: members)
+
+    def stop_group(
+        process_group_id: int,
+        *,
+        expected_members: tuple[tuple[int, int], ...] | None = None,
+    ) -> None:
+        """同じ snapshot を確認した停止だけを許可する。"""
+        stopped.append((process_group_id, expected_members))
+
+    monkeypatch.setattr(runtime_run, "stop_process_group", stop_group)
     monkeypatch.setattr(runtime_run.os, "close", lambda fd: closed.append(fd))
 
-    with pytest.raises(CmocError, match="同一性を確認できません"):
-        runtime_run.stop_child_process_group(child)
-
-    assert stopped == []
+    assert runtime_run.stop_child_process_group(child) is None
+    assert stopped == [(789, members)]
     assert closed == [99]
 
 

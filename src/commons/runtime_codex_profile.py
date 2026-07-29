@@ -8,6 +8,7 @@ subprocess 境界の不変条件を共有するため、分割すると呼び出
 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
+import errno
 import fcntl
 import json
 import os
@@ -142,6 +143,13 @@ def open_process_fd(process_id: int, process_name: str = "run process") -> int |
             [f"{process_name} を手動で確認してから再実行してください。"],
             f"pid: {process_id}",
         ) from exc
+    except OSError as exc:
+        if exc.errno == errno.EINVAL:
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # pidfd を開けない場合は呼び出し側の start time/group 検証へ渡し、
+            # leader が消えた group を数値 PGID だけで停止しない。
+            return None
+        raise
 
 
 def send_process_signal(
@@ -299,6 +307,7 @@ def _current_tracked_process_group_members(
 def stop_process_group(
     process_group_id: int,
     expected_leader: tuple[int, int] | None = None,
+    expected_members: tuple[tuple[int, int], ...] | None = None,
 ) -> None:
     """Codex group を個別 pidfd で SIGTERM、必要なら SIGKILL する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
@@ -320,6 +329,16 @@ def stop_process_group(
             "実行中 Codex subprocess の同一性を確認できません。",
             ["Codex subprocess を手動で停止してから再実行してください。"],
             f"pid: {expected_leader[0]}\npgid: {process_group_id}",
+        )
+    if (
+        expected_members is not None
+        and initial_members
+        and not any(member in expected_members for member in initial_members)
+    ):
+        raise CmocError(
+            "実行中 Codex subprocess の同一性を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pgid: {process_group_id}",
         )
     known_members = set(initial_members)
     _signal_process_members(initial_members, signal.SIGTERM)
