@@ -856,6 +856,40 @@ def test_apply_fork_stops_tracked_codex_children_before_joinable(
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
+def test_apply_fork_reports_cleanup_warnings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """apply fork の cleanup warning を fork report に保存する。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        apply_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
+    )
+    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
+    monkeypatch.setattr(
+        apply_module,
+        "stop_tracked_codex_children",
+        lambda *_args: ["run child process already stopped: 789"],
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    reports = list(
+        (
+            root / ".cmoc" / "gu" / "ar" / "report" / "realization" / "apply" / "fork"
+        ).glob("*.md")
+    )
+    assert len(reports) == 1
+    assert "run child process already stopped: 789" in reports[0].read_text()
+
+
 def test_refactor_fork_tracks_initialization_indexing_codex_calls(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

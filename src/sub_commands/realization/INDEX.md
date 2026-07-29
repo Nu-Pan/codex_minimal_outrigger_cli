@@ -15,21 +15,20 @@
 # `apply`
 
 ## Summary
-- `__init__.py` は realization の apply workload を扱うモジュールで、apply workload 実装の入口となる。
-- `fork.py` は `cmoc realization apply fork` の CLI サブコマンド実装で、agent 起動、oracle 差分、変更検査、INDEX 更新、commit・rollback、run 状態、fork report を扱う。
+- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装と、`cmoc realization apply fork` の CLI 実行処理を確認する入口となる。
 
 ## Read this when
-- realization の apply workload の内容を調査・変更するとき。
-- `realization apply fork` の実行フロー、run 状態遷移、agent 差分の許可判定、commit・rollback、fork report を確認するとき。
-- realization apply agent の起動条件、oracle 差分の受け渡し、INDEX 更新を含む処理単位を確認するとき。
+- realization の apply workload の内容を調査・変更するとき
+- `cmoc realization apply fork` の動作、例外処理、run state、fork report、差分検査、commit 処理を調査・変更するとき
 
 ## Do not read this when
-- apply workload 以外の処理を扱うとき。
-- realization apply の prompt 構築や agent parameter の詳細だけを確認するとき。
-- run の共通ライフサイクル、プロセス追跡、report 出力の共通仕様だけを確認するとき。
+- apply workload 以外の処理を扱うとき
+- Codex builder の launch parameter だけを確認したいとき
+- run lifecycle の共通仕様や process tracking の共通実装だけを確認したいとき
+- `realization apply` 以外のサブコマンドの CLI 実装を調査するとき
 
 ## hash
-- 186517b2c807ee9b332dd2edad16cd426f331f86f4a22d26f2273738341fbdd1
+- 7123c72962aa3ce39b992061670779f554386532236de746f708fa03552b8d4e
 
 # `refactor`
 

@@ -126,33 +126,34 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization 実装ルートで、CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP builder などの実装領域を含む。下位ディレクトリや主要モジュールへ進むための入口として使う。
+- `src` は cmoc CLI の realization 実装のルートで、CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import shim など、実行時コードの下位領域への入口をまとめる。各機能の具体的な挙動や実装を調査するときは、該当する下位モジュールへ進む。
 
 ## Read this when
-- cmoc の realization 実装全体の構成や、CLI・共通 runtime・互換 import・ACP builder の実装入口を確認するとき。
-- 対象の実装が `src` 配下のどのサブ領域に属するかを特定するとき。
+- cmoc の realization 実装全体の構成や、CLI・共通 runtime・ACP builder・互換入口の担当領域を確認するとき。
+- 調査対象の下位ディレクトリや主要エントリーポイントを特定するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装を確認するときは、`oracle` 配下を直接読む。
-- 特定のサブコマンド、共通 runtime module、互換 shim、ACP builder の詳細が明確なときは、対応する下位対象を直接読む。
+- 正本仕様や oracle 側の実装を確認するとき。対応する `oracle` 配下を直接読む。
+- 特定のサブコマンド、runtime helper、ACP builder の詳細処理を確認するとき。該当する下位モジュールを直接読む。
+- テストや memo、開発環境など `src` の realization 実装に含まれない領域を調査するとき。
 
 ## hash
-- 412a67bc55951d8cf5a3f79f414c73e80eb55318aa762c7c6b2a4f5288f1d121
+- 2facec10ac70caf8c6473256b5443e5c570f6f7e10924fd90eea7defbc1bbe62
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、worktree、共通 runtime など、実装の外部挙動と制御契約を検証するテスト群への入口。
+- テストコードから正本 schema の path を解決する helper、CLI・Git・Ollama・Codex 実行を支援する共通 helper、および cmoc の各機能に対する realization test を収録するテストディレクトリ。ACP builder、runtime、CLI lifecycle、indexing、oracle review、session、state、TUI などの外部挙動・制御ロジックを検証する入口。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テスト、統合テスト、受け入れテストの所在を探すとき
-- CLI、Codex 実行、indexing、oracle review、session lifecycle、runtime state などの外部契約を検証するテストを選ぶとき
-- 対象機能に対応するテストファイルを特定し、関連する helper や fixture の利用方法を確認するとき
+- cmoc の実装変更に対応する回帰テストや統合テストを探すとき
+- CLI、Codex runtime、ACP builder、indexing、oracle review、session、state、TUI などの挙動をテストから確認するとき
+- テスト用の共通 helper、fake command、Git repository、case-local Ollama の利用方法を確認するとき
 
 ## Do not read this when
-- 正本仕様や設計・開発手順を確認することが目的のときは、対応する oracle 文書を直接読む
-- 実装詳細だけを調査するときは、対応する src の実装ファイルを直接読む
+- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc・oracle src・oracle schema を直接読む
+- 特定機能の実装詳細だけを調査するときは、対応する src ファイルを直接読む
 - テスト実行環境や品質検査の手順だけを確認するときは、対応する開発・テスト手順を読む
 
 ## hash
-- bb63e5a3f26efa78b04c7f80744cc7bf762e73b71a44370675740cae71462695
+- 0758808116892e24b0f7c5428e11b620f7b4a3d8724e35d14a02f5f18d6f4faf

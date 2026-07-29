@@ -54,6 +54,7 @@ def _cmoc_realization_apply_fork_body() -> None:
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
     diff_base_commit: str | None = None
+    cleanup_warnings: list[str] = []
     start_attempted = False
     start_was_ready = False
     try:
@@ -125,7 +126,9 @@ def _cmoc_realization_apply_fork_body() -> None:
             # {{work-root}}/oracle/doc/app_spec/run_isolation.md
             # 後続 process の遅い書き込みを差分検査・commit に混ぜないよう、最終
             # snapshot の前に tracked Codex child を停止する。
-            stop_tracked_codex_children(context.repo, context.session_id)
+            cleanup_warnings.extend(
+                stop_tracked_codex_children(context.repo, context.session_id)
+            )
             # tree_changes は commit 済みの差分だけを返すため、commit 前は status
             # path を同じ path 分類へ渡してから処理単位を確定する。
             pending_paths = worktree_change_paths(
@@ -164,6 +167,7 @@ def _cmoc_realization_apply_fork_body() -> None:
             changed_paths=flattened_change_paths(changes),
             codex_returncode=codex_returncode,
             extra_fields={"diff_base_commit": diff_base_commit},
+            body_lines=_cleanup_warning_lines(cleanup_warnings),
         )
     except BaseException as exc:
         if context is None:
@@ -180,6 +184,7 @@ def _cmoc_realization_apply_fork_body() -> None:
             diff_base_commit,
             codex_returncode,
             exc,
+            cleanup_warnings,
         )
         error = CmocError(
             "realization apply fork は error state で停止しました。",
@@ -208,11 +213,14 @@ def _record_error(
     diff_base_commit: str | None,
     codex_returncode: int | None,
     exc: BaseException,
+    cleanup_warnings: list[str] | None = None,
 ) -> Path:
     """apply run の差分を戻し、error state と fork report を保存する。"""
-    cleanup_errors: list[str] = []
+    cleanup_errors = list(cleanup_warnings or [])
     try:
-        stop_tracked_codex_children(context.repo, context.session_id)
+        cleanup_errors.extend(
+            stop_tracked_codex_children(context.repo, context.session_id)
+        )
     except BaseException as cleanup_error:
         cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
     try:
@@ -243,7 +251,17 @@ def _record_error(
         body_lines=[
             "## Error",
             repr(exc),
-            "## Cleanup warnings",
-            *([f"- {item}" for item in cleanup_errors] or ["- none"]),
+            *_cleanup_warning_lines(cleanup_errors),
         ],
     )
+
+
+def _cleanup_warning_lines(warnings: list[str]) -> list[str]:
+    """fork report 用の cleanup warning section を組み立てる。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    return [
+        "## Cleanup warnings",
+        *([f"- {warning}" for warning in warnings] or ["- none"]),
+    ]
