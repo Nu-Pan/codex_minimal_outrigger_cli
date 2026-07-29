@@ -90,10 +90,10 @@
     "last_investigated_at": "2026-07-28_00-32_08_263940000"
   },
   "oracle/doc/app_spec/run_isolation.md": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
     "last_investigated_sha256": "2124abd2e172d2cbaafcebff6c722ffbcbe0f86611db40113fcc44a3dcbd292d",
-    "last_investigated_at": "2026-07-29_12-49_43_062585000"
+    "last_investigated_at": "2026-07-30_06-42_11_399520000"
   },
   "oracle/doc/app_spec/session_state.md": {
     "investigation_required": false,
