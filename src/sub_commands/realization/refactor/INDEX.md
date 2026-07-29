@@ -15,18 +15,17 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の CLI 実行全体を管理する単一 workload。run の初期化、realization file 単位の agent 調査・修正、差分検証、refactor state 更新、処理単位 commit、unresolved finding 管理、完了判定、joinable/error report 保存までを担当する。
-- 中断・異常終了時には Codex 子プロセス停止、rollback、run state 更新、進捗と cleanup warning を含む report 生成を行う。
+- realization refactor fork の full-cycle CLI workload。realization file の選択、単位ごとの agent 調査・修正、差分検証、state 同期、commit、unresolved 管理、完了判定、joinable/error report 保存までを一貫して扱う。
+- fork 全体で共有する run context と処理進捗を保持するため、target 選択から report 生成までを単一の lifecycle として実装している。
 
 ## Read this when
-- realization refactor fork のライフサイクル、処理単位の選択・commit、unresolved finding の扱い、完了条件を変更または調査するとき
-- refactor state と run worktree の差分検証、INDEX refresh、Codex descendant の停止、joinable/error report の連携を確認するとき
-- realization refactor fork の正常完了・ユーザー中断・異常終了時の出力や状態遷移を追跡するとき
+- realization refactor fork の実行フロー、処理単位の commit、unresolved finding の追跡、完了条件を変更・調査するとき。
+- agent call 後の realization 差分検証、INDEX/state 更新、interrupt・error cleanup、joinable report の挙動を確認するとき。
 
 ## Do not read this when
-- 単一 realization file の調査・修正ロジックだけを確認したい場合は、file review 用の下位実装を直接読む
-- refactor fork の変更概要生成だけを確認したい場合は、change summary 用の下位実装を直接読む
-- 一般的な run isolation、editing run、INDEX 更新、refactor state の仕様を確認したい場合は、対応する oracle 文書や共通 runtime 実装を先に読む
+- refactor agent の Structured Output schema や file 単位の調査・修正 prompt だけを変更するときは、対応する builder module を直接読む。
+- run lifecycle の共通処理、process tracking、report 出力の一般仕様だけを確認するときは、対応する commons module または oracle 文書を直接読む。
+- refactor state の共通データ構造や target 選択ロジックだけを変更するときは、runtime_refactor module を直接読む。
 
 ## hash
-- 9d8390051c495b3bcd5f4af399b66b342b4dc86491a45daedf82eb39e7a9c187
+- 1ddd0030e6631891407ce2defe6a86560d6b192b54af6ddb134f30eb34191871

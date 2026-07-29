@@ -1213,6 +1213,78 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
+def test_refactor_fork_moves_unresolved_target_after_rename(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """rename 後も unresolved target と refactor state の path 集合を揃える。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+
+    def fake_refactor(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """README の rename と unresolved finding を再現する。"""
+        worktree = Path(str(kwargs["cwd"]))
+        if kwargs["purpose"] == "realization refactor: README.md":
+            (worktree / "README.md").rename(worktree / "renamed.md")
+            return SimpleNamespace(
+                returncode=0,
+                output_json={
+                    "findings": [
+                        {
+                            "title": "deferred",
+                            "resolution": {
+                                "status": "unresolved",
+                                "summary": "needs follow-up",
+                            },
+                        }
+                    ]
+                },
+                call_log_path=worktree / "README-call.json",
+            )
+        if kwargs["purpose"] == "realization refactor change summary":
+            return SimpleNamespace(
+                returncode=0,
+                output_json={
+                    "changes": [{"category": "rename", "summary": "README renamed"}]
+                },
+            )
+        return SimpleNamespace(
+            returncode=0,
+            output_json={"findings": []},
+            call_log_path=worktree / "call.json",
+        )
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _state(state_path)["run"]["state"] == "joinable"
+    reports = list(
+        (
+            root
+            / ".cmoc"
+            / "gu"
+            / "ar"
+            / "report"
+            / "realization"
+            / "refactor"
+            / "fork"
+        ).glob("*.md")
+    )
+    assert len(reports) == 1
+    report = reports[0].read_text()
+    assert "## Completion\ncompleted_with_unresolved" in report
+    assert "renamed.md" in report
+
+
 @pytest.mark.parametrize(
     "managed_path",
     ["INDEX.md", ".cmoc/gt/ar/realization/refactor/state.json"],

@@ -62,16 +62,19 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply と refactor の下位処理へ進むための起点。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の処理を束ね、各サブパッケージの実装へ進むための入口となる。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
+- realization workload サブコマンド全体の構成や、apply・refactor のどちらを調査すべきか確認するとき。
+- realization apply または realization refactor の処理を調査・変更するとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき。
+- apply workload の詳細な実装や `cmoc realization apply fork` の実行処理だけを確認したいとき。
+- refactor fork の実行フローだけを確認したいとき。
+- run lifecycle、process tracking、report 出力などの共通処理だけを確認したいとき。
 
 ## hash
-- 75264c55fe020c0ac981085e757e8991ef80b150d6fde307895c8470291d8e24
+- 9339cd21879362b5f46cdf5073d0794a57afb8d37b6a2d3f075c545b24d6062e
 
 # `review`
 

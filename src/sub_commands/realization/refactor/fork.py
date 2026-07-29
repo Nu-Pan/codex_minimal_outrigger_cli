@@ -470,9 +470,43 @@ def _commit_refactor_unit(
             after_head.returncode == 0 and after_head.stdout.strip() != before_head
         ):
             units.append((target, finding_count))
+            committed_changes = tree_changes(
+                context.run_worktree,
+                before_head,
+                after_head.stdout.strip(),
+            )
+            rename_paths = {
+                change.paths[0]: change.paths[1]
+                for change in committed_changes
+                if change.status.startswith("R") and len(change.paths) == 2
+            }
+            state = load_refactor_state(context.run_worktree)
+            _reconcile_unresolved_findings(
+                state,
+                rename_paths,
+                unresolved_findings,
+            )
             if unresolved:
                 # commit 済みの対象だけを current fork 内で保留し、次の対象へ進む。
-                unresolved_findings[target] = unresolved
+                unresolved_target = rename_paths.get(target, target)
+                if unresolved_target in state:
+                    unresolved_findings[unresolved_target] = unresolved
+
+
+def _reconcile_unresolved_findings(
+    state: RefactorState,
+    rename_paths: dict[str, str],
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+) -> None:
+    """commit 後の state path に current fork の unresolved を揃える。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # rename は state 上で旧 path の削除と新 path の追加になるため、commit 前の
+    # target key をそのまま保持すると completed_with_unresolved の集合が不一致になる。
+    for target in list(unresolved_findings):
+        current_target = rename_paths.get(target, target)
+        findings = unresolved_findings.pop(target)
+        if current_target in state:
+            unresolved_findings[current_target] = findings
 
 
 def _status_change(path: str) -> GitChange:
