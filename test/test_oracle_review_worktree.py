@@ -401,6 +401,7 @@ def test_oracle_review_rejects_uncommitted_worktree_changes(
 
     assert result.exit_code != 0
     assert "git 未コミット差分" in result.output
+    assert str(root / relative_path) in result.output
     assert relative_path in result.output
 
 
@@ -741,6 +742,7 @@ def test_oracle_review_reports_cleanup_failure(
     rendered = report_path.read_text()
     assert "result: error" in rendered
     assert "oracle review の隔離 run の cleanup に失敗しました。" in rendered
+    assert "cleanup failed" in rendered
     assert "worktree removal failed: cleanup failed" in result.output
     assert "cleanup failed" in result.output
 

@@ -242,8 +242,13 @@ def _cmoc_oracle_review_body(
     except BaseException as exc:
         # {{work-root}}/oracle/doc/app_spec/run_isolation.md
         # create_run_worktree が部分作成後に失敗した場合も、隔離 run を残さない。
-        cleanup_error = _cleanup_created_resources()
-        error_message = str(exc) or exc.__class__.__name__
+        cleanup_result = _cleanup_created_resources()
+        if cleanup_result is not None:
+            cleanup_error = cleanup_result
+        if isinstance(exc, CmocError):
+            error_message = f"{exc.summary}\n{exc.detail}"
+        else:
+            error_message = str(exc) or exc.__class__.__name__
         if cleanup_error is not None and cleanup_error is not exc:
             error_message = f"{error_message}\ncleanup: {cleanup_error.detail}"
         report_path = write_oracle_review_report(
@@ -349,5 +354,5 @@ def _require_clean_worktree(root: Path) -> None:
         raise CmocError(
             "oracle review は git 未コミット差分がある状態では実行できません。",
             ["差分を commit または退避してから再実行してください。"],
-            "\n".join(str(path.relative_to(root)) for _status, path in statuses),
+            "\n".join(str(path) for _status, path in statuses),
         )
