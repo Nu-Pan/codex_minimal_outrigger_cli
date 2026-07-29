@@ -714,10 +714,10 @@
     "last_investigated_at": "2026-07-29_02-12_36_541318000"
   },
   "src/commons/prompt_editor_input.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "5b4c8b92cfd723b9bd31e33b234cc9809fdc7e597e4129aa31e3007a5af482d1",
-    "last_investigated_at": "2026-07-25_00-44_47_920976000"
+    "last_investigated_sha256": "5e7022e4bf219323a09a46511b3e637d461996a044331792505fabfcad318d99",
+    "last_investigated_at": "2026-07-29_15-46_38_282001000"
   },
   "src/commons/runtime_cli.py": {
     "investigation_required": true,
