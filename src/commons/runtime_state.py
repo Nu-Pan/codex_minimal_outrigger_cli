@@ -311,6 +311,18 @@ def _validate_run_fields(run: dict[str, Any], source: Path | None) -> None:
             source,
             "active run には有効な kind, branch, fork_commit が必要です。",
         )
+    # {{work-root}}/oracle/doc/branch_model.md
+    # state に保存する run branch は、worktree 解決と同じ canonical namespace に限定する。
+    parts = run["branch"].split("/")
+    if (
+        len(parts) != 4
+        or parts[:2] != ["cmoc", "run"]
+        or any(not parts[index] or parts[index] in {".", ".."} for index in (2, 3))
+    ):
+        raise _invalid_state(
+            source,
+            "`run.branch` は cmoc/run/{{session-id}}/{{run-id}} 形式である必要があります。",
+        )
 
 
 def _invalid_state(source: Path | None, reason: str) -> CmocError:

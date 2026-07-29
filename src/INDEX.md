@@ -49,20 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行、Codex subprocess、設定・状態・パス、Git、ログ、結果型、エラー処理、INDEX lifecycle など、上位実装が横断的に利用する基盤機能への入口。
+- cmoc の共通 runtime 機能をまとめる commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・パス管理、Git、ログ、エラー、run lifecycle、INDEX 更新などの共通実装への入口であり、個別責務の実装確認では下位モジュールへ進む。
 
 ## Read this when
-- 共通 runtime API や複数の runtime 機能にまたがる依存関係を確認・変更するとき
-- CLI、Codex 実行、設定・状態・worktree・Git、ログ、INDEX 更新などの共通基盤の実装箇所を探すとき
-- 特定の runtime helper の責務に対応する実装ファイルを選ぶ必要があるとき
+- 複数の runtime サブモジュールにまたがる共通 API や依存関係を確認するとき
+- CLI、Codex 実行、設定・状態・パス、Git、ログ、エラー、run lifecycle、INDEX 更新などの共通 runtime 機能を調査・変更するとき
+- 対象となる個別 runtime モジュールを特定し、その実装入口を選ぶとき
 
 ## Do not read this when
-- 利用者向け仕様や正本仕様を確認するときは、対応する oracle 文書を直接読む
-- 特定の runtime helper の実装詳細だけを調査するときは、commons 配下の対応する個別モジュールを直接読む
-- 個別 CLI サブコマンドの業務フローだけを調査するときは、そのサブコマンドの実装を直接読む
+- 特定の runtime 機能の実装詳細だけを調査・変更するとき
+- 特定の CLI サブコマンドや Codex 実行経路の業務フローだけを確認するとき
+- 利用者向け仕様や正本仕様、設定型・状態モデル・path model などの定義そのものを確認するとき
 
 ## hash
-- b44a53f9d43a07f52eb3efacf04a09c2c3f14e85553f329e882aa25b466ad8c6
+- aa60226cdb56bd35a6af02c72a9b53616d6a989387bc6bb1e0abe42f88b4846f
 
 # `config`
 

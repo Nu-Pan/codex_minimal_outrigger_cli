@@ -289,6 +289,30 @@ def test_active_run_requires_kind_branch_and_fork_commit(state: str) -> None:
         SessionState.from_dict(data)
 
 
+@pytest.mark.parametrize(
+    "branch",
+    [
+        "not-a-run-branch",
+        "cmoc/session/session",
+        "cmoc/run/session",
+        "cmoc/run/session/run/extra",
+        "cmoc/run/../run",
+    ],
+)
+def test_active_run_rejects_noncanonical_branch(branch: str) -> None:
+    """active run の branch が canonical naming rule に一致しない state を拒否する。"""
+    data = _valid_state().to_dict()
+    data["run"] = {
+        "state": "running",
+        "kind": "realization_apply",
+        "branch": branch,
+        "fork_commit": "abc",
+    }
+
+    with pytest.raises(CmocError, match="session state file"):
+        SessionState.from_dict(data)
+
+
 def test_session_state_rejects_unknown_fields() -> None:
     """session state の未定義 field を拒否する。"""
     data = _valid_state().to_dict()
