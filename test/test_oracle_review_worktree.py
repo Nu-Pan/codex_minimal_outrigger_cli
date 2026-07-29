@@ -273,6 +273,7 @@ def test_oracle_review_interrupt_during_run_creation_cleans_resources(
     worktree = Path(str(created["worktree"]))
     assert run_git(root, "branch", "--list", branch).stdout == ""
     assert not worktree.exists()
+    assert not worktree.is_symlink()
     report_path = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     )
@@ -320,6 +321,7 @@ def test_oracle_review_interrupt_after_branch_only_creation_cleans_branch(
     worktree = Path(str(created["worktree"]))
     assert run_git(root, "branch", "--list", branch).stdout == ""
     assert not worktree.exists()
+    assert not worktree.is_symlink()
     report_path = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     )
@@ -363,6 +365,7 @@ def test_oracle_review_unexpected_base_exception_during_run_creation_cleans_reso
     worktree = Path(str(created["worktree"]))
     assert run_git(root, "branch", "--list", branch).stdout == ""
     assert not worktree.exists()
+    assert not worktree.is_symlink()
     report_path = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     )
@@ -506,7 +509,7 @@ def test_oracle_review_merges_review_index_changes(
         path.name == ".git"
         for path in (root / ".cmoc" / "gu" / "worktree").rglob(".git")
     )
-    assert all(not path.exists() for path in review_worktrees)
+    assert all(not path.exists() and not path.is_symlink() for path in review_worktrees)
 
 
 def test_oracle_review_merges_preflight_committed_index_changes(
