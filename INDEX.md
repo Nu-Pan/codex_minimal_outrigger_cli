@@ -126,33 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc の実装コードをまとめる主要ソースディレクトリ。Typer CLI の登録と起動、共通 runtime、サブコマンド、互換 import shim、ACP・basic・config の公開入口を扱い、各下位パッケージへの入口となる。
+- cmoc の realization 実装をまとめる src パッケージ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・ACP・basic の公開入口を提供し、各領域の実体へ進むための入口となる。
 
 ## Read this when
-- cmoc の CLI 構成、サブコマンド登録、共通 runtime、または realization 側の公開 import 経路を確認・変更するとき。
-- 特定のサブコマンドや共通機能の実装へ進む前に、対応する下位パッケージの所在を確認するとき。
+- src 配下の realization 実装の構成、CLI 登録、サブコマンド入口、共通 runtime、互換 import の関係を確認するとき。
+- 特定の実装領域へ進む前に、対応する package・module の所在と責務を確認するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装を確認したいときは、対応する oracle 配下を直接読む。
-- 特定の機能の詳細実装を調査するときは、このディレクトリ全体ではなく対応する下位モジュールを直接読む。
+- 特定モジュールの実装詳細や個別サブコマンドの処理を確認したいときは、対応する下位要素を直接読む。
+- 正本仕様や oracle 側の実装を確認したいときは、src ではなく対応する oracle の対象を直接読む。
+- src と無関係な設定仕様、利用者向け挙動、または runtime 個別機能だけを調査するとき。
 
 ## hash
-- 392ef5b73c93bece29646e41dd2f7e0e6ca9580140e119fae4e386e4d61fcf99
+- 609f5ba1159da11da34f02b79c14b7dbb792013e9bdec908f4a03a3fb5badaff
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定、Git・worktree、安全性などの外部挙動と制御契約を検証する。各領域の回帰テストへ進むための入口。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、共通 runtime などの外部挙動・制御ロジックを検証する各テストと、複数テストから利用する補助モジュールへの入口を提供する。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test、統合テスト、受け入れテストを探すとき
-- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、runtime state の挙動をテストから確認するとき
-- テスト共通 helper や実経路統合テストの構成を確認するとき
+- 変更対象の機能に対応する realization test を特定したいとき
+- 複数の CLI・runtime・builder・worktree lifecycle にまたがる回帰テストの入口を探すとき
+- テスト共通 helper や実経路統合テストの配置を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認するときは、対応する oracle file を直接読む
-- 特定機能の実装詳細だけを調査するときは、対応する src の実装を直接読む
-- cmoc と無関係なテストや、対象領域に対応する個別テストを必要としない作業のとき
+- 実装の詳細を変更・調査するときは、対応する src ファイルを直接読む
+- 正本仕様、schema、開発環境、テスト実行手順を確認するときは、対応する oracle 文書や開発ルールを直接読む
+- 対象機能が明確な場合は、このディレクトリ全体ではなく該当する個別テストまたは support module を直接読む
 
 ## hash
-- 0f9519ba41a4f7fde4168f92ab9db3fbe3d76d384c95d5791216acbdb0e78ef8
+- eba02e2a01d7d13ed65f103a6dfa499cb16d5cc64b548c1c8e480c62d4b05435

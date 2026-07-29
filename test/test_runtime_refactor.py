@@ -6,6 +6,7 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import cast
 
@@ -208,6 +209,34 @@ def test_refactor_state_rejects_symlinked_path_without_writing_target(
         write_refactor_state(root, {})
 
     assert outside.read_text() == "original\n"
+
+
+@pytest.mark.parametrize(
+    "path_kind",
+    [
+        "directory",
+        pytest.param(
+            "fifo",
+            marks=pytest.mark.skipif(
+                not hasattr(os, "mkfifo"), reason="named pipes are unavailable"
+            ),
+        ),
+    ],
+)
+def test_refactor_state_rejects_non_file_path(tmp_path: Path, path_kind: str) -> None:
+    """state path が通常 file でない場合に read/write を block させない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path.parent.mkdir(parents=True)
+    if path_kind == "directory":
+        path.mkdir()
+    else:
+        os.mkfifo(path)
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+    with pytest.raises(CmocError, match="refactor state"):
+        write_refactor_state(root, {})
 
 
 def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(

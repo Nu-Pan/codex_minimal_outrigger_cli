@@ -36,6 +36,7 @@ def load_refactor_state(root: Path) -> RefactorState:
     """
     path = refactor_state_path(root)
     _reject_symlinked_state_path(path)
+    _reject_non_file_state_path(path)
     if not path.exists():
         return {}
     try:
@@ -49,6 +50,7 @@ def write_refactor_state(root: Path, state: RefactorState) -> None:
     """refactor state を path 順の安定した JSON 表現で保存する。"""
     path = refactor_state_path(root)
     _reject_symlinked_state_path(path)
+    _reject_non_file_state_path(path)
     validated = _validated_state(path, state)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -154,6 +156,12 @@ def _reject_symlinked_state_path(path: Path) -> None:
                 path, "state path は symlink 経由で扱えません。"
             )
         current = current.parent
+
+
+def _reject_non_file_state_path(path: Path) -> None:
+    """state path が通常 file でない場合の block と raw exception を防ぐ。"""
+    if path.exists() and not path.is_file():
+        raise _invalid_refactor_state(path, "state path は通常ファイルではありません。")
 
 
 def _validated_state(path: Path, value: object) -> RefactorState:
