@@ -59,7 +59,7 @@ _QUOTA_POLLING = False
 _QUOTA_PROBE_AVAILABLE = False
 _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
-_LAST_CODEX_LOG_TIMESTAMP: str | None = None
+_LAST_CODEX_LOG_TIMESTAMPS: dict[Path, str] = {}
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -150,22 +150,26 @@ def _codex_failure_detail(
     )
 
 
-def _next_codex_log_timestamp() -> str:
-    """壁時計後退時も同一プロセス内の Codex exec log 名を単調増加させる。"""
-    global _LAST_CODEX_LOG_TIMESTAMP
+def _next_codex_log_timestamp(log_dir: Path) -> str:
+    """log directory ごとに Codex exec log 名を単調増加させる。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # quota retry の時系列は同じ log directory 内だけで保ち、別 repository の
+    # 呼び出し履歴で新しい log 名を進めない。
+    log_dir = log_dir.resolve()
     with _CODEX_LOG_TIMESTAMP_LOCK:
         current = timestamp()
-        if (
-            _LAST_CODEX_LOG_TIMESTAMP is not None
-            and current <= _LAST_CODEX_LOG_TIMESTAMP
-        ):
-            current_dt = datetime.strptime(
-                _LAST_CODEX_LOG_TIMESTAMP[:-3], "%Y-%m-%d_%H-%M_%S_%f"
-            )
-            current = (current_dt + timedelta(microseconds=1)).strftime(
-                "%Y-%m-%d_%H-%M_%S_%f000"
-            )
-        _LAST_CODEX_LOG_TIMESTAMP = current
+        last = _LAST_CODEX_LOG_TIMESTAMPS.get(log_dir)
+        if last is not None and current <= last:
+            try:
+                current_dt = datetime.strptime(last[:-3], "%Y-%m-%d_%H-%M_%S_%f")
+            except ValueError:
+                # canonical timestamp でない値は、path reservation の衝突解消へ委ねる。
+                pass
+            else:
+                current = (current_dt + timedelta(microseconds=1)).strftime(
+                    "%Y-%m-%d_%H-%M_%S_%f000"
+                )
+        _LAST_CODEX_LOG_TIMESTAMPS[log_dir] = current
         return current
 
 
@@ -232,7 +236,9 @@ def run_codex_exec(
         # sibling path を導出する前に O_EXCL で call path を予約する。process-local の
         # timestamp lock だけでは並列 cmoc process を保護できない。
         run_ts, run_call_path = _reserve_timestamped_path(
-            log_dir, "_call.json", _next_codex_log_timestamp
+            log_dir,
+            "_call.json",
+            lambda: _next_codex_log_timestamp(log_dir),
         )
         return (
             run_ts,

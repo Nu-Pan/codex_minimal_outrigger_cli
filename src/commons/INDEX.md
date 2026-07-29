@@ -102,22 +102,18 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを実行制御する中核モジュール。subprocess 起動、prompt・stdout・stderr・output・call log の保存、Structured Output の厳格な JSON/schema 検証、capacity retry、quota polling と代表 probe、resume token による再開、console・subcommand event 記録、最終的な CodexExecResult の構築を一体で担う。
+- Codex exec の単一試行ループを制御する実装。Structured Output の検証、capacity retry、quota 待機と代表 probe、resume 継続、subprocess 実行結果・call log・subcommand event の記録を一体の状態機械として扱う。
 
 ## Read this when
-- Codex exec の起動条件、argv・cwd・環境・schema の準備を変更するとき
-- Structured Output の検証、semantic retry、capacity retry、quota 待機・代表 probe、resume 継続の挙動を調査または変更するとき
-- Codex call log、prompt/output/stdout/stderr log、console または subcommand event の記録内容を変更するとき
-- Codex CLI 呼び出し失敗時の分類、エラー処理、CodexExecResult の組み立てを確認するとき
+- Codex exec の subprocess 起動条件、再試行、Structured Output 検証、quota 回復待機、resume token 継続を変更・調査するとき。
+- Codex call の prompt、stdout、stderr、output、call log、console/event 記録の対応関係を確認するとき。
 
 ## Do not read this when
-- TUI 起動や TUI 固有の分岐を変更・調査するときは、TUI を担当する別 module を直接読む
-- Codex exec のログ出力形式だけを変更するときは、ログ整形を担当する runtime_codex_logging を先に読む
-- Codex の profile 判定、環境・cwd・schema 準備などの個別 helper の内部仕様だけを確認するときは、runtime_codex_profile を直接読む
-- 設定読み込み、subcommand logger、パス生成、結果型そのものを変更するときは、それぞれの担当 module を直接読む
+- TUI の起動や実行分岐を変更するときは、TUI 用 module を先に読む。
+- Codex の個別エラー分類、環境・cwd・schema 準備、結果型などの単独 helper を変更するときは、対応する runtime module を直接読む。
 
 ## hash
-- 98c71def8a29984cdafe15fa8d042a7c20be25b8ec8f61ac0b5b8907819b0295
+- 5d6ec51d2d83973d97c7a132240ca81cb6b67acf5af7b2447b186bccf579fd19
 
 # `runtime_codex_logging.py`
 
