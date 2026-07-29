@@ -134,8 +134,10 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
     assert exc_info.value.exit_code == 1
     [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
-    assert len(events) >= 2
-    assert all(isinstance(event, dict) and event for event in events)
+    assert events[0]["event"] == "command_invoked"
+    assert any(event["event"] == "step_started" for event in events)
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 1
     assert "probe" in json.dumps(events[0], ensure_ascii=False)
     assert "doctor failed" in json.dumps(events[-1], ensure_ascii=False)
 
@@ -359,11 +361,17 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
 ) -> None:
     """shell completion probe は cmoc preflight と初期化副作用を起こさない。"""
     root = make_repo(tmp_path)
+    isolated_home = tmp_path / "home"
+    isolated_home.mkdir()
     main_path = Path(main_module.__file__).resolve()
     result = subprocess.run(
         [sys.executable, str(main_path), "doctor"],
         cwd=root,
-        env={"PYTHONPATH": str(main_path.parent), "_CMOC_COMPLETE": "bash_complete"},
+        env={
+            "PYTHONPATH": str(main_path.parent),
+            "_CMOC_COMPLETE": "bash_complete",
+            "HOME": str(isolated_home),
+        },
         text=True,
         capture_output=True,
         check=False,
@@ -415,8 +423,10 @@ def test_pre_log_check_failure_writes_subcommand_log(
     events = [
         json.loads(line) for line in next(iter(new_logs)).read_text().splitlines()
     ]
-    assert len(events) >= 2
-    assert all(isinstance(event, dict) and event for event in events)
+    assert events[0]["event"] == "command_invoked"
+    assert any(event["event"] == "step_started" for event in events)
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 1
     assert "indexing" in json.dumps(events[0], ensure_ascii=False)
 
 
