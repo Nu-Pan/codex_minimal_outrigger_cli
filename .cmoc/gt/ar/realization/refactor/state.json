@@ -225,7 +225,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "c725d18b649ce36fdca432bb297452492eea1bca900c874e600451769d21d501",
-    "last_investigated_at": "2026-07-29_15-23_37_063120000"
+    "last_investigated_at": "2026-07-30_08-50_53_027572000"
   },
   "oracle/doc/dev_rule/design_rule.md": {
     "investigation_required": false,
@@ -1152,7 +1152,7 @@
     "last_investigated_at": "2026-07-26_08-05_30_096281000"
   },
   "test/test_doctor_cli.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "dd62984139f8111b85633e70b546dead766508e84f2da1e7c1c3df45f07e6d7b",
     "last_investigated_at": "2026-07-29_22-13_35_390431000"

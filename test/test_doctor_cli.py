@@ -29,6 +29,7 @@ from _git_support import make_repo, run_git
 
 import commons.runtime_doctor as doctor_module
 from commons.runtime_errors import CmocError
+from commons.runtime_refactor import RefactorState
 
 
 def _hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
@@ -117,18 +118,22 @@ def test_doctor_preprocess_follows_repair_order(
     original_state = doctor_module.sync_refactor_state
 
     def observe_ignore(path: Path) -> None:
+        """ignore 修復の呼び出し順を記録する。"""
         events.append("ignore")
         original_ignore(path)
 
     def observe_agents(path: Path) -> bool:
+        """agents 修復の呼び出し順を記録する。"""
         events.append("agents")
         return original_agents(path)
 
     def observe_config(path: Path) -> None:
+        """config 修復の呼び出し順を記録する。"""
         events.append("config")
         original_config(path)
 
-    def observe_state(path: Path, *, sync_entries: bool = True):
+    def observe_state(path: Path, *, sync_entries: bool = True) -> RefactorState:
+        """refactor state 修復の呼び出し順を記録する。"""
         events.append("state")
         return original_state(path, sync_entries=sync_entries)
 
