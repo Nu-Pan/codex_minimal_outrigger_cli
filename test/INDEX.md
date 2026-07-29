@@ -419,19 +419,19 @@
 # `test_indexing_common.py`
 
 ## Summary
-- `commons.indexing` の INDEX.md 生成・解析・更新処理を直接検証するテスト。入力検証、ハッシュによる再利用と再生成、空ディレクトリやネストした memo の traversal、symlink・特殊ファイルの除外、安定した描画順、並列更新、logger の伝播、pushd 中の実行、linked worktree 間の lock 共有を扱う。
+- `commons.indexing` の INDEX.md エントリー生成・解析・更新と directory traversal を直接検証するテスト群。入力検証、hash による再利用、空ディレクトリ、symlink・特殊ファイル、memo の扱い、安定した生成順序、並列更新、logger 伝播、linked worktree 間の lock 共有を対象とする。
 
 ## Read this when
-- INDEX.md の entry schema 検証や render/parse/update の挙動を変更・調査するとき
-- ディレクトリ traversal、symlink、特殊ファイル、memo 除外、並列更新、lock の回帰を確認するとき
-- INDEX 更新時の Codex worker と subcommand logger の連携を確認するとき
+- INDEX.md の schema 検証や malformed entry の再生成を変更・調査するとき
+- INDEX 更新の traversal、hash 判定、symlink・特殊ファイル・memo の扱いを変更・調査するとき
+- INDEX の並列生成、cwd lock、subcommand logger、linked worktree 対応を変更・調査するとき
 
 ## Do not read this when
-- CLI lifecycle や indexing サブコマンド全体の統合挙動を確認したいときは、対応するサブコマンド実装・テストを直接読む
-- INDEX entry の正本仕様や生成 prompt の規約を確認したいときは、参照されている oracle 文書・oracle source を読む
+- CLI lifecycle や indexing サブコマンドの統合挙動だけを確認するときは、対応する CLI テストを直接読む
+- INDEX entry の正本 schema や仕様を確認するときは、oracle の indexing 仕様・schema 定義を直接読む
 
 ## hash
-- 02521388eea0b35228ea7766094f0d5cf4725829704b503e335011e53b184550
+- 3919b27c86420b68c097a8dd64c28437ad6db1b7311de2f211c22547246d76cb
 
 # `test_indexing_preflight.py`
 

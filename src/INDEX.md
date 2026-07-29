@@ -49,21 +49,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 機能を集約する commons パッケージ。CLI 実行 lifecycle、Codex exec/TUI、設定・状態・パス、Git、ログ、エラー、結果型、run lifecycle、INDEX 管理など、上位実装が利用する横断的な実行時部品を提供する。
-- commons 配下の個別 runtime モジュールへ進むための入口であり、複数領域にまたがる共通 API や runtime 間の責務分担を確認するときに参照する。
+- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex exec/TUI、設定・状態・パス、Git、ログ、エラー、結果型、INDEX 更新、editing run lifecycle など、複数の上位機能から利用される基盤実装への入口。
 
 ## Read this when
-- cmoc の共通 runtime API や、複数の runtime 領域にまたがる依存関係を確認するとき
-- CLI、Codex、設定、状態、Git、ログ、パス、run lifecycle、INDEX 管理などの共通実行基盤の担当箇所を特定するとき
-- commons パッケージの初期化や共通公開入口を確認してから、個別 runtime 実装へ進むとき
+- 共通 runtime API の公開入口や、複数の runtime 領域にまたがる依存関係を確認するとき
+- Codex 実行、設定・状態管理、Git/worktree、ログ、INDEX 更新、editing run などの基盤挙動を変更・調査するとき
+- 対象の責務が commons 配下のどの runtime モジュールに属するか判断するとき
 
 ## Do not read this when
-- 特定の runtime 機能の実装詳細だけを調査・変更するときは、対応する個別 runtime モジュールを直接読む
-- 利用者向け仕様や正本テンプレートを確認するときは、対応する oracle 文書を直接読む
-- 特定の CLI サブコマンド固有の業務フローだけを調査するときは、そのサブコマンドの実装を直接読む
+- 特定の runtime helper の実装詳細だけを確認したいときは、commons 配下の対応する個別モジュールを直接読む
+- 特定サブコマンドの業務フローや利用者向け仕様だけを調査するときは、該当する上位実装または oracle 文書を直接読む
 
 ## hash
-- 13b1d2f9894f8112ac378fd89ee56e4992290dcdccb839daddfc87533418b039
+- 0fc7676e3f51d03227d1b4076d664eede529f8de950b5aba52c040888ddcb0a1
 
 # `config`
 

@@ -33,21 +33,20 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の検査・生成・更新・commit を一貫して扱う indexing lifecycle の共通実装。対象ディレクトリの列挙、既存 entry の hash による再利用、Codex による不足 entry の生成、Markdown 検証・書き込み、更新差分の commit までを担当する。
+- INDEX.md の検査・生成・更新・commit を担う共通ライフサイクル実装。対象ディレクトリの列挙、既存 entry の再利用判定、不足 entry の Codex 生成、hash 検証、Markdown 化、ファイル書き込み、indexing commit までを一貫して処理する。
 
 ## Read this when
-- INDEX.md の自動生成・鮮度判定・entry 再利用・hash 計算を変更または調査するとき
-- indexing の排他制御、並列生成、Codex 実行コンテキスト、worktree isolation を変更または調査するとき
-- INDEX.md の書き込み、symlink・binary・git ignore・memo 除外、生成結果の schema 検証を変更または調査するとき
-- indexing による Git add・diff・commit の挙動を変更または調査するとき
+- INDEX.md の自動更新、entry の生成・再利用、対象 hash の計算、更新 commit、排他制御を変更または調査するとき。
+- Codex 呼び出し前の indexing preflight、並列 entry 生成、実行コンテキストや worktree の扱いを確認するとき。
+- 不正な INDEX.md、symlink、binary file、git ignore、memo directory の除外挙動を確認するとき。
 
 ## Do not read this when
-- INDEX.md entry の文章仕様だけを確認・変更するときは、関連する oracle の entry 規則や Structured Output schema を直接読む
-- Codex の preflight、runtime path、Git 共通処理などの内部実装だけを調査するときは、対応する runtime モジュールを直接読む
-- indexing 以外の CLI 機能や一般的なファイル操作を調査するときは、この lifecycle 実装を入口にしない
+- INDEX.md entry の文章仕様や Structured Output schema の正本を確認したいときは、対応する oracle source または schema を直接読む。
+- 個別の CLI サブコマンドや indexing 以外の runtime 処理を変更するとき。
+- INDEX.md の利用者向けルーティング内容だけを確認したいとき。
 
 ## hash
-- 3a12bb8da2be10b857727872e4a63a8e7a443059cb0175388a08707a080ca3ab
+- 23b8aa939138c853284982329a1c0e65ee4229daf0a28e06b13c901cf31f4a55
 
 # `prompt_editor_input.py`
 
