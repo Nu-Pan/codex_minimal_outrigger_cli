@@ -48,12 +48,6 @@ def run_doctor_preprocess(
             # linked worktree 実行時も両方の .cmoc/gu を ignore 対象にする。
             repair_roots.append(main_root)
 
-        # config は worktree ごとの設定なので current work-root だけを同期する。
-        # index にはまだ触れず、後続の一時 index で他の doctor 修復と同じ
-        # commit にまとめる。
-        sync_config(root)
-        sync_refactor_state(root, sync_entries=sync_refactor_entries)
-
         repairs: list[tuple[Path, Path, bool, bool]] = []
         original_indexes: list[tuple[Path, Path]] = []
         try:
@@ -74,9 +68,11 @@ def run_doctor_preprocess(
                     )
                 )
 
-            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-            # 初回 doctor が作る .gitignore も realization file 集合へ含め、doctor
-            # 完了時点で refactor entry と実 file を一致させる。
+            # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+            # ignore と .agents の保証後に、config と refactor state を current
+            # work-root だけで同期する。index には直接触れず、後続の一時 index
+            # で他の doctor 修復と同じ commit にまとめる。
+            sync_config(root)
             sync_refactor_state(root, sync_entries=sync_refactor_entries)
         except BaseException:
             for repair_root, original_index_path in original_indexes:
@@ -140,15 +136,13 @@ def _ensure_agents_tracked(root: Path) -> bool:
     # .agents は agent 操作禁止領域なので、tracked file がない場合だけ
     # placeholder を追加して差分が出る余地を小さくする。
     agents = root / ".agents"
+    _validate_agents_paths(root)
     agents.mkdir(exist_ok=True)
     if run_git(["ls-files", "--", ".agents"], root).stdout.strip():
         return False
     gitkeep = agents / ".gitkeep"
-    if (
-        not gitkeep.exists()
-        and not gitkeep.is_symlink()
-        and _head_entry(root, ".agents/.gitkeep")
-    ):
+    _validate_agents_paths(root)
+    if not gitkeep.exists() and _head_entry(root, ".agents/.gitkeep"):
         run_git(
             ["restore", "--source=HEAD", "--worktree", "--", ".agents/.gitkeep"],
             root,
@@ -163,6 +157,35 @@ def _ensure_agents_tracked(root: Path) -> bool:
             str(agents),
         )
     return True
+
+
+def _validate_agents_paths(root: Path) -> None:
+    """.agents の doctor 書き込み対象を通常の directory/file に限定する。"""
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # symlink 経由の mkdir/touch は .agents 外へ書き込むため、修復前に拒否する。
+    agents = root / ".agents"
+    gitkeep = agents / ".gitkeep"
+    if agents.is_symlink() or gitkeep.is_symlink():
+        path = agents if agents.is_symlink() else gitkeep
+        raise CmocError(
+            ".agents は symlink 経由で修復できません。",
+            [
+                ".agents と .agents/.gitkeep を通常の directory/file に戻してから再実行してください。"
+            ],
+            str(path),
+        )
+    if agents.exists() and not agents.is_dir():
+        raise CmocError(
+            ".agents が directory ではありません。",
+            [".agents を通常の directory に戻してから再実行してください。"],
+            str(agents),
+        )
+    if gitkeep.exists() and not gitkeep.is_file():
+        raise CmocError(
+            ".agents/.gitkeep が通常の file ではありません。",
+            [".agents/.gitkeep を通常の file に戻してから再実行してください。"],
+            str(gitkeep),
+        )
 
 
 def _validate_tracked_runtime_files(root: Path) -> None:

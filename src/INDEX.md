@@ -49,44 +49,21 @@
 # `commons`
 
 ## Summary
-- commons パッケージの初期化入口。共通 runtime helper の利用開始時に確認する。
-- cmoc runtime の共通 API を再エクスポートする集約入口。複数 runtime 機能を横断する依存関係を確認する。
-- INDEX.md の列挙、entry 生成、hash 再利用、検証、書き込み、commit を担う indexing lifecycle。
-- エディタまたは TUI からの prompt 入力、編集ファイル管理、コメント除去、エディタ選択、ignore 保証を担う。
-- CLI サブコマンドの work root 検査、doctor 前処理、ログ、step、完了表示、例外処理を共通化する。
-- Codex exec と TUI の公開実行 API を提供する。具体的な挙動は下位実装へ委譲する。
-- Codex exec の subprocess 実行、出力・ログ保存、Structured Output 検証、retry、quota、resume を担う中核実装。
-- Codex CLI 呼び出しの console 通知と起動失敗エラーの整形を担う。
-- Codex 起動前の INDEX 更新 preflight の登録、再入抑止、直列実行、root 算出を担う。
-- Codex CLI subprocess 境界。環境、argv、CODEX_HOME、schema、process tracking、安全な停止、出力・失敗判定を扱う。
-- Codex TUI の起動、実行環境、ログ、イベント、戻り値、例外処理を担う。
-- 設定値と JSON 永続化形式の変換・検証、既定値、設定ファイルの安全な読み書きを担う。
-- ファイル・文字列の SHA-256、hash 付き一時ファイル保存、バイナリ判定を提供する。
-- doctor preprocess の修復、Git index の保全・復元、ignore と runtime ファイルの同期、修復 commit を担う。
-- CmocError と共通 Markdown エラーレポートの生成、復旧案・詳細・stack の整形を担う。
-- Git 実行、branch・commit・status、linked worktree、ignore、oracle/realization path 分類を担う共通境界。
-- サブコマンドの JSON Lines ログ、step timing、quota 待機時間、現在の logger 管理を担う。
-- repository・worktree・cmoc root、各種保存先、timestamp、duration、cwd 切替を提供する path utility。
-- oracle・realization の調査対象列挙、refactor state の検証・保存・同期・選択を担う。
-- Codex exec、外部コマンド、そのログ・生成物・設定パスを表す共通結果型を定義する。
-- editing run の worktree 解決、process identity、Codex 子プロセス追跡・停止、tracking cleanup を担う。
-- editing run の開始、状態遷移、commit、差分分類、INDEX 更新、cleanup 判定を担う lifecycle 実装。
-- fork および lifecycle の Markdown report を生成・保存し、Front Matter、完了情報、変更パス、警告を整形する。
-- session/run state の schema、branch 解決、JSON 読み書き、symlink 防止、fork lock を担う永続状態管理。
+- cmoc の共通 runtime 機能を集約する commons パッケージ。CLI 実行 lifecycle、Codex exec/TUI、設定・状態・パス、Git、ログ、エラー、結果型、run lifecycle、INDEX 管理など、上位実装が利用する横断的な実行時部品を提供する。
+- commons 配下の個別 runtime モジュールへ進むための入口であり、複数領域にまたがる共通 API や runtime 間の責務分担を確認するときに参照する。
 
 ## Read this when
-- commons の共通 runtime API やパッケージ入口を確認するとき。
-- INDEX 更新の生成・hash・検証・commit、prompt editor、CLI 共通 lifecycle を変更するとき。
-- Codex exec/TUI の起動、出力検証、retry、quota、process tracking、ログを調査するとき。
-- 設定、Git/worktree、path、state、refactor state、run lifecycle/report など単一責務の runtime 挙動を変更するとき。
+- cmoc の共通 runtime API や、複数の runtime 領域にまたがる依存関係を確認するとき
+- CLI、Codex、設定、状態、Git、ログ、パス、run lifecycle、INDEX 管理などの共通実行基盤の担当箇所を特定するとき
+- commons パッケージの初期化や共通公開入口を確認してから、個別 runtime 実装へ進むとき
 
 ## Do not read this when
-- 対象機能の正本仕様や利用者向け契約だけを確認する場合は、対応する oracle 文書を直接読む。
-- 特定の runtime 機能だけを調査する場合は、集約入口ではなく対応する専用モジュールを直接読む。
-- commons 外の CLI サブコマンド固有処理を調査する場合は、該当する上位実装を読む。
+- 特定の runtime 機能の実装詳細だけを調査・変更するときは、対応する個別 runtime モジュールを直接読む
+- 利用者向け仕様や正本テンプレートを確認するときは、対応する oracle 文書を直接読む
+- 特定の CLI サブコマンド固有の業務フローだけを調査するときは、そのサブコマンドの実装を直接読む
 
 ## hash
-- d56c9a873638cb2b89ce333e6c8c225a2ae508128788d3acb17d89dc63fb75e8
+- 13b1d2f9894f8112ac378fd89ee56e4992290dcdccb839daddfc87533418b039
 
 # `config`
 

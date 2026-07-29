@@ -28,6 +28,7 @@ from _cli_support import run_doctor
 from _git_support import make_repo, run_git
 
 import commons.runtime_doctor as doctor_module
+from commons.runtime_errors import CmocError
 
 
 def _hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
@@ -101,6 +102,44 @@ def test_doctor_preprocess_repairs_git_state(
         }
         for entry in state.values()
     )
+
+
+def test_doctor_preprocess_follows_repair_order(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """doctor が oracle の ignore、agents、config、state 順に修復する。"""
+    root = make_repo(tmp_path)
+    events: list[str] = []
+    original_ignore = doctor_module.ensure_cmoc_ignored
+    original_agents = doctor_module._ensure_agents_tracked
+    original_config = doctor_module.sync_config
+    original_state = doctor_module.sync_refactor_state
+
+    def observe_ignore(path: Path) -> None:
+        events.append("ignore")
+        original_ignore(path)
+
+    def observe_agents(path: Path) -> bool:
+        events.append("agents")
+        return original_agents(path)
+
+    def observe_config(path: Path) -> None:
+        events.append("config")
+        original_config(path)
+
+    def observe_state(path: Path, *, sync_entries: bool = True):
+        events.append("state")
+        return original_state(path, sync_entries=sync_entries)
+
+    monkeypatch.setattr(doctor_module, "ensure_cmoc_ignored", observe_ignore)
+    monkeypatch.setattr(doctor_module, "_ensure_agents_tracked", observe_agents)
+    monkeypatch.setattr(doctor_module, "sync_config", observe_config)
+    monkeypatch.setattr(doctor_module, "sync_refactor_state", observe_state)
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert events == ["ignore", "agents", "config", "state"]
 
 
 def test_doctor_preprocess_waits_for_common_repository_lock(
@@ -452,6 +491,32 @@ def test_doctor_preserves_existing_untracked_gitkeep_content(
     assert run_git(root, "show", "HEAD:.agents/.gitkeep").stdout == "human content\n"
     assert gitkeep.read_text() == "human content\n"
     assert run_git(root, "status", "--short").stdout == ""
+
+
+@pytest.mark.parametrize("symlinked_path", ["agents", "gitkeep"])
+def test_doctor_rejects_symlinked_agents_paths(
+    tmp_path: Path,
+    symlinked_path: str,
+) -> None:
+    """doctor が .agents 外への symlink 経由書き込みを拒否する。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside"
+    if symlinked_path == "agents":
+        outside.mkdir()
+        (root / ".agents").symlink_to(outside, target_is_directory=True)
+        outside_content = None
+    else:
+        outside.write_text("outside\n")
+        (root / ".agents").mkdir()
+        (root / ".agents" / ".gitkeep").symlink_to(outside)
+        outside_content = outside.read_text()
+
+    with pytest.raises(CmocError):
+        doctor_module.run_doctor_preprocess(root)
+
+    assert not (outside / ".gitkeep").exists()
+    if outside_content is not None:
+        assert outside.read_text() == outside_content
 
 
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
