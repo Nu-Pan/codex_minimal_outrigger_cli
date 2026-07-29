@@ -7,12 +7,12 @@
 import json
 from pathlib import Path
 
-from commons.runtime_paths import (
+from .runtime_paths import (
     _reserve_timestamped_path,
     reports_dir,
     timestamp,
 )
-from commons.runtime_run_lifecycle import EditingRunContext
+from .runtime_run_lifecycle import EditingRunContext
 
 
 def write_fork_report(

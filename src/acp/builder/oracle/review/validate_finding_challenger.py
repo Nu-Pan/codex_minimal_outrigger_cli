@@ -13,7 +13,7 @@ from oracle.acp_builder.oracle.review.validate_finding_challenger import (
     build_oracle_review_validate_finding_challenger_parameter as _build_parameter,
 )
 
-from acp.builder.common.prompt_fence import (
+from ...common.prompt_fence import (
     _protect_review_sections,
 )
 

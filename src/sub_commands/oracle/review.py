@@ -27,25 +27,26 @@ from commons.runtime_git import status_path_statuses
 from commons.runtime_results import CodexExecCallable
 from commons.runtime_run import run_lifecycle_lock
 from commons.runtime_run_lifecycle import new_run_target
-from sub_commands.oracle.review_index import (
+
+from .review_index import (
     commit_review_index_changes,
     merge_review_branch,
     resolve_review_index_conflicts,
     review_branch_has_index_changes,
     review_worktree_status_paths,
 )
-from sub_commands.oracle.review_loop import (
+from .review_loop import (
     OracleReviewInterrupted,
     apply_finding_merge_operations,
     run_oracle_review_loop,
 )
-from sub_commands.oracle.review_report import (
+from .review_report import (
     path_display,
     render_finding_section,
     render_oracle_review_report,
     write_oracle_review_report,
 )
-from sub_commands.oracle.review_targets import (
+from .review_targets import (
     enumerate_oracle_review_targets,
     enumerate_review_all_oracle_files,
 )

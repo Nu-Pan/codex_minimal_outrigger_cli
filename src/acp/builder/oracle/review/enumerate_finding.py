@@ -14,9 +14,10 @@ from oracle.acp_builder.oracle.review.enumerate_finding import (
     build_oracle_review_enumerate_finding_parameter as _build_enumerate_parameter,
 )
 
-from acp.builder.common.prompt_fence import _protect_code_block_fence
 from basic.acp import AgentCallParameter as _AgentCallParameter
 from basic.path_model import resolve_real_path as _resolve_real_path
+
+from ...common.prompt_fence import _protect_code_block_fence
 
 
 def build_oracle_review_enumerate_finding_parameter(

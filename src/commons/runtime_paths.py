@@ -8,7 +8,8 @@ from datetime import datetime
 from pathlib import Path
 
 from basic.path_model import RootPathPlaceHolder, resolve_real_path
-from commons.runtime_errors import CmocError
+
+from .runtime_errors import CmocError
 
 _CWD_LOCK = threading.RLock()
 _CWD_OVERRIDE_DEPTH: ContextVar[int] = ContextVar("CWD_OVERRIDE_DEPTH", default=0)

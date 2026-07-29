@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import NamedTuple
 
-from commons.runtime_codex_profile import (
+from .runtime_codex_profile import (
     RUN_PROCESS_TRACKING_ENV,
     open_process_fd,
     process_group_has_running_member,
@@ -17,9 +17,9 @@ from commons.runtime_codex_profile import (
     stop_process_group,
     wait_process_fd_exit,
 )
-from commons.runtime_errors import CmocError
-from commons.runtime_git import expected_run_worktree, run_git
-from commons.runtime_paths import generated_agent_read_dir
+from .runtime_errors import CmocError
+from .runtime_git import expected_run_worktree, run_git
+from .runtime_paths import generated_agent_read_dir
 
 
 class ProcessIdentity(NamedTuple):

@@ -43,8 +43,8 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
 def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> bool:
     """base commit 以降の review branch 差分が INDEX.md だけか確認する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
-    # rename detection can hide a non-INDEX source path from --name-only output, so
-    # every changed tree path must be checked independently.
+    # rename 検出で --name-only の出力から INDEX.md 以外の元 path が隠れるため、
+    # 変更された tree path を一つずつ独立して検査する。
     changed_paths = _git_name_only_paths(
         review_worktree,
         ["diff", "--no-renames", "--name-only", f"{base_commit}..HEAD"],

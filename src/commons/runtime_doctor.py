@@ -18,16 +18,16 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from commons.runtime_config import sync_config
-from commons.runtime_errors import CmocError
-from commons.runtime_git import (
+from .runtime_config import sync_config
+from .runtime_errors import CmocError
+from .runtime_git import (
     ensure_cmoc_ignored,
     git_common_dir,
     run_git,
     with_cmoc_ignore_pattern,
 )
-from commons.runtime_paths import config_path, refactor_state_path, repo_root
-from commons.runtime_refactor import sync_refactor_state
+from .runtime_paths import config_path, refactor_state_path, repo_root
+from .runtime_refactor import sync_refactor_state
 
 
 def run_doctor_preprocess(

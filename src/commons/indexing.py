@@ -31,11 +31,12 @@ from cmoc_runtime import (
     run_git,
     text_sha256,
 )
-from commons.runtime_codex_preflight import configure_indexing_preflight
-from commons.runtime_codex_profile import run_process_tracking_active
-from commons.runtime_git import git_common_dir, literal_pathspec
-from commons.runtime_paths import cwd_override_active
-from commons.runtime_results import CodexExecCallable
+
+from .runtime_codex_preflight import configure_indexing_preflight
+from .runtime_codex_profile import run_process_tracking_active
+from .runtime_git import git_common_dir, literal_pathspec
+from .runtime_paths import cwd_override_active
+from .runtime_results import CodexExecCallable
 
 CodexExec = CodexExecCallable
 # {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json

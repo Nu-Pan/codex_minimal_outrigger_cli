@@ -6,9 +6,9 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from commons.runtime_errors import CmocError
-from commons.runtime_git import git_common_dir
-from commons.runtime_paths import sessions_dir
+from .runtime_errors import CmocError
+from .runtime_git import git_common_dir
+from .runtime_paths import sessions_dir
 
 SESSION_STATES = {"active", "joined", "abandoned", "error"}
 RUN_STATES = {"ready", "running", "joinable", "error"}

@@ -17,16 +17,16 @@
 # `fork`
 
 ## Summary
-- `cmoc realization apply fork` 用の builder adapter を収める初期化モジュール群。fork 適用処理の builder 接続点と、launch_exec builder の prompt 生成・raw oracle git diff 埋め込みを確認する入口。
+- `cmoc realization apply fork` 用の builder adapter 群。初期化モジュールと、oracle builder の呼び出しおよび生成 prompt 内の raw oracle git diff のコードフェンス保護を担う launch_exec adapter を含む。fork 適用処理における builder 接続点の入口。
 
 ## Read this when
-- `cmoc realization apply fork` の builder adapter の責務や配置を確認するとき。
-- realization apply fork の launch_exec builder の挙動、prompt 生成、または raw oracle git diff の埋め込みを変更・調査するとき。
+- `cmoc realization apply fork` の builder adapter の配置・責務を確認するとき。
+- apply fork の launch_exec builder の引数、oracle builder との adapter 境界、prompt 内の diff フェンス保護を確認・変更するとき。
 
 ## Do not read this when
 - fork 適用処理そのものの実装詳細を調査するとき。
-- `cmoc realization apply fork` 以外の builder adapter を調査するとき。
-- 正本 builder 自体の仕様や実装を確認するとき。対応する oracle file を直接読む。
+- apply fork 以外の builder adapter を調査するとき。
+- prompt fence 保護の共通処理や正本 builder の仕様を確認するとき。
 
 ## hash
-- 1bb3a9b7c555d706b37165e3009620a3b3c866dc1d6b0a822117135a18780d61
+- c1980cf470953f39a0f3c00338b0b2754e1ba593c163cd793f8c5627b323c844

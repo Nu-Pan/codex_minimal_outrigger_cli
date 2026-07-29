@@ -1,19 +1,19 @@
 # `acp`
 
 ## Summary
-- ACP builder 関連の realization 実装をまとめた入口。互換公開、builder adapter、indexing、session、TUI などの下位領域へ進むための案内を提供する。
+- ACP互換の公開入口を扱い、既存の`acp.*`参照を`oracle.*`または実体モジュールへ移行する際の入口となる。
+- ACP builder realizationのパッケージ。oracle実装への互換入口、builder共通処理、oracle・realization・session・TUI・indexing向けadapter、quota probeのfallbackをまとめ、各下位要素への入口を提供する。
 
 ## Read this when
-- ACP builder の実装領域や下位モジュールの入口を確認するとき。
-- 互換 import、builder adapter、prompt の code fence 保護、session・TUI・indexing 向け builder を調査するとき。
+- `acp`という公開名の存廃や、既存参照をoracle側の実体へ切り替える導線を確認したいとき。
+- ACP builder realizationの構成、互換import、oracle実装への委譲、builder共通処理、各builder adapterの入口を確認したいとき。
 
 ## Do not read this when
-- canonical な oracle 仕様や実装を確認するときは、対応する oracle 側を直接読む。
-- builder 以外の CLI、TUI、apply、refactor などの処理本体を調査するとき。
-- review builder の具体的な finding 処理を変更するとき。
+- `acp`配下の具体的な実装内容や移行先の詳細だけを確認したいときは、該当する実体モジュールを直接読む。
+- canonicalなoracle builderの仕様・実装、またはTUI・CLI・sessionなど利用側の挙動を確認したいときは、それぞれの対象を直接読む。
 
 ## hash
-- 674476fe6219ebcaa2ba07598f84807d45cb198669bd477faa0a858e9cc96fab
+- 37a5cdccd2d3f31d506aaed6cc61ba09b39548bbdba0780b9ea25a7280fc4b09
 
 # `basic`
 
@@ -49,20 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI の設定、Git、Codex 実行、プロセス管理、パス、状態、ログ、結果型、INDEX 更新などの横断的な実行時機能を扱う。個別 runtime module や公開 API の入口を確認するためのディレクトリ。
+- cmoc の共通 runtime helper を提供する commons パッケージ。CLI 実行、Codex exec/TUI、設定・状態・パス、Git、ログ、エラー、結果型、INDEX lifecycle、prompt editor などの横断的な実行時機能を扱う。各機能の公開入口と責務別 runtime module への起点。
 
 ## Read this when
-- 複数の CLI 機能にまたがる runtime helper の責務や公開入口を確認するとき
-- 設定、Git、Codex 実行、プロセス、パス、状態、ログ、結果、INDEX 更新の共通処理を調査・変更するとき
-- commons 配下で対象となる個別 module を特定するとき
+- commons 配下の共通 runtime API や複数機能にまたがる実行時処理を調査・変更するとき
+- Codex 実行、設定・状態管理、Git/worktree、ログ、エラー、INDEX 更新、prompt editor のいずれかの共通 runtime 実装を確認するとき
+- 特定の runtime 機能を担当する下位 module の所在や公開入口を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の実装詳細だけを確認したいときは、対応する個別 module を直接読む
-- CLI サブコマンド固有の業務ロジックやテストだけを調査するとき
-- runtime helper の正本仕様や文章上の要件だけを確認したいときは、対応する oracle 文書を直接読む
+- 特定サブコマンド固有の業務フローや利用者向け仕様だけを確認するとき
+- 単一の runtime 機能の詳細が明確で、対応する個別 module を直接読めるとき
+- oracle の仕様断片や Structured Output schema 自体を確認するとき
 
 ## hash
-- 09427141b54922c4568df1bbff8b4fc4dbc889d6dcb4bdae8b766f1aaa3bd375
+- 5c23b89a4d39df286a4dcc25a9f496f6199c171f47f52e26a698d8f8fd63873e
 
 # `config`
 
@@ -114,15 +114,13 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、review、run、session、tui などの CLI 実行入口や、配下の個別実装へ進むためのルーティング起点。apply は現時点で実装なし。
+- サブコマンド実装をまとめるディレクトリ。apply、doctor、indexing、oracle、realization、review、run、session、tui の各 CLI 入口または実装パッケージへの入口を提供する。
 
 ## Read this when
-- サブコマンドの実装構成や、対象サブコマンドの CLI 実行入口を確認・変更するとき。
-- doctor、indexing、oracle、realization、review、run、session、tui の実装配置や下位要素への入口を探すとき。
+- サブコマンド実装の構成や、対象サブコマンドの実行フロー・ライフサイクル処理・TUI 起動処理の所在を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理だけを調査する場合は、対応する個別実装ファイルや下位ディレクトリを直接読む。
-- CLI runtime、共通 indexing 処理、oracle の正本仕様、TUI builder など共通・参照先の詳細だけを確認したいとき。
+- 特定サブコマンドの詳細処理、共通ランタイム、oracle 文書・実装、index 更新の具体的処理だけを調査する場合は、対応する下位実装や参照先を直接読む。
 
 ## hash
-- 4c02a44c277629b9c7854649a33540e8aa8a6753ea8aebcbe64e3eadec019d67
+- 043f8e96e1f1dd241b4ae90b25c8ff481ec467f97f3ceecb2f3e7791f5f10f91

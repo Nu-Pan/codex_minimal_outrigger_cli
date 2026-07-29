@@ -17,14 +17,15 @@
 # `index_entry.py`
 
 ## Summary
-- oracle の index entry builder を互換入口として再公開する薄いラッパー。既存の `acp.builder.indexing.index_entry` 参照を維持しつつ、生成された prompt 内の対象本文に含まれるコードフェンスを保護する。
+- oracle 側の INDEX.md エントリー生成 parameter を再利用し、対象本文に含まれるコードフェンスを保護した互換入口。既存の `acp.builder.indexing.index_entry` 参照を維持するための薄いラッパーで、利用者向け公開面と realization 側から参照がなくなるまで残す。
 
 ## Read this when
-- index entry 生成処理の互換入口、正本 builder の再公開、または prompt 内のコードフェンス保護を変更・調査するとき。
+- INDEX.md エントリー生成処理の互換入口や参照維持の挙動を変更・確認するとき。
+- 対象本文のコードフェンス保護や、oracle builder parameter の再公開処理を調査するとき。
 
 ## Do not read this when
-- 正本の index entry 生成仕様や parameter の構築内容だけを確認したいときは、`oracle/src/oracle/acp_builder/indexing/index_entry.py` を直接読む。
-- index entry 生成と無関係な ACP builder や一般的な prompt 処理を調査するとき。
+- INDEX.md エントリー生成の正本仕様や本体 builder の実装を確認したいときは、oracle 側の対応ファイルを直接読む。
+- INDEX.md のルーティング内容だけを確認する場合や、indexing 以外の ACP builder を扱う場合。
 
 ## hash
-- 2de53539645cd4f05b94c0af07ff0045748980aa4cb0161298952342c1f46539
+- 1fa7430b1e8ef3c930f0126fd6f48b9ed9571a5fa725bdf6a1dbaf45254540f9

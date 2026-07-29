@@ -13,9 +13,9 @@ import subprocess
 from pathlib import Path
 from typing import Callable
 
-from commons.runtime_errors import CmocError
-from commons.runtime_paths import worktrees_dir
-from commons.runtime_results import CommandResult
+from .runtime_errors import CmocError
+from .runtime_paths import worktrees_dir
+from .runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/run/")
 CMOC_IGNORE_PATTERN = "/.cmoc/gu/"

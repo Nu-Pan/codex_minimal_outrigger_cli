@@ -10,13 +10,14 @@ from oracle.other.cmoc_config import (
 )
 
 from basic.acp import ModelClass, ReasoningEffort
-from commons.runtime_errors import CmocError
-from commons.runtime_paths import config_path
 from config.cmoc_config import (
     CmocConfig,
     CmocConfigCodex,
     CmocConfigOracleReview,
 )
+
+from .runtime_errors import CmocError
+from .runtime_paths import config_path
 
 ConfigKey = TypeVar("ConfigKey", ModelClass, ReasoningEffort)
 

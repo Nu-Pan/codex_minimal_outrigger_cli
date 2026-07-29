@@ -15,32 +15,37 @@
 # `apply`
 
 ## Summary
-- realization apply 用の builder adapter を提供するモジュール群。apply の共通入口と、fork 適用時の builder 接続・launch_exec の prompt 生成および raw oracle git diff 埋め込みを扱う。
+- `__init__.py` は realization apply 用の builder adapter を提供し、apply 処理の builder 実装へ進む入口となる。
+- `fork` は `cmoc realization apply fork` 用の builder adapter 群を収め、初期化と launch_exec adapter による oracle builder 呼び出しおよび prompt 内 raw oracle git diff のコードフェンス保護を担う。fork 適用処理における builder 接続点の入口である。
 
 ## Read this when
-- realization apply の builder adapter の責務や配置を確認するとき
-- `cmoc realization apply fork` の builder adapter、launch_exec builder の挙動、prompt 生成、または raw oracle git diff 埋め込みを調査・変更するとき
+- realization apply の builder adapter の責務や実装を確認するとき
+- apply 処理の builder 実装を辿るとき
+- `cmoc realization apply fork` の builder adapter の配置・責務を確認するとき
+- apply fork の launch_exec builder の引数、oracle builder との adapter 境界、prompt 内 diff フェンス保護を確認・変更するとき
 
 ## Do not read this when
-- apply 処理そのものの実装詳細を調査するとき
-- realization apply fork 以外の builder adapter を調査するとき
-- 正本 builder の仕様や実装を確認するとき（対応する oracle file を直接読む）
+- apply 処理以外の builder 実装を確認するとき
+- builder adapter の詳細実装を直接確認する場合
+- fork 適用処理そのものの実装詳細を調査するとき
+- apply fork 以外の builder adapter を調査するとき
+- prompt fence 保護の共通処理や正本 builder の仕様を確認するとき
 
 ## hash
-- 18b45cb27d4e2b32d14c8e0ed99ac43b897c37b88ad434dd7216e412e09a341e
+- 57a0537b9501de7783fe84e97545b76d19c05684a168f04670a729aee468461c
 
 # `refactor`
 
 ## Summary
-- realization refactor の builder adapter パッケージ。refactor 処理における builder 関連実装への入口で、fork 用 adapter を下位要素として含む。
+- realization refactor の builder adapter パッケージ。refactor 処理に関する builder 実装へ進む入口で、fork 配下に専用の接続・再公開実装がある。
 
 ## Read this when
 - realization refactor の builder adapter の責務や実装入口を確認するとき。
-- realization refactor fork の builder adapter、change summary 用 parameter 生成、または file review and fix parameter builder の接続を確認するとき。
+- fork 側の change summary や file review and fix に関する builder 接続を調査するとき。
 
 ## Do not read this when
 - builder adapter 以外の refactor 処理を確認するとき。
-- 正本 builder 仕様、change summary JSON 定義、file review and fix の parameter 定義、または prompt fence 保護の共通実装を確認するとき。
+- fork 以外の builder 実装を調査するとき。
 
 ## hash
-- db19447baaeb6057a30ad381abb56478455cefdf2accdd949ba3c6b0bd47cf2c
+- 418124a68c32e7db4e47360041c5ab69b5e533b7e174b395951a6ff3f999cdbe

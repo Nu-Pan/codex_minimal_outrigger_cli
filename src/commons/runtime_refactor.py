@@ -5,14 +5,14 @@ from collections.abc import Collection
 from pathlib import Path
 from typing import Literal, TypedDict, cast
 
-from commons.runtime_content import file_sha256
-from commons.runtime_errors import CmocError
-from commons.runtime_git import (
+from .runtime_content import file_sha256
+from .runtime_errors import CmocError
+from .runtime_git import (
     is_oracle_file_path,
     is_realization_file_path,
     run_git,
 )
-from commons.runtime_paths import refactor_state_path
+from .runtime_paths import refactor_state_path
 
 InvestigationResult = Literal["not_investigated", "no_findings", "findings"]
 

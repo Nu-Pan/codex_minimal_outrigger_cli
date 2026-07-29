@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
 
-from commons.runtime_errors import CmocError
-from commons.runtime_paths import console_timestamp, format_duration
+from .runtime_errors import CmocError
+from .runtime_paths import console_timestamp, format_duration
 
 
 def emit_codex_call_console(

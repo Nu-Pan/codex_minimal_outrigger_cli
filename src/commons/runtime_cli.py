@@ -5,15 +5,15 @@ from typing import Any
 
 import typer
 
-from commons.runtime_doctor import run_doctor_preprocess
-from commons.runtime_errors import CmocError, render_error
-from commons.runtime_logging import (
+from .runtime_doctor import run_doctor_preprocess
+from .runtime_errors import CmocError, render_error
+from .runtime_logging import (
     SubcommandLogger,
     current_subcommand_logger,
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
-from commons.runtime_paths import (
+from .runtime_paths import (
     console_timestamp,
     format_duration,
     repo_root,

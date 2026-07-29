@@ -17,18 +17,17 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization package。oracle、realization、互換入口、共通処理、indexing、session、TUI などの builder 関連実装へ進むための入口を提供する。
-- 配下には、ACP builder の初期化・互換公開、Markdown code fence 補正、index entry builder、quota probe、oracle/realization 向け adapter、session・TUI 向け builder、および review builder の実行時キャッシュが含まれる。
+- ACP builder realization のパッケージ。oracle 実装への互換入口、builder 共通処理、oracle・realization・session・TUI・indexing 向け adapter をまとめ、quota probe の fallback も提供する。各サブディレクトリは対応する builder adapter や共通処理を調査するための下位入口である。
 
 ## Read this when
-- ACP builder 関連の realization 実装の責務や配下モジュールの入口を確認するとき。
-- builder adapter、互換 import 経路、prompt の code fence 保護、session・TUI・indexing 向け builder を調査・変更するとき。
-- 目的の処理が配下の oracle、realization、indexing、session、tui などのどの領域に属するかを判断するとき。
+- ACP builder realization の構成や、互換入口から各 builder adapter へ進む経路を確認するとき。
+- 既存の acp.builder import 互換性、oracle 実装への委譲、builder 共通の Markdown code fence 保護を調査するとき。
+- cmoc oracle・realization・session・TUI・indexing builder、または quota probe の adapter の入口を探すとき。
 
 ## Do not read this when
-- ACP builder の canonical な正本仕様・実装そのものを調査するときは、対応する oracle 側の対象を直接読む。
-- TUI、CLI、apply、refactor など builder 以外の処理本体を調査するときは、それぞれの実装入口を直接読む。
-- review builder の具体的な finding 処理や実装を変更するときは、生成キャッシュではなく対応する実装・テストを直接読む。
+- canonical な oracle builder の仕様や実装そのものを確認・変更するときは、oracle 側の対象を直接読む。
+- TUI、CLI、session など利用側の挙動や公開面を調査するときは、各利用側の実装・参照元を直接読む。
+- 特定の adapter の実装詳細を確認するときは、このディレクトリ全体ではなく該当する下位要素を直接読む。
 
 ## hash
-- 903f318d7cf1338b3fc282aa99f871603ab699d461e32e87d1a54ecd5631ccf3
+- 67ed1cfe49653c5efe8729fdab97581587611d7b1321a6815c0fd8b81cff5be4

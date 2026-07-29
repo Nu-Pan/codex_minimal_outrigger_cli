@@ -5,7 +5,8 @@ from pathlib import Path
 
 from cmoc_runtime import SessionState, reports_dir, timestamp
 from commons.runtime_paths import _reserve_timestamped_path
-from sub_commands.oracle.review_paths import finding_oracle_path, oracle_path_key
+
+from .review_paths import finding_oracle_path, oracle_path_key
 
 _PLAIN_YAML_SCALAR = re.compile(r"(?:[A-Za-z0-9_][A-Za-z0-9_./-]*|/[A-Za-z0-9_./-]+)\Z")
 _YAML_STRING_LITERALS = {"null", "true", "false", "yes", "no", "on", "off", "~"}

@@ -4,11 +4,13 @@ import time
 from pathlib import Path
 
 from basic.acp import AgentCallParameter
-from commons.runtime_codex_logging import (
+from config.cmoc_config import CmocConfig
+
+from .runtime_codex_logging import (
     emit_codex_call_console,
     format_codex_call_error,
 )
-from commons.runtime_codex_profile import (
+from .runtime_codex_profile import (
     codex_subprocess_env,
     parameter_codex_cwd,
     prepare_codex_override_args,
@@ -16,18 +18,17 @@ from commons.runtime_codex_profile import (
     run_codex_subprocess,
     validate_codex_home,
 )
-from commons.runtime_config import load_config
-from commons.runtime_errors import CmocError
-from commons.runtime_logging import current_subcommand_logger
-from commons.runtime_paths import (
+from .runtime_config import load_config
+from .runtime_errors import CmocError
+from .runtime_logging import current_subcommand_logger
+from .runtime_paths import (
     _reserve_timestamped_path,
     codex_log_dir,
     repo_root,
     timestamp,
     work_root,
 )
-from commons.runtime_results import CommandResult
-from config.cmoc_config import CmocConfig
+from .runtime_results import CommandResult
 
 
 def run_codex_tui(

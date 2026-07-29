@@ -16,11 +16,11 @@ from collections.abc import Collection
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from commons.indexing import commit_index_updates, indexing_lock, update_indexes
-from commons.runtime_codex import run_codex_exec as run_indexing_codex_exec
-from commons.runtime_codex_profile import process_start_time
-from commons.runtime_errors import CmocError
-from commons.runtime_git import (
+from .indexing import commit_index_updates, indexing_lock, update_indexes
+from .runtime_codex import run_codex_exec as run_indexing_codex_exec
+from .runtime_codex_profile import process_start_time
+from .runtime_errors import CmocError
+from .runtime_git import (
     branch_exists,
     create_run_worktree,
     current_branch,
@@ -33,7 +33,7 @@ from commons.runtime_git import (
     run_git,
     status_path_statuses,
 )
-from commons.runtime_paths import (
+from .runtime_paths import (
     is_root_memo,
     pushd,
     refactor_state_path,
@@ -41,7 +41,7 @@ from commons.runtime_paths import (
     timestamp,
     work_root,
 )
-from commons.runtime_run import (
+from .runtime_run import (
     delete_run_process_id,
     expected_run_worktree,
     read_run_process_id,
@@ -50,7 +50,7 @@ from commons.runtime_run import (
     worktree_for_branch_optional,
     write_run_process_id,
 )
-from commons.runtime_state import (
+from .runtime_state import (
     RunPart,
     SessionState,
     load_state_for_branch,

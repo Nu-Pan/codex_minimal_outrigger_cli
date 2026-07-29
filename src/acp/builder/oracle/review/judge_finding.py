@@ -13,7 +13,7 @@ from oracle.acp_builder.oracle.review.judge_finding import (
     build_oracle_review_judge_finding_parameter as _build_parameter,
 )
 
-from acp.builder.common.prompt_fence import (
+from ...common.prompt_fence import (
     _protect_review_sections,
 )
 
