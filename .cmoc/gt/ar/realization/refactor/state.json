@@ -552,10 +552,10 @@
     "last_investigated_at": "2026-07-29_17-17_58_428094000"
   },
   "src/acp/builder/oracle/review/judge_finding.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "908f319b7b5984945ebed453677adbbfa0e30322ce9fab81ac17f2c3eb8f5893",
-    "last_investigated_at": "2026-07-28_05-46_56_033365000"
+    "last_investigated_sha256": "72e2700ef3f0572acede306cd6aa250cc47eb95a7b8536ec631dda68ae9321a1",
+    "last_investigated_at": "2026-07-29_20-06_30_976744000"
   },
   "src/acp/builder/oracle/review/merge_finding.py": {
     "investigation_required": false,
