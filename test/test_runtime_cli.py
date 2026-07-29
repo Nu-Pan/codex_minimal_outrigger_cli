@@ -22,6 +22,7 @@
 """
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -505,6 +506,47 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
     assert ignored.returncode == 0
 
 
+@pytest.mark.parametrize(
+    "path_kind",
+    [
+        "directory",
+        pytest.param(
+            "fifo",
+            marks=pytest.mark.skipif(
+                not hasattr(os, "mkfifo"), reason="named pipes are unavailable"
+            ),
+        ),
+    ],
+)
+def test_ensure_cmoc_ignored_rejects_non_file_gitignore(
+    tmp_path: Path, path_kind: str
+) -> None:
+    """.gitignore が特殊 file でも read_text で停止せずエラーにする。"""
+    root = make_repo(tmp_path)
+    gitignore = root / ".gitignore"
+    if path_kind == "directory":
+        gitignore.mkdir()
+    else:
+        os.mkfifo(gitignore)
+
+    with pytest.raises(CmocError, match="通常の file"):
+        ensure_cmoc_ignored(root)
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
+def test_ensure_cmoc_ignored_rejects_non_file_info_exclude(tmp_path: Path) -> None:
+    """.gitignore 更新時の共通 ignore 判定も特殊 file で停止しない。"""
+    root = make_repo(tmp_path)
+    exclude_path = root / Path(
+        run_git(root, "rev-parse", "--git-path", "info/exclude").stdout.strip()
+    )
+    exclude_path.parent.mkdir(parents=True, exist_ok=True)
+    os.mkfifo(exclude_path)
+
+    with pytest.raises(CmocError, match="通常の file"):
+        ensure_cmoc_ignored(root)
+
+
 def test_ensure_cmoc_ignored_rejects_symlinked_gitignore(tmp_path: Path) -> None:
     """.gitignore の symlink 先を cmoc が書き換えないことを検証する。"""
     root = make_repo(tmp_path)
@@ -516,6 +558,36 @@ def test_ensure_cmoc_ignored_rejects_symlinked_gitignore(tmp_path: Path) -> None
         ensure_cmoc_ignored(root)
 
     assert external.read_text() == "existing\n"
+
+
+@pytest.mark.parametrize(
+    "path_kind",
+    [
+        "directory",
+        pytest.param(
+            "fifo",
+            marks=pytest.mark.skipif(
+                not hasattr(os, "mkfifo"), reason="named pipes are unavailable"
+            ),
+        ),
+    ],
+)
+def test_ensure_cmoc_ignored_in_exclude_rejects_non_file(
+    tmp_path: Path, path_kind: str
+) -> None:
+    """Git info/exclude が特殊 file でも read_text で停止せずエラーにする。"""
+    root = make_repo(tmp_path)
+    exclude_path = root / Path(
+        run_git(root, "rev-parse", "--git-path", "info/exclude").stdout.strip()
+    )
+    exclude_path.parent.mkdir(parents=True, exist_ok=True)
+    if path_kind == "directory":
+        exclude_path.mkdir()
+    else:
+        os.mkfifo(exclude_path)
+
+    with pytest.raises(CmocError, match="通常の file"):
+        ensure_cmoc_ignored_in_exclude(root)
 
 
 def test_ensure_cmoc_ignored_in_exclude_rejects_symlinked_exclude(

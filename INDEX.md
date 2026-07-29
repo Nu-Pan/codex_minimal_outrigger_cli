@@ -126,33 +126,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装ルート。Typer CLI の起動・サブコマンド登録、共通 runtime、互換 import shim、ACP builder、各 CLI サブコマンドを含み、具体的な処理は対応する下位パッケージやモジュールへ委譲する。
+- `src` 配下の実装入口と互換 shim、共通 runtime、CLI サブコマンド群をまとめるトップレベルディレクトリ。各対象の詳細実装へ進むためのルーティング起点。
 
 ## Read this when
-- cmoc CLI 全体の入口、サブコマンド構成、実装領域の切り分けを確認するとき
-- 共通 runtime、互換 import、ACP builder、oracle・realization・run・session などの実装入口を選ぶとき
+- `src` 配下で対象となる実装モジュールや CLI サブコマンドの入口を選ぶとき。
+- 互換 import、共通 runtime、CLI 登録、サブコマンド実装の構成を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime 機能の詳細を調査・変更するときは、対応する下位モジュールを直接読む
-- oracle 側の正本仕様や実装、利用者向け仕様を確認するときは、src 配下ではなく対応する oracle の対象を読む
+- 特定モジュールの具体的な処理や仕様を確認したいときは、対応するファイルまたは下位ディレクトリを直接読む。
+- 正本仕様や oracle 側の実装を確認したいときは、`oracle` 配下を直接読む。
 
 ## hash
-- d73c38edd65034c68ff52721288a23fc2480b96a30d8a01d2690219f5c255e5b
+- 179324bd35b8e22c44e9f68354be7c330754b897330ef38d2dcd5241a532bf5e
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Git/worktree などの外部挙動・制御ロジックを pytest で検証する。個別機能の回帰テストと共有テスト支援モジュールへの入口となる。
+- cmoc の realization test 一式を収めるディレクトリ。共通テスト支援、runtime・Codex 実行、CLI lifecycle、indexing、oracle review、session、TUI、設定・状態永続化など、外部挙動と制御契約の回帰検証への入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する既存テストや回帰観点を探すとき
-- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、state、worktree の外部契約をテストから確認するとき
-- 複数のサブシステムにまたがる統合テストや、本番経路・GPU 統合テストの検証方法を調べるとき
+- cmoc の実装変更に対応する回帰テストや、対象機能の外部契約を確認したいとき
+- 共通テスト helper、Codex/Ollama 統合テスト、CLI・runtime・state・worktree の検証対象を探すとき
+- indexing、oracle review、session、TUI、refactor などの機能別テストの入口を選ぶとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc または oracle schema を直接読む
-- 実装の局所的な詳細だけを調査するときは、対応する src ファイルを直接読む
-- テスト実行環境や Python 開発規約だけを確認するときは、対応する開発・テスト手順を読む
+- 正本仕様や実装の詳細を確認することが目的のときは、対応する oracle または src を直接読む
+- テスト実行環境・Python 開発規約を確認するときは、指定された開発・テスト手順を読む
+- 対象機能が明確で、その機能の個別テストへ直接進めるとき
 
 ## hash
-- 9fc437c9657956393dbe76cc738b278f7617d5976d9b9b1b3bf66c11f4b6566d
+- 53b5c0d53ef2e22eb807adddd25415dce79739a1df880960a4245cf6f82862a6

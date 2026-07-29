@@ -348,6 +348,15 @@ def main_worktree_root(root: Path) -> Path:
 
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
     """.cmoc/gu の追跡有無と ignore 判定を取得する。"""
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # git の ignore 判定は .gitignore と info/exclude を読むため、共通経路で
+    # 非通常 file を拒否してからコマンドを実行する。
+    gitignore = root / ".gitignore"
+    _validate_ignore_path(gitignore, ".gitignore")
+    exclude_path = (
+        root / run_git(["rev-parse", "--git-path", "info/exclude"], root).stdout.strip()
+    )
+    _validate_ignore_path(exclude_path, "Git info/exclude")
     tracked = run_git(["ls-files", "--", ".cmoc/gu"], root).stdout.strip()
     ignored = run_git(
         ["check-ignore", "-q", CMOC_IGNORE_PROBE],
@@ -386,12 +395,31 @@ def _reject_symlinked_path(path: Path, description: str) -> None:
         )
 
 
+def _reject_non_file_path(path: Path, description: str) -> None:
+    """ignore file の読み書きを通常 file に限定する。"""
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # FIFO や device を read_text/write_text すると doctor が停止または block するため、
+    # symlink 検査後に既存 path の種別を検証する。
+    if path.exists() and not path.is_file():
+        raise CmocError(
+            f"{description} は通常の file ではありません。",
+            [f"{description} を通常の file に戻してから再実行してください。"],
+            str(path),
+        )
+
+
+def _validate_ignore_path(path: Path, description: str) -> None:
+    """ignore file の symlink と非通常 file をまとめて拒否する。"""
+    _reject_symlinked_path(path, description)
+    _reject_non_file_path(path, description)
+
+
 def ensure_cmoc_ignored(root: Path) -> None:
     """.gitignore と index を更新できる場面で .cmoc/gu を追跡対象外にする。"""
-    tracked, ignored_returncode = _cmoc_ignore_status(root)
     gitignore = root / ".gitignore"
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    _reject_symlinked_path(gitignore, ".gitignore")
+    _validate_ignore_path(gitignore, ".gitignore")
+    tracked, ignored_returncode = _cmoc_ignore_status(root)
     content = gitignore.read_text() if gitignore.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
     if updated_content != content:
@@ -420,7 +448,7 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     exclude_path = (
         root / run_git(["rev-parse", "--git-path", "info/exclude"], root).stdout.strip()
     )
-    _reject_symlinked_path(exclude_path, "Git info/exclude")
+    _validate_ignore_path(exclude_path, "Git info/exclude")
     content = exclude_path.read_text() if exclude_path.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
     if updated_content != content:
