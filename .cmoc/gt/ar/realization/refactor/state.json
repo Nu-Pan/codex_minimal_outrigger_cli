@@ -822,10 +822,10 @@
     "last_investigated_at": "2026-07-30_02-18_25_087062000"
   },
   "src/commons/runtime_run_lifecycle.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "f806a46699cf98cf89b62796e20a0ac2e79447db0a88849df57f17ee3035221f",
-    "last_investigated_at": "2026-07-29_08-42_22_968940000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "69d910c7db522a9fe1c5847164720a31f4be0b88230d905aa79763e905ec786e",
+    "last_investigated_at": "2026-07-30_02-38_18_889987000"
   },
   "src/commons/runtime_run_report.py": {
     "investigation_required": true,
