@@ -1218,10 +1218,10 @@
     "last_investigated_at": "2026-07-26_11-00_44_197970000"
   },
   "test/test_oracle_review_worktree.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "51e93a1b5de976527c68c889871520faa47c612d4a0a15c7f3b25c0a76925efc",
-    "last_investigated_at": "2026-07-29_12-20_13_128972000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "c92bf15074eef678368b28944dd4fb034941fce6cdc5ec77a9746ac849ec4e12",
+    "last_investigated_at": "2026-07-30_06-15_27_302576000"
   },
   "test/test_packaged_import.py": {
     "investigation_required": false,
