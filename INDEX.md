@@ -126,34 +126,41 @@
 # `src`
 
 ## Summary
-- cmoc の実行コードをまとめる主要パッケージ。CLI エントリーポイント、サブコマンド、共通 runtime、ACP・basic・config の互換入口を提供し、正本 oracle との接続を含む。
-- CLI の登録から各サブコマンド実装、Codex 実行、設定・状態・Git・ログ・INDEX 更新などの実行時処理へ進むための入口。
+- `acp`: ACP互換 import 入口と、builder・session・TUIなどACP関連実装への入口を提供するパッケージ。
+- `basic`: ACP型、path model、構造化文書APIなどの互換 import 入口を提供するパッケージ。
+- `cmoc_runtime.py`: 共通runtime APIを再公開する互換 import shim。
+- `commons`: indexing、prompt入力、Codex実行、設定、Git、path、state、run lifecycleなどの共通runtime実装をまとめるパッケージ。
+- `config`: oracle側の設定定義を再公開する互換 import 入口。
+- `main.py`: Typerによるcmoc CLIの主要入口。doctor、tui、indexing、oracle、realization、run、sessionの各コマンドを登録し、実装へ委譲する。
+- `oracle.py`: `src`単独起動時に正本側の`oracle.*`パッケージを解決する互換shim。
+- `sub_commands`: doctor、indexing、oracle、realization、run、session、tuiなどのCLIサブコマンド実装への入口。
 
 ## Read this when
-- cmoc の CLI 構成、サブコマンド、共通 runtime、互換 import の所在を確認するとき。
-- src 配下の実装を調査・変更する前に、主要な入口と責務別パッケージの構成を把握したいとき。
+- cmoc CLIのコマンド登録、サブコマンドへの委譲、互換import入口、共通runtime、サブコマンド実装の配置を確認するとき。
+- `src` 配下の対象がどの公開入口または実装パッケージに属するかを判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime 機能の詳細が明確なときは、対応する下位モジュールを直接読む。
-- 正本仕様や oracle 実装、INDEX の生成・更新規則そのものを確認するときは、src ではなく対応する oracle または runtime の対象を直接読む。
+- 個別サブコマンドの詳細処理を確認したいときは、`sub_commands` 配下の対応実装を直接読む。
+- 共通runtimeの具体的挙動を確認したいときは、`commons` 配下の責務別モジュールを直接読む。
+- 互換入口の正本仕様や設定・ACP型の定義を確認したいときは、対応するoracle側の実体を直接読む。
 
 ## hash
-- a6782052b29825cfe3a5973d02d14209d4e8eef4a5d8cc823762b7f38b0ff7bd
+- ea964f98d5550cc18bf40642d49dfff4cde0291843c88d101829115ecaca2fdc
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、prompt、worktree などの外部挙動と制御ロジックを検証し、各機能の回帰テストおよび共通テスト支援モジュールへの入口となる。
+- cmoc の各機能を検証する pytest テストと、Git・Codex・Ollama・CLI 実行などに共通するテスト支援モジュールを収録する。個別機能の外部契約、異常系、安全性、状態 lifecycle、統合動作を確認するためのテスト入口である。
 
 ## Read this when
-- cmoc の機能変更に対応する回帰テストを探すとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session、runtime state などのテスト対象を確認するとき
-- テスト用 Git、Ollama、Codex、外部コマンドの共通 helper を利用・変更するとき
+- テスト対象の機能領域が不明で、cmoc の realization test 全体から関連テストを探すとき。
+- 複数のテストで共用される Git、Codex、Ollama、外部コマンド、CLI 実行支援の役割を確認するとき。
+- 特定サブコマンドや runtime、ACP builder、oracle review、indexing、session などの回帰テストを選定するとき。
 
 ## Do not read this when
-- 正本仕様や実装本体を確認したいときは、対応する oracle または src のファイルを直接読む
-- テスト対象と無関係な機能の実装詳細だけを調査するとき
-- テスト実行環境や品質検査手順だけを確認するときは、対応する開発・テスト手順を読む
+- 正本仕様や実装の詳細を確認することが目的の場合は、対応する oracle 文書または src 配下の対象を直接読む。
+- 単一の機能の具体的なテスト内容が分かっている場合は、このディレクトリ全体ではなく該当するテストファイルを直接読む。
+- テスト実行環境や品質ゲートの手順だけを確認する場合は、対応する開発・テスト手順を読む。
 
 ## hash
-- a325381b0f17ada4744ccfdb21c5fc78281193e397249d66874d35abbd17427b
+- 26cd8aebc4a4ce0257ba488e4e24203752f9eb01307f84c7d0e5c6586b6adf8d

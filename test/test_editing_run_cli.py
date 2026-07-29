@@ -223,6 +223,35 @@ def test_run_reports_keep_distinct_files_on_timestamp_collision(
     )
 
 
+def test_fork_report_escapes_special_changed_paths(tmp_path: Path) -> None:
+    """変更 path の Markdown code span と行構造を壊さない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path,
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="run-fork",
+        run_worktree=tmp_path,
+    )
+
+    report = run_report_module.write_fork_report(
+        context,
+        "realization/apply/fork",
+        state_after="joinable",
+        completion_reason="completed",
+        changed_paths=["line\nbreak`|<&.md"],
+    )
+
+    assert "- <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>" in report.read_text()
+
+
 def test_new_run_target_skips_dangling_worktree_symlink(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

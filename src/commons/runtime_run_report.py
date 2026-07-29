@@ -4,6 +4,7 @@
 に従っている。
 """
 
+import html
 import json
 from pathlib import Path
 
@@ -47,7 +48,7 @@ def write_fork_report(
         ("codex_returncode", codex_returncode),
     ]
     fields.extend((extra_fields or {}).items())
-    changed = [f"- `{item}`" for item in changed_paths] or ["- none"]
+    changed = [_render_changed_path(item) for item in changed_paths] or ["- none"]
     content = [
         "---",
         *[f"{name}: {_yaml_scalar(value)}" for name, value in fields],
@@ -124,3 +125,22 @@ def _yaml_scalar(value: object) -> str:
     if isinstance(value, (int, float)):
         return str(value)
     return json.dumps(str(value), ensure_ascii=False)
+
+
+def _render_changed_path(path: str) -> str:
+    """Git path を report の Markdown 箇条書きとして安全に描画する。
+
+    Git path には Markdown の code span 境界や行構造を壊す文字を含められる。
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    if not any(character in path for character in ("`", "|", "\r", "\n")):
+        return f"- `{path}`"
+    escaped = html.escape(path, quote=False)
+    escaped = (
+        escaped.replace("`", "&#96;")
+        .replace("|", "&#124;")
+        .replace("\r\n", "&#13;&#10;")
+        .replace("\r", "&#13;")
+        .replace("\n", "&#10;")
+    )
+    return f"- <code>{escaped}</code>"
