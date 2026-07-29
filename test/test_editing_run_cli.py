@@ -1821,6 +1821,32 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
     )
 
 
+def test_run_join_force_resolve_restores_realization_source_of_rename(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """force-resolve が想定外 rename の realization 側を失わせないことを確認する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    destination = context.run_worktree / "oracle" / "unexpected.md"
+    destination.parent.mkdir(exist_ok=True)
+    (context.run_worktree / "README.md").rename(destination)
+    commit_work_unit(context.run_worktree, "rename realization into oracle")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(
+        app,
+        ["run", "join", "--force-resolve"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (root / "README.md").read_text() == "# repo\n"
+    assert not (root / "oracle" / "unexpected.md").exists()
+
+
 def test_run_join_cleanup_preserves_worktree_when_removal_leaves_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

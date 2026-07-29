@@ -46,6 +46,7 @@ from commons.runtime_run import (
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
+    GitChange,
     commit_work_unit,
     refresh_indexes,
     resolve_active_run,
@@ -136,7 +137,7 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 warnings,
             )
         if run_unexpected:
-            _revert_unexpected_run_paths(context, run_unexpected)
+            _revert_unexpected_run_paths(context, run_changes, run_unexpected)
             warnings.append(
                 "--force-resolve reverted unexpected run paths: "
                 + ", ".join(run_unexpected)
@@ -396,12 +397,23 @@ def _stop_error_run(context: EditingRunContext, warnings: list[str]) -> None:
 
 def _revert_unexpected_run_paths(
     context: EditingRunContext,
-    paths: list[str],
+    changes: list[GitChange],
+    unexpected_paths: list[str],
 ) -> None:
-    """force-resolve 対象の想定外 path を fork commit へ戻して commit する。"""
+    """force-resolve 対象の変更を fork commit へ戻して commit する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # Git pathspec の wildcard 解釈で別 path を巻き込まないよう、検出済み
-    # repository path を literal として指定する。
+    # repository path を literal として指定する。rename は一つの変更に両端が
+    # 含まれるため、想定外の片側を含む変更全体を戻して許可側を失わせない。
+    unexpected = set(unexpected_paths)
+    paths = sorted(
+        {
+            path
+            for change in changes
+            if unexpected.intersection(change.paths)
+            for path in change.paths
+        }
+    )
     run_git(
         [
             "restore",
