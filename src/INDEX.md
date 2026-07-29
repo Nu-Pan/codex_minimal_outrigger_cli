@@ -49,21 +49,49 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 機能を提供する commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・パス管理、Git 操作、ログ、エラー処理、INDEX 更新など、複数の上位機能から利用される runtime 部品への入口。
-- パッケージ初期化と共通 API の集約に加え、各 runtime サブモジュールが個別の責務を実装する。対象機能の実装詳細を確認する場合は、対応する runtime モジュールへ進む。
+- cmoc 共通 runtime helper を提供する commons パッケージの初期化。commons 配下の共通実行時機能を確認するときの入口。
+- cmoc runtime の公開 API を集約し、CLI、Codex、設定、状態、Git、ログ、パス、結果、エラーなどの共通部品を再エクスポートする。
+- INDEX.md の検査・生成・既存 entry 再利用・Structured Output 検証・書き込み・commit・排他制御を担う indexing lifecycle。
+- エディタから AI Agent 用 prompt を受け取り、入力ファイルの準備、エディタ起動、コメント除去、読み込み、関連する ignore 保証を担う。
+- CLI サブコマンド共通の work root 検査、doctor preprocess、ログ、step 通知、完了表示、終了コード化、例外処理を管理する。
+- Codex exec と TUI の実行 API を公開する共通入口。
+- Codex exec の subprocess 実行、Structured Output 検証、capacity/quota retry、resume 継続、ログ・イベント記録を制御する。
+- Codex CLI 呼び出しの console 通知と、起動失敗時の共通エラー整形を担う。
+- Codex exec/TUI 起動前の INDEX 更新 preflight、再入抑止、直列化、対象 root 算出、実行本体への委譲を担う。
+- Codex CLI subprocess の起動環境、sandbox・cwd・CODEX_HOME・argv・schema、process tracking、停止、JSONL 出力解析、エラー判定を扱う。
+- Codex TUI の起動、設定上書き、実行環境、ログ、イベント、成功・失敗時の戻り値と例外処理を扱う。
+- 設定値と JSON 永続化形式の変換・検証、既定値補完、不正設定のエラー化、安全な設定ファイル読み書きを担う。
+- ファイル内容・文字列の SHA-256、ハッシュ付き一時ファイルの安全な保存、バイナリ判定を提供する。
+- doctor preprocess の排他、修復対象同期、Git index の退避・合成・復元、修復 commit、追跡状態検証を担う。
+- cmoc の実行時例外を利用者向け Markdown エラーレポートへ変換し、概要、復旧案、詳細、call stack を組み立てる。
+- Git コマンド、branch・commit・status、managed worktree、ignore 状態、oracle/realization file の path 分類を扱う共通境界。
+- サブコマンド単位の JSONL ログ、step timing、quota 待機時間、現在の logger 管理を担う。
+- repository・worktree・cmoc root の解決、標準保存先、timestamp・duration 整形、衝突回避、cwd 切替を提供する。
+- oracle/realization file の調査履歴 state の読み書き・検証・同期、対象列挙、未調査対象選択を担う。
+- Codex exec の構造化出力、外部コマンド結果、実行に伴うログ・生成物・設定パスを表す結果型を定義する。
+- editing run の worktree 解決、process identity の記録・検証、Codex 子プロセス追跡・停止、tracking file cleanup を担う。
+- editing run の開始、state 遷移、commit、差分分類、INDEX 更新、cleanup 判定を一体で扱う lifecycle 実装。
+- editing run の fork と lifecycle の Markdown レポートを YAML Front Matter 付きで生成・保存し、変更パスなどを安全に整形する。
+- session state の JSON 復元・検証・保存、session/run schema、branch からの ID 解決、symlink 防止、fork 排他 lock を担う。
 
 ## Read this when
-- cmoc 共通 runtime API や commons パッケージの構成を確認するとき
-- CLI、Codex、設定、状態、Git、ログ、パス、INDEX 更新などの横断的な共通処理を調査・変更するとき
-- 特定の runtime 機能を担当するモジュールの入口を選ぶとき
+- commons の共通 runtime 機能やパッケージ入口を確認するとき
+- 複数の runtime 領域を横断する公開 API や依存関係を調査するとき
+- INDEX.md の生成・検査・更新・commit・preflight を変更するとき
+- prompt editor または TUI の入力保存・編集フローを変更するとき
+- CLI サブコマンド共通の実行 lifecycle、ログ、終了処理を変更するとき
+- Codex exec/TUI の起動、retry、resume、process 管理、出力解析を変更するとき
+- 設定、Git、path、content、doctor、error、logging、state、refactor の各 runtime 挙動を変更するとき
+- editing run の process cleanup、state lifecycle、差分管理、report 生成を変更するとき
 
 ## Do not read this when
-- 単一の runtime 機能の詳細だけを調査・変更するときは、対応する runtime モジュールを直接読む
-- 利用者向け仕様や正本仕様を確認するときは、対応する oracle 文書を直接読む
-- 特定の CLI サブコマンド固有の業務フローだけを調査するときは、そのサブコマンド実装を直接読む
+- 単一の runtime 機能の詳細だけを調査する場合は、該当する個別モジュールへ直接進む
+- 利用者向け正本仕様、prompt template、INDEX entry schema、run/state の仕様を確認する場合は対応する oracle 文書を読む
+- 特定の CLI サブコマンド固有の業務フローだけを調査する場合は、その command 実装を読む
+- Codex 実行本体、TUI、設定、Git、path などの個別責務を横断して確認する必要がない場合
 
 ## hash
-- 745f40e7095f1f7e8594c183f79f27e774826bfbcc8d8244298dc6c4a6eb003a
+- 0c242605393c730b05f2b74d7b6d6f24d9c4592c20798028394c9b86d2bdc380
 
 # `config`
 

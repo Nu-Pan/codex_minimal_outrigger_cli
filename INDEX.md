@@ -126,35 +126,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる src ツリー。Typer CLI の登録・引数解析、サブコマンド実装、共通 runtime、互換 import shim、ACP builder、設定・基本型の公開入口を提供し、各下位パッケージへの入口となる。
+- cmoc の realization 実装を構成する src ツリー。ACP・basic・config などの互換入口、commons の共通 runtime、CLI 本体、サブコマンド実装を下位要素へ案内する。
 
 ## Read this when
-- cmoc の CLI 全体構成、サブコマンドの登録先、realization 実装の主要な責務分担を確認したいとき
-- 共通 runtime、ACP builder、session・oracle・realization・run・TUI などの実装入口を選びたいとき
-- 互換 import shim や realization 側の公開 API の配置を確認したいとき
+- cmoc の realization 側の実装構成や、CLI・runtime・互換 import の入口を確認するとき。
+- 複数の実装領域を横断して、適切な下位モジュールの読み始める場所を判断するとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime 機能、builder adapter、互換 shim の詳細実装だけを確認したいときは、対応する下位モジュールを直接読む
-- canonical な oracle 仕様・実装や oracle 文書を確認したいときは、oracle ツリーを直接読む
-- INDEX 更新や設定など単一の共通機能の詳細だけを調査するときは、対応する commons・config・sub_commands 配下を直接読む
+- 特定の runtime 機能、CLI サブコマンド、oracle 実装、または互換 shim の詳細だけを確認したいときは、対応する下位要素を直接読む。
+- 正本仕様や oracle 側の実装内容を確認したいときは、src ではなく oracle ツリーを読む。
 
 ## hash
-- 09f38bfd34640eb17eb492599ccf78de52471428073a4ba318de236f0e994592
+- 53cee4ca4f1303e919aee58f2951bd2ef60b7e54c1c60727ca16c1f548a65bc5
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、共通 runtime などの外部挙動・制御ロジックを検証する各テストと、複数テストから利用する補助モジュールへの入口を提供する。
+- cmoc のテストコードを集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、構造化文書などの実装契約と外部挙動を検証する。各機能のテストへ進むための入口。
 
 ## Read this when
-- 変更対象の機能に対応する realization test を特定したいとき
-- 複数の CLI・runtime・builder・worktree lifecycle にまたがる回帰テストの入口を探すとき
-- テスト共通 helper や実経路統合テストの配置を確認するとき
+- cmoc の実装変更に対応する回帰テストや外部契約の確認先を探すとき。
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run lifecycle、runtime state などのテスト対象を調査するとき。
+- 共通テスト支援、隔離 Git repository、case-local Ollama、Codex subprocess の検証方法を確認するとき。
 
 ## Do not read this when
-- 実装の詳細を変更・調査するときは、対応する src ファイルを直接読む
-- 正本仕様、schema、開発環境、テスト実行手順を確認するときは、対応する oracle 文書や開発ルールを直接読む
-- 対象機能が明確な場合は、このディレクトリ全体ではなく該当する個別テストまたは support module を直接読む
+- 正本仕様、schema、開発環境、設計・テスト規約を確認することが目的のときは、対応する oracle file や開発ルールを直接読む。
+- 単一の実装詳細だけを調査し、テスト上の期待挙動を確認する必要がないとき。
+- このディレクトリに含まれない機能や、Codex の回答品質そのものを評価するとき。
 
 ## hash
-- eba02e2a01d7d13ed65f103a6dfa499cb16d5cc64b548c1c8e480c62d4b05435
+- e278753242847c8ee808869e1742359564be98f60fe641e4a1d08226d1f4d7dc

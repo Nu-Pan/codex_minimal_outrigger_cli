@@ -677,18 +677,19 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex argv の model・sandbox・provider 上書き契約を検証するテスト。全 FileAccessMode の sandbox 変換、承認設定、model/reasoning 指定、不要な設定の非出力、未知 mode や未定義 provider の早期拒否、選択 provider の TOML argv 変換を扱う。関連する Codex 実行ルールと model/provider 仕様のテスト入口。
+- Codex argv の model、sandbox、reasoning effort、provider 上書き契約を検証するテスト。全 FileAccessMode の sandbox 変換、未知 mode や未定義 provider の拒否、選択 provider のみの TOML 伝達、provider key の扱い、prepare 境界の設定専属性を確認する。schema の元バイト保持・SHA256 保存名・不正 UTF-8 出力の扱いも検証する。
 
 ## Read this when
-- Codex 起動時の override argv、sandbox、model、reasoning、provider 連携を変更・検証するとき。
-- FileAccessMode の追加や provider 設定のシリアライズ、Codex CLI の TOML override 形式を調査するとき。
+- Codex 起動引数の model、sandbox、approval、reasoning effort、provider 上書き処理を変更または検証するとき。
+- Codex model provider の TOML argv 変換や、選択 provider の検証を調査するとき。
+- schema の保存・ハッシュ化、Codex 出力 JSON の読み取り失敗時挙動を変更または検証するとき。
 
 ## Do not read this when
-- Codex argv の構築や model/provider 上書きに関係しないテスト・実装を扱うとき。
-- Codex 実行ルールの正本仕様そのものを確認する必要があり、oracle の仕様文書を直接読むべきとき。
+- Codex argv や runtime_codex_profile の挙動に関係しない機能を変更するとき。
+- Codex の正本仕様そのものを確認する場合は、対応する oracle 文書を直接読む。
 
 ## hash
-- 542b624fa7880aef8adeab46f24328813cc41db9b742fc7f1645361ff45dcfe8
+- 5433643d0d0bfc480e5e27d4b2707043f38370cb2e376af2f207e563ad348722
 
 # `test_runtime_config.py`
 

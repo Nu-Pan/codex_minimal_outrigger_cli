@@ -773,17 +773,24 @@ def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
     """Structured Output schema を指定 root の内容 hash store へ配置する。"""
     if schema_source_path is None:
         return None
-    schema_text = schema_source_path.read_text()
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # hash path と保存本文を schema source の UTF-8 bytes に一致させるため、
+    # Path.read_text() の改行変換を通さない。
+    schema_text = schema_source_path.read_bytes().decode("utf-8")
     return write_hashed_file(schema_store_dir(root), "", ".json", schema_text)
 
 
 def read_output_json(path: Path) -> Any:
     """schema なしの Codex output が空または不正 JSON の場合は None を返す。"""
-    if not path.exists() or not path.read_text().strip():
+    try:
+        output_text = path.read_text(encoding="utf-8")
+    except (FileNotFoundError, UnicodeError):
+        return None
+    if not output_text.strip():
         return None
     try:
-        return json.loads(path.read_text())
-    except json.JSONDecodeError:
+        return json.loads(output_text)
+    except (json.JSONDecodeError, UnicodeError):
         return None
 
 

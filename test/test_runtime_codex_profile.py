@@ -5,7 +5,9 @@
 - {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
 """
 
+import hashlib
 from dataclasses import replace
+from pathlib import Path
 from typing import cast
 
 import pytest
@@ -17,6 +19,8 @@ from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import (
     build_codex_override_args,
     prepare_codex_override_args,
+    prepare_schema,
+    read_output_json,
 )
 from config.cmoc_config import CmocConfig
 
@@ -186,3 +190,26 @@ def test_codex_overrides_reject_undefined_selected_provider() -> None:
             ),
             config,
         )
+
+
+def test_prepare_schema_preserves_source_bytes_for_hash_store(tmp_path: Path) -> None:
+    """schema の改行を変えず、source 本文の SHA256 path に保存する。"""
+    source = tmp_path / "schema.json"
+    source_bytes = b'{\r\n  "type": "object"\r\n}\r\n'
+    source.write_bytes(source_bytes)
+
+    stored = prepare_schema(tmp_path / "repo", source)
+
+    assert stored is not None
+    assert stored.name == f"{hashlib.sha256(source_bytes).hexdigest()}.json"
+    assert stored.read_bytes() == source_bytes
+
+
+def test_read_output_json_returns_none_for_invalid_utf8(
+    tmp_path: Path,
+) -> None:
+    """不正 encoding の schema-less output を JSON failure として扱う。"""
+    output = tmp_path / "output.json"
+    output.write_bytes(b"\xff")
+
+    assert read_output_json(output) is None
