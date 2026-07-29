@@ -62,19 +62,20 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply と refactor の処理を束ね、各サブパッケージの実装へ進むための入口となる。
+- realization workload サブコマンド群のパッケージ入口。apply workload と refactor workload、およびそれぞれの CLI 実行処理へのルーティング起点となる。
 
 ## Read this when
-- realization workload サブコマンド全体の構成や、apply・refactor のどちらを調査すべきか確認するとき。
-- realization apply または realization refactor の処理を調査・変更するとき。
+- realization apply または realization refactor の workload 実装・構成を確認するとき
+- realization apply fork や realization refactor fork の CLI 実行処理を調査・変更するとき
+- apply または refactor の lifecycle、差分検証、state 更新、commit、report、完了処理の入口を確認するとき
 
 ## Do not read this when
-- apply workload の詳細な実装や `cmoc realization apply fork` の実行処理だけを確認したいとき。
-- refactor fork の実行フローだけを確認したいとき。
-- run lifecycle、process tracking、report 出力などの共通処理だけを確認したいとき。
+- realization workload サブコマンドに関係しない処理を確認するとき
+- Codex builder の launch parameter、run lifecycle 共通実装、process tracking 共通実装だけを確認するとき
+- apply または refactor の個別対象調査・prompt 生成、共通 state 永続化、共通 report 描画だけを確認するとき
 
 ## hash
-- 9339cd21879362b5f46cdf5073d0794a57afb8d37b6a2d3f075c545b24d6062e
+- 0f04a1ff3e7a8b1d872327541e4a688e54eed04ac6a5ada10763e26d0c1c599a
 
 # `review`
 
@@ -93,18 +94,19 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンド群をまとめるパッケージ。run の abandon・join 実装と、旧 import path を維持する lifecycle/report の互換 shim への入口として機能する。
+- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。abandon・join の実装と、共通 lifecycle/report 実装への互換 shim を下位要素として案内する入口。
 
 ## Read this when
-- editing run の abandon または join lifecycle、状態遷移、process 停止、merge、rollback、cleanup、report 連携を調査・変更するとき。
-- editing run の旧 import path 互換性や、配下の lifecycle/report 実装の参照先を確認するとき。
+- editing run の abandon、join、ライフサイクル、report 連携を調査・変更するとき。
+- run worktree・branch・state・process tracking・rollback・cleanup・report の処理経路を追うとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- 特定の処理の詳細を確認する場合は、この入口ではなく配下の該当実装または canonical な commons モジュールを直接読むとき。
+- 特定の処理の実装詳細を確認する場合は、この入口ではなく配下の該当ファイルを直接読むとき。
+- 共通 lifecycle や report の canonical 実装そのものを確認する場合は、commons 側の実装を読むとき。
 
 ## hash
-- 31e1d35b3219cae7e987d9189f75bab9aad4195f964d2de46a116ac348d4211f
+- 487cfc797f092144b6fb5980fa1a2c7f5200bee0e5d3f21250e7429a4fc84f01
 
 # `session`
 

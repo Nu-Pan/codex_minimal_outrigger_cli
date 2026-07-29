@@ -58,7 +58,7 @@ from commons.runtime_run_lifecycle import (
     unexpected_run_paths,
     worktree_change_paths,
 )
-from commons.runtime_run_report import write_fork_report
+from commons.runtime_run_report import _render_changed_path, write_fork_report
 
 _UnresolvedFinding = tuple[str, str, Path]
 
@@ -675,13 +675,22 @@ def _write_refactor_report(
         f"- uninvestigated targets: {uninvestigated_targets}",
         "## Processing units",
         *(
-            [f"- `{target}`: {count} finding(s)" for target, count in units]
+            [
+                f"{_render_changed_path(target)}: {count} finding(s)"
+                for target, count in units
+            ]
             or ["- none"]
         ),
         "## Unresolved targets",
         f"- count: {len(unresolved_targets)}",
         "- paths:",
-        *([f"  - `{target}`" for target in sorted(unresolved_targets)] or ["  - none"]),
+        *(
+            [
+                _render_changed_path(target, "  ")
+                for target in sorted(unresolved_targets)
+            ]
+            or ["  - none"]
+        ),
         "## Unresolved findings",
         *_render_unresolved_findings(unresolved_findings),
         "## Refactor state",
@@ -761,14 +770,16 @@ def _render_summary(
             paths = change.get("changed_paths", [])
             lines.append(f"- {category}: {description}")
             lines.extend(
-                f"  - `{path}`"
+                _render_changed_path(path, "  ")
                 for path in paths
                 if isinstance(path, str) and path in changed_path_set
             )
         return lines or ["- none"]
     if not changed_paths:
         return ["- none"]
-    return [f"- committed path: `{path}`" for path in changed_paths]
+    return [
+        _render_changed_path(path, label="committed path: ") for path in changed_paths
+    ]
 
 
 def _render_unresolved_findings(
@@ -780,9 +791,9 @@ def _render_unresolved_findings(
         for title, summary, call_log_path in unresolved_findings[target]:
             lines.extend(
                 [
-                    f"- `{target}`: {title}",
+                    f"{_render_changed_path(target)}: {title}",
                     f"  - resolution.summary: {summary}",
-                    f"  - Codex call log: `{call_log_path}`",
+                    _render_changed_path(str(call_log_path), "  ", "Codex call log: "),
                 ]
             )
     return lines or ["- none"]

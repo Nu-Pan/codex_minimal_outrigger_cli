@@ -49,20 +49,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・パス管理、Git、ログ、エラー、INDEX lifecycle など、複数機能から利用される runtime 実装への入口。
+- cmoc の共通 runtime 機能を提供する commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・パス管理、Git 操作、ログ、エラー処理、run lifecycle、INDEX 更新などを責務別モジュールで構成し、上位実装から利用する共通基盤をまとめている。
 
 ## Read this when
-- 共通 runtime API や複数の runtime 領域にまたがる依存関係を調査・変更するとき
-- 特定の runtime 機能の実装箇所を選ぶとき
-- INDEX 更新、Codex 実行、設定・状態・worktree・process lifecycle などの共通処理を調査するとき
+- 複数の runtime 機能にまたがる依存関係や公開 API を確認するとき
+- Codex 実行、設定・状態管理、Git/worktree、logging、run lifecycle、INDEX 更新の共通基盤を変更・調査するとき
+- 特定の runtime 責務の実装入口を探すとき
 
 ## Do not read this when
-- 特定の機能の詳細だけを調査・変更する場合は、対応する個別の runtime モジュールを直接読む
-- 利用者向け仕様や正本仕様を確認する場合は、対応する oracle 文書を直接読む
-- 特定サブコマンド固有の業務フローや CLI 入出力だけを調査する場合は、該当する上位実装を読む
+- 特定の runtime 機能だけを調査・変更する場合は、対応する個別モジュールへ直接進むとき
+- 利用者向けサブコマンド仕様や oracle 文書の正本仕様を確認することが目的のとき
 
 ## hash
-- 9e2de3726378961858fda8089c47bbe8932b5b4ed023c07da0c27b45d01828f1
+- 7f9e019c0ecac2b3ca5b6fd794fe9162225b2f652d0bc0175b94d9f0b6bf0db2
 
 # `config`
 
@@ -114,15 +113,16 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの実行入口と、配下パッケージへのルーティングを提供する。apply と review は現在実装本文がない。
+- CLI サブコマンド実装を集約するディレクトリ。doctor、indexing、tui、oracle、realization、run、session などの実行入口と、未実装の apply・review の配置先を含む。
+- 個別サブコマンドの実行経路やライフサイクル処理の入口を選ぶための上位ディレクトリ。詳細な処理は各サブコマンドまたは下位実装を直接確認する。
 
 ## Read this when
-- サブコマンド全体の実装構成や、対象サブコマンドの実行入口を選ぶとき。
-- 特定サブコマンドの実装、ライフサイクル処理、TUI 起動処理の調査・変更先を確認するとき。
+- CLI サブコマンドの実装構成や、対象サブコマンドの実行入口を確認するとき
+- oracle・realization・run・session などのサブコマンド群から、調査対象となる下位実装を選ぶとき
 
 ## Do not read this when
-- 共通ランタイム、Git 操作、INDEX 更新、TUI builder など、サブコマンド配下の具体的な共通処理だけを調査するとき。
-- oracle の仕様や実装を確認するとき。対応する oracle 文書・実装を直接読む。
+- 特定サブコマンドの詳細処理、共通ライブラリ、oracle 仕様の内容を直接調査するとき
+- サブコマンド以外の実装領域を扱うとき
 
 ## hash
-- 61d0bf4dc80d9d3f8594ddfc0cea6ec5c10f89db824b8b21eb287e0b1f9a227d
+- 6b03fe2584d81bc5927a49363c241886a5921793f2a6314d23fd2f3254018701

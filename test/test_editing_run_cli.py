@@ -447,6 +447,42 @@ def test_refactor_change_summary_keeps_only_actual_changed_paths() -> None:
     ) == ["- rename: file renamed", "  - `new.md`"]
 
 
+def test_refactor_change_summary_escapes_special_changed_paths() -> None:
+    """change summary の path が Markdown の構造を壊さない。"""
+    assert refactor_module._render_summary(
+        [
+            {
+                "category": "rename",
+                "summary": "file renamed",
+                "changed_paths": ["line\nbreak`|<&.md"],
+            }
+        ],
+        ["line\nbreak`|<&.md"],
+    ) == [
+        "- rename: file renamed",
+        "  - <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>",
+    ]
+    assert refactor_module._render_summary(
+        None,
+        ["line\nbreak`|<&.md"],
+    ) == ["- committed path: <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>"]
+    assert refactor_module._render_unresolved_findings(
+        {
+            "line\nbreak`|<&.md": [
+                (
+                    "title",
+                    "reason",
+                    Path("log`|<&.md"),
+                )
+            ]
+        }
+    ) == [
+        "- <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>: title",
+        "  - resolution.summary: reason",
+        "  - Codex call log: <code>log&#96;&#124;&lt;&amp;.md</code>",
+    ]
+
+
 def test_refactor_change_summary_rejects_empty_result(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2103,6 +2139,45 @@ def test_run_join_rolls_back_merge_when_post_join_sync_fails(
 
     assert joined.exit_code == 0
     assert (root / "README.md").read_text() == "realized\n"
+
+
+def test_run_join_keeps_completed_merge_when_final_report_update_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """cleanup 後の report 更新失敗で完了済み merge を rollback しない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    original_write_report = run_join_module.write_lifecycle_report
+
+    def fail_final_report(
+        report_context: EditingRunContext,
+        operation: str,
+        **kwargs: object,
+    ) -> Path:
+        """final report rewrite だけの失敗を再現する。"""
+        if kwargs.get("report_path") is not None:
+            raise RuntimeError("final report update failed")
+        return original_write_report(report_context, operation, **kwargs)
+
+    monkeypatch.setattr(run_join_module, "write_lifecycle_report", fail_final_report)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert (root / "README.md").read_text() == "realized\n"
+    assert "final join report update failed" in result.output
+    assert _state(state_path)["run"]["state"] == "ready"
+    assert not context.run_worktree.exists()
+    assert not run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+    report = next(
+        root.joinpath(".cmoc", "gu", "ar", "report", "run", "join").glob("*.md")
+    )
+    assert 'cleanup: "pending"' in report.read_text()
 
 
 def test_refactor_fork_completes_persistent_full_cycle(

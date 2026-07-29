@@ -32,18 +32,20 @@
 # `join.py`
 
 ## Summary
-- `cmoc run join` の workload 非依存な merge lifecycle を実装する。active run の差分検査、force-resolve、session への merge、INDEX 再生成、post-join state 同期、report、失敗時 rollback、worktree・branch cleanup までを一つの責務として扱う。
+- `cmoc run join` の active editing run 終了処理を一括して担う実装。run/session の差分検査、merge、INDEX 再生成、refactor state 同期、report 保存、失敗時 rollback と error state 化、worktree・branch cleanup を扱う。
 
 ## Read this when
-- `cmoc run join` の merge、差分検査、INDEX conflict 解決、post-join state 同期、failure rollback、report、cleanup の挙動を変更・調査するとき。
-- join の成功・error state・cleanup pending に関する実装や不変条件を確認するとき。
+- `cmoc run join` の正常系・失敗系・force-resolve の挙動を変更または調査するとき
+- merge conflict、想定外差分、post-join hook、state 同期、cleanup pending の処理を確認するとき
+- join lifecycle の rollback、report、process tracking、run 資源削除の関係を追うとき
 
 ## Do not read this when
-- run の開始・編集・abandon など、join lifecycle 以外のサブコマンドを扱うとき。
-- git 差分計算、state 同期、report 出力などの共通処理の詳細だけを確認するときは、対応する共通モジュールを直接読む。
+- join 以外の run サブコマンドの処理だけを変更・調査するとき
+- 一般的な Git 差分処理や共有 lifecycle helper の実装を確認したいときは、まず対応する共通 runtime module を読む
+- INDEX.md の生成規則そのものや refactor state 同期の共通実装だけを確認するとき
 
 ## hash
-- 81917ad0833d35503a2f853c10cf61e152b206283100821e19c9e4ba5f26d337
+- 7f1678f84ac41a0dda3e44ebafd50f3500e35dfbd7303a56406df145d247177f
 
 # `lifecycle.py`
 

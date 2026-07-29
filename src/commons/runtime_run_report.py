@@ -127,14 +127,14 @@ def _yaml_scalar(value: object) -> str:
     return json.dumps(str(value), ensure_ascii=False)
 
 
-def _render_changed_path(path: str) -> str:
+def _render_changed_path(path: str, indent: str = "", label: str = "") -> str:
     """Git path を report の Markdown 箇条書きとして安全に描画する。
 
     Git path には Markdown の code span 境界や行構造を壊す文字を含められる。
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     if not any(character in path for character in ("`", "|", "\r", "\n")):
-        return f"- `{path}`"
+        return f"{indent}- {label}`{path}`"
     escaped = html.escape(path, quote=False)
     escaped = (
         escaped.replace("`", "&#96;")
@@ -143,4 +143,4 @@ def _render_changed_path(path: str) -> str:
         .replace("\r", "&#13;")
         .replace("\n", "&#10;")
     )
-    return f"- <code>{escaped}</code>"
+    return f"{indent}- {label}<code>{escaped}</code>"

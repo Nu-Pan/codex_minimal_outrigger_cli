@@ -15,17 +15,18 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の full-cycle CLI workload。realization file の選択、単位ごとの agent 調査・修正、差分検証、state 同期、commit、unresolved 管理、完了判定、joinable/error report 保存までを一貫して扱う。
-- fork 全体で共有する run context と処理進捗を保持するため、target 選択から report 生成までを単一の lifecycle として実装している。
+- realization refactor fork の CLI 実行全体を担当する。run の初期化・process tracking、realization file 単位の調査と修正、差分検証・state 更新・commit、unresolved 管理、完了判定、interruption/error cleanup、fork report と完了ログまでを一貫して扱う。
 
 ## Read this when
-- realization refactor fork の実行フロー、処理単位の commit、unresolved finding の追跡、完了条件を変更・調査するとき。
-- agent call 後の realization 差分検証、INDEX/state 更新、interrupt・error cleanup、joinable report の挙動を確認するとき。
+- realization refactor fork の lifecycle、処理単位、current fork 内の unresolved finding 管理、完了不変条件、run state 遷移を変更または調査するとき
+- refactor agent の差分検証、state と INDEX の同期、commit 後の進捗記録、interruption/error 時の rollback・report を確認するとき
+- fork report の内容や正常完了・中断・エラー時の出力を変更するとき
 
 ## Do not read this when
-- refactor agent の Structured Output schema や file 単位の調査・修正 prompt だけを変更するときは、対応する builder module を直接読む。
-- run lifecycle の共通処理、process tracking、report 出力の一般仕様だけを確認するときは、対応する commons module または oracle 文書を直接読む。
-- refactor state の共通データ構造や target 選択ロジックだけを変更するときは、runtime_refactor module を直接読む。
+- refactor 対象 file の個別調査・修正 prompt の生成だけを変更するときは、file review and fix の実装を直接読む
+- 変更概要の Structured Output 生成だけを変更するときは、change summary の実装を直接読む
+- refactor state の一般的な永続化・target 選択処理だけを変更するときは、runtime refactor の実装を直接読む
+- run の共通 lifecycle や report 描画を変更するときは、対応する commons 実装を直接読む
 
 ## hash
-- 1ddd0030e6631891407ce2defe6a86560d6b192b54af6ddb134f30eb34191871
+- 0b0e7166cb7005eecb2c80afb8d63fc76f17e653a9b4199d9b31f5158c40e867

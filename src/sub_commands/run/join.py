@@ -201,6 +201,7 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 f"- refactor_state_sync_commit: `{state_sync_commit}`",
                 f"- cleanup: `{cleanup}`",
                 f"- report: `{report}`",
+                *[f"- warning: {warning}" for warning in warnings],
             ]
         )
     )
@@ -299,19 +300,25 @@ def _merge_and_finalize(
         },
     )
     cleanup = _cleanup_joined_run(context, warnings)
-    report = write_lifecycle_report(
-        context,
-        "join",
-        state_after="ready",
-        warnings=warnings,
-        details={
-            "run_join_commit": run_join_commit,
-            "post_join_hook": hook_result,
-            "refactor_state_sync_commit": state_sync_commit,
-            "cleanup": cleanup,
-        },
-        report_path=report,
-    )
+    try:
+        report = write_lifecycle_report(
+            context,
+            "join",
+            state_after="ready",
+            warnings=warnings,
+            details={
+                "run_join_commit": run_join_commit,
+                "post_join_hook": hook_result,
+                "refactor_state_sync_commit": state_sync_commit,
+                "cleanup": cleanup,
+            },
+            report_path=report,
+        )
+    except BaseException as report_error:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # merge、ready state、cleanup が完了した後の report 更新失敗で、確定済み
+        # merge を rollback し、唯一の復旧可能な run commit を失わせてはいけない。
+        warnings.append(f"final join report update failed: {report_error!r}")
     return run_join_commit, hook_result, state_sync_commit, cleanup, report
 
 

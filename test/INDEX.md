@@ -383,21 +383,22 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の fork・join・abandon lifecycle を対象とする統合テスト。realization apply/refactor の run state、worktree・branch・process tracking、INDEX 更新、report、rollback、cleanup、merge、割り込み・失敗時の復旧を検証する。関連する lifecycle fixture と状態遷移を共有するため、一続きのテスト対象として扱う。
+- workload fork と共通 run の join/abandon に関する統合テスト。session state、run worktree、fork report、INDEX 更新、Codex process tracking、rollback、cleanup、merge、interrupt/error recovery などの lifecycle 挙動を検証する。
+- realization apply/refactor fork と run join/abandon の相互運用、および変更 path・report・refactor state・worktree/branch の整合性を確認するテスト群への入口。
 
 ## Read this when
-- realization apply/refactor fork の run lifecycle を変更・調査するとき
-- run join または run abandon の state 遷移、merge、cleanup、force-resolve を変更・調査するとき
-- INDEX refresh、Codex child tracking、process tracking、fork/lifecycle report の連携を検証するとき
-- run 開始・処理中断・agent failure・cleanup failure・競合時の rollback と復旧挙動を確認するとき
+- realization apply または realization refactor の fork lifecycle を変更・調査するとき
+- run join、run abandon、run worktree、session state、fork/lifecycle report の挙動を変更・調査するとき
+- INDEX 更新、process tracking、Codex child cleanup、rollback、merge conflict、interrupt/error recovery の統合挙動を検証するとき
+- 変更 path の rename/delete、oracle・INDEX など管理対象ファイルの差分制御、refactor state の同期を確認するとき
 
 ## Do not read this when
-- 単一の lifecycle 実装関数の内部ロジックだけを確認し、対応する外部挙動の統合テストが不要なとき
-- editing run と無関係な CLI command、parser、または独立した INDEX 生成処理だけを変更・調査するとき
-- fork・join・abandon の状態遷移を直接扱わない unit test や fixture を探しているとき
+- 単一の実装関数の局所ロジックだけを確認し、その統合 lifecycle や CLI 外部挙動が関係しないとき
+- session や run の lifecycle を伴わない一般的な parser、表示、設定、単体 helper のテストを調査するとき
+- テスト実行環境や Python 開発規約の確認が目的で、テストケースの検証観点を読む必要がないとき
 
 ## hash
-- ec5b220194b8316e5f80ebd1f89020c83c54c6d86f5d9b50837d5b983ff8fb80
+- c7f60d748043c0a84fbb04069afeb61ceaed36da0ffc10c16f141dbeb42f82fc
 
 # `test_indexing_cli.py`
 
