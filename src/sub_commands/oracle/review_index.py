@@ -42,8 +42,12 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
 # も含め、隔離終了時に review branch を merge することを求めている。
 def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> bool:
     """base commit 以降の review branch 差分が INDEX.md だけか確認する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    # rename detection can hide a non-INDEX source path from --name-only output, so
+    # every changed tree path must be checked independently.
     changed_paths = _git_name_only_paths(
-        review_worktree, ["diff", "--name-only", f"{base_commit}..HEAD"]
+        review_worktree,
+        ["diff", "--no-renames", "--name-only", f"{base_commit}..HEAD"],
     )
     non_index = [path for path in changed_paths if Path(path).name != "INDEX.md"]
     if non_index:
@@ -80,7 +84,9 @@ def merge_review_branch(root: Path, review_branch: str) -> str:
 
 def resolve_review_index_conflicts(root: Path) -> bool:
     """INDEX.mdだけのmerge conflictをoursまたは削除で解決してcommitする。"""
-    conflicted = _git_name_only_paths(root, ["diff", "--name-only", "--diff-filter=U"])
+    conflicted = _git_name_only_paths(
+        root, ["diff", "--no-renames", "--name-only", "--diff-filter=U"]
+    )
     if not conflicted:
         return False
     if any(Path(path).name != "INDEX.md" for path in conflicted):

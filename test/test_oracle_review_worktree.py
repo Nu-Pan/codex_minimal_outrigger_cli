@@ -26,6 +26,7 @@ import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_run_lifecycle as lifecycle_module
 import sub_commands.oracle.review as review_module
 from basic.acp import AgentCallParameter
+from cmoc_runtime import CmocError
 from commons.runtime_results import CommandResult
 from commons.runtime_run_lifecycle import set_run_state, start_editing_run
 from main import app
@@ -655,6 +656,23 @@ def test_review_branch_accepts_index_path_with_git_quoted_parent(
     base_commit = run_git(root, "rev-parse", "HEAD^").stdout.strip()
 
     assert review_module.review_branch_has_index_changes(root, base_commit) is True
+
+
+def test_review_branch_rejects_non_index_rename_to_index(
+    tmp_path: Path,
+) -> None:
+    """非 INDEX file から INDEX.md への rename を差分違反として扱う。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
+    """
+    root = make_repo(tmp_path)
+    (root / "README.md").rename(root / "INDEX.md")
+    run_git(root, "add", "-A")
+    run_git(root, "commit", "-m", "rename non-index to index")
+    base_commit = run_git(root, "rev-parse", "HEAD^").stdout.strip()
+
+    with pytest.raises(CmocError, match="INDEX.md 以外の commit 済み差分"):
+        review_module.review_branch_has_index_changes(root, base_commit)
 
 
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])

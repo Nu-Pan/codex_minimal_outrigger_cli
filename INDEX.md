@@ -126,34 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる src 配下の入口。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import、ACP builder などの下位領域へ進むためのルーティングを提供する。
+- 対象は src 配下の realization 実装全体への入口です。CLI エントリーポイント、互換 import shim、共通 runtime、サブコマンド実装、ACP builder などの下位領域へ進むための責務と境界を案内します。
 
 ## Read this when
-- cmoc の CLI 実装全体の構成や、下位モジュールの読むべき入口を確認するとき。
-- CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import の実装領域を調査するとき。
+- src 配下で実装対象の配置や下位モジュールへの入口を確認するとき。
+- CLI 登録、共通 runtime、互換 import、サブコマンド実装、ACP builder の調査・変更先を特定するとき。
 
 ## Do not read this when
-- 正本仕様や oracle 実装を確認するときは、対応する oracle 配下を直接読む。
-- 特定のサブコマンド、runtime helper、builder の詳細実装を確認するときは、src 配下の対応する下位要素を直接読む。
-- CLI と無関係なテストや開発環境設定を調査するとき。
+- 正本仕様や oracle 側の実装を確認するときは、対応する oracle 配下を直接読む。
+- 特定モジュールの詳細処理だけを調査するときは、その個別ファイルまたは下位ディレクトリを直接読む。
+- src と無関係なテスト、文書、開発環境の手順を確認するとき。
 
 ## hash
-- eefd4e6b474fa826cf6ee289e09b61e74d8db0ba21964cad4562d29614b00d2f
+- 6f4505d8e0e5ccc3e6be6e001d6142f92d62e220a84872490350a9d7af88cdd5
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群をまとめたディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、config などの外部挙動・制御ロジックを検証する各テストと、テスト用の共通 helper を含む。個別領域の実装変更時に、対応する回帰テストへ進むための入口。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、prompt、worktree などの外部挙動と制御ロジックを検証し、各機能の回帰テストおよび共通テスト支援モジュールへの入口となる。
 
 ## Read this when
-- cmoc の realization test を探すとき
-- CLI、Codex 実行、indexing、oracle review、session、runtime、ACP builder などの挙動変更に伴う回帰テストを確認するとき
-- テスト用 Git、Ollama、Codex、外部コマンドなどの共通 helper の利用箇所を調べるとき
+- cmoc の機能変更に対応する回帰テストを探すとき
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session、runtime state などのテスト対象を確認するとき
+- テスト用 Git、Ollama、Codex、外部コマンドの共通 helper を利用・変更するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc・oracle source・oracle schema を直接読む
-- 実装詳細だけを調査するときは、対応する src の実装を直接読む
-- 対象領域と無関係なテストや、テスト実行手順だけを確認するときは、このディレクトリ全体ではなく対応する専用テストまたは開発手順を読む
+- 正本仕様や実装本体を確認したいときは、対応する oracle または src のファイルを直接読む
+- テスト対象と無関係な機能の実装詳細だけを調査するとき
+- テスト実行環境や品質検査手順だけを確認するときは、対応する開発・テスト手順を読む
 
 ## hash
-- 4ae0eeae8f8f0814562eb628574a750666049c4dbb4fff0dc4ed0e836292acef
+- a325381b0f17ada4744ccfdb21c5fc78281193e397249d66874d35abbd17427b
