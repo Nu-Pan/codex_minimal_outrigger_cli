@@ -74,7 +74,27 @@ class SessionState:
 
 def state_path(root: Path, session_id: str) -> Path:
     """session_id に対応する session state file の保存先を返す。"""
-    return sessions_dir(root) / f"{session_id}.json"
+    path = sessions_dir(root) / f"{session_id}.json"
+    _reject_symlinked_state_path(path)
+    return path
+
+
+def _reject_symlinked_state_path(path: Path) -> None:
+    """session state path の symlink 経由アクセスを拒否する。"""
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # session state は repo-root 側の cmoc 管理 data だが、symlink を追跡すると
+    # 指定された保存先の外側を読み書きして隔離境界を越えてしまう。
+    current = path.absolute()
+    while current != current.parent:
+        if current.is_symlink():
+            raise CmocError(
+                "session state path は symlink 経由で扱えません。",
+                [
+                    "session state file と親 directory を通常の file/directory に戻してから再実行してください。"
+                ],
+                str(current),
+            )
+        current = current.parent
 
 
 @contextmanager
@@ -152,6 +172,7 @@ def load_session_part_for_branch(
 
 def _read_state_data(path: Path) -> dict[str, Any]:
     """session state file を JSON object として読み込む。"""
+    _reject_symlinked_state_path(path)
     if not path.is_file():
         raise CmocError(
             "session state file が存在しません。",
@@ -173,6 +194,7 @@ def _read_state_data(path: Path) -> dict[str, Any]:
 
 def write_state(path: Path, state: SessionState) -> None:
     """session state を安定した JSON 表現で保存する。"""
+    _reject_symlinked_state_path(path)
     validated = SessionState.from_dict(state.to_dict(), path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -183,7 +205,9 @@ def write_state(path: Path, state: SessionState) -> None:
 
 def active_session_for_home(root: Path, home_branch: str) -> Path | None:
     """home branch に紐づく active session state file を探す。"""
-    for path in sessions_dir(root).glob("*.json"):
+    directory = sessions_dir(root)
+    _reject_symlinked_state_path(directory)
+    for path in directory.glob("*.json"):
         data = _read_state_data(path)
         state = SessionState.from_dict(data, path)
         if (

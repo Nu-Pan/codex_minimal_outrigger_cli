@@ -126,35 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめる最上位の入口。Typer によるコマンド登録・引数解析・エラー変換を担う CLI エントリーポイントと、互換 import、共通 runtime、設定、サブコマンド実装を含む。下位ディレクトリから個別機能の実装へ進むための起点。
+- cmoc の realization 実装をまとめる src 配下の入口。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import、ACP builder などの下位領域へ進むためのルーティングを提供する。
 
 ## Read this when
-- cmoc の CLI 全体の構成、コマンド登録、引数解析、補完、エラー処理を確認するとき。
-- 共通 runtime、互換 import、設定、またはサブコマンド実装の配置と担当範囲を確認するとき。
-- 特定のサブコマンドや共通処理の詳細実装へ進む前に、最上位の委譲関係を把握するとき。
+- cmoc の CLI 実装全体の構成や、下位モジュールの読むべき入口を確認するとき。
+- CLI エントリーポイント、サブコマンド、共通 runtime、ACP builder、互換 import の実装領域を調査するとき。
 
 ## Do not read this when
-- canonical な oracle 仕様や oracle 側実装を確認するときは、対応する oracle ツリーを直接読む。
-- 特定のサブコマンド、runtime helper、互換 shim の詳細を調査・変更するときは、対応する下位ファイルを直接読む。
-- INDEX 更新や TUI など、個別機能の処理本体だけを確認したいときは、該当する実装へ直接進む。
+- 正本仕様や oracle 実装を確認するときは、対応する oracle 配下を直接読む。
+- 特定のサブコマンド、runtime helper、builder の詳細実装を確認するときは、src 配下の対応する下位要素を直接読む。
+- CLI と無関係なテストや開発環境設定を調査するとき。
 
 ## hash
-- 8aed3a9e46290ea50fb0d3977a6d86cc667cd4180b71acc68e897ac0ec019a16
+- eefd4e6b474fa826cf6ee289e09b61e74d8db0ba21964cad4562d29614b00d2f
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、prompt などの外部挙動・制御ロジックを検証するテストと、各領域で共有するテスト支援 helper を含む。個別機能の変更時に、対応する実装契約や回帰テストへ進むための入口。
+- cmoc の realization test 群をまとめたディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、config などの外部挙動・制御ロジックを検証する各テストと、テスト用の共通 helper を含む。個別領域の実装変更時に、対応する回帰テストへ進むための入口。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test を探すとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session、runtime state、設定などのテスト対象を調査・変更するとき
-- 複数テストで共有される Git、Codex/Ollama、外部コマンド、CLI 実行支援の責務を確認するとき
+- cmoc の realization test を探すとき
+- CLI、Codex 実行、indexing、oracle review、session、runtime、ACP builder などの挙動変更に伴う回帰テストを確認するとき
+- テスト用 Git、Ollama、Codex、外部コマンドなどの共通 helper の利用箇所を調べるとき
 
 ## Do not read this when
 - 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc・oracle source・oracle schema を直接読む
-- 実装の詳細だけを調査するときは、対応する src 配下の実装を直接読む
-- 対象領域が明確な場合は、このディレクトリ内の個別テストまたは helper を直接読む
+- 実装詳細だけを調査するときは、対応する src の実装を直接読む
+- 対象領域と無関係なテストや、テスト実行手順だけを確認するときは、このディレクトリ全体ではなく対応する専用テストまたは開発手順を読む
 
 ## hash
-- a366e2b47baaa63bce2dfcb117678b99334a4ff6e6f2df6875fbbc3e8b8a231b
+- 4ae0eeae8f8f0814562eb628574a750666049c4dbb4fff0dc4ed0e836292acef

@@ -218,6 +218,24 @@ def test_write_state_rejects_invalid_session_identity(tmp_path: Path) -> None:
     assert not path.exists()
 
 
+def test_session_state_rejects_symlinked_path_without_writing_target(
+    tmp_path: Path,
+) -> None:
+    """session state の symlink 経由 read/write で link 先を扱わない。"""
+    outside = tmp_path / "outside-state.json"
+    outside.write_text("original\n")
+    path = state_path(tmp_path, "session")
+    path.parent.mkdir(parents=True)
+    path.symlink_to(outside)
+
+    with pytest.raises(CmocError, match="session state path"):
+        write_state(path, _valid_state())
+    with pytest.raises(CmocError, match="session state path"):
+        load_state_for_branch(tmp_path, "cmoc/session/session")
+
+    assert outside.read_text() == "original\n"
+
+
 @pytest.mark.parametrize("state", ["running", "joinable", "error"])
 def test_active_run_requires_kind_branch_and_fork_commit(state: str) -> None:
     """active run state が kind・branch・fork commit を必要とする。"""

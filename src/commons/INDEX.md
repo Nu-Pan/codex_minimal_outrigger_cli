@@ -390,16 +390,18 @@
 # `runtime_state.py`
 
 ## Summary
-- session の永続 state を表す dataclass、JSON schema 検証、読み書き、branch からの session 特定、active session 検索を提供する共通 runtime モジュール。session fork の排他 lock も扱い、session/run 操作から state 管理を参照する入口となる。
+- cmoc の session state を表す dataclass、JSON 永続化、schema 検証、session/run branch と state file の対応付けを担う共通モジュール。session fork 用の排他 lock、symlink 経由の保存先拒否、active session の検索も提供する。
 
 ## Read this when
-- session state の schema、状態値、不変条件、JSON 保存形式を変更または確認するとき
-- session branch・run branch と state file の対応付けや、state の読み書き・検証を調査するとき
-- session fork の排他制御や active session の検索処理を変更するとき
+- session state の schema、状態値、不変条件、読み書き、エラー変換を変更または調査するとき
+- cmoc/session または cmoc/run branch から session-id や state file を解決するとき
+- session fork の排他制御や state file の symlink 安全性を確認するとき
+- 複数の session 操作で共有される state 読み込み・検証処理の入口を確認するとき
 
 ## Do not read this when
-- CLI サブコマンド固有の session 操作仕様や lifecycle を確認したいときは、対応する oracle 文書またはサブコマンド実装を直接読む
-- session state と無関係な git 操作、path 解決、エラー型の一般仕様だけを調べるとき
+- 特定の CLI サブコマンドの処理手順や user-facing 操作を確認したいとき
+- oracle が定める session state schema の仕様自体を確認したいとき
+- session state や branch 対応付けに関係しない共通 runtime utility を調査するとき
 
 ## hash
-- e0b35333320120922fa7b0dc327f3f8e884f62a884378b435bbef5e550647fff
+- 4d78f20fb747f002f7215b5148e3419ac514a924040f75557feb0dfc88f28cac
