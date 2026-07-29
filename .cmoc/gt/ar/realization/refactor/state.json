@@ -570,10 +570,10 @@
     "last_investigated_at": "2026-07-29_20-20_42_266044000"
   },
   "src/acp/builder/oracle/review/validate_finding_challenger.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "327dbd9953060b5a205b5bfbe4f6f32fc0b7ff6d7d85aaa8d4fa0fc81f6c5dda",
-    "last_investigated_at": "2026-07-28_06-14_52_903852000"
+    "last_investigated_sha256": "b937c8eec287e4aeac088b29ae3f6cf090fa8829e45a257dfe46b37cdc3deb33",
+    "last_investigated_at": "2026-07-29_20-36_03_998523000"
   },
   "src/acp/builder/quota_probe.py": {
     "investigation_required": false,
