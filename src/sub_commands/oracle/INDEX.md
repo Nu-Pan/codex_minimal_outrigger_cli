@@ -62,21 +62,20 @@
 # `review.py`
 
 ## Summary
-- oracle review サブコマンドの CLI 実行入口と隔離 run のライフサイクルを担う。active session branch の検証、clean worktree の要求、review 用 worktree・branch の作成と cleanup、oracle review loop の実行、INDEX 変更の merge、所見レポート生成、中断・例外時の結果記録を扱う。review 対象列挙、review loop、レポート描画、INDEX 変更処理の詳細へ進むための上位入口。
+- oracle review サブコマンドの CLI 実装。active session branch 上での実行条件を確認し、隔離 worktree・run branch の作成、oracle 対象列挙、レビュー loop、結果の index merge、レポート出力までを統括する。
+- 中断・例外・cleanup 失敗を含む review run のライフサイクルと、未コミット差分の拒否を扱う。詳細な対象列挙、レビュー処理、レポート生成、index 操作の実装へ進む入口でもある。
 
 ## Read this when
-- oracle review サブコマンドの実行条件、隔離 worktree/branch の作成・cleanup、review loop の呼び出し順を確認するとき
-- oracle review の中断・例外処理、cleanup 失敗時の報告動作を確認するとき
-- oracle review に関係する対象列挙、所見処理、レポート、INDEX merge の連携箇所を特定するとき
+- oracle review サブコマンドの実行フロー、隔離 run の作成・統合・削除、割り込みや失敗時の処理を変更または調査するとき
+- oracle review の CLI 前提条件、clean worktree 検査、レポート出力の呼び出し関係を確認するとき
 
 ## Do not read this when
-- oracle review の対象ファイル列挙規則だけを確認したいときは review_targets の実装を読む
-- 所見の反復評価や中断時の部分結果処理だけを確認したいときは review_loop の実装を読む
-- レポートの表示形式や出力内容だけを確認したいときは review_report の実装を読む
-- review branch の commit、merge、conflict 解決だけを確認したいときは review_index の実装を読む
+- oracle review の対象ファイル列挙・レビュー判定・所見処理だけを変更するときは、対応する review_targets または review_loop の実装を直接読む
+- レビュー所見の表示形式やレポート本文だけを変更するときは、review_report の実装を直接読む
+- review branch の index 差分処理だけを変更するときは、review_index の実装を直接読む
 
 ## hash
-- 9c3e5aa9187b5d7b2e5a6646d4d38a7caab0cf00043cf621473eecaabccd0eb2
+- 0f9e9430a82211077c5f889e3861d5098bb6790403f59c654faa36499c2e666e
 
 # `review_index.py`
 

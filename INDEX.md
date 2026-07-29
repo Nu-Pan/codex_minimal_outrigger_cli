@@ -126,33 +126,33 @@
 # `src`
 
 ## Summary
-- cmoc の実行時実装を提供する `src` パッケージ。CLI エントリーポイント、互換 import shim、共通 runtime、設定入口、サブコマンド実装、oracle 連携入口をまとめ、各下位要素へのルーティング起点となる。
+- `src` は cmoc の realization 実装ルートで、CLI の起動点、サブコマンド、共通 runtime、互換 import shim をまとめる。CLI 登録から個別処理・共通基盤へ進むための入口である。
 
 ## Read this when
-- `src` 配下の CLI 実装全体の構成や、主要な公開 import 入口を確認したいとき。
-- CLI エントリーポイントからサブコマンド、共通 runtime、設定、oracle・ACP・basic の互換入口へ進む先を判断したいとき。
+- cmoc realization の実装全体の構成や、CLI・サブコマンド・共通 runtime・互換入口の読み進め先を判断するとき。
+- `src` 直下の起動点や package shim の役割を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理詳細、共通 runtime の個別機能、oracle 側の正本仕様・実装を確認したいときは、対応する下位ディレクトリや oracle ツリーを直接読む。
-- `src` 配下の個別 shim や adapter の挙動だけを調査するときは、該当ファイルを直接読む。
+- 特定サブコマンド、runtime helper、oracle 実装などの詳細を調査するときは、対応する下位ディレクトリまたは直接の実体モジュールを読む。
+- 利用者向け仕様や正本仕様を確認するときは、`oracle` 配下の対象を直接読む。
 
 ## hash
-- b8224151fe9606f15f2e1ea179adbed39d20485559e710389975e236a6528ffc
+- 5654b9d83ae29be47f1870a9e9cc46bb0224ad331f32e88f4eb84e857e71cefd
 
 # `test`
 
 ## Summary
-- テストコードから利用する共通支援モジュールと、cmoc の各機能を検証する pytest・統合・受け入れテストを集約するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定、Git/worktree などの外部契約や安全性を確認する入口であり、対象機能の実装変更時に対応するテストへ進む。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Git/worktree、StructDoc などの外部挙動・制御ロジックを検証する。各機能の回帰テストや共通テスト支援モジュールへの入口として利用する。
 
 ## Read this when
-- cmoc の実装や仕様変更に対応する回帰テスト・統合テストを探すとき
-- 対象機能が ACP builder、Codex 実行、CLI、indexing、oracle review、session/run、runtime state、設定、Git/worktree のいずれかに関係するとき
-- テスト共通 fixture、fake external command、Git repository、case-local Ollama、Codex home の支援方法を確認するとき
+- 変更対象の機能に対応する realization test を探すとき
+- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、runtime state などの外部契約や回帰挙動を検証するとき
+- テスト用 Git repository、case-local Ollama、Codex home、fake external command などの共通支援を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle 文書・schema を直接読む
-- 実装詳細を確認することが目的で、テストの期待挙動を調べる必要がないときは、対応する src を直接読む
-- 対象機能と無関係なテストや共通支援モジュールを読む必要はない
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc・oracle source・oracle schema を直接読む
+- 実装詳細だけを調査するときは、対応する src ファイルを直接読む
+- 対象機能と無関係なテスト領域や共通支援を確認するときは、このディレクトリ全体ではなく該当テストまたは support module へ直接進む
 
 ## hash
-- 5787a7c9d3b7e8a124431b9580bb26b5190b1ba83bff9d8e0773e115873bd525
+- ca21c20b2a347a096cb965ed9b1c2b4f81f8adedbb17e5524336edf063c6c15c

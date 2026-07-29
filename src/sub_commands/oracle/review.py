@@ -205,7 +205,9 @@ def _cmoc_oracle_review_body(
         )
     except KeyboardInterrupt:
         # loop 外の中断も、確定済みとして記録済みの範囲だけで正常完了する。
-        cleanup_error = _cleanup_created_resources()
+        cleanup_result = _cleanup_created_resources()
+        if cleanup_result is not None:
+            cleanup_error = cleanup_result
         if cleanup_error is not None:
             report_path = write_oracle_review_report(
                 root,

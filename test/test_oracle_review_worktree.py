@@ -768,6 +768,57 @@ def test_oracle_review_reports_cleanup_failure(
     assert "cleanup failed" in result.output
 
 
+def test_oracle_review_reports_cleanup_failure_after_outer_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cleanup failure after an outer Ctrl+C remains an error, not interrupted success."""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """review の列挙を完了させ、後続処理の中断検査へ進める。"""
+        assert _schema_name(parameter) == "enumerate_finding.json"
+        return _FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    def interrupt_after_review(_review_worktree: Path) -> bool:
+        """review loop 後の処理で、外側の中断処理を再現する。"""
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(
+        review_module, "commit_review_index_changes", interrupt_after_review
+    )
+    failed_cleanup = CommandResult(1, "", "cleanup failed")
+
+    def fail_remove_worktree(_root: Path, worktree: Path) -> CommandResult:
+        """削除 command が失敗しつつ path だけ消えた cleanup を再現する。"""
+        worktree.rename(worktree.with_name(f"{worktree.name}.removed"))
+        return failed_cleanup
+
+    monkeypatch.setattr(review_module, "remove_worktree", fail_remove_worktree)
+    monkeypatch.setattr(
+        review_module, "delete_branch", lambda *args, **kwargs: failed_cleanup
+    )
+
+    result = runner.invoke(app, ["oracle", "review", "--scope", "full"])
+
+    assert result.exit_code != 0
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    rendered = report_path.read_text()
+    assert "result: error" in rendered
+    assert "cleanup failed" in rendered
+    assert "ユーザー中断要求" not in rendered
+
+
 def test_cleanup_review_run_rejects_remaining_dangling_worktree_symlink(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
