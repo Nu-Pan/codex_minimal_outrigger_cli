@@ -33,18 +33,16 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を扱うパッケージで、関連サブコマンドの実装入口となる。
-- fork.py は realization refactor fork の実行ライフサイクル全体を管理し、対象選択、agent による調査・修正、差分検証、state 更新、commit、完了判定、unresolved 所見、report 保存、中断・エラー時の cleanup を担う。
+- realization のリファクタリング処理を提供するパッケージ。fork 実行のライフサイクル管理と、関連する下位リファクタリング処理への入口を担う。
 
 ## Read this when
-- realization refactor の処理フロー、対象 file の反復、agent 出力検証、差分制約、commit 単位を確認するとき
-- unresolved finding、investigation_required、完了判定、change summary、fork report の生成や保存を変更するとき
-- KeyboardInterrupt や BaseException 発生時の子プロセス停止、rollback、run 回収、error report を調査するとき
+- realization refactor fork の実行ライフサイクル、処理単位の選択・commit、状態更新、finding 管理、完了・中断・異常終了時の処理を確認または変更するとき
+- realization リファクタリング処理の構成や入口を確認するとき
 
 ## Do not read this when
-- refactor state のデータ構造や対象選択を変更するときは、commons.runtime_refactor の実装を読む
-- run の開始・join・abandon や一般的な worktree isolation の仕様を変更するときは、runtime_run 関連実装と対応する oracle 文書を読む
-- file 単位の review agent parameter や change summary の Structured Output 定義だけを確認するときは、対応する parameter builder を直接読む
+- 単一 realization file の調査・修正ロジックだけを確認したいとき
+- 変更概要生成だけを確認したいとき
+- 一般的な run isolation、editing run、INDEX 更新、refactor state の仕様を確認したいとき
 
 ## hash
-- 358f3992cf4e8276cb09e820463602d574beb705ddb8f1266bbd5ef5033a7e51
+- 7eb9cac344b6ada13fd6ba6b1212667a808b684d98ed45e4eb75f1b20ee99d9a

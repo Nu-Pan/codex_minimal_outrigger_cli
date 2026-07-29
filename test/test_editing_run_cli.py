@@ -994,6 +994,60 @@ def test_refactor_fork_stops_tracked_children_before_each_commit(
     assert all(index > 0 and events[index - 1] == "stop" for index in commit_positions)
 
 
+def test_refactor_fork_reports_cleanup_warnings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """refactor fork の child 停止 warning を fork report に保存する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+
+    def fake_refactor(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """file review と change summary の固定 Structured Output を返す。"""
+        if kwargs["purpose"] == "realization refactor change summary":
+            return SimpleNamespace(
+                returncode=0,
+                output_json={"changes": [{"category": "state", "summary": "更新"}]},
+            )
+        return SimpleNamespace(returncode=0, output_json={"findings": []})
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+    monkeypatch.setattr(
+        refactor_module,
+        "stop_tracked_codex_children",
+        lambda *_args: ["run child process already stopped: 789"],
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _state(state_path)["run"]["state"] == "joinable"
+    reports = list(
+        (
+            root
+            / ".cmoc"
+            / "gu"
+            / "ar"
+            / "report"
+            / "realization"
+            / "refactor"
+            / "fork"
+        ).glob("*.md")
+    )
+    assert len(reports) == 1
+    assert "run child process already stopped: 789" in reports[0].read_text()
+
+
 def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2251,6 +2305,70 @@ def test_refactor_fork_refreshes_changed_file_index_during_process_tracking(
         "README.md",
     } <= committed_paths
     assert readme_reviews == 2
+
+
+@pytest.mark.parametrize("rogue_refresh_call", [1, 2])
+def test_refactor_rejects_realization_change_added_by_index_refresh(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    rogue_refresh_call: int,
+) -> None:
+    """INDEX refresh 後に増えた realization 差分を commit しない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/indexing.md
+    {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    refresh_calls = 0
+
+    def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
+        """初期化後の INDEX refresh が管理外 realization を作る状態を再現する。"""
+        nonlocal refresh_calls
+        assert not commit
+        refresh_calls += 1
+        if refresh_calls == rogue_refresh_call:
+            (worktree / "refresh-created.py").write_text("unexpected\n")
+        return []
+
+    def fake_refactor(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """対象 realization file だけを変更して fixed finding を返す。"""
+        purpose = str(kwargs["purpose"])
+        if purpose == "realization refactor change summary":
+            raise AssertionError("change summary must not run after invalid unit")
+        target = purpose.removeprefix("realization refactor: ")
+        worktree = Path(str(kwargs["cwd"]))
+        target_path = worktree / target
+        if target_path.is_file():
+            target_path.write_text(target_path.read_text() + "fixed\n")
+        return SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [
+                    {
+                        "title": "target finding",
+                        "resolution": {"status": "fixed"},
+                    }
+                ]
+            },
+        )
+
+    monkeypatch.setattr(refactor_module, "refresh_indexes", fake_refresh)
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    parts = _state(state_path)["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert not (worktree / "refresh-created.py").exists()
 
 
 def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(

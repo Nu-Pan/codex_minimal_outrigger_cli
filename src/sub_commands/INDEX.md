@@ -60,18 +60,16 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンド群のパッケージ。apply と refactor の実装入口を含み、各サブコマンドの CLI 実行、ライフサイクル、差分検証、state・report・commit 処理へ進むための上位入口。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の下位処理へ進むための起点。
 
 ## Read this when
-- realization workload サブコマンドの実装構成や、apply・refactor の処理入口を確認するとき。
-- realization apply または realization refactor の CLI 動作・実行フローを調査または変更するとき。
+- realization workload サブコマンドの実装や構成を確認するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- run lifecycle などの共通実装、refactor state のデータ構造、parameter builder の定義だけを確認するときは、それぞれの直接の実装を読む。
 
 ## hash
-- fa10da6b863821be4fb633421251571b460de2fe6e3306dcca5b69f2f26452ea
+- 75264c55fe020c0ac981085e757e8991ef80b150d6fde307895c8470291d8e24
 
 # `review`
 
