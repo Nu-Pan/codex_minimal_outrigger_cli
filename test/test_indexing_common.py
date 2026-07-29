@@ -279,10 +279,10 @@ def test_update_indexes_creates_empty_index_for_empty_directory(
     assert (empty_dir / "INDEX.md").read_text() == ""
 
 
-def test_update_indexes_regenerates_entry_after_empty_file_becomes_directory(
+def test_update_indexes_reuses_entry_after_empty_file_becomes_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """空 file と空 directory の hash 衝突で古い entry を再利用しない。"""
+    """定義された hash が一致する空 target の entry を再利用する。"""
     root = make_repo(tmp_path)
     cmoc_runtime.sync_config(root)
     target = root / "target"
@@ -307,7 +307,7 @@ def test_update_indexes_regenerates_entry_after_empty_file_becomes_directory(
 
     indexing_common.update_indexes(root)
 
-    assert target in calls
+    assert target not in calls
 
 
 def test_update_indexes_generates_sibling_entries_in_stable_render_order(

@@ -46,7 +46,6 @@ _INDEX_ENTRY_KEYS = frozenset(
         "required"
     ]
 )
-_EMPTY_TARGET_HASH = text_sha256("")
 
 
 @dataclass
@@ -197,16 +196,7 @@ def _plan_index_directory(root: Path, directory: Path) -> _IndexDirectoryPlan:
     for child in indexable_children(root, directory):
         digest = index_target_hash(root, child)
         existing_entry = existing_entries.get(child.name)
-        if (
-            existing_entry
-            and existing_entry["hash"] == digest
-            # {{work-root}}/oracle/doc/app_spec/indexing.md defines an empty file
-            # hash and an empty directory hash as the same SHA-256 value. The
-            # standard entry stores no path kind, so reusing this ambiguous hash
-            # would keep a file's routing text after it becomes a directory (or
-            # vice versa).
-            and digest != _EMPTY_TARGET_HASH
-        ):
+        if existing_entry and existing_entry["hash"] == digest:
             entries.append(existing_entry["text"])
         else:
             entries.append(None)
