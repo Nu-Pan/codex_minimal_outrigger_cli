@@ -660,10 +660,10 @@
     "last_investigated_at": "2026-07-27_06-21_47_534518000"
   },
   "src/acp/builder/tui/resolve_parameter.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "7e8901cc79447e31dc390e44d0368b2a377aeea5d13b58a4d44a8283d32670a7",
-    "last_investigated_at": "2026-07-27_06-36_12_185408000"
+    "last_investigated_sha256": "bb0a1eb0bfb775c57dff95c2aadc79a249c0520185c3930d1208db768a01a7f3",
+    "last_investigated_at": "2026-07-29_19-02_29_658505000"
   },
   "src/basic/__init__.py": {
     "investigation_required": false,
