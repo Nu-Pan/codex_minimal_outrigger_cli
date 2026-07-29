@@ -284,9 +284,12 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
         )
     except (TypeError, ValueError) as exc:
         try:
-            detail = json.dumps(data, ensure_ascii=False, indent=2, default=repr)
+            # {{work-root}}/oracle/doc/app_spec/error_handling.md
+            # 不正 JSON には surrogate も含まれうるため、error report を UTF-8 で出力
+            # できる ASCII escape へ変換する。
+            detail = json.dumps(data, ensure_ascii=True, indent=2, default=repr)
         except (TypeError, ValueError):
-            detail = repr(data)
+            detail = repr(data).encode("utf-8", "backslashreplace").decode("utf-8")
         raise CmocError(
             "cmoc config が不正です。",
             [

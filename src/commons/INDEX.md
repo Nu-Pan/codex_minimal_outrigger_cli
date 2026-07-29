@@ -186,19 +186,22 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc の設定値を、正本の設定型と JSON 永続化形式の間で変換・検証するランタイム設定モジュール。model provider、model、reasoning effort、各種 int 値の型・値検証、既定値補完、不正設定の CmocError 化を扱う。
-- 設定 JSON の安全な読み書きを担当し、symlink 経由のアクセス、特殊ファイル、不正 JSON、欠落ファイルを拒否する。config の生成・読み込み・書き戻し処理への入口となる。
+- cmoc 設定の JSON 永続化境界を担当するモジュール。設定オブジェクトと JSON/TOML 互換値の相互変換、型・値・循環参照の検証、既定値補完、不正設定の利用者向けエラー化を行う。
+- 設定ファイルの symlink・特殊ファイルを拒否し、安全に読み込み・書き込み・初期同期する。設定形式、Codex のモデル・provider・reasoning effort、oracle review の試行回数を変更・検証するときの実装入口。
 
 ## Read this when
-- cmoc config の JSON 永続化形式、設定値の検証、既定値補完、不正設定時のエラー境界を変更または調査するとき
-- config path の symlink・特殊ファイル対策や、設定ファイルの生成・読み込み・同期処理を確認するとき
+- 設定の JSON 保存形式や復元処理を変更するとき
+- Codex model/provider、reasoning effort、試行回数などの設定値検証を変更するとき
+- 設定ファイルの生成・読み込み・書き戻し、symlink や特殊ファイルへの対応を調査するとき
+- 不正な設定入力が CmocError として報告される境界を確認するとき
 
 ## Do not read this when
-- Codex の設定型そのものや既定値を変更する場合は、先に設定型を定義するモジュールを読むとよい
-- CLI コマンドの引数定義や、設定 path の算出だけを確認する場合は、対応するコマンド・path モジュールを直接読むとよい
+- 設定型そのものの定義や既定値を確認したい場合は、参照先の設定型定義を直接読む
+- CLI コマンドの引数解析や実行処理だけを調べる場合
+- 設定とは無関係な runtime path や一般的なエラー処理を調べる場合
 
 ## hash
-- 3777f708f12dc5b235bc71cbd925805374428c5b124a790ad2be309efec24709
+- b747b382b51d18e1111ca14c92645c9b8c1915179905a77ab2712deed7439000
 
 # `runtime_content.py`
 

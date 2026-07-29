@@ -23,6 +23,7 @@ from cmoc_runtime import (
     config_from_dict,
     config_to_dict,
     load_config,
+    render_error,
     write_config,
 )
 from config.cmoc_config import CmocConfig
@@ -173,6 +174,27 @@ def test_config_rejects_invalid_codex_model_specs(
         config_from_dict({"codex": {"model": {"mainstream": spec}}})
 
     assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+def test_invalid_config_error_report_escapes_surrogate() -> None:
+    """不正な surrogate を含む設定でも error report を UTF-8 出力できる。"""
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict(
+            {
+                "codex": {
+                    "model": {
+                        "mainstream": {
+                            "model_provider": "provider",
+                            "model": "\ud800",
+                        }
+                    }
+                }
+            }
+        )
+
+    report = render_error(exc_info.value)
+    report.encode("utf-8")
+    assert "\\ud800" in report
 
 
 @pytest.mark.parametrize("value", [False, None, [], {}, "", "  "])
