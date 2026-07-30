@@ -622,24 +622,19 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の error report、終了コード、stdout/stderr 境界、例外・割り込み処理を runtime CLI の外部挙動として検証するテスト。
-- サブコマンドログの生成、終了イベント、並列イベント記録、ログ書き込み失敗時の扱いを検証する。
-- work root の preflight、doctor preprocess、gitignore・info/exclude の安全な更新・判定、completion probe の副作用抑制を検証する。
-- 起動 wrapper の venv 異常時報告と、worktree を含む実行 root の選択も対象とする。
+- CLI の error report、duration 表示、サブコマンドログ、並列イベント記録、doctor preflight、work root 検証、completion probe を横断的に検証するテスト。共通 runner の終了コード・ログ・stdout/stderr 境界を確認する外部契約の入口。
 
 ## Read this when
-- CLI のエラー表示、終了コード、stdout/stderr 出力、Call stack、KeyboardInterrupt の扱いを変更・調査するとき。
-- サブコマンドログ、command lifecycle event、並列 logger、preflight または doctor preprocess の実行順・失敗時挙動を変更するとき。
-- shell completion の初期化抑制や CLI 引数解析のエラー変換を変更するとき。
-- gitignore、Git info/exclude、global/nested ignore の安全性検証や起動 wrapper の異常報告を変更するとき。
+- CLI lifecycle の error handling、ログ出力、終了処理、doctor preflight、work root 制約、shell completion の挙動を変更または調査するとき
+- SubcommandLogger の timestamp 衝突、並列記録、quota wait、command event を変更または検証するとき
+- CLI parser error や callback の非 0 終了、KeyboardInterrupt、error report の stdout 出力を確認するとき
 
 ## Do not read this when
-- CLI lifecycle や runtime logging の外部挙動を扱わず、特定サブコマンドの実装・業務ロジックだけを変更するとき。
-- 単独のデータモデルや path model の仕様を確認したいときは、まず対応する oracle src・実装・専用テストを読む。
-- CLI completion、preflight、ログ、gitignore 安全性のいずれにも関係しないテストや fixture の変更を行うとき。
+- CLI の個別サブコマンド内部ロジックだけを変更・調査し、共通 runner、ログ、preflight、completion に影響しないとき
+- error report の描画実装だけを直接確認する必要があり、テストケースの全体構成を読む必要がないとき
 
 ## hash
-- ab2144b574d6bad9f75401be1cbeffe09f197aa88bd0225668454b17b8c9af8d
+- be3b1f8b337435ed9fb2d5b198508e64c9fdf29edc04969b3083b16709a98b28
 
 # `test_runtime_codex_conflicts.py`
 
@@ -742,6 +737,22 @@
 ## hash
 - 4115b2fd0a1a6350e8acec4a57b5a039c8f768d3660b0b75a0579ed96addb571
 
+# `test_runtime_git_ignore.py`
+
+## Summary
+- Git ignore の安全な更新・判定処理を検証するテスト。`.gitignore` や `info/exclude` への cmoc 用パターン追加、既存の有効な ignore パターン後の追記、特殊ファイル・symlink・global excludes・親ディレクトリ内の `.gitignore` に対するエラー処理を扱う。
+
+## Read this when
+- cmoc の ignore 設定更新や Git ignore 判定の挙動を変更・検証するとき
+- `.gitignore`、`info/exclude`、global excludes、symlink・特殊ファイルへの安全な対応を確認するとき
+
+## Do not read this when
+- Git ignore と無関係なランタイム機能を変更・調査するとき
+- 実装の詳細ではなく、ignore 仕様そのものを確認したいときは、記載された oracle 文書・ソースを直接読む
+
+## hash
+- cbba1d8481304ced5dd53c0f3201b017bcb9429eb42fc83030285e21e30fb161
+
 # `test_runtime_refactor.py`
 
 ## Summary
@@ -781,6 +792,20 @@
 
 ## hash
 - 7704ec65a7ccb2ca1eb887987ff4d0658a605fdc0e76abf1e7cb8cb20e30980e
+
+# `test_runtime_wrapper.py`
+
+## Summary
+- bin/cmoc の仮想環境検査に関する pytest。venv の欠落・不正なパス・Python として起動できない実行ファイルを対象に、終了コードと標準出力のエラーレポート形式、root token path を検証する。
+
+## Read this when
+- bin/cmoc の起動 wrapper、venv 検査、missing venv 時の call stack 表示、エラーレポートの回帰を確認・変更するとき
+
+## Do not read this when
+- CLI 本体の実装や一般的なエラーハンドリングだけを調査するときは、まず対応する実装または oracle の仕様文書を読む
+
+## hash
+- 23421a82a418f28bb979077880c6c6dc3a73d1a1890cf70502152ab6cb694983
 
 # `test_session_cli.py`
 
