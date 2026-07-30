@@ -177,19 +177,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- Root/worktree と path model の runtime 契約を検証するテスト。placeholder の解決、repo root と linked worktree の区別、process-global cwd を扱う pushd の排他、run worktree の作成・検索・削除における管理領域・branch 対応・Git 登録・symlink・置換 path の安全性を対象とする。
+- Root/worktree と path model の runtime 契約を検証するテスト。placeholder path の解決、repo root と linked worktree の区別、process-global な cwd 変更の直列化を扱う。
+- run worktree の作成・検索・削除について、管理領域外、branch と不一致、dot component、symlink、未登録 path、Git 登録 path の置換などを拒否する安全性を検証する。
+- Git global 設定に依存しない test repository の生成も検証する。
 
 ## Read this when
-- path placeholder、repo root、linked worktree、work root の runtime 挙動を変更または調査するとき
-- run worktree の作成・検索・削除、管理 path の検証、symlink 対策を変更または調査するとき
-- pushd の並行利用や process-global cwd の競合を変更または調査するとき
+- path model や root placeholder の解決挙動を変更・調査するとき
+- repo root、linked worktree、run/work root、cwd 操作の runtime 挙動を変更・調査するとき
+- run worktree の作成・検索・削除、managed path 検証、symlink 対策を変更・調査するとき
+- 関連する runtime 実装の変更後に安全性を検証するとき
 
 ## Do not read this when
-- runtime path や worktree の安全性に関係しない CLI 機能・モデル処理・別領域のテストを扱うとき
-- path model や worktree API の実装詳細ではなく、単一の別テスト対象の挙動だけを確認するとき
+- CLI の個別コマンドや runtime と無関係な機能を変更・調査するとき
+- path model や worktree lifecycle の実装・仕様そのものを確認したい場合（参照されている oracle 文書・ソースを直接読む）
 
 ## hash
-- d84cfe58f00b664dd386048a8b2c25d1b415034c7adf096fdb4dcbf1aa189fb0
+- e46f7c07941d2f3bc273d0ad44f98f8bd15be87aaa353e70242d6ad53f197d6c
 
 # `test_cli_command_tree.py`
 

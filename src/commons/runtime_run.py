@@ -83,7 +83,7 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
                 # run-root 外へ解決される登録を受け入れない。
                 if registered_path != expected or resolved_path != expected:
                     return None
-                if registered_path.exists() and not _has_linked_worktree_metadata(
+                if not registered_path.is_dir() or not _has_linked_worktree_metadata(
                     root, registered_path
                 ):
                     return None

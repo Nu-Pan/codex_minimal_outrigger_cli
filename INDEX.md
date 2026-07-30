@@ -126,33 +126,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装を格納する src ツリー。Typer CLI の入口、CLI サブコマンド、共通 runtime、ACP builder、互換 import shim を扱い、各機能の実装詳細へ進むための上位ルーティング地点。
+- cmoc の realization source tree。Typer CLI の起動・サブコマンド登録、CLI サブコマンド実装、共通 runtime、ACP builder adapter、互換 import shim、設定・基本型の公開入口をまとめる。各機能の詳細実装へ進むための上位入口。
 
 ## Read this when
-- cmoc の CLI 全体構成、公開コマンドから実装への委譲、または realization 側の主要パッケージ配置を確認するとき。
-- 共通 runtime、ACP builder、互換 import、doctor・indexing・oracle・realization・run・session・TUI の実装入口を探すとき。
+- cmoc CLI 全体の登録構成や、サブコマンドから実装への委譲関係を確認するとき。
+- 共通 runtime、ACP builder、互換 import、設定・基本型の realization 構成を横断して調査するとき。
 
 ## Do not read this when
-- 単一サブコマンドや runtime helper の詳細を確認したいときは、該当する下位実装を直接読む。
-- oracle の正本仕様・実装、または個別 API の具体的な挙動だけを確認したいときは、対応する oracle file や実体モジュールを直接読む。
+- 特定サブコマンド、runtime 機能、builder adapter、互換 shim の詳細だけを確認したいときは、対応する下位対象を直接読む。
+- oracle の正本仕様や oracle source の実装を確認するときは、oracle 配下を直接読む。
 
 ## hash
-- e50bf045a2bcb1d3c47ce7b703a18522d4f3cd4929f470d3f8fba46209516c04
+- 68dc955c26468594511f743d265e48c94af3bc0c096e70ff9dd3aa1adb56bc69
 
 # `test`
 
 ## Summary
-- cmoc の realization test ディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定・Git・worktree など、主要機能の外部契約と安全性を検証する pytest 群を収録する。各テストファイルが個別領域の検証入口となる。
+- cmoc の realization test を集約するテストディレクトリ。共通テストヘルパー、runtime・CLI・Codex 実行、indexing、oracle review、session/run lifecycle、設定・状態永続化、各種安全性契約を検証する下位テストへの入口。
 
 ## Read this when
-- cmoc の実装変更に伴う回帰テストの対象領域を選ぶとき
-- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、Git、worktree などの外部挙動を検証するとき
-- 共通テスト支援モジュールや実経路・GPU 統合テストの利用方法を確認するとき
+- cmoc の複数サブシステムにまたがる回帰テストの構成や、対象テストファイルの選択肢を把握するとき。
+- CLI、runtime、Codex、indexing、oracle review、session/run、設定・状態管理の外部挙動を検証するテストを探すとき。
+- テスト用 Git repository、fake command、Codex/Ollama 環境などの共通 helper を確認するとき。
 
 ## Do not read this when
-- 正本仕様や実装の詳細を確認したいときは、対応する oracle または src ファイルを直接読む
-- 対象機能が明確な場合は、このディレクトリ全体ではなく該当する個別テストへ直接進む
-- Codex や LLM の回答品質そのものを評価したいとき
+- 特定機能の正本仕様や実装詳細を確認したいときは、対応する oracle 文書・ソースまたは realization 実装を直接読む。
+- テスト実行環境や品質ゲートの手順だけを確認するときは、対応する開発・テスト手順を読む。
+- 対象機能と無関係なテストを総覧する必要がないときは、このディレクトリ全体ではなく該当する個別テストへ進む。
 
 ## hash
-- a3a9eaee3f572bda8bc0befe1db62b64c6db12bfa8a8cabf97d6bb44d696e34d
+- 67c68fc1fae9f759d126be6044f49ab3b75dfa346c48c841047e769ab55a4d5a

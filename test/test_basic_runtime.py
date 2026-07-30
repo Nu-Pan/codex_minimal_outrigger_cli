@@ -221,6 +221,7 @@ def test_run_worktree_lookup_rejects_replaced_registered_path(
         "HEAD",
     )
     target.rename(tmp_path / "moved-worktree")
+    assert worktree_for_branch_optional(root, "cmoc/run/session/run") is None
     target.mkdir(parents=True)
 
     assert worktree_for_branch_optional(root, "cmoc/run/session/run") is None
