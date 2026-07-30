@@ -972,10 +972,10 @@
     "last_investigated_at": "2026-07-30_04-12_58_477520000"
   },
   "src/sub_commands/run/join.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "84588cb3a32f820eddac5a158f8e7360c4375ec75686989e3673e68d05c674fc",
-    "last_investigated_at": "2026-07-30_04-33_44_893433000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "7f1678f84ac41a0dda3e44ebafd50f3500e35dfbd7303a56406df145d247177f",
+    "last_investigated_at": "2026-07-30_14-30_31_240130000"
   },
   "src/sub_commands/run/lifecycle.py": {
     "investigation_required": false,
