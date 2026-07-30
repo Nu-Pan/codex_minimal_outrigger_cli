@@ -215,6 +215,8 @@ def run_codex_exec(
     )
     schema_definition: Any | None = None
     if schema_path is not None:
+        # jsonschema exposes some malformed `$schema` metadata as AttributeError; keep
+        # those local schema failures on the controlled CmocError path.
         try:
             schema_definition = json.loads(schema_path.read_text(encoding="utf-8"))
             validators.validator_for(schema_definition).check_schema(schema_definition)
@@ -224,6 +226,7 @@ def run_codex_exec(
             json.JSONDecodeError,
             SchemaError,
             TypeError,
+            AttributeError,
         ) as exc:
             raise CmocError(
                 "Structured Output schema が不正です。",

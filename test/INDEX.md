@@ -314,21 +314,20 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex exec の再試行・失敗処理を外部挙動として検証するテスト。Structured Output の意味的失敗や解析失敗、capacity retry、未知の JSONL エラー、中断、retry 上限、agent diff 保持を扱う。fake Codex による応答を使い、最終結果だけでなく subprocess 呼び出し回数、call log、subcommand event、エラー出力まで一続きで確認する。
+- Codex exec の retry・失敗処理とログ出力を外部挙動として検証するテスト。Structured Output の意味的失敗・解析失敗、capacity retry、未知の JSONL エラー、中断、retry 上限、agent diff 保持、stdout 外のエラーマーカー無視を扱う。run_codex_exec の呼び出し回数、retry 状態、call log、subcommand event、最終結果や例外を一続きで確認する。
 
 ## Read this when
-- Codex exec の retry 条件、retry 上限、backoff、失敗分類を変更・調査するとき
-- Codex 呼び出しの call log や subcommand event の記録形式・状態遷移を変更・調査するとき
-- Structured Output の検証失敗、JSONL error、中断時の外部挙動を確認するとき
-- capacity retry 後の agent diff 保持や stdout JSONL 外のエラーマーカー処理を確認するとき
+- run_codex_exec の retry 条件、失敗分類、backoff、上限、Structured Output 検証を変更・調査するとき
+- Codex subprocess の呼び出し回数や KeyboardInterrupt・JSONL error の扱いを確認するとき
+- Codex call log または subcommand event の status・error・returncode・パスを変更・検証するとき
+- capacity retry 後の差分保持や、stdout JSONL 外のエラーマーカーの扱いを確認するとき
 
 ## Do not read this when
-- Codex exec の通常成功処理だけを変更・調査するとき
-- Codex exec 本体ではなく、別の CLI 機能や無関係なログ処理を扱うとき
-- retry や失敗時ログの外部挙動を確認する必要がなく、実装詳細だけを読むとき
+- Codex exec の通常成功経路だけを変更・調査するとき
+- retry や失敗時ログに関係しない CLI、設定、または別サブコマンドのテストを扱うとき
 
 ## hash
-- f07155d1d0d18a3d67913502ece2d92509c23f8e9065ddf30795c6af23d294cf
+- 1247ba2ac5760832365ff81f6535e62b235e91a639fc202cb48e4d6dc366f7e4
 
 # `test_codex_runtime_subprocess.py`
 
