@@ -122,13 +122,30 @@ def _cmoc_oracle_review_body(
         if not (review_worktree_created or run_branch_created):
             return None
         try:
-            return _cleanup_review_run(
-                current_root,
-                review_worktree,
-                run_branch,
-                worktree_created=review_worktree_created,
-                branch_created=run_branch_created,
-            )
+            # {{work-root}}/oracle/doc/branch_model.md
+            # worktree を先に削除してから branch を削除するため、cleanup 中に同じ
+            # run-id が再利用されると別 invocation の branch を誤って検査する。
+            # target の再確保と resource cleanup を同じ lock で直列化する。
+            try:
+                with run_lifecycle_lock(root, session_id):
+                    return _cleanup_review_run(
+                        current_root,
+                        review_worktree,
+                        run_branch,
+                        worktree_created=review_worktree_created,
+                        branch_created=run_branch_created,
+                    )
+            except BaseException as exc:
+                # lock 待機中の Ctrl+C でも resource ownership を成功扱いで捨てず、
+                # 通常の cleanup failure として report する。
+                return CmocError(
+                    "oracle review の隔離 run の cleanup に失敗しました。",
+                    [
+                        "review worktree と run branch の状態を確認してください。",
+                        "残った隔離 run の資源を整理してから再実行してください。",
+                    ],
+                    f"run lifecycle lock acquisition failed: {exc!r}",
+                )
         finally:
             review_worktree_created = False
             run_branch_created = False
@@ -208,7 +225,11 @@ def _cmoc_oracle_review_body(
                     review_worktree, run_fork_commit
                 )
             if review_has_index_changes:
-                run_join_commit = merge_review_branch(current_root, run_branch)
+                # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+                # review run の自動 merge は editing run の join と同じ session branch
+                # を更新するため、別 run の lifecycle 操作と直列化する。
+                with run_lifecycle_lock(root, session_id):
+                    run_join_commit = merge_review_branch(current_root, run_branch)
         finally:
             cleanup_error = _cleanup_created_resources()
         if cleanup_error is not None:

@@ -15,6 +15,7 @@
 
 import subprocess
 from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -413,6 +414,83 @@ def test_oracle_review_keeps_successfully_created_branch_owned_on_false_probe(
     assert result.exit_code == 0, result.output
     assert created_branch
     assert run_git(root, "branch", "--list", created_branch[0]).stdout == ""
+
+
+@pytest.mark.parametrize("interrupt_cleanup_lock", [False, True])
+def test_oracle_review_serializes_merge_and_cleanup_with_run_lifecycle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    interrupt_cleanup_lock: bool,
+) -> None:
+    """review run の merge・cleanup と lock 待機中断を検証する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/run_isolation.md、
+    {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    original_lock = review_module.run_lifecycle_lock
+    original_cleanup = review_module._cleanup_review_run
+    original_merge = review_module.merge_review_branch
+    lock_depth = 0
+    lock_calls = 0
+    merge_lock_depths: list[int] = []
+    cleanup_lock_depths: list[int] = []
+
+    @contextmanager
+    def tracked_lock(root_arg: Path, session_id: str) -> Iterator[None]:
+        """lifecycle lock の保持中に実行された処理を記録する。"""
+        nonlocal lock_calls, lock_depth
+        lock_calls += 1
+        if interrupt_cleanup_lock and lock_calls == 3:
+            raise KeyboardInterrupt()
+        with original_lock(root_arg, session_id):
+            lock_depth += 1
+            try:
+                yield
+            finally:
+                lock_depth -= 1
+
+    def tracked_cleanup(*args: object, **kwargs: object) -> object:
+        """merge 後の cleanup が lock 内で行われることを検証する。"""
+        cleanup_lock_depths.append(lock_depth)
+        return original_cleanup(*args, **kwargs)
+
+    def tracked_merge(*args: object, **kwargs: object) -> object:
+        """review branch の merge が lock 内で行われることを検証する。"""
+        merge_lock_depths.append(lock_depth)
+        return original_merge(*args, **kwargs)
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """finding 列挙を空結果にして lifecycle の直列化だけを検証する。"""
+        assert _schema_name(parameter) == "enumerate_finding.json"
+        (Path.cwd() / "INDEX.md").write_text("# generated review index\n")
+        return _FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(review_module, "run_lifecycle_lock", tracked_lock)
+    monkeypatch.setattr(review_module, "_cleanup_review_run", tracked_cleanup)
+    monkeypatch.setattr(review_module, "merge_review_branch", tracked_merge)
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
+    )
+
+    if interrupt_cleanup_lock:
+        assert result.exit_code != 0
+        assert "oracle review の隔離 run の cleanup に失敗しました。" in result.output
+        assert merge_lock_depths == [1]
+        assert cleanup_lock_depths == []
+    else:
+        assert result.exit_code == 0, result.output
+        assert merge_lock_depths == [1]
+        assert cleanup_lock_depths == [1]
 
 
 def test_oracle_review_unexpected_base_exception_during_run_creation_cleans_resources(
