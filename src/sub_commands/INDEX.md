@@ -46,16 +46,18 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。edit、investigation、review の各入口と、review の対象列挙・パス解決・ループ・レポート・Git 操作を担う下位実装への入口となる。
+- oracle 系サブコマンドの実装群をまとめるディレクトリ。edit・investigation・review の各 CLI 入口と、review の対象列挙、パス解決、ループ、レポート、INDEX 統合などの下位実装への入口を提供する。
 
 ## Read this when
-- oracle 系サブコマンドの構成や、各サブコマンド・review 関連実装の入口を確認するとき。
+- oracle サブコマンド群の構成や、対象サブコマンドの実装入口を確認するとき。
+- oracle review の実行制御・対象管理・結果統合に関わる複数モジュールの関係を把握するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な挙動を調査する場合は、対応する下位実装を直接読む。
+- 単一の oracle サブコマンドの詳細実装を調査する場合は、該当する実装ファイルを直接読む。
+- 共通入力部品、TUI 起動パラメータ生成、review の個別処理やレポート形式だけを調査する場合は、対応する下位実装を直接読む。
 
 ## hash
-- df40670274cd24756f86cd861a19ff939a1d0b0cbd3d23dcb6a4b2e4ad188108
+- 42af8b3fbcfb638abc8599b26ce165eb53fdcf022dd12fdf05ba5d1ff015c6e9
 
 # `realization`
 

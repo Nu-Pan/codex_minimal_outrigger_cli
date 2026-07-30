@@ -108,6 +108,8 @@ def _restore_failed_review_merge(root: Path, merge_base: str) -> None:
     if merge_head.returncode == 0:
         run_git(["merge", "--abort"], root, check=False)
     run_git(["reset", "--hard", merge_base], root)
+    # merge --abort が残した未追跡の部分成果物も除去し、開始前の clean tree に戻す。
+    run_git(["clean", "-fd"], root)
 
 
 def resolve_review_index_conflicts(root: Path) -> bool:

@@ -731,6 +731,47 @@ def test_oracle_review_restores_interrupted_merge_conflict(
     assert (root / "README.md").read_text() == "session\n"
 
 
+def test_oracle_review_cleans_untracked_merge_rollback_residue(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """merge abort の失敗で残った未追跡 path も session worktree から除去する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    """
+    root = make_repo(tmp_path)
+    home_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    run_git(root, "switch", "-c", "review")
+    (root / "README.md").write_text("review\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "review README")
+    run_git(root, "switch", home_branch)
+    (root / "README.md").write_text("session\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session README")
+    session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    leftover = root / "merge-leftover.txt"
+    original_run_git = review_index_module.run_git
+
+    def fail_abort_with_leftover(
+        args: list[str], cwd: Path, check: bool = True
+    ) -> CommandResult:
+        """merge abort 失敗後に未追跡 path が残る状態を再現する。"""
+        result = original_run_git(args, cwd, check=check)
+        if args == ["merge", "--abort"]:
+            leftover.write_text("partial merge output\n")
+            return CommandResult(1, result.stdout, result.stderr)
+        return result
+
+    monkeypatch.setattr(review_index_module, "run_git", fail_abort_with_leftover)
+
+    with pytest.raises(CmocError, match="review branch の merge に失敗しました"):
+        review_module.merge_review_branch(root, "review")
+
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_commit
+    assert run_git(root, "status", "--porcelain").stdout == ""
+    assert not leftover.exists()
+
+
 def test_commit_review_index_changes_accepts_nested_untracked_index(
     tmp_path: Path,
 ) -> None:
