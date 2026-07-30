@@ -126,33 +126,35 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる src ディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP builder adapter、設定・基本 API の再公開を扱い、各実装領域への入口となる。
+- cmoc の realization 実装をまとめる src ツリー。CLI エントリーポイント、共通 runtime、サブコマンド、ACP・basic・config の互換入口を含み、各下位ディレクトリまたは実装モジュールへ進むための起点となる。
 
 ## Read this when
-- cmoc の realization 側の全体構成や主要な実装領域を把握したいとき
-- CLI、共通 runtime、ACP adapter、互換 import、サブコマンドの配置先を選びたいとき
+- cmoc の realization 実装全体の構成や、CLI から各サブコマンド・共通 runtime へ至る入口を確認するとき。
+- ACP、basic、config、oracle の互換 import shim の配置と役割を確認するとき。
+- 対象機能の実装ファイルを特定し、下位ディレクトリへ調査を進めるとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime 機能の詳細を確認するときは、対応する下位ディレクトリまたはモジュールを直接読む
-- oracle 側の正本仕様・実装を確認するときは、oracle 配下を直接読む
+- 正本仕様や oracle 側の実装内容を確認するときは、対応する oracle ツリーを直接読む。
+- 特定サブコマンド、runtime 機能、ACP builder の詳細が明確な場合は、src 配下の対応する実体モジュールまたは下位ディレクトリを直接読む。
+- CLI や realization 実装と無関係な仕様・テストだけを確認するとき。
 
 ## hash
-- 4c34bfd530034f29a17689c60627a082bff5eafbd6a52b4042f9e6d9e83af6b8
+- 4423dbc2ea4981f2b6f39d08878929b5a63f9397b57a80aaa44a90235458cb2b
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定・Git・worktree・prompt などの外部挙動と制御契約を検証する。各機能の回帰テストへ進む入口。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定・Git・path 安全性など、実装の外部契約と制御ロジックを検証するテストおよび共通テスト支援を含む。各機能の回帰テストへ進む入口。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test を探すとき
-- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、Git、worktree、prompt の挙動をテストから確認するとき
-- 関連するテストの実行対象や、外部契約を検証する既存ケースを調べるとき
+- cmoc の realization test を探すとき
+- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、Git、path、安全性などの外部挙動や制御ロジックを検証・変更するとき
+- 複数テストで共有される Codex、Ollama、Git、外部コマンド、path 解決のテスト支援を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle 文書・oracle source・oracle schema を直接読む
-- 実装詳細だけを調査するときは、対応する src ファイルを直接読む
-- cmoc と無関係なテストや、Codex の回答品質そのものを評価するテストを探すとき
+- 正本仕様、schema、prompt、開発・テスト手順を確認するときは、対応する oracle file または開発ルールを直接読む
+- 実装の内部詳細だけを調査し、テスト上の外部契約を確認する必要がないとき
+- 対象機能が明確な場合は、このディレクトリ全体ではなく該当する個別テストへ直接進む
 
 ## hash
-- 936458b60c99f426c5e748ee62f6d85377c62cfaa8ffcf711e0db0984f38a270
+- 114aaf226c0f246edfd3f7c8f40342b050b67fcbc1224ba116d8e2f6ae4fc753

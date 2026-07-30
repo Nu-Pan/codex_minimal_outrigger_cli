@@ -150,10 +150,23 @@ def _cmoc_oracle_review_body(
                 # worktree add が作成直後に中断されても、今回の作成物だけを cleanup 対象として
                 # 後続の終了処理へ渡す。target 選択と作成は lock 下なので、検出された resource
                 # はこの invocation の部分作成である。
-                review_worktree_created = (
-                    review_worktree.exists() or review_worktree.is_symlink()
-                )
-                run_branch_created = branch_exists(root, run_branch)
+                try:
+                    review_worktree_created = (
+                        review_worktree.exists() or review_worktree.is_symlink()
+                    )
+                except BaseException:
+                    # 検出自体が中断されても、作成を開始した target はこの invocation の
+                    # 所有物として扱い、cleanup で取り残しを防ぐ。
+                    review_worktree_created = True
+                    run_branch_created = True
+                    raise
+                try:
+                    run_branch_created = branch_exists(root, run_branch)
+                except BaseException:
+                    # branch probe 中の Ctrl+C でも、create_run_worktree が確保した branch を
+                    # cleanup 対象として保持する。未作成なら cleanup 側で失敗を report する。
+                    run_branch_created = True
+                    raise
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")
             with pushd(review_worktree):

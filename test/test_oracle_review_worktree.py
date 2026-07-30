@@ -330,6 +330,49 @@ def test_oracle_review_interrupt_after_branch_only_creation_cleans_branch(
     assert "result: interrupted" in report_path.read_text()
 
 
+def test_oracle_review_interrupt_during_resource_probe_cleans_resources(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """作成直後の resource probe 中断でも review branch を残さない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    original_branch_exists = review_module.branch_exists
+    interrupted = False
+    created_branch: list[str] = []
+
+    def interrupt_during_branch_probe(root_arg: Path, branch: str) -> bool:
+        """review resource の所有権確認中の Ctrl+C を再現する。"""
+        nonlocal interrupted
+        if branch.startswith("cmoc/run/") and not interrupted:
+            interrupted = True
+            created_branch.append(branch)
+            raise KeyboardInterrupt()
+        return original_branch_exists(root_arg, branch)
+
+    monkeypatch.setattr(review_module, "branch_exists", interrupt_during_branch_probe)
+
+    result = runner.invoke(
+        app,
+        ["oracle", "review", "--scope", "full"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    assert created_branch
+    assert run_git(root, "branch", "--list", created_branch[0]).stdout == ""
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    assert "result: interrupted" in report_path.read_text()
+
+
 def test_oracle_review_unexpected_base_exception_during_run_creation_cleans_resources(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
