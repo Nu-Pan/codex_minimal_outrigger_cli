@@ -227,19 +227,19 @@
 # `runtime_doctor.py`
 
 ## Summary
-- doctor preprocess の排他ロック、修復対象の同期、Git index の退避・一時 index 合成・復元、修復 commit を一つの lifecycle として実装するモジュール。`.gitignore`、`.agents/.gitkeep`、config、refactor state の修復と、修復後の追跡状態検証を扱う。
+- doctor preprocess の修復ライフサイクル全体を担う実装。doctor lock による排他、修復対象の同期、Git index の退避・一時 index への修復差分合成・復元、修復 commit、追跡状態の検証を扱う。doctor preprocess の挙動や Git common directory／index の不変条件を変更・調査するときの主要な入口。
 
 ## Read this when
-- doctor preprocess の修復処理、Git common directory 単位の排他制御、修復 commit、または現在の index の保存・復元を調査・変更するとき
-- `.gitignore` や `.agents/.gitkeep` の doctor 修復、config/refactor state の同期、修復差分と利用者の staged 状態の分離を確認するとき
-- doctor 実行時の失敗処理、一時 index、Git index の不変条件、tracked runtime file の検証を確認するとき
+- doctor preprocess の修復処理、修復 commit、並行実行時の排他を変更または調査するとき。
+- ユーザーの staged 状態を保ったまま .gitignore、.agents、config、refactor state を修復する処理を確認するとき。
+- Git index の退避・一時 index の合成・復元、HEAD 起点の commit lifecycle、失敗時の復元挙動を確認するとき。
 
 ## Do not read this when
-- 通常の Git 操作、doctor 以外の CLI 処理、config や refactor state の同期実装そのものだけを調査するとき
-- runtime のパス・Git 共通 helper・エラー型の定義を直接確認する必要があるときは、それぞれの専用モジュールを先に読む
+- doctor preprocess 以外の一般的な Git 操作や runtime 設定同期だけを変更・調査するときは、それぞれの担当モジュールを直接読む。
+- doctor の CLI 引数や利用者向けエラー仕様だけを確認するときは、コマンド定義または対応する仕様文書を先に読む。
 
 ## hash
-- 12ecb44653b8c3df1995c37c68a8554114c9f66fb410588ed2b61e48ec82bdaf
+- d37e5ea4aa000b9ef2c08b54122aa15f2a9313c6df4e8eca700888205fbd935a
 
 # `runtime_errors.py`
 

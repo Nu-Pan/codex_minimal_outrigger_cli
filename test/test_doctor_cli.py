@@ -610,3 +610,22 @@ def test_doctor_preprocess_preserves_preexisting_staged_rename(
         "R100\told.txt\tnew.txt"
     ]
     assert run_git(root, "diff", "--name-status").stdout.strip() == ""
+
+
+def test_doctor_preserves_preexisting_staged_gitignore_deletion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """doctor が既存 .gitignore の staged deletion も保持する。"""
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    run_doctor(root)
+
+    run_git(root, "rm", "--cached", "-f", "--", ".gitignore")
+    before = run_git(root, "diff", "--cached", "--name-status").stdout
+
+    run_doctor(root)
+
+    assert run_git(root, "diff", "--cached", "--name-status").stdout == before
+    assert run_git(root, "ls-files", "--stage", "--", ".gitignore").stdout == ""

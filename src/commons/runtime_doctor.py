@@ -92,6 +92,7 @@ def run_doctor_preprocess(
             try:
                 restored_index_path = _restored_index(
                     repair_root,
+                    original_index_path=original_index_path,
                     include_config=include_config,
                 )
                 _commit_doctor_repairs(
@@ -289,13 +290,24 @@ def _stage_agents_gitkeep_repair(
         _stage_agents_gitkeep(root, index_path)
 
 
-def _restored_index(root: Path, *, include_config: bool) -> Path:
+def _restored_index(
+    root: Path,
+    *,
+    original_index_path: Path,
+    include_config: bool,
+) -> Path:
     """doctor 修復を合成した一時 index file を作る。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     # 復元対象は path 列挙ではなく index 全体で扱い、rename や unstaged hunk を保つ。
     index_path = _copy_current_index(root)
     try:
-        _stage_gitignore_repair_from_index(root, index_path)
+        # 修復 commit は HEAD を更新するが、復元 index では利用者の staged deletion を保つ。
+        if not _is_staged_deletion_of_head_entry(
+            root,
+            original_index_path,
+            ".gitignore",
+        ):
+            _stage_gitignore_repair_from_index(root, index_path)
         _stage_agents_gitkeep_repair_from_index(root, index_path)
         if include_config:
             _stage_tracked_runtime_repair(root, index_path)
@@ -386,6 +398,21 @@ def _stage_tracked_runtime_repair(root: Path, index_path: Path) -> None:
     """同期済み config/state を ignore 規則に左右されず一時 index へ載せる。"""
     for path in (config_path(root), refactor_state_path(root)):
         _stage_text(root, index_path, str(path.relative_to(root)), path.read_text())
+
+
+def _is_staged_deletion_of_head_entry(
+    root: Path,
+    index_path: Path,
+    path: str,
+) -> bool:
+    """元 index が HEAD の tracked path を staged deletion にしているか返す。"""
+    if _head_entry(root, path) is None:
+        return False
+    return not _run_git_with_index(
+        ["ls-files", "--stage", "--", path],
+        root,
+        index_path,
+    ).stdout.strip()
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:

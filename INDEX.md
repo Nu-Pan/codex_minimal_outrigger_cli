@@ -126,32 +126,34 @@
 # `src`
 
 ## Summary
-- `src` 配下の実装入口と互換 shim、共通 runtime、CLI サブコマンド群をまとめるトップレベルディレクトリ。各対象の詳細実装へ進むためのルーティング起点。
+- cmoc の realization 実装ルート。CLI エントリーポイント、サブコマンド、共通 runtime、設定・ACP・basic の互換入口、oracle package shim を含み、各機能の実装領域へ進むための上位入口となる。
 
 ## Read this when
-- `src` 配下で対象となる実装モジュールや CLI サブコマンドの入口を選ぶとき。
-- 互換 import、共通 runtime、CLI 登録、サブコマンド実装の構成を確認するとき。
+- cmoc の realization 側の実装構成や、CLI・runtime・互換 import の入口を確認するとき。
+- CLI の登録元から個別サブコマンド実装、または commons の共通 runtime 実装へ進む先を選ぶとき。
+- oracle.* や既存公開 import path を realization 側から解決する仕組みを確認するとき。
 
 ## Do not read this when
-- 特定モジュールの具体的な処理や仕様を確認したいときは、対応するファイルまたは下位ディレクトリを直接読む。
-- 正本仕様や oracle 側の実装を確認したいときは、`oracle` 配下を直接読む。
+- 特定サブコマンドの詳細処理を確認したいときは、sub_commands 配下の該当実装を直接読む。
+- 共通 runtime の個別責務を確認したいときは、commons 配下の対応する runtime module を直接読む。
+- 設定・oracle 仕様の正本や、oracle 側の実装内容を確認したいときは、対応する oracle 配下を直接読む。
 
 ## hash
-- 179324bd35b8e22c44e9f68354be7c330754b897330ef38d2dcd5241a532bf5e
+- 3be8bceef3af816e5ffb781ab9d2c270ae646a9cedc6083e31d7b17df573b148
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/state、設定・path・Git など、各機能の外部契約と境界条件を検証するテストおよび共通テスト支援へ進む入口。
+- cmoc の realization test 群と共通テスト支援モジュールを収録するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run lifecycle、設定・状態・Git・worktree などの外部契約と境界条件を検証する各テストへの入口である。
 
 ## Read this when
-- 実装変更に対応する回帰テストや、対象機能の外部挙動・失敗時挙動・ライフサイクルを確認するとき
-- 複数のサブシステムにまたがる統合テスト、実経路受け入れテスト、共通テスト helper を探すとき
+- 変更・調査対象に対応する realization test や、その共通 fixture・fake command・Git/Ollama/Codex 支援を探すとき。
+- 複数のサブシステムにまたがる CLI、Codex 実行、indexing、oracle review、session/run lifecycle の回帰テストを確認するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc・oracle src・oracle schema を直接読む
-- 実装の局所ロジックだけを調査するときは、対応する src の実装ファイルを直接読む
-- テスト実行環境や Python 開発規約だけを確認するときは、対応する開発・テスト手順を読む
+- 正本仕様、schema、開発環境、テスト実行手順を確認することが目的のときは、対応する oracle file または開発・テスト規約を直接読む。
+- 単一の実装関数の局所ロジックだけを調査するときは、対応する realization implementation を直接読む。
+- 対象機能と無関係なテスト領域を探しているときは、このディレクトリ全体ではなく対応する個別テストへ進む。
 
 ## hash
-- 8a93b1d6f87e873df3fb814383180c4198d12beb20a29c91a4dc0a646e9b9747
+- 428f41c3571a952de9afcd5d26a50ef55258fd56dd197f39bef28bcf6571ec2c
