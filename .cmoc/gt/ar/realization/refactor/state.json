@@ -1290,10 +1290,10 @@
     "last_investigated_at": "2026-07-30_18-00_00_429351000"
   },
   "test/test_runtime_refactor.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "2bad16161bd863560ec2e73e21b40d45c477eab5d299eaf467d61352fe86ed2c",
-    "last_investigated_at": "2026-07-30_08-35_57_904586000"
+    "last_investigated_sha256": "81e6958cf7d40be0ec70effa950e4b3cc0d877b1fa1791c18ce9803952fe2ac6",
+    "last_investigated_at": "2026-07-31_01-38_00_917229000"
   },
   "test/test_runtime_state.py": {
     "investigation_required": false,
