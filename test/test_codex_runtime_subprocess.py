@@ -556,6 +556,14 @@ def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     monkeypatch.setenv(cmoc_runtime.RUN_PROCESS_TRACKING_ENV, str(tracking_path))
 
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "run_tracked_codex_subprocess",
+        lambda *_args, **_kwargs: pytest.fail(
+            "inherited tracking env must not activate child tracking"
+        ),
+    )
+
     result = run_codex_subprocess(["codex"], text=True, capture_output=True)
 
     assert result.stdout == "ok\n"
