@@ -8,6 +8,7 @@ oracle/realization file の分類は、同じ repository path・Git index・安�
 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -346,17 +347,74 @@ def main_worktree_root(root: Path) -> Path:
     return git_common_dir(root).parent
 
 
+def _git_info_exclude_path(root: Path) -> Path:
+    """Git の repository-local info/exclude path を返す。"""
+    return (
+        root / run_git(["rev-parse", "--git-path", "info/exclude"], root).stdout.strip()
+    )
+
+
+def _global_git_ignore_paths(root: Path) -> list[Path]:
+    """Git が読む global excludes file の path を返す。"""
+    configured = run_git(
+        ["config", "--path", "--get-all", "core.excludesFile"],
+        root,
+        check=False,
+    )
+    if configured.returncode == 0:
+        paths: list[Path] = []
+        for line in configured.stdout.splitlines():
+            if line:
+                path = Path(line)
+                paths.append(path if path.is_absolute() else root / path)
+        return paths
+    config_home = os.environ.get("XDG_CONFIG_HOME")
+    base = Path(config_home) if config_home else Path.home() / ".config"
+    return [base / "git" / "ignore"]
+
+
+def _validate_git_ignore_sources(
+    root: Path,
+    candidate: Path,
+    *,
+    strict_local: bool = False,
+) -> None:
+    """git check-ignore が読む ignore file を非通常 file でないと確認する。"""
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    root = root.absolute()
+    relative = candidate.absolute().relative_to(root)
+    validate_local = _validate_ignore_path if strict_local else _reject_non_file_path
+    validate_local(root / ".gitignore", ".gitignore")
+    validate_local(_git_info_exclude_path(root), "Git info/exclude")
+
+    directory = root
+    for part in relative.parts:
+        directory /= part
+        if not directory.is_dir():
+            break
+        _reject_non_file_path(directory / ".gitignore", "Git nested .gitignore")
+
+    for path in _global_git_ignore_paths(root):
+        _validate_global_git_ignore_path(path)
+
+
+def _validate_global_git_ignore_path(path: Path) -> None:
+    """global excludes の特殊 file を検証し、無害な /dev/null だけ許可する。"""
+    if path.resolve() == Path(os.devnull).resolve():
+        return
+    _reject_non_file_path(path, "Git global excludes file")
+
+
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
     """.cmoc/gu の追跡有無と ignore 判定を取得する。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    # git の ignore 判定は .gitignore と info/exclude を読むため、共通経路で
-    # 非通常 file を拒否してからコマンドを実行する。
-    gitignore = root / ".gitignore"
-    _validate_ignore_path(gitignore, ".gitignore")
-    exclude_path = (
-        root / run_git(["rev-parse", "--git-path", "info/exclude"], root).stdout.strip()
+    # git check-ignore は repository-local、nested、global の ignore file を読むため、
+    # FIFO などの非通常 file を拒否してからコマンドを実行する。
+    _validate_git_ignore_sources(
+        root,
+        root / CMOC_IGNORE_PROBE,
+        strict_local=True,
     )
-    _validate_ignore_path(exclude_path, "Git info/exclude")
     tracked = run_git(["ls-files", "--", ".cmoc/gu"], root).stdout.strip()
     ignored = run_git(
         ["check-ignore", "-q", CMOC_IGNORE_PROBE],
@@ -416,10 +474,8 @@ def _validate_ignore_path(path: Path, description: str) -> None:
 
 def ensure_cmoc_ignored(root: Path) -> None:
     """.gitignore と index を更新できる場面で .cmoc/gu を追跡対象外にする。"""
-    gitignore = root / ".gitignore"
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    _validate_ignore_path(gitignore, ".gitignore")
     tracked, ignored_returncode = _cmoc_ignore_status(root)
+    gitignore = root / ".gitignore"
     content = gitignore.read_text() if gitignore.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
     if updated_content != content:
@@ -445,9 +501,7 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
     - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
-    exclude_path = (
-        root / run_git(["rev-parse", "--git-path", "info/exclude"], root).stdout.strip()
-    )
+    exclude_path = _git_info_exclude_path(root)
     _validate_ignore_path(exclude_path, "Git info/exclude")
     content = exclude_path.read_text() if exclude_path.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
@@ -478,6 +532,7 @@ def is_git_ignored(root: Path, path: Path) -> bool:
     """対象 path が git ignore されるかを work root 基準で判定する。"""
     candidate = path if path.is_absolute() else root / path
     rel = candidate.absolute().relative_to(root.absolute())
+    _validate_git_ignore_sources(root, candidate)
     return (
         run_git(
             ["check-ignore", "--no-index", "-q", literal_pathspec(str(rel))],
@@ -495,6 +550,7 @@ def is_untracked_git_ignored(root: Path, path: Path) -> bool:
     # ignore pattern に一致しても、追跡済み file は対象に残す。
     candidate = path if path.is_absolute() else root / path
     rel = candidate.absolute().relative_to(root.absolute())
+    _validate_git_ignore_sources(root, candidate)
     return (
         run_git(
             ["check-ignore", "-q", literal_pathspec(str(rel))],

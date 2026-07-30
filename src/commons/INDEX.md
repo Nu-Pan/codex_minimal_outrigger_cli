@@ -263,21 +263,21 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行、branch・linked worktree の作成／削除、安全な path 検証、ignore 規則の管理、oracle／realization file の分類を担う共通境界。Git 状態や worktree 操作、`.cmoc` の ignore 初期化・検査、ファイル分類ロジックを変更・調査する際の入口。
+- Git コマンド実行、branch・HEAD・status、linked worktree の作成削除、安全検証を担う共通境界。
+- Git ignore の検査・更新と、oracle file／realization file の repository path・追跡状態による分類を提供する。
+- Git repository の状態確認、worktree 操作、ignore 初期化・診断、oracle／realization 判定を実装または変更するときの入口。
 
 ## Read this when
-- Git subprocess の戻り値や利用者向けエラー変換を確認するとき
-- branch、linked worktree、worktree path の安全性や削除条件を扱うとき
-- `.cmoc/gu` の ignore 設定・検査や `.gitignore`／`info/exclude` の更新を扱うとき
-- oracle file と realization file の path・Git 状態による分類を確認するとき
+- Git subprocess のエラー処理、branch・worktree・commit・status の取得や検証を変更するとき。
+- cmoc 管理 worktree の作成・削除、安全な path 検証、symlink や Git metadata の扱いを確認するとき。
+- `.cmoc/gu` の ignore 保証、Git ignore source の安全性検証、oracle／realization file の分類条件を変更するとき。
 
 ## Do not read this when
-- CLI 固有のコマンドフローや session state の仕様だけを調べるとき
-- Git と無関係な path 定数・実行時エラー・結果型の定義だけを確認するとき
-- oracle の正本仕様そのものを確認するときは、対応する oracle file を直接読む
+- Git 境界や path 分類を使うだけで、共通 helper の挙動を変更しない作業。
+- 個別サブコマンドの業務ロジック、prompt の組み立て、runtime error 型や結果型そのものを変更する作業。
 
 ## hash
-- 534db71a37dcb7e83df50ae23b113b210510eb8889d6f389155f41ec901bb773
+- 09796c4fde82b463f4f3b67c77f1686d5fd4031165bc2a9391d88611b1834d1a
 
 # `runtime_logging.py`
 

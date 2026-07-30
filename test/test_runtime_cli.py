@@ -44,6 +44,8 @@ from cmoc_runtime import (
     ensure_cmoc_ignored,
     ensure_cmoc_ignored_in_exclude,
     format_duration,
+    is_git_ignored,
+    is_untracked_git_ignored,
     render_error,
 )
 from main import app
@@ -555,6 +557,32 @@ def test_ensure_cmoc_ignored_rejects_non_file_info_exclude(tmp_path: Path) -> No
 
     with pytest.raises(CmocError, match="通常の file"):
         ensure_cmoc_ignored(root)
+
+
+def test_ignore_checks_reject_non_file_global_exclude(tmp_path: Path) -> None:
+    """global excludes が特殊 file でも git check-ignore を停止させない。"""
+    root = make_repo(tmp_path)
+    global_exclude = root / "global-ignore"
+    os.mkfifo(global_exclude)
+    run_git(root, "config", "core.excludesFile", "global-ignore")
+
+    for checker in (is_git_ignored, is_untracked_git_ignored):
+        with pytest.raises(CmocError, match="global excludes"):
+            checker(root, root / "probe")
+    with pytest.raises(CmocError, match="global excludes"):
+        ensure_cmoc_ignored(root)
+
+
+def test_ignore_checks_reject_non_file_nested_gitignore(tmp_path: Path) -> None:
+    """path 親 directory の特殊 .gitignore でも git check-ignore を停止させない。"""
+    root = make_repo(tmp_path)
+    source = root / "src"
+    source.mkdir()
+    os.mkfifo(source / ".gitignore")
+
+    for checker in (is_git_ignored, is_untracked_git_ignored):
+        with pytest.raises(CmocError, match="通常の file"):
+            checker(root, source / "probe")
 
 
 def test_ensure_cmoc_ignored_rejects_symlinked_gitignore(tmp_path: Path) -> None:

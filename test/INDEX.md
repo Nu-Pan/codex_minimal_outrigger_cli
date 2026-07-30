@@ -622,19 +622,24 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI のエラー報告、終了コード、stdout/stderr 出力、サブコマンドログ、doctor preflight、completion probe、work root 制約を検証する runtime 回帰テスト。ログ競合・並列イベント・特殊ファイルや symlink の ignore 更新、起動 wrapper の失敗も扱う。
+- CLI の error report、終了コード、stdout/stderr 境界、例外・割り込み処理を runtime CLI の外部挙動として検証するテスト。
+- サブコマンドログの生成、終了イベント、並列イベント記録、ログ書き込み失敗時の扱いを検証する。
+- work root の preflight、doctor preprocess、gitignore・info/exclude の安全な更新・判定、completion probe の副作用抑制を検証する。
+- 起動 wrapper の venv 異常時報告と、worktree を含む実行 root の選択も対象とする。
 
 ## Read this when
-- CLI のエラー形式、例外処理、終了処理、ログ生成やログ flush を変更・調査するとき
-- doctor preflight、work root 判定、shell completion の副作用抑制を変更・調査するとき
-- サブコマンドログ、gitignore/info exclude 更新、bin/cmoc 起動失敗の挙動を検証するとき
+- CLI のエラー表示、終了コード、stdout/stderr 出力、Call stack、KeyboardInterrupt の扱いを変更・調査するとき。
+- サブコマンドログ、command lifecycle event、並列 logger、preflight または doctor preprocess の実行順・失敗時挙動を変更するとき。
+- shell completion の初期化抑制や CLI 引数解析のエラー変換を変更するとき。
+- gitignore、Git info/exclude、global/nested ignore の安全性検証や起動 wrapper の異常報告を変更するとき。
 
 ## Do not read this when
-- 個別サブコマンドの正常系処理だけを変更・調査するときは、対応するサブコマンド実装・テストを直接読む
-- CLI と無関係なモデル、prompt 生成、ファイル索引処理だけを変更・調査するとき
+- CLI lifecycle や runtime logging の外部挙動を扱わず、特定サブコマンドの実装・業務ロジックだけを変更するとき。
+- 単独のデータモデルや path model の仕様を確認したいときは、まず対応する oracle src・実装・専用テストを読む。
+- CLI completion、preflight、ログ、gitignore 安全性のいずれにも関係しないテストや fixture の変更を行うとき。
 
 ## hash
-- 9f738a48448ef3eae3efa348b2583799de9ba3ca08af34ede721edb13b3ac6d3
+- ab2144b574d6bad9f75401be1cbeffe09f197aa88bd0225668454b17b8c9af8d
 
 # `test_runtime_codex_conflicts.py`
 
