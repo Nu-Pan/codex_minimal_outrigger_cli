@@ -1177,9 +1177,9 @@
   },
   "test/test_indexing_preflight.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "721d5257bee16bdb655a64f92321934576c947ac6c7eb8d2ccdfeafa89de574f",
-    "last_investigated_at": "2026-07-26_09-31_11_437936000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "d66ab6c99ee7b325acecced3ac210615f957fe86a3146d5e9e262fa7a6aa87fb",
+    "last_investigated_at": "2026-07-30_22-49_38_242801000"
   },
   "test/test_oracle_edit_cli.py": {
     "investigation_required": false,

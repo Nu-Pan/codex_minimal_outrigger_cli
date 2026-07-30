@@ -13,6 +13,7 @@ from _git_support import make_repo, run_git
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 
 # preflight の実行条件・順序・worktree 選択・recovery 禁止は、
@@ -380,7 +381,7 @@ def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
             "blocked = pathlib.Path('oracle/blocked.md')",
             "blocked.write_text('blocked\\n')",
             "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
+            "print(json.dumps({'type': 'turn.failed', 'error': {'message': 'file access violation'}}))",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
@@ -406,13 +407,14 @@ def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
     indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
-    codex_preflight_module.run_codex_exec(
-        parameter,
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-        purpose="apply fork refine findings",
-    )
+    with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗しました"):
+        codex_preflight_module.run_codex_exec(
+            parameter,
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+            purpose="apply fork refine findings",
+        )
 
     assert counter.read_text() == "1"
     assert events == [root]
