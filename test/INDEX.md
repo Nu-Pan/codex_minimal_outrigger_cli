@@ -557,21 +557,20 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- oracle review の隔離 run lifecycle と INDEX.md 統合を検証する回帰テスト。linked worktree・snapshot commit からの fork・衝突回避・中断時 cleanup・未コミット差分拒否・active editing run の許可を扱う。
-- review worktree で生成または preflight commit された INDEX.md のみを session に統合し、INDEX.md の削除競合や Git の quoted path を解決する挙動を検証する。
-- 非 INDEX 差分、merge conflict、cleanup 失敗、dangling symlink など、review の失敗時復旧とリソース残存を検証する。
+- oracle review の worktree lifecycle と INDEX.md 統合を検証する回帰テスト群。linked worktree・snapshot commit 起点の隔離、run target 衝突、中断や例外時の branch/worktree cleanup、未コミット差分の拒否、active editing run の許可を扱う。
+- review worktree で生成・preflight commit された INDEX.md のみを session に統合できること、INDEX.md の conflict 解決、非 INDEX 差分や不正な rename の拒否、merge rollback と cleanup failure の復旧・報告を検証する。
 
 ## Read this when
-- oracle review の worktree 隔離、branch lifecycle、snapshot、cleanup、中断処理を変更または調査するとき
-- oracle review における INDEX.md の生成・commit・merge・conflict 解決を変更または調査するとき
-- review run の差分検証や失敗時レポート、リソース復旧の回帰を確認するとき
+- oracle review の隔離 worktree、session branch、snapshot commit、run lifecycle の挙動を変更・調査するとき
+- oracle review における INDEX.md の生成、preflight、merge、conflict 解決、差分制限を変更・調査するとき
+- 中断・例外・cleanup failure 時の branch/worktree 残存防止や error report を確認するとき
 
 ## Do not read this when
-- oracle review の所見判定や prompt 構築だけを変更し、worktree lifecycle と INDEX 統合に関係しないとき
-- INDEX.md 更新処理そのものを単独で変更する場合は、まず indexing の実装・専用テストを読むとき
+- oracle review や INDEX.md 統合の挙動に関係せず、別のサブコマンドや一般的なテスト基盤だけを変更するとき
+- 実装の詳細を直接確認する必要があり、review lifecycle の回帰テストではなく対象モジュールを読むべきとき
 
 ## hash
-- 5ae9a9dfa0904844022bce09ce2e60f922cd4892806f2d21ffd2a8711f902e09
+- 5c7b6eb2db2850868b8d2eb25493c1d7dbfd33081b3c8db5bb48ff70ee786d18
 
 # `test_packaged_import.py`
 

@@ -143,17 +143,17 @@
 # `test`
 
 ## Summary
-- `test` ディレクトリは、cmoc の realization test を集約する回帰・統合テスト領域。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定・Git・path 安全性など、実装の外部契約と制御ロジックを検証する。各機能領域の専用テストおよび共通テスト支援モジュールへの入口として利用する。
+- cmoc の realization test を集約し、共通テスト支援モジュールと各機能の回帰・統合・受け入れテストを提供する。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Git、prompt、TUI などの外部挙動・制御契約を検証する入口である。
 
 ## Read this when
-- cmoc の realization test を探すとき
-- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、Git、path 安全性などの回帰テストを追加・変更・調査するとき
-- テスト用の Codex/Ollama、Git repository、fake external command などの共通支援を確認するとき
+- 複数の機能領域にまたがる回帰テストの配置や、対象機能に対応するテストファイルを探すとき。
+- 新しい realization implementation の変更後に、関連する外部挙動・ライフサイクル・安全性のテスト範囲を確認するとき。
+- 共通テスト支援、Codex/Ollama 統合、Git repository fixture、CLI 実行 fixture の所在を確認するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する `oracle` 文書・source・schema を直接読む
-- 実装の責務や詳細を確認するときは、対応する `src` 配下の実装を直接読む
-- テスト対象と無関係な機能の実装や仕様だけを調査するときは、このディレクトリ全体ではなく該当するテストまたは実装へ進む
+- 単一機能の正本仕様や実装詳細を確認する場合は、対応する oracle 文書・oracle source・src 配下の実装を直接読む。
+- テスト実行環境や品質ゲートの手順だけを確認する場合は、対応する開発・テスト手順を直接読む。
+- INDEX.md のエントリー生成ロジックや schema 内容だけを確認する場合は、対応する indexing builder または oracle schema を直接読む。
 
 ## hash
-- 2741d0c7c60123607661dd0c8ba0e3b1c3f9512e6ca508fe16f25183936996dd
+- 5c7ba77c7b6d8be78cab121189a590d93536ebab39fd7da8ff66e43d7b6b3c73

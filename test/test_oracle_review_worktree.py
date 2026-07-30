@@ -967,7 +967,7 @@ def test_oracle_review_reports_cleanup_failure(
 def test_oracle_review_reports_cleanup_failure_after_outer_interrupt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """cleanup failure after an outer Ctrl+C remains an error, not interrupted success."""
+    """外側で Ctrl+C が発生した後の cleanup failure は中断成功ではなくエラーとする。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
