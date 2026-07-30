@@ -418,20 +418,20 @@
 # `test_indexing_common.py`
 
 ## Summary
-- `commons.indexing` の INDEX entry 生成・解析・更新と directory traversal を直接検証する回帰テスト群。入力 schema 検証、hash による entry 再利用・再生成、空ディレクトリ、安定順序、並列更新、logger 伝播、cwd lock、memo 除外、symlink cycle・特殊ファイル・INDEX symlink の扱い、linked worktree 間の lock 共有を扱う。indexing runtime の共通契約を検証するテスト入口。
+- `commons.indexing` の INDEX entry 生成・解析・更新と directory traversal を検証する回帰テスト群。入力検証、hash による entry 再利用・再生成、空ディレクトリ、安定した描画順、並列更新、logger 伝播、cwd lock 下の実行を扱う。
+- memo 除外やネストした memo、symlink cycle・特殊ファイル・INDEX symlink の安全な扱い、linked worktree 間の indexing lock 共有も検証する。indexing runtime contract の実装変更や関連仕様の確認時に読む入口である。
 
 ## Read this when
-- INDEX entry の render/parse/update、hash 再利用、更新対象 directory の traversal 方針を変更・調査するとき
-- INDEX 更新の並列実行、logger 伝播、pushd 中の worker 制約、lock 共有を変更・調査するとき
-- symlink、特殊ファイル、memo directory、空 directory の INDEX 更新挙動を確認するとき
+- INDEX.md の parse/render/update、hash 再利用、traversal、symlink、安全なファイル更新を変更または調査するとき
+- indexing の並列実行、Codex worker の logger 伝播、pushd/cwd lock、worktree lock の回帰を検証するとき
+- `oracle/doc/app_spec/indexing.md` などの indexing contract に対する realization test を確認するとき
 
 ## Do not read this when
-- CLI lifecycle や indexing サブコマンド全体の統合挙動を確認したいときは、対応する lifecycle・subcommand テストを直接読む
-- INDEX entry の正本 schema や prompt 生成規則を確認したいときは、参照される oracle file を読む
-- indexing と無関係な CLI、ログ、Git 操作のテストを調査するとき
+- CLI lifecycle や indexing 以外のサブコマンドの挙動だけを調査するとき
+- INDEX entry の正本スキーマや prompt 標準そのものを確認するときは、対応する oracle source または仕様文書を直接読む
 
 ## hash
-- b87e9aecc9c6e05489f9a2f803257001f30ae097a9bc2733b6bfd5dec886c252
+- 186d44c1ff7661b34fab8cafc83db9af5200e925112a02912853cb069a0102f8
 
 # `test_indexing_preflight.py`
 

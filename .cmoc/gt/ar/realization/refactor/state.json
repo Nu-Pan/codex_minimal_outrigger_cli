@@ -1172,8 +1172,8 @@
   "test/test_indexing_common.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "3919b27c86420b68c097a8dd64c28437ad6db1b7311de2f211c22547246d76cb",
-    "last_investigated_at": "2026-07-29_23-10_44_516056000"
+    "last_investigated_sha256": "b87e9aecc9c6e05489f9a2f803257001f30ae097a9bc2733b6bfd5dec886c252",
+    "last_investigated_at": "2026-07-30_10-31_42_595438000"
   },
   "test/test_indexing_preflight.py": {
     "investigation_required": false,

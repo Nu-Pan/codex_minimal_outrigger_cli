@@ -144,16 +144,17 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群と共通テスト支援モジュールを収録するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run lifecycle、設定・状態・Git・worktree などの外部契約と境界条件を検証する各テストへの入口である。
+- テストコードから、ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Git/worktree など cmoc の主要機能に対する回帰・統合・受け入れテストへ進むための入口。共通テストヘルパー、実行環境隔離、正本 schema 参照も含む。
 
 ## Read this when
-- 変更・調査対象に対応する realization test や、その共通 fixture・fake command・Git/Ollama/Codex 支援を探すとき。
-- 複数のサブシステムにまたがる CLI、Codex 実行、indexing、oracle review、session/run lifecycle の回帰テストを確認するとき。
+- cmoc の機能変更に対応する realization test を探すとき
+- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、Git/worktree、TUI の外部挙動や境界条件を検証するとき
+- ACP builder やテスト用の Codex/Ollama、Git、外部コマンド支援を利用・変更するとき
 
 ## Do not read this when
-- 正本仕様、schema、開発環境、テスト実行手順を確認することが目的のときは、対応する oracle file または開発・テスト規約を直接読む。
-- 単一の実装関数の局所ロジックだけを調査するときは、対応する realization implementation を直接読む。
-- 対象機能と無関係なテスト領域を探しているときは、このディレクトリ全体ではなく対応する個別テストへ進む。
+- 正本仕様、schema、prompt 標準、開発環境やテスト実行規約を確認するときは、対応する oracle 文書・source や開発手順を直接読む
+- 対象機能が明確な場合は、このディレクトリ全体ではなく該当するテストまたは実装へ直接進む
+- LLM の回答品質や推論品質そのものを評価するとき
 
 ## hash
-- 428f41c3571a952de9afcd5d26a50ef55258fd56dd197f39bef28bcf6571ec2c
+- a9f52296b1b73d17e6b8322326cd713117a50837baca38f97b7aa686abb33cd3

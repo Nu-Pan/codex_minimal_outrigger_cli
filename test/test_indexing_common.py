@@ -287,7 +287,8 @@ def test_update_indexes_reuses_entry_after_empty_file_becomes_directory(
     cmoc_runtime.sync_config(root)
     target = root / "target"
     target.write_bytes(b"")
-    (root / "INDEX.md").write_text(_render_test_entry(root, target))
+    existing_entry = _render_test_entry(root, target)
+    (root / "INDEX.md").write_text(existing_entry)
 
     target.unlink()
     target.mkdir()
@@ -308,6 +309,7 @@ def test_update_indexes_reuses_entry_after_empty_file_becomes_directory(
     indexing_common.update_indexes(root)
 
     assert target not in calls
+    assert existing_entry in (root / "INDEX.md").read_text()
 
 
 def test_update_indexes_generates_sibling_entries_in_stable_render_order(
