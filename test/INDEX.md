@@ -762,23 +762,21 @@
 # `test_runtime_refactor.py`
 
 ## Summary
-- realization refactor の永続 state を対象とするテスト。oracle・realization file 集合との同期、調査履歴の保持、変更時の再調査要求、target 選択順を検証する。
-- oracle／realization file 判定の path escape、directory、gitlink、特殊文字 path、dangling symlink への対応を検証する。
-- state の JSON schema、path・timestamp の正規性、UTF-8、NUL、非 file path、symlink 経由の安全な読み書き拒否を検証する。runtime_refactor と file classifier の実装変更時に、外部挙動を確認するテスト入口となる。
+- realization refactor の永続 state について、oracle・realization file 集合の同期、調査履歴の保持、変更時の再調査フラグ、対象選択の優先順位を検証するテスト群。
+- oracle/realization file の path 判定、Git branch 上の特殊 path・directory・gitlink・symlink の扱いと、work-root 外への path escape 防止を検証する。
+- state JSON の schema 検証、UTF-8・path・timestamp・調査結果の妥当性、symlink や非通常 file 経由の安全な読み書き拒否を検証する。
 
 ## Read this when
-- refactor state の同期、履歴、再調査判定、target 選択を変更または調査するとき
-- oracle／realization file の分類規則や path 安全性を変更するとき
-- refactor state の schema 検証、読み書き、symlink・特殊 path 対応を変更するとき
-- runtime_refactor 関連のテスト失敗を再現・診断するとき
+- refactor state の同期・履歴・対象選択ロジックを変更またはレビューするとき
+- oracle/realization file の分類や Git branch 上の file 判定を変更するとき
+- refactor state の JSON schema、path 安全性、異常入力処理を変更するとき
 
 ## Do not read this when
-- refactor state や file classifier に関係しない CLI 機能・実装を変更するとき
-- 実装の詳細ではなく、正本仕様そのものを確認・変更するときは oracle の対応文書を直接読む
-- runtime_refactor 以外のテスト対象を調査するときは、該当するテストファイルへ直接進む
+- refactor 機能以外の CLI 挙動や一般的な Git 操作を確認するとき
+- 実装本体の詳細を確認する必要があり、commons.runtime_refactor または commons.runtime_git を直接読むべきとき
 
 ## hash
-- 2bad16161bd863560ec2e73e21b40d45c477eab5d299eaf467d61352fe86ed2c
+- 81e6958cf7d40be0ec70effa950e4b3cc0d877b1fa1791c18ce9803952fe2ac6
 
 # `test_runtime_state.py`
 

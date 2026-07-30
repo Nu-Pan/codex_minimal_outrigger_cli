@@ -788,8 +788,8 @@
   "src/commons/runtime_git.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "534db71a37dcb7e83df50ae23b113b210510eb8889d6f389155f41ec901bb773",
-    "last_investigated_at": "2026-07-30_17-08_06_031426000"
+    "last_investigated_sha256": "09796c4fde82b463f4f3b67c77f1686d5fd4031165bc2a9391d88611b1834d1a",
+    "last_investigated_at": "2026-07-31_01-16_42_536404000"
   },
   "src/commons/runtime_logging.py": {
     "investigation_required": false,
@@ -1290,7 +1290,7 @@
     "last_investigated_at": "2026-07-30_18-00_00_429351000"
   },
   "test/test_runtime_refactor.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "2bad16161bd863560ec2e73e21b40d45c477eab5d299eaf467d61352fe86ed2c",
     "last_investigated_at": "2026-07-30_08-35_57_904586000"

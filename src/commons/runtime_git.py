@@ -585,9 +585,12 @@ def is_realization_file_path(
         or candidate.name in {"AGENTS.md", "INDEX.md"}
     ):
         return False
-    if branch:
+    if branch and (not candidate.is_dir() or candidate.is_symlink()):
         # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
         # 含めず blob entry だけを branch の fallback として採用する。
+        # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+        # branch の blob は削除された path の追跡状態を補うが、現在の通常 directory
+        # を file として扱う根拠にはならない。symlink は file entry として許可する。
         branch_entries = run_git(
             [
                 "ls-tree",
