@@ -98,6 +98,29 @@ def _no_index_refresh(_root: Path, *, commit: bool) -> list[Path]:
     return []
 
 
+def test_refactor_rejects_empty_refactor_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """対象 file のない cycle を natural completion にしない。"""
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path,
+        session_id="session",
+        state_path=tmp_path / "state.json",
+        session_branch="cmoc/session/session",
+        session_fork_commit="fork",
+        kind="realization_refactor",
+        run_branch="cmoc/run/session/run",
+        run_fork_commit="fork",
+        run_worktree=tmp_path,
+    )
+    monkeypatch.setattr(refactor_module, "sync_refactor_state", lambda _root: {})
+
+    with pytest.raises(CmocError, match="対象 file がありません"):
+        refactor_module._initialize_cycle(context)
+
+
 def test_refresh_indexes_builds_prompts_for_requested_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

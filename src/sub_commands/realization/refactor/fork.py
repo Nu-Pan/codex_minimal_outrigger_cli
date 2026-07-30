@@ -280,6 +280,15 @@ def _raise_refactor_error(
 def _initialize_cycle(context: EditingRunContext) -> list[str]:
     """refactor state と INDEX を同期して新しい cycle の commit を作る。"""
     state = sync_refactor_state(context.run_worktree)
+    if not state:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # 完了時の refactor state は各 file の履歴を保持する非空 object でなければ
+        # ならない。対象がない cycle を natural_completion として公開しない。
+        raise CmocError(
+            "realization refactor の対象 file がありません。",
+            ["oracle file または realization file を追加してから再実行してください。"],
+            str(refactor_state_path(context.run_worktree)),
+        )
     if not any(entry["investigation_required"] for entry in state.values()):
         mark_all_refactor_targets_required(state)
         write_refactor_state(context.run_worktree, state)
@@ -330,6 +339,12 @@ def _run_refactor_unit(
         return
     investigated_hash = file_sha256(target_path)
     agent_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
+
+    def record_agent_head() -> None:
+        """本命 agent の直前の HEAD を preflight 後に記録する。"""
+        nonlocal agent_head
+        agent_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
+
     with pushd(context.run_worktree):
         try:
             parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
@@ -341,6 +356,10 @@ def _run_refactor_unit(
                 cwd=context.run_worktree,
                 config=load_config(context.run_worktree),
                 purpose=f"realization refactor: {target}",
+                # {{work-root}}/oracle/doc/app_spec/indexing.md
+                # file-review builder の preflight commit を agent commit の検査基準へ
+                # 含めず、本命 subprocess の直前を baseline とする。
+                before_agent_call=record_agent_head,
             )
         except BaseException:
             _ensure_agent_did_not_commit(context.run_worktree, agent_head)

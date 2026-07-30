@@ -134,18 +134,16 @@
 # `runtime_codex_preflight.py`
 
 ## Summary
-- Codex exec/TUI 実行前に INDEX 更新 preflight を挟むランタイム連携を担当する。preflight の登録・解除、再入抑止と直列実行、実行対象からの indexing 起点 root 算出、実行本体への委譲を扱う。
+- Codex exec/TUI 実行前に INDEX 更新 preflight を挟む共通ラッパー。preflight の登録・解除、再入抑止と直列実行、実行対象からの indexing 起点決定を扱い、Codex 実行ランタイムへの委譲入口となる。
 
 ## Read this when
-- Codex exec または TUI の起動前処理、INDEX 更新 preflight、preflight の有効化・無効化を変更するとき。
-- Codex 呼び出し設定から作業 root を決める処理や、preflight の再入・並列実行制御を確認するとき。
+- Codex exec または TUI の起動前処理、INDEX 更新 preflight の登録・解除、preflight の再入制御や起点決定を変更・調査するとき。
 
 ## Do not read this when
-- Codex 実行本体の subprocess・TUI 実装を変更または調査するときは、runtime_codex の実装を直接読む。
-- INDEX の生成規則や oracle 編集サブコマンド固有の仕様を確認するときは、対応する oracle 文書を直接読む。
+- Codex 実行ランタイムそのものの挙動、パス解決の詳細、実行結果型や agent call パラメータの定義だけを確認したいとき。
 
 ## hash
-- 9a17bb577fe0ed64e036ca1f99b85af81357514dd6f87db9bde3a1d7bbe25e19
+- ff9f14f11dcbba8a944eb2baf77fe135c26507adfb77dd434076bd8afb683e5b
 
 # `runtime_codex_profile.py`
 

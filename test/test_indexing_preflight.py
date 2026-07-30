@@ -89,11 +89,14 @@ def test_command_codex_call_runs_indexing_preflight(
     )
 
     result = codex_preflight_module.run_codex_exec(
-        parameter, root=root, purpose="apply fork refine findings"
+        parameter,
+        root=root,
+        purpose="apply fork refine findings",
+        before_agent_call=lambda: events.append("before-agent"),
     )
 
     assert isinstance(result, FakeCodexResult)
-    assert events == ["indexing", "codex"]
+    assert events == ["indexing", "before-agent", "codex"]
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     assert run_git(root, "status", "--short").stdout.strip() == ""
 

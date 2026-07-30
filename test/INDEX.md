@@ -384,19 +384,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と run join/abandon の統合 lifecycle を検証する realization test。apply/refactor fork、共有 session state、run worktree、fork/lifecycle report、Codex process tracking、INDEX 更新、merge/cleanup、rollback、interrupt、error recovery、force-resolve などの正常系・失敗系を扱う。
+- workload fork と共通 run join/abandon の統合 realization test。
+- editing run の session state、run worktree、fork report、Codex process tracking、INDEX 更新、refactor state、join/abandon の lifecycle を横断して検証する。
+- apply fork と refactor fork の正常完了・中断・失敗・rollback、および join/abandon の merge・cleanup・競合・破損状態を扱う下位テスト群への入口。
 
 ## Read this when
-- realization apply fork または realization refactor fork の lifecycle 挙動を変更・検証するとき
-- run join/abandon、run worktree・branch の cleanup、state 遷移、report 生成を変更・検証するとき
-- INDEX refresh、Codex child tracking、oracle/managed file の差分制御、rollback や interrupt recovery の統合挙動を確認するとき
+- realization apply/refactor fork の lifecycle や run join/abandon の挙動を変更・調査するとき。
+- session state、run worktree、branch、process tracking、report、INDEX refresh の連携を検証するとき。
+- agent による禁止 file 変更、予期しない差分、rename/delete、merge rollback、cleanup warning を確認するとき。
 
 ## Do not read this when
-- 単一の lifecycle helper や report formatter の局所実装だけを変更し、その統合挙動を確認する必要がないとき
-- session fork、doctor、refactor state など本 file が直接検証していない機能だけを扱うとき
+- 単一の実装 helper や個別 report formatter の仕様だけを確認する場合。
+- fork・join・abandon の lifecycle 統合や共有 state に関係しないテストを探している場合。
 
 ## hash
-- 975ab6c285d827eee874e9fc28c68050b4685c38738cc2b438bd00be210268a7
+- f0e7d692588ed2db997df6270448afd9818352727f6c5d0045da086c55ebd30d
 
 # `test_indexing_cli.py`
 
@@ -435,18 +437,19 @@
 # `test_indexing_preflight.py`
 
 ## Summary
-- Codex 実行前の indexing preflight を検証するテスト。exec/TUI 経路での実行順序、linked worktree の選択、repository lock 待機、パラメータによる無効化、file access violation 後に recovery indexing を行わない制約を扱う。indexing と Codex 実行連携の挙動を確認するためのテスト入口。
+- Codex exec/TUI 呼び出し直前の indexing preflight を検証するテスト。preflight の実行順序、対象 worktree の選択、repository lock 待機、パラメータによる無効化、file access violation 後に recovery indexing を行わない制約を確認する。関連する indexing・Codex preflight 実装の挙動を検証する入口。
 
 ## Read this when
-- Codex 呼び出し前の indexing preflight の実行条件・順序・対象 worktree を変更または検証するとき
-- repository lock との排他制御や、preflight 無効化・recovery 禁止の挙動を確認するとき
+- indexing preflight の実行条件、Codex 呼び出しとの順序、worktree 選択を変更・調査するとき
+- repository lock の待機や preflight 無効化の挙動を変更・検証するとき
+- file access violation 発生時の recovery 処理を変更・検証するとき
 
 ## Do not read this when
-- INDEX.md 生成そのもののアルゴリズムや個別の Codex 実行実装を変更するとき
-- preflight と無関係な CLI 機能やテストを調査するとき
+- INDEX.md の生成ロジック自体を変更・調査するとき
+- Codex 呼び出しや indexing preflight と無関係なテスト・実装を扱うとき
 
 ## hash
-- 721d5257bee16bdb655a64f92321934576c947ac6c7eb8d2ccdfeafa89de574f
+- d66ab6c99ee7b325acecced3ac210615f957fe86a3146d5e9e262fa7a6aa87fb
 
 # `test_oracle_edit_cli.py`
 

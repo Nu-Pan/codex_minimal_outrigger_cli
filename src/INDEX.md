@@ -49,20 +49,20 @@
 # `commons`
 
 ## Summary
-- cmoc 共通 runtime helper を提供する commons パッケージ。CLI 実行、Codex 実行、設定・状態・パス管理、Git、ログ、エラー、INDEX 更新、editing run lifecycle などの runtime 実装への入口。
+- cmoc の共通 runtime 機能をまとめる commons パッケージ。CLI 実行、Codex exec/TUI、設定・状態・パス、Git、ログ、report、INDEX 更新、editing run lifecycle など、上位機能が横断利用する実装への入口。配下の個別 runtime モジュールへ進むためのディレクトリ。
 
 ## Read this when
-- 複数の runtime 機能にまたがる共通 API や依存関係を確認するとき
-- 特定の runtime helper、Codex 実行、設定・状態・Git、INDEX 更新、editing run lifecycle の実装を調査・変更するとき
-- commons パッケージの初期化や共通 runtime 公開入口を確認するとき
+- 複数の cmoc runtime 機能にまたがる依存関係や共通 API の構成を確認するとき
+- CLI、Codex 実行、設定・状態管理、Git、ログ、report、editing run lifecycle などの共通基盤を変更・調査するとき
+- 対象となる個別 runtime モジュールを特定し、その実装へ進みたいとき
 
 ## Do not read this when
-- 単一の runtime 機能の詳細だけを調査する場合は、対応する個別モジュールを直接読む
-- 利用者向け正本仕様や INDEX entry の文章を確認する場合は、対応する oracle file または対象本文を直接読む
-- commons 配下を利用するだけで、共通実装の責務や依存関係を変更しない場合
+- 特定の runtime 機能の実装詳細だけを調査・変更するときは、commons 配下の対応する個別モジュールへ直接進む場合
+- 特定サブコマンド固有の業務ロジックや利用者向け仕様だけを確認するとき
+- Codex や session state など単一領域の正本仕様を確認するときは、対応する oracle 文書を直接読む場合
 
 ## hash
-- d9d43d36c42a8d172a26c7ec523dd7974582e7e0b492ef5d010e984fb15fdc7c
+- 8c03194b1ce398d6daa46d5eef06edd2a1cb31f24ca968c1382e6a50492463c0
 
 # `config`
 
@@ -114,16 +114,15 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装を分類するディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの CLI 実装入口と、サブコマンド単位の下位パッケージを案内する。apply と review は現時点で実装本文がない。
+- cmoc の各サブコマンド実装を配置するディレクトリ。doctor・indexing・oracle・realization workload・run・session・tui の実行入口と、review 実装の配置場所を下位要素として案内する。
 
 ## Read this when
-- 特定の cmoc サブコマンドの実装入口やパッケージ構成を確認・変更するとき。
-- サブコマンドの実行フロー、ライフサイクル処理、workload 処理、TUI 起動処理の読むべき実装を選ぶとき。
+- サブコマンドの実装構成や CLI 実行入口を確認・変更するとき。
+- 特定のサブコマンド実装へ進む前に、対応する下位要素を選ぶとき。
 
 ## Do not read this when
-- サブコマンド共通の CLI runtime、Codex builder、prompt editor、report、lifecycle などの詳細実装だけを調査するときは、対応する共通実装を直接読む。
-- oracle 文書・oracle 実装の仕様や処理内容を確認するときは、対応する oracle 配下を直接読む。
-- 特定のサブコマンドの詳細処理を確認するときは、このディレクトリ全体ではなく対応する実装ファイルまたは下位パッケージを直接読む。
+- サブコマンド共通の CLI runtime や設定処理だけを調査するとき。
+- 個別サブコマンドの詳細実装を直接確認する場合は、対応する下位要素へ進むとき。
 
 ## hash
-- 592257be07f84ccdf491efc7d86efc2c6fec5e053fdc9106b132b725d4338752
+- 8c77640bd7a7232d815297511d56a2dd95d52f6827aac838c48bbbb98a0d2d0d
