@@ -524,6 +524,48 @@ def test_stop_child_process_group_stops_group_after_leader_is_gone(
     assert stopped == [(789, members)]
 
 
+@pytest.mark.parametrize("process_fd", [None, 99])
+def test_stop_child_process_group_rejects_reused_group_after_leader_exit(
+    monkeypatch: pytest.MonkeyPatch,
+    process_fd: int | None,
+) -> None:
+    """leader 消滅後の PGID 再利用を停止前 snapshot で拒否する。"""
+    child = runtime_run.ProcessIdentity(123, 456, 789)
+    target_snapshots = iter([(), ((222, 20),)])
+    reused_members = ((222, 20),)
+    signals: list[signal.Signals] = []
+
+    monkeypatch.setattr(
+        runtime_run,
+        "process_group_members",
+        lambda _group: next(target_snapshots),
+    )
+    monkeypatch.setattr(runtime_run, "open_process_fd", lambda *_args: process_fd)
+    monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: None)
+    monkeypatch.setattr(runtime_run, "wait_process_fd_exit", lambda *_args: True)
+    monkeypatch.setattr(runtime_run.os, "close", lambda _fd: None)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: reused_members,
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_signal_process_members",
+        lambda _members, sig: signals.append(sig),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_wait_tracked_process_group_exit",
+        lambda *_args: True,
+    )
+
+    with pytest.raises(CmocError, match="同一性を確認できません"):
+        runtime_run.stop_child_process_group(child)
+
+    assert signals == []
+
+
 def test_stop_child_process_group_stops_group_after_pidfd_leader_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -296,9 +296,17 @@ def _stop_parent_run_process(process: RunProcessIdentity) -> str | None:
 
 
 def _stop_orphaned_child_process_group(
-    process: ProcessIdentity, process_group_id: int
+    process: ProcessIdentity,
+    process_group_id: int,
+    expected_members: tuple[tuple[int, int], ...] | None,
 ) -> str | None:
     """leader 消滅後も残る group を snapshot 検証付きで停止する。"""
+    if expected_members is None:
+        raise CmocError(
+            "実行中 Codex subprocess の process group を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pid: {process.process_id}\npgid: {process_group_id}",
+        )
     members = process_group_members(process_group_id)
     if members is None:
         raise CmocError(
@@ -311,7 +319,7 @@ def _stop_orphaned_child_process_group(
     # {{work-root}}/oracle/doc/app_spec/run_isolation.md
     # leader が消えても member が残る専用 PGID は再利用されない。snapshot の一部を
     # stop_process_group でも確認し、group が一度空になって再利用された race は拒否する。
-    stop_process_group(process_group_id, expected_members=members)
+    stop_process_group(process_group_id, expected_members=expected_members)
     return None
 
 
@@ -328,7 +336,9 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
             current_start_time = process_start_time(process.process_id)
             if current_start_time is None:
                 if wait_process_fd_exit(process_fd, 0):
-                    return _stop_orphaned_child_process_group(process, process_group_id)
+                    return _stop_orphaned_child_process_group(
+                        process, process_group_id, expected_members
+                    )
                 raise CmocError(
                     "実行中 Codex subprocess の同一性を確認できません。",
                     ["run process を確認し、停止後に再実行してください。"],
@@ -359,7 +369,9 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
     else:
         current_start_time = process_start_time(process.process_id)
         if current_start_time is None:
-            return _stop_orphaned_child_process_group(process, process_group_id)
+            return _stop_orphaned_child_process_group(
+                process, process_group_id, expected_members
+            )
         if process.start_time is None:
             raise CmocError(
                 "実行中 Codex subprocess の同一性を確認できません。",
