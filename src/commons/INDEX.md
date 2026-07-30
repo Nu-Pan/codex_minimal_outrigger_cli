@@ -102,20 +102,18 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを実装する中核モジュール。Structured Output の schema 検証と semantic retry、capacity retry、quota availability probe と待機・resume 継続を統合し、各 Codex 呼び出しの prompt・stdout・stderr・output・call log・subcommand event を記録して CodexExecResult を返す。exec 実行制御に関する状態機械の入口であり、個別の Codex 引数・エラー分類・path 操作の詳細は依存する runtime モジュールを確認する。
+- Codex exec の単一試行ループを実装する中核モジュール。Structured Output の JSON/schema 検証、capacity retry、quota availability probe と待機・resume、Codex subprocess の実行記録、console/subcommand event の発行、最終的な CodexExecResult の構築を一体の状態機械として扱う。
 
 ## Read this when
-- Codex exec の実行、再試行、Structured Output 検証、quota 待機、resume 継続の挙動を変更・調査するとき
-- Codex 呼び出しのログ、console event、subcommand event、結果オブジェクトの連携を確認するとき
-- capacity・quota・unexpected failure と semantic schema failure の制御フローを確認するとき
+- Codex exec の実行、再試行、Structured Output 検証、quota 待機・probe、resume 継続、call log や subcommand event の記録を変更・調査するとき。
+- Codex の subprocess 起動条件、ログパス、schema 検証失敗や quota/capacity/unexpected error の扱いを確認するとき。
 
 ## Do not read this when
-- Codex CLI の引数生成、エラー分類、schema 準備、Codex subprocess 起動など単一の補助処理だけを変更・調査するときは、対応する runtime_codex_profile などの依存モジュールを直接読む
-- TUI 起動や exec 以外の subcommand の実装を確認するとき
-- ログ形式そのものの正本仕様を確認するときは、先に oracle/doc/app_spec の該当仕様を読む
+- TUI の起動や TUI 固有の分岐を変更・調査するときは、TUI 用の別 module を読む。
+- Codex の低レベルな環境・エラー分類・結果型・ログ出力の個別実装だけを確認する場合は、対応する runtime_codex_profile、runtime_results、runtime_codex_logging などを直接読む。
 
 ## hash
-- c84749cad60f6e2f0aa7357759b205956efc591865c9151c2337f3ea17995829
+- 43867a8a206c53c2bfce1cdc33f70b532d7daa9ee10134ee0d6a08491bcfca9d
 
 # `runtime_codex_logging.py`
 

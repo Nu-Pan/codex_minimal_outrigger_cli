@@ -215,8 +215,9 @@ def run_codex_exec(
     )
     schema_definition: Any | None = None
     if schema_path is not None:
-        # jsonschema exposes some malformed `$schema` metadata as AttributeError; keep
-        # those local schema failures on the controlled CmocError path.
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # jsonschema の malformed な `$schema` metadata が AttributeError になる場合も、
+        # schema のローカルな失敗として controlled な CmocError 経路へ送る。
         try:
             schema_definition = json.loads(schema_path.read_text(encoding="utf-8"))
             validators.validator_for(schema_definition).check_schema(schema_definition)

@@ -126,19 +126,18 @@
 # `src`
 
 ## Summary
-- cmoc CLI の実装ルート。Typer によるコマンド登録と引数解析エラー処理を担い、doctor・tui・indexing・session・oracle・realization・run の各サブコマンドへ委譲する。
-- commons の共通 runtime、sub_commands のコマンド実装、acp・basic・config・oracle・cmoc_runtime の互換 import 入口をまとめる上位ディレクトリ。各機能の詳細調査では配下の該当パッケージまたはモジュールへ進む。
+- cmoc の realization 実装を格納する `src` ツリー。Typer CLI の起動点、サブコマンド実装、共通 runtime、ACP・basic・config の互換入口、および正本 `oracle.*` への package shim を扱う。配下の責務別パッケージ・モジュールへ進むための上位ルーティング地点。
 
 ## Read this when
-- cmoc CLI 全体の入口、サブコマンド登録、Typer/Click の引数解析、補完時の副作用抑制、CLI エラー変換を確認・変更するとき。
-- トップレベルの互換 import shim と、commons・sub_commands・各公開パッケージの役割分担を把握するとき。
+- cmoc の realization 実装全体の構成や、CLI 起動点から各サブコマンド・共通 runtime への入口を確認するとき。
+- CLI、runtime、ACP/basic/config の互換 import、または正本 oracle package の解決に関わる実装対象を特定するとき。
 
 ## Do not read this when
-- 単一サブコマンドの処理内容を調査・変更するときは、sub_commands 配下の該当実装を直接読む。
-- 共通 runtime の個別機能、ACP builder、設定、正本 oracle 実装の詳細を確認するときは、それぞれの対応する下位モジュールや oracle 側を直接読む。
+- 特定のサブコマンド、runtime 機能、互換入口、または oracle package の詳細実装を確認・変更したいときは、配下の該当モジュールを直接読む。
+- 正本仕様や oracle 側の実装を確認するときは、`oracle` ツリーを直接読む。
 
 ## hash
-- 2474bcaf11c3fe98c3284edb79a5beb8277b9aa05e4c9d30b6138a687142d1f2
+- 36e2ea57240dd68e9d4a2ce1c7a869c01f2352f06be21162d814b6273507e76e
 
 # `test`
 
