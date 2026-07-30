@@ -229,6 +229,41 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
     assert expected_error in codex_events[0]["error"]
 
 
+def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """不正な Structured Output schema は Codex 呼び出し前に失敗させる。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    schema = tmp_path / "invalid_schema.json"
+    schema.write_text("{")
+    calls = 0
+
+    def fail_run(*_args: object, **_kwargs: object) -> object:
+        """ローカル schema エラーで Codex が起動されないことを検証する。"""
+        nonlocal calls
+        calls += 1
+        raise AssertionError("Codex must not run for an invalid schema")
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fail_run)
+
+    with pytest.raises(CmocError, match="Structured Output schema"):
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                schema,
+            ),
+            root=root,
+            config=CmocConfig(),
+        )
+
+    assert calls == 0
+
+
 @pytest.mark.parametrize("failure_returncode", [0, 1])
 def test_run_codex_exec_logs_capacity_retrying_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_returncode: int

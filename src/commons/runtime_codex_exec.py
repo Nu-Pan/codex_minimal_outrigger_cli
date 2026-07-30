@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from jsonschema import validate
+from jsonschema import SchemaError, validate, validators
 
 from basic.acp import AgentCallParameter
 from config.cmoc_config import CmocConfig
@@ -213,6 +213,26 @@ def run_codex_exec(
         if parameter.structured_output_schema_path
         else None
     )
+    schema_definition: Any | None = None
+    if schema_path is not None:
+        try:
+            schema_definition = json.loads(schema_path.read_text(encoding="utf-8"))
+            validators.validator_for(schema_definition).check_schema(schema_definition)
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+            SchemaError,
+            TypeError,
+        ) as exc:
+            raise CmocError(
+                "Structured Output schema が不正です。",
+                [
+                    "Structured Output schema の JSON と schema 定義を確認してください。",
+                    "schema を修正してから同じ cmoc コマンドを再実行してください。",
+                ],
+                f"schema: {schema_path}\nerror: {exc}",
+            ) from exc
 
     def _call_data(
         run_parameter: AgentCallParameter,
@@ -793,11 +813,10 @@ def run_codex_exec(
                 ),
             )
         if schema_path is not None:
+            assert schema_definition is not None
             try:
                 output_json = _read_required_output_json(output_path)
-                validate(
-                    instance=output_json, schema=json.loads(schema_path.read_text())
-                )
+                validate(instance=output_json, schema=schema_definition)
             except Exception as exc:
                 if semantic_attempts < max_semantic_retries:
                     semantic_attempts += 1

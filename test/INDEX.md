@@ -314,19 +314,18 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex exec の Structured Output 検証失敗、capacity retry、JSONL エラー、中断時の失敗記録、retry 上限、agent diff 保持を、subprocess 呼び出し回数・call log・subcommand event と併せて検証するテスト群。run_codex_exec の異常系状態機械を確認する入口。
+- Codex exec の Structured Output 検証失敗、capacity retry、JSONL error、中断、retry 上限、backoff、ログ記録、agent diff 保持を外部挙動として検証するテスト。`run_codex_exec` の retry 状態と subprocess 呼び出し、call log・subcommand event を一続きで確認する異常系テストの入口。
 
 ## Read this when
-- Codex exec の retry 判定、失敗時ログ、JSONL エラー処理、Structured Output 検証、capacity retry、中断時挙動を変更・調査するとき。
-- call log や subcommand event の status、returncode、error、ログパス、retry 上限、backoff の外部挙動を確認するとき。
-- capacity retry 後の agent diff 保持や、stdout JSONL 外のエラーマーカーを無視する挙動を確認するとき。
+- Codex exec の retry 判定、Structured Output の検証・解析失敗、capacity error、未知の JSONL error、中断処理を変更または調査するとき
+- Codex exec の call log、subcommand event、失敗理由、retry 上限・backoff、agent diff 保持の挙動を確認するとき
 
 ## Do not read this when
-- Codex exec の正常系だけ、または retry・失敗時ログに関係しない入出力変換を確認するときは、対象の実装・正常系テストを直接読む。
-- 共有ログ schema の正本や retry 方針そのものを確認する場合は、このテストではなく参照されている oracle ドキュメントを先に読む。
+- Codex exec の正常系だけ、または retry・失敗時ログに関係しない別の実装を確認するとき
+- 共通テスト補助関数や正本仕様そのものを確認したいときは、対応する `_codex_support`・`_command_support`・`_git_support` または oracle 文書を直接読む
 
 ## hash
-- a0d3ee61dd2a5c14a5eee7b99cf16e1bf174abbee88364624b2eb2e148238ce3
+- ad5a173ab229c584d99b10fd89dd2c34c2badb4388d5636428da69285c8193d1
 
 # `test_codex_runtime_subprocess.py`
 

@@ -49,21 +49,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 機能を集約する commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・パス管理、Git 操作、ログ、エラー処理、INDEX 更新などの横断的な実装を含む。
-- 各 runtime_* モジュールが個別責務の実装入口となり、cmoc_runtime.py が複数の runtime 部品を利用する上位実装向けの共通 API 入口を提供する。
+- cmoc 共通 runtime helper を提供する commons パッケージの初期化入口。
+- Codex 実行、CLI、設定、状態、Git、ログ、パス、INDEX 更新、editing run などの共通 runtime 実装を含む。
 
 ## Read this when
-- commons 配下の共通 runtime 機能を調査・変更するとき
-- CLI、Codex 実行、設定、状態、Git、ログ、パス、run lifecycle、INDEX 更新など、複数機能にまたがる実装の依存関係を確認するとき
-- 特定の runtime 責務の実装入口や、共通 runtime API の公開範囲を確認するとき
+- commons 配下の共通 runtime 機能の入口や構成を確認するとき。
+- 複数の runtime モジュールにまたがる処理の依存関係を調査するとき。
 
 ## Do not read this when
-- 利用者向け仕様や正本仕様を確認することが目的の場合は、対応する oracle 文書を直接読む
-- 特定の runtime 機能だけを調査・変更する場合は、対応する runtime_* モジュールを直接読む
-- サブコマンド固有の業務フローや Codex 実行本体など、commons の共通実装ではない処理を確認する場合
+- 特定の runtime 機能の実装詳細だけを確認するとき。
+- 個別のサブコマンドや oracle 文書の仕様を直接調査するとき。
 
 ## hash
-- 9f3c0fae5d8339898b402446d1d4dbfae0f01859fdfaea37ab80bc557ec1415d
+- f37128bd62b85152e33c91deb5750a87da5d3d1e0b03a8f2f7f34bef5aaf9bb1
 
 # `config`
 

@@ -126,35 +126,36 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装ルート。CLI エントリーポイント、サブコマンド、共通 runtime、設定・ACP・basic の互換入口、oracle package shim を含み、各機能の実装領域へ進むための上位入口となる。
+- `src` は cmoc CLI の realization 実装ルート。CLI 本体、サブコマンド、共通 runtime、互換 import shim を束ね、各機能の実装入口を提供する。
+- `main.py` から doctor・indexing・tui・session・oracle・realization・run などの CLI 実行経路へ進み、共通処理は `commons`、互換公開入口は `acp`・`basic`・`config` などへ進む。
 
 ## Read this when
-- cmoc の realization 側の実装構成や、CLI・runtime・互換 import の入口を確認するとき。
-- CLI の登録元から個別サブコマンド実装、または commons の共通 runtime 実装へ進む先を選ぶとき。
-- oracle.* や既存公開 import path を realization 側から解決する仕組みを確認するとき。
+- cmoc の realization 側 CLI 実装全体の構成や、調査対象となる下位ディレクトリ・モジュールの入口を選ぶとき。
+- CLI の公開入口からサブコマンド、共通 runtime、互換 import shim の実装へ進む必要があるとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理を確認したいときは、sub_commands 配下の該当実装を直接読む。
-- 共通 runtime の個別責務を確認したいときは、commons 配下の対応する runtime module を直接読む。
-- 設定・oracle 仕様の正本や、oracle 側の実装内容を確認したいときは、対応する oracle 配下を直接読む。
+- 特定のサブコマンドや runtime 機能の詳細を確認したいときは、`main.py`、`sub_commands`、`commons`、または該当する互換入口を直接読む。
+- oracle 側の正本仕様・実装や、realization 配下の個別機能の挙動だけを調査するとき。
 
 ## hash
-- 3be8bceef3af816e5ffb781ab9d2c270ae646a9cedc6083e31d7b17df573b148
+- 99a17b71a25eb888fb4a85a58482b696878380683244ffddba95de7d37c621ea
 
 # `test`
 
 ## Summary
-- テストコードから、ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Git/worktree など cmoc の主要機能に対する回帰・統合・受け入れテストへ進むための入口。共通テストヘルパー、実行環境隔離、正本 schema 参照も含む。
+- cmoc の realization test 群と共通テスト支援モジュールを集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Git/worktree、prompt などの外部契約・異常系・統合 lifecycle を検証する入口であり、対象機能の実装変更時に対応するテストを選ぶために読む。
 
 ## Read this when
-- cmoc の機能変更に対応する realization test を探すとき
-- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、Git/worktree、TUI の外部挙動や境界条件を検証するとき
-- ACP builder やテスト用の Codex/Ollama、Git、外部コマンド支援を利用・変更するとき
+- cmoc の実装または外部契約を変更し、対応する回帰テスト・統合テストを特定するとき
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run lifecycle、runtime state/config、Git/worktree の挙動を検証するとき
+- 共通の Codex/Ollama、Git repository、fake external command、doctor CLI、schema path 解決のテスト支援を利用・変更するとき
+- 実経路統合テストや GPU-only の case-local Ollama 検証方法を確認するとき
 
 ## Do not read this when
-- 正本仕様、schema、prompt 標準、開発環境やテスト実行規約を確認するときは、対応する oracle 文書・source や開発手順を直接読む
-- 対象機能が明確な場合は、このディレクトリ全体ではなく該当するテストまたは実装へ直接進む
-- LLM の回答品質や推論品質そのものを評価するとき
+- 正本仕様、schema の内容、開発環境やテスト実行手順を確認することが目的の場合は、対応する oracle 文書・schema・開発ルールを直接読む
+- 対象機能の実装詳細だけを調査し、テストの期待挙動を確認する必要がないときは、対応する realization implementation を直接読む
+- LLM の回答品質や推論内容自体を評価するとき
+- 対象領域と無関係なテストや共通支援モジュールを読むとき
 
 ## hash
-- a9f52296b1b73d17e6b8322326cd713117a50837baca38f97b7aa686abb33cd3
+- 8997ccdb94d501cb818ff5424cc4c6783e897348edccb8b0ca27efa940240f39
