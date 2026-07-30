@@ -373,6 +373,48 @@ def test_oracle_review_interrupt_during_resource_probe_cleans_resources(
     assert "result: interrupted" in report_path.read_text()
 
 
+def test_oracle_review_keeps_successfully_created_branch_owned_on_false_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """成功した worktree 作成後の false probe でも run branch を cleanup する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    created_branch: list[str] = []
+    original_branch_exists = review_module.branch_exists
+
+    def false_for_created_branch(root_arg: Path, branch: str) -> bool:
+        """作成後の branch probe が false になる状態を再現する。"""
+        if branch.startswith("cmoc/run/"):
+            created_branch.append(branch)
+            return False
+        return original_branch_exists(root_arg, branch)
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """finding 列挙を空結果にして cleanup だけを検証する。"""
+        assert _schema_name(parameter) == "enumerate_finding.json"
+        return _FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(review_module, "branch_exists", false_for_created_branch)
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0, result.output
+    assert created_branch
+    assert run_git(root, "branch", "--list", created_branch[0]).stdout == ""
+
+
 def test_oracle_review_unexpected_base_exception_during_run_creation_cleans_resources(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

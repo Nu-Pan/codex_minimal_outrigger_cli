@@ -126,33 +126,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization source tree。Typer CLI の起動・サブコマンド登録、CLI サブコマンド実装、共通 runtime、ACP builder adapter、互換 import shim、設定・基本型の公開入口をまとめる。各機能の詳細実装へ進むための上位入口。
+- `src` は cmoc の realization 実装を収める主要なコード領域。CLI エントリーポイント、各サブコマンド、共通 runtime、ACP builder、互換 import 入口、設定・基本型を扱い、配下の実装領域へ進むための起点となる。
 
 ## Read this when
-- cmoc CLI 全体の登録構成や、サブコマンドから実装への委譲関係を確認するとき。
-- 共通 runtime、ACP builder、互換 import、設定・基本型の realization 構成を横断して調査するとき。
+- cmoc の実装全体の構成や、CLI・サブコマンド・共通 runtime・ACP builder の配置を確認したいとき。
+- 特定の実装領域へ進む前に、src 配下の主要な責務の分かれ方を把握したいとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime 機能、builder adapter、互換 shim の詳細だけを確認したいときは、対応する下位対象を直接読む。
-- oracle の正本仕様や oracle source の実装を確認するときは、oracle 配下を直接読む。
+- 特定のサブコマンド、runtime 機能、ACP builder、設定・基本型の詳細を確認したいときは、src 配下の該当モジュールを直接読む。
+- 正本仕様や oracle 実装を確認したいときは、oracle ツリーの対応対象を直接読む。
 
 ## hash
-- 68dc955c26468594511f743d265e48c94af3bc0c096e70ff9dd3aa1adb56bc69
+- cec320c9be327f5a4b84e3b2a65100ce8187463f5507a63f11f747d3ce9a052c
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するテストディレクトリ。共通テストヘルパー、runtime・CLI・Codex 実行、indexing、oracle review、session/run lifecycle、設定・状態永続化、各種安全性契約を検証する下位テストへの入口。
+- cmoc の realization test 群を集約するテストディレクトリ。CLI、runtime、Codex 実行、indexing、oracle review、session/editing run、設定・Git・状態永続化などの外部契約と安全性を検証する。各テスト領域の詳細確認や回帰テストの入口として利用する。
 
 ## Read this when
-- cmoc の複数サブシステムにまたがる回帰テストの構成や、対象テストファイルの選択肢を把握するとき。
-- CLI、runtime、Codex、indexing、oracle review、session/run、設定・状態管理の外部挙動を検証するテストを探すとき。
-- テスト用 Git repository、fake command、Codex/Ollama 環境などの共通 helper を確認するとき。
+- cmoc の機能変更後に対応する回帰テストや外部挙動の検証対象を探すとき
+- CLI、runtime、Codex、indexing、oracle review、session/editing run、設定・状態管理のテスト範囲を確認するとき
+- 共通テスト支援 helper、実経路統合テスト、GPU/Ollama 統合テストの入口を探すとき
 
 ## Do not read this when
-- 特定機能の正本仕様や実装詳細を確認したいときは、対応する oracle 文書・ソースまたは realization 実装を直接読む。
-- テスト実行環境や品質ゲートの手順だけを確認するときは、対応する開発・テスト手順を読む。
-- 対象機能と無関係なテストを総覧する必要がないときは、このディレクトリ全体ではなく該当する個別テストへ進む。
+- 単一機能の正本仕様や実装詳細を確認する場合は、対応する oracle 文書・oracle source・src 実装を直接読む
+- テスト実行環境や検証コマンドを確認する場合は、対応する開発・テスト手順を直接読む
+- Codex や LLM の回答品質そのものを評価する場合
 
 ## hash
-- 67c68fc1fae9f759d126be6044f49ab3b75dfa346c48c841047e769ab55a4d5a
+- 972019a2cdf6b79a3bb7d5b5d6240e625e3f0a73ec7f57c8d86e94acc904dfa7

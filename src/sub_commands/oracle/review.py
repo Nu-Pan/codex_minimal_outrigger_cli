@@ -141,17 +141,24 @@ def _cmoc_oracle_review_body(
         with run_lifecycle_lock(root, session_id):
             run_branch, review_worktree = new_run_target(root, session_id)
             run_fork_commit = head_commit(current_root)
+            create_succeeded = False
             try:
                 create_run_worktree(
                     current_root, run_branch, review_worktree, run_fork_commit
                 )
+                create_succeeded = True
             finally:
                 # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
                 # worktree add が作成直後に中断されても、今回の作成物だけを cleanup 対象として
                 # 後続の終了処理へ渡す。target 選択と作成は lock 下なので、検出された resource
                 # はこの invocation の部分作成である。
+                # create_run_worktree の成功後は branch/worktree とも今回の所有物なので、
+                # probe の False で ownership を失わせない。
+                if create_succeeded:
+                    review_worktree_created = True
+                    run_branch_created = True
                 try:
-                    review_worktree_created = (
+                    worktree_present = (
                         review_worktree.exists() or review_worktree.is_symlink()
                     )
                 except BaseException:
@@ -160,13 +167,17 @@ def _cmoc_oracle_review_body(
                     review_worktree_created = True
                     run_branch_created = True
                     raise
+                if not create_succeeded:
+                    review_worktree_created = worktree_present
                 try:
-                    run_branch_created = branch_exists(root, run_branch)
+                    branch_present = branch_exists(root, run_branch)
                 except BaseException:
                     # branch probe 中の Ctrl+C でも、create_run_worktree が確保した branch を
                     # cleanup 対象として保持する。未作成なら cleanup 側で失敗を report する。
                     run_branch_created = True
                     raise
+                if not create_succeeded:
+                    run_branch_created = branch_present
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")
             with pushd(review_worktree):
