@@ -796,16 +796,18 @@
 # `test_runtime_wrapper.py`
 
 ## Summary
-- bin/cmoc の仮想環境検査に関する pytest。venv の欠落・不正なパス・Python として起動できない実行ファイルを対象に、終了コードと標準出力のエラーレポート形式、root token path を検証する。
+- `bin/cmoc` の仮想環境検査を対象とするテスト。仮想環境の Python が存在しない、通常ファイルでない、または Python として起動できない場合に、終了コード・標準出力のエラーレポート・Call stack 表示を検証する。wrapper の呼び出し位置が root token path で報告されることや、補完プローブ環境を通常経路から分離する fixture も含む。
 
 ## Read this when
-- bin/cmoc の起動 wrapper、venv 検査、missing venv 時の call stack 表示、エラーレポートの回帰を確認・変更するとき
+- `bin/cmoc` の起動失敗、仮想環境の検査、エラーレポート、Call stack 表示を変更または調査するとき。
+- wrapper が異常終了時に標準出力・標準エラー・終了コードをどう扱うか確認するとき。
 
 ## Do not read this when
-- CLI 本体の実装や一般的なエラーハンドリングだけを調査するときは、まず対応する実装または oracle の仕様文書を読む
+- CLI 本体の一般的なサブコマンド動作や補完仕様そのものを調査するとき。
+- 仮想環境検査や wrapper のエラー報告に関係しないテストを読むとき。
 
 ## hash
-- 23421a82a418f28bb979077880c6c6dc3a73d1a1890cf70502152ab6cb694983
+- 6efd31941c8d5085a104dc194feedecb69abc1dc94b75b779dd34cf81fd6a89a
 
 # `test_session_cli.py`
 

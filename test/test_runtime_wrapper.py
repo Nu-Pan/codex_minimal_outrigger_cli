@@ -3,6 +3,7 @@
 根拠:
 - {{work-root}}/oracle/doc/dev_rule/development_environment.md
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
+- {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
 - {{work-root}}/oracle/src/oracle/other/path_model.py
 """
 
@@ -11,6 +12,12 @@ import subprocess
 from pathlib import Path
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _clear_completion_probe_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """通常 wrapper 経路のテストから補完プローブ環境を分離する。"""
+    monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
 
 
 def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:
