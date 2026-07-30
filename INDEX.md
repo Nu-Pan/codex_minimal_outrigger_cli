@@ -126,34 +126,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる `src` 配下の入口。Typer CLI の登録、サブコマンド実装、共通 runtime、ACP builder adapter、互換 import shim、設定・基本型の再公開を扱う。
-- CLI 入口から各サブコマンド、共通 runtime、builder adapter、互換公開面へ進むための最上位ルーティング対象。
+- cmoc の realization 実装を格納する src ツリー。CLI エントリーポイント、サブコマンド、共通 runtime、ACP/basic/config/oracle の互換入口を含み、各実装領域へのルーティング起点となる。
 
 ## Read this when
-- cmoc の CLI 全体構成、サブコマンドの配置、共通 runtime と builder adapter の関係を確認したいとき。
-- 特定の realization 実装へ進む前に、src 直下の公開入口や委譲関係を把握したいとき。
+- cmoc の realization 実装全体の構成や、CLI・サブコマンド・共通 runtime・互換 shim の配置を確認したいとき。
+- 対象となる実装ファイルや下位パッケージが特定できておらず、src 配下の入口から調査を始める必要があるとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime 機能、ACP builder、互換 import の詳細を確認したいときは、対応する下位ディレクトリまたはモジュールを直接読む。
-- CLI から参照される oracle の正本仕様を確認したいときは、oracle 配下の対象を直接読む。
+- 特定の CLI サブコマンド、runtime 機能、builder adapter、互換 import の詳細を確認したいときは、対応する下位対象を直接読む。
+- oracle 側の正本仕様や実装、prompt 本文を確認したいときは、src ではなく対応する oracle file を読む。
 
 ## hash
-- beabf4120b215c4f44fe1f2d8c5249da286ce74e10fe77e36ee68a98921d3da1
+- 48c876b1f5960bc317eeb9fb68d2c3d2b6da9d92345a0fb4c5b1c11c6a804b36
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、Git、設定、TUI などの外部挙動・制御契約を検証するテストと、各領域で共有するテスト補助モジュールを含む。対象機能の回帰テストや、実装変更に対応する検証入口を選ぶために読む。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定・Git・path 安全性など、実装の外部契約と統合挙動を検証するテスト群への入口。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test の候補を探すとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session、runtime、設定、Git、TUI などの外部挙動や制御ロジックを検証するとき
-- テスト用 Git リポジトリ、fake external command、隔離 Codex/Ollama 環境などの共通支援を確認するとき
+- cmoc の実装変更に対して、対応する回帰テストや統合テストを探すとき
+- CLI、Codex 実行、indexing、oracle review、session/run lifecycle の外部挙動を確認するとき
+- 設定、状態永続化、Git、worktree、path、sandbox、process cleanup の安全性を検証するテストを探すとき
 
 ## Do not read this when
 - 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc または oracle source を直接読む
-- 実装の内部詳細だけを調査するときは、対応する src の実装を直接読む
-- 対象機能と無関係なテスト領域や、テスト実行手順そのものだけを確認するとき
+- 特定の実装内部だけを調査し、テストケースの構成や期待挙動を確認する必要がないときは、対応する実装ファイルを直接読む
+- テスト実行環境や品質ゲートを確認するときは、対応する開発・テスト手順を直接読む
 
 ## hash
-- 86cf31aeb4a67e5c4cc0157c54d33c58fc0ed4bc41343853b0a26a0e477d62d2
+- 8a59fb41378ff898b324a1208ea7636a78339a44ce1173a03e0e773b325f6e14

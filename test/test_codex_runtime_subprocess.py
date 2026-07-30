@@ -157,6 +157,40 @@ def test_stop_process_group_rejects_reused_group_before_signal(
     assert sent == []
 
 
+def test_stop_process_group_rejects_snapshot_without_expected_leader(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """生存中 leader と異なる group snapshot を停止対象にしない。
+
+    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    sent: list[signal.Signals] = []
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: ((222, 20),),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_signal_process_members",
+        lambda _members, sig: sent.append(sig),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_wait_tracked_process_group_exit",
+        lambda *_args: False,
+    )
+
+    with pytest.raises(CmocError, match="同一性を確認できません"):
+        runtime_codex_profile.stop_process_group(
+            111,
+            expected_leader=(111, 10),
+            expected_members=((222, 20),),
+        )
+
+    assert sent == []
+
+
 def test_stop_process_group_accepts_descendant_after_leader_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -415,7 +449,13 @@ def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
     """child 起動後の tracking 更新失敗でも child を残さない。"""
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
-    stopped: list[int] = []
+    stopped: list[
+        tuple[
+            int,
+            tuple[int, int] | None,
+            tuple[tuple[int, int], ...] | None,
+        ]
+    ] = []
 
     class RunningProcess:
         """tracking 更新失敗後も生存している fake process。"""
@@ -448,10 +488,18 @@ def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
         "_record_tracked_child_process",
         fail_record,
     )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: (),
+    )
     monkeypatch.setattr(
         runtime_codex_profile,
         "stop_process_group",
-        lambda process_group_id: stopped.append(process_group_id),
+        lambda process_group_id, expected_leader=None, expected_members=None: (
+            stopped.append((process_group_id, expected_leader, expected_members))
+        ),
     )
 
     with pytest.raises(UnicodeDecodeError):
@@ -459,7 +507,7 @@ def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
             ["codex"], tracking_path, text=True, capture_output=True
         )
 
-    assert stopped == [4321]
+    assert stopped == [(4321, (4321, 333), ())]
     assert process.returncode == 0
 
 

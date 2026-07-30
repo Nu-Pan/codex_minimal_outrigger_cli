@@ -331,7 +331,9 @@ def stop_process_group(
     # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
     # 初回 snapshot と同じ group identity が消えた後の PGID 再利用へ signal を送らない。
     # leader が検証直後に終了しても、停止前 snapshot と現在の member に重なりが
-    # あれば同じ group とみなし、重なりがなければ再利用または検証不能として拒否する。
+    # あれば同じ group とみなす。ただし leader が現在の snapshot にいない場合は、
+    # 保存済み snapshot にも leader が含まれることを確認し、別 group の member overlap
+    # だけで停止を許可しない。
     initial_members = process_group_members(process_group_id)
     if initial_members is None:
         raise CmocError(
@@ -355,6 +357,7 @@ def stop_process_group(
         and expected_leader not in initial_members
         and (
             expected_members is None
+            or expected_leader not in expected_members
             or not any(member in expected_members for member in initial_members)
         )
     ):
@@ -677,6 +680,8 @@ def run_tracked_codex_subprocess(
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
     process: subprocess.Popen[Any] | None = None
+    cleanup_expected_leader: tuple[int, int] | None = None
+    cleanup_expected_members: tuple[tuple[int, int], ...] | None = None
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # Popen と child 行の登録だけを遅延させ、exec 後の child は通常の SIGTERM を受ける。
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
@@ -693,6 +698,13 @@ def run_tracked_codex_subprocess(
             with run_process_id_file_lock(tracking_path):
                 _validate_tracked_process_file(tracking_path)
                 process = subprocess.Popen(argv, start_new_session=True, **kwargs)
+                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # tracking 更新に失敗しても、後から PGID を再探索して別 group を停止しない
+                # よう、Popen 直後の identity snapshot を cleanup に引き継ぐ。
+                cleanup_start_time = process_start_time(process.pid)
+                if cleanup_start_time is not None:
+                    cleanup_expected_leader = (process.pid, cleanup_start_time)
+                cleanup_expected_members = process_group_members(process.pid)
                 _record_tracked_child_process(
                     tracking_path, process.pid, process_group_id=process.pid
                 )
@@ -700,7 +712,17 @@ def run_tracked_codex_subprocess(
             if process is None:
                 raise
             try:
-                stop_process_group(process.pid)
+                if cleanup_expected_members is None:
+                    raise CmocError(
+                        "実行中 Codex subprocess の process group を確認できません。",
+                        ["Codex subprocess を手動で停止してから再実行してください。"],
+                        f"pid: {process.pid}",
+                    )
+                stop_process_group(
+                    process.pid,
+                    expected_leader=cleanup_expected_leader,
+                    expected_members=cleanup_expected_members,
+                )
                 # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
                 # tracking 登録が失敗した場合も Popen を wait して reaping する。そうしないと
                 # group を停止しても、tracking 更新失敗で zombie process が残る。
