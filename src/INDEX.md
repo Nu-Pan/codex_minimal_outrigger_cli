@@ -49,21 +49,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 機能を構成する commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・パス管理、Git 操作、ログ、エラー処理、run lifecycle、INDEX 更新などの実装入口を含む。
-- 各 runtime モジュールは個別責務を担当し、cmoc_runtime.py と __init__.py が共通 API およびパッケージの入口を提供する。
+- cmoc の共通 runtime 機能を構成するモジュール群をまとめた commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・パス、Git、ログ、エラー、run lifecycle、INDEX 更新などの専用実装への入口となる。
 
 ## Read this when
-- commons 配下の共通 runtime 機能を調査・変更するとき
-- CLI、Codex、設定、状態、Git、ログ、パス、run lifecycle、report、INDEX 更新など複数の上位機能にまたがる実装を確認するとき
-- 対象となる runtime 機能の担当モジュールを特定するとき
+- 複数の runtime 機能にまたがる依存関係や共通 API の公開範囲を確認するとき
+- CLI、Codex、session/run、設定、Git、ログ、INDEX 更新などの共通 runtime 実装の担当モジュールを特定するとき
+- 特定の機能を変更する前に、commons 配下の責務分担を把握するとき
 
 ## Do not read this when
-- 特定の runtime 機能の実装詳細が明確な場合は、その担当モジュールを直接読む
-- 利用者向け仕様や正本仕様を確認する場合は、対応する oracle 文書を直接読む
-- commons と無関係な CLI 固有処理や個別サブコマンドの業務フローだけを調査する場合
+- 単一の runtime 機能の実装詳細を調査するときは、対応する個別モジュールを直接読む
+- 利用者向けサブコマンド仕様や oracle の正本仕様を確認するときは、対応する command 実装または oracle file を直接読む
 
 ## hash
-- 585cc43c51cac911f7376f20a42a1d3e8769424373b9f5f447b1f6bad6c3f7a8
+- a5d3d578278d431f01c94878160afc73e8eb992556e072b232cd4eb082a304b7
 
 # `config`
 

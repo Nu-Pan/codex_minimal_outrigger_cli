@@ -398,16 +398,16 @@
 # `runtime_state.py`
 
 ## Summary
-- session state の schema・検証・JSON 永続化を担う共通ランタイムモジュール。session/run の状態、branch からの session 特定、state file の読み書き、session fork の排他 lock、symlink 経由アクセス拒否を提供する。
+- session state の dataclass schema、状態値、永続化・復元・検証を担う runtime モジュール。session/run branch と state file の対応付け、path traversal・symlink・不正な file 種別の拒否、排他 lock、active session の検索も提供する。
 
 ## Read this when
-- session state の構造、許可される状態値、payload の不変条件を確認するとき
-- session または run branch に対応する state の読み込み・保存・検証を変更するとき
-- session fork の排他制御や state file の symlink 安全性を調査するとき
+- session state の JSON schema、session/run lifecycle、state file の読み書きや検証を変更・調査するとき
+- session branch または run branch から state を解決する処理、session fork 排他、state file の安全な保存先検証を扱うとき
+- runtime state の不正入力・破損 JSON・不正 branch に対する CmocError の挙動を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの session lifecycle や branch 操作の仕様だけを確認したいときは、対応する oracle 文書またはサブコマンド実装を直接読む
-- CmocError の共通仕様や git/path helper の実装を確認したいときは、それぞれの専用モジュールを読む
+- CLI の各サブコマンド固有の処理だけを変更し、state の schema・読み書き・branch 対応付けに触れないとき
+- session state の正本仕様そのものを確認する場合は、この実装ではなく oracle/doc/app_spec/session_state.md などの oracle file を直接読むとき
 
 ## hash
-- 42b6bc05926d345b544a816a90ae6b0d6c23014ebeddd21bdef842c4c471d446
+- 7c345df8bc8ad1c10a5993fce9b60cd0c0f988c6d884b110ba45c40cc928c14e

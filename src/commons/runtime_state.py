@@ -69,6 +69,7 @@ class SessionState:
 
 def state_path(root: Path, session_id: str) -> Path:
     """session_id に対応する session state file の保存先を返す。"""
+    _validate_session_id(session_id)
     path = sessions_dir(root) / f"{session_id}.json"
     _reject_symlinked_state_path(path)
     return path
@@ -92,6 +93,38 @@ def _reject_symlinked_state_path(path: Path) -> None:
         current = current.parent
 
 
+def _validate_session_id(session_id: str) -> None:
+    """session-id を一つの通常の file name component に限定する。"""
+    # {{work-root}}/oracle/doc/app_spec/session_state.md
+    # state file は session-id を一つの file name component として保存するため、
+    # separator や NUL を含む値を path に連結して保存先を外へ出さない。
+    if (
+        not isinstance(session_id, str)
+        or not session_id
+        or session_id in {".", ".."}
+        or Path(session_id).name != session_id
+        or "\x00" in session_id
+    ):
+        raise CmocError(
+            "session-id が不正です。",
+            ["session state file の保存先と branch 名を確認してください。"],
+            f"session_id: {session_id!r}",
+        )
+
+
+def _reject_non_file_state_path(path: Path) -> None:
+    """session state path を通常の file に限定する。"""
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # FIFO や device を open すると state 操作が停止するため、書き込み前にも
+    # 既存 path の種別を検証する。
+    if path.exists() and not path.is_file():
+        raise CmocError(
+            "session state path は通常の file ではありません。",
+            ["session state file を通常の file に戻してから再実行してください。"],
+            str(path),
+        )
+
+
 @contextmanager
 def session_fork_lock(root: Path) -> Iterator[None]:
     """repository 共通の session fork 排他 lock を保持する。"""
@@ -110,7 +143,12 @@ def branch_session_id(branch: str) -> str:
     """cmoc session branch 名から session-id を取り出す。"""
     prefix = "cmoc/session/"
     parts = branch.split("/")
-    if not branch.startswith(prefix) or len(parts) != 3 or not parts[2]:
+    if (
+        not branch.startswith(prefix)
+        or len(parts) != 3
+        or not parts[2]
+        or parts[2] in {".", ".."}
+    ):
         raise CmocError(
             "session branch 名から session-id を特定できません。",
             ["branch 名と session state file を確認してください。"],
@@ -122,7 +160,14 @@ def branch_session_id(branch: str) -> str:
 def run_branch_session_id(branch: str) -> str:
     """`cmoc/run/{{session-id}}/{{run-id}}` から session-id を取り出す。"""
     parts = branch.split("/")
-    if len(parts) != 4 or parts[:2] != ["cmoc", "run"] or not parts[2] or not parts[3]:
+    if (
+        len(parts) != 4
+        or parts[:2] != ["cmoc", "run"]
+        or not parts[2]
+        or not parts[3]
+        or parts[2] in {".", ".."}
+        or parts[3] in {".", ".."}
+    ):
         raise CmocError(
             "run branch 名から session-id を特定できません。",
             ["branch 名と session state file を確認してください。"],
@@ -169,6 +214,7 @@ def load_session_part_for_branch(
 def _read_state_data(path: Path) -> dict[str, Any]:
     """session state file を JSON object として読み込む。"""
     _reject_symlinked_state_path(path)
+    _reject_non_file_state_path(path)
     if not path.is_file():
         raise CmocError(
             "session state file が存在しません。",
@@ -191,6 +237,7 @@ def _read_state_data(path: Path) -> dict[str, Any]:
 def write_state(path: Path, state: SessionState) -> None:
     """session state を安定した JSON 表現で保存する。"""
     _reject_symlinked_state_path(path)
+    _reject_non_file_state_path(path)
     validated = SessionState.from_dict(state.to_dict(), path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(

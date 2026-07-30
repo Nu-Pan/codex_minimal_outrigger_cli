@@ -42,7 +42,13 @@ def _valid_state() -> SessionState:
 
 @pytest.mark.parametrize(
     "branch",
-    ["cmoc/session/", "cmoc/session/id/extra", "cmoc/run/id/run"],
+    [
+        "cmoc/session/",
+        "cmoc/session/id/extra",
+        "cmoc/session/.",
+        "cmoc/session/..",
+        "cmoc/run/id/run",
+    ],
 )
 def test_branch_session_id_rejects_invalid_shape(branch: str) -> None:
     """session branch の不正な形を拒否する。"""
@@ -52,7 +58,13 @@ def test_branch_session_id_rejects_invalid_shape(branch: str) -> None:
 
 @pytest.mark.parametrize(
     "branch",
-    ["cmoc/run/", "cmoc/run/session", "cmoc/run/session/run/extra"],
+    [
+        "cmoc/run/",
+        "cmoc/run/session",
+        "cmoc/run/session/run/extra",
+        "cmoc/run/../run",
+        "cmoc/run/session/.",
+    ],
 )
 def test_run_branch_session_id_rejects_invalid_shape(branch: str) -> None:
     """run branch の不正な形を拒否する。"""
@@ -74,6 +86,17 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
     assert session_id == "session"
     assert loaded_path == path
     assert loaded == state
+
+
+@pytest.mark.parametrize(
+    "session_id", ["../outside", "/outside", "nested/id", ".", ".."]
+)
+def test_state_path_rejects_path_like_session_id(
+    tmp_path: Path, session_id: str
+) -> None:
+    """session-id を state directory 外へ解決する path として扱わない。"""
+    with pytest.raises(CmocError, match="session-id"):
+        state_path(tmp_path, session_id)
 
 
 @pytest.mark.parametrize("payload", [b"{", b"\xff"])
@@ -277,6 +300,17 @@ def test_session_state_rejects_symlinked_path_without_writing_target(
         load_state_for_branch(tmp_path, "cmoc/session/session")
 
     assert outside.read_text() == "original\n"
+
+
+def test_state_operations_reject_non_regular_path(tmp_path: Path) -> None:
+    """state path が directory の場合に raw open error や停止を起こさない。"""
+    path = state_path(tmp_path, "session")
+    path.mkdir(parents=True)
+
+    with pytest.raises(CmocError, match="通常の file"):
+        write_state(path, _valid_state())
+    with pytest.raises(CmocError, match="通常の file"):
+        load_state_for_branch(tmp_path, "cmoc/session/session")
 
 
 @pytest.mark.parametrize("state", ["running", "joinable", "error"])
