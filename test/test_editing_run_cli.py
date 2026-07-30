@@ -1325,7 +1325,16 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     )
 
     assert result.exit_code == 0, result.output
-    assert _state(state_path)["run"]["state"] == "joinable"
+    state = _state(state_path)
+    assert state["run"]["state"] == "joinable"
+    parts = state["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    refactor_state = load_refactor_state(worktree)
+    assert "README.md" not in refactor_state
+    assert refactor_state["renamed.md"]["investigation_required"] is True
+    assert refactor_state["renamed.md"]["last_investigation_result"] == (
+        "not_investigated"
+    )
     reports = list(
         (
             root
@@ -1341,7 +1350,7 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     assert len(reports) == 1
     report = reports[0].read_text()
     assert "## Completion\ncompleted_with_unresolved" in report
-    assert "renamed.md" in report
+    assert "## Unresolved targets\n- count: 1\n- paths:\n  - `renamed.md`" in report
 
 
 @pytest.mark.parametrize(
