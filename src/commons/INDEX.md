@@ -153,24 +153,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界を担当し、起動時の sandbox・cwd・CODEX_HOME・argv/config override・Structured Output schema 配置を扱う。
-- process tracking と pidfd/process group による child process の同一性確認・停止・cleanup、および tracking file の検証・lock 管理を提供する。
-- Codex の subprocess 実行結果について、JSON/JSONL の読み取り、error detail の集約、resume token 抽出、capacity・quota・unexpected error の判定を行う。
-- Codex CLI 実行環境や機械的な実行結果の解釈を変更・検証する際の入口であり、実行フロー全体や利用者向けサブコマンド仕様そのものを読む代替ではない。
+- Codex CLI subprocess 境界の実装を担い、起動前の sandbox・cwd・CODEX_HOME・argv/config override・schema 配置と、起動後の process tracking・process group 停止・JSONL 出力解析・error/retry 判定をまとめる。Codex CLI との実行環境および機械的な実行結果を扱う下位実装への入口である。
 
 ## Read this when
-- Codex CLI に渡す argv、sandbox、cwd、CODEX_HOME、model/provider 設定、環境変数を変更または確認するとき。
-- editing run の process tracking、lock、pidfd、process group、SIGTERM/SIGKILL、PID reuse 対策を変更または調査するとき。
-- Structured Output schema の配置や Codex の stdout/stderr、JSONL error、resume token、capacity/quota retry 判定を変更または検証するとき。
-- Codex subprocess 不在・起動失敗・tracking state 不正など、この境界のエラー変換を調査するとき。
+- Codex CLI の起動引数、sandbox 権限、cwd、CODEX_HOME、provider 設定、Structured Output schema の配置を変更・調査するとき
+- Codex subprocess の PID/start time/process group tracking、signal による停止、abandon 時の cleanup を変更・調査するとき
+- Codex の JSONL stdout/stderr、thread resume token、capacity・quota・unexpected error の判定を変更・調査するとき
 
 ## Do not read this when
-- Codex CLI の上位サブコマンドの業務フローや run/abandon の利用者向け仕様を確認する場合は、対応する app_spec と command 実装を直接読む。
-- Codex の prompt 本文や prompt builder の構成を変更する場合は、prompt builder 関連の実装・oracle を直接読む。
-- 一般的な設定値の検証や path/content の共通処理だけを変更する場合は、runtime_config・runtime_paths・runtime_content の担当ファイルを直接読む。
+- Codex CLI 境界以外の一般的な設定検証、runtime content の hash store、パス解決だけを直接調査するときは、それぞれの専用実装を読む
+- Codex のプロンプト本文生成や agent call の上位オーケストレーションの仕様・挙動を調査するとき
 
 ## hash
-- 8d157ec9378f1b816330ce81cb4354cafa7f1a6be6d7e4e91ce7ec19e63fc9f6
+- d9aac07884cd53bf1e07d7a7358cd389ef41c05ee824b19fb92bd0033422c8bd
 
 # `runtime_codex_tui.py`
 

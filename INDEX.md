@@ -126,18 +126,19 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装ルート。Typer CLI の起動点、サブコマンド実装、共通 runtime、互換 import shim、設定・基本 API の再公開をまとめ、各下位パッケージへの入口を提供する。
+- cmoc の Python 実装ルート。CLI エントリーポイント、互換 import shim、共通 runtime、設定公開、ACP builder、各サブコマンド実装をまとめ、対象領域ごとの下位パッケージへ進む入口を提供する。
+- CLI 登録や全体の委譲関係は `main.py`、横断 runtime は `commons`、サブコマンド固有処理は `sub_commands`、互換公開面は `acp`・`basic`・`config`・`cmoc_runtime.py`・`oracle.py` から確認する。
 
 ## Read this when
-- cmoc の CLI 全体の登録・起動や、サブコマンドへの委譲関係を確認するとき。
-- サブコマンド、共通 runtime、互換 import、設定・基本 API の realization 側の配置を探すとき。
+- cmoc の実装ルート全体の構成や、CLI・runtime・互換入口・サブコマンドの配置を確認するとき。
+- 特定の実装へ進む前に、対象が CLI 登録、共通 runtime、ACP builder、設定・型の互換公開、サブコマンドのどの領域に属するか判断するとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime 機能、互換 shim の詳細だけを調査・変更するときは、対応する下位ファイルやパッケージを直接読む。
-- 正本仕様や oracle パッケージの実装を確認するときは、oracle ツリーを直接読む。
+- 特定サブコマンド、runtime 機能、ACP builder、設定型、互換 import の詳細を確認したいときは、対応する下位ファイルまたはディレクトリを直接読む。
+- oracle 側の正本仕様や実装を確認するときは、`oracle` ツリーを直接読む。
 
 ## hash
-- dc46f1cf0861eba95152f0896269a151c7e64fd61ece7a32cc85a42dcd7567bd
+- cc2bb5eadf6e60cc9796339d50adb5ee3d25ae23d1679581d649ec78b2b0dc40
 
 # `test`
 

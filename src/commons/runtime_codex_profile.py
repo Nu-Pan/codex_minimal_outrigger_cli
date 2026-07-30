@@ -753,14 +753,6 @@ def run_tracked_codex_subprocess(
                 ) from exc
 
 
-def record_tracked_child_process(
-    path: Path, process_id: int, process_group_id: int | None = None
-) -> None:
-    """run process tracking file へ Codex child の同一性情報を追記する。"""
-    with run_process_id_file_lock(path):
-        _record_tracked_child_process(path, process_id, process_group_id)
-
-
 def _record_tracked_child_process(
     path: Path, process_id: int, process_group_id: int | None = None
 ) -> None:
