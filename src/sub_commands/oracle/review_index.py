@@ -71,15 +71,35 @@ def review_worktree_status_paths(review_worktree: Path) -> list[str]:
 
 def merge_review_branch(root: Path, review_branch: str) -> str:
     """review branch を session branch へ merge し、merge 後 HEAD を返す。"""
+    merge_base = head_commit(root)
     merge = run_git(["merge", "--no-ff", review_branch], root, check=False)
     if merge.returncode != 0:
-        if not resolve_review_index_conflicts(root):
+        try:
+            resolved = resolve_review_index_conflicts(root)
+        except BaseException:
+            _restore_failed_review_merge(root, merge_base)
+            raise
+        if not resolved:
+            _restore_failed_review_merge(root, merge_base)
             raise CmocError(
                 "review branch の merge に失敗しました。",
                 ["git status を確認し、手動で解決してください。"],
                 merge.stderr,
             )
     return head_commit(root)
+
+
+def _restore_failed_review_merge(root: Path, merge_base: str) -> None:
+    """失敗した review merge の状態を merge 開始前へ戻す。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    # merge 失敗後に session worktree を unresolved のまま残すと、isolated run の
+    # cleanup 後も次の cmoc 操作を開始できないため、abort の成否に関係なく復旧する。
+    merge_head = run_git(
+        ["rev-parse", "-q", "--verify", "MERGE_HEAD"], root, check=False
+    )
+    if merge_head.returncode == 0:
+        run_git(["merge", "--abort"], root, check=False)
+    run_git(["reset", "--hard", merge_base], root)
 
 
 def resolve_review_index_conflicts(root: Path) -> bool:

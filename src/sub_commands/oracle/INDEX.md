@@ -80,19 +80,20 @@
 # `review_index.py`
 
 ## Summary
-- oracle review 用 worktree・branch の INDEX.md 差分だけを検査し、必要に応じて commit・merge・conflict 解決を行う Git 操作を扱う実装。レビュー隔離終了時の INDEX.md 変更反映処理を確認する入口。
+- oracle review 用の review worktree・review branch を扱う Git 処理をまとめた実装。INDEX.md だけの変更を検証して commit し、review branch の merge、INDEX.md 限定の競合解決、失敗時の復旧を担う。
 
 ## Read this when
-- oracle review による INDEX.md 変更の commit 条件や差分検査を変更・確認するとき
-- review branch の merge、INDEX.md 限定の conflict 解決、Git path 復元処理を調査するとき
+- oracle review の review worktree で変更を commit する処理を調べるとき
+- review branch の merge、INDEX.md 限定の競合解決、merge 失敗時の worktree 復旧を変更または確認するとき
+- Git の status、name-only path、ours stage の扱いを確認するとき
 
 ## Do not read this when
-- 通常の INDEX.md 生成・ルーティング内容を確認するとき
-- oracle review の仕様やレビュー全体の実行フローを確認するときは、対応する oracle 文書を先に読む場合
-- Git 実行共通処理そのものを変更・調査するとき
+- INDEX.md の内容生成や一般的なインデックスルーティングを変更するとき
+- oracle review の仕様や merge 方針そのものを確認するときは、先に対応する oracle 文書を読むべき場合
+- review worktree や review branch を使わない Git 操作を調べるとき
 
 ## hash
-- 0e19aa384667a4d42a288ccd740473f11fae20edad33138bb4604132c2357550
+- ba2545c74a613ca45442845862f7684acae6ea9b01bf5138ab1d4b4660439633
 
 # `review_loop.py`
 

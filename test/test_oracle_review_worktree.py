@@ -618,6 +618,35 @@ def test_oracle_review_resolves_index_conflict_when_session_deleted_index(
     assert "Merge branch 'review'" in run_git(root, "log", "-1", "--pretty=%B").stdout
 
 
+def test_oracle_review_aborts_non_index_merge_conflict(
+    tmp_path: Path,
+) -> None:
+    """INDEX.md 以外の merge conflict でも session worktree を復旧する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
+    """
+
+    root = make_repo(tmp_path)
+    home_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    run_git(root, "switch", "-c", "review")
+    (root / "README.md").write_text("review\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "review README")
+    run_git(root, "switch", home_branch)
+    (root / "README.md").write_text("session\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session README")
+    session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    with pytest.raises(CmocError, match="review branch の merge に失敗しました"):
+        review_module.merge_review_branch(root, "review")
+
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_commit
+    assert run_git(root, "diff", "--name-only", "--diff-filter=U").stdout == ""
+    assert run_git(root, "status", "--porcelain").stdout == ""
+    assert (root / "README.md").read_text() == "session\n"
+
+
 def test_commit_review_index_changes_accepts_nested_untracked_index(
     tmp_path: Path,
 ) -> None:
