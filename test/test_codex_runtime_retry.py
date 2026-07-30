@@ -416,7 +416,8 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
             "counter.write_text(str(count + 1))",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "blocked = pathlib.Path('oracle/blocked.md')",
+            "blocked = pathlib.Path('src/blocked.py')",
+            "blocked.parent.mkdir(exist_ok=True)",
             "if count == 0:",
             "    blocked.write_text('blocked\\n')",
             (
@@ -444,7 +445,7 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
     )
 
     assert counter.read_text() == "2"
-    assert (root / "oracle" / "blocked.md").read_text() == "blocked\n"
+    assert (root / "src" / "blocked.py").read_text() == "blocked\n"
 
 
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(

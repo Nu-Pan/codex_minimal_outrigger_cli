@@ -143,19 +143,17 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群と共通テスト支援モジュールを集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Git/worktree、prompt などの外部契約・異常系・統合 lifecycle を検証する入口であり、対象機能の実装変更時に対応するテストを選ぶために読む。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Git/worktree、StructDoc など、実装の外部契約と境界条件を検証するテストおよび共有テストヘルパーを扱う。各機能の具体的な挙動を調査・変更するときの入口であり、対象領域に対応する個別テストへ進む。
 
 ## Read this when
-- cmoc の実装または外部契約を変更し、対応する回帰テスト・統合テストを特定するとき
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run lifecycle、runtime state/config、Git/worktree の挙動を検証するとき
-- 共通の Codex/Ollama、Git repository、fake external command、doctor CLI、schema path 解決のテスト支援を利用・変更するとき
-- 実経路統合テストや GPU-only の case-local Ollama 検証方法を確認するとき
+- cmoc の実装変更に伴う回帰テストや外部挙動の検証対象を探すとき
+- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、worktree などのテスト契約を確認するとき
+- 複数テストで共有される Git、Codex、Ollama、外部コマンド、schema path のテスト支援を確認するとき
 
 ## Do not read this when
-- 正本仕様、schema の内容、開発環境やテスト実行手順を確認することが目的の場合は、対応する oracle 文書・schema・開発ルールを直接読む
-- 対象機能の実装詳細だけを調査し、テストの期待挙動を確認する必要がないときは、対応する realization implementation を直接読む
-- LLM の回答品質や推論内容自体を評価するとき
-- 対象領域と無関係なテストや共通支援モジュールを読むとき
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle 文書・schema を直接読む
+- 実装の局所的な詳細だけを調査するときは、対応する src ファイルを直接読む
+- テスト実行環境や Python 開発規約だけを確認するときは、対応する開発・テスト手順を読む
 
 ## hash
-- 8997ccdb94d501cb818ff5424cc4c6783e897348edccb8b0ca27efa940240f39
+- 61fe9815a77ff73606a101a6db8d24a3b9ee9d6c603e968b23c5db50a1355fd5
