@@ -146,19 +146,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。実行時の sandbox・cwd・CODEX_HOME・argv/config override・Structured Output schema 配置を準備し、subprocess 起動、process group tracking、安全な停止、JSONL 出力解析、capacity/quota/error 判定を一括して扱う。
+- Codex CLI subprocess 境界の実行環境・argv・状態追跡・出力解釈を担う実装。sandbox モード、cwd、CODEX_HOME、provider 設定、TOML override、process group の安全な停止、schema 配置、JSON/JSONL error と retry 判定を扱う。Codex 起動条件、実行中 process の tracking・abandon、Structured Output、Codex エラー判定を確認・変更するときの入口。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox または cwd の決定、CODEX_HOME、provider 設定、schema 配置を変更・調査するとき
-- Codex subprocess の process tracking、pidfd、process group の停止や abandon 時の挙動を変更・調査するとき
-- Codex の戻り値、JSONL error、resume token、capacity/quota retry 判定を変更・調査するとき
+- Codex subprocess の argv/env/cwd、sandbox、CODEX_HOME、model provider 設定を確認・変更するとき
+- Codex child process の PID tracking、process group、pidfd、停止・cleanup の挙動を確認・変更するとき
+- Structured Output schema の配置、Codex JSON/JSONL の読み取り、error・capacity・quota・resume 判定を確認・変更するとき
 
 ## Do not read this when
-- Codex CLI 境界ではなく、上位の prompt 構築や editing run の業務フロー自体を変更・調査するとき
-- Codex 呼び出しを伴わない設定モデル、一般的な path/content helper、独立したエラー型の実装だけを確認するとき
+- Codex CLI を呼び出す上位の run/editing workflow や利用者向けコマンド制御を確認する場合は、対応する上位モジュールを先に読む
+- Codex 固有ではない設定値検証、内容 hash、schema store path の一般実装だけを確認する場合は、各 helper モジュールを直接読む
 
 ## hash
-- 550c1f1f0c977258446ccc10380074fb26329961dabc714b6643d8474c672185
+- 519a22a8cda2090d1865230d47aecd4e8bce8906b31dfa8bdaa7fa32865ca406
 
 # `runtime_codex_tui.py`
 

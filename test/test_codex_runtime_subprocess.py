@@ -326,6 +326,37 @@ def test_tracked_codex_subprocess_defers_sigterm_until_tracking_is_written(
     assert tracking_at_signal == ["111 222\nchild 4321 333 4321\n"]
 
 
+def test_tracked_codex_subprocess_redelivers_sigterm_when_startup_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Popen 前の失敗でも保留した SIGTERM を握りつぶさない。"""
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
+    received: list[int] = []
+    previous_handler = signal.getsignal(signal.SIGTERM)
+
+    def handler(signum: int, _frame: object) -> None:
+        """復元後の handler が保留 signal を受け取ったことを記録する。"""
+        received.append(signum)
+
+    def popen(*_args: object, **_kwargs: object) -> object:
+        """Popen 前の失敗と同時に SIGTERM を受けた状態を再現する。"""
+        signal.raise_signal(signal.SIGTERM)
+        raise OSError("startup failed")
+
+    signal.signal(signal.SIGTERM, handler)
+    try:
+        monkeypatch.setattr(runtime_codex_profile.subprocess, "Popen", popen)
+        with pytest.raises(OSError, match="startup failed"):
+            run_tracked_codex_subprocess(
+                ["codex"], tracking_path, text=True, capture_output=True
+            )
+    finally:
+        signal.signal(signal.SIGTERM, previous_handler)
+
+    assert received == [signal.SIGTERM]
+
+
 def test_tracked_codex_subprocess_keeps_group_tracking_after_leader_exit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

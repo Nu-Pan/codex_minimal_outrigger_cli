@@ -692,6 +692,15 @@ def run_tracked_codex_subprocess(
         nonlocal sigterm_pending
         sigterm_pending = True
 
+    def _restore_sigterm_handler() -> None:
+        """保留した SIGTERM を setup 成否にかかわらず復元する。"""
+        signal.signal(signal.SIGTERM, previous_sigterm_handler)
+        if sigterm_pending and previous_sigterm_handler != signal.SIG_IGN:
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # Popen/child 行登録の途中だけ signal を遅延し、setup 失敗時も元の
+            # handler へ再配送して run の中断を握りつぶさない。
+            os.kill(os.getpid(), signal.SIGTERM)
+
     signal.signal(signal.SIGTERM, _defer_sigterm)
     try:
         try:
@@ -744,10 +753,7 @@ def run_tracked_codex_subprocess(
                 ) from exc
             raise
     finally:
-        signal.signal(signal.SIGTERM, previous_sigterm_handler)
-    if sigterm_pending and previous_sigterm_handler != signal.SIG_IGN:
-        # Popen と pid file 更新の間だけ遅らせ、登録後は通常の中断処理へ戻す。
-        os.kill(os.getpid(), signal.SIGTERM)
+        _restore_sigterm_handler()
     try:
         stdout, stderr = process.communicate(input_data)
         result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
