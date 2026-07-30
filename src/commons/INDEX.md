@@ -338,19 +338,19 @@
 # `runtime_run.py`
 
 ## Summary
-- editing run の process identity と tracking file を管理し、run process および Codex child process group の安全な停止・cleanup を担う共通ランタイムモジュール。worktree 解決や lifecycle lock も提供する。
+- editing run の worktree 解決、process tracking、lifecycle lock、親 run process と Codex child process group の安全な停止・cleanup を担う共通 runtime 境界。join/abandon や error cleanup で、同一 session の状態・lock・tracking file・worktree identity と fail-closed な process 同一性検証を確認する入口。
 
 ## Read this when
-- editing run の abandon、error cleanup、process tracking、Codex subprocess group の停止処理を変更・調査するとき
-- PID 再利用、start time、pidfd、process group snapshot 検証に関わる挙動を確認するとき
-- run branch の worktree 解決や run lifecycle の排他制御を確認するとき
+- editing run の worktree lookup、join/abandon、error cleanup、process tracking、親 process または Codex child group の停止処理を変更・調査するとき。
+- PID 再利用、start time、pidfd、process group、tracking file の破損や stale 状態に対する安全な失敗挙動を確認するとき。
 
 ## Do not read this when
-- CLI の editing run の公開仕様や状態遷移そのものを確認したいときは、対応する oracle doc や上位の run 実装を先に読む
-- git 操作、runtime path、runtime error の個別実装だけを変更・調査するとき
+- worktree の一般的な git 操作だけを調査する場合は runtime_git の実装を直接読む。
+- process の低レベル操作そのものを調査する場合は runtime_codex_profile の実装を直接読む。
+- editing run の正本仕様や利用者向け subcommand 挙動を確認する場合は、列挙された oracle 文書を直接読む。
 
 ## hash
-- 2f70df13f070689934af61b2b3650763f3f6852bdc15a6df2798c863d1f955ad
+- cccbd97dd28e70679913119db3ca8a6e534cccc0c267bbb0c65c4381fd0df1f2
 
 # `runtime_run_lifecycle.py`
 

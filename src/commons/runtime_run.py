@@ -1,3 +1,15 @@
+"""editing run の worktree 解決と process cleanup を束ねる共通 runtime 境界。
+
+この module は run state の同一 lock・tracking file・worktree identity を共有する
+ため、join/abandon の復旧処理で一緒に読む必要がある。worktree lookup と process
+停止を分けると、この不変条件と fail-closed 方針の文脈が分散するため、一つの run
+lifecycle 境界として保つ。
+
+根拠:
+- {{work-root}}/oracle/doc/app_spec/run_isolation.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+"""
+
 import os
 import signal
 from collections.abc import Callable, Iterator
@@ -18,7 +30,11 @@ from .runtime_codex_profile import (
     wait_process_fd_exit,
 )
 from .runtime_errors import CmocError
-from .runtime_git import expected_run_worktree, run_git
+from .runtime_git import (
+    _has_linked_worktree_metadata,
+    expected_run_worktree,
+    run_git,
+)
 from .runtime_paths import generated_agent_read_dir
 
 
@@ -66,6 +82,10 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
                 # run worktree は managed path そのものに限定し、symlink 経由で
                 # run-root 外へ解決される登録を受け入れない。
                 if registered_path != expected or resolved_path != expected:
+                    return None
+                if registered_path.exists() and not _has_linked_worktree_metadata(
+                    root, registered_path
+                ):
                     return None
             return resolved_path
     return None

@@ -205,6 +205,27 @@ def test_run_worktree_lookup_rejects_symlink_components(
     assert worktree_for_branch_optional(root, "cmoc/run/session/run") is None
 
 
+def test_run_worktree_lookup_rejects_replaced_registered_path(
+    tmp_path: Path,
+) -> None:
+    """Git 登録が残っていても linked worktree でない置換先を扱わない。"""
+    root = make_repo(tmp_path)
+    target = root / ".cmoc" / "gu" / "worktree" / "session" / "run"
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        "cmoc/run/session/run",
+        str(target),
+        "HEAD",
+    )
+    target.rename(tmp_path / "moved-worktree")
+    target.mkdir(parents=True)
+
+    assert worktree_for_branch_optional(root, "cmoc/run/session/run") is None
+
+
 @pytest.mark.parametrize("symlink_component", ["base", "session", "target"])
 def test_create_run_worktree_rejects_symlink_components(
     tmp_path: Path, symlink_component: str
