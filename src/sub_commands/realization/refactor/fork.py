@@ -329,29 +329,40 @@ def _run_refactor_unit(
         )
         return
     investigated_hash = file_sha256(target_path)
+    agent_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
     with pushd(context.run_worktree):
-        parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
-            target_path
+        try:
+            parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
+                target_path
+            )
+            result = run_codex_exec(
+                parameter,
+                root=context.repo,
+                cwd=context.run_worktree,
+                config=load_config(context.run_worktree),
+                purpose=f"realization refactor: {target}",
+            )
+        except BaseException:
+            _ensure_agent_did_not_commit(context.run_worktree, agent_head)
+            raise
+    # {{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py
+    # agent は git commit を実行してはいけない。commit 済み差分は status 検査をすり抜けるため、
+    # process tracking の child を止めた直後に HEAD も検査し、違反時は処理単位の開始
+    # commit へ戻してから error cleanup へ渡す。
+    try:
+        cleanup_warnings.extend(
+            stop_tracked_codex_children(context.repo, context.session_id) or []
         )
-        result = run_codex_exec(
-            parameter,
-            root=context.repo,
-            cwd=context.run_worktree,
-            config=load_config(context.run_worktree),
-            purpose=f"realization refactor: {target}",
-        )
+    except BaseException:
+        _ensure_agent_did_not_commit(context.run_worktree, agent_head)
+        raise
+    _ensure_agent_did_not_commit(context.run_worktree, agent_head)
     if result.returncode != 0:
         raise CmocError(
             "refactor agent が正常終了しませんでした。",
             ["Codex call log を確認してください。"],
             f"target: {target}\nreturncode: {result.returncode}",
         )
-    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
-    # agent の leader 終了後も descendant が残る場合があるため、agent の差分を
-    # 検査する前に run worktree への遅延書き込みを止める。
-    cleanup_warnings.extend(
-        stop_tracked_codex_children(context.repo, context.session_id) or []
-    )
     findings = _validated_findings(result.output_json, target)
     changed_realization = worktree_change_paths(
         context.run_worktree,
@@ -440,6 +451,27 @@ def _run_refactor_unit(
         units,
         unresolved_findings,
         f"cmoc realization refactor {target}",
+    )
+
+
+def _ensure_agent_did_not_commit(worktree: Path, before_head: str) -> None:
+    """agent call 中の commit を開始前の run tree へ戻して拒否する。"""
+    after_head = run_git(["rev-parse", "HEAD"], worktree).stdout.strip()
+    if after_head == before_head:
+        return
+    try:
+        run_git(["reset", "--hard", before_head], worktree)
+    except BaseException as reset_error:
+        raise CmocError(
+            "refactor agent が commit を作成し、差分を戻せませんでした。",
+            ["run worktree の git history と Codex call log を確認してください。"],
+            f"before HEAD: {before_head}\nafter HEAD: {after_head}\n"
+            f"reset error: {reset_error!r}",
+        ) from reset_error
+    raise CmocError(
+        "refactor agent が git commit を実行しました。",
+        ["agent の commit を取り除いてから refactor fork を再実行してください。"],
+        f"before HEAD: {before_head}\nafter HEAD: {after_head}",
     )
 
 

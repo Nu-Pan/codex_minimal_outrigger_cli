@@ -126,33 +126,33 @@
 # `src`
 
 ## Summary
-- cmoc の実装コードを配置する src ツリー。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、設定・ACP・basic の公開入口を含み、各下位要素へのルーティング起点となる。
+- cmoc CLI の realization 実装をまとめる src ツリー。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、oracle/basic/config の公開入口を提供し、各下位要素へのルーティング起点となる。
 
 ## Read this when
-- cmoc の realization 実装全体の構成、CLI から各機能への委譲関係、共通 runtime と互換 import の配置を確認するとき。
-- 対象となる実装モジュールやサブコマンドの担当箇所を特定し、下位要素へ進む入口を探すとき。
+- cmoc の realization 実装全体の構成や、CLI・サブコマンド・共通 runtime の担当領域を確認するとき。
+- CLI の登録入口、互換 import、oracle 実装への接続、または対象実装の配置先を特定するとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime 機能、oracle 実装、または互換 shim の詳細が明確な場合は、該当する下位対象を直接読む。
-- 利用者向け仕様や正本仕様を確認する場合は、src ではなく対応する oracle 文書を読む。
+- 特定サブコマンドや runtime 機能の詳細が明確な場合は、対応する下位モジュールを直接読む。
+- 利用者向け仕様や正本実装を確認する場合は、対応する oracle 配下を直接読む。
 
 ## hash
-- d4bb25a26bab7677058e7e8e4e003cad72ae7b5378d5d0afff4ae020a89b0663
+- 58dfed275b228d93ba1f0a881bb629ec1c6eb192b32c44cf37aa33703e8d3206
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群と共通テスト支援モジュールを集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、config、Git/worktree、TUI などの外部契約・制御ロジックを検証する入口であり、各機能の回帰テストと実経路統合テストへ進むための階層。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定、Git/worktree、prompt、renderer などの外部挙動・制御ロジックを検証する。各機能の実装変更時に対応する個別テストへ進む入口となる。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test や共通テスト helper を探すとき
-- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、runtime state、config、worktree の外部挙動を検証するテストを選ぶとき
-- テスト用 Git repository、fake external command、case-local Ollama、隔離 Codex home などの共通基盤を確認するとき
+- cmoc の実装またはテスト変更に対する回帰テストの対象を探すとき
+- CLI、Codex 実行、indexing、oracle review、session、runtime、設定、worktree の挙動を検証するとき
+- 共通テスト支援 helper や実経路統合テストの構成を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle doc または oracle source/test を直接読む
-- 実装の局所ロジックだけを調査するときは、対応する src ファイルを直接読む
-- テスト実行環境や Python 開発規約だけを確認するときは、開発・テスト手順を直接読む
+- 正本仕様や schema の内容を確認するときは、対応する oracle 文書・schema を直接読む
+- 実装の詳細を調査するときは、対応する src ファイルを直接読む
+- 対象機能が特定できている場合は、このディレクトリ全体ではなく該当する個別テストへ進む
 
 ## hash
-- 1707e2f42929637d12b564ac98c983c1f9121590c1a250c06b0924dbc980a46f
+- 7f7de75049eae50227ce6b212c45c93949b51fbc4226b4d6912a0aed22b492a5

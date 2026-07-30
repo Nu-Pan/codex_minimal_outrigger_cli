@@ -62,20 +62,20 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンド群のパッケージ入口。apply workload と refactor workload、およびそれぞれの CLI 実行処理へのルーティング起点となる。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の workload 実装および関連 CLI 実行処理へのルーティングを提供する。
 
 ## Read this when
-- realization apply または realization refactor の workload 実装・構成を確認するとき
-- realization apply fork や realization refactor fork の CLI 実行処理を調査・変更するとき
-- apply または refactor の lifecycle、差分検証、state 更新、commit、report、完了処理の入口を確認するとき
+- realization workload サブコマンドの実装や構成を確認するとき。
+- realization apply または realization refactor の workload 実行フロー、状態管理、差分・commit 検証、report 生成を調査・変更するとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき
-- Codex builder の launch parameter、run lifecycle 共通実装、process tracking 共通実装だけを確認するとき
-- apply または refactor の個別対象調査・prompt 生成、共通 state 永続化、共通 report 描画だけを確認するとき
+- realization workload サブコマンドに関係しない処理を確認するとき。
+- run lifecycle や process tracking などの共通実装だけを確認するとき。
+- Codex builder の launch parameter、agent prompt、Structured Output schema、共通 report 表示だけを確認するとき。
+- realization apply または realization refactor 以外のサブコマンドを調査するとき。
 
 ## hash
-- 0f04a1ff3e7a8b1d872327541e4a688e54eed04ac6a5ada10763e26d0c1c599a
+- 65eed79b81685da1e5b9fee7dbb1a1e446856091515e020b02ec91405efa013d
 
 # `review`
 

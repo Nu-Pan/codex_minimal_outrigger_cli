@@ -1373,6 +1373,45 @@ def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
         assert restored.read_text() == original.read_text()
 
 
+def test_refactor_rejects_agent_commit_and_rolls_back_unit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """refactor agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+
+    def fake_refactor(
+        _parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """agent が realization file を直接 commit する状態を再現する。"""
+        worktree = Path(str(kwargs["cwd"]))
+        (worktree / "README.md").write_text("agent commit\n")
+        run_git(worktree, "add", "README.md")
+        run_git(worktree, "commit", "-m", "agent commit")
+        return SimpleNamespace(returncode=0, output_json={"findings": []})
+
+    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    parts = _state(state_path)["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (worktree / "README.md").read_text() == "# repo\n"
+    assert (
+        "agent commit"
+        not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
+    )
+    assert run_git(worktree, "status", "--porcelain").stdout == ""
+
+
 def test_apply_failure_rolls_back_index_with_realization_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
