@@ -72,7 +72,15 @@ def review_worktree_status_paths(review_worktree: Path) -> list[str]:
 def merge_review_branch(root: Path, review_branch: str) -> str:
     """review branch を session branch へ merge し、merge 後 HEAD を返す。"""
     merge_base = head_commit(root)
-    merge = run_git(["merge", "--no-ff", review_branch], root, check=False)
+    try:
+        merge = run_git(["merge", "--no-ff", review_branch], root, check=False)
+    except BaseException:
+        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        # subprocess の中断は、git が MERGE_HEAD を作成した直後に届くことがある。
+        # review.py が隔離 resource を cleanup しても session worktree の merge 状態は
+        # 残るため、通常の merge failure と同じく開始前へ復旧してから中断を再送する。
+        _restore_failed_review_merge(root, merge_base)
+        raise
     if merge.returncode != 0:
         try:
             resolved = resolve_review_index_conflicts(root)

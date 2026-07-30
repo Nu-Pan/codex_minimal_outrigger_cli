@@ -25,6 +25,7 @@ import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_run_lifecycle as lifecycle_module
 import sub_commands.oracle.review as review_module
+import sub_commands.oracle.review_index as review_index_module
 from basic.acp import AgentCallParameter
 from cmoc_runtime import CmocError
 from commons.runtime_results import CommandResult
@@ -639,6 +640,46 @@ def test_oracle_review_aborts_non_index_merge_conflict(
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     with pytest.raises(CmocError, match="review branch の merge に失敗しました"):
+        review_module.merge_review_branch(root, "review")
+
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_commit
+    assert run_git(root, "diff", "--name-only", "--diff-filter=U").stdout == ""
+    assert run_git(root, "status", "--porcelain").stdout == ""
+    assert (root / "README.md").read_text() == "session\n"
+
+
+def test_oracle_review_restores_interrupted_merge_conflict(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """git merge の中断でも session worktree に conflict state を残さない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    """
+    root = make_repo(tmp_path)
+    home_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    run_git(root, "switch", "-c", "review")
+    (root / "README.md").write_text("review\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "review README")
+    run_git(root, "switch", home_branch)
+    (root / "README.md").write_text("session\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session README")
+    session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    original_run_git = review_index_module.run_git
+
+    def interrupt_during_merge(
+        args: list[str], cwd: Path, check: bool = True
+    ) -> CommandResult:
+        """conflict state 作成直後の Ctrl+C を再現する。"""
+        result = original_run_git(args, cwd, check=check)
+        if args[:2] == ["merge", "--no-ff"]:
+            raise KeyboardInterrupt()
+        return result
+
+    monkeypatch.setattr(review_index_module, "run_git", interrupt_during_merge)
+
+    with pytest.raises(KeyboardInterrupt):
         review_module.merge_review_branch(root, "review")
 
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_commit
