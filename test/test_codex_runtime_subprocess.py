@@ -757,6 +757,25 @@ def test_read_run_process_id_rejects_negative_parent_start_time(
     assert runtime_run.read_run_process_id(tmp_path, "session") is None
 
 
+@pytest.mark.parametrize(
+    "tracking_text",
+    [
+        f"{2**31}\n",
+        f"123 456\nchild {2**31} 789 {2**31}\n",
+        "123 456\nchild 789 1011 123\n",
+    ],
+)
+def test_read_run_process_id_rejects_unusable_child_identity(
+    tmp_path: Path, tracking_text: str
+) -> None:
+    """停止対象として扱えない pid と group の組を受け入れない。"""
+    tracking_path = runtime_run.run_process_id_path(tmp_path, "session")
+    tracking_path.parent.mkdir(parents=True)
+    tracking_path.write_text(tracking_text)
+
+    assert runtime_run.read_run_process_id(tmp_path, "session") is None
+
+
 @pytest.mark.parametrize("path_kind", ["symlink", "fifo"])
 def test_run_process_tracking_rejects_external_or_special_path(
     tmp_path: Path, path_kind: str

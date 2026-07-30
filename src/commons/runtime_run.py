@@ -54,6 +54,14 @@ class RunProcessIdentity(NamedTuple):
     child_processes: tuple[ProcessIdentity, ...] = ()
 
 
+def _is_valid_process_id(process_id: int) -> bool:
+    """OS の process API へ安全に渡せる pid_t 範囲か判定する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # 壊れた tracking の巨大な整数を受け入れると、abandon 時の pidfd_open が
+    # OverflowError になり、停止対象なしとして扱う経路へ到達できない。
+    return 0 < process_id <= 2**31 - 1
+
+
 def worktree_for_branch(root: Path, branch: str) -> Path:
     """branch が checkout されている worktree を返す。"""
     path = worktree_for_branch_optional(root, branch)
@@ -150,7 +158,7 @@ def _read_run_process_id_file(path: Path) -> RunProcessIdentity | None:
         if not lines or len(lines[0]) not in {1, 2}:
             return None
         process_id = int(lines[0][0])
-        if process_id <= 0:
+        if not _is_valid_process_id(process_id):
             return None
         start_time = int(lines[0][1]) if len(lines[0]) == 2 else None
         if start_time is not None and start_time < 0:
@@ -162,10 +170,17 @@ def _read_run_process_id_file(path: Path) -> RunProcessIdentity | None:
             child_id = int(parts[1])
             child_start_time = int(parts[2])
             group_id = int(parts[3]) if len(parts) == 4 else None
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # run_tracked_codex_subprocess は start_new_session child の PID を PGID
+            # として保存する。別 PGID を受け入れると、leader 消滅後に tracking の
+            # stale 値を再利用した別 process group を停止し得る。
             if (
-                child_id <= 0
+                not _is_valid_process_id(child_id)
                 or child_start_time < 0
-                or (group_id is not None and group_id <= 0)
+                or (
+                    group_id is not None
+                    and (not _is_valid_process_id(group_id) or group_id != child_id)
+                )
             ):
                 return None
             children.append(ProcessIdentity(child_id, child_start_time, group_id))
