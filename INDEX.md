@@ -126,33 +126,34 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization 実装を収める主要なコード領域。CLI エントリーポイント、各サブコマンド、共通 runtime、ACP builder、互換 import 入口、設定・基本型を扱い、配下の実装領域へ進むための起点となる。
+- cmoc の realization 実装と CLI エントリーポイントをまとめる src ツリー。Typer CLI、互換 import shim、共通 runtime、ACP builder、設定・基本型、各サブコマンド実装を下位要素へ案内する。
 
 ## Read this when
-- cmoc の実装全体の構成や、CLI・サブコマンド・共通 runtime・ACP builder の配置を確認したいとき。
-- 特定の実装領域へ進む前に、src 配下の主要な責務の分かれ方を把握したいとき。
+- cmoc の CLI コマンド登録、サブコマンド委譲、引数解析エラー処理、自動補完の挙動を確認したいとき。
+- 共通 runtime、ACP builder、互換 import、設定・基本型、またはサブコマンド実装の構成を確認したいとき。
+- oracle・realization・session・run の実行経路を、公開 CLI 入口からたどりたいとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime 機能、ACP builder、設定・基本型の詳細を確認したいときは、src 配下の該当モジュールを直接読む。
-- 正本仕様や oracle 実装を確認したいときは、oracle ツリーの対応対象を直接読む。
+- 特定サブコマンド、runtime 機能、builder adapter、設定型、基本型の詳細実装を確認したいときは、対応する下位モジュールを直接読む。
+- 正本仕様や oracle 側の実装内容を確認したいときは、oracle ツリーを直接読む。
 
 ## hash
-- cec320c9be327f5a4b84e3b2a65100ce8187463f5507a63f11f747d3ce9a052c
+- 6183506b1cee3999f9a7f8a81979f8b011354a68ad73cb19be446d98f7b67e2a
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を集約するテストディレクトリ。CLI、runtime、Codex 実行、indexing、oracle review、session/editing run、設定・Git・状態永続化などの外部契約と安全性を検証する。各テスト領域の詳細確認や回帰テストの入口として利用する。
+- cmoc の realization test 群を集約するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定・Git・prompt など、実装の外部契約や制御ロジックを検証するテストと共通テスト支援を扱う。各機能の回帰テストへ進むための入口。
 
 ## Read this when
-- cmoc の機能変更後に対応する回帰テストや外部挙動の検証対象を探すとき
-- CLI、runtime、Codex、indexing、oracle review、session/editing run、設定・状態管理のテスト範囲を確認するとき
-- 共通テスト支援 helper、実経路統合テスト、GPU/Ollama 統合テストの入口を探すとき
+- 複数の cmoc 機能にまたがる realization test の所在や、対象機能に対応するテストを探すとき。
+- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、Git、安全性などの外部挙動・制御ロジックをテストから確認するとき。
+- 対象機能に対応する共通テスト helper や統合・受け入れテストを探すとき。
 
 ## Do not read this when
-- 単一機能の正本仕様や実装詳細を確認する場合は、対応する oracle 文書・oracle source・src 実装を直接読む
-- テスト実行環境や検証コマンドを確認する場合は、対応する開発・テスト手順を直接読む
-- Codex や LLM の回答品質そのものを評価する場合
+- 正本仕様、schema、実装の責務や詳細を確認することが目的の場合は、対応する oracle 文書・schema・実装ファイルを直接読む。
+- テスト実行環境や品質検査の手順を確認する場合は、対応する開発・テスト手順を読む。
+- 特定の機能と無関係なテストを総覧する必要がなく、対象機能に対応する個別テストが明らかな場合は、そのテストへ直接進む。
 
 ## hash
-- 972019a2cdf6b79a3bb7d5b5d6240e625e3f0a73ec7f57c8d86e94acc904dfa7
+- d9734de083d030fd2c59aeed8d05eea3bdcc766276a5e50c2895ee3c45a0bb3c

@@ -6,6 +6,7 @@
 単一 workload の lifecycle として保つ。
 """
 
+from collections.abc import Collection
 from pathlib import Path
 
 import typer
@@ -338,6 +339,7 @@ def _run_refactor_unit(
         )
         return
     investigated_hash = file_sha256(target_path)
+    state_paths_before = set(load_refactor_state(context.run_worktree))
     agent_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
 
     def record_agent_head() -> None:
@@ -470,6 +472,8 @@ def _run_refactor_unit(
         units,
         unresolved_findings,
         f"cmoc realization refactor {target}",
+        pending_realization_paths=changed_realization,
+        state_paths_before=state_paths_before,
     )
 
 
@@ -502,6 +506,9 @@ def _commit_refactor_unit(
     units: list[tuple[str, int]],
     unresolved_findings: dict[str, list[_UnresolvedFinding]],
     message: str,
+    *,
+    pending_realization_paths: Collection[str] = (),
+    state_paths_before: Collection[str] = (),
 ) -> None:
     """commit 済み処理単位の report 進捗を interruption 前に公開する。
 
@@ -532,6 +539,22 @@ def _commit_refactor_unit(
                 if change.status.startswith("R") and len(change.paths) == 2
             }
             state = load_refactor_state(context.run_worktree)
+            if target not in rename_paths and target not in state:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+                # Git は内容の変更量が大きい rename を delete/add として記録する。
+                # 処理単位で新しく現れた realization file が一つだけなら、state の
+                # 旧 target をその path へ対応付け、unresolved を失わないようにする。
+                candidates = sorted(
+                    {
+                        path
+                        for path in pending_realization_paths
+                        if path != target
+                        and path in state
+                        and path not in state_paths_before
+                    }
+                )
+                if len(candidates) == 1:
+                    rename_paths[target] = candidates[0]
             _reconcile_unresolved_findings(
                 state,
                 rename_paths,

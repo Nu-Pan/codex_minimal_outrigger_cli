@@ -1272,9 +1272,11 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
+@pytest.mark.parametrize("replace_content", [False, True])
 def test_refactor_fork_moves_unresolved_target_after_rename(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    replace_content: bool,
 ) -> None:
     """rename 後も unresolved target と refactor state の path 集合を揃える。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
@@ -1288,6 +1290,8 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
         worktree = Path(str(kwargs["cwd"]))
         if kwargs["purpose"] == "realization refactor: README.md":
             (worktree / "README.md").rename(worktree / "renamed.md")
+            if replace_content:
+                (worktree / "renamed.md").write_text("completely different content\n")
             return SimpleNamespace(
                 returncode=0,
                 output_json={
