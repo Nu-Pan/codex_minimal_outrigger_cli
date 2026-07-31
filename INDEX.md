@@ -126,23 +126,20 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側 Python ソースツリー。CLI エントリーポイント、共通 runtime、互換 import shim、ACP builder adapter、サブコマンド実装を集約する。
-- `main.py` が doctor・tui・indexing・session・oracle・realization・run の CLI 登録と委譲を担い、`sub_commands` が各サブコマンドの実処理を提供する。
-- `commons` は CLI 実行、Codex subprocess/TUI、設定、Git、パス、ログ、状態、run lifecycle、indexing などの共通 runtime を責務別に提供する。
-- `acp`、`basic`、`config`、`cmoc_runtime.py`、`oracle.py` には既存 import path と正本側実装の移行を支える互換入口がある。
+- cmoc の realization 実装を格納する src ツリー。Typer CLI の主要入口、サブコマンド、共通 runtime、ACP・basic・config の互換 import shim を扱い、個別機能の実装へ進むための入口となる。
 
 ## Read this when
-- cmoc の realization CLI 全体の入口、サブコマンド登録、または委譲関係を確認するとき。
-- 共通 runtime とサブコマンド実装のどちらへ進むべきか判断するとき。
-- ACP builder adapter、互換 import、または oracle 側実装への接続を調査するとき。
+- cmoc の CLI 登録、主要エントリーポイント、サブコマンドの配置を確認したいとき。
+- 共通 runtime と、ACP・basic・config・oracle の互換 import 経路を確認したいとき。
+- 特定のサブコマンドや runtime 機能の実装へ進む先を判断したいとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理を確認したいときは、`sub_commands` 配下の該当モジュールを直接読む。
-- Codex 実行、Git、設定、状態、ログなど特定の共通機能を確認したいときは、`commons` 配下の対応 runtime モジュールを直接読む。
-- 正本仕様や oracle 実装の内容を確認したいときは、`oracle` ツリーを直接読む。
+- 特定サブコマンドや runtime 機能の詳細を調査・変更する場合は、対応する下位ディレクトリやモジュールを直接読む。
+- 正本仕様や oracle 実装の内容を確認する場合は、oracle ツリーを直接読む。
+- src の CLI・互換入口・共通 runtime と無関係なテストや文書を調査する場合。
 
 ## hash
-- 7e8230d8e23bfee2bf84e1f9ff8ea43a80545e30d5c13a73eb60c68214315a5d
+- 8248701eb6da7d5f8895ed8adcb2cc259a38f15bea824c4bffbde4136b5eb240
 
 # `test`
 

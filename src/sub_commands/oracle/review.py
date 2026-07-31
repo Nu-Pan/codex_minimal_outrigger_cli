@@ -1,3 +1,23 @@
+"""oracle review の CLI と isolated run lifecycle を統括する。
+
+この file は 16,000 文字を超えるが、次の処理は同じ resource ownership と例外処理を
+共有する一つの責務である。
+
+- review run の target 作成
+- review loop の呼び出し
+- INDEX 差分の merge
+- 中断・失敗時の cleanup と report
+
+これらを分割すると、中断・部分作成・cleanup failure の状態遷移を複数 file で追う必要
+があるため、現状は oracle review lifecycle として一箇所に保つ。
+
+根拠:
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+- {{work-root}}/oracle/doc/app_spec/run_isolation.md
+- {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
+
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 from pathlib import Path
 
