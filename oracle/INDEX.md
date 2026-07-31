@@ -1,20 +1,21 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様文書を集約するディレクトリ。CLI 自動補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト、run・session lifecycle、サブコマンドなどの仕様を横断的に確認する入口で、詳細は各文書または下位ディレクトリへ進む。
+- cmoc の正本仕様ドキュメントを収録するディレクトリ。アプリケーション仕様、branch・commit・worktree のモデル、開発ルール、不採用案の検討記録など、実装やテストの判断根拠となる文書への入口。
 
 ## Read this when
-- cmoc の正本仕様を横断的に探すとき
-- CLI 起動、Codex CLI 呼び出し、ログ、プロンプト、run・session、サブコマンドの仕様上の入口を確認するとき
-- 複数機能に共通する仕様文書の所在を判断するとき
+- cmoc の利用者向け挙動や CLI、Codex 連携、run・session lifecycle の正本仕様を調査するとき
+- branch・commit・worktree の関係や session・run の分岐モデルを確認するとき
+- Python 実装、CLI 配置、開発環境、realization test の共通ルールを確認するとき
+- realization refactor で採用しなかった方式の背景や不採用理由を確認するとき
 
 ## Do not read this when
-- 特定機能の詳細仕様が明らかな場合は、対応する個別文書または下位ディレクトリを直接読むとき
-- realization の実装・テスト詳細だけを調査するとき
-- cmoc の一般的な利用手順だけを確認するとき
+- 具体的な実装やテストの詳細だけを確認したいときは、対応する realization file を直接読む
+- 対象が特定の oracle 文書に限定され、該当文書を直接特定できるとき
+- INDEX.md の読み方やリポジトリ共通のルーティング方針だけを確認したいとき
 
 ## hash
-- 6d6060b0bb507d1d9e461a10f290ce69491c4105e87c19cc57608d412756cec4
+- 957b4769611d19d1d13f77222cafd821b9598f8ea96bfcf1605d216edccee32b
 
 # `src`
 

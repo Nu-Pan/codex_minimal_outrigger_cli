@@ -91,21 +91,23 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様ファイルを集約するディレクトリ。CLI 自動補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト、run・session lifecycle、サブコマンドなど、複数機能にまたがる仕様確認の入口を提供する。
-- 下位の doc は自然言語による仕様、src は正本ソースを扱う。特定機能の詳細や個別定義を調べる場合は、該当する下位ディレクトリまたはファイルへ進む。
+- cmoc の正本仕様ファイルを収録するディレクトリ。アプリケーション仕様、branch・commit・worktree・session・run のモデル、開発ルール、不採用案の検討記録など、実装やテストの判断根拠を提供する。
+- 下位の doc は仕様・開発ルール文書、src は AI エージェント呼び出し、設定・パス、構造化文書、規範表現、プロンプト構成に関する正本ソースを扱う。
 
 ## Read this when
-- cmoc の正本仕様を横断的に探すとき
-- CLI 起動、Codex CLI 呼び出し、ログ、プロンプト、run・session lifecycle、サブコマンドなどの仕様の入口を確認するとき
-- 正本ソースの責務分担や、エージェント呼び出し・設定・パス・構造化文書・プロンプト関連の下位領域を確認するとき
+- cmoc の利用者向け挙動、CLI、Codex 連携、run・session lifecycle の正本仕様を調査するとき
+- branch・commit・worktree の関係や session・run の分岐モデルを確認するとき
+- Python 実装、CLI 配置、開発環境、realization test の共通ルールを確認するとき
+- 正本ソースの責務分担や、AI エージェント呼び出し・設定・パス・構造化 Markdown・プロンプト構成の入口を確認するとき
+- realization refactor で採用しなかった方式の背景や不採用理由を確認するとき
 
 ## Do not read this when
-- 特定機能の詳細仕様や個別定義が明らかなとき
-- realization の実装・テスト詳細だけを調査するとき
-- cmoc の一般的な利用手順だけを確認するとき
+- 具体的な実装やテストの詳細だけを確認したいときは、対応する realization file を直接読む
+- 対象が特定の oracle 文書や正本ソースに限定され、該当ファイルを直接特定できるとき
+- INDEX.md の読み方やリポジトリ共通のルーティング方針だけを確認したいとき
 
 ## hash
-- 6877728871b1241f4ff9e1a35daadd176707bd10caacf4aeefb6c43e9b318157
+- 15dbf7a8bd09c551b0f60ea499c83e7d83c5ed1297f53ea97300ae96254ebef5
 
 # `pyproject.toml`
 
