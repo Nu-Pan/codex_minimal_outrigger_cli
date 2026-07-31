@@ -239,6 +239,52 @@ def test_oracle_review_retries_run_target_collision(
     assert all(path != collision_worktree for path in review_worktrees)
 
 
+def test_oracle_review_does_not_cleanup_preexisting_target_after_create_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """作成前から存在した target は create failure 後も削除しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    occupied_branch = f"cmoc/run/{session_id}/occupied"
+    occupied_worktree = root / ".cmoc" / "gu" / "worktree" / session_id / "occupied"
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        occupied_branch,
+        str(occupied_worktree),
+        "HEAD",
+    )
+    monkeypatch.setattr(
+        review_module,
+        "new_run_target",
+        lambda _root, _session_id: (occupied_branch, occupied_worktree),
+    )
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """既存 target が cleanup されず review が失敗することだけを確認する。"""
+        raise AssertionError("create_run_worktree must fail before Codex execution")
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["oracle", "review", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code != 0
+    assert occupied_worktree.is_dir()
+    assert run_git(root, "branch", "--list", occupied_branch).stdout.strip()
+
+
 def test_oracle_review_interrupt_during_run_creation_cleans_resources(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

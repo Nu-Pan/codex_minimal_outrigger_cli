@@ -62,18 +62,21 @@
 # `review.py`
 
 ## Summary
-- oracle review サブコマンドの CLI 実行フローを担当する実装。active session branch と clean worktree の検証、隔離 review run の作成・実行・merge・cleanup、中断時や失敗時のレポート生成を束ねる。review loop、対象列挙、レポート描画などの詳細実装への入口でもある。
+- oracle review サブコマンドの CLI 実行フローを実装する。active session branch と clean worktree を検証し、隔離された review run で oracle ファイルを評価し、所見・INDEX 変更の反映・cleanup・レポート出力までを統括する。
+- レビュー対象の列挙、レビュー loop、所見のマージ、review branch の merge、レポート生成など、oracle review 実行に必要な公開処理もここから参照できる。
 
 ## Read this when
-- oracle review サブコマンドの起動条件、実行ライフサイクル、隔離 worktree／branch の管理、中断・例外時の cleanup、review 結果の merge や report 出力を変更・調査するとき。
+- oracle review サブコマンドの起動条件、実行手順、隔離 worktree/branch のライフサイクルを変更・調査するとき
+- oracle review の中断処理、cleanup 失敗、未コミット差分の扱い、レビュー結果レポートを確認するとき
+- review run による INDEX 変更の commit・merge と session branch 更新の流れを確認するとき
 
 ## Do not read this when
-- oracle review の所見判定ロジックだけを変更・調査するときは review_loop の実装を直接読む。
-- レビュー対象ファイルの列挙規則だけを確認するときは review_targets の実装を直接読む。
-- 所見やレポートの表示形式だけを確認するときは review_report の実装を直接読む。
+- oracle ファイルのレビュー判定ルールや所見生成 loop の詳細だけを確認したいときは、レビュー loop の実装を直接読む
+- レビュー対象ファイルの列挙条件だけを確認したいときは、review targets の実装を直接読む
+- レポートの表示形式だけを確認したいときは、review report の実装を直接読む
 
 ## hash
-- d818ed8d8cfa43b70bcd76c7873933f55c54951ac0df5d79b21aa303dd91aab3
+- 92607f33d1b8db789c3e719b86ad084027ccfaed5b83d9e2904687be4d6a0a62
 
 # `review_index.py`
 

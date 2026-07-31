@@ -558,18 +558,21 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- oracle review の隔離 run lifecycle と INDEX.md 統合を検証する大規模回帰テスト。linked worktree・snapshot fork・衝突回避・中断時 cleanup・lifecycle lock・未コミット差分検査・INDEX.md 限定 merge・merge conflict 復旧・cleanup 失敗報告までを、CLI と内部 review helper の外部挙動として検証する。
+- oracle review の隔離 run lifecycle と INDEX.md 統合を検証する回帰テスト。linked worktree・snapshot fork・run target 衝突・中断時 cleanup・merge rollback・差分制限・preflight 生成 INDEX の統合・cleanup 失敗など、review worktree の作成から検証、merge、削除までを扱う。
 
 ## Read this when
-- oracle review の worktree、branch、run lifecycle、snapshot、cleanup、merge、差分制限、または INDEX.md 統合を変更・調査するとき
-- oracle review の中断、merge conflict、未追跡残骸、resource lock、cleanup failure の回帰を確認するとき
+- oracle review の linked worktree、session snapshot、run branch、worktree lifecycle を変更または調査するとき
+- review worktree で生成・コミットされた INDEX.md の検出、merge、conflict 解決を変更または調査するとき
+- oracle review の中断、例外、cleanup、merge rollback、resource lock の挙動を変更または検証するとき
+- review が INDEX.md 以外の差分を拒否する制御や、関連する回帰テストを確認するとき
 
 ## Do not read this when
-- oracle review の実装詳細だけを変更せず、別のサブコマンドや一般的な INDEX 生成処理だけを調査するとき
-- 単純な INDEX.md のルーティング仕様を確認したい場合は、まず indexing の oracle 文書や対象実装を読む
+- oracle review の所見列挙・challenger/advocate 検証・judge のプロンプト仕様だけを確認するときは、oracle review の実装または専用 schema を直接読む
+- INDEX.md の通常の生成・ルーティング規則だけを確認するときは、indexing の oracle 文書や INDEX 更新実装を直接読む
+- 一般的な run lifecycle や session fork の仕様だけを確認するときは、対応する oracle 文書・実装を直接読む
 
 ## hash
-- 997264e0982ea5beefd8c433eb2454863479b50464624fb827f6ae80c6be23fe
+- 65990794e237292b79f4fb5cabadc69213b78d0167793da8b9632855de746fd9
 
 # `test_packaged_import.py`
 

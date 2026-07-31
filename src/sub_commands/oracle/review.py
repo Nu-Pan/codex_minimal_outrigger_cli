@@ -158,6 +158,10 @@ def _cmoc_oracle_review_body(
         with run_lifecycle_lock(root, session_id):
             run_branch, review_worktree = new_run_target(root, session_id)
             run_fork_commit = head_commit(current_root)
+            worktree_present_before_create = (
+                review_worktree.exists() or review_worktree.is_symlink()
+            )
+            branch_present_before_create = branch_exists(root, run_branch)
             create_succeeded = False
             try:
                 create_run_worktree(
@@ -180,21 +184,27 @@ def _cmoc_oracle_review_body(
                     )
                 except BaseException:
                     # 検出自体が中断されても、作成を開始した target はこの invocation の
-                    # 所有物として扱い、cleanup で取り残しを防ぐ。
-                    review_worktree_created = True
-                    run_branch_created = True
+                    # 所有物として扱う。ただし、作成前から存在した resource は別 invocation
+                    # の所有物なので cleanup 対象にしない。
+                    review_worktree_created = not worktree_present_before_create
+                    run_branch_created = not branch_present_before_create
                     raise
                 if not create_succeeded:
-                    review_worktree_created = worktree_present
+                    review_worktree_created = (
+                        not worktree_present_before_create and worktree_present
+                    )
                 try:
                     branch_present = branch_exists(root, run_branch)
                 except BaseException:
                     # branch probe 中の Ctrl+C でも、create_run_worktree が確保した branch を
-                    # cleanup 対象として保持する。未作成なら cleanup 側で失敗を report する。
-                    run_branch_created = True
+                    # cleanup 対象として保持する。作成前から存在した branch は別 invocation
+                    # の所有物なので cleanup しない。
+                    run_branch_created = not branch_present_before_create
                     raise
                 if not create_succeeded:
-                    run_branch_created = branch_present
+                    run_branch_created = (
+                        not branch_present_before_create and branch_present
+                    )
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")
             with pushd(review_worktree):

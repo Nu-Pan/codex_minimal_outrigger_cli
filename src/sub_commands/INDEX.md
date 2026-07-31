@@ -46,21 +46,18 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。oracle の編集・調査・レビュー機能への入口であり、レビュー実行、対象列挙、パス解決、レポート生成、INDEX 差分の commit／merge などの実装へ案内する。
-- 編集・調査・レビューそれぞれの個別 CLI フローと、review loop・対象選定・パス解決・レポート・Git 操作の詳細実装を含む。
+- oracle 系サブコマンドの実装をまとめるパッケージ。oracle edit・investigation・review の CLI 実行フローと、review に関連する対象列挙、パス解決、finding 処理、INDEX 差分反映、レポート生成の入口を提供する。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や入口を確認するとき。
-- oracle edit、oracle investigation、oracle review の CLI 実行フローを変更・調査するとき。
-- oracle review の対象列挙、finding 処理、パス解決、レポート出力、INDEX.md の commit／merge 処理を確認するとき。
+- oracle サブコマンド全体の構成や、各サブコマンド実装の入口を確認するとき。
+- oracle review の対象列挙、パス解決、レビュー loop、INDEX 差分の commit/merge、レポート生成のいずれかを変更または調査するとき。
 
 ## Do not read this when
-- 個別サブコマンドの入力部品や TUI 起動パラメータ構築など、より具体的な下位実装だけを確認したいとき。
-- oracle review の finding 判定、対象列挙、パス解決、レポート生成など単一責務の詳細だけを調査するときは、対応する下位実装を直接読む。
-- 他のサブコマンドや一般的な CLI runtime、Codex TUI 自体の実装を調査するとき。
+- 個別サブコマンドの詳細実装だけを確認したい場合は、対象の実装ファイルを直接読む。
+- 共通の prompt editor、TUI 起動パラメータ builder、一般的な CLI runtime の詳細だけを調査するとき。
 
 ## hash
-- 89d3539c4eb91ebc7e7ddafd50267ec3c6441498f5618b938b2852539afd3a67
+- fecb6de18b657e9e420376443352ffc1219c9dfcdd3b5392fd8632a579320b2a
 
 # `realization`
 
