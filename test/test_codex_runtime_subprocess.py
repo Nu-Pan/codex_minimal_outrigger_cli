@@ -643,6 +643,17 @@ def test_stop_child_process_group_stops_group_after_leader_is_gone(
     assert stopped == [(789, members)]
 
 
+def test_stop_child_process_group_rejects_current_process(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """壊れた child tracking で cleanup 自身を停止対象にしない。"""
+    child = runtime_run.ProcessIdentity(123, 456, 123)
+    monkeypatch.setattr(runtime_run.os, "getpid", lambda: 123)
+
+    with pytest.raises(CmocError, match="現在の process は Codex subprocess"):
+        runtime_run.stop_child_process_group(child)
+
+
 @pytest.mark.parametrize("process_fd", [None, 99])
 def test_stop_child_process_group_rejects_reused_group_after_leader_exit(
     monkeypatch: pytest.MonkeyPatch,

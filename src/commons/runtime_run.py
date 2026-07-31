@@ -353,6 +353,14 @@ def _stop_orphaned_child_process_group(
 
 def stop_child_process_group(process: ProcessIdentity) -> str | None:
     """Codex group を保存済み group ID と member pidfd で停止する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # tracking が壊れていても cleanup 自身を Codex child として停止しない。
+    if process.process_id == os.getpid():
+        raise CmocError(
+            "現在の process は Codex subprocess の停止対象にできません。",
+            ["process tracking と実行中 process を確認してから再実行してください。"],
+            f"pid: {process.process_id}",
+        )
     process_group_id = process.process_group_id or process.process_id
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # identity 検証後に leader が終了しても descendant を停止できるよう、停止前の
