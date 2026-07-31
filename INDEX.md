@@ -126,34 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側ソースコードを集約するディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、設定・公開互換 shim、ACP/basic adapter など、実行時の具体的な実装への入口を提供する。
+- cmoc の realization 側 `src` ツリー。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP・設定・oracle パッケージへの公開入口をまとめ、各責務別実装への入口を提供する。
 
 ## Read this when
-- cmoc の realization 実装の全体構成や、CLI・runtime・互換 import の入口を確認したいとき。
-- 特定のサブコマンド、共通 runtime、ACP/basic adapter、設定 shim などの実装へ進む前に、配置と責務の境界を把握したいとき。
+- cmoc の realization 側における CLI、サブコマンド、共通 runtime、互換 import、または oracle 実装への接続経路を確認・変更するとき。
+- 対象となる機能の実装ファイルやパッケージを特定し、下位ディレクトリへ進む入口を選ぶとき。
 
 ## Do not read this when
-- 正本仕様や oracle 実装の内容を確認したいときは、oracle 配下の対応対象を直接読む。
-- 特定モジュールの詳細実装だけを調査・変更するときは、このディレクトリ全体ではなく該当する下位ファイルやディレクトリを直接読む。
-- 利用者向け仕様やテストの挙動だけを確認したいときは、対応する oracle または test の対象を直接読む。
+- 特定の CLI サブコマンド、runtime 機能、互換 shim、または oracle 実装の詳細だけを確認したいときは、対応する下位対象を直接読む。
+- 利用者向け仕様や正本仕様を確認するときは、`oracle` ツリーの対応する文書・実装を直接読む。
 
 ## hash
-- c63e86b74658e5f60ed0d73d83f7d90de06eeebfc3a9e79c9ccdf7d92dd0d5c9
+- cb9dba2e14c7557ce9c2ce88c3e20bc7af352bf43c63a673f4e410e1e8016de4
 
 # `test`
 
 ## Summary
-- テストコードから参照される共通サポートモジュールと、cmoc の各サブシステム・CLI・Codex runtime・state・indexing・oracle review などを検証する pytest テスト群を収録する。個別テストの詳細へ進むためのテスト領域の入口。
+- cmoc の realization test 群を収録するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session/run state、設定、Git・path・process lifecycle などの外部契約と回帰挙動を検証する。
+- 各テストファイルは特定のサブシステムまたは共通テスト支援に対応しており、実装や正本仕様を変更・調査する際の検証入口となる。
 
 ## Read this when
-- テスト対象の実装変更後に、対応する外部挙動・制御ロジック・安全性の回帰テストを探すとき
-- CLI、Codex runtime、indexing、oracle review、session/run state、設定、Git、TUI などのテスト範囲を確認するとき
-- 複数テストで共用される Git、Codex/Ollama、fake command、CLI 実行などのテスト支援を利用・変更するとき
+- cmoc の実装変更後に、対象サブシステムの外部挙動・制御ロジック・安全性を検証するとき
+- CLI、Codex 実行、indexing、oracle review、session/run lifecycle、設定、Git/path/process handling の回帰テストを探すとき
+- 対象機能に対応する個別テストまたは共通テストヘルパーの利用方法を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認・変更するときは、対応する oracle 文書・oracle source・schema を直接読む
-- 実装本体の詳細を確認するときは、対応する src の realization implementation を直接読む
-- テスト実行環境や品質ゲートを確認するときは、リポジトリの開発・テスト手順を直接読む
+- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc・oracle source・oracle schema を直接読む
+- 実装詳細だけを調査するときは、対応する realization implementation を直接読む
+- 対象機能と無関係なテスト領域や、Codex の回答品質そのものを評価するとき
 
 ## hash
-- dc1c4a5f664aa848be3f56a8163409e7eb3aca4c5477b066bdc465e7db7f13f5
+- 1eacb0a8ea2e5cb1aeb3e948b260cfa5c0bed1193fe11929b0738047583857d3

@@ -818,8 +818,8 @@
   "src/commons/runtime_run.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "2fcea5713784502f3c7908f47c399b550293c7c2d72731a81fee1b69fa8c09da",
-    "last_investigated_at": "2026-07-31_07-53_54_109611000"
+    "last_investigated_sha256": "ae63f8a141f4c6b7505eefab0e7fa2e034120ff48c563e7e00345245b1b72d9c",
+    "last_investigated_at": "2026-07-31_10-48_26_681220000"
   },
   "src/commons/runtime_run_lifecycle.py": {
     "investigation_required": false,
@@ -1140,7 +1140,7 @@
     "last_investigated_at": "2026-07-30_20-03_29_728984000"
   },
   "test/test_codex_runtime_subprocess.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "aa0eb706f3636048f276ceaa4d38d1ad33285570756b2dedac2d87b957ca9254",
     "last_investigated_at": "2026-07-31_09-21_28_295083000"

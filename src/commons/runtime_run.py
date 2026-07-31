@@ -393,6 +393,23 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
             # 保存するため、停止完了まで pidfd を保持して leader/PGID の再利用による
             # 別 process group への signal を防ぐ。
             if current_start_time == process.start_time:
+                # process_group_members は zombie と一時的に読めない process を snapshot
+                # から除く。leader が snapshot にいないまま空 group を stop_process_group
+                # へ渡すと、live process を停止済みと誤認して cleanup を進め得るため、
+                # pidfd で終了を確認できない場合は fail closed にする。
+                if (
+                    expected_members is None
+                    or (process.process_id, process.start_time) not in expected_members
+                ):
+                    if wait_process_fd_exit(process_fd, 0):
+                        return _stop_orphaned_child_process_group(
+                            process, process_group_id, expected_members
+                        )
+                    raise CmocError(
+                        "実行中 Codex subprocess の同一性を確認できません。",
+                        ["run process を確認し、停止後に再実行してください。"],
+                        f"pid: {process.process_id}\npgid: {process_group_id}",
+                    )
                 stop_process_group(
                     process_group_id,
                     expected_leader=(process.process_id, process.start_time),
@@ -415,6 +432,18 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
             )
         if current_start_time != process.start_time:
             return _stale_child_process_warning(process, process_group_id)
+        # pidfd を開けない環境では、leader が snapshot に含まれない理由を終了と
+        # 一時的な proc 読み取り欠落から区別できない。停止確認を証明できないまま
+        # group cleanup を進めない。
+        if (
+            expected_members is None
+            or (process.process_id, process.start_time) not in expected_members
+        ):
+            raise CmocError(
+                "実行中 Codex subprocess の同一性を確認できません。",
+                ["run process を確認し、停止後に再実行してください。"],
+                f"pid: {process.process_id}\npgid: {process_group_id}",
+            )
     stop_process_group(
         process_group_id,
         expected_leader=(process.process_id, process.start_time),

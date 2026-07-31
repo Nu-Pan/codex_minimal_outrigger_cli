@@ -735,6 +735,36 @@ def test_stop_child_process_group_keeps_leader_pidfd_until_group_stop(
     assert events == ["open", "stop:123", "close"]
 
 
+@pytest.mark.parametrize("process_fd", [None, 99])
+def test_stop_child_process_group_fails_closed_when_live_leader_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+    process_fd: int | None,
+) -> None:
+    """snapshot 欠落時に live leader を停止済みとして扱わない。"""
+    child = runtime_run.ProcessIdentity(123, 456, 123)
+    stopped: list[int] = []
+    monkeypatch.setattr(runtime_run, "process_group_members", lambda _pgid: ())
+    monkeypatch.setattr(runtime_run, "open_process_fd", lambda *_args: process_fd)
+    monkeypatch.setattr(runtime_run, "process_start_time", lambda _pid: 456)
+    monkeypatch.setattr(
+        runtime_run,
+        "wait_process_fd_exit",
+        lambda *_args: False,
+    )
+    monkeypatch.setattr(
+        runtime_run,
+        "stop_process_group",
+        lambda pgid, **_kwargs: stopped.append(pgid),
+    )
+    if process_fd is not None:
+        monkeypatch.setattr(runtime_run.os, "close", lambda _fd: None)
+
+    with pytest.raises(CmocError, match="同一性を確認できません"):
+        runtime_run.stop_child_process_group(child)
+
+    assert stopped == []
+
+
 def test_read_run_process_id_treats_invalid_encoding_as_stale(
     tmp_path: Path,
 ) -> None:
