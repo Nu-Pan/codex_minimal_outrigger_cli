@@ -5,9 +5,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from commons.runtime_errors import CmocError
-from commons.runtime_git import ensure_cmoc_ignored
-from commons.runtime_paths import (
+from .runtime_errors import CmocError
+from .runtime_git import ensure_cmoc_ignored
+from .runtime_paths import (
     _reserve_timestamped_path,
     editor_input_dir,
     timestamp,

@@ -8,14 +8,15 @@ oracle/realization file の分類は、同じ repository path・Git index・安�
 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Callable
 
-from commons.runtime_errors import CmocError
-from commons.runtime_paths import worktrees_dir
-from commons.runtime_results import CommandResult
+from .runtime_errors import CmocError
+from .runtime_paths import worktrees_dir
+from .runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/run/")
 CMOC_IGNORE_PATTERN = "/.cmoc/gu/"
@@ -37,6 +38,11 @@ CMOC_CONFIG_IGNORE_EXCEPTIONS = (
     "!/.cmoc/gt/ar/realization/refactor/state.json",
 )
 CMOC_IGNORE_PROBE = ".cmoc/gu/.__cmoc_ignore_probe__"
+
+
+def literal_pathspec(path: str) -> str:
+    """Git が repository path を wildcard として解釈しない pathspec を返す。"""
+    return f":(literal){path}"
 
 
 def run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
@@ -208,12 +214,12 @@ def expected_run_worktree(root: Path, branch: str) -> Path:
             ["cmoc run branch 名を確認してください。"],
             f"branch: {branch}",
         )
-    return worktrees_dir(main_worktree_root(root)) / parts[2] / parts[3]
+    return worktrees_dir(_main_worktree_root(root)) / parts[2] / parts[3]
 
 
 def _require_managed_worktree(root: Path, worktree: Path) -> Path:
     """削除対象が管理領域内の登録済みworktreeであることを検証する。"""
-    base = worktrees_dir(main_worktree_root(root))
+    base = worktrees_dir(_main_worktree_root(root))
     candidate = _absolute_path(worktree)
     if _first_managed_worktree_symlink(root, candidate) is not None:
         raise _unmanaged_worktree_error(worktree, base)
@@ -264,7 +270,7 @@ def _first_managed_worktree_symlink(root: Path, *paths: Path) -> Path | None:
     # {{work-root}}/oracle/doc/branch_model.md
     # resolve() だけでは repo 外の実体が managed path に見えるため、canonicalize 前に
     # lexical path の component を検査して、作成・削除の両方で symlink 経由を拒否する。
-    for path in (worktrees_dir(main_worktree_root(root)), *paths):
+    for path in (worktrees_dir(_main_worktree_root(root)), *paths):
         if symlink := _first_symlink_component(path):
             return symlink
     return None
@@ -336,13 +342,94 @@ def git_common_dir(root: Path) -> Path:
     return Path(common).resolve()
 
 
-def main_worktree_root(root: Path) -> Path:
+def _main_worktree_root(root: Path) -> Path:
     """linked worktreeからmain worktreeのrootを求める。"""
     return git_common_dir(root).parent
 
 
+def _git_info_exclude_path(root: Path) -> Path:
+    """Git の repository-local info/exclude path を返す。"""
+    return (
+        root / run_git(["rev-parse", "--git-path", "info/exclude"], root).stdout.strip()
+    )
+
+
+def _global_git_ignore_paths(root: Path) -> list[Path]:
+    """Git が読む global excludes file の path を返す。"""
+    configured = run_git(
+        ["config", "--path", "--get-all", "core.excludesFile"],
+        root,
+        check=False,
+    )
+    if configured.returncode == 0:
+        paths: list[Path] = []
+        for line in configured.stdout.splitlines():
+            if line:
+                path = Path(line)
+                paths.append(path if path.is_absolute() else root / path)
+        return paths
+    config_home = os.environ.get("XDG_CONFIG_HOME")
+    base = Path(config_home) if config_home else Path.home() / ".config"
+    return [base / "git" / "ignore"]
+
+
+def _validate_git_ignore_sources(
+    root: Path,
+    candidate: Path,
+    *,
+    strict_local: bool = False,
+) -> None:
+    """git check-ignore が読む ignore file を非通常 file でないと確認する。"""
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    root = root.absolute()
+    relative = candidate.absolute().relative_to(root)
+    validate_local = _validate_ignore_path if strict_local else _reject_non_file_path
+    validate_local(root / ".gitignore", ".gitignore")
+    validate_local(_git_info_exclude_path(root), "Git info/exclude")
+
+    directory = root
+    for part in relative.parts:
+        directory /= part
+        if not directory.is_dir():
+            break
+        _reject_non_file_path(directory / ".gitignore", "Git nested .gitignore")
+
+    for path in _global_git_ignore_paths(root):
+        _validate_global_git_ignore_path(path)
+
+
+def _validate_global_git_ignore_path(path: Path) -> None:
+    """global excludes の特殊 file を検証し、無害な /dev/null だけ許可する。"""
+    if path.resolve() == Path(os.devnull).resolve():
+        return
+    _reject_non_file_path(path, "Git global excludes file")
+
+
+def _check_git_ignore(root: Path, relative: Path, *, no_index: bool) -> bool:
+    """check-ignore が受け付ける literal な repository 相対 path を判定する。"""
+    args = ["check-ignore"]
+    if no_index:
+        args.append("--no-index")
+    # check-ignore は :(literal) magic を受け付けないため、pathspec magic として
+    # 解釈されない ./ を付けて path 名をそのまま渡す。
+    result = run_git(
+        [*args, "-q", "--", f"./{relative}"],
+        root,
+        check=False,
+    )
+    return result.returncode == 0
+
+
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
     """.cmoc/gu の追跡有無と ignore 判定を取得する。"""
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # git check-ignore は repository-local、nested、global の ignore file を読むため、
+    # FIFO などの非通常 file を拒否してからコマンドを実行する。
+    _validate_git_ignore_sources(
+        root,
+        root / CMOC_IGNORE_PROBE,
+        strict_local=True,
+    )
     tracked = run_git(["ls-files", "--", ".cmoc/gu"], root).stdout.strip()
     ignored = run_git(
         ["check-ignore", "-q", CMOC_IGNORE_PROBE],
@@ -368,6 +455,36 @@ def with_cmoc_ignore_pattern(content: str) -> str:
     newline = "" if content == "" or content.endswith("\n") else "\n"
     added = "\n".join(patterns)
     return f"{content}{newline}{separator}{added}\n"
+
+
+def _reject_symlinked_path(path: Path, description: str) -> None:
+    """cmoc が更新する ignore file を symlink 経由で扱わない。"""
+    # Path.write_text() は symlink を追従するため、修復対象外への書き込みを防ぐ。
+    if _first_symlink_component(path) is not None:
+        raise CmocError(
+            f"{description} は symlink 経由で更新できません。",
+            ["ignore file の symlink を通常の file に戻してから再実行してください。"],
+            str(path),
+        )
+
+
+def _reject_non_file_path(path: Path, description: str) -> None:
+    """ignore file の読み書きを通常 file に限定する。"""
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # FIFO や device を read_text/write_text すると doctor が停止または block するため、
+    # symlink 検査後に既存 path の種別を検証する。
+    if path.exists() and not path.is_file():
+        raise CmocError(
+            f"{description} は通常の file ではありません。",
+            [f"{description} を通常の file に戻してから再実行してください。"],
+            str(path),
+        )
+
+
+def _validate_ignore_path(path: Path, description: str) -> None:
+    """ignore file の symlink と非通常 file をまとめて拒否する。"""
+    _reject_symlinked_path(path, description)
+    _reject_non_file_path(path, description)
 
 
 def ensure_cmoc_ignored(root: Path) -> None:
@@ -399,9 +516,8 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
     - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
-    exclude_path = (
-        root / run_git(["rev-parse", "--git-path", "info/exclude"], root).stdout.strip()
-    )
+    exclude_path = _git_info_exclude_path(root)
+    _validate_ignore_path(exclude_path, "Git info/exclude")
     content = exclude_path.read_text() if exclude_path.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
     if updated_content != content:
@@ -431,14 +547,8 @@ def is_git_ignored(root: Path, path: Path) -> bool:
     """対象 path が git ignore されるかを work root 基準で判定する。"""
     candidate = path if path.is_absolute() else root / path
     rel = candidate.absolute().relative_to(root.absolute())
-    return (
-        run_git(
-            ["check-ignore", "--no-index", "-q", str(rel)],
-            root,
-            check=False,
-        ).returncode
-        == 0
-    )
+    _validate_git_ignore_sources(root, candidate)
+    return _check_git_ignore(root, rel, no_index=True)
 
 
 def is_untracked_git_ignored(root: Path, path: Path) -> bool:
@@ -448,7 +558,8 @@ def is_untracked_git_ignored(root: Path, path: Path) -> bool:
     # ignore pattern に一致しても、追跡済み file は対象に残す。
     candidate = path if path.is_absolute() else root / path
     rel = candidate.absolute().relative_to(root.absolute())
-    return run_git(["check-ignore", "-q", str(rel)], root, check=False).returncode == 0
+    _validate_git_ignore_sources(root, candidate)
+    return _check_git_ignore(root, rel, no_index=False)
 
 
 def is_realization_file_path(
@@ -470,18 +581,41 @@ def is_realization_file_path(
         return False
     if (
         not relative.parts
+        or ".." in relative.parts
         or relative.parts[0] in {"oracle", "memo", ".git", ".agents", ".codex", ".cmoc"}
         or candidate.name in {"AGENTS.md", "INDEX.md"}
     ):
         return False
-    if (
-        branch
-        and run_git(
-            ["ls-tree", "-r", "--name-only", branch, "--", str(relative)], root
-        ).stdout.splitlines()
-    ):
-        return True
-    return not is_untracked_git_ignored(root, candidate)
+    if branch and not candidate.exists():
+        # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
+        # 含めず blob entry だけを branch の fallback として採用する。
+        # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+        # branch の blob は削除された path の追跡状態を補うが、現在の directory や
+        # FIFO などの特殊 file を file として扱う根拠にはならない。
+        branch_entries = run_git(
+            [
+                "ls-tree",
+                "-r",
+                "-z",
+                branch,
+                "--",
+                literal_pathspec(str(relative)),
+            ],
+            root,
+        ).stdout.split("\0")
+        for entry in branch_entries:
+            metadata, separator, entry_path = entry.partition("\t")
+            metadata_fields = metadata.split()
+            if (
+                separator
+                and entry_path == str(relative)
+                and len(metadata_fields) >= 2
+                and metadata_fields[1] == "blob"
+            ):
+                return True
+    return (
+        candidate.is_file() or candidate.is_symlink()
+    ) and not is_untracked_git_ignored(root, candidate)
 
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:
@@ -498,7 +632,9 @@ def is_oracle_file_path(root: Path, path: Path) -> bool:
         return False
     return (
         bool(relative.parts)
+        and ".." not in relative.parts
         and relative.parts[0] == "oracle"
-        and path.name not in {"AGENTS.md", "INDEX.md"}
+        and candidate.name not in {"AGENTS.md", "INDEX.md"}
+        and (candidate.is_file() or candidate.is_symlink())
         and not is_untracked_git_ignored(root, path)
     )

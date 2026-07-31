@@ -34,15 +34,19 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
+from commons.runtime_git import literal_pathspec
 from commons.runtime_refactor import sync_refactor_state
 from commons.runtime_run import (
     delete_run_process_id,
-    read_run_process_id,
     run_lifecycle_lock,
-    stop_run_process,
+    run_process_tracking,
+    stop_error_run_process,
+    stop_tracked_codex_children,
+    write_run_process_id,
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
+    GitChange,
     commit_work_unit,
     refresh_indexes,
     resolve_active_run,
@@ -92,6 +96,12 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
         )
         if state.run.state == "error":
             _stop_error_run(context, warnings)
+        elif state.run.state == "joinable":
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # 既存 state の復旧でも、merge 前に run worktree の descendant を止める。
+            warnings.extend(
+                stop_tracked_codex_children(context.repo, context.session_id) or []
+            )
         require_clean_worktree(context.session_worktree)
         require_clean_worktree(context.run_worktree)
         run_changes = tree_changes(
@@ -127,7 +137,7 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 warnings,
             )
         if run_unexpected:
-            _revert_unexpected_run_paths(context, run_unexpected)
+            _revert_unexpected_run_paths(context, run_changes, run_unexpected)
             warnings.append(
                 "--force-resolve reverted unexpected run paths: "
                 + ", ".join(run_unexpected)
@@ -191,6 +201,7 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
                 f"- refactor_state_sync_commit: `{state_sync_commit}`",
                 f"- cleanup: `{cleanup}`",
                 f"- report: `{report}`",
+                *[f"- warning: {warning}" for warning in warnings],
             ]
         )
     )
@@ -256,8 +267,10 @@ def _merge_and_finalize(
     last_joined_apply_fork_commit = state.session.last_joined_apply_fork_commit
     if context.kind == "realization_apply":
         last_joined_apply_fork_commit = context.run_fork_commit
-        hook_result = f"session.last_joined_apply_fork_commit={context.run_fork_commit}"
-    refresh_indexes(context.session_worktree, commit=True)
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # common の run_fork_commit と同じ commit を workload 固有名で重複掲載しない。
+        hook_result = "session.last_joined_apply_fork_commit updated"
+    _refresh_join_indexes(context, warnings)
     sync_refactor_state(context.session_worktree)
     state_sync_commit = commit_work_unit(
         context.session_worktree,
@@ -287,20 +300,49 @@ def _merge_and_finalize(
         },
     )
     cleanup = _cleanup_joined_run(context, warnings)
-    report = write_lifecycle_report(
-        context,
-        "join",
-        state_after="ready",
-        warnings=warnings,
-        details={
-            "run_join_commit": run_join_commit,
-            "post_join_hook": hook_result,
-            "refactor_state_sync_commit": state_sync_commit,
-            "cleanup": cleanup,
-        },
-        report_path=report,
-    )
+    try:
+        report = write_lifecycle_report(
+            context,
+            "join",
+            state_after="ready",
+            warnings=warnings,
+            details={
+                "run_join_commit": run_join_commit,
+                "post_join_hook": hook_result,
+                "refactor_state_sync_commit": state_sync_commit,
+                "cleanup": cleanup,
+            },
+            report_path=report,
+        )
+    except BaseException as report_error:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # merge、ready state、cleanup が完了した後の report 更新失敗で、確定済み
+        # merge を rollback し、唯一の復旧可能な run commit を失わせてはいけない。
+        warnings.append(f"final join report update failed: {report_error!r}")
     return run_join_commit, hook_result, state_sync_commit, cleanup, report
+
+
+def _refresh_join_indexes(
+    context: EditingRunContext,
+    warnings: list[str],
+) -> None:
+    """post-merge の INDEX 生成を追跡し、INDEX 外の副作用を拒否する。"""
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # join 自身が起動する Codex も run process tracking に登録し、descendant が
+    # session worktree を変更し続ける競合を止めてから clean 状態を検査する。
+    with run_process_tracking(context.repo, context.session_id):
+        write_run_process_id(context.repo, context.session_id, os.getpid())
+        try:
+            refresh_indexes(context.session_worktree, commit=True)
+        finally:
+            try:
+                warnings.extend(
+                    stop_tracked_codex_children(context.repo, context.session_id) or []
+                )
+            finally:
+                delete_run_process_id(context.repo, context.session_id)
+    # INDEX commit が拾わない Codex の副作用を state sync commit へ混入させない。
+    require_clean_worktree(context.session_worktree)
 
 
 def _record_join_failure(
@@ -355,25 +397,30 @@ def _restore_session_after_join_failure(
 
 def _stop_error_run(context: EditingRunContext, warnings: list[str]) -> None:
     """error state の run process tracking を停止して削除する。"""
-    process = read_run_process_id(context.repo, context.session_id)
-    if process is None:
-        warnings.append("run process tracking was absent or stale")
-        delete_run_process_id(context.repo, context.session_id)
-        return
-    warning = stop_run_process(
-        process,
-        lambda: read_run_process_id(context.repo, context.session_id),
-    )
+    _tracked, warning = stop_error_run_process(context.repo, context.session_id)
     if warning:
         warnings.append(warning)
-    delete_run_process_id(context.repo, context.session_id)
 
 
 def _revert_unexpected_run_paths(
     context: EditingRunContext,
-    paths: list[str],
+    changes: list[GitChange],
+    unexpected_paths: list[str],
 ) -> None:
-    """force-resolve 対象の想定外 path を fork commit へ戻して commit する。"""
+    """force-resolve 対象の変更を fork commit へ戻して commit する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # Git pathspec の wildcard 解釈で別 path を巻き込まないよう、検出済み
+    # repository path を literal として指定する。rename は一つの変更に両端が
+    # 含まれるため、想定外の片側を含む変更全体を戻して許可側を失わせない。
+    unexpected = set(unexpected_paths)
+    paths = sorted(
+        {
+            path
+            for change in changes
+            if unexpected.intersection(change.paths)
+            for path in change.paths
+        }
+    )
     run_git(
         [
             "restore",
@@ -382,7 +429,7 @@ def _revert_unexpected_run_paths(
             "--staged",
             "--worktree",
             "--",
-            *paths,
+            *[literal_pathspec(path) for path in paths],
         ],
         context.run_worktree,
     )
@@ -402,11 +449,27 @@ def _resolve_index_only_conflict_or_fail(
     ).stdout.split("\0")
     conflicts = [path for path in fields if path]
     if conflicts and all(Path(path).name == "INDEX.md" for path in conflicts):
-        run_git(["checkout", "--ours", "--", *conflicts], context.session_worktree)
-        run_git(["add", "--", *conflicts], context.session_worktree)
+        for path in conflicts:
+            if _has_ours_conflict_stage(context.session_worktree, path):
+                run_git(
+                    ["checkout", "--ours", "--", literal_pathspec(path)],
+                    context.session_worktree,
+                )
+                run_git(
+                    ["add", "--", literal_pathspec(path)],
+                    context.session_worktree,
+                )
+            else:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # session 側で削除された INDEX.md には ours stage がないため、削除を
+                # stage してから再生成処理へ渡す。
+                run_git(
+                    ["rm", "-f", "--", literal_pathspec(path)],
+                    context.session_worktree,
+                )
         run_git(["commit", "--no-edit"], context.session_worktree)
         merge_commit = head_commit(context.session_worktree)
-        refresh_indexes(context.session_worktree, commit=True)
+        _refresh_join_indexes(context, warnings)
         warnings.append("INDEX.md conflicts were regenerated")
         return merge_commit
     _restore_session_after_join_failure(context, session_head_before_join)
@@ -434,30 +497,54 @@ def _resolve_index_only_conflict_or_fail(
     raise error
 
 
+def _has_ours_conflict_stage(root: Path, path: str) -> bool:
+    """unmerged path に session 側の stage 2 が存在するか判定する。"""
+    fields = run_git(
+        ["ls-files", "-u", "-z", "--", literal_pathspec(path)], root
+    ).stdout.split("\0")
+    for field in fields:
+        metadata, separator, _path = field.partition("\t")
+        if separator and len(metadata.split()) >= 3 and metadata.split()[2] == "2":
+            return True
+    return False
+
+
 def _cleanup_joined_run(
     context: EditingRunContext,
     warnings: list[str],
 ) -> str:
     """merge 済み run の worktree と branch を安全条件付きで削除する。"""
-    reachable = (
-        run_git(
-            [
-                "merge-base",
-                "--is-ancestor",
-                context.run_branch,
-                context.session_branch,
-            ],
-            context.session_worktree,
-            check=False,
-        ).returncode
-        == 0
-    )
+    try:
+        reachable = (
+            run_git(
+                [
+                    "merge-base",
+                    "--is-ancestor",
+                    context.run_branch,
+                    context.session_branch,
+                ],
+                context.session_worktree,
+                check=False,
+            ).returncode
+            == 0
+        )
+    except Exception:
+        warnings.append("run branch reachability check failed")
+        return "preserved"
     if not reachable:
         warnings.append("run branch is not reachable from session branch")
         return "preserved"
     if Path.cwd().resolve() == context.run_worktree.resolve():
-        os.chdir(context.session_worktree)
-    removal = remove_worktree(context.repo, context.run_worktree)
+        try:
+            os.chdir(context.session_worktree)
+        except Exception:
+            warnings.append("run worktree cleanup failed")
+            return "preserved"
+    try:
+        removal = remove_worktree(context.repo, context.run_worktree)
+    except Exception:
+        warnings.append("run worktree cleanup failed")
+        return "preserved"
     if (
         removal.returncode != 0
         or context.run_worktree.exists()
@@ -465,9 +552,21 @@ def _cleanup_joined_run(
     ):
         warnings.append("run worktree cleanup failed")
         return "preserved"
-    if branch_exists(context.repo, context.run_branch):
-        deletion = delete_branch(context.repo, context.run_branch)
-        if deletion.returncode != 0 or branch_exists(context.repo, context.run_branch):
+    try:
+        branch_present = branch_exists(context.repo, context.run_branch)
+    except Exception:
+        warnings.append("run branch cleanup failed")
+        return "branch_preserved"
+    if branch_present:
+        try:
+            deletion = delete_branch(context.repo, context.run_branch)
+            branch_present = deletion.returncode != 0 or branch_exists(
+                context.repo, context.run_branch
+            )
+        except Exception:
+            warnings.append("run branch cleanup failed")
+            return "branch_preserved"
+        if branch_present:
             warnings.append("run branch cleanup failed")
             return "branch_preserved"
     return "completed"

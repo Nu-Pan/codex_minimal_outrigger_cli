@@ -15,48 +15,48 @@
 # `abandon.py`
 
 ## Summary
-- `cmoc run abandon` の CLI 実装。active editing run を特定し、実行中プロセスを停止したうえで run worktree・branch・state・process tracking を cleanup し、ライフサイクルレポートと結果を表示する。run の停止・cleanup 警告や失敗も扱う。
+- `cmoc run abandon` の CLI 実装。active editing run を特定し、状態に応じて追跡プロセスや Codex 子プロセスを停止した後、run worktree・branch・state・process tracking を cleanup し、ライフサイクルレポートと結果を表示する。cleanup 失敗時は資源を保持してエラーにする。
 
 ## Read this when
-- `cmoc run abandon` の挙動、active run の停止処理、run worktree/branch の削除、cleanup 後の state 更新やレポート出力を変更・調査するとき。
+- `cmoc run abandon` の停止・破棄処理を変更または調査するとき
+- active run の running・error・joinable 各状態における process 停止や cleanup 挙動を確認するとき
+- run worktree、branch、state、process tracking、ライフサイクルレポートの連携を追跡するとき
 
 ## Do not read this when
-- run の開始・join・完了など、abandon 以外の editing run lifecycle を変更・調査するとき。
-- 共通の process tracking、active run 解決、worktree 操作の汎用実装そのものを確認するときは、対応する `commons` または runtime 実装を直接読む。
+- `cmoc run` の通常作成・編集・join 処理だけを調査するとき
+- abandon の共通 run 状態解決や process 操作の詳細を確認したい場合は、先にそれぞれの共通 runtime module を読むとき
 
 ## hash
-- ecf34cd6c11152d99d80cfef1f1267561bbff147d1d5d378646849dfda35fe25
+- fb8470db00c117fcd931bf2bb8a8da7731594cf84b6c2b24b54a3b0eb11be56d
 
 # `join.py`
 
 ## Summary
-- `cmoc run join` の active run 統合ライフサイクルを担当する。run branch と session branch の差分検査、merge、INDEX.md conflict の解決、post-join state 同期、report 保存、worktree・branch cleanup、および失敗時 rollback/error 化を扱う。run join の処理全体を確認する入口であり、個別の git・state・report helper の実装そのものを調べる対象ではない。
+- `cmoc run join` の active editing run 終了処理を一括して担う実装。run/session の差分検査、merge、INDEX 再生成、refactor state 同期、report 保存、失敗時 rollback と error state 化、worktree・branch cleanup を扱う。
 
 ## Read this when
-- `cmoc run join` の成功・失敗時の制御フローを調査または変更するとき
-- run branch の想定外差分、merge conflict、`--force-resolve` の挙動を確認するとき
-- post-join hook、state 同期、lifecycle report、run 資源 cleanup の連携を確認するとき
-- merge または post-join 処理の失敗後に session を復元して error state にする挙動を確認するとき
+- `cmoc run join` の正常系・失敗系・force-resolve の挙動を変更または調査するとき
+- merge conflict、想定外差分、post-join hook、state 同期、cleanup pending の処理を確認するとき
+- join lifecycle の rollback、report、process tracking、run 資源削除の関係を追うとき
 
 ## Do not read this when
-- run join 以外のサブコマンドのライフサイクルだけを調べるとき
-- git 操作、state 操作、process tracking、report 出力の共通実装だけを調べるときは、それぞれの helper module を直接読む
-- join の利用者向け仕様や state の正本定義を確認するときは、対応する oracle doc を先に読む
+- join 以外の run サブコマンドの処理だけを変更・調査するとき
+- 一般的な Git 差分処理や共有 lifecycle helper の実装を確認したいときは、まず対応する共通 runtime module を読む
+- INDEX.md の生成規則そのものや refactor state 同期の共通実装だけを確認するとき
 
 ## hash
-- 7df92d2ceb682e728f9430beec54b772292d83a7d9d6df570b62cd52f276b8a8
+- 7f1678f84ac41a0dda3e44ebafd50f3500e35dfbd7303a56406df145d247177f
 
 # `lifecycle.py`
 
 ## Summary
-- editing run のライフサイクル共通 helper を旧 import path から再エクスポートする互換 shim。実装本体は commons 側にあり、旧利用者の移行完了後に削除される対象。
+- editing run 共通 helper の旧 import path を維持する互換 shim。実体は commons.runtime_run_lifecycle にあり、関連する型・ライフサイクル操作を再公開する。
 
 ## Read this when
-- 旧 import path の互換性や、editing run helper の再エクスポートを確認するとき。
+- editing run のライフサイクル処理や旧 import path との互換性を確認・変更するとき。
 
 ## Do not read this when
-- ライフサイクル共通処理の実装や仕様を確認するときは、commons 側の canonical 実装を直接読む。
-- 旧 import path の利用状況や削除可否に関係しない作業。
+- 共通ライフサイクル処理そのものを実装・変更する場合は、commons 側の canonical 実装を直接読むとよい。
 
 ## hash
 - 3de456333531bc878de445ccbaf683410ad0990c75f16028b6bcab36ac7d5939

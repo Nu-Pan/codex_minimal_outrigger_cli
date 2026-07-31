@@ -1,10 +1,12 @@
+import html
 import json
 import re
 from pathlib import Path
 
 from cmoc_runtime import SessionState, reports_dir, timestamp
 from commons.runtime_paths import _reserve_timestamped_path
-from sub_commands.oracle.review_paths import finding_oracle_path, oracle_path_key
+
+from .review_paths import finding_oracle_path, oracle_path_key
 
 _PLAIN_YAML_SCALAR = re.compile(r"(?:[A-Za-z0-9_][A-Za-z0-9_./-]*|/[A-Za-z0-9_./-]+)\Z")
 _YAML_STRING_LITERALS = {"null", "true", "false", "yes", "no", "on", "off", "~"}
@@ -117,7 +119,9 @@ def render_oracle_review_report(
     for idx, path in enumerate(oracle_files, 1):
         path_key = oracle_path_key(root, path)
         finding_count = findings_by_path.get(path_key, 0) if path_key is not None else 0
-        row_lines.append(f"| {idx} | `{path_display(root, path)}` | {finding_count} |")
+        row_lines.append(
+            f"| {idx} | {_render_path_cell(root, path)} | {finding_count} |"
+        )
     rows = "\n".join(row_lines)
     frontmatter = [
         ("command", "oracle review"),
@@ -287,7 +291,8 @@ def _render_frontmatter_field(name: str, value: object) -> str:
         # 単純な値は既存の可読な表記を保ち、それ以外は JSON quoting で YAML scalar にする。
         if (
             _PLAIN_YAML_SCALAR.fullmatch(text) is not None
-            and not text.isdigit()
+            # branch name などの string field は YAML の数値や日付に見えることがある。
+            and not text[:1].isdigit()
             and text.casefold() not in _YAML_STRING_LITERALS
         ):
             scalar = text
@@ -319,6 +324,30 @@ def render_finding_section(findings: list[dict]) -> str:
             line += f" (judge reason: {finding.get('judge_reason')})"
         lines.append(line)
     return "\n".join(lines)
+
+
+def _render_path_cell(root: Path, path: Path) -> str:
+    """評価対象 path を Markdown table の 1 cell として描画する。
+
+    Git path には改行、pipe、backtick を含められるため、通常の code span に
+    そのまま埋め込むと表の行や code span の境界が壊れる。通常の path の出力は
+    既存の可読性を保ち、構造文字を含む場合だけ HTML の code element と文字参照
+    へ切り替える。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    """
+    display = path_display(root, path)
+    if not any(character in display for character in ("`", "|", "\r", "\n")):
+        return f"`{display}`"
+    escaped = html.escape(display, quote=False)
+    escaped = (
+        escaped.replace("`", "&#96;")
+        .replace("|", "&#124;")
+        .replace("\r\n", "&#13;&#10;")
+        .replace("\r", "&#13;")
+        .replace("\n", "&#10;")
+    )
+    return f"<code>{escaped}</code>"
 
 
 def path_display(root: Path, path: Path) -> str:

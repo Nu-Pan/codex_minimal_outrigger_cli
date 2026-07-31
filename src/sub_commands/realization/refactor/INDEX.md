@@ -15,19 +15,15 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の全ライフサイクルを実行する CLI 実装。refactor state の初期化、realization file 単位の agent 調査・修正、差分検証と commit、unresolved 所見の管理、完了判定、joinable/error 状態への更新、fork report の生成を一貫して扱う。
-- realization refactor fork の処理フロー、完了不変条件、中断・失敗時の cleanup、state 集計、変更概要・unresolved 所見の report 形式を確認するための入口。
+- realization refactor fork の CLI 実行ライフサイクルを統括する workload。run の初期化、INDEX と refactor state の同期、realization file 単位の agent 調査・修正、差分と commit の検証、unresolved 所見の追跡、完了判定、joinable/error report の保存までを一つの進捗状態で扱う。
 
 ## Read this when
-- realization refactor fork の実行フローや処理単位を変更するとき
-- refactor state、調査対象の再要求、unresolved finding、完了理由の整合性を調査するとき
-- fork の joinable/error 遷移、中断時 rollback、Codex child 停止、report 生成を変更・検証するとき
-- realization refactor の差分検証、commit、INDEX 同期の責務を確認するとき
+- realization refactor fork の処理フロー、run state、処理単位の commit、unresolved 管理、完了条件、fork report の挙動を変更または調査するとき。
+- agent の差分・commit・evidence path の検証や、割り込み・エラー時の rollback と cleanup を確認するとき。
 
 ## Do not read this when
-- 単一ファイルの調査・修正 agent 呼び出しの詳細だけを変更する場合は、file review and fix の実装を直接読む
-- 変更概要の Structured Output パラメータだけを変更する場合は、change summary の実装を直接読む
-- 一般的な editing run の共通ライフサイクルや run 状態操作だけを確認する場合は、対応する commons 実装を直接読む
+- realization refactor の agent prompt や Structured Output の構築だけを変更するときは、対応する builder 実装を直接読む。
+- run の共通ライフサイクル、差分分類、process tracking、report 生成の汎用仕様だけを変更するときは、対応する commons 実装や oracle 文書を直接読む。
 
 ## hash
-- 7144dbc0f18b04ba13238ecd3901496bbfeb8a8792752b5b9a87bf07b27cdb60
+- 6149f7027dbb70c7d189dc87fc3ff5bfe40e42673b2901192f468306f6879b7d

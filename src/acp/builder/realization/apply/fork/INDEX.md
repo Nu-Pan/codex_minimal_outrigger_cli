@@ -16,13 +16,15 @@
 # `launch_exec.py`
 
 ## Summary
-- realization apply fork 用の launch_exec builder を再公開する adapter。正本 builder で生成した AgentCallParameter の prompt に対し、raw oracle git diff のコードフェンスを保護する。
+- realization apply fork 用の launch_exec builder adapter。oracle 側の正本 builder を呼び出し、生成された agent call parameter の prompt 内にある raw oracle git diff のコードフェンスを保護して再公開する。
 
 ## Read this when
-- realization apply fork の launch_exec builder の挙動、prompt 生成、または raw oracle git diff の埋め込みを変更・調査するとき。
+- realization apply fork の launch_exec builder の挙動、引数、prompt の diff フェンス保護、または oracle builder との adapter 境界を確認・変更するとき。
 
 ## Do not read this when
-- apply fork 以外の builder を扱うとき。正本 builder 自体の仕様や実装を確認する場合は、対応する oracle file を直接読む。
+- apply fork 以外の builder を調査するとき。
+- prompt fence 保護の共通処理自体を調査するときは、共通 prompt fence module を直接読む。
+- 正本 builder の仕様や prompt 構成を確認するときは、対応する oracle file を直接読む。
 
 ## hash
-- edf6e79c8004629ae426c74f51846e1c3291f4285ddcc771db1c6d9ce4a79a3d
+- 473f716b1cb96a375e360999e60a8e757465dfd74b025119f58c276e84e379a6

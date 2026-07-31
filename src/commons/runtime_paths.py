@@ -8,7 +8,8 @@ from datetime import datetime
 from pathlib import Path
 
 from basic.path_model import RootPathPlaceHolder, resolve_real_path
-from commons.runtime_errors import CmocError
+
+from .runtime_errors import CmocError
 
 _CWD_LOCK = threading.RLock()
 _CWD_OVERRIDE_DEPTH: ContextVar[int] = ContextVar("CWD_OVERRIDE_DEPTH", default=0)
@@ -48,15 +49,24 @@ def _resolve_root(placeholder: RootPathPlaceHolder, cwd: Path | None) -> Path:
     Returns:
         placeholder が示す絶対 root path。
     """
-    if cwd is None:
-        with _CWD_LOCK:
+    with _CWD_LOCK:
+        if cwd is None:
             return resolve_real_path(placeholder)
-    start_dir = cwd.resolve() if cwd.is_dir() else cwd.resolve().parent
-    # {{work-root}}/oracle/src/oracle/other/path_model.py
-    # root resolver は resolve_real_path 専用の内部実装なので、cwd 起点の
-    # runtime 契約は一時的な cwd 切替で公開 API へ寄せる。
-    with pushd(start_dir):
-        return resolve_real_path(placeholder)
+        # relative path の解決から root resolver の完了まで process-global cwd を
+        # 固定し、別 thread の pushd と起点 path が混線しないようにする。
+        resolved_cwd = cwd.resolve()
+        start_dir = resolved_cwd if resolved_cwd.is_dir() else resolved_cwd.parent
+        # 存在しない file/directory を起点にしても、既存の祖先から root を探索できる。
+        while not start_dir.is_dir():
+            parent = start_dir.parent
+            if parent == start_dir:
+                break
+            start_dir = parent
+        # {{work-root}}/oracle/src/oracle/other/path_model.py
+        # root resolver は resolve_real_path 専用の内部実装なので、cwd 起点の
+        # runtime 契約は一時的な cwd 切替で公開 API へ寄せる。
+        with pushd(start_dir):
+            return resolve_real_path(placeholder)
 
 
 def timestamp() -> str:
@@ -142,13 +152,13 @@ def schema_store_dir(root: Path) -> Path:
 
 def config_path(root: Path) -> Path:
     """cmoc config JSON の保存 path を返す。"""
-    return tracked_agent_read_dir(root) / "config.json"
+    return _tracked_agent_read_dir(root) / "config.json"
 
 
 def refactor_state_path(root: Path) -> Path:
     """realization refactor の追跡 state 保存 path を返す。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    return tracked_agent_read_dir(root) / "realization" / "refactor" / "state.json"
+    return _tracked_agent_read_dir(root) / "realization" / "refactor" / "state.json"
 
 
 def generated_agent_read_dir(root: Path) -> Path:
@@ -157,7 +167,7 @@ def generated_agent_read_dir(root: Path) -> Path:
     return root / ".cmoc" / "gu" / "ar"
 
 
-def tracked_agent_read_dir(root: Path) -> Path:
+def _tracked_agent_read_dir(root: Path) -> Path:
     """git 追跡かつ agent 読み取り専用の設定 directory を返す。"""
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     return root / ".cmoc" / "gt" / "ar"
@@ -165,9 +175,13 @@ def tracked_agent_read_dir(root: Path) -> Path:
 
 def is_root_memo(root: Path, path: Path) -> bool:
     """`{{work-root}}/memo` 自体またはその配下か判定する。"""
-    memo = (root / "memo").resolve()
-    resolved = path.resolve()
-    return resolved == memo or memo in resolved.parents
+    # {{work-root}}/oracle/doc/app_spec/indexing.md
+    # memo の判定は repository 上の path 境界で行い、symlink の実体へ追跡しない。
+    # abspath は symlink を解決せずに `.`/`..` だけを正規化するため、memo/../path
+    # を memo 配下と誤認しない。
+    memo = Path(os.path.abspath(root / "memo"))
+    candidate = Path(os.path.abspath(path))
+    return candidate == memo or memo in candidate.parents
 
 
 def cwd_override_active() -> bool:

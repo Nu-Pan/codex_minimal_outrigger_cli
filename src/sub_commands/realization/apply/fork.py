@@ -9,26 +9,25 @@ from acp.builder.realization.apply.fork.launch_exec import (
 )
 from cmoc_runtime import (
     CmocError,
-    current_branch,
     load_config,
     load_state_for_branch,
     pushd,
-    repo_root,
     run_cli_subcommand,
     run_codex_exec,
     start_subcommand_step,
-    work_root,
 )
 from commons.indexing import enable_indexing_preflight
-from commons.runtime_run import run_process_tracking
+from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
+    GitChange,
     commit_work_unit,
     flattened_change_paths,
     raw_oracle_diff,
+    recover_started_run,
     refresh_indexes,
-    resolve_active_run,
     rollback_work_unit,
+    session_run_was_ready,
     set_run_state,
     start_editing_run,
     tree_changes,
@@ -55,11 +54,12 @@ def _cmoc_realization_apply_fork_body() -> None:
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
     diff_base_commit: str | None = None
+    cleanup_warnings: list[str] = []
     start_attempted = False
     start_was_ready = False
     try:
         start_subcommand_step(2, "realization apply run を作成", "create editing run")
-        start_was_ready = _session_run_was_ready()
+        start_was_ready = session_run_was_ready()
         start_attempted = True
         context = start_editing_run("realization_apply")
         _, _, state = load_state_for_branch(context.repo, context.session_branch)
@@ -79,12 +79,16 @@ def _cmoc_realization_apply_fork_body() -> None:
             diff_base_commit,
             context.run_fork_commit,
         )
-        parameter = build_realization_apply_fork_launch_exec_parameter(
-            diff_base_commit,
-            context.run_fork_commit,
-            oracle_diff,
-            context.run_worktree,
-        )
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # canonical builder は prompt 内の work-root を cwd から解決するため、
+        # AgentCallParameter の cwd だけでなく構築時の cwd も run worktree に揃える。
+        with pushd(context.run_worktree):
+            parameter = build_realization_apply_fork_launch_exec_parameter(
+                diff_base_commit,
+                context.run_fork_commit,
+                oracle_diff,
+                context.run_worktree,
+            )
         start_subcommand_step(4, "realization 追従 agent を実行", "run apply agent")
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # INDEX 再生成も run 中の Codex call なので、abandon が停止できるよう
@@ -105,23 +109,53 @@ def _cmoc_realization_apply_fork_body() -> None:
                     ["run report と Codex call log を確認してください。"],
                     f"returncode: {result.returncode}",
                 )
+            changed_agent_paths = worktree_change_paths(
+                context.run_worktree,
+                include_rename_sources=True,
+            )
+            unexpected = unexpected_agent_paths(context, changed_agent_paths)
+            if unexpected:
+                raise _unexpected_change_error(unexpected)
             start_subcommand_step(
                 5, "realization 差分を検査して commit", "commit changes"
             )
-            _validate_agent_changes(context)
             # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
             # agent の realization 差分と cmoc が生成する INDEX.md を同じ処理単位に
             # 含め、後続の commit/rollback が両方へ同じように適用されるようにする。
             refresh_indexes(context.run_worktree, commit=False)
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # 後続 process の遅い書き込みを差分検査・commit に混ぜないよう、最終
+            # snapshot の前に tracked Codex child を停止する。
+            cleanup_warnings.extend(
+                stop_tracked_codex_children(context.repo, context.session_id)
+            )
+            # tree_changes は commit 済みの差分だけを返すため、commit 前は status
+            # path を同じ path 分類へ渡してから処理単位を確定する。
+            pending_paths = worktree_change_paths(
+                context.run_worktree,
+                include_rename_sources=True,
+            )
+            pending_changes = [GitChange("M", (path,)) for path in pending_paths]
+            unexpected = unexpected_run_paths(context, pending_changes)
+            # {{work-root}}/oracle/doc/app_spec/indexing.md
+            # indexing は INDEX.md だけを生成するため、agent 検査後に増えた realization
+            # 差分を agent の許可済み差分へ便乗させない。
+            unexpected.extend(
+                path
+                for path in pending_paths
+                if path not in changed_agent_paths
+                and Path(path).name != "INDEX.md"
+                and path not in unexpected
+            )
+            unexpected.sort()
+            if unexpected:
+                raise _unexpected_change_error(unexpected)
             commit_work_unit(
                 context.run_worktree,
                 "cmoc realization apply fork",
                 allow_empty=True,
             )
             changes = tree_changes(context.run_worktree, context.run_fork_commit)
-            unexpected = unexpected_run_paths(context, changes)
-            if unexpected:
-                raise _unexpected_change_error(unexpected)
         start_subcommand_step(6, "run を joinable に更新", "publish joinable")
         set_run_state(context, "joinable")
         start_subcommand_step(7, "fork report を保存", "write fork report")
@@ -133,6 +167,7 @@ def _cmoc_realization_apply_fork_body() -> None:
             changed_paths=flattened_change_paths(changes),
             codex_returncode=codex_returncode,
             extra_fields={"diff_base_commit": diff_base_commit},
+            body_lines=_cleanup_warning_lines(cleanup_warnings),
         )
     except BaseException as exc:
         if context is None:
@@ -141,7 +176,7 @@ def _cmoc_realization_apply_fork_body() -> None:
             # 回収してはいけない。非 CmocError は start 後の公開処理失敗、または
             # start 処理が context を呼び出し側へ返す前に送出した失敗だけを回収する。
             if start_attempted and start_was_ready and not isinstance(exc, CmocError):
-                context = _recover_started_run()
+                context = recover_started_run("realization_apply")
             if context is None:
                 raise
         report = _record_error(
@@ -149,6 +184,7 @@ def _cmoc_realization_apply_fork_body() -> None:
             diff_base_commit,
             codex_returncode,
             exc,
+            cleanup_warnings,
         )
         error = CmocError(
             "realization apply fork は error state で停止しました。",
@@ -163,19 +199,6 @@ def _cmoc_realization_apply_fork_body() -> None:
     typer.echo(f"- fork report: `{report}`")
 
 
-def _validate_agent_changes(context: EditingRunContext) -> None:
-    """apply agent が変更した path が許可範囲内か検証する。"""
-    unexpected = unexpected_agent_paths(
-        context,
-        worktree_change_paths(
-            context.run_worktree,
-            include_rename_sources=True,
-        ),
-    )
-    if unexpected:
-        raise _unexpected_change_error(unexpected)
-
-
 def _unexpected_change_error(paths: list[str]) -> CmocError:
     """想定外の apply 差分を共通の利用者向け例外へ変換する。"""
     return CmocError(
@@ -185,35 +208,21 @@ def _unexpected_change_error(paths: list[str]) -> CmocError:
     )
 
 
-def _session_run_was_ready() -> bool:
-    """fork 開始前の session が新しい run を公開できる状態か確認する。"""
-    try:
-        _, _, state = load_state_for_branch(repo_root(), current_branch(work_root()))
-    except CmocError:
-        return False
-    return state.session.state == "active" and state.run.state == "ready"
-
-
-def _recover_started_run() -> EditingRunContext | None:
-    """start 後の context 代入前に公開された apply run を回収する。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
-    """
-    try:
-        context, _state = resolve_active_run({"running", "error"})
-    except CmocError:
-        return None
-    return context if context.kind == "realization_apply" else None
-
-
 def _record_error(
     context: EditingRunContext,
     diff_base_commit: str | None,
     codex_returncode: int | None,
     exc: BaseException,
+    cleanup_warnings: list[str] | None = None,
 ) -> Path:
     """apply run の差分を戻し、error state と fork report を保存する。"""
-    cleanup_errors: list[str] = []
+    cleanup_errors = list(cleanup_warnings or [])
+    try:
+        cleanup_errors.extend(
+            stop_tracked_codex_children(context.repo, context.session_id)
+        )
+    except BaseException as cleanup_error:
+        cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
     try:
         rollback_work_unit(context.run_worktree)
     except BaseException as cleanup_error:
@@ -222,19 +231,37 @@ def _record_error(
         set_run_state(context, "error")
     except BaseException as state_error:
         cleanup_errors.append(f"state update failed: {state_error!r}")
-    changes = tree_changes(context.run_worktree, context.run_fork_commit)
+    # 最終 git inspection が失敗しても error report を保存できるようにする。
+    # 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
+    try:
+        changed_paths = flattened_change_paths(
+            tree_changes(context.run_worktree, context.run_fork_commit)
+        )
+    except BaseException as change_error:
+        cleanup_errors.append(f"change inspection failed: {change_error!r}")
+        changed_paths = []
     return write_fork_report(
         context,
         "realization/apply/fork",
         state_after="error",
         completion_reason="error",
-        changed_paths=flattened_change_paths(changes),
+        changed_paths=changed_paths,
         codex_returncode=codex_returncode,
         extra_fields={"diff_base_commit": diff_base_commit},
         body_lines=[
             "## Error",
             repr(exc),
-            "## Cleanup warnings",
-            *([f"- {item}" for item in cleanup_errors] or ["- none"]),
+            *_cleanup_warning_lines(cleanup_errors),
         ],
     )
+
+
+def _cleanup_warning_lines(warnings: list[str]) -> list[str]:
+    """fork report 用の cleanup warning section を組み立てる。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    return [
+        "## Cleanup warnings",
+        *([f"- {warning}" for warning in warnings] or ["- none"]),
+    ]

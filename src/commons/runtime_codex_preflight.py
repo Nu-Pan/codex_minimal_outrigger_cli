@@ -35,10 +35,19 @@ def disable_indexing_preflight() -> None:
     _INDEXING_PREFLIGHT = None
 
 
-def run_codex_exec(parameter: AgentCallParameter, **kwargs: Any) -> CodexExecResult:
+def run_codex_exec(
+    parameter: AgentCallParameter,
+    *,
+    before_agent_call: Callable[[], None] | None = None,
+    **kwargs: Any,
+) -> CodexExecResult:
     """INDEX 更新 preflight を挟んで Codex exec 実行本体へ委譲する。"""
     if parameter.run_indexing_preflight:
         _run_indexing_before_codex(_indexing_root_for_codex(parameter, kwargs))
+    if before_agent_call is not None:
+        # preflight が作った cmoc 管理 commit を workload が agent の commit と
+        # 誤認しないよう、本命 subprocess の直前に呼び出し元へ境界を通知する。
+        before_agent_call()
     return runtime_run_codex_exec(parameter, **kwargs)
 
 

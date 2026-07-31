@@ -6,13 +6,17 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
+from typing import cast
 
 import pytest
 from _git_support import make_repo, run_git
 
 from cmoc_runtime import CmocError, file_sha256
+from commons.runtime_git import is_oracle_file_path, is_realization_file_path
 from commons.runtime_refactor import (
+    RefactorState,
     load_refactor_state,
     select_refactor_target,
     sync_refactor_state,
@@ -34,7 +38,108 @@ def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
         entry["last_investigation_result"] == "not_investigated"
         for entry in state.values()
     )
+    assert all(
+        entry["last_investigated_sha256"] is None
+        and entry["last_investigated_at"] is None
+        for entry in state.values()
+    )
     assert load_refactor_state(root) == state
+
+
+@pytest.mark.parametrize(
+    "relative", ["nested/../../outside.md", "oracle/../../outside.md"]
+)
+def test_refactor_target_classifiers_reject_parent_path_escape(
+    tmp_path: Path, relative: str
+) -> None:
+    """oracle/realization file classifier が work-root 外の path を拒否する。"""
+    # 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    root = make_repo(tmp_path)
+    (tmp_path / "outside.md").write_text("outside\n")
+
+    path = root / relative
+
+    assert not is_oracle_file_path(root, path)
+    assert not is_realization_file_path(root, path)
+
+
+def test_refactor_target_classifiers_require_file_entries(
+    tmp_path: Path,
+) -> None:
+    """oracle/realization file classifier が directory と欠落 path を拒否する。"""
+    root = make_repo(tmp_path)
+    realization_directory = root / "src"
+    realization_directory.mkdir()
+    realization_file = realization_directory / "module.py"
+    realization_file.write_text("VALUE = 1\n")
+    run_git(root, "add", "src/module.py")
+    run_git(root, "commit", "-m", "add realization directory")
+
+    assert not is_oracle_file_path(root, root / "oracle")
+    assert not is_oracle_file_path(root, root / "oracle" / "missing.md")
+    assert not is_realization_file_path(root, realization_directory)
+    assert not is_realization_file_path(root, realization_directory, branch="HEAD")
+    assert is_realization_file_path(root, realization_file, branch="HEAD")
+    assert not is_realization_file_path(root, root / "missing.py")
+
+
+@pytest.mark.parametrize(
+    "replacement",
+    [
+        "directory",
+        pytest.param(
+            "fifo",
+            marks=pytest.mark.skipif(
+                not hasattr(os, "mkfifo"), reason="named pipes are unavailable"
+            ),
+        ),
+    ],
+)
+def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
+    tmp_path: Path, replacement: str
+) -> None:
+    """branch の blob fallback が既存の非通常 file を file として扱わない。"""
+    root = make_repo(tmp_path)
+    path = root / "module.py"
+    path.write_text("VALUE = 1\n")
+    run_git(root, "add", "module.py")
+    run_git(root, "commit", "-m", "add module")
+    path.unlink()
+    if replacement == "directory":
+        path.mkdir()
+    else:
+        os.mkfifo(path)
+
+    assert not is_realization_file_path(root, path, branch="HEAD")
+
+
+def test_refactor_target_classifier_rejects_gitlink_directory(
+    tmp_path: Path,
+) -> None:
+    """realization file classifier が Gitlink の directory entry を拒否する。"""
+    root = make_repo(tmp_path)
+    gitlink = root / "module"
+    gitlink.mkdir()
+    commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "update-index", "--add", "--cacheinfo", f"160000,{commit},module")
+    run_git(root, "commit", "-m", "add gitlink entry")
+
+    assert gitlink.is_dir()
+    assert not is_realization_file_path(root, gitlink, branch="HEAD")
+
+
+def test_refactor_target_classifier_accepts_special_path_from_branch(
+    tmp_path: Path,
+) -> None:
+    """削除された特殊文字 path も branch tree の realization と判定する。"""
+    root = make_repo(tmp_path)
+    realization_file = root / "module[1].py"
+    realization_file.write_text("VALUE = 1\n")
+    run_git(root, "add", "module[1].py")
+    run_git(root, "commit", "-m", "add special realization")
+    realization_file.unlink()
+
+    assert is_realization_file_path(root, realization_file, branch="HEAD")
 
 
 def test_refactor_state_sync_hashes_dangling_oracle_symlink(
@@ -48,9 +153,26 @@ def test_refactor_state_sync_hashes_dangling_oracle_symlink(
     run_git(root, "commit", "-m", "add dangling oracle symlink")
 
     state = sync_refactor_state(root)
+    expected_digest = hashlib.sha256(b"../missing.md").hexdigest()
 
     assert "oracle/dangling.md" in state
-    assert file_sha256(link) == hashlib.sha256(b"../missing.md").hexdigest()
+    state["oracle/dangling.md"].update(
+        {
+            "investigation_required": False,
+            "last_investigation_result": "no_findings",
+            "last_investigated_sha256": expected_digest,
+            "last_investigated_at": "2026-07-19_00-00_00_000000000",
+        }
+    )
+    write_refactor_state(root, state)
+    link.unlink()
+    link.symlink_to("../different-missing.md")
+
+    synchronized = sync_refactor_state(root)
+
+    changed = synchronized["oracle/dangling.md"]
+    assert changed["investigation_required"] is True
+    assert changed["last_investigated_sha256"] == expected_digest
 
 
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
@@ -60,11 +182,12 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     root = make_repo(tmp_path)
     state = sync_refactor_state(root)
     entry = state["README.md"]
+    previous_digest = file_sha256(root / "README.md")
     entry.update(
         {
             "investigation_required": False,
             "last_investigation_result": "no_findings",
-            "last_investigated_sha256": file_sha256(root / "README.md"),
+            "last_investigated_sha256": previous_digest,
             "last_investigated_at": "2026-07-19_00-00_00_000000000",
         }
     )
@@ -77,7 +200,73 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     assert changed["investigation_required"] is True
     assert changed["last_investigation_result"] == "no_findings"
     assert changed["last_investigated_at"] == "2026-07-19_00-00_00_000000000"
-    assert changed["last_investigated_sha256"] != file_sha256(root / "README.md")
+    assert changed["last_investigated_sha256"] == previous_digest
+
+
+def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
+    """state writer が schema 不正値を保存しない。"""
+    root = make_repo(tmp_path)
+    state = cast(
+        RefactorState,
+        {
+            "README.md": {
+                "investigation_required": True,
+                "last_investigation_result": [],
+                "last_investigated_sha256": None,
+                "last_investigated_at": None,
+            }
+        },
+    )
+
+    with pytest.raises(CmocError, match="refactor state"):
+        write_refactor_state(root, state)
+
+
+def test_refactor_state_rejects_symlinked_path_without_writing_target(
+    tmp_path: Path,
+) -> None:
+    """state path の symlink 経由更新が work-root 外へ到達しない。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside-state.json"
+    outside.write_text("original\n")
+    state_path = (
+        root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    )
+    state_path.parent.mkdir(parents=True)
+    state_path.symlink_to(outside)
+
+    with pytest.raises(CmocError, match="refactor state"):
+        write_refactor_state(root, {})
+
+    assert outside.read_text() == "original\n"
+
+
+@pytest.mark.parametrize(
+    "path_kind",
+    [
+        "directory",
+        pytest.param(
+            "fifo",
+            marks=pytest.mark.skipif(
+                not hasattr(os, "mkfifo"), reason="named pipes are unavailable"
+            ),
+        ),
+    ],
+)
+def test_refactor_state_rejects_non_file_path(tmp_path: Path, path_kind: str) -> None:
+    """state path が通常 file でない場合に read/write を block させない。"""
+    root = make_repo(tmp_path)
+    path = root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    path.parent.mkdir(parents=True)
+    if path_kind == "directory":
+        path.mkdir()
+    else:
+        os.mkfifo(path)
+
+    with pytest.raises(CmocError, match="refactor state"):
+        load_refactor_state(root)
+    with pytest.raises(CmocError, match="refactor state"):
+        write_refactor_state(root, {})
 
 
 def test_refactor_target_selection_prioritizes_uninvestigated_then_oldest(

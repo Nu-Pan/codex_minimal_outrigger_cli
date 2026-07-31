@@ -32,7 +32,8 @@ from acp.builder.oracle.review.validate_finding_challenger import (
 from cmoc_runtime import CmocError
 from commons.runtime_results import CodexExecCallable
 from config.cmoc_config import CmocConfig
-from sub_commands.oracle.review_paths import finding_oracle_path, oracle_path_key
+
+from .review_paths import finding_oracle_path, oracle_path_key
 
 _MAX_MERGE_FINDING_SEMANTIC_RETRIES = 2
 

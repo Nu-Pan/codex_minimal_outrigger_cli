@@ -18,29 +18,28 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動 parameter builder の互換 import 経路を提供する薄いモジュール。実体の実装や正本仕様は持たず、正本側で定義された builder を再公開する。
+- TUI 起動用の agent call parameter builder adapter。正本 builder を呼び出し、TUI が free-form prompt を受ける契約に合わせて Structured Output schema path を無効化する。
 
 ## Read this when
-- TUI 起動 parameter builder の import 経路や互換性を確認するとき。
-- TUI 起動 parameter builder の公開名を参照するコードの入口を確認するとき。
+- TUI 起動時の agent call parameter 生成や、Structured Output schema path の扱いを確認・変更するとき。
 
 ## Do not read this when
-- builder の具体的な生成ロジックや仕様を確認したいときは、正本として示された oracle 側の実装を直接読む。
-- TUI 起動処理全体や別の parameter builder を調査するとき。
+- TUI 以外の parameter builder、または正本 builder の仕様自体を確認・変更するとき。
 
 ## hash
-- 6e9784f7e8505819488f5b54a774a719a4f662ab87693b9fbecc5a080f79477a
+- 2e19ef7b2bbcbcd68134e7bb99c529ff44530bdae06fb7c954f0e99f7190f9ee
 
 # `resolve_parameter.py`
 
 ## Summary
-- TUI の resolve-parameter builder を再公開する互換アダプター。canonical builder の生成結果を利用し、入力プロンプト内のコードフェンスを保護した AgentCallParameter を返す。
+- TUI の resolve-parameter builder を旧 import 経路向けに再公開する互換アダプター。正本 builder の結果を利用し、入力プロンプト内のコードフェンスを保護した AgentCallParameter を返す。
 
 ## Read this when
-- TUI の resolve-parameter builder の import 互換性や、入力プロンプトのコードフェンス保護処理を確認・変更するとき。
+- TUI の resolve-parameter building の呼び出し元、互換 import 経路、またはプロンプトのコードフェンス保護を変更・調査するとき。
 
 ## Do not read this when
-- canonical builder の仕様や生成内容だけを確認したいとき。oracle 側の builder を直接読む。
+- canonical builder の仕様や実装を変更・調査するときは、指定された oracle builder を直接読む。
+- TUI の他の builder や一般的な prompt 構築を扱うだけのとき。
 
 ## hash
-- 7e8901cc79447e31dc390e44d0368b2a377aeea5d13b58a4d44a8283d32670a7
+- bb0a1eb0bfb775c57dff95c2aadc79a249c0520185c3930d1208db768a01a7f3

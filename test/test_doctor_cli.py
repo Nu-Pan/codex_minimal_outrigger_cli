@@ -28,9 +28,11 @@ from _cli_support import run_doctor
 from _git_support import make_repo, run_git
 
 import commons.runtime_doctor as doctor_module
+from commons.runtime_errors import CmocError
+from commons.runtime_refactor import RefactorState
 
 
-def hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
+def _hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
     """別プロセスで共有 doctor lock を保持し、解放通知まで待機する。"""
 
     import fcntl
@@ -84,8 +86,65 @@ def test_doctor_preprocess_repairs_git_state(
             cwd=root,
             check=False,
         ).returncode
-        != 0
+        == 1
     )
+    state_path = (
+        root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    )
+    state = json.loads(state_path.read_text())
+    assert set(state) == {".gitignore", "README.md", "oracle/spec.md"}
+    assert all(
+        entry
+        == {
+            "investigation_required": True,
+            "last_investigation_result": "not_investigated",
+            "last_investigated_sha256": None,
+            "last_investigated_at": None,
+        }
+        for entry in state.values()
+    )
+
+
+def test_doctor_preprocess_follows_repair_order(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """doctor が oracle の ignore、agents、config、state 順に修復する。"""
+    root = make_repo(tmp_path)
+    events: list[str] = []
+    original_ignore = doctor_module.ensure_cmoc_ignored
+    original_agents = doctor_module._ensure_agents_tracked
+    original_config = doctor_module.sync_config
+    original_state = doctor_module.sync_refactor_state
+
+    def observe_ignore(path: Path) -> None:
+        """ignore 修復の呼び出し順を記録する。"""
+        events.append("ignore")
+        original_ignore(path)
+
+    def observe_agents(path: Path) -> bool:
+        """agents 修復の呼び出し順を記録する。"""
+        events.append("agents")
+        return original_agents(path)
+
+    def observe_config(path: Path) -> None:
+        """config 修復の呼び出し順を記録する。"""
+        events.append("config")
+        original_config(path)
+
+    def observe_state(path: Path, *, sync_entries: bool = True) -> RefactorState:
+        """refactor state 修復の呼び出し順を記録する。"""
+        events.append("state")
+        return original_state(path, sync_entries=sync_entries)
+
+    monkeypatch.setattr(doctor_module, "ensure_cmoc_ignored", observe_ignore)
+    monkeypatch.setattr(doctor_module, "_ensure_agents_tracked", observe_agents)
+    monkeypatch.setattr(doctor_module, "sync_config", observe_config)
+    monkeypatch.setattr(doctor_module, "sync_refactor_state", observe_state)
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert events == ["ignore", "agents", "config", "state"]
 
 
 def test_doctor_preprocess_waits_for_common_repository_lock(
@@ -102,7 +161,7 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
     ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
     release_child, release_parent = multiprocessing.Pipe(duplex=False)
     process = multiprocessing.Process(
-        target=hold_doctor_lock,
+        target=_hold_doctor_lock,
         args=(lock_path, ready_child, release_child),
     )
     lock_attempted = threading.Event()
@@ -249,7 +308,7 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
         cwd=root,
         check=False,
     )
-    assert check_ignore.returncode != 0
+    assert check_ignore.returncode == 1
 
 
 def test_doctor_preprocess_targets_current_linked_worktree(
@@ -422,6 +481,49 @@ def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_delet
     ]
 
 
+def test_doctor_preserves_existing_untracked_gitkeep_content(
+    tmp_path: Path,
+) -> None:
+    """既存の未追跡 `.agents/.gitkeep` を空内容へ置き換えず追跡する。"""
+
+    root = make_repo(tmp_path)
+    gitkeep = root / ".agents" / ".gitkeep"
+    gitkeep.parent.mkdir()
+    gitkeep.write_text("human content\n")
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert run_git(root, "show", "HEAD:.agents/.gitkeep").stdout == "human content\n"
+    assert gitkeep.read_text() == "human content\n"
+    assert run_git(root, "status", "--short").stdout == ""
+
+
+@pytest.mark.parametrize("symlinked_path", ["agents", "gitkeep"])
+def test_doctor_rejects_symlinked_agents_paths(
+    tmp_path: Path,
+    symlinked_path: str,
+) -> None:
+    """doctor が .agents 外への symlink 経由書き込みを拒否する。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside"
+    if symlinked_path == "agents":
+        outside.mkdir()
+        (root / ".agents").symlink_to(outside, target_is_directory=True)
+        outside_content = None
+    else:
+        outside.write_text("outside\n")
+        (root / ".agents").mkdir()
+        (root / ".agents" / ".gitkeep").symlink_to(outside)
+        outside_content = outside.read_text()
+
+    with pytest.raises(CmocError):
+        doctor_module.run_doctor_preprocess(root)
+
+    assert not (outside / ".gitkeep").exists()
+    if outside_content is not None:
+        assert outside.read_text() == outside_content
+
+
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -508,3 +610,22 @@ def test_doctor_preprocess_preserves_preexisting_staged_rename(
         "R100\told.txt\tnew.txt"
     ]
     assert run_git(root, "diff", "--name-status").stdout.strip() == ""
+
+
+def test_doctor_preserves_preexisting_staged_gitignore_deletion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """doctor が既存 .gitignore の staged deletion も保持する。"""
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    run_doctor(root)
+
+    run_git(root, "rm", "--cached", "-f", "--", ".gitignore")
+    before = run_git(root, "diff", "--cached", "--name-status").stdout
+
+    run_doctor(root)
+
+    assert run_git(root, "diff", "--cached", "--name-status").stdout == before
+    assert run_git(root, "ls-files", "--stage", "--", ".gitignore").stdout == ""

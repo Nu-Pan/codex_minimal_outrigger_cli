@@ -17,6 +17,7 @@ from _git_support import make_repo
 import cmoc_runtime
 from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_codex_logging import emit_codex_call_console
 from commons.runtime_codex_profile import (
     codex_error_text,
     extract_resume_token,
@@ -28,6 +29,32 @@ from commons.runtime_logging import (
     set_current_subcommand_logger,
 )
 from config.cmoc_config import CmocConfig
+
+
+def test_codex_call_console_resolves_relative_call_log_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Codex call 通知の call log path を正本どおりフルパスで表示する。"""
+    monkeypatch.chdir(tmp_path)
+
+    emit_codex_call_console("test", Path("call.json"), 0.0, 0)
+
+    captured = capsys.readouterr()
+    assert f"- Call log: `{tmp_path / 'call.json'}`" in captured.out
+    assert captured.err == ""
+
+
+def test_codex_call_console_reports_not_started_as_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """終了コードを得られない呼び出しを stderr のエラーとして表示する。"""
+    emit_codex_call_console("test", tmp_path / "call.json", 0.0, None)
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "- Exit code: `not started`" in captured.err
 
 
 @pytest.mark.parametrize("line", ["null", "[]", "1"])
@@ -73,7 +100,9 @@ def test_codex_runtime_rejects_non_object_jsonl_event(
 
 
 def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_output(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """returncode 0 と valid output があっても不正 stdout は失敗にする。"""
     root = make_repo(tmp_path)
@@ -103,6 +132,10 @@ def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_outp
         )
 
     assert "malformed JSONL event (invalid JSON): not-json" not in exc_info.value.detail
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "- Exit code: `0`" in captured.err
+    assert "not-json" not in captured.err
 
 
 def test_codex_runtime_reports_missing_codex_cli(

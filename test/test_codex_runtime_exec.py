@@ -11,6 +11,7 @@ from _codex_support import (
     codex_parameter,
     configure_codex_home_for_test_local_ollama,
     setup_codex_home,
+    stub_codex_overrides,
 )
 from _command_support import write_python_executable
 from _git_support import make_repo
@@ -209,6 +210,38 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert (root / ".gitignore").read_text() == "memo\n"
     _assert_no_codex_home_config(codex_home)
     assert result.output_text == "done\n"
+
+
+def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """schema-less output の不正 UTF-8 で結果構築を中断しない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_bytes(b'\\xff')",
+            'print(\'{"type": "turn.completed"}\')',
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    result = run_codex_exec(
+        codex_parameter(),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert result.output_json is None
+    assert result.output_text == "\ufffd"
 
 
 def test_run_codex_exec_uses_generic_provider_without_builtin_local_flags(

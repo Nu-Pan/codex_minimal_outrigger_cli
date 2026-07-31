@@ -14,8 +14,9 @@ from oracle.acp_builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter as _build_parameter,
 )
 
-from acp.builder.common.prompt_fence import _protect_code_block_fence
 from basic.path_model import resolve_real_path as _resolve_real_path
+
+from ...common.prompt_fence import _protect_code_block_fence
 
 __all__ = ["build_session_join_conflict_resolution_parameter"]
 

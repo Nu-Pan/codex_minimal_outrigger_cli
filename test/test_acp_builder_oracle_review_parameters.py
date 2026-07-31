@@ -1,6 +1,14 @@
 """oracle review ACP builder の parameter、schema、adapter 公開面を検証する。
 
 対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/
+
+この file は 16,000 文字を超えるが、review builder 群の parameter、schema、公開面、
+および動的 prompt の fence 保護は同じ AgentCallParameter と canonical builder の
+互換契約を検証する一つの責務である。分割すると、builder 間で共有する schema・公開面
+の期待値と prompt 境界の検証文脈が複数 file に分散するため、現状は review builder
+回帰として一箇所に保つ。
+
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
@@ -362,6 +370,83 @@ def test_oracle_review_fence_protection_keeps_marker_in_current_input() -> None:
     assert (
         "inside\n```\n\n# 所見が妥当であるとする理由\nafter\n````" in parameter.prompt
     )
+
+
+def test_oracle_review_fence_protection_uses_actual_later_section() -> None:
+    """先行する動的本文内の section 風文字列を実際の section と誤認しない。"""
+    fence = "`" * 3
+    advocate = f"advocate\n{fence}\ninside\n{fence}"
+    finding = (
+        "before\n\n# 所見が妥当であるとする理由\n\n"
+        f"```text\n{advocate}\n```\n\n"
+        "# 所見が妥当ではないとする理由\n\ntrailing"
+    )
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        finding,
+        advocate,
+        "known challenger",
+    )
+
+    actual_start = parameter.prompt.rindex("# 所見が妥当であるとする理由")
+    actual_end = parameter.prompt.index(
+        "\n\n# 所見が妥当ではないとする理由", actual_start
+    )
+    actual_section = parameter.prompt[actual_start:actual_end]
+    assert f"# 所見が妥当であるとする理由\n\n````text\n{advocate}\n````" in (
+        actual_section
+    )
+
+
+@pytest.mark.parametrize(
+    "builder",
+    [
+        build_oracle_review_validate_finding_advocate_parameter,
+        build_oracle_review_validate_finding_challenger_parameter,
+    ],
+)
+def test_oracle_review_validation_fence_protection_uses_actual_later_section(
+    builder: Callable[[str, str, str], AgentCallParameter],
+) -> None:
+    """validation prompt が本文内の section 風文字列ではなく実体を補正する。"""
+    fence = "`" * 3
+    advocate = f"advocate\n{fence}\ninside\n{fence}"
+    finding = (
+        "before\n\n# 既知の妥当であるとする理由\n\n"
+        f"```text\n{advocate}\n```\n\n"
+        "# 既知の妥当ではないとする理由\n\ntrailing"
+    )
+
+    parameter = builder(finding, advocate, "known challenger")
+
+    actual_start = parameter.prompt.rindex("# 既知の妥当であるとする理由")
+    actual_end = parameter.prompt.index(
+        "\n\n# 既知の妥当ではないとする理由", actual_start
+    )
+    actual_section = parameter.prompt[actual_start:actual_end]
+    assert f"# 既知の妥当であるとする理由\n\n````text\n{advocate}\n````" in (
+        actual_section
+    )
+
+
+def test_oracle_review_fence_protection_matches_renderer_blank_line_normalization() -> (
+    None
+):
+    """連続空行で renderer が本文を正規化しても nested fence を保護する。"""
+    finding = "before\n```\ninside\n```\n\n\n\nafter"
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        finding,
+        "known advocate",
+        "known challenger",
+    )
+
+    start = parameter.prompt.index("# 所見の内容")
+    end = parameter.prompt.index("\n\n# 所見が妥当であるとする理由", start)
+    section = parameter.prompt[start:end]
+    assert section.startswith("# 所見の内容\n\n````text\n")
+    assert "inside\n```\n\nafter" in section
+    assert section.endswith("\nafter\n````")
 
 
 @pytest.mark.parametrize(

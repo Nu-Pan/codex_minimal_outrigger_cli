@@ -5,23 +5,17 @@
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 - {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/indexing.md
-- {{work-root}}/oracle/doc/app_spec/indexing.md
 - {{work-root}}/oracle/doc/app_spec/misc_spec.md
 - {{work-root}}/oracle/src/oracle/other/path_model.py
 
-この file は 16,000 文字を超えるが、CLI lifecycle の error、log、preflight、completion
-は同じ runner、work root、subcommand event を共有する一つの外部契約である。分割すると
-共通 fixture と終了処理の観測文脈が複数 file に分散するため、現状は runtime CLI 回帰
-として一箇所に保つ。
-
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+CLI lifecycle の error、log、preflight、completion は同じ runner、work root、
+subcommand event を共有する一つの外部契約として一箇所で検証する。
+この file は 16,000 文字を超えるが、error report、console log、preflight、completion
+が共通の runner と終了処理を観測するため、これ以上分割すると同じ外部契約の文脈が
+分散する。
 """
 
 import json
-import shutil
 import subprocess
 import sys
 import threading
@@ -39,7 +33,6 @@ import main as main_module
 from cmoc_runtime import (
     CmocError,
     SubcommandLogger,
-    ensure_cmoc_ignored,
     format_duration,
     render_error,
 )
@@ -131,10 +124,100 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
     assert exc_info.value.exit_code == 1
     [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
-    assert len(events) >= 2
-    assert all(isinstance(event, dict) and event for event in events)
+    assert events[0]["event"] == "command_invoked"
+    assert any(event["event"] == "step_started" for event in events)
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 1
     assert "probe" in json.dumps(events[0], ensure_ascii=False)
     assert "doctor failed" in json.dumps(events[-1], ensure_ascii=False)
+
+
+def test_cli_nonzero_impl_result_is_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """callback の非0 returnも共通error reportと終了コードへ変換する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            lambda: 7,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+            doctor_preprocess=False,
+        )
+
+    captured = capsys.readouterr()
+    assert exc_info.value.exit_code == 7
+    assert "# ERROR" in captured.out
+    assert "returncode: 7" in captured.out
+    assert "## Call stack" in captured.out
+    assert captured.err == ""
+
+
+def test_cli_error_report_survives_failed_error_log_flush(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """終了ログの失敗が元の error report を隠さないことを検証する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    original_event = runtime_cli.SubcommandLogger.event
+
+    def fail_finish_event(
+        logger: SubcommandLogger, kind: str, **payload: object
+    ) -> None:
+        """command_finished のログ書き込み失敗を再現する。"""
+        if kind == "command_finished":
+            raise OSError("log flush failed")
+        original_event(logger, kind, **payload)
+
+    def fail_impl() -> None:
+        """callback の失敗を再現する。"""
+        raise ValueError("callback failed")
+
+    monkeypatch.setattr(runtime_cli.SubcommandLogger, "event", fail_finish_event)
+
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            fail_impl,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+            doctor_preprocess=False,
+        )
+
+    captured = capsys.readouterr()
+    assert exc_info.value.exit_code == 1
+    assert "# ERROR" in captured.out
+    assert "callback failed" in captured.out
+    assert captured.err == ""
+
+
+def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Codex CLI へ委ねる Ctrl+C を cmoc の error report に変換しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    def interrupt() -> None:
+        """子 process から伝播した Ctrl+C を再現する。"""
+        raise KeyboardInterrupt()
+
+    with pytest.raises(KeyboardInterrupt):
+        runtime_cli.run_cli_subcommand(
+            interrupt,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+            doctor_preprocess=False,
+        )
+
+    captured = capsys.readouterr()
+    assert "# ERROR" not in captured.out
+    assert "# ERROR" not in captured.err
+    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 130
 
 
 def test_render_error_uses_structured_markdown() -> None:
@@ -268,11 +351,17 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
 ) -> None:
     """shell completion probe は cmoc preflight と初期化副作用を起こさない。"""
     root = make_repo(tmp_path)
+    isolated_home = tmp_path / "home"
+    isolated_home.mkdir()
     main_path = Path(main_module.__file__).resolve()
     result = subprocess.run(
         [sys.executable, str(main_path), "doctor"],
         cwd=root,
-        env={"PYTHONPATH": str(main_path.parent), "_CMOC_COMPLETE": "bash_complete"},
+        env={
+            "PYTHONPATH": str(main_path.parent),
+            "_CMOC_COMPLETE": "bash_complete",
+            "HOME": str(isolated_home),
+        },
         text=True,
         capture_output=True,
         check=False,
@@ -324,97 +413,11 @@ def test_pre_log_check_failure_writes_subcommand_log(
     events = [
         json.loads(line) for line in next(iter(new_logs)).read_text().splitlines()
     ]
-    assert len(events) >= 2
-    assert all(isinstance(event, dict) and event for event in events)
+    assert events[0]["event"] == "command_invoked"
+    assert any(event["event"] == "step_started" for event in events)
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 1
     assert "indexing" in json.dumps(events[0], ensure_ascii=False)
-
-
-def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:
-    """起動 wrapper の missing venv report は root token path で位置を出す。"""
-    fake_cmoc_root = tmp_path / "cmoc"
-    fake_bin = fake_cmoc_root / "bin"
-    fake_bin.mkdir(parents=True)
-    shutil.copy2(Path(__file__).parents[1] / "bin" / "cmoc", fake_bin / "cmoc")
-
-    result = subprocess.run(
-        ["./bin/cmoc"],
-        cwd=fake_cmoc_root,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-
-    assert result.returncode == 1
-    assert "## Call stack" in result.stdout
-    assert "({{cmoc-root}}/bin/cmoc:" in result.stdout
-    assert "(./bin/cmoc:" not in result.stdout
-    assert "(bin/cmoc:" not in result.stdout
-
-
-def test_bin_cmoc_non_file_venv_path_uses_error_report(tmp_path: Path) -> None:
-    """通常ファイルでない venv path も wrapper の error report で通知する。"""
-    fake_cmoc_root = tmp_path / "cmoc"
-    fake_bin = fake_cmoc_root / "bin"
-    fake_bin.mkdir(parents=True)
-    (fake_cmoc_root / ".venv" / "bin" / "python").mkdir(parents=True)
-    shutil.copy2(Path(__file__).parents[1] / "bin" / "cmoc", fake_bin / "cmoc")
-
-    result = subprocess.run(
-        ["./bin/cmoc"],
-        cwd=fake_cmoc_root,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-
-    assert result.returncode == 1
-    assert "# ERROR" in result.stdout
-    assert "## Call stack" in result.stdout
-    assert result.stderr == ""
-
-
-def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
-    """cmoc/local が未 ignore の repo では literal ignore pattern を追加する。"""
-    root = make_repo(tmp_path)
-
-    ensure_cmoc_ignored(root)
-
-    assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
-    ignored = subprocess.run(
-        ["git", "check-ignore", "-q", ".cmoc/gu/.__cmoc_ignore_probe__"],
-        cwd=root,
-    )
-    assert ignored.returncode == 0
-
-
-def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_pattern(
-    tmp_path: Path,
-) -> None:
-    """既存 pattern が有効でも root 固定 pattern を追記して表現を安定させる。"""
-    root = make_repo(tmp_path)
-    (root / ".gitignore").write_text(".cmoc/\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "ignore cmoc")
-
-    ensure_cmoc_ignored(root)
-
-    assert (root / ".gitignore").read_text() == (
-        ".cmoc/\n\n"
-        "!/.cmoc/\n"
-        "/.cmoc/*\n"
-        "!/.cmoc/gt/\n"
-        "/.cmoc/gt/*\n"
-        "!/.cmoc/gt/ar/\n"
-        "/.cmoc/gt/ar/*\n"
-        "!/.cmoc/gt/ar/config.json\n"
-        "!/.cmoc/gt/ar/realization/\n"
-        "/.cmoc/gt/ar/realization/*\n"
-        "!/.cmoc/gt/ar/realization/refactor/\n"
-        "/.cmoc/gt/ar/realization/refactor/*\n"
-        "!/.cmoc/gt/ar/realization/refactor/state.json\n"
-        "/.cmoc/gu/\n"
-    )
-    assert run_git(root, "status", "--short").stdout.strip() == "M .gitignore"
 
 
 def test_cli_wrapper_doctor_preprocess_uses_current_worktree(

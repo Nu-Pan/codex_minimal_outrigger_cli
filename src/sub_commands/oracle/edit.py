@@ -60,7 +60,7 @@ def _cmoc_oracle_edit_body() -> None:
     )
     start_subcommand_step(4, "TUI 起動前 indexing", "indexing preflight")
 
-    def validate_and_start_launch_step() -> None:
+    def _validate_and_start_launch_step() -> None:
         """oracle edit TUI の起動前提を検証し、最後の step を開始する。"""
         start_subcommand_step(5, "TUI 起動の事前条件を確認", "validate TUI launch")
         _require_oracle_edit_launch_preconditions(repository, current_root)
@@ -72,7 +72,7 @@ def _cmoc_oracle_edit_body() -> None:
         cwd=current_root,
         config=load_config(current_root),
         purpose="oracle edit",
-        pre_launch_check=validate_and_start_launch_step,
+        pre_launch_check=_validate_and_start_launch_step,
     )
 
 

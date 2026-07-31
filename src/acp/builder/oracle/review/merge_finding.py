@@ -11,7 +11,7 @@ from oracle.acp_builder.oracle.review.merge_finding import (
     build_oracle_review_merge_finding_parameter as _build_parameter,
 )
 
-from acp.builder.common.prompt_fence import _protect_code_block_fence
+from ...common.prompt_fence import _protect_code_block_fence
 
 __all__ = ["build_oracle_review_merge_finding_parameter"]
 

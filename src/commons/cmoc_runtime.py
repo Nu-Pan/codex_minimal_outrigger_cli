@@ -1,17 +1,16 @@
 import subprocess
 import time
 
-from commons.runtime_cli import (
-    CliRunResult,
+from .runtime_cli import (
     require_current_directory_is_work_root,
     run_cli_subcommand,
     start_subcommand_step,
 )
-from commons.runtime_codex_preflight import (
+from .runtime_codex_preflight import (
     run_codex_exec,
     run_codex_tui,
 )
-from commons.runtime_codex_profile import (
+from .runtime_codex_profile import (
     RUN_PROCESS_TRACKING_ENV,
     build_codex_override_args,
     codex_error_text,
@@ -34,22 +33,22 @@ from commons.runtime_codex_profile import (
     validate_codex_home,
     wait_process_fd_exit,
 )
-from commons.runtime_config import (
+from .runtime_config import (
     config_from_dict,
     config_to_dict,
     load_config,
     sync_config,
     write_config,
 )
-from commons.runtime_content import (
+from .runtime_content import (
     file_sha256,
     is_binary,
     text_sha256,
     write_hashed_file,
 )
-from commons.runtime_doctor import run_doctor_preprocess
-from commons.runtime_errors import CmocError, render_error
-from commons.runtime_git import (
+from .runtime_doctor import run_doctor_preprocess
+from .runtime_errors import CmocError, render_error
+from .runtime_git import (
     MANAGED_BRANCH_PREFIXES,
     branch_exists,
     create_run_worktree,
@@ -68,13 +67,13 @@ from commons.runtime_git import (
     run_git,
     with_cmoc_ignore_pattern,
 )
-from commons.runtime_logging import (
+from .runtime_logging import (
     SubcommandLogger,
     current_subcommand_logger,
     reset_current_subcommand_logger,
     set_current_subcommand_logger,
 )
-from commons.runtime_paths import (
+from .runtime_paths import (
     cmoc_root,
     codex_log_dir,
     config_path,
@@ -92,8 +91,8 @@ from commons.runtime_paths import (
     work_root,
     worktrees_dir,
 )
-from commons.runtime_results import CodexExecResult, CommandResult
-from commons.runtime_state import (
+from .runtime_results import CodexExecResult, CommandResult
+from .runtime_state import (
     RUN_KINDS,
     RUN_STATES,
     RunPart,
@@ -113,7 +112,6 @@ __all__ = (
     "RUN_PROCESS_TRACKING_ENV",
     "RUN_STATES",
     "RunPart",
-    "CliRunResult",
     "CmocError",
     "CodexExecResult",
     "CommandResult",

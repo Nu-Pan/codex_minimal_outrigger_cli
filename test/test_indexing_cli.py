@@ -281,7 +281,8 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
 def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     """INDEX 更新の commit に INDEX.md 以外を含めない。"""
     root = make_repo(tmp_path)
-    index_path = root / "INDEX.md"
+    index_path = root / "generated[1]" / "INDEX.md"
+    index_path.parent.mkdir()
     index_path.write_text("# generated\n")
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
 
@@ -290,7 +291,7 @@ def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     committed_paths = run_git(
         root, "show", "--name-only", "--pretty=", "HEAD"
     ).stdout.strip()
-    assert committed_paths == "INDEX.md"
+    assert committed_paths == "generated[1]/INDEX.md"
     assert run_git(root, "status", "--short").stdout.strip() == "?? .gitignore"
 
 
@@ -319,8 +320,8 @@ def test_commit_index_updates_rejects_git_diff_failure(
         indexing_common.commit_index_updates(root, [root / "INDEX.md"])
 
     assert calls == [
-        (["add", "--", "INDEX.md"], True),
-        (["diff", "--cached", "--quiet", "--", "INDEX.md"], False),
+        (["add", "--", ":(literal)INDEX.md"], True),
+        (["diff", "--cached", "--quiet", "--", ":(literal)INDEX.md"], False),
     ]
 
 

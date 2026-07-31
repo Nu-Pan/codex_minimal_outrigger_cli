@@ -9,12 +9,15 @@ hash 検証、書き込み、commit は同じ index plan・lock・Codex context 
 """
 
 import fcntl
+import json
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from contextvars import copy_context
 from dataclasses import dataclass, replace
 from pathlib import Path
+
+from oracle.acp_builder.indexing import index_entry as _index_entry_oracle
 
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from cmoc_runtime import (
@@ -28,14 +31,21 @@ from cmoc_runtime import (
     run_git,
     text_sha256,
 )
-from commons.runtime_codex_preflight import configure_indexing_preflight
-from commons.runtime_codex_profile import run_process_tracking_active
-from commons.runtime_git import git_common_dir
-from commons.runtime_paths import cwd_override_active
-from commons.runtime_results import CodexExecCallable
+
+from .runtime_codex_preflight import configure_indexing_preflight
+from .runtime_codex_profile import run_process_tracking_active
+from .runtime_git import git_common_dir, literal_pathspec
+from .runtime_paths import cwd_override_active
+from .runtime_results import CodexExecCallable
 
 CodexExec = CodexExecCallable
-INDEX_ENTRY_KEYS = {"summary", "read_this_when", "do_not_read_this_when"}
+# {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json
+# 正本の必須 field を読み取り、realization 側へ schema を複製しない。
+_INDEX_ENTRY_KEYS = frozenset(
+    json.loads(Path(_index_entry_oracle.__file__).with_suffix(".json").read_text())[
+        "required"
+    ]
+)
 
 
 @dataclass
@@ -83,16 +93,17 @@ def indexing_lock_path(root: Path) -> Path:
 def commit_index_updates(root: Path, updated: list[Path]) -> None:
     """INDEX.md の更新差分だけを indexing commit として保存する。"""
     index_paths = [str(path.relative_to(root)) for path in updated]
+    literal_index_paths = [literal_pathspec(path) for path in index_paths]
     if index_paths:
-        run_git(["add", "--", *index_paths], root)
+        run_git(["add", "--", *literal_index_paths], root)
     if not index_paths:
         return
-    diff_args = ["diff", "--cached", "--quiet", "--", *index_paths]
+    diff_args = ["diff", "--cached", "--quiet", "--", *literal_index_paths]
     diff = run_git(diff_args, root, check=False)
     if diff.returncode == 0:
         return
     if diff.returncode == 1:
-        run_git(["commit", "-m", "cmoc indexing", "--", *index_paths], root)
+        run_git(["commit", "-m", "cmoc indexing", "--", *literal_index_paths], root)
         return
     if diff.returncode != 0:
         # {{work-root}}/oracle/doc/app_spec/indexing.md は Git failure で indexing を
@@ -404,7 +415,7 @@ def render_index_entry(
     digest: str | None = None,
 ) -> str:
     """Structured Output から INDEX.md entry Markdown を生成する。"""
-    if not isinstance(entry, dict) or set(entry) != INDEX_ENTRY_KEYS:
+    if not isinstance(entry, dict) or set(entry) != _INDEX_ENTRY_KEYS:
         raise CmocError(
             "INDEX.md entry 生成結果が不正です。",
             ["cmoc indexing を再実行してください。"],

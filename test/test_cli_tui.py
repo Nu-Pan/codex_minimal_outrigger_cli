@@ -8,14 +8,12 @@ from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
 
-import oracle.acp_builder.tui.launch_tui as tui_launch_oracle_module
 import pytest
 from _cli_support import run_doctor, runner
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 
-import acp.builder.tui.launch_tui as tui_launch_adapter_module
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.tui as tui_module
@@ -29,14 +27,6 @@ def reset_indexing_preflight() -> Iterator[None]:
     codex_preflight_module.disable_indexing_preflight()
     yield
     codex_preflight_module.disable_indexing_preflight()
-
-
-def test_tui_launch_adapter_reexports_canonical_builder() -> None:
-    """TUI 起動 builder の互換層でシグネチャを複製しない。"""
-    assert (
-        tui_launch_adapter_module.build_tui_launch_tui_parameter
-        is tui_launch_oracle_module.build_tui_launch_tui_parameter
-    )
 
 
 def test_editor_input_keeps_timestamp_collisions_in_separate_files(
@@ -144,8 +134,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.model_class == ModelClass.FLAGSHIP
         assert parameter.reasoning_effort == ReasoningEffort.MAX
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
-        assert parameter.structured_output_schema_path is not None
-        assert parameter.structured_output_schema_path.name == "launch_tui.json"
+        assert parameter.structured_output_schema_path is None
         assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
         assert "extra_read_paths" not in kwargs
 
@@ -207,8 +196,7 @@ def test_tui_launch_parameter_uses_fixed_access_and_prompt_contract(
     )
 
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
-    assert parameter.structured_output_schema_path is not None
-    assert parameter.structured_output_schema_path.name == "launch_tui.json"
+    assert parameter.structured_output_schema_path is None
     complete_prompt = (
         root
         / ".cmoc"

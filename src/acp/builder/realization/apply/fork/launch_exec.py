@@ -11,7 +11,7 @@ from oracle.acp_builder.realization.apply.fork.launch_exec import (
     build_realization_apply_fork_launch_exec_parameter as _build_parameter,
 )
 
-from acp.builder.common.prompt_fence import (
+from ....common.prompt_fence import (
     _protect_code_block_fence,
 )
 

@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from _git_support import make_repo
 
+import commons.runtime_state as runtime_state_module
 from cmoc_runtime import CmocError
 from commons.runtime_state import (
     RunPart,
@@ -24,7 +25,7 @@ from commons.runtime_state import (
 )
 
 
-def hold_session_fork_lock(root: Path, ready: Connection, release: Connection) -> None:
+def _hold_session_fork_lock(root: Path, ready: Connection, release: Connection) -> None:
     """別 process で session fork lock を保持し、解放指示を待つ。"""
     with session_fork_lock(root):
         ready.send(True)
@@ -41,7 +42,13 @@ def _valid_state() -> SessionState:
 
 @pytest.mark.parametrize(
     "branch",
-    ["cmoc/session/", "cmoc/session/id/extra", "cmoc/run/id/run"],
+    [
+        "cmoc/session/",
+        "cmoc/session/id/extra",
+        "cmoc/session/.",
+        "cmoc/session/..",
+        "cmoc/run/id/run",
+    ],
 )
 def test_branch_session_id_rejects_invalid_shape(branch: str) -> None:
     """session branch の不正な形を拒否する。"""
@@ -51,7 +58,13 @@ def test_branch_session_id_rejects_invalid_shape(branch: str) -> None:
 
 @pytest.mark.parametrize(
     "branch",
-    ["cmoc/run/", "cmoc/run/session", "cmoc/run/session/run/extra"],
+    [
+        "cmoc/run/",
+        "cmoc/run/session",
+        "cmoc/run/session/run/extra",
+        "cmoc/run/../run",
+        "cmoc/run/session/.",
+    ],
 )
 def test_run_branch_session_id_rejects_invalid_shape(branch: str) -> None:
     """run branch の不正な形を拒否する。"""
@@ -73,6 +86,30 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
     assert session_id == "session"
     assert loaded_path == path
     assert loaded == state
+
+
+@pytest.mark.parametrize(
+    "session_id", ["../outside", "/outside", "nested/id", ".", ".."]
+)
+def test_state_path_rejects_path_like_session_id(
+    tmp_path: Path, session_id: str
+) -> None:
+    """session-id を state directory 外へ解決する path として扱わない。"""
+    with pytest.raises(CmocError, match="session-id"):
+        state_path(tmp_path, session_id)
+
+
+@pytest.mark.parametrize("payload", [b"{", b"\xff"])
+def test_load_state_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
+    """壊れた JSON または UTF-8 の state file を利用者向けエラーへ変換する。"""
+    path = state_path(tmp_path, "session")
+    path.parent.mkdir(parents=True)
+    path.write_bytes(payload)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_state_for_branch(tmp_path, "cmoc/session/session")
+
+    assert "session state file が不正です。" == exc_info.value.summary
 
 
 @pytest.mark.parametrize("part", ["session", "run"])
@@ -164,6 +201,27 @@ def test_load_session_part_does_not_validate_run_section(tmp_path: Path) -> None
     assert loaded == session
 
 
+@pytest.mark.parametrize("mutation", ["missing_run", "unknown_top_level"])
+def test_load_session_part_rejects_invalid_top_level(
+    tmp_path: Path, mutation: str
+) -> None:
+    """session 部分だけを読む場合も state の top-level schema を守る。"""
+    path = state_path(tmp_path, "session")
+    path.parent.mkdir(parents=True)
+    data = _valid_state().to_dict()
+    data["run"] = {"not_inspected": True}
+    if mutation == "missing_run":
+        del data["run"]
+    else:
+        data["obsolete"] = None
+    path.write_text(json.dumps(data))
+
+    with pytest.raises(CmocError) as exc_info:
+        load_session_part_for_branch(tmp_path, "cmoc/session/session")
+
+    assert "top-level" in exc_info.value.detail
+
+
 @pytest.mark.parametrize("field", ["session_home_branch", "session_fork_commit"])
 def test_session_state_requires_session_identity(field: str) -> None:
     """session identity の必須 field が null の state を拒否する。"""
@@ -194,6 +252,28 @@ def test_load_session_part_requires_session_identity(
     assert f"`session.{field}` は string" in exc_info.value.detail
 
 
+@pytest.mark.parametrize(
+    ("part", "field"),
+    [
+        ("session", "session_home_branch"),
+        ("session", "session_fork_commit"),
+        ("session", "last_joined_apply_fork_commit"),
+        ("run", "kind"),
+        ("run", "branch"),
+        ("run", "fork_commit"),
+    ],
+)
+def test_session_state_rejects_empty_payload(part: str, field: str) -> None:
+    """branch・commit などの state payload に空文字を保存しない。"""
+    data = _valid_state().to_dict()
+    data[part][field] = ""
+
+    with pytest.raises(CmocError) as exc_info:
+        SessionState.from_dict(data)
+
+    assert f"`{part}.{field}`" in exc_info.value.detail
+
+
 def test_write_state_rejects_invalid_session_identity(tmp_path: Path) -> None:
     """不完全な session state を file へ書き込まない。"""
     path = state_path(tmp_path, "session")
@@ -204,11 +284,64 @@ def test_write_state_rejects_invalid_session_identity(tmp_path: Path) -> None:
     assert not path.exists()
 
 
+def test_session_state_rejects_symlinked_path_without_writing_target(
+    tmp_path: Path,
+) -> None:
+    """session state の symlink 経由 read/write で link 先を扱わない。"""
+    outside = tmp_path / "outside-state.json"
+    outside.write_text("original\n")
+    path = state_path(tmp_path, "session")
+    path.parent.mkdir(parents=True)
+    path.symlink_to(outside)
+
+    with pytest.raises(CmocError, match="session state path"):
+        write_state(path, _valid_state())
+    with pytest.raises(CmocError, match="session state path"):
+        load_state_for_branch(tmp_path, "cmoc/session/session")
+
+    assert outside.read_text() == "original\n"
+
+
+def test_state_operations_reject_non_regular_path(tmp_path: Path) -> None:
+    """state path が directory の場合に raw open error や停止を起こさない。"""
+    path = state_path(tmp_path, "session")
+    path.mkdir(parents=True)
+
+    with pytest.raises(CmocError, match="通常の file"):
+        write_state(path, _valid_state())
+    with pytest.raises(CmocError, match="通常の file"):
+        load_state_for_branch(tmp_path, "cmoc/session/session")
+
+
 @pytest.mark.parametrize("state", ["running", "joinable", "error"])
 def test_active_run_requires_kind_branch_and_fork_commit(state: str) -> None:
     """active run state が kind・branch・fork commit を必要とする。"""
     data = _valid_state().to_dict()
     data["run"]["state"] = state
+
+    with pytest.raises(CmocError, match="session state file"):
+        SessionState.from_dict(data)
+
+
+@pytest.mark.parametrize(
+    "branch",
+    [
+        "not-a-run-branch",
+        "cmoc/session/session",
+        "cmoc/run/session",
+        "cmoc/run/session/run/extra",
+        "cmoc/run/../run",
+    ],
+)
+def test_active_run_rejects_noncanonical_branch(branch: str) -> None:
+    """active run の branch が canonical naming rule に一致しない state を拒否する。"""
+    data = _valid_state().to_dict()
+    data["run"] = {
+        "state": "running",
+        "kind": "realization_apply",
+        "branch": branch,
+        "fork_commit": "abc",
+    }
 
     with pytest.raises(CmocError, match="session state file"):
         SessionState.from_dict(data)
@@ -236,22 +369,36 @@ def test_session_state_rejects_unknown_top_level_fields() -> None:
     assert "top-level に未定義 field" in exc_info.value.detail
 
 
-def test_session_fork_lock_is_shared_across_processes(tmp_path: Path) -> None:
+def test_session_fork_lock_is_shared_across_processes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """session fork lock が process 間で共有されることを確認する。"""
     root = make_repo(tmp_path)
     ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
     release_child, release_parent = multiprocessing.Pipe(duplex=False)
     process = multiprocessing.Process(
-        target=hold_session_fork_lock,
+        target=_hold_session_fork_lock,
         args=(root, ready_child, release_child),
     )
     process.start()
+    lock_attempted = threading.Event()
     acquired = threading.Event()
+
+    original_flock = runtime_state_module.fcntl.flock
+
+    def observe_lock_attempt(fd: int, operation: int) -> None:
+        """worker が排他 lock を試行したことを通知する。"""
+        if operation & runtime_state_module.fcntl.LOCK_EX:
+            lock_attempted.set()
+        original_flock(fd, operation)
+
+    monkeypatch.setattr(runtime_state_module.fcntl, "flock", observe_lock_attempt)
     worker = threading.Thread(target=lambda: _acquire_lock(root, acquired))
     released = False
     try:
         assert ready_parent.recv()
         worker.start()
+        assert lock_attempted.wait(timeout=3)
         assert not acquired.wait(timeout=0.2)
         release_parent.send(True)
         released = True

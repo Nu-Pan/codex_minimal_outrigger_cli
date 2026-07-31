@@ -19,6 +19,7 @@ import os
 import pty
 import select
 import shutil
+import signal
 import struct
 import subprocess
 import sys
@@ -52,6 +53,7 @@ from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
 from main import app
 
+_WORK_ROOT = Path(__file__).resolve().parents[1]
 _CMOC_CONSOLE = Path(sys.executable).with_name("cmoc")
 _REAL_CODEX = shutil.which("codex")
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
@@ -230,6 +232,16 @@ def _production_environment(
         "NO_PROXY": "127.0.0.1,localhost",
         "no_proxy": "127.0.0.1,localhost",
         "PATH": f"{editor_dir}:{os.environ.get('PATH', '')}",
+        # 共有 development venv の console script は、この設定がないと親 session
+        # worktree を import するため、現在の realization worktree を指定する。
+        # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+        "PYTHONPATH": os.pathsep.join(
+            [
+                str(_WORK_ROOT / "src"),
+                str(_WORK_ROOT / "oracle" / "src"),
+                *([os.environ["PYTHONPATH"]] if os.environ.get("PYTHONPATH") else []),
+            ]
+        ),
         "TERM": "xterm-256color",
     }
     assert (
@@ -333,7 +345,9 @@ def _completed_tui_message(codex_home: Path) -> str | None:
     for path in codex_home.glob("sessions/**/rollout-*.jsonl"):
         originator: str | None = None
         completed_message: str | None = None
-        for line in path.read_text().splitlines():
+        # TUI は polling 中にこの file を追記するため、最後の chunk が partial UTF-8
+        # sequence で終わっていても、無効な session event とは限らない。
+        for line in path.read_bytes().decode("utf-8", errors="ignore").splitlines():
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:
@@ -391,6 +405,25 @@ def _answer_terminal_queries(
             os.write(master_fd, response)
             answered.add(query)
     return probe_buffer
+
+
+def _stop_tui_process_group(process: subprocess.Popen[bytes]) -> None:
+    """失敗時に cmoc と、その Codex TUI child を同じ group から停止する。"""
+    # start_new_session=True で作った group を leader だけ terminate すると、
+    # cmoc が起動した実 Codex CLI が test 後も PTY を保持して残る可能性がある。
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(process.pid, sig)
+        except ProcessLookupError:
+            return
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            continue
+        try:
+            os.killpg(process.pid, 0)
+        except ProcessLookupError:
+            return
 
 
 def _run_cmoc_tui(
@@ -452,13 +485,7 @@ def _run_cmoc_tui(
         _read_pty(master_fd, transcript)
         assert returncode == 0, transcript[-12000:].decode(errors="replace")
     finally:
-        if process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
+        _stop_tui_process_group(process)
         os.close(master_fd)
     return message, transcript.decode(errors="replace")
 

@@ -78,10 +78,17 @@ def _cmoc_session_fork_body() -> None:
             5, "session branch を作成して checkout", "create session branch"
         )
         branch_created = False
+        state_file_created = False
         try:
             run_git(["switch", "-c", session_branch], work)
             branch_created = True
             start_subcommand_step(6, "session state を保存", "write session state")
+            # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+            # session-id の再確認後に別 process が state file を作った場合も、既存
+            # state を上書き・rollback 削除しないよう、先に排他的に path を確保する。
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch(exist_ok=False)
+            state_file_created = True
             write_state(path, state)
         except BaseException as error:
             rollback_errors: list[str] = []
@@ -105,12 +112,13 @@ def _cmoc_session_fork_body() -> None:
                     rollback_errors.append(
                         f"session branch deletion failed: {rollback_error!r}"
                     )
-            try:
-                path.unlink(missing_ok=True)
-            except BaseException as rollback_error:
-                rollback_errors.append(
-                    f"session state cleanup failed: {rollback_error!r}"
-                )
+            if state_file_created:
+                try:
+                    path.unlink(missing_ok=True)
+                except BaseException as rollback_error:
+                    rollback_errors.append(
+                        f"session state cleanup failed: {rollback_error!r}"
+                    )
             details = [
                 f"original error: {error!r}",
                 "rollback errors:",

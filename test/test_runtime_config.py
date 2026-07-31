@@ -5,6 +5,7 @@
 - {{work-root}}/oracle/doc/app_spec/error_handling.md
 """
 
+import os
 from pathlib import Path
 from typing import cast
 
@@ -17,7 +18,14 @@ from oracle.other.cmoc_config import (
 )
 
 from basic.acp import ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError, config_from_dict, config_to_dict, load_config
+from cmoc_runtime import (
+    CmocError,
+    config_from_dict,
+    config_to_dict,
+    load_config,
+    render_error,
+    write_config,
+)
 from config.cmoc_config import CmocConfig
 
 
@@ -79,6 +87,64 @@ def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
     ]
 
 
+@pytest.mark.parametrize("payload", [b"{", b"\xff"])
+def test_load_config_rejects_unreadable_json(tmp_path: Path, payload: bytes) -> None:
+    """JSON 構文または UTF-8 が壊れた config を利用者向けエラーへ変換する。"""
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_bytes(payload)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
+
+
+def test_load_config_rejects_non_file_config_path(tmp_path: Path) -> None:
+    """config path が通常ファイルでない場合も読み込みエラーへ変換する。"""
+    root = make_repo(tmp_path)
+    (root / ".cmoc" / "gt" / "ar" / "config.json").mkdir(parents=True)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert exc_info.value.summary == "cmoc config JSON を読み込めません。"
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
+def test_config_rejects_named_pipe_config_path(tmp_path: Path) -> None:
+    """config path が named pipe の場合に read/write で block しない。"""
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path.parent.mkdir(parents=True)
+    os.mkfifo(config_path)
+
+    with pytest.raises(CmocError, match="cmoc config JSON"):
+        load_config(root)
+    with pytest.raises(CmocError, match="cmoc config path"):
+        write_config(config_path, CmocConfig())
+
+
+def test_config_rejects_symlinked_path_without_touching_link_target(
+    tmp_path: Path,
+) -> None:
+    """tracked config の symlink 経由 read/write で link 先を扱わない。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside-config.json"
+    outside.write_text("original\n")
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    config_path.parent.mkdir(parents=True)
+    config_path.symlink_to(outside)
+
+    with pytest.raises(CmocError, match="cmoc config path"):
+        load_config(root)
+    with pytest.raises(CmocError, match="cmoc config path"):
+        write_config(config_path, CmocConfig())
+
+    assert outside.read_text() == "original\n"
+
+
 @pytest.mark.parametrize("value", [False, None, [], "gpt"])
 def test_config_rejects_non_object_codex_model_specs(value: object) -> None:
     """model の値にオブジェクト以外を指定した config を拒否する。"""
@@ -96,6 +162,8 @@ def test_config_rejects_non_object_codex_model_specs(value: object) -> None:
         {"model_provider": "provider", "model": ""},
         {"model_provider": "provider", "model": "  "},
         {"model_provider": "provider", "model": None},
+        {"model_provider": "provider", "model": "\x00"},
+        {"model_provider": "provider", "model": "\ud800"},
     ],
 )
 def test_config_rejects_invalid_codex_model_specs(
@@ -108,11 +176,40 @@ def test_config_rejects_invalid_codex_model_specs(
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
+def test_invalid_config_error_report_escapes_surrogate() -> None:
+    """不正な surrogate を含む設定でも error report を UTF-8 出力できる。"""
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict(
+            {
+                "codex": {
+                    "model": {
+                        "mainstream": {
+                            "model_provider": "provider",
+                            "model": "\ud800",
+                        }
+                    }
+                }
+            }
+        )
+
+    report = render_error(exc_info.value)
+    report.encode("utf-8")
+    assert "\\ud800" in report
+
+
 @pytest.mark.parametrize("value", [False, None, [], {}, "", "  "])
 def test_config_rejects_non_string_reasoning_effort_names(value: object) -> None:
     """reasoning effort 名に文字列以外や空文字列を指定した config を拒否する。"""
     with pytest.raises(CmocError) as exc_info:
         config_from_dict({"codex": {"reasoning_effort": {"low": value}}})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+def test_config_rejects_non_toml_reasoning_effort_name() -> None:
+    """TOML string として符号化できない reasoning effort 名を拒否する。"""
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({"codex": {"reasoning_effort": {"low": "\ud800"}}})
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
@@ -243,6 +340,16 @@ def test_config_to_dict_rejects_invalid_in_memory_provider_setting() -> None:
     config.codex.model_providers["provider"] = CodexModelProviderConfig(
         {"setting": cast(JsonTomlValue, None)}
     )
+
+    with pytest.raises(TypeError):
+        config_to_dict(config)
+
+
+@pytest.mark.parametrize("model", ["\x00", "\ud800"])
+def test_config_to_dict_rejects_unusable_in_memory_model_name(model: str) -> None:
+    """型注釈を迂回した model 名も永続化境界で拒否する。"""
+    config = CmocConfig()
+    config.codex.model[ModelClass.MAINSTREAM] = CodexModelSpec(None, model)
 
     with pytest.raises(TypeError):
         config_to_dict(config)

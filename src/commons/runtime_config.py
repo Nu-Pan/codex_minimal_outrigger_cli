@@ -10,54 +10,101 @@ from oracle.other.cmoc_config import (
 )
 
 from basic.acp import ModelClass, ReasoningEffort
-from commons.runtime_errors import CmocError
-from commons.runtime_paths import config_path
 from config.cmoc_config import (
     CmocConfig,
     CmocConfigCodex,
     CmocConfigOracleReview,
 )
 
+from .runtime_errors import CmocError
+from .runtime_paths import config_path
+
 ConfigKey = TypeVar("ConfigKey", ModelClass, ReasoningEffort)
+
+
+def _model_name(value: Any) -> str:
+    """Codex の専用 argv へ渡せる非空モデル名へ検証する。"""
+    if not isinstance(value, str) or not value.strip() or "\x00" in value:
+        raise TypeError
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # model は TOML string ではなく --model の argv へそのまま渡すため、NUL と
+    # Unicode surrogate を設定読み込み時に拒否して subprocess 起動失敗を防ぐ。
+    validate_json_toml_value(value)
+    return value
+
+
+def _reasoning_effort_name(value: Any) -> str:
+    """Codex の TOML override へ渡せる非空 reasoning effort 名へ検証する。"""
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError
+    validate_json_toml_value(value)
+    return value
+
+
+def _config_int(value: Any) -> int:
+    """永続化対象の int field が bool や別型に置き換わっていないか検証する。"""
+    if type(value) is not int:
+        raise TypeError
+    return value
 
 
 def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     """正本 config 型を、永続化 JSON の object 境界へ変換する。"""
     model_providers: dict[str, dict[str, dict[str, JsonTomlValue]]] = {}
-    for provider_id, provider in config.codex.model_providers.items():
+    for provider_id, provider_config in config.codex.model_providers.items():
         if not isinstance(provider_id, str) or not isinstance(
-            provider, CodexModelProviderConfig
+            provider_config, CodexModelProviderConfig
         ):
             raise TypeError("invalid Codex model provider definition")
         validate_json_toml_value(provider_id)
         settings: dict[str, JsonTomlValue] = {}
-        for key, value in provider.settings.items():
+        for key, setting_value in provider_config.settings.items():
             if not isinstance(key, str):
                 raise TypeError("invalid Codex model provider setting key")
             validate_json_toml_value(key)
-            settings[key] = validate_json_toml_value(value)
+            settings[key] = validate_json_toml_value(setting_value)
         model_providers[provider_id] = {"settings": settings}
+    model: dict[str, dict[str, str | None]] = {}
+    for key, model_spec in config.codex.model.items():
+        if not isinstance(key, ModelClass) or not isinstance(
+            model_spec, CodexModelSpec
+        ):
+            raise TypeError("invalid Codex model definition")
+        model_provider = model_spec.model_provider
+        if model_provider is not None:
+            if not isinstance(model_provider, str):
+                raise TypeError("invalid Codex model provider ID")
+            validate_json_toml_value(model_provider)
+        model[key.value] = {
+            "model_provider": model_provider,
+            "model": _model_name(model_spec.model),
+        }
+
+    reasoning_effort: dict[str, str] = {}
+    for key, value in config.codex.reasoning_effort.items():
+        if not isinstance(key, ReasoningEffort):
+            raise TypeError("invalid Codex reasoning effort key")
+        reasoning_effort[key.value] = _reasoning_effort_name(value)
+
     return {
-        "num_parallel": config.num_parallel,
+        "num_parallel": _config_int(config.num_parallel),
         "codex": {
             "model_providers": model_providers,
-            "model": {
-                key.value: {
-                    "model_provider": value.model_provider,
-                    "model": value.model,
-                }
-                for key, value in config.codex.model.items()
-            },
-            "reasoning_effort": {
-                key.value: value for key, value in config.codex.reasoning_effort.items()
-            },
+            "model": model,
+            "reasoning_effort": reasoning_effort,
             # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
-            "num_try_falv_recovery": config.codex.num_try_falv_recovery,
+            "num_try_falv_recovery": _config_int(config.codex.num_try_falv_recovery),
         },
         "oracle_review": {
-            "num_enumerate_findings_loop": config.oracle_review.num_enumerate_findings_loop,
-            "num_merge_findings_loop": config.oracle_review.num_merge_findings_loop,
-            "num_validate_findings_loop": config.oracle_review.num_validate_findings_loop,
+            "num_enumerate_findings_loop": _config_int(
+                config.oracle_review.num_enumerate_findings_loop
+            ),
+            "num_merge_findings_loop": _config_int(
+                config.oracle_review.num_merge_findings_loop
+            ),
+            "num_validate_findings_loop": _config_int(
+                config.oracle_review.num_validate_findings_loop
+            ),
         },
     }
 
@@ -65,7 +112,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
 def validate_json_toml_value(value: Any) -> JsonTomlValue:
     """JSON と TOML の双方へ意味を変えず保存できる値を検証する。"""
 
-    def validate(item: Any, active_containers: set[int]) -> JsonTomlValue:
+    def _validate(item: Any, active_containers: set[int]) -> JsonTomlValue:
         """循環 container も拒否しながら再帰的な値を検証する。"""
         if isinstance(item, str):
             # TOML string は Unicode scalar value だけを受理する。
@@ -91,19 +138,19 @@ def validate_json_toml_value(value: Any) -> JsonTomlValue:
             active_containers.add(identity)
             try:
                 if isinstance(item, list):
-                    return [validate(element, active_containers) for element in item]
+                    return [_validate(element, active_containers) for element in item]
                 restored: dict[str, JsonTomlValue] = {}
                 for key, element in item.items():
                     if not isinstance(key, str):
                         raise TypeError
-                    validate(key, active_containers)
-                    restored[key] = validate(element, active_containers)
+                    _validate(key, active_containers)
+                    restored[key] = _validate(element, active_containers)
                 return restored
             finally:
                 active_containers.remove(identity)
         raise TypeError
 
-    return validate(value, set())
+    return _validate(value, set())
 
 
 def _model_provider_map_from_dict(data: Any) -> dict[str, CodexModelProviderConfig]:
@@ -140,9 +187,7 @@ def _enum_str_map_from_dict(
     for key, value in data.items():
         # `{{work-root}}/oracle/src/oracle/other/cmoc_config.py` は ReasoningEffort を
         # Codex CLI 名へ変換するため、空名は不正な JSON 編集として扱う。
-        if not isinstance(value, str) or not value.strip():
-            raise TypeError
-        restored[key_type(key)] = value
+        restored[key_type(key)] = _reasoning_effort_name(value)
     return restored
 
 
@@ -161,12 +206,9 @@ def _model_spec_map_from_dict(
         model = value.get("model")
         # `{{work-root}}/oracle/src/oracle/other/cmoc_config.py` は未定義の Codex
         # model 名を許可しないため、人手編集による空値はこの境界で失敗させる。
-        if (
-            (provider is not None and not isinstance(provider, str))
-            or not isinstance(model, str)
-            or not model.strip()
-        ):
+        if provider is not None and not isinstance(provider, str):
             raise TypeError
+        model = _model_name(model)
         if isinstance(provider, str):
             validate_json_toml_value(provider)
         restored[ModelClass(key)] = CodexModelSpec(provider, model)
@@ -188,9 +230,7 @@ def _int_value(data: dict[str, Any], key: str, default: int) -> int:
     value = data.get(key, default)
     # `{{work-root}}/oracle/src/oracle/other/cmoc_config.py` では int field なので、
     # JSON の bool/string 値は数値ではなく人手編集エラーとして扱う。
-    if type(value) is not int:
-        raise TypeError
-    return value
+    return _config_int(value)
 
 
 def config_from_dict(data: dict[str, Any]) -> CmocConfig:
@@ -244,9 +284,12 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
         )
     except (TypeError, ValueError) as exc:
         try:
-            detail = json.dumps(data, ensure_ascii=False, indent=2, default=repr)
+            # {{work-root}}/oracle/doc/app_spec/error_handling.md
+            # 不正 JSON には surrogate も含まれうるため、error report を UTF-8 で出力
+            # できる ASCII escape へ変換する。
+            detail = json.dumps(data, ensure_ascii=True, indent=2, default=repr)
         except (TypeError, ValueError):
-            detail = repr(data)
+            detail = repr(data).encode("utf-8", "backslashreplace").decode("utf-8")
         raise CmocError(
             "cmoc config が不正です。",
             [
@@ -256,8 +299,36 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
         ) from exc
 
 
+def _reject_symlinked_config_path(path: Path) -> None:
+    """config path の symlink 経由アクセスを拒否する。"""
+    # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+    # config は work-root 内の tracked file なので、link 先の設定を読み書きしない。
+    current = path.absolute()
+    while current != current.parent:
+        if current.is_symlink():
+            raise CmocError(
+                "cmoc config path は symlink 経由で扱えません。",
+                [
+                    "config.json と親 directory を通常の file/directory に戻してから再実行してください。"
+                ],
+                str(current),
+            )
+        current = current.parent
+
+
 def write_config(path: Path, config: CmocConfig) -> None:
     """config JSON を人間が確認しやすい安定した表現で保存する。"""
+    _reject_symlinked_config_path(path)
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # FIFO などを open して command が停止しないよう、既存 path は regular file に限る。
+    if path.exists() and not path.is_file():
+        raise CmocError(
+            "cmoc config path は通常ファイルではありません。",
+            [
+                "config.json を通常の file に戻してから再実行してください。",
+            ],
+            str(path),
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
@@ -274,6 +345,7 @@ def write_config(path: Path, config: CmocConfig) -> None:
 def load_config(root: Path) -> CmocConfig:
     """既存 config JSON を読み、利用者向け error 境界で config に復元する。"""
     path = config_path(root)
+    _reject_symlinked_config_path(path)
     if not path.exists():
         raise CmocError(
             "cmoc config が存在しません。",
@@ -282,9 +354,19 @@ def load_config(root: Path) -> CmocConfig:
             ],
             str(path),
         )
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # 特殊 file を read_text する前に拒否し、設定読み込みを即時に失敗させる。
+    if not path.is_file():
+        raise CmocError(
+            "cmoc config JSON を読み込めません。",
+            [
+                "{{work-root}}/.cmoc/gt/ar/config.json を通常の file に修正してください。"
+            ],
+            str(path),
+        )
     try:
-        data = json.loads(path.read_text())
-    except json.JSONDecodeError as exc:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise CmocError(
             "cmoc config JSON を読み込めません。",
             ["{{work-root}}/.cmoc/gt/ar/config.json の JSON 構文を確認してください。"],

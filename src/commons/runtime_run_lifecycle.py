@@ -13,40 +13,44 @@ INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を�
 
 import os
 from collections.abc import Collection
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
-from commons.indexing import commit_index_updates, indexing_lock, update_indexes
-from commons.runtime_codex import run_codex_exec as run_indexing_codex_exec
-from commons.runtime_errors import CmocError
-from commons.runtime_git import (
+from .indexing import commit_index_updates, indexing_lock, update_indexes
+from .runtime_codex import run_codex_exec as run_indexing_codex_exec
+from .runtime_codex_profile import process_start_time
+from .runtime_errors import CmocError
+from .runtime_git import (
     branch_exists,
     create_run_worktree,
     current_branch,
     delete_branch,
     head_commit,
     is_realization_file_path,
+    literal_pathspec,
     remove_worktree,
     require_clean_worktree,
     run_git,
     status_path_statuses,
 )
-from commons.runtime_paths import (
+from .runtime_paths import (
     is_root_memo,
+    pushd,
     refactor_state_path,
     repo_root,
     timestamp,
     work_root,
 )
-from commons.runtime_run import (
+from .runtime_run import (
     delete_run_process_id,
     expected_run_worktree,
+    read_run_process_id,
     run_lifecycle_lock,
     worktree_for_branch,
     worktree_for_branch_optional,
     write_run_process_id,
 )
-from commons.runtime_state import (
+from .runtime_state import (
     RunPart,
     SessionState,
     load_state_for_branch,
@@ -118,6 +122,16 @@ def require_ready_session() -> tuple[Path, Path, str, Path, SessionState, str]:
     )
 
 
+def session_run_was_ready() -> bool:
+    """新しい editing run を開始できる状態だったかを確認する。"""
+    # {{work-root}}/oracle/doc/dev_rule/design_rule.md
+    try:
+        require_ready_session()
+    except CmocError:
+        return False
+    return True
+
+
 def start_editing_run(kind: str) -> EditingRunContext:
     """session HEAD から isolated run branch/worktree を作り state を公開する。"""
     (
@@ -141,7 +155,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
             )
         require_clean_worktree(session_worktree)
         fork_commit = head_commit(session_worktree)
-        run_branch, run_worktree = _new_run_target(repository, session_id)
+        run_branch, run_worktree = new_run_target(repository, session_id)
         created = False
         published = False
         try:
@@ -165,8 +179,20 @@ def start_editing_run(kind: str) -> EditingRunContext:
             if published:
                 state.run.state = "error"
                 write_state(path, state)
-            elif created:
-                remove_worktree(repository, run_worktree)
+            else:
+                # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+                # create_run_worktree または state 公開の途中で中断しても、未公開の
+                # branch/worktree と running state を残さない。run target は lock 下で
+                # 新規確保済みなので、ここで扱う state/resource はこの invocation の
+                # 部分作成物である。
+                if state.run.state == "running" and state.run.branch == run_branch:
+                    state.run = RunPart()
+                    write_state(path, state)
+                worktree_created = (
+                    created or run_worktree.exists() or run_worktree.is_symlink()
+                )
+                if worktree_created:
+                    remove_worktree(repository, run_worktree)
                 if branch_exists(repository, run_branch):
                     delete_branch(repository, run_branch, force=True)
             raise
@@ -256,6 +282,26 @@ def resolve_active_run(
     )
 
 
+def recover_started_run(kind: str) -> EditingRunContext | None:
+    """context 公開前に作成された指定 kind の run を回収対象として解決する。"""
+    try:
+        context, _state = resolve_active_run({"running", "error"})
+    except CmocError:
+        return None
+    if context.kind != kind:
+        return None
+    tracked = read_run_process_id(context.repo, context.session_id)
+    if tracked is not None and (
+        tracked.process_id != os.getpid()
+        or tracked.start_time is None
+        or process_start_time(os.getpid()) != tracked.start_time
+    ):
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # ready 確認後に別 process が run を公開しても、その run を recovery しない。
+        return None
+    return replace(context, state_before="ready")
+
+
 def set_run_state(context: EditingRunContext, run_state: str) -> SessionState:
     """同じ active run であることを確認して joinable/error を保存する。"""
     if run_state not in {"joinable", "error"}:
@@ -312,10 +358,14 @@ def commit_work_unit(
 def refresh_indexes(worktree: Path, *, commit: bool) -> list[Path]:
     """run worktree の INDEX.md を再生成し、必要なら独立 commit にする。"""
     with indexing_lock(worktree):
-        updated = update_indexes(worktree, run_indexing_codex_exec)
-        if commit:
-            commit_index_updates(worktree, updated)
-        return updated
+        # INDEX builder は `{{work-root}}` を process cwd から解決するため、対象
+        # worktree を明示引数へ渡すだけでは不十分である。join を run worktree
+        # から実行する場合も、session worktree 用 prompt を正しい root で作る。
+        with pushd(worktree):
+            updated = update_indexes(worktree, run_indexing_codex_exec)
+            if commit:
+                commit_index_updates(worktree, updated)
+            return updated
 
 
 def worktree_change_paths(
@@ -325,8 +375,8 @@ def worktree_change_paths(
 ) -> list[str]:
     """未 commit 差分の変更対象を repository 相対 path で返す。"""
     # {{work-root}}/oracle/doc/app_spec/misc_spec.md
-    # report 用の既定値は rename 後の path だけを返し、agent 権限検査だけが
-    # rename 元も明示的に含める。
+    # report 用の既定値は rename 後の path だけを返し、差分の有無を判定する
+    # 呼び出し側だけが rename 元も明示的に含める。
     paths = status_path_statuses(
         worktree,
         untracked_all=True,
@@ -334,6 +384,37 @@ def worktree_change_paths(
     )
     return sorted(
         {str(path.absolute().relative_to(worktree.absolute())) for _, path in paths}
+    )
+
+
+def unexpected_agent_paths(
+    context: EditingRunContext,
+    changed_paths: Collection[str],
+) -> list[str]:
+    """agent call が realization file 以外へ生じさせた差分を返す。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
+    return sorted(
+        {
+            path
+            for path in changed_paths
+            if not (
+                _is_agent_expected_path(
+                    context.run_worktree,
+                    context.kind,
+                    path,
+                    context.run_branch,
+                )
+                or _is_agent_expected_path(
+                    context.run_worktree,
+                    context.kind,
+                    path,
+                    context.run_fork_commit,
+                )
+            )
+        }
     )
 
 
@@ -377,23 +458,6 @@ def flattened_change_paths(changes: list[GitChange]) -> list[str]:
             else change.paths[0]
         )
     return sorted(paths)
-
-
-def unexpected_agent_paths(
-    context: EditingRunContext,
-    paths: list[str],
-) -> list[str]:
-    """workload agent が変更を許可されていない path を返す。"""
-    return sorted(
-        path
-        for path in paths
-        if not _is_agent_expected_path(
-            context.run_worktree,
-            context.kind,
-            path,
-            context.run_branch,
-        )
-    )
 
 
 def unexpected_run_paths(
@@ -456,19 +520,38 @@ def raw_oracle_diff(worktree: Path, base: str, end: str) -> str:
     )
     if not candidates:
         return ""
+    # Git は `--` の後も pathspec の wildcard を解釈するため、literal pathspec を使う。
+    # これにより、1つの oracle filename が diff の対象を抑制・拡張することを防ぐ。
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    literal_candidates = [literal_pathspec(path) for path in candidates]
     return run_git(
-        ["diff", "--binary", "--find-renames", base, end, "--", *candidates],
+        [
+            "diff",
+            "--binary",
+            "--find-renames",
+            base,
+            end,
+            "--",
+            *literal_candidates,
+        ],
         worktree,
     ).stdout
 
 
-def _new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
+def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
     """衝突しない run branch と管理 worktree path を予約候補として選ぶ。"""
     for _ in range(MAX_RUN_ID_ATTEMPTS):
         run_id = timestamp()
         branch = f"cmoc/run/{session_id}/{run_id}"
         worktree = expected_run_worktree(repository, branch)
-        if not branch_exists(repository, branch) and not worktree.exists():
+        # {{work-root}}/oracle/doc/branch_model.md
+        # Path.exists() は dangling symlink に false を返すため、symlink を空き
+        # target として create_run_worktree へ渡さない。
+        if (
+            not branch_exists(repository, branch)
+            and not worktree.exists()
+            and not worktree.is_symlink()
+        ):
             return branch, worktree
     raise CmocError(
         "一意な run-id を生成できませんでした。",

@@ -5,14 +5,14 @@ from collections.abc import Collection
 from pathlib import Path
 from typing import Literal, TypedDict, cast
 
-from commons.runtime_content import file_sha256
-from commons.runtime_errors import CmocError
-from commons.runtime_git import (
+from .runtime_content import file_sha256
+from .runtime_errors import CmocError
+from .runtime_git import (
     is_oracle_file_path,
     is_realization_file_path,
     run_git,
 )
-from commons.runtime_paths import refactor_state_path
+from .runtime_paths import refactor_state_path
 
 InvestigationResult = Literal["not_investigated", "no_findings", "findings"]
 
@@ -35,30 +35,27 @@ def load_refactor_state(root: Path) -> RefactorState:
     根拠: {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     """
     path = refactor_state_path(root)
+    _reject_symlinked_state_path(path)
+    _reject_non_file_state_path(path)
     if not path.exists():
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise _invalid_refactor_state(path, "JSON を読み込めません。") from exc
-    if not isinstance(data, dict):
-        raise _invalid_refactor_state(
-            path, "top-level は object である必要があります。"
-        )
-    state: RefactorState = {}
-    for raw_path, raw_entry in data.items():
-        if not isinstance(raw_path, str) or not _valid_relative_path(raw_path):
-            raise _invalid_refactor_state(path, f"不正な path key: {raw_path!r}")
-        state[raw_path] = _validated_entry(path, raw_path, raw_entry)
-    return state
+    return _validated_state(path, data)
 
 
 def write_refactor_state(root: Path, state: RefactorState) -> None:
     """refactor state を path 順の安定した JSON 表現で保存する。"""
     path = refactor_state_path(root)
+    _reject_symlinked_state_path(path)
+    _reject_non_file_state_path(path)
+    validated = _validated_state(path, state)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(dict(sorted(state.items())), ensure_ascii=False, indent=2) + "\n",
+        json.dumps(dict(sorted(validated.items())), ensure_ascii=False, indent=2)
+        + "\n",
         encoding="utf-8",
     )
 
@@ -144,6 +141,44 @@ def mark_all_refactor_targets_required(state: RefactorState) -> None:
     """完了済み state から新しい full refactor cycle を開始する。"""
     for entry in state.values():
         entry["investigation_required"] = True
+
+
+def _reject_symlinked_state_path(path: Path) -> None:
+    """state path の symlink 経由アクセスを拒否する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # state は cmoc が更新する管理 file なので、親 directory を含めて symlink を
+    # 追跡すると work-root 外の file を読み書きしてしまう。
+    absolute = path.absolute()
+    current = absolute
+    while current != current.parent:
+        if current.is_symlink():
+            raise _invalid_refactor_state(
+                path, "state path は symlink 経由で扱えません。"
+            )
+        current = current.parent
+
+
+def _reject_non_file_state_path(path: Path) -> None:
+    """state path が通常 file でない場合の block と raw exception を防ぐ。"""
+    if path.exists() and not path.is_file():
+        raise _invalid_refactor_state(path, "state path は通常ファイルではありません。")
+
+
+def _validated_state(path: Path, value: object) -> RefactorState:
+    """refactor state 全体を schema 検証し、型付けされた state として返す。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
+    if not isinstance(value, dict):
+        raise _invalid_refactor_state(
+            path, "top-level は object である必要があります。"
+        )
+    state: RefactorState = {}
+    for raw_path, raw_entry in value.items():
+        if not isinstance(raw_path, str) or not _valid_relative_path(raw_path):
+            raise _invalid_refactor_state(path, f"不正な path key: {raw_path!r}")
+        state[raw_path] = _validated_entry(path, raw_path, raw_entry)
+    return state
 
 
 def _valid_relative_path(value: str) -> bool:

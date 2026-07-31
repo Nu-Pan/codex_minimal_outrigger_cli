@@ -11,10 +11,11 @@ from oracle.acp_builder.indexing.index_entry import (
     build_indexing_index_entry_parameter as _build_indexing_index_entry_parameter,
 )
 
-from acp.builder.common.prompt_fence import (
+from basic.acp import AgentCallParameter as _AgentCallParameter
+
+from ..common.prompt_fence import (
     _protect_code_block_fence,
 )
-from basic.acp import AgentCallParameter as _AgentCallParameter
 
 __all__ = ["build_indexing_index_entry_parameter"]
 

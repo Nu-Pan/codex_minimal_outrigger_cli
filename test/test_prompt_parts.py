@@ -1,9 +1,7 @@
 """標準 prompt parts と complete prompt の組み立て結果を検証する。
 
-この file は 16,000 文字を超えるが、各 prompt part の rendering と complete prompt の
-有効化・placeholder 展開は同じ StructDoc 出力を共有する一つの責務である。分割すると
-標準文面と統合時の包含条件を複数 file で追う必要があるため、現状は prompt builder
-回帰として一箇所に保つ。
+各 prompt part の rendering と complete prompt の有効化・placeholder 展開は同じ
+StructDoc 出力を共有する一つの責務であるため、prompt builder 回帰として一箇所に保つ。
 
 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
@@ -35,39 +33,9 @@ from basic.acp import FileAccessMode
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 
 
-def build_apply_review_standard() -> StructDoc:
-    """canonical apply review standardの本文だけを返す。"""
-    return _build_apply_review_standard()[1]
-
-
-def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
-    """canonical file access ruleの本文だけを返す。"""
-    return _build_file_access_rule(mode)[1]
-
-
-def build_index_entry_standard() -> StructDoc:
-    """canonical index entry standardの本文だけを返す。"""
-    return _build_index_entry_standard()[1]
-
-
-def build_oracle_review_standard() -> StructDoc:
-    """canonical oracle review standardの本文だけを返す。"""
-    return _build_oracle_review_standard()[1]
-
-
-def build_realization_standard() -> StructDoc:
-    """canonical realization standardの本文だけを返す。"""
-    return _build_realization_standard()[1]
-
-
-def build_routing_rule() -> StructDoc:
-    """canonical routing ruleの本文だけを返す。"""
-    return _build_routing_rule()[1]
-
-
 def test_build_apply_review_standard_renders_core_review_aspects() -> None:
     """apply review standardの主要な所見境界がrenderされることを検証する。"""
-    doc = build_apply_review_standard()
+    doc = _build_apply_review_standard()[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "apply review standard"
@@ -81,7 +49,7 @@ def test_build_apply_review_standard_renders_core_review_aspects() -> None:
 
 def test_build_routing_rule_renders_core_reading_rules() -> None:
     """routing ruleがINDEX案内の主要な見出しをrenderすることを検証する。"""
-    doc = build_routing_rule()
+    doc = _build_routing_rule()[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "routing rule"
@@ -146,7 +114,7 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
     }
 
     for mode, fragments in expected.items():
-        doc = build_file_access_rule(mode)
+        doc = _build_file_access_rule(mode)[1]
         rendered = render_as_markdown(doc)
         assert doc.title == f"file read write rule - {mode.value}"
         for fragment in fragments:
@@ -312,7 +280,7 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
 
 def test_build_realization_standard_renders_file_split_and_merge_rules() -> None:
     """realization standardのfile分割・統合規則がrenderされることを検証する。"""
-    doc = build_realization_standard()
+    doc = _build_realization_standard()[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "realization standard"
@@ -348,7 +316,7 @@ def test_complete_prompt_can_include_realization_standard() -> None:
 
 def test_build_index_entry_standard_renders_core_output_rules() -> None:
     """index entry standardの出力境界がrenderされることを検証する。"""
-    doc = build_index_entry_standard()
+    doc = _build_index_entry_standard()[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "index entry standard"
@@ -400,7 +368,7 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
 
 def test_build_oracle_review_standard_renders_core_review_rules() -> None:
     """oracle review standardのseverityと所見境界がrenderされることを検証する。"""
-    doc = build_oracle_review_standard()
+    doc = _build_oracle_review_standard()[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "oracle review standard"

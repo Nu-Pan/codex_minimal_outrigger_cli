@@ -6,6 +6,7 @@
 単一 workload の lifecycle として保つ。
 """
 
+from collections.abc import Collection
 from pathlib import Path
 
 import typer
@@ -18,6 +19,7 @@ from acp.builder.realization.refactor.fork.file_review_and_fix import (
 )
 from cmoc_runtime import (
     CmocError,
+    current_subcommand_logger,
     file_sha256,
     load_config,
     pushd,
@@ -38,19 +40,18 @@ from commons.runtime_refactor import (
     write_refactor_state,
 )
 from commons.runtime_run import (
-    read_run_process_id,
     run_process_tracking,
-    stop_child_process_group,
+    stop_tracked_codex_children,
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,
     commit_work_unit,
     flattened_change_paths,
+    recover_started_run,
     refresh_indexes,
-    require_ready_session,
-    resolve_active_run,
     rollback_work_unit,
+    session_run_was_ready,
     set_run_state,
     start_editing_run,
     tree_changes,
@@ -58,7 +59,7 @@ from commons.runtime_run_lifecycle import (
     unexpected_run_paths,
     worktree_change_paths,
 )
-from commons.runtime_run_report import write_fork_report
+from commons.runtime_run_report import _render_changed_path, write_fork_report
 
 _UnresolvedFinding = tuple[str, str, Path]
 
@@ -79,30 +80,38 @@ def _cmoc_realization_refactor_fork_body() -> None:
     context: EditingRunContext | None = None
     units: list[tuple[str, int]] = []
     unresolved_findings: dict[str, list[_UnresolvedFinding]] = {}
+    cleanup_warnings: list[str] = []
     start_attempted = False
     start_was_ready = False
     try:
         start_subcommand_step(2, "realization refactor run を作成", "create run")
-        start_was_ready = _session_run_was_ready()
+        start_was_ready = session_run_was_ready()
         start_attempted = True
         context = start_editing_run("realization_refactor")
-        start_subcommand_step(3, "full refactor cycle を初期化", "initialize cycle")
-        _initialize_cycle(context)
-        start_subcommand_step(4, "file 単位の調査と修正を実行", "run refactor loop")
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # 初期化時の INDEX 更新も Codex call を起こすため、fork 全体を同じ
+        # process tracking scope に置き、interrupt/abandon から停止可能にする。
         with run_process_tracking(context.repo, context.session_id):
+            start_subcommand_step(3, "full refactor cycle を初期化", "initialize cycle")
+            cleanup_warnings.extend(_initialize_cycle(context) or [])
+            start_subcommand_step(4, "file 単位の調査と修正を実行", "run refactor loop")
             while target := select_refactor_target(
                 load_refactor_state(context.run_worktree), unresolved_findings
             ):
-                unit_target, finding_count, unresolved = _run_refactor_unit(
-                    context, target
+                _run_refactor_unit(
+                    context,
+                    target,
+                    units,
+                    unresolved_findings,
+                    cleanup_warnings,
                 )
-                units.append((unit_target, finding_count))
-                if unresolved:
-                    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-                    # commit 済みの対象だけを current fork 内で保留し、次の対象へ進む。
-                    unresolved_findings[target] = unresolved
             reason = _completion_reason(context.run_worktree, unresolved_findings)
             summary = _completion_change_summary(context)
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # joinable は run worktree を使う Codex descendant の停止後に公開する。
+            cleanup_warnings.extend(
+                stop_tracked_codex_children(context.repo, context.session_id) or []
+            )
         start_subcommand_step(5, "run を joinable に更新", "publish joinable")
         set_run_state(context, "joinable")
         start_subcommand_step(6, "fork report を保存", "write fork report")
@@ -113,6 +122,7 @@ def _cmoc_realization_refactor_fork_body() -> None:
             units,
             unresolved_findings,
             summary=summary,
+            cleanup_errors=cleanup_warnings,
         )
         typer.echo(_completion_log(reason, unresolved_findings, report))
     except KeyboardInterrupt as interruption:
@@ -122,12 +132,14 @@ def _cmoc_realization_refactor_fork_body() -> None:
             # 中断対象として回収してはならない。context 返却前の start failure
             # だけを、公開済み run の回収対象にする。
             if start_attempted and start_was_ready:
-                context = _recover_started_run()
+                context = recover_started_run("realization_refactor")
             if context is None:
                 raise
         cleanup_errors: list[str] = []
         try:
-            _stop_tracked_codex_children(context)
+            cleanup_warnings.extend(
+                stop_tracked_codex_children(context.repo, context.session_id) or []
+            )
         except BaseException as cleanup_error:
             cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
         try:
@@ -140,7 +152,7 @@ def _cmoc_realization_refactor_fork_body() -> None:
                 units,
                 unresolved_findings,
                 interruption,
-                cleanup_errors,
+                [*cleanup_warnings, *cleanup_errors],
             )
         try:
             set_run_state(context, "joinable")
@@ -151,7 +163,7 @@ def _cmoc_realization_refactor_fork_body() -> None:
                 units,
                 unresolved_findings,
                 interruption,
-                cleanup_errors,
+                [*cleanup_warnings, *cleanup_errors],
             )
         try:
             report = _write_refactor_report(
@@ -161,6 +173,7 @@ def _cmoc_realization_refactor_fork_body() -> None:
                 units,
                 unresolved_findings,
                 summary=None,
+                cleanup_errors=cleanup_warnings,
             )
         except BaseException as report_error:
             cleanup_errors.append(f"interruption report failed: {report_error!r}")
@@ -169,21 +182,30 @@ def _cmoc_realization_refactor_fork_body() -> None:
                 units,
                 unresolved_findings,
                 interruption,
-                cleanup_errors,
+                [*cleanup_warnings, *cleanup_errors],
             )
         typer.echo(_completion_log("user_interruption", unresolved_findings, report))
         return
     except BaseException as exc:
         if context is None:
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-            # CmocError は共通事前条件の失敗として既存 run を変更せず再送出する。
-            # 非 CmocError の start failure だけを、context 返却前に公開された
-            # run の回収対象とする。
+            # 事前条件が ready でなかった場合は既存 run を回収しない。ready を
+            # 確認後に別 invocation が先に run を公開すると CmocError になるため、
+            # その run をこの invocation の回収対象として扱わない。
             if start_attempted and start_was_ready and not isinstance(exc, CmocError):
-                context = _recover_started_run()
+                context = recover_started_run("realization_refactor")
             if context is None:
                 raise
-        error_cleanup_errors: list[str] = []
+        error_cleanup_errors: list[str] = list(cleanup_warnings)
+        try:
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # rollback 後も Codex descendant が worktree を変更し続けないよう、
+            # error cleanup でも停止を rollback より先に行う。
+            error_cleanup_errors.extend(
+                stop_tracked_codex_children(context.repo, context.session_id) or []
+            )
+        except BaseException as cleanup_error:
+            error_cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
         try:
             rollback_work_unit(context.run_worktree)
         except BaseException as cleanup_error:
@@ -199,25 +221,6 @@ def _cmoc_realization_refactor_fork_body() -> None:
             exc,
             error_cleanup_errors,
         )
-
-
-def _stop_tracked_codex_children(context: EditingRunContext) -> None:
-    """中断時に editing run が追跡している Codex child group を停止する。"""
-    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    tracked = read_run_process_id(context.repo, context.session_id)
-    if tracked is None:
-        return
-    for child in tracked.child_processes:
-        stop_child_process_group(child)
-
-
-def _session_run_was_ready() -> bool:
-    """新しい run を開始できる状態だったかを回収判定用に確認する。"""
-    try:
-        require_ready_session()
-    except CmocError:
-        return False
-    return True
 
 
 def _raise_refactor_interruption_error(
@@ -275,55 +278,106 @@ def _raise_refactor_error(
     raise cmoc_error from error
 
 
-def _recover_started_run() -> EditingRunContext | None:
-    """start 後の context 代入前に公開された run を cleanup 対象として回収する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    try:
-        context, _state = resolve_active_run({"running", "error"})
-    except CmocError:
-        return None
-    return context if context.kind == "realization_refactor" else None
-
-
-def _initialize_cycle(context: EditingRunContext) -> None:
+def _initialize_cycle(context: EditingRunContext) -> list[str]:
     """refactor state と INDEX を同期して新しい cycle の commit を作る。"""
     state = sync_refactor_state(context.run_worktree)
+    if not state:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # 完了時の refactor state は各 file の履歴を保持する非空 object でなければ
+        # ならない。対象がない cycle を natural_completion として公開しない。
+        raise CmocError(
+            "realization refactor の対象 file がありません。",
+            ["oracle file または realization file を追加してから再実行してください。"],
+            str(refactor_state_path(context.run_worktree)),
+        )
     if not any(entry["investigation_required"] for entry in state.values()):
         mark_all_refactor_targets_required(state)
         write_refactor_state(context.run_worktree, state)
     refresh_indexes(context.run_worktree, commit=False)
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # INDEX 用 Codex の leader 終了後も descendant が残る場合があるため、cycle の
+    # state と INDEX を commit する前に run worktree への遅延書き込みを止める。
+    cleanup_warnings = stop_tracked_codex_children(context.repo, context.session_id)
+    unexpected = _unexpected_refresh_paths(
+        context,
+        [],
+        worktree_change_paths(context.run_worktree, include_rename_sources=True),
+    )
+    if unexpected:
+        raise CmocError(
+            "refactor cycle に想定外差分があります。",
+            ["run worktree の差分を確認してください。"],
+            "\n".join(unexpected),
+        )
     commit_work_unit(
         context.run_worktree,
         "cmoc realization refactor cycle",
         allow_empty=True,
     )
+    return cleanup_warnings
 
 
 def _run_refactor_unit(
     context: EditingRunContext,
     target: str,
-) -> tuple[str, int, list[_UnresolvedFinding]]:
+    units: list[tuple[str, int]],
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+    cleanup_warnings: list[str],
+) -> None:
     """単一 target の agent call、差分検証、state 更新、commit を実行する。"""
     target_path = context.run_worktree / target
     if not (target_path.is_file() or target_path.is_symlink()):
         sync_refactor_state(context.run_worktree)
-        commit_work_unit(
-            context.run_worktree,
+        _commit_refactor_unit(
+            context,
+            target,
+            0,
+            [],
+            units,
+            unresolved_findings,
             f"cmoc realization refactor sync {target}",
         )
-        return target, 0, []
+        return
     investigated_hash = file_sha256(target_path)
+    state_paths_before = set(load_refactor_state(context.run_worktree))
+    agent_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
+
+    def record_agent_head() -> None:
+        """本命 agent の直前の HEAD を preflight 後に記録する。"""
+        nonlocal agent_head
+        agent_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
+
     with pushd(context.run_worktree):
-        parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
-            target_path
+        try:
+            parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
+                target_path
+            )
+            result = run_codex_exec(
+                parameter,
+                root=context.repo,
+                cwd=context.run_worktree,
+                config=load_config(context.run_worktree),
+                purpose=f"realization refactor: {target}",
+                # {{work-root}}/oracle/doc/app_spec/indexing.md
+                # file-review builder の preflight commit を agent commit の検査基準へ
+                # 含めず、本命 subprocess の直前を baseline とする。
+                before_agent_call=record_agent_head,
+            )
+        except BaseException:
+            _ensure_agent_did_not_commit(context.run_worktree, agent_head)
+            raise
+    # {{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py
+    # agent は git commit を実行してはいけない。commit 済み差分は status 検査をすり抜けるため、
+    # process tracking の child を止めた直後に HEAD も検査し、違反時は処理単位の開始
+    # commit へ戻してから error cleanup へ渡す。
+    try:
+        cleanup_warnings.extend(
+            stop_tracked_codex_children(context.repo, context.session_id) or []
         )
-        result = run_codex_exec(
-            parameter,
-            root=context.repo,
-            cwd=context.run_worktree,
-            config=load_config(context.run_worktree),
-            purpose=f"realization refactor: {target}",
-        )
+    except BaseException:
+        _ensure_agent_did_not_commit(context.run_worktree, agent_head)
+        raise
+    _ensure_agent_did_not_commit(context.run_worktree, agent_head)
     if result.returncode != 0:
         raise CmocError(
             "refactor agent が正常終了しませんでした。",
@@ -337,9 +391,12 @@ def _run_refactor_unit(
     )
     unexpected = unexpected_agent_paths(context, changed_realization)
     if unexpected:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # state と INDEX.md は cmoc が更新するため、agent call 直後に realization
+        # file 以外の差分を拒否し、agent の変更を cmoc の更新として取り込まない。
         raise CmocError(
-            "refactor agent が想定外 path を変更しました。",
-            ["run report を確認し、run を join または abandon してください。"],
+            "refactor agent が realization file 以外を変更しました。",
+            ["Codex call log と run worktree の差分を確認してください。"],
             "\n".join(unexpected),
         )
     if not findings and changed_realization:
@@ -347,6 +404,22 @@ def _run_refactor_unit(
             "所見が空の refactor agent call に差分があります。",
             ["Codex call log と run worktree の差分を確認してください。"],
             "\n".join(changed_realization),
+        )
+    unattributed = _unattributed_realization_paths(
+        context,
+        target,
+        changed_realization,
+        findings,
+        state_paths_before,
+    )
+    if unattributed:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # agent の差分は返却した所見のいずれかに対応しなければならない。path の
+        # evidence に現れない realization 差分を処理単位へ混ぜず、commit 前に拒否する。
+        raise CmocError(
+            "refactor agent の差分が所見に対応していません。",
+            ["Codex call log と run worktree の差分を確認してください。"],
+            "\n".join(unattributed),
         )
     normalized_findings = findings
     if (
@@ -374,6 +447,11 @@ def _run_refactor_unit(
         changed_realization,
     )
     refresh_indexes(context.run_worktree, commit=False)
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # INDEX 用 Codex の descendant による遅延差分を処理単位の commit に混ぜない。
+    cleanup_warnings.extend(
+        stop_tracked_codex_children(context.repo, context.session_id) or []
+    )
     all_unit_paths = worktree_change_paths(
         context.run_worktree,
         include_rename_sources=True,
@@ -384,16 +462,16 @@ def _run_refactor_unit(
         # status と tree diff の分類は path 単位で同じなので一時 change として扱う。
         [_status_change(path) for path in all_unit_paths],
     )
+    unexpected.extend(
+        _unexpected_refresh_paths(context, changed_realization, all_unit_paths)
+    )
+    unexpected = sorted(set(unexpected))
     if unexpected:
         raise CmocError(
             "refactor 処理単位に想定外差分があります。",
             ["run worktree の差分を確認してください。"],
             "\n".join(unexpected),
         )
-    commit_work_unit(
-        context.run_worktree,
-        f"cmoc realization refactor {target}",
-    )
     unresolved_details = [
         (
             str(finding.get("title", "")),
@@ -402,12 +480,152 @@ def _run_refactor_unit(
         )
         for finding in unresolved
     ]
-    return target, len(normalized_findings), unresolved_details
+    _commit_refactor_unit(
+        context,
+        target,
+        len(normalized_findings),
+        unresolved_details,
+        units,
+        unresolved_findings,
+        f"cmoc realization refactor {target}",
+        pending_realization_paths=changed_realization,
+        state_paths_before=state_paths_before,
+    )
+
+
+def _ensure_agent_did_not_commit(worktree: Path, before_head: str) -> None:
+    """agent call 中の commit を開始前の run tree へ戻して拒否する。"""
+    after_head = run_git(["rev-parse", "HEAD"], worktree).stdout.strip()
+    if after_head == before_head:
+        return
+    try:
+        run_git(["reset", "--hard", before_head], worktree)
+    except BaseException as reset_error:
+        raise CmocError(
+            "refactor agent が commit を作成し、差分を戻せませんでした。",
+            ["run worktree の git history と Codex call log を確認してください。"],
+            f"before HEAD: {before_head}\nafter HEAD: {after_head}\n"
+            f"reset error: {reset_error!r}",
+        ) from reset_error
+    raise CmocError(
+        "refactor agent が git commit を実行しました。",
+        ["agent の commit を取り除いてから refactor fork を再実行してください。"],
+        f"before HEAD: {before_head}\nafter HEAD: {after_head}",
+    )
+
+
+def _commit_refactor_unit(
+    context: EditingRunContext,
+    target: str,
+    finding_count: int,
+    unresolved: list[_UnresolvedFinding],
+    units: list[tuple[str, int]],
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+    message: str,
+    *,
+    pending_realization_paths: Collection[str] = (),
+    state_paths_before: Collection[str] = (),
+) -> None:
+    """commit 済み処理単位の report 進捗を interruption 前に公開する。
+
+    commit 後、呼び出し元へ戻る前にも Ctrl+C が届く。HEAD が進んだ場合は
+    その処理単位を確定済みとして記録してから中断処理へ戻し、report の進捗を
+    実際の run branch と一致させる。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
+    before_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
+    commit_result: str | None = None
+    try:
+        commit_result = commit_work_unit(context.run_worktree, message)
+    finally:
+        after_head = run_git(["rev-parse", "HEAD"], context.run_worktree, check=False)
+        if commit_result is not None or (
+            after_head.returncode == 0 and after_head.stdout.strip() != before_head
+        ):
+            units.append((target, finding_count))
+            committed_changes = tree_changes(
+                context.run_worktree,
+                before_head,
+                after_head.stdout.strip(),
+            )
+            rename_paths = {
+                change.paths[0]: change.paths[1]
+                for change in committed_changes
+                if change.status.startswith("R") and len(change.paths) == 2
+            }
+            state = load_refactor_state(context.run_worktree)
+            if target not in rename_paths and target not in state:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+                # Git は内容の変更量が大きい rename を delete/add として記録する。
+                # 処理単位で新しく現れた realization file が一つだけなら、state の
+                # 旧 target をその path へ対応付け、unresolved を失わないようにする。
+                candidates = sorted(
+                    {
+                        path
+                        for path in pending_realization_paths
+                        if path != target
+                        and path in state
+                        and path not in state_paths_before
+                    }
+                )
+                if len(candidates) == 1:
+                    rename_paths[target] = candidates[0]
+            _reconcile_unresolved_findings(
+                state,
+                rename_paths,
+                unresolved_findings,
+            )
+            if unresolved:
+                # commit 済みの対象だけを current fork 内で保留し、次の対象へ進む。
+                unresolved_target = rename_paths.get(target, target)
+                if unresolved_target in state:
+                    unresolved_findings[unresolved_target] = unresolved
+
+
+def _reconcile_unresolved_findings(
+    state: RefactorState,
+    rename_paths: dict[str, str],
+    unresolved_findings: dict[str, list[_UnresolvedFinding]],
+) -> None:
+    """commit 後の state path に current fork の unresolved を揃える。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # rename は state 上で旧 path の削除と新 path の追加になるため、commit 前の
+    # target key をそのまま保持すると completed_with_unresolved の集合が不一致になる。
+    for target in list(unresolved_findings):
+        current_target = rename_paths.get(target, target)
+        findings = unresolved_findings.pop(target)
+        if current_target in state:
+            unresolved_findings[current_target] = findings
 
 
 def _status_change(path: str) -> GitChange:
     """未 commit path を共通の差分分類へ渡す最小 GitChange にする。"""
     return GitChange("M", (path,))
+
+
+def _unexpected_refresh_paths(
+    context: EditingRunContext,
+    changed_agent_paths: list[str],
+    pending_paths: list[str],
+) -> list[str]:
+    """INDEX refresh 後に増えた cmoc 管理外の差分を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/indexing.md
+    # INDEX 更新は INDEX.md と refactor state だけを生成するため、refresh 後に増えた
+    # realization 差分を agent の許可済み差分へ便乗させない。
+    refactor_state = refactor_state_path(context.run_worktree).relative_to(
+        context.run_worktree
+    )
+    agent_paths = set(changed_agent_paths)
+    return sorted(
+        {
+            path
+            for path in pending_paths
+            if path not in agent_paths
+            and Path(path).name != "INDEX.md"
+            and Path(path) != refactor_state
+        }
+    )
 
 
 def _update_refactor_state(
@@ -456,6 +674,87 @@ def _validated_findings(output: object, target: str) -> list[dict]:
             f"target: {target}\noutput: {output!r}",
         )
     return findings
+
+
+def _unattributed_realization_paths(
+    context: EditingRunContext,
+    target: str,
+    changed_paths: Collection[str],
+    findings: Collection[dict],
+    state_paths_before: Collection[str],
+) -> list[str]:
+    """findings の evidence に対応しない agent 差分を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # findings の evidence path を run-relative path にそろえ、agent 差分との対応を
+    # 判定できる形にする。
+    evidence_paths: set[str] = set()
+    has_evidence_path = False
+    for finding in findings:
+        evidences = finding.get("evidences")
+        if not isinstance(evidences, list):
+            continue
+        for evidence in evidences:
+            if not isinstance(evidence, dict):
+                continue
+            raw_path = evidence.get("path")
+            if not isinstance(raw_path, str):
+                continue
+            has_evidence_path = True
+            if relative_path := _evidence_relative_path(context, raw_path):
+                evidence_paths.add(relative_path)
+    # run_codex_exec が正本 schema を検証する。evidence path を持たない軽量な fake や
+    # 過去の記録済み応答は互換性のため許容し、path を持つ応答は run 内へ解決できない
+    # 場合に fail-closed とする。
+    if not has_evidence_path:
+        return []
+
+    # evidence と今回の agent 差分の共通部分を、所見へ対応済みの path として扱う。
+    changed = set(changed_paths)
+    attributed = changed & evidence_paths
+    target_path = context.run_worktree / target
+    if not (target_path.exists() or target_path.is_symlink()) and target in changed:
+        # Git は大きな内容変更を伴う rename を delete/add と報告することがある。今回の
+        # agent call で追加された realization path が一つだけで evidence に含まれる
+        # 場合は、調査対象の継続先として扱う。
+        candidates = sorted(
+            path
+            for path in changed
+            if path != target and path not in state_paths_before
+        )
+        if len(candidates) == 1 and (
+            target in evidence_paths or candidates[0] in evidence_paths
+        ):
+            attributed.update({target, candidates[0]})
+    return sorted(changed - attributed)
+
+
+def _evidence_relative_path(
+    context: EditingRunContext,
+    raw_path: str,
+) -> str | None:
+    """evidence の絶対/placeholder path を run-relative path へ変換する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # Structured Output の path は placeholder、絶対 path、run-relative path のいずれ
+    # でも受け取るため、同じ run-relative 表現へ正規化する。
+    roots = (context.run_worktree, context.repo)
+    for prefix, root in (
+        ("{{run-root}}", context.run_worktree),
+        ("{{work-root}}", context.run_worktree),
+        ("{{repo-root}}", context.repo),
+    ):
+        if raw_path == prefix:
+            return "."
+        if raw_path.startswith(f"{prefix}/"):
+            path = root / raw_path.removeprefix(f"{prefix}/")
+            return path.absolute().relative_to(root.absolute()).as_posix()
+    path = Path(raw_path)
+    for root in roots:
+        candidate = path if path.is_absolute() else root / path
+        try:
+            return candidate.absolute().relative_to(root.absolute()).as_posix()
+        except ValueError:
+            continue
+    return None
 
 
 def _completion_reason(
@@ -525,7 +824,17 @@ def _write_refactor_report(
     """refactor cycle の state、findings、変更概要を report として保存する。"""
     state = _safe_refactor_state(context.run_worktree)
     counts = _state_counts(state)
-    changes = tree_changes(context.run_worktree, context.run_fork_commit)
+    report_cleanup_errors = list(cleanup_errors or [])
+    try:
+        changes = tree_changes(context.run_worktree, context.run_fork_commit)
+    except BaseException as change_error:
+        if reason not in {"error", "user_interruption"}:
+            raise
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # error/interruption report は補助的な git inspection の失敗でも保存し、
+        # 確認できない変更 path は空として warning に残す。
+        report_cleanup_errors.append(f"change inspection failed: {change_error!r}")
+        changes = []
     unresolved_targets = set(unresolved_findings)
     uninvestigated_targets = sum(
         entry["investigation_required"] and path not in unresolved_targets
@@ -537,13 +846,22 @@ def _write_refactor_report(
         f"- uninvestigated targets: {uninvestigated_targets}",
         "## Processing units",
         *(
-            [f"- `{target}`: {count} finding(s)" for target, count in units]
+            [
+                f"{_render_changed_path(target)}: {count} finding(s)"
+                for target, count in units
+            ]
             or ["- none"]
         ),
         "## Unresolved targets",
         f"- count: {len(unresolved_targets)}",
         "- paths:",
-        *([f"  - `{target}`" for target in sorted(unresolved_targets)] or ["  - none"]),
+        *(
+            [
+                _render_changed_path(target, "  ")
+                for target in sorted(unresolved_targets)
+            ]
+            or ["  - none"]
+        ),
         "## Unresolved findings",
         *_render_unresolved_findings(unresolved_findings),
         "## Refactor state",
@@ -561,8 +879,8 @@ def _write_refactor_report(
         [
             "## Cleanup warnings",
             *(
-                [f"- {item}" for item in cleanup_errors]
-                if cleanup_errors
+                [f"- {item}" for item in report_cleanup_errors]
+                if report_cleanup_errors
                 else ["- none"]
             ),
         ]
@@ -623,14 +941,16 @@ def _render_summary(
             paths = change.get("changed_paths", [])
             lines.append(f"- {category}: {description}")
             lines.extend(
-                f"  - `{path}`"
+                _render_changed_path(path, "  ")
                 for path in paths
                 if isinstance(path, str) and path in changed_path_set
             )
         return lines or ["- none"]
     if not changed_paths:
         return ["- none"]
-    return [f"- committed path: `{path}`" for path in changed_paths]
+    return [
+        _render_changed_path(path, label="committed path: ") for path in changed_paths
+    ]
 
 
 def _render_unresolved_findings(
@@ -642,9 +962,9 @@ def _render_unresolved_findings(
         for title, summary, call_log_path in unresolved_findings[target]:
             lines.extend(
                 [
-                    f"- `{target}`: {title}",
+                    f"{_render_changed_path(target)}: {title}",
                     f"  - resolution.summary: {summary}",
-                    f"  - Codex call log: `{call_log_path}`",
+                    _render_changed_path(str(call_log_path), "  ", "Codex call log: "),
                 ]
             )
     return lines or ["- none"]
@@ -656,6 +976,18 @@ def _completion_log(
     report: Path,
 ) -> str:
     """fork 固有の完了理由、unresolved 件数、report path を出力する。"""
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # 終了 console だけでなく JSON Lines の終了 event にも、後から run の完了理由と
+    # report を追跡できる値を残す。
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "fork_completed",
+            completion_reason=reason,
+            unresolved_target_count=len(unresolved_findings),
+            report_path=str(report.resolve()),
+        )
     return "\n".join(
         [
             f"- completion_reason: `{reason}`",

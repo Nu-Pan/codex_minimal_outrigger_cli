@@ -12,7 +12,7 @@ from oracle.acp_builder.realization.refactor.fork.change_summary import (
     build_realization_refactor_fork_change_summary_parameter as _build_parameter,
 )
 
-from acp.builder.common.prompt_fence import (
+from ....common.prompt_fence import (
     _protect_code_block_fence,
 )
 

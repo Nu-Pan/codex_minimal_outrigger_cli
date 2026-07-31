@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
 
-from commons.runtime_errors import CmocError
-from commons.runtime_paths import console_timestamp, format_duration
+from .runtime_errors import CmocError
+from .runtime_paths import console_timestamp, format_duration
 
 
 def emit_codex_call_console(
@@ -19,10 +19,11 @@ def emit_codex_call_console(
 
     根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     """
+    display_call_path = call_path.resolve()
     lines = [
         f"# {console_timestamp()} Codex CLI call",
         f"- Purpose: `{purpose}`",
-        f"- Call log: `{call_path}`",
+        f"- Call log: `{display_call_path}`",
         f"- Elapsed time: `{format_duration(elapsed_sec)}`",
         f"- Exit code: `{returncode if returncode is not None else 'not started'}`",
     ]
@@ -30,8 +31,9 @@ def emit_codex_call_console(
         safe_error = error.replace("\n", " ")
         lines.append(f"- Error: `{safe_error}`")
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    # 非 0 終了も Codex 呼び出しのエラーなので、起動後の失敗も stderr に出す。
-    is_error = error is not None or returncode not in (None, 0)
+    # 非 0 終了と、終了コードを得られない未起動状態は Codex 呼び出しのエラーなので
+    # stderr に出す。
+    is_error = error is not None or returncode is None or returncode != 0
     print(
         "\n".join(lines),
         file=sys.stderr if is_error else sys.stdout,

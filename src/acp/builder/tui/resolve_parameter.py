@@ -12,7 +12,7 @@ from oracle.acp_builder.tui.resolve_parameter import (
     build_tui_resolve_parameter_parameter as _build_parameter,
 )
 
-from acp.builder.common.prompt_fence import _protect_code_block_fence
+from ..common.prompt_fence import _protect_code_block_fence
 
 __all__ = ["build_tui_resolve_parameter_parameter"]
 
