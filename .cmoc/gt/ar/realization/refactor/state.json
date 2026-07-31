@@ -954,10 +954,10 @@
     "last_investigated_at": "2026-07-25_11-11_03_467924000"
   },
   "src/sub_commands/realization/refactor/fork.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "14b2d055b47573245628146d5f1f68a08fcebb7b5492f622b63922c535dc9d12",
-    "last_investigated_at": "2026-07-31_09-04_48_020207000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "6149f7027dbb70c7d189dc87fc3ff5bfe40e42673b2901192f468306f6879b7d",
+    "last_investigated_at": "2026-07-31_11-39_04_095417000"
   },
   "src/sub_commands/run/__init__.py": {
     "investigation_required": false,
