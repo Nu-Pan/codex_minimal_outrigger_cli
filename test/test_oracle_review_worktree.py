@@ -351,11 +351,12 @@ def test_oracle_review_interrupt_during_resource_probe_cleans_resources(
     def interrupt_during_branch_probe(root_arg: Path, branch: str) -> bool:
         """review resource の所有権確認中の Ctrl+C を再現する。"""
         nonlocal interrupted
-        if branch.startswith("cmoc/run/") and not interrupted:
+        present = original_branch_exists(root_arg, branch)
+        if branch.startswith("cmoc/run/") and present and not interrupted:
             interrupted = True
             created_branch.append(branch)
             raise KeyboardInterrupt()
-        return original_branch_exists(root_arg, branch)
+        return present
 
     monkeypatch.setattr(review_module, "branch_exists", interrupt_during_branch_probe)
 

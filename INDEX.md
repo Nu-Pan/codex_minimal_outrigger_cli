@@ -144,17 +144,17 @@
 # `test`
 
 ## Summary
-- `test` ディレクトリは、cmoc の realization test を集約する回帰・統合・受け入れテストの入口。CLI の各サブコマンド、Codex runtime、ACP builder、indexing、oracle review、session/run lifecycle、設定・state・Git・path 安全性など、利用者から観測できる契約と主要な制御ロジックを検証する。共通テスト helper は隔離環境、fake external command、Git repository、Codex/Ollama、CLI 実行などのテスト基盤を提供する。
+- テストコードから参照される共通サポートモジュールと、cmoc の各サブシステム・CLI・Codex runtime・state・indexing・oracle review などを検証する pytest テスト群を収録する。個別テストの詳細へ進むためのテスト領域の入口。
 
 ## Read this when
-- cmoc の複数サブシステムにまたがる外部挙動、回帰テストの構成、または対象機能に対応する realization test の所在を確認するとき。
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run、config、state、Git、path 安全性の変更後に、関連するテスト入口を選ぶとき。
-- 共通の隔離環境、fake command、Git repository、Ollama、Codex 実行支援を利用するテストを追加・変更するとき。
+- テスト対象の実装変更後に、対応する外部挙動・制御ロジック・安全性の回帰テストを探すとき
+- CLI、Codex runtime、indexing、oracle review、session/run state、設定、Git、TUI などのテスト範囲を確認するとき
+- 複数テストで共用される Git、Codex/Ollama、fake command、CLI 実行などのテスト支援を利用・変更するとき
 
 ## Do not read this when
-- 単一機能の正本仕様や実装詳細を確認することが目的の場合は、対応する oracle file または realization implementation を直接読む。
-- テスト対象と無関係な機能を調査する場合は、このディレクトリ全体を読まず、該当する個別テストまたは helper に進む。
-- Codex や LLM の回答品質そのものを評価する場合は、このディレクトリのテストを入口にしない。
+- 正本仕様や schema の内容を確認・変更するときは、対応する oracle 文書・oracle source・schema を直接読む
+- 実装本体の詳細を確認するときは、対応する src の realization implementation を直接読む
+- テスト実行環境や品質ゲートを確認するときは、リポジトリの開発・テスト手順を直接読む
 
 ## hash
-- f2c95c5743b60199455063e845c7a3b906d9e328c57ceac908ea1a615ed6c33a
+- dc1c4a5f664aa848be3f56a8163409e7eb3aca4c5477b066bdc465e7db7f13f5
