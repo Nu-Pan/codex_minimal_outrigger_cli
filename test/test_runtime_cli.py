@@ -39,14 +39,32 @@ from cmoc_runtime import (
 from main import app
 
 
-def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> None:
-    """duration 表示は丸めず切り捨て、時分秒の幅を揃える。"""
-    assert format_duration(0.19) == " 0h  0m  0.1s"
-    assert format_duration(3.19) == " 0h  0m  3.1s"
-    assert format_duration(59.99) == " 0h  0m 59.9s"
-    assert format_duration(99 * 3600 + 59 * 60 + 59.99) == "99h 59m 59.9s"
-    with pytest.raises(ValueError, match="two-digit hour"):
-        format_duration(100 * 3600)
+@pytest.mark.parametrize(
+    ("seconds", "expected"),
+    [
+        (0.19, " 0.1 Sec"),
+        (59.99, "59.9 Sec"),
+        (60, " 1 Min  0.0 Sec"),
+        (10 * 3600, "10 Hr  0 Min  0.0 Sec"),
+        (24 * 3600, " 1 Day  0 Hr  0 Min  0.0 Sec"),
+        (30 * 24 * 3600, " 1 Mo  0 Day  0 Hr  0 Min  0.0 Sec"),
+        (
+            (99 * 30 + 29) * 24 * 3600 + 23 * 3600 + 59 * 60 + 59.99,
+            "99 Mo 29 Day 23 Hr 59 Min 59.9 Sec",
+        ),
+    ],
+)
+def test_format_duration_uses_compact_space_padded_time_parts(
+    seconds: float, expected: str
+) -> None:
+    """duration を上位 0 単位なしの固定幅 field で表示する。"""
+    assert format_duration(seconds) == expected
+
+
+def test_format_duration_rejects_unrepresentable_values() -> None:
+    """負値と 2 桁の最大構成を超える duration を拒否する。"""
+    with pytest.raises(ValueError, match="two-digit month"):
+        format_duration(100 * 30 * 24 * 3600)
     with pytest.raises(ValueError, match="non-negative"):
         format_duration(-0.1)
 
