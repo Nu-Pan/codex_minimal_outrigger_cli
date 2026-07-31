@@ -65,24 +65,21 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply workload と refactor workload、およびそれぞれの CLI 実行・ライフサイクル関連処理への入口を提供する。
-- apply は realization apply fork の実行、例外処理、run state、fork report、差分検査、commit 処理を扱う。
-- refactor はリファクタリング fork の初期化から対象調査・修正、差分・commit 検証、unresolved 所見追跡、完了判定、cleanup、report 保存までを扱う。
+- realization workload サブコマンドのパッケージ入口。apply workload と refactor 処理へのルーティングを提供する。
+- apply workload は realization apply fork の CLI 実行、例外処理、run state、fork report、差分検査、commit 処理を扱う。
+- refactor パッケージは realization refactor の実行入口と、対象選択から調査・修正、差分検証、state 同期、完了判定、report 生成までを扱う。
 
 ## Read this when
-- realization workload サブコマンドの実装構成やパッケージ入口を確認するとき。
-- realization apply workload または `cmoc realization apply fork` の動作を調査・変更するとき。
-- realization のリファクタリング fork の実行順序、対象選択、commit、完了条件、report 保存を調査・変更するとき。
-- apply または refactor における fork の状態管理、検証、エラー処理、cleanup を確認するとき。
+- realization workload サブコマンドの構成や実装入口を確認するとき。
+- realization apply fork の動作やライフサイクルを調査・変更するとき。
+- realization refactor の対象選択、修正、state 同期、完了判定、report 生成を調査・変更するとき。
 
 ## Do not read this when
-- realization apply workload や refactor workload に関係しない処理を確認するとき。
-- Codex builder の launch parameter、agent parameter、state データ構造、対象同期処理だけを確認したいとき。
-- run lifecycle の共通仕様や process tracking、isolation、report 処理だけを確認したいとき。
-- realization apply または realization refactor の利用者向け仕様だけを確認したいとき。
+- realization apply・refactor 以外のサブコマンドを扱うとき。
+- Codex builder の launch parameter、共通 run lifecycle、process tracking、report 描画、agent 用 schema・prompt 構築だけを確認するとき。
 
 ## hash
-- 6983835b09b08dee1a99df472c2b5ed99ce9bcaefd79739bd4ce72c21ceeace8
+- 7d1c39f09c6e54d66dcf38823da73cde99aa499c916995a265470a5a31409cf1
 
 # `review`
 

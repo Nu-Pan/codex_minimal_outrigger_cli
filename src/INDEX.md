@@ -115,17 +115,17 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの CLI 入口と、サブコマンド単位の実行フロー・ライフサイクル処理への入口を提供する。
+- cmoc の各サブコマンド実装パッケージへの入口。doctor、indexing、oracle、realization、run、session、tui などの CLI 実行フローと、review・apply の実装配置状況を案内する。
 
 ## Read this when
-- サブコマンド実装の構成や、対象サブコマンドの CLI 実行入口を確認するとき。
-- oracle、realization、run、session などのサブコマンド群を横断して実行フローや責務の配置を調査するとき。
-- 目的のサブコマンド実装が未追加か、どの下位要素を読むべきかを判断するとき。
+- サブコマンドの実装構成や CLI 実行入口を確認するとき
+- doctor、indexing、oracle、realization、run、session、tui の実行フローを調査・変更するとき
+- review または apply の実装追加先や現在の配置状況を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理だけを調査する場合は、対応する下位実装を直接読む。
-- 共通 CLI runtime、commons の実装、Codex TUI builder、または oracle 文書の仕様だけを確認する場合は、それぞれの直接の参照先を読む。
-- apply または review の具体的な実装を確認する場合は、実装が追加されていれば対応する下位要素を読む。
+- 特定サブコマンドの詳細処理だけを調査・変更する場合は、対応する配下の実装ファイルを直接読む
+- oracle の仕様や realization の処理詳細を確認する場合は、対応する oracle 文書または下位実装を直接読む
+- CLI runtime、Codex TUI builder、共通 lifecycle など、サブコマンド固有でない実装だけを確認するとき
 
 ## hash
-- 885952d5d41c76980e1f5c61d21fd012bc8ce5cdca96a3ad35255ade5f7dc137
+- 36973891f873b8bf8cd513a9a3d47a2247bcc1afa5e01895a533ed713e19f123

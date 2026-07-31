@@ -388,18 +388,19 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 lifecycle を検証する realization test。session state、run worktree、fork report、INDEX 更新、process tracking、merge、cleanup、rollback、interrupt、error recovery、および refactor の継続処理を対象とする。関連する run lifecycle 実装と apply/refactor fork、join/abandon の挙動を横断して確認する入口。
+- workload fork と run join/abandon の共通 lifecycle を検証する統合テスト。apply/refactor fork の state 遷移、worktree・branch・process tracking の cleanup、INDEX 更新、report 生成、merge・rollback・force-resolve、rename/delete、割り込み・失敗時の復旧を対象とする。
 
 ## Read this when
-- editing run の fork、join、abandon、refactor cycle、run state、worktree、report、process tracking、cleanup、rollback の挙動を変更または調査するとき
-- realization apply/refactor と共通 run lifecycle の統合テスト対象を確認するとき
+- realization apply/refactor fork の lifecycle、run join/abandon、共通 run state、worktree cleanup、process tracking、report、INDEX refresh の挙動を変更または調査するとき
+- run の正常完了、joinable/error 状態、割り込み、競合、rollback、想定外差分の検証範囲を確認するとき
 
 ## Do not read this when
-- 単独の parser、builder、report formatter、または run lifecycle と無関係な CLI 機能だけを変更・調査するとき
-- 実装の詳細を直接確認したい場合は、まず対応する commons、sub_commands.realization、または sub_commands.run の実装へ進む
+- 個別の apply agent prompt 構築だけを変更・調査するとき
+- refactor の finding schema や change summary の単体仕様だけを確認するとき
+- run lifecycle の実装詳細を直接確認したい場合は、まず対応する realization implementation と oracle file を読むべきとき
 
 ## hash
-- d98c1e5a1064b75f898b04acd48e48a30ebc5815ac5fb93d9136db07b559450f
+- 64ddecbb7b86ce9c62510654dc93c49d6795d3ad30cb1540d159ee6a5ac6dc69
 
 # `test_indexing_cli.py`
 

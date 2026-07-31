@@ -405,6 +405,22 @@ def _run_refactor_unit(
             ["Codex call log と run worktree の差分を確認してください。"],
             "\n".join(changed_realization),
         )
+    unattributed = _unattributed_realization_paths(
+        context,
+        target,
+        changed_realization,
+        findings,
+        state_paths_before,
+    )
+    if unattributed:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # agent の差分は返却した所見のいずれかに対応しなければならない。path の
+        # evidence に現れない realization 差分を処理単位へ混ぜず、commit 前に拒否する。
+        raise CmocError(
+            "refactor agent の差分が所見に対応していません。",
+            ["Codex call log と run worktree の差分を確認してください。"],
+            "\n".join(unattributed),
+        )
     normalized_findings = findings
     if (
         findings
@@ -658,6 +674,80 @@ def _validated_findings(output: object, target: str) -> list[dict]:
             f"target: {target}\noutput: {output!r}",
         )
     return findings
+
+
+def _unattributed_realization_paths(
+    context: EditingRunContext,
+    target: str,
+    changed_paths: Collection[str],
+    findings: Collection[dict],
+    state_paths_before: Collection[str],
+) -> list[str]:
+    """findings の evidence に対応しない agent 差分を返す。"""
+    evidence_paths: set[str] = set()
+    has_evidence_path = False
+    for finding in findings:
+        evidences = finding.get("evidences")
+        if not isinstance(evidences, list):
+            continue
+        for evidence in evidences:
+            if not isinstance(evidence, dict):
+                continue
+            raw_path = evidence.get("path")
+            if not isinstance(raw_path, str):
+                continue
+            has_evidence_path = True
+            if relative_path := _evidence_relative_path(context, raw_path):
+                evidence_paths.add(relative_path)
+    # run_codex_exec validates the canonical schema before this function. The fallback
+    # keeps lightweight test doubles and older recorded responses usable; a response
+    # that does contain evidence paths is checked fail-closed if none maps into the run.
+    if not has_evidence_path:
+        return []
+
+    changed = set(changed_paths)
+    attributed = changed & evidence_paths
+    target_path = context.run_worktree / target
+    if not (target_path.exists() or target_path.is_symlink()) and target in changed:
+        # Git may report a rename with a large content replacement as delete/add. The
+        # new path is a valid continuation of evidence for the investigated target
+        # when it is the only realization path added during this call.
+        candidates = sorted(
+            path
+            for path in changed
+            if path != target and path not in state_paths_before
+        )
+        if len(candidates) == 1 and (
+            target in evidence_paths or candidates[0] in evidence_paths
+        ):
+            attributed.update({target, candidates[0]})
+    return sorted(changed - attributed)
+
+
+def _evidence_relative_path(
+    context: EditingRunContext,
+    raw_path: str,
+) -> str | None:
+    """evidence の絶対/placeholder path を run-relative path へ変換する。"""
+    roots = (context.run_worktree, context.repo)
+    for prefix, root in (
+        ("{{run-root}}", context.run_worktree),
+        ("{{work-root}}", context.run_worktree),
+        ("{{repo-root}}", context.repo),
+    ):
+        if raw_path == prefix:
+            return "."
+        if raw_path.startswith(f"{prefix}/"):
+            path = root / raw_path.removeprefix(f"{prefix}/")
+            return path.absolute().relative_to(root.absolute()).as_posix()
+    path = Path(raw_path)
+    for root in roots:
+        candidate = path if path.is_absolute() else root / path
+        try:
+            return candidate.absolute().relative_to(root.absolute()).as_posix()
+        except ValueError:
+            continue
+    return None
 
 
 def _completion_reason(
