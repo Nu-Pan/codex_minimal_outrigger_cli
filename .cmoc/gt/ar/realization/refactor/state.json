@@ -1284,10 +1284,10 @@
     "last_investigated_at": "2026-07-27_22-36_52_843047000"
   },
   "test/test_runtime_git_ignore.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "cbba1d8481304ced5dd53c0f3201b017bcb9429eb42fc83030285e21e30fb161",
-    "last_investigated_at": "2026-07-30_18-00_00_429351000"
+    "last_investigated_sha256": "51a3bb513cc9e203fd066e67a06b39ca91c764ee2c1cba48c2ca5943ae3bb8e4",
+    "last_investigated_at": "2026-07-31_14-55_11_756930000"
   },
   "test/test_runtime_refactor.py": {
     "investigation_required": true,
