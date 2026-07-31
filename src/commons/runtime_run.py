@@ -19,6 +19,7 @@ from typing import NamedTuple
 
 from .runtime_codex_profile import (
     RUN_PROCESS_TRACKING_ENV,
+    _is_valid_process_id,
     open_process_fd,
     process_group_has_running_member,
     process_group_members,
@@ -52,14 +53,6 @@ class RunProcessIdentity(NamedTuple):
     process_id: int
     start_time: int | None
     child_processes: tuple[ProcessIdentity, ...] = ()
-
-
-def _is_valid_process_id(process_id: int) -> bool:
-    """OS の process API へ安全に渡せる pid_t 範囲か判定する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # 壊れた tracking の巨大な整数を受け入れると、abandon 時の pidfd_open が
-    # OverflowError になり、停止対象なしとして扱う経路へ到達できない。
-    return 0 < process_id <= 2**31 - 1
 
 
 def worktree_for_branch(root: Path, branch: str) -> Path:

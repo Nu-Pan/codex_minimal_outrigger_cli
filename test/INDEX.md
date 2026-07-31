@@ -336,19 +336,19 @@
 # `test_codex_runtime_subprocess.py`
 
 ## Summary
-- Codex サブプロセスと run process の追跡・停止・cleanup に関する回帰テスト。pidfd、process group、tracking file、signal 配信、プロセス同一性検証、異常時の fail-closed 挙動を検証する。runtime_codex_profile と runtime_run の実装変更時に参照するテスト入口。
+- Codex subprocess と run process の停止・追跡を検証するテスト。pidfd、process group、tracking file、signal 処理、子プロセス cleanup、PID 再利用や不正状態に対する fail-closed 挙動を扱う。runtime_codex_profile と runtime_run の実装検証への入口。
 
 ## Read this when
-- Codex subprocess の起動・追跡・停止処理を変更するとき
-- run process tracking file、pidfd、process group cleanup、SIGTERM 処理を変更するとき
-- プロセス再利用、leader 終了、tracking 更新失敗、壊れた tracking state の回帰を確認するとき
+- Codex subprocess の起動・追跡・終了処理を変更または調査するとき
+- run process の停止、process group の同一性検証、pidfd 処理を変更または調査するとき
+- tracking file の形式検証、異常系、signal 中断時の cleanup を確認するとき
 
 ## Do not read this when
-- Codex の出力内容や通常の CLI 実行結果だけを変更するとき
-- プロセス追跡・停止処理に関係しない runtime 実装やテストを変更するとき
+- Codex runtime subprocess や run process の停止・追跡に関係しないテストを探しているとき
+- 対象実装の詳細を直接確認したいときは、対応する runtime_codex_profile または runtime_run の実装へ進む
 
 ## hash
-- f86528f863d0114990088b68d4325e358ef2e64ab92e9a096bdb43e27e1a5a9d
+- 36988c2e5c4e7f6a5fa4906db4505a7f9b201b96aee0a2521d3e88fec6e8d082
 
 # `test_codex_runtime_tui.py`
 

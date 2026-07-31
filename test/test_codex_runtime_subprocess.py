@@ -191,6 +191,32 @@ def test_stop_process_group_rejects_snapshot_without_expected_leader(
     assert sent == []
 
 
+def test_stop_process_group_rejects_empty_snapshot_without_expected_leader(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """leader の証跡がない空 snapshot を停止済みとして扱わない。"""
+    sent: list[signal.Signals] = []
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: (),
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_signal_process_members",
+        lambda _members, sig: sent.append(sig),
+    )
+
+    with pytest.raises(CmocError, match="同一性を確認できません"):
+        runtime_codex_profile.stop_process_group(
+            111,
+            expected_leader=(111, 10),
+            expected_members=((222, 20),),
+        )
+
+    assert sent == []
+
+
 def test_stop_process_group_accepts_descendant_after_leader_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -439,7 +465,13 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
 
 @pytest.mark.parametrize(
     ("tracking_bytes", "expected_error"),
-    [(b"\xff", UnicodeDecodeError), (b"111 222\ninvalid line\n", OSError)],
+    [
+        (b"\xff", UnicodeDecodeError),
+        (b"111 222\ninvalid line\n", OSError),
+        (b"2147483648\n", OSError),
+        (b"111 222\nchild 2147483648 789 2147483648\n", OSError),
+        (b"111 222\nchild 789 1011 123\n", OSError),
+    ],
 )
 def test_tracked_codex_subprocess_rejects_invalid_tracking_before_start(
     tmp_path: Path,

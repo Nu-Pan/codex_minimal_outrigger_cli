@@ -76,6 +76,12 @@ def _validate_process_tracking_path(path: Path) -> None:
             )
 
 
+def _is_valid_process_id(process_id: int) -> bool:
+    """OS の process API へ安全に渡せる pid_t 範囲か判定する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    return 0 < process_id <= 2**31 - 1
+
+
 @contextmanager
 def run_process_id_file_lock(path: Path) -> Iterator[None]:
     """editing run の process tracking file を直列化する。"""
@@ -108,7 +114,9 @@ def _validate_tracked_process_file(path: Path) -> None:
     try:
         parent_id = int(lines[0][0])
         parent_start_time = int(lines[0][1]) if len(lines[0]) == 2 else None
-        if parent_id <= 0 or (parent_start_time is not None and parent_start_time < 0):
+        if not _is_valid_process_id(parent_id) or (
+            parent_start_time is not None and parent_start_time < 0
+        ):
             raise ValueError
         for parts in lines[1:]:
             if len(parts) not in {3, 4} or parts[0] != "child":
@@ -117,9 +125,12 @@ def _validate_tracked_process_file(path: Path) -> None:
             child_start_time = int(parts[2])
             group_id = int(parts[3]) if len(parts) == 4 else None
             if (
-                child_id <= 0
+                not _is_valid_process_id(child_id)
                 or child_start_time < 0
-                or (group_id is not None and group_id <= 0)
+                or (
+                    group_id is not None
+                    and (not _is_valid_process_id(group_id) or group_id != child_id)
+                )
             ):
                 raise ValueError
     except (IndexError, ValueError) as exc:
@@ -340,6 +351,14 @@ def stop_process_group(
             "実行中 Codex subprocess の process group を確認できません。",
             ["Codex subprocess を手動で停止してから再実行してください。"],
             f"pgid: {process_group_id}",
+        )
+    if expected_leader is not None and (
+        expected_members is None or expected_leader not in expected_members
+    ):
+        raise CmocError(
+            "実行中 Codex subprocess の同一性を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pid: {expected_leader[0]}\npgid: {process_group_id}",
         )
     if (
         expected_members is not None
