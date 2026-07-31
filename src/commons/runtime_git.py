@@ -405,6 +405,21 @@ def _validate_global_git_ignore_path(path: Path) -> None:
     _reject_non_file_path(path, "Git global excludes file")
 
 
+def _check_git_ignore(root: Path, relative: Path, *, no_index: bool) -> bool:
+    """check-ignore が受け付ける literal な repository 相対 path を判定する。"""
+    args = ["check-ignore"]
+    if no_index:
+        args.append("--no-index")
+    # check-ignore は :(literal) magic を受け付けないため、pathspec magic として
+    # 解釈されない ./ を付けて path 名をそのまま渡す。
+    result = run_git(
+        [*args, "-q", "--", f"./{relative}"],
+        root,
+        check=False,
+    )
+    return result.returncode == 0
+
+
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
     """.cmoc/gu の追跡有無と ignore 判定を取得する。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -533,14 +548,7 @@ def is_git_ignored(root: Path, path: Path) -> bool:
     candidate = path if path.is_absolute() else root / path
     rel = candidate.absolute().relative_to(root.absolute())
     _validate_git_ignore_sources(root, candidate)
-    return (
-        run_git(
-            ["check-ignore", "--no-index", "-q", literal_pathspec(str(rel))],
-            root,
-            check=False,
-        ).returncode
-        == 0
-    )
+    return _check_git_ignore(root, rel, no_index=True)
 
 
 def is_untracked_git_ignored(root: Path, path: Path) -> bool:
@@ -551,14 +559,7 @@ def is_untracked_git_ignored(root: Path, path: Path) -> bool:
     candidate = path if path.is_absolute() else root / path
     rel = candidate.absolute().relative_to(root.absolute())
     _validate_git_ignore_sources(root, candidate)
-    return (
-        run_git(
-            ["check-ignore", "-q", literal_pathspec(str(rel))],
-            root,
-            check=False,
-        ).returncode
-        == 0
-    )
+    return _check_git_ignore(root, rel, no_index=False)
 
 
 def is_realization_file_path(
@@ -585,12 +586,12 @@ def is_realization_file_path(
         or candidate.name in {"AGENTS.md", "INDEX.md"}
     ):
         return False
-    if branch and (not candidate.is_dir() or candidate.is_symlink()):
+    if branch and not candidate.exists():
         # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
         # 含めず blob entry だけを branch の fallback として採用する。
         # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-        # branch の blob は削除された path の追跡状態を補うが、現在の通常 directory
-        # を file として扱う根拠にはならない。symlink は file entry として許可する。
+        # branch の blob は削除された path の追跡状態を補うが、現在の directory や
+        # FIFO などの特殊 file を file として扱う根拠にはならない。
         branch_entries = run_git(
             [
                 "ls-tree",

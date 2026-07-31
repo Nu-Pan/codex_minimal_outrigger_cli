@@ -742,37 +742,34 @@
 # `test_runtime_git_ignore.py`
 
 ## Summary
-- Git ignore の安全な更新・判定処理を検証するテスト。`.gitignore` や `info/exclude` への cmoc 用パターン追加、既存の有効な ignore パターン後の追記、特殊ファイル・symlink・global excludes・親ディレクトリ内の `.gitignore` に対するエラー処理を扱う。
+- Git ignore の安全な更新・判定処理を検証するテスト。cmoc 用 ignore pattern の追加、literal path の判定、特殊ファイル・symlink 化された .gitignore／info/exclude／global excludes／階層 .gitignore の拒否を扱う。
 
 ## Read this when
-- cmoc の ignore 設定更新や Git ignore 判定の挙動を変更・検証するとき
-- `.gitignore`、`info/exclude`、global excludes、symlink・特殊ファイルへの安全な対応を確認するとき
+- Git ignore 判定や cmoc 用 ignore pattern 更新のテストを追加・変更するとき
+- 特殊ファイルや symlink に対する安全性、既存 pattern と追記内容の安定性を確認するとき
 
 ## Do not read this when
-- Git ignore と無関係なランタイム機能を変更・調査するとき
-- 実装の詳細ではなく、ignore 仕様そのものを確認したいときは、記載された oracle 文書・ソースを直接読む
+- Git ignore の実装そのものを変更・調査するときは、まず対応する runtime 実装と oracle file を読むとき
+- Git ignore と無関係な CLI 機能やテストを扱うとき
 
 ## hash
-- cbba1d8481304ced5dd53c0f3201b017bcb9429eb42fc83030285e21e30fb161
+- 51a3bb513cc9e203fd066e67a06b39ca91c764ee2c1cba48c2ca5943ae3bb8e4
 
 # `test_runtime_refactor.py`
 
 ## Summary
-- realization refactor の永続 state について、oracle・realization file 集合の同期、調査履歴の保持、変更時の再調査フラグ、対象選択の優先順位を検証するテスト群。
-- oracle/realization file の path 判定、Git branch 上の特殊 path・directory・gitlink・symlink の扱いと、work-root 外への path escape 防止を検証する。
-- state JSON の schema 検証、UTF-8・path・timestamp・調査結果の妥当性、symlink や非通常 file 経由の安全な読み書き拒否を検証する。
+- realization refactor の永続 state 同期・検証・target 選択をテストするファイル。oracle/realization file 集合の追跡、履歴保持と変更検出、path・symlink・特殊 file・state schema の拒否、および未調査・最古順の選択規則を扱う。
 
 ## Read this when
-- refactor state の同期・履歴・対象選択ロジックを変更またはレビューするとき
-- oracle/realization file の分類や Git branch 上の file 判定を変更するとき
-- refactor state の JSON schema、path 安全性、異常入力処理を変更するとき
+- realization refactor の state 同期、state の読み書き検証、対象 file の分類、調査対象選択ロジックを変更またはレビューするとき
+- refactor state の path 安全性、schema 検証、symlink や特殊 file の扱いを確認するとき
 
 ## Do not read this when
-- refactor 機能以外の CLI 挙動や一般的な Git 操作を確認するとき
-- 実装本体の詳細を確認する必要があり、commons.runtime_refactor または commons.runtime_git を直接読むべきとき
+- realization refactor の実装詳細ではなく、正本仕様そのものを確認したいときは oracle/doc/app_spec/sub_command/realization_refactor.md と oracle/doc/app_spec/misc_spec.md を直接読む
+- refactor state や target 選択に関係しない CLI 機能・別サブコマンドのテストを調べるとき
 
 ## hash
-- 81e6958cf7d40be0ec70effa950e4b3cc0d877b1fa1791c18ce9803952fe2ac6
+- ba1d4a580fe1720514b8d55f0669ee5ec0bcb53aeebbc2f51a133492ea4aebea
 
 # `test_runtime_state.py`
 

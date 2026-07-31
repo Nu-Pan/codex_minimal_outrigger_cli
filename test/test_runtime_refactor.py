@@ -83,17 +83,32 @@ def test_refactor_target_classifiers_require_file_entries(
     assert not is_realization_file_path(root, root / "missing.py")
 
 
-def test_refactor_target_classifier_rejects_directory_replacing_branch_file(
-    tmp_path: Path,
+@pytest.mark.parametrize(
+    "replacement",
+    [
+        "directory",
+        pytest.param(
+            "fifo",
+            marks=pytest.mark.skipif(
+                not hasattr(os, "mkfifo"), reason="named pipes are unavailable"
+            ),
+        ),
+    ],
+)
+def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
+    tmp_path: Path, replacement: str
 ) -> None:
-    """branch の blob fallback が既存 directory を file として扱わない。"""
+    """branch の blob fallback が既存の非通常 file を file として扱わない。"""
     root = make_repo(tmp_path)
     path = root / "module.py"
     path.write_text("VALUE = 1\n")
     run_git(root, "add", "module.py")
     run_git(root, "commit", "-m", "add module")
     path.unlink()
-    path.mkdir()
+    if replacement == "directory":
+        path.mkdir()
+    else:
+        os.mkfifo(path)
 
     assert not is_realization_file_path(root, path, branch="HEAD")
 

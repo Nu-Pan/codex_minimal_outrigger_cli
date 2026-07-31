@@ -36,6 +36,21 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
     assert ignored.returncode == 0
 
 
+def test_ignore_checks_classify_literal_path_names(tmp_path: Path) -> None:
+    """check-ignore が path 名をそのまま判定し、literal pathspec magic に依存しない。"""
+    root = make_repo(tmp_path)
+    path = root / "probe[1].txt"
+    magic_prefix_path = root / ":(literal)probe.txt"
+    path.write_text("probe\n")
+    magic_prefix_path.write_text("probe\n")
+    (root / ".gitignore").write_text("probe[[]1].txt\n:(literal)probe.txt\n")
+
+    assert is_git_ignored(root, path)
+    assert is_untracked_git_ignored(root, path)
+    assert is_git_ignored(root, magic_prefix_path)
+    assert is_untracked_git_ignored(root, magic_prefix_path)
+
+
 @pytest.mark.parametrize(
     "path_kind",
     [
