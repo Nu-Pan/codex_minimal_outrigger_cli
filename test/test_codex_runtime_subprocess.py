@@ -358,16 +358,20 @@ def test_tracked_codex_subprocess_redelivers_sigterm_when_startup_fails(
     """Popen 前の失敗でも保留した SIGTERM を握りつぶさない。"""
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
-    received: list[int] = []
+    events: list[str] = []
     previous_handler = signal.getsignal(signal.SIGTERM)
 
     def handler(signum: int, _frame: object) -> None:
         """復元後の handler が保留 signal を受け取ったことを記録する。"""
-        received.append(signum)
+        assert signum == signal.SIGTERM
+        assert signal.getsignal(signal.SIGTERM) is handler
+        events.append("delivered")
 
     def popen(*_args: object, **_kwargs: object) -> object:
         """Popen 前の失敗と同時に SIGTERM を受けた状態を再現する。"""
+        events.append("popen")
         signal.raise_signal(signal.SIGTERM)
+        events.append("after-signal")
         raise OSError("startup failed")
 
     signal.signal(signal.SIGTERM, handler)
@@ -380,7 +384,7 @@ def test_tracked_codex_subprocess_redelivers_sigterm_when_startup_fails(
     finally:
         signal.signal(signal.SIGTERM, previous_handler)
 
-    assert received == [signal.SIGTERM]
+    assert events == ["popen", "after-signal", "delivered"]
 
 
 def test_tracked_codex_subprocess_keeps_group_tracking_after_leader_exit(
@@ -572,6 +576,76 @@ def test_tracked_codex_subprocess_stops_and_reaps_child_when_tracking_fails(
 
     assert stopped == [(4321, (4321, 333), ())]
     assert process.returncode == 0
+
+
+@pytest.mark.parametrize("group_members", [None, ()])
+def test_tracked_codex_subprocess_reaps_child_when_group_cleanup_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    group_members: tuple[tuple[int, int], ...] | None,
+) -> None:
+    """group cleanup が失敗しても起動済み child を直接停止して reap する。
+
+    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
+
+    class RunningProcess:
+        """group cleanup 失敗後も生存している fake process。"""
+
+        pid = 4321
+        returncode: int | None = None
+        killed = False
+        waited = False
+
+        def poll(self) -> int | None:
+            return self.returncode
+
+        def kill(self) -> None:
+            self.killed = True
+            self.returncode = -signal.SIGKILL
+
+        def wait(self) -> int:
+            self.waited = True
+            assert self.returncode is not None
+            return self.returncode
+
+    process = RunningProcess()
+
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: process,
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: group_members,
+    )
+    group_cleanup_calls: list[bool] = []
+
+    def fail_record(*_args: object, **_kwargs: object) -> None:
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid")
+
+    def fail_group_cleanup(*_args: object, **_kwargs: object) -> None:
+        group_cleanup_calls.append(True)
+        raise CmocError("group cleanup failed")
+
+    monkeypatch.setattr(
+        runtime_codex_profile, "_record_tracked_child_process", fail_record
+    )
+    monkeypatch.setattr(runtime_codex_profile, "stop_process_group", fail_group_cleanup)
+
+    with pytest.raises(CmocError, match="run process tracking を更新できません"):
+        run_tracked_codex_subprocess(
+            ["codex"], tracking_path, text=True, capture_output=True
+        )
+
+    assert process.killed
+    assert process.waited
+    assert group_cleanup_calls == ([] if group_members is None else [True])
 
 
 def test_run_codex_subprocess_ignores_inherited_run_tracking_env(

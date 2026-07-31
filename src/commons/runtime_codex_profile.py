@@ -755,11 +755,25 @@ def run_tracked_codex_subprocess(
                     expected_leader=cleanup_expected_leader,
                     expected_members=cleanup_expected_members,
                 )
-                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-                # tracking 登録が失敗した場合も Popen を wait して reaping する。そうしないと
-                # group を停止しても、tracking 更新失敗で zombie process が残る。
                 process.wait()
             except BaseException as cleanup_exc:
+                try:
+                    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                    # process group cleanup が完了しない場合は PGID を推測して signal せず、
+                    # Popen が直接保持する child だけを停止してから reap する。
+                    if process.poll() is None:
+                        process.kill()
+                    process.wait()
+                except BaseException as reap_exc:
+                    raise CmocError(
+                        "run process tracking を更新できません。",
+                        [
+                            "run process tracking file の権限と保存先を確認してください。",
+                            "Codex subprocess の停止にも失敗しました。",
+                        ],
+                        f"path: {tracking_path}\nerror: {exc}\n"
+                        f"cleanup: {cleanup_exc}\nreap: {reap_exc}",
+                    ) from reap_exc
                 raise CmocError(
                     "run process tracking を更新できません。",
                     [
@@ -767,7 +781,7 @@ def run_tracked_codex_subprocess(
                         "Codex subprocess の停止にも失敗しました。",
                     ],
                     f"path: {tracking_path}\nerror: {exc}\ncleanup: {cleanup_exc}",
-                ) from exc
+                ) from cleanup_exc
             if isinstance(exc, OSError):
                 raise CmocError(
                     "run process tracking を更新できません。",
