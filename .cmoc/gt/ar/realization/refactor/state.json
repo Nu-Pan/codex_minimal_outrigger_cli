@@ -800,8 +800,8 @@
   "src/commons/runtime_paths.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "a480abe2a89ac7eb386fd95d53aca2ee7ea41e7b4819676994e9ac9d99236430",
-    "last_investigated_at": "2026-07-31_13-52_04_876788000"
+    "last_investigated_sha256": "0bfa25c7082f4af28c66b776bf22abb1f2fec496fdc2b9707d6f6f17cb6125de",
+    "last_investigated_at": "2026-07-31_17-36_47_579427000"
   },
   "src/commons/runtime_refactor.py": {
     "investigation_required": false,
@@ -1086,7 +1086,7 @@
     "last_investigated_at": "2026-07-26_05-19_32_904720000"
   },
   "test/test_basic_runtime.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "95487782111d9b6fddafdd2713bb6973456bc1ab70d88c35be7175a8a2ad47f5",
     "last_investigated_at": "2026-07-31_14-09_50_402192000"

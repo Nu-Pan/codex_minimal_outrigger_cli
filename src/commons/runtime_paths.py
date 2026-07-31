@@ -175,9 +175,11 @@ def _tracked_agent_read_dir(root: Path) -> Path:
 
 def is_root_memo(root: Path, path: Path) -> bool:
     """`{{work-root}}/memo` 自体またはその配下か判定する。"""
-    memo = (root / "memo").resolve()
-    resolved = path.resolve()
-    return resolved == memo or memo in resolved.parents
+    # {{work-root}}/oracle/doc/app_spec/indexing.md
+    # memo の判定は repository 上の path 境界で行い、symlink の実体へ追跡しない。
+    memo = (root / "memo").absolute()
+    candidate = path.absolute()
+    return candidate == memo or memo in candidate.parents
 
 
 def cwd_override_active() -> bool:

@@ -126,34 +126,33 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装本体。Typer CLI の登録・引数解析・エラー変換を起点に、doctor、indexing、oracle、realization、run、session、tui の各サブコマンドへ委譲する。commons に共通 runtime、acp・basic・config・oracle.py に互換 import と正本実装への接続を置く。
+- `src` は cmoc CLI の realization 実装ルート。Typer の起動入口、サブコマンド実装、共通 runtime、互換 import shim をまとめ、CLI から個別実装へ進むための入口を提供する。
 
 ## Read this when
-- cmoc CLI 全体の入口、サブコマンドの登録先、引数解析や共通実行ライフサイクルを確認するとき。
-- サブコマンド実装、共通 runtime、ACP/basic/config の互換入口、oracle package shim の配置を確認するとき。
+- cmoc の realization 側 CLI 構成、起動入口、サブコマンド配置、共通 runtime、または互換 import の関係を確認したいとき。
+- 特定のサブコマンドや runtime 実装を読む前に、該当する下位ディレクトリ・モジュールへの入口を選びたいとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理詳細を調査するときは、該当する sub_commands 配下を直接読む。
-- 共通 runtime の個別機能を確認するときは、該当する commons モジュールを直接読む。
-- oracle の正本仕様・実装や、互換入口の移行先詳細を確認するときは、対応する oracle 側または実体モジュールを直接読む。
+- 特定サブコマンドや runtime 機能の詳細だけを調査・変更するときは、対応する下位実装を直接読む。
+- oracle の正本仕様・実装、または利用者向け挙動の根拠を確認するときは、対応する oracle 配下を読む。
 
 ## hash
-- 0ada04cd60aef264e0d3bf33e90de5f69fe60c29841388ca518514cf9d1eb587
+- ee221a21dfeccba4a1f1acce9074e94045569126d804d564b7348defab807537
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。CLI、runtime、session/run lifecycle、indexing、oracle review、Codex 実行、設定、Git、TUI などの外部挙動・制御ロジックを検証し、各機能の実装や正本仕様を確認するための入口を提供する。共通 fixture・fake command・Git/Ollama/Codex 支援も含む。
+- テストコードから、ACP builder、Codex runtime、CLI・TUI、indexing、oracle review、session/run state、設定、Git、StructDoc など cmoc の主要機能における外部契約・制御ロジック・安全性を検証する入口。共通テスト支援モジュールも含み、個別機能の回帰テストへ進むための階層。
 
 ## Read this when
-- cmoc の実装変更に対応する回帰テストや外部契約の検証範囲を探すとき
-- CLI、runtime、Codex 実行、indexing、oracle review、session/run lifecycle、設定、Git、TUI の挙動をテストから確認するとき
-- テスト共通ヘルパーや実経路統合テストの準備方法を確認するとき
+- cmoc の複数サブシステムにまたがるテスト範囲を把握したいとき
+- 実装変更に対応する既存の回帰テストや、外部挙動・状態遷移・安全性の検証箇所を探すとき
+- ACP builder、Codex 実行、CLI lifecycle、indexing、oracle review、session/run state、設定、Git 操作などのテスト入口を選ぶとき
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc または oracle schema を直接読む
-- 実装の責務や内部ロジックを確認するときは、対応する src 側の実装を直接読む
-- テスト対象と無関係な機能や、Codex の回答品質そのものを調査するとき
+- 特定の実装の詳細を確認したいときは、対応する src の実装ファイルを直接読む
+- 正本仕様、schema、prompt 本文、開発環境、テスト実行規則を確認したいときは、対応する oracle 文書・schema・開発手順を直接読む
+- 単一テストファイルの具体的な期待挙動だけを確認したいときは、該当するテストファイルへ直接進む
 
 ## hash
-- eaf520b1f17ee679c93aa155b6298b958b2a716ffe315b2874b67d23ef5a7641
+- e32acff12a3f33ae1ba24e34f04ed7e91ca61618b5285a86c50fab073a7d803f

@@ -16,6 +16,7 @@ from basic.path_model import RootPathPlaceHolder, resolve_ph_path, resolve_real_
 from cmoc_runtime import (
     CmocError,
     create_run_worktree,
+    is_root_memo,
     pushd,
     remove_worktree,
     repo_root,
@@ -126,6 +127,25 @@ def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
     missing_anchor = original / "not-created" / "file.py"
     assert repo_root(missing_anchor) == original
     assert work_root(missing_anchor) == original
+
+
+def test_root_memo_classification_uses_repository_path_for_symlinks(
+    tmp_path: Path,
+) -> None:
+    """memo 判定は symlink の link 先ではなく repository path で行う。"""
+    root = make_repo(tmp_path)
+    memo = root / "memo"
+    memo.mkdir()
+    (memo / "target.md").write_text("memo\n")
+    outside = tmp_path / "outside.md"
+    outside.write_text("outside\n")
+    memo_link = memo / "outside-link.md"
+    memo_link.symlink_to(outside)
+    outside_link = root / "outside-link.md"
+    outside_link.symlink_to(memo / "target.md")
+
+    assert is_root_memo(root, memo_link)
+    assert not is_root_memo(root, outside_link)
 
 
 def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
