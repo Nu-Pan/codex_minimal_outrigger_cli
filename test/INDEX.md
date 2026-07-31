@@ -177,19 +177,19 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- Root/worktree と path model の runtime 契約を検証するテスト。リポジトリ・linked worktree・run worktree のパス解決、cwd の直列化、symlink や未登録・管理外 path の拒否、worktree 削除時の安全性を扱う。
+- Root/worktree と path model の runtime 契約を検証するテスト。root placeholder の解決、repo/work/run root の識別、cwd と symlink の安全な扱い、run worktree の作成・検索・削除における管理領域・branch・Git 登録の検証を扱う。
 
 ## Read this when
-- path placeholder の解決や repo/work/run root の扱いを変更・調査するとき
-- run worktree の作成・検索・削除、managed path の安全性を変更・調査するとき
-- pushd の並行利用や test repository の Git 設定分離を検証するとき
+- runtime の root/path 解決、linked worktree、cwd の並列制御、memo 判定を変更・調査するとき
+- run worktree の作成・検索・削除や、managed path・symlink・Git 登録の安全性を変更・調査するとき
+- テスト用 Git repository の global config 非依存性を確認するとき
 
 ## Do not read this when
-- CLI コマンドの入出力や runtime path 以外の機能を変更・調査するとき
-- path model や worktree lifecycle のテストを直接確認する必要がないとき
+- CLI の一般的な実行フローや個別コマンドの仕様だけを変更・調査するとき
+- path model や worktree runtime の挙動に関係しないテストを扱うとき
 
 ## hash
-- d17f551d78828a1edd9d8ecae455490093d4bca9e203a19c0709e0ebb007356e
+- fa7331492340dd8544b573858bdc8cbd16f812a9808bac6b908cb97bbaef0f84
 
 # `test_cli_command_tree.py`
 

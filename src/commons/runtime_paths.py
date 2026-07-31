@@ -177,8 +177,10 @@ def is_root_memo(root: Path, path: Path) -> bool:
     """`{{work-root}}/memo` 自体またはその配下か判定する。"""
     # {{work-root}}/oracle/doc/app_spec/indexing.md
     # memo の判定は repository 上の path 境界で行い、symlink の実体へ追跡しない。
-    memo = (root / "memo").absolute()
-    candidate = path.absolute()
+    # abspath は symlink を解決せずに `.`/`..` だけを正規化するため、memo/../path
+    # を memo 配下と誤認しない。
+    memo = Path(os.path.abspath(root / "memo"))
+    candidate = Path(os.path.abspath(path))
     return candidate == memo or memo in candidate.parents
 
 

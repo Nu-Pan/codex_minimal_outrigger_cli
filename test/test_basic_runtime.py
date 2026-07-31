@@ -146,6 +146,7 @@ def test_root_memo_classification_uses_repository_path_for_symlinks(
 
     assert is_root_memo(root, memo_link)
     assert not is_root_memo(root, outside_link)
+    assert not is_root_memo(root, memo / ".." / outside_link.name)
 
 
 def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:

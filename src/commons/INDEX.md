@@ -285,19 +285,18 @@
 # `runtime_paths.py`
 
 ## Summary
-- cmoc の repository/worktree/cmoc root 解決、実行時 timestamp・duration 表示、排他的な timestamp path 予約、各種 runtime 保存先 path 生成、memo 判定、cwd 一時切替を提供する共通 runtime path ユーティリティ。root 解決や process-wide cwd 操作の実装を確認する入口。
+- cmoc の repository/worktree root、実行時刻、経過時間、各種 runtime directory・設定 path を解決する共通ユーティリティ。cwd の一時切替を thread-safe に管理し、root 解決失敗や timestamp 衝突などの runtime 契約も担う。
 
 ## Read this when
-- root placeholder の実パス解決や、repository/worktree 起点のエラー処理を変更・調査するとき
-- session、report、log、schema、worktree など cmoc の runtime 保存先を追加・変更するとき
-- timestamp、duration 表示、timestamp path の衝突回避、cwd 切替の並行性を変更・調査するとき
+- root path、session/report/log/schema/config などの cmoc 内部保存先を扱う実装を変更・調査するとき
+- cwd を起点にした root 解決、pushd、timestamp、duration 表示の挙動を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの処理や保存データ形式そのものを変更するときは、まず該当サブコマンドの実装・仕様を読む
-- root placeholder の解決規則自体を変更するときは、path model の定義を直接読む
+- 特定サブコマンドの処理や個別ログ内容だけを変更・調査するとき
+- root path や runtime directory の解決を使わない機能を扱うとき
 
 ## hash
-- 7c1e3def18dbe914386327b4cfca1e01716de482c81abcdb5b533f316bad3421
+- 067ead4b3e70b253b8909a92589fded5f28a6d6f242f61be6bf1d30a96400f6c
 
 # `runtime_refactor.py`
 
