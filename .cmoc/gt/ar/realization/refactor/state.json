@@ -750,10 +750,10 @@
     "last_investigated_at": "2026-07-30_22-33_53_583201000"
   },
   "src/commons/runtime_codex_profile.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "d6a7bd3de227caedf4d519931968ebea97b41d00a8e4147cc765a21ad91303fc",
-    "last_investigated_at": "2026-07-31_19-48_55_571017000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "984eeaeabc15f95c6651e9b765024d23fc7f18c76606a44f0878cc66d16ac17c",
+    "last_investigated_at": "2026-07-31_21-03_32_463572000"
   },
   "src/commons/runtime_codex_tui.py": {
     "investigation_required": false,
