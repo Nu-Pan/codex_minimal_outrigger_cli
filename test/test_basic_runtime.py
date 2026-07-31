@@ -77,6 +77,57 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
     assert work_root(linked) == linked.resolve()
 
 
+def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """relativeな起点の解決をcwd切替と直列化し、未作成の祖先も受理する。"""
+    (tmp_path / "first").mkdir()
+    (tmp_path / "second").mkdir()
+    first = make_repo(tmp_path / "first")
+    second = make_repo(tmp_path / "second")
+    original = first.resolve()
+    monkeypatch.chdir(original)
+    first_ready = threading.Event()
+    release_first = threading.Event()
+    worker_started = threading.Event()
+    worker_finished = threading.Event()
+    observed: list[Path] = []
+
+    def hold_other_directory() -> None:
+        """別threadのpushdがprocess-global cwdを保持する。"""
+        with pushd(second):
+            first_ready.set()
+            release_first.wait(5)
+
+    def resolve_relative_cwd() -> None:
+        """相対cwdを解決し、呼び出し結果を記録する。"""
+        first_ready.wait(5)
+        worker_started.set()
+        observed.append(repo_root(Path(".")))
+        worker_finished.set()
+
+    holder = threading.Thread(target=hold_other_directory)
+    worker = threading.Thread(target=resolve_relative_cwd)
+    holder.start()
+    assert first_ready.wait(5)
+    worker.start()
+    try:
+        assert worker_started.wait(5)
+        assert not worker_finished.wait(0.1)
+    finally:
+        release_first.set()
+        holder.join(5)
+        worker.join(5)
+
+    assert observed == [original]
+    assert not holder.is_alive()
+    assert not worker.is_alive()
+
+    missing_anchor = original / "not-created" / "file.py"
+    assert repo_root(missing_anchor) == original
+    assert work_root(missing_anchor) == original
+
+
 def test_pushd_serializes_process_global_cwd_changes(tmp_path: Path) -> None:
     """並列する pushd が process-global な cwd を混線させない。"""
     first = tmp_path / "first"

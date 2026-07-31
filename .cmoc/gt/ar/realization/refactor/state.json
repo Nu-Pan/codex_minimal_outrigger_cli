@@ -799,9 +799,9 @@
   },
   "src/commons/runtime_paths.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "a6083e682746a50b8a97e22b8003317e0fd2b04e7074f12e33e8f228b944ceaa",
-    "last_investigated_at": "2026-07-29_16-43_49_188827000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "a480abe2a89ac7eb386fd95d53aca2ee7ea41e7b4819676994e9ac9d99236430",
+    "last_investigated_at": "2026-07-31_13-52_04_876788000"
   },
   "src/commons/runtime_refactor.py": {
     "investigation_required": false,
@@ -1086,7 +1086,7 @@
     "last_investigated_at": "2026-07-26_05-19_32_904720000"
   },
   "test/test_basic_runtime.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "e46f7c07941d2f3bc273d0ad44f98f8bd15be87aaa353e70242d6ad53f197d6c",
     "last_investigated_at": "2026-07-31_04-02_24_256985000"

@@ -49,15 +49,24 @@ def _resolve_root(placeholder: RootPathPlaceHolder, cwd: Path | None) -> Path:
     Returns:
         placeholder が示す絶対 root path。
     """
-    if cwd is None:
-        with _CWD_LOCK:
+    with _CWD_LOCK:
+        if cwd is None:
             return resolve_real_path(placeholder)
-    start_dir = cwd.resolve() if cwd.is_dir() else cwd.resolve().parent
-    # {{work-root}}/oracle/src/oracle/other/path_model.py
-    # root resolver は resolve_real_path 専用の内部実装なので、cwd 起点の
-    # runtime 契約は一時的な cwd 切替で公開 API へ寄せる。
-    with pushd(start_dir):
-        return resolve_real_path(placeholder)
+        # relative path の解決から root resolver の完了まで process-global cwd を
+        # 固定し、別 thread の pushd と起点 path が混線しないようにする。
+        resolved_cwd = cwd.resolve()
+        start_dir = resolved_cwd if resolved_cwd.is_dir() else resolved_cwd.parent
+        # 存在しない file/directory を起点にしても、既存の祖先から root を探索できる。
+        while not start_dir.is_dir():
+            parent = start_dir.parent
+            if parent == start_dir:
+                break
+            start_dir = parent
+        # {{work-root}}/oracle/src/oracle/other/path_model.py
+        # root resolver は resolve_real_path 専用の内部実装なので、cwd 起点の
+        # runtime 契約は一時的な cwd 切替で公開 API へ寄せる。
+        with pushd(start_dir):
+            return resolve_real_path(placeholder)
 
 
 def timestamp() -> str:
