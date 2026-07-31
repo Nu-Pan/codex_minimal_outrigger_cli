@@ -146,19 +146,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界を担当し、実行前後の argv/env/cwd、sandbox と CODEX_HOME、schema 配置、child process の追跡・停止、JSONL 出力解析および capacity/quota/予期しない error 判定をまとめる。Codex CLI の実行環境設定と機械的な実行結果の解釈が必要な作業の入口。
+- Codex CLI subprocess 境界を担当し、sandbox・cwd・CODEX_HOME・argv/config override・schema 配置・子プロセス追跡と安全な停止・JSONL 出力の解析および capacity/quota/error 判定をまとめる。Codex 起動環境の構築と機械的な実行結果解釈に関する実装の入口。
 
 ## Read this when
-- Codex CLI に渡す sandbox、cwd、CODEX_HOME、model/provider 設定、config override、schema を変更または調査するとき。
-- Codex subprocess の起動、process group、PID reuse 対策、tracking file、abandon 時の停止処理を変更または調査するとき。
-- Codex の JSONL output、resume token、stderr、capacity/quota/error 判定を変更または調査するとき。
+- Codex CLI の起動引数、sandbox モード、model provider、reasoning 設定、cwd、CODEX_HOME、schema 配置を変更または調査するとき
+- editing run の process tracking、PID reuse 対策、process group の停止、SIGTERM/SIGKILL、abandon cleanup を変更または調査するとき
+- Codex subprocess の実行失敗、JSONL error、thread resume token、capacity/quota retry 判定を変更または調査するとき
 
 ## Do not read this when
-- Codex CLI のプロンプト内容や実行依頼の組み立てだけを変更する場合は、prompt builder の該当部分を直接読む。
-- 一般的な runtime config、runtime path、content hash、CmocError の共通実装だけを変更する場合は、それぞれの専用モジュールを直接読む。
+- Codex CLI 境界以外の一般的な設定検証や path/content helper だけを変更するときは、該当する runtime module を直接読む
+- 利用者向けの editing run 全体の状態遷移や abandon コマンドの仕様を確認するときは、先に対応する oracle 文書と上位の run 実装を読む
 
 ## hash
-- 15eb933b05f57c376a488bda3ca33851a1f0d84fea4ce25606694663f20d7e30
+- 4f0ef21cd5da9b192fe8fe339c6404a8b14e7eecdfa90219128edc5b0ab4d897
 
 # `runtime_codex_tui.py`
 

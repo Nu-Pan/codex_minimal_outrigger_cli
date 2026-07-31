@@ -1142,8 +1142,8 @@
   "test/test_codex_runtime_subprocess.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "f86528f863d0114990088b68d4325e358ef2e64ab92e9a096bdb43e27e1a5a9d",
-    "last_investigated_at": "2026-07-31_11-58_55_160657000"
+    "last_investigated_sha256": "57831ffca40ed13fd9a2702ead97106a296ee491bbd2f2d600eb88adbe03108c",
+    "last_investigated_at": "2026-07-31_16-35_13_732474000"
   },
   "test/test_codex_runtime_tui.py": {
     "investigation_required": false,

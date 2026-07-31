@@ -354,7 +354,10 @@ def stop_process_group(
             f"pgid: {process_group_id}",
         )
     if expected_leader is not None and (
-        expected_members is None or expected_leader not in expected_members
+        # 空 snapshot は leader の終了と観測欠落を区別できないため、停止済み扱いにしない。
+        expected_members is None
+        or expected_leader not in expected_members
+        or not initial_members
     ):
         raise CmocError(
             "実行中 Codex subprocess の同一性を確認できません。",

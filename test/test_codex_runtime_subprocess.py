@@ -191,7 +191,7 @@ def test_stop_process_group_rejects_snapshot_without_expected_leader(
     assert sent == []
 
 
-def test_stop_process_group_rejects_empty_snapshot_without_expected_leader(
+def test_stop_process_group_rejects_empty_snapshot_with_expected_leader(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """leader の証跡がない空 snapshot を停止済みとして扱わない。"""
@@ -211,7 +211,7 @@ def test_stop_process_group_rejects_empty_snapshot_without_expected_leader(
         runtime_codex_profile.stop_process_group(
             111,
             expected_leader=(111, 10),
-            expected_members=((222, 20),),
+            expected_members=((111, 10), (222, 20)),
         )
 
     assert sent == []

@@ -126,35 +126,34 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装を格納する src ツリー。Typer CLI の主要入口、サブコマンド、共通 runtime、ACP・basic・config の互換 import shim を扱い、個別機能の実装へ進むための入口となる。
+- cmoc の realization 実装本体。Typer CLI の登録・引数解析・エラー変換を起点に、doctor、indexing、oracle、realization、run、session、tui の各サブコマンドへ委譲する。commons に共通 runtime、acp・basic・config・oracle.py に互換 import と正本実装への接続を置く。
 
 ## Read this when
-- cmoc の CLI 登録、主要エントリーポイント、サブコマンドの配置を確認したいとき。
-- 共通 runtime と、ACP・basic・config・oracle の互換 import 経路を確認したいとき。
-- 特定のサブコマンドや runtime 機能の実装へ進む先を判断したいとき。
+- cmoc CLI 全体の入口、サブコマンドの登録先、引数解析や共通実行ライフサイクルを確認するとき。
+- サブコマンド実装、共通 runtime、ACP/basic/config の互換入口、oracle package shim の配置を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime 機能の詳細を調査・変更する場合は、対応する下位ディレクトリやモジュールを直接読む。
-- 正本仕様や oracle 実装の内容を確認する場合は、oracle ツリーを直接読む。
-- src の CLI・互換入口・共通 runtime と無関係なテストや文書を調査する場合。
+- 特定サブコマンドの処理詳細を調査するときは、該当する sub_commands 配下を直接読む。
+- 共通 runtime の個別機能を確認するときは、該当する commons モジュールを直接読む。
+- oracle の正本仕様・実装や、互換入口の移行先詳細を確認するときは、対応する oracle 側または実体モジュールを直接読む。
 
 ## hash
-- 8248701eb6da7d5f8895ed8adcb2cc259a38f15bea824c4bffbde4136b5eb240
+- 0ada04cd60aef264e0d3bf33e90de5f69fe60c29841388ca518514cf9d1eb587
 
 # `test`
 
 ## Summary
-- テストコードから正本 schema・oracle 文書・実装を参照するための共通支援モジュールと、cmoc の各機能を外部契約・制御ロジック・統合経路で検証するテスト群を収録する。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、Git/worktree、設定、prompt、TUI などの変更時に、対応する回帰テストへ進むための入口となる。
+- cmoc の realization test を集約するディレクトリ。CLI、runtime、session/run lifecycle、indexing、oracle review、Codex 実行、設定、Git、TUI などの外部挙動・制御ロジックを検証し、各機能の実装や正本仕様を確認するための入口を提供する。共通 fixture・fake command・Git/Ollama/Codex 支援も含む。
 
 ## Read this when
-- cmoc の実装変更に対応する既存の回帰テストや、追加すべき外部挙動・制御ロジックの検証箇所を探すとき。
-- ACP builder、Codex 実行、CLI サブコマンド、indexing、oracle review、session/run lifecycle、設定、Git/worktree、TUI のいずれかのテストを変更・調査するとき。
-- テスト用の Codex/Ollama 環境、fake external command、Git repository、oracle schema path、CLI 実行 helper が必要なとき。
+- cmoc の実装変更に対応する回帰テストや外部契約の検証範囲を探すとき
+- CLI、runtime、Codex 実行、indexing、oracle review、session/run lifecycle、設定、Git、TUI の挙動をテストから確認するとき
+- テスト共通ヘルパーや実経路統合テストの準備方法を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle 文書・schema・source を直接読む。
-- 実装の責務や内部処理を調査するときは、対応する src 側の実装を直接読む。
-- 対象機能と無関係なテスト領域や、Codex の回答品質そのものを評価する目的のとき。
+- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc または oracle schema を直接読む
+- 実装の責務や内部ロジックを確認するときは、対応する src 側の実装を直接読む
+- テスト対象と無関係な機能や、Codex の回答品質そのものを調査するとき
 
 ## hash
-- 9f188b930bbbbb77f1127295d30b94e7bdb4965b0f581b59a931c05564740117
+- eaf520b1f17ee679c93aa155b6298b958b2a716ffe315b2874b67d23ef5a7641
