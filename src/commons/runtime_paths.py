@@ -143,13 +143,13 @@ def schema_store_dir(root: Path) -> Path:
 
 def config_path(root: Path) -> Path:
     """cmoc config JSON の保存 path を返す。"""
-    return tracked_agent_read_dir(root) / "config.json"
+    return _tracked_agent_read_dir(root) / "config.json"
 
 
 def refactor_state_path(root: Path) -> Path:
     """realization refactor の追跡 state 保存 path を返す。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    return tracked_agent_read_dir(root) / "realization" / "refactor" / "state.json"
+    return _tracked_agent_read_dir(root) / "realization" / "refactor" / "state.json"
 
 
 def generated_agent_read_dir(root: Path) -> Path:
@@ -158,7 +158,7 @@ def generated_agent_read_dir(root: Path) -> Path:
     return root / ".cmoc" / "gu" / "ar"
 
 
-def tracked_agent_read_dir(root: Path) -> Path:
+def _tracked_agent_read_dir(root: Path) -> Path:
     """git 追跡かつ agent 読み取り専用の設定 directory を返す。"""
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     return root / ".cmoc" / "gt" / "ar"

@@ -146,20 +146,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。実行前の sandbox・cwd・CODEX_HOME・argv/config override・schema 配置、実行中の process group tracking と安全な停止、実行後の JSON/JSONL 読み取り・resume token・capacity/quota/error 判定を扱う。Codex 起動経路や editing run の abandon/cleanup、Structured Output の配置、Codex エラーの retry 判定を調べる際の入口。
+- Codex CLI subprocess 境界を担当し、実行前後の argv/env/cwd、sandbox と CODEX_HOME、schema 配置、child process の追跡・停止、JSONL 出力解析および capacity/quota/予期しない error 判定をまとめる。Codex CLI の実行環境設定と機械的な実行結果の解釈が必要な作業の入口。
 
 ## Read this when
-- Codex CLI に渡す sandbox、cwd、CODEX_HOME、環境変数、model/provider、TOML override を変更・調査するとき
-- Codex subprocess の起動、process group、PID reuse 対策、tracking file、SIGTERM/SIGKILL、abandon cleanup を変更・調査するとき
-- Structured Output schema の配置や Codex の JSON/JSONL 出力、resume token、capacity/quota/unexpected error 判定を変更・調査するとき
+- Codex CLI に渡す sandbox、cwd、CODEX_HOME、model/provider 設定、config override、schema を変更または調査するとき。
+- Codex subprocess の起動、process group、PID reuse 対策、tracking file、abandon 時の停止処理を変更または調査するとき。
+- Codex の JSONL output、resume token、stderr、capacity/quota/error 判定を変更または調査するとき。
 
 ## Do not read this when
-- Codex 呼び出し元の prompt 構築や agent call の業務ロジックだけを変更・調査するときは、直接その呼び出し元と対応する oracle を読む
-- Codex CLI 以外の subprocess、一般的な設定値検証、runtime path/content の実装だけを変更・調査するときは、各専用モジュールを直接読む
-- 利用者向けの editing run コマンド仕様全体を確認する場合は、この境界実装だけで判断せず、対応する oracle 文書を先に読む
+- Codex CLI のプロンプト内容や実行依頼の組み立てだけを変更する場合は、prompt builder の該当部分を直接読む。
+- 一般的な runtime config、runtime path、content hash、CmocError の共通実装だけを変更する場合は、それぞれの専用モジュールを直接読む。
 
 ## hash
-- 7e38fedccdc3663a1ad0d91f1e4785c1d3cca3bc7de9086232b3cadc473fdcbb
+- 15eb933b05f57c376a488bda3ca33851a1f0d84fea4ce25606694663f20d7e30
 
 # `runtime_codex_tui.py`
 
@@ -252,21 +251,21 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行、branch・linked worktree の作成削除、Git 共通ディレクトリの解決を担う共通境界。
-- Git ignore の検査・設定と、oracle file / realization file の repository path・追跡状態による分類を提供する。
-- path の正規化、symlink・非通常 file・管理外 worktree の安全性検証、および cmoc 固有 branch・ignore 規則を扱う。
+- Git コマンド実行、branch・linked worktree の作成／削除、安全性検証、Git ignore 管理を担う共通境界。repository path、Git index、worktree metadata、symlink・特殊ファイルの安全検査を共有し、oracle／realization file の分類判定も提供する。Git 状態や worktree 操作、ignore 初期化、ファイル分類に関わる下位実装から参照する入口。
 
 ## Read this when
-- Git の状態取得、branch や linked worktree のライフサイクル、worktree 削除の安全性を変更・調査するとき。
-- `.cmoc/gu` の ignore 保証、Git ignore source の検証、oracle / realization file の分類判定を変更・調査するとき。
-- Git path、worktree path、symlink、追跡状態に関する共通 helper の挙動を確認するとき。
+- Git コマンドの実行結果や利用者向けエラー処理を変更・調査するとき
+- branch の判定、linked worktree の作成・削除、managed path の安全検証を変更・調査するとき
+- `.cmoc/gu` の ignore 設定や Git ignore source の検証を変更・調査するとき
+- oracle file／realization file の path 分類や Git 追跡状態の判定を変更・調査するとき
 
 ## Do not read this when
-- CLI 固有のコマンド制御や session state の仕様だけを確認する場合は、各 command・state 実装と対応する oracle doc を直接読む。
-- Git と無関係な prompt 生成、runtime error、path 定義、結果型の変更だけを扱う場合は、各専用 module を読む。
+- Git 境界を使う上位の CLI 機能の仕様や orchestration だけを確認したいとき
+- Git と無関係な runtime helper、出力整形、個別サブコマンドの処理だけを変更・調査するとき
+- oracle file の正本仕様そのものを確認するときは、対応する `oracle` 文書やソースを直接読む
 
 ## hash
-- 2d9438cef169a2e52fbaeb210126ab1a29864fc73df7add828be4f7c4788310a
+- 516156a59e74f4f5b22cc56e76b30732b3cd380969aab9dfef1d8199314358c8
 
 # `runtime_logging.py`
 
@@ -288,18 +287,19 @@
 # `runtime_paths.py`
 
 ## Summary
-- リポジトリ・worktree・cmoc root の解決、実行時 timestamp と duration の整形、session/report/log/schema/config などの標準保存先の算出を提供する runtime path ユーティリティ。cwd を一時変更する処理は process-wide lock と ContextVar で直列化する。
+- cmoc の repository/worktree root 解決、実行時刻・経過時間の整形、session・report・log・worktree などの標準パス算出、root 配下判定、cwd の一時切替を担う共通 runtime path ユーティリティ。各種 runtime directory や設定・状態ファイルの保存先を確認する実装の入口。
 
 ## Read this when
-- root path の解決、cmoc 管理ディレクトリや各種ログ・レポート保存先の扱いを変更または調査するとき
-- timestamp、duration 表示、timestamp 付き path の排他的予約、cwd 切替の挙動を確認するとき
+- repository root または worktree root の解決エラー、root 起点のパス算出、runtime 用ディレクトリ配置を変更・調査するとき
+- timestamp・console timestamp・duration の表示形式、timestamp path の排他的予約、cwd 切替の並行実行制御を確認するとき
+- session、report、log、schema、config、refactor state などの保存先を追跡するとき
 
 ## Do not read this when
-- 個別サブコマンドの処理内容、ログ出力形式、設定スキーマそのものを確認したいとき
-- path 解決の基盤実装や root placeholder の定義を確認したいときは、path model 側を直接読む
+- 特定サブコマンドの処理仕様や CLI 入出力だけを確認したいとき
+- root 解決や共通 runtime path、時刻・cwd 制御に関係しない機能を変更するとき
 
 ## hash
-- a6083e682746a50b8a97e22b8003317e0fd2b04e7074f12e33e8f228b944ceaa
+- a480abe2a89ac7eb386fd95d53aca2ee7ea41e7b4819676994e9ac9d99236430
 
 # `runtime_refactor.py`
 

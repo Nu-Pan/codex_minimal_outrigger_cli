@@ -124,16 +124,15 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実行フローを担う実装。プロンプト編集、実行パラメータ解決、Codex TUI 起動を、リポジトリおよび作業ルートのコンテキストで統合する。TUI 起動用パラメータの構築と、解決済み JSON の真偽値抽出も提供する。
+- `cmoc tui` の CLI 実行フローを担当する実装。入力プロンプトの収集、実行パラメータの解決、Codex TUI 用パラメータの構築、対象 worktree での TUI 起動を一連の runtime 処理として実装している。
 
 ## Read this when
-- `cmoc tui` の起動処理、プロンプト入力、実行パラメータ解決、Codex TUI 呼び出しを変更・調査するとき
-- TUI 用 `AgentCallParameter` の構築や解決済み設定値の扱いを確認するとき
+- `cmoc tui` の起動処理、プロンプト入力、実行パラメータ解決、Codex TUI 起動の流れを変更または調査するとき。
+- 解決済みパラメータから `AgentCallParameter` を構築する処理や、TUI 実行時の repository/worktree コンテキストを確認するとき。
 
 ## Do not read this when
-- TUI の起動パラメータ定義そのものを確認したいときは、TUI builder の実装を直接読む
-- プロンプト編集の入力仕様を確認したいときは、prompt editor input の実装または参照される oracle 文書を直接読む
-- CLI 共通実行処理や設定読み込みの仕様だけを確認したいときは、cmoc runtime の実装を直接読む
+- TUI 用の個別パラメータ定義やプロンプト内容の正本仕様を確認したいときは、参照コメントに示された oracle doc を直接読む。
+- 共通 CLI runtime、設定読み込み、プロンプト入力収集の共通処理だけを変更または調査するときは、それぞれの共通モジュールを直接読む。
 
 ## hash
-- a257bd9698b2b21e78a3eaf80056c7cb90787bb53c494cc35b490e8e2710a60f
+- fbdd08269efbbff2e6a6820d30b8bc62602ddb51e91183451fe1b430eb68fc66

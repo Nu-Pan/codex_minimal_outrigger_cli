@@ -126,21 +126,20 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装ルート。Typer による公開 CLI と、doctor・session・oracle・realization・run・TUI・indexing の各サブコマンド入口を提供する。
-- commons、basic、acp、config などの共通 runtime・互換 import・設定入口と、oracle package shim を含み、各機能の実装や adapter へ進む起点となる。
+- cmoc の realization 実装ルート。Typer CLI の登録・引数解析・エラー変換を担う `main.py`、CLI サブコマンド、共通 runtime、ACP/basic/config の互換入口、oracle package shim を含む。
+- CLI の入口やサブコマンド登録を確認したい場合は `main.py`、共通処理は `commons`、個別コマンドは `sub_commands`、互換 import は `acp`・`basic`・`config`・`oracle.py` へ進む。
 
 ## Read this when
-- cmoc の CLI コマンド構成、サブコマンド登録、引数解析エラー、自動補完の挙動を確認したいとき。
-- session、oracle、realization、run、doctor、TUI、indexing の実行経路を特定したいとき。
-- 共通 runtime、互換 import、設定入口、oracle package 解決の realization 側構成を調査したいとき。
+- cmoc CLI の全体構成、公開サブコマンド、Typer の引数解析・補完・エラー処理を調査または変更するとき。
+- 共通 runtime と CLI サブコマンド、互換 import shim の配置関係を把握してから対象実装を選ぶとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理詳細を確認したいときは、対応する sub_commands 配下を直接読む。
-- 共通 runtime の個別処理を確認したいときは commons 配下の該当 module を直接読む。
-- oracle の正本仕様・実装や、CLI 利用側の外部挙動を確認したいときは、それぞれの oracle 側または専用実装を直接読む。
+- 特定サブコマンドの処理詳細を確認したいときは `sub_commands` 配下の該当実装を直接読む。
+- 共通 runtime の個別機能を調査するときは `commons` 配下の対応モジュールを直接読む。
+- oracle 側の正本仕様・実装や、ACP 型の canonical 定義を確認するときは `oracle` 配下の対象を直接読む。
 
 ## hash
-- c19dd615e71b89aa108479da33a053786479f54c5f708535ab26d1591c1d9da0
+- 5723ff6d350b62d96c3be999593b3f20ee5e9182894fe792e9c74dcb761d96ee
 
 # `test`
 

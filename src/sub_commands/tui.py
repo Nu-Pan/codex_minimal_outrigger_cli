@@ -106,16 +106,16 @@ def build_tui_codex_parameter(
     return build_tui_launch_tui_parameter(
         launch_timestamp or timestamp(),
         original_prompt=original_prompt,
-        oracle_standard=nested_bool(resolved_parameter, "oracle_standard"),
-        realization_standard=nested_bool(resolved_parameter, "realization_standard"),
-        oracle_review_standard=nested_bool(
+        oracle_standard=_nested_bool(resolved_parameter, "oracle_standard"),
+        realization_standard=_nested_bool(resolved_parameter, "realization_standard"),
+        oracle_review_standard=_nested_bool(
             resolved_parameter, "oracle_review_standard"
         ),
-        apply_review_standard=nested_bool(resolved_parameter, "apply_review_standard"),
+        apply_review_standard=_nested_bool(resolved_parameter, "apply_review_standard"),
     )
 
 
-def nested_bool(data: dict[str, object], name: str) -> bool:
+def _nested_bool(data: dict[str, object], name: str) -> bool:
     """TUI parameter JSON で `{value: ...}` 形式の項目を真偽値として読む。"""
     value = data.get(name)
     return bool(value.get("value")) if isinstance(value, dict) else False

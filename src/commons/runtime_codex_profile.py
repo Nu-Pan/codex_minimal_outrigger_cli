@@ -20,6 +20,7 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from types import FrameType
 from typing import Any
 
 from basic.acp import AgentCallParameter, FileAccessMode
@@ -706,7 +707,7 @@ def run_tracked_codex_subprocess(
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
     sigterm_pending = False
 
-    def _defer_sigterm(_signum: int, _frame: Any) -> None:
+    def _defer_sigterm(_signum: int, _frame: FrameType | None) -> None:
         """tracking情報の登録が終わるまでSIGTERMを保留する。"""
         nonlocal sigterm_pending
         sigterm_pending = True
@@ -791,7 +792,7 @@ def run_tracked_codex_subprocess(
             process.pid
         ):
             try:
-                remove_tracked_child_process(tracking_path, process.pid)
+                _remove_tracked_child_process(tracking_path, process.pid)
             except OSError as exc:
                 raise CmocError(
                     "run process tracking を更新できません。",
@@ -817,7 +818,7 @@ def _record_tracked_child_process(
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def remove_tracked_child_process(path: Path, process_id: int) -> None:
+def _remove_tracked_child_process(path: Path, process_id: int) -> None:
     """終了した Codex child process を run process tracking file から除く。"""
     with run_process_id_file_lock(path):
         if not path.exists():
