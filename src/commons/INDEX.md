@@ -146,19 +146,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界を担当し、起動時の sandbox・cwd・CODEX_HOME・argv/config override・schema 配置と、実行時の process group tracking、pidfd による安全な停止、JSON/JSONL 出力・error・resume token の解釈をまとめる。Codex 呼び出しの実行環境設定と、Codex から返る機械的結果の判定を確認するための入口。
+- Codex CLI subprocess 境界の実装を担当し、起動前後の argv・環境変数・cwd・schema 配置と、実行結果の JSON/JSONL・error 判定を扱う。
+- sandbox 権限変換、CODEX_HOME、provider 設定、process group と pidfd による child process tracking・停止・cleanup、Codex CLI 不在時のエラー変換を含む。
+- Codex CLI 実行境界に関する変更や、process tracking・schema 配置・JSONL error/retry 判定の挙動を確認する際の入口となる。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox、cwd、CODEX_HOME、model provider、reasoning 設定を変更・調査するとき
-- Codex subprocess の process tracking、process group の停止、PID reuse 対策、abandon 時の cleanup を変更・調査するとき
-- Structured Output schema の配置、Codex JSON/JSONL 出力、resume token、capacity/quota/unexpected error の判定を変更・調査するとき
+- Codex CLI に渡す sandbox、model、provider、reasoning effort、TOML override argv を変更または調査するとき。
+- CODEX_HOME、Codex subprocess の cwd/env、schema の hash store 配置、Codex CLI 不在時のエラー処理を確認するとき。
+- editing run の process tracking、pidfd、process group の signal・cleanup・PID reuse 対策を変更または調査するとき。
+- Codex の stdout JSONL から error、capacity/quota retry、resume token を判定する処理を変更または調査するとき。
 
 ## Do not read this when
-- Codex CLI を呼び出さず、上位の run 制御や利用者向けエラー表示だけを変更するとき
-- Codex 以外の subprocess、設定値の定義、共有 path/content helper の実装を直接調査するとき
+- Codex CLI 境界を経由しない一般的な設定検証や runtime path/content の実装だけを変更・調査するときは、対応する専用モジュールを直接読む。
+- Codex CLI の利用者向けコマンド仕様や editing run 全体の制御フローを確認する場合は、このファイルだけで完結させず、該当する oracle doc と上位の run 実装を読む。
 
 ## hash
-- d6a7bd3de227caedf4d519931968ebea97b41d00a8e4147cc765a21ad91303fc
+- 984eeaeabc15f95c6651e9b765024d23fc7f18c76606a44f0878cc66d16ac17c
 
 # `runtime_codex_tui.py`
 

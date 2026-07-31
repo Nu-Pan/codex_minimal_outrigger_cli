@@ -705,6 +705,7 @@ def run_tracked_codex_subprocess(
     process: subprocess.Popen[Any] | None = None
     cleanup_expected_leader: tuple[int, int] | None = None
     cleanup_expected_members: tuple[tuple[int, int], ...] | None = None
+    tracked_start_time: int | None = None
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # Popen と child 行の登録だけを遅延させ、exec 後の child は通常の SIGTERM を受ける。
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
@@ -737,7 +738,7 @@ def run_tracked_codex_subprocess(
                 if cleanup_start_time is not None:
                     cleanup_expected_leader = (process.pid, cleanup_start_time)
                 cleanup_expected_members = process_group_members(process.pid)
-                _record_tracked_child_process(
+                tracked_start_time = _record_tracked_child_process(
                     tracking_path, process.pid, process_group_id=process.pid
                 )
         except BaseException as exc:
@@ -805,11 +806,18 @@ def run_tracked_codex_subprocess(
     finally:
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # leader 終了後も descendant が group に残る間は tracking を保持する。
-        if process.poll() is not None and not process_group_has_running_member(
-            process.pid
+        if (
+            process.poll() is not None
+            and not process_group_has_running_member(process.pid)
+            and tracked_start_time is not None
         ):
             try:
-                _remove_tracked_child_process(tracking_path, process.pid)
+                _remove_tracked_child_process(
+                    tracking_path,
+                    process.pid,
+                    tracked_start_time,
+                    process.pid,
+                )
             except OSError as exc:
                 raise CmocError(
                     "run process tracking を更新できません。",
@@ -820,8 +828,8 @@ def run_tracked_codex_subprocess(
 
 def _record_tracked_child_process(
     path: Path, process_id: int, process_group_id: int | None = None
-) -> None:
-    """Codex childのPID、start time、process groupをtracking fileへ保存する。"""
+) -> int:
+    """Codex child の identity を tracking file へ保存し、start time を返す。"""
     _validate_tracked_process_file(path)
     start_time = process_start_time(process_id)
     if start_time is None:
@@ -833,17 +841,42 @@ def _record_tracked_child_process(
     lines = [line for line in lines if not line.startswith(f"child {process_id} ")]
     lines.append(child_line)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return start_time
 
 
-def _remove_tracked_child_process(path: Path, process_id: int) -> None:
-    """終了した Codex child process を run process tracking file から除く。"""
+def _remove_tracked_child_process(
+    path: Path,
+    process_id: int,
+    expected_start_time: int,
+    expected_group_id: int | None = None,
+) -> None:
+    """同じ identity の終了済み Codex child を tracking file から除く。"""
     with run_process_id_file_lock(path):
         if not path.exists():
             return
+
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # PID は再利用されるため、古い child の cleanup で新しい tracking 行を消さない。
+        def is_same_child(line: str) -> bool:
+            """PID 再利用後に登録された新しい child 行を保持する。"""
+            parts = line.split()
+            if len(parts) not in {3, 4} or parts[0] != "child":
+                return False
+            try:
+                if int(parts[1]) != process_id or int(parts[2]) != expected_start_time:
+                    return False
+                return (
+                    expected_group_id is None
+                    or len(parts) == 3
+                    or int(parts[3]) == expected_group_id
+                )
+            except ValueError:
+                return False
+
         lines = [
             line
             for line in path.read_text(encoding="utf-8").splitlines()
-            if not line.startswith(f"child {process_id} ")
+            if not is_same_child(line)
         ]
         path.write_text(("\n".join(lines) + "\n") if lines else "", encoding="utf-8")
 

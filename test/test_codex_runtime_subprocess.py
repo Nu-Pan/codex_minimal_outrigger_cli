@@ -425,6 +425,53 @@ def test_tracked_codex_subprocess_keeps_group_tracking_after_leader_exit(
     assert tracking_path.read_text() == "111 222\nchild 4321 333 4321\n"
 
 
+def test_tracked_codex_subprocess_preserves_reused_pid_tracking(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """終了処理が PID 再利用後の新しい child 行を削除しない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
+
+    class ReusedPidProcess:
+        """古い child の終了前に同じ PID の新しい tracking が登録された double。"""
+
+        pid = 4321
+        returncode = 0
+
+        def communicate(self, _input: object) -> tuple[str, str]:
+            """古い child の cleanup 前に PID 再利用を再現する。"""
+            tracking_path.write_text("111 222\nchild 4321 999 4321\n")
+            return "ok", ""
+
+        def poll(self) -> int:
+            """古い child が終了済みであることを返す。"""
+            return self.returncode
+
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: ReusedPidProcess(),
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile, "process_group_members", lambda _group: ()
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_has_running_member",
+        lambda _group: False,
+    )
+
+    run_tracked_codex_subprocess(
+        ["codex"], tracking_path, text=True, capture_output=True
+    )
+
+    assert tracking_path.read_text() == "111 222\nchild 4321 999 4321\n"
+
+
 def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
