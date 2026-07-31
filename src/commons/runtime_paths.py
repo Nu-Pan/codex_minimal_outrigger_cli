@@ -103,16 +103,33 @@ def format_duration(seconds: float) -> str:
     if seconds < 0:
         raise ValueError("duration must be non-negative")
     total_tenths = int(seconds * 10)
-    hours = total_tenths // 36000
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md は hour field を 2 桁に
+
+    # 経過時間には暦上の起点がないため、month は固定 30 day として分解する。
+    tenths_per_day = 24 * 60 * 60 * 10
+    months, remainder = divmod(total_tenths, 30 * tenths_per_day)
+    days, remainder = divmod(remainder, tenths_per_day)
+    hours, remainder = divmod(remainder, 36000)
+    minutes, sec_tenths = divmod(remainder, 600)
+    sec, msec = divmod(sec_tenths, 10)
+
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md は各 field を 2 桁に
     # 限るため、表現できない duration は幅を広げずに失敗させる。
-    if hours >= 100:
-        raise ValueError("duration exceeds the two-digit hour display limit")
-    minutes = (total_tenths % 36000) // 600
-    sec_tenths = total_tenths % 600
-    sec = sec_tenths // 10
-    msec = sec_tenths % 10
-    return f"{hours:2d}h {minutes:2d}m {sec:2d}.{msec}s"
+    if months >= 100:
+        raise ValueError("duration exceeds the two-digit month display limit")
+
+    # 最初の非 0 単位より上位だけを省略し、seconds は常に残す。
+    values = (months, days, hours, minutes)
+    parts = (
+        f"{months:2d} Mo",
+        f"{days:2d} Day",
+        f"{hours:2d} Hr",
+        f"{minutes:2d} Min",
+        f"{sec:2d}.{msec} Sec",
+    )
+    first_visible = next(
+        (index for index, value in enumerate(values) if value), len(values)
+    )
+    return " ".join(parts[first_visible:])
 
 
 def sessions_dir(root: Path) -> Path:

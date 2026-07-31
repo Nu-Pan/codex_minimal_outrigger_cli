@@ -288,18 +288,21 @@
 # `runtime_paths.py`
 
 ## Summary
-- cmoc の repository/worktree root、実行時刻、経過時間、各種 runtime directory・設定 path を解決する共通ユーティリティ。cwd の一時切替を thread-safe に管理し、root 解決失敗や timestamp 衝突などの runtime 契約も担う。
+- リポジトリ・worktree・cmoc ルートの解決、実行時 timestamp と duration の整形、各種 runtime 保存先 path の構築、cwd の一時切替を提供する共通 runtime path helper。関連する CLI の保存先、ログ、session、worktree、root 解決、pushd の挙動を確認する際の入口。
 
 ## Read this when
-- root path、session/report/log/schema/config などの cmoc 内部保存先を扱う実装を変更・調査するとき
-- cwd を起点にした root 解決、pushd、timestamp、duration 表示の挙動を確認するとき
+- root placeholder の実パス解決や、repo/worktree/cmoc root の runtime error 処理を変更・調査するとき
+- session、report、log、schema、worktree など cmoc 管理ディレクトリの保存先を変更・調査するとき
+- timestamp、console timestamp、duration 表示、timestamp path の排他的予約を変更・調査するとき
+- process-global な cwd 切替や、cwd 起点の root 解決の thread safety を変更・調査するとき
 
 ## Do not read this when
-- 特定サブコマンドの処理や個別ログ内容だけを変更・調査するとき
-- root path や runtime directory の解決を使わない機能を扱うとき
+- 特定サブコマンドの保存内容やログ形式そのものを確認する場合は、該当するサブコマンドの実装・oracle doc を直接読む
+- path placeholder の定義や root 探索アルゴリズム自体を確認する場合は、basic.path_model の実装・oracle src を直接読む
+- runtime path helper と無関係な CLI 入出力、agent call、schema 内容を変更・調査するとき
 
 ## hash
-- 067ead4b3e70b253b8909a92589fded5f28a6d6f242f61be6bf1d30a96400f6c
+- 106740a2370f965eb4c136399ac4b2a49cad93ae5c26c7a975d9599b1c6e13a7
 
 # `runtime_refactor.py`
 
