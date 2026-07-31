@@ -126,20 +126,19 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる src ツリー。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim、ACP・basic・config 関連の公開入口を扱い、各下位要素への入口を提供する。
+- cmoc の realization 側ソースコードを集約するディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、設定・公開互換 shim、ACP/basic adapter など、実行時の具体的な実装への入口を提供する。
 
 ## Read this when
-- cmoc の realization 側の実装構成や、CLI から各サブコマンド・runtime への入口を確認したいとき。
-- 互換 import、oracle パッケージ解決、ACP・basic・config の公開入口を調査したいとき。
-- 特定のサブコマンドや共通 runtime 実装へ進む前に、src 配下の責務分担を把握したいとき。
+- cmoc の realization 実装の全体構成や、CLI・runtime・互換 import の入口を確認したいとき。
+- 特定のサブコマンド、共通 runtime、ACP/basic adapter、設定 shim などの実装へ進む前に、配置と責務の境界を把握したいとき。
 
 ## Do not read this when
-- 特定サブコマンド、runtime 機能、互換 shim の詳細だけを確認したいときは、対応する下位要素を直接読む。
-- 正本仕様や oracle 側の実装を確認したいときは、対応する oracle ツリーを直接読む。
-- テストや補助ファイルだけを調査・変更するとき。
+- 正本仕様や oracle 実装の内容を確認したいときは、oracle 配下の対応対象を直接読む。
+- 特定モジュールの詳細実装だけを調査・変更するときは、このディレクトリ全体ではなく該当する下位ファイルやディレクトリを直接読む。
+- 利用者向け仕様やテストの挙動だけを確認したいときは、対応する oracle または test の対象を直接読む。
 
 ## hash
-- ccd90cfc943668b7937a1d06e4037e987be61953b85b0703699f929c723ae1b8
+- c63e86b74658e5f60ed0d73d83f7d90de06eeebfc3a9e79c9ccdf7d92dd0d5c9
 
 # `test`
 

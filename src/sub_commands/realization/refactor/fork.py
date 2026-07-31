@@ -684,6 +684,9 @@ def _unattributed_realization_paths(
     state_paths_before: Collection[str],
 ) -> list[str]:
     """findings の evidence に対応しない agent 差分を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # findings の evidence path を run-relative path にそろえ、agent 差分との対応を
+    # 判定できる形にする。
     evidence_paths: set[str] = set()
     has_evidence_path = False
     for finding in findings:
@@ -699,19 +702,20 @@ def _unattributed_realization_paths(
             has_evidence_path = True
             if relative_path := _evidence_relative_path(context, raw_path):
                 evidence_paths.add(relative_path)
-    # run_codex_exec validates the canonical schema before this function. The fallback
-    # keeps lightweight test doubles and older recorded responses usable; a response
-    # that does contain evidence paths is checked fail-closed if none maps into the run.
+    # run_codex_exec が正本 schema を検証する。evidence path を持たない軽量な fake や
+    # 過去の記録済み応答は互換性のため許容し、path を持つ応答は run 内へ解決できない
+    # 場合に fail-closed とする。
     if not has_evidence_path:
         return []
 
+    # evidence と今回の agent 差分の共通部分を、所見へ対応済みの path として扱う。
     changed = set(changed_paths)
     attributed = changed & evidence_paths
     target_path = context.run_worktree / target
     if not (target_path.exists() or target_path.is_symlink()) and target in changed:
-        # Git may report a rename with a large content replacement as delete/add. The
-        # new path is a valid continuation of evidence for the investigated target
-        # when it is the only realization path added during this call.
+        # Git は大きな内容変更を伴う rename を delete/add と報告することがある。今回の
+        # agent call で追加された realization path が一つだけで evidence に含まれる
+        # 場合は、調査対象の継続先として扱う。
         candidates = sorted(
             path
             for path in changed
@@ -729,6 +733,9 @@ def _evidence_relative_path(
     raw_path: str,
 ) -> str | None:
     """evidence の絶対/placeholder path を run-relative path へ変換する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # Structured Output の path は placeholder、絶対 path、run-relative path のいずれ
+    # でも受け取るため、同じ run-relative 表現へ正規化する。
     roots = (context.run_worktree, context.repo)
     for prefix, root in (
         ("{{run-root}}", context.run_worktree),

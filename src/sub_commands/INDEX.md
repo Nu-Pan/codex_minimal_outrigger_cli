@@ -65,21 +65,16 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply workload と refactor 処理へのルーティングを提供する。
-- apply workload は realization apply fork の CLI 実行、例外処理、run state、fork report、差分検査、commit 処理を扱う。
-- refactor パッケージは realization refactor の実行入口と、対象選択から調査・修正、差分検証、state 同期、完了判定、report 生成までを扱う。
+- realization workload サブコマンドのパッケージ入口。apply workload と refactor workload を束ね、各処理の下位実装への入口となる。
 
 ## Read this when
-- realization workload サブコマンドの構成や実装入口を確認するとき。
-- realization apply fork の動作やライフサイクルを調査・変更するとき。
-- realization refactor の対象選択、修正、state 同期、完了判定、report 生成を調査・変更するとき。
+- realization workload サブコマンドの構成や、apply・refactor のどちらを調査すべきか確認するとき。
 
 ## Do not read this when
-- realization apply・refactor 以外のサブコマンドを扱うとき。
-- Codex builder の launch parameter、共通 run lifecycle、process tracking、report 描画、agent 用 schema・prompt 構築だけを確認するとき。
+- realization workload サブコマンドに関係しない処理を確認するとき。
 
 ## hash
-- 7d1c39f09c6e54d66dcf38823da73cde99aa499c916995a265470a5a31409cf1
+- 7b264537f54597e8a7b16ce8d24a975b3a9faf3eb80d76d77cfd93f9f526e82b
 
 # `review`
 
