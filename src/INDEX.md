@@ -49,21 +49,18 @@
 # `commons`
 
 ## Summary
-- cmoc 共通 runtime helper を提供する commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・パス、Git、ログ、エラー、run lifecycle、INDEX 管理などの横断的な実行時機能への入口を含む。
-- 個別ファイルの entry は、それぞれの runtime 責務を確認・変更する際の直接の入口として機能する。
+- cmoc の共通 runtime 実装を集約する commons パッケージ。CLI lifecycle、Codex 実行、設定・状態・パス、Git、ログ、INDEX 更新、editing run など、複数の上位機能から利用される基盤処理の入口。
 
 ## Read this when
-- commons 配下の共通 runtime 機能の入口や、複数の runtime 領域にまたがる依存関係を確認するとき
-- CLI、Codex、設定、状態、Git、ログ、パス、run lifecycle、INDEX 管理の共通実装を変更・調査するとき
-- 特定の runtime helper の責務に対応する実装ファイルを選ぶ必要があるとき
+- 複数の cmoc 機能にまたがる runtime 挙動を調査・変更するとき
+- CLI、Codex、設定、状態、Git、INDEX、editing run の共通処理の担当箇所を特定するとき
 
 ## Do not read this when
-- 特定の runtime helper の実装詳細だけを確認したい場合は、対応する個別モジュールを直接読む
-- 利用者向け仕様や正本テンプレートを確認したい場合は、対応する oracle file を読む
-- commons と無関係な CLI サブコマンド固有処理や、単一領域の仕様だけを調査する場合
+- 特定サブコマンド固有の仕様や処理だけを調査するとき
+- 正本仕様や entry schema を確認するときは、対応する oracle file を直接読む
 
 ## hash
-- 0f4fdb0812c0da48850db68d45cbe82384da26f1f422c88f19eb961882eeadb6
+- 5b969059aee9dcd637287a874f074661052056f21de2edccd2a82af77cd2756e
 
 # `config`
 
@@ -115,17 +112,15 @@
 # `sub_commands`
 
 ## Summary
-- `src/sub_commands` は各 cmoc サブコマンドの CLI 実行入口をまとめるディレクトリ。doctor・indexing・oracle・realization・run・session・tui などの実装と、未実装サブコマンドの配置先を案内する。個別処理の詳細は配下の担当ファイルや commons 実装へ進むための入口として使う。
+- CLI サブコマンドの realization 実装をまとめるディレクトリ。doctor、indexing、oracle、realization、review、run、session、tui など各サブコマンドの実行入口と、その下位実装へのルーティングを提供する。
 
 ## Read this when
-- cmoc サブコマンドの実装配置や一覧を確認するとき。
-- 特定サブコマンドの CLI 実行入口を調査・変更するとき。
-- サブコマンドから下位実装または共通実装へ進む先を判断するとき。
+- CLI サブコマンドの実装構成や、対象サブコマンドの実行入口を確認・変更するとき。
+- 特定のサブコマンドについて、配下の実装ファイルへ進む入口を探すとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理だけを調査する場合は、配下の該当実装ファイルを直接読む。
-- 共通 lifecycle、indexing、report などの canonical 実装だけを確認する場合は、対応する commons 実装を直接読む。
-- oracle の正本仕様や preprocess など、実装入口以外の内容を確認する場合は、参照先の oracle 文書を直接読む。
+- 特定サブコマンドの処理詳細を確認する場合は、このディレクトリ全体ではなく該当する実装ファイルを直接読むとき。
+- CLI ランタイム共通処理や、サブコマンド配下にない共通実装だけを調査するとき。
 
 ## hash
-- 6b39dbc3ec2ddcfba1d4f4fb6f717373c5c1cd1ab7c875dfce1fd6d309502ff3
+- c4803297d0c8e343f1c9d41f6b731dfb44961643a92427b2246161ad857ce692

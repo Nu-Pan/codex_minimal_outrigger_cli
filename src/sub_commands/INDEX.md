@@ -46,20 +46,18 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装群を含むディレクトリ。編集、調査、レビューの CLI 実行入口と、レビュー対象列挙・パス解決・ループ・INDEX 差分処理・レポート生成などの下位実装への入口を提供する。
+- oracle 系サブコマンドの実装をまとめる package。編集・調査・レビューの各サブコマンドと、レビュー処理を構成する対象列挙、パス解決、差分統合、レポート生成などの下位実装への入口を提供する。
 
 ## Read this when
-- oracle サブコマンドの一覧、実装配置、個別サブコマンドやレビュー関連処理の入口を確認するとき。
-- oracle edit・investigation・review の CLI 実行経路を調査するとき。
-- oracle review の対象列挙、パス解決、レビュー判定、INDEX 差分処理、レポート生成の担当ファイルを特定するとき。
+- oracle サブコマンドの構成や実行入口を確認するとき
+- oracle review の実行経路、対象選定、finding 処理、INDEX 差分統合、パス解決、レポート生成の実装箇所を特定するとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細実装を確認する場合は、このディレクトリの該当ファイルを直接読む。
-- レビュー判定、対象列挙、パス解決、INDEX 差分処理、レポート生成の詳細だけを調べる場合は、それぞれの担当ファイルを直接読む。
-- Codex TUI 自体や、oracle サブコマンド以外の共通 CLI runtime を調査する場合。
+- 個別サブコマンドの詳細な処理を確認する場合は、対応する実装ファイルを直接読む
+- 共通 CLI runtime や git・session 管理など、oracle package 外の共通処理だけを調査する場合
 
 ## hash
-- e69b213ffadfe4b7465b316a3e47603b93a79dbc26ab9fda12b879498544d2d6
+- ff9dfe07b5fd461acee9fbc1693175e4d9ca1422f804a78bf9787199ea1c248e
 
 # `realization`
 
@@ -126,15 +124,16 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` の CLI 実行フローを担当する実装。入力プロンプトの収集、実行パラメータの解決、Codex TUI 用パラメータの構築、対象 worktree での TUI 起動を一連の runtime 処理として実装している。
+- `cmoc tui` サブコマンドの実行フローを担当する実装。プロンプト編集、実行パラメータ解決、Codex TUI 起動を、CLI ランタイムと現在の worktree コンテキストに接続する。TUI の起動処理、解決済みパラメータからの `AgentCallParameter` 構築、ネストされた真偽値の読み取りを確認したい場合の入口。
 
 ## Read this when
-- `cmoc tui` の起動処理、プロンプト入力、実行パラメータ解決、Codex TUI 起動の流れを変更または調査するとき。
-- 解決済みパラメータから `AgentCallParameter` を構築する処理や、TUI 実行時の repository/worktree コンテキストを確認するとき。
+- `cmoc tui` の CLI 実行フローを変更・調査するとき
+- オリジナルプロンプトの収集から Codex TUI 起動までの連携を確認するとき
+- TUI 起動パラメータや実行時の root、worktree、設定の受け渡しを確認するとき
 
 ## Do not read this when
-- TUI 用の個別パラメータ定義やプロンプト内容の正本仕様を確認したいときは、参照コメントに示された oracle doc を直接読む。
-- 共通 CLI runtime、設定読み込み、プロンプト入力収集の共通処理だけを変更または調査するときは、それぞれの共通モジュールを直接読む。
+- TUI 用の個別パラメータ生成ロジック自体を変更・調査する場合は、参照先の builder 実装を直接読むとよい
+- `cmoc tui` 以外のサブコマンドの実行フローや共通ランタイムの仕様だけを調べる場合
 
 ## hash
-- fbdd08269efbbff2e6a6820d30b8bc62602ddb51e91183451fe1b430eb68fc66
+- a2beb411104f9d6157b6de05b641d0fa5d32f4103ed5ee895fdb872293522a99

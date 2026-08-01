@@ -52,23 +52,22 @@
 # `prompt_editor_input.py`
 
 ## Summary
-- エディタから AI Agent 用プロンプトを受け取り、初期テンプレートの保存、エディタ選択・起動、入力内容のコメント除去と読み込みを担う共通境界。
-- エディタ入力用ディレクトリの作成や一意なタイムスタンプ付きファイルの予約、エディタ終了エラーの cmoc 利用者向け例外への変換、現在の worktree と対象 root の `.cmoc` ignore 保証も扱う。
-- プロンプト編集フロー、エディタ選択順、編集ファイルの読み込み・コメント除去、または prompt editor 用 root の ignore 設定を変更・調査するときの実装入口。
+- エディタから AI Agent 用 prompt を受け取る共通境界を提供する。初期 prompt 用ファイルの予約・保存、エディタ起動、終了確認、HTML コメントと前後空白を除去した入力の返却を扱う。TUI やエディタ入力に関わる `.cmoc` の ignore 保証と、PATH 上のエディタ選択も担う。
 
 ## Read this when
-- prompt editor または TUI の入力保存・編集フローを調査するとき。
-- 利用可能なエディタの選択順、起動引数、終了失敗時のエラー処理を変更するとき。
-- HTML コメントを除去したプロンプト入力の読み込みや、編集用ファイルの timestamp 衝突回避を調査するとき。
-- editor/TUI が利用する `.cmoc` ignore の保証処理を変更するとき。
+- エディタ経由の prompt 入力フローを変更・調査するとき
+- 初期 prompt の保存先予約、エディタ選択順、終了失敗時のエラー処理を確認するとき
+- 入力から HTML コメントや前後空白を除去する処理を確認するとき
+- prompt editor が利用する repository または worktree の `.cmoc` ignore 設定を確認するとき
 
 ## Do not read this when
-- プロンプト本文の正本テンプレートや利用者向け仕様を確認することが目的の場合は、対応する oracle doc を直接読む。
-- prompt editor 入力を利用した後続の agent 呼び出し、CLI 実行、runtime path・git の詳細を調査する場合は、それぞれの呼び出し元または専用 runtime モジュールを直接読む。
-- 一般的なエディタ設定や prompt の内容編集だけが目的で、入力境界の実装を変更しない場合。
+- prompt の初期本文の構築仕様を変更・調査するときは、prompt 初期本文の builder を直接読む
+- エディタを使わない prompt の生成・変換・実行処理だけを変更・調査するとき
+- パス生成や timestamp の一般的な仕様だけを確認するときは、runtime paths の実装を直接読む
+- cmoc のエラー型や ignore 操作の詳細だけを確認するときは、それぞれの runtime module を直接読む
 
 ## hash
-- 5e7022e4bf219323a09a46511b3e637d461996a044331792505fabfcad318d99
+- 714e1b66bc934aac54a81b9a64255547f48b5ea06cbcf7092367be60ddf8c4e3
 
 # `runtime_cli.py`
 

@@ -13,6 +13,7 @@ from _cli_support import run_doctor, runner
 from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
+from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_codex_preflight as codex_preflight_module
@@ -29,11 +30,11 @@ def reset_indexing_preflight() -> Iterator[None]:
     codex_preflight_module.disable_indexing_preflight()
 
 
-def test_editor_input_keeps_timestamp_collisions_in_separate_files(
+def test_editor_input_uses_canonical_text_and_keeps_timestamp_collisions(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """同じ timestamp の editor input を上書きせず保持する。"""
+    """正本の初期値を使い、同じ timestamp の入力を上書きせず保持する。"""
     timestamps = iter(
         [
             "2026-06-27_10-00_00_000001000",
@@ -42,6 +43,7 @@ def test_editor_input_keeps_timestamp_collisions_in_separate_files(
         ]
     )
     opened: list[Path] = []
+    initial_texts: list[str] = []
 
     monkeypatch.setattr(
         prompt_editor_input_module,
@@ -58,18 +60,25 @@ def test_editor_input_keeps_timestamp_collisions_in_separate_files(
         """editor subprocess の代わりに入力 file を作成する。"""
         path = Path(argv[-1])
         opened.append(path)
+        initial_texts.append(path.read_text(encoding="utf-8"))
         path.write_text(f"input-{len(opened)}\n", encoding="utf-8")
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
 
     first_path, first_input = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path
+        tmp_path,
+        "- first automatic instruction",
     )
     second_path, second_input = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path
+        tmp_path,
+        "- second automatic instruction",
     )
 
+    assert initial_texts == [
+        build_prompt_editor_input_initial_text("- first automatic instruction"),
+        build_prompt_editor_input_initial_text("- second automatic instruction"),
+    ]
     assert first_path.name == "2026-06-27_10-00_00_000001000_orig.md"
     assert second_path.name == "2026-06-27_10-00_00_000002000_orig.md"
     assert first_path != second_path
@@ -151,10 +160,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     )
     assert len(orig_files) == 1
     original_prompt = orig_files[0].read_text()
-    assert "基本的な考え方は以下の通り" in original_prompt
-    assert "解き方の指示は最小限度" in original_prompt
-    assert "# ゴール" in original_prompt
-    assert "# 制約境界" in original_prompt
+    assert original_prompt.startswith(build_prompt_editor_input_initial_text(""))
     complete_files = list(
         (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )

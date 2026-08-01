@@ -57,38 +57,38 @@
 # `oracle_edit.md`
 
 ## Summary
-- oracle file をユーザー指示に基づき Codex CLI TUI で直接編集する `cmoc oracle edit` サブコマンドの正本仕様。引数、入力注入、起動前提条件・パラメータ、実行順序、編集境界、終了後の差分維持、中断・排他制御、ログ方針を扱う。oracle edit の挙動や起動条件、oracle file 編集権限を確認する際の入口。
+- oracle file を直接編集する `cmoc oracle edit` サブコマンドの正本仕様。目的、入力、TUI 起動前条件・パラメータ、実行順序、編集境界、終了時の差分扱い、中断・排他制御、ログ方針を定義する。oracle edit の挙動や実装配置を調査・変更するときの入口。
 
 ## Read this when
-- `cmoc oracle edit` の実行フローや引数仕様を確認するとき
-- oracle file 編集用 TUI の起動条件、builder パラメータ、file access mode を確認するとき
-- TUI agent の編集対象・禁止操作、終了後の差分や indexing の扱いを確認するとき
-- 中断、排他制御、並行編集、ログの仕様を確認するとき
+- `cmoc oracle edit` の実行順序、TUI 起動条件、Codex CLI パラメータを確認するとき
+- oracle file の編集権限・編集対象境界・終了後の差分保持を確認するとき
+- 中断、排他制御、session state、ログの扱いを確認するとき
 
 ## Do not read this when
-- realization file の実装配置や CLI 責務境界を確認したいとき
-- oracle file の調査専用サブコマンドの仕様を確認したいとき
-- Codex CLI の一般的な起動規則だけを確認したいときは、参照されている共通規則を直接読む
+- realization file の具体的な実装を変更・検証するときは、対応する `oracle/src` や realization 側の実装を直接読む
+- エディタ入力の具体的な仕様を確認するときは、指定された prompt editor input の oracle file を読む
+- Codex CLI の一般的な起動規則を確認するときは、指定された codex exec rule の oracle file を読む
 
 ## hash
-- 13bdca10481604c07cf3bba64b6cb48c1533173e70d6841a7bf1a5b7207f967f
+- 0337b4fc1dda4e6275a254256ca5ea848ac313e06d023bdc9063422e07aa632b
 
 # `oracle_investigation.md`
 
 ## Summary
-- `cmoc oracle investigation` のサブコマンド仕様。エディタから oracle file に関する調査指示を受け取り、doctor preprocess と専用の起動パラメータ構築を経て Codex CLI の TUI で調査結果を回答する。入力コメント、TUI 起動、Codex CLI 設定、調査結果や変更禁止の扱いを定める。
+- oracle file に関するユーザーの調査指示を受け取り、doctor preprocess 後に Codex CLI の TUI を起動するサブコマンドの仕様を定義する。入力編集、TUI 起動パラメータ、Codex CLI 起動条件、調査結果の扱いと変更禁止事項を扱う。関連する oracle investigation の実装・起動条件を確認する入口となる。
 
 ## Read this when
-- oracle file を根拠に調査する `cmoc oracle investigation` の動作、入力方法、Codex CLI TUI の起動条件を確認するとき。
-- oracle investigation の起動パラメータ、Codex CLI の環境変数・preflight validation・設定上書き、または読み書き制約を変更・検証するとき。
+- oracle file の調査用サブコマンドの挙動を確認・変更するとき
+- エディタ入力から Codex CLI TUI 起動までの処理を追うとき
+- oracle file を読み取り専用、realization file を読み書き禁止として扱う調査フローを確認するとき
 
 ## Do not read this when
-- oracle file の具体的な仕様や規約そのものを調査する場合は、このサブコマンド仕様ではなく対象の oracle file を直接読む。
-- エディタ入力の共通仕様を確認する場合は、指定された prompt editor input の正本を読む。
-- TUI 起動パラメータの実装詳細を確認する場合は、専用 builder の正本実装を直接読む。
+- Codex CLI TUI の一般的な起動パラメータの正本を確認したいときは、指定された launch_tui の oracle src を直接読む
+- エディタ入力仕様だけを確認したいときは、prompt_editor_input の oracle doc を直接読む
+- Codex CLI の環境変数・preflight validation・引数上書き規則だけを確認したいときは、codex_exec_rule の oracle doc を直接読む
 
 ## hash
-- f9ad127a8fbfb4aeef8eaed77a0ca6f796b897127149f964bccce3df7a2a292a
+- e40e4e04abc6a8d526f4e566449aaa858bd29ffd1f40ffc74d8eae79f34101da
 
 # `oracle_review.md`
 
@@ -196,16 +196,17 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの正本仕様。プロンプト入力、agent call による起動パラメータ決定、AI Agent CLI/TUI 起動までの手順と、Codex CLI 固有の起動条件を扱う。
+- cmoc tui サブコマンドの正本仕様。ユーザー入力と自動生成プロンプトを組み合わせ、パラメータ解決後に AI Agent CLI/TUI を起動する実行手順、プロンプト編集、TUI 起動、および Codex CLI 固有の設定引き継ぎを扱う。
 
 ## Read this when
-- `cmoc tui` の実行手順、プロンプト入力、agent call のパラメータ決定、または AI Agent CLI/TUI の起動仕様を確認するとき。
-- Codex CLI 起動時の `$CODEX_HOME`、preflight validation、CLI 引数による設定上書きの扱いを確認するとき。
+- cmoc tui の実行手順、引数・事前条件、プロンプト編集入力の仕様を確認するとき
+- agent call による起動パラメータ決定や、AI Agent CLI/TUI の起動条件を変更・検証するとき
+- Codex CLI 起動時の CODEX_HOME、preflight validation、CLI 引数による設定上書きを確認するとき
 
 ## Do not read this when
-- エディタ入力の詳細仕様だけを確認したい場合は、`prompt_editor_input.md` を直接読む。
-- agent call で決定するパラメータの詳細だけを確認したい場合は、`build_tui_resolve_parameter_parameter` の正本を直接読む。
-- TUI 起動パラメータの詳細だけを確認したい場合は、`build_tui_launch_tui_parameter` の正本を直接読む。
+- doctor preprocess 単体の仕様を確認するときは、doctor 関連の正本仕様を直接読む
+- エディタ入力の詳細仕様だけを確認するときは、prompt_editor_input.md を直接読む
+- Codex exec の共通仕様だけを確認するときは、codex_exec_rule.md を直接読む
 
 ## hash
-- be9faf25edcb1c5a094206c1ad538e66195cd6dcaef06552ae63ef8375d6229d
+- df5b0d7b743e52f741c020b0532fcb5eff5bb9e1f1e49e6db5a3f9bcd397d2f3

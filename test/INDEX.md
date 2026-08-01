@@ -212,19 +212,19 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理を外部挙動から検証するテスト。エディタ入力の保存、prompt 解決、Codex TUI 起動パラメータ、完全 prompt の生成、linked worktree でのログ・schema・ignore 配置を扱う。
+- TUI 起動直前の CLI 前処理を検証するテスト。エディター入力の初期値・timestamp 衝突、編集済み prompt の解決、Codex TUI 起動パラメータ、prompt 保存先、linked worktree 対応、`.cmoc` の ignore とログ配置を扱う。
 
 ## Read this when
-- TUI サブコマンドの起動前処理や Codex 起動設定を変更・検証するとき
-- エディタ入力ファイルの timestamp 衝突、prompt の standard 選択、linked worktree 対応を確認するとき
-- TUI 関連の CLI テスト失敗を調査するとき
+- TUI サブコマンドの前処理や Codex TUI 起動条件を変更・検証するとき
+- エディター入力ファイル、complete prompt、parameter 解決、linked worktree 上の保存先を調査するとき
+- TUI 実行時の `.cmoc` ignore、ログ、schema 配置の回帰を確認するとき
 
 ## Do not read this when
-- TUI 以外のサブコマンドや、起動前処理と無関係な共通ユーティリティだけを変更・調査するとき
-- Codex 実行基盤そのものの詳細を確認したい場合は、対応する runtime 実装・テストを直接読むとき
+- TUI 以外のサブコマンドの挙動だけを調査するとき
+- Codex 実行基盤そのものや prompt 生成の正本仕様を直接変更・検証するときは、対応する実装・oracle test を先に読む
 
 ## hash
-- 5246687320a9532814fd8c76cbe305e350e1ea2e80de4cc9c7f9fb384c9874cb
+- 845757d34122decff8859c9197f6359473a73ece571b58d7fabec2f8b62c8b51
 
 # `test_codex_runtime_errors.py`
 
@@ -453,36 +453,35 @@
 # `test_oracle_edit_cli.py`
 
 ## Summary
-- `cmoc oracle edit` の main-worktree TUI 起動を検証するテスト。TUI 実行時のイベント順序、AgentCallParameter、oracle 差分の保持、session state と run lifecycle の非変更、TUI 失敗時の終了を確認する。
-- oracle edit の起動前提として、main worktree、session branch、active session、clean worktree が必要であることを、各違反ケースの利用者向け例外で検証する。
+- `cmoc oracle edit` の main-worktree TUI 制御を検証するテスト。oracle edit の起動前提、indexing preflight・clean worktree 検査・TUI 呼び出し順、モデルやアクセスモードなどの引数、oracle 差分と session state の保持、TUI 成功・失敗時の終了結果を確認する。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 起動処理、TUI 呼び出し、oracle 編集後の状態保持を変更または調査するとき。
-- oracle edit の起動前提条件や、indexing preflight・clean worktree 検査・TUI 実行の順序を確認するとき。
-- 関連する oracle edit 実装やテストの挙動を検証するとき。
+- oracle edit CLI の起動条件や main-worktree 制約を変更・調査するとき
+- oracle edit が利用する indexing preflight、clean worktree 検査、runtime TUI 呼び出し、session state の連携を変更・検証するとき
+- oracle edit の TUI 失敗時も差分や session state を保持する挙動を確認するとき
 
 ## Do not read this when
-- oracle edit 以外のサブコマンドの実装やテストだけを扱うとき。
-- TUI の内部実装そのものや oracle 文書の編集仕様を直接確認したいときは、それぞれの実装ファイルまたは oracle 文書を直接読む。
+- oracle edit 以外のサブコマンドの CLI 挙動を調査するとき
+- oracle edit の実装詳細ではなく、oracle edit の正本仕様そのものを確認するときは、対応する oracle 文書や実装を直接読むとき
 
 ## hash
-- a61bdf40a7dbc1e1c1e25b26188714fa9e912825b0d9a8bb53dec26a692ee884
+- caae37ce6e48be17a7f58ea54919d76ecda6b5dd7e79366e2dee5c0bd126a64f
 
 # `test_oracle_investigation_cli.py`
 
 ## Summary
-- `cmoc oracle investigation` CLI の起動条件を検証するテスト。セッション前提なしで main worktree から起動できること、oracle 専用のファイルアクセスモードと調査指示を含む prompt が渡されることを確認する。
+- `cmoc oracle investigation` CLI の起動条件を検証するテスト。セッションなしの main worktree で起動できること、エディタ入力への自動注入指示、PURE_ORACLE_READ のアクセスモード、生成プロンプトの終端を確認する。
 
 ## Read this when
-- oracle investigation サブコマンドの起動条件や session 前提を変更・確認するとき
-- oracle investigation から Codex TUI へ渡すファイルアクセスモードや prompt の検証を確認するとき
+- `oracle investigation` サブコマンドの起動条件や preflight state のリセットを変更・調査するとき
+- oracle file と realization file のアクセス制約を CLI が注入・適用する挙動を検証するとき
 
 ## Do not read this when
-- oracle investigation 以外のサブコマンドの CLI 起動条件を調べるとき
-- oracle investigation の実装詳細や oracle 仕様本文を確認することが目的のときは、対応する実装または oracle 文書を直接読む
+- `oracle investigation` 以外のサブコマンドの実装やテストを調査するとき
+- 一般的な Codex TUI 起動処理や git fixture の詳細を直接調査するとき
 
 ## hash
-- cc83e904333f6e395618532c5f0b7e5972e5b46b426d468c0e1c44b7db03eeda
+- a9a15e3b9206567b3b3a3e8e446377a842f243cdc0cc747096cf7cb1584116df
 
 # `test_oracle_review_loop.py`
 
@@ -574,18 +573,19 @@
 # `test_packaged_import.py`
 
 ## Summary
-- packaged layout 上での import 境界と公開 API を検証するテスト。oracle review/edit builder、ACP basic、cmoc config の import・再公開・出力契約を、隔離した一時環境で確認する。
+- 隔離した packaged layout で、正本 oracle と realization 側の import 境界・公開 API・設定再公開を検証するテスト。setuptools の package 配置、oracle review/edit builder、prompt editor 入力、ACP basic、cmoc config の出力契約を対象とする。
 
 ## Read this when
-- packaged layout での Python import が失敗する問題を調査するとき
-- builder や config の公開面、canonical 定義の再公開、structured output 契約を変更・検証するとき
+- packaged layout や -S/PYTHONPATH 下での import 不具合を調査するとき
+- oracle 定義と realization 側の再公開・参照関係を変更または検証するとき
+- ACP builder、prompt editor、config の公開面や structured output 契約を確認するとき
 
 ## Do not read this when
-- packaged layout や import 境界に関係しない機能を変更するとき
-- 個別 builder の内部ロジックだけを調査し、隔離環境での公開契約を確認する必要がないとき
+- 通常の CLI 挙動や個別 builder の内部処理だけを変更・調査するとき
+- packaged import、公開 API、oracle 参照境界に関係しないテストや実装を扱うとき
 
 ## hash
-- 03bfd812e2a27540732f277777e9f2e12787c042b1c95a522ba0537a6b359c82
+- ade6ef7be6bdf584834ad835383a394ef3b5d7cb505c8eb818133e1f6fa27048
 
 # `test_production_cli.py`
 

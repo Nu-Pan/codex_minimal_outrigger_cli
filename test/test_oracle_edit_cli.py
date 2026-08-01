@@ -95,10 +95,20 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         / "2026-07-20_00-00-00_000000000_orig.md"
     )
     editor_path.parent.mkdir(parents=True, exist_ok=True)
+    editor_calls: list[tuple[Path, str]] = []
+
+    def fake_collect_prompt_editor_input(
+        target_root: Path,
+        automatically_injected_instruction: str,
+    ) -> tuple[Path, str]:
+        """エディタ入力 call と自動注入指示を記録する。"""
+        editor_calls.append((target_root, automatically_injected_instruction))
+        return editor_path, "oracle spec を更新する"
+
     monkeypatch.setattr(
         oracle_edit_module,
         "collect_prompt_editor_input",
-        lambda *_args: (editor_path, "oracle spec を更新する"),
+        fake_collect_prompt_editor_input,
     )
     events: list[str] = []
     calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
@@ -149,6 +159,9 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
     assert result.exit_code == (1 if tui_fails else 0)
+    assert editor_calls[0][0] == root
+    assert "realization file の読み書き禁止" in editor_calls[0][1]
+    assert "oracle file の規約・規範" in editor_calls[0][1]
     assert events == ["indexing", "check", "tui"]
     assert len(calls) == 1
     parameter, kwargs = calls[0]

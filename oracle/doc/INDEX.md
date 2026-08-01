@@ -1,18 +1,20 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様をまとめた oracle 文書ディレクトリ。自動補完、Codex CLI 呼び出し、ログ、doctor preprocess、prompt、run/session lifecycle、サブコマンドなど、CLI の主要な利用者向け挙動と共通規約を確認する入口であり、詳細は各仕様文書または sub_command 配下へ進む。
+- cmoc のアプリケーション仕様をまとめた正本文書ディレクトリ。CLI 補完、Codex CLI 呼び出し、ログ、doctor、prompt、run/session lifecycle、サブコマンドなど、主要機能の実行条件・状態遷移・入出力・責務境界を扱う。アプリケーション仕様の実装・変更・レビュー時に、関連する個別仕様へ進むための入口となる。
 
 ## Read this when
-- cmoc の CLI 挙動、共通出力、エラー処理、prompt、Codex 呼び出し、run/session lifecycle の正本仕様を確認するとき
-- 複数のサブコマンドにまたがる仕様や、対象機能の詳細仕様文書を特定するとき
+- cmoc の利用者向け挙動、CLI 実行条件、状態管理、ログ、Codex 呼び出し、prompt、run/session lifecycle の正本仕様を探すとき
+- 複数のアプリケーション仕様にまたがる変更で、読むべき個別 oracle 文書を切り分けるとき
+- サブコマンド、agent call、INDEX 更新、doctor、補完などの仕様入口を確認するとき
 
 ## Do not read this when
-- 特定仕様文書の詳細だけを確認したいときは、該当する文書へ直接進む
-- 実装構造やテスト手順だけを確認したいときは、対応する realization code または realization test を読む
+- 具体的な realization 実装・テストの配置や開発環境の規則だけを確認するとき
+- oracle file と realization file の一般定義や共通開発規則だけを確認するとき
+- 特定文書の詳細仕様が既に分かっており、その本文だけを直接確認すれば足りるとき
 
 ## hash
-- 5d5f8807817195d9b327edf2435730127d4982f911c5f936bf16134e6d013373
+- 0fbb56f447f648902f55a62e2b5aa361714e788be87035420bc7cab206285adb
 
 # `branch_model.md`
 
