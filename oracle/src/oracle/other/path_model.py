@@ -14,9 +14,9 @@
 ## パスの表記例
 
 - ユーザーは `{{repo-root}}` をカレントとして `{{cmoc-root}}/bin/cmoc` を呼び出す
-- `cmoc oracle edit` は main worktree から呼び出され、`{{repo-root}}` を cwd として Codex CLI の TUI を起動する
-- `cmoc realization apply fork`, `cmoc realization refactor fork` は `{{repo-root}}` を pwd として呼び出され、run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
-- realization の各 fork が起動する編集用 `codex exec` は `{{run-root}}` を cwd とする
+- `cmoc oracle edit` は main worktree から呼び出され、`{{repo-root}}` を agent call の cwd として Codex CLI の TUI を起動する
+- `cmoc realization apply fork`, `cmoc realization refactor fork` は `{{repo-root}}` を cmoc process の cwd として呼び出され、run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
+- realization の各 fork が起動する編集用 `codex exec` は `{{run-root}}` を agent call の cwd とする
 - agent call の call-scoped path context は `AgentCallPathContext` を正本とする
 """
 
@@ -52,36 +52,37 @@ class RootPathPlaceHolder(StrEnum):
 class AgentCallPathContext:
     """1 回の agent call で共有する root path の正本モデル。
 
-    constructor は決定済みの AgentCallParameter.cwd だけを受け取る。
-    work_root と repo_root は cwd から導出し、呼び出し側から指定させない。
+    constructor は決定済みの AgentCallParameter.agent_call_cwd だけを受け取る。
+    work_root と repo_root は agent_call_cwd から導出し、呼び出し側から指定させない。
     構築後の値は変更できず、同じ agent call の prompt 全体で共有する。
     """
 
-    # prompt 構築前に builder が決定する agent call 時のカレントパス
+    # prompt 構築前に builder が決定する agent call の cwd
     # cmoc process の cwd から暗黙に補完してはならない
-    cwd: Path
+    agent_call_cwd: Path
 
-    # `{{work-root}}` として使う、cwd を含む最寄りの Git worktree root
-    # cwd が main worktree 上なら repo_root と同値になる
-    # cwd が `{{cmoc-run-worktree}}` 上なら `{{run-root}}` と同値になり、repo_root とは異なる
+    # `{{work-root}}` として使う、agent_call_cwd を含む最寄りの Git worktree root
+    # agent_call_cwd が main worktree 上なら repo_root と同値になる
+    # agent_call_cwd が `{{cmoc-run-worktree}}` 上なら `{{run-root}}` と同値になり、repo_root とは異なる
     work_root: Path = field(init=False)
 
     # `{{repo-root}}` として使う、work_root が属する Git repository の main worktree root
     repo_root: Path = field(init=False)
 
     def __post_init__(self) -> None:
-        """cwd を正規化し、同じ起点から派生 root を初期化する。"""
+        """agent_call_cwd を正規化し、同じ起点から派生 root を初期化する。"""
         # agent call で実際に使用できる絶対ディレクトリへ正規化する
-        resolved_cwd = self.cwd.resolve()
-        if not resolved_cwd.is_dir():
+        resolved_agent_call_cwd = self.agent_call_cwd.resolve()
+        if not resolved_agent_call_cwd.is_dir():
             raise ValueError(
-                f"AgentCallParameter.cwd is not directory (cwd={resolved_cwd})"
+                "AgentCallParameter.agent_call_cwd is not directory "
+                f"(agent_call_cwd={resolved_agent_call_cwd})"
             )
 
-        # cwd から worktree root を決め、その worktree が属する main root を決める
-        work_root = resolve_work_root(resolved_cwd)
+        # agent_call_cwd から worktree root を決め、その worktree が属する main root を決める
+        work_root = resolve_work_root(resolved_agent_call_cwd)
         repo_root = resolve_repo_root(work_root)
-        object.__setattr__(self, "cwd", resolved_cwd)
+        object.__setattr__(self, "agent_call_cwd", resolved_agent_call_cwd)
         object.__setattr__(self, "work_root", work_root)
         object.__setattr__(self, "repo_root", repo_root)
 
@@ -114,7 +115,7 @@ def resolve_real_path(
                 return resolve_repo_root()
             case RootPathPlaceHolder.RUN:
                 if path_context is not None:
-                    return resolve_run_root(path_context.cwd)
+                    return resolve_run_root(path_context.agent_call_cwd)
                 return resolve_run_root()
             case RootPathPlaceHolder.WORK:
                 if path_context is not None:
@@ -178,25 +179,27 @@ def resolve_repo_root(
     """
     `{{repo-root}}` を返す。
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
-    cwd を起点として「`.git` ディレクトリを直下に持つディレクトリ」を探索する。
+    start_path が指定されていれば、その探索開始 path を起点とする。
+    start_path が省略されていれば、cmoc process の cwd を探索開始 path とする。
+    「`.git` ディレクトリを直下に持つディレクトリ」を探索する。
     """
-    # カレントからの .git ディレクトリ探索を試みる
+    # 指定された探索開始 path または cmoc process の cwd から探索する
     for candidate in _enumerate_candidates(start_path, Path.cwd()):
         if (candidate / ".git").is_dir():
             return candidate
-    # カレントディレクトリを解決
+    # git command の cwd に使う探索開始ディレクトリを解決する
     if start_path is None:
-        start_dir = Path.cwd()
+        git_command_cwd = Path.cwd()
     elif start_path.is_dir():
-        start_dir = start_path.resolve()
+        git_command_cwd = start_path.resolve()
     else:
-        start_dir = start_path.resolve().parent
+        git_command_cwd = start_path.resolve().parent
     # git コマンドからの特定を試みる
     # NOTE
     #   `{{run-root}}` が `{{repo-root}}` の外にある場合向けの処理
     git_result = subprocess.run(
         ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
-        cwd=start_dir,
+        cwd=git_command_cwd,
         text=True,
         capture_output=True,
     )
@@ -214,9 +217,11 @@ def resolve_run_root(
     """
     `{{run-root}}` を返す。
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
-    cwd を起点として「`.git` ファイルを直下に持つディレクトリ」を探索する。
+    start_path が指定されていれば、その探索開始 path を起点とする。
+    start_path が省略されていれば、cmoc process の cwd を探索開始 path とする。
+    「`.git` ファイルを直下に持つディレクトリ」を探索する。
     """
-    # .git ファイルを探索
+    # 指定された探索開始 path または cmoc process の cwd から探索する
     for candidate in _enumerate_candidates(start_path, Path.cwd()):
         if (candidate / ".git").is_file():
             return candidate
@@ -230,9 +235,11 @@ def resolve_work_root(
     """
     `{{work-root}}` を返す。
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
-    cwd を起点として「`.git` ファイル・ディレクトリを直下に持つディレクトリ」を探索する。
+    start_path が指定されていれば、その探索開始 path を起点とする。
+    start_path が省略されていれば、cmoc process の cwd を探索開始 path とする。
+    「`.git` ファイル・ディレクトリを直下に持つディレクトリ」を探索する。
     """
-    # .git ファイル・ディレクトリを探索
+    # 指定された探索開始 path または cmoc process の cwd から探索する
     for candidate in _enumerate_candidates(start_path, Path.cwd()):
         dot_git_path = candidate / ".git"
         if dot_git_path.is_dir() or dot_git_path.is_file():

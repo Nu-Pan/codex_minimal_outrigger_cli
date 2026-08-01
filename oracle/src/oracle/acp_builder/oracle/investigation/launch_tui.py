@@ -26,8 +26,8 @@ def build_oracle_investigation_launch_tui_parameter(
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
     """
-    # main worktree を agent call の cwd として先に確定する
-    path_context = AgentCallPathContext(resolve_repo_root())
+    # main worktree を agent_call_cwd として先に確定する
+    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
 
     # ユーザー指示以外を固定した完全プロンプトを構築する
     complete_prompt = build_complete_prompt(
@@ -75,6 +75,6 @@ def build_oracle_investigation_launch_tui_parameter(
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
         structured_output_schema_path=None,
-        cwd=path_context.cwd,
+        agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,
     )

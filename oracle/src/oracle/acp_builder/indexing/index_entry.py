@@ -19,7 +19,7 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 def build_indexing_index_entry_parameter(
     target_path: Path,
     target_content: str,
-    cwd: Path,
+    agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """
     `cmoc indexing` サブコマンド、目次情報生成用。
@@ -32,11 +32,11 @@ def build_indexing_index_entry_parameter(
         目次情報生成対象の内容
         ディレクトリの場合は、その直下の `INDEX.md` の内容が渡される想定
 
-    cwd: Path
-        indexing 対象の AgentCallParameter.cwd
+    agent_call_cwd: Path
+        目次情報生成 agent call に設定する cwd
     """
-    # agent call の cwd を確定してから完全 prompt 用の path context を構築する
-    path_context = AgentCallPathContext(cwd)
+    # agent_call_cwd を確定してから完全 prompt 用の path context を構築する
+    path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
 
     # プロンプト
     prompt = build_complete_prompt(
@@ -81,6 +81,6 @@ def build_indexing_index_entry_parameter(
         file_access_mode=FileAccessMode.READONLY,
         prompt=render_as_markdown(prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
-        cwd=path_context.cwd,
+        agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=False,
     )

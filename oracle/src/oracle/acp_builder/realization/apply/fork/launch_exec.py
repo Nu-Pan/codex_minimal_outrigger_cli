@@ -32,10 +32,10 @@ def build_realization_apply_fork_launch_exec_parameter(
         diff_base_commit: 追従対象差分の始点 commit。
         run_fork_commit: 追従対象差分の終点である run fork commit。
         raw_oracle_git_diff: 始点と終点の間にある oracle file の raw git diff。
-        run_worktree: `codex exec` の cwd とする linked worktree。
+        run_worktree: AgentCallParameter.agent_call_cwd とする linked worktree。
     """
-    # run worktree を agent call の cwd として先に確定する
-    path_context = AgentCallPathContext(run_worktree)
+    # run worktree を agent_call_cwd として先に確定する
+    path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
 
     # commit 範囲と差分を一意な参照対象にまとめる。
     apply_change = StructBlock(
@@ -83,6 +83,6 @@ def build_realization_apply_fork_launch_exec_parameter(
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         prompt=render_as_markdown(complete_prompt),
         structured_output_schema_path=None,
-        cwd=path_context.cwd,
+        agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,
     )

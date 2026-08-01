@@ -19,7 +19,7 @@ def build_file_access_rule(
         読み書きモードプリセット
 
     path_context:
-        AgentCallParameter.cwd と同じ値から構築した call-scoped path context
+        AgentCallParameter.agent_call_cwd と同じ値から構築した call-scoped path context
     """
     # リポジトリ外 deny ルール
     # NOTE

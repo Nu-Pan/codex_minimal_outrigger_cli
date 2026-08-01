@@ -9,6 +9,16 @@
 - コード単体では意図が伝わりにくい場合は `NOTE` を付けてコメントを書く
 - オーバーエンジニアリングは避け、要求を満たす最小限の変更に留める
 
+## cwd を表す識別子
+
+cwd を表す内部識別子には、cwd の主体または具体的な役割を含める。
+
+- 呼び出される agent call に設定する cwd は `agent_call_cwd` とする
+- cmoc process 自身の cwd は `cmoc_process_cwd` とする
+- 同じスコープで複数の agent call を扱う場合は、必要に応じて `indexing_agent_call_cwd` のように agent call の役割も含める
+- 値の具体的な役割が分かっている場合は、`run_worktree` や `main_worktree` のような名前を優先する
+- `Path.cwd()` や `subprocess.run(cwd=...)` など、Python または利用ライブラリが定める API 名は変更しない
+
 ## 型ヒント
 
 - 型ヒントは必ず書く

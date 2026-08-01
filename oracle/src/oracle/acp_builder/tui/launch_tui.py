@@ -38,8 +38,8 @@ def build_tui_launch_tui_parameter(
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
     """
-    # main worktree を agent call の cwd として先に確定する
-    path_context = AgentCallPathContext(resolve_repo_root())
+    # main worktree を agent_call_cwd として先に確定する
+    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
 
     # 完全なプロンプトを生成してファイルに保存
     original_prompt_ref = '<cmoc_ref target="original_prompt"/>'
@@ -90,6 +90,6 @@ def build_tui_launch_tui_parameter(
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
-        cwd=path_context.cwd,
+        agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,
     )

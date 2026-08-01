@@ -7,15 +7,15 @@
 
 ## agent call の path context
 
-- call-scoped path context のデータモデル、各 member の意味、および cwd からの導出規則は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext` class 定義と class・member comment を正本とする
-- AgentCallParameter builder は、完全 prompt を構築する前に `AgentCallParameter.cwd` を決定する
-- `AgentCallParameter.cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
-- builder は、決定済みの `AgentCallParameter.cwd` だけを渡して `AgentCallPathContext` を構築する
+- call-scoped path context のデータモデル、各 member の意味、および `AgentCallPathContext.agent_call_cwd` からの導出規則は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext` class 定義と class・member comment を正本とする
+- AgentCallParameter builder は、完全 prompt を構築する前に `AgentCallParameter.agent_call_cwd` を決定する
+- `AgentCallParameter.agent_call_cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
+- builder は、決定済みの `AgentCallParameter.agent_call_cwd` だけを `agent_call_cwd` keyword argument に渡して `AgentCallPathContext` を構築する
 
 call-scoped path context の適用範囲を次に示す。
 
 - 同じ完全 prompt 内の file access rule、routing rule、oracle file と realization file の分類、および path placeholder は、同一の call-scoped path context を使用する
-- `AgentCallParameter.cwd` と完全 prompt の path placeholder は、同じ call-scoped path context から取得する
+- `AgentCallParameter.agent_call_cwd` と完全 prompt の path placeholder は、同じ call-scoped path context から取得する
 - `build_complete_prompt` と各 prompt part は、cmoc process の cwd を個別に参照して path を解決してはならない
 - cmoc process の cwd だけを根拠として、子 agent call の path context を決定してはならない
 - call-scoped path context の構築に process-global な `chdir` を使用してはならない

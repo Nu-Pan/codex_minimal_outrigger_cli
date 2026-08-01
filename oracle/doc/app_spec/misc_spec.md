@@ -21,8 +21,8 @@ cmoc による操作対象 worktree である `{{work-root}}` は、次の要件
 ## cmoc 実行時のカレントディレクトリ
 
 - cmoc process は、対象 Git repository のいずれかの worktree root をカレントディレクトリとして実行する
-- cmoc process の cwd と `AgentCallParameter.cwd` は、異なる値を許容する
-- cmoc process の cwd が `{{repo-root}}` であっても、run 用 `AgentCallParameter.cwd` は `{{run-root}}` とする
+- cmoc process の cwd と `AgentCallParameter.agent_call_cwd` は、異なる値を許容する
+- cmoc process の cwd が `{{repo-root}}` であっても、run 用 `AgentCallParameter.agent_call_cwd` は `{{run-root}}` とする
 - agent call の path context を、cmoc process の cwd だけから決定してはならない
 
 ## タイムスタンプのフォーマット

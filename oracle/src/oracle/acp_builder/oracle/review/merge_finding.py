@@ -26,8 +26,8 @@ def build_oracle_review_merge_finding_parameter(
     findings: str
         現状の所見リスト。各所見は finding_id を含む想定。
     """
-    # oracle review は main worktree を agent call の cwd として先に確定する
-    path_context = AgentCallPathContext(resolve_repo_root())
+    # oracle review は main worktree を agent_call_cwd として先に確定する
+    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
 
     # プロンプト
     prompt = build_complete_prompt(
@@ -57,6 +57,6 @@ def build_oracle_review_merge_finding_parameter(
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         prompt=render_as_markdown(prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
-        cwd=path_context.cwd,
+        agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,
     )

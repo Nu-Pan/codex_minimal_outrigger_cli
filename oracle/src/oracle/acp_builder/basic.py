@@ -86,9 +86,9 @@ class AgentCallParameter:
     # Structured Output を要求しない呼び出しでは None。
     structured_output_schema_path: Path | None
 
-    # agent call 時のカレントパス
-    # builder は prompt 構築前に cwd を決定し、同じ値から call-scoped path context を構築する
-    cwd: Path
+    # agent call に設定する cwd
+    # builder は prompt 構築前に agent_call_cwd を決定し、同じ値から call-scoped path context を構築する
+    agent_call_cwd: Path
 
     # True なら本命 agent call の前に indexing preflight を実行する
     # False なら indexing preflight を実行しない

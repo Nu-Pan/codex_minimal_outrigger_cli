@@ -74,7 +74,7 @@ def build_complete_prompt(
         agent によるファイルアクセスに対する制限設定
 
     path_context:
-        AgentCallParameter.cwd から事前に構築した call-scoped path context
+        AgentCallParameter.agent_call_cwd から事前に構築した call-scoped path context
 
     aux_static_prompt:
         任意に追加可能な静的プロンプト

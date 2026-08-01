@@ -2,7 +2,7 @@
 
 ## 目的
 
-- oracle file の最終状態に関するユーザー指示を受け取り、`{{repo-root}}` を cwd とする Codex CLI の TUI で oracle file を直接編集する。
+- oracle file の最終状態に関するユーザー指示を受け取り、`{{repo-root}}` を agent call の cwd とする Codex CLI の TUI で oracle file を直接編集する。
 - TUI の変更は未コミットのまま残し、人間が差分の確認、追加修正、commit、破棄に責任を持つ。
 - このサブコマンドは編集 run ではなく、fork, join, abandon lifecycle、run branch、linked worktree、session state の `run` section を使用しない。
 
@@ -33,7 +33,7 @@
 - TUI に渡す prompt と `AgentCallParameter` は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_tui.py` の `build_oracle_edit_launch_tui_parameter` を正本とする。
 - builder が返したパラメータを変更せずに TUI 起動へ渡し、実行パラメータ決定用の追加 agent call は行わない。
 - builder は少なくとも以下を固定する。
-    - cwd は `{{repo-root}}`。
+    - `AgentCallParameter.agent_call_cwd` は `{{repo-root}}`。
     - model class は `FLAGSHIP`、reasoning effort は `MAX`。
     - file access mode は `PURE_ORACLE_WRITE`。
     - Structured Output は要求しない。

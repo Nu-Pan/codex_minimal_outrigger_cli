@@ -25,7 +25,7 @@
 ## agent call と file access
 
 - `build_realization_apply_fork_launch_exec_parameter` が、追従対象 commit 範囲と raw oracle diff を含む完全 prompt を `AgentCallParameter.prompt` として返す。
-- `{{cmoc-run-worktree}}` を cwd とする `codex exec` を 1 回だけ本命 agent call として実行する。Codex CLI の TUI は起動しない。
+- `{{cmoc-run-worktree}}` を agent call の cwd とする `codex exec` を 1 回だけ本命 agent call として実行する。Codex CLI の TUI は起動しない。
 - 本命の追従作業を複数の agent call に分割してはいけない。
 - 収束判定のために同じ作業を反復してはいけない。
 - 本命 agent call 終了後に、別の agent call で作業を補完してはいけない。
@@ -43,7 +43,7 @@
 1. doctor preprocess と編集 run の共通 fork 開始処理を行う。
 2. 追従対象差分を構築する。
 3. `build_realization_apply_fork_launch_exec_parameter` で AgentCallParameter を構築する。
-4. その AgentCallParameter を変更せず、`{{cmoc-run-worktree}}` を cwd とする `codex exec` で実行する。
+4. その AgentCallParameter を変更せず、`{{cmoc-run-worktree}}` を agent call の cwd とする `codex exec` で実行する。
 5. agent の realization file 差分と cmoc が生成した `INDEX.md` を検査し、run branch に commit する。
 6. `run.state` を `joinable` にして結果を report する。
 

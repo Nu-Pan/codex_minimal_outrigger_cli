@@ -31,8 +31,8 @@ def build_tui_resolve_parameter_parameter(
         ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す元プロンプト。
         コメント除去と strip は呼び出し側で完了している想定。
     """
-    # 後続 TUI と同じ main worktree を cwd として先に確定する
-    path_context = AgentCallPathContext(resolve_repo_root())
+    # 後続 TUI と同じ main worktree を agent_call_cwd として先に確定する
+    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
 
     # プロンプト
     prompt = build_complete_prompt(
@@ -77,6 +77,6 @@ def build_tui_resolve_parameter_parameter(
         file_access_mode=FileAccessMode.READONLY,
         prompt=render_as_markdown(prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
-        cwd=path_context.cwd,
+        agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,
     )

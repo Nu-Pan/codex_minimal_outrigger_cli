@@ -30,8 +30,8 @@ def build_session_join_conflict_resolution_parameter(
     conflicted_paths: list[Path]
         conflict marker 解消対象ファイルのパス。
     """
-    # session join は main worktree を agent call の cwd として先に確定する
-    path_context = AgentCallPathContext(resolve_repo_root())
+    # session join は main worktree を agent_call_cwd として先に確定する
+    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
 
     # エイリアス
     resolved_paths = [
@@ -82,6 +82,6 @@ def build_session_join_conflict_resolution_parameter(
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt=render_as_markdown(prompt),
         structured_output_schema_path=None,
-        cwd=path_context.cwd,
+        agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=False,
     )
