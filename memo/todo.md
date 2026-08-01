@@ -1,28 +1,19 @@
 # 現在進行中
 
-- oracle doc に $japanese-writing-skill を適用する
-    - 認知負荷を下げて、まともにレビュー出来る状態を作る
-- `state.json` のマージコンフリクトの問題は要調整
-    - 確実に run branch, session branch 両方で編集が発生する
-    - `state.json` だけは機械的なマージコンフリクト解消ルールを組み込むべきかも
 - サブコマンド固有の初期プロンプトが TODO のまま
 - `cmoc realizatin apply fork` の自動構築プロンプトで、`{{repo-root}}`, `{{work-root}}` が同じになっている
     - apply は `{{run-root}}` での実行のはず
     - oracle の問題くさい
     - `run codex resume 019f8762-e21c-7122-b33a-22b14664a2a7`
-- `openai-docs` 用の外部ネットワークアクセスが弾かれてしまう
-- スキルから oracle file を参照しちゃってる
-    - このリポジトリ固有とは言え、スキルは自己完結性をもたせたい
-- `cmoc realization refactor` の unresolved の扱い方が微妙
-    - git 履歴上残らないので、再実行時に毎回 unresolved の再調査が入る
-    - unresolved も `state.json` に含めたい
-- oracle file にあれこれ書こうとする件
-    - コンテキスト切って余計な情報の取捨選択をさせると良いらしい？
-    - コンテキストが乗っているとディティールを考慮しすぎるのは、人間基準で考えてもたしかにそう
-    - edit して shrink してっていう順序系とか tui での反復とかを考えると、git worktree, branch の作成と実行は分けたほうが良いような気がする
-    - oracle file の半自動編集は悲願なので、直近については専用サブコマンドの追加で良いか？　 cmoc tui で良いような気もする
+- run-cmoc-tests スキルから oracle file を参照しちゃってる
+    - このリポジトリ固有とは言え、スキルは自己完結性をもっているほうが望ましい
 
-# cmoc の作業品質
+## oracle file にあれこれ書こうとする件
+
+- コンテキスト切って余計な情報の取捨選択をさせると良いらしい？
+- コンテキストが乗っているとディティールを考慮しすぎるのは、人間基準で考えてもたしかにそう
+- edit して shrink してっていう順序系とか tui での反復とかを考えると、git worktree, branch の作成と実行は分けたほうが良いような気がする
+- oracle file の半自動編集は悲願なので、直近については専用サブコマンドの追加で良いか？　 cmoc tui で良いような気もする
 
 ## いい加減、`codex`, `codex exec` の仕様記述の棲み分けをどうにかしたい
 
@@ -40,6 +31,16 @@
 - realization file は読み書き禁止
 - ３系統をどの用に分配するかの設計的な部分についてのみ、AI Agent の裁量が認められる
 ```
+
+## `state.json` のマージコンフリクトの問題は要調整
+
+- 確実に run branch, session branch 両方で編集が発生する
+- `state.json` だけは機械的なマージコンフリクト解消ルールを組み込むべきかも
+
+## oracle doc に $japanese-writing-skill を適用する
+
+- 認知負荷を下げて、まともにレビュー出来る状態を作る
+- cmoc oracle edit --foreach みたいなのが必要かも
 
 ## standard の改善系
 

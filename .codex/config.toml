@@ -43,6 +43,8 @@ features.network_proxy.domains."github.com" = "allow"
 features.network_proxy.domains."release-assets.githubusercontent.com" = "allow"
 features.network_proxy.domains."registry.ollama.ai" = "allow"
 features.network_proxy.domains."dd20bb891979d25aebc8bec07b2b3bbc.r2.cloudflarestorage.com" = "allow"
+features.network_proxy.domains."developers.openai.com" = "allow"
+features.network_proxy.domains."learn.chatgpt.com" = "allow"
 
 # 承認関係
 # NOTE
