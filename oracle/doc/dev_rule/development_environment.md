@@ -50,7 +50,7 @@ cd "{{cmoc-root}}"
 
 ```bash
 cd "{{cmoc-root}}"
-./.venv/bin/python -m pip install -e .
+./.venv/bin/python -m pip install -e '.[dev]'
 ```
 
 ### `{{cmoc-root}}/.venv` への新規パッケージ追加

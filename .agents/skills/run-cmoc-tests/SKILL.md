@@ -51,6 +51,7 @@ cd "$cmoc_work_root"
 ## 検査対象を選ぶ
 
 - 明示された test failure の再現では、その node ID を focused test とする。
+- `.agents/skills/**` の変更では、`test/test_skill_metadata.py` を focused test とする。
 - implementation の変更では、`test/INDEX.md` の Summary と `rg` による import・symbol の参照検索から、変更した外部挙動または制御ロジックを検証する test file または node ID を選ぶ。
 - test helper の変更では、その helper を直接検証する test と、変更した interface の主要な利用側を選ぶ。
 - test file に GPU test と非 GPU test が混在する場合は、`gpu_integration` marker で focused test も 2 command に分割する。
