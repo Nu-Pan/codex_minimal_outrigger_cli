@@ -1,20 +1,18 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc tui` の TUI 起動用 AgentCallParameter を構築する oracle src。完全なプロンプトを生成・保存し、最高性能モデル・最大推論設定・リポジトリ書き込み権限などの固定起動パラメータを返す。TUI 起動条件、プロンプト生成、モデル設定、作業ディレクトリ、構造化出力スキーマの確認における入口。
+- `cmoc tui` 起動時に使用する AgentCallParameter を構築する oracle src。ユーザー入力を完全な作業 prompt として保存し、最高品質のモデル設定・リポジトリ書き込み権限・構造化出力 schema・実行対象 cwd・事前 indexing を含む TUI 起動条件を定める。
 
 ## Read this when
-- `cmoc tui` の TUI 起動処理や AgentCallParameter の設定を変更・調査するとき
-- TUI 用の完全プロンプト保存先、パスコンテキスト、動的プロンプトの構成を確認するとき
-- TUI 起動時のモデル、推論強度、ファイルアクセスモード、インデックス事前処理の設定を確認するとき
+- `cmoc tui` の AgentCallParameter、起動 prompt、モデル・推論設定、ファイルアクセスモード、agent call の cwd、または prompt 保存処理を変更・確認するとき。
+- oracle/realization standard の適用可否や、TUI 用の構造化出力 schema の指定箇所を確認するとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンドのプロンプト生成や AgentCallParameter を調査するとき
-- `cmoc tui` の呼び出し元やエディタ入力処理だけを確認するとき
-- TUI 起動で使用する構造化出力スキーマの詳細だけを確認するとき
+- TUI 起動パラメータではなく、通常の CLI サブコマンド実装や prompt 本文の共通生成ロジックだけを調査するとき。
+- TUI の画面表示・対話制御・エディタ入力処理そのものを変更・確認するときは、該当する直接の実装へ進む。
 
 ## hash
-- 6dce0148f0c47eb025a9dc391bdf7fbdf4bcf0bc730dcc026d6289e9eb6ebff2
+- 280da05e84f9a11b620d03624d553378a44e0532caa12f2e44cef9ec9655f372
 
 # `resolve_parameter.json`
 
@@ -34,17 +32,17 @@
 # `resolve_parameter.py`
 
 ## Summary
-- `cmoc tui` の実行パラメータ解決用プロンプトと、後続の AI Agent CLI/TUI 呼び出しに渡す `AgentCallParameter` を構築する正本実装。モデル、推論強度、読み取り専用アクセス、作業ディレクトリ、構造化出力スキーマなどの実行条件を定義し、関連する prompt builder や path context の入口となる。
+- `cmoc tui` の実行パラメータ解決用 AgentCallParameter と、後続エージェント呼び出し向けの完全プロンプトを構築する oracle src。ユーザー入力プロンプトを動的プロンプトへ埋め込み、標準適用方針・読み取り専用アクセス・モデル等の実行条件を定義する。
 
 ## Read this when
 - `cmoc tui` の実行パラメータ解決処理を変更・レビューするとき
-- 後続エージェント向けプロンプトの role、summary、goal、標準規則の適用条件を確認するとき
-- TUI 用 AgentCallParameter のモデル、アクセスモード、cwd、構造化出力設定を確認するとき
+- 後続 AI Agent CLI/TUI 呼び出しの prompt、path context、model、access mode、structured output 設定を確認するとき
+- ユーザー入力プロンプトを含む完全 prompt の構築経路を追跡するとき
 
 ## Do not read this when
-- `cmoc tui` のユーザー入力受付や画面表示など、実行パラメータ解決以外の TUI 挙動を調べるとき
-- 構造化出力スキーマの項目定義だけを確認したいときは、対応する JSON スキーマを直接読む
-- 共通の完全プロンプト生成仕様やパス解決仕様だけを確認したいときは、それぞれの共通モジュールを直接読む
+- `cmoc tui` の実際の対話処理や UI 制御だけを調べるとき
+- 実行パラメータ解決後の Agent CLI/TUI 呼び出し実装を直接確認すべきとき
+- Structured Output schema の詳細だけを確認するときは、対応する schema ファイルへ直接進む
 
 ## hash
-- d0178af4f620a213141d82c8c31e1590cfbf08b15105b1d5bf3254ee5a6bc236
+- cd5c4c1693503436f0cbd5f4a6d4a47f2e2f5156a868b93ad091885caefc5bce

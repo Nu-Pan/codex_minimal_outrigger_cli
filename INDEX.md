@@ -91,22 +91,22 @@
 # `oracle`
 
 ## Summary
-- cmoc のアプリケーション仕様を扱う oracle doc と、機能別の oracle source を収める領域。CLI 自動補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト、run・session lifecycle、サブコマンド、INDEX 更新、ACP 設定、共通設定、パス、構造化文書処理などの仕様・実装定義へ進む入口を提供する。
-- branch・commit・worktree の関係は branch_model、Python 実装・CLI 配置・開発環境・テスト規則は dev_rule、採用しなかった realization refactor 方式は considered_alternative から確認できる。
+- cmoc の正本仕様を収録するディレクトリ。機能仕様、ライフサイクル、ブランチモデル、INDEX 生成、開発環境・CLI・テストなどの開発規約を確認するための入口。
+- CLI、Codex 呼び出し、ログ、doctor、prompt、run/session、branch model、INDEX 生成、Python 開発規約などの個別仕様は doc へ、agent call パラメータ、パス解決、プロンプト構築、INDEX 生成や realization 操作の正本ソースは src へ進む。
 
 ## Read this when
-- cmoc のアプリケーション仕様を確認・変更・レビューするとき
-- CLI 起動、Codex agent call、ログ、プロンプト、run・session、サブコマンド、INDEX 更新の仕様上の入口を探すとき
-- ACP agent call の共通設定、prompt、Structured Output schema、cmoc 固有設定、パス解決、規範構造、StructDoc、Markdown レンダリング、prompt builder 部品を調査するとき
-- 複数の個別仕様や oracle source にまたがる共通ルールを切り分けるとき
+- cmoc の機能・共通仕様や個別 oracle doc の所在を確認するとき
+- branch・commit・worktree、session・run の関係やライフサイクルを調査するとき
+- Python 開発、CLI 設計、開発環境、pytest などの開発規約を確認するとき
+- agent call の設定・パス解決・prompt 構築・INDEX 生成・oracle review・realization 操作の正本ソースを探すとき
 
 ## Do not read this when
-- 具体的な realization implementation や realization test の実装詳細だけを確認するとき
-- Python 実行環境・テスト実行方法など、アプリケーション仕様と無関係な開発規則だけを確認するとき
-- 特定の仕様文書や下位 source の内容が明らかで、対象へ直接進めるとき
+- 既に確認対象の仕様文書や開発規約文書が特定できており、その本文だけで目的を満たせるとき
+- 実装構造やテスト実装、一般的な Codex CLI・model provider の仕様を直接調査するとき
+- 既存の INDEX.md のルーティングだけを更新するとき
 
 ## hash
-- 0800a78b0a4c83877bee871019dddb5acbd19d5bec8c3f4532ec04244a6eb06a
+- 91d04de8eeb1114758d97aa495cb405bac04a4095519565a0386adb71ff71988
 
 # `pyproject.toml`
 

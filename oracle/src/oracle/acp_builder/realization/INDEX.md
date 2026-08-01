@@ -1,34 +1,34 @@
 # `apply`
 
 ## Summary
-- Oracle の変更差分を埋め込んだ realization 追従用の完全な prompt と AgentCallParameter を構築し、linked worktree、commit 範囲、書き込み権限、モデル設定、事前 indexing を含む agent call の起動設定を担う。
+- `cmoc realization apply fork` 実行時に使う `codex exec` 用 AgentCallParameter の正本コード。prompt、権限、oracle 差分、実行用 worktree、commit 範囲、モデル設定を組み立てる。
 
 ## Read this when
-- oracle file の変更を realization implementation・test・ancillary 全体へ反映する agent call の起動条件や prompt を変更するとき。
-- realization apply fork の実行 cwd、差分情報、権限、モデル・推論設定を確認するとき。
+- `cmoc realization apply fork` の AgentCallParameter 生成や prompt 構成を変更・検証するとき。
+- oracle 差分の渡し方、実行用 worktree、commit 範囲、モデル設定を調査するとき。
 
 ## Do not read this when
-- 通常の realization 実装やテストの内容を変更するとき。
-- oracle の仕様や共通 prompt 構築処理を確認するとき。対応する oracle file や prompt builder を直接読む。
+- 通常の realization 実装・テストを調査するとき。
+- `cmoc realization apply fork` 以外の agent call 起動処理を調査するとき。
+- oracle 変更に追従する realization 実装そのものを調査するとき。
 
 ## hash
-- 8c1fa6ddc8b66ad59031966d99e543a070f67a0f3980b967283a5aa98b205aa6
+- 1e237c12628442cd8f02b41ab9dc080c0d2b6cdf9b766868ba1048ff36c9840f
 
 # `refactor`
 
 ## Summary
-- refactor fork の変更要約およびファイル単位レビュー・修正に関する Structured Output schema と、これらの agent call パラメータ構築処理をまとめた領域。差分要約、レビュー所見、対象 path・linked worktree・prompt・モデル・権限・検証設定を扱う。
+- refactor fork の変更要約と単一ファイルレビュー・修正に関する Structured Output schema、およびそれらを利用する AgentCallParameter 構築の正本実装を扱う。変更要約、レビュー対象 path の解決、prompt、権限、モデル設定、作業ディレクトリの確認・変更に進むための入口となる。
 
 ## Read this when
-- refactor fork の変更要約やレビュー結果の出力 schema を確認するとき
-- 変更要約 agent call の prompt、差分入力、実行条件、モデル設定を確認するとき
-- ファイル単位の realization review・fix agent call の対象 path、権限、検証要件、Structured Output schema 指定を確認するとき
+- refactor fork の変更要約 agent の出力形式、差分カテゴリ、要約、根拠 path を確認するとき
+- 単一ファイルのレビュー・修正 agent の prompt、対象 path、権限、検証条件、git 操作制約を確認するとき
+- 配下の変更要約またはファイルレビュー・修正の schema や AgentCallParameter 構築実装を確認・変更するとき
 
 ## Do not read this when
-- 実際の変更内容や realization code の挙動を調査するとき
-- 個別の Structured Output schema の具体的な定義だけを確認するとき
-- レビュー・修正 agent call の実処理そのものを調査するとき
-- 他の agent call 種別の prompt 構築規則だけを調査するとき
+- レビュー対象ファイル自体の実装内容や個別の oracle/realization file の仕様を調査するとき
+- 変更要約またはファイルレビュー・修正の Structured Output schema の詳細だけを確認したいとき
+- 一般的な prompt 構築、path 解決、構造化文書レンダリングの実装だけを調査するとき
 
 ## hash
-- 318ecc69d1d90df72308619839ab42029bdaa4869e8935526c77c0d890cfbe3e
+- f1ada39671e97d2728b0770519c14810a6fa95681b2ba97f0ee60e6fd531ece8

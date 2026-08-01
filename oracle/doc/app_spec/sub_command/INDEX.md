@@ -57,20 +57,21 @@
 # `oracle_edit.md`
 
 ## Summary
-- oracle file を直接編集する `cmoc oracle edit` サブコマンドの正本仕様。目的、入力、TUI 起動前条件・パラメータ、実行順序、編集境界、終了時の差分扱い、中断・排他制御、ログ方針を定義する。oracle edit の挙動や実装配置を調査・変更するときの入口。
+- `cmoc oracle edit` サブコマンドの正本仕様。oracle file の編集指示を受け取り、事前検査後に main worktree 上の Codex CLI TUI を起動し、oracle file の未コミット変更を人間の確認対象として残す。
+- 引数、エディタ入力、TUI 起動パラメータ、実行順序、編集禁止範囲、終了時の差分維持、中断・排他制御、ログ方針を定義する。oracle edit の実装・テストや関連する app specification を確認する入口。
 
 ## Read this when
-- `cmoc oracle edit` の実行順序、TUI 起動条件、Codex CLI パラメータを確認するとき
-- oracle file の編集権限・編集対象境界・終了後の差分保持を確認するとき
-- 中断、排他制御、session state、ログの扱いを確認するとき
+- `cmoc oracle edit` の挙動、起動前提条件、TUI パラメータ、編集境界を変更・調査するとき
+- oracle file の編集指示入力、事前検査、終了後の差分・indexing の扱いを確認するとき
+- oracle edit サブコマンドのテストや関連 builder・prompt editor input の仕様を確認するとき
 
 ## Do not read this when
-- realization file の具体的な実装を変更・検証するときは、対応する `oracle/src` や realization 側の実装を直接読む
-- エディタ入力の具体的な仕様を確認するときは、指定された prompt editor input の oracle file を読む
-- Codex CLI の一般的な起動規則を確認するときは、指定された codex exec rule の oracle file を読む
+- realization file の具体的な実装配置や Python 実行環境だけを確認したいときは、対応する realization code または開発環境の oracle file を直接読む
+- `cmoc oracle investigation` の権限やライフサイクルを確認したいときは、この oracle edit 仕様ではなく investigation の仕様を読む
+- INDEX.md の生成・更新方法そのものを確認したいときは、indexing 関連の正本仕様を直接読む
 
 ## hash
-- 0337b4fc1dda4e6275a254256ca5ea848ac313e06d023bdc9063422e07aa632b
+- d6ab16734df840a9438e85810a2503cbf531d6e34ed7870616e5dc422c39ef41
 
 # `oracle_investigation.md`
 
@@ -111,20 +112,20 @@
 # `realization_apply.md`
 
 ## Summary
-- realization apply fork の目的、追従対象となる oracle 差分、agent call の実行制約、実行手順、エラー処理、report と終了コード、join 後 hook を定義する仕様文書。realization apply の fork 処理を実装・検証・運用する際の入口となる。
+- `cmoc realization apply fork` の目的、追従対象となる oracle 差分、agent call の実行制約、実行手順、エラー処理、report、join 後 hook を定義する正本仕様。realization apply の fork 処理や編集 run の lifecycle、差分適用と結果報告の実装入口となる。
 
 ## Read this when
-- realization apply fork の挙動や lifecycle を変更・検証するとき
-- oracle 差分の始点・終点、rename の扱い、agent call の制約を確認するとき
-- fork report、終了状態、join 後の session 更新を扱うとき
+- realization apply fork の差分始点・終点、oracle file の rename を含む追従範囲を確認するとき
+- 本命 agent call の実行回数、cwd、file access mode、変更対象を確認するとき
+- fork の実行手順、エラー時の state、report 内容・保存先、join 後 hook を実装または検証するとき
 
 ## Do not read this when
-- realization apply fork 以外の sub-command の仕様を確認するとき
-- 共通する fork・join・abandon lifecycle の詳細だけを確認したいときは、指定された editing_run.md を直接読む
-- ファイル単位の realization 追従や refactor の仕様を確認するとき
+- fork・join・abandon に共通する lifecycle だけを確認したいときは、指定された共通 lifecycle の正本を直接読む
+- realization file の具体的な実装やテストの詳細を調べるとき
+- ファイル単位の網羅的な realization 追従や refactor の仕様を調べるとき
 
 ## hash
-- c38be9c0824711d2152006094ff8f7291415ce015e3349c076ebb4442dabb90c
+- a98e7be894f3092fa4bc7493d0d87c9f5db19691675509f7283ed3912e48c1b0
 
 # `realization_refactor.md`
 

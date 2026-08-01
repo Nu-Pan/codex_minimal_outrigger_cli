@@ -15,17 +15,16 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の変更差分を要約する agent call 用パラメータを構築する。差分を動的 prompt に埋め込み、読み取り専用の linked worktree を対象として、効率重視のモデル設定と Structured Output schema を指定する。
+- refactor fork の作業差分を人間向けに要約する AgentCallParameter を構築する正本実装。差分を補助入力として prompt、読み取り専用の実行条件、効率重視のモデル設定、Structured Output schema の参照先をまとめる。
 
 ## Read this when
-- refactor fork の run branch 差分を人間向けに要約する prompt 構築や、その agent call の実行条件を確認するとき。
+- refactor fork の変更差分を要約する prompt 構築処理や、その AgentCallParameter の実行条件を確認・変更するとき。
 
 ## Do not read this when
-- refactor fork の実際の変更内容を調査するときは、生成された差分や対象実装を直接読む。
-- 変更要約の出力形式そのものを確認するときは、対応する Structured Output schema を直接読む。
+- refactor fork の変更内容そのものや要約結果の形式だけを確認したいとき。差分入力や Structured Output schema の定義を直接確認する場合は、対応する入力元・schema を読む。
 
 ## hash
-- e8ae11e0b02d60a1916d306796b879d5a57e176398051e2aa648ff069224d985
+- af7d317b4f642b2960d33444e913d1f38c4f4a6e05ecc93c5f2844e52253b36a
 
 # `file_review_and_fix.json`
 
@@ -44,17 +43,19 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- `cmoc realization refactor fork` のファイル単位レビュー・修正用 AgentCallParameter を構築する。対象ファイルと実行用 worktree を受け取り、パス文脈、完全なレビュー・修正プロンプト、モデル設定、構造化出力 schema、cwd、事前 indexing をまとめて返す。レビュー対象の oracle/realization file を起点に、調査・修正・検証まで行う agent call の設定入口である。
+- `cmoc realization refactor fork` における、単一ファイルを起点としたレビュー・修正用の AgentCallParameter を構築する oracle src。対象 path と実行 worktree を受け取り、完全なレビュー・修正 prompt、ファイルアクセス権限、モデル設定、構造化出力 schema、作業ディレクトリをまとめて返す。
+- 対象ファイルを起点に、必要な oracle file・realization file の調査、所見への修正、修正後検証、テスト通過を agent に要求する prompt を組み立てる。差分推測の禁止、git add/commit の禁止、変更と findings の対応付けなどの作業上の制約も prompt に含める。
+- レビュー対象 path は `AgentCallPathContext` と `resolve_real_path` で prompt 用の実パスへ変換し、`build_complete_prompt` と `render_as_markdown` を通じて最終 prompt 化する。実装本体ではなく、ファイル単位レビュー・修正 agent の呼び出しパラメータ生成を担う入口である。
 
 ## Read this when
-- ファイル単位の realization review・fix agent call のプロンプト内容、権限、検証要件を変更または確認するとき
-- レビュー対象 path と linked worktree の解決、モデル・推論設定、structured output schema の指定を変更するとき
-- refactor fork 系の agent call parameter 構築処理を調査するとき
+- ファイル単位の realization refactor fork レビュー・修正 agent の起動条件、prompt 構成、対象 path の扱いを確認するとき。
+- AgentCallParameter のモデルクラス、推論強度、realization write 権限、構造化出力 schema、agent call の作業ディレクトリ設定を変更・調査するとき。
+- レビュー結果に求める findings/resolution、修正・検証・git 操作に関する制約を確認するとき。
 
 ## Do not read this when
-- レビュー・修正 prompt の詳細ではなく、実際のレビュー処理や realization code の実装を調査するとき
-- 構造化出力の具体的な schema 定義だけを確認するときは、対応する schema file を直接読む
-- 他の agent call 種別の prompt 構築規則だけを調査するとき
+- レビュー対象ファイルそのものの実装内容や、個別の oracle/realization file の仕様・実装を調査するときは、それぞれの対象ファイルを直接読む。
+- レビュー結果の structured output schema の詳細だけを確認するときは、指定された schema ファイルを直接読む。
+- 一般的な prompt 構築処理、path 解決、構造化文書のレンダリングの実装を確認するときは、対応する import 元のモジュールを直接読む。
 
 ## hash
-- cb92108ab52a21f75bf7203e62fef63cd2a0dff36e5d2d53ab96d7b0cbef1d70
+- 0cc296fcb605b459776af995cf3befc7643a27a71e1204ee44c5f7f50a3816dd
