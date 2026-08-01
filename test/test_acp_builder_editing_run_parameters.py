@@ -40,7 +40,7 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff() -> None:
     assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.run_indexing_preflight is True
-    assert parameter.cwd == run_worktree.resolve()
+    assert parameter.agent_call_cwd == run_worktree.resolve()
     assert "base-commit" in parameter.prompt
     assert "fork-commit" in parameter.prompt
     assert "diff --git a/oracle/a.md b/oracle/a.md" in parameter.prompt
@@ -66,10 +66,11 @@ def test_realization_apply_builder_keeps_nested_diff_fences() -> None:
 def test_refactor_builders_use_canonical_structured_output_schemas() -> None:
     """refactor builder が canonical schema と要求された実行設定を使うことを確認する。"""
     review = build_realization_refactor_fork_file_review_and_fix_parameter(
-        Path(__file__)
+        Path(__file__), Path.cwd()
     )
     summary = build_realization_refactor_fork_change_summary_parameter(
-        "diff --git a/src/a.py b/src/a.py\n```\n</cmoc_block>\n```\n"
+        "diff --git a/src/a.py b/src/a.py\n```\n</cmoc_block>\n```\n",
+        Path.cwd(),
     )
 
     assert review.model_class == ModelClass.EFFICIENCY
@@ -110,7 +111,8 @@ def test_refactor_builders_use_canonical_structured_output_schemas() -> None:
 def test_refactor_change_summary_keeps_marker_like_diff_content() -> None:
     """raw diff 内の prompt 境界風見出しを外側の境界と誤認しない。"""
     parameter = build_realization_refactor_fork_change_summary_parameter(
-        "diff --git a/README.md b/README.md\n```\n\n# place holder definition\n\n```\n"
+        "diff --git a/README.md b/README.md\n```\n\n# place holder definition\n\n```\n",
+        Path.cwd(),
     )
 
     start = parameter.prompt.index("# run branch 上の refactor 差分")

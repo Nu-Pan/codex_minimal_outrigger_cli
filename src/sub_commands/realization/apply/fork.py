@@ -11,7 +11,6 @@ from cmoc_runtime import (
     CmocError,
     load_config,
     load_state_for_branch,
-    pushd,
     run_cli_subcommand,
     run_codex_exec,
     start_subcommand_step,
@@ -79,29 +78,23 @@ def _cmoc_realization_apply_fork_body() -> None:
             diff_base_commit,
             context.run_fork_commit,
         )
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-        # canonical builder は prompt 内の work-root を cwd から解決するため、
-        # AgentCallParameter の cwd だけでなく構築時の cwd も run worktree に揃える。
-        with pushd(context.run_worktree):
-            parameter = build_realization_apply_fork_launch_exec_parameter(
-                diff_base_commit,
-                context.run_fork_commit,
-                oracle_diff,
-                context.run_worktree,
-            )
+        parameter = build_realization_apply_fork_launch_exec_parameter(
+            diff_base_commit,
+            context.run_fork_commit,
+            oracle_diff,
+            context.run_worktree,
+        )
         start_subcommand_step(4, "realization 追従 agent を実行", "run apply agent")
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # INDEX 再生成も run 中の Codex call なので、abandon が停止できるよう
         # agent call から処理単位の commit 検査まで同じ tracking scope に含める。
         with run_process_tracking(context.repo, context.session_id):
-            with pushd(context.run_worktree):
-                result = run_codex_exec(
-                    parameter,
-                    root=context.repo,
-                    cwd=context.run_worktree,
-                    config=load_config(context.run_worktree),
-                    purpose="realization apply fork",
-                )
+            result = run_codex_exec(
+                parameter,
+                root=context.repo,
+                config=load_config(context.run_worktree),
+                purpose="realization apply fork",
+            )
             codex_returncode = result.returncode
             if result.returncode != 0:
                 raise CmocError(

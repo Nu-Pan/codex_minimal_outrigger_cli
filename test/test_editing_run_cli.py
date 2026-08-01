@@ -121,18 +121,18 @@ def test_refactor_rejects_empty_refactor_state(
         refactor_module._initialize_cycle(context)
 
 
-def test_refresh_indexes_builds_prompts_for_requested_worktree(
+def test_refresh_indexes_does_not_change_process_cwd(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """INDEX builder の work-root を明示された worktree に揃える。"""
+    """明示 worktree の INDEX 更新で process-global cwd を変更しない。"""
     root = make_repo(tmp_path)
     caller = tmp_path.resolve()
     monkeypatch.chdir(caller)
     observed: list[Path] = []
 
     def fake_update_indexes(worktree: Path, _codex_exec: object) -> list[Path]:
-        """対象 worktree で index builder が呼ばれることを記録する。"""
+        """対象 worktree と呼び出し時の process cwd を記録する。"""
         observed.append(Path.cwd().resolve())
         assert worktree == root
         return []
@@ -141,7 +141,7 @@ def test_refresh_indexes_builds_prompts_for_requested_worktree(
 
     lifecycle_module.refresh_indexes(root, commit=False)
 
-    assert observed == [root.resolve()]
+    assert observed == [caller]
     assert Path.cwd().resolve() == caller
 
 
@@ -316,11 +316,12 @@ def test_apply_rolls_back_unexpected_oracle_change(
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
 
     def fake_apply(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """apply agent が oracle file を変更した状態を再現する。"""
-        worktree = Path(str(kwargs["cwd"]))
+        worktree = parameter.agent_call_cwd
+        assert "cwd" not in kwargs
         (worktree / "oracle" / "unexpected.md").write_text("unexpected\n")
         return SimpleNamespace(returncode=0, output_json=None)
 
@@ -350,11 +351,12 @@ def test_apply_rejects_agent_index_change_before_index_refresh(
     refresh_calls = 0
 
     def fake_apply(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """apply agent が INDEX.md を変更した状態を再現する。"""
-        worktree = Path(str(kwargs["cwd"]))
+        worktree = parameter.agent_call_cwd
+        assert "cwd" not in kwargs
         index_path = worktree / "INDEX.md"
         index_path.write_text("agent change\n")
         return SimpleNamespace(returncode=0, output_json=None)
@@ -552,9 +554,10 @@ def test_realization_apply_fork_and_run_join_use_common_state(
         **kwargs: object,
     ) -> SimpleNamespace:
         """apply agent の代わりに run worktree の realization file を変更する。"""
-        cwd = Path(str(kwargs["cwd"]))
-        calls.append((parameter, cwd))
-        (cwd / "README.md").write_text("# repo\n\nrealized\n")
+        worktree = parameter.agent_call_cwd
+        assert "cwd" not in kwargs
+        calls.append((parameter, worktree))
+        (worktree / "README.md").write_text("# repo\n\nrealized\n")
         return SimpleNamespace(returncode=0, output_json=None)
 
     monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
@@ -712,14 +715,14 @@ def test_run_join_rejects_index_refresh_side_effect(
     assert (root / "README.md").read_text() == "# repo\n"
 
 
-def test_apply_builder_uses_run_worktree_as_prompt_work_root(
+def test_apply_builder_uses_call_scoped_run_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """apply builder の prompt 内 work-root と exec cwd を一致させる。"""
-    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    """process cwd を変えずに parameter と prompt が run worktree を共有する。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     original_builder = apply_module.build_realization_apply_fork_launch_exec_parameter
-    observed: list[tuple[Path, Path, str]] = []
+    observed: list[tuple[Path, Path, Path, str]] = []
 
     def capture_builder(
         diff_base_commit: str,
@@ -727,7 +730,7 @@ def test_apply_builder_uses_run_worktree_as_prompt_work_root(
         raw_oracle_git_diff: str,
         run_worktree: Path,
     ) -> AgentCallParameter:
-        """builder 構築時の cwd と prompt を記録する。"""
+        """builder 構築時の process cwd、agent call cwd、prompt を記録する。"""
         parameter = original_builder(
             diff_base_commit,
             run_fork_commit,
@@ -735,7 +738,12 @@ def test_apply_builder_uses_run_worktree_as_prompt_work_root(
             run_worktree,
         )
         observed.append(
-            (Path.cwd().resolve(), run_worktree.resolve(), parameter.prompt)
+            (
+                Path.cwd().resolve(),
+                run_worktree.resolve(),
+                parameter.agent_call_cwd,
+                parameter.prompt,
+            )
         )
         return parameter
 
@@ -760,8 +768,9 @@ def test_apply_builder_uses_run_worktree_as_prompt_work_root(
     assert result.exit_code == 0
     assert _state(state_path)["run"]["state"] == "joinable"
     assert len(observed) == 1
-    build_cwd, run_worktree, prompt = observed[0]
-    assert build_cwd == run_worktree
+    cmoc_process_cwd, run_worktree, agent_call_cwd, prompt = observed[0]
+    assert cmoc_process_cwd == root
+    assert agent_call_cwd == run_worktree
     assert f"- {{{{work-root}}}} = {run_worktree}" in prompt
 
 
@@ -1082,7 +1091,7 @@ def test_refactor_fork_tracks_initialization_indexing_codex_calls(
         return []
 
     def fake_refactor(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """file review と change summary の固定 Structured Output を返す。"""
@@ -1283,11 +1292,11 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
     def fake_refactor(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """README の rename と unresolved finding を再現する。"""
-        worktree = Path(str(kwargs["cwd"]))
+        worktree = parameter.agent_call_cwd
         if kwargs["purpose"] == "realization refactor: README.md":
             (worktree / "README.md").rename(worktree / "renamed.md")
             if replace_content:
@@ -1371,11 +1380,11 @@ def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
     def fake_refactor(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """agent が INDEX または refactor state を変更する状態を再現する。"""
-        worktree = Path(str(kwargs["cwd"]))
+        worktree = parameter.agent_call_cwd
         managed = worktree / managed_path
         managed.write_text(managed.read_text() + "\n")
         return SimpleNamespace(
@@ -1419,7 +1428,7 @@ def test_refactor_rejects_unattributed_realization_changes(
     first_review = True
 
     def fake_refactor(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """README の所見に無関係な realization file も変更する agent を再現する。"""
@@ -1433,7 +1442,7 @@ def test_refactor_rejects_unattributed_realization_changes(
         target = purpose.removeprefix("realization refactor: ")
         if target == "README.md" and first_review:
             first_review = False
-            worktree = Path(str(kwargs["cwd"]))
+            worktree = parameter.agent_call_cwd
             (worktree / "README.md").write_text("fixed\n")
             (worktree / "unattributed.py").write_text("unexpected\n")
             return SimpleNamespace(
@@ -1489,11 +1498,11 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
     def fake_refactor(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """agent が realization file を直接 commit する状態を再現する。"""
-        worktree = Path(str(kwargs["cwd"]))
+        worktree = parameter.agent_call_cwd
         (worktree / "README.md").write_text("agent commit\n")
         run_git(worktree, "add", "README.md")
         run_git(worktree, "commit", "-m", "agent commit")
@@ -1529,12 +1538,12 @@ def test_apply_failure_rolls_back_index_with_realization_changes(
     before_index: str | None = None
 
     def fake_apply(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """apply agent の代わりに差分と rollback 前の INDEX を作る。"""
         nonlocal before_index
-        worktree = Path(str(kwargs["cwd"]))
+        worktree = parameter.agent_call_cwd
         index_path = worktree / "INDEX.md"
         before_index = index_path.read_text() if index_path.exists() else None
         (worktree / "README.md").write_text("realized\n")
@@ -2337,7 +2346,7 @@ def test_refactor_fork_completes_persistent_full_cycle(
     summary_calls = 0
 
     def fake_refactor(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """refactor agent と change-summary agent の deterministic response を返す。"""
@@ -2668,7 +2677,7 @@ def test_refactor_fork_refreshes_changed_file_index_during_process_tracking(
     readme_reviews = 0
 
     def fake_refactor(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """README の初回調査だけ file を修正し、他は固定応答を返す。"""
@@ -2694,7 +2703,7 @@ def test_refactor_fork_refreshes_changed_file_index_during_process_tracking(
         if purpose == "realization refactor: README.md":
             readme_reviews += 1
             if readme_reviews == 1:
-                worktree = Path(str(kwargs["cwd"]))
+                worktree = parameter.agent_call_cwd
                 (worktree / "README.md").write_text("# repo\n\nfixed\n")
                 return SimpleNamespace(
                     returncode=0,
@@ -2768,7 +2777,7 @@ def test_refactor_rejects_realization_change_added_by_index_refresh(
         return []
 
     def fake_refactor(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """対象 realization file だけを変更して fixed finding を返す。"""
@@ -2776,7 +2785,7 @@ def test_refactor_rejects_realization_change_added_by_index_refresh(
         if purpose == "realization refactor change summary":
             raise AssertionError("change summary must not run after invalid unit")
         target = purpose.removeprefix("realization refactor: ")
-        worktree = Path(str(kwargs["cwd"]))
+        worktree = parameter.agent_call_cwd
         target_path = worktree / target
         if target_path.is_file():
             target_path.write_text(target_path.read_text() + "fixed\n")
@@ -2817,11 +2826,11 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
     def interrupting_agent(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> NoReturn:
         """差分を作成した処理単位の途中で利用者中断を再現する。"""
-        worktree = Path(str(kwargs["cwd"]))
+        worktree = parameter.agent_call_cwd
         (worktree / "README.md").write_text("interrupted\n")
         raise KeyboardInterrupt()
 
@@ -2877,13 +2886,13 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
     call_log.write_text("{}\n")
 
     def fake_refactor(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """README の commit 済み処理単位に unresolved finding を返す。"""
         target = str(kwargs["purpose"]).removeprefix("realization refactor: ")
         if target == "README.md":
-            worktree = Path(str(kwargs["cwd"]))
+            worktree = parameter.agent_call_cwd
             (worktree / "README.md").write_text("# repo\n\nfixed\n")
             return SimpleNamespace(
                 returncode=0,

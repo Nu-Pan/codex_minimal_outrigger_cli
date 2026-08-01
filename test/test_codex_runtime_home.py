@@ -67,6 +67,7 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
 
     result = run_codex_exec(
@@ -114,6 +115,7 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
 
     result = run_codex_exec(
@@ -164,6 +166,7 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
         FileAccessMode.PURE_ORACLE_READ,
         "prompt",
         None,
+        root,
     )
 
     result = run_codex_exec(
@@ -191,6 +194,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
 
     try:
@@ -223,6 +227,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
 
     try:

@@ -22,7 +22,6 @@ from cmoc_runtime import (
     current_subcommand_logger,
     file_sha256,
     load_config,
-    pushd,
     refactor_state_path,
     run_cli_subcommand,
     run_codex_exec,
@@ -347,25 +346,23 @@ def _run_refactor_unit(
         nonlocal agent_head
         agent_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
 
-    with pushd(context.run_worktree):
-        try:
-            parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
-                target_path
-            )
-            result = run_codex_exec(
-                parameter,
-                root=context.repo,
-                cwd=context.run_worktree,
-                config=load_config(context.run_worktree),
-                purpose=f"realization refactor: {target}",
-                # {{work-root}}/oracle/doc/app_spec/indexing.md
-                # file-review builder の preflight commit を agent commit の検査基準へ
-                # 含めず、本命 subprocess の直前を baseline とする。
-                before_agent_call=record_agent_head,
-            )
-        except BaseException:
-            _ensure_agent_did_not_commit(context.run_worktree, agent_head)
-            raise
+    try:
+        parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
+            target_path, context.run_worktree
+        )
+        result = run_codex_exec(
+            parameter,
+            root=context.repo,
+            config=load_config(context.run_worktree),
+            purpose=f"realization refactor: {target}",
+            # {{work-root}}/oracle/doc/app_spec/indexing.md
+            # file-review builder の preflight commit を agent commit の検査基準へ
+            # 含めず、本命 subprocess の直前を baseline とする。
+            before_agent_call=record_agent_head,
+        )
+    except BaseException:
+        _ensure_agent_did_not_commit(context.run_worktree, agent_head)
+        raise
     # {{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py
     # agent は git commit を実行してはいけない。commit 済み差分は status 検査をすり抜けるため、
     # process tracking の child を止めた直後に HEAD も検査し、違反時は処理単位の開始
@@ -786,14 +783,14 @@ def _completion_change_summary(context: EditingRunContext) -> list[dict] | None:
     ).stdout
     if not diff:
         return None
-    with pushd(context.run_worktree):
-        result = run_codex_exec(
-            build_realization_refactor_fork_change_summary_parameter(diff),
-            root=context.repo,
-            cwd=context.run_worktree,
-            config=load_config(context.run_worktree),
-            purpose="realization refactor change summary",
-        )
+    result = run_codex_exec(
+        build_realization_refactor_fork_change_summary_parameter(
+            diff, context.run_worktree
+        ),
+        root=context.repo,
+        config=load_config(context.run_worktree),
+        purpose="realization refactor change summary",
+    )
     output = result.output_json
     if (
         result.returncode != 0

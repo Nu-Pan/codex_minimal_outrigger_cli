@@ -1,35 +1,37 @@
 # `acp`
 
 ## Summary
-- ACP互換の公開入口を扱い、既存の`acp.*`参照を`oracle.*`または実体モジュールへ移行する際の入口となる。
-- ACP builder realizationのパッケージ。oracle実装への互換入口、builder共通処理、oracle・realization・session・TUI・indexing向けadapter、quota probeのfallbackをまとめ、各下位要素への入口を提供する。
+- `acp` 互換公開入口と `acp.builder` の realization package を扱う。旧 import 経路から canonical な `oracle` 実体へ委譲する互換層、および quota probe、Markdown section 処理、indexing、oracle command、realization、session、TUI の builder adapter 群へ進む起点。
 
 ## Read this when
-- `acp`という公開名の存廃や、既存参照をoracle側の実体へ切り替える導線を確認したいとき。
-- ACP builder realizationの構成、互換import、oracle実装への委譲、builder共通処理、各builder adapterの入口を確認したいとき。
+- `acp` 公開名や互換 import 経路の存廃を判断するとき。
+- `acp.builder` の互換層、canonical oracle builder への委譲、または builder adapter の構成を確認・変更するとき。
+- quota probe、indexing、oracle command、realization、session、TUI などの builder 領域へ進む対象を選ぶとき。
 
 ## Do not read this when
-- `acp`配下の具体的な実装内容や移行先の詳細だけを確認したいときは、該当する実体モジュールを直接読む。
-- canonicalなoracle builderの仕様・実装、またはTUI・CLI・sessionなど利用側の挙動を確認したいときは、それぞれの対象を直接読む。
+- canonical な oracle builder の仕様・実装そのものを確認または変更するとき。
+- TUI、CLI、session、または各 builder adapter の具体的な処理詳細を調査するとき。
+- `acp` 互換入口ではなく、移行先の実体モジュールや内部挙動を直接確認したいとき。
 
 ## hash
-- 37a5cdccd2d3f31d506aaed6cc61ba09b39548bbdba0780b9ea25a7280fc4b09
+- 6fd72f99b72bdce2b199955f050a640da15049ca8212784aafd19d4dda73c9fc
 
 # `basic`
 
 ## Summary
-- `basic.*` の互換 import を維持する公開入口群。ACP 型、path model、構造化文書 API を実体定義から再公開し、`basic` 側に実装や正本仕様を複製しない。
+- `basic` 配下の互換 import 入口をまとめるディレクトリ。ACP 型、path model、構造化文書 API などを正本や oracle 側から再公開し、既存の `basic.*` 公開面を維持する。個別実装や正本定義を確認する場合は各再公開元へ進む。
 
 ## Read this when
-- `basic.*` 経由の公開名や互換 import の維持・廃止を判断するとき。
-- ACP 型、path model、構造化文書 API の realization 側での再公開関係を確認するとき。
+- `basic.*` の互換 import を維持・廃止する判断をするとき。
+- `basic.acp`、`basic.path_model`、`basic.struct_doc` の公開経路や再公開元を確認するとき。
+- 利用者向け公開面の移行先や互換層の維持条件を調べるとき。
 
 ## Do not read this when
-- 各 API の正本仕様や実装本体を確認したいときは、対応する oracle 側を直接読む。
-- `basic.*` の公開面や互換 import に関係しない処理を調査・変更するとき。
+- ACP 型、path model、構造化文書 API の正本仕様や実装詳細を確認したいときは、各 oracle 側の定義を直接読む。
+- 個別モジュールと無関係な処理を調査・変更するとき。
 
 ## hash
-- 6427f271674f13de9f39976c4fe0d10226ad4c7573c6fa05a58ee5db32f274b7
+- 292bc262556c427d8a4a7636a2c7e14127adfdea1c7d57f167e9bfa04d4ce5ea
 
 # `cmoc_runtime.py`
 
@@ -49,18 +51,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 実装を集約する commons パッケージ。CLI lifecycle、Codex 実行、設定・状態・パス、Git、ログ、INDEX 更新、editing run など、複数の上位機能から利用される基盤処理の入口。
+- cmoc 共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・パス管理、Git 操作、ログ、エラー処理、INDEX 更新など、複数の上位機能から利用される共通実装への入口。
 
 ## Read this when
-- 複数の cmoc 機能にまたがる runtime 挙動を調査・変更するとき
-- CLI、Codex、設定、状態、Git、INDEX、editing run の共通処理の担当箇所を特定するとき
+- cmoc の共通 runtime 機能を調査・変更するとき
+- CLI、Codex、設定、状態、Git、ログ、INDEX 更新などの横断的な基盤処理の入口を確認するとき
+- 対象となる個別 runtime helper や公開 API の配置を特定するとき
 
 ## Do not read this when
-- 特定サブコマンド固有の仕様や処理だけを調査するとき
-- 正本仕様や entry schema を確認するときは、対応する oracle file を直接読む
+- 特定の runtime helper の実装詳細だけを確認したいとき
+- 特定の CLI サブコマンドや利用者向け仕様だけを調査するときは、対応する個別実装または oracle 文書を直接読む
 
 ## hash
-- 5b969059aee9dcd637287a874f074661052056f21de2edccd2a82af77cd2756e
+- 1c42a6851f8e63adadadf350a3bd99ae7bcfd9b8624f8c8e1b998c1594a7fceb
 
 # `config`
 
@@ -112,15 +115,17 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの realization 実装をまとめるディレクトリ。doctor、indexing、oracle、realization、review、run、session、tui など各サブコマンドの実行入口と、その下位実装へのルーティングを提供する。
+- サブコマンド実装をまとめるディレクトリ。doctor、indexing、tui、oracle、realization、run、session などの各 CLI 入口と、未実装の apply・review の配置先を案内する。個別サブコマンドや関連する共通処理へ進むための上位ルーティング入口。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、対象サブコマンドの実行入口を確認・変更するとき。
-- 特定のサブコマンドについて、配下の実装ファイルへ進む入口を探すとき。
+- サブコマンド実装の構成や、対象サブコマンドの実装入口を確認するとき。
+- doctor、indexing、tui、oracle、realization、run、session の実行フローや配置を調査・変更するとき。
+- apply または review の実装を追加する場所を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理詳細を確認する場合は、このディレクトリ全体ではなく該当する実装ファイルを直接読むとき。
-- CLI ランタイム共通処理や、サブコマンド配下にない共通実装だけを調査するとき。
+- 特定サブコマンドの詳細実装を確認する場合は、対応する下位ファイルやディレクトリを直接読むとき。
+- 共通 CLI runtime、設定、Git、state、report などの実装だけを調査する場合は、対応する共通モジュールを直接読むとき。
+- oracle や realization の個別処理仕様を確認する場合は、対応する仕様文書・実装を直接読むとき。
 
 ## hash
-- c4803297d0c8e343f1c9d41f6b731dfb44961643a92427b2246161ad857ce692
+- 034d6d84254114747686b133121f660e64ed723e5151dbf30d10f90b42d91f5c

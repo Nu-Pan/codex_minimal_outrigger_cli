@@ -697,7 +697,8 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
 
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
-        assert set(kwargs) == {"root", "cwd", "purpose"}
+        assert set(kwargs) == {"root", "purpose"}
+        assert parameter.agent_call_cwd == root
         assert str(target) in parameter.prompt
         override_args = build_codex_override_args(
             parameter,
@@ -755,7 +756,8 @@ def test_session_join_handles_conflict_path_containing_newline(
 
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
         """conflict pathをpromptに含め、解消済み内容を書き込む。"""
-        assert set(kwargs) == {"root", "cwd", "purpose"}
+        assert set(kwargs) == {"root", "purpose"}
+        assert parameter.agent_call_cwd == root
         assert str(target) in parameter.prompt
         target.write_text("resolved change\n")
         return FakeCodexResult()
@@ -1062,10 +1064,10 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     assert "conflict marker が残っています。" in result.stderr
 
 
-def test_session_join_conflict_uses_repo_root_for_codex_storage(
+def test_session_join_conflict_uses_main_worktree_path_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree の conflict 解消で Codex storage は repo root、cwd は linked worktree になることを検証する。
+    """linked worktree の conflict 解消でも main worktree context を使用する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
     {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -1102,15 +1104,16 @@ def test_session_join_conflict_uses_repo_root_for_codex_storage(
 
         output_json = None
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
-        """Codex wrapper に渡された repo root と linked-worktree cwd を記録する。
+    def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
+        """Codex wrapper に渡された repo root と agent call cwd を記録する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         """
 
         seen["root"] = kwargs["root"]
-        seen["cwd"] = kwargs["cwd"]
+        seen["agent_call_cwd"] = parameter.agent_call_cwd
+        assert "cwd" not in kwargs
         target.write_text("resolved change\nTitle\n=======\n")
         return FakeCodexResult()
 
@@ -1119,6 +1122,6 @@ def test_session_join_conflict_uses_repo_root_for_codex_storage(
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    assert seen == {"root": root, "cwd": linked}
+    assert seen == {"root": root, "agent_call_cwd": root}
     assert current_branch(linked) == home_branch
     assert target.read_text() == "resolved change\nTitle\n=======\n"

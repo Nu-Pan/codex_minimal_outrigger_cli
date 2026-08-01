@@ -30,7 +30,13 @@ from oracle.prompt_builder.parts.routing_rule import (
 )
 
 from basic.acp import FileAccessMode
+from basic.path_model import AgentCallPathContext
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
+
+
+def _path_context() -> AgentCallPathContext:
+    """現在の test repository を起点に call-scoped path context を作る。"""
+    return AgentCallPathContext(agent_call_cwd=Path.cwd())
 
 
 def test_build_apply_review_standard_renders_core_review_aspects() -> None:
@@ -49,7 +55,7 @@ def test_build_apply_review_standard_renders_core_review_aspects() -> None:
 
 def test_build_routing_rule_renders_core_reading_rules() -> None:
     """routing ruleがINDEX案内の主要な見出しをrenderすることを検証する。"""
-    doc = _build_routing_rule()[1]
+    doc = _build_routing_rule(_path_context())[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "routing rule"
@@ -70,11 +76,39 @@ def test_complete_prompt_always_includes_routing_rule() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
     )
 
     rendered = render_as_markdown(prompt)
     assert "# routing rule" in rendered
+
+
+def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
+    tmp_path: Path,
+) -> None:
+    """root placeholder は同値なら統合し、異値なら prompt 構築を失敗させる。"""
+    context = _path_context()
+
+    prompt = build_complete_prompt(
+        role="- role",
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=context,
+        aux_placeholder_def={"work-root": context.work_root},
+    )
+    assert render_as_markdown(prompt).count("- {{work-root}} =") == 1
+
+    with pytest.raises(ValueError, match="Conflicting placeholder definition"):
+        build_complete_prompt(
+            role="- role",
+            summary="- summary",
+            goal="- goal",
+            file_access_mode=FileAccessMode.READONLY,
+            path_context=context,
+            aux_placeholder_def={"work-root": tmp_path / "other-worktree"},
+        )
 
 
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:
@@ -114,7 +148,7 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
     }
 
     for mode, fragments in expected.items():
-        doc = _build_file_access_rule(mode)[1]
+        doc = _build_file_access_rule(mode, _path_context())[1]
         rendered = render_as_markdown(doc)
         assert doc.title == f"file read write rule - {mode.value}"
         for fragment in fragments:
@@ -128,6 +162,7 @@ def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
         summary="summary",
         goal="goal",
         file_access_mode=FileAccessMode.NO_RULE,
+        path_context=_path_context(),
     )
     rendered = render_as_markdown(prompt)
 
@@ -141,6 +176,7 @@ def test_complete_prompt_can_include_apply_review_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         apply_review_standard=True,
     )
@@ -157,6 +193,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         oracle_standard=True,
         realization_standard=True,
@@ -206,6 +243,7 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
         summary="- {{repo-root}} ツリー内の realization file を修正すること",
         goal="- realization standard と oracle standard に従うこと",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[
             StructDoc(
                 "aux realization file",
@@ -249,6 +287,7 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
         summary="- {{work-root}}/src/app.py を確認すること",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         realization_standard=True,
     )
@@ -271,6 +310,7 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
     )
 
@@ -280,7 +320,7 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
 
 def test_build_realization_standard_renders_file_split_and_merge_rules() -> None:
     """realization standardのfile分割・統合規則がrenderされることを検証する。"""
-    doc = _build_realization_standard()[1]
+    doc = _build_realization_standard(_path_context())[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "realization standard"
@@ -304,6 +344,7 @@ def test_complete_prompt_can_include_realization_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         realization_standard=True,
     )
@@ -344,6 +385,7 @@ def test_complete_prompt_can_include_index_entry_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         index_entry_standard=True,
     )
@@ -359,6 +401,7 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
     )
 
@@ -392,6 +435,7 @@ def test_complete_prompt_can_include_oracle_review_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         oracle_review_standard=True,
     )
@@ -408,6 +452,7 @@ def test_complete_prompt_omits_oracle_review_standard_by_default() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
     )
 

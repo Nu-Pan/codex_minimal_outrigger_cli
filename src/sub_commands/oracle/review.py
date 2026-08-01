@@ -34,7 +34,6 @@ from cmoc_runtime import (
     head_commit,
     load_config,
     load_state_for_branch,
-    pushd,
     remove_worktree,
     repo_root,
     run_cli_subcommand,
@@ -227,33 +226,30 @@ def _cmoc_oracle_review_body(
                     )
         try:
             start_subcommand_step(3, "所見リストを初期化", "initialize findings")
-            with pushd(review_worktree):
-                all_oracle_files = enumerate_review_all_oracle_files(review_worktree)
-                oracle_files = enumerate_oracle_review_targets(
-                    review_worktree, scope, state, run_fork_commit
+            all_oracle_files = enumerate_review_all_oracle_files(review_worktree)
+            oracle_files = enumerate_oracle_review_targets(
+                review_worktree, scope, state, run_fork_commit
+            )
+            try:
+                findings = run_oracle_review_loop(
+                    root,
+                    review_worktree,
+                    oracle_files,
+                    config,
+                    codex_exec,
+                    step_callback=start_subcommand_step,
+                    evaluated_files=evaluated_oracle_files,
                 )
-                try:
-                    findings = run_oracle_review_loop(
-                        root,
-                        review_worktree,
-                        oracle_files,
-                        config,
-                        codex_exec,
-                        step_callback=start_subcommand_step,
-                        evaluated_files=evaluated_oracle_files,
-                    )
-                except OracleReviewInterrupted as interruption:
-                    interrupted = True
-                    findings = interruption.findings
-                    evaluated_oracle_files = interruption.evaluated_files
-                    _record_oracle_review_interruption()
-                start_subcommand_step(
-                    7, "run の隔離実行を終了", "finish isolated review"
-                )
-                commit_review_index_changes(review_worktree)
-                review_has_index_changes = review_branch_has_index_changes(
-                    review_worktree, run_fork_commit
-                )
+            except OracleReviewInterrupted as interruption:
+                interrupted = True
+                findings = interruption.findings
+                evaluated_oracle_files = interruption.evaluated_files
+                _record_oracle_review_interruption()
+            start_subcommand_step(7, "run の隔離実行を終了", "finish isolated review")
+            commit_review_index_changes(review_worktree)
+            review_has_index_changes = review_branch_has_index_changes(
+                review_worktree, run_fork_commit
+            )
             if review_has_index_changes:
                 # {{work-root}}/oracle/doc/app_spec/run_isolation.md
                 # review run の自動 merge は editing run の join と同じ session branch

@@ -101,11 +101,12 @@ def test_run_codex_exec_invokes_real_codex_with_test_local_ollama_provider(
         config = use_test_local_ollama(CmocConfig(), ollama, (ModelClass.MINIMUM,))
         result = run_codex_exec(
             AgentCallParameter(
-                ModelClass.MINIMUM,
-                ReasoningEffort.LOW,
-                FileAccessMode.READONLY,
-                prompt,
-                schema_source,
+                model_class=ModelClass.MINIMUM,
+                reasoning_effort=ReasoningEffort.LOW,
+                file_access_mode=FileAccessMode.READONLY,
+                prompt=prompt,
+                structured_output_schema_path=schema_source,
+                agent_call_cwd=root,
             ),
             root=root,
             capacity_initial_sleep_sec=0,
@@ -180,7 +181,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     result = run_codex_exec(
-        codex_parameter(FileAccessMode.REPO_WRITE),
+        codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
@@ -234,7 +235,7 @@ def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     result = run_codex_exec(
-        codex_parameter(),
+        codex_parameter(agent_call_cwd=root),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
@@ -281,11 +282,12 @@ def test_run_codex_exec_uses_generic_provider_without_builtin_local_flags(
 
     run_codex_exec(
         AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
+            model_class=ModelClass.MINIMUM,
+            reasoning_effort=ReasoningEffort.LOW,
+            file_access_mode=FileAccessMode.READONLY,
+            prompt="prompt",
+            structured_output_schema_path=None,
+            agent_call_cwd=root,
         ),
         root=root,
         capacity_initial_sleep_sec=0,
@@ -317,7 +319,9 @@ def test_prepare_codex_override_args_does_not_create_codex_home_config(
     """Codex override の構築時に CODEX_HOME の設定ファイルを作成しないことを検証する。"""
     codex_home = setup_codex_home(tmp_path, monkeypatch)
 
-    override_args = prepare_codex_override_args(codex_parameter(), CmocConfig())
+    override_args = prepare_codex_override_args(
+        codex_parameter(agent_call_cwd=tmp_path), CmocConfig()
+    )
 
     assert "--profile" not in override_args
     assert "-p" not in override_args

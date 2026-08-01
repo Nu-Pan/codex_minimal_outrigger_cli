@@ -18,13 +18,15 @@
 # `conflict_resolution.py`
 
 ## Summary
-- session join の競合解消パラメータ生成を再公開する互換 import 経路。canonical 実装へ委譲し、競合 path を prompt に埋め込む際の code fence 保護を補う。
+- session join の競合解決用パラメータを再公開する互換 import 経路。canonical 実装を呼び出し、競合 path を prompt に安全に埋め込むための fence 保護を追加する。
 
 ## Read this when
-- `acp.builder.session.join.conflict_resolution` の import 互換性や、session join の競合 path prompt 生成を確認・変更するとき。
+- session join の競合解決パラメータ生成や、旧 import 経路との互換性を確認・変更するとき。
+- 競合 path の prompt 埋め込みと code block fence 保護の挙動を確認するとき。
 
 ## Do not read this when
-- canonical な競合解消パラメータ生成の仕様や実装本体を確認するとき。oracle 側の canonical path を直接読む。
+- canonical な競合解決パラメータ生成そのものを変更するときは、oracle 側の canonical 実装を直接読む。
+- session join の競合解決と無関係な builder や prompt 処理を扱うとき。
 
 ## hash
-- 5716153998dadc61c97eb12b63f0518a34c1111910b718b090ce9f8a249557da
+- de65cce597118bf119865b66ea413acfbcafb953c0a48e462279853faf6ae505

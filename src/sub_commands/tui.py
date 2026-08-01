@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from dataclasses import replace
 from pathlib import Path
 
 from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
@@ -55,12 +54,8 @@ def _cmoc_tui_body(
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     start_subcommand_step(3, "実行パラメータを決定", "resolve parameters")
     resolved = run_codex_exec(
-        replace(
-            build_tui_resolve_parameter_parameter(original_prompt),
-            cwd=work_root,
-        ),
+        build_tui_resolve_parameter_parameter(original_prompt),
         root=root,
-        cwd=work_root,
         config=config,
         purpose="tui resolve parameter",
     ).output_json
@@ -70,13 +65,10 @@ def _cmoc_tui_body(
         launch_timestamp=original_path.name.removesuffix("_orig.md"),
     )
 
-    # TUI は対象 worktree を cwd とし、完全 prompt は repository 側のログを読む。
-    parameter = replace(parameter, cwd=work_root)
     start_subcommand_step(4, "AI Agent TUI を起動", "launch agent TUI")
     run_codex_tui(
         parameter,
         root=root,
-        cwd=work_root,
         config=config,
         purpose="tui codex",
     )

@@ -46,32 +46,36 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめる package。編集・調査・レビューの各サブコマンドと、レビュー処理を構成する対象列挙、パス解決、差分統合、レポート生成などの下位実装への入口を提供する。
+- oracle 系サブコマンドの実装をまとめるディレクトリ。編集、調査、レビューの各 CLI 入口と、レビュー対象列挙・ループ・パス解決・レポート・INDEX 差分処理への入口を提供する。
 
 ## Read this when
-- oracle サブコマンドの構成や実行入口を確認するとき
-- oracle review の実行経路、対象選定、finding 処理、INDEX 差分統合、パス解決、レポート生成の実装箇所を特定するとき
+- oracle 系サブコマンドの構成や、各サブコマンド実装への入口を確認するとき。
+- oracle review の実行ライフサイクル、対象選定、レビュー処理、レポート生成、INDEX 差分の統合処理を横断して調査するとき。
 
 ## Do not read this when
-- 個別サブコマンドの詳細な処理を確認する場合は、対応する実装ファイルを直接読む
-- 共通 CLI runtime や git・session 管理など、oracle package 外の共通処理だけを調査する場合
+- 特定の oracle サブコマンドやレビュー処理の詳細だけを確認したいとき。対応する個別実装を直接読む方が適切。
+- 共通 CLI runtime、設定読み込み、プロンプト入力など、oracle サブコマンド固有でない処理を調査するとき。
 
 ## hash
-- ff9dfe07b5fd461acee9fbc1693175e4d9ca1422f804a78bf9787199ea1c248e
+- 2b9f81cee3dbed523fa1f5ae690ef42d83c607248f011f5e611a5121a69c6bcf
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply workload と refactor workload を束ね、各処理の下位実装への入口となる。
+- realization workload サブコマンドのパッケージ入口。apply workload と realization refactor の実行構成へ進むための上位エントリー。
 
 ## Read this when
-- realization workload サブコマンドの構成や、apply・refactor のどちらを調査すべきか確認するとき。
+- realization workload サブコマンドの実装や構成を確認するとき。
+- apply workload の実行フロー、fork のライフサイクル、差分検査、rollback、cleanup を調査するとき。
+- realization refactor の fork 実行、対象選択、agent call、commit、state・report 管理を調査するとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき。
+- realization workload や realization refactor に関係しない処理を確認するとき。
+- apply fork の launch parameter 構築だけを確認したいとき。
+- state 同期、target 選択、共通 run lifecycle、report 表示などの共通実装だけを確認したいとき。
 
 ## hash
-- 7b264537f54597e8a7b16ce8d24a975b3a9faf3eb80d76d77cfd93f9f526e82b
+- 8902fe26739f5d4d3ac7367aa8bdd6c5f34bc96d1a21c9f205f27d9939a556ce
 
 # `review`
 
@@ -107,33 +111,31 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session の各ライフサイクル操作を確認する際の入口となる。
-- session の abandon・fork・join サブコマンド実装を含む。
+- session サブコマンドの実装パッケージ。session の各ライフサイクル操作に対応するサブコマンド実装への入口。
 
 ## Read this when
-- session サブコマンドの実装構成やライフサイクル処理を確認・変更するとき。
-- session の branch 操作、state 管理、merge、cleanup、失敗時復旧の挙動を横断的に調査するとき。
+- session サブコマンドの構成や実装を確認・変更するとき
+- session の fork、join、abandon のライフサイクル処理を扱うとき
 
 ## Do not read this when
-- session 以外のサブコマンドを扱うとき。
-- 特定の session サブコマンドだけを調査・変更する場合は、該当する実装ファイルを直接読む。
+- session 以外のサブコマンドを扱うとき
+- Git 実行、state 管理、CLI ランタイムなど共通機能だけを確認するときは、対応する共通モジュールを直接読む
 
 ## hash
-- a12b38f37341e0ada494e5c0d04aea1042f7528583228f05e396368a56d18652
+- 1b01f38b1306948237ab7a586e9027b86dfa7174512a360ba4f41377675838b6
 
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実行フローを担当する実装。プロンプト編集、実行パラメータ解決、Codex TUI 起動を、CLI ランタイムと現在の worktree コンテキストに接続する。TUI の起動処理、解決済みパラメータからの `AgentCallParameter` 構築、ネストされた真偽値の読み取りを確認したい場合の入口。
+- `cmoc tui` サブコマンドの実行入口と本体処理を定義する。プロンプト編集、実行パラメータ解決、Codex TUI 起動を連携し、現在のリポジトリ状態から設定・作業ルートを取得して処理する。TUI 起動用パラメータの構築と、解決済み JSON の真偽値変換も担う。
 
 ## Read this when
-- `cmoc tui` の CLI 実行フローを変更・調査するとき
-- オリジナルプロンプトの収集から Codex TUI 起動までの連携を確認するとき
-- TUI 起動パラメータや実行時の root、worktree、設定の受け渡しを確認するとき
+- `cmoc tui` の CLI 実行フロー、プロンプト入力、パラメータ解決、Codex TUI 起動の連携を変更・調査するとき。
+- TUI 起動用 `AgentCallParameter` の構築や、解決済みパラメータの解釈を変更・調査するとき。
 
 ## Do not read this when
-- TUI 用の個別パラメータ生成ロジック自体を変更・調査する場合は、参照先の builder 実装を直接読むとよい
-- `cmoc tui` 以外のサブコマンドの実行フローや共通ランタイムの仕様だけを調べる場合
+- TUI のパラメータ解決規則そのものを確認したいときは、参照されているパラメータ構築側の仕様・実装を直接読む。
+- プロンプトエディタの入力・無視設定の詳細や、共通ランタイム処理の仕様を確認したいときは、それぞれの共通モジュールを直接読む。
 
 ## hash
-- a2beb411104f9d6157b6de05b641d0fa5d32f4103ed5ee895fdb872293522a99
+- 6d1d7abde773789d65402ae4e98d2edea2dde77c64a10e7c65ef77757604fb9b

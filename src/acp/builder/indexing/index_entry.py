@@ -23,9 +23,12 @@ __all__ = ["build_indexing_index_entry_parameter"]
 def build_indexing_index_entry_parameter(
     target_path: _Path,
     target_content: str,
+    agent_call_cwd: _Path,
 ) -> _AgentCallParameter:
     """正本 builder の parameter を再公開し、対象本文の fence を保護する。"""
-    parameter = _build_indexing_index_entry_parameter(target_path, target_content)
+    parameter = _build_indexing_index_entry_parameter(
+        target_path, target_content, agent_call_cwd
+    )
     return _replace(
         parameter,
         prompt=_protect_code_block_fence(

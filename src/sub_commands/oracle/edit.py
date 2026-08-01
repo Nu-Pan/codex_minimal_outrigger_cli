@@ -64,7 +64,6 @@ def _cmoc_oracle_edit_body() -> None:
     run_codex_tui(
         parameter,
         root=repository,
-        cwd=current_root,
         config=load_config(current_root),
         purpose="oracle edit",
         pre_launch_check=_validate_and_start_launch_step,

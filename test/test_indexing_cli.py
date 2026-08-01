@@ -221,7 +221,8 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
         """Codex 実行へ渡された設定を記録して固定結果を返す fake。"""
         seen_models.append(kwargs["config"].codex.model[ModelClass.EFFICIENCY])
         assert kwargs["root"] == root
-        assert kwargs["cwd"] == apply_worktree
+        assert parameter.agent_call_cwd == apply_worktree
+        assert "cwd" not in kwargs
         return FakeCodexResult()
 
     indexing_common.run_indexing_preflight(apply_worktree, fake_codex_exec)

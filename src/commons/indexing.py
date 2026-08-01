@@ -14,7 +14,7 @@ from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from contextvars import copy_context
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 
 from oracle.acp_builder.indexing import index_entry as _index_entry_oracle
@@ -366,7 +366,7 @@ def build_index_entry(
         )
     content = target_content_for_indexing(path)
     log_root = repo_root(root)
-    parameter = replace(build_indexing_index_entry_parameter(path, content), cwd=root)
+    parameter = build_indexing_index_entry_parameter(path, content, root)
     result = codex_exec(
         parameter,
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -374,7 +374,6 @@ def build_index_entry(
         # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は
         # run worktree 側へ流れないよう repo root に固定する。
         root=log_root,
-        cwd=root,
         config=load_config(root),
         purpose=f"indexing index entry for {path}",
     ).output_json

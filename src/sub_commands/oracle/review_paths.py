@@ -1,8 +1,12 @@
 import os
 from pathlib import Path
 
-from basic.path_model import RootPathPlaceHolder, resolve_real_path
-from commons.runtime_paths import pushd, worktrees_dir
+from basic.path_model import (
+    AgentCallPathContext,
+    RootPathPlaceHolder,
+    resolve_real_path,
+)
+from commons.runtime_paths import worktrees_dir
 
 
 def finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
@@ -25,8 +29,8 @@ def finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
     if path.parts:
         try:
             placeholder = RootPathPlaceHolder(path.parts[0])
-            with pushd(worktree):
-                root = resolve_real_path(placeholder)
+            path_context = AgentCallPathContext(agent_call_cwd=worktree)
+            root = resolve_real_path(placeholder, path_context)
             return _absolute_without_symlink(root / Path(*path.parts[1:]))
         except (TypeError, ValueError):
             return None

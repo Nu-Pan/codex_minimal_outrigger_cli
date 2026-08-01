@@ -34,21 +34,16 @@
 # `path_model.py`
 
 ## Summary
-- `oracle.other.path_model` の公開 path model をそのまま再公開する薄い中継層。`basic.path_model` を参照している利用者や、公開面を通じて path model を取り込む変更のときに読む。
-- 中身の実装差ではなく、公開名の維持が目的なので、実体の生成方法や内部の path 変換ロジックを追う必要はない。
+- 正本の path model を realization 側で再公開する互換用モジュール。path context・placeholder・path 解決関数の入口であり、実装内容の確認は正本側を読む。
 
 ## Read this when
-- `basic.path_model` 経由の公開名が必要なとき
-- 再公開される `RootPathPlaceHolder` と path 解決関数の公開関係を確認したいとき
-- `basic.path_model` を直接使う既存利用者の互換性を扱うとき
+- basic.path_model の公開 import、互換参照、利用者向け path model API の入口を確認するとき。
 
 ## Do not read this when
-- path 解決の本体仕様や変換規則を確認したいときは、正本側の実装を見る
-- `basic.path_model` を使わない新規コードの配置先を探しているだけなら、ここは読む必要がない
-- 公開名の一覧だけを知りたい場合は、実体側や利用箇所を優先して読む
+- path model の仕様や実装詳細を確認するときは、再公開元の oracle 側実装を直接読む。basic.path_model と無関係な path 処理を調べるとき。
 
 ## hash
-- 04ccbdd9d67b1290d840fdc1d4a8b3ff576ff7ddf0efee21717a188214d79784
+- f80137559e09b7e85d1b92c22df5d0ef5f82420f970ee0de34e7b4a5a58eabf3
 
 # `struct_doc.py`
 

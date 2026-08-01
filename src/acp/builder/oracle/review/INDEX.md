@@ -15,18 +15,17 @@
 # `enumerate_finding.py`
 
 ## Summary
-- Oracle review finding enumeration の互換アダプター。canonical builder に処理を委譲しつつ、動的な関連所見のコードフェンス保護と symlink 使用時の oracle path 表現補正を行う。呼び出し元が canonical path を直接利用するまでの移行用入口。
+- Oracle review の finding 列挙用 canonical builder を互換的に再公開する realization adapter。関連所見の prompt fence 保護と、symlink 経由の oracle path を lexical path に戻す補正を扱う。
 
 ## Read this when
-- oracle review finding enumeration の parameter builder の呼び出し元や移行状況を確認するとき
-- 関連所見を含む prompt の fence 保護や symlink oracle path の扱いを変更するとき
+- oracle review の finding 列挙 parameter builder の互換 adapter、prompt fence 保護、または symlink 経由の oracle path 処理を変更・調査するとき。
 
 ## Do not read this when
-- canonical な enumeration builder の仕様・実装を確認したいとき
-- oracle review 以外の builder や prompt fence 処理を調べるとき
+- canonical な oracle review finding 列挙 builder 自体を変更するときは、oracle 側の実装を直接読む。
+- oracle review の finding 列挙と無関係な builder、prompt、path 処理を変更するとき。
 
 ## hash
-- e9e8d01912d26c8fe23a51190eb6dd7c74cf45c85893c1f7df3b7e1663fe5b9c
+- 033c8e7e82e8e8377c70d38d7d23f0e7bf99b1e88337bdeba64c19da6dd5b850
 
 # `judge_finding.py`
 
@@ -63,18 +62,18 @@
 # `validate_finding_advocate.py`
 
 ## Summary
-- 妥当性検証用の agent call parameter を構築するモジュール。canonical parameter を生成した後、oracle root placeholder の typo を限定的に補正し、対象所見と既知の賛成・反対理由を prompt fence で保護する。
+- レビュー対象の所見と既知の賛否理由を受け取り、canonical な AgentCallParameter を生成する builder。動的に挿入される各レビューセクションを fence で保護し、プロンプトの構造を維持する。
 
 ## Read this when
-- oracle review における finding の妥当性検証 prompt の生成・修正・テストを確認するとき
-- 動的な finding や既知理由を保持した prompt parameter の組み立てを変更するとき
+- oracle review の finding advocate 検証用 agent call パラメータ生成を変更・調査するとき
+- finding、既知の妥当性理由、またはプロンプトセクション保護の受け渡しを確認するとき
 
 ## Do not read this when
-- canonical な妥当性検証 parameter の正本定義そのものを確認するとき
-- prompt fence の共通実装を確認するときは、まず共通の prompt fence module を読む
+- canonical な oracle review parameter の仕様自体を確認したいときは、参照先の oracle builder を直接読む
+- 共通のプロンプト fence 実装を変更・調査するときは、prompt_fence モジュールを直接読む
 
 ## hash
-- 8968304748accf6e357b983ac04140a9829210866d5827f9b28560b53128b9f0
+- cf78bb6abe160ecc3c19b62759a85385bd0af273b6f81f0ed88d518cf7939479
 
 # `validate_finding_challenger.py`
 

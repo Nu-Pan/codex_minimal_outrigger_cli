@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from basic.acp import AgentCallParameter
+from basic.path_model import AgentCallPathContext
 
 from .runtime_codex import (
     run_codex_exec as runtime_run_codex_exec,
@@ -13,7 +14,6 @@ from .runtime_codex import (
 from .runtime_codex import (
     run_codex_tui as runtime_run_codex_tui,
 )
-from .runtime_paths import repo_root, work_root
 from .runtime_results import CodexExecCallable, CodexExecResult, CommandResult
 
 IndexingPreflight = Callable[[Path, CodexExecCallable], None]
@@ -43,7 +43,7 @@ def run_codex_exec(
 ) -> CodexExecResult:
     """INDEX 更新 preflight を挟んで Codex exec 実行本体へ委譲する。"""
     if parameter.run_indexing_preflight:
-        _run_indexing_before_codex(_indexing_root_for_codex(parameter, kwargs))
+        _run_indexing_before_codex(_indexing_root_for_codex(parameter))
     if before_agent_call is not None:
         # preflight が作った cmoc 管理 commit を workload が agent の commit と
         # 誤認しないよう、本命 subprocess の直前に呼び出し元へ境界を通知する。
@@ -59,7 +59,7 @@ def run_codex_tui(
 ) -> CommandResult:
     """INDEX 更新と任意の直前検査を挟んで Codex TUI 実行本体へ委譲する。"""
     if parameter.run_indexing_preflight:
-        _run_indexing_before_codex(_indexing_root_for_codex(parameter, kwargs))
+        _run_indexing_before_codex(_indexing_root_for_codex(parameter))
     if pre_launch_check is not None:
         # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
         # indexing が作る commit を事前条件へ反映し、検査後は TUI 起動まで
@@ -68,16 +68,9 @@ def run_codex_tui(
     return runtime_run_codex_tui(parameter, **kwargs)
 
 
-def _indexing_root_for_codex(
-    parameter: AgentCallParameter, kwargs: dict[str, Any]
-) -> Path:
+def _indexing_root_for_codex(parameter: AgentCallParameter) -> Path:
     """Codex 呼び出し設定から indexing の起点 root を決める。"""
-    context = kwargs.get("cwd") or kwargs.get("root") or repo_root()
-    context_root = work_root(context)
-    parameter_cwd = parameter.cwd.resolve()
-    if parameter_cwd.is_relative_to(context_root.resolve()):
-        return work_root(parameter_cwd)
-    return context_root
+    return AgentCallPathContext(parameter.agent_call_cwd).work_root
 
 
 def _run_indexing_before_codex(root: Path) -> None:

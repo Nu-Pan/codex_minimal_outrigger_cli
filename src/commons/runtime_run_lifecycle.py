@@ -35,7 +35,6 @@ from .runtime_git import (
 )
 from .runtime_paths import (
     is_root_memo,
-    pushd,
     refactor_state_path,
     repo_root,
     timestamp,
@@ -358,14 +357,13 @@ def commit_work_unit(
 def refresh_indexes(worktree: Path, *, commit: bool) -> list[Path]:
     """run worktree の INDEX.md を再生成し、必要なら独立 commit にする。"""
     with indexing_lock(worktree):
-        # INDEX builder は `{{work-root}}` を process cwd から解決するため、対象
-        # worktree を明示引数へ渡すだけでは不十分である。join を run worktree
-        # から実行する場合も、session worktree 用 prompt を正しい root で作る。
-        with pushd(worktree):
-            updated = update_indexes(worktree, run_indexing_codex_exec)
-            if commit:
-                commit_index_updates(worktree, updated)
-            return updated
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # indexing builder が worktree を AgentCallParameter.agent_call_cwd として
+        # 受け取るため、process-global な cwd 切替は行わない。
+        updated = update_indexes(worktree, run_indexing_codex_exec)
+        if commit:
+            commit_index_updates(worktree, updated)
+        return updated
 
 
 def worktree_change_paths(

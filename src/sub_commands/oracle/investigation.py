@@ -53,7 +53,6 @@ def _cmoc_oracle_investigation_body() -> None:
     run_codex_tui(
         parameter,
         root=root,
-        cwd=current_root,
         config=load_config(current_root),
         purpose="oracle investigation",
     )

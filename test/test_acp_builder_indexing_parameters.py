@@ -14,7 +14,9 @@ from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
 
 def test_indexing_index_entry_uses_minimum_model_and_low_reasoning() -> None:
     """index entry builderがminimum modelとlow reasoningを選ぶことを検証する。"""
-    parameter = build_indexing_index_entry_parameter(Path(__file__), "# README")
+    parameter = build_indexing_index_entry_parameter(
+        Path(__file__), "# README", Path.cwd()
+    )
 
     assert parameter.model_class == ModelClass.MINIMUM
     assert parameter.reasoning_effort == ReasoningEffort.LOW
@@ -24,7 +26,9 @@ def test_indexing_index_entry_uses_minimum_model_and_low_reasoning() -> None:
 
 def test_indexing_index_entry_schema_requires_non_empty_semantic_lists() -> None:
     """INDEX entry の各 semantic 配列を空にできないことを検証する。"""
-    parameter = build_indexing_index_entry_parameter(Path(__file__), "# README")
+    parameter = build_indexing_index_entry_parameter(
+        Path(__file__), "# README", Path.cwd()
+    )
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
 
@@ -36,7 +40,9 @@ def test_indexing_index_entry_keeps_nested_code_fences_in_target_content() -> No
     """対象本文内の三連 backtick が prompt の本文境界を閉じないことを検証する。"""
     target_content = "before\n```\ninside\n```\nafter"
 
-    parameter = build_indexing_index_entry_parameter(Path(__file__), target_content)
+    parameter = build_indexing_index_entry_parameter(
+        Path(__file__), target_content, Path.cwd()
+    )
 
     assert "````\nbefore\n```\ninside\n```\nafter\n````" in parameter.prompt
 
@@ -47,7 +53,9 @@ def test_indexing_index_entry_keeps_placeholder_like_heading_in_target_content()
     """対象本文内の placeholder 風見出しを prompt の境界と誤認しないことを検証する。"""
     target_content = "before\n```\n\n# place holder definition\n\n```\nafter"
 
-    parameter = build_indexing_index_entry_parameter(Path(__file__), target_content)
+    parameter = build_indexing_index_entry_parameter(
+        Path(__file__), target_content, Path.cwd()
+    )
 
     start = parameter.prompt.index("# `{{target-path}}` の内容")
     end = parameter.prompt.rfind("\n\n# place holder definition")

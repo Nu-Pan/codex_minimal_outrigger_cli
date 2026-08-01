@@ -430,18 +430,6 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
 
 
-def parameter_codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) -> Path:
-    """AgentCallParameter.cwd を優先し、対象 work root 外の古い呼び出しを補正する。"""
-    parameter_cwd = parameter.cwd.resolve()
-    work = codex_work_root.resolve()
-    if parameter_cwd.is_relative_to(work):
-        return parameter_cwd
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # 古い call path は linked worktree に対して repo root を渡すことがあるが、Codex は
-    # target work root 内で実行しなければならない。
-    return work
-
-
 def _toml_string(value: str) -> str:
     """TOML string として安全な JSON 互換 quote へ寄せる。"""
     validate_json_toml_value(value)
@@ -583,12 +571,12 @@ def build_codex_override_args(
     return args
 
 
-def resolve_codex_home(cwd: Path | None = None) -> Path:
+def resolve_codex_home(agent_call_cwd: Path) -> Path:
     """CODEX_HOME の相対指定を Codex subprocess の cwd 基準で解決する。"""
     value = os.environ.get("CODEX_HOME")
     if value is not None:
         raw_path = Path(value)
-        return raw_path if raw_path.is_absolute() else (cwd or Path.cwd()) / raw_path
+        return raw_path if raw_path.is_absolute() else agent_call_cwd / raw_path
     return (Path.home() / ".codex").resolve()
 
 
