@@ -138,7 +138,7 @@
     "last_investigated_at": "2026-07-26_19-36_07_316367000"
   },
   "oracle/doc/app_spec/sub_command/realization_apply.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "c38be9c0824711d2152006094ff8f7291415ce015e3349c076ebb4442dabb90c",
     "last_investigated_at": "2026-07-29_14-39_21_051957000"
@@ -222,7 +222,7 @@
     "last_investigated_at": "2026-07-24_00-29_04_894152000"
   },
   "oracle/doc/dev_rule/coding_rule.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "c725d18b649ce36fdca432bb297452492eea1bca900c874e600451769d21d501",
     "last_investigated_at": "2026-07-31_17-18_20_044651000"
