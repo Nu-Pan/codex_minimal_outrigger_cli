@@ -91,20 +91,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様と正本ソースを収める oracle ツリーの入口。主要なアプリケーション仕様、開発ルール、AI エージェント呼び出しのパラメータ・プロンプト構成を確認するための下位領域へ案内する。
+- cmoc の正本仕様と実装を集約する oracle ツリー。アプリケーション仕様・開発規則を扱う文書群と、設定、パス解決、構造化文書、プロンプト、ACP、レビュー、realization、INDEX 生成などの正本ソースを下位要素として提供する。
 
 ## Read this when
-- cmoc の正本仕様または正本ソースの全体構成を把握するとき
-- 仕様文書と正本ソースのどちらを読むべきか判断するとき
-- CLI 挙動、開発ルール、エージェント呼び出し、プロンプト構成に関する詳細文書の入口を探すとき
+- cmoc の利用者向け挙動、状態管理、CLI、agent call、run/session lifecycle などの仕様を探すとき
+- branch model、realization refactor、Python 開発環境、CLI 配置、realization test の規則を確認するとき
+- 設定・パス解決・StructDoc・プロンプト構成・ACP・oracle review・realization・INDEX 生成の正本実装を調べるとき
+- 複数の仕様領域にまたがる変更で、oracle doc と oracle src の参照先を切り分けるとき
 
 ## Do not read this when
-- 特定のアプリケーション仕様を確認したいときは doc へ直接進む
-- 正本ソースの責務や定義元を確認したいときは src へ直接進む
-- 個別モジュールの実装詳細やテスト実装を確認したいときは realization code または realization test を読む
+- 特定の個別仕様や正本ソースの内容が明確で、下位の直接対象を読めば足りるとき
+- oracle と realization の一般定義や共通原則だけを確認したいとき
+- INDEX.md のルーティング方針自体を確認したいとき
 
 ## hash
-- 7e86d737951317b22f01727104f1d437b0d86e756021c8b63f2e9ae8c8aaf87c
+- 1a81906a4a1727e3d5e9ea1cde94662656fe3b1cfeb6e313e7102439f54e9067
 
 # `pyproject.toml`
 

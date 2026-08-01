@@ -143,17 +143,19 @@
 # `prompt_editor_input.md`
 
 ## Summary
-- cmoc がユーザー入力用エディタを起動し、初期プロンプトを一時的な編集対象へ注入して、編集後の Markdown プロンプトを読み出す際の仕様を定める。エディタ選択、`code --wait`、編集対象パス、コメント除去と前後空白除去の規則を扱う。
+- cmoc がユーザーのプロンプトをエディタで入力・編集する際の仕様を定める。エディタ選択の優先順位、`code --wait` の要件、編集対象と初期値の出典、自動注入指示の扱い、編集完了判定、プロンプト読み出し時のコメント除去と空白除去を扱う。プロンプト編集フローやエディタ起動仕様を確認する際の入口となる。
 
 ## Read this when
-- ユーザー入力用エディタの起動順、待機方法、編集対象ファイル、初期プロンプト、または編集後のプロンプト読み出し処理を変更・確認するとき。
+- ユーザー入力用エディタの起動・選択・待機動作を変更または確認するとき
+- エディタ入力ファイルの場所、初期値、自動注入指示、編集完了判定を確認するとき
+- 編集後のプロンプトのコメント除去や前後空白除去の挙動を変更または確認するとき
 
 ## Do not read this when
-- エディタ入力以外の cmoc プロンプト生成・実行処理を変更・確認するとき。
-- 編集後プロンプトの解析や下流の agent 呼び出しだけを確認するときは、該当する下流仕様を直接読む。
+- エディタを介さないプロンプト生成や、入力後のプロンプト処理だけを調べるとき
+- エディタ入力の初期値を具体的に構築する実装を変更するときは、参照先の実装を直接読む
 
 ## hash
-- 5fdddf85a7cab158fe640ea08b906aba7e33ec750f23e35395c5e2bc2bcc5699
+- b47670393941a74a64ff654dbc87f66c8cbc4d215130089c24b53b1f89b03284
 
 # `prompt_standard.md`
 
@@ -210,20 +212,21 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンドおよび session・編集 run lifecycle の正本仕様をまとめたディレクトリ。doctor、indexing、oracle 操作、tui、session 操作、realization apply/refactor の実行条件・状態管理・終了処理を確認するための入口であり、各機能の詳細は対応する文書へ進む。
+- cmoc のサブコマンド単位の正本仕様をまとめたディレクトリ。doctor、indexing、oracle/session/run の各 lifecycle、tui などの実行条件・手順・状態遷移・出力要件を扱い、サブコマンド仕様の実装・変更・レビュー時の入口となる。
+- 共通 lifecycle や個別 workload の仕様を確認したい場合は、該当する文書へ進む。サブコマンド内部の実装、共通処理の詳細、入力パラメータ単体の仕様は、各文書から参照される対応先を直接読む。
 
 ## Read this when
-- cmoc のサブコマンド仕様のうち、doctor、indexing、oracle edit/investigation/review、tui の挙動を確認するとき。
-- session fork/join/abandon または realization apply/refactor の lifecycle、state、merge、cleanup、report を確認するとき。
-- 複数の編集 run に共通する fork・join・abandon の仕様を確認するとき。
+- cmoc のサブコマンドの実行条件、引数、実行手順、状態遷移、終了処理を調査・変更するとき。
+- session、editing run、oracle 操作、realization 操作、indexing、doctor、tui の正本仕様の入口を探すとき。
+- 個別サブコマンドの仕様と、共通 lifecycle・workload 固有仕様の読むべき範囲を切り分けたいとき。
 
 ## Do not read this when
-- 特定サブコマンドの内部実装やテスト配置だけを確認したいときは、対応する realization file またはテストを直接読む。
-- doctor preprocess、prompt editor input、agent call parameter、TUI 起動 parameter など、本文中で参照される共通仕様の詳細だけを確認したいときは、その正本文書を直接読む。
-- oracle file の具体的な内容や realization の個別編集内容だけを調査するときは、このディレクトリのサブコマンド概要を入口にせず、対象の正本文書へ進む。
+- サブコマンドに依存しない共通実装や、agent call・Codex CLI 起動など参照先の詳細仕様だけを確認したいとき。
+- 具体的な realization 実装・テストの配置や開発環境の規則だけを確認したいとき。
+- INDEX 自体の生成方法や、サブコマンドと無関係な仕様を調査するとき。
 
 ## hash
-- 55ce188308ef4ab8e7f2e0a8be1d404053bef020bc330de4dc41ba11da61d5dd
+- 08c8f26210f4c027a0c387d8db393a2f77d14df795adea91c35d669a28613af2
 
 # `subcommand_interruption.md`
 
