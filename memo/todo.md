@@ -1,6 +1,5 @@
 # 現在進行中
 
-- サブコマンド固有の初期プロンプトが TODO のまま
 - `cmoc realizatin apply fork` の自動構築プロンプトで、`{{repo-root}}`, `{{work-root}}` が同じになっている
     - apply は `{{run-root}}` での実行のはず
     - oracle の問題くさい
