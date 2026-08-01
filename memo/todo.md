@@ -1,9 +1,5 @@
 # 現在進行中
 
-- `cmoc realizatin apply fork` の自動構築プロンプトで、`{{repo-root}}`, `{{work-root}}` が同じになっている
-    - apply は `{{run-root}}` での実行のはず
-    - oracle の問題くさい
-    - `run codex resume 019f8762-e21c-7122-b33a-22b14664a2a7`
 - run-cmoc-tests スキルから oracle file を参照しちゃってる
     - このリポジトリ固有とは言え、スキルは自己完結性をもっているほうが望ましい
 
