@@ -84,8 +84,10 @@ def test_oracle_review_enumerate_builder_imports_from_packaged_layout(
     assert result.returncode == 0, result.stderr
 
 
-def test_oracle_edit_builder_imports_from_packaged_layout(tmp_path: Path) -> None:
-    """oracle edit TUI adapter が packaged layout で完全 prompt を保存する。"""
+def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
+    tmp_path: Path,
+) -> None:
+    """oracle edit と editor 入力境界が packaged layout で正本を参照する。"""
     root = Path(__file__).parents[1]
     target = tmp_path / "site"
     for package in ("acp", "basic", "commons"):
@@ -95,9 +97,14 @@ def test_oracle_edit_builder_imports_from_packaged_layout(tmp_path: Path) -> Non
     result = _run_from_packaged_layout(
         target,
         (
+            "import commons.prompt_editor_input as editor_input; "
             "from pathlib import Path; "
             "from acp.builder.oracle.edit.launch_tui import "
             "build_oracle_edit_launch_tui_parameter as build; "
+            "from oracle.prompt_builder.editor_input import "
+            "build_prompt_editor_input_initial_text as canonical_editor_input; "
+            "assert editor_input.build_prompt_editor_input_initial_text "
+            "is canonical_editor_input; "
             "log = Path.cwd() / '.cmoc/gu/ar/log/editor_input/test_cmpl.md'; "
             "p = build('test', 'oracle を編集する'); "
             "assert p.structured_output_schema_path is None; "

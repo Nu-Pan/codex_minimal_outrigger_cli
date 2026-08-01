@@ -29,35 +29,32 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの実装。oracle 編集指示を収集し、TUI 起動パラメータを構築したうえで、main worktree 上の active session branch から Codex TUI を起動する。indexing、入力ルートの ignore 確認、worktree・branch・session・clean 状態の事前検証も担う。
+- `cmoc oracle edit` サブコマンドの実行入口と TUI 起動処理を担う。oracle 編集指示の収集、起動パラメータ構築、main worktree・session branch・clean worktree の事前条件検証を経て Codex TUI を起動する。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 動作、oracle 編集指示の入力処理、Codex TUI 起動条件を変更または調査するとき。
-- oracle edit の indexing preflight、prompt editor 入力、session branch と clean worktree の検証経路を確認するとき。
+- `cmoc oracle edit` の起動フロー、入力収集、TUI 起動前検証、または main-worktree 制約を変更・調査するとき。
 
 ## Do not read this when
-- oracle 編集指示の入力部品そのものを変更する場合は、prompt editor 入力の共通実装を直接読む。
-- TUI 起動パラメータの構築仕様を確認する場合は、oracle edit launch TUI builder を直接読む。
-- 他のサブコマンドの CLI runtime や session 状態処理だけを調査する場合は、このファイルを起点にしない。
+- oracle 編集プロンプトの具体的な生成内容を確認したいときは、参照される oracle edit 起動ビルダーや oracle 仕様を直接読む。
+- 共通の CLI 実行基盤、git 状態確認、session 状態管理の実装だけを調査するときは、それぞれの共通モジュールを直接読む。
 
 ## hash
-- 337fbe660a404600575a320131d1cf1d36b710d08a30c6cb33a2bb332da9809f
+- 965daee686edf600e90e21ba52cb1563358abc875f915dcb62bb3820f3af926b
 
 # `investigation.py`
 
 ## Summary
-- `cmoc oracle investigation` サブコマンドの read-only TUI workload を実装する。入力された oracle 調査指示を編集・収集し、TUI 起動パラメータを構築して Codex TUI を起動する。
+- `cmoc oracle investigation` サブコマンドの実装。oracle 調査指示を入力として TUI 起動パラメータを構築し、CLI runtime 経由で Codex TUI を read-only workload として起動する。インデックス作成の事前処理、入力ルートの ignore 設定、oracle/realization の読み書き制約も調査セッションへ適用する。
 
 ## Read this when
-- `cmoc oracle investigation` の CLI 実行フロー、入力テンプレート、TUI 起動処理を確認・変更するとき。
-- oracle 調査指示の入力前処理や indexing preflight、実行ステップの構成を確認するとき。
+- `cmoc oracle investigation` の実行フロー、入力編集、TUI 起動、または oracle 調査時の自動注入指示を変更・確認するとき。
 
 ## Do not read this when
-- 他の oracle サブコマンドや、TUI 起動パラメータの具体的な構築ロジックだけを確認したいときは、それぞれの実装先を直接読む。
-- Codex TUI 自体の実装や共通 CLI runtime の詳細だけを調べるとき。
+- oracle 調査の具体的な TUI 起動パラメータ生成ロジックを確認したい場合は、直接 `launch_tui` の実装を読む。
+- CLI runtime の共通処理や prompt editor 入力の詳細を確認したい場合は、各共通モジュールを直接読む。
 
 ## hash
-- 82d05024db9f62a0c049f64b3f6163d532cdfe1b8d691142961abcf9e49b3c10
+- bfecfa3273928372af6209d2aa865f59ccece71dd051d3a01edbecb0f6ea3743
 
 # `review.py`
 

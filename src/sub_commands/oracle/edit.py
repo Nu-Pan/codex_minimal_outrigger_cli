@@ -23,13 +23,8 @@ from commons.runtime_git import current_branch, require_clean_worktree
 from commons.runtime_state import load_session_part_for_branch
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-ORACLE_EDIT_TEMPLATE = """<!--
-以下の指示は cmoc が自動注入するため、この file に書いてはいけない。
-
-- realization file の読み書き禁止
-- oracle file の規約・規範
-- TODO
--->"""
+ORACLE_EDIT_AUTOMATICALLY_INJECTED_INSTRUCTION = """- realization file の読み書き禁止
+- oracle file の規約・規範"""
 
 
 def cmoc_oracle_edit_impl() -> None:
@@ -51,7 +46,7 @@ def _cmoc_oracle_edit_body() -> None:
     start_subcommand_step(2, "oracle 最終状態の指示を入力", "edit instruction")
     original_path, instruction = collect_prompt_editor_input(
         repository,
-        ORACLE_EDIT_TEMPLATE,
+        ORACLE_EDIT_AUTOMATICALLY_INJECTED_INSTRUCTION,
     )
     start_subcommand_step(3, "TUI 起動パラメータを構築", "build TUI parameter")
     parameter = build_oracle_edit_launch_tui_parameter(

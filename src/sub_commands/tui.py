@@ -50,7 +50,7 @@ def _cmoc_tui_body(
     """依頼文の編集、実行パラメータ解決、Codex TUI 起動を一連で行う。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     start_subcommand_step(2, "オリジナルプロンプトを入力", "edit original prompt")
-    original_path, original_prompt = collect_prompt_editor_input(root)
+    original_path, original_prompt = collect_prompt_editor_input(root, "")
 
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     start_subcommand_step(3, "実行パラメータを決定", "resolve parameters")
