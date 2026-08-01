@@ -18,19 +18,22 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI（codex exec）を呼び出す際の正本規約。CODEX_HOME の扱い、preflight validation、argv による設定上書き、sandbox・権限・モデル・provider・プロンプト・Structured Output の指定、ログ保存、並列実行、失敗時の retry／quota 待機、.agents 編集禁止までを定める。Codex CLI 呼び出し実装や AgentCallParameter builder、実行ログ・スキーマ生成、エラー処理の入口となる。
+- `codex exec` による Codex CLI 呼び出しの正本規約。agent call の path context、環境変数、preflight、argv 上書き、sandbox・権限、モデル・provider、prompt の渡し方、ログ保存、Structured Output、並列実行、失敗時の retry・待機・復旧方針を定める。Codex CLI 呼び出しや AgentCallParameter builder、prompt・sandbox・ログ・Structured Output 実装を変更・調査する際の入口となる。
 
 ## Read this when
-- cmoc の Codex CLI 呼び出し仕様、argv、sandbox、approval policy、model/provider、reasoning effort、prompt の渡し方を変更・確認するとき
-- Codex exec のログ、Structured Output、並列実行、retry、quota 待機などの運用を実装・検証するとき
-- AgentCallParameter builder や Codex CLI 実行経路の責務境界を判断するとき
+- cmoc が Codex CLI を起動する方法や `codex exec` の argv・stdin・出力処理を変更するとき
+- AgentCallParameter の cwd、path context、file access mode、model/provider、reasoning effort の扱いを確認するとき
+- Codex CLI の sandbox、approval、permission profile、環境変数、preflight validation の実装を確認するとき
+- Structured Output、prompt・stdout・stderr・output-last-message・call log の保存規約を確認するとき
+- quota、rate limit、model capacity、一時障害、意味的失敗など Codex CLI 失敗時の retry・resume・待機処理を変更するとき
 
 ## Do not read this when
-- Codex CLI 呼び出しやその周辺の動作を扱わず、別のサブシステムの仕様・実装だけを変更・確認するとき
-- 具体的な builder の定義や provider 解決の詳細を確認する場合は、この規約だけで判断せず、指定された正本実装・関連 oracle file を直接読むとき
+- Codex CLI 呼び出しや agent call 規約に関係しない cmoc 機能の実装・テストを調査するとき
+- 一般的な Codex CLI の利用方法だけを確認したいときは、個別呼び出し仕様の正本である AgentCallParameter builder を直接読む
+- モデル provider 固有の仕様だけを確認するときは、provider の正本文書を直接読む
 
 ## hash
-- 6e3bb4c2b7fcb0346cc1ab3ce2bbefc93addd26b7bd9216fa4af9922a1d15f34
+- 374f98e35a94a3dd27c223879d6505a994a6d3b477d7e2eb6adf61cf398a37f5
 
 # `codex_model_provider.md`
 
@@ -125,20 +128,20 @@
 # `misc_spec.md`
 
 ## Summary
-- cmoc の雑多な仕様を定義する oracle 文書。oracle file・realization file の列挙方法、work-root の前提、実行時カレントディレクトリ、タイムスタンプ形式、cmoc-managed-branch の対象範囲を扱う。misc 系仕様を確認する際の入口。
+- cmoc の雑多な仕様を定める文書。oracle file・realization file の列挙方法、work-root の前提、cmoc 実行時のパス関係、タイムスタンプ形式、cmoc-managed-branch 上の変更範囲を扱う。これらの共通定義を確認するための入口。
 
 ## Read this when
 - oracle file または realization file の列挙方法を確認するとき
-- work-root の前提や cmoc 実行時のカレントディレクトリを確認するとき
-- タイムスタンプ形式を確認するとき
-- cmoc-managed-branch 上の変更範囲の定義を確認するとき
+- work-root、repo-root、run-root の前提や agent call の cwd の関係を確認するとき
+- タイムスタンプ形式を実装・検証するとき
+- cmoc-managed-branch 上の変更範囲や rename・削除ファイルの扱いを確認するとき
 
 ## Do not read this when
-- 特定の oracle file や realization file の実装内容を確認したいとき
-- 開発環境、設計ルール、テストルールなど個別の開発手順を確認したいとき
+- 特定の oracle file や realization file の内容・責務を確認したいとき
+- パスモデルの正本定義そのものを確認したいときは、参照先の path_model.py を直接読む
 
 ## hash
-- 35f26f304c23fb77c0a46fd13bc01989e8fc2629fc8ea3db7ee5dba90cdc5d3c
+- f16f9bf6becc748adc0bbf8aef123a0e26ff5fd837224d4c65f73a765b69d935
 
 # `prompt_editor_input.md`
 
@@ -160,37 +163,37 @@
 # `prompt_standard.md`
 
 ## Summary
-- cmoc の agent call 用プロンプトに関する正本仕様を定める oracle doc。プロンプトの動的構築元、realization 側での加工制約、Markdown・プレースホルダ・cmoc_block/cmoc_ref 記法、参照検証、使用言語の原則と例外を扱う。
+- cmoc が agent call に渡すプロンプトの構築規範を定める oracle doc。oracle src の builder 関数による動的生成、GFM と cmoc 固有記法、placeholder と参照ブロックの整合性検査、日本語を基本とする言語方針を扱う。
 
 ## Read this when
-- agent call に渡すプロンプトの構築方法や realization 側の加工可否を確認するとき
-- プロンプトの Markdown 方言、プレースホルダ、cmoc_block/cmoc_ref の記法・検証を変更または実装するとき
-- Codex CLI が扱う自然言語の使用言語や個別仕様による例外を確認するとき
+- agent call 用プロンプトの構築・変更・検証方法を確認するとき
+- placeholder、cmoc_block、cmoc_ref の記法や整合性要件を確認するとき
+- Codex CLI のプロンプト・レポート・INDEX.md などで使用する言語方針を確認するとき
 
 ## Do not read this when
-- 具体的な oracle src の関数実装や動的プロンプト生成コードを直接変更・調査するときは、該当する oracle/src の実装を読む
-- 一般的な agent 作業規則や oracle・realization の定義を確認するときは、リポジトリの共通規則を読む
+- プロンプト構築以外の Python 実装規約を確認するときは、oracle src の実装対象や開発環境の文書を直接読む
+- 一般的な Markdown の記法だけを確認したいとき
+- 個別の agent 作業内容や対象ファイルの仕様を確認したいとき
 
 ## hash
-- 9e3766aebf04cc43deaa8ca92d848217c208025881860ab522ff1882a870f126
+- 68025ae63d5fc8e51868267a8c176cf65bba64d8f4aad41d38578f39493c4a10
 
 # `run_isolation.md`
 
 ## Summary
-- run の隔離作業を、fork から join または abandon までの lifecycle として定義する仕様文書。run とサブコマンドの関係、workload、専用 branch・linked worktree、成果物の merge または破棄、および run-root 外への書き込み例外を扱う。run の開始・終了、branch/worktree 管理、成果物の取り込み、cmoc 管理データの保存先を判断するための入口となる。
+- run の隔離作業における用語、fork から join または abandon までのライフサイクル、Git branch/worktree の扱い、および run-root 外への書き込み例外を定める仕様。run の開始・取り込み・破棄や、関連する branch、worktree、管理データの配置を理解するための入口。
 
 ## Read this when
-- run、fork、join、abandon の lifecycle を実装・レビューするとき
-- run 用 branch、linked worktree、成果物の merge/破棄規則を確認するとき
-- run-root 外への書き込み可否や cmoc 管理データの保存先を判断するとき
-- 編集 run と read-only investigation/review、機械的更新、session join の conflict 解消の扱いを確認するとき
+- run の fork、join、abandon のライフサイクルを実装・確認するとき
+- run branch、fork 時点の commit、linked worktree、session branch への merge 規則を扱うとき
+- run-root 外への書き込み例外や cmoc 管理データの保存場所を確認するとき
 
 ## Do not read this when
-- run の隔離 lifecycle や branch/worktree 管理に関係しない機能を扱うとき
-- 具体的な CLI 引数や個別 workload の詳細仕様を確認したいときは、対応する個別仕様を直接読むとき
+- run の具体的な CLI 引数やサブコマンド実装だけを確認したいとき
+- run 以外の workload の仕様や、個別の agent call path model の詳細を確認したいとき
 
 ## hash
-- 2124abd2e172d2cbaafcebff6c722ffbcbe0f86611db40113fcc44a3dcbd292d
+- 000c7e1a1bd4461aa9f0229de21df744e6bb89d64940a3d3ce3bed99b82cf3ed
 
 # `session_state.md`
 

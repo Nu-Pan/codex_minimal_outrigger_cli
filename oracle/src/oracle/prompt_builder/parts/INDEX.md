@@ -17,17 +17,19 @@
 # `file_access_rule.py`
 
 ## Summary
-- cmoc のファイル読み書き規則プロンプトを、アクセスモード別に構築する。リポジトリ外や保護対象ツリーの deny ルール、oracle file・realization file の読み書き制限を扱い、プロンプト生成時のファイルアクセス制御の入口となる。
+- ファイルアクセスモードとパスコンテキストから、エージェント向けの読み書き禁止規則とプレースホルダー定義を構築する。READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE、NO_RULE の各モードを扱う。
 
 ## Read this when
-- ファイルアクセス規則の生成内容、FileAccessMode ごとの読み書き制限、repo-root/work-root のプレースホルダーを変更・確認するとき。
+- エージェントのファイル読み書き規則を生成・変更・検証するとき
+- モードごとの oracle file、realization file、リポジトリ内特殊ディレクトリへのアクセス制約を確認するとき
+- repo-root と work-root に応じたパスプレースホルダーの扱いを確認するとき
 
 ## Do not read this when
-- 具体的な Codex CLI sandbox 設定や実行権限の仕様を確認するとき。
-- プロンプト全体の構築や別の prompt builder 部品だけを変更・確認するとき。
+- 具体的な CLI 機能や oracle・realization の実装責務を調べるとき
+- 生成されたプロンプト全体の構造や、ファイルアクセス規則以外の prompt builder 部品を調べるとき
 
 ## hash
-- 489b78b56036f1ae03614cb1633e6c2e43a407febffb3e4330834b4dbcc70a09
+- e2d87e025e986d6b9e4526b4295e09453728f07095a6f187d663b4004cb92429
 
 # `index_entry_standard.py`
 
@@ -49,18 +51,18 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- oracle file と realization file の定義・役割・下位概念を構築する prompt builder の一部。oracle、realization の責務境界と配置先を説明する StructDoc を返す。
+- oracle と realization file の定義・役割・下位概念を構築する prompt builder の一部。oracle file を人間所有の正本仕様断片、realization file をその具体化として整理し、doc・src・test・implementation・ancillary の分類と配置を説明する。
 
 ## Read this when
-- oracle file と realization file の分類、責務、配置先を確認するとき
-- oracle と realization に関する基本説明文の生成処理を変更・調査するとき
+- oracle file と realization file の定義や責務境界を prompt に組み込む処理を変更するとき
+- oracle、realization の分類・配置・正本性に関する説明文の生成元を確認するとき
 
 ## Do not read this when
-- 個別の oracle doc・src・test の仕様や実装を確認したいとき
-- prompt builder 全体の構成や、基本説明以外の prompt 部品を確認したいとき
+- 個別の oracle 文書や realization 実装の内容を確認したいとき
+- prompt builder 全体の構成や別の prompt part の仕様だけを調べるとき
 
 ## hash
-- 52d5324d5a026e9a98b5f944af4b667e19d4b114dd9cf1e66a40c111d3521ea6
+- 46cac8d7867434199021d72041b4b1b9eea45f91fbb845ee3e177089d3dde021
 
 # `oracle_review_standard.py`
 
@@ -83,49 +85,52 @@
 # `oracle_standard.py`
 
 ## Summary
-- oracle file が従うべき標準規範を、構造化文書として構築する実装。人間の認知負荷、仕様断片の正本性、未定義部分、整合性、用語・命名、実装との責務境界、goal/non-goal などの原則を標準項目として定義し、prompt builder が利用できる形式へ変換する。
+- oracle file が従う規範文章を構築する。人間の認知負荷を抑えた疎な正本仕様断片、未定義部分の扱い、仕様間の整合性、実装からの逆流禁止、用語・命名の統一、oracle file 優先、goal/non-goal の境界などを Standard として StructDoc に変換する。
+- AgentCallPathContext から root 定義を取得し、`work-root` プレースホルダーを返却する。
 
 ## Read this when
-- oracle file の記述方針や品質基準を変更・確認するとき
-- oracle standard を prompt に組み込む処理や構造化文書の生成方法を調査するとき
-- oracle file に関する規範項目の追加・削除・整合性を検討するとき
+- oracle file の規範、仕様断片の書き方、正本仕様と実装の責務境界を確認するとき
+- oracle standard の構造化文書生成や Standard 定義を変更するとき
 
 ## Do not read this when
-- realization code の一般的な実装規約だけを確認するとき
-- oracle file の具体的な仕様内容や個別ドキュメントを調査するとき
-- prompt builder の他の部品や placeholder の挙動だけを調査するとき
+- realization code の具体的な動作や CLI 機能を調査するとき
+- oracle file の規範ではなく、他の prompt builder 部品や個別仕様を確認するとき
 
 ## hash
-- 44a731f03bef07e78578477f06d0911569244875809ae1c0d17c7dc9f57b6df2
+- a4591683096c830a9d8f57525436de044e2788180a22c06caf4f4a53aae4d57b
 
 # `realization_standard.py`
 
 ## Summary
-- realization file が従うべき規範文章を、複数の Standard として構築する prompt builder 部品。実装の簡潔性・品質・責務分割・oracle src との重複防止・コメント方針・テストや依存関係の肥大化抑制・変更後の整理を扱う。realization standard の prompt 生成処理を確認する入口。
+- realization file が従うべき規範文章を構築する。実装・テスト・コメント・ファイル分割・抽象化・公開面・依存関係・不要な旧実装の整理に関する標準を、背景・要求・例を含む構造化文書として提供する。
+- realization standard の生成時に call-scoped context から work-root 定義を取得し、各規範文書へプレースホルダーを渡す。
 
 ## Read this when
-- realization file の実装規範を prompt に組み込む処理を変更・調査するとき
-- realization code、test、依存関係、公開面、コメントに関する標準文面の生成元を確認するとき
+- realization file、realization code、realization test の品質基準や削除・統合方針を確認するとき
+- oracle src と realization src の責務境界、コメントや docstring の根拠記載、ファイル分割・抽象化の判断基準を確認するとき
+- 公開面・設定・状態・依存関係・生成物を追加する可否や、変更後の整理方針を確認するとき
+- realization standard を構築する処理や、その出力に含まれる標準項目を変更するとき
 
 ## Do not read this when
-- oracle standard や index entry standard など、別の規範文章の生成処理だけを確認するとき
-- prompt builder の共通基盤や StructDoc の実装を直接調査する場合は、まず該当する共通モジュールを読むとき
+- INDEX.md のルーティング規則やエントリー形式だけを確認したいときは、INDEX.md 関連の対象を直接読む
+- oracle の正本仕様そのものや Python 実行環境・テスト実行方法を確認したいときは、対応する oracle 文書を直接読む
+- 特定の realization 実装・テストの挙動を調査するだけで、realization file 全般の規範を確認する必要がないとき
 
 ## hash
-- 5dbc1cb4f5d03990e3486c70f90a0bf811d01efbbc2740d4155b8f70d2bc5478
+- 667977a7edea2e30fa8684ad26e1d89dd9beb3b51f82bb4cd987a93871281d71
 
 # `routing_rule.py`
 
 ## Summary
-- INDEX.md を使った文書ルーティング規則の構築処理を定義する。作業対象に応じて読むべき INDEX.md や本文を選ぶための案内文と、work-root のプレースホルダー値を生成する。
+- INDEX.md を使って必要な本文へ進むためのルーティング規則を構築する関数を定義する。call-scoped context から work-root の定義を取得し、INDEX.md の扱い・読み進め方・判断基準を含む構造化文書とプレースホルダ map を返す。
 
 ## Read this when
-- INDEX.md の役割、読み進め方、対象文書の選択基準を確認したいとき。
-- プロンプトへ work-root を埋め込むルーティング規則の生成処理を変更・確認するとき。
+- INDEX.md の役割、読み進め方、対象本文へ進む判断基準を変更・確認するとき
+- routing rule の構造化文書生成や work-root プレースホルダの扱いを変更するとき
 
 ## Do not read this when
-- 特定の INDEX.md の実際のエントリー内容を確認・編集したいとき。
-- ルーティング規則以外のプロンプト部品や、文書構造そのものを確認したいとき。
+- INDEX.md の個別エントリー内容や対象ファイルの責務を確認したいとき
+- ルーティング規則以外の prompt builder 部品を変更・調査するとき
 
 ## hash
-- 0264980cdd927da5be0d9580428c1d9fb3a129f66b254b0d462d7be9cbd1af5b
+- bd6e9b76921aaddbccba9336ae77740768a301b4cc6026b3083008a25e525d14

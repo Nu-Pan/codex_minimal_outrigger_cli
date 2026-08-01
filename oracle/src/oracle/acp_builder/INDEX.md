@@ -15,97 +15,97 @@
 # `basic.py`
 
 ## Summary
-- AI コーディングエージェント呼び出し用の論理パラメータとデフォルト値を定義する。モデルクラス、推論負荷、ファイルアクセスモード、プロンプト、Structured Output schema、indexing preflight、作業ディレクトリを扱う。関連する agent call 設定の入口。
+- AI コーディングエージェント呼び出しに必要なモデルクラス、推論強度、ファイルアクセスモード、プロンプト、Structured Output schema、作業ディレクトリ、索引事前処理フラグを定義する。ACP 関連の呼び出しパラメータや論理 enum の意味を確認する入口。
 
 ## Read this when
-- Agent call のパラメータ構造、モデル選択区分、推論負荷、ファイルアクセスモード、preflight 実行方針、cwd の既定値を確認するとき
-- Agent Call Parameter の生成・受け渡し処理を変更または調査するとき
+- ACP の呼び出しパラメータ構造を変更・利用するとき
+- モデル選択、推論強度、ファイルアクセスモード、プロンプト、作業ディレクトリの表現を確認するとき
+- agent call 前の indexing preflight 制御を確認するとき
 
 ## Do not read this when
-- バックエンドが受理する具体的なモデル名への解決方法を確認したいとき
-- 各ファイルアクセスモードの詳細規則や Codex CLI sandbox の仕様を確認したいとき
-- パス解決そのものの仕様を確認したいとき
+- 実際のバックエンドモデル名への解決や Codex CLI の実行規則を確認したいとき
+- ファイルアクセス規則の詳細や app specification を確認したいとき
+- ACP パラメータ以外のビルダー実装や呼び出し処理を調べるとき
 
 ## hash
-- 5bfd68846014d69f50ee19162dd738616d5814856daa60487cce0322b5da12e9
+- d2680fbd43595b5fe00108bf30e2a6937ae8d68a22e6f8906e54e7766b7339f7
 
 # `indexing`
 
 ## Summary
-- `cmoc indexing` の目次エントリー生成に関する正本実装と、その呼び出しパラメータ用 JSON Schema を扱うディレクトリ。対象本文を埋め込んだ読み取り専用プロンプトの構築、構造化出力によるルーティングエントリー生成、モデル・推論・設定の指定を確認する入口。
+- INDEX.md エントリー生成用の正本実装と、その Structured Output schema を扱うディレクトリ。`cmoc indexing` が対象パスの本文からルーティング情報を生成するための prompt・agent call 設定の入口を含む。
 
 ## Read this when
-- `cmoc indexing` のエントリー生成プロンプト、対象本文の埋め込み、構造化出力設定を変更・調査するとき
-- 目次エントリー生成に使う呼び出しパラメータや JSON Schema を確認するとき
+- `cmoc indexing` の INDEX.md エントリー生成 prompt、Structured Output schema、対象パス解決、モデル・推論・アクセスモード設定を変更・調査するとき。
 
 ## Do not read this when
-- 目次エントリーの一般的なルーティング基準や記述形式だけを確認したいとき
-- 実際の indexing 実行処理、対象ファイルの探索、モデル呼び出しの実行経路を調べるとき
+- INDEX.md の一般的なルーティング規則や記述方針だけを確認したいとき。
+- `cmoc indexing` 以外の prompt 構築や agent call パラメータを調査するとき。
 
 ## hash
-- a52af7824ce6dae69368045f30fc19b36ce54e0ddf050a1d601d51933aec63b5
+- 6114f70e885a1247cd290b3397cb56f6fc8c2691ee81127b8b2be381cf58a6cf
 
 # `oracle`
 
 ## Summary
-- `cmoc oracle edit`、`investigation`、`review` 各処理の AgentCall 構築に関する実装をまとめたディレクトリ。TUI 起動設定、oracle 調査用プロンプトとログ保存、レビュー所見処理および各種 Structured Output schema を下位ファイルへの入口として扱う。
+- `cmoc oracle` 系サブコマンド向けの agent call 構築実装を分類するディレクトリです。`edit` は oracle 編集 TUI の起動処理、`investigation` は調査用 TUI の prompt・起動パラメータ生成、`review` はレビュー所見処理の prompt builder と Structured Output schema を扱います。各サブディレクトリが担当機能の実装確認への入口です。
 
 ## Read this when
-- `cmoc oracle` の TUI 起動条件、oracle 調査用プロンプト、editor_input ログ保存、またはレビュー所見の生成・判定・統合を変更・調査するとき。
-- oracle 専用のファイルアクセス制約、モデル・推論設定、Structured Output の入出力契約を確認するとき。
-- このディレクトリに含まれる個別処理の実装や用途を確認するとき。
+- `cmoc oracle` の edit、investigation、review のいずれかに関する agent call prompt、起動パラメータ、Structured Output schema、またはログ保存処理を調査・変更するとき。
 
 ## Do not read this when
-- oracle file の編集・調査そのものの実行処理や、oracle review の一般的な判定基準を確認するとき。
-- prompt 共通生成規則、パス解決、通常の ACP builder、または JSON schema の詳細実装だけを確認するときは、対応する共通実装・仕様文書・schema ファイルを直接読む。
+- oracle の正本仕様やレビュー判定基準そのものを確認するとき。
+- 共通の agent call 型・prompt 構築・実行設定、または各サブコマンドの具体的な実装を直接確認するとき。
 
 ## hash
-- a9d071bc749ef34ecbb92855a6e7c88c76af2353cd083d2f637cc983f78f2883
+- c8d881f5fe2278734de3aae15024a8150f4b5e966b64ccf8c9c3c4899152cc27
 
 # `realization`
 
 ## Summary
-- Oracle 側の差分を realization file 全体へ反映する `codex exec` 用 AgentCallParameter の構築処理を扱う。raw git diff、commit 範囲、実行設定、linked worktree を prompt に組み込む。
-- 変更要約とファイル単位レビュー・修正を行う agent call の oracle source と Structured Output schema を扱う。
+- Oracle の変更を realization 全体へ反映する agent call の起動設定と、refactor fork の変更要約・レビュー・修正用 agent call パラメータを扱うディレクトリ。
 
 ## Read this when
-- `cmoc realization apply fork` の実行 prompt、realization 追従処理、対象 agent call の実行設定を変更・調査するとき。
-- refactor fork の change_summary または file_review_and_fix の出力形式、prompt、入力差分、対象パス、アクセスモード、モデル設定、検証要件、schema 指定を確認するとき。
+- oracle の変更を realization implementation・test・ancillary へ反映する agent call の条件や prompt を変更するとき。
+- refactor fork の変更要約、レビュー、修正に関する出力 schema や agent call パラメータを確認するとき。
 
 ## Do not read this when
-- 通常の realization 実装・テストの挙動を変更または調査するとき。
-- prompt の一般的な組み立て規則や、refactor 差分そのもの・レビュー対象の realization 実装を調査するとき。
+- 通常の realization 実装やテストの内容を変更するとき。
+- oracle の仕様、共通 prompt 構築処理、実際の realization code の挙動を調査するとき。
+- 個別の Structured Output schema の定義や、レビュー・修正 agent call の実処理だけを確認するとき。
 
 ## hash
-- dd96a0937830b0d39dca023f54862aaf6883aa6baf7212231b44e6428fa68827
+- ca27df97fb419a4c0b24a7336b3516490b74f2f0b5186c96d8c58788a3e9ad13
 
 # `session`
 
 ## Summary
-- `cmoc session join` の merge conflict marker 解消用 AgentCallParameter を構築する正本ソース。競合対象パスを実パスへ解決して prompt に列挙し、conflict 解消時の役割・目標・追加アクセス規則・モデルおよび推論設定を定義する。
+- `cmoc session join` の merge conflict marker 解消用 agent call 設定を扱う。対象ファイルの実パス解決、専用 prompt、リポジトリ書き込み権限、最高品質のモデル・推論設定、実行 cwd、indexing preflight 無効化を確認する入口。
 
 ## Read this when
-- `cmoc session join` の conflict marker 解消 prompt の内容、対象ファイル指定、AgentCallParameter のモデル・推論・アクセス設定を変更または確認するとき。
+- `session join` の conflict 解消 agent call における対象パス、prompt、ファイルアクセス権限、モデル、推論設定、cwd、preflight 設定を変更または調査するとき。
 
 ## Do not read this when
-- 通常の `session join` 実装や conflict 解消処理そのものを調べるときは、該当するサブコマンド実装・テストを直接読む。
-- prompt 全体の共通構築規則を調べるときは、prompt builder や共通 prompt 定義を直接読む。
+- 通常の `session join` 処理や merge 操作そのものを調査するとき。
+- 共通の agent call パラメータ、prompt 生成、パス解決の仕様だけを調査するとき。
 
 ## hash
-- 3c6b42e6170984ac75d89b0faddac0bb84751e6f83dc374948e382fecd729dfa
+- bd3443e6c0860f9001070a192885b30f18fc92d0ba9e3b4540b7fd0aef225b01
 
 # `tui`
 
 ## Summary
-- `cmoc tui` の起動・実行パラメータ解決に関する正本実装群。完全プロンプトの生成・保存、標準文書参照要否の判定、モデルや推論強度などの Agent CLI/TUI 設定を扱う。
+- TUI 起動の実行パラメータ解決と AgentCallParameter 構築に関する oracle src を扱うディレクトリ。起動用パラメータ、完全プロンプト、モデル・推論設定、アクセスモード、作業ディレクトリ、構造化出力判定スキーマを確認する入口。
 
 ## Read this when
-- `cmoc tui` の起動処理、完全プロンプト、ログ保存先、AgentCallParameter を変更・調査するとき。
-- AI Agent CLI/TUI に適用する標準文書の判定や、読み取り専用の実行設定を確認するとき。
+- `cmoc tui` の起動処理や AgentCallParameter の設定を調査・変更するとき
+- TUI 用プロンプトの構成、保存先、パスコンテキスト、実行条件を確認するとき
+- AI Agent CLI/TUI の標準文書参照要否や入力スキーマを確認するとき
 
 ## Do not read this when
-- TUI 以外のサブコマンドの起動処理やプロンプト構築を調査するとき。
-- 共通プロンプト構築規則、標準文書本文、実際の後続 AI Agent CLI/TUI 実装だけを確認したいとき。
+- TUI 以外のサブコマンドのプロンプト生成や AgentCallParameter を調査するとき
+- TUI の呼び出し元、ユーザー入力受付、画面表示を調べるとき
+- 構造化出力スキーマや共通プロンプト・パス解決仕様だけを確認するときは、対応する直接のファイルを読むとき
 
 ## hash
-- 7746b9c3f3debfda158128b34c5b8bf25fcc5c934e27473ef7a8f234e5ad3975
+- 54a7d588fc2f8e0881d24e319e6dd6325e156e1f714e1b15aad41cb9364e8cd8

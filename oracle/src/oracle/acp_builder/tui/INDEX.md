@@ -1,18 +1,20 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc tui` 起動時に、ユーザー入力を埋め込んだ完全なプロンプトを生成・保存し、Codex CLI/TUI 用の固定実行パラメータを返す正本実装。保存先ディレクトリの作成、プロンプト構築、モデル・推論強度・アクセスモードなどの起動設定を扱う。
+- `cmoc tui` の TUI 起動用 AgentCallParameter を構築する oracle src。完全なプロンプトを生成・保存し、最高性能モデル・最大推論設定・リポジトリ書き込み権限などの固定起動パラメータを返す。TUI 起動条件、プロンプト生成、モデル設定、作業ディレクトリ、構造化出力スキーマの確認における入口。
 
 ## Read this when
-- `cmoc tui` の起動処理、起動用 AgentCallParameter、完全プロンプトの生成または保存先を変更・調査するとき。
-- TUI 起動時のモデル、推論強度、ファイルアクセスモード、レビュー標準の適用条件を確認するとき。
+- `cmoc tui` の TUI 起動処理や AgentCallParameter の設定を変更・調査するとき
+- TUI 用の完全プロンプト保存先、パスコンテキスト、動的プロンプトの構成を確認するとき
+- TUI 起動時のモデル、推論強度、ファイルアクセスモード、インデックス事前処理の設定を確認するとき
 
 ## Do not read this when
-- TUI 以外のサブコマンドのプロンプト構築や起動パラメータを調査するときは、該当する起動実装を直接読む。
-- プロンプト本文の共通構築規則だけを確認したい場合は、共通プロンプト構築モジュールを読む。
+- TUI 以外のサブコマンドのプロンプト生成や AgentCallParameter を調査するとき
+- `cmoc tui` の呼び出し元やエディタ入力処理だけを確認するとき
+- TUI 起動で使用する構造化出力スキーマの詳細だけを確認するとき
 
 ## hash
-- c2ab97aa1fc3c9c37b1d9d206c70304e1a0e56ba4163417637f4bbf0c4170fe1
+- 6dce0148f0c47eb025a9dc391bdf7fbdf4bcf0bc730dcc026d6289e9eb6ebff2
 
 # `resolve_parameter.json`
 
@@ -32,15 +34,17 @@
 # `resolve_parameter.py`
 
 ## Summary
-- `cmoc tui` の実行パラメータ解決用プロンプトを正本として構築する oracle src。後続 AI Agent CLI/TUI に適用する標準の選択を依頼する完全プロンプトを生成し、効率重視・最大推論の呼び出しパラメータとして返す。
+- `cmoc tui` の実行パラメータ解決用プロンプトと、後続の AI Agent CLI/TUI 呼び出しに渡す `AgentCallParameter` を構築する正本実装。モデル、推論強度、読み取り専用アクセス、作業ディレクトリ、構造化出力スキーマなどの実行条件を定義し、関連する prompt builder や path context の入口となる。
 
 ## Read this when
-- `cmoc tui` の実行パラメータ解決プロンプト、適用する標準、読み取り専用の agent call パラメータを変更・確認するとき。
-- `build_tui_resolve_parameter_parameter` の入力プロンプト埋め込み、placeholder、出力 schema パス、モデル・推論設定を確認するとき。
+- `cmoc tui` の実行パラメータ解決処理を変更・レビューするとき
+- 後続エージェント向けプロンプトの role、summary、goal、標準規則の適用条件を確認するとき
+- TUI 用 AgentCallParameter のモデル、アクセスモード、cwd、構造化出力設定を確認するとき
 
 ## Do not read this when
-- `cmoc tui` の通常の対話実行や、実際の後続 AI Agent CLI/TUI の実装を確認したいとき。
-- 共通プロンプト生成処理の詳細だけを確認したいときは、プロンプトビルダー側の対象を直接読む。
+- `cmoc tui` のユーザー入力受付や画面表示など、実行パラメータ解決以外の TUI 挙動を調べるとき
+- 構造化出力スキーマの項目定義だけを確認したいときは、対応する JSON スキーマを直接読む
+- 共通の完全プロンプト生成仕様やパス解決仕様だけを確認したいときは、それぞれの共通モジュールを直接読む
 
 ## hash
-- 7d442f0a37e22042352348e3bbd4eebe1afb38cfea28f5137362d8d698952d33
+- d0178af4f620a213141d82c8c31e1590cfbf08b15105b1d5bf3254ee5a6bc236

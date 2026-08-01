@@ -1,14 +1,14 @@
 # `join`
 
 ## Summary
-- `cmoc session join` の merge conflict marker 解消用 AgentCallParameter を構築する正本ソース。競合対象パスを実パスへ解決して prompt に列挙し、競合解消時の役割・目標・追加アクセス規則・モデルおよび推論設定を定義する。
+- `cmoc session join` における merge conflict marker 解消用の AI エージェント呼び出し設定を扱う実装。対象パス、専用 prompt、書き込み権限、モデル、実行 cwd などの組み立てを確認する入口。
 
 ## Read this when
-- `cmoc session join` の conflict marker 解消 prompt の内容、対象ファイル指定、AgentCallParameter のモデル・推論・アクセス設定を変更または確認するとき。
+- `cmoc session join` の merge conflict 解消処理や、その agent call の prompt・モデル・権限・実行設定を変更または調査するとき。
 
 ## Do not read this when
-- 通常の `session join` 実装や conflict 解消処理そのものを調べるときは、該当するサブコマンド実装・テストを直接読む。
-- prompt 全体の共通構築規則を調べるときは、prompt builder や共通 prompt 定義を直接読む。
+- 通常の `session join` 処理や merge 操作そのものを調査するとき。
+- 一般的な prompt 生成処理や共通の agent call パラメータ定義を確認するとき。
 
 ## hash
-- e3d325a17e362bec618d1339a0a3f8f41b3b2a414313fc7ebf45c49b0beb5bac
+- c8f042a91557c1abddd59fc938d1fcb08cb718dcec3da6d616167dcd5a4cf4c3

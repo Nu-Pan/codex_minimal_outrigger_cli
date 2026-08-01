@@ -17,16 +17,16 @@
 # `index_entry.py`
 
 ## Summary
-- `cmoc indexing` が生成する目次情報用エージェント呼び出しパラメータの正本実装。対象本文を埋め込んだ読み取り専用プロンプトを構築し、構造化出力向けのルーティングエントリー生成を依頼する。
-- プロンプトの役割・概要・完了条件、参照制約、対象パスのプレースホルダーを設定し、呼び出しモデル・推論強度・アクセスモード・設定ファイルをまとめて返す。
+- `cmoc indexing` が生成する INDEX.md エントリー用の agent call パラメータを構築する正本実装。対象パス・内容・cwd から prompt、Structured Output schema、読み取り専用設定、モデル設定を組み立てる。
+- prompt の path context 解決、エントリー生成規則、対象本文の埋め込み、indexing preflight 無効化など、目次情報生成呼び出しの設定入口となる。
 
 ## Read this when
-- `cmoc indexing` の目次エントリー生成プロンプトを変更・調査するとき
-- 対象ファイルの内容を使ったエージェント呼び出しパラメータや、モデル・推論・読み取り専用設定を確認するとき
+- `cmoc indexing` の INDEX.md エントリー生成 prompt や agent call 設定を変更・調査するとき
+- 対象パスの解決、Structured Output schema の指定、モデル・推論・アクセスモードの設定を確認するとき
 
 ## Do not read this when
-- 目次エントリーの一般的な書式やルーティング基準だけを確認したいときは、index entry standard の正本を読む
-- 実際の indexing 実行処理や対象ファイルの探索を調べるときは、該当する indexing 実装を直接読む
+- INDEX.md の一般的なルーティング規則やエントリー記述方針だけを確認したいとき
+- `cmoc indexing` 以外の prompt 構築や agent call パラメータを調査するとき
 
 ## hash
-- 058e18296ffaa70e3bbd9cd01f57844d70ee5728bf901430965634b7ac353a17
+- 002ab294bd67ef207783024b63bf6f0b815a73114be63126196da093d25769fd

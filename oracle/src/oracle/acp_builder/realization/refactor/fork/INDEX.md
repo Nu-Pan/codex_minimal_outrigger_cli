@@ -15,17 +15,17 @@
 # `change_summary.py`
 
 ## Summary
-- cmoc の realization refactor fork 差分を要約する agent call パラメータを構築する oracle src。差分を埋め込んだ読み取り専用 prompt、モデル・推論設定、Structured Output schema、事前インデックス処理を定義する。
+- refactor fork の変更差分を要約する agent call 用パラメータを構築する。差分を動的 prompt に埋め込み、読み取り専用の linked worktree を対象として、効率重視のモデル設定と Structured Output schema を指定する。
 
 ## Read this when
-- realization refactor fork の変更要約 prompt の構築方法、入力差分の渡し方、モデル設定、出力 schema の指定を確認するとき。
+- refactor fork の run branch 差分を人間向けに要約する prompt 構築や、その agent call の実行条件を確認するとき。
 
 ## Do not read this when
-- refactor 差分そのものの内容を確認したいとき。
-- 変更要約の Structured Output schema の詳細だけを確認したいとき。
+- refactor fork の実際の変更内容を調査するときは、生成された差分や対象実装を直接読む。
+- 変更要約の出力形式そのものを確認するときは、対応する Structured Output schema を直接読む。
 
 ## hash
-- 7dc4a8a193cda8108332d73c5038399de0a3799a17f0df4437990b657150489f
+- e8ae11e0b02d60a1916d306796b879d5a57e176398051e2aa648ff069224d985
 
 # `file_review_and_fix.json`
 
@@ -44,15 +44,17 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- cmoc の realization refactor fork における、ファイル単位レビュー兼修正 agent call のパラメータを構築する oracle source。完全な調査・修正・検証 prompt、対象パスのプレースホルダ、モデル・推論設定、Structured Output schema を定義する。
+- `cmoc realization refactor fork` のファイル単位レビュー・修正用 AgentCallParameter を構築する。対象ファイルと実行用 worktree を受け取り、パス文脈、完全なレビュー・修正プロンプト、モデル設定、構造化出力 schema、cwd、事前 indexing をまとめて返す。レビュー対象の oracle/realization file を起点に、調査・修正・検証まで行う agent call の設定入口である。
 
 ## Read this when
-- ファイル単位の realization review・修正 agent call の prompt 構成や実行パラメータを変更するとき
-- レビュー対象ファイル、アクセスモード、モデル設定、検証・出力要件の関係を確認するとき
+- ファイル単位の realization review・fix agent call のプロンプト内容、権限、検証要件を変更または確認するとき
+- レビュー対象 path と linked worktree の解決、モデル・推論設定、structured output schema の指定を変更するとき
+- refactor fork 系の agent call parameter 構築処理を調査するとき
 
 ## Do not read this when
-- レビュー対象の realization 実装そのものを調査・修正するとき
-- レビュー結果の Structured Output schema の詳細だけを確認するときは、対応する schema file を直接読む
+- レビュー・修正 prompt の詳細ではなく、実際のレビュー処理や realization code の実装を調査するとき
+- 構造化出力の具体的な schema 定義だけを確認するときは、対応する schema file を直接読む
+- 他の agent call 種別の prompt 構築規則だけを調査するとき
 
 ## hash
-- 4a1ffe3d0db1a8dd9cbb1ea93c798d3afd70bc36a8f31df9fbcf7ac9fb008195
+- cb92108ab52a21f75bf7203e62fef63cd2a0dff36e5d2d53ab96d7b0cbef1d70

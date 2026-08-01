@@ -1,15 +1,15 @@
 # `launch_exec.py`
 
 ## Summary
-- Oracle 側で定義された差分追従用 `codex exec` の AgentCallParameter 構築処理。oracle file の raw git diff と commit 範囲を prompt に埋め込み、realization file 全体への反映を委譲するための prompt・実行設定・linked worktree を組み立てる。
+- Oracle の変更を realization file 全体へ反映する `codex exec` 用 AgentCallParameter と完全 prompt を構築する。commit 範囲と oracle の raw git diff を prompt に埋め込み、linked worktree を実行 cwd として realization 追従作業を委譲する。
 
 ## Read this when
-- `cmoc realization apply fork` の実行 prompt、realization 追従処理、または oracle 差分を realization file へ反映する AgentCallParameter の動作を変更・調査するとき。
-- 対象 agent call のモデル、推論強度、ファイルアクセスモード、作業ディレクトリ、indexing preflight の設定を確認するとき。
+- realization apply fork の起動 prompt や AgentCallParameter の構築方法を確認するとき
+- oracle file の差分を realization implementation・test・ancillary へ反映する agent call の設定を変更するとき
 
 ## Do not read this when
-- 通常の realization 実装やテストの内容を変更・調査するとき。
-- prompt の一般的な組み立て規則だけを確認したいときは、prompt builder の実装を直接読む。
+- 通常の realization 実装やテストの内容を変更するとき
+- oracle file の仕様や一般的な prompt 構築処理を確認するときは、まず対応する oracle file や prompt builder の実装を直接読む
 
 ## hash
-- 2f62a61956371b2154da3ededf6103c79ec999bfcabdae2983231f9f9364b97b
+- 7f875634aa2c257952fb6139d9233765d2bc07a694143986722c9183c525bcde

@@ -15,13 +15,15 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc oracle edit` 用の TUI 起動パラメータを構築する oracle src。完全な編集 prompt の生成・ログ保存と、モデル、権限、作業ディレクトリなど固定された起動条件の指定を担う。
+- `cmoc oracle edit` の TUI 起動用パラメータを構築する oracle src。リポジトリルートを作業ディレクトリとして確定し、ユーザー指示を埋め込んだ完全 prompt を生成・保存して、固定モデル設定とともに Codex CLI 起動用の AgentCallParameter を返す。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動方法、編集 prompt の構成、または oracle file 編集用の agent 起動設定を変更・確認するとき。
+- `cmoc oracle edit` の TUI 起動条件、完全 prompt の構成、prompt ログ保存先、または起動パラメータを変更・確認するとき。
+- oracle file 編集用 agent call の role、summary、goal、アクセスモード、モデル、推論設定を確認するとき。
 
 ## Do not read this when
-- oracle file の編集処理そのもの、prompt の共通生成規則、パス解決、構造化文書のレンダリングを変更・確認するときは、それぞれの担当モジュールを直接読む。
+- oracle file 編集そのものの仕様や編集処理を確認したいときは、生成される完全 prompt や対象の oracle file を直接読む。
+- 一般的な prompt 構築処理、構造化文書のレンダリング、パス解決の実装を確認したいときは、それぞれの担当モジュールを直接読む。
 
 ## hash
-- 8fb4ccce29dcf1b377a317fb58eaa990e443a90e5b1125f03c3e104593d8bcaf
+- 6908bbefb338c0ca16f4d90a22f97fa862f2690f9140558b702dfc6dc50474e0
