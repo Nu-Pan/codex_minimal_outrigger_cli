@@ -17,18 +17,19 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全なプロンプトを、固定・動的パーツとプレースホルダ定義から構築するモジュール。oracle/realization、各種レビュー標準、INDEX ルーティングなどの注入条件と依存関係を調整し、プレースホルダの競合を検出する。
+- agent call に渡す完全なプロンプトを構築する正本実装。役割・依頼概要・完了条件、静的／動的プロンプト、placeholder 定義を組み合わせ、各種 oracle／realization／レビュー／ルーティング規則を依存関係に従って注入する。
 
 ## Read this when
-- 完全プロンプトの構成、標準プロンプト注入フラグ、静的・動的プロンプトの順序を変更または調査するとき
-- プレースホルダ定義の統合や同名定義の競合処理を変更するとき
+- agent call の完全プロンプト生成処理を変更・レビューするとき
+- 静的プロンプトと動的プロンプトの構成、placeholder 統合、各種プロンプト規則の注入順序を確認するとき
+- oracle／realization や INDEX エントリー生成に関わるプロンプト注入条件を調査するとき
 
 ## Do not read this when
-- 個別のプロンプト標準本文を確認したいときは、対応する parts モジュールを直接読む
-- プロンプト構造体やパスコンテキストの仕様だけを確認したいときは、関連する型・モデル定義を直接読む
+- 個別のプロンプトパーツ本文だけを変更・確認するときは、対応する parts 配下の実装を直接読む
+- プロンプト生成とは無関係な CLI、パスモデル、構造化文書の実装を調査するとき
 
 ## hash
-- 2cbb916799c42dca9d40eb21c85be690684b6ff4702d0d90e96e83fb5bd6cb7a
+- 9074a0c9fb71f1a3a24fe08e84f5e996faa837f038e4f656aaf0295737f9a3e3
 
 # `editor_input.py`
 
@@ -48,17 +49,19 @@
 # `parts`
 
 ## Summary
-- cmoc のプロンプト生成部品を収めるディレクトリ。oracle・realization の基本定義と各種標準、ファイルアクセス規則、INDEX.md ルーティング規則などを構造化されたプロンプト文書として構築する。個別の prompt builder 部品を調査・変更する際の入口。
+- oracle と realization の規範、および両者を適用したレビュー基準を prompt builder の構造化文書として生成する部品群。oracle／realization の定義、レビュー所見、INDEX.md ルーティング、ファイルアクセス規則など、エージェント向けプロンプトの基礎規則への入口となる。
 
 ## Read this when
-- プロンプト生成部品の責務や構造を確認するとき
-- oracle／realization の定義・規範、ファイルアクセス制約、INDEX.md ルーティング規則の生成処理を変更・検証するとき
-- レビュー基準や INDEX.md エントリー規範など、生成される標準文書の内容を調査するとき
+- oracle・realization の定義や責務境界、各種標準規範を prompt に組み込む処理を確認・変更するとき
+- oracle file と realization file の不整合や致命的問題をレビュー所見として扱う基準を確認するとき
+- INDEX.md のエントリー生成・ルーティング規則、またはエージェント向けファイルアクセス規則を確認するとき
+- これらの規範文書を構造化して生成する prompt builder 部品を調査するとき
 
 ## Do not read this when
-- 特定の oracle 文書や realization 実装・テストの挙動を調査するとき
-- Python 実行環境やテスト実行方法を確認するとき
-- prompt builder 以外の CLI 機能や共通 StructDoc 実装を直接調査するとき
+- 個別の oracle 文書や realization 実装・テストの内容を調査するとき
+- 特定のサブコマンドやプロダクト機能の実装責務を調査するとき
+- StructDoc や Standard など共通の構造化文書機構そのものを変更・確認するとき
+- Codex CLI の実行環境やテスト手順の正本仕様を確認するときは、対応する oracle 文書を直接読む
 
 ## hash
-- fa43ba20cf58e932f568f97e85bf2d787e95b4b0ec9b8a6eb7306981d3049cfd
+- a0b2facad381820e0979d3d636b984c9619b42e718975c4c195e979a0f3a93ef

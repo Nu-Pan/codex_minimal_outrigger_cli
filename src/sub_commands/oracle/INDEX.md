@@ -29,53 +29,56 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの実行入口と TUI 起動処理を担う。oracle 編集指示の収集、起動パラメータ構築、main worktree・session branch・clean worktree の事前条件検証を経て Codex TUI を起動する。
+- `cmoc oracle edit` の main worktree 向け TUI workload を実装する。oracle 編集指示の収集、TUI 起動パラメータの構築、indexing preflight、起動前検証、Codex TUI 起動を担当する。
+- active な `cmoc/session/` branch、main worktree、clean worktree を要求し、条件不成立時は `CmocError` で再実行案内を返す。
 
 ## Read this when
-- `cmoc oracle edit` の起動フロー、入力収集、TUI 起動前検証、または main-worktree 制約を変更・調査するとき。
+- `cmoc oracle edit` の CLI 動作、TUI 起動処理、oracle 編集指示の受け渡しを変更または調査するとき。
+- main worktree・session branch・active session・clean worktree の起動前提を確認するとき。
+- oracle edit の step 管理、indexing preflight、設定読み込み、runtime state 参照の連携を確認するとき。
 
 ## Do not read this when
-- oracle 編集プロンプトの具体的な生成内容を確認したいときは、参照される oracle edit 起動ビルダーや oracle 仕様を直接読む。
-- 共通の CLI 実行基盤、git 状態確認、session 状態管理の実装だけを調査するときは、それぞれの共通モジュールを直接読む。
+- oracle 編集指示の入力収集そのものを変更する場合は、prompt editor input の実装を直接読む。
+- TUI 起動パラメータの内容や構築規則を変更する場合は、oracle edit launch builder を直接読む。
+- 一般的な CLI runtime や session state の共通仕様を調査する場合は、それぞれの共通 runtime 実装・oracle 文書を直接読む。
 
 ## hash
-- 965daee686edf600e90e21ba52cb1563358abc875f915dcb62bb3820f3af926b
+- f94e9d22580ddbdea7684c75c960f3190f4f71d2d6430773e1868710e61b0324
 
 # `investigation.py`
 
 ## Summary
-- `cmoc oracle investigation` サブコマンドの実装。oracle 調査指示を入力として TUI 起動パラメータを構築し、CLI runtime 経由で Codex TUI を read-only workload として起動する。インデックス作成の事前処理、入力ルートの ignore 設定、oracle/realization の読み書き制約も調査セッションへ適用する。
+- `cmoc oracle investigation` サブコマンドの read-only TUI 実行入口。oracle 調査指示を入力として受け取り、TUI 起動パラメータを構築し、設定を読み込んで Codex TUI を起動する。
 
 ## Read this when
-- `cmoc oracle investigation` の実行フロー、入力編集、TUI 起動、または oracle 調査時の自動注入指示を変更・確認するとき。
+- `cmoc oracle investigation` の CLI 実行フロー、入力収集、TUI 起動処理を確認するとき。
+- oracle 調査時の read-only 制約や自動注入指示の適用箇所を確認するとき。
 
 ## Do not read this when
-- oracle 調査の具体的な TUI 起動パラメータ生成ロジックを確認したい場合は、直接 `launch_tui` の実装を読む。
-- CLI runtime の共通処理や prompt editor 入力の詳細を確認したい場合は、各共通モジュールを直接読む。
+- TUI 起動パラメータの詳細仕様を確認したいときは、パラメータ構築側を直接読む。
+- 共通の CLI 実行基盤、設定読み込み、プロンプト入力処理の仕様を確認したいときは、それぞれの共通モジュールを直接読む。
 
 ## hash
-- bfecfa3273928372af6209d2aa865f59ccece71dd051d3a01edbecb0f6ea3743
+- 5b60675fc30fb84c69ec1e5117ec5bb99c04b3bfb6a50e8d105910c0d07e54da
 
 # `review.py`
 
 ## Summary
-- oracle review の CLI 実行と isolated run lifecycle を統括する実装。review 対象の選定・実行、所見と INDEX 差分の処理、review branch の merge、割り込み・失敗時の report、worktree と branch の cleanup を一貫した resource ownership と lifecycle lock のもとで管理する。oracle review の実行経路や中断・失敗時の状態遷移、cleanup 挙動を確認する際の入口。
+- oracle review の CLI 実行と isolated run のライフサイクルを統括する実装。review target の作成、レビュー loop、INDEX 差分の merge、割り込み・失敗時の report と resource cleanup を扱う。
 
 ## Read this when
-- oracle review サブコマンドの実行フローや active session branch の前提を調べるとき
-- review run の worktree・branch 作成、merge、cleanup、lifecycle lock の扱いを変更または確認するとき
-- oracle review の割り込み、部分作成、cleanup failure、report 生成時の挙動を調べるとき
-- review loop、対象列挙、INDEX 差分処理、report 処理を統合した CLI runtime の責務を確認するとき
+- oracle review の CLI 実行経路や active session branch の検証を変更するとき
+- review worktree・run branch の作成、merge、割り込み、cleanup、失敗 report の挙動を調査または変更するとき
+- oracle review の全体 lifecycle と review loop・report・index 操作の接続点を確認するとき
 
 ## Do not read this when
-- review 判定ロジックそのものだけを変更・確認する場合は review_loop.py を直接読む
-- review 対象ファイルの列挙条件だけを調べる場合は review_targets.py を直接読む
-- INDEX 差分の commit・merge・conflict 解決だけを調べる場合は review_index.py を直接読む
-- review report の表示内容や出力だけを調べる場合は review_report.py を直接読む
-- oracle review 以外のサブコマンドの run lifecycle を調べる場合は、対象サブコマンドの実装または共通 runtime を直接読む
+- review 対象ファイルの列挙規則だけを変更する場合は review target の実装を直接読む
+- 所見の評価 loop 内部だけを変更する場合は review loop の実装を直接読む
+- レポートの表示・書式だけを変更する場合は review report の実装を直接読む
+- INDEX 差分の commit・merge・conflict 解決だけを変更する場合は review index の実装を直接読む
 
 ## hash
-- 37757f94b4c746550c998be8efa3ff1c28b483f5cd1f793407b95e3c32e17850
+- c5d96614701b0728ada22d2b8e4b76946315c6e2f6d07a80ee5ef1e0290ae609
 
 # `review_index.py`
 
@@ -97,39 +100,37 @@
 # `review_loop.py`
 
 ## Summary
-- oracle review の finding 列挙・マージ・妥当性検証・採否判定を行う review loop の実装。
-- レビュー進捗、同一 round の finding、semantic retry、割り込み時の部分結果保存を一体として管理し、各段階の agent call と結果反映を制御する。
-- merge operation の検証・適用、oracle path に基づく finding 関連付け、検証理由の反復収集、judge 結果の付与を担う。
+- oracle review の finding 列挙、同一対象 finding の関連付け、merge operation 適用、妥当性検証、採否判定を一つの review loop として実行する実装。
+- レビュー進捗を保持し、KeyboardInterrupt 時には完了済みの finding と評価済みファイルだけを部分結果として返す。semantic な merge operation 検証失敗には再試行上限を設け、契約違反時はレビューを失敗させる。
 
 ## Read this when
-- oracle review の実行フロー、finding の列挙・マージ・検証・判定を変更または調査するとき
-- レビュー処理の KeyboardInterrupt 時の部分結果保持や evaluated files の更新を確認するとき
-- merge finding operation の契約検証、semantic retry、finding ID の採番・削除・置換・統合を確認するとき
+- oracle review の列挙・merge・validate・judge のループ挙動を変更または調査するとき
+- レビュー中断時の部分保存や evaluated_files、確定済み finding の扱いを確認するとき
+- merge operation の target_ids、delete・replace・merge の検証規則や semantic retry を変更するとき
 
 ## Do not read this when
-- oracle review の各 agent call に渡す個別パラメータ生成だけを調査するときは、review 配下の対応する parameter builder を直接読む
-- oracle review のファイルパス解決だけを調査するときは review_paths の実装を直接読む
-- レビュー以外のサブコマンドや一般的な Codex 実行規則を調査するとき
+- oracle review の prompt parameter 構築だけを変更するときは、各 review parameter builder を直接読む
+- oracle review のパス解決規則だけを変更するときは、review_paths の実装を直接読む
+- oracle review の CLI 起動や上位コマンドの進捗表示だけを変更するときは、呼び出し元の sub-command 実装を直接読む
 
 ## hash
-- 0152c77343761b7b4bae2620d96df9f85bc6386ea64f025883bf6369726cc40f
+- 57969895f69fcb91848255f0a096f58c74c5cb57d154673d889445b8fbc37503
 
 # `review_paths.py`
 
 ## Summary
-- Oracle の検出結果に含まれるパスを、シンボリックリンクを追跡せず絶対パスへ解決する処理と、Oracle ファイルをリポジトリ相対キーへ変換する処理を提供する。メイン worktree と cmoc 管理下の isolated worktree の境界を検証し、対象外のパスは無視する。
+- oracle_path の値を解決して絶対パスへ変換し、oracle file の repository-relative key を生成する補助処理。worktree 所属判定と symlink 非追跡のパス正規化を担当する。
 
 ## Read this when
-- Oracle review の finding から oracle_path を解決・正規化するとき
-- worktree 間で Oracle ファイルの相対キーを生成するとき
-- パスの所属範囲やシンボリックリンク非追跡の挙動を変更・確認するとき
+- oracle_path の入力形式、{{oracle-root}} や root placeholder の解決、または oracle file の相対キー生成を変更・調査するとき。
+- main worktree と cmoc 管理下の isolated worktree のパス境界や、symlink を追跡しない正規化処理を確認するとき。
 
 ## Do not read this when
-- Oracle review のレポート生成や finding の内容自体を変更する作業
-- 一般的なパス操作や runtime path の仕様を確認する作業
+- oracle review の全体仕様や finding の生成・評価ロジックを確認したいときは、まず対応する oracle review 文書や呼び出し元を読む。
+- oracle_path の解決や oracle-relative key 生成に関係しないサブコマンド処理を調査するとき。
 
 ## hash
-- eddbb1a5f24d266c525ab726d9961e9b5cc95ae97c62f3b4e1ce076712725fb7
+- 89eb16dfdab2aef4017794b8fb1e637fe91a6861d254dff3c5eb988a922b7b6c
 
 # `review_report.py`
 

@@ -20,6 +20,7 @@ from typing import Any
 from jsonschema import SchemaError, validate, validators
 
 from basic.acp import AgentCallParameter
+from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
 
 from .runtime_codex_logging import (
@@ -33,7 +34,6 @@ from .runtime_codex_profile import (
     is_capacity_error,
     is_quota_error,
     is_unexpected_error,
-    parameter_codex_cwd,
     prepare_codex_override_args,
     prepare_schema,
     read_output_json,
@@ -48,9 +48,7 @@ from .runtime_paths import (
     _reserve_timestamped_path,
     codex_log_dir,
     console_timestamp,
-    repo_root,
     timestamp,
-    work_root,
 )
 from .runtime_results import CodexExecResult
 
@@ -97,7 +95,7 @@ def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
         return None
 
 
-def _base_exec_argv(override_args: list[str], codex_cwd: Path) -> list[str]:
+def _base_exec_argv(override_args: list[str], agent_call_cwd: Path) -> list[str]:
     """cmoc 側で検査済みの cwd と設定上書きを Codex exec argv にする。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # cmoc は linked worktree や生成 root から Codex を実行し得るため、repo の検証は
@@ -110,7 +108,7 @@ def _base_exec_argv(override_args: list[str], codex_cwd: Path) -> list[str]:
         "exec",
         "--skip-git-repo-check",
         "--cd",
-        str(codex_cwd),
+        str(agent_call_cwd),
     ]
 
 
@@ -177,7 +175,6 @@ def run_codex_exec(
     parameter: AgentCallParameter,
     *,
     root: Path | None = None,
-    cwd: Path | None = None,
     config: CmocConfig | None = None,
     purpose: str = "codex exec",
     max_semantic_retries: int = 2,
@@ -188,17 +185,16 @@ def run_codex_exec(
     subcommand_logger: SubcommandLogger | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
-    root = root or repo_root()
-    cwd = cwd or root
-    codex_work_root = work_root(cwd)
-    config = config or load_config(codex_work_root)
+    path_context = AgentCallPathContext(parameter.agent_call_cwd)
+    root = root or path_context.repo_root
+    config = config or load_config(path_context.work_root)
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
-    codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
+    agent_call_cwd = path_context.agent_call_cwd
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # 相対 CODEX_HOME は変更せず渡すため、preflight は Codex が実際の cwd から解決する
     # path を対象にする。
-    codex_home = resolve_codex_home(codex_cwd)
+    codex_home = resolve_codex_home(agent_call_cwd)
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
     override_args = prepare_codex_override_args(
@@ -241,7 +237,7 @@ def run_codex_exec(
     def _call_data(
         run_parameter: AgentCallParameter,
         run_codex_home: Path,
-        run_codex_cwd: Path,
+        run_agent_call_cwd: Path,
     ) -> dict[str, str]:
         """call log に残す論理値を実際の呼び出し parameter に揃える。"""
         return {
@@ -249,10 +245,10 @@ def run_codex_exec(
             "model_class": run_parameter.model_class.value,
             "reasoning_effort": run_parameter.reasoning_effort.value,
             "file_access_mode": run_parameter.file_access_mode.value,
-            "cwd": str(run_codex_cwd.resolve()),
+            "cwd": str(run_agent_call_cwd.resolve()),
         }
 
-    base_call_data = _call_data(parameter, codex_home, codex_cwd)
+    base_call_data = _call_data(parameter, codex_home, agent_call_cwd)
 
     def _new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
@@ -275,7 +271,7 @@ def run_codex_exec(
 
     def _build_argv(output_path: Path, resume_token: str | None) -> list[str]:
         """schema と resume 状態を反映した `codex exec` の argv を組み立てる。"""
-        run_argv = _base_exec_argv(override_args, codex_cwd)
+        run_argv = _base_exec_argv(override_args, agent_call_cwd)
         run_argv.extend(["--json", "--output-last-message", str(output_path)])
         if schema_path is not None:
             run_argv.extend(["--output-schema", str(schema_path)])
@@ -288,7 +284,7 @@ def run_codex_exec(
         run_argv: list[str],
         run_prompt_path: Path,
         *,
-        run_codex_cwd: Path = codex_cwd,
+        run_agent_call_cwd: Path = agent_call_cwd,
         run_codex_env: dict[str, str] = codex_env,
     ) -> subprocess.CompletedProcess[str]:
         """prompt logをstdinとしてCodex subprocessを起動する。"""
@@ -297,7 +293,7 @@ def run_codex_exec(
         with run_prompt_path.open() as prompt_file:
             return run_codex_subprocess(
                 run_argv,
-                cwd=run_codex_cwd,
+                cwd=run_agent_call_cwd,
                 stdin=prompt_file,
                 text=True,
                 capture_output=True,
@@ -606,13 +602,13 @@ def run_codex_exec(
                         quota_probe_parameter = _quota_availability_probe_parameter(
                             parameter
                         )
-                        probe_codex_cwd = parameter_codex_cwd(
-                            quota_probe_parameter, codex_work_root
-                        )
+                        probe_agent_call_cwd = AgentCallPathContext(
+                            quota_probe_parameter.agent_call_cwd
+                        ).agent_call_cwd
                         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
                         # quota probe は別の Codex call なので、最小の AgentCallParameter も
                         # argv/cwd/env を駆動しなければならない。
-                        probe_codex_home = resolve_codex_home(probe_codex_cwd)
+                        probe_codex_home = resolve_codex_home(probe_agent_call_cwd)
                         validate_codex_home(probe_codex_home)
                         probe_codex_env = codex_subprocess_env(probe_codex_home)
                         probe_override_args = prepare_codex_override_args(
@@ -622,7 +618,7 @@ def run_codex_exec(
                         probe_call_data = _call_data(
                             quota_probe_parameter,
                             probe_codex_home,
-                            probe_codex_cwd,
+                            probe_agent_call_cwd,
                         )
                         (
                             probe_ts,
@@ -636,7 +632,7 @@ def run_codex_exec(
                             ".jsonl"
                         )
                         probe_argv = _base_exec_argv(
-                            probe_override_args, probe_codex_cwd
+                            probe_override_args, probe_agent_call_cwd
                         )
                         probe_argv.extend(
                             [
@@ -666,7 +662,7 @@ def run_codex_exec(
                             poll = _run_with_prompt_file(
                                 probe_argv,
                                 probe_prompt_path,
-                                run_codex_cwd=probe_codex_cwd,
+                                run_agent_call_cwd=probe_agent_call_cwd,
                                 run_codex_env=probe_codex_env,
                             )
                         except BaseException as exc:

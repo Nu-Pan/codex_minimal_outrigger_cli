@@ -17,19 +17,19 @@
 # `path_model.py`
 
 ## Summary
-- パス表記とルートプレースホルダの解決モデルを定義する。agent call のパスコンテキスト、repo/work/run/cmoc root の探索、実パスとの相互変換を扱う。パス解決やプレースホルダ表記に関する実装・テストの入口。
+- ルートパスプレースホルダと、agent call の cwd から repo/work/run root を導出するパスモデルを定義する。実パスとの相互変換、root 探索、call-scoped context の構築を扱う。パス解決や root placeholder、worktree 境界の実装・変更を確認するときの入口。
 
 ## Read this when
-- ルートプレースホルダを含むパスの解決・生成を変更または調査するとき
-- AgentCallPathContext や Git worktree root の導出を確認するとき
-- 実パスとプレースホルダ表記の変換規則を確認するとき
+- root placeholder の追加・変更や、placeholder を含むパスの実体解決を調査するとき
+- agent call の cwd、work root、repository root、run root の導出規則を確認するとき
+- 実パスと placeholder 表記の変換、worktree 探索、パス入力の検証を変更・テストするとき
 
 ## Do not read this when
-- CLI の個別コマンドやパス解決以外の機能を変更・調査するとき
-- パス表記・root 探索・agent call のパスコンテキストを扱わないテストや文書を読むとき
+- CLI の具体的なサブコマンドや agent call prompt の生成処理だけを調査するとき
+- パスモデルを利用する個別機能の挙動だけを確認し、root 解決や placeholder 変換自体を扱わないとき
 
 ## hash
-- e6b627355717e4c4f50bc1187d727f21d2dc22830c51c67be93797a38c68e12a
+- 8660330a40e76a5e7acf35ec03434282d0e05c4569a0319712e061d391fc848b
 
 # `standard.py`
 

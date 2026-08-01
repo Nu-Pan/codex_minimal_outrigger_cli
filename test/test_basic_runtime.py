@@ -7,12 +7,18 @@
 """
 
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 from _git_support import make_repo, run_git
 
-from basic.path_model import RootPathPlaceHolder, resolve_ph_path, resolve_real_path
+from basic.path_model import (
+    AgentCallPathContext,
+    RootPathPlaceHolder,
+    resolve_ph_path,
+    resolve_real_path,
+)
 from cmoc_runtime import (
     CmocError,
     create_run_worktree,
@@ -76,6 +82,38 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
     assert repo_root(linked) == root.resolve()
     assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
     assert work_root(linked) == linked.resolve()
+
+
+def test_agent_call_path_contexts_are_parallel_and_call_scoped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """並列 call が process cwd を変えず、互いに異なる work root を保持する。"""
+    root = make_repo(tmp_path)
+    worktrees = [root / "first-worktree", root / "second-worktree"]
+    for index, worktree in enumerate(worktrees):
+        run_git(
+            root,
+            "worktree",
+            "add",
+            "-b",
+            f"parallel-context-{index}",
+            str(worktree),
+            "HEAD",
+        )
+    monkeypatch.chdir(root)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        contexts = list(executor.map(AgentCallPathContext, worktrees))
+
+    assert Path.cwd() == root
+    for context, worktree in zip(contexts, worktrees, strict=True):
+        assert context.agent_call_cwd == worktree.resolve()
+        assert context.work_root == worktree.resolve()
+        assert context.repo_root == root.resolve()
+        assert context.root_placeholder_definitions() == {
+            "repo-root": root.resolve(),
+            "work-root": worktree.resolve(),
+        }
 
 
 def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(

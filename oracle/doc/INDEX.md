@@ -1,20 +1,20 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様をまとめた oracle doc ディレクトリ。CLI 自動補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト、run・session lifecycle、サブコマンド、INDEX 更新など、個別機能の正本仕様断片への入口を提供する。
+- cmoc の CLI、Codex 呼び出し、ログ、doctor、INDEX 生成、prompt、run/session lifecycle、サブコマンドなどの正本仕様を収録する app_spec の入口。個別機能の仕様を探し、関連する oracle doc へ進むために読む。
 
 ## Read this when
-- cmoc のアプリケーション仕様を確認・変更・レビューするとき
-- CLI 起動、Codex agent call、ログ、プロンプト、run・session、サブコマンド、INDEX 更新の仕様上の入口を探すとき
-- 複数の個別仕様にまたがる共通ルールや、適切な正本仕様文書を切り分けるとき
+- cmoc の機能仕様や共通仕様の正本文書を探すとき
+- CLI 補完、Codex 呼び出し、ログ、doctor、prompt、run/session、サブコマンド、INDEX 更新の仕様を確認するとき
+- 対象機能に対応する個別の oracle doc を特定するとき
 
 ## Do not read this when
-- 具体的な realization implementation や realization test の実装詳細だけを確認するとき
-- アプリケーション仕様と無関係な開発環境・設計・テスト実行規則を確認するとき
-- 特定の仕様文書の内容が明らかで、対象文書へ直接進めるとき
+- 特定の仕様文書が既に分かっており、その本文だけを確認すればよいとき
+- 実装構造、テスト手順、開発環境など、対応する realization code・realization test・dev_rule の文書を直接読むべきとき
+- 一般的な Codex CLI、model provider、認証、推論品質など cmoc の正本仕様外の事項を調査するとき
 
 ## hash
-- 54b02fc5f1cd4487d1a77dca765892413fe9639e85d44dd949e365ba5e76d27e
+- 22d1f862e9753f1dc2d3fd865638ef972ee78cdd1e9f89268c38bf58fae51152
 
 # `branch_model.md`
 
@@ -56,19 +56,18 @@
 # `dev_rule`
 
 ## Summary
-- Python 実装のコーディング規則、CLI の設計・配置方針、開発環境の運用ルール、pytest による realization test 規約をまとめた開発ルール文書群。実装・テスト・環境設定に関する判断の入口。
+- cmoc の開発規約を扱うディレクトリ。Python コーディング、CLI の設計・実装配置、開発環境、pytest による realization test の規約を確認するための入口。各規約の詳細は用途に応じた個別文書で確認する。
 
 ## Read this when
-- cmoc の Python 実装方針、型ヒント、import、docstring、コメント、命名を確認するとき。
-- CLI のエントリーポイント、サブコマンド、共有モジュールの責務や配置を決めるとき。
-- Python、venv、依存関係、ファイル命名・エンコードなど開発環境のルールを確認するとき。
-- realization test の追加・変更・レビュー、実経路統合テストや GPU test の実行条件を確認するとき。
+- Python 実装の命名・責務・型ヒント・import・docstring・コメントを確認するとき。
+- CLI のエントリーポイント、サブコマンド、共有処理の配置方針を確認するとき。
+- Python/venv・依存関係・ファイル形式などの開発環境ルールを確認するとき。
+- pytest、実経路統合テスト、GPU test、cache、timeout などのテスト規約を確認するとき。
 
 ## Do not read this when
-- 個別機能や CLI の具体的な挙動・出力仕様を確認するときは、対象機能の oracle doc を直接読む。
-- 個別モジュールの実装詳細を確認するときは、その realization code を読む。
-- INDEX.md の読み方やルーティング方針自体を確認するときは、対応する routing 文書を読む。
-- 一般的な利用方法だけを確認する場合は、README などの利用者向け文書を優先する。
+- 個別機能や CLI の具体的な挙動・出力仕様を確認したいとき。
+- README だけで足りる一般的な利用方法を確認したいとき。
+- 既存の INDEX.md のルーティングだけを更新したいとき。
 
 ## hash
-- 17eeb3926e0e5d1fd2b71d2a19bc50fab24083ae35e7b5612a6c65e333d67346
+- a1c4a09fee986b0f4fd273d2cab6a7a54416595437dc16acddbcacc63cfcc4b7

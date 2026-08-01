@@ -170,8 +170,8 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.run_indexing_preflight is True
-    assert parameter.cwd == root.resolve()
-    assert kwargs["cwd"] == root
+    assert parameter.agent_call_cwd == root.resolve()
+    assert "cwd" not in kwargs
     assert kwargs["purpose"] == "oracle edit"
     prompt_suffix = " を読んで、その指示に従って下さい"
     assert parameter.prompt.endswith(prompt_suffix)

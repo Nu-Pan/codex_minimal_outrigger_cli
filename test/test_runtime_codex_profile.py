@@ -37,11 +37,12 @@ _SANDBOX_BY_MODE = {
 def _parameter(mode: FileAccessMode) -> AgentCallParameter:
     """指定modeの最小AgentCallParameterを作る。"""
     return AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        mode,
-        "prompt",
-        None,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=mode,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=Path.cwd(),
     )
 
 
@@ -117,11 +118,12 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
 
     args = build_codex_override_args(
         AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
+            model_class=ModelClass.MINIMUM,
+            reasoning_effort=ReasoningEffort.LOW,
+            file_access_mode=FileAccessMode.READONLY,
+            prompt="prompt",
+            structured_output_schema_path=None,
+            agent_call_cwd=Path.cwd(),
         ),
         config,
     )
@@ -160,11 +162,12 @@ def test_codex_overrides_leave_bare_toml_key_segments_unquoted() -> None:
 
     args = build_codex_override_args(
         AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
+            model_class=ModelClass.MINIMUM,
+            reasoning_effort=ReasoningEffort.LOW,
+            file_access_mode=FileAccessMode.READONLY,
+            prompt="prompt",
+            structured_output_schema_path=None,
+            agent_call_cwd=Path.cwd(),
         ),
         config,
     )
@@ -182,11 +185,12 @@ def test_codex_overrides_reject_undefined_selected_provider() -> None:
     with pytest.raises(CmocError, match="Codex model provider が未定義"):
         build_codex_override_args(
             AgentCallParameter(
-                ModelClass.MINIMUM,
-                ReasoningEffort.LOW,
-                FileAccessMode.READONLY,
-                "prompt",
-                None,
+                model_class=ModelClass.MINIMUM,
+                reasoning_effort=ReasoningEffort.LOW,
+                file_access_mode=FileAccessMode.READONLY,
+                prompt="prompt",
+                structured_output_schema_path=None,
+                agent_call_cwd=Path.cwd(),
             ),
             config,
         )

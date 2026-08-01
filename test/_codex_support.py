@@ -1,5 +1,4 @@
 import tomllib
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -40,20 +39,19 @@ def configure_codex_home_for_test_local_ollama(codex_home: Path) -> None:
 
 
 def codex_parameter(
-    mode: FileAccessMode = FileAccessMode.READONLY, *, cwd: Path | None = None
+    mode: FileAccessMode = FileAccessMode.READONLY,
+    *,
+    agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """runtime wrapper test で使う小さな既定 Codex parameter を作る。"""
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        mode,
-        "prompt",
-        None,
+    return AgentCallParameter(
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=mode,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=agent_call_cwd,
     )
-    if cwd is None:
-        return parameter
-    # {{work-root}}/oracle/src/oracle/acp_builder/basic.py
-    return replace(parameter, cwd=cwd)
 
 
 def codex_arg_value(args: list[str], flag: str) -> str | None:

@@ -112,7 +112,7 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "assert p.run_indexing_preflight; "
             "assert p.prompt == f'{log} を読んで、その指示に従って下さい'; "
             "assert 'oracle を編集する' in log.read_text(); "
-            "assert p.cwd == Path.cwd()"
+            "assert p.agent_call_cwd == Path.cwd()"
         ),
         tmp_path,
     )

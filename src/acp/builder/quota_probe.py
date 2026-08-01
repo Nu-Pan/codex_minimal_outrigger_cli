@@ -36,12 +36,12 @@ def build_quota_availability_probe_parameter(
         # 空 stdin により prompt を realization layer へコピーせず、optional oracle builder
         # を含まない package でも quota polling を実行可能にする。
         return AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "",
-            None,
+            model_class=ModelClass.MINIMUM,
+            reasoning_effort=ReasoningEffort.LOW,
+            file_access_mode=FileAccessMode.READONLY,
+            prompt="",
+            structured_output_schema_path=None,
+            agent_call_cwd=base_parameter.agent_call_cwd,
             run_indexing_preflight=False,
-            cwd=base_parameter.cwd,
         )
     return build_oracle_parameter(base_parameter)

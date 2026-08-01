@@ -5,12 +5,14 @@
 """
 
 from oracle.other.path_model import (
+    AgentCallPathContext,
     RootPathPlaceHolder,
     resolve_ph_path,
     resolve_real_path,
 )
 
 __all__ = [
+    "AgentCallPathContext",
     "RootPathPlaceHolder",
     "resolve_ph_path",
     "resolve_real_path",

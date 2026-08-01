@@ -74,7 +74,10 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
 
     run_codex_tui(
         replace(
-            codex_parameter(FileAccessMode.PURE_ORACLE_READ),
+            codex_parameter(
+                FileAccessMode.PURE_ORACLE_READ,
+                agent_call_cwd=root,
+            ),
             prompt=f"{prompt_path} を読んで、その指示に従って下さい",
             structured_output_schema_path=schema_path,
         ),
@@ -129,11 +132,10 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
 
     run_codex_tui(
         replace(
-            codex_parameter(FileAccessMode.REPO_WRITE),
+            codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=linked),
             prompt=f"{prompt_path} を読んで、その指示に従って下さい",
         ),
         root=root,
-        cwd=linked,
         config=CmocConfig(),
     )
 
@@ -168,7 +170,9 @@ def test_run_codex_tui_logs_successful_call(
     logger = SubcommandLogger(root, "test")
     token = set_current_subcommand_logger(logger)
     try:
-        result = run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+        result = run_codex_tui(
+            codex_parameter(agent_call_cwd=root), root=root, config=CmocConfig()
+        )
     finally:
         reset_current_subcommand_logger(token)
 
@@ -206,8 +210,8 @@ def test_run_codex_tui_keeps_call_logs_on_timestamp_collision(
     )
     monkeypatch.setattr(runtime_codex_tui, "timestamp", lambda: next(timestamps))
 
-    run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
-    run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+    run_codex_tui(codex_parameter(agent_call_cwd=root), root=root, config=CmocConfig())
+    run_codex_tui(codex_parameter(agent_call_cwd=root), root=root, config=CmocConfig())
 
     call_logs = sorted(_tui_call_logs(root))
     assert [path.name for path in call_logs] == [
@@ -240,7 +244,11 @@ def test_run_codex_tui_logs_missing_cli_failure(
     token = set_current_subcommand_logger(logger)
     try:
         with pytest.raises(CmocError, match="Codex CLI が見つかりません"):
-            run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+            run_codex_tui(
+                codex_parameter(agent_call_cwd=root),
+                root=root,
+                config=CmocConfig(),
+            )
     finally:
         reset_current_subcommand_logger(token)
 
@@ -277,7 +285,11 @@ def test_run_codex_tui_logs_keyboard_interrupt(
     token = set_current_subcommand_logger(logger)
     try:
         with pytest.raises(KeyboardInterrupt):
-            run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+            run_codex_tui(
+                codex_parameter(agent_call_cwd=root),
+                root=root,
+                config=CmocConfig(),
+            )
     finally:
         reset_current_subcommand_logger(token)
 
@@ -310,7 +322,11 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
     token = set_current_subcommand_logger(logger)
     try:
         with pytest.raises(CmocError, match="Codex CLI/TUI 呼び出しが失敗"):
-            run_codex_tui(codex_parameter(), root=root, config=CmocConfig())
+            run_codex_tui(
+                codex_parameter(agent_call_cwd=root),
+                root=root,
+                config=CmocConfig(),
+            )
     finally:
         reset_current_subcommand_logger(token)
 

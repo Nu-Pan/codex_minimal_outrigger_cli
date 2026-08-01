@@ -74,6 +74,7 @@ def test_run_codex_exec_retries_semantic_output(
         FileAccessMode.READONLY,
         "prompt",
         schema,
+        root,
     )
     logger = SubcommandLogger(root, "test")
 
@@ -138,6 +139,7 @@ def test_run_codex_exec_logs_keyboard_interrupt(
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
+                root,
             ),
             root=root,
             config=CmocConfig(),
@@ -207,6 +209,7 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
         FileAccessMode.READONLY,
         "prompt",
         schema,
+        root,
     )
     logger = SubcommandLogger(root, "test")
 
@@ -257,6 +260,7 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
+                root,
             ),
             root=root,
             config=CmocConfig(),
@@ -304,6 +308,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
     logger = SubcommandLogger(root, "test")
 
@@ -381,6 +386,7 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
+                root,
             ),
             root=root,
             config=CmocConfig(),
@@ -439,6 +445,7 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
             FileAccessMode.REALIZATION_WRITE,
             "prompt",
             None,
+            root,
         ),
         root=root,
         capacity_initial_sleep_sec=0,
@@ -469,6 +476,7 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
     cases = [
         (
@@ -605,6 +613,7 @@ def test_run_codex_exec_stops_after_retry_limit(
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
+                root,
             ),
             root=root,
             config=CmocConfig(),

@@ -17,19 +17,21 @@
 # `file_access_rule.py`
 
 ## Summary
-- ファイルアクセスモードとパスコンテキストから、エージェント向けの読み書き禁止規則とプレースホルダー定義を構築する。READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE、NO_RULE の各モードを扱う。
+- ファイルアクセスモードに応じた、AI エージェント向けの読み書き禁止規則を構築する。リポジトリ外、管理対象ディレクトリ、AGENTS.md・INDEX.md・memo、oracle file・realization file などのアクセス制約をモード別に組み立てる。
+- ファイルアクセス規則の文面とプレースホルダー定義を生成する責務を持つ。アクセス権限の実行環境設定そのものではなく、プロンプトに使用する規則文面の入口である。
 
 ## Read this when
-- エージェントのファイル読み書き規則を生成・変更・検証するとき
-- モードごとの oracle file、realization file、リポジトリ内特殊ディレクトリへのアクセス制約を確認するとき
-- repo-root と work-root に応じたパスプレースホルダーの扱いを確認するとき
+- AI エージェントのファイル読み書き規則を変更・確認するとき
+- FileAccessMode ごとの oracle file・realization file のアクセス制約や、パスプレースホルダーの生成を調べるとき
+- リポジトリ外アクセスや .git・.agents・.codex・.cmoc・memo への制約文面を調べるとき
 
 ## Do not read this when
-- 具体的な CLI 機能や oracle・realization の実装責務を調べるとき
-- 生成されたプロンプト全体の構造や、ファイルアクセス規則以外の prompt builder 部品を調べるとき
+- 特定のサブコマンドや機能の実装責務を調べるとき
+- Codex CLI の sandbox 設定や実行権限の正本仕様を調べるときは、対応する oracle 文書を先に確認する
+- INDEX.md の生成・更新処理そのものを調べるとき
 
 ## hash
-- e2d87e025e986d6b9e4526b4295e09453728f07095a6f187d663b4004cb92429
+- 16cc4569cb6d50750e5f0012d24a558b04cf8ffd01192ef3e51498a4e005b8f9
 
 # `index_entry_standard.py`
 

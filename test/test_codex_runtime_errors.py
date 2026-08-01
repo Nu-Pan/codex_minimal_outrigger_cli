@@ -90,7 +90,7 @@ def test_codex_runtime_rejects_non_object_jsonl_event(
 
     with pytest.raises(CmocError) as exc_info:
         run_codex_exec(
-            codex_parameter(),
+            codex_parameter(agent_call_cwd=root),
             root=root,
             capacity_initial_sleep_sec=0,
             config=CmocConfig(),
@@ -125,7 +125,7 @@ def test_codex_runtime_rejects_invalid_jsonl_with_zero_returncode_and_valid_outp
 
     with pytest.raises(CmocError) as exc_info:
         run_codex_exec(
-            codex_parameter(),
+            codex_parameter(agent_call_cwd=root),
             root=root,
             capacity_initial_sleep_sec=0,
             config=CmocConfig(),
@@ -160,7 +160,7 @@ def test_codex_runtime_reports_missing_codex_cli(
     try:
         with pytest.raises(CmocError, match="Codex CLI が見つかりません"):
             run_codex_exec(
-                codex_parameter(),
+                codex_parameter(agent_call_cwd=root),
                 root=root,
                 capacity_initial_sleep_sec=0,
                 config=CmocConfig(),

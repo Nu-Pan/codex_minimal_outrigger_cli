@@ -1,15 +1,15 @@
 # `fork`
 
 ## Summary
-- Oracle の変更差分を埋め込んだ realization 追従用の完全 prompt と AgentCallParameter を構築する。linked worktree、commit 範囲、realization write 権限、モデル設定、事前 indexing を含む agent call の起動設定を担う。
+- `cmoc realization apply fork` 実行時に、oracle の変更を realization file 全体へ反映するための `codex exec` 用 AgentCallParameter を構築する正本コード。prompt、権限、差分、実行用 worktree、モデル設定を組み立てる入口。
 
 ## Read this when
-- oracle file の変更を realization implementation・test・ancillary 全体へ反映する agent call の起動条件や prompt を変更するとき。
-- realization apply fork の実行 cwd、差分情報、権限、モデル・推論設定を確認するとき。
+- `cmoc realization apply fork` の AgentCallParameter 生成、prompt 構成、oracle 差分の渡し方、実行用 worktree や commit 範囲を変更・検証するとき。
 
 ## Do not read this when
-- 通常の realization 実装やテストの内容を変更するとき。
-- oracle の仕様や共通 prompt 構築処理を確認するときは、対応する oracle file や prompt builder を直接読む。
+- 通常の realization 実装・テストを調査するとき。
+- `cmoc realization apply fork` 以外の agent call 起動処理を調査するとき。
+- oracle 変更に追従する realization 実装そのものを調査するとき。
 
 ## hash
-- 2f2df60b09b88d45b02e29970cd4304b79fedbe954701daf164b03a64414e47d
+- df0ac058f0b1345005f75f1387a66622bc7d4f7f051302ff227b8bdeaa3e8b0d

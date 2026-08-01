@@ -37,15 +37,17 @@
 # `refactor`
 
 ## Summary
-- realization refactor の builder adapter パッケージ。refactor 処理に関する builder 実装へ進む入口で、fork 配下に専用の接続・再公開実装がある。
+- realization refactor における builder adapter パッケージ。refactor 処理の builder 関連実装へ進む入口。
+- fork 用 builder adapter を提供し、change summary と file review and fix の builder 接続・再公開を扱う。
 
 ## Read this when
 - realization refactor の builder adapter の責務や実装入口を確認するとき。
-- fork 側の change summary や file review and fix に関する builder 接続を調査するとき。
+- fork の builder adapter、または change summary・file review and fix の agent call parameter builder の接続や公開 API を変更・調査するとき。
 
 ## Do not read this when
 - builder adapter 以外の refactor 処理を確認するとき。
 - fork 以外の builder 実装を調査するとき。
+- 正本 builder の parameter 定義・JSON 定義、prompt fence 共通処理を確認・変更するとき。
 
 ## hash
-- 418124a68c32e7db4e47360041c5ab69b5e533b7e174b395951a6ff3f999cdbe
+- 919e1c2f18330e415fd3ed57b7b0a2db49f15d291b83fdcafcf4e84b343aa516

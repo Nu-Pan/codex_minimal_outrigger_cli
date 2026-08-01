@@ -83,8 +83,8 @@ def _assert_review_call_context(
     """
     assert Path.cwd() == review_worktree
     assert kwargs["root"] == repo_root
-    assert kwargs["cwd"] == review_worktree
-    assert parameter.cwd == review_worktree
+    assert "cwd" not in kwargs
+    assert parameter.agent_call_cwd == review_worktree
 
 
 def test_oracle_review_enumerate_receives_only_related_findings(

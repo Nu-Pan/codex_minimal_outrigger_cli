@@ -15,6 +15,7 @@ from oracle.acp_builder.oracle.review.enumerate_finding import (
 )
 
 from basic.acp import AgentCallParameter as _AgentCallParameter
+from basic.path_model import AgentCallPathContext as _AgentCallPathContext
 from basic.path_model import resolve_real_path as _resolve_real_path
 
 from ...common.prompt_fence import _protect_code_block_fence
@@ -26,15 +27,16 @@ def build_oracle_review_enumerate_finding_parameter(
 ) -> _AgentCallParameter:
     """canonical builder の parameter を再公開し、動的所見の fence を保護する。"""
     parameter = _build_enumerate_parameter(oracle_path, related_findings)
+    path_context = _AgentCallPathContext(parameter.agent_call_cwd)
     prompt = parameter.prompt
     lexical_path = oracle_path
     if not lexical_path.is_absolute():
         # canonical builder が受け付ける placeholder path も実体へ移してから
         # symlink を検査する。placeholder 自体を Path API で検査すると、常に
         # 文字通りの相対 path として扱われて symlink entry を見失う。
-        lexical_path = _resolve_real_path(_Path(lexical_path.parts[0])) / _Path(
-            *lexical_path.parts[1:]
-        )
+        lexical_path = _resolve_real_path(
+            _Path(lexical_path.parts[0]), path_context
+        ) / _Path(*lexical_path.parts[1:])
     if lexical_path.is_symlink():
         # oracle file の所属は repository path で決まり、link 先ではない。
         # canonical builder の resolve は link 先を埋め込むため、対象 entry を

@@ -15,34 +15,34 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装と、`cmoc realization apply fork` の CLI 実行処理を確認する入口となる。
+- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装を確認する入口であり、fork サブコマンドの実行制御を含む。
 
 ## Read this when
-- realization の apply workload の内容を調査・変更するとき
-- `cmoc realization apply fork` の動作、例外処理、run state、fork report、差分検査、commit 処理を調査・変更するとき
+- realization の apply workload の内容を調査・変更するとき。
+- `cmoc realization apply fork` の実行フロー、成功時の joinable 化、fork report、差分検査、rollback、cleanup の挙動を確認するとき。
 
 ## Do not read this when
-- apply workload 以外の処理を扱うとき
-- Codex builder の launch parameter だけを確認したいとき
-- run lifecycle の共通仕様や process tracking の共通実装だけを確認したいとき
-- `realization apply` 以外のサブコマンドの CLI 実装を調査するとき
+- apply workload 以外の処理を扱うとき。
+- launch parameter の構築詳細だけを確認したいときは、`acp.builder.realization.apply.fork.launch_exec` を直接読む。
+- 編集 run の共通ライフサイクル API や fork report の共通フォーマットだけを確認したいときは、対応する共通モジュールや oracle 文書を直接読む。
 
 ## hash
-- 7123c72962aa3ce39b992061670779f554386532236de746f708fa03552b8d4e
+- e2c0db34d7b078e689b1736295ce767c5ba9cca7511bc999910f271298cbdc8c
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を提供するパッケージ。リファクタリング作業全体の入口と、fork 実行の進捗・状態管理を担う。
-- fork 実行では、run 初期化、INDEX と refactor state の同期、realization file ごとの agent 調査・修正、差分・commit 検証、unresolved 所見の追跡、完了判定、レポート保存までを扱う。
+- realization のリファクタリング処理を扱うパッケージ。fork の CLI 実行ライフサイクルと、関連するリファクタリング処理への入口を提供する。
 
 ## Read this when
-- realization refactor の処理フロー、実行状態、処理単位の commit、unresolved 管理、完了条件、fork report の挙動を調査・変更するとき。
-- agent の差分・commit・evidence path の検証、割り込み・エラー時の rollback と cleanup を確認するとき。
+- realization refactor の処理構成や fork の実行ライフサイクルを確認するとき
+- run 初期化、対象 file 選択、agent call、差分検証、commit、state・report 管理を調査するとき
+- 中断・例外時の停止、rollback、完了判定を調査するとき
 
 ## Do not read this when
-- realization refactor の agent prompt や Structured Output の構築だけを変更するとき。
-- run 共通ライフサイクル、差分分類、process tracking、report 生成の汎用仕様だけを調査・変更するとき。
+- realization refactor の state 同期や target 選択の共通実装を調査するとき
+- agent 入力 parameter や change summary の構築を調査するとき
+- 一般的な run lifecycle や report 表示の共通仕様を確認するとき
 
 ## hash
-- 3d7d99484de970c64c86246762bc0a3efe5fb65c0a7e36c788b24baff3d4e8ca
+- 581f980f2e2f64e6d839cc68b4ad2eab8a849e056194ec36014da63b4ecbedb8

@@ -51,11 +51,12 @@ def test_command_codex_call_runs_indexing_preflight(
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.READONLY,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=root,
     )
     events: list[str] = []
 
@@ -102,21 +103,22 @@ def test_command_codex_call_runs_indexing_preflight(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
-def test_command_codex_call_indexes_cwd_worktree_before_root(
+def test_command_codex_call_indexes_agent_call_worktree_before_log_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """cwd が linked worktree 内なら、その worktree だけを indexing することを検証する。"""
+    """agent call が linked worktree 内なら、その worktree だけを indexing する。"""
 
     root = make_repo(tmp_path)
     worktree = tmp_path / "codex-worktree"
     run_git(root, "worktree", "add", "-b", "codex-work", str(worktree))
     codex_cwd = worktree / "oracle"
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.READONLY,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=codex_cwd,
     )
     events: list[str] = []
 
@@ -139,11 +141,11 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
     def fake_runtime_run_codex_exec(
         call_parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
-        """元の root と cwd を保持した Codex exec 呼び出しを検証する fake。"""
+        """log root を保持した Codex exec 呼び出しを検証する fake。"""
 
         events.append("codex")
         assert kwargs["root"] == root
-        assert kwargs["cwd"] == codex_cwd
+        assert call_parameter.agent_call_cwd == codex_cwd
         return FakeCodexResult()
 
     indexing_module.enable_indexing_preflight()
@@ -155,7 +157,6 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
     result = codex_preflight_module.run_codex_exec(
         parameter,
         root=root,
-        cwd=codex_cwd,
         purpose="oracle review enumerate findings",
     )
 
@@ -177,11 +178,12 @@ def test_command_tui_codex_call_runs_indexing_preflight(
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.READONLY,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=root,
     )
     events: list[str] = []
 
@@ -309,12 +311,13 @@ def test_command_codex_call_skips_indexing_when_parameter_disables_preflight(
 
     root = make_repo(tmp_path)
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-        False,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.READONLY,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=root,
+        run_indexing_preflight=False,
     )
     calls: list[str] = []
 
@@ -388,11 +391,12 @@ def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
     index_path = root / "INDEX.md"
     events: list[Path] = []
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.REALIZATION_WRITE,
-        "prompt",
-        None,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=root,
     )
 
     def fake_update_indexes(

@@ -50,16 +50,15 @@
 # `review`
 
 ## Summary
-- `cmoc oracle review` builder の realization adapter 群を収めるディレクトリ。finding の列挙・判定・統合・妥当性検証に関する canonical builder の再公開と、prompt fence 保護や oracle path 補正などの互換処理への入口を提供する。
+- `cmoc oracle review` builder の realization adapter 群をまとめたパッケージ。finding の列挙・判断・統合・妥当性検証・反証検証に使う canonical builder への互換入口を提供し、動的なレビュー内容の prompt fence 保護や oracle path の補正を扱う。各下位ファイルは個別の builder adapter とその移行・互換処理を確認するための入口。
 
 ## Read this when
-- `cmoc oracle review` の finding 関連 parameter builder の caller、互換 adapter、移行状況を確認するとき
-- finding や既知理由などの動的内容を prompt に埋め込む際の fence 保護を変更するとき
-- symlink 使用時の oracle path 表現や oracle root placeholder の補正処理を確認するとき
+- `cmoc oracle review` builder の realization adapter の責務や、finding 関連 agent call parameter の生成・互換 import を調査または変更するとき。
+- finding、既知の賛否理由、動的レビューセクションの prompt 埋め込み保護、symlink 経由の oracle path 補正を確認するとき。
 
 ## Do not read this when
-- canonical builder の正本仕様・実装や prompt 本文を確認したいとき
-- oracle review 以外の builder、CLI 実装、共通 prompt fence 処理だけを調査するとき
+- oracle review の正本仕様や canonical builder の prompt 本文・実装を確認するとき。
+- builder 以外の CLI 実装、共通 prompt fence 実装、または oracle review と無関係な処理を調査するとき。
 
 ## hash
-- ebbfebc8f1c704d1aee6e19b9d5d066142e68616f551f1ad1bb471ab94ca9714
+- 2cd1ae892cf03fb26908d4663d01832d93c953173f1bad99a062d2da2396c860

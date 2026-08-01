@@ -1,6 +1,5 @@
 # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 import json
-from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
@@ -133,14 +132,10 @@ def resolve_session_join_conflict(
         )
     start_subcommand_step("3/4, 2/5", "conflict marker 解消を依頼", "resolve conflicts")
     codex_exec(
-        replace(
-            build_session_join_conflict_resolution_parameter(conflicted_paths),
-            cwd=root,
-        ),
+        build_session_join_conflict_resolution_parameter(conflicted_paths),
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md:
         # Codex がこの worktree を編集しても config/log は repo-root に残す。
         root=repo_root(root),
-        cwd=root,
         purpose="session join conflict resolution",
     )
     start_subcommand_step(

@@ -10,7 +10,7 @@ retry、interrupt 時の部分保存は同じ review loop 状態を共有する�
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 import json
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
@@ -137,21 +137,17 @@ def _run_oracle_review_loop(
         )
         for oracle_path in sorted(dirty_files):
             result = codex_exec(
-                replace(
-                    build_oracle_review_enumerate_finding_parameter(
-                        oracle_path,
-                        json.dumps(
-                            _findings_related_to_oracle_path(
-                                findings, oracle_path, worktree, log_root
-                            ),
-                            ensure_ascii=False,
-                            indent=2,
+                build_oracle_review_enumerate_finding_parameter(
+                    oracle_path,
+                    json.dumps(
+                        _findings_related_to_oracle_path(
+                            findings, oracle_path, worktree, log_root
                         ),
+                        ensure_ascii=False,
+                        indent=2,
                     ),
-                    cwd=worktree,
                 ),
                 root=log_root,
-                cwd=worktree,
                 config=config,
                 purpose=f"oracle review enumerate findings for {oracle_path}",
             )
@@ -250,16 +246,12 @@ def _validate_and_judge_findings(
             )
             finding_text = json.dumps(finding, ensure_ascii=False, indent=2)
             challenger = codex_exec(
-                replace(
-                    build_oracle_review_validate_finding_challenger_parameter(
-                        finding_text,
-                        "\n".join(finding["advocate_reasons"]),
-                        "\n".join(finding["challenger_reasons"]),
-                    ),
-                    cwd=worktree,
+                build_oracle_review_validate_finding_challenger_parameter(
+                    finding_text,
+                    "\n".join(finding["advocate_reasons"]),
+                    "\n".join(finding["challenger_reasons"]),
                 ),
                 root=log_root,
-                cwd=worktree,
                 config=config,
                 purpose=f"oracle review validate challenger {finding['finding_id']}",
             ).output_json
@@ -275,16 +267,12 @@ def _validate_and_judge_findings(
                 "advocate finding",
             )
             advocate = codex_exec(
-                replace(
-                    build_oracle_review_validate_finding_advocate_parameter(
-                        finding_text,
-                        "\n".join(finding["advocate_reasons"]),
-                        "\n".join(finding["challenger_reasons"]),
-                    ),
-                    cwd=worktree,
+                build_oracle_review_validate_finding_advocate_parameter(
+                    finding_text,
+                    "\n".join(finding["advocate_reasons"]),
+                    "\n".join(finding["challenger_reasons"]),
                 ),
                 root=log_root,
-                cwd=worktree,
                 config=config,
                 purpose=f"oracle review validate advocate {finding['finding_id']}",
             ).output_json
@@ -296,16 +284,12 @@ def _validate_and_judge_findings(
     _report_step(step_callback, 6, "所見を採用・不採用判定", "judge findings")
     for finding in findings:
         judge = codex_exec(
-            replace(
-                build_oracle_review_judge_finding_parameter(
-                    json.dumps(finding, ensure_ascii=False, indent=2),
-                    "\n".join(finding["advocate_reasons"]),
-                    "\n".join(finding["challenger_reasons"]),
-                ),
-                cwd=worktree,
+            build_oracle_review_judge_finding_parameter(
+                json.dumps(finding, ensure_ascii=False, indent=2),
+                "\n".join(finding["advocate_reasons"]),
+                "\n".join(finding["challenger_reasons"]),
             ),
             root=log_root,
-            cwd=worktree,
             config=config,
             purpose=f"oracle review judge finding {finding['finding_id']}",
         ).output_json
@@ -334,14 +318,10 @@ def _merge_findings_with_semantic_retry(
     last_error: ValueError | None = None
     for _ in range(_MAX_MERGE_FINDING_SEMANTIC_RETRIES + 1):
         operations = codex_exec(
-            replace(
-                build_oracle_review_merge_finding_parameter(
-                    json.dumps(findings, ensure_ascii=False, indent=2)
-                ),
-                cwd=worktree,
+            build_oracle_review_merge_finding_parameter(
+                json.dumps(findings, ensure_ascii=False, indent=2)
             ),
             root=log_root,
-            cwd=worktree,
             config=config,
             purpose="oracle review merge findings",
         ).output_json

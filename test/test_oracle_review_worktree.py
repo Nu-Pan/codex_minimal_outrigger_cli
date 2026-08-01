@@ -67,6 +67,15 @@ def _schema_name(parameter: AgentCallParameter) -> str:
     return schema_path.name
 
 
+def _review_worktree_from_enumeration(kwargs: dict[str, object]) -> Path:
+    """enumeration purpose に含まれる oracle path から隔離 worktree を得る。"""
+    prefix = "oracle review enumerate findings for "
+    purpose = str(kwargs["purpose"])
+    if not purpose.startswith(prefix):
+        raise AssertionError(purpose)
+    return Path(purpose.removeprefix(prefix)).parent.parent
+
+
 def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -90,17 +99,17 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     )
     session_head = run_git(linked, "rev-parse", "HEAD").stdout.strip()
     calls: list[str] = []
-    review_worktrees: list[Path] = []
+    agent_call_cwds: list[Path] = []
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> _FakeCodexResult:
-        """finding 列挙の応答と review worktree を記録する。
+        """finding 列挙の応答と agent call cwd を記録する。
 
         根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md。
         """
 
-        review_worktrees.append(Path.cwd())
+        agent_call_cwds.append(parameter.agent_call_cwd)
         calls.append(str(kwargs["purpose"]))
         schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
@@ -127,11 +136,9 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     assert "`oracle/linked.md`" in rendered
     branch = run_git(linked, "branch", "--show-current").stdout.strip()
     assert branch.startswith("cmoc/session/")
-    session_id = branch.removeprefix("cmoc/session/")
-    assert review_worktrees
-    for review_worktree in review_worktrees:
-        assert review_worktree.parent == root / ".cmoc" / "gu" / "worktree" / session_id
-        assert not review_worktree.is_relative_to(linked)
+    assert agent_call_cwds
+    assert set(agent_call_cwds) == {root}
+    assert Path.cwd() == linked
     assert any("linked.md" in call for call in calls)
 
 
@@ -216,13 +223,13 @@ def test_oracle_review_retries_run_target_collision(
     )
     target_ids = iter([collision_id, "2026-07-28_00-00-00_000000001"])
     monkeypatch.setattr(lifecycle_module, "timestamp", lambda: next(target_ids))
-    review_worktrees: list[Path] = []
+    agent_call_cwds: list[Path] = []
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> _FakeCodexResult:
-        """review の構造化出力を空にし、衝突後の worktree を記録する。"""
-        review_worktrees.append(Path.cwd())
+        """review の構造化出力を空にし、agent call cwd を記録する。"""
+        agent_call_cwds.append(parameter.agent_call_cwd)
         assert _schema_name(parameter) == "enumerate_finding.json"
         return _FakeCodexResult({"findings": []})
 
@@ -235,8 +242,8 @@ def test_oracle_review_retries_run_target_collision(
     assert result.exit_code == 0, result.output
     assert collision_worktree.exists()
     assert run_git(root, "branch", "--list", collision_branch).stdout.strip()
-    assert review_worktrees
-    assert all(path != collision_worktree for path in review_worktrees)
+    assert agent_call_cwds
+    assert set(agent_call_cwds) == {root}
 
 
 def test_oracle_review_does_not_cleanup_preexisting_target_after_create_failure(
@@ -517,7 +524,8 @@ def test_oracle_review_serializes_merge_and_cleanup_with_run_lifecycle(
     ) -> _FakeCodexResult:
         """finding 列挙を空結果にして lifecycle の直列化だけを検証する。"""
         assert _schema_name(parameter) == "enumerate_finding.json"
-        (Path.cwd() / "INDEX.md").write_text("# generated review index\n")
+        review_worktree = _review_worktree_from_enumeration(kwargs)
+        (review_worktree / "INDEX.md").write_text("# generated review index\n")
         return _FakeCodexResult({"findings": []})
 
     monkeypatch.setattr(review_module, "run_lifecycle_lock", tracked_lock)
@@ -688,10 +696,11 @@ def test_oracle_review_merges_review_index_changes(
         {{work-root}}/oracle/doc/app_spec/indexing.md。
         """
 
-        review_worktrees.append(Path.cwd())
+        review_worktree = _review_worktree_from_enumeration(kwargs)
+        review_worktrees.append(review_worktree)
         schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
-            (Path.cwd() / "INDEX.md").write_text("# generated review index\n")
+            (review_worktree / "INDEX.md").write_text("# generated review index\n")
             return _FakeCodexResult({"findings": []})
         if schema_name in {
             "validate_finding_challenger.json",
@@ -724,10 +733,10 @@ def test_oracle_review_merges_review_index_changes(
     assert all(not path.exists() and not path.is_symlink() for path in review_worktrees)
 
 
-def test_oracle_review_merges_preflight_committed_index_changes(
+def test_oracle_review_preflight_uses_main_worktree_path_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """preflight が review worktree にコミットした INDEX.md を統合する。
+    """review agent call の preflight は canonical main worktree context を使う。
 
     根拠: {{work-root}}/oracle/doc/app_spec/run_isolation.md、
     {{work-root}}/oracle/doc/app_spec/indexing.md。
@@ -778,15 +787,15 @@ def test_oracle_review_merges_preflight_committed_index_changes(
 
     assert result.exit_code == 0
     assert (root / "INDEX.md").read_text() == "# preflight review index\n"
-    assert review_worktrees and all(path != root for path in review_worktrees)
+    assert review_worktrees and set(review_worktrees) == {root}
     assert (
         run_git(root, "log", "--first-parent", "-1", "--pretty=%s").stdout.strip()
-        != "cmoc indexing"
+        == "cmoc indexing"
     )
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "run_join_commit: null" not in rendered
+    assert "run_join_commit: null" in rendered
 
 
 @pytest.mark.parametrize("index_relative_path", ["INDEX.md", "日本語[1]/INDEX.md"])
@@ -1025,12 +1034,13 @@ def test_oracle_review_rejects_non_index_worktree_changes(
 
         schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
+            review_worktree = _review_worktree_from_enumeration(kwargs)
             if change_kind == "untracked":
-                (Path.cwd() / "generated.txt").write_text("unexpected\n")
+                (review_worktree / "generated.txt").write_text("unexpected\n")
             else:
-                (Path.cwd() / "README.md").write_text("unexpected\n")
+                (review_worktree / "README.md").write_text("unexpected\n")
                 if change_kind == "staged":
-                    run_git(Path.cwd(), "add", "README.md")
+                    run_git(review_worktree, "add", "README.md")
             return _FakeCodexResult({"findings": []})
         raise AssertionError(schema_name)
 

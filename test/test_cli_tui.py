@@ -225,7 +225,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """linked worktree でも complete prompt を repository 側へ保存する。"""
+    """linked worktree 起動でも prompt と agent call context は main 側に置く。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -280,8 +280,10 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
 
     assert result.exit_code == 0
     assert len(tui_calls) == 1
-    assert tui_calls[0][1]["root"] == root.resolve()
-    assert tui_calls[0][1]["cwd"] == linked.resolve()
+    parameter, tui_kwargs = tui_calls[0]
+    assert tui_kwargs["root"] == root.resolve()
+    assert "cwd" not in tui_kwargs
+    assert parameter.agent_call_cwd == root.resolve()
     assert (
         len(
             list(
@@ -299,11 +301,11 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
         (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
     assert len(complete_files) == 1
-    assert str(complete_files[0]) in tui_calls[0][0].prompt
-    assert "extra_read_paths" not in tui_calls[0][1]
+    assert str(complete_files[0]) in parameter.prompt
+    assert "extra_read_paths" not in tui_kwargs
     recorded = json.loads(recorder.read_text())
     schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
-    assert recorded["cwd"] == str(linked)
+    assert recorded["cwd"] == str(root)
     assert Path(schema_arg).parent == root / ".cmoc" / "gu" / "ar" / "schema"
     assert not (linked / ".cmoc" / "gu" / "ar" / "schema").exists()
 

@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 
 from basic.acp import AgentCallParameter
+from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
 
 from .runtime_codex_logging import (
@@ -12,7 +13,6 @@ from .runtime_codex_logging import (
 )
 from .runtime_codex_profile import (
     codex_subprocess_env,
-    parameter_codex_cwd,
     prepare_codex_override_args,
     resolve_codex_home,
     run_codex_subprocess,
@@ -24,9 +24,7 @@ from .runtime_logging import current_subcommand_logger
 from .runtime_paths import (
     _reserve_timestamped_path,
     codex_log_dir,
-    repo_root,
     timestamp,
-    work_root,
 )
 from .runtime_results import CommandResult
 
@@ -35,22 +33,20 @@ def run_codex_tui(
     parameter: AgentCallParameter,
     *,
     root: Path | None = None,
-    cwd: Path | None = None,
     config: CmocConfig | None = None,
     purpose: str = "codex tui",
 ) -> CommandResult:
     """Codex TUI を設定上書き argv と call log を準備して起動する。"""
-    root = root or repo_root()
-    cwd = cwd or root
-    codex_work_root = work_root(cwd)
-    config = config or load_config(codex_work_root)
+    path_context = AgentCallPathContext(parameter.agent_call_cwd)
+    root = root or path_context.repo_root
+    config = config or load_config(path_context.work_root)
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
-    codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
+    agent_call_cwd = path_context.agent_call_cwd
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # 利用者指定の env value は変更せず、Codex が相対 CODEX_HOME を解決する場所に
     # validation を合わせる。
-    codex_home = resolve_codex_home(codex_cwd)
+    codex_home = resolve_codex_home(agent_call_cwd)
     validate_codex_home(codex_home)
     override_args = prepare_codex_override_args(
         parameter,
@@ -60,7 +56,7 @@ def run_codex_tui(
         "codex",
         *override_args,
         "--cd",
-        str(codex_cwd),
+        str(agent_call_cwd),
         parameter.prompt,
     ]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -75,7 +71,7 @@ def run_codex_tui(
                 "model_class": parameter.model_class.value,
                 "reasoning_effort": parameter.reasoning_effort.value,
                 "file_access_mode": parameter.file_access_mode.value,
-                "cwd": str(codex_cwd),
+                "cwd": str(agent_call_cwd),
             },
             ensure_ascii=False,
             indent=2,
@@ -89,7 +85,7 @@ def run_codex_tui(
     try:
         result = run_codex_subprocess(
             argv,
-            cwd=codex_cwd,
+            cwd=agent_call_cwd,
             env=codex_subprocess_env(codex_home),
             check=True,
         )

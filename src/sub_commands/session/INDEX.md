@@ -44,15 +44,17 @@
 # `join.py`
 
 ## Summary
-- session branch を home branch へ merge し、必要に応じて Codex CLI に merge conflict 解消を依頼する session join の CLI 実装。事前条件確認、conflict 対応、merge 後の状態更新、session branch 削除、安全性警告、結果表示を扱う。
+- `session join` サブコマンドの実装。active な session branch の事前条件を確認し、session home branch へ merge した後、状態更新・branch 削除・結果表示までを担当する。merge conflict 発生時の Codex CLI による解消、NUL 区切りの conflict 対象取得、conflict marker 検査も含む。
 
 ## Read this when
-- session join の事前条件、merge、conflict 解消、merge 完了処理、session branch 削除、結果表示を変更・調査するとき。
-- Git の unmerged path や conflict marker の検出、NUL framing、Codex CLI の実行コンテキストを確認するとき。
+- `cmoc session join` の挙動、事前条件、merge・conflict 解消・後始末を変更または調査するとき
+- session branch の削除条件、state 更新、エラー出力先、結果表示を確認するとき
+- session join に関する Git 操作や conflict marker のテストを追加・修正するとき
 
 ## Do not read this when
-- session join 以外の session サブコマンドの挙動だけを調査するとき。
-- conflict resolution parameter の生成仕様だけを確認する場合は、専用の conflict resolution 実装を直接読む。
+- session の作成・実行・終了など、`session join` 以外のサブコマンドだけを扱うとき
+- session join の conflict 解消パラメータ生成自体を変更するときは、conflict resolution builder の実装を直接読む
+- 共通の Git 実行、state 管理、CLI ランタイムの仕様だけを確認するときは、対応する共通モジュールや oracle 文書を直接読む
 
 ## hash
-- 2ce0e70c7995d370def7ddf0c590650e3d76a7f63306d18629dcf3481c04f98d
+- e976577e9c3747cad1e6bcc24ebed882043e694a422fde579860926a11e76528
