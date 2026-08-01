@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -15,7 +16,13 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _git_support import make_repo
-from _ollama_support import TEST_SLM_MODEL, local_ollama, use_test_local_ollama
+from _ollama_support import (
+    TEST_OLLAMA_CACHE_ENV,
+    TEST_SLM_MODEL,
+    _run_pytest,
+    local_ollama,
+    use_test_local_ollama,
+)
 from oracle.other.cmoc_config import CodexModelProviderConfig, CodexModelSpec
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
@@ -24,6 +31,33 @@ from commons.runtime_codex_profile import prepare_codex_override_args
 from config.cmoc_config import CmocConfig
 
 _REAL_CODEX = shutil.which("codex")
+
+
+def test_pytest_runner_separates_run_tmpdir_from_ollama_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """pytest の run-local temp を保ち、半永続 cache だけを分離する。"""
+    # pytest だけに適用する run-local temporary directory を再現する。
+    run_temporary_directory = tmp_path / "run"
+    run_temporary_directory.mkdir()
+    monkeypatch.setenv("TMPDIR", str(run_temporary_directory))
+    monkeypatch.delenv(TEST_OLLAMA_CACHE_ENV, raising=False)
+
+    def intercept_execve(
+        executable: str, args: list[str], environment: dict[str, str]
+    ) -> None:
+        # process 置換直前の argv と environment を runner の外部契約として確認する。
+        assert executable == sys.executable
+        assert args == [sys.executable, "-m", "pytest", "test/example.py", "-ra"]
+        assert environment["TMPDIR"] == str(run_temporary_directory)
+        cache_root = Path(environment[TEST_OLLAMA_CACHE_ENV])
+        assert cache_root.is_absolute()
+        assert not cache_root.is_relative_to(run_temporary_directory)
+        raise RuntimeError("execve intercepted")
+
+    monkeypatch.setattr(os, "execve", intercept_execve)
+    with pytest.raises(RuntimeError, match="execve intercepted"):
+        _run_pytest(["test/example.py", "-ra"])
 
 
 def test_setup_codex_home_isolates_home_and_codex_home(

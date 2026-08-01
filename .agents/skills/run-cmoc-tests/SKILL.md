@@ -1,60 +1,126 @@
 ---
 name: run-cmoc-tests
-description: cmoc リポジトリ固有のテスト実行環境を準備し、focused test、full pytest、Ruff、mypy の対象を選び、通常の検査は sandbox 内、GPU integration test だけは限定した sandbox escalation で検証する。cmoc の実装・テスト変更後にテストや品質検査を実行するとき、test-local Ollama cache を維持したまま pytest の一時領域を隔離するとき、または cmoc のテスト失敗を再現・診断するときに使用する。
+description: cmoc リポジトリで、既存の Python 環境と test helper を使って focused test、full pytest、Ruff、mypy を選択・実行・報告する。cmoc の implementation・test 変更後、品質検査、test failure の再現、または test-local Ollama cache を維持した実行に使用する。通常の検査は sandbox 内、GPU integration test だけは限定した command 単位 sandbox escalation で実行する。
 ---
 
 # cmoc のテストと品質検査を実行する
 
-## 正本と責務を確認する
+## 責務を限定する
 
-- 最初に `oracle/doc/dev_rule/development_environment.md` と `oracle/doc/dev_rule/test_rule.md` を読む。
-- Python 共通の品質ゲートには `python-dev-skill` を併用し、その skill を編集しない。
-- テストの正しさ、test-local Ollama、cache、timeout、および backend の要件は oracle file を正本とする。この skill から要件を補完または変更しない。
-- この skill では cmoc 固有の実行対象、一時領域の準備、および実行時アクセスだけを扱う。
+- この skill は、構築済みのサポート対象開発環境で検査対象を選択し、command を実行して結果を報告する。
+- Python 共通の品質ゲートには `python-dev-skill` を併用する。この skill に共通規則を複製しない。
+- 通常の検査実行では oracle file を事前に読まず、その内容を実行時に解釈しない。
+- test の期待値が仕様上正しいかを判断する意味論的調査は、通常の検査実行と分離する。
+- 環境の新規構築、依存関係の追加、または pip の操作は行わない。
+- この skill を根拠として、現在の file access mode、作業範囲、または sandbox の書き込み先を広げない。
+
+## repository root と Python を決定する
+
+次の手順で、現在の worktree と main worktree のどちらからも構築済み環境を選択できるようにする。
+
+```bash
+cmoc_work_root="$(git rev-parse --show-toplevel)"
+cmoc_common_git_dir="$(git -C "$cmoc_work_root" rev-parse --path-format=absolute --git-common-dir)"
+cmoc_main_root="$(dirname "$cmoc_common_git_dir")"
+
+if [[ -x "$cmoc_work_root/.venv/bin/python" ]]; then
+    cmoc_python="$cmoc_work_root/.venv/bin/python"
+elif [[ -x "$cmoc_main_root/.venv/bin/python" ]]; then
+    cmoc_python="$cmoc_main_root/.venv/bin/python"
+else
+    echo "cmoc Python environment is not built" >&2
+    exit 1
+fi
+
+cd "$cmoc_work_root"
+```
+
+`pyproject.toml`、`src`、`oracle/src`、`test`、`test/_ollama_support.py` が worktree root に存在することを確認する。Python version、依存関係、pytest marker、timeout、Ruff、および mypy の機械可読な値は `pyproject.toml` を正本とし、この skill に転記しない。
+
+選択した Python で次の command を実行する。表示された Python version が `project.requires-python` を満たすことと、検査用 module が利用可能なことを確認する。
+
+```bash
+"$cmoc_python" -c 'import sys, tomllib; from pathlib import Path; config = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8")); print(sys.version.split()[0], config["project"]["requires-python"])'
+"$cmoc_python" -m pytest --version
+"$cmoc_python" -m ruff --version
+"$cmoc_python" -m mypy --version
+```
+
+前提を満たさない場合は検査を開始しない。欠けている path、version、または module を報告し、環境構築が必要な未完了状態として停止する。
 
 ## 検査対象を選ぶ
 
-- repository root を cwd とする。
-- focused test は `test/INDEX.md` から変更対象に対応する test file を選ぶ。
-- Ruff の first-party 検査対象には `src`、`oracle/src`、`test` を渡す。
-- mypy の検査対象には `src`、`oracle/src` を渡す。pytest の import path を前提とする `test` は、project の mypy 対象へ追加しない。
-- `gpu_integration` marker は test-local Ollama による GPU-only 実推論を必要とする test だけを選択する。
-- full pytest は `test -ra -m "not gpu_integration"` と `test -ra -m gpu_integration` の和集合とし、どちらも fresh に実行する。
+- 明示された test failure の再現では、その node ID を focused test とする。
+- implementation の変更では、`test/INDEX.md` の Summary と `rg` による import・symbol の参照検索から、変更した外部挙動または制御ロジックを検証する test file または node ID を選ぶ。
+- test helper の変更では、その helper を直接検証する test と、変更した interface の主要な利用側を選ぶ。
+- test file に GPU test と非 GPU test が混在する場合は、`gpu_integration` marker で focused test も 2 command に分割する。
+- Ruff の first-party 対象は `src`、`oracle/src`、`test` とする。変更中は、この中の変更 path を focused 対象にしてよい。
+- mypy の対象は `src`、`oracle/src` とする。`test` は追加しない。
 
-## pytest の一時領域と cache を準備する
+## pytest runner で一時領域と cache を分離する
 
-- pytest の隔離だけを目的として run 固有の `TMPDIR` を設定せず、pytest の case/session 用一時領域を使用する。
-- run 固有の `TMPDIR` が既に設定されているか、別の理由で必要な場合は、pytest 起動前に `test_rule.md` が定義する cache root override 環境変数へ、run に依存しない system temporary directory 上の path を設定する。
-- system temporary directory の基準を取得してから `TMPDIR` を設定する。既に上書き済みなら、開発環境規則が指定する Python を `TMPDIR`、`TMP`、`TEMP` なしで起動し、`tempfile.gettempdir()` の値を取得する。
-- cache path は `test_rule.md` の安定性と namespacing の要件に従って選び、この skill 独自の命名規則を設けない。
-- archive や model を手動で事前配置せず、cache hit と cache miss の処理を realization test の helper に任せる。
+pytest は、選択した Python から次の repository local interface を使って起動する。
+
+```bash
+"$cmoc_python" test/_ollama_support.py run-pytest <pytest arguments>
+```
+
+- pytest の隔離だけを理由として run 固有の `TMPDIR` を設定せず、pytest の case/session 用一時領域を使う。
+- `TMPDIR`、`TMP`、または `TEMP` が既に設定されている場合も、この runner を使う。runner は pytest の一時領域を保ったまま、test-local Ollama cache を run 固有の一時 path から分離する。
+- cache の環境変数名、schema version、OS user namespacing、root path を skill 内で組み立てない。
+- archive、binary、model を手動配置せず、cache hit、cache miss、materialize、および publish を test helper に任せる。
+- cache 状態、GPU 可視性、または既存 Ollama service を事前判定しない。選択した pytest command から helper を起動する。
+
+## 変更中の検査を実行する
+
+1. 非 GPU の focused test を repository 所定の sandbox 内で実行する。
+2. GPU の focused test は、後述する command 単位 sandbox escalation で実行する。
+3. 変更した first-party path に対して、`python-dev-skill` に従う Ruff check、Ruff format check、および必要な mypy を実行する。
+4. failure を再現する場合は、最小の node ID から始め、実行環境、外部 executable、timeout、cache/helper、test assertion のどこで失敗したかを分類する。
+
+非 GPU focused test の基本形を次に示す。
+
+```bash
+"$cmoc_python" test/_ollama_support.py run-pytest <test paths or node IDs> -ra -m "not gpu_integration"
+```
+
+## fresh な完了ゲートを実行する
+
+realization implementation または realization test を変更した場合は、最後の変更後に次の全 command を fresh に実行する。過去の実行結果や focused test だけで完了扱いにしない。
+
+```bash
+"$cmoc_python" -m ruff check src oracle/src test
+"$cmoc_python" -m ruff format --check src oracle/src test
+"$cmoc_python" -m mypy src oracle/src
+"$cmoc_python" test/_ollama_support.py run-pytest test -ra -m "not gpu_integration"
+"$cmoc_python" test/_ollama_support.py run-pytest test -ra -m gpu_integration
+```
+
+pytest command には、`python-dev-skill` が定める Python development mode と `ResourceWarning` 検査を適用する。上から 4 番目までは repository 所定の sandbox 内で実行し、最後の GPU command だけを sandbox escalation の対象とする。
+
+文書と skill だけを変更した場合は、変更箇所の参照、用語、path、command、および project 設定との整合性を検査する。Python helper または test を変更した場合は、focused test と上記の完了ゲートを実行する。
 
 ## GPU integration test だけを sandbox 外で実行する
 
-- `gpu_integration` 以外の pytest、Ruff、および mypy は repository 所定の sandbox 内で実行する。
-- `gpu_integration` を選択する pytest command は sandbox 内で試行せず、最初の実行から shell/exec tool の command 単位 sandbox escalation を要求する。
-- Codex の unified exec tool では、対象 command に `sandbox_permissions=require_escalated` を指定し、test-local Ollama が WSL GPU device を使用するために必要だと justification に明記する。
-- escalation は pytest command とその descendant process だけへ限定する。agent call 全体へ `danger-full-access` を指定せず、prefix allow rule の作成または永続化を要求しない。
-- escalation が利用不能、拒否、または review 失敗になった場合は同じ test を sandbox 内で代替実行せず、GPU test と full test が未完了だと報告する。
-- sandbox 外で起動した test が host の GPU 利用不能を理由に skip した場合は、skip と具体的な理由を報告する。
-
-## system temporary directory へのアクセスを限定する
-
-- この repository 所定の test・品質検査を実行している間だけ、その test・tool が作成したか明示的に割り当てられた system temporary directory 上の一時ファイルと cache を読み書きしてよい。
-- escalated GPU test の間だけ、test-local Ollama が GPU device を使用してよい。関係のない device や host file を探索または操作しない。
-- この例外を、関係のない一時ファイルの探索・読み書き、または repository 外への作業成果物の配置に使用しない。
-- file access mode ごとの oracle file と realization file の読み書き境界は変更しない。
-
-## 検証を実行する
-
-1. 開発環境規則どおりに interpreter と依存関係を確認する。
-2. 変更中は、選択した focused test と変更した first-party path に対する品質検査を `python-dev-skill` の方法で実行する。
-3. focused test が `gpu_integration` の場合も、その test を選択する最初の command から sandbox escalation を要求する。
-4. 完了時は、上記の tool ごとの対象、sandbox 内の非 GPU pytest、および escalated GPU pytest を使い、`python-dev-skill` の完了ゲートを fresh に実行する。
-5. cache 状態や sandbox 内の GPU 可視性の事前判定を実行手順に加えず、選択した test command から realization test の helper を起動する。
+- `gpu_integration` を選択する pytest command は sandbox 内で試行せず、最初の実行から command 単位 sandbox escalation を要求する。
+- Codex の unified exec tool では、その command にだけ `sandbox_permissions=require_escalated` を指定する。
+- justification には、test-local Ollama が WSL host の GPU device を使用するために必要であることを明記する。
+- escalation は pytest runner command と descendant process に限定する。agent call 全体へ `danger-full-access` を指定せず、prefix allow rule の作成または永続化を要求しない。
+- escalation が利用不能、拒否、または review failure になった場合は停止する。同じ test を sandbox 内で実行せず、GPU test と full test を未完了として報告する。
+- sandbox 外の test が GPU 利用不能を理由に skip した場合は、skip reason を報告し、GPU test と full test を未完了として扱う。
+- escalated test が作成した case-local 一時ファイル、cache、および GPU device 以外の host resource を探索または操作しない。
 
 ## 結果を報告する
 
-- 実行した command、終了状態、skip、失敗した検査を報告する。
-- sandbox 内の非 GPU pytest と escalated GPU pytest の結果を分けて報告する。
-- full pytest を実行していない場合や、Real Codex CLI を使う test が skip された場合は、その事実と理由を明記する。
+結果では、次の情報を区別して報告する。
+
+- 実行した command と終了状態
+- Ruff check、Ruff format check、mypy の結果
+- sandbox 内の focused test と非 GPU full pytest の結果
+- escalated GPU focused test と GPU full pytest の結果
+- test 数、skip 数、および skip reason
+- Real Codex CLI を使う test の実行または skip
+- cache hit/miss など、出力から確認できた実行上の原因
+- full test が fresh に完了したか、未完了ならその理由
+
+失敗した期待値を変更すべきかという意味論的判断は、実行上の原因分類と同じ作業として扱わない。必要な場合は別の仕様調査として明示する。

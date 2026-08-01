@@ -5,7 +5,7 @@
 - pytest を使用する
 - realization test は `{{cmoc-root}}/test` に実装する
 - `python-dev-skill` が pytest の隔離に使用する `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
-- agent が test・品質検査を実行する具体的な手順は repository local の `run-cmoc-tests` skill に委ね、この文書では test が満たすべき要件だけを定める
+- agent が test・品質検査を選択・実行・報告する具体的な手順は、repository local の `.agents/skills/run-cmoc-tests/SKILL.md` に委ねる。この文書では test が満たすべき要件と sandbox escalation の認可境界だけを定める
 
 ## goal
 
@@ -47,15 +47,14 @@
 - host 実行環境で GPU が利用できない場合、GPU 推論を開始できない場合、または GPU 推論を確認できない場合は、test-local Ollama を必要とする test case を skip する
 - Codex sandbox から GPU device が不可視でも、sandbox 外の同じ host 実行環境で GPU が利用可能なら、GPU が利用できない場合とはみなさない
 
-## agent による GPU test 実行
+## GPU test の sandbox escalation 認可境界
 
-- agent が full test を実行する場合、`gpu_integration` 以外の全 test を repository 所定の sandbox 内で実行し、`gpu_integration` の全 test だけを command 単位の sandbox escalation により実行する。この 2 command の和集合を full test とする
-- `gpu_integration` の test command は sandbox 内での失敗を事前条件とせず、最初の実行から sandbox escalation を要求する
-- escalation は `gpu_integration` を選択する pytest command とその descendant process だけへ限定し、Ruff、mypy、およびそれ以外の pytest を sandbox 外で実行してはならない
+- full test の対象は、`gpu_integration` 以外の全 test と `gpu_integration` の全 test の和集合とする
+- agent call の sandbox 下で `gpu_integration` を実行する場合は、同 marker を選択する pytest command とその descendant process だけに command 単位 sandbox escalation を必要とし、許容する。sandbox 内での失敗を事前条件としない
+- Ruff、mypy、および `gpu_integration` 以外の pytest を sandbox 外で実行してはならない
 - agent call 全体へ `danger-full-access` を指定してはならず、GPU test のための永続的な prefix allow rule を要求してはならない
-- escalation が利用不能または拒否された場合、sandbox 内で CPU fallback または skip を発生させて代替せず、GPU test は未検証であり full test が完了していないと報告する
-- GPU test command が sandbox 外の host 実行環境でも GPU 利用不能を理由に skip した場合は、その事実と理由を報告する
-- GPU test の sandbox escalation は GPU device と実推論を使用するためだけの例外とし、cache の利用、再構築、または永続化を理由に適用範囲を広げてはならない
+- sandbox escalation は GPU device と実推論を使用するためだけの例外とする。cache の利用、再構築、または永続化を理由に適用範囲を広げてはならない
+- 具体的な command、sandbox escalation の要求、拒否・skip・未完了時の扱い、および結果報告は `.agents/skills/run-cmoc-tests/SKILL.md` に委ねる
 
 ## timeout
 

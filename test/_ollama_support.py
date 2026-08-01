@@ -17,6 +17,7 @@ import signal
 import socket
 import stat
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.error
@@ -26,6 +27,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import NoReturn
 
 import pytest
 
@@ -177,18 +179,83 @@ def _select_cache_root(tmp_path: Path) -> Path:
         candidate = Path(override)
         _prepare_cache_root(candidate)
         return candidate.resolve()
-    user = str(os.getuid()) if hasattr(os, "getuid") else os.environ.get("USER", "user")
-    candidate = (
-        Path(tempfile.gettempdir())
-        / f"cmoc-test-ollama-{user}-v{_CACHE_SCHEMA_VERSION}"
-    )
+    candidate = _default_cache_root(Path(tempfile.gettempdir()))
     try:
         _prepare_cache_root(candidate)
         return candidate.resolve()
     except OSError:
+        user = _cache_user()
         fallback = tmp_path.parent / f"ollama-cache-{user}-v{_CACHE_SCHEMA_VERSION}"
         _prepare_cache_root(fallback)
         return fallback.resolve()
+
+
+def _cache_user() -> str:
+    """cache root の OS user namespace を返す。"""
+    # UID は test が文字列の USER 環境変数を隔離しても namespace を安定させる。
+    return str(os.getuid()) if hasattr(os, "getuid") else os.environ.get("USER", "user")
+
+
+def _default_cache_root(system_temporary_directory: Path) -> Path:
+    """system temporary directory から versioned cache root を組み立てる。"""
+    # 通常の test と repository local runner で schema と命名を共有する。
+    return system_temporary_directory / (
+        f"cmoc-test-ollama-{_cache_user()}-v{_CACHE_SCHEMA_VERSION}"
+    )
+
+
+def _stable_system_temporary_directory() -> Path:
+    """run 固有の temporary override を除いた system temporary directory を返す。"""
+    # pytest の一時領域にだけ必要な override を、半永続 cache の基準から除外する。
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in {"TMPDIR", "TMP", "TEMP"}
+    }
+    # fresh interpreter を使い、tempfile が process 内で cache 済みでも影響させない。
+    result = subprocess.run(
+        [sys.executable, "-c", "import tempfile; print(tempfile.gettempdir())"],
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=True,
+    )
+    path = Path(result.stdout.strip())
+    if not path.is_absolute():
+        raise RuntimeError("system temporary directory must be absolute")
+    return path
+
+
+def _pytest_environment() -> dict[str, str]:
+    """pytest の temporary override と半永続 cache を独立させる。"""
+    environment = os.environ.copy()
+    # 明示済み override は呼び出し側の選択として維持する。
+    if not environment.get(TEST_OLLAMA_CACHE_ENV):
+        environment[TEST_OLLAMA_CACHE_ENV] = str(
+            _default_cache_root(_stable_system_temporary_directory())
+        )
+    return environment
+
+
+def _run_pytest(args: list[str]) -> NoReturn:
+    """選択中の interpreter で stable Ollama cache を使う pytest を起動する。"""
+    # process を置換し、pytest の exit code と signal を wrapper で変更しない。
+    os.execve(
+        sys.executable,
+        [sys.executable, "-m", "pytest", *args],
+        _pytest_environment(),
+    )
+
+
+def _main(args: list[str]) -> None:
+    """repository local test runner interface を処理する。"""
+    # cache を必要としない汎用 command runner へ公開面を広げない。
+    if not args or args[0] != "run-pytest":
+        raise SystemExit(
+            "usage: python test/_ollama_support.py run-pytest <pytest arguments>"
+        )
+    _run_pytest(args[1:])
 
 
 def _prepare_cache_root(path: Path) -> None:
@@ -596,3 +663,7 @@ def _process_group_exists(process_group_id: int) -> bool:
     except ProcessLookupError:
         return False
     return True
+
+
+if __name__ == "__main__":
+    _main(sys.argv[1:])
