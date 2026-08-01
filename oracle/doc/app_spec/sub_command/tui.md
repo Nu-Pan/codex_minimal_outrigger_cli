@@ -24,6 +24,8 @@
 ## 「オリジナルプロンプトをユーザーからエディタ入力」の詳細
 
 - エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする
+- エディタ編集対象ファイルの初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する
+- `automatically_injected_instruction` の具体的な文面と追加内容は realization file 側の実装裁量とする
 
 ## 「必要なパラメータを agent call で決定」の詳細
 
