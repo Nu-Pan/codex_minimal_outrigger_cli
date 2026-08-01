@@ -78,7 +78,7 @@
     "last_investigated_at": "2026-07-26_17-47_14_693123000"
   },
   "oracle/doc/app_spec/prompt_editor_input.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "c4d73b4fd42f632c93fe725969c1f42964015fdf716b054730177ab92a00e63c",
     "last_investigated_at": "2026-07-23_16-50_44_104735000"
