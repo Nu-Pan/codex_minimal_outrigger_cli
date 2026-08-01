@@ -1,21 +1,21 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様ドキュメントを収録するディレクトリ。アプリケーション仕様、branch・commit・worktree のモデル、開発ルール、不採用案の検討記録など、実装やテストの判断根拠となる文書への入口。
+- cmoc の主要なアプリケーション仕様をまとめた oracle 文書ディレクトリ。CLI の共通挙動、branch・session・run の lifecycle、開発ルール、不採用案の検討記録への入口を提供する。
 
 ## Read this when
-- cmoc の利用者向け挙動や CLI、Codex 連携、run・session lifecycle の正本仕様を調査するとき
-- branch・commit・worktree の関係や session・run の分岐モデルを確認するとき
-- Python 実装、CLI 配置、開発環境、realization test の共通ルールを確認するとき
-- realization refactor で採用しなかった方式の背景や不採用理由を確認するとき
+- cmoc の CLI 挙動、共通規約、session・run・branch・worktree の仕様を確認するとき
+- Python 実装、CLI 配置、開発環境、realization test のルールを確認するとき
+- realization refactor における採用・不採用の設計判断を調べるとき
+- 複数の oracle 文書にまたがる仕様の入口や、詳細文書の所在を特定するとき
 
 ## Do not read this when
-- 具体的な実装やテストの詳細だけを確認したいときは、対応する realization file を直接読む
-- 対象が特定の oracle 文書に限定され、該当文書を直接特定できるとき
-- INDEX.md の読み方やリポジトリ共通のルーティング方針だけを確認したいとき
+- 特定の仕様文書の詳細だけを確認したいときは、その文書へ直接進む
+- 個別モジュールの実装詳細やテスト実装を確認したいときは、対応する realization code または realization test を読む
+- 一般的な利用方法だけを確認したいときは、利用者向け文書を優先する
 
 ## hash
-- 957b4769611d19d1d13f77222cafd821b9598f8ea96bfcf1605d216edccee32b
+- 30c57196877a9510c5a30dc81def3558d97755b842bbb17eca515e228ff9f744
 
 # `src`
 
