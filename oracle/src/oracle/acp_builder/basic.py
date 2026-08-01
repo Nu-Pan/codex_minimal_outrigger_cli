@@ -3,12 +3,9 @@ acp = Agent Call Parameter
 """
 
 # std
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum, auto
 from pathlib import Path
-
-# cmoc
-from oracle.other.path_model import resolve_work_root
 
 
 class ModelClass(StrEnum):
@@ -89,13 +86,13 @@ class AgentCallParameter:
     # Structured Output を要求しない呼び出しでは None。
     structured_output_schema_path: Path | None
 
+    # agent call 時のカレントパス
+    # builder は prompt 構築前に cwd を決定し、同じ値から call-scoped path context を構築する
+    cwd: Path
+
     # True なら本命 agent call の前に indexing preflight を実行する
     # False なら indexing preflight を実行しない
     # 本命 agent call 自身が indexing である場合は indexling preflight をスキップする、というのが主な使い方
     # 通常は True のままで良い
     # file access rule violation recovery のような indexing preflight から連鎖的に発生する処理の場合もスキップの対象。
-    run_indexing_preflight: bool = field(default=True)
-
-    # agent call 時のカレントパス
-    # 通常は `{{work-root}}` のままで良い
-    cwd: Path = field(default_factory=lambda: resolve_work_root())
+    run_indexing_preflight: bool = True

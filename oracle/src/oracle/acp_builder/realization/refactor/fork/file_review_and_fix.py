@@ -10,20 +10,29 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import resolve_real_path, resolve_repo_root
+from oracle.other.path_model import AgentCallPathContext, resolve_real_path
 from oracle.other.struct_doc import StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
 def build_realization_refactor_fork_file_review_and_fix_parameter(
     target_path: Path,
+    run_worktree: Path,
 ) -> AgentCallParameter:
-    """差分に依存しないファイル単位の追従パラメータを構築する。"""
+    """差分に依存しないファイル単位の追従パラメータを構築する。
+
+    Args:
+        target_path: run worktree 上のレビュー対象 path。
+        run_worktree: agent call の cwd とする linked worktree。
+    """
+    # run worktree を agent call の cwd として先に確定する
+    path_context = AgentCallPathContext(run_worktree)
+
     # 対象 file を起点に、調査から検証までを行う完全プロンプトを構築する。
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア実装のファイル単位レビュー兼修正担当です",
         summary="""
-        - oracle file または realization file である `{{target-path}}` を起点に `{{repo-root}}` ツリー内の所見を調査し、対応する realization file を修正すること
+        - oracle file または realization file である `{{target-path}}` を起点に `{{work-root}}` ツリー内の所見を調査し、対応する realization file を修正すること
         """,
         goal="""
         - `{{target-path}}` 以外の必要な oracle file, realization file も読んでいること
@@ -35,6 +44,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         - 指定された Structured Output schema に従い、この agent call で発見した所見と対応結果を返すこと
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        path_context=path_context,
         aux_static_prompt=[
             StructDoc(
                 "作業上の注意点",
@@ -51,8 +61,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
             ),
         ],
         aux_placeholder_def={
-            "repo-root": resolve_repo_root(),
-            "target-path": resolve_real_path(target_path),
+            "target-path": resolve_real_path(target_path, path_context),
         },
         oracle_standard=True,
         realization_standard=True,
@@ -66,5 +75,6 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         prompt=render_as_markdown(prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),
+        cwd=path_context.cwd,
         run_indexing_preflight=True,
     )

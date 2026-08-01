@@ -10,6 +10,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
+from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import (
     StructBlock,
     StructCodeBlock,
@@ -33,6 +34,9 @@ def build_realization_apply_fork_launch_exec_parameter(
         raw_oracle_git_diff: 始点と終点の間にある oracle file の raw git diff。
         run_worktree: `codex exec` の cwd とする linked worktree。
     """
+    # run worktree を agent call の cwd として先に確定する
+    path_context = AgentCallPathContext(run_worktree)
+
     # commit 範囲と差分を一意な参照対象にまとめる。
     apply_change = StructBlock(
         "realization_apply_change",
@@ -64,6 +68,7 @@ def build_realization_apply_fork_launch_exec_parameter(
         - oracle file を変更していないこと
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        path_context=path_context,
         aux_dynamic_prompt=[apply_change],
         oracle_and_realization_basic=True,
         oracle_standard=True,
@@ -78,6 +83,6 @@ def build_realization_apply_fork_launch_exec_parameter(
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         prompt=render_as_markdown(complete_prompt),
         structured_output_schema_path=None,
+        cwd=path_context.cwd,
         run_indexing_preflight=True,
-        cwd=run_worktree.resolve(),
     )

@@ -7,7 +7,8 @@
 
 ## `{{work-root}}` に対する仮定
 
-cmoc による操作対象リポジトリである `{{work-root}}` は以下の要件を満たすものと仮定する
+`{{work-root}}` の定義は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext.work_root` を正本とする。
+cmoc による操作対象 worktree である `{{work-root}}` は、次の要件を満たすものと仮定する。
 
 - git で管理されている
 - `{{work-root}}/oracle` 配下に断片的な正本情報が記載されている（`{{cmoc-root}}` 配下がそうであるように）
@@ -19,7 +20,10 @@ cmoc による操作対象リポジトリである `{{work-root}}` は以下の�
 
 ## cmoc 実行時のカレントディレクトリ
 
-- cmoc 実行時のカレント (pwd) は必ず  `{{work-root}}` とする
+- cmoc process は、対象 Git repository のいずれかの worktree root をカレントディレクトリとして実行する
+- cmoc process の cwd と `AgentCallParameter.cwd` は、異なる値を許容する
+- cmoc process の cwd が `{{repo-root}}` であっても、run 用 `AgentCallParameter.cwd` は `{{run-root}}` とする
+- agent call の path context を、cmoc process の cwd だけから決定してはならない
 
 ## タイムスタンプのフォーマット
 

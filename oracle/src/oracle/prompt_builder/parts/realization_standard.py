@@ -1,4 +1,5 @@
 # cmoc
+from oracle.other.path_model import AgentCallPathContext
 from oracle.other.standard import (
     Requirement,
     Standard,
@@ -8,10 +9,14 @@ from oracle.other.struct_doc import StructDoc
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_realization_standard() -> tuple[PlaceholderMap, StructDoc]:
+def build_realization_standard(
+    path_context: AgentCallPathContext,
+) -> tuple[PlaceholderMap, StructDoc]:
     """
     realization file が従うべき規範文章を構築する
     """
+    # この part の文面が参照する root 定義を call-scoped context から取得する
+    root_definitions = path_context.root_placeholder_definitions()
     standards = [
         Standard(
             title="realization file の総文字数の最小化を目標とする",
@@ -537,7 +542,7 @@ def build_realization_standard() -> tuple[PlaceholderMap, StructDoc]:
         ),
     ]
     return (
-        {},
+        {"work-root": root_definitions["work-root"]},
         StructDoc(
             "realization standard",
             *[standard_to_struct_doc(rs) for rs in standards],

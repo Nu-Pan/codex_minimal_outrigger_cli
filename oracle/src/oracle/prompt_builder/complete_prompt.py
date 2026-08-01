@@ -1,8 +1,8 @@
 # cmoc
-from copy import deepcopy
 from typing import Callable
 
 from oracle.acp_builder.basic import FileAccessMode
+from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import StructBlock, StructDoc
 
 from .basic import PlaceholderMap
@@ -18,12 +18,28 @@ from .parts.realization_standard import build_realization_standard
 from .parts.routing_rule import build_routing_rule
 
 
+def _merge_placeholder_definitions(
+    destination: PlaceholderMap,
+    source: PlaceholderMap,
+) -> None:
+    """同名 placeholder の異値上書きを拒否しながら定義を統合する。"""
+    # 既存値と文字列表現が一致する定義だけを重複として許容する
+    for name, value in source.items():
+        if name in destination and str(destination[name]) != str(value):
+            raise ValueError(
+                "Conflicting placeholder definition "
+                f"(name={name}, current={destination[name]}, new={value})"
+            )
+        destination.setdefault(name, value)
+
+
 def build_complete_prompt(
     *,
     role: str,
     summary: str,
     goal: str,
     file_access_mode: FileAccessMode,
+    path_context: AgentCallPathContext,
     aux_static_prompt: list[StructDoc | StructBlock] = list(),
     aux_dynamic_prompt: list[StructDoc | StructBlock] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
@@ -48,7 +64,7 @@ def build_complete_prompt(
     role:
         agent が果たすべき役割の短い説明
 
-    summaey:
+    summary:
         agent への依頼する作業の概要・短い説明
 
     goal:
@@ -56,6 +72,9 @@ def build_complete_prompt(
 
     file_access_mode:
         agent によるファイルアクセスに対する制限設定
+
+    path_context:
+        AgentCallParameter.cwd から事前に構築した call-scoped path context
 
     aux_static_prompt:
         任意に追加可能な静的プロンプト
@@ -89,11 +108,9 @@ def build_complete_prompt(
     return:
         agent call にそのまま渡すことができる完全なプロンプト
     """
-    # プレースホルダマップ
-    if aux_placeholder_def:
-        ph_map = deepcopy(aux_placeholder_def)
-    else:
-        ph_map = dict()
+    # 完全 prompt 自身が参照できる root 定義を call-scoped context から初期化する
+    ph_map: PlaceholderMap = path_context.root_placeholder_definitions()
+    _merge_placeholder_definitions(ph_map, aux_placeholder_def)
 
     # 動的プロンプトの参照先
     role_block = StructBlock("role", StructDoc("role", role))
@@ -113,7 +130,7 @@ def build_complete_prompt(
     # 構築ユーティリティ
     def _extend_static_prompt(build_fn: Callable, *args, **kwargs):
         temp_ph_map, temp_prompt = build_fn(*args, **kwargs)
-        ph_map.update(**temp_ph_map)
+        _merge_placeholder_definitions(ph_map, temp_ph_map)
         prompt.append(temp_prompt)
 
     # 注入プロンプトを調整
@@ -139,11 +156,11 @@ def build_complete_prompt(
 
     # 静的プロンプトを構築
     if oracle_and_realization_basic:
-        _extend_static_prompt(build_oracle_and_realization_basic)
+        _extend_static_prompt(build_oracle_and_realization_basic, path_context)
     if oracle_standard:
-        _extend_static_prompt(build_oracle_standard)
+        _extend_static_prompt(build_oracle_standard, path_context)
     if realization_standard:
-        _extend_static_prompt(build_realization_standard)
+        _extend_static_prompt(build_realization_standard, path_context)
     if apply_review_standard:
         _extend_static_prompt(build_apply_review_standard)
     if oracle_review_standard:
@@ -153,8 +170,8 @@ def build_complete_prompt(
     if aux_static_prompt:
         prompt.extend(aux_static_prompt)
     if file_access_mode != FileAccessMode.NO_RULE:
-        _extend_static_prompt(build_file_access_rule, file_access_mode)
-    _extend_static_prompt(build_routing_rule)
+        _extend_static_prompt(build_file_access_rule, file_access_mode, path_context)
+    _extend_static_prompt(build_routing_rule, path_context)
 
     # 動的プロンプトを構築
     prompt.extend((role_block, summary_block, goal_block))

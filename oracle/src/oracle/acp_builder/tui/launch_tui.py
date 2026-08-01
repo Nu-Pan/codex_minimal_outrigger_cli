@@ -10,7 +10,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import resolve_repo_root
+from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
 from oracle.other.struct_doc import StructBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
@@ -38,6 +38,9 @@ def build_tui_launch_tui_parameter(
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
     """
+    # main worktree を agent call の cwd として先に確定する
+    path_context = AgentCallPathContext(resolve_repo_root())
+
     # 完全なプロンプトを生成してファイルに保存
     original_prompt_ref = '<cmoc_ref target="original_prompt"/>'
     complete_prompt = build_complete_prompt(
@@ -45,6 +48,7 @@ def build_tui_launch_tui_parameter(
         summary=original_prompt_ref,
         goal=original_prompt_ref,
         file_access_mode=FileAccessMode.REPO_WRITE,
+        path_context=path_context,
         aux_dynamic_prompt=[
             StructBlock(
                 "original_prompt",
@@ -62,7 +66,7 @@ def build_tui_launch_tui_parameter(
         index_entry_standard=False,
     )
     complete_prompt_path = (
-        resolve_repo_root()
+        path_context.repo_root
         / ".cmoc"
         / "gu"
         / "ar"
@@ -81,10 +85,11 @@ def build_tui_launch_tui_parameter(
     #   入力タスクの難易度を正確に測るには最高性能モデルを使わざるを得ないし、だったら最初から最高性能モデルで作業させたほうが安い
     #   過剰になりうることは割り切って、最高品質設定にする
     return AgentCallParameter(
-        ModelClass.FLAGSHIP,
-        ReasoningEffort.MAX,
-        FileAccessMode.REPO_WRITE,
-        f"{complete_prompt_path} を読んで、その指示に従って下さい",
-        Path(__file__).with_suffix(".json"),
-        True,
+        model_class=ModelClass.FLAGSHIP,
+        reasoning_effort=ReasoningEffort.MAX,
+        file_access_mode=FileAccessMode.REPO_WRITE,
+        prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
+        structured_output_schema_path=Path(__file__).with_suffix(".json"),
+        cwd=path_context.cwd,
+        run_indexing_preflight=True,
     )

@@ -17,13 +17,12 @@
 - `cmoc oracle edit` は main worktree から呼び出され、`{{repo-root}}` を cwd として Codex CLI の TUI を起動する
 - `cmoc realization apply fork`, `cmoc realization refactor fork` は `{{repo-root}}` を pwd として呼び出され、run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
 - realization の各 fork が起動する編集用 `codex exec` は `{{run-root}}` を cwd とする
-- run の作業隔離のための linked worktree は `{{repo-root}}` 内に作成されるから、「`{{repo-root}}` のフルパス」は「`{{run-root}}` のフルパス」の部分文字列となる
-- `{{run-root}}` 内で cmoc を起動した場合 `{{run-root}}` と同値
-- `{{run-root}}` 外の `{{repo-root}}` 内で cmoc を起動した場合 `{{repo-root}}` と同値
+- agent call の call-scoped path context は `AgentCallPathContext` を正本とする
 """
 
 # std
 import subprocess
+from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import Generator
@@ -38,40 +37,94 @@ class RootPathPlaceHolder(StrEnum):
     # cmoc 自体のソースコード・ドキュメントを指す時に使う
     CMOC = "{{cmoc-root}}"
 
-    # cmoc を用いた開発を行う対象となる git リポジトリの main worktree のルートディレクトリ
-    # より平易に git リポジトリ本体のルートディレクトリとも言える
-    # 直下に `.git` ディレクトリを持つ
+    # AgentCallPathContext.repo_root に対応する placeholder
     REPO = "{{repo-root}}"
 
     # cmoc が run の隔離作業用に作る linked worktree のルートを指す
     # 直下に `.git` ファイルを持つ
     RUN = "{{run-root}}"
 
-    # ユーザーが cmoc を呼び出した cwd から最近傍の `.git` ディレクトリ・ファイルで解決される worktree root
-    # 直下に `.git` ディレクトリ・ファイルを持つ
+    # AgentCallPathContext.work_root に対応する placeholder
     WORK = "{{work-root}}"
 
 
-def resolve_real_path(source: RootPathPlaceHolder | str | Path) -> Path:
+@dataclass(frozen=True)
+class AgentCallPathContext:
+    """1 回の agent call で共有する root path の正本モデル。
+
+    constructor は決定済みの AgentCallParameter.cwd だけを受け取る。
+    work_root と repo_root は cwd から導出し、呼び出し側から指定させない。
+    構築後の値は変更できず、同じ agent call の prompt 全体で共有する。
+    """
+
+    # prompt 構築前に builder が決定する agent call 時のカレントパス
+    # cmoc process の cwd から暗黙に補完してはならない
+    cwd: Path
+
+    # `{{work-root}}` として使う、cwd を含む最寄りの Git worktree root
+    # cwd が main worktree 上なら repo_root と同値になる
+    # cwd が `{{cmoc-run-worktree}}` 上なら `{{run-root}}` と同値になり、repo_root とは異なる
+    work_root: Path = field(init=False)
+
+    # `{{repo-root}}` として使う、work_root が属する Git repository の main worktree root
+    repo_root: Path = field(init=False)
+
+    def __post_init__(self) -> None:
+        """cwd を正規化し、同じ起点から派生 root を初期化する。"""
+        # agent call で実際に使用できる絶対ディレクトリへ正規化する
+        resolved_cwd = self.cwd.resolve()
+        if not resolved_cwd.is_dir():
+            raise ValueError(
+                f"AgentCallParameter.cwd is not directory (cwd={resolved_cwd})"
+            )
+
+        # cwd から worktree root を決め、その worktree が属する main root を決める
+        work_root = resolve_work_root(resolved_cwd)
+        repo_root = resolve_repo_root(work_root)
+        object.__setattr__(self, "cwd", resolved_cwd)
+        object.__setattr__(self, "work_root", work_root)
+        object.__setattr__(self, "repo_root", repo_root)
+
+    def root_placeholder_definitions(self) -> dict[str, str | Path]:
+        """call-scoped root placeholder の全定義を返す。"""
+        # root placeholder の名前と値は、この関数を唯一の値取得元とする
+        return {
+            "repo-root": self.repo_root,
+            "work-root": self.work_root,
+        }
+
+
+def resolve_real_path(
+    source: RootPathPlaceHolder | str | Path,
+    path_context: AgentCallPathContext | None = None,
+) -> Path:
     """
     ルートパスプレースホルダそのもの、あるいはルートパスプレースホルダを含むパスを、実際の絶対パスに解決する。
+
+    path_context が指定された場合、agent call に依存する root は同じ context から解決する。
     """
     if isinstance(source, RootPathPlaceHolder):
-        # 引数がルートパスプレースホルダの場合は素直に解決して返す
+        # 引数がルートパスプレースホルダの場合は call-scoped context を優先する
         match source:
             case RootPathPlaceHolder.CMOC:
                 return resolve_cmoc_root()
             case RootPathPlaceHolder.REPO:
+                if path_context is not None:
+                    return path_context.repo_root
                 return resolve_repo_root()
             case RootPathPlaceHolder.RUN:
+                if path_context is not None:
+                    return resolve_run_root(path_context.cwd)
                 return resolve_run_root()
             case RootPathPlaceHolder.WORK:
+                if path_context is not None:
+                    return path_context.work_root
                 return resolve_work_root()
             case _:
                 raise ValueError(f"{source} is invalid RootPathPlaceHolder.")
     elif isinstance(source, str):
         # 引数が str の場合は Path に処理を回す
-        return resolve_real_path(Path(source))
+        return resolve_real_path(Path(source), path_context)
     elif isinstance(source, Path):
         # Path の場合は先頭のトークンを置換
         # 絶対パスならそのまま返す（symlink とかの可能性があるので resolve はする）
@@ -84,7 +137,9 @@ def resolve_real_path(source: RootPathPlaceHolder | str | Path) -> Path:
         head_part = source.parts[0]
         for root_path_ph in RootPathPlaceHolder:
             if head_part == root_path_ph.value:
-                result = resolve_real_path(root_path_ph) / Path(*source.parts[1:])
+                result = resolve_real_path(root_path_ph, path_context) / Path(
+                    *source.parts[1:]
+                )
                 return result.resolve()
         else:
             raise ValueError(
@@ -186,13 +241,17 @@ def resolve_work_root(
         raise ValueError("`{{work-root}}` was not found")
 
 
-def resolve_ph_path(real_path: Path, rpph: RootPathPlaceHolder) -> Path:
+def resolve_ph_path(
+    real_path: Path,
+    rpph: RootPathPlaceHolder,
+    path_context: AgentCallPathContext | None = None,
+) -> Path:
     """
     実パス (`real_path`) を root path place holder 表記に変換する。
     変換先は `rpph` で指定し、マッチしなかった場合は例外を投げる。
     """
     real_path = real_path.resolve()
-    root_real_path = resolve_real_path(rpph)
+    root_real_path = resolve_real_path(rpph, path_context)
     try:
         relative_path = real_path.relative_to(root_real_path)
     except ValueError:

@@ -1,11 +1,14 @@
 # cmoc
 from oracle.acp_builder.basic import FileAccessMode
-from oracle.other.path_model import resolve_repo_root, resolve_work_root
+from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import StructDoc
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, StructDoc]:
+def build_file_access_rule(
+    mode: FileAccessMode,
+    path_context: AgentCallPathContext,
+) -> tuple[PlaceholderMap, StructDoc]:
     """
     AI エージェントによるファイル読み書き規則のプロンプトを構築する
 
@@ -14,6 +17,9 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
 
     mode:
         読み書きモードプリセット
+
+    path_context:
+        AgentCallParameter.cwd と同じ値から構築した call-scoped path context
     """
     # リポジトリ外 deny ルール
     # NOTE
@@ -24,8 +30,8 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     #   その関係で、agent が `{{run-root}}` での作業中に `{{repo-root}}/.cmoc/gu/ar/log` を読みに行きたくなる事がある。
     #   更に log から `{{repo-root}}/.cmoc` ツリー内を読みに行きたくなるはずである (report とか)。
     #   よって、`{{repo-root}}/.cmoc/g*/ar` だけは例外的にアクセスを許可する。
-    repo_root = resolve_repo_root()
-    work_root = resolve_work_root()
+    repo_root = path_context.repo_root
+    work_root = path_context.work_root
     if repo_root == work_root:
         out_repo_deny_rule = [
             "`{{repo-root}}` ツリー外は読み書き禁止",
@@ -122,10 +128,7 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
             raise ValueError(f"Invalid mode (mode={mode})")
     # 正常終了
     return (
-        {
-            "repo-root": repo_root,
-            "work-root": work_root,
-        },
+        path_context.root_placeholder_definitions(),
         StructDoc(
             f"file read write rule - {mode.value}",
             "\n".join(f"- {r}" for r in deny_rule),

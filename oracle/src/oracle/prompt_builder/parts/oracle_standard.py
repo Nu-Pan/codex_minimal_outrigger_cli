@@ -1,4 +1,5 @@
 # cmoc
+from oracle.other.path_model import AgentCallPathContext
 from oracle.other.standard import (
     Requirement,
     Standard,
@@ -8,10 +9,14 @@ from oracle.other.struct_doc import StructDoc
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
+def build_oracle_standard(
+    path_context: AgentCallPathContext,
+) -> tuple[PlaceholderMap, StructDoc]:
     """
     oracle file が従うべき規範文章を構築する
     """
+    # この part の文面が参照する root 定義を call-scoped context から取得する
+    root_definitions = path_context.root_placeholder_definitions()
     standards = [
         Standard(
             title="人間の認知能力の消費は節約しなければならない",
@@ -335,7 +340,7 @@ def build_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
         ),
     ]
     return (
-        {},
+        {"work-root": root_definitions["work-root"]},
         StructDoc(
             "oracle standard",
             *[standard_to_struct_doc(os) for os in standards],

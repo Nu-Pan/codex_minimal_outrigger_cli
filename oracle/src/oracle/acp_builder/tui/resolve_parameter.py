@@ -10,7 +10,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import resolve_repo_root, resolve_work_root
+from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
 from oracle.other.struct_doc import (
     StructBlock,
     StructCodeBlock,
@@ -31,6 +31,9 @@ def build_tui_resolve_parameter_parameter(
         ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す元プロンプト。
         コメント除去と strip は呼び出し側で完了している想定。
     """
+    # 後続 TUI と同じ main worktree を cwd として先に確定する
+    path_context = AgentCallPathContext(resolve_repo_root())
+
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたの役割は、後続の AI Agent CLI/TUI 実行に必要な情報を選定することです",
@@ -43,6 +46,7 @@ def build_tui_resolve_parameter_parameter(
         - 選択の根拠として、オリジナルプロンプト <cmoc_ref target="original_prompt"/> の該当行、あるいは `{{work-root}}` ツリー内の file の該当行が具体的に示されていること
         """,
         file_access_mode=FileAccessMode.READONLY,
+        path_context=path_context,
         aux_dynamic_prompt=[
             StructBlock(
                 "original_prompt",
@@ -55,10 +59,6 @@ def build_tui_resolve_parameter_parameter(
                 ),
             )
         ],
-        aux_placeholder_def={
-            "repo-root": resolve_repo_root(),
-            "work-root": resolve_work_root(),
-        },
         oracle_and_realization_basic=True,
         oracle_standard=True,
         realization_standard=True,
@@ -72,10 +72,11 @@ def build_tui_resolve_parameter_parameter(
     #   しかし、ここで間違えられると、後続の本命作業がパーになってキレそうになる
     #   経済性重視系の最高性能を使用する
     return AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.MAX,
-        FileAccessMode.READONLY,
-        render_as_markdown(prompt),
-        Path(__file__).with_suffix(".json"),
-        True,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.MAX,
+        file_access_mode=FileAccessMode.READONLY,
+        prompt=render_as_markdown(prompt),
+        structured_output_schema_path=Path(__file__).with_suffix(".json"),
+        cwd=path_context.cwd,
+        run_indexing_preflight=True,
     )

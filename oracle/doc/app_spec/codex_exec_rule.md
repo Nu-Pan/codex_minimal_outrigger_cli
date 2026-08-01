@@ -5,6 +5,28 @@
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
 - 個別の `codex exec` 呼び出しの仕様は `{{cmoc-root}}/oracle/src/oracle/acp_builder` ツリー内の AgentCallParameter builder を正本とする
 
+## agent call の path context
+
+- call-scoped path context のデータモデル、各 member の意味、および cwd からの導出規則は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext` class 定義と class・member comment を正本とする
+- AgentCallParameter builder は、完全 prompt を構築する前に `AgentCallParameter.cwd` を決定する
+- `AgentCallParameter.cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
+- builder は、決定済みの `AgentCallParameter.cwd` だけを渡して `AgentCallPathContext` を構築する
+
+call-scoped path context の適用範囲を次に示す。
+
+- 同じ完全 prompt 内の file access rule、routing rule、oracle file と realization file の分類、および path placeholder は、同一の call-scoped path context を使用する
+- `AgentCallParameter.cwd` と完全 prompt の path placeholder は、同じ call-scoped path context から取得する
+- `build_complete_prompt` と各 prompt part は、cmoc process の cwd を個別に参照して path を解決してはならない
+- cmoc process の cwd だけを根拠として、子 agent call の path context を決定してはならない
+- call-scoped path context の構築に process-global な `chdir` を使用してはならない
+- 並列 agent call は call-scoped path context を共有または変更してはならない
+
+### non-goal
+
+- `{{repo-root}}`、`{{run-root}}`、および `{{cmoc-run-worktree}}` の既存の意味や配置は変更しない
+- 全 agent call で `{{work-root}} != {{repo-root}}` とすることは目的としない
+- agent call のためだけに新しい root placeholder を追加しない
+
 ## 環境変数 `$CODEX_HOME`
 
 - cmoc 呼び出し時点で `$CODEX_HOME` が設定済みであるなら、それをそのまま Codex CLI に渡す

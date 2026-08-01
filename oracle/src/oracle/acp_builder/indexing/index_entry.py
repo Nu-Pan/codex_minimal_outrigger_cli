@@ -9,7 +9,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import resolve_real_path
+from oracle.other.path_model import AgentCallPathContext, resolve_real_path
 
 # cmoc
 from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
@@ -19,6 +19,7 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 def build_indexing_index_entry_parameter(
     target_path: Path,
     target_content: str,
+    cwd: Path,
 ) -> AgentCallParameter:
     """
     `cmoc indexing` サブコマンド、目次情報生成用。
@@ -30,13 +31,20 @@ def build_indexing_index_entry_parameter(
     target_content: str
         目次情報生成対象の内容
         ディレクトリの場合は、その直下の `INDEX.md` の内容が渡される想定
+
+    cwd: Path
+        indexing 対象の AgentCallParameter.cwd
     """
+    # agent call の cwd を確定してから完全 prompt 用の path context を構築する
+    path_context = AgentCallPathContext(cwd)
+
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェアリポジトリのルーティング文書作成担当です",
         summary="- `{{target-path}}` の `INDEX.md` 用エントリーを生成すること",
         goal="- 指定された Structured Output schema に従ってエントリーを返すこと",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=path_context,
         aux_dynamic_prompt=[
             StructDoc(
                 "エントリー生成規則",
@@ -55,7 +63,7 @@ def build_indexing_index_entry_parameter(
             ),
         ],
         aux_placeholder_def={
-            "target-path": resolve_real_path(target_path),
+            "target-path": resolve_real_path(target_path, path_context),
         },
         index_entry_standard=True,
     )
@@ -68,10 +76,11 @@ def build_indexing_index_entry_parameter(
     #   非常に単純な要約タスクなので、かなり品質を下げても成立しやすい
     #   cmoc 上の下限設定を採用
     return AgentCallParameter(
-        ModelClass.MINIMUM,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        render_as_markdown(prompt),
-        Path(__file__).with_suffix(".json"),
-        False,
+        model_class=ModelClass.MINIMUM,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.READONLY,
+        prompt=render_as_markdown(prompt),
+        structured_output_schema_path=Path(__file__).with_suffix(".json"),
+        cwd=path_context.cwd,
+        run_indexing_preflight=False,
     )

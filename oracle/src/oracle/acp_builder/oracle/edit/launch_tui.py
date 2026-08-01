@@ -7,7 +7,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import resolve_repo_root
+from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
 from oracle.other.struct_doc import StructBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
@@ -25,6 +25,9 @@ def build_oracle_edit_launch_tui_parameter(
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
     """
+    # main worktree を agent call の cwd として先に確定する
+    path_context = AgentCallPathContext(resolve_repo_root())
+
     # ユーザー指示以外を固定した完全 prompt を構築する。
     complete_prompt = build_complete_prompt(
         role="- あなたは oracle file の編集担当です",
@@ -39,6 +42,7 @@ def build_oracle_edit_launch_tui_parameter(
         - `git add`、`git commit`、`git stash`、branch 切替、worktree 操作を行わず、変更を未コミットのまま残していること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
+        path_context=path_context,
         aux_dynamic_prompt=[
             StructBlock(
                 "original_user_instruction",
@@ -54,7 +58,7 @@ def build_oracle_edit_launch_tui_parameter(
 
     # cmoc が管理する TUI ログへ完全 prompt を保存する。
     complete_prompt_path = (
-        resolve_repo_root()
+        path_context.repo_root
         / ".cmoc"
         / "gu"
         / "ar"
@@ -72,6 +76,6 @@ def build_oracle_edit_launch_tui_parameter(
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
         structured_output_schema_path=None,
+        cwd=path_context.cwd,
         run_indexing_preflight=True,
-        cwd=resolve_repo_root(),
     )

@@ -9,7 +9,11 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import resolve_real_path, resolve_work_root
+from oracle.other.path_model import (
+    AgentCallPathContext,
+    resolve_real_path,
+    resolve_repo_root,
+)
 
 # cmoc
 from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
@@ -26,8 +30,13 @@ def build_session_join_conflict_resolution_parameter(
     conflicted_paths: list[Path]
         conflict marker 解消対象ファイルのパス。
     """
+    # session join は main worktree を agent call の cwd として先に確定する
+    path_context = AgentCallPathContext(resolve_repo_root())
+
     # エイリアス
-    resolved_paths = [resolve_real_path(path) for path in conflicted_paths]
+    resolved_paths = [
+        resolve_real_path(path, path_context) for path in conflicted_paths
+    ]
     path_list = "\n".join(str(path) for path in resolved_paths)
     # プロンプト
     prompt = build_complete_prompt(
@@ -42,6 +51,7 @@ def build_session_join_conflict_resolution_parameter(
         - 全てのテストに通過する状態であること
         """,
         file_access_mode=FileAccessMode.REPO_WRITE,
+        path_context=path_context,
         aux_dynamic_prompt=[
             StructDoc(
                 "conflict 対象ファイル",
@@ -57,9 +67,6 @@ def build_session_join_conflict_resolution_parameter(
                 """,
             ),
         ],
-        aux_placeholder_def={
-            "work-root": resolve_work_root(),
-        },
         oracle_and_realization_basic=True,
         oracle_standard=True,
         realization_standard=True,
@@ -70,10 +77,11 @@ def build_session_join_conflict_resolution_parameter(
     # NOTE
     #   ここでやらかすと、ここまでに投下したコストが全てパーになるので、最高品質設定で呼び出す
     return AgentCallParameter(
-        ModelClass.FLAGSHIP,
-        ReasoningEffort.MAX,
-        FileAccessMode.REPO_WRITE,
-        render_as_markdown(prompt),
-        None,
-        False,
+        model_class=ModelClass.FLAGSHIP,
+        reasoning_effort=ReasoningEffort.MAX,
+        file_access_mode=FileAccessMode.REPO_WRITE,
+        prompt=render_as_markdown(prompt),
+        structured_output_schema_path=None,
+        cwd=path_context.cwd,
+        run_indexing_preflight=False,
     )

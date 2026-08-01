@@ -1,17 +1,19 @@
 # cmoc
-from oracle.other.path_model import resolve_work_root
+from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import StructDoc
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_routing_rule() -> tuple[PlaceholderMap, StructDoc]:
+def build_routing_rule(
+    path_context: AgentCallPathContext,
+) -> tuple[PlaceholderMap, StructDoc]:
     """
     INDEX.md を使って必要な文章へ進むための規則文章を構築する
     """
+    # この part の文面が参照する root 定義を call-scoped context から取得する
+    root_definitions = path_context.root_placeholder_definitions()
     return (
-        {
-            "work-root": resolve_work_root(),
-        },
+        {"work-root": root_definitions["work-root"]},
         StructDoc(
             "routing rule",
             StructDoc(
