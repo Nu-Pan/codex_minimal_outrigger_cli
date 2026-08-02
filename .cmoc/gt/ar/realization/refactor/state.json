@@ -234,13 +234,13 @@
     "last_investigated_at": "2026-07-29_07-52_01_567090000"
   },
   "oracle/doc/dev_rule/development_environment.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "d1371e90d6e441b3470b215a3f421f05b6c6fec889700442a191f677de0c81b1",
     "last_investigated_at": "2026-07-24_01-36_08_165371000"
   },
   "oracle/doc/dev_rule/test_rule.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "64df10101d72683cb65d504537d5a267a58131f6567a762ecc8cdb72de9ff1db",
     "last_investigated_at": "2026-07-28_19-05_23_990163000"
@@ -480,7 +480,7 @@
     "last_investigated_at": "2026-07-24_15-14_59_704104000"
   },
   "pyproject.toml": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "b2f7a17a58e3aa7aac375d93ebf50b342e13e74c4e9bc5ba3b6e8fd88b78edd4",
     "last_investigated_at": "2026-07-24_15-27_37_615117000"
@@ -1056,7 +1056,7 @@
     "last_investigated_at": "2026-07-27_17-07_58_869347000"
   },
   "test/_ollama_support.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "05a91d9bcaa87673390175fa9a02ca7c11ceaf6d760ad5b472ed0846c7b92019",
     "last_investigated_at": "2026-07-27_17-25_56_212602000"
@@ -1318,6 +1318,12 @@
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "05fda609787853f37b99bf1a763df322a79683a455a09de5453a1cd39982ae48",
     "last_investigated_at": "2026-07-27_23-29_29_301948000"
+  },
+  "test/test_skill_metadata.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "test/test_struct_doc_rendering.py": {
     "investigation_required": false,
