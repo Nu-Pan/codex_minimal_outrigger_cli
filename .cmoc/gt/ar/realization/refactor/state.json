@@ -144,7 +144,7 @@
     "last_investigated_at": "2026-07-29_14-39_21_051957000"
   },
   "oracle/doc/app_spec/sub_command/realization_refactor.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "49ed124e4e4d48ea9baee1d3014cf98ad0b8240d7a3720d9b9a1474ed26853a8",
     "last_investigated_at": "2026-07-28_17-38_22_567561000"
@@ -276,7 +276,7 @@
     "last_investigated_at": "2026-07-27_00-12_50_142515000"
   },
   "oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.json": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "bf1beeb7e863efdb9f38a22902dbccae13ddd76b070e8492eeb4dd1e929aa085",
     "last_investigated_at": "2026-07-24_03-46_52_651330000"
@@ -300,7 +300,7 @@
     "last_investigated_at": "2026-07-24_04-22_43_581249000"
   },
   "oracle/src/oracle/acp_builder/oracle/review/merge_finding.json": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "0966bfdbee83e16727ad5010f02f8010e46f6ea9121624f7093757678ed500eb",
     "last_investigated_at": "2026-07-24_04-36_48_252077000"
@@ -312,7 +312,7 @@
     "last_investigated_at": "2026-07-24_07-57_41_218506000"
   },
   "oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.json": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "229fedb31871f51de412eb7dd3a7026bc34829344851b2bc81dc8231b250e296",
     "last_investigated_at": "2026-07-24_08-10_40_886951000"
@@ -324,7 +324,7 @@
     "last_investigated_at": "2026-07-24_08-23_00_558419000"
   },
   "oracle/src/oracle/acp_builder/oracle/review/validate_finding_challenger.json": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "dfeec2f83fac0acf4622e1f9286a65c266d11d3943bcbf685448b58b9ce245bc",
     "last_investigated_at": "2026-07-24_08-35_10_179581000"
@@ -354,7 +354,7 @@
     "last_investigated_at": "2026-07-27_00-56_01_380416000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "0510d3855b5b99e1f3cfbcdfb863e34e58dc00054954c748b0b6ccf8129677cc",
     "last_investigated_at": "2026-07-27_01-07_46_432048000"
@@ -377,18 +377,6 @@
     "last_investigated_sha256": "c2ab97aa1fc3c9c37b1d9d206c70304e1a0e56ba4163417637f4bbf0c4170fe1",
     "last_investigated_at": "2026-07-28_04-31_18_306708000"
   },
-  "oracle/src/oracle/acp_builder/tui/resolve_parameter.json": {
-    "investigation_required": false,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "22a4c43bcee0978a70007dbaf2a6487403ce7b2829df218cad8d608141bc0b0e",
-    "last_investigated_at": "2026-07-24_11-12_40_049031000"
-  },
-  "oracle/src/oracle/acp_builder/tui/resolve_parameter.py": {
-    "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "7d442f0a37e22042352348e3bbd4eebe1afb38cfea28f5137362d8d698952d33",
-    "last_investigated_at": "2026-07-27_01-39_50_218925000"
-  },
   "oracle/src/oracle/other/cmoc_config.py": {
     "investigation_required": false,
     "last_investigation_result": "no_findings",
@@ -402,7 +390,7 @@
     "last_investigated_at": "2026-07-24_11-53_56_754732000"
   },
   "oracle/src/oracle/other/standard.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "a030f66eb8db892df78b4e0246d71fcfb3a99d49a56a37ddd8ea96705340bf2f",
     "last_investigated_at": "2026-07-24_12-07_33_192017000"
@@ -431,12 +419,6 @@
     "last_investigated_sha256": null,
     "last_investigated_at": null
   },
-  "oracle/src/oracle/prompt_builder/parts/apply_review_standard.py": {
-    "investigation_required": false,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "0c69d41cfb94d57df0d3e1e59249241820ca832705e149d3377718c0e781ed84",
-    "last_investigated_at": "2026-07-24_13-08_55_632931000"
-  },
   "oracle/src/oracle/prompt_builder/parts/file_access_rule.py": {
     "investigation_required": true,
     "last_investigation_result": "no_findings",
@@ -455,23 +437,11 @@
     "last_investigated_sha256": "52d5324d5a026e9a98b5f944af4b667e19d4b114dd9cf1e66a40c111d3521ea6",
     "last_investigated_at": "2026-07-28_04-47_22_283229000"
   },
-  "oracle/src/oracle/prompt_builder/parts/oracle_review_standard.py": {
-    "investigation_required": false,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "64ee7071e9eab5d4ea0a841855aef097148772882131514e1f967b84d31a036b",
-    "last_investigated_at": "2026-07-27_02-33_04_650227000"
-  },
-  "oracle/src/oracle/prompt_builder/parts/oracle_standard.py": {
+  "oracle/src/oracle/prompt_builder/parts/realization_oracle_reference_rule.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "44a731f03bef07e78578477f06d0911569244875809ae1c0d17c7dc9f57b6df2",
-    "last_investigated_at": "2026-07-24_14-37_04_109639000"
-  },
-  "oracle/src/oracle/prompt_builder/parts/realization_standard.py": {
-    "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "5dbc1cb4f5d03990e3486c70f90a0bf811d01efbbc2740d4155b8f70d2bc5478",
-    "last_investigated_at": "2026-07-28_19-23_23_032896000"
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "oracle/src/oracle/prompt_builder/parts/routing_rule.py": {
     "investigation_required": true,
