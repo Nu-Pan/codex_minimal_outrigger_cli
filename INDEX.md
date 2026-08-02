@@ -1,18 +1,20 @@
 # `AGENTS.md`
 
 ## Summary
-- cmoc 自己開発における恒常的なリポジトリ固有指示を定める文書。動的生成プロンプトの権限・作業範囲を再定義せず、oracle file を優先する原則と、開発環境・設計・テスト・品質検査に関する参照先を示す。
+- cmoc 自己開発で恒常的に適用するリポジトリ固有の補足指示を定義する文書。動的生成プロンプトの権限・作業範囲は変更せず、Python 環境、設計、テスト、テスト実行に関する oracle file の参照先を案内する。
 
 ## Read this when
-- cmoc リポジトリ固有の開発ルールや、動的生成プロンプトとの関係を確認するとき
-- Python 環境、依存関係、realization implementation、realization test、品質検査の進め方を判断するとき
+- cmoc リポジトリ自身の開発に関する作業を行うとき
+- Python 環境や依存関係、realization implementation、realization test、品質検査の標準参照先を確認するとき
+- 動的生成プロンプトとリポジトリ固有指示の関係を確認するとき
 
 ## Do not read this when
-- 具体的な実装仕様やテスト仕様そのものを確認したいとき
-- 指定された開発作業の詳細が oracle file や repository local skill に直接定義されているとき
+- 動的生成プロンプトが定める作業範囲・ファイルアクセス・oracle/realization 規則だけを確認したいとき
+- 特定の実装やテストの詳細仕様を確認する必要があり、案内された oracle file を直接読むべきとき
+- cmoc 自己開発に関係しない一般的な作業を行うとき
 
 ## hash
-- b68df81da1c2ea21aea0a7fa9182c441085b2ebc1019ff01f7e172de6c61b126
+- 89bee9d7c2af278bbd665139abcc639290db77ce14190f9d84c74505d635448d
 
 # `LICENSE`
 
@@ -87,21 +89,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様と正本ソースを扱う oracle ディレクトリ。アプリケーション仕様、CLI・agent call・session/run lifecycle、branch・commit・worktree、開発規則、および agent call のパラメータ・設定・Structured Document・prompt builder の定義を確認する入口。
+- cmoc の人間所有の正本仕様を集約するディレクトリ。アプリケーション共通仕様、branch・commit・worktree モデル、開発規則、不採用案の検討記録、および参照可能な正本ソースを扱う。仕様領域ごとの文書・ソースへ進むための入口。
 
 ## Read this when
-- cmoc の利用者向け挙動や CLI、agent call、ログ、prompt、session/run lifecycle の正本仕様を探すとき
-- session fork、run の隔離、branch・commit・worktree の関係やライフサイクルを確認するとき
-- 開発環境、CLI 実装配置、Python 規則、realization test の方針を確認するとき
-- Agent Call Parameter、Structured Output、CmocConfig、root 解決、Structured Document、prompt builder の定義や生成規則を調査するとき
+- cmoc の正本仕様や正本ソースを探すとき
+- アプリケーション挙動、branch・worktree lifecycle、開発規則、テスト・環境構築、設定・パスモデル、規範モデル、構造化文書生成の仕様を確認するとき
+- 特定の仕様領域に対応する下位ディレクトリを選ぶとき
 
 ## Do not read this when
-- 確認したい個別仕様文書が明確なときは、その文書を直接読む
-- 構築済み環境での具体的なテスト・Ruff・mypy の実行手順だけを確認するときは、repository local の run-cmoc-tests skill を読む
-- CLI サブコマンドの実際の処理、共通 prompt 実行フロー、バックエンド固有のモデル解決、または個別 realization 実装だけを調査するときは、対応する直接の対象を読む
+- 確認対象の具体的な仕様文書や正本ソースがすでに特定されているとき
+- realization 実装、具体的なテスト実行、一般的な開発作業だけを調査するとき
 
 ## hash
-- 32a79aa8be1e1f9620554b01dbe3aa2a030cdb866a8e86b5680ea9726ebafcb9
+- e908e48f3d2933a9d3a3ec6655628c93423376d399fe6ab681f97692ae241f56
 
 # `pyproject.toml`
 

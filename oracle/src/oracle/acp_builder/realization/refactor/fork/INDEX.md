@@ -29,29 +29,34 @@
 # `file_review_and_fix.json`
 
 ## Summary
-- 対象ファイルに対応する realization implementation と既存テストを確認したが、要修正点は見つからなかった。
+- 実装レビューで検出した所見を、根拠・oracle 要求・実装状況・理由・対応結果・検証結果とともに記録する JSON スキーマ定義。レビュー結果を構造化して返すための入口。
 
 ## Read this when
-- realization refactor の file review・修正 builder の schema と実行契約を確認するとき。
+- 実装レビューや修正対応の所見フォーマットを確認するとき
+- 所見の根拠位置、oracle 要求、対応状態、検証結果の構造を確認するとき
 
 ## Do not read this when
-- change summary builder や別の ACP builder の契約だけを確認するとき。
+- 実装レビューの具体的な観点や対象ファイルを確認したいとき
+- 通常の実装・テスト仕様や、別形式の出力スキーマを扱うとき
 
 ## hash
-- 2c9d5c94fd9445868a9fb6622a21a543177468f0a827bf9eecd1e9aef0cebc04
+- 4a1ec12adc95a23912e38113ca366655a433bcf323284cfb08675bf8c11cc167
 
 # `file_review_and_fix.py`
 
 ## Summary
-- cmoc の realization refactor fork における、単一ファイルのレビュー兼修正用 AgentCallParameter を構築する正本実装。対象ファイルを起点に完全プロンプト、パス文脈、アクセス権、モデル設定、構造化出力 schema を組み立てる。
+- `cmoc realization refactor fork` のファイル単位レビュー・修正用 AgentCallParameter を構築するモジュール。対象ファイルを起点に完全なレビュー・修正プロンプトを生成し、モデル・権限・検証・Structured Output schema などの実行条件をまとめて返す。
+- プロンプト本文の組み立て、対象パスの解決、構造化 Markdown 化、実行パラメータ生成が主な責務であり、ファイル単位レビュー・修正フローの入口となる。
 
 ## Read this when
-- realization refactor fork のファイル単位レビュー・修正処理を変更または調査するとき
-- 対象 path、agent call の作業ディレクトリ、プロンプト生成規則、検証・修正条件の設定を確認するとき
+- ファイル単位の realization レビュー・修正 prompt の構成や実行条件を変更するとき
+- 対象 path、worktree、file access mode、reasoning/model 設定、Structured Output schema の指定を確認するとき
+- レビュー時の oracle・realization 参照規則や修正・検証条件を確認するとき
 
 ## Do not read this when
-- 実際のレビュー対象ファイルの実装内容を調査するとき
-- レビュー結果の structured output schema だけを確認するときは、対応する schema ファイルを直接読む
+- レビュー対象ファイルそのものの実装内容や個別の所見を調査するとき
+- レビュー結果の Structured Output schema 定義だけを確認するとき
+- 共通 prompt builder や path model の内部仕様を直接確認するとき
 
 ## hash
-- 5ee953a70d14c96b13aff4437a95f19fc2208f0f52bf81d3e492e895b00b446f
+- d28b48d3e7a7160ccd6b4efb68a2725ea2e4ebc471d032b45d5adbb5978a4164

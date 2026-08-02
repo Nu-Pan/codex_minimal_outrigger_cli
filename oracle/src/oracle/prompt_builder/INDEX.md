@@ -17,20 +17,18 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全なプロンプトを、役割・依頼概要・完了条件、静的／動的プロンプト、各種規則、プレースホルダ定義から構築する。
-- oracle・realization、realization から oracle 参照、INDEX エントリー、ファイルアクセス、ルーティングの各規則を条件付きで注入し、placeholder の競合を検出する。
+- oracle と realization の各種規範およびパス文脈を組み合わせ、agent call に渡す完全なプロンプトを決定論的に構築する。静的・動的プロンプト、placeholder 定義、規範間の依存関係を扱う。
 
 ## Read this when
-- agent call 用プロンプトの構成や注入順序を変更するとき
-- 静的／動的プロンプト、補助プロンプト、placeholder 定義の統合処理を確認するとき
-- oracle・realization 関連規則や INDEX エントリー規則の有効化条件を変更するとき
+- agent call 用プロンプトの全体構成、注入する規範、placeholder、ファイルアクセス・ルーティング規則を変更または確認するとき
+- 静的プロンプトと動的プロンプトの分離、規範の自動有効化、placeholder の競合処理を調査するとき
 
 ## Do not read this when
-- 個別のプロンプト部品の本文や規則の内容だけを変更するときは、対応する parts 配下の実装を直接読む
-- プロンプト生成と無関係な CLI、パスモデル、構造化文書の処理を変更するとき
+- 個別の oracle／realization 規範本文だけを確認したいとき
+- 特定のプロンプト部品の文面や内容を変更・確認する場合で、その部品の実装を直接読めるとき
 
 ## hash
-- 9ee989a6beb974e3cecde4497393189632a7ddc50ec34869be9805681c5b1aac
+- 809587f3af485137443c65358d9600db1f5b8f02770dab4b6267aa0829497260
 
 # `editor_input.py`
 
@@ -50,15 +48,18 @@
 # `parts`
 
 ## Summary
-- prompt builder が生成する各種規則・定義文書の部品を収めるディレクトリ。ファイルアクセス制約、oracle/realization の基本定義、INDEX.md ルーティング、oracle file 参照規則など、個別のプロンプト構成要素への入口となる。
+- oracle と realization、適合性レビュー、ファイルアクセス、INDEX.md ルーティングなどの規範を prompt builder 用の構造化文書へ変換する実装群を収録するディレクトリ。各ファイルは特定のレビュー規範・アクセス制約・仕様分類・ルーティング規則の生成責務を持つ。
 
 ## Read this when
-- prompt builder の規則文書を追加・変更・確認するとき
-- ファイルアクセス、oracle/realization、INDEX.md ルーティング、realization code の oracle 参照のいずれかに関する生成規則を調べるとき
+- oracle file と realization file の適合性、レビュー所見、conflict 解消規範を調査・変更するとき
+- AI エージェント向けのファイルアクセス規則や oracle・realization の定義を変更するとき
+- INDEX.md のエントリー規範やルーティング規則の生成処理を調査・変更するとき
+- prompt builder に注入する標準文書の構造、Requirement・Standard の扱い、oracle 参照ルールを確認するとき
 
 ## Do not read this when
-- 個別の oracle 文書や realization 実装の内容を調べるとき
-- prompt builder 全体の構成や、このディレクトリに含まれない別の生成部品だけを調べるとき
+- 特定の oracle 文書や realization 実装そのものの仕様・挙動を調査するとき
+- Codex CLI の実行権限や sandbox 設定そのものを確認するとき
+- prompt builder 以外のサブコマンド処理や、一般的なコード品質・ベストプラクティスだけをレビューするとき
 
 ## hash
-- a337f6fe855ab67cb0994ec92a4da67f8e23c517fc9b5afddee0c5fa8927c59b
+- 64f41aa2cca1fda8f8258429b314afc03bcd26666154c0ef725c4dac6ca92905

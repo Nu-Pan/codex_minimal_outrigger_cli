@@ -1,3 +1,37 @@
+# `apply_review_standard.py`
+
+## Summary
+- oracle file に対する realization file の適合性判定規範を構築する実装。明確な仕様不整合や実行不能な致命的バグを修正対象とし、根拠を具体化する。
+- oracle file に明記されない実装詳細、好み、推測、一般的な改善案だけでは修正対象にせず、realization の挙動を oracle 仕様へ逆流させないための適用基準を定義する。
+- oracle の要求に対する realization の追従要否、所見、修正内容を判断する処理を調べる際の入口。
+
+## Read this when
+- oracle file と realization file の適合性、追従要否、レビュー所見、修正対象の判定規範を確認するとき
+- apply review standard の構造化文書や、その構築に使われる Requirement・Standard の扱いを変更または調査するとき
+
+## Do not read this when
+- 一般的なコード品質改善やベストプラクティスのレビューだけを行うとき
+- oracle の適合性判定ではなく、別の prompt builder 部品や realization 実装そのものを直接調査するとき
+
+## hash
+- bf29bea4168dbc8d59d7d6c3d0e676ff93f39a6d6fc6dd2ed4465862df7f5c0c
+
+# `conflict_resolution_standard.py`
+
+## Summary
+- session join における conflict marker 解消専用の規範を構築する oracle source。両 branch の意図と挙動を保ち、conflict 解消に不要な変更を禁止し、判断不能な場合は未解消事項として報告する要件を構造化文書へ変換する。
+
+## Read this when
+- `cmoc session join` の conflict marker 解消ルールや適用条件を確認するとき
+- conflict 解消用の prompt または規範構造を変更・レビューするとき
+
+## Do not read this when
+- conflict 解消以外の session 処理を確認するとき
+- 一般的な oracle / realization 規範の定義を確認するときは、対応する標準定義を直接読む
+
+## hash
+- c9e43334d126ed735a55807763442ee34292bfe17bfa2545c8e84e166b4d7c91
+
 # `file_access_rule.py`
 
 ## Summary
@@ -50,21 +84,74 @@
 ## hash
 - 46cac8d7867434199021d72041b4b1b9eea45f91fbb845ee3e177089d3dde021
 
+# `oracle_review_standard.py`
+
+## Summary
+- oracle review 全段階で共有する所見判定規範を構築する正本実装。fatal・minor・所見なしの判定境界、根拠の要件、適用条件を定義する。
+
+## Read this when
+- oracle file の所見を列挙、統合、検証、擁護・反証理由の整理、または採否判定するとき
+- fatal と minor の判定基準や、仕様の具体的記述に基づく所見の成立条件を確認するとき
+
+## Do not read this when
+- oracle review の所見判定を扱わず、一般的な仕様規範や別の prompt builder 部品だけを確認するとき
+- 所見判定規範そのものではなく、Requirement・Standard・StructDoc のデータ構造や変換処理を確認するとき
+
+## hash
+- 831f63ed0ce47db11c675b76a03db06362fba62446e299ea7d6e6858f6d5a3e6
+
+# `oracle_standard.py`
+
+## Summary
+- oracle file の作成・変更・調査・レビューに適用する規範を、call-scoped な work-root 定義とともに構築する。oracle file を正本仕様断片として扱うこと、仕様の隙間を過剰に埋めないこと、実装から仕様を逆算しないこと、仕様間の整合性・用語統一・検索性を保つことを定義する。
+
+## Read this when
+- oracle file に関する規範の構築・変更・適用条件を確認するとき
+- oracle file と realization file、既存実装、installed skill の優先関係を判断するとき
+- 正本仕様断片の追加・変更に伴う境界、整合性、用語統一を確認するとき
+
+## Do not read this when
+- realization file の実装やテスト自体の設計・変更だけを行うとき
+- oracle file に関する規範ではなく、個別の oracle file の内容を確認するとき
+
+## hash
+- 4c37309fee606d2905ef28dca1322a86d786d78aa8c90e7211995a02079364ed
+
 # `realization_oracle_reference_rule.py`
 
 ## Summary
-- realization code から、対応する oracle file のパスをコメントへ記載するための規則を構築する。パス文脈から `work-root` の定義を取得し、プレースホルダー置換用マップと構造化ドキュメントを返す。
+- realization code から参照すべき oracle file path をコメントへ記載する規則を、agent call のパス文脈から構築する関数。placeholder map と構造化文書を返し、realization 実装時の oracle 参照ルールをプロンプトへ組み込む。
 
 ## Read this when
-- realization code のコメントに oracle file path を参照させる規則を変更・利用するとき。
-- `work-root` のプレースホルダー定義や、対応する構造化ドキュメントの生成方法を確認するとき。
+- realization code の作成・変更時に、対応する oracle file path をコメントへ記載する規則を確認したいとき。
+- agent call の root placeholder 定義と、realization oracle reference rule の構造化文書生成方法を確認したいとき。
 
 ## Do not read this when
-- oracle file の一般的な定義やパス文脈全体の仕様だけを確認したいとき。
-- realization code の具体的なコメント記述や、別の prompt builder 規則を直接変更するとき。
+- realization code の具体的な実装内容やテスト方法を確認したいとき。
+- oracle file の仕様本文や、プロンプト構築の別ルールを直接確認したいとき。
 
 ## hash
-- f891c0131b0da1ad3836613b719a1e733c79ea7a2882935ee545126fc5457f3f
+- 79789b9f78302eb267516c71cb34589e6f94c8b1408c4e2b2d5a691b9dbe0124
+
+# `realization_standard.py`
+
+## Summary
+- realization file の作成・変更・レビュー時に適用する規範を、対象 repository の work-root 定義とともに構築する。
+- oracle file への適合、不要な実装や公開面の抑制、repository 固有手順による検証という3領域を扱う。
+- realization file の作業規範を注入する prompt builder 部品への入口である。
+
+## Read this when
+- realization file の作成、変更、リファクタ、またはレビューに適用される規範を確認するとき
+- oracle file と realization file の責務境界、重複禁止、参照・生成・変換の扱いを確認するとき
+- 対象 repository 固有の手順による検証要件を確認するとき
+
+## Do not read this when
+- oracle file 自体の仕様を作成・変更するとき
+- INDEX.md のルーティング規則そのものを確認するとき
+- realization file に関係しない prompt builder の部品を調査するとき
+
+## hash
+- 72ee123baa624d77b27881c41104fb4d31a59634b2faf3b7dcf83de77fe9dbea
 
 # `routing_rule.py`
 
