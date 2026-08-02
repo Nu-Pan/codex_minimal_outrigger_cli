@@ -33,6 +33,7 @@
 
 - TUI に渡す prompt と `AgentCallParameter` は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_tui.py` の `build_oracle_edit_launch_tui_parameter` を正本とする。
 - builder が返したパラメータを変更せずに TUI 起動へ渡し、実行パラメータ決定用の追加 agent call は行わない。
+- builder は `build_oracle_standard` の規範を固定で prompt へ注入する。
 - builder は少なくとも以下を固定する。
     - `AgentCallParameter.agent_call_cwd` は `{{repo-root}}`。
     - model class は `FLAGSHIP`、reasoning effort は `MAX`。

@@ -4,7 +4,8 @@
 ## 概要
 
 - ユーザーから与えられたプロンプトへ cmoc 固有の契約を注入し、AI Agent CLI/TUI を起動する
-- 汎用規範は installed skill に委ね、実行パラメータ選定用の agent call は行わない
+- installed skill の有無にかかわらず解釈できる、適用条件付きの cmoc 基本規範を固定で注入する
+- 実行パラメータまたは注入規範を選定するための agent call は行わない
 
 ## 引数
 
@@ -32,6 +33,17 @@
 
 - ユーザーのプロンプト入力後、`build_tui_launch_tui_parameter` で構築した固定パラメータを使用して TUI を直接起動する
 - TUI 起動パラメータは `build_tui_launch_tui_parameter` を正本とする
+- builder は次の規範を、オリジナルプロンプトの内容によらず固定で注入する
+    - `build_oracle_standard`
+    - `build_realization_standard`
+    - `build_oracle_review_standard`
+    - `build_apply_review_standard`
+    - `build_realization_oracle_reference_rule`
+- 各規範は自身が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
+- installed skill は任意の追加規範として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
+- builder は model class を `FLAGSHIP`、reasoning effort を `MAX`、file access mode を `REPO_WRITE` とする
+- Structured Output は要求しない
+- TUI 起動前の indexing preflight を行う
 
 ### Codex CLI の場合
 

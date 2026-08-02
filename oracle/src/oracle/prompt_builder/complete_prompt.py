@@ -8,12 +8,17 @@ from oracle.other.struct_doc import StructBlock, StructDoc
 from .basic import PlaceholderMap
 
 # local
+from .parts.apply_review_standard import build_apply_review_standard
+from .parts.conflict_resolution_standard import build_conflict_resolution_standard
 from .parts.file_access_rule import build_file_access_rule
 from .parts.index_entry_standard import build_index_entry_standard
 from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
+from .parts.oracle_review_standard import build_oracle_review_standard
+from .parts.oracle_standard import build_oracle_standard
 from .parts.realization_oracle_reference_rule import (
     build_realization_oracle_reference_rule,
 )
+from .parts.realization_standard import build_realization_standard
 from .parts.routing_rule import build_routing_rule
 
 
@@ -43,6 +48,11 @@ def build_complete_prompt(
     aux_dynamic_prompt: list[StructDoc | StructBlock] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
     oracle_and_realization_basic: bool = False,
+    oracle_standard: bool = False,
+    realization_standard: bool = False,
+    oracle_review_standard: bool = False,
+    apply_review_standard: bool = False,
+    conflict_resolution_standard: bool = False,
     realization_oracle_reference_rule: bool = False,
     index_entry_standard: bool = False,
 ) -> list[StructDoc | StructBlock]:
@@ -86,6 +96,21 @@ def build_complete_prompt(
     oracle_and_realization_basic:
         True の時、oracle, realization についての基本情報をプロンプトに注入する
 
+    oracle_standard:
+        True の時、oracle standard をプロンプトに注入する
+
+    realization_standard:
+        True の時、realization standard をプロンプトに注入する
+
+    oracle_review_standard:
+        True の時、oracle review standard をプロンプトに注入する
+
+    apply_review_standard:
+        True の時、apply review standard をプロンプトに注入する
+
+    conflict_resolution_standard:
+        True の時、conflict resolution standard をプロンプトに注入する
+
     realization_oracle_reference_rule:
         True の時、realization code から oracle file path を参照する規則を
         プロンプトに注入する
@@ -121,13 +146,37 @@ def build_complete_prompt(
         _merge_placeholder_definitions(ph_map, temp_ph_map)
         prompt.append(temp_prompt)
 
+    # 適合性規範が依存する規範を決定論的に有効化する。
+    if apply_review_standard:
+        realization_standard = True
+    if realization_standard or oracle_review_standard:
+        oracle_standard = True
+
     # 下位規則が参照する cmoc 固有概念も同時に注入する。
-    if realization_oracle_reference_rule or index_entry_standard:
+    if (
+        oracle_standard
+        or realization_standard
+        or oracle_review_standard
+        or apply_review_standard
+        or conflict_resolution_standard
+        or realization_oracle_reference_rule
+        or index_entry_standard
+    ):
         oracle_and_realization_basic = True
 
     # 静的プロンプトを構築
     if oracle_and_realization_basic:
         _extend_static_prompt(build_oracle_and_realization_basic, path_context)
+    if oracle_standard:
+        _extend_static_prompt(build_oracle_standard, path_context)
+    if realization_standard:
+        _extend_static_prompt(build_realization_standard, path_context)
+    if apply_review_standard:
+        _extend_static_prompt(build_apply_review_standard)
+    if oracle_review_standard:
+        _extend_static_prompt(build_oracle_review_standard)
+    if conflict_resolution_standard:
+        _extend_static_prompt(build_conflict_resolution_standard)
     if realization_oracle_reference_rule:
         _extend_static_prompt(build_realization_oracle_reference_rule, path_context)
     if index_entry_standard:

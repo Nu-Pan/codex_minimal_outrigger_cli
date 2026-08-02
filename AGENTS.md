@@ -14,4 +14,4 @@ cmoc は agent call ごとにプロンプトを動的生成し、その作業に
 - Python 環境の新規構築、依存関係の追加、または pip の操作を行うときは、`oracle/doc/dev_rule/development_environment.md` を読む。
 - realization implementation の配置先や CLI 実装の責務境界を判断するときは、`oracle/doc/dev_rule/design_rule.md` を読む。
 - realization test の追加・変更・レビュー、または test が満たすべき要件を判断するときは、`oracle/doc/dev_rule/test_rule.md` を読む。
-- 既存 test と品質検査を選択・実行して結果を報告するときは、repository local の `run-cmoc-tests` skill を使う。通常の実行だけを理由として、上記の oracle file を事前に読む必要はない。
+- 既存 test と品質検査を選択・実行して結果を報告するときは、repository local の `oracle/doc/dev_rule/test_execution.md` skill を使う。通常の実行だけを理由として、上記の oracle file を事前に読む必要はない。

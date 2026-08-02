@@ -30,7 +30,8 @@
 - 収束判定のために同じ作業を反復してはいけない。
 - 本命 agent call 終了後に、別の agent call で作業を補完してはいけない。
 - prompt は、注入差分とリポジトリ全体の関連 oracle file および realization file を根拠に、必要な implementation、test、ancillary を修正するよう要求する。
-- 汎用規範と動的プロンプトの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする。
+- builder は `build_oracle_standard`、`build_realization_standard`、および `build_apply_review_standard` の規範を固定で prompt へ注入する。
+- installed skill の有無によって、追従要否、適合性、または完了の判定基準を変えてはいけない。
 - file access mode は `REALIZATION_WRITE` とし、agent は realization file だけを変更する。
 
 ## 想定内差分

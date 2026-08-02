@@ -38,6 +38,7 @@ def build_oracle_investigation_launch_tui_parameter(
         goal="""
         - ユーザー指示が要求する調査が完了し、その結果が回答されていること
         - 調査結果の根拠となる oracle file を回答から特定できること
+        - oracle file で定義されている事項と未定義の事項を混同せず、未定義の事項を正本仕様として断定していないこと
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,
@@ -51,6 +52,7 @@ def build_oracle_investigation_launch_tui_parameter(
             )
         ],
         oracle_and_realization_basic=True,
+        oracle_standard=True,
     )
 
     # cmoc が管理する TUI ログへ完全プロンプトを保存する

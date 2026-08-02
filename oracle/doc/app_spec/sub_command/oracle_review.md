@@ -46,6 +46,9 @@
 ## agent call 規則
 
 - 個別 agent call の詳細仕様は、対応する `build_oracle_review_*_parameter()` を正本とする
+- 所見の判定基準は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/oracle_review_standard.py` の `build_oracle_review_standard` だけを正本とする
+- 所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定の全 builder は、`build_oracle_review_standard` の同じ生成結果を prompt へ注入する
+- Structured Output schema は出力構造だけを定義し、所見の判定基準を定義しない
 
 ## 「run の隔離実行」とは
 
@@ -84,7 +87,7 @@
 
 ## 「所見」の定義
 
-- `build_oracle_review_viewpoint` を正本とする
+- `build_oracle_review_standard` を正本とする
 
 ## 所見の ID 管理
 

@@ -13,6 +13,7 @@ def build_realization_oracle_reference_rule(
         {"work-root": root_definitions["work-root"]},
         StructDoc(
             "realization oracle reference rule",
+            "- realization code を作成または変更する場合に適用する\n"
             "- 対応する oracle file が存在する場合、realization code のコメントに "
             "`{{work-root}}` 起点の oracle file path を書く",
         ),

@@ -1,8 +1,5 @@
 """`cmoc tui` の TUI 起動 prompt 正本。"""
 
-# std
-from pathlib import Path
-
 # cmoc
 from oracle.acp_builder.basic import (
     AgentCallParameter,
@@ -51,6 +48,10 @@ def build_tui_launch_tui_parameter(
             )
         ],
         oracle_and_realization_basic=True,
+        oracle_standard=True,
+        realization_standard=True,
+        oracle_review_standard=True,
+        apply_review_standard=True,
         realization_oracle_reference_rule=True,
     )
     complete_prompt_path = (
@@ -77,7 +78,7 @@ def build_tui_launch_tui_parameter(
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
-        structured_output_schema_path=Path(__file__).with_suffix(".json"),
+        structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,
     )

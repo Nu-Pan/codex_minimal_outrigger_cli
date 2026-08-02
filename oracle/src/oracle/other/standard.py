@@ -9,7 +9,7 @@ class Standard:
     「何らかの事柄が従うべき規範」のフォーマットを定義するクラス
     e.g. INDEX.md エントリーは index entry standard に従う。
     index entry standard は `Standard` を元に生成される。
-    `Standard` は `{{cmoc-root}}` ツリー内に対して適用されるものであり、`{{work-root}}` ツリー内は対象外である
+    規範の定義は cmoc が所有し、適用対象は各 prompt part の適用条件が定める。
     """
 
     def __init__(

@@ -1,11 +1,16 @@
 # cmoc テスト実装規約
 
+## 責務境界
+
+- この文書は、realization test が満たすべき意味上の要件を定める
+- 構築済み環境で test と品質検査を選択、実行、完了判定、および報告する手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` を正本とする
+- 開発環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` を正本とする
+
 ## 基本
 
 - pytest を使用する
 - realization test は `{{cmoc-root}}/test` に実装する
-- `python-dev-skill` が pytest の隔離に使用する `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
-- agent が test・品質検査を選択・実行・報告する具体的な手順は、repository local の `.agents/skills/run-cmoc-tests/SKILL.md` に委ねる。この文書では test が満たすべき要件と sandbox escalation の認可境界だけを定める
+- pytest の `tmp_path` を `{{test-root}}` とし、被テスト cmoc の HOME、repository、worktree、設定、および実行成果物をそのツリー内に構築する
 
 ## goal
 
@@ -28,7 +33,7 @@
 - Codex CLI 呼び出しには、実在の Codex CLI executable、実在の Ollama executable、および test-local Ollama による実推論を使用する。Fake、mock、stub、記録済み response、または起動確認だけでは実経路統合テストを代替できない
 - 本番との差は、`{{test-root}}` による隔離、決定論的な入力と対話操作の自動化、test-local Ollama、テスト用 SLM、および有料クラウド backend 禁止のために必要な範囲だけ許容する
 - `--help`、shell completion、不正入力、事前条件違反、handler の直接呼び出し、または process を分離しない確認は、実経路統合テストとはみなさない
-- realization implementation または realization test の変更後は全件を fresh に実行する。新規サブコマンドには同じ作業で test case を追加し、実行結果、Real Codex CLI 呼び出し、および本番との差を報告する。未実行、未検証、失敗、または許容外の差があれば作業を完了扱いにしない
+- 新規の公開末端サブコマンドには、同じ変更で対応する実経路統合 test case を追加する
 
 ## test-local Ollama
 
@@ -46,15 +51,6 @@
 - test-local Ollama を必要とする test case には `gpu_integration` marker を付け、それ以外の test case へこの marker を付けてはならない
 - host 実行環境で GPU が利用できない場合、GPU 推論を開始できない場合、または GPU 推論を確認できない場合は、test-local Ollama を必要とする test case を skip する
 - Codex sandbox から GPU device が不可視でも、sandbox 外の同じ host 実行環境で GPU が利用可能なら、GPU が利用できない場合とはみなさない
-
-## GPU test の sandbox escalation 認可境界
-
-- full test の対象は、`gpu_integration` 以外の全 test と `gpu_integration` の全 test の和集合とする
-- agent call の sandbox 下で `gpu_integration` を実行する場合は、同 marker を選択する pytest command とその descendant process だけに command 単位 sandbox escalation を必要とし、許容する。sandbox 内での失敗を事前条件としない
-- Ruff、mypy、および `gpu_integration` 以外の pytest を sandbox 外で実行してはならない
-- agent call 全体へ `danger-full-access` を指定してはならず、GPU test のための永続的な prefix allow rule を要求してはならない
-- sandbox escalation は GPU device と実推論を使用するためだけの例外とする。cache の利用、再構築、または永続化を理由に適用範囲を広げてはならない
-- 具体的な command、sandbox escalation の要求、拒否・skip・未完了時の扱い、および結果報告は `.agents/skills/run-cmoc-tests/SKILL.md` に委ねる
 
 ## timeout
 

@@ -36,6 +36,8 @@ def build_oracle_edit_launch_tui_parameter(
         """,
         goal="""
         - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/> が要求する最終状態が oracle file 上で満たされていること
+        - 関連する oracle file と論理的に整合していること
+        - ユーザー指示の実現に必要な箇所以外の既存仕様の意味が維持されていること
         - oracle file だけを編集し、realization file、`INDEX.md`、`AGENTS.md` を編集していないこと
         - `git add`、`git commit`、`git stash`、branch 切替、worktree 操作を行わず、変更を未コミットのまま残していること
         """,
@@ -51,6 +53,7 @@ def build_oracle_edit_launch_tui_parameter(
             )
         ],
         oracle_and_realization_basic=True,
+        oracle_standard=True,
     )
 
     # cmoc が管理する TUI ログへ完全 prompt を保存する。

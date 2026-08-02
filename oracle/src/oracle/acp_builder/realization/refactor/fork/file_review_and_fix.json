@@ -7,7 +7,7 @@
   "properties": {
     "findings": {
       "type": "array",
-      "description": "この agent call の調査開始時点で存在した realization file の要修正点。既存実装ですでに解消されている問題は含めない。この agent call 内で realization file を変更して解消した所見は含める。",
+      "description": "この agent call が返す所見と対応結果のリスト。所見がない場合は空配列。",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -65,7 +65,7 @@
           },
           "oracle_requirement": {
             "type": "string",
-            "description": "所見に関係する oracle file の要求。対応する明示要求がない場合は、その旨を記載する。"
+            "description": "所見に関係する oracle file の要求、または対応する明示要求がない旨。"
           },
           "observed_implementation": {
             "type": "string",
@@ -90,7 +90,7 @@
                   "fixed",
                   "unresolved"
                 ],
-                "description": "この agent call 内で所見に対応する realization file を実際に変更し、修正後の検証まで行った場合だけ fixed とする。この agent call 内で解消できなかった所見は unresolved とする。"
+                "description": "所見の対応状態。"
               },
               "summary": {
                 "type": "string",

@@ -74,7 +74,8 @@ call-scoped path context の適用範囲を次に示す。
 - command 単位 sandbox escalation は、作業固有の oracle file が sandbox 外実行を必要条件として明示し、agent が対象 command と理由を限定して要求する場合に限り許容する
 - escalation は対象 command とその descendant process だけへ適用し、agent call 全体の sandbox mode、`AgentCallParameter.file_access_mode`、または詳細なファイルアクセス制限を変更しない
 - command 単位 escalation のために `--sandbox danger-full-access` または `--dangerously-bypass-approvals-and-sandbox` を agent call 全体へ指定してはならない
-- cmoc 自己開発の GPU test に許容する最小の escalation 境界は `{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とし、具体的な実行手順は repository local の `run-cmoc-tests` skill に委ねる
+- cmoc 自己開発の GPU test に許容する command と具体的な escalation 手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` を正本とする
+- GPU test の具体的な手順も、この節が定める一般的な command 単位 escalation 境界を広げてはいけない
 - cmoc は command 単位 escalation のための Codex exec rule を生成せず、永続的な prefix allow rule に依存しない
 
 ### model provider transport と Codex sandbox のネットワークアクセス
