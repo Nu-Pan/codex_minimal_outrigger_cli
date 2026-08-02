@@ -24,7 +24,7 @@ from commons.runtime_state import load_session_part_for_branch
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
 ORACLE_EDIT_AUTOMATICALLY_INJECTED_INSTRUCTION = """- realization file の読み書き禁止
-- oracle file の規約・規範"""
+- oracle file の編集に必要な cmoc 固有の契約は自動注入"""
 
 
 def cmoc_oracle_edit_impl() -> None:

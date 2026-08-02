@@ -1,98 +1,66 @@
-"""TUI resolve parameter builder の出力と schema を検証する。
+"""TUI 起動 builder の固定 parameter と prompt を検証する。
 
-対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/tui/resolve_parameter.py
+対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py
 """
 
-import json
+from pathlib import Path
 
-import acp.builder.tui.resolve_parameter as tui_resolve_parameter_module
-from acp.builder.tui.resolve_parameter import (
-    build_tui_resolve_parameter_parameter,
-)
+import pytest
+from _git_support import make_repo
+
+import acp.builder.tui.launch_tui as tui_launch_module
+from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
 from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
 
 
-def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
-    """TUI parameter builderが元promptと標準promptを埋め込むことを検証する。"""
-    original_prompt = "# 依頼\n\nsrc の実装を調べて必要なら修正して下さい。"
+def test_tui_launch_builder_uses_fixed_parameter_and_standards(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """オリジナル prompt によらず固定の規範と実行設定を使用する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    original_prompt = "# 依頼\n\nsrc の実装を確認する。"
 
-    parameter = build_tui_resolve_parameter_parameter(original_prompt)
+    parameter = build_tui_launch_tui_parameter(
+        "2026-08-03_12-00_00_000000000",
+        original_prompt,
+    )
 
-    assert parameter.model_class == ModelClass.EFFICIENCY
+    assert parameter.model_class == ModelClass.FLAGSHIP
     assert parameter.reasoning_effort == ReasoningEffort.MAX
-    assert parameter.file_access_mode == FileAccessMode.READONLY
-    assert parameter.structured_output_schema_path is not None
-    assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
-    assert parameter.structured_output_schema_path.exists()
-    assert "後続の AI Agent CLI/TUI 実行に必要な情報を選定" in parameter.prompt
-    assert "4つの標準の選択結果" in parameter.prompt
-    assert original_prompt in parameter.prompt
-    assert "# oracle and realization basic" in parameter.prompt
-    assert "# oracle standard" in parameter.prompt
-    assert "# realization standard" in parameter.prompt
-    assert "# oracle review standard" in parameter.prompt
-    assert "# apply review standard" in parameter.prompt
-    assert "# index entry standard" not in parameter.prompt
+    assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
+    assert parameter.structured_output_schema_path is None
+    assert parameter.agent_call_cwd == root.resolve()
+    assert parameter.run_indexing_preflight is True
+    complete_path = (
+        root
+        / ".cmoc"
+        / "gu"
+        / "ar"
+        / "log"
+        / "editor_input"
+        / "2026-08-03_12-00_00_000000000_cmpl.md"
+    )
+    assert parameter.prompt == f"{complete_path} を読んで、その指示に従って下さい"
+    complete_prompt = complete_path.read_text(encoding="utf-8")
+    for heading in (
+        "# oracle and realization basic",
+        "# oracle standard",
+        "# realization standard",
+        "# oracle review standard",
+        "# apply review standard",
+        "# realization oracle reference rule",
+    ):
+        assert heading in complete_prompt
+    assert "# conflict resolution standard" not in complete_prompt
+    assert "# index entry standard" not in complete_prompt
+    assert original_prompt in complete_prompt
 
 
-def test_tui_resolve_parameter_keeps_nested_prompt_fences() -> None:
-    """元prompt内の三連backtickが外側の境界を閉じないことを確認する。"""
-    original_prompt = "before\n```\ninside\n```\nafter"
-
-    parameter = build_tui_resolve_parameter_parameter(original_prompt)
-
-    start = parameter.prompt.index("# オリジナルプロンプト")
-    end = parameter.prompt.rfind("\n</cmoc_block>", start)
-    section = parameter.prompt[start:end]
-    assert section.startswith("# オリジナルプロンプト\n\n````markdown\n")
-    assert "```\ninside\n```" in section
-    assert section.endswith("\n````")
-
-
-def test_tui_resolve_parameter_ignores_marker_inside_nested_prompt_fence() -> None:
-    """元prompt内の終了マーカー風文字列を外側の境界と誤認しないことを確認する。"""
-    original_prompt = "before\n```\ninside\n```\n</cmoc_block>\n\n```\nafter\n```"
-
-    parameter = build_tui_resolve_parameter_parameter(original_prompt)
-
-    start = parameter.prompt.index("# オリジナルプロンプト")
-    end = parameter.prompt.rfind("\n</cmoc_block>", start)
-    section = parameter.prompt[start:end]
-    assert section.startswith("# オリジナルプロンプト\n\n````markdown\n")
-    assert original_prompt in section
-    assert section.endswith("\n````")
-
-
-def test_tui_resolve_parameter_schema_contains_only_standard_flags() -> None:
-    """TUI parameter schema が4つの standard 選択だけを求めることを検証する。"""
-    parameter = build_tui_resolve_parameter_parameter("調査して下さい。")
-    assert parameter.structured_output_schema_path is not None
-
-    schema = json.loads(parameter.structured_output_schema_path.read_text())
-
-    assert schema["required"] == [
-        "oracle_standard",
-        "realization_standard",
-        "oracle_review_standard",
-        "apply_review_standard",
-    ]
-    assert schema["additionalProperties"] is False
-    for parameter_name in schema["required"]:
-        parameter_schema = schema["properties"][parameter_name]
-        assert parameter_schema["type"] == "object"
-        assert parameter_schema["additionalProperties"] is False
-        assert parameter_schema["required"] == ["value", "reason"]
-        assert parameter_schema["properties"]["reason"]["type"] == "string"
-        assert parameter_schema["properties"]["reason"]["description"]
-    for flag_name in schema["required"]:
-        assert (
-            schema["properties"][flag_name]["properties"]["value"]["type"] == "boolean"
-        )
-
-
-def test_tui_resolve_parameter_module_exports_only_required_names() -> None:
-    """TUI resolve互換moduleが必要な公開名だけを持つことを検証する。"""
-    assert tui_resolve_parameter_module.__all__ == [
-        "build_tui_resolve_parameter_parameter"
-    ]
-    assert not hasattr(tui_resolve_parameter_module, "render_as_markdown")
+def test_tui_launch_module_exports_only_builder() -> None:
+    """互換 module の公開面を現行 builder だけに限定する。"""
+    assert tui_launch_module.__all__ == ["build_tui_launch_tui_parameter"]
+    assert {name for name in vars(tui_launch_module) if not name.startswith("_")} == {
+        "build_tui_launch_tui_parameter"
+    }

@@ -141,17 +141,15 @@
 # `tui`
 
 ## Summary
-- TUI 向けの agent call parameter builder を旧 import 経路から利用するための互換アダプター群。起動用 builder と resolve-parameter builder を再公開し、正本 builder の結果を TUI の契約に合わせて変換する。
+- TUI 起動 parameter builder の互換 import 経路を提供するディレクトリ。`launch_tui.py` は oracle 側の builder を再エクスポートし、`__init__.py` とともに既存の import 公開面を維持する。実装本体の調査入口ではない。
 
 ## Read this when
-- TUI 起動時の parameter 生成や Structured Output schema path の扱いを確認・変更するとき。
-- TUI の resolve-parameter builder、互換 import 経路、プロンプト内コードフェンス保護を確認・変更するとき。
-- 既存の acp.builder.tui.* import と oracle.acp_builder.tui 互換層の削除可否を確認するとき。
+- TUI 起動 parameter builder の既存 import 経路、公開名、互換性を確認するとき
+- 当該互換 import 経路を削除・変更できるか判断するとき
 
 ## Do not read this when
-- TUI 実装本体の挙動や画面構成を確認したいとき。
-- canonical builder の仕様や実装を確認・変更するとき。
-- 新しい公開 API や新規 import 経路を設計するとき。
+- TUI builder の実装詳細や起動処理そのものを調査・変更するとき
+- TUI 起動や互換 import 経路に関係しない処理を扱うとき
 
 ## hash
-- 5cae55527a9d5a3694f74db600627569ee745a36affcaff094f3c1a495c934e1
+- 11e93e1ead52a1d97b9ea5415eb5b1db6799fb5f88289afc9da65662deddef1d

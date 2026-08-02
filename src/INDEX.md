@@ -1,20 +1,18 @@
 # `acp`
 
 ## Summary
-- `acp` 互換公開入口と `acp.builder` の realization package を扱う。旧 import 経路から canonical な `oracle` 実体へ委譲する互換層、および quota probe、Markdown section 処理、indexing、oracle command、realization、session、TUI の builder adapter 群へ進む起点。
+- `acp` 互換パッケージの公開入口と ACP builder adapter を扱うディレクトリ。`acp.*` から `oracle.*` または実体モジュールへ移行する際の互換経路、canonical builder への委譲、prompt 保護、各領域の builder 接続を下位項目から確認する。
 
 ## Read this when
-- `acp` 公開名や互換 import 経路の存廃を判断するとき。
-- `acp.builder` の互換層、canonical oracle builder への委譲、または builder adapter の構成を確認・変更するとき。
-- quota probe、indexing、oracle command、realization、session、TUI などの builder 領域へ進む対象を選ぶとき。
+- `acp` の公開入口や互換 import 経路の存廃を判断するとき。
+- ACP builder adapter の構成、canonical 実装への委譲、prompt 生成保護、各領域の builder 接続を調査・変更するとき。
 
 ## Do not read this when
-- canonical な oracle builder の仕様・実装そのものを確認または変更するとき。
-- TUI、CLI、session、または各 builder adapter の具体的な処理詳細を調査するとき。
-- `acp` 互換入口ではなく、移行先の実体モジュールや内部挙動を直接確認したいとき。
+- canonical な oracle builder の仕様・実装を確認したいときは、oracle 側の対応対象を直接読む。
+- 特定の builder 機能の詳細や `acp.*` の利用箇所を確認したいときは、対応する下位項目または参照元を直接読む。
 
 ## hash
-- 6fd72f99b72bdce2b199955f050a640da15049ca8212784aafd19d4dda73c9fc
+- b387db12cf1b05c7d5c6dba2445229f2d960be9f787b06498d557b96a0ab2898
 
 # `basic`
 
@@ -115,17 +113,16 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装をまとめるディレクトリ。doctor、indexing、tui、oracle、realization、run、session などの各 CLI 入口と、未実装の apply・review の配置先を案内する。個別サブコマンドや関連する共通処理へ進むための上位ルーティング入口。
+- `cmoc` の各サブコマンド実装を配置するディレクトリ。apply、doctor、indexing、oracle、realization、review、run、session、tui の実行入口またはパッケージを扱い、各機能の CLI 実行経路を下位要素へ案内する。
 
 ## Read this when
-- サブコマンド実装の構成や、対象サブコマンドの実装入口を確認するとき。
-- doctor、indexing、tui、oracle、realization、run、session の実行フローや配置を調査・変更するとき。
-- apply または review の実装を追加する場所を確認するとき。
+- サブコマンドの実装場所や package 構成を確認するとき
+- 複数のサブコマンドにまたがる CLI 実行入口の構成を調査するとき
+- 特定サブコマンドの詳細実装を探すための入口が必要なとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細実装を確認する場合は、対応する下位ファイルやディレクトリを直接読むとき。
-- 共通 CLI runtime、設定、Git、state、report などの実装だけを調査する場合は、対応する共通モジュールを直接読むとき。
-- oracle や realization の個別処理仕様を確認する場合は、対応する仕様文書・実装を直接読むとき。
+- 特定サブコマンドの処理詳細を確認する場合は、該当する下位ファイルまたは package を直接読むとき
+- サブコマンドから呼び出される共通処理や oracle 文書の仕様だけを確認する場合は、それぞれの直接の実装・仕様文書を読むとき
 
 ## hash
-- 034d6d84254114747686b133121f660e64ed723e5151dbf30d10f90b42d91f5c
+- 106348993a64e57ce5df49014d6ca155c0cb375605ac741571edfacb446892c1

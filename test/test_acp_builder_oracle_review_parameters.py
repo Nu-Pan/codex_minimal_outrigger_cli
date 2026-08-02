@@ -102,6 +102,38 @@ def test_oracle_review_judge_finding_uses_max_reasoning() -> None:
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
 
 
+@pytest.mark.parametrize(
+    ("builder", "arguments"),
+    [
+        (
+            build_oracle_review_enumerate_finding_parameter,
+            (Path("{{work-root}}/oracle/spec.md"), "[]"),
+        ),
+        (build_oracle_review_merge_finding_parameter, ("[]",)),
+        (build_oracle_review_judge_finding_parameter, ("finding", "pro", "con")),
+        (
+            build_oracle_review_validate_finding_advocate_parameter,
+            ("finding", "pro", "con"),
+        ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            ("finding", "pro", "con"),
+        ),
+    ],
+)
+def test_oracle_review_builders_share_finding_judgement_standard(
+    builder: Callable[..., AgentCallParameter],
+    arguments: tuple[object, ...],
+) -> None:
+    """review の全段階で単一の所見判定規範を注入する。"""
+    prompt = builder(*arguments).prompt
+
+    assert "# oracle review standard" in prompt
+    assert "実装者の裁量で解消不能な問題だけを fatal 所見にする" in prompt
+    assert "文意または検索性を損なう表記上の誤りだけを minor 所見にする" in prompt
+    assert "所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定" in prompt
+
+
 def test_oracle_review_enumerate_finding_schema_matches_oracle_source() -> None:
     """enumerate finding builderのschemaがoracle sourceと一致することを検証する。"""
     parameter = build_oracle_review_enumerate_finding_parameter(
@@ -250,8 +282,8 @@ def test_oracle_review_validate_finding_schema_matches_oracle_source(
     assert "known advocate" in parameter.prompt
     assert "known challenger" in parameter.prompt
     assert "{{oracle_root}}" not in parameter.prompt
-    assert "{{oracle-root}}" in parameter.prompt
-    assert "- {{oracle-root}} =" in parameter.prompt
+    assert "{{oracle-root}}" not in parameter.prompt
+    assert "- {{work-root}} =" in parameter.prompt
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
@@ -280,7 +312,7 @@ def test_oracle_review_validate_finding_advocate_preserves_dynamic_text() -> Non
     assert known_advocate in parameter.prompt
     assert known_challenger in parameter.prompt
     assert parameter.prompt.count("`{{oracle_root}}` ツリー内") == 3
-    assert "`{{oracle-root}}` ツリー内" in parameter.prompt
+    assert "`{{oracle-root}}` ツリー内" not in parameter.prompt
 
 
 @pytest.mark.parametrize(

@@ -29,37 +29,33 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` の main worktree 向け TUI workload を実装する。oracle 編集指示の収集、TUI 起動パラメータの構築、indexing preflight、起動前検証、Codex TUI 起動を担当する。
-- active な `cmoc/session/` branch、main worktree、clean worktree を要求し、条件不成立時は `CmocError` で再実行案内を返す。
+- `cmoc oracle edit` の CLI 実装。oracle 編集指示を収集し、TUI 起動パラメータを構築して Codex TUI を起動する。main worktree、active session branch、clean worktree などの起動前提も検証する。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 動作、TUI 起動処理、oracle 編集指示の受け渡しを変更または調査するとき。
-- main worktree・session branch・active session・clean worktree の起動前提を確認するとき。
-- oracle edit の step 管理、indexing preflight、設定読み込み、runtime state 参照の連携を確認するとき。
+- `cmoc oracle edit` の起動処理、oracle 編集指示の入力、Codex TUI 起動パラメータ、または起動前提の検証を変更・調査するとき。
 
 ## Do not read this when
-- oracle 編集指示の入力収集そのものを変更する場合は、prompt editor input の実装を直接読む。
-- TUI 起動パラメータの内容や構築規則を変更する場合は、oracle edit launch builder を直接読む。
-- 一般的な CLI runtime や session state の共通仕様を調査する場合は、それぞれの共通 runtime 実装・oracle 文書を直接読む。
+- oracle 編集処理そのものの仕様を確認するときは、対応する oracle 文書を直接読む。共通のプロンプト入力、git 状態検証、runtime state、または TUI パラメータ構築の実装だけを調査するときは、それぞれの共通モジュールを直接読む。
 
 ## hash
-- f94e9d22580ddbdea7684c75c960f3190f4f71d2d6430773e1868710e61b0324
+- a50aa0ee99eb4d72bf527f16d4e80af3d640a0ec062baea4ffda8ac16d4e4b87
 
 # `investigation.py`
 
 ## Summary
-- `cmoc oracle investigation` サブコマンドの read-only TUI 実行入口。oracle 調査指示を入力として受け取り、TUI 起動パラメータを構築し、設定を読み込んで Codex TUI を起動する。
+- `cmoc oracle investigation` の read-only TUI workload を実装するCLIサブコマンド。oracle調査指示の入力、TUI起動パラメータの構築、Codex TUIの起動を担当する。
 
 ## Read this when
-- `cmoc oracle investigation` の CLI 実行フロー、入力収集、TUI 起動処理を確認するとき。
-- oracle 調査時の read-only 制約や自動注入指示の適用箇所を確認するとき。
+- `cmoc oracle investigation` サブコマンドの実行フローや、oracle調査指示からCodex TUIを起動する処理を変更・確認するとき。
+- oracle調査向けの自動注入指示、prompt editor入力、indexing preflight、CLIステップ管理の連携を確認するとき。
 
 ## Do not read this when
-- TUI 起動パラメータの詳細仕様を確認したいときは、パラメータ構築側を直接読む。
-- 共通の CLI 実行基盤、設定読み込み、プロンプト入力処理の仕様を確認したいときは、それぞれの共通モジュールを直接読む。
+- oracle investigationの正本仕様そのものを確認するときは、対応するoracle仕様文書を直接読む。
+- TUI起動パラメータの詳細な生成規則を確認するときは、`launch_tui`のビルダーを直接読む。
+- 共通のprompt editor入力やignore設定の仕様だけを確認するときは、対応するcommons実装を直接読む。
 
 ## hash
-- 5b60675fc30fb84c69ec1e5117ec5bb99c04b3bfb6a50e8d105910c0d07e54da
+- 7121ba137ce8aee037482930ae2b3141aa4df647f2e22c4bb807583a6469b69e
 
 # `review.py`
 

@@ -42,7 +42,7 @@ print_missing_venv_error() {
         printf '%s\n' "セットアップ手順:"
         printf '%s\n' "  cd \"$cmoc_root\""
         printf '%s\n' "  /usr/bin/python3 -m venv .venv"
-        printf '%s\n' "  ./.venv/bin/python -m pip install -e ."
+        printf '%s\n' "  ./.venv/bin/python -m pip install -e '.[dev]'"
         printf '%s\n' "## Call stack"
         printf '%s\n' "  at print_missing_venv_error ($display_script_path:$(line_number_of "^print_missing_venv_error[(][)] [{]$"))"
         printf '%s\n' "  at require_venv_python ($display_script_path:$(line_number_of "^    print_missing_venv_error$"))"

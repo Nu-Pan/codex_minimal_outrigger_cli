@@ -44,6 +44,15 @@ def test_realization_apply_builder_embeds_commit_range_and_raw_diff() -> None:
     assert "base-commit" in parameter.prompt
     assert "fork-commit" in parameter.prompt
     assert "diff --git a/oracle/a.md b/oracle/a.md" in parameter.prompt
+    for heading in (
+        "# oracle standard",
+        "# realization standard",
+        "# apply review standard",
+        "# realization oracle reference rule",
+    ):
+        assert heading in parameter.prompt
+    assert "# oracle review standard" not in parameter.prompt
+    assert "# conflict resolution standard" not in parameter.prompt
 
 
 def test_realization_apply_builder_keeps_nested_diff_fences() -> None:
@@ -82,6 +91,8 @@ def test_refactor_builders_use_canonical_structured_output_schemas() -> None:
     assert str(Path(__file__).resolve()) in review.prompt
     assert "調査開始時点の既存実装ですでに解消されている問題" in review.prompt
     assert "`resolution.status=fixed` は、この agent call 内で" in review.prompt
+    assert "対象 repository が要求する必要な検証" in review.prompt
+    assert "# realization oracle reference rule" in review.prompt
     review_schema = json.loads(review.structured_output_schema_path.read_text())
     assert review_schema == json.loads(
         oracle_schema_path(

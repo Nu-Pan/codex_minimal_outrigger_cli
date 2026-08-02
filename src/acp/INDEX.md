@@ -17,15 +17,17 @@
 # `builder`
 
 ## Summary
-- `acp.builder` の realization package。oracle.acp_builder を旧 import 経路から利用する互換入口を提供し、quota probe、共通 Markdown section 処理、indexing、oracle command、realization、session、TUI などの builder adapter 群へ進む起点となる。
+- ACP builder の realization adapter と互換 import 経路をまとめるディレクトリ。oracle 側の canonical builder への委譲、prompt の Markdown fence 保護、index・oracle・realization・session・TUI 各領域の builder 接続を扱う。下位項目から、対象機能の具体的な互換入口や処理実装へ進む。
 
 ## Read this when
-- acp.builder 配下の互換 import 経路、canonical oracle builder への委譲、または builder adapter の責務と構成を確認・変更するとき。
-- quota probe、prompt の code fence 保護、indexing、oracle command、realization、session、TUI の各 builder 領域へ進む対象を選ぶとき。
+- ACP builder の realization package 全体の責務や下位構成を確認するとき。
+- 既存の acp.builder.* import 経路、canonical 実装への委譲、builder adapter の配置を調査・変更するとき。
+- prompt 生成の動的 section 保護や、oracle・realization・session・index 関連 builder の対象を選ぶとき。
 
 ## Do not read this when
-- canonical な oracle builder の仕様・実装そのものを確認または変更するときは、oracle 側の対応対象を直接読む。
-- TUI、CLI、session などの利用側実装や、各 builder の具体的な処理詳細を調査するときは、対応する下位対象または参照元を直接読む。
+- canonical な oracle builder の仕様・実装そのものを確認したいときは、oracle 側の対応対象を直接読む。
+- ACP builder の利用箇所や利用者向け公開面を調査するときは、各参照元を直接読む。
+- 特定領域の具体的な実装詳細を確認するときは、このディレクトリ全体ではなく対応する下位項目を直接読む。
 
 ## hash
-- cdc72845231c6a64ed6db1ee9f4ceafdfa22347e30b4f26b49a54b096873c648
+- e9f85fe4e2e462a0e3f5637971d03e25b28ddddc5783d38d2b63a2b3b31d1bad
