@@ -1,20 +1,17 @@
 # `oracle`
 
 ## Summary
-- AIエージェント呼び出し用パラメータを構築する正本ソースを扱うディレクトリ。共通パラメータ、INDEX.md生成、oracle操作、realization適用、session競合解消、TUI起動に関する下位領域への入口を提供する。
-- 設定・パスモデル・規範構造・Markdown構造化文書を扱うPythonモジュール群。リポジトリ固有設定、agent callのパス解決、Standard/Requirementの変換、StructDocのレンダリングを調査・変更するときに読む。
-- プロンプトビルダーの中核実装を扱うディレクトリ。placeholder型、agent callプロンプトの構築、エディタ初期文面、oracle／realization／INDEXなどの規範部品を確認・変更するときの入口を提供する。
+- AIエージェント呼び出しのパラメータ、設定・パスモデル、構造化文書、プロンプト生成に関する正本ソースを扱うディレクトリ。agent call の契約や起動条件、設定・root解決、StructDoc、prompt builder の実装を調査する入口。
 
 ## Read this when
-- agent callの共通パラメータ、INDEX.md生成、oracle操作、realization適用、session joinの競合解消、TUI起動を調査・変更するとき
-- CmocConfig、agent callのパスモデル、Standard/Requirement、StructDocのMarkdownレンダリングを調査・変更するとき
-- agent callに渡す完全なプロンプト、プロンプト入力エディタの初期文面、規範注入、placeholder型を調査・変更するとき
+- Agent Call Parameter、Structured Output、agent call の起動条件やパラメータを変更・調査するとき
+- CmocConfig、root解決、Standard・Requirement・StructDoc の定義や Markdown レンダリングを調査するとき
+- prompt builder、プレースホルダ、入力エディタ初期文、oracle・realization・INDEX.md 関連のプロンプト生成規則を調査するとき
 
 ## Do not read this when
-- oracle fileやrealization fileの具体的な仕様・実装内容だけを確認するとき
-- 一般的なprompt構築、path解決、構造化文書レンダリングなど、別の共通実装を調査するとき
-- CLI実行フロー、設定ファイル生成・同期、個別の規範本文、ModelClass・ReasoningEffort自体の定義だけを調査するとき
-- 個別のプロンプトパーツ本文、CLI、パスモデル、構造化文書機構、プロダクト機能を調査するとき
+- CLI サブコマンドの実際の処理や画面操作の挙動を調査するとき
+- 共通の prompt 構築・実行フローやバックエンド固有のモデル解決を調査するとき
+- 個別の oracle 文書や realization 実装の内容だけを調査するとき
 
 ## hash
-- f45c9b8c9373fdef3550954dfa322543859290c173d1e9a1a4eda9c8d0dfee6b
+- 3520457b1aadbdf81640f707c5b7130667da572f2814185f7948e594079ebd02

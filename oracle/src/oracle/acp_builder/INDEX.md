@@ -49,69 +49,68 @@
 # `oracle`
 
 ## Summary
-- oracle の edit、investigation、review 用 ACP builder をまとめるディレクトリです。TUI 起動用の prompt・起動パラメータと、oracle file の所見レビューに用いる prompt builder・Structured Output schema を下位領域への入口として提供します。
+- `cmoc oracle` 各サブコマンドの agent call 構築に関する oracle source をまとめたディレクトリ。TUI 起動、完全 prompt、アクセス制約、実行パラメータ、Structured Output schema、管理ログ保存の定義を扱う。
 
 ## Read this when
-- `cmoc oracle edit` または `cmoc oracle investigation` の TUI 起動 prompt、ログ保存、作業ディレクトリ、モデル、推論強度、ファイルアクセスモードを確認・変更するとき。
-- `cmoc oracle review` の新規所見列挙、所見の採否判定、擁護理由・反証理由の列挙、所見リストの統合を確認・変更するとき。
-- oracle review の Structured Output schema または各レビュー処理の agent call パラメータを確認・変更するとき。
+- `cmoc oracle edit`、`investigation`、`review` の TUI 起動処理や agent call パラメータを変更・調査するとき
+- oracle file 編集・調査・レビュー用 prompt、アクセス権限、構造化出力契約を確認するとき
+- レビュー所見の構造化出力、採否判定、重複・矛盾整理の agent call 条件を確認するとき
 
 ## Do not read this when
-- oracle file の仕様内容や編集対象そのものを確認・変更するとき。
-- 一般的な prompt 構築、パス解決、構造化文書レンダリング、agent call の共通実装を確認するとき。
-- 対象配下の具体的な実装ファイルまたは schema を直接確認できるとき。
+- oracle file の編集・調査・レビュー処理そのものを変更・調査するとき
+- 共通の prompt 構築や実行制御だけを変更・調査するとき
+- `cmoc oracle` 以外の agent call や TUI を調査するとき
 
 ## hash
-- f8549241d4fb54d417327338497a2e57d53cf6e2453147179b95d0d40ff36b7c
+- 88671e68ed8b6dd1edab55bcdcc53f34699136b4a2c15647d79376d630b7fa89
 
 # `realization`
 
 ## Summary
-- `cmoc realization apply fork` 用の AgentCallParameter 生成に関する正本コードを扱う。prompt、権限、oracle 差分、実行用 worktree、commit 範囲、モデル設定の確認・変更に進む入口。
-- refactor fork の変更要約および単一ファイルレビュー・修正用 AgentCallParameter 生成の正本コードを扱う。Structured Output schema、対象 path、prompt、権限、検証条件、git 操作制約の確認・変更に進む入口。
+- realization apply fork と refactor fork の agent call 起動処理に関する正本 schema・prompt 構築・実行条件を扱うディレクトリ。各 fork の変更要約、レビュー・修正処理、AgentCallParameter、Structured Output 契約を確認する入口。
 
 ## Read this when
-- `cmoc realization apply fork` の AgentCallParameter、prompt、実行環境、oracle 差分、commit 範囲、モデル設定を調査・変更するとき。
-- refactor fork の変更要約または単一ファイルレビュー・修正の schema、prompt、対象 path、権限、検証条件、git 操作制約を調査・変更するとき。
+- realization apply fork の agent call 起動処理、oracle 差分・commit 範囲・linked worktree の prompt 組み込み、AgentCallParameter 設定を変更・調査するとき。
+- refactor fork の変更要約、単一ファイルのレビュー・修正、prompt 構築、実行条件、Structured Output schema を確認・変更するとき。
 
 ## Do not read this when
-- 通常の realization 実装・テスト、oracle 変更に追従する realization 実装を調査するとき。
-- `cmoc realization apply fork` 以外の agent call 起動処理を調査するとき。
-- レビュー対象ファイルの実装内容や個別の oracle・realization file の仕様だけを調査するとき。
-- 一般的な prompt 構築、path 解決、構造化文書レンダリングの実装だけを調査するとき。
+- refactor fork の実際のレビュー対象ファイルや変更差分の実装内容を調査するとき。
+- 共通 prompt 生成仕様だけを確認するとき。
+- 実際の realization implementation や test の追従内容を調査するとき。
+- 要約・レビュー結果の詳細な出力形式だけを確認するとき。
 
 ## hash
-- d045e443305f770674659ad4c196e7a2db0d2893c5fa7fc39b4020670cb369a9
+- f7659db7413c66338eaabc75319db16f7a14d6fc37c17fdf34cae33b401d7135
 
 # `session`
 
 ## Summary
-- `cmoc session join` における merge conflict marker 解消用 AI エージェント呼び出しパラメータの正本ソースを収録するディレクトリ。競合対象パスの解決、プロンプト、最高品質・リポジトリ書き込み設定を扱う。
+- `cmoc session join` の merge conflict marker 解消用 AI エージェント呼び出しパラメータを構築する実装への入口。競合ファイルの実パス解決、解消用 prompt、書き込み権限、最高品質のモデル・推論設定を扱い、下位の conflict resolution 実装へ進むためのディレクトリ。
 
 ## Read this when
-- `cmoc session join` の merge conflict 解消 prompt、競合対象ファイルのパス解決、または agent call 設定を変更・確認するとき。
+- `cmoc session join` の conflict marker 解消フローを変更・調査するとき
+- 競合対象ファイルの解決、解消用 prompt、エージェント呼び出しのモデル・推論・実行ディレクトリ設定を変更するとき
 
 ## Do not read this when
-- 通常の prompt 生成を扱うとき。
-- `session join` の conflict 解消以外の agent call を扱うとき。
+- `session join` 以外のサブコマンドを変更・調査するとき
+- merge conflict 解消処理や共通 prompt 構築処理そのものを直接変更・調査するとき
 
 ## hash
-- 42b7025ceb8aaf4f1ed8061851f8793a0396ffdbb7909339d12f80b4176ef9cc
+- 4c706eb84cb41f9d2aab9c4192c75ab4fa1fe36ca58af7b6d7e1bb30e5f9eb6b
 
 # `tui`
 
 ## Summary
-- `cmoc tui` の起動・実行パラメータ解決に関わる oracle src と、標準文書の参照要否を判定する入力 schema を含むディレクトリ。TUI 起動条件、完全 prompt、AgentCallParameter、実行環境設定、Structured Output schema の関連箇所への入口となる。
+- `cmoc tui` の TUI 起動用 AgentCallParameter を構築するソース。オリジナルプロンプトから動的プロンプトを生成・保存し、モデル、推論強度、ファイルアクセス、作業ディレクトリ、インデックス事前処理、構造化出力などの起動設定をまとめる。TUI 起動条件や agent call パラメータを調べる入口。
 
 ## Read this when
-- `cmoc tui` の AgentCallParameter、起動条件、完全 prompt、モデル・推論設定、ファイルアクセスモード、agent call の cwd、prompt 保存処理を確認・変更するとき。
-- AI Agent CLI/TUI 実行時の標準文書参照要否を判定する処理や入力 schema を確認するとき。
-- TUI 用の構造化出力 schema の指定箇所や、ユーザー入力から後続 agent 呼び出しまでの prompt 構築経路を追跡するとき。
+- `cmoc tui` の TUI 起動処理を変更・調査するとき
+- TUI 用のプロンプト生成・保存や起動パラメータを確認するとき
 
 ## Do not read this when
-- TUI の画面表示、対話制御、エディタ入力処理そのものを確認するとき。
-- 通常の CLI サブコマンド実装や、prompt 本文の共通生成ロジックだけを調査するとき。
-- oracle standard、realization standard、レビュー標準の本文や、TUI 実行後の agent 呼び出し実装を直接確認するとき。
+- TUI 以外のサブコマンドの起動パラメータを調べるとき
+- 完全なプロンプトの共通生成仕様を確認するとき
+- TUI の実行本体や画面操作の挙動だけを調べるとき
 
 ## hash
-- 383e81fb868c8c17d59795551289e7f1a7d21d6220e651e3863af536f6a08f5d
+- 3790fe52c359504b97c539a1d998a5863c2e4db98a9eee1b38f19487aeabe679

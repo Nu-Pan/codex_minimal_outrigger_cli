@@ -162,20 +162,20 @@
 # `prompt_standard.md`
 
 ## Summary
-- cmoc が agent call に渡すプロンプトの構築規範を定める oracle doc。oracle src の builder 関数による動的生成、GFM と cmoc 固有記法、placeholder と参照ブロックの整合性検査、日本語を基本とする言語方針を扱う。
+- cmoc が agent call 用の動的プロンプトを構築する際の正本規範を定める oracle doc。プロンプト構成関数の利用、cmoc 固有記法（placeholder・cmoc_block・cmoc_ref）、GFM と日本語の原則、および installed skill との責務境界を扱う。
 
 ## Read this when
-- agent call 用プロンプトの構築・変更・検証方法を確認するとき
-- placeholder、cmoc_block、cmoc_ref の記法や整合性要件を確認するとき
-- Codex CLI のプロンプト・レポート・INDEX.md などで使用する言語方針を確認するとき
+- agent call の動的プロンプトの構築・変更・検証を行うとき
+- prompt part、placeholder、cmoc_block、cmoc_ref の仕様を確認するとき
+- cmoc 固有のプロンプト規範と installed skill の責務境界を確認するとき
+- プロンプトや作業レポートなどの言語方針を確認するとき
 
 ## Do not read this when
-- プロンプト構築以外の Python 実装規約を確認するときは、oracle src の実装対象や開発環境の文書を直接読む
-- 一般的な Markdown の記法だけを確認したいとき
-- 個別の agent 作業内容や対象ファイルの仕様を確認したいとき
+- 正本仕様、実装、テスト、レビュー、日本語文書、Python 開発の汎用規範だけを確認したいときは、対応する installed skill を直接読む
+- プロンプト構築とは無関係な cmoc の実装・テスト・運用を扱うとき
 
 ## hash
-- 68025ae63d5fc8e51868267a8c176cf65bba64d8f4aad41d38578f39493c4a10
+- 2dd788fb0fb11aa6f99d9403c0a7cbfec07dc6d4c645541a796b1c6eae81f0b4
 
 # `run_isolation.md`
 
@@ -214,20 +214,18 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンドに関する正本仕様をまとめたディレクトリ。doctor、indexing、oracle edit/investigation/review、tui、session lifecycle、realization apply/refactor の実行条件・状態管理・入出力・ライフサイクルを扱い、各サブコマンド仕様の入口となる。
+- cmoc の主要サブコマンドに関する正本仕様をまとめたディレクトリ。doctor、indexing、oracle edit/investigation/review、realization apply/refactor、session fork/join/abandon、run lifecycle、tui の実行条件・状態遷移・編集境界・レポート仕様を扱う。各サブコマンドや lifecycle の実装・テスト・仕様確認時に、対応する下位文書へ進むための入口。
 
 ## Read this when
-- cmoc サブコマンドの正本仕様を探すとき。
-- session、run、oracle、realization の各 lifecycle や、doctor・indexing・tui の実行フローを確認するとき。
-- 対象サブコマンドの引数、事前条件、状態遷移、report、cleanup、agent call の仕様を調査するとき。
+- cmoc のサブコマンド、session/run lifecycle、oracle 操作、realization workload の正本仕様を探すとき。
+- 対象の実装やテストを変更する前に、該当するサブコマンドまたは lifecycle の仕様文書を特定するとき。
 
 ## Do not read this when
-- 特定サブコマンドの実装詳細だけを確認したいときは、対応する realization code やテストを直接読む。
-- 共通の開発環境、設計規則、テスト実行方法を確認したいときは、対応する dev_rule の oracle file を読む。
-- INDEX.md の生成・更新そのものや、個別パラメータ定義など、各サブコマンド文書より直接的な正本がある内容だけを確認したいとき。
+- 特定のサブコマンドや lifecycle の詳細が判明している場合は、このディレクトリ全体ではなく対応する下位文書を直接読む。
+- 共通 prompt、Codex CLI 起動規則、doctor preprocess、indexing 本体など、本文中で参照される別の正本仕様だけを確認したいとき。
 
 ## hash
-- ff28cd3a6538ae4a0eaea8eac571794643d44a58ffac51e28c65fa2b5d131b64
+- e3ed7a1dfdecaf80031944dfad40259c15e03d46b40f0525329f98e3c46bcb91
 
 # `subcommand_interruption.md`
 

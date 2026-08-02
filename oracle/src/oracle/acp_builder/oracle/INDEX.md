@@ -1,51 +1,49 @@
 # `edit`
 
 ## Summary
-- oracle 編集向け TUI 起動処理を扱うディレクトリ。現時点では、リポジトリルートを作業ディレクトリとして確定し、完全な prompt を構築・保存して Codex CLI 起動パラメータを返す実装への入口です。
+- `cmoc oracle edit` 向けの TUI 起動パラメータと、完全 prompt を管理ログへ保存する oracle src を含むディレクトリ。パス、アクセスモード、モデル・推論設定、構造化出力、インデックス前処理などの agent call 条件を確認する入口。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動処理や、起動時 prompt、agent call パラメータを変更・調査するとき。
-- prompt の構成・保存先、モデルや推論設定、ファイルアクセスモード、作業ディレクトリ指定を確認するとき。
+- `cmoc oracle edit` の TUI 起動動作や agent call パラメータを変更・調査するとき
+- oracle file 編集用 prompt の構築、ユーザー指示の埋め込み、ファイルアクセス制約を確認するとき
 
 ## Do not read this when
-- oracle file の編集内容や仕様そのものを確認・変更するとき。
-- TUI 起動以外の agent call や prompt 構築処理を確認・変更するとき。
-- このディレクトリに具体的なファイルが追加され、そのファイルを直接確認できるとき。
+- oracle file の編集処理そのものを調査するとき
+- 一般的な prompt 構築の詳細だけを調査するとき
+- TUI を起動しない agent call や `cmoc oracle edit` 以外のサブコマンドを調査するとき
 
 ## hash
-- 9f2a364ef1511a844eb166efa92c893d8ff5c632585fdf9636d252b3e739dd11
+- 2d2f53cb81d73889706ce5ad0305038c3b5f1934b9c5eb5dce9dbf21c95ec205
 
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動処理を扱う領域。完全な oracle 調査プロンプトの構築・ログ保存と、固定モデル、推論強度、読み取り権限、作業ディレクトリなどの起動パラメータ生成を担う。
+- `cmoc oracle investigation` の TUI 起動処理を担当し、固定プロンプト、エージェント呼び出しパラメータ、ログ保存、TUI 起動設定を構築する。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動時プロンプトやユーザー調査指示の埋め込みを確認・変更するとき
-- oracle-only のファイルアクセス設定や TUI 起動パラメータを確認・変更するとき
+- `cmoc oracle investigation` の TUI 起動処理を変更・調査するとき
+- 完全プロンプト、エージェント呼び出しパラメータ、editor input ログ保存の挙動を変更・調査するとき
 
 ## Do not read this when
-- TUI 起動以外の agent call パラメータ生成を調べるとき
-- 完全プロンプトの共通構築規則を確認するときは prompt builder を直接読むとき
-- ログ保存の共通仕様やパス解決の詳細だけを調べるとき
+- oracle file の調査内容そのものを変更・調査するとき
+- 完全プロンプトの共通構築ロジックを変更・調査するときは、対応する調査処理または prompt builder を直接読む
 
 ## hash
-- 4b8e91f02a0cbc1814d86e74fce265c56c2c18045f8a0e539d69e095191183c8
+- a9577f323e7d83ff7ce7f194dee04eec9a701b0f325f260633c236cf28f27e0f
 
 # `review`
 
 ## Summary
-- `cmoc oracle review` における所見レビュー用の oracle src と Structured Output schema をまとめたディレクトリ。新規所見列挙、採否判定、所見の擁護・反証理由列挙、所見リストのマージ処理を扱い、それぞれの prompt builder と入出力契約の確認入口となる。
+- `cmoc oracle review` の所見列挙・判定・統合・妥当性検証に関する Structured Output schema と agent call パラメータ構築用 oracle source をまとめた領域。各ファイルは、レビュー所見の構造化出力契約または対応する prompt・アクセス権限・実行設定を定義する。
 
 ## Read this when
-- `cmoc oracle review` の所見レビュー処理を変更・調査するとき。
-- 新規所見、採否判定、擁護理由、反証理由、所見マージの prompt 構築や agent call 設定を確認するとき。
-- レビュー処理で利用する Structured Output schema の入出力形式を確認するとき。
+- `cmoc oracle review` の所見列挙、採否判定、重複・矛盾整理、妥当性の支持・反証に関する prompt 構築や agent call パラメータを変更・調査するとき。
+- これらの処理で利用する Structured Output schema の入力・出力契約を確認するとき。
 
 ## Do not read this when
-- oracle review の所見内容そのものや正本仕様を確認したいとき。
-- レビュー以外の ACP builder 実装や、一般的な prompt 構築・パス解決・構造化文書レンダリングの共通実装を調査するとき。
-- レビュー所見を扱わない通常の ACP builder 実装を読むとき。
+- レビュー所見の内容や oracle 仕様そのものの妥当性を確認するとき。
+- 所見レビュー全体の実行制御や共通 prompt 生成だけを確認するとき。
+- `cmoc oracle review` と無関係な agent call や Structured Output を扱うとき。
 
 ## hash
-- 3024ba3ba0da0040c32a93c1607bed8b4f97bba8501a480d7a6aa4f869c0fe28
+- c84e53dc0546b88f41fdcceed717a6500ea8847f5b8aa1b704c1fd587fae65eb

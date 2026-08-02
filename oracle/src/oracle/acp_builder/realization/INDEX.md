@@ -1,34 +1,32 @@
 # `apply`
 
 ## Summary
-- `cmoc realization apply fork` 実行時に使う `codex exec` 用 AgentCallParameter の正本コード。prompt、権限、oracle 差分、実行用 worktree、commit 範囲、モデル設定を組み立てる。
+- `realization apply fork` 用の agent call 起動処理を担う oracle src。codex exec の起動パラメータと完全 prompt を構築し、oracle 差分・commit 範囲・linked worktree、AgentCallParameter の設定を realization 追従 agent に渡す。
 
 ## Read this when
-- `cmoc realization apply fork` の AgentCallParameter 生成や prompt 構成を変更・検証するとき。
-- oracle 差分の渡し方、実行用 worktree、commit 範囲、モデル設定を調査するとき。
+- `realization apply fork` の agent call 起動処理を変更・調査するとき
+- oracle diff、commit 範囲、linked worktree の realization 追従 prompt への組み込みを確認するとき
+- AgentCallParameter の model、reasoning、file access、indexing 設定を変更するとき
 
 ## Do not read this when
-- 通常の realization 実装・テストを調査するとき。
-- `cmoc realization apply fork` 以外の agent call 起動処理を調査するとき。
-- oracle 変更に追従する realization 実装そのものを調査するとき。
+- `realization apply fork` 以外の agent call prompt を変更するとき
+- prompt の共通生成仕様だけを確認するとき
+- 実際の realization implementation や test の追従内容を調査するとき
 
 ## hash
-- 1e237c12628442cd8f02b41ab9dc080c0d2b6cdf9b766868ba1048ff36c9840f
+- 7ac025b33ddf3ea7a9cb73ddb36ebc52bbe2216b9a3dd9f5d4f6c4d0f581223c
 
 # `refactor`
 
 ## Summary
-- refactor fork の変更要約と単一ファイルレビュー・修正に関する Structured Output schema、およびそれらを利用する AgentCallParameter 構築の正本実装を扱う。変更要約、レビュー対象 path の解決、prompt、権限、モデル設定、作業ディレクトリの確認・変更に進むための入口となる。
+- refactor fork の変更要約とファイル単位レビュー・修正に関する AgentCallParameter の正本 schema および builder 実装をまとめるディレクトリ。差分要約、レビュー結果、各処理の prompt、実行条件、構造化出力契約を確認する入口。
 
 ## Read this when
-- refactor fork の変更要約 agent の出力形式、差分カテゴリ、要約、根拠 path を確認するとき
-- 単一ファイルのレビュー・修正 agent の prompt、対象 path、権限、検証条件、git 操作制約を確認するとき
-- 配下の変更要約またはファイルレビュー・修正の schema や AgentCallParameter 構築実装を確認・変更するとき
+- refactor fork の変更要約、単一ファイルのレビュー・修正、AgentCallParameter、prompt 構築、実行条件、Structured Output schema を確認または変更するとき。
 
 ## Do not read this when
-- レビュー対象ファイル自体の実装内容や個別の oracle/realization file の仕様を調査するとき
-- 変更要約またはファイルレビュー・修正の Structured Output schema の詳細だけを確認したいとき
-- 一般的な prompt 構築、path 解決、構造化文書レンダリングの実装だけを調査するとき
+- 実際のレビュー対象ファイルの実装内容を調査するとき。
+- 変更差分そのものや、要約・レビュー結果の詳細な出力形式だけを確認するとき。
 
 ## hash
-- f1ada39671e97d2728b0770519c14810a6fa95681b2ba97f0ee60e6fd531ece8
+- 7c65884066bf26a7c0c2ed02199dc76ca8f9b6ac29bf27afd1f5ec52dfc4131d

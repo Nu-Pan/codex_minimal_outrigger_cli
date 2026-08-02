@@ -29,33 +29,29 @@
 # `file_review_and_fix.json`
 
 ## Summary
-- 対象ファイルは所見を記録するための Structured Output schema であり、内容上の要修正点は確認できません。
+- 対象ファイルに対応する realization implementation と既存テストを確認したが、要修正点は見つからなかった。
 
 ## Read this when
-- この schema のレビュー結果を確認するとき
+- realization refactor の file review・修正 builder の schema と実行契約を確認するとき。
 
 ## Do not read this when
-- 実装ファイルの挙動や修正内容を調査するとき
+- change summary builder や別の ACP builder の契約だけを確認するとき。
 
 ## hash
-- 0510d3855b5b99e1f3cfbcdfb863e34e58dc00054954c748b0b6ccf8129677cc
+- 2c9d5c94fd9445868a9fb6622a21a543177468f0a827bf9eecd1e9aef0cebc04
 
 # `file_review_and_fix.py`
 
 ## Summary
-- `cmoc realization refactor fork` における、単一ファイルを起点としたレビュー・修正用の AgentCallParameter を構築する oracle src。対象 path と実行 worktree を受け取り、完全なレビュー・修正 prompt、ファイルアクセス権限、モデル設定、構造化出力 schema、作業ディレクトリをまとめて返す。
-- 対象ファイルを起点に、必要な oracle file・realization file の調査、所見への修正、修正後検証、テスト通過を agent に要求する prompt を組み立てる。差分推測の禁止、git add/commit の禁止、変更と findings の対応付けなどの作業上の制約も prompt に含める。
-- レビュー対象 path は `AgentCallPathContext` と `resolve_real_path` で prompt 用の実パスへ変換し、`build_complete_prompt` と `render_as_markdown` を通じて最終 prompt 化する。実装本体ではなく、ファイル単位レビュー・修正 agent の呼び出しパラメータ生成を担う入口である。
+- cmoc の realization refactor fork における、単一ファイルのレビュー兼修正用 AgentCallParameter を構築する正本実装。対象ファイルを起点に完全プロンプト、パス文脈、アクセス権、モデル設定、構造化出力 schema を組み立てる。
 
 ## Read this when
-- ファイル単位の realization refactor fork レビュー・修正 agent の起動条件、prompt 構成、対象 path の扱いを確認するとき。
-- AgentCallParameter のモデルクラス、推論強度、realization write 権限、構造化出力 schema、agent call の作業ディレクトリ設定を変更・調査するとき。
-- レビュー結果に求める findings/resolution、修正・検証・git 操作に関する制約を確認するとき。
+- realization refactor fork のファイル単位レビュー・修正処理を変更または調査するとき
+- 対象 path、agent call の作業ディレクトリ、プロンプト生成規則、検証・修正条件の設定を確認するとき
 
 ## Do not read this when
-- レビュー対象ファイルそのものの実装内容や、個別の oracle/realization file の仕様・実装を調査するときは、それぞれの対象ファイルを直接読む。
-- レビュー結果の structured output schema の詳細だけを確認するときは、指定された schema ファイルを直接読む。
-- 一般的な prompt 構築処理、path 解決、構造化文書のレンダリングの実装を確認するときは、対応する import 元のモジュールを直接読む。
+- 実際のレビュー対象ファイルの実装内容を調査するとき
+- レビュー結果の structured output schema だけを確認するときは、対応する schema ファイルを直接読む
 
 ## hash
-- 0cc296fcb605b459776af995cf3befc7643a27a71e1204ee44c5f7f50a3816dd
+- 5ee953a70d14c96b13aff4437a95f19fc2208f0f52bf81d3e492e895b00b446f

@@ -1,17 +1,14 @@
 # `fork`
 
 ## Summary
-- refactor fork における変更要約と単一ファイルレビュー・修正のための Structured Output schema、およびそれらを利用する AgentCallParameter 構築の正本実装を扱う。変更要約では差分のカテゴリ別要約と根拠ファイルを、ファイルレビューでは所見・修正・検証結果を構造化して返す。各ファイルの詳細な schema や prompt 構成、実行条件を確認するための入口となる。
+- refactor fork の変更要約およびファイル単位レビュー・修正を行う AgentCallParameter の正本 schema と builder 実装をまとめたディレクトリ。差分要約、レビュー結果、各処理の prompt・実行条件・構造化出力契約を確認する入口となる。
 
 ## Read this when
-- refactor fork の変更要約出力形式、要約結果の検証項目、根拠ファイル一覧を確認するとき
-- 単一ファイルのレビュー・修正 agent に渡す prompt、対象 path の解決、権限、モデル設定、Structured Output schema、作業ディレクトリを確認・変更するとき
-- レビュー結果に求める findings、resolution、修正・検証・git 操作の制約を確認するとき
+- refactor fork の変更要約または単一ファイルのレビュー・修正に関する AgentCallParameter、prompt 構築、実行条件、Structured Output schema を確認・変更するとき。
 
 ## Do not read this when
-- レビュー対象ファイル自体の実装内容や個別の oracle/realization file の仕様を調査するとき
-- 変更要約またはファイルレビューの Structured Output schema の詳細だけを確認したいとき
-- 一般的な prompt 構築、path 解決、構造化文書レンダリングの実装だけを調査したいとき
+- 実際のレビュー対象ファイルの実装内容を調査するとき。
+- 変更差分そのものや、要約・レビュー結果の詳細な出力形式だけを確認したいときは、対応する入力元または schema ファイルを直接読む。
 
 ## hash
-- 47e0b5a5cba29ece724b05362b1c0c64bf018691834d05036b9d1f918eddfa77
+- 863f52f841d383ddeaec9c2c432450af143facdd1d1a31d7ca4a15dee273b630

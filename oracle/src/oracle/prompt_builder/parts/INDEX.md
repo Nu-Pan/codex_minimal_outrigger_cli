@@ -1,19 +1,3 @@
-# `apply_review_standard.py`
-
-## Summary
-- oracle file と realization file の不整合、および realization file 単体で明らかな致命的問題を所見として扱うためのレビュー規範を構築する。仕様の隙間だけを理由に所見化しない判断基準や具体例も含む。
-
-## Read this when
-- oracle file を realization file に適用した結果のレビュー所見を列挙・評価するとき
-- oracle file との不整合、仕様の隙間、実装単体の致命的問題を区別する必要があるとき
-
-## Do not read this when
-- レビュー所見の列挙ではなく、oracle file の一般原則や realization file の実装そのものを確認するとき
-- 構造化ドキュメントの共通定義やプロンプト生成処理を直接調査するとき
-
-## hash
-- 0c69d41cfb94d57df0d3e1e59249241820ca832705e149d3377718c0e781ed84
-
 # `file_access_rule.py`
 
 ## Summary
@@ -66,60 +50,21 @@
 ## hash
 - 46cac8d7867434199021d72041b4b1b9eea45f91fbb845ee3e177089d3dde021
 
-# `oracle_review_standard.py`
+# `realization_oracle_reference_rule.py`
 
 ## Summary
-- `cmoc oracle review` が所見を列挙する際の規範文章を構築する。fatal・minor として扱う問題の境界、および oracle file だけでは問題と言い切れない事項を所見にしない原則を、背景・要求・例として StructDoc に変換して返す。
+- realization code から、対応する oracle file のパスをコメントへ記載するための規則を構築する。パス文脈から `work-root` の定義を取得し、プレースホルダー置換用マップと構造化ドキュメントを返す。
 
 ## Read this when
-- `cmoc oracle review` のレビュー基準や所見分類を変更・確認するとき
-- fatal と minor の判定基準、仕様の隙間の扱いを確認するとき
-- oracle file のレビュー用プロンプトを生成・修正するとき
+- realization code のコメントに oracle file path を参照させる規則を変更・利用するとき。
+- `work-root` のプレースホルダー定義や、対応する構造化ドキュメントの生成方法を確認するとき。
 
 ## Do not read this when
-- oracle review 以外のプロンプト部品を変更・確認するとき
-- 実際の oracle file の内容やレビュー対象を調査するときは、対象の oracle file を直接読む
-- StructDoc や Standard の共通実装自体を変更・確認するときは、それらの定義ファイルを直接読む
+- oracle file の一般的な定義やパス文脈全体の仕様だけを確認したいとき。
+- realization code の具体的なコメント記述や、別の prompt builder 規則を直接変更するとき。
 
 ## hash
-- 64ee7071e9eab5d4ea0a841855aef097148772882131514e1f967b84d31a036b
-
-# `oracle_standard.py`
-
-## Summary
-- oracle file が従う規範文章を構築する。人間の認知負荷を抑えた疎な正本仕様断片、未定義部分の扱い、仕様間の整合性、実装からの逆流禁止、用語・命名の統一、oracle file 優先、goal/non-goal の境界などを Standard として StructDoc に変換する。
-- AgentCallPathContext から root 定義を取得し、`work-root` プレースホルダーを返却する。
-
-## Read this when
-- oracle file の規範、仕様断片の書き方、正本仕様と実装の責務境界を確認するとき
-- oracle standard の構造化文書生成や Standard 定義を変更するとき
-
-## Do not read this when
-- realization code の具体的な動作や CLI 機能を調査するとき
-- oracle file の規範ではなく、他の prompt builder 部品や個別仕様を確認するとき
-
-## hash
-- a4591683096c830a9d8f57525436de044e2788180a22c06caf4f4a53aae4d57b
-
-# `realization_standard.py`
-
-## Summary
-- realization file が従うべき規範文章を構築する。実装・テスト・コメント・ファイル分割・抽象化・公開面・依存関係・不要な旧実装の整理に関する標準を、背景・要求・例を含む構造化文書として提供する。
-- realization standard の生成時に call-scoped context から work-root 定義を取得し、各規範文書へプレースホルダーを渡す。
-
-## Read this when
-- realization file、realization code、realization test の品質基準や削除・統合方針を確認するとき
-- oracle src と realization src の責務境界、コメントや docstring の根拠記載、ファイル分割・抽象化の判断基準を確認するとき
-- 公開面・設定・状態・依存関係・生成物を追加する可否や、変更後の整理方針を確認するとき
-- realization standard を構築する処理や、その出力に含まれる標準項目を変更するとき
-
-## Do not read this when
-- INDEX.md のルーティング規則やエントリー形式だけを確認したいときは、INDEX.md 関連の対象を直接読む
-- oracle の正本仕様そのものや Python 実行環境・テスト実行方法を確認したいときは、対応する oracle 文書を直接読む
-- 特定の realization 実装・テストの挙動を調査するだけで、realization file 全般の規範を確認する必要がないとき
-
-## hash
-- 667977a7edea2e30fa8684ad26e1d89dd9beb3b51f82bb4cd987a93871281d71
+- f891c0131b0da1ad3836613b719a1e733c79ea7a2882935ee545126fc5457f3f
 
 # `routing_rule.py`
 

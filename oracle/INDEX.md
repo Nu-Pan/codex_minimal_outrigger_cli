@@ -1,37 +1,36 @@
 # `doc`
 
 ## Summary
-- cmoc の正本ドキュメントを機能領域ごとに整理したディレクトリ。アプリケーション仕様、branch・commit・worktree モデル、不採用案の検討記録、開発ルールへの入口を提供する。
+- cmoc のアプリケーション仕様を定義する正本文書群。CLI、agent call、ログ、prompt、session/run lifecycle、branch・commit・worktree、サブコマンドなどの利用者向け挙動を扱う。個別仕様文書を探すための入口。
 
 ## Read this when
-- cmoc の正本仕様や開発ルールから、対象機能に対応する文書を探すとき
-- CLI、session・run、branch・worktree、ログ、prompt、サブコマンド、INDEX.md 生成などの仕様を確認するとき
-- realization refactor の設計判断や不採用案の背景を確認するとき
-- Python 実装配置、開発環境、テスト方針などの開発ルールを確認するとき
+- cmoc のアプリケーション挙動や CLI・agent call・ログ・prompt・session/run の正本仕様を探すとき
+- session fork、run の隔離、branch・commit・worktree の関係やライフサイクルを確認するとき
+- 開発環境、CLI 実装配置、Python 規則、realization test の方針を確認するとき
+- 採用されなかった設計案や作業方式の背景を確認するとき
 
 ## Do not read this when
-- 構築済み環境での具体的なテスト、Ruff、mypy の実行手順だけを確認するときは repository local の run-cmoc-tests skill を読む
-- 特定機能の実装詳細やテスト詳細だけを確認するときは対応する realization code または realization test を直接読む
-- 正本仕様と無関係な一般的な CLI 入出力や実装上の細部だけを調査するとき
+- 確認したい個別仕様文書が明確なときは、その文書を直接読む
+- 構築済み環境での具体的なテスト・Ruff・mypy の実行手順だけを確認するときは、repository local の run-cmoc-tests skill を読む
+- 実装構造やテストの詳細だけを確認するときは、対応する realization file を直接読む
 
 ## hash
-- 19aff3ccea76461b3677632278fa506f97282bf8eda6991cd8bcf20466093b0e
+- c9903d04fb12d273403652e166563d4280695065e928b889089088a4e8a0c7d8
 
 # `src`
 
 ## Summary
-- AIエージェント呼び出し用パラメータの正本ソースを扱うディレクトリ。ACP設定、パスモデル、設定モデル、構造化Markdown、完全プロンプト、各種規範プロンプト、INDEX生成、oracle review、realization操作、session join、TUI起動の実装入口を含む。
+- AIエージェント呼び出しに関する正本ソースを扱うディレクトリ。agent call のパラメータ・起動条件、設定と root 解決、Structured Document、prompt builder の実装を調査する入口。
 
 ## Read this when
-- agent callのモデル・推論・ファイルアクセス設定やパラメータ構築を調査・変更するとき
-- agent callのcwd、worktree、repo root、placeholderなどのパス解決を調査・変更するとき
-- 完全プロンプト、エディタ初期文面、規範注入、StructDocのMarkdown化を調査・変更するとき
-- INDEX生成、oracle review、realization適用・refactor、session join、TUI起動のprompt構築を調査・変更するとき
+- Agent Call Parameter、Structured Output、agent call の起動条件やパラメータを変更・調査するとき
+- CmocConfig、root 解決、Standard・Requirement・StructDoc の定義や Markdown レンダリングを調査するとき
+- prompt builder、プレースホルダ、入力エディタ初期文、oracle・realization・INDEX.md 関連のプロンプト生成規則を調査するとき
 
 ## Do not read this when
-- realization側のCLI実装や実行フローだけを調査・変更するとき
-- oracleドキュメント本文や個別規範の内容だけを確認するとき
-- ACPのモデル・推論値そのものの利用箇所や、設定ファイルの生成・同期処理だけを調査するとき
+- CLI サブコマンドの実際の処理や画面操作の挙動を調査するとき
+- 共通の prompt 構築・実行フローやバックエンド固有のモデル解決を調査するとき
+- 個別の oracle 文書や realization 実装の内容だけを調査するとき
 
 ## hash
-- 15a2b0a78fabdb3e363407ec80b26fdbd569f82f65e894a4a1562dce8f875c23
+- 2abeba640329884146f2dec5837e62b0faa8a473b298b5f2e1e81b50877c99a2

@@ -17,19 +17,20 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全なプロンプトを構築する正本実装。役割・依頼概要・完了条件、静的／動的プロンプト、placeholder 定義を組み合わせ、各種 oracle／realization／レビュー／ルーティング規則を依存関係に従って注入する。
+- agent call に渡す完全なプロンプトを、役割・依頼概要・完了条件、静的／動的プロンプト、各種規則、プレースホルダ定義から構築する。
+- oracle・realization、realization から oracle 参照、INDEX エントリー、ファイルアクセス、ルーティングの各規則を条件付きで注入し、placeholder の競合を検出する。
 
 ## Read this when
-- agent call の完全プロンプト生成処理を変更・レビューするとき
-- 静的プロンプトと動的プロンプトの構成、placeholder 統合、各種プロンプト規則の注入順序を確認するとき
-- oracle／realization や INDEX エントリー生成に関わるプロンプト注入条件を調査するとき
+- agent call 用プロンプトの構成や注入順序を変更するとき
+- 静的／動的プロンプト、補助プロンプト、placeholder 定義の統合処理を確認するとき
+- oracle・realization 関連規則や INDEX エントリー規則の有効化条件を変更するとき
 
 ## Do not read this when
-- 個別のプロンプトパーツ本文だけを変更・確認するときは、対応する parts 配下の実装を直接読む
-- プロンプト生成とは無関係な CLI、パスモデル、構造化文書の実装を調査するとき
+- 個別のプロンプト部品の本文や規則の内容だけを変更するときは、対応する parts 配下の実装を直接読む
+- プロンプト生成と無関係な CLI、パスモデル、構造化文書の処理を変更するとき
 
 ## hash
-- 9074a0c9fb71f1a3a24fe08e84f5e996faa837f038e4f656aaf0295737f9a3e3
+- 9ee989a6beb974e3cecde4497393189632a7ddc50ec34869be9805681c5b1aac
 
 # `editor_input.py`
 
@@ -49,19 +50,15 @@
 # `parts`
 
 ## Summary
-- oracle と realization の規範、および両者を適用したレビュー基準を prompt builder の構造化文書として生成する部品群。oracle／realization の定義、レビュー所見、INDEX.md ルーティング、ファイルアクセス規則など、エージェント向けプロンプトの基礎規則への入口となる。
+- prompt builder が生成する各種規則・定義文書の部品を収めるディレクトリ。ファイルアクセス制約、oracle/realization の基本定義、INDEX.md ルーティング、oracle file 参照規則など、個別のプロンプト構成要素への入口となる。
 
 ## Read this when
-- oracle・realization の定義や責務境界、各種標準規範を prompt に組み込む処理を確認・変更するとき
-- oracle file と realization file の不整合や致命的問題をレビュー所見として扱う基準を確認するとき
-- INDEX.md のエントリー生成・ルーティング規則、またはエージェント向けファイルアクセス規則を確認するとき
-- これらの規範文書を構造化して生成する prompt builder 部品を調査するとき
+- prompt builder の規則文書を追加・変更・確認するとき
+- ファイルアクセス、oracle/realization、INDEX.md ルーティング、realization code の oracle 参照のいずれかに関する生成規則を調べるとき
 
 ## Do not read this when
-- 個別の oracle 文書や realization 実装・テストの内容を調査するとき
-- 特定のサブコマンドやプロダクト機能の実装責務を調査するとき
-- StructDoc や Standard など共通の構造化文書機構そのものを変更・確認するとき
-- Codex CLI の実行環境やテスト手順の正本仕様を確認するときは、対応する oracle 文書を直接読む
+- 個別の oracle 文書や realization 実装の内容を調べるとき
+- prompt builder 全体の構成や、このディレクトリに含まれない別の生成部品だけを調べるとき
 
 ## hash
-- a0b2facad381820e0979d3d636b984c9619b42e718975c4c195e979a0f3a93ef
+- a337f6fe855ab67cb0994ec92a4da67f8e23c517fc9b5afddee0c5fa8927c59b

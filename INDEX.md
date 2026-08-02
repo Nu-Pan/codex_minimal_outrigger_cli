@@ -87,19 +87,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様と、agent 呼び出し用パラメータの正本ソースを機能領域ごとに整理したディレクトリ。doc ではアプリケーション仕様・開発ルール・設計判断を、src では ACP 設定、パス・設定モデル、プロンプト、INDEX 生成、oracle review、realization 操作などの実装入口を扱う。
+- cmoc の正本仕様と正本ソースを扱う oracle ディレクトリ。アプリケーション仕様、CLI・agent call・session/run lifecycle、branch・commit・worktree、開発規則、および agent call のパラメータ・設定・Structured Document・prompt builder の定義を確認する入口。
 
 ## Read this when
-- cmoc の正本仕様、開発ルール、設計判断を確認するとき
-- agent call のパラメータ、プロンプト構築、INDEX 生成、oracle review、realization 操作の正本ソースを調査するとき
+- cmoc の利用者向け挙動や CLI、agent call、ログ、prompt、session/run lifecycle の正本仕様を探すとき
+- session fork、run の隔離、branch・commit・worktree の関係やライフサイクルを確認するとき
+- 開発環境、CLI 実装配置、Python 規則、realization test の方針を確認するとき
+- Agent Call Parameter、Structured Output、CmocConfig、root 解決、Structured Document、prompt builder の定義や生成規則を調査するとき
 
 ## Do not read this when
-- 具体的な realization 側の CLI 実装や実行フローだけを調査するとき
-- 構築済み環境でのテスト、Ruff、mypy の実行手順だけを確認するとき
-- 特定機能の実装詳細・テスト詳細や、一般的な CLI 入出力の細部だけを確認するとき
+- 確認したい個別仕様文書が明確なときは、その文書を直接読む
+- 構築済み環境での具体的なテスト・Ruff・mypy の実行手順だけを確認するときは、repository local の run-cmoc-tests skill を読む
+- CLI サブコマンドの実際の処理、共通 prompt 実行フロー、バックエンド固有のモデル解決、または個別 realization 実装だけを調査するときは、対応する直接の対象を読む
 
 ## hash
-- 071f11dc2685edc2d63dab3e7fb0c068d5f5387a3e773037d7a3d06da36554e9
+- 32a79aa8be1e1f9620554b01dbe3aa2a030cdb866a8e86b5680ea9726ebafcb9
 
 # `pyproject.toml`
 
