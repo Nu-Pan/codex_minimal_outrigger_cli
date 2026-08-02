@@ -26,7 +26,8 @@
 - `automatically_injected_instruction` は、少なくとも以下の内容を伝える
     - oracle file は読み取り専用である
     - realization file は読み書き禁止である
-    - oracle file の規約・規範は cmoc が自動注入する
+    - oracle file の調査に必要な cmoc 固有の契約は自動注入される
+- 汎用規範と動的プロンプトの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする
 - 上記を満たす具体的な文面と追加内容は realization file 側の実装裁量とする
 
 ## TUI 起動パラメータ

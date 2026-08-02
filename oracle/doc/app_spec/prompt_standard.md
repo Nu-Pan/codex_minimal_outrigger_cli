@@ -6,6 +6,12 @@
 - cmoc が agent に渡すプロンプトが従うべき規範を述べる
 - これは cmoc に固有の規範である（任意のプロダクトに適用可能な規範ではない）ため oracle doc として述べる
 
+## installed skill との責務境界
+
+- cmoc の動的プロンプトには、cmoc 固有の概念、file access、`INDEX.md` routing、出力契約、および agent call 固有の契約だけを含める
+- 正本仕様、実装、テスト、レビュー、日本語文書、および Python 開発に関する汎用規範は、対応する installed skill に委ねる
+- installed skill に委ねる汎用規範を、cmoc の動的プロンプトへ再掲してはいけない
+
 ## agent call に渡すプロンプトは、oracle src 定義の関数を使用する
 
 - agent call に渡すプロンプトは `{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する

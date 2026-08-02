@@ -47,8 +47,7 @@ def build_oracle_review_merge_finding_parameter(
                 StructCodeBlock("text", findings),
             ),
         ],
-        oracle_standard=True,
-        oracle_review_standard=True,
+        oracle_and_realization_basic=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

@@ -29,7 +29,8 @@
 - 本命の追従作業を複数の agent call に分割してはいけない。
 - 収束判定のために同じ作業を反復してはいけない。
 - 本命 agent call 終了後に、別の agent call で作業を補完してはいけない。
-- prompt は、注入差分、リポジトリ全体の関連 oracle file と realization file、および適用される standard を根拠に、必要な implementation、test、ancillary を修正して検証するよう要求する。
+- prompt は、注入差分とリポジトリ全体の関連 oracle file および realization file を根拠に、必要な implementation、test、ancillary を修正するよう要求する。
+- 汎用規範と動的プロンプトの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする。
 - file access mode は `REALIZATION_WRITE` とし、agent は realization file だけを変更する。
 
 ## 想定内差分

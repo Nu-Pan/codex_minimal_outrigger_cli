@@ -14,7 +14,8 @@
 
 - エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする。
 - エディタ編集対象 file の初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する。
-- `automatically_injected_instruction` は、少なくとも realization file の読み書き禁止と oracle file の規約・規範が cmoc によって自動注入されることを伝える内容とする。
+- `automatically_injected_instruction` は、少なくとも realization file の読み書き禁止と、oracle file の編集に必要な cmoc 固有の契約が自動注入されることを伝える内容とする。
+- 汎用規範と動的プロンプトの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする。
 - 上記を満たす具体的な文面と追加内容は realization file 側の実装裁量とする。
 
 - cmoc は original prompt file の編集主体をこのサブコマンドに限定せず、排他的 writer を管理しない。他の TUI やエディタによる更新と、その並行操作から生じる競合や不整合は人間が管理する。

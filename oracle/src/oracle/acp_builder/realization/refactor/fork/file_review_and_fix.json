@@ -65,7 +65,7 @@
           },
           "oracle_requirement": {
             "type": "string",
-            "description": "oracle file または apply review standard が要求している仕様・規範。"
+            "description": "所見に関係する oracle file の要求。対応する明示要求がない場合は、その旨を記載する。"
           },
           "observed_implementation": {
             "type": "string",
@@ -73,7 +73,7 @@
           },
           "reason": {
             "type": "string",
-            "description": "なぜ明確に問題があり、修正が必要であると言えるのか。推測や未確認事項は含めない。"
+            "description": "所見を要修正とする理由。"
           },
           "resolution": {
             "type": "object",

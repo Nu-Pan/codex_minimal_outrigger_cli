@@ -18,10 +18,6 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 def build_tui_launch_tui_parameter(
     time_stamp: str,
     original_prompt: str,
-    oracle_standard: bool,
-    realization_standard: bool,
-    oracle_review_standard: bool,
-    apply_review_standard: bool,
 ) -> AgentCallParameter:
     """`cmoc tui` サブコマンドの TUI 起動パラメータを構築する。
 
@@ -30,10 +26,6 @@ def build_tui_launch_tui_parameter(
         original_prompt: ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す
             オリジナルプロンプト。コメント除去と strip は呼び出し側で完了している
             想定。
-        oracle_standard: oracle standard を適用するかどうか。
-        realization_standard: realization standard を適用するかどうか。
-        oracle_review_standard: oracle review standard を適用するかどうか。
-        apply_review_standard: apply review standard を適用するかどうか。
 
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
@@ -59,11 +51,7 @@ def build_tui_launch_tui_parameter(
             )
         ],
         oracle_and_realization_basic=True,
-        oracle_standard=oracle_standard,
-        realization_standard=realization_standard,
-        oracle_review_standard=oracle_review_standard,
-        apply_review_standard=apply_review_standard,
-        index_entry_standard=False,
+        realization_oracle_reference_rule=True,
     )
     complete_prompt_path = (
         path_context.repo_root

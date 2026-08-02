@@ -3,7 +3,8 @@
 ## 目的
 
 - realization refactor は、oracle file と realization file を起点とするファイル単位の追従調査を、current fork で保留した unresolved target 以外の調査要求がなくなるまで繰り返す workload である。
-- 所見調査・修正を行う agent call には commit 差分や変更要約を渡さず、oracle file、realization file、および standard から修正すべき点を見つけさせる。
+- 所見調査・修正を行う agent call には commit 差分や変更要約を渡さず、oracle file と realization file を調査対象として渡す。
+- レビューと実装の汎用規範は installed skill に委ねる。動的プロンプトとの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする。
 - 短い変更ループを担う realization apply とは workload を分ける。
 - fork, join, abandon の共通 lifecycle は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` を正本とする。
 

@@ -62,18 +62,14 @@ def build_realization_apply_fork_launch_exec_parameter(
         """,
         goal="""
         - 追従対象変更 <cmoc_ref target="realization_apply_change"/> から読み取れる変更について、oracle file と realization file の間に齟齬がないこと
-        - 関連する既存 oracle file、realization file、standard と論理的に整合していること
-        - 必要な realization implementation、realization test、realization ancillary の変更と検証が完了していること
-        - realization file が realization standard に従っていること
+        - 必要な realization implementation、realization test、realization ancillary の変更が完了していること
         - oracle file を変更していないこと
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         path_context=path_context,
         aux_dynamic_prompt=[apply_change],
         oracle_and_realization_basic=True,
-        oracle_standard=True,
-        realization_standard=True,
-        apply_review_standard=True,
+        realization_oracle_reference_rule=True,
     )
 
     # リポジトリ全体の追従を 1 agent call へ委ねるため最高品質設定を使う。

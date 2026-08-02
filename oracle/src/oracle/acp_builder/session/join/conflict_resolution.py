@@ -45,10 +45,9 @@ def build_session_join_conflict_resolution_parameter(
         - `{{work-root}}` ツリー内の merge conflict marker を解消すること
         """,
         goal="""
-        - conflict marker の解消いがいの余計な差分が存在しないこと
-        - 作業前後で仕様の意味がへんかしていないこと
+        - conflict marker の解消以外の余計な差分が存在しないこと
+        - 作業前後で仕様の意味が変化していないこと
         - conflict marker が残っていないこと
-        - 全てのテストに通過する状態であること
         """,
         file_access_mode=FileAccessMode.REPO_WRITE,
         path_context=path_context,
@@ -68,12 +67,11 @@ def build_session_join_conflict_resolution_parameter(
             ),
         ],
         oracle_and_realization_basic=True,
-        oracle_standard=True,
-        realization_standard=True,
+        realization_oracle_reference_rule=True,
     )
     # パラメータを生成して返す
     # NOTE
-    #   conflic 解消時に余計な事をしてほしくないので run_indexing_preflight=False
+    #   conflict 解消時に余計な事をしてほしくないので run_indexing_preflight=False
     # NOTE
     #   ここでやらかすと、ここまでに投下したコストが全てパーになるので、最高品質設定で呼び出す
     return AgentCallParameter(

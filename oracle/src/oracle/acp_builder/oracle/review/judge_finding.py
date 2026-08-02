@@ -9,11 +9,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import (
-    AgentCallPathContext,
-    resolve_real_path,
-    resolve_repo_root,
-)
+from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
 
 # cmoc
 from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
@@ -69,11 +65,7 @@ def build_oracle_review_judge_finding_parameter(
                 ),
             ),
         ],
-        aux_placeholder_def={
-            "oracle-root": resolve_real_path("{{work-root}}/oracle", path_context),
-        },
-        oracle_standard=True,
-        oracle_review_standard=True,
+        oracle_and_realization_basic=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

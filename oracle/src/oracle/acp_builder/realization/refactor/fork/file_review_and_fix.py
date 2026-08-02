@@ -36,11 +36,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         """,
         goal="""
         - `{{target-path}}` 以外の必要な oracle file, realization file も読んでいること
-        - 列挙した所見が apply review standard を満たしていること
         - 発見した所見に対応する修正をベストエフォートで実施したこと
-        - 修正した file を再調査し、この agent call 内で対応可能な所見を残していないこと
-        - realization file が realization standard に従っていること
-        - 全ての test に通過する状態であること
         - 指定された Structured Output schema に従い、この agent call で発見した所見と対応結果を返すこと
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
@@ -63,9 +59,8 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         aux_placeholder_def={
             "target-path": resolve_real_path(target_path, path_context),
         },
-        oracle_standard=True,
-        realization_standard=True,
-        apply_review_standard=True,
+        oracle_and_realization_basic=True,
+        realization_oracle_reference_rule=True,
     )
 
     # 全 oracle file と realization file に適用するため、効率モデルの最大推論を使う。

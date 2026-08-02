@@ -9,11 +9,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import (
-    AgentCallPathContext,
-    resolve_real_path,
-    resolve_repo_root,
-)
+from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
 
 # cmoc
 from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
@@ -46,7 +42,6 @@ def build_oracle_review_validate_finding_advocate_parameter(
         goal="""
         - 指定の Structured Output schema に従って、対象所見が妥当である理由を返していること
         - 既存の理由と重複しないよう、新規理由だけが列挙されていること
-        - `{{oracle-root}}` ツリー内の oracle file を具体的な根拠とし、「かもしれない」「可能性がある」は根拠にしていないこと
         - 新規理由が無い場合、空配列を返していること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
@@ -74,11 +69,7 @@ def build_oracle_review_validate_finding_advocate_parameter(
                 ),
             ),
         ],
-        aux_placeholder_def={
-            "oracle-root": resolve_real_path("{{work-root}}/oracle", path_context),
-        },
-        oracle_standard=True,
-        oracle_review_standard=True,
+        oracle_and_realization_basic=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

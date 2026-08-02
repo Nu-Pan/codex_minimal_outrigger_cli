@@ -3,8 +3,8 @@
 
 ## 概要
 
-- ユーザーから与えられたプロンプトと cmoc の自動生成プロンプトを注入した状態で AI Agent CLI/TUI を起動する
-- cmoc に実装されている規則・規範の上で任意のプロンプトを実行するための仕組み
+- ユーザーから与えられたプロンプトへ cmoc 固有の契約を注入し、AI Agent CLI/TUI を起動する
+- 汎用規範は installed skill に委ね、実行パラメータ選定用の agent call は行わない
 
 ## 引数
 
@@ -18,8 +18,7 @@
 
 1. doctor preprocess を呼び出す
 2. オリジナルプロンプトをユーザーからエディタ入力
-3. 必要なパラメータを agent call で決定
-4. AI Agent CLI/TUI を起動
+3. AI Agent CLI/TUI を起動
 
 ## 「オリジナルプロンプトをユーザーからエディタ入力」の詳細
 
@@ -27,15 +26,11 @@
 - エディタ編集対象ファイルの初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する
 - `automatically_injected_instruction` の具体的な文面と追加内容は realization file 側の実装裁量とする
 
-## 「必要なパラメータを agent call で決定」の詳細
-
-- `build_tui_resolve_parameter_parameter` で構築したパラメータを使用し、`codex exec` の agent call で決定する
-- agent call の詳細仕様は `build_tui_resolve_parameter_parameter` を正本とする
-
 ## 「AI Agent CLI/TUI を起動」の詳細
 
 ### 全バックエンド共通
 
+- ユーザーのプロンプト入力後、`build_tui_launch_tui_parameter` で構築した固定パラメータを使用して TUI を直接起動する
 - TUI 起動パラメータは `build_tui_launch_tui_parameter` を正本とする
 
 ### Codex CLI の場合
