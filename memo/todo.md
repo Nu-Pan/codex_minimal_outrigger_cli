@@ -1,10 +1,5 @@
 # 現在進行中
 
-## cmoc の動的構築プロンプトから、一般的な規範を抽出してスキル化したい
-
-- https://github.com/Nu-Pan/nupan-codex-skills に抽出した
-- 今度は cmoc から除外する必要がある
-
 ## エディタ経由プロンプト入力にエージェントから書かせるやつ
 
 - `cmoc oracle investigation` で計画を揉んで、その結果を `cmoc oracle edit` に入力させるようなケース
