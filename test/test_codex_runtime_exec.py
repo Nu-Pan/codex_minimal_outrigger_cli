@@ -2,9 +2,11 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
+import _ollama_support
 import pytest
 from _codex_support import (
     codex_arg_value,
@@ -20,6 +22,7 @@ from _ollama_support import (
     TEST_OLLAMA_CACHE_ENV,
     TEST_SLM_MODEL,
     _run_pytest,
+    _select_cache_root,
     local_ollama,
     use_test_local_ollama,
 )
@@ -50,14 +53,76 @@ def test_pytest_runner_separates_run_tmpdir_from_ollama_cache(
         assert executable == sys.executable
         assert args == [sys.executable, "-m", "pytest", "test/example.py", "-ra"]
         assert environment["TMPDIR"] == str(run_temporary_directory)
-        cache_root = Path(environment[TEST_OLLAMA_CACHE_ENV])
-        assert cache_root.is_absolute()
-        assert not cache_root.is_relative_to(run_temporary_directory)
+        assert TEST_OLLAMA_CACHE_ENV not in environment
         raise RuntimeError("execve intercepted")
 
     monkeypatch.setattr(os, "execve", intercept_execve)
     with pytest.raises(RuntimeError, match="execve intercepted"):
         _run_pytest(["test/example.py", "-ra"])
+
+
+def test_ollama_cache_selection_ignores_run_local_tmpdir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cache root の既定値を pytest の run-local temporary と分離する。"""
+    run_temporary_directory = tmp_path / "run"
+    stable_temporary_directory = tmp_path / "stable"
+    run_temporary_directory.mkdir()
+    stable_temporary_directory.mkdir()
+    monkeypatch.setenv("TMPDIR", str(run_temporary_directory))
+    monkeypatch.delenv(TEST_OLLAMA_CACHE_ENV, raising=False)
+    monkeypatch.setattr(
+        _ollama_support,
+        "_stable_system_temporary_directory",
+        lambda: stable_temporary_directory,
+    )
+
+    cache_root = _select_cache_root(tmp_path)
+
+    assert cache_root.parent == stable_temporary_directory
+    assert not cache_root.is_relative_to(run_temporary_directory)
+
+
+def test_pytest_runner_imports_current_worktree_sources() -> None:
+    """main venv の editable install より current worktree を優先する。"""
+    work_root = Path(__file__).resolve().parents[1]
+    probe = """
+import os
+import runpy
+import sys
+
+def intercept_execve(_executable, _args, _environment):
+    import basic.acp
+    import commons.runtime_paths
+    import config.cmoc_config
+
+    print(basic.acp.__file__)
+    print(commons.runtime_paths.__file__)
+    print(config.cmoc_config.__file__)
+    raise SystemExit(0)
+
+os.execve = intercept_execve
+sys.argv = ["test/_ollama_support.py", "run-pytest", "-q"]
+runpy.run_path("test/_ollama_support.py", run_name="__main__")
+"""
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    result = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=work_root,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    imported_paths = [Path(line) for line in result.stdout.splitlines()]
+    assert imported_paths == [
+        work_root / "src" / "basic" / "acp.py",
+        work_root / "src" / "commons" / "runtime_paths.py",
+        work_root / "src" / "config" / "cmoc_config.py",
+    ]
 
 
 def test_setup_codex_home_isolates_home_and_codex_home(

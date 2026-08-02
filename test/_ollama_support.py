@@ -20,7 +20,6 @@ import socket
 import stat
 import subprocess
 import sys
-import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -33,13 +32,19 @@ from typing import NoReturn
 
 import pytest
 
-from basic.acp import ModelClass
-from commons.runtime_paths import repo_root
-from config.cmoc_config import (
+# {{work-root}}/oracle/doc/dev_rule/test_execution.md
+# linked worktree で main worktree の venv を使う場合も、runner 自身の
+# first-party import は検査対象の source tree を優先する。
+_WORK_ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(_WORK_ROOT / "src"), str(_WORK_ROOT / "oracle" / "src")]
+
+from basic.acp import ModelClass  # noqa: E402
+from commons.runtime_paths import repo_root  # noqa: E402
+from config.cmoc_config import (  # noqa: E402
     CmocConfig,
     CodexModelProviderConfig,
     CodexModelSpec,
-)
+)  # noqa: E402
 
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 TEST_SLM_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
@@ -49,7 +54,6 @@ _ARCHIVE_URL = "https://ollama.com/download/ollama-linux-amd64.tar.zst"
 _GPU_LAYER_COUNT = 999
 _MAX_OUTPUT_TOKENS = 4096
 _GPU_INFERENCE_TIMEOUT = 120
-_WORK_ROOT = Path(__file__).resolve().parents[1]
 _CMOC_ROOT = repo_root(_WORK_ROOT)
 
 
@@ -181,7 +185,7 @@ def _select_cache_root(tmp_path: Path) -> Path:
         candidate = Path(override)
         _prepare_cache_root(candidate)
         return candidate.resolve()
-    candidate = _default_cache_root(Path(tempfile.gettempdir()))
+    candidate = _default_cache_root(_stable_system_temporary_directory())
     try:
         _prepare_cache_root(candidate)
         return candidate.resolve()
@@ -230,14 +234,8 @@ def _stable_system_temporary_directory() -> Path:
 
 
 def _pytest_environment() -> dict[str, str]:
-    """pytest の temporary override と半永続 cache を独立させる。"""
-    environment = os.environ.copy()
-    # 明示済み override は呼び出し側の選択として維持する。
-    if not environment.get(TEST_OLLAMA_CACHE_ENV):
-        environment[TEST_OLLAMA_CACHE_ENV] = str(
-            _default_cache_root(_stable_system_temporary_directory())
-        )
-    return environment
+    """pytest の環境を保ち、cache root の選択を test helper へ委譲する。"""
+    return os.environ.copy()
 
 
 def _run_pytest(args: list[str]) -> NoReturn:
