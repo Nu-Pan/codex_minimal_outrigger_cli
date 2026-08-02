@@ -5,6 +5,11 @@
 - https://github.com/Nu-Pan/nupan-codex-skills に抽出した
 - 今度は cmoc から除外する必要がある
 
+## エディタ経由プロンプト入力にエージェントから書かせるやつ
+
+- `cmoc oracle investigation` で計画を揉んで、その結果を `cmoc oracle edit` に入力させるようなケース
+- 書き込ませるファイルのパスは `.cmoc/gu/ar/log/editor_input/...` だから、厳密に言えばエージェント書き込み禁止区域では？
+
 ## YAGNI とかの名前のついた原則を指示に組み込む
 
 - 原則の中身を展開せず、名前を指定した方がコンテキストを節約できるはず
