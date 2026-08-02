@@ -13,9 +13,9 @@
   },
   "README.md": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "aee9654cfb1c4d0d9aa963e9f03b8a56f4e5b6cdc7aac1ebeeb478b914f88f11",
-    "last_investigated_at": "2026-07-23_13-36_15_853926000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "c9a65ea2bc4ae8a742a22e9ced541f459b3804a77b29a66a7a3513280711137a",
+    "last_investigated_at": "2026-08-03_07-22_09_795907000"
   },
   "bin/cmoc": {
     "investigation_required": true,
