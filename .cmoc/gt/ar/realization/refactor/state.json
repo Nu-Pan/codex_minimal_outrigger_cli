@@ -169,9 +169,9 @@
   },
   "oracle/doc/app_spec/sub_command/tui.md": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "be9faf25edcb1c5a094206c1ad538e66195cd6dcaef06552ae63ef8375d6229d",
-    "last_investigated_at": "2026-07-23_22-02_21_657291000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "64d50ee80bdaea88d81b3a78d714a3d0174ce9787dda0cc8d089fd3752bd1b45",
+    "last_investigated_at": "2026-08-03_08-21_32_121238000"
   },
   "oracle/doc/app_spec/subcommand_interruption.md": {
     "investigation_required": false,

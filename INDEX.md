@@ -123,20 +123,20 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめるソースディレクトリ。CLI 起動、互換 import 入口、共通 runtime、サブコマンド、ACP builder adapter、設定入口を扱い、各機能の詳細は対応する下位ディレクトリまたはモジュールへ進んで確認する。
+- cmoc CLI の realization 実装をまとめるソース領域。Typer による主要なコマンド入口、サブコマンド実装、共通 runtime、ACP 互換 import 層、設定・正本パッケージへの互換 shim を扱う。下位項目では、CLI 登録、サブコマンド、共通基盤、互換入口など責務ごとの実装へ進める。
 
 ## Read this when
-- cmoc の realization 側 CLI 全体の構成や主要な実装入口を確認するとき。
-- CLI 起動処理、共通 runtime、サブコマンド、ACP builder、互換 import の配置先を特定するとき。
-- 対象機能の実装へ進む前に、上位の委譲関係や公開入口を把握するとき。
+- cmoc CLI 全体のコマンド登録、引数解析、エラー変換、自動補完の挙動を確認・変更するとき。
+- CLI サブコマンド、共通 runtime、ACP builder、設定や oracle への互換 import 経路の配置を調べるとき。
+- 特定のサブコマンドや runtime helper へ進む前に、realization 側の上位構成を把握したいとき。
 
 ## Do not read this when
-- 正本仕様や oracle 側の実装内容を確認するとき。
-- 特定のサブコマンド、runtime helper、builder の詳細を確認するときは、対応する下位項目または個別モジュールを直接読む。
-- 実装と無関係なドキュメント、テスト、運用ルールを調査するとき。
+- 正本仕様や正本実装そのものを確認・変更したいときは、対応する oracle 側を直接読む。
+- 特定サブコマンド、builder、runtime helper、互換 shim の内部挙動だけを調べたいときは、この階層ではなく該当する下位項目を直接読む。
+- CLI と無関係なテストや補助ファイルを調査するとき。
 
 ## hash
-- edaeb6eb0870f5a2b087552ddb82cedf0e1ff35f3c8140031f26f872b3710a3e
+- c81e4a534ca0a79517f918e2d50df326652942b23b1a83d2c014b764e1177673
 
 # `test`
 

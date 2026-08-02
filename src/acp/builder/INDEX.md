@@ -141,15 +141,16 @@
 # `tui`
 
 ## Summary
-- TUI 起動 parameter builder の互換 import 経路を提供するディレクトリ。`launch_tui.py` は oracle 側の builder を再エクスポートし、`__init__.py` とともに既存の import 公開面を維持する。実装本体の調査入口ではない。
+- TUI 起動 builder の既存 import 経路を維持する互換 package。実装本体への入口ではなく、不要になった場合に削除を検討する対象。
+- TUI 起動 parameter builder を既存の互換 import 経路から再公開するモジュール。実体は oracle 側の TUI 起動定義にあり、利用箇所からその定義へ進む入口。
 
 ## Read this when
-- TUI 起動 parameter builder の既存 import 経路、公開名、互換性を確認するとき
-- 当該互換 import 経路を削除・変更できるか判断するとき
+- TUI 起動 builder の既存 import 経路や互換性を確認するとき
+- 互換 import の解決先や、その経路を削除・変更できるか判断するとき
 
 ## Do not read this when
-- TUI builder の実装詳細や起動処理そのものを調査・変更するとき
-- TUI 起動や互換 import 経路に関係しない処理を扱うとき
+- TUI 起動 parameter の生成ロジックや起動処理そのものを調査・変更するとき
+- TUI 以外の ACP builder、共通 parameter builder 仕様、または互換性に関係しない処理を扱うとき
 
 ## hash
-- 11e93e1ead52a1d97b9ea5415eb5b1db6799fb5f88289afc9da65662deddef1d
+- 8b5e533d0629fa51629b23b240cec1b19c41b3772b23e0449961cf4be62f8082

@@ -1,18 +1,18 @@
 # `acp`
 
 ## Summary
-- `acp` 互換パッケージの公開入口と ACP builder adapter を扱うディレクトリ。`acp.*` から `oracle.*` または実体モジュールへ移行する際の互換経路、canonical builder への委譲、prompt 保護、各領域の builder 接続を下位項目から確認する。
+- `src/acp` は ACP 互換層の realization 実装をまとめる領域で、公開入口と builder 系の互換経路を扱う。下位項目では、利用者向け入口の互換処理や builder の adapter・prompt 生成処理など、責務ごとの具体的な実装へ進める。
 
 ## Read this when
-- `acp` の公開入口や互換 import 経路の存廃を判断するとき。
-- ACP builder adapter の構成、canonical 実装への委譲、prompt 生成保護、各領域の builder 接続を調査・変更するとき。
+- ACP 互換層全体の責務や、`src/acp` 配下で調査すべき実装領域を選びたいとき。
+- `acp` 公開入口から canonical な `oracle` 実体や各 builder adapter へつながる realization 側の経路を確認したいとき。
 
 ## Do not read this when
-- canonical な oracle builder の仕様・実装を確認したいときは、oracle 側の対応対象を直接読む。
-- 特定の builder 機能の詳細や `acp.*` の利用箇所を確認したいときは、対応する下位項目または参照元を直接読む。
+- canonical な仕様・実装そのものを確認または変更したいときは、対応する `oracle` 側を直接読む。
+- `acp` 配下の特定モジュールの内部挙動だけを調べたいときは、この階層ではなく該当する下位項目を直接読む。
 
 ## hash
-- b387db12cf1b05c7d5c6dba2445229f2d960be9f787b06498d557b96a0ab2898
+- 913909fbc65b15ee293901dfef8b670588f2300173ed68f7dcb47173a87b3ad0
 
 # `basic`
 
