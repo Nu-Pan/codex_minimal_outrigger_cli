@@ -112,18 +112,17 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session の各ライフサイクル操作に対応するサブコマンド実装への入口。
+- session サブコマンドの実装パッケージ。session の各ライフサイクル処理を確認する入口で、開始・参加・中断などの個別サブコマンド実装を含む。
 
 ## Read this when
-- session サブコマンドの構成や実装を確認・変更するとき
-- session の fork、join、abandon のライフサイクル処理を扱うとき
+- session サブコマンドの実装構成や、fork・join・abandon の処理を確認・変更するとき。
 
 ## Do not read this when
-- session 以外のサブコマンドを扱うとき
-- Git 実行、state 管理、CLI ランタイムなど共通機能だけを確認するときは、対応する共通モジュールを直接読む
+- session 以外のサブコマンドを扱うとき。
+- session のデータ構造や共通 runtime、設定・仕様のみを確認するときは、対応する直接の実装・仕様ファイルを読む。
 
 ## hash
-- 1b01f38b1306948237ab7a586e9027b86dfa7174512a360ba4f41377675838b6
+- ab4130d63f8a101c3dcea6098fe955537fe6e185866cf8cb9e83dd99578b8e4c
 
 # `tui.py`
 

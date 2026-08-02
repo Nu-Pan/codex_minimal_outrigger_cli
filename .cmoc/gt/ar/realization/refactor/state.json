@@ -433,9 +433,9 @@
   },
   "oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "c9e43334d126ed735a55807763442ee34292bfe17bfa2545c8e84e166b4d7c91",
+    "last_investigated_at": "2026-08-03_06-42_32_725414000"
   },
   "oracle/src/oracle/prompt_builder/parts/file_access_rule.py": {
     "investigation_required": true,
