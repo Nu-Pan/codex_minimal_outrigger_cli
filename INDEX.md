@@ -1,22 +1,18 @@
 # `AGENTS.md`
 
 ## Summary
-- cmoc 自己開発時に恒常的に適用するリポジトリ固有の指示を定める補足文書。動的生成プロンプトの権限や作業範囲は変更せず、Python 環境、設計、テストの判断時に参照すべき oracle file への入口を提供する。
+- cmoc 自己開発における恒常的なリポジトリ固有指示を定める文書。動的生成プロンプトの権限・作業範囲を再定義せず、oracle file を優先する原則と、開発環境・設計・テスト・品質検査に関する参照先を示す。
 
 ## Read this when
 - cmoc リポジトリ固有の開発ルールや、動的生成プロンプトとの関係を確認するとき
-- Python の実行環境・環境構築・pip の扱いを判断するとき
-- realization implementation の配置・責務境界を判断するとき
-- realization test の実装・実行・変更後の検証方法を判断するとき
+- Python 環境、依存関係、realization implementation、realization test、品質検査の進め方を判断するとき
 
 ## Do not read this when
-- 具体的な Python 環境手順を確認する場合は、直接 development_environment.md を読むとき
-- 実装の設計責務を確認する場合は、直接 design_rule.md を読むとき
-- テスト手順を確認する場合は、直接 test_rule.md を読むとき
-- 動的生成プロンプトで指定された作業範囲や権限を確認する場合
+- 具体的な実装仕様やテスト仕様そのものを確認したいとき
+- 指定された開発作業の詳細が oracle file や repository local skill に直接定義されているとき
 
 ## hash
-- b168e9259b1693105309f460d4ef248fd19978f0bae5fab8e1617b0f3aeac112
+- b68df81da1c2ea21aea0a7fa9182c441085b2ebc1019ff01f7e172de6c61b126
 
 # `LICENSE`
 
@@ -91,38 +87,36 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を収録するディレクトリ。機能仕様、ライフサイクル、ブランチモデル、INDEX 生成、開発環境・CLI・テストなどの開発規約を確認するための入口。
-- CLI、Codex 呼び出し、ログ、doctor、prompt、run/session、branch model、INDEX 生成、Python 開発規約などの個別仕様は doc へ、agent call パラメータ、パス解決、プロンプト構築、INDEX 生成や realization 操作の正本ソースは src へ進む。
+- cmoc の正本仕様と、agent 呼び出し用パラメータの正本ソースを機能領域ごとに整理したディレクトリ。doc ではアプリケーション仕様・開発ルール・設計判断を、src では ACP 設定、パス・設定モデル、プロンプト、INDEX 生成、oracle review、realization 操作などの実装入口を扱う。
 
 ## Read this when
-- cmoc の機能・共通仕様や個別 oracle doc の所在を確認するとき
-- branch・commit・worktree、session・run の関係やライフサイクルを調査するとき
-- Python 開発、CLI 設計、開発環境、pytest などの開発規約を確認するとき
-- agent call の設定・パス解決・prompt 構築・INDEX 生成・oracle review・realization 操作の正本ソースを探すとき
+- cmoc の正本仕様、開発ルール、設計判断を確認するとき
+- agent call のパラメータ、プロンプト構築、INDEX 生成、oracle review、realization 操作の正本ソースを調査するとき
 
 ## Do not read this when
-- 既に確認対象の仕様文書や開発規約文書が特定できており、その本文だけで目的を満たせるとき
-- 実装構造やテスト実装、一般的な Codex CLI・model provider の仕様を直接調査するとき
-- 既存の INDEX.md のルーティングだけを更新するとき
+- 具体的な realization 側の CLI 実装や実行フローだけを調査するとき
+- 構築済み環境でのテスト、Ruff、mypy の実行手順だけを確認するとき
+- 特定機能の実装詳細・テスト詳細や、一般的な CLI 入出力の細部だけを確認するとき
 
 ## hash
-- 91d04de8eeb1114758d97aa495cb405bac04a4095519565a0386adb71ff71988
+- 071f11dc2685edc2d63dab3e7fb0c068d5f5387a3e773037d7a3d06da36554e9
 
 # `pyproject.toml`
 
 ## Summary
-- プロジェクトの Python パッケージメタデータ、依存関係、CLI エントリーポイント、ビルド設定を定義する設定ファイル。pytest・Ruff・mypy の実行対象や Python バージョン要件も確認できる。
+- プロジェクトの Python パッケージ設定。依存関係、開発用依存関係、`cmoc` CLI エントリーポイント、パッケージ配置、pytest・Ruff・mypy の設定を定義する。
 
 ## Read this when
-- 依存関係、対応 Python バージョン、`cmoc` コマンドのエントリーポイント、パッケージ探索、ビルド設定を確認するとき。
-- pytest・Ruff・mypy のプロジェクト共通設定や GPU integration テストのマーカーを確認するとき。
+- 依存関係や Python バージョン要件を確認するとき
+- `cmoc` コマンドのエントリーポイントやパッケージ構成を変更するとき
+- pytest、Ruff、mypy のプロジェクト設定を確認・変更するとき
 
 ## Do not read this when
-- CLI の具体的な処理や実装責務を確認したいときは、`src` 配下の実装を直接読む。
-- 正本仕様や開発環境・テスト手順を確認したいときは、`oracle` 配下の該当文書を読む。
+- 個別の CLI 処理や実装ロジックを確認するとき
+- テストケースや oracle の正本仕様を確認するとき
 
 ## hash
-- b2f7a17a58e3aa7aac375d93ebf50b342e13e74c4e9bc5ba3b6e8fd88b78edd4
+- 62c23b5f8693844b19076cbd7c8e2cc4930ace5468300a33c0b5ae87e3886d9f
 
 # `src`
 
@@ -145,19 +139,17 @@
 # `test`
 
 ## Summary
-- `test` ディレクトリは、cmoc の実装に対する pytest テスト群と共有テストヘルパーをまとめた検証領域です。ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、config、Git、TUI などの外部挙動・制御ロジックを対象とし、個別機能の回帰テストから実 Codex CLI を使う受け入れテストまでを含みます。機能領域ごとのテストファイルが、対応する realization implementation や oracle 仕様を確認する入口になります。
+- cmoc の realization test 群を収めたディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、設定・状態管理などの外部挙動と制御ロジックを検証するテスト、および共有テストヘルパーを提供する。各機能領域の実装変更時に対応する回帰テストの入口となる。
 
 ## Read this when
-- cmoc の機能変更に対して、該当する外部挙動・制御ロジックのテストや回帰範囲を特定するとき
-- ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、config、Git、TUI などのテスト対象を探すとき
-- 実装変更後の統合テスト、実経路テスト、または受け入れテストの入口を確認するとき
-- 共通テストヘルパー、test-local Ollama、Git fixture、fake external command の利用方法を確認するとき
+- cmoc の実装変更に伴う realization test の追加・修正・対象テストの選定が必要なとき
+- CLI、Codex runtime、ACP builder、indexing、oracle review、session、runtime 設定・状態などの外部挙動を検証するとき
+- テスト用 Git リポジトリ、Codex 環境、Ollama、fake external command など共有テスト基盤を確認するとき
 
 ## Do not read this when
-- 正本仕様や Structured Output schema の内容を確認するときは、対応する oracle 文書・schema・oracle source を直接読む
-- 実装の責務や内部設計を変更・調査するときは、該当する src 側の realization implementation を直接読む
-- テスト対象と無関係な機能の挙動を調べるときは、このディレクトリを総覧せず、該当する機能別テストへ直接進む
-- Codex や LLM の回答品質そのものを評価するときは、実経路テストの品質判定を目的にしない
+- 正本仕様や schema の内容を確認するときは、対応する oracle 文書・oracle source・schema を直接読む
+- 実装の責務や内部処理だけを変更・調査するときは、対応する realization implementation を直接読む
+- 対象領域と無関係なテストや、テスト実行手順そのものだけを確認するときは、このディレクトリ全体ではなく repository local のテスト手順を読む
 
 ## hash
-- 1a59ea61fe24ecaf0b889c90c2c97f08dfc455064eda2fa55a645449bbea8e0d
+- 10a3737482ea960c56940edbb85c9943cfc8e432d06d41c2ad241d6f67978f46

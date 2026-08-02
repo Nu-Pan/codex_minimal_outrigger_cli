@@ -1,20 +1,20 @@
 # `app_spec`
 
 ## Summary
-- cmoc の CLI、Codex 呼び出し、ログ、doctor、INDEX 生成、prompt、run/session lifecycle、サブコマンドなどの正本仕様を収録する app_spec の入口。個別機能の仕様を探し、関連する oracle doc へ進むために読む。
+- cmoc のアプリケーション仕様をまとめた正本文書ディレクトリ。CLI の自動補完、Codex 呼び出し、ログ、doctor preprocess、prompt、run/session lifecycle、サブコマンド、INDEX.md 生成など、各機能仕様の入口となる。
 
 ## Read this when
-- cmoc の機能仕様や共通仕様の正本文書を探すとき
-- CLI 補完、Codex 呼び出し、ログ、doctor、prompt、run/session、サブコマンド、INDEX 更新の仕様を確認するとき
-- 対象機能に対応する個別の oracle doc を特定するとき
+- cmoc のアプリケーション仕様から、対象機能に対応する正本文書を探すとき
+- CLI 呼び出し、ログ、prompt、run/session、サブコマンド、INDEX.md 生成などの挙動仕様を確認するとき
+- 個別仕様の適用範囲や、関連する仕様文書間の入口を確認するとき
 
 ## Do not read this when
-- 特定の仕様文書が既に分かっており、その本文だけを確認すればよいとき
-- 実装構造、テスト手順、開発環境など、対応する realization code・realization test・dev_rule の文書を直接読むべきとき
-- 一般的な Codex CLI、model provider、認証、推論品質など cmoc の正本仕様外の事項を調査するとき
+- Python 開発環境、設計規則、テスト実行手順を確認するときは、対応する dev_rule または repository local skill を読む
+- 特定機能の実装詳細だけを確認するときは、対応する realization code や realization test を直接読む
+- アプリケーション仕様と無関係な一般的な CLI 入出力や実装上の細部だけを調査するとき
 
 ## hash
-- 22d1f862e9753f1dc2d3fd865638ef972ee78cdd1e9f89268c38bf58fae51152
+- ed36e4c907777df7b9741e964c928a496f35f87c462eb5033a5ba422bc18366a
 
 # `branch_model.md`
 
@@ -56,18 +56,17 @@
 # `dev_rule`
 
 ## Summary
-- cmoc の開発規約を扱うディレクトリ。Python コーディング、CLI の設計・実装配置、開発環境、pytest による realization test の規約を確認するための入口。各規約の詳細は用途に応じた個別文書で確認する。
+- cmoc の開発ルールをまとめた正本仕様群。Python コーディング規則、CLI の実装配置、開発環境、realization test の方針を扱い、実装・テスト・環境構築時の判断入口となる。
 
 ## Read this when
-- Python 実装の命名・責務・型ヒント・import・docstring・コメントを確認するとき。
-- CLI のエントリーポイント、サブコマンド、共有処理の配置方針を確認するとき。
-- Python/venv・依存関係・ファイル形式などの開発環境ルールを確認するとき。
-- pytest、実経路統合テスト、GPU test、cache、timeout などのテスト規約を確認するとき。
+- Python 実装の命名、責務分割、型ヒント、import、docstring、コメント、公開範囲を確認するとき。
+- CLI のエントリーポイント、サブコマンド、共有処理の配置境界を判断するとき。
+- Python 環境の構築、依存関係の追加、pip の実行方法を確認するとき。
+- realization test の設計・実装・レビュー、統合テスト、Ollama、GPU、キャッシュ、backend、認可境界を確認するとき。
 
 ## Do not read this when
-- 個別機能や CLI の具体的な挙動・出力仕様を確認したいとき。
-- README だけで足りる一般的な利用方法を確認したいとき。
-- 既存の INDEX.md のルーティングだけを更新したいとき。
+- 構築済み環境での具体的なテスト・Ruff・mypy の実行手順だけを確認したいときは、repository local の run-cmoc-tests skill を読む。
+- CLI の具体的な挙動や出力仕様を確認したいときは、app_spec 配下を読む。
 
 ## hash
-- a1c4a09fee986b0f4fd273d2cab6a7a54416595437dc16acddbcacc63cfcc4b7
+- 3168391ca2cada110d5557bab2d03d5cda1bd52571b8762039c35b92c3bc20e9

@@ -81,16 +81,17 @@
 # `_ollama_support.py`
 
 ## Summary
-- 実経路統合テスト向けに、case-local Ollama の導入・モデル準備・GPU-only 推論確認・cache の安全な materialize/atomic publish・process group teardown を一体で扱う支援モジュール。通常のモデル設定を動的なローカル Ollama provider へ差し替える入口も提供する。
+- 実経路統合テストで使う case-local Ollama の準備・実行・終了を一元管理する支援モジュール。Ollama の archive/model cache を安全に検証・materialize・atomic publish し、GPU-only 推論を確認したうえで、テスト用 provider 設定と pytest runner を提供する。
 
 ## Read this when
-- 実経路統合テストで case-local Ollama の起動、モデル cache、GPU 利用確認、provider 設定、終了処理を変更・調査するとき。
+- 実経路統合テストの Ollama 起動、cache のライフサイクル、model の GPU 配置確認、case-local provider 設定、process group の teardown を変更または調査するとき。
 
 ## Do not read this when
-- 通常の Ollama やモデル provider の本番実装を変更するとき。個別の統合テスト本体の検証ロジックだけを変更するとき。
+- 通常の Ollama 本番設定や一般的なモデル provider 実装を変更するとき。
+- Ollama を使わない単体テストや、テスト対象の業務ロジックだけを変更するとき。
 
 ## hash
-- 05a91d9bcaa87673390175fa9a02ca7c11ceaf6d760ad5b472ed0846c7b92019
+- e6c8f98d513c05c0768db9bf51d6e7d2a4af32f797845e9c575855b980d1b1bd
 
 # `test_acp_builder_editing_run_parameters.py`
 
@@ -255,19 +256,19 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ランタイムの統合テストを扱う。テスト用 Codex 環境の分離、argv・stdin・override・schema・ログの契約、実リモート相当の Ollama provider 経由の実行、出力処理を検証する。Codex 実行経路や override 構築の変更時に、外部から観測できる契約を確認する入口となる。
+- Codex CLI 実行ランナーと関連テスト用の統合テストファイル。pytest 実行時の一時領域・Ollama キャッシュ分離、Codex 環境隔離、実 Codex CLI 呼び出し、argv・override・provider・schema・出力・リポジトリ変更の契約、不正 UTF-8 出力の扱いを検証する。Codex 実行やテスト用 Ollama provider、runtime_codex の変更影響を確認する入口。
 
 ## Read this when
-- Codex CLI の実行引数、sandbox、approval、model/provider override、prompt の stdin 渡しを変更または調査するとき
-- Codex の structured output schema、実行ログ、生成物の配置、CODEX_HOME の設定ファイル非生成を変更または検証するとき
-- test-local Ollama を用いた Codex 統合動作や、不正 UTF-8 出力の扱いを確認するとき
+- Codex CLI の実行引数、stdin prompt、出力 schema、override 設定、sandbox・approval、model provider の契約を変更または確認するとき
+- run_codex_exec、prepare_codex_override_args、テスト用 Codex/Ollama 環境 helper の統合動作を変更または検証するとき
+- Codex 実行結果、prompt/schema の保存、リポジトリへの書き込み、不正 UTF-8 出力に関する回帰を調査するとき
 
 ## Do not read this when
-- Codex 実行ランタイムの実装詳細そのものを変更する場合は、まず対応する src 側の runtime 実装と oracle の仕様を読むとき
-- Codex 以外のサブコマンド、一般的な設定処理、または Ollama helper 単体の挙動だけを扱うとき
+- Codex 実行ランナーやそのテスト用環境に関係しない機能を変更するとき
+- Codex CLI の一般仕様や正本ルールだけを確認したいときは、対応する oracle 文書を先に読む
 
 ## hash
-- 626ba13ea13e485e03e730284d128cb62db187b639cb838e922991c2d7ab0b21
+- c4bae588e28031302c696613118e365318c51b0f9fad5ef93718b6bf1822e729
 
 # `test_codex_runtime_home.py`
 
@@ -831,6 +832,20 @@
 
 ## hash
 - b75adeb4a265b177303b3237e7396054ea64d424a9231c880822a02b67713fc3
+
+# `test_skill_metadata.py`
+
+## Summary
+- Repository local skill の SKILL.md にある YAML frontmatter の必須 metadata とディレクトリ名の一致を検証するテスト。skill 追加時の metadata 契約を確認する入口。
+
+## Read this when
+- Repository local skill の frontmatter 契約、必須 name・description、または skill 自動検査の挙動を変更・確認するとき。
+
+## Do not read this when
+- skill 本文の設計や実装手順を確認するとき。個別 skill の SKILL.md を直接読むべき場合。
+
+## hash
+- bf735875997b038795c375af2a689094f308e7a286145efe3996c3ce9cd796d8
 
 # `test_struct_doc_rendering.py`
 

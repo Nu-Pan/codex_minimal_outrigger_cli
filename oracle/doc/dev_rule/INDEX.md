@@ -35,37 +35,34 @@
 # `development_environment.md`
 
 ## Summary
-- WSL2 の VS Code + Codex CLI 前提で、このリポジトリを作業できる環境条件と Python/venv の運用ルールを案内する。
-- `python3` の直接使用を避けて `.venv/bin/python` と `pip -e .` を使う必要がある作業や、新規パッケージ追加の手順を確認するときに読む。
-- ファイル命名やエンコードの制約を確認したいときに読む。
+- Python 環境の新規構築、依存関係の追加、pip 操作に必要な開発環境の正本仕様。WSL2・Python バージョン・venv・pip 実行方法、命名規則、エンコード、パッケージ追加手順を扱う。
 
 ## Read this when
-- このリポジトリをローカルで開く前提条件や、Codex CLI を使う実行環境を確認したい。
-- Python 3.12.3 以上、仮想環境の場所、`pip` の実行方法など、開発時の環境運用ルールを確認したい。
-- 新しい依存を `pyproject.toml` に追加して仮想環境へ入れる手順を確認したい。
-- ファイル名の付け方や UTF-8 BOM なし運用の制約を確認したい。
+- Python 仮想環境を新規作成するとき
+- Python パッケージや依存関係を追加するとき
+- pip を実行する方法や開発環境の前提を確認するとき
 
 ## Do not read this when
-- 個別の機能仕様、コマンド仕様、実装方針を知りたい場合は、より直接の oracle doc を読む。
-- 既存の `INDEX.md` のルーティングだけを更新したい場合は、この文書ではなく対象階層の案内先を探す。
-- README だけで足りる一般的な利用方法を知りたい場合は、この環境ルール文書は不要。
+- 構築済み環境で既存テストや品質検査を選択・実行・報告するときは、repository local の run-cmoc-tests skill を直接読む
+- 通常のテスト実行だけを行うとき
 
 ## hash
-- d1371e90d6e441b3470b215a3f421f05b6c6fec889700442a191f677de0c81b1
+- 2dd1253da053a65bff5ebdc4ad5c019acb18aa34b0b10ada5b40a4f5a74db35f
 
 # `test_rule.md`
 
 ## Summary
-- pytest による cmoc realization test の正本規約。決定論的制御ロジック、Real Codex CLI と test-local Ollama を使う実経路統合テスト、GPU test、cache、timeout、cloud backend 制約を定める。テスト実装・実行方針を確認する際の入口。
+- cmoc の realization test における基本方針、検証対象、実経路統合テスト、test-local Ollama、GPU 実行、キャッシュ、クラウド backend、Fake Codex CLI の認可境界を定める正本仕様。テスト実装・実行方法を判断する際の入口。
 
 ## Read this when
 - cmoc の realization test を追加・変更・レビューするとき
-- 実経路統合テスト、Real Codex CLI、test-local Ollama、GPU marker、cache、timeout の要件を確認するとき
-- 実装またはテスト変更後の full test 検証条件を確認するとき
+- 実経路統合テストの対象、Real Codex CLI、test-local Ollama、GPU marker、timeout、cache、sandbox escalation の要件を確認するとき
+- full test や品質検査の対象範囲と未完了条件を確認するとき
 
 ## Do not read this when
-- cmoc の realization implementation の責務や配置だけを確認するとき
-- CLI の設計・仕様や開発環境の手順を確認するときは、対応する design_rule または development_environment を直接読む
+- 実装配置や CLI の責務境界だけを判断する場合は design_rule.md を読む
+- Python 環境や依存関係の構築だけを行う場合は development_environment.md を読む
+- 具体的な pytest・Ruff・mypy の選択、実行、報告手順だけを確認する場合は repository local の run-cmoc-tests skill を読む
 
 ## hash
-- 64df10101d72683cb65d504537d5a267a58131f6567a762ecc8cdb72de9ff1db
+- 58f6d502e8b8d7c6c33cfad68839fd8482b6a066a4fe0ec7a3b9cb6456c4acd4

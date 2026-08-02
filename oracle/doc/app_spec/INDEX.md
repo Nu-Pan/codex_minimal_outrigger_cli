@@ -18,21 +18,20 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc から `codex exec` を呼び出す際の正本仕様を定義する文書。call-scoped path context、環境変数、preflight validation、CLI 引数による設定上書き、sandbox、model/provider、prompt の stdin 渡し、ログ・Structured Output、並列実行、失敗時の retry と quota 待機を扱う。Codex CLI 呼び出し実装や呼び出しパラメータ設計の確認入口であり、個別 builder の詳細仕様と組み合わせて読む。
+- cmoc が `codex exec` を呼び出す際の正本規約を定義する文書。agent call の path context、環境変数、preflight、CLI 引数、sandbox、権限、モデル設定、プロンプト・ログ・Structured Output の受け渡し、並列実行、失敗時の再試行・待機方針を扱う。Codex CLI 呼び出し実装や関連する builder の仕様確認への入口となる。
 
 ## Read this when
-- cmoc の `codex exec` 呼び出し方法、引数、sandbox、approval、model/provider、reasoning effort の扱いを変更・レビューするとき
-- 完全 prompt の渡し方、ログ保存、output schema、stdout/stderr、Structured Output の検証方法を確認するとき
-- Codex CLI 呼び出しの retry、quota 待機、サーバー一時不調、並列実行の制御を確認するとき
-- call-scoped path context、`agent_call_cwd`、path placeholder、`$CODEX_HOME` の検証規則を確認するとき
+- Codex CLI 呼び出しの argv、sandbox、approval、model/provider、reasoning effort、CODEX_HOME の扱いを変更・確認するとき
+- agent call の path context、prompt の渡し方、ログ保存、Structured Output、並列実行の規約を確認するとき
+- Codex CLI の失敗時リトライ、quota 待機、session resume、`.agents` 編集禁止の扱いを確認するとき
 
 ## Do not read this when
-- Codex CLI 呼び出し自体ではなく、個別の AgentCallParameter builder の実装詳細だけを確認したいときは、対応する builder の oracle src を先に読む
-- 通常の Codex CLI 利用方法や一般的なモデル選択を調べるとき
-- prompt の個別内容や対象機能の仕様を確認するときは、該当する prompt part または機能別 oracle file を直接読む
+- Codex CLI 呼び出し規約ではなく、個別の AgentCallParameter builder の実装詳細だけを変更・確認するときは、対応する builder の oracle src を直接読む
+- Codex モデル provider の仕様そのものを確認するときは、provider 専用の oracle doc を直接読む
+- 一般的な cmoc の開発環境、設計、テスト実行手順を確認するときは、対応する dev_rule または repository local skill を読む
 
 ## hash
-- 4fea78c60ddd3a0d0b40c1581498424f09fef8d171f7b707b248d65346104142
+- c4573a2c3edc05d3d5a2ba7989f14077d2a8ea1571e54d88edd6dc20f63d0bc6
 
 # `codex_model_provider.md`
 

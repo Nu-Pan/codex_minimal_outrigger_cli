@@ -1,21 +1,21 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様ドキュメントを収録する入口。CLI、Codex 呼び出し、ログ、doctor、prompt、run/session lifecycle、branch model、INDEX 生成、開発規約などの個別仕様を探す際に、機能仕様または開発規約の文書へ進むために読む。
+- cmoc の正本ドキュメントを機能領域ごとに整理したディレクトリ。アプリケーション仕様、branch・commit・worktree モデル、不採用案の検討記録、開発ルールへの入口を提供する。
 
 ## Read this when
-- cmoc の機能・共通仕様を確認し、対応する oracle doc を特定するとき
-- branch・commit・worktree、session・run の関係やライフサイクルを確認するとき
-- Python 開発、CLI 設計、開発環境、pytest などの開発規約を確認するとき
-- 採用されなかった設計案や作業方式の背景を調査するとき
+- cmoc の正本仕様や開発ルールから、対象機能に対応する文書を探すとき
+- CLI、session・run、branch・worktree、ログ、prompt、サブコマンド、INDEX.md 生成などの仕様を確認するとき
+- realization refactor の設計判断や不採用案の背景を確認するとき
+- Python 実装配置、開発環境、テスト方針などの開発ルールを確認するとき
 
 ## Do not read this when
-- 特定の仕様文書や開発規約文書が既に分かっており、その本文だけを確認すればよいとき
-- 実装構造、テスト実装、一般的な Codex CLI や model provider の仕様を直接調査するとき
-- 既存の INDEX.md のルーティングだけを更新するとき
+- 構築済み環境での具体的なテスト、Ruff、mypy の実行手順だけを確認するときは repository local の run-cmoc-tests skill を読む
+- 特定機能の実装詳細やテスト詳細だけを確認するときは対応する realization code または realization test を直接読む
+- 正本仕様と無関係な一般的な CLI 入出力や実装上の細部だけを調査するとき
 
 ## hash
-- 561d1321fc7b134c6afb2fdc4ef7a6288a2fc62d4bfec4d829876068a0438129
+- 19aff3ccea76461b3677632278fa506f97282bf8eda6991cd8bcf20466093b0e
 
 # `src`
 
