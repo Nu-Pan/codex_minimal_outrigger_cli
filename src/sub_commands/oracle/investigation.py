@@ -20,7 +20,7 @@ from commons.prompt_editor_input import (
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
 ORACLE_INVESTIGATION_AUTOMATICALLY_INJECTED_INSTRUCTION = """- oracle file は読み取り専用
 - realization file の読み書き禁止
-- oracle file の規約・規範"""
+- oracle file の調査に必要な cmoc 固有の契約は自動注入"""
 
 
 def cmoc_oracle_investigation_impl() -> None:

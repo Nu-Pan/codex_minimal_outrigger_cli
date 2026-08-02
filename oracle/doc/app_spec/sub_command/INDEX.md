@@ -57,90 +57,93 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの正本仕様。oracle file を TUI で直接編集する目的、入力文面、起動前条件、TUI パラメータ、実行順序、編集境界、終了後の差分・indexing・中断・ログの扱いを定義する。oracle edit の起動条件や lifecycle、権限境界を確認する入口。
+- `cmoc oracle edit` の目的、入力、TUI 起動前条件・パラメータ、実行順序、編集境界、終了時の差分維持、中断・ログ方針を定義するサブコマンド仕様。oracle file を直接編集するフローの入口。
 
 ## Read this when
-- `cmoc oracle edit` の挙動、起動可否、TUI への入力・設定、oracle file の編集境界を実装または確認するとき。
-- oracle edit 実行後の差分維持、indexing、終了コード、並行操作の扱いを確認するとき。
+- `cmoc oracle edit` の実装、起動条件、Codex CLI TUI へのパラメータ受け渡しを確認するとき
+- oracle file 編集時の agent 権限、worktree・branch・未コミット差分の制約を確認するとき
+- TUI 終了後の差分、indexing、commit・rollback 等の扱いを確認するとき
 
 ## Do not read this when
-- realization file の編集や通常の agent call の lifecycle を扱うとき。
-- oracle investigation の file access 権限や実行規則を確認するとき。
-- prompt editor input、prompt standard、Codex CLI 起動規則の詳細だけを確認する場合は、それぞれの参照先を直接読む。
+- realization file の編集や通常の編集 run の lifecycle を調べるとき
+- oracle investigation の権限や挙動を調べるとき
+- Codex CLI の一般的な起動規則だけを確認するときは、参照されている共通仕様を直接読む
 
 ## hash
-- d25e4fdd76bf4b347db0264ba06a0605415964589b2ca78a28ddc55191541006
+- 1c8a30c9c5f0717b6e1d66c5617484e034b6850477d09395288aebc325465624
 
 # `oracle_investigation.md`
 
 ## Summary
-- oracle file に関する調査指示をエディタから受け取り、Codex CLI の TUI を起動して調査結果を回答するサブコマンドの仕様を定義する。入力方法、起動パラメータ、読み取り専用の調査契約、Codex CLI 起動条件を扱う。
+- oracle file を根拠に調査を行う Codex CLI TUI サブコマンドの仕様を定義する文書。doctor preprocess、エディタ入力、起動パラメータ構築、Codex CLI 起動、読み取り専用の調査結果提示までの流れを扱う。
 
 ## Read this when
-- oracle file の調査用サブコマンドの実行手順、エディタ入力、TUI 起動パラメータ、Codex CLI 起動方法を確認するとき。
-- oracle file と realization file のアクセス制約や、調査結果・変更・自動 commit の扱いを確認するとき。
+- oracle file に関する調査用サブコマンドの挙動や実行手順を確認するとき
+- oracle investigation のエディタ入力、TUI 起動パラメータ、Codex CLI 起動規則を変更・調査するとき
+- 調査中の oracle file および realization file のアクセス制約を確認するとき
 
 ## Do not read this when
-- oracle file の調査プロンプト初期値やエディタ入力仕様の詳細を確認したいときは、指定された prompt editor input の仕様または実装を直接読む。
-- 汎用プロンプト規範を確認したいときは、prompt standard の仕様を直接読む。
-- TUI 起動パラメータの詳細を確認したいときは、対応する launch parameter builder の正本を直接読む。
-- Codex CLI の共通起動規則を確認したいときは、codex exec rule の仕様を直接読む。
+- エディタ入力の共通仕様だけを確認したいときは prompt_editor_input.md を直接読む
+- 汎用プロンプト規範だけを確認したいときは prompt_standard.md を直接読む
+- TUI 起動パラメータの詳細だけを確認したいときは launch_tui.py を直接読む
+- Codex CLI の起動環境や引数上書き規則だけを確認したいときは codex_exec_rule.md を直接読む
 
 ## hash
-- 0227009f5cbb01e49f6604e795514605794b41599386b69afe73b0d1b0bf0716
+- 538e05a68e9be671d7490d0d75a0f095406cb3574dd1f820e6313502d7008215
 
 # `oracle_review.md`
 
 ## Summary
-- `cmoc oracle review` サブコマンドの正本仕様。oracle ファイルのレビュー範囲、所見の列挙・統合・検証・判定、ユーザー中断時の扱い、Markdown レポート形式と保存先を定義する。oracle レビュー機能の実装や関連パラメータ仕様へ進むための入口。
+- `cmoc oracle review` の正本仕様。oracle ファイルを対象に、隔離実行・所見列挙/統合/検証/採否判定を経て Markdown レポートを生成する CLI サブコマンドの責務、前提条件、スコープ、割り込み、出力形式を定義する。
 
 ## Read this when
-- `cmoc oracle review` の引数、事前条件、実行手順、所見管理、ループ上限、中断処理を変更・確認するとき
-- oracle レビュー結果の YAML frontmatter、本文セクション、所見分類、保存先を変更・確認するとき
-- oracle review の実装で参照される agent call パラメータ仕様や run isolation の仕様を調査するとき
+- oracle の致命的問題レビュー、`cmoc oracle review` の実行条件・処理ループ・agent call・所見判定を確認するとき
+- oracle review レポートの frontmatter、本文構成、所見の分類・表示順、保存先を確認するとき
+- レビュー対象範囲、隔離実行、ユーザー中断時の確定結果の扱いを確認するとき
 
 ## Do not read this when
-- INDEX.md など自動生成ファイル自体のレビュー対象や生成方法だけを確認するとき
-- oracle review と無関係なサブコマンドの引数・実行手順・レポート形式を確認するとき
-- 個別 agent call の詳細仕様だけを確認する場合は、本文中で参照される対応する parameter 定義を直接読むとき
+- INDEX.md の更新方法や一般的なルーティング規則だけを確認したいとき
+- oracle review 以外のサブコマンドの仕様を確認したいとき
+- 実装詳細や個別 agent call builder の本文を直接確認する必要があるときは、対応する実装・正本 builder を読む
 
 ## hash
-- 586aa78654ae95846265f5e5d09bbceda171d80724f5ebcde510fd0d6fd05d8f
+- 6e7224ec0ab34ebd47c51fd7a750826e289406794645750a37d84249d9d84561
 
 # `realization_apply.md`
 
 ## Summary
-- realization apply fork の目的、追従対象差分、agent call の実行制約、実行手順、エラー処理、report、join 後 hook を定義する正本仕様。realization apply の fork 実装や関連 lifecycle・prompt・report 仕様を確認する入口。
+- realization apply fork の目的・追従対象差分・agent call 実行・変更検査・run lifecycle・report・エラー処理・join 後 hook を定義する仕様書。realization apply fork の実装や運用フローを確認する入口。
 
 ## Read this when
-- realization apply fork の挙動、差分範囲、agent call、run state、report、join 後の session 更新を実装・変更・検証するとき。
-- realization apply に関する oracle file と realization file の追従関係や、fork のエラー処理を確認するとき。
+- realization apply fork の開始条件、差分の始点・終点、oracle file の追従範囲を確認するとき
+- agent call の実行条件、file access mode、変更後の検査・commit、run state を確認するとき
+- fork report の形式・保存先・終了コード、join 後の session 更新を確認するとき
 
 ## Do not read this when
-- fork・join・abandon に共通する lifecycle の詳細だけを確認したいときは、指定された editing_run の正本を直接読む。
-- prompt の共通規範だけを確認したいときは、prompt_standard の正本を直接読む。
-- ファイル単位の網羅的な realization 追従や refactor の仕様を確認したいとき。
+- fork・join・abandon に共通する lifecycle の詳細だけを確認したいときは、指定された editing_run.md を読む
+- ファイル単位の網羅的な realization 追従や refactor の方針を確認したいとき
+- INDEX.md の生成方法そのものを確認したいとき
 
 ## hash
-- c63f30a9971b2d635b4ba96db45de078b4bb3f829201ab78411c0d24b6af0f19
+- d85d5413e8a956a89e078695cd555fad907a5b5762693d007f0dc5dde28428f6
 
 # `realization_refactor.md`
 
 ## Summary
-- realization file と oracle file の追従調査を、current fork の未解決対象を除き要求がなくなるまで反復する workload の正本仕様。refactor state の同期、調査対象選択、agent call、所見・差分の確定、完了判定、中断・エラー処理、report 生成までを定義する。
+- realization refactor fork の目的、状態管理、current fork の未解決 target、調査ループ、完了・中断・エラー処理、report 生成を定義する正本仕様。refactor サブコマンドの実装や lifecycle、state schema、agent call の処理結果判定を確認する入口。
 
 ## Read this when
-- realization refactor fork の処理フロー、state.json の schema や同期規則を実装・変更するとき
-- 調査対象の選択、unresolved target、処理単位の commit、完了理由、report の仕様を確認するとき
-- refactor workload と realization apply や共通 lifecycle の責務境界を判断するとき
+- realization refactor fork の実装、state 同期、調査対象選択、処理単位の commit、完了判定を変更・レビューするとき
+- unresolved target、user interruption、error、fork report の挙動を確認するとき
+- refactor workload と realization apply の責務境界や共通 lifecycle との関係を調査するとき
 
 ## Do not read this when
-- 短い変更ループを担う realization apply の仕様だけを扱うとき
-- fork・join・abandon の共通 lifecycle や中断の共通動作だけを確認するときは、本文が指定する共通仕様を直接読む
-- 一般的な agent call のプロンプト規範や realization file の実装・テスト規範だけを確認するとき
+- 短い変更ループを担う realization apply の実装だけを確認するとき
+- 共通の fork・join・abandon lifecycle の詳細だけを確認するときは、本文が参照する共通 lifecycle の正本仕様を直接読む
+- 個別の oracle file と realization file の追従内容を調査するだけで、refactor fork の制御や state 管理に関係しないとき
 
 ## hash
-- 804eb44d82dc30355a4f626844b294b11112e30667531e178be351e9b8992cb6
+- 831a998ef86795464cf43ff3088a78b643e5360de8363c408849830f26c87724
 
 # `session_abandon.md`
 
@@ -180,31 +183,35 @@
 # `session_join.md`
 
 ## Summary
-- `cmoc session join` の正本仕様。セッション用ブランチをホームブランチへマージしてセッションを完了するコマンドの、引数・事前条件・マージ手順・conflict 解消・状態更新・ブランチ削除条件を定める。
+- `cmoc session join` の仕様を定義する正本ドキュメント。session branch の状態・未コミット差分などの事前条件、home branch への merge、conflict 解消、session state 更新、branch 削除条件を扱う。session join の挙動や実装条件を確認する際の入口。
 
 ## Read this when
-- `cmoc session join` の実装、テスト、エラー条件、ブランチマージ、セッション状態更新を変更または確認するとき。
-- `git merge` の conflict 発生時に行う agent call や後始末の仕様を確認するとき。
+- `cmoc session join` の引数、事前検証、merge 手順、後始末を確認するとき
+- home branch が session 作成後に進んだ場合の扱いや merge conflict の解消手順を確認するとき
+- session branch の削除条件や想定外エラー時の扱いを確認するとき
 
 ## Do not read this when
-- 通常の git branch 間 merge wrapper や、`cmoc session join` 以外の session サブコマンドを扱うとき。
-- conflict 解消用 agent call の詳細仕様だけを確認する場合は、`build_session_join_conflict_resolution_parameter` の正本を直接読む。
+- session join 以外の session サブコマンドの仕様を確認するとき
+- 通常の git branch 間 merge や repository default branch の一般的な扱いを確認するとき
+- conflict 解消用 agent call の詳細なパラメータ仕様を確認するときは、専用の正本仕様を直接読む
 
 ## hash
-- 6b979c851055d04a45abb56293b24dd00cc7b2fd997b8bcf7d0bd3fa6cc3871b
+- 11aa2971553013657e02052b2a4184d319ac9a3358b96460cc3f142a13b4a74b
 
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの正本仕様。ユーザープロンプトへの cmoc 固有契約の注入、エディタ入力、AI Agent CLI/TUI の固定パラメータによる起動手順と、Codex CLI 固有の起動条件を定義する。
+- `cmoc tui` サブコマンドの責務・引数・実行手順・TUI 起動契約を定義する正本仕様。プロンプト編集、固定規範の注入、バックエンド共通設定、Codex CLI 固有設定の確認入口となる。
 
 ## Read this when
-- `cmoc tui` の実行手順、プロンプト編集入力、TUI 起動パラメータ、Codex CLI 起動条件を実装・確認するとき。
-- プロンプトエディタ入力仕様や Codex CLI の設定上書き規則との関係を確認するとき。
+- `cmoc tui` の起動フローやプロンプト編集仕様を確認するとき
+- TUI 起動パラメータ、注入する cmoc 規範、モデル・推論・権限設定を変更または確認するとき
+- Codex CLI 起動時の環境変数、preflight、引数上書き仕様を確認するとき
 
 ## Do not read this when
-- `cmoc tui` 以外のサブコマンドの仕様を扱うとき。
-- 汎用規範や installed skill の詳細だけを確認するとき。
+- `cmoc tui` 以外のサブコマンドの仕様だけを確認するとき
+- エディタ入力の詳細仕様そのものを確認するときは、指定された `prompt_editor_input.md` を直接読む
+- Codex CLI の実行規則全体を確認するときは、指定された `codex_exec_rule.md` を直接読む
 
 ## hash
-- ee7b02444245c4ea9260aea2760352ef86bc9b1a57e48480ce6de274652ae2a2
+- 64d50ee80bdaea88d81b3a78d714a3d0174ce9787dda0cc8d089fd3752bd1b45

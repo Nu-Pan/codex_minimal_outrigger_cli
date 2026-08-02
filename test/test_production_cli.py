@@ -79,9 +79,9 @@ NONINTERACTIVE_SCENARIO_COMMANDS = {
 }
 
 TUI_SCENARIOS = (
-    (("tui",), "tui codex", True),
-    (("oracle", "edit"), "oracle edit", False),
-    (("oracle", "investigation"), "oracle investigation", False),
+    (("tui",), "tui codex"),
+    (("oracle", "edit"), "oracle edit"),
+    (("oracle", "investigation"), "oracle investigation"),
 )
 
 PRODUCTION_SCENARIO_COMMANDS = NONINTERACTIVE_SCENARIO_COMMANDS | {
@@ -609,7 +609,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert executed_commands == NONINTERACTIVE_SCENARIO_COMMANDS
 
 
-@pytest.mark.parametrize(("command", "tui_purpose", "expects_resolver"), TUI_SCENARIOS)
+@pytest.mark.parametrize(("command", "tui_purpose"), TUI_SCENARIOS)
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 # indexing と TUI の各 GPU 推論、cache miss、実行環境の揺らぎを含める。
 @pytest.mark.gpu_integration
@@ -619,7 +619,6 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     ollama_instance: LocalOllama,
     command: tuple[str, ...],
     tui_purpose: str,
-    expects_resolver: bool,
 ) -> None:
     """全 TUI 末端を実 local SLM response 後まで本番経路で完了する。"""
     root = make_repo(tmp_path)
@@ -651,12 +650,6 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
         next(iter(tui_calls)), ollama_instance, tui=True
     )
     assert tui_payload["purpose"] == tui_purpose
-    has_tui_resolver = any(
-        _assert_local_codex_call(path, ollama_instance).get("purpose")
-        == "tui resolve parameter"
-        for path in exec_calls
-    )
-    assert has_tui_resolver is expects_resolver
-    assert bool(exec_calls) is expects_resolver
+    assert not exec_calls
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert run_git(root, "status", "--short").stdout == status_before

@@ -19,7 +19,7 @@
 2. python 仮想環境セットアップ
     ``` bash
     /usr/bin/python3 -m venv .venv
-    ./.venv/bin/python -m pip install -e .
+    ./.venv/bin/python -m pip install -e '.[dev]'
     ```
 3. `cmoc` コマンドにパスを通す
     - 現在のシェルで使う場合

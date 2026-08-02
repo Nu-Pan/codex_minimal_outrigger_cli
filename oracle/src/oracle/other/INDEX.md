@@ -34,21 +34,20 @@
 # `standard.py`
 
 ## Summary
-- 「何らかの事柄が従うべき規範」を表す Standard と、その要求項目を表す Requirement を定義する。Standard の title、backgrounds、requirements、examples を検証付きで保持し、各値を読み出すプロパティを提供する。
-- standard_to_struct_doc により、Standard の背景・要求・判断例を StructDoc の構造へ変換する。規範定義や構造化ドキュメント生成に関わる処理の入口となる。
+- 規範（Standard）の定義モデルと、規範を構造化文書（StructDoc）へ変換する処理を提供する。Standard は題名、背景、要求、任意の判断例を保持し、Requirement は要求のラベルと本文を表す。
 
 ## Read this when
-- Standard や Requirement のフィールド、入力検証、プロパティの挙動を変更・確認するとき
-- Standard から StructDoc へ変換する処理や、規範文書の構造化形式を変更・確認するとき
-- oracle.other.struct_doc と連携する規範定義コードを調査するとき
+- Standard や Requirement のデータ構造・入力検証を確認するとき
+- 規範定義を StructDoc 形式へ変換する処理を確認するとき
+- INDEX.md エントリーなど、規範の適用形式を調査するとき
 
 ## Do not read this when
-- INDEX.md のルーティング規則やエントリー形式だけを確認したいとき
-- Standard の具体的な規範内容を確認したいとき
-- StructDoc 自体の仕様や実装だけを確認したいときは、まず StructDoc の定義を直接読む
+- 個別の規範本文や適用対象の要件を確認したいとき
+- StructDoc 自体の仕様や実装を確認したいときは、まず StructDoc の定義を直接読む場合
+- 規範を利用する呼び出し側の処理だけを調査するとき
 
 ## hash
-- 0c9f35d5435e6aa00c068f80662a493c447fbf7520fa600e2267fbe01c08d8f0
+- dc88f4650fb393d33b5b609ee0a739f9960737fd8fc42fd7cda51f037e1dab00
 
 # `struct_doc.py`
 

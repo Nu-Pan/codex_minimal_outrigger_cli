@@ -46,18 +46,19 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめるディレクトリ。編集、調査、レビューの各 CLI 入口と、レビュー対象列挙・ループ・パス解決・レポート・INDEX 差分処理への入口を提供する。
+- oracle 系サブコマンドをまとめる package。oracle の edit、investigation、review と、review の対象列挙・loop・path 解決・report・INDEX merge を担う実装への入口。
 
 ## Read this when
-- oracle 系サブコマンドの構成や、各サブコマンド実装への入口を確認するとき。
-- oracle review の実行ライフサイクル、対象選定、レビュー処理、レポート生成、INDEX 差分の統合処理を横断して調査するとき。
+- oracle 系サブコマンドの package 構成や入口を確認するとき。
+- oracle edit、investigation、review の実行経路を調査・変更するとき。
+- oracle review の対象列挙、評価 loop、path 解決、report、INDEX 差分 merge のいずれかを調査・変更するとき。
 
 ## Do not read this when
-- 特定の oracle サブコマンドやレビュー処理の詳細だけを確認したいとき。対応する個別実装を直接読む方が適切。
-- 共通 CLI runtime、設定読み込み、プロンプト入力など、oracle サブコマンド固有でない処理を調査するとき。
+- 個別サブコマンドや review 機能の詳細だけを確認する場合は、該当する実装ファイルを直接読む。
+- oracle の正本仕様を確認する場合は、対応する oracle 文書を直接読む。
 
 ## hash
-- 2b9f81cee3dbed523fa1f5ae690ef42d83c607248f011f5e611a5121a69c6bcf
+- 69f4a777ca3159ddf6a0bacf46b478271aed4523b93bb7282cf7e1312594263e
 
 # `realization`
 
@@ -127,15 +128,15 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実行入口と本体処理を定義する。プロンプト編集、実行パラメータ解決、Codex TUI 起動を連携し、現在のリポジトリ状態から設定・作業ルートを取得して処理する。TUI 起動用パラメータの構築と、解決済み JSON の真偽値変換も担う。
+- `cmoc tui` サブコマンドの実行入口と本体処理を定義する。インデックス事前処理、オリジナルプロンプトの編集入力、TUI 起動パラメータの構築、Codex TUI の起動を担当する。
 
 ## Read this when
-- `cmoc tui` の CLI 実行フロー、プロンプト入力、パラメータ解決、Codex TUI 起動の連携を変更・調査するとき。
-- TUI 起動用 `AgentCallParameter` の構築や、解決済みパラメータの解釈を変更・調査するとき。
+- `cmoc tui` の実行フロー、プロンプト入力、TUI 起動処理を変更または調査するとき。
+- TUI 起動時のリポジトリルート、作業ルート、設定値の受け渡しを確認するとき。
 
 ## Do not read this when
-- TUI のパラメータ解決規則そのものを確認したいときは、参照されているパラメータ構築側の仕様・実装を直接読む。
-- プロンプトエディタの入力・無視設定の詳細や、共通ランタイム処理の仕様を確認したいときは、それぞれの共通モジュールを直接読む。
+- TUI 起動パラメータの詳細仕様だけを確認したいときは、パラメータ構築側の実装や対応する仕様を直接読む。
+- プロンプトエディタの入力・ignore 処理だけを変更または調査するときは、入力処理側の実装や対応する仕様を直接読む。
 
 ## hash
-- 6d1d7abde773789d65402ae4e98d2edea2dde77c64a10e7c65ef77757604fb9b
+- aa6f03a8d2a0cd859192f29279ebe32b845bd7c380a0ce0620b2b1a54dd3483e

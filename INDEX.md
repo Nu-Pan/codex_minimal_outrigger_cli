@@ -1,18 +1,20 @@
 # `AGENTS.md`
 
 ## Summary
-- cmoc 自己開発における恒常的なリポジトリ固有指示を定める文書。動的生成プロンプトの権限・作業範囲を再定義せず、oracle file を優先する原則と、開発環境・設計・テスト・品質検査に関する参照先を示す。
+- cmoc 自己開発で恒常的に適用するリポジトリ固有の補足指示を定義する文書。動的生成プロンプトの権限・作業範囲は変更せず、Python 環境、設計、テスト、テスト実行に関する oracle file の参照先を案内する。
 
 ## Read this when
-- cmoc リポジトリ固有の開発ルールや、動的生成プロンプトとの関係を確認するとき
-- Python 環境、依存関係、realization implementation、realization test、品質検査の進め方を判断するとき
+- cmoc リポジトリ自身の開発に関する作業を行うとき
+- Python 環境や依存関係、realization implementation、realization test、品質検査の標準参照先を確認するとき
+- 動的生成プロンプトとリポジトリ固有指示の関係を確認するとき
 
 ## Do not read this when
-- 具体的な実装仕様やテスト仕様そのものを確認したいとき
-- 指定された開発作業の詳細が oracle file や repository local skill に直接定義されているとき
+- 動的生成プロンプトが定める作業範囲・ファイルアクセス・oracle/realization 規則だけを確認したいとき
+- 特定の実装やテストの詳細仕様を確認する必要があり、案内された oracle file を直接読むべきとき
+- cmoc 自己開発に関係しない一般的な作業を行うとき
 
 ## hash
-- b68df81da1c2ea21aea0a7fa9182c441085b2ebc1019ff01f7e172de6c61b126
+- 89bee9d7c2af278bbd665139abcc639290db77ce14190f9d84c74505d635448d
 
 # `LICENSE`
 
@@ -36,34 +38,33 @@
 # `README.md`
 
 ## Summary
-- Codex Minimal Outrigger CLI（cmoc）の概要、初期セットアップ、基本ワークフロー、ターミナルロック対策を案内するプロジェクト入口。詳細な開発指示は AGENTS.md、運用手順は oracle/doc/app_spec/usage.md へ進むための起点。
+- Codex Minimal Outrigger CLI（cmoc）の概要、初期セットアップ、基本ワークフロー、ターミナル操作上の注意を案内するプロジェクト入口。開発環境の構築や利用手順を確認したい場合の起点となる。
 
 ## Read this when
 - cmoc の目的や略称を確認したいとき
-- 初期セットアップや PATH 設定の手順を確認したいとき
-- 基本ワークフローの参照先を知りたいとき
-- Ctrl+S によるターミナルロックを防ぎたいとき
+- リポジトリの初期セットアップ手順を確認したいとき
+- 基本ワークフローの参照先や Ctrl+S によるターミナルロック対策を確認したいとき
 
 ## Do not read this when
-- 詳細な開発規約や恒常的なリポジトリ指示を確認したいときは AGENTS.md を読む
-- 基本ワークフローの具体的な運用手順を確認したいときは oracle/doc/app_spec/usage.md を直接読む
+- 個別機能の詳細仕様や実装を調べるとき
+- 通常の開発ワークフローの詳細を確認するときは、案内されている usage 仕様を直接読むとき
 
 ## hash
-- aee9654cfb1c4d0d9aa963e9f03b8a56f4e5b6cdc7aac1ebeeb478b914f88f11
+- c9a65ea2bc4ae8a742a22e9ced541f459b3804a77b29a66a7a3513280711137a
 
 # `bin`
 
 ## Summary
-- cmoc の実行入口を提供するシェルラッパーを含むディレクトリ。仮想環境 Python の存在・実行可能性を検査し、失敗時にはセットアップ手順と呼び出し位置を表示したうえで、成功時は src/main.py を起動する。
+- 仮想環境内の Python を検証し、cmoc の Python CLI 本体へ委譲する起動ラッパーを含む。通常実行時のエラー表示、補完プローブ、ユーザー向けパスとコールスタック行番号の組み立てを扱う。cmoc の起動経路やラッパーの表示・エラー処理を確認する際の入口。
 
 ## Read this when
-- cmoc コマンドの起動経路、仮想環境 Python の検査、補完プローブ、起動前エラー表示を確認・変更するとき。
+- cmoc の起動経路、仮想環境 Python の検証、補完プローブ、ラッパーのエラー出力や表示パスを確認・変更するとき。
 
 ## Do not read this when
-- Python CLI 本体のコマンド処理や業務ロジックを確認したいとき。起動後の実装は src 側を直接読む。
+- Python CLI 本体のコマンド挙動やドメインロジックを調べるときは、委譲先の実装を直接読む。開発環境の正本仕様を確認するときは、参照されている oracle 文書を読む。
 
 ## hash
-- 464142724c5c5ed9b5dfec5aa77b6fb9e839c337859913d6ceced907ae5f5da9
+- 2b049993c6378dede2a9d759c9dd13b8795479d1bc900a42c174e227e8ce2e0b
 
 # `codex_minimal_outrigger_cli.code-workspace`
 
@@ -87,21 +88,19 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様と正本ソースを扱う oracle ディレクトリ。アプリケーション仕様、CLI・agent call・session/run lifecycle、branch・commit・worktree、開発規則、および agent call のパラメータ・設定・Structured Document・prompt builder の定義を確認する入口。
+- cmoc の人間所有の正本仕様を集約するディレクトリ。アプリケーション共通仕様、branch・commit・worktree モデル、開発規則、不採用案の検討記録、および参照可能な正本ソースを扱う。仕様領域ごとの文書・ソースへ進むための入口。
 
 ## Read this when
-- cmoc の利用者向け挙動や CLI、agent call、ログ、prompt、session/run lifecycle の正本仕様を探すとき
-- session fork、run の隔離、branch・commit・worktree の関係やライフサイクルを確認するとき
-- 開発環境、CLI 実装配置、Python 規則、realization test の方針を確認するとき
-- Agent Call Parameter、Structured Output、CmocConfig、root 解決、Structured Document、prompt builder の定義や生成規則を調査するとき
+- cmoc の正本仕様や正本ソースを探すとき
+- アプリケーション挙動、branch・worktree lifecycle、開発規則、テスト・環境構築、設定・パスモデル、規範モデル、構造化文書生成の仕様を確認するとき
+- 特定の仕様領域に対応する下位ディレクトリを選ぶとき
 
 ## Do not read this when
-- 確認したい個別仕様文書が明確なときは、その文書を直接読む
-- 構築済み環境での具体的なテスト・Ruff・mypy の実行手順だけを確認するときは、repository local の run-cmoc-tests skill を読む
-- CLI サブコマンドの実際の処理、共通 prompt 実行フロー、バックエンド固有のモデル解決、または個別 realization 実装だけを調査するときは、対応する直接の対象を読む
+- 確認対象の具体的な仕様文書や正本ソースがすでに特定されているとき
+- realization 実装、具体的なテスト実行、一般的な開発作業だけを調査するとき
 
 ## hash
-- 32a79aa8be1e1f9620554b01dbe3aa2a030cdb866a8e86b5680ea9726ebafcb9
+- e908e48f3d2933a9d3a3ec6655628c93423376d399fe6ab681f97692ae241f56
 
 # `pyproject.toml`
 
@@ -123,35 +122,35 @@
 # `src`
 
 ## Summary
-- `acp` 公開 import 経路と `acp.builder` 配下の realization adapter を扱う。既存の `acp.*`／`acp.builder.*` 参照を canonical な `oracle.acp_builder` 実体へ委譲する互換入口と、quota probe、indexing、oracle、realization、session、TUI builder の下位領域への入口。
+- cmoc の実行側パッケージを配置するディレクトリ。CLI エントリーポイント、サブコマンド、共通 runtime、互換 import shim を扱い、利用者向け実行経路から各機能の実装へ進む入口となる。
 
 ## Read this when
-- `acp` または `acp.builder.*` の互換 import 経路を維持・廃止するとき。
-- canonical な oracle builder への委譲や、builder adapter の配置・責務を確認するとき。
-- quota probe、indexing、oracle、realization、session、TUI の builder 実装へ進む対象を選ぶとき。
+- cmoc CLI の主要エントリーポイント、サブコマンド登録、実行側パッケージ構成を確認するとき。
+- 共通 runtime、互換 import、ACP 関連実装の配置を特定するとき。
+- 特定機能の実装を調査する前に、CLI からの委譲先や下位パッケージを確認するとき。
 
 ## Do not read this when
-- canonical な `oracle.acp_builder` の仕様・実装そのものを確認するとき。
-- 個別 builder adapter の処理詳細を調査するときは、対応する下位モジュールを直接読む。
-- `acp` 互換入口ではなく、CLI、runtime、または移行先の実体モジュールを直接調査するとき。
+- 正本 oracle の仕様・実装や canonical builder の詳細を確認したいときは、oracle 側の対応対象を直接読む。
+- 特定のサブコマンド、runtime helper、互換 shim の詳細を確認したいときは、対応する下位対象を直接読む。
+- 実行側実装と無関係な仕様断片や利用箇所だけを確認したいとき。
 
 ## hash
-- 9e131b700e5ce8802dd59b08956a8a4a6a0da2a80bcfd97bef69f428b414e860
+- ebfb0bd8b277299540c60698ebb845fa45ab027375cf57f4ee7606b2a0cfffc6
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収めたディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session、設定・状態管理などの外部挙動と制御ロジックを検証するテスト、および共有テストヘルパーを提供する。各機能領域の実装変更時に対応する回帰テストの入口となる。
+- `test` ディレクトリは、CLI、runtime、Git・worktree・state、Codex 実行、indexing、oracle review、session、TUI、設定、prompt、builder など、cmoc の外部挙動と主要な制御契約を検証する realization test 群を収める。各テストは対応する実装や oracle 仕様を確認するための機能別の入口となる。
 
 ## Read this when
-- cmoc の実装変更に伴う realization test の追加・修正・対象テストの選定が必要なとき
-- CLI、Codex runtime、ACP builder、indexing、oracle review、session、runtime 設定・状態などの外部挙動を検証するとき
-- テスト用 Git リポジトリ、Codex 環境、Ollama、fake external command など共有テスト基盤を確認するとき
+- cmoc の機能変更に伴い、対応する外部挙動・制御ロジック・統合 lifecycle の realization test を探すとき。
+- CLI、Codex runtime、indexing、oracle review、session、worktree、state、設定、prompt、builder など特定領域の回帰テストを確認するとき。
+- 実装変更が既存の公開 API、出力、永続状態、Git 操作、プロセス制御、sandbox 境界に適合するか検証するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容を確認するときは、対応する oracle 文書・oracle source・schema を直接読む
-- 実装の責務や内部処理だけを変更・調査するときは、対応する realization implementation を直接読む
-- 対象領域と無関係なテストや、テスト実行手順そのものだけを確認するときは、このディレクトリ全体ではなく repository local のテスト手順を読む
+- 正本仕様、schema、開発ルール、テスト実行方針そのものを確認したいときは、対応する oracle 文書や開発ルールを直接読む。
+- 単一の実装関数や内部 helper の詳細だけを調査するときは、対応する `src` モジュールまたはより狭い専用テストを直接読む。
+- 対象機能と無関係なテスト全体を読む必要はなく、機能別のテストファイルへ直接進む。
 
 ## hash
-- 10a3737482ea960c56940edbb85c9943cfc8e432d06d41c2ad241d6f67978f46
+- bbce5079c3b8f3d55014503e45d812954180d286253ad6cfd34609b9af201586

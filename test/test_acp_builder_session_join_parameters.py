@@ -42,6 +42,14 @@ def test_session_join_conflict_resolution_uses_repo_write_mode() -> None:
     assert "conflict 対象ファイル" in parameter.prompt
     assert str(conflicted_path) in parameter.prompt
     assert parameter.run_indexing_preflight is False
+    assert "# conflict resolution standard" in parameter.prompt
+    for heading in (
+        "# oracle standard",
+        "# realization standard",
+        "# oracle review standard",
+        "# apply review standard",
+    ):
+        assert heading not in parameter.prompt
 
 
 def test_session_join_conflict_paths_protect_nested_code_fences() -> None:

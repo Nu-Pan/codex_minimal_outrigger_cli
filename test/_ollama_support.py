@@ -5,7 +5,9 @@ GPU-only model の構築・確認、process teardown は、同じ working set �
 lock のライフサイクルを共有する一つの責務である。分割すると、失敗時にも cache を
 変更せず case の process group だけを停止する不変条件を複数 file で追う必要がある。
 
-根拠: {{work-root}}/oracle/doc/dev_rule/test_rule.md
+根拠:
+- {{work-root}}/oracle/doc/dev_rule/test_rule.md
+- {{work-root}}/oracle/doc/dev_rule/test_execution.md
 """
 
 import fcntl
@@ -240,6 +242,7 @@ def _pytest_environment() -> dict[str, str]:
 
 def _run_pytest(args: list[str]) -> NoReturn:
     """選択中の interpreter で stable Ollama cache を使う pytest を起動する。"""
+    # {{work-root}}/oracle/doc/dev_rule/test_execution.md
     # process を置換し、pytest の exit code と signal を wrapper で変更しない。
     os.execve(
         sys.executable,

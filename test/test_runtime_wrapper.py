@@ -40,6 +40,7 @@ def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -
     assert "({{cmoc-root}}/bin/cmoc:" in result.stdout
     assert "(./bin/cmoc:" not in result.stdout
     assert "(bin/cmoc:" not in result.stdout
+    assert "./.venv/bin/python -m pip install -e '.[dev]'" in result.stdout
 
 
 def test_bin_cmoc_non_file_venv_path_uses_error_report(tmp_path: Path) -> None:

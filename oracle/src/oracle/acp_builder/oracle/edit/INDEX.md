@@ -15,15 +15,14 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc oracle edit` の TUI 起動パラメータを構築し、固定済みの完全 prompt を cmoc 管理ログへ保存する oracle src。パスコンテキスト、アクセスモード、モデル・推論設定、prompt、構造化出力設定、インデックス事前処理の起動条件をまとめて定義する。
+- `cmoc oracle edit` の TUI 起動用パラメータを構築する oracle src。パスコンテキスト、固定完全 prompt、ログ保存、モデル・権限・起動設定を組み立てる実装であり、oracle 編集起動フローの入口となる。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動動作、agent call パラメータ、完全 prompt の構築または保存処理を変更・調査するとき。
-- oracle file 編集用 prompt の役割、ユーザー指示の埋め込み、ファイルアクセス制約を確認するとき。
+- `cmoc oracle edit` の TUI 起動処理、起動時 prompt、oracle 編集用ファイルアクセス権限、モデルや実行設定を確認・変更するとき。
 
 ## Do not read this when
-- oracle file の編集処理そのものや、一般的な prompt 構築の詳細だけを調査するときは、該当する編集処理または prompt builder を直接読む。
-- TUI を起動しない agent call や、`cmoc oracle edit` 以外のサブコマンドのパラメータを調査するとき。
+- oracle file の編集内容や編集 agent の一般的な prompt 仕様だけを確認したいときは、関連する prompt builder や oracle 仕様ファイルを直接読む。
+- TUI 起動後の agent 処理、oracle file の編集ロジック、ログ解析を調べるとき。
 
 ## hash
-- 2194e8ae7c82947d9c28c3c55b7bfe2bc4a8e2375f55a746fbb20c0b2de38c55
+- dfcda7b79c338ddff78034ac5ad94f9c26210703cfa05d6d6fee565f2d8d8a42

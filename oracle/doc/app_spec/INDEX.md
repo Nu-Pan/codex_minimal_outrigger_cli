@@ -18,20 +18,20 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が `codex exec` を呼び出す際の正本規約を定義する文書。agent call の path context、環境変数、preflight、CLI 引数、sandbox、権限、モデル設定、プロンプト・ログ・Structured Output の受け渡し、並列実行、失敗時の再試行・待機方針を扱う。Codex CLI 呼び出し実装や関連する builder の仕様確認への入口となる。
+- cmoc から `codex exec` を呼び出す際の正本規約。agent call の path context、環境変数、preflight、CLI 設定上書き、sandbox・ファイルアクセス、モデル/provider、prompt・ログ・Structured Output、並列実行、失敗時の retry・quota 待機、`.agents` 編集禁止を定義する。codex exec の呼び出し実装や設定、prompt builder、ログ保存、失敗処理を調査・変更する際の入口。
 
 ## Read this when
-- Codex CLI 呼び出しの argv、sandbox、approval、model/provider、reasoning effort、CODEX_HOME の扱いを変更・確認するとき
-- agent call の path context、prompt の渡し方、ログ保存、Structured Output、並列実行の規約を確認するとき
-- Codex CLI の失敗時リトライ、quota 待機、session resume、`.agents` 編集禁止の扱いを確認するとき
+- `codex exec` の argv、sandbox、approval、model/provider、reasoning effort、`CODEX_HOME` の扱いを実装またはレビューするとき
+- agent call の path context、prompt の構築・受け渡し、Structured Output、stdout/stderr/output log の保存規約を確認するとき
+- Codex CLI 呼び出しの retry、quota 待機、server capacity 対応、異常終了処理を変更または調査するとき
+- `.agents` 配下の編集禁止や command 単位の sandbox escalation を含む cmoc 固有の呼び出し制約を確認するとき
 
 ## Do not read this when
-- Codex CLI 呼び出し規約ではなく、個別の AgentCallParameter builder の実装詳細だけを変更・確認するときは、対応する builder の oracle src を直接読む
-- Codex モデル provider の仕様そのものを確認するときは、provider 専用の oracle doc を直接読む
-- 一般的な cmoc の開発環境、設計、テスト実行手順を確認するときは、対応する dev_rule または repository local skill を読む
+- Codex CLI 呼び出しや cmoc の agent call 規約に関係せず、通常のプロダクト機能や一般的な CLI 実装だけを調査するとき
+- `AgentCallParameter` や prompt builder の具体的なデータモデル・生成ロジックを直接確認する必要があるときは、先に対応する oracle src の定義を読む
 
 ## hash
-- c4573a2c3edc05d3d5a2ba7989f14077d2a8ea1571e54d88edd6dc20f63d0bc6
+- 5de625ab332d342d9d2390773c504de27332611a12822e0948675f8ee7182211
 
 # `codex_model_provider.md`
 
@@ -126,21 +126,20 @@
 # `misc_spec.md`
 
 ## Summary
-- cmoc の雑多な仕様を定義する正本文書。oracle file と realization file の列挙方法、work-root の前提と定義、cmoc 実行時のパス関係、タイムスタンプ形式、cmoc-managed-branch の対象範囲を扱う。misc 系仕様を確認する際の入口。
+- cmoc の雑多な仕様を定義する文書。oracle file・realization file の列挙方法、work-root の前提、cmoc 実行時のパス関係、タイムスタンプ形式、cmoc-managed-branch の対象範囲を扱う。これらの用語や運用条件を確認する際の入口となる。
 
 ## Read this when
-- oracle file または realization file の列挙方法を確認するとき
-- work-root、repo-root、cmoc-root、agent call の cwd に関する前提を確認するとき
-- cmoc-managed-branch 上の変更範囲の定義を確認するとき
-- cmoc のタイムスタンプ形式を確認するとき
+- oracle file または realization file の列挙条件を確認するとき
+- work-root、repo-root、cmoc process、agent call のパス関係を確認するとき
+- タイムスタンプの形式を確認するとき
+- cmoc-managed-branch 上の変更範囲を判断するとき
 
 ## Do not read this when
-- 特定の oracle file の個別仕様や実装責務を確認するとき
-- 開発環境、設計ルール、テスト実行方法を確認するときは、それぞれの専用 oracle file を読む
-- INDEX.md の更新方法やルーティング規則を確認するとき
+- 個別の oracle 仕様や実装の詳細を確認したいとき
+- cmoc の一般的な開発手順や言語・ツール固有の手順を確認したいときは、対応する仕様文書や skill を直接読む
 
 ## hash
-- 621f1d6d705e478f7f2914452fec193fccc5368f6084c27e42bff39cad5c3dee
+- 77d23570d567556574348b40f8db0ff01bb9215863ecc0993c8d2a41176280ee
 
 # `prompt_editor_input.md`
 
@@ -162,20 +161,20 @@
 # `prompt_standard.md`
 
 ## Summary
-- cmoc が agent call 用の動的プロンプトを構築する際の正本規範を定める oracle doc。プロンプト構成関数の利用、cmoc 固有記法（placeholder・cmoc_block・cmoc_ref）、GFM と日本語の原則、および installed skill との責務境界を扱う。
+- cmoc が agent call に渡すプロンプトの正本規範を定める oracle doc。cmoc 固有契約と installed skill の責務境界、規範の決定論的注入、Structured Output schema の責務、oracle src による prompt 構築、placeholder・参照記法・言語方針を扱う。プロンプト生成や関連する契約の確認における入口となる。
 
 ## Read this when
-- agent call の動的プロンプトの構築・変更・検証を行うとき
-- prompt part、placeholder、cmoc_block、cmoc_ref の仕様を確認するとき
-- cmoc 固有のプロンプト規範と installed skill の責務境界を確認するとき
-- プロンプトや作業レポートなどの言語方針を確認するとき
+- agent call のプロンプト構築規則、cmoc 固有契約と skill の優先関係、Structured Output schema の責務を確認するとき
+- placeholder、cmoc_block/cmoc_ref、Markdown/GFM、プロンプト言語の仕様を変更またはレビューするとき
+- prompt builder の実装が従うべき正本規範を確認するとき
 
 ## Do not read this when
-- 正本仕様、実装、テスト、レビュー、日本語文書、Python 開発の汎用規範だけを確認したいときは、対応する installed skill を直接読む
-- プロンプト構築とは無関係な cmoc の実装・テスト・運用を扱うとき
+- INDEX.md のルーティング方法自体を確認するだけのとき
+- 対象 repository 固有の開発手順や Python 実装規約を確認するときは、対応する repository 文書・設定・script・skill を直接読む
+- 個別の agent call の作業範囲や出力形式だけを確認する場合に、この文書全体を読む必要がないとき
 
 ## hash
-- 2dd788fb0fb11aa6f99d9403c0a7cbfec07dc6d4c645541a796b1c6eae81f0b4
+- ca0179e80487c4a785ed8a5e4184a10ad2f7f23f702efa6636b0c0792bb9fe03
 
 # `run_isolation.md`
 
@@ -214,18 +213,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンドに関する正本仕様をまとめたディレクトリ。doctor、indexing、oracle edit/investigation/review、realization apply/refactor、session fork/join/abandon、run lifecycle、tui の実行条件・状態遷移・編集境界・レポート仕様を扱う。各サブコマンドや lifecycle の実装・テスト・仕様確認時に、対応する下位文書へ進むための入口。
+- cmoc のサブコマンドごとの正本仕様をまとめるディレクトリ。doctor、indexing、tui、oracle/session/run 関連の実行条件、ライフサイクル、状態管理、編集・レビュー・報告の契約を扱う。各サブコマンドの実装・変更・レビュー時に該当する仕様書へ進む入口となる。
 
 ## Read this when
-- cmoc のサブコマンド、session/run lifecycle、oracle 操作、realization workload の正本仕様を探すとき。
-- 対象の実装やテストを変更する前に、該当するサブコマンドまたは lifecycle の仕様文書を特定するとき。
+- cmoc の特定サブコマンドの挙動、引数、事前条件、実行フロー、状態遷移を確認したいとき。
+- oracle 編集・調査・レビュー、realization の apply・refactor、session・run の fork・join・abandon の仕様を確認したいとき。
+- 複数のサブコマンドにまたがる lifecycle や、共通仕様から個別仕様への参照先を探したいとき。
 
 ## Do not read this when
-- 特定のサブコマンドや lifecycle の詳細が判明している場合は、このディレクトリ全体ではなく対応する下位文書を直接読む。
-- 共通 prompt、Codex CLI 起動規則、doctor preprocess、indexing 本体など、本文中で参照される別の正本仕様だけを確認したいとき。
+- サブコマンドの内部処理そのものを確認したいときは、対応する実装または参照先の共通仕様を直接読む。
+- INDEX.md の生成方法や一般的なルーティング規則だけを確認したいとき。
+- 特定サブコマンドと無関係な git 運用、Codex CLI 一般仕様、個別 agent call builder の詳細だけを調べたいとき。
 
 ## hash
-- e3ed7a1dfdecaf80031944dfad40259c15e03d46b40f0525329f98e3c46bcb91
+- 4620545064255c72e11f32a9ff6b4ac61ab86ea6a28775afce8f1dc72aa837cb
 
 # `subcommand_interruption.md`
 

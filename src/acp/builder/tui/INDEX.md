@@ -1,45 +1,31 @@
 # `__init__.py`
 
 ## Summary
-- 既存の `acp.builder.tui.*` import を維持するためだけに残された、`oracle.acp_builder.tui` 互換 package の入口。
-- realization 側と利用者向け公開面からこの参照が消えた後に削除できる互換層として位置づけられる。
+- TUI 起動 builder の既存 import 経路を維持する互換 package。realization 側および利用者向け公開面から同経路が不要になった場合の削除候補であり、TUI builder の実装詳細への入口ではない。
 
 ## Read this when
-- 既存 import 経路 `acp.builder.tui.*` の互換維持や削除可否を確認する。
-- `oracle.acp_builder.tui` との互換 package がなぜ残っているかを確認する。
+- TUI 起動 builder の既存 import 経路や互換性を確認するとき
+- realization 側または利用者向け公開面から当該 import 経路を削除・変更できるか判断するとき
 
 ## Do not read this when
-- TUI 実装本体の挙動や画面構成を確認したい場合。
-- 新しい公開 API や新規 import 経路を設計したい場合。
+- TUI builder の実装や起動処理そのものを変更・調査するとき
+- TUI 起動 builder の import 互換性に関係しない処理を扱うとき
 
 ## hash
-- 9e5ae7e28c1e80b5ffa414ac5eea7dd08927b7977f87292b3afa9b714a894d0a
+- d9cfe056fb590ace7dace1732eced1ab73daab8f28e521f8d480dd52beb37a60
 
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動用の agent call parameter builder adapter。正本 builder を呼び出し、TUI が free-form prompt を受ける契約に合わせて Structured Output schema path を無効化する。
+- TUI 起動 parameter builder を互換 import 経路として公開する薄いモジュール。実装本体は oracle 側の `build_tui_launch_tui_parameter` を再エクスポートし、TUI 起動 parameter 構築への入口を提供する。
 
 ## Read this when
-- TUI 起動時の agent call parameter 生成や、Structured Output schema path の扱いを確認・変更するとき。
+- TUI 起動 parameter builder の互換 import 経路や公開名を確認するとき。
+- `build_tui_launch_tui_parameter` をこの import 経路から利用するコードを調査するとき。
 
 ## Do not read this when
-- TUI 以外の parameter builder、または正本 builder の仕様自体を確認・変更するとき。
+- parameter builder の実装詳細を確認したいときは、再エクスポート元の oracle 側実装を直接読む。
+- TUI 起動以外の parameter 構築や、互換 import 経路に関係しない処理を調査するとき。
 
 ## hash
-- 2e19ef7b2bbcbcd68134e7bb99c529ff44530bdae06fb7c954f0e99f7190f9ee
-
-# `resolve_parameter.py`
-
-## Summary
-- TUI の resolve-parameter builder を旧 import 経路向けに再公開する互換アダプター。正本 builder の結果を利用し、入力プロンプト内のコードフェンスを保護した AgentCallParameter を返す。
-
-## Read this when
-- TUI の resolve-parameter building の呼び出し元、互換 import 経路、またはプロンプトのコードフェンス保護を変更・調査するとき。
-
-## Do not read this when
-- canonical builder の仕様や実装を変更・調査するときは、指定された oracle builder を直接読む。
-- TUI の他の builder や一般的な prompt 構築を扱うだけのとき。
-
-## hash
-- bb0a1eb0bfb775c57dff95c2aadc79a249c0520185c3930d1208db768a01a7f3
+- ce5d479f7cdbb9db6b4500a3d3a3f7411a47e05200670c12c41672e3101c5b93

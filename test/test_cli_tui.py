@@ -3,14 +3,12 @@
 正本仕様: {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
 """
 
-import json
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from _cli_support import run_doctor, runner
-from _codex_support import setup_codex_home, stub_codex_overrides
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
@@ -86,11 +84,11 @@ def test_editor_input_uses_canonical_text_and_keeps_timestamp_collisions(
     assert second_input == "input-2"
 
 
-def test_tui_runs_editor_resolves_parameters_and_launches_codex(
+def test_tui_runs_editor_and_launches_codex_directly(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """編集済み prompt の解決と Codex TUI 起動までを検証する。"""
+    """編集済み prompt から追加 agent call なしで Codex TUI を起動する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -108,33 +106,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    exec_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
-
-    class FakeResolveResult:
-        """parameter 解決 call が返す最小の fake result。"""
-
-        output_json = {
-            "oracle_standard": {"value": False, "reason": "not needed"},
-            "realization_standard": {"value": True, "reason": "needed"},
-            "oracle_review_standard": {"value": False, "reason": "not needed"},
-            "apply_review_standard": {"value": False, "reason": "not needed"},
-        }
-
-    def fake_run_codex_exec(
-        parameter: AgentCallParameter, **kwargs: object
-    ) -> FakeResolveResult:
-        """解決パラメータ取得 call を記録して期待値を検証する。"""
-        exec_calls.append((parameter, kwargs))
-        assert kwargs["purpose"] == "tui resolve parameter"
-        assert parameter.model_class == ModelClass.EFFICIENCY
-        assert parameter.reasoning_effort == ReasoningEffort.MAX
-        assert parameter.file_access_mode == FileAccessMode.READONLY
-        assert parameter.structured_output_schema_path is not None
-        assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
-        assert "remove me" not in parameter.prompt
-        assert "src を確認して必要なら直す" in parameter.prompt
-        return FakeResolveResult()
 
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         """TUI 起動 call を記録して生成パラメータを検証する。"""
@@ -147,13 +119,11 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
         assert "extra_read_paths" not in kwargs
 
-    monkeypatch.setattr(tui_module, "run_codex_exec", fake_run_codex_exec)
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert len(exec_calls) == 1
     assert len(tui_calls) == 1
     orig_files = list(
         (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_orig.md")
@@ -168,10 +138,11 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     complete_prompt = complete_files[0].read_text()
     assert "# file read write rule - repo_write" in complete_prompt
     assert "# oracle and realization basic" in complete_prompt
-    assert "\n# oracle standard\n" not in complete_prompt
+    assert "# oracle standard" in complete_prompt
     assert "# realization standard" in complete_prompt
-    assert "\n# oracle review standard\n" not in complete_prompt
-    assert "\n# apply review standard\n" not in complete_prompt
+    assert "# oracle review standard" in complete_prompt
+    assert "# apply review standard" in complete_prompt
+    assert "# realization oracle reference rule" in complete_prompt
     assert "# index entry standard" not in complete_prompt
     assert '<cmoc_ref target="original_prompt"/>' in complete_prompt
     assert "# オリジナルプロンプト" in complete_prompt
@@ -183,52 +154,12 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
-def test_tui_launch_parameter_uses_fixed_access_and_prompt_contract(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """TUI 起動設定の固定値と選択対象の standard だけを反映する。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    parameter = tui_module.build_tui_codex_parameter(
-        "確認して下さい。",
-        {
-            "oracle_standard": {"value": True, "reason": "needed"},
-            "realization_standard": {"value": False, "reason": "not needed"},
-            "oracle_review_standard": {"value": False, "reason": "not needed"},
-            "apply_review_standard": {"value": False, "reason": "not needed"},
-        },
-        launch_timestamp="2026-07-20_12-00-00_000000000",
-    )
-
-    assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
-    assert parameter.structured_output_schema_path is None
-    complete_prompt = (
-        root
-        / ".cmoc"
-        / "gu"
-        / "ar"
-        / "log"
-        / "editor_input"
-        / "2026-07-20_12-00-00_000000000_cmpl.md"
-    ).read_text()
-    assert "# oracle and realization basic" in complete_prompt
-    assert "# oracle standard" in complete_prompt
-    assert "\n# realization standard\n" not in complete_prompt
-    assert "\n# oracle review standard\n" not in complete_prompt
-    assert "\n# apply review standard\n" not in complete_prompt
-    assert "# index entry standard" not in complete_prompt
-    assert "確認して下さい。" in complete_prompt
-
-
 def test_tui_saves_complete_prompt_in_linked_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """linked worktree 起動でも prompt と agent call context は main 側に置く。"""
     root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
@@ -236,7 +167,6 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     monkeypatch.chdir(linked)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    recorder = tmp_path / "codex_record.json"
     fake_code = bin_dir / "code"
     write_python_executable(
         fake_code,
@@ -245,25 +175,6 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
             "assert sys.argv[1:-1] == ['--wait']",
             "path = pathlib.Path(sys.argv[-1])",
             "path.write_text(path.read_text() + '\\nlinked worktree task\\n')",
-        ],
-    )
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, os, pathlib, sys",
-            f"record = pathlib.Path({str(recorder)!r})",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "data = {key: {'value': False, 'reason': 'test'} for key in [",
-            "    'oracle_standard',",
-            "    'realization_standard',",
-            "    'oracle_review_standard',",
-            "    'apply_review_standard',",
-            "]}",
-            "output.write_text(json.dumps(data))",
-            "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
@@ -303,11 +214,6 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     assert len(complete_files) == 1
     assert str(complete_files[0]) in parameter.prompt
     assert "extra_read_paths" not in tui_kwargs
-    recorded = json.loads(recorder.read_text())
-    schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
-    assert recorded["cwd"] == str(root)
-    assert Path(schema_arg).parent == root / ".cmoc" / "gu" / "ar" / "schema"
-    assert not (linked / ".cmoc" / "gu" / "ar" / "schema").exists()
 
 
 def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
@@ -336,23 +242,7 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    class FakeResolveResult:
-        """parameter 解決 call が返す最小の fake result。"""
-
-        output_json = {
-            name: {"value": False, "reason": "test"}
-            for name in (
-                "oracle_standard",
-                "realization_standard",
-                "oracle_review_standard",
-                "apply_review_standard",
-            )
-        }
-
     monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
-    monkeypatch.setattr(
-        tui_module, "run_codex_exec", lambda *_, **__: FakeResolveResult()
-    )
     monkeypatch.setattr(tui_module, "run_codex_tui", lambda *_, **__: None)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)

@@ -161,7 +161,7 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     assert result.exit_code == (1 if tui_fails else 0)
     assert editor_calls[0][0] == root
     assert "realization file の読み書き禁止" in editor_calls[0][1]
-    assert "oracle file の規約・規範" in editor_calls[0][1]
+    assert "oracle file の編集に必要な cmoc 固有の契約は自動注入" in editor_calls[0][1]
     assert events == ["indexing", "check", "tui"]
     assert len(calls) == 1
     parameter, kwargs = calls[0]
@@ -178,6 +178,7 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     complete_prompt_path = Path(parameter.prompt.removesuffix(prompt_suffix))
     complete_prompt = complete_prompt_path.read_text()
     assert "oracle spec を更新する" in complete_prompt
+    assert "# oracle standard" in complete_prompt
     assert "realization file、`INDEX.md`、`AGENTS.md` を編集していない" in (
         complete_prompt
     )

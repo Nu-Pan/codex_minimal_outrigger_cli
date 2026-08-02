@@ -65,6 +65,10 @@ def test_oracle_investigation_has_no_session_precondition(
     assert editor_calls[0][0] == root
     assert "oracle file は読み取り専用" in editor_calls[0][1]
     assert "realization file の読み書き禁止" in editor_calls[0][1]
-    assert "oracle file の規約・規範" in editor_calls[0][1]
+    assert "oracle file の調査に必要な cmoc 固有の契約は自動注入" in editor_calls[0][1]
     assert calls[0].file_access_mode == FileAccessMode.PURE_ORACLE_READ
     assert calls[0].prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
+    prompt_path = Path(
+        calls[0].prompt.removesuffix(" を読んで、その指示に従って下さい")
+    )
+    assert "# oracle standard" in prompt_path.read_text(encoding="utf-8")

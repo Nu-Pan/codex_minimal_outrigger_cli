@@ -1,51 +1,51 @@
 # `acp_builder`
 
 ## Summary
-- AIエージェント呼び出し用パラメータを構築する正本ソースを扱うディレクトリ。基本パラメータ、INDEX.mdエントリー生成、oracle・realization・session・TUI向けの起動条件やStructured Output契約を確認する入口。
+- 参照可能な正本ソース本文が存在するかを確認するための入口です。配下の具体的な実装内容を扱う場所ではありません。
 
 ## Read this when
-- Agent Call Parameter のモデル、推論強度、アクセス権限、Structured Output、作業ディレクトリを変更・調査するとき
-- INDEX.mdエントリー生成の出力形式や生成用agent callを変更・調査するとき
-- oracle、realization、session join、cmoc tui のagent call起動条件やパラメータを変更・調査するとき
+- このディレクトリの内容や、参照可能な正本ソースの有無を確認するとき。
 
 ## Do not read this when
-- 対象サブコマンドの実際の処理や画面操作の挙動を調査するときは、各サブコマンドの実装を直接読む
-- 共通のprompt構築・実行フローを調査するときは、共通実装を直接読む
-- バックエンド固有のモデル名・推論強度への解決方法を調査するときは、realization srcを読む
+- 実装仕様や処理内容を確認したいとき。
 
 ## hash
-- e7b5cdc214c2dece98cc88bef0f4d7cbc29cd68c4e62a5ac2fe35f7d484278a1
+- e7ba2a5f671e5ffd23f90351318d24669e7ab864944a52493104db2ba0366d9a
 
 # `other`
 
 ## Summary
-- cmoc の設定、パスモデル、規範定義、構造化 Markdown 文書生成を担う補助モジュール群。リポジトリ固有設定や root 解決、Standard/Requirement、StructDoc の実装を調査する際の入口。
+- リポジトリ設定、パスモデル、規範モデル、構造化文書レンダラーを担う Python ソース群。設定値や永続化構造、root 解決、規範の構造化、Markdown 出力を調査・変更する際の入口となる。
 
 ## Read this when
-- CmocConfig の設定項目・既定値・シリアライズ対象・Codex および oracle review 設定を確認するとき
-- agent call の cwd や repository/work/run root、root placeholder、実パス変換の規則を確認するとき
-- Standard や Requirement の定義・検証、Standard から StructDoc への変換を確認するとき
-- StructDoc による階層文書の Markdown レンダリング、cmoc_ref 検証、コードブロックやインデント処理を確認するとき
+- CmocConfig や Codex 設定、oracle review の上限、JSON/TOML シリアライズを確認するとき
+- agent call の cwd・work/repository/run root、root placeholder、パス変換や検証を確認するとき
+- Standard・Requirement の構造や StructDoc への変換を確認するとき
+- StructDoc の階層、Markdown レンダリング、cmoc_ref 検証、コードブロックや空行処理を確認するとき
 
 ## Do not read this when
-- CLI のサブコマンド実行フロー、設定ファイルの生成・同期、agent call prompt 生成だけを調査するとき
-- ModelClass や ReasoningEffort の定義、または StructDoc 自体と無関係な oracle 文書の内容だけを確認するとき
+- CLI の実行フロー、設定ファイルの生成・同期、agent call prompt 生成などの利用側処理だけを調査するとき
+- ModelClass、ReasoningEffort、StructDoc 自体など、別ファイルに定義された概念の詳細だけを確認するとき
+- 個別の規範本文や、Markdown レンダリングを通らない他の oracle 文書の仕様だけを確認するとき
 
 ## hash
-- b62e9df5e183aa361d13b2d8ad4fea5f429768cdbdc76240453b7b9ce61275c1
+- 01ecbe8fd695e08e7b934d3c8c596ce87ab0fd7d09615d8dc1fb9728229c4da7
 
 # `prompt_builder`
 
 ## Summary
-- プロンプト生成機能の構成要素を収めるディレクトリ。プレースホルダ型、完全な agent call 用プロンプトの構築、入力エディタ初期文、各種規則・定義部品を扱い、prompt builder の個別実装や生成規則を確認する際の入口となる。
+- oracle と realization、適合性レビュー、ファイルアクセス、INDEX.md ルーティングなどの規範を、prompt builder 用の構造化文書へ変換する実装群を収録するディレクトリ。特定のレビュー規範やアクセス制約、仕様分類、ルーティング規則の生成処理への入口となる。
 
 ## Read this when
-- prompt builder の構成や生成部品を変更・確認するとき
-- agent call 用プロンプトの組み立て、プレースホルダ、入力エディタ、oracle・realization・INDEX.md 関連規則を調べるとき
+- oracle file と realization file の適合性、レビュー所見、conflict 解消規範を調査・変更するとき。
+- AI エージェント向けのファイルアクセス規則や oracle・realization の定義を変更するとき。
+- INDEX.md のエントリー規範やルーティング規則の生成処理を調査・変更するとき。
+- prompt builder に注入する標準文書の構造、Requirement・Standard の扱い、oracle 参照ルールを確認するとき。
 
 ## Do not read this when
-- 個別の oracle 文書や realization 実装の内容だけを調べるとき
-- prompt builder と無関係な CLI、パスモデル、構造化文書の処理を調べるとき
+- 特定の oracle 文書や realization 実装そのものの仕様・挙動を調査するとき。
+- Codex CLI の実行権限や sandbox 設定そのものを確認するとき。
+- prompt builder 以外のサブコマンド処理や、一般的なコード品質・ベストプラクティスだけをレビューするとき。
 
 ## hash
-- 583efd55e167dc7d8971f73ab5e929532590206f2e2d540989f758d4ef4cb396
+- dcb504c92f81d240b75e76c3ff2b11d6e83ee502510f7e4236ae8a6b09d48879

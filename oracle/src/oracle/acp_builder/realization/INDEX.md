@@ -1,32 +1,37 @@
 # `apply`
 
 ## Summary
-- `realization apply fork` 用の agent call 起動処理を担う oracle src。codex exec の起動パラメータと完全 prompt を構築し、oracle 差分・commit 範囲・linked worktree、AgentCallParameter の設定を realization 追従 agent に渡す。
+- `cmoc realization apply fork` 用の codex exec 起動パラメータを構築する実装。oracle file の差分、commit 範囲、linked worktree を prompt に組み込み、FLAGSHIP モデルへ realization file の差分追従を委譲する入口。
 
 ## Read this when
-- `realization apply fork` の agent call 起動処理を変更・調査するとき
-- oracle diff、commit 範囲、linked worktree の realization 追従 prompt への組み込みを確認するとき
-- AgentCallParameter の model、reasoning、file access、indexing 設定を変更するとき
+- oracle file の変更を realization file へ追従させる AgentCallParameter を構築・変更するとき
+- realization apply fork の prompt、作業範囲、差分参照、モデル設定、worktree 設定を確認するとき
+- 差分追従の完了条件や realization write の委譲方法を調査するとき
 
 ## Do not read this when
-- `realization apply fork` 以外の agent call prompt を変更するとき
-- prompt の共通生成仕様だけを確認するとき
-- 実際の realization implementation や test の追従内容を調査するとき
+- realization apply fork の差分適用ロジックやテストだけを調べるとき
+- 一般的な prompt 構築処理を調べるとき
+- AgentCallParameter や path context の共通定義を調べるとき
 
 ## hash
-- 7ac025b33ddf3ea7a9cb73ddb36ebc52bbe2216b9a3dd9f5d4f6c4d0f581223c
+- 132f46ba2d4207e8b13105a02aa0265cc1bd78a348aa3c925878926a52fbe27c
 
 # `refactor`
 
 ## Summary
-- refactor fork の変更要約とファイル単位レビュー・修正に関する AgentCallParameter の正本 schema および builder 実装をまとめるディレクトリ。差分要約、レビュー結果、各処理の prompt、実行条件、構造化出力契約を確認する入口。
+- refactor fork における変更要約とファイル単位レビュー・修正の AgentCallParameter、および Structured Output schema を定義するファイル群。変更要約・レビュー結果の形式確認と、各 prompt 構築処理の変更時に参照する入口。
 
 ## Read this when
-- refactor fork の変更要約、単一ファイルのレビュー・修正、AgentCallParameter、prompt 構築、実行条件、Structured Output schema を確認または変更するとき。
+- refactor fork の変更要約出力形式、根拠ファイル一覧、要約結果の検証項目を確認するとき
+- ファイル単位レビュー・修正の所見フォーマットや、根拠・oracle 要求・対応・検証結果の構造を確認するとき
+- 変更要約またはファイル単位レビュー・修正の prompt 構成、対象 path、実行条件、モデル設定、Structured Output schema の参照先を確認・変更するとき
+- レビュー時の oracle・realization 参照規則や修正・検証条件を確認するとき
 
 ## Do not read this when
-- 実際のレビュー対象ファイルの実装内容を調査するとき。
-- 変更差分そのものや、要約・レビュー結果の詳細な出力形式だけを確認するとき。
+- レビュー対象ファイルの具体的な実装内容や個別の所見を調査するとき
+- 変更差分そのものや要約結果の具体的内容を確認するとき
+- 共通 prompt builder や path model の内部仕様を直接確認するとき
+- 通常の実装・テスト仕様や、このディレクトリ以外の出力スキーマを扱うとき
 
 ## hash
-- 7c65884066bf26a7c0c2ed02199dc76ca8f9b6ac29bf27afd1f5ec52dfc4131d
+- 56003164afc00ea727f3c2ed9ebf137e5e673f67fd213b15d94cfa9265589100

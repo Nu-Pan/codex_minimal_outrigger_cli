@@ -1,36 +1,37 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション仕様を定義する正本文書群。CLI、agent call、ログ、prompt、session/run lifecycle、branch・commit・worktree、サブコマンドなどの利用者向け挙動を扱う。個別仕様文書を探すための入口。
+- cmoc の正本仕様ドキュメントをまとめるディレクトリ。アプリケーション共通仕様、branch・commit・worktree モデル、不採用案の検討記録、Python 開発規則を扱い、各仕様領域の入口となる。
 
 ## Read this when
-- cmoc のアプリケーション挙動や CLI・agent call・ログ・prompt・session/run の正本仕様を探すとき
-- session fork、run の隔離、branch・commit・worktree の関係やライフサイクルを確認するとき
-- 開発環境、CLI 実装配置、Python 規則、realization test の方針を確認するとき
-- 採用されなかった設計案や作業方式の背景を確認するとき
+- cmoc のアプリケーション挙動、branch・worktree lifecycle、開発規則、テストや環境構築の正本仕様を探すとき
+- 特定の仕様領域に対応する文書やサブディレクトリを選ぶとき
+- 採用しなかった設計案の背景や判断理由を確認するとき
 
 ## Do not read this when
-- 確認したい個別仕様文書が明確なときは、その文書を直接読む
-- 構築済み環境での具体的なテスト・Ruff・mypy の実行手順だけを確認するときは、repository local の run-cmoc-tests skill を読む
-- 実装構造やテストの詳細だけを確認するときは、対応する realization file を直接読む
+- 確認対象の仕様文書やサブディレクトリがすでに特定されているとき
+- 実装構造、具体的なテスト実行、一般的な開発作業だけを調査するとき
 
 ## hash
-- c9903d04fb12d273403652e166563d4280695065e928b889089088a4e8a0c7d8
+- f32417f2e650bee68a57635aa90f903273dc9c0856cfd21ed011134f1fafef04
 
 # `src`
 
 ## Summary
-- AIエージェント呼び出しに関する正本ソースを扱うディレクトリ。agent call のパラメータ・起動条件、設定と root 解決、Structured Document、prompt builder の実装を調査する入口。
+- 参照可能な正本ソース本文の有無を確認するための入口。
+- リポジトリ設定、パスモデル、規範モデル、構造化文書レンダラーを担う Python ソース群。
+- oracle・realization、適合性レビュー、ファイルアクセス、INDEX.md ルーティングなどの規範を prompt builder 用の構造化文書へ変換する実装群。
 
 ## Read this when
-- Agent Call Parameter、Structured Output、agent call の起動条件やパラメータを変更・調査するとき
-- CmocConfig、root 解決、Standard・Requirement・StructDoc の定義や Markdown レンダリングを調査するとき
-- prompt builder、プレースホルダ、入力エディタ初期文、oracle・realization・INDEX.md 関連のプロンプト生成規則を調査するとき
+- oracle/src 配下の正本ソースの有無や構成を確認するとき。
+- 設定、パス解決、規範モデル、構造化文書の変換・Markdown レンダリングを調査・変更するとき。
+- oracle・realization の規範、適合性レビュー、ファイルアクセス規則、INDEX.md ルーティング規則、prompt builder 用文書生成を調査・変更するとき。
 
 ## Do not read this when
-- CLI サブコマンドの実際の処理や画面操作の挙動を調査するとき
-- 共通の prompt 構築・実行フローやバックエンド固有のモデル解決を調査するとき
-- 個別の oracle 文書や realization 実装の内容だけを調査するとき
+- 実装仕様や処理内容を確認したいときは、oracle/src 配下の具体的な実装を直接読む。
+- CLI の実行フロー、設定ファイルの生成・同期、agent call prompt 生成などの利用側処理だけを調査するとき。
+- 特定の oracle 文書や realization 実装そのものの仕様・挙動だけを調査するとき。
+- Codex CLI の実行権限や sandbox 設定そのものを確認するとき。
 
 ## hash
-- 2abeba640329884146f2dec5837e62b0faa8a473b298b5f2e1e81b50877c99a2
+- 7a59440d630d046b7448c3e583446ba8782ba36bde058772de6e0371bf455e21
