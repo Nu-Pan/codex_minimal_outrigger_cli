@@ -476,20 +476,20 @@
 # `test_oracle_investigation_cli.py`
 
 ## Summary
-- `cmoc oracle investigation` CLI の起動条件と、セッションなしの main worktree での動作を検証するテスト。エディタ入力の自動注入指示、Codex 呼び出し時の oracle 専用読み取りモード、生成プロンプトの内容を確認する。
+- `cmoc oracle investigation` が session なしの main worktree でも起動できることを検証する CLI テスト。doctor preprocess、エディタ入力、自動注入指示、oracle 専用の読み取り専用 TUI 起動パラメータ、完全プロンプトへのユーザー指示反映を確認する。oracle investigation の起動条件と呼び出し契約を検証するテスト群への入口。
 
 ## Read this when
-- `oracle investigation` サブコマンドの起動条件や session precondition を変更・調査するとき。
-- oracle file／realization file のアクセス制約を自動注入する処理を変更・検証するとき。
-- Codex TUI 呼び出しパラメータや oracle standard を含む生成プロンプトを確認するとき。
+- `cmoc oracle investigation` の起動可否や session 前提を変更・確認するとき
+- oracle investigation のエディタ入力、自動注入指示、または TUI 起動パラメータのテスト影響を確認するとき
+- oracle 専用の file access mode、モデル、推論強度、preflight 実行条件を検証するとき
 
 ## Do not read this when
-- `oracle investigation` 以外のサブコマンドの挙動だけを変更・調査するとき。
-- CLI 共通の runner や doctor の実装を直接確認したいときは、対応する `_cli_support` や共通実装を先に読む。
-- oracle investigation の実装詳細そのものを変更・調査する場合は、このテストではなく `sub_commands/oracle/investigation` の実装を直接読む。
+- oracle investigation の実装詳細を変更・確認するときは、対応する sub-command 実装や launch parameter builder を直接読む
+- エディタ入力仕様全般を確認するときは、prompt editor input の正本仕様を直接読む
+- 他のサブコマンドの起動条件や一般的な CLI テストを確認するとき
 
 ## hash
-- 198b2b7e3c0b1488400f3dfce0aa911760f0823cc0fcf3461343531b69105763
+- 57f50ac8204d62ee8a1763bfeac80d23a4335d4296aff8f533b8ef080caf65b8
 
 # `test_oracle_review_loop.py`
 
