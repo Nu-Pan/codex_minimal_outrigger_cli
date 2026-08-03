@@ -1074,10 +1074,10 @@
     "last_investigated_at": "2026-08-03_11-51_23_730998000"
   },
   "test/test_acp_builder_oracle_review_parameters.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "4c5b51431a96b031e804828b21e575faf6b2c36b230a63173b222075c468784b",
-    "last_investigated_at": "2026-07-27_17-54_40_831662000"
+    "last_investigated_sha256": "a0ef67aa6bcec04c5c274de927a0a31f9307e6c30d5b8da1961ed6fa41f06c4b",
+    "last_investigated_at": "2026-08-03_18-34_08_596581000"
   },
   "test/test_acp_builder_session_join_parameters.py": {
     "investigation_required": true,
