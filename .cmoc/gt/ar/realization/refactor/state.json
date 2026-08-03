@@ -1038,10 +1038,10 @@
     "last_investigated_at": "2026-07-27_16-39_55_386747000"
   },
   "test/_codex_support.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "6698e05b59d5277c59d5808c9ebf1aa58b962fe0dcd2d39630961bc262839119",
-    "last_investigated_at": "2026-07-27_16-52_44_561377000"
+    "last_investigated_sha256": "db0b25029c11871292d2b05dac95f7bc3ef88c9a5f64f74d9c406acf3e5241c1",
+    "last_investigated_at": "2026-08-03_17-28_04_802794000"
   },
   "test/_command_support.py": {
     "investigation_required": false,
