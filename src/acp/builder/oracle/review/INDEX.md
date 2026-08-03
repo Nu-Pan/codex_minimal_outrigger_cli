@@ -62,18 +62,18 @@
 # `validate_finding_advocate.py`
 
 ## Summary
-- レビュー対象の所見と既知の賛否理由を受け取り、canonical な AgentCallParameter を生成する builder。動的に挿入される各レビューセクションを fence で保護し、プロンプトの構造を維持する。
+- レビュー所見が妥当である理由を列挙する canonical prompt builder の realization adapter。canonical parameter を再利用し、対象所見と既知理由を含む動的 prompt section を fence で保護する。レビュー処理から擁護理由列挙用 parameter を構築する入口である。
 
 ## Read this when
-- oracle review の finding advocate 検証用 agent call パラメータ生成を変更・調査するとき
-- finding、既知の妥当性理由、またはプロンプトセクション保護の受け渡しを確認するとき
+- 擁護理由列挙用 builder の realization 側の委譲や動的 prompt section 保護を確認するとき
+- レビュー所見・既知理由の prompt 注入防止処理を追跡するとき
 
 ## Do not read this when
-- canonical な oracle review parameter の仕様自体を確認したいときは、参照先の oracle builder を直接読む
-- 共通のプロンプト fence 実装を変更・調査するときは、prompt_fence モジュールを直接読む
+- canonical な prompt 内容、モデル設定、ファイルアクセス設定を確認するときは oracle 側の実装を読む
+- 妥当ではない理由の列挙や所見判定の処理を確認するときは、それぞれの専用 builder を直接読む
 
 ## hash
-- cf78bb6abe160ecc3c19b62759a85385bd0af273b6f81f0ed88d518cf7939479
+- 565d65144153e071e455c57663ac03bba887173be798cfaaecca3d49fa03a52b
 
 # `validate_finding_challenger.py`
 

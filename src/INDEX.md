@@ -1,18 +1,21 @@
 # `acp`
 
 ## Summary
-- `src/acp` は ACP 互換層の realization 実装をまとめる領域で、公開入口と builder 系の互換経路を扱う。下位項目では、利用者向け入口の互換処理や builder の adapter・prompt 生成処理など、責務ごとの具体的な実装へ進める。
+- acp 互換 import 名前空間の公開入口。oracle 側の canonical 実装を複製せず、既存の `acp.*` 参照を維持するための互換層を提供する。
+- `__init__.py` は名前空間の存在と互換入口の存続条件を示し、`builder` は canonical builder への委譲、quota probe の互換実装、下位 builder 領域への入口を担う。
 
 ## Read this when
-- ACP 互換層全体の責務や、`src/acp` 配下で調査すべき実装領域を選びたいとき。
-- `acp` 公開入口から canonical な `oracle` 実体や各 builder adapter へつながる realization 側の経路を確認したいとき。
+- 既存コードの `acp.*` import を維持または `oracle.*`・実体モジュールへ移行する際に、互換入口の責務と存続条件を確認したいとき。
+- builder 配下の処理領域が不明で、indexing、oracle、realization、session、TUI、quota probe などの下位要素への入口を特定したいとき。
+- optional な oracle quota probe が存在しない配布形態で、互換 fallback の所在を確認したいとき。
 
 ## Do not read this when
-- canonical な仕様・実装そのものを確認または変更したいときは、対応する `oracle` 側を直接読む。
-- `acp` 配下の特定モジュールの内部挙動だけを調べたいときは、この階層ではなく該当する下位項目を直接読む。
+- oracle 側の canonical builder 実装や正本仕様を確認したいときは、oracle 側の対応モジュールを直接読む。
+- 具体的な prompt fence、index entry、session、TUI、realization、oracle review/edit などの実装詳細を調べるときは、builder 配下の該当する下位要素を直接読む。
+- `acp.*` 互換層と無関係な CLI 本体や利用者向け参照の挙動を調べるときは、このディレクトリを起点にしない。
 
 ## hash
-- 913909fbc65b15ee293901dfef8b670588f2300173ed68f7dcb47173a87b3ad0
+- 063b73908eccd72df4e63c578421a57ed10312daa00b972821ea3b729067f804
 
 # `basic`
 
