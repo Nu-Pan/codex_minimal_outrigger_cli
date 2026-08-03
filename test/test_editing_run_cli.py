@@ -183,6 +183,28 @@ def test_raw_oracle_diff_treats_changed_paths_as_literal_pathspecs(
     assert "+after" in diff
 
 
+def test_raw_oracle_diff_excludes_oracle_gitlinks(
+    tmp_path: Path,
+) -> None:
+    """oracle file ではない Gitlink を raw diff に含めない。"""
+    root = make_repo(tmp_path)
+    gitlink = root / "oracle" / "gitlink"
+    gitlink.mkdir()
+    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    commit = base
+    run_git(
+        root,
+        "update-index",
+        "--add",
+        "--cacheinfo",
+        f"160000,{commit},oracle/gitlink",
+    )
+    run_git(root, "commit", "-m", "add oracle gitlink")
+    end = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    assert raw_oracle_diff(root, base, end) == ""
+
+
 def test_run_reports_keep_distinct_files_on_timestamp_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
