@@ -154,18 +154,18 @@
 # `test_acp_builder_session_join_parameters.py`
 
 ## Summary
-- session join の conflict resolution builder に対する契約テスト。公開 export、repo write 権限、モデル・推論設定、prompt の必須内容と除外内容、競合 path に含まれる三連 backtick の安全な埋め込みを検証する。
+- session join の conflict resolution builder に関するテスト。公開 export の限定、repo write 権限・モデル・推論設定・prompt 内容などの生成契約、および競合パス内の三連バッククォートを安全に埋め込む処理を検証する。対応する builder 実装の挙動を確認したいときの入口。
 
 ## Read this when
-- session join の conflict resolution 用パラメータ builder を変更・レビュー・テストするとき
-- conflict resolution prompt の構成、権限設定、公開 API、path の code fence 処理を確認するとき
+- session join の conflict resolution パラメータ生成を変更・レビューするとき
+- conflict resolution builder の公開 API、権限設定、prompt 構造、パス埋め込みの契約を確認するとき
 
 ## Do not read this when
-- session join の他の builder や conflict resolution 以外の処理だけを変更するとき
-- 正本仕様そのものを確認する必要があるときは、対応する oracle source を直接読む
+- session join 以外の builder の契約を確認するとき
+- conflict resolution builder の実装詳細そのものを調査するときは、対応する正本または実装を直接読む
 
 ## hash
-- f67830519cf3e111f51be913501de52c2c8e513f177a0164153c4694e84bbdbb
+- 1ce9c852ebe12b5de8c5115cf47256dc5b2d7d081a0c8b75ac4aa0eb05e3e050
 
 # `test_acp_builder_tui_parameters.py`
 
