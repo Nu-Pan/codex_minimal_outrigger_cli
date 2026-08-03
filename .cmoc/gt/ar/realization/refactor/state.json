@@ -390,10 +390,10 @@
     "last_investigated_at": "2026-07-24_11-41_11_294374000"
   },
   "oracle/src/oracle/other/path_model.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "a05616c36333cdccc95f284834f4260a7a3613dd30a7c4d886d81c54f3c4f3b3",
-    "last_investigated_at": "2026-07-24_11-53_56_754732000"
+    "last_investigated_sha256": "8660330a40e76a5e7acf35ec03434282d0e05c4569a0319712e061d391fc848b",
+    "last_investigated_at": "2026-08-03_10-16_16_106614000"
   },
   "oracle/src/oracle/other/standard.py": {
     "investigation_required": true,
