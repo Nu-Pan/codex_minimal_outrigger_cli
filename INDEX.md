@@ -142,18 +142,17 @@
 # `test`
 
 ## Summary
-- テストコードから、cmoc の runtime・CLI・Codex 実行・worktree／Git lifecycle・設定・state・indexing・oracle review・ACP builder などの外部挙動と契約を検証する realization test 群へ進む入口。共通テスト helper と、機能領域ごとの回帰・統合・受け入れテストを含む。
+- realization test を集約するディレクトリ。CLI、runtime、Codex 実行、indexing、oracle review、session/run lifecycle、設定・状態永続化など、実装の外部挙動と安全性を検証する pytest テスト群への入口。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test や回帰テストを探すとき
-- CLI、Codex runtime、indexing、session／run lifecycle、oracle review、設定、state、ACP builder などの外部挙動を検証するテストを確認するとき
-- 実経路統合テストや test-local Ollama を使うテストの構成・前提を調べるとき
+- 実装変更に対応する回帰テストや外部契約の検証箇所を探すとき
+- CLI、Codex runtime、indexing、oracle review、session/run、設定・状態管理のテスト要件を確認するとき
+- テスト用の Git、Ollama、Codex 環境や共有ヘルパーの利用方法を確認するとき
 
 ## Do not read this when
-- 正本仕様・schema・canonical builder の定義自体を確認するときは、対応する oracle 文書・oracle source・schema を直接読む
-- 実装内部の詳細だけを調査するときは、対応する src の実装を直接読む
+- 正本仕様や Structured Output schema の内容自体を確認・変更するときは、対応する oracle doc または oracle source を直接読む
+- 実装詳細のみを確認・変更するときは、対応する src の実装を直接読む
 - テスト実行全体の標準手順や品質ゲートだけを確認するときは、対応するテスト実行規則を読む
-- 対象機能と無関係なテスト領域を確認するときは、このディレクトリを総覧せず、該当する個別テストへ直接進む
 
 ## hash
-- 750c1c9ac652eecf0de42c75a4eeac0d01ebbcc50d4ba8990161d3957f94aa30
+- 50219108197c591c41362397827c72c2271ce3f9421229c2a33424893c2f5c1c

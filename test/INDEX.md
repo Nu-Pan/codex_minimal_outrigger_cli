@@ -288,19 +288,19 @@
 # `test_codex_runtime_paths.py`
 
 ## Summary
-- Codex 実行時のパスと sandbox 設定を検証するテスト。並列実行時のログパス予約、agent call の cwd、リンク済み worktree における schema 保存先、PURE_ORACLE_READ の read-only sandbox 変換、`.agents` パス権限の非注入を扱う。
+- Codex exec の実運用呼び出しにおけるログパス予約、agent call の cwd、構造化出力 schema の保存先、sandbox 引数を検証するテスト群。PURE_ORACLE_READ と linked worktree を含む実行境界、および .agents パスを個別権限へ注入しないことも確認する。Codex 実行時のパス配置やファイルアクセス制御の変更影響を確認する入口。
 
 ## Read this when
-- Codex 実行ラッパーのログ・出力・schema 保存先を変更または検証するとき
-- agent call の cwd、worktree、sandbox 権限の動作を変更または検証するとき
-- Codex 実行のプロセス間競合や timestamp 付きパスの一意性を調査するとき
+- run_codex_exec のログ・出力ファイルの命名や同時実行時の衝突回避を変更するとき
+- agent_call_cwd、linked worktree、構造化出力 schema の保存場所を変更するとき
+- Codex sandbox のモードや権限引数の生成を変更するとき
 
 ## Do not read this when
-- Codex の prompt 生成規則そのものを変更または調査するとき
-- Codex 実行時のパスや sandbox 引数に関係しないテストを変更するとき
+- Codex 実行経路やパス・sandbox 引数に変更がなく、別の機能のテストや実装を確認するとき
+- Codex の正本仕様そのものを確認するときは、参照されている oracle 文書・ソースを直接読む
 
 ## hash
-- 7ce907d7b5bf714bfa514e10ed2765eb6caad9f99af8ffb4dba0ed5703359230
+- 62d40c0055610186202ff691639807b414341bf0309969252e4bf4fca6fb1cb4
 
 # `test_codex_runtime_quota_retry.py`
 
