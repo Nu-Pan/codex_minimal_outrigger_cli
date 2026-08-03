@@ -32,17 +32,20 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を扱うパッケージ。fork の CLI 実行ライフサイクルと、関連するリファクタリング処理への入口を提供する。
+- realization のリファクタリング処理を扱うパッケージ。関連するリファクタリング処理への入口となる。
+- refactor fork の実行フローとして、run 初期化、対象 realization file の選択、Codex による調査・修正、差分と所見の検証、state 更新、commit、unresolved 管理、完了判定、cleanup、report 保存を一貫して処理する。
+- refactor fork のライフサイクル、run worktree、process tracking、INDEX 更新、Git commit の整合性を確認する際の主要な実装入口であり、個別の所見生成や report の詳細は呼び出される実装へ進む。
 
 ## Read this when
-- realization refactor の処理構成や fork の実行ライフサイクルを確認するとき
-- run 初期化、対象 file 選択、agent call、差分検証、commit、state・report 管理を調査するとき
-- 中断・例外時の停止、rollback、完了判定を調査するとき
+- realization のリファクタリング処理の構成や CLI 挙動を確認・変更するとき
+- 対象選択から完了までの refactor fork の処理フローを調査するとき
+- 差分検証、agent commit、rename、refactor state、unresolved finding の整合性を確認するとき
+- 正常完了・中断・例外時の run state、rollback、child process 停止、report 保存を調査するとき
 
 ## Do not read this when
-- realization refactor の state 同期や target 選択の共通実装を調査するとき
-- agent 入力 parameter や change summary の構築を調査するとき
-- 一般的な run lifecycle や report 表示の共通仕様を確認するとき
+- 個別の refactor agent prompt や change summary の Structured Output 定義だけを確認したいとき
+- 一般的な editing run の仕様、run isolation、INDEX 更新規則だけを確認したいとき
+- fork report の Markdown 表現や共通 report 書き込み処理だけを確認したいとき
 
 ## hash
-- 581f980f2e2f64e6d839cc68b4ad2eab8a849e056194ec36014da63b4ecbedb8
+- b8bf9e4967fe97c3caf02bddbdb4746baca8396548d5b5f8caab74171f04627b
