@@ -142,17 +142,17 @@
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。CLI サブコマンド、Codex 実行経路、indexing、oracle review、session/run state、Git/worktree、設定、prompt、共有テストヘルパーなど、実装の外部挙動・安全性・公開契約を検証する。個別テストファイルは機能領域ごとの詳細な回帰テストへの入口となる。
+- test ディレクトリは、cmoc の realization test を集約する検証領域です。CLI の外部挙動、Codex 実行基盤、path・Git・state・config、indexing、oracle review、session/run lifecycle、prompt・builder、テスト用 Ollama などを、単体・統合・受け入れテストとして検証します。各テストファイルが機能領域ごとの具体的な期待挙動を確認する入口です。
 
 ## Read this when
-- cmoc の実装変更に対応する realization test や、既存テストで検証される外部挙動を探すとき
-- CLI、Codex runtime、indexing、oracle review、session lifecycle、state、Git/worktree、設定、prompt などの機能領域別テストを選ぶとき
-- テスト用の Codex、Ollama、Git repository、fake command など共有支援基盤の使い方を確認するとき
+- cmoc の実装変更に対応する realization test や回帰テストの対象を探すとき
+- CLI、Codex runtime、indexing、oracle review、session/run、設定、状態管理、Git、prompt などの外部挙動を検証するとき
+- 実経路統合テストや case-local Ollama を使うテストの前提・実行基盤を確認するとき
 
 ## Do not read this when
-- 正本仕様、schema、builder、または実装本体の定義を確認することが目的のときは、対応する oracle file や realization implementation を直接読む
-- テスト実行全体の標準手順や品質ゲートを確認するときは、対応するテスト実行規則を読む
-- 対象機能と無関係なテストや、個別テストで扱わない一般的な実装詳細を調査するとき
+- 正本仕様、schema、builder の定義そのものを確認・変更するときは、対応する oracle doc・oracle source・oracle schema を直接読む
+- 実装詳細の原因調査だけが目的のときは、対応する src 配下の実装を直接読む
+- テスト実行全体の標準手順や品質ゲートだけを確認したいときは、対応するテスト実行規則を読む
 
 ## hash
-- 0cd32164632fce66d9e9a85f5a85d4d29e9d6d777fdc3769c4cf5efb2e803615
+- 063396275d45194c6e5717ca9261742e2904d68095397e68392842cdda09d95c

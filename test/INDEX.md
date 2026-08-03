@@ -494,18 +494,19 @@
 # `test_oracle_review_loop.py`
 
 ## Summary
-- oracle review の finding loop を対象とする回帰テスト群。finding の対象別引き継ぎ、main worktree とのパス対応、challenger と advocate の同一周回連携、judge・advocate 中断時の部分結果保持、semantic retry と上限到達時の失敗を fake Codex 呼び出しで検証する。
+- oracle review の finding loop を検証するテスト。finding の列挙・対象別フィルタリング、challenger/advocate の同一周回連携、judge 結果、意味的 retry、割り込み時の部分結果復旧を fake Codex 呼び出しで回帰検証する。oracle review の review loop 挙動を確認するためのテスト入口。
 
 ## Read this when
-- oracle review の finding 列挙・検証・判定 loop を変更または調査するとき
-- finding の prompt 引き継ぎ、worktree 隔離、interrupt 復旧、merge retry の挙動を確認するとき
+- oracle review の finding 列挙、検証、判定、merge retry の挙動を変更または調査するとき
+- oracle review の Codex call context、prompt 引き継ぎ、割り込み復旧を確認するとき
+- review loop の回帰テストを追加・修正するとき
 
 ## Do not read this when
-- oracle review の実装詳細だけを確認する場合は、まず対応する sub_commands の実装を読む
-- oracle review と無関係なテストや一般的なテスト実行方法を調べる場合
+- oracle review 以外のサブコマンドや、finding loop の外側の実装を調査するとき
+- 正本仕様そのものを確認するときは、テスト内で参照される oracle 文書を直接読む
 
 ## hash
-- 1cd3af13d55c94a61e3a1e8dbe48a421b8a70cb964dbce82e8f7a70fd5cb1578
+- db675864938cb26e6cc21a41ac4816e4429fddd971f989cb795223d02f5f18f4
 
 # `test_oracle_review_merge_operations.py`
 
