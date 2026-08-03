@@ -305,18 +305,20 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota exceeded 後の probe・待機・resume・再実行を検証する回帰テスト群。代表 probe の共有、resume token の復元、quota/capacity の再試行、失敗伝播、ログ・出力・CODEX_HOME・cwd の観測を一体として扱う。
+- Codex の quota 超過後に行う probe・待機・resume・再実行の外部挙動を検証する回帰テスト。probe の共有、resume token の復元、call/subcommand log、CODEX_HOME と cwd、並行呼び出し時の状態伝播まで、同一の quota retry 状態機械として扱う。
 
 ## Read this when
-- Codex exec の quota 待機、quota availability probe、resume または同一 prompt の再実行を変更・調査するとき
-- quota retry の並行実行、probe 失敗、KeyboardInterrupt、poll 上限、ログ記録、相対 CODEX_HOME の挙動を検証するとき
+- Codex exec の quota 復帰、quota availability probe、resume token、再実行条件を変更・調査するとき。
+- quota 待機中の並行呼び出し、probe 失敗の伝播、poll 上限、ログ記録、CODEX_HOME/cwd の挙動を確認するとき。
+- quota retry に関する実装の回帰テストや外部観測結果を確認するとき。
 
 ## Do not read this when
-- quota retry 以外の Codex 実行仕様や通常の subprocess 呼び出しを調査するときは、対応する実装・正本仕様を直接読む
-- Codex runtime の実装変更を伴わない一般的なテスト構成や別サブコマンドのテストを調査するとき
+- quota retry 以外の Codex exec 挙動だけを調査するときは、通常の exec 実行テストや実装へ直接進む。
+- quota probe adapter の仕様そのものを確認するときは、正本 builder または codex exec 規則を直接読む。
+- 一般的なログ機構や subcommand logger の仕様だけを確認するときは、それぞれの実装・専用テストを直接読む。
 
 ## hash
-- af23cb81b1f04beebcc6489ce24e3cb6393ff2b69fbdb5726690db33d8161fb3
+- 9fd582638466db1f13fba12b085be7adad93e4aa64c4bf9bb148b397b6b58711
 
 # `test_codex_runtime_retry.py`
 

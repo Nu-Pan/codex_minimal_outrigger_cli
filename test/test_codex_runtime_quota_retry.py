@@ -621,12 +621,15 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
     probe_prompt = quota_probe_prompt(root)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
+    calls = tmp_path / "calls.jsonl"
     write_python_executable(
         bin_dir / "codex",
         [
             "import json, pathlib, sys",
+            f"calls = pathlib.Path({str(calls)!r})",
             "args = sys.argv[1:]",
             "stdin = sys.stdin.read()",
+            "with calls.open('a') as f: f.write(json.dumps({'stdin': stdin}) + '\\n')",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "if stdin == 'prompt':",
             "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
@@ -639,6 +642,7 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    logger = SubcommandLogger(root, "test")
 
     with pytest.raises(CmocError) as exc_info:
         run_codex_exec(
@@ -654,10 +658,18 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
             quota_poll_interval_sec=0,
             max_quota_polls=1,
             config=CmocConfig(),
+            subcommand_logger=logger,
         )
 
     assert "quota availability probe" in str(exc_info.value)
     assert "malformed JSONL event (invalid JSON): not-json" not in exc_info.value.detail
+    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert [record["stdin"] for record in call_records] == ["prompt", probe_prompt]
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert [event["status"] for event in codex_events] == ["quota_waiting", "failed"]
+    assert codex_events[1]["returncode"] == 0
+    assert "malformed JSONL event (invalid JSON): not-json" in codex_events[1]["error"]
 
 
 def test_quota_poll_limit_stops_before_probe(
