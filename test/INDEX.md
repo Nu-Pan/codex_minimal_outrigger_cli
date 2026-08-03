@@ -766,18 +766,19 @@
 # `test_runtime_refactor.py`
 
 ## Summary
-- realization refactor の永続 state 同期・検証・target 選択をテストするファイル。oracle/realization file 集合の追跡、履歴保持と変更検出、path・symlink・特殊 file・state schema の拒否、および未調査・最古順の選択規則を扱う。
+- realization refactor の永続 state について、対象ファイル集合の同期、調査履歴の保持・再調査判定、調査対象の優先選択、state schema 検証をテストする。oracle と realization の file 判定、path escape・特殊 file・symlink・gitlink など境界条件も扱う。refactor state の挙動や回帰を確認する realization test の入口である。
 
 ## Read this when
-- realization refactor の state 同期、state の読み書き検証、対象 file の分類、調査対象選択ロジックを変更またはレビューするとき
-- refactor state の path 安全性、schema 検証、symlink や特殊 file の扱いを確認するとき
+- refactor state の同期・読み書き・schema 検証を変更または調査するとき
+- oracle/realization file classifier や refactor target selection の挙動を確認するとき
+- refactor 機能の境界条件に関する realization test を探すとき
 
 ## Do not read this when
-- realization refactor の実装詳細ではなく、正本仕様そのものを確認したいときは oracle/doc/app_spec/sub_command/realization_refactor.md と oracle/doc/app_spec/misc_spec.md を直接読む
-- refactor state や target 選択に関係しない CLI 機能・別サブコマンドのテストを調べるとき
+- refactor state や target selection の挙動を扱わないテストを探しているとき
+- 正本仕様そのものを確認するときは、参照先として示された oracle 文書を直接読むべきである
 
 ## hash
-- ba1d4a580fe1720514b8d55f0669ee5ec0bcb53aeebbc2f51a133492ea4aebea
+- 537d98f1cb502fd793e165dbe1200c01d8d4ae1a426830152b63b03020cce035
 
 # `test_runtime_state.py`
 

@@ -10,7 +10,6 @@ from .runtime_errors import CmocError
 from .runtime_git import (
     is_oracle_file_path,
     is_realization_file_path,
-    run_git,
 )
 from .runtime_paths import refactor_state_path
 
@@ -90,18 +89,15 @@ def sync_refactor_state(root: Path, *, sync_entries: bool = True) -> RefactorSta
 
 def enumerate_refactor_targets(root: Path) -> list[str]:
     """現在存在する全 oracle file と realization file を列挙する。"""
-    fields = run_git(
-        ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], root
-    ).stdout.split("\0")
+    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # Git の file 一覧は nested repository 内を列挙しないため、仕様どおり work-root
+    # 配下の全 file を glob してから oracle/realization の定義で分類する。
     targets = []
-    for relative in fields:
-        if not relative:
-            continue
-        path = root / relative
+    for path in root.rglob("*"):
         if not (path.is_file() or path.is_symlink()):
             continue
         if is_oracle_file_path(root, path) or is_realization_file_path(root, path):
-            targets.append(relative)
+            targets.append(path.relative_to(root).as_posix())
     return sorted(set(targets))
 
 
