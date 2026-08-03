@@ -684,10 +684,10 @@
     "last_investigated_at": "2026-07-24_23-04_29_031657000"
   },
   "src/basic/path_model.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "04ccbdd9d67b1290d840fdc1d4a8b3ff576ff7ddf0efee21717a188214d79784",
-    "last_investigated_at": "2026-07-24_23-15_29_351406000"
+    "last_investigated_sha256": "f80137559e09b7e85d1b92c22df5d0ef5f82420f970ee0de34e7b4a5a58eabf3",
+    "last_investigated_at": "2026-08-03_11-06_11_712260000"
   },
   "src/basic/struct_doc.py": {
     "investigation_required": false,
