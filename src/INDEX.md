@@ -1,21 +1,20 @@
 # `acp`
 
 ## Summary
-- acp 互換 import 名前空間の公開入口。oracle 側の canonical 実装を複製せず、既存の `acp.*` 参照を維持するための互換層を提供する。
-- `__init__.py` は名前空間の存在と互換入口の存続条件を示し、`builder` は canonical builder への委譲、quota probe の互換実装、下位 builder 領域への入口を担う。
+- `acp` 互換名前空間を提供する realization パッケージ。canonical な `oracle` 実装への互換 import、quota probe の fallback、動的 prompt の code fence 補正、indexing・TUI builder の再公開を扱う。互換入口全体の存廃や `acp` 参照の移行を検討する際の上位入口であり、個別の生成ロジックは下位要素へ進む。
 
 ## Read this when
-- 既存コードの `acp.*` import を維持または `oracle.*`・実体モジュールへ移行する際に、互換入口の責務と存続条件を確認したいとき。
-- builder 配下の処理領域が不明で、indexing、oracle、realization、session、TUI、quota probe などの下位要素への入口を特定したいとき。
-- optional な oracle quota probe が存在しない配布形態で、互換 fallback の所在を確認したいとき。
+- 既存の `acp.*` import 経路を維持・削除・canonical 実装へ移行する判断をするとき。
+- quota availability probe、prompt fence 補正、indexing builder、TUI builder の互換接続先を特定するとき。
+- builder 配下の oracle・realization・session・indexing・TUI の構成を把握し、該当する下位要素へ進む必要があるとき。
 
 ## Do not read this when
-- oracle 側の canonical builder 実装や正本仕様を確認したいときは、oracle 側の対応モジュールを直接読む。
-- 具体的な prompt fence、index entry、session、TUI、realization、oracle review/edit などの実装詳細を調べるときは、builder 配下の該当する下位要素を直接読む。
-- `acp.*` 互換層と無関係な CLI 本体や利用者向け参照の挙動を調べるときは、このディレクトリを起点にしない。
+- canonical な実装や正本仕様の内容を確認したいときは、対応する `oracle` 側の実体を直接読む。
+- 個別 builder の詳細な生成ロジックや prompt の変換規則だけを調査するときは、該当する下位モジュールを直接読む。
+- `acp` 互換層と無関係な CLI、TUI、共通処理の挙動を調査するとき。
 
 ## hash
-- 063b73908eccd72df4e63c578421a57ed10312daa00b972821ea3b729067f804
+- c6a3101eda3c4767814e5e2db6ed0ae2fe3d78b7022a6c71837f778e04b0f8a8
 
 # `basic`
 

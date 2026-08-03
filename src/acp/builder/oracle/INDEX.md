@@ -15,17 +15,22 @@
 # `edit`
 
 ## Summary
-- `cmoc oracle edit` builder の realization adapter パッケージ。oracle edit 用 TUI 起動パラメータの生成入口と関連する配置領域を扱う。
+- `cmoc oracle edit` builder の realization adapter パッケージ。oracle edit 用 builder 実装への入口と、TUI 起動パラメータ生成を扱う。
+- 空のディレクトリで、現時点では案内対象となる実装・テスト・補助ファイルを含まない。
+- oracle edit 用 TUI 起動パラメータを生成し、リポジトリ実パスの解決、editor input directory の準備、oracle 側 builder の呼び出しを担う。
 
 ## Read this when
-- `cmoc oracle edit` の builder adapter の責務や、TUI 起動パラメータ生成の実装入口を確認するとき。
+- `cmoc oracle edit` の builder adapter の責務や実装入口を確認するとき。
+- このディレクトリにファイルが追加されたか確認するとき。
+- oracle edit の TUI 起動パラメータ生成、editor input directory の準備、または realization 側から oracle 側 builder を呼び出す経路を確認・変更するとき。
 
 ## Do not read this when
-- oracle edit の具体的な prompt 構築仕様や編集処理を確認したいとき。対応する oracle builder または対象実装を直接読む。
-- 他の ACP builder や TUI 以外の起動処理を調査するとき。
+- oracle edit の具体的な編集処理や CLI 全体の動作を確認したいとき。対象の実装ファイルや上位の CLI 関連ファイルを直接読む。
+- oracle 側の TUI builder の prompt 内容や本体ロジックを直接確認するとき。
+- oracle edit や TUI 起動パラメータと無関係な builder、パス解決、実行時処理を調べるとき。
 
 ## hash
-- 8eaf93e4d854bf31694349ea8dfbf72a6819a47a09b0f8a42cf7d62f10e377ad
+- 8f3a1408430c389329fe8f6468d5594d329af74b48c018f93d6368153e193bf1
 
 # `investigation`
 
