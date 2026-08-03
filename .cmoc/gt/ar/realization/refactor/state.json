@@ -1087,9 +1087,9 @@
   },
   "test/test_acp_builder_tui_parameters.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "4f9cd433607cb19fbee7b396a535097531e6981b1a626fd1b5d4ad6726238380",
-    "last_investigated_at": "2026-07-26_05-19_32_904720000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "2bb304c7ea64fd5c28021ec0e6aa82da0b469ad4f9bc951bbf3c20509ccd4786",
+    "last_investigated_at": "2026-08-03_12-35_22_300635000"
   },
   "test/test_basic_runtime.py": {
     "investigation_required": true,

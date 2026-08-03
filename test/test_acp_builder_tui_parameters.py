@@ -13,14 +13,21 @@ from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
 from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
 
 
+@pytest.mark.parametrize(
+    "original_prompt",
+    [
+        "# 依頼\n\nsrc の実装を確認する。",
+        "README の構成を調査する。",
+    ],
+)
 def test_tui_launch_builder_uses_fixed_parameter_and_standards(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    original_prompt: str,
 ) -> None:
     """オリジナル prompt によらず固定の規範と実行設定を使用する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    original_prompt = "# 依頼\n\nsrc の実装を確認する。"
 
     parameter = build_tui_launch_tui_parameter(
         "2026-08-03_12-00_00_000000000",

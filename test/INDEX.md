@@ -170,18 +170,19 @@
 # `test_acp_builder_tui_parameters.py`
 
 ## Summary
-- TUI 起動 builder の固定 parameter と prompt 構成を検証するテスト。モデル種別、推論強度、ファイルアクセス権、作業ディレクトリ、索引処理、生成 prompt、完全 prompt に含める規範と除外する規範を確認する。互換 module の公開 API が builder 関数だけであることも検証する。
+- TUI 起動 builder が固定するモデル・推論・ファイルアクセス設定、実行前処理、生成 prompt と規範の内容を検証するテスト。互換 module の公開 API が現行 builder のみに限定されることも確認する。TUI 起動 parameter の挙動や公開面を変更・確認する際のテスト入口。
 
 ## Read this when
-- TUI 起動 parameter の生成仕様や、生成 prompt に適用される規範の包含・除外を変更または確認するとき。
-- acp.builder.tui.launch_tui の公開 API や互換 module の公開面を変更または確認するとき。
+- TUI 起動 parameter の固定値、prompt 生成、規範の埋め込み、実行前処理を変更または検証するとき。
+- TUI 起動 builder の互換 module における公開 API の範囲を変更または検証するとき。
+- 対応する builder 実装の挙動に対するテスト要件を確認するとき。
 
 ## Do not read this when
-- TUI 以外の builder の parameter や prompt を扱うとき。
-- TUI 起動 builder の実装ではなく、共通の prompt 生成規則や正本仕様そのものを変更・確認するときは、対応する実装または oracle を直接読む。
+- TUI 起動 builder の実装詳細を直接確認・変更する場合は、まず対応する実装や正本仕様を読むべきである。
+- TUI 以外の builder や、共通 parameter の一般仕様だけを調査する場合。
 
 ## hash
-- 2bb304c7ea64fd5c28021ec0e6aa82da0b469ad4f9bc951bbf3c20509ccd4786
+- 690dcff632dbbae0554cb917f595d38985d2ddc8eae16c07ed8422dd32814a79
 
 # `test_basic_runtime.py`
 
