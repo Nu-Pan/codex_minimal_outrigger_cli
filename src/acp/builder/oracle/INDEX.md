@@ -35,22 +35,21 @@
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` 用 builder adapter パッケージの入口。oracle investigation 向け builder 機能への参照先。
-- oracle investigation 用の完全な AgentCallParameter を正本 builder に委譲する realization adapter。実行前のリポジトリ解決と editor input 用ディレクトリ準備を担い、investigation launch TUI のパラメータ生成処理への入口となる。
+- `cmoc oracle investigation` 用 builder adapter パッケージの入口。oracle investigation 向け builder 機能へ進む際の参照先。
+- oracle investigation の正本 builder を呼び出す realization adapter。エディタ入力用ディレクトリを準備し、時刻情報とユーザー指示を正本 builder に渡して AgentCallParameter を生成する。
 
 ## Read this when
 - oracle investigation 用 builder adapter の構成や入口を確認するとき
 - 該当パッケージ内の下位実装へ進む前に責務を確認するとき
-- oracle investigation の launch TUI 用 builder や AgentCallParameter 生成の呼び出し経路を確認するとき
-- editor input ディレクトリの準備を含む investigation 起動処理を変更・調査するとき
+- oracle investigation の launch TUI 用パラメータ生成、完全な prompt の保存先準備、正本 builder への委譲経路を確認するとき
 
 ## Do not read this when
-- builder adapter の具体的な実装詳細を確認したいときは、パッケージ内の実装ファイルを直接読む
-- 正本 builder の prompt 内容や investigation 起動仕様そのものを確認したいとき
-- investigation 以外の builder、TUI 実装、または共通パス解決処理だけを調査するとき
+- oracle 側の launch TUI builder の仕様や prompt 構築詳細を確認したいとき
+- launch TUI 以外の builder や、エディタ入力ディレクトリの一般的な実装だけを調べるとき
+- oracle investigation 以外の builder や ACP 実装を調べるとき
 
 ## hash
-- ebdb0eded51c4843b36edad877803b1b0e31f6fcff21c28327631abb2cecfc39
+- 80cc28d0067aa6d4edfe448b81bdeec6cbd2b358695b1bf3958ae53924fc5e03
 
 # `review`
 

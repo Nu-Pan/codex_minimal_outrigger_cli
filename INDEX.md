@@ -123,35 +123,35 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 実装をまとめるディレクトリ。`main.py` の CLI 登録・委譲、サブコマンド実装、共通 runtime、互換 import shim、正本 `oracle` パッケージへの接続を扱う上位入口であり、個別機能の調査は対応する下位要素へ進む。
+- CLI 起動用の realization 実装をまとめる領域。Typer の主要エントリーポイント、サブコマンド実装、ACP 互換公開入口、共通 runtime、設定・oracle の互換 shim を扱う。CLI 全体の構成や実行入口を確認した後、個別機能は対応する下位要素へ進むための起点となる。
 
 ## Read this when
-- cmoc の realization 側 CLI 構成、主要エントリーポイント、サブコマンド実装への入口を確認するとき。
-- 共通 runtime、互換 import、正本パッケージ接続を含む src 配下の責務分担を把握するとき。
-- 特定の CLI サブコマンドや共通処理の下位実装へ進む前に、該当する入口を選ぶとき。
+- cmoc の CLI 登録、サブコマンドへの委譲、引数解析や自動補完の挙動を調査・変更するとき。
+- doctor、indexing、tui、session、run、oracle、realization などのサブコマンド実装への入口を探すとき。
+- ACP、設定、oracle パッケージ、共通 runtime の realization 側互換入口や横断基盤の構成を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの処理詳細を確認するときは、対応する `sub_commands` 配下を直接読む。
-- 共通 runtime helper の詳細を確認するときは、`commons` 配下を直接読む。
-- 正本仕様や canonical 実装の内容を確認するときは、対応する `oracle` 側の実体を直接読む。
-- 互換 import の個別挙動だけを確認するときは、該当する shim または再公開元を直接読む。
+- 特定サブコマンドの処理詳細を確認したい場合は、サブコマンド配下の該当実装へ直接進む。
+- 共通 runtime helper、設定定義、oracle の正本実装、ACP builder の個別挙動を確認したい場合は、それぞれの直接の実装または oracle 側定義を読む。
+- CLI や互換入口と無関係な仕様・実装を調査するとき。
 
 ## hash
-- 5906e619548dbcc585abb9254c64fcfff85c3a26ab57f64d814bae3ddc85eb31
+- 97c036a2705f6d7c78502ea6f061c6b44d7c0630e43fa38c608c396729c0c2cb
 
 # `test`
 
 ## Summary
-- テストコード群をまとめる realization test ディレクトリ。CLI、runtime、Codex 実行、indexing、oracle review、session lifecycle、設定、状態永続化など、実装の外部挙動と境界条件を検証する回帰・統合・受け入れテストを扱う。個別機能のテストファイルへ進むための入口である。
+- cmoc の realization test を集約するテスト領域。CLI、runtime、Codex 実行経路、indexing、oracle review、session/run lifecycle、設定・状態永続化などの外部挙動と境界条件を検証する。個別テストファイルや共有テストヘルパーへ進むための入口。
 
 ## Read this when
-- 対象機能の realization test、統合テスト、回帰テスト、または本番経路の受け入れテストを探すとき。
-- CLI lifecycle、Codex runtime、indexing、oracle review、session/run state など、複数コンポーネントにまたがる外部挙動の検証箇所を確認するとき。
+- cmoc の機能変更に対応する realization test を探すとき
+- 既存の外部挙動、統合 lifecycle、エラー処理、安全性の回帰テストを確認するとき
+- テスト専用の共有 helper や実経路 Ollama 環境の扱いを調査するとき
 
 ## Do not read this when
-- 実装の責務や正本仕様そのものを確認したいときは、対応する src または oracle のファイルを直接読む。
-- テスト実行の標準手順や品質ゲートを確認したいときは、対応するテスト実行規則を先に読む。
-- テスト対象と無関係な実装詳細や仕様だけを調査するとき。
+- 実装の責務や正本仕様そのものを確認するときは、対応する src または oracle の文書・ソースを直接読む
+- テスト実行全体の標準手順だけを確認するときは、対応するテスト実行規則を読む
+- 対象機能と無関係なテストを探しているときは、このディレクトリ全体ではなく該当する個別テストへ進む
 
 ## hash
-- abb24366298d9dabfe3072251b91c35b83e2f97154273161085bbd48728f00c2
+- 355eb42a9dd78f99dac76e7753c1c39c8e673fcc2b6264a27284d2abd4161c0b

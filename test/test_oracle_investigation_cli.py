@@ -13,6 +13,7 @@ import pytest
 from _cli_support import run_doctor, runner
 from _git_support import make_repo
 
+import acp.builder.oracle.investigation.launch_tui as launch_tui_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.investigation as investigation_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
@@ -88,3 +89,13 @@ def test_oracle_investigation_has_no_session_precondition(
     complete_prompt = prompt_path.read_text(encoding="utf-8")
     assert "# oracle standard" in complete_prompt
     assert "oracle の根拠を調査する" in complete_prompt
+
+
+def test_oracle_investigation_builder_exports_only_the_builder() -> None:
+    """investigation の realization adapter が補助名を公開しない。"""
+    expected = ["build_oracle_investigation_launch_tui_parameter"]
+    assert launch_tui_module.__all__ == expected
+    assert (
+        sorted(name for name in vars(launch_tui_module) if not name.startswith("_"))
+        == expected
+    )
