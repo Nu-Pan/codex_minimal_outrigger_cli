@@ -828,10 +828,10 @@
     "last_investigated_at": "2026-07-31_18-39_37_305280000"
   },
   "src/commons/runtime_run_lifecycle.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "69d910c7db522a9fe1c5847164720a31f4be0b88230d905aa79763e905ec786e",
-    "last_investigated_at": "2026-07-30_02-38_18_889987000"
+    "last_investigated_sha256": "1bc627c17c3ce127fa032a0b71340fbd854498a11ffcbc56780e8cdee78ba73f",
+    "last_investigated_at": "2026-08-04_02-46_21_241563000"
   },
   "src/commons/runtime_run_report.py": {
     "investigation_required": false,
