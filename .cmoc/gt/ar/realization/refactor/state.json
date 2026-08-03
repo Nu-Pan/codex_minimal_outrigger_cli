@@ -1230,10 +1230,10 @@
     "last_investigated_at": "2026-07-31_12-38_37_478878000"
   },
   "test/test_packaged_import.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "03bfd812e2a27540732f277777e9f2e12787c042b1c95a522ba0537a6b359c82",
-    "last_investigated_at": "2026-07-26_11-42_00_844083000"
+    "last_investigated_sha256": "fb66b4d678655d53e9ce9394a52d98ee66d4ba6e159ddda2fccf6037b3943321",
+    "last_investigated_at": "2026-08-03_14-06_59_060148000"
   },
   "test/test_production_cli.py": {
     "investigation_required": true,
