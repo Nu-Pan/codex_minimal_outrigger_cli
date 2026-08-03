@@ -27,7 +27,7 @@ def build_session_join_conflict_resolution_parameter(
 ) -> _AgentCallParameter:
     """canonical parameterを再公開し、競合 path の fence を保護する。"""
     parameter = _build_parameter(conflicted_paths)
-    path_context = _AgentCallPathContext(parameter.agent_call_cwd)
+    path_context = _AgentCallPathContext(agent_call_cwd=parameter.agent_call_cwd)
     path_list = "\n".join(
         str(_resolve_real_path(path, path_context)) for path in conflicted_paths
     )

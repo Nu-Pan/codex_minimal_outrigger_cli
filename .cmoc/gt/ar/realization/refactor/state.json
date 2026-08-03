@@ -655,9 +655,9 @@
   },
   "src/acp/builder/session/join/conflict_resolution.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "5716153998dadc61c97eb12b63f0518a34c1111910b718b090ce9f8a249557da",
-    "last_investigated_at": "2026-07-29_18-45_56_590204000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "de65cce597118bf119865b66ea413acfbcafb953c0a48e462279853faf6ae505",
+    "last_investigated_at": "2026-08-04_01-51_06_965646000"
   },
   "src/acp/builder/tui/__init__.py": {
     "investigation_required": false,

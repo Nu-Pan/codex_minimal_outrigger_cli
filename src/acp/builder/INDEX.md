@@ -125,18 +125,21 @@
 # `session`
 
 ## Summary
-- session 関連の互換 import 経路を提供する realization package。session 初期化と join 配下の canonical 実装への接続・旧 import 維持を扱う下位要素への入口。
+- 既存の `acp.builder.session.*` import 互換性を維持するための session package。初期化入口と、canonical な session join 競合解決実装への互換アダプターを含む。
+- session join の互換 import 経路、競合解決 parameter のラッパー、競合 path の prompt 埋め込み、code block fence 保護を確認するための入口。
 
 ## Read this when
-- acp.builder.session.* の互換 import 経路や公開面を確認・変更するとき。
-- session join に関する互換経路や、競合解決パラメータ生成への接続を確認するとき。
+- 既存の `acp.builder.session.*` import 経路や互換 package の公開面を調査・変更するとき。
+- session join の競合解決互換ラッパーや canonical 実装との対応関係を確認するとき。
+- 互換 package を削除または oracle 側実装へ移行できる条件を検討するとき。
 
 ## Do not read this when
-- session の具体的な実装挙動や構成要素を確認したい場合。
-- canonical 実装そのものや、互換 package の参照元を調査する場合。
+- session join の具体的な処理内容や canonical な競合解決仕様を確認したいとき。
+- session 実装の通常の挙動や構成要素、新規機能の入口を調査するとき。
+- 互換 import の利用箇所や利用者向け API から参照が残っているかを確認したいとき。
 
 ## hash
-- e7357a6d7de42b0fb8253544f1d8069f2495ebe105125df1b044135c21268d74
+- 7db33cfd6e9f321d2d2a5d79c5f69777fe5ac95f0ba1cd67f0d3d4df2a7aee6f
 
 # `tui`
 
