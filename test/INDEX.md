@@ -97,18 +97,22 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- editing run workload の canonical builder adapter を検証するテスト。apply builder の commit 範囲・raw diff・標準設定、ネストしたコードフェンスの保持、refactor builder の canonical structured-output schema・実行設定・prompt 内容、および差分内の境界風テキストの安全な保持を確認する。
+- editing run workload の canonical builder adapter を検証するテスト。apply 用 builder が commit 範囲・raw diff・標準規則を prompt に埋め込み、refactor 用 builder が canonical structured output schema と所定の実行設定を使用することを確認する。
+- raw diff に三連 backtick や prompt 境界風の見出しが含まれる場合でも、外側の prompt 境界を壊さず保持できることを検証する。
+- editing run 用 linked worktree を fixture で隔離し、対象 builder の parameter、prompt、schema path、実行モードを確認する realization test の入口。
 
 ## Read this when
-- ACP builder の editing run 用 apply/refactor fork parameter の実装や canonical schema、prompt 境界処理を変更・レビューするとき。
-- 関連する oracle builder 実装または structured-output schema とテストの適合性を確認するとき。
+- apply または refactor の editing run builder の prompt 構成、実行設定、structured output schema の利用を変更・検証するとき。
+- raw diff の埋め込みと prompt 境界のエスケープ・保持挙動を確認するとき。
+- 対象 builder の canonical oracle schema との一致をテスト実装から確認するとき。
 
 ## Do not read this when
-- editing run workload や ACP builder の parameter 生成に関係しない機能を調査するとき。
-- builder 実装ではなく、個別の CLI 実行処理や一般的なテスト基盤だけを確認するとき。
+- builder の実装詳細そのものを変更・調査する場合は、対応する realization implementation と oracle file を直接読む。
+- editing run 以外の builder や、builder の一般的なテスト実行方法だけを確認する場合。
+- schema の正本定義を確認する場合は、このテストではなく対応する oracle schema file を直接読む。
 
 ## hash
-- 97790644222cbc2ef25b9412fe42013cef9114efef02f8c398c61169f1507c36
+- 340600a90ae1353f4ed62914d447b15c8ebc04ba380d5143c3cb409448d75fac
 
 # `test_acp_builder_indexing_parameters.py`
 
