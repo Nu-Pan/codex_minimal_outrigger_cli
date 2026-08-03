@@ -81,24 +81,18 @@
 # `_ollama_support.py`
 
 ## Summary
-- 実経路統合テスト専用の case-local Ollama を準備するテストヘルパー。共有キャッシュの安全性検証、Ollama バイナリとモデルの取得・atomic publish・case-local materialize、GPU-only 推論の事前確認、動的 provider 設定、pytest 起動、case 単位の process group teardown を一つのライフサイクルとして扱う。test 配下から、Ollama を使う実経路統合テストの実行基盤へ進む入口。
+- 実経路統合テスト向けに、case-local Ollama の導入・設定・起動・GPU 推論確認・終了処理をまとめて提供するテスト支援モジュール。共有 cache の安全な検証、atomic publish、独立した working set、pytest runner も扱うため、Ollama を使う統合テストの入口となる。
 
 ## Read this when
-- Ollama を必要とする実経路統合テストの実行方法や前提条件を確認するとき
-- test case 専用の Ollama process、model working set、cache、GPU 推論確認の挙動を調査・変更するとき
-- case-local Ollama を Codex の model provider 設定へ接続する方法を確認するとき
-- Ollama キャッシュの lock、atomic publish、materialize、破損時の再構築を調査するとき
-- テスト終了時の専用 process group の停止処理を確認するとき
+- Ollama を使用する実経路統合テストの実行環境、cache、model 構築、GPU-only 推論、process group の teardown を調査・変更するとき
+- test case から case-local Ollama provider を設定する方法や、専用 pytest runner の挙動を確認するとき
 
 ## Do not read this when
-- Ollama を使わない通常の単体テストや統合テストの実装・実行を扱うとき
-- Ollama 本体やモデルの一般的な仕様を確認したいとき
-- テスト実行全体の標準手順や品質ゲートを確認したいときは、先に対応するテスト実行規則を読むとき
-- model provider や CmocConfig の正本仕様・一般的な実装を確認したいとき
-- 対象の具体的な統合テスト case の期待挙動を確認したいときは、その test file を直接読むとき
+- Ollama を使わない通常のテストや、アプリケーション本体の model provider 実装を調査するとき
+- テスト実行全体の選択・品質検査手順を確認したいときは、まず test execution の正本仕様を読む
 
 ## hash
-- e894318b9984bb7d0d44d0b7c5ac8288aacb34e68bea50f845d6cafff03b90ee
+- c96f1fa7b5a180f33e64ebf941c45a1711c31c3dd36a3fcedf848b04ec430003
 
 # `test_acp_builder_editing_run_parameters.py`
 
@@ -257,19 +251,21 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex exec 実行基盤のテスト。pytest 実行環境、Ollama キャッシュ分離、current worktree の import、Codex HOME 隔離、CLI 引数・override・provider・schema・出力処理を検証する。runtime_codex とその周辺テストの入口。
+- Codex CLI 実行ランタイムとテスト用ローカル Ollama 環境の結合を検証するテスト。pytest 実行時の一時領域・キャッシュ分離、モデルキャッシュ、current worktree の import、Codex Home 分離、Codex exec の argv・stdin・override・出力・schema・provider 設定を扱う。
 
 ## Read this when
-- Codex exec の起動契約、ファイルアクセスモード、モデル provider、構造化出力 schema、prompt の stdin 渡しを確認・変更するとき
-- Ollama を用いた Codex 実行の統合動作や、テスト用 HOME・CODEX_HOME・一時ディレクトリの分離を確認するとき
-- runtime_codex、runtime_codex_profile、テスト用 Ollama runner の挙動を検証するとき
+- Codex exec の起動引数、stdin prompt、structured output、override 設定、出力解析を変更または検証するとき
+- テスト用ローカル Ollama の起動、モデル準備、キャッシュ配置、GPU モデル再利用を変更または検証するとき
+- pytest runner の一時ディレクトリ、current worktree import、Codex Home 分離を変更または検証するとき
+- Codex CLI とローカル provider の結合動作を実測テストで確認するとき
 
 ## Do not read this when
-- Codex exec やテスト実行基盤に関係しない機能の実装・テストを扱うとき
-- Codex CLI の正本仕様そのものを確認するときは、対応する oracle 文書を直接読む
+- Codex exec や Ollama の実装自体を変更する場合は、まず対応する src の実装と正本仕様を読むとき
+- Codex CLI の一般的な仕様や設定契約だけを確認する場合は、専用の app_spec 文書を直接読むとき
+- このテスト領域と無関係な機能の実装・テストを扱うとき
 
 ## hash
-- fdc57cfbb77facb7744178f263cd8cf087542b9fd8c5533c9bfc0374b55b51fc
+- 44f59de3cb5e835d1740f35c83d2b62d312958b9726bcae9e9e3f5f6181c6542
 
 # `test_codex_runtime_home.py`
 

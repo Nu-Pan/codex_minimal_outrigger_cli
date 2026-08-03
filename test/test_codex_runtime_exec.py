@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 import _ollama_support
 import pytest
@@ -81,6 +82,110 @@ def test_ollama_cache_selection_ignores_run_local_tmpdir(
 
     assert cache_root.parent == stable_temporary_directory
     assert not cache_root.is_relative_to(run_temporary_directory)
+
+
+def test_ollama_cache_selection_falls_back_when_system_temp_is_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """system temp の取得失敗時は pytest session temp を使う。"""
+    monkeypatch.delenv(TEST_OLLAMA_CACHE_ENV, raising=False)
+
+    def unavailable_system_temp() -> Path:
+        """利用不能な system temp を再現する。"""
+        raise OSError("system temp unavailable")
+
+    monkeypatch.setattr(
+        _ollama_support,
+        "_stable_system_temporary_directory",
+        unavailable_system_temp,
+    )
+
+    cache_root = _select_cache_root(tmp_path)
+
+    assert cache_root.parent == tmp_path.parent
+    assert cache_root.name.startswith("ollama-cache-")
+
+
+def test_ensure_model_reuses_existing_gpu_model_parameters(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`show --parameters` の既存 GPU model を cache hit として扱う。"""
+    calls: list[list[str]] = []
+
+    def run_ollama(
+        _executable: Path,
+        args: list[str],
+        _environment: dict[str, str],
+        _timeout: float,
+    ) -> subprocess.CompletedProcess[str]:
+        """既存 model の show 結果だけを返す。"""
+        calls.append(list(args))
+        if args == ["show", TEST_SLM_MODEL]:
+            return subprocess.CompletedProcess(args, 0, "", "")
+        if args == ["show", "--parameters", TEST_SLM_MODEL]:
+            return subprocess.CompletedProcess(
+                args, 0, "num_gpu 999\nnum_predict 4096\n", ""
+            )
+        raise AssertionError(f"unexpected Ollama command: {args}")
+
+    monkeypatch.setattr(_ollama_support, "_run_ollama", run_ollama)
+
+    class RunningProcess:
+        """`_ensure_model` が確認する起動中 process の最小 double。"""
+
+        def poll(self) -> None:
+            """process が起動中であることを返す。"""
+            return None
+
+    changed = _ollama_support._ensure_model(
+        tmp_path / "ollama",
+        {},
+        cast(subprocess.Popen[bytes], RunningProcess()),
+        tmp_path / "ollama.log",
+        tmp_path,
+    )
+
+    assert changed is False
+    assert calls == [
+        ["show", TEST_SLM_MODEL],
+        ["show", "--parameters", TEST_SLM_MODEL],
+    ]
+
+
+def test_cached_install_rebuilds_when_archive_path_is_corrupt_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """archive path の directory 化を cache miss として再構築する。"""
+    cache_root = tmp_path / "cache"
+    cache_root.mkdir()
+    archive = cache_root / "ollama-linux-amd64.tar.zst"
+    archive.mkdir()
+    downloaded: list[Path] = []
+
+    def download_archive(path: Path) -> None:
+        """壊れた archive を置き換える download を再現する。"""
+        downloaded.append(path)
+        path.write_bytes(b"archive")
+
+    def executable_ok(path: Path) -> bool:
+        """staging の最小 executable 検証を再現する。"""
+        return path.name == "ollama" and "install-staging-" in path.parent.parent.name
+
+    def extract_archive(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """archive extraction の成功を再現する。"""
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(_ollama_support, "_download_archive", download_archive)
+    monkeypatch.setattr(_ollama_support, "_ollama_executable_ok", executable_ok)
+    monkeypatch.setattr(subprocess, "run", extract_archive)
+
+    install = _ollama_support._ensure_cached_install(cache_root)
+
+    assert downloaded == [archive]
+    assert install.parent == cache_root / "binaries"
+    assert archive.is_file()
 
 
 def test_pytest_runner_imports_current_worktree_sources() -> None:
