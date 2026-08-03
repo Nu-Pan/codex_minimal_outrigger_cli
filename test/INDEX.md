@@ -391,21 +391,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、Codex child tracking、INDEX 更新、Git 差分・merge・cleanup、apply/refactor の成功・失敗・中断時ライフサイクルを検証する。関連する lifecycle fixture と state 遷移を共有するため、これらの統合シナリオを一続きで扱う入口となる。
+- workload fork と共通 editing run lifecycle の統合テストを担う。apply/refactor fork、run join/abandon、session state、run worktree、Git branch、process tracking、INDEX refresh、report、rollback、cleanup、interrupt、競合解決を同一 fixture で検証する。対象領域の end-to-end な挙動確認への入口となる。
 
 ## Read this when
-- realization apply fork または realization refactor fork の run lifecycle を変更・検証するとき
-- run join、run abandon、force-resolve、worktree・branch cleanup の挙動を変更・検証するとき
-- run state、process tracking、Codex child 停止、INDEX refresh、report 生成、rollback の統合挙動を調査するとき
-- fork と join/abandon が共有する Git 差分、rename/delete、oracle 管理境界、state sync を確認するとき
+- realization apply/refactor fork と run join/abandon の連携を変更・検証するとき
+- editing run の state 遷移、worktree・branch の lifecycle、process tracking、Codex child cleanup を変更・検証するとき
+- INDEX refresh、fork/lifecycle report、変更 path 集計、rollback、merge・cleanup failure、interrupt、force-resolve の挙動を変更・検証するとき
+- 既存の lifecycle fixture を共有する統合テストの全体的な制約や境界を確認するとき
 
 ## Do not read this when
-- 単一の実装関数の局所的な挙動だけを確認し、その関数に直接対応する test を読む方が適切なとき
-- run lifecycle や fork/join/abandon に関係しない機能の実装・テストを扱うとき
-- oracle 仕様そのものを確認するときは、対応する oracle doc または oracle src を直接読む
+- 単一 helper や単一 command の局所的な実装だけを確認し、対応する unit test が読むべき対象として案内されているとき
+- oracle の仕様や実装本体の詳細を確認することが目的で、統合テストの検証範囲を確認する必要がないとき
+- editing run、fork、join、abandon、state、worktree、report、INDEX refresh のいずれにも関係しないテストを探しているとき
 
 ## hash
-- 538710fe0520ee2a4c79094b1712805b57fa51e7ae5a68258b0aa805b5b9201f
+- abc2770357623f9983e8df4db4afb0942e75d731829f9dca5402f3501472f277
 
 # `test_indexing_cli.py`
 

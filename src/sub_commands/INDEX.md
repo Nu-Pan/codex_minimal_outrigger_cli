@@ -63,22 +63,22 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンド群のパッケージ入口。apply workload と refactor workload を下位要素として扱い、realization に対する適用・リファクタリング処理へ進むための構成上の入口。
-- apply は realization への変更適用、fork 実行制御、成功時の joinable 化、差分検査、rollback、cleanup、fork report を扱う。
-- refactor は対象 realization file の選択から Codex による調査・修正、差分・所見検証、state 更新、commit、unresolved 管理、完了判定、cleanup、report 保存までのライフサイクルを扱う。
+- realization workload サブコマンドのパッケージ。サブコマンドの構成と、apply・refactor それぞれの処理への入口を提供する。
+- apply workload の実装入口と、realization apply fork の実行 lifecycle、差分検査、commit、状態遷移、fork report 保存を扱う。
+- refactor workload の実装入口と、対象選択から調査・修正、差分検証、state 更新、commit、unresolved 管理、cleanup、report 保存までの一貫した処理を扱う。
 
 ## Read this when
-- realization workload サブコマンドの実装構成や CLI 挙動を確認・変更するとき。
-- realization の apply または refactor の実行フロー、状態更新、差分検証、rollback、cleanup、report 保存を調査するとき。
-- apply workload と refactor workload のどちらへ進むべきか判断するとき。
+- realization workload サブコマンドの構成や実装入口を確認するとき。
+- realization apply の CLI 動作、run lifecycle、差分許可範囲、commit、状態遷移、report 生成を調査・変更するときは apply の実装へ進むとき。
+- realization refactor の対象選択から完了までの処理、差分検証、agent commit、state、rollback、cleanup、report 保存を調査・変更するときは refactor の実装へ進むとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき。
-- apply の launch parameter 構築、共通の editing run ライフサイクル、fork report の共通形式など、より直接的な下位実装や共通モジュールを確認したいとき。
-- 個別の agent prompt、change summary、report の Markdown 表現など、下位要素に限定された詳細だけを確認したいとき。
+- realization workload に関係しない処理を扱うとき。
+- apply agent の launch parameter、run の共通 join・abandon 処理、realization apply の正本仕様だけを確認したいときは、より直接該当する実装・仕様へ進むとき。
+- 個別の refactor agent prompt、change summary、一般的な editing run 仕様、共通 fork report 表現だけを確認したいときは、対応する下位実装や共通仕様へ直接進むとき。
 
 ## hash
-- 3a0241c2c3edcdd236546ea4075c0d2051808a118efc87740636e9bc8ee60d5b
+- ed11061cefcc63e2d4805b4739309610373f9acedf9dce84931407a93fa024aa
 
 # `review`
 
