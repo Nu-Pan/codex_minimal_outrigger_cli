@@ -339,12 +339,15 @@ def _run_refactor_unit(
         return
     investigated_hash = file_sha256(target_path)
     state_paths_before = set(load_refactor_state(context.run_worktree))
-    agent_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
+    preflight_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
+    agent_head = preflight_head
+    agent_call_boundary_reached = False
 
     def record_agent_head() -> None:
         """本命 agent の直前の HEAD を preflight 後に記録する。"""
-        nonlocal agent_head
+        nonlocal agent_call_boundary_reached, agent_head
         agent_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
+        agent_call_boundary_reached = True
 
     try:
         parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
@@ -361,7 +364,16 @@ def _run_refactor_unit(
             before_agent_call=record_agent_head,
         )
     except BaseException:
-        _ensure_agent_did_not_commit(context.run_worktree, agent_head)
+        if agent_call_boundary_reached:
+            _ensure_agent_did_not_commit(context.run_worktree, agent_head)
+        else:
+            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+            # callback 前の indexing commit は agent commit ではないため、元の
+            # 中断・失敗を保ったまま処理単位の cleanup へ渡す。
+            _rollback_preflight_commits(
+                context.run_worktree,
+                preflight_head,
+            )
         raise
     # {{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py
     # agent は git commit を実行してはいけない。commit 済み差分は status 検査をすり抜けるため、
@@ -509,6 +521,22 @@ def _ensure_agent_did_not_commit(worktree: Path, before_head: str) -> None:
         ["agent の commit を取り除いてから refactor fork を再実行してください。"],
         f"before HEAD: {before_head}\nafter HEAD: {after_head}",
     )
+
+
+def _rollback_preflight_commits(worktree: Path, before_head: str) -> None:
+    """本命 agent 前の preflight commit を agent 境界前の失敗時に戻す。"""
+    after_head = run_git(["rev-parse", "HEAD"], worktree).stdout.strip()
+    if after_head == before_head:
+        return
+    try:
+        run_git(["reset", "--hard", before_head], worktree)
+    except BaseException as reset_error:
+        raise CmocError(
+            "refactor preflight の commit を差分へ戻せませんでした。",
+            ["run worktree の git history と indexing の状態を確認してください。"],
+            f"before HEAD: {before_head}\nafter HEAD: {after_head}\n"
+            f"reset error: {reset_error!r}",
+        ) from reset_error
 
 
 def _commit_refactor_unit(

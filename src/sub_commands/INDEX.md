@@ -63,20 +63,22 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply workload と realization refactor の実行構成へ進むための上位エントリー。
+- realization workload サブコマンド群のパッケージ入口。apply workload と refactor workload を下位要素として扱い、realization に対する適用・リファクタリング処理へ進むための構成上の入口。
+- apply は realization への変更適用、fork 実行制御、成功時の joinable 化、差分検査、rollback、cleanup、fork report を扱う。
+- refactor は対象 realization file の選択から Codex による調査・修正、差分・所見検証、state 更新、commit、unresolved 管理、完了判定、cleanup、report 保存までのライフサイクルを扱う。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- apply workload の実行フロー、fork のライフサイクル、差分検査、rollback、cleanup を調査するとき。
-- realization refactor の fork 実行、対象選択、agent call、commit、state・report 管理を調査するとき。
+- realization workload サブコマンドの実装構成や CLI 挙動を確認・変更するとき。
+- realization の apply または refactor の実行フロー、状態更新、差分検証、rollback、cleanup、report 保存を調査するとき。
+- apply workload と refactor workload のどちらへ進むべきか判断するとき。
 
 ## Do not read this when
-- realization workload や realization refactor に関係しない処理を確認するとき。
-- apply fork の launch parameter 構築だけを確認したいとき。
-- state 同期、target 選択、共通 run lifecycle、report 表示などの共通実装だけを確認したいとき。
+- realization workload サブコマンドに関係しない処理を確認するとき。
+- apply の launch parameter 構築、共通の editing run ライフサイクル、fork report の共通形式など、より直接的な下位実装や共通モジュールを確認したいとき。
+- 個別の agent prompt、change summary、report の Markdown 表現など、下位要素に限定された詳細だけを確認したいとき。
 
 ## hash
-- 8902fe26739f5d4d3ac7367aa8bdd6c5f34bc96d1a21c9f205f27d9939a556ce
+- 3a0241c2c3edcdd236546ea4075c0d2051808a118efc87740636e9bc8ee60d5b
 
 # `review`
 
@@ -112,18 +114,17 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session の各ライフサイクル操作に対応するサブコマンド実装への入口。
+- session サブコマンドの実装パッケージ。session の各ライフサイクル処理を確認する入口で、開始・参加・中断などの個別サブコマンド実装を含む。
 
 ## Read this when
-- session サブコマンドの構成や実装を確認・変更するとき
-- session の fork、join、abandon のライフサイクル処理を扱うとき
+- session サブコマンドの実装構成や、fork・join・abandon の処理を確認・変更するとき。
 
 ## Do not read this when
-- session 以外のサブコマンドを扱うとき
-- Git 実行、state 管理、CLI ランタイムなど共通機能だけを確認するときは、対応する共通モジュールを直接読む
+- session 以外のサブコマンドを扱うとき。
+- session のデータ構造や共通 runtime、設定・仕様のみを確認するときは、対応する直接の実装・仕様ファイルを読む。
 
 ## hash
-- 1b01f38b1306948237ab7a586e9027b86dfa7174512a360ba4f41377675838b6
+- ab4130d63f8a101c3dcea6098fe955537fe6e185866cf8cb9e83dd99578b8e4c
 
 # `tui.py`
 

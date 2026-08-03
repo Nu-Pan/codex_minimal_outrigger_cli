@@ -29,14 +29,15 @@
 # `launch_tui.py`
 
 ## Summary
-- oracle edit 用の TUI 起動パラメータを生成する realization adapter。リポジトリの実パスを解決し、完全な prompt の保存先ディレクトリを作成したうえで、oracle 側の正本 builder に処理を委譲する。
+- oracle edit 用の TUI 起動パラメータを生成する realization adapter。リポジトリ実パスを解決し、完全な prompt の保存先となる editor input directory を準備したうえで、oracle 側の builder を呼び出す。
 
 ## Read this when
-- oracle edit の TUI 起動パラメータ生成、prompt 保存先の準備、または oracle builder への委譲経路を変更・調査するとき。
+- oracle edit の TUI 起動パラメータ生成や、その前提となる editor input directory の準備を確認・変更するとき
+- realization 側から oracle edit の正本 builder を呼び出す経路を追跡するとき
 
 ## Do not read this when
-- oracle 側の prompt 構築仕様そのものを確認するときは、対応する oracle builder を直接読む。
-- 他の ACP builder や TUI 以外の起動処理を調査するとき。
+- oracle 側の TUI builder の prompt 内容や本体ロジックを直接確認するとき
+- oracle edit や TUI 起動パラメータと無関係な builder、パス解決、実行時処理を調べるとき
 
 ## hash
-- 4ad26bd2026388f9bea1d1dc78e071bd09e3cf13e602472c5dc92d5e91803506
+- 7ae5d0a9e77b7cc62a050f8eb6bba220dcc501423e1bbf47bb6361478ecfe557

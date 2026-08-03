@@ -308,17 +308,20 @@
 # `runtime_refactor.py`
 
 ## Summary
-- oracle/realization file の調査履歴を管理する state の読み込み・検証・保存・同期を担当する。対象 file の列挙、未調査対象の選択、調査要否の更新、path・entry・日時・SHA256 の schema 検証、および不正 state の利用者向け例外変換を含む。
+- oracle と realization のファイルを対象とする refactor state の読み込み・検証・保存・同期を担う。調査対象の列挙、未調査対象の選択、調査要求の一括設定、path・entry・履歴値の妥当性検証を提供する。refactor state の永続化や investigation target 選定の実装を確認する入口。
 
 ## Read this when
-- realization refactor の調査対象選択、調査履歴の同期・更新、state file の読み書きや schema 検証を変更・確認するとき。
-- oracle file と realization file の列挙条件や、調査履歴の妥当性検証を確認するとき。
+- refactor state の schema、履歴保持、ファイル集合との同期を変更・調査するとき
+- refactor 対象の選定や調査要求フラグの制御を変更・調査するとき
+- state path の安全性検証や不正 state のエラー変換を確認するとき
 
 ## Do not read this when
-- CLI の個別サブコマンド処理、一般的な runtime helper、refactor state の仕様そのものを確認したいとき。後者は対応する oracle document を直接読む。
+- 個別の oracle 仕様本文や CLI サブコマンドの利用者向け挙動を確認したいとき
+- refactor と無関係な runtime 共通処理を調査するとき
+- state の具体的な保存場所だけを確認したいときは、path 定義を担う対象を直接読むとき
 
 ## hash
-- 0dc268da40f4c5d47ff20fe8e687d82a25f89103fd82551ce70e5174536860ed
+- 2cc31b1e54ce0398ba95a31d140fcda98f83aa4df85532efa605895a11294639
 
 # `runtime_results.py`
 

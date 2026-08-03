@@ -1,3 +1,9 @@
+"""oracle review advocate validation の realization adapter。
+
+canonical 実装は
+`{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/validate_finding_advocate.py`。
+"""
+
 from dataclasses import replace as _replace
 
 from oracle.acp_builder.basic import AgentCallParameter as _AgentCallParameter

@@ -427,19 +427,6 @@ def test_oracle_review_advocate_keeps_existing_challenger_reasons(
             num_validate_findings_loop=1,
         ),
     )
-    findings = [
-        {
-            "finding_id": "finding-0001",
-            "oracle_path": "{{oracle-root}}/spec.md",
-            "severity": "fatal",
-            "title": "finding",
-            "reason": "reason",
-            "advocate_reasons": [],
-            "challenger_reasons": ["old challenger reason"],
-            "verdict": None,
-            "judge_reason": None,
-        }
-    ]
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
@@ -450,6 +437,21 @@ def test_oracle_review_advocate_keeps_existing_challenger_reasons(
         """
         _assert_review_call_context(parameter, kwargs, repo_root, review_worktree)
         schema_name = _schema_name(parameter)
+        if schema_name == "enumerate_finding.json":
+            return _FakeCodexResult(
+                {
+                    "findings": [
+                        {
+                            "oracle_path": "{{oracle-root}}/spec.md",
+                            "severity": "fatal",
+                            "title": "finding",
+                            "reason": "reason",
+                            "advocate_reasons": [],
+                            "challenger_reasons": ["old challenger reason"],
+                        }
+                    ]
+                }
+            )
         if schema_name == "validate_finding_challenger.json":
             return _FakeCodexResult({"reasons": ["same-round challenger reason"]})
         if schema_name == "validate_finding_advocate.json":
@@ -459,10 +461,10 @@ def test_oracle_review_advocate_keeps_existing_challenger_reasons(
             return _FakeCodexResult({"verdict": "reject", "reason": "rejected"})
         raise AssertionError(schema_name)
 
-    review_loop_module._validate_and_judge_findings(
+    review_module.run_oracle_review_loop(
         repo_root,
         review_worktree,
-        findings,
+        [review_worktree / "oracle" / "spec.md"],
         config,
         fake_run_codex_exec,
     )

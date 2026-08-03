@@ -2,9 +2,12 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
+import _ollama_support
 import pytest
 from _codex_support import (
     codex_arg_value,
@@ -20,6 +23,7 @@ from _ollama_support import (
     TEST_OLLAMA_CACHE_ENV,
     TEST_SLM_MODEL,
     _run_pytest,
+    _select_cache_root,
     local_ollama,
     use_test_local_ollama,
 )
@@ -50,14 +54,180 @@ def test_pytest_runner_separates_run_tmpdir_from_ollama_cache(
         assert executable == sys.executable
         assert args == [sys.executable, "-m", "pytest", "test/example.py", "-ra"]
         assert environment["TMPDIR"] == str(run_temporary_directory)
-        cache_root = Path(environment[TEST_OLLAMA_CACHE_ENV])
-        assert cache_root.is_absolute()
-        assert not cache_root.is_relative_to(run_temporary_directory)
+        assert TEST_OLLAMA_CACHE_ENV not in environment
         raise RuntimeError("execve intercepted")
 
     monkeypatch.setattr(os, "execve", intercept_execve)
     with pytest.raises(RuntimeError, match="execve intercepted"):
         _run_pytest(["test/example.py", "-ra"])
+
+
+def test_ollama_cache_selection_ignores_run_local_tmpdir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cache root の既定値を pytest の run-local temporary と分離する。"""
+    run_temporary_directory = tmp_path / "run"
+    stable_temporary_directory = tmp_path / "stable"
+    run_temporary_directory.mkdir()
+    stable_temporary_directory.mkdir()
+    monkeypatch.setenv("TMPDIR", str(run_temporary_directory))
+    monkeypatch.delenv(TEST_OLLAMA_CACHE_ENV, raising=False)
+    monkeypatch.setattr(
+        _ollama_support,
+        "_stable_system_temporary_directory",
+        lambda: stable_temporary_directory,
+    )
+
+    cache_root = _select_cache_root(tmp_path)
+
+    assert cache_root.parent == stable_temporary_directory
+    assert not cache_root.is_relative_to(run_temporary_directory)
+
+
+def test_ollama_cache_selection_falls_back_when_system_temp_is_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """system temp の取得失敗時は pytest session temp を使う。"""
+    monkeypatch.delenv(TEST_OLLAMA_CACHE_ENV, raising=False)
+
+    def unavailable_system_temp() -> Path:
+        """利用不能な system temp を再現する。"""
+        raise OSError("system temp unavailable")
+
+    monkeypatch.setattr(
+        _ollama_support,
+        "_stable_system_temporary_directory",
+        unavailable_system_temp,
+    )
+
+    cache_root = _select_cache_root(tmp_path)
+
+    assert cache_root.parent == tmp_path.parent
+    assert cache_root.name.startswith("ollama-cache-")
+
+
+def test_ensure_model_reuses_existing_gpu_model_parameters(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`show --parameters` の既存 GPU model を cache hit として扱う。"""
+    calls: list[list[str]] = []
+
+    def run_ollama(
+        _executable: Path,
+        args: list[str],
+        _environment: dict[str, str],
+        _timeout: float,
+    ) -> subprocess.CompletedProcess[str]:
+        """既存 model の show 結果だけを返す。"""
+        calls.append(list(args))
+        if args == ["show", TEST_SLM_MODEL]:
+            return subprocess.CompletedProcess(args, 0, "", "")
+        if args == ["show", "--parameters", TEST_SLM_MODEL]:
+            return subprocess.CompletedProcess(
+                args, 0, "num_gpu 999\nnum_predict 4096\n", ""
+            )
+        raise AssertionError(f"unexpected Ollama command: {args}")
+
+    monkeypatch.setattr(_ollama_support, "_run_ollama", run_ollama)
+
+    class RunningProcess:
+        """`_ensure_model` が確認する起動中 process の最小 double。"""
+
+        def poll(self) -> None:
+            """process が起動中であることを返す。"""
+            return None
+
+    changed = _ollama_support._ensure_model(
+        tmp_path / "ollama",
+        {},
+        cast(subprocess.Popen[bytes], RunningProcess()),
+        tmp_path / "ollama.log",
+        tmp_path,
+    )
+
+    assert changed is False
+    assert calls == [
+        ["show", TEST_SLM_MODEL],
+        ["show", "--parameters", TEST_SLM_MODEL],
+    ]
+
+
+def test_cached_install_rebuilds_when_archive_path_is_corrupt_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """archive path の directory 化を cache miss として再構築する。"""
+    cache_root = tmp_path / "cache"
+    cache_root.mkdir()
+    archive = cache_root / "ollama-linux-amd64.tar.zst"
+    archive.mkdir()
+    downloaded: list[Path] = []
+
+    def download_archive(path: Path) -> None:
+        """壊れた archive を置き換える download を再現する。"""
+        downloaded.append(path)
+        path.write_bytes(b"archive")
+
+    def executable_ok(path: Path) -> bool:
+        """staging の最小 executable 検証を再現する。"""
+        return path.name == "ollama" and "install-staging-" in path.parent.parent.name
+
+    def extract_archive(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """archive extraction の成功を再現する。"""
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(_ollama_support, "_download_archive", download_archive)
+    monkeypatch.setattr(_ollama_support, "_ollama_executable_ok", executable_ok)
+    monkeypatch.setattr(subprocess, "run", extract_archive)
+
+    install = _ollama_support._ensure_cached_install(cache_root)
+
+    assert downloaded == [archive]
+    assert install.parent == cache_root / "binaries"
+    assert archive.is_file()
+
+
+def test_pytest_runner_imports_current_worktree_sources() -> None:
+    """main venv の editable install より current worktree を優先する。"""
+    work_root = Path(__file__).resolve().parents[1]
+    probe = """
+import os
+import runpy
+import sys
+
+def intercept_execve(_executable, _args, _environment):
+    import basic.acp
+    import commons.runtime_paths
+    import config.cmoc_config
+
+    print(basic.acp.__file__)
+    print(commons.runtime_paths.__file__)
+    print(config.cmoc_config.__file__)
+    raise SystemExit(0)
+
+os.execve = intercept_execve
+sys.argv = ["test/_ollama_support.py", "run-pytest", "-q"]
+runpy.run_path("test/_ollama_support.py", run_name="__main__")
+"""
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    result = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=work_root,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    imported_paths = [Path(line) for line in result.stdout.splitlines()]
+    assert imported_paths == [
+        work_root / "src" / "basic" / "acp.py",
+        work_root / "src" / "commons" / "runtime_paths.py",
+        work_root / "src" / "config" / "cmoc_config.py",
+    ]
 
 
 def test_setup_codex_home_isolates_home_and_codex_home(

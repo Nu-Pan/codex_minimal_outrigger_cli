@@ -7,6 +7,8 @@
 
 import json
 from multiprocessing import Barrier, Pipe, Process
+from multiprocessing.connection import Connection
+from multiprocessing.synchronize import Barrier as BarrierType
 from pathlib import Path
 
 import pytest
@@ -25,7 +27,9 @@ from config.cmoc_config import CmocConfig
 _FIXED_CODEX_TIMESTAMP = "2099-01-01_00-00_00_000000000"
 
 
-def run_fixed_codex_exec(root: Path, barrier: Barrier, connection: object) -> None:
+def run_fixed_codex_exec(
+    root: Path, barrier: BarrierType, connection: Connection
+) -> None:
     """同じ初回 timestamp の実運用 Codex 呼び出しを別 process で実行する。"""
     import commons.runtime_codex_exec as exec_module
 

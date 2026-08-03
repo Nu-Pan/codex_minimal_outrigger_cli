@@ -2875,6 +2875,56 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     assert completion["report_path"] == str(report.resolve())
 
 
+def test_refactor_interrupt_during_indexing_preflight_is_joinable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """agent 境界前の indexing commit と中断でも joinable にする。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
+
+    def interrupting_preflight(
+        parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> NoReturn:
+        """before_agent_call callback 前の indexing commit と中断を再現する。"""
+        worktree = parameter.agent_call_cwd
+        (worktree / "README.md").write_text("preflight-only\n")
+        run_git(worktree, "add", "README.md")
+        run_git(worktree, "commit", "-m", "cmoc indexing")
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(
+        refactor_module,
+        "run_codex_exec",
+        interrupting_preflight,
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    state = _state(state_path)
+    assert state["run"]["state"] == "joinable"
+    parts = state["run"]["branch"].split("/")
+    run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (run_worktree / "README.md").read_text() == "# repo\n"
+    assert (
+        "cmoc indexing"
+        not in run_git(run_worktree, "log", "--format=%s").stdout.splitlines()
+    )
+    report_line = next(
+        line
+        for line in result.output.splitlines()
+        if line.startswith("- fork report: `")
+    )
+    report = Path(report_line.removeprefix("- fork report: `").removesuffix("`"))
+    assert 'completion_reason: "user_interruption"' in report.read_text()
+
+
 def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

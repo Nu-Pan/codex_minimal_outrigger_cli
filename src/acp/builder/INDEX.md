@@ -61,21 +61,21 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization adapter 群をまとめたパッケージ。`cmoc oracle edit`、`investigation`、`review` 各コマンドの起動パラメータ生成や builder adapter への入口を提供する。
-- 下位項目では、コマンド別の TUI 起動処理、AgentCallParameter 生成、finding 関連レビュー処理などの実装領域へ進める。
+- oracle command builder の realization adapter パッケージ群をまとめる入口。`oracle edit`、`oracle investigation`、`oracle review` 向けの builder adapter へ進むための構成と責務を確認できる。
+- 各下位パッケージは、正本 oracle builder への委譲、TUI 起動パラメータや editor input directory の準備、review finding 関連の parameter builder など、コマンド別の realization 経路を扱う。
 
 ## Read this when
-- oracle command builder の realization package の責務や下位構成を確認するとき。
-- `cmoc oracle edit`、`investigation`、`review` の builder adapter の入口や呼び出し経路を調査・変更するとき。
-- 各 oracle command の下位 builder 実装へ進む対象を選ぶとき。
+- oracle command builder の realization adapter 全体の構成や、コマンド別 builder package の入口を確認するとき。
+- `cmoc oracle edit`、`cmoc oracle investigation`、`cmoc oracle review` の builder adapter のいずれかを調査・変更するとき。
+- 下位 package の本文へ進む前に、対象コマンドに対応する builder の範囲を切り分けるとき。
 
 ## Do not read this when
-- oracle command の正本仕様や canonical builder の prompt 本文を確認したいとき。
-- builder adapter 以外の CLI、TUI、共通パス解決処理を調査するとき。
-- 特定コマンドの具体的な実装詳細を確認したいときは、対応する下位項目を直接読む。
+- oracle 側の canonical builder の仕様や prompt 本文を確認するとき。
+- builder 以外の CLI 実装、ACP 実装、または oracle command builder と無関係な処理を調査するとき。
+- 特定コマンドの具体的な実装詳細を確認する場合は、この入口ではなく該当する下位 package を直接読む。
 
 ## hash
-- 884ba366cb3af7b4c8a69c6b405ad80d04a1e72822eb20ebc4d3f178b1680658
+- 751381e9bb47c73cc62d861709ceba71344e442f9169c87623c50ef706dca550
 
 # `quota_probe.py`
 
@@ -141,15 +141,16 @@
 # `tui`
 
 ## Summary
-- TUI 起動 parameter builder の互換 import 経路を提供するディレクトリ。`launch_tui.py` は oracle 側の builder を再エクスポートし、`__init__.py` とともに既存の import 公開面を維持する。実装本体の調査入口ではない。
+- TUI 起動 builder の既存 import 経路を維持する互換 package。実装本体への入口ではなく、不要になった場合に削除を検討する対象。
+- TUI 起動 parameter builder を既存の互換 import 経路から再公開するモジュール。実体は oracle 側の TUI 起動定義にあり、利用箇所からその定義へ進む入口。
 
 ## Read this when
-- TUI 起動 parameter builder の既存 import 経路、公開名、互換性を確認するとき
-- 当該互換 import 経路を削除・変更できるか判断するとき
+- TUI 起動 builder の既存 import 経路や互換性を確認するとき
+- 互換 import の解決先や、その経路を削除・変更できるか判断するとき
 
 ## Do not read this when
-- TUI builder の実装詳細や起動処理そのものを調査・変更するとき
-- TUI 起動や互換 import 経路に関係しない処理を扱うとき
+- TUI 起動 parameter の生成ロジックや起動処理そのものを調査・変更するとき
+- TUI 以外の ACP builder、共通 parameter builder 仕様、または互換性に関係しない処理を扱うとき
 
 ## hash
-- 11e93e1ead52a1d97b9ea5415eb5b1db6799fb5f88289afc9da65662deddef1d
+- 8b5e533d0629fa51629b23b240cec1b19c41b3772b23e0449961cf4be62f8082

@@ -20,7 +20,6 @@ import socket
 import stat
 import subprocess
 import sys
-import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -33,13 +32,19 @@ from typing import NoReturn
 
 import pytest
 
-from basic.acp import ModelClass
-from commons.runtime_paths import repo_root
-from config.cmoc_config import (
+# {{work-root}}/oracle/doc/dev_rule/test_execution.md
+# linked worktree で main worktree の venv を使う場合も、runner 自身の
+# first-party import は検査対象の source tree を優先する。
+_WORK_ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(_WORK_ROOT / "src"), str(_WORK_ROOT / "oracle" / "src")]
+
+from basic.acp import ModelClass  # noqa: E402
+from commons.runtime_paths import repo_root  # noqa: E402
+from config.cmoc_config import (  # noqa: E402
     CmocConfig,
     CodexModelProviderConfig,
     CodexModelSpec,
-)
+)  # noqa: E402
 
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 TEST_SLM_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
@@ -49,7 +54,6 @@ _ARCHIVE_URL = "https://ollama.com/download/ollama-linux-amd64.tar.zst"
 _GPU_LAYER_COUNT = 999
 _MAX_OUTPUT_TOKENS = 4096
 _GPU_INFERENCE_TIMEOUT = 120
-_WORK_ROOT = Path(__file__).resolve().parents[1]
 _CMOC_ROOT = repo_root(_WORK_ROOT)
 
 
@@ -181,11 +185,11 @@ def _select_cache_root(tmp_path: Path) -> Path:
         candidate = Path(override)
         _prepare_cache_root(candidate)
         return candidate.resolve()
-    candidate = _default_cache_root(Path(tempfile.gettempdir()))
     try:
+        candidate = _default_cache_root(_stable_system_temporary_directory())
         _prepare_cache_root(candidate)
         return candidate.resolve()
-    except OSError:
+    except (OSError, RuntimeError, subprocess.SubprocessError):
         user = _cache_user()
         fallback = tmp_path.parent / f"ollama-cache-{user}-v{_CACHE_SCHEMA_VERSION}"
         _prepare_cache_root(fallback)
@@ -230,14 +234,8 @@ def _stable_system_temporary_directory() -> Path:
 
 
 def _pytest_environment() -> dict[str, str]:
-    """pytest の temporary override と半永続 cache を独立させる。"""
-    environment = os.environ.copy()
-    # 明示済み override は呼び出し側の選択として維持する。
-    if not environment.get(TEST_OLLAMA_CACHE_ENV):
-        environment[TEST_OLLAMA_CACHE_ENV] = str(
-            _default_cache_root(_stable_system_temporary_directory())
-        )
-    return environment
+    """pytest の環境を保ち、cache root の選択を test helper へ委譲する。"""
+    return os.environ.copy()
 
 
 def _run_pytest(args: list[str]) -> NoReturn:
@@ -317,6 +315,10 @@ def _ensure_cached_install(cache_root: Path) -> Path:
         archive = cache_root / "ollama-linux-amd64.tar.zst"
         for attempt in range(2):
             if not archive.is_file() or archive.is_symlink():
+                if archive.is_dir() and not archive.is_symlink():
+                    shutil.rmtree(archive)
+                else:
+                    archive.unlink(missing_ok=True)
                 _download_archive(archive)
             digest = _sha256(archive)
             install = cache_root / "binaries" / digest
@@ -468,9 +470,10 @@ def _ensure_model(
         environment,
         120,
     )
+    # `show --parameters` は Modelfile の `PARAMETER` 接頭辞を表示しない。
     required_settings = {
-        ("PARAMETER", "num_gpu", str(_GPU_LAYER_COUNT)),
-        ("PARAMETER", "num_predict", str(_MAX_OUTPUT_TOKENS)),
+        ("num_gpu", str(_GPU_LAYER_COUNT)),
+        ("num_predict", str(_MAX_OUTPUT_TOKENS)),
     }
     actual_settings = {tuple(line.split()) for line in parameters.stdout.splitlines()}
     if parameters.returncode == 0 and required_settings <= actual_settings:

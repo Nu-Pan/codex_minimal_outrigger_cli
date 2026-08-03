@@ -98,6 +98,7 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
         target,
         (
             "import commons.prompt_editor_input as editor_input; "
+            "import acp.builder.oracle.edit.launch_tui as edit_module; "
             "from pathlib import Path; "
             "from acp.builder.oracle.edit.launch_tui import "
             "build_oracle_edit_launch_tui_parameter as build; "
@@ -105,6 +106,10 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
             "build_prompt_editor_input_initial_text as canonical_editor_input; "
             "assert editor_input.build_prompt_editor_input_initial_text "
             "is canonical_editor_input; "
+            "assert edit_module.__all__ == "
+            "['build_oracle_edit_launch_tui_parameter']; "
+            "assert sorted(n for n in vars(edit_module) if not n.startswith('_')) "
+            "== ['build_oracle_edit_launch_tui_parameter']; "
             "log = Path.cwd() / '.cmoc/gu/ar/log/editor_input/test_cmpl.md'; "
             "p = build('test', 'oracle を編集する'); "
             "assert p.structured_output_schema_path is None; "

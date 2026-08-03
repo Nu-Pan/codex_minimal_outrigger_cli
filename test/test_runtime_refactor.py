@@ -46,6 +46,26 @@ def test_refactor_state_sync_tracks_exact_oracle_and_realization_set(
     assert load_refactor_state(root) == state
 
 
+def test_refactor_state_sync_globs_nested_repository_files(tmp_path: Path) -> None:
+    """work-root 配下の nested repository 内 file も対象へ含める。"""
+    root = make_repo(tmp_path)
+    nested = root / "nested"
+    nested.mkdir()
+    run_git(
+        root,
+        "init",
+        "--template=/dev/null",
+        "--separate-git-dir",
+        str(tmp_path / "nested-git"),
+        str(nested),
+    )
+    (nested / "module.py").write_text("VALUE = 1\n")
+
+    state = sync_refactor_state(root)
+
+    assert "nested/module.py" in state
+
+
 @pytest.mark.parametrize(
     "relative", ["nested/../../outside.md", "oracle/../../outside.md"]
 )

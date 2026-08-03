@@ -170,6 +170,24 @@ def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
 
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:
     """各file access modeに対応する標準ruleの内容を検証する。"""
+    mode_specific_rules = {
+        FileAccessMode.READONLY: {
+            "oracle file は書き込み禁止",
+            "realization file は書き込み禁止",
+        },
+        FileAccessMode.PURE_ORACLE_READ: {
+            "oracle file は書き込み禁止",
+            "realization file は読み書き禁止",
+        },
+        FileAccessMode.REPO_WRITE: set(),
+        FileAccessMode.PURE_ORACLE_WRITE: {
+            "realization file は読み書き禁止",
+        },
+        FileAccessMode.REALIZATION_WRITE: {
+            "oracle file は書き込み禁止",
+        },
+    }
+    all_mode_specific_rules = set().union(*mode_specific_rules.values())
     expected = {
         FileAccessMode.READONLY: [
             "ツリー外は読み書き禁止",
@@ -210,6 +228,8 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         assert doc.title == f"file read write rule - {mode.value}"
         for fragment in fragments:
             assert fragment in rendered
+        for fragment in all_mode_specific_rules - mode_specific_rules[mode]:
+            assert fragment not in rendered
 
 
 def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
