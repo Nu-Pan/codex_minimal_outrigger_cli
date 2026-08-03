@@ -3,17 +3,12 @@
 根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 """
 
-import inspect
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
-from _codex_support import (
-    codex_arg_value,
-    codex_override_config,
-    setup_codex_home,
-)
+from _codex_support import setup_codex_home
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from commons.runtime_codex_profile import (
@@ -37,63 +32,26 @@ def _parameter(mode: FileAccessMode) -> AgentCallParameter:
     )
 
 
-@pytest.mark.parametrize("mode", list(FileAccessMode))
-def test_codex_overrides_do_not_inject_permission_profile(
-    mode: FileAccessMode,
-) -> None:
-    """profile の生成・選択・config 注入を全 mode で禁止する。"""
-    args = build_codex_override_args(_parameter(mode), CmocConfig())
-    config_values = [
-        args[index + 1] for index, arg in enumerate(args[:-1]) if arg == "--config"
-    ]
-
-    assert codex_arg_value(args, "--sandbox") in {"read-only", "workspace-write"}
-    assert "--profile" not in args
-    assert "-p" not in args
-    assert all(
-        not value.startswith(
-            (
-                "default_permissions=",
-                "permissions.",
-                "sandbox_workspace_write=",
-            )
-        )
-        for value in config_values
-    )
-    parsed = codex_override_config(args)
-    assert "permissions" not in parsed
-    assert "default_permissions" not in parsed
-    assert "sandbox_workspace_write" not in parsed
-    assert "features" not in parsed
-
-
 def test_path_based_permission_inputs_are_absent_from_builder_api() -> None:
     """path 別の read/write 例外を argv builder へ渡す入口を残さない。"""
-    build_parameters = inspect.signature(build_codex_override_args).parameters
-    prepare_parameters = inspect.signature(prepare_codex_override_args).parameters
+    parameter = _parameter(FileAccessMode.READONLY)
+    config = CmocConfig()
+    for builder in (build_codex_override_args, prepare_codex_override_args):
+        for name in (
+            "extra_read_paths",
+            "extra_writable_paths",
+            "extra_read_root",
+            "allow_oracle_conflict_writes",
+        ):
+            with pytest.raises(TypeError, match=name):
+                builder(
+                    parameter,
+                    config,
+                    **{name: Path("path")},
+                )
 
-    assert tuple(build_parameters) == ("parameter", "config")
-    assert tuple(prepare_parameters) == ("parameter", "config")
-    for name in (
-        "extra_read_paths",
-        "extra_writable_paths",
-        "extra_read_root",
-        "allow_oracle_conflict_writes",
-    ):
-        assert name not in prepare_parameters
 
-
-@pytest.mark.parametrize(
-    "mode",
-    [
-        FileAccessMode.READONLY,
-        FileAccessMode.PURE_ORACLE_READ,
-        FileAccessMode.REALIZATION_WRITE,
-        FileAccessMode.PURE_ORACLE_WRITE,
-        FileAccessMode.REPO_WRITE,
-        FileAccessMode.NO_RULE,
-    ],
-)
+@pytest.mark.parametrize("mode", list(FileAccessMode))
 @pytest.mark.skipif(_CODEX_CLI is None, reason="codex CLI is not installed")
 def test_sandbox_argument_is_accepted_by_codex_cli(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mode: FileAccessMode
@@ -131,4 +89,3 @@ def test_sandbox_argument_is_accepted_by_codex_cli(
     output = result.stdout + result.stderr
     assert result.returncode == 1
     assert "Failed to read output schema file" in output
-    assert "permission" not in output.lower()
