@@ -314,10 +314,10 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
     assert current_branch(root) == home_branch
 
 
-def test_session_fork_initializes_cmoc_ignore_before_logging(
+def test_session_fork_initializes_cmoc_ignore_and_writes_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """session forkがlog作成前にcmoc ignoreを初期化することを検証する。"""
+    """session forkがcmoc ignoreを初期化し、サブコマンドlogを保存する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     home_branch = current_branch(root)

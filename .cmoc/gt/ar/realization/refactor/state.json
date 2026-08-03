@@ -1315,9 +1315,9 @@
   },
   "test/test_session_cli.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "05fda609787853f37b99bf1a763df322a79683a455a09de5453a1cd39982ae48",
-    "last_investigated_at": "2026-07-27_23-29_29_301948000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "747dcda058115e6a69200623c64489cefad1e9a9df623cf8b2c2b7fb020ea986",
+    "last_investigated_at": "2026-08-03_19-19_23_016280000"
   },
   "test/test_skill_metadata.py": {
     "investigation_required": false,

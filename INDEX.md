@@ -141,17 +141,17 @@
 # `test`
 
 ## Summary
-- テスト用の共有ヘルパーと、ACP builder、Codex runtime、CLI、indexing、oracle review、session、state、設定などの realization test をまとめたテスト領域。個別機能の外部挙動・実行契約・境界条件を確認する入口であり、目的に応じて該当するテストまたは共有 helper へ進む。
+- `test` ディレクトリは、cmoc の realization test を集約する。ACP builder、Codex runtime、CLI、indexing、oracle review/edit、session/run lifecycle、設定・状態・Git・prompt・StructDoc などの外部挙動と境界条件を、単体・統合・実経路テストで検証する下位テスト群への入口である。
 
 ## Read this when
-- テスト対象の機能について、既存の外部挙動、回帰条件、統合 lifecycle、境界条件を確認または変更するとき。
-- Codex runtime、CLI、indexing、oracle review、session、state、設定、builder など、対象領域の realization test を探すとき。
-- 複数テストで共有される Git、Ollama、Codex、CLI、command のテスト支援処理を確認するとき。
+- cmoc の実装変更に対して、対応する外部契約や回帰テストの所在を特定するとき。
+- CLI、Codex 実行経路、indexing、oracle 操作、session/run lifecycle、設定・状態永続化などの挙動をテスト側から確認するとき。
+- テスト用の共通 helper、Ollama 実経路環境、Git リポジトリ隔離の仕組みを確認するとき。
 
 ## Do not read this when
-- 正本仕様、schema、builder 定義、実装詳細を確認することが目的の場合は、対応する oracle または src を直接読む。
-- テスト実行全体の選択・品質検査手順を確認する場合は、専用の test execution 文書を読む。
-- 対象機能と無関係なテストや共有 helper を読む必要がない場合。
+- 正本仕様、schema、builder 定義、実装本体を確認することが目的のときは、対応する oracle または src 配下へ直接進む。
+- テスト実行手順や品質検査の選択だけを確認するときは、専用の test execution 文書を読む。
+- 対象機能と無関係なテストを一括して読む必要はない。
 
 ## hash
-- a8c307aa2db7c69d3009d5dec410d8e7cb1df4f94db560c173396830db7ef8da
+- 912be27b25942c25994f90f9494cd2bf19f66f3fc5b577848e171d2d28564572
