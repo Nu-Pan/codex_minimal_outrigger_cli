@@ -888,10 +888,10 @@
     "last_investigated_at": "2026-07-25_07-48_18_213857000"
   },
   "src/sub_commands/oracle/edit.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "337fbe660a404600575a320131d1cf1d36b710d08a30c6cb33a2bb332da9809f",
-    "last_investigated_at": "2026-07-29_05-34_49_262834000"
+    "last_investigated_sha256": "a50aa0ee99eb4d72bf527f16d4e80af3d640a0ec062baea4ffda8ac16d4e4b87",
+    "last_investigated_at": "2026-08-03_22-18_25_129524000"
   },
   "src/sub_commands/oracle/investigation.py": {
     "investigation_required": false,
