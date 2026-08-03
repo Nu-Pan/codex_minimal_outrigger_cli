@@ -460,18 +460,18 @@
 # `test_oracle_edit_cli.py`
 
 ## Summary
-- `cmoc oracle edit` の main-worktree TUI 制御を検証するテスト。doctor 済みの隔離リポジトリと session state を準備し、TUI 実行時の preflight・clean worktree 検査・呼び出しパラメータ・oracle 差分保持・失敗時挙動・session state 非変更を確認する。あわせて、linked worktree、非 session branch、inactive session、未コミット差分に対する起動前提違反を検証する。
+- `cmoc oracle edit` の main worktree TUI 起動制御を検証するテスト。TUI 実行順序、oracle 差分の保持、run lifecycle や session state の不変性、モデル・権限・prompt 設定、および起動前提違反時のエラーを扱う。oracle edit CLI 実装とその起動前提を確認する際のテスト入口。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動順序、実行パラメータ、oracle 編集結果の保持、run lifecycle 非使用を変更・検証するとき
-- `oracle edit` の起動前提チェックや session state との連携を変更・検証するとき
+- `cmoc oracle edit` の TUI 起動、実行引数、prompt 注入、差分保持の挙動を変更または検証するとき
+- oracle edit の main worktree・session branch・clean worktree 前提やエラー処理を変更または検証するとき
 
 ## Do not read this when
-- `oracle edit` 以外のサブコマンドの挙動だけを調査するとき
-- TUI 実装そのものや oracle edit の仕様本文を確認する必要があるときは、対応する実装・oracle 仕様を直接読む
+- oracle edit 以外のサブコマンドの挙動を確認するとき
+- oracle edit の正本仕様や実装詳細そのものを確認するときは、まず対応する oracle 仕様または実装を直接読む場合
 
 ## hash
-- 9b71d0963534ba293a3fe838402cdf5962c1c68ad9d30e61898de3e7dec07938
+- 497959f379256116990c899ae1320a81251ab407d398dac0a7b54d9833a8d6c0
 
 # `test_oracle_investigation_cli.py`
 

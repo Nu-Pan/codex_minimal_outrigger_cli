@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 from _cli_support import run_doctor, runner
+from _codex_support import setup_codex_home
 from _git_support import current_branch, make_repo, run_git
 
 import commons.indexing as indexing_module
@@ -63,6 +64,7 @@ def _prepared_repo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
     """doctor 済みの隔離 repository を準備する。"""
+    setup_codex_home(tmp_path, monkeypatch)
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     run_doctor(root)
