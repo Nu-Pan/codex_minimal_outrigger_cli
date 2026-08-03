@@ -666,10 +666,10 @@
     "last_investigated_at": "2026-08-03_11-01_04_971824000"
   },
   "src/acp/builder/tui/launch_tui.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "2e19ef7b2bbcbcd68134e7bb99c529ff44530bdae06fb7c954f0e99f7190f9ee",
-    "last_investigated_at": "2026-07-27_06-21_47_534518000"
+    "last_investigated_sha256": "1a8a4aaf0f802fad209b12e2f0fbf5a2632620119c7e31c49847c01a3da61a93",
+    "last_investigated_at": "2026-08-03_17-18_59_927508000"
   },
   "src/basic/__init__.py": {
     "investigation_required": false,
