@@ -512,7 +512,11 @@ def raw_oracle_diff(worktree: Path, base: str, end: str) -> str:
         {
             path
             for change in tree_changes(worktree, base, end)
-            if any(_is_oracle_path(path) for path in change.paths)
+            if any(
+                _is_oracle_tree_file(worktree, commit, path)
+                for commit in (base, end)
+                for path in change.paths
+            )
             for path in change.paths
         }
     )
@@ -602,6 +606,37 @@ def _is_oracle_path(path: str) -> bool:
             "INDEX.md",
         }
     )
+
+
+def _is_oracle_tree_file(worktree: Path, commit: str, path: str) -> bool:
+    """commit tree の path が oracle の blob entry か判定する。"""
+    if not _is_oracle_path(path):
+        return False
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    # raw diff の対象は両端で定義上の oracle file だった path に限るため、
+    # directory や Gitlink の tree entry は file として扱わない。
+    entries = run_git(
+        [
+            "ls-tree",
+            "-r",
+            "-z",
+            commit,
+            "--",
+            literal_pathspec(path),
+        ],
+        worktree,
+    ).stdout.split("\0")
+    for entry in entries:
+        metadata, separator, entry_path = entry.partition("\t")
+        metadata_fields = metadata.split()
+        if (
+            separator
+            and entry_path == path
+            and len(metadata_fields) >= 2
+            and metadata_fields[1] == "blob"
+        ):
+            return True
+    return False
 
 
 def _is_index_path(path: str) -> bool:

@@ -183,6 +183,28 @@ def test_raw_oracle_diff_treats_changed_paths_as_literal_pathspecs(
     assert "+after" in diff
 
 
+def test_raw_oracle_diff_excludes_oracle_gitlinks(
+    tmp_path: Path,
+) -> None:
+    """oracle file ではない Gitlink を raw diff に含めない。"""
+    root = make_repo(tmp_path)
+    gitlink = root / "oracle" / "gitlink"
+    gitlink.mkdir()
+    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    commit = base
+    run_git(
+        root,
+        "update-index",
+        "--add",
+        "--cacheinfo",
+        f"160000,{commit},oracle/gitlink",
+    )
+    run_git(root, "commit", "-m", "add oracle gitlink")
+    end = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    assert raw_oracle_diff(root, base, end) == ""
+
+
 def test_run_reports_keep_distinct_files_on_timestamp_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -383,6 +405,48 @@ def test_apply_rejects_agent_index_change_before_index_refresh(
     parts = state["run"]["branch"].split("/")
     run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
     assert not (run_worktree / "INDEX.md").exists()
+
+
+def test_apply_rejects_agent_commit_and_rolls_back_unit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """apply agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    monkeypatch.setattr(apply_module, "refresh_indexes", _no_index_refresh)
+
+    def fake_apply(
+        parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> SimpleNamespace:
+        """agent が realization file を直接 commit する状態を再現する。"""
+        before_agent_call = kwargs["before_agent_call"]
+        assert callable(before_agent_call)
+        before_agent_call()
+        worktree = parameter.agent_call_cwd
+        (worktree / "README.md").write_text("agent commit\n")
+        run_git(worktree, "add", "README.md")
+        run_git(worktree, "commit", "-m", "agent commit")
+        return SimpleNamespace(returncode=0, output_json=None)
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    parts = _state(state_path)["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (worktree / "README.md").read_text() == "# repo\n"
+    assert (
+        "agent commit"
+        not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
+    )
+    assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
 @pytest.mark.parametrize("unexpected_path", ["oracle/unexpected.md", "README.md"])

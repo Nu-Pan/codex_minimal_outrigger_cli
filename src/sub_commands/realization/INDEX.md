@@ -15,19 +15,20 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理に関する workload を扱うディレクトリ。apply workload の実装を確認する入口であり、fork サブコマンドの実行制御を含む。
+- realization の apply 処理を構成するモジュール群。apply workload の実装入口と、`cmoc realization apply fork` の実行・run lifecycle・差分検査・commit・状態遷移・fork report 保存を扱う。
 
 ## Read this when
-- realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の実行フロー、成功時の joinable 化、fork report、差分検査、rollback、cleanup の挙動を確認するとき。
+- realization の apply workload の内容を調査または変更するとき。
+- `cmoc realization apply fork` の CLI 動作、run lifecycle、agent 差分の許可範囲、commit・joinable/error 遷移、fork report の生成を確認または変更するとき。
 
 ## Do not read this when
 - apply workload 以外の処理を扱うとき。
-- launch parameter の構築詳細だけを確認したいときは、`acp.builder.realization.apply.fork.launch_exec` を直接読む。
-- 編集 run の共通ライフサイクル API や fork report の共通フォーマットだけを確認したいときは、対応する共通モジュールや oracle 文書を直接読む。
+- apply agent に渡す launch parameter だけを確認するとき。
+- run の join・abandon 処理や共通 lifecycle の実装を確認するとき。
+- realization apply の正本仕様を確認するとき。
 
 ## hash
-- e2c0db34d7b078e689b1736295ce767c5ba9cca7511bc999910f271298cbdc8c
+- 6328a3fb5fd66ea735889bff8f471e4af11f51a9b873ee20bec41d585ea8b27e
 
 # `refactor`
 

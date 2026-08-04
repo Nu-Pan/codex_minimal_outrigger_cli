@@ -9,10 +9,12 @@ from acp.builder.realization.apply.fork.launch_exec import (
 )
 from cmoc_runtime import (
     CmocError,
+    head_commit,
     load_config,
     load_state_for_branch,
     run_cli_subcommand,
     run_codex_exec,
+    run_git,
     start_subcommand_step,
 )
 from commons.indexing import enable_indexing_preflight
@@ -53,6 +55,8 @@ def _cmoc_realization_apply_fork_body() -> None:
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
     diff_base_commit: str | None = None
+    agent_head: str | None = None
+    agent_commit_check_active = False
     cleanup_warnings: list[str] = []
     start_attempted = False
     start_was_ready = False
@@ -88,13 +92,29 @@ def _cmoc_realization_apply_fork_body() -> None:
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # INDEX 再生成も run 中の Codex call なので、abandon が停止できるよう
         # agent call から処理単位の commit 検査まで同じ tracking scope に含める。
+        run_worktree = context.run_worktree
         with run_process_tracking(context.repo, context.session_id):
-            result = run_codex_exec(
-                parameter,
-                root=context.repo,
-                config=load_config(context.run_worktree),
-                purpose="realization apply fork",
-            )
+
+            def record_agent_head() -> None:
+                """本命 agent の直前の run branch HEAD を記録する。"""
+                nonlocal agent_commit_check_active, agent_head
+                agent_head = head_commit(run_worktree)
+                agent_commit_check_active = True
+
+            try:
+                result = run_codex_exec(
+                    parameter,
+                    root=context.repo,
+                    config=load_config(context.run_worktree),
+                    purpose="realization apply fork",
+                    before_agent_call=record_agent_head,
+                )
+            except BaseException:
+                if agent_commit_check_active and agent_head is not None:
+                    _ensure_agent_did_not_commit(run_worktree, agent_head)
+                raise
+            if agent_commit_check_active and agent_head is not None:
+                _ensure_agent_did_not_commit(run_worktree, agent_head)
             codex_returncode = result.returncode
             if result.returncode != 0:
                 raise CmocError(
@@ -122,6 +142,8 @@ def _cmoc_realization_apply_fork_body() -> None:
             cleanup_warnings.extend(
                 stop_tracked_codex_children(context.repo, context.session_id)
             )
+            if agent_commit_check_active and agent_head is not None:
+                _ensure_agent_did_not_commit(run_worktree, agent_head)
             # tree_changes は commit 済みの差分だけを返すため、commit 前は status
             # path を同じ path 分類へ渡してから処理単位を確定する。
             pending_paths = worktree_change_paths(
@@ -143,6 +165,7 @@ def _cmoc_realization_apply_fork_body() -> None:
             unexpected.sort()
             if unexpected:
                 raise _unexpected_change_error(unexpected)
+            agent_commit_check_active = False
             commit_work_unit(
                 context.run_worktree,
                 "cmoc realization apply fork",
@@ -172,6 +195,11 @@ def _cmoc_realization_apply_fork_body() -> None:
                 context = recover_started_run("realization_apply")
             if context is None:
                 raise
+        if agent_commit_check_active and agent_head is not None:
+            try:
+                _ensure_agent_did_not_commit(context.run_worktree, agent_head)
+            except BaseException as agent_commit_error:
+                exc = agent_commit_error
         report = _record_error(
             context,
             diff_base_commit,
@@ -198,6 +226,32 @@ def _unexpected_change_error(paths: list[str]) -> CmocError:
         "realization apply run に想定外差分があります。",
         ["run report を確認し、run を join または abandon してください。"],
         "\n".join(paths),
+    )
+
+
+def _ensure_agent_did_not_commit(worktree: Path, before_head: str) -> None:
+    """本命 apply agent の commit を検出し、処理単位へ混入させない。"""
+    after_head = head_commit(worktree)
+    if after_head == before_head:
+        return
+    try:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # agent の変更は cmoc が差分検査後に処理単位として commit するため、agent
+        # が先に履歴を進めた場合は本命 call 前の run tree へ戻して error cleanup へ渡す。
+        run_git(["reset", "--hard", before_head], worktree)
+    except BaseException as reset_error:
+        raise CmocError(
+            "realization apply agent が commit を作成し、差分を戻せませんでした。",
+            ["run worktree の git history と Codex call log を確認してください。"],
+            f"before HEAD: {before_head}\nafter HEAD: {after_head}\n"
+            f"reset error: {reset_error!r}",
+        ) from reset_error
+    raise CmocError(
+        "realization apply agent が git commit を実行しました。",
+        [
+            "agent の commit を取り除いてから realization apply fork を再実行してください。"
+        ],
+        f"before HEAD: {before_head}\nafter HEAD: {after_head}",
     )
 
 

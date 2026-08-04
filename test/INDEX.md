@@ -391,21 +391,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run の join/abandon を対象とする統合 realization test。apply/refactor fork、session state、run worktree・branch、process tracking、INDEX 更新、report、rollback、cleanup、rename/delete、競合・中断・失敗時の lifecycle を検証する。関連する fork と run lifecycle の挙動を同一 fixture で横断確認する入口。
+- workload fork と共通 editing run lifecycle の統合テストを担う。apply/refactor fork、run join/abandon、session state、run worktree、Git branch、process tracking、INDEX refresh、report、rollback、cleanup、interrupt、競合解決を同一 fixture で検証する。対象領域の end-to-end な挙動確認への入口となる。
 
 ## Read this when
-- realization apply/refactor fork の run lifecycle 統合挙動を確認するとき
-- run join または abandon の state 遷移、merge、cleanup、process 停止を確認するとき
-- INDEX 更新、report 生成、rollback、予期しない差分の拒否や force-resolve をテストで確認するとき
-- fork や join/abandon の中断・初期化失敗・cleanup 失敗・競合時の挙動を確認するとき
+- realization apply/refactor fork と run join/abandon の連携を変更・検証するとき
+- editing run の state 遷移、worktree・branch の lifecycle、process tracking、Codex child cleanup を変更・検証するとき
+- INDEX refresh、fork/lifecycle report、変更 path 集計、rollback、merge・cleanup failure、interrupt、force-resolve の挙動を変更・検証するとき
+- 既存の lifecycle fixture を共有する統合テストの全体的な制約や境界を確認するとき
 
 ## Do not read this when
-- 単一の lifecycle helper や CLI 実装の詳細を直接確認したいとき
-- refactor の所見解析・変更要約の仕様だけを確認したいときは、対応する実装・仕様・専用テストへ進む
-- INDEX.md の生成規則や一般的な indexing 挙動だけを確認したいときは、indexing の仕様・実装へ進む
+- 単一 helper や単一 command の局所的な実装だけを確認し、対応する unit test が読むべき対象として案内されているとき
+- oracle の仕様や実装本体の詳細を確認することが目的で、統合テストの検証範囲を確認する必要がないとき
+- editing run、fork、join、abandon、state、worktree、report、INDEX refresh のいずれにも関係しないテストを探しているとき
 
 ## hash
-- b430640e0e95294ab19f9ab8dc987b547524b8ca5d9a0eae56938b1adafcb8c1
+- abc2770357623f9983e8df4db4afb0942e75d731829f9dca5402f3501472f277
 
 # `test_indexing_cli.py`
 

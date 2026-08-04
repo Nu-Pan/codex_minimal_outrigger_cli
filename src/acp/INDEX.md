@@ -17,16 +17,18 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization adapter と互換 import 経路をまとめるディレクトリ。canonical な oracle builder への委譲、prompt の code fence 保護、index・oracle・realization・session・TUI builder のコマンド別入口を扱う。
-- 特定の builder や共通処理を調査・変更する際は、該当する下位パッケージまたはモジュールへ進むための起点となる。
+- ACP builder の realization adapter と互換入口をまとめるディレクトリ。oracle、realization、session、indexing、tui などの command/package 別 builder adapter と、Markdown code fence 保護の共通処理を下位要素へ案内する。
+- canonical な oracle 実装への委譲や既存 import 経路の互換維持を確認するための入口であり、各処理の具体的な実装は対応する下位 package・モジュールから調査する。
 
 ## Read this when
-- ACP builder 全体の構成や realization adapter の責務範囲を確認するとき。
-- 特定の command builder、互換 import 経路、prompt fence 共通処理の入口を切り分けるとき。
+- ACP builder 全体の構成、command 別 adapter の配置、互換入口から正本実装への接続を切り分けるとき。
+- apply・refactor・oracle・session・indexing・tui builder のいずれかを調査・変更する前に、進むべき下位要素を判断するとき。
+- 動的 Markdown section の code fence 保護など、builder 共通処理の所在を確認するとき。
 
 ## Do not read this when
-- canonical な oracle builder の仕様や実装そのものを確認するとき。
-- CLI 実装、ACP builder の利用箇所、または特定 builder の詳細挙動を直接調査するときは、対応する下位要素や参照元を直接読む。
+- canonical な oracle builder の仕様や実装そのものを確認するときは、oracle 側の対象を直接読む。
+- 特定 builder の具体的な生成ロジックや処理本体を調査するときは、このディレクトリ入口ではなく該当する下位 package・モジュールを直接読む。
+- ACP builder と無関係な CLI 実装、利用箇所、利用者向け公開面だけを調査するとき。
 
 ## hash
-- 8895f03be1a35e171ae6139ff1eef41fb1d9ca2805cefefffbf3a280f75bd826
+- c78c8a84393293da2770c4f551781dffcaeda386ffeb701b0956b3cce70b0f45
