@@ -29,30 +29,32 @@
 # `file_review_and_fix.json`
 
 ## Summary
-- agent call の所見・対応結果を記述する JSON Schema を定義する対象。レビュー結果を返す処理の契約と、各所見の根拠・変更・要求・実装状況・解消状態を扱う。
+- ファイル単位のレビュー・修正処理が発見した所見と、その対応結果を構造化して返すための出力契約を定義する。各所見について、根拠、関連する oracle 要求、実装状況、理由、解決状態、検証結果を記録する。
 
 ## Read this when
-- この対象に従う所見出力の形式を確認・生成・検証するとき。
+- ファイル単位レビュー・修正処理の Structured Output 形式を確認または変更するとき。
+- 所見の根拠、修正対象、修正結果の表現方法を確認するとき。
 
 ## Do not read this when
-- 個別の実装や oracle 要求そのものを調査するとき。対象のスキーマではなく、該当する oracle または realization の本文を直接読む。
+- レビュー・修正処理のプロンプト本文や実行パラメータを確認したいときは、対応する実装ファイルを直接読む。
+- 変更内容だけの要約形式を確認したいときは、兄弟の変更要約用スキーマを読む。
 
 ## hash
-- 3a341995439328e1aec77700036953546bccb4fde829145e9d4162174129bf4f
+- df89b1e212bb8ea23fe6670447bc23f1f86a5116fe16c85fbec6027508dd3fff
 
 # `file_review_and_fix.py`
 
 ## Summary
-- cmoc の realization refactor fork における、ファイル単位レビュー・修正用の agent call パラメータを構築する実装。対象ファイルを起点に完全な調査・修正プロンプトを生成し、oracle/realization の参照規則、レビュー基準、修正・検証条件、変更パス報告規則を組み込む。
-- 対象ファイルのパス文脈を設定し、効率重視・最大推論のモデル設定、realization write 権限、構造化出力スキーマ、インデックス事前処理を含む AgentCallParameter を返す。
+- ファイル単位の realization レビュー・修正を行う agent call parameter を構築する。対象ファイルを起点に必要な oracle・realization を調査し、所見対応、再調査、検証までを促す完全な prompt を生成する。
+- レビュー対象の作業ディレクトリ、realization への書き込み権限、最大推論設定、構造化出力 schema、indexing preflight を含む実行パラメータを返す。
 
 ## Read this when
-- ファイル単位の realization レビュー・修正 agent call の prompt 構成や実行パラメータを変更するとき
-- レビュー結果の構造化出力、変更パス、修正後検証、oracle/realization 参照規則の組み込み方を確認するとき
+- ファイル単位の realization レビュー・修正用 agent call の prompt 構成や実行パラメータを確認・変更するとき。
+- 対象ファイルを起点とした oracle・realization 調査、修正、検証の責務を確認するとき。
 
 ## Do not read this when
-- レビュー対象ファイルの具体的な実装内容やレビュー基準そのものを確認したいとき
-- agent call の構造化出力スキーマだけを確認したいときは、対応する JSON スキーマを直接読む
+- INDEX.md のルーティング内容だけを確認したいとき。
+- 個別の realization 実装やテストの挙動を直接調査・変更するとき。
 
 ## hash
-- eac6581e368c11cc412386c8a9d7b7970f8cded86d9b676c63f897b1c131bbaa
+- c88423754c117cbc4be781a31ec5d63b66bb1b3b042f179dfca6fc60caa6390a

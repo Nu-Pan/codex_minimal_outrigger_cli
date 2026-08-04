@@ -130,18 +130,20 @@
 # `realization_refactor.md`
 
 ## Summary
-- realization refactor fork の目的、refactor state、current fork の unresolved target、処理ループ、完了・中断・エラー時の扱い、report 生成を定義する正本仕様。realization file の追従調査を実装・レビュー・変更する際の入口となる。
+- realization refactor fork の目的、状態管理、調査対象選択、処理単位、完了・中断・エラー時の挙動、および report 要件を定義する正本仕様。oracle file と realization file の追従調査を current fork 単位で実行する際の入口となる。
 
 ## Read this when
-- realization refactor fork のライフサイクル、調査対象の選択、state 同期、unresolved target、完了条件を確認するとき
-- refactor fork の中断・エラー処理、report、終了コードの仕様を確認するとき
+- realization refactor fork のライフサイクル、state.json の同期や調査要求、unresolved target の扱いを実装・変更・レビューするとき
+- refactor loop の対象選択、処理単位の commit・rollback、完了理由、report または終了 log の仕様を確認するとき
+- 他の realization workload と refactor fork の責務境界を判断するとき
 
 ## Do not read this when
 - 短い変更ループを担う realization apply の仕様だけを確認するとき
-- fork、join、abandon の共通 lifecycle だけを確認するときは、指定された共通 lifecycle の正本を直接読む
+- fork・join・abandon の共通 lifecycle だけを確認するときは、共通 lifecycle の正本仕様を直接読む
+- state の具体的な実装やテストだけを確認し、refactor fork の挙動仕様自体を変更・検証しないとき
 
 ## hash
-- 92bbbce9d1780a6da0d9931d2cb30419ee8d3edad929dca0bd34fb66cf871283
+- 18ba799a7222c87510c9447ed3ac78426e3774bd958c3261fdfb9d561dbbb812
 
 # `session_abandon.md`
 

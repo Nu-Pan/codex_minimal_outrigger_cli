@@ -70,20 +70,23 @@
 # `realization`
 
 ## Summary
-- oracle の変更を realization file へ反映する apply fork と、変更要約・レビュー・修正を扱う refactor fork の AgentCallParameter 構築実装をまとめたディレクトリ。各 fork の prompt、実行条件、構造化出力、差分追従・変更後検証への入口を提供する。
+- oracle file の差分を realization file へ追従させる realization apply fork の起動パラメータ構築を担う実装領域。差分、commit 範囲、linked worktree、FLAGSHIP モデルなどを prompt に組み込み、追従作業を委譲する入口。
+- refactor fork の変更要約と、ファイル単位のレビュー・修正結果を扱う実装および Structured Output スキーマの領域。関連 agent call の prompt、実行条件、出力契約を確認する入口。
 
 ## Read this when
-- oracle file の変更を realization file へ追従させる apply fork の起動パラメータや委譲条件を確認するとき
-- refactor fork の変更要約、ファイル単位レビュー・修正、構造化出力、実行条件を確認するとき
-- apply fork または refactor fork の prompt 構成や AgentCallParameter 構築を変更するとき
+- oracle file の変更を realization file へ追従させる AgentCallParameter や realization apply fork の起動条件を調べるとき
+- refactor fork の変更要約、ファイル単位レビュー・修正、検証結果の出力契約を調べるとき
+- 対象 fork の prompt 構成や agent call の実行条件を確認・変更するとき
 
 ## Do not read this when
-- apply fork の差分適用ロジックやテストだけを調べるとき
-- 一般的な prompt 構築、AgentCallParameter、path context の共通定義だけを調べるとき
-- 個別ファイルの実装内容、レビュー基準、構造化出力スキーマだけを確認するとき
+- realization apply fork の差分適用ロジックやテストの挙動だけを調べるとき
+- 個別の realization 実装・テストそのものを調査・変更するとき
+- 一般的な prompt 構築処理、AgentCallParameter、path context の共通定義だけを調べるとき
+- refactor の出力形式だけを確認し、prompt や実行条件を調べないとき
+- 変更内容そのものだけを確認するとき
 
 ## hash
-- 4b87f3555581a600abb33ccfcc91115a56201487b028142d54fe51e9ff3ddf10
+- e1be5d7037ae48b133da3b84ca22e75c8539bef0302b1230ff706b0fd77a7a06
 
 # `session`
 
