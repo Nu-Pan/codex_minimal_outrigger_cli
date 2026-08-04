@@ -19,19 +19,16 @@
 # `refactor`
 
 ## Summary
-- refactor fork における変更要約とファイル単位レビュー・修正の AgentCallParameter、および Structured Output schema を定義するファイル群。変更要約・レビュー結果の形式確認と、各 prompt 構築処理の変更時に参照する入口。
+- 対象ディレクトリの責務を、refactor fork における変更要約・ファイル単位レビュー／修正の構造化出力と AgentCallParameter 構築の入口として説明する。変更差分の要約やレビュー・修正実行の条件を確認する際に参照する。
 
 ## Read this when
-- refactor fork の変更要約出力形式、根拠ファイル一覧、要約結果の検証項目を確認するとき
-- ファイル単位レビュー・修正の所見フォーマットや、根拠・oracle 要求・対応・検証結果の構造を確認するとき
-- 変更要約またはファイル単位レビュー・修正の prompt 構成、対象 path、実行条件、モデル設定、Structured Output schema の参照先を確認・変更するとき
-- レビュー時の oracle・realization 参照規則や修正・検証条件を確認するとき
+- refactor fork の変更要約・レビュー・修正 prompt の構成を確認するとき
+- 構造化出力、AgentCallParameter、実行条件、変更後検証の実装を確認するとき
 
 ## Do not read this when
-- レビュー対象ファイルの具体的な実装内容や個別の所見を調査するとき
-- 変更差分そのものや要約結果の具体的内容を確認するとき
-- 共通 prompt builder や path model の内部仕様を直接確認するとき
-- 通常の実装・テスト仕様や、このディレクトリ以外の出力スキーマを扱うとき
+- 個別ファイルの実装内容やレビュー基準だけを調べるとき
+- 構造化出力スキーマだけを確認するとき
+- レビュー対象の変更内容や生成済み要約だけを確認するとき
 
 ## hash
-- 56003164afc00ea727f3c2ed9ebf137e5e673f67fd213b15d94cfa9265589100
+- 8e0a8efc7a985a2ef3c63cd00841f6fa5014108ae7762cc328a87a497917d1a6

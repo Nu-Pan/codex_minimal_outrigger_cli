@@ -1,37 +1,35 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様ドキュメントをまとめるディレクトリ。アプリケーション共通仕様、branch・commit・worktree モデル、不採用案の検討記録、Python 開発規則を扱い、各仕様領域の入口となる。
+- cmoc の正本ドキュメントを集約するディレクトリ。アプリケーション仕様、branch・commit・worktree のモデル、採用しなかった設計案、Python 開発規約を扱い、個別仕様や開発手順へ進むための入口となる。
 
 ## Read this when
-- cmoc のアプリケーション挙動、branch・worktree lifecycle、開発規則、テストや環境構築の正本仕様を探すとき
-- 特定の仕様領域に対応する文書やサブディレクトリを選ぶとき
-- 採用しなかった設計案の背景や判断理由を確認するとき
+- cmoc のアプリケーション挙動、CLI、agent call、ログ、prompt、run／session lifecycle、サブコマンドの正本仕様を探すとき
+- session fork、run の隔離、branch・commit・worktree の関係やライフサイクルを確認するとき
+- realization refactor で採用しなかった作業方式・検査方式・状態管理方式の理由を確認するとき
+- Python のコーディング規則、CLI 設計、開発環境、テスト規則、テスト実行手順を確認するとき
 
 ## Do not read this when
-- 確認対象の仕様文書やサブディレクトリがすでに特定されているとき
-- 実装構造、具体的なテスト実行、一般的な開発作業だけを調査するとき
+- INDEX.md の生成規則やルーティング方針だけを確認するとき
+- 対象が明確な個別仕様、開発環境手順、コーディング規則、CLI 配置方針、テスト規則、テスト実行手順を直接確認できるとき
+- realization 実装や realization テスト固有の内容だけを調査するとき
+- 現行仕様ではなく、具体的な実装ファイルやテストファイルの内容だけを確認するとき
 
 ## hash
-- f32417f2e650bee68a57635aa90f903273dc9c0856cfd21ed011134f1fafef04
+- e5ad7a677991c6f41c30ea66e602a2a0e9fe95f3701af1aa2344081a9708a865
 
 # `src`
 
 ## Summary
-- 参照可能な正本ソース本文の有無を確認するための入口。
-- リポジトリ設定、パスモデル、規範モデル、構造化文書レンダラーを担う Python ソース群。
-- oracle・realization、適合性レビュー、ファイルアクセス、INDEX.md ルーティングなどの規範を prompt builder 用の構造化文書へ変換する実装群。
+- AIコーディングエージェント呼び出しに関する正本実装をまとめたソースディレクトリ。共通パラメータ構築、設定・パス・規範・構造化文書のモデル化、oracle・realization規範やINDEX.mdルーティング規則のprompt builder処理を下位実装への入口として提供する。
 
 ## Read this when
-- oracle/src 配下の正本ソースの有無や構成を確認するとき。
-- 設定、パス解決、規範モデル、構造化文書の変換・Markdown レンダリングを調査・変更するとき。
-- oracle・realization の規範、適合性レビュー、ファイルアクセス規則、INDEX.md ルーティング規則、prompt builder 用文書生成を調査・変更するとき。
+- Agent call のパラメータ構築、設定・パスモデル、規範や構造化文書の処理を調査・変更するとき
+- oracle・realization の適合性、ファイルアクセス制約、INDEX.md ルーティング規則を prompt builder へ変換する処理を調査・変更するとき
 
 ## Do not read this when
-- 実装仕様や処理内容を確認したいときは、oracle/src 配下の具体的な実装を直接読む。
-- CLI の実行フロー、設定ファイルの生成・同期、agent call prompt 生成などの利用側処理だけを調査するとき。
-- 特定の oracle 文書や realization 実装そのものの仕様・挙動だけを調査するとき。
-- Codex CLI の実行権限や sandbox 設定そのものを確認するとき。
+- 個別機能の実際の処理ロジックやテストだけを調べるとき
+- 共通 prompt 構築、パス解決、レビュー基準、差分適用、マージ操作など、下位実装が直接の対象であるとき
 
 ## hash
-- 7a59440d630d046b7448c3e583446ba8782ba36bde058772de6e0371bf455e21
+- d96bec8652f08ac01841fa2fa974e3154b3c1ffe23e110dfc641b9ceb1e1601f

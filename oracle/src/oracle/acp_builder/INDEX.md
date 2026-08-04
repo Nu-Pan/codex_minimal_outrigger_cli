@@ -70,20 +70,20 @@
 # `realization`
 
 ## Summary
-- `cmoc realization apply fork` の起動パラメータを構築し、oracle 差分・commit 範囲・linked worktree を prompt に組み込んで realization file の追従を委譲する実装。差分追従の AgentCallParameter、モデル・worktree 設定、完了条件を確認する入口。
-- `refactor fork` の変更要約およびファイル単位レビュー・修正に用いる AgentCallParameter と Structured Output schema の定義。変更要約、根拠、所見、oracle 要求、対応、検証結果、prompt 構成や実行条件を確認する入口。
+- oracle の変更を realization file へ反映する apply fork と、変更要約・レビュー・修正を扱う refactor fork の AgentCallParameter 構築実装をまとめたディレクトリ。各 fork の prompt、実行条件、構造化出力、差分追従・変更後検証への入口を提供する。
 
 ## Read this when
-- oracle file の変更を realization file へ追従させる起動パラメータ、prompt、差分参照、モデル設定、worktree 設定を確認・変更するとき。
-- refactor fork の変更要約出力、レビュー・修正結果の形式、根拠ファイル、oracle・realization 参照規則、prompt 構成や Structured Output schema を確認・変更するとき。
+- oracle file の変更を realization file へ追従させる apply fork の起動パラメータや委譲条件を確認するとき
+- refactor fork の変更要約、ファイル単位レビュー・修正、構造化出力、実行条件を確認するとき
+- apply fork または refactor fork の prompt 構成や AgentCallParameter 構築を変更するとき
 
 ## Do not read this when
-- realization apply fork の差分適用ロジックやテストだけを調べるとき。
-- 一般的な prompt 構築、AgentCallParameter、path context の共通定義を調べるとき。
-- レビュー対象ファイルの具体的な実装、個別の差分や所見、通常の実装・テスト仕様を調べるとき。
+- apply fork の差分適用ロジックやテストだけを調べるとき
+- 一般的な prompt 構築、AgentCallParameter、path context の共通定義だけを調べるとき
+- 個別ファイルの実装内容、レビュー基準、構造化出力スキーマだけを確認するとき
 
 ## hash
-- f56229be53dc5064f5cccdbd3ef31848c8bbf52321d759f9bd80295846949760
+- 4b87f3555581a600abb33ccfcc91115a56201487b028142d54fe51e9ff3ddf10
 
 # `session`
 
