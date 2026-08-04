@@ -89,7 +89,7 @@
 1. 調査対象 file の現在の SHA256 を調査時点の hash として取得する。
 2. `build_realization_refactor_fork_file_review_and_fix_parameter` に調査対象 path だけを渡し、所見調査、realization file の修正、および検証を 1 回の agent call で行う。
 3. agent call が正常終了した後、返された Structured Output と、その agent call による realization file の差分から処理結果を決定する。
-    - agent call 開始直前と終了直後の `{{work-root}}` の file tree を比較し、終了時点に残る net 差分の path 集合を、agent call が生じさせた実際の変更 path 集合とする。
+    - agent call 開始時点を基準として終了時点に残る realization file の net 差分の path 集合を、agent call が生じさせた実際の変更 path 集合とする。
     - 実際の変更 path は、正規化済みの `{{work-root}}` 相対 path とする。absolute path と `..` による `{{work-root}}` 外参照を禁止する。
     - 追加と変更は終了時点の path を含め、削除は開始時点の path を含める。rename は削除と追加として rename 前後の path を含める。
     - 各所見の `changed_paths` は、その所見への対応によって生じた実際の変更 path を列挙する必須の配列とする。対応する net 差分がない所見では空配列とする。
@@ -97,8 +97,7 @@
     - 申告された変更 path 集合と実際の変更 path 集合は一致しなければならない。実際の変更 path の申告漏れと、実際には変更されていない path の過剰申告は、どちらも Structured Output の契約違反とする。
     - 差分の帰属判定には `changed_paths` だけを使用する。調査時点の所見の根拠を表す `evidences[].path` を、変更 path の申告または帰属判定に使用してはいけない。
     - `findings` が空の場合は、所見なしとする。
-    - `findings` が空の場合は、実際の変更 path 集合も空でなければならない。
-    - `findings` が 1 件以上あり、全所見の `resolution.status` が `fixed` であり、agent call 後の realization file の差分が空の場合は、処理結果を所見なしへ正規化する。
+    - `findings` が 1 件以上あり、全所見の `resolution.status` が `fixed` であり、実際の変更 path 集合が空の場合は、処理結果を所見なしへ正規化する。
     - それ以外の場合は、返された所見を処理結果の所見とする。
 4. 調査時点の hash、日時、および正規化後の所見有無を対象 entry に保存する。
     - 所見なし: `last_investigation_result=no_findings`, `investigation_required=false`
@@ -110,14 +109,13 @@
 8. 正規化後の処理結果に `resolution.status=unresolved` の所見が 1 件以上ある場合は、処理単位の確定後に対象 path を current fork の unresolved target 集合へ追加する。
 9. unresolved target 集合を除いた調査対象が残っていれば、次の対象を選ぶ。
 
-- 所見が空の場合、agent は差分を発生させてはいけない。
-- agent の差分は返却した所見のいずれかに対応し、対応する所見の `changed_paths` に含まれなければならない。
+- 想定外 path の変更と変更禁止対象への書き込みは、`changed_paths` の照合とは別に検査する。
 - agent call には commit 差分、変更 commit の列、または変更要約を注入してはいけない。
 - `resolution.status=fixed` は agent の自己申告であり、その申告だけを修正の意味的な正しさを証明する情報として扱ってはいけない。
 - 所見なしへの正規化は cmoc の処理判定だけに適用する。agent が返した元の Structured Output と Codex call log は破棄または改変せず、調査可能な実行記録として保持する。
 - 所見なしへ正規化した所見を current fork の unresolved target 集合へ追加してはいけない。synthetic `unresolved` への変換や、人間による判断、手動修正、手動承認を要求する workflow の追加も行わない。
 - 所見なしへの正規化を理由に run を error state にしてはいけない。処理単位を確定し、残りの target の処理を継続する。
-- 所見なしへの正規化は、想定外 path の変更、変更禁止対象への書き込み、説明のない realization file の差分、または処理単位の commit・rollback 失敗に対する検査を緩和しない。
+- 所見なしへの正規化は、`changed_paths` の照合、想定外 path と変更禁止対象の検査、または処理単位の commit・rollback 失敗に対する検査を緩和しない。
 - unresolved を含むことだけを理由に、処理単位を rollback したり refactor loop を停止したりしてはいけない。
 - unresolved を含む処理単位でも、realization file の差分、refactor state、および `INDEX.md` を整合した単位として確定する。
 

@@ -54,10 +54,8 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
                 - 所見の調査、修正、修正後の検証を同一の agent call 内で行う
                 - `resolution.status=fixed` は、この agent call 内で所見に対応する realization file を実際に変更し、修正後の検証まで行った場合だけ使用する
                 - この agent call で realization file を変更して解消した所見も、この agent call で発見した所見として `findings` に含める
-                - 各所見の `changed_paths` に、その所見への対応によって agent call 終了時点で net 差分が生じた全 file の、正規化済みの `{{work-root}}` 相対 path を列挙する。absolute path と `..` による `{{work-root}}` 外参照は禁止する。対応する net 差分がない場合は空配列にする
-                - 追加と変更は終了時点の path を `changed_paths` に含め、削除は開始時点の path を含める。rename は削除と追加として rename 前後の path を含める
-                - 全所見の `changed_paths` の和集合を、この agent call が生じさせた実際の変更 path 集合と一致させる。同じ path が複数の所見に対応する場合は、重複を除いた集合として扱う
-                - `evidences` は調査時点の所見の根拠として使用し、変更 path の申告には使用しない
+                - 全所見の `changed_paths` の和集合を、この agent call の開始時点を基準として終了時点に残る realization file の net 差分の path 集合と一致させる。同じ path を複数の所見に含めてよい
+                - `evidences[].path` は調査時点の所見の根拠だけを表し、変更 path の申告または帰属判定には使用しない
                 - 所見が見つからなかった場合は `findings` を空にし、file に差分を発生させない
                 - git add と git commit は実行禁止
                 """,
