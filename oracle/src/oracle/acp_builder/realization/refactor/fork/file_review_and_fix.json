@@ -14,6 +14,7 @@
         "required": [
           "title",
           "evidences",
+          "changed_paths",
           "oracle_requirement",
           "observed_implementation",
           "reason",
@@ -61,6 +62,13 @@
                   "description": "該当箇所の短い要約。修正による位置情報の変化を判別するための情報。"
                 }
               }
+            }
+          },
+          "changed_paths": {
+            "type": "array",
+            "description": "この所見への対応によって agent call 終了時点で net 差分が生じた全 file の、正規化済みの `{{work-root}}` 相対 path。absolute path と `..` による `{{work-root}}` 外参照は禁止。対応する net 差分がない場合は空配列。追加と変更は終了時点の path、削除は開始時点の path、rename は rename 前後の path を含む。",
+            "items": {
+              "type": "string"
             }
           },
           "oracle_requirement": {
