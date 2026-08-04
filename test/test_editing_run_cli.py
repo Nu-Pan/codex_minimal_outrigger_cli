@@ -1371,6 +1371,7 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
                     "findings": [
                         {
                             "title": "deferred",
+                            "changed_paths": ["README.md", "renamed.md"],
                             "resolution": {
                                 "status": "unresolved",
                                 "summary": "needs follow-up",
@@ -1457,6 +1458,7 @@ def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
                 "findings": [
                     {
                         "title": "managed file change",
+                        "changed_paths": [],
                         "resolution": {"status": "fixed"},
                     }
                 ]
@@ -1482,11 +1484,11 @@ def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
         assert restored.read_text() == original.read_text()
 
 
-def test_refactor_rejects_unattributed_realization_changes(
+def test_refactor_rejects_unreported_changed_paths_despite_evidences(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """所見 evidence にない realization 差分を処理単位へ混ぜない。"""
+    """evidences でなく changed_paths の申告漏れにより差分を拒否する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     first_review = True
@@ -1495,7 +1497,7 @@ def test_refactor_rejects_unattributed_realization_changes(
         parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
-        """README の所見に無関係な realization file も変更する agent を再現する。"""
+        """evidences には全差分を載せ、changed_paths では一部だけ申告する。"""
         nonlocal first_review
         purpose = str(kwargs["purpose"])
         if purpose == "realization refactor change summary":
@@ -1521,8 +1523,15 @@ def test_refactor_rejects_unattributed_realization_changes(
                                     "line_start": 1,
                                     "line_end": 1,
                                     "summary": "README の変更行",
-                                }
+                                },
+                                {
+                                    "path": str(worktree / "unattributed.py"),
+                                    "line_start": 1,
+                                    "line_end": 1,
+                                    "summary": "追加した realization file",
+                                },
                             ],
+                            "changed_paths": ["README.md"],
                             "oracle_requirement": "README を正しく扱う",
                             "observed_implementation": "README に問題がある",
                             "reason": "修正が必要",
@@ -1546,11 +1555,50 @@ def test_refactor_rejects_unattributed_realization_changes(
     )
 
     assert result.exit_code == 1
+    assert "changed_paths が実際の差分と一致しません" in result.output
     assert _state(state_path)["run"]["state"] == "error"
     parts = _state(state_path)["run"]["branch"].split("/")
     worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
     assert (worktree / "README.md").read_text() == "# repo\n"
     assert not (worktree / "unattributed.py").exists()
+
+
+@pytest.mark.parametrize(
+    ("actual_paths", "findings", "error"),
+    [
+        ([], [{}], "changed_paths が不正です"),
+        ([], [{"changed_paths": ["README.md"]}], "実際の差分と一致しません"),
+        ([], [{"changed_paths": ["/outside.py"]}], "changed_paths が不正です"),
+        ([], [{"changed_paths": ["../outside.py"]}], "changed_paths が不正です"),
+        (["../outside.py"], [], "実際の変更 path が不正です"),
+    ],
+)
+def test_refactor_changed_path_contract_rejects_invalid_declarations(
+    actual_paths: list[str],
+    findings: list[dict[str, object]],
+    error: str,
+) -> None:
+    """必須 field、過剰申告、および work-root 外 path を拒否する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    with pytest.raises(CmocError, match=error):
+        refactor_module._validate_changed_path_contract(
+            "README.md",
+            actual_paths,
+            findings,
+        )
+
+
+def test_refactor_changed_path_contract_uses_deduplicated_union() -> None:
+    """複数所見で重複する changed_paths を集合として照合する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    refactor_module._validate_changed_path_contract(
+        "README.md",
+        ["README.md", "added.py"],
+        [
+            {"changed_paths": ["README.md"]},
+            {"changed_paths": ["README.md", "added.py"]},
+        ],
+    )
 
 
 def test_refactor_rejects_agent_commit_and_rolls_back_unit(
@@ -2441,6 +2489,7 @@ def test_refactor_fork_completes_persistent_full_cycle(
                     "findings": [
                         {
                             "title": "差分のない fixed 自己申告",
+                            "changed_paths": [],
                             "resolution": {
                                 "status": "fixed",
                                 "summary": "agent は修正済みと申告した",
@@ -2664,6 +2713,7 @@ def test_refactor_fork_defers_unresolved_target_and_completes_remaining_targets(
                     "findings": [
                         {
                             "title": "README unresolved finding",
+                            "changed_paths": [],
                             "resolution": {
                                 "status": "unresolved",
                                 "summary": "人間の判断が必要",
@@ -2775,6 +2825,7 @@ def test_refactor_fork_refreshes_changed_file_index_during_process_tracking(
                         "findings": [
                             {
                                 "title": "README finding",
+                                "changed_paths": ["README.md"],
                                 "resolution": {"status": "fixed"},
                             }
                         ]
@@ -2859,6 +2910,7 @@ def test_refactor_rejects_realization_change_added_by_index_refresh(
                 "findings": [
                     {
                         "title": "target finding",
+                        "changed_paths": [target] if target_path.is_file() else [],
                         "resolution": {"status": "fixed"},
                     }
                 ]
@@ -3015,6 +3067,7 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
                     "findings": [
                         {
                             "title": "README unresolved finding",
+                            "changed_paths": ["README.md"],
                             "resolution": {
                                 "status": "unresolved",
                                 "summary": "人間の判断が必要",

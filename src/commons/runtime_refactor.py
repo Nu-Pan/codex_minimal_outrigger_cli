@@ -171,14 +171,14 @@ def _validated_state(path: Path, value: object) -> RefactorState:
         )
     state: RefactorState = {}
     for raw_path, raw_entry in value.items():
-        if not isinstance(raw_path, str) or not _valid_relative_path(raw_path):
+        if not isinstance(raw_path, str) or not is_normalized_relative_path(raw_path):
             raise _invalid_refactor_state(path, f"不正な path key: {raw_path!r}")
         state[raw_path] = _validated_entry(path, raw_path, raw_entry)
     return state
 
 
-def _valid_relative_path(value: str) -> bool:
-    """state key として許可される repository 相対 path か判定する。
+def is_normalized_relative_path(value: str) -> bool:
+    """refactor 契約で許可される正規化済み work-root 相対 path か判定する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     """

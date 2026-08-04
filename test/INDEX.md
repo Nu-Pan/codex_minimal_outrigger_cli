@@ -97,22 +97,20 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- editing run workload の canonical builder adapter を検証するテスト。apply 用 builder が commit 範囲・raw diff・標準規則を prompt に埋め込み、refactor 用 builder が canonical structured output schema と所定の実行設定を使用することを確認する。
-- raw diff に三連 backtick や prompt 境界風の見出しが含まれる場合でも、外側の prompt 境界を壊さず保持できることを検証する。
-- editing run 用 linked worktree を fixture で隔離し、対象 builder の parameter、prompt、schema path、実行モードを確認する realization test の入口。
+- editing run workload の canonical builder adapter を検証するテスト。apply 用 builder がコミット範囲・raw diff・所定の prompt 規約・実行設定を埋め込み、refactor 用 builder が canonical structured output schema と要求された実行設定を使うことを確認する。raw diff 内の三連 backtick や prompt 境界風マーカーを安全に保持するケースも含む。対応する oracle の builder 実装および JSON schema の期待値を確認するための realization test の入口。
 
 ## Read this when
-- apply または refactor の editing run builder の prompt 構成、実行設定、structured output schema の利用を変更・検証するとき。
-- raw diff の埋め込みと prompt 境界のエスケープ・保持挙動を確認するとき。
-- 対象 builder の canonical oracle schema との一致をテスト実装から確認するとき。
+- editing run の apply/refactor fork builder の prompt 構成、実行設定、structured output schema の適合性を検証・変更するとき
+- raw diff を prompt に埋め込む際のコードフェンスや境界マーカーの扱いを確認するとき
+- 対応する canonical builder adapter や schema の変更が既存テストへ与える影響を調べるとき
 
 ## Do not read this when
-- builder の実装詳細そのものを変更・調査する場合は、対応する realization implementation と oracle file を直接読む。
-- editing run 以外の builder や、builder の一般的なテスト実行方法だけを確認する場合。
-- schema の正本定義を確認する場合は、このテストではなく対応する oracle schema file を直接読む。
+- builder 実装そのものの責務や prompt 生成ロジックを調査するときは、対応する realization implementation を直接読む
+- structured output schema の正本仕様を確認するときは、対応する oracle schema を直接読む
+- editing run と無関係な builder、CLI、一般的なテスト実行方法を調査するとき
 
 ## hash
-- 340600a90ae1353f4ed62914d447b15c8ebc04ba380d5143c3cb409448d75fac
+- fc568cb7e522813d4c41a010d03690538ceb4203a2b52faae1747938624e1bc7
 
 # `test_acp_builder_indexing_parameters.py`
 
@@ -391,21 +389,22 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 editing run lifecycle の統合テストを担う。apply/refactor fork、run join/abandon、session state、run worktree、Git branch、process tracking、INDEX refresh、report、rollback、cleanup、interrupt、競合解決を同一 fixture で検証する。対象領域の end-to-end な挙動確認への入口となる。
+- workload fork と run join/abandon の統合 realization test。editing run の session state、run worktree、Git branch、process tracking、Codex child lifecycle、INDEX refresh、fork/lifecycle report を同一 fixture で検証する。
+- apply fork と refactor fork の正常完了、失敗、割り込み、rollback、managed file 保護、変更 path 契約、rename/delete、unresolved finding、timestamp 衝突などを扱う。
+- run join/abandon の merge、force-resolve、cleanup、競合、state 同期、report 保存、worktree・branch 削除条件を検証する。各 subcommand 実装や lifecycle 共通処理の挙動を確認するための統合テスト入口。
 
 ## Read this when
-- realization apply/refactor fork と run join/abandon の連携を変更・検証するとき
-- editing run の state 遷移、worktree・branch の lifecycle、process tracking、Codex child cleanup を変更・検証するとき
-- INDEX refresh、fork/lifecycle report、変更 path 集計、rollback、merge・cleanup failure、interrupt、force-resolve の挙動を変更・検証するとき
-- 既存の lifecycle fixture を共有する統合テストの全体的な制約や境界を確認するとき
+- realization apply/refactor fork、run join/abandon、editing run lifecycle の外部挙動を変更・調査するとき。
+- run worktree、session state、process tracking、INDEX refresh、report、rollback、cleanup の連携を検証するとき。
+- 既存の統合テストが期待する変更 path、割り込み、異常終了、merge/cleanup の契約を確認するとき。
 
 ## Do not read this when
-- 単一 helper や単一 command の局所的な実装だけを確認し、対応する unit test が読むべき対象として案内されているとき
-- oracle の仕様や実装本体の詳細を確認することが目的で、統合テストの検証範囲を確認する必要がないとき
-- editing run、fork、join、abandon、state、worktree、report、INDEX refresh のいずれにも関係しないテストを探しているとき
+- 単一の lifecycle helper や subcommand 実装の内部仕様だけを確認する場合は、対応する src ファイルや oracle 仕様を直接読む。
+- INDEX 文書生成、一般的な unit test 規約、個別の report format の正本仕様だけを確認する場合。
+- editing run と無関係な CLI 機能やテストを調査する場合。
 
 ## hash
-- abc2770357623f9983e8df4db4afb0942e75d731829f9dca5402f3501472f277
+- 90083a149acd910b06b7b7fb9d7ab41dcc39dd77dc7eaaa8ef205e1624f40d60
 
 # `test_indexing_cli.py`
 
