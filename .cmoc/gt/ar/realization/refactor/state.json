@@ -1080,10 +1080,10 @@
     "last_investigated_at": "2026-08-03_18-34_08_596581000"
   },
   "test/test_acp_builder_session_join_parameters.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "f67830519cf3e111f51be913501de52c2c8e513f177a0164153c4694e84bbdbb",
-    "last_investigated_at": "2026-08-03_12-19_29_893340000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "1ce9c852ebe12b5de8c5115cf47256dc5b2d7d081a0c8b75ac4aa0eb05e3e050",
+    "last_investigated_at": "2026-08-06_08-15_04_007923000"
   },
   "test/test_acp_builder_tui_parameters.py": {
     "investigation_required": true,
