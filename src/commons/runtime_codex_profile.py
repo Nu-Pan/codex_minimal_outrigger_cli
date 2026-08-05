@@ -653,10 +653,12 @@ def _is_missing_codex_executable(
     if exc.filename is None:
         # テスト double などが filename を設定しない FileNotFoundError を許容する。
         return True
-    cwd = kwargs.get("cwd")
-    if cwd is not None and not isinstance(cwd, int):
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    # subprocess の cwd key は API 名として維持し、内部値には process の役割を付ける。
+    codex_process_cwd = kwargs.get("cwd")
+    if codex_process_cwd is not None and not isinstance(codex_process_cwd, int):
         try:
-            if not Path(cwd).is_dir():
+            if not Path(codex_process_cwd).is_dir():
                 return False
         except (OSError, TypeError):
             return False

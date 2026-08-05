@@ -223,9 +223,9 @@
   },
   "oracle/doc/dev_rule/coding_rule.md": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "c725d18b649ce36fdca432bb297452492eea1bca900c874e600451769d21d501",
-    "last_investigated_at": "2026-07-31_17-18_20_044651000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "10ce107790563037a796187d2a3959120787f2c61e70a5c832cc6c59154f5a56",
+    "last_investigated_at": "2026-08-05_20-45_46_969836000"
   },
   "oracle/doc/dev_rule/design_rule.md": {
     "investigation_required": false,
@@ -792,7 +792,7 @@
     "last_investigated_at": "2026-07-25_03-38_39_786476000"
   },
   "src/commons/runtime_git.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "d72d562b804fb6f6985663b8e7994bf6cce6a3338a7308f6f675e6edcf3adfd8",
     "last_investigated_at": "2026-07-31_18-23_40_143100000"

@@ -45,11 +45,13 @@ def literal_pathspec(path: str) -> str:
     return f":(literal){path}"
 
 
-def run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
+def run_git(args: list[str], git_cwd: Path, check: bool = True) -> CommandResult:
     """git subprocess の失敗を cmoc の利用者向けエラーへそろえる境界。"""
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    # Git の実行場所は subprocess API の cwd とは異なる内部役割名で扱う。
     result = subprocess.run(
         ["git", *args],
-        cwd=cwd,
+        cwd=git_cwd,
         text=True,
         capture_output=True,
     )
