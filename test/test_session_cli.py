@@ -769,6 +769,53 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
 
 
+def test_session_join_rejects_changes_outside_conflict_marker_block(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """conflict marker 外の変更を含む解消結果を merge しない。
+
+    根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py
+    {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+    """
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("prefix\nsession change\nsuffix\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    target.write_text("prefix\nhome change\nsuffix\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        """conflict resolution の成功を表す最小 fake result。"""
+
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """marker 外の suffix を変更した conflict agent の結果を再現する。"""
+        target.write_text("prefix\nresolved change\nchanged suffix\n")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "conflict 対象 file の不要な差分が残っています。" in result.stderr
+    assert str(target) in result.stderr
+    assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
+
+
 def test_session_join_handles_conflict_path_containing_newline(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

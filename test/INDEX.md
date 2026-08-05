@@ -811,20 +811,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- session の fork・join・abandon に関する CLI 外部挙動を、branch と永続 state のライフサイクルとして一体的に検証する回帰テスト。linked worktree、state cleanup、競合解消、dirty worktree 拒否、失敗時の rollback やエラー報告まで扱う。
+- session fork/join/abandon の CLI 外部挙動をまとめて検証する回帰テスト。session branch と永続 state の作成・遷移・cleanup、linked worktree 対応、競合解消、dirty worktree や不正 state の拒否、失敗時の rollback・エラー報告を扱う。session lifecycle の実装や仕様を確認する際のテスト入口。
 
 ## Read this when
-- session サブコマンドの挙動、session branch/state の状態遷移、linked worktree 対応を変更・調査するとき
-- session join の conflict 解消、Codex 呼び出し境界、cleanup 失敗時の復旧を検証するとき
-- session CLI 回帰テストの対象範囲や既存の外部挙動を確認するとき
+- session fork、join、abandon の挙動や回帰を確認・変更するとき
+- session state、session branch、linked worktree のライフサイクルを検証するとき
+- join の conflict resolution、sandbox、対象外差分拒否、cleanup 失敗時の復元を確認するとき
+- session CLI のエラー出力、ログ、preprocess 順序を確認するとき
 
 ## Do not read this when
-- session 以外の CLI サブコマンドだけを変更・調査するとき
-- session state の正規スキーマや仕様そのものを確認したいときは、対応する oracle 仕様を直接読む
-- 個別の実装詳細や共通テスト補助関数だけを確認したいとき
+- session CLI 以外のコマンドの挙動を確認するとき
+- session state の正本仕様を確認するときは、先に session state や各 session サブコマンドの仕様を読むとき
+- 実装の責務や内部 prompt 生成だけを確認するときは、対応する src または oracle の直接対象を読むとき
 
 ## hash
-- 936d80a07b77cbaccb54f27759bfed1eb208e096ce96cc25bc180c10a2be4f86
+- b42d994dc673bac1968cf16b034b0543511c8c63a161a1e7e37e1bf050eb40e3
 
 # `test_skill_metadata.py`
 

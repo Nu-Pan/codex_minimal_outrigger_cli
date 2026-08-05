@@ -1,6 +1,7 @@
 # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 import hashlib
 import json
+from functools import lru_cache
 from pathlib import Path
 from typing import Callable
 
@@ -133,6 +134,7 @@ def resolve_session_join_conflict(
             git(["status", "--short"], root).stdout,
         )
     before_codex = _changed_path_snapshot(root, git)
+    before_conflict_contents = _conflict_file_contents(conflicted_paths)
     start_subcommand_step("3/4, 2/5", "conflict marker 解消を依頼", "resolve conflicts")
     codex_exec(
         build_session_join_conflict_resolution_parameter(conflicted_paths),
@@ -142,6 +144,7 @@ def resolve_session_join_conflict(
         purpose="session join conflict resolution",
     )
     _reject_non_conflict_changes(root, git, before_codex, conflicted_paths)
+    _reject_conflict_context_changes(before_conflict_contents)
     start_subcommand_step(
         "3/4, 3/5", "conflict marker の残存を確認", "check conflict markers"
     )
@@ -208,6 +211,112 @@ def _reject_non_conflict_changes(
             ["差分を確認し、不要な変更を戻してから手動で merge を完了してください。"],
             "\n".join(str(path) for path in changed),
         )
+
+
+def _conflict_file_contents(paths: list[Path]) -> dict[Path, bytes]:
+    """conflict marker 外の内容を比較するため、対象 file の事前内容を保存する。"""
+    contents: dict[Path, bytes] = {}
+    for path in paths:
+        absolute = _absolute_path(path)
+        content = _read_regular_file(absolute)
+        if content is not None and _conflict_context_segments(content) is not None:
+            contents[absolute] = content
+    return contents
+
+
+def _reject_conflict_context_changes(before_contents: dict[Path, bytes]) -> None:
+    """conflict marker の外側へ agent が差分を加えた場合は merge を拒否する。"""
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py:
+    # conflict marker の置換範囲外の仕様変更、実装改善、整形を merge commit に持ち込まない。
+    changed: list[Path] = []
+    for path, before in before_contents.items():
+        after = _read_regular_file(path)
+        if after is None:
+            if path.exists() or path.is_symlink():
+                changed.append(path)
+                continue
+            after = b""
+        if not _preserves_conflict_context(before, after):
+            changed.append(path)
+    if changed:
+        raise CmocError(
+            "conflict 対象 file の不要な差分が残っています。",
+            [
+                "差分を確認し、marker 外の変更を戻してから手動で merge を完了してください。"
+            ],
+            "\n".join(str(path) for path in changed),
+        )
+
+
+def _read_regular_file(path: Path) -> bytes | None:
+    """symlink や directory をたどらず、通常 file の bytes だけを読む。"""
+    try:
+        if path.is_symlink() or not path.is_file():
+            return None
+        return path.read_bytes()
+    except OSError:
+        return None
+
+
+def _conflict_context_segments(content: bytes) -> list[tuple[bytes, ...]] | None:
+    """conflict block を除いた、変更禁止の line segment を返す。"""
+    lines = tuple(content.splitlines(keepends=True))
+    ranges: list[tuple[int, int]] = []
+    opening: int | None = None
+    for index, line in enumerate(lines):
+        if opening is None:
+            if line.startswith(b"<<<<<<<"):
+                opening = index
+        elif line.startswith(b">>>>>>>"):
+            ranges.append((opening, index + 1))
+            opening = None
+    if opening is not None:
+        ranges.append((opening, len(lines)))
+    if not ranges:
+        return None
+
+    segments: list[tuple[bytes, ...]] = []
+    cursor = 0
+    for start, end in ranges:
+        segments.append(lines[cursor:start])
+        cursor = end
+    segments.append(lines[cursor:])
+    return segments
+
+
+def _preserves_conflict_context(before: bytes, after: bytes) -> bool:
+    """解消後も conflict block 外の line segment が順序・内容を保つか判定する。"""
+    segments = _conflict_context_segments(before)
+    if segments is None:
+        # binary conflict や marker を持たない conflict は、marker 外の境界を決められない。
+        return True
+    after_lines = tuple(after.splitlines(keepends=True))
+
+    @lru_cache(maxsize=None)
+    def matches(segment_index: int, position: int) -> bool:
+        if segment_index == len(segments):
+            # 最後の conflict block の置換本文は任意の line を含み得る。
+            return True
+        segment = segments[segment_index]
+        if not segment:
+            return matches(segment_index + 1, position)
+        if segment_index == 0:
+            end = position + len(segment)
+            return after_lines[position:end] == segment and matches(
+                segment_index + 1, end
+            )
+
+        for start in range(position, len(after_lines) - len(segment) + 1):
+            end = start + len(segment)
+            if after_lines[start:end] != segment:
+                continue
+            if segment_index == len(segments) - 1 and end != len(after_lines):
+                continue
+            if matches(segment_index + 1, end):
+                return True
+        return False
+
+    return matches(0, 0)
 
 
 def _changed_path_snapshot(
