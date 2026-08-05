@@ -900,10 +900,10 @@
     "last_investigated_at": "2026-08-03_11-13_12_682079000"
   },
   "src/sub_commands/oracle/review.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "37757f94b4c746550c998be8efa3ff1c28b483f5cd1f793407b95e3c32e17850",
-    "last_investigated_at": "2026-07-31_18-59_10_106950000"
+    "last_investigated_sha256": "c5d96614701b0728ada22d2b8e4b76946315c6e2f6d07a80ee5ef1e0290ae609",
+    "last_investigated_at": "2026-08-05_21-11_29_947808000"
   },
   "src/sub_commands/oracle/review_index.py": {
     "investigation_required": false,
