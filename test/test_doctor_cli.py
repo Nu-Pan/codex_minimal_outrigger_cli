@@ -1,19 +1,18 @@
 """doctor preprocess の共有 lifecycle を外部挙動から検証する統合テスト。
 
-doctor preprocess は `.cmoc/gu`、`.agents`、config、managed Ollama を同じ
+doctor preprocess は `.cmoc/gu`、`.agents`、config、refactor state を同じ
 repository/worktree 前提で修復し、必要な差分を commit する。このファイルは
 CLI と直接呼び出しの両方で、その lifecycle と pre-existing Git index の保持を
 一続きの文脈で確認する。
 
-Ollama・lock・CLI/config・Git index はテスト観点としては分かれるが、各ケース
+lock・CLI/config・Git index はテスト観点としては分かれるが、各ケース
 が同じ `make_repo`、linked worktree、共有 doctor lock、preprocess の副作用を
 前提にする。ファイルを分割すると、これらの fixture と lifecycle の説明を
 複数のモジュールで重複して読む必要があり、局所的な読解量が増えるため、
 責務を doctor preprocess の外部契約に限定して一つに保つ。
 
 正本仕様: `{{work-root}}/oracle/doc/app_spec/doctor_preprocess.md`,
-`{{work-root}}/oracle/doc/app_spec/sub_command/doctor.md`,
-`{{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md`。
+`{{work-root}}/oracle/doc/app_spec/sub_command/doctor.md`。
 """
 
 import json
@@ -25,23 +24,15 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-from _cli_support import runner
+from _cli_support import run_doctor
 from _git_support import make_repo, run_git
-from _ollama_support import (
-    TEST_SLM_MODEL,
-    run_doctor,
-)
-from oracle.other.cmoc_config import CodexModelSpec
 
 import commons.runtime_doctor as doctor_module
-import commons.runtime_ollama as ollama_module
-from basic.acp import ModelClass
-from commons.runtime_config import write_config
-from config.cmoc_config import CmocConfig
-from main import app
+from commons.runtime_errors import CmocError
+from commons.runtime_refactor import RefactorState
 
 
-def hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
+def _hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
     """別プロセスで共有 doctor lock を保持し、解放通知まで待機する。"""
 
     import fcntl
@@ -54,21 +45,17 @@ def hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) ->
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
+def test_doctor_preprocess_repairs_git_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """doctor が Git の共通状態を修復し、共有 Ollama を再利用可能にすることを検証する。"""
+    """doctor が Git 状態、config、refactor state を修復する。"""
 
     root = make_repo(tmp_path)
-    config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
-    write_config(root / ".cmoc" / "gt" / "ar" / "config.json", config)
 
     monkeypatch.chdir(root)
-    result = run_doctor(root)
+    run_doctor(root)
 
-    assert result.exit_code == 0
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
@@ -76,27 +63,6 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
     agents_gitkeep = root / ".agents" / ".gitkeep"
     assert agents_gitkeep.is_file()
     assert agents_gitkeep.read_text() == ""
-    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # これはテスト用 HOME や endpoint ではなく、本番実行と共有するサービスと永続 model store である。
-    # 後続テストでも再利用できるよう、doctor はこのサービスをそのまま残す。
-    home = Path.home()
-    service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
-    assert (home / ".cmoc" / "ollama" / "bin" / "ollama").is_file()
-    assert (home / ".cmoc" / "ollama" / "models").is_dir()
-    assert service.read_text().splitlines() == [
-        "[Unit]",
-        "Description=cmoc managed ollama",
-        "",
-        "[Service]",
-        "ExecStart=%h/.cmoc/ollama/bin/ollama serve",
-        "Environment=OLLAMA_HOST=127.0.0.1:11434",
-        "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
-        "Restart=on-failure",
-        "RestartSec=2s",
-        "",
-        "[Install]",
-        "WantedBy=default.target",
-    ]
     repair_commit_paths = run_git(
         root, "show", "--name-only", "--format=", "HEAD"
     ).stdout
@@ -120,93 +86,65 @@ def test_doctor_preprocess_repairs_git_state_and_ensures_shared_managed_ollama(
             cwd=root,
             check=False,
         ).returncode
-        != 0
+        == 1
+    )
+    state_path = (
+        root / ".cmoc" / "gt" / "ar" / "realization" / "refactor" / "state.json"
+    )
+    state = json.loads(state_path.read_text())
+    assert set(state) == {".gitignore", "README.md", "oracle/spec.md"}
+    assert all(
+        entry
+        == {
+            "investigation_required": True,
+            "last_investigation_result": "not_investigated",
+            "last_investigated_sha256": None,
+            "last_investigated_at": None,
+        }
+        for entry in state.values()
     )
 
 
-def test_doctor_pulls_each_unique_cmoc_provider_model(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_doctor_preprocess_follows_repair_order(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """設定に現れる cmoc provider model を重複なく pull 対象にすることを検証する。"""
-
+    """doctor が oracle の ignore、agents、config、state 順に修復する。"""
     root = make_repo(tmp_path)
-    config = CmocConfig()
-    config.codex.model[ModelClass.MAINSTREAM] = CodexModelSpec("cmoc", "alpha")
-    config.codex.model[ModelClass.FLAGSHIP] = CodexModelSpec("cmoc", "beta")
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "alpha")
-    write_config(root / ".cmoc" / "gt" / "ar" / "config.json", config)
-    pulled: list[str] = []
+    events: list[str] = []
+    original_ignore = doctor_module.ensure_cmoc_ignored
+    original_agents = doctor_module._ensure_agents_tracked
+    original_config = doctor_module.sync_config
+    original_state = doctor_module.sync_refactor_state
 
-    monkeypatch.setenv("HOME", str(tmp_path / "home"))
-    monkeypatch.setattr(
-        ollama_module, "_ensure_ollama_installed", lambda: Path("ollama")
-    )
-    monkeypatch.setattr(
-        ollama_module, "_ensure_ollama_service", lambda executable: None
-    )
-    monkeypatch.setattr(
-        ollama_module, "_verify_ollama_service", lambda executable: None
-    )
-    monkeypatch.setattr(
-        ollama_module,
-        "_ensure_ollama_model",
-        lambda executable, model: pulled.append(model),
-    )
+    def observe_ignore(path: Path) -> None:
+        """ignore 修復の呼び出し順を記録する。"""
+        events.append("ignore")
+        original_ignore(path)
+
+    def observe_agents(path: Path) -> bool:
+        """agents 修復の呼び出し順を記録する。"""
+        events.append("agents")
+        return original_agents(path)
+
+    def observe_config(path: Path) -> None:
+        """config 修復の呼び出し順を記録する。"""
+        events.append("config")
+        original_config(path)
+
+    def observe_state(path: Path, *, sync_entries: bool = True) -> RefactorState:
+        """refactor state 修復の呼び出し順を記録する。"""
+        events.append("state")
+        return original_state(path, sync_entries=sync_entries)
+
+    monkeypatch.setattr(doctor_module, "ensure_cmoc_ignored", observe_ignore)
+    monkeypatch.setattr(doctor_module, "_ensure_agents_tracked", observe_agents)
+    monkeypatch.setattr(doctor_module, "sync_config", observe_config)
+    monkeypatch.setattr(doctor_module, "sync_refactor_state", observe_state)
 
     doctor_module.run_doctor_preprocess(root)
 
-    assert len(pulled) == 2
-    assert set(pulled) == {"alpha", "beta"}
-
-
-def test_doctor_preprocess_in_linked_worktree_uses_worktree_config(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """linked worktree からの preprocess がその worktree の model 設定を使う。"""
-
-    root = make_repo(tmp_path)
-    repo_config = CmocConfig()
-    repo_config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "repo-model")
-    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
-    write_config(config_path, repo_config)
-    run_git(root, "add", ".cmoc/gt/ar/config.json")
-    run_git(root, "commit", "-m", "add cmoc config")
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked-ollama-config"
-    run_git(root, "worktree", "add", "-b", "linked-ollama-config", str(linked), "HEAD")
-    worktree_config = CmocConfig()
-    worktree_config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(
-        "cmoc", "worktree-model"
-    )
-    write_config(
-        linked / ".cmoc" / "gt" / "ar" / "config.json",
-        worktree_config,
-    )
-    pulled: list[str] = []
-
-    monkeypatch.setenv("HOME", str(tmp_path / "home"))
-    monkeypatch.setattr(
-        ollama_module, "_ensure_ollama_installed", lambda: Path("ollama")
-    )
-    monkeypatch.setattr(
-        ollama_module, "_ensure_ollama_service", lambda executable: None
-    )
-    monkeypatch.setattr(
-        ollama_module, "_verify_ollama_service", lambda executable: None
-    )
-    monkeypatch.setattr(
-        ollama_module,
-        "_ensure_ollama_model",
-        lambda executable, model: pulled.append(model),
-    )
-
-    doctor_module.run_doctor_preprocess(linked)
-
-    assert pulled == ["worktree-model"]
-    assert (linked / ".cmoc" / "gt" / "ar" / "config.json").exists()
-    assert (
-        json.loads(config_path.read_text())["codex"]["model"]["minimum"]["model"]
-        == "repo-model"
-    )
+    assert events == ["ignore", "agents", "config", "state"]
 
 
 def test_doctor_preprocess_waits_for_common_repository_lock(
@@ -223,7 +161,7 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
     ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
     release_child, release_parent = multiprocessing.Pipe(duplex=False)
     process = multiprocessing.Process(
-        target=hold_doctor_lock,
+        target=_hold_doctor_lock,
         args=(lock_path, ready_child, release_child),
     )
     lock_attempted = threading.Event()
@@ -242,7 +180,10 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
     try:
         assert ready_parent.recv() is True
         with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(doctor_module.run_doctor_preprocess, linked)
+            future = executor.submit(
+                doctor_module.run_doctor_preprocess,
+                linked,
+            )
             assert lock_attempted.wait(timeout=3)
             assert not future.done()
             release_parent.send(True)
@@ -257,11 +198,9 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
             process.join()
 
 
-@pytest.mark.parametrize("failure_stage", ["managed_ollama", "repair_commit"])
 def test_doctor_restores_preexisting_index_when_repair_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    failure_stage: str,
 ) -> None:
     """doctor の修復失敗時も、呼び出し前の staged index を保持する。"""
 
@@ -271,39 +210,56 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
     run_git(root, "add", "staged.txt")
     expected_index_tree = run_git(root, "write-tree").stdout.strip()
 
-    if failure_stage == "managed_ollama":
+    def fail_commit(
+        _root: Path,
+        _agents_gitkeep_added: bool,
+        *,
+        include_config: bool,
+    ) -> None:
+        """repair commit の失敗を再現する。"""
+        raise RuntimeError("repair commit failure")
 
-        def fail_ollama(_root: Path, _config: CmocConfig | None) -> None:
-            """managed Ollama の失敗を再現する。"""
-            raise RuntimeError("managed ollama failure")
+    monkeypatch.setattr(doctor_module, "_commit_doctor_repairs_from_head", fail_commit)
 
-        monkeypatch.setattr(
-            doctor_module, "ensure_ollama_serves_local_slm", fail_ollama
-        )
-        expected_error = "managed ollama failure"
-    else:
-
-        def fail_commit(
-            _root: Path,
-            _agents_gitkeep_added: bool,
-            *,
-            include_config: bool,
-        ) -> None:
-            """repair commit の失敗を再現する。"""
-            raise RuntimeError("repair commit failure")
-
-        monkeypatch.setattr(
-            doctor_module, "_commit_doctor_repairs_from_head", fail_commit
-        )
-        expected_error = "repair commit failure"
-
-    with pytest.raises(RuntimeError, match=expected_error):
+    with pytest.raises(RuntimeError, match="repair commit failure"):
         doctor_module.run_doctor_preprocess(root)
 
     assert run_git(root, "write-tree").stdout.strip() == expected_index_tree
     assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
         "staged.txt"
     ]
+
+
+@pytest.mark.parametrize("index_flag", ["--assume-unchanged", "--skip-worktree"])
+def test_doctor_preserves_preexisting_index_flags(
+    tmp_path: Path,
+    index_flag: str,
+) -> None:
+    """doctor が内容以外の Git index flag も保持する。"""
+
+    root = make_repo(tmp_path)
+    run_git(root, "update-index", index_flag, "README.md")
+    before = run_git(root, "ls-files", "-v", "README.md").stdout
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert run_git(root, "ls-files", "-v", "README.md").stdout == before
+
+
+def test_doctor_preserves_preexisting_intent_to_add_index_entry(tmp_path: Path) -> None:
+    """doctor が intent-to-add の index entry を通常の未追跡へ戻さない。"""
+
+    root = make_repo(tmp_path)
+    path = root / "new.txt"
+    path.write_text("new\n")
+    run_git(root, "add", "-N", "new.txt")
+    before_entry = run_git(root, "ls-files", "--stage", "new.txt").stdout
+    before_status = run_git(root, "status", "--short").stdout
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert run_git(root, "ls-files", "--stage", "new.txt").stdout == before_entry
+    assert run_git(root, "status", "--short").stdout == before_status
 
 
 def test_doctor_generates_and_tracks_config(
@@ -323,6 +279,7 @@ def test_doctor_generates_and_tracks_config(
         == ".cmoc/gt/ar/config.json"
     )
     assert json.loads(config_path.read_text())["codex"]["num_try_falv_recovery"] == 1
+    assert json.loads(config_path.read_text())["codex"]["model_providers"] == {}
     assert (
         ".cmoc/gt/ar/config.json"
         in run_git(root, "show", "--name-only", "--format=", "HEAD").stdout.splitlines()
@@ -351,7 +308,7 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
         cwd=root,
         check=False,
     )
-    assert check_ignore.returncode != 0
+    assert check_ignore.returncode == 1
 
 
 def test_doctor_preprocess_targets_current_linked_worktree(
@@ -364,7 +321,7 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
 
-    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+    result = run_doctor(linked)
 
     assert result.exit_code == 0
     assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
@@ -417,10 +374,11 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
             {
                 "num_parallel": 3,
                 "codex": {
+                    "model_providers": {"custom": {"settings": {}}},
                     "num_try_falv_recovery": 4,
                     "model": {
                         "mainstream": {
-                            "model_provider": "codex",
+                            "model_provider": "custom",
                             "model": "CUSTOM",
                         }
                     },
@@ -434,12 +392,13 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     run_doctor(root)
     data = json.loads(config_path.read_text())
     assert data["num_parallel"] == 3
+    assert data["codex"]["model_providers"] == {"custom": {"settings": {}}}
     assert data["codex"]["model"]["mainstream"] == {
-        "model_provider": "codex",
+        "model_provider": "custom",
         "model": "CUSTOM",
     }
     assert data["codex"]["model"]["efficiency"] == {
-        "model_provider": "codex",
+        "model_provider": None,
         "model": "gpt-5.6-luna",
     }
     assert data["codex"]["num_try_falv_recovery"] == 4
@@ -520,6 +479,49 @@ def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_delet
     assert run_git(root, "diff", "--cached", "--name-status").stdout.splitlines() == [
         "D\t.agents/existing.txt"
     ]
+
+
+def test_doctor_preserves_existing_untracked_gitkeep_content(
+    tmp_path: Path,
+) -> None:
+    """既存の未追跡 `.agents/.gitkeep` を空内容へ置き換えず追跡する。"""
+
+    root = make_repo(tmp_path)
+    gitkeep = root / ".agents" / ".gitkeep"
+    gitkeep.parent.mkdir()
+    gitkeep.write_text("human content\n")
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert run_git(root, "show", "HEAD:.agents/.gitkeep").stdout == "human content\n"
+    assert gitkeep.read_text() == "human content\n"
+    assert run_git(root, "status", "--short").stdout == ""
+
+
+@pytest.mark.parametrize("symlinked_path", ["agents", "gitkeep"])
+def test_doctor_rejects_symlinked_agents_paths(
+    tmp_path: Path,
+    symlinked_path: str,
+) -> None:
+    """doctor が .agents 外への symlink 経由書き込みを拒否する。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside"
+    if symlinked_path == "agents":
+        outside.mkdir()
+        (root / ".agents").symlink_to(outside, target_is_directory=True)
+        outside_content = None
+    else:
+        outside.write_text("outside\n")
+        (root / ".agents").mkdir()
+        (root / ".agents" / ".gitkeep").symlink_to(outside)
+        outside_content = outside.read_text()
+
+    with pytest.raises(CmocError):
+        doctor_module.run_doctor_preprocess(root)
+
+    assert not (outside / ".gitkeep").exists()
+    if outside_content is not None:
+        assert outside.read_text() == outside_content
 
 
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
@@ -608,3 +610,22 @@ def test_doctor_preprocess_preserves_preexisting_staged_rename(
         "R100\told.txt\tnew.txt"
     ]
     assert run_git(root, "diff", "--name-status").stdout.strip() == ""
+
+
+def test_doctor_preserves_preexisting_staged_gitignore_deletion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """doctor が既存 .gitignore の staged deletion も保持する。"""
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    run_doctor(root)
+
+    run_git(root, "rm", "--cached", "-f", "--", ".gitignore")
+    before = run_git(root, "diff", "--cached", "--name-status").stdout
+
+    run_doctor(root)
+
+    assert run_git(root, "diff", "--cached", "--name-status").stdout == before
+    assert run_git(root, "ls-files", "--stage", "--", ".gitignore").stdout == ""

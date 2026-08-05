@@ -1,10 +1,10 @@
 # cmoc
-from oracle.other.struct_doc import StructDoc
 from oracle.other.standard import (
     Requirement,
     Standard,
     standard_to_struct_doc,
 )
+from oracle.other.struct_doc import StructDoc
 from oracle.prompt_builder.basic import PlaceholderMap
 
 

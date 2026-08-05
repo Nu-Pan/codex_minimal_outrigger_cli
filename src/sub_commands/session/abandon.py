@@ -6,6 +6,7 @@ from cmoc_runtime import (
     branch_exists,
     current_branch,
     delete_branch,
+    head_commit,
     load_state_for_branch,
     repo_root,
     require_clean_worktree,
@@ -51,6 +52,7 @@ def _cmoc_session_abandon_body() -> None:
             ["session state file と git branch の状態を確認してください。"],
             f"session_home_branch: {home}",
         )
+    session_commit = head_commit(work)
     start_subcommand_step(3, "session をクリーンアップ", "cleanup session")
     try:
         run_git(["switch", home], work)
@@ -77,6 +79,10 @@ def _cmoc_session_abandon_body() -> None:
         except BaseException as rollback_error:
             rollback_errors.append(f"state rollback failed: {rollback_error!r}")
         try:
+            # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+            # 削除処理が副作用後に中断しても、元の commit から session branch を復元する。
+            if not branch_exists(repo, branch):
+                run_git(["branch", branch, session_commit], repo)
             if branch_exists(repo, branch):
                 run_git(["switch", branch], work)
         except BaseException as rollback_error:

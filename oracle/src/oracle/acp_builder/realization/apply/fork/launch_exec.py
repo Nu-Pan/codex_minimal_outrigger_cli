@@ -10,6 +10,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
+from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import (
     StructBlock,
     StructCodeBlock,
@@ -31,8 +32,11 @@ def build_realization_apply_fork_launch_exec_parameter(
         diff_base_commit: 追従対象差分の始点 commit。
         run_fork_commit: 追従対象差分の終点である run fork commit。
         raw_oracle_git_diff: 始点と終点の間にある oracle file の raw git diff。
-        run_worktree: `codex exec` の cwd とする linked worktree。
+        run_worktree: AgentCallParameter.agent_call_cwd とする linked worktree。
     """
+    # run worktree を agent_call_cwd として先に確定する
+    path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
+
     # commit 範囲と差分を一意な参照対象にまとめる。
     apply_change = StructBlock(
         "realization_apply_change",
@@ -58,17 +62,17 @@ def build_realization_apply_fork_launch_exec_parameter(
         """,
         goal="""
         - 追従対象変更 <cmoc_ref target="realization_apply_change"/> から読み取れる変更について、oracle file と realization file の間に齟齬がないこと
-        - 関連する既存 oracle file、realization file、standard と論理的に整合していること
+        - 関連する既存 oracle file と realization file に論理的に整合していること
         - 必要な realization implementation、realization test、realization ancillary の変更と検証が完了していること
-        - realization file が realization standard に従っていること
         - oracle file を変更していないこと
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        path_context=path_context,
         aux_dynamic_prompt=[apply_change],
         oracle_and_realization_basic=True,
-        oracle_standard=True,
         realization_standard=True,
         apply_review_standard=True,
+        realization_oracle_reference_rule=True,
     )
 
     # リポジトリ全体の追従を 1 agent call へ委ねるため最高品質設定を使う。
@@ -78,6 +82,6 @@ def build_realization_apply_fork_launch_exec_parameter(
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         prompt=render_as_markdown(complete_prompt),
         structured_output_schema_path=None,
+        agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,
-        cwd=run_worktree.resolve(),
     )

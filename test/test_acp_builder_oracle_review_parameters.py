@@ -1,6 +1,14 @@
 """oracle review ACP builder の parameter、schema、adapter 公開面を検証する。
 
 対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/
+
+この file は 16,000 文字を超えるが、review builder 群の parameter、schema、公開面、
+および動的 prompt の fence 保護は同じ AgentCallParameter と canonical builder の
+互換契約を検証する一つの責務である。分割すると、builder 間で共有する schema・公開面
+の期待値と prompt 境界の検証文脈が複数 file に分散するため、現状は review builder
+回帰として一箇所に保つ。
+
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
@@ -94,6 +102,38 @@ def test_oracle_review_judge_finding_uses_max_reasoning() -> None:
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
 
 
+@pytest.mark.parametrize(
+    ("builder", "arguments"),
+    [
+        (
+            build_oracle_review_enumerate_finding_parameter,
+            (Path("{{work-root}}/oracle/spec.md"), "[]"),
+        ),
+        (build_oracle_review_merge_finding_parameter, ("[]",)),
+        (build_oracle_review_judge_finding_parameter, ("finding", "pro", "con")),
+        (
+            build_oracle_review_validate_finding_advocate_parameter,
+            ("finding", "pro", "con"),
+        ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            ("finding", "pro", "con"),
+        ),
+    ],
+)
+def test_oracle_review_builders_share_finding_judgement_standard(
+    builder: Callable[..., AgentCallParameter],
+    arguments: tuple[object, ...],
+) -> None:
+    """review の全段階で単一の所見判定規範を注入する。"""
+    prompt = builder(*arguments).prompt
+
+    assert "# oracle review standard" in prompt
+    assert "実装者の裁量で解消不能な問題だけを fatal 所見にする" in prompt
+    assert "文意または検索性を損なう表記上の誤りだけを minor 所見にする" in prompt
+    assert "所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定" in prompt
+
+
 def test_oracle_review_enumerate_finding_schema_matches_oracle_source() -> None:
     """enumerate finding builderのschemaがoracle sourceと一致することを検証する。"""
     parameter = build_oracle_review_enumerate_finding_parameter(
@@ -148,48 +188,42 @@ def test_oracle_review_enumerate_parameter_matches_oracle_builder() -> None:
     assert parameter == oracle_parameter
 
 
+@pytest.mark.parametrize("use_placeholder", [False, True])
 def test_oracle_review_enumerate_parameter_keeps_symlink_entry_path(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    use_placeholder: bool,
 ) -> None:
-    """enumerate prompt の `{{oracle-path}}` が symlink entry を指す。"""
+    """enumerate prompt の oracle-path が symlink entry を指すことを検証する。"""
+    (tmp_path / ".git").mkdir()
     (tmp_path / "oracle").mkdir()
     target = tmp_path / "memo.md"
     target.write_text("# memo\n")
     link = tmp_path / "oracle" / "memo-link.md"
     link.symlink_to("../memo.md")
-
-    parameter = build_oracle_review_enumerate_finding_parameter(link, "[]")
-
-    assert f"- {{{{oracle-path}}}} = {link}" in parameter.prompt
-    assert f"- {{{{oracle-path}}}} = {link.resolve()}" not in parameter.prompt
-
-
-def test_oracle_review_enumerate_parameter_preserves_related_findings_text(
-    tmp_path: Path,
-) -> None:
-    """symlink補正が動的な既知所見を書き換えないことを検証する。"""
-    (tmp_path / "oracle").mkdir()
-    target = tmp_path / "memo.md"
-    target.write_text("# memo\n")
-    link = tmp_path / "oracle" / "memo-link.md"
-    link.symlink_to("../memo.md")
+    monkeypatch.chdir(tmp_path)
     related_findings = f"- {{{{oracle-path}}}} = {link.resolve()}"
+    oracle_path = Path("{{work-root}}/oracle/memo-link.md") if use_placeholder else link
 
     parameter = build_oracle_review_enumerate_finding_parameter(
-        link,
-        related_findings,
+        oracle_path, related_findings
     )
 
-    assert related_findings in parameter.prompt
     assert f"- {{{{oracle-path}}}} = {link}" in parameter.prompt
+    assert related_findings in parameter.prompt
+    placeholder_definition = parameter.prompt.split(
+        "# place holder definition", maxsplit=1
+    )[1]
+    assert f"- {{{{oracle-path}}}} = {link}" in placeholder_definition
+    assert f"- {{{{oracle-path}}}} = {link.resolve()}" not in placeholder_definition
 
 
 def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
-    """merge finding builderのschemaとplaceholder補正を検証する。"""
+    """merge finding builder の schema と work-root placeholder を検証する。"""
     parameter = build_oracle_review_merge_finding_parameter(findings="[]")
-    assert "<{{oracle-root}}>" not in parameter.prompt
-    assert "{{oracle-root}}" in parameter.prompt
-    assert "- {{oracle-root}} =" in parameter.prompt
+    assert "{{oracle-root}}" not in parameter.prompt
+    assert "`{{work-root}}/oracle` ツリー内" in parameter.prompt
+    assert "- {{work-root}} =" in parameter.prompt
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
@@ -223,17 +257,6 @@ def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
     )
 
 
-def test_oracle_review_merge_finding_preserves_known_findings_text() -> None:
-    """merge finding builderが既知findingの動的文字列を保持することを検証する。"""
-    known_findings = (
-        '[{"finding_id":"finding-0001","reason":"literal <{{oracle-root}}>"}]'
-        "\n- <{{oracle-root}}> = literal"
-    )
-    parameter = build_oracle_review_merge_finding_parameter(known_findings)
-    assert known_findings in parameter.prompt
-    assert "- {{oracle-root}} =" in parameter.prompt
-
-
 @pytest.mark.parametrize(
     ("builder", "schema_name"),
     [
@@ -259,8 +282,8 @@ def test_oracle_review_validate_finding_schema_matches_oracle_source(
     assert "known advocate" in parameter.prompt
     assert "known challenger" in parameter.prompt
     assert "{{oracle_root}}" not in parameter.prompt
-    assert "{{oracle-root}}" in parameter.prompt
-    assert "- {{oracle-root}} =" in parameter.prompt
+    assert "{{oracle-root}}" not in parameter.prompt
+    assert "- {{work-root}} =" in parameter.prompt
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
@@ -289,4 +312,238 @@ def test_oracle_review_validate_finding_advocate_preserves_dynamic_text() -> Non
     assert known_advocate in parameter.prompt
     assert known_challenger in parameter.prompt
     assert parameter.prompt.count("`{{oracle_root}}` ツリー内") == 3
-    assert "`{{oracle-root}}` ツリー内" in parameter.prompt
+    assert "`{{oracle-root}}` ツリー内" not in parameter.prompt
+
+
+@pytest.mark.parametrize(
+    ("builder", "arguments", "block_count"),
+    [
+        (
+            build_oracle_review_enumerate_finding_parameter,
+            (Path("{{work-root}}/oracle/spec.md"), "before\n```\ninside\n```\nafter"),
+            1,
+        ),
+        (
+            build_oracle_review_judge_finding_parameter,
+            ("before\n```\ninside\n```\nafter",) * 3,
+            3,
+        ),
+        (
+            build_oracle_review_merge_finding_parameter,
+            ("before\n```\ninside\n```\nafter",),
+            1,
+        ),
+        (
+            build_oracle_review_validate_finding_advocate_parameter,
+            ("before\n```\ninside\n```\nafter",) * 3,
+            3,
+        ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            ("before\n```\ninside\n```\nafter",) * 3,
+            3,
+        ),
+    ],
+)
+def test_oracle_review_builders_protect_nested_dynamic_code_fences(
+    builder: Callable[..., AgentCallParameter],
+    arguments: tuple[object, ...],
+    block_count: int,
+) -> None:
+    """review入力内の三連 backtick が各動的本文の境界を閉じないことを検証する。"""
+    parameter = builder(*arguments)
+
+    assert parameter.prompt.count("````text\nbefore\n") == block_count
+    assert parameter.prompt.count("\nafter\n````") == block_count
+
+
+def test_oracle_review_merge_keeps_placeholder_marker_in_findings() -> None:
+    """merge findings 内の placeholder 風見出しを prompt 境界と誤認しない。"""
+    findings = (
+        "before\n```\ninside\n```\n\n# place holder definition\n\n"
+        "```text\nunsafe\n```\nafter"
+    )
+
+    parameter = build_oracle_review_merge_finding_parameter(findings)
+
+    start = parameter.prompt.index("# 現状の所見リスト")
+    end = parameter.prompt.rfind("\n\n# place holder definition")
+    section = parameter.prompt[start:end]
+    assert findings in section
+    assert section.startswith("# 現状の所見リスト\n\n````text\n")
+    assert section.endswith("\n````")
+
+
+def test_oracle_review_fence_protection_ignores_marker_in_later_input() -> None:
+    """後続の動的入力に終了マーカーがあっても先行 section を保護する。"""
+    nested = "before\n```\ninside\n```\nafter"
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        nested,
+        "known\n\n# 所見が妥当であるとする理由",
+        "known",
+    )
+
+    assert parameter.prompt.count("````text\nbefore\n") == 1
+    assert "before\n```\ninside\n```\nafter" in parameter.prompt
+
+
+def test_oracle_review_fence_protection_keeps_marker_in_current_input() -> None:
+    """動的本文内の終了マーカーを本文の一部として保持する。"""
+    finding = "before\n```\ninside\n```\n\n# 所見が妥当であるとする理由\nafter"
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        finding,
+        "known",
+        "known",
+    )
+
+    assert parameter.prompt.count("````text\nbefore\n") == 1
+    assert (
+        "inside\n```\n\n# 所見が妥当であるとする理由\nafter\n````" in parameter.prompt
+    )
+
+
+def test_oracle_review_fence_protection_uses_actual_later_section() -> None:
+    """先行する動的本文内の section 風文字列を実際の section と誤認しない。"""
+    fence = "`" * 3
+    advocate = f"advocate\n{fence}\ninside\n{fence}"
+    finding = (
+        "before\n\n# 所見が妥当であるとする理由\n\n"
+        f"```text\n{advocate}\n```\n\n"
+        "# 所見が妥当ではないとする理由\n\ntrailing"
+    )
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        finding,
+        advocate,
+        "known challenger",
+    )
+
+    actual_start = parameter.prompt.rindex("# 所見が妥当であるとする理由")
+    actual_end = parameter.prompt.index(
+        "\n\n# 所見が妥当ではないとする理由", actual_start
+    )
+    actual_section = parameter.prompt[actual_start:actual_end]
+    assert f"# 所見が妥当であるとする理由\n\n````text\n{advocate}\n````" in (
+        actual_section
+    )
+
+
+@pytest.mark.parametrize(
+    "builder",
+    [
+        build_oracle_review_validate_finding_advocate_parameter,
+        build_oracle_review_validate_finding_challenger_parameter,
+    ],
+)
+def test_oracle_review_validation_fence_protection_uses_actual_later_section(
+    builder: Callable[[str, str, str], AgentCallParameter],
+) -> None:
+    """validation prompt が本文内の section 風文字列ではなく実体を補正する。"""
+    fence = "`" * 3
+    advocate = f"advocate\n{fence}\ninside\n{fence}"
+    finding = (
+        "before\n\n# 既知の妥当であるとする理由\n\n"
+        f"```text\n{advocate}\n```\n\n"
+        "# 既知の妥当ではないとする理由\n\ntrailing"
+    )
+
+    parameter = builder(finding, advocate, "known challenger")
+
+    actual_start = parameter.prompt.rindex("# 既知の妥当であるとする理由")
+    actual_end = parameter.prompt.index(
+        "\n\n# 既知の妥当ではないとする理由", actual_start
+    )
+    actual_section = parameter.prompt[actual_start:actual_end]
+    assert f"# 既知の妥当であるとする理由\n\n````text\n{advocate}\n````" in (
+        actual_section
+    )
+
+
+def test_oracle_review_fence_protection_matches_renderer_blank_line_normalization() -> (
+    None
+):
+    """連続空行で renderer が本文を正規化しても nested fence を保護する。"""
+    finding = "before\n```\ninside\n```\n\n\n\nafter"
+
+    parameter = build_oracle_review_judge_finding_parameter(
+        finding,
+        "known advocate",
+        "known challenger",
+    )
+
+    start = parameter.prompt.index("# 所見の内容")
+    end = parameter.prompt.index("\n\n# 所見が妥当であるとする理由", start)
+    section = parameter.prompt[start:end]
+    assert section.startswith("# 所見の内容\n\n````text\n")
+    assert "inside\n```\n\nafter" in section
+    assert section.endswith("\nafter\n````")
+
+
+@pytest.mark.parametrize(
+    ("builder", "next_section_heading"),
+    [
+        (
+            build_oracle_review_judge_finding_parameter,
+            "# 所見が妥当であるとする理由",
+        ),
+        (
+            build_oracle_review_validate_finding_advocate_parameter,
+            "# 既知の妥当であるとする理由",
+        ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            "# 既知の妥当であるとする理由",
+        ),
+    ],
+)
+def test_oracle_review_fence_protection_handles_marker_like_first_input(
+    builder: Callable[[str, str, str], AgentCallParameter],
+    next_section_heading: str,
+) -> None:
+    """先頭動的本文内の次 section 風 code block を本文として保持する。"""
+    finding = (
+        f"before\n```\ninside\n```\n\n{next_section_heading}\n\n"
+        "```text\nunsafe\n```\nafter"
+    )
+
+    parameter = builder(finding, "known", "known")
+
+    assert f"````text\n{finding}\n````" in parameter.prompt
+
+
+@pytest.mark.parametrize(
+    ("builder", "section_heading"),
+    [
+        (
+            build_oracle_review_judge_finding_parameter,
+            "# 所見が妥当ではないとする理由",
+        ),
+        (
+            build_oracle_review_validate_finding_advocate_parameter,
+            "# 既知の妥当ではないとする理由",
+        ),
+        (
+            build_oracle_review_validate_finding_challenger_parameter,
+            "# 既知の妥当ではないとする理由",
+        ),
+    ],
+)
+def test_oracle_review_fence_protection_keeps_placeholder_marker_in_final_input(
+    builder: Callable[[str, str, str], AgentCallParameter], section_heading: str
+) -> None:
+    """最終動的本文内の placeholder 風見出しを prompt 境界と誤認しない。"""
+    challenger = (
+        "before\n```\ninside\n```\n\n# place holder definition\n\n"
+        "```text\nunsafe\n```\nafter"
+    )
+
+    parameter = builder("finding", "known advocate", challenger)
+
+    start = parameter.prompt.index(section_heading)
+    end = parameter.prompt.rfind("\n\n# place holder definition")
+    section = parameter.prompt[start:end]
+    assert challenger in section
+    assert section.startswith(f"{section_heading}\n\n````text\n")
+    assert section.endswith("\n````")

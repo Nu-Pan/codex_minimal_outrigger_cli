@@ -58,11 +58,14 @@ merge conflict が発生した場合は通常の conflict として扱う。
 
 - この agent call の詳細仕様は `build_session_join_conflict_resolution_parameter` を正本とする
 - この agent call は `{{work-root}}` に対する編集操作を伴うため、必ず直列に実行すること
+- builder は `build_conflict_resolution_standard` の規範だけを conflict 解消用規範として固定で prompt へ注入する
+- oracle edit、oracle review、または realization refactor のための規範を conflict 解消へ転用してはいけない
 
-### oracle file 規則とコンフリクト解決の優先順位
+### oracle file 規則と conflict 解消の優先順位
 
-- 前提として、 oracle file は AI 編集禁止・差分検査といった規則が cmoc の仕様として定められている
-- コンフリクト解消のための操作に対しては、例外的にこれら oracle file 規則を適用しない
+- conflict 対象 oracle file は、marker 解消に必要な範囲だけ例外的に編集してよい
+- conflict 解消後も oracle file は realization file の正本であり、realization file の都合に合わせて oracle file の意味を変更してはいけない
+- conflict marker の解消に不要な仕様変更、実装改善、または別 file の変更を行ってはいけない
 
 ## その他、コマンドが想定外に失敗した場合
 

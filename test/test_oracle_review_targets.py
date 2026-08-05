@@ -11,9 +11,8 @@
 from pathlib import Path
 
 import pytest
-from _cli_support import runner
+from _cli_support import run_doctor, runner
 from _git_support import add_tracked_ignored_oracle_file, make_repo, run_git
-from _ollama_support import run_doctor
 
 import sub_commands.oracle.review as review_module
 from basic.acp import AgentCallParameter
@@ -278,6 +277,28 @@ def test_oracle_review_session_scope_uses_review_fork_commit(
     assert targets == [(root / "oracle" / "fork.md").resolve()]
 
 
+def test_oracle_review_session_scope_preserves_newline_in_git_path(
+    tmp_path: Path,
+) -> None:
+    """session scope が改行を含む Git path を対象から落とさない。"""
+    root = make_repo(tmp_path)
+    state = SessionState()
+    state.session.session_fork_commit = run_git(
+        root, "rev-parse", "HEAD"
+    ).stdout.strip()
+    target = root / "oracle" / "line\nbreak.md"
+    target.write_text("# newline\n")
+    run_git(root, "add", "oracle/line\nbreak.md")
+    run_git(root, "commit", "-m", "add newline oracle path")
+    review_fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    targets = review_module.enumerate_oracle_review_targets(
+        root, "session", state, review_fork_commit
+    )
+
+    assert targets == [target.resolve()]
+
+
 def test_oracle_review_target_enumeration_excludes_agents_and_index(
     tmp_path: Path,
 ) -> None:
@@ -305,4 +326,19 @@ def test_oracle_review_target_enumeration_classifies_oracle_symlink_by_repo_path
     run_git(root, "add", "memo/draft.md", "oracle/memo-link.md")
     run_git(root, "commit", "-m", "add oracle symlink")
 
+    assert oracle_link.absolute() in enumerate_review_all_oracle_files(root)
+
+
+def test_oracle_review_target_enumeration_keeps_tracked_dangling_oracle_symlink(
+    tmp_path: Path,
+) -> None:
+    """link先が存在しない追跡済みsymlinkもoracle fileとして列挙する。"""
+    root = make_repo(tmp_path)
+    oracle_link = root / "oracle" / "dangling.md"
+    oracle_link.symlink_to("../missing.md")
+    run_git(root, "add", "oracle/dangling.md")
+    run_git(root, "commit", "-m", "add dangling oracle symlink")
+
+    assert not oracle_link.exists()
+    assert oracle_link.is_symlink()
     assert oracle_link.absolute() in enumerate_review_all_oracle_files(root)

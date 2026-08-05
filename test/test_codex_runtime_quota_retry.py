@@ -35,16 +35,16 @@ from commons.runtime_errors import CmocError
 from config.cmoc_config import CmocConfig
 
 
-def quota_probe_prompt(cwd: Path) -> str:
+def quota_probe_prompt(agent_call_cwd: Path) -> str:
     """実在する quota probe adapter が生成する prompt を返す。"""
     return build_quota_availability_probe_parameter(
         AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "base",
-            None,
-            cwd=cwd,
+            model_class=ModelClass.EFFICIENCY,
+            reasoning_effort=ReasoningEffort.LOW,
+            file_access_mode=FileAccessMode.READONLY,
+            prompt="base",
+            structured_output_schema_path=None,
+            agent_call_cwd=agent_call_cwd,
         )
     ).prompt
 
@@ -116,6 +116,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
     logger = SubcommandLogger(root, "test")
 
@@ -298,6 +299,7 @@ def test_capacity_probe_retry_skips_quota_poll_interval(
             FileAccessMode.READONLY,
             "prompt",
             None,
+            root,
         ),
         root=root,
         quota_poll_interval_sec=1800,
@@ -350,6 +352,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
+                root,
             ),
             root=root,
             quota_poll_interval_sec=0,
@@ -376,13 +379,13 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
 def test_quota_probe_adapter_builds_minimal_probe() -> None:
     """配布 tree に正本 builder がなくても最小 probe を構築する。"""
     base = AgentCallParameter(
-        ModelClass.FLAGSHIP,
-        ReasoningEffort.HIGH,
-        FileAccessMode.REPO_WRITE,
-        "base",
-        None,
+        model_class=ModelClass.FLAGSHIP,
+        reasoning_effort=ReasoningEffort.HIGH,
+        file_access_mode=FileAccessMode.REPO_WRITE,
+        prompt="base",
+        structured_output_schema_path=None,
+        agent_call_cwd=Path("/tmp/base-cwd"),
         run_indexing_preflight=True,
-        cwd=Path("/tmp/base-cwd"),
     )
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     probe = build_quota_availability_probe_parameter(base)
@@ -393,7 +396,7 @@ def test_quota_probe_adapter_builds_minimal_probe() -> None:
     assert probe.prompt == ""
     assert probe.structured_output_schema_path is None
     assert probe.run_indexing_preflight is False
-    assert probe.cwd == base.cwd
+    assert probe.agent_call_cwd == base.agent_call_cwd
 
 
 def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
@@ -405,7 +408,6 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     probe_codex_home = root / "relative_codex_home"
     for codex_home in {initial_codex_home, probe_codex_home}:
         codex_home.mkdir()
-        (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     stub_codex_overrides(monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
@@ -446,6 +448,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
         FileAccessMode.PURE_ORACLE_READ,
         "prompt",
         None,
+        root,
     )
 
     run_codex_exec(
@@ -522,6 +525,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
 
     result = run_codex_exec(
@@ -579,6 +583,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
     logger = SubcommandLogger(root, "test")
 
@@ -616,12 +621,15 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
     probe_prompt = quota_probe_prompt(root)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
+    calls = tmp_path / "calls.jsonl"
     write_python_executable(
         bin_dir / "codex",
         [
             "import json, pathlib, sys",
+            f"calls = pathlib.Path({str(calls)!r})",
             "args = sys.argv[1:]",
             "stdin = sys.stdin.read()",
+            "with calls.open('a') as f: f.write(json.dumps({'stdin': stdin}) + '\\n')",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "if stdin == 'prompt':",
             "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
@@ -634,6 +642,7 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    logger = SubcommandLogger(root, "test")
 
     with pytest.raises(CmocError) as exc_info:
         run_codex_exec(
@@ -643,15 +652,24 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
+                root,
             ),
             root=root,
             quota_poll_interval_sec=0,
             max_quota_polls=1,
             config=CmocConfig(),
+            subcommand_logger=logger,
         )
 
     assert "quota availability probe" in str(exc_info.value)
     assert "malformed JSONL event (invalid JSON): not-json" not in exc_info.value.detail
+    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert [record["stdin"] for record in call_records] == ["prompt", probe_prompt]
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert [event["status"] for event in codex_events] == ["quota_waiting", "failed"]
+    assert codex_events[1]["returncode"] == 0
+    assert "malformed JSONL event (invalid JSON): not-json" in codex_events[1]["error"]
 
 
 def test_quota_poll_limit_stops_before_probe(
@@ -689,6 +707,7 @@ def test_quota_poll_limit_stops_before_probe(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
 
     with pytest.raises(CmocError, match="quota"):
@@ -746,6 +765,7 @@ def test_quota_probe_failure_reports_probe_error(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
 
     with pytest.raises(CmocError, match="quota availability probe"):
@@ -811,6 +831,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
 
     def call_codex() -> object:
@@ -880,6 +901,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
 
     def call_codex() -> object:
@@ -945,6 +967,7 @@ def test_quota_polling_state_is_cleared_when_progress_output_fails(
                     FileAccessMode.READONLY,
                     "prompt",
                     None,
+                    root,
                 ),
                 root=root,
                 quota_poll_interval_sec=0,

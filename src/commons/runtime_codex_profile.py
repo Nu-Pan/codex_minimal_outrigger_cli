@@ -8,9 +8,11 @@ subprocess 境界の不変条件を共有するため、分割すると呼び出
 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
+import errno
 import fcntl
 import json
 import os
+import re
 import select
 import signal
 import subprocess
@@ -18,22 +20,73 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from types import FrameType
 from typing import Any
 
 from basic.acp import AgentCallParameter, FileAccessMode
-from commons.runtime_content import write_hashed_file
-from commons.runtime_errors import CmocError
-from commons.runtime_paths import schema_store_dir
-from config.cmoc_config import CmocConfig
+from config.cmoc_config import CmocConfig, JsonTomlValue
+
+from .runtime_config import validate_json_toml_value
+from .runtime_content import write_hashed_file
+from .runtime_errors import CmocError
+from .runtime_paths import schema_store_dir
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
 _active_run_process_tracking_path: Path | None = None
-_OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
+
+
+def _first_symlink_component(path: Path) -> Path | None:
+    """path を順にたどり、最初に見つかった symlink component を返す。"""
+    absolute = path.absolute()
+    current = Path(absolute.anchor)
+    for part in absolute.parts[1:]:
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            current = current.parent
+            continue
+        current /= part
+        if current.is_symlink():
+            return current
+    return None
+
+
+def _validate_process_tracking_path(path: Path) -> None:
+    """tracking file と lock を管理領域内の通常 file として扱えるか検証する。"""
+    lock_path = path.with_name(f"{path.name}.lock")
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # process tracking は repo-root 側に置く cmoc 管理データなので、symlink 経由の
+    # 外部 read/write と lock の外部化を許可しない。
+    for candidate in (path, lock_path):
+        if symlink := _first_symlink_component(candidate):
+            raise CmocError(
+                "run process tracking path は symlink 経由で扱えません。",
+                [
+                    "tracking file と親 directory を通常の file/directory に戻してから再実行してください。"
+                ],
+                f"path: {candidate}\nsymlink: {symlink}",
+            )
+    for candidate in (path, lock_path):
+        if candidate.exists() and not candidate.is_file():
+            raise CmocError(
+                "run process tracking path は通常 file ではありません。",
+                [
+                    "tracking file と lock file を通常の file に戻してから再実行してください。"
+                ],
+                str(candidate),
+            )
+
+
+def _is_valid_process_id(process_id: int) -> bool:
+    """OS の process API へ安全に渡せる pid_t 範囲か判定する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    return 0 < process_id <= 2**31 - 1
 
 
 @contextmanager
 def run_process_id_file_lock(path: Path) -> Iterator[None]:
     """editing run の process tracking file を直列化する。"""
+    _validate_process_tracking_path(path)
     lock_path = path.with_name(f"{path.name}.lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
@@ -45,6 +98,44 @@ def run_process_id_file_lock(path: Path) -> Iterator[None]:
             yield
         finally:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def _validate_tracked_process_file(path: Path) -> None:
+    """Codex child を起動する前に tracking file の形式を検証する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # abandon は壊れた tracking file を停止対象なしとして扱うため、壊れた既存 state に
+    # child 行だけを追記すると、実行中 process を cleanup できないまま worktree を破棄する。
+    lines = [
+        line.split()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    if not lines or len(lines[0]) not in {1, 2}:
+        raise OSError(f"invalid run process tracking file: {path}")
+    try:
+        parent_id = int(lines[0][0])
+        parent_start_time = int(lines[0][1]) if len(lines[0]) == 2 else None
+        if not _is_valid_process_id(parent_id) or (
+            parent_start_time is not None and parent_start_time < 0
+        ):
+            raise ValueError
+        for parts in lines[1:]:
+            if len(parts) not in {3, 4} or parts[0] != "child":
+                raise ValueError
+            child_id = int(parts[1])
+            child_start_time = int(parts[2])
+            group_id = int(parts[3]) if len(parts) == 4 else None
+            if (
+                not _is_valid_process_id(child_id)
+                or child_start_time < 0
+                or (
+                    group_id is not None
+                    and (not _is_valid_process_id(group_id) or group_id != child_id)
+                )
+            ):
+                raise ValueError
+    except (IndexError, ValueError) as exc:
+        raise OSError(f"invalid run process tracking file: {path}") from exc
 
 
 def open_process_fd(process_id: int, process_name: str = "run process") -> int | None:
@@ -65,6 +156,13 @@ def open_process_fd(process_id: int, process_name: str = "run process") -> int |
             [f"{process_name} を手動で確認してから再実行してください。"],
             f"pid: {process_id}",
         ) from exc
+    except OSError as exc:
+        if exc.errno == errno.EINVAL:
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # pidfd を開けない場合は呼び出し側の start time/group 検証へ渡し、
+            # leader が消えた group を数値 PGID だけで停止しない。
+            return None
+        raise
 
 
 def send_process_signal(
@@ -151,25 +249,10 @@ def process_group_has_running_member(process_group_id: int) -> bool:
     return members is None or bool(members)
 
 
-def wait_process_group_exit(process_group_id: int, timeout_sec: float) -> bool:
-    """数値 PGID へ signal を送らず、group が空になるまで待つ。"""
-    deadline = time.monotonic() + timeout_sec
-    while process_group_has_running_member(process_group_id):
-        if time.monotonic() >= deadline:
-            return False
-        time.sleep(0.05)
-    return True
-
-
-def signal_process_group_members(process_group_id: int, sig: signal.Signals) -> None:
-    """group member を個別 pidfd で再検証して signal を送る。"""
-    members = process_group_members(process_group_id)
-    if members is None:
-        raise CmocError(
-            "実行中 Codex subprocess の process group を確認できません。",
-            ["Codex subprocess を手動で停止してから再実行してください。"],
-            f"pgid: {process_group_id}",
-        )
+def _signal_process_members(
+    members: tuple[tuple[int, int], ...], sig: signal.Signals
+) -> None:
+    """snapshot の member を個別 pidfd で再検証して signal を送る。"""
     for process_id, expected_start_time in members:
         process_fd = open_process_fd(process_id, "Codex subprocess")
         if process_fd is None:
@@ -188,15 +271,141 @@ def signal_process_group_members(process_group_id: int, sig: signal.Signals) -> 
             os.close(process_fd)
 
 
-def stop_process_group(process_group_id: int) -> None:
+def signal_process_group_members(process_group_id: int, sig: signal.Signals) -> None:
+    """group member を個別 pidfd で再検証して signal を送る。"""
+    members = process_group_members(process_group_id)
+    if members is None:
+        raise CmocError(
+            "実行中 Codex subprocess の process group を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pgid: {process_group_id}",
+        )
+    _signal_process_members(members, sig)
+
+
+def _wait_tracked_process_group_exit(
+    process_group_id: int,
+    known_members: set[tuple[int, int]],
+    timeout_sec: float,
+) -> bool:
+    """初回 snapshot と同じ group が終了するまで待つ。"""
+    deadline = time.monotonic() + timeout_sec
+    while True:
+        members = process_group_members(process_group_id)
+        if members is None:
+            return False
+        if not any(member in known_members for member in members):
+            if members:
+                raise _unverified_process_group_error(process_group_id)
+            return True
+        # group が存続している間に増えた descendant も、同じ group の identity として
+        # 次の signal 対象へ加える。元の全 member が消えた後の PGID 再利用は追加しない。
+        known_members.update(members)
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.05)
+
+
+def _unverified_process_group_error(process_group_id: int) -> CmocError:
+    """既知の member が消えた後に残る未検証 group の error を作る。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    return CmocError(
+        "実行中 Codex subprocess の同一性を確認できません。",
+        ["Codex subprocess を手動で停止してから再実行してください。"],
+        f"pgid: {process_group_id}",
+    )
+
+
+def _current_tracked_process_group_members(
+    process_group_id: int, known_members: set[tuple[int, int]]
+) -> tuple[tuple[int, int], ...] | None:
+    """既知の group identity が残る場合だけ現在の member snapshot を返す。"""
+    members = process_group_members(process_group_id)
+    if members is None:
+        return None
+    if not any(member in known_members for member in members):
+        if members:
+            raise _unverified_process_group_error(process_group_id)
+        return ()
+    known_members.update(members)
+    return members
+
+
+def stop_process_group(
+    process_group_id: int,
+    expected_leader: tuple[int, int] | None = None,
+    expected_members: tuple[tuple[int, int], ...] | None = None,
+) -> None:
     """Codex group を個別 pidfd で SIGTERM、必要なら SIGKILL する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
-    signal_process_group_members(process_group_id, signal.SIGTERM)
-    if wait_process_group_exit(process_group_id, 5.0):
+    # 初回 snapshot と同じ group identity が消えた後の PGID 再利用へ signal を送らない。
+    # leader が検証直後に終了しても、停止前 snapshot と現在の member に重なりが
+    # あれば同じ group とみなす。ただし leader が現在の snapshot にいない場合は、
+    # 保存済み snapshot にも leader が含まれることを確認し、別 group の member overlap
+    # だけで停止を許可しない。
+    initial_members = process_group_members(process_group_id)
+    if initial_members is None:
+        raise CmocError(
+            "実行中 Codex subprocess の process group を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pgid: {process_group_id}",
+        )
+    if expected_leader is not None and (
+        # 空 snapshot は leader の終了と観測欠落を区別できないため、停止済み扱いにしない。
+        expected_members is None
+        or expected_leader not in expected_members
+        or not initial_members
+    ):
+        raise CmocError(
+            "実行中 Codex subprocess の同一性を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pid: {expected_leader[0]}\npgid: {process_group_id}",
+        )
+    if (
+        expected_members is not None
+        and initial_members
+        and not any(member in expected_members for member in initial_members)
+    ):
+        raise CmocError(
+            "実行中 Codex subprocess の同一性を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pgid: {process_group_id}",
+        )
+    if (
+        expected_leader is not None
+        and initial_members
+        and expected_leader not in initial_members
+        and (
+            expected_members is None
+            or expected_leader not in expected_members
+            or not any(member in expected_members for member in initial_members)
+        )
+    ):
+        raise CmocError(
+            "実行中 Codex subprocess の同一性を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pid: {expected_leader[0]}\npgid: {process_group_id}",
+        )
+    known_members = set(initial_members)
+    _signal_process_members(initial_members, signal.SIGTERM)
+    if _wait_tracked_process_group_exit(process_group_id, known_members, 5.0):
         return
-    signal_process_group_members(process_group_id, signal.SIGKILL)
-    if wait_process_group_exit(process_group_id, 5.0):
+    current_members = _current_tracked_process_group_members(
+        process_group_id, known_members
+    )
+    if current_members is None:
+        raise CmocError(
+            "実行中 Codex subprocess の process group を確認できません。",
+            ["Codex subprocess を手動で停止してから再実行してください。"],
+            f"pgid: {process_group_id}",
+        )
+    if not current_members:
+        return
+    _signal_process_members(current_members, signal.SIGKILL)
+    if _wait_tracked_process_group_exit(process_group_id, known_members, 5.0):
         return
     raise CmocError(
         "実行中 Codex subprocess を停止できません。",
@@ -221,21 +430,46 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
 
 
-def parameter_codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) -> Path:
-    """AgentCallParameter.cwd を優先し、対象 work root 外の古い呼び出しを補正する。"""
-    parameter_cwd = parameter.cwd.resolve()
-    work = codex_work_root.resolve()
-    if parameter_cwd.is_relative_to(work):
-        return parameter_cwd
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # 古い call path は linked worktree に対して repo root を渡すことがあるが、Codex は
-    # target work root 内で実行しなければならない。
-    return work
-
-
 def _toml_string(value: str) -> str:
     """TOML string として安全な JSON 互換 quote へ寄せる。"""
-    return json.dumps(value, ensure_ascii=False)
+    validate_json_toml_value(value)
+    # JSON が raw のまま残す DEL は TOML basic string では escape が必要になる。
+    return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007F")
+
+
+def _is_bare_toml_key_segment(value: str) -> bool:
+    """Codex CLI の dotted override path で bare に渡せる key か判定する。"""
+    return re.fullmatch(r"[A-Za-z0-9_-]+", value) is not None
+
+
+def _toml_key_segment(value: str) -> str:
+    """provider ID/key を意味を保つ単一の TOML key segment にする。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # Codex CLI の dotted override path は bare key を引用せず渡す必要がある。
+    if _is_bare_toml_key_segment(value):
+        return value
+    return _toml_string(value)
+
+
+def _toml_value(value: JsonTomlValue) -> str:
+    """null 以外の JSON value を一意な TOML value へ変換する。"""
+    value = validate_json_toml_value(value)
+    if isinstance(value, str):
+        return _toml_string(value)
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return repr(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_toml_value(item) for item in value) + "]"
+    return (
+        "{"
+        + ", ".join(
+            f"{_toml_key_segment(key)} = {_toml_value(item)}"
+            for key, item in value.items()
+        )
+        + "}"
+    )
 
 
 def _config_override(key: str, toml_value: str) -> list[str]:
@@ -243,25 +477,75 @@ def _config_override(key: str, toml_value: str) -> list[str]:
     return ["--config", f"{key}={toml_value}"]
 
 
-def _ollama_provider_override_args() -> list[str]:
-    """cmoc managed ollama provider を argv config override にする。"""
-    provider_key = f"model_providers.{_OLLAMA_PROVIDER_ID}"
-    return [
-        # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
-        # Codex は既定で non-function web-search と multi-agent tool type を有効にするが、
-        # Ollama の Responses endpoint は function tool を受け付ける。managed local provider
-        # は両者に共通する tool subset に保つ。
-        "--disable",
-        "multi_agent",
-        *_config_override("web_search", _toml_string("disabled")),
-        *_config_override("model_provider", _toml_string(_OLLAMA_PROVIDER_ID)),
-        *_config_override(f"{provider_key}.name", _toml_string("cmoc managed ollama")),
-        *_config_override(
-            f"{provider_key}.base_url",
-            _toml_string("http://127.0.0.1:11434/v1"),
-        ),
-        *_config_override(f"{provider_key}.wire_api", _toml_string("responses")),
-    ]
+def _model_provider_override_args(
+    provider_id: str,
+    config: CmocConfig,
+) -> list[str]:
+    """選択した provider と provider-local 設定だけを argv にする。"""
+    try:
+        provider = config.codex.model_providers[provider_id]
+    except KeyError as exc:
+        raise CmocError(
+            "Codex model provider が未定義です。",
+            [
+                "{{work-root}}/.cmoc/gt/ar/config.json の codex.model_providers を確認してください。"
+            ],
+            f"model provider ID: {provider_id!r}",
+        ) from exc
+    try:
+        provider_key = f"model_providers.{_toml_key_segment(provider_id)}"
+        provider_value = _toml_string(provider_id)
+    except TypeError as exc:
+        raise CmocError(
+            "Codex model provider ID が不正です。",
+            [
+                "model provider ID を Codex CLI が解釈できる TOML key/value に修正してください。"
+            ],
+            f"model provider ID: {provider_id!r}",
+        ) from exc
+    args = _config_override("model_provider", provider_value)
+    normalized_settings: dict[str, JsonTomlValue] = {}
+    has_non_bare_segment = not _is_bare_toml_key_segment(provider_id)
+    encoded_settings: list[tuple[str, str]] = []
+    for key, value in provider.settings.items():
+        if not isinstance(key, str):
+            raise CmocError(
+                "Codex model provider 設定が不正です。",
+                [
+                    "{{work-root}}/.cmoc/gt/ar/config.json の provider-local key を確認してください。"
+                ],
+                f"model provider ID: {provider_id!r}\nkey: {key!r}",
+            )
+        try:
+            key_segment = _toml_key_segment(key)
+            normalized_value = validate_json_toml_value(value)
+            toml_value = _toml_value(normalized_value)
+        except TypeError as exc:
+            raise CmocError(
+                "Codex model provider 設定が不正です。",
+                [
+                    "provider-local setting を null 以外の JSON/TOML 共通値へ修正してください。"
+                ],
+                f"model provider ID: {provider_id!r}\nkey: {key!r}",
+            ) from exc
+        normalized_settings[key] = normalized_value
+        encoded_settings.append((key_segment, toml_value))
+        has_non_bare_segment |= not _is_bare_toml_key_segment(key)
+    if has_non_bare_segment and encoded_settings:
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # Codex CLI の dotted override parser は quoted key segment を path として解釈せず、
+        # provider ID/key に dot を含む設定を壊す。inline TOML table なら同じ
+        # provider-local key を一つの config override として意味を保てる。
+        args.extend(
+            _config_override(
+                "model_providers",
+                _toml_value({provider_id: normalized_settings}),
+            )
+        )
+        return args
+    for key_segment, toml_value in encoded_settings:
+        args.extend(_config_override(f"{provider_key}.{key_segment}", toml_value))
+    return args
 
 
 def build_codex_override_args(
@@ -282,23 +566,22 @@ def build_codex_override_args(
         *_config_override("approvals_reviewer", _toml_string("auto_review")),
         *_config_override("model_reasoning_effort", _toml_string(reasoning_effort)),
     ]
-    use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"
-    if use_cmoc_managed_ollama:
-        args.extend(_ollama_provider_override_args())
+    if model_spec.model_provider is not None:
+        args.extend(_model_provider_override_args(model_spec.model_provider, config))
     return args
 
 
-def resolve_codex_home(cwd: Path | None = None) -> Path:
+def resolve_codex_home(agent_call_cwd: Path) -> Path:
     """CODEX_HOME の相対指定を Codex subprocess の cwd 基準で解決する。"""
     value = os.environ.get("CODEX_HOME")
     if value is not None:
         raw_path = Path(value)
-        return raw_path if raw_path.is_absolute() else (cwd or Path.cwd()) / raw_path
+        return raw_path if raw_path.is_absolute() else agent_call_cwd / raw_path
     return (Path.home() / ".codex").resolve()
 
 
 def validate_codex_home(codex_home: Path) -> None:
-    """Codex 起動前に通常利用に必要な home と auth.json の存在を検査する。"""
+    """Codex 起動前に CODEX_HOME が directory であることだけを検査する。"""
     if not codex_home.exists():
         raise CmocError(
             "Codex home が存在しません。",
@@ -317,36 +600,14 @@ def validate_codex_home(codex_home: Path) -> None:
             ],
             f"CODEX_HOME: {codex_home}\nfailed condition: CODEX_HOME is directory",
         )
-    auth_path = codex_home / "auth.json"
-    if not auth_path.is_file():
-        raise CmocError(
-            "Codex CLI 認証情報が存在しません。",
-            [
-                "Codex CLI の通常利用環境を初期化してください。",
-                "既存の Codex home を指すように CODEX_HOME を設定してください。",
-            ],
-            f"CODEX_HOME: {codex_home}\nfailed condition: {auth_path} is file",
-        )
 
 
 def prepare_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig | None = None,
-    root: Path | None = None,
 ) -> list[str]:
-    """必要なら local provider を準備し、path 非依存の Codex argv を返す。
-
-    root は managed local provider の事前準備だけに使い、sandbox や詳細な
-    ファイルアクセス設定の組み立てには使わない。
-    """
+    """CmocConfig だけから path 非依存の Codex argv を返す。"""
     resolved_config = config or CmocConfig()
-    if (
-        resolved_config.codex.model[parameter.model_class].model_provider == "cmoc"
-        and root is not None
-    ):
-        from commons.runtime_doctor import run_doctor_preprocess
-
-        run_doctor_preprocess(root, resolved_config)
     return build_codex_override_args(parameter, resolved_config)
 
 
@@ -372,7 +633,7 @@ def run_codex_subprocess(
             )
         return subprocess.run(argv, **kwargs)
     except FileNotFoundError as exc:
-        if argv[:1] != ["codex"]:
+        if not _is_missing_codex_executable(exc, argv, kwargs):
             raise
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # Codex CLI missing は想定外の exec 失敗として即時に利用者向け失敗にする。
@@ -383,12 +644,38 @@ def run_codex_subprocess(
         ) from exc
 
 
+def _is_missing_codex_executable(
+    exc: FileNotFoundError, argv: list[str], kwargs: dict[str, Any]
+) -> bool:
+    """FileNotFoundError が Codex executable の不在を示すか判定する。"""
+    if argv[:1] != ["codex"]:
+        return False
+    if exc.filename is None:
+        # テスト double などが filename を設定しない FileNotFoundError を許容する。
+        return True
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    # subprocess の cwd key は API 名として維持し、内部値には process の役割を付ける。
+    codex_process_cwd = kwargs.get("cwd")
+    if codex_process_cwd is not None and not isinstance(codex_process_cwd, int):
+        try:
+            if not Path(codex_process_cwd).is_dir():
+                return False
+        except (OSError, TypeError):
+            return False
+    return os.fsdecode(exc.filename) == argv[0]
+
+
 def set_run_process_tracking_path(path: Path | None) -> Path | None:
     """editing run 実行中だけ有効な process-local tracking path を差し替える。"""
     global _active_run_process_tracking_path
     old_path = _active_run_process_tracking_path
     _active_run_process_tracking_path = path
     return old_path
+
+
+def run_process_tracking_active() -> bool:
+    """editing run の Codex subprocess tracking が有効か返す。"""
+    return _active_run_process_tracking_path is not None
 
 
 def run_tracked_codex_subprocess(
@@ -406,30 +693,78 @@ def run_tracked_codex_subprocess(
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
     process: subprocess.Popen[Any] | None = None
+    cleanup_expected_leader: tuple[int, int] | None = None
+    cleanup_expected_members: tuple[tuple[int, int], ...] | None = None
+    tracked_start_time: int | None = None
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # Popen と child 行の登録だけを遅延させ、exec 後の child は通常の SIGTERM を受ける。
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
     sigterm_pending = False
 
-    def defer_sigterm(_signum: int, _frame: Any) -> None:
+    def _defer_sigterm(_signum: int, _frame: FrameType | None) -> None:
         """tracking情報の登録が終わるまでSIGTERMを保留する。"""
         nonlocal sigterm_pending
         sigterm_pending = True
 
-    signal.signal(signal.SIGTERM, defer_sigterm)
+    def _restore_sigterm_handler() -> None:
+        """保留した SIGTERM を setup 成否にかかわらず復元する。"""
+        signal.signal(signal.SIGTERM, previous_sigterm_handler)
+        if sigterm_pending and previous_sigterm_handler != signal.SIG_IGN:
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # Popen/child 行登録の途中だけ signal を遅延し、setup 失敗時も元の
+            # handler へ再配送して run の中断を握りつぶさない。
+            os.kill(os.getpid(), signal.SIGTERM)
+
+    signal.signal(signal.SIGTERM, _defer_sigterm)
     try:
         try:
             with run_process_id_file_lock(tracking_path):
+                _validate_tracked_process_file(tracking_path)
                 process = subprocess.Popen(argv, start_new_session=True, **kwargs)
-                _record_tracked_child_process(
+                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # tracking 更新に失敗しても、後から PGID を再探索して別 group を停止しない
+                # よう、Popen 直後の identity snapshot を cleanup に引き継ぐ。
+                cleanup_start_time = process_start_time(process.pid)
+                if cleanup_start_time is not None:
+                    cleanup_expected_leader = (process.pid, cleanup_start_time)
+                cleanup_expected_members = process_group_members(process.pid)
+                tracked_start_time = _record_tracked_child_process(
                     tracking_path, process.pid, process_group_id=process.pid
                 )
-        except OSError as exc:
+        except BaseException as exc:
             if process is None:
                 raise
             try:
-                stop_process_group(process.pid)
-            except CmocError as cleanup_exc:
+                if cleanup_expected_members is None:
+                    raise CmocError(
+                        "実行中 Codex subprocess の process group を確認できません。",
+                        ["Codex subprocess を手動で停止してから再実行してください。"],
+                        f"pid: {process.pid}",
+                    )
+                stop_process_group(
+                    process.pid,
+                    expected_leader=cleanup_expected_leader,
+                    expected_members=cleanup_expected_members,
+                )
+                process.wait()
+            except BaseException as cleanup_exc:
+                try:
+                    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                    # process group cleanup が完了しない場合は PGID を推測して signal せず、
+                    # Popen が直接保持する child だけを停止してから reap する。
+                    if process.poll() is None:
+                        process.kill()
+                    process.wait()
+                except BaseException as reap_exc:
+                    raise CmocError(
+                        "run process tracking を更新できません。",
+                        [
+                            "run process tracking file の権限と保存先を確認してください。",
+                            "Codex subprocess の停止にも失敗しました。",
+                        ],
+                        f"path: {tracking_path}\nerror: {exc}\n"
+                        f"cleanup: {cleanup_exc}\nreap: {reap_exc}",
+                    ) from reap_exc
                 raise CmocError(
                     "run process tracking を更新できません。",
                     [
@@ -437,17 +772,16 @@ def run_tracked_codex_subprocess(
                         "Codex subprocess の停止にも失敗しました。",
                     ],
                     f"path: {tracking_path}\nerror: {exc}\ncleanup: {cleanup_exc}",
+                ) from cleanup_exc
+            if isinstance(exc, OSError):
+                raise CmocError(
+                    "run process tracking を更新できません。",
+                    ["run process tracking file の権限と保存先を確認してください。"],
+                    f"path: {tracking_path}\nerror: {exc}",
                 ) from exc
-            raise CmocError(
-                "run process tracking を更新できません。",
-                ["run process tracking file の権限と保存先を確認してください。"],
-                f"path: {tracking_path}\nerror: {exc}",
-            ) from exc
+            raise
     finally:
-        signal.signal(signal.SIGTERM, previous_sigterm_handler)
-    if sigterm_pending and previous_sigterm_handler != signal.SIG_IGN:
-        # Popen と pid file 更新の間だけ遅らせ、登録後は通常の中断処理へ戻す。
-        os.kill(os.getpid(), signal.SIGTERM)
+        _restore_sigterm_handler()
     try:
         stdout, stderr = process.communicate(input_data)
         result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
@@ -462,11 +796,18 @@ def run_tracked_codex_subprocess(
     finally:
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # leader 終了後も descendant が group に残る間は tracking を保持する。
-        if process.poll() is not None and not process_group_has_running_member(
-            process.pid
+        if (
+            process.poll() is not None
+            and not process_group_has_running_member(process.pid)
+            and tracked_start_time is not None
         ):
             try:
-                remove_tracked_child_process(tracking_path, process.pid)
+                _remove_tracked_child_process(
+                    tracking_path,
+                    process.pid,
+                    tracked_start_time,
+                    process.pid,
+                )
             except OSError as exc:
                 raise CmocError(
                     "run process tracking を更新できません。",
@@ -475,59 +816,83 @@ def run_tracked_codex_subprocess(
                 ) from exc
 
 
-def record_tracked_child_process(
-    path: Path, process_id: int, process_group_id: int | None = None
-) -> None:
-    """run process tracking file へ Codex child の同一性情報を追記する。"""
-    with run_process_id_file_lock(path):
-        _record_tracked_child_process(path, process_id, process_group_id)
-
-
 def _record_tracked_child_process(
     path: Path, process_id: int, process_group_id: int | None = None
-) -> None:
-    """Codex childのPID、start time、process groupをtracking fileへ保存する。"""
+) -> int:
+    """Codex child の identity を tracking file へ保存し、start time を返す。"""
+    _validate_tracked_process_file(path)
     start_time = process_start_time(process_id)
     if start_time is None:
         raise OSError(f"process {process_id} start time is unavailable")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    current = path.read_text() if path.exists() else ""
+    current = path.read_text(encoding="utf-8")
     lines = [line for line in current.splitlines() if line.strip()]
     group_id = process_id if process_group_id is None else process_group_id
     child_line = f"child {process_id} {start_time} {group_id}"
     lines = [line for line in lines if not line.startswith(f"child {process_id} ")]
     lines.append(child_line)
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return start_time
 
 
-def remove_tracked_child_process(path: Path, process_id: int) -> None:
-    """終了した Codex child process を run process tracking file から除く。"""
+def _remove_tracked_child_process(
+    path: Path,
+    process_id: int,
+    expected_start_time: int,
+    expected_group_id: int | None = None,
+) -> None:
+    """同じ identity の終了済み Codex child を tracking file から除く。"""
     with run_process_id_file_lock(path):
         if not path.exists():
             return
+
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # PID は再利用されるため、古い child の cleanup で新しい tracking 行を消さない。
+        def is_same_child(line: str) -> bool:
+            """PID 再利用後に登録された新しい child 行を保持する。"""
+            parts = line.split()
+            if len(parts) not in {3, 4} or parts[0] != "child":
+                return False
+            try:
+                if int(parts[1]) != process_id or int(parts[2]) != expected_start_time:
+                    return False
+                return (
+                    expected_group_id is None
+                    or len(parts) == 3
+                    or int(parts[3]) == expected_group_id
+                )
+            except ValueError:
+                return False
+
         lines = [
             line
-            for line in path.read_text().splitlines()
-            if not line.startswith(f"child {process_id} ")
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if not is_same_child(line)
         ]
-        path.write_text(("\n".join(lines) + "\n") if lines else "")
+        path.write_text(("\n".join(lines) + "\n") if lines else "", encoding="utf-8")
 
 
 def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
     """Structured Output schema を指定 root の内容 hash store へ配置する。"""
     if schema_source_path is None:
         return None
-    schema_text = schema_source_path.read_text()
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # hash path と保存本文を schema source の UTF-8 bytes に一致させるため、
+    # Path.read_text() の改行変換を通さない。
+    schema_text = schema_source_path.read_bytes().decode("utf-8")
     return write_hashed_file(schema_store_dir(root), "", ".json", schema_text)
 
 
 def read_output_json(path: Path) -> Any:
     """schema なしの Codex output が空または不正 JSON の場合は None を返す。"""
-    if not path.exists() or not path.read_text().strip():
+    try:
+        output_text = path.read_text(encoding="utf-8")
+    except (FileNotFoundError, UnicodeError):
+        return None
+    if not output_text.strip():
         return None
     try:
-        return json.loads(path.read_text())
-    except json.JSONDecodeError:
+        return json.loads(output_text)
+    except (json.JSONDecodeError, UnicodeError):
         return None
 
 

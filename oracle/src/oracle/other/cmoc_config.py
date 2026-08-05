@@ -12,10 +12,22 @@
 
 # std
 from dataclasses import dataclass, field
-from typing import Literal
 
 # cmoc
 from oracle.acp_builder.basic import ModelClass, ReasoningEffort
+
+# JSON と TOML の両方で表現できる設定値
+type JsonTomlValue = (
+    str | int | float | bool | list[JsonTomlValue] | dict[str, JsonTomlValue]
+)
+
+
+@dataclass(frozen=True)
+class CodexModelProviderConfig:
+    """単一 model provider の provider-local Codex config。"""
+
+    # provider-local key --> JSON/TOML 共通の設定値
+    settings: dict[str, JsonTomlValue] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -40,13 +52,8 @@ class CmocConfig:
 class CodexModelSpec:
     """Codex CLI 上のモデル指定"""
 
-    # model provider 設定
-    # codex:
-    #   Codex CLI 標準のモデル設定を使う
-    #   いわば未指定 (default)
-    # cmoc:
-    #   cmoc managed ollama を使う
-    model_provider: Literal["codex", "cmoc"]
+    # model provider ID。None の場合は Codex CLI の既定値を使う
+    model_provider: str | None
 
     # モデル名
     model: str
@@ -58,16 +65,19 @@ class CmocConfigCodex:
     cmoc の設定 (config) のうち Codex CLI 向けの設定を集約したクラス
     """
 
+    # model provider ID --> provider-local な Codex config
+    model_providers: dict[str, CodexModelProviderConfig] = field(default_factory=dict)
+
     # `ModelClass` --> Codex CLI が受理可能な Model 名
     # NOTE
     #   モデル名の未定義は禁止
     #   モデル名は case sensitive なので注意
     model: dict[ModelClass, CodexModelSpec] = field(
         default_factory=lambda: {
-            ModelClass.MAINSTREAM: CodexModelSpec("codex", "gpt-5.6-terra"),
-            ModelClass.FLAGSHIP: CodexModelSpec("codex", "gpt-5.6-sol"),
-            ModelClass.EFFICIENCY: CodexModelSpec("codex", "gpt-5.6-luna"),
-            ModelClass.MINIMUM: CodexModelSpec("codex", "gpt-5.4-mini"),
+            ModelClass.MAINSTREAM: CodexModelSpec(None, "gpt-5.6-terra"),
+            ModelClass.FLAGSHIP: CodexModelSpec(None, "gpt-5.6-sol"),
+            ModelClass.EFFICIENCY: CodexModelSpec(None, "gpt-5.6-luna"),
+            ModelClass.MINIMUM: CodexModelSpec(None, "gpt-5.4-mini"),
         }
     )
 

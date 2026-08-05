@@ -1,77 +1,61 @@
 """`cmoc tui` の TUI 起動 prompt 正本。"""
 
-# std
-from pathlib import Path
-
 # cmoc
-from oracle.other.struct_doc import StructDoc, render_as_markdown
-from oracle.other.path_model import resolve_repo_root
 from oracle.acp_builder.basic import (
     AgentCallParameter,
+    FileAccessMode,
     ModelClass,
     ReasoningEffort,
-    FileAccessMode,
 )
+from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
+from oracle.other.struct_doc import StructBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
 def build_tui_launch_tui_parameter(
     time_stamp: str,
-    role: str,
-    summary: str,
-    goal: str,
-    file_access_mode: FileAccessMode,
     original_prompt: str,
-    oracle_and_realization_basic: bool,
-    oracle_standard: bool,
-    realization_standard: bool,
-    oracle_review_standard: bool,
-    apply_review_standard: bool,
-    index_entry_standard: bool,
 ) -> AgentCallParameter:
-    """`cmoc tui` サブコマンド、TUI 起動パラメータ解決用。
-    AI エージェント呼び出しパラメータを構築する。
+    """`cmoc tui` サブコマンドの TUI 起動パラメータを構築する。
 
-    time_stamp: str
-        この `cmoc tui` 呼び出しのタイムスタンプ文字列
+    Args:
+        time_stamp: この `cmoc tui` 呼び出しのタイムスタンプ文字列。
+        original_prompt: ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す
+            オリジナルプロンプト。コメント除去と strip は呼び出し側で完了している
+            想定。
 
-    role: str
-    summary: str
-    goal: str
-    file_access_mode: str
-    oracle_and_realization_basic: bool
-    oracle_standard: bool
-    realization_standard: bool
-    oracle_review_standard: bool
-    apply_review_standard: bool
-    index_entry_standard: bool
-        関数 `build_complete_prompt` の docstring を参照
-
-    original_prompt: str
-        ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す元プロンプト。
-        コメント除去と strip は呼び出し側で完了している想定。
+    Returns:
+        Codex CLI の TUI 起動に使う固定パラメータ。
     """
+    # main worktree を agent_call_cwd として先に確定する
+    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
+
     # 完全なプロンプトを生成してファイルに保存
+    original_prompt_ref = '<cmoc_ref target="original_prompt"/>'
     complete_prompt = build_complete_prompt(
-        role=role,
-        summary=summary,
-        goal=goal,
-        file_access_mode=file_access_mode,
+        role=original_prompt_ref,
+        summary=original_prompt_ref,
+        goal=original_prompt_ref,
+        file_access_mode=FileAccessMode.REPO_WRITE,
+        path_context=path_context,
         aux_dynamic_prompt=[
-            StructDoc(
-                "オリジナルプロンプト",
-                original_prompt,
-            ),
+            StructBlock(
+                "original_prompt",
+                StructDoc(
+                    "オリジナルプロンプト",
+                    original_prompt,
+                ),
+            )
         ],
-        oracle_and_realization_basic=oracle_and_realization_basic,
-        oracle_standard=oracle_standard,
-        realization_standard=realization_standard,
-        oracle_review_standard=oracle_review_standard,
-        apply_review_standard=apply_review_standard,
-        index_entry_standard=index_entry_standard,
+        oracle_and_realization_basic=True,
+        oracle_standard=True,
+        realization_standard=True,
+        oracle_review_standard=True,
+        apply_review_standard=True,
+        realization_oracle_reference_rule=True,
     )
     complete_prompt_path = (
-        resolve_repo_root()
+        path_context.repo_root
         / ".cmoc"
         / "gu"
         / "ar"
@@ -79,18 +63,22 @@ def build_tui_launch_tui_parameter(
         / "editor_input"
         / f"{time_stamp}_cmpl.md"
     )
-    with open(complete_prompt_path, "w") as f:
-        f.write(render_as_markdown(complete_prompt))
+    complete_prompt_path.parent.mkdir(parents=True, exist_ok=True)
+    complete_prompt_path.write_text(
+        render_as_markdown(complete_prompt),
+        encoding="utf-8",
+    )
     # パラメータを生成して返す
     # NOTE
     #   TUI による対話的作業では人間の認知コスト的な負荷が大きいので、最大限 AI に頑張ってもらいたい
     #   入力タスクの難易度を正確に測るには最高性能モデルを使わざるを得ないし、だったら最初から最高性能モデルで作業させたほうが安い
     #   過剰になりうることは割り切って、最高品質設定にする
     return AgentCallParameter(
-        ModelClass.FLAGSHIP,
-        ReasoningEffort.MAX,
-        file_access_mode,
-        f"{complete_prompt_path} を読んで、その指示に従って下さい",
-        Path(__file__).with_suffix(".json"),
-        True,
+        model_class=ModelClass.FLAGSHIP,
+        reasoning_effort=ReasoningEffort.MAX,
+        file_access_mode=FileAccessMode.REPO_WRITE,
+        prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
+        structured_output_schema_path=None,
+        agent_call_cwd=path_context.agent_call_cwd,
+        run_indexing_preflight=True,
     )

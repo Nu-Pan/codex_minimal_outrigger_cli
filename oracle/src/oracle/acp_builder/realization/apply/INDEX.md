@@ -1,15 +1,17 @@
 # `fork`
 
 ## Summary
-- Oracle 側の差分を realization file 全体へ反映する `codex exec` 用 AgentCallParameter の構築処理を扱う。raw git diff と commit 範囲を prompt に埋め込み、実行設定と linked worktree を組み立てる。
+- `cmoc realization apply fork` 向けの codex exec 起動パラメータを構築する実装。oracle file の差分、commit 範囲、linked worktree を prompt に組み込み、realization file への差分追従を FLAGSHIP モデルへ委譲する入口。
 
 ## Read this when
-- `cmoc realization apply fork` の実行 prompt や realization 追従処理を変更・調査するとき。
-- 対象 agent call のモデル、推論強度、ファイルアクセス、作業ディレクトリ、indexing preflight を確認するとき。
+- oracle file の変更を realization file へ追従させる AgentCallParameter を構築・変更するとき
+- realization apply fork の prompt、作業範囲、差分参照、モデル設定、worktree 設定を確認するとき
+- 差分追従の完了条件や realization write の委譲方法を調査するとき
 
 ## Do not read this when
-- 通常の realization 実装・テストを変更または調査するとき。
-- prompt の一般的な組み立て規則だけを確認したいとき。
+- realization apply fork の差分適用ロジックやテストだけを調べるとき
+- 一般的な prompt 構築処理を調べるとき
+- AgentCallParameter や path context の共通定義を調べるとき
 
 ## hash
-- 7c89cc510f69445bc05e90b52eaa820466a335c6d0b593b049f4b1f85564c9c9
+- 3ce433d3436f0bdbab513ab255c879387e1240ebed7d75aed3f349f086bed814

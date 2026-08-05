@@ -2,23 +2,25 @@
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-- {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
+- {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
 """
 
+import hashlib
 from dataclasses import replace
 from pathlib import Path
 from typing import cast
 
 import pytest
 from _codex_support import codex_arg_value, codex_override_config
-from _ollama_support import TEST_SLM_MODEL
-from oracle.other.cmoc_config import CodexModelSpec
+from oracle.other.cmoc_config import CodexModelProviderConfig, CodexModelSpec
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import (
     build_codex_override_args,
     prepare_codex_override_args,
+    prepare_schema,
+    read_output_json,
 )
 from config.cmoc_config import CmocConfig
 
@@ -35,11 +37,12 @@ _SANDBOX_BY_MODE = {
 def _parameter(mode: FileAccessMode) -> AgentCallParameter:
     """指定modeの最小AgentCallParameterを作る。"""
     return AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        mode,
-        "prompt",
-        None,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=mode,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=Path.cwd(),
     )
 
 
@@ -68,6 +71,9 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     assert "permissions" not in parsed
     assert "default_permissions" not in parsed
     assert "sandbox_workspace_write" not in parsed
+    assert "features" not in parsed
+    assert "model_provider" not in parsed
+    assert "model_providers" not in parsed
     assert "--profile" not in args
     assert "-p" not in args
 
@@ -83,52 +89,131 @@ def test_codex_overrides_reject_unknown_file_access_mode() -> None:
         build_codex_override_args(parameter, CmocConfig())
 
 
-def test_prepare_codex_overrides_does_not_scan_worktree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """通常 provider の argv は root の実在 path や内容を入力にしない。"""
-    root = tmp_path / "repo"
-    root.mkdir()
-
-    def fail_scan(*_args: object, **_kwargs: object) -> object:
-        """worktree走査が呼ばれた場合にテストを失敗させる。"""
-        raise AssertionError("worktree scan must not be used to build Codex argv")
-
-    monkeypatch.setattr(Path, "iterdir", fail_scan)
-    monkeypatch.setattr(Path, "rglob", fail_scan)
-
+def test_prepare_codex_overrides_is_config_only() -> None:
+    """prepare 境界も path や provider lifecycle を入力に持たない。"""
     parameter = _parameter(FileAccessMode.REALIZATION_WRITE)
     config = CmocConfig()
-    assert prepare_codex_override_args(parameter, config, root) == (
+    assert prepare_codex_override_args(parameter, config) == (
         build_codex_override_args(parameter, config)
     )
 
 
-def test_codex_overrides_use_cmoc_ollama_provider_for_local_slm() -> None:
-    """minimum modelがcmoc managed Ollama providerへ変換されることを検証する。"""
+def test_codex_overrides_encode_selected_generic_provider() -> None:
+    """任意 ID/key と再帰値を意味を変えない TOML argv にする。"""
     config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
+    provider_id = "provider.with dot"
+    config.codex.model_providers[provider_id] = CodexModelProviderConfig(
+        {
+            "base.url": "http://127.0.0.1:43123/v1",
+            "enabled": True,
+            "count": 2,
+            "ratio": 0.5,
+            "nested": ["value", {"answer": 42}],
+        }
+    )
+    config.codex.model_providers["unused"] = CodexModelProviderConfig(
+        {"secret": "must-not-be-forwarded"}
+    )
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(provider_id, "local-model")
 
     args = build_codex_override_args(
         AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
+            model_class=ModelClass.MINIMUM,
+            reasoning_effort=ReasoningEffort.LOW,
+            file_access_mode=FileAccessMode.READONLY,
+            prompt="prompt",
+            structured_output_schema_path=None,
+            agent_call_cwd=Path.cwd(),
         ),
         config,
     )
 
     parsed = codex_override_config(args)
     assert codex_arg_value(args, "--sandbox") == "read-only"
-    assert codex_arg_value(args, "--model") == TEST_SLM_MODEL
-    assert codex_arg_value(args, "--disable") == "multi_agent"
-    assert parsed["web_search"] == "disabled"
-    assert parsed["model_provider"] == "cmoc_managed_ollama"
-    assert parsed["model_providers"]["cmoc_managed_ollama"] == {
-        "name": "cmoc managed ollama",
-        "base_url": "http://127.0.0.1:11434/v1",
-        "wire_api": "responses",
+    assert codex_arg_value(args, "--model") == "local-model"
+    assert parsed["model_provider"] == provider_id
+    assert parsed["model_providers"] == {
+        provider_id: {
+            "base.url": "http://127.0.0.1:43123/v1",
+            "enabled": True,
+            "count": 2,
+            "ratio": 0.5,
+            "nested": ["value", {"answer": 42}],
+        }
     }
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # dotted override path の quoted segment は Codex CLI parser が受理しないため、
+    # selected provider を inline TOML table として一度に渡す。
+    assert any(
+        argument.startswith('model_providers={"provider.with dot" = {')
+        for argument in args
+    )
     assert "permissions" not in parsed
+
+
+def test_codex_overrides_leave_bare_toml_key_segments_unquoted() -> None:
+    """Codex CLI の dotted path parser が読む bare provider key を検証する。"""
+    config = CmocConfig()
+    provider_id = "test-local_provider"
+    config.codex.model_providers[provider_id] = CodexModelProviderConfig(
+        {"name": "local provider"}
+    )
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(provider_id, "local-model")
+
+    args = build_codex_override_args(
+        AgentCallParameter(
+            model_class=ModelClass.MINIMUM,
+            reasoning_effort=ReasoningEffort.LOW,
+            file_access_mode=FileAccessMode.READONLY,
+            prompt="prompt",
+            structured_output_schema_path=None,
+            agent_call_cwd=Path.cwd(),
+        ),
+        config,
+    )
+
+    assert 'model_providers.test-local_provider.name="local provider"' in args
+
+
+def test_codex_overrides_reject_undefined_selected_provider() -> None:
+    """選択 provider の定義欠落を Codex 起動前の argv 構築で失敗させる。"""
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(
+        "missing-provider", "local-model"
+    )
+
+    with pytest.raises(CmocError, match="Codex model provider が未定義"):
+        build_codex_override_args(
+            AgentCallParameter(
+                model_class=ModelClass.MINIMUM,
+                reasoning_effort=ReasoningEffort.LOW,
+                file_access_mode=FileAccessMode.READONLY,
+                prompt="prompt",
+                structured_output_schema_path=None,
+                agent_call_cwd=Path.cwd(),
+            ),
+            config,
+        )
+
+
+def test_prepare_schema_preserves_source_bytes_for_hash_store(tmp_path: Path) -> None:
+    """schema の改行を変えず、source 本文の SHA256 path に保存する。"""
+    source = tmp_path / "schema.json"
+    source_bytes = b'{\r\n  "type": "object"\r\n}\r\n'
+    source.write_bytes(source_bytes)
+
+    stored = prepare_schema(tmp_path / "repo", source)
+
+    assert stored is not None
+    assert stored.name == f"{hashlib.sha256(source_bytes).hexdigest()}.json"
+    assert stored.read_bytes() == source_bytes
+
+
+def test_read_output_json_returns_none_for_invalid_utf8(
+    tmp_path: Path,
+) -> None:
+    """不正 encoding の schema-less output を JSON failure として扱う。"""
+    output = tmp_path / "output.json"
+    output.write_bytes(b"\xff")
+
+    assert read_output_json(output) is None

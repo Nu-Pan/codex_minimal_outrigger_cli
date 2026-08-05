@@ -81,6 +81,7 @@ def test_apply_finding_merge_operations_enforces_kind_contract() -> None:
     "operation",
     [
         {"kind": "delete", "target_ids": ["finding-0001"], "finding": {}},
+        {"kind": "delete", "target_ids": ["finding-0001"]},
         {
             "kind": "replace",
             "target_ids": ["finding-0001", "finding-0002"],

@@ -2,42 +2,242 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
+import sys
 from pathlib import Path
+from typing import cast
 
+import _ollama_support
 import pytest
 from _codex_support import (
     codex_arg_value,
     codex_override_config,
     codex_parameter,
+    configure_codex_home_for_test_local_ollama,
     setup_codex_home,
-    stub_managed_ollama_preflight,
+    stub_codex_overrides,
 )
 from _command_support import write_python_executable
 from _git_support import make_repo
-from _ollama_support import TEST_SLM_MODEL
-from oracle.other.cmoc_config import CodexModelSpec
+from _ollama_support import (
+    TEST_OLLAMA_CACHE_ENV,
+    TEST_SLM_MODEL,
+    _run_pytest,
+    _select_cache_root,
+    local_ollama,
+    use_test_local_ollama,
+)
+from oracle.other.cmoc_config import CodexModelProviderConfig, CodexModelSpec
 
-import commons.runtime_doctor as doctor_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import prepare_codex_override_args
-from commons.runtime_doctor import run_doctor_preprocess
 from config.cmoc_config import CmocConfig
 
 _REAL_CODEX = shutil.which("codex")
 
 
-def _prepare_production_managed_ollama(root: Path, config: CmocConfig) -> None:
-    """production Codex call が使う実 per-user managed service を要求する。"""
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    # {{work-root}}/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # 本番と同じサービスと永続モデルストアを検証するため、HOME、PATH、systemctl、
-    # ~/.cmoc/ollama は差し替えない。
-    try:
-        run_doctor_preprocess(root, config)
-    except (CmocError, OSError) as exc:
-        pytest.skip(f"production cmoc managed ollama is unavailable: {exc}")
+def test_pytest_runner_separates_run_tmpdir_from_ollama_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """pytest の run-local temp を保ち、半永続 cache だけを分離する。"""
+    # pytest だけに適用する run-local temporary directory を再現する。
+    run_temporary_directory = tmp_path / "run"
+    run_temporary_directory.mkdir()
+    monkeypatch.setenv("TMPDIR", str(run_temporary_directory))
+    monkeypatch.delenv(TEST_OLLAMA_CACHE_ENV, raising=False)
+
+    def intercept_execve(
+        executable: str, args: list[str], environment: dict[str, str]
+    ) -> None:
+        # process 置換直前の argv と environment を runner の外部契約として確認する。
+        assert executable == sys.executable
+        assert args == [sys.executable, "-m", "pytest", "test/example.py", "-ra"]
+        assert environment["TMPDIR"] == str(run_temporary_directory)
+        assert TEST_OLLAMA_CACHE_ENV not in environment
+        raise RuntimeError("execve intercepted")
+
+    monkeypatch.setattr(os, "execve", intercept_execve)
+    with pytest.raises(RuntimeError, match="execve intercepted"):
+        _run_pytest(["test/example.py", "-ra"])
+
+
+def test_ollama_cache_selection_ignores_run_local_tmpdir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cache root の既定値を pytest の run-local temporary と分離する。"""
+    run_temporary_directory = tmp_path / "run"
+    stable_temporary_directory = tmp_path / "stable"
+    run_temporary_directory.mkdir()
+    stable_temporary_directory.mkdir()
+    monkeypatch.setenv("TMPDIR", str(run_temporary_directory))
+    monkeypatch.delenv(TEST_OLLAMA_CACHE_ENV, raising=False)
+    monkeypatch.setattr(
+        _ollama_support,
+        "_stable_system_temporary_directory",
+        lambda: stable_temporary_directory,
+    )
+
+    cache_root = _select_cache_root(tmp_path)
+
+    assert cache_root.parent == stable_temporary_directory
+    assert not cache_root.is_relative_to(run_temporary_directory)
+
+
+def test_ollama_cache_selection_falls_back_when_system_temp_is_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """system temp の取得失敗時は pytest session temp を使う。"""
+    monkeypatch.delenv(TEST_OLLAMA_CACHE_ENV, raising=False)
+
+    def unavailable_system_temp() -> Path:
+        """利用不能な system temp を再現する。"""
+        raise OSError("system temp unavailable")
+
+    monkeypatch.setattr(
+        _ollama_support,
+        "_stable_system_temporary_directory",
+        unavailable_system_temp,
+    )
+
+    cache_root = _select_cache_root(tmp_path)
+
+    assert cache_root.parent == tmp_path.parent
+    assert cache_root.name.startswith("ollama-cache-")
+
+
+def test_ensure_model_reuses_existing_gpu_model_parameters(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`show --parameters` の既存 GPU model を cache hit として扱う。"""
+    calls: list[list[str]] = []
+
+    def run_ollama(
+        _executable: Path,
+        args: list[str],
+        _environment: dict[str, str],
+        _timeout: float,
+    ) -> subprocess.CompletedProcess[str]:
+        """既存 model の show 結果だけを返す。"""
+        calls.append(list(args))
+        if args == ["show", TEST_SLM_MODEL]:
+            return subprocess.CompletedProcess(args, 0, "", "")
+        if args == ["show", "--parameters", TEST_SLM_MODEL]:
+            return subprocess.CompletedProcess(
+                args, 0, "num_gpu 999\nnum_predict 4096\n", ""
+            )
+        raise AssertionError(f"unexpected Ollama command: {args}")
+
+    monkeypatch.setattr(_ollama_support, "_run_ollama", run_ollama)
+
+    class RunningProcess:
+        """`_ensure_model` が確認する起動中 process の最小 double。"""
+
+        def poll(self) -> None:
+            """process が起動中であることを返す。"""
+            return None
+
+    changed = _ollama_support._ensure_model(
+        tmp_path / "ollama",
+        {},
+        cast(subprocess.Popen[bytes], RunningProcess()),
+        tmp_path / "ollama.log",
+        tmp_path,
+    )
+
+    assert changed is False
+    assert calls == [
+        ["show", TEST_SLM_MODEL],
+        ["show", "--parameters", TEST_SLM_MODEL],
+    ]
+
+
+def test_cached_install_rebuilds_when_archive_path_is_corrupt_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """archive path の directory 化を cache miss として再構築する。"""
+    cache_root = tmp_path / "cache"
+    cache_root.mkdir()
+    archive = cache_root / "ollama-linux-amd64.tar.zst"
+    archive.mkdir()
+    downloaded: list[Path] = []
+
+    def download_archive(path: Path) -> None:
+        """壊れた archive を置き換える download を再現する。"""
+        downloaded.append(path)
+        path.write_bytes(b"archive")
+
+    def executable_ok(path: Path) -> bool:
+        """staging の最小 executable 検証を再現する。"""
+        return path.name == "ollama" and "install-staging-" in path.parent.parent.name
+
+    def extract_archive(
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        """archive extraction の成功を再現する。"""
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(_ollama_support, "_download_archive", download_archive)
+    monkeypatch.setattr(_ollama_support, "_ollama_executable_ok", executable_ok)
+    monkeypatch.setattr(subprocess, "run", extract_archive)
+
+    install = _ollama_support._ensure_cached_install(cache_root)
+
+    assert downloaded == [archive]
+    assert install.parent == cache_root / "binaries"
+    assert archive.is_file()
+
+
+def test_pytest_runner_imports_current_worktree_sources() -> None:
+    """main venv の editable install より current worktree を優先する。"""
+    work_root = Path(__file__).resolve().parents[1]
+    probe = """
+import os
+import runpy
+import sys
+
+def intercept_execve(_executable, _args, _environment):
+    import basic.acp
+    import commons.runtime_paths
+    import config.cmoc_config
+
+    print(basic.acp.__file__)
+    print(commons.runtime_paths.__file__)
+    print(config.cmoc_config.__file__)
+    raise SystemExit(0)
+
+os.execve = intercept_execve
+sys.argv = ["test/_ollama_support.py", "run-pytest", "-q"]
+runpy.run_path("test/_ollama_support.py", run_name="__main__")
+"""
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    result = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=work_root,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    imported_paths = [Path(line) for line in result.stdout.splitlines()]
+    assert imported_paths == [
+        work_root / "src" / "basic" / "acp.py",
+        work_root / "src" / "commons" / "runtime_paths.py",
+        work_root / "src" / "config" / "cmoc_config.py",
+    ]
+
+
+def test_setup_codex_home_isolates_home_and_codex_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """共通 Codex 環境 helper が両方の home を test-root 内へ置く。"""
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
+
+    assert Path(os.environ["HOME"]) == tmp_path / "home"
+    assert Path(os.environ["CODEX_HOME"]) == codex_home
 
 
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -51,7 +251,10 @@ def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     assert "-p" not in args
     assert codex_arg_value(args, "--sandbox") in {"read-only", "workspace-write"}
     assert codex_arg_value(args, "--ask-for-approval") == "on-request"
-    assert codex_override_config(args)["approvals_reviewer"] == "auto_review"
+    override = codex_override_config(args)
+    assert override["approvals_reviewer"] == "auto_review"
+    assert "sandbox_workspace_write" not in override
+    assert "features" not in override
 
 
 def _assert_no_codex_home_config(codex_home: Path) -> None:
@@ -60,17 +263,20 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
     assert not list(codex_home.glob("*.config.toml"))
 
 
+@pytest.mark.gpu_integration
 @pytest.mark.skipif(_REAL_CODEX is None, reason="real Codex CLI is not installed")
-def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
+# {{work-root}}/oracle/doc/dev_rule/test_rule.md
+# GPU 正常系の実測 86 秒に、cache miss と実行環境の揺らぎを加えた timeout。
+@pytest.mark.timeout(600)
+def test_run_codex_exec_invokes_real_codex_with_test_local_ollama_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Real Codex CLI と cmoc managed ollama の結合動作を検証する。"""
+    """Real Codex CLI と case-local Ollama の結合動作を検証する。"""
     assert _REAL_CODEX is not None
     real_codex = _REAL_CODEX
     root = make_repo(tmp_path)
-    setup_codex_home(tmp_path, monkeypatch)
-    config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
+    configure_codex_home_for_test_local_ollama(codex_home)
     schema_source = tmp_path / "schema.json"
     schema_source.write_text(
         json.dumps(
@@ -87,27 +293,31 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
         '{"result":"cmoc-real-codex-provider"}'
     )
 
-    _prepare_production_managed_ollama(root, config)
     monkeypatch.setenv(
         "PATH", f"{Path(real_codex).parent}:{os.environ.get('PATH', '')}"
     )
     monkeypatch.setenv("OPENAI_API_KEY", "cmoc-local-test")
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md: ローカル SLM を provider にした
-    # Real Codex CLI を意図的に使い、cmoc が所有する結合成果物だけを検証する。
-    result = run_codex_exec(
-        AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            prompt,
-            schema_source,
-        ),
-        root=root,
-        capacity_initial_sleep_sec=0,
-        max_capacity_retries=0,
-        max_semantic_retries=1,
-        config=config,
-    )
+    monkeypatch.setenv("NO_PROXY", "127.0.0.1,localhost")
+    monkeypatch.setenv("no_proxy", "127.0.0.1,localhost")
+    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    # binary、process、model working set、port はこの test case の tmp_path に閉じる。
+    with local_ollama(tmp_path) as ollama:
+        config = use_test_local_ollama(CmocConfig(), ollama, (ModelClass.MINIMUM,))
+        result = run_codex_exec(
+            AgentCallParameter(
+                model_class=ModelClass.MINIMUM,
+                reasoning_effort=ReasoningEffort.LOW,
+                file_access_mode=FileAccessMode.READONLY,
+                prompt=prompt,
+                structured_output_schema_path=schema_source,
+                agent_call_cwd=root,
+            ),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            max_capacity_retries=0,
+            max_semantic_retries=1,
+            config=config,
+        )
 
     call_log_path = result.call_log_path
     call_log = json.loads(call_log_path.read_text())
@@ -120,12 +330,13 @@ def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
     assert Path(call_log["prompt_log_path"]).read_text() == prompt
     assert call_log["model_class"] == ModelClass.MINIMUM.value
     assert codex_arg_value(call_log["argv"], "--model") == TEST_SLM_MODEL
-    assert codex_arg_value(call_log["argv"], "--disable") == "multi_agent"
-    assert override_config["web_search"] == "disabled"
-    assert override_config["model_provider"] == "cmoc_managed_ollama"
-    assert override_config["model_providers"]["cmoc_managed_ollama"] == {
-        "name": "cmoc managed ollama",
-        "base_url": "http://127.0.0.1:11434/v1",
+    assert "--disable" not in call_log["argv"]
+    assert override_config["model_provider"] == ollama.provider_id
+    providers = override_config["model_providers"]
+    assert isinstance(providers, dict)
+    assert providers[ollama.provider_id] == {
+        "name": "test-local Ollama",
+        "base_url": f"http://{ollama.host}/v1",
         "wire_api": "responses",
     }
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -174,7 +385,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     result = run_codex_exec(
-        codex_parameter(FileAccessMode.REPO_WRITE),
+        codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
@@ -193,6 +404,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
     assert Path(record["stdin_fd"]).resolve() == result.prompt_log_path.resolve()
+    assert result.prompt_log_path.name.endswith("_prompt.md")
     assert codex_arg_value(record["args"], "--sandbox") == "workspace-write"
     override_config = codex_override_config(record["args"])
     assert override_config["model_reasoning_effort"] == "low"
@@ -205,15 +417,55 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     assert result.output_text == "done\n"
 
 
-def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
+def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """local SLM 用 override と組み込み Ollama フラグの不使用を検証する。"""
+    """schema-less output の不正 UTF-8 で結果構築を中断しない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_bytes(b'\\xff')",
+            'print(\'{"type": "turn.completed"}\')',
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    result = run_codex_exec(
+        codex_parameter(agent_call_cwd=root),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert result.output_json is None
+    assert result.output_text == "\ufffd"
+
+
+def test_run_codex_exec_uses_generic_provider_without_builtin_local_flags(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """汎用 provider override と組み込み local provider フラグ不使用を検証する。"""
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
-    stub_managed_ollama_preflight(monkeypatch)
     config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
+    config.codex.model_providers["local.provider"] = CodexModelProviderConfig(
+        {
+            "name": "local provider",
+            "base_url": "http://127.0.0.1:43123/v1",
+            "wire_api": "responses",
+        }
+    )
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec(
+        "local.provider", TEST_SLM_MODEL
+    )
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -234,11 +486,12 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
 
     run_codex_exec(
         AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
+            model_class=ModelClass.MINIMUM,
+            reasoning_effort=ReasoningEffort.LOW,
+            file_access_mode=FileAccessMode.READONLY,
+            prompt="prompt",
+            structured_output_schema_path=None,
+            agent_call_cwd=root,
         ),
         root=root,
         capacity_initial_sleep_sec=0,
@@ -250,60 +503,16 @@ def test_run_codex_exec_uses_local_slm_overrides_without_builtin_ollama_flags(
     override_config = codex_override_config(record["args"])
     assert "--oss" not in record["args"]
     assert "--local-provider" not in record["args"]
+    assert "--disable" not in record["args"]
     assert codex_arg_value(record["args"], "--model") == TEST_SLM_MODEL
-    assert codex_arg_value(record["args"], "--disable") == "multi_agent"
-    assert override_config["web_search"] == "disabled"
-    assert override_config["model_provider"] == "cmoc_managed_ollama"
-    assert override_config["model_providers"]["cmoc_managed_ollama"] == {
-        "name": "cmoc managed ollama",
-        "base_url": "http://127.0.0.1:11434/v1",
+    assert override_config["model_provider"] == "local.provider"
+    providers = override_config["model_providers"]
+    assert isinstance(providers, dict)
+    assert providers["local.provider"] == {
+        "name": "local provider",
+        "base_url": "http://127.0.0.1:43123/v1",
         "wire_api": "responses",
     }
-    _assert_no_codex_home_config(codex_home)
-
-
-def test_prepare_local_slm_runs_managed_ollama_preflight(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """local SLM 用 override の構築前に Ollama preflight を実行することを検証する。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    codex_home = tmp_path / "codex_home"
-    codex_home.mkdir()
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    monkeypatch.setenv("CODEX_HOME", str(codex_home))
-    config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
-
-    ollama_preflight_calls: list[tuple[Path, CmocConfig | None]] = []
-
-    def record_ollama_preflight(
-        actual_root: Path, actual_config: CmocConfig | None = None
-    ) -> None:
-        """Ollama preflight に渡された root と設定を記録する。"""
-        ollama_preflight_calls.append((actual_root, actual_config))
-
-    monkeypatch.setattr(
-        doctor_module, "ensure_ollama_serves_local_slm", record_ollama_preflight
-    )
-    override_args = prepare_codex_override_args(
-        AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
-        ),
-        config,
-        root,
-    )
-
-    assert codex_override_config(override_args)["model_provider"] == (
-        "cmoc_managed_ollama"
-    )
-    assert ollama_preflight_calls == [(root.resolve(), config)]
-    assert "--profile" not in override_args
-    assert "-p" not in override_args
     _assert_no_codex_home_config(codex_home)
 
 
@@ -312,10 +521,11 @@ def test_prepare_codex_override_args_does_not_create_codex_home_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Codex override の構築時に CODEX_HOME の設定ファイルを作成しないことを検証する。"""
-    root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
 
-    override_args = prepare_codex_override_args(codex_parameter(), CmocConfig(), root)
+    override_args = prepare_codex_override_args(
+        codex_parameter(agent_call_cwd=tmp_path), CmocConfig()
+    )
 
     assert "--profile" not in override_args
     assert "-p" not in override_args

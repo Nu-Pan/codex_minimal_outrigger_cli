@@ -1,5 +1,4 @@
 import tomllib
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -10,7 +9,7 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 
 
 class FakeCodexResult:
-    """apply fork test 用の最小 Structured Codex result double。"""
+    """INDEX entry test 用の最小 Structured Codex result double。"""
 
     def __init__(self, output_json: object | None = None) -> None:
         """structured outputの検証対象を初期化する。"""
@@ -18,42 +17,41 @@ class FakeCodexResult:
 
 
 def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """fake CLI 実行用の最小 authenticated Codex home を準備する。"""
+    """test-root 内に provider 固有の認証を仮定しない Codex 環境を準備する。"""
+    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    home = tmp_path / "home"
+    home.mkdir()
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
-    (codex_home / "auth.json").write_text("{}\n")
+    monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("CODEX_HOME", str(codex_home))
     return codex_home
 
 
-def stub_managed_ollama_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
-    """fake Codex subprocess argv のテスト中は managed Ollama setup を省略する。"""
-    import commons.runtime_doctor as doctor_module
-
+def configure_codex_home_for_test_local_ollama(codex_home: Path) -> None:
+    """Ollama 非対応の Codex 組み込み tool type を実経路試験だけで無効化する。"""
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    # fake Codex test は cmoc の argv construction を検証し、共有 service は検証しない。
-    monkeypatch.setattr(
-        doctor_module,
-        "ensure_ollama_serves_local_slm",
-        lambda *_args, **_kwargs: None,
+    # 現行 Codex が既定で送る namespace/web_search tool は Ollama の Responses
+    # endpoint が受理しないため、test-local provider に必要な差だけを隔離 home に置く。
+    (codex_home / "config.toml").write_text(
+        'web_search = "disabled"\n\n[features]\nmulti_agent = false\n'
     )
 
 
 def codex_parameter(
-    mode: FileAccessMode = FileAccessMode.READONLY, *, cwd: Path | None = None
+    mode: FileAccessMode = FileAccessMode.READONLY,
+    *,
+    agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """runtime wrapper test で使う小さな既定 Codex parameter を作る。"""
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        mode,
-        "prompt",
-        None,
+    return AgentCallParameter(
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=mode,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=agent_call_cwd,
     )
-    if cwd is None:
-        return parameter
-    # {{work-root}}/oracle/src/oracle/acp_builder/basic.py
-    return replace(parameter, cwd=cwd)
 
 
 def codex_arg_value(args: list[str], flag: str) -> str | None:

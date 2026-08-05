@@ -3,13 +3,12 @@
 ## 対象
 
 - 以下の workload 固有コマンドが編集 run を開始する。
-    - `cmoc oracle edit fork`: `oracle_edit`
     - `cmoc realization apply fork`: `realization_apply`
     - `cmoc realization refactor fork`: `realization_refactor`
 - 編集 run は `cmoc run join` または `cmoc run abandon` で終了する。
 - 汎用の `cmoc run fork` は提供しない。
 - `cmoc session join` と `cmoc session abandon` は外側の session lifecycle であり、この仕様の対象ではない。
-- read-only の investigation/review、cmoc 自身による機械的更新、および session join の conflict 解消は、この編集 run lifecycle の対象ではない。
+- `cmoc oracle edit`、read-only の investigation/review、cmoc 自身による機械的更新、および session join の conflict 解消は、この編集 run lifecycle の対象ではない。
 
 ## 同時実行の境界
 

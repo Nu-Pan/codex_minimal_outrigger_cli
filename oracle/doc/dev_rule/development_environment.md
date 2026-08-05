@@ -1,5 +1,11 @@
 # cmoc 開発環境
 
+## 責務境界
+
+- この文書は、Python 環境の新規構築、依存関係の追加、および pip の操作に必要な条件を定める
+- 構築済み環境で既存 test と品質検査を選択、実行、完了判定、および報告する手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` を正本とする
+- 通常の test 実行だけを理由として、この文書を事前に読む必要はない
+
 ## 基本環境
 
 - WSL2 Ubuntu 24.04 on Windows 11
@@ -44,7 +50,7 @@ cd "{{cmoc-root}}"
 
 ```bash
 cd "{{cmoc-root}}"
-./.venv/bin/python -m pip install -e .
+./.venv/bin/python -m pip install -e '.[dev]'
 ```
 
 ### `{{cmoc-root}}/.venv` への新規パッケージ追加

@@ -6,13 +6,14 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-from _codex_support import setup_codex_home
+from _codex_support import FakeCodexResult, setup_codex_home
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 
 # preflight の実行条件・順序・worktree 選択・recovery 禁止は、
@@ -50,11 +51,12 @@ def test_command_codex_call_runs_indexing_preflight(
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.READONLY,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=root,
     )
     events: list[str] = []
 
@@ -67,11 +69,6 @@ def test_command_codex_call_runs_indexing_preflight(
         assert update_root == root
         index_path.write_text("# generated\n")
         return [index_path]
-
-    class FakeCodexResult:
-        """Codex exec の結果として必要な最小属性だけを持つ fake。"""
-
-        output_json = None
 
     def fake_runtime_run_codex_exec(
         call_parameter: AgentCallParameter, **kwargs: object
@@ -89,30 +86,34 @@ def test_command_codex_call_runs_indexing_preflight(
     )
 
     result = codex_preflight_module.run_codex_exec(
-        parameter, root=root, purpose="apply fork refine findings"
+        parameter,
+        root=root,
+        purpose="apply fork refine findings",
+        before_agent_call=lambda: events.append("before-agent"),
     )
 
     assert isinstance(result, FakeCodexResult)
-    assert events == ["indexing", "codex"]
+    assert events == ["indexing", "before-agent", "codex"]
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
-def test_command_codex_call_indexes_cwd_worktree_before_root(
+def test_command_codex_call_indexes_agent_call_worktree_before_log_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """cwd が linked worktree 内なら、その worktree だけを indexing することを検証する。"""
+    """agent call が linked worktree 内なら、その worktree だけを indexing する。"""
 
     root = make_repo(tmp_path)
     worktree = tmp_path / "codex-worktree"
     run_git(root, "worktree", "add", "-b", "codex-work", str(worktree))
     codex_cwd = worktree / "oracle"
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.READONLY,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=codex_cwd,
     )
     events: list[str] = []
 
@@ -127,19 +128,14 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
         index_path.write_text("# generated\n")
         return [index_path]
 
-    class FakeCodexResult:
-        """Codex exec の結果として必要な最小属性だけを持つ fake。"""
-
-        output_json = None
-
     def fake_runtime_run_codex_exec(
         call_parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
-        """元の root と cwd を保持した Codex exec 呼び出しを検証する fake。"""
+        """log root を保持した Codex exec 呼び出しを検証する fake。"""
 
         events.append("codex")
         assert kwargs["root"] == root
-        assert kwargs["cwd"] == codex_cwd
+        assert call_parameter.agent_call_cwd == codex_cwd
         return FakeCodexResult()
 
     indexing_module.enable_indexing_preflight()
@@ -151,7 +147,6 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
     result = codex_preflight_module.run_codex_exec(
         parameter,
         root=root,
-        cwd=codex_cwd,
         purpose="oracle review enumerate findings",
     )
 
@@ -173,11 +168,12 @@ def test_command_tui_codex_call_runs_indexing_preflight(
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.READONLY,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=root,
     )
     events: list[str] = []
 
@@ -199,6 +195,10 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         events.append("codex")
         assert call_parameter == parameter
 
+    def pre_launch_check() -> None:
+        """TUI 起動前の pre-launch 検査を記録する。"""
+        events.append("check")
+
     indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
     monkeypatch.setattr(
@@ -207,9 +207,14 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         fake_runtime_run_codex_tui,
     )
 
-    codex_preflight_module.run_codex_tui(parameter, root=root, purpose="tui codex")
+    codex_preflight_module.run_codex_tui(
+        parameter,
+        root=root,
+        purpose="tui codex",
+        pre_launch_check=pre_launch_check,
+    )
 
-    assert events == ["indexing", "codex"]
+    assert events == ["indexing", "check", "codex"]
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
@@ -237,11 +242,6 @@ def test_indexing_preflight_waits_for_repository_lock(
 
         events.append("updated")
         return []
-
-    class FakeCodexResult:
-        """preflight callback の型契約を満たす最小 fake。"""
-
-        output_json = None
 
     def fake_codex_exec(*args: object, **kwargs: object) -> FakeCodexResult:
         """lock test では呼び出されない Codex result を返す fake。"""
@@ -296,19 +296,15 @@ def test_command_codex_call_skips_indexing_when_parameter_disables_preflight(
 
     root = make_repo(tmp_path)
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-        False,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.READONLY,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=root,
+        run_indexing_preflight=False,
     )
     calls: list[str] = []
-
-    class FakeCodexResult:
-        """Codex exec の結果として必要な最小属性だけを持つ fake。"""
-
-        output_json = None
 
     def fail_update_indexes(
         update_root: Path, codex_exec: Callable[..., object] | None = None
@@ -368,18 +364,19 @@ def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
             "blocked = pathlib.Path('oracle/blocked.md')",
             "blocked.write_text('blocked\\n')",
             "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
+            "print(json.dumps({'type': 'turn.failed', 'error': {'message': 'file access violation'}}))",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     index_path = root / "INDEX.md"
     events: list[Path] = []
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.REALIZATION_WRITE,
-        "prompt",
-        None,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        prompt="prompt",
+        structured_output_schema_path=None,
+        agent_call_cwd=root,
     )
 
     def fake_update_indexes(
@@ -394,13 +391,14 @@ def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
     indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
-    codex_preflight_module.run_codex_exec(
-        parameter,
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-        purpose="apply fork refine findings",
-    )
+    with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗しました"):
+        codex_preflight_module.run_codex_exec(
+            parameter,
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+            purpose="apply fork refine findings",
+        )
 
     assert counter.read_text() == "1"
     assert events == [root]

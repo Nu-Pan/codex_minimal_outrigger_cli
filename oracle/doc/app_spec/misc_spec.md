@@ -7,19 +7,22 @@
 
 ## `{{work-root}}` に対する仮定
 
-cmoc による操作対象リポジトリである `{{work-root}}` は以下の要件を満たすものと仮定する
+`{{work-root}}` の定義は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext.work_root` を正本とする。
+cmoc による操作対象 worktree である `{{work-root}}` は、次の要件を満たすものと仮定する。
 
 - git で管理されている
 - `{{work-root}}/oracle` 配下に断片的な正本情報が記載されている（`{{cmoc-root}}` 配下がそうであるように）
-- `{{work-root}}` に固有の作業のノウハウは全てリポジトリ上で実装済みである
+- `{{work-root}}` に固有の作業のノウハウは、Codex CLI が参照可能な追跡対象の文書、設定、script、または skill としてリポジトリ上に用意されている
     - 言い換えれば cmoc が無くても Codex CLI の直接利用でも作業を完遂出来るように `{{work-root}}` がメンテナンスされている事を仮定する
-    - e.g.
-        - 「`{{work-root}}/oracle` 配下のファイル別に `codex exec` セッションを起動する責任」は cmoc が負う
-        - 「開発必要な特定のツールの使用方法を説明する責任」は cmoc ではなく `{{work-root}}/.agents/skills` が担う
+    - `{{work-root}}/oracle` 配下の file 別に `codex exec` session を起動する責任は cmoc が負う
+    - 言語、framework、tool 固有の手順を用意する責任は `{{work-root}}` が負い、その配置先を `.agents/skills` に限定しない
 
 ## cmoc 実行時のカレントディレクトリ
 
-- cmoc 実行時のカレント (pwd) は必ず  `{{work-root}}` とする
+- cmoc process は、対象 Git repository のいずれかの worktree root をカレントディレクトリとして実行する
+- cmoc process の cwd と `AgentCallParameter.agent_call_cwd` は、異なる値を許容する
+- cmoc process の cwd が `{{repo-root}}` であっても、run 用 `AgentCallParameter.agent_call_cwd` は `{{run-root}}` とする
+- agent call の path context を、cmoc process の cwd だけから決定してはならない
 
 ## タイムスタンプのフォーマット
 

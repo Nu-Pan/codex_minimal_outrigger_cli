@@ -12,9 +12,8 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
-from _cli_support import runner
+from _cli_support import run_doctor, runner
 from _git_support import make_repo, run_git
-from _ollama_support import run_doctor
 from oracle.other.cmoc_config import CodexModelSpec
 
 import cmoc_runtime
@@ -187,7 +186,7 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     config = cmoc_runtime.sync_config(root)
-    custom_model = CodexModelSpec("codex", "CUSTOM-INDEXING-EFFICIENCY")
+    custom_model = CodexModelSpec(None, "CUSTOM-INDEXING-EFFICIENCY")
     config.codex.model[ModelClass.EFFICIENCY] = custom_model
     cmoc_runtime.write_config(
         root / ".cmoc" / "gt" / "ar" / "config.json",
@@ -222,7 +221,8 @@ def test_indexing_preflight_in_apply_worktree_uses_worktree_config(
         """Codex 実行へ渡された設定を記録して固定結果を返す fake。"""
         seen_models.append(kwargs["config"].codex.model[ModelClass.EFFICIENCY])
         assert kwargs["root"] == root
-        assert kwargs["cwd"] == apply_worktree
+        assert parameter.agent_call_cwd == apply_worktree
+        assert "cwd" not in kwargs
         return FakeCodexResult()
 
     indexing_common.run_indexing_preflight(apply_worktree, fake_codex_exec)
@@ -282,7 +282,8 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
 def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     """INDEX 更新の commit に INDEX.md 以外を含めない。"""
     root = make_repo(tmp_path)
-    index_path = root / "INDEX.md"
+    index_path = root / "generated[1]" / "INDEX.md"
+    index_path.parent.mkdir()
     index_path.write_text("# generated\n")
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
 
@@ -291,7 +292,7 @@ def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     committed_paths = run_git(
         root, "show", "--name-only", "--pretty=", "HEAD"
     ).stdout.strip()
-    assert committed_paths == "INDEX.md"
+    assert committed_paths == "generated[1]/INDEX.md"
     assert run_git(root, "status", "--short").stdout.strip() == "?? .gitignore"
 
 
@@ -320,8 +321,8 @@ def test_commit_index_updates_rejects_git_diff_failure(
         indexing_common.commit_index_updates(root, [root / "INDEX.md"])
 
     assert calls == [
-        (["add", "--", "INDEX.md"], True),
-        (["diff", "--cached", "--quiet", "--", "INDEX.md"], False),
+        (["add", "--", ":(literal)INDEX.md"], True),
+        (["diff", "--cached", "--quiet", "--", ":(literal)INDEX.md"], False),
     ]
 
 

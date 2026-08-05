@@ -6,13 +6,13 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from commons.runtime_errors import CmocError
-from commons.runtime_git import git_common_dir
-from commons.runtime_paths import sessions_dir
+from .runtime_errors import CmocError
+from .runtime_git import git_common_dir
+from .runtime_paths import sessions_dir
 
 SESSION_STATES = {"active", "joined", "abandoned", "error"}
 RUN_STATES = {"ready", "running", "joinable", "error"}
-RUN_KINDS = {"oracle_edit", "realization_apply", "realization_refactor"}
+RUN_KINDS = {"realization_apply", "realization_refactor"}
 
 
 @dataclass
@@ -51,11 +51,13 @@ class SessionState:
             raise _invalid_state(
                 source, "top-level JSON は object である必要があります。"
             )
+        _require_top_level_fields(data, source)
         session_data = _part_data(data, "session", SessionPart, source)
         run_data = _part_data(data, "run", RunPart, source)
         _require_state(session_data, "session", SESSION_STATES, source)
         _require_state(run_data, "run", RUN_STATES, source)
         _require_nullable_strings(session_data, "session", source)
+        _require_session_identity(session_data, source)
         _require_nullable_strings(run_data, "run", source)
         _validate_run_fields(run_data, source)
         return cls(SessionPart(**session_data), RunPart(**run_data))
@@ -67,7 +69,60 @@ class SessionState:
 
 def state_path(root: Path, session_id: str) -> Path:
     """session_id に対応する session state file の保存先を返す。"""
-    return sessions_dir(root) / f"{session_id}.json"
+    _validate_session_id(session_id)
+    path = sessions_dir(root) / f"{session_id}.json"
+    _reject_symlinked_state_path(path)
+    return path
+
+
+def _reject_symlinked_state_path(path: Path) -> None:
+    """session state path の symlink 経由アクセスを拒否する。"""
+    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # session state は repo-root 側の cmoc 管理 data だが、symlink を追跡すると
+    # 指定された保存先の外側を読み書きして隔離境界を越えてしまう。
+    current = path.absolute()
+    while current != current.parent:
+        if current.is_symlink():
+            raise CmocError(
+                "session state path は symlink 経由で扱えません。",
+                [
+                    "session state file と親 directory を通常の file/directory に戻してから再実行してください。"
+                ],
+                str(current),
+            )
+        current = current.parent
+
+
+def _validate_session_id(session_id: str) -> None:
+    """session-id を一つの通常の file name component に限定する。"""
+    # {{work-root}}/oracle/doc/app_spec/session_state.md
+    # state file は session-id を一つの file name component として保存するため、
+    # separator や NUL を含む値を path に連結して保存先を外へ出さない。
+    if (
+        not isinstance(session_id, str)
+        or not session_id
+        or session_id in {".", ".."}
+        or Path(session_id).name != session_id
+        or "\x00" in session_id
+    ):
+        raise CmocError(
+            "session-id が不正です。",
+            ["session state file の保存先と branch 名を確認してください。"],
+            f"session_id: {session_id!r}",
+        )
+
+
+def _reject_non_file_state_path(path: Path) -> None:
+    """session state path を通常の file に限定する。"""
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # FIFO や device を open すると state 操作が停止するため、書き込み前にも
+    # 既存 path の種別を検証する。
+    if path.exists() and not path.is_file():
+        raise CmocError(
+            "session state path は通常の file ではありません。",
+            ["session state file を通常の file に戻してから再実行してください。"],
+            str(path),
+        )
 
 
 @contextmanager
@@ -88,7 +143,12 @@ def branch_session_id(branch: str) -> str:
     """cmoc session branch 名から session-id を取り出す。"""
     prefix = "cmoc/session/"
     parts = branch.split("/")
-    if not branch.startswith(prefix) or len(parts) != 3 or not parts[2]:
+    if (
+        not branch.startswith(prefix)
+        or len(parts) != 3
+        or not parts[2]
+        or parts[2] in {".", ".."}
+    ):
         raise CmocError(
             "session branch 名から session-id を特定できません。",
             ["branch 名と session state file を確認してください。"],
@@ -100,7 +160,14 @@ def branch_session_id(branch: str) -> str:
 def run_branch_session_id(branch: str) -> str:
     """`cmoc/run/{{session-id}}/{{run-id}}` から session-id を取り出す。"""
     parts = branch.split("/")
-    if len(parts) != 4 or parts[:2] != ["cmoc", "run"] or not parts[2] or not parts[3]:
+    if (
+        len(parts) != 4
+        or parts[:2] != ["cmoc", "run"]
+        or not parts[2]
+        or not parts[3]
+        or parts[2] in {".", ".."}
+        or parts[3] in {".", ".."}
+    ):
         raise CmocError(
             "run branch 名から session-id を特定できません。",
             ["branch 名と session state file を確認してください。"],
@@ -122,35 +189,69 @@ def load_state_for_branch(root: Path, branch: str) -> tuple[str, Path, SessionSt
             f"current branch: {branch}",
         )
     path = state_path(root, session_id)
+    data = _read_state_data(path)
+    return session_id, path, SessionState.from_dict(data, path)
+
+
+def load_session_part_for_branch(
+    root: Path, branch: str
+) -> tuple[str, Path, SessionPart]:
+    """session branch に対応する session 部分だけを検証して読み込む。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+    """
+    session_id = branch_session_id(branch)
+    path = state_path(root, session_id)
+    data = _read_state_data(path)
+    _require_top_level_fields(data, path)
+    session_data = _part_data(data, "session", SessionPart, path)
+    _require_state(session_data, "session", SESSION_STATES, path)
+    _require_nullable_strings(session_data, "session", path)
+    _require_session_identity(session_data, path)
+    return session_id, path, SessionPart(**session_data)
+
+
+def _read_state_data(path: Path) -> dict[str, Any]:
+    """session state file を JSON object として読み込む。"""
+    _reject_symlinked_state_path(path)
+    _reject_non_file_state_path(path)
     if not path.is_file():
         raise CmocError(
             "session state file が存在しません。",
             ["対象 session が正しく作成されているか確認してください。"],
             str(path),
         )
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # 壊れた永続 JSON を raw read exception として漏らさず、CmocError に統一する。
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise _invalid_state(path, "JSON 構文が不正です。") from exc
-    return session_id, path, SessionState.from_dict(data, path)
+    except (OSError, UnicodeError) as exc:
+        raise _invalid_state(path, "JSON を読み込めません。") from exc
+    if not isinstance(data, dict):
+        raise _invalid_state(path, "top-level JSON は object である必要があります。")
+    return data
 
 
 def write_state(path: Path, state: SessionState) -> None:
     """session state を安定した JSON 表現で保存する。"""
+    _reject_symlinked_state_path(path)
+    _reject_non_file_state_path(path)
+    validated = SessionState.from_dict(state.to_dict(), path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(state.to_dict(), ensure_ascii=False, indent=2) + "\n",
+        json.dumps(validated.to_dict(), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
 
 def active_session_for_home(root: Path, home_branch: str) -> Path | None:
     """home branch に紐づく active session state file を探す。"""
-    for path in sessions_dir(root).glob("*.json"):
-        try:
-            data = json.loads(path.read_text())
-        except json.JSONDecodeError as exc:
-            raise _invalid_state(path, "JSON 構文が不正です。") from exc
+    directory = sessions_dir(root)
+    _reject_symlinked_state_path(directory)
+    for path in directory.glob("*.json"):
+        data = _read_state_data(path)
         state = SessionState.from_dict(data, path)
         if (
             state.session.state == "active"
@@ -183,9 +284,28 @@ def _part_data(
     return {name: part[name] for name in fields}
 
 
+def _require_top_level_fields(data: dict[str, Any], source: Path | None) -> None:
+    """session state の top-level field 集合を検証する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    """
+    expected = {"session", "run"}
+    missing = [name for name in expected if name not in data]
+    extra = [name for name in data if name not in expected]
+    if not missing and not extra:
+        return
+    details = []
+    if missing:
+        details.append("必須 field がありません: " + ", ".join(sorted(missing)))
+    if extra:
+        details.append("未定義 field があります: " + ", ".join(extra))
+    raise _invalid_state(source, "top-level に" + " / ".join(details))
+
+
 def _require_state(
     part: dict[str, Any], key: str, allowed: set[str], source: Path | None
 ) -> None:
+    """state part の状態値が許可された集合に含まれることを検証する。"""
     value = part["state"]
     if not isinstance(value, str) or value not in allowed:
         raise _invalid_state(
@@ -197,11 +317,30 @@ def _require_state(
 def _require_nullable_strings(
     part: dict[str, Any], key: str, source: Path | None
 ) -> None:
+    """state part の payload が null または空でない string であることを検証する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    """
     for name, value in part.items():
         if name != "state" and value is not None and not isinstance(value, str):
             raise _invalid_state(
                 source,
                 f"`{key}.{name}` は string または null である必要があります: {value!r}",
+            )
+        if name != "state" and value == "":
+            raise _invalid_state(source, f"`{key}.{name}` は空文字にできません。")
+
+
+def _require_session_identity(session: dict[str, Any], source: Path | None) -> None:
+    """永続 state に必要な session の fork 元情報を検証する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    """
+    for name in ("session_home_branch", "session_fork_commit"):
+        if not isinstance(session[name], str):
+            raise _invalid_state(
+                source,
+                f"`session.{name}` は string である必要があります: {session[name]!r}",
             )
 
 
@@ -219,9 +358,22 @@ def _validate_run_fields(run: dict[str, Any], source: Path | None) -> None:
             source,
             "active run には有効な kind, branch, fork_commit が必要です。",
         )
+    # {{work-root}}/oracle/doc/branch_model.md
+    # state に保存する run branch は、worktree 解決と同じ canonical namespace に限定する。
+    parts = run["branch"].split("/")
+    if (
+        len(parts) != 4
+        or parts[:2] != ["cmoc", "run"]
+        or any(not parts[index] or parts[index] in {".", ".."} for index in (2, 3))
+    ):
+        raise _invalid_state(
+            source,
+            "`run.branch` は cmoc/run/{{session-id}}/{{run-id}} 形式である必要があります。",
+        )
 
 
 def _invalid_state(source: Path | None, reason: str) -> CmocError:
+    """不正な session state を利用者向け例外へ変換する。"""
     detail = f"{source}\n{reason}" if source else reason
     return CmocError(
         "session state file が不正です。",

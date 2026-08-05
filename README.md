@@ -19,7 +19,7 @@
 2. python 仮想環境セットアップ
     ``` bash
     /usr/bin/python3 -m venv .venv
-    ./.venv/bin/python -m pip install -e .
+    ./.venv/bin/python -m pip install -e '.[dev]'
     ```
 3. `cmoc` コマンドにパスを通す
     - 現在のシェルで使う場合
@@ -37,7 +37,7 @@
 
 ## 基本ワークフロー
 
-- `{{cmoc-root}}/oracle/doc/app_spec/usage.md` を参照
+- 基本ワークフローは [oracle/doc/app_spec/usage.md](oracle/doc/app_spec/usage.md) を参照
 
 ## Tips
 

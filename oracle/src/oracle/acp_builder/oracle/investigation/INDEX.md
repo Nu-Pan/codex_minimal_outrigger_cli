@@ -1,14 +1,14 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動用パラメータを構築する実装。ユーザー調査指示を埋め込んだ完全プロンプトを生成・保存し、モデルやアクセス権限など固定の起動設定とともに返す。
+- `cmoc oracle investigation` の TUI 起動用パラメータを構築する実装。リポジトリルートを作業ディレクトリとして確定し、ユーザー指示を含む完全プロンプトを生成・保存したうえで、固定されたモデル、推論強度、ファイルアクセス権、起動設定を返す。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動処理、完全プロンプトの構築・保存、または起動パラメータの固定値を変更・調査するとき。
+- `cmoc oracle investigation` の TUI 起動パラメータ、完全プロンプト生成、作業パス確定、起動ログ保存の挙動を変更・調査するとき。
 
 ## Do not read this when
-- 調査用プロンプトの本文構成や共通プロンプト生成規則だけを確認したいときは、完全プロンプトを構築する実装を直接読む。
-- oracle investigation 以外の agent call パラメータや TUI 起動処理を調査するとき。
+- oracle investigation の調査プロンプト本文や一般的なプロンプト組み立て規則だけを確認したいときは、完全プロンプト生成実装や関連する prompt builder を直接読む。
+- TUI 起動以外の agent call パラメータ構築を変更するとき。
 
 ## hash
-- 7424488cff693a4c6b5cb8e411e2f7fa3c36378184089e42399714114b227c37
+- c983f032ef23cefe8a127a9c8dc7a7c864b8f9eb40b8c632b84779eecfc819d2

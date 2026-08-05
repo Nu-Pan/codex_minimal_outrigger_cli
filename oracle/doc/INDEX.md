@@ -1,18 +1,19 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を収録するディレクトリ。CLI 補完、ログ、エラー処理、プロンプト、managed ollama、session/run、サブコマンドなど、利用者向け挙動と主要 workflow の正本仕様を扱う。個別仕様の確認では、該当する仕様ファイルまたはサブコマンド仕様へ進む入口となる。
+- cmoc の CLI・workflow・Codex 連携・ログ・エラー処理・session/run lifecycle など、アプリケーション挙動に関する正本仕様をまとめたディレクトリ。個別仕様の責務や適用条件を確認し、実装・検証時に対応する仕様文書へ進むための入口となる。
 
 ## Read this when
-- cmoc の利用者向け挙動、CLI 実行条件、出力・ログ、状態管理、プロンプト、サービス管理、session/run、サブコマンドの正本仕様の所在を確認するとき。
-- 複数のアプリケーション仕様にまたがる workflow や、どの個別仕様を読むべきか判断するとき。
+- cmoc のアプリケーション仕様を調査・実装・変更・レビューするとき。
+- CLI 自動補完、Codex exec、provider、ログ、doctor preprocess、prompt、run/session、サブコマンドなど複数の仕様領域から読むべき正本を選ぶとき。
 
 ## Do not read this when
-- 具体的な機能の詳細仕様が特定できる場合は、このディレクトリ全体ではなく対応する個別仕様ファイルを直接読む。
-- 開発環境、設計・テスト規則、oracle/realization の共通定義、または具体的な実装詳細だけを確認するとき。
+- INDEX.md の生成・更新規則そのものを確認するとき。
+- 特定仕様の実装構造やテスト手順など、対応する realization code・test を直接確認すべきとき。
+- cmoc の利用手順だけを確認するときは、利用手順書を直接読む。
 
 ## hash
-- 2da92451d745246352797e3a2bae34d705875532d2e75afb53a3882712b561ea
+- d30ec218f343649f9229f7cfc6f01ab130c2afc0a4dcfc7d53d0d58805f98d02
 
 # `branch_model.md`
 
@@ -54,18 +55,22 @@
 # `dev_rule`
 
 ## Summary
-- cmoc の開発規則に関する正本ドキュメント群。Python コーディング、CLI の設計・配置、開発環境、realization test の方針を確認するための入口。
+- cmoc の Python 開発に関する正本仕様をまとめたディレクトリ。コーディング規則、CLI 設計、開発環境、テスト規則、テスト実行手順を扱い、実装・環境構築・テスト関連の判断における入口となる。
 
 ## Read this when
-- Python 実装の書き方や命名・型ヒント・import 方針を確認するとき。
-- CLI のエントリーポイント、サブコマンド、共有処理の配置を判断するとき。
-- Python/venv、依存関係、ファイル命名など開発環境の運用を確認するとき。
-- pytest、Real Codex CLI 結合、テスト環境隔離、検証範囲など realization test の方針を確認するとき。
+- Python 実装の作成・修正・レビューで、命名、型ヒント、import、docstring、コメント、ログの規則を確認するとき。
+- CLI のエントリーポイント、サブコマンド、共有モジュールの配置や責務分担を決めるとき。
+- Python 環境の構築、依存関係追加、pip 操作の手順を確認するとき。
+- テストの追加・変更・レビューで、検証対象、実経路統合、Ollama、GPU、cache、backend 制約を確認するとき。
+- pytest、Ruff、mypy、GPU test などの選択・実行・完了判定・結果報告を行うとき。
 
 ## Do not read this when
-- 個別機能やコマンドの挙動仕様を確認したいときは、対象機能の oracle doc を直接読む。
-- 個別モジュールの実装詳細を確認したいときは、その実装本文を読む。
-- INDEX.md の読み方やルーティング方針を確認したいときは、専用の routing 文書を読む。
+- CLI の利用者向け挙動や出力形式など、アプリケーション仕様そのものを確認するときは app_spec 配下を直接読む。
+- テストの意味上の要件ではなく、構築済み環境でのテスト実行手順だけを確認するときは test_execution.md を直接読む。
+- Python 環境の新規構築、依存関係追加、pip 操作だけを確認するときは development_environment.md を直接読む。
+- Python の文法、型ヒント、docstring、コメントの書き方だけを確認するときは coding_rule.md を直接読む。
+- CLI の実装配置方針だけを確認するときは design_rule.md を直接読む。
+- テスト固有の作成・変更要件だけを確認するときは test_rule.md を直接読む。
 
 ## hash
-- 2eadee0de716c3689527ae67aef5aeae48aedf5689c90b9bc197be8d5fa9cc60
+- d5d9bb89ee7d975c11d125df48b4eb78f7b43da0e926f53fd25b9f558b62b113

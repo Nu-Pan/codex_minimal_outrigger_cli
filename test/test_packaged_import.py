@@ -84,8 +84,10 @@ def test_oracle_review_enumerate_builder_imports_from_packaged_layout(
     assert result.returncode == 0, result.stderr
 
 
-def test_oracle_edit_builder_imports_from_packaged_layout(tmp_path: Path) -> None:
-    """oracle edit fork adapter が packaged layout で完全 prompt を返す。"""
+def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
+    tmp_path: Path,
+) -> None:
+    """oracle edit と editor 入力境界が packaged layout で正本を参照する。"""
     root = Path(__file__).parents[1]
     target = tmp_path / "site"
     for package in ("acp", "basic", "commons"):
@@ -95,14 +97,27 @@ def test_oracle_edit_builder_imports_from_packaged_layout(tmp_path: Path) -> Non
     result = _run_from_packaged_layout(
         target,
         (
+            "import commons.prompt_editor_input as editor_input; "
+            "import acp.builder.oracle.edit.launch_tui as edit_module; "
             "from pathlib import Path; "
-            "from acp.builder.oracle.edit.fork.launch_exec import "
-            "build_oracle_edit_fork_launch_exec_parameter as build; "
-            "p = build('oracle を編集する', Path.cwd()); "
+            "from acp.builder.oracle.edit.launch_tui import "
+            "build_oracle_edit_launch_tui_parameter as build; "
+            "from oracle.prompt_builder.editor_input import "
+            "build_prompt_editor_input_initial_text as canonical_editor_input; "
+            "assert editor_input.build_prompt_editor_input_initial_text "
+            "is canonical_editor_input; "
+            "assert edit_module.__all__ == "
+            "['build_oracle_edit_launch_tui_parameter']; "
+            "assert sorted(n for n in vars(edit_module) if not n.startswith('_')) "
+            "== ['build_oracle_edit_launch_tui_parameter']; "
+            "log = Path.cwd() / '.cmoc/gu/ar/log/editor_input/test_cmpl.md'; "
+            "p = build('test', 'oracle を編集する'); "
             "assert p.structured_output_schema_path is None; "
             "assert p.file_access_mode.value == 'pure_oracle_write'; "
-            "assert 'oracle を編集する' in p.prompt; "
-            "assert p.cwd == Path.cwd()"
+            "assert p.run_indexing_preflight; "
+            "assert p.prompt == f'{log} を読んで、その指示に従って下さい'; "
+            "assert 'oracle を編集する' in log.read_text(); "
+            "assert p.agent_call_cwd == Path.cwd()"
         ),
         tmp_path,
     )
@@ -129,6 +144,8 @@ def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
             "import acp.builder; "
             "from acp.builder.basic import AgentCallParameter, ModelClass; "
             "from oracle.acp_builder.basic import AgentCallParameter as Canonical; "
+            "assert acp.builder.__all__ == ['basic']; "
+            "assert sorted(n for n in vars(acp.builder) if not n.startswith('_')) == ['basic']; "
             "assert acp.builder.basic.AgentCallParameter is Canonical; "
             "assert AgentCallParameter is Canonical; "
             "assert ModelClass.MAINSTREAM.value == 'mainstream'"
@@ -157,7 +174,8 @@ def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
         (
             "import config.cmoc_config as c; "
             "expected = ['CmocConfig', 'CmocConfigCodex', "
-            "'CmocConfigOracleReview', 'CodexModelSpec']; "
+            "'CmocConfigOracleReview', 'CodexModelProviderConfig', "
+            "'CodexModelSpec', 'JsonTomlValue']; "
             "assert c.__all__ == expected; "
             "assert sorted(n for n in vars(c) if not n.startswith('_')) == expected"
         ),

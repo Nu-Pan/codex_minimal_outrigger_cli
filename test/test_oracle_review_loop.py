@@ -7,6 +7,11 @@
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md
 - {{work-root}}/oracle/doc/dev_rule/coding_rule.md
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+
+この file は 16,000 文字を超えるが、finding の列挙、judgement、advocate、semantic
+retry、interrupt 復旧は同じ review round と fake Codex call 列を検証する一つの責務で
+ある。分割すると、partial progress と retry の外部契約を複数 file で追う必要がある
+ため、現状は review loop 回帰として一箇所に保つ。
 """
 
 from pathlib import Path
@@ -78,8 +83,8 @@ def _assert_review_call_context(
     """
     assert Path.cwd() == review_worktree
     assert kwargs["root"] == repo_root
-    assert kwargs["cwd"] == review_worktree
-    assert parameter.cwd == review_worktree
+    assert "cwd" not in kwargs
+    assert parameter.agent_call_cwd == review_worktree
 
 
 def test_oracle_review_enumerate_receives_only_related_findings(
@@ -170,6 +175,7 @@ def test_oracle_review_enumerate_matches_main_worktree_finding_paths(
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> _FakeCodexResult:
+        """oracle review builder ごとの deterministic response を返す。"""
         _assert_review_call_context(parameter, kwargs, repo_root, review_worktree)
         schema_name = _schema_name(parameter)
         if schema_name == "enumerate_finding.json":
@@ -421,19 +427,6 @@ def test_oracle_review_advocate_keeps_existing_challenger_reasons(
             num_validate_findings_loop=1,
         ),
     )
-    findings = [
-        {
-            "finding_id": "finding-0001",
-            "oracle_path": "{{oracle-root}}/spec.md",
-            "severity": "fatal",
-            "title": "finding",
-            "reason": "reason",
-            "advocate_reasons": [],
-            "challenger_reasons": ["old challenger reason"],
-            "verdict": None,
-            "judge_reason": None,
-        }
-    ]
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
@@ -444,6 +437,21 @@ def test_oracle_review_advocate_keeps_existing_challenger_reasons(
         """
         _assert_review_call_context(parameter, kwargs, repo_root, review_worktree)
         schema_name = _schema_name(parameter)
+        if schema_name == "enumerate_finding.json":
+            return _FakeCodexResult(
+                {
+                    "findings": [
+                        {
+                            "oracle_path": "{{oracle-root}}/spec.md",
+                            "severity": "fatal",
+                            "title": "finding",
+                            "reason": "reason",
+                            "advocate_reasons": [],
+                            "challenger_reasons": ["old challenger reason"],
+                        }
+                    ]
+                }
+            )
         if schema_name == "validate_finding_challenger.json":
             return _FakeCodexResult({"reasons": ["same-round challenger reason"]})
         if schema_name == "validate_finding_advocate.json":
@@ -453,10 +461,10 @@ def test_oracle_review_advocate_keeps_existing_challenger_reasons(
             return _FakeCodexResult({"verdict": "reject", "reason": "rejected"})
         raise AssertionError(schema_name)
 
-    review_loop_module._validate_and_judge_findings(
+    review_module.run_oracle_review_loop(
         repo_root,
         review_worktree,
-        findings,
+        [review_worktree / "oracle" / "spec.md"],
         config,
         fake_run_codex_exec,
     )

@@ -6,16 +6,21 @@
 - `{{work-root}}/oracle/doc/dev_rule/test_rule.md`
 - `{{work-root}}/oracle/doc/dev_rule/coding_rule.md`
 - `{{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py`
+
+この file は 16,000 文字を超えるが、report の構築、finding 表示、CLI 出力、error
+summary は同じ oracle review report contract を検証する一つの責務である。分割すると
+report schema と表示結果の対応を複数 file で追う必要があるため、現状は report 回帰
+として一箇所に保つ。
 """
 
 from pathlib import Path
 
 import pytest
-from _cli_support import runner
+from _cli_support import run_doctor, runner
 from _git_support import make_repo, run_git
-from _ollama_support import run_doctor
 
 import sub_commands.oracle.review as review_module
+import sub_commands.oracle.review_report as report_module
 from basic.acp import AgentCallParameter
 from cmoc_runtime import SessionState
 from config.cmoc_config import CmocConfig, CmocConfigOracleReview
@@ -170,7 +175,7 @@ def test_oracle_review_writes_report(
     h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
     assert h2_sections[: len(required_sections) - 1] == required_sections[1:]
     assert "`oracle/spec.md`" in rendered
-    assert "review_join_commit: null" in rendered
+    assert "run_join_commit: null" in rendered
     assert "session_id:" not in rendered
     assert any(call.startswith("oracle review enumerate findings") for call in calls)
     assert "oracle review merge findings" not in calls
@@ -423,6 +428,29 @@ def test_oracle_review_report_counts_symlink_findings_by_repository_path(
     assert "| 1 | `oracle/memo-link.md` | 1 |" in rendered
 
 
+def test_oracle_review_report_escapes_structural_path_characters(
+    tmp_path: Path,
+) -> None:
+    """特殊文字を含む oracle path でも評価対象 table の行を壊さない。"""
+    root = tmp_path
+    unsafe_path = root / "oracle" / "line\n|`break.md"
+
+    rendered = review_module.render_oracle_review_report(
+        root,
+        "full",
+        "cmoc/session/session-1",
+        SessionState(),
+        1,
+        [unsafe_path],
+        [],
+        "cmoc/run/session-1/run-1",
+        "fork",
+        None,
+    )
+
+    assert "| 1 | <code>oracle/line&#10;&#124;&#96;break.md</code> | 0 |" in rendered
+
+
 def test_oracle_review_accepts_short_scope_option(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -582,3 +610,86 @@ def test_oracle_review_error_report_lists_only_completed_enumerations(
     assert "oracle_count_evaluated: 1" in rendered
     assert "`oracle/spec.md`" in rendered
     assert "`oracle/z.md`" not in rendered
+
+
+def test_oracle_review_reports_reserve_timestamped_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """同一 timestamp の report が相互に上書きされない。"""
+    timestamps = iter(
+        [
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000002000",
+        ]
+    )
+    monkeypatch.setattr(report_module, "timestamp", lambda: next(timestamps))
+
+    paths = [
+        review_module.write_oracle_review_report(
+            tmp_path,
+            "full",
+            "cmoc/session/session",
+            SessionState(),
+            0,
+            [],
+            [],
+            None,
+            None,
+            None,
+        )
+        for _ in range(2)
+    ]
+
+    assert [path.stem for path in paths] == [
+        "2026-06-27_10-00_00_000001000",
+        "2026-06-27_10-00_00_000002000",
+    ]
+    assert all(path.is_file() for path in paths)
+    assert all(
+        f'generated_at: "{path.stem}"' in path.read_text(encoding="utf-8")
+        for path in paths
+    )
+
+
+def test_oracle_review_report_quotes_unsafe_yaml_frontmatter_values(
+    tmp_path: Path,
+) -> None:
+    """YAML の特殊文字を含む repository root を文字列として保持する。"""
+    root = tmp_path / "repo #1"
+
+    rendered = review_module.render_oracle_review_report(
+        root,
+        "full",
+        "cmoc/session/session",
+        SessionState(),
+        0,
+        [],
+        [],
+        None,
+        None,
+        None,
+    )
+
+    assert f'repo_root: "{root}"' in rendered
+
+
+def test_oracle_review_report_quotes_numeric_like_yaml_strings(
+    tmp_path: Path,
+) -> None:
+    """数値や日付に見える branch 名を YAML の文字列として保持する。"""
+    rendered = review_module.render_oracle_review_report(
+        tmp_path,
+        "full",
+        "1.0",
+        SessionState(),
+        0,
+        [],
+        [],
+        "2026-06-27",
+        None,
+        None,
+    )
+
+    assert 'session_branch: "1.0"' in rendered
+    assert 'run_branch: "2026-06-27"' in rendered

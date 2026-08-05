@@ -1,47 +1,30 @@
 # `__init__.py`
 
 ## Summary
-- 既存の `acp.builder.tui.*` import を維持するためだけに残された、`oracle.acp_builder.tui` 互換 package の入口。
-- realization 側と利用者向け公開面からこの参照が消えた後に削除できる互換層として位置づけられる。
+- TUI 起動 builder の既存 import 経路を維持する互換 package。realization 側および利用者向け公開面から同経路が不要になった場合の削除候補であり、TUI builder の実装詳細への入口ではない。
 
 ## Read this when
-- 既存 import 経路 `acp.builder.tui.*` の互換維持や削除可否を確認する。
-- `oracle.acp_builder.tui` との互換 package がなぜ残っているかを確認する。
+- TUI 起動 builder の既存 import 経路や互換性を確認するとき
+- realization 側または利用者向け公開面から当該 import 経路を削除・変更できるか判断するとき
 
 ## Do not read this when
-- TUI 実装本体の挙動や画面構成を確認したい場合。
-- 新しい公開 API や新規 import 経路を設計したい場合。
+- TUI builder の実装や起動処理そのものを変更・調査するとき
+- TUI 起動 builder の import 互換性に関係しない処理を扱うとき
 
 ## hash
-- 9e5ae7e28c1e80b5ffa414ac5eea7dd08927b7977f87292b3afa9b714a894d0a
+- d9cfe056fb590ace7dace1732eced1ab73daab8f28e521f8d480dd52beb37a60
 
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動用 AgentCallParameter を構築する realization adapter。oracle builder に処理を委譲する前に、runtime 側の editor input directory を作成する。
+- TUI 起動 parameter builder の互換 import 経路を提供するモジュール。実体の builder は oracle 側の TUI 起動定義から再公開されるため、TUI 起動 parameter の実装詳細ではなく、この import 経路の利用箇所から下位定義へ進む入口として扱う。
 
 ## Read this when
-- cmoc tui の起動 parameter 構築や editor input directory の準備処理を確認・変更するとき。
+- TUI 起動 parameter builder を既存の import 経路から参照するコードや、互換 import の解決先を確認するとき。
 
 ## Do not read this when
-- oracle 側の TUI launch parameter 仕様や builder 本体の実装を確認するとき。
-- TUI 以外の parameter builder や、起動後の TUI 処理を確認するとき。
+- TUI 起動 parameter の生成ロジックや挙動を調査・変更するときは、再公開元の TUI 起動定義を直接読む。
+- TUI 以外の ACP builder や、parameter builder の共通仕様を調査するとき。
 
 ## hash
-- 3502d9873b62abbf0ec153c7df8ea429ef1077ec35f72fec75785f7748c2dac5
-
-# `resolve_parameter.py`
-
-## Summary
-- TUI の resolve-parameter builder に対する互換 import shim。既存の `acp.builder.tui.resolve_parameter` caller 向けに canonical builder と TUI 用の FileAccessMode 選択肢を再公開する。
-
-## Read this when
-- 既存 TUI import surface の互換性を確認・変更するとき
-- 互換 shim の削除条件や `TUI_FILE_ACCESS_MODES` の利用箇所を調べるとき
-
-## Do not read this when
-- resolve-parameter builder 本体を実装・変更するときは canonical oracle path を読む
-- 互換 import 経路に関係しない TUI builder の処理を調べるとき
-
-## hash
-- ecaa0fc136f723fdcd9ead1add141c738130ab8500136c11f8290979d1721879
+- 1a8a4aaf0f802fad209b12e2f0fbf5a2632620119c7e31c49847c01a3da61a93

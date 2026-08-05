@@ -12,17 +12,32 @@
 ## hash
 - aceb2892c60c365c1ab63b37a6a8264fbaf18cc2d0e146e7f8d370741f78ac55
 
+# `fork`
+
+## Summary
+- 内容がない空ディレクトリで、現時点では案内対象となる実装・テスト・補助ファイルを含まない。
+
+## Read this when
+- このディレクトリにファイルが追加されたか確認するとき。
+
+## Do not read this when
+- 既存の実装やテストを調査するとき。
+
+## hash
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
 # `launch_tui.py`
 
 ## Summary
-- oracle edit TUI 用の realization adapter。実行時の editor input 保存先ディレクトリを作成したうえで、正本 builder に完全な AgentCallParameter の生成を委譲する。
+- oracle edit 用の TUI 起動パラメータを生成する realization adapter。リポジトリ実パスを解決し、完全な prompt の保存先となる editor input directory を準備したうえで、oracle 側の builder を呼び出す。
 
 ## Read this when
-- oracle edit TUI の起動パラメータ生成や、editor input 保存先の準備処理を変更・確認するとき。
+- oracle edit の TUI 起動パラメータ生成や、その前提となる editor input directory の準備を確認・変更するとき
+- realization 側から oracle edit の正本 builder を呼び出す経路を追跡するとき
 
 ## Do not read this when
-- 正本 builder の prompt 構築仕様そのものを確認するときは、対応する oracle builder を直接読む。
-- editor input ディレクトリのパス定義を確認するときは、runtime path 定義を直接読む。
+- oracle 側の TUI builder の prompt 内容や本体ロジックを直接確認するとき
+- oracle edit や TUI 起動パラメータと無関係な builder、パス解決、実行時処理を調べるとき
 
 ## hash
-- 31d0d75fce702d13def856b79200196a9b7a355c4b5005759a219dfea26c3618
+- 7ae5d0a9e77b7cc62a050f8eb6bba220dcc501423e1bbf47bb6361478ecfe557

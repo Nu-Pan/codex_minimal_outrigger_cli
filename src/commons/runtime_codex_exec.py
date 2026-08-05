@@ -17,21 +17,23 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from jsonschema import validate
+from jsonschema import SchemaError, validate, validators
 
 from basic.acp import AgentCallParameter
-from commons.runtime_codex_logging import (
+from basic.path_model import AgentCallPathContext
+from config.cmoc_config import CmocConfig
+
+from .runtime_codex_logging import (
     emit_codex_call_console,
     format_codex_call_error,
 )
-from commons.runtime_codex_profile import (
+from .runtime_codex_profile import (
     codex_error_text,
     codex_subprocess_env,
     extract_resume_token,
     is_capacity_error,
     is_quota_error,
     is_unexpected_error,
-    parameter_codex_cwd,
     prepare_codex_override_args,
     prepare_schema,
     read_output_json,
@@ -39,27 +41,23 @@ from commons.runtime_codex_profile import (
     run_codex_subprocess,
     validate_codex_home,
 )
-from commons.runtime_config import load_config
-from commons.runtime_errors import CmocError
-from commons.runtime_git import status_path_statuses
-from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
-from commons.runtime_paths import (
+from .runtime_config import load_config
+from .runtime_errors import CmocError
+from .runtime_logging import SubcommandLogger, current_subcommand_logger
+from .runtime_paths import (
     _reserve_timestamped_path,
     codex_log_dir,
     console_timestamp,
-    repo_root,
     timestamp,
-    work_root,
 )
-from commons.runtime_results import CodexExecResult
-from config.cmoc_config import CmocConfig
+from .runtime_results import CodexExecResult
 
 _QUOTA_CONDITION = threading.Condition()
 _QUOTA_POLLING = False
 _QUOTA_PROBE_AVAILABLE = False
 _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
-_LAST_CODEX_LOG_TIMESTAMP: str | None = None
+_LAST_CODEX_LOG_TIMESTAMPS: dict[Path, str] = {}
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -97,7 +95,7 @@ def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
         return None
 
 
-def _base_exec_argv(override_args: list[str], codex_cwd: Path) -> list[str]:
+def _base_exec_argv(override_args: list[str], agent_call_cwd: Path) -> list[str]:
     """cmoc 側で検査済みの cwd と設定上書きを Codex exec argv にする。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # cmoc は linked worktree や生成 root から Codex を実行し得るため、repo の検証は
@@ -110,7 +108,7 @@ def _base_exec_argv(override_args: list[str], codex_cwd: Path) -> list[str]:
         "exec",
         "--skip-git-repo-check",
         "--cd",
-        str(codex_cwd),
+        str(agent_call_cwd),
     ]
 
 
@@ -150,22 +148,26 @@ def _codex_failure_detail(
     )
 
 
-def _next_codex_log_timestamp() -> str:
-    """壁時計後退時も同一プロセス内の Codex exec log 名を単調増加させる。"""
-    global _LAST_CODEX_LOG_TIMESTAMP
+def _next_codex_log_timestamp(log_dir: Path) -> str:
+    """log directory ごとに Codex exec log 名を単調増加させる。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # quota retry の時系列は同じ log directory 内だけで保ち、別 repository の
+    # 呼び出し履歴で新しい log 名を進めない。
+    log_dir = log_dir.resolve()
     with _CODEX_LOG_TIMESTAMP_LOCK:
         current = timestamp()
-        if (
-            _LAST_CODEX_LOG_TIMESTAMP is not None
-            and current <= _LAST_CODEX_LOG_TIMESTAMP
-        ):
-            current_dt = datetime.strptime(
-                _LAST_CODEX_LOG_TIMESTAMP[:-3], "%Y-%m-%d_%H-%M_%S_%f"
-            )
-            current = (current_dt + timedelta(microseconds=1)).strftime(
-                "%Y-%m-%d_%H-%M_%S_%f000"
-            )
-        _LAST_CODEX_LOG_TIMESTAMP = current
+        last = _LAST_CODEX_LOG_TIMESTAMPS.get(log_dir)
+        if last is not None and current <= last:
+            try:
+                current_dt = datetime.strptime(last[:-3], "%Y-%m-%d_%H-%M_%S_%f")
+            except ValueError:
+                # canonical timestamp でない値は、path reservation の衝突解消へ委ねる。
+                pass
+            else:
+                current = (current_dt + timedelta(microseconds=1)).strftime(
+                    "%Y-%m-%d_%H-%M_%S_%f000"
+                )
+        _LAST_CODEX_LOG_TIMESTAMPS[log_dir] = current
         return current
 
 
@@ -173,7 +175,6 @@ def run_codex_exec(
     parameter: AgentCallParameter,
     *,
     root: Path | None = None,
-    cwd: Path | None = None,
     config: CmocConfig | None = None,
     purpose: str = "codex exec",
     max_semantic_retries: int = 2,
@@ -184,37 +185,56 @@ def run_codex_exec(
     subcommand_logger: SubcommandLogger | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
-    root = root or repo_root()
-    cwd = cwd or root
-    codex_work_root = work_root(cwd)
-    config = config or load_config(codex_work_root)
+    path_context = AgentCallPathContext(parameter.agent_call_cwd)
+    root = root or path_context.repo_root
+    config = config or load_config(path_context.work_root)
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
-    codex_cwd = parameter_codex_cwd(parameter, codex_work_root)
+    agent_call_cwd = path_context.agent_call_cwd
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # 相対 CODEX_HOME は変更せず渡すため、preflight は Codex が実際の cwd から解決する
     # path を対象にする。
-    codex_home = resolve_codex_home(codex_cwd)
+    codex_home = resolve_codex_home(agent_call_cwd)
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
     override_args = prepare_codex_override_args(
         parameter,
         config,
-        codex_work_root,
     )
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # `--output-schema` は Codex 自身が linked worktree 内で動く場合も repo-root の
-    # local schema store を指さなければならない。
-    schema_path = (
-        prepare_schema(root, parameter.structured_output_schema_path)
-        if parameter.structured_output_schema_path
-        else None
-    )
+    schema_path: Path | None = None
+    schema_definition: Any | None = None
+    schema_source_path = parameter.structured_output_schema_path
+    if schema_source_path is not None:
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # `--output-schema` は Codex 自身が linked worktree 内で動く場合も repo-root の
+        # local schema store を指さなければならない。source の読み取り・UTF-8 decode、
+        # JSON parse、schema validation を同じ local failure として扱う。
+        try:
+            schema_path = prepare_schema(root, schema_source_path)
+            assert schema_path is not None
+            schema_definition = json.loads(schema_path.read_text(encoding="utf-8"))
+            validators.validator_for(schema_definition).check_schema(schema_definition)
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+            SchemaError,
+            TypeError,
+            AttributeError,
+        ) as exc:
+            raise CmocError(
+                "Structured Output schema が不正です。",
+                [
+                    "Structured Output schema の JSON と schema 定義を確認してください。",
+                    "schema を修正してから同じ cmoc コマンドを再実行してください。",
+                ],
+                f"schema: {schema_path or schema_source_path}\nerror: {exc}",
+            ) from exc
 
-    def call_data(
+    def _call_data(
         run_parameter: AgentCallParameter,
         run_codex_home: Path,
-        run_codex_cwd: Path,
+        run_agent_call_cwd: Path,
     ) -> dict[str, str]:
         """call log に残す論理値を実際の呼び出し parameter に揃える。"""
         return {
@@ -222,31 +242,33 @@ def run_codex_exec(
             "model_class": run_parameter.model_class.value,
             "reasoning_effort": run_parameter.reasoning_effort.value,
             "file_access_mode": run_parameter.file_access_mode.value,
-            "cwd": str(run_codex_cwd.resolve()),
+            "cwd": str(run_agent_call_cwd.resolve()),
         }
 
-    base_call_data = call_data(parameter, codex_home, codex_cwd)
+    base_call_data = _call_data(parameter, codex_home, agent_call_cwd)
 
-    def new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
+    def _new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # sibling path を導出する前に O_EXCL で call path を予約する。process-local の
         # timestamp lock だけでは並列 cmoc process を保護できない。
         run_ts, run_call_path = _reserve_timestamped_path(
-            log_dir, "_call.json", _next_codex_log_timestamp
+            log_dir,
+            "_call.json",
+            lambda: _next_codex_log_timestamp(log_dir),
         )
         return (
             run_ts,
-            log_dir / f"{run_ts}_prompt.jsonl",
+            log_dir / f"{run_ts}_prompt.md",
             log_dir / f"{run_ts}_stdout.jsonl",
             log_dir / f"{run_ts}_stderr.log",
             log_dir / f"{run_ts}_output.json",
             run_call_path,
         )
 
-    def build_argv(output_path: Path, resume_token: str | None) -> list[str]:
+    def _build_argv(output_path: Path, resume_token: str | None) -> list[str]:
         """schema と resume 状態を反映した `codex exec` の argv を組み立てる。"""
-        run_argv = _base_exec_argv(override_args, codex_cwd)
+        run_argv = _base_exec_argv(override_args, agent_call_cwd)
         run_argv.extend(["--json", "--output-last-message", str(output_path)])
         if schema_path is not None:
             run_argv.extend(["--output-schema", str(schema_path)])
@@ -255,11 +277,11 @@ def run_codex_exec(
         run_argv.append("-")
         return run_argv
 
-    def run_with_prompt_file(
+    def _run_with_prompt_file(
         run_argv: list[str],
         run_prompt_path: Path,
         *,
-        run_codex_cwd: Path = codex_cwd,
+        run_agent_call_cwd: Path = agent_call_cwd,
         run_codex_env: dict[str, str] = codex_env,
     ) -> subprocess.CompletedProcess[str]:
         """prompt logをstdinとしてCodex subprocessを起動する。"""
@@ -268,14 +290,14 @@ def run_codex_exec(
         with run_prompt_path.open() as prompt_file:
             return run_codex_subprocess(
                 run_argv,
-                cwd=run_codex_cwd,
+                cwd=run_agent_call_cwd,
                 stdin=prompt_file,
                 text=True,
                 capture_output=True,
                 env=run_codex_env,
             )
 
-    def write_call_log(
+    def _write_call_log(
         path: Path,
         *,
         run_purpose: str,
@@ -313,7 +335,7 @@ def run_codex_exec(
     quota_wait_sec = 0.0
     logger = subcommand_logger or current_subcommand_logger()
 
-    def emit_codex_call_event(
+    def _emit_codex_call_event(
         *,
         run_purpose: str,
         run_call_path: Path,
@@ -331,6 +353,16 @@ def run_codex_exec(
     ) -> None:
         """console と subcommand log の両方へ Codex call 結果を記録する。"""
         elapsed_sec = time.perf_counter() - started_at
+        if console_error is None:
+            # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+            # returncode 0 でも malformed JSONL や最終 schema failure は error である。
+            # stdout/stderr 本文を console へ漏らさず、固定メッセージだけ stderr へ出す。
+            console_error = {
+                "failed": "Codex CLI 呼び出しが失敗しました。",
+                "schema_validation_failed": (
+                    "Codex CLI の Structured Output 検証に失敗しました。"
+                ),
+            }.get(status)
         emit_codex_call_console(
             run_purpose, run_call_path, elapsed_sec, returncode, console_error
         )
@@ -355,7 +387,7 @@ def run_codex_exec(
             payload["error"] = error
         logger.event("codex_call", **payload)
 
-    def codex_exec_result_from_paths(
+    def _codex_exec_result_from_paths(
         result: subprocess.CompletedProcess[str],
         *,
         run_call_path: Path,
@@ -366,7 +398,13 @@ def run_codex_exec(
         run_schema_path: Path | None = schema_path,
     ) -> CodexExecResult:
         """保存済みlog pathから一回分のCodex結果を組み立てる。"""
-        output_text = run_output_path.read_text() if run_output_path.exists() else ""
+        try:
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # output JSON の parse failure は caller が分類するため、壊れた UTF-8 の
+            # output-last-message でも結果の組み立て自体を UnicodeDecodeError で中断しない。
+            output_text = run_output_path.read_text(encoding="utf-8", errors="replace")
+        except FileNotFoundError:
+            output_text = ""
         return CodexExecResult(
             returncode=result.returncode,
             output_text=output_text,
@@ -392,12 +430,12 @@ def run_codex_exec(
 
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = (
-            new_log_paths()
+            _new_log_paths()
         )
         output_jsonl_path = output_path.with_suffix(".jsonl")
-        current_argv = build_argv(output_path, resume_token)
+        current_argv = _build_argv(output_path, resume_token)
         _write_prompt_log(prompt_path, parameter.prompt)
-        write_call_log(
+        _write_call_log(
             call_path,
             run_purpose=purpose,
             run_ts=ts,
@@ -410,10 +448,10 @@ def run_codex_exec(
         )
         attempt_started_at = time.perf_counter()
         try:
-            result = run_with_prompt_file(current_argv, prompt_path)
+            result = _run_with_prompt_file(current_argv, prompt_path)
         except BaseException as exc:
             startup_error = format_codex_call_error(exc)
-            emit_codex_call_event(
+            _emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
                 run_prompt_path=prompt_path,
@@ -445,7 +483,7 @@ def run_codex_exec(
                 and capacity_attempts < max_capacity_retries
             ):
                 capacity_attempts += 1
-                emit_codex_call_event(
+                _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
                     run_prompt_path=prompt_path,
@@ -463,7 +501,7 @@ def run_codex_exec(
                 continue
             if quota_error and not unexpected_error:
                 global _QUOTA_POLLING, _QUOTA_PROBE_AVAILABLE, _QUOTA_PROBE_ERROR
-                emit_codex_call_event(
+                _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
                     run_prompt_path=prompt_path,
@@ -561,24 +599,23 @@ def run_codex_exec(
                         quota_probe_parameter = _quota_availability_probe_parameter(
                             parameter
                         )
-                        probe_codex_cwd = parameter_codex_cwd(
-                            quota_probe_parameter, codex_work_root
-                        )
+                        probe_agent_call_cwd = AgentCallPathContext(
+                            quota_probe_parameter.agent_call_cwd
+                        ).agent_call_cwd
                         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
                         # quota probe は別の Codex call なので、最小の AgentCallParameter も
                         # argv/cwd/env を駆動しなければならない。
-                        probe_codex_home = resolve_codex_home(probe_codex_cwd)
+                        probe_codex_home = resolve_codex_home(probe_agent_call_cwd)
                         validate_codex_home(probe_codex_home)
                         probe_codex_env = codex_subprocess_env(probe_codex_home)
                         probe_override_args = prepare_codex_override_args(
                             quota_probe_parameter,
                             config,
-                            codex_work_root,
                         )
-                        probe_call_data = call_data(
+                        probe_call_data = _call_data(
                             quota_probe_parameter,
                             probe_codex_home,
-                            probe_codex_cwd,
+                            probe_agent_call_cwd,
                         )
                         (
                             probe_ts,
@@ -587,12 +624,12 @@ def run_codex_exec(
                             probe_stderr_path,
                             probe_output_path,
                             probe_call_path,
-                        ) = new_log_paths()
+                        ) = _new_log_paths()
                         probe_output_jsonl_path = probe_output_path.with_suffix(
                             ".jsonl"
                         )
                         probe_argv = _base_exec_argv(
-                            probe_override_args, probe_codex_cwd
+                            probe_override_args, probe_agent_call_cwd
                         )
                         probe_argv.extend(
                             [
@@ -605,7 +642,7 @@ def run_codex_exec(
                         _write_prompt_log(
                             probe_prompt_path, quota_probe_parameter.prompt
                         )
-                        write_call_log(
+                        _write_call_log(
                             probe_call_path,
                             run_purpose="quota availability probe",
                             run_ts=probe_ts,
@@ -619,15 +656,15 @@ def run_codex_exec(
                         )
                         probe_started_at = time.perf_counter()
                         try:
-                            poll = run_with_prompt_file(
+                            poll = _run_with_prompt_file(
                                 probe_argv,
                                 probe_prompt_path,
-                                run_codex_cwd=probe_codex_cwd,
+                                run_agent_call_cwd=probe_agent_call_cwd,
                                 run_codex_env=probe_codex_env,
                             )
                         except BaseException as exc:
                             startup_error = format_codex_call_error(exc)
-                            emit_codex_call_event(
+                            _emit_codex_call_event(
                                 run_purpose="quota availability probe",
                                 run_call_path=probe_call_path,
                                 run_prompt_path=probe_prompt_path,
@@ -663,7 +700,7 @@ def run_codex_exec(
                         ):
                             capacity_attempts += 1
                             quota_polls -= 1
-                            emit_codex_call_event(
+                            _emit_codex_call_event(
                                 run_purpose="quota availability probe",
                                 run_call_path=probe_call_path,
                                 run_prompt_path=probe_prompt_path,
@@ -684,7 +721,7 @@ def run_codex_exec(
                         if not probe_available and (
                             probe_unexpected_error or not probe_quota_error
                         ):
-                            emit_codex_call_event(
+                            _emit_codex_call_event(
                                 run_purpose="quota availability probe",
                                 run_call_path=probe_call_path,
                                 run_prompt_path=probe_prompt_path,
@@ -714,7 +751,7 @@ def run_codex_exec(
                                     stderr_path=probe_stderr_path,
                                 ),
                             )
-                        emit_codex_call_event(
+                        _emit_codex_call_event(
                             run_purpose="quota availability probe",
                             run_call_path=probe_call_path,
                             run_prompt_path=probe_prompt_path,
@@ -748,7 +785,7 @@ def run_codex_exec(
                 )
                 resume_token = _extract_resume_token_from_jsonl_log(output_jsonl_path)
                 continue
-            emit_codex_call_event(
+            _emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
                 run_prompt_path=prompt_path,
@@ -773,15 +810,14 @@ def run_codex_exec(
                 ),
             )
         if schema_path is not None:
+            assert schema_definition is not None
             try:
                 output_json = _read_required_output_json(output_path)
-                validate(
-                    instance=output_json, schema=json.loads(schema_path.read_text())
-                )
+                validate(instance=output_json, schema=schema_definition)
             except Exception as exc:
                 if semantic_attempts < max_semantic_retries:
                     semantic_attempts += 1
-                    emit_codex_call_event(
+                    _emit_codex_call_event(
                         run_purpose=purpose,
                         run_call_path=call_path,
                         run_prompt_path=prompt_path,
@@ -795,7 +831,7 @@ def run_codex_exec(
                         error=str(exc),
                     )
                     continue
-                emit_codex_call_event(
+                _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
                     run_prompt_path=prompt_path,
@@ -815,7 +851,7 @@ def run_codex_exec(
                 ) from exc
         else:
             output_json = read_output_json(output_path)
-        emit_codex_call_event(
+        _emit_codex_call_event(
             run_purpose=purpose,
             run_call_path=call_path,
             run_prompt_path=prompt_path,
@@ -827,7 +863,7 @@ def run_codex_exec(
             returncode=result.returncode,
             status="succeeded",
         )
-        exec_result = codex_exec_result_from_paths(
+        exec_result = _codex_exec_result_from_paths(
             result,
             run_call_path=call_path,
             run_prompt_path=prompt_path,
@@ -851,16 +887,3 @@ def run_codex_exec(
             quota_polls=quota_polls,
         )
         return exec_result
-
-
-def changed_worktree_paths(root: Path) -> list[Path]:
-    """worktree 上の変更 path を absolute path として返す。"""
-    return [path for _status, path in _changed_worktree_path_statuses(root)]
-
-
-def _changed_worktree_path_statuses(root: Path) -> list[tuple[str, Path]]:
-    """worktree 上の変更 path と git status code を absolute path として返す。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    # refactor state は agent call 後に file-level path を必要とするため、default status が
-    # untracked directory を一つの directory path に畳み込まないようにする。
-    return status_path_statuses(root, untracked_all=True)

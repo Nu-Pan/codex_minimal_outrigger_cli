@@ -74,6 +74,7 @@ def test_run_codex_exec_retries_semantic_output(
         FileAccessMode.READONLY,
         "prompt",
         schema,
+        root,
     )
     logger = SubcommandLogger(root, "test")
 
@@ -138,6 +139,7 @@ def test_run_codex_exec_logs_keyboard_interrupt(
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
+                root,
             ),
             root=root,
             config=CmocConfig(),
@@ -207,6 +209,7 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
         FileAccessMode.READONLY,
         "prompt",
         schema,
+        root,
     )
     logger = SubcommandLogger(root, "test")
 
@@ -227,6 +230,43 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
         "succeeded",
     ]
     assert expected_error in codex_events[0]["error"]
+
+
+@pytest.mark.parametrize("schema_bytes", [b"{", b'{"$schema": 1}', b"\xff"])
+def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, schema_bytes: bytes
+) -> None:
+    """不正な Structured Output schema は Codex 呼び出し前に失敗させる。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    schema = tmp_path / "invalid_schema.json"
+    schema.write_bytes(schema_bytes)
+    calls = 0
+
+    def fail_run(*_args: object, **_kwargs: object) -> object:
+        """ローカル schema エラーで Codex が起動されないことを検証する。"""
+        nonlocal calls
+        calls += 1
+        raise AssertionError("Codex must not run for an invalid schema")
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fail_run)
+
+    with pytest.raises(CmocError, match="Structured Output schema"):
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                schema,
+                root,
+            ),
+            root=root,
+            config=CmocConfig(),
+        )
+
+    assert calls == 0
 
 
 @pytest.mark.parametrize("failure_returncode", [0, 1])
@@ -268,6 +308,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
     logger = SubcommandLogger(root, "test")
 
@@ -345,6 +386,7 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
+                root,
             ),
             root=root,
             config=CmocConfig(),
@@ -381,7 +423,8 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
             "counter.write_text(str(count + 1))",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "blocked = pathlib.Path('oracle/blocked.md')",
+            "blocked = pathlib.Path('src/blocked.py')",
+            "blocked.parent.mkdir(exist_ok=True)",
             "if count == 0:",
             "    blocked.write_text('blocked\\n')",
             (
@@ -402,6 +445,7 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
             FileAccessMode.REALIZATION_WRITE,
             "prompt",
             None,
+            root,
         ),
         root=root,
         capacity_initial_sleep_sec=0,
@@ -409,7 +453,7 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
     )
 
     assert counter.read_text() == "2"
-    assert (root / "oracle" / "blocked.md").read_text() == "blocked\n"
+    assert (root / "src" / "blocked.py").read_text() == "blocked\n"
 
 
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
@@ -432,6 +476,7 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
         FileAccessMode.READONLY,
         "prompt",
         None,
+        root,
     )
     cases = [
         (
@@ -465,7 +510,9 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
         except CmocError as exc:
             assert exc.summary == "Codex CLI 呼び出しが失敗しました。"
             assert expected_detail not in exc.detail
-            assert expected_detail not in capsys.readouterr().out
+            captured = capsys.readouterr()
+            assert expected_detail not in captured.out
+            assert expected_detail not in captured.err
         else:
             raise AssertionError(f"{name} marker outside JSONL should fail directly")
         assert counter.read_text() == "1"
@@ -566,6 +613,7 @@ def test_run_codex_exec_stops_after_retry_limit(
                 FileAccessMode.READONLY,
                 "prompt",
                 schema,
+                root,
             ),
             root=root,
             config=CmocConfig(),

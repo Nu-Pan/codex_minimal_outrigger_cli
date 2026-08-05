@@ -1,50 +1,45 @@
 # `edit`
 
 ## Summary
-- oracle file 編集用の agent call 起動設定を構築する実装。ユーザー指示を基に完全 prompt を作成し、実行モデル、権限、作業ディレクトリ、linked worktree などを設定する。oracle file 編集フローの起動パラメータを確認・変更する際の入口。
+- 現時点で本文ファイルを含まない空のディレクトリです。
 
 ## Read this when
-- `cmoc oracle edit fork` の agent call 起動設定を変更・確認するとき
-- oracle file 編集用の完全 prompt、実行モデル、権限、作業ディレクトリ、linked worktree の指定を確認するとき
+- このディレクトリにファイルが追加され、その内容や用途を確認する必要があるとき。
 
 ## Do not read this when
-- oracle file 編集以外の agent call 起動パラメータを扱うとき
-- 完全 prompt の共通生成規則だけを確認したいとき
+- このディレクトリ配下の具体的なファイルを直接確認できる場合。
 
 ## hash
-- 9b01dafec4bb8323113080263826082ade3e5b4da1a697cd1d6f71a8c1f124f2
+- 5a0738490b6b32407892ee1cfe8c82273cebcea45d9451bbc9c34cc67ec0c2fe
 
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動用パラメータを構築する実装。ユーザー調査指示を含む完全プロンプトを生成・保存し、モデルやアクセス権限などの固定起動設定とともに返す。
+- `cmoc oracle investigation` の TUI 起動パラメータを構築する実装。リポジトリルートを作業ディレクトリとして確定し、ユーザー指示を含む完全プロンプトの生成・保存、固定されたモデル・推論強度・ファイルアクセス権・起動設定の返却を担う。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動処理を変更・調査するとき
-- 完全プロンプトの構築・保存処理を変更・調査するとき
-- モデルやアクセス権限などの起動時固定値を確認するとき
+- `cmoc oracle investigation` の TUI 起動パラメータ、完全プロンプト生成、作業パス確定、起動ログ保存の挙動を変更・調査するとき。
 
 ## Do not read this when
-- 調査用プロンプトの本文構成や共通プロンプト生成規則だけを確認したいとき
-- oracle investigation 以外の agent call パラメータや TUI 起動処理を調査するとき
+- oracle investigation の調査プロンプト本文や一般的なプロンプト組み立て規則だけを確認したいとき。完全プロンプト生成実装や関連する prompt builder を直接読む。
+- TUI 起動以外の agent call パラメータ構築を変更するとき。
 
 ## hash
-- c5f3cd682c896b600f5ce3188f406ef7f52e4cb1dceeda6062955ba7b19c0076
+- 4b8e91f02a0cbc1814d86e74fce265c56c2c18045f8a0e539d69e095191183c8
 
 # `review`
 
 ## Summary
-- `cmoc oracle review` の所見レビュー用エージェント呼び出し定義と Structured Output スキーマをまとめたディレクトリです。新規所見の列挙、所見の採否判定、賛否理由の検証、所見リストの重複・矛盾整理を扱い、それぞれの処理実装と入出力契約の入口になります。
+- `cmoc oracle review` の各段階で使う、所見列挙・判定・擁護・反証・統合に関する Structured Output schema と agent call パラメータ構築実装をまとめた領域。レビュー処理の個別段階を調査する入口となる。
 
 ## Read this when
-- `cmoc oracle review` の所見列挙・判定・擁護理由・反証理由・マージ処理を変更または追跡するとき。
-- レビュー用 agent call の prompt、読み取り権限、モデル設定、Structured Output schema の対応関係を確認するとき。
-- レビュー所見の入力・出力形式、重複排除や既知理由の除外条件を確認するとき。
+- `cmoc oracle review` の所見生成、妥当性判定、擁護・反証理由の列挙、所見統合を変更または調査するとき。
+- 各処理の prompt、oracle-only アクセス、モデル設定、作業ディレクトリ、Structured Output schema の接続を確認するとき。
 
 ## Do not read this when
-- 通常の ACP builder 実装や、oracle review 以外の prompt 構築を調べるとき。
-- レビュー結果の schema または実装を個別に確認でき、ディレクトリ全体の構成を知る必要がないとき。
-- 実際の oracle file のレビュー基準そのものを確認するとき。
+- レビュー基準や個別所見の内容を確認するときは、対応する oracle review 仕様やレビュー対象を直接読む。
+- 共通の agent call パラメータ、prompt 構築、パス解決の仕様だけを確認するときは、参照先の共通モジュールを直接読む。
+- 所見統合結果の適用処理など、agent call パラメータ構築以外の実装を調査するときは、該当する実行・編集側の実装を直接読む。
 
 ## hash
-- 2c05a5aaf7bf06cba4d019c69706e8ba87dd9d3dbbb630ff813dd5afcdc2bd57
+- b905b66d3e6f9d152ffc02296b9fef4fe75b8bdf0ed2d91af1efb37a647dfb93

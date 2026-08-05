@@ -1,6 +1,9 @@
 """標準 prompt parts と complete prompt の組み立て結果を検証する。
 
-分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+各 prompt part の rendering と complete prompt の有効化・placeholder 展開は同じ
+StructDoc 出力を共有する一つの責務であるため、prompt builder 回帰として一箇所に保つ。
+
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 from pathlib import Path
@@ -9,6 +12,9 @@ import pytest
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 from oracle.prompt_builder.parts.apply_review_standard import (
     build_apply_review_standard as _build_apply_review_standard,
+)
+from oracle.prompt_builder.parts.conflict_resolution_standard import (
+    build_conflict_resolution_standard as _build_conflict_resolution_standard,
 )
 from oracle.prompt_builder.parts.file_access_rule import (
     build_file_access_rule as _build_file_access_rule,
@@ -19,6 +25,9 @@ from oracle.prompt_builder.parts.index_entry_standard import (
 from oracle.prompt_builder.parts.oracle_review_standard import (
     build_oracle_review_standard as _build_oracle_review_standard,
 )
+from oracle.prompt_builder.parts.realization_oracle_reference_rule import (
+    build_realization_oracle_reference_rule as _build_realization_oracle_reference_rule,
+)
 from oracle.prompt_builder.parts.realization_standard import (
     build_realization_standard as _build_realization_standard,
 )
@@ -27,56 +36,83 @@ from oracle.prompt_builder.parts.routing_rule import (
 )
 
 from basic.acp import FileAccessMode
+from basic.path_model import AgentCallPathContext
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 
 
-def build_apply_review_standard() -> StructDoc:
-    """canonical apply review standardの本文だけを返す。"""
-    return _build_apply_review_standard()[1]
-
-
-def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
-    """canonical file access ruleの本文だけを返す。"""
-    return _build_file_access_rule(mode)[1]
-
-
-def build_index_entry_standard() -> StructDoc:
-    """canonical index entry standardの本文だけを返す。"""
-    return _build_index_entry_standard()[1]
-
-
-def build_oracle_review_standard() -> StructDoc:
-    """canonical oracle review standardの本文だけを返す。"""
-    return _build_oracle_review_standard()[1]
-
-
-def build_realization_standard() -> StructDoc:
-    """canonical realization standardの本文だけを返す。"""
-    return _build_realization_standard()[1]
-
-
-def build_routing_rule() -> StructDoc:
-    """canonical routing ruleの本文だけを返す。"""
-    return _build_routing_rule()[1]
+def _path_context() -> AgentCallPathContext:
+    """現在の test repository を起点に call-scoped path context を作る。"""
+    return AgentCallPathContext(agent_call_cwd=Path.cwd())
 
 
 def test_build_apply_review_standard_renders_core_review_aspects() -> None:
     """apply review standardの主要な所見境界がrenderされることを検証する。"""
-    doc = build_apply_review_standard()
+    doc = _build_apply_review_standard()[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "apply review standard"
 
     rendered = render_as_markdown(doc)
-    assert "oracle file と realization file の明確な不整合" in rendered
-    assert "仕様断片の隙間" in rendered
-    assert "致命的問題" in rendered
-    assert "クオリティアップ" in rendered
+    assert "oracle file に対する realization file の追従要否" in rendered
+    assert "明確な不適合または致命的な実装問題" in rendered
+    assert "仕様の隙間や改善案だけを修正対象にしない" in rendered
+    assert "調査開始時点ですでに解消されている問題" in rendered
+
+
+def test_conflict_resolution_standard_is_injected_without_editing_standards() -> None:
+    """conflict 解消には専用規範だけを編集規範として注入する。"""
+    doc = _build_conflict_resolution_standard()[1]
+    rendered_doc = render_as_markdown(doc)
+    assert doc.title == "conflict resolution standard"
+    assert "`cmoc session join` の conflict marker を解消する場合だけ" in rendered_doc
+    assert "conflict marker の解消に不要な仕様変更" in rendered_doc
+
+    prompt = build_complete_prompt(
+        role="- role",
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.REPO_WRITE,
+        path_context=_path_context(),
+        conflict_resolution_standard=True,
+    )
+    rendered = render_as_markdown(prompt)
+    assert "# oracle and realization basic" in rendered
+    assert "# conflict resolution standard" in rendered
+    for heading in (
+        "# oracle standard",
+        "# realization standard",
+        "# oracle review standard",
+        "# apply review standard",
+    ):
+        assert heading not in rendered
+
+
+def test_realization_oracle_reference_rule_is_independently_selectable() -> None:
+    """oracle path コメント規則を realization standard と分離して注入する。"""
+    doc = _build_realization_oracle_reference_rule(_path_context())[1]
+    rendered_doc = render_as_markdown(doc)
+    assert doc.title == "realization oracle reference rule"
+    assert "realization code を作成または変更する場合" in rendered_doc
+    assert "`{{work-root}}` 起点の oracle file path" in rendered_doc
+
+    prompt = build_complete_prompt(
+        role="- role",
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        path_context=_path_context(),
+        realization_oracle_reference_rule=True,
+    )
+    rendered = render_as_markdown(prompt)
+    assert "# oracle and realization basic" in rendered
+    assert "# realization oracle reference rule" in rendered
+    assert "# oracle standard" not in rendered
+    assert "# realization standard" not in rendered
 
 
 def test_build_routing_rule_renders_core_reading_rules() -> None:
     """routing ruleがINDEX案内の主要な見出しをrenderすることを検証する。"""
-    doc = build_routing_rule()
+    doc = _build_routing_rule(_path_context())[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "routing rule"
@@ -97,6 +133,7 @@ def test_complete_prompt_always_includes_routing_rule() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
     )
 
@@ -104,8 +141,53 @@ def test_complete_prompt_always_includes_routing_rule() -> None:
     assert "# routing rule" in rendered
 
 
+def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
+    tmp_path: Path,
+) -> None:
+    """root placeholder は同値なら統合し、異値なら prompt 構築を失敗させる。"""
+    context = _path_context()
+
+    prompt = build_complete_prompt(
+        role="- role",
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=context,
+        aux_placeholder_def={"work-root": context.work_root},
+    )
+    assert render_as_markdown(prompt).count("- {{work-root}} =") == 1
+
+    with pytest.raises(ValueError, match="Conflicting placeholder definition"):
+        build_complete_prompt(
+            role="- role",
+            summary="- summary",
+            goal="- goal",
+            file_access_mode=FileAccessMode.READONLY,
+            path_context=context,
+            aux_placeholder_def={"work-root": tmp_path / "other-worktree"},
+        )
+
+
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:
     """各file access modeに対応する標準ruleの内容を検証する。"""
+    mode_specific_rules = {
+        FileAccessMode.READONLY: {
+            "oracle file は書き込み禁止",
+            "realization file は書き込み禁止",
+        },
+        FileAccessMode.PURE_ORACLE_READ: {
+            "oracle file は書き込み禁止",
+            "realization file は読み書き禁止",
+        },
+        FileAccessMode.REPO_WRITE: set(),
+        FileAccessMode.PURE_ORACLE_WRITE: {
+            "realization file は読み書き禁止",
+        },
+        FileAccessMode.REALIZATION_WRITE: {
+            "oracle file は書き込み禁止",
+        },
+    }
+    all_mode_specific_rules = set().union(*mode_specific_rules.values())
     expected = {
         FileAccessMode.READONLY: [
             "ツリー外は読み書き禁止",
@@ -141,11 +223,13 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
     }
 
     for mode, fragments in expected.items():
-        doc = build_file_access_rule(mode)
+        doc = _build_file_access_rule(mode, _path_context())[1]
         rendered = render_as_markdown(doc)
         assert doc.title == f"file read write rule - {mode.value}"
         for fragment in fragments:
             assert fragment in rendered
+        for fragment in all_mode_specific_rules - mode_specific_rules[mode]:
+            assert fragment not in rendered
 
 
 def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
@@ -155,6 +239,7 @@ def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
         summary="summary",
         goal="goal",
         file_access_mode=FileAccessMode.NO_RULE,
+        path_context=_path_context(),
     )
     rendered = render_as_markdown(prompt)
 
@@ -168,12 +253,15 @@ def test_complete_prompt_can_include_apply_review_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         apply_review_standard=True,
     )
 
     rendered = render_as_markdown(prompt)
     assert "# oracle and realization basic" in rendered
+    assert "# oracle standard" in rendered
+    assert "# realization standard" in rendered
     assert "# apply review standard" in rendered
 
 
@@ -184,36 +272,39 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         oracle_standard=True,
         realization_standard=True,
         oracle_review_standard=True,
         apply_review_standard=True,
+        conflict_resolution_standard=True,
+        realization_oracle_reference_rule=True,
         index_entry_standard=True,
     )
 
     rendered = render_as_markdown(prompt)
-    assert "`oracle file` を検索語" in rendered
-    assert "`oracle spec`" in rendered
-    assert "`仕様ファイル`" in rendered
-    assert "`oracles file` のような typo" in rendered
+    assert "cmoc 固有契約または oracle file と installed skill" in rendered
+    assert "現行仕様に必要な実装だけを保つ" in rendered
+    assert "所見の各段階で同じ採否境界" in rendered
+    assert "両 branch の意味を保って conflict marker だけを解消する" in rendered
     for forbidden in ["{{cmoc-root}}", "{{run-root}}"]:
         assert forbidden not in rendered
     assert "{{repo-root}}" in rendered
     assert (
-        "コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く"
+        "realization code のコメントに `{{work-root}}` 起点の oracle file path を書く"
         in rendered
     )
-    assert "`{{work-root}}/oracle/doc/...` のように根拠 path" in rendered
     for expected in [
         "oracle and realization basic",
         "oracle standard",
         "realization standard",
         "oracle review standard",
         "apply review standard",
+        "conflict resolution standard",
+        "realization oracle reference rule",
         "index entry standard",
         "oracle file",
-        "oracles file",
         "realization file",
     ]:
         assert expected in rendered
@@ -233,6 +324,7 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
         summary="- {{repo-root}} ツリー内の realization file を修正すること",
         goal="- realization standard と oracle standard に従うこと",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[
             StructDoc(
                 "aux realization file",
@@ -276,18 +368,19 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
         summary="- {{work-root}}/src/app.py を確認すること",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         realization_standard=True,
+        realization_oracle_reference_rule=True,
     )
 
     rendered = render_as_markdown(prompt)
 
     assert "- {{work-root}}/src/app.py を確認すること" in rendered
     assert (
-        "コメントにプレースホルダ `{{work-root}}` 起点の oracle file path を書く"
+        "realization code のコメントに `{{work-root}}` 起点の oracle file path を書く"
         in rendered
     )
-    assert "`{{work-root}}/oracle/doc/...` のように根拠 path" in rendered
     assert f"- {{{{work-root}}}} = {repo_root}" in rendered
 
 
@@ -298,6 +391,7 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
     )
 
@@ -305,23 +399,19 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
     assert "apply review standard" not in rendered
 
 
-def test_build_realization_standard_renders_file_split_and_merge_rules() -> None:
-    """realization standardのfile分割・統合規則がrenderされることを検証する。"""
-    doc = build_realization_standard()
+def test_build_realization_standard_renders_core_conformance_rules() -> None:
+    """realization standard の適合性と検証境界が render される。"""
+    doc = _build_realization_standard(_path_context())[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "realization standard"
 
     rendered = render_as_markdown(doc)
-    assert "コメントや docstring は実装意図と根拠を補う" in rendered
-    assert "対応する oracle file" in rendered
-    assert "前後のコードを読むだけでは分からない情報" in rendered
-    assert "INDEX.md" in rendered
-    assert "8,000" in rendered
-    assert "16,000" in rendered
-    assert "責務境界" in rendered
-    assert "分割" in rendered
-    assert "統合" in rendered
+    assert "realization file を現行の oracle file に適合させる" in rendered
+    assert "現行仕様に必要な実装だけを保つ" in rendered
+    assert "対象 repository 固有の手順で変更を検証する" in rendered
+    assert "配置場所にかかわらず特定" in rendered
+    assert "`.agents/skills` に限定" in rendered
 
 
 def test_complete_prompt_can_include_realization_standard() -> None:
@@ -331,19 +421,21 @@ def test_complete_prompt_can_include_realization_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         realization_standard=True,
     )
 
     rendered = render_as_markdown(prompt)
+    assert "# oracle standard" in rendered
     assert "# realization standard" in rendered
-    assert "意味上のまとまりと適度なサイズ" in rendered
-    assert "16,000" in rendered
+    assert "対象 repository 固有の手順で変更を検証する" in rendered
+    assert "# realization oracle reference rule" not in rendered
 
 
 def test_build_index_entry_standard_renders_core_output_rules() -> None:
     """index entry standardの出力境界がrenderされることを検証する。"""
-    doc = build_index_entry_standard()
+    doc = _build_index_entry_standard()[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "index entry standard"
@@ -371,12 +463,16 @@ def test_complete_prompt_can_include_index_entry_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         index_entry_standard=True,
     )
 
     rendered = render_as_markdown(prompt)
+    assert "# oracle and realization basic" in rendered
     assert "# index entry standard" in rendered
+    assert "# oracle standard" not in rendered
+    assert "# realization standard" not in rendered
 
 
 def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
@@ -386,6 +482,7 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
     )
 
@@ -395,7 +492,7 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
 
 def test_build_oracle_review_standard_renders_core_review_rules() -> None:
     """oracle review standardのseverityと所見境界がrenderされることを検証する。"""
-    doc = build_oracle_review_standard()
+    doc = _build_oracle_review_standard()[1]
 
     assert isinstance(doc, StructDoc)
     assert doc.title == "oracle review standard"
@@ -403,13 +500,12 @@ def test_build_oracle_review_standard_renders_core_review_rules() -> None:
     rendered = render_as_markdown(doc)
     assert "fatal" in rendered
     assert "minor" in rendered
-    assert "仕様断片同士に明確な矛盾" in rendered
+    assert "正本仕様断片同士に解釈の余地がない明確な矛盾" in rendered
     assert "実装者の裁量では解消不能" in rendered
     assert "誤字" in rendered
-    assert "用語の不統一" in rendered
-    assert "oracle file だけからは問題だとは言い切れない" in rendered
-    assert "仕様からは実装が一意に定まらない" in rendered
-    assert "`cmoc oracle review`" in rendered
+    assert "用語不統一" in rendered
+    assert "oracle file の具体的な記述だけから問題と言えない" in rendered
+    assert "所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定" in rendered
 
 
 def test_complete_prompt_can_include_oracle_review_standard() -> None:
@@ -419,13 +515,16 @@ def test_complete_prompt_can_include_oracle_review_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
         oracle_review_standard=True,
     )
 
     rendered = render_as_markdown(prompt)
     assert "# oracle and realization basic" in rendered
+    assert "# oracle standard" in rendered
     assert "# oracle review standard" in rendered
+    assert "# realization standard" not in rendered
 
 
 def test_complete_prompt_omits_oracle_review_standard_by_default() -> None:
@@ -435,6 +534,7 @@ def test_complete_prompt_omits_oracle_review_standard_by_default() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
         aux_dynamic_prompt=[],
     )
 

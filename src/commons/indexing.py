@@ -1,10 +1,23 @@
+"""INDEX.md の検査・生成・commit lifecycle を扱う共通実装。
+
+この file は 16,000 文字を超えるが、directory traversal、entry の再利用・生成、
+hash 検証、書き込み、commit は同じ index plan・lock・Codex context を共有する一つの
+責務である。分割すると、深さ順更新と entry の鮮度不変条件を複数 file で追う必要が
+生じるため、現状は indexing lifecycle として一箇所に保つ。
+
+根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+"""
+
 import fcntl
+import json
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from contextvars import copy_context
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
+
+from oracle.acp_builder.indexing import index_entry as _index_entry_oracle
 
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from cmoc_runtime import (
@@ -18,13 +31,21 @@ from cmoc_runtime import (
     run_git,
     text_sha256,
 )
-from commons.runtime_codex_preflight import configure_indexing_preflight
-from commons.runtime_git import git_common_dir
-from commons.runtime_paths import cwd_override_active
-from commons.runtime_results import CodexExecCallable
+
+from .runtime_codex_preflight import configure_indexing_preflight
+from .runtime_codex_profile import run_process_tracking_active
+from .runtime_git import git_common_dir, literal_pathspec
+from .runtime_paths import cwd_override_active
+from .runtime_results import CodexExecCallable
 
 CodexExec = CodexExecCallable
-INDEX_ENTRY_KEYS = {"summary", "read_this_when", "do_not_read_this_when"}
+# {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json
+# 正本の必須 field を読み取り、realization 側へ schema を複製しない。
+_INDEX_ENTRY_KEYS = frozenset(
+    json.loads(Path(_index_entry_oracle.__file__).with_suffix(".json").read_text())[
+        "required"
+    ]
+)
 
 
 @dataclass
@@ -72,16 +93,17 @@ def indexing_lock_path(root: Path) -> Path:
 def commit_index_updates(root: Path, updated: list[Path]) -> None:
     """INDEX.md の更新差分だけを indexing commit として保存する。"""
     index_paths = [str(path.relative_to(root)) for path in updated]
+    literal_index_paths = [literal_pathspec(path) for path in index_paths]
     if index_paths:
-        run_git(["add", "--", *index_paths], root)
+        run_git(["add", "--", *literal_index_paths], root)
     if not index_paths:
         return
-    diff_args = ["diff", "--cached", "--quiet", "--", *index_paths]
+    diff_args = ["diff", "--cached", "--quiet", "--", *literal_index_paths]
     diff = run_git(diff_args, root, check=False)
     if diff.returncode == 0:
         return
     if diff.returncode == 1:
-        run_git(["commit", "-m", "cmoc indexing", "--", *index_paths], root)
+        run_git(["commit", "-m", "cmoc indexing", "--", *literal_index_paths], root)
         return
     if diff.returncode != 0:
         # {{work-root}}/oracle/doc/app_spec/indexing.md は Git failure で indexing を
@@ -131,11 +153,13 @@ def update_indexes(
                     ),
                 )
 
-            if cwd_override_active():
+            if cwd_override_active() or run_process_tracking_active():
                 # pushd は scope 全体で process-global cwd lock を保持する。
                 # この thread が worker を待つ間に worker が repo_root/work_root で
                 # block しないよう、isolated run worktree は lock 所有 thread で作る。
-                # pushd の外では並列性を維持する。
+                # tracked Codex subprocess は process-global signal handler を一時変更
+                # するため、editing run 中も handler を変更できる呼び出し thread で作る。
+                # どちらの制約もない場合は並列性を維持する。
                 results = map(build_missing, missing)
                 for plan, index, entry in results:
                     plan.entries[index] = entry
@@ -342,7 +366,7 @@ def build_index_entry(
         )
     content = target_content_for_indexing(path)
     log_root = repo_root(root)
-    parameter = replace(build_indexing_index_entry_parameter(path, content), cwd=root)
+    parameter = build_indexing_index_entry_parameter(path, content, root)
     result = codex_exec(
         parameter,
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -350,7 +374,6 @@ def build_index_entry(
         # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は
         # run worktree 側へ流れないよう repo root に固定する。
         root=log_root,
-        cwd=root,
         config=load_config(root),
         purpose=f"indexing index entry for {path}",
     ).output_json
@@ -362,7 +385,10 @@ def target_content_for_indexing(path: Path) -> str:
     if path.is_file():
         return path.read_text(errors="ignore")
     index_path = path / "INDEX.md"
-    if index_path.exists():
+    # {{work-root}}/oracle/doc/app_spec/indexing.md の生成対象は work-root 内に
+    # 限る。INDEX.md symlink は _read_existing_index_content と同じく再利用せず、
+    # リンク先の内容を agent prompt へ読み込まない。
+    if index_path.is_file() and not index_path.is_symlink():
         return index_path.read_text(errors="ignore")
     return "\n".join(
         child.name for child in sorted(path.iterdir(), key=lambda p: p.name)
@@ -388,7 +414,7 @@ def render_index_entry(
     digest: str | None = None,
 ) -> str:
     """Structured Output から INDEX.md entry Markdown を生成する。"""
-    if not isinstance(entry, dict) or set(entry) != INDEX_ENTRY_KEYS:
+    if not isinstance(entry, dict) or set(entry) != _INDEX_ENTRY_KEYS:
         raise CmocError(
             "INDEX.md entry 生成結果が不正です。",
             ["cmoc indexing を再実行してください。"],

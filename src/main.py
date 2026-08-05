@@ -12,7 +12,7 @@ from cmoc_runtime import (
 )
 from sub_commands.doctor import cmoc_doctor_impl
 from sub_commands.indexing import cmoc_indexing_impl
-from sub_commands.oracle.edit.fork import cmoc_oracle_edit_fork_impl
+from sub_commands.oracle.edit import cmoc_oracle_edit_impl
 from sub_commands.oracle.investigation import cmoc_oracle_investigation_impl
 from sub_commands.oracle.review import cmoc_oracle_review_impl
 from sub_commands.realization.apply.fork import cmoc_realization_apply_fork_impl
@@ -81,17 +81,19 @@ class _CmocTyperGroup(typer.core.TyperGroup):
         # 依存しない error-handling contract のため両方の exception class に対応する。
         except _CLICK_EXCEPTION_TYPES as exc:
             click_exception = cast(click.ClickException, exc)
-            typer.echo(
-                render_error(
-                    CmocError(
-                        "CLI 引数解析に失敗しました。",
-                        [
-                            "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
-                        ],
-                        click_exception.format_message(),
-                    )
-                )
-            )
+            # {{work-root}}/oracle/doc/app_spec/error_handling.md
+            # 未 raise の例外を render_error すると Call stack が概要だけになるため、
+            # parser error を cause にした report exception を raise してから描画する。
+            try:
+                raise CmocError(
+                    "CLI 引数解析に失敗しました。",
+                    [
+                        "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
+                    ],
+                    click_exception.format_message(),
+                ) from exc
+            except CmocError as report_error:
+                typer.echo(render_error(report_error))
             if standalone_mode:
                 raise SystemExit(click_exception.exit_code) from exc
             raise
@@ -107,14 +109,12 @@ app = typer.Typer(
 )
 session_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 oracle_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
-oracle_edit_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 realization_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 realization_apply_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 realization_refactor_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 run_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 app.add_typer(session_app, name="session")
 app.add_typer(oracle_app, name="oracle")
-oracle_app.add_typer(oracle_edit_app, name="edit")
 app.add_typer(realization_app, name="realization")
 realization_app.add_typer(realization_apply_app, name="apply")
 realization_app.add_typer(realization_refactor_app, name="refactor")
@@ -160,10 +160,10 @@ def oracle_review(
     cmoc_oracle_review_impl(scope.value)
 
 
-@oracle_edit_app.command("fork")
-def oracle_edit_fork() -> None:
-    """oracle editing run を開始する CLI 入口。"""
-    cmoc_oracle_edit_fork_impl()
+@oracle_app.command("edit")
+def oracle_edit() -> None:
+    """oracle file を main worktree の Codex TUI で編集する CLI 入口。"""
+    cmoc_oracle_edit_impl()
 
 
 @oracle_app.command("investigation")

@@ -7,6 +7,8 @@
 
 import json
 from multiprocessing import Barrier, Pipe, Process
+from multiprocessing.connection import Connection
+from multiprocessing.synchronize import Barrier as BarrierType
 from pathlib import Path
 
 import pytest
@@ -25,7 +27,9 @@ from config.cmoc_config import CmocConfig
 _FIXED_CODEX_TIMESTAMP = "2099-01-01_00-00_00_000000000"
 
 
-def run_fixed_codex_exec(root: Path, barrier: Barrier, connection: object) -> None:
+def run_fixed_codex_exec(
+    root: Path, barrier: BarrierType, connection: Connection
+) -> None:
     """同じ初回 timestamp の実運用 Codex 呼び出しを別 process で実行する。"""
     import commons.runtime_codex_exec as exec_module
 
@@ -46,7 +50,7 @@ def run_fixed_codex_exec(root: Path, barrier: Barrier, connection: object) -> No
     exec_module.timestamp = timestamp_factory
     try:
         result = run_codex_exec(
-            codex_parameter(),
+            codex_parameter(agent_call_cwd=root),
             root=root,
             capacity_initial_sleep_sec=0,
             config=CmocConfig(),
@@ -144,12 +148,14 @@ def test_timestamped_path_reservation_is_process_safe(
 
 
 @pytest.mark.parametrize(
-    "parameter_cwd",
-    [None, "oracle"],
-    ids=["fallback_to_work_root", "parameter_cwd"],
+    "agent_call_cwd_relative",
+    [".", "oracle"],
+    ids=["work_root", "nested_directory"],
 )
-def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, parameter_cwd: str | None
+def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    agent_call_cwd_relative: str,
 ) -> None:
     """パラメータの cwd と pure-oracle read の権限境界を検証する。
 
@@ -178,21 +184,25 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    target_cwd = root / parameter_cwd if parameter_cwd is not None else None
+    agent_call_cwd = root / agent_call_cwd_relative
     run_codex_exec(
-        codex_parameter(FileAccessMode.PURE_ORACLE_READ, cwd=target_cwd),
+        codex_parameter(
+            FileAccessMode.PURE_ORACLE_READ,
+            agent_call_cwd=agent_call_cwd,
+        ),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
     )
 
     record = json.loads(recorder.read_text())
-    expected_cwd = (target_cwd or root).resolve()
+    expected_cwd = agent_call_cwd.resolve()
     assert record["args"][record["args"].index("--cd") + 1] == str(expected_cwd)
     assert record["cwd"] == str(expected_cwd)
     override_config = codex_override_config(record["args"])
     assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
     assert "sandbox_workspace_write" not in override_config
+    assert "features" not in override_config
     assert "default_permissions" not in override_config
     assert "permissions" not in override_config
 
@@ -239,17 +249,17 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
         )
     )
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.REPO_WRITE,
-        "prompt",
-        schema_source,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.LOW,
+        file_access_mode=FileAccessMode.REPO_WRITE,
+        prompt="prompt",
+        structured_output_schema_path=schema_source,
+        agent_call_cwd=linked,
     )
 
     result = run_codex_exec(
         parameter,
         root=root,
-        cwd=linked,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
     )
@@ -295,9 +305,11 @@ def test_run_codex_exec_uses_readonly_sandbox_from_linked_worktree(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     run_codex_exec(
-        codex_parameter(FileAccessMode.PURE_ORACLE_READ),
+        codex_parameter(
+            FileAccessMode.PURE_ORACLE_READ,
+            agent_call_cwd=linked,
+        ),
         root=root,
-        cwd=linked,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
     )
@@ -341,7 +353,7 @@ def test_run_codex_exec_does_not_inject_agents_path_permissions(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     run_codex_exec(
-        codex_parameter(FileAccessMode.REPO_WRITE),
+        codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),

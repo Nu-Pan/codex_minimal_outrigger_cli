@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from cmoc_runtime import CmocError, head_commit, run_git
-from commons.runtime_git import status_path_statuses
+from commons.runtime_git import literal_pathspec, status_path_statuses
 
 
 def commit_review_index_changes(review_worktree: Path) -> bool:
@@ -19,7 +19,15 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
     ]
     if not changed_index_paths:
         return False
-    run_git(["add", "-A", "--", *changed_index_paths], review_worktree)
+    run_git(
+        [
+            "add",
+            "-A",
+            "--",
+            *[literal_pathspec(path) for path in changed_index_paths],
+        ],
+        review_worktree,
+    )
     staged = run_git(
         ["diff", "--cached", "--name-only"], review_worktree
     ).stdout.splitlines()
@@ -34,9 +42,13 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
 # も含め、隔離終了時に review branch を merge することを求めている。
 def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> bool:
     """base commit 以降の review branch 差分が INDEX.md だけか確認する。"""
-    changed_paths = run_git(
-        ["diff", "--name-only", f"{base_commit}..HEAD"], review_worktree
-    ).stdout.splitlines()
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    # rename 検出で --name-only の出力から INDEX.md 以外の元 path が隠れるため、
+    # 変更された tree path を一つずつ独立して検査する。
+    changed_paths = _git_name_only_paths(
+        review_worktree,
+        ["diff", "--no-renames", "--name-only", f"{base_commit}..HEAD"],
+    )
     non_index = [path for path in changed_paths if Path(path).name != "INDEX.md"]
     if non_index:
         raise CmocError(
@@ -59,9 +71,24 @@ def review_worktree_status_paths(review_worktree: Path) -> list[str]:
 
 def merge_review_branch(root: Path, review_branch: str) -> str:
     """review branch を session branch へ merge し、merge 後 HEAD を返す。"""
-    merge = run_git(["merge", "--no-ff", review_branch], root, check=False)
+    merge_base = head_commit(root)
+    try:
+        merge = run_git(["merge", "--no-ff", review_branch], root, check=False)
+    except BaseException:
+        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        # subprocess の中断は、git が MERGE_HEAD を作成した直後に届くことがある。
+        # review.py が隔離 resource を cleanup しても session worktree の merge 状態は
+        # 残るため、通常の merge failure と同じく開始前へ復旧してから中断を再送する。
+        _restore_failed_review_merge(root, merge_base)
+        raise
     if merge.returncode != 0:
-        if not resolve_review_index_conflicts(root):
+        try:
+            resolved = resolve_review_index_conflicts(root)
+        except BaseException:
+            _restore_failed_review_merge(root, merge_base)
+            raise
+        if not resolved:
+            _restore_failed_review_merge(root, merge_base)
             raise CmocError(
                 "review branch の merge に失敗しました。",
                 ["git status を確認し、手動で解決してください。"],
@@ -70,26 +97,53 @@ def merge_review_branch(root: Path, review_branch: str) -> str:
     return head_commit(root)
 
 
+def _restore_failed_review_merge(root: Path, merge_base: str) -> None:
+    """失敗した review merge の状態を merge 開始前へ戻す。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    # merge 失敗後に session worktree を unresolved のまま残すと、isolated run の
+    # cleanup 後も次の cmoc 操作を開始できないため、abort の成否に関係なく復旧する。
+    merge_head = run_git(
+        ["rev-parse", "-q", "--verify", "MERGE_HEAD"], root, check=False
+    )
+    if merge_head.returncode == 0:
+        run_git(["merge", "--abort"], root, check=False)
+    run_git(["reset", "--hard", merge_base], root)
+    # merge --abort が残した未追跡の部分成果物も除去し、開始前の clean tree に戻す。
+    run_git(["clean", "-fd"], root)
+
+
 def resolve_review_index_conflicts(root: Path) -> bool:
     """INDEX.mdだけのmerge conflictをoursまたは削除で解決してcommitする。"""
-    conflicted = run_git(
-        ["diff", "--name-only", "--diff-filter=U"], root
-    ).stdout.splitlines()
+    conflicted = _git_name_only_paths(
+        root, ["diff", "--no-renames", "--name-only", "--diff-filter=U"]
+    )
     if not conflicted:
         return False
     if any(Path(path).name != "INDEX.md" for path in conflicted):
         return False
     for path in conflicted:
         if _has_ours_stage(root, path):
-            run_git(["checkout", "--ours", "--", path], root)
-            run_git(["add", "--", path], root)
+            run_git(["checkout", "--ours", "--", literal_pathspec(path)], root)
+            run_git(["add", "--", literal_pathspec(path)], root)
         else:
-            run_git(["rm", "-f", "--", path], root)
+            run_git(["rm", "-f", "--", literal_pathspec(path)], root)
     run_git(["commit", "--no-edit"], root)
     return True
 
 
 def _has_ours_stage(root: Path, path: str) -> bool:
     """unmerged pathにours stageが存在するかを返す。"""
-    unmerged = run_git(["ls-files", "-u", "--", path], root).stdout.splitlines()
-    return any(line.split(maxsplit=3)[2] == "2" for line in unmerged)
+    fields = run_git(
+        ["ls-files", "-u", "-z", "--", literal_pathspec(path)], root
+    ).stdout.split("\0")
+    for field in fields:
+        metadata, separator, _path = field.partition("\t")
+        metadata_fields = metadata.split()
+        if separator and len(metadata_fields) >= 3 and metadata_fields[2] == "2":
+            return True
+    return False
+
+
+def _git_name_only_paths(root: Path, args: list[str]) -> list[str]:
+    """Git の quote 済み path を壊さず name-only 出力から復元する。"""
+    return [path for path in run_git([*args, "-z"], root).stdout.split("\0") if path]

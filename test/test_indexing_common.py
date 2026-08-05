@@ -6,6 +6,13 @@ CLI lifecycle から分離して検証する。根拠は
 `{{work-root}}/oracle/doc/app_spec/sub_command/indexing.md`、
 `{{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json`、
 `{{work-root}}/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py`。
+
+この file は 16,000 文字を超えるが、INDEX entry の parse、hash、traversal、生成、
+並列更新は同じ indexing contract を検証する一つの責務である。分割すると、entry の
+鮮度と directory 更新順の観測文脈が複数 file に分散するため、現状は indexing の
+共通 runtime 回帰として一箇所に保つ。
+
+分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
@@ -270,6 +277,39 @@ def test_update_indexes_creates_empty_index_for_empty_directory(
     # directory ごとに INDEX.md を配置することを求める。
     assert empty_dir / "INDEX.md" in updated
     assert (empty_dir / "INDEX.md").read_text() == ""
+
+
+def test_update_indexes_reuses_entry_after_empty_file_becomes_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """定義された hash が一致する空 target の entry を再利用する。"""
+    root = make_repo(tmp_path)
+    cmoc_runtime.sync_config(root)
+    target = root / "target"
+    target.write_bytes(b"")
+    existing_entry = _render_test_entry(root, target)
+    (root / "INDEX.md").write_text(existing_entry)
+
+    target.unlink()
+    target.mkdir()
+    calls: list[Path] = []
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        """INDEX entry 生成対象を記録し、固定結果を返す fake。"""
+        calls.append(path)
+        return _render_test_entry(update_root, path, digest)
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    indexing_common.update_indexes(root)
+
+    assert target not in calls
+    assert existing_entry in (root / "INDEX.md").read_text()
 
 
 def test_update_indexes_generates_sibling_entries_in_stable_render_order(
@@ -541,6 +581,26 @@ def test_update_indexes_replaces_index_symlink_without_writing_link_target(
     assert (root / "INDEX.md").is_file()
     assert not (root / "INDEX.md").is_symlink()
     assert external_index.read_text() == "external\n"
+
+
+def test_target_content_for_indexing_does_not_follow_index_symlink(
+    tmp_path: Path,
+) -> None:
+    """INDEX.md symlink のリンク先を agent prompt の本文に含めない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/indexing.md
+    """
+    root = make_repo(tmp_path)
+    directory = root / "docs"
+    directory.mkdir()
+    (directory / "visible.txt").write_text("inside\n")
+    external_index = tmp_path / "external-index.md"
+    external_index.write_text("outside-only\n")
+    (directory / "INDEX.md").symlink_to(external_index)
+
+    assert indexing_common.target_content_for_indexing(directory) == (
+        "INDEX.md\nvisible.txt"
+    )
 
 
 def test_indexing_lock_path_is_shared_across_linked_worktrees(tmp_path: Path) -> None:

@@ -1,20 +1,19 @@
 # `coding_rule.md`
 
 ## Summary
-- Python実装時のコーディング規則を定める正本断片。型ヒント、import 方針、docstring、コメント、命名、非公開識別子の付け方など、実装やレビューの基準を確認したいときに読む。
+- cmoc の Python 実装におけるコーディング規則を定める正本仕様。PEP 8、命名・責務・入出力の明確化、最小限の変更、型ヒント、相対 import、Google style docstring、コメント・ログの言語、非公開識別子の命名を扱う。
 
 ## Read this when
-- `cmoc` の Python 実装方針を決めるとき。
-- 型ヒント、import、docstring、コメント、命名規則の解釈を確認したいとき。
-- 新規コードや既存コードの書き方を、このリポジトリの規則に合わせて揃えたいとき。
+- Python の実装、修正、レビューを行うとき
+- 命名、型ヒント、import、docstring、コメント、ログ、cwd 識別子の規則を確認するとき
 
 ## Do not read this when
-- 機能仕様や挙動仕様を確認したいときは、対象機能の oracle doc を直接読む。
-- この規則の要約ではなく、個別モジュールの実装詳細を知りたいときは、そのモジュール本文を読む。
-- INDEX.md の読み方やルーティング方針そのものを確認したいときは、別の routing 文書を読む。
+- テスト固有の作成・変更規則だけを確認するとき
+- 開発環境の構築や依存関係管理だけを確認するとき
+- 仕様そのものや CLI の挙動を確認するとき
 
 ## hash
-- c725d18b649ce36fdca432bb297452492eea1bca900c874e600451769d21d501
+- 10ce107790563037a796187d2a3959120787f2c61e70a5c832cc6c59154f5a56
 
 # `design_rule.md`
 
@@ -37,40 +36,51 @@
 # `development_environment.md`
 
 ## Summary
-- WSL2 の VS Code + Codex CLI 前提で、このリポジトリを作業できる環境条件と Python/venv の運用ルールを案内する。
-- `python3` の直接使用を避けて `.venv/bin/python` と `pip -e .` を使う必要がある作業や、新規パッケージ追加の手順を確認するときに読む。
-- ファイル命名やエンコードの制約を確認したいときに読む。
+- Python 開発環境の構築条件、依存関係追加、pip 操作の手順を定める正本文書。Python・仮想環境・エンコード・命名規則に関する前提を扱い、開発環境操作の入口となる。
 
 ## Read this when
-- このリポジトリをローカルで開く前提条件や、Codex CLI を使う実行環境を確認したい。
-- Python 3.12.3 以上、仮想環境の場所、`pip` の実行方法など、開発時の環境運用ルールを確認したい。
-- 新しい依存を `pyproject.toml` に追加して仮想環境へ入れる手順を確認したい。
-- ファイル名の付け方や UTF-8 BOM なし運用の制約を確認したい。
+- Python 仮想環境を新規作成するとき
+- 依存関係を追加・インストールするとき
+- pip を操作するとき
+- Python 実行環境、ファイルエンコード、命名規則の前提を確認するとき
 
 ## Do not read this when
-- 個別の機能仕様、コマンド仕様、実装方針を知りたい場合は、より直接の oracle doc を読む。
-- 既存の `INDEX.md` のルーティングだけを更新したい場合は、この文書ではなく対象階層の案内先を探す。
-- README だけで足りる一般的な利用方法を知りたい場合は、この環境ルール文書は不要。
+- 構築済み環境で既存 test や品質検査を実行・判定・報告するだけのときは、test_execution.md を直接読む
 
 ## hash
-- d1371e90d6e441b3470b215a3f421f05b6c6fec889700442a191f677de0c81b1
+- a13ec95d864a050b35a175111679065fa638c2688f4ff161232e4e1b5c4eab0d
+
+# `test_execution.md`
+
+## Summary
+- 構築済みの cmoc 開発環境を前提に、現在の worktree と Python interpreter を決定し、preflight、focused test、品質検査、full test、GPU test、完了判定、結果報告までの実行手順を定める文書。pytest は repository local runner を使用し、Python development mode と ResourceWarning 検査を適用する。
+
+## Read this when
+- cmoc の test、pytest、Ruff、mypy、GPU integration test、品質検査を選択・実行・報告するとき。
+- Python 環境や依存関係の不足、test の skip・失敗、GPU test の sandbox escalation、full test の完了可否を判断するとき。
+- 変更後に fresh な完了ゲートを実行し、使用した worktree・interpreter・command・結果・skip reason を報告するとき。
+
+## Do not read this when
+- realization test が満たすべき意味上の要件を確認する場合は、test_rule.md を直接読む。
+- Python 環境の新規構築、依存関係の追加、pip 操作を行う場合は、development_environment.md を直接読む。
+- test 実行以外の実装、仕様設計、または agent call の file access・作業範囲・sandbox 権限を判断する場合。
+
+## hash
+- 53cf7109630279120a8f0d6905abe4d6ae04605afa8f447043fa4aef1e417ff8
 
 # `test_rule.md`
 
 ## Summary
-- cmoc の realization test に関する正本規約。pytest の配置、決定論的制御ロジックと Real Codex CLI 結合動作の検証範囲、全末端サブコマンドの独立プロセスによる本番経路試験、テスト環境隔離、cmoc managed ollama・テスト用 SLM の利用、クラウドバックエンド禁止、Fake Codex CLI の適用条件を定める。テスト実装・実行方針を確認する入口。
+- realization test の意味上の要件を定める正本文書。pytest、隔離された test-root、決定論的制御ロジック、Codex CLI を含む実経路統合テスト、test-local Ollama、GPU 実行、キャッシュ、クラウド backend 禁止、Fake Codex CLI の適用範囲を扱う。テスト実行手順や環境構築・依存操作の詳細は別の正本文書への入口として位置づけられる。
 
 ## Read this when
-- cmoc の realization test を追加・変更・レビューするとき
-- pytest の配置、tmp_path によるテスト環境隔離、テスト用リポジトリ構築方針を確認するとき
-- Real Codex CLI 呼び出しを伴うテストで、provider、SLM、cmoc managed ollama、クラウド利用禁止の規約を確認するとき
-- 全サブコマンドの本番経路試験の対象、実行条件、検証内容、完了判定を確認するとき
-- 実装またはテスト変更後に必要な検証範囲と未検証時の扱いを確認するとき
+- realization test の追加・変更・レビューで、検証対象、実経路統合テスト、Codex CLI と Ollama の扱い、GPU marker、timeout、cache、backend 制約を判断するとき。
+- テストが仕様上の goal / non-goal や外部から観測可能な結果を満たしているか確認するとき。
 
 ## Do not read this when
-- realization implementation の配置や CLI 実装の責務境界だけを確認したいときは design_rule.md を読む
-- Python 実行環境、仮想環境、依存関係、pytest の実行コマンドだけを確認したいときは development_environment.md を読む
-- LLM の回答品質や Codex CLI 自体の正しさを評価するテスト方針を確認したいときは、この文書ではなく対象外であることを確認する
+- 構築済み環境でのテスト選択・実行・完了判定・報告手順だけを確認したいときは、test_execution.md を直接読む。
+- Python 環境の新規構築、依存関係の追加、pip 操作を行うときは、development_environment.md を直接読む。
+- LLM の回答品質、Codex CLI 自体や model provider の正しさ、有料クラウド backend、GPU 性能・推論速度そのものを評価するとき。
 
 ## hash
-- 4f65994501bce1a23de3b9cf3a6f832a05037450e5ab1f6d62739dc59b0b3692
+- f1837a73e1fc07ba376aeb4a6cb5583c0b6e5eaf10a366a0bbb50508c1880ff3

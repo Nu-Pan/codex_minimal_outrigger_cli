@@ -17,15 +17,14 @@
 # `cmoc_config.py`
 
 ## Summary
-- oracle 側の設定定義クラスを realization 側の `config.cmoc_config` として再公開する互換ブリッジ。設定定義自体は複製せず、oracle の型を参照して利用者向け import 面を維持する。
+- oracle/src/oracle/other/cmoc_config.py の設定型を realization 側から再公開する互換用モジュール。設定定義自体は保持せず、既存の config.cmoc_config 参照を維持する。
 
 ## Read this when
-- `config.cmoc_config` の設定クラス import や公開 API を変更・確認するとき。
-- oracle 側の設定定義と realization 側の参照関係を確認するとき。
+- cmoc 設定型の import 経路や config.cmoc_config 参照を変更・確認するとき。
 
 ## Do not read this when
-- 設定クラスの仕様や実装を確認したいときは、再公開元である oracle 側の設定定義を直接読む。
-- 設定参照を利用する個別機能だけを変更するときは、この再公開モジュールではなく該当する利用側コードを読む。
+- 設定定義の内容や仕様そのものを確認するときは、再公開元の oracle/src/oracle/other/cmoc_config.py を直接読む。
+- config.cmoc_config 参照が realization 側と利用者向け公開面からなくなっている場合。
 
 ## hash
-- 9984eb91677d6d945b13c4d066cc6e2928fe2b933e4152300048b4ade9a9bcc3
+- 46d78fa1d103a3d52db1f861d2187698122d2dde1940ff0b4c0d1a60ca7a87fa

@@ -1,32 +1,35 @@
 # `apply`
 
 ## Summary
-- Oracle 側の差分を realization file 全体へ反映する `codex exec` 用 AgentCallParameter を構築する処理を扱う。raw git diff と commit 範囲を prompt に埋め込み、実行設定と linked worktree を組み立てる。
+- `cmoc realization apply fork` 用の codex exec 起動パラメータを構築する実装。oracle file の差分、commit 範囲、linked worktree を prompt に組み込み、FLAGSHIP モデルへ realization file の差分追従を委譲する入口。
 
 ## Read this when
-- `cmoc realization apply fork` の実行 prompt や realization 追従処理を変更・調査するとき。
-- 対象 agent call のモデル、推論強度、ファイルアクセス、作業ディレクトリ、indexing preflight を確認するとき。
+- oracle file の変更を realization file へ追従させる AgentCallParameter を構築・変更するとき
+- realization apply fork の prompt、作業範囲、差分参照、モデル設定、worktree 設定を確認するとき
+- 差分追従の完了条件や realization write の委譲方法を調査するとき
 
 ## Do not read this when
-- 通常の realization 実装・テストを変更または調査するとき。
-- prompt の一般的な組み立て規則だけを確認したいとき。
+- realization apply fork の差分適用ロジックやテストだけを調べるとき
+- 一般的な prompt 構築処理を調べるとき
+- AgentCallParameter や path context の共通定義を調べるとき
 
 ## hash
-- 6831092f313aa0e997cc403d2a897d51b344a43ca142092721e9db68a91ab45b
+- 132f46ba2d4207e8b13105a02aa0265cc1bd78a348aa3c925878926a52fbe27c
 
 # `refactor`
 
 ## Summary
-- realization refactor fork の変更要約と、ファイル単位レビュー・修正に関する prompt 構築処理および Structured Output schema をまとめる領域。差分要約とレビュー対象の調査・修正・検証に進む入口。
+- refactor fork における変更要約と、ファイル単位のレビュー・修正結果を扱う正本実装および Structured Output スキーマの領域。変更要約、レビュー結果、各処理の prompt と実行条件を確認する入口。
 
 ## Read this when
-- realization refactor fork の変更要約 agent call の入力、モデル設定、アクセス権、出力形式を確認するとき
-- ファイル単位レビュー・修正 agent call の対象パス、prompt、修正方針、検証要件、所見 schema を確認するとき
+- refactor fork の変更差分を要約する処理や出力契約を確認・変更するとき
+- ファイル単位レビュー・修正の所見、修正結果、検証結果の出力形式を確認・変更するとき
+- 変更要約またはレビュー・修正 agent call の prompt 構成・実行条件を確認・変更するとき
 
 ## Do not read this when
-- refactor fork の差分内容や候補ファイルの処理順を確認したいとき
-- レビュー対象ファイルの実装詳細を調査したいとき
-- 変更要約またはレビュー・修正の Structured Output schema の詳細だけを確認したいときは、対応する JSON schema を直接読む
+- 個別の realization 実装やテストの挙動を直接調査・変更するとき
+- prompt や実行パラメータを確認せず、出力形式だけを確認したいとき
+- 変更内容そのものだけを確認したいとき
 
 ## hash
-- 334d143dc97e803e7a15bc5ba906e800523440036ef01d806d0fd9d5c99176fc
+- 4d3ab490fae709e20c5eab2e9492858dd77db7e7520ba0532a5eecc989e7e0d3

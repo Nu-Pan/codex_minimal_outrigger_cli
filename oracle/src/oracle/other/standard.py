@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 from typing import Literal
+
 from oracle.other.struct_doc import StructDoc
 
 
 class Standard:
     """
     「何らかの事柄が従うべき規範」のフォーマットを定義するクラス
-    e.g. oracle file は oracle standard に従うし、oracle standard は `Standard` を元に生成される
-    `Stnadrd` は `{{cmoc-root}}` ツリー内に対して適用されるものであり、`{{work-root}}` ツリー内は対象外である
+    e.g. INDEX.md エントリーは index entry standard に従う。
+    index entry standard は `Standard` を元に生成される。
+    規範の定義は cmoc が所有し、適用対象は各 prompt part の適用条件が定める。
     """
 
     def __init__(
@@ -93,9 +95,8 @@ class Requirement:
     # 要求の本文
     # １文で簡潔に書く
     # - e.g. 良い要求の書き方
-    #     - 許容: oracle file の隙間に未定義部分が残ることは許容する
-    #     - 必須: 実装差が許されない事項は、人間が oracle file に明示する
-    #     - 推奨: AI 裁量で補う仕様の規模は小さく保つ
+    #     - 必須: 対象を読むべき条件を判断できる意味情報を書く
+    #     - 禁止: 対象外の責務を推測で追加してはいけない
     body: str
 
 

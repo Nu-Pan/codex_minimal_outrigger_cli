@@ -17,33 +17,49 @@
 # `complete_prompt.py`
 
 ## Summary
-- エージェント呼び出し用の完全なプロンプトを、固定・動的パーツ、プレースホルダ、各種標準ルールの有効化設定から構築するモジュール。プロンプト生成仕様や注入パーツの構成を確認する入口。
+- oracle と realization の各種規範およびパス文脈を組み合わせ、agent call に渡す完全なプロンプトを決定論的に構築する。静的・動的プロンプト、placeholder 定義、規範間の依存関係を扱う。
 
 ## Read this when
-- プロンプト全体の構造、標準ルールの依存関係、動的プロンプトやプレースホルダの組み立てを変更・調査するとき。
+- agent call 用プロンプトの全体構成、注入する規範、placeholder、ファイルアクセス・ルーティング規則を変更または確認するとき
+- 静的プロンプトと動的プロンプトの分離、規範の自動有効化、placeholder の競合処理を調査するとき
 
 ## Do not read this when
-- 特定の注入パーツの本文や個別標準ルールだけを変更・調査する場合は、対応する parts モジュールを直接読む。プロンプト生成と無関係な oracle 構造体やファイルアクセス規則の調査にも不要。
+- 個別の oracle／realization 規範本文だけを確認したいとき
+- 特定のプロンプト部品の文面や内容を変更・確認する場合で、その部品の実装を直接読めるとき
 
 ## hash
-- 2217343e656f775f0701b674731aa9fa2adf94085beaf1e59dee573301f29b56
+- 809587f3af485137443c65358d9600db1f5b8f02770dab4b6267aa0829497260
+
+# `editor_input.py`
+
+## Summary
+- ユーザー入力用エディタに表示する初期テキストを構築する正本実装。AI Agent CLI/TUI向けプロンプトの記述形式・品質基準・指定事項を案内するHTMLコメントの固定接頭辞を定義し、サブコマンド固有の自動注入指示を結合して返す。
+
+## Read this when
+- プロンプト入力エディタの初期表示内容、案内文、HTMLコメントによる注入指示の構造を変更・確認するとき。
+- 自動注入されるサブコマンド固有指示を初期テキストへ組み込む処理を変更・確認するとき。
+
+## Do not read this when
+- 特定サブコマンドのプロンプト内容や、エディタ以外のプロンプト生成処理を調査するとき。
+
+## hash
+- 5622a37bf21a60f5ae6bc90f00c4a5d9350402e529f28f004aa46d3b26aa1c76
 
 # `parts`
 
 ## Summary
-- oracle と realization、INDEX.md、ファイルアクセス規則、レビュー基準などの prompt builder 部品をまとめるディレクトリ。各 Python ファイルは特定の正本仕様・規範・ルーティング情報を StructDoc やプロンプトとして構築する。
+- oracle と realization、適合性レビュー、ファイルアクセス、INDEX.md ルーティングなどの規範を prompt builder 用の構造化文書へ変換する実装群を収録するディレクトリ。各ファイルは特定のレビュー規範・アクセス制約・仕様分類・ルーティング規則の生成責務を持つ。
 
 ## Read this when
-- oracle・realization の基本定義や記述規範を変更・確認するとき
-- INDEX.md のルーティング規則やエントリー生成基準を変更・確認するとき
-- oracle review・apply review の所見判定基準を変更・確認するとき
-- ファイルアクセスモード別のプロンプト生成や deny ルールを調査するとき
-- prompt builder のこれらの部品の生成内容や構成を変更するとき
+- oracle file と realization file の適合性、レビュー所見、conflict 解消規範を調査・変更するとき
+- AI エージェント向けのファイルアクセス規則や oracle・realization の定義を変更するとき
+- INDEX.md のエントリー規範やルーティング規則の生成処理を調査・変更するとき
+- prompt builder に注入する標準文書の構造、Requirement・Standard の扱い、oracle 参照ルールを確認するとき
 
 ## Do not read this when
-- 個別の oracle file や realization file の具体的な仕様・実装を調査するとき
-- CLI の個別コマンドや実際のファイル操作を調査するとき
-- prompt builder の別領域や、生成処理・ファイル探索処理の実装詳細だけを調べたいとき
+- 特定の oracle 文書や realization 実装そのものの仕様・挙動を調査するとき
+- Codex CLI の実行権限や sandbox 設定そのものを確認するとき
+- prompt builder 以外のサブコマンド処理や、一般的なコード品質・ベストプラクティスだけをレビューするとき
 
 ## hash
-- a6fd78125ff56314ce8480de0ccbf177b52abd355ea33f6be0c15c04915f2f11
+- 64f41aa2cca1fda8f8258429b314afc03bcd26666154c0ef725c4dac6ca92905

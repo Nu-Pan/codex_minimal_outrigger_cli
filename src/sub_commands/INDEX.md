@@ -1,48 +1,32 @@
 # `apply`
 
 ## Summary
-- apply サブコマンドの実装パッケージ。abandon、fork、fork report、join の処理を扱い、apply run の開始からレビュー・修正、差分 commit、merge、report 保存、state 更新、process・worktree・branch cleanup までの実装入口となる。
+- 現在、apply サブコマンドの実装ファイルはありません。
 
 ## Read this when
-- apply サブコマンドの実装を確認または変更するとき。
-- apply run の lifecycle、state・process tracking、worktree・branch 操作、差分処理、report 生成、join・abandon の挙動を調査するとき。
+- apply サブコマンドの実装が追加された後、その内容を確認するとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドだけを扱うとき。
-- 共通 runtime、Git、worktree、Codex 実行基盤の実装だけを変更・調査するときは、対応する共通実装を直接読む。
-- apply fork 内のレビュー・修正プロンプト生成や report 内容だけを扱うときは、対応する下位実装を直接読む。
+- apply 以外のサブコマンドを扱うとき。
 
 ## hash
-- 5f2275d9b011172ec29ff2fb2afa5fe73a6fa692c5de562481b35860e11e2fa4
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 # `doctor.py`
 
 ## Summary
-- doctor サブコマンドの実装。CLI runtime を介して doctor 用の preprocess 処理を明示的に実行する。
+- `cmoc doctor` サブコマンドの実装。CLI ランタイム経由で doctor preprocess を 1 ステップ実行し、完了後に repo_root を表示する。doctor コマンドの実行経路と preprocess 呼び出しの入口として扱う。
 
 ## Read this when
-- doctor サブコマンドの動作や preprocess 呼び出しを確認・変更するとき。
+- doctor サブコマンドの実装や実行手順を変更・調査するとき
+- doctor preprocess の呼び出し位置、実行ステップ、表示内容を確認するとき
 
 ## Do not read this when
-- doctor 以外のサブコマンドを扱うとき。preprocess の共通実装自体を確認するときは、共通 runtime preprocess command の実装を直接読む。
+- doctor preprocess 自体の仕様や処理内容を確認したいときは、参照される oracle/doc/app_spec/doctor_preprocess.md を直接読む
+- CLI ランタイム共通処理の仕様や実装だけを確認したいとき
 
 ## hash
-- 9324a8b1f2f1bbd3a83adfb61690e64ff7e1f6502e165e208c84e2cefbd35980
-
-# `eval_oracle.py`
-
-## Summary
-- want を書き出した oracle を、oracle review と同じ評価経路へ渡す実装。評価対象の scope を受け取り、oracle review 実装へ委譲する。
-
-## Read this when
-- oracle に記述した want の評価経路や、oracle review と同じ評価処理を確認・変更するとき。
-
-## Do not read this when
-- oracle review 自体の評価ロジックを変更するときは、直接 oracle review の実装を読む。
-- oracle の検討方針や評価基準を確認するときは、対応する oracle 文書を直接読む。
-
-## hash
-- 4a5d221c70ba607bc460b99a70f7d0c385eb3115c40668c54aeecd7cf6820461
+- 48cc149773f0620f64d4650bed55bdb7b42dada088e55d312892186978176836
 
 # `indexing.py`
 
@@ -62,18 +46,38 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドを構成する package。`oracle edit` の起動処理と、`oracle review` の実行フローおよび対象列挙・パス解決・レビュー loop・レポート・INDEX 更新に関する下位実装への入口。
+- oracle 系サブコマンドをまとめる package。oracle の edit、investigation、review と、review の対象列挙・loop・path 解決・report・INDEX merge を担う実装への入口。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や入口を確認するとき
-- `oracle edit` または `oracle review` の処理責務を特定し、関連する下位モジュールへ進むとき
+- oracle 系サブコマンドの package 構成や入口を確認するとき。
+- oracle edit、investigation、review の実行経路を調査・変更するとき。
+- oracle review の対象列挙、評価 loop、path 解決、report、INDEX 差分 merge のいずれかを調査・変更するとき。
 
 ## Do not read this when
-- 個別サブコマンドの詳細実装だけを確認したいとき
-- レビュー対象列挙、パス解決、レビュー loop、レポート生成、INDEX 更新など、特定の下位責務を直接調査するとき
+- 個別サブコマンドや review 機能の詳細だけを確認する場合は、該当する実装ファイルを直接読む。
+- oracle の正本仕様を確認する場合は、対応する oracle 文書を直接読む。
 
 ## hash
-- c89563a4ef39409c50975356a178b5f467e13eddb7f24933a3f603d5a1f3e116
+- 69f4a777ca3159ddf6a0bacf46b478271aed4523b93bb7282cf7e1312594263e
+
+# `realization`
+
+## Summary
+- realization workload サブコマンドのパッケージ入口。
+- apply workload と refactor 処理の実装へ進むための階層入口であり、apply では実行ライフサイクルや差分・状態・report、refactor では fork 実行全体や完了判定・report 保存を扱う。
+
+## Read this when
+- realization workload サブコマンドの実装構成を確認するとき。
+- realization apply workload の CLI 動作、run lifecycle、差分検査、commit、状態遷移、fork report を調査または変更するとき。
+- realization refactor の fork 実行フロー、対象選択、差分・commit・INDEX 検証、所見管理、state 更新、report 生成を確認するとき。
+
+## Do not read this when
+- realization workload サブコマンドに関係しない処理を確認するとき。
+- apply agent の launch parameter、run 共通の join・abandon 処理、または realization apply の正本仕様だけを確認するとき。
+- 個別 refactor agent の Structured Output や prompt builder、refactor state のデータ形式・対象選択ロジック、共通 lifecycle・report・process tracking・INDEX 更新の仕様だけを確認するとき。
+
+## hash
+- 6692789f64731f8e38015a17e85a88e921b58653e364c247ea4d541ce7f3e522
 
 # `review`
 
@@ -89,36 +93,50 @@
 ## hash
 - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
+# `run`
+
+## Summary
+- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。abandon・join の実装と、共通 lifecycle/report 実装への互換 shim を下位要素として案内する入口。
+
+## Read this when
+- editing run の abandon、join、ライフサイクル、report 連携を調査・変更するとき。
+- run worktree・branch・state・process tracking・rollback・cleanup・report の処理経路を追うとき。
+
+## Do not read this when
+- editing run 以外のサブコマンドを扱うとき。
+- 特定の処理の実装詳細を確認する場合は、この入口ではなく配下の該当ファイルを直接読むとき。
+- 共通 lifecycle や report の canonical 実装そのものを確認する場合は、commons 側の実装を読むとき。
+
+## hash
+- 487cfc797f092144b6fb5980fa1a2c7f5200bee0e5d3f21250e7429a4fc84f01
+
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。fork、join、abandon の各 session 操作に関する CLI 実装を確認する入口。
+- session サブコマンドの実装パッケージ。session の各ライフサイクル処理を確認する入口で、開始・参加・中断などの個別サブコマンド実装を含む。
 
 ## Read this when
-- session サブコマンドの実装や構成を確認・変更するとき。
-- session branch、session state、cleanup、merge、rollback など session 操作の挙動を調査するとき。
+- session サブコマンドの実装構成や、fork・join・abandon の処理を確認・変更するとき。
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき。
-- 共通の git 操作、state 操作、Codex 実行規則、session データモデル自体を直接確認するとき。
+- session のデータ構造や共通 runtime、設定・仕様のみを確認するときは、対応する直接の実装・仕様ファイルを読む。
 
 ## hash
-- fd4b0da87a48090397a866c729c2b89e9e18e7a38833e92107be89c7220385bd
+- ab4130d63f8a101c3dcea6098fe955537fe6e185866cf8cb9e83dd99578b8e4c
 
 # `tui.py`
 
 ## Summary
-- `cmoc tui` の CLI 実行経路を担当する実装。プロンプト入力、実行パラメータ解決、TUI 用 AgentCallParameter の構築、Codex TUI 起動までを統合する。TUI のパラメータ解決や起動処理の流れを確認・変更するときの入口。
+- `cmoc tui` サブコマンドの実行入口と本体処理を定義する。インデックス事前処理、オリジナルプロンプトの編集入力、TUI 起動パラメータの構築、Codex TUI の起動を担当する。
 
 ## Read this when
-- `cmoc tui` の実行フロー、プロンプト編集入力、解決済みパラメータからの TUI 起動パラメータ構築を確認するとき
-- TUI で許可するファイルアクセスモードや、設定された oracle・realization standard の反映を変更するとき
-- TUI 起動前後の CLI runtime、ログ、作業ルートの扱いを確認するとき
+- `cmoc tui` の実行フロー、プロンプト入力、TUI 起動処理を変更または調査するとき。
+- TUI 起動時のリポジトリルート、作業ルート、設定値の受け渡しを確認するとき。
 
 ## Do not read this when
-- TUI の低レベルな起動パラメータ生成だけを変更する場合は、TUI builder の実装を直接確認する
-- TUI 用パラメータ解決のプロンプトや許可モード定義だけを変更する場合は、resolve parameter 側を直接確認する
-- プロンプト編集そのものの入力処理だけを変更する場合は、prompt editor input 側を直接確認する
+- TUI 起動パラメータの詳細仕様だけを確認したいときは、パラメータ構築側の実装や対応する仕様を直接読む。
+- プロンプトエディタの入力・ignore 処理だけを変更または調査するときは、入力処理側の実装や対応する仕様を直接読む。
 
 ## hash
-- bc6c3be08640a1000dcead34a380e970ba103be1b1fd792bea3cc1579a1db2d3
+- aa6f03a8d2a0cd859192f29279ebe32b845bd7c380a0ce0620b2b1a54dd3483e

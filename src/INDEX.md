@@ -1,34 +1,35 @@
 # `acp`
 
 ## Summary
-- ACP 互換の公開入口と、ACP parameter builder の realization 側入口をまとめるパッケージ。canonical builder への委譲や既存 import の互換維持、機能別 builder への導線を扱う。
+- `acp` 互換の公開入口と ACP builder adapter 群を扱うディレクトリ。公開名の互換維持や oracle 実体への移行を確認する入口であり、builder の command/package 別処理は下位要素へ案内する。
 
 ## Read this when
-- `acp` 公開入口の存廃や既存参照の互換維持を判断するとき。
-- ACP parameter builder の realization 側入口、canonical builder への委譲、または機能別 builder を調査・変更するとき。
+- `acp` という公開参照を維持・削除できるか判断するとき。
+- ACP builder 全体の構成や、command 別 adapter・共通処理の調査先を切り分けるとき。
 
 ## Do not read this when
-- canonical な builder の仕様・実装内容だけを確認したいとき。対応する `oracle.acp_builder` 側を読む。
-- CLI のループ制御、state 遷移、TUI 起動後の処理など、ACP の公開入口や parameter builder 以外の挙動を調査するとき。対応する上位実装または実体モジュールを直接読む。
+- `acp` 配下の具体的な実装や移行先の詳細だけを確認したいときは、該当する実体モジュールを直接読む。
+- ACP と無関係な CLI 実装や利用者向け公開面だけを調査するとき。
 
 ## hash
-- ad852e72b72fda5b0728c292e6c863f8024e25a526244d93299652f0269328ee
+- 0b7c56e5a4cbb8b1fd252f7f4742b58265d952a0a784bd780fcb3732be279d80
 
 # `basic`
 
 ## Summary
-- `basic.*` の互換 import を維持する公開入口群。ACP 型、path model、構造化文書 API を実体定義から再公開し、`basic` 側に実装や正本仕様を複製しない。
+- `basic` 配下の互換 import 入口をまとめるディレクトリ。ACP 型、path model、構造化文書 API などを正本や oracle 側から再公開し、既存の `basic.*` 公開面を維持する。個別実装や正本定義を確認する場合は各再公開元へ進む。
 
 ## Read this when
-- `basic.*` 経由の公開名や互換 import の維持・廃止を判断するとき。
-- ACP 型、path model、構造化文書 API の realization 側での再公開関係を確認するとき。
+- `basic.*` の互換 import を維持・廃止する判断をするとき。
+- `basic.acp`、`basic.path_model`、`basic.struct_doc` の公開経路や再公開元を確認するとき。
+- 利用者向け公開面の移行先や互換層の維持条件を調べるとき。
 
 ## Do not read this when
-- 各 API の正本仕様や実装本体を確認したいときは、対応する oracle 側を直接読む。
-- `basic.*` の公開面や互換 import に関係しない処理を調査・変更するとき。
+- ACP 型、path model、構造化文書 API の正本仕様や実装詳細を確認したいときは、各 oracle 側の定義を直接読む。
+- 個別モジュールと無関係な処理を調査・変更するとき。
 
 ## hash
-- 6427f271674f13de9f39976c4fe0d10226ad4c7573c6fa05a58ee5db32f274b7
+- 292bc262556c427d8a4a7636a2c7e14127adfdea1c7d57f167e9bfa04d4ce5ea
 
 # `cmoc_runtime.py`
 
@@ -48,50 +49,53 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行、Codex、設定、Git、パス、ログ、状態、Ollama、INDEX 更新など、複数のサブコマンドから利用される横断的な実行時機能を扱う。配下の個別 runtime モジュールや公開 API を確認するための入口。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行、Codex 実行、設定・状態・パス管理、Git、ログ、エラー、INDEX 更新、editing run など、上位実装が横断的に利用する runtime API と個別実装への入口を提供する。
+- パッケージ全体の公開 API や複数 runtime 領域の連携を確認する場合の入口であり、個別機能の詳細調査では配下の担当モジュールへ進む。
 
 ## Read this when
-- 複数の CLI サブコマンドにまたがる runtime helper の責務や構成を確認するとき
-- commons 配下の個別実装へ進む前に、共通 runtime 機能の全体像と適切な入口を把握したいとき
-- Codex 実行、設定、Git、パス、ログ、状態、Ollama、INDEX 更新などの共通機能を調査するとき
+- cmoc の共通 runtime API や commons パッケージの責務範囲を確認するとき
+- CLI、Codex、設定、状態、Git、ログ、INDEX 更新、editing run など複数の runtime 領域にまたがる依存関係を調査するとき
+- commons 配下で対象となる個別実装を選ぶため、各 runtime module の役割を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の実装詳細だけを調べるときは、対応する個別 runtime モジュールを直接読む
-- 特定サブコマンドの業務処理や利用者向け仕様だけを調査するときは、そのサブコマンド実装または oracle 文書を直接読む
+- 単一の runtime 機能の実装詳細だけを調査・変更するときは、対応する runtime module を直接読む
+- 特定サブコマンドの固有処理や利用者向け仕様だけを確認するときは、その command 実装または oracle 文書を直接読む
+- INDEX.md の正本 schema や生成 prompt、個別の session・report・process 仕様を確認するときは、対応する専用実装または oracle file を直接読む
 
 ## hash
-- e9f59e01914fb431b259940e67dd6cee776357502ddf6d8c2b030ea82ce2adce
+- b777aed2e1f18f5a8a14517b9dd0a6ee08e756af1e18583b7a623dfc9264e684
 
 # `config`
 
 ## Summary
-- 設定定義を直接実装せず、oracle 側の設定型を `config.*` として再公開する互換入口。既存利用者向けの import 面を確認するためのディレクトリ。
+- 設定モジュールの互換入口を提供するディレクトリ。`__init__.py` は `config.*` 参照を成立させ、`cmoc_config.py` は oracle 側の設定型を定義せず realization 側から再公開する。設定仕様の確認先ではない。
 
 ## Read this when
-- `config` または `config.cmoc_config` の import・公開 API を維持、変更、確認するとき。
-- oracle 側の設定定義と realization 側の互換ブリッジの関係を確認するとき。
+- 既存利用者の `config` または `config.cmoc_config` 参照を維持・確認するとき。
+- 設定型の import 経路や互換入口の有無を調べるとき。
 
 ## Do not read this when
-- 設定仕様や設定定義そのものを確認するときは、oracle 側の設定定義を直接読む。
-- 設定を利用する個別機能だけを変更するときは、該当する利用側コードを直接読む。
+- 設定定義の内容や仕様そのものを確認するときは、oracle 側の設定定義を直接読む。
+- 設定参照を新規に追加する実装判断では、利用側の参照経路を直接確認する。
 
 ## hash
-- daa5ed72b11813f850abdb829e763dbf883b1abeace1419ea40a5fd5a555af2f
+- fbc828970884bf16f7e7e6174e3461888e3c4000d754454ba9794e1d2c99d6f2
 
 # `main.py`
 
 ## Summary
-- cmoc の Typer CLI アプリケーション定義。トップレベルおよび session、apply、oracle 配下のサブコマンドを登録し、各実装モジュールへ委譲する実行入口。CLI 引数解析エラーの共通変換、補完時の副作用抑制、scope option と console script 起動も扱う。
+- Typer を用いた cmoc CLI の主要エントリーポイント。doctor、tui、indexing と、session・oracle・realization・run の各サブコマンドを登録し、対応する実装関数へ委譲する。CLI 引数解析エラーは cmoc 形式のエラーレポートへ変換し、自動補完時は副作用を抑制する。各サブコマンド実装や CLI 全体の構成を確認する際の入口。
 
 ## Read this when
-- cmoc の CLI コマンド、サブコマンド、option、scope 値、引数解析エラー処理、補完動作、または console script の起動経路を変更・調査するとき。
+- cmoc の CLI コマンド、サブコマンド、option、Typer/Click の引数解析、エラー変換、自動補完の挙動を変更・調査するとき
+- 特定のサブコマンド実装へ進む前に、CLI からの登録名と委譲先を確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの業務処理や branch・worktree 操作の詳細を調査するときは、対応する sub_commands 配下の実装を直接読む。
-- oracle review、oracle edit、apply fork などの仕様詳細だけを確認するときは、参照されている oracle 文書を直接読む。
+- 個別サブコマンドの処理内容や永続化・worktree 操作の詳細を確認したいとき。対応する sub_commands 配下の実装を直接読む
+- CLI とは無関係な runtime、oracle、realization の内部処理を調査するとき
 
 ## hash
-- ccb042da55c6aa724f6c6810135c48c7ecaee2dfc4da1ead01512324a4c4387f
+- 2fc467906ef010b3f9c4d51a1600ba115332880dd4658767606f556b60c8e8d7
 
 # `oracle.py`
 
@@ -111,15 +115,16 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装を配置するパッケージ。apply、doctor、oracle、review、session、indexing、tui などの CLI 実行入口と、各処理の下位実装への導線を扱う。
+- CLI サブコマンドの realization 実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの各サブコマンド入口と、関連する実行フロー実装への階層入口を提供する。
+- apply と review は現在実装本文がなく、将来の実装配置先として示されている。
 
 ## Read this when
-- サブコマンドの実装構成や CLI 実行入口を確認・変更するとき。
-- apply、oracle、session、tui など特定サブコマンドの lifecycle、state、worktree、report、起動処理の入口を調査するとき。
+- CLI サブコマンドの実装構成や、特定サブコマンドの実行入口を確認・変更するとき。
+- doctor、indexing、oracle、realization、run、session、tui のいずれかの実行フローを調査するとき。
 
 ## Do not read this when
-- 共通 runtime、Git、worktree、Codex 実行基盤、indexing の具体的更新処理など、下位または共通実装そのものを直接調査するとき。
-- 特定サブコマンドの下位責務だけを扱うときは、対応する下位実装を直接読む。
+- 個別サブコマンドの詳細実装、共通処理、正本仕様を直接確認したいときは、該当する下位実装または oracle 文書を読む。
+- apply または review の具体的な処理を確認したいときは、実装が追加された後に該当する下位要素を読む。
 
 ## hash
-- 57fe313fa0ed4e183ebdb529bac3a9798e04558b95faff7cd33f5200069c2390
+- fdd924c80cfde87014738001294eb9358dc73ea3b6262e624e045818e8883fe5

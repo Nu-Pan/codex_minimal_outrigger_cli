@@ -1,14 +1,14 @@
 """`cmoc oracle investigation` の TUI 起動 prompt 正本。"""
 
 # cmoc
-from oracle.other.struct_doc import StructDoc, StructBlock, render_as_markdown
-from oracle.other.path_model import resolve_repo_root
 from oracle.acp_builder.basic import (
     AgentCallParameter,
+    FileAccessMode,
     ModelClass,
     ReasoningEffort,
-    FileAccessMode,
 )
+from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
+from oracle.other.struct_doc import StructBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
@@ -26,6 +26,9 @@ def build_oracle_investigation_launch_tui_parameter(
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
     """
+    # main worktree を agent_call_cwd として先に確定する
+    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
+
     # ユーザー指示以外を固定した完全プロンプトを構築する
     complete_prompt = build_complete_prompt(
         role="- あなたは oracle file の調査担当です",
@@ -38,6 +41,7 @@ def build_oracle_investigation_launch_tui_parameter(
         - oracle file で定義されている事項と未定義の事項を混同せず、未定義の事項を正本仕様として断定していないこと
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        path_context=path_context,
         aux_dynamic_prompt=[
             StructBlock(
                 "original_user_instruction",
@@ -53,7 +57,7 @@ def build_oracle_investigation_launch_tui_parameter(
 
     # cmoc が管理する TUI ログへ完全プロンプトを保存する
     complete_prompt_path = (
-        resolve_repo_root()
+        path_context.repo_root
         / ".cmoc"
         / "gu"
         / "ar"
@@ -71,5 +75,6 @@ def build_oracle_investigation_launch_tui_parameter(
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         prompt=f"{complete_prompt_path} を読んで、その指示に従って下さい",
         structured_output_schema_path=None,
+        agent_call_cwd=path_context.agent_call_cwd,
         run_indexing_preflight=True,
     )

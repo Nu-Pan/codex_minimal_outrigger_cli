@@ -17,15 +17,14 @@
 # `index_entry.py`
 
 ## Summary
-- `acp.builder.indexing.index_entry` の互換入口を保つための再公開層。実体ではなく、既存参照を切らさずに oracle 側の実装へつなぐ役割を持つ。
+- 既存の acp.builder.indexing.index_entry 参照を維持する互換入口。正本 builder へ委譲し、対象本文のコードフェンスを保護した AgentCallParameter を生成する。
 
 ## Read this when
-- `acp.builder.indexing.index_entry` への既存の利用経路を維持したいとき。
-- 互換入口として残すか、削除条件を判断したいとき。
+- index_entry の互換参照、正本 builder への委譲、または対象本文のプロンプト埋め込み時のコードフェンス保護を変更・確認するとき。
 
 ## Do not read this when
-- 実体の実装内容や振る舞いを確認したいときは、再公開先の oracle 側を読む。
-- 新しい機能追加や索引処理の設計変更を考えるだけなら、この互換入口ではなく実装側を読む。
+- 正本の builder 仕様やプロンプト構築自体を変更・確認するときは、oracle 側の対応ファイルを直接読む。
+- index 作成処理や他の prompt fence 保護処理だけを変更・確認するとき。
 
 ## hash
-- e9117a11bed4e8ab8054372ace27e1b8b6a68446bd98cdd03ad65d4dcd81ea24
+- b092e2255012c464484aedf6665543543a554ff95e2f4508e91e063858237730

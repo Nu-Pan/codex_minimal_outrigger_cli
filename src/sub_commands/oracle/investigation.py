@@ -18,14 +18,9 @@ from commons.prompt_editor_input import (
 )
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
-ORACLE_INVESTIGATION_TEMPLATE = """<!--
-以下の指示は `cmoc oracle investigation` で自動注入されるため、このファイルに書いてはいけない。
-
-- oracle file は読み取り専用
+ORACLE_INVESTIGATION_AUTOMATICALLY_INJECTED_INSTRUCTION = """- oracle file は読み取り専用
 - realization file の読み書き禁止
-- oracle file の規約・規範
-- TODO
--->"""
+- oracle file の調査に必要な cmoc 固有の契約は自動注入"""
 
 
 def cmoc_oracle_investigation_impl() -> None:
@@ -41,12 +36,13 @@ def cmoc_oracle_investigation_impl() -> None:
 
 
 def _cmoc_oracle_investigation_body() -> None:
+    """入力された oracle 調査指示から Codex TUI を起動する。"""
     root = repo_root()
     current_root = work_root()
     start_subcommand_step(2, "oracle 調査指示を入力", "edit investigation")
     original_path, instruction = collect_prompt_editor_input(
         root,
-        ORACLE_INVESTIGATION_TEMPLATE,
+        ORACLE_INVESTIGATION_AUTOMATICALLY_INJECTED_INSTRUCTION,
     )
     start_subcommand_step(3, "TUI 起動パラメータを構築", "build TUI parameter")
     parameter = build_oracle_investigation_launch_tui_parameter(
@@ -57,7 +53,6 @@ def _cmoc_oracle_investigation_body() -> None:
     run_codex_tui(
         parameter,
         root=root,
-        cwd=current_root,
         config=load_config(current_root),
         purpose="oracle investigation",
     )

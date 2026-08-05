@@ -3,15 +3,20 @@
 # std
 from pathlib import Path
 
-# cmoc
-from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
-from oracle.other.path_model import resolve_real_path
 from oracle.acp_builder.basic import (
     AgentCallParameter,
+    FileAccessMode,
     ModelClass,
     ReasoningEffort,
-    FileAccessMode,
 )
+from oracle.other.path_model import (
+    AgentCallPathContext,
+    resolve_real_path,
+    resolve_repo_root,
+)
+
+# cmoc
+from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
@@ -29,6 +34,9 @@ def build_oracle_review_enumerate_finding_parameter(
     related_findings: str
         現状の所見リストのうち、レビュー対象ファイルと関連するもの
     """
+    # oracle review は main worktree を agent_call_cwd として先に確定する
+    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
+
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片のレビュー担当です",
@@ -42,6 +50,7 @@ def build_oracle_review_enumerate_finding_parameter(
         - 新規所見が無い場合は空配列を返していること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        path_context=path_context,
         aux_dynamic_prompt=[
             StructDoc(
                 "既知の関連所見",
@@ -52,19 +61,21 @@ def build_oracle_review_enumerate_finding_parameter(
             )
         ],
         aux_placeholder_def={
-            "oracle-path": resolve_real_path(oracle_path),
-            "oracle-root": resolve_real_path(Path("{{work-root}}/oracle")),
+            "oracle-path": resolve_real_path(oracle_path, path_context),
+            "oracle-root": resolve_real_path(
+                Path("{{work-root}}/oracle"), path_context
+            ),
         },
         oracle_and_realization_basic=True,
-        oracle_standard=True,
         oracle_review_standard=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.MAX,
-        FileAccessMode.PURE_ORACLE_READ,
-        render_as_markdown(prompt),
-        Path(__file__).with_suffix(".json"),
-        True,
+        model_class=ModelClass.EFFICIENCY,
+        reasoning_effort=ReasoningEffort.MAX,
+        file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        prompt=render_as_markdown(prompt),
+        structured_output_schema_path=Path(__file__).with_suffix(".json"),
+        agent_call_cwd=path_context.agent_call_cwd,
+        run_indexing_preflight=True,
     )

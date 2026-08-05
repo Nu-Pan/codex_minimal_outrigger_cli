@@ -25,6 +25,8 @@
 
 - run の作業は、`{{cmoc-run-branch}}` を checkout した git linked worktree である `{{cmoc-run-worktree}}` 上で行う。
 - agent call の cwd は、個別仕様に別の定めがない限り `{{cmoc-run-worktree}}` とする。
+- run 上の agent call の root path は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext` に従う。
+- cmoc process の cwd が `{{repo-root}}` であっても、run 上の agent call の path context は `{{cmoc-run-worktree}}` から解決する。
 - 人間が `{{cmoc-run-worktree}}` を直接編集することは想定しない。
 
 ## `{{run-root}}` 外への書き込み例外

@@ -5,6 +5,28 @@
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
 - 個別の `codex exec` 呼び出しの仕様は `{{cmoc-root}}/oracle/src/oracle/acp_builder` ツリー内の AgentCallParameter builder を正本とする
 
+## agent call の path context
+
+- call-scoped path context のデータモデル、各 member の意味、および `AgentCallPathContext.agent_call_cwd` からの導出規則は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext` class 定義と class・member comment を正本とする
+- AgentCallParameter builder は、完全 prompt を構築する前に `AgentCallParameter.agent_call_cwd` を決定する
+- `AgentCallParameter.agent_call_cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
+- builder は、決定済みの `AgentCallParameter.agent_call_cwd` だけを `agent_call_cwd` keyword argument に渡して `AgentCallPathContext` を構築する
+
+call-scoped path context の適用範囲を次に示す。
+
+- 同じ完全 prompt 内の file access rule、routing rule、oracle file と realization file の分類、および path placeholder は、同一の call-scoped path context を使用する
+- `AgentCallParameter.agent_call_cwd` と完全 prompt の path placeholder は、同じ call-scoped path context から取得する
+- `build_complete_prompt` と各 prompt part は、cmoc process の cwd を個別に参照して path を解決してはならない
+- cmoc process の cwd だけを根拠として、子 agent call の path context を決定してはならない
+- call-scoped path context の構築に process-global な `chdir` を使用してはならない
+- 並列 agent call は call-scoped path context を共有または変更してはならない
+
+### non-goal
+
+- `{{repo-root}}`、`{{run-root}}`、および `{{cmoc-run-worktree}}` の既存の意味や配置は変更しない
+- 全 agent call で `{{work-root}} != {{repo-root}}` とすることは目的としない
+- agent call のためだけに新しい root placeholder を追加しない
+
 ## 環境変数 `$CODEX_HOME`
 
 - cmoc 呼び出し時点で `$CODEX_HOME` が設定済みであるなら、それをそのまま Codex CLI に渡す
@@ -13,9 +35,8 @@
 ## preflight validation
 
 - cmoc は Codex CLI 呼び出し前に「Codex CLI が実際に参照する `$CODEX_HOME`」に対する preflight validation を行う
-- preflight validation では以下のことを確かめる
-    - `$CODEX_HOME` がディレクトリとして存在すること
-    - `$CODEX_HOME/auth.json` がファイルとして存在すること
+- preflight validation では `$CODEX_HOME` がディレクトリとして存在することを確かめる
+- model provider 固有の認証要件を cmoc が一律に検証してはならない
 - preflight validation に失敗した場合、cmoc の実行を即時失敗させる
 
 ## Codex CLI 引数による設定上書き
@@ -47,6 +68,22 @@
 - `$CODEX_HOME/config.toml` や project config の sandbox 設定に依存してはならない
 - sandbox は専用引数で指定し、`--config` で上書きしてはならない
 
+### command 単位の sandbox 外実行
+
+- `--sandbox` は agent call 内で実行する command の既定境界を定めるものとし、承認済みの command 単位 sandbox escalation まで禁止するものではない
+- command 単位 sandbox escalation は、作業固有の oracle file が sandbox 外実行を必要条件として明示し、agent が対象 command と理由を限定して要求する場合に限り許容する
+- escalation は対象 command とその descendant process だけへ適用し、agent call 全体の sandbox mode、`AgentCallParameter.file_access_mode`、または詳細なファイルアクセス制限を変更しない
+- command 単位 escalation のために `--sandbox danger-full-access` または `--dangerously-bypass-approvals-and-sandbox` を agent call 全体へ指定してはならない
+- cmoc 自己開発の GPU test に許容する command と具体的な escalation 手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` を正本とする
+- GPU test の具体的な手順も、この節が定める一般的な command 単位 escalation 境界を広げてはいけない
+- cmoc は command 単位 escalation のための Codex exec rule を生成せず、永続的な prefix allow rule に依存しない
+
+### model provider transport と Codex sandbox のネットワークアクセス
+
+- Codex CLI と model provider の間の transport は、Codex agent が sandbox 内で実行する command のネットワークアクセスとは別のものとして扱う
+- model provider の選択または provider-local 設定を理由に、Codex sandbox のネットワークアクセス設定を追加または変更してはならない
+- agent が実行する command にネットワークアクセスが必要な場合は、model provider 設定とは独立して扱う
+
 ### 詳細なファイルアクセス制限
 
 - 個別の AgentCallParameter builder は論理的な file access mode を選択する正本とする
@@ -67,15 +104,28 @@
 
 - agent call が発生させた差分がファイルアクセス制限に違反していないかの事後検証は禁止とする
 
-## Model, Reasoning Effort
+## Model provider, Model, Reasoning Effort
 
 - Codex CLI に対する Model, Reasoning Effort は、全ての呼び出しで以下の argv により明示的に上書きする
     - Model: `--model`, `{{model-name}}`
     - Reasoning Effort: `--config`, `model_reasoning_effort="{{reasoning-effort}}"`
 - `{{model-name}}` は `AgentCallParameter.model_class` を `CmocConfigCodex.model` で解決したモデル名とする
 - `{{reasoning-effort}}` は `AgentCallParameter.reasoning_effort` を `CmocConfigCodex.reasoning_effort` で解決した値とする
-- 具体的な設定は AgentCallParameter builder を正本とする
-- cmoc は Model, Reasoning Effort 設定についての情報を Codex CLI プロンプトに注入しない
+- `AgentCallParameter.model_class` から解決した `CodexModelSpec.model_provider` が `None` の場合は、model provider に関する argv override を渡さない
+- null でない model provider ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` に従って Codex CLI 起動前に解決し、解決できなければエラーとする
+- null でない model provider ID は、次と同じ形の argv により呼び出し単位で明示的に上書きする
+    ```text
+    --config 'model_provider={{provider ID の TOML value}}'
+    ```
+- 選択した provider の `CodexModelProviderConfig.settings` は、各 key/value を次と同じ形の argv により呼び出し単位で明示的に上書きする
+    ```text
+    --config 'model_providers.{{provider ID の TOML key segment}}.{{provider-local key の TOML key segment}}={{provider-local setting の TOML value}}'
+    ```
+- model provider ID、provider-local key、および provider-local setting は、意味を変えず Codex CLI が解釈できる TOML key/value として符号化する
+- 選択していない provider の設定を argv に渡してはならない
+- model provider の選択と provider-local 設定に `--profile`、`$CODEX_HOME/config.toml`、または project config を使用してはならない
+- AgentCallParameter builder は model class と reasoning effort の選択を正本とし、実際の model provider、model、および reasoning effort の値は `CmocConfigCodex` から解決する
+- cmoc は Model provider, Model, Reasoning Effort 設定についての情報を Codex CLI プロンプトに注入しない
 
 ## プロンプトの渡し方
 

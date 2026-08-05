@@ -1,19 +1,19 @@
 # cmoc
-from oracle.other.path_model import resolve_work_root
+from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import StructDoc
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_oracle_and_realization_basic() -> tuple[PlaceholderMap, StructDoc]:
+def build_oracle_and_realization_basic(
+    path_context: AgentCallPathContext,
+) -> tuple[PlaceholderMap, StructDoc]:
     """
     oracle, realization についての基本知識の説明文章を構築する
     """
-    # エイリアス
-    work_root = resolve_work_root()
+    # この part の文面が参照する root 定義を call-scoped context から取得する
+    root_definitions = path_context.root_placeholder_definitions()
     return (
-        {
-            "work-root": str(work_root),
-        },
+        {"work-root": root_definitions["work-root"]},
         StructDoc(
             "oracle and realization basic",
             StructDoc(
