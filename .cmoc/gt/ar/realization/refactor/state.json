@@ -804,10 +804,10 @@
     "last_investigated_at": "2026-07-29_16-17_13_733417000"
   },
   "src/commons/runtime_paths.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "067ead4b3e70b253b8909a92589fded5f28a6d6f242f61be6bf1d30a96400f6c",
-    "last_investigated_at": "2026-07-31_20-05_55_281951000"
+    "last_investigated_sha256": "4eae4e541f9b83357378196e3c7349a0369a99264dbb3a6aa3786bfd7db8fccc",
+    "last_investigated_at": "2026-08-05_21-20_06_841380000"
   },
   "src/commons/runtime_refactor.py": {
     "investigation_required": false,
