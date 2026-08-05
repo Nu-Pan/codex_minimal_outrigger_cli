@@ -327,19 +327,19 @@
 # `test_codex_runtime_subprocess.py`
 
 ## Summary
-- Codex サブプロセスと run process tracking の停止・追跡・再利用防止を検証するテスト。pidfd、専用 process group、leader 終了後の descendant、PID/PGID 再利用、tracking file の不正内容・特殊ファイル、シグナル保留、cleanup 失敗時の停止と reap、継承環境変数や cwd エラーを扱う。runtime_codex_profile と runtime_run のプロセス安全性に関するテスト入口。
+- Codex subprocess と run process の追跡・停止・cleanup に関するテスト群。pidfd、process group、PID 再利用、signal 処理、tracking file の妥当性、不正状態や cleanup 失敗時の fail-closed 動作を検証する。関連する runtime 実装の挙動を確認するための realization test の入口。
 
 ## Read this when
-- Codex subprocess の起動・追跡・シグナル処理・cleanup を変更またはレビューするとき
-- run process tracking、pidfd、process group、PID/PGID の同一性検証を変更するとき
-- Codex subprocess 終了時の例外処理、reap、tracking file 検証を確認するとき
+- Codex subprocess の起動・追跡・signal 配信・process group cleanup を変更または調査するとき
+- run process identity、tracking file、pidfd、PID/PGID 再利用時の安全な停止処理を変更または検証するとき
+- editing run の cleanup 仕様に対する runtime 実装のテストカバレッジを確認するとき
 
 ## Do not read this when
-- Codex subprocess や run process tracking の停止・追跡挙動に関係しないテストを探しているとき
-- CLI の通常の入出力、編集処理、プロファイル設定そのものを確認するときは、対象の実装・専用テストを直接読む
+- Codex subprocess や run process の停止・追跡処理に関係しないテストや実装を扱うとき
+- tracking file の通常の読み書き仕様だけを確認する場合は、まず runtime 実装または対応する oracle 仕様を直接読むとき
 
 ## hash
-- 20b53eb1c13189bfcaa51a6aa93c9fa6f84c74dd0f4641683d86a87e5f37b73a
+- fd2e438163940497e1056974ac1091294881c638634f3c896954394262805014
 
 # `test_codex_runtime_tui.py`
 

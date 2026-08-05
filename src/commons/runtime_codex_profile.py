@@ -735,7 +735,12 @@ def run_tracked_codex_subprocess(
             if process is None:
                 raise
             try:
-                if cleanup_expected_members is None:
+                if cleanup_expected_members is None or cleanup_expected_leader is None:
+                    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                    # leader の identity を取得できない snapshot を停止済みと
+                    # 扱うと、live child の process.wait() だけを無期限に待つ。
+                    # group 停止を証明できない場合は outer fallback の Popen child
+                    # kill/reap へ渡し、未確認の group cleanup を成功扱いしない。
                     raise CmocError(
                         "実行中 Codex subprocess の process group を確認できません。",
                         ["Codex subprocess を手動で停止してから再実行してください。"],

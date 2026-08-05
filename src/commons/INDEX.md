@@ -151,21 +151,23 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。起動前の sandbox・argv・CODEX_HOME・schema 準備、実行中の child process tracking と安全な process group 停止、実行後の JSON/JSONL 出力解析および capacity・quota・予期しない error 判定を担う。Codex 呼び出しの実行環境や機械的結果を扱う下位実装への入口。
+- Codex CLI 起動前後の subprocess 境界を担い、sandbox・argv・cwd・CODEX_HOME・provider 設定・schema 配置を扱う。
+- editing run の Codex child process tracking、PID/start time/process group の検証、pidfd による安全な signal、終了待機と cleanup を提供する。
+- Codex の JSONL 出力から session ID や error を抽出し、capacity・quota・unexpected error を判定する。関連する subprocess 境界処理を一体で確認する入口。
 
 ## Read this when
-- Codex CLI に渡す sandbox、config override、model provider、CODEX_HOME、subprocess 環境を変更・調査するとき
-- editing run における Codex child process の tracking、PID reuse 対策、process group の停止や cleanup を変更・調査するとき
-- Structured Output schema の配置、Codex JSONL の session ID 抽出、error・capacity・quota 判定を変更・調査するとき
-- Codex subprocess の起動失敗や実行結果の利用者向けエラー変換を確認するとき
+- Codex CLI に渡す sandbox、model、reasoning effort、model provider、TOML override の生成を調べるとき。
+- CODEX_HOME の解決・検証、Codex subprocess の環境、schema の hash store 配置を確認するとき。
+- editing run の abandon、child process tracking、process group cleanup、PID reuse 対策を調べるとき。
+- Codex JSONL の session ID 抽出、stderr と event message の統合、capacity・quota・unexpected error の判定を確認するとき。
 
 ## Do not read this when
-- Codex CLI 境界を呼び出す上位の業務フローや editing run 全体の仕様を確認することが目的のときは、まず該当する oracle 仕様または呼び出し側実装を読む
-- Codex subprocess と無関係な設定値の検証、ファイル内容の hash store、一般的なパス解決の実装を調べるとき
-- Codex CLI 以外のプロセス管理、出力形式、エラー分類を調べるとき
+- Codex subprocess 境界を呼び出す上位の editing run 業務フローや retry 制御だけを調べるときは、まずその呼び出し側を読む。
+- 一般的な runtime config、runtime content、runtime path の共通処理だけを調べるときは、対応する専用モジュールを直接読む。
+- Codex CLI と無関係な process 管理や JSON 処理を調べるときは、この対象を入口にしない。
 
 ## hash
-- 45eaeb28c80306a97db3a0786ddbd2fbb9a23aa8bb0997c6daa84125704c94ef
+- 04989333751e092f41d31601b42a3f0d97027a4ef57e1f830925ff0a1f000b88
 
 # `runtime_codex_tui.py`
 
