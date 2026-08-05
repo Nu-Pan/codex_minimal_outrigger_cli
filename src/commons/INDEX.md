@@ -102,19 +102,23 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを実行制御する中核モジュール。Structured Output の厳格な JSON/schema 検証、capacity retry、quota の代表 probe と待機、resume token による再開、prompt・stdout・stderr・output・call log の保存、console/subcommand event の記録を一体で扱う。exec 実行制御の実装を確認する入口であり、ログ整形や Codex プロファイル処理の詳細は分離先モジュールを参照する。
+- Codex exec の単一試行ループを実行制御する中核実装。Structured Output の schema 準備・厳格な JSON 読み取りと検証、prompt・stdout・stderr・output・call log の保存、Codex subprocess の起動、結果イベントの記録を扱う。
+- capacity error の指数バックオフ retry、quota error の代表 probe と待機・再開、失敗 session の resume token による継続、quota 待機状態のスレッド間共有を一体的に制御する。
+- Codex CLI の成功・失敗・schema 検証失敗を CodexExecResult または CmocError として呼び出し元へ返す、exec 実行制御の入口である。
 
 ## Read this when
-- Codex exec の再試行、quota 待機・probe、resume 継続、Structured Output 検証、実行ログ保存、Codex call event の挙動を変更または調査するとき。
-- Codex subprocess の argv、cwd、環境、schema、prompt stdin、失敗分類から最終結果生成までの制御フローを確認するとき。
+- Codex exec の起動条件、argv・cwd・環境変数、Structured Output 検証を調査または変更するとき。
+- capacity retry、quota polling・probe、resume token、semantic retry の相互作用を確認するとき。
+- Codex call log、prompt/output log、console・subcommand event の記録内容や失敗分類を調査するとき。
+- CodexExecResult の生成や exec subprocess 失敗時の CmocError 処理を追跡するとき。
 
 ## Do not read this when
-- Codex のエラー分類、schema 準備、resume token 抽出、subprocess 起動など個別 helper の実装だけを確認したいときは、分離された runtime プロファイル系モジュールを直接読む。
-- Codex call の console 出力形式だけを確認したいときは、runtime logging 系モジュールを直接読む。
-- TUI 起動や exec 以外のサブコマンド実装を調査するとき。
+- TUI 起動そのものの実装や分岐を調査するときは、TUI 担当 module を直接読む。
+- Codex のログ整形、profile 判定、subprocess 実行補助など単独の共通処理だけを変更するときは、対応する runtime module を直接読む。
+- exec の正本仕様や retry・quota の要件を確認するときは、まず参照されている oracle 文書を読む。
 
 ## hash
-- c17d813410337f225e231d93db7fc75d7cac6319af7803abc68f0d8aadfed1d0
+- 48066df0b33e37b084bfb925db8f0167b14151fa9793e8a719f45a2bbdbe330f
 
 # `runtime_codex_logging.py`
 
@@ -150,20 +154,21 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。sandbox・argv・CODEX_HOME・provider 設定・schema 配置・process tracking・子プロセス停止・JSONL 出力解析・capacity/quota/error 判定を扱う。Codex 起動環境の構築と、機械的な実行結果を利用者向けエラーや retry 判定へ変換する下位実装への入口。
+- Codex CLI subprocess 境界を担当し、起動前の sandbox・argv・CODEX_HOME・schema 配置と、起動後の process tracking・process group cleanup・JSONL 出力および error/retry 判定を扱う。
+- Codex CLI への実行環境設定と、Codex CLI の機械的な実行結果を解釈する処理の入口であり、これらを同時に確認する必要がある場合に読む。
 
 ## Read this when
-- Codex CLI の起動引数、sandbox mode、model provider の TOML override、CODEX_HOME、schema 配置を変更・調査するとき。
-- editing run の Codex subprocess tracking、process group の安全な停止、PID reuse 対策、signal・lock・cleanup を変更・調査するとき。
-- Codex の stdout/stderr、JSONL event、thread resume token、capacity・quota・unexpected error の判定を変更・調査するとき。
+- Codex CLI の sandbox、model/provider、reasoning effort、TOML config override、CODEX_HOME、subprocess 環境を変更または調査するとき。
+- editing run における Codex child process の tracking、PID/start time 検証、process group の停止・cleanup、SIGTERM/SIGKILL 処理を変更または調査するとき。
+- Structured Output schema の配置、Codex の JSONL 出力、resume token、capacity/quota/unexpected error の判定を変更または調査するとき。
 
 ## Do not read this when
-- Codex CLI の呼び出し元が担う run 全体の orchestration、retry 待機、利用者向けコマンドフローだけを調査するときは、呼び出し元の実装を直接読む。
-- Codex の設定値そのものの正本仕様や editing run の外部仕様を確認するときは、対応する oracle file を先に読む。
-- Codex CLI と無関係な共通 path・content・config helper の挙動だけを調査するとき。
+- Codex CLI 境界を呼び出す上位の editing run の業務フローや利用者向け仕様だけを確認したいときは、該当する app specification を直接読む。
+- Codex subprocess 以外の一般的な設定値の検証、runtime path、runtime content、runtime error の独立した責務だけを確認したいときは、それぞれの専用実装を直接読む。
+- Codex の process tracking file の永続形式や abandon 操作の正本仕様を確認したいときは、実装ではなく対応する oracle specification を読む。
 
 ## hash
-- fabe86808acb56a908b0492aef070308c4411cf5630d6829eee1230caeacad6f
+- 087b9ea889433216d9c56cc1e836f6340f021a601ac708812109c86959d1df05
 
 # `runtime_codex_tui.py`
 
@@ -255,19 +260,21 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行、branch・HEAD・worktree の検証と作成・削除、Git ignore の安全な更新・検査、oracle/realization file の分類を担う共通境界。repository path、Git index、ignore 状態、worktree metadata の安全性を横断して扱うため、これらの挙動を変更・調査する際の入口となる。
+- Git コマンド実行、branch と HEAD の取得、worktree の作成・削除・検証、Git ignore 状態の管理を担う共通境界。
+- oracle/realization file の分類や path 安全性検証を、repository path・Git index・ignore 規則に基づいて提供する。関連する Git 状態処理や worktree 操作の実装を調べる際の入口。
 
 ## Read this when
-- Git subprocess のエラー変換、branch 状態、clean worktree、status path の扱いを変更・調査するとき
-- cmoc 管理 worktree の作成・削除、branch 名からの path 解決、symlink や Git metadata の安全性を確認するとき
-- `.cmoc/gu` の ignore 設定、Git ignore source の検証、oracle/realization file の分類条件を変更・調査するとき
+- Git subprocess のエラー変換、branch 状態、未コミット差分、HEAD 情報を扱う処理を変更・調査するとき。
+- cmoc 管理下の linked worktree の作成・削除、branch との対応、安全性検証を変更・調査するとき。
+- `.cmoc/gu` の ignore 保証、Git ignore file の検証、oracle/realization file の判定を変更・調査するとき。
 
 ## Do not read this when
-- CLI の個別コマンドや state/report の処理だけを変更・調査し、Git 境界の共通挙動に関係しないとき
-- Git 管理外の一般的な path 操作や、worktree・ignore・oracle/realization 分類を直接利用しない処理を確認するとき
+- Git や worktree を使わない機能の実装・調査を行うとき。
+- 個別の CLI command の振る舞いだけを確認する場合で、共通 Git 境界の契約や実装を直接扱わないとき。
+- oracle/realization の定義そのものや prompt 生成規則を確認する場合は、対応する正本仕様を直接読むとき。
 
 ## hash
-- d72d562b804fb6f6985663b8e7994bf6cce6a3338a7308f6f675e6edcf3adfd8
+- 8b63f398ce78fe82f938df9f8e2f29878944bf5c40c9e7282beb8ca07c85451d
 
 # `runtime_logging.py`
 
@@ -289,21 +296,20 @@
 # `runtime_paths.py`
 
 ## Summary
-- リポジトリ・worktree・cmoc ルートの解決、実行時 timestamp と duration の整形、各種 runtime 保存先 path の構築、cwd の一時切替を提供する共通 runtime path helper。関連する CLI の保存先、ログ、session、worktree、root 解決、pushd の挙動を確認する際の入口。
+- リポジトリ、worktree、cmoc 自身の root 解決と、実行時の各種ディレクトリ・設定・状態ファイルのパス導出を担う共通 runtime path モジュール。timestamp 生成、duration 表示整形、timestamp 付きパス予約、root memo 判定、cwd の一時切替も提供する。
+- root 解決や runtime directory の保存先、ログ・report・schema・worktree などのパスを利用する下位実装へ進むための共通入口。
 
 ## Read this when
-- root placeholder の実パス解決や、repo/worktree/cmoc root の runtime error 処理を変更・調査するとき
-- session、report、log、schema、worktree など cmoc 管理ディレクトリの保存先を変更・調査するとき
-- timestamp、console timestamp、duration 表示、timestamp path の排他的予約を変更・調査するとき
-- process-global な cwd 切替や、cwd 起点の root 解決の thread safety を変更・調査するとき
+- リポジトリ root、worktree root、cmoc root の解決挙動を変更・確認するとき
+- session、report、log、schema、worktree、設定、refactor state などの保存先を扱う処理を変更・確認するとき
+- timestamp、duration 表示、timestamp 付きファイル予約、cwd 切替、memo 配下判定の共通挙動を変更・確認するとき
 
 ## Do not read this when
-- 特定サブコマンドの保存内容やログ形式そのものを確認する場合は、該当するサブコマンドの実装・oracle doc を直接読む
-- path placeholder の定義や root 探索アルゴリズム自体を確認する場合は、basic.path_model の実装・oracle src を直接読む
-- runtime path helper と無関係な CLI 入出力、agent call、schema 内容を変更・調査するとき
+- 特定のサブコマンド固有のログ・report 内容や保存処理を確認する場合は、そのサブコマンドの実装・仕様へ直接進むとき
+- root placeholder の定義や実パス解決そのものの仕様を確認する場合は、path model の実装・仕様へ直接進むとき
 
 ## hash
-- 106740a2370f965eb4c136399ac4b2a49cad93ae5c26c7a975d9599b1c6e13a7
+- 4eae4e541f9b83357378196e3c7349a0369a99264dbb3a6aa3786bfd7db8fccc
 
 # `runtime_refactor.py`
 

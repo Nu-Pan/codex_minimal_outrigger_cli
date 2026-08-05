@@ -15,47 +15,53 @@ _CWD_LOCK = threading.RLock()
 _CWD_OVERRIDE_DEPTH: ContextVar[int] = ContextVar("CWD_OVERRIDE_DEPTH", default=0)
 
 
-def repo_root(cwd: Path | None = None) -> Path:
+def repo_root(root_anchor: Path | None = None) -> Path:
     """cmoc の実行前提に合う repository root を runtime error として解決する。"""
     try:
-        return _resolve_root(RootPathPlaceHolder.REPO, cwd)
+        return _resolve_root(RootPathPlaceHolder.REPO, root_anchor)
     except ValueError as exc:
         raise CmocError(
             "{{repo-root}} を特定できません。",
             ["git repository 内から cmoc を再実行してください。"],
-            str(cwd or Path.cwd()),
+            str(root_anchor or Path.cwd()),
         ) from exc
 
 
-def work_root(cwd: Path | None = None) -> Path:
+def work_root(root_anchor: Path | None = None) -> Path:
     """cmoc の実行前提に合う worktree root を runtime error として解決する。"""
     try:
-        return _resolve_root(RootPathPlaceHolder.WORK, cwd)
+        return _resolve_root(RootPathPlaceHolder.WORK, root_anchor)
     except ValueError as exc:
         raise CmocError(
             "{{work-root}} を特定できません。",
             ["git worktree 内から cmoc を再実行してください。"],
-            str(cwd or Path.cwd()),
+            str(root_anchor or Path.cwd()),
         ) from exc
 
 
-def _resolve_root(placeholder: RootPathPlaceHolder, cwd: Path | None) -> Path:
+def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) -> Path:
     """指定された起点から root placeholder を実パスへ解決する。
 
     Args:
         placeholder: 解決対象の root placeholder。
-        cwd: 起点にする file または directory。None は現在の cwd を使う。
+        root_anchor: 起点にする file または directory。None は process の cwd を使う。
 
     Returns:
         placeholder が示す絶対 root path。
     """
     with _CWD_LOCK:
-        if cwd is None:
+        if root_anchor is None:
             return resolve_real_path(placeholder)
+        # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+        # root 探索の起点は file または directory なので、process の cwd と区別する。
         # relative path の解決から root resolver の完了まで process-global cwd を
         # 固定し、別 thread の pushd と起点 path が混線しないようにする。
-        resolved_cwd = cwd.resolve()
-        start_dir = resolved_cwd if resolved_cwd.is_dir() else resolved_cwd.parent
+        resolved_root_anchor = root_anchor.resolve()
+        start_dir = (
+            resolved_root_anchor
+            if resolved_root_anchor.is_dir()
+            else resolved_root_anchor.parent
+        )
         # 存在しない file/directory を起点にしても、既存の祖先から root を探索できる。
         while not start_dir.is_dir():
             parent = start_dir.parent

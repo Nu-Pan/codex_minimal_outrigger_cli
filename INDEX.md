@@ -129,33 +129,36 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装を構成するトップレベル領域。Typer CLI の公開入口、サブコマンド実装、共通 runtime、ACP・設定・基本型の互換 import、oracle package shim を扱う。各領域の詳細調査へ進むための入口。
+- cmoc の realization 実装を収める src ディレクトリ。CLI の主要入口、サブコマンド、共通 runtime、互換 import shim を扱い、個別機能の調査では担当する下位要素へ進むための階層入口となる。
+- ACP、設定、runtime、oracle などの互換 import 入口と、Typer CLI から各サブコマンドへ委譲する構成を確認できる。
 
 ## Read this when
-- cmoc の CLI 全体構成や realization 実装の主要領域を切り分けるとき。
-- CLI 登録入口、サブコマンド、共通 runtime、互換 import 経路の関係を確認するとき。
+- cmoc の src 配下にある CLI 入口、サブコマンド、共通 runtime、互換 import の構成を切り分けるとき。
+- 公開 import path の互換維持や oracle 側実装への委譲経路を調査するとき。
+- 特定の CLI サブコマンドや runtime 機能へ進む前に、該当する実装要素の入口を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理詳細は、対応する下位実装を直接読む。
-- 共通 runtime の個別挙動、ACP・設定・基本型の定義、oracle 側の実装を確認したいときは、それぞれの直接の実装元を読む。
+- 個別サブコマンドの処理内容や runtime 機能の詳細だけを確認したいときは、対応する下位実装を直接読む。
+- 設定仕様、ACP 型、構造化文書 API、oracle 側実装などの正本定義を確認したいときは、対応する oracle file を直接読む。
+- src と無関係な利用者向け仕様やテストだけを調査するとき。
 
 ## hash
-- 4fc1a7c9d6e89b40f3320347bbf2d9439df5b68c7abb723ea07be1764aa21b3d
+- f5a13a6b2e3664f88e64890469b73a40ab3c4cfd1729c2b44392643874c87185
 
 # `test`
 
 ## Summary
-- テストコードから正本 schema を参照する helper、CLI・runtime・worktree・Git・Codex・Ollama・indexing・oracle review などの realization test を集約する領域。個別機能の外部挙動や境界条件を検証するテストへの入口であり、共有テスト補助も含む。
+- `test` ディレクトリは、cmoc の実装・CLI・Codex 実行経路・Git/worktree lifecycle・設定・永続 state・indexing・oracle review などを対象に、外部挙動と仕様適合性を検証する realization test 群を集約する。個別機能の回帰テスト、共有テストヘルパー、実 Codex/Ollama を用いる統合・受け入れテストが下位要素への入口となる。
 
 ## Read this when
-- 特定の CLI、runtime、builder、worktree、state、indexing、oracle review などの外部挙動や回帰条件を検証・変更するとき。
-- 対象機能に対応する realization test の範囲、fixture、期待される境界条件を把握したいとき。
-- Codex、Ollama、Git、fake external command など、テスト環境を準備する共有 helper の使い方を確認するとき。
+- cmoc の実装変更に対する対応テストや、既存テストが検証する外部契約を探すとき。
+- CLI、Codex runtime、indexing、oracle review、session/run lifecycle、設定、worktree、state などの機能別テスト対象を選ぶとき。
+- テスト用 Git・Ollama・Codex 環境や共有 helper の利用方法を確認するとき。
 
 ## Do not read this when
-- 正本仕様、schema、builder、実装本体の責務を確認・変更するときは、対応する oracle または realization implementation を直接読む。
-- テスト実行手順全体を確認するときは、repository local の test execution の正本仕様を読む。
-- 対象機能と無関係なテストや共有 helper を読む必要はない。
+- 正本仕様、schema、builder の定義そのものを確認・変更するときは、対応する oracle doc・oracle source・oracle schema を直接読む。
+- 実装詳細や単一機能の責務だけを調査するときは、対応する `src` の実装へ直接進む。
+- テスト実行全体の手順や品質検査を確認するときは、専用の test execution 仕様を読む。
 
 ## hash
-- 79c0beced016ef00bbb051eb385536ad8819876e7581201041e57005d52eb5c6
+- d0be4607d4830b87225a20e12227afc89a0ee56ddbe6c215063f3cf6514e7a51

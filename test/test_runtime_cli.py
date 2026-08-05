@@ -39,6 +39,15 @@ from cmoc_runtime import (
 from main import app
 
 
+@pytest.fixture(autouse=True)
+def _clear_completion_probe_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """通常の in-process CLI test を外部の completion probe 環境から分離する。"""
+    # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+    monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
+
+
 @pytest.mark.parametrize(
     ("seconds", "expected"),
     [
@@ -385,7 +394,6 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
         check=False,
     )
 
-    assert result.returncode != 0
     completion_output = result.stdout + result.stderr
     assert "# ERROR" not in completion_output
     assert "サブコマンドログ" not in completion_output

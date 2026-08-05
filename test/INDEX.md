@@ -321,20 +321,19 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex exec の retry、失敗、中断、Structured Output 検証、JSONL error、差分保持を外部挙動として検証するテスト群。fake Codex の応答、subprocess 呼び出し回数、call log、subcommand event、最終結果を同じ状態機械の文脈で確認する。
+- Codex exec の retry・失敗処理を、Structured Output 検証、capacity retry、JSONL error、中断、retry 上限、ログ記録、agent diff 保持まで一貫した外部挙動として検証するテスト。Codex subprocess の呼び出し回数、retry 状態、call log、subcommand event の対応も確認する。
 
 ## Read this when
-- run_codex_exec の retry 条件、retry 上限・backoff、capacity／semantic failure の扱いを変更または調査するとき
-- Codex 呼び出しの call log、JSONL error、subcommand event、KeyboardInterrupt の記録を変更または検証するとき
-- Structured Output schema の検証失敗、未知の JSONL error、retry 中の agent diff 保持を確認するとき
+- run_codex_exec の retry 条件、Structured Output の検証失敗・parse 失敗、capacity error、未知の JSONL error、中断時の挙動を変更または調査するとき
+- Codex 呼び出しの call log、prompt・stdout・output の保存、subcommand event の status や returncode を確認するとき
+- retry 中に生成された agent diff の保持や retry 上限・backoff を検証するとき
 
 ## Do not read this when
-- Codex exec の実装詳細そのものを変更・調査する場合は、まず対応する realization implementation と正本仕様を読むとき
-- Codex exec と無関係な CLI、ログ、schema、retry 機能の変更を扱うとき
-- 単に通常成功時の Codex 出力形式だけを確認したいとき
+- Codex exec の実装詳細や正本仕様そのものを確認したいときは、対応する runtime 実装または oracle 仕様を直接読む
+- retry や失敗処理と無関係な Codex 呼び出し、ログ機構、または別のテスト領域を扱うとき
 
 ## hash
-- 84b0b2cfe79705c6f315d07a3f3acee5d05341788c6dfd9e5987d8f5d9d3b86c
+- 2e6fd38f1fd4f079edb76ac8d55800caed887c5553d1f7ac7659f25d2eac9b5f
 
 # `test_codex_runtime_subprocess.py`
 
@@ -444,19 +443,20 @@
 # `test_indexing_preflight.py`
 
 ## Summary
-- Codex 呼び出し直前に実行される indexing preflight の統合テスト。exec/TUI 経路での実行順序、対象 worktree の選択、repository lock 待機、preflight 無効化、file access violation 後の recovery indexing 非実行、および indexing commit と作業ツリー状態を検証する。
+- Codex exec／TUI 呼び出し直前の indexing preflight のテスト群。preflight の実行順序、対象 root／linked worktree の選択、repository lock 待機、パラメータによる無効化、および file access violation 後に recovery indexing を行わない制約を検証する。indexing と Codex 呼び出しの統合挙動を確認する realization test の入口。
 
 ## Read this when
-- Codex 呼び出し前の indexing preflight の挙動を変更・調査するとき
-- exec または TUI の Codex 実行順序、worktree 選択、lock 制御を変更するとき
-- file access violation や preflight 無効化時の indexing 回数を検証するとき
+- Codex 呼び出し前の indexing preflight の動作、実行順序、対象 worktree 選択を変更または検証するとき
+- repository lock による preflight の待機や、preflight 無効化条件を変更するとき
+- file access violation 発生時の recovery 方針や Codex 呼び出し回数を変更するとき
 
 ## Do not read this when
-- indexing の生成ロジック自体を変更・調査するときは、対応する commons indexing 実装とその専用テストを読む
-- Codex 呼び出し preflight と無関係な CLI 機能や一般的なテスト基盤を扱うとき
+- INDEX.md の生成ロジック自体や indexing 実装の詳細を確認したいときは、indexing 実装側のテストまたは仕様を直接読む
+- Codex CLI 呼び出し単体の引数・結果処理を確認したいときは、Codex runtime の実装・テストを直接読む
+- preflight と無関係な CLI 経路や一般的な repository test fixture を扱うとき
 
 ## hash
-- a810d7d5439cbc195e2c278369349a1cc90aa31015ac3000db918cd3e1e3cfd4
+- 7dd35c562ccb6e88dc06a7a73aee87930908a29cb85c44c0564a2abe2c14cb0f
 
 # `test_oracle_edit_cli.py`
 
@@ -634,21 +634,23 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の error report、console/log 出力、duration 表示、サブコマンドログ、doctor preflight、work root 検証、completion probe の外部契約を検証するテスト。共通 runner における終了コード、例外処理、ログ flush 失敗、Ctrl+C、並列イベント記録、現在の worktree の扱いまで確認する。
+- CLI の共通 runner と終了処理を通じた error report、console log、preflight、shell completion の外部契約を検証するテスト。
+- duration 表示、サブコマンドログの衝突・並列書き込み、doctor preflight、CLI 解析エラー、work root 制約、completion probe、KeyboardInterrupt、終了コードを扱う。
+- CLI lifecycle の複数境界を横断して確認するため、個別の error・log・preflight・completion テストではなく、共通 runner の挙動を調査・変更するときの入口となる。
 
 ## Read this when
-- CLI のエラー表示や終了コードを変更・調査するとき
-- サブコマンドログ、console log、duration 表示の仕様を変更・調査するとき
-- doctor preflight、pre-log check、work root 検証、completion の副作用境界を変更・調査するとき
-- 共通 CLI runner の例外処理や終了処理を検証するとき
+- CLI の error report や終了コード、stdout/stderr 出力を変更・調査するとき
+- サブコマンドログ、runner、doctor preflight、work root 判定の挙動を変更・調査するとき
+- shell completion probe が通常の CLI 初期化や副作用を回避する境界を変更・調査するとき
+- duration 表示または並列 logger の挙動を変更・調査するとき
 
 ## Do not read this when
-- CLI の個別サブコマンドの業務ロジックだけを変更・調査するとき
-- CLI と無関係な parser、状態管理、Git 操作の単体挙動だけを確認するとき
-- error、log、preflight、completion の外部契約を経由しない実装を直接確認するとき
+- CLI の業務処理そのものや、特定サブコマンドの実装だけを変更・調査するとき
+- error report の仕様、ログ形式、completion、doctor preprocess の正本仕様を確認するときは、対応する oracle 文書を直接読む
+- CLI と無関係なテストや、共通 runner・終了処理を通らない単体処理を調査するとき
 
 ## hash
-- 2d758f5d6623c0c319c723aaefa6a539f938dbac9e1126493102566ca679f24c
+- 7520ad8a76eaed8d8e9ab20ef600e2f6f72e12ed4d77742a4b6ca64a90ddfadc
 
 # `test_runtime_codex_conflicts.py`
 
@@ -807,18 +809,16 @@
 # `test_runtime_wrapper.py`
 
 ## Summary
-- bin/cmoc の起動時に、仮想環境の Python 実行ファイルが不足・不正な場合のエラーレポートを検証するテスト。missing venv、通常ファイルでない venv path、Python として起動できない executable を対象とする。
+- bin/cmoc の起動時に仮想環境の Python が利用できない場合のエラーレポートを検証するテスト。missing venv、通常ファイルでない venv パス、Python として起動できない実行ファイルを対象に、終了コード・stdout の report 構造・call stack の root token path・次のアクションを確認する。
 
 ## Read this when
-- bin/cmoc の仮想環境検査、起動失敗時の終了コード、標準出力のエラーレポート、Call stack 表示を変更・調査するとき。
-- wrapper が仮想環境の異常をどのように利用者へ通知するかを確認するとき。
+- bin/cmoc の仮想環境検査、起動失敗時のエラーレポート、wrapper の call stack 表示を変更または検証するとき。
 
 ## Do not read this when
-- 補完プローブ環境や通常の CLI 補完挙動だけを変更・調査するとき。
-- bin/cmoc 以外の実行経路のエラー処理や、仮想環境検査を伴わない CLI 機能を扱うとき。
+- 通常の CLI 機能や補完プローブの挙動だけを変更・調査するとき。仮想環境検査と wrapper の失敗 report に直接関係しないテストを扱うとき。
 
 ## hash
-- 3f095faa60df18e5840c6d8e1b7db9df4376d874d974d4b06ea51c439cca62fa
+- 777dd4f6844721c51f36f16bb80f4c7d61c30c4c8853372891e7c4e3874c7335
 
 # `test_session_cli.py`
 

@@ -20,6 +20,26 @@ def _clear_completion_probe_environment(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
 
 
+def _assert_error_report(result: subprocess.CompletedProcess[str]) -> None:
+    """wrapper の失敗が必要な report 項目を stdout に含むことを確認する。"""
+    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    report = result.stdout
+    assert result.returncode == 1
+    assert result.stderr == ""
+    assert report.startswith("# ERROR\n")
+
+    header, report = report.split("## Summary\n", 1)
+    summary, report = report.split("## Next actions\n", 1)
+    next_actions, report = report.split("## Detail\n", 1)
+    detail, call_stack = report.split("## Call stack\n", 1)
+    assert header == "# ERROR\n"
+    assert summary.strip()
+    assert next_actions.strip()
+    assert sum(line.startswith("- ") for line in next_actions.splitlines()) >= 2
+    assert detail.strip()
+    assert call_stack.strip()
+
+
 def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:
     """起動 wrapper の missing venv report は root token path で位置を出す。"""
     fake_cmoc_root = tmp_path / "cmoc"
@@ -35,8 +55,7 @@ def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -
         check=False,
     )
 
-    assert result.returncode == 1
-    assert "## Call stack" in result.stdout
+    _assert_error_report(result)
     assert "({{cmoc-root}}/bin/cmoc:" in result.stdout
     assert "(./bin/cmoc:" not in result.stdout
     assert "(bin/cmoc:" not in result.stdout
@@ -59,10 +78,7 @@ def test_bin_cmoc_non_file_venv_path_uses_error_report(tmp_path: Path) -> None:
         check=False,
     )
 
-    assert result.returncode == 1
-    assert "# ERROR" in result.stdout
-    assert "## Call stack" in result.stdout
-    assert result.stderr == ""
+    _assert_error_report(result)
 
 
 @pytest.mark.parametrize("fake_exit_code", [0, 42])
@@ -87,7 +103,4 @@ def test_bin_cmoc_non_python_executable_uses_error_report(
         check=False,
     )
 
-    assert result.returncode == 1
-    assert "# ERROR" in result.stdout
-    assert "## Call stack" in result.stdout
-    assert result.stderr == ""
+    _assert_error_report(result)
