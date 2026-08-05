@@ -142,17 +142,17 @@
 # `test`
 
 ## Summary
-- realization test を集約するディレクトリ。CLI、runtime、worktree・Git・state lifecycle、Codex/Ollama 実行経路、builder・prompt・schema、oracle review/edit、indexing、設定・補助機能など、実装の外部挙動と統合契約を検証する。個別機能の回帰テストや共有テストヘルパーへ進む入口となる。
+- realization test 群を集約するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定、Git、prompt、packaged import など、cmoc の実装契約と外部挙動を pytest で検証する。各テストファイルが個別機能・境界条件の直接の入口となる。
 
 ## Read this when
-- 実装変更がどの realization test や共有 fixture に影響するか確認するとき。
-- CLI、runtime、Codex 実行、indexing、oracle review/edit、session/run lifecycle、設定、builder の外部契約を検証または変更するとき。
-- テスト用 Git repository、fake command、case-local Ollama、Codex 環境などの共有支援機能を利用・変更するとき。
+- 複数の機能領域にまたがる回帰テストの対象を探すとき
+- 実装変更に対応する realization test の候補を選ぶとき
+- CLI、Codex 実行、indexing、oracle review、session/run lifecycle の外部挙動や統合契約を検証するとき
 
 ## Do not read this when
-- 正本仕様、schema、prompt 規範、CLI 契約そのものを確認・変更するときは、対応する oracle file を直接読む。
-- 単一の実装詳細を確認するだけなら、対応する src の realization implementation を直接読む。
-- テスト実行全体の選択・品質検査手順だけを確認するときは、test execution の正本仕様を読む。
+- 正本仕様や Structured Output schema の内容を確認したいときは、対応する oracle doc または oracle source を直接読む
+- 単一機能の実装詳細を確認したいときは、このディレクトリ全体ではなく対応する src と専用テストを読む
+- テスト実行手順や品質検査の選択を確認したいときは、test execution の正本仕様を読む
 
 ## hash
-- 88e43a9345770eef1163aca195f2e18876d0a430cd9c9d03201b62c02c339bd1
+- 2b4d6b38285d150ec827b17a76e7cf1aa310463b4445cf44e9f092bfaec4ff0b

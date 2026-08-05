@@ -498,18 +498,19 @@
 # `test_oracle_review_merge_operations.py`
 
 ## Summary
-- oracle review の finding merge operation 適用契約を検証するテスト。delete・replace・merge の kind ごとの finding 更新と追加数、および未知の target ID を位置情報付きで報告する postcondition を扱う。oracle review 実装の merge 処理や review loop の入力 ID 検証を確認する入口。
+- oracle review の finding merge operation 適用契約を検証するテスト。delete・replace・merge の kind ごとの更新結果、finding_id 採番、既知でない target_id の位置付きエラー報告を確認する。
 
 ## Read this when
-- oracle review の merge operation 適用動作を変更・検証するとき
-- finding の delete・replace・merge 契約や target ID 検証のテスト影響を確認するとき
+- oracle review の merge operation の挙動や契約を変更・検証するとき
+- finding の削除・置換・統合後の内容や追加件数を確認するとき
+- merge 操作が未知の finding_id を参照した場合の事後条件を確認するとき
 
 ## Do not read this when
-- merge operation 以外の oracle review 挙動を調べるとき
-- oracle review の正本仕様を確認するときは、参照されている oracle doc を直接読む
+- oracle review の merge operation と無関係な実装やテストを調査するとき
+- oracle review の仕様本文や実装詳細を直接確認する必要があるときは、対応する oracle 文書・ソースを読む
 
 ## hash
-- dbf61e686c419072b391772298a10fb4d520d5453b907ef255b0e3ad84811c22
+- 72576ff9d5f5672d1a5009f090d82c91c8955395d69903dc5d0e9de1ec0dd7a2
 
 # `test_oracle_review_report.py`
 
