@@ -18,20 +18,21 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc から `codex exec` を呼び出す際の正本規約。agent call の path context、環境変数、preflight、CLI 設定上書き、sandbox・ファイルアクセス、モデル/provider、prompt・ログ・Structured Output、並列実行、失敗時の retry・quota 待機、`.agents` 編集禁止を定義する。codex exec の呼び出し実装や設定、prompt builder、ログ保存、失敗処理を調査・変更する際の入口。
+- cmoc が Codex CLI を呼び出す際の基本規約を定義する正本仕様。agent call の path context、環境変数、事前検証、CLI 引数、sandbox、モデル・provider、prompt の受け渡し、ログ保存、Structured Output 検証、並列実行、失敗時のリトライと待機を扱う。Codex 呼び出し処理やその検証・エラーハンドリングの実装へ進む入口となる。
 
 ## Read this when
-- `codex exec` の argv、sandbox、approval、model/provider、reasoning effort、`CODEX_HOME` の扱いを実装またはレビューするとき
-- agent call の path context、prompt の構築・受け渡し、Structured Output、stdout/stderr/output log の保存規約を確認するとき
-- Codex CLI 呼び出しの retry、quota 待機、server capacity 対応、異常終了処理を変更または調査するとき
-- `.agents` 配下の編集禁止や command 単位の sandbox escalation を含む cmoc 固有の呼び出し制約を確認するとき
+- cmoc の Codex CLI 呼び出し方法や argv、sandbox、provider、モデル、reasoning effort を変更・検証するとき
+- prompt、ログ、session、Structured Output の保存・検証・補正処理を変更・検証するとき
+- quota、レートリミット、一時的なサーバー障害など Codex 呼び出し失敗時の処理を変更・検証するとき
+- agent call の path context や並列呼び出しの扱いを確認するとき
 
 ## Do not read this when
-- Codex CLI 呼び出しや cmoc の agent call 規約に関係せず、通常のプロダクト機能や一般的な CLI 実装だけを調査するとき
-- `AgentCallParameter` や prompt builder の具体的なデータモデル・生成ロジックを直接確認する必要があるときは、先に対応する oracle src の定義を読む
+- Codex CLI 呼び出し自体ではなく、個別の prompt 部品や AgentCallParameter builder の詳細なデータモデルだけを調べるときは、それぞれの正本実装・仕様を直接読む
+- 通常の realization テスト実行手順だけを確認するときは、開発ルールのテスト実行手順を直接読む
+- Codex 呼び出しと無関係な cmoc の機能を調査・変更するとき
 
 ## hash
-- 5de625ab332d342d9d2390773c504de27332611a12822e0948675f8ee7182211
+- 27206b325bc56ecab208cd8dbce8eb14a92ff2875eb05b92913d8ade5576ed83
 
 # `codex_model_provider.md`
 
@@ -161,20 +162,20 @@
 # `prompt_standard.md`
 
 ## Summary
-- cmoc が agent call に渡すプロンプトの正本規範を定める oracle doc。cmoc 固有契約と installed skill の責務境界、規範の決定論的注入、Structured Output schema の責務、oracle src による prompt 構築、placeholder・参照記法・言語方針を扱う。プロンプト生成や関連する契約の確認における入口となる。
+- cmoc が agent に渡すプロンプトの規範を定める oracle doc。cmoc 固有契約と installed skill の責務境界、Structured Output の schema・事後条件、oracle src の prompt builder 利用、placeholder・参照記法、使用言語を扱う。プロンプト生成や受理条件、cmoc 固有の agent call 契約を確認する際の入口となる。
 
 ## Read this when
-- agent call のプロンプト構築規則、cmoc 固有契約と skill の優先関係、Structured Output schema の責務を確認するとき
-- placeholder、cmoc_block/cmoc_ref、Markdown/GFM、プロンプト言語の仕様を変更またはレビューするとき
-- prompt builder の実装が従うべき正本規範を確認するとき
+- agent call の初回プロンプトや補正プロンプトの構築規則を変更・確認するとき
+- Structured Output の schema、決定論的事後条件、受理条件の責務分担を確認するとき
+- prompt builder、placeholder、cmoc_block/cmoc_ref の記法や検証規則を扱うとき
+- cmoc のプロンプトや作業レポートに適用する言語規則を確認するとき
 
 ## Do not read this when
-- INDEX.md のルーティング方法自体を確認するだけのとき
-- 対象 repository 固有の開発手順や Python 実装規約を確認するときは、対応する repository 文書・設定・script・skill を直接読む
-- 個別の agent call の作業範囲や出力形式だけを確認する場合に、この文書全体を読む必要がないとき
+- 個別の機能実装、テスト、依存関係、対象 repository 固有の開発手順だけを扱うとき
+- プロンプト生成や Structured Output の受理条件に直接関係する別の正本仕様を確認するとき
 
 ## hash
-- ca0179e80487c4a785ed8a5e4184a10ad2f7f23f702efa6636b0c0792bb9fe03
+- 8498cdf4013e64a3efa9cd120a38f3b0f6d5a01cbdf9db4c837472e8d768b16b
 
 # `run_isolation.md`
 
@@ -213,21 +214,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンドと session・run lifecycle に関する正本仕様をまとめたディレクトリ。doctor、indexing、tui、oracle 操作、realization workload、session 操作の仕様確認における入口となる。
-- 各文書は個別サブコマンドまたは lifecycle の責務・前提条件・実行手順・状態管理・エラー処理を扱い、共通仕様や処理内部の詳細は必要に応じて別の正本仕様へ案内する。
+- cmoc の各サブコマンド仕様をまとめた正本ドキュメント群。doctor、indexing、oracle/realization の調査・編集・レビュー、session と run のライフサイクル、tui の責務・起動契約を扱う。各サブコマンドの実装・挙動・テスト条件を確認する際の入口となる。
 
 ## Read this when
-- cmoc のサブコマンド仕様、session または編集 run の lifecycle を調査・実装・変更・レビューするとき。
-- 対象が doctor、indexing、tui、oracle 操作、realization apply/refactor、session fork/join/abandon のいずれかで、対応する正本仕様を選ぶ必要があるとき。
-- 複数のサブコマンドや lifecycle の責務境界を確認するとき。
+- cmoc サブコマンドの挙動、実行条件、引数、処理手順を確認・変更するとき。
+- oracle または realization の調査・編集・レビュー、session/run の fork・join・abandon、TUI 起動の仕様を確認するとき。
+- 対象サブコマンドの責務と、共通ライフサイクルや下位処理仕様への進み先を判断するとき。
 
 ## Do not read this when
-- INDEX.md の生成方法や一般的なルーティング規則だけを確認したいとき。
-- 特定サブコマンドの内部処理、共通 lifecycle、エディタ入力、TUI 起動、Codex CLI 実行規則などを直接確認したいときは、対応する専用の正本仕様へ進む。
-- 実装コードやテストの具体的な詳細だけを調べるとき。
+- 特定サブコマンドの内部処理や共通処理だけを確認する場合は、該当する下位の正本仕様・実装を直接読む。
+- INDEX.md の一般的な生成規則や、Codex CLI・エディタ・doctor preprocess など単独の共通仕様だけを確認する場合。
+- 通常の git 運用や、対象サブコマンドと無関係な機能の仕様を調べる場合。
 
 ## hash
-- c26da80577b26c88c1b190d06b0fdfa41550dc9acfc905258b10c6817447ff19
+- d9ce8ca2008bdec35b05bd0f757db00a45e5e48ae20aecc0e5214c8c94d4c1ac
 
 # `subcommand_interruption.md`
 

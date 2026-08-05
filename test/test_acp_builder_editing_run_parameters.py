@@ -121,8 +121,11 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert str(target_path.resolve()) in review.prompt
     assert "調査開始時点の既存実装ですでに解消されている問題" in review.prompt
     assert "`resolution.status=fixed` は、この agent call 内で" in review.prompt
+    assert "# Structured Output の決定論的事後条件" in review.prompt
     assert "全所見の `changed_paths` の和集合" in review.prompt
-    assert "`evidences[].path` は調査時点の所見の根拠だけ" in review.prompt
+    assert (
+        "`evidences[].path` は変更 path の申告または照合に使用しない" in review.prompt
+    )
     assert "対象 repository が要求する必要な検証" in review.prompt
     assert "# realization oracle reference rule" in review.prompt
     review_schema = json.loads(review.structured_output_schema_path.read_text())
@@ -147,6 +150,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
             "realization", "refactor", "fork", "change_summary.json"
         ).read_text()
     )
+    assert summary_schema["properties"]["changes"]["minItems"] == 1
     start = summary.prompt.index("# run branch 上の refactor 差分")
     end = summary.prompt.rfind("\n\n# place holder definition", start)
     section = summary.prompt[start:end]

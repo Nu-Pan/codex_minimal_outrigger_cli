@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Protocol, Sequence
 
 
 class CodexExecOutput(Protocol):
@@ -22,6 +22,22 @@ class CommandResult:
     returncode: int
     stdout: str
     stderr: str
+
+
+# {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+@dataclass(frozen=True)
+class StructuredOutputValidationIssue:
+    """Structured Output の補正 prompt へ渡す機械的検証エラー。"""
+
+    condition: str
+    location: str
+    expected: str
+    observed: str
+
+
+StructuredOutputPostcondition = Callable[
+    [Any, frozenset[str]], Sequence[StructuredOutputValidationIssue]
+]
 
 
 @dataclass(frozen=True)

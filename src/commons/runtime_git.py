@@ -10,7 +10,9 @@ oracle/realization file の分類は、同じ repository path・Git index・安�
 
 import os
 import shutil
+import stat
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
@@ -38,6 +40,184 @@ CMOC_CONFIG_IGNORE_EXCEPTIONS = (
     "!/.cmoc/gt/ar/realization/refactor/state.json",
 )
 CMOC_IGNORE_PROBE = ".cmoc/gu/.__cmoc_ignore_probe__"
+_CODEX_SNAPSHOT_EXCLUDED_PREFIXES = (
+    Path(".cmoc/gu/ar/log"),
+    Path(".cmoc/gu/ar/schema"),
+)
+
+
+@dataclass(frozen=True)
+class WorktreeArtifact:
+    """作業成果物 1 path の復元可能な filesystem 状態。"""
+
+    kind: str
+    content: bytes | str | None
+    mode: int
+
+
+@dataclass(frozen=True)
+class WorktreeSnapshot:
+    """Codex call の前後で比較する非 ignore 作業成果物の状態。"""
+
+    root: Path
+    entries: tuple[tuple[str, WorktreeArtifact], ...]
+
+    def changed_paths(self, other: "WorktreeSnapshot") -> frozenset[str]:
+        """2 snapshot 間で filesystem 状態が異なる repository 相対 path を返す。"""
+        if self.root != other.root:
+            raise ValueError("worktree snapshot roots do not match")
+        before = dict(self.entries)
+        after = dict(other.entries)
+        return frozenset(
+            path
+            for path in before.keys() | after.keys()
+            if before.get(path) != after.get(path)
+        )
+
+
+def capture_worktree_snapshot(root: Path) -> WorktreeSnapshot:
+    """追跡済みまたは非 ignore の作業成果物を復元可能な形で取得する。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # Codex call の log と schema store は Git ignore 対象なので snapshot へ含めず、
+    # agent が扱う非 ignore の作業成果物だけを固定する。
+    root = root.absolute()
+    fields = run_git(
+        ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], root
+    ).stdout.split("\0")
+    entries: dict[str, WorktreeArtifact] = {}
+    for field in fields:
+        if not field:
+            continue
+        relative = Path(field)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise CmocError(
+                "作業成果物の snapshot を取得できません。",
+                ["repository の Git index と path を確認してください。"],
+                f"invalid path: {field!r}",
+            )
+        if any(
+            relative == prefix or prefix in relative.parents
+            for prefix in _CODEX_SNAPSHOT_EXCLUDED_PREFIXES
+        ):
+            continue
+        artifact_path, artifact = _read_worktree_artifact(root, relative)
+        if artifact is not None:
+            entries[artifact_path] = artifact
+    return WorktreeSnapshot(root, tuple(sorted(entries.items())))
+
+
+def restore_worktree_snapshot(snapshot: WorktreeSnapshot) -> None:
+    """現在の作業成果物を指定 snapshot と同じ filesystem 状態へ戻す。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # Structured Output 補正 turn が変動させた path だけを初回 call 完了時へ戻す。
+    frozen = dict(snapshot.entries)
+    seen: set[frozenset[str]] = set()
+    while True:
+        current = capture_worktree_snapshot(snapshot.root)
+        changed = snapshot.changed_paths(current)
+        if not changed:
+            return
+        if changed in seen:
+            raise CmocError(
+                "補正 turn が変更した作業成果物を復元できませんでした。",
+                ["run worktree の差分を確認してから同じコマンドを再実行してください。"],
+                f"remaining paths: {sorted(changed)!r}",
+            )
+        seen.add(changed)
+        ordered = sorted(changed, key=lambda item: (len(Path(item).parts), item))
+        for relative in ordered:
+            _remove_worktree_artifact(snapshot.root, Path(relative))
+        for relative in ordered:
+            artifact = frozen.get(relative)
+            if artifact is not None:
+                _write_worktree_artifact(snapshot.root, Path(relative), artifact)
+
+
+def _read_worktree_artifact(
+    root: Path, relative: Path
+) -> tuple[str, WorktreeArtifact | None]:
+    """symlink の親をたどらず、最初の filesystem object を読み取る。"""
+    candidate = root
+    for index, part in enumerate(relative.parts):
+        candidate /= part
+        try:
+            metadata = candidate.lstat()
+        except FileNotFoundError:
+            return str(relative), None
+        is_last = index == len(relative.parts) - 1
+        if not is_last and stat.S_ISDIR(metadata.st_mode):
+            continue
+        artifact_relative = candidate.relative_to(root)
+        mode = stat.S_IMODE(metadata.st_mode)
+        if stat.S_ISREG(metadata.st_mode):
+            artifact = WorktreeArtifact("file", candidate.read_bytes(), mode)
+        elif stat.S_ISLNK(metadata.st_mode):
+            artifact = WorktreeArtifact("symlink", os.readlink(candidate), mode)
+        elif stat.S_ISDIR(metadata.st_mode):
+            artifact = WorktreeArtifact("directory", None, mode)
+        else:
+            raise CmocError(
+                "作業成果物の snapshot を取得できません。",
+                ["特殊 file を repository の作業成果物から取り除いてください。"],
+                f"unsupported path: {artifact_relative}",
+            )
+        return str(artifact_relative), artifact
+    return str(relative), None
+
+
+def _remove_worktree_artifact(root: Path, relative: Path) -> None:
+    """root 外の symlink をたどらず、補正 turn 後の object を取り除く。"""
+    candidate = root
+    for part in relative.parts:
+        candidate /= part
+        try:
+            metadata = candidate.lstat()
+        except FileNotFoundError:
+            return
+        if not stat.S_ISDIR(metadata.st_mode):
+            if stat.S_ISLNK(metadata.st_mode) or stat.S_ISREG(metadata.st_mode):
+                candidate.unlink()
+            else:
+                raise CmocError(
+                    "補正 turn が変更した作業成果物を復元できませんでした。",
+                    ["run worktree の差分を確認してください。"],
+                    f"unsupported path: {candidate.relative_to(root)}",
+                )
+            return
+    shutil.rmtree(candidate)
+
+
+def _write_worktree_artifact(
+    root: Path, relative: Path, artifact: WorktreeArtifact
+) -> None:
+    """snapshot の object を symlink のない親 directory 配下へ復元する。"""
+    parent = root
+    for part in relative.parts[:-1]:
+        parent /= part
+        try:
+            metadata = parent.lstat()
+        except FileNotFoundError:
+            parent.mkdir()
+            continue
+        if not stat.S_ISDIR(metadata.st_mode):
+            raise CmocError(
+                "補正 turn が変更した作業成果物を復元できませんでした。",
+                ["run worktree の差分を確認してください。"],
+                f"non-directory parent: {parent.relative_to(root)}",
+            )
+    path = root / relative
+    if artifact.kind == "file":
+        assert isinstance(artifact.content, bytes)
+        path.write_bytes(artifact.content)
+        path.chmod(artifact.mode)
+    elif artifact.kind == "symlink":
+        assert isinstance(artifact.content, str)
+        path.symlink_to(artifact.content)
+    elif artifact.kind == "directory":
+        path.mkdir(exist_ok=True)
+        path.chmod(artifact.mode)
+    else:
+        raise AssertionError(f"unknown worktree artifact kind: {artifact.kind}")
 
 
 def literal_pathspec(path: str) -> str:

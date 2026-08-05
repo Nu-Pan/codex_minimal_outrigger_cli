@@ -96,21 +96,21 @@
 # `review_loop.py`
 
 ## Summary
-- oracle review の finding 列挙、同一対象 finding の関連付け、merge operation 適用、妥当性検証、採否判定を一つの review loop として実行する実装。
-- レビュー進捗を保持し、KeyboardInterrupt 時には完了済みの finding と評価済みファイルだけを部分結果として返す。semantic な merge operation 検証失敗には再試行上限を設け、契約違反時はレビューを失敗させる。
+- oracle review の所見列挙・マージ・妥当性検証・採否判定を一連のループとして実行する実装。中断時には確定済みの所見と評価済みファイルを部分結果として保持し、再開可能な進捗管理を担う。
+- 所見の対象パス正規化、merge 操作の Structured Output 検証、所見リストへの追加・削除・置換適用も扱う。oracle review の状態共有とループ制御を確認するための入口であり、個別 agent prompt の内容を調べる場合は各 review builder へ進む。
 
 ## Read this when
-- oracle review の列挙・merge・validate・judge のループ挙動を変更または調査するとき
-- レビュー中断時の部分保存や evaluated_files、確定済み finding の扱いを確認するとき
-- merge operation の target_ids、delete・replace・merge の検証規則や semantic retry を変更するとき
+- oracle review の列挙、マージ、反証・擁護、採否判定の実行順序やループ回数を変更・確認するとき
+- KeyboardInterrupt 発生時の部分保存、評価済みファイル、確定済み所見の扱いを調べるとき
+- finding の対象 oracle path の関連付けや merge operation の適用・入力 ID 検証を調べるとき
 
 ## Do not read this when
-- oracle review の prompt parameter 構築だけを変更するときは、各 review parameter builder を直接読む
-- oracle review のパス解決規則だけを変更するときは、review_paths の実装を直接読む
-- oracle review の CLI 起動や上位コマンドの進捗表示だけを変更するときは、呼び出し元の sub-command 実装を直接読む
+- 個別の enumerate、validate、judge、merge agent prompt のパラメータ仕様だけを確認したいときは、対応する review builder を直接読む
+- oracle review の CLI 起動条件や利用者向けコマンド仕様だけを確認したいときは、review loop の呼び出し元または oracle review の仕様文書を読む
+- 一般的な finding データ構造やパス操作の定義だけを確認したいときは、対応する review path・finding utility を直接読む
 
 ## hash
-- 57969895f69fcb91848255f0a096f58c74c5cb57d154673d889445b8fbc37503
+- 3bd2bac468cf8543617a42ba0c84d70aaad30d530ae5b088d21e999ce434178f
 
 # `review_paths.py`
 

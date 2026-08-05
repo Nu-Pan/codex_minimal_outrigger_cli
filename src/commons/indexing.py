@@ -9,15 +9,12 @@ hash 検証、書き込み、commit は同じ index plan・lock・Codex context 
 """
 
 import fcntl
-import json
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from contextvars import copy_context
 from dataclasses import dataclass
 from pathlib import Path
-
-from oracle.acp_builder.indexing import index_entry as _index_entry_oracle
 
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from cmoc_runtime import (
@@ -39,13 +36,6 @@ from .runtime_paths import cwd_override_active
 from .runtime_results import CodexExecCallable
 
 CodexExec = CodexExecCallable
-# {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json
-# 正本の必須 field を読み取り、realization 側へ schema を複製しない。
-_INDEX_ENTRY_KEYS = frozenset(
-    json.loads(Path(_index_entry_oracle.__file__).with_suffix(".json").read_text())[
-        "required"
-    ]
-)
 
 
 @dataclass
@@ -377,7 +367,7 @@ def build_index_entry(
         config=load_config(root),
         purpose=f"indexing index entry for {path}",
     ).output_json
-    return render_index_entry(root, path, result or {}, digest=digest).rstrip()
+    return render_index_entry(root, path, result, digest=digest).rstrip()
 
 
 def target_content_for_indexing(path: Path) -> str:
@@ -410,20 +400,16 @@ def index_target_hash(root: Path, path: Path) -> str:
 def render_index_entry(
     root: Path,
     path: Path,
-    entry: dict | None = None,
+    entry: dict,
     digest: str | None = None,
 ) -> str:
-    """Structured Output から INDEX.md entry Markdown を生成する。"""
-    if not isinstance(entry, dict) or set(entry) != _INDEX_ENTRY_KEYS:
-        raise CmocError(
-            "INDEX.md entry 生成結果が不正です。",
-            ["cmoc indexing を再実行してください。"],
-            f"{path.relative_to(root)}: entry の項目が schema と一致していません。",
-        )
+    """schema 検証済み Structured Output から INDEX.md entry を生成する。"""
+    # {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+    # schema 外の意味的な品質を、render 時の追加受理条件として再検証しない。
     digest = digest or index_target_hash(root, path)
-    summary = entry_list(root, path, entry, "summary")
-    read_this_when = entry_list(root, path, entry, "read_this_when")
-    do_not_read_this_when = entry_list(root, path, entry, "do_not_read_this_when")
+    summary = entry["summary"]
+    read_this_when = entry["read_this_when"]
+    do_not_read_this_when = entry["do_not_read_this_when"]
     return "\n".join(
         [
             f"# `{path.name}`",
@@ -441,29 +427,4 @@ def render_index_entry(
             f"- {digest}",
             "",
         ]
-    )
-
-
-def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str]:
-    """Structured Output の必須 list[str] 項目を検証して取り出す。"""
-    value = entry.get(key) if isinstance(entry, dict) else None
-    # {{work-root}}/oracle/doc/app_spec/indexing.md と
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py は、
-    # 対象を読む前に役立つ bullet-only の semantic entry を求める。
-    if (
-        isinstance(value, list)
-        and value
-        and all(
-            isinstance(item, str)
-            and item.strip()
-            and "\n" not in item
-            and "\r" not in item
-            for item in value
-        )
-    ):
-        return value
-    raise CmocError(
-        "INDEX.md entry 生成結果が不正です。",
-        ["cmoc indexing を再実行してください。"],
-        f"{path.relative_to(root)}: `{key}` は 1 件以上の 1 行文字列配列である必要があります。",
     )

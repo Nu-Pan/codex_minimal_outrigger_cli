@@ -1,7 +1,7 @@
 """oracle review の finding 列挙・判定・merge loop を扱う。
 
-この file は 16,000 文字を超えるが、review progress、同一 round の finding、semantic
-retry、interrupt 時の部分保存は同じ review loop 状態を共有する一つの責務である。
+この file は 16,000 文字を超えるが、review progress、同一 round の finding、merge、
+interrupt 時の部分保存は同じ review loop 状態を共有する一つの責務である。
 分割すると、judgement と merge operation の再開・失敗条件を複数 file で追う必要が
 生じるため、現状は oracle review loop として一箇所に保つ。
 
@@ -29,13 +29,13 @@ from acp.builder.oracle.review.validate_finding_advocate import (
 from acp.builder.oracle.review.validate_finding_challenger import (
     build_oracle_review_validate_finding_challenger_parameter,
 )
-from cmoc_runtime import CmocError
-from commons.runtime_results import CodexExecCallable
+from commons.runtime_results import (
+    CodexExecCallable,
+    StructuredOutputValidationIssue,
+)
 from config.cmoc_config import CmocConfig
 
 from .review_paths import finding_oracle_path, oracle_path_key
-
-_MAX_MERGE_FINDING_SEMANTIC_RETRIES = 2
 
 StepCallback = Callable[[int | str, str, str | None], None]
 
@@ -168,8 +168,8 @@ def _run_oracle_review_loop(
             break
         _report_step(step_callback, "4/8, 2/2", "所見リストをマージ", "merge findings")
         for _ in range(config.oracle_review.num_merge_findings_loop):
-            findings, added_count, changed = _merge_findings_with_semantic_retry(
-                log_root, worktree, findings, next_id, config, codex_exec
+            findings, added_count, changed = _merge_findings(
+                log_root, findings, next_id, config, codex_exec
             )
             progress.findings = findings
             if not changed:
@@ -298,51 +298,61 @@ def _validate_and_judge_findings(
     return findings
 
 
-def _merge_findings_with_semantic_retry(
+def _merge_findings(
     log_root: Path,
-    worktree: Path,
     findings: list[dict],
     next_id: int,
     config: CmocConfig,
     codex_exec: CodexExecCallable,
 ) -> tuple[list[dict], int, bool]:
-    """所見リストの編集操作を適用し、意味的な検証失敗だけ再試行する。
+    """所見リストの編集操作を、検証済み Structured Output から適用する。"""
+    # {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py
+    operations = codex_exec(
+        build_oracle_review_merge_finding_parameter(
+            json.dumps(findings, ensure_ascii=False, indent=2)
+        ),
+        root=log_root,
+        config=config,
+        purpose="oracle review merge findings",
+        structured_output_postcondition=lambda output, changed_paths: (
+            _merge_target_id_postcondition(findings, output, changed_paths)
+        ),
+    ).output_json
+    edits: list[dict] = operations["operations"]
+    if not edits:
+        return findings, 0, False
+    merged, added_count = apply_finding_merge_operations(findings, edits, next_id)
+    return merged, added_count, True
 
-    変更不要の空操作はそのまま返し、無効な Structured Output は2回まで
-    再試行した後にレビュー全体を失敗させる。
 
-    根拠:
-        {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
-        {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    """
-    last_error: ValueError | None = None
-    for _ in range(_MAX_MERGE_FINDING_SEMANTIC_RETRIES + 1):
-        operations = codex_exec(
-            build_oracle_review_merge_finding_parameter(
-                json.dumps(findings, ensure_ascii=False, indent=2)
-            ),
-            root=log_root,
-            config=config,
-            purpose="oracle review merge findings",
-        ).output_json
-        edits = list((operations or {}).get("operations", []))
-        if not edits:
-            return findings, 0, False
-        try:
-            merged, added_count = apply_finding_merge_operations(
-                findings, edits, next_id
+def _merge_target_id_postcondition(
+    findings: list[dict],
+    output: object,
+    _artifact_changed_paths: frozenset[str],
+) -> tuple[StructuredOutputValidationIssue, ...]:
+    """merge prompt が宣言する入力 finding_id 参照を検証する。"""
+    # {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py
+    assert isinstance(output, dict)
+    existing_ids = {finding["finding_id"] for finding in findings}
+    issues: list[StructuredOutputValidationIssue] = []
+    for operation_index, operation in enumerate(output["operations"]):
+        for target_index, target_id in enumerate(operation["target_ids"]):
+            if target_id in existing_ids:
+                continue
+            issues.append(
+                StructuredOutputValidationIssue(
+                    condition=(
+                        "operations[].target_ids の各値が、入力された finding_id "
+                        "集合の要素である"
+                    ),
+                    location=(
+                        f"operations[{operation_index}].target_ids[{target_index}]"
+                    ),
+                    expected=repr(sorted(existing_ids)),
+                    observed=repr(target_id),
+                )
             )
-        except ValueError as exc:
-            last_error = exc
-            continue
-        return merged, added_count, True
-    # `{{work-root}}/oracle/doc/app_spec/codex_exec_rule.md` は merge operation contract
-    # violation を semantic response failure として扱う。
-    raise CmocError(
-        "oracle review merge finding の Structured Output 検証に失敗しました。",
-        ["merge finding の Codex 出力と対象 finding_id を確認してください。"],
-        str(last_error),
-    ) from last_error
+    return tuple(issues)
 
 
 def apply_finding_merge_operations(
@@ -350,23 +360,11 @@ def apply_finding_merge_operations(
 ) -> tuple[list[dict], int]:
     """merge finding Structured Output の edit operation を finding list に適用する。"""
     by_id = {finding["finding_id"]: finding for finding in findings}
-    existing_ids = set(by_id)
-    used_ids: set[str] = set()
-    validated_operations: list[tuple[dict, set[str]]] = []
-    for operation in operations:
-        target_ids = _validate_finding_merge_operation(operation, existing_ids)
-        reused_ids = target_ids & used_ids
-        if reused_ids:
-            raise ValueError(
-                "merge finding operation target_ids reuse finding_id: "
-                + ", ".join(sorted(reused_ids))
-            )
-        used_ids.update(target_ids)
-        validated_operations.append((operation, target_ids))
     deleted: set[str] = set()
     additions: list[dict] = []
-    for operation, target_ids in validated_operations:
-        kind = operation.get("kind")
+    for operation in operations:
+        target_ids = set(operation["target_ids"])
+        kind = operation["kind"]
         if kind == "delete":
             deleted.update(target_ids)
         else:
@@ -384,52 +382,3 @@ def apply_finding_merge_operations(
         for finding in findings
         if finding["finding_id"] not in deleted and finding["finding_id"] in by_id
     ] + additions, len(additions)
-
-
-def _validate_finding_merge_operation(
-    operation: dict, existing_ids: set[str]
-) -> set[str]:
-    """1件の merge operation が所見リストへ適用可能か検証する。
-
-    target_ids の形式・既存性・重複と、kind ごとの target/finding の組み合わせを
-    確認し、適用対象 ID の集合を返す。契約違反は ValueError として通知する。
-
-    根拠:
-        {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
-    """
-    kind = operation.get("kind")
-    target_ids = operation.get("target_ids")
-    if not isinstance(target_ids, list) or not all(
-        isinstance(target_id, str) for target_id in target_ids
-    ):
-        raise ValueError("merge finding operation target_ids must be a string list")
-    if len(set(target_ids)) != len(target_ids):
-        raise ValueError(
-            "merge finding operation target_ids must not contain duplicates"
-        )
-    target_id_set = set(target_ids)
-    unknown_ids = target_id_set - existing_ids
-    if unknown_ids:
-        raise ValueError(
-            "merge finding operation target_ids include unknown finding_id: "
-            + ", ".join(sorted(unknown_ids))
-        )
-    if "finding" not in operation:
-        raise ValueError("merge finding operation requires a finding field")
-    finding = operation["finding"]
-    if kind == "delete":
-        if not target_ids or finding is not None:
-            raise ValueError("delete operation requires targets and finding null")
-    elif kind == "replace":
-        if len(target_ids) != 1 or not isinstance(finding, dict):
-            raise ValueError(
-                "replace operation requires exactly one target and a finding object"
-            )
-    elif kind == "merge":
-        if len(target_ids) < 2 or not isinstance(finding, dict):
-            raise ValueError(
-                "merge operation requires at least two targets and a finding object"
-            )
-    else:
-        raise ValueError(f"unknown merge finding operation kind: {kind!r}")
-    return target_id_set

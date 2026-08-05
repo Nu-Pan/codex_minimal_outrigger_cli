@@ -924,7 +924,7 @@ def codex_error_text(stdout_text: str, stderr_text: str) -> str:
 
 
 def extract_resume_token(stdout_text: str) -> str | None:
-    """quota retry で resume できる thread id を Codex JSONL stdout から拾う。"""
+    """`codex exec resume` に渡す session ID を Codex JSONL stdout から拾う。"""
     for line in stdout_text.splitlines():
         try:
             item = json.loads(line)
@@ -932,7 +932,7 @@ def extract_resume_token(stdout_text: str) -> str | None:
             continue
         if not isinstance(item, dict):
             # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # non-object event は resume token を持てない。
+            # non-object event は session ID を持てない。
             continue
         if item.get("type") != "thread.started":
             continue
