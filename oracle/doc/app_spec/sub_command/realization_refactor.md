@@ -88,14 +88,10 @@
 
 1. 調査対象 file の現在の SHA256 を調査時点の hash として取得する。
 2. `build_realization_refactor_fork_file_review_and_fix_parameter` に調査対象 path だけを渡し、所見調査、realization file の修正、および検証を 1 回の agent call で行う。
-3. agent call が正常終了した後、返された Structured Output と、その agent call による realization file の差分から処理結果を決定する。
-    - agent call 開始時点を基準として終了時点に残る realization file の net 差分の path 集合を、agent call が生じさせた実際の変更 path 集合とする。
-    - 実際の変更 path は、正規化済みの `{{work-root}}` 相対 path とする。absolute path と `..` による `{{work-root}}` 外参照を禁止する。
-    - 追加と変更は終了時点の path を含め、削除は開始時点の path を含める。rename は削除と追加として rename 前後の path を含める。
-    - 各所見の `changed_paths` は、その所見への対応によって生じた実際の変更 path を列挙する必須の配列とする。対応する net 差分がない所見では空配列とする。
-    - 全所見の `changed_paths` の和集合を申告された変更 path 集合とする。同じ path が複数の所見に含まれる場合は、重複を除いて集合として扱う。
-    - 申告された変更 path 集合と実際の変更 path 集合は一致しなければならない。実際の変更 path の申告漏れと、実際には変更されていない path の過剰申告は、どちらも Structured Output の契約違反とする。
-    - 差分の帰属判定には `changed_paths` だけを使用する。調査時点の所見の根拠を表す `evidences[].path` を、変更 path の申告または帰属判定に使用してはいけない。
+3. agent call が正常終了した後、機械的検証へ合格した Structured Output と、その agent call による realization file の差分から処理結果を決定する。
+    - `changed_paths` 照合の決定論的事後条件は、`build_realization_refactor_fork_file_review_and_fix_parameter` が初回 prompt に構築する「Structured Output の決定論的事後条件」だけを正本とする。
+    - cmoc は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` に従って同事後条件を検証する。本書に同じ条件を重複定義しない。
+    - 以下で実際の変更 path 集合という場合は、同事後条件の検証で算出した集合を指す。
     - `findings` が空の場合は、所見なしとする。
     - `findings` が 1 件以上あり、全所見の `resolution.status` が `fixed` であり、実際の変更 path 集合が空の場合は、処理結果を所見なしへ正規化する。
     - それ以外の場合は、返された所見を処理結果の所見とする。

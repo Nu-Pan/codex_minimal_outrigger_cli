@@ -7,7 +7,8 @@
   "properties": {
     "changes": {
       "type": "array",
-      "description": "差分を、変更内容の意味論に基づいて分類した要約。空配列は想定しない。",
+      "description": "差分を、変更内容の意味論に基づいて分類した 1 件以上の要約。",
+      "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,

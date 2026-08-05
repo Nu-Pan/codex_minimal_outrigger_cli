@@ -66,7 +66,7 @@
           },
           "changed_paths": {
             "type": "array",
-            "description": "この所見への対応によって生じ、agent call 開始時点を基準として終了時点に残る realization file の net 差分を表す、正規化済みの `{{work-root}}` 相対 path の配列。対応する net 差分がない場合は空配列。追加と変更は終了時点の path、削除は開始時点の path、rename は rename 前後の path で表す。",
+            "description": "この所見への対応による、agent call 開始時点を基準として終了時点に残る realization file の net 差分として申告する、正規化済みの `{{work-root}}` 相対 path の配列。対応する net 差分がない場合は空配列。追加と変更は終了時点の path、削除は開始時点の path、rename は rename 前後の path で表す。",
             "items": {
               "type": "string"
             }
