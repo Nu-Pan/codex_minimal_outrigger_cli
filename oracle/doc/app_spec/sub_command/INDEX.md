@@ -130,20 +130,19 @@
 # `realization_refactor.md`
 
 ## Summary
-- realization refactor fork の目的、状態管理、調査対象選択、処理単位、完了・中断・エラー時の挙動、および report 要件を定義する正本仕様。oracle file と realization file の追従調査を current fork 単位で実行する際の入口となる。
+- realization refactor fork の目的、状態管理、調査ループ、完了・中断・エラー処理、レポート生成を定義する正本仕様。oracle file と realization file の追従調査を current fork 単位で管理し、未解決 target を次回 fork へ引き継がない境界を示す。
 
 ## Read this when
-- realization refactor fork のライフサイクル、state.json の同期や調査要求、unresolved target の扱いを実装・変更・レビューするとき
-- refactor loop の対象選択、処理単位の commit・rollback、完了理由、report または終了 log の仕様を確認するとき
-- 他の realization workload と refactor fork の責務境界を判断するとき
+- realization refactor fork のライフサイクル、state.json の同期、調査対象選択、agent call の処理単位、unresolved target、完了判定を実装・変更・レビューするとき。
+- fork report、終了コード、ユーザー中断、その他のエラー、join 後の動作を確認するとき。
 
 ## Do not read this when
-- 短い変更ループを担う realization apply の仕様だけを確認するとき
-- fork・join・abandon の共通 lifecycle だけを確認するときは、共通 lifecycle の正本仕様を直接読む
-- state の具体的な実装やテストだけを確認し、refactor fork の挙動仕様自体を変更・検証しないとき
+- 短い変更ループを担う realization apply の仕様だけを確認するとき。
+- 共通の fork・join・abandon lifecycle の一般仕様だけを確認するときは、共通 lifecycle の正本仕様を直接読む。
+- Codex agent call の一般的な事後条件や実行規則だけを確認するときは、Codex exec の正本仕様を直接読む。
 
 ## hash
-- 18ba799a7222c87510c9447ed3ac78426e3774bd958c3261fdfb9d561dbbb812
+- 9ac7f96eca7d16d0d4712976e95bb8e540cb6783af901a42589abbd2532db87f
 
 # `session_abandon.md`
 

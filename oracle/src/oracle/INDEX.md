@@ -1,19 +1,20 @@
 # `acp_builder`
 
 ## Summary
-- AIエージェント呼び出しに関する正本ソースの配置領域。共通パラメータモデル、INDEX生成、oracle・realization・session・tui 各機能の起動パラメータ構築を扱う下位ファイルへの入口であり、`apply` は参照可能な正本ソースの有無を確認するための空の追加予定領域。
+- oracle の agent call パラメータ構築に関する正本実装を用途別にまとめたディレクトリです。共通の呼び出しパラメータ型、INDEX.md 生成、oracle 関連、realization 関連、session join、TUI 起動の各実装への入口を提供します。
 
 ## Read this when
-- AIエージェント呼び出し設定や各サブコマンドの起動パラメータ構築について、該当する下位実装の入口を選ぶとき。
-- この領域に新しい正本ソースが追加されているか確認するとき。
+- AgentCallParameter の型やモデル・推論強度・アクセスモードを確認するとき。
+- INDEX.md エントリー生成のスキーマや構築処理を調査するとき。
+- oracle、realization、session join、TUI など特定用途の agent call パラメータ構築を変更・調査するとき。
 
 ## Do not read this when
-- 個別機能の具体的な処理内容や実装詳細を確認したい場合は、該当する下位ファイルを直接読むとき。
-- 共通仕様、prompt 構築規則、パス解決、agent call パラメータ型の定義だけを確認したいとき。
-- 実際の INDEX.md ルーティング内容を判断したいとき。
+- 実際の処理本体、差分適用、競合解消、git 操作を調査するとき。
+- 共通 prompt 構築やパスコンテキストなど、各用途の下位実装より共通領域を直接確認すべきとき。
+- 個別の構造化出力フィールド定義だけを確認するとき。
 
 ## hash
-- 9d95d3b381413af8377bb2e1f8602dfbf3883b336b20ef33aff55919e0c17e3f
+- 2a571ac6da46c0f867122d11910d7f72f3de07fb3e0e1f7ea3e97ffe585a2479
 
 # `other`
 

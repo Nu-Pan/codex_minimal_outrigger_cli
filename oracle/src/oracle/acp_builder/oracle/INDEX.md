@@ -30,16 +30,16 @@
 # `review`
 
 ## Summary
-- `cmoc oracle review` の各段階で使う、所見列挙・判定・擁護・反証・統合に関する Structured Output schema と agent call パラメータ構築実装をまとめた領域。レビュー処理の個別段階を調査する入口となる。
+- `cmoc oracle review` の所見生成・検証・判定・統合に用いる agent call パラメータ構築実装と、各処理の Structured Output schema をまとめた領域。oracle review の各段階へ進むための入口となる。
 
 ## Read this when
-- `cmoc oracle review` の所見生成、妥当性判定、擁護・反証理由の列挙、所見統合を変更または調査するとき。
-- 各処理の prompt、oracle-only アクセス、モデル設定、作業ディレクトリ、Structured Output schema の接続を確認するとき。
+- `cmoc oracle review` の所見列挙、妥当性検証、採否判定、重複・矛盾の統合処理を変更・調査するとき。
+- レビュー用 prompt、oracle-only の実行条件、モデル設定、Structured Output schema の接続を確認するとき。
 
 ## Do not read this when
-- レビュー基準や個別所見の内容を確認するときは、対応する oracle review 仕様やレビュー対象を直接読む。
-- 共通の agent call パラメータ、prompt 構築、パス解決の仕様だけを確認するときは、参照先の共通モジュールを直接読む。
-- 所見統合結果の適用処理など、agent call パラメータ構築以外の実装を調査するときは、該当する実行・編集側の実装を直接読む。
+- レビュー所見そのものや oracle file のレビュー基準を確認するとき。
+- oracle review 全体の制御フローや共通の agent call・prompt 構築仕様だけを確認するとき。
+- 特定の判定結果・擁護理由・反証理由の出力形式だけを確認するときは、対応する JSON schema を直接読む。
 
 ## hash
-- b905b66d3e6f9d152ffc02296b9fef4fe75b8bdf0ed2d91af1efb37a647dfb93
+- aa5a80c4e150edd79472a494ab3f2e7844dac648ca9f7b235aad75d187414bfc

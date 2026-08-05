@@ -89,25 +89,20 @@
 # `oracle`
 
 ## Summary
-- 人間が所有する cmoc の正本仕様を収める領域。CLI の挙動、Codex 連携、プロンプト、session・run の状態と隔離、ログ・エラー処理、branch・commit・worktree モデル、開発・テスト規則、採用しなかった設計案を扱う。
-- 自然言語の仕様文書はアプリケーション仕様、開発規則、branch model、代替案に分かれ、正本ソースは agent 呼び出し、プロンプト生成、設定、パス、構造化文書、レビュー・ルーティング規範を定義する。各下位領域の詳細を確認するための入口となる。
+- cmoc の人間所有の正本仕様を格納するディレクトリ。機能仕様、開発・設計規則、正本実装、agent call 用の prompt や Structured Output schema などを扱う。下位の doc では自然言語の仕様・規則、src では正本実装を確認できる。
 
 ## Read this when
-- cmoc の正本仕様を横断的に調査・変更・レビューするとき。
-- CLI、Codex 連携、session・run、ログ、エラー処理、プロンプト、インデクシングの仕様を確認するとき。
-- Python 開発環境、設計、コーディング、テスト規則やテスト実行手順を確認するとき。
-- session・run に関わる branch、commit、worktree の関係を確認するとき。
-- 採用されなかった作業方式や設計案の背景・不採用理由を確認するとき。
-- agent 呼び出しパラメータ、共通設定、パスモデル、構造化文書、プロンプト部品の正本定義を確認するとき。
+- cmoc の機能仕様、開発規則、設計判断を調査・変更・検証するとき
+- agent call のパラメータ、prompt、Structured Output schema、oracle の正本実装を確認するとき
+- 正本仕様または正本実装の下位入口を選ぶ必要があるとき
 
 ## Do not read this when
-- 特定のアプリケーション仕様、開発規則、branch model、代替案、または正本ソースの本文を直接確認できる場合。
-- 実装構造、realization 側のコード、テストコード、具体的なテスト結果を確認するとき。
-- cmoc の利用手順だけを確認するときは、利用手順に対応する仕様文書を直接読む。
-- INDEX.md の生成・更新規則そのものを確認するとき。
+- 実際の CLI 実装、差分適用、競合解消、git 操作など realization 側の処理を調査するとき
+- 確認対象の仕様文書または正本実装の場所が既に分かっているときは、下位の doc または src を直接読む
+- INDEX.md の自動生成規則や oracle・realization の一般原則だけを確認するときは、それぞれの専用仕様を直接読む
 
 ## hash
-- bc529f41e2ab627cc88356b97defa62cdc35eaf7f90eaee2031b5fc3c2a1782b
+- 1aec4df1dcfcda0f9d4e3993e85091f83ff694025cad33e3bd82e6c56916d6fa
 
 # `pyproject.toml`
 
