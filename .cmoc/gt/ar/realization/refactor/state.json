@@ -12,10 +12,10 @@
     "last_investigated_at": "2026-07-23_13-23_57_335168000"
   },
   "README.md": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "c9a65ea2bc4ae8a742a22e9ced541f459b3804a77b29a66a7a3513280711137a",
-    "last_investigated_at": "2026-08-03_07-22_09_795907000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "6b9b1484c0f145d96180325067b4b8552f696e6ed12e84990ab90ed87d713cb6",
+    "last_investigated_at": "2026-08-06_06-35_37_152073000"
   },
   "bin/cmoc": {
     "investigation_required": false,
