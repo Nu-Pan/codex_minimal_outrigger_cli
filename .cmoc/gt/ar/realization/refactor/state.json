@@ -1020,10 +1020,10 @@
     "last_investigated_at": "2026-08-03_11-32_15_805723000"
   },
   "src/sub_commands/tui.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "fbdd08269efbbff2e6a6820d30b8bc62602ddb51e91183451fe1b430eb68fc66",
-    "last_investigated_at": "2026-07-31_13-31_01_215644000"
+    "last_investigated_sha256": "aa6f03a8d2a0cd859192f29279ebe32b845bd7c380a0ce0620b2b1a54dd3483e",
+    "last_investigated_at": "2026-08-05_20-24_12_601490000"
   },
   "test/_acp_builder_support.py": {
     "investigation_required": false,
