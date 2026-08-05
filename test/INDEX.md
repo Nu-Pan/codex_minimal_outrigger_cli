@@ -809,18 +809,16 @@
 # `test_runtime_wrapper.py`
 
 ## Summary
-- bin/cmoc の起動時に、仮想環境の Python 実行ファイルが不足・不正な場合のエラーレポートを検証するテスト。missing venv、通常ファイルでない venv path、Python として起動できない executable を対象とする。
+- bin/cmoc の起動時に仮想環境の Python が利用できない場合のエラーレポートを検証するテスト。missing venv、通常ファイルでない venv パス、Python として起動できない実行ファイルを対象に、終了コード・stdout の report 構造・call stack の root token path・次のアクションを確認する。
 
 ## Read this when
-- bin/cmoc の仮想環境検査、起動失敗時の終了コード、標準出力のエラーレポート、Call stack 表示を変更・調査するとき。
-- wrapper が仮想環境の異常をどのように利用者へ通知するかを確認するとき。
+- bin/cmoc の仮想環境検査、起動失敗時のエラーレポート、wrapper の call stack 表示を変更または検証するとき。
 
 ## Do not read this when
-- 補完プローブ環境や通常の CLI 補完挙動だけを変更・調査するとき。
-- bin/cmoc 以外の実行経路のエラー処理や、仮想環境検査を伴わない CLI 機能を扱うとき。
+- 通常の CLI 機能や補完プローブの挙動だけを変更・調査するとき。仮想環境検査と wrapper の失敗 report に直接関係しないテストを扱うとき。
 
 ## hash
-- 3f095faa60df18e5840c6d8e1b7db9df4376d874d974d4b06ea51c439cca62fa
+- 777dd4f6844721c51f36f16bb80f4c7d61c30c4c8853372891e7c4e3874c7335
 
 # `test_session_cli.py`
 
