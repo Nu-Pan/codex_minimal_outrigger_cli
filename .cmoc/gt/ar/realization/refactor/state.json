@@ -1086,10 +1086,10 @@
     "last_investigated_at": "2026-08-06_08-15_04_007923000"
   },
   "test/test_acp_builder_tui_parameters.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "2bb304c7ea64fd5c28021ec0e6aa82da0b469ad4f9bc951bbf3c20509ccd4786",
-    "last_investigated_at": "2026-08-03_12-35_22_300635000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "690dcff632dbbae0554cb917f595d38985d2ddc8eae16c07ed8422dd32814a79",
+    "last_investigated_at": "2026-08-06_08-18_30_046433000"
   },
   "test/test_basic_runtime.py": {
     "investigation_required": false,
