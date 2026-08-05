@@ -1,18 +1,18 @@
 # `acp`
 
 ## Summary
-- `acp` 互換の公開入口と ACP builder adapter 群を扱うディレクトリ。公開名の互換維持や oracle 実体への移行を確認する入口であり、builder の command/package 別処理は下位要素へ案内する。
+- ACP 互換名前空間の公開入口と builder 互換・委譲パッケージ群を扱うディレクトリ。既存の `acp.*` 参照を維持しながら、canonical な oracle 実装や実体モジュールへ導くための入口として、互換公開名の存廃、builder の委譲経路、用途別 adapter、共通 prompt 処理、TUI・quota probe の下位要素へ進む。
 
 ## Read this when
-- `acp` という公開参照を維持・削除できるか判断するとき。
-- ACP builder 全体の構成や、command 別 adapter・共通処理の調査先を切り分けるとき。
+- `acp` 名前空間を残すか削除するか、既存参照から oracle 側の実体へ移行する導線を確認したいとき。
+- `acp.builder.*` の互換 import、canonical builder への委譲、用途別 builder adapter、共通 Markdown fence 処理、TUI・quota probe の入口を調査・変更するとき。
 
 ## Do not read this when
-- `acp` 配下の具体的な実装や移行先の詳細だけを確認したいときは、該当する実体モジュールを直接読む。
-- ACP と無関係な CLI 実装や利用者向け公開面だけを調査するとき。
+- canonical な oracle 実装や prompt 仕様そのものを確認・変更したいときは、oracle 側の対応対象を直接読む。
+- builder の具体的な command・session・indexing・common 処理や、利用箇所・公開面を確認したいときは、該当する下位要素または参照元を直接読む。
 
 ## hash
-- 0b7c56e5a4cbb8b1fd252f7f4742b58265d952a0a784bd780fcb3732be279d80
+- 2f103aced3f9563fae65c599919d0406f0638884e8caa676bf64174140a673b2
 
 # `basic`
 

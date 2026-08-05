@@ -1,7 +1,8 @@
 """oracle review finding merge の realization adapter。
 
-canonical 実装は
-`{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py`。
+対応する oracle file:
+`{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py`
+`{{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.json`。
 """
 
 from dataclasses import replace as _replace

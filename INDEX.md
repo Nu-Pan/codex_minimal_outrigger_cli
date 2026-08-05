@@ -124,23 +124,21 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装を配置する主要ソースディレクトリ。Typer CLI の登録入口、サブコマンド実装、共通 runtime、ACP・設定・基本型の互換 import shim、正本 oracle パッケージへの解決入口を扱う。
-- CLI 全体の構成は主要エントリーポイントから、個別コマンドの処理はサブコマンド実装へ、横断的な実行時処理は共通 runtime パッケージへ進む。互換公開面や正本定義の確認では、それぞれの shim または oracle 側の実体へ進む。
+- cmoc CLI の realization 実装をまとめるトップレベルの入口。Typer による CLI 登録、ACP・basic・config の互換公開層、commons の共通 runtime、サブコマンド実装を扱う。
+- CLI の入口やサブコマンド構成を確認した後、個別機能の実装は `sub_commands`、共通実行処理は `commons`、互換 import は `acp`・`basic`・`config` へ進む。正本側の仕様や実装を確認する入口ではない。
 
 ## Read this when
-- cmoc CLI の登録コマンド、引数解析、エラー変換、自動補完、全体の委譲構造を調査・変更するとき。
-- CLI サブコマンド、session・run lifecycle、oracle・realization 操作、TUI、INDEX 更新の実装入口を切り分けるとき。
-- 複数の機能から利用される設定、Git、Codex 呼び出し、状態、パス、ログ、エラーなどの共通 runtime の責務を確認するとき。
-- acp、basic、config、cmoc_runtime など既存公開名の互換 import や oracle パッケージ解決を確認するとき。
+- cmoc の CLI 全体の実装領域と、CLI 入口から各機能へ進む構成を把握するとき。
+- Typer のコマンド登録、互換 import 層、共通 runtime、サブコマンド実装のどの領域を読むべきか判断するとき。
+- realization 側の CLI 実装と canonical な oracle 実装の境界を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理だけを調べるときは、対応する sub_commands 配下の実装を直接読む。
-- 単一の runtime 機能の挙動だけを調査するときは、対応する commons の個別 runtime モジュールを直接読む。
-- ACP、設定、path model、構造化文書などの正本仕様・実装を確認するときは、対応する oracle 側の定義を直接読む。
-- 利用者向け仕様や CLI の正本契約を確認するときは、対応する oracle 文書を直接読む。
+- 特定のサブコマンドの処理、session・run・oracle・realization 操作、TUI、indexing の詳細を調査・変更するときは、対応する `sub_commands` 配下を直接読む。
+- CLI 横断の設定、Git、Codex 呼び出し、状態管理、run lifecycle などの具体的な runtime 処理を調査するときは、対応する `commons` モジュールを直接読む。
+- ACP builder、basic 型、設定型、または oracle の正本仕様・実装を確認するときは、対応する下位要素または `oracle` 側を直接読む。
 
 ## hash
-- eaf2c4d3752debf7a061c7547f8f1856a35a44c9f8fc0c0884ca01bc31dc79f2
+- 38e1b04164ce7aae029c8b3bddd7631871c2f0ff719db96b60d5691be6c07704
 
 # `test`
 
