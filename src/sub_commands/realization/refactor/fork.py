@@ -32,6 +32,7 @@ from cmoc_runtime import (
 from commons.indexing import enable_indexing_preflight
 from commons.runtime_refactor import (
     RefactorState,
+    is_normalized_relative_path,
     load_refactor_state,
     mark_all_refactor_targets_required,
     select_refactor_target,
@@ -394,11 +395,11 @@ def _run_refactor_unit(
             f"target: {target}\nreturncode: {result.returncode}",
         )
     findings = _validated_findings(result.output_json, target)
-    changed_realization = worktree_change_paths(
+    actual_changed_paths = worktree_change_paths(
         context.run_worktree,
         include_rename_sources=True,
     )
-    unexpected = unexpected_agent_paths(context, changed_realization)
+    unexpected = unexpected_agent_paths(context, actual_changed_paths)
     if unexpected:
         # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
         # state と INDEX.md は cmoc が更新するため、agent call 直後に realization
@@ -408,32 +409,15 @@ def _run_refactor_unit(
             ["Codex call log と run worktree の差分を確認してください。"],
             "\n".join(unexpected),
         )
-    if not findings and changed_realization:
-        raise CmocError(
-            "所見が空の refactor agent call に差分があります。",
-            ["Codex call log と run worktree の差分を確認してください。"],
-            "\n".join(changed_realization),
-        )
-    unattributed = _unattributed_realization_paths(
-        context,
+    _validate_changed_path_contract(
         target,
-        changed_realization,
+        actual_changed_paths,
         findings,
-        state_paths_before,
     )
-    if unattributed:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-        # agent の差分は返却した所見のいずれかに対応しなければならない。path の
-        # evidence に現れない realization 差分を処理単位へ混ぜず、commit 前に拒否する。
-        raise CmocError(
-            "refactor agent の差分が所見に対応していません。",
-            ["Codex call log と run worktree の差分を確認してください。"],
-            "\n".join(unattributed),
-        )
     normalized_findings = findings
     if (
         findings
-        and not changed_realization
+        and not actual_changed_paths
         and all(
             finding.get("resolution", {}).get("status") == "fixed"
             for finding in findings
@@ -453,7 +437,7 @@ def _run_refactor_unit(
         target,
         investigated_hash,
         bool(normalized_findings),
-        changed_realization,
+        actual_changed_paths,
     )
     refresh_indexes(context.run_worktree, commit=False)
     # {{work-root}}/oracle/doc/app_spec/run_isolation.md
@@ -472,7 +456,7 @@ def _run_refactor_unit(
         [_status_change(path) for path in all_unit_paths],
     )
     unexpected.extend(
-        _unexpected_refresh_paths(context, changed_realization, all_unit_paths)
+        _unexpected_refresh_paths(context, actual_changed_paths, all_unit_paths)
     )
     unexpected = sorted(set(unexpected))
     if unexpected:
@@ -497,7 +481,7 @@ def _run_refactor_unit(
         units,
         unresolved_findings,
         f"cmoc realization refactor {target}",
-        pending_realization_paths=changed_realization,
+        pending_realization_paths=actual_changed_paths,
         state_paths_before=state_paths_before,
     )
 
@@ -701,85 +685,60 @@ def _validated_findings(output: object, target: str) -> list[dict]:
     return findings
 
 
-def _unattributed_realization_paths(
-    context: EditingRunContext,
+def _validate_changed_path_contract(
     target: str,
-    changed_paths: Collection[str],
+    actual_paths: Collection[str],
     findings: Collection[dict],
-    state_paths_before: Collection[str],
-) -> list[str]:
-    """findings の evidence に対応しない agent 差分を返す。"""
+) -> None:
+    """所見の変更 path 申告と agent call の実際の net 差分を照合する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    # findings の evidence path を run-relative path にそろえ、agent 差分との対応を
-    # 判定できる形にする。
-    evidence_paths: set[str] = set()
-    has_evidence_path = False
-    for finding in findings:
-        evidences = finding.get("evidences")
-        if not isinstance(evidences, list):
-            continue
-        for evidence in evidences:
-            if not isinstance(evidence, dict):
-                continue
-            raw_path = evidence.get("path")
-            if not isinstance(raw_path, str):
-                continue
-            has_evidence_path = True
-            if relative_path := _evidence_relative_path(context, raw_path):
-                evidence_paths.add(relative_path)
-    # run_codex_exec が正本 schema を検証する。evidence path を持たない軽量な fake や
-    # 過去の記録済み応答は互換性のため許容し、path を持つ応答は run 内へ解決できない
-    # 場合に fail-closed とする。
-    if not has_evidence_path:
-        return []
-
-    # evidence と今回の agent 差分の共通部分を、所見へ対応済みの path として扱う。
-    changed = set(changed_paths)
-    attributed = changed & evidence_paths
-    target_path = context.run_worktree / target
-    if not (target_path.exists() or target_path.is_symlink()) and target in changed:
-        # Git は大きな内容変更を伴う rename を delete/add と報告することがある。今回の
-        # agent call で追加された realization path が一つだけで evidence に含まれる
-        # 場合は、調査対象の継続先として扱う。
-        candidates = sorted(
-            path
-            for path in changed
-            if path != target and path not in state_paths_before
+    # evidences は調査時点の根拠に限定し、差分の帰属には changed_paths だけを使う。
+    actual = set(actual_paths)
+    invalid_actual = sorted(
+        path for path in actual if not is_normalized_relative_path(path)
+    )
+    if invalid_actual:
+        raise CmocError(
+            "refactor agent の実際の変更 path が不正です。",
+            ["run worktree の Git status を確認してください。"],
+            f"target: {target}\ninvalid paths: {invalid_actual!r}",
         )
-        if len(candidates) == 1 and (
-            target in evidence_paths or candidates[0] in evidence_paths
+
+    declared: set[str] = set()
+    for index, finding in enumerate(findings):
+        changed_paths = finding.get("changed_paths")
+        if not isinstance(changed_paths, list) or any(
+            not isinstance(path, str) for path in changed_paths
         ):
-            attributed.update({target, candidates[0]})
-    return sorted(changed - attributed)
+            raise CmocError(
+                "refactor agent の changed_paths が不正です。",
+                ["Codex call log と output schema を確認してください。"],
+                f"target: {target}\nfinding index: {index}\n"
+                f"changed_paths: {changed_paths!r}",
+            )
+        invalid_declared = sorted(
+            path for path in changed_paths if not is_normalized_relative_path(path)
+        )
+        if invalid_declared:
+            raise CmocError(
+                "refactor agent の changed_paths が不正です。",
+                ["Codex call log と output schema を確認してください。"],
+                f"target: {target}\nfinding index: {index}\n"
+                f"invalid paths: {invalid_declared!r}",
+            )
+        declared.update(changed_paths)
 
-
-def _evidence_relative_path(
-    context: EditingRunContext,
-    raw_path: str,
-) -> str | None:
-    """evidence の絶対/placeholder path を run-relative path へ変換する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    # Structured Output の path は placeholder、絶対 path、run-relative path のいずれ
-    # でも受け取るため、同じ run-relative 表現へ正規化する。
-    roots = (context.run_worktree, context.repo)
-    for prefix, root in (
-        ("{{run-root}}", context.run_worktree),
-        ("{{work-root}}", context.run_worktree),
-        ("{{repo-root}}", context.repo),
-    ):
-        if raw_path == prefix:
-            return "."
-        if raw_path.startswith(f"{prefix}/"):
-            path = root / raw_path.removeprefix(f"{prefix}/")
-            return path.absolute().relative_to(root.absolute()).as_posix()
-    path = Path(raw_path)
-    for root in roots:
-        candidate = path if path.is_absolute() else root / path
-        try:
-            return candidate.absolute().relative_to(root.absolute()).as_posix()
-        except ValueError:
-            continue
-    return None
+    if declared == actual:
+        return
+    raise CmocError(
+        "refactor agent の changed_paths が実際の差分と一致しません。",
+        ["Codex call log と run worktree の差分を確認してください。"],
+        f"target: {target}\n"
+        f"actual paths: {sorted(actual)!r}\n"
+        f"declared paths: {sorted(declared)!r}\n"
+        f"unreported paths: {sorted(actual - declared)!r}\n"
+        f"overreported paths: {sorted(declared - actual)!r}",
+    )
 
 
 def _completion_reason(

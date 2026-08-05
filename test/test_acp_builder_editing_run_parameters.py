@@ -121,6 +121,8 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert str(target_path.resolve()) in review.prompt
     assert "調査開始時点の既存実装ですでに解消されている問題" in review.prompt
     assert "`resolution.status=fixed` は、この agent call 内で" in review.prompt
+    assert "全所見の `changed_paths` の和集合" in review.prompt
+    assert "`evidences[].path` は調査時点の所見の根拠だけ" in review.prompt
     assert "対象 repository が要求する必要な検証" in review.prompt
     assert "# realization oracle reference rule" in review.prompt
     review_schema = json.loads(review.structured_output_schema_path.read_text())
@@ -129,6 +131,9 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
             "realization", "refactor", "fork", "file_review_and_fix.json"
         ).read_text()
     )
+    finding_schema = review_schema["properties"]["findings"]["items"]
+    assert "changed_paths" in finding_schema["required"]
+    assert finding_schema["properties"]["changed_paths"]["type"] == "array"
     assert summary.model_class == ModelClass.EFFICIENCY
     assert summary.reasoning_effort == ReasoningEffort.MEDIUM
     assert summary.file_access_mode == FileAccessMode.READONLY

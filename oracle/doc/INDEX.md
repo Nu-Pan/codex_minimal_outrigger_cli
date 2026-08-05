@@ -1,19 +1,19 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション全体に関する正本仕様を集約するディレクトリ。CLI の補完、Codex 実行、ログ、doctor preprocess、prompt、run／session、サブコマンド、利用手順など、個別機能や共通規約の仕様確認へ進む入口となる。
+- cmoc の CLI・workflow・Codex 連携・ログ・エラー処理・session/run lifecycle など、アプリケーション挙動に関する正本仕様をまとめたディレクトリ。個別仕様の責務や適用条件を確認し、実装・検証時に対応する仕様文書へ進むための入口となる。
 
 ## Read this when
-- cmoc のアプリケーション仕様から、対象機能に対応する正本文書を選びたいとき
-- CLI 実行、agent call、ログ、prompt、run／session lifecycle、サブコマンドなどの挙動仕様を調査・実装・レビューするとき
+- cmoc のアプリケーション仕様を調査・実装・変更・レビューするとき。
+- CLI 自動補完、Codex exec、provider、ログ、doctor preprocess、prompt、run/session、サブコマンドなど複数の仕様領域から読むべき正本を選ぶとき。
 
 ## Do not read this when
-- INDEX.md の生成規則やルーティング方針だけを確認したいとき
-- Python 開発環境や realization 実装・テスト固有の手順を確認したいとき
-- 対象が明確な個別仕様を直接確認できる場合に、ディレクトリ内の仕様を広く読む必要があるとき
+- INDEX.md の生成・更新規則そのものを確認するとき。
+- 特定仕様の実装構造やテスト手順など、対応する realization code・test を直接確認すべきとき。
+- cmoc の利用手順だけを確認するときは、利用手順書を直接読む。
 
 ## hash
-- c0d1be945a42f290631c921db40f3595de68e8aa0fdcb7018906197c3082a41a
+- d30ec218f343649f9229f7cfc6f01ab130c2afc0a4dcfc7d53d0d58805f98d02
 
 # `branch_model.md`
 

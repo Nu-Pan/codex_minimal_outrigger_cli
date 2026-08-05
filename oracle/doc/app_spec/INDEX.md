@@ -213,18 +213,21 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンドに関する正本仕様を集約するディレクトリ。doctor、indexing、oracle 操作、realization の編集処理、session・run lifecycle、TUI の仕様確認に進む入口となる。
+- cmoc の主要サブコマンドと session・run lifecycle に関する正本仕様をまとめたディレクトリ。doctor、indexing、tui、oracle 操作、realization workload、session 操作の仕様確認における入口となる。
+- 各文書は個別サブコマンドまたは lifecycle の責務・前提条件・実行手順・状態管理・エラー処理を扱い、共通仕様や処理内部の詳細は必要に応じて別の正本仕様へ案内する。
 
 ## Read this when
-- cmoc サブコマンドの挙動、実行条件、引数、状態遷移、編集 run または session lifecycle を調査・実装・レビューするとき。
-- 対象サブコマンドの仕様書を選び、処理手順や責務の正本を確認したいとき。
+- cmoc のサブコマンド仕様、session または編集 run の lifecycle を調査・実装・変更・レビューするとき。
+- 対象が doctor、indexing、tui、oracle 操作、realization apply/refactor、session fork/join/abandon のいずれかで、対応する正本仕様を選ぶ必要があるとき。
+- 複数のサブコマンドや lifecycle の責務境界を確認するとき。
 
 ## Do not read this when
-- サブコマンド共通のプロンプト、Codex CLI 起動規則、エディタ入力、doctor preprocess など、別の共通仕様だけを確認したいとき。
-- INDEX.md の生成規則や一般的なルーティング方針だけを確認したいとき。
+- INDEX.md の生成方法や一般的なルーティング規則だけを確認したいとき。
+- 特定サブコマンドの内部処理、共通 lifecycle、エディタ入力、TUI 起動、Codex CLI 実行規則などを直接確認したいときは、対応する専用の正本仕様へ進む。
+- 実装コードやテストの具体的な詳細だけを調べるとき。
 
 ## hash
-- bcd546c97ef5e1f0aa8a59dafcf251b8f1ff435a7ac711331700d131f7cd33b7
+- c26da80577b26c88c1b190d06b0fdfa41550dc9acfc905258b10c6817447ff19
 
 # `subcommand_interruption.md`
 

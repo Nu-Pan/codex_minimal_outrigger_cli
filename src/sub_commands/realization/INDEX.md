@@ -33,20 +33,18 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を扱うパッケージ。関連するリファクタリング処理への入口となる。
-- refactor fork の実行フローとして、run 初期化、対象 realization file の選択、Codex による調査・修正、差分と所見の検証、state 更新、commit、unresolved 管理、完了判定、cleanup、report 保存を一貫して処理する。
-- refactor fork のライフサイクル、run worktree、process tracking、INDEX 更新、Git commit の整合性を確認する際の主要な実装入口であり、個別の所見生成や report の詳細は呼び出される実装へ進む。
+- realization のリファクタリング処理をまとめるパッケージで、関連する CLI 実装への入口となる。
+- fork.py は realization refactor fork の実行全体を統括し、対象選択、Codex による調査・修正、state・差分・commit・INDEX の検証、所見管理、完了判定、report 保存までを扱う。
 
 ## Read this when
-- realization のリファクタリング処理の構成や CLI 挙動を確認・変更するとき
-- 対象選択から完了までの refactor fork の処理フローを調査するとき
-- 差分検証、agent commit、rename、refactor state、unresolved finding の整合性を確認するとき
-- 正常完了・中断・例外時の run state、rollback、child process 停止、report 保存を調査するとき
+- realization のリファクタリング処理の構成や CLI 実行フローを確認するとき。
+- fork の正常完了・中断・エラー時の state 更新、cleanup、rollback、report 生成を調査するとき。
+- 対象 file の処理、agent 差分、commit、INDEX 更新、完了条件の検証を確認するとき。
 
 ## Do not read this when
-- 個別の refactor agent prompt や change summary の Structured Output 定義だけを確認したいとき
-- 一般的な editing run の仕様、run isolation、INDEX 更新規則だけを確認したいとき
-- fork report の Markdown 表現や共通 report 書き込み処理だけを確認したいとき
+- 個別 refactor agent の Structured Output や prompt builder だけを確認したいとき。
+- refactor state のデータ形式や対象選択ロジックだけを確認したいときは、state 管理を担う実装を直接読む。
+- run 共通ライフサイクル、report 表現、process tracking、INDEX 更新の一般仕様だけを確認したいときは、各共通実装または正本仕様を直接読む。
 
 ## hash
-- b8bf9e4967fe97c3caf02bddbdb4746baca8396548d5b5f8caab74171f04627b
+- ed2e75232055fb8cd9c338ea6e73e5c2004cfe6f55b5fa95a01c7a5f0a608d93

@@ -49,21 +49,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行 lifecycle、Codex exec/TUI、設定・状態・パス、Git、ログ、エラー、結果型、INDEX 管理など、上位実装から利用する横断的な runtime 入口と個別実装を提供する。
-- パッケージ初期化および共通 API の再エクスポートを起点に、対象領域に対応する runtime モジュールへ進むための入口。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。INDEX.md の生成・検査、CLI 実行、Codex exec/TUI、設定、Git、ログ、パス、状態、run lifecycle、エラー、結果型など、上位実装が横断的に利用する runtime の入口と個別実装を提供する。各機能の調査・変更時は、該当する runtime モジュールへ進むための入口となる。
 
 ## Read this when
-- cmoc の共通 runtime API やパッケージ入口を確認するとき
-- CLI サブコマンド、Codex 実行、設定・状態・Git・ログ・パス・report・refactor などの共通 runtime 挙動を調査または変更するとき
-- INDEX.md の生成 lifecycle や preflight、editing run の lifecycle・process cleanup を調査するとき
+- commons 配下の共通 runtime 機能の責務や、複数の runtime サブモジュールにまたがる公開 API を確認するとき
+- INDEX 更新、Codex 実行、CLI lifecycle、設定、Git、ログ、パス、状態、editing run などの共通実装の入口を選ぶとき
 
 ## Do not read this when
-- 特定機能の正本仕様を確認する場合は、対応する oracle 文書や oracle source を直接読むとき
-- 特定の runtime helper の詳細だけを調査する場合は、commons 配下の対応する個別モジュールへ直接進むとき
-- CLI サブコマンド固有の処理や Codex 実行以外の個別機能だけを調査する場合は、該当する実装を直接読むとき
+- 特定の runtime 機能の具体的な挙動だけを調査・変更するときは、該当する個別 runtime モジュールを直接読む
+- 正本仕様や prompt 定義を確認・変更するときは、対応する oracle file または prompt builder を直接読む
+- commons と無関係な個別 CLI コマンドや上位機能だけを調査するとき
 
 ## hash
-- d228d5a4f5566958d25809eac07d59a010c0a3633f5b9764774311aaceaeea8e
+- a6af083c9c8ba9458cf479cdd5e2cba1dc819c5833b1f8fb55580168f1526ee0
 
 # `config`
 
@@ -115,17 +113,16 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装をまとめるディレクトリ。doctor、indexing、oracle、realization、review、run、session、tui の各実装入口を案内し、apply は実装未配置であることを示す。
+- CLI サブコマンドの realization 実装をまとめるディレクトリ。doctor、indexing、oracle、realization、run、session、tui などの各サブコマンド入口と、関連する実行フロー実装への階層入口を提供する。
+- apply と review は現在実装本文がなく、将来の実装配置先として示されている。
 
 ## Read this when
-- サブコマンドの実装構成や、各サブコマンドの実行入口を確認するとき。
-- doctor、indexing、oracle、realization、run、session、tui の実装を調査・変更するとき。
-- review または apply の実装配置先を確認するとき。
+- CLI サブコマンドの実装構成や、特定サブコマンドの実行入口を確認・変更するとき。
+- doctor、indexing、oracle、realization、run、session、tui のいずれかの実行フローを調査するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理を確認する場合は、対応する下位実装ファイルへ直接進むとき。
-- サブコマンドの正本仕様や共通処理の詳細を確認する場合は、対応する oracle 文書または共通実装へ直接進むとき。
-- apply の具体的な処理を確認する場合は、実装追加後に追加された対象へ進むとき。
+- 個別サブコマンドの詳細実装、共通処理、正本仕様を直接確認したいときは、該当する下位実装または oracle 文書を読む。
+- apply または review の具体的な処理を確認したいときは、実装が追加された後に該当する下位要素を読む。
 
 ## hash
-- 8679e481bf43228aa07e5539f4b0cfc4da58172ced3209a6c725800cfb6f1533
+- fdd924c80cfde87014738001294eb9358dc73ea3b6262e624e045818e8883fe5
