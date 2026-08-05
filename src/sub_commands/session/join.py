@@ -192,7 +192,7 @@ def _reject_non_conflict_changes(
     before_codex: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]],
     conflicted_paths: list[Path],
 ) -> None:
-    """Codex 呼び出し後に conflict 対象外の差分が変化していないか検査する。"""
+    """Codex 呼び出し後に許可範囲外の差分が変化していないか検査する。"""
     # {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py:
     # conflict marker 解消に不要な別 file の変更を merge commit へ持ち込まない。
     allowed = {_absolute_path(path) for path in conflicted_paths}
@@ -205,6 +205,19 @@ def _reject_non_conflict_changes(
         ),
         key=str,
     )
+    # conflict 対象でも file type と mode は marker 解消の対象外なので、変更を許可しない。
+    for path in sorted(allowed, key=str):
+        before_entry = before_codex.get(path)
+        after_entry = after_codex.get(path)
+        if before_entry is None or after_entry is None:
+            continue
+        before_fingerprint = before_entry[1]
+        after_fingerprint = after_entry[1]
+        if before_fingerprint is None or after_fingerprint is None:
+            continue
+        if before_fingerprint[:2] != after_fingerprint[:2]:
+            changed.append(path)
+    changed.sort(key=str)
     if changed:
         raise CmocError(
             "conflict 解消以外の差分が残っています。",

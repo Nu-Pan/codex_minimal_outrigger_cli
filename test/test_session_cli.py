@@ -8,6 +8,7 @@ fixture を追う文脈が分散する。現状は session CLI 回帰として�
 """
 
 import json
+import stat
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
@@ -769,10 +770,11 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
 
 
-def test_session_join_rejects_changes_outside_conflict_marker_block(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("change_kind", ["context", "mode"])
+def test_session_join_rejects_extra_conflict_file_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change_kind: str
 ) -> None:
-    """conflict marker 外の変更を含む解消結果を merge しない。
+    """conflict marker 解消以外の conflict file 変更を merge しない。
 
     根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py
     {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
@@ -801,8 +803,13 @@ def test_session_join_rejects_changes_outside_conflict_marker_block(
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
-        """marker 外の suffix を変更した conflict agent の結果を再現する。"""
-        target.write_text("prefix\nresolved change\nchanged suffix\n")
+        """conflict marker 外または file mode を変更した agent を再現する。"""
+        target.write_text(
+            "prefix\nresolved change\n"
+            + ("changed suffix\n" if change_kind == "context" else "suffix\n")
+        )
+        if change_kind == "mode":
+            target.chmod(target.stat().st_mode | stat.S_IXUSR)
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
@@ -811,7 +818,12 @@ def test_session_join_rejects_changes_outside_conflict_marker_block(
 
     assert result.exit_code != 0
     assert current_branch(root) == home_branch
-    assert "conflict 対象 file の不要な差分が残っています。" in result.stderr
+    expected_summary = (
+        "conflict 対象 file の不要な差分が残っています。"
+        if change_kind == "context"
+        else "conflict 解消以外の差分が残っています。"
+    )
+    assert expected_summary in result.stderr
     assert str(target) in result.stderr
     assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
 

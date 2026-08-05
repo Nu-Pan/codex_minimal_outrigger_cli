@@ -811,21 +811,22 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork/join/abandon の CLI 外部挙動をまとめて検証する回帰テスト。session branch と永続 state の作成・遷移・cleanup、linked worktree 対応、競合解消、dirty worktree や不正 state の拒否、失敗時の rollback・エラー報告を扱う。session lifecycle の実装や仕様を確認する際のテスト入口。
+- session fork・join・abandon の CLI 外部挙動を、実 Git リポジトリと session state を用いて回帰検証するテスト群。
+- session branch/state の生成、衝突、rollback、cleanup、linked worktree、dirty worktree 拒否、merge/conflict 解消、不要差分検出、エラー出力を扱う。
+- session ライフサイクルと branch/state 遷移に関するテスト実装へ進む入口であり、個別サブコマンドの実装詳細や正本仕様そのものの入口ではない。
 
 ## Read this when
-- session fork、join、abandon の挙動や回帰を確認・変更するとき
-- session state、session branch、linked worktree のライフサイクルを検証するとき
-- join の conflict resolution、sandbox、対象外差分拒否、cleanup 失敗時の復元を確認するとき
-- session CLI のエラー出力、ログ、preprocess 順序を確認するとき
+- session fork、join、abandon の外部挙動や回帰テストを確認・変更するとき
+- session state、managed branch、linked worktree のライフサイクル検証を調べるとき
+- session join の conflict resolution、sandbox、不要差分、エラー出力のテストを確認するとき
 
 ## Do not read this when
-- session CLI 以外のコマンドの挙動を確認するとき
-- session state の正本仕様を確認するときは、先に session state や各 session サブコマンドの仕様を読むとき
-- 実装の責務や内部 prompt 生成だけを確認するときは、対応する src または oracle の直接対象を読むとき
+- session CLI の実装挙動そのものを変更・調査する場合は、対応するサブコマンド実装や正本仕様を先に読むとき
+- session state のスキーマやライフサイクル契約を確認する場合は、session state の正本仕様を直接読むとき
+- 一般的な CLI、Git helper、Codex 実行規則だけを調べる場合
 
 ## hash
-- b42d994dc673bac1968cf16b034b0543511c8c63a161a1e7e37e1bf050eb40e3
+- fbdc8ebef81bda8d2b01754401be6f53de065f1b6faf335b986974f93dd573c4
 
 # `test_skill_metadata.py`
 
