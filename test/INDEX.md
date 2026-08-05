@@ -279,18 +279,19 @@
 # `test_codex_runtime_paths.py`
 
 ## Summary
-- Codex exec の実行境界を検証するテスト。並列実行時の timestamp 付きログパス予約、指定 cwd の反映、リンク済み worktree での schema 保存先、読み取り専用 sandbox の変換、および `.agents` を個別権限として注入しないことを扱う。Codex 実行経路やファイルアクセス権限の変更時に、実運用に近い subprocess 境界の回帰確認へ進む入口となる。
+- Codex exec の実運用呼び出しにおけるログ・出力パスの衝突回避、agent call の cwd、schema 保存先、sandbox 引数を検証する統合テスト。
+- 同一 timestamp の並列実行、リンク済み worktree、PURE_ORACLE_READ と REPO_WRITE、.agents パスの扱いなど、Codex 実行境界の回帰検証への入口。
 
 ## Read this when
-- Codex exec の cwd、ログ・出力・schema の保存先、worktree 対応、sandbox 引数、`.agents` 権限注入の挙動を変更または検証するとき。
-- 実運用 Codex 呼び出しの並列実行における timestamp 衝突回避を確認するとき。
+- run_codex_exec の cwd、sandbox モード、schema 出力先、ログ・出力パス予約の挙動を変更または検証するとき
+- リンク済み worktree や並列実行時の Codex 呼び出しの回帰を調査するとき
 
 ## Do not read this when
-- Codex exec のプロンプト生成内容や oracle 仕様そのものを確認したいときは、参照されている oracle 文書・ソースを直接読む。
-- Codex 実行経路以外の CLI 機能や一般的なテスト実行方法を調べるとき。
+- Codex 実行境界ではなく、プロンプト生成、ファイルアクセス規則そのもの、または個別のテスト支援関数を直接調べるとき
+- run_codex_exec の外部挙動を変更しない一般的なテスト実行や別機能のテストを扱うとき
 
 ## hash
-- c813b993e01e2bfbf465ba99600ecd785fd1f273aa63c950b2f89b83f882d19a
+- bcb897854ccb08e5c616379e214cf6ece1ca038a49e06866de8ce7826f92fe06
 
 # `test_codex_runtime_quota_retry.py`
 
