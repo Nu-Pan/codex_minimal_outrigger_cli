@@ -145,18 +145,17 @@
 # `test`
 
 ## Summary
-- pytest による realization test 群と、複数テストで共有するテスト支援ヘルパーをまとめた領域。CLI、runtime、Codex 実行経路、indexing、oracle review、session/run lifecycle、設定・状態永続化などの外部挙動や契約を検証する。各テストファイルが機能領域ごとの詳細な入口となる。
+- `test` ディレクトリは、cmoc の実装・CLI・Codex 実行経路・Git/worktree lifecycle・設定・永続 state・indexing・oracle review などを対象に、外部挙動と仕様適合性を検証する realization test 群を集約する。個別機能の回帰テスト、共有テストヘルパー、実 Codex/Ollama を用いる統合・受け入れテストが下位要素への入口となる。
 
 ## Read this when
-- 実装や正本仕様の変更が、対応する CLI・runtime・Codex・indexing・oracle review・session/run・設定・状態管理のテスト契約に適合するか確認するとき。
-- 特定機能の回帰テスト、統合テスト、実経路テスト、または共有テストヘルパーの利用方法を探すとき。
-- テスト対象を機能別に絞り込み、該当する個別テストファイルへ進む必要があるとき。
+- cmoc の実装変更に対する対応テストや、既存テストが検証する外部契約を探すとき。
+- CLI、Codex runtime、indexing、oracle review、session/run lifecycle、設定、worktree、state などの機能別テスト対象を選ぶとき。
+- テスト用 Git・Ollama・Codex 環境や共有 helper の利用方法を確認するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc または oracle schema を直接読む。
-- 実装の責務や内部ロジックを確認するときは、対応する src の実装ファイルを直接読む。
-- テスト実行全体の選択・品質検査手順を確認するときは、専用の test execution 仕様を読む。
-- 対象機能と関係しないテスト領域や、共有ヘルパーを使わない一般的な処理を調査するとき。
+- 正本仕様、schema、builder の定義そのものを確認・変更するときは、対応する oracle doc・oracle source・oracle schema を直接読む。
+- 実装詳細や単一機能の責務だけを調査するときは、対応する `src` の実装へ直接進む。
+- テスト実行全体の手順や品質検査を確認するときは、専用の test execution 仕様を読む。
 
 ## hash
-- f02f9dffc80aeb5a412a146f9cd96c1386a20e2e6d511522896c3e2bf1a24a74
+- d0be4607d4830b87225a20e12227afc89a0ee56ddbe6c215063f3cf6514e7a51

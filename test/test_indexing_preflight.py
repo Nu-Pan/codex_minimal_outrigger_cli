@@ -6,7 +6,7 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-from _codex_support import setup_codex_home
+from _codex_support import FakeCodexResult, setup_codex_home
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 
@@ -70,11 +70,6 @@ def test_command_codex_call_runs_indexing_preflight(
         index_path.write_text("# generated\n")
         return [index_path]
 
-    class FakeCodexResult:
-        """Codex exec の結果として必要な最小属性だけを持つ fake。"""
-
-        output_json = None
-
     def fake_runtime_run_codex_exec(
         call_parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
@@ -132,11 +127,6 @@ def test_command_codex_call_indexes_agent_call_worktree_before_log_root(
         index_path = update_root / "INDEX.md"
         index_path.write_text("# generated\n")
         return [index_path]
-
-    class FakeCodexResult:
-        """Codex exec の結果として必要な最小属性だけを持つ fake。"""
-
-        output_json = None
 
     def fake_runtime_run_codex_exec(
         call_parameter: AgentCallParameter, **kwargs: object
@@ -253,11 +243,6 @@ def test_indexing_preflight_waits_for_repository_lock(
         events.append("updated")
         return []
 
-    class FakeCodexResult:
-        """preflight callback の型契約を満たす最小 fake。"""
-
-        output_json = None
-
     def fake_codex_exec(*args: object, **kwargs: object) -> FakeCodexResult:
         """lock test では呼び出されない Codex result を返す fake。"""
 
@@ -320,11 +305,6 @@ def test_command_codex_call_skips_indexing_when_parameter_disables_preflight(
         run_indexing_preflight=False,
     )
     calls: list[str] = []
-
-    class FakeCodexResult:
-        """Codex exec の結果として必要な最小属性だけを持つ fake。"""
-
-        output_json = None
 
     def fail_update_indexes(
         update_root: Path, codex_exec: Callable[..., object] | None = None
