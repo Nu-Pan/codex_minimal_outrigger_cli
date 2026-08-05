@@ -126,7 +126,6 @@ def test_timestamped_path_reservation_is_process_safe(
                     "stdout_log_path",
                     "stderr_log_path",
                     "output_path",
-                    "output_jsonl_log_path",
                 )
             ),
         ]

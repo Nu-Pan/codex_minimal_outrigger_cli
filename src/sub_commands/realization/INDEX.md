@@ -33,18 +33,20 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージで、関連する CLI 実装への入口となる。
-- fork.py は realization refactor fork の実行全体を統括し、対象選択、Codex による調査・修正、state・差分・commit・INDEX の検証、所見管理、完了判定、report 保存までを扱う。
+- realization のリファクタリング処理を扱うパッケージで、関連するリファクタリング処理への入口となる。
+- realization refactor fork の CLI 実行全体を担い、run の初期化、対象 realization file ごとの調査・修正、差分・commit 検証、state 更新、unresolved finding の追跡、完了判定、report 保存、割り込み・エラー時の rollback までを一つの lifecycle として実装する。
 
 ## Read this when
-- realization のリファクタリング処理の構成や CLI 実行フローを確認するとき。
-- fork の正常完了・中断・エラー時の state 更新、cleanup、rollback、report 生成を調査するとき。
-- 対象 file の処理、agent 差分、commit、INDEX 更新、完了条件の検証を確認するとき。
+- realization のリファクタリング作業の内容や構成を確認するとき。
+- `cmoc realization refactor fork` の起動から完了または失敗までの制御フローを変更・調査するとき。
+- 対象選択、処理単位の commit、agent call、refactor state、unresolved finding、完了理由、fork report の整合性を確認するとき。
+- KeyboardInterrupt、agent error、cleanup failure、run の joinable/error 遷移に関する挙動を確認するとき。
 
 ## Do not read this when
-- 個別 refactor agent の Structured Output や prompt builder だけを確認したいとき。
-- refactor state のデータ形式や対象選択ロジックだけを確認したいときは、state 管理を担う実装を直接読む。
-- run 共通ライフサイクル、report 表現、process tracking、INDEX 更新の一般仕様だけを確認したいときは、各共通実装または正本仕様を直接読む。
+- realization のリファクタリング以外の処理を確認するとき。
+- refactor agent に渡すプロンプトや Structured Output の仕様だけを確認したいとき。
+- refactor state の選択・同期ロジックだけを確認したいとき。
+- run の一般的な isolation、state、join/abandon 契約だけを確認したいとき。
 
 ## hash
-- ed2e75232055fb8cd9c338ea6e73e5c2004cfe6f55b5fa95a01c7a5f0a608d93
+- d4e6955da20c078f4106e7b2b8a0c260f1ed63f936eef65139f23f7c0140a610

@@ -46,38 +46,40 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。oracle の edit、investigation、review と、review の対象列挙・loop・path 解決・report・INDEX merge を担う実装への入口。
+- oracle 系サブコマンドをまとめる package。oracle の編集・調査・レビューに関する CLI 実装と、それらを支える review 用の対象選定、ループ、パス、レポート、INDEX merge 処理への入口を提供する。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や入口を確認するとき。
-- oracle edit、investigation、review の実行経路を調査・変更するとき。
-- oracle review の対象列挙、評価 loop、path 解決、report、INDEX 差分 merge のいずれかを調査・変更するとき。
+- oracle 系サブコマンドの構成や、各サブコマンド実装への入口を確認するとき。
+- oracle review の lifecycle、対象選定、所見処理、レポート生成、INDEX 差分 merge の実装箇所を特定するとき。
 
 ## Do not read this when
-- 個別サブコマンドや review 機能の詳細だけを確認する場合は、該当する実装ファイルを直接読む。
+- 特定の oracle サブコマンドの詳細な起動処理を確認する場合は、そのサブコマンド実装を直接読む。
+- review の対象列挙、ループ、パス解決、レポート、INDEX 操作の個別仕様を確認する場合は、対応する実装ファイルを直接読む。
 - oracle の正本仕様を確認する場合は、対応する oracle 文書を直接読む。
 
 ## hash
-- 69f4a777ca3159ddf6a0bacf46b478271aed4523b93bb7282cf7e1312594263e
+- d6eaa49c796a99bf83921c0827a42b43a0eae8cb1d6a595c2cb1491c29f5a39f
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。
-- apply workload と refactor 処理の実装へ進むための階層入口であり、apply では実行ライフサイクルや差分・状態・report、refactor では fork 実行全体や完了判定・report 保存を扱う。
+- realization workload サブコマンドのパッケージ入口で、apply と refactor の処理群への導線を提供する。
+- apply は realization apply workload と fork 実行 lifecycle、差分検査、commit、状態遷移、report 保存を扱う。
+- refactor は realization refactor fork の実行 lifecycle、対象ファイルの修正、検証、状態更新、finding 追跡、完了判定、report 保存、エラー時 rollback を扱う。
 
 ## Read this when
-- realization workload サブコマンドの実装構成を確認するとき。
-- realization apply workload の CLI 動作、run lifecycle、差分検査、commit、状態遷移、fork report を調査または変更するとき。
-- realization refactor の fork 実行フロー、対象選択、差分・commit・INDEX 検証、所見管理、state 更新、report 生成を確認するとき。
+- realization workload サブコマンドの実装や構成を確認するとき。
+- realization apply workload または `cmoc realization apply fork` の動作、状態遷移、差分検査、commit、report 生成を調査・変更するとき。
+- realization refactor の fork lifecycle、対象選択、agent call、state、unresolved finding、完了判定、割り込み・エラー時の挙動を調査・変更するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply agent の launch parameter、run 共通の join・abandon 処理、または realization apply の正本仕様だけを確認するとき。
-- 個別 refactor agent の Structured Output や prompt builder、refactor state のデータ形式・対象選択ロジック、共通 lifecycle・report・process tracking・INDEX 更新の仕様だけを確認するとき。
+- apply agent や refactor agent に渡す launch parameter、プロンプト、Structured Output の仕様だけを確認するとき。
+- run の一般的な isolation、state、join、abandon 契約だけを確認するとき。
+- refactor state の選択・同期ロジックだけを確認するとき。
 
 ## hash
-- 6692789f64731f8e38015a17e85a88e921b58653e364c247ea4d541ce7f3e522
+- c467a832d0d1a8a5883c2c32c8ab8717a3027c24d4dc88824e079311accc999b
 
 # `review`
 

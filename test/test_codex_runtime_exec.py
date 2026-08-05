@@ -315,7 +315,6 @@ def test_run_codex_exec_invokes_real_codex_with_test_local_ollama_provider(
             root=root,
             capacity_initial_sleep_sec=0,
             max_capacity_retries=0,
-            max_semantic_retries=1,
             config=config,
         )
 

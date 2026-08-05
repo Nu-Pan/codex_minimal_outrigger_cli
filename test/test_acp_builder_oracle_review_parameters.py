@@ -18,7 +18,7 @@ from typing import Callable
 
 import pytest
 from _acp_builder_support import oracle_schema_path
-from jsonschema import validate
+from jsonschema import ValidationError, validate
 from oracle.acp_builder.oracle.review.enumerate_finding import (
     build_oracle_review_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
 )
@@ -223,6 +223,8 @@ def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
     parameter = build_oracle_review_merge_finding_parameter(findings="[]")
     assert "{{oracle-root}}" not in parameter.prompt
     assert "`{{work-root}}/oracle` ツリー内" in parameter.prompt
+    assert "# Structured Output の決定論的事後条件" in parameter.prompt
+    assert "入力された `finding_id` 集合の要素" in parameter.prompt
     assert "- {{work-root}} =" in parameter.prompt
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
@@ -255,6 +257,18 @@ def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
         },
         schema,
     )
+    invalid_operations = [
+        {"kind": "delete", "target_ids": ["finding-0001"], "finding": finding},
+        {
+            "kind": "replace",
+            "target_ids": ["finding-0001", "finding-0002"],
+            "finding": finding,
+        },
+        {"kind": "merge", "target_ids": ["finding-0001"], "finding": finding},
+    ]
+    for operation in invalid_operations:
+        with pytest.raises(ValidationError):
+            validate({"operations": [operation]}, schema)
 
 
 @pytest.mark.parametrize(

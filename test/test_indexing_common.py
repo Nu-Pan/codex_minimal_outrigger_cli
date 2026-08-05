@@ -191,64 +191,22 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     assert "## Do not read this when" in rendered
 
 
-@pytest.mark.parametrize(
-    "entry",
-    [
-        None,
-        {},
-        {
-            "summary": ["summary"],
-            "read_this_when": ["read"],
-            "do_not_read_this_when": [1],
-        },
-        {
-            "summary": ["summary"],
-            "read_this_when": ["read"],
-            "do_not_read_this_when": ["skip"],
-            "extra": ["ignored"],
-        },
-    ],
-)
-def test_render_index_entry_rejects_schema_mismatched_entries(
-    tmp_path: Path, entry: dict[str, object] | None
+@pytest.mark.parametrize("value", ["", "   ", "line1\nline2", "line1\rline2"])
+def test_render_index_entry_does_not_add_semantic_acceptance_conditions(
+    tmp_path: Path, value: str
 ) -> None:
-    """schema と一致しない INDEX entry を拒否する。"""
-    root = make_repo(tmp_path)
-    readme = root / "README.md"
-
-    with pytest.raises(cmoc_runtime.CmocError):
-        indexing_common.render_index_entry(root, readme, entry)
-
-
-@pytest.mark.parametrize(
-    ("key", "value"),
-    [
-        ("summary", []),
-        ("summary", [""]),
-        ("summary", ["   "]),
-        ("summary", ["line1\nline2"]),
-        ("summary", ["line1\rline2"]),
-        ("read_this_when", []),
-        ("read_this_when", [""]),
-        ("do_not_read_this_when", []),
-        ("do_not_read_this_when", ["\t"]),
-    ],
-)
-def test_render_index_entry_rejects_empty_blank_or_multiline_semantic_items(
-    tmp_path: Path, key: str, value: list[str]
-) -> None:
-    """空白または複数行の semantic item を拒否する。"""
+    """schema が許容する文字列を renderer 独自の品質条件では拒否しない。"""
     root = make_repo(tmp_path)
     readme = root / "README.md"
     entry = {
-        "summary": ["summary"],
+        "summary": [value],
         "read_this_when": ["read"],
         "do_not_read_this_when": ["skip"],
     }
-    entry[key] = value
 
-    with pytest.raises(cmoc_runtime.CmocError):
-        indexing_common.render_index_entry(root, readme, entry)
+    rendered = indexing_common.render_index_entry(root, readme, entry)
+
+    assert f"## Summary\n- {value}\n" in rendered
 
 
 def test_update_indexes_creates_empty_index_for_empty_directory(

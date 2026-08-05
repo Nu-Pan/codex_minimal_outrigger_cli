@@ -15,18 +15,18 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の全ライフサイクルを実行する CLI サブコマンド実装。run の初期化から対象 file の選択、Codex による調査・修正、差分・commit・state の検証、unresolved 所見の管理、完了判定、joinable/error/interruption report の保存までを一貫して扱う。
-- refactor state、INDEX 更新、run worktree、process tracking、Git commit/rollback、変更概要生成など複数の補助機能を連携させる、realization refactor 処理の主要なオーケストレーション入口。
+- `realization refactor fork` の CLI 実行全体を担う workload 実装。refactor run の初期化、対象 realization file ごとの agent 調査・修正、差分と commit の検証、refactor state の更新、unresolved finding の追跡、完了判定、report 保存、割り込み・エラー時の rollback と run state 更新を一つの lifecycle として扱う。
+- realization refactor fork の実行制御、処理単位の commit、agent が作成した想定外差分や commit の拒否、変更概要と unresolved finding の report 出力を確認したい場合の実装上の入口である。
 
 ## Read this when
-- `cmoc realization refactor fork` の実行フロー、対象 file の処理単位、refactor state の更新、unresolved 所見の扱いを調査または変更するとき。
-- fork の正常完了・中断・エラー時における run state、cleanup、rollback、report 生成の挙動を確認するとき。
-- agent が作成した差分、changed_paths、commit、INDEX 更新、完了条件の検証ロジックを調査するとき。
+- `cmoc realization refactor fork` の起動から完了または失敗までの制御フローを変更・調査するとき。
+- 対象選択、処理単位の commit、agent call 境界、refactor state、unresolved finding、完了理由、fork report の整合性を確認するとき。
+- KeyboardInterrupt、agent error、cleanup failure、run の joinable/error 遷移に関する挙動を確認するとき。
 
 ## Do not read this when
-- 個別の refactor agent 用 Structured Output や prompt builder の仕様だけを確認する場合は、該当する builder 実装を直接読む。
-- refactor state のデータ形式や対象選択ロジックだけを確認する場合は、state 管理を担う runtime_refactor 実装を直接読む。
-- run の共通ライフサイクル、report 表現、process tracking、INDEX 更新の一般仕様だけを確認する場合は、それぞれの共通 runtime 実装または正本仕様を直接読む。
+- refactor agent に渡すプロンプトや Structured Output の仕様だけを確認したい場合は、file review builder の実装を直接読む。
+- refactor state の選択・同期ロジックだけを確認したい場合は、runtime refactor 共通実装を直接読む。
+- run の一般的な isolation、state、join/abandon 契約だけを確認したい場合は、対応する editing run / run isolation の正本仕様を読む。
 
 ## hash
-- dfa6c077494c737f1de89734761784e94cde51ca03506c8414256b65ff243677
+- 266484a2dc49590c168afc052fe7b25355852c67414036d5e3d06b65b46fd92f

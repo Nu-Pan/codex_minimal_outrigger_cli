@@ -1,10 +1,10 @@
-"""Codex exec の単一試行ループを扱う。
+"""1 回の agent call に含まれる Codex call の実行ループを扱う。
 
-このファイルは 16,000 文字を超えるが、Structured Output 検証、capacity
+このファイルは 16,000 文字を超えるが、Structured Output 検証・補正、capacity
 retry、quota 代表 probe、resume 継続は同じ subprocess 結果、call log、
-subcommand event、retry counter を共有する 1 つの状態機械である。TUI 起動は
+subcommand event、補正・retry counter を共有する 1 つの状態機械である。TUI 起動は
 別 module へ分け、exec の分岐だけをここに残すことで責務境界を exec 実行制御
-へ限定している。quota 処理だけをさらに分離すると、resume token と log/event
+へ限定している。quota 処理だけをさらに分離すると、resume session ID と log/event
 の読み取り文脈が呼び出し元と分断されるため、現状は一体で読む方が凝集性が高い。
 根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from jsonschema import SchemaError, validate, validators
+from jsonschema import SchemaError, validators
 
 from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
@@ -43,6 +43,11 @@ from .runtime_codex_profile import (
 )
 from .runtime_config import load_config
 from .runtime_errors import CmocError
+from .runtime_git import (
+    WorktreeSnapshot,
+    capture_worktree_snapshot,
+    restore_worktree_snapshot,
+)
 from .runtime_logging import SubcommandLogger, current_subcommand_logger
 from .runtime_paths import (
     _reserve_timestamped_path,
@@ -50,12 +55,17 @@ from .runtime_paths import (
     console_timestamp,
     timestamp,
 )
-from .runtime_results import CodexExecResult
+from .runtime_results import (
+    CodexExecResult,
+    StructuredOutputPostcondition,
+    StructuredOutputValidationIssue,
+)
 
 _QUOTA_CONDITION = threading.Condition()
 _QUOTA_POLLING = False
 _QUOTA_PROBE_AVAILABLE = False
 _QUOTA_PROBE_ERROR: BaseException | None = None
+_MAX_OUTPUT_CORRECTIONS = 2
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMPS: dict[Path, str] = {}
 
@@ -68,12 +78,11 @@ def _write_prompt_log(path: Path, prompt: str) -> None:
 
 
 def _read_required_output_json(path: Path) -> Any:
-    """Structured Output の必須 JSON を semantic retry 用に厳格に読み取る。"""
+    """Structured Output の必須 JSON を機械的検証用に厳格に読み取る。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # Structured Output の parse failure は semantic failure である。schema の寛容さにより
-    # 欠落、空、malformed な output を成功に変えてはならない。
+    # 欠落、空、malformed な output は JSON parse 不合格として補正対象にする。
     try:
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise ValueError(f"output file does not exist: {path}") from exc
     if not text.strip():
@@ -84,13 +93,128 @@ def _read_required_output_json(path: Path) -> Any:
         raise ValueError(f"output file is not valid JSON: {exc}") from exc
 
 
-def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
-    """失敗した Codex session の永続 JSONL log から resume token を取り出す。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # quota resume は失敗した Codex session の永続 JSONL log を根拠にする。
-    # 読み取れない場合は `resume` なしで retry する。
+def _display_validation_value(value: Any, *, limit: int = 1000) -> str:
+    """補正に必要な観測値を、prompt を過大化しない JSON 表現へ整える。"""
     try:
-        return extract_resume_token(path.read_text())
+        rendered = json.dumps(value, ensure_ascii=False, sort_keys=True)
+    except (TypeError, ValueError):
+        rendered = repr(value)
+    if len(rendered) <= limit:
+        return rendered
+    return f"{rendered[:limit]}... (truncated, {len(rendered)} characters total)"
+
+
+def _parse_validation_issue(
+    path: Path, exc: Exception
+) -> StructuredOutputValidationIssue:
+    """JSON parse failure を補正 prompt 用の共通表現へ変換する。"""
+    if isinstance(exc.__cause__, json.JSONDecodeError):
+        cause = exc.__cause__
+        assert isinstance(cause, json.JSONDecodeError)
+        location = f"line {cause.lineno}, column {cause.colno}, character {cause.pos}"
+    else:
+        location = str(path)
+    return StructuredOutputValidationIssue(
+        condition="JSON parse",
+        location=location,
+        expected="UTF-8 で符号化された空でない有効な JSON document",
+        observed=str(exc),
+    )
+
+
+def _schema_validation_issues(
+    output: Any, schema_validator: Any
+) -> tuple[StructuredOutputValidationIssue, ...]:
+    """JSON Schema 違反を field ごとの補正可能なエラーへ変換する。"""
+    errors = sorted(
+        schema_validator.iter_errors(output),
+        key=lambda error: (str(getattr(error, "json_path", "$")), error.message),
+    )
+    return tuple(
+        StructuredOutputValidationIssue(
+            condition=f"JSON Schema keyword `{error.validator}`",
+            location=str(getattr(error, "json_path", "$")),
+            expected=_display_validation_value(error.validator_value),
+            observed=_display_validation_value(error.instance),
+        )
+        for error in errors
+    )
+
+
+def _validate_structured_output(
+    path: Path,
+    schema_validator: Any,
+    postcondition: StructuredOutputPostcondition | None,
+    changed_paths: frozenset[str],
+) -> tuple[Any, tuple[StructuredOutputValidationIssue, ...]]:
+    """parse、schema、宣言済み事後条件を順番どおり検証する。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    try:
+        output = _read_required_output_json(path)
+    except (UnicodeError, ValueError) as exc:
+        return None, (_parse_validation_issue(path, exc),)
+    issues = _schema_validation_issues(output, schema_validator)
+    if issues or postcondition is None:
+        return output, issues
+    postcondition_issues = tuple(postcondition(output, changed_paths))
+    if any(
+        not isinstance(issue, StructuredOutputValidationIssue)
+        for issue in postcondition_issues
+    ):
+        raise TypeError(
+            "structured output postcondition must return validation issue objects"
+        )
+    return output, postcondition_issues
+
+
+def _render_validation_issues(
+    issues: tuple[StructuredOutputValidationIssue, ...],
+) -> str:
+    """検証エラーの四要素を補正 prompt と failure detail に共通利用する。"""
+    sections: list[str] = []
+    for index, issue in enumerate(issues, start=1):
+        sections.extend(
+            [
+                f"### {index}",
+                "",
+                f"- 違反した条件: {issue.condition}",
+                f"- 対象 field または位置: {issue.location}",
+                f"- 期待値: {issue.expected}",
+                f"- 観測値: {issue.observed}",
+                "",
+            ]
+        )
+    return "\n".join(sections).rstrip()
+
+
+def _build_output_correction_prompt(
+    issues: tuple[StructuredOutputValidationIssue, ...],
+) -> str:
+    """初回 prompt を加工せず、同じ session の次 turn 用入力を構築する。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    return "\n".join(
+        [
+            "# Structured Output の出力補正",
+            "",
+            "直前の Structured Output は、初回 prompt で宣言済みの機械的検証に合格しませんでした。",
+            "作業成果物を変更せず、初回と同じ schema に従う完全な置換出力を返してください。",
+            "差分、patch、または不合格出力の一部分だけを返してはいけません。",
+            "",
+            "## 検証エラー",
+            "",
+            _render_validation_issues(issues),
+            "",
+        ]
+    )
+
+
+def _extract_session_id_from_stdout_log(path: Path) -> str | None:
+    """Codex call の stdout JSONL log から session ID を取り出す。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # session ID を取得できない場合の扱いは、quota 再開と出力補正で異なるため、
+    # 呼び出し側が判断できるよう None を返す。
+    try:
+        return extract_resume_token(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError):
         return None
 
@@ -177,14 +301,14 @@ def run_codex_exec(
     root: Path | None = None,
     config: CmocConfig | None = None,
     purpose: str = "codex exec",
-    max_semantic_retries: int = 2,
+    structured_output_postcondition: StructuredOutputPostcondition | None = None,
     max_capacity_retries: int = 8,
     capacity_initial_sleep_sec: float = 5.0,
     quota_poll_interval_sec: float = 1800.0,
     max_quota_polls: int | None = None,
     subcommand_logger: SubcommandLogger | None = None,
 ) -> CodexExecResult:
-    """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
+    """Codex exec の再試行、Structured Output 補正、実行記録を一括制御する。"""
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
     root = root or path_context.repo_root
     config = config or load_config(path_context.work_root)
@@ -202,7 +326,7 @@ def run_codex_exec(
         config,
     )
     schema_path: Path | None = None
-    schema_definition: Any | None = None
+    schema_validator: Any | None = None
     schema_source_path = parameter.structured_output_schema_path
     if schema_source_path is not None:
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -213,7 +337,9 @@ def run_codex_exec(
             schema_path = prepare_schema(root, schema_source_path)
             assert schema_path is not None
             schema_definition = json.loads(schema_path.read_text(encoding="utf-8"))
-            validators.validator_for(schema_definition).check_schema(schema_definition)
+            validator_class = validators.validator_for(schema_definition)
+            validator_class.check_schema(schema_definition)
+            schema_validator = validator_class(schema_definition)
         except (
             OSError,
             UnicodeError,
@@ -230,6 +356,18 @@ def run_codex_exec(
                 ],
                 f"schema: {schema_path or schema_source_path}\nerror: {exc}",
             ) from exc
+    elif structured_output_postcondition is not None:
+        raise CmocError(
+            "Structured Output の決定論的事後条件を検証できません。",
+            ["postcondition を Structured Output schema と一緒に指定してください。"],
+            "structured_output_schema_path is None",
+        )
+
+    artifact_snapshot_before = (
+        capture_worktree_snapshot(path_context.work_root)
+        if schema_path is not None
+        else None
+    )
 
     def _call_data(
         run_parameter: AgentCallParameter,
@@ -266,14 +404,14 @@ def run_codex_exec(
             run_call_path,
         )
 
-    def _build_argv(output_path: Path, resume_token: str | None) -> list[str]:
+    def _build_argv(output_path: Path, resume_session_id: str | None) -> list[str]:
         """schema と resume 状態を反映した `codex exec` の argv を組み立てる。"""
         run_argv = _base_exec_argv(override_args, agent_call_cwd)
         run_argv.extend(["--json", "--output-last-message", str(output_path)])
         if schema_path is not None:
             run_argv.extend(["--output-schema", str(schema_path)])
-        if resume_token:
-            run_argv.extend(["resume", resume_token])
+        if resume_session_id:
+            run_argv.extend(["resume", resume_session_id])
         run_argv.append("-")
         return run_argv
 
@@ -323,7 +461,6 @@ def run_codex_exec(
                     "stdout_log_path": str(run_stdout_path),
                     "stderr_log_path": str(run_stderr_path),
                     "output_path": str(run_output_path),
-                    "output_jsonl_log_path": str(run_output_path.with_suffix(".jsonl")),
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -359,8 +496,11 @@ def run_codex_exec(
             # stdout/stderr 本文を console へ漏らさず、固定メッセージだけ stderr へ出す。
             console_error = {
                 "failed": "Codex CLI 呼び出しが失敗しました。",
-                "schema_validation_failed": (
+                "structured_output_validation_failed": (
                     "Codex CLI の Structured Output 検証に失敗しました。"
+                ),
+                "output_correction_failed": (
+                    "Codex CLI の Structured Output 補正に失敗しました。"
                 ),
             }.get(status)
         emit_codex_call_console(
@@ -386,6 +526,72 @@ def run_codex_exec(
         if error is not None:
             payload["error"] = error
         logger.event("codex_call", **payload)
+
+    def _ensure_correction_artifacts_unchanged(
+        frozen_snapshot: WorktreeSnapshot | None,
+        *,
+        run_call_path: Path,
+        run_prompt_path: Path,
+        run_stdout_path: Path,
+        run_stderr_path: Path,
+        run_output_path: Path,
+        started_at: float,
+        returncode: int | None,
+    ) -> None:
+        """補正 turn の差分変動を復元し、補正不能な失敗として通知する。"""
+        if frozen_snapshot is None:
+            return
+        try:
+            current_snapshot = capture_worktree_snapshot(frozen_snapshot.root)
+            changed = frozen_snapshot.changed_paths(current_snapshot)
+            if not changed:
+                return
+            restore_worktree_snapshot(frozen_snapshot)
+        except Exception as exc:
+            detail = f"artifact inspection or restoration failed: {exc!r}"
+            _emit_codex_call_event(
+                run_purpose=purpose,
+                run_call_path=run_call_path,
+                run_prompt_path=run_prompt_path,
+                run_stdout_path=run_stdout_path,
+                run_stderr_path=run_stderr_path,
+                run_output_path=run_output_path,
+                run_schema_path=schema_path,
+                started_at=started_at,
+                returncode=returncode,
+                status="output_correction_failed",
+                error=detail,
+            )
+            raise CmocError(
+                "Structured Output 補正中の作業成果物を復元できませんでした。",
+                ["run worktree と Codex call log を確認してください。"],
+                detail,
+            ) from exc
+        detail = "\n".join(
+            [
+                "correction turn changed work artifacts",
+                f"changed paths: {sorted(changed)!r}",
+                "restoration: succeeded",
+            ]
+        )
+        _emit_codex_call_event(
+            run_purpose=purpose,
+            run_call_path=run_call_path,
+            run_prompt_path=run_prompt_path,
+            run_stdout_path=run_stdout_path,
+            run_stderr_path=run_stderr_path,
+            run_output_path=run_output_path,
+            run_schema_path=schema_path,
+            started_at=started_at,
+            returncode=returncode,
+            status="output_correction_failed",
+            error=detail,
+        )
+        raise CmocError(
+            "Structured Output 補正 turn が作業成果物を変更しました。",
+            ["復元済みの run worktree と Codex call log を確認してください。"],
+            detail,
+        )
 
     def _codex_exec_result_from_paths(
         result: subprocess.CompletedProcess[str],
@@ -421,20 +627,23 @@ def run_codex_exec(
             quota_polls=quota_polls,
         )
 
-    semantic_attempts = 0
+    output_corrections = 0
     capacity_attempts = 0
     quota_polls = 0
     sleep_sec = capacity_initial_sleep_sec
     capacity_retry_pending = False
-    resume_token: str | None = None
+    resume_session_id: str | None = None
+    correction_session_id: str | None = None
+    current_prompt = parameter.prompt
+    frozen_artifact_snapshot: WorktreeSnapshot | None = None
+    artifact_changed_paths: frozenset[str] = frozenset()
 
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = (
             _new_log_paths()
         )
-        output_jsonl_path = output_path.with_suffix(".jsonl")
-        current_argv = _build_argv(output_path, resume_token)
-        _write_prompt_log(prompt_path, parameter.prompt)
+        current_argv = _build_argv(output_path, resume_session_id)
+        _write_prompt_log(prompt_path, current_prompt)
         _write_call_log(
             call_path,
             run_purpose=purpose,
@@ -450,6 +659,16 @@ def run_codex_exec(
         try:
             result = _run_with_prompt_file(current_argv, prompt_path)
         except BaseException as exc:
+            _ensure_correction_artifacts_unchanged(
+                frozen_artifact_snapshot,
+                run_call_path=call_path,
+                run_prompt_path=prompt_path,
+                run_stdout_path=stdout_path,
+                run_stderr_path=stderr_path,
+                run_output_path=output_path,
+                started_at=attempt_started_at,
+                returncode=None,
+            )
             startup_error = format_codex_call_error(exc)
             _emit_codex_call_event(
                 run_purpose=purpose,
@@ -467,8 +686,17 @@ def run_codex_exec(
             )
             raise
         stdout_path.write_text(result.stdout)
-        output_jsonl_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
+        _ensure_correction_artifacts_unchanged(
+            frozen_artifact_snapshot,
+            run_call_path=call_path,
+            run_prompt_path=prompt_path,
+            run_stdout_path=stdout_path,
+            run_stderr_path=stderr_path,
+            run_output_path=output_path,
+            started_at=attempt_started_at,
+            returncode=result.returncode,
+        )
         error_text = codex_error_text(result.stdout, result.stderr)
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # retry/wait 挙動は JSONL event で決め、既知の event がない場合だけ exit status を
@@ -544,8 +772,8 @@ def run_codex_exec(
                                     stderr_path=stderr_path,
                                 ),
                             )
-                        resume_token = _extract_resume_token_from_jsonl_log(
-                            output_jsonl_path
+                        resume_session_id = correction_session_id or (
+                            _extract_session_id_from_stdout_log(stdout_path)
                         )
                         continue
                     _QUOTA_PROBE_AVAILABLE = False
@@ -625,9 +853,6 @@ def run_codex_exec(
                             probe_output_path,
                             probe_call_path,
                         ) = _new_log_paths()
-                        probe_output_jsonl_path = probe_output_path.with_suffix(
-                            ".jsonl"
-                        )
                         probe_argv = _base_exec_argv(
                             probe_override_args, probe_agent_call_cwd
                         )
@@ -681,7 +906,6 @@ def run_codex_exec(
                             )
                             raise
                         probe_stdout_path.write_text(poll.stdout)
-                        probe_output_jsonl_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
                         probe_quota_error = is_quota_error(poll.stdout)
@@ -783,7 +1007,9 @@ def run_codex_exec(
                     f"# {console_timestamp()} Codex CLI quota wait: resuming work",
                     flush=True,
                 )
-                resume_token = _extract_resume_token_from_jsonl_log(output_jsonl_path)
+                resume_session_id = correction_session_id or (
+                    _extract_session_id_from_stdout_log(stdout_path)
+                )
                 continue
             _emit_codex_call_event(
                 run_purpose=purpose,
@@ -810,27 +1036,23 @@ def run_codex_exec(
                 ),
             )
         if schema_path is not None:
-            assert schema_definition is not None
+            assert schema_validator is not None
+            if frozen_artifact_snapshot is None:
+                assert artifact_snapshot_before is not None
+                frozen_artifact_snapshot = capture_worktree_snapshot(
+                    artifact_snapshot_before.root
+                )
+                artifact_changed_paths = artifact_snapshot_before.changed_paths(
+                    frozen_artifact_snapshot
+                )
             try:
-                output_json = _read_required_output_json(output_path)
-                validate(instance=output_json, schema=schema_definition)
+                output_json, validation_issues = _validate_structured_output(
+                    output_path,
+                    schema_validator,
+                    structured_output_postcondition,
+                    artifact_changed_paths,
+                )
             except Exception as exc:
-                if semantic_attempts < max_semantic_retries:
-                    semantic_attempts += 1
-                    _emit_codex_call_event(
-                        run_purpose=purpose,
-                        run_call_path=call_path,
-                        run_prompt_path=prompt_path,
-                        run_stdout_path=stdout_path,
-                        run_stderr_path=stderr_path,
-                        run_output_path=output_path,
-                        run_schema_path=schema_path,
-                        started_at=attempt_started_at,
-                        returncode=result.returncode,
-                        status="schema_validation_retrying",
-                        error=str(exc),
-                    )
-                    continue
                 _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
@@ -841,14 +1063,74 @@ def run_codex_exec(
                     run_schema_path=schema_path,
                     started_at=attempt_started_at,
                     returncode=result.returncode,
-                    status="schema_validation_failed",
-                    error=str(exc),
+                    status="structured_output_validation_failed",
+                    error=f"structured output validation could not run: {exc!r}",
+                )
+                raise CmocError(
+                    "Structured Output を機械的に検証できませんでした。",
+                    [
+                        "Codex call log、prompt、schema、および validator の整合性を確認してください。"
+                    ],
+                    f"schema: {schema_path}\noutput: {output_path}\nerror: {exc!r}",
+                ) from exc
+            if validation_issues:
+                rendered_issues = _render_validation_issues(validation_issues)
+                failure_reason: str | None = None
+                if output_corrections >= _MAX_OUTPUT_CORRECTIONS:
+                    failure_reason = (
+                        f"maximum output corrections reached: {_MAX_OUTPUT_CORRECTIONS}"
+                    )
+                elif correction_session_id is None:
+                    correction_session_id = _extract_session_id_from_stdout_log(
+                        stdout_path
+                    )
+                    if correction_session_id is None:
+                        failure_reason = "Codex session ID is unavailable"
+                if failure_reason is None:
+                    output_corrections += 1
+                    resume_session_id = correction_session_id
+                    current_prompt = _build_output_correction_prompt(validation_issues)
+                    _emit_codex_call_event(
+                        run_purpose=purpose,
+                        run_call_path=call_path,
+                        run_prompt_path=prompt_path,
+                        run_stdout_path=stdout_path,
+                        run_stderr_path=stderr_path,
+                        run_output_path=output_path,
+                        run_schema_path=schema_path,
+                        started_at=attempt_started_at,
+                        returncode=result.returncode,
+                        status="output_correction_requested",
+                        error=rendered_issues,
+                    )
+                    continue
+                detail = "\n".join(
+                    [
+                        f"schema: {schema_path}",
+                        f"output: {output_path}",
+                        f"reason: {failure_reason}",
+                        "validation errors:",
+                        rendered_issues,
+                    ]
+                )
+                _emit_codex_call_event(
+                    run_purpose=purpose,
+                    run_call_path=call_path,
+                    run_prompt_path=prompt_path,
+                    run_stdout_path=stdout_path,
+                    run_stderr_path=stderr_path,
+                    run_output_path=output_path,
+                    run_schema_path=schema_path,
+                    started_at=attempt_started_at,
+                    returncode=result.returncode,
+                    status="structured_output_validation_failed",
+                    error=f"{failure_reason}\n{rendered_issues}",
                 )
                 raise CmocError(
                     "Codex CLI の Structured Output 検証に失敗しました。",
-                    ["schema と output を確認してください。"],
-                    f"schema: {schema_path}\noutput: {output_path}\nerror: {exc}",
-                ) from exc
+                    ["Codex call log、schema、および validator を確認してください。"],
+                    detail,
+                )
         else:
             output_json = read_output_json(output_path)
         _emit_codex_call_event(

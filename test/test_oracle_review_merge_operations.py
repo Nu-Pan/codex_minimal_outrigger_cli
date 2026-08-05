@@ -6,9 +6,8 @@
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md
 """
 
-import pytest
-
 import sub_commands.oracle.review as review_module
+import sub_commands.oracle.review_loop as review_loop_module
 
 
 def test_apply_finding_merge_operations_enforces_kind_contract() -> None:
@@ -77,80 +76,24 @@ def test_apply_finding_merge_operations_enforces_kind_contract() -> None:
     ]
 
 
-@pytest.mark.parametrize(
-    "operation",
-    [
-        {"kind": "delete", "target_ids": ["finding-0001"], "finding": {}},
-        {"kind": "delete", "target_ids": ["finding-0001"]},
-        {
-            "kind": "replace",
-            "target_ids": ["finding-0001", "finding-0002"],
-            "finding": {},
-        },
-        {"kind": "replace", "target_ids": ["finding-0001"], "finding": None},
-        {"kind": "merge", "target_ids": ["finding-0001"], "finding": {}},
-        {
-            "kind": "merge",
-            "target_ids": ["finding-0001", "finding-9999"],
-            "finding": {},
-        },
-        {
-            "kind": "delete",
-            "target_ids": ["finding-0001", "finding-0001"],
-            "finding": None,
-        },
-    ],
-)
-def test_apply_finding_merge_operations_rejects_invalid_operations(
-    operation: dict,
-) -> None:
-    """対象や payload が不正な merge operation を拒否する。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
-    """
-    with pytest.raises(ValueError):
-        review_module.apply_finding_merge_operations(
-            [{"finding_id": "finding-0001"}, {"finding_id": "finding-0002"}],
-            [operation],
-            3,
-        )
-
-
-@pytest.mark.parametrize(
-    "operations",
-    [
-        [
-            {"kind": "replace", "target_ids": ["finding-0001"], "finding": {}},
-            {"kind": "replace", "target_ids": ["finding-0001"], "finding": {}},
-        ],
-        [
+def test_merge_target_id_postcondition_reports_unknown_input_id() -> None:
+    """入力 finding_id 集合にない参照を field 位置つきで報告する。"""
+    findings = [{"finding_id": "finding-0001"}]
+    output = {
+        "operations": [
             {
-                "kind": "merge",
-                "target_ids": ["finding-0001", "finding-0002"],
-                "finding": {},
-            },
-            {"kind": "delete", "target_ids": ["finding-0002"], "finding": None},
-        ],
-        [
-            {"kind": "delete", "target_ids": ["finding-0001"], "finding": None},
-            {
-                "kind": "merge",
-                "target_ids": ["finding-0001", "finding-0002"],
-                "finding": {},
-            },
-        ],
-    ],
-)
-def test_apply_finding_merge_operations_rejects_reused_targets(
-    operations: list[dict],
-) -> None:
-    """複数 operation に同じ finding_id を再利用する入力を拒否する。
+                "kind": "delete",
+                "target_ids": ["finding-0001", "finding-9999"],
+                "finding": None,
+            }
+        ]
+    }
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
-    """
-    with pytest.raises(ValueError):
-        review_module.apply_finding_merge_operations(
-            [{"finding_id": "finding-0001"}, {"finding_id": "finding-0002"}],
-            operations,
-            3,
-        )
+    issues = review_loop_module._merge_target_id_postcondition(
+        findings, output, frozenset()
+    )
+
+    assert len(issues) == 1
+    assert issues[0].location == "operations[0].target_ids[1]"
+    assert issues[0].expected == "['finding-0001']"
+    assert issues[0].observed == "'finding-9999'"
