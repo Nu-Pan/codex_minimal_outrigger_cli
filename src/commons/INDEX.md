@@ -102,19 +102,23 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを実行制御する中核モジュール。Structured Output の厳格な JSON/schema 検証、capacity retry、quota の代表 probe と待機、resume token による再開、prompt・stdout・stderr・output・call log の保存、console/subcommand event の記録を一体で扱う。exec 実行制御の実装を確認する入口であり、ログ整形や Codex プロファイル処理の詳細は分離先モジュールを参照する。
+- Codex exec の単一試行ループを実行制御する中核実装。Structured Output の schema 準備・厳格な JSON 読み取りと検証、prompt・stdout・stderr・output・call log の保存、Codex subprocess の起動、結果イベントの記録を扱う。
+- capacity error の指数バックオフ retry、quota error の代表 probe と待機・再開、失敗 session の resume token による継続、quota 待機状態のスレッド間共有を一体的に制御する。
+- Codex CLI の成功・失敗・schema 検証失敗を CodexExecResult または CmocError として呼び出し元へ返す、exec 実行制御の入口である。
 
 ## Read this when
-- Codex exec の再試行、quota 待機・probe、resume 継続、Structured Output 検証、実行ログ保存、Codex call event の挙動を変更または調査するとき。
-- Codex subprocess の argv、cwd、環境、schema、prompt stdin、失敗分類から最終結果生成までの制御フローを確認するとき。
+- Codex exec の起動条件、argv・cwd・環境変数、Structured Output 検証を調査または変更するとき。
+- capacity retry、quota polling・probe、resume token、semantic retry の相互作用を確認するとき。
+- Codex call log、prompt/output log、console・subcommand event の記録内容や失敗分類を調査するとき。
+- CodexExecResult の生成や exec subprocess 失敗時の CmocError 処理を追跡するとき。
 
 ## Do not read this when
-- Codex のエラー分類、schema 準備、resume token 抽出、subprocess 起動など個別 helper の実装だけを確認したいときは、分離された runtime プロファイル系モジュールを直接読む。
-- Codex call の console 出力形式だけを確認したいときは、runtime logging 系モジュールを直接読む。
-- TUI 起動や exec 以外のサブコマンド実装を調査するとき。
+- TUI 起動そのものの実装や分岐を調査するときは、TUI 担当 module を直接読む。
+- Codex のログ整形、profile 判定、subprocess 実行補助など単独の共通処理だけを変更するときは、対応する runtime module を直接読む。
+- exec の正本仕様や retry・quota の要件を確認するときは、まず参照されている oracle 文書を読む。
 
 ## hash
-- c17d813410337f225e231d93db7fc75d7cac6319af7803abc68f0d8aadfed1d0
+- 48066df0b33e37b084bfb925db8f0167b14151fa9793e8a719f45a2bbdbe330f
 
 # `runtime_codex_logging.py`
 

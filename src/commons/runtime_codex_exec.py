@@ -201,20 +201,17 @@ def run_codex_exec(
         parameter,
         config,
     )
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # `--output-schema` は Codex 自身が linked worktree 内で動く場合も repo-root の
-    # local schema store を指さなければならない。
-    schema_path = (
-        prepare_schema(root, parameter.structured_output_schema_path)
-        if parameter.structured_output_schema_path
-        else None
-    )
+    schema_path: Path | None = None
     schema_definition: Any | None = None
-    if schema_path is not None:
+    schema_source_path = parameter.structured_output_schema_path
+    if schema_source_path is not None:
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        # jsonschema の malformed な `$schema` metadata が AttributeError になる場合も、
-        # schema のローカルな失敗として controlled な CmocError 経路へ送る。
+        # `--output-schema` は Codex 自身が linked worktree 内で動く場合も repo-root の
+        # local schema store を指さなければならない。source の読み取り・UTF-8 decode、
+        # JSON parse、schema validation を同じ local failure として扱う。
         try:
+            schema_path = prepare_schema(root, schema_source_path)
+            assert schema_path is not None
             schema_definition = json.loads(schema_path.read_text(encoding="utf-8"))
             validators.validator_for(schema_definition).check_schema(schema_definition)
         except (
@@ -231,7 +228,7 @@ def run_codex_exec(
                     "Structured Output schema の JSON と schema 定義を確認してください。",
                     "schema を修正してから同じ cmoc コマンドを再実行してください。",
                 ],
-                f"schema: {schema_path}\nerror: {exc}",
+                f"schema: {schema_path or schema_source_path}\nerror: {exc}",
             ) from exc
 
     def _call_data(

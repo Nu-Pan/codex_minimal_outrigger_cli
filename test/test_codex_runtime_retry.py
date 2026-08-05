@@ -232,16 +232,16 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
     assert expected_error in codex_events[0]["error"]
 
 
-@pytest.mark.parametrize("schema_text", ["{", '{"$schema": 1}'])
+@pytest.mark.parametrize("schema_bytes", [b"{", b'{"$schema": 1}', b"\xff"])
 def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, schema_text: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, schema_bytes: bytes
 ) -> None:
     """不正な Structured Output schema は Codex 呼び出し前に失敗させる。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     schema = tmp_path / "invalid_schema.json"
-    schema.write_text(schema_text)
+    schema.write_bytes(schema_bytes)
     calls = 0
 
     def fail_run(*_args: object, **_kwargs: object) -> object:
