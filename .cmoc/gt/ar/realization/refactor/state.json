@@ -36,7 +36,7 @@
     "last_investigated_at": "2026-07-23_14-14_51_750582000"
   },
   "oracle/doc/app_spec/codex_exec_rule.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "5de625ab332d342d9d2390773c504de27332611a12822e0948675f8ee7182211",
     "last_investigated_at": "2026-08-03_14-27_08_667763000"
@@ -84,7 +84,7 @@
     "last_investigated_at": "2026-08-03_07-38_53_398747000"
   },
   "oracle/doc/app_spec/prompt_standard.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "ca0179e80487c4a785ed8a5e4184a10ad2f7f23f702efa6636b0c0792bb9fe03",
     "last_investigated_at": "2026-08-03_19-45_34_224465000"
@@ -252,7 +252,7 @@
     "last_investigated_at": "2026-08-03_21-59_44_377954000"
   },
   "oracle/src/oracle/acp_builder/basic.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "f9b3e077a13bda4bd4bd865643b4da0fcd9f5291fb6e597c04629c9eb3037c46",
     "last_investigated_at": "2026-08-03_08-32_52_828881000"
@@ -306,13 +306,13 @@
     "last_investigated_at": "2026-08-03_08-55_07_905197000"
   },
   "oracle/src/oracle/acp_builder/oracle/review/merge_finding.json": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "dbeea7c7b9bbc2c9552e7b69100001b19434ca89d296c5ea9615247b74b1546a",
     "last_investigated_at": "2026-08-03_09-04_25_504478000"
   },
   "oracle/src/oracle/acp_builder/oracle/review/merge_finding.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "6a03fe9ccb4cc5a19525e8cefbf5ff55df017aaf78939366c4474cf009c0f3ab",
     "last_investigated_at": "2026-08-03_09-13_03_856884000"
@@ -348,7 +348,7 @@
     "last_investigated_at": "2026-08-03_16-39_44_846896000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.json": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "dc922a0d0f2d939d57f9fe06e94599cbe8166bdbfd52c2ff17cd5c65882b6eda",
     "last_investigated_at": "2026-07-27_00-41_38_070519000"
