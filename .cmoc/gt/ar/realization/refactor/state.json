@@ -654,10 +654,10 @@
     "last_investigated_at": "2026-07-24_21-56_24_592457000"
   },
   "src/acp/builder/session/join/conflict_resolution.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "de65cce597118bf119865b66ea413acfbcafb953c0a48e462279853faf6ae505",
-    "last_investigated_at": "2026-08-04_01-51_06_965646000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "df1c9fc7faf28466fa86b69c0bc45f518f61457d14fc616e0b9d9adb5664c105",
+    "last_investigated_at": "2026-08-06_13-17_22_685157000"
   },
   "src/acp/builder/tui/__init__.py": {
     "investigation_required": false,
