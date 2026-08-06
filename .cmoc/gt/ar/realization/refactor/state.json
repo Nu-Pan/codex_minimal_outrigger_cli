@@ -1250,8 +1250,8 @@
   "test/test_runtime_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "2d758f5d6623c0c319c723aaefa6a539f938dbac9e1126493102566ca679f24c",
-    "last_investigated_at": "2026-08-05_18-30_48_379279000"
+    "last_investigated_sha256": "7520ad8a76eaed8d8e9ab20ef600e2f6f72e12ed4d77742a4b6ca64a90ddfadc",
+    "last_investigated_at": "2026-08-06_14-42_09_140507000"
   },
   "test/test_runtime_codex_conflicts.py": {
     "investigation_required": false,

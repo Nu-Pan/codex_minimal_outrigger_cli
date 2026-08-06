@@ -632,23 +632,21 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の共通 runner と終了処理を通じた error report、console log、preflight、shell completion の外部契約を検証するテスト。
-- duration 表示、サブコマンドログの衝突・並列書き込み、doctor preflight、CLI 解析エラー、work root 制約、completion probe、KeyboardInterrupt、終了コードを扱う。
-- CLI lifecycle の複数境界を横断して確認するため、個別の error・log・preflight・completion テストではなく、共通 runner の挙動を調査・変更するときの入口となる。
+- CLI の error report、console/file log、doctor preflight、shell completion、および共通 runner の終了処理を横断的に検証するテスト群。これらの外部契約を変更・確認する際の入口であり、個別実装の挙動だけでなく work root、subcommand event、終了コード、標準出力・標準エラーの境界を確認する。
 
 ## Read this when
-- CLI の error report や終了コード、stdout/stderr 出力を変更・調査するとき
-- サブコマンドログ、runner、doctor preflight、work root 判定の挙動を変更・調査するとき
-- shell completion probe が通常の CLI 初期化や副作用を回避する境界を変更・調査するとき
-- duration 表示または並列 logger の挙動を変更・調査するとき
+- CLI のエラー報告形式、終了コード、例外・KeyboardInterrupt の扱いを変更または調査するとき
+- サブコマンドログ、並列イベント記録、ログ書き込み失敗時の終了処理を変更または調査するとき
+- doctor preflight、work root 判定、pre-log check の実行順序や副作用を変更または調査するとき
+- CLI 引数解析や shell completion probe の挙動を変更または調査するとき
 
 ## Do not read this when
-- CLI の業務処理そのものや、特定サブコマンドの実装だけを変更・調査するとき
-- error report の仕様、ログ形式、completion、doctor preprocess の正本仕様を確認するときは、対応する oracle 文書を直接読む
-- CLI と無関係なテストや、共通 runner・終了処理を通らない単体処理を調査するとき
+- CLI lifecycle の外部契約に関係しない実装詳細や、単独のビジネスロジックを確認するとき
+- duration formatting や logger の内部実装だけを直接確認したいときは、まず対応する実装・仕様を読むとき
+- 対象のテストを実行・修正する必要がなく、別のサブコマンド固有機能だけを調査するとき
 
 ## hash
-- 7520ad8a76eaed8d8e9ab20ef600e2f6f72e12ed4d77742a4b6ca64a90ddfadc
+- 3075ad5ab382b9519becccaa9819a21243158a120eb7b4570858fd88a0db6a3c
 
 # `test_runtime_codex_conflicts.py`
 
