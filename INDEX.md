@@ -124,22 +124,22 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装ルート。Typer CLI の公開入口、サブコマンド、共通 runtime、ACP・basic・config・oracle の互換 import 層を扱う。
-- CLI は doctor、TUI、indexing、session、oracle、realization、run の操作を登録し、個別処理をサブコマンド実装へ委譲する。
-- 共通 runtime と互換層、サブコマンド群が下位要素への主要な入口であり、機能別の調査・変更は該当する下位要素へ進む。
+- cmoc の実装ツリー。Typer CLI の主要入口、サブコマンド、共通 runtime helper、互換 import shim、ACP builder 群を扱い、CLI から各機能実装へ進むための入口となる。
+- ACP・basic・config は canonical 実装や型を再公開する互換層、commons は CLI 実行・Codex・設定・状態・Git・logging・run lifecycle などの共通処理、sub_commands は doctor・indexing・oracle・realization・run・session・TUI の実行入口を担う。
 
 ## Read this when
-- cmoc CLI の全体構成、公開コマンド、引数解析、エラー変換、自動補完の挙動を確認するとき。
-- 共通 runtime、ACP builder、互換 import 層、またはサブコマンド群の配置と責務を把握するとき。
-- 特定の CLI 操作について、どの実装領域へ進むべきか判断するとき。
+- cmoc の CLI コマンド登録、Typer/Click の引数解析、エラー変換、自動補完、サブコマンドへの委譲を調査・変更するとき
+- 共通 runtime の担当領域や、CLI・Codex・設定・状態・Git・logging・run lifecycle の実装入口を特定するとき
+- 既存の acp、basic、config、cmoc_runtime、oracle 関連の互換 import 経路を維持・移行するとき
+- ACP builder、用途別 adapter、prompt 処理、TUI、quota probe の実装入口を確認するとき
 
 ## Do not read this when
-- 個別サブコマンド、runtime 機能、builder、互換 module の具体的な挙動を確認・変更するときは、対応する下位要素を直接読む。
-- canonical な oracle 実装、利用者向け仕様、prompt 仕様を確認するときは、oracle 側の対応対象を直接読む。
-- CLI と無関係な単一機能の内部処理だけを調査するとき。
+- canonical な oracle 実装や正本仕様を確認・変更したいときは、oracle 側の対応対象を直接読む
+- 特定サブコマンド、runtime 機能、builder、prompt、TUI の詳細処理を確認したいときは、該当する下位要素を直接読む
+- CLI と無関係な個別機能や、互換層ではない利用箇所の公開面を調査するときは、参照元または担当モジュールを直接読む
 
 ## hash
-- bbefd9b46d499d022ecc3be61e998e2d45af2d8931761a1ad0a93b43c19f829b
+- f6a883693b5551fa2d077a956f3c06b13eb290e3c87075e2d07e02dadf11e098
 
 # `test`
 

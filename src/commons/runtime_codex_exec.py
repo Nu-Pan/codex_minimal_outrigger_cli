@@ -74,7 +74,7 @@ def _write_prompt_log(path: Path, prompt: str) -> None:
     """Codex に渡した完全 prompt を再実行可能な stdin log として保存する。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # prompt log 自体を再実行可能な stdin source とし、metadata にはしない。
-    path.write_text(prompt)
+    path.write_text(prompt, encoding="utf-8")
 
 
 def _read_required_output_json(path: Path) -> Any:
@@ -425,12 +425,13 @@ def run_codex_exec(
         """prompt logをstdinとしてCodex subprocessを起動する。"""
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # prompt log file は `codex exec ... -` の stdin source である。
-        with run_prompt_path.open() as prompt_file:
+        with run_prompt_path.open(encoding="utf-8") as prompt_file:
             return run_codex_subprocess(
                 run_argv,
                 cwd=run_agent_call_cwd,
                 stdin=prompt_file,
                 text=True,
+                encoding="utf-8",
                 capture_output=True,
                 env=run_codex_env,
             )
@@ -465,7 +466,8 @@ def run_codex_exec(
                 ensure_ascii=False,
                 indent=2,
             )
-            + "\n"
+            + "\n",
+            encoding="utf-8",
         )
 
     call_started_at = time.perf_counter()
@@ -685,8 +687,8 @@ def run_codex_exec(
                 console_error=startup_error,
             )
             raise
-        stdout_path.write_text(result.stdout)
-        stderr_path.write_text(result.stderr)
+        stdout_path.write_text(result.stdout, encoding="utf-8")
+        stderr_path.write_text(result.stderr, encoding="utf-8")
         _ensure_correction_artifacts_unchanged(
             frozen_artifact_snapshot,
             run_call_path=call_path,
@@ -905,8 +907,8 @@ def run_codex_exec(
                                 run_codex_home=probe_codex_home,
                             )
                             raise
-                        probe_stdout_path.write_text(poll.stdout)
-                        probe_stderr_path.write_text(poll.stderr)
+                        probe_stdout_path.write_text(poll.stdout, encoding="utf-8")
+                        probe_stderr_path.write_text(poll.stderr, encoding="utf-8")
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
                         probe_quota_error = is_quota_error(poll.stdout)
                         probe_capacity_error = is_capacity_error(poll.stdout)
