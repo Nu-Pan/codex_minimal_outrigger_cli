@@ -8,10 +8,10 @@
 - {{work-root}}/oracle/doc/dev_rule/coding_rule.md
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 
-この file は 16,000 文字を超えるが、finding の列挙、judgement、advocate、semantic
-retry、interrupt 復旧は同じ review round と fake Codex call 列を検証する一つの責務で
-ある。分割すると、partial progress と retry の外部契約を複数 file で追う必要がある
-ため、現状は review loop 回帰として一箇所に保つ。
+この file は 16,000 文字を超えるが、finding の列挙、理由検証、merge、judgement、
+interrupt 復旧は同じ review round と fake Codex call 列を検証する一つの責務である。
+分割すると、partial progress と merge の外部契約を複数 file で追う必要があるため、
+現状は review loop 回帰として一箇所に保つ。
 """
 
 from pathlib import Path
