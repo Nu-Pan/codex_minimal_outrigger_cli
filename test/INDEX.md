@@ -81,18 +81,21 @@
 # `_ollama_support.py`
 
 ## Summary
-- 実経路統合テスト向けに、case-local Ollama の導入・設定・起動・GPU 推論確認・終了処理をまとめて提供するテスト支援モジュール。共有 cache の安全な検証、atomic publish、独立した working set、pytest runner も扱うため、Ollama を使う統合テストの入口となる。
+- 実経路統合テスト向けに、case-local Ollama の導入・キャッシュ管理・モデル準備・GPU-only 推論確認・pytest 起動・プロセスグループ終了を一体で担うテスト支援モジュール。
+- 共有キャッシュの安全性、排他制御、atomic publish、case ごとの作業領域分離を扱い、統合テストが利用するローカル Ollama 接続情報と設定変換を提供する。
 
 ## Read this when
-- Ollama を使用する実経路統合テストの実行環境、cache、model 構築、GPU-only 推論、process group の teardown を調査・変更するとき
-- test case から case-local Ollama provider を設定する方法や、専用 pytest runner の挙動を確認するとき
+- 実経路統合テストで Ollama を起動・利用する仕組みを調査または変更するとき。
+- Ollama のキャッシュ、モデルの materialize／publish、GPU-only 検証、動的 endpoint、process teardown の挙動を確認するとき。
+- case-local Ollama を向けた CmocConfig や、この支援モジュール経由の pytest runner を扱うとき。
 
 ## Do not read this when
-- Ollama を使わない通常のテストや、アプリケーション本体の model provider 実装を調査するとき
-- テスト実行全体の選択・品質検査手順を確認したいときは、まず test execution の正本仕様を読む
+- 通常の Ollama provider 設定や本番実装の挙動だけを確認する場合は、設定・実装側の対象を直接読む。
+- Ollama を使わない単体テストや、一般的な pytest 実行方法だけを調べる場合。
+- モデル品質や応答内容そのものを評価する場合。
 
 ## hash
-- c96f1fa7b5a180f33e64ebf941c45a1711c31c3dd36a3fcedf848b04ec430003
+- 51b074c8cb0b59b3fbb3ee372cdad386653bfe5dc0bfb3fcf84999f5565989f2
 
 # `test_acp_builder_editing_run_parameters.py`
 
