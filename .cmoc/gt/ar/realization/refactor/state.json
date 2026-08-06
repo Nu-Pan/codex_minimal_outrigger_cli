@@ -183,7 +183,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "67c1e11a5d4ebc3936273d706933419f4e789856bd1afb62c8baeed5896e0296",
-    "last_investigated_at": "2026-08-03_15-24_33_286619000"
+    "last_investigated_at": "2026-08-06_10-00_03_932246000"
   },
   "oracle/doc/branch_model.md": {
     "investigation_required": false,
