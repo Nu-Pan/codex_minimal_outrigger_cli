@@ -1316,8 +1316,8 @@
   "test/test_session_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "747dcda058115e6a69200623c64489cefad1e9a9df623cf8b2c2b7fb020ea986",
-    "last_investigated_at": "2026-08-03_19-19_23_016280000"
+    "last_investigated_sha256": "fbdc8ebef81bda8d2b01754401be6f53de065f1b6faf335b986974f93dd573c4",
+    "last_investigated_at": "2026-08-06_11-36_21_822382000"
   },
   "test/test_skill_metadata.py": {
     "investigation_required": false,

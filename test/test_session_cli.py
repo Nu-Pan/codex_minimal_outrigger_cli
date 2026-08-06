@@ -745,6 +745,7 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     target.write_text("home change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "home change")
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
     run_git(root, "switch", session_branch)
 
     class FakeCodexResult:
@@ -767,7 +768,7 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     assert current_branch(root) == home_branch
     assert "conflict 解消以外の差分が残っています。" in result.stderr
     assert "src/extra.py" in result.stderr
-    assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
+    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
 
 
 @pytest.mark.parametrize("change_kind", ["context", "mode"])
@@ -795,6 +796,7 @@ def test_session_join_rejects_extra_conflict_file_changes(
     target.write_text("prefix\nhome change\nsuffix\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "home change")
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
     run_git(root, "switch", session_branch)
 
     class FakeCodexResult:
@@ -825,7 +827,7 @@ def test_session_join_rejects_extra_conflict_file_changes(
     )
     assert expected_summary in result.stderr
     assert str(target) in result.stderr
-    assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
+    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
 
 
 def test_session_join_handles_conflict_path_containing_newline(
