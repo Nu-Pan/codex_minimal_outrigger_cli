@@ -75,6 +75,8 @@
     - 「oracle file もっと良くするには」の人間への提案は目的ではない
     - 過去 oracle file に何があったか (i.e. 編集・追加・削除) はレビュー対象ではない
 
+oracle review の finding、採否判定、および verdict を feedback observation または human disposition として自動変換しない。agent が共通 reporter で明示的に申告した observation と allowlist 済み log detector の observation は、review 成果物と分離して `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` に従う。
+
 ## ユーザー中断
 
 - `cmoc oracle review` は中断可能サブコマンドとし、共通動作は `{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` を正本とする

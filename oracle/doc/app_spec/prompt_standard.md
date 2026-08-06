@@ -30,6 +30,13 @@
 - `cmoc tui` のオリジナルプロンプトに応じて規範を選択する agent call を行ってはいけない
 - indexing agent call は、`build_index_entry_standard` が定める index entry standard の責務を維持する
 
+## 人間向け feedback instruction を共通注入する
+
+- `build_complete_prompt` は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py` の生成結果を全 agent call へ無条件に 1 回だけ注入する
+- 個別の `build_*_parameter` 関数、個別 prompt、または個別 Structured Output schema に同じ reporting instruction を追加してはならない
+- reporting instruction の判断基準、reporter、collector、および保存責務は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` を正本とする
+- feedback field を持たない既存 Structured Output の意味と受理条件を変更してはならない
+
 ## Structured Output の出力契約
 
 Structured Output の機械的な受理条件は、schema と宣言済みの決定論的事後条件だけで定義する。

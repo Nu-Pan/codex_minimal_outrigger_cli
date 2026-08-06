@@ -71,6 +71,7 @@ def build_oracle_edit_launch_tui_parameter(
 
     # main worktree で対話型 TUI を起動するパラメータを返す。
     return AgentCallParameter(
+        agent_call_kind=build_oracle_edit_launch_tui_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,

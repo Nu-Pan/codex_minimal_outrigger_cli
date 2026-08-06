@@ -34,3 +34,4 @@
 - 原則として、run の作業は `{{run-root}}` ツリー内だけを読み書きする。
 - 個別仕様が明示する cmoc 管理データは、例外として `{{repo-root}}` 側へ書き込んでよい。
     - e.g. 実行ログと session state は `{{run-root}}/.cmoc/gu` ではなく `{{repo-root}}/.cmoc/gu` に保存する。
+    - accepted feedback observation は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従って `{{repo-root}}/.cmoc/gu/ar/feedback` に保存する。

@@ -44,6 +44,7 @@
 - builder は model class を `FLAGSHIP`、reasoning effort を `MAX`、file access mode を `REPO_WRITE` とする
 - Structured Output は要求しない
 - TUI 起動前の indexing preflight を行う
+- 共通 feedback instruction、TUI process の collector context、および accepted observation の保持は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従う
 
 ### Codex CLI の場合
 

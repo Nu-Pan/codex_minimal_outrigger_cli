@@ -82,3 +82,4 @@
 - oracle edit 固有の fork report は作成しない。
 - 共通のサブコマンドログには prompt file、TUI の開始と終了、終了コードを記録してよい。
 - TUI 前後の git 差分または変更 path を、この invocation の成果物として断定してはならない。
+- 共通 reporter が受理した feedback observation は oracle edit の差分または成果物ではなく、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` に従う独立した実行記録とする。

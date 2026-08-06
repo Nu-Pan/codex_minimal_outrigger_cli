@@ -75,6 +75,7 @@ def build_session_join_conflict_resolution_parameter(
     # NOTE
     #   ここでやらかすと、ここまでに投下したコストが全てパーになるので、最高品質設定で呼び出す
     return AgentCallParameter(
+        agent_call_kind=build_session_join_conflict_resolution_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REPO_WRITE,

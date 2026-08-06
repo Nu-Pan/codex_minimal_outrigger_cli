@@ -10,6 +10,7 @@ from .basic import PlaceholderMap
 # local
 from .parts.apply_review_standard import build_apply_review_standard
 from .parts.conflict_resolution_standard import build_conflict_resolution_standard
+from .parts.feedback_reporting_standard import build_feedback_reporting_standard
 from .parts.file_access_rule import build_file_access_rule
 from .parts.index_entry_standard import build_index_entry_standard
 from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
@@ -165,6 +166,9 @@ def build_complete_prompt(
         oracle_and_realization_basic = True
 
     # 静的プロンプトを構築
+    # feedback reporting は個別 builder や Structured Output 契約へ重複させず、
+    # 全 agent call に共通するこの経路で常に注入する。
+    _extend_static_prompt(build_feedback_reporting_standard, path_context)
     if oracle_and_realization_basic:
         _extend_static_prompt(build_oracle_and_realization_basic, path_context)
     if oracle_standard:

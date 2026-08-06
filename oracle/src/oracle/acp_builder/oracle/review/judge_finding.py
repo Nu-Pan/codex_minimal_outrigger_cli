@@ -70,6 +70,7 @@ def build_oracle_review_judge_finding_parameter(
     )
     # パラメータを生成して返す
     return AgentCallParameter(
+        agent_call_kind=build_oracle_review_judge_finding_parameter.__name__,
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,

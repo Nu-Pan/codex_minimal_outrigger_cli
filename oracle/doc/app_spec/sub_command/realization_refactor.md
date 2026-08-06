@@ -143,6 +143,12 @@
 - 続行不能なエラーは、`resolution.status=unresolved` の所見と区別する。
 - 確定済み commit と refactor state は保持する。
 
+## feedback との境界
+
+- findings、`resolution.status`、current fork の unresolved target、および refactor state を feedback observation または human disposition として自動変換しない。
+- agent が共通 reporter で明示的に申告した observation と、allowlist 済み log detector の observation だけを `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` に従って別途保存する。
+- feedback の有無または内容は、refactor loop、`investigation_required`、`completion_reason`、run state、および終了コードへ影響させない。
+
 ## fork report、終了 log、および終了コード
 
 - report は Markdown + YAML Front Matter とする。

@@ -50,6 +50,9 @@ def build_realization_refactor_fork_change_summary_parameter(
 
     # report 用の分類は品質より経済性を優先する。
     return AgentCallParameter(
+        agent_call_kind=(
+            build_realization_refactor_fork_change_summary_parameter.__name__
+        ),
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.MEDIUM,
         file_access_mode=FileAccessMode.READONLY,

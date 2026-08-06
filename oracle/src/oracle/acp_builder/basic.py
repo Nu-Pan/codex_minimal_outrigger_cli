@@ -70,6 +70,9 @@ class AgentCallParameter:
     AI コーディングエージェント (e.g. Codex CLI) の呼び出しパラメータをまとめたクラス
     """
 
+    # 対応する builder 関数名を使う、安定した低カーディナリティ識別子
+    agent_call_kind: str
+
     # モデルクラス
     model_class: ModelClass
 

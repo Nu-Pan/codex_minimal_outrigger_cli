@@ -70,6 +70,7 @@ def build_oracle_investigation_launch_tui_parameter(
 
     # TUI を起動する
     return AgentCallParameter(
+        agent_call_kind=build_oracle_investigation_launch_tui_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,

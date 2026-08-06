@@ -77,6 +77,7 @@ def build_realization_apply_fork_launch_exec_parameter(
 
     # リポジトリ全体の追従を 1 agent call へ委ねるため最高品質設定を使う。
     return AgentCallParameter(
+        agent_call_kind=build_realization_apply_fork_launch_exec_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,

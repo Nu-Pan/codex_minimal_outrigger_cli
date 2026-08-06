@@ -10,6 +10,7 @@
 - 永続化する情報は必要最小限に留める。
 - その場で確実に解決できる情報は state に持たせない。
 - 1 session に未 join の編集 run は高々 1 つとする。
+- feedback の observation、issue、machine assessment、および human disposition は session/run lifecycle state ではなく、この file に保存しない。tracked state は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` を正本とする。
 
 ## スキーマ定義
 

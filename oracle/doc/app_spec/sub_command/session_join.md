@@ -45,6 +45,13 @@ merge conflict が発生した場合は通常の conflict として扱う。
 
 ## `git merge` がコンフリクトした場合
 
+### tracked feedback state の優先処理
+
+- `{{work-root}}/.cmoc/gt/ar/feedback` 内の conflict は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の append-only record 規則を先に適用する。
+- 同じ path の内容が byte-for-byte で同一なら 1 件へ統合してよい。
+- 同じ path の内容が異なる場合は、observation、normalization result、または human disposition を失う可能性があるため、自動解決せず merge を中止する。
+- divergent な feedback record を conflict marker 解消用 agent call へ渡してはならない。
+
 ### 解決手順
 
 1. cmoc は conflict 対象ファイルを列挙する

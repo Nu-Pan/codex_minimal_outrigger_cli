@@ -7,6 +7,8 @@
 - 本書で agent call とは、1 個の `AgentCallParameter` に対する論理的な呼び出し単位を指す
 - Structured Output の出力補正を行う場合も、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回の agent call とする
 - 本書で Codex call とは、初回実行や補正を含む個々の Codex CLI 呼び出しを指す
+- cmoc は agent call ごとに、対応する builder を表す安定した低カーディナリティの `agent_call_kind` と一意な agent call ID を付与する
+- cmoc は初回、補正、および TUI process ごとに一意な Codex call ID を付与する
 
 ## agent call の path context
 
@@ -143,6 +145,15 @@ call-scoped path context の適用範囲を次に示す。
 - プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で `{{time-stamp}}_prompt.md` をリダイレクト入力すること
 - argv に載せてよいのは、フラグ、モデル名、設定上書き値、短い固定文字列、短いファイルパスのみとする
 
+## feedback reporter と collector context
+
+- 全 agent call の完全 prompt には、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従って共通 reporting instruction を 1 回だけ含める
+- cmoc は各 Codex call の開始前に collector の受付を開始し、repository、work-root、subcommand invocation、agent call、および Codex call に拘束した capability を reporter から利用可能にする
+- Structured Output の補正 call は元の agent call ID を共有し、新しい Codex call ID と capability を使用する。初回 prompt で注入済みの reporting instruction を補正 schema または補正 prompt へ重複させない
+- reporter submission は agent call の正式な Structured Output、作業成果物の差分、および Codex CLI の戻り値とは独立して受理する
+- reporter または collector の利用不能は `feedback.reporter_unavailable` event と warning を記録するが、本命 Codex call の開始、終了、Structured Output 検証、retry、および戻り値を変更しない
+- Codex call 終了時は collector の新規受付を止め、accepted request の永続化を完了してから call context を破棄する
+
 ## Codex CLI 呼び出し情報の保存
 
 - Codex CLI 呼び出しに関する情報は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_call.json` に保存すること
@@ -219,6 +230,7 @@ call-scoped path context の適用範囲を次に示す。
 - 最大 2 回の補正後も検証へ合格しない場合は、検証を緩和せず既存のエラー処理へ移る
 - prompt、schema、および validator が矛盾している場合は、補正によって矛盾を隠そうとせず既存のエラー処理へ移る
 - 作業成果物の差分変動、session の再開不能、またはその他の出力修正だけでは解消できない失敗も、検証を緩和せず既存のエラー処理へ移る
+- Structured Output の正式な結果を得られず既存のエラー処理へ移る場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` が定める `codex.structured_output_validation_exhausted` v1 event を、同仕様の安定 field とともに subcommand log へ記録する
 
 ## `codex exec` の並列呼び出し
 

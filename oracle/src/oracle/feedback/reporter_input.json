@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "cmoc feedback reporter input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "category",
+    "severity",
+    "summary",
+    "impact",
+    "human_action_reason",
+    "cause",
+    "evidence",
+    "continuation"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "reporter input schema の version。"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "environment",
+        "tooling",
+        "configuration",
+        "oracle",
+        "workflow",
+        "external_dependency",
+        "other"
+      ],
+      "description": "問題の分類。"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "moderate",
+        "high",
+        "critical",
+        "unknown"
+      ],
+      "description": "agent が推測した重要度。collector は確定事実として扱わない。"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "問題の短い要約。"
+    },
+    "impact": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1200,
+      "description": "現在の作業へ生じた影響。"
+    },
+    "human_action_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1200,
+      "description": "現在の作業外にいる人間の対応が必要な理由。"
+    },
+    "cause": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "certainty",
+        "description"
+      ],
+      "properties": {
+        "certainty": {
+          "type": "string",
+          "enum": [
+            "known",
+            "suspected",
+            "unknown"
+          ],
+          "description": "原因説明に対する agent の確信度。"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1200,
+          "description": "判明している原因、推測した原因、または不明である旨。"
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "description": "問題を再確認するための根拠。少なくとも 1 件必要。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "text"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "command",
+              "error",
+              "file",
+              "oracle",
+              "log",
+              "other"
+            ],
+            "description": "根拠の種類。"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "command、error、該当内容、または根拠の短い説明。"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "file、oracle、log の repository 内 path。"
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "行番号、JSON pointer、event ID など path 内の位置。"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "oracle",
+                    "log"
+                  ]
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "required": [
+                "path"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "continuation": {
+      "type": "string",
+      "enum": [
+        "continued",
+        "degraded",
+        "blocked"
+      ],
+      "description": "本命作業を継続できたかを表す。"
+    },
+    "deduplication_hint": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "description": "任意の重複判定用 hint。確定した issue key ではない。"
+    }
+  }
+}

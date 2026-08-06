@@ -76,6 +76,7 @@ def build_indexing_index_entry_parameter(
     #   非常に単純な要約タスクなので、かなり品質を下げても成立しやすい
     #   cmoc 上の下限設定を採用
     return AgentCallParameter(
+        agent_call_kind=build_indexing_index_entry_parameter.__name__,
         model_class=ModelClass.MINIMUM,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.READONLY,

@@ -74,6 +74,7 @@ def build_tui_launch_tui_parameter(
     #   入力タスクの難易度を正確に測るには最高性能モデルを使わざるを得ないし、だったら最初から最高性能モデルで作業させたほうが安い
     #   過剰になりうることは割り切って、最高品質設定にする
     return AgentCallParameter(
+        agent_call_kind=build_tui_launch_tui_parameter.__name__,
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.MAX,
         file_access_mode=FileAccessMode.REPO_WRITE,

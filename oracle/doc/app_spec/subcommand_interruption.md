@@ -10,6 +10,7 @@
 - 現在の中断可能サブコマンドは以下とする。
     - `cmoc realization refactor fork`
     - `cmoc oracle review`
+    - `cmoc feedback report`
 - 中断可能サブコマンドとして追加できるのは、長時間実行され、かつ処理済みの範囲だけでも一貫した結果として確定できるサブコマンドに限る。
 - この条件を満たすだけでは中断可能サブコマンドとみなさず、個別仕様への明記を必須とする。
 
@@ -34,4 +35,5 @@
 - `cmoc realization refactor fork` は active run を `joinable` にし、同じ run を再開しない。
 - refactor の確定済み部分結果から続きを行う場合は、`cmoc run join` の後に新しい fork を開始する。
 - `cmoc oracle review` は途中位置から再開せず、同じサブコマンドを後から呼び出した場合は新しい run として扱う。
-- 中断から同じ run を再開するための checkpoint を保存してはいけない。
+- `cmoc feedback report` は確定済み normalization unit commit と checkpoint を保持し、実行中 unit を commit または rollback して `result=interrupted` の report を保存する。後から再実行した場合は ingestion receipt と checkpoint から未処理 observation だけを処理する。
+- 編集 run または oracle review の中断位置を再開する checkpoint を保存してはいけない。`cmoc feedback report` が同一 observation の normalization agent call を再実行しないために保存する call result checkpoint は、中断位置を表さないためこの禁止の対象外とする。

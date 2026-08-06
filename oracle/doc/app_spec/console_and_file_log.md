@@ -40,6 +40,8 @@
 
 - 過去のサブコマンド実行時に起きた事の詳細を辿るのに必要な情報を含めること
 - 具体的項目は実装者の裁量で決めて良い
+- 例外として、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の detector rule が参照する event は、同仕様が定める `event_schema_version`, `event_id`, `event_type`, context、および rule 固有 field を安定した契約として含めること
+- feedback detector は安定契約として定義されていない自由文 field を判定に使用してはならない
 
 ## サブコマンドログコンソール出力
 
@@ -77,3 +79,7 @@
     - サブコマンド全体の経過時間
     - サブコマンド全体の Codex CLI quota 回復待ち時間
     - サブコマンドの戻り値
+    - ingestion receipt がない raw feedback observation 数
+    - 前回正常完了した feedback report の snapshot 後に増えた raw feedback observation 数
+
+feedback の件数は詳細を展開せず、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の通知境界に従う。件数または warning を、サブコマンドの戻り値、run state、または成功判定へ反映してはならない。
