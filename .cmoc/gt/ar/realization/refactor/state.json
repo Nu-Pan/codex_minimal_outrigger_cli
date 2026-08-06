@@ -557,6 +557,18 @@
     "last_investigated_sha256": "53bf45c68f2496bd7c4ea1cbc7c3033d6fb47970634dba3ead9e5c4226418224",
     "last_investigated_at": "2026-07-28_05-32_15_761546000"
   },
+  "src/acp/builder/feedback/__init__.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/acp/builder/feedback/normalize_issue.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/acp/builder/indexing/__init__.py": {
     "investigation_required": false,
     "last_investigation_result": "no_findings",
@@ -636,7 +648,7 @@
     "last_investigated_at": "2026-07-29_20-36_03_998523000"
   },
   "src/acp/builder/quota_probe.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "53cb131c3313e1f5578fcb289b0afa963a2ba5e0a184345ede301eb26faf67fd",
     "last_investigated_at": "2026-08-03_10-55_55_897789000"
@@ -774,7 +786,7 @@
     "last_investigated_at": "2026-08-04_01-12_03_130285000"
   },
   "src/commons/runtime_cli.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "32db723142717e6b038a1ae8c3fba66bc7e23e144d95477b0dd2638a40440e4c",
     "last_investigated_at": "2026-07-29_21-41_15_940701000"
@@ -810,7 +822,7 @@
     "last_investigated_at": "2026-08-06_05-47_56_436102000"
   },
   "src/commons/runtime_codex_tui.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "fc6bd1b828fb6a9abeb346b20ba9165c1f93a27b137d14da41f37c9c2453cfeb",
     "last_investigated_at": "2026-08-04_02-10_41_123991000"
@@ -828,7 +840,7 @@
     "last_investigated_at": "2026-07-27_09-19_48_548125000"
   },
   "src/commons/runtime_doctor.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "d37e5ea4aa000b9ef2c08b54122aa15f2a9313c6df4e8eca700888205fbd935a",
     "last_investigated_at": "2026-07-30_18-54_13_570457000"
@@ -839,6 +851,30 @@
     "last_investigated_sha256": "19293509934218345593f574c4afed40ab4c72ae4d921b9864a95b3fa9f8cf66",
     "last_investigated_at": "2026-07-25_03-38_39_786476000"
   },
+  "src/commons/runtime_feedback.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_feedback_reporter.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_feedback_state.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/commons/runtime_feedback_store.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/commons/runtime_git.py": {
     "investigation_required": true,
     "last_investigation_result": "no_findings",
@@ -846,7 +882,7 @@
     "last_investigated_at": "2026-08-05_21-00_17_650358000"
   },
   "src/commons/runtime_logging.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "37a9742cfd233aebdde8d02ae426db9eb479df2f0e94238fee7aae903baa44eb",
     "last_investigated_at": "2026-07-29_16-17_13_733417000"
@@ -882,7 +918,7 @@
     "last_investigated_at": "2026-08-04_02-46_21_241563000"
   },
   "src/commons/runtime_run_report.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "aa17bfbf0ae862cd6f69617cb193b9ae00553ee2cc7737d64e8de7f8c1414b00",
     "last_investigated_at": "2026-07-30_09-09_03_503280000"
@@ -906,7 +942,7 @@
     "last_investigated_at": "2026-07-25_06-50_44_901970000"
   },
   "src/main.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "2fc467906ef010b3f9c4d51a1600ba115332880dd4658767606f556b60c8e8d7",
     "last_investigated_at": "2026-07-25_07-03_13_361785000"
@@ -922,6 +958,18 @@
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "48cc149773f0620f64d4650bed55bdb7b42dada088e55d312892186978176836",
     "last_investigated_at": "2026-07-28_03-24_59_364720000"
+  },
+  "src/sub_commands/feedback/__init__.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "src/sub_commands/feedback/report.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "src/sub_commands/indexing.py": {
     "investigation_required": false,
@@ -1086,7 +1134,7 @@
     "last_investigated_at": "2026-07-27_16-39_55_386747000"
   },
   "test/_codex_support.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "db0b25029c11871292d2b05dac95f7bc3ef88c9a5f64f74d9c406acf3e5241c1",
     "last_investigated_at": "2026-08-03_17-28_04_802794000"
@@ -1146,7 +1194,7 @@
     "last_investigated_at": "2026-08-05_21-24_38_685308000"
   },
   "test/test_cli_command_tree.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "cffc47f8ab96e3302d3f3478add14aaa2e1ad86d0722ba6bf95dfd6595e029ab",
     "last_investigated_at": "2026-07-26_05-46_25_019214000"
@@ -1164,13 +1212,13 @@
     "last_investigated_at": "2026-08-03_20-23_55_892133000"
   },
   "test/test_codex_runtime_exec.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "92e17c3771e48773696c4e0e3766ef299910d93f7d832755d8c6675d334bf331",
     "last_investigated_at": "2026-08-06_13-38_40_333008000"
   },
   "test/test_codex_runtime_home.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "740b5b3a00a5126bd02cef64f4029305a074beaefd9f3720e46c46a95eb7ee23",
     "last_investigated_at": "2026-08-03_12-40_09_539369000"
@@ -1182,13 +1230,13 @@
     "last_investigated_at": "2026-08-06_08-34_12_365572000"
   },
   "test/test_codex_runtime_quota_retry.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "114395fbebf31845ed23367f4e7d18e0648b6b6c9881569137745424a2eb1836",
     "last_investigated_at": "2026-08-06_08-42_19_473069000"
   },
   "test/test_codex_runtime_retry.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "987b4a754eef73ebdc3d986b44868bd9b22af0f70d26a0509da9ecb351d1124d",
     "last_investigated_at": "2026-08-06_14-22_12_669533000"
@@ -1217,6 +1265,12 @@
     "last_investigated_sha256": "89c8cb1408e789e1f30421d813d1c092853d556d7d8a9f6e4d8427cfd94e57a5",
     "last_investigated_at": "2026-08-06_15-48_51_611797000"
   },
+  "test/test_feedback.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "test/test_indexing_cli.py": {
     "investigation_required": false,
     "last_investigation_result": "no_findings",
@@ -1230,7 +1284,7 @@
     "last_investigated_at": "2026-08-06_05-15_03_667322000"
   },
   "test/test_indexing_preflight.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "7dd35c562ccb6e88dc06a7a73aee87930908a29cb85c44c0564a2abe2c14cb0f",
     "last_investigated_at": "2026-08-06_15-31_07_695289000"
@@ -1284,13 +1338,13 @@
     "last_investigated_at": "2026-08-06_09-13_49_128062000"
   },
   "test/test_production_cli.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "aaf76c02aae5a469140980ba6e6b220dee1bd3910e601671b2a8ba372c3dc4ad",
     "last_investigated_at": "2026-08-03_20-47_28_395218000"
   },
   "test/test_prompt_parts.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "fbd8c486f527e613515e9633ca2bf1eddc6724bed295a5d9c19247422f8737aa",
     "last_investigated_at": "2026-08-06_12-09_22_636903000"
@@ -1308,13 +1362,13 @@
     "last_investigated_at": "2026-07-26_13-12_59_350114000"
   },
   "test/test_runtime_codex_permissions.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "5c5b1bcc7012fea9d7929919ca98cf8bb9cb85e61003e1a66d0ba4015af5bfe8",
     "last_investigated_at": "2026-08-06_11-20_16_224006000"
   },
   "test/test_runtime_codex_profile.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "54867cf498f40b53957007f1ca6f35ba64a01f0da03c24605446bdc0a8fba141",
     "last_investigated_at": "2026-08-05_18-00_02_354357000"
