@@ -148,11 +148,18 @@ call-scoped path context の適用範囲を次に示す。
 ## feedback reporter と collector context
 
 - 全 agent call の完全 prompt には、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従って共通 reporting instruction を 1 回だけ含める
-- cmoc は各 Codex call の開始前に collector の受付を開始し、repository、work-root、subcommand invocation、agent call、および Codex call に拘束した capability を reporter から利用可能にする
-- Structured Output の補正 call は元の agent call ID を共有し、新しい Codex call ID と capability を使用する。初回 prompt で注入済みの reporting instruction を補正 schema または補正 prompt へ重複させない
+- cmoc は initial call、Structured Output の correction call、および TUI call の開始前に、invocation-scoped collector へその Codex call の context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする
+- cmoc は call-scoped な Codex CLI `--config` override により、MCP server namespace `cmoc_feedback`、公開 tool `submit_observation`、同 tool の approval behavior、および MCP process に必要な起動情報を設定する
+- cmoc は `cmoc_feedback` の effective configuration 全体を呼び出し単位で支配する。user config、`$CODEX_HOME/config.toml`、または project config の server 定義、tool 設定、approval behavior、および起動情報に依存してはならず、それらによって別 tool の公開または reporter の置換を許してはならない
+- 通常の `cmoc_feedback.submit_observation` は、human approval、auto-review、または command sandbox escalation を要求せずに実行できるよう設定する
+- reporter の起動失敗または reporter・collector の利用不能が、Codex call の開始または本命 workload の成功を妨げないようにする
+- capability value を prompt、Codex argv、Codex call log、または submit payload に含めてはならない。MCP process へ capability を安全に渡す具体方式と環境変数名は、この非露出要件を満たす限り実装裁量とする
+- Structured Output の correction call は元の agent call ID を共有し、新しい Codex call ID、capability、および MCP context を使用する。初回 prompt で注入済みの reporting instruction を correction schema または correction prompt へ重複させない
+- parallel call ごとに capability と MCP context を分離する。一つの call の停止、drain、または capability 無効化によって別 call の受付を変更してはならない
+- 一つの TUI process では、全 turn にわたって同じ Codex call ID、capability、および MCP reporter context を維持する
 - reporter submission は agent call の正式な Structured Output、作業成果物の差分、および Codex CLI の戻り値とは独立して受理する
 - reporter または collector の利用不能は `feedback.reporter_unavailable` event と warning を記録するが、本命 Codex call の開始、終了、Structured Output 検証、retry、および戻り値を変更しない
-- Codex call 終了時は collector の新規受付を止め、accepted request の永続化を完了してから call context を破棄する
+- Codex call 終了時は、その capability の新規受付を止め、受付済み request を drain し、accepted とする observation の永続化を完了してから、その capability と MCP context を無効化する
 
 ## Codex CLI 呼び出し情報の保存
 

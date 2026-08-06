@@ -6,7 +6,7 @@ feedback subsystem は、cmoc が起動した Codex の作業中に判明した�
 
 観測源は次の 2 種類に限定する。
 
-- agent が共通 reporter を使って自己申告した内容
+- agent が共通 MCP tool `cmoc_feedback.submit_observation` を使って自己申告した内容
 - cmoc が allowlist 済み rule で構造化 log event から検出した diagnostic
 
 観測時点では raw observation だけを保存する。人間向け issue への意味的な正規化は、`cmoc feedback report` が呼ばれるまで行わない。
@@ -16,7 +16,7 @@ feedback subsystem は、cmoc が起動した Codex の作業中に判明した�
 feedback の詳細は、責務ごとに次の正本仕様へ分ける。同じ schema、判断基準、または状態遷移を複数文書へ重複させない。
 
 - `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md`
-    - reporter、collector、共通 prompt instruction、機械 detector、および raw observation を定める。
+    - local stdio MCP reporter/client、collector、共通 prompt instruction、機械 detector、および raw observation を定める。
 - `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md`
     - normalized issue、machine assessment、human disposition、および増分処理 record を定める。
 - `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
@@ -31,6 +31,7 @@ feedback は診断と人間への提示だけに使用する。次の用途に�
 - agent による feedback 保存 file の直接編集
 - 自然言語 error message への広範な正規表現など、不安定な根拠による機械検出
 - task の成功判定、run state、他サブコマンドの終了コード、retry、または自動 recovery の入力
+- agent-facing transport の変更を理由とする feedback normalization、state、または report semantics の変更
 - issue または AI-generated kaizen の後続 Codex call への自動注入
 - sandbox、config、oracle file、realization file、または feedback の根拠となった対象の自動修正
 
@@ -56,14 +57,19 @@ feedback の状態は、実行記録、機械評価、人間判断を混在さ�
 
 machine assessment と human disposition は別 record とする。agent、collector、detector、normalizer、および report renderer は、human disposition record を作成、変更、削除、または別状態として解釈してはならない。
 
+agent-facing の送信面は、call-scoped な local stdio MCP reporter/client が公開する `cmoc_feedback.submit_observation` だけとする。MCP reporter/client は request を invocation-scoped collector へ転送する。保存 context は collector が call capability から確定し、raw observation は collector だけが `.cmoc/gu` へ atomic に保存する。agent と MCP reporter/client は保存先を直接操作しない。
+
 全体のデータフローを次に示す。
 
 ```text
-agent -> reporter -> collector -> raw observation --+
-structured log event -> allowlist detector ----------+-> cmoc feedback report -> tracked issue state -> report
-                                                                                         ^
-                                                                                         |
-                                                                                human disposition
+agent
+  -> Codex MCP tool `cmoc_feedback.submit_observation`
+  -> call-scoped local stdio MCP reporter/client
+  -> invocation-scoped collector IPC ----------------+
+                                                      +-> cmoc collector -> raw observation -> cmoc feedback report -> tracked issue state -> report
+structured log event -> allowlist detector -----------+                                                                    ^
+                                                                                                                           |
+human disposition ---------------------------------------------------------------------------------------------------------+
 ```
 
 ## 既存 workload との接続

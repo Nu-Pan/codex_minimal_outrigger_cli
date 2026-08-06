@@ -2,26 +2,15 @@
 
 本書は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` が定義する observation の収集、検査、および raw 保存を定める。
 
-## reporter による自己申告
+## MCP reporter による自己申告
 
-### reporter の配置と interface
+### agent-facing interface
 
-reporter の安定 path は、次とする。
+agent-facing transport は、Codex が起動する call-scoped な local stdio MCP reporter/client に固定する。MCP server namespace は `cmoc_feedback` とし、公開する tool は `submit_observation` だけとする。MCP resource、prompt、および observation submission 以外の tool を公開してはならない。
 
-```text
-{{repo-root}}/.cmoc/gu/ar/feedback/reporter
-```
+`cmoc_feedback.submit_observation` の input は、`{{cmoc-root}}/oracle/src/oracle/feedback/reporter_input.json` に適合する JSON object そのものとする。repository、agent call ID、Codex call ID、保存先、または capability を input に追加してはならない。
 
-reporter は、cmoc が配置する collector client である。agent が実行する interface は次の 3 つに限定する。
-
-- `reporter describe`
-    - reporter input schema、制限、使用例、および protocol version を stdout へ返す。
-- `reporter submit`
-    - stdin から UTF-8 の JSON object を 1 個だけ読み、collector へ送る。
-- `reporter version --json`
-    - reporter version と protocol version を機械可読な JSON で返す。
-
-`submit` の stdout は、次のいずれかの JSON object とする。
+tool result は、次のいずれかの JSON object とする。
 
 ```json
 {"status":"accepted","observation_id":"fbo_...","redaction_count":0}
@@ -31,7 +20,7 @@ reporter は、cmoc が配置する collector client である。agent が実行
 {"status":"rejected","code":"...","message":"...","retryable":false}
 ```
 
-accepted は終了コード 0、payload の拒否は 2、collector または transport の利用不能は 3 とする。reporter の失敗だけを理由に、本命作業を失敗または中断させてはいけない。
+`status=accepted` は受理と永続化の完了を表す。payload または call context を拒否する場合は、MCP protocol error や process exit code ではなく、`status=rejected` の構造化された domain result を返す。
 
 rejection code は、次のいずれかとする。
 
@@ -48,9 +37,11 @@ rejection code は、次のいずれかとする。
 
 `rate_limited`, `collector_unavailable`, `transport_unavailable` だけ `retryable=true` を許容する。retryable は本命作業の retry を要求する意味ではない。
 
+reporter または collector の起動失敗、利用不能、rejected result、および transport failure だけを理由に、本命 Codex workload を失敗または中断させてはならない。reporter が result を返せない状態も、本命 workload とは独立した非致命的な degradation とする。
+
 ### agent input schema の正本
 
-agent が入力する JSON schema の正本は、`{{cmoc-root}}/oracle/src/oracle/feedback/reporter_input.json` とする。reporter の `describe` と受け入れ検査は、同 schema から導出する。同じ field 定義を prompt、個別 AgentCallParameter builder、または個別 Structured Output schema へ複製してはならない。
+agent が入力する JSON schema の唯一の正本は、`{{cmoc-root}}/oracle/src/oracle/feedback/reporter_input.json` とする。MCP reporter が tool discovery で提示する `inputSchema` と受け入れ検査は、同 schema から導出する。同じ field 定義を prompt、個別 AgentCallParameter builder、個別 Structured Output schema、または別の oracle file へ複製してはならない。
 
 schema に含まれる agent 申告の原因、重要度、および重複判定用 hint は、確定事実または issue key として扱わない。
 
@@ -58,7 +49,7 @@ schema に含まれる agent 申告の原因、重要度、および重複判定
 
 共通 instruction の文面と報告基準は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py` の `build_feedback_reporting_standard` だけを正本とする。`build_complete_prompt` は同生成結果を全 agent call へ無条件に 1 回だけ注入する。個別 builder が有効化する option にしてはならない。
 
-共通 instruction には reporter の安定 path だけを示し、schema、入力例、文字数制限、および受け入れ検査は reporter の `describe` に置く。
+共通 instruction には `cmoc_feedback.submit_observation` を使うことだけを示す。schema、context field、入力例、文字数制限、受け入れ検査、および MCP reporter から collector までの内部 transport を複製してはならない。
 
 ### reporter の受け入れ検査
 
@@ -97,21 +88,41 @@ agent に実行文脈を入力させてはならない。collector は、call-sc
 
 agent call ID は Structured Output 補正を含む論理 agent call で共有する。Codex call ID は初回、補正、および TUI process ごとに分ける。
 
-### sandbox と transport
+### sandbox、transport、および lifecycle
 
-reporter は feedback file を直接書かない。collector だけが agent の sandbox 外から raw observation を保存する。
+agent の送信から raw observation の保存までのデータフローを次に示す。
 
-cmoc は Codex call の開始前に、送信先と call-scoped capability を reporter へ利用可能にする。transport の実装方式は、次の外部挙動と安全要件を満たす範囲で実装裁量とし、Unix socket、local MCP、環境変数名などの未検証の方式を正本仕様として固定しない。
+```text
+Codex MCP tool
+  -> call-scoped local stdio MCP reporter/client
+  -> invocation-scoped collector IPC
+  -> cmoc collector
+  -> .cmoc/gu の raw observation
+```
 
-- `read-only` と `workspace-write` の sandbox、TUI、および `codex exec` から利用できる。
-- concurrent な Codex call ごとに capability と context を分離する。
-- capability を発行した repository、work-root、agent call、および Codex call 以外へ送信できない。
-- capability は推測困難で、call 終了後に失効する。
-- payload を observation として受け取る以外の arbitrary file write、file read、または command execution を提供しない。
-- collector は observation file の flush と永続化を完了してから accepted を返す。
-- collector 利用不能時は構造化された拒否を返し、本命作業の継続を妨げない。
+local stdio MCP reporter/client は feedback file を直接書かない。invocation-scoped collector は Codex の command sandbox 外で request を受け、collector だけが raw observation を atomic に保存する。agent は保存先を直接操作してはならない。
 
-collector は TUI process の複数 turn を通して生存する。Codex process の異常終了、ユーザーによる TUI 終了、または collector shutdown 時にも、accepted を返した observation を失ってはならない。cmoc は collector の新規受付を止め、受理済み request を drain してから終了する。
+cmoc は initial call、Structured Output の correction call、および TUI call の開始前に、その Codex call 専用の MCP reporter と call-scoped capability を利用可能にする。`read-only`、`workspace-write`、`codex exec`、および TUI は、同じ agent-facing MCP transport を使用する。
+
+agent または agent が実行する shell command は collector IPC へ直接接続してはならない。この transport のために、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` が定める sandbox、permission profile、および network access の境界を変更してはならない。`dangerously_allow_all_unix_sockets` または同等の広い許可を成立条件にしてはならない。
+
+collector は payload ではなく capability に結び付いた context を保存に使用する。capability は推測困難かつ Codex call ごとに一意とし、発行対象の repository、work-root、agent call、および Codex call 以外に使用できないようにする。capability value を prompt、Codex argv、Codex call log、または submit payload に含めてはならない。
+
+MCP reporter は observation submission 以外の arbitrary file access、command execution、または collector 管理操作を提供してはならない。unknown、別 call 用、または失効済みの capability による request は `context_invalid` として拒否する。
+
+collector は「durability と retention」が定める atomic な永続化を完了した後だけ accepted を返す。
+
+Codex process の異常終了またはユーザーによる TUI 終了を含め、Codex call の終了時は次の順序でその call だけを終了する。
+
+1. その capability に対する新規 request の受付を止める。
+2. 受付済み request を drain し、accepted とする observation の永続化を完了する。
+3. その capability と MCP context を無効化する。
+
+parallel call ごとに capability、context、drain、および無効化を分離する。一つの call の停止または無効化によって、稼働中の別 call を停止または無効化してはならない。
+
+correction call は元の agent call ID を共有する一方、新しい Codex call ID、capability、および MCP context を使用する。TUI では、一つの TUI process の全 turn を通して同じ Codex call ID、capability、および MCP reporter context を維持し、TUI process の終了時に上記の順序で無効化する。
+
+stdio MCP process と invocation-scoped collector の間の IPC 方式と framing、内部 module path、capability を同 process へ安全に渡す具体方式、および環境変数名は、本節の安全要件を満たす限り実装裁量とする。
 
 ## 機械的な log 検出
 
@@ -121,7 +132,7 @@ detector は、構造化 log event から diagnostic observation を作るだけ
 
 detector は event が flush された後に rule を評価する。rule に一致した occurrence は、通知 threshold 未満でも raw observation として保存する。threshold を満たすかの集約は `cmoc feedback report` が行う。
 
-machine observation は、agent 用 reporter transport を経由せず cmoc 自身が observation store へ保存する。検出または保存の失敗は構造化 log event と warning に留め、本命 subcommand の結果を変更しない。
+machine observation は agent 用 reporter transport を経由しない。detector は検出結果を cmoc collector へ渡し、collector だけが observation store へ保存する。検出または保存の失敗は構造化 log event と warning に留め、本命 subcommand の結果を変更しない。
 
 ### event contract
 
@@ -258,6 +269,8 @@ raw file のトップレベルは、次の field を持つ JSON object とする
 ### durability と retention
 
 observation は sibling temporary file への write、file flush、atomic rename、および parent directory の flush が完了してから accepted とする。accepted は repository が存在する local filesystem 上の durability だけを保証し、別 clone、別 machine、または hardware failure に対する backup を保証しない。
+
+accepted response 後に observation が未保存となる状態や sibling temporary file が残る状態を許容してはならない。
 
 raw observation は normalization 後も変更または自動削除しない。初期仕様では retention を無期限とし、自動 pruning と prune subcommand を提供しない。pruning を追加する場合は、少なくとも tracked ingestion receipt が存在する observation だけを対象とし、未処理 observation を削除しない別仕様を先に定義する。
 
