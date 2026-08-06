@@ -305,6 +305,7 @@ def test_run_codex_exec_invokes_real_codex_with_test_local_ollama_provider(
         config = use_test_local_ollama(CmocConfig(), ollama, (ModelClass.MINIMUM,))
         result = run_codex_exec(
             AgentCallParameter(
+                agent_call_kind="test_agent_call",
                 model_class=ModelClass.MINIMUM,
                 reasoning_effort=ReasoningEffort.LOW,
                 file_access_mode=FileAccessMode.READONLY,
@@ -485,6 +486,7 @@ def test_run_codex_exec_uses_generic_provider_without_builtin_local_flags(
 
     run_codex_exec(
         AgentCallParameter(
+            agent_call_kind="test_agent_call",
             model_class=ModelClass.MINIMUM,
             reasoning_effort=ReasoningEffort.LOW,
             file_access_mode=FileAccessMode.READONLY,

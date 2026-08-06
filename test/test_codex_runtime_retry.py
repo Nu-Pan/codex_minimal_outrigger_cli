@@ -71,6 +71,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
         )
     )
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -95,6 +96,9 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     )
     call_logs = [json.loads(path.read_text()) for path in call_paths]
     assert len(call_logs) == 2
+    assert {log["agent_call_kind"] for log in call_logs} == {"test_agent_call"}
+    assert len({log["agent_call_id"] for log in call_logs}) == 1
+    assert len({log["codex_call_id"] for log in call_logs}) == 2
     assert [Path(log["output_path"]).read_text() for log in call_logs] == [
         '{"bad": true}',
         '{"ok": true}',
@@ -124,6 +128,8 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     ]
     assert codex_events[0]["returncode"] == 0
     assert codex_events[0]["call_log_path"] == str(call_paths[0])
+    assert len({event["agent_call_id"] for event in codex_events}) == 1
+    assert len({event["codex_call_id"] for event in codex_events}) == 2
 
 
 def test_run_codex_exec_corrects_declared_postcondition(
@@ -184,6 +190,7 @@ def test_run_codex_exec_corrects_declared_postcondition(
 
     result = run_codex_exec(
         AgentCallParameter(
+            "test_agent_call",
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
             FileAccessMode.REALIZATION_WRITE,
@@ -240,6 +247,7 @@ def test_run_codex_exec_does_not_replace_missing_correction_session(
     with pytest.raises(CmocError, match="Structured Output 検証") as error:
         run_codex_exec(
             AgentCallParameter(
+                "test_agent_call",
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
                 FileAccessMode.READONLY,
@@ -302,6 +310,7 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
     with pytest.raises(CmocError, match="作業成果物を変更"):
         run_codex_exec(
             AgentCallParameter(
+                "test_agent_call",
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
                 FileAccessMode.REALIZATION_WRITE,
@@ -346,6 +355,7 @@ def test_run_codex_exec_logs_keyboard_interrupt(
     with pytest.raises(KeyboardInterrupt):
         run_codex_exec(
             AgentCallParameter(
+                "test_agent_call",
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
                 FileAccessMode.READONLY,
@@ -417,6 +427,7 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     schema = tmp_path / f"{name}_schema.json"
     schema.write_text("{}")
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -468,6 +479,7 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
     with pytest.raises(CmocError, match="Structured Output schema"):
         run_codex_exec(
             AgentCallParameter(
+                "test_agent_call",
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
                 FileAccessMode.READONLY,
@@ -516,6 +528,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -594,6 +607,7 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
     with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗しました") as error:
         run_codex_exec(
             AgentCallParameter(
+                "test_agent_call",
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
                 FileAccessMode.READONLY,
@@ -653,6 +667,7 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_retry(
 
     run_codex_exec(
         AgentCallParameter(
+            "test_agent_call",
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
             FileAccessMode.REALIZATION_WRITE,
@@ -684,6 +699,7 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
     fake_codex = bin_dir / "codex"
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -823,6 +839,7 @@ def test_run_codex_exec_stops_after_retry_limit(
     with pytest.raises(CmocError, match=summary) as error:
         run_codex_exec(
             AgentCallParameter(
+                "test_agent_call",
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
                 FileAccessMode.READONLY,
@@ -852,3 +869,19 @@ def test_run_codex_exec_stops_after_retry_limit(
     assert [event["call_log_path"] for event in codex_events] == [
         str(path) for path in call_paths
     ]
+    diagnostics = [
+        event
+        for event in log_events
+        if event.get("event_type") == "codex.structured_output_validation_exhausted"
+    ]
+    if failure == "output_contract":
+        [diagnostic] = diagnostics
+        call_logs = [json.loads(path.read_text()) for path in call_paths]
+        assert diagnostic["event_schema_version"] == 1
+        assert diagnostic["agent_call_kind"] == "test_agent_call"
+        assert diagnostic["agent_call_id"] == call_logs[-1]["agent_call_id"]
+        assert diagnostic["codex_call_id"] == call_logs[-1]["codex_call_id"]
+        assert diagnostic["last_failure_stage"] == "schema_validation"
+        assert diagnostic["schema_sha256"]
+    else:
+        assert diagnostics == []

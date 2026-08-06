@@ -7,6 +7,8 @@ import typer
 
 from .runtime_doctor import run_doctor_preprocess
 from .runtime_errors import CmocError, render_error
+from .runtime_feedback import start_feedback_invocation, stop_feedback_invocation
+from .runtime_feedback_store import feedback_completion_counts
 from .runtime_logging import (
     SubcommandLogger,
     current_subcommand_logger,
@@ -49,6 +51,8 @@ def run_cli_subcommand(
     """
     logger = None
     logger_token = None
+    feedback_invocation = None
+    feedback_token = None
     step_total_token = None
     error_returncode: int | None = None
     name = command_name or impl.__name__
@@ -60,7 +64,15 @@ def run_cli_subcommand(
         logger = SubcommandLogger(log_root, name)
         logger_token = set_current_subcommand_logger(logger)
         step_total_token = _CURRENT_STEP_TOTAL.set(total_steps)
+        # command_invoked は reporter の degraded event を含む全 invocation event より
+        # 先に置き、既存のサブコマンド log lifecycle を維持する。
         logger.event("command_invoked", argv=list(command_argv or [name]))
+        feedback_invocation, feedback_token = start_feedback_invocation(
+            log_root,
+            current_root,
+            name,
+            logger,
+        )
         typer.echo(f"# {console_timestamp()} 開始 {name}")
         typer.echo(f"- サブコマンドログ: `{logger.path}`")
         if doctor_preprocess:
@@ -117,6 +129,8 @@ def run_cli_subcommand(
         )
         raise typer.Exit(failed_returncode) from exc
     finally:
+        if feedback_token is not None:
+            stop_feedback_invocation(feedback_invocation, feedback_token)
         if step_total_token is not None:
             _CURRENT_STEP_TOTAL.reset(step_total_token)
         if logger_token is not None:
@@ -206,4 +220,15 @@ def _emit_completion_summary(
         )
     typer.echo(f"- 経過時間: `{format_duration(elapsed)}`")
     typer.echo(f"- quota 待機時間: `{format_duration(logger.quota_wait_sec)}`")
+    try:
+        unprocessed, increased, warnings = feedback_completion_counts(
+            logger.root, work_root()
+        )
+        typer.echo(f"- 未処理 feedback observation: `{unprocessed}`")
+        typer.echo(f"- 前回正常 feedback report 後の増加: `{increased}`")
+        for warning in warnings:
+            typer.echo(f"- warning: {warning}")
+    except BaseException:
+        # feedback の件数計算失敗は本命サブコマンドの結果を変更しない。
+        typer.echo("- warning: feedback observation 件数を計算できませんでした。")
     typer.echo(f"- 終了コード: `{returncode}`")

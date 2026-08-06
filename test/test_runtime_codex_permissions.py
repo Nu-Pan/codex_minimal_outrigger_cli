@@ -23,6 +23,7 @@ _CODEX_CLI = shutil.which("codex")
 def _parameter(mode: FileAccessMode) -> AgentCallParameter:
     """指定modeの最小AgentCallParameterを作る。"""
     return AgentCallParameter(
+        agent_call_kind="test_agent_call",
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=mode,

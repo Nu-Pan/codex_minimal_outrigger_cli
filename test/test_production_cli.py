@@ -50,6 +50,11 @@ from typer.main import get_command
 from basic.acp import ReasoningEffort
 from commons.indexing import commit_index_updates, update_indexes
 from commons.runtime_config import write_config
+from commons.runtime_feedback import (
+    FEEDBACK_CAPABILITY_ENV,
+    FEEDBACK_COLLECTOR_ENV,
+    FEEDBACK_PROTOCOL_ENV,
+)
 from config.cmoc_config import CmocConfig
 from main import app
 
@@ -67,6 +72,7 @@ pytestmark = pytest.mark.skipif(
 
 NONINTERACTIVE_SCENARIO_COMMANDS = {
     ("doctor",),
+    ("feedback", "report"),
     ("indexing",),
     ("oracle", "review"),
     ("realization", "apply", "fork"),
@@ -318,6 +324,15 @@ def _assert_local_codex_call(
         "base_url": f"http://{ollama.host}/v1",
         "wire_api": "responses",
     }
+    feedback_server = override["mcp_servers"]["cmoc_feedback"]
+    assert feedback_server["enabled_tools"] == ["submit_observation"]
+    assert feedback_server["required"] is False
+    assert feedback_server["default_tools_approval_mode"] == "approve"
+    assert feedback_server["env_vars"] == [
+        FEEDBACK_CAPABILITY_ENV,
+        FEEDBACK_COLLECTOR_ENV,
+        FEEDBACK_PROTOCOL_ENV,
+    ]
     return payload
 
 
@@ -555,6 +570,13 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     run_without_codex("oracle", "review")
     review_report = next(iter(set(review_dir.glob("*.md")) - review_reports))
     assert "result: no_targets" in review_report.read_text()
+    feedback_report_dir = root / ".cmoc" / "gu" / "ar" / "report" / "feedback"
+    feedback_reports = set(feedback_report_dir.glob("*.md"))
+    run_without_codex("feedback", "report")
+    feedback_report = next(
+        iter(set(feedback_report_dir.glob("*.md")) - feedback_reports)
+    )
+    assert 'result: "ok"' in feedback_report.read_text()
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # 2 workload と共通 join/abandon を本番 Codex 経路で観測する。
     for command, kind in [

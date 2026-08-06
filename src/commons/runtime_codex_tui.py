@@ -20,6 +20,8 @@ from .runtime_codex_profile import (
 )
 from .runtime_config import load_config
 from .runtime_errors import CmocError
+from .runtime_feedback import begin_feedback_call
+from .runtime_feedback_store import uuid7_prefixed
 from .runtime_logging import current_subcommand_logger
 from .runtime_paths import (
     _reserve_timestamped_path,
@@ -61,12 +63,17 @@ def run_codex_tui(
     ]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     ts, call_path = _reserve_timestamped_path(log_dir, "_tui_call.json", timestamp)
+    agent_call_id = uuid7_prefixed("agc_")
+    codex_call_id = uuid7_prefixed("cdc_")
     call_path.write_text(
         json.dumps(
             {
                 "purpose": purpose,
                 "timestamp": ts,
                 "argv": argv,
+                "agent_call_id": agent_call_id,
+                "agent_call_kind": parameter.agent_call_kind,
+                "codex_call_id": codex_call_id,
                 "codex_home": str(codex_home),
                 "model_class": parameter.model_class.value,
                 "reasoning_effort": parameter.reasoning_effort.value,
@@ -82,11 +89,17 @@ def run_codex_tui(
     failure: subprocess.CalledProcessError | None = None
     startup_failure: BaseException | None = None
     returncode: int | None = None
+    feedback_call = begin_feedback_call(
+        agent_call_id=agent_call_id,
+        agent_call_kind=parameter.agent_call_kind,
+        codex_call_id=codex_call_id,
+        log_paths=[call_path],
+    )
     try:
         result = run_codex_subprocess(
             argv,
             cwd=agent_call_cwd,
-            env=codex_subprocess_env(codex_home),
+            env=feedback_call.subprocess_env(codex_subprocess_env(codex_home)),
             check=True,
         )
         returncode = result.returncode
@@ -95,6 +108,8 @@ def run_codex_tui(
         returncode = exc.returncode
     except BaseException as exc:
         startup_failure = exc
+    finally:
+        feedback_call.close()
     elapsed_sec = time.perf_counter() - started_at
     error: str | None = None
     if startup_failure is not None:
@@ -117,6 +132,9 @@ def run_codex_tui(
             "elapsed_sec": elapsed_sec,
             "call_log_path": str(call_path),
             "codex_home": str(codex_home),
+            "agent_call_id": agent_call_id,
+            "agent_call_kind": parameter.agent_call_kind,
+            "codex_call_id": codex_call_id,
         }
         if error is not None:
             payload["error"] = error

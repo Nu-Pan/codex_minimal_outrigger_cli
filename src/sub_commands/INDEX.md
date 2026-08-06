@@ -28,6 +28,24 @@
 ## hash
 - 48cc149773f0620f64d4650bed55bdb7b42dada088e55d312892186978176836
 
+# `feedback`
+
+## Summary
+- feedback サブコマンド群の実装入口。feedback report を含む各サブコマンドの処理を扱い、feedback 機能の挙動確認・変更時に参照する。
+- report 実装では、observation の snapshot と normalization、issue 統合、checkpoint／commit／rollback、assessment 再評価、差分判定、可視 issue 選別、Markdown report と tracked record の保存を一連の transaction として処理する。
+
+## Read this when
+- feedback サブコマンドの実行フローや挙動を確認・変更するとき
+- feedback report の observation 処理、issue 統合、assessment、表示選別、出力生成を調査するとき
+
+## Do not read this when
+- feedback 以外の機能やサブコマンドを扱うとき
+- feedback state の基本構造だけを確認したいとき
+- normalization agent の parameter や Structured Output schema だけを確認したいとき
+
+## hash
+- 8ca2c107511b5363cc6080ae7ead35b521057f410ffab0e96ea18b788ec69d47
+
 # `indexing.py`
 
 ## Summary
@@ -63,18 +81,22 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply と refactor の処理構成、およびそれぞれの CLI 実行フローを下位要素へ案内する。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の処理構成や実行フローを確認する際の起点となる。
+- apply workload の入口と、realization apply fork における実行オーケストレーションを扱う下位要素へ進める。
+- realization のリファクタリング処理、CLI 実行、refactor fork の実行フローを扱う下位要素へ進める。
 
 ## Read this when
-- realization workload サブコマンドの実装構成や、apply・refactor の処理入口を確認するとき。
-- realization apply fork または realization refactor fork の実行フローを調査するとき。
+- realization workload サブコマンドの実装や構成を確認するとき。
+- realization apply workload または realization refactor の実行フロー、状態管理、差分・commit・cleanup・report 処理を調査・変更するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply または refactor の個別実装、共通 lifecycle、起動パラメータなどを直接調査・変更するとき。
+- apply agent 固有の prompt や差分適用規則だけを調べるとき。
+- 共通の run lifecycle、process tracking、git 差分操作の一般仕様だけを調べるとき。
+- 単一ファイルの refactor prompt や Structured Output 契約、正常完了時の変更概要生成だけを確認するとき。
 
 ## hash
-- 0a620d680086cb726879d3163877cd2bf0a1c519b912faba6686b81ec2e69e8f
+- 07915510e6a8f6c0ead70596b6950aee914463aa3f7e95e7f55738f1c9b236a3
 
 # `review`
 
@@ -110,21 +132,19 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session のライフサイクル操作に関する実装を確認する際の入口となる。
-- session の abandon、fork、join を扱い、branch・state の作成、検証、更新、cleanup、失敗時のロールバックや merge conflict 解決を含む。
+- session サブコマンド群の実装をまとめるパッケージ。session の fork、join、abandon と、それらを束ねる構成を確認する際の入口となる。
 
 ## Read this when
 - session サブコマンドの実装構成やライフサイクル処理を確認・変更するとき。
-- session branch と state の作成・更新・削除、cleanup、失敗時の復旧処理を調査するとき。
-- session join の merge conflict 委譲、安全な差分制限、解決後の stage・commit 処理を確認・変更するとき。
+- session branch、state、merge、cleanup など session 共通の処理箇所を特定するとき。
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき。
-- session の共通 state データ構造、runtime、Git status 取得などの一般仕様だけを確認するときは、対応する共通実装・仕様を直接読む。
-- conflict resolution 用 prompt の正本仕様や builder 実装そのものを確認するときは、対応する oracle または builder の対象を直接読む。
+- 特定の session 操作だけを変更・調査する場合は、対応する個別サブコマンド実装を直接読む。
+- session state の共通データ構造や runtime の一般仕様だけを確認する場合は、対応する共通実装を直接読む。
 
 ## hash
-- 8a0dfef628903e21e7fae720cdfc2150168e3c41e5d0776d9d80ec9fd63a111d
+- 2b019a2574c9012ac6120ef208e51b19199266c07a51b615dd1c3351745b1ab9
 
 # `tui.py`
 

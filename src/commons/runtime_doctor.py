@@ -20,6 +20,11 @@ from pathlib import Path
 
 from .runtime_config import sync_config
 from .runtime_errors import CmocError
+from .runtime_feedback import (
+    ReporterAvailabilityError,
+    emit_reporter_unavailable,
+    validate_feedback_reporter_availability,
+)
 from .runtime_git import (
     ensure_cmoc_ignored,
     git_common_dir,
@@ -74,6 +79,14 @@ def run_doctor_preprocess(
             # で他の doctor 修復と同じ commit にまとめる。
             sync_config(root)
             sync_refactor_state(root, sync_entries=sync_refactor_entries)
+            # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+            # reporter 固有の不一致は修復や version command を行わず degraded にする。
+            try:
+                validate_feedback_reporter_availability()
+            except ReporterAvailabilityError as exc:
+                emit_reporter_unavailable(exc.component, exc.failure_code)
+            except BaseException:
+                emit_reporter_unavailable("reporter", "protocol_error")
         except BaseException:
             for repair_root, original_index_path in original_indexes:
                 try:

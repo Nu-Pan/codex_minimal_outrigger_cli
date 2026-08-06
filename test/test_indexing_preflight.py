@@ -51,6 +51,7 @@ def test_command_codex_call_runs_indexing_preflight(
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     parameter = AgentCallParameter(
+        agent_call_kind="test_agent_call",
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.READONLY,
@@ -108,6 +109,7 @@ def test_command_codex_call_indexes_agent_call_worktree_before_log_root(
     run_git(root, "worktree", "add", "-b", "codex-work", str(worktree))
     codex_cwd = worktree / "oracle"
     parameter = AgentCallParameter(
+        agent_call_kind="test_agent_call",
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.READONLY,
@@ -168,6 +170,7 @@ def test_command_tui_codex_call_runs_indexing_preflight(
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     parameter = AgentCallParameter(
+        agent_call_kind="test_agent_call",
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.READONLY,
@@ -296,6 +299,7 @@ def test_command_codex_call_skips_indexing_when_parameter_disables_preflight(
 
     root = make_repo(tmp_path)
     parameter = AgentCallParameter(
+        agent_call_kind="test_agent_call",
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.READONLY,
@@ -371,6 +375,7 @@ def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
     index_path = root / "INDEX.md"
     events: list[Path] = []
     parameter = AgentCallParameter(
+        agent_call_kind="test_agent_call",
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,

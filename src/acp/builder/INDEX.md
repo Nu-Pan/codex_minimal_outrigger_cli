@@ -42,6 +42,21 @@
 ## hash
 - 6d72aa648c1db3dbe426fc72a1ec7b985a823e2671fa93055518cf3142638cea
 
+# `feedback`
+
+## Summary
+- feedback normalization 用の builder adapter をまとめるパッケージ。feedback issue の正規化パラメータ builder を builder 層から利用する際の入口となる。
+
+## Read this when
+- feedback normalization に関する builder adapter の公開入口や、feedback issue の正規化 builder への接続を確認するとき。
+
+## Do not read this when
+- 正規化パラメータの具体的な実装や仕様を確認したいときは、対応する正本実装・oracle file を直接読む。
+- feedback 以外の builder や、正規化処理そのものの詳細を調査するとき。
+
+## hash
+- 31d482ec1c323f01d4b071b755cf3fa02a72c14d9c3625c4075af717234479c8
+
 # `indexing`
 
 ## Summary
@@ -80,16 +95,17 @@
 # `quota_probe.py`
 
 ## Summary
-- quota availability probe の互換入口。canonical な oracle builder が利用可能な場合は委譲し、未配布時は最小構成の読み取り専用 probe パラメータを生成する。
+- quota availability probe の互換 builder。利用可能な正本 builder を委譲先として解決し、optional oracle builder がない配布形態では、最小モデル・低推論・読み取り専用・空 stdin の quota polling 用パラメータを生成する。
 
 ## Read this when
-- quota availability probe の builder 呼び出し経路、oracle builder への委譲、または optional distribution 向け fallback を確認・変更するとき。
+- quota availability probe の呼び出し経路、正本 builder への委譲、または oracle builder 未配布時の互換 fallback を確認するとき。
 
 ## Do not read this when
-- canonical な quota probe の正本仕様や builder 自体の実装を確認したいとき。oracle 側の quota probe 定義を直接読むこと。
+- quota probe の正本仕様や canonical builder の詳細を確認したいとき。oracle 側の該当実装・仕様を直接読むこと。
+- quota polling 以外の ACP builder や一般的な AgentCallParameter の仕様を確認するとき。各担当領域の直接の実装・仕様へ進むこと。
 
 ## hash
-- 53cb131c3313e1f5578fcb289b0afa963a2ba5e0a184345ede301eb26faf67fd
+- 6de081322a7c345a77160cd3f575b27f994fe305aea137e57709bc44fde31ab3
 
 # `realization`
 

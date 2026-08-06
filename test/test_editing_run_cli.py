@@ -984,7 +984,33 @@ def test_run_abandon_reports_stale_child_stop_warning(
         (root / ".cmoc" / "gu" / "ar" / "report" / "run" / "abandon").glob("*.md")
     )
     assert len(reports) == 1
-    assert "run child process already stopped: 789" in reports[0].read_text()
+    report_text = reports[0].read_text()
+    assert "run child process already stopped: 789" in report_text
+
+
+def test_apply_report_fields_include_accepted_feedback_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """apply report が invocation 内で accepted になった raw 参照だけを含む。"""
+    observations = [
+        {
+            "observation_id": "fbo_feedback",
+            "path": "/repo/.cmoc/gu/ar/feedback/observation/fbo_feedback.json",
+        }
+    ]
+    monkeypatch.setattr(
+        apply_module,
+        "accepted_feedback_observations",
+        lambda: observations,
+    )
+
+    fields = apply_module._apply_report_fields("base-commit")
+
+    assert fields == {
+        "diff_base_commit": "base-commit",
+        "feedback_observation_count": 1,
+        "feedback_observations": observations,
+    }
 
 
 def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
@@ -1148,7 +1174,10 @@ def test_apply_fork_reports_cleanup_warnings(
         ).glob("*.md")
     )
     assert len(reports) == 1
-    assert "run child process already stopped: 789" in reports[0].read_text()
+    report_text = reports[0].read_text()
+    assert "run child process already stopped: 789" in report_text
+    assert "feedback_observation_count: 0" in report_text
+    assert "feedback_observations: []" in report_text
 
 
 def test_refactor_fork_tracks_initialization_indexing_codex_calls(

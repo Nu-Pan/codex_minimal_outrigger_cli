@@ -39,6 +39,7 @@ def quota_probe_prompt(agent_call_cwd: Path) -> str:
     """実在する quota probe adapter が生成する prompt を返す。"""
     return build_quota_availability_probe_parameter(
         AgentCallParameter(
+            agent_call_kind="test_agent_call",
             model_class=ModelClass.EFFICIENCY,
             reasoning_effort=ReasoningEffort.LOW,
             file_access_mode=FileAccessMode.READONLY,
@@ -111,6 +112,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.FLAGSHIP,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -290,6 +292,7 @@ def test_capacity_probe_retry_skips_quota_poll_interval(
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     result = run_codex_exec(
         AgentCallParameter(
+            "test_agent_call",
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
             FileAccessMode.READONLY,
@@ -343,6 +346,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     with pytest.raises(KeyboardInterrupt):
         run_codex_exec(
             AgentCallParameter(
+                "test_agent_call",
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
                 FileAccessMode.READONLY,
@@ -375,6 +379,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
 def test_quota_probe_adapter_builds_minimal_probe() -> None:
     """配布 tree に正本 builder がなくても最小 probe を構築する。"""
     base = AgentCallParameter(
+        agent_call_kind="test_agent_call",
         model_class=ModelClass.FLAGSHIP,
         reasoning_effort=ReasoningEffort.HIGH,
         file_access_mode=FileAccessMode.REPO_WRITE,
@@ -439,6 +444,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.PURE_ORACLE_READ,
@@ -516,6 +522,7 @@ def test_run_codex_exec_reruns_after_quota_without_session_id(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -574,6 +581,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -643,6 +651,7 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
     with pytest.raises(CmocError) as exc_info:
         run_codex_exec(
             AgentCallParameter(
+                "test_agent_call",
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
                 FileAccessMode.READONLY,
@@ -698,6 +707,7 @@ def test_quota_poll_limit_stops_before_probe(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -756,6 +766,7 @@ def test_quota_probe_failure_reports_probe_error(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -822,6 +833,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -892,6 +904,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
+        "test_agent_call",
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
@@ -958,6 +971,7 @@ def test_quota_polling_state_is_cleared_when_progress_output_fails(
         with pytest.raises(BrokenPipeError, match="closed output"):
             run_codex_exec(
                 AgentCallParameter(
+                    "test_agent_call",
                     ModelClass.EFFICIENCY,
                     ReasoningEffort.LOW,
                     FileAccessMode.READONLY,

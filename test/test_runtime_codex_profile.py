@@ -6,6 +6,7 @@
 """
 
 import hashlib
+import sys
 from dataclasses import replace
 from pathlib import Path
 from typing import cast
@@ -22,6 +23,11 @@ from commons.runtime_codex_profile import (
     prepare_schema,
     read_output_json,
 )
+from commons.runtime_feedback import (
+    FEEDBACK_CAPABILITY_ENV,
+    FEEDBACK_COLLECTOR_ENV,
+    FEEDBACK_PROTOCOL_ENV,
+)
 from config.cmoc_config import CmocConfig
 
 _SANDBOX_BY_MODE = {
@@ -37,6 +43,7 @@ _SANDBOX_BY_MODE = {
 def _parameter(mode: FileAccessMode) -> AgentCallParameter:
     """指定modeの最小AgentCallParameterを作る。"""
     return AgentCallParameter(
+        agent_call_kind="test_agent_call",
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=mode,
@@ -74,6 +81,30 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     assert "features" not in parsed
     assert "model_provider" not in parsed
     assert "model_providers" not in parsed
+    assert parsed["mcp_servers"] == {
+        "cmoc_feedback": {
+            "command": sys.executable,
+            "args": ["-m", "commons.runtime_feedback_reporter"],
+            "env_vars": [
+                FEEDBACK_CAPABILITY_ENV,
+                FEEDBACK_COLLECTOR_ENV,
+                FEEDBACK_PROTOCOL_ENV,
+            ],
+            "enabled": True,
+            "required": False,
+            "enabled_tools": ["submit_observation"],
+            "disabled_tools": [],
+            "startup_timeout_sec": 5,
+            "tool_timeout_sec": 15,
+            "default_tools_approval_mode": "approve",
+            "tools": {"submit_observation": {"approval_mode": "approve"}},
+        }
+    }
+    assert parsed["shell_environment_policy"]["filters"] == {
+        FEEDBACK_CAPABILITY_ENV: "exclude",
+        FEEDBACK_COLLECTOR_ENV: "exclude",
+        FEEDBACK_PROTOCOL_ENV: "exclude",
+    }
     assert "--profile" not in args
     assert "-p" not in args
 
@@ -87,6 +118,29 @@ def test_codex_overrides_reject_unknown_file_access_mode() -> None:
 
     with pytest.raises(CmocError, match="不明な FileAccessMode"):
         build_codex_override_args(parameter, CmocConfig())
+
+
+def test_feedback_capability_values_are_not_written_to_codex_argv(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MCP 起動情報は環境変数名だけを含み、call secret を argv に載せない。"""
+    secret_values = (
+        "capability-secret-value",
+        "/tmp/private-collector.sock",
+        "private-protocol-value",
+    )
+    for name, value in zip(
+        (FEEDBACK_CAPABILITY_ENV, FEEDBACK_COLLECTOR_ENV, FEEDBACK_PROTOCOL_ENV),
+        secret_values,
+        strict=True,
+    ):
+        monkeypatch.setenv(name, value)
+
+    args = build_codex_override_args(_parameter(FileAccessMode.READONLY), CmocConfig())
+    rendered = "\n".join(args)
+
+    for value in secret_values:
+        assert value not in rendered
 
 
 def test_prepare_codex_overrides_is_config_only() -> None:
@@ -118,6 +172,7 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
 
     args = build_codex_override_args(
         AgentCallParameter(
+            agent_call_kind="test_agent_call",
             model_class=ModelClass.MINIMUM,
             reasoning_effort=ReasoningEffort.LOW,
             file_access_mode=FileAccessMode.READONLY,
@@ -162,6 +217,7 @@ def test_codex_overrides_leave_bare_toml_key_segments_unquoted() -> None:
 
     args = build_codex_override_args(
         AgentCallParameter(
+            agent_call_kind="test_agent_call",
             model_class=ModelClass.MINIMUM,
             reasoning_effort=ReasoningEffort.LOW,
             file_access_mode=FileAccessMode.READONLY,
@@ -185,6 +241,7 @@ def test_codex_overrides_reject_undefined_selected_provider() -> None:
     with pytest.raises(CmocError, match="Codex model provider が未定義"):
         build_codex_override_args(
             AgentCallParameter(
+                agent_call_kind="test_agent_call",
                 model_class=ModelClass.MINIMUM,
                 reasoning_effort=ReasoningEffort.LOW,
                 file_access_mode=FileAccessMode.READONLY,

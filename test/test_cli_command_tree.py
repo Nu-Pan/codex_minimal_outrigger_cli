@@ -25,6 +25,7 @@ def test_public_cli_leaf_commands_match_oracle() -> None:
     """公開 CLI の末端 command 集合が正本の列挙と一致することを確認する。"""
     assert _leaves(get_command(app)) == {
         ("doctor",),
+        ("feedback", "report"),
         ("indexing",),
         ("oracle", "edit"),
         ("oracle", "investigation"),

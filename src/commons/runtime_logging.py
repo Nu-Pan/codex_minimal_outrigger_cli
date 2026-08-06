@@ -1,4 +1,5 @@
 import json
+import sys
 import threading
 import time
 from contextvars import ContextVar, Token
@@ -7,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .runtime_feedback_store import uuid7_prefixed
 from .runtime_paths import _reserve_timestamped_path, logs_dir, timestamp
 
 _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
@@ -32,6 +34,7 @@ class SubcommandLogger:
         """実行中のサブコマンドが追記する log file を初期化する。"""
         self.root = root
         self.command = command
+        self.invocation_id = uuid7_prefixed("sci_")
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
         self.step_timings: list[StepTiming] = []
@@ -56,6 +59,37 @@ class SubcommandLogger:
             with self.path.open("a") as f:
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 f.flush()
+        # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+        # detector は event が flush された後だけ評価し、失敗を本命 logger へ返さない。
+        if {
+            "event_schema_version",
+            "event_id",
+            "event_type",
+            "occurred_at",
+        }.issubset(record):
+            try:
+                from .runtime_feedback import detect_feedback_event
+
+                detect_feedback_event(record, self.path)
+            except BaseException as exc:
+                self._record_detector_failure(exc)
+
+    def _record_detector_failure(self, error: BaseException) -> None:
+        """detector failure を nonfatal な自由 event と warning に留める。"""
+        record = {
+            "event": "feedback.detector_failed",
+            "command": self.command,
+            "timestamp": datetime.now().isoformat(),
+            "error": repr(error),
+        }
+        try:
+            with self._lock:
+                with self.path.open("a") as log_file:
+                    log_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+                    log_file.flush()
+        except BaseException:
+            pass
+        print("warning: feedback detector failed", file=sys.stderr, flush=True)
 
     def start_step(
         self, index: str, description: str, log_description: str | None = None
