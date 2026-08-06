@@ -1,45 +1,50 @@
 # `edit`
 
 ## Summary
-- 現時点で本文ファイルを含まない空のディレクトリです。
+- oracle 編集用 TUI の起動パラメータを構築する実装を含む領域です。リポジトリルート、oracle 編集専用のアクセス制御、固定プロンプト、モデル設定、構造化出力、管理ログ保存を確認する入口になります。現時点では、確認対象となる本文ファイルを含まない空の領域もあります。
 
 ## Read this when
-- このディレクトリにファイルが追加され、その内容や用途を確認する必要があるとき。
+- `cmoc oracle edit` の TUI 起動条件やパラメータを確認・変更するとき。
+- oracle 編集時に使われるプロンプト、パスコンテキスト、アクセスモード、モデル設定、ログ保存の挙動を調べるとき。
 
 ## Do not read this when
-- このディレクトリ配下の具体的なファイルを直接確認できる場合。
+- oracle file の編集内容や編集エージェントの一般的な役割を確認するとき。
+- 共通のプロンプト構築処理や realization 側の CLI・TUI 動作を確認するとき。
+- この領域に具体的な本文ファイルがなく、配下のファイルを直接確認できる場合。
 
 ## hash
-- 5a0738490b6b32407892ee1cfe8c82273cebcea45d9451bbc9c34cc67ec0c2fe
+- 906c47065e8fde322cc925923c398f022ea6230fc1b3fcece490d0d0d70e280b
 
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動パラメータを構築する実装。リポジトリルートを作業ディレクトリとして確定し、ユーザー指示を含む完全プロンプトの生成・保存、固定されたモデル・推論強度・ファイルアクセス権・起動設定の返却を担う。
+- `cmoc oracle investigation` の TUI 起動パラメータを構築する正本実装。oracle file 調査用プロンプトの生成・ログ保存と、モデル、権限、作業ディレクトリなどを固定した `AgentCallParameter` の返却を担う。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動パラメータ、完全プロンプト生成、作業パス確定、起動ログ保存の挙動を変更・調査するとき。
+- `cmoc oracle investigation` の TUI 起動条件、調査用プロンプト、起動パラメータ構成を変更・確認するとき。
+- ユーザー指示を含む完全プロンプトの生成から起動前ログ保存までの流れを確認するとき。
 
 ## Do not read this when
-- oracle investigation の調査プロンプト本文や一般的なプロンプト組み立て規則だけを確認したいとき。完全プロンプト生成実装や関連する prompt builder を直接読む。
-- TUI 起動以外の agent call パラメータ構築を変更するとき。
+- oracle file 調査の仕様や完全プロンプト共通構造を確認するとき。
+- `AgentCallParameter` の型定義やファイルアクセスモードの一般的な意味だけを確認するとき。
 
 ## hash
-- 4b8e91f02a0cbc1814d86e74fce265c56c2c18045f8a0e539d69e095191183c8
+- 7c5fc3c611d4d9eba23dff64427007dff368c17235754cdd9d84ce1f8a9897ea
 
 # `review`
 
 ## Summary
-- `cmoc oracle review` の所見生成・検証・判定・統合に用いる agent call パラメータ構築実装と、各処理の Structured Output schema をまとめた領域。oracle review の各段階へ進むための入口となる。
+- oracle review の所見列挙・判定・マージ・擁護・反証に関する Structured Output スキーマと agent call パラメータ実装を扱う領域です。各ファイルは、所見の生成、妥当性判定、重複整理、賛成理由・反証理由の列挙という個別フローへの入口を提供します。
 
 ## Read this when
-- `cmoc oracle review` の所見列挙、妥当性検証、採否判定、重複・矛盾の統合処理を変更・調査するとき。
-- レビュー用 prompt、oracle-only の実行条件、モデル設定、Structured Output schema の接続を確認するとき。
+- `cmoc oracle review` の所見生成、妥当性判定、所見リスト整理、擁護理由または反証理由の列挙処理を変更・調査するとき。
+- レビュー用 agent call のプロンプト、oracle 読み取り範囲、モデル設定、Structured Output との対応を確認するとき。
+- 所見関連の Structured Output の入力・出力契約を確認するとき。
 
 ## Do not read this when
-- レビュー所見そのものや oracle file のレビュー基準を確認するとき。
-- oracle review 全体の制御フローや共通の agent call・prompt 構築仕様だけを確認するとき。
-- 特定の判定結果・擁護理由・反証理由の出力形式だけを確認するときは、対応する JSON schema を直接読む。
+- レビュー所見の内容や妥当性基準そのものを確認する場合は、対応するレビュー標準または対象 oracle file を直接読む。
+- Structured Output の共通生成処理や一般的な agent call 基盤だけを確認する場合は、共通実装を直接読む。
+- 所見列挙・判定・マージ・擁護・反証以外の `cmoc oracle review` サブコマンドを調査する場合。
 
 ## hash
-- aa5a80c4e150edd79472a494ab3f2e7844dac648ca9f7b235aad75d187414bfc
+- 348c466b7b71e9efe8ce66188142a1cca30f4397c9735e2d43e175b8a3be9f6b

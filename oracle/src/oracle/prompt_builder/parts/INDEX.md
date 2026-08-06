@@ -32,6 +32,22 @@
 ## hash
 - c9e43334d126ed735a55807763442ee34292bfe17bfa2545c8e84e166b4d7c91
 
+# `feedback_reporting_standard.py`
+
+## Summary
+- 全 agent call に共通する、人間向け feedback 報告規範のプロンプト断片を構築する。root の placeholder 定義から repo-root を取得し、報告条件・提出方法・報告後の継続方針を StructDoc として返す。
+
+## Read this when
+- agent call 共通の人間向け feedback 報告規範を変更・確認するとき
+- prompt builder の feedback reporting 部分や、repo-root placeholder の受け渡しを調査するとき
+
+## Do not read this when
+- 個別の agent call の役割・作業概要・完了条件だけを確認したいとき
+- feedback 保存 file の形式や reporter の具体的な入力方法を確認したいときは、reporter の describe を直接読むべき場合
+
+## hash
+- f094e8e7a6c495e5faca43d968f6a1eb2f0ad2dde7fe72fd6701a2ff681137f2
+
 # `file_access_rule.py`
 
 ## Summary

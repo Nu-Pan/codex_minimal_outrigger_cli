@@ -1,34 +1,35 @@
 # `doc`
 
 ## Summary
-- cmoc の正本ドキュメントを機能・開発規則・設計判断ごとに整理したディレクトリ。アプリケーション仕様、branch model、不採用案、Python 開発規則への入口を提供する。
+- cmoc の正本仕様ドキュメントを領域別にまとめたディレクトリ。アプリケーション共通仕様、branch・commit・worktree、開発規則、不採用案などへの入口として機能する。
 
 ## Read this when
-- cmoc の機能仕様、branch・commit・worktree のモデル、Python 開発・CLI 設計・テスト規則を調査・変更・検証するとき
-- 対象の詳細仕様や開発ルール文書を特定し、責務境界や関連文書への入口を確認するとき
-- 採用されなかった realization refactor の方式や判断理由を確認するとき
+- 複数の正本仕様から、調査・変更対象の文書を選ぶとき
+- Codex 呼び出し、ログ、prompt、session／run、branch、worktree、CLI、Python 開発、テストなどの仕様の入口を探すとき
+- 現行仕様ではなく、採用されなかった設計案やその理由を確認するとき
 
 ## Do not read this when
-- 確認したい特定の機能仕様、開発環境手順、テスト手順、CLI 設計、コーディング規則が既に分かっているときは該当文書を直接読む
-- 実装構造やテストコードの内容を確認するときは対応する realization code・realization test を直接読む
-- INDEX.md の自動生成規則や oracle の一般原則だけを確認するときは、それぞれの専用仕様を直接読む
+- 対象の仕様文書がすでに特定できており、その本文へ直接進めるとき
+- 実装やテストの具体的な内容だけを確認するとき
+- Python 環境構築、CLI 設計、テスト実行など、対応する個別の開発規則文書が明確なとき
 
 ## hash
-- be3d734e9af5847b21ec2ae967fc9311915ebe9076d661faba0d9743e6ed9499
+- f264ab1af6f26b43de171eb799f1d7adb6386371322f465a6b5c66013e301048
 
 # `src`
 
 ## Summary
-- oracle の正本実装群を格納するディレクトリです。Agent Call Parameter、各種 prompt、Structured Output schema、パス・設定・構造化文書の共通処理を定義し、下位ディレクトリから indexing、oracle 操作、realization 操作、session、TUI の用途別実装へ進みます。
+- cmoc の agent call 用正本ソースを集約する領域です。共通パラメータ、用途別の呼び出し構築、Structured Output schema、prompt の組み立て、パス・設定・構造化文書モデル、feedback 入力契約を扱います。各用途の builder、規範、構造化モデルの実装へ進む入口です。
 
 ## Read this when
-- cmoc の agent call パラメータ、prompt、Structured Output schema、oracle・realization の扱い、または TUI・session 起動の正本実装を調査・変更するとき。
-- 用途別の ACP builder、共通 prompt builder、パスモデル、設定、構造化文書処理の入口を選ぶ必要があるとき。
+- agent call のモデル、推論強度、ファイルアクセス、作業 root、Structured Output を確認するとき。
+- indexing、oracle review、realization、feedback、TUI など用途別の agent call 構築を調査・変更するとき。
+- prompt の共通部品、oracle・realization の規範、ルーティング規則、パス解決、構造化文書の変換を確認するとき。
 
 ## Do not read this when
-- 実際の CLI 実装や差分適用、競合解消、git 操作など、oracle の正本実装を呼び出す realization 側の処理を調査するとき。
-- 特定の用途が明確で、indexing、oracle、realization、session、TUI、prompt builder などの下位ディレクトリへ直接進めるとき。
-- 個別の prompt 部品、Structured Output フィールド定義、または特定の設定・パスモデルだけを確認するとき。
+- 実際の agent call の実行制御、CLI・TUI の上位フロー、または通常の realization 実装を調査するとき。
+- 正本仕様そのもの、feedback の保存・集約、または通常のテスト実装だけを確認するとき。
+- 特定の用途やモデルの責務が明らかな場合は、この領域全体ではなく該当する下位実装へ直接進むとき。
 
 ## hash
-- d15c71e92ca4f9aa8e7b78017625c19bfe2b714eb4921a791d18c6503ea78552
+- 6016abd0b4858f5c22dba8192d514c2b6a7a820e28bb7bfc0f82c7b818fb52dd

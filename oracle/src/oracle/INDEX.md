@@ -1,20 +1,36 @@
 # `acp_builder`
 
 ## Summary
-- oracle の agent call パラメータ構築に関する正本実装を用途別にまとめたディレクトリです。共通の呼び出しパラメータ型、INDEX.md 生成、oracle 関連、realization 関連、session join、TUI 起動の各実装への入口を提供します。
+- Agent call 用の正本ソースをまとめる領域です。共通パラメータ定義、feedback・indexing・oracle・realization・session・tui 各用途の起動条件や prompt 構築、Structured Output 連携を扱い、各サブ領域の実装を確認する入口になります。
 
 ## Read this when
-- AgentCallParameter の型やモデル・推論強度・アクセスモードを確認するとき。
-- INDEX.md エントリー生成のスキーマや構築処理を調査するとき。
-- oracle、realization、session join、TUI など特定用途の agent call パラメータ構築を変更・調査するとき。
+- Agent call の共通パラメータやモデル・推論強度・ファイルアクセスモードを確認するとき。
+- 特定用途の agent call における prompt、実行条件、Structured Output 設定の実装入口を探すとき。
+- indexing、oracle、realization、session、tui、feedback の agent call 構築を調査・変更するとき。
 
 ## Do not read this when
-- 実際の処理本体、差分適用、競合解消、git 操作を調査するとき。
-- 共通 prompt 構築やパスコンテキストなど、各用途の下位実装より共通領域を直接確認すべきとき。
-- 個別の構造化出力フィールド定義だけを確認するとき。
+- 実際の agent call 実行フローや CLI・TUI の上位制御を調査するとき。
+- 正本仕様そのもの、Codex CLI の sandbox・permission profile の詳細、または Structured Output schema の本文だけを確認するとき。
+- 通常の realization 実装・テストや issue の保存・取得・表示など、agent call パラメータ構築以外の処理を調べるとき。
 
 ## hash
-- 2a571ac6da46c0f867122d11910d7f72f3de07fb3e0e1f7ea3e97ffe585a2479
+- 693ef7698194df195757d31f2e2d2d40ee74c317fef720c65de889208b737e7d
+
+# `feedback`
+
+## Summary
+- 対象ディレクトリは、agent が検出した問題を feedback reporter から collector へ渡すための入力契約を扱う領域です。問題の分類・重要度・影響、人間の対応が必要な理由、原因の確信度、再確認可能な根拠、作業継続状態を表現・検証する下位要素への入口になります。
+
+## Read this when
+- feedback reporter の入力形式や、検出した問題を人間向け feedback として構造化する処理を確認するとき。
+- 入力契約を構成するスキーマや関連する検証定義を調査・変更するとき。
+
+## Do not read this when
+- collector 側の保存、集約、重複判定の仕様だけを確認したいとき。
+- feedback の検出方法や、agent が作業を継続するかどうかの判断ロジックだけを確認したいとき。
+
+## hash
+- a86d0e0a2687a4eed300cd97383ba6e521f2347418e4446a2bfba702aedcd9ba
 
 # `other`
 
@@ -38,18 +54,17 @@
 # `prompt_builder`
 
 ## Summary
-- oracle と realization、適合性レビュー、ファイルアクセス、INDEX.md ルーティングなどの規範を、prompt builder 用の構造化文書へ変換する実装群を収録するディレクトリ。特定のレビュー規範やアクセス制約、仕様分類、ルーティング規則の生成処理への入口となる。
+- cmoc のエージェント呼び出し用プロンプトを構築する実装群。プレースホルダ型、完全なプロンプトの組み立て、エディタ初期文、oracle・realization・レビュー・アクセス制約・ルーティング規範の各 prompt builder を扱う。配下の個別部品や `parts` を調査・変更する際の入口となる。
 
 ## Read this when
-- oracle file と realization file の適合性、レビュー所見、conflict 解消規範を調査・変更するとき。
-- AI エージェント向けのファイルアクセス規則や oracle・realization の定義を変更するとき。
-- INDEX.md のエントリー規範やルーティング規則の生成処理を調査・変更するとき。
-- prompt builder に注入する標準文書の構造、Requirement・Standard の扱い、oracle 参照ルールを確認するとき。
+- エージェントプロンプトの構成や注入規範を調査・変更するとき。
+- プレースホルダ、エディタ初期文、共通規範の prompt builder 部品を確認するとき。
+- 配下にある複数の prompt builder 部品を横断して確認するとき。
 
 ## Do not read this when
-- 特定の oracle 文書や realization 実装そのものの仕様・挙動を調査するとき。
-- Codex CLI の実行権限や sandbox 設定そのものを確認するとき。
-- prompt builder 以外のサブコマンド処理や、一般的なコード品質・ベストプラクティスだけをレビューするとき。
+- 特定の規範や個別プロンプト部品の詳細だけを確認する場合は、該当する配下の実装を直接読む。
+- prompt builder と無関係な oracle 文書、realization 実装、CLI 機能を調査する場合。
+- INDEX.md の個別エントリーだけを確認する場合。
 
 ## hash
-- dcb504c92f81d240b75e76c3ff2b11d6e83ee502510f7e4236ae8a6b09d48879
+- 175b7e364aa8d560c2cf60d639c60399961360077abf48448de99bc6b4e4dbe5

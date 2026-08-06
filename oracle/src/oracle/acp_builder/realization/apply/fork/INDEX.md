@@ -1,17 +1,15 @@
 # `launch_exec.py`
 
 ## Summary
-- `cmoc realization apply fork` 用の codex exec 起動パラメータを構築する。oracle file の差分、commit 範囲、linked worktree を完全 prompt に組み込み、realization file の差分追従を FLAGSHIP モデルへ委譲する処理の入口。
+- `cmoc realization apply fork` 用の codex exec 起動パラメータを構築する正本実装。oracle file の差分、対象コミット範囲、作業用 linked worktree を完全な realization 追従プロンプトへまとめ、実行モデルやアクセス権限などの AgentCallParameter を定義する。
 
 ## Read this when
-- oracle file の変更を realization file へ追従させる AgentCallParameter の構築・変更を行うとき
-- realization apply fork の prompt 内容、作業範囲、差分参照、モデル設定、worktree 設定を確認するとき
-- 差分追従処理の完了条件や realization write の委譲方法を調査するとき
+- realization file へ oracle file の変更を追従させる AgentCallParameter の生成条件や、差分駆動の codex exec prompt 構築方法を確認したいとき。
+- `realization_apply_change` ブロック、完全 prompt、実行時のモデル・推論・ファイルアクセス設定の対応関係を調べるとき。
 
 ## Do not read this when
-- realization apply fork の実際の差分適用ロジックやテストだけを調べるとき
-- 一般的な prompt 構築処理を調べるときは、prompt_builder の対象実装を直接読む方が適切
-- AgentCallParameter や path context の共通定義を調べるときは、それぞれの定義元を直接読む方が適切
+- `cmoc realization apply fork` の起動以外の prompt 構築を調べるときは、各用途の prompt builder 実装を直接読む。
+- realization file の具体的な変更処理やテスト内容を確認したいときは、対応する realization implementation または realization test を直接読む。
 
 ## hash
-- 68cf3897fb535f36e027ccadd2b32f81fb566e2f4e0d7d9671d808b76b4a995b
+- 1e32c9dab816365b25751644b376838a59e1a19ab099271595baecb24980f936

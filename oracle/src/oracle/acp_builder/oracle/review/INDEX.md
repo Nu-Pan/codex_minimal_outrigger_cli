@@ -15,20 +15,20 @@
 # `enumerate_finding.py`
 
 ## Summary
-- `cmoc oracle review` における新規所見列挙用のエージェント呼び出しパラメータを構築する正本。レビュー対象 oracle file、関連所見、oracle ツリーのパス、プロンプト、モデル・アクセス設定、Structured Output schema を組み立てる。
+- `cmoc oracle review` で新規所見を列挙するための agent call パラメータを構築する実装。レビュー対象 oracle file、関連する既知の所見、oracle-only の読み取り制約、動的プロンプト、構造化出力スキーマ、作業ディレクトリなどを設定し、完成した呼び出し定義を返す。
 
 ## Read this when
-- `cmoc oracle review` の新規所見列挙処理を変更・調査するとき
-- レビュー用 prompt の役割、対象範囲、既知所見との重複排除条件、実行パラメータを確認するとき
-- oracle review 用 Structured Output schema や prompt builder との接続を追うとき
+- `cmoc oracle review` の新規所見列挙フローを変更・調査するとき
+- レビュー用 prompt の構築条件、oracle file の参照範囲、agent call の実行設定を確認するとき
+- 新規所見列挙用の Structured Output schema との対応を確認するとき
 
 ## Do not read this when
-- 所見の内容や oracle file の仕様レビュー基準だけを確認したいときは、レビュー対象の oracle file やレビュー基準の正本を直接読む
-- 新規所見列挙以外の `cmoc oracle review` 処理を調査するときは、該当する実装・prompt 定義を直接読む
-- 一般的な agent call パラメータやパス解決の共通仕様だけを確認したいときは、参照先の共通モジュールを直接読む
+- oracle review の所見判定基準そのものを確認したいときは、レビュー標準や対象 oracle file を直接読む
+- 新規所見列挙以外の `cmoc oracle review` サブコマンドを変更・調査するとき
+- 一般的な prompt 構築や agent call 基盤の仕様だけを確認したいときは、対応する共通実装を直接読む
 
 ## hash
-- d36c0d49839198aeee9af491179040c8b9899879cda2c1d7530414e1aef60013
+- f809fae0a0130114150d1cfc82c53d129ebdf149451cb68571c797c8f0babadd
 
 # `judge_finding.json`
 
@@ -47,20 +47,20 @@
 # `judge_finding.py`
 
 ## Summary
-- `cmoc oracle review` における所見採否判定用の AI エージェント呼び出しパラメータを構築する。所見、妥当性を支持する理由、反対理由をプロンプトへ組み込み、oracle 読み取り専用の実行条件、モデル・推論設定、構造化出力 schema、作業ディレクトリを指定する。
+- `cmoc oracle review`で、単一のレビュー所見と賛成・反対理由を材料に、所見を人間へ提示すべきか判定するエージェント呼び出しパラメータを構築する。プロンプト、読み取り範囲、モデル設定、構造化出力スキーマ、作業ディレクトリをまとめて定義する。
 
 ## Read this when
-- `cmoc oracle review` の所見採否判定プロンプトの生成内容や agent call パラメータを確認・変更するとき
-- 所見・賛成理由・反対理由のプロンプトへの渡し方を確認するとき
-- oracle review 用の実行権限、モデル設定、構造化出力 schema の指定を確認するとき
+- `cmoc oracle review`の所見採否判定処理を変更・調査するとき。
+- 所見、賛成理由、反対理由を入力とするエージェント呼び出しのプロンプト生成や実行設定を確認するとき。
+- この判定処理の構造化出力スキーマやoracle読み取り権限、パスコンテキストの設定を確認するとき。
 
 ## Do not read this when
-- 所見採否判定の出力 schema 自体を確認したいときは、対応する JSON schema を直接読む
-- レビュー所見の判定ロジックや oracle review サブコマンド全体の処理を確認したいときは、それぞれの実装・仕様ファイルを直接読む
-- 一般的な prompt 構築や agent call の共通仕様だけを確認したいときは、共通 builder・型定義を直接読む
+- レビュー所見の内容そのものや、oracle仕様レビュー全体のルールを確認する場合。
+- 判定結果の構造化データ形式だけを確認する場合は、対応する出力スキーマを直接読む。
+- `cmoc oracle review`以外のサブコマンドのエージェント呼び出しを調査する場合。
 
 ## hash
-- 880f80ca17cd50ea96674b8e02121af0666fda838048fa191bce18ec20d4a311
+- ac18a5d34f4aa9a070d79a04c7c147f49ba9d8117bee0ed0e6465347fce51f63
 
 # `merge_finding.json`
 
@@ -81,18 +81,20 @@
 # `merge_finding.py`
 
 ## Summary
-- `cmoc oracle review` が oracle file のレビュー所見リストを整理するための agent call パラメータを構築する実装。所見の重複・矛盾を解消するマージ処理に関する prompt、Structured Output schema、実行コンテキスト設定の入口となる。
+- `cmoc oracle review` における所見リストマージ用の agent call パラメータを構築する実装。oracle file の所見一覧を動的プロンプトへ埋め込み、重複・矛盾の解消と編集操作の列挙を要求する呼び出し条件、モデル設定、アクセス範囲、Structured Output schema の参照先を定義する。oracle review の所見マージ処理へ進む入口となる。
 
 ## Read this when
-- `cmoc oracle review` の所見リストマージ prompt の生成や agent call 設定を変更・調査するとき
-- 所見リストの整理条件、Structured Output schema の指定、oracle 専用読み取り権限の設定を確認するとき
+- `cmoc oracle review` の所見リストマージ処理を変更・調査するとき
+- 所見マージ用 agent call のプロンプト、モデル、推論強度、ファイルアクセスモード、実行ディレクトリを確認するとき
+- 所見リストの動的入力や Structured Output の事後条件がどのように呼び出しへ反映されるか確認するとき
 
 ## Do not read this when
-- レビュー所見そのものの内容や正本仕様のレビュー規則を確認したいときは、oracle 配下のレビュー対象やレビュー標準を直接読む
-- `cmoc oracle review` のマージ以外のサブコマンドや prompt builder の共通仕様だけを調査するとき
+- 所見の個別内容や oracle file の仕様本文を確認することが目的のときは、対象となる oracle file を直接読む
+- 所見マージ結果の Structured Output の形式だけを確認するときは、参照される schema ファイルを直接読む
+- `cmoc oracle review` のマージ以外のサブコマンドや、一般的な prompt builder の共通仕様だけを調査するとき
 
 ## hash
-- 3fb1d219df9754eb356ae8aa3fc21afac77b4ad6802cac38201cc31ec7838a8e
+- 2b4b13abc8b3a9e9cf744bf542d7ca477afdebbdfdfb250b6c3d4e155e456c55
 
 # `validate_finding_advocate.json`
 
@@ -111,18 +113,20 @@
 # `validate_finding_advocate.py`
 
 ## Summary
-- `cmoc oracle review`でレビュー所見が妥当である理由を調査するAIエージェント呼び出しパラメータを構築する。対象所見、既知の擁護理由・反論理由をプロンプトへ渡し、重複しない新規理由のStructured Output生成を指定する。
+- `cmoc oracle review` において、レビュー所見が妥当である理由を調査するための AI エージェント呼び出しパラメータを構築する oracle prompt 定義。対象所見、既知の賛成理由・反対理由をプロンプトへ渡し、既存理由と重複しない新規理由の列挙を要求する。
+- oracle の読み取り専用アクセス、最大推論 effort、効率重視モデル、構造化出力スキーマ、リポジトリルートを作業ディレクトリとする実行条件を設定する。
 
 ## Read this when
-- `cmoc oracle review`の所見擁護処理、またはそのプロンプト・エージェント呼び出し設定を変更・調査するとき。
-- 所見、既知の理由、Oracle読み取り専用アクセス、構造化出力スキーマの受け渡しを確認するとき。
+- `cmoc oracle review` の所見擁護フロー、またはその agent call prompt の内容・実行条件を調査するとき。
+- 所見が妥当である理由の重複排除、理由がない場合の空配列、構造化出力の設定を確認するとき。
+- この prompt builder が生成する agent call parameter のモデル、推論強度、ファイルアクセス範囲、作業ディレクトリを確認するとき。
 
 ## Do not read this when
-- 所見が妥当ではない理由の列挙処理を確認する場合。
-- レビュー機能の一般的な実装や、対象ファイルが呼び出す共通プロンプト構築処理だけを確認する場合は、対応する直接の実装・仕様へ進む。
+- レビュー所見が妥当でない理由の列挙や、擁護以外の oracle review prompt を調査するときは、該当する別の prompt 定義を読む。
+- レビュー処理そのもの、構造化出力のスキーマ内容、または prompt の共通生成ロジックを直接調査する場合は、それぞれの実装・スキーマ・共通 builder を読む。
 
 ## hash
-- 0b8e03af59bebba76cf4040569d32542b3c13554989c09530d3d3c096fced082
+- 226dc4d18a232051757e1c6b30f594422e32598d19f72f7b29d000c6bae3dce1
 
 # `validate_finding_challenger.json`
 
@@ -141,17 +145,16 @@
 # `validate_finding_challenger.py`
 
 ## Summary
-- `cmoc oracle review` における、レビュー所見が妥当ではない理由を列挙する agent call パラメータ生成の正本。対象所見と既知の賛成・反対理由をプロンプトへ組み込み、oracle-only 読み取り、モデル設定、構造化出力 schema、作業ディレクトリを指定する。
+- `cmoc oracle review` において、レビュー所見が妥当ではない理由を列挙するための agent call パラメータを構築する。所見、既知の賛成理由、既知の反証理由をプロンプトへ渡し、重複しない新規の反証理由だけを返すレビュー処理への入口となる。
 
 ## Read this when
-- `cmoc oracle review` の所見反証・否定理由列挙の prompt 構築を変更または確認するとき
-- finding、既知の妥当理由、既知の不妥当理由の入力方法や、重複しない新規理由を求める prompt を確認するとき
-- この agent call のモデル、アクセスモード、構造化出力、パス解決などの実行パラメータを確認するとき
+- `cmoc oracle review` の所見反証処理、またはその agent call パラメータ生成を変更・調査するとき。
+- 所見、既知の理由、Structured Output、oracle 専用読み取り設定の受け渡しを確認するとき。
 
 ## Do not read this when
-- レビュー所見そのものの判定ロジックや oracle review の別段階を変更・確認するときは、対応する別の prompt builder またはサブコマンド実装を直接読む
-- 構造化出力の項目定義だけを確認するときは、対応する JSON schema を直接読む
-- 共通 prompt の組み立て規則や agent call 型定義だけを確認するときは、参照先の共通 builder・型定義を直接読む
+- レビュー所見の妥当性そのものを評価する実装を直接調べるとき。
+- 反証理由の出力スキーマだけを確認したいときは、対応する JSON スキーマを直接読む。
+- `cmoc oracle review` 以外のサブコマンドや、一般的な agent call 構築処理だけを調べるとき。
 
 ## hash
-- dbbcb59fb9d8baa2656e6e8623a2e154df3fb41e10433d9f03a4597653636451
+- b929fd36b37c905037e353b41582b6bc88efc0b34419089457af236859bd945a
