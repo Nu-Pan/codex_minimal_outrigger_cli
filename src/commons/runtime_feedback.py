@@ -424,6 +424,7 @@ class FeedbackInvocation:
             or not isinstance(occurred_at, str)
             or not isinstance(invocation_id, str)
             or not invocation_id
+            or invocation_id != self.invocation_id
         ):
             return
         try:

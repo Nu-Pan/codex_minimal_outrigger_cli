@@ -249,8 +249,8 @@ _SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "private_key",
         re.compile(
-            r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----.*?"
-            r"-----END (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----",
+            r"-----BEGIN (?:ENCRYPTED |RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----.*?"
+            r"-----END (?:ENCRYPTED |RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----",
             re.DOTALL,
         ),
     ),
@@ -377,10 +377,10 @@ def validate_agent_payload(
         text = item.get("text")
         if isinstance(text, str) and redaction_marker.sub("", text).strip():
             meaningful_evidence = True
-        if item.get("kind") in _PATH_EVIDENCE_KINDS and isinstance(
-            item.get("path"), str
-        ):
-            meaningful_evidence = True
+        path = item.get("path")
+        if item.get("kind") in _PATH_EVIDENCE_KINDS and isinstance(path, str):
+            if redaction_marker.sub("", path).strip():
+                meaningful_evidence = True
     if not meaningful_evidence:
         raise FeedbackRejected(
             "suspected_secret", "required evidence has no meaning after redaction"

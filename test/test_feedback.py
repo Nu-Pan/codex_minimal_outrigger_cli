@@ -274,6 +274,31 @@ def test_agent_store_rejects_outside_paths_and_secret_only_evidence(
     assert "[REDACTED:authorization]" in path.read_text()
     assert "abcdefghijklmnopqrstuvwxyz" not in path.read_text()
 
+    secret_path_payload = _payload(
+        text="Authorization: Bearer abcdefghijklmnopqrstuvwxyz",
+        path="ghp_abcdefghijklmnopqrstuvwxyz",
+    )
+    with pytest.raises(FeedbackRejected) as secret_path:
+        store_agent_observation(root, _context(root), secret_path_payload)
+    assert secret_path.value.code == "suspected_secret"
+
+    encrypted_key_payload = _payload(
+        text=(
+            "before\n"
+            "-----BEGIN ENCRYPTED PRIVATE KEY-----\n"
+            "secret-key-material\n"
+            "-----END ENCRYPTED PRIVATE KEY-----\n"
+            "after"
+        ),
+        kind="error",
+        path=None,
+    )
+    result, path = store_agent_observation(root, _context(root), encrypted_key_payload)
+    stored = path.read_text()
+    assert result["redaction_count"] == 1
+    assert "[REDACTED:private_key]" in stored
+    assert "secret-key-material" not in stored
+
 
 def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
     """同じ stable event の再検出が同じ raw observation 一件へ収束する。"""
@@ -298,6 +323,26 @@ def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
     assert validate_observation_envelope(observation) == []
     assert observation["source"] == "machine_rule"
     assert observation["source_event"]["event_id"] == event["event_id"]
+
+
+def test_machine_detector_ignores_foreign_invocation_event(tmp_path: Path) -> None:
+    """別 invocation の stable event を現在の detector が取り込まない。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    event = {
+        "event_schema_version": 1,
+        "event_id": "evt_foreign_scope",
+        "event_type": "feedback.reporter_unavailable",
+        "occurred_at": rfc3339_now(),
+        "subcommand_invocation_id": "foreign_scope",
+        "component": "collector",
+        "failure_code": "protocol_error",
+    }
+
+    invocation.detect_event(event, logger.path)
+
+    assert iter_observation_paths(root) == []
 
 
 def test_machine_detector_ignores_incomplete_structured_output_event(
