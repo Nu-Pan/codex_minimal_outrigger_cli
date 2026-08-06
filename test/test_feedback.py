@@ -28,6 +28,7 @@ from acp.builder.feedback.normalize_issue import (
 from basic.acp import FileAccessMode
 from commons.runtime_feedback import FeedbackInvocation
 from commons.runtime_feedback_state import (
+    IssueView,
     identity_record,
     issue_id,
     load_issue_views,
@@ -297,6 +298,96 @@ def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
     assert validate_observation_envelope(observation) == []
     assert observation["source"] == "machine_rule"
     assert observation["source_event"]["event_id"] == event["event_id"]
+
+
+def test_machine_detector_ignores_incomplete_structured_output_event(
+    tmp_path: Path,
+) -> None:
+    """rule 固有 field が欠けた event を raw observation として保存しない。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    event = {
+        "event_schema_version": 1,
+        "event_id": "evt_incomplete_structured_output",
+        "event_type": "codex.structured_output_validation_exhausted",
+        "occurred_at": rfc3339_now(),
+        "subcommand_invocation_id": logger.invocation_id,
+        "agent_call_id": "agc_incomplete_structured_output",
+        "agent_call_kind": "build_feedback_test_parameter",
+        "codex_call_id": "cdc_incomplete_structured_output",
+    }
+
+    invocation.detect_event(event, logger.path)
+
+    assert iter_observation_paths(root) == []
+
+
+def test_agent_candidate_requires_all_fingerprints_for_exact_match(
+    tmp_path: Path,
+) -> None:
+    """一部の evidence だけ一致する候補は normalizer へ残す。"""
+    view = IssueView(
+        issue_id="fbi_candidate",
+        identity={"origin": "agent_report"},
+        revision={"category": "tooling"},
+        occurrences=[{"observation_id": "fbo_old"}],
+        assessment=None,
+        disposition=None,
+    )
+    first_path = str((tmp_path / "README.md").resolve())
+    second_path = str((tmp_path / "pyproject.toml").resolve())
+    previous = {
+        "fbo_old": {
+            "payload": {"category": "tooling"},
+            "evidence_fingerprints": [
+                {"normalized_path": first_path, "sha256": "a" * 64},
+                {"normalized_path": second_path, "sha256": "b" * 64},
+            ],
+        }
+    }
+    current = {
+        "payload": {"category": "tooling"},
+        "evidence_fingerprints": [{"normalized_path": first_path, "sha256": "a" * 64}],
+    }
+
+    exact, candidates = feedback_report_module._candidate_issues(
+        current,
+        {view.issue_id: view},
+        previous,
+    )
+
+    assert exact is None
+    assert candidates == [view]
+
+
+def test_normalizer_presence_keeps_changed_fingerprint_stale(
+    tmp_path: Path,
+) -> None:
+    """normalizer の presence を使っても変更済み fingerprint は再検証扱いにする。"""
+    evidence_path = tmp_path / "evidence.txt"
+    evidence_path.write_text("current\n")
+    observation = {
+        "context": {"repo_root": str(tmp_path.resolve())},
+        "evidence_fingerprints": [
+            {
+                "normalized_path": str(evidence_path.resolve()),
+                "state": "hashed",
+                "sha256": "a" * 64,
+            }
+        ],
+    }
+
+    assessment = feedback_report_module._assessment_for_observation(
+        "fbi_candidate",
+        rfc3339_now(),
+        observation,
+        {"presence": "likely_absent", "reason": "current content differs"},
+    )
+
+    assert assessment["presence"] == "likely_absent"
+    assert assessment["freshness"] == "needs_revalidation"
+    assert assessment["reason_code"] == "normalizer_assessment"
 
 
 def test_feedback_report_is_incremental_and_refreshes_fingerprint(

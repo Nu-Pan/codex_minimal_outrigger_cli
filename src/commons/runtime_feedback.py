@@ -30,6 +30,7 @@ import typer
 from .runtime_feedback_store import (
     REPORTER_PROTOCOL_VERSION,
     FeedbackRejected,
+    parse_rfc3339,
     rfc3339_now,
     store_agent_observation,
     store_machine_observation,
@@ -412,7 +413,22 @@ class FeedbackInvocation:
         """allowlist 済み stable event を machine observation へ変換する。"""
         event_type = event.get("event_type")
         version = event.get("event_schema_version")
-        if version != 1:
+        event_id = event.get("event_id")
+        occurred_at = event.get("occurred_at")
+        invocation_id = event.get("subcommand_invocation_id")
+        if (
+            type(version) is not int
+            or version != 1
+            or not isinstance(event_id, str)
+            or not event_id
+            or not isinstance(occurred_at, str)
+            or not isinstance(invocation_id, str)
+            or not invocation_id
+        ):
+            return
+        try:
+            parse_rfc3339(occurred_at)
+        except ValueError:
             return
         if event_type == "feedback.reporter_unavailable":
             component = event.get("component")
@@ -441,6 +457,28 @@ class FeedbackInvocation:
         elif event_type == "codex.structured_output_validation_exhausted":
             agent_call_kind = event.get("agent_call_kind")
             if not isinstance(agent_call_kind, str) or not agent_call_kind:
+                return
+            schema_sha256 = event.get("schema_sha256")
+            if (
+                not isinstance(schema_sha256, str)
+                or len(schema_sha256) != 64
+                or any(
+                    character not in "0123456789abcdef" for character in schema_sha256
+                )
+            ):
+                return
+            if event.get("last_failure_stage") not in {
+                "json_parse",
+                "schema_validation",
+                "deterministic_postcondition",
+                "resume_unavailable",
+                "artifact_changed",
+            }:
+                return
+            if not all(
+                isinstance(event.get(name), str) and event.get(name)
+                for name in ("agent_call_id", "codex_call_id")
+            ):
                 return
             rule = {
                 "rule_id": "codex.structured_output_validation_exhausted.v1",

@@ -783,6 +783,15 @@ def _candidate_issues(
         for item in fingerprints
         if isinstance(item, dict) and isinstance(item.get("normalized_path"), str)
     }
+    current_fingerprint_pairs = [
+        (item.get("normalized_path"), item.get("sha256"))
+        for item in fingerprints
+        if isinstance(item, dict) and isinstance(item.get("normalized_path"), str)
+    ]
+    current_fingerprints_hashed = bool(current_fingerprint_pairs) and all(
+        isinstance(path, str) and isinstance(digest, str)
+        for path, digest in current_fingerprint_pairs
+    )
     exact: list[IssueView] = []
     candidates: list[IssueView] = []
     for view in views.values():
@@ -804,17 +813,27 @@ def _candidate_issues(
                 # agent hint は候補検索だけに使い、完全一致や issue key には使わない。
                 hint_match = True
             previous_fingerprints = previous.get("evidence_fingerprints", [])
+            previous_fingerprint_pairs: list[tuple[object, object]] = []
+            previous_fingerprints_hashed = True
             for item in previous_fingerprints:
                 if not isinstance(item, dict):
+                    previous_fingerprints_hashed = False
                     continue
                 path = item.get("normalized_path")
                 if path in current_by_path:
                     path_match = True
-                    if (
-                        item.get("sha256") is not None
-                        and item.get("sha256") == current_by_path[path]
-                    ):
-                        hash_match = True
+                if isinstance(path, str):
+                    digest = item.get("sha256")
+                    previous_fingerprint_pairs.append((path, digest))
+                    if not isinstance(digest, str):
+                        previous_fingerprints_hashed = False
+            if (
+                current_fingerprints_hashed
+                and previous_fingerprints_hashed
+                and sorted(previous_fingerprint_pairs)
+                == sorted(current_fingerprint_pairs)
+            ):
+                hash_match = True
         if path_match or hint_match:
             candidates.append(view)
         if hash_match:
@@ -1059,7 +1078,12 @@ def _assessment_for_observation(
         unavailable |= current_state != "hashed" or item.get("state") != "hashed"
         changed |= item.get("sha256") != current_hash
     if isinstance(agent_assessment, dict):
-        freshness = "unavailable" if unavailable or not compared else "current"
+        if unavailable or not compared:
+            freshness = "unavailable"
+        elif changed:
+            freshness = "needs_revalidation"
+        else:
+            freshness = "current"
         return assessment_record(
             current_issue_id,
             assessed_at,

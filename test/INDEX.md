@@ -405,21 +405,22 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の受け入れ境界を検証する一連のテスト。reporter input の canonical MCP tool、normalizer agent call の識別子と READONLY 範囲、collector の context・rate limit・capability・失効、agent/machine observation の検証・冪等性・secret redaction、tracked feedback state の revision 選択、増分 feedback report の生成・再評価・machine issue 抑制・不正 raw observation・ユーザー中断処理を扱う。feedback subsystem の observation lifecycle を同じ fixture ID と Git session で通し検証するための入口であり、個別実装の詳細や正本仕様を読む前に、実際の外部挙動を確認したい場合に進む対象である。
+- feedback observation の reporter 入力、collector の受理・拒否・rate limit・secret redaction、machine event の冪等保存を検証する受け入れテスト。
+- raw observation から tracked issue、normalizer の候補判定、fingerprint の再検証、incremental report、machine issue の抑制、invalid ingestion、source observation 時刻に基づく revision 選択まで feedback lifecycle 全体を扱う。
+- feedback report のユーザー中断時に deferred observation を伴う正常完了として記録する挙動も検証する。feedback subsystem の挙動変更や関連する acceptance test の確認時の入口となる。
 
 ## Read this when
-- feedback observation の収集、保存、redaction、rate limit、machine event の冪等性を検証または変更するとき
-- feedback report の増分生成、issue の recurrence threshold、evidence fingerprint による再検証、不正 observation の ingestion、Ctrl+C 中断時の完了処理を確認するとき
-- reporter の MCP discovery や observation 転送 envelope、feedback normalize 用 agent call の schema・アクセス範囲を確認するとき
-- 同一の raw observation から tracked issue state と report までの受け入れ挙動を追跡したいとき
+- feedback observation の収集・保存・正規化・report 生成を変更または検証するとき
+- reporter/collector の protocol、capability、context、rate limit、redaction、machine detector の挙動を確認するとき
+- incremental feedback report、issue recurrence、fingerprint freshness、invalid raw observation、Ctrl+C 処理のテスト要件を確認するとき
 
 ## Do not read this when
-- feedback subsystem の正本仕様そのものを確認したいときは、参照されている oracle 文書を直接読む
-- reporter、collector、state、report の単一実装の内部詳細だけを調べるときは、対応する src ファイルへ直接進む
-- feedback と無関係な CLI subcommand や一般的な Git fixture helper の挙動だけを調べるとき
+- feedback の正本仕様や状態モデルを確認する場合は、参照されている oracle の仕様を直接読むとき
+- feedback subsystem 以外の CLI 機能や、単一の共通ユーティリティだけを変更・検証するとき
+- 実装の詳細を調査する場合は、対象の realization implementation を直接読む方が適切なとき
 
 ## hash
-- 0a2ed486b5372cf3659ff14f21f0f73cc6fa6066eb1b3f1ad73ea195ccbd1f49
+- dc9ba45a41da3aad95c76ecaceb7e55ee20af6a4042de5852d0852dcc9655623
 
 # `test_indexing_cli.py`
 

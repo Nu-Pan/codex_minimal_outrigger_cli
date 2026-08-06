@@ -31,20 +31,17 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンド群の実装入口。feedback report を含む各サブコマンドの処理を扱い、feedback 機能の挙動確認・変更時に参照する。
-- report 実装では、observation の snapshot と normalization、issue 統合、checkpoint／commit／rollback、assessment 再評価、差分判定、可視 issue 選別、Markdown report と tracked record の保存を一連の transaction として処理する。
+- feedback サブコマンドの実装をまとめたディレクトリ。観測の正規化・統合から report 生成、状態更新、差分計算までの処理を扱う。feedback サブコマンドの実装や挙動を確認・変更するときの入口。
 
 ## Read this when
-- feedback サブコマンドの実行フローや挙動を確認・変更するとき
-- feedback report の observation 処理、issue 統合、assessment、表示選別、出力生成を調査するとき
+- feedback サブコマンドの実行順序、観測処理、report 生成、checkpoint、commit/rollback、assessment 再評価を調査・変更するとき
 
 ## Do not read this when
-- feedback 以外の機能やサブコマンドを扱うとき
-- feedback state の基本構造だけを確認したいとき
-- normalization agent の parameter や Structured Output schema だけを確認したいとき
+- feedback 以外のサブコマンドを扱うとき
+- 個別の observation schema、永続 state の定義、normalize builder、CLI 共通実行基盤の詳細だけを確認するとき
 
 ## hash
-- 8ca2c107511b5363cc6080ae7ead35b521057f410ffab0e96ea18b788ec69d47
+- d7b950ebde47b757d3e417785b3e12c2954b88a1dbefb11022195e4091ea14dd
 
 # `indexing.py`
 

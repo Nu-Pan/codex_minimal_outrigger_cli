@@ -15,19 +15,18 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の CLI 実装本体。raw observation の snapshot 固定、未処理 observation の増分 normalization、machine/agent observation の issue 統合、checkpoint と unit commit/rollback、assessment 再評価、前回 report との差分判定、可視 issue の選別、Markdown report と tracked report record の保存までを一つの中断可能な transaction として扱う。
-- feedback report の事前条件、snapshot と receipt の整合性検査、invalid observation の記録、normalization agent の Structured Output 検証、recurrence threshold、suppression、最終 report の集約を確認する入口。
+- feedback report コマンドの中心実装。raw observation の snapshot 固定、未処理 observation の normalization、invalid receipt、machine/agent issue 統合、checkpoint、unit 単位の commit/rollback、assessment 再評価、前回 report との差分計算、Markdown report と tracked report record の生成までを一連の中断可能 transaction として扱う。
+- feedback report の状態機械や normalization の順序・境界を確認する必要がある場合の主要な入口であり、個別の正規化ルール、永続 state の record schema、CLI 実行基盤そのものを調べる場合は対応する import 先を直接読む。
 
 ## Read this when
-- `cmoc feedback report` の実行フロー、状態機械、処理順序を変更または調査するとき
-- observation の snapshot、normalization unit、checkpoint、unit commit/rollback の挙動を確認するとき
-- issue の統合・assessment 再評価・前回 report との差分・既定表示や `--all` の選別規則を調査するとき
-- feedback report の Markdown 出力や tracked report record の生成内容を変更するとき
+- cmoc feedback report の実行順序、snapshot、deferred/invalid 処理、machine または agent observation の issue 統合を変更・調査するとき
+- normalization checkpoint の再利用、unit commit/rollback、assessment の再評価、report の表示・抑制条件を確認するとき
+- report の front matter、issue 差分、tracked report record、部分失敗・中断時の挙動を確認するとき
 
 ## Do not read this when
-- feedback observation の envelope、issue view、record schema、tracked state の基本構造だけを確認したいときは、共通 feedback state の実装・仕様を直接読む
-- normalization agent に渡す parameter や Structured Output schema の定義だけを確認したいときは、feedback normalization builder と対応する schema を直接読む
-- report command 以外の feedback subcommand の挙動を調査するときは、その subcommand の実装または正本仕様を直接読む
+- 個別の observation schema や feedback record のデータ構造だけを確認する場合は、runtime feedback state/store の定義を直接読む
+- normalization agent に渡す parameter や Structured Output schema だけを確認する場合は、feedback normalize builder と schema を直接読む
+- CLI 共通実行、ログ、session state、git 操作の共通仕様だけを確認する場合は、対応する runtime module や oracle specification を直接読む
 
 ## hash
-- 1f1b7c291cd7722d19ee3a9cf730ee219a90eec82032405699b27fbf30b79c1c
+- 76513f6cf3c1cf4485174493038e2851d909868302d875b7cc4a5b632581c0c3
