@@ -18,21 +18,22 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI を呼び出す際の包括的な規約を定める正本仕様。agent call と Codex call の識別、call-scoped path context、環境変数、preflight、CLI 引数による設定上書き、sandbox と詳細なファイルアクセス制限、モデル・provider・reasoning effort、prompt の受け渡し、feedback reporter、ログ保存、Structured Output の検証と補正、並列実行、失敗時の retry・quota 待機・エラー処理を扱う。Codex exec 呼び出し実装や関連する builder、ログ・検証・エラー処理の仕様を確認する際の入口となる。
+- Codex CLI を用いた agent call の呼び出し規約を定義する正本仕様。呼び出し方式、path context、環境変数、preflight、argv 上書き、sandbox、provider/model、prompt 전달、feedback reporter、ログ、Structured Output、並列実行、失敗時の retry・待機・エラー処理までを扱う。Codex 呼び出し実装や関連 builder・設定・ログ・出力検証の入口となる。
 
 ## Read this when
-- cmoc の Codex CLI 呼び出し方法、argv、sandbox、設定上書き、prompt 入力、ログ出力を変更・検証するとき
-- Structured Output の schema 指定、検証、同一 session での補正、差分不変性、失敗時処理を変更・検証するとき
-- agent call の path context、model/provider 解決、feedback reporter、並列実行、quota または一時障害時の retry を扱うとき
-- Codex exec 呼び出し規約と AgentCallParameter builder や関連する oracle 仕様との整合性を確認するとき
+- cmoc の Codex CLI 呼び出し仕様を実装・変更・レビューするとき
+- AgentCallParameter builder、path context、file access mode、sandbox、model/provider、reasoning effort の argv 反映を確認するとき
+- prompt の渡し方、Structured Output の検証・補正、session resume、Codex call ログを扱うとき
+- quota 枯渇、モデル容量超過、その他の Codex CLI 失敗時の処理を確認するとき
 
 ## Do not read this when
-- Codex CLI 呼び出しや agent call の挙動に関係せず、対象となる実装・テスト・別の正本仕様を直接確認すれば足りるとき
-- 単に一般的な Codex CLI の使い方を調べるだけで、cmoc 固有の呼び出し契約を扱わないとき
-- 本書が参照する個別の builder、path model、provider、feedback、prompt standard、test execution の詳細仕様そのものを確認するときは、該当する参照先を直接読む
+- 個別の builder の詳細な実装責務だけを確認する場合は、builder の正本実装・関連仕様を直接読む
+- path context のデータモデルや導出規則だけを確認する場合は、指定された path model の定義を直接読む
+- feedback observation の event schema や collector 契約だけを確認する場合は、feedback observation 仕様を直接読む
+- Codex CLI と無関係な cmoc の実装・テスト・仕様を扱う場合
 
 ## hash
-- 2ac2b1faa885219e620a4d7b79f4cbc6f9718eed7da8502aead9ca7ce7e2e4e3
+- 8e56036a6b90750dd42c0f38df90da8b87a765064a825d37091ff0aa2b2f4fd4
 
 # `codex_model_provider.md`
 
@@ -72,19 +73,19 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- cmoc の各サブコマンド実行前に、リポジトリが正常実行可能かを共通検証し、必要な修復を行う doctor preprocess の正本仕様。git 追跡状態、refactor state、feedback reporter の検証・修復条件と、修復後の commit および degraded warning の扱いを定義する。
+- cmoc の各サブコマンド開始前に実行する共通の検証・修復処理を定義する。Git 追跡状態、設定・refactor state の整合性、feedback reporter/client の利用可能性を扱い、修復困難な場合の終了条件と reporter 利用不能時の degraded warning を定める。
 
 ## Read this when
-- cmoc のサブコマンド共通の事前検証・修復処理を実装、変更、レビューするとき
-- `.cmoc/gu`、`.agents`、設定ファイル、refactor state の git 追跡条件を確認するとき
-- feedback reporter の配置、protocol version 検証、利用不能時の継続条件を確認するとき
+- doctor preprocess の検証・修復処理を実装または変更するとき
+- サブコマンド共通の事前条件、Git 管理対象、refactor state 同期、feedback reporter の事前検証の責務を確認するとき
+- 修復後の完了判定や、reporter 利用不能時に本命処理を継続する条件を確認するとき
 
 ## Do not read this when
-- 個別サブコマンド固有の事前条件や本命処理だけを扱うとき
-- doctor preprocess の仕様ではなく、refactor state の詳細スキーマや feedback reporter interface の正本仕様を直接確認するとき
+- 特定サブコマンド固有の事前条件や本命処理の仕様を確認するとき
+- doctor preprocess と無関係な Git 操作、refactor state の詳細仕様、feedback observation の正本仕様を直接確認するときは、それぞれの個別仕様を読む
 
 ## hash
-- 4998955d88376261c975062b57221240ccd99d2c8504dbdf0d7559df716ec868
+- 5cafeef78d2ac95e25e30d8f4c70e23e8856ff0822bcb7d103642ae096e6c6c1
 
 # `error_handling.md`
 
@@ -107,43 +108,41 @@
 # `feedback.md`
 
 ## Summary
-- cmoc の作業中に判明した人間対応対象を、agent の自己申告と allowlist 済み diagnostic のみに基づく raw observation として集約する feedback subsystem の目的・責務・データフローを定める正本仕様。
-- observation、issue、machine assessment、human disposition、feedback report の境界と、report 実行時まで意味的な正規化を行わない原則を示す。
-- feedback observation・state・report の詳細仕様、および realization 作業や TUI・中断時の既存 workload との接続方針への入口となる。
+- feedback subsystem 全体の目的、観測源、raw observation の保存から report 生成までのデータフロー、用語上の責務分離、non-goal、既存 workload や TUI・中断との接続境界を定める正本仕様。個別の observation schema・状態遷移・feedback report の CLI 契約は、責務ごとに分割された下位仕様への入口として扱う。
 
 ## Read this when
-- feedback subsystem の目的、対象範囲、観測源、raw observation の扱いを確認するとき
-- observation、issue、machine assessment、human disposition、feedback report の責務分離を確認するとき
-- feedback と realization 作業、固有成果物、TUI・中断・異常終了の関係を確認するとき
-- feedback の詳細な observation schema や state 遷移、report コマンドの挙動を調べる前に全体方針を把握するとき
+- feedback subsystem の全体像、適用範囲、責務分担、non-goal、agent-facing transport から report までの流れを確認するとき
+- feedback を realization 作業、oracle 問題、既存成果物、TUI の中断や異常終了と接続する境界を判断するとき
+- feedback 関連の個別仕様を読む前に、どの責務の正本へ進むべきかを選ぶとき
 
 ## Do not read this when
-- reporter、collector、detector、raw observation の具体的な schema や検出規則だけを確認したい場合は、feedback observation の正本仕様を直接読む
-- issue、machine assessment、human disposition、増分処理 record の schema や状態規則だけを確認したい場合は、feedback state の正本仕様を直接読む
-- cmoc feedback report の事前条件、normalization、commit、再開、表示の具体的な挙動だけを確認したい場合は、feedback report の正本仕様を直接読む
-- feedback ではなく realization、oracle review、indexing、run、session、TUI の固有成果物の判定基準や lifecycle を確認したい場合は、それぞれの正本仕様を直接読む
+- raw observation の schema、collector・detector・MCP reporter/client の詳細を確認する場合は observation 専用仕様を直接読むとき
+- normalized issue、machine assessment、human disposition、増分処理 record の状態遷移を確認する場合は state 専用仕様を直接読むとき
+- `cmoc feedback report` の事前条件、normalization、commit、再開、表示を確認する場合は subcommand 専用仕様を直接読むとき
+- feedback とは無関係な task 成否、run state、retry、recovery、または一般的な実装詳細を確認するとき
 
 ## hash
-- 45356f21628fc8e3199fe2bd03a50534970b441732405ede747d704d6b39b7c3
+- 7d4a2f2cbd9b63ed3e416ae75efab3175e47e0dd9c3585a866b12faf3a8d9143
 
 # `feedback_observation.md`
 
 ## Summary
-- feedback observation の自己申告、機械的検出、raw observation 保存に関する正本仕様。reporter の CLI interface、入力・受入検査、collector context、sandbox/transport、安全な保存、detector の初期 allowlist、observation envelope、durability・retention・未処理件数の扱いを定義する。feedback observation の収集から保存、検出ルール、運用上の完了サマリーまでを確認する入口。
+- feedback observation の収集・検査・保存に関するアプリケーション仕様。MCP reporter の agent-facing 契約、入力 schema の正本、共通 prompt instruction、受け入れ検査、collector が付与する context、sandbox・transport・lifecycle、機械的 log 検出の event 契約と初期 rule、raw observation の envelope・durability・retention・完了サマリーを定める。feedback 機能の実装・検証・関連仕様を確認する際の入口となる。
 
 ## Read this when
-- reporter の配置、CLI interface、入力 schema、受入拒否、secret masking、rate limit を実装または確認するとき。
-- collector が付与する実行 context、sandbox capability、transport の安全要件を扱うとき。
-- 構造化 log から diagnostic observation を検出する責務境界、event contract、rule registry、初期 allowlist を実装または確認するとき。
-- raw observation の保存先、ID 生成、重複・corruption 処理、envelope schema、durability、retention、未処理件数の表示や warning を扱うとき。
+- feedback observation の reporter、collector、MCP transport、raw 保存、secret masking、rate limit、capability lifecycle を実装またはレビューするとき
+- structured log event から machine observation を検出する rule、threshold、issue key、recurrence 集計を実装または検証するとき
+- raw observation の envelope、保存 path、atomic durability、retention、未処理件数の表示仕様を確認するとき
+- feedback の agent prompt 生成、入力 schema、Codex call lifecycle との連携仕様を調査するとき
 
 ## Do not read this when
-- observation の意味、reporter input の field 定義、または共通 prompt instruction の正本だけを確認する場合は、対応する oracle schema・prompt builder の正本を直接読む。
-- feedback observation の集計・通知 threshold の実装だけを確認する場合は、report 仕様または report 実装を直接読む。
-- 一般的な cmoc の開発環境、設計境界、テスト実行手順を確認する場合は、対応する dev_rule を読む。
+- feedback の入力 JSON schema の具体的な field 定義だけを確認する場合は、指定された reporter input schema を直接読む
+- 共通 prompt instruction の文面だけを確認する場合は、feedback reporting standard の builder を直接読む
+- Codex 実行時の sandbox、permission profile、network 境界だけを確認する場合は、codex exec rule を直接読む
+- feedback report の集約・ingestion receipt・snapshot manifest の詳細だけを確認する場合は、その report 仕様を直接読む
 
 ## hash
-- a141297a2717a61b8558e7661fe2b93b72b730c4055097a4ecbae657b97ceb55
+- ddc423b39c33480da77be1b5f61d45a751a83dfa02408134354c627ec5f3da59
 
 # `feedback_state.md`
 

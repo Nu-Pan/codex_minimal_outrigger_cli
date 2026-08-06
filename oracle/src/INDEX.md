@@ -1,18 +1,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の agent call 用正本ソースをまとめる領域です。共通パラメータ、用途別の呼び出し条件、Structured Output 連携、prompt 構築、設定・パス・構造化文書モデル、feedback 入力契約を扱います。各機能の prompt builder や構造化モデルの実装へ進む入口です。
+- cmoc の正本ソースを集約する領域です。エージェント呼び出しのパラメータ・用途別プロンプト・Structured Output 契約、feedback 入力契約、パス・設定・規範・構造化 Markdown のモデルを扱います。各機能領域の実装やスキーマを確認する際の入口です。
 
 ## Read this when
-- agent call の共通パラメータ、モデル、推論強度、ファイルアクセスモード、作業 root の扱いを確認するとき。
-- indexing、oracle review、realization、session join、TUI、feedback など用途別の agent call 構築を調査・変更するとき。
-- agent prompt の組み立て、placeholder、oracle・realization の適用規範、Structured Output schema の接続を確認するとき。
-- 設定値、パス解決、規範モデル、構造化文書の変換や Markdown レンダリングを調査するとき。
+- エージェント呼び出しの共通設定、用途別の prompt 構築、Structured Output の契約を調査・変更するとき。
+- feedback reporter の入力形式や問題正規化の契約を確認するとき。
+- パス解決、設定、規範モデル、構造化文書のレンダリングを確認するとき。
+- oracle と realization の扱い、レビュー、ルーティングに関する正本プロンプトを確認するとき。
 
 ## Do not read this when
-- 実際の agent call の実行制御、CLI・TUI の上位フロー、または通常の realization 実装を調査するとき。
-- 正本仕様そのものや、feedback の保存・集約・重複判定だけを確認するとき。
-- 特定の用途やモデルの詳細が明らかな場合は、この領域全体ではなく該当する下位実装を直接読むとき。
+- 実際の CLI・TUI 実行フローや上位の agent call 制御を調査するとき。
+- oracle/doc の自然言語仕様そのもの、通常の realization 実装・テスト、feedback の保存・集約処理だけを確認したいとき。
+- 特定の下位領域の詳細が明らかな場合は、この領域全体を読まず、該当する下位要素へ直接進むとき。
 
 ## hash
-- f965a5c35f43dfa6f97a364e64b688703b10ff9b12ec7b30ba98e85d4a61f83a
+- 8052eee95fafecc138dcaf9289c3d61c74ac59e8c131ca0e4404aaf7a7093624

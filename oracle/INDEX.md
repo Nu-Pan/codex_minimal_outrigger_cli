@@ -1,35 +1,38 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様ドキュメントを領域別にまとめたディレクトリ。アプリケーション共通仕様、branch・commit・worktree、開発規則、不採用案などへの入口として機能する。
+- cmoc のアプリケーション仕様、branch・commit・worktree のモデル、不採用案、Python 開発規則を分野別に収める正本文書群。アプリケーション挙動や開発・テスト方針を確認する際の入口となる。
 
 ## Read this when
-- 複数の正本仕様から、調査・変更対象の文書を選ぶとき
-- Codex 呼び出し、ログ、prompt、session／run、branch、worktree、CLI、Python 開発、テストなどの仕様の入口を探すとき
-- 現行仕様ではなく、採用されなかった設計案やその理由を確認するとき
+- cmoc のアプリケーション仕様を調査し、対象となる個別仕様文書を選ぶとき
+- branch・session・run・worktree の関係やライフサイクルを確認するとき
+- Python の実装、CLI 設計、開発環境、テスト規則・実行手順を確認するとき
+- 採用されなかった refactor の作業方式や検査方式の設計理由を調べるとき
 
 ## Do not read this when
-- 対象の仕様文書がすでに特定できており、その本文へ直接進めるとき
-- 実装やテストの具体的な内容だけを確認するとき
-- Python 環境構築、CLI 設計、テスト実行など、対応する個別の開発規則文書が明確なとき
+- 対象の個別仕様文書がすでに特定でき、その本文を直接読むべきとき
+- 実装配置、テスト実行手順、開発環境など、対象文書が明確なアプリケーション仕様以外の事項を直接確認するとき
+- 現行実装の詳細や具体的なテスト内容だけを確認したいとき
 
 ## hash
-- f264ab1af6f26b43de171eb799f1d7adb6386371322f465a6b5c66013e301048
+- 8363ba78bb8990c78d226077232e8a198b51602418f0eeb1f455085169542272
 
 # `src`
 
 ## Summary
-- cmoc の agent call 用正本ソースを集約する領域です。共通パラメータ、用途別の呼び出し構築、Structured Output schema、prompt の組み立て、パス・設定・構造化文書モデル、feedback 入力契約を扱います。各用途の builder、規範、構造化モデルの実装へ進む入口です。
+- cmoc の正本ソースを集約する領域です。agent call の論理パラメータ、用途別 prompt、Structured Output schema、パス・設定・構造化文書・規範のモデルと生成処理を扱います。
+- agent call 用の共通モデルと用途別 builder、prompt を組み立てる共通部品、補助的なパス解決・設定・構造化 Markdown 処理が主な構成要素です。
 
 ## Read this when
-- agent call のモデル、推論強度、ファイルアクセス、作業 root、Structured Output を確認するとき。
-- indexing、oracle review、realization、feedback、TUI など用途別の agent call 構築を調査・変更するとき。
-- prompt の共通部品、oracle・realization の規範、ルーティング規則、パス解決、構造化文書の変換を確認するとき。
+- agent call のモデルクラス、推論負荷、ファイルアクセス、cwd、prompt、Structured Output の契約を調査・変更するとき。
+- 用途別の oracle、realization、feedback、review、indexing、TUI、session join 用 prompt の正本を確認するとき。
+- prompt 共通規範、パス placeholder、設定、構造化文書のレンダリングを確認するとき。
+- 特定の責務が明らかな場合は、agent call builder、prompt builder、または補助モデルの下位領域から確認を始めるとき。
 
 ## Do not read this when
-- 実際の agent call の実行制御、CLI・TUI の上位フロー、または通常の realization 実装を調査するとき。
-- 正本仕様そのもの、feedback の保存・集約、または通常のテスト実装だけを確認するとき。
-- 特定の用途やモデルの責務が明らかな場合は、この領域全体ではなく該当する下位実装へ直接進むとき。
+- 実際の CLI・TUI 実行フローや agent call の上位制御を調査するとき。
+- oracle の自然言語仕様、通常の realization 実装・テスト、feedback の保存・集約処理だけを確認したいとき。
+- 対象が特定の用途別 prompt、共通 prompt 部品、または補助モデルに限定されている場合は、この領域全体ではなく該当する下位要素へ直接進むとき。
 
 ## hash
-- 6016abd0b4858f5c22dba8192d514c2b6a7a820e28bb7bfc0f82c7b818fb52dd
+- ab37af7a33dbad5010a76c115a1adc4cc80a4fe7a82ac0874da7fcb17b970690

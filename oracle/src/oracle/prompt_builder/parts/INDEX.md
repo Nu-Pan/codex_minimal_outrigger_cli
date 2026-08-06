@@ -35,18 +35,16 @@
 # `feedback_reporting_standard.py`
 
 ## Summary
-- 全 agent call に共通する、人間向け feedback 報告規範のプロンプト断片を構築する。root の placeholder 定義から repo-root を取得し、報告条件・提出方法・報告後の継続方針を StructDoc として返す。
+- 全 agent call に共通する、人間向け feedback 報告規範の prompt 部分を構築する。作業外の人間対応で再発防止・浪費削減・意図確定につながる問題だけを報告対象とし、専用 MCP tool による報告後も本来の作業を継続するための標準文面を提供する。
 
 ## Read this when
-- agent call 共通の人間向け feedback 報告規範を変更・確認するとき
-- prompt builder の feedback reporting 部分や、repo-root placeholder の受け渡しを調査するとき
+- 全 agent call 共通の feedback 報告ルールや、人間への問題報告用 prompt の生成処理を確認・変更するとき。
 
 ## Do not read this when
-- 個別の agent call の役割・作業概要・完了条件だけを確認したいとき
-- feedback 保存 file の形式や reporter の具体的な入力方法を確認したいときは、reporter の describe を直接読むべき場合
+- 個別 agent call の作業内容や、feedback 保存先の実装を直接確認したいとき。通常の作業内で解決済みの問題や、単なる改善提案を扱うとき。
 
 ## hash
-- f094e8e7a6c495e5faca43d968f6a1eb2f0ad2dde7fe72fd6701a2ff681137f2
+- b8637771d4871133e4db01d49c7e6d05f105f213e4d5b819003338d42385066c
 
 # `file_access_rule.py`
 
