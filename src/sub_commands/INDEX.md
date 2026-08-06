@@ -46,38 +46,35 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。oracle の edit、investigation、review と、review の対象列挙・loop・path 解決・report・INDEX merge を担う実装への入口。
+- oracle 系サブコマンドをまとめる package。oracle の編集・調査・レビューに関する CLI 実装と、それらを支える review 用の対象選定、ループ、パス、レポート、INDEX merge 処理への入口を提供する。
 
 ## Read this when
-- oracle 系サブコマンドの package 構成や入口を確認するとき。
-- oracle edit、investigation、review の実行経路を調査・変更するとき。
-- oracle review の対象列挙、評価 loop、path 解決、report、INDEX 差分 merge のいずれかを調査・変更するとき。
+- oracle 系サブコマンドの構成や、各サブコマンド実装への入口を確認するとき。
+- oracle review の lifecycle、対象選定、所見処理、レポート生成、INDEX 差分 merge の実装箇所を特定するとき。
 
 ## Do not read this when
-- 個別サブコマンドや review 機能の詳細だけを確認する場合は、該当する実装ファイルを直接読む。
+- 特定の oracle サブコマンドの詳細な起動処理を確認する場合は、そのサブコマンド実装を直接読む。
+- review の対象列挙、ループ、パス解決、レポート、INDEX 操作の個別仕様を確認する場合は、対応する実装ファイルを直接読む。
 - oracle の正本仕様を確認する場合は、対応する oracle 文書を直接読む。
 
 ## hash
-- 69f4a777ca3159ddf6a0bacf46b478271aed4523b93bb7282cf7e1312594263e
+- d6eaa49c796a99bf83921c0827a42b43a0eae8cb1d6a595c2cb1491c29f5a39f
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。
-- apply workload と refactor 処理の実装へ進むための階層入口であり、apply では実行ライフサイクルや差分・状態・report、refactor では fork 実行全体や完了判定・report 保存を扱う。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の処理構成、およびそれぞれの CLI 実行フローを下位要素へ案内する。
 
 ## Read this when
-- realization workload サブコマンドの実装構成を確認するとき。
-- realization apply workload の CLI 動作、run lifecycle、差分検査、commit、状態遷移、fork report を調査または変更するとき。
-- realization refactor の fork 実行フロー、対象選択、差分・commit・INDEX 検証、所見管理、state 更新、report 生成を確認するとき。
+- realization workload サブコマンドの実装構成や、apply・refactor の処理入口を確認するとき。
+- realization apply fork または realization refactor fork の実行フローを調査するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply agent の launch parameter、run 共通の join・abandon 処理、または realization apply の正本仕様だけを確認するとき。
-- 個別 refactor agent の Structured Output や prompt builder、refactor state のデータ形式・対象選択ロジック、共通 lifecycle・report・process tracking・INDEX 更新の仕様だけを確認するとき。
+- apply または refactor の個別実装、共通 lifecycle、起動パラメータなどを直接調査・変更するとき。
 
 ## hash
-- 6692789f64731f8e38015a17e85a88e921b58653e364c247ea4d541ce7f3e522
+- 0a620d680086cb726879d3163877cd2bf0a1c519b912faba6686b81ec2e69e8f
 
 # `review`
 
@@ -113,17 +110,21 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session の各ライフサイクル処理を確認する入口で、開始・参加・中断などの個別サブコマンド実装を含む。
+- session サブコマンドの実装パッケージ。session のライフサイクル操作に関する実装を確認する際の入口となる。
+- session の abandon、fork、join を扱い、branch・state の作成、検証、更新、cleanup、失敗時のロールバックや merge conflict 解決を含む。
 
 ## Read this when
-- session サブコマンドの実装構成や、fork・join・abandon の処理を確認・変更するとき。
+- session サブコマンドの実装構成やライフサイクル処理を確認・変更するとき。
+- session branch と state の作成・更新・削除、cleanup、失敗時の復旧処理を調査するとき。
+- session join の merge conflict 委譲、安全な差分制限、解決後の stage・commit 処理を確認・変更するとき。
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき。
-- session のデータ構造や共通 runtime、設定・仕様のみを確認するときは、対応する直接の実装・仕様ファイルを読む。
+- session の共通 state データ構造、runtime、Git status 取得などの一般仕様だけを確認するときは、対応する共通実装・仕様を直接読む。
+- conflict resolution 用 prompt の正本仕様や builder 実装そのものを確認するときは、対応する oracle または builder の対象を直接読む。
 
 ## hash
-- ab4130d63f8a101c3dcea6098fe955537fe6e185866cf8cb9e83dd99578b8e4c
+- 8a0dfef628903e21e7fae720cdfc2150168e3c41e5d0776d9d80ec9fd63a111d
 
 # `tui.py`
 

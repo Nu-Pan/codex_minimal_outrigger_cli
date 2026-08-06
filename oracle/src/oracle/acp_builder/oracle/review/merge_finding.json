@@ -1,5 +1,5 @@
 {
-    "type": "object",
+  "type": "object",
   "additionalProperties": false,
   "required": [
     "operations"
@@ -28,7 +28,7 @@
           },
           "target_ids": {
             "type": "array",
-            "description": "編集対象となる入力所見の finding_id のリスト。delete と replace では対象所見、merge では統合元の複数所見を指定する。",
+            "description": "編集対象を識別する finding_id のリスト。delete と replace では対象所見、merge では統合元の複数所見を指定する。",
             "minItems": 1,
             "items": {
               "type": "string"
@@ -74,7 +74,54 @@
               }
             ]
           }
-        }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "delete"
+                ]
+              },
+              "target_ids": {
+                "maxItems": 1
+              },
+              "finding": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "replace"
+                ]
+              },
+              "target_ids": {
+                "maxItems": 1
+              },
+              "finding": {
+                "type": "object"
+              }
+            }
+          },
+          {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "merge"
+                ]
+              },
+              "target_ids": {
+                "minItems": 2
+              },
+              "finding": {
+                "type": "object"
+              }
+            }
+          }
+        ]
       }
     }
   }

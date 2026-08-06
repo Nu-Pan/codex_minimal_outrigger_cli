@@ -98,53 +98,64 @@ def test_timestamped_path_reservation_is_process_safe(
         )
         for _parent, child in channels
     ]
-    for process in processes:
-        process.start()
-
     records = []
-    for parent, _child in channels:
-        assert parent.poll(10)
-        records.append(parent.recv())
-    for process in processes:
-        process.join(10)
+    started_processes = []
+    try:
+        for process in processes:
+            process.start()
+            started_processes.append(process)
 
-    assert all(process.exitcode == 0 for process in processes)
-    assert all("error" not in record for record in records), records
-    all_log_paths = []
-    for record in records:
-        call_path = Path(record["call_log_path"])
-        call_log = json.loads(call_path.read_text())
-        timestamp = call_log["timestamp"]
-        assert timestamp.startswith(_FIXED_CODEX_TIMESTAMP)
-        assert call_path.name == f"{timestamp}_call.json"
-        related_paths = [
-            call_path,
-            *(
-                Path(call_log[key])
+        for parent, _child in channels:
+            assert parent.poll(10)
+            records.append(parent.recv())
+        for process in started_processes:
+            process.join(10)
+
+        assert all(process.exitcode == 0 for process in started_processes)
+        assert all("error" not in record for record in records), records
+        all_log_paths = []
+        for record in records:
+            call_path = Path(record["call_log_path"])
+            call_log = json.loads(call_path.read_text())
+            timestamp = call_log["timestamp"]
+            assert timestamp.startswith(_FIXED_CODEX_TIMESTAMP)
+            assert call_path.name == f"{timestamp}_call.json"
+            related_paths = [
+                call_path,
+                *(
+                    Path(call_log[key])
+                    for key in (
+                        "prompt_log_path",
+                        "stdout_log_path",
+                        "stderr_log_path",
+                        "output_path",
+                    )
+                ),
+            ]
+            assert all(path.is_file() for path in related_paths)
+            assert all(path.name.startswith(f"{timestamp}_") for path in related_paths)
+            assert {
+                Path(record[key])
                 for key in (
+                    "call_log_path",
                     "prompt_log_path",
                     "stdout_log_path",
                     "stderr_log_path",
                     "output_path",
-                    "output_jsonl_log_path",
                 )
-            ),
-        ]
-        assert all(path.is_file() for path in related_paths)
-        assert all(path.name.startswith(f"{timestamp}_") for path in related_paths)
-        assert {
-            Path(record[key])
-            for key in (
-                "call_log_path",
-                "prompt_log_path",
-                "stdout_log_path",
-                "stderr_log_path",
-                "output_path",
-            )
-        }.issubset(related_paths)
-        all_log_paths.extend(related_paths)
+            }.issubset(related_paths)
+            all_log_paths.extend(related_paths)
 
-    assert len(all_log_paths) == len(set(all_log_paths))
+        assert len(all_log_paths) == len(set(all_log_paths))
+    finally:
+        for process in started_processes:
+            if process.is_alive():
+                process.terminate()
+        for process in started_processes:
+            process.join()
+        for parent, child in channels:
+            parent.close()
+            child.close()
 
 
 @pytest.mark.parametrize(

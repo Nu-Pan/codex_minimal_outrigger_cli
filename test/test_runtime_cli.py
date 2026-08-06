@@ -122,6 +122,7 @@ def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     assert len(events) == worker_count
     assert all(event["event"] == "worker" for event in events)
+    assert sorted(event["index"] for event in events) == list(range(worker_count))
     assert logger.quota_wait_sec == pytest.approx(worker_count * 0.25)
 
 
@@ -386,7 +387,9 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
         cwd=root,
         env={
             "PYTHONPATH": str(main_path.parent),
-            "_CMOC_COMPLETE": "bash_complete",
+            "_CMOC_COMPLETE": "complete_bash",
+            "COMP_WORDS": "cmoc doctor",
+            "COMP_CWORD": "1",
             "HOME": str(isolated_home),
         },
         text=True,
@@ -395,6 +398,8 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     )
 
     completion_output = result.stdout + result.stderr
+    # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+    assert result.returncode == 0
     assert "# ERROR" not in completion_output
     assert "サブコマンドログ" not in completion_output
     assert "開始 doctor" not in completion_output
@@ -468,3 +473,7 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
 
     assert doctor_roots == [linked.resolve()]
     assert pre_log_roots == [root.resolve()]
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    log_dir = root / ".cmoc" / "gu" / "ar" / "log" / "sub_command"
+    assert len(list(log_dir.glob("*.jsonl"))) == 1
+    assert not (linked / ".cmoc" / "gu" / "ar" / "log" / "sub_command").exists()

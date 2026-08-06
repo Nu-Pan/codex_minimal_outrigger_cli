@@ -15,20 +15,19 @@
 # `basic.py`
 
 ## Summary
-- AIコーディングエージェント呼び出しに渡すパラメータの論理モデルを定義する。モデルクラス、推論強度、ファイルアクセスモード、プロンプト、Structured Output スキーマ、作業ディレクトリ、インデックス事前処理の実行可否を扱う。各列挙値の意味と、バックエンド固有値への解決を実装側に委ねる境界も示す。
+- エージェント呼び出しに必要な論理モデルクラス、推論強度、ファイルアクセスモード、および呼び出し固有パラメータを定義する正本仕様の型モジュール。モデル選択やアクセス制御を扱う箇所の入口となる。
 
 ## Read this when
-- Agent Call Parameter の構造や既定値を確認・変更するとき
-- モデル選択、推論強度、ファイルアクセス権限、Structured Output、agent call の作業ディレクトリを扱うとき
-- indexing preflight の実行条件を確認するとき
+- AgentCallParameter の構造、利用可能なモデルクラス・推論強度・ファイルアクセスモードを確認するとき。
+- エージェント呼び出しのプロンプト、Structured Output スキーマ、作業ディレクトリ、インデックス事前処理の指定方法を確認するとき。
 
 ## Do not read this when
-- Codex CLI の具体的なファイルアクセス規則を確認したいときは、指定された正本仕様を直接読む
-- バックエンドが受理可能なモデル名や Reasoning Effort 名への解決方法を確認したいときは realization src を読む
-- agent call の prompt 構築処理や builder の実装詳細だけを確認したいとき
+- 実際のバックエンド用モデル名への解決方法を確認したいとき。
+- ファイルアクセス規則の詳細や Codex CLI sandbox への適用方法を確認したいとき。
+- エージェント呼び出しの生成・実行処理そのものを確認したいとき。
 
 ## hash
-- f9b3e077a13bda4bd4bd865643b4da0fcd9f5291fb6e597c04629c9eb3037c46
+- 688b81e8c85b0dec3716f65446db036b8c9ca17a9c20987507a52ee63aba7cbc
 
 # `indexing`
 
@@ -49,44 +48,36 @@
 # `oracle`
 
 ## Summary
-- `cmoc oracle` 配下の各機能に対応する実装領域へのルーティング情報を提供します。`edit` は空の追加予定領域、`investigation` は調査 TUI の起動パラメータ構築、`review` はレビュー各段階の Structured Output と agent call パラメータ構築を扱います。
+- oracle 関連の agent call パラメータ構築実装を、用途別の下位領域へ案内するディレクトリです。調査用 TUI、レビュー処理、追加された編集関連ファイルの入口として機能します。
 
 ## Read this when
-- このディレクトリにファイルが追加され、その内容や用途を確認する必要があるとき。
-- `cmoc oracle investigation` の TUI 起動パラメータ、完全プロンプト生成、作業パス確定、起動ログ保存を変更・調査するとき。
-- `cmoc oracle review` の所見生成・判定・擁護・反証・統合、または関連する prompt、アクセス権、モデル設定、Structured Output 接続を確認するとき。
+- oracle investigation または oracle review の agent call パラメータ構築や関連処理の場所を判断するとき。
+- このディレクトリに新しいファイルが追加され、その内容や用途を確認する必要があるとき。
 
 ## Do not read this when
-- `edit` 配下の具体的なファイルを直接確認できるとき。
-- oracle investigation の調査プロンプト本文や一般的な prompt 組み立て規則だけを確認したいとき。
-- TUI 起動以外の agent call パラメータ構築を変更するとき。
-- レビュー基準や個別所見の内容を確認するとき。
-- 共通の agent call パラメータ、prompt 構築、パス解決の仕様だけを確認するとき。
-- 所見統合結果の適用処理など、agent call パラメータ構築以外の実装を調査するとき。
+- 特定の下位領域の実装を直接確認できるとき。
+- 調査プロンプト本文、一般的な prompt builder の規則、レビュー基準や個別の JSON schema を確認するときは、対応する直接の対象を読む。
 
 ## hash
-- 7c6a5e5598abeb010097ad3b5cb9afe643d3be7da6aede15304eef29220caff7
+- f9a6ea683fdb1467b3e08bbc813e68caf4347838296cbea3a57fa133663c147e
 
 # `realization`
 
 ## Summary
-- oracle file の差分を realization file へ追従させる realization apply fork の起動パラメータ構築を担う実装領域。差分、commit 範囲、linked worktree、FLAGSHIP モデルなどを prompt に組み込み、追従作業を委譲する入口。
-- refactor fork の変更要約と、ファイル単位のレビュー・修正結果を扱う実装および Structured Output スキーマの領域。関連 agent call の prompt、実行条件、出力契約を確認する入口。
+- oracle の変更を realization へ反映する apply fork と、差分要約・ファイル単位レビュー／修正を行う refactor fork の AgentCallParameter 構築実装と出力契約を扱うディレクトリです。各 fork の prompt、作業範囲、モデル・権限設定、検証条件、構造化出力スキーマを確認する入口になります。
 
 ## Read this when
-- oracle file の変更を realization file へ追従させる AgentCallParameter や realization apply fork の起動条件を調べるとき
-- refactor fork の変更要約、ファイル単位レビュー・修正、検証結果の出力契約を調べるとき
-- 対象 fork の prompt 構成や agent call の実行条件を確認・変更するとき
+- oracle の変更追従用 apply fork の起動パラメータ、prompt、差分参照、worktree 設定、完了条件を変更・調査するとき
+- refactor fork の変更要約またはファイルレビュー・修正の出力契約、対象パス、権限、prompt、検証条件を変更・調査するとき
 
 ## Do not read this when
-- realization apply fork の差分適用ロジックやテストの挙動だけを調べるとき
-- 個別の realization 実装・テストそのものを調査・変更するとき
-- 一般的な prompt 構築処理、AgentCallParameter、path context の共通定義だけを調べるとき
-- refactor の出力形式だけを確認し、prompt や実行条件を調べないとき
-- 変更内容そのものだけを確認するとき
+- 実際の差分適用ロジックやテストを調べるときは apply の実装・テストを直接読む
+- 差分内容、対象 realization file、対応する oracle file の仕様適合性を調べるときは、該当する入力元や対象ファイルを直接読む
+- 一般的な prompt 構築、AgentCallParameter、path context の共通定義、または refactor fork 以外の agent call を調べるときは、対応する共通実装や各 fork の入口を直接読む
+- 構造化出力のフィールド定義だけを確認するときは、対応する JSON スキーマを直接読む
 
 ## hash
-- e1be5d7037ae48b133da3b84ca22e75c8539bef0302b1230ff706b0fd77a7a06
+- b58111c52a0d7454b89c0305ea7a258f86c5c1b36f7da171e89c5678f57fbfb9
 
 # `session`
 

@@ -90,9 +90,10 @@ class AgentCallParameter:
     # builder は prompt 構築前に agent_call_cwd を決定し、同じ値から call-scoped path context を構築する
     agent_call_cwd: Path
 
-    # True なら本命 agent call の前に indexing preflight を実行する
+    # True なら論理 agent call の初回 Codex call 前に indexing preflight を実行する
     # False なら indexing preflight を実行しない
-    # 本命 agent call 自身が indexing である場合は indexling preflight をスキップする、というのが主な使い方
+    # Structured Output の補正用 Codex call では、この値によらず再実行しない
+    # 本命 agent call 自身が indexing である場合は indexing preflight をスキップする、というのが主な使い方
     # 通常は True のままで良い
     # file access rule violation recovery のような indexing preflight から連鎖的に発生する処理の場合もスキップの対象。
     run_indexing_preflight: bool = True

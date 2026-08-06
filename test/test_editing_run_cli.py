@@ -449,6 +449,50 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
     assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
+def test_apply_rolls_back_preflight_commit_before_agent_boundary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """本命 agent 前の indexing failure で preflight commit を残さない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+
+    def fail_preflight(
+        parameter: AgentCallParameter,
+        **_kwargs: object,
+    ) -> NoReturn:
+        """agent boundary 前に indexing commit が作られて失敗する状態を再現する。"""
+        worktree = parameter.agent_call_cwd
+        index_path = worktree / "INDEX.md"
+        index_path.write_text("preflight index\n")
+        run_git(worktree, "add", "INDEX.md")
+        run_git(worktree, "commit", "-m", "preflight index")
+        raise RuntimeError("preflight failed")
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fail_preflight)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    state = _state(state_path)
+    assert state["run"]["state"] == "error"
+    parts = state["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (
+        run_git(worktree, "rev-parse", "HEAD").stdout.strip()
+        == state["run"]["fork_commit"]
+    )
+    assert (
+        "preflight index"
+        not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
+    )
+    assert not (worktree / "INDEX.md").exists()
+    assert run_git(worktree, "status", "--porcelain").stdout == ""
+
+
 @pytest.mark.parametrize("unexpected_path", ["oracle/unexpected.md", "README.md"])
 def test_apply_rejects_unexpected_refresh_change_before_commit(
     tmp_path: Path,
@@ -570,39 +614,6 @@ def test_refactor_change_summary_escapes_special_changed_paths() -> None:
         "  - resolution.summary: reason",
         "  - Codex call log: <code>log&#96;&#124;&lt;&amp;.md</code>",
     ]
-
-
-def test_refactor_change_summary_rejects_empty_result(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """非空の tree diff に対する空の変更要約を拒否する。
-
-    根拠: {{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/change_summary.json
-    {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    """
-    context = SimpleNamespace(
-        repo=tmp_path,
-        run_fork_commit="fork-commit",
-        run_worktree=tmp_path,
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "run_git",
-        lambda *_args, **_kwargs: SimpleNamespace(stdout="diff --git a/a b/a\n"),
-    )
-    monkeypatch.setattr(refactor_module, "load_config", lambda _root: object())
-    monkeypatch.setattr(
-        refactor_module,
-        "run_codex_exec",
-        lambda *_args, **_kwargs: SimpleNamespace(
-            returncode=0,
-            output_json={"changes": []},
-        ),
-    )
-
-    with pytest.raises(CmocError, match="change summary"):
-        refactor_module._completion_change_summary(context)
 
 
 def test_realization_apply_fork_and_run_join_use_common_state(
@@ -1345,11 +1356,15 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
-@pytest.mark.parametrize("replace_content", [False, True])
+@pytest.mark.parametrize(
+    ("replace_content", "add_unrelated_file"),
+    [(False, False), (True, False), (True, True)],
+)
 def test_refactor_fork_moves_unresolved_target_after_rename(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     replace_content: bool,
+    add_unrelated_file: bool,
 ) -> None:
     """rename 後も unresolved target と refactor state の path 集合を揃える。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
@@ -1365,20 +1380,34 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
             (worktree / "README.md").rename(worktree / "renamed.md")
             if replace_content:
                 (worktree / "renamed.md").write_text("completely different content\n")
+            findings = [
+                {
+                    "title": "deferred",
+                    "changed_paths": ["README.md", "renamed.md"],
+                    "resolution": {
+                        "status": "unresolved",
+                        "summary": "needs follow-up",
+                    },
+                }
+            ]
+            if add_unrelated_file:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+                # rename 判定の候補を増やしても unresolved の changed_paths から
+                # rename 先を特定できることを検証する。
+                (worktree / "extra.md").write_text("extra realization\n")
+                findings.append(
+                    {
+                        "title": "extra update",
+                        "changed_paths": ["extra.md"],
+                        "resolution": {
+                            "status": "fixed",
+                            "summary": "updated extra file",
+                        },
+                    }
+                )
             return SimpleNamespace(
                 returncode=0,
-                output_json={
-                    "findings": [
-                        {
-                            "title": "deferred",
-                            "changed_paths": ["README.md", "renamed.md"],
-                            "resolution": {
-                                "status": "unresolved",
-                                "summary": "needs follow-up",
-                            },
-                        }
-                    ]
-                },
+                output_json={"findings": findings},
                 call_log_path=worktree / "README-call.json",
             )
         if kwargs["purpose"] == "realization refactor change summary":
@@ -1511,38 +1540,48 @@ def test_refactor_rejects_unreported_changed_paths_despite_evidences(
             worktree = parameter.agent_call_cwd
             (worktree / "README.md").write_text("fixed\n")
             (worktree / "unattributed.py").write_text("unexpected\n")
+            output = {
+                "findings": [
+                    {
+                        "title": "README finding",
+                        "evidences": [
+                            {
+                                "path": str(worktree / "README.md"),
+                                "line_start": 1,
+                                "line_end": 1,
+                                "summary": "README の変更行",
+                            },
+                            {
+                                "path": str(worktree / "unattributed.py"),
+                                "line_start": 1,
+                                "line_end": 1,
+                                "summary": "追加した realization file",
+                            },
+                        ],
+                        "changed_paths": ["README.md"],
+                        "oracle_requirement": "README を正しく扱う",
+                        "observed_implementation": "README に問題がある",
+                        "reason": "修正が必要",
+                        "resolution": {
+                            "status": "fixed",
+                            "summary": "README を修正した",
+                            "verification": "確認済み",
+                        },
+                    }
+                ]
+            }
+            postcondition = kwargs["structured_output_postcondition"]
+            assert callable(postcondition)
+            issues = postcondition(output, frozenset({"README.md", "unattributed.py"}))
+            if issues:
+                raise CmocError(
+                    "Codex CLI の Structured Output 検証に失敗しました。",
+                    ["Codex call log を確認してください。"],
+                    repr(issues),
+                )
             return SimpleNamespace(
                 returncode=0,
-                output_json={
-                    "findings": [
-                        {
-                            "title": "README finding",
-                            "evidences": [
-                                {
-                                    "path": str(worktree / "README.md"),
-                                    "line_start": 1,
-                                    "line_end": 1,
-                                    "summary": "README の変更行",
-                                },
-                                {
-                                    "path": str(worktree / "unattributed.py"),
-                                    "line_start": 1,
-                                    "line_end": 1,
-                                    "summary": "追加した realization file",
-                                },
-                            ],
-                            "changed_paths": ["README.md"],
-                            "oracle_requirement": "README を正しく扱う",
-                            "observed_implementation": "README に問題がある",
-                            "reason": "修正が必要",
-                            "resolution": {
-                                "status": "fixed",
-                                "summary": "README を修正した",
-                                "verification": "確認済み",
-                            },
-                        }
-                    ]
-                },
+                output_json=output,
             )
         return SimpleNamespace(returncode=0, output_json={"findings": []})
 
@@ -1555,7 +1594,7 @@ def test_refactor_rejects_unreported_changed_paths_despite_evidences(
     )
 
     assert result.exit_code == 1
-    assert "changed_paths が実際の差分と一致しません" in result.output
+    assert "Structured Output 検証に失敗しました" in result.output
     assert _state(state_path)["run"]["state"] == "error"
     parts = _state(state_path)["run"]["branch"].split("/")
     worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
@@ -1563,49 +1602,60 @@ def test_refactor_rejects_unreported_changed_paths_despite_evidences(
     assert not (worktree / "unattributed.py").exists()
 
 
-@pytest.mark.parametrize(
-    ("actual_paths", "findings", "error"),
-    [
-        ([], [{}], "changed_paths が不正です"),
-        ([], [{"changed_paths": ["README.md"]}], "実際の差分と一致しません"),
-        ([], [{"changed_paths": ["/outside.py"]}], "changed_paths が不正です"),
-        ([], [{"changed_paths": ["../outside.py"]}], "changed_paths が不正です"),
-        (["../outside.py"], [], "実際の変更 path が不正です"),
-    ],
-)
-def test_refactor_changed_path_contract_rejects_invalid_declarations(
-    actual_paths: list[str],
-    findings: list[dict[str, object]],
-    error: str,
+def test_refactor_changed_path_postcondition_reports_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """必須 field、過剰申告、および work-root 外 path を拒否する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    with pytest.raises(CmocError, match=error):
-        refactor_module._validate_changed_path_contract(
-            "README.md",
-            actual_paths,
-            findings,
-        )
-
-
-def test_refactor_changed_path_contract_uses_deduplicated_union() -> None:
-    """複数所見で重複する changed_paths を集合として照合する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    refactor_module._validate_changed_path_contract(
-        "README.md",
-        ["README.md", "added.py"],
-        [
-            {"changed_paths": ["README.md"]},
-            {"changed_paths": ["README.md", "added.py"]},
-        ],
+    """申告集合と初回 call の実差分が異なる場合は補正用エラーを返す。"""
+    monkeypatch.setattr(
+        refactor_module,
+        "unexpected_agent_paths",
+        lambda _context, _paths: [],
     )
+
+    issues = refactor_module._changed_path_postcondition(
+        SimpleNamespace(),
+        {"findings": [{"changed_paths": ["README.md"]}]},
+        frozenset({"README.md", "added.py"}),
+    )
+
+    assert len(issues) == 1
+    assert issues[0].location == "findings[*].changed_paths"
+    assert issues[0].expected == "['README.md', 'added.py']"
+    assert issues[0].observed == "['README.md']"
+
+
+def test_refactor_changed_path_postcondition_uses_deduplicated_union(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """複数所見で重複する changed_paths を集合として照合する。"""
+    monkeypatch.setattr(
+        refactor_module,
+        "unexpected_agent_paths",
+        lambda _context, _paths: [],
+    )
+
+    issues = refactor_module._changed_path_postcondition(
+        SimpleNamespace(),
+        {
+            "findings": [
+                {"changed_paths": ["README.md"]},
+                {"changed_paths": ["README.md", "added.py"]},
+            ]
+        },
+        frozenset({"README.md", "added.py"}),
+    )
+
+    assert not issues
 
 
 def test_refactor_rejects_agent_commit_and_rolls_back_unit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """refactor agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。"""
+    """refactor agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
@@ -1614,6 +1664,9 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
         **kwargs: object,
     ) -> SimpleNamespace:
         """agent が realization file を直接 commit する状態を再現する。"""
+        before_agent_call = kwargs["before_agent_call"]
+        assert callable(before_agent_call)
+        before_agent_call()
         worktree = parameter.agent_call_cwd
         (worktree / "README.md").write_text("agent commit\n")
         run_git(worktree, "add", "README.md")

@@ -1,7 +1,7 @@
 """Codex quota exceeded 後の probe/resume/retry 制御を検証する。
 
 このファイルは 16,000 文字を超えるが、責務境界は quota 待機から復帰する
-Codex exec の外部挙動に閉じている。probe 共有、resume token、再実行、call log、
+Codex exec の外部挙動に閉じている。probe 共有、resume session ID、再実行、call log、
 subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であり、分割すると
 同じ fake Codex 呼び出し列を追う文脈が分散する。現状は quota retry 回帰として
 一箇所に保つ方が凝集性が高い。
@@ -49,17 +49,17 @@ def quota_probe_prompt(agent_call_cwd: Path) -> str:
     ).prompt
 
 
-def test_resume_token_is_read_from_persisted_jsonl_log(tmp_path: Path) -> None:
-    """保存済み JSONL から resume token を復元し、欠落時は None にする。"""
+def test_session_id_is_read_from_persisted_stdout_jsonl_log(tmp_path: Path) -> None:
+    """保存済み stdout JSONL から session ID を復元し、欠落時は None にする。"""
     log_path = tmp_path / "failed_call.jsonl"
     log_path.write_text('{"type":"thread.started","thread_id":"sess-from-log"}\n')
 
     assert (
-        runtime_codex_exec._extract_resume_token_from_jsonl_log(log_path)
+        runtime_codex_exec._extract_session_id_from_stdout_log(log_path)
         == "sess-from-log"
     )
     assert (
-        runtime_codex_exec._extract_resume_token_from_jsonl_log(
+        runtime_codex_exec._extract_session_id_from_stdout_log(
             tmp_path / "missing.jsonl"
         )
         is None
@@ -209,11 +209,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         '{"type": "thread.started", "thread_id": "sess-1"}\n'
         '{"type": "error", "message": "Quota exceeded"}'
     )
-    assert Path(initial_log["output_jsonl_log_path"]).name.endswith("_output.jsonl")
-    assert (
-        Path(initial_log["output_jsonl_log_path"]).read_text()
-        == Path(initial_log["stdout_log_path"]).read_text()
-    )
+    assert not Path(initial_log["output_path"]).with_suffix(".jsonl").exists()
     assert Path(resume_log["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )
@@ -482,10 +478,10 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     ]
 
 
-def test_run_codex_exec_reruns_after_quota_without_resume_token(
+def test_run_codex_exec_reruns_after_quota_without_session_id(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """resume token がない quota 復帰で同じ prompt を再実行する。"""
+    """session ID がない quota 復帰で同じ prompt を再実行する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -925,12 +921,12 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
     assert all(isinstance(error, CmocError) for error in errors)
 
 
-def test_resume_token_returns_none_for_invalid_encoding(tmp_path: Path) -> None:
+def test_session_id_returns_none_for_invalid_stdout_encoding(tmp_path: Path) -> None:
     """不正な UTF-8 の保存ログでは resume せず再実行する。"""
     log_path = tmp_path / "invalid_encoding.jsonl"
     log_path.write_bytes(b"\xff\n")
 
-    assert runtime_codex_exec._extract_resume_token_from_jsonl_log(log_path) is None
+    assert runtime_codex_exec._extract_session_id_from_stdout_log(log_path) is None
 
 
 def test_quota_polling_state_is_cleared_when_progress_output_fails(

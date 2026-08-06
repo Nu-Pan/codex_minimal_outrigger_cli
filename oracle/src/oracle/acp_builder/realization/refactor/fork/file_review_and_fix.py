@@ -47,6 +47,16 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         path_context=path_context,
         aux_static_prompt=[
             StructDoc(
+                "Structured Output の決定論的事後条件",
+                """
+                - この agent call の開始時点を基準として、出力時点に残る realization file の net 差分の path 集合を、実際の変更 path 集合とする
+                - 実際の変更 path 集合は、schema が `changed_paths` に定義する path 表現に従って算出する
+                - 全所見の `changed_paths` の和集合を、申告された変更 path 集合とする。同じ path を複数の所見に含めてよい
+                - 申告された変更 path 集合は、実際の変更 path 集合と一致しなければならない
+                - `evidences[].path` は変更 path の申告または照合に使用しない
+                """,
+            ),
+            StructDoc(
                 "作業上の注意点",
                 """
                 - commit 差分、変更 commit の列、変更要約は入力として与えられていない。最近の差分を推測して作業範囲を狭めてはいけない
@@ -54,9 +64,6 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
                 - 所見の調査、修正、修正後の検証を同一の agent call 内で行う
                 - `resolution.status=fixed` は、この agent call 内で所見に対応する realization file を実際に変更し、修正後の検証まで行った場合だけ使用する
                 - この agent call で realization file を変更して解消した所見も、この agent call で発見した所見として `findings` に含める
-                - 全所見の `changed_paths` の和集合を、この agent call の開始時点を基準として終了時点に残る realization file の net 差分の path 集合と一致させる。同じ path を複数の所見に含めてよい
-                - `evidences[].path` は調査時点の所見の根拠だけを表し、変更 path の申告または帰属判定には使用しない
-                - 所見が見つからなかった場合は `findings` を空にし、file に差分を発生させない
                 - git add と git commit は実行禁止
                 """,
             ),

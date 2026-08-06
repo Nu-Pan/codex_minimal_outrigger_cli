@@ -65,34 +65,34 @@
 # `merge_finding.json`
 
 ## Summary
-- 所見リストの重複・矛盾を整理する編集操作を定義する JSON Schema。delete、replace、merge の操作形式と所見フィールドを検証する。
+- レビュー所見リストの重複・矛盾を解消する編集操作を定義するスキーマ。所見の削除、単一所見の置換、複数所見の統合を表現し、各操作に対象所見と統合後の所見内容を指定する。
 
 ## Read this when
-- 所見統合処理の入力・出力契約や、編集操作の JSON 構造を確認するとき。
+- レビュー結果として複数の所見を整理・統合・置換・削除する処理を実装または確認するとき
+- 所見編集操作の入力・出力契約を確認するとき
 
 ## Do not read this when
-- 個別の所見内容や、実際の統合ロジックの実装を確認したいとき。
+- 個別のレビュー所見そのものの内容や根拠を確認するとき
+- レビュー判定ルールや所見生成処理を確認するときは、対応するレビュー仕様・実装を直接読む
 
 ## hash
-- dbeea7c7b9bbc2c9552e7b69100001b19434ca89d296c5ea9615247b74b1546a
+- 53f10a41fd1c8b619ef8948aba0d176282093ba61e8ead9f412f99725d632ed3
 
 # `merge_finding.py`
 
 ## Summary
-- `cmoc oracle review` で oracle file のレビュー所見リストをマージするための AI エージェント呼び出しパラメータを構築する。所見データをプロンプトへ埋め込み、oracle-only のアクセス制約と編集操作列挙用スキーマを設定する実装。
+- `cmoc oracle review` が oracle file のレビュー所見リストを整理するための agent call パラメータを構築する実装。所見の重複・矛盾を解消するマージ処理に関する prompt、Structured Output schema、実行コンテキスト設定の入口となる。
 
 ## Read this when
-- `cmoc oracle review` の所見マージ処理を変更・調査するとき
-- 所見リストを入力にした prompt 構築、agent call のモデル・権限・実行ディレクトリ設定を確認するとき
-- 所見マージ用 Structured Output schema の参照元を確認するとき
+- `cmoc oracle review` の所見リストマージ prompt の生成や agent call 設定を変更・調査するとき
+- 所見リストの整理条件、Structured Output schema の指定、oracle 専用読み取り権限の設定を確認するとき
 
 ## Do not read this when
-- レビュー所見の内容や重複・矛盾の判定基準そのものを確認したいときは、所見マージ prompt の正本ではなくレビュー標準を読む
-- `cmoc oracle review` のマージ結果を実際に適用する処理を調査するときは、agent call parameter の構築処理ではなく実行・編集側の実装を読む
-- 一般的な prompt 構築や共通の agent call 設定を調査するときは、専用の共通 builder 実装を直接読む
+- レビュー所見そのものの内容や正本仕様のレビュー規則を確認したいときは、oracle 配下のレビュー対象やレビュー標準を直接読む
+- `cmoc oracle review` のマージ以外のサブコマンドや prompt builder の共通仕様だけを調査するとき
 
 ## hash
-- 6a03fe9ccb4cc5a19525e8cefbf5ff55df017aaf78939366c4474cf009c0f3ab
+- 3fb1d219df9754eb356ae8aa3fc21afac77b4ad6802cac38201cc31ec7838a8e
 
 # `validate_finding_advocate.json`
 

@@ -8,10 +8,10 @@
 - {{work-root}}/oracle/doc/dev_rule/coding_rule.md
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 
-この file は 16,000 文字を超えるが、finding の列挙、judgement、advocate、semantic
-retry、interrupt 復旧は同じ review round と fake Codex call 列を検証する一つの責務で
-ある。分割すると、partial progress と retry の外部契約を複数 file で追う必要がある
-ため、現状は review loop 回帰として一箇所に保つ。
+この file は 16,000 文字を超えるが、finding の列挙、理由検証、merge、judgement、
+interrupt 復旧は同じ review round と fake Codex call 列を検証する一つの責務である。
+分割すると、partial progress と merge の外部契約を複数 file で追う必要があるため、
+現状は review loop 回帰として一箇所に保つ。
 """
 
 from pathlib import Path
@@ -474,11 +474,11 @@ def test_oracle_review_advocate_keeps_existing_challenger_reasons(
     assert "same-round challenger reason" in advocate_prompts[0]
 
 
-def test_oracle_review_retries_semantic_merge_finding_failure(
+def test_oracle_review_passes_merge_postcondition_to_single_agent_call(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """意味的に不正な merge response の後に merge を再試行する。
+    """merge の入力 ID 条件を runtime に渡し、loop 自身は agent call を再試行しない。
 
     根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     """
@@ -523,34 +523,34 @@ def test_oracle_review_retries_semantic_merge_finding_failure(
             )
         if schema_name == "merge_finding.json":
             merge_calls += 1
-            if merge_calls == 1:
-                return _FakeCodexResult(
+            postcondition = kwargs["structured_output_postcondition"]
+            assert callable(postcondition)
+            invalid = {
+                "operations": [
                     {
-                        "operations": [
-                            {
-                                "kind": "delete",
-                                "target_ids": ["finding-9999"],
-                                "finding": None,
-                            }
-                        ]
+                        "kind": "delete",
+                        "target_ids": ["finding-9999"],
+                        "finding": None,
                     }
-                )
-            return _FakeCodexResult(
-                {
-                    "operations": [
-                        {
-                            "kind": "merge",
-                            "target_ids": ["finding-0001", "finding-0002"],
-                            "finding": {
-                                "oracle_path": "{{oracle-root}}/spec.md",
-                                "severity": "fatal",
-                                "title": "merged",
-                                "reason": "merged reason",
-                            },
-                        }
-                    ]
-                }
-            )
+                ]
+            }
+            valid = {
+                "operations": [
+                    {
+                        "kind": "merge",
+                        "target_ids": ["finding-0001", "finding-0002"],
+                        "finding": {
+                            "oracle_path": "{{oracle-root}}/spec.md",
+                            "severity": "fatal",
+                            "title": "merged",
+                            "reason": "merged reason",
+                        },
+                    }
+                ]
+            }
+            assert postcondition(invalid, frozenset())
+            assert not postcondition(valid, frozenset())
+            return _FakeCodexResult(valid)
         if schema_name in {
             "validate_finding_challenger.json",
             "validate_finding_advocate.json",
@@ -568,16 +568,16 @@ def test_oracle_review_retries_semantic_merge_finding_failure(
         fake_run_codex_exec,
     )
 
-    assert merge_calls == 2
+    assert merge_calls == 1
     assert [finding["finding_id"] for finding in findings] == ["finding-0003"]
     assert findings[0]["title"] == "merged"
 
 
-def test_oracle_review_fails_after_merge_finding_semantic_retries(
+def test_oracle_review_propagates_merge_output_correction_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """merge response が再試行上限まで不正なら loop を失敗させる。
+    """共通 runtime で補正不能になった merge agent call の失敗をそのまま伝播する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     """
@@ -616,16 +616,10 @@ def test_oracle_review_fails_after_merge_finding_semantic_retries(
             )
         if schema_name == "merge_finding.json":
             merge_calls += 1
-            return _FakeCodexResult(
-                {
-                    "operations": [
-                        {
-                            "kind": "delete",
-                            "target_ids": ["finding-9999"],
-                            "finding": None,
-                        }
-                    ]
-                }
+            raise CmocError(
+                "merge finding の Structured Output 補正に失敗しました。",
+                ["Codex call log を確認してください。"],
+                "output correction failed",
             )
         raise AssertionError(schema_name)
 
@@ -638,4 +632,4 @@ def test_oracle_review_fails_after_merge_finding_semantic_retries(
             fake_run_codex_exec,
         )
 
-    assert merge_calls == 3
+    assert merge_calls == 1

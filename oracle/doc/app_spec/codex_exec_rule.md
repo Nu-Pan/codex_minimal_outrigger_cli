@@ -4,6 +4,9 @@
 
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
 - 個別の `codex exec` 呼び出しの仕様は `{{cmoc-root}}/oracle/src/oracle/acp_builder` ツリー内の AgentCallParameter builder を正本とする
+- 本書で agent call とは、1 個の `AgentCallParameter` に対する論理的な呼び出し単位を指す
+- Structured Output の出力補正を行う場合も、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回の agent call とする
+- 本書で Codex call とは、初回実行や補正を含む個々の Codex CLI 呼び出しを指す
 
 ## agent call の path context
 
@@ -129,10 +132,11 @@ call-scoped path context の適用範囲を次に示す。
 
 ## プロンプトの渡し方
 
-- AgentCallParameter builder が生成した `AgentCallParameter.prompt` は、Codex CLI に渡すプロンプト本文の正本とする
+- AgentCallParameter builder が生成した `AgentCallParameter.prompt` は、初回 Codex call に渡すプロンプト本文の正本とする
 - exec 用 builder は完全 prompt を `AgentCallParameter.prompt` として直接返す。editor-input log など別 file の path を読む指示だけを間接 prompt として返してはいけない
-- cmoc は `AgentCallParameter.prompt` を、可能な限りそのまま Codex CLI に渡すこと
-- cmoc は Codex CLI へ渡す直前の段階で、`AgentCallParameter.prompt` に指示文、注意書き、説明、整形、要約、翻訳、補助文脈、モデル・reasoning effort 情報を追加してはならない
+- cmoc は `AgentCallParameter.prompt` を、可能な限りそのまま初回 Codex call に渡すこと
+- cmoc は初回 Codex call へ渡す直前の段階で、`AgentCallParameter.prompt` に指示文、注意書き、説明、整形、要約、翻訳、補助文脈、モデル・reasoning effort 情報を追加してはならない
+- Structured Output の補正 prompt は、初回 prompt を加工したものではなく、本書の出力補正規則に従う次の turn の入力として構築する
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する
 - プロンプト本文を argv に載せてはならない
 - `codex exec` に渡すプロンプト全文は一度 `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_prompt.md` に出力すること
@@ -144,6 +148,8 @@ call-scoped path context の適用範囲を次に示す。
 - Codex CLI 呼び出しに関する情報は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_call.json` に保存すること
 - `{{time-stamp}}_stdout.jsonl`, `{{time-stamp}}_stderr.log`, `{{time-stamp}}_output.json` に残らない情報だけを `{{time-stamp}}_call.json` に書くこと
 - 同一の Codex CLI 呼び出しの間で `{{time-stamp}}` は一致しなければならない
+- 1 回の agent call に初回と補正の複数 Codex call が含まれる場合は、Codex call ごとに別の `{{time-stamp}}` と log 一式を作成する
+- 後続の Codex call は、先行する Codex call の log または出力を上書きしてはならない
 
 ## stdout, stderr の扱い
 
@@ -151,6 +157,15 @@ call-scoped path context の適用範囲を次に示す。
 - stdout は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_stdout.jsonl` に出力すること
 - stderr は `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_stderr.log` に出力すること
 - stdout, stderr をコンソールには流さないこと
+
+## Codex session ID
+
+- Codex call の session ID は、対応する `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_stdout.jsonl` から読み取る
+- `type == thread.started` である要素の `thread_id` field を session ID とする
+
+    ```json
+    {"type":"thread.started","thread_id":"019efe07-4886-7423-b252-625febbe31eb"}
+    ```
 
 ## `--output-last-message`
 
@@ -163,7 +178,47 @@ call-scoped path context の適用範囲を次に示す。
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
 - スキーマは、一度 `{{repo-root}}/.cmoc/gu/ar/schema/{{hash}}.json` に保存して、これを Codex CLI に参照させること
 - `{{hash}}` は schema 本文の SHA256 ハッシュとする
-- Structured Output の結果は cmoc 側でも機械的検証を行うこと
+- schema と決定論的事後条件の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする
+
+### 機械的検証と正式な結果
+
+- 初回と補正の各 Structured Output に、次の機械的検証を同じ順序で行う
+    1. JSON parse
+    2. JSON Schema validation
+    3. 初回 prompt で宣言された決定論的事後条件の検証
+- cmoc が正式な結果として解釈してよいのは、最後に全検証へ合格した出力だけとする
+- 検証へ不合格だった出力を、部分的な結果、fallback、または後続処理の入力として解釈してはいけない
+- 不合格だった出力と、初回および各補正の Codex call log は、破棄、上書き、または改変してはいけない
+
+### 同じ session での出力補正
+
+- JSON parse、JSON Schema validation、または宣言済みの決定論的事後条件の検証に不合格だった場合は、出力補正可能な失敗として扱う
+- 初回 Codex call 後の補正は、初回と同じ Codex session に対する `codex exec resume` で行う
+- session ID を取得できず同じ session を再開できない場合は、新しい session で代替せず、出力修正だけでは解消できない失敗として扱う
+- 補正 prompt では、同じ schema に従う完全な置換出力を返すよう依頼する。差分、patch、または不合格出力の一部分だけを返すよう依頼してはいけない
+- 補正 prompt では、作業成果物を変更せず Structured Output だけを修正するよう明示する
+- 補正 prompt には、検出できた検証エラーを出力修正に必要な範囲でまとめる
+- 各検証エラーには、違反した条件、対象 field または位置、期待値、および観測値を含める
+- 補正 prompt で、初回応答前に宣言されていなかった受理条件を追加してはいけない
+- 補正後の出力も、初回出力と同じ機械的検証へ通す
+- 補正 Codex call は初回 Codex call 後に最大 2 回まで行う。したがって、出力生成 turn は初回を含めて最大 3 回とする
+- 出力補正の間隔を開ける必要はない
+
+### 補正 turn の実行条件
+
+- 補正 turn は Structured Output の修正専用とし、作業成果物を変更させてはいけない
+- 初回 Codex call 完了時に、agent call の開始前を基準とする作業成果物の差分を固定する
+- Codex call ごとの prompt、log、および Structured Output schema の保存物は、本節でいう作業成果物の差分に含めない
+- 補正中は、固定した差分を変動させてはいけない。補正 turn が差分を変動させた場合は、初回 Codex call 完了時の状態へ戻し、出力修正だけでは解消できない失敗として扱う
+- 差分不変性の検査を、file access mode 違反の判定またはリカバリに使用してはいけない
+- 補正 turn では indexing preflight を再実行しない
+- 補正 turn の model、reasoning effort、cwd、および Structured Output schema は、元の agent call と整合させる
+
+### 補正不能時の扱い
+
+- 最大 2 回の補正後も検証へ合格しない場合は、検証を緩和せず既存のエラー処理へ移る
+- prompt、schema、および validator が矛盾している場合は、補正によって矛盾を隠そうとせず既存のエラー処理へ移る
+- 作業成果物の差分変動、session の再開不能、またはその他の出力修正だけでは解消できない失敗も、検証を緩和せず既存のエラー処理へ移る
 
 ## `codex exec` の並列呼び出し
 
@@ -178,13 +233,10 @@ call-scoped path context の適用範囲を次に示す。
 - quota 不足で停止した場合は quota が復活するまで待機・再開してほしい
 - OpenAI サーバー側の一時的な問題であることが明白な既知のエラーなら、自動的にリトライしてほしい
 
-### レスポンスの意味的な失敗
+### Structured Output の出力契約違反
 
-- Codex CLI のレスポンスが満たすべき要件を満たせていなかった場合
-    - e.g. Structured Output のパース失敗
-- 2 回までリトライする
-- リトライの間隔を開ける必要は無い
-- リトライが全て失敗したら、続行しようとせずに即時コマンド全体を失敗させる
+- Structured Output の機械的検証に不合格だった場合は、本書の「同じ session での出力補正」に従う
+- schema または宣言済みの決定論的事後条件に含まれない意味的な判定を、出力補正の開始条件にしてはいけない
 
 ### quota 枯渇・レートリミットで停止した場合
 
@@ -201,13 +253,7 @@ call-scoped path context の適用範囲を次に示す。
 - 並列に呼び出した Codex CLI 呼び出しが同時に待機に突入した場合
     - 一番最初に待機に入ったスレッドだけが代表してポーリングを行う
     - 複数スレッドで並列にポーリングを行うのは禁止
-- 再開対象セッション ID の調査方法
-    - 対象セッションの `{{repo-root}}/.cmoc/gu/ar/log/codex/{{time-stamp}}_output.jsonl` から読み取る
-    - `type == thread.started` になっている要素の `thread_id` フィールドから読み取る
-    - e.g.
-        ```json
-        {"type":"thread.started","thread_id":"019efe07-4886-7423-b252-625febbe31eb"}
-        ```
+- 再開対象の session ID は、本書の「Codex session ID」に従って停止した Codex call の stdout JSONL から取得する
 - 再開とは
     - 停止した時のセッションを `codex exec ... resume ...` サブコマンドで復元したうえで、全く同じプロンプトで実行する
     - セッション ID の取得に失敗した場合、resume せずに単に同一の設定で再実行する

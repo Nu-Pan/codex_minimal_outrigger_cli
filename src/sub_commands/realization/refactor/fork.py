@@ -32,13 +32,13 @@ from cmoc_runtime import (
 from commons.indexing import enable_indexing_preflight
 from commons.runtime_refactor import (
     RefactorState,
-    is_normalized_relative_path,
     load_refactor_state,
     mark_all_refactor_targets_required,
     select_refactor_target,
     sync_refactor_state,
     write_refactor_state,
 )
+from commons.runtime_results import StructuredOutputValidationIssue
 from commons.runtime_run import (
     run_process_tracking,
     stop_tracked_codex_children,
@@ -359,6 +359,9 @@ def _run_refactor_unit(
             root=context.repo,
             config=load_config(context.run_worktree),
             purpose=f"realization refactor: {target}",
+            structured_output_postcondition=lambda output, changed_paths: (
+                _changed_path_postcondition(context, output, changed_paths)
+            ),
             # {{work-root}}/oracle/doc/app_spec/indexing.md
             # file-review builder の preflight commit を agent commit の検査基準へ
             # 含めず、本命 subprocess の直前を baseline とする。
@@ -394,7 +397,7 @@ def _run_refactor_unit(
             ["Codex call log を確認してください。"],
             f"target: {target}\nreturncode: {result.returncode}",
         )
-    findings = _validated_findings(result.output_json, target)
+    findings: list[dict] = result.output_json["findings"]
     actual_changed_paths = worktree_change_paths(
         context.run_worktree,
         include_rename_sources=True,
@@ -409,11 +412,6 @@ def _run_refactor_unit(
             ["Codex call log と run worktree の差分を確認してください。"],
             "\n".join(unexpected),
         )
-    _validate_changed_path_contract(
-        target,
-        actual_changed_paths,
-        findings,
-    )
     normalized_findings = findings
     if (
         findings
@@ -432,6 +430,9 @@ def _run_refactor_unit(
         for finding in normalized_findings
         if finding.get("resolution", {}).get("status") == "unresolved"
     ]
+    unresolved_changed_paths = {
+        path for finding in unresolved for path in finding["changed_paths"]
+    }
     _update_refactor_state(
         context,
         target,
@@ -483,6 +484,7 @@ def _run_refactor_unit(
         f"cmoc realization refactor {target}",
         pending_realization_paths=actual_changed_paths,
         state_paths_before=state_paths_before,
+        unresolved_changed_paths=unresolved_changed_paths,
     )
 
 
@@ -534,6 +536,7 @@ def _commit_refactor_unit(
     *,
     pending_realization_paths: Collection[str] = (),
     state_paths_before: Collection[str] = (),
+    unresolved_changed_paths: Collection[str] = (),
 ) -> None:
     """commit 済み処理単位の report 進捗を interruption 前に公開する。
 
@@ -567,18 +570,24 @@ def _commit_refactor_unit(
             if target not in rename_paths and target not in state:
                 # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
                 # Git は内容の変更量が大きい rename を delete/add として記録する。
-                # 処理単位で新しく現れた realization file が一つだけなら、state の
-                # 旧 target をその path へ対応付け、unresolved を失わないようにする。
-                candidates = sorted(
-                    {
-                        path
-                        for path in pending_realization_paths
-                        if path != target
-                        and path in state
-                        and path not in state_paths_before
-                    }
+                # 所見が宣言した changed_paths に旧 target と新 path が含まれ、そこから
+                # 新しく現れた realization file が一つだけなら、先にその対応を採用する。
+                # それ以外は、処理単位で新しく現れた realization file が一つだけの
+                # 場合に限って旧 target をその path へ対応付ける。
+                new_state_paths = {
+                    path
+                    for path in pending_realization_paths
+                    if path != target
+                    and path in state
+                    and path not in state_paths_before
+                }
+                declared_candidates = sorted(
+                    path for path in unresolved_changed_paths if path in new_state_paths
                 )
-                if len(candidates) == 1:
+                candidates = declared_candidates or sorted(new_state_paths)
+                if len(declared_candidates) == 1:
+                    rename_paths[target] = declared_candidates[0]
+                elif len(candidates) == 1:
                     rename_paths[target] = candidates[0]
             _reconcile_unresolved_findings(
                 state,
@@ -665,79 +674,30 @@ def _update_refactor_state(
     write_refactor_state(context.run_worktree, state)
 
 
-def _validated_findings(output: object, target: str) -> list[dict]:
-    """agent の Structured Output が findings object か検証して返す。"""
-    if not isinstance(output, dict) or set(output) != {"findings"}:
-        raise CmocError(
-            "refactor agent の Structured Output が不正です。",
-            ["Codex call log と output schema を確認してください。"],
-            f"target: {target}\noutput: {output!r}",
-        )
+def _changed_path_postcondition(
+    context: EditingRunContext,
+    output: object,
+    artifact_changed_paths: frozenset[str],
+) -> tuple[StructuredOutputValidationIssue, ...]:
+    """refactor prompt が宣言する changed_paths 照合結果を返す。"""
+    # {{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py
+    assert isinstance(output, dict)
     findings = output["findings"]
-    if not isinstance(findings, list) or any(
-        not isinstance(finding, dict) for finding in findings
-    ):
-        raise CmocError(
-            "refactor findings が配列ではありません。",
-            ["Codex call log と output schema を確認してください。"],
-            f"target: {target}\noutput: {output!r}",
-        )
-    return findings
-
-
-def _validate_changed_path_contract(
-    target: str,
-    actual_paths: Collection[str],
-    findings: Collection[dict],
-) -> None:
-    """所見の変更 path 申告と agent call の実際の net 差分を照合する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-    # evidences は調査時点の根拠に限定し、差分の帰属には changed_paths だけを使う。
-    actual = set(actual_paths)
-    invalid_actual = sorted(
-        path for path in actual if not is_normalized_relative_path(path)
-    )
-    if invalid_actual:
-        raise CmocError(
-            "refactor agent の実際の変更 path が不正です。",
-            ["run worktree の Git status を確認してください。"],
-            f"target: {target}\ninvalid paths: {invalid_actual!r}",
-        )
-
-    declared: set[str] = set()
-    for index, finding in enumerate(findings):
-        changed_paths = finding.get("changed_paths")
-        if not isinstance(changed_paths, list) or any(
-            not isinstance(path, str) for path in changed_paths
-        ):
-            raise CmocError(
-                "refactor agent の changed_paths が不正です。",
-                ["Codex call log と output schema を確認してください。"],
-                f"target: {target}\nfinding index: {index}\n"
-                f"changed_paths: {changed_paths!r}",
-            )
-        invalid_declared = sorted(
-            path for path in changed_paths if not is_normalized_relative_path(path)
-        )
-        if invalid_declared:
-            raise CmocError(
-                "refactor agent の changed_paths が不正です。",
-                ["Codex call log と output schema を確認してください。"],
-                f"target: {target}\nfinding index: {index}\n"
-                f"invalid paths: {invalid_declared!r}",
-            )
-        declared.update(changed_paths)
-
+    unexpected = set(unexpected_agent_paths(context, artifact_changed_paths))
+    actual = set(artifact_changed_paths) - unexpected
+    declared = {path for finding in findings for path in finding["changed_paths"]}
     if declared == actual:
-        return
-    raise CmocError(
-        "refactor agent の changed_paths が実際の差分と一致しません。",
-        ["Codex call log と run worktree の差分を確認してください。"],
-        f"target: {target}\n"
-        f"actual paths: {sorted(actual)!r}\n"
-        f"declared paths: {sorted(declared)!r}\n"
-        f"unreported paths: {sorted(actual - declared)!r}\n"
-        f"overreported paths: {sorted(declared - actual)!r}",
+        return ()
+    return (
+        StructuredOutputValidationIssue(
+            condition=(
+                "全所見の changed_paths の和集合が、agent call による realization "
+                "file の実際の変更 path 集合と一致する"
+            ),
+            location="findings[*].changed_paths",
+            expected=repr(sorted(actual)),
+            observed=repr(sorted(declared)),
+        ),
     )
 
 
@@ -778,20 +738,7 @@ def _completion_change_summary(context: EditingRunContext) -> list[dict] | None:
         config=load_config(context.run_worktree),
         purpose="realization refactor change summary",
     )
-    output = result.output_json
-    if (
-        result.returncode != 0
-        or not isinstance(output, dict)
-        or set(output) != {"changes"}
-        or not isinstance(output["changes"], list)
-        or not output["changes"]
-    ):
-        raise CmocError(
-            "refactor change summary を生成できません。",
-            ["Codex call log と output schema を確認してください。"],
-            repr(output),
-        )
-    return output["changes"]
+    return result.output_json["changes"]
 
 
 def _write_refactor_report(

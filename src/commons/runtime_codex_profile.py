@@ -735,7 +735,12 @@ def run_tracked_codex_subprocess(
             if process is None:
                 raise
             try:
-                if cleanup_expected_members is None:
+                if cleanup_expected_members is None or cleanup_expected_leader is None:
+                    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                    # leader の identity を取得できない snapshot を停止済みと
+                    # 扱うと、live child の process.wait() だけを無期限に待つ。
+                    # group 停止を証明できない場合は outer fallback の Popen child
+                    # kill/reap へ渡し、未確認の group cleanup を成功扱いしない。
                     raise CmocError(
                         "実行中 Codex subprocess の process group を確認できません。",
                         ["Codex subprocess を手動で停止してから再実行してください。"],
@@ -924,7 +929,7 @@ def codex_error_text(stdout_text: str, stderr_text: str) -> str:
 
 
 def extract_resume_token(stdout_text: str) -> str | None:
-    """quota retry で resume できる thread id を Codex JSONL stdout から拾う。"""
+    """`codex exec resume` に渡す session ID を Codex JSONL stdout から拾う。"""
     for line in stdout_text.splitlines():
         try:
             item = json.loads(line)
@@ -932,7 +937,7 @@ def extract_resume_token(stdout_text: str) -> str | None:
             continue
         if not isinstance(item, dict):
             # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-            # non-object event は resume token を持てない。
+            # non-object event は session ID を持てない。
             continue
         if item.get("type") != "thread.started":
             continue

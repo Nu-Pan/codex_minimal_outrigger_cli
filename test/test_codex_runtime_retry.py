@@ -1,10 +1,10 @@
 """Codex exec の再試行と失敗時ログを検証する。
 
-Structured Output の意味的失敗、capacity retry、JSONL error、中断、差分保持を
+Structured Output の出力補正、capacity retry、JSONL error、中断、差分保持を
 外部挙動として確認する。根拠は次の正本仕様断片にある。
 
 このファイルは `run_codex_exec` の retry 状態、subprocess の呼び出し回数、call log、
-subcommand event を同時に確認する一つの責務を持つ。semantic failure、capacity failure、
+subcommand event を同時に確認する一つの責務を持つ。出力契約違反、capacity failure、
 未知の JSONL error、中断は同じ状態機械の分岐であり、各テストは fake の応答から最終結果と
 ログ列までを一続きの外部挙動として検証する。したがって、16,000 文字を超えても異常系を
 別ファイルへ分けず、retry 状態と共有ログ schema を同じ読み取り文脈に保つ。
@@ -28,13 +28,14 @@ import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_results import StructuredOutputValidationIssue
 from config.cmoc_config import CmocConfig
 
 
-def test_run_codex_exec_retries_semantic_output(
+def test_run_codex_exec_corrects_schema_output_in_same_session(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Structured Output の意味的失敗を一度だけ再試行し、各ログを保存する。"""
+    """schema 不合格を同じ session で補正し、Codex call ごとの log を保存する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -53,6 +54,7 @@ def test_run_codex_exec_retries_semantic_output(
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "payload = {'ok': True} if count else {'bad': True}",
             "output.write_text(json.dumps(payload))",
+            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
@@ -97,21 +99,231 @@ def test_run_codex_exec_retries_semantic_output(
         '{"bad": true}',
         '{"ok": true}',
     ]
-    assert [Path(log["prompt_log_path"]).read_text() for log in call_logs] == [
-        "prompt",
-        "prompt",
-    ]
+    prompts = [Path(log["prompt_log_path"]).read_text() for log in call_logs]
+    assert prompts[0] == "prompt"
+    assert prompts[1].startswith("# Structured Output の出力補正\n")
+    assert "作業成果物を変更せず" in prompts[1]
+    assert "完全な置換出力" in prompts[1]
+    assert "違反した条件" in prompts[1]
+    assert "対象 field または位置" in prompts[1]
+    assert "期待値" in prompts[1]
+    assert "観測値" in prompts[1]
+    assert "resume" not in call_logs[0]["argv"]
+    resume_index = call_logs[1]["argv"].index("resume")
+    assert call_logs[1]["argv"][resume_index + 1] == "session-1"
+    for key in ("model_class", "reasoning_effort", "cwd", "schema_path"):
+        assert call_logs[1][key] == call_logs[0][key]
     assert len({log["stdout_log_path"] for log in call_logs}) == 2
     assert len({log["prompt_log_path"] for log in call_logs}) == 2
     assert result.call_log_path == call_paths[1]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == [
-        "schema_validation_retrying",
+        "output_correction_requested",
         "succeeded",
     ]
     assert codex_events[0]["returncode"] == 0
     assert codex_events[0]["call_log_path"] == str(call_paths[0])
+
+
+def test_run_codex_exec_corrects_declared_postcondition(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """初回 call の実差分で決定論的事後条件を検証し、出力だけを補正する。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "postcondition_bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "postcondition_counter"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "if count == 0:",
+            "    pathlib.Path('README.md').write_text('first call change\\n')",
+            "payload = {'paths': ['README.md']} if count else {'paths': []}",
+            "output.write_text(json.dumps(payload))",
+            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    schema = tmp_path / "postcondition_schema.json"
+    schema.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "required": ["paths"],
+                "properties": {"paths": {"type": "array", "items": {"type": "string"}}},
+            }
+        )
+    )
+
+    def validate_paths(
+        output: object, changed_paths: frozenset[str]
+    ) -> tuple[StructuredOutputValidationIssue, ...]:
+        """初回 prompt が宣言した path 集合照合を再現する。"""
+        assert isinstance(output, dict)
+        observed = frozenset(output["paths"])
+        if observed == changed_paths:
+            return ()
+        return (
+            StructuredOutputValidationIssue(
+                condition="paths が実際の変更 path 集合と一致する",
+                location="paths",
+                expected=repr(sorted(changed_paths)),
+                observed=repr(sorted(observed)),
+            ),
+        )
+
+    result = run_codex_exec(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            schema,
+            root,
+        ),
+        root=root,
+        config=CmocConfig(),
+        structured_output_postcondition=validate_paths,
+    )
+
+    assert result.output_json == {"paths": ["README.md"]}
+    assert counter.read_text() == "2"
+    assert (root / "README.md").read_text() == "first call change\n"
+
+
+def test_run_codex_exec_does_not_replace_missing_correction_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """session ID を取得できない出力契約違反を新しい session で代替しない。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "missing_session_bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "missing_session_counter"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'bad': True}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    schema = tmp_path / "missing_session_schema.json"
+    schema.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["ok"],
+                "properties": {"ok": {"type": "boolean"}},
+            }
+        )
+    )
+
+    with pytest.raises(CmocError, match="Structured Output 検証") as error:
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                schema,
+                root,
+            ),
+            root=root,
+            config=CmocConfig(),
+        )
+
+    assert counter.read_text() == "1"
+    assert "session ID is unavailable" in error.value.detail
+
+
+def test_run_codex_exec_restores_artifacts_changed_by_correction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """補正 turn が変動させた成果物を初回 call 完了時へ戻して失敗する。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "artifact_change_bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "artifact_change_counter"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "readme = pathlib.Path('README.md')",
+            "readme.write_text('correction change\\n' if count else 'first call change\\n')",
+            "if count:",
+            "    pathlib.Path('extra.py').write_text('correction-only\\n')",
+            "    pathlib.Path('oracle/spec.md').unlink()",
+            "payload = {'ok': True} if count else {'bad': True}",
+            "output.write_text(json.dumps(payload))",
+            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    schema = tmp_path / "artifact_change_schema.json"
+    schema.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["ok"],
+                "properties": {"ok": {"type": "boolean"}},
+            }
+        )
+    )
+    logger = SubcommandLogger(root, "test")
+
+    with pytest.raises(CmocError, match="作業成果物を変更"):
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                schema,
+                root,
+            ),
+            root=root,
+            config=CmocConfig(),
+            subcommand_logger=logger,
+        )
+
+    assert counter.read_text() == "2"
+    assert (root / "README.md").read_text() == "first call change\n"
+    assert not (root / "extra.py").exists()
+    assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in events if event["event"] == "codex_call"]
+    assert [event["status"] for event in codex_events] == [
+        "output_correction_requested",
+        "output_correction_failed",
+    ]
 
 
 def test_run_codex_exec_logs_keyboard_interrupt(
@@ -169,14 +381,14 @@ def test_run_codex_exec_logs_keyboard_interrupt(
         ("malformed", ["output.write_text('{')"], "is not valid JSON"),
     ],
 )
-def test_run_codex_exec_retries_structured_output_parse_failure(
+def test_run_codex_exec_corrects_structured_output_parse_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     name: str,
     first_output_lines: list[str],
     expected_error: str,
 ) -> None:
-    """Structured Output の欠落・空・不正 JSON を再試行し、失敗理由を記録する。"""
+    """Structured Output の欠落・空・不正 JSON を補正し、失敗理由を記録する。"""
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
@@ -197,6 +409,7 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
             *([f"    {line}" for line in first_output_lines] or ["    pass"]),
             "else:",
             "    output.write_text(json.dumps({'ok': True}))",
+            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
@@ -226,7 +439,7 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == [
-        "schema_validation_retrying",
+        "output_correction_requested",
         "succeeded",
     ]
     assert expected_error in codex_events[0]["error"]
@@ -529,12 +742,13 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
     ),
     [
         (
-            "semantic",
+            "output_contract",
             3,
-            ["schema_validation_retrying"] * 2 + ["schema_validation_failed"],
+            ["output_correction_requested"] * 2
+            + ["structured_output_validation_failed"],
             [],
             "Codex CLI の Structured Output 検証に失敗しました。",
-            "Additional properties",
+            "`additionalProperties`",
         ),
         (
             "capacity",
@@ -578,8 +792,9 @@ def test_run_codex_exec_stops_after_retry_limit(
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             f"failure = {failure!r}",
-            "if failure == 'semantic':",
+            "if failure == 'output_contract':",
             "    output.write_text(json.dumps({'bad': True}))",
+            "    print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
             "    print(json.dumps({'type': 'turn.completed'}))",
             "else:",
             (
@@ -591,7 +806,7 @@ def test_run_codex_exec_stops_after_retry_limit(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema: Path | None = None
-    if failure == "semantic":
+    if failure == "output_contract":
         schema = tmp_path / "schema.json"
         schema.write_text(
             json.dumps(
@@ -623,7 +838,7 @@ def test_run_codex_exec_stops_after_retry_limit(
     assert counter.read_text() == str(expected_calls)
     assert sleep_calls == expected_sleeps
     assert error.value.summary == summary
-    if failure == "semantic":
+    if failure == "output_contract":
         assert error_fragment in error.value.detail
     else:
         assert error_fragment not in error.value.detail

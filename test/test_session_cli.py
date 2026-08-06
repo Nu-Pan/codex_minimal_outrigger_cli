@@ -8,6 +8,7 @@ fixture を追う文脈が分散する。現状は session CLI 回帰として�
 """
 
 import json
+import stat
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
@@ -744,6 +745,7 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     target.write_text("home change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "home change")
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
     run_git(root, "switch", session_branch)
 
     class FakeCodexResult:
@@ -766,7 +768,66 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     assert current_branch(root) == home_branch
     assert "conflict 解消以外の差分が残っています。" in result.stderr
     assert "src/extra.py" in result.stderr
-    assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
+    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
+
+
+@pytest.mark.parametrize("change_kind", ["context", "mode"])
+def test_session_join_rejects_extra_conflict_file_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change_kind: str
+) -> None:
+    """conflict marker 解消以外の conflict file 変更を merge しない。
+
+    根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py
+    {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+    """
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("prefix\nsession change\nsuffix\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    target.write_text("prefix\nhome change\nsuffix\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "home change")
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        """conflict resolution の成功を表す最小 fake result。"""
+
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        """conflict marker 外または file mode を変更した agent を再現する。"""
+        target.write_text(
+            "prefix\nresolved change\n"
+            + ("changed suffix\n" if change_kind == "context" else "suffix\n")
+        )
+        if change_kind == "mode":
+            target.chmod(target.stat().st_mode | stat.S_IXUSR)
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    expected_summary = (
+        "conflict 対象 file の不要な差分が残っています。"
+        if change_kind == "context"
+        else "conflict 解消以外の差分が残っています。"
+    )
+    assert expected_summary in result.stderr
+    assert str(target) in result.stderr
+    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
 
 
 def test_session_join_handles_conflict_path_containing_newline(

@@ -37,10 +37,17 @@ def build_oracle_review_merge_finding_parameter(
         - 指定の Structured Output schema に従って編集操作を列挙すること
         - 編集操作実行後、所見同士の内容的な重複や相互矛盾が解消されていること
         - 十分コンパクトで整合的なら空配列を返すこと
-        - target_ids には入力所見の finding_id を指定すること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,
+        aux_static_prompt=[
+            StructDoc(
+                "Structured Output の決定論的事後条件",
+                """
+                - 各 `operations[].target_ids` の各値は、「現状の所見リスト」に入力された `finding_id` 集合の要素でなければならない
+                """,
+            ),
+        ],
         aux_dynamic_prompt=[
             StructDoc(
                 "現状の所見リスト",

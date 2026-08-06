@@ -44,16 +44,19 @@
 # `join.py`
 
 ## Summary
-- session branch を session home branch へ merge し、事前条件確認、conflict 解消依頼、merge 完了、状態更新、local branch 削除と結果表示までを実行する CLI 実装。
-- merge conflict 時は対象 path を安全に列挙し、Codex に conflict marker 解消を依頼したうえで、対象外変更・marker 残存・unmerged path を検査してから commit する。
+- `cmoc session join` の CLI 実装。active な session branch の事前条件を検証し、session home branch へ merge した後、到達可能な場合のみ元 branch を削除して結果を表示する。
+- merge conflict 発生時は未解決 path を安全に列挙し、Codex に conflict marker の解消を依頼する。conflict 対象外の変更や marker 外の内容変更を検査し、解決後に stage・commit まで行う。
+- session join の実行本体と、conflict 解決、差分監視、path fingerprint、marker 検出などの内部補助処理を含む。
 
 ## Read this when
-- `cmoc session join` の実行フロー、事前条件、状態遷移、merge 後の branch 削除条件を確認するとき。
-- session join の merge conflict 解消、Codex 呼び出し、対象外差分の検査、conflict marker 判定を変更または調査するとき。
+- session join CLI の実行条件、merge・branch 削除・結果表示の挙動を確認または変更するとき
+- session join における merge conflict の Codex 委譲、安全な差分制限、marker 検証を確認または変更するとき
+- session branch の join 後 cleanup や failure 時の stderr 出力を調査するとき
 
 ## Do not read this when
-- session 作成や session 状態管理全般を調査するだけで、join サブコマンドの挙動を扱わないとき。
-- conflict resolution parameter の仕様や Codex 実行規則そのものを確認する場合は、対応する設定・仕様ファイルを直接読むとき。
+- session の作成・開始・終了など join 以外の subcommand の挙動を確認するとき
+- conflict resolution 用 prompt の正本仕様や builder 実装そのものを確認するときは、対応する oracle または builder の対象を直接読む
+- 共通 CLI runtime、state 永続化、Git status 取得の一般仕様だけを確認するときは、それぞれの共通実装・仕様を直接読む
 
 ## hash
-- 4db399ac22ea9860918c2283317bd42e702d73015c22a544dabf6504031743e9
+- b8e19759006c930fb59075adae4e8ff8bc78a3d8de25a6ca14f7d2e3459fc69e

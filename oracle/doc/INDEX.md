@@ -1,19 +1,19 @@
 # `app_spec`
 
 ## Summary
-- cmoc の CLI・workflow・Codex 連携・ログ・エラー処理・session/run lifecycle など、アプリケーション挙動に関する正本仕様をまとめたディレクトリ。個別仕様の責務や適用条件を確認し、実装・検証時に対応する仕様文書へ進むための入口となる。
+- cmoc のアプリケーション仕様をまとめた正本ドキュメント群。CLI 補完、Codex CLI 呼び出し、ログ、doctor preprocess、プロンプト編集、session/run、サブコマンドなど、実装や検証時に参照すべき機能別仕様への入口となる。
 
 ## Read this when
-- cmoc のアプリケーション仕様を調査・実装・変更・レビューするとき。
-- CLI 自動補完、Codex exec、provider、ログ、doctor preprocess、prompt、run/session、サブコマンドなど複数の仕様領域から読むべき正本を選ぶとき。
+- cmoc の CLI 挙動、共通処理、Codex 連携、ログ、プロンプト、session/run、サブコマンドの正本仕様を調査・変更・検証するとき
+- 対象機能の仕様文書を特定し、その責務境界や関連する下位仕様への入口を確認するとき
 
 ## Do not read this when
-- INDEX.md の生成・更新規則そのものを確認するとき。
-- 特定仕様の実装構造やテスト手順など、対応する realization code・test を直接確認すべきとき。
-- cmoc の利用手順だけを確認するときは、利用手順書を直接読む。
+- 特定機能の詳細仕様が既に分かっており、該当する個別仕様文書を直接確認できるとき
+- 実装構造やテスト実行手順だけを確認する場合は、対応する realization code・realization test・開発ルールを直接読むとき
+- INDEX.md の自動生成規則だけを確認する場合は、インデクシング仕様を直接読むとき
 
 ## hash
-- d30ec218f343649f9229f7cfc6f01ab130c2afc0a4dcfc7d53d0d58805f98d02
+- ebb40b1c0cb03341f90488981f9ac2e1992df3d5b1b07451b60bc24f1eea9184
 
 # `branch_model.md`
 

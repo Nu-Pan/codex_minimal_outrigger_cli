@@ -46,18 +46,18 @@
 # `merge_finding.py`
 
 ## Summary
-- oracle review finding merge 用の realization adapter。canonical builder を再利用し、動的な所見リストを含む prompt 内のコードフェンスを保護して、レビュー所見統合用の AgentCallParameter を生成する。
+- oracle review finding の canonical parameter builder を再公開する realization adapter。動的な所見リストを prompt に埋め込む際、コードブロックの fence を保護する。
 
 ## Read this when
-- oracle review finding merge の parameter 生成処理を変更・確認するとき
-- 動的な所見リストの prompt 埋め込みやコードフェンス保護の挙動を確認するとき
+- oracle review finding の agent call parameter を生成・再公開する実装を確認するとき。
+- 所見リストの prompt 埋め込みやコードブロック fence 保護の挙動を確認するとき。
 
 ## Do not read this when
-- canonical builder の仕様や prompt 本文を確認したいときは、参照先の oracle 実装を直接読む
-- レビュー所見統合以外の builder や prompt fence 処理を調査するとき
+- canonical builder 自体の仕様や prompt 内容を確認したいときは、対応する oracle の実装・定義を直接読む。
+- review finding と無関係な agent call builder や prompt fence 処理を調査するとき。
 
 ## hash
-- 6d22b428055bda107099448ee4e32f4f9d8fb99eee14fdd81085fbfd16b9d294
+- e7eee39c1cc6da7a9c11626c164a5f34322d6814f43fce8aec86e8adc409b439
 
 # `validate_finding_advocate.py`
 

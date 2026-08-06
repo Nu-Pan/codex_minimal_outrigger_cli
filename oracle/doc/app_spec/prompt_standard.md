@@ -30,17 +30,38 @@
 - `cmoc tui` のオリジナルプロンプトに応じて規範を選択する agent call を行ってはいけない
 - indexing agent call は、`build_index_entry_standard` が定める index entry standard の責務を維持する
 
-## Structured Output schema の責務
+## Structured Output の出力契約
 
-- Structured Output schema は、field、型、必須性、列挙値、および入れ子構造からなる出力構造を定義する
-- cmoc が解釈する判定基準は、対応する prompt part の単一の正本に置く
-- 同じ判定基準を複数の schema、個別 prompt、および prompt part に重複させてはいけない
+Structured Output の機械的な受理条件は、schema と宣言済みの決定論的事後条件だけで定義する。
+
+### schema の責務
+
+- 使用可能な JSON Schema で表現できる条件は schema に置く
+- schema が定義する条件には、field、型、必須性、列挙値、配列要素数、入れ子、および field 間の構造的な組み合わせを含める
 - schema の field description は、field の意味と構造を説明する範囲に留める
+- schema で表現できる条件を個別 prompt または決定論的事後条件へ重複させてはいけない
+
+### 決定論的事後条件の責務
+
+- 実行時状態を必要とするため schema で表現できない条件だけを、決定論的事後条件にする
+- 実行時状態を必要とする条件には、agent call が実際に変更した path 集合との照合や、入力された ID 集合への参照を含める
+- 決定論的事後条件は、対応する `build_*_parameter` 関数が構築する初回 prompt 内の一箇所に置く
+- 機械的に検証する各条件は、初回応答前に agent が読み取れる形で宣言する
+- 同じ決定論的事後条件を schema、複数の個別 prompt、prompt part、または oracle doc に重複させてはいけない
+- oracle doc から個別の決定論的事後条件を示す必要がある場合は、正本である builder と初回 prompt 内の節を参照する
+
+### 受理条件の境界
+
+- cmoc は、JSON parse の成否、schema validation、および宣言済みの決定論的事後条件以外の条件で Structured Output を拒否してはいけない
+- prompt が要求する意味的な品質は、schema または宣言済みの決定論的事後条件に含まれる場合だけ機械的な受理条件として扱う
+- 補正 turn で新しい受理条件を追加してはいけない
+- prompt、schema、および validator の矛盾を出力補正の retry で隠してはいけない
 
 ## agent call に渡すプロンプトは、oracle src 定義の関数を使用する
 
-- agent call に渡すプロンプトは `{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
-- 原則として、この動的構築されたプロンプトをそのまま agent call 側に渡すこととし、realization file 側でプロンプトを加工するのは禁止
+- agent call の初回 prompt は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
+- 原則として、この動的構築された初回 prompt をそのまま agent call 側に渡すこととし、realization file 側でプロンプトを加工するのは禁止
+- Structured Output の補正 prompt には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の出力補正規則を例外として適用する
 - 例外として、oracle src 側にバグがあって realization file 側でフォローする必要がある場合は、必要最低限の範囲内での加工を許容する
 
 ## 記法

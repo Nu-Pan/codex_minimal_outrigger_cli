@@ -1,38 +1,34 @@
 # `doc`
 
 ## Summary
-- cmoc の正本ドキュメントを収めるディレクトリ。アプリケーション挙動、開発規則、branch・commit・worktree のモデル、採用しなかった設計案を扱い、実装・テスト・運用判断の根拠となる下位文書への入口を提供する。
+- cmoc の正本ドキュメントを機能・開発規則・設計判断ごとに整理したディレクトリ。アプリケーション仕様、branch model、不採用案、Python 開発規則への入口を提供する。
 
 ## Read this when
-- cmoc の正本仕様を横断的に調査・変更・レビューするとき。
-- CLI、Codex 連携、session／run、ログ、エラー処理などのアプリケーション仕様を確認するとき。
-- Python 開発環境、設計、コーディング、テスト規則やテスト実行手順を確認するとき。
-- session・run の branch、commit、worktree の関係を確認するとき。
-- 採用されなかった作業方式や設計案の背景・不採用理由を確認するとき。
+- cmoc の機能仕様、branch・commit・worktree のモデル、Python 開発・CLI 設計・テスト規則を調査・変更・検証するとき
+- 対象の詳細仕様や開発ルール文書を特定し、責務境界や関連文書への入口を確認するとき
+- 採用されなかった realization refactor の方式や判断理由を確認するとき
 
 ## Do not read this when
-- 特定のアプリケーション仕様、開発規則、branch model の本文を直接確認できる場合。
-- 実装構造やテストコード、具体的なテスト結果を確認するとき。
-- cmoc の利用手順だけを確認するときは、利用手順に対応する仕様文書を直接読む。
-- INDEX.md の生成・更新規則そのものを確認するとき。
+- 確認したい特定の機能仕様、開発環境手順、テスト手順、CLI 設計、コーディング規則が既に分かっているときは該当文書を直接読む
+- 実装構造やテストコードの内容を確認するときは対応する realization code・realization test を直接読む
+- INDEX.md の自動生成規則や oracle の一般原則だけを確認するときは、それぞれの専用仕様を直接読む
 
 ## hash
-- 308ad5a869d2352db5f718da1c4ffddabac650ac2baa2463dcb8ab0699bdb8af
+- be3d734e9af5847b21ec2ae967fc9311915ebe9076d661faba0d9743e6ed9499
 
 # `src`
 
 ## Summary
-- AIエージェント呼び出しパラメータ、プロンプト生成、設定・パスモデル・構造化文書の正本ソースを収録する領域。呼び出し処理は `acp_builder`、共通モデルや設定は `other`、プロンプトの組み立てと規範は `prompt_builder` から確認する。
+- oracle の正本実装群を格納するディレクトリです。Agent Call Parameter、各種 prompt、Structured Output schema、パス・設定・構造化文書の共通処理を定義し、下位ディレクトリから indexing、oracle 操作、realization 操作、session、TUI の用途別実装へ進みます。
 
 ## Read this when
-- AIエージェント呼び出しの論理パラメータやサブコマンド別のプロンプト構築を確認するとき。
-- プロンプトで使う共通の設定、パス解決、構造化文書、oracle・realization・レビュー・ルーティング規範を確認するとき。
-- 対象責務が `acp_builder`、`other`、`prompt_builder` のどれに属するかを判断するとき。
+- cmoc の agent call パラメータ、prompt、Structured Output schema、oracle・realization の扱い、または TUI・session 起動の正本実装を調査・変更するとき。
+- 用途別の ACP builder、共通 prompt builder、パスモデル、設定、構造化文書処理の入口を選ぶ必要があるとき。
 
 ## Do not read this when
-- CLIから正本ソースを利用する具体的な実行フローやrealization側の実装だけを確認したいとき。
-- 特定のサブコマンドの呼び出しパラメータ、共通モデル、またはプロンプト部品の責務が明らかな場合は、該当する下位ディレクトリへ直接進むとき。
-- 正本文書やテストの内容を確認したいとき。
+- 実際の CLI 実装や差分適用、競合解消、git 操作など、oracle の正本実装を呼び出す realization 側の処理を調査するとき。
+- 特定の用途が明確で、indexing、oracle、realization、session、TUI、prompt builder などの下位ディレクトリへ直接進めるとき。
+- 個別の prompt 部品、Structured Output フィールド定義、または特定の設定・パスモデルだけを確認するとき。
 
 ## hash
-- 865811be3ca72f2dc59f9ccdd9071cfcaa25ef45c152a826926f407e9ab92bff
+- d15c71e92ca4f9aa8e7b78017625c19bfe2b714eb4921a791d18c6503ea78552

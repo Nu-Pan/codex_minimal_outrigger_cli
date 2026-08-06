@@ -94,6 +94,7 @@ def _cmoc_realization_apply_fork_body() -> None:
         # agent call から処理単位の commit 検査まで同じ tracking scope に含める。
         run_worktree = context.run_worktree
         with run_process_tracking(context.repo, context.session_id):
+            preflight_head = head_commit(run_worktree)
 
             def record_agent_head() -> None:
                 """本命 agent の直前の run branch HEAD を記録する。"""
@@ -112,6 +113,11 @@ def _cmoc_realization_apply_fork_body() -> None:
             except BaseException:
                 if agent_commit_check_active and agent_head is not None:
                     _ensure_agent_did_not_commit(run_worktree, agent_head)
+                else:
+                    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+                    # callback 前の indexing commit は本命 agent の処理単位に含めず、
+                    # 元の失敗を保ったまま error cleanup へ渡す。
+                    _rollback_preflight_commits(run_worktree, preflight_head)
                 raise
             if agent_commit_check_active and agent_head is not None:
                 _ensure_agent_did_not_commit(run_worktree, agent_head)
@@ -253,6 +259,23 @@ def _ensure_agent_did_not_commit(worktree: Path, before_head: str) -> None:
         ],
         f"before HEAD: {before_head}\nafter HEAD: {after_head}",
     )
+
+
+def _rollback_preflight_commits(worktree: Path, before_head: str) -> None:
+    """本命 agent 前の indexing commit を処理単位の開始 HEAD へ戻す。"""
+    after_head = head_commit(worktree)
+    if after_head == before_head:
+        return
+    try:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        run_git(["reset", "--hard", before_head], worktree)
+    except BaseException as reset_error:
+        raise CmocError(
+            "realization apply の preflight commit を差分へ戻せませんでした。",
+            ["run worktree の git history と indexing の状態を確認してください。"],
+            f"before HEAD: {before_head}\nafter HEAD: {after_head}\n"
+            f"reset error: {reset_error!r}",
+        ) from reset_error
 
 
 def _record_error(
