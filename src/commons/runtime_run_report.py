@@ -124,6 +124,10 @@ def _yaml_scalar(value: object) -> str:
         return "true" if value else "false"
     if isinstance(value, (int, float)):
         return str(value)
+    if isinstance(value, (list, dict)):
+        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # JSON flow style は YAML 1.2 と互換で、nested front matter を一行で保てる。
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
     return json.dumps(str(value), ensure_ascii=False)
 
 

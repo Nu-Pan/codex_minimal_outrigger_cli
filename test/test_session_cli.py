@@ -724,6 +724,79 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
     assert modes == [FileAccessMode.REPO_WRITE]
 
 
+def test_session_join_auto_stages_byte_identical_feedback_record(
+    tmp_path: Path,
+) -> None:
+    """append-only feedback conflict は両 stage が同一 byte の場合だけ統合する。"""
+    root = tmp_path / "repo"
+    root.mkdir()
+    path = root / ".cmoc/gt/ar/feedback/ingestion/fbo_same.json"
+    calls: list[list[str]] = []
+
+    def fake_git(
+        args: list[str], _root: Path, check: bool = True
+    ) -> cmoc_runtime.CommandResult:
+        """stage 2/3 が同じ内容の unmerged index を再現する。"""
+        del check
+        calls.append(args)
+        if args[:1] == ["show"]:
+            return cmoc_runtime.CommandResult(0, '{"same":true}\n', "")
+        return cmoc_runtime.CommandResult(0, "", "")
+
+    remaining = session_join_module._resolve_feedback_state_conflicts(
+        root, [path], fake_git
+    )
+
+    assert remaining == []
+    assert [call[0] for call in calls] == ["show", "show", "checkout", "add"]
+
+
+def test_session_join_aborts_divergent_feedback_record_without_agent(
+    tmp_path: Path,
+) -> None:
+    """同じ feedback record path の異なる内容を agent へ渡さず merge 中止する。"""
+    root = make_repo(tmp_path)
+    home_branch = current_branch(root)
+    relative = ".cmoc/gt/ar/feedback/ingestion/fbo_conflict.json"
+    path = root / relative
+    run_git(root, "switch", "-c", "feedback-session")
+    path.parent.mkdir(parents=True)
+    path.write_text('{"branch":"session"}\n')
+    run_git(root, "add", relative)
+    run_git(root, "commit", "-m", "session feedback")
+    run_git(root, "switch", home_branch)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('{"branch":"home"}\n')
+    run_git(root, "add", relative)
+    run_git(root, "commit", "-m", "home feedback")
+    merge = cmoc_runtime.run_git(
+        ["merge", "--no-ff", "feedback-session"], root, check=False
+    )
+    assert merge.returncode != 0
+    agent_called = False
+
+    def fail_agent(*_args: object, **_kwargs: object) -> None:
+        """divergent feedback record が generic agent に届いたら失敗する。"""
+        nonlocal agent_called
+        agent_called = True
+
+    with pytest.raises(CmocError, match="divergent conflict"):
+        session_join_module.resolve_session_join_conflict(
+            root,
+            fail_agent,
+            cmoc_runtime.run_git,
+        )
+
+    assert agent_called is False
+    assert (
+        cmoc_runtime.run_git(
+            ["rev-parse", "-q", "--verify", "MERGE_HEAD"], root, check=False
+        ).returncode
+        != 0
+    )
+    assert path.read_text() == '{"branch":"home"}\n'
+
+
 def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

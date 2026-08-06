@@ -18,6 +18,7 @@ from cmoc_runtime import (
     start_subcommand_step,
 )
 from commons.indexing import enable_indexing_preflight
+from commons.runtime_feedback import accepted_feedback_observations
 from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -188,7 +189,7 @@ def _cmoc_realization_apply_fork_body() -> None:
             completion_reason="completed",
             changed_paths=flattened_change_paths(changes),
             codex_returncode=codex_returncode,
-            extra_fields={"diff_base_commit": diff_base_commit},
+            extra_fields=_apply_report_fields(diff_base_commit),
             body_lines=_cleanup_warning_lines(cleanup_warnings),
         )
     except BaseException as exc:
@@ -317,7 +318,7 @@ def _record_error(
         completion_reason="error",
         changed_paths=changed_paths,
         codex_returncode=codex_returncode,
-        extra_fields={"diff_base_commit": diff_base_commit},
+        extra_fields=_apply_report_fields(diff_base_commit),
         body_lines=[
             "## Error",
             repr(exc),
@@ -335,3 +336,13 @@ def _cleanup_warning_lines(warnings: list[str]) -> list[str]:
         "## Cleanup warnings",
         *([f"- {warning}" for warning in warnings] or ["- none"]),
     ]
+
+
+def _apply_report_fields(diff_base_commit: str | None) -> dict[str, object]:
+    """apply 固有の diff 始点と accepted feedback 参照を返す。"""
+    observations = accepted_feedback_observations()
+    return {
+        "diff_base_commit": diff_base_commit,
+        "feedback_observation_count": len(observations),
+        "feedback_observations": observations,
+    }

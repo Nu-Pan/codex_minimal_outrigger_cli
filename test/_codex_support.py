@@ -45,6 +45,7 @@ def codex_parameter(
 ) -> AgentCallParameter:
     """runtime wrapper test で使う小さな既定 Codex parameter を作る。"""
     return AgentCallParameter(
+        agent_call_kind="test_agent_call",
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=mode,

@@ -141,6 +141,23 @@ def test_complete_prompt_always_includes_routing_rule() -> None:
     assert "# routing rule" in rendered
 
 
+def test_complete_prompt_includes_feedback_instruction_exactly_once() -> None:
+    """全 agent call の共通 feedback instruction が一経路だけで注入される。"""
+    prompt = build_complete_prompt(
+        role="- role",
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
+        aux_dynamic_prompt=[],
+    )
+
+    rendered = render_as_markdown(prompt)
+    assert rendered.count("# human feedback reporting") == 1
+    assert rendered.count("cmoc_feedback.submit_observation") == 1
+    assert "feedback 保存 file は直接編集しない" in rendered
+
+
 def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
     tmp_path: Path,
 ) -> None:

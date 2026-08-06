@@ -15,19 +15,20 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理を構成するモジュール群。apply workload の実装と、`cmoc realization apply fork` の実行フロー・run lifecycle・差分検査・commit・rollback・report 保存を確認する入口。
+- realization の apply 処理に関する実装をまとめるディレクトリ。apply workload の入口と、`realization apply fork` の実行オーケストレーションを確認するために読む。
 
 ## Read this when
-- realization の apply workload を調査・変更するとき。
-- `cmoc realization apply fork` の実行フロー、agent 差分の検査、run state 更新、fork report、失敗時の rollback・cleanup を確認するとき。
+- realization の apply workload の内容を調査・変更するとき。
+- `cmoc realization apply fork` の実行順序、run state 遷移、apply agent 起動、差分検査、commit 単位の処理、fork report 保存や失敗時 cleanup を調査・変更するとき。
 
 ## Do not read this when
 - apply workload 以外の処理を扱うとき。
-- apply agent の起動パラメータだけを変更するときは、launch parameter builder を直接読む。
-- 共通 lifecycle の仕様や実装、または `cmoc realization apply` の別サブコマンドだけを扱うとき。
+- apply agent 自体のプロンプトや差分適用規則だけを調べるとき。
+- 共通の run lifecycle、process tracking、git 差分操作の一般仕様だけを調べるとき。
+- apply fork と無関係な CLI サブコマンドの挙動を調べるとき。
 
 ## hash
-- 42bdf2dfaf2569c314513e0284e369a1e2eddafecde5351c4480bc10de11b9e8
+- eb7545f0b637ac9a56a90a93e267347684b622220449242820e5034e90a9b328
 
 # `refactor`
 

@@ -16,6 +16,7 @@ import re
 import select
 import signal
 import subprocess
+import sys
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -29,6 +30,11 @@ from config.cmoc_config import CmocConfig, JsonTomlValue
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
 from .runtime_errors import CmocError
+from .runtime_feedback import (
+    FEEDBACK_CAPABILITY_ENV,
+    FEEDBACK_COLLECTOR_ENV,
+    FEEDBACK_PROTOCOL_ENV,
+)
 from .runtime_paths import schema_store_dir
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
@@ -548,6 +554,45 @@ def _model_provider_override_args(
     return args
 
 
+def _feedback_mcp_override_args() -> list[str]:
+    """cmoc_feedback server の effective configuration 全体を支配する。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # capability value は argv に載せず、Codex process の local environment から
+    # reporter process だけが whitelist 名で継承する。
+    server: dict[str, JsonTomlValue] = {
+        "command": sys.executable,
+        "args": ["-m", "commons.runtime_feedback_reporter"],
+        "env_vars": [
+            FEEDBACK_CAPABILITY_ENV,
+            FEEDBACK_COLLECTOR_ENV,
+            FEEDBACK_PROTOCOL_ENV,
+        ],
+        "enabled": True,
+        "required": False,
+        "enabled_tools": ["submit_observation"],
+        "disabled_tools": [],
+        "startup_timeout_sec": 5,
+        "tool_timeout_sec": 15,
+        "default_tools_approval_mode": "approve",
+        "tools": {"submit_observation": {"approval_mode": "approve"}},
+    }
+    args = _config_override("mcp_servers.cmoc_feedback", _toml_value(server))
+    # MCP process への env_vars 転送には Codex process の環境が必要だが、同じ値を
+    # agent が起動する shell command へ継承させてはならない。
+    for name in (
+        FEEDBACK_CAPABILITY_ENV,
+        FEEDBACK_COLLECTOR_ENV,
+        FEEDBACK_PROTOCOL_ENV,
+    ):
+        args.extend(
+            _config_override(
+                f"shell_environment_policy.filters.{name}",
+                _toml_string("exclude"),
+            )
+        )
+    return args
+
+
 def build_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig,
@@ -565,6 +610,7 @@ def build_codex_override_args(
         sandbox_mode,
         *_config_override("approvals_reviewer", _toml_string("auto_review")),
         *_config_override("model_reasoning_effort", _toml_string(reasoning_effort)),
+        *_feedback_mcp_override_args(),
     ]
     if model_spec.model_provider is not None:
         args.extend(_model_provider_override_args(model_spec.model_provider, config))

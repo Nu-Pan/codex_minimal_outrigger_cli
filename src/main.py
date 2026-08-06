@@ -11,6 +11,7 @@ from cmoc_runtime import (
     render_error,
 )
 from sub_commands.doctor import cmoc_doctor_impl
+from sub_commands.feedback.report import cmoc_feedback_report_impl
 from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.oracle.edit import cmoc_oracle_edit_impl
 from sub_commands.oracle.investigation import cmoc_oracle_investigation_impl
@@ -113,12 +114,14 @@ realization_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 realization_apply_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 realization_refactor_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 run_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
+feedback_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 app.add_typer(session_app, name="session")
 app.add_typer(oracle_app, name="oracle")
 app.add_typer(realization_app, name="realization")
 realization_app.add_typer(realization_apply_app, name="apply")
 realization_app.add_typer(realization_refactor_app, name="refactor")
 app.add_typer(run_app, name="run")
+app.add_typer(feedback_app, name="feedback")
 
 
 @app.command()
@@ -200,6 +203,15 @@ def run_abandon() -> None:
 def indexing() -> None:
     """work root の INDEX.md を更新する CLI 入口。"""
     cmoc_indexing_impl()
+
+
+@feedback_app.command("report")
+def feedback_report(
+    show_all: bool = typer.Option(False, "--all"),
+) -> None:
+    """raw feedback observation を増分 normalization して report を作る。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    cmoc_feedback_report_impl(show_all)
 
 
 def main() -> None:

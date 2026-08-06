@@ -260,6 +260,7 @@ def test_run_codex_exec_stores_schema_state_under_repo_root(
         )
     )
     parameter = AgentCallParameter(
+        agent_call_kind="test_agent_call",
         model_class=ModelClass.EFFICIENCY,
         reasoning_effort=ReasoningEffort.LOW,
         file_access_mode=FileAccessMode.REPO_WRITE,
