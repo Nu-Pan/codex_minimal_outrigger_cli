@@ -385,22 +385,23 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 lifecycle を検証する pytest テスト群です。session state、run worktree・branch、process tracking、INDEX 更新、fork/lifecycle report、merge・rollback・cleanup、異常終了・中断時の状態遷移を横断的に扱います。
-- realization apply/refactor の agent 境界、変更 path、oracle・INDEX・cmoc 管理ファイルの保護、rename/delete、unresolved finding、joinable/ready/error 遷移を検証するテストの入口です。
+- editing run の統合テスト入口。realization apply/refactor の fork、共通 run state、run join/abandon、worktree・branch・process tracking・report の lifecycle を、隔離 Git repository fixture で検証する。
+- 正常系だけでなく、unexpected な oracle・INDEX・realization 差分、agent commit、rename/delete、cleanup・merge・rollback・復旧・中断・競合・破損 tracking などの失敗境界を扱う。
+- apply/refactor の実装挙動、共通 lifecycle helper、run join/abandon の実装や仕様適合を調査・変更・レビューするときの統合テスト入口である。
 
 ## Read this when
-- realization apply/refactor の fork 挙動を変更・調査するとき
-- run join/abandon の merge、force-resolve、cleanup、process 停止を変更・調査するとき
-- fork/lifecycle report、refactor state、INDEX refresh、Codex child tracking の連携を確認するとき
-- agent commit、想定外差分、初期化失敗、競合、cleanup 失敗、中断などの lifecycle 異常系を確認するとき
+- realization apply または refactor の fork lifecycle を確認・変更するとき
+- run join または run abandon の state 遷移、merge、cleanup、report、process 停止を確認するとき
+- agent や INDEX refresh が作る差分の検証、rollback、中断・失敗時の復旧挙動を確認するとき
+- 複数の run lifecycle 実装をまたぐ回帰テストの対象や既存ケースを把握するとき
 
 ## Do not read this when
-- editing run や run lifecycle と無関係な CLI・テストを扱うとき
-- 単一の低レベル helper の挙動だけを確認し、より直接対応する専用テストで十分なとき
-- 正本仕様の内容確認が目的のとき。対応する oracle 文書を先に読む
+- 単一の helper や単一サブコマンドの局所的な実装だけを確認し、対応する専用テストで十分なとき
+- INDEX 生成そのものの仕様や一般的なテスト実行手順を確認するときは、対応する oracle 文書またはテスト実行手順を直接読む
+- editing run、run join、run abandon に関係しない機能のテストを調査するとき
 
 ## hash
-- 89c8cb1408e789e1f30421d813d1c092853d556d7d8a9f6e4d8427cfd94e57a5
+- 1f12f891749025675f7f9f5663cfc4d29bf785d4e197a7fee4b879e9821c15bc
 
 # `test_indexing_cli.py`
 

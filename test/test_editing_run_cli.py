@@ -1652,7 +1652,10 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """refactor agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。"""
+    """refactor agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
@@ -1661,6 +1664,9 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
         **kwargs: object,
     ) -> SimpleNamespace:
         """agent が realization file を直接 commit する状態を再現する。"""
+        before_agent_call = kwargs["before_agent_call"]
+        assert callable(before_agent_call)
+        before_agent_call()
         worktree = parameter.agent_call_cwd
         (worktree / "README.md").write_text("agent commit\n")
         run_git(worktree, "add", "README.md")
