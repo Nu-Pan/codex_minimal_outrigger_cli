@@ -63,23 +63,18 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口で、apply と refactor の処理群への導線を提供する。
-- apply は realization apply workload と fork 実行 lifecycle、差分検査、commit、状態遷移、report 保存を扱う。
-- refactor は realization refactor fork の実行 lifecycle、対象ファイルの修正、検証、状態更新、finding 追跡、完了判定、report 保存、エラー時 rollback を扱う。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の処理構成・CLI 実行フローを下位実装へ案内する。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- realization apply workload または `cmoc realization apply fork` の動作、状態遷移、差分検査、commit、report 生成を調査・変更するとき。
-- realization refactor の fork lifecycle、対象選択、agent call、state、unresolved finding、完了判定、割り込み・エラー時の挙動を調査・変更するとき。
+- realization workload サブコマンドの構成や実装入口を確認するとき。
+- realization apply または realization refactor の CLI 動作や処理フローを調査・変更するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply agent や refactor agent に渡す launch parameter、プロンプト、Structured Output の仕様だけを確認するとき。
-- run の一般的な isolation、state、join、abandon 契約だけを確認するとき。
-- refactor state の選択・同期ロジックだけを確認するとき。
+- apply または refactor の具体的な処理詳細を確認する場合は、該当する下位パッケージを直接読むとき。
 
 ## hash
-- c467a832d0d1a8a5883c2c32c8ab8717a3027c24d4dc88824e079311accc999b
+- 1a0b83f8736a7768a2d63071164a5f7a263e05689a37289ccf5904cf48024b8a
 
 # `review`
 

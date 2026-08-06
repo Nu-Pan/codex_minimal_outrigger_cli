@@ -1312,11 +1312,15 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
-@pytest.mark.parametrize("replace_content", [False, True])
+@pytest.mark.parametrize(
+    ("replace_content", "add_unrelated_file"),
+    [(False, False), (True, False), (True, True)],
+)
 def test_refactor_fork_moves_unresolved_target_after_rename(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     replace_content: bool,
+    add_unrelated_file: bool,
 ) -> None:
     """rename 後も unresolved target と refactor state の path 集合を揃える。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
@@ -1332,20 +1336,34 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
             (worktree / "README.md").rename(worktree / "renamed.md")
             if replace_content:
                 (worktree / "renamed.md").write_text("completely different content\n")
+            findings = [
+                {
+                    "title": "deferred",
+                    "changed_paths": ["README.md", "renamed.md"],
+                    "resolution": {
+                        "status": "unresolved",
+                        "summary": "needs follow-up",
+                    },
+                }
+            ]
+            if add_unrelated_file:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+                # rename 判定の候補を増やしても unresolved の changed_paths から
+                # rename 先を特定できることを検証する。
+                (worktree / "extra.md").write_text("extra realization\n")
+                findings.append(
+                    {
+                        "title": "extra update",
+                        "changed_paths": ["extra.md"],
+                        "resolution": {
+                            "status": "fixed",
+                            "summary": "updated extra file",
+                        },
+                    }
+                )
             return SimpleNamespace(
                 returncode=0,
-                output_json={
-                    "findings": [
-                        {
-                            "title": "deferred",
-                            "changed_paths": ["README.md", "renamed.md"],
-                            "resolution": {
-                                "status": "unresolved",
-                                "summary": "needs follow-up",
-                            },
-                        }
-                    ]
-                },
+                output_json={"findings": findings},
                 call_log_path=worktree / "README-call.json",
             )
         if kwargs["purpose"] == "realization refactor change summary":

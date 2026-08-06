@@ -15,18 +15,18 @@
 # `fork.py`
 
 ## Summary
-- `realization refactor fork` の CLI 実行全体を担う workload 実装。refactor run の初期化、対象 realization file ごとの agent 調査・修正、差分と commit の検証、refactor state の更新、unresolved finding の追跡、完了判定、report 保存、割り込み・エラー時の rollback と run state 更新を一つの lifecycle として扱う。
-- realization refactor fork の実行制御、処理単位の commit、agent が作成した想定外差分や commit の拒否、変更概要と unresolved finding の report 出力を確認したい場合の実装上の入口である。
+- realization refactor fork の CLI 実行単位を統括する full-cycle workload。run の開始・初期化、対象 file ごとの agent 調査と修正、state 同期、commit、unresolved 管理、完了判定、joinable/error/interruption cleanup、fork report 生成までを一貫して扱う。
+- refactor state と run worktree の差分・HEAD・agent の commit・INDEX 更新後の想定外差分を検証し、current fork の進捗と unresolved finding を report に反映する。下位の file review、change summary、runtime lifecycle、state 管理の入口として機能する。
 
 ## Read this when
-- `cmoc realization refactor fork` の起動から完了または失敗までの制御フローを変更・調査するとき。
-- 対象選択、処理単位の commit、agent call 境界、refactor state、unresolved finding、完了理由、fork report の整合性を確認するとき。
-- KeyboardInterrupt、agent error、cleanup failure、run の joinable/error 遷移に関する挙動を確認するとき。
+- `cmoc realization refactor fork` の実行フロー、処理単位、完了理由、unresolved target の扱いを確認するとき
+- realization refactor fork における run state、割り込み・エラー時の rollback、Codex child の停止、joinable 公開、fork report の生成を変更・調査するとき
+- refactor state と実際の realization 差分、agent commit、rename、INDEX refresh の整合性検証を確認するとき
 
 ## Do not read this when
-- refactor agent に渡すプロンプトや Structured Output の仕様だけを確認したい場合は、file review builder の実装を直接読む。
-- refactor state の選択・同期ロジックだけを確認したい場合は、runtime refactor 共通実装を直接読む。
-- run の一般的な isolation、state、join/abandon 契約だけを確認したい場合は、対応する editing run / run isolation の正本仕様を読む。
+- 単一 file の調査・修正 prompt や Structured Output 契約だけを確認したいときは、file review builder の実装を直接読む
+- 正常完了時の変更概要生成だけを確認したいときは、change summary builder を直接読む
+- 一般的な editing run の join・abandon・state 遷移だけを確認したいときは、runtime lifecycle や run isolation の仕様を直接読む
 
 ## hash
-- 266484a2dc49590c168afc052fe7b25355852c67414036d5e3d06b65b46fd92f
+- 1fc722866cae61f7242fe52600be947a786fd71c33c59b3ba6d1e27dc4d3daf2

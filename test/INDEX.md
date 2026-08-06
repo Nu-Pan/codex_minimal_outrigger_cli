@@ -385,21 +385,25 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 editing run lifecycle の統合テストを扱う。realization apply/refactor の fork、run join/abandon、session state、run worktree、Git 差分、INDEX 更新、process tracking、report、rollback、cleanup の連携と異常系を検証する。
-- apply/refactor の各実装単体ではなく、共通 lifecycle fixture を介した状態遷移や成果物の統合挙動を確認するためのテスト入口である。
+- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、process tracking、INDEX 更新、merge、cleanup、rollback、interrupt、error recovery まで同一 lifecycle fixture で検証する。
+- realization apply fork と realization refactor fork が agent の予期しない変更や commit、管理対象外差分を拒否し、適切に rollback・report・state 遷移を行うことを確認する。
+- run join が realization 変更、rename/delete、oracle 変更、force-resolve、INDEX conflict、post-join 同期失敗を扱い、成功時に merge・state 更新・worktree/branch cleanup を完了することを検証する。
+- run abandon が process tracking の確認、残存 child 停止、worktree/branch cleanup、破損 tracking や cleanup 失敗時の保護と report を行うことを検証する。
+- refactor fork の target 調査、unresolved finding、rename 後の state 移行、change summary、継続的な INDEX refresh、処理単位 commit、user interruption と completion report を検証する。
 
 ## Read this when
-- realization apply または refactor の fork と run join/abandon の連携を変更・レビューするとき。
-- run の state 遷移、worktree・branch の作成/削除、process tracking、Codex child の停止、INDEX refresh、report 生成、rollback の統合挙動を確認するとき。
-- unexpected な oracle・INDEX・realization 差分、rename/delete、force-resolve、merge conflict、interrupt、cleanup failure などの境界条件を調査するとき。
+- editing run の apply/refactor fork、run join、run abandon の統合 lifecycle 挙動を変更・レビューするとき
+- session state、run worktree、run branch、process tracking、Codex child cleanup の連携を確認するとき
+- fork report または lifecycle report の生成内容、警告、完了理由、失敗時の永続化を確認するとき
+- INDEX refresh や refactor state 同期が run の commit・rollback・join に与える影響を調査するとき
 
 ## Do not read this when
-- 単一の lifecycle helper や sub-command の内部実装だけを確認する場合は、対応する実装とより直接的な単体テストを読む。
-- 一般的な INDEX 生成規則や正本仕様を確認する場合は、この統合テストではなく対応する oracle 文書を読む。
-- fork と join/abandon を含まない通常の CLI 挙動や、無関係なテスト領域を調査する場合。
+- 単一の apply、refactor、join、abandon 実装の詳細だけを確認したい場合は、対応する src 実装または個別の oracle 仕様を直接読む
+- 一般的な INDEX 生成処理や無関係な CLI のテストを調べる場合
+- lifecycle をまたがない単純なユニットロジックの挙動だけを確認する場合
 
 ## hash
-- cbe193eee16e612b6544b52a9321b63f01394f0fde4142afba4d1d66078f4038
+- 7e66c040207d1817edc3579b6be013aece705e28b0920f0b67f180a04abc90c4
 
 # `test_indexing_cli.py`
 

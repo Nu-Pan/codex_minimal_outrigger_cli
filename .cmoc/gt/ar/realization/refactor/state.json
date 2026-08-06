@@ -146,8 +146,8 @@
   "oracle/doc/app_spec/sub_command/realization_refactor.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "831a998ef86795464cf43ff3088a78b643e5360de8363c408849830f26c87724",
-    "last_investigated_at": "2026-08-03_21-38_24_024568000"
+    "last_investigated_sha256": "9ac7f96eca7d16d0d4712976e95bb8e540cb6783af901a42589abbd2532db87f",
+    "last_investigated_at": "2026-08-06_12-36_56_299811000"
   },
   "oracle/doc/app_spec/sub_command/session_abandon.md": {
     "investigation_required": false,
