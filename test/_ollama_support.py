@@ -394,7 +394,7 @@ def _ollama_executable_ok(executable: Path) -> bool:
             timeout=30,
             check=False,
         )
-    except OSError:
+    except (OSError, subprocess.SubprocessError):
         return False
     return result.returncode == 0
 

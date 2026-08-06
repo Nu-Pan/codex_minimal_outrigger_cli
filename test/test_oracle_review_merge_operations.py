@@ -4,6 +4,8 @@
 
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md
+- {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py
+- {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.json
 """
 
 import sub_commands.oracle.review as review_module
@@ -82,9 +84,14 @@ def test_merge_target_id_postcondition_reports_unknown_input_id() -> None:
     output = {
         "operations": [
             {
-                "kind": "delete",
+                "kind": "merge",
                 "target_ids": ["finding-0001", "finding-9999"],
-                "finding": None,
+                "finding": {
+                    "oracle_path": "{{oracle-root}}/spec.md",
+                    "severity": "fatal",
+                    "title": "merged",
+                    "reason": "merged reason",
+                },
             }
         ]
     }

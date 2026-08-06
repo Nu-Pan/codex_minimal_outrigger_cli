@@ -15,38 +15,37 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理を構成するモジュール群。apply workload の実装入口と、`cmoc realization apply fork` の実行・run lifecycle・差分検査・commit・状態遷移・fork report 保存を扱う。
+- realization の apply 処理を構成するモジュール群。apply workload の実装と、`cmoc realization apply fork` の実行フロー・run lifecycle・差分検査・commit・rollback・report 保存を確認する入口。
 
 ## Read this when
-- realization の apply workload の内容を調査または変更するとき。
-- `cmoc realization apply fork` の CLI 動作、run lifecycle、agent 差分の許可範囲、commit・joinable/error 遷移、fork report の生成を確認または変更するとき。
+- realization の apply workload を調査・変更するとき。
+- `cmoc realization apply fork` の実行フロー、agent 差分の検査、run state 更新、fork report、失敗時の rollback・cleanup を確認するとき。
 
 ## Do not read this when
 - apply workload 以外の処理を扱うとき。
-- apply agent に渡す launch parameter だけを確認するとき。
-- run の join・abandon 処理や共通 lifecycle の実装を確認するとき。
-- realization apply の正本仕様を確認するとき。
+- apply agent の起動パラメータだけを変更するときは、launch parameter builder を直接読む。
+- 共通 lifecycle の仕様や実装、または `cmoc realization apply` の別サブコマンドだけを扱うとき。
 
 ## hash
-- 6328a3fb5fd66ea735889bff8f471e4af11f51a9b873ee20bec41d585ea8b27e
+- 42bdf2dfaf2569c314513e0284e369a1e2eddafecde5351c4480bc10de11b9e8
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を扱うパッケージで、関連するリファクタリング処理への入口となる。
-- realization refactor fork の CLI 実行全体を担い、run の初期化、対象 realization file ごとの調査・修正、差分・commit 検証、state 更新、unresolved finding の追跡、完了判定、report 保存、割り込み・エラー時の rollback までを一つの lifecycle として実装する。
+- realization のリファクタリング処理を扱うパッケージ。リファクタリング関連の CLI 実行と処理構成を確認するための入口となる。
+- 単一ファイルの調査・修正、変更概要生成、一般的な run lifecycle の詳細は、それぞれ専用の下位実装を直接確認する。
 
 ## Read this when
-- realization のリファクタリング作業の内容や構成を確認するとき。
-- `cmoc realization refactor fork` の起動から完了または失敗までの制御フローを変更・調査するとき。
-- 対象選択、処理単位の commit、agent call、refactor state、unresolved finding、完了理由、fork report の整合性を確認するとき。
-- KeyboardInterrupt、agent error、cleanup failure、run の joinable/error 遷移に関する挙動を確認するとき。
+- realization のリファクタリング処理の構成や入口を確認するとき
+- realization refactor fork の実行フロー、run 初期化、対象ファイル処理、state 同期、commit、unresolved 管理、完了判定を確認するとき
+- 割り込み・エラー時の cleanup、Codex child の停止、joinable 公開、fork report 生成を調査するとき
+- refactor state、realization 差分、agent commit、rename、INDEX 更新後の整合性検証を確認するとき
 
 ## Do not read this when
-- realization のリファクタリング以外の処理を確認するとき。
-- refactor agent に渡すプロンプトや Structured Output の仕様だけを確認したいとき。
-- refactor state の選択・同期ロジックだけを確認したいとき。
-- run の一般的な isolation、state、join/abandon 契約だけを確認したいとき。
+- realization のリファクタリング以外の処理を確認するとき
+- 単一ファイルの調査・修正 prompt や Structured Output 契約だけを確認するとき
+- 正常完了時の変更概要生成だけを確認するとき
+- 一般的な editing run の join・abandon・state 遷移だけを確認するとき
 
 ## hash
-- d4e6955da20c078f4106e7b2b8a0c260f1ed63f936eef65139f23f7c0140a610
+- 40d944c7b3fe42c3676a2af6e3b3efb15bad5494da89c4146deed57d0df570c8

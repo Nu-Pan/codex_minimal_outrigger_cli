@@ -63,23 +63,18 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口で、apply と refactor の処理群への導線を提供する。
-- apply は realization apply workload と fork 実行 lifecycle、差分検査、commit、状態遷移、report 保存を扱う。
-- refactor は realization refactor fork の実行 lifecycle、対象ファイルの修正、検証、状態更新、finding 追跡、完了判定、report 保存、エラー時 rollback を扱う。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の処理構成、およびそれぞれの CLI 実行フローを下位要素へ案内する。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- realization apply workload または `cmoc realization apply fork` の動作、状態遷移、差分検査、commit、report 生成を調査・変更するとき。
-- realization refactor の fork lifecycle、対象選択、agent call、state、unresolved finding、完了判定、割り込み・エラー時の挙動を調査・変更するとき。
+- realization workload サブコマンドの実装構成や、apply・refactor の処理入口を確認するとき。
+- realization apply fork または realization refactor fork の実行フローを調査するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply agent や refactor agent に渡す launch parameter、プロンプト、Structured Output の仕様だけを確認するとき。
-- run の一般的な isolation、state、join、abandon 契約だけを確認するとき。
-- refactor state の選択・同期ロジックだけを確認するとき。
+- apply または refactor の個別実装、共通 lifecycle、起動パラメータなどを直接調査・変更するとき。
 
 ## hash
-- c467a832d0d1a8a5883c2c32c8ab8717a3027c24d4dc88824e079311accc999b
+- 0a620d680086cb726879d3163877cd2bf0a1c519b912faba6686b81ec2e69e8f
 
 # `review`
 
@@ -115,17 +110,21 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session の各ライフサイクル処理を確認する入口で、開始・参加・中断などの個別サブコマンド実装を含む。
+- session サブコマンドの実装パッケージ。session のライフサイクル操作に関する実装を確認する際の入口となる。
+- session の abandon、fork、join を扱い、branch・state の作成、検証、更新、cleanup、失敗時のロールバックや merge conflict 解決を含む。
 
 ## Read this when
-- session サブコマンドの実装構成や、fork・join・abandon の処理を確認・変更するとき。
+- session サブコマンドの実装構成やライフサイクル処理を確認・変更するとき。
+- session branch と state の作成・更新・削除、cleanup、失敗時の復旧処理を調査するとき。
+- session join の merge conflict 委譲、安全な差分制限、解決後の stage・commit 処理を確認・変更するとき。
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき。
-- session のデータ構造や共通 runtime、設定・仕様のみを確認するときは、対応する直接の実装・仕様ファイルを読む。
+- session の共通 state データ構造、runtime、Git status 取得などの一般仕様だけを確認するときは、対応する共通実装・仕様を直接読む。
+- conflict resolution 用 prompt の正本仕様や builder 実装そのものを確認するときは、対応する oracle または builder の対象を直接読む。
 
 ## hash
-- ab4130d63f8a101c3dcea6098fe955537fe6e185866cf8cb9e83dd99578b8e4c
+- 8a0dfef628903e21e7fae720cdfc2150168e3c41e5d0776d9d80ec9fd63a111d
 
 # `tui.py`
 

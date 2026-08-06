@@ -695,6 +695,68 @@ def test_tracked_codex_subprocess_reaps_child_when_group_cleanup_fails(
     assert group_cleanup_calls == ([] if group_members is None else [True])
 
 
+def test_tracked_codex_subprocess_kills_child_when_cleanup_identity_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """leader identity が読めない cleanup で live child を待ち続けない。
+
+    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    """
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
+
+    class RunningProcess:
+        """group snapshot が空でも生存している fake process。"""
+
+        pid = 4321
+        returncode: int | None = None
+        killed = False
+        waited = False
+
+        def poll(self) -> int | None:
+            """fake process が cleanup 前は生存していることを返す。"""
+            return self.returncode
+
+        def kill(self) -> None:
+            """Popen が保持する child を直接停止したことを記録する。"""
+            self.killed = True
+            self.returncode = -signal.SIGKILL
+
+        def wait(self) -> int:
+            """直接停止した child を reap したことを記録する。"""
+            self.waited = True
+            assert self.returncode is not None
+            return self.returncode
+
+    process = RunningProcess()
+
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: process,
+    )
+    monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: None)
+    monkeypatch.setattr(
+        runtime_codex_profile, "process_group_members", lambda _group: ()
+    )
+
+    def fail_record(*_args: object, **_kwargs: object) -> None:
+        """child tracking の書き込み失敗を再現する。"""
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid")
+
+    monkeypatch.setattr(
+        runtime_codex_profile, "_record_tracked_child_process", fail_record
+    )
+
+    with pytest.raises(CmocError, match="run process tracking を更新できません"):
+        run_tracked_codex_subprocess(
+            ["codex"], tracking_path, text=True, capture_output=True
+        )
+
+    assert process.killed
+    assert process.waited
+
+
 def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

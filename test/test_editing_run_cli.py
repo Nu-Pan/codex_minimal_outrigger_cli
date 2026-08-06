@@ -449,6 +449,50 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
     assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
+def test_apply_rolls_back_preflight_commit_before_agent_boundary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """本命 agent 前の indexing failure で preflight commit を残さない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+
+    def fail_preflight(
+        parameter: AgentCallParameter,
+        **_kwargs: object,
+    ) -> NoReturn:
+        """agent boundary 前に indexing commit が作られて失敗する状態を再現する。"""
+        worktree = parameter.agent_call_cwd
+        index_path = worktree / "INDEX.md"
+        index_path.write_text("preflight index\n")
+        run_git(worktree, "add", "INDEX.md")
+        run_git(worktree, "commit", "-m", "preflight index")
+        raise RuntimeError("preflight failed")
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fail_preflight)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    state = _state(state_path)
+    assert state["run"]["state"] == "error"
+    parts = state["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (
+        run_git(worktree, "rev-parse", "HEAD").stdout.strip()
+        == state["run"]["fork_commit"]
+    )
+    assert (
+        "preflight index"
+        not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
+    )
+    assert not (worktree / "INDEX.md").exists()
+    assert run_git(worktree, "status", "--porcelain").stdout == ""
+
+
 @pytest.mark.parametrize("unexpected_path", ["oracle/unexpected.md", "README.md"])
 def test_apply_rejects_unexpected_refresh_change_before_commit(
     tmp_path: Path,
@@ -1312,11 +1356,15 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
-@pytest.mark.parametrize("replace_content", [False, True])
+@pytest.mark.parametrize(
+    ("replace_content", "add_unrelated_file"),
+    [(False, False), (True, False), (True, True)],
+)
 def test_refactor_fork_moves_unresolved_target_after_rename(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     replace_content: bool,
+    add_unrelated_file: bool,
 ) -> None:
     """rename 後も unresolved target と refactor state の path 集合を揃える。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
@@ -1332,20 +1380,34 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
             (worktree / "README.md").rename(worktree / "renamed.md")
             if replace_content:
                 (worktree / "renamed.md").write_text("completely different content\n")
+            findings = [
+                {
+                    "title": "deferred",
+                    "changed_paths": ["README.md", "renamed.md"],
+                    "resolution": {
+                        "status": "unresolved",
+                        "summary": "needs follow-up",
+                    },
+                }
+            ]
+            if add_unrelated_file:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+                # rename 判定の候補を増やしても unresolved の changed_paths から
+                # rename 先を特定できることを検証する。
+                (worktree / "extra.md").write_text("extra realization\n")
+                findings.append(
+                    {
+                        "title": "extra update",
+                        "changed_paths": ["extra.md"],
+                        "resolution": {
+                            "status": "fixed",
+                            "summary": "updated extra file",
+                        },
+                    }
+                )
             return SimpleNamespace(
                 returncode=0,
-                output_json={
-                    "findings": [
-                        {
-                            "title": "deferred",
-                            "changed_paths": ["README.md", "renamed.md"],
-                            "resolution": {
-                                "status": "unresolved",
-                                "summary": "needs follow-up",
-                            },
-                        }
-                    ]
-                },
+                output_json={"findings": findings},
                 call_log_path=worktree / "README-call.json",
             )
         if kwargs["purpose"] == "realization refactor change summary":
@@ -1590,7 +1652,10 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """refactor agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。"""
+    """refactor agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    """
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
 
@@ -1599,6 +1664,9 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
         **kwargs: object,
     ) -> SimpleNamespace:
         """agent が realization file を直接 commit する状態を再現する。"""
+        before_agent_call = kwargs["before_agent_call"]
+        assert callable(before_agent_call)
+        before_agent_call()
         worktree = parameter.agent_call_cwd
         (worktree / "README.md").write_text("agent commit\n")
         run_git(worktree, "add", "README.md")
