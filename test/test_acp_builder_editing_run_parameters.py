@@ -115,7 +115,12 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert review.reasoning_effort == ReasoningEffort.MAX
     assert review.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert review.structured_output_schema_path is not None
-    assert review.structured_output_schema_path.name == "file_review_and_fix.json"
+    review_schema_path = oracle_schema_path(
+        "realization", "refactor", "fork", "file_review_and_fix.json"
+    )
+    assert (
+        review.structured_output_schema_path.resolve() == review_schema_path.resolve()
+    )
     assert review.run_indexing_preflight is True
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in review.prompt
     assert str(target_path.resolve()) in review.prompt
@@ -129,11 +134,6 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert "対象 repository が要求する必要な検証" in review.prompt
     assert "# realization oracle reference rule" in review.prompt
     review_schema = json.loads(review.structured_output_schema_path.read_text())
-    assert review_schema == json.loads(
-        oracle_schema_path(
-            "realization", "refactor", "fork", "file_review_and_fix.json"
-        ).read_text()
-    )
     finding_schema = review_schema["properties"]["findings"]["items"]
     assert "changed_paths" in finding_schema["required"]
     assert finding_schema["properties"]["changed_paths"]["type"] == "array"
@@ -141,15 +141,15 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert summary.reasoning_effort == ReasoningEffort.MEDIUM
     assert summary.file_access_mode == FileAccessMode.READONLY
     assert summary.structured_output_schema_path is not None
-    assert summary.structured_output_schema_path.name == "change_summary.json"
+    summary_schema_path = oracle_schema_path(
+        "realization", "refactor", "fork", "change_summary.json"
+    )
+    assert (
+        summary.structured_output_schema_path.resolve() == summary_schema_path.resolve()
+    )
     assert summary.run_indexing_preflight is True
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in summary.prompt
     summary_schema = json.loads(summary.structured_output_schema_path.read_text())
-    assert summary_schema == json.loads(
-        oracle_schema_path(
-            "realization", "refactor", "fork", "change_summary.json"
-        ).read_text()
-    )
     assert summary_schema["properties"]["changes"]["minItems"] == 1
     start = summary.prompt.index("# run branch 上の refactor 差分")
     end = summary.prompt.rfind("\n\n# place holder definition", start)

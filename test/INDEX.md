@@ -100,17 +100,21 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- editing run workload の canonical builder adapter を検証するテスト。apply 用 builder が commit 範囲・raw diff・実行規則を prompt に埋め込むこと、refactor 用 builder が canonical Structured Output schema と実行設定を使うことを確認する。
+- editing run workload の canonical builder adapter を検証するテスト。apply builder が commit 範囲・raw diff・標準規則を prompt と実行設定へ反映し、refactor builder が canonical Structured Output schema、実行設定、決定論的事後条件を使うことを確認する。
+- テスト用 linked worktree を隔離して作成し、raw diff 内の三連 backtick や prompt 境界風マーカーが外側の prompt 境界を壊さず保持されることも検証する。対応する builder 実装と oracle schema の挙動を確認する入口となる。
 
 ## Read this when
-- editing run の realization apply/refactor builder の prompt 構成、実行設定、Structured Output schema、raw diff の境界処理を検証または変更するとき。
+- apply または refactor の editing run builder の prompt 構成、実行パラメータ、Structured Output schema の利用を変更・検証するとき
+- raw diff の埋め込み、prompt 境界のエスケープ、linked worktree 上での builder 動作を確認するとき
+- 対応する canonical builder adapter や oracle schema の回帰テストを調査するとき
 
 ## Do not read this when
-- builder 実装そのものの仕様や変更内容を確認したいときは、テストが対応する oracle file と各 realization builder 実装を直接読む。
-- editing run と無関係な builder、または一般的な Git worktree fixture の挙動だけを扱うとき。
+- builder 以外の ACP 実装や一般的な git worktree 操作だけを調査するとき
+- Structured Output schema の正本内容そのものを変更・確認するときは、対応する oracle schema を直接読む
+- prompt 標準規則の定義や realization の設計意図を確認するときは、対応する oracle 文書を直接読む
 
 ## hash
-- a906168c8878b853cb6354fbb3f45b9e96e77a5b449e5aa151453cc129b80b5d
+- 275dd9bf6d20cf16b1d14eef2d39e10d576a1cc6a0fe685cd7a9fcba7fde4504
 
 # `test_acp_builder_indexing_parameters.py`
 
