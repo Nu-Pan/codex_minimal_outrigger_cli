@@ -449,6 +449,50 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
     assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
+def test_apply_rolls_back_preflight_commit_before_agent_boundary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """本命 agent 前の indexing failure で preflight commit を残さない。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+
+    def fail_preflight(
+        parameter: AgentCallParameter,
+        **_kwargs: object,
+    ) -> NoReturn:
+        """agent boundary 前に indexing commit が作られて失敗する状態を再現する。"""
+        worktree = parameter.agent_call_cwd
+        index_path = worktree / "INDEX.md"
+        index_path.write_text("preflight index\n")
+        run_git(worktree, "add", "INDEX.md")
+        run_git(worktree, "commit", "-m", "preflight index")
+        raise RuntimeError("preflight failed")
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fail_preflight)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    state = _state(state_path)
+    assert state["run"]["state"] == "error"
+    parts = state["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (
+        run_git(worktree, "rev-parse", "HEAD").stdout.strip()
+        == state["run"]["fork_commit"]
+    )
+    assert (
+        "preflight index"
+        not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
+    )
+    assert not (worktree / "INDEX.md").exists()
+    assert run_git(worktree, "status", "--porcelain").stdout == ""
+
+
 @pytest.mark.parametrize("unexpected_path", ["oracle/unexpected.md", "README.md"])
 def test_apply_rejects_unexpected_refresh_change_before_commit(
     tmp_path: Path,

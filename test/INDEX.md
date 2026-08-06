@@ -385,25 +385,22 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、process tracking、INDEX 更新、merge、cleanup、rollback、interrupt、error recovery まで同一 lifecycle fixture で検証する。
-- realization apply fork と realization refactor fork が agent の予期しない変更や commit、管理対象外差分を拒否し、適切に rollback・report・state 遷移を行うことを確認する。
-- run join が realization 変更、rename/delete、oracle 変更、force-resolve、INDEX conflict、post-join 同期失敗を扱い、成功時に merge・state 更新・worktree/branch cleanup を完了することを検証する。
-- run abandon が process tracking の確認、残存 child 停止、worktree/branch cleanup、破損 tracking や cleanup 失敗時の保護と report を行うことを検証する。
-- refactor fork の target 調査、unresolved finding、rename 後の state 移行、change summary、継続的な INDEX refresh、処理単位 commit、user interruption と completion report を検証する。
+- workload fork と共通 run join/abandon の統合 lifecycle を検証する pytest テスト群です。session state、run worktree・branch、process tracking、INDEX 更新、fork/lifecycle report、merge・rollback・cleanup、異常終了・中断時の状態遷移を横断的に扱います。
+- realization apply/refactor の agent 境界、変更 path、oracle・INDEX・cmoc 管理ファイルの保護、rename/delete、unresolved finding、joinable/ready/error 遷移を検証するテストの入口です。
 
 ## Read this when
-- editing run の apply/refactor fork、run join、run abandon の統合 lifecycle 挙動を変更・レビューするとき
-- session state、run worktree、run branch、process tracking、Codex child cleanup の連携を確認するとき
-- fork report または lifecycle report の生成内容、警告、完了理由、失敗時の永続化を確認するとき
-- INDEX refresh や refactor state 同期が run の commit・rollback・join に与える影響を調査するとき
+- realization apply/refactor の fork 挙動を変更・調査するとき
+- run join/abandon の merge、force-resolve、cleanup、process 停止を変更・調査するとき
+- fork/lifecycle report、refactor state、INDEX refresh、Codex child tracking の連携を確認するとき
+- agent commit、想定外差分、初期化失敗、競合、cleanup 失敗、中断などの lifecycle 異常系を確認するとき
 
 ## Do not read this when
-- 単一の apply、refactor、join、abandon 実装の詳細だけを確認したい場合は、対応する src 実装または個別の oracle 仕様を直接読む
-- 一般的な INDEX 生成処理や無関係な CLI のテストを調べる場合
-- lifecycle をまたがない単純なユニットロジックの挙動だけを確認する場合
+- editing run や run lifecycle と無関係な CLI・テストを扱うとき
+- 単一の低レベル helper の挙動だけを確認し、より直接対応する専用テストで十分なとき
+- 正本仕様の内容確認が目的のとき。対応する oracle 文書を先に読む
 
 ## hash
-- 7e66c040207d1817edc3579b6be013aece705e28b0920f0b67f180a04abc90c4
+- 89c8cb1408e789e1f30421d813d1c092853d556d7d8a9f6e4d8427cfd94e57a5
 
 # `test_indexing_cli.py`
 
