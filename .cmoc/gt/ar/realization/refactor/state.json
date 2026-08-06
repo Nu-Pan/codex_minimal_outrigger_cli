@@ -1260,10 +1260,10 @@
     "last_investigated_at": "2026-07-26_13-12_59_350114000"
   },
   "test/test_runtime_codex_permissions.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "c74b31ed3e75231b941ec5ba95d015c193c2eb99abf1f8338728567033e9d560",
-    "last_investigated_at": "2026-08-03_19-01_12_837934000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "5c5b1bcc7012fea9d7929919ca98cf8bb9cb85e61003e1a66d0ba4015af5bfe8",
+    "last_investigated_at": "2026-08-06_11-20_16_224006000"
   },
   "test/test_runtime_codex_profile.py": {
     "investigation_required": false,
