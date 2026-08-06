@@ -717,7 +717,12 @@ def validate_tracked_feedback_state(worktree: Path) -> None:
     for path in sorted(root.rglob("*.json")):
         try:
             content = path.read_text(encoding="utf-8")
-            if any(marker in content for marker in ("<<<<<<<", "=======", ">>>>>>>")):
+            # Git の marker は行頭に現れる。canonical JSON の文字列値に含まれる
+            # marker 風の文字列は、未解決 conflict ではない。
+            if any(
+                line.startswith(("<<<<<<<", "|||||||", "=======", ">>>>>>>"))
+                for line in content.splitlines()
+            ):
                 raise ValueError("unresolved conflict marker")
             value = json.loads(content)
             if not isinstance(value, dict):

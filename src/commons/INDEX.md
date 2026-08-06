@@ -305,23 +305,24 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の append-only tracked state を扱う中核モジュール。issue identity、revision、occurrence、assessment、disposition、ingestion、report の各 record を構築・保存・検証し、content-addressed ID や observation との対応関係を管理する。
-- raw observation envelope と tracked feedback state の schema、canonical JSON、ID、timestamp、path、record 間参照を検査する。
-- tracked record 集合から effective revision・assessment・disposition を選択して issue view を構築し、現在の worktree または指定 commit の state を読み取る。
-- feedback 正規化処理の version、normalization unit ID、report ID も提供する。feedback state の永続化仕様や正規化・report 読み取りの実装を確認する際の入口であり、正本仕様は対応する oracle 文書を参照する。
+- feedback の tracked append-only normalized state を一元的に扱うモジュール。identity、revision、occurrence、assessment、disposition、ingestion、report の各 record を構築・配置・canonical JSON として保存する。
+- raw observation envelope、各 tracked record の schema、content-addressed ID、パス整合性、record 間参照、Git conflict marker を検査する。
+- tracked state または指定 commit から issue view を読み込み、観測時刻と ID に基づいて effective revision・assessment・disposition を選択する。
+- feedback の canonical issue key、normalizer version、normalization unit ID、report ID など、append-only state の識別値を生成する。
 
 ## Read this when
-- feedback の tracked append-only state の record 形式、生成、保存、schema 検証を変更・調査するとき
-- observation と issue、revision、ingestion の参照整合性や content-addressed ID の挙動を確認するとき
-- effective issue view の選択規則、worktree または commit からの feedback state 読み取りを確認するとき
+- feedback observation の収集結果を tracked state へ正規化・保存する処理を変更するとき。
+- feedback record の schema、ID、canonical JSON、パス、参照関係の検査規則を確認するとき。
+- issue の effective state を現在または特定 Git commit から読み取る処理を変更するとき。
+- feedback normalization の再開単位、normalizer version、report record の識別規則を確認するとき。
 
 ## Do not read this when
-- feedback の正本仕様そのものを確認する場合は、対応する oracle 文書を直接読むとき
-- feedback state 以外の runtime 共通処理、Git 操作、reporter 入力 schema の詳細だけを確認する場合は、それぞれの直接の実装・仕様へ進むとき
-- 既存 state の実行結果や CLI 全体の利用手順だけを確認する場合は、この内部モデルではなく呼び出し側の実装や実行仕様を読むとき
+- agent report の入力 payload schema 自体を変更する場合は、まず対応する reporter input schema の正本と実装を読む。
+- tracked feedback state の永続パスや Git 実行の共通処理だけを変更する場合は、対応する runtime store または runtime git の直接実装を読む。
+- 人間向け disposition の作成・更新フローだけを変更する場合は、disposition を操作する上位の feedback workflow を読む。
 
 ## hash
-- 368d5d2d47fbd64b3783a28b4690cb3ef143b1d6b47cfd8d762faffdddf5103d
+- e64699c20566dc521a9caf3ffc8c9d5b498266ac39e74b40d2b3dd2b8a173fc7
 
 # `runtime_feedback_store.py`
 

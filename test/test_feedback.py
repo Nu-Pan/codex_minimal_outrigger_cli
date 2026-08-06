@@ -642,6 +642,55 @@ def test_effective_revision_uses_source_observation_time(tmp_path: Path) -> None
     assert view.revision["summary"] == "new summary"
 
 
+def test_tracked_feedback_state_allows_marker_like_record_text(
+    tmp_path: Path,
+) -> None:
+    """record の文字列値に含まれる conflict marker 風文字列を許容する。"""
+    root = tmp_path / "state"
+    observation_id = "fbo_00000000-0000-7000-8000-000000000001"
+    canonical_key = f"agent\0{observation_id}"
+    current_issue_id = issue_id(canonical_key)
+    observation = {
+        "observation_id": observation_id,
+        "observed_at": "2026-01-01T00:00:00Z",
+        "context": {"subcommand_invocation_id": "scope"},
+    }
+    records = [
+        (
+            "identity",
+            identity_record(
+                current_issue_id,
+                canonical_key,
+                "agent_report",
+                observation_id,
+                observation["observed_at"],
+            ),
+        ),
+        (
+            "occurrence",
+            occurrence_record(current_issue_id, observation, "a" * 64),
+        ),
+        (
+            "revision",
+            revision_record(
+                current_issue_id,
+                observation["observed_at"],
+                [observation_id],
+                "tooling",
+                "literal <<<<<<< ======= >>>>>>>",
+                "action",
+                "impact",
+                {"certainty": "unknown", "description": "unknown"},
+                [],
+            ),
+        ),
+    ]
+    for kind, record in records:
+        write_tracked_record(record_path(root, record, kind), record)
+
+    validate_tracked_feedback_state(root)
+
+
 def test_feedback_report_records_user_interruption_as_normal_completion(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
