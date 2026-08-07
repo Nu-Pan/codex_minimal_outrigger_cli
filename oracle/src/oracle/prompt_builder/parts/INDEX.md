@@ -85,18 +85,18 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- oracle と realization file の定義・役割・下位概念を構築する prompt builder の一部。oracle file を人間所有の正本仕様断片、realization file をその具体化として整理し、doc・src・test・implementation・ancillary の分類と配置を説明する。
+- 対象ファイルは、oracle と realization の定義・役割・下位分類を、動的な work-root 定義を用いて構築するプロンプト部品です。呼び出し元へは PlaceholderMap と StructDoc の組を返し、oracle/realization の基本説明を組み立てる入口になります。
 
 ## Read this when
-- oracle file と realization file の定義や責務境界を prompt に組み込む処理を変更するとき
-- oracle、realization の分類・配置・正本性に関する説明文の生成元を確認するとき
+- oracle と realization の基本概念を説明するプロンプト生成や、その文面・構造を変更または確認するとき。
+- AgentCallPathContext からルート定義を取得し、StructDoc とプレースホルダーの組を返す処理を追跡するとき。
 
 ## Do not read this when
-- 個別の oracle 文書や realization 実装の内容を確認したいとき
-- prompt builder 全体の構成や別の prompt part の仕様だけを調べるとき
+- 特定の oracle 文書や realization 実装の内容そのものを調べるとき。
+- プロンプト部品の選択・組み合わせだけを調べるときは、該当する prompt builder の呼び出し元を直接読む。
 
 ## hash
-- 46cac8d7867434199021d72041b4b1b9eea45f91fbb845ee3e177089d3dde021
+- 3ebaefdba6473a30c6510a47642027979a34061132dd26b4472f8c5c11321d7d
 
 # `oracle_review_standard.py`
 

@@ -89,21 +89,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の人間所有の正本ツリー。アプリケーション横断仕様、branch・commit・worktree モデル、開発規則、不採用案の検討記録を文書として扱い、Agent-call の共通設定・用途別設定・実行条件・Structured Output schema をソースとして定義する。配下の doc と src が、それぞれ仕様文書と実装定義を確認する入口になる。
+- cmoc の正本仕様を保持する oracle 領域。アプリケーション挙動、branch・commit・worktree のモデル、不採用設計、Python 開発規則を文書として定義し、Agent call、prompt、feedback、レビュー、indexing などの正本ソースも提供する。配下の doc は仕様本文、src はその仕様に基づく prompt・builder・補助処理の実装へ進む入口。
 
 ## Read this when
-- cmoc の正本仕様や開発規則を探すとき
-- 複数領域にまたがる仕様文書の所在を確認するとき
-- Agent-call の共通設定、用途別 prompt・起動設定、モデル・権限・作業ディレクトリ、Structured Output schema の定義を調査するとき
-- 採用済み仕様と不採用案の検討記録を区別して参照するとき
+- cmoc の現行仕様、設計上の用語や制約、CLI・session・run・feedback・prompt の挙動を確認するとき
+- Python の開発環境、コーディング、CLI 設計、テスト規則や実行手順を確認するとき
+- Agent call、Structured Output、prompt 構築、oracle／realization／feedback／INDEX の規範に関わる実装を調査・変更するとき
+- 不採用となった設計案の背景や理由を確認するとき
 
 ## Do not read this when
-- 単一機能の正本仕様や特定用途の prompt・schema が明確で、下位文書や下位ソースへ直接進めるとき
-- 具体的な realization 実装の配置やテスト実行方法を確認するとき
-- CLI・TUI の実行フローや通常の realization 実装・テストだけを調査するとき
+- 特定の仕様文書、サブコマンド、開発規則、または実装ファイルが明確な場合は、対応する配下の対象を直接読むとき
+- 通常の realization 実装・テストや CLI／TUI の実行処理そのものを調査するとき
+- 現行仕様に関係せず、不採用案の検討理由も必要ない単純な作業を行うとき
 
 ## hash
-- b887027971e8b19919dac7fa7c442e1d7787f1d456f7840f89c0acc3d8ffb9a7
+- 8055a886f8c133d0f7c09fd8d97613e4655f23380adb448f1c715acf087556b3
 
 # `pyproject.toml`
 
