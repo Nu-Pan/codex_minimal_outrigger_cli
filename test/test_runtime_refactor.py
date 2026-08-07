@@ -4,7 +4,6 @@
 `{{work-root}}/oracle/doc/app_spec/misc_spec.md`。
 """
 
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -107,6 +106,7 @@ def test_refactor_target_classifiers_require_file_entries(
     "replacement",
     [
         "directory",
+        "symlink",
         pytest.param(
             "fifo",
             marks=pytest.mark.skipif(
@@ -127,6 +127,8 @@ def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
     path.unlink()
     if replacement == "directory":
         path.mkdir()
+    elif replacement == "symlink":
+        path.symlink_to(root / "missing")
     else:
         os.mkfifo(path)
 
@@ -162,37 +164,19 @@ def test_refactor_target_classifier_accepts_special_path_from_branch(
     assert is_realization_file_path(root, realization_file, branch="HEAD")
 
 
-def test_refactor_state_sync_hashes_dangling_oracle_symlink(
+def test_refactor_state_sync_rejects_oracle_symlink(
     tmp_path: Path,
 ) -> None:
-    """定義上の oracle file である dangling symlink を state 同期できる。"""
+    """state 同期が regular file ではない oracle symlink を拒否する。"""
     root = make_repo(tmp_path)
     link = root / "oracle" / "dangling.md"
     link.symlink_to("../missing.md")
     run_git(root, "add", "oracle/dangling.md")
     run_git(root, "commit", "-m", "add dangling oracle symlink")
 
-    state = sync_refactor_state(root)
-    expected_digest = hashlib.sha256(b"../missing.md").hexdigest()
-
-    assert "oracle/dangling.md" in state
-    state["oracle/dangling.md"].update(
-        {
-            "investigation_required": False,
-            "last_investigation_result": "no_findings",
-            "last_investigated_sha256": expected_digest,
-            "last_investigated_at": "2026-07-19_00-00_00_000000000",
-        }
-    )
-    write_refactor_state(root, state)
-    link.unlink()
-    link.symlink_to("../different-missing.md")
-
-    synchronized = sync_refactor_state(root)
-
-    changed = synchronized["oracle/dangling.md"]
-    assert changed["investigation_required"] is True
-    assert changed["last_investigated_sha256"] == expected_digest
+    assert not is_oracle_file_path(root, link)
+    with pytest.raises(CmocError, match="oracle/realization file"):
+        sync_refactor_state(root)
 
 
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(

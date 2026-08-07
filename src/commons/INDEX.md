@@ -208,19 +208,19 @@
 # `runtime_content.py`
 
 ## Summary
-- ファイル内容の SHA-256 ハッシュ計算、UTF-8 文字列のハッシュ計算、内容ハッシュを含む一時ファイルの安全な保存、バイナリ判定を提供する共通ランタイム処理。symlink や dangling symlink、既存ファイルとの整合性、原子的な置換を扱う。
+- ファイル内容の SHA-256 ハッシュ計算、UTF-8 文字列の SHA-256 計算、内容ハッシュを名前に含むファイルの安全な保存、NUL バイトと読み取り可否による粗いバイナリ判定を提供する共通ランタイム処理。状態同期対象の regular file、symlink、ハッシュ付き schema store の保存処理など、ファイル内容と一時ファイル置換を扱う実装へ進む入口。
 
 ## Read this when
-- ファイル分類や状態同期で、通常ファイルと symlink のハッシュ方法を確認するとき
-- 内容ハッシュ付きファイルの生成・再利用・原子的な保存処理を変更するとき
-- ファイルのバイナリ判定ロジックを変更または利用するとき
+- ファイルや文字列の SHA-256 値を算出する処理を確認・変更するとき。
+- 内容ハッシュを使った出力ファイルの生成、既存同一内容ファイルの再利用、一時ファイルからの置換処理を確認するとき。
+- ファイルをバイナリとして粗く判定する処理を確認するとき。
 
 ## Do not read this when
-- 特定のプロンプト生成処理や oracle/realization の仕様を確認したいとき
-- この共通ランタイム処理を利用する上位機能の挙動だけを調査するとき
+- 同期対象の列挙規則や上位のアプリケーション仕様を確認したい場合は、参照されている oracle 仕様を直接読む。
+- この共通処理を利用する個別 caller の挙動だけを確認したい場合は、caller の実装やテストを直接読む。
 
 ## hash
-- ddf0f66390f4aaf71281fa12bd36f060b80ff0d272148ee758ccd73e2714c1c6
+- 3b078af87a040009e5f907b968ec8dd5717a28db9647f5ea77fc1fe87b7709e4
 
 # `runtime_doctor.py`
 
@@ -338,20 +338,20 @@
 # `runtime_git.py`
 
 ## Summary
-- Git repository と worktree の安全な操作を一元化する共通境界。Git コマンド実行、branch・commit・status の取得、linked worktree の作成・削除、管理対象検証、snapshot の取得・復元を扱う。
-- Git ignore の検証・更新と、oracle file / realization file の分類を repository path と Git index の状態に基づいて判定する。関連する CLI 操作や path 分類、worktree 操作の実装から参照する共通 runtime helper。
+- Git repository に対する共通境界を担い、Git command の実行、branch・linked worktree の作成／削除、安全性検証、worktree snapshot の取得／復元を扱う。
+- Git ignore の検査・設定と、oracle file／realization file の列挙・分類を提供する。関連する Git 状態、path 正規化、symlink・特殊 file の安全性検証を各 caller に重複させないための実装入口である。
 
 ## Read this when
-- Git コマンドの実行失敗を cmoc のエラーへ変換する処理を変更するとき。
-- branch、linked worktree、worktree snapshot、Git status、managed path の作成・削除・安全性検証を扱うとき。
-- `.cmoc/gu` の ignore 保証、Git ignore source の検証、oracle / realization file の分類ロジックを変更または調査するとき。
+- Git command のエラー処理、branch や linked worktree のライフサイクル、worktree 差分の snapshot／復元を変更または調査するとき。
+- `.cmoc/gu` の ignore 状態、Git ignore source、repository path の所有判定を扱うとき。
+- oracle file／realization file の列挙・分類や、Git の追跡状態に基づく path 判定を変更または調査するとき。
 
 ## Do not read this when
-- 個別の CLI コマンドの利用者向け仕様や branch 運用ルールだけを確認したいときは、対応する oracle doc を直接読む。
-- Git 境界を利用する caller の業務フローや prompt 生成仕様を確認したいときは、その caller または正本仕様を直接読む。
+- 特定の caller の業務フローや prompt 生成仕様だけを確認する場合は、その caller と対応する oracle specification を直接読む。
+- Git 境界を利用するだけで、共通 helper の挙動や安全性を変更・検証しない場合。
 
 ## hash
-- ad5f6745b8aa25ae8c9587fb3fe2b8caf9b0302a45b4fff22cb6cd64d9a9e9a9
+- b8000d6cb4c09e4ca82c3fe09724eb39e5098fc3e3b38a563783eb58057a7b13
 
 # `runtime_logging.py`
 
@@ -393,18 +393,21 @@
 # `runtime_refactor.py`
 
 ## Summary
-- 対象は、realization file の調査履歴を管理する refactor state の読み込み・検証・同期・保存と、調査対象ファイルの列挙・選択を担う共通ランタイムモジュールです。state の schema、path・SHA-256・時刻の検証、symlink など安全性の拒否、調査状態の更新規則を確認したい場合の実装入口です。
+- refactor state の読み込み・検証・保存・同期を担う共通ランタイム実装。state path の安全性、JSON schema、work-root 相対 path、調査履歴の SHA256 と時刻形式を検証する。
+- oracle/realization file の列挙、未調査対象の優先選択、全対象への再調査要求を提供する。refactor state に関する実装の入口であり、上位 CLI フローや正本仕様の入口ではない。
 
 ## Read this when
-- refactor state の load/write/sync、調査対象の列挙や優先選択、state entry の validation、path・digest・timestamp の妥当性検証を変更または調査するとき。
-- realization refactor の state file と runtime 層の連携、未調査・調査済み状態の遷移、変更検知による再調査要求を確認するとき。
+- refactor state の読み込み、書き込み、schema 検証、path 検証、file 集合との同期を変更・調査するとき。
+- refactor workload の対象列挙、未調査対象の優先選択、全対象への再調査要求を確認するとき。
+- state path の symlink・非通常ファイル拒否や、調査履歴の整合性検証を確認するとき。
 
 ## Do not read this when
-- refactor state の利用側コマンドや、state schema の正本仕様だけを確認したいときは、まずそれぞれの直接の実装・oracle 文書を読む。
-- 一般的な runtime utility、Git path 判定、例外型、ファイル hash の詳細だけを調べる場合は、それぞれの担当モジュールへ直接進む。
+- doctor preprocess や realization refactor の利用者向け仕様を確認することが目的で、実装の詳細が不要なとき。対応する oracle doc を直接読む。
+- CLI のコマンド受付や上位 orchestration の挙動だけを確認するとき。呼び出し側の実装を直接読む。
+- refactor state と無関係な共通 runtime 機能を調査するとき。
 
 ## hash
-- b2393d480925d0ef423511a4abc0a0b89bbdc64bff2058ec06a6fc3f268b9f79
+- 7fe3e1176584aba4799f1f9356120e8d1eec3d1e75a410014b938a7ff4b8c79f
 
 # `runtime_results.py`
 

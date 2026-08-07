@@ -3,6 +3,7 @@
 根拠:
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+- {{work-root}}/oracle/doc/app_spec/misc_spec.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 - {{work-root}}/oracle/doc/dev_rule/coding_rule.md
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md
@@ -16,7 +17,7 @@ from _git_support import add_tracked_ignored_oracle_file, make_repo, run_git
 
 import sub_commands.oracle.review as review_module
 from basic.acp import AgentCallParameter
-from cmoc_runtime import SessionState
+from cmoc_runtime import CmocError, SessionState
 from main import app
 from sub_commands.oracle.review_paths import finding_oracle_path, oracle_path_key
 from sub_commands.oracle.review_targets import enumerate_review_all_oracle_files
@@ -95,31 +96,25 @@ def test_oracle_review_full_scope_keeps_tracked_ignored_oracle_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """full scope が追跡済み oracle file と symlink を対象に含める。"""
+    """full scope が追跡済み ignored file と binary file を保つ。"""
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
-    outside_target = tmp_path / "ignored-link-target.md"
-    outside_target.write_text("# outside\n")
     with (root / ".gitignore").open("a") as file:
-        file.write("oracle/ignored-link.md\noracle/untracked-ignored.md\n")
-    (root / "oracle" / "ignored-link.md").symlink_to(outside_target)
+        file.write("oracle/untracked-ignored.md\n")
     (root / "oracle" / "untracked-ignored.md").write_text("# untracked ignored\n")
     (root / "oracle" / "asset.bin").write_bytes(b"\x00\x01binary\n")
     (root / "memo" / "oracle").mkdir(parents=True)
     (root / "memo" / "oracle" / "draft.md").write_text("# memo draft\n")
     (root / "oracle" / "memo").mkdir()
     (root / "oracle" / "memo" / "kept.md").write_text("# oracle memo dir\n")
-    (root / "oracle" / "memo-link.md").symlink_to("../memo/oracle/draft.md")
     run_git(
         root,
         "add",
         "-f",
         ".gitignore",
         "oracle/asset.bin",
-        "oracle/ignored-link.md",
         "memo/oracle/draft.md",
         "oracle/memo/kept.md",
-        "oracle/memo-link.md",
     )
     run_git(root, "commit", "-m", "add binary and memo-shaped oracle")
     monkeypatch.chdir(root)
@@ -146,20 +141,18 @@ def test_oracle_review_full_scope_keeps_tracked_ignored_oracle_files(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "oracle_count_total: 6" in rendered
-    assert "oracle_count_evaluated: 6" in rendered
+    assert "oracle_count_total: 4" in rendered
+    assert "oracle_count_evaluated: 4" in rendered
     assert "`oracle/asset.bin`" in rendered
-    assert "`oracle/ignored-link.md`" in rendered
     assert "`oracle/ignored.md`" in rendered
     assert "`oracle/memo/kept.md`" in rendered
-    assert "`oracle/memo-link.md`" in rendered
     assert "`oracle/spec.md`" in rendered
     assert "oracle/untracked-ignored.md" not in rendered
     assert "memo/oracle/draft.md" not in rendered
     enumerate_calls = [
         call for call in calls if call.startswith("oracle review enumerate findings")
     ]
-    assert len(enumerate_calls) == 6
+    assert len(enumerate_calls) == 4
 
 
 def test_oracle_review_session_scope_reports_total_and_no_targets(
@@ -206,25 +199,19 @@ def test_oracle_review_session_scope_keeps_changed_tracked_ignored_oracle_files(
     """session scope が review fork 時点で変更された追跡済み oracle file を保つ。"""
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
-    outside_target = tmp_path / "ignored-link-target.md"
-    outside_target.write_text("# outside\n")
     with (root / ".gitignore").open("a") as file:
-        file.write("oracle/ignored-link.md\n")
-    (root / "oracle" / "ignored-link.md").symlink_to(outside_target)
-    run_git(root, "add", "-f", ".gitignore", "oracle/ignored-link.md")
-    run_git(root, "commit", "-m", "add ignored oracle symlink")
+        file.write("oracle/ignored-second.md\n")
+    (root / "oracle" / "ignored-second.md").write_text("# ignored second\n")
+    run_git(root, "add", "-f", ".gitignore", "oracle/ignored-second.md")
+    run_git(root, "commit", "-m", "add second ignored oracle")
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
     (root / "oracle" / "ignored.md").write_text("# ignored changed\n")
-    changed_target = tmp_path / "changed-ignored-link-target.md"
-    changed_target.write_text("# changed outside\n")
-    (root / "oracle" / "ignored-link.md").unlink()
-    (root / "oracle" / "ignored-link.md").symlink_to(changed_target)
-    run_git(root, "add", "oracle/ignored.md")
-    run_git(root, "add", "-f", "oracle/ignored-link.md")
+    (root / "oracle" / "ignored-second.md").write_text("# ignored second changed\n")
+    run_git(root, "add", "oracle/ignored.md", "oracle/ignored-second.md")
     run_git(root, "commit", "-m", "change ignored oracle")
     calls: list[str] = []
 
@@ -249,7 +236,7 @@ def test_oracle_review_session_scope_keeps_changed_tracked_ignored_oracle_files(
     ).read_text()
     assert "oracle_count_total: 3" in rendered
     assert "oracle_count_evaluated: 2" in rendered
-    assert "`oracle/ignored-link.md`" in rendered
+    assert "`oracle/ignored-second.md`" in rendered
     assert "`oracle/ignored.md`" in rendered
 
 
@@ -314,31 +301,15 @@ def test_oracle_review_target_enumeration_excludes_agents_and_index(
     assert enumerate_review_all_oracle_files(root) == [spec.resolve()]
 
 
-def test_oracle_review_target_enumeration_classifies_oracle_symlink_by_repo_path(
+def test_oracle_review_target_enumeration_rejects_symlink(
     tmp_path: Path,
 ) -> None:
-    """oracle 配下 symlink は link 先ではなく repository path で分類する。"""
-    root = make_repo(tmp_path)
-    (root / "memo").mkdir()
-    (root / "memo" / "draft.md").write_text("# draft\n")
-    oracle_link = root / "oracle" / "memo-link.md"
-    oracle_link.symlink_to("../memo/draft.md")
-    run_git(root, "add", "memo/draft.md", "oracle/memo-link.md")
-    run_git(root, "commit", "-m", "add oracle symlink")
-
-    assert oracle_link.absolute() in enumerate_review_all_oracle_files(root)
-
-
-def test_oracle_review_target_enumeration_keeps_tracked_dangling_oracle_symlink(
-    tmp_path: Path,
-) -> None:
-    """link先が存在しない追跡済みsymlinkもoracle fileとして列挙する。"""
+    """oracle review の全件列挙が regular file ではない symlink を拒否する。"""
     root = make_repo(tmp_path)
     oracle_link = root / "oracle" / "dangling.md"
     oracle_link.symlink_to("../missing.md")
     run_git(root, "add", "oracle/dangling.md")
     run_git(root, "commit", "-m", "add dangling oracle symlink")
 
-    assert not oracle_link.exists()
-    assert oracle_link.is_symlink()
-    assert oracle_link.absolute() in enumerate_review_all_oracle_files(root)
+    with pytest.raises(CmocError, match="oracle/realization file"):
+        enumerate_review_all_oracle_files(root)

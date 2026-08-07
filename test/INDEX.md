@@ -438,6 +438,25 @@
 ## hash
 - 59694b34e8c9f8aa49f915583895d4709dce14daf6a4d226b2784bf14fe74e1d
 
+# `test_file_inventory.py`
+
+## Summary
+- Git 管理下の oracle/realization ファイル列挙契約を検証するテスト。通常の全探索結果との一致、除外境界、nested repository の Git ignore、非通常ファイル拒否、linked worktree、状態ハッシュ更新、候補数増加時の処理量不変を確認する。
+- ファイルインベントリ実装や refactor state 同期処理の挙動を変更・検証する際のテスト入口。
+
+## Read this when
+- oracle/realization ファイルの列挙、単一パス分類、Git ignore 適用、除外ディレクトリ・metadata 境界を変更または調査するとき
+- refactor state の同期やファイル SHA 更新に関するテスト要件を確認するとき
+- nested repository、linked worktree、symlink、FIFO、socket・device 相当 mode の扱いを検証するとき
+- 候補ファイル数に対する Git 起動回数・source 検証・directory traversal の計算量を確認するとき
+
+## Do not read this when
+- CLI の他サブコマンドや、ファイルインベントリ・refactor state と無関係な機能を変更または調査するとき
+- 実装の詳細や正本仕様そのものを確認する必要があるときは、参照先として示された oracle 仕様または実装モジュールを直接読むとき
+
+## hash
+- 23e83e9f4ec6ac99c82b5c8c3e4fd93d01458d20ea00814963ed52ce775574af
+
 # `test_indexing_cli.py`
 
 ## Summary
@@ -577,20 +596,21 @@
 # `test_oracle_review_targets.py`
 
 ## Summary
-- oracle review の対象ファイル列挙と finding path 解決を検証する realization test。placeholder 付きパス、symlink、repository 内の oracle 判定、tracked/ignored file、session/full scope、fork commit 基準、除外対象、対象なしレポートを扱う。oracle review の対象選定・パス解決ロジックを確認する入口である。
+- oracle review の finding path 解決と oracle 対象列挙を検証するテスト。対象範囲、追跡済み ignored file、binary file、Git path、symlink、AGENTS.md/INDEX.md の除外、および session scope の基準 commit を確認する。
+- oracle review の no_targets 出力と、finding path の oracle/work-root 解決規則を確認するテストの入口。
 
 ## Read this when
-- oracle review の対象列挙や finding の oracle path 解決を変更・調査するとき
-- session/full scope、tracked ignored file、symlink、fork commit 基準の挙動を確認するとき
-- oracle review CLI の対象なし結果や Codex 呼び出し回数を検証するとき
+- oracle review の対象ファイル列挙、scope 切り替え、対象パス解決、review fork commit 基準を変更または調査するとき
+- 追跡済み ignored oracle file、binary oracle file、改行を含む Git path、symlink の扱いを確認するとき
+- oracle review の no_targets レポートや Structured Output による finding 列挙の挙動を検証するとき
 
 ## Do not read this when
-- oracle review 以外のサブコマンドや、対象列挙・パス解決と無関係な CLI 処理を変更するとき
-- Codex CLI の実推論や出力品質を検証する実経路統合テストを探しているとき
-- oracle review の所見マージ・妥当性検証・採否判定の詳細実装を直接確認したいとき
+- oracle review の finding 内容の判定ロジック自体だけを変更・調査するときは、対象実装と対応する finding テストを直接読む
+- oracle file や realization file の一般的な定義・配置規則だけを確認したいときは、対応する oracle 仕様を直接読む
+- oracle review と無関係な CLI サブコマンドやテスト対象を扱うとき
 
 ## hash
-- 9113e685069c202fce5d8a6896ad9e71cbe5268f33057e218a8d36c42cce0271
+- 8757338cf196ee4ade11c6c3d124615a06a93057a593aa317532e79f4970e2fb
 
 # `test_oracle_review_worktree.py`
 
@@ -807,19 +827,21 @@
 # `test_runtime_refactor.py`
 
 ## Summary
-- realization refactor の永続 state について、対象ファイル集合の同期、調査履歴の保持・再調査判定、調査対象の優先選択、state schema 検証をテストする。oracle と realization の file 判定、path escape・特殊 file・symlink・gitlink など境界条件も扱う。refactor state の挙動や回帰を確認する realization test の入口である。
+- realization refactor の永続 state に関するテストを集約する。oracle と realization の対象 file 集合の同期、調査履歴の保持、変更 file の再調査化、未調査・古い対象の選択を検証する。
+- state の読み書きと schema 検証を扱い、不正な結果型、UTF-8 以外の内容、NUL や親 directory escape を含む path、非 canonical timestamp、symlink・directory・FIFO など通常 file でない state path を拒否する挙動を確認する。
+- oracle・realization file の分類と target 選択に関する境界条件を検証する。work-root 外への escape、欠落 path、directory、Gitlink、branch 上の特殊文字 path、branch file を置き換えた非通常 file を対象外とする。
 
 ## Read this when
-- refactor state の同期・読み書き・schema 検証を変更または調査するとき
-- oracle/realization file classifier や refactor target selection の挙動を確認するとき
-- refactor 機能の境界条件に関する realization test を探すとき
+- refactor state の同期、永続化、schema、履歴、再調査判定を変更または検証するとき。
+- oracle・realization file の分類規則、branch tree fallback、target 選択の優先順位を変更または検証するとき。
+- state path や対象 path の symlink、特殊 file、Gitlink、path escape への安全な対応を確認するとき。
 
 ## Do not read this when
-- refactor state や target selection の挙動を扱わないテストを探しているとき
-- 正本仕様そのものを確認するときは、参照先として示された oracle 文書を直接読むべきである
+- refactor state、oracle・realization file 分類、または target 選択に関係しない機能を調査するとき。
+- 正本仕様の意図や詳細な契約を確認する場合は、このテストではなく、本文冒頭に示された oracle 文書を直接読むとき。
 
 ## hash
-- 537d98f1cb502fd793e165dbe1200c01d8d4ae1a426830152b63b03020cce035
+- 2edd23c746052c208a328683f4eaeca2d7174a6c25f16a6a9d763611c4ecd7e9
 
 # `test_runtime_state.py`
 

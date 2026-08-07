@@ -2,9 +2,9 @@ from pathlib import Path
 
 from cmoc_runtime import (
     SessionState,
-    is_oracle_file_path,
     run_git,
 )
+from commons.runtime_git import enumerate_oracle_and_realization_files
 
 
 def enumerate_oracle_review_targets(
@@ -33,10 +33,7 @@ def enumerate_oracle_review_targets(
 
 def enumerate_review_all_oracle_files(root: Path) -> list[Path]:
     """review 対象候補となる oracle file 全件を列挙する。"""
-    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-    # symlink は link 先ではなく repository path 上の oracle file として扱う。
-    return [
-        path
-        for path in sorted((root / "oracle").rglob("*"))
-        if (path.is_file() or path.is_symlink()) and is_oracle_file_path(root, path)
-    ]
+    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # full scope と state 同期で同じ full-tree 分類結果を使用する。
+    oracle_files, _ = enumerate_oracle_and_realization_files(root)
+    return oracle_files

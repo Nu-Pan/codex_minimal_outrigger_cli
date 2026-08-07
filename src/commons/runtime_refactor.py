@@ -7,10 +7,7 @@ from typing import Literal, TypedDict, cast
 
 from .runtime_content import file_sha256
 from .runtime_errors import CmocError
-from .runtime_git import (
-    is_oracle_file_path,
-    is_realization_file_path,
-)
+from .runtime_git import enumerate_oracle_and_realization_files
 from .runtime_paths import refactor_state_path
 
 InvestigationResult = Literal["not_investigated", "no_findings", "findings"]
@@ -90,15 +87,13 @@ def sync_refactor_state(root: Path, *, sync_entries: bool = True) -> RefactorSta
 def enumerate_refactor_targets(root: Path) -> list[str]:
     """現在存在する全 oracle file と realization file を列挙する。"""
     # {{work-root}}/oracle/doc/app_spec/misc_spec.md
-    # Git の file 一覧は nested repository 内を列挙しないため、仕様どおり work-root
-    # 配下の全 file を glob してから oracle/realization の定義で分類する。
-    targets = []
-    for path in root.rglob("*"):
-        if not (path.is_file() or path.is_symlink()):
-            continue
-        if is_oracle_file_path(root, path) or is_realization_file_path(root, path):
-            targets.append(path.relative_to(root).as_posix())
-    return sorted(set(targets))
+    # doctor preprocess と refactor workload は、共通の full-tree 分類結果で
+    # state entry を同期する。
+    oracle_files, realization_files = enumerate_oracle_and_realization_files(root)
+    return sorted(
+        path.relative_to(root.absolute()).as_posix()
+        for path in [*oracle_files, *realization_files]
+    )
 
 
 def new_refactor_entry() -> RefactorEntry:
