@@ -67,12 +67,12 @@ def build_feedback_normalize_issue_parameter(
                 - `decision=existing` の場合、`existing_issue_id` を `related_issue_ids` に重複させてはいけない
                 """,
             ),
+        ],
+        aux_dynamic_prompt=[
             StructDoc(
                 "参照範囲",
                 reference_scope,
             ),
-        ],
-        aux_dynamic_prompt=[
             StructDoc(
                 "構造化済み observation",
                 StructCodeBlock("json", observation_json),
