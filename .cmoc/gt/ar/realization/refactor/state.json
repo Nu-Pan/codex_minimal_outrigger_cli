@@ -1266,10 +1266,10 @@
     "last_investigated_at": "2026-08-06_15-48_51_611797000"
   },
   "test/test_feedback.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "af4ea1e2c48c33e28af191186f9f69e0469d1273b8b2161ff1863b6f71ccc8c3",
+    "last_investigated_at": "2026-08-07_14-27_16_620621000"
   },
   "test/test_indexing_cli.py": {
     "investigation_required": false,
