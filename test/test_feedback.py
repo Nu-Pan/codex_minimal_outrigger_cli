@@ -12,6 +12,7 @@ feedback subsystem test として保つ。
 """
 
 import json
+import os
 import threading
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
@@ -45,14 +46,18 @@ from commons.runtime_feedback_state import (
 )
 from commons.runtime_feedback_store import (
     FeedbackRejected,
+    feedback_completion_counts,
     ingestion_receipt_path,
     iter_observation_paths,
     observation_path,
     read_json_object,
+    report_snapshot_root,
     reporter_input_schema,
     rfc3339_now,
+    sha256_bytes,
     store_agent_observation,
     store_machine_observation,
+    write_immutable_json,
 )
 from commons.runtime_logging import SubcommandLogger
 from main import app
@@ -376,6 +381,13 @@ def test_agent_store_rejects_outside_paths_and_secret_only_evidence(
         store_agent_observation(root, _context(root), empty_evidence)
     assert empty.value.code == "evidence_empty"
 
+    invalid_utf8 = _payload(text="invalid surrogate: \ud800")
+    before_invalid_utf8 = set(iter_observation_paths(root))
+    with pytest.raises(FeedbackRejected) as invalid_utf8_error:
+        store_agent_observation(root, _context(root), invalid_utf8)
+    assert invalid_utf8_error.value.code == "schema_invalid"
+    assert set(iter_observation_paths(root)) == before_invalid_utf8
+
     with pytest.raises(FeedbackRejected) as outside:
         store_agent_observation(
             root,
@@ -439,6 +451,22 @@ def test_agent_store_rejects_outside_paths_and_secret_only_evidence(
     assert masked_schema.value.code == "schema_invalid"
     assert set(iter_observation_paths(root)) == before_boundary
 
+    outside_store = tmp_path / "outside_feedback_store"
+    outside_store.mkdir()
+    symlinked_month = root / ".cmoc/gu/ar/feedback/observation/v1/2030/01"
+    symlinked_month.parent.mkdir(parents=True)
+    symlinked_month.symlink_to(outside_store, target_is_directory=True)
+    with pytest.raises(FeedbackRejected) as symlink_error:
+        store_agent_observation(
+            root,
+            _context(root),
+            _payload(),
+            observation_id="fbo_00000000-0000-7000-8000-000000000001",
+            observed_at="2030-01-02T00:00:00Z",
+        )
+    assert symlink_error.value.code == "context_invalid"
+    assert list(outside_store.iterdir()) == []
+
 
 def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
     """同じ stable event の再検出が同じ raw observation 一件へ収束する。"""
@@ -458,11 +486,111 @@ def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
     invocation.detect_event(event, logger.path)
     invocation.detect_event(event, logger.path)
 
+    with pytest.raises(FeedbackRejected) as collision:
+        invocation.detect_event(
+            {**event, "occurred_at": "2026-08-08T00:00:00Z"}, logger.path
+        )
+    assert collision.value.code == "context_invalid"
+
     [path] = iter_observation_paths(root)
     observation = read_json_object(path)
     assert validate_observation_envelope(observation) == []
     assert observation["source"] == "machine_rule"
     assert observation["source_event"]["event_id"] == event["event_id"]
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
+def test_observation_store_rejects_existing_special_file(tmp_path: Path) -> None:
+    """既存 observation path の FIFO を読むことなく拒否する。"""
+    root = make_repo(tmp_path)
+    path = observation_path(
+        root,
+        "fbo_00000000-0000-7000-8000-000000000003",
+        "2030-02-02T00:00:00Z",
+    )
+    path.parent.mkdir(parents=True)
+    os.mkfifo(path)
+
+    with pytest.raises(FeedbackRejected) as error:
+        store_agent_observation(
+            root,
+            _context(root),
+            _payload(),
+            observation_id="fbo_00000000-0000-7000-8000-000000000003",
+            observed_at="2030-02-02T00:00:00Z",
+        )
+    assert error.value.code == "context_invalid"
+
+
+def test_feedback_completion_counts_ignores_invalid_report_id(
+    tmp_path: Path,
+) -> None:
+    """不正な report ID を snapshot path の一部として解釈しない。"""
+    root = make_repo(tmp_path)
+    result, _ = store_agent_observation(
+        root,
+        _context(root),
+        _payload(),
+        observation_id="fbo_00000000-0000-7000-8000-000000000002",
+        observed_at="2030-01-02T00:00:00Z",
+    )
+    observation_id = result["observation_id"]
+    assert isinstance(observation_id, str)
+
+    outside_receipt = tmp_path / "outside_receipt.json"
+    outside_receipt.write_text("{}\n")
+    receipt_path = ingestion_receipt_path(root, observation_id)
+    receipt_path.parent.mkdir(parents=True)
+    receipt_path.symlink_to(outside_receipt)
+
+    invalid_report_id = "../previous"
+    manifest_path = report_snapshot_root(root).parent / "previous.json"
+    manifest = {
+        "report_id": invalid_report_id,
+        "observations": [{"observation_id": observation_id}],
+    }
+    write_immutable_json(manifest_path, manifest)
+    report_path = root / ".cmoc/gt/ar/feedback/report/fbr_invalid.json"
+    write_immutable_json(
+        report_path,
+        {
+            "report_id": invalid_report_id,
+            "generated_at": rfc3339_now(),
+            "snapshot_manifest_sha256": sha256_bytes(manifest_path.read_bytes()),
+            "result": "ok",
+        },
+    )
+
+    assert feedback_completion_counts(root, root)[:2] == (1, 1)
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
+def test_feedback_completion_counts_ignores_special_snapshot_manifest(
+    tmp_path: Path,
+) -> None:
+    """snapshot manifest の FIFO を読むことなく fallback する。"""
+    root = make_repo(tmp_path)
+    result, _ = store_agent_observation(root, _context(root), _payload())
+    observation_id = result["observation_id"]
+    assert isinstance(observation_id, str)
+    report_id = "fbr_00000000-0000-7000-8000-000000000004"
+    manifest_path = report_snapshot_root(root) / f"{report_id}.json"
+    manifest_path.parent.mkdir(parents=True)
+    os.mkfifo(manifest_path)
+    report_path = root / ".cmoc/gt/ar/feedback/report" / f"{report_id}.json"
+    write_immutable_json(
+        report_path,
+        {
+            "report_id": report_id,
+            "generated_at": rfc3339_now(),
+            "snapshot_manifest_sha256": "0" * 64,
+            "result": "ok",
+        },
+    )
+
+    counts = feedback_completion_counts(root, root)
+    assert counts[:2] == (1, 1)
+    assert counts[2]
 
 
 def test_machine_detector_ignores_foreign_invocation_event(tmp_path: Path) -> None:

@@ -199,8 +199,22 @@ def observation_path(repo: Path, observation_id: str, observed_at: str) -> Path:
     )
 
 
+def _has_symlink_component(path: Path) -> bool:
+    """path の lexical component に symlink が含まれるかを返す。"""
+    current = path.absolute()
+    while current != current.parent:
+        if current.is_symlink():
+            return True
+        current = current.parent
+    return False
+
+
 def _atomic_create(path: Path, content: bytes) -> bool:
     """durable な sibling temporary file を排他的な atomic rename で publish する。"""
+    if _has_symlink_component(path):
+        raise FeedbackRejected(
+            "context_invalid", f"feedback storage path uses a symlink: {path}"
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.parent / f".{path.name}.{secrets.token_hex(12)}.tmp"
     try:
@@ -215,6 +229,11 @@ def _atomic_create(path: Path, content: bytes) -> bool:
             # 直列化し、既存 immutable record を上書きしない。
             fcntl.flock(directory_fd, fcntl.LOCK_EX)
             if os.path.lexists(path):
+                if path.is_symlink() or not path.is_file():
+                    raise FeedbackRejected(
+                        "context_invalid",
+                        f"feedback record path is not a regular file: {path}",
+                    )
                 return False
             os.rename(temporary, path)
             os.fsync(directory_fd)
@@ -243,6 +262,64 @@ def write_immutable_json(path: Path, value: dict[str, Any]) -> str:
             "context_invalid", f"observation ID collision or corruption: {path}"
         )
     return digest
+
+
+def _store_observation(
+    repo: Path,
+    observation_id: str,
+    observed_at: str,
+    envelope: dict[str, Any],
+) -> Path:
+    """observation ID の重複を全日付 directory で検査して保存する。"""
+    path = observation_path(repo, observation_id, observed_at)
+    try:
+        content = canonical_json_bytes(envelope)
+    except (TypeError, UnicodeError, ValueError) as exc:
+        raise FeedbackRejected(
+            "context_invalid", "observation must be valid UTF-8 JSON"
+        ) from exc
+    digest = sha256_bytes(content)
+    root = observation_root(repo)
+    if _has_symlink_component(root):
+        raise FeedbackRejected(
+            "context_invalid", f"feedback storage path uses a symlink: {root}"
+        )
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise FeedbackRejected(
+            "context_invalid", f"feedback observation root is unavailable: {root}"
+        ) from exc
+
+    directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        fcntl.flock(directory_fd, fcntl.LOCK_EX)
+        for existing in root.rglob(path.name):
+            if existing == path:
+                continue
+            if _has_symlink_component(existing) or not existing.is_file():
+                raise FeedbackRejected(
+                    "context_invalid",
+                    f"observation ID path is not a regular file: {existing}",
+                )
+            try:
+                existing_content = existing.read_bytes()
+            except OSError as exc:
+                raise FeedbackRejected(
+                    "context_invalid",
+                    f"existing observation cannot be read: {existing}",
+                ) from exc
+            if sha256_bytes(existing_content) != digest:
+                raise FeedbackRejected(
+                    "context_invalid",
+                    f"observation ID collision or corruption: {existing}",
+                )
+            return existing.resolve()
+        write_immutable_json(path, envelope)
+        return path.resolve()
+    finally:
+        fcntl.flock(directory_fd, fcntl.LOCK_UN)
+        os.close(directory_fd)
 
 
 _SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -348,7 +425,12 @@ def validate_agent_payload(
     """reporter input を schema、安全性、path 境界で検査する。"""
     if not isinstance(payload, dict):
         raise FeedbackRejected("schema_invalid", "payload must be a JSON object")
-    payload_bytes = canonical_json_bytes(payload)[:-1]
+    try:
+        payload_bytes = canonical_json_bytes(payload)[:-1]
+    except (TypeError, UnicodeError, ValueError) as exc:
+        raise FeedbackRejected(
+            "schema_invalid", "payload must be valid UTF-8 JSON"
+        ) from exc
     if len(payload_bytes) > _MAX_PAYLOAD_BYTES:
         raise FeedbackRejected("payload_too_large", "payload exceeds 32 KiB")
     if isinstance(payload.get("evidence"), list) and not payload["evidence"]:
@@ -368,7 +450,12 @@ def validate_agent_payload(
         raise FeedbackRejected("suspected_secret", "payload could not be redacted")
     # 固定長の redaction marker が短い credential を置換すると、mask 前は
     # schema 内でも mask 後に field または payload size を超えることがある。
-    masked_payload_bytes = canonical_json_bytes(masked_value)[:-1]
+    try:
+        masked_payload_bytes = canonical_json_bytes(masked_value)[:-1]
+    except (TypeError, UnicodeError, ValueError) as exc:
+        raise FeedbackRejected(
+            "schema_invalid", "payload must be valid UTF-8 JSON"
+        ) from exc
     if len(masked_payload_bytes) > _MAX_PAYLOAD_BYTES:
         raise FeedbackRejected("payload_too_large", "redacted payload exceeds 32 KiB")
     masked_errors = reporter_input_validation_errors(masked_value)
@@ -437,13 +524,12 @@ def store_agent_observation(
         "evidence_fingerprints": fingerprints,
         "source_event": None,
     }
-    path = observation_path(repo, observation_id, observed_at)
-    write_immutable_json(path, envelope)
+    path = _store_observation(repo, observation_id, observed_at, envelope)
     return {
         "status": "accepted",
         "observation_id": observation_id,
         "redaction_count": redaction_count,
-    }, path.resolve()
+    }, path
 
 
 def machine_observation_id(rule_id: str, event_id: str) -> str:
@@ -512,17 +598,20 @@ def store_machine_observation(
             "event_sha256": sha256_bytes(canonical_json_bytes(event)),
         },
     }
-    path = observation_path(repo, observation_id, observed_at)
-    write_immutable_json(path, envelope)
-    return observation_id, path.resolve()
+    path = _store_observation(repo, observation_id, observed_at, envelope)
+    return observation_id, path
 
 
 def iter_observation_paths(repo: Path) -> list[Path]:
     """存在する raw observation file を path 順で列挙する。"""
     root = observation_root(repo)
-    if not root.is_dir():
+    if _has_symlink_component(root) or not root.is_dir():
         return []
-    return sorted(path for path in root.rglob("fbo_*.json") if path.is_file())
+    return sorted(
+        path
+        for path in root.rglob("fbo_*.json")
+        if not _has_symlink_component(path) and path.is_file()
+    )
 
 
 def read_json_object(path: Path) -> dict[str, Any]:
@@ -543,7 +632,8 @@ def unprocessed_observation_paths(repo: Path, worktree: Path) -> list[Path]:
     paths: list[Path] = []
     for path in iter_observation_paths(repo):
         observation_id = path.stem
-        if not ingestion_receipt_path(worktree, observation_id).is_file():
+        receipt_path = ingestion_receipt_path(worktree, observation_id)
+        if _has_symlink_component(receipt_path) or not receipt_path.is_file():
             paths.append(path)
     return paths
 
@@ -556,13 +646,17 @@ def feedback_completion_counts(
     warnings: list[str] = []
     records: list[dict[str, Any]] = []
     report_dir = tracked_feedback_root(worktree) / "report"
-    if report_dir.is_dir():
+    if not _has_symlink_component(report_dir) and report_dir.is_dir():
         for path in report_dir.glob("fbr_*.json"):
+            if _has_symlink_component(path) or not path.is_file():
+                continue
             try:
                 record = read_json_object(path)
             except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
                 continue
-            if record.get("result") in {"ok", "attention"}:
+            if record.get("result") in {"ok", "attention"} and is_uuid7_prefixed(
+                record.get("report_id"), "fbr_"
+            ):
                 records.append(record)
     if not records:
         increased = len(unprocessed)
@@ -577,6 +671,8 @@ def feedback_completion_counts(
         report_id = latest.get("report_id")
         manifest_path = report_snapshot_root(repo) / f"{report_id}.json"
         try:
+            if _has_symlink_component(manifest_path) or not manifest_path.is_file():
+                raise ValueError("snapshot manifest path is not a regular file")
             expected_manifest_sha = latest.get("snapshot_manifest_sha256")
             if (
                 not isinstance(expected_manifest_sha, str)
