@@ -79,7 +79,7 @@
     - サブコマンド全体の経過時間
     - サブコマンド全体の Codex CLI quota 回復待ち時間
     - サブコマンドの戻り値
-    - ingestion receipt がない raw feedback observation 数
-    - 前回正常完了した feedback report の snapshot 後に増えた raw feedback observation 数
+    - repository-local な effective ingestion receipt がない raw feedback observation 数
+    - 直前の正常な local feedback report の report snapshot 後に増えた raw feedback observation 数
 
-feedback の件数は詳細を展開せず、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の通知境界に従う。件数または warning を、サブコマンドの戻り値、run state、または成功判定へ反映してはならない。
+feedback の件数は詳細を展開せず、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の通知境界に従う。一回限りの旧 state 移行が未完了で件数を安全に算出できない場合は、値を推測せず unavailable と warning を示す。件数、算出失敗、または warning を、サブコマンドの戻り値、run state、retry、または成功判定へ反映してはならない。

@@ -43,14 +43,12 @@
 
 merge conflict が発生した場合は通常の conflict として扱う。
 
+## feedback state との境界
+
+- repository-local feedback state は merge source と merge target のどちらにも属さず、session join の merge 対象ではない。
+- session join は、raw observation、issue record、occurrence、assessment、human disposition、ingestion receipt、normalization unit、checkpoint、report record、および snapshot を取り込み、競合解消、または巻き戻しの対象にしてはならない。
+
 ## `git merge` がコンフリクトした場合
-
-### tracked feedback state の優先処理
-
-- `{{work-root}}/.cmoc/gt/ar/feedback` 内の conflict は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の append-only record 規則を先に適用する。
-- 同じ path の内容が byte-for-byte で同一なら 1 件へ統合してよい。
-- 同じ path の内容が異なる場合は、observation、normalization result、または human disposition を失う可能性があるため、自動解決せず merge を中止する。
-- divergent な feedback record を conflict marker 解消用 agent call へ渡してはならない。
 
 ### 解決手順
 

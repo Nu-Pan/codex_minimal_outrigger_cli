@@ -43,8 +43,8 @@ workload は、agent call の開始前に fork の共通開始処理を完了し
 - workload が正常終了した場合は `run.state` を `joinable` にする。
 - ユーザー中断を正常系として扱う workload は、実行中の処理単位を commit まで完了するか rollback してから `run.state` を `joinable` にする。
 - 続行不能な失敗では、未確定の処理単位を commit または rollback により整合させ、`run.state` を `error` にする。
-- raw feedback observation は `{{repo-root}}/.cmoc/gu` に保存する cmoc 管理データであり、run branch の差分または workload 成果物として扱わない。
-- `cmoc feedback report` は `run.state=ready` を要求するため、active な編集 run の途中で tracked feedback state を更新しない。
+- raw observation、normalized state、checkpoint、report record、および snapshot を含む feedback 永続データは、`{{repo-root}}/.cmoc/gu` に保存する cmoc 管理データである。run branch の差分または workload 成果物として扱わない。
+- `cmoc feedback report` は `run.state=ready` を要求するため、active な編集 run の途中で normalized feedback state を更新しない。run の join または abandon は、既に確定した repository-local feedback state を取り込み、破棄、または巻き戻さない。
 
 ## `cmoc run join`
 

@@ -12,7 +12,7 @@
 
 ## 実行手順
 
-1. `{{work-root}}/.cmoc/gu` が git 追跡対象外であることを保証する
+1. `{{repo-root}}/.cmoc/gu` が git 追跡対象外であることを保証する
 2. `{{work-root}}/.agents` が git 追跡対象であることを保証する
 3. `{{work-root}}/.cmoc/gt/ar/config.json` が git 追跡対象である事を保証する
 4. `{{work-root}}/.cmoc/gt/ar/realization/refactor/state.json` が git 追跡対象であり、schema と entry 集合が同期済みであることを保証する
@@ -23,21 +23,23 @@
 
 ### 検証
 
+- 非追跡保証は `.cmoc/gu` の一部用途だけではなく、feedback の observation、normalized state、checkpoint、report、snapshot を含むツリー全体と、将来作成される全 descendant に適用する
 - 必要な操作
-    - `/.cmoc/gu/` を `{{work-root}}/.gitignore` に追加する
-    - 既に tracked な `{{work-root}}/.cmoc/gu` ツリー内ファイルは追跡を解除する (e.g. `git rm --cached`)
+    - `/.cmoc/gu/` を `{{repo-root}}/.gitignore` に追加する
+    - 既に tracked な `{{repo-root}}/.cmoc/gu` ツリー内ファイルは追跡を解除する (e.g. `git rm --cached`)
 - `{{repo-root}}/.cmoc/gu` 追跡対象外保証の完了判定は、以下の両方を満たすこととする
     - `git ls-files -- {{repo-root}}/.cmoc/gu` の出力が空である
     - `git check-ignore -q {{repo-root}}/.cmoc/gu/.__cmoc_ignore_probe__` が成功する
-        - これは `{{work-root}}/.cmoc/gu` 配下に将来作成されるファイルが git ignore 対象になることを確認するための probe path である
+        - これは `{{repo-root}}/.cmoc/gu` 配下に将来作成されるファイルが git ignore 対象になることを確認するための probe path である
     - よって、実ファイルを作成する必要はない
 
 ### 修復
 
-- `{{work-root}}/.gitignore` が存在しなければ作成する
-- `{{work-root}}/.gitignore` に `/.cmoc/gu/` が無ければ追加する
-- `{{work-root}}/.cmoc/gu` ツリー内に tracked file があれば、working tree 上の実ファイルを残したまま git index から除外する
+- `{{repo-root}}/.gitignore` が存在しなければ作成する
+- `{{repo-root}}/.gitignore` に `/.cmoc/gu/` が無ければ追加する
+- `{{repo-root}}/.cmoc/gu` ツリー内に tracked file があれば、working tree 上の実ファイルを残したまま git index から除外する
 - 修復後も完了判定を満たさない場合はエラー終了する
+- doctor preprocess は feedback の一回限りの旧 state 移行を代行しない。移行の完了条件と失敗時の workload 分離は feedback state と `cmoc feedback report` の仕様を正本とする
 
 ## 「`{{work-root}}/.agents` が git 追跡対象であることを保証する」の詳細
 

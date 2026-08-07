@@ -18,9 +18,9 @@ feedback の詳細は、責務ごとに次の正本仕様へ分ける。同じ s
 - `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md`
     - local stdio MCP reporter/client、collector、共通 prompt instruction、機械 detector、および raw observation を定める。
 - `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md`
-    - normalized issue、machine assessment、human disposition、および増分処理 record を定める。
+    - repository-local な normalized issue、machine assessment、human disposition、増分処理 record、および state snapshot を定める。
 - `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
-    - `cmoc feedback report` の事前条件、増分 normalization、commit、再開、および表示を定める。
+    - `cmoc feedback report` の事前条件、増分 normalization、durable な処理単位、再開、および表示を定める。
 
 ## non-goal
 
@@ -66,11 +66,13 @@ agent
   -> Codex MCP tool `cmoc_feedback.submit_observation`
   -> call-scoped local stdio MCP reporter/client
   -> invocation-scoped collector IPC ----------------+
-                                                      +-> cmoc collector -> raw observation -> cmoc feedback report -> tracked issue state -> report
-structured log event -> allowlist detector -----------+                                                                    ^
-                                                                                                                           |
-human disposition ---------------------------------------------------------------------------------------------------------+
+                                                      +-> cmoc collector -> raw observation -> cmoc feedback report -> repository-local normalized state -> report
+structured log event -> allowlist detector -----------+                                                                                  ^
+                                                                                                                                         |
+human disposition -----------------------------------------------------------------------------------------------------------------------+
 ```
+
+raw observation と normalized state は `{{repo-root}}/.cmoc/gu` に属する。session または run の join と abandon は、feedback state を取り込み、破棄、または巻き戻さない。feedback state の別 clone、別 machine、または Git remote への複製は保証しない。
 
 ## 既存 workload との接続
 

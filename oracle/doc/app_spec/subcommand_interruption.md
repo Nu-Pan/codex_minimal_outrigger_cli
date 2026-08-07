@@ -35,5 +35,6 @@
 - `cmoc realization refactor fork` は active run を `joinable` にし、同じ run を再開しない。
 - refactor の確定済み部分結果から続きを行う場合は、`cmoc run join` の後に新しい fork を開始する。
 - `cmoc oracle review` は途中位置から再開せず、同じサブコマンドを後から呼び出した場合は新しい run として扱う。
-- `cmoc feedback report` は確定済み normalization unit commit と checkpoint を保持し、実行中 unit を commit または rollback して `result=interrupted` の report を保存する。後から再実行した場合は ingestion receipt と checkpoint から未処理 observation だけを処理する。
+- `cmoc feedback report` は確定済み normalization unit manifest と checkpoint を保持する。実行中 unit は、全 record を durable に保存して manifest を確定できる場合だけ effective state に含める。確定できない unit は部分 record を読み取らず、整合した state から `result=interrupted` の report を保存する。
+- 中断後に再実行した場合は、effective ingestion receipt、確定済み unit manifest、および正式な normalization agent output の checkpoint を再利用し、未処理 observation だけを処理する。
 - 編集 run または oracle review の中断位置を再開する checkpoint を保存してはいけない。`cmoc feedback report` が同一 observation の normalization agent call を再実行しないために保存する call result checkpoint は、中断位置を表さないためこの禁止の対象外とする。

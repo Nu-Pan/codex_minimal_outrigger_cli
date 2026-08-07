@@ -272,13 +272,15 @@ observation は sibling temporary file への write、file flush、atomic rename
 
 accepted response 後に observation が未保存となる状態や sibling temporary file が残る状態を許容してはならない。
 
-raw observation は normalization 後も変更または自動削除しない。初期仕様では retention を無期限とし、自動 pruning と prune subcommand を提供しない。pruning を追加する場合は、少なくとも tracked ingestion receipt が存在する observation だけを対象とし、未処理 observation を削除しない別仕様を先に定義する。
+raw observation は normalization 後も変更または自動削除しない。初期仕様では retention を無期限とし、自動 pruning と prune subcommand を提供しない。pruning を追加する場合は、少なくとも repository-local な effective ingestion receipt が存在する observation だけを対象とし、未処理 observation を削除しない別仕様を先に定義する。
 
 通常のサブコマンド完了サマリーは、詳細を展開せず次の 2 値だけを表示する。
 
-- 現在 branch の tracked ingestion receipt がない raw observation 数
-- 前回正常完了した feedback report の snapshot 後に増えた raw observation 数
+- repository-local な effective ingestion receipt がない raw observation 数
+- 直前の正常な local feedback report の report snapshot 後に増えた raw observation 数
 
-前回正常完了した feedback report が現在 branch にない場合は、後者を前者と同数とする。report record はあるが git 追跡対象外の snapshot manifest がない場合も同じ fallback を使用し、manifest 不在を warning として示す。
+直前の正常な local feedback report がない場合は、後者を前者と同数とする。report record はあるが対応する report snapshot がない、hash が一致しない、または正常 report の連鎖を一意に解決できない場合も同じ fallback を使用し、理由を warning として示す。raw observation の report snapshot と normalized state の state snapshot を混同してはならない。
+
+一回限りの旧 state 移行が未完了で effective ingestion receipt を安全に読めない場合は、件数を推測しない。feedback 件数を unavailable として warning を示し、本命 workload を続行する。
 
 未処理 observation が 100 件以上、または最古の未処理 observation が 7 日以上前の場合は、`cmoc feedback report` の実行を促す warning を追加する。この warning と件数計算の失敗は、サブコマンドの終了コードまたは run state を変更しない。
