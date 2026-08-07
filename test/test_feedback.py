@@ -1,7 +1,7 @@
 """feedback observation の収集、保存、増分 report を検証する。
 
-この file は 16,000 文字を超えるが、reporter input から raw observation、tracked
-issue state、増分 report までを同じ fixture ID と Git session で追跡する受け入れ境界
+この file は 16,000 文字を超えるが、reporter input から raw observation、repository-local
+issue state、増分 report までを同じ fixture ID で追跡する受け入れ境界
 である。分割すると同じ observation の lifecycle assertion が重複するため、一続きの
 feedback subsystem test として保つ。
 
@@ -25,6 +25,7 @@ from _git_support import current_branch, make_repo, run_git
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_feedback as runtime_feedback_module
 import commons.runtime_feedback_reporter as reporter_module
+import commons.runtime_feedback_state as feedback_state_module
 import sub_commands.feedback.report as feedback_report_module
 from acp.builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter,
@@ -32,23 +33,32 @@ from acp.builder.feedback.normalize_issue import (
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_feedback import FeedbackInvocation
+from commons.runtime_feedback_migration import ensure_feedback_migration
 from commons.runtime_feedback_state import (
     IssueView,
+    feedback_writer_lock,
     identity_record,
+    ingestion_record,
     issue_id,
     load_issue_views,
+    normalization_unit_id,
+    normalizer_version,
     occurrence_record,
+    publish_normalization_unit,
     record_path,
+    recover_normalization_units,
     revision_record,
+    validate_feedback_state,
     validate_observation_envelope,
-    validate_tracked_feedback_state,
-    write_tracked_record,
 )
 from commons.runtime_feedback_store import (
     FeedbackRejected,
+    canonical_json_bytes,
     feedback_completion_counts,
+    feedback_root,
     ingestion_receipt_path,
     iter_observation_paths,
+    normalization_recovery_root,
     observation_path,
     read_json_object,
     report_snapshot_root,
@@ -122,6 +132,32 @@ def _active_session(root: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     branch = current_branch(root)
     assert branch.startswith("cmoc/session/")
     return branch.removeprefix("cmoc/session/")
+
+
+def _publish_fixture_unit(
+    root: Path,
+    observation_id: str,
+    records: list[tuple[str, dict[str, object]]],
+) -> str:
+    """test record 集合を repository-local normalization unit として確定する。"""
+    ensure_feedback_migration(root, migration_source=None)
+    version = normalizer_version(False)
+    unit_id = normalization_unit_id([observation_id], [], version)
+    return publish_normalization_unit(
+        root,
+        normalization_unit_id_value=unit_id,
+        observations=[
+            {
+                "observation_id": observation_id,
+                "observation_sha256": "a" * 64,
+            }
+        ],
+        candidate_revision_ids=[],
+        normalizer_schema_sha256=version,
+        normalizer_version_value=version,
+        records=records,
+        checkpoint_sha256=None,
+    )
 
 
 def test_reporter_exposes_only_canonical_submission_tool(
@@ -527,70 +563,100 @@ def test_observation_store_rejects_existing_special_file(tmp_path: Path) -> None
     assert error.value.code == "context_invalid"
 
 
-def test_feedback_completion_counts_ignores_invalid_report_id(
+def test_observation_store_recovers_matching_atomic_temporary(
     tmp_path: Path,
 ) -> None:
-    """不正な report ID を snapshot path の一部として解釈しない。"""
+    """異常終了で残った同一 byte 列の sibling temporary file を回収する。"""
     root = make_repo(tmp_path)
-    result, _ = store_agent_observation(
+    observation_id = "fbo_00000000-0000-7000-8000-000000000004"
+    observed_at = "2030-02-03T00:00:00Z"
+    _result, path = store_agent_observation(
+        root,
+        _context(root),
+        _payload(),
+        observation_id=observation_id,
+        observed_at=observed_at,
+    )
+    expected = path.read_bytes()
+    temporary = path.parent / f".{path.name}.interrupted.tmp"
+    path.rename(temporary)
+
+    _result, recovered = store_agent_observation(
+        root,
+        _context(root),
+        _payload(),
+        observation_id=observation_id,
+        observed_at=observed_at,
+    )
+
+    assert recovered == path
+    assert recovered.read_bytes() == expected
+    assert not temporary.exists()
+
+
+def test_observation_store_rejects_different_atomic_temporary(
+    tmp_path: Path,
+) -> None:
+    """期待 byte 列と異なる sibling temporary file を推測で上書きしない。"""
+    root = make_repo(tmp_path)
+    observation_id = "fbo_00000000-0000-7000-8000-000000000005"
+    observed_at = "2030-02-04T00:00:00Z"
+    path = observation_path(root, observation_id, observed_at)
+    path.parent.mkdir(parents=True)
+    temporary = path.parent / f".{path.name}.interrupted.tmp"
+    temporary.write_bytes(b"partial")
+
+    with pytest.raises(FeedbackRejected, match="temporary record differs"):
+        store_agent_observation(
+            root,
+            _context(root),
+            _payload(),
+            observation_id=observation_id,
+            observed_at=observed_at,
+        )
+
+    assert not path.exists()
+    assert temporary.read_bytes() == b"partial"
+
+
+def test_feedback_completion_counts_are_unavailable_before_migration(
+    tmp_path: Path,
+) -> None:
+    """旧 state の選択前は receipt を推測せず件数を unavailable にする。"""
+    root = make_repo(tmp_path)
+    store_agent_observation(
         root,
         _context(root),
         _payload(),
         observation_id="fbo_00000000-0000-7000-8000-000000000002",
         observed_at="2030-01-02T00:00:00Z",
     )
-    observation_id = result["observation_id"]
-    assert isinstance(observation_id, str)
 
-    outside_receipt = tmp_path / "outside_receipt.json"
-    outside_receipt.write_text("{}\n")
-    receipt_path = ingestion_receipt_path(root, observation_id)
-    receipt_path.parent.mkdir(parents=True)
-    receipt_path.symlink_to(outside_receipt)
+    counts = feedback_completion_counts(root, root)
 
-    invalid_report_id = "../previous"
-    manifest_path = report_snapshot_root(root).parent / "previous.json"
-    manifest = {
-        "report_id": invalid_report_id,
-        "observations": [{"observation_id": observation_id}],
-    }
-    write_immutable_json(manifest_path, manifest)
-    report_path = root / ".cmoc/gt/ar/feedback/report/fbr_invalid.json"
-    write_immutable_json(
-        report_path,
-        {
-            "report_id": invalid_report_id,
-            "generated_at": rfc3339_now(),
-            "snapshot_manifest_sha256": sha256_bytes(manifest_path.read_bytes()),
-            "result": "ok",
-        },
-    )
-
-    assert feedback_completion_counts(root, root)[:2] == (1, 1)
+    assert counts[:2] == (None, None)
+    assert "移行が未完了" in counts[2][0]
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
 def test_feedback_completion_counts_ignores_special_snapshot_manifest(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """snapshot manifest の FIFO を読むことなく fallback する。"""
     root = make_repo(tmp_path)
-    result, _ = store_agent_observation(root, _context(root), _payload())
-    observation_id = result["observation_id"]
-    assert isinstance(observation_id, str)
-    report_id = "fbr_00000000-0000-7000-8000-000000000004"
+    session_id = _active_session(root, monkeypatch)
+    first = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert first.exit_code == 0, first.output
+    [report_record_path] = (feedback_root(root) / "report").glob("*.json")
+    report_id = report_record_path.stem
     manifest_path = report_snapshot_root(root) / f"{report_id}.json"
-    manifest_path.parent.mkdir(parents=True)
+    manifest_path.unlink()
     os.mkfifo(manifest_path)
-    report_path = root / ".cmoc/gt/ar/feedback/report" / f"{report_id}.json"
-    write_immutable_json(
-        report_path,
-        {
-            "report_id": report_id,
-            "generated_at": rfc3339_now(),
-            "snapshot_manifest_sha256": "0" * 64,
-            "result": "ok",
-        },
+    store_agent_observation(
+        root,
+        _context(root, session_id=session_id),
+        _payload(),
     )
 
     counts = feedback_completion_counts(root, root)
@@ -641,6 +707,298 @@ def test_machine_detector_ignores_incomplete_structured_output_event(
     assert iter_observation_paths(root) == []
 
 
+def test_feedback_report_migrates_tracked_state_to_repository_local_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """旧 tracked record を archive・検証して local state へ一度だけ移す。"""
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    observation_id = "fbo_00000000-0000-7000-8000-000000000011"
+    observed_at = "2026-01-01T00:00:00Z"
+    _result, raw_path = store_agent_observation(
+        root,
+        _context(root, session_id=session_id),
+        _payload(),
+        observation_id=observation_id,
+        observed_at=observed_at,
+    )
+    observation_hash = sha256_bytes(raw_path.read_bytes())
+    canonical_key = f"agent\0{observation_id}"
+    current_issue_id = issue_id(canonical_key)
+    version = normalizer_version(False)
+    unit_id = normalization_unit_id([observation_id], [], version)
+    observation = read_json_object(raw_path)
+    records = [
+        (
+            "identity",
+            identity_record(
+                current_issue_id,
+                canonical_key,
+                "agent_report",
+                observation_id,
+                observed_at,
+            ),
+        ),
+        (
+            "occurrence",
+            occurrence_record(current_issue_id, observation, observation_hash),
+        ),
+        (
+            "revision",
+            revision_record(
+                current_issue_id,
+                observed_at,
+                [observation_id],
+                "tooling",
+                "legacy summary",
+                "legacy action",
+                "legacy impact",
+                {"certainty": "unknown", "description": "legacy"},
+                [],
+            ),
+        ),
+        (
+            "ingestion",
+            ingestion_record(
+                observation_id,
+                observation_hash,
+                observed_at,
+                unit_id,
+                version,
+                "integrated",
+                [current_issue_id],
+                [],
+            ),
+        ),
+    ]
+    legacy_root = root / ".cmoc" / "gt" / "ar" / "feedback"
+    for kind, record in records:
+        relative = record_path(root, record, kind).relative_to(feedback_root(root))
+        write_immutable_json(legacy_root / relative, record)
+    legacy_report_id = "fbr_00000000-0000-7000-8000-000000000011"
+    legacy_snapshot = {
+        "schema_version": 1,
+        "report_id": legacy_report_id,
+        "generated_at": observed_at,
+        "observations": [
+            {
+                "path": str(raw_path.resolve()),
+                "observation_id": observation_id,
+                "sha256": observation_hash,
+            }
+        ],
+    }
+    legacy_snapshot_sha256 = write_immutable_json(
+        report_snapshot_root(root) / f"{legacy_report_id}.json",
+        legacy_snapshot,
+    )
+    legacy_report_path = root / ".cmoc/gu/ar/report/feedback/legacy.md"
+    legacy_report_path.parent.mkdir(parents=True)
+    legacy_report_content = b"# legacy feedback report\n"
+    legacy_report_path.write_bytes(legacy_report_content)
+    legacy_report = {
+        "schema_version": 1,
+        "report_id": legacy_report_id,
+        "generated_at": observed_at,
+        "snapshot_manifest_sha256": legacy_snapshot_sha256,
+        "snapshot_observation_count": 1,
+        "processed_observation_count": 1,
+        "deferred_observation_count": 0,
+        "report_path": str(legacy_report_path.resolve()),
+        "report_sha256": sha256_bytes(legacy_report_content),
+        "result": "ok",
+        "state_commit_ids": [],
+    }
+    write_immutable_json(
+        legacy_root / "report" / f"{legacy_report_id}.json", legacy_report
+    )
+    run_git(root, "add", ".cmoc/gt/ar/feedback")
+    run_git(root, "commit", "-m", "legacy feedback state")
+
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert run_git(root, "ls-files", "--", ".cmoc/gt/ar/feedback").stdout == ""
+    assert not legacy_root.exists()
+    for kind, record in records:
+        assert record_path(root, record, kind).is_file()
+    receipt = read_json_object(
+        feedback_root(root) / "migration" / "v1" / "receipt.json"
+    )
+    assert receipt["source_branch"] == current_branch(root)
+    assert len(receipt["records"]) == len(records)
+    assert receipt["baseline"]["legacy_report_id"] == legacy_report_id
+    [new_report_path] = (feedback_root(root) / "report").glob("*.json")
+    new_report = read_json_object(new_report_path)
+    assert new_report["previous_successful_report_id"] == legacy_report_id
+    assert unit_id not in new_report["normalization_unit_ids"]
+    assert (
+        run_git(root, "log", "-1", "--pretty=%s").stdout.strip()
+        == "cmoc feedback state migration"
+    )
+    changed = run_git(
+        root, "show", "--format=", "--name-status", "HEAD"
+    ).stdout.splitlines()
+    assert changed and all(
+        line.startswith("D\t.cmoc/gt/ar/feedback/") for line in changed
+    )
+
+
+def test_feedback_migration_stops_on_divergent_local_branch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """異なる旧 state tree は停止し、active branch の明示選択だけ受ける。"""
+    root = make_repo(tmp_path)
+    _active_session(root, monkeypatch)
+    observation_id = "fbo_00000000-0000-7000-8000-000000000013"
+    version = normalizer_version(False)
+    unit_id = normalization_unit_id([observation_id], [], version)
+    first_receipt = ingestion_record(
+        observation_id,
+        "a" * 64,
+        "2026-01-01T00:00:00Z",
+        unit_id,
+        version,
+        "invalid",
+        [],
+        ["first branch validation error"],
+    )
+    current_receipt = ingestion_record(
+        observation_id,
+        "a" * 64,
+        "2026-01-02T00:00:00Z",
+        unit_id,
+        version,
+        "invalid",
+        [],
+        ["current branch validation error"],
+    )
+    legacy = root / f".cmoc/gt/ar/feedback/ingestion/{observation_id}.json"
+    legacy.parent.mkdir(parents=True)
+    legacy.write_bytes(canonical_json_bytes(first_receipt))
+    run_git(root, "add", ".cmoc/gt/ar/feedback")
+    run_git(root, "commit", "-m", "first legacy tree")
+    run_git(root, "branch", "legacy-other")
+    legacy.write_bytes(canonical_json_bytes(current_receipt))
+    run_git(root, "add", ".cmoc/gt/ar/feedback")
+    run_git(root, "commit", "-m", "divergent legacy tree")
+
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert result.exit_code != 0
+    assert "旧 feedback state が分岐しています" in result.output
+    assert "different_paths" in result.output
+    assert legacy.is_file()
+    assert not (feedback_root(root) / "migration" / "v1" / "receipt.json").exists()
+
+    selected_branch = current_branch(root)
+    selected = runner.invoke(
+        app,
+        ["feedback", "report", "--migration-source", selected_branch],
+        catch_exceptions=False,
+    )
+
+    assert selected.exit_code == 0, selected.output
+    receipt = read_json_object(
+        feedback_root(root) / "migration" / "v1" / "receipt.json"
+    )
+    assert receipt["source_branch"] == selected_branch
+    assert {candidate["branch"] for candidate in receipt["candidates"]} == {
+        selected_branch,
+        "legacy-other",
+    }
+    assert read_json_object(ingestion_receipt_path(root, observation_id)) == (
+        current_receipt
+    )
+
+
+def test_normalization_unit_recovers_after_manifest_publish_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """manifest 前に残った record を recovery metadata の同じ byte 列で確定する。"""
+    root = make_repo(tmp_path)
+    ensure_feedback_migration(root, migration_source=None)
+    observation_id = "fbo_00000000-0000-7000-8000-000000000012"
+    observed_at = "2026-01-01T00:00:00Z"
+    canonical_key = f"agent\0{observation_id}"
+    current_issue_id = issue_id(canonical_key)
+    records = [
+        (
+            "identity",
+            identity_record(
+                current_issue_id,
+                canonical_key,
+                "agent_report",
+                observation_id,
+                observed_at,
+            ),
+        ),
+        (
+            "occurrence",
+            occurrence_record(
+                current_issue_id,
+                {
+                    "observation_id": observation_id,
+                    "observed_at": observed_at,
+                    "context": {"subcommand_invocation_id": "scope"},
+                },
+                "a" * 64,
+            ),
+        ),
+        (
+            "revision",
+            revision_record(
+                current_issue_id,
+                observed_at,
+                [observation_id],
+                "tooling",
+                "summary",
+                "action",
+                "impact",
+                {"certainty": "unknown", "description": "unknown"},
+                [],
+            ),
+        ),
+    ]
+    version = normalizer_version(False)
+    unit_id = normalization_unit_id([observation_id], [], version)
+    original_write = feedback_state_module.write_immutable_json
+
+    def fail_manifest(path: Path, value: dict[str, object]) -> str:
+        """record と recovery 保存後の final manifest publish だけを失敗させる。"""
+        if path.parent == feedback_root(root) / "normalization_unit":
+            raise OSError("manifest publish failed")
+        return original_write(path, value)
+
+    monkeypatch.setattr(feedback_state_module, "write_immutable_json", fail_manifest)
+    with pytest.raises(CmocError, match="manifest"):
+        _publish_fixture_unit(root, observation_id, records)
+
+    recovery_path = normalization_recovery_root(root) / f"{unit_id}.json"
+    assert recovery_path.is_file()
+    with pytest.raises(CmocError, match="orphan"):
+        validate_feedback_state(root, require_no_orphans=True)
+
+    monkeypatch.setattr(feedback_state_module, "write_immutable_json", original_write)
+    assert recover_normalization_units(root) == [unit_id]
+    assert not recovery_path.exists()
+    assert (feedback_root(root) / "normalization_unit" / f"{unit_id}.json").is_file()
+    validate_feedback_state(root, require_no_orphans=True)
+
+
+def test_feedback_writer_lock_rejects_concurrent_writer(tmp_path: Path) -> None:
+    """同じ repository で二つの feedback writer を同時に開始しない。"""
+    root = make_repo(tmp_path)
+
+    with feedback_writer_lock(root):
+        with pytest.raises(CmocError, match="更新中"):
+            with feedback_writer_lock(root):
+                pytest.fail("concurrent feedback writer lock was acquired")
+
+
 def test_agent_candidate_requires_all_fingerprints_for_exact_match(
     tmp_path: Path,
 ) -> None:
@@ -680,7 +1038,7 @@ def test_agent_candidate_requires_all_fingerprints_for_exact_match(
 
 
 def test_feedback_unit_validates_state_before_commit(tmp_path: Path) -> None:
-    """unit が不完全な tracked state を commit せずに rollback する。"""
+    """unit が不完全な state を record 保存前に拒否する。"""
     root = make_repo(tmp_path)
     observation_id = "fbo_00000000-0000-7000-8000-000000000001"
     canonical_key = f"agent\0{observation_id}"
@@ -694,14 +1052,9 @@ def test_feedback_unit_validates_state_before_commit(tmp_path: Path) -> None:
     )
 
     with pytest.raises(CmocError):
-        feedback_report_module._commit_record_unit(
-            root,
-            [("identity", identity)],
-            "invalid feedback unit",
-        )
+        _publish_fixture_unit(root, observation_id, [("identity", identity)])
 
     assert not record_path(root, identity, "identity").exists()
-    assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
 def test_feedback_state_rejects_boolean_schema_versions(tmp_path: Path) -> None:
@@ -764,19 +1117,23 @@ def test_feedback_state_rejects_boolean_schema_versions(tmp_path: Path) -> None:
         {"certainty": "unknown", "description": "unknown"},
         [],
     )
-    write_tracked_record(record_path(root, identity, "identity"), identity)
-    write_tracked_record(record_path(root, occurrence, "occurrence"), occurrence)
-    write_tracked_record(record_path(root, revision, "revision"), revision)
-
     with pytest.raises(CmocError):
-        validate_tracked_feedback_state(root)
+        _publish_fixture_unit(
+            root,
+            observation_id,
+            [
+                ("identity", identity),
+                ("occurrence", occurrence),
+                ("revision", revision),
+            ],
+        )
 
 
-def test_tracked_feedback_state_requires_origin_canonical_key(
+def test_feedback_state_requires_origin_canonical_key(
     tmp_path: Path,
 ) -> None:
     """identity の origin と canonical key の組み合わせを検査する。"""
-    root = tmp_path / "state"
+    root = make_repo(tmp_path)
     observation_id = "fbo_00000000-0000-7000-8000-000000000001"
     observed_at = "2026-01-01T00:00:00Z"
     canonical_key = "agent\0different-observation"
@@ -808,22 +1165,23 @@ def test_tracked_feedback_state_requires_origin_canonical_key(
         {"certainty": "unknown", "description": "unknown"},
         [],
     )
-    for kind, record in (
-        ("identity", identity),
-        ("occurrence", occurrence),
-        ("revision", revision),
-    ):
-        write_tracked_record(record_path(root, record, kind), record)
-
     with pytest.raises(CmocError):
-        validate_tracked_feedback_state(root)
+        _publish_fixture_unit(
+            root,
+            observation_id,
+            [
+                ("identity", identity),
+                ("occurrence", occurrence),
+                ("revision", revision),
+            ],
+        )
 
 
-def test_tracked_feedback_state_rejects_unknown_machine_subject(
+def test_feedback_state_rejects_unknown_machine_subject(
     tmp_path: Path,
 ) -> None:
     """machine issue の subject は rule registry の値に限定する。"""
-    root = tmp_path / "state"
+    root = make_repo(tmp_path)
     observation_id = "fbo_" + "a" * 32
     observed_at = "2026-01-01T00:00:00Z"
     canonical_key = (
@@ -857,22 +1215,23 @@ def test_tracked_feedback_state_rejects_unknown_machine_subject(
         {"certainty": "unknown", "description": "unknown"},
         [],
     )
-    for kind, record in (
-        ("identity", identity),
-        ("occurrence", occurrence),
-        ("revision", revision),
-    ):
-        write_tracked_record(record_path(root, record, kind), record)
-
     with pytest.raises(CmocError):
-        validate_tracked_feedback_state(root)
+        _publish_fixture_unit(
+            root,
+            observation_id,
+            [
+                ("identity", identity),
+                ("occurrence", occurrence),
+                ("revision", revision),
+            ],
+        )
 
 
-def test_tracked_feedback_state_requires_machine_rule_category(
+def test_feedback_state_requires_machine_rule_category(
     tmp_path: Path,
 ) -> None:
     """machine issue の category は rule registry の値に限定する。"""
-    root = tmp_path / "state"
+    root = make_repo(tmp_path)
     observation_id = "fbo_" + "a" * 32
     observed_at = "2026-01-01T00:00:00Z"
     canonical_key = (
@@ -906,15 +1265,16 @@ def test_tracked_feedback_state_requires_machine_rule_category(
         {"certainty": "unknown", "description": "unknown"},
         [],
     )
-    for kind, record in (
-        ("identity", identity),
-        ("occurrence", occurrence),
-        ("revision", revision),
-    ):
-        write_tracked_record(record_path(root, record, kind), record)
-
     with pytest.raises(CmocError):
-        validate_tracked_feedback_state(root)
+        _publish_fixture_unit(
+            root,
+            observation_id,
+            [
+                ("identity", identity),
+                ("occurrence", occurrence),
+                ("revision", revision),
+            ],
+        )
 
 
 def test_normalizer_presence_keeps_changed_fingerprint_stale(
@@ -968,11 +1328,11 @@ def test_feedback_report_is_incremental_and_refreshes_fingerprint(
     assert first.exit_code == 0, first.output
     assert raw_path.is_file()
     assert ingestion_receipt_path(root, raw_path.stem).is_file()
-    report_records = sorted((root / ".cmoc/gt/ar/feedback/report").glob("fbr_*.json"))
+    report_records = sorted((feedback_root(root) / "report").glob("fbr_*.json"))
     [first_record_path] = report_records
     first_record = read_json_object(first_record_path)
-    for commit_id in first_record["state_commit_ids"]:
-        assert f"feedback normalization unit commit: `{commit_id}`" in first.output
+    for unit_id in first_record["normalization_unit_ids"]:
+        assert f"feedback normalization unit: `{unit_id}`" in first.output
     log_paths = sorted((root / ".cmoc/gu/ar/log/sub_command").glob("*.jsonl"))
     events = [
         json.loads(line)
@@ -982,9 +1342,12 @@ def test_feedback_report_is_incremental_and_refreshes_fingerprint(
     ]
     assert any(
         event.get("event") == "feedback_report_committed"
-        and event.get("state_commit_ids") == first_record["state_commit_ids"]
+        and event.get("normalization_unit_ids")
+        == first_record["normalization_unit_ids"]
         for event in events
     )
+    assert first_record["state_snapshot_id"].startswith("fbs_")
+    assert first_record["previous_successful_report_id"] is None
     reports = sorted((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
     assert len(reports) == 1
     assert 'result: "attention"' in reports[-1].read_text()
@@ -998,6 +1361,9 @@ def test_feedback_report_is_incremental_and_refreshes_fingerprint(
     assert len(reports) == 2
     assert 'result: "ok"' in reports[-1].read_text()
     assert "既定表示の対象 issue はありません。" in reports[-1].read_text()
+    second_records = sorted((feedback_root(root) / "report").glob("fbr_*.json"))
+    second_record = read_json_object(second_records[-1])
+    assert second_record["previous_successful_report_id"] == first_record["report_id"]
 
     (root / "README.md").write_text("# changed evidence\n")
     run_git(root, "add", "README.md")
@@ -1161,20 +1527,18 @@ def test_effective_revision_uses_source_observation_time(tmp_path: Path) -> None
         ("revision", old_revision),
         ("revision", new_revision),
     ]
-    for kind, record in records:
-        write_tracked_record(record_path(root, record, kind), record)
-
-    validate_tracked_feedback_state(root)
+    _publish_fixture_unit(root, old_observation_id, records)
+    validate_feedback_state(root)
     view = load_issue_views(root)[current_issue_id]
 
     assert view.revision["summary"] == "new summary"
 
 
-def test_tracked_feedback_state_allows_marker_like_record_text(
+def test_feedback_state_allows_marker_like_record_text(
     tmp_path: Path,
 ) -> None:
     """record の文字列値に含まれる conflict marker 風文字列を許容する。"""
-    root = tmp_path / "state"
+    root = make_repo(tmp_path)
     observation_id = "fbo_00000000-0000-7000-8000-000000000001"
     canonical_key = f"agent\0{observation_id}"
     current_issue_id = issue_id(canonical_key)
@@ -1213,10 +1577,8 @@ def test_tracked_feedback_state_allows_marker_like_record_text(
             ),
         ),
     ]
-    for kind, record in records:
-        write_tracked_record(record_path(root, record, kind), record)
-
-    validate_tracked_feedback_state(root)
+    _publish_fixture_unit(root, observation_id, records)
+    validate_feedback_state(root)
 
 
 def test_feedback_report_records_user_interruption_as_normal_completion(
@@ -1251,11 +1613,69 @@ def test_feedback_report_records_user_interruption_as_normal_completion(
     assert "deferred_observation_count: 1" in report_text
 
 
-def test_feedback_report_keeps_unit_committed_before_interruption(
+def test_feedback_report_recovers_prepared_publication(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """unit commit 直後の Ctrl+C でも確定済み receipt と commit を report する。"""
+    """Markdown 保存後の異常終了では recovery metadata から publication を再開する。"""
+    root = make_repo(tmp_path)
+    _active_session(root, monkeypatch)
+    original_publish = feedback_report_module.publish_report_record
+
+    def fail_publication(*_args: object, **_kwargs: object) -> Path:
+        """final report record の publish 直前に異常終了する。"""
+        raise RuntimeError("report publication failed")
+
+    monkeypatch.setattr(
+        feedback_report_module, "publish_report_record", fail_publication
+    )
+    failed = runner.invoke(app, ["feedback", "report"])
+
+    assert failed.exit_code != 0
+    recovery_root = feedback_root(root) / "report_recovery"
+    [recovery_path] = recovery_root.glob("*.json")
+    recovered_id = recovery_path.stem
+    assert not (feedback_root(root) / "report" / f"{recovered_id}.json").exists()
+    recovery_record = read_json_object(recovery_path)
+    report_path = Path(str(recovery_record["report_path"]))
+    report_temporary = report_path.parent / f".{report_path.name}.interrupted.tmp"
+    report_path.rename(report_temporary)
+    record_temporary = (
+        feedback_root(root) / "report" / f".{recovered_id}.json.interrupted.tmp"
+    )
+    record_temporary.parent.mkdir(parents=True, exist_ok=True)
+    record_temporary.write_bytes(canonical_json_bytes(recovery_record))
+
+    monkeypatch.setattr(
+        feedback_report_module, "publish_report_record", original_publish
+    )
+    resumed = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert resumed.exit_code == 0, resumed.output
+    assert not list(recovery_root.glob("*.json"))
+    assert report_path.is_file()
+    assert not report_temporary.exists()
+    assert not record_temporary.exists()
+    report_records = [
+        read_json_object(path)
+        for path in (feedback_root(root) / "report").glob("*.json")
+    ]
+    assert len(report_records) == 2
+    recovered = next(
+        record for record in report_records if record["report_id"] == recovered_id
+    )
+    successor = next(
+        record for record in report_records if record["report_id"] != recovered_id
+    )
+    assert recovered["previous_successful_report_id"] is None
+    assert successor["previous_successful_report_id"] == recovered_id
+
+
+def test_feedback_report_keeps_unit_manifest_confirmed_before_interruption(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """unit manifest 確定直後の Ctrl+C でも receipt と unit ID を report する。"""
     root = make_repo(tmp_path)
     session_id = _active_session(root, monkeypatch)
     observation_result, _ = store_agent_observation(
@@ -1264,21 +1684,21 @@ def test_feedback_report_keeps_unit_committed_before_interruption(
         _payload(),
     )
     observation_id = str(observation_result["observation_id"])
-    original_head_commit = feedback_report_module.head_commit
+    original_publish = feedback_report_module.publish_normalization_unit
     interrupted = False
 
-    def commit_then_interrupt(worktree: Path) -> str:
+    def publish_then_interrupt(*args: object, **kwargs: object) -> str:
         nonlocal interrupted
-        commit_id = original_head_commit(worktree)
+        unit_id = original_publish(*args, **kwargs)
         if not interrupted:
             interrupted = True
             raise KeyboardInterrupt
-        return commit_id
+        return unit_id
 
     monkeypatch.setattr(
         feedback_report_module,
-        "head_commit",
-        commit_then_interrupt,
+        "publish_normalization_unit",
+        publish_then_interrupt,
     )
 
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
@@ -1292,14 +1712,5 @@ def test_feedback_report_keeps_unit_committed_before_interruption(
     assert 'result: "interrupted"' in report_text
     assert "processed_observation_count: 1" in report_text
     assert run_git(root, "status", "--short").stdout.strip() == ""
-    normalization_commit = run_git(
-        root,
-        "log",
-        "--format=%H",
-        "--grep=cmoc feedback normalize",
-        "-1",
-    ).stdout.strip()
-    assert normalization_commit
-    assert (
-        f"feedback normalization unit commit: `{normalization_commit}`" in result.output
-    )
+    [unit_manifest] = (feedback_root(root) / "normalization_unit").glob("*.json")
+    assert f"feedback normalization unit: `{unit_manifest.stem}`" in result.output

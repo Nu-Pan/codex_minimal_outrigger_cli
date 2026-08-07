@@ -6,7 +6,9 @@ observation の byte 表現と保存先を共有する。分割すると受理�
 record の同一性判定が重複するため、raw observation store の境界にまとめる。
 
 対応する oracle file:
-`{{work-root}}/oracle/doc/app_spec/feedback_observation.md`。
+
+- `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
+- `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
 """
 
 import fcntl
@@ -144,7 +146,7 @@ def reporter_input_validation_errors(payload: object) -> list[str]:
 
 
 def feedback_root(repo: Path) -> Path:
-    """repository 共通の feedback raw data root を返す。"""
+    """repository 共通の feedback 永続データ root を返す。"""
     return repo / ".cmoc" / "gu" / "ar" / "feedback"
 
 
@@ -163,9 +165,29 @@ def normalization_checkpoint_root(repo: Path) -> Path:
     return feedback_root(repo) / "normalization_checkpoint"
 
 
-def tracked_feedback_root(worktree: Path) -> Path:
-    """git 追跡対象の normalized feedback state root を返す。"""
-    return worktree / ".cmoc" / "gt" / "ar" / "feedback"
+def normalization_unit_root(repo: Path) -> Path:
+    """durable に確定した normalization unit manifest root を返す。"""
+    return feedback_root(repo) / "normalization_unit"
+
+
+def normalization_recovery_root(repo: Path) -> Path:
+    """未確定 normalization unit の durable recovery metadata root を返す。"""
+    return feedback_root(repo) / "normalization_recovery"
+
+
+def state_snapshot_root(repo: Path) -> Path:
+    """repository-local normalized state snapshot root を返す。"""
+    return feedback_root(repo) / "state_snapshot"
+
+
+def migration_root(repo: Path) -> Path:
+    """一回限りの tracked feedback state 移行用 root を返す。"""
+    return feedback_root(repo) / "migration" / "v1"
+
+
+def report_recovery_root(repo: Path) -> Path:
+    """未確定 report publication の durable recovery metadata root を返す。"""
+    return feedback_root(repo) / "report_recovery"
 
 
 def parse_rfc3339(value: str) -> datetime:
@@ -228,14 +250,37 @@ def _atomic_create(path: Path, content: bytes) -> bool:
             # 同じ保存 directory を使う collector process 間で存在確認と rename を
             # 直列化し、既存 immutable record を上書きしない。
             fcntl.flock(directory_fd, fcntl.LOCK_EX)
+            temporary_prefix = f".{path.name}."
+            sibling_temporaries = [
+                candidate
+                for candidate in path.parent.iterdir()
+                if candidate.name.startswith(temporary_prefix)
+                and candidate.name.endswith(".tmp")
+            ]
+            for candidate in sibling_temporaries:
+                if (
+                    candidate.is_symlink()
+                    or not candidate.is_file()
+                    or candidate.read_bytes() != content
+                ):
+                    raise FeedbackRejected(
+                        "context_invalid",
+                        f"feedback temporary record differs or is not regular: {candidate}",
+                    )
             if os.path.lexists(path):
                 if path.is_symlink() or not path.is_file():
                     raise FeedbackRejected(
                         "context_invalid",
                         f"feedback record path is not a regular file: {path}",
                     )
+                for candidate in sibling_temporaries:
+                    candidate.unlink(missing_ok=True)
+                os.fsync(directory_fd)
                 return False
             os.rename(temporary, path)
+            for candidate in sibling_temporaries:
+                if candidate != temporary:
+                    candidate.unlink(missing_ok=True)
             os.fsync(directory_fd)
         finally:
             fcntl.flock(directory_fd, fcntl.LOCK_UN)
@@ -245,9 +290,8 @@ def _atomic_create(path: Path, content: bytes) -> bool:
         temporary.unlink(missing_ok=True)
 
 
-def write_immutable_json(path: Path, value: dict[str, Any]) -> str:
-    """同一内容だけを再利用できる immutable JSON record を保存する。"""
-    content = canonical_json_bytes(value)
+def write_immutable_bytes(path: Path, content: bytes) -> str:
+    """同一 byte 列だけを再利用できる durable file を保存する。"""
     digest = sha256_bytes(content)
     if _atomic_create(path, content):
         return digest
@@ -255,13 +299,72 @@ def write_immutable_json(path: Path, value: dict[str, Any]) -> str:
         current = path.read_bytes()
     except OSError as exc:
         raise FeedbackRejected(
-            "context_invalid", f"existing observation cannot be read: {path}"
+            "context_invalid", f"existing feedback record cannot be read: {path}"
         ) from exc
     if sha256_bytes(current) != digest:
         raise FeedbackRejected(
-            "context_invalid", f"observation ID collision or corruption: {path}"
+            "context_invalid", f"immutable feedback record differs: {path}"
         )
     return digest
+
+
+def recover_immutable_bytes_from_temporary(
+    path: Path,
+    expected_sha256: str,
+) -> bool:
+    """完全な sibling temporary file を期待 hash の immutable file へ回収する。"""
+    if _has_symlink_component(path):
+        raise FeedbackRejected(
+            "context_invalid", f"feedback storage path uses a symlink: {path}"
+        )
+    if not path.parent.is_dir():
+        return False
+    prefix = f".{path.name}."
+    candidates = [
+        candidate
+        for candidate in path.parent.iterdir()
+        if candidate.name.startswith(prefix) and candidate.name.endswith(".tmp")
+    ]
+    if not candidates:
+        return False
+    if os.path.lexists(path):
+        if path.is_symlink() or not path.is_file():
+            raise FeedbackRejected(
+                "context_invalid", f"feedback record path is not regular: {path}"
+            )
+        content = path.read_bytes()
+        if sha256_bytes(content) != expected_sha256:
+            raise FeedbackRejected(
+                "context_invalid", f"feedback record hash differs: {path}"
+            )
+        write_immutable_bytes(path, content)
+        return True
+    contents: list[bytes] = []
+    for candidate in candidates:
+        if candidate.is_symlink() or not candidate.is_file():
+            raise FeedbackRejected(
+                "context_invalid",
+                f"feedback temporary record is not regular: {candidate}",
+            )
+        content = candidate.read_bytes()
+        if sha256_bytes(content) != expected_sha256:
+            raise FeedbackRejected(
+                "context_invalid",
+                f"feedback temporary record hash differs: {candidate}",
+            )
+        contents.append(content)
+    if any(content != contents[0] for content in contents[1:]):
+        raise FeedbackRejected(
+            "context_invalid",
+            f"feedback temporary records differ for: {path}",
+        )
+    write_immutable_bytes(path, contents[0])
+    return True
+
+
+def write_immutable_json(path: Path, value: dict[str, Any]) -> str:
+    """同一内容だけを再利用できる immutable JSON record を保存する。"""
+    return write_immutable_bytes(path, canonical_json_bytes(value))
 
 
 def _store_observation(
@@ -622,58 +725,92 @@ def read_json_object(path: Path) -> dict[str, Any]:
     return value
 
 
-def ingestion_receipt_path(worktree: Path, observation_id: str) -> Path:
-    """observation ごとの tracked ingestion receipt path を返す。"""
-    return tracked_feedback_root(worktree) / "ingestion" / f"{observation_id}.json"
+def ingestion_receipt_path(repo: Path, observation_id: str) -> Path:
+    """observation ごとの repository-local ingestion receipt path を返す。"""
+    return feedback_root(repo) / "ingestion" / f"{observation_id}.json"
 
 
-def unprocessed_observation_paths(repo: Path, worktree: Path) -> list[Path]:
-    """現在 branch に ingestion receipt がない raw observation を返す。"""
-    paths: list[Path] = []
-    for path in iter_observation_paths(repo):
-        observation_id = path.stem
-        receipt_path = ingestion_receipt_path(worktree, observation_id)
-        if _has_symlink_component(receipt_path) or not receipt_path.is_file():
-            paths.append(path)
-    return paths
+def unprocessed_observation_paths(repo: Path) -> list[Path]:
+    """effective ingestion receipt がない raw observation を返す。"""
+    # normalized state はこの module の primitive を使うため、reader だけを遅延 import する。
+    from .runtime_feedback_state import effective_ingestion_receipts
+
+    receipts = effective_ingestion_receipts(repo)
+    return [path for path in iter_observation_paths(repo) if path.stem not in receipts]
 
 
 def feedback_completion_counts(
-    repo: Path, worktree: Path
-) -> tuple[int, int, list[str]]:
+    repo: Path, worktree: Path | None = None
+) -> tuple[int | None, int | None, list[str]]:
     """通常サブコマンド完了時の raw observation 件数と warning を返す。"""
-    unprocessed = unprocessed_observation_paths(repo, worktree)
+    del worktree
+    # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+    # receipt 前は旧 state の選択が未確定なため、件数を推測しない。
+    from .runtime_feedback_state import (
+        latest_successful_report_record,
+        load_effective_feedback_state,
+        migration_receipt_path,
+    )
+
+    if not migration_receipt_path(repo).is_file():
+        return (
+            None,
+            None,
+            ["feedback の一回限りの旧 state 移行が未完了のため件数を計算できません。"],
+        )
+
+    try:
+        unprocessed = unprocessed_observation_paths(repo)
+    except Exception as exc:
+        return (
+            None,
+            None,
+            [
+                "repository-local feedback state を安全に検証できないため件数を計算できません。",
+                f"feedback state: {exc}",
+            ],
+        )
     warnings: list[str] = []
-    records: list[dict[str, Any]] = []
-    report_dir = tracked_feedback_root(worktree) / "report"
-    if not _has_symlink_component(report_dir) and report_dir.is_dir():
-        for path in report_dir.glob("fbr_*.json"):
-            if _has_symlink_component(path) or not path.is_file():
-                continue
-            try:
-                record = read_json_object(path)
-            except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
-                continue
-            if record.get("result") in {"ok", "attention"} and is_uuid7_prefixed(
-                record.get("report_id"), "fbr_"
-            ):
-                records.append(record)
-    if not records:
+    try:
+        latest = latest_successful_report_record(repo)
+        if latest is None:
+            receipt = load_effective_feedback_state(repo).migration_receipt
+            baseline = receipt.get("baseline")
+            baseline_id = (
+                baseline.get("legacy_report_id") if isinstance(baseline, dict) else None
+            )
+            metadata = next(
+                (
+                    item
+                    for item in receipt.get("legacy_reports", [])
+                    if isinstance(item, dict) and item.get("report_id") == baseline_id
+                ),
+                None,
+            )
+            if metadata is not None:
+                archive = feedback_root(repo) / str(metadata["archive_path"])
+                legacy = read_json_object(archive)
+                latest = {
+                    "report_id": baseline_id,
+                    "report_snapshot_sha256": legacy.get("snapshot_manifest_sha256"),
+                }
+    except Exception as exc:
+        latest = None
+        warnings.extend(
+            [
+                "正常 feedback report の連鎖を一意に解決できないため未処理件数を使用しました。",
+                f"feedback report chain: {exc}",
+            ]
+        )
+    if latest is None:
         increased = len(unprocessed)
     else:
-        latest = max(
-            records,
-            key=lambda record: (
-                _best_effort_timestamp(record.get("generated_at")),
-                str(record.get("report_id", "")),
-            ),
-        )
         report_id = latest.get("report_id")
         manifest_path = report_snapshot_root(repo) / f"{report_id}.json"
         try:
             if _has_symlink_component(manifest_path) or not manifest_path.is_file():
                 raise ValueError("snapshot manifest path is not a regular file")
-            expected_manifest_sha = latest.get("snapshot_manifest_sha256")
+            expected_manifest_sha = latest.get("report_snapshot_sha256")
             if (
                 not isinstance(expected_manifest_sha, str)
                 or sha256_bytes(manifest_path.read_bytes()) != expected_manifest_sha
@@ -695,7 +832,7 @@ def feedback_completion_counts(
         except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
             increased = len(unprocessed)
             warnings.append(
-                "前回 feedback report の snapshot manifest がないため未処理件数を使用しました。"
+                "直前の正常な local feedback report の report snapshot を検証できないため未処理件数を使用しました。"
             )
 
     # notification threshold は詳細を展開せず report 実行だけを促す。
@@ -722,13 +859,3 @@ def feedback_completion_counts(
             "未処理 feedback が蓄積しています。`cmoc feedback report` を実行してください。"
         )
     return len(unprocessed), increased, warnings
-
-
-def _best_effort_timestamp(value: object) -> datetime:
-    """不正 record を件数表示だけで致命化せず時刻比較する key を返す。"""
-    if isinstance(value, str):
-        try:
-            return parse_rfc3339(value).astimezone(timezone.utc)
-        except ValueError:
-            pass
-    return datetime.min.replace(tzinfo=timezone.utc)

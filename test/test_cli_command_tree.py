@@ -67,3 +67,19 @@ def test_help_renders_without_typer_click_compatibility_error() -> None:
     assert "oracle" in rendered
     assert "realization" in rendered
     assert "run" in rendered
+
+
+def test_feedback_report_exposes_migration_source_option() -> None:
+    """一回限りの divergent 旧 state 移行を人間が明示選択できる。"""
+    command = get_command(app)
+    feedback = command.commands["feedback"]
+    assert isinstance(feedback, click.Group)
+    report = feedback.commands["report"]
+    options = {
+        option
+        for parameter in report.params
+        if isinstance(parameter, click.Option)
+        for option in parameter.opts
+    }
+
+    assert options == {"--all", "--migration-source"}

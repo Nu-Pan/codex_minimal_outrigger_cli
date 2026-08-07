@@ -4,7 +4,13 @@
 ライフサイクルに閉じている。fork、join、abandon、linked worktree、state cleanup、
 dirty worktree 拒否は同じ session 状態遷移の観測点であり、分割すると同じ branch/state
 fixture を追う文脈が分散する。現状は session CLI 回帰として一箇所に保つ方が凝集性が高い。
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+
+根拠:
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+- {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+- {{work-root}}/oracle/doc/app_spec/feedback_state.md
+- {{work-root}}/oracle/doc/app_spec/session_state.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 """
 
 import json
@@ -470,8 +476,11 @@ def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
     assert result.exit_code != 0
     assert current_branch(linked) == session_branch
     assert "session home branch が存在しません。" in result.stdout
-    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
-    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout == ""
+    assert "/.cmoc/gu/" not in gitignore.read_text().splitlines()
+    assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
+    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == [
+        ".cmoc/gu/tracked-probe"
+    ]
     assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
@@ -724,77 +733,27 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_sandbox(
     assert modes == [FileAccessMode.REPO_WRITE]
 
 
-def test_session_join_auto_stages_byte_identical_feedback_record(
+def test_session_join_preserves_repository_local_feedback_state(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """append-only feedback conflict は両 stage が同一 byte の場合だけ統合する。"""
-    root = tmp_path / "repo"
-    root.mkdir()
-    path = root / ".cmoc/gt/ar/feedback/ingestion/fbo_same.json"
-    calls: list[list[str]] = []
-
-    def fake_git(
-        args: list[str], _root: Path, check: bool = True
-    ) -> cmoc_runtime.CommandResult:
-        """stage 2/3 が同じ内容の unmerged index を再現する。"""
-        del check
-        calls.append(args)
-        if args[:1] == ["show"]:
-            return cmoc_runtime.CommandResult(0, '{"same":true}\n', "")
-        return cmoc_runtime.CommandResult(0, "", "")
-
-    remaining = session_join_module._resolve_feedback_state_conflicts(
-        root, [path], fake_git
-    )
-
-    assert remaining == []
-    assert [call[0] for call in calls] == ["show", "show", "checkout", "add"]
-
-
-def test_session_join_aborts_divergent_feedback_record_without_agent(
-    tmp_path: Path,
-) -> None:
-    """同じ feedback record path の異なる内容を agent へ渡さず merge 中止する。"""
+    """session join が repository-local feedback state を merge や rollback しない。"""
     root = make_repo(tmp_path)
-    home_branch = current_branch(root)
-    relative = ".cmoc/gt/ar/feedback/ingestion/fbo_conflict.json"
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    fork = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+    assert fork.exit_code == 0, fork.output
+    relative = ".cmoc/gu/ar/feedback/normalization_checkpoint/sentinel.json"
     path = root / relative
-    run_git(root, "switch", "-c", "feedback-session")
     path.parent.mkdir(parents=True)
-    path.write_text('{"branch":"session"}\n')
-    run_git(root, "add", relative)
-    run_git(root, "commit", "-m", "session feedback")
-    run_git(root, "switch", home_branch)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text('{"branch":"home"}\n')
-    run_git(root, "add", relative)
-    run_git(root, "commit", "-m", "home feedback")
-    merge = cmoc_runtime.run_git(
-        ["merge", "--no-ff", "feedback-session"], root, check=False
-    )
-    assert merge.returncode != 0
-    agent_called = False
+    content = '{"repository_local":true}\n'
+    path.write_text(content)
 
-    def fail_agent(*_args: object, **_kwargs: object) -> None:
-        """divergent feedback record が generic agent に届いたら失敗する。"""
-        nonlocal agent_called
-        agent_called = True
+    joined = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
-    with pytest.raises(CmocError, match="divergent conflict"):
-        session_join_module.resolve_session_join_conflict(
-            root,
-            fail_agent,
-            cmoc_runtime.run_git,
-        )
-
-    assert agent_called is False
-    assert (
-        cmoc_runtime.run_git(
-            ["rev-parse", "-q", "--verify", "MERGE_HEAD"], root, check=False
-        ).returncode
-        != 0
-    )
-    assert path.read_text() == '{"branch":"home"}\n'
+    assert joined.exit_code == 0, joined.output
+    assert path.read_text() == content
+    assert run_git(root, "ls-files", "--", relative).stdout == ""
 
 
 def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
@@ -1052,8 +1011,11 @@ def test_session_join_preprocesses_linked_worktree_before_preconditions(
     assert current_branch(linked) == session_branch
     assert "git コマンドが失敗しました。" in result.stderr
     assert "git コマンドが失敗しました。" not in result.stdout
-    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
-    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout == ""
+    assert "/.cmoc/gu/" not in gitignore.read_text().splitlines()
+    assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
+    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == [
+        ".cmoc/gu/tracked-probe"
+    ]
     assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
