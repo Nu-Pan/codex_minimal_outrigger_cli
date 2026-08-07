@@ -228,24 +228,23 @@
 # `runtime_doctor.py`
 
 ## Summary
-- doctor preprocess における修復処理、Git common directory 単位の排他ロック、一時 index の退避・合成・復元、修復差分の commit lifecycle を一体として扱う実装。
-- .cmoc/gu の ignore、.agents/.gitkeep、config、refactor state の同期と追跡状態を保証し、失敗時には呼び出し元の index を復元する。
-- doctor の修復 commit が利用者の staged 状態や未 staged 変更を混入させないよう、HEAD 起点の一時 index を使って commit 対象を分離する。
-- reporter の利用不能時は修復や version command を止めず degraded として通知する。
+- doctor preprocess の修復処理と commit lifecycle を一元的に扱う実装。Git common directory 単位の排他 lock、現在の index の退避・復元、.cmoc の ignore、.agents の追跡用 placeholder、config/refactor state の同期、feedback reporter の degraded 処理、修復差分の分離 commit を担当する。
+- 一時 index を使って利用者の staged 状態や unstaged hunk、staged deletion、rename を保ちながら doctor 修復を合成し、失敗時には元の index を復元する。Git index 上の runtime state の追跡も最後に検証する。
+- doctor preprocess の呼び出し、Git index/common directory のライフサイクル、修復 commit の挙動、.agents の安全なパス検証、または関連する一時 index 操作を調査・変更するときの入口となる。
 
 ## Read this when
-- doctor preprocess の修復対象、lock、Git index の退避・復元、修復 commit の挙動を変更または調査するとき
-- config や refactor state の doctor 同期、.cmoc/gu の ignore、.agents の追跡保証を確認するとき
-- doctor 実行時の staged 状態の保全、失敗時の復旧、HEAD 起点の一時 index による commit 分離を確認するとき
-- reporter 可用性エラーを doctor preprocess がどう扱うか確認するとき
+- doctor preprocess の修復、同期、commit、失敗時復元の挙動を確認するとき
+- Git common directory の lock、複数 worktree、現在 index と一時 index の分離を扱うとき
+- .cmoc の ignore、.agents/.gitkeep、config、refactor state の追跡状態を修復・検証するとき
+- doctor 修復が利用者の staged 状態や staged deletion を保持する仕組みを調査するとき
 
 ## Do not read this when
-- 通常の Git 操作、doctor 以外の preprocess、config や refactor state の同期実装そのものだけを調べるときは、各担当モジュールを直接読む
-- CLI の一般的な doctor 入力検証や表示仕様だけを調べるときは、doctor preprocess の仕様・呼び出し元を直接読む
-- reporter の詳細なプロトコルや通知仕様だけを調べるときは、runtime feedback の担当実装を直接読む
+- doctor preprocess 以外の一般的な Git 操作や runtime 設定だけを調査するときは、それぞれの Git・設定関連実装を直接読む
+- feedback reporter の単独の検証・通知仕様だけを調査するときは、reporter 関連の実装や仕様を直接読む
+- doctor が同期する config や refactor state の内容・同期規則だけを調査するときは、各同期実装を直接読む
 
 ## hash
-- 34d96aba1a871809a1a3de6ecf091f5e0ff436473ecee248b479aac883641699
+- cc0d7ce2aada85fc97d644d0e62be6e7dedc780ff8005e93397e6dcb4af9fe8f
 
 # `runtime_errors.py`
 
@@ -266,20 +265,21 @@
 # `runtime_feedback.py`
 
 ## Summary
-- サブコマンド invocation 単位の feedback collector と Codex call context を管理する中核モジュール。専用 capability と Unix socket を介した observation の並行受付・保存、call 終了時の drain、reporter 利用不能時の degraded 処理、stable event の検証と machine observation 化を担う。feedback の受付ライフサイクル、reporter/collector の可用性検証、または detector の挙動を確認・変更するときの入口となる。
+- feedback observation の invocation-scoped collector と Codex call 単位の capability lifecycle を統合する中核 runtime 実装。Unix socket による reporter request の受付、並行処理、rate limit、保存、call 終了時の drain、degraded event の発行、allowlist 済み event の machine observation 化を担う。collector の開始・停止、現在 invocation の取得、call context の開始、doctor 用 reporter/collector 検証、accepted observation の取得が、この機能群への主な入口である。
 
 ## Read this when
-- feedback observation の収集経路、Codex call ごとの capability、受付制限、並行処理、終了処理を調査・変更するとき。
-- feedback reporter または collector の doctor 検証、利用不能イベント、degraded behavior を調査・変更するとき。
-- allowlist 済み event から machine observation を生成する detector の挙動を確認するとき。
+- feedback reporter、collector、observation の保存経路を変更・調査するとき
+- Codex call の capability、subprocess 環境、受付停止、drain、並行 request の挙動を確認するとき
+- reporter unavailable や Structured Output validation exhausted の event 検出・machine observation 化を確認するとき
+- doctor における reporter schema、MCP protocol、collector socket の可用性検証を変更するとき
 
 ## Do not read this when
-- 保存形式や observation payload の schema、RFC3339、observation の永続化処理そのものを確認したい場合は、runtime feedback store の実装を直接読む。
-- MCP reporter の公開 tool 実装や stdio protocol の詳細だけを確認したい場合は、runtime feedback reporter の実装を直接読む。
-- branch、HEAD、logger、session state など個別の runtime context の実装を確認したい場合は、それぞれの runtime helper を直接読む。
+- 保存形式や observation payload の schema・永続化規則だけを確認したい場合は、runtime_feedback_store の実装または対応する oracle を直接読む
+- MCP reporter 自体の tool 実装や stdio protocol の詳細だけを確認したい場合は、runtime_feedback_reporter を直接読む
+- 一般的な subcommand logging や git context の仕様だけを確認したい場合は、対応する runtime_logging・runtime_git・runtime_state の実装を直接読む
 
 ## hash
-- d73b5f0238b28cc6a3194b70ddbd2c19840bb693a4e3b95b9319c395e7645f0d
+- 455d13200beda2c58cee6982200b1d490d0c4fc0a842e4e0a1f3cbf52d895f21
 
 # `runtime_feedback_reporter.py`
 

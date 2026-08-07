@@ -370,19 +370,19 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の共有 lifecycle を検証する統合テスト。CLI と直接呼び出しの双方で、Git 状態・config・refactor state・lock・linked worktree の修復、副作用、失敗時の index 保持を確認する。doctor preprocess の外部契約を検証するテストの入口。
+- doctor preprocess の統合テスト。CLI と直接呼び出しの両方で、Git 状態、config、refactor state、共有 doctor lock、reporter probe、linked worktree を含む修復 lifecycle を検証する。修復失敗時や既存の staged index、index flag、intent-to-add、rename、削除、unstaged hunk を保持する契約、および `.agents` の symlink 経由書き込み拒否も扱う。doctor preprocess の外部挙動を確認するテストの入口。
 
 ## Read this when
-- doctor preprocess の修復順序、共有 lock、config/state 同期、linked worktree 対応を変更・調査するとき
-- doctor が既存の staged/unstaged 差分、index flag、rename、intent-to-add、symlink を保持・拒否する挙動を確認するとき
-- doctor の修復 commit に利用者の事前 staged 変更を含めない契約を検証するとき
+- doctor preprocess の外部契約や修復 lifecycle を変更・検証するとき
+- doctor の Git index 保持、repair commit、config/state 同期、linked worktree、lock 待機を扱うとき
+- doctor の reporter probe における中断伝播や `.agents` の安全な修復を確認するとき
 
 ## Do not read this when
-- doctor preprocess 以外の CLI サブコマンドや Git helper の実装を直接調査するとき
-- doctor の内部実装詳細だけを確認したい場合は、対応する runtime doctor 実装と正本仕様を先に読むとよい
+- doctor preprocess 以外の CLI サブコマンドや、個別の Git・config・refactor 実装だけを直接調査するとき
+- 単体テストの共通 fixture や CLI 実行ヘルパーの仕様を確認したいときは、それぞれの実装・ヘルパーを直接読む
 
 ## hash
-- dda671fcb93055d51d0813a6c07f4a0d0541814d51c376364cb9b4b04b4b3091
+- 43bb38f9b56c6ca8b47e2522e1c23788e228c9e3e023c35518efe05ef4d60b3a
 
 # `test_editing_run_cli.py`
 

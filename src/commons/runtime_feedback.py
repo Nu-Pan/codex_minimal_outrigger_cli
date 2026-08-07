@@ -602,7 +602,7 @@ def validate_feedback_reporter_availability() -> None:
 
     try:
         expected_schema = reporter_input_schema()
-    except BaseException as exc:
+    except Exception as exc:
         raise ReporterAvailabilityError(
             "reporter", "version_mismatch", "feedback reporter schema is invalid"
         ) from exc
