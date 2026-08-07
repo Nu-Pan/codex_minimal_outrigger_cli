@@ -140,19 +140,19 @@
 # `test`
 
 ## Summary
-- テストコードから、CLI・runtime・ACP builder・indexing・oracle review・session・config・feedback など cmoc 各サブシステムの外部契約と回帰条件を検証する realization test 群への入口。
-- 共通の Git、Codex、Ollama、fake command、doctor CLI などのテスト支援 helper も含み、個別機能の統合挙動から低レベル境界条件、本番経路までを扱う。
+- cmoc の realization test 群を収録するディレクトリ。CLI の各サブコマンド、Codex runtime、ACP builder、indexing、oracle review、session/run lifecycle、設定・状態永続化、共通 runtime、packaged import、実 Codex 経路などの外部挙動・契約・境界条件を検証する。個別機能の回帰テストや関連するテスト支援モジュールへ進むための入口となる。
 
 ## Read this when
-- 対象機能の realization test、統合テスト、外部挙動、状態遷移、CLI 契約、Codex 実行契約の検証先を探すとき。
-- ACP builder、runtime、indexing、oracle review、session、config、feedback などに関する既存の回帰条件やテスト用 fixture の責務を確認するとき。
-- 複数サブシステムにまたがる lifecycle、worktree、Git、process cleanup、report、Structured Output の受け入れ境界を調査するとき。
+- cmoc の機能変更に対応する既存の realization test や回帰テストを探すとき
+- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run、設定・状態管理などの外部契約をテスト側から確認するとき
+- テスト対象の境界条件、安全性、状態遷移、ログ・report・Git/worktree 副作用の検証箇所を特定するとき
+- 共通 fixture やテスト支援モジュールの責務を確認するとき
 
 ## Do not read this when
-- 正本仕様、schema、prompt 規範、実装詳細そのものを確認・変更する場合は、対応する oracle 文書・schema・src 実装を直接読む。
-- 単一の共通 helper の実装だけを調査する場合は、該当する support module を直接読む。
-- テスト実行方法や品質検査の選択基準だけを確認する場合は、テスト実行ルールを読む。
-- LLM の回答品質そのものを評価する場合は、本番経路テストではなく対象の品質評価資料を読む。
+- 正本仕様、schema、prompt 規範、設計意図そのものを確認するときは、対応する oracle 文書・schema・実装を直接読む
+- 特定機能の実装詳細だけを調査するときは、対応する src 側の実装を直接読む
+- テスト全体の実行方法や品質検査の選択基準だけを確認するときは、テスト実行規則を読む
+- 対象機能と関係しないテストや、実 Codex・Ollama を用いる本番経路試験を必要としない単体の実装調査を行うとき
 
 ## hash
-- f7a170a36aae8cd5026d013caa74de6b4ebea1a9d756555bd23ebd2872897808
+- 6df2eecdeb815b1b5058f3e756a64d4aba0144d1ab977489228a61b9a8d99f98
