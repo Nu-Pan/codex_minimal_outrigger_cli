@@ -202,18 +202,19 @@
 # `test_cli_command_tree.py`
 
 ## Summary
-- 公開 CLI の末端コマンド集合を oracle の列挙と照合し、CLI の公開構造が固定どおりであることを検証するテスト。Typer/Click の互換性エラーなしに help が描画され、主要なコマンド群が含まれることも確認する。CLI コマンドツリーの公開 leaf 構成や help 表示の回帰を調べる際の入口となる。
+- 公開 CLI の末端コマンド集合が oracle 仕様で列挙された command path と一致することを検証するテスト。
+- Typer/Click の互換性エラーを起こさず CLI help を描画でき、主要な command group が含まれることも確認する。
 
 ## Read this when
-- 公開 CLI のコマンド追加・削除・階層変更が正本の leaf 集合に適合しているか確認するとき
-- Typer と Click の互換性問題や CLI help の描画回帰を調査するとき
+- 公開 CLI の command tree、コマンド追加・削除・階層変更、または oracle 仕様の CLI leaf 集合を変更する作業を行うとき。
+- Typer/Click の更新や CLI help 描画の互換性問題を調査するとき。
 
 ## Do not read this when
-- 個別コマンドの実装や実行時挙動を調べるとき
-- CLI 以外の機能のテストや仕様を確認するとき
+- 個別サブコマンドの実装や、その引数・実行時挙動だけを変更または調査するとき。
+- CLI 以外の機能のテストや実装を扱うとき。
 
 ## hash
-- c1f84066267a99d9c9241db39240e44979c883cd51906ccd1186ed3c78354d0a
+- 7b99bf08e71cea1d97ce22d61ff81b7f4295a9d90833758e297880502e4657dd
 
 # `test_cli_tui.py`
 

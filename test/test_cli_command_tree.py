@@ -1,4 +1,20 @@
-"""oracle 変更後の公開 CLI leaf 集合を固定する。"""
+"""oracle 変更後の公開 CLI leaf 集合を固定する。
+
+正本仕様:
+- {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/indexing.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+"""
 
 import click
 from typer.main import get_command
