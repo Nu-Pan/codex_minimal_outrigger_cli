@@ -73,20 +73,20 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンドの共通実行ライフサイクルを担うランタイム実装。work root 検査、サブコマンドログ、feedback invocation、doctor preprocess、step 通知、成功・失敗時の終了処理、エラー表示、完了サマリーを統合する。
-- サブコマンド共通の実行制御や step 通知、作業ディレクトリ制約、終了時ログ・コンソール出力の挙動を確認するための実装入口であり、個別サブコマンドの処理内容を読む対象ではない。
+- CLI サブコマンド共通の実行ライフサイクルを管理するランタイム実装。work root 検査、ログと feedback invocation の開始・終了、doctor 前処理、step 通知、正常・異常終了の記録、エラー表示、完了サマリーを集約する。
+- サブコマンド共通処理の呼び出し順序や終了経路を確認する必要がある場合の入口であり、個別サブコマンドの実装や各ランタイム機能の詳細は、それぞれの呼び出し元・専用モジュールを読む。
 
 ## Read this when
-- 複数の CLI サブコマンドに共通する実行前処理・実行後処理・例外処理を調査または変更するとき。
-- サブコマンドログ、feedback invocation、doctor preprocess、step 表示、完了サマリーの連携を確認するとき。
-- work root での実行必須条件や、非 0 return・KeyboardInterrupt・例外の終了経路を確認するとき。
+- サブコマンド実行時の共通初期化、doctor 前処理、ログ記録、feedback 処理、step 表示、終了コード変換、例外処理を変更または調査するとき
+- サブコマンドの正常終了・失敗終了・KeyboardInterrupt 時の挙動やコンソール完了サマリーを確認するとき
+- work root と repo root の使い分け、共通実行ラッパーの引数契約を確認するとき
 
 ## Do not read this when
-- 特定サブコマンド固有の入力処理、業務ロジック、または個別の事前条件だけを調査するとき。
-- ログ出力、エラー描画、doctor preprocess、feedback 保存など各機能の詳細仕様や実装を直接確認する必要があるときは、それぞれの専用仕様・実装へ進む。
+- 特定サブコマンド固有の業務処理、CLI 引数定義、または個別ランタイム機能の内部実装だけを確認するとき
+- ログ形式、doctor 前処理、feedback 保存、エラー描画の仕様そのものを確認するときは、対応する oracle 仕様または専用モジュールを直接読む
 
 ## hash
-- 53e291c220da6408dd82fca39ae300aacf37082aea3fc4c1bbc2d24177876e51
+- 58c70ca6ef3c5348863e05d3dc99f340d4c95495bb1811dd1b7b8f04195fccd4
 
 # `runtime_codex.py`
 
@@ -280,23 +280,6 @@
 ## hash
 - 455d13200beda2c58cee6982200b1d490d0c4fc0a842e4e0a1f3cbf52d895f21
 
-# `runtime_feedback_migration.py`
-
-## Summary
-- tracked feedback state を local branch の legacy tree から repository-local の normalized state へ一回限りで移行する実装。branch ごとの候補収集、分岐検出、archive と hash による成果物保全、選択 record の取り込み、baseline snapshot の生成、legacy state の安全な削除、migration receipt による再開・完了確認を担う。
-
-## Read this when
-- feedback state migration の開始条件、migration source の分岐選択、legacy report の archive・取り込み・baseline 生成を変更または調査するとき
-- migration receipt、prepared artifact、hash 検証、削除 commit による一回限りの再開安全性を確認するとき
-- legacy branch 間の divergence や、legacy state と archive の不一致時のエラー挙動を確認するとき
-
-## Do not read this when
-- 通常の feedback state の読み書きや report 保存の挙動だけを変更・調査するときは、feedback store や state validation の直接実装を読む
-- migration の正本仕様や利用者向け制約を確認するときは、対応する oracle specification を直接読む
-
-## hash
-- dc52ddd661c43db3764b2978a007b97f714043d39b5c92719e57a879a6ef5e74
-
 # `runtime_feedback_reporter.py`
 
 ## Summary
@@ -318,41 +301,42 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の repository-local normalized state を表す共通 state model。issue identity、revision、occurrence、assessment、disposition、ingestion、report の record 構築・保存・schema検査・content-addressed ID・record間参照を扱う。
-- append-only feedback state、normalization unit、recovery metadata、migration receipt、state snapshot、report publication artifact の整合性と durable 保存を検証する。
-- manifest または migration receipt から effective state と issue view を復元し、effective revision・assessment・disposition、report predecessor、snapshot 参照を選択する下位処理の中心入口。
+- repository-local feedback の append-only normalized state を一元的に扱う実装。record の構築、ID 生成、観測 envelope と各 record の schema 検査、record 間参照検証、effective issue view 選択を担う。
+- normalization unit の recovery・publish、effective state の読み込み、state snapshot の生成・復元、report publication の recovery・検証・履歴管理までを扱う。
+- feedback state の不変条件と読み取り規則を共有する下位実装への入口であり、対応する正本仕様は oracle 側の feedback state 仕様。
 
 ## Read this when
-- feedback state の record schema、ID生成、canonical JSON、hash検証、append-only保存の挙動を変更・調査するとき
-- observation の正規化、normalization unit の公開・復旧、migration artifact や state snapshot の検証を扱うとき
-- effective issue view、report publication の predecessor、直前の正常 report や snapshot の選択規則を確認するとき
+- feedback observation や normalized record の schema、ID、content hash、path、参照関係を変更または調査するとき
+- effective issue の revision・assessment・disposition 選択、normalization unit の確定・再開、state snapshot の復元を確認するとき
+- feedback report の publication、recovery、predecessor 連鎖、snapshot 参照を変更または検証するとき
+- feedback state の永続化、writer lock、immutable artifact の整合性検証を調査するとき
 
 ## Do not read this when
-- raw observation の収集・検出や reporter payload の生成だけを扱い、normalized state の検証・読み取りに触れないとき
-- feedback CLI の利用手順や人間向け report の表示内容だけを確認したいときは、対応する CLI または report 生成側へ進む
-- 正本となる state の仕様・フィールド契約を確認する必要があるときは、対応する oracle specification を直接読む
+- feedback の正本仕様や不変条件そのものを確認することが目的の場合は、対応する oracle の仕様を読む
+- report の表示内容や agent に渡す normalization 入出力だけを調査する場合は、それぞれの report 生成処理または feedback builder/schema を直接読む
+- feedback state と無関係な CLI、runtime error、一般的なファイル保存処理を調査する場合は、該当する専用実装を直接読む
 
 ## hash
-- 8bf60db18220ee4d896b7f61a8690051130e1953545148fed53d6b2ad1d76d00
+- 9be3f5bc9ffabb8cfe87e2bc01746d532b8b210a03c25a5773823ff871e6b236
 
 # `runtime_feedback_store.py`
 
 ## Summary
-- feedback raw observation の受理・検証・秘匿化・保存を担う共有ストア。reporter payload と machine rule の observation を schema、安全性、repository 内 path 境界、fingerprint、重複・hash 整合性に基づいて検査し、immutable な JSON として atomic に永続化する。
-- observation の列挙・未処理判定・ingestion receipt 参照、および過去の report snapshot と連動した未処理件数・警告の算出を提供する。raw observation の保存境界と durable store の挙動を確認する入口であり、正本 schema や normalized state の詳細は対応する oracle 文書・state 実装を参照する。
+- feedback observation の入力検査と raw observation の durable store を担う実装。正本 schema による検証、secret masking、payload サイズ・evidence・repo 内 path の検査、path fingerprint、canonical JSON と SHA-256、UUIDv7 または machine rule に基づく observation ID、immutable record の atomic publish/recovery を扱う。
+- agent および machine rule の observation 保存、raw observation の列挙、ingestion receipt に基づく未処理件数、直近 report snapshot と比較した増加件数、蓄積時の warning を提供する。feedback の正本仕様や normalized state/report chain の詳細ではなく、raw observation の保存境界から確認する入口。
 
 ## Read this when
-- feedback reporter の payload 検証、secret masking、evidence path の正規化、fingerprint 生成を調べるとき
-- raw observation の ID、canonical JSON、SHA-256、immutable 保存、atomic publish、重複・recovery 挙動を変更または確認するとき
-- machine rule observation の保存形式や、未処理 observation 件数・report snapshot 連携を調べるとき
+- feedback reporter の payload 検証、secret masking、evidence path の正規化または fingerprint を変更・調査するとき
+- raw observation の ID、canonical JSON、hash、immutable 保存、atomic publish、temporary recovery、重複・collision 処理を確認するとき
+- agent rule observation の保存形式、observation file の列挙、未処理件数や完了時 warning の算出を確認するとき
 
 ## Do not read this when
-- 正本の reporter schema や feedback の人間向け挙動仕様を確認するだけのとき
-- normalized feedback state、report の集約・公開処理そのものを調べるときは、対応する state/report 実装を直接読む
-- feedback と無関係な CLI 実装、一般的な JSON 処理、別の durable store を調べるとき
+- feedback の正本 schema や受理条件の意図を確認したいだけのときは oracle の feedback observation 仕様を読む
+- normalized feedback state、ingestion receipt の有効性、report chain や snapshot publication の詳細を調査するときは runtime feedback state または report 実装を直接読む
+- MCP tool の公開インターフェースや agent 側の報告判断だけを確認するときは、その呼び出し元・tool 実装を読む
 
 ## hash
-- d4a26195480fb0b219cdb99419eff88b3894469b5a518a9bd0cade85ec2f10c9
+- c5ab7ee2aa3490a29c63ab34b5ab7825dd2339720de50dd0c2c7b809f49b7758
 
 # `runtime_git.py`
 

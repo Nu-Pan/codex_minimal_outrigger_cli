@@ -15,20 +15,16 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の実行本体として、raw observation の snapshot 固定、増分 normalization、checkpoint 復旧、state snapshot、最終 report record の公開を一つの中断可能な transaction として管理する。
-- machine_rule と agent_report の observation を issue へ統合し、invalid・deferred・再発・再検証要否・human disposition の変更を集計して Markdown report を生成する。
+- `cmoc feedback report` の実行本体を担い、raw observation の snapshot 作成、未処理 observation の増分 normalization、checkpoint/unit の復旧・確定、issue state assessment、state snapshot、最終 Markdown report と report record の公開を一つの中断可能な transaction として管理する。machine rule と agent observation の統合、invalid/deferred/interrupted/partial 状態、表示対象 issue の選別まで扱う feedback report command の中心実装である。
 
 ## Read this when
-- `cmoc feedback report` の事前条件、実行順序、lock、migration、state 整合性検証を確認するとき。
-- observation の pending 判定、machine/agent 別の normalization、候補 issue の絞り込み、agent checkpoint の再利用または呼び出し条件を確認するとき。
-- normalization unit、ingestion receipt、assessment、state snapshot、report record の公開順序や中断・部分失敗時の復旧処理を確認するとき。
-- report の表示対象、machine issue の抑制、再発判定、fingerprint に基づく再検証、Markdown 出力項目を確認するとき。
+- feedback report の状態機械、snapshot と normalization unit の処理順序、agent normalization の checkpoint 復旧、issue の可視性判定、report/state snapshot の公開処理を変更または調査するとき
+- feedback observation の machine_rule・agent_report 統合、再発判定、fingerprint に基づく再検証、invalid または中断時の report 挙動を確認するとき
 
 ## Do not read this when
-- feedback observation の保存・列挙・immutable file 操作そのものを確認するときは、feedback store の実装を直接読む。
-- issue state の record schema、effective state の構築、unit/report publication の共通処理を確認するときは、runtime feedback state の実装を直接読む。
-- normalization agent の prompt や Structured Output schema の定義を確認するときは、normalize issue parameter の実装と対応する schema を直接読む。
-- `cmoc feedback report` 以外の CLI subcommand の処理や、正本仕様の意図を確認するときは、この report runtime 実装を入口にしない。
+- feedback observation の受け付け・保存形式だけを確認したいときは、観測受付や store の実装を直接読む
+- feedback state の record schema、issue view のロード、unit/report publication の低レベル処理だけを確認したいときは、`commons.runtime_feedback_state` または `commons.runtime_feedback_store` を直接読む
+- normalization agent に渡す parameter や Structured Output schema の定義だけを確認したいときは、normalization parameter builder と対応する oracle/spec を直接読む
 
 ## hash
-- e970b35f2509afc52be8e0812dc384c723d888aba0d162aabc89671b51da1f4e
+- ff72718fb3fb2c56aeb3b2fec534070fe4d72dc4eb4606d7a44484b03de97baf

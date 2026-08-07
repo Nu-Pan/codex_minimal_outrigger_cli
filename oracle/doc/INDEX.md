@@ -1,18 +1,19 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を集約するディレクトリ。CLI の補完、実行規約、ログ、doctor preprocess、feedback、prompt、session/run、subcommand など、利用者向け挙動と横断的な運用契約を定義する正本仕様群を扱う。個別仕様やサブコマンド仕様へ進むための入口となる。
+- CLI の自動補完プローブに関する正本仕様断片。`_CMOC_COMPLETE` を含む呼び出しを通常実行と区別し、補完処理前の cmoc 固有処理・副作用・標準出力／標準エラー出力の扱いを定める。CLI 起動や補完プローブの挙動を実装・検証する際の仕様上の入口。
 
 ## Read this when
-- cmoc の利用者向け挙動、CLI 実行契約、ログ、feedback、prompt、session/run、またはサブコマンドの正本仕様を調査・実装・変更するとき
-- 複数のアプリケーション仕様の責務境界や、共通処理と個別コマンドの関係を確認するとき
+- `_CMOC_COMPLETE` による自動補完の判定や実行順序を変更するとき
+- 自動補完時の副作用、状態検査、ログ・INDEX 更新、エラー出力の扱いを確認するとき
+- CLI 補完プローブの stdout／stderr 互換性を実装・テストするとき
 
 ## Do not read this when
-- 特定仕様の詳細だけを確認する場合は、該当する個別仕様本文へ直接進むとき
-- 実装配置、開発環境、テスト実行手順、または個別 builder の実装詳細だけを確認するときは、対応する設計規約・開発規約・realization file を読むとき
+- 通常のサブコマンド処理、session／run 状態管理、ログ作成、INDEX 更新そのものを変更するとき
+- 自動補完と無関係な CLI 入出力や一般的なエラー処理を確認するとき
 
 ## hash
-- 92df768ac0489c72cf4ac5d1efe44cf8ffa4898974fafc14de5ea15fe0c1f617
+- c375cd615a7b3dd586621e0e042c363334e5e7ffe32ebfc30401039a4acc35ea
 
 # `branch_model.md`
 

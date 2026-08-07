@@ -35,22 +35,24 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の仕様を定義する正本文書。raw observation を immutable な report snapshot として取り込み、normalized feedback state への増分処理、曖昧な issue の正規化、assessment・notification threshold・human disposition の扱い、checkpoint と durable な report/state snapshot の確定を定める。
-- 移行、排他、整合性検証、ユーザー中断、report の差分基準、既定表示、保存形式、および終了コードを規定し、feedback report 実装の入口となる。
+- `cmoc feedback report` の正本仕様。feedback state を検証し、raw observation の immutable snapshot を起点に増分 normalization・assessment・ingestion を処理し、Markdown report と state snapshot を durable に確定する。
+- machine observation の統合、曖昧な agent observation の normalization、notification threshold、fingerprint に基づく鮮度評価、checkpoint による中断・再開、重複防止を定義する。
+- report の保存形式、front matter、既定表示と `--all` 表示、差分基準、ユーザー中断時の扱い、および終了コードを定義する。feedback の詳細な observation schema と state record schema は参照先の正本仕様へ委譲する。
 
 ## Read this when
-- `cmoc feedback report` の引数、事前条件、repository-local state、または旧 state 移行を実装・変更・レビューするとき
-- raw observation の snapshot 化、増分 normalization、normalization agent call、checkpoint、unit 確定、再実行・中断・失敗時の復旧を扱うとき
-- feedback report の表示内容、保存先・front matter、差分基準、終了コード、assessment や notification threshold の挙動を確認するとき
+- `cmoc feedback report` の引数、事前条件、終了コード、保存先、出力形式を確認するとき。
+- raw observation から normalized issue、assessment、ingestion receipt、report を生成する処理や、notification threshold・鮮度評価を実装または確認するとき。
+- report snapshot、state snapshot、checkpoint、predecessor に基づく増分処理・再実行・中断復旧の挙動を確認するとき。
+- 既定 report と `--all` の表示対象、差分の判定基準、issue の表示順を確認するとき。
 
 ## Do not read this when
-- raw observation の形式や保存契約だけを扱うときは、feedback observation の正本を直接読む
-- normalized state の schema、integrity、migration、snapshot、report record の詳細だけを扱うときは、feedback state の正本を直接読む
-- feedback report 共通のユーザー中断規則だけを確認するときは、subcommand interruption の正本を直接読む
-- normalization agent builder や専用 Structured Output schema の詳細だけを扱うときは、指定された builder・schema を直接読む
+- raw observation のフィールド定義や不正値の詳細を確認するだけの場合は、観測仕様を直接読む。
+- repository-local feedback state の record schema、hash、参照整合性、retention の詳細を確認するだけの場合は、feedback state 仕様を直接読む。
+- 共通のユーザー中断動作だけを確認する場合は、subcommand interruption 仕様を直接読む。
+- feedback report 以外のサブコマンドの挙動や、一般的な report 生成手順を確認する場合。
 
 ## hash
-- abd168f465de71897d0eaa8923d881c54c43df5f653541d8196955448cc14207
+- 430750e55d1e019d74d2f59af57b4e37a7d58b24ba76ba38005fb4a723881195
 
 # `indexing.md`
 

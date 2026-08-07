@@ -202,22 +202,17 @@
 # `test_cli_command_tree.py`
 
 ## Summary
-- 公開 CLI の末端 command 集合が正本仕様と一致することを検証するテスト。
-- Typer/Click の互換性エラーなしに help が描画され、主要な command group が公開されることを検証する。
-- feedback report が一回限りの divergent 旧 state 移行元を選択する option を公開することを検証する。
+- 公開 CLI の末端コマンド集合が oracle 仕様の列挙と一致すること、および Typer/Click の互換性エラーなくヘルプを描画できることを検証する CLI コマンドツリーのテスト。feedback report の公開オプションが --all のみに限定されることも確認する。CLI コマンド構成や help 表示、feedback report のオプション範囲を変更・調査するときの実装テスト入口。
 
 ## Read this when
-- 公開 CLI の command tree、leaf command の追加・削除・名称変更を確認するとき。
-- CLI help の Typer/Click 互換性を検証するとき。
-- feedback report の migration source option の公開契約を確認するとき。
+- 公開 CLI の leaf command 集合、サブコマンド階層、help 描画、feedback report のオプション公開範囲を変更または検証するとき。
 
 ## Do not read this when
-- 個別 command の実装挙動や処理詳細を調査・変更するとき。
-- CLI の正本仕様そのものを確認するときは、列挙された oracle 文書を直接読む。
-- CLI 以外のテストや内部実装の一般的な品質を確認するとき。
+- 個別サブコマンドの実行仕様や oracle 文書の内容を確認したいとき。対応する oracle のサブコマンド仕様を直接読むこと。
+- CLI 以外の実装やテストを変更するとき。
 
 ## hash
-- 6c411d9f907abbf8b58b33aa82e9c39e62d4cd04d085da8737f4d9cbbbe22da5
+- a65963aa0e35e9bd6d16fb6738b2cb0341188616256c1c554b64f626ad39af0e
 
 # `test_cli_tui.py`
 
@@ -409,22 +404,22 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の収集から保存、検証、状態移行、正規化、増分 report までを一続きで検証する受け入れテスト。
-- agent と machine の observation、reporter／collector protocol、rate limit、secret redaction、path 境界、atomic recovery、migration、normalization unit、issue candidate、fingerprint refresh、interruption recovery などを扱う。
-- feedback subsystem の実装や正本仕様に対する外部挙動を確認するための、広範な統合テスト入口である。
+- feedback observation の収集・保存・正規化・状態検証・増分 report を一連の受け入れテストで検証する。
+- reporter と collector 間の MCP/JSON-RPC 契約、capability、rate limit、context、redaction、path 境界、冪等性、異常復旧を扱う。
+- repository-local な issue state、normalization unit、report manifest、assessment、fingerprint 更新、machine issue の抑制、ユーザー中断時の完了処理を検証する。
+- feedback subsystem の実装や oracle 仕様を変更した際に、その lifecycle 全体の外部挙動を確認するためのテスト入口である。
 
 ## Read this when
-- feedback observation の reporter、collector、store、state、migration、normalizer、report command の挙動を変更または検証するとき。
-- raw observation から issue state、normalization unit、incremental report までの lifecycle を同じ fixture で確認する必要があるとき。
-- feedback protocol、入力検証、secret redaction、rate limit、atomic／interruption recovery、repository-local state の移行をテストするとき。
+- feedback observation の reporter、collector、store、state、normalizer、reporter report の挙動を変更または検証するとき。
+- raw observation から ingestion receipt、normalization unit、incremental report までの一連の lifecycle を確認するとき。
+- rate limit、secret redaction、path boundary、atomic write、recovery、fingerprint freshness、machine issue suppression の回帰を調査するとき。
 
 ## Do not read this when
-- feedback subsystem の仕様や設計意図を確認することが目的のときは、参照先の oracle 文書を直接読む。
-- 個別の runtime 実装や report command の内部ロジックだけを調査するときは、対応する実装ファイルとより直接的なテストを読む。
-- feedback と無関係な CLI 機能、一般的な test execution、または単純な schema／unit test の確認を行うとき。
+- feedback subsystem の単一実装関数の詳細だけを確認する場合は、対応する src 実装または oracle 仕様を直接読む。
+- feedback と無関係な CLI subcommand、一般的なテスト実行設定、別機能の fixture を扱う場合。
 
 ## hash
-- 95e55ac7d98517746e90a377573327deff4d4589f8ab18e062e28858ef6717bd
+- 377bce63cfa439e3f5c9f8d34d4100444508a520f4010f4fe170bcf32fbdefc4
 
 # `test_indexing_cli.py`
 

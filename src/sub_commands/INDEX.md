@@ -31,19 +31,19 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装群を扱うディレクトリ。feedback の CLI 入口と、`cmoc feedback report` の中断可能な transaction、observation の normalization・issue 統合・Markdown report 生成を確認するための入口。
+- 対象ディレクトリは feedback サブコマンドの実装入口で、受付後の observation 処理から report 公開までの feedback report 実行系を含む。
+- feedback サブコマンド全体を確認・変更する際の下位実装への入口として機能する。
 
 ## Read this when
-- feedback サブコマンドの挙動や実装を確認・変更するとき。
-- `cmoc feedback report` の実行順序、checkpoint 復旧、state 整合性、issue 集計、report 生成を確認するとき。
+- feedback サブコマンドの実装や挙動を確認・変更するとき。
+- feedback report の状態遷移、観測の正規化、checkpoint 復旧、issue 判定、report 公開処理を調査するとき。
 
 ## Do not read this when
 - feedback 以外のサブコマンドを扱うとき。
-- feedback observation の保存・列挙や issue state の共通 schema を直接確認したいときは、それぞれの専用実装へ進む。
-- normalization agent の prompt や Structured Output schema だけを確認したいときは、対応する normalize issue parameter の実装へ進む。
+- 観測受付・保存形式、feedback state/store の低レベル処理、または normalization parameter/schema の定義だけを確認したいときは、対応する実装を直接読む。
 
 ## hash
-- 453d36b046dcadee04cde82f6d9091b476fafb11fb90eb758996179d05acc747
+- 0ee2a91cc383ff54623a157adcb81eb7aa7442c85a640644474443eaa174f2e2
 
 # `indexing.py`
 
