@@ -64,18 +64,20 @@
 # `oracle`
 
 ## Summary
-- oracle サブコマンド群をまとめるパッケージ境界であり、編集・調査・レビューの各サブコマンド実装と、oracle review の対象列挙、パス解決、ループ、レポート、INDEX 差分処理への入口です。
+- oracle 系サブコマンドの実装パッケージです。編集・調査・レビューの CLI ワークロードと、レビュー対象列挙、進捗ループ、パス解決、レポート生成、INDEX 差分の commit/merge を担う補助処理を含みます。oracle サブコマンド群の実装へ進む入口です。
 
 ## Read this when
-- oracle サブコマンドの構成や、編集・調査・レビューの実行フローを確認するとき。
-- oracle review の対象範囲、実行ループ、結果レポート、INDEX 差分の commit/merge を調べるとき。
+- oracle 系サブコマンドの実装構成や、編集・調査・レビューの実行フローを確認するとき。
+- oracle review の対象列挙、レビュー進捗、finding の処理、レポート生成、隔離 run の lifecycle を調べるとき。
+- レビュー結果の oracle path 解決や INDEX 差分の commit・merge 処理を調査するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細実装、個別の review builder、パス解決、対象列挙、レポート描画、Git 操作だけを調べるときは、該当する下位ファイルを直接読む。
-- oracle の正本仕様や一般的な run lifecycle の仕様を確認するときは、参照される oracle 文書を直接読む。
+- 特定サブコマンドの詳細だけを確認する場合は、対応する個別実装へ直接進んでください。
+- TUI 起動パラメータ、共通入力エディタ、git 状態確認などの共通処理だけを調べる場合は、対応する共通モジュールへ直接進んでください。
+- oracle review の正本仕様や編集プロンプトの内容を確認する場合は、参照されている oracle 文書へ進んでください。
 
 ## hash
-- beffe7d3d481b189aabbebf78b68f5ae31c8eeee11663e067f6583dda684bed7
+- a410d8e4e8bdd436ce9dec0f620ec85133ada016bbaed55f1b44f7d7e6c13669
 
 # `realization`
 
