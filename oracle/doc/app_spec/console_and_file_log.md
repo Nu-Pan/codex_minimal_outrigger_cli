@@ -83,3 +83,5 @@
     - 直前の正常な local feedback report の report snapshot 後に増えた raw feedback observation 数
 
 feedback の件数は詳細を展開せず、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の通知境界に従う。件数、算出失敗、または warning を、サブコマンドの戻り値、run state、retry、または成功判定へ反映してはならない。
+
+Windows toast 通知の対象、発火順序、通知内容、および失敗時の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。

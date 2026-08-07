@@ -45,6 +45,7 @@
 - Structured Output は要求しない
 - TUI 起動前の indexing preflight を行う
 - 共通 feedback instruction、TUI process の collector context、および accepted observation の保持は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従う
+- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする
 
 ### Codex CLI の場合
 

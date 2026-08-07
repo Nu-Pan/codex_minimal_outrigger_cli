@@ -29,6 +29,7 @@
 - report と終了 log から、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
 - ユーザー中断要求を受け付けた後は、そのサブコマンドのための新しい Codex CLI 呼び出し、retry、quota 回復待ち、および Codex CLI session の再開を行わない。この指示は `codex_exec_rule.md` の待機・再開規則より優先する。
 - 通常の完了処理自体に失敗した場合は、ユーザー中断要求による正常系ではなく、個別仕様と error handling 規則に従う。
+- ユーザー中断要求による terminal result の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。
 
 ## 中断後の扱い
 

@@ -58,6 +58,7 @@ call-scoped path context の適用範囲を次に示す。
 - 全ての Codex CLI 呼び出しで、次の承認設定を呼び出し単位の argv により明示的に上書きする
     - `approval_policy`: `"on-request"`
     - `approvals_reviewer`: `"auto_review"`
+- Codex CLI 呼び出しにおける Windows toast 通知の effective configuration、`codex exec` と TUI の境界、および callback の検証条件は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする
 
 ## ファイルアクセス制限
 

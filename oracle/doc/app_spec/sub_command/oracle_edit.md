@@ -42,6 +42,7 @@
     - TUI 起動前の indexing preflight を行う。
 - 起動コマンドは `codex` とし、`codex exec` は使用しない。
 - 1 つの TUI process 内で複数 turn の対話を許容する。
+- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。
 - Codex CLI の起動には `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` から以下だけを持ち込む。
     - 環境変数 `$CODEX_HOME`
     - preflight validation

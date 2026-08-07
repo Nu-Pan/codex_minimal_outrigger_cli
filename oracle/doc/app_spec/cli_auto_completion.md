@@ -4,3 +4,4 @@
 - 自動補完用プローブでは、cmoc 独自の通常実行向け前処理・検査・副作用を、CLI ライブラリの補完処理より前に実行してはならない
     - e.g. サブコマンド未指定判定、カレントディレクトリ変更、session/run 状態検査、`.cmoc` ログ作成、INDEX 更新、cmoc 形式のエラーレポート出力
 - 自動補完用プローブでは、stdout/stderr に CLI ライブラリの補完処理が必要とする出力以外を混ぜてはならない
+- Windows toast 通知に固有の自動補完プローブ境界は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする

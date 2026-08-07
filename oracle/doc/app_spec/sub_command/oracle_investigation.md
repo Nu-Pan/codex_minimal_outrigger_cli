@@ -45,6 +45,7 @@
     - 環境変数 `$CODEX_HOME`
     - preflight validation
     - Codex CLI 引数による設定上書き
+- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする
 
 ## 調査結果と変更の扱い
 
