@@ -15,19 +15,17 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の CLI 実装本体。raw observation の snapshot 固定、未処理 observation の増分 normalization、machine/agent observation の issue 統合、checkpoint と unit commit/rollback、assessment 再評価、前回 report との差分判定、可視 issue の選別、Markdown report と tracked report record の保存までを一つの中断可能な transaction として扱う。
-- feedback report の事前条件、snapshot と receipt の整合性検査、invalid observation の記録、normalization agent の Structured Output 検証、recurrence threshold、suppression、最終 report の集約を確認する入口。
+- feedback report サブコマンドの中核実装。raw observation の snapshot 固定、未処理 observation の validation・増分 normalization、machine/agent issue 統合、checkpoint と unit commit/rollback、assessment 再評価、前回 report との差分計算、表示対象の選別、Markdown report と tracked record の保存までを一つの中断可能な transaction として扱う。feedback report の CLI 入口および処理順序・状態遷移を確認するための入口。
 
 ## Read this when
-- `cmoc feedback report` の実行フロー、状態機械、処理順序を変更または調査するとき
-- observation の snapshot、normalization unit、checkpoint、unit commit/rollback の挙動を確認するとき
-- issue の統合・assessment 再評価・前回 report との差分・既定表示や `--all` の選別規則を調査するとき
-- feedback report の Markdown 出力や tracked report record の生成内容を変更するとき
+- `cmoc feedback report` の実行フロー、snapshot、deferred/invalid 処理、normalization unit、checkpoint、commit/rollback を調査または変更するとき
+- machine observation と agent observation の issue 統合、candidate 選定、assessment、再発判定、表示境界を確認するとき
+- feedback report の生成形式、report record、state commit IDs、前回 report との差分を確認するとき
 
 ## Do not read this when
-- feedback observation の envelope、issue view、record schema、tracked state の基本構造だけを確認したいときは、共通 feedback state の実装・仕様を直接読む
-- normalization agent に渡す parameter や Structured Output schema の定義だけを確認したいときは、feedback normalization builder と対応する schema を直接読む
-- report command 以外の feedback subcommand の挙動を調査するときは、その subcommand の実装または正本仕様を直接読む
+- feedback observation の schema や tracked state の record 定義だけを確認したい場合は、対応する runtime feedback state/store または oracle 仕様を直接読む
+- feedback report の CLI 呼び出しだけを確認したい場合は、サブコマンドの公開入口を直接読む
+- report 生成とは無関係な feedback の記録・収集処理を調査する場合は、この実装全体を読まず該当する収集側モジュールへ進む
 
 ## hash
-- 1f1b7c291cd7722d19ee3a9cf730ee219a90eec82032405699b27fbf30b79c1c
+- 3f11befab4dd8b0a012c08cddabbf2144aca11a544eef038df1d322bf5a2d7e5

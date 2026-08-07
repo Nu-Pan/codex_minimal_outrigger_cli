@@ -69,11 +69,14 @@ def _submit(payload: object) -> dict[str, object]:
                     return _rejected(
                         "transport_unavailable", "collector response is too large", True
                     )
-        value = json.loads(response.split(b"\n", 1)[0])
-    except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
+    except OSError:
         return _rejected(
             "collector_unavailable", "feedback collector is unavailable", True
         )
+    try:
+        value = json.loads(response.split(b"\n", 1)[0])
+    except (UnicodeError, json.JSONDecodeError):
+        return _rejected("protocol_mismatch", "invalid collector response", False)
     if not isinstance(value, dict) or value.get("status") not in {
         "accepted",
         "rejected",
@@ -105,10 +108,10 @@ def _response(request: object) -> dict[str, object] | None:
             "error": {"code": -32600, "message": "Invalid Request"},
         }
     method = request.get("method")
-    request_id = request.get("id")
-    if request_id is None:
+    if "id" not in request:
         # notification は状態を持たない reporter では応答不要である。
         return None
+    request_id = request["id"]
     if method == "initialize":
         parameters = request.get("params")
         requested_protocol = (

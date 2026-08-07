@@ -202,18 +202,19 @@
 # `test_cli_command_tree.py`
 
 ## Summary
-- 公開 CLI の末端コマンド集合を oracle の列挙と照合し、CLI の公開構造が固定どおりであることを検証するテスト。Typer/Click の互換性エラーなしに help が描画され、主要なコマンド群が含まれることも確認する。CLI コマンドツリーの公開 leaf 構成や help 表示の回帰を調べる際の入口となる。
+- 公開 CLI の末端コマンド集合が oracle 仕様で列挙された command path と一致することを検証するテスト。
+- Typer/Click の互換性エラーを起こさず CLI help を描画でき、主要な command group が含まれることも確認する。
 
 ## Read this when
-- 公開 CLI のコマンド追加・削除・階層変更が正本の leaf 集合に適合しているか確認するとき
-- Typer と Click の互換性問題や CLI help の描画回帰を調査するとき
+- 公開 CLI の command tree、コマンド追加・削除・階層変更、または oracle 仕様の CLI leaf 集合を変更する作業を行うとき。
+- Typer/Click の更新や CLI help 描画の互換性問題を調査するとき。
 
 ## Do not read this when
-- 個別コマンドの実装や実行時挙動を調べるとき
-- CLI 以外の機能のテストや仕様を確認するとき
+- 個別サブコマンドの実装や、その引数・実行時挙動だけを変更または調査するとき。
+- CLI 以外の機能のテストや実装を扱うとき。
 
 ## hash
-- c1f84066267a99d9c9241db39240e44979c883cd51906ccd1186ed3c78354d0a
+- 7b99bf08e71cea1d97ce22d61ff81b7f4295a9d90833758e297880502e4657dd
 
 # `test_cli_tui.py`
 
@@ -369,57 +370,60 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の共有 lifecycle を検証する統合テスト。CLI と直接呼び出しの双方で、Git 状態・config・refactor state・lock・linked worktree の修復、副作用、失敗時の index 保持を確認する。doctor preprocess の外部契約を検証するテストの入口。
+- doctor preprocess の統合テスト。CLI と直接呼び出しの両方で、Git 状態、config、refactor state、共有 doctor lock、reporter probe、linked worktree を含む修復 lifecycle を検証する。修復失敗時や既存の staged index、index flag、intent-to-add、rename、削除、unstaged hunk を保持する契約、および `.agents` の symlink 経由書き込み拒否も扱う。doctor preprocess の外部挙動を確認するテストの入口。
 
 ## Read this when
-- doctor preprocess の修復順序、共有 lock、config/state 同期、linked worktree 対応を変更・調査するとき
-- doctor が既存の staged/unstaged 差分、index flag、rename、intent-to-add、symlink を保持・拒否する挙動を確認するとき
-- doctor の修復 commit に利用者の事前 staged 変更を含めない契約を検証するとき
+- doctor preprocess の外部契約や修復 lifecycle を変更・検証するとき
+- doctor の Git index 保持、repair commit、config/state 同期、linked worktree、lock 待機を扱うとき
+- doctor の reporter probe における中断伝播や `.agents` の安全な修復を確認するとき
 
 ## Do not read this when
-- doctor preprocess 以外の CLI サブコマンドや Git helper の実装を直接調査するとき
-- doctor の内部実装詳細だけを確認したい場合は、対応する runtime doctor 実装と正本仕様を先に読むとよい
+- doctor preprocess 以外の CLI サブコマンドや、個別の Git・config・refactor 実装だけを直接調査するとき
+- 単体テストの共通 fixture や CLI 実行ヘルパーの仕様を確認したいときは、それぞれの実装・ヘルパーを直接読む
 
 ## hash
-- dda671fcb93055d51d0813a6c07f4a0d0541814d51c376364cb9b4b04b4b3091
+- 43bb38f9b56c6ca8b47e2522e1c23788e228c9e3e023c35518efe05ef4d60b3a
 
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の統合 realization test。realization apply/refactor の fork、共通 run state、run worktree、Codex child tracking、INDEX 更新、fork report、run join/abandon の成功・失敗・中断・rollback・cleanup を、隔離 Git repository の lifecycle fixture 上で検証する。
-- 対象実装の lifecycle、report、state、process tracking、INDEX refresh、apply/refactor fork、run join/abandon の挙動を横断的に確認する統合テストの入口。
+- editing run の integration test として、realization apply/refactor の fork、run join/abandon、共通 lifecycle state、worktree・branch・process tracking・report の生成と cleanup を検証する。異常系では想定外差分、agent commit、INDEX refresh、副作用、merge/cleanup/rollback 失敗、中断、破損 tracking、競合を扱い、状態遷移と資源保全を確認する。関連する編集 run lifecycle の挙動を一続きで確認する入口となる。
 
 ## Read this when
-- editing run の fork、join、abandon、run state 遷移、worktree 管理、report 生成、process tracking、INDEX refresh の変更や不具合を調査するとき。
-- realization apply/refactor の agent 境界、変更 path 検証、rollback、割り込み処理、cleanup の回帰を確認するとき。
-- 共通 lifecycle fixture を使った CLI 統合テストの期待挙動を確認するとき。
+- realization apply または refactor の fork lifecycle を変更・調査するとき
+- run join/abandon、worktree・branch cleanup、process tracking、report、rollback の挙動を変更・調査するとき
+- editing run の状態遷移や apply/refactor と共通 lifecycle の統合挙動を検証するとき
 
 ## Do not read this when
-- 単一の低レベル helper や個別コマンドの実装詳細だけを調べる場合は、対応する src の実装とより直接的な単体テストを読む。
-- INDEX エントリー生成、oracle 仕様、一般的なテスト実行手順だけを確認する場合。
-- editing run と無関係な CLI、state、worktree、report、process tracking の変更を扱う場合。
+- INDEX 更新単体の仕様や実装を確認するだけのとき
+- apply または refactor の agent prompt・単独処理を確認するだけで、run lifecycle との統合挙動を扱わないとき
+- 通常の CLI 入口や無関係なコマンドのテストを探しているとき
 
 ## hash
-- b6fcb70749ce1e461b109b465d3ae7fe70807d9b4371b8c347c0fd6acf2ac6a3
+- 8fa12dea1fc99606ba072444f0bb300d9ee40b6a02e040ae3d0c47537ce72c0a
 
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の受け入れ境界を検証する一連のテスト。reporter input の canonical MCP tool、normalizer agent call の識別子と READONLY 範囲、collector の context・rate limit・capability・失効、agent/machine observation の検証・冪等性・secret redaction、tracked feedback state の revision 選択、増分 feedback report の生成・再評価・machine issue 抑制・不正 raw observation・ユーザー中断処理を扱う。feedback subsystem の observation lifecycle を同じ fixture ID と Git session で通し検証するための入口であり、個別実装の詳細や正本仕様を読む前に、実際の外部挙動を確認したい場合に進む対象である。
+- feedback observation の reporter、collector、保存、検証、追跡 issue state、増分 report を一続きで受け入れ検証する feedback subsystem test。
+- agent／machine observation の受理、rate limit、context、冪等性、redaction、path boundary、特殊ファイル拒否を検証する。
+- tracked feedback state の schema、origin、machine rule、revision 選択、commit rollback を検証する。
+- feedback report の初回生成、再実行時の差分、evidence 変更、machine issue の抑制、invalid observation、ユーザー中断時の確定処理を検証する。
+- feedback observation や report の実装挙動を変更・レビューするときに、関連する正本仕様と実装の受け入れ境界として読む。
 
 ## Read this when
-- feedback observation の収集、保存、redaction、rate limit、machine event の冪等性を検証または変更するとき
-- feedback report の増分生成、issue の recurrence threshold、evidence fingerprint による再検証、不正 observation の ingestion、Ctrl+C 中断時の完了処理を確認するとき
-- reporter の MCP discovery や observation 転送 envelope、feedback normalize 用 agent call の schema・アクセス範囲を確認するとき
-- 同一の raw observation から tracked issue state と report までの受け入れ挙動を追跡したいとき
+- feedback observation の収集・保存・正規化・report 生成を変更するとき
+- feedback reporter／collector の protocol、capability、rate limit、redaction、context 検証を確認するとき
+- tracked issue state や増分 report、evidence fingerprint、machine issue の recurrence を検証するとき
+- feedback report の中断処理、receipt、commit、invalid input の扱いを確認するとき
 
 ## Do not read this when
-- feedback subsystem の正本仕様そのものを確認したいときは、参照されている oracle 文書を直接読む
-- reporter、collector、state、report の単一実装の内部詳細だけを調べるときは、対応する src ファイルへ直接進む
-- feedback と無関係な CLI subcommand や一般的な Git fixture helper の挙動だけを調べるとき
+- feedback subsystem の実装詳細ではなく、正本仕様そのものを確認したいときは oracle/doc/app_spec 配下の feedback 仕様を読む
+- feedback と無関係な CLI サブコマンド、一般的な Git helper、他 subsystem の test を調べるとき
+- 単一の低レベル関数の局所的な挙動だけを確認し、この受け入れテストが扱う observation lifecycle 全体を必要としないとき
 
 ## hash
-- 0a2ed486b5372cf3659ff14f21f0f73cc6fa6066eb1b3f1ad73ea195ccbd1f49
+- 1203dc57827daeaa770e7cee09ab47cf0be0c9601b046ebb6b501193587e7663
 
 # `test_indexing_cli.py`
 
@@ -655,21 +659,20 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の error report、console/file log、doctor preflight、shell completion、および共通 runner の終了処理を横断的に検証するテスト群。これらの外部契約を変更・確認する際の入口であり、個別実装の挙動だけでなく work root、subcommand event、終了コード、標準出力・標準エラーの境界を確認する。
+- CLI の error report、console/file log、doctor preflight、shell completion、work root 境界を検証する統合テスト。共通 runner と終了処理を通じた外部契約の入口として、runtime CLI 周辺の挙動を確認する。
+- duration 表示、並列 subcommand logger、doctor preprocess・pre-log check・callback・KeyboardInterrupt の終了処理、stdout error report、Click 引数解析、scope 制約、completion probe の副作用抑制、worktree ごとの処理対象を扱う。
 
 ## Read this when
-- CLI のエラー報告形式、終了コード、例外・KeyboardInterrupt の扱いを変更または調査するとき
-- サブコマンドログ、並列イベント記録、ログ書き込み失敗時の終了処理を変更または調査するとき
-- doctor preflight、work root 判定、pre-log check の実行順序や副作用を変更または調査するとき
-- CLI 引数解析や shell completion probe の挙動を変更または調査するとき
+- CLI lifecycle の error report、ログ生成・終了イベント、doctor preflight、completion probe、work root 制約の実装または仕様を検証するとき
+- runtime_cli、runtime_logging、error rendering、CLI parser、completion 初期化の変更が既存の外部契約に適合するか確認するとき
 
 ## Do not read this when
-- CLI lifecycle の外部契約に関係しない実装詳細や、単独のビジネスロジックを確認するとき
-- duration formatting や logger の内部実装だけを直接確認したいときは、まず対応する実装・仕様を読むとき
-- 対象のテストを実行・修正する必要がなく、別のサブコマンド固有機能だけを調査するとき
+- CLI の通常機能や個別サブコマンドの成功系だけを確認する場合
+- duration・logger・error rendering の実装詳細を直接調べる場合は、それぞれの実装または正本仕様を先に読むとき
+- CLI lifecycle と無関係なテストデータ、Git 操作、他パッケージの挙動を調べる場合
 
 ## hash
-- 3075ad5ab382b9519becccaa9819a21243158a120eb7b4570858fd88a0db6a3c
+- 6a1ddc1af9c5586c87fb02ee6657a9541b14f703ff50521aab334d6fdfd938f8
 
 # `test_runtime_codex_conflicts.py`
 

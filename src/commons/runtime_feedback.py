@@ -30,6 +30,7 @@ import typer
 from .runtime_feedback_store import (
     REPORTER_PROTOCOL_VERSION,
     FeedbackRejected,
+    parse_rfc3339,
     rfc3339_now,
     store_agent_observation,
     store_machine_observation,
@@ -368,10 +369,11 @@ class FeedbackInvocation:
                 raise FeedbackRejected(
                     "rate_limited", "accepted observation limit reached", retryable=True
                 )
-            recent_pending_count = sum(
-                value >= cutoff for value in context.pending_times
-            )
-            if len(context.accepted_times) + recent_pending_count >= 3:
+            # Keep every in-flight reservation in the limit.  A durable store can
+            # take longer than the rate window; expiring a pending reservation by
+            # its start time would allow more than three observations to become
+            # accepted in the same 60-second window.
+            if len(context.accepted_times) + len(context.pending_times) >= 3:
                 raise FeedbackRejected(
                     "rate_limited",
                     "60 second observation limit reached",
@@ -386,8 +388,12 @@ class FeedbackInvocation:
             except BaseException:
                 pass
             result, path = store_agent_observation(self.repo, storage_context, payload)
+            accepted_at = time.monotonic()
             with self._condition:
-                context.accepted_times.append(reserved_at)
+                cutoff = accepted_at - 60
+                while context.accepted_times and context.accepted_times[0] < cutoff:
+                    context.accepted_times.popleft()
+                context.accepted_times.append(accepted_at)
                 context.accepted_paths.append(path)
                 observation_id = result["observation_id"]
                 assert isinstance(observation_id, str)
@@ -412,7 +418,23 @@ class FeedbackInvocation:
         """allowlist 済み stable event を machine observation へ変換する。"""
         event_type = event.get("event_type")
         version = event.get("event_schema_version")
-        if version != 1:
+        event_id = event.get("event_id")
+        occurred_at = event.get("occurred_at")
+        invocation_id = event.get("subcommand_invocation_id")
+        if (
+            type(version) is not int
+            or version != 1
+            or not isinstance(event_id, str)
+            or not event_id
+            or not isinstance(occurred_at, str)
+            or not isinstance(invocation_id, str)
+            or not invocation_id
+            or invocation_id != self.invocation_id
+        ):
+            return
+        try:
+            parse_rfc3339(occurred_at)
+        except ValueError:
             return
         if event_type == "feedback.reporter_unavailable":
             component = event.get("component")
@@ -441,6 +463,28 @@ class FeedbackInvocation:
         elif event_type == "codex.structured_output_validation_exhausted":
             agent_call_kind = event.get("agent_call_kind")
             if not isinstance(agent_call_kind, str) or not agent_call_kind:
+                return
+            schema_sha256 = event.get("schema_sha256")
+            if (
+                not isinstance(schema_sha256, str)
+                or len(schema_sha256) != 64
+                or any(
+                    character not in "0123456789abcdef" for character in schema_sha256
+                )
+            ):
+                return
+            if event.get("last_failure_stage") not in {
+                "json_parse",
+                "schema_validation",
+                "deterministic_postcondition",
+                "resume_unavailable",
+                "artifact_changed",
+            }:
+                return
+            if not all(
+                isinstance(event.get(name), str) and event.get(name)
+                for name in ("agent_call_id", "codex_call_id")
+            ):
                 return
             rule = {
                 "rule_id": "codex.structured_output_validation_exhausted.v1",
@@ -558,7 +602,7 @@ def validate_feedback_reporter_availability() -> None:
 
     try:
         expected_schema = reporter_input_schema()
-    except BaseException as exc:
+    except Exception as exc:
         raise ReporterAvailabilityError(
             "reporter", "version_mismatch", "feedback reporter schema is invalid"
         ) from exc

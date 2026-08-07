@@ -85,7 +85,7 @@ def run_doctor_preprocess(
                 validate_feedback_reporter_availability()
             except ReporterAvailabilityError as exc:
                 emit_reporter_unavailable(exc.component, exc.failure_code)
-            except BaseException:
+            except Exception:
                 emit_reporter_unavailable("reporter", "protocol_error")
         except BaseException:
             for repair_root, original_index_path in original_indexes:

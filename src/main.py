@@ -74,7 +74,11 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                 if standalone_mode:
                     raise SystemExit(0)
                 return 0
-            return super().main(standalone_mode=standalone_mode, **click_kwargs)
+            # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+            # `_CMOC_COMPLETE` を常に Click へ明示し、呼び出し側の prog_name に
+            # 依存して通常 command が実行される経路を防ぐ。
+            completion_kwargs = {**click_kwargs, "complete_var": "_CMOC_COMPLETE"}
+            return super().main(standalone_mode=standalone_mode, **completion_kwargs)
         try:
             result = super().main(standalone_mode=False, **click_kwargs)
         # {{work-root}}/oracle/doc/app_spec/error_handling.md

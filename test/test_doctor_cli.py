@@ -28,6 +28,7 @@ from _cli_support import run_doctor
 from _git_support import make_repo, run_git
 
 import commons.runtime_doctor as doctor_module
+import commons.runtime_feedback_store as feedback_store_module
 from commons.runtime_errors import CmocError
 from commons.runtime_refactor import RefactorState
 
@@ -145,6 +146,42 @@ def test_doctor_preprocess_follows_repair_order(
     doctor_module.run_doctor_preprocess(root)
 
     assert events == ["ignore", "agents", "config", "state"]
+
+
+def test_doctor_preprocess_propagates_interrupt_during_reporter_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """reporter 事前検証中のユーザー中断を degraded warning に変換しない。"""
+    root = make_repo(tmp_path)
+
+    def interrupt() -> None:
+        """reporter 検証中の Ctrl+C を再現する。"""
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(
+        doctor_module,
+        "validate_feedback_reporter_availability",
+        interrupt,
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        doctor_module.run_doctor_preprocess(root)
+
+
+def test_doctor_preprocess_propagates_interrupt_during_reporter_schema_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """reporter schema の予期しない中断も利用不能 warning に変換しない。"""
+    root = make_repo(tmp_path)
+
+    def interrupt() -> None:
+        """reporter schema 読み込み中の Ctrl+C を再現する。"""
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(feedback_store_module, "reporter_input_schema", interrupt)
+
+    with pytest.raises(KeyboardInterrupt):
+        doctor_module.run_doctor_preprocess(root)
 
 
 def test_doctor_preprocess_waits_for_common_repository_lock(

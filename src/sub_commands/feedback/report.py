@@ -116,6 +116,7 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
 
     # 既存 receipt の hash 一致を先に検査し、corruption を unit 処理へ混ぜない。
     pending, _ = _pending_entries(worktree, entries)
+    normalization_start_head = _git_head(worktree)
     state_commit_ids: list[str] = []
     invalid_count = 0
     normalization_agent_call_count = 0
@@ -205,9 +206,25 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
             if commit_id is not None:
                 state_commit_ids.append(commit_id)
     except KeyboardInterrupt:
+        state_commit_ids.extend(
+            _missing_normalization_commits(
+                worktree, normalization_start_head, state_commit_ids
+            )
+        )
+        processed_count, invalid_count = _committed_observation_counts(
+            worktree, entries
+        )
         result = "interrupted"
         _record_feedback_interruption()
     except BaseException as exc:
+        state_commit_ids.extend(
+            _missing_normalization_commits(
+                worktree, normalization_start_head, state_commit_ids
+            )
+        )
+        processed_count, invalid_count = _committed_observation_counts(
+            worktree, entries
+        )
         result = "partial"
         partial_error = exc
 
@@ -291,8 +308,18 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
         [("report", report_state)],
         f"cmoc feedback report {report_id}",
     )
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "feedback_report_committed",
+            report_id=report_id,
+            state_commit_ids=state_commit_ids,
+            report_record_commit=report_commit,
+        )
     typer.echo(f"- feedback report: `{report_path}`")
-    typer.echo(f"- feedback state commit: `{report_commit}`")
+    for commit_id in state_commit_ids:
+        typer.echo(f"- feedback normalization unit commit: `{commit_id}`")
+    typer.echo(f"- feedback report record commit: `{report_commit}`")
     if result == "partial":
         return 2
     if result == "error":
@@ -783,6 +810,15 @@ def _candidate_issues(
         for item in fingerprints
         if isinstance(item, dict) and isinstance(item.get("normalized_path"), str)
     }
+    current_fingerprint_pairs = [
+        (item.get("normalized_path"), item.get("sha256"))
+        for item in fingerprints
+        if isinstance(item, dict) and isinstance(item.get("normalized_path"), str)
+    ]
+    current_fingerprints_hashed = bool(current_fingerprint_pairs) and all(
+        isinstance(path, str) and isinstance(digest, str)
+        for path, digest in current_fingerprint_pairs
+    )
     exact: list[IssueView] = []
     candidates: list[IssueView] = []
     for view in views.values():
@@ -804,17 +840,27 @@ def _candidate_issues(
                 # agent hint は候補検索だけに使い、完全一致や issue key には使わない。
                 hint_match = True
             previous_fingerprints = previous.get("evidence_fingerprints", [])
+            previous_fingerprint_pairs: list[tuple[object, object]] = []
+            previous_fingerprints_hashed = True
             for item in previous_fingerprints:
                 if not isinstance(item, dict):
+                    previous_fingerprints_hashed = False
                     continue
                 path = item.get("normalized_path")
                 if path in current_by_path:
                     path_match = True
-                    if (
-                        item.get("sha256") is not None
-                        and item.get("sha256") == current_by_path[path]
-                    ):
-                        hash_match = True
+                if isinstance(path, str):
+                    digest = item.get("sha256")
+                    previous_fingerprint_pairs.append((path, digest))
+                    if not isinstance(digest, str):
+                        previous_fingerprints_hashed = False
+            if (
+                current_fingerprints_hashed
+                and previous_fingerprints_hashed
+                and sorted(previous_fingerprint_pairs)
+                == sorted(current_fingerprint_pairs)
+            ):
+                hash_match = True
         if path_match or hint_match:
             candidates.append(view)
         if hash_match:
@@ -1059,7 +1105,12 @@ def _assessment_for_observation(
         unavailable |= current_state != "hashed" or item.get("state") != "hashed"
         changed |= item.get("sha256") != current_hash
     if isinstance(agent_assessment, dict):
-        freshness = "unavailable" if unavailable or not compared else "current"
+        if unavailable or not compared:
+            freshness = "unavailable"
+        elif changed:
+            freshness = "needs_revalidation"
+        else:
+            freshness = "current"
         return assessment_record(
             current_issue_id,
             assessed_at,
@@ -1175,12 +1226,21 @@ def _commit_record_unit(
     """unit records だけを作成・commit し、失敗時は同じ path だけ戻す。"""
     paths = [record_path(worktree, record, kind) for kind, record in records]
     existed = {path: path.exists() for path in paths}
+    before_head = _git_head(worktree)
     try:
         for (kind, record), path in zip(records, paths, strict=True):
             assert path == record_path(worktree, record, kind)
             write_tracked_record(path, record)
+        validate_tracked_feedback_state(worktree)
         return _commit_paths(worktree, paths, message)
     except BaseException:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+        # commit 完了直後に Ctrl+C が届いても、HEAD が進んだ unit を rollback
+        # すると確定済み state と作業ツリーが不一致になる。unit 開始時と
+        # 現在の HEAD を比較し、commit 済みなら path をそのまま保持する。
+        after_head = run_git(["rev-parse", "HEAD"], worktree, check=False)
+        if after_head.returncode == 0 and after_head.stdout.strip() != before_head:
+            raise
         relative = sorted({str(path.relative_to(worktree)) for path in paths})
         if relative:
             run_git(["reset", "HEAD", "--", *relative], worktree, check=False)
@@ -1220,6 +1280,46 @@ def _commit_paths(worktree: Path, paths: list[Path], message: str) -> str | None
         )
     run_git(["commit", "-m", message, "--", *relative], worktree)
     return head_commit(worktree)
+
+
+def _git_head(worktree: Path) -> str:
+    """unit 境界を検出するため、現在の HEAD commit を直接取得する。"""
+    return run_git(["rev-parse", "HEAD"], worktree).stdout.strip()
+
+
+def _missing_normalization_commits(
+    worktree: Path,
+    start_head: str,
+    known_commit_ids: list[str],
+) -> list[str]:
+    """中断・一部失敗時に state_commit_ids へ不足分だけ追加する。"""
+    commits = run_git(
+        ["rev-list", "--reverse", f"{start_head}..HEAD"], worktree
+    ).stdout.splitlines()
+    known = set(known_commit_ids)
+    return [commit_id for commit_id in commits if commit_id not in known]
+
+
+def _committed_observation_counts(
+    worktree: Path,
+    entries: list[dict[str, Any]],
+) -> tuple[int, int]:
+    """tracked ingestion receipt から確定済み observation 数を再計算する。"""
+    processed = 0
+    invalid = 0
+    seen: set[str] = set()
+    for entry in entries:
+        observation_id = str(entry["observation_id"])
+        if observation_id in seen:
+            continue
+        seen.add(observation_id)
+        receipt_path = ingestion_receipt_path(worktree, observation_id)
+        if not receipt_path.is_file():
+            continue
+        receipt = read_json_object(receipt_path)
+        processed += 1
+        invalid += int(receipt.get("status") == "invalid")
+    return processed, invalid
 
 
 def _deferred_count(worktree: Path, entries: list[dict[str, Any]]) -> int:

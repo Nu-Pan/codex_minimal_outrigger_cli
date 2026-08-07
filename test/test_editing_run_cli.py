@@ -2529,6 +2529,44 @@ def test_run_join_keeps_completed_merge_when_final_report_update_fails(
     assert 'cleanup: "pending"' in report.read_text()
 
 
+def test_run_join_preserves_active_state_when_cleanup_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """cleanup 失敗時も残存 resource を abandon で回収できる状態を保つ。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+    monkeypatch.setattr(
+        run_join_module,
+        "_cleanup_joined_run",
+        lambda _context, warnings: warnings.append("cleanup pending") or "preserved",
+    )
+
+    joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert joined.exit_code == 0, joined.output
+    state = _state(state_path)
+    assert state["run"] == {
+        "state": "error",
+        "kind": "realization_apply",
+        "branch": context.run_branch,
+        "fork_commit": context.run_fork_commit,
+    }
+    assert context.run_worktree.exists()
+    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+
+    abandoned = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+    assert abandoned.exit_code == 0, abandoned.output
+    assert _state(state_path)["run"]["state"] == "ready"
+    assert not context.run_worktree.exists()
+    assert not run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+
+
 def test_refactor_fork_completes_persistent_full_cycle(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

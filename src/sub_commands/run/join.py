@@ -300,11 +300,32 @@ def _merge_and_finalize(
         },
     )
     cleanup = _cleanup_joined_run(context, warnings)
+    state_after_cleanup = "ready"
+    if cleanup != "completed":
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # cleanup できない run resource を保持したまま ready にすると active run の
+        # branch/worktree を state から再解決できず、後続の abandon も受け付けられない。
+        # merge 済み成果物は session branch に残し、run resource は error state として
+        # abandon で再試行できるようにする。
+        state_after_cleanup = "error"
+        write_state(
+            context.state_path,
+            replace(
+                state_after_join,
+                run=RunPart(
+                    state="error",
+                    kind=context.kind,
+                    branch=context.run_branch,
+                    fork_commit=context.run_fork_commit,
+                ),
+            ),
+        )
+        delete_run_process_id(context.repo, context.session_id)
     try:
         report = write_lifecycle_report(
             context,
             "join",
-            state_after="ready",
+            state_after=state_after_cleanup,
             warnings=warnings,
             details={
                 "run_join_commit": run_join_commit,
