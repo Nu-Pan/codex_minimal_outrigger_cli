@@ -12,7 +12,9 @@ feedback subsystem test として保つ。
 """
 
 import json
+import threading
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -20,6 +22,7 @@ from _cli_support import run_doctor, runner
 from _git_support import current_branch, make_repo, run_git
 
 import commons.runtime_codex_preflight as codex_preflight_module
+import commons.runtime_feedback as runtime_feedback_module
 import commons.runtime_feedback_reporter as reporter_module
 import sub_commands.feedback.report as feedback_report_module
 from acp.builder.feedback.normalize_issue import (
@@ -235,6 +238,79 @@ def test_collector_validates_context_rate_and_durable_observation(
     with pytest.raises(FeedbackRejected) as context_error:
         invocation._submit_request(request)
     assert context_error.value.code == "context_invalid"
+
+
+def test_collector_rate_limit_counts_slow_pending_observations(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """保存が rate window をまたいでも accepted observation 数を制限する。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    call = invocation.register_call(
+        agent_call_id="agc_slow",
+        agent_call_kind="build_slow",
+        codex_call_id="cdc_slow",
+        log_paths=[],
+    )
+    request = {"protocol": "1", "capability": call.capability, "payload": _payload()}
+    original_store = runtime_feedback_module.store_agent_observation
+    started = threading.Barrier(3)
+    all_started = threading.Event()
+    release = threading.Event()
+    entered_lock = threading.Lock()
+    entered = 0
+    clock = 100.0
+
+    def fake_monotonic() -> float:
+        return clock
+
+    class FakeClock:
+        """runtime feedback だけの monotonic clock。"""
+
+        monotonic = staticmethod(fake_monotonic)
+
+    def delayed_store(
+        *args: object, **kwargs: object
+    ) -> tuple[dict[str, object], Path]:
+        nonlocal entered
+        with entered_lock:
+            entered += 1
+            index = entered
+            if index == 3:
+                all_started.set()
+        if index <= 3:
+            started.wait(timeout=5)
+            assert release.wait(timeout=5)
+        return original_store(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(runtime_feedback_module, "time", FakeClock())
+    monkeypatch.setattr(
+        runtime_feedback_module,
+        "store_agent_observation",
+        delayed_store,
+    )
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [
+            executor.submit(invocation._submit_request, request) for _ in range(3)
+        ]
+        try:
+            assert all_started.wait(timeout=5)
+            clock = 200.0
+            with pytest.raises(FeedbackRejected) as pending_rate_error:
+                invocation._submit_request(request)
+            assert pending_rate_error.value.code == "rate_limited"
+        finally:
+            release.set()
+
+        assert all(
+            future.result(timeout=5)["status"] == "accepted" for future in futures
+        )
+        with pytest.raises(FeedbackRejected) as accepted_rate_error:
+            invocation._submit_request(request)
+        assert accepted_rate_error.value.code == "rate_limited"
 
 
 def test_agent_store_rejects_outside_paths_and_secret_only_evidence(

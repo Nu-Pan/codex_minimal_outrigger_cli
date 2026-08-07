@@ -369,10 +369,11 @@ class FeedbackInvocation:
                 raise FeedbackRejected(
                     "rate_limited", "accepted observation limit reached", retryable=True
                 )
-            recent_pending_count = sum(
-                value >= cutoff for value in context.pending_times
-            )
-            if len(context.accepted_times) + recent_pending_count >= 3:
+            # Keep every in-flight reservation in the limit.  A durable store can
+            # take longer than the rate window; expiring a pending reservation by
+            # its start time would allow more than three observations to become
+            # accepted in the same 60-second window.
+            if len(context.accepted_times) + len(context.pending_times) >= 3:
                 raise FeedbackRejected(
                     "rate_limited",
                     "60 second observation limit reached",
@@ -387,8 +388,12 @@ class FeedbackInvocation:
             except BaseException:
                 pass
             result, path = store_agent_observation(self.repo, storage_context, payload)
+            accepted_at = time.monotonic()
             with self._condition:
-                context.accepted_times.append(reserved_at)
+                cutoff = accepted_at - 60
+                while context.accepted_times and context.accepted_times[0] < cutoff:
+                    context.accepted_times.popleft()
+                context.accepted_times.append(accepted_at)
                 context.accepted_paths.append(path)
                 observation_id = result["observation_id"]
                 assert isinstance(observation_id, str)

@@ -266,24 +266,20 @@
 # `runtime_feedback.py`
 
 ## Summary
-- サブコマンド invocation に紐づく feedback collector のライフサイクルを管理し、Codex call ごとの capability 発行、reporter 環境継承、request の並行受付・検証・rate limit・保存、終了時の drain を一体的に扱う。
-- Unix socket 経由の agent observation 受付と machine observation の allowlist detector を提供し、reporter/collector の利用不能や Structured Output 検証失敗を安定した degraded event として記録する。
-- doctor 向けに reporter schema、protocol、collector socket、stdio MCP tool の互換性を非破壊検証する。feedback runtime の invocation 初期化・停止、call 開始・終了、accepted observation 取得、event 検出の入口となる。
+- サブコマンド invocation 単位の feedback collector と Codex call context を管理する中核モジュール。専用 capability と Unix socket を介した observation の並行受付・保存、call 終了時の drain、reporter 利用不能時の degraded 処理、stable event の検証と machine observation 化を担う。feedback の受付ライフサイクル、reporter/collector の可用性検証、または detector の挙動を確認・変更するときの入口となる。
 
 ## Read this when
-- feedback observation の受付、保存、capability、rate limit、call 単位の終了処理を変更・調査するとき
-- Codex subprocess に reporter 用環境変数を渡す仕組みや invocation-scoped collector の lifecycle を確認するとき
-- reporter unavailable event、Structured Output validation exhausted event、machine observation detector の挙動を変更・調査するとき
-- doctor の feedback reporter availability 検証や MCP protocol/schema 互換性を確認するとき
+- feedback observation の収集経路、Codex call ごとの capability、受付制限、並行処理、終了処理を調査・変更するとき。
+- feedback reporter または collector の doctor 検証、利用不能イベント、degraded behavior を調査・変更するとき。
+- allowlist 済み event から machine observation を生成する detector の挙動を確認するとき。
 
 ## Do not read this when
-- feedback observation の保存形式・入力 schema・永続化処理そのものを確認する場合は、対応する runtime feedback store の実装を直接読む
-- reporter MCP tool の公開実装や stdio 通信の詳細を確認する場合は、runtime feedback reporter の実装を直接読む
-- 一般的な logging、git context、runtime state の仕様だけを確認する場合は、それぞれの専用実装や正本仕様へ進む
-- feedback の正本仕様を確認・変更する場合は、対応する oracle 文書を読む
+- 保存形式や observation payload の schema、RFC3339、observation の永続化処理そのものを確認したい場合は、runtime feedback store の実装を直接読む。
+- MCP reporter の公開 tool 実装や stdio protocol の詳細だけを確認したい場合は、runtime feedback reporter の実装を直接読む。
+- branch、HEAD、logger、session state など個別の runtime context の実装を確認したい場合は、それぞれの runtime helper を直接読む。
 
 ## hash
-- 8ea296edfb9bcfa4d5423f1953df5779b444f24e2af2c4f9cbb83037e5031e31
+- d73b5f0238b28cc6a3194b70ddbd2c19840bb693a4e3b95b9319c395e7645f0d
 
 # `runtime_feedback_reporter.py`
 

@@ -50,18 +50,21 @@
 # `commons`
 
 ## Summary
-- cmoc 共通 runtime helper を提供する commons パッケージの初期化ファイル。commons 配下の共通実行時補助機能を確認・変更するときの入口。
+- cmoc 共通 runtime helper を提供する commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・パス、Git、ログ、feedback、INDEX lifecycle など、複数の上位機能から利用される共通実装への入口。
+- パッケージ初期化と共通 API 集約に加え、各 runtime 領域の専用モジュールへ進むための下位構成を含む。
 
 ## Read this when
-- 共通 runtime helper の提供箇所や commons パッケージの初期化を確認するとき
-- commons 配下の機能を利用・変更する前にパッケージの入口を確認するとき
+- 複数の cmoc runtime 機能にまたがる共通処理の入口や依存関係を確認するとき
+- CLI、Codex、設定、状態、Git、feedback、INDEX 更新などの共通 runtime 実装の配置を判断するとき
+- commons 配下の特定機能を変更する前に、該当する専用 runtime module を特定するとき
 
 ## Do not read this when
-- 特定の runtime helper の実装詳細を確認したいとき
-- commons 配下に対象となる個別実装ファイルがある場合
+- 特定の runtime 機能の実装詳細だけを調査・変更する場合は、commons 配下の対応する個別 module を直接読む
+- 利用者向け仕様や単一サブコマンド固有の挙動だけを確認する場合は、対応する oracle 文書またはサブコマンド実装へ直接進む
+- commons と無関係な CLI、ドキュメント、設定仕様を調査する場合
 
 ## hash
-- a1874b601197173b3fbda5d2e9bba4ae9eca68da62e3b6dd1aa8ebfec51f60c8
+- f7cb4288152817e7a13fbce6a2814527f6a06fee8f92602c24f793f96919439e
 
 # `config`
 

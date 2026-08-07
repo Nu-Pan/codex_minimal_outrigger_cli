@@ -405,20 +405,20 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の reporter 入力、collector 保存、secret/path 検証、rate limit、machine event の冪等性・スコープ、tracked state の整合性、normalizer 判定、増分 report、抑制閾値、不正 raw observation、effective revision、中断時 report を一連の lifecycle として受け入れ検証する feedback subsystem test。feedback 関連の実装や正本仕様を変更・レビューし、これらの外部挙動を確認するときの入口となる。
+- feedback observation の収集から保存、検証、増分 report までを一貫して検証する受け入れテスト。agent と machine の observation、context・rate limit・secret/path 制約、idempotency、tracked state の rollback、fingerprint 更新、report の抑制・再実行・中断処理を扱う。feedback subsystem の lifecycle を同一 fixture ID と Git session で追跡するため、関連テストの入口となる。
 
 ## Read this when
-- feedback observation の収集・保存・正規化・state 更新・report 生成の統合挙動を変更または検証するとき
-- reporter MCP 契約、collector の受理拒否、rate limit、redaction、machine detection、増分 report の回帰を確認するとき
-- oracle の feedback observation/state/report 仕様に対する realization test の適合性を確認するとき
+- feedback observation の reporter、collector、normalizer、state、report の契約や lifecycle を変更・検証するとき
+- agent または machine observation の受理条件、rate limit、redaction、重複排除、invocation scope を確認するとき
+- feedback report の増分処理、issue recurrence、fingerprint freshness、invalid input、KeyboardInterrupt の挙動を確認するとき
 
 ## Do not read this when
-- feedback subsystem の単一関数の内部実装だけを調べるときは、対応する src 実装またはより小さい単体テストへ直接進む
-- feedback の正本仕様や設計意図を確認するときは、この test ではなく列挙された oracle 文書を読む
-- feedback と無関係な CLI、git session、一般的な test fixture の変更を扱うとき
+- feedback 以外の subsystem の実装やテストだけを扱うとき
+- 単一の collector API や report formatter の詳細実装を直接確認する必要があり、対応する oracle 仕様または実装ファイルを読む方が適切なとき
+- テスト共通 fixture や CLI・Git helper の実装自体を変更・調査するとき
 
 ## hash
-- 18ead520359b79b1fe1664d1fb532da5c42e3c01623efb5c1eb87f12880a9d87
+- 64deeef68c03dd7ff0a87981088a1688851e23eab56dc3b33813ca66e711f636
 
 # `test_indexing_cli.py`
 
