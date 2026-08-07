@@ -441,21 +441,20 @@
 # `test_file_inventory.py`
 
 ## Summary
-- Git 管理下の oracle/realization ファイル列挙契約を検証するテスト。通常の全探索結果との一致、除外境界、nested repository の Git ignore、非通常ファイル拒否、linked worktree、状態ハッシュ更新、候補数増加時の処理量不変を確認する。
-- ファイルインベントリ実装や refactor state 同期処理の挙動を変更・検証する際のテスト入口。
+- Git 管理下の oracle・realization ファイルを full-tree で列挙し、除外境界、ignore 判定、nested repository、特殊ファイル、symlink、linked worktree を検証するテスト群。
+- ファイル列挙結果と refactor state の同期、SHA 更新、候補数増加時の Git 処理量が一定であることも検証する。
 
 ## Read this when
-- oracle/realization ファイルの列挙、単一パス分類、Git ignore 適用、除外ディレクトリ・metadata 境界を変更または調査するとき
-- refactor state の同期やファイル SHA 更新に関するテスト要件を確認するとき
-- nested repository、linked worktree、symlink、FIFO、socket・device 相当 mode の扱いを検証するとき
-- 候補ファイル数に対する Git 起動回数・source 検証・directory traversal の計算量を確認するとき
+- ファイルインベントリ列挙や realization file 判定の実装を変更・検証するとき。
+- Git ignore、nested repository、metadata 除外、特殊ファイル・symlink の扱いを確認するとき。
+- refactor state の同期や列挙処理の性能特性を変更するとき。
 
 ## Do not read this when
-- CLI の他サブコマンドや、ファイルインベントリ・refactor state と無関係な機能を変更または調査するとき
-- 実装の詳細や正本仕様そのものを確認する必要があるときは、参照先として示された oracle 仕様または実装モジュールを直接読むとき
+- CLI の個別サブコマンドや、ファイル列挙・refactor state と無関係な機能を扱うとき。
+- テスト実行方法だけを確認したいときは、テスト実行手順の仕様を直接読む。
 
 ## hash
-- 23e83e9f4ec6ac99c82b5c8c3e4fd93d01458d20ea00814963ed52ce775574af
+- 3b17f5b62d6fb9519122318b78661719189acd7d5d3575659863392044770a3d
 
 # `test_indexing_cli.py`
 

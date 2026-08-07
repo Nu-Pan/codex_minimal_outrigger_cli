@@ -71,10 +71,6 @@ def _full_glob_reference(
         mode = path.lstat().st_mode
         if stat.S_ISDIR(mode):
             continue
-        if not stat.S_ISREG(mode):
-            raise AssertionError(f"reference fixture contains a special file: {path}")
-        if path.name in _EXCLUDED_NAMES:
-            continue
 
         owning_repository = max(
             (
@@ -94,6 +90,10 @@ def _full_glob_reference(
             continue
         if ignored.returncode != 1:
             raise AssertionError(f"reference check-ignore failed for {path}")
+        if not stat.S_ISREG(mode):
+            raise AssertionError(f"reference fixture contains a special file: {path}")
+        if path.name in _EXCLUDED_NAMES:
+            continue
 
         if relative.parts[0] == "oracle":
             oracle_files.add(relative.as_posix())
@@ -119,7 +119,7 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
 ) -> None:
     """最適化列挙と state entry・SHA 更新を full glob 基準へ一致させる。"""
     root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("ignored/\n*.outer\n")
+    (root / ".gitignore").write_text("ignored/\n.venv/\n*.outer\n")
     ignored = root / "ignored"
     ignored.mkdir()
     (ignored / "tracked.txt").write_text("tracked ignored\n")
@@ -158,6 +158,17 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
         )
     previous_readme_digest = state["README.md"]["last_investigated_sha256"]
     write_refactor_state(root, state)
+
+    # ignored directory 内の untracked symlink は regular file の state を変えない。
+    venv_bin = root / ".venv" / "bin"
+    venv_bin.mkdir(parents=True)
+    (venv_bin / "python").symlink_to(root / "missing-python")
+    expected_with_symlink = _full_glob_reference(root, (nested,))
+
+    assert _relative_sets(root, enumerate_oracle_and_realization_files(root)) == (
+        expected_with_symlink
+    )
+    assert sync_refactor_state(root) == state
 
     (root / "README.md").write_text("changed\n")
     (root / "visible.txt").unlink()
@@ -218,18 +229,25 @@ def test_inventory_prunes_only_exact_roots_and_verified_nested_git_metadata(
 
 
 @pytest.mark.parametrize(
-    "kind",
+    ("kind", "location"),
     [
-        "symlink",
+        ("symlink", "root-boundary"),
         pytest.param(
             "fifo",
+            "root-boundary",
+            marks=pytest.mark.skipif(
+                not hasattr(os, "mkfifo"), reason="named pipes are unavailable"
+            ),
+        ),
+        pytest.param(
+            "fifo",
+            "unpruned",
             marks=pytest.mark.skipif(
                 not hasattr(os, "mkfifo"), reason="named pipes are unavailable"
             ),
         ),
     ],
 )
-@pytest.mark.parametrize("location", ["root-boundary", "unpruned"])
 def test_inventory_rejects_nonregular_paths(
     tmp_path: Path, kind: str, location: str
 ) -> None:
@@ -240,6 +258,92 @@ def test_inventory_rejects_nonregular_paths(
     with _special_path(path, kind):
         with pytest.raises(CmocError, match="oracle/realization file"):
             enumerate_oracle_and_realization_files(root)
+
+
+@pytest.mark.parametrize("status", ["tracked", "unignored"])
+def test_inventory_rejects_symlink_not_confirmed_untracked_and_ignored(
+    tmp_path: Path, status: str
+) -> None:
+    """tracked または unignored な symlink を列挙エラーにする。"""
+    root = make_repo(tmp_path)
+    link = root / "candidate.link"
+    if status == "tracked":
+        (root / ".gitignore").write_text("*.link\n")
+    link.symlink_to(root / "missing-target")
+    if status == "tracked":
+        run_git(root, "add", "-f", ".gitignore", "candidate.link")
+        run_git(root, "commit", "-m", "add tracked symlink")
+
+    with pytest.raises(CmocError, match="oracle/realization file"):
+        enumerate_oracle_and_realization_files(root)
+
+
+def test_inventory_rejects_symlink_when_ignore_status_is_unknown(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Git が ignore 状態を返せない symlink を列挙エラーにする。"""
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("*.link\n")
+    (root / "candidate.link").symlink_to(root / "missing-target")
+    original_run = runtime_git.subprocess.run
+
+    def failing_check_ignore(
+        *args: object, **kwargs: object
+    ) -> subprocess.CompletedProcess:
+        """一括 ignore 判定だけを失敗させる。"""
+        command = args[0]
+        if command == ["git", "check-ignore", "--stdin", "-z"]:
+            return subprocess.CompletedProcess(
+                command,
+                128,
+                stdout=b"",
+                stderr=b"simulated check-ignore failure",
+            )
+        return original_run(*args, **kwargs)
+
+    monkeypatch.setattr(runtime_git.subprocess, "run", failing_check_ignore)
+
+    with pytest.raises(CmocError, match="Git ignore"):
+        enumerate_oracle_and_realization_files(root)
+
+
+@pytest.mark.parametrize("target_location", ["inside", "outside"])
+def test_inventory_does_not_follow_ignored_symlink_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    target_location: str,
+) -> None:
+    """work-root 内外の symlink 参照先を link 経由で走査しない。"""
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("*.link\n")
+    target = root / "target" if target_location == "inside" else tmp_path / "target"
+    target.mkdir()
+    (target / "payload.txt").write_text("payload\n")
+    link = root / "ignored.link"
+    link.symlink_to(target, target_is_directory=True)
+    scanned: list[Path] = []
+    original_scandir = runtime_git.os.scandir
+
+    def recording_scandir(path: Path) -> Iterator[os.DirEntry[str]]:
+        """走査された directory を記録して実処理へ委譲する。"""
+        scanned.append(Path(path).absolute())
+        return original_scandir(path)
+
+    monkeypatch.setattr(runtime_git.os, "scandir", recording_scandir)
+
+    _, realization_files = _relative_sets(
+        root, enumerate_oracle_and_realization_files(root)
+    )
+
+    assert link.absolute() not in scanned
+    assert all(
+        not relative.startswith("ignored.link/") for relative in realization_files
+    )
+    if target_location == "inside":
+        assert "target/payload.txt" in realization_files
+    else:
+        assert target.absolute() not in scanned
 
 
 @pytest.mark.parametrize(
@@ -366,15 +470,26 @@ def test_single_path_classifier_uses_nested_repository_context(tmp_path: Path) -
     assert not is_realization_file_path(root, nested / ".git" / "config")
 
 
+@pytest.mark.parametrize("candidate_kind", ["regular-file", "ignored-symlink"])
 def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    candidate_kind: str,
 ) -> None:
-    """候補 file 数だけの増加で Git 起動・source 検証・traversal を増やさない。"""
+    """候補 regular file・symlink 数の増加で Git 処理量を増やさない。"""
     root = make_repo(tmp_path)
     source = root / "source"
     source.mkdir()
-    (source / "one.txt").write_text("one\n")
+    (root / ".gitignore").write_text("*.link\n")
+
+    def add_candidate(name: str) -> None:
+        """性能 fixture に指定種別の候補を一つ追加する。"""
+        if candidate_kind == "regular-file":
+            (source / f"{name}.txt").write_text(f"{name}\n")
+        else:
+            (source / f"{name}.link").symlink_to(root / "missing-target")
+
+    add_candidate("one")
 
     git_calls = 0
     source_validations = 0
@@ -414,7 +529,7 @@ def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
     traversals = 0
 
     for index in range(50):
-        (source / f"candidate-{index}.txt").write_text(f"{index}\n")
+        add_candidate(f"candidate-{index}")
     enumerate_oracle_and_realization_files(root)
 
     assert (git_calls, source_validations, traversals) == first_counts
