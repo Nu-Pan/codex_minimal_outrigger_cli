@@ -89,20 +89,20 @@
 # `oracle`
 
 ## Summary
-- oracle 配下の正本文書・正本ソース・正本テストを収める領域です。cmoc の人間所有の仕様、設計・開発規則、実装仕様や検証基準を確認するための入口で、下位の分野別文書・ソース・テストへ進む起点になります。
+- cmoc の正本仕様を収める oracle ツリー。アプリケーション仕様や開発規則を扱う文書群と、Agent call の共通設定・用途別設定・Structured Output schema を定義する oracle/src を下位入口として持つ。
 
 ## Read this when
-- cmoc の挙動、設計、制約、開発・テスト方針の正本を確認するとき
-- 実装やテストを変更する前に、それが従うべき人間所有の仕様を特定するとき
-- 下位領域のどの正本文書を読むべきか判断するとき
+- cmoc の正本仕様を探すとき
+- アプリケーション仕様、branch・session・run・worktree のモデル、Python 開発規則を確認するとき
+- Agent call の設定、用途別 prompt／起動設定、モデル・権限・作業ディレクトリ、Structured Output schema の定義を探すとき
 
 ## Do not read this when
-- 対象の仕様文書、正本ソース、正本テストがすでに特定でき、その本文を直接読むべきとき
-- 現行 realization 実装や realization test の具体的な内容だけを調査するとき
-- 通常の実装補助ファイルや作業メモを確認するとき
+- 対象の個別仕様文書や特定の prompt／schema がすでに特定でき、その本文を直接読むべきとき
+- 現行の realization 実装やテスト、CLI／TUI の実行フローを調査するとき
+- 実装配置、テスト実行手順、開発環境などの直接の手順を、対応する下位文書から確認するとき
 
 ## hash
-- bc44395fa80b13e8bebbea24fc8aaab33f83c5a17b1c6cccb38546936fd90050
+- fd2fc024801f8fa34a0d1849a88bbc6e899b70dd798c7d9633822cf8166c8bf3
 
 # `pyproject.toml`
 
