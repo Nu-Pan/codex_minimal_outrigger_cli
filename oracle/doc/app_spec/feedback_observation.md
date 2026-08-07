@@ -281,6 +281,4 @@ raw observation は normalization 後も変更または自動削除しない。�
 
 直前の正常な local feedback report がない場合は、後者を前者と同数とする。report record はあるが対応する report snapshot がない、hash が一致しない、または正常 report の連鎖を一意に解決できない場合も同じ fallback を使用し、理由を warning として示す。raw observation の report snapshot と normalized state の state snapshot を混同してはならない。
 
-一回限りの旧 state 移行が未完了で effective ingestion receipt を安全に読めない場合は、件数を推測しない。feedback 件数を unavailable として warning を示し、本命 workload を続行する。
-
 未処理 observation が 100 件以上、または最古の未処理 observation が 7 日以上前の場合は、`cmoc feedback report` の実行を促す warning を追加する。この warning と件数計算の失敗は、サブコマンドの終了コードまたは run state を変更しない。

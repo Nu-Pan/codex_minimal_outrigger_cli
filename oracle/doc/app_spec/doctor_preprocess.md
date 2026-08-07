@@ -39,7 +39,6 @@
 - `{{repo-root}}/.gitignore` に `/.cmoc/gu/` が無ければ追加する
 - `{{repo-root}}/.cmoc/gu` ツリー内に tracked file があれば、working tree 上の実ファイルを残したまま git index から除外する
 - 修復後も完了判定を満たさない場合はエラー終了する
-- doctor preprocess は feedback の一回限りの旧 state 移行を代行しない。移行の完了条件と失敗時の workload 分離は feedback state と `cmoc feedback report` の仕様を正本とする
 
 ## 「`{{work-root}}/.agents` が git 追跡対象であることを保証する」の詳細
 

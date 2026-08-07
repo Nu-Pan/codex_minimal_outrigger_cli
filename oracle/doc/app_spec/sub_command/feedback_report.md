@@ -8,10 +8,6 @@
 - `--all` を受け取る。
     - 既定表示で省略する全 disposition 済み issue、threshold 未満の machine issue、全 revision、全 assessment、および全 occurrence を表示する。
     - 既定値は false とする。
-- `--migration-source {{local-branch}}` を受け取る。
-    - 一回限りの旧 state 移行で divergent な local branch がある場合に、人間が移行元を明示するためだけに使用する。
-    - 移行完了後は受け付けない。
-    - branch の選択規則と非選択 state の保存は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の移行契約に従う。
 
 ## 事前条件と repository-local state
 
@@ -22,19 +18,13 @@ doctor preprocess の後、次の条件をすべて満たす場合だけ実行�
 - `run.state=ready` である。
 - repository-level feedback writer 排他を取得できる。
 
-一回限りの旧 state 移行で tracked file の削除 commit が必要な場合だけ、git working tree と staging area に未コミット差分がないことを追加で要求する。通常の report は Git commit を作成しないため、Git の clean 状態を事前条件にしない。
+report は Git commit を作成しない。git working tree と staging area の clean 状態は事前条件にしない。
 
 report は編集 run を作らず、session state と run state を変更しない。normalized feedback state は `{{repo-root}}` に属し、現在の branch には属さない。session または run の join と abandon は、確定済み unit、ingestion receipt、report record、checkpoint、および snapshot を取り込み、破棄、または巻き戻さない。
 
-## 一回限りの移行
+## repository-local state の検証
 
-writer 排他を取得した後、normalized state、ingestion receipt、旧 report baseline のいずれかを読む前に、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` が定める移行完了を検証する。migration receipt がない場合は、同仕様に従って移行を実行する。
-
-branch divergence、schema 違反、hash 不一致、参照不整合、または baseline の再構築不能により移行を完了できない場合は、feedback report をエラー終了する。旧 state、移行前から有効だった新 state、および検証済みの移行 archive は保持する。移行の失敗を、別 workload の成功判定、run state、retry、または終了コードへ伝播させない。
-
-移行完了後の通常処理は、旧 state を読み取り元、保存先、rollback 元、または差分基準にしてはならない。
-
-移行完了を確認した後、repository-local feedback state の schema、hash、参照整合性、および確定済み unit を検証する。違反または破損がある場合は、effective state を変更せずエラー終了する。
+writer 排他を取得した後、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` に従って repository-local feedback state の schema、hash、参照整合性、および確定済み unit を検証する。state root が存在しない状態は有効な初期状態として扱う。違反または破損がある場合は、effective state を変更せずエラー終了する。
 
 ## report snapshot と増分処理
 
@@ -175,7 +165,7 @@ front matter は、次の field を持つ。
 
 ## report 差分の基準
 
-直前の正常な local report は、正常 report record の predecessor 連鎖から一意に決める。移行直後で新方式の正常 report がない場合は、migration receipt が示す legacy baseline を predecessor とする。branch reachability、過去 commit の tree、または timestamp の大小で選んではならない。
+直前の正常な local report は、正常 report record の predecessor 連鎖から一意に決める。正常 report がまだない場合は predecessor は存在しない。branch reachability、過去 commit の tree、または timestamp の大小で選んではならない。
 
 新しい正常 report は、直前の正常 report に対応する immutable state snapshot と、今回確定した state snapshot を比較する。新規 revision、assessment、disposition、および occurrence の差分は、snapshot が列挙する record ID と SHA256 で判定する。record 内の timestamp だけで差分を判定してはならない。
 
