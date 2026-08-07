@@ -43,6 +43,10 @@
 - cmoc oracle edit の作業結果をレビューする時に余計な事が書いてると負担なので、この最小化処理は cmoc oracle refactor
 - 究極的には、仕様記述言語を導入して機械的検証をしないとダメかも
 
+## cmoc refactor state sync after run join のコミットは run branch に積んだほうが良いように思える
+
+- session branch に積んでる理由から確認が必要
+
 ## いい加減、`codex`, `codex exec` の仕様記述の棲み分けをどうにかしたい
 
 以下の指示で
