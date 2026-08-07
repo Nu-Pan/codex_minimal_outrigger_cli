@@ -124,20 +124,20 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる src のトップレベル入口。Typer CLI 本体、CLI サブコマンド、共通 runtime helper、ACP・basic・config・oracle の互換 import 層を扱う。CLI の全体構成や実装領域の選択から、各サブディレクトリまたはトップレベル module へ進むための起点。
+- cmoc CLI の realization 実装をまとめる src 階層。Typer による CLI 本体、サブコマンド、共通 runtime、互換 import shim、ACP builder adapter を提供する。
+- CLI のコマンド構成や実行入口を確認する場合は本階層を起点にし、個別の処理は sub_commands、共通機能は commons、互換公開面は acp・basic・config などの下位要素へ進む。
 
 ## Read this when
-- cmoc の CLI 全体構成、トップレベル command 登録、サブコマンドへの委譲関係を調査・変更するとき。
-- 共通 runtime、互換 import shim、CLI サブコマンド実装の所在を判断するとき。
-- 実装対象が src 配下のどの責務領域に属するかを切り分けるとき。
+- cmoc の realization 側 CLI 全体の構成、公開 import 経路、サブコマンドおよび共通 runtime の入口を把握したいとき。
+- 対象の責務が特定のサブコマンド、共通 runtime、または ACP/basic/config の互換層にまたがり、下位ディレクトリへの入口を選ぶ必要があるとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細挙動を確認・変更するときは、対応する sub_commands 配下を直接読む。
-- runtime helper の内部処理を確認するときは、commons 配下の該当 module を直接読む。
-- ACP、basic、config、oracle の正本定義や内部実装を確認するときは、各互換入口ではなく対応する oracle 側または実体 module を直接読む。
+- 特定サブコマンドの詳細な挙動を確認・変更するときは、該当する sub_commands 配下を直接読む。
+- runtime helper の実装詳細を調べるときは commons 配下を、正本仕様や oracle 側実装を調べるときは oracle 配下を直接読む。
+- 特定の互換 import shim や ACP builder adapter の内容だけを確認するときは、該当する下位要素を直接読む。
 
 ## hash
-- 192185b0d6980412ec53f25991ca00fe707f5cd01d751a9bff827681577eed0d
+- 35e8eff6817b7584982e57d1c096efc9a75d2c264fda5a2d0e56bd66e3c6d375
 
 # `test`
 

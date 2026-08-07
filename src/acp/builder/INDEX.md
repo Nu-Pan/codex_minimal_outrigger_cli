@@ -45,17 +45,18 @@
 # `feedback`
 
 ## Summary
-- feedback normalization 用の builder adapter をまとめるパッケージ。feedback issue の正規化パラメータ builder を builder 層から利用する際の入口となる。
+- feedback normalization 用の builder adapter をまとめるディレクトリ。feedback builder の公開入口と、対応する oracle 実装へのルーティングを担う。
 
 ## Read this when
-- feedback normalization に関する builder adapter の公開入口や、feedback issue の正規化 builder への接続を確認するとき。
+- feedback issue の正規化パラメータ builder の公開入口や参照先を確認するとき。
+- feedback builder 経由で正規化処理を利用する箇所を調査するとき。
 
 ## Do not read this when
-- 正規化パラメータの具体的な実装や仕様を確認したいときは、対応する正本実装・oracle file を直接読む。
-- feedback 以外の builder や、正規化処理そのものの詳細を調査するとき。
+- feedback normalization 以外の builder 実装を調べるとき。
+- 正規化 builder の具体的な実装や仕様を確認するときは、対応する oracle file を直接読む。
 
 ## hash
-- 31d482ec1c323f01d4b071b755cf3fa02a72c14d9c3625c4075af717234479c8
+- e07cc95b5d6752cc55467387169ba8d8b4b61e0eb4f5f73f66071a7ed17e3e1b
 
 # `indexing`
 

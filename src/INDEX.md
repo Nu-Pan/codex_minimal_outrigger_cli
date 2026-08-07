@@ -1,18 +1,19 @@
 # `acp`
 
 ## Summary
-- `acp` 互換公開入口と ACP builder の realization package を扱う。既存の `acp.*` 参照を維持・移行する判断や、用途別 builder adapter の調査を始めるための入口。
+- ACP 互換の realization package。`acp.*` の公開 import 経路を維持しつつ、下位の builder adapter などを通じて canonical な oracle 側実装へ接続する。
+- `acp` 公開入口の存廃判断と、builder 用途別の下位要素へ進むための起点となる。
 
 ## Read this when
-- `acp` 公開名の存廃や oracle 側実体への移行導線を確認したいとき。
-- ACP builder の互換入口、委譲 adapter、用途別 builder の配置を調査したいとき。
+- `acp.*` の互換 import 経路や公開入口全体を確認したいとき。
+- ACP builder の用途別 adapter へ進む入口を選びたいとき。
 
 ## Do not read this when
-- 特定用途の builder の生成ロジックや内部挙動を確認・変更したいときは、対応する下位要素を直接読む。
-- canonical builder、CLI 実行処理、利用側の参照を調査したいときは、それぞれの直接の対象を読む。
+- `acp` 公開入口の存廃だけを判断したいなら、入口モジュールを直接読む。
+- 特定の builder の実装・canonical 仕様・利用箇所を調べたいなら、該当する下位要素または参照元を直接読む。
 
 ## hash
-- 09db759a0970b3bff75e3a86e811ce069889b3cf001bc092feeb6df89c9bca33
+- 19748d31bd6289625fef47d1a672db39bd72ee4039df05de799d7d7caeb3ec5a
 
 # `basic`
 

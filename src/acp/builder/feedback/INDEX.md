@@ -1,16 +1,16 @@
 # `__init__.py`
 
 ## Summary
-- feedback normalization 用の builder adapter パッケージ入口。feedback の正規化処理を builder 層から扱う必要があるときの起点となる。
+- feedback normalization 用の builder adapter を扱う。対応する oracle 実装を参照する際の入口となる。
 
 ## Read this when
-- feedback normalization に対応する builder adapter の入口や責務を確認するとき。
+- feedback の normalization 用 builder adapter の責務や対応する oracle file を確認するとき。
 
 ## Do not read this when
-- feedback の具体的な正規化ロジックや他の builder 実装を直接確認したいとき。
+- feedback normalization 以外の builder 実装を調べるとき。具体的な normalization 処理の実装を確認する場合は、対応する oracle file を直接読む。
 
 ## hash
-- 15f4c28e13a780cd6cf9d07ab5dbab29668875a19050011905cde72428413b05
+- 146a63c76ef83bf2091b863cb528329ee2171de4c27917d4367e8076d999d8c5
 
 # `normalize_issue.py`
 
