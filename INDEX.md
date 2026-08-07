@@ -124,36 +124,35 @@
 # `src`
 
 ## Summary
-- cmoc の realization package 全体。Typer CLI のコマンド登録と引数処理、サブコマンド実装、共通 runtime helper、ACP・設定・path model・構造化文書・oracle の互換 import 入口を含む。
-- CLI 入口から各サブコマンド、共通 runtime、互換 shim の実装へ進むための起点。
+- cmoc の realization 実装をまとめる src パッケージ。CLI ルート、サブコマンド、共通 runtime、互換 import shim など、利用者向け実行経路と下位実装への入口を扱う。src 全体の実装構成を把握し、対象領域の下位要素へ進むための起点となる。
 
 ## Read this when
-- cmoc の CLI 構成やトップレベルのコマンド登録を確認するとき。
-- サブコマンド、共通 runtime、ACP builder、または互換 import 経路の配置を選択するとき。
-- realization 側の実装が oracle 側の型・設定・パスモデルをどう再公開・接続するかを調べるとき。
+- CLI のトップレベル構成やサブコマンド実装の入口を確認するとき。
+- commons、basic、config、acp などの共通基盤・互換層を含む realization 実装の配置を調べるとき。
+- 対象となる下位実装を特定して、個別モジュールへ進む必要があるとき。
 
 ## Do not read this when
-- 特定サブコマンドや runtime helper の詳細な挙動を調べる場合は、該当する下位要素へ直接進むとき。
-- ACP builder の用途別処理を調べる場合は、該当する builder 配下へ直接進むとき。
-- 正本仕様や oracle 側の実装内容を確認する場合は、oracle 配下の対応する文書・ソースを直接読むとき。
+- 特定サブコマンド、runtime helper、互換 import shim の詳細だけを確認する場合は、該当する下位要素を直接読む。
+- ACP・設定・path model などの正本仕様や canonical 実装を確認する場合は、対応する oracle 側定義を直接読む。
+- CLI のテストだけを調べる場合は、対応する realization test を直接読む。
 
 ## hash
-- 6ce02d227e3474fb80bbfbca0eb364f8bdd180e1b4efe9afdfd25b23a857fce1
+- 672b812cec2f0c435b831db7e9d5dcb7c74da3e940f430481e55af76ee72bcf2
 
 # `test`
 
 ## Summary
-- cmoc の realization test を収録するテストディレクトリ。CLI の外部挙動、Codex runtime、ACP builder、indexing、oracle review、session/run lifecycle、設定・state・Git・worktree の安全性、packaged import、実 Codex 経路を対象とする。各テストファイルが機能領域別の詳細な回帰・統合テストへの入口となる。
+- cmoc の realization test ディレクトリ。CLI、runtime、Codex 実行、indexing、oracle review、session、editing run、設定、Git、state、prompt、テスト支援など、実装の外部挙動と主要な境界条件を検証する pytest 群を収録する。各機能の回帰テストや統合テストを探す際の入口となる。
 
 ## Read this when
-- 実装や仕様変更に対応する realization test の入口を探すとき
-- CLI、Codex runtime、ACP builder、indexing、oracle review、session/run、設定、state、Git、worktree の外部挙動を検証するとき
-- 対象機能に対応する回帰テストや統合テストの範囲を確認するとき
+- cmoc の機能変更に対応する realization test、統合テスト、回帰テストの所在を判断するとき
+- CLI、Codex runtime、worktree lifecycle、indexing、oracle review、session、editing run、設定、state などの外部契約を検証するテストを探すとき
+- テスト用 fixture、fake command、Git repository、case-local Ollama など共通支援の入口を確認するとき
 
 ## Do not read this when
-- 正本仕様や schema の内容そのものを確認・変更するときは、対応する oracle doc・source・schema を直接読む
-- 実装詳細だけを調査するときは、対応する src の実装を直接読む
-- テスト実行方法全般だけを確認するときは、テスト実行規則を読む
+- 正本仕様、schema、prompt 規則、設計意図を確認するときは、対応する oracle 文書・schema・source を直接読む
+- 実装詳細の変更や原因調査が目的で、対象の src ファイルを直接読むべきとき
+- テストの実行方法や品質検査の選択基準だけを確認したいときは、テスト実行ルールを読む
 
 ## hash
-- bd79cfae1bbbc64954fd4fcf619f6ffbc0678af2773fe973a3082da6c1f09fb7
+- 58777c461302d954e934ba67dcc6f7199e6b5ffa09c79cf4a63b21f6496000b9

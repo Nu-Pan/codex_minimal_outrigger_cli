@@ -408,19 +408,23 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     assert not (root / ".cmoc").exists()
 
 
-def test_cli_empty_completion_marker_skips_normal_command(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("marker", ["", "complete_bash"])
+def test_cli_completion_marker_skips_normal_command(
+    monkeypatch: pytest.MonkeyPatch, marker: str
 ) -> None:
-    """空の補完 marker でも通常の command callback を実行しない。"""
+    """補完 marker の値によらず通常の command callback を実行しない。"""
     calls: list[str] = []
-    monkeypatch.setenv("_CMOC_COMPLETE", "")
+    monkeypatch.setenv("_CMOC_COMPLETE", marker)
+    monkeypatch.setenv("COMP_WORDS", "cmoc doctor")
+    monkeypatch.setenv("COMP_CWORD", "1")
     monkeypatch.setattr(main_module, "cmoc_doctor_impl", lambda: calls.append("doctor"))
 
     result = runner.invoke(app, ["doctor"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert calls == []
-    assert result.output == ""
+    if not marker:
+        assert result.output == ""
 
 
 def test_pre_log_check_failure_writes_subcommand_log(

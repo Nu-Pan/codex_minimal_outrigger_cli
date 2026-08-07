@@ -85,19 +85,16 @@
 # `main.py`
 
 ## Summary
-- cmoc の Typer CLI アプリケーション本体。トップレベルおよび session、oracle、realization、run、feedback の各サブコマンドを登録し、対応する実装へ処理を委譲する。
-- CLI 引数解析エラーを cmoc のエラーレポート形式へ変換し、自動補完時の副作用を抑制する共通実行制御も担う。各サブコマンドの詳細な挙動を確認する場合の CLI 実装入口。
+- cmoc の Typer/Click CLI のルートエントリーポイント。補完 probe、引数解析エラーの cmoc 形式への変換、session・oracle・realization・run・feedback のサブコマンド登録、doctor・tui・indexing・console script 起動を扱う。各サブコマンドの具体的な処理は import 先の実装への入口として委譲する。
 
 ## Read this when
-- cmoc の CLI コマンド構成、コマンド登録、サブコマンドの入口、Typer/Click の引数解析エラー処理を調査・変更するとき。
-- トップレベル CLI から各サブコマンド実装へ処理がどのように委譲されるかを確認するとき。
+- CLI のトップレベルコマンド、サブコマンド階層、option、補完処理、引数解析エラー処理、または console script の起動方法を変更・確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの業務ロジックや詳細仕様だけを調査するときは、対応する sub_commands 配下の実装または oracle 仕様を直接読む。
-- CLI 以外のランタイムエラー描画、ブランチ操作、oracle/realization 処理の内部実装を調査するとき。
+- 特定サブコマンドの業務処理や run/session/oracle/realization の内部実装を変更するときは、対応する import 先の実装を直接読む。CLI のテストのみを調べるときは、対応する realization test を読む。
 
 ## hash
-- ab836c831dc3c506349bd82f4dbd6b61ff24527de8e45ffadd819f423bb670d6
+- 7726923dd657d38c034f473eb30b402793bb9849767e56eb218d4d4ddedaa8fa
 
 # `oracle.py`
 
