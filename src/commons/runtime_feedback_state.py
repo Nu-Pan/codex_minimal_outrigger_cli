@@ -29,7 +29,6 @@ from .runtime_feedback_store import (
     is_observation_id,
     is_uuid7_prefixed,
     machine_observation_id,
-    migration_root,
     normalization_checkpoint_root,
     normalization_recovery_root,
     normalization_unit_root,
@@ -731,62 +730,6 @@ def _validate_machine_observation(observation: dict[str, Any]) -> list[str]:
     return errors
 
 
-def legacy_feedback_root(worktree: Path) -> Path:
-    """一回限りの移行元である tracked state root を返す。"""
-    return worktree / ".cmoc" / "gt" / "ar" / "feedback"
-
-
-def validate_legacy_feedback_state(worktree: Path) -> None:
-    """移行前の tracked state の JSON object と参照整合性を検査する。"""
-    root = legacy_feedback_root(worktree)
-    if not root.exists():
-        return
-    if root.is_symlink() or not root.is_dir():
-        raise CmocError(
-            "legacy feedback state root が通常 directory ではありません。",
-            ["feedback state path を確認してください。"],
-            str(root),
-        )
-    unsupported = [
-        path
-        for path in root.rglob("*")
-        if (path.is_symlink() or (path.is_file() and path.suffix != ".json"))
-    ]
-    if unsupported:
-        raise CmocError(
-            "legacy feedback state に未定義 file または symlink があります。",
-            ["append-only JSON record 以外の path を確認してください。"],
-            "\n".join(str(path) for path in unsupported),
-        )
-    records: list[tuple[Path, dict[str, Any]]] = []
-    for path in sorted(root.rglob("*.json")):
-        try:
-            content = path.read_text(encoding="utf-8")
-            # Git の marker は行頭に現れる。canonical JSON の文字列値に含まれる
-            # marker 風の文字列は、未解決 conflict ではない。
-            if any(
-                line.startswith(("<<<<<<<", "|||||||", "=======", ">>>>>>>"))
-                for line in content.splitlines()
-            ):
-                raise ValueError("unresolved conflict marker")
-            value = json.loads(content)
-            if not isinstance(value, dict):
-                raise ValueError("JSON object required")
-            if content.encode("utf-8") != canonical_json_bytes(value):
-                raise ValueError("canonical JSON form required")
-            errors = _validate_tracked_record(root, path, value)
-            if errors:
-                raise ValueError("; ".join(errors))
-            records.append((path, value))
-        except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
-            raise CmocError(
-                "legacy feedback state が不正です。",
-                ["schema 違反または conflict marker を解消してください。"],
-                f"path: {path}\nerror: {exc}",
-            ) from exc
-    _validate_tracked_record_relations(root, records)
-
-
 def _field_set(record: dict[str, Any], expected: set[str]) -> list[str]:
     """record の不足 field と未定義 field を返す。"""
     actual = set(record)
@@ -805,7 +748,7 @@ def _is_string_list(value: object, *, non_empty: bool = False) -> bool:
 
 
 def _validate_common_fields(record: dict[str, Any]) -> list[str]:
-    """全 tracked record に共通する schema version を検査する。"""
+    """全 normalized record に共通する schema version を検査する。"""
     return (
         []
         if _is_version_one(record.get("schema_version"))
@@ -824,7 +767,7 @@ def _require_timestamp(
         errors.append(f"{name} is not an RFC 3339 timestamp")
 
 
-def _validate_tracked_record(
+def _validate_normalized_record(
     root: Path,
     path: Path,
     record: dict[str, Any],
@@ -852,10 +795,10 @@ def _validate_tracked_record(
         kind = parts[2]
         if record.get("issue_id") != parts[1]:
             errors.append("issue_id does not match path")
-    elif len(parts) == 2 and parts[0] in {"ingestion", "report"}:
-        kind = parts[0]
+    elif len(parts) == 2 and parts[0] == "ingestion":
+        kind = "ingestion"
     else:
-        return [*errors, "unsupported tracked feedback record path"]
+        return [*errors, "unsupported normalized feedback record path"]
 
     validators = {
         "identity": _validate_identity_record,
@@ -864,7 +807,6 @@ def _validate_tracked_record(
         "assessment": _validate_assessment_record,
         "disposition": _validate_disposition_record,
         "ingestion": _validate_ingestion_record,
-        "report": _validate_report_record,
     }
     errors.extend(validators[kind](record, path_id))
     return errors
@@ -1205,73 +1147,7 @@ def _validate_ingestion_record(record: dict[str, Any], path_id: str) -> list[str
     return errors
 
 
-def _validate_report_record(record: dict[str, Any], path_id: str) -> list[str]:
-    """feedback report record の schema を検査する。"""
-    errors = _field_set(
-        record,
-        {
-            "schema_version",
-            "report_id",
-            "generated_at",
-            "snapshot_manifest_sha256",
-            "snapshot_observation_count",
-            "processed_observation_count",
-            "deferred_observation_count",
-            "report_path",
-            "report_sha256",
-            "result",
-            "state_commit_ids",
-        },
-    )
-    if record.get("report_id") != path_id or not is_uuid7_prefixed(
-        record.get("report_id"), "fbr_"
-    ):
-        errors.append("report_id is invalid")
-    if record.get("result") not in {
-        "ok",
-        "attention",
-        "partial",
-        "interrupted",
-        "error",
-    }:
-        errors.append("report result is invalid")
-    for name in (
-        "snapshot_observation_count",
-        "processed_observation_count",
-        "deferred_observation_count",
-    ):
-        value = record.get(name)
-        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-            errors.append(f"{name} is invalid")
-    if not _is_string_list(record.get("state_commit_ids")):
-        errors.append("state_commit_ids is invalid")
-    string_fields = (
-        "report_id",
-        "generated_at",
-        "snapshot_manifest_sha256",
-        "report_path",
-        "report_sha256",
-    )
-    if not all(isinstance(record.get(name), str) for name in string_fields):
-        errors.append("report string field is invalid")
-    for name in ("snapshot_manifest_sha256", "report_sha256"):
-        if not re.fullmatch(r"[0-9a-f]{64}", str(record.get(name, ""))):
-            errors.append(f"{name} is invalid")
-    _require_timestamp(record, "generated_at", errors)
-    report_path_value = record.get("report_path")
-    if isinstance(report_path_value, str) and not Path(report_path_value).is_absolute():
-        errors.append("report_path is not absolute")
-    state_commit_ids = record.get("state_commit_ids")
-    if isinstance(state_commit_ids, list) and any(
-        not isinstance(value, str)
-        or re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", value) is None
-        for value in state_commit_ids
-    ):
-        errors.append("state_commit_ids contains invalid Git object ID")
-    return errors
-
-
-def _validate_tracked_record_relations(
+def _validate_normalized_record_relations(
     root: Path,
     records: list[tuple[Path, dict[str, Any]]],
 ) -> None:
@@ -1381,16 +1257,10 @@ def _validate_tracked_record_relations(
 
 @dataclass(frozen=True)
 class EffectiveFeedbackState:
-    """manifest または migration receipt で確定した record 集合。"""
+    """normalization unit manifest で確定した record 集合。"""
 
     records: dict[str, dict[str, Any]]
     unit_manifests: dict[str, dict[str, Any]]
-    migration_receipt: dict[str, Any]
-
-
-def migration_receipt_path(repo: Path) -> Path:
-    """旧 state 移行の完了を表す immutable receipt path を返す。"""
-    return migration_root(repo) / "receipt.json"
 
 
 @contextmanager
@@ -1537,7 +1407,7 @@ def _validate_effective_record(
             ["manifest と record path を確認してください。"],
             relative,
         )
-    errors = _validate_tracked_record(root, path, record)
+    errors = _validate_normalized_record(root, path, record)
     if errors:
         raise CmocError(
             "repository-local feedback record が schema に適合しません。",
@@ -1736,363 +1606,9 @@ def _validate_unit_manifest(
     return unit_id, manifest, records
 
 
-def _validate_migration_receipt(
-    repo: Path,
-) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
-    """migration receipt と取り込み済み record を検査する。"""
-    path = migration_receipt_path(repo)
-    receipt = _canonical_object(path, "feedback migration receipt")
-    return validate_migration_artifacts(repo, receipt, source_path=path)
-
-
-def validate_migration_artifacts(
-    repo: Path,
-    receipt: dict[str, Any],
-    *,
-    source_path: Path,
-) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
-    """receipt 候補の schema と全 migration output を削除 commit 前に検査する。"""
-    path = source_path
-    required = {
-        "schema_version",
-        "migration_version",
-        "completed_at",
-        "source_branch",
-        "source_commit",
-        "source_tree",
-        "candidates",
-        "records",
-        "legacy_reports",
-        "baseline",
-    }
-    if (
-        set(receipt) != required
-        or receipt.get("schema_version") != 1
-        or receipt.get("migration_version") != 1
-        or not isinstance(receipt.get("source_branch"), str)
-        or not receipt.get("source_branch")
-        or not isinstance(receipt.get("completed_at"), str)
-        or not _is_timestamp(receipt["completed_at"])
-        or not isinstance(receipt.get("records"), list)
-        or not isinstance(receipt.get("candidates"), list)
-        or not isinstance(receipt.get("legacy_reports"), list)
-    ):
-        raise CmocError(
-            "feedback migration receipt の schema が不正です。",
-            ["receipt と migration archive を確認してください。"],
-            str(path),
-        )
-    root = feedback_root(repo)
-    candidates_by_branch: dict[str, dict[str, Any]] = {}
-    for candidate in receipt["candidates"]:
-        if (
-            not isinstance(candidate, dict)
-            or set(candidate) != {"branch", "commit", "tree", "files"}
-            or not isinstance(candidate.get("branch"), str)
-            or not candidate.get("branch")
-            or re.fullmatch(
-                r"[0-9a-f]{40}|[0-9a-f]{64}", str(candidate.get("commit", ""))
-            )
-            is None
-            or re.fullmatch(
-                r"[0-9a-f]{40}|[0-9a-f]{64}", str(candidate.get("tree", ""))
-            )
-            is None
-            or not isinstance(candidate.get("files"), list)
-        ):
-            raise CmocError(
-                "feedback migration candidate の schema が不正です。",
-                ["migration archive metadata を確認してください。"],
-                repr(candidate),
-            )
-        branch = str(candidate["branch"])
-        if branch in candidates_by_branch:
-            raise CmocError(
-                "feedback migration candidate branch が重複しています。",
-                ["migration receipt を確認してください。"],
-                branch,
-            )
-        candidates_by_branch[branch] = candidate
-        seen_legacy_paths: set[str] = set()
-        for reference in candidate["files"]:
-            if (
-                not isinstance(reference, dict)
-                or set(reference) != {"legacy_path", "archive_path", "sha256"}
-                or not isinstance(reference.get("legacy_path"), str)
-                or not isinstance(reference.get("archive_path"), str)
-                or Path(str(reference.get("legacy_path"))).is_absolute()
-                or ".." in Path(str(reference.get("legacy_path"))).parts
-                or Path(str(reference.get("archive_path"))).is_absolute()
-                or ".." in Path(str(reference.get("archive_path"))).parts
-                or Path(str(reference.get("archive_path"))).parts[:3]
-                != ("migration", "v1", "archive")
-                or re.fullmatch(r"[0-9a-f]{64}", str(reference.get("sha256", "")))
-                is None
-            ):
-                raise CmocError(
-                    "feedback migration archive 参照が不正です。",
-                    ["candidate file metadata を確認してください。"],
-                    repr(reference),
-                )
-            legacy_path_value = str(reference["legacy_path"])
-            if legacy_path_value in seen_legacy_paths:
-                raise CmocError(
-                    "feedback migration archive に重複 path があります。",
-                    ["candidate file metadata を確認してください。"],
-                    legacy_path_value,
-                )
-            seen_legacy_paths.add(legacy_path_value)
-            expected_archive_path = (
-                Path("migration")
-                / "v1"
-                / "archive"
-                / hashlib.sha256(branch.encode("utf-8")).hexdigest()
-                / str(candidate["tree"])
-                / "tree"
-                / legacy_path_value
-            )
-            if Path(str(reference["archive_path"])) != expected_archive_path:
-                raise CmocError(
-                    "feedback migration archive path が candidate と一致しません。",
-                    ["branch、tree、legacy path の archive 対応を確認してください。"],
-                    repr(reference),
-                )
-            archive_path = root / str(reference["archive_path"])
-            if (
-                archive_path.is_symlink()
-                or not archive_path.is_file()
-                or sha256_bytes(archive_path.read_bytes()) != reference["sha256"]
-            ):
-                raise CmocError(
-                    "feedback migration archive が欠落または不一致です。",
-                    ["migration archive を人間が確認してください。"],
-                    str(archive_path),
-                )
-
-    source_commit = receipt.get("source_commit")
-    source_tree = receipt.get("source_tree")
-    source_candidate = candidates_by_branch.get(str(receipt["source_branch"]))
-    if source_candidate is None:
-        if candidates_by_branch or source_commit is not None or source_tree is not None:
-            raise CmocError(
-                "feedback migration source が candidate と一致しません。",
-                ["source branch、commit、および tree を確認してください。"],
-                str(path),
-            )
-    elif (
-        source_candidate.get("commit") != source_commit
-        or source_candidate.get("tree") != source_tree
-    ):
-        raise CmocError(
-            "feedback migration source commit/tree が candidate と一致しません。",
-            ["migration receipt を確認してください。"],
-            str(path),
-        )
-
-    source_files = (
-        {
-            str(item["legacy_path"]): item
-            for item in source_candidate["files"]
-            if isinstance(item, dict)
-        }
-        if source_candidate is not None
-        else {}
-    )
-    unsupported_source_paths = sorted(
-        relative
-        for relative in source_files
-        if not relative.startswith(("issue/", "ingestion/", "report/"))
-    )
-    if unsupported_source_paths:
-        raise CmocError(
-            "feedback migration source に未定義 record path があります。",
-            ["source archive を人間が確認してください。"],
-            "\n".join(unsupported_source_paths),
-        )
-    records: dict[str, dict[str, Any]] = {}
-    for reference in receipt["records"]:
-        relative, record_path_value = _validate_reference(
-            root, reference, description="migrated feedback record"
-        )
-        source_reference = source_files.get(relative)
-        if source_reference is None or source_reference.get("sha256") != reference.get(
-            "sha256"
-        ):
-            raise CmocError(
-                "migrated feedback record が選択した source tree と一致しません。",
-                ["migration receipt と source archive を確認してください。"],
-                relative,
-            )
-        record = _canonical_object(record_path_value, "migrated feedback record")
-        _validate_effective_record(root, relative, record)
-        if relative in records:
-            raise CmocError(
-                "feedback migration receipt に重複 record があります。",
-                ["migration receipt を確認してください。"],
-                relative,
-            )
-        records[relative] = record
-    expected_record_paths = {
-        relative
-        for relative in source_files
-        if relative.startswith(("issue/", "ingestion/"))
-    }
-    if set(records) != expected_record_paths:
-        raise CmocError(
-            "feedback migration receipt の record 集合が source tree と一致しません。",
-            ["欠落または余分な migrated record を確認してください。"],
-            f"expected: {sorted(expected_record_paths)}\nactual: {sorted(records)}",
-        )
-    legacy_reports: dict[str, dict[str, Any]] = {}
-    for metadata in receipt["legacy_reports"]:
-        if (
-            not isinstance(metadata, dict)
-            or set(metadata)
-            != {
-                "report_id",
-                "source_branch",
-                "source_commit",
-                "legacy_path",
-                "archive_path",
-                "sha256",
-            }
-            or not is_uuid7_prefixed(metadata.get("report_id"), "fbr_")
-            or metadata.get("source_branch") != receipt["source_branch"]
-            or metadata.get("source_commit") != source_commit
-        ):
-            raise CmocError(
-                "legacy feedback report metadata が不正です。",
-                ["migration receipt と archive を確認してください。"],
-                repr(metadata),
-            )
-        report_id_value = str(metadata["report_id"])
-        legacy_path_value = str(metadata["legacy_path"])
-        source_reference = source_files.get(legacy_path_value)
-        if (
-            legacy_path_value != f"report/{report_id_value}.json"
-            or source_reference is None
-            or source_reference.get("archive_path") != metadata.get("archive_path")
-            or source_reference.get("sha256") != metadata.get("sha256")
-        ):
-            raise CmocError(
-                "legacy feedback report metadata が source archive と一致しません。",
-                ["migration receipt と candidate archive を確認してください。"],
-                repr(metadata),
-            )
-        archive_path = root / str(metadata.get("archive_path", ""))
-        if (
-            archive_path.is_symlink()
-            or not archive_path.is_file()
-            or sha256_bytes(archive_path.read_bytes()) != metadata.get("sha256")
-        ):
-            raise CmocError(
-                "legacy feedback report archive が欠落または不一致です。",
-                ["migration archive を人間が確認してください。"],
-                str(archive_path),
-            )
-        legacy_record = _canonical_object(archive_path, "legacy feedback report")
-        legacy_errors = _validate_report_record(legacy_record, report_id_value)
-        if legacy_errors:
-            raise CmocError(
-                "legacy feedback report record の schema が不正です。",
-                ["migration archive を人間が確認してください。"],
-                "; ".join(legacy_errors),
-            )
-        legacy_snapshot = report_snapshot_root(repo) / f"{report_id_value}.json"
-        legacy_markdown = Path(str(legacy_record["report_path"]))
-        if (
-            legacy_snapshot.is_symlink()
-            or not legacy_snapshot.is_file()
-            or sha256_bytes(legacy_snapshot.read_bytes())
-            != legacy_record["snapshot_manifest_sha256"]
-            or legacy_markdown.is_symlink()
-            or not legacy_markdown.is_file()
-            or sha256_bytes(legacy_markdown.read_bytes())
-            != legacy_record["report_sha256"]
-        ):
-            raise CmocError(
-                "legacy feedback report artifact が欠落または不一致です。",
-                ["report snapshot と Markdown report を確認してください。"],
-                report_id_value,
-            )
-        if report_id_value in legacy_reports:
-            raise CmocError(
-                "legacy feedback report metadata が重複しています。",
-                ["migration receipt を確認してください。"],
-                report_id_value,
-            )
-        legacy_reports[report_id_value] = legacy_record
-    expected_legacy_report_paths = {
-        relative for relative in source_files if relative.startswith("report/")
-    }
-    actual_legacy_report_paths = {
-        str(metadata["legacy_path"])
-        for metadata in receipt["legacy_reports"]
-        if isinstance(metadata, dict)
-    }
-    if actual_legacy_report_paths != expected_legacy_report_paths:
-        raise CmocError(
-            "legacy feedback report metadata の集合が source tree と一致しません。",
-            ["migration receipt と source archive を確認してください。"],
-            f"expected: {sorted(expected_legacy_report_paths)}\nactual: {sorted(actual_legacy_report_paths)}",
-        )
-    baseline = receipt.get("baseline")
-    normal_legacy_reports = [
-        record
-        for record in legacy_reports.values()
-        if record.get("result") in {"ok", "attention"}
-    ]
-    expected_baseline_id = (
-        str(
-            max(
-                normal_legacy_reports,
-                key=lambda record: (
-                    parse_rfc3339(str(record["generated_at"])),
-                    str(record["report_id"]),
-                ),
-            )["report_id"]
-        )
-        if normal_legacy_reports
-        else None
-    )
-    actual_baseline_id = (
-        baseline.get("legacy_report_id") if isinstance(baseline, dict) else None
-    )
-    if actual_baseline_id != expected_baseline_id:
-        raise CmocError(
-            "feedback migration baseline が直前の正常 legacy report と一致しません。",
-            ["legacy report の generated_at と report ID を確認してください。"],
-            f"expected: {expected_baseline_id!r}\nactual: {actual_baseline_id!r}",
-        )
-    if baseline is not None:
-        if (
-            not isinstance(baseline, dict)
-            or set(baseline) != {"legacy_report_id", "state_snapshot_id"}
-            or not isinstance(baseline.get("legacy_report_id"), str)
-            or not isinstance(baseline.get("state_snapshot_id"), str)
-        ):
-            raise CmocError(
-                "feedback migration baseline が不正です。",
-                ["legacy report と state snapshot の対応を確認してください。"],
-                repr(baseline),
-            )
-        legacy_report = legacy_reports.get(str(baseline["legacy_report_id"]))
-        if legacy_report is None or legacy_report.get("result") not in {
-            "ok",
-            "attention",
-        }:
-            raise CmocError(
-                "feedback migration baseline が正常 legacy report を参照していません。",
-                ["migration receipt の baseline を確認してください。"],
-                repr(baseline),
-            )
-        _load_state_snapshot(repo, str(baseline["state_snapshot_id"]))
-    return receipt, records
-
-
 def load_effective_feedback_state(repo: Path) -> EffectiveFeedbackState:
-    """valid な manifest/receipt が確定する normalized state を読む。"""
-    receipt, records = _validate_migration_receipt(repo)
+    """valid な manifest が確定する normalized state を読む。"""
+    records: dict[str, dict[str, Any]] = {}
     manifests: dict[str, dict[str, Any]] = {}
     unit_root = normalization_unit_root(repo)
     if unit_root.exists() and (unit_root.is_symlink() or not unit_root.is_dir()):
@@ -2112,7 +1628,7 @@ def load_effective_feedback_state(repo: Path) -> EffectiveFeedbackState:
                 ) != canonical_json_bytes(record):
                     raise CmocError(
                         "effective feedback record の参照が競合しています。",
-                        ["unit manifest と migration receipt を確認してください。"],
+                        ["unit manifest の record 参照を確認してください。"],
                         relative,
                     )
                 records[relative] = record
@@ -2167,8 +1683,8 @@ def load_effective_feedback_state(repo: Path) -> EffectiveFeedbackState:
         (feedback_root(repo) / relative, record)
         for relative, record in sorted(records.items())
     ]
-    _validate_tracked_record_relations(feedback_root(repo), relation_records)
-    return EffectiveFeedbackState(records, manifests, receipt)
+    _validate_normalized_record_relations(feedback_root(repo), relation_records)
+    return EffectiveFeedbackState(records, manifests)
 
 
 def _normalized_record_paths(repo: Path) -> set[str]:
@@ -2455,7 +1971,7 @@ def publish_normalization_unit(
                 relative,
             )
         tentative[relative] = record
-    _validate_tracked_record_relations(
+    _validate_normalized_record_relations(
         root,
         [(root / relative, record) for relative, record in sorted(tentative.items())],
     )
@@ -2513,7 +2029,7 @@ def write_state_snapshot_from_records(
     created_at: str,
 ) -> tuple[dict[str, Any], str]:
     """検証済み record 集合から state snapshot を durable 保存する。"""
-    state = EffectiveFeedbackState(records, {}, {})
+    state = EffectiveFeedbackState(records, {})
     root = feedback_root(repo)
     for relative, record in state.records.items():
         _validate_effective_record(root, relative, record)
@@ -2528,7 +2044,7 @@ def write_state_snapshot_from_records(
                 ["snapshot source path を人間が確認してください。"],
                 str(path),
             )
-    _validate_tracked_record_relations(
+    _validate_normalized_record_relations(
         root,
         [
             (root / relative, record)
@@ -3077,7 +2593,7 @@ def _validated_report_records(
         _validate_report_artifacts(repo, state, record, require_markdown=True)
         records[report_id] = record
     try:
-        _successful_report_head(state.migration_receipt, records)
+        _successful_report_head(records)
     except ValueError as exc:
         raise CmocError(
             "正常な local feedback report の連鎖が不正です。",
@@ -3088,15 +2604,11 @@ def _validated_report_records(
 
 
 def _expected_report_predecessor(
-    receipt: dict[str, Any],
     records: dict[str, dict[str, Any]],
 ) -> str | None:
     """現在の正常 report 連鎖から次 publication の predecessor を返す。"""
-    head = _successful_report_head(receipt, records)
-    if head is not None:
-        return str(head["report_id"])
-    baseline = receipt.get("baseline")
-    return str(baseline["legacy_report_id"]) if isinstance(baseline, dict) else None
+    head = _successful_report_head(records)
+    return str(head["report_id"]) if head is not None else None
 
 
 def prepare_report_publication(repo: Path, record: dict[str, Any]) -> Path:
@@ -3123,7 +2635,7 @@ def prepare_report_publication(repo: Path, record: dict[str, Any]) -> Path:
                 report_id,
             )
         return record_path(repo, record, "report")
-    expected = _expected_report_predecessor(state.migration_receipt, records)
+    expected = _expected_report_predecessor(records)
     if record.get("previous_successful_report_id") != expected:
         raise CmocError(
             "feedback report の predecessor が現在の正常連鎖と一致しません。",
@@ -3202,7 +2714,6 @@ def recover_report_publications(repo: Path) -> list[str]:
 
 
 def _successful_report_head(
-    receipt: dict[str, Any],
     records: dict[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     """predecessor 連鎖を検査し、正常 report の先頭を返す。"""
@@ -3211,15 +2722,11 @@ def _successful_report_head(
         for report_id, record in records.items()
         if record.get("result") in {"ok", "attention"}
     }
-    baseline = receipt.get("baseline")
-    baseline_id = (
-        baseline.get("legacy_report_id") if isinstance(baseline, dict) else None
-    )
     for report_id, record in records.items():
         if report_id in normal:
             continue
         previous = record.get("previous_successful_report_id")
-        if previous is not None and previous not in normal and previous != baseline_id:
+        if previous is not None and previous not in normal:
             raise ValueError(
                 f"report {report_id} has unknown successful predecessor {previous}"
             )
@@ -3233,7 +2740,7 @@ def _successful_report_head(
             children.setdefault(str(previous), []).append(report_id)
             if previous in normal:
                 referenced.add(str(previous))
-            elif previous != baseline_id:
+            else:
                 raise ValueError(
                     f"normal report {report_id} has unknown predecessor {previous}"
                 )
@@ -3252,10 +2759,8 @@ def _successful_report_head(
         visited.add(cursor)
         previous = normal[cursor].get("previous_successful_report_id")
         cursor = str(previous) if previous is not None else None
-    if cursor != baseline_id:
-        raise ValueError(
-            f"normal report chain terminates at {cursor!r}, expected {baseline_id!r}"
-        )
+    if cursor is not None:
+        raise ValueError(f"normal report chain terminates at {cursor!r}")
     if visited != set(normal):
         raise ValueError("normal report chain is disconnected")
     return normal[head_id]
@@ -3265,7 +2770,7 @@ def latest_successful_report_record(repo: Path) -> dict[str, Any] | None:
     """一意な predecessor 連鎖の先頭にある正常 report を返す。"""
     state = load_effective_feedback_state(repo)
     records = _validated_report_records(repo, state)
-    return _successful_report_head(state.migration_receipt, records)
+    return _successful_report_head(records)
 
 
 def previous_successful_report_id(repo: Path) -> str | None:
@@ -3273,9 +2778,7 @@ def previous_successful_report_id(repo: Path) -> str | None:
     latest = latest_successful_report_record(repo)
     if latest is not None:
         return str(latest["report_id"])
-    receipt = load_effective_feedback_state(repo).migration_receipt
-    baseline = receipt.get("baseline")
-    return str(baseline["legacy_report_id"]) if isinstance(baseline, dict) else None
+    return None
 
 
 def previous_state_snapshot_id(repo: Path) -> str | None:
@@ -3284,9 +2787,7 @@ def previous_state_snapshot_id(repo: Path) -> str | None:
     if latest is not None:
         value = latest.get("state_snapshot_id")
         return str(value) if isinstance(value, str) else None
-    receipt = load_effective_feedback_state(repo).migration_receipt
-    baseline = receipt.get("baseline")
-    return str(baseline["state_snapshot_id"]) if isinstance(baseline, dict) else None
+    return None
 
 
 def _effective_revision(
@@ -3330,7 +2831,7 @@ def load_issue_views(
     *,
     state: EffectiveFeedbackState | None = None,
 ) -> dict[str, IssueView]:
-    """manifest/receipt が指す record だけから effective issue view を構築する。"""
+    """manifest が指す record だけから effective issue view を構築する。"""
     state = state or load_effective_feedback_state(repo)
     grouped: dict[str, dict[str, Any]] = {}
     for relative, record in state.records.items():

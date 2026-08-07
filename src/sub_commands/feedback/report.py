@@ -32,7 +32,6 @@ from cmoc_runtime import (
     start_subcommand_step,
     work_root,
 )
-from commons.runtime_feedback_migration import ensure_feedback_migration
 from commons.runtime_feedback_state import (
     IssueView,
     agent_canonical_key,
@@ -84,24 +83,17 @@ from commons.runtime_results import StructuredOutputValidationIssue
 
 def cmoc_feedback_report_impl(
     show_all: bool = False,
-    migration_source: str | None = None,
 ) -> None:
     """CLI runtime を通して feedback report を実行する。"""
     run_cli_subcommand(
         _cmoc_feedback_report_body,
         show_all,
-        migration_source,
         command_name="feedback report",
         command_argv=[
             "cmoc",
             "feedback",
             "report",
             *(["--all"] if show_all else []),
-            *(
-                ["--migration-source", migration_source]
-                if migration_source is not None
-                else []
-            ),
         ],
         total_steps=6,
     )
@@ -109,7 +101,6 @@ def cmoc_feedback_report_impl(
 
 def _cmoc_feedback_report_body(
     show_all: bool,
-    migration_source: str | None,
 ) -> int:
     """snapshot 内の未処理 observation を unit ごとに確定する。"""
     repo = repo_root()
@@ -121,10 +112,9 @@ def _cmoc_feedback_report_body(
     with feedback_writer_lock(repo):
         start_subcommand_step(
             3,
-            "feedback の旧 state 移行と整合性を確認",
-            "migrate and validate feedback state",
+            "feedback state の整合性を確認",
+            "validate feedback state",
         )
-        ensure_feedback_migration(repo, migration_source=migration_source)
         recovered_units = recover_normalization_units(repo)
         recover_report_publications(repo)
         validate_feedback_state(repo, require_no_orphans=True)

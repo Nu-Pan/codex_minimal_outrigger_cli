@@ -180,11 +180,6 @@ def state_snapshot_root(repo: Path) -> Path:
     return feedback_root(repo) / "state_snapshot"
 
 
-def migration_root(repo: Path) -> Path:
-    """一回限りの tracked feedback state 移行用 root を返す。"""
-    return feedback_root(repo) / "migration" / "v1"
-
-
 def report_recovery_root(repo: Path) -> Path:
     """未確定 report publication の durable recovery metadata root を返す。"""
     return feedback_root(repo) / "report_recovery"
@@ -740,24 +735,11 @@ def unprocessed_observation_paths(repo: Path) -> list[Path]:
 
 
 def feedback_completion_counts(
-    repo: Path, worktree: Path | None = None
+    repo: Path,
 ) -> tuple[int | None, int | None, list[str]]:
     """通常サブコマンド完了時の raw observation 件数と warning を返す。"""
-    del worktree
     # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
-    # receipt 前は旧 state の選択が未確定なため、件数を推測しない。
-    from .runtime_feedback_state import (
-        latest_successful_report_record,
-        load_effective_feedback_state,
-        migration_receipt_path,
-    )
-
-    if not migration_receipt_path(repo).is_file():
-        return (
-            None,
-            None,
-            ["feedback の一回限りの旧 state 移行が未完了のため件数を計算できません。"],
-        )
+    from .runtime_feedback_state import latest_successful_report_record
 
     try:
         unprocessed = unprocessed_observation_paths(repo)
@@ -773,27 +755,6 @@ def feedback_completion_counts(
     warnings: list[str] = []
     try:
         latest = latest_successful_report_record(repo)
-        if latest is None:
-            receipt = load_effective_feedback_state(repo).migration_receipt
-            baseline = receipt.get("baseline")
-            baseline_id = (
-                baseline.get("legacy_report_id") if isinstance(baseline, dict) else None
-            )
-            metadata = next(
-                (
-                    item
-                    for item in receipt.get("legacy_reports", [])
-                    if isinstance(item, dict) and item.get("report_id") == baseline_id
-                ),
-                None,
-            )
-            if metadata is not None:
-                archive = feedback_root(repo) / str(metadata["archive_path"])
-                legacy = read_json_object(archive)
-                latest = {
-                    "report_id": baseline_id,
-                    "report_snapshot_sha256": legacy.get("snapshot_manifest_sha256"),
-                }
     except Exception as exc:
         latest = None
         warnings.extend(

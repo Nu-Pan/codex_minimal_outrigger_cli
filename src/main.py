@@ -212,11 +212,10 @@ def indexing() -> None:
 @feedback_app.command("report")
 def feedback_report(
     show_all: bool = typer.Option(False, "--all"),
-    migration_source: str | None = typer.Option(None, "--migration-source"),
 ) -> None:
     """raw feedback observation を増分 normalization して report を作る。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
-    cmoc_feedback_report_impl(show_all, migration_source)
+    cmoc_feedback_report_impl(show_all)
 
 
 def main() -> None:
