@@ -23,7 +23,7 @@ def build_oracle_and_realization_basic(
                     StructDoc(
                         "定義",
                         """
-                        以下の条件をすべて満たしたファイルの事を指す
+                        以下の条件をすべて満たした regular file の事を指す
                         - `{{work-root}}/oracle` ツリー内である
                         - ファイル名が `INDEX.md`, `AGENTS.md` のいずれでもない
                         - `git check-ignore` で git 追跡対象外ではないと判定された
@@ -58,7 +58,7 @@ def build_oracle_and_realization_basic(
                 StructDoc(
                     "定義",
                     """
-                    以下の条件をすべて満たしたファイルの事を指す
+                    以下の条件をすべて満たした regular file の事を指す
                     - `{{work-root}}` ツリー内である
                     - `{{work-root}}/oracle` ツリー内ではない
                     - `{{work-root}}/memo` ツリー内ではない

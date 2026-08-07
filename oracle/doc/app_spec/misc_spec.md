@@ -24,13 +24,13 @@ nested Git working tree 本体の file は、repository metadata を除いて通
 
 Git ignore 判定の意味は次のとおりとする。
 
-- 候補 file の owning repository は、その path を含む最内側の検証済み Git working tree とする
+- 候補 path の owning repository は、その path を含む最内側の検証済み Git working tree とする
 - owning repository における通常の index-aware な `git check-ignore` と同値に判定する
 - root と nested の `.gitignore`、repository-local exclude、および global exclude を有効な ignore source とする
-- owning repository で untracked かつ ignore pattern に一致する file は分類対象外とする
-- owning repository で tracked な file は、ignore pattern に一致していても分類対象に含める
-- tracked file を ignore 判定へ含める `--no-index` 相当の意味を採用しない
-- ignore pattern に一致しない untracked file は分類対象に含める
+- owning repository で untracked かつ ignore pattern に一致する regular file は分類対象外とする
+- owning repository で tracked な regular file は、ignore pattern に一致していても分類対象に含める
+- tracked path を ignore 判定へ含める `--no-index` 相当の意味を採用しない
+- ignore pattern に一致しない untracked regular file は分類対象に含める
 
 以上の対象外条件と Git ignore 判定を適用した regular file を、次の条件で分類する。
 
@@ -60,19 +60,23 @@ regular file の扱いにより、linked worktree の `.git` metadata file を�
 検証済みの pruned directory の descendant は、個別の列挙と非通常ファイル検証のどちらも行わない。
 
 pruning されなかった領域では directory を traversal し、regular file を分類候補とする。
-同領域の symlink、FIFO、socket、device、およびその他の非通常ファイルは、追跡せず列挙をエラー終了する。
+同領域の symlink は dereference せず、symlink 自身の path を owning repository における通常の index-aware な Git ignore 判定の対象とする。
+symlink が untracked かつ ignored と確定した場合だけ、その path を分類対象外として列挙を継続する。
+tracked、unignored、または ignore 状態を確定できない symlink は、列挙をエラー終了する。
+symlink の参照先は `{{work-root}}` 内外のどちらにあっても、traversal、分類、または repository context の検出対象としない。
+同領域の FIFO、socket、device、およびその他の非通常ファイルは、追跡せず列挙をエラー終了する。
 
 directory が Git ignore 対象であることだけを理由に pruning してはならない。
 `.venv` などの ignored directory も traversal し、その中で owning repository が tracked とする file を列挙結果に保持する。
 
 ### Git ignore 判定の性能不変条件
 
-Git ignore 判定は、owning repository ごとに候補 path を一括処理する。
+Git ignore 判定は、regular file の分類候補と pruning されなかった領域の symlink の各 path を、owning repository ごとに一括処理する。
 判定は本書の分類結果が定める通常の index-aware な意味を維持し、次の性能不変条件を満たす。
 
-- Git subprocess 数を候補 file 数に比例させない
+- Git subprocess 数を候補 path 数に比例させない
 - 同じ repository context と同じ ignore source の検証結果を、1 回の列挙内で再利用する
-- repository context と ignore source が同じまま候補 file 数だけが増えた場合、Git subprocess 数と ignore source の検証回数を増やさない
+- repository context と ignore source が同じまま候補 path 数だけが増えた場合、symlink だけが増えた場合を含め、Git subprocess 数と ignore source の検証回数を増やさない
 - nested repository ごとに異なる repository context と ignore source を適用する
 - 検証結果の再利用は 1 回の列挙内に限定でき、doctor invocation 間の永続 cache を要求しない
 - cache を doctor invocation 間で永続化する場合も、設定変更を見落として以前の検証結果を使用してはならない
@@ -87,11 +91,14 @@ fixture は少なくとも次の境界を扱う。
 - exact root の pruning 対象へ descend せず、nested の同名 directory は名前だけで pruning しない
 - pruning 境界の symlink、FIFO、socket、および device 相当を拒否する
 - linked worktree の regular `.git` file を正常に扱う
-- ignored directory を traversal し、その中の tracked file を保持する
+- untracked かつ ignored な `.venv/bin/python` symlink を分類対象外として列挙を正常終了する
+- ignored directory を traversal し、その中の tracked regular file を保持する
+- tracked、unignored、または ignore 状態を確定できない symlink を拒否する
+- symlink の参照先が `{{work-root}}` 内外のどちらにあっても、その参照先を traversal しない
 - Git ignore に一致しない untracked file を保持する
 - outer repository と nested repository に異なる ignore 規則を適用する
 - root と nested の `.gitignore`、repository-local exclude、および global exclude を反映する
-- refactor state の entry 集合と SHA256 更新結果を full glob の基準結果と一致させる
+- regular file の列挙結果、対象 path の正規化、file 内容の SHA256、`investigation_required` の意味、および refactor state の entry 集合を full glob の基準結果と一致させ、symlink 対応による不要な変更を生じさせない
 
 性能回帰は、次の回数を観測して検出する。
 
@@ -99,7 +106,7 @@ fixture は少なくとも次の境界を扱う。
 - 一意な ignore source の検証回数
 - pruning 対象への traversal 回数
 
-候補 file 数だけを増やした fixture では、Git subprocess の起動回数と ignore source の検証回数が増えてはならない。
+候補 regular file または symlink のいずれかの件数だけを増やした fixture では、Git subprocess の起動回数と ignore source の検証回数が増えてはならない。
 path 件数に依存する wall-clock time を自動テストの合否条件にしてはならない。
 
 ## `{{work-root}}` に対する仮定
