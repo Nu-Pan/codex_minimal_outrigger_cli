@@ -3,6 +3,7 @@
 根拠:
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
+- {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 """
 
 import hashlib
@@ -81,6 +82,8 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
     assert "features" not in parsed
     assert "model_provider" not in parsed
     assert "model_providers" not in parsed
+    assert parsed["notify"] == []
+    assert parsed["tui"] == {"notifications": False}
     assert parsed["mcp_servers"] == {
         "cmoc_feedback": {
             "command": sys.executable,
@@ -143,13 +146,32 @@ def test_feedback_capability_values_are_not_written_to_codex_argv(
         assert value not in rendered
 
 
-def test_prepare_codex_overrides_is_config_only() -> None:
-    """prepare 境界も path や provider lifecycle を入力に持たない。"""
+def test_prepare_codex_overrides_matches_builder_defaults() -> None:
+    """callback 未指定の prepare 境界は builder の既定 argv と一致する。"""
     parameter = _parameter(FileAccessMode.REALIZATION_WRITE)
     config = CmocConfig()
     assert prepare_codex_override_args(parameter, config) == (
         build_codex_override_args(parameter, config)
     )
+
+
+def test_codex_overrides_encode_tui_notification_command_as_toml_data() -> None:
+    """TUI callback argv を shell 文字列へ変換せず notification 設定へ渡す。"""
+    command = [
+        "/python with space",
+        "/callback.py",
+        "repository '; Write-Error injected",
+    ]
+
+    args = build_codex_override_args(
+        _parameter(FileAccessMode.READONLY),
+        CmocConfig(),
+        notification_command=command,
+    )
+
+    parsed = codex_override_config(args)
+    assert parsed["notify"] == command
+    assert parsed["tui"] == {"notifications": False}
 
 
 def test_codex_overrides_encode_selected_generic_provider() -> None:

@@ -35,6 +35,7 @@ def cmoc_oracle_edit_impl() -> None:
         pre_log_check=ensure_prompt_editor_roots_ignored,
         command_name="oracle edit",
         command_argv=["cmoc", "oracle", "edit"],
+        tui_process=True,
         total_steps=6,
     )
 
@@ -67,6 +68,7 @@ def _cmoc_oracle_edit_body() -> None:
         config=load_config(current_root),
         purpose="oracle edit",
         pre_launch_check=_validate_and_start_launch_step,
+        notification_command_name="oracle edit",
     )
 
 

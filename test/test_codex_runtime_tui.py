@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -38,6 +39,7 @@ def _tui_call_logs(root: Path) -> list[Path]:
 # {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+# {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 # docstring の責務記述は {{work-root}}/oracle/doc/dev_rule/coding_rule.md に従う。
 def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -93,6 +95,16 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     override_config = codex_override_config(record["args"])
     assert codex_arg_value(record["args"], "--ask-for-approval") == "on-request"
     assert override_config["approvals_reviewer"] == "auto_review"
+    notification_command = override_config["notify"]
+    assert isinstance(notification_command, list)
+    assert notification_command[0] == sys.executable
+    assert Path(notification_command[1]).name == "runtime_windows_toast.py"
+    assert notification_command[2] == "codex-tui-callback"
+    callback_state_root = Path(notification_command[3])
+    assert not callback_state_root.exists()
+    assert notification_command[4:] == ["codex tui", root.name]
+    assert override_config["tui"] == {"notifications": False}
+    assert "complete prompt" not in "\n".join(notification_command)
     assert "permissions" not in override_config
     assert "--output-schema" not in record["args"]
 

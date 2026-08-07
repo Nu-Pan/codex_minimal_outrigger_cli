@@ -22,6 +22,7 @@ from cmoc_runtime import (
     current_subcommand_logger,
     file_sha256,
     load_config,
+    mark_current_subcommand_interrupted,
     refactor_state_path,
     run_cli_subcommand,
     run_codex_exec,
@@ -184,6 +185,8 @@ def _cmoc_realization_refactor_fork_body() -> None:
                 interruption,
                 [*cleanup_warnings, *cleanup_errors],
             )
+        # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+        mark_current_subcommand_interrupted()
         typer.echo(_completion_log("user_interruption", unresolved_findings, report))
         return
     except BaseException as exc:

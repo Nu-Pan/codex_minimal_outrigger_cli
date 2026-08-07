@@ -2,6 +2,7 @@ import subprocess
 import time
 
 from .runtime_cli import (
+    mark_current_subcommand_interrupted,
     require_current_directory_is_work_root,
     run_cli_subcommand,
     start_subcommand_step,
@@ -153,6 +154,7 @@ __all__ = (
     "load_config",
     "load_state_for_branch",
     "logs_dir",
+    "mark_current_subcommand_interrupted",
     "open_process_fd",
     "prepare_codex_override_args",
     "prepare_schema",

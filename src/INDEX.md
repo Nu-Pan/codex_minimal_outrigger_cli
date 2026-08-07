@@ -50,19 +50,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を提供する commons パッケージ。CLI 実行 lifecycle、Codex exec/TUI、設定・状態・パス、Git、ログ、feedback、エラー、INDEX 更新など、複数の上位機能から利用される横断的な実行時処理を扱う。
-- パッケージ初期化と共通 API の集約を入口に、個別の runtime_* モジュールへ進んで各領域の実装詳細を確認するためのディレクトリ。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行 lifecycle、Codex 実行、設定・状態管理、Git・パス・ログ・エラー・feedback、INDEX 更新など、複数機能から再利用される共通実装と公開入口を扱う。各個別 runtime module の調査へ進むための入口。
 
 ## Read this when
-- 複数の cmoc 機能にまたがる runtime helper の構成や、共通 API の入口を確認するとき
-- CLI、Codex、設定、状態、Git、ログ、feedback、INDEX 更新などの共通実行時処理の担当モジュールを選ぶとき
+- 複数の cmoc runtime 機能にまたがる共通 API や処理境界を調査するとき
+- CLI、Codex、設定、状態、Git、ログ、パス、feedback、run lifecycle などの共通実装を変更・確認するとき
+- 対象機能に対応する個別 runtime module の入口や公開シンボルを特定するとき
 
 ## Do not read this when
-- 特定の runtime 機能の実装詳細だけを確認したいときは、対応する runtime_* モジュールを直接読む
-- 利用者向けの正本仕様や個別サブコマンドの業務処理だけを確認したいときは、対応する oracle 文書または呼び出し元の実装を直接読む
+- 特定の runtime helper の具体的なアルゴリズムや仕様だけを調査するとき
+- 個別 CLI サブコマンドの業務ロジックや引数定義だけを確認するとき
+- 正本仕様、個別の設定型定義、feedback schema、path model などを確認する場合は、対応する oracle または専用実装を直接読む
 
 ## hash
-- fdd8ad10929086e04c6c1e1f81945bd6728f6b4838824039b21f994ac126b446
+- a5bc281bbe19890ae33687b16b1ca2bae04d23580a748c7ea63d2eebea302408
 
 # `config`
 
@@ -114,18 +115,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめる領域。doctor、feedback、indexing、oracle、realization、run、session、tui の各実行入口と、サブコマンド固有の下位処理への入口を提供する。
-- サブコマンド全体の構成や、目的の CLI 実装へ進む先を選ぶための起点として扱う。
+- CLI サブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの各サブコマンド実装へ進むための入口を提供する。
+- サブコマンド単位の実行フロー、状態遷移、処理オーケストレーション、ユーザー入力やレポート生成の入口を扱う。
 
 ## Read this when
-- CLI サブコマンドの一覧、実装配置、実行入口を確認するとき。
-- 特定サブコマンドの実装を調査・変更する前に、対応する下位パッケージまたは実装ファイルを特定するとき。
-- oracle、realization、run、session のサブコマンド群に含まれる下位処理への入口を確認するとき。
+- CLI サブコマンド全体の構成や、目的のサブコマンド実装がどこにあるかを確認するとき。
+- 特定サブコマンドの実行入口、ライフサイクル、状態管理、処理フローを調査・変更するとき。
+- feedback、oracle、realization、session など複数の下位実装にまたがるサブコマンドの構成を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な挙動、状態遷移、処理内容を確認したいときは、対応する下位パッケージまたは実装ファイルを直接読む。
-- CLI サブコマンドで共有されるランタイム、Git 操作、report 処理などの共通実装だけを確認したいとき。
-- oracle や realization の正本仕様を確認したいときは、対応する oracle 文書を直接読む。
+- 特定サブコマンドの詳細処理を調べる場合は、対応する下位ファイルやディレクトリを直接読む。
+- 共通 CLI ランタイム、永続化、Git 操作、入力 schema、正本仕様の詳細だけを確認したいときは、それぞれの共通実装・定義・oracle 文書を直接読む。
+- apply 以外のサブコマンドを扱うときは、実装本文のない apply の入口を読む必要はない。
 
 ## hash
-- d70c36bf435e0ea688e8de9265bb5303602a273ccce3db1ec9d4118e74ac1718
+- bced6584ed3583504fb89386d18038e800d4793af05fea3cccf3269e6973f183

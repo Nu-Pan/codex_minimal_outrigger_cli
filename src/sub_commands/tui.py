@@ -29,6 +29,7 @@ def cmoc_tui_impl() -> None:
         pre_log_check=ensure_prompt_editor_roots_ignored,
         command_name="tui",
         command_argv=["cmoc", "tui"],
+        tui_process=True,
         total_steps=3,
     )
 
@@ -56,6 +57,7 @@ def _cmoc_tui_body(
         root=root,
         config=config,
         purpose="tui codex",
+        notification_command_name="tui",
     )
 
 

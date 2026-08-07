@@ -9,6 +9,7 @@ feedback subsystem test として保つ。
 - {{work-root}}/oracle/doc/app_spec/feedback_observation.md
 - {{work-root}}/oracle/doc/app_spec/feedback_state.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+- {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 """
 
 import json
@@ -22,6 +23,7 @@ import pytest
 from _cli_support import run_doctor, runner
 from _git_support import current_branch, make_repo, run_git
 
+import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_feedback as runtime_feedback_module
 import commons.runtime_feedback_reporter as reporter_module
@@ -1388,6 +1390,12 @@ def test_feedback_report_records_user_interruption_as_normal_completion(
         "_integrate_agent_observation",
         interrupt,
     )
+    notifications: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda command, _root, state: notifications.append((command, state)),
+    )
 
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
@@ -1397,6 +1405,7 @@ def test_feedback_report_records_user_interruption_as_normal_completion(
     report_text = report.read_text()
     assert 'result: "interrupted"' in report_text
     assert "deferred_observation_count: 1" in report_text
+    assert notifications == [("feedback report", "interrupted")]
 
 
 def test_feedback_report_recovers_prepared_publication(

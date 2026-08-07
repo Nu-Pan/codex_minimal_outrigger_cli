@@ -21,9 +21,13 @@ from .runtime_paths import (
     repo_root,
     work_root,
 )
+from .runtime_windows_toast import ToastState, notify_terminal_result
 
 _CURRENT_STEP_TOTAL: ContextVar[int | None] = ContextVar(
     "CURRENT_STEP_TOTAL", default=None
+)
+_CURRENT_USER_INTERRUPTION: ContextVar[bool | None] = ContextVar(
+    "CURRENT_USER_INTERRUPTION", default=None
 )
 
 
@@ -36,6 +40,7 @@ def run_cli_subcommand(
     error_to_stderr: bool = False,
     use_work_root_runtime: bool = False,
     doctor_preprocess: bool = True,
+    tui_process: bool = False,
     total_steps: int = 1,
     **kwargs: Any,
 ) -> None:
@@ -54,12 +59,16 @@ def run_cli_subcommand(
     feedback_invocation = None
     feedback_token = None
     step_total_token = None
+    interruption_token = _CURRENT_USER_INTERRUPTION.set(False)
     error_returncode: int | None = None
     name = command_name or impl.__name__
+    notification_root = Path.cwd()
+    terminal_state: ToastState | None = None
     try:
         current_root = work_root()
+        notification_root = repo_root()
         require_current_directory_is_work_root(current_root)
-        log_root = repo_root()
+        log_root = notification_root
         runtime_root = current_root if use_work_root_runtime else log_root
         logger = SubcommandLogger(log_root, name)
         logger_token = set_current_subcommand_logger(logger)
@@ -108,11 +117,16 @@ def run_cli_subcommand(
             quota_wait_sec=logger.quota_wait_sec,
         )
         _emit_completion_summary(logger, name, returncode)
+        if not tui_process:
+            terminal_state = (
+                "interrupted" if _CURRENT_USER_INTERRUPTION.get() else "completed"
+            )
     except KeyboardInterrupt as exc:
         # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
         # 非中断可能な TUI の Ctrl+C は Codex CLI に委ね、cmoc の error report に変換しない。
         if logger:
             _finish_failed_subcommand(logger, name, 130, exc)
+        terminal_state = "failed"
         raise
     except BaseException as exc:
         failed_returncode = error_returncode if error_returncode is not None else 1
@@ -127,6 +141,7 @@ def run_cli_subcommand(
             render_error(exc),
             err=(error_to_stderr or bool(getattr(exc, "cmoc_error_to_stderr", False))),
         )
+        terminal_state = "failed"
         raise typer.Exit(failed_returncode) from exc
     finally:
         if feedback_token is not None:
@@ -135,6 +150,30 @@ def run_cli_subcommand(
             _CURRENT_STEP_TOTAL.reset(step_total_token)
         if logger_token is not None:
             reset_current_subcommand_logger(logger_token)
+        _CURRENT_USER_INTERRUPTION.reset(interruption_token)
+        if terminal_state is not None:
+            _notify_terminal_result_safely(name, notification_root, terminal_state)
+
+
+def mark_current_subcommand_interrupted() -> None:
+    """現在の最外側サブコマンドを正常なユーザー中断完了として印付けする。"""
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    # runner 外の直接呼び出しでは次の invocation へ state を漏らさない。
+    if _CURRENT_USER_INTERRUPTION.get() is not None:
+        _CURRENT_USER_INTERRUPTION.set(True)
+
+
+def _notify_terminal_result_safely(
+    command_name: str,
+    repository_root: Path,
+    state: ToastState,
+) -> None:
+    """確定済み result を、通知失敗から完全に分離して送る。"""
+    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    try:
+        notify_terminal_result(command_name, repository_root, state)
+    except BaseException:
+        pass
 
 
 def _finish_failed_subcommand(

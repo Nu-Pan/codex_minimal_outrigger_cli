@@ -29,52 +29,52 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` の CLI 実装。oracle 編集指示を収集し、TUI 起動パラメータを構築して Codex TUI を起動する。main worktree、active session branch、clean worktree などの起動前提も検証する。
+- `cmoc oracle edit` サブコマンドの実行フローを担う実装。入力された oracle 編集指示を受け取り、起動パラメータを構築し、main worktree・active session branch・clean worktree などの前提を検証したうえで Codex TUI を起動する。oracle 編集 CLI の起動条件や実行手順を確認する際の入口。
 
 ## Read this when
-- `cmoc oracle edit` の起動処理、oracle 編集指示の入力、Codex TUI 起動パラメータ、または起動前提の検証を変更・調査するとき。
+- `cmoc oracle edit` の CLI 実行フロー、TUI 起動、入力受付、起動前提の検証を調べるとき。
 
 ## Do not read this when
-- oracle 編集処理そのものの仕様を確認するときは、対応する oracle 文書を直接読む。共通のプロンプト入力、git 状態検証、runtime state、または TUI パラメータ構築の実装だけを調査するときは、それぞれの共通モジュールを直接読む。
+- oracle 編集そのものの正本仕様や編集プロンプトの内容を確認するとき。
+- TUI 起動パラメータの詳細実装、入力エディタ、git 状態確認、session 状態管理の詳細を直接調べるとき。
 
 ## hash
-- a50aa0ee99eb4d72bf527f16d4e80af3d640a0ec062baea4ffda8ac16d4e4b87
+- cd8a3c105c06d089fc166338f1847122c3d38e1b7d52dc09925adaf8fed768f9
 
 # `investigation.py`
 
 ## Summary
-- `cmoc oracle investigation` の read-only TUI workload を実装するCLIサブコマンド。oracle調査指示の入力、TUI起動パラメータの構築、Codex TUIの起動を担当する。
+- `cmoc oracle investigation` サブコマンドの read-only TUI ワークロードを実装する。調査指示の入力、TUI 起動パラメータの構築、Codex TUI の起動、および oracle 調査向けの自動注入指示を扱う。
 
 ## Read this when
-- `cmoc oracle investigation` サブコマンドの実行フローや、oracle調査指示からCodex TUIを起動する処理を変更・確認するとき。
-- oracle調査向けの自動注入指示、prompt editor入力、indexing preflight、CLIステップ管理の連携を確認するとき。
+- `cmoc oracle investigation` の CLI 実行フロー、調査指示入力、または Codex TUI 起動処理を変更・調査するとき。
+- oracle file の読み取り専用制約や realization file の読み書き禁止を、調査ワークロードへどう適用するか確認するとき。
 
 ## Do not read this when
-- oracle investigationの正本仕様そのものを確認するときは、対応するoracle仕様文書を直接読む。
-- TUI起動パラメータの詳細な生成規則を確認するときは、`launch_tui`のビルダーを直接読む。
-- 共通のprompt editor入力やignore設定の仕様だけを確認するときは、対応するcommons実装を直接読む。
+- oracle investigation の具体的な TUI 起動パラメータ生成規則だけを確認する場合は、起動パラメータ構築モジュールを直接読む。
+- プロンプトエディタ入力の収集や ignore 設定だけを変更・調査する場合は、対応する共通モジュールを直接読む。
 
 ## hash
-- 7121ba137ce8aee037482930ae2b3141aa4df647f2e22c4bb807583a6469b69e
+- 2d11eb1f2e99c0309e06cfb882c224853d406790678269499d01886114ce1821
 
 # `review.py`
 
 ## Summary
-- oracle review の CLI 実行と isolated run のライフサイクルを統括する実装。review target の作成、レビュー loop、INDEX 差分の merge、割り込み・失敗時の report と resource cleanup を扱う。
+- oracle review の CLI 実行と isolated run lifecycle を統括する実装。review 対象の列挙・review loop 呼び出し・INDEX 差分の commit/merge・中断や失敗時の report・worktree/branch cleanup を、共有する resource ownership と例外処理の境界内で管理する。oracle review のサブコマンド実装と、その run lifecycle の入口として読む。
 
 ## Read this when
-- oracle review の CLI 実行経路や active session branch の検証を変更するとき
-- review worktree・run branch の作成、merge、割り込み、cleanup、失敗 report の挙動を調査または変更するとき
-- oracle review の全体 lifecycle と review loop・report・index 操作の接続点を確認するとき
+- oracle review サブコマンドの起動条件、active session branch の検証、review run の隔離 target 作成、review loop から merge/report までの制御フローを確認するとき
+- 中断、部分的な resource 作成、cleanup failure、review worktree と run branch の所有権処理を調査または変更するとき
+- oracle review における INDEX 差分の commit/merge や失敗時・中断時の report 生成を確認するとき
 
 ## Do not read this when
-- review 対象ファイルの列挙規則だけを変更する場合は review target の実装を直接読む
-- 所見の評価 loop 内部だけを変更する場合は review loop の実装を直接読む
-- レポートの表示・書式だけを変更する場合は review report の実装を直接読む
-- INDEX 差分の commit・merge・conflict 解決だけを変更する場合は review index の実装を直接読む
+- review 対象ファイルの列挙規則だけを確認する場合は review targets の実装を直接読む
+- review loop 内の所見評価や merge operation の詳細だけを確認する場合は review loop の実装を直接読む
+- review report の表示形式や出力内容だけを確認する場合は review report の実装を直接読む
+- run lifecycle の一般仕様や branch/worktree の正本仕様を確認する場合は、参照されている oracle 文書を直接読む
 
 ## hash
-- c5d96614701b0728ada22d2b8e4b76946315c6e2f6d07a80ee5ef1e0290ae609
+- 6ac4648b5fc5439d0aed1aa23065323215e7e29d410b528919846f6a094a120d
 
 # `review_index.py`
 

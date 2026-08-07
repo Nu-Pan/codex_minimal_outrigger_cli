@@ -112,6 +112,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
         """TUI 起動 call を記録して生成パラメータを検証する。"""
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
+        assert kwargs["notification_command_name"] == "tui"
         assert parameter.model_class == ModelClass.FLAGSHIP
         assert parameter.reasoning_effort == ReasoningEffort.MAX
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
@@ -193,6 +194,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     assert len(tui_calls) == 1
     parameter, tui_kwargs = tui_calls[0]
     assert tui_kwargs["root"] == root.resolve()
+    assert tui_kwargs["notification_command_name"] == "tui"
     assert "cwd" not in tui_kwargs
     assert parameter.agent_call_cwd == root.resolve()
     assert (
