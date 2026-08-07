@@ -840,7 +840,7 @@
     "last_investigated_at": "2026-07-30_12-24_38_841294000"
   },
   "src/commons/runtime_content.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "ddf0f66390f4aaf71281fa12bd36f060b80ff0d272148ee758ccd73e2714c1c6",
     "last_investigated_at": "2026-07-27_09-19_48_548125000"
@@ -900,7 +900,7 @@
     "last_investigated_at": "2026-08-05_21-20_06_841380000"
   },
   "src/commons/runtime_refactor.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "b2393d480925d0ef423511a4abc0a0b89bbdc64bff2058ec06a6fc3f268b9f79",
     "last_investigated_at": "2026-08-05_17-54_12_325222000"
@@ -1038,7 +1038,7 @@
     "last_investigated_at": "2026-07-29_21-24_30_984214000"
   },
   "src/sub_commands/oracle/review_targets.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "95936d0c2a0e48b4b1d262160a9446dea0d9cb6d80f6fa8fe673a825e6e5ade3",
     "last_investigated_at": "2026-07-27_13-30_54_779104000"
@@ -1289,6 +1289,12 @@
     "last_investigated_sha256": "af4ea1e2c48c33e28af191186f9f69e0469d1273b8b2161ff1863b6f71ccc8c3",
     "last_investigated_at": "2026-08-07_14-27_16_620621000"
   },
+  "test/test_file_inventory.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "test/test_indexing_cli.py": {
     "investigation_required": false,
     "last_investigation_result": "no_findings",
@@ -1338,7 +1344,7 @@
     "last_investigated_at": "2026-07-28_14-03_46_374167000"
   },
   "test/test_oracle_review_targets.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "9113e685069c202fce5d8a6896ad9e71cbe5268f33057e218a8d36c42cce0271",
     "last_investigated_at": "2026-07-26_11-00_44_197970000"
@@ -1416,7 +1422,7 @@
     "last_investigated_at": "2026-07-31_14-55_11_756930000"
   },
   "test/test_runtime_refactor.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "537d98f1cb502fd793e165dbe1200c01d8d4ae1a426830152b63b03020cce035",
     "last_investigated_at": "2026-08-05_20-28_32_296090000"
