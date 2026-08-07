@@ -31,18 +31,18 @@
 # `feedback`
 
 ## Summary
-- フィードバック報告に関する issue 正規化の仕様と prompt 構築実装を扱う領域。観測結果と既存 issue 候補を比較し、統合または新規作成へ導く入口となる。
+- feedback observation を既存 issue への統合または新規 issue 作成へ正規化するための Structured Output schema と prompt builder 実装を扱う。観測結果、既存 issue 候補、原因・影響・対応候補・存在可能性の評価を入力から整理し、feedback 正規化処理の出力契約と AgentCallParameter 構築の入口を提供する。
 
 ## Read this when
-- feedback report の issue 正規化に関する出力契約、判断基準、原因・影響・対応候補の記述ルールを確認するとき。
-- 観測結果と既存 issue 候補を用いた正規化 prompt、参照範囲、モデル設定、Structured Output 連携を確認するとき。
+- feedback observation から issue の統合または新規作成を判断する出力契約を確認するとき。
+- 正規化 prompt の参照範囲、読み取り専用制約、モデル設定、推論強度、Structured Output schema の対応を確認するとき。
 
 ## Do not read this when
-- feedback observation の生成、raw log の解析、issue の保存・取得・表示、人間による disposition の決定だけを調べるとき。
-- 正規化結果の Structured Output schema 以外の schema や、issue 正規化と無関係な処理を確認するとき。
+- feedback issue の保存・取得や human disposition の決定だけを調べるとき。
+- raw Codex call log、feedback observation の保存形式、または別の prompt builder の実装を直接調べるとき。
 
 ## hash
-- f73b852b838aaca37419812eae183dda3f15689eb9918cead59e27fdef0e024e
+- 7aa0e70e501d38db3db0a1f193884c2dd6184ef9f9185b0c83b0da4278d24337
 
 # `indexing`
 

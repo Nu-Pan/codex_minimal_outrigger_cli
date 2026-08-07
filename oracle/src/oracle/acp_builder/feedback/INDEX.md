@@ -18,17 +18,15 @@
 # `normalize_issue.py`
 
 ## Summary
-- `cmoc feedback report` における曖昧な issue の正規化用 agent call パラメータを構築する正本実装。構造化 observation と候補 issue、指定された現在参照対象だけを入力範囲として、既存 issue への統合または新規 issue 作成を判断する prompt を生成する。feedback issue 正規化の prompt 構成、参照範囲、決定論的事後条件、モデル・読み取り専用設定を確認する入口となる。
+- `cmoc feedback report` における曖昧な issue の正規化用 AgentCallParameter を構築する正本実装。構造化 observation と絞り込み済み既存 issue 候補を入力し、指定参照範囲だけを許可する読み取り専用 prompt、モデル設定、Structured Output schema を組み立てる。
 
 ## Read this when
-- feedback report の issue 正規化 prompt を変更・レビューするとき
-- observation と既存 issue 候補の比較、参照対象の制約、既存 issue ID の扱いを確認するとき
-- 正規化 agent call のモデル設定、推論強度、Structured Output schema 連携を確認するとき
+- feedback observation から既存 issue への統合または新規 issue 作成を判断する prompt の仕様・参照範囲・出力制約を確認するとき
+- feedback 正規化処理の AgentCallParameter、モデル、推論強度、読み取り専用設定、Structured Output schema の対応を確認するとき
 
 ## Do not read this when
-- feedback observation の生成や raw log の解析処理を変更するとき
-- 正規化結果の Structured Output schema 自体を変更するとき
-- issue の永続化、表示、human disposition の決定処理を確認するとき
+- feedback issue の保存処理や human disposition の決定を調べるとき
+- raw Codex call log、feedback observation 保存 file、または別の prompt builder の実装を直接調べるべきとき
 
 ## hash
-- 2794fc4b35000003fe7ae675a062ab6f5f75c07c921b2b25210ce2f4e90bf7c9
+- 126a46c0dada76cf04e9fcf8ffc0dd77e06601e5dd44f4ac9519f5a06c43f0e3

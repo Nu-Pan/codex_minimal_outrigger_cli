@@ -239,7 +239,7 @@ def test_reporter_responds_to_explicit_null_request_id() -> None:
 def test_feedback_normalizer_builder_has_call_kind_and_readonly_scope(
     tmp_path: Path,
 ) -> None:
-    """normalization 専用 agent call の識別子、schema、参照範囲を固定する。"""
+    """normalization 専用 agent call の識別子、schema、動的な参照範囲を固定する。"""
     root = make_repo(tmp_path)
     parameter = build_feedback_normalize_issue_parameter(
         json.dumps({"observation_id": "fbo_input"}),
@@ -252,6 +252,11 @@ def test_feedback_normalizer_builder_has_call_kind_and_readonly_scope(
     assert parameter.file_access_mode is FileAccessMode.READONLY
     assert parameter.structured_output_schema_path is not None
     assert parameter.structured_output_schema_path.name == "normalize_issue.json"
+    assert (
+        parameter.prompt.index("# routing rule")
+        < parameter.prompt.index("# 参照範囲")
+        < parameter.prompt.index("# 構造化済み observation")
+    )
     assert parameter.prompt.count("cmoc_feedback.submit_observation") == 1
 
 

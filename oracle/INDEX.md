@@ -20,19 +20,16 @@
 # `src`
 
 ## Summary
-- cmoc の正本ソースを集約する領域です。agent call の論理パラメータ、用途別 prompt、Structured Output schema、パス・設定・構造化文書・規範のモデルと生成処理を扱います。
-- agent call 用の共通モデルと用途別 builder、prompt を組み立てる共通部品、補助的なパス解決・設定・構造化 Markdown 処理が主な構成要素です。
+- oracle/src is the source-code portion of the repository’s authoritative oracle tree. It contains executable/configuration definitions that drive cmoc Agent-call behavior, including shared call parameters, purpose-specific prompts or launch settings, and Structured Output schemas; use it as the implementation-level entry point before descending into a narrower subdirectory.
 
 ## Read this when
-- agent call のモデルクラス、推論負荷、ファイルアクセス、cwd、prompt、Structured Output の契約を調査・変更するとき。
-- 用途別の oracle、realization、feedback、review、indexing、TUI、session join 用 prompt の正本を確認するとき。
-- prompt 共通規範、パス placeholder、設定、構造化文書のレンダリングを確認するとき。
-- 特定の責務が明らかな場合は、agent call builder、prompt builder、または補助モデルの下位領域から確認を始めるとき。
+- 調査・変更対象が cmoc Agent call の共通設定、用途別 prompt／起動設定、モデル・推論設定、権限・作業ディレクトリ、実行前設定、または Structured Output schema の実装定義であるとき。
+- oracle/src 配下の特定の用途や設定領域への入口を探すとき。
 
 ## Do not read this when
-- 実際の CLI・TUI 実行フローや agent call の上位制御を調査するとき。
-- oracle の自然言語仕様、通常の realization 実装・テスト、feedback の保存・集約処理だけを確認したいとき。
-- 対象が特定の用途別 prompt、共通 prompt 部品、または補助モデルに限定されている場合は、この領域全体ではなく該当する下位要素へ直接進むとき。
+- 通常の realization 実装・テスト、または CLI／TUI の実行フローそのものを調査するとき。
+- 正本仕様ドキュメント、sandbox・permission profile、共通 prompt 構築の詳細だけを調査するときは、それぞれの oracle/doc 配下の直接の対象を読むとき。
+- 特定用途の prompt や schema の詳細だけを確認したいときは、oracle/src 全体ではなく該当する下位ディレクトリやファイルを直接読むとき。
 
 ## hash
-- ab37af7a33dbad5010a76c115a1adc4cc80a4fe7a82ac0874da7fcb17b970690
+- acbe7573c2a82b1699975f51a13fe95ea80c972aed3694e02172ca992b55c20d
