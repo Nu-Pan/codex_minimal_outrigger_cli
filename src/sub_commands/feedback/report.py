@@ -116,6 +116,7 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
 
     # 既存 receipt の hash 一致を先に検査し、corruption を unit 処理へ混ぜない。
     pending, _ = _pending_entries(worktree, entries)
+    normalization_start_head = _git_head(worktree)
     state_commit_ids: list[str] = []
     invalid_count = 0
     normalization_agent_call_count = 0
@@ -205,9 +206,25 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
             if commit_id is not None:
                 state_commit_ids.append(commit_id)
     except KeyboardInterrupt:
+        state_commit_ids.extend(
+            _missing_normalization_commits(
+                worktree, normalization_start_head, state_commit_ids
+            )
+        )
+        processed_count, invalid_count = _committed_observation_counts(
+            worktree, entries
+        )
         result = "interrupted"
         _record_feedback_interruption()
     except BaseException as exc:
+        state_commit_ids.extend(
+            _missing_normalization_commits(
+                worktree, normalization_start_head, state_commit_ids
+            )
+        )
+        processed_count, invalid_count = _committed_observation_counts(
+            worktree, entries
+        )
         result = "partial"
         partial_error = exc
 
@@ -1209,6 +1226,7 @@ def _commit_record_unit(
     """unit records だけを作成・commit し、失敗時は同じ path だけ戻す。"""
     paths = [record_path(worktree, record, kind) for kind, record in records]
     existed = {path: path.exists() for path in paths}
+    before_head = _git_head(worktree)
     try:
         for (kind, record), path in zip(records, paths, strict=True):
             assert path == record_path(worktree, record, kind)
@@ -1216,6 +1234,13 @@ def _commit_record_unit(
         validate_tracked_feedback_state(worktree)
         return _commit_paths(worktree, paths, message)
     except BaseException:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+        # commit 完了直後に Ctrl+C が届いても、HEAD が進んだ unit を rollback
+        # すると確定済み state と作業ツリーが不一致になる。unit 開始時と
+        # 現在の HEAD を比較し、commit 済みなら path をそのまま保持する。
+        after_head = run_git(["rev-parse", "HEAD"], worktree, check=False)
+        if after_head.returncode == 0 and after_head.stdout.strip() != before_head:
+            raise
         relative = sorted({str(path.relative_to(worktree)) for path in paths})
         if relative:
             run_git(["reset", "HEAD", "--", *relative], worktree, check=False)
@@ -1255,6 +1280,46 @@ def _commit_paths(worktree: Path, paths: list[Path], message: str) -> str | None
         )
     run_git(["commit", "-m", message, "--", *relative], worktree)
     return head_commit(worktree)
+
+
+def _git_head(worktree: Path) -> str:
+    """unit 境界を検出するため、現在の HEAD commit を直接取得する。"""
+    return run_git(["rev-parse", "HEAD"], worktree).stdout.strip()
+
+
+def _missing_normalization_commits(
+    worktree: Path,
+    start_head: str,
+    known_commit_ids: list[str],
+) -> list[str]:
+    """中断・一部失敗時に state_commit_ids へ不足分だけ追加する。"""
+    commits = run_git(
+        ["rev-list", "--reverse", f"{start_head}..HEAD"], worktree
+    ).stdout.splitlines()
+    known = set(known_commit_ids)
+    return [commit_id for commit_id in commits if commit_id not in known]
+
+
+def _committed_observation_counts(
+    worktree: Path,
+    entries: list[dict[str, Any]],
+) -> tuple[int, int]:
+    """tracked ingestion receipt から確定済み observation 数を再計算する。"""
+    processed = 0
+    invalid = 0
+    seen: set[str] = set()
+    for entry in entries:
+        observation_id = str(entry["observation_id"])
+        if observation_id in seen:
+            continue
+        seen.add(observation_id)
+        receipt_path = ingestion_receipt_path(worktree, observation_id)
+        if not receipt_path.is_file():
+            continue
+        receipt = read_json_object(receipt_path)
+        processed += 1
+        invalid += int(receipt.get("status") == "invalid")
+    return processed, invalid
 
 
 def _deferred_count(worktree: Path, entries: list[dict[str, Any]]) -> int:

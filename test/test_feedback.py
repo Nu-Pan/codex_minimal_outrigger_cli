@@ -1244,3 +1244,57 @@ def test_feedback_report_records_user_interruption_as_normal_completion(
     report_text = report.read_text()
     assert 'result: "interrupted"' in report_text
     assert "deferred_observation_count: 1" in report_text
+
+
+def test_feedback_report_keeps_unit_committed_before_interruption(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """unit commit 直後の Ctrl+C でも確定済み receipt と commit を report する。"""
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    observation_result, _ = store_agent_observation(
+        root,
+        _context(root, session_id=session_id),
+        _payload(),
+    )
+    observation_id = str(observation_result["observation_id"])
+    original_head_commit = feedback_report_module.head_commit
+    interrupted = False
+
+    def commit_then_interrupt(worktree: Path) -> str:
+        nonlocal interrupted
+        commit_id = original_head_commit(worktree)
+        if not interrupted:
+            interrupted = True
+            raise KeyboardInterrupt
+        return commit_id
+
+    monkeypatch.setattr(
+        feedback_report_module,
+        "head_commit",
+        commit_then_interrupt,
+    )
+
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert "ユーザー中断要求を受け付けました" in result.output
+    receipt = ingestion_receipt_path(root, observation_id)
+    assert receipt.is_file()
+    [report] = (root / ".cmoc/gu/ar/report/feedback").glob("*.md")
+    report_text = report.read_text()
+    assert 'result: "interrupted"' in report_text
+    assert "processed_observation_count: 1" in report_text
+    assert run_git(root, "status", "--short").stdout.strip() == ""
+    normalization_commit = run_git(
+        root,
+        "log",
+        "--format=%H",
+        "--grep=cmoc feedback normalize",
+        "-1",
+    ).stdout.strip()
+    assert normalization_commit
+    assert (
+        f"feedback normalization unit commit: `{normalization_commit}`" in result.output
+    )
