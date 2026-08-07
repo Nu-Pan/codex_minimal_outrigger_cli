@@ -17,41 +17,40 @@
 # `editing_run.md`
 
 ## Summary
-- 編集 run を開始・終了する共通ライフサイクル仕様を定める。対象は realization apply/refactor の fork と、run join/abandon である。
-- session state による同時実行制約、fork の事前条件・開始処理、編集差分と state の管理、join の差分検査・merge・hook・cleanup、abandon の破棄・cleanup、および各操作の report 要件を扱う。
-- workload 固有仕様が定める処理の共通基盤として、対象 workload の fork/join 後処理や session lifecycle との境界を確認する入口となる。
+- 明示的な join を必要とする realization 編集 run の共通ライフサイクル仕様。workload 固有 fork の事前条件・開始処理、同時実行境界、編集責務、想定内差分、join/abandon の事前条件・差分検査・merge・cleanup、report 要件を定義する。realization apply/refactor の run lifecycle や、run join/abandon の実装・挙動を確認する際の入口となる。
 
 ## Read this when
-- realization apply または realization refactor の fork 実装・挙動・事前条件を確認するとき
-- cmoc run join または cmoc run abandon の引数、state 遷移、差分検査、merge、cleanup を実装・レビューするとき
-- 編集 run と session lifecycle の責務境界、同時実行制約、想定内差分、report 要件を確認するとき
+- realization apply または realization refactor の fork、join、abandon のライフサイクルを実装・変更・検証するとき
+- 編集 run の session state、branch/worktree、想定内差分、merge 後 hook、cleanup、report の契約を確認するとき
+- 明示的な join を要求する編集 run と、session lifecycle・read-only investigation・oracle edit などの対象外範囲を区別するとき
 
 ## Do not read this when
-- cmoc session join や cmoc session abandon など、外側の session lifecycle だけを扱うとき
-- cmoc oracle edit、read-only の investigation/review、cmoc 自身による機械的更新、session join の conflict 解消だけを扱うとき
-- workload 固有の編集内容、許可ファイル、fork report の保存先、join 後 hook の詳細だけを確認するときは、対応する workload 固有仕様を直接読む
+- cmoc session join/abandon など外側の session lifecycle だけを扱うとき
+- oracle edit、read-only investigation/review、cmoc 自身による機械的更新、session join の conflict 解消だけを扱うとき
+- 編集 run の個別 workload 固有仕様や refactor state 同期の詳細だけを確認する場合は、それぞれの workload 仕様または refactor 仕様を直接読む
 
 ## hash
-- 6fee5370ce0cc454cfc8fab2f2ad99264d6c451a4b7ab31bd34afc4b93c967b9
+- d2497f520c68c3f20aac45a085fc969a946ce4fe2df94a56774c6a39fa773fb3
 
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の仕様を定める文書。feedback の正本仕様を参照し、引数、実行前提、raw observation の snapshot・増分処理、normalization agent、assessment、threshold、checkpoint、commit・再開、中断、report 保存形式、既定表示、終了コードを定義する。feedback report の実装や挙動を確認・変更する際の入口となる。
+- `cmoc feedback report` の仕様を定義する正本文書。raw observation を immutable な report snapshot として取り込み、normalized feedback state への増分処理、曖昧な issue の正規化、assessment・notification threshold・human disposition の扱い、checkpoint と durable な report/state snapshot の確定を定める。
+- 移行、排他、整合性検証、ユーザー中断、report の差分基準、既定表示、保存形式、および終了コードを規定し、feedback report 実装の入口となる。
 
 ## Read this when
-- `cmoc feedback report` の引数、実行条件、状態更新、終了コードを確認するとき
-- feedback observation や tracked feedback state を report に取り込む処理、deduplication、normalization、assessment、threshold を実装・検証するとき
-- report の snapshot、checkpoint、unit commit、再開・中断、Markdown report の front matter や既定表示を扱うとき
+- `cmoc feedback report` の引数、事前条件、repository-local state、または旧 state 移行を実装・変更・レビューするとき
+- raw observation の snapshot 化、増分 normalization、normalization agent call、checkpoint、unit 確定、再実行・中断・失敗時の復旧を扱うとき
+- feedback report の表示内容、保存先・front matter、差分基準、終了コード、assessment や notification threshold の挙動を確認するとき
 
 ## Do not read this when
-- raw observation の schema や生成・保存規則だけを確認したいときは feedback observation の仕様を読む
-- tracked feedback record の schema や revision・assessment・disposition のデータ構造だけを確認したいときは feedback state の仕様を読む
-- normalization agent の builder 入力・出力 schema だけを確認したいときは専用 builder と schema を直接読む
-- subcommand 共通のユーザー中断動作だけを確認したいときは subcommand interruption の仕様を読む
+- raw observation の形式や保存契約だけを扱うときは、feedback observation の正本を直接読む
+- normalized state の schema、integrity、migration、snapshot、report record の詳細だけを扱うときは、feedback state の正本を直接読む
+- feedback report 共通のユーザー中断規則だけを確認するときは、subcommand interruption の正本を直接読む
+- normalization agent builder や専用 Structured Output schema の詳細だけを扱うときは、指定された builder・schema を直接読む
 
 ## hash
-- 1c30e8012e627aa0736f011c8438b13dc81a3115c28403dfd31561d2a41b3539
+- abd168f465de71897d0eaa8923d881c54c43df5f653541d8196955448cc14207
 
 # `indexing.md`
 
@@ -206,20 +205,20 @@
 # `session_join.md`
 
 ## Summary
-- セッション作業ブランチをホームブランチへマージし、セッションを joined に遷移させる `cmoc session join` の正本仕様。引数、事前条件、doctor preprocess、マージ、コンフリクト解消、状態更新、ブランチ削除条件を扱う。
+- `cmoc session join` の正本仕様。セッションブランチをホームブランチへマージしてセッションを完了するコマンドの責務、引数、事前条件、実行手順、競合解消、状態更新、ブランチ削除条件を定める。session join の挙動や実装・テストの入口となる。
 
 ## Read this when
-- `cmoc session join` の挙動、引数、実行前検証、マージ先・マージ元を確認するとき
-- session join のコンフリクト処理や tracked feedback state の扱いを実装・検証するとき
-- join 後のセッション状態更新やセッションブランチ削除条件を確認するとき
+- `cmoc session join` の実装、テスト、CLI 挙動を確認または変更するとき
+- セッション完了時のブランチマージ、状態遷移、競合解消、後始末の仕様を確認するとき
+- ホームブランチの進行や repository-local feedback state のマージ境界を確認するとき
 
 ## Do not read this when
-- 通常の git branch 間マージや `repository-default-branch` の扱いを確認したいとき
-- session の作成・実行・離脱など、join 以外のライフサイクル動作を確認するとき
-- conflict resolution agent call の詳細パラメータ自体を確認するときは、そのビルダー仕様を直接読む
+- 通常の git merge wrapper や、`cmoc session join` 以外の session サブコマンドを扱うとき
+- doctor preprocess、競合解消用 agent call、または session state の詳細仕様だけを直接確認したいときは、それぞれの正本仕様を読むとき
+- INDEX.md のルーティング情報だけを確認する必要があるとき
 
 ## hash
-- 041840c61fcea0cc518e31d84088a68ca7f78339577bafc4b4bcc86e080138c3
+- bdd1ca02b01f8793c07fc24dbe5b9dd609d534d52f03a1f0f40280a8d070e320
 
 # `tui.md`
 

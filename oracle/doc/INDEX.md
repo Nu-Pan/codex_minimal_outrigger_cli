@@ -1,18 +1,18 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を分野別に収めた正本文書群。CLI 補完、Codex 呼び出し、ログ、doctor preprocess、feedback、プロンプト、run/session、各サブコマンドなどの個別仕様へ進むための入口となる。
+- cmoc のアプリケーション仕様を集約するディレクトリ。CLI の補完、実行規約、ログ、doctor preprocess、feedback、prompt、session/run、subcommand など、利用者向け挙動と横断的な運用契約を定義する正本仕様群を扱う。個別仕様やサブコマンド仕様へ進むための入口となる。
 
 ## Read this when
-- cmoc のアプリケーション挙動に関する正本仕様を調査するとき
-- 実装・テスト・レビューの対象に対応する個別仕様文書を選ぶとき
+- cmoc の利用者向け挙動、CLI 実行契約、ログ、feedback、prompt、session/run、またはサブコマンドの正本仕様を調査・実装・変更するとき
+- 複数のアプリケーション仕様の責務境界や、共通処理と個別コマンドの関係を確認するとき
 
 ## Do not read this when
-- 対象の個別仕様文書がすでに特定でき、その本文を直接読むべきとき
-- 実装配置、テスト実行手順、開発環境など、アプリケーション仕様以外を確認するとき
+- 特定仕様の詳細だけを確認する場合は、該当する個別仕様本文へ直接進むとき
+- 実装配置、開発環境、テスト実行手順、または個別 builder の実装詳細だけを確認するときは、対応する設計規約・開発規約・realization file を読むとき
 
 ## hash
-- 426b4984ac87919fe283e296220284dc72d471d621e4a2c9106dd71d917cedf6
+- 92df768ac0489c72cf4ac5d1efe44cf8ffa4898974fafc14de5ea15fe0c1f617
 
 # `branch_model.md`
 

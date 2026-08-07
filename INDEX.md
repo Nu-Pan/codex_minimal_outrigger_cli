@@ -89,20 +89,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を収める oracle ツリー。アプリケーション仕様や開発規則を扱う文書群と、Agent call の共通設定・用途別設定・Structured Output schema を定義する oracle/src を下位入口として持つ。
+- oracle は cmoc の人間所有の正本仕様ツリーで、ドキュメントと実装定義を通じて Agent call の挙動・設定・構造化出力を規定する。配下の分野別ドキュメントやソース定義へ進むための最上位入口である。
 
 ## Read this when
-- cmoc の正本仕様を探すとき
-- アプリケーション仕様、branch・session・run・worktree のモデル、Python 開発規則を確認するとき
-- Agent call の設定、用途別 prompt／起動設定、モデル・権限・作業ディレクトリ、Structured Output schema の定義を探すとき
+- cmoc の正本仕様、設計規約、Agent call の設定・prompt・起動条件・権限・作業ディレクトリ・Structured Output schema を調査するとき
+- 対象分野が未確定で、oracle/doc または oracle/src のどちらへ進むべきか判断するとき
 
 ## Do not read this when
-- 対象の個別仕様文書や特定の prompt／schema がすでに特定でき、その本文を直接読むべきとき
-- 現行の realization 実装やテスト、CLI／TUI の実行フローを調査するとき
-- 実装配置、テスト実行手順、開発環境などの直接の手順を、対応する下位文書から確認するとき
+- 特定の仕様文書や実装定義が明確な場合は、該当する oracle/doc または oracle/src の下位対象へ直接進むとき
+- 通常の realization 実装・テスト、CLI／TUI の実行フロー、実行成果物だけを確認するとき
 
 ## hash
-- fd2fc024801f8fa34a0d1849a88bbc6e899b70dd798c7d9633822cf8166c8bf3
+- c2813600e379d1a586178739b945671fc20792cfa129c70fa61037f1fdb1b88e
 
 # `pyproject.toml`
 
