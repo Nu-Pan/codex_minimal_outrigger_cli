@@ -1,8 +1,8 @@
-"""`cmoc feedback report` の増分 normalization と report 生成。
+"""`cmoc feedback report` の repository-local 増分 normalization と report 生成。
 
 この file は 16,000 文字を超えるが、snapshot 固定、normalization unit、checkpoint、
-unit commit/rollback、前回 report tree との差分、および最終 report record は、一つの
-中断可能 transaction の順序を構成する。分割すると commit 済み unit と deferred
+unit manifest、state snapshot、および最終 report record は、一つの
+中断可能 transaction の順序を構成する。分割すると確定済み unit と deferred
 observation の境界を module 間で重複管理するため、report command の状態機械として
 一箇所に保つ。
 
@@ -25,76 +25,92 @@ from acp.builder.feedback.normalize_issue import (
 from cmoc_runtime import (
     CmocError,
     current_branch,
-    head_commit,
     load_state_for_branch,
     repo_root,
-    require_clean_worktree,
     run_cli_subcommand,
     run_codex_exec,
-    run_git,
     start_subcommand_step,
     work_root,
 )
+from commons.runtime_feedback_migration import ensure_feedback_migration
 from commons.runtime_feedback_state import (
     IssueView,
     agent_canonical_key,
     assessment_record,
+    build_state_snapshot,
+    effective_ingestion_receipts,
+    feedback_writer_lock,
     identity_record,
     ingestion_record,
     issue_id,
+    load_effective_feedback_state,
     load_issue_views,
-    load_issue_views_at_commit,
+    load_issue_views_from_snapshot,
     machine_canonical_key,
     new_report_id,
     normalization_unit_id,
     normalizer_version,
     occurrence_record,
-    record_path,
+    prepare_report_publication,
+    previous_state_snapshot_id,
+    previous_successful_report_id,
+    publish_normalization_unit,
+    publish_report_record,
+    recover_normalization_units,
+    recover_report_publications,
     report_record,
     revision_record,
+    validate_feedback_state,
     validate_observation_envelope,
-    validate_tracked_feedback_state,
-    write_tracked_record,
 )
 from commons.runtime_feedback_store import (
-    ingestion_receipt_path,
+    canonical_json_bytes,
+    feedback_root,
     iter_observation_paths,
     normalization_checkpoint_root,
     observation_path,
     parse_rfc3339,
-    read_json_object,
+    recover_immutable_bytes_from_temporary,
     report_snapshot_root,
     rfc3339_now,
     sha256_bytes,
-    tracked_feedback_root,
+    write_immutable_bytes,
     write_immutable_json,
 )
 from commons.runtime_logging import current_subcommand_logger
-from commons.runtime_paths import (
-    _reserve_timestamped_path,
-    reports_dir,
-    timestamp,
-)
+from commons.runtime_paths import reports_dir, timestamp
 from commons.runtime_results import StructuredOutputValidationIssue
 
 
-def cmoc_feedback_report_impl(show_all: bool = False) -> None:
+def cmoc_feedback_report_impl(
+    show_all: bool = False,
+    migration_source: str | None = None,
+) -> None:
     """CLI runtime を通して feedback report を実行する。"""
     run_cli_subcommand(
         _cmoc_feedback_report_body,
         show_all,
+        migration_source,
         command_name="feedback report",
         command_argv=[
             "cmoc",
             "feedback",
             "report",
             *(["--all"] if show_all else []),
+            *(
+                ["--migration-source", migration_source]
+                if migration_source is not None
+                else []
+            ),
         ],
-        total_steps=5,
+        total_steps=6,
     )
 
 
-def _cmoc_feedback_report_body(show_all: bool) -> int:
+def _cmoc_feedback_report_body(
+    show_all: bool,
+    migration_source: str | None,
+) -> int:
     """snapshot 内の未処理 observation を unit ごとに確定する。"""
     repo = repo_root()
     worktree = work_root()
@@ -102,12 +118,32 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
         2, "feedback report の事前条件を確認", "validate feedback report preconditions"
     )
     _validate_preconditions(repo, worktree)
-    previous_views = _previous_normal_issue_views(worktree)
+    with feedback_writer_lock(repo):
+        start_subcommand_step(
+            3,
+            "feedback の旧 state 移行と整合性を確認",
+            "migrate and validate feedback state",
+        )
+        ensure_feedback_migration(repo, migration_source=migration_source)
+        recovered_units = recover_normalization_units(repo)
+        recover_report_publications(repo)
+        validate_feedback_state(repo, require_no_orphans=True)
+        return _cmoc_feedback_report_locked(repo, worktree, show_all, recovered_units)
+
+
+def _cmoc_feedback_report_locked(
+    repo: Path,
+    worktree: Path,
+    show_all: bool,
+    recovered_unit_ids: list[str],
+) -> int:
+    """repository-level writer lock 保持中に report transaction を完了する。"""
+    previous_views = _previous_normal_issue_views(repo)
 
     report_id = new_report_id()
     generated_at = rfc3339_now()
     start_subcommand_step(
-        3, "raw observation snapshot を保存", "snapshot raw observations"
+        4, "raw observation snapshot を保存", "snapshot raw observations"
     )
     snapshot, snapshot_sha256 = _write_snapshot(repo, report_id, generated_at)
     entries = snapshot["observations"]
@@ -115,16 +151,15 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
     observation_map = _read_snapshot_observations(entries)
 
     # 既存 receipt の hash 一致を先に検査し、corruption を unit 処理へ混ぜない。
-    pending, _ = _pending_entries(worktree, entries)
-    normalization_start_head = _git_head(worktree)
-    state_commit_ids: list[str] = []
+    pending, _, normalization_unit_ids = _pending_entries(repo, entries)
+    normalization_unit_ids[:0] = recovered_unit_ids
     invalid_count = 0
     normalization_agent_call_count = 0
     processed_count = 0
     result = "ok"
     partial_error: BaseException | None = None
     start_subcommand_step(
-        4, "observation を増分 normalization", "normalize feedback observations"
+        5, "observation を増分 normalization", "normalize feedback observations"
     )
     try:
         # schema 不正 record は改変せず invalid receipt だけを確定する。
@@ -146,11 +181,10 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
             ):
                 errors.append("/observation_id: file name and payload differ")
             if errors:
-                commit_id = _commit_invalid_observation(
-                    worktree, entry, errors, generated_at
+                unit_id = _publish_invalid_observation(
+                    repo, entry, errors, generated_at
                 )
-                if commit_id is not None:
-                    state_commit_ids.append(commit_id)
+                normalization_unit_ids.append(unit_id)
                 invalid_count += 1
                 processed_count += 1
             else:
@@ -167,79 +201,67 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
             else:
                 agent_entries.append(entry)
         for canonical_key, group in sorted(machine_groups.items()):
-            _issue, commit_id = _integrate_machine_group(
-                worktree,
+            _issue, unit_id = _integrate_machine_group(
+                repo,
                 canonical_key,
                 group,
                 observation_map,
                 generated_at,
             )
-            if commit_id is not None:
-                state_commit_ids.append(commit_id)
+            normalization_unit_ids.append(unit_id)
             processed_count += len(group)
 
         # agent observation は一件ずつ候補を絞り込み、曖昧な場合だけ agent を使う。
         for entry in sorted(
             agent_entries, key=lambda item: str(item["observation_id"])
         ):
-            _issue, commit_id, agent_used = _integrate_agent_observation(
+            _issue, unit_id, agent_used = _integrate_agent_observation(
                 repo,
                 worktree,
                 entry,
                 observation_map,
                 generated_at,
             )
-            if commit_id is not None:
-                state_commit_ids.append(commit_id)
+            normalization_unit_ids.append(unit_id)
             normalization_agent_call_count += int(agent_used)
             processed_count += 1
 
         # 新規 observation がなくても、既存 evidence の現在 fingerprint が変われば
         # machine assessment を独立 unit として追加する。
-        for view in load_issue_views(worktree).values():
-            commit_id = _refresh_issue_assessment(
-                worktree,
+        for view in load_issue_views(repo).values():
+            assessment_unit_id = _refresh_issue_assessment(
+                repo,
                 view,
                 observation_map,
                 generated_at,
             )
-            if commit_id is not None:
-                state_commit_ids.append(commit_id)
+            if assessment_unit_id is not None:
+                normalization_unit_ids.append(assessment_unit_id)
     except KeyboardInterrupt:
-        state_commit_ids.extend(
-            _missing_normalization_commits(
-                worktree, normalization_start_head, state_commit_ids
-            )
-        )
-        processed_count, invalid_count = _committed_observation_counts(
-            worktree, entries
-        )
+        processed_count, invalid_count = _effective_observation_counts(repo, entries)
+        _, _, committed_unit_ids = _pending_entries(repo, entries)
+        normalization_unit_ids.extend(committed_unit_ids)
         result = "interrupted"
         _record_feedback_interruption()
     except BaseException as exc:
-        state_commit_ids.extend(
-            _missing_normalization_commits(
-                worktree, normalization_start_head, state_commit_ids
-            )
-        )
-        processed_count, invalid_count = _committed_observation_counts(
-            worktree, entries
-        )
+        processed_count, invalid_count = _effective_observation_counts(repo, entries)
+        _, _, committed_unit_ids = _pending_entries(repo, entries)
+        normalization_unit_ids.extend(committed_unit_ids)
         result = "partial"
         partial_error = exc
 
-    _require_clean_after_units(worktree)
+    validate_feedback_state(repo, require_no_orphans=True)
 
-    # 確定済み commit だけから report を作り、未処理 entry は deferred とする。
+    # 確定済み unit manifest だけから report を作り、未処理 entry は deferred とする。
     start_subcommand_step(
-        5, "feedback report と tracked record を保存", "write feedback report"
+        6, "feedback report と state snapshot を保存", "write feedback report"
     )
-    views = load_issue_views(worktree)
+    views = load_issue_views(repo)
     changed_issue_ids, disposition_changed_issue_ids = _issue_changes(
         previous_views,
         views,
     )
-    deferred_count = _deferred_count(worktree, entries)
+    deferred_count = _deferred_count(repo, entries)
     default_visible, suppressed = _visible_issues(
         views,
         observation_map,
@@ -268,7 +290,13 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
     )
     if result == "ok" and (default_visible or invalid_count):
         result = "attention"
-    report_path, report_sha256 = _write_report(
+    normalization_unit_ids = list(dict.fromkeys(normalization_unit_ids))
+    state_snapshot, _state_snapshot_sha256 = build_state_snapshot(
+        repo, created_at=generated_at
+    )
+    state_snapshot_id = str(state_snapshot["state_snapshot_id"])
+    predecessor_id = previous_successful_report_id(repo)
+    report_path, report_sha256, report_content = _write_report(
         repo=repo,
         worktree=worktree,
         report_id=report_id,
@@ -285,7 +313,9 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
         needs_revalidation_count=needs_revalidation_count,
         suppressed_count=len(suppressed),
         show_all=show_all,
-        state_commit_ids=state_commit_ids,
+        normalization_unit_ids=normalization_unit_ids,
+        state_snapshot_id=state_snapshot_id,
+        previous_successful_report_id=predecessor_id,
         result=result,
         visible=visible,
         observations=observation_map,
@@ -294,32 +324,35 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
     report_state = report_record(
         report_id=report_id,
         generated_at=generated_at,
-        snapshot_manifest_sha256=snapshot_sha256,
-        snapshot_observation_count=len(entries),
+        report_snapshot_sha256=snapshot_sha256,
+        report_snapshot_observation_count=len(entries),
         processed_observation_count=processed_count,
         deferred_observation_count=deferred_count,
         report_path=report_path,
         report_sha256=report_sha256,
         result=result,
-        state_commit_ids=state_commit_ids,
+        normalization_unit_ids=normalization_unit_ids,
+        state_snapshot_id=state_snapshot_id,
+        previous_successful_report_id=predecessor_id,
     )
-    report_commit = _commit_record_unit(
-        worktree,
-        [("report", report_state)],
-        f"cmoc feedback report {report_id}",
-    )
+    prepare_report_publication(repo, report_state)
+    write_immutable_bytes(report_path, report_content)
+    report_record_path = publish_report_record(repo, report_state)
+    validate_feedback_state(repo, require_no_orphans=True)
     logger = current_subcommand_logger()
     if logger is not None:
         logger.event(
             "feedback_report_committed",
             report_id=report_id,
-            state_commit_ids=state_commit_ids,
-            report_record_commit=report_commit,
+            normalization_unit_ids=normalization_unit_ids,
+            state_snapshot_id=state_snapshot_id,
+            report_record_path=str(report_record_path),
         )
     typer.echo(f"- feedback report: `{report_path}`")
-    for commit_id in state_commit_ids:
-        typer.echo(f"- feedback normalization unit commit: `{commit_id}`")
-    typer.echo(f"- feedback report record commit: `{report_commit}`")
+    for unit_id in normalization_unit_ids:
+        typer.echo(f"- feedback normalization unit: `{unit_id}`")
+    typer.echo(f"- feedback state snapshot: `{state_snapshot_id}`")
+    typer.echo(f"- feedback report record: `{report_record_path}`")
     if result == "partial":
         return 2
     if result == "error":
@@ -328,7 +361,7 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
 
 
 def _validate_preconditions(repo: Path, worktree: Path) -> None:
-    """session branch、run state、clean tree、tracked schema を検査する。"""
+    """main worktree、active session branch、ready run state を検査する。"""
     if repo.resolve() != worktree.resolve():
         raise CmocError(
             "feedback report は main worktree 上で実行してください。",
@@ -349,8 +382,6 @@ def _validate_preconditions(repo: Path, worktree: Path) -> None:
             ["active session の editing run を join または abandon してください。"],
             f"state: {state_path}\n{json.dumps(state.to_dict(), ensure_ascii=False)}",
         )
-    require_clean_worktree(worktree)
-    validate_tracked_feedback_state(worktree)
 
 
 def _write_snapshot(
@@ -407,12 +438,19 @@ def _read_snapshot_observations(
 
 
 def _pending_entries(
-    worktree: Path, entries: list[dict[str, Any]]
-) -> tuple[list[dict[str, Any]], int]:
+    repo: Path, entries: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], int, list[str]]:
     """receipt と hash が一致する entry を除き、corruption を拒否する。"""
     pending: list[dict[str, Any]] = []
     processed = 0
+    reused_unit_ids: list[str] = []
     seen: dict[str, str] = {}
+    state = load_effective_feedback_state(repo)
+    receipts = {
+        str(record["observation_id"]): record
+        for relative, record in state.records.items()
+        if relative.startswith("ingestion/")
+    }
     for entry in entries:
         observation_id = str(entry.get("observation_id"))
         digest = str(entry.get("sha256"))
@@ -426,26 +464,23 @@ def _pending_entries(
                 )
             continue
         seen[observation_id] = digest
-        receipt_path = ingestion_receipt_path(worktree, observation_id)
-        if not receipt_path.is_file():
+        receipt = receipts.get(observation_id)
+        if receipt is None:
             pending.append(entry)
             continue
-        receipt = read_json_object(receipt_path)
         if receipt.get("observation_sha256") != digest:
             raise CmocError(
                 "ingestion receipt と raw observation の SHA256 が一致しません。",
                 [
-                    "raw observation と tracked receipt の corruption を確認してください。"
+                    "raw observation と effective receipt の corruption を確認してください。"
                 ],
                 f"observation_id: {observation_id}",
             )
         processed += 1
-        checkpoint = (
-            normalization_checkpoint_root(worktree)
-            / f"{receipt.get('normalization_unit_id')}.json"
-        )
-        checkpoint.unlink(missing_ok=True)
-    return pending, processed
+        unit_id = receipt.get("normalization_unit_id")
+        if isinstance(unit_id, str) and unit_id in state.unit_manifests:
+            reused_unit_ids.append(unit_id)
+    return pending, processed, reused_unit_ids
 
 
 def _record_feedback_interruption() -> None:
@@ -463,44 +498,21 @@ def _record_feedback_interruption() -> None:
         )
 
 
-def _previous_normal_issue_views(worktree: Path) -> dict[str, IssueView]:
-    """前回正常 report record を初めて含む commit の issue view を返す。"""
-    report_directory = tracked_feedback_root(worktree) / "report"
-    records: list[tuple[Path, dict[str, Any]]] = []
-    if report_directory.is_dir():
-        for path in sorted(report_directory.glob("fbr_*.json")):
-            record = read_json_object(path)
-            if record.get("result") in {"ok", "attention"}:
-                records.append((path, record))
-    if not records:
-        return {}
-    path, _record = max(
-        records,
-        key=lambda item: (
-            _parse_time(item[1].get("generated_at"))
-            or datetime.min.replace(tzinfo=timezone.utc),
-            str(item[1].get("report_id", "")),
-        ),
+def _previous_normal_issue_views(repo: Path) -> dict[str, IssueView]:
+    """正常 report 連鎖の直前 state snapshot から issue view を返す。"""
+    snapshot_id = previous_state_snapshot_id(repo)
+    return (
+        load_issue_views_from_snapshot(repo, snapshot_id)
+        if snapshot_id is not None
+        else {}
     )
-    relative = str(path.relative_to(worktree))
-    commits = run_git(
-        ["log", "--format=%H", "--diff-filter=A", "--", relative],
-        worktree,
-    ).stdout.splitlines()
-    if not commits:
-        raise CmocError(
-            "前回 feedback report record の作成 commit を特定できません。",
-            ["tracked report record と git history を確認してください。"],
-            relative,
-        )
-    return load_issue_views_at_commit(worktree, commits[-1])
 
 
 def _issue_changes(
     previous: dict[str, IssueView],
     current: dict[str, IssueView],
 ) -> tuple[set[str], set[str]]:
-    """前回正常 report tree からの revision/disposition 差分を返す。"""
+    """直前の正常 state snapshot からの revision/disposition 差分を返す。"""
     changed: set[str] = set()
     disposition_changed: set[str] = set()
     for current_issue_id, view in current.items():
@@ -524,12 +536,12 @@ def _issue_changes(
     return changed, disposition_changed
 
 
-def _commit_invalid_observation(
-    worktree: Path,
+def _publish_invalid_observation(
+    repo: Path,
     entry: dict[str, Any],
     errors: list[str],
     processed_at: str,
-) -> str | None:
+) -> str:
     """schema 不正 observation の invalid receipt を一 unit で確定する。"""
     observation_id = str(entry["observation_id"])
     version = normalizer_version(False)
@@ -544,23 +556,33 @@ def _commit_invalid_observation(
         [],
         errors,
     )
-    return _commit_record_unit(
-        worktree,
-        [("ingestion", receipt)],
-        f"cmoc feedback normalize {unit_id}",
+    return publish_normalization_unit(
+        repo,
+        normalization_unit_id_value=unit_id,
+        observations=[
+            {
+                "observation_id": observation_id,
+                "observation_sha256": str(entry["sha256"]),
+            }
+        ],
+        candidate_revision_ids=[],
+        normalizer_schema_sha256=version,
+        normalizer_version_value=version,
+        records=[("ingestion", receipt)],
+        checkpoint_sha256=None,
     )
 
 
 def _integrate_machine_group(
-    worktree: Path,
+    repo: Path,
     canonical_key: str,
     entries: list[dict[str, Any]],
     observations: dict[str, dict[str, Any]],
     processed_at: str,
-) -> tuple[str, str | None]:
+) -> tuple[str, str]:
     """同じ machine canonical key の observation を一 issue へ統合する。"""
     current_issue_id = issue_id(canonical_key)
-    views = load_issue_views(worktree)
+    views = load_issue_views(repo)
     existing = views.get(current_issue_id)
     first = observations[str(entries[0]["observation_id"])]
     payload = first["payload"]
@@ -648,9 +670,23 @@ def _integrate_machine_group(
                 ),
             )
         )
-    return current_issue_id, _commit_record_unit(
-        worktree, records, f"cmoc feedback normalize {unit_id}"
+    published = publish_normalization_unit(
+        repo,
+        normalization_unit_id_value=unit_id,
+        observations=[
+            {
+                "observation_id": str(entry["observation_id"]),
+                "observation_sha256": str(entry["sha256"]),
+            }
+            for entry in entries
+        ],
+        candidate_revision_ids=[],
+        normalizer_schema_sha256=version,
+        normalizer_version_value=version,
+        records=records,
+        checkpoint_sha256=None,
     )
+    return current_issue_id, published
 
 
 def _integrate_agent_observation(
@@ -659,11 +695,11 @@ def _integrate_agent_observation(
     entry: dict[str, Any],
     observations: dict[str, dict[str, Any]],
     processed_at: str,
-) -> tuple[str, str | None, bool]:
+) -> tuple[str, str, bool]:
     """一 agent observation を exact match または normalization agent で統合する。"""
     observation_id = str(entry["observation_id"])
     observation = observations[observation_id]
-    views = load_issue_views(worktree)
+    views = load_issue_views(repo)
     exact, candidates = _candidate_issues(observation, views, observations)
     requires_agent = exact is None and bool(candidates)
     agent_called = False
@@ -673,15 +709,18 @@ def _integrate_agent_observation(
     checkpoint_path: Path | None = None
     candidate_revision_ids = [str(view.revision["revision_id"]) for view in candidates]
     version = normalizer_version(requires_agent)
+    schema_sha256 = version
 
     if requires_agent:
-        output, checkpoint_path, unit_id, agent_called = _normalize_with_agent(
-            repo,
-            worktree,
-            observation,
-            str(entry["sha256"]),
-            candidates,
-            version,
+        output, checkpoint_path, unit_id, agent_called, schema_sha256 = (
+            _normalize_with_agent(
+                repo,
+                worktree,
+                observation,
+                str(entry["sha256"]),
+                candidates,
+                version,
+            )
         )
         decision = output.get("decision")
         if decision == "existing":
@@ -786,12 +825,27 @@ def _integrate_agent_observation(
             ),
         )
     )
-    commit_id = _commit_record_unit(
-        worktree, records, f"cmoc feedback normalize {unit_id}"
+    checkpoint_sha256 = (
+        sha256_bytes(checkpoint_path.read_bytes())
+        if checkpoint_path is not None
+        else None
     )
-    if checkpoint_path is not None and commit_id is not None:
-        checkpoint_path.unlink(missing_ok=True)
-    return current_issue_id, commit_id, agent_called
+    published = publish_normalization_unit(
+        repo,
+        normalization_unit_id_value=unit_id,
+        observations=[
+            {
+                "observation_id": observation_id,
+                "observation_sha256": str(entry["sha256"]),
+            }
+        ],
+        candidate_revision_ids=candidate_revision_ids,
+        normalizer_schema_sha256=schema_sha256,
+        normalizer_version_value=version,
+        records=records,
+        checkpoint_sha256=checkpoint_sha256,
+    )
+    return current_issue_id, published, agent_called
 
 
 def _candidate_issues(
@@ -875,7 +929,7 @@ def _normalize_with_agent(
     observation_sha256: str,
     candidates: list[IssueView],
     version: str,
-) -> tuple[dict[str, Any], Path, str, bool]:
+) -> tuple[dict[str, Any], Path, str, bool, str]:
     """checkpoint を再利用し、必要な場合だけ normalization agent を呼ぶ。"""
     observation_id = str(observation["observation_id"])
     candidate_payload = [
@@ -913,8 +967,8 @@ def _normalize_with_agent(
     )
     checkpoint_path = normalization_checkpoint_root(repo) / f"{unit_id}.json"
     allowed = {view.issue_id for view in candidates}
-    if checkpoint_path.is_file():
-        checkpoint = read_json_object(checkpoint_path)
+    checkpoint, checkpoint_content = _recoverable_checkpoint(checkpoint_path)
+    if checkpoint is not None:
         expected_candidate_ids = sorted(
             str(view.revision["revision_id"]) for view in candidates
         )
@@ -930,7 +984,18 @@ def _normalize_with_agent(
                 checkpoint["structured_output"], schema_path, allowed
             )
         ):
-            return checkpoint["structured_output"], checkpoint_path, unit_id, False
+            assert checkpoint_content is not None
+            recover_immutable_bytes_from_temporary(
+                checkpoint_path,
+                sha256_bytes(checkpoint_content),
+            )
+            return (
+                checkpoint["structured_output"],
+                checkpoint_path,
+                unit_id,
+                False,
+                schema_sha256,
+            )
         raise CmocError(
             "feedback normalization checkpoint が入力と一致しません。",
             ["checkpoint の corruption を確認し、手動対応してください。"],
@@ -968,7 +1033,64 @@ def _normalize_with_agent(
         "structured_output": result.output_json,
     }
     write_immutable_json(checkpoint_path, checkpoint)
-    return result.output_json, checkpoint_path, unit_id, True
+    return result.output_json, checkpoint_path, unit_id, True, schema_sha256
+
+
+def _recoverable_checkpoint(path: Path) -> tuple[dict[str, Any] | None, bytes | None]:
+    """final file または同一 byte 列の sibling temporary から checkpoint を読む。"""
+    temporaries: list[Path] = []
+    if path.parent.is_dir():
+        prefix = f".{path.name}."
+        temporaries = [
+            candidate
+            for candidate in path.parent.iterdir()
+            if candidate.name.startswith(prefix) and candidate.name.endswith(".tmp")
+        ]
+    if path.exists() or path.is_symlink():
+        if path.is_symlink() or not path.is_file():
+            raise CmocError(
+                "feedback normalization checkpoint path が通常 file ではありません。",
+                ["checkpoint path を人間が確認してください。"],
+                str(path),
+            )
+        candidates = [path, *temporaries]
+    else:
+        candidates = temporaries
+    if not candidates:
+        return None, None
+    contents: list[bytes] = []
+    for candidate in candidates:
+        if candidate.is_symlink() or not candidate.is_file():
+            raise CmocError(
+                "feedback normalization checkpoint temporary file が不正です。",
+                ["checkpoint path を人間が確認してください。"],
+                str(candidate),
+            )
+        contents.append(candidate.read_bytes())
+    if any(content != contents[0] for content in contents[1:]):
+        raise CmocError(
+            "feedback normalization checkpoint temporary file の byte 列が一致しません。",
+            ["異なる checkpoint 候補を人間が確認してください。"],
+            str(path),
+        )
+    try:
+        checkpoint = json.loads(contents[0])
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise CmocError(
+            "feedback normalization checkpoint temporary file が JSON ではありません。",
+            ["checkpoint path を人間が確認してください。"],
+            str(path),
+        ) from exc
+    if (
+        not isinstance(checkpoint, dict)
+        or canonical_json_bytes(checkpoint) != contents[0]
+    ):
+        raise CmocError(
+            "feedback normalization checkpoint temporary file が canonical JSON object ではありません。",
+            ["checkpoint path を人間が確認してください。"],
+            str(path),
+        )
+    return checkpoint, contents[0]
 
 
 def _normalization_output_matches_contract(
@@ -1165,7 +1287,7 @@ def _current_repo_path(path: Path, repository: Path) -> Path | None:
 
 
 def _refresh_issue_assessment(
-    worktree: Path,
+    repo: Path,
     view: IssueView,
     observations: dict[str, dict[str, Any]],
     assessed_at: str,
@@ -1206,128 +1328,62 @@ def _refresh_issue_assessment(
         return None
     observation_id = str(occurrence["observation_id"])
     version = normalizer_version(False)
+    schema_sha256 = sha256_bytes(
+        canonical_json_bytes(
+            {
+                "kind": "feedback-assessment-v1",
+                "compared_fingerprints": candidate["compared_fingerprints"],
+            }
+        )
+    )
     unit_id = normalization_unit_id(
         [observation_id],
         [str(view.revision["revision_id"])],
-        version,
+        schema_sha256,
     )
-    return _commit_record_unit(
-        worktree,
-        [("assessment", candidate)],
-        f"cmoc feedback assess {unit_id}",
+    return publish_normalization_unit(
+        repo,
+        normalization_unit_id_value=unit_id,
+        observations=[
+            {
+                "observation_id": observation_id,
+                "observation_sha256": str(occurrence["observation_sha256"]),
+            }
+        ],
+        candidate_revision_ids=[str(view.revision["revision_id"])],
+        normalizer_schema_sha256=schema_sha256,
+        normalizer_version_value=version,
+        records=[("assessment", candidate)],
+        checkpoint_sha256=None,
     )
 
 
-def _commit_record_unit(
-    worktree: Path,
-    records: list[tuple[str, dict[str, Any]]],
-    message: str,
-) -> str | None:
-    """unit records だけを作成・commit し、失敗時は同じ path だけ戻す。"""
-    paths = [record_path(worktree, record, kind) for kind, record in records]
-    existed = {path: path.exists() for path in paths}
-    before_head = _git_head(worktree)
-    try:
-        for (kind, record), path in zip(records, paths, strict=True):
-            assert path == record_path(worktree, record, kind)
-            write_tracked_record(path, record)
-        validate_tracked_feedback_state(worktree)
-        return _commit_paths(worktree, paths, message)
-    except BaseException:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
-        # commit 完了直後に Ctrl+C が届いても、HEAD が進んだ unit を rollback
-        # すると確定済み state と作業ツリーが不一致になる。unit 開始時と
-        # 現在の HEAD を比較し、commit 済みなら path をそのまま保持する。
-        after_head = run_git(["rev-parse", "HEAD"], worktree, check=False)
-        if after_head.returncode == 0 and after_head.stdout.strip() != before_head:
-            raise
-        relative = sorted({str(path.relative_to(worktree)) for path in paths})
-        if relative:
-            run_git(["reset", "HEAD", "--", *relative], worktree, check=False)
-        for path in paths:
-            if not existed[path]:
-                path.unlink(missing_ok=True)
-        raise
-
-
-def _require_clean_after_units(worktree: Path) -> None:
-    """unit commit/rollback 後に未確定差分が残っていないことを確認する。"""
-    status = run_git(["status", "--short"], worktree).stdout.strip()
-    if status:
-        raise CmocError(
-            "feedback normalization unit の未確定差分が残っています。",
-            ["表示された path を手動で確認してから再実行してください。"],
-            status,
-        )
-
-
-def _commit_paths(worktree: Path, paths: list[Path], message: str) -> str | None:
-    """unit が生成した tracked path だけを stage・commit する。"""
-    relative = sorted({str(path.relative_to(worktree)) for path in paths})
-    if not relative:
-        return None
-    run_git(["add", "--", *relative], worktree)
-    diff = run_git(
-        ["diff", "--cached", "--quiet", "--", *relative], worktree, check=False
-    )
-    if diff.returncode == 0:
-        return None
-    if diff.returncode != 1:
-        raise CmocError(
-            "feedback unit の staged 差分を確認できません。",
-            ["git index と feedback state path を確認してください。"],
-            diff.stderr,
-        )
-    run_git(["commit", "-m", message, "--", *relative], worktree)
-    return head_commit(worktree)
-
-
-def _git_head(worktree: Path) -> str:
-    """unit 境界を検出するため、現在の HEAD commit を直接取得する。"""
-    return run_git(["rev-parse", "HEAD"], worktree).stdout.strip()
-
-
-def _missing_normalization_commits(
-    worktree: Path,
-    start_head: str,
-    known_commit_ids: list[str],
-) -> list[str]:
-    """中断・一部失敗時に state_commit_ids へ不足分だけ追加する。"""
-    commits = run_git(
-        ["rev-list", "--reverse", f"{start_head}..HEAD"], worktree
-    ).stdout.splitlines()
-    known = set(known_commit_ids)
-    return [commit_id for commit_id in commits if commit_id not in known]
-
-
-def _committed_observation_counts(
-    worktree: Path,
+def _effective_observation_counts(
+    repo: Path,
     entries: list[dict[str, Any]],
 ) -> tuple[int, int]:
-    """tracked ingestion receipt から確定済み observation 数を再計算する。"""
+    """effective ingestion receipt から確定済み observation 数を再計算する。"""
     processed = 0
     invalid = 0
     seen: set[str] = set()
+    receipts = effective_ingestion_receipts(repo)
     for entry in entries:
         observation_id = str(entry["observation_id"])
         if observation_id in seen:
             continue
         seen.add(observation_id)
-        receipt_path = ingestion_receipt_path(worktree, observation_id)
-        if not receipt_path.is_file():
+        receipt = receipts.get(observation_id)
+        if receipt is None:
             continue
-        receipt = read_json_object(receipt_path)
         processed += 1
         invalid += int(receipt.get("status") == "invalid")
     return processed, invalid
 
 
-def _deferred_count(worktree: Path, entries: list[dict[str, Any]]) -> int:
-    """snapshot 内でまだ ingestion receipt がない observation 数を返す。"""
-    return sum(
-        not ingestion_receipt_path(worktree, str(entry["observation_id"])).is_file()
-        for entry in entries
-    )
+def _deferred_count(repo: Path, entries: list[dict[str, Any]]) -> int:
+    """snapshot 内で effective ingestion receipt がない observation 数を返す。"""
+    receipts = effective_ingestion_receipts(repo)
+    return sum(str(entry["observation_id"]) not in receipts for entry in entries)
 
 
 def _is_open(view: IssueView) -> bool:
@@ -1458,23 +1514,28 @@ def _write_report(
     needs_revalidation_count: int,
     suppressed_count: int,
     show_all: bool,
-    state_commit_ids: list[str],
+    normalization_unit_ids: list[str],
+    state_snapshot_id: str,
+    previous_successful_report_id: str | None,
     result: str,
     visible: list[IssueView],
     observations: dict[str, dict[str, Any]],
     partial_error: BaseException | None,
-) -> tuple[Path, str]:
-    """deterministic issue view を Markdown + YAML Front Matter へ保存する。"""
+) -> tuple[Path, str, bytes]:
+    """deterministic issue view の Markdown publication 内容を準備する。"""
     directory = reports_dir(repo, "feedback")
     directory.mkdir(parents=True, exist_ok=True)
-    _, path = _reserve_timestamped_path(directory, ".md", timestamp)
+    timestamp_value = timestamp()
+    path = directory / f"{timestamp_value}.md"
+    if path.exists():
+        path = directory / f"{timestamp_value}_{report_id}.md"
     fields: dict[str, object] = {
         "command": "cmoc feedback report",
         "generated_at": generated_at,
         "repo_root": str(repo.resolve()),
         "session_branch": current_branch(worktree),
-        "snapshot_manifest_sha256": snapshot_sha256,
-        "snapshot_observation_count": snapshot_count,
+        "report_snapshot_sha256": snapshot_sha256,
+        "report_snapshot_observation_count": snapshot_count,
         "processed_observation_count": processed_count,
         "deferred_observation_count": deferred_count,
         "invalid_observation_count": invalid_count,
@@ -1485,7 +1546,9 @@ def _write_report(
         "disposition_change_count": len(disposition_changed_issue_ids),
         "suppressed_machine_issue_count": suppressed_count,
         "all": show_all,
-        "state_commit_ids": state_commit_ids,
+        "normalization_unit_ids": normalization_unit_ids,
+        "state_snapshot_id": state_snapshot_id,
+        "previous_successful_report_id": previous_successful_report_id,
         "result": result,
     }
     lines = [
@@ -1560,11 +1623,11 @@ def _write_report(
                 f"- machine assessment: {assessment.get('presence', 'unknown')} / {assessment.get('freshness', 'unavailable')}",
                 f"- human disposition: {disposition}",
                 f"- 代表的な evidence: {representative_evidence}",
-                f"- issue directory: `{tracked_feedback_root(worktree) / 'issue' / view.issue_id}`",
+                f"- issue directory: `{feedback_root(repo) / 'issue' / view.issue_id}`",
                 f"- raw observation: `{raw_reference}`",
                 f"- log: `{log_reference}`",
                 *(
-                    ["- 前回正常 report 後に human disposition が変更されています。"]
+                    ["- 直前の正常 report 後に human disposition が変更されています。"]
                     if view.issue_id in disposition_changed_issue_ids
                     else []
                 ),
@@ -1591,9 +1654,8 @@ def _write_report(
                     "",
                 ]
             )
-    content = "\n".join(lines)
-    path.write_text(content, encoding="utf-8")
-    return path.resolve(), sha256_bytes(content.encode("utf-8"))
+    content = ("\n".join(lines) + "\n").encode("utf-8")
+    return path.resolve(), sha256_bytes(content), content
 
 
 def _representative_evidence(observation: dict[str, Any]) -> str:

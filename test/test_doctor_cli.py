@@ -252,8 +252,10 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
         _agents_gitkeep_added: bool,
         *,
         include_config: bool,
+        include_gu_ignore: bool,
     ) -> None:
         """repair commit の失敗を再現する。"""
+        del include_config, include_gu_ignore
         raise RuntimeError("repair commit failure")
 
     monkeypatch.setattr(doctor_module, "_commit_doctor_repairs_from_head", fail_commit)
@@ -348,10 +350,10 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
     assert check_ignore.returncode == 1
 
 
-def test_doctor_preprocess_targets_current_linked_worktree(
+def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree 起点の doctor が repository と worktree の状態を正しく修復することを検証する。"""
+    """`.cmoc/gu` は repo root、tracked runtime は current worktree で修復する。"""
 
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked-doctor"
@@ -361,20 +363,20 @@ def test_doctor_preprocess_targets_current_linked_worktree(
     result = run_doctor(linked)
 
     assert result.exit_code == 0
-    assert "/.cmoc/gu/" in (linked / ".gitignore").read_text()
+    assert not (linked / ".gitignore").exists()
     assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
     assert (
-        run_git(
-            linked, "check-ignore", "-q", ".cmoc/gu/.__cmoc_ignore_probe__"
+        subprocess.run(
+            ["git", "check-ignore", "-q", ".cmoc/gu/.__cmoc_ignore_probe__"],
+            cwd=linked,
+            check=False,
         ).returncode
-        == 0
+        != 0
     )
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
-    assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
-        ".agents/.gitkeep"
-    ]
+    assert run_git(root, "ls-files", "--", ".agents").stdout == ""
     assert (
         run_git(
             root,

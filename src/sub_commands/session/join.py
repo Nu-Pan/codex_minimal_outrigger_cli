@@ -133,11 +133,6 @@ def resolve_session_join_conflict(
             ["git status を確認し、手動解決後に再実行してください。"],
             git(["status", "--short"], root).stdout,
         )
-    conflicted_paths = _resolve_feedback_state_conflicts(root, conflicted_paths, git)
-    if not conflicted_paths:
-        # byte-identical append-only record だけが競合した場合は agent を起動しない。
-        git(["commit", "--no-edit"], root)
-        return
     before_codex = _changed_path_snapshot(root, git)
     before_conflict_contents = _conflict_file_contents(conflicted_paths)
     start_subcommand_step("3/4, 2/5", "conflict marker 解消を依頼", "resolve conflicts")
@@ -179,46 +174,6 @@ def resolve_session_join_conflict(
             unmerged,
         )
     git(["commit", "--no-edit"], root)
-
-
-def _resolve_feedback_state_conflicts(
-    root: Path,
-    conflicted_paths: list[Path],
-    git: GitRun,
-) -> list[Path]:
-    """tracked feedback record を generic conflict agent より先に処理する。"""
-    feedback_root = (root / ".cmoc" / "gt" / "ar" / "feedback").absolute()
-    remaining: list[Path] = []
-    divergent: list[Path] = []
-    for path in conflicted_paths:
-        absolute = path.absolute()
-        if absolute != feedback_root and feedback_root not in absolute.parents:
-            remaining.append(path)
-            continue
-        relative = str(path.relative_to(root))
-        ours = git(["show", f":2:{relative}"], root, check=False)
-        theirs = git(["show", f":3:{relative}"], root, check=False)
-        if (
-            ours.returncode == 0
-            and theirs.returncode == 0
-            and ours.stdout == theirs.stdout
-        ):
-            git(["checkout", "--ours", "--", relative], root)
-            git(["add", "--", relative], root)
-            continue
-        divergent.append(path)
-    if divergent:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-        # observation、normalization、human disposition を推測で選ばず merge 全体を戻す。
-        git(["merge", "--abort"], root, check=False)
-        raise CmocError(
-            "tracked feedback state に divergent conflict があります。",
-            [
-                "conflict path の record を人間が確認してから session join を再実行してください。"
-            ],
-            "\n".join(str(path.absolute()) for path in divergent),
-        )
-    return remaining
 
 
 def _unmerged_paths(root: Path, git: GitRun) -> list[Path]:

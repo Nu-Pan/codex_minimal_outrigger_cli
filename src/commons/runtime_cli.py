@@ -220,12 +220,16 @@ def _emit_completion_summary(
         )
     typer.echo(f"- 経過時間: `{format_duration(elapsed)}`")
     typer.echo(f"- quota 待機時間: `{format_duration(logger.quota_wait_sec)}`")
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
     try:
         unprocessed, increased, warnings = feedback_completion_counts(
             logger.root, work_root()
         )
-        typer.echo(f"- 未処理 feedback observation: `{unprocessed}`")
-        typer.echo(f"- 前回正常 feedback report 後の増加: `{increased}`")
+        unprocessed_text = "unavailable" if unprocessed is None else str(unprocessed)
+        increased_text = "unavailable" if increased is None else str(increased)
+        typer.echo(f"- 未処理 feedback observation: `{unprocessed_text}`")
+        typer.echo(f"- 直前の正常な local feedback report 後の増加: `{increased_text}`")
         for warning in warnings:
             typer.echo(f"- warning: {warning}")
     except BaseException:

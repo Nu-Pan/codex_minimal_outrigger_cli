@@ -31,20 +31,19 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンド群の実装入口。feedback の各処理を確認・変更するときに読む。
-- raw observation のスナップショット、validation・normalization、issue 統合、assessment、差分計算、Markdown report と tracked record の保存を含む feedback report の中核処理を担う。report の処理順序や transaction 状態遷移を調査・変更するときの入口。
+- feedback サブコマンドの実装群を扱うディレクトリ。feedback の CLI 入口と、`cmoc feedback report` の中断可能な transaction、observation の normalization・issue 統合・Markdown report 生成を確認するための入口。
 
 ## Read this when
 - feedback サブコマンドの挙動や実装を確認・変更するとき。
-- feedback report の snapshot、deferred/invalid 処理、checkpoint、commit/rollback、issue 統合、assessment、再発判定、表示対象、report record を調査・変更するとき。
+- `cmoc feedback report` の実行順序、checkpoint 復旧、state 整合性、issue 集計、report 生成を確認するとき。
 
 ## Do not read this when
 - feedback 以外のサブコマンドを扱うとき。
-- feedback の observation schema や tracked state の record 定義だけを確認するとき。
-- feedback report の CLI 公開入口だけ、または report と無関係な observation の収集処理だけを確認するとき。
+- feedback observation の保存・列挙や issue state の共通 schema を直接確認したいときは、それぞれの専用実装へ進む。
+- normalization agent の prompt や Structured Output schema だけを確認したいときは、対応する normalize issue parameter の実装へ進む。
 
 ## hash
-- c67fb036cb0328213547575674a3fcc473fe63d1b29563a0fa289f3899c84e28
+- 453d36b046dcadee04cde82f6d9091b476fafb11fb90eb758996179d05acc747
 
 # `indexing.py`
 
@@ -131,19 +130,20 @@
 # `session`
 
 ## Summary
-- session サブコマンド群の実装をまとめるパッケージ。session の fork、join、abandon と、それらを束ねる構成を確認する際の入口となる。
+- session サブコマンドの実装パッケージ。session の各ライフサイクル処理を確認する際の入口となる。
+- session の abandon、fork、join における branch 操作、state 更新、競合解消、失敗時の復旧を扱う。
 
 ## Read this when
-- session サブコマンドの実装構成やライフサイクル処理を確認・変更するとき。
-- session branch、state、merge、cleanup など session 共通の処理箇所を特定するとき。
+- session サブコマンドの実装や構成を確認・変更するとき。
+- session の作成、離脱、統合、branch・state のライフサイクルを調査するとき。
+- session join の merge conflict 解消や検証処理を確認するとき。
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき。
-- 特定の session 操作だけを変更・調査する場合は、対応する個別サブコマンド実装を直接読む。
-- session state の共通データ構造や runtime の一般仕様だけを確認する場合は、対応する共通実装を直接読む。
+- session の共通 state データ構造、runtime Git 処理、Codex 実行規則だけを確認したいときは、それぞれの共通実装や定義を直接読む。
 
 ## hash
-- 2b019a2574c9012ac6120ef208e51b19199266c07a51b615dd1c3351745b1ab9
+- 8a0dfef628903e21e7fae720cdfc2150168e3c41e5d0776d9d80ec9fd63a111d
 
 # `tui.py`
 

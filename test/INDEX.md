@@ -202,19 +202,22 @@
 # `test_cli_command_tree.py`
 
 ## Summary
-- 公開 CLI の末端コマンド集合が oracle 仕様で列挙された command path と一致することを検証するテスト。
-- Typer/Click の互換性エラーを起こさず CLI help を描画でき、主要な command group が含まれることも確認する。
+- 公開 CLI の末端 command 集合が正本仕様と一致することを検証するテスト。
+- Typer/Click の互換性エラーなしに help が描画され、主要な command group が公開されることを検証する。
+- feedback report が一回限りの divergent 旧 state 移行元を選択する option を公開することを検証する。
 
 ## Read this when
-- 公開 CLI の command tree、コマンド追加・削除・階層変更、または oracle 仕様の CLI leaf 集合を変更する作業を行うとき。
-- Typer/Click の更新や CLI help 描画の互換性問題を調査するとき。
+- 公開 CLI の command tree、leaf command の追加・削除・名称変更を確認するとき。
+- CLI help の Typer/Click 互換性を検証するとき。
+- feedback report の migration source option の公開契約を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの実装や、その引数・実行時挙動だけを変更または調査するとき。
-- CLI 以外の機能のテストや実装を扱うとき。
+- 個別 command の実装挙動や処理詳細を調査・変更するとき。
+- CLI の正本仕様そのものを確認するときは、列挙された oracle 文書を直接読む。
+- CLI 以外のテストや内部実装の一般的な品質を確認するとき。
 
 ## hash
-- 7b99bf08e71cea1d97ce22d61ff81b7f4295a9d90833758e297880502e4657dd
+- 6c411d9f907abbf8b58b33aa82e9c39e62d4cd04d085da8737f4d9cbbbe22da5
 
 # `test_cli_tui.py`
 
@@ -370,19 +373,20 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の統合テスト。CLI と直接呼び出しの両方で、Git 状態、config、refactor state、共有 doctor lock、reporter probe、linked worktree を含む修復 lifecycle を検証する。修復失敗時や既存の staged index、index flag、intent-to-add、rename、削除、unstaged hunk を保持する契約、および `.agents` の symlink 経由書き込み拒否も扱う。doctor preprocess の外部挙動を確認するテストの入口。
+- doctor preprocess の共有 lifecycle を外部挙動から検証する統合テスト。Git の ignore・tracked runtime・config・refactor state の修復、repair 順序、reporter probe の中断伝播、共有 lock、修復失敗時の index 復元を扱う。CLI と直接呼び出しの両方を通じて、既存の staged 差分・index flag・intent-to-add・rename・削除・unstaged hunk を保持し、修復用 commit が利用者変更を取り込まない契約を確認する。doctor preprocess の外部契約を検証するテスト群への入口であり、実装の詳細や個別の低レベル helper のテストを探す場合は別のテスト対象を読む。
 
 ## Read this when
-- doctor preprocess の外部契約や修復 lifecycle を変更・検証するとき
-- doctor の Git index 保持、repair commit、config/state 同期、linked worktree、lock 待機を扱うとき
-- doctor の reporter probe における中断伝播や `.agents` の安全な修復を確認するとき
+- doctor preprocess の CLI または直接呼び出しにおける修復 lifecycle、Git index の保全、linked worktree と repository の境界を検証・変更するとき
+- doctor の lock、config 同期、refactor state 同期、reporter 事前検証、repair commit の外部挙動を一続きの統合テストとして確認するとき
+- 既存の staged・unstaged 差分や index metadata を doctor が保持する契約を調査するとき
 
 ## Do not read this when
-- doctor preprocess 以外の CLI サブコマンドや、個別の Git・config・refactor 実装だけを直接調査するとき
-- 単体テストの共通 fixture や CLI 実行ヘルパーの仕様を確認したいときは、それぞれの実装・ヘルパーを直接読む
+- doctor preprocess の実装ロジックや正本仕様そのものを確認したいときは、実装または指定された oracle 文書を直接読む
+- doctor 以外の CLI サブコマンド、または個別 helper の局所的な単体挙動だけを確認したいとき
+- Git、config、refactor state の一般的な fixture や共通 test helper の定義を確認したいときは、それぞれの支援モジュールを直接読む
 
 ## hash
-- 43bb38f9b56c6ca8b47e2522e1c23788e228c9e3e023c35518efe05ef4d60b3a
+- 6ff9769ab1050644d4a791da38567da6e08f510e03c71db4eca665d540e69306
 
 # `test_editing_run_cli.py`
 
@@ -405,20 +409,22 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の reporter、collector、rate limit、secret/path 検証、machine detector、tracked state、incremental report、interruption 処理を一続きで検証する受け入れテスト。feedback subsystem の外部挙動と observation lifecycle を確認する入口である。
+- feedback observation の収集から保存、検証、状態移行、正規化、増分 report までを一続きで検証する受け入れテスト。
+- agent と machine の observation、reporter／collector protocol、rate limit、secret redaction、path 境界、atomic recovery、migration、normalization unit、issue candidate、fingerprint refresh、interruption recovery などを扱う。
+- feedback subsystem の実装や正本仕様に対する外部挙動を確認するための、広範な統合テスト入口である。
 
 ## Read this when
-- feedback observation の受付・保存・redaction・rate limit を変更または検証するとき
-- feedback state の identity、occurrence、revision、validation や report の差分・再検証・抑制を変更または検証するとき
-- feedback reporter、normalizer builder、machine detector、Ctrl+C 時の report 確定処理の契約を確認するとき
+- feedback observation の reporter、collector、store、state、migration、normalizer、report command の挙動を変更または検証するとき。
+- raw observation から issue state、normalization unit、incremental report までの lifecycle を同じ fixture で確認する必要があるとき。
+- feedback protocol、入力検証、secret redaction、rate limit、atomic／interruption recovery、repository-local state の移行をテストするとき。
 
 ## Do not read this when
-- feedback subsystem の実装詳細だけを調べるときは、対象の runtime、state、store、report 実装を直接読む
-- feedback の正本仕様や受け入れ要件を確認するときは、列挙された oracle 文書を先に読む
-- feedback と無関係な CLI 機能や一般的なテスト実行方法を調べるとき
+- feedback subsystem の仕様や設計意図を確認することが目的のときは、参照先の oracle 文書を直接読む。
+- 個別の runtime 実装や report command の内部ロジックだけを調査するときは、対応する実装ファイルとより直接的なテストを読む。
+- feedback と無関係な CLI 機能、一般的な test execution、または単純な schema／unit test の確認を行うとき。
 
 ## hash
-- 8c8ab95c53cf12848fcea0c95c8e1e8de09374e66c9dba8aa6fc9aae3dc48897
+- 95e55ac7d98517746e90a377573327deff4d4589f8ab18e062e28858ef6717bd
 
 # `test_indexing_cli.py`
 
@@ -839,20 +845,25 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork・join・abandon の CLI 外部挙動を回帰検証する統合テスト。session branch と永続 state のライフサイクル、linked worktree、cleanup と rollback、dirty worktree 拒否、join 時の conflict 解消と安全な差分制限、CLI のエラー出力を扱う。
+- session の fork・join・abandon に関する CLI 外部挙動を、session branch と永続 state のライフサイクルとして一括検証する回帰テスト。
+- 通常の branch/state 作成・遷移に加え、state 保存失敗や session-id 衝突、cleanup 失敗時の rollback、破損 state、home branch 欠落を検証する。
+- linked worktree での session 操作、doctor preprocess、dirty worktree 拒否、state cleanup、sub-command log、stdout/stderr のエラー報告も対象とする。
+- session join の conflict 解消について、Codex 実行境界、REPO_WRITE sandbox、対象外変更の拒否、marker 検出、削除・mode・改行を含む path の扱い、branch 削除警告を検証する。
+- session CLI の実装や仕様を直接変更するファイルではなく、関連する外部挙動をまとめて確認する realization test として、session 状態遷移の回帰検証の入口になる。
 
 ## Read this when
-- session サブコマンドの fork・join・abandon の挙動や回帰テストを確認するとき
-- session state、session branch、linked worktree のライフサイクルを変更または検証するとき
-- session join の conflict resolution、Codex 呼び出し境界、許可される差分、エラー報告を確認するとき
+- session fork、join、abandon の CLI 挙動や回帰テストを調査・変更するとき。
+- session branch、session state、linked worktree のライフサイクルや rollback を確認するとき。
+- session join の conflict 解消、Codex 呼び出し境界、sandbox、差分検証を確認するとき。
+- doctor preprocess、dirty worktree、state cleanup、エラー出力やログの session CLI 連携を検証するとき。
 
 ## Do not read this when
-- session CLI 以外のサブコマンドや、session の内部実装だけを直接調査するとき
-- session state の正本仕様を確認するときは、対応する oracle の仕様文書を読む
-- 一般的な Git fixture や CLI テスト共通ヘルパーの実装を確認するときは、対応する support module を直接読む
+- session サブコマンドの実装詳細だけを確認する場合は、対応する src の実装ファイルを直接読む。
+- session state や join の正本仕様を確認する場合は、列挙された oracle doc・oracle src を直接読む。
+- session CLI と無関係なコマンド、一般的な Git helper、Codex prompt 全般のテストを調査する場合。
 
 ## hash
-- be9444bd6b3bcd237cb8361116023667a2e41d2eea59f61c3753d7280e596878
+- 99597bfe90a4093c54bd4e5279c1b5f3f01a568b9059fff29cc7d9c80c22a233
 
 # `test_skill_metadata.py`
 
