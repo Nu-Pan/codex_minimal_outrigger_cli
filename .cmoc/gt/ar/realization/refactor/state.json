@@ -421,9 +421,9 @@
   },
   "oracle/src/oracle/feedback/reporter_input.json": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "c3c07e9f43494e5bcda5f9fefd3c65f6d89617409082a24f6a67656143b38f97",
+    "last_investigated_at": "2026-08-07_10-12_09_492272000"
   },
   "oracle/src/oracle/other/cmoc_config.py": {
     "investigation_required": false,

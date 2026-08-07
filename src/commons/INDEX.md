@@ -327,19 +327,22 @@
 # `runtime_feedback_store.py`
 
 ## Summary
-- agent および machine rule の feedback observation を検査し、repository 内の raw observation store へ immutable JSON として保存する共通境界。入力 schema 検査、payload サイズ制限、secret masking、evidence path の repository 内正規化、fingerprint、hash、UUIDv7 または deterministic ID、atomic publish を扱う。保存済み observation の列挙、ingestion receipt に基づく未処理件数、report snapshot と連動した完了時 warning も提供する。feedback の受理・永続化・未処理件数の挙動を変更または追跡するときの入口。
+- feedback raw observation の受理・検証・保存を担う共通ストア。reporter payload の schema 検査、secret masking、payload サイズ確認、evidence path の repository 内正規化、fingerprint 取得、UUID・hash に基づく observation ID 生成、immutable JSON の atomic publish を扱う。
+- agent 起点および machine rule 起点の raw observation を schema version 配下へ保存し、既存記録との衝突・破損を検出する。さらに ingestion receipt と report snapshot を参照して未処理 observation 件数、増加数、蓄積 warning を算出する。
+- feedback observation の受理境界と durable raw store の実装入口であり、reporter、machine rule、feedback report、完了時通知が raw observation の保存・同一性・未処理判定を必要とするときに進む対象。
 
 ## Read this when
-- agent または machine rule の feedback observation の schema 検査、secret masking、evidence path 制約、fingerprint、ID、hash、atomic 保存を変更・調査するとき
-- raw observation の保存先、immutable record の衝突処理、observation 列挙、ingestion receipt に基づく未処理件数や通知条件を確認するとき
+- feedback observation の payload 検証、secret masking、evidence path の安全な正規化、fingerprint、observation ID、immutable 保存を変更・調査するとき。
+- agent または machine rule の observation 保存形式、raw record の重複・衝突判定、atomic publish の挙動を確認するとき。
+- feedback report 後の未処理件数や蓄積 warning の算出ロジックを変更・調査するとき。
 
 ## Do not read this when
-- feedback の正本 schema や受理項目の意味を確認するだけの場合は、対応する oracle schema・仕様を直接読む
-- feedback report の集約・正規化・表示処理を変更する場合は、その report または normalization の実装を直接読む
-- 通常の feedback tool 呼び出し側の制御フローだけを調べる場合は、呼び出し側の実装を直接読む
+- feedback の正本 schema や人間向けの受理条件を確認することが目的の場合は、対応する oracle specification を直接読む。
+- report の集約・正規化・出力形式だけを調査する場合は、report 実装や tracked feedback state の対象を直接読む。
+- MCP tool の公開インターフェースや CLI の dispatch を調査する場合は、それぞれの tool・CLI 実装を直接読む。
 
 ## hash
-- e113292d62cb8c3be8ccbb0e8e26e2b37fd8cd89b14288567d876adffe2a4ecd
+- 44f3752847171ab3e4d837dbde9d5685a84bb4e9d1bc0415e75f803b649e1677
 
 # `runtime_git.py`
 

@@ -366,6 +366,14 @@ def validate_agent_payload(
     masked_value, redaction_count = _mask_payload(payload)
     if not isinstance(masked_value, dict):
         raise FeedbackRejected("suspected_secret", "payload could not be redacted")
+    # 固定長の redaction marker が短い credential を置換すると、mask 前は
+    # schema 内でも mask 後に field または payload size を超えることがある。
+    masked_payload_bytes = canonical_json_bytes(masked_value)[:-1]
+    if len(masked_payload_bytes) > _MAX_PAYLOAD_BYTES:
+        raise FeedbackRejected("payload_too_large", "redacted payload exceeds 32 KiB")
+    masked_errors = reporter_input_validation_errors(masked_value)
+    if masked_errors:
+        raise FeedbackRejected("schema_invalid", masked_errors[0])
     masked_evidence = masked_value.get("evidence")
     if not isinstance(masked_evidence, list) or not masked_evidence:
         raise FeedbackRejected("suspected_secret", "required evidence was redacted")

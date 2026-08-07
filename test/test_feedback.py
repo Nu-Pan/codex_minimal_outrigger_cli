@@ -300,6 +300,17 @@ def test_agent_store_rejects_outside_paths_and_secret_only_evidence(
     assert "[REDACTED:private_key]" in stored
     assert "secret-key-material" not in stored
 
+    # AWS credential の marker は元の最短 token より 1 文字長いため、
+    # mask 前の maxLength だけを検査すると保存後の payload が schema 違反になる。
+    boundary_payload = _payload(text="context", kind="error", path=None)
+    credential = "AKIA" + "A" * 16
+    boundary_payload["summary"] = "x" * (200 - len(credential) - 1) + " " + credential
+    before_boundary = set(iter_observation_paths(root))
+    with pytest.raises(FeedbackRejected) as masked_schema:
+        store_agent_observation(root, _context(root), boundary_payload)
+    assert masked_schema.value.code == "schema_invalid"
+    assert set(iter_observation_paths(root)) == before_boundary
+
 
 def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
     """同じ stable event の再検出が同じ raw observation 一件へ収束する。"""
