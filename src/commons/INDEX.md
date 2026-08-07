@@ -17,18 +17,20 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- cmoc の実行時機能を横断して公開する共通 API 集約モジュール。CLI 実行、Codex プロセス制御、設定・状態・パス管理、Git 操作、ログ、結果型、エラー処理などの runtime 部品を再エクスポートし、上位実装からの共通入口を提供する。
+- cmoc のランタイム共通公開 API を集約するモジュール。CLI サブコマンド実行、Codex プロセス制御、設定・状態管理、パス解決、Git 操作、ログ、コンテンツハッシュ、エラー処理など、各ランタイム機能から再利用される関数・定数・型を公開する。個別機能の実装ではなく、これらの共通 API の構成や公開名を確認するための入口。
 
 ## Read this when
-- cmoc runtime の共通 API、公開シンボル、または複数の runtime サブモジュールを横断する依存関係を確認するとき
-- CLI サブコマンドやセッション・worktree・設定・状態処理が、共通 runtime API を通じてどの機能に依存するか調査するとき
+- cmoc ランタイムの共通 API や公開シンボルを確認・変更するとき
+- CLI、Codex 実行、設定、状態、Git、ログ、パスなど複数のランタイム機能を横断して依存関係を調査するとき
+- 他のモジュールから利用される共通エラー・結果型・状態型の公開元を確認するとき
 
 ## Do not read this when
-- 特定の runtime 機能の実装詳細だけを調査・変更するときは、対応する runtime_* モジュールを直接読む
-- Codex の preflight、Git、設定、状態、パスなど単一領域の挙動だけを確認する場合
+- 特定のランタイム機能の内部実装を変更・調査する場合は、対応する個別 runtime モジュールを直接読むとよい
+- CLI の個別サブコマンドの挙動だけを確認する場合
+- このモジュールが再公開する機能の具体的なアルゴリズムや仕様を確認する場合
 
 ## hash
-- 7ca0f0765cda341c73ce13d5f085c20c8907c7c64ad270a4ec1f2fe389c7a83f
+- d4bdb41ff7df1879f0483a1bb3d9a2c72156a9d3598d0babfbe45b128997574d
 
 # `indexing.py`
 
@@ -73,20 +75,20 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンド共通の実行ライフサイクルを管理するランタイム実装。work root 検査、ログと feedback invocation の開始・終了、doctor 前処理、step 通知、正常・異常終了の記録、エラー表示、完了サマリーを集約する。
-- サブコマンド共通処理の呼び出し順序や終了経路を確認する必要がある場合の入口であり、個別サブコマンドの実装や各ランタイム機能の詳細は、それぞれの呼び出し元・専用モジュールを読む。
+- CLI サブコマンドの共通実行ライフサイクルを提供する実装。work root 検査、doctor 前処理、サブコマンドログ、feedback invocation、step 通知、完了・失敗記録、エラー表示、終了通知を一元管理する。
+- サブコマンド実装の実行ラッパーと、現在のサブコマンド状態を操作・参照する補助関数が含まれる。各 CLI サブコマンドの実行経路や共通終了処理を確認する入口。
 
 ## Read this when
-- サブコマンド実行時の共通初期化、doctor 前処理、ログ記録、feedback 処理、step 表示、終了コード変換、例外処理を変更または調査するとき
-- サブコマンドの正常終了・失敗終了・KeyboardInterrupt 時の挙動やコンソール完了サマリーを確認するとき
-- work root と repo root の使い分け、共通実行ラッパーの引数契約を確認するとき
+- CLI サブコマンドの実行順序、共通前処理、ログ記録、終了コード処理を変更・調査するとき
+- サブコマンドの step 通知、ユーザー中断状態、失敗時の summary、Windows 通知連携を確認するとき
+- work root と repository root の runtime state・ログ配置の扱いを確認するとき
 
 ## Do not read this when
-- 特定サブコマンド固有の業務処理、CLI 引数定義、または個別ランタイム機能の内部実装だけを確認するとき
-- ログ形式、doctor 前処理、feedback 保存、エラー描画の仕様そのものを確認するときは、対応する oracle 仕様または専用モジュールを直接読む
+- 個別サブコマンドの業務ロジックや引数定義だけを変更・調査するとき
+- ログ出力、エラー描画、doctor 前処理、feedback 保存、通知機能そのものの詳細実装を確認するときは、それぞれの専用 runtime モジュールや正本仕様を先に読む
 
 ## hash
-- 58c70ca6ef3c5348863e05d3dc99f340d4c95495bb1811dd1b7b8f04195fccd4
+- 3c6af065355fc1192633bd3dc793bf66ff93d39ea248e23debf3b2c693e16770
 
 # `runtime_codex.py`
 
@@ -155,38 +157,33 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。起動前の sandbox、argv、CODEX_HOME、provider/MCP 設定、Structured Output schema 配置を準備し、起動後の process tracking、PID reuse を避けた process group 停止、JSONL 出力・error・resume token の解釈を担う。Codex CLI と cmoc の実行環境・機械的結果の変換が必要な場合の入口。
+- Codex CLI subprocess 境界の実装を担い、起動時の sandbox・argv・CODEX_HOME・環境変数・schema 配置と、実行後の process tracking・JSON/JSONL 出力・capacity/quota/error 判定を扱う。Codex 呼び出しの実行環境構築と機械的な結果解釈を確認する入口である。
 
 ## Read this when
-- Codex CLI の argv、sandbox、model/provider、MCP、CODEX_HOME、schema 配置を変更または確認するとき
-- Codex subprocess の起動、process group tracking、abandon 時の停止、PID reuse 対策を変更または確認するとき
-- Codex の JSONL 出力、session ID、capacity/quota/unexpected error 判定を変更または確認するとき
+- Codex CLI の起動引数、sandbox 権限、model/provider 設定、通知や feedback MCP の上書きを調べるとき。
+- CODEX_HOME、subprocess の process group・pidfd・tracking file、abandon 時の停止や cleanup を変更・調査するとき。
+- Structured Output schema の配置、Codex JSONL の session/error event、capacity・quota・unexpected error の判定を確認するとき。
 
 ## Do not read this when
-- Codex CLI 境界ではなく、呼び出し側の editing run 業務フローや retry 方針そのものを確認するときは、該当する上位の実行制御を読む
-- Codex の設定値の正本や利用者向け仕様を確認するときは、設定・仕様の oracle 文書を直接読む
-- 一般的な process 操作や JSON/TOML 変換だけを調べる場合は、これを包括的なユーティリティ実装として読む必要はない
+- Codex CLI を呼び出す上位の業務フローや editing run 全体の仕様を確認する場合は、対応する app_spec または subcommand の実装・仕様を直接読む。
+- Codex CLI 以外の一般的な subprocess 実行、設定値の検証、feedback reporter 自体の挙動を調べる場合は、それぞれの専用実装を直接読む。
 
 ## hash
-- 0b29f6adb7e3496b14a2189bcde3655267fc313229fc7de75c7b2339af95f5f1
+- 217a2d18c640e54151b133627b31e6c7d59a727df335d174c5ee017625898afa
 
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI の起動処理を担う実装。エージェント呼び出しパラメータと設定から Codex CLI の実行引数・環境・作業ディレクトリを準備し、呼び出しログとフィードバック処理を管理する。
-- Codex CLI の起動結果をコンソールおよびサブコマンドログへ記録し、起動失敗や非ゼロ終了を cmoc のエラーとして返すための入口。
+- Codex TUI の起動処理を担当する実装。設定上書き引数、作業ディレクトリ、Codex HOME、通知 callback、呼び出しログ、feedback 用環境、成功・失敗イベントを準備し、Codex subprocess を実行する。TUI 起動経路や Codex 呼び出しログ・終了処理を確認する際の入口となる。
 
 ## Read this when
-- Codex TUI の起動方法、設定上書き引数、CODEX_HOME の検証、呼び出しログの生成を変更・調査するとき
-- Codex CLI 呼び出しの成功・失敗判定、終了コード、フィードバック呼び出し、ログイベントの挙動を確認するとき
+- Codex TUI の起動、設定上書き、Codex subprocess の実行結果、呼び出しログ、通知 callback、feedback 連携を調査・変更するとき。
 
 ## Do not read this when
-- Codex CLI のサブプロセス実行そのものや環境変数構築の詳細を変更・調査する場合は、専用のランタイムプロファイル実装を直接読むとき
-- 設定ファイルの読み込み規則やエージェント呼び出しパラメータの定義だけを確認する場合は、それぞれの定義元を直接読むとき
-- Codex TUI 以外の CLI サブコマンドの処理を調査するとき
+- Codex の通常の非 TUI 実行処理だけを調査するとき。設定値の定義や個別のログ形式の正本を確認する場合は、参照コメントで示された設定・仕様ファイルを直接読む。
 
 ## hash
-- d2a7dda0948a1d6552cd2f501bfc5d34304e986ddce2d754eb23237550effbee
+- beb932fb492747edaf1009a5537bea7b381cc5c99218079dc803ae42f47f6bd6
 
 # `runtime_config.py`
 
@@ -496,3 +493,20 @@
 
 ## hash
 - 7c345df8bc8ad1c10a5993fce9b60cd0c0f988c6d884b110ba45c40cc928c14e
+
+# `runtime_windows_toast.py`
+
+## Summary
+- Windows toast 通知と Codex TUI callback の非致命的な transport 境界を担うランタイム補助モジュール。通知文の短縮・固定化、Windows PowerShell/WinRT への有限時間 transport、TUI callback の invocation-local 状態と turn 重複排除を扱う。通知や callback 実装を確認する際の入口。
+
+## Read this when
+- Windows toast 通知の生成・送信、PowerShell executable の解決、通知文の入力制約や長さ制限を変更・確認するとき。
+- Codex TUI の agent-turn-complete callback、thread/turn identity の受理、並行 callback の重複排除、callback 用一時 state の cleanup を変更・確認するとき。
+- 通知 transport や callback の失敗が本命処理の terminal result に影響しないことを確認するとき。
+
+## Do not read this when
+- Codex の通常の terminal result 判定や最外側サブコマンドのライフサイクルだけを調べるとき。
+- Windows toast や TUI callback と無関係な共通ランタイム機能、または通知本文の仕様を調べるとき。
+
+## hash
+- d26eaaed129a3bddaf5f37f26de7b8533f56efc33bda3aa829ac8978b9dcad53

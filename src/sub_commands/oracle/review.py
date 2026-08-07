@@ -34,6 +34,7 @@ from cmoc_runtime import (
     head_commit,
     load_config,
     load_state_for_branch,
+    mark_current_subcommand_interrupted,
     remove_worktree,
     repo_root,
     run_cli_subcommand,
@@ -345,6 +346,8 @@ def _cmoc_oracle_review_body(
 
 def _record_oracle_review_interruption() -> None:
     """review 中断要求を console とサブコマンドログへ記録する。"""
+    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    mark_current_subcommand_interrupted()
     typer.echo(
         "# ユーザー中断要求を受け付けました\n"
         "- 確定済みの部分結果で oracle review を完了します。"

@@ -18,7 +18,7 @@ import signal
 import subprocess
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from types import FrameType
@@ -596,11 +596,15 @@ def _feedback_mcp_override_args() -> list[str]:
 def build_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig,
+    *,
+    notification_command: Sequence[str] | None = None,
 ) -> list[str]:
     """論理設定を専用 sandbox 引数と必要最小限の config argv にする。"""
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
     model_spec = config.codex.model[parameter.model_class]
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
+    notification_argv: list[JsonTomlValue] = []
+    notification_argv.extend(notification_command or ())
     args = [
         "--ask-for-approval",
         "on-request",
@@ -610,6 +614,10 @@ def build_codex_override_args(
         sandbox_mode,
         *_config_override("approvals_reviewer", _toml_string("auto_review")),
         *_config_override("model_reasoning_effort", _toml_string(reasoning_effort)),
+        # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+        # user config の callback と組み込み TUI 通知を呼び出し単位で上書きする。
+        *_config_override("notify", _toml_value(notification_argv)),
+        *_config_override("tui.notifications", "false"),
         *_feedback_mcp_override_args(),
     ]
     if model_spec.model_provider is not None:
@@ -651,10 +659,16 @@ def validate_codex_home(codex_home: Path) -> None:
 def prepare_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig | None = None,
+    *,
+    notification_command: Sequence[str] | None = None,
 ) -> list[str]:
-    """CmocConfig だけから path 非依存の Codex argv を返す。"""
+    """CmocConfig と任意の invocation-local callback から Codex argv を返す。"""
     resolved_config = config or CmocConfig()
-    return build_codex_override_args(parameter, resolved_config)
+    return build_codex_override_args(
+        parameter,
+        resolved_config,
+        notification_command=notification_command,
+    )
 
 
 def codex_subprocess_env(codex_home: Path) -> dict[str, str]:

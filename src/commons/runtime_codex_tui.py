@@ -29,6 +29,7 @@ from .runtime_paths import (
     timestamp,
 )
 from .runtime_results import CommandResult
+from .runtime_windows_toast import create_tui_notification_callback
 
 
 def run_codex_tui(
@@ -37,6 +38,7 @@ def run_codex_tui(
     root: Path | None = None,
     config: CmocConfig | None = None,
     purpose: str = "codex tui",
+    notification_command_name: str | None = None,
 ) -> CommandResult:
     """Codex TUI を設定上書き argv と call log を準備して起動する。"""
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
@@ -50,9 +52,49 @@ def run_codex_tui(
     # validation を合わせる。
     codex_home = resolve_codex_home(agent_call_cwd)
     validate_codex_home(codex_home)
+    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    # callback state はこの TUI process invocation の期間だけ保持する。
+    notification_callback = create_tui_notification_callback(
+        notification_command_name or purpose,
+        root,
+    )
+    try:
+        return _run_codex_tui_process(
+            parameter,
+            root=root,
+            config=config,
+            purpose=purpose,
+            agent_call_cwd=agent_call_cwd,
+            codex_home=codex_home,
+            log_dir=log_dir,
+            notification_command=(
+                notification_callback.command
+                if notification_callback is not None
+                else None
+            ),
+        )
+    finally:
+        if notification_callback is not None:
+            notification_callback.close()
+
+
+def _run_codex_tui_process(
+    parameter: AgentCallParameter,
+    *,
+    root: Path,
+    config: CmocConfig,
+    purpose: str,
+    agent_call_cwd: Path,
+    codex_home: Path,
+    log_dir: Path,
+    notification_command: list[str] | None,
+) -> CommandResult:
+    """invocation-local callback を設定した 1 つの Codex TUI process を実行する。"""
+    # user config の notify を無効化し、利用可能な場合だけ cmoc callback へ置換する。
     override_args = prepare_codex_override_args(
         parameter,
         config,
+        notification_command=notification_command,
     )
     argv = [
         "codex",

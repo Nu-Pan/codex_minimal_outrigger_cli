@@ -55,11 +55,11 @@ def test_oracle_investigation_has_no_session_precondition(
         "collect_prompt_editor_input",
         fake_collect_prompt_editor_input,
     )
-    calls: list[AgentCallParameter] = []
+    calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
     monkeypatch.setattr(
         investigation_module,
         "run_codex_tui",
-        lambda parameter, **_kwargs: calls.append(parameter),
+        lambda parameter, **kwargs: calls.append((parameter, kwargs)),
     )
 
     result = runner.invoke(
@@ -75,13 +75,14 @@ def test_oracle_investigation_has_no_session_precondition(
     assert "realization file の読み書き禁止" in editor_calls[0][1]
     assert "oracle file の調査に必要な cmoc 固有の契約は自動注入" in editor_calls[0][1]
     assert len(calls) == 1
-    parameter = calls[0]
+    parameter, kwargs = calls[0]
     assert parameter.model_class == ModelClass.FLAGSHIP
     assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()
     assert parameter.run_indexing_preflight is True
+    assert kwargs["notification_command_name"] == "oracle investigation"
     prompt_path = (
         root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / f"{time_stamp}_cmpl.md"
     )

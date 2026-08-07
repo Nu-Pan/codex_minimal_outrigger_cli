@@ -33,20 +33,21 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を扱うパッケージ。リファクタリング関連の CLI 実行と処理構成を確認するための入口となる。
-- 単一ファイルの調査・修正、変更概要生成、一般的な run lifecycle の詳細は、それぞれ専用の下位実装を直接確認する。
+- realization のリファクタリング処理を担うパッケージ。CLI 実行ライフサイクル、対象ファイルの調査・修正、状態同期、差分・commit 検証、完了・中断・エラー処理、fork report 生成への入口となる。
+- 個別の agent parameter、共通 runtime、refactor state のデータ構造、INDEX 更新処理だけを確認する場合は、配下の実装や対応する共通処理へ直接進む。
 
 ## Read this when
-- realization のリファクタリング処理の構成や入口を確認するとき
-- realization refactor fork の実行フロー、run 初期化、対象ファイル処理、state 同期、commit、unresolved 管理、完了判定を確認するとき
-- 割り込み・エラー時の cleanup、Codex child の停止、joinable 公開、fork report 生成を調査するとき
-- refactor state、realization 差分、agent commit、rename、INDEX 更新後の整合性検証を確認するとき
+- realization refactor fork サブコマンドの実行順序、状態遷移、処理単位、commit 境界を調査するとき
+- refactor target の選択、unresolved finding の管理、rename 後の state 同期、完了判定を変更・検証するとき
+- 中断・例外時の child process 停止、rollback、run state 更新、error/interruption report の挙動を調査するとき
+- fork report の変更概要、state 集計、completion log の生成内容を確認するとき
 
 ## Do not read this when
+- file review agent の prompt や Structured Output parameter の仕様だけを確認したいとき
+- refactor state のデータ構造や target 同期処理だけを確認したいとき
+- run の共通 lifecycle、git 差分分類、process tracking の一般仕様だけを確認したいとき
+- INDEX 更新処理そのものの仕様だけを確認したいとき
 - realization のリファクタリング以外の処理を確認するとき
-- 単一ファイルの調査・修正 prompt や Structured Output 契約だけを確認するとき
-- 正常完了時の変更概要生成だけを確認するとき
-- 一般的な editing run の join・abandon・state 遷移だけを確認するとき
 
 ## hash
-- 40d944c7b3fe42c3676a2af6e3b3efb15bad5494da89c4146deed57d0df570c8
+- abe322cb84e0b08816d5f1b252d160fdd8f033ccc4ee42735065f185f7380818

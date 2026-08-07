@@ -6,6 +6,7 @@
 - {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
 - {{work-root}}/oracle/doc/app_spec/misc_spec.md
+- {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 - {{work-root}}/oracle/src/oracle/other/path_model.py
 
 CLI lifecycle の error、log、preflight、completion は同じ runner、work root、
@@ -29,6 +30,7 @@ from _git_support import make_repo, run_git
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_logging as runtime_logging
+import commons.runtime_windows_toast as runtime_windows_toast
 import main as main_module
 from cmoc_runtime import (
     CmocError,
@@ -248,6 +250,124 @@ def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
     assert events[-1]["returncode"] == 130
 
 
+@pytest.mark.parametrize(
+    ("tui_process", "expected_state"),
+    [(False, "completed"), (True, None)],
+)
+def test_cli_terminal_notification_boundary_on_success(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tui_process: bool,
+    expected_state: str | None,
+) -> None:
+    """非対話成功だけを終了 log と cleanup の後に terminal 通知する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    calls: list[tuple[str, Path, str]] = []
+
+    def record_notification(command: str, repository: Path, state: str) -> None:
+        """通知時点の logger と終了 event を検証する。"""
+        assert runtime_cli.current_subcommand_logger() is None
+        [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob(
+            "*.jsonl"
+        )
+        events = [json.loads(line) for line in log_path.read_text().splitlines()]
+        assert events[-1]["event"] == "command_finished"
+        calls.append((command, repository, state))
+
+    monkeypatch.setattr(runtime_cli, "notify_terminal_result", record_notification)
+
+    runtime_cli.run_cli_subcommand(
+        lambda: None,
+        command_name="probe",
+        command_argv=["cmoc", "probe"],
+        doctor_preprocess=False,
+        tui_process=tui_process,
+    )
+
+    expected = [] if expected_state is None else [("probe", root, expected_state)]
+    assert calls == expected
+
+
+@pytest.mark.parametrize("tui_process", [False, True])
+def test_cli_terminal_notification_reports_error_for_all_command_kinds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tui_process: bool,
+) -> None:
+    """非対話と TUI の確定済み失敗をどちらも 1 回だけ通知する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    calls: list[tuple[str, Path, str]] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda command, repository, state: calls.append((command, repository, state)),
+    )
+
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            lambda: 7,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+            doctor_preprocess=False,
+            tui_process=tui_process,
+        )
+
+    assert exc_info.value.exit_code == 7
+    assert calls == [("probe", root, "failed")]
+
+
+def test_cli_terminal_notification_distinguishes_user_interruption(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """正常に確定したユーザー中断を自然完了やエラーとして通知しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    calls: list[str] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda _command, _repository, state: calls.append(state),
+    )
+
+    def interrupt_normally() -> None:
+        """中断可能サブコマンドの正常な完了処理を再現する。"""
+        runtime_cli.mark_current_subcommand_interrupted()
+
+    runtime_cli.run_cli_subcommand(
+        interrupt_normally,
+        command_name="probe",
+        command_argv=["cmoc", "probe"],
+        doctor_preprocess=False,
+    )
+
+    assert calls == ["interrupted"]
+
+
+def test_cli_notification_failure_does_not_change_terminal_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """通知 callback 自体の失敗を成功したサブコマンドへ逆流させない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    def fail_notification(*_args: object) -> None:
+        """通知境界からの想定外例外を再現する。"""
+        raise RuntimeError("toast failed")
+
+    monkeypatch.setattr(runtime_cli, "notify_terminal_result", fail_notification)
+
+    runtime_cli.run_cli_subcommand(
+        lambda: None,
+        command_name="probe",
+        command_argv=["cmoc", "probe"],
+        doctor_preprocess=False,
+    )
+
+
 def test_render_error_uses_structured_markdown() -> None:
     """CmocError は利用者が読む Markdown report として整形される。"""
     try:
@@ -414,15 +534,22 @@ def test_cli_completion_marker_skips_normal_command(
 ) -> None:
     """補完 marker の値によらず通常の command callback を実行しない。"""
     calls: list[str] = []
+    transport_checks: list[str] = []
     monkeypatch.setenv("_CMOC_COMPLETE", marker)
     monkeypatch.setenv("COMP_WORDS", "cmoc doctor")
     monkeypatch.setenv("COMP_CWORD", "1")
     monkeypatch.setattr(main_module, "cmoc_doctor_impl", lambda: calls.append("doctor"))
+    monkeypatch.setattr(
+        runtime_windows_toast,
+        "_powershell_executable",
+        lambda: transport_checks.append("checked") or None,
+    )
 
     result = runner.invoke(app, ["doctor"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert calls == []
+    assert transport_checks == []
     if not marker:
         assert result.output == ""
 

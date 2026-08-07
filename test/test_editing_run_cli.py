@@ -3,6 +3,8 @@
 この file は 16,000 文字を超えるが、editing run の session state、run worktree、
 fork report、および join/abandon は同じ lifecycle fixture を共有する。分割すると、
 同じ branch・state 遷移の準備と検証を複数 file で重複させるため、一続きに保つ。
+
+通知根拠: {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 """
 
 import json
@@ -19,6 +21,7 @@ from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
 
 import commons.indexing as indexing_module
+import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_codex_profile as codex_profile_module
 import commons.runtime_run as runtime_run_module
@@ -2668,6 +2671,12 @@ def test_refactor_interrupt_after_run_publish_is_joinable(
         raise KeyboardInterrupt()
 
     monkeypatch.setattr(refactor_module, "start_editing_run", interrupt_after_start)
+    notifications: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda command, _root, state: notifications.append((command, state)),
+    )
 
     result = runner.invoke(
         app,
@@ -2684,6 +2693,7 @@ def test_refactor_interrupt_after_run_publish_is_joinable(
     )
     report = Path(report_line.removeprefix("- fork report: ").strip("`"))
     assert 'completion_reason: "user_interruption"' in report.read_text()
+    assert notifications == [("realization refactor fork", "interrupted")]
 
 
 def test_start_run_interrupt_during_worktree_creation_cleans_partial_resources(

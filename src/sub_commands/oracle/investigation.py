@@ -31,6 +31,7 @@ def cmoc_oracle_investigation_impl() -> None:
         pre_log_check=ensure_prompt_editor_roots_ignored,
         command_name="oracle investigation",
         command_argv=["cmoc", "oracle", "investigation"],
+        tui_process=True,
         total_steps=4,
     )
 
@@ -55,4 +56,5 @@ def _cmoc_oracle_investigation_body() -> None:
         root=root,
         config=load_config(current_root),
         purpose="oracle investigation",
+        notification_command_name="oracle investigation",
     )

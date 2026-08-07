@@ -31,19 +31,20 @@
 # `feedback`
 
 ## Summary
-- 対象ディレクトリは feedback サブコマンドの実装入口で、受付後の observation 処理から report 公開までの feedback report 実行系を含む。
-- feedback サブコマンド全体を確認・変更する際の下位実装への入口として機能する。
+- feedback サブコマンドの実装をまとめるディレクトリ。入力 observation の処理、issue への統合、状態復旧、report 公開までの feedback report 処理を扱う。配下の各実装へ進むための入口。
 
 ## Read this when
-- feedback サブコマンドの実装や挙動を確認・変更するとき。
-- feedback report の状態遷移、観測の正規化、checkpoint 復旧、issue 判定、report 公開処理を調査するとき。
+- feedback サブコマンド全体の実行フローや責務分担を確認・変更するとき。
+- feedback report における observation の正規化、issue 統合、checkpoint・receipt・state の復旧、表示内容の生成を調べるとき。
+- feedback 関連の処理中断、部分失敗、再実行、corruption 検出の扱いを確認するとき。
 
 ## Do not read this when
-- feedback 以外のサブコマンドを扱うとき。
-- 観測受付・保存形式、feedback state/store の低レベル処理、または normalization parameter/schema の定義だけを確認したいときは、対応する実装を直接読む。
+- feedback observation の入力 schema、state record のデータモデル、共通 persistence API の詳細だけを調べるとき。
+- normalization agent の parameter や Structured Output schema だけを調べるとき。
+- feedback 以外のサブコマンド、または共通 CLI runtime・ログ・path・result validation だけを調べるとき。
 
 ## hash
-- 0ee2a91cc383ff54623a157adcb81eb7aa7442c85a640644474443eaa174f2e2
+- 89bcf4d5416cefb4ddd2a31d82471273bdc7caa5b425970f0df996d761fda786
 
 # `indexing.py`
 
@@ -63,39 +64,34 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドをまとめる package。oracle の編集・調査・レビューに関する CLI 実装と、それらを支える review 用の対象選定、ループ、パス、レポート、INDEX merge 処理への入口を提供する。
+- oracle サブコマンド群をまとめるパッケージ境界であり、編集・調査・レビューの各サブコマンド実装と、oracle review の対象列挙、パス解決、ループ、レポート、INDEX 差分処理への入口です。
 
 ## Read this when
-- oracle 系サブコマンドの構成や、各サブコマンド実装への入口を確認するとき。
-- oracle review の lifecycle、対象選定、所見処理、レポート生成、INDEX 差分 merge の実装箇所を特定するとき。
+- oracle サブコマンドの構成や、編集・調査・レビューの実行フローを確認するとき。
+- oracle review の対象範囲、実行ループ、結果レポート、INDEX 差分の commit/merge を調べるとき。
 
 ## Do not read this when
-- 特定の oracle サブコマンドの詳細な起動処理を確認する場合は、そのサブコマンド実装を直接読む。
-- review の対象列挙、ループ、パス解決、レポート、INDEX 操作の個別仕様を確認する場合は、対応する実装ファイルを直接読む。
-- oracle の正本仕様を確認する場合は、対応する oracle 文書を直接読む。
+- 特定サブコマンドの詳細実装、個別の review builder、パス解決、対象列挙、レポート描画、Git 操作だけを調べるときは、該当する下位ファイルを直接読む。
+- oracle の正本仕様や一般的な run lifecycle の仕様を確認するときは、参照される oracle 文書を直接読む。
 
 ## hash
-- d6eaa49c796a99bf83921c0827a42b43a0eae8cb1d6a595c2cb1491c29f5a39f
+- beffe7d3d481b189aabbebf78b68f5ae31c8eeee11663e067f6583dda684bed7
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply と refactor の処理構成や実行フローを確認する際の起点となる。
-- apply workload の入口と、realization apply fork における実行オーケストレーションを扱う下位要素へ進める。
-- realization のリファクタリング処理、CLI 実行、refactor fork の実行フローを扱う下位要素へ進める。
+- realization workload のサブコマンド群を束ねるパッケージ。workload の入口、apply、refactor の実行オーケストレーションと関連する状態遷移・差分検査・report 処理への入口を提供する。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- realization apply workload または realization refactor の実行フロー、状態管理、差分・commit・cleanup・report 処理を調査・変更するとき。
+- realization workload サブコマンド全体の構成や、apply・refactor の処理へ進む入口を確認するとき。
+- realization apply または refactor の実行順序、状態管理、差分・commit 検証、report 処理を調査するとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき。
-- apply agent 固有の prompt や差分適用規則だけを調べるとき。
-- 共通の run lifecycle、process tracking、git 差分操作の一般仕様だけを調べるとき。
-- 単一ファイルの refactor prompt や Structured Output 契約、正常完了時の変更概要生成だけを確認するとき。
+- realization workload に関係しない CLI サブコマンドを扱うとき。
+- apply agent 固有の prompt や、run lifecycle・process tracking・git 差分操作など共通処理の仕様だけを確認したいとき。
 
 ## hash
-- 07915510e6a8f6c0ead70596b6950aee914463aa3f7e95e7f55738f1c9b236a3
+- be75104a33adab32d91f2931c63f6211a43bd71e0da0b23e82882e075df2372b
 
 # `review`
 
@@ -148,15 +144,17 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実行入口と本体処理を定義する。インデックス事前処理、オリジナルプロンプトの編集入力、TUI 起動パラメータの構築、Codex TUI の起動を担当する。
+- 対象は `cmoc tui` の CLI 実行入口です。インデックスからは、TUI 起動フローやプロンプト編集入力、起動パラメータの組み立てを調べる必要がある場合に進みます。
 
 ## Read this when
-- `cmoc tui` の実行フロー、プロンプト入力、TUI 起動処理を変更または調査するとき。
-- TUI 起動時のリポジトリルート、作業ルート、設定値の受け渡しを確認するとき。
+- `cmoc tui` サブコマンドの実行開始処理を確認するとき
+- オリジナルプロンプトの編集から Codex TUI 起動までの連携を追うとき
+- TUI 起動時の固定設定や現在のリポジトリ・作業ルートの受け渡しを確認するとき
 
 ## Do not read this when
-- TUI 起動パラメータの詳細仕様だけを確認したいときは、パラメータ構築側の実装や対応する仕様を直接読む。
-- プロンプトエディタの入力・ignore 処理だけを変更または調査するときは、入力処理側の実装や対応する仕様を直接読む。
+- TUI 起動パラメータの詳細仕様だけを確認したいときは、パラメータ生成元の実装または TUI サブコマンド仕様を直接読む
+- プロンプト編集入力の仕様だけを確認したいときは、入力収集処理の実装または対応する仕様書を直接読む
+- CLI 共通の実行ラッパーや設定ロードの挙動だけを確認したいときは、それぞれの共通実装を直接読む
 
 ## hash
-- aa6f03a8d2a0cd859192f29279ebe32b845bd7c380a0ce0620b2b1a54dd3483e
+- 50927cde072036223c209ad43e0f4a9fc55ac3c827fdb77489488047831d25f5

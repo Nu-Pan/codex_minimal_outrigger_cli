@@ -4,6 +4,7 @@
 {{work-root}}/oracle/doc/app_spec/run_isolation.md、
 {{work-root}}/oracle/doc/branch_model.md、
 {{work-root}}/oracle/doc/app_spec/indexing.md。
+通知根拠: {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md。
 
 この file は 16,000 文字を超えるが、review fork、linked worktree、preflight commit、
 差分検証、merge は同じ review worktree lifecycle を検証する一つの責務である。分割
@@ -23,6 +24,7 @@ from _cli_support import run_doctor, runner
 from _git_support import make_repo, run_git
 
 import commons.indexing as indexing_module
+import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_run_lifecycle as lifecycle_module
 import sub_commands.oracle.review as review_module
@@ -317,6 +319,12 @@ def test_oracle_review_interrupt_during_run_creation_cleans_resources(
         raise KeyboardInterrupt()
 
     monkeypatch.setattr(review_module, "create_run_worktree", create_then_interrupt)
+    notifications: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda command, _root, state: notifications.append((command, state)),
+    )
 
     result = runner.invoke(
         app,
@@ -330,6 +338,7 @@ def test_oracle_review_interrupt_during_run_creation_cleans_resources(
     assert run_git(root, "branch", "--list", branch).stdout == ""
     assert not worktree.exists()
     assert not worktree.is_symlink()
+    assert notifications == [("oracle review", "interrupted")]
     report_path = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     )

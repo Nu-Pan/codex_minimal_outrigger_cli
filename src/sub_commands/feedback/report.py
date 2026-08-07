@@ -26,6 +26,7 @@ from cmoc_runtime import (
     CmocError,
     current_branch,
     load_state_for_branch,
+    mark_current_subcommand_interrupted,
     repo_root,
     run_cli_subcommand,
     run_codex_exec,
@@ -475,6 +476,8 @@ def _pending_entries(
 
 def _record_feedback_interruption() -> None:
     """ユーザー中断を正常な report 終了理由として console と log に残す。"""
+    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    mark_current_subcommand_interrupted()
     typer.echo(
         "# ユーザー中断要求を受け付けました\n"
         "- 確定済みの normalization unit で feedback report を完了します。"

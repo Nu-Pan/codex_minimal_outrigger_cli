@@ -1,39 +1,39 @@
 # `cli_auto_completion.md`
 
 ## Summary
-- CLI の自動補完プローブに関する正本仕様断片。`_CMOC_COMPLETE` が存在する呼び出しを通常実行と区別し、補完処理前の cmoc 固有処理・副作用・不要な標準出力／標準エラー出力を禁止する。CLI 起動処理や補完プローブの挙動を実装・検証する際の仕様上の入口となる。
+- CLI 自動補完プローブと通常の cmoc 実行を区別するための境界条件を定義する仕様。環境変数によるプローブ判定、通常実行向け前処理・副作用の抑止、補完処理に必要な出力だけを許可する制約を扱う。CLI の補完経路を実装・変更・レビューする際の入口となる。
 
 ## Read this when
-- `_CMOC_COMPLETE` を用いた自動補完の判定や実行順序を変更するとき
-- 自動補完時の副作用、状態検査、ログ・INDEX 更新、エラー出力の扱いを確認するとき
-- CLI 補完プローブの stdout／stderr の互換性を実装・テストするとき
+- 自動補完プローブの判定や処理順序を実装・変更するとき
+- 補完実行時に通常実行向けの検査、副作用、エラー出力が混入していないか確認するとき
+- CLI の自動補完境界に関する挙動仕様を確認するとき
 
 ## Do not read this when
-- 通常のサブコマンド処理、session／run 状態管理、ログ作成、INDEX 更新そのものを変更するとき
-- 自動補完とは無関係な CLI 入出力や一般的なエラー処理を確認するとき
+- Windows toast 通知固有の自動補完プローブ境界を確認するときは、指定された Windows toast 通知仕様を直接読む
+- 自動補完以外の CLI 実行や cmoc の一般的な状態管理を扱うとき
 
 ## hash
-- c6c8f4184e5a5408e45d6fc796612c986a7954e7b2002b30e42c241fd1b590e2
+- 5d3e467991746592b1be1e88a9dfee48ee1826974290fafb96de45460efbf671
 
 # `codex_exec_rule.md`
 
 ## Summary
-- Codex CLI を用いた agent call の呼び出し規約を定義する正本仕様。呼び出し方式、path context、環境変数、preflight、argv 上書き、sandbox、provider/model、prompt 전달、feedback reporter、ログ、Structured Output、並列実行、失敗時の retry・待機・エラー処理までを扱う。Codex 呼び出し実装や関連 builder・設定・ログ・出力検証の入口となる。
+- cmoc が Codex CLI を呼び出す際の包括的な運用規約を定める正本仕様。agent call の path context、環境変数、CLI 引数、sandbox と詳細なファイルアクセス制限、モデル/provider、プロンプト փոխանց送、feedback reporter、ログ保存、Structured Output 検証・補正、並列実行、失敗時の再試行・待機、および .agents 編集禁止を扱う。Codex 呼び出し実装やその設定・ログ・出力検証の挙動を確認する際の入口となる。
 
 ## Read this when
-- cmoc の Codex CLI 呼び出し仕様を実装・変更・レビューするとき
-- AgentCallParameter builder、path context、file access mode、sandbox、model/provider、reasoning effort の argv 反映を確認するとき
-- prompt の渡し方、Structured Output の検証・補正、session resume、Codex call ログを扱うとき
-- quota 枯渇、モデル容量超過、その他の Codex CLI 失敗時の処理を確認するとき
+- Codex CLI の初回呼び出し、resume、TUI 呼び出し、引数構築、prompt の渡し方、ログ保存を実装・変更・レビューするとき
+- AgentCallParameter の path context、file access mode、sandbox、model/provider、reasoning effort、approval 設定の適用規則を確認するとき
+- Structured Output の schema 指定、検証、補正 turn、session 再開、差分不変性を扱うとき
+- feedback reporter の登録・利用・終了処理、並列 call の分離、quota や一時的サーバー障害への対応を確認するとき
 
 ## Do not read this when
-- 個別の builder の詳細な実装責務だけを確認する場合は、builder の正本実装・関連仕様を直接読む
-- path context のデータモデルや導出規則だけを確認する場合は、指定された path model の定義を直接読む
-- feedback observation の event schema や collector 契約だけを確認する場合は、feedback observation 仕様を直接読む
-- Codex CLI と無関係な cmoc の実装・テスト・仕様を扱う場合
+- Codex CLI 呼び出しや Structured Output、関連するログ・sandbox・provider・feedback の挙動を扱わず、対象外の機能だけを調査・変更するとき
+- 個別 builder の詳細な実装責務だけを確認する場合は、まず対応する AgentCallParameter builder の正本へ進むとき
+- Windows toast 通知の effective configuration や callback 検証だけを扱う場合は、指定された Windows toast 通知仕様へ直接進むとき
+- Codex model provider の解決規則だけを扱う場合は、指定された model provider 仕様へ直接進むとき
 
 ## hash
-- 8e56036a6b90750dd42c0f38df90da8b87a765064a825d37091ff0aa2b2f4fd4
+- 25fabf9f0294cb673da6072ed4a60481cc8d1317112f86b1170382c398b1bdec
 
 # `codex_model_provider.md`
 
@@ -55,20 +55,20 @@
 # `console_and_file_log.md`
 
 ## Summary
-- コンソール表示とサブコマンドの JSON Lines ログ出力に関する共通仕様を定義する。時間・パスの表示形式、ログの配置・イベント・即時 flush、コンソール通知の構成、完了サマリーと feedback 件数の扱いを扱う。アプリケーションのログ挙動や出力形式を確認・変更する際の入口となる。
+- コンソール表示とサブコマンドログファイルに関する正本仕様。時間・パスの表示形式、JSON Lines ログの配置・イベント・即時 flush、コンソールログの Markdown 形式、開始・ステップ・Codex CLI・完了通知の要件を定める。ログ出力や表示仕様の実装・検証時の入口となる。
 
 ## Read this when
-- サブコマンドログのファイル配置、イベント内容、JSON Lines 形式、flush 要件を確認するとき
-- コンソールログの markdown 形式、ステップ通知、Codex CLI 通知、完了サマリーを確認するとき
-- 時間表示またはフルパス表示のフォーマットを確認するとき
-- feedback observation 件数の通知境界や成功判定への影響を確認するとき
+- サブコマンドのログファイル出力、イベント記録、flush、保存先を実装または検証するとき
+- コンソールの開始通知、ステップ通知、Codex CLI 通知、完了サマリーや表示フォーマットを実装または検証するとき
+- 時間表示やフルパス表示の仕様を確認するとき
 
 ## Do not read this when
-- ログやコンソール出力の具体的な実装箇所を直接調査・変更するだけで、仕様の確認が不要なとき
-- feedback observation の検出規則そのものを確認するときは、専用の feedback observation 仕様を読む
+- feedback observation のイベント契約そのものを確認するときは、指定された feedback observation 仕様を直接読む
+- Windows toast 通知の対象・順序・内容・失敗時の扱いだけを確認するときは、Windows toast notification 仕様を直接読む
+- ログやコンソール表示に関係しないサブコマンドの挙動を扱うとき
 
 ## hash
-- ab66699596c84833dfd1463899751bb5126f4c36d618af401bff9632e1652d62
+- 03b116a9345a0f2cbaa067b1583e6cbd5430095524eda773b4d682acf9abef9a
 
 # `doctor_preprocess.md`
 
@@ -224,20 +224,20 @@
 # `prompt_standard.md`
 
 ## Summary
-- cmoc が agent call に渡すプロンプトの標準規範を定める oracle doc。cmoc 固有契約と installed skill の責務境界、決定論的な規範注入、Structured Output の schema・事後条件・受理条件、プロンプト構築関数、プレースホルダと参照記法、使用言語を扱う。プロンプト生成や出力契約の設計・変更時に、app_spec 配下の関連仕様へ進む入口となる。
+- cmoc が agent に渡すプロンプトの標準規範を定める oracle doc。cmoc 固有契約と installed skill の責務境界、決定論的な規範注入、Structured Output の受理条件、プロンプト構築関数の利用、プレースホルダ・参照記法・言語原則を扱う。プロンプト生成や agent call の契約を確認する際の入口となる。
 
 ## Read this when
-- agent call の初回プロンプト、補正プロンプト、Structured Output、受理条件の設計または変更を行うとき
-- cmoc 固有契約と installed skill の責務境界、feedback instruction の共通注入、プレースホルダや cmoc_ref の扱いを確認するとき
-- プロンプトの記法、言語方針、oracle src の prompt builder との関係を確認するとき
+- agent call の初回プロンプト構築規則や prompt builder の責務を確認するとき
+- Structured Output の schema・決定論的事後条件・受理条件の境界を変更またはレビューするとき
+- cmoc 固有契約と installed skill の責務境界、プレースホルダ、cmoc_block/cmoc_ref 記法、言語規則を確認するとき
 
 ## Do not read this when
-- 個別のプロンプト builder 実装の詳細だけを調査・変更する場合は、対応する oracle src の実装を直接読む
-- feedback の観測・保存責務だけを確認する場合は、feedback observation の仕様を直接読む
-- Structured Output の補正処理の具体的な実行規則だけを確認する場合は、codex exec rule を直接読む
+- 個別の oracle src 実装の具体的な挙動や関数定義を直接調査するとき
+- feedback の保存・収集責務そのものを確認するときは、feedback observation の正本仕様を直接読む
+- 対象 repository 固有の開発手順やテスト実行方法だけを確認するときは、該当する repository 文書や開発規則を読む
 
 ## hash
-- cf3dd3c6498b114980635132e3eee9a0ea56aff71c233297af3132268f7920e9
+- 1126905bdb1eab48d45c31c5a2a07c3f8924a3b16f3d8cdf12d30f43f0002cf0
 
 # `run_isolation.md`
 
@@ -278,37 +278,37 @@
 # `sub_command`
 
 ## Summary
-- cmoc の各サブコマンドおよび主要なセッション・編集 run の正本仕様を集約するディレクトリ。doctor、indexing、tui、oracle 操作、realization apply/refactor、session 操作、feedback report などのコマンド単位の挙動確認に進む入口となる。
+- cmoc の主要サブコマンド仕様をまとめたディレクトリ。doctor、indexing、oracle edit/investigation/review、realization apply/refactor、session fork/join/abandon、run lifecycle、tui、feedback report の実行条件・責務・状態遷移・入出力を扱う。各サブコマンドの挙動や実装・テストの確認時に、該当する仕様文書へ進むための入口となる。
 
 ## Read this when
-- cmoc サブコマンドの引数、事前条件、実行手順、終了条件を確認・変更するとき
-- oracle 編集・調査・レビュー、realization の apply/refactor、session の fork/join/abandon、feedback report の仕様を確認するとき
-- 対象コマンド固有の責務と、共通 lifecycle や下位処理仕様との境界を判断するとき
+- cmoc のサブコマンドの引数、前提条件、実行手順、終了状態を確認したいとき。
+- oracle 編集・調査・レビュー、realization の適用・リファクタ、session/run の fork・join・abandon、TUI、feedback report の仕様を調べるとき。
+- サブコマンド間の共通 lifecycle と workload 固有仕様の境界を確認したいとき。
 
 ## Do not read this when
-- サブコマンド固有ではなく、doctor preprocess、Codex 起動、プロンプト入力、feedback schema、共通編集 run lifecycle などの共通仕様だけを確認したいときは、各参照先の正本仕様へ直接進む
-- 具体的な realization 実装やテストの詳細だけを調べるときは、対応する realization file または realization test を直接読む
-- INDEX.md のルーティング情報だけを確認する必要があるとき
+- doctor preprocess、feedback observation/state、Codex exec、prompt editor、通知など、各文書が委譲する詳細仕様だけを確認したいときは、参照先の正本を直接読む。
+- インデクシングや refactor の内部処理そのものなど、サブコマンド入口以外の実装詳細だけを調べたいとき。
+- 一般的な session 操作や git 操作の仕様だけを確認したいとき。
 
 ## hash
-- 2f847238402357a2a69c4fe1d56a32df1b0e3d8e8d3da1a8dcf0a027bc6efc77
+- 190c579c31ed97b0cb0905a8dcf9445859c9a686bd20c93955fee3fe094efce3
 
 # `subcommand_interruption.md`
 
 ## Summary
-- 中断可能な cmoc サブコマンドについて、対象範囲、Ctrl+C によるユーザー中断要求の通知、共通の完了・状態更新・報告・終了ログ要件を定める仕様。各サブコマンドの中断後の再開可否、確定済み部分結果、checkpoint、normalization の扱いを確認する入口となる。
+- 中断可能な cmoc サブコマンドにおけるユーザー中断要求（Ctrl+C）の受付、共通の完了処理、正常系としての扱い、report・終了 log での識別方法を定義する仕様。
+- 対象サブコマンドごとに、中断後の run の状態、再開可否、確定済み部分結果や checkpoint の扱いを定める。
 
 ## Read this when
-- 中断可能サブコマンドの追加・変更・実装適合性を確認するとき
-- Ctrl+C、正常系としての中断完了、report・終了 log、state 更新の仕様を調べるとき
-- refactor fork、oracle review、feedback report の中断後の扱いを確認するとき
+- 中断可能なサブコマンドの挙動、Ctrl+C の処理、部分結果の確定、interrupted 完了、または中断後の再実行・再開可否を確認するとき。
+- `cmoc realization refactor fork`、`cmoc oracle review`、`cmoc feedback report` の中断仕様を実装・レビューするとき。
 
 ## Do not read this when
-- 中断処理ではなく、個別サブコマンドの通常時の処理仕様だけを調べるとき
-- Codex CLI の呼び出し・retry・quota 待機の一般規則だけを調べるときは、専用の実行規則を直接読むとき
+- 通常のサブコマンドのエラー処理や、Ctrl+C を中断要求として扱うことが個別仕様に明記されていないサブコマンドを調べるとき。
+- Windows toast 通知の詳細を確認するときは、専用の通知仕様を直接読む。
 
 ## hash
-- d5eedb81caf0c6d8c73e2ccb3688d039a28a59d9ad85f8d46089eab351e13307
+- bea325ca9cf30996074c014e517e8a851ea4b8c89c5be2f0018a48fdc6c16cd4
 
 # `usage.md`
 
@@ -326,3 +326,23 @@
 
 ## hash
 - 67c1e11a5d4ebc3936273d706933419f4e789856bd1afb62c8baeed5896e0296
+
+# `windows_toast_notification.md`
+
+## Summary
+- Windows 11 上の WSL2 で cmoc が表示する Windows toast 通知の正本仕様。通知対象となるサブコマンド境界、非対話処理と TUI の発火条件、通知内容、Codex CLI 設定境界、外部契約の事前検証、通知 transport の制約、自動補完時の禁止事項、non-goal を定める。
+- Windows toast 通知の実装、サブコマンドや TUI の lifecycle event との接続、Codex CLI callback の利用可否検証、通知 transport の設計を確認する入口となる。
+
+## Read this when
+- Windows toast 通知を新規実装・変更・レビューするとき
+- 非対話サブコマンドの完了通知、TUI の turn 完了通知、通知の重複排除や中断状態の扱いを判断するとき
+- Codex CLI の通知 callback 設定や callback event の外部契約を検証するとき
+- WSL2 から Windows へ通知する transport、自動補完プローブ時の初期化禁止、通知失敗時の独立性を確認するとき
+
+## Do not read this when
+- 通知仕様ではなく、一般的なサブコマンドの挙動やログ仕様だけを調べるときは、対象となる各サブコマンドの正本仕様を直接読む
+- Windows 以外のデスクトップ通知や toast の表示カスタマイズを扱うとき
+- agent turn 途中の承認要求や prompt・assistant 回答の表示を扱うとき
+
+## hash
+- ae77b082d0e9fb697d97d557fa7f6c7ba6f6fa51afbe88b7b6e5a3ad805974f2

@@ -97,6 +97,21 @@
 ## hash
 - 51b074c8cb0b59b3fbb3ee372cdad386653bfe5dc0bfb3fcf84999f5565989f2
 
+# `conftest.py`
+
+## Summary
+- pytest 実行時に Windows toast 通知の外部副作用を隔離する共通 fixture。pytest プロセスと子プロセスの双方で fake transport を使わせ、利用者の通知履歴へ実際の toast を残さないためのテスト環境入口。
+
+## Read this when
+- pytest の共通 fixture、テスト実行時の Windows toast 通知隔離、または subprocess から呼ばれる toast transport の挙動を確認するとき。
+
+## Do not read this when
+- Windows toast の本番実装や通知仕様そのものを調べるときは、toast 実装または正本仕様を直接読む。
+- 個別テストの検証ロジックや fixture 以外のテスト共通設定を調べるとき。
+
+## hash
+- b3f3b49e68d53aabe2132800ffc6a1c690c6a2188dd64826fa72ead0f29fe6c4
+
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
@@ -217,19 +232,22 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理を外部挙動から検証するテスト。エディタ入力の正本初期値、timestamp 衝突時の保持、編集済み prompt による Codex TUI 起動、agent call パラメータ、prompt 保存先、linked worktree の扱い、`.cmoc` の ignore とログ配置を確認する。TUI 前処理やその統合挙動に関するテストの入口。
+- TUI 起動直前の CLI 前処理の外部挙動を検証する realization test です。
+- エディタ入力の正本初期文、timestamp 衝突時の入力保持、編集済み prompt による Codex TUI の直接起動、起動パラメータ、完成 prompt、linked worktree での保存先、`.cmoc` ignore とログ配置を扱います。
+- TUI サブコマンドの前処理挙動を確認するための入口であり、実装詳細や正本仕様の確認は参照先の実装・oracle 文書へ進みます。
 
 ## Read this when
-- `tui` サブコマンドの起動処理、エディタ入力、Codex TUI 呼び出し、prompt の生成・保存を変更または調査するとき
-- linked worktree と main repository 間の prompt・ログ配置や `.cmoc` ignore の挙動を確認するとき
-- TUI 前処理の外部挙動に対するテストを追加・変更するとき
+- `tui` サブコマンドの起動前処理、エディタ入力、完成 prompt、Codex TUI 起動パラメータの外部挙動を検証または変更するとき
+- 通常のリポジトリと linked worktree における prompt・ログ・`.cmoc` ignore の配置を確認するとき
+- 同一 timestamp の入力ファイル衝突や indexing preflight のテスト分離を確認するとき
 
 ## Do not read this when
-- TUI 以外のサブコマンドや、TUI 前処理と無関係な prompt builder・runtime preflight の内部実装だけを調査するとき
-- 正本仕様そのものを確認する場合は、テストではなく指定された oracle 仕様を直接読むとき
+- TUI 本体の内部実装や表示を調査するとき
+- 正本仕様の内容を確認・変更するとき
+- CLI の別サブコマンドや、テスト対象に含まれない共通処理だけを調査するとき
 
 ## hash
-- 7caff6698462b8d5de5df1bba5a1b6b3298b87b201146255c81513baee8ba1c4
+- b0765d7b5fe2f3f3cb01450852b6d77b661cb23b4bab3be71a59c0e7f096e2fb
 
 # `test_codex_runtime_errors.py`
 
@@ -352,18 +370,20 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 実行ランタイムの振る舞いを検証する pytest。完成済み prompt の読み込み、作業ディレクトリと sandbox 引数、Codex 呼び出しログ・サブコマンドイベント・コンソール要約、timestamp 衝突時のログ保持、CLI 不在・KeyboardInterrupt・非 0 終了時の失敗処理を扱う。TUI 実行処理やその仕様に関するテストを追加・変更するときの入口。
+- Codex TUI 実行ラッパーの振る舞いを検証するテスト群。完成済みプロンプトの読み込み、作業ディレクトリ・sandbox・CLI 引数、呼び出しログとサブコマンドイベント、終了結果や例外時のエラー記録を確認する。Codex TUI 実行処理の実装や、そのログ・アクセス制約に関するテストの入口。
 
 ## Read this when
-- Codex TUI の CLI 引数、アクセスモード、prompt の扱い、実行ログまたはイベントログを検証・変更するとき
-- Codex CLI 不在、割り込み、非 0 終了など TUI 呼び出し失敗時の外部挙動を確認するとき
+- Codex TUI の実行引数、prompt の扱い、agent call のアクセスモードを変更または検証するとき
+- Codex TUI の成功、CLI 不在、KeyboardInterrupt、非 0 終了時のログ・コンソール報告を変更または確認するとき
+- TUI call log と codex_call サブコマンドイベントの生成契約をテストするとき
 
 ## Do not read this when
-- TUI 以外の Codex 実行経路や一般的なログ機能だけを変更・調査するとき
-- Codex TUI の実装詳細を変更する作業で、まず実装モジュールや対応する oracle file を直接確認すべきとき
+- Codex TUI 以外の Codex 実行経路や一般的なサブコマンドのテストを扱うとき
+- 実装の詳細を確認することが目的で、対応する runtime 実装や oracle 仕様を直接読むべきとき
+- prompt 構築規則、ログ形式、通知仕様そのものを変更・確認するとき
 
 ## hash
-- caeee66fedc4771b2e991b66cd2bfd3011c2fd01d6b40412f75cfec1e06f52cb
+- bfd29666737329453563f4dc1683fcd4286ea87f5519d1b46bf72a84fb8482b7
 
 # `test_doctor_cli.py`
 
@@ -386,40 +406,37 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の integration test として、realization apply/refactor の fork、run join/abandon、共通 lifecycle state、worktree・branch・process tracking・report の生成と cleanup を検証する。異常系では想定外差分、agent commit、INDEX refresh、副作用、merge/cleanup/rollback 失敗、中断、破損 tracking、競合を扱い、状態遷移と資源保全を確認する。関連する編集 run lifecycle の挙動を一続きで確認する入口となる。
+- editing run の realization apply/refactor fork と run join/abandon を横断する統合テスト。共通 lifecycle fixture を使い、run state、worktree・branch 資源、Codex child tracking、INDEX refresh、report、rollback、merge、cleanup、interrupt/error recovery の挙動を検証する。
 
 ## Read this when
-- realization apply または refactor の fork lifecycle を変更・調査するとき
-- run join/abandon、worktree・branch cleanup、process tracking、report、rollback の挙動を変更・調査するとき
-- editing run の状態遷移や apply/refactor と共通 lifecycle の統合挙動を検証するとき
+- realization apply/refactor fork の run lifecycle、変更 path 検証、管理対象外差分の拒否、commit/rollback、fork report を確認・変更するとき。
+- run join/abandon の merge、force-resolve、session state 同期、worktree・branch cleanup、process tracking、lifecycle report を確認・変更するとき。
+- editing run の中断、失敗、競合、未読 process tracking、INDEX refresh、副作用、Codex child 停止に関する統合挙動を検証するとき。
 
 ## Do not read this when
-- INDEX 更新単体の仕様や実装を確認するだけのとき
-- apply または refactor の agent prompt・単独処理を確認するだけで、run lifecycle との統合挙動を扱わないとき
-- 通常の CLI 入口や無関係なコマンドのテストを探しているとき
+- 単一の lifecycle helper や report formatter の実装詳細だけを確認する場合は、対応する src の実装を直接読む。
+- INDEX の生成規則だけを確認する場合は、indexing の正本仕様または実装・専用テストを読む。
+- editing run と無関係な CLI コマンドやテストを調査する場合。
 
 ## hash
-- 8fa12dea1fc99606ba072444f0bb300d9ee40b6a02e040ae3d0c47537ce72c0a
+- 21ca1f982f6cf1ed051cd2004bd7fa4fda54d98380bb2d58f380bc579ea897d8
 
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の収集・保存・正規化・状態検証・増分 report を一連の受け入れテストで検証する。
-- reporter と collector 間の MCP/JSON-RPC 契約、capability、rate limit、context、redaction、path 境界、冪等性、異常復旧を扱う。
-- repository-local な issue state、normalization unit、report manifest、assessment、fingerprint 更新、machine issue の抑制、ユーザー中断時の完了処理を検証する。
-- feedback subsystem の実装や oracle 仕様を変更した際に、その lifecycle 全体の外部挙動を確認するためのテスト入口である。
+- feedback observation の収集から保存、検証、normalization、増分 report 生成までを一続きで検証する受け入れテスト。reporter/collector の通信契約、context・rate limit・secret/path 安全性、冪等性、atomic recovery、feedback state の整合性、machine issue の抑制、Ctrl+C・publication recovery などを扱う。feedback subsystem の外部挙動や lifecycle を変更・調査する際の主要なテスト入口である。
 
 ## Read this when
-- feedback observation の reporter、collector、store、state、normalizer、reporter report の挙動を変更または検証するとき。
-- raw observation から ingestion receipt、normalization unit、incremental report までの一連の lifecycle を確認するとき。
-- rate limit、secret redaction、path boundary、atomic write、recovery、fingerprint freshness、machine issue suppression の回帰を調査するとき。
+- feedback observation の reporter、collector、state、normalization、report サブコマンドの挙動を変更または検証するとき
+- raw observation から report までの lifecycle、障害回復、増分処理、入力検証の受け入れ条件を確認するとき
 
 ## Do not read this when
-- feedback subsystem の単一実装関数の詳細だけを確認する場合は、対応する src 実装または oracle 仕様を直接読む。
-- feedback と無関係な CLI subcommand、一般的なテスト実行設定、別機能の fixture を扱う場合。
+- feedback subsystem の実装詳細だけを確認する場合は、対象の commons、sub_commands、または acp.builder 実装を直接読むとよい
+- feedback 仕様そのものを確認する場合は、列挙された oracle の app_spec 文書を読むとよい
+- feedback と無関係な CLI 機能やテストの調査・変更には進まなくてよい
 
 ## hash
-- 377bce63cfa439e3f5c9f8d34d4100444508a520f4010f4fe170bcf32fbdefc4
+- 59694b34e8c9f8aa49f915583895d4709dce14daf6a4d226b2784bf14fe74e1d
 
 # `test_indexing_cli.py`
 
@@ -477,35 +494,34 @@
 # `test_oracle_edit_cli.py`
 
 ## Summary
-- `cmoc oracle edit` の main worktree TUI 起動制御を検証するテスト。TUI 実行順序、oracle 差分の保持、run lifecycle や session state の不変性、モデル・権限・prompt 設定、および起動前提違反時のエラーを扱う。oracle edit CLI 実装とその起動前提を確認する際のテスト入口。
+- `cmoc oracle edit` の main-worktree TUI 起動を検証する pytest。oracle 編集前の indexing preflight・clean worktree 検査・TUI 呼び出し、oracle 差分の保持、run lifecycle 非使用、失敗時の終了結果を確認する。起動条件違反として linked worktree、非 session branch、非 active session、未コミット差分も検証する。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動、実行引数、prompt 注入、差分保持の挙動を変更または検証するとき
-- oracle edit の main worktree・session branch・clean worktree 前提やエラー処理を変更または検証するとき
+- `cmoc oracle edit` の CLI 挙動、TUI 起動順序、oracle 編集時の状態保持を変更・確認するとき。
+- oracle edit の main-worktree/session 前提や起動前検査のテストを追加・修正するとき。
 
 ## Do not read this when
-- oracle edit 以外のサブコマンドの挙動を確認するとき
-- oracle edit の正本仕様や実装詳細そのものを確認するときは、まず対応する oracle 仕様または実装を直接読む場合
+- oracle edit の実装詳細そのものを変更・調査する場合は、参照先として示された oracle 仕様と realization 実装を直接読む。
+- 他のサブコマンド、一般的な indexing、session state の仕様だけを扱う場合は、このテストではなく対応する実装・仕様・テストへ進む。
 
 ## hash
-- 497959f379256116990c899ae1320a81251ab407d398dac0a7b54d9833a8d6c0
+- 9de907c4d9d88071eeafbd81e6cf4fa5ebdaea20b380e9d1b55e1865bbc94a51
 
 # `test_oracle_investigation_cli.py`
 
 ## Summary
-- `cmoc oracle investigation` CLI の起動条件と起動時パラメータを検証するテスト。session なしの main worktree で起動できること、エディタ入力と自動注入指示が適切に扱われること、oracle 専用の読み取り権限・モデル・推論設定・indexing preflight が指定されることを確認する。あわせて investigation の realization adapter が期待する builder だけを公開することも検証する。
+- `cmoc oracle investigation` CLI の起動条件と起動時パラメータを検証するテスト。セッション前提なしで main worktree から起動できること、oracle 専用の読み取り権限・preflight・プロンプト生成が適用されることを確認する。investigation 用 realization adapter の公開 API が指定ビルダーだけであることも検証する。oracle investigation CLI の挙動や対応する起動ビルダーの公開範囲を確認する入口。
 
 ## Read this when
-- `oracle investigation` サブコマンドの起動可否や session 前提を変更・調査するとき
-- oracle investigation 起動時の prompt、editor input、自動注入指示、AgentCallParameter の設定を確認するとき
-- investigation の realization adapter の公開シンボルを変更・検証するとき
+- `oracle investigation` サブコマンドの起動条件、プロンプト入力、Codex TUI 呼び出し設定を変更または検証するとき
+- oracle investigation の builder adapter が公開するシンボルを変更または検証するとき
 
 ## Do not read this when
-- oracle investigation 以外のサブコマンドの挙動を調査するとき
-- 起動条件や builder の公開範囲ではなく、oracle investigation の本体仕様を確認するときは、参照されている仕様書や実装を直接読む
+- oracle investigation 以外のサブコマンドの CLI 起動条件を扱うとき
+- 共通 CLI ヘルパー、Git リポジトリ fixture、または oracle investigation の正本仕様そのものを直接確認するとき
 
 ## hash
-- bb91be2f9c8e3f01fc18863489d6ea6766753d3d408830b1dba647d0d2c1e4cd
+- 8a0b4a789d751f3c1be37816715e9230bd7cd051d80d63b61de1d67b78a49528
 
 # `test_oracle_review_loop.py`
 
@@ -579,22 +595,21 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- oracle review の隔離 run における linked worktree・session branch・snapshot commit の利用と、作成失敗・中断時の branch/worktree cleanup を検証する統合テスト。
-- review worktree で生成された INDEX.md だけを session に merge し、非 INDEX 差分・merge conflict・削除・rollback residue・cleanup failure を適切に扱うことを確認する。
-- indexing preflight の実行コンテキスト、Structured Output、run lifecycle lock、active editing run との共存、report 結果を検証する。
+- oracle review の隔離 run と INDEX.md 統合を検証する回帰テスト群。linked worktree・session snapshot・review branch の lifecycle、preflight、差分制約、merge conflict、cleanup、割り込み・異常終了時の復旧を扱う。oracle review の実装や関連する run isolation・branch model・indexing の挙動を確認する入口となる。
 
 ## Read this when
-- oracle review、review worktree、run isolation、session branch、preflight commit の挙動を変更または調査するとき
-- oracle review における INDEX.md の merge、差分制限、merge conflict 復旧、cleanup を変更または検証するとき
-- oracle review の中断・例外処理、run lifecycle lock、agent call のテスト方法を確認するとき
+- oracle review の review worktree、run branch、session snapshot の作成・所有・cleanup を変更または調査するとき
+- oracle review が INDEX.md だけを session に統合する契約、preflight、commit 済み・未コミット差分の検証を変更または調査するとき
+- review branch の merge conflict、merge rollback、割り込み、cleanup failure の挙動を変更または調査するとき
+- oracle review の回帰テストや関連する隔離 run のテスト要件を確認するとき
 
 ## Do not read this when
-- oracle review の通常の CLI 引数仕様や所見判定ロジックだけを確認したいときは、対応する実装または oracle review 仕様を直接読む
-- INDEX.md の一般的な生成・更新規則だけを確認したいときは、indexing の仕様・実装・専用テストを直接読む
-- 他のサブコマンドの worktree lifecycle や cleanup だけを扱うとき
+- oracle review の実装詳細を直接確認する必要があり、まず実装ファイルや正本仕様を読むべきとき
+- oracle review と無関係な CLI サブコマンド、通常の INDEX 生成、または別のテスト領域だけを扱うとき
+- 一般的な Git worktree・merge の使い方だけを確認したいとき
 
 ## hash
-- bb24e8f1e29da826cfe03ea61429d73eed522f7fca0e9c4dc3277fc47c83a974
+- 8b6cd9de414f150019cc4e7d59debec9309b7ebd4d686fed4bfa308e8f0aaa64
 
 # `test_packaged_import.py`
 
@@ -655,20 +670,22 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の error report、console/file log、doctor preflight、shell completion、work root 境界を検証する統合テスト。共通 runner と終了処理を通じた外部契約の入口として、runtime CLI 周辺の挙動を確認する。
-- duration 表示、並列 subcommand logger、doctor preprocess・pre-log check・callback・KeyboardInterrupt の終了処理、stdout error report、Click 引数解析、scope 制約、completion probe の副作用抑制、worktree ごとの処理対象を扱う。
+- CLI の error、log、preflight、completion 境界を横断的に検証するテスト群。共通 CLI runner の終了処理、サブコマンドログ、エラーレポート、端末通知、work root 制約、shell completion の副作用抑制を扱う。
+- duration 表示、並列 logger、doctor preprocess、pre-log check、CLI parser、ユーザー中断、TUI・非対話コマンドの成功／失敗通知まで、CLI lifecycle の外部契約を検証する入口。
 
 ## Read this when
-- CLI lifecycle の error report、ログ生成・終了イベント、doctor preflight、completion probe、work root 制約の実装または仕様を検証するとき
-- runtime_cli、runtime_logging、error rendering、CLI parser、completion 初期化の変更が既存の外部契約に適合するか確認するとき
+- CLI runner の error report、終了コード、例外処理、KeyboardInterrupt、終了ログ、端末通知の挙動を変更または調査するとき
+- サブコマンドログの生成・イベント記録・並列書き込み・worktree の保存先を変更または検証するとき
+- doctor preprocess、pre-log check、work root 制約、CLI 引数解析、shell completion の preflight・副作用境界を変更または検証するとき
+- CmocError の Markdown 整形や duration 表示の仕様に関わる実装を変更または検証するとき
 
 ## Do not read this when
-- CLI の通常機能や個別サブコマンドの成功系だけを確認する場合
-- duration・logger・error rendering の実装詳細を直接調べる場合は、それぞれの実装または正本仕様を先に読むとき
-- CLI lifecycle と無関係なテストデータ、Git 操作、他パッケージの挙動を調べる場合
+- CLI lifecycle の外部挙動ではなく、個別サブコマンドの内部処理だけを変更・調査するとき
+- error、log、preflight、completion のいずれにも関係しない一般的なテストや実装を扱うとき
+- 対象の実装詳細や正本仕様を直接確認する必要があるときは、このテストだけで判断せず、対応する runtime 実装または oracle 文書を読む
 
 ## hash
-- 6a1ddc1af9c5586c87fb02ee6657a9541b14f703ff50521aab334d6fdfd938f8
+- c16f9452be80be1ae215a4051903ff56ecf78b52e9789ea06495d5e17a381cef
 
 # `test_runtime_codex_conflicts.py`
 
@@ -706,19 +723,19 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex argv の model、sandbox、provider 上書き契約と、フィードバック MCP 設定の安全な伝達を検証するテスト。未知の file access mode や未定義 provider の拒否、任意 provider 設定の TOML 化、schema のバイト保持、invalid UTF-8 出力の扱いも対象とする。runtime_codex_profile の Codex 起動前構築・schema 保存・出力解析の挙動を確認する realization test。
+- Codex argv の model、sandbox、provider 上書き契約を検証する pytest テスト。file access mode から sandbox への変換、承認・通知・MCP feedback 設定、provider の TOML 表現、未定義 mode/provider の拒否を対象とする。あわせて schema の元バイト保持・SHA256 保存と不正 UTF-8 出力の扱いも検証する。Codex 実行引数の構築や runtime codex profile の挙動を変更・検証するときの realization test として読む。
 
 ## Read this when
-- Codex の model、sandbox、provider 上書き引数の生成または変更を検証するとき
-- Codex 起動時の MCP フィードバック設定、secret の argv 非露出、provider 設定の TOML 変換を確認するとき
-- schema のハッシュ保存や Codex 出力 JSON の異常系を変更・調査するとき
+- Codex の sandbox、model/provider、通知、MCP feedback を含む実行引数構築のテストを確認するとき
+- runtime codex profile の schema 保存または JSON 出力エラー処理を変更・検証するとき
+- Codex override の未知値・未定義 provider に対する起動前エラー契約を確認するとき
 
 ## Do not read this when
-- Codex argv や runtime_codex_profile の挙動を変更・検証しない一般的なテスト作業
-- 正本仕様そのものを確認・変更する作業では、このテストから始めず oracle の app_spec 文書を直接読むとき
+- Codex 実行引数や runtime codex profile の挙動に関係しないテスト・実装を調べるとき
+- 正本仕様そのものを確認する必要があり、oracle の Codex 実行規則や model/provider 仕様を直接読むべきとき
 
 ## hash
-- d43052038e0b562dc89c79e4fa76edda9e8d0a399bf3bd3028cff490652a90de
+- 1ad54a1d64add564f00b59396b1e9514466389e5b371618643e1c36b3eae0710
 
 # `test_runtime_config.py`
 
@@ -889,3 +906,19 @@
 
 ## hash
 - 650a3dab8a023eb6c55dd32e6ed5ce178f4641d3f81b8805b33c18bce039c1db
+
+# `test_windows_toast.py`
+
+## Summary
+- Windows toast 通知のテスト。端末結果の通知内容を短い必須項目に限定し、PowerShell transport が通知値を JSON stdin として安全に渡すこと、通知失敗を本処理へ波及させないことを検証する。Codex の turn 完了 callback について、turn 単位の重複排除、本文非使用、TUI invocation 内だけの一時 state、単独実行可能な argv を確認する。
+
+## Read this when
+- Windows toast の表示内容、PowerShell transport の引数・入力方式、通知失敗時の境界を変更または検証するとき
+- Codex callback の turn 完了通知、重複排除、callback state の寿命、TUI から起動する実コマンドを変更または検証するとき
+
+## Do not read this when
+- toast や Codex callback に関係しない機能の実装・テストを扱うとき
+- 通知機能の実装詳細そのものを確認する必要があり、まず対応する実装や正本仕様を読むべきとき
+
+## hash
+- f1f0a9f3a04e4ada5ad53f104f3705c209336c73548820126cb535f8a17f9e6b

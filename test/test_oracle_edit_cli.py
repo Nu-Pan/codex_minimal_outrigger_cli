@@ -175,6 +175,7 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     assert parameter.agent_call_cwd == root.resolve()
     assert "cwd" not in kwargs
     assert kwargs["purpose"] == "oracle edit"
+    assert kwargs["notification_command_name"] == "oracle edit"
     prompt_suffix = " を読んで、その指示に従って下さい"
     assert parameter.prompt.endswith(prompt_suffix)
     complete_prompt_path = Path(parameter.prompt.removesuffix(prompt_suffix))
