@@ -26,6 +26,7 @@ from acp.builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter,
 )
 from basic.acp import FileAccessMode
+from cmoc_runtime import CmocError
 from commons.runtime_feedback import FeedbackInvocation
 from commons.runtime_feedback_state import (
     IssueView,
@@ -406,6 +407,31 @@ def test_agent_candidate_requires_all_fingerprints_for_exact_match(
     assert candidates == [view]
 
 
+def test_feedback_unit_validates_state_before_commit(tmp_path: Path) -> None:
+    """unit が不完全な tracked state を commit せずに rollback する。"""
+    root = make_repo(tmp_path)
+    observation_id = "fbo_00000000-0000-7000-8000-000000000001"
+    canonical_key = f"agent\0{observation_id}"
+    current_issue_id = issue_id(canonical_key)
+    identity = identity_record(
+        current_issue_id,
+        canonical_key,
+        "agent_report",
+        observation_id,
+        "2026-01-01T00:00:00Z",
+    )
+
+    with pytest.raises(CmocError):
+        feedback_report_module._commit_record_unit(
+            root,
+            [("identity", identity)],
+            "invalid feedback unit",
+        )
+
+    assert not record_path(root, identity, "identity").exists()
+    assert run_git(root, "status", "--short").stdout.strip() == ""
+
+
 def test_normalizer_presence_keeps_changed_fingerprint_stale(
     tmp_path: Path,
 ) -> None:
@@ -457,6 +483,23 @@ def test_feedback_report_is_incremental_and_refreshes_fingerprint(
     assert first.exit_code == 0, first.output
     assert raw_path.is_file()
     assert ingestion_receipt_path(root, raw_path.stem).is_file()
+    report_records = sorted((root / ".cmoc/gt/ar/feedback/report").glob("fbr_*.json"))
+    [first_record_path] = report_records
+    first_record = read_json_object(first_record_path)
+    for commit_id in first_record["state_commit_ids"]:
+        assert f"feedback normalization unit commit: `{commit_id}`" in first.output
+    log_paths = sorted((root / ".cmoc/gu/ar/log/sub_command").glob("*.jsonl"))
+    events = [
+        json.loads(line)
+        for path in log_paths
+        for line in path.read_text().splitlines()
+        if line
+    ]
+    assert any(
+        event.get("event") == "feedback_report_committed"
+        and event.get("state_commit_ids") == first_record["state_commit_ids"]
+        for event in events
+    )
     reports = sorted((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
     assert len(reports) == 1
     assert 'result: "attention"' in reports[-1].read_text()

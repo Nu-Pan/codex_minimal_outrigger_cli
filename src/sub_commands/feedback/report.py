@@ -291,8 +291,18 @@ def _cmoc_feedback_report_body(show_all: bool) -> int:
         [("report", report_state)],
         f"cmoc feedback report {report_id}",
     )
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "feedback_report_committed",
+            report_id=report_id,
+            state_commit_ids=state_commit_ids,
+            report_record_commit=report_commit,
+        )
     typer.echo(f"- feedback report: `{report_path}`")
-    typer.echo(f"- feedback state commit: `{report_commit}`")
+    for commit_id in state_commit_ids:
+        typer.echo(f"- feedback normalization unit commit: `{commit_id}`")
+    typer.echo(f"- feedback report record commit: `{report_commit}`")
     if result == "partial":
         return 2
     if result == "error":
@@ -1203,6 +1213,7 @@ def _commit_record_unit(
         for (kind, record), path in zip(records, paths, strict=True):
             assert path == record_path(worktree, record, kind)
             write_tracked_record(path, record)
+        validate_tracked_feedback_state(worktree)
         return _commit_paths(worktree, paths, message)
     except BaseException:
         relative = sorted({str(path.relative_to(worktree)) for path in paths})

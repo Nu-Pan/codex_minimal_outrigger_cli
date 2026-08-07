@@ -15,18 +15,22 @@
 # `report.py`
 
 ## Summary
-- feedback report コマンドの中心実装。raw observation の snapshot 固定、未処理 observation の normalization、invalid receipt、machine/agent issue 統合、checkpoint、unit 単位の commit/rollback、assessment 再評価、前回 report との差分計算、Markdown report と tracked report record の生成までを一連の中断可能 transaction として扱う。
-- feedback report の状態機械や normalization の順序・境界を確認する必要がある場合の主要な入口であり、個別の正規化ルール、永続 state の record schema、CLI 実行基盤そのものを調べる場合は対応する import 先を直接読む。
+- feedback report コマンドの中核状態機械。raw observation の snapshot 固定、未処理 observation の validation と増分 normalization、machine/agent issue 統合、checkpoint 再利用、unit 単位の commit/rollback、assessment 再評価、前回 report との差分計算、可視化条件の適用、Markdown report と tracked report record の保存までを一つの中断可能な transaction として扱う。
+- feedback normalization の ingestion・issue identity・revision・occurrence・assessment・report record を生成し、確定済み unit の commit ID、deferred/invalid 件数、再発・再検証・disposition 変更などを最終 report に反映する。
+- feedback report の CLI 実行入口と、session branch・run state・clean worktree・tracked feedback state の事前条件検査も担う。
 
 ## Read this when
-- cmoc feedback report の実行順序、snapshot、deferred/invalid 処理、machine または agent observation の issue 統合を変更・調査するとき
-- normalization checkpoint の再利用、unit commit/rollback、assessment の再評価、report の表示・抑制条件を確認するとき
-- report の front matter、issue 差分、tracked report record、部分失敗・中断時の挙動を確認するとき
+- `cmoc feedback report` の実行順序、状態遷移、snapshot、deferred observation、partial/interrupted 処理を調べるとき。
+- feedback observation を machine rule または agent report の issue に正規化・統合する処理を変更または確認するとき。
+- normalization checkpoint、unit commit/rollback、tracked feedback record、assessment の再評価を調べるとき。
+- 前回正常 report との差分、既定表示と `--all` 表示、再発 issue・再検証要求・human disposition 変更の判定を調べるとき。
+- feedback report の出力 Markdown、front matter、可視 issue の evidence/reference 表示、report record 保存を変更または確認するとき。
 
 ## Do not read this when
-- 個別の observation schema や feedback record のデータ構造だけを確認する場合は、runtime feedback state/store の定義を直接読む
-- normalization agent に渡す parameter や Structured Output schema だけを確認する場合は、feedback normalize builder と schema を直接読む
-- CLI 共通実行、ログ、session state、git 操作の共通仕様だけを確認する場合は、対応する runtime module や oracle specification を直接読む
+- feedback observation の envelope/schema や issue record のデータ構造そのものだけを調べるときは、先に `commons.runtime_feedback_state` などの直接の定義を読む。
+- feedback normalization agent の prompt/Structured Output parameter の生成だけを調べるときは、`acp.builder.feedback.normalize_issue` を直接読む。
+- 一般的な CLI runtime、git 操作、ログ、パス、report directory の共通実装だけを調べるときは、それぞれの `cmoc_runtime`、`commons.runtime_logging`、`commons.runtime_paths`、`commons.runtime_results` の定義を直接読む。
+- feedback report の正本仕様や利用者向け挙動を確認するときは、対応する oracle 文書を先に読む。
 
 ## hash
-- 76513f6cf3c1cf4485174493038e2851d909868302d875b7cc4a5b632581c0c3
+- c2e07c0ded18d88fffc5d4a161cc9aa7de7349d27163b699d9d5c495dbe91ad9
