@@ -189,20 +189,19 @@
 # `misc_spec.md`
 
 ## Summary
-- cmoc の雑多な仕様を定義する文書。oracle file・realization file の列挙方法、work-root の前提、cmoc 実行時のパス関係、タイムスタンプ形式、cmoc-managed-branch の対象範囲を扱う。これらの用語や運用条件を確認する際の入口となる。
+- oracle file と realization file の分類、Git ignore 判定、pruning、nested repository、性能不変条件、回帰検証を定義する雑多な仕様。
+- work-root の前提、cmoc 実行時のパス関係、タイムスタンプ形式、cmoc-managed-branch の意味を定める共通仕様として、関連実装・テストへ進む入口になる。
 
 ## Read this when
-- oracle file または realization file の列挙条件を確認するとき
-- work-root、repo-root、cmoc process、agent call のパス関係を確認するとき
-- タイムスタンプの形式を確認するとき
-- cmoc-managed-branch 上の変更範囲を判断するとき
+- ファイル列挙や分類結果、Git ignore、traversal/pruning、nested repository の扱いを確認・変更するとき。
+- 列挙性能、回帰検証、work-root の前提、cmoc の実行パス、タイムスタンプ、managed branch の定義を確認するとき。
 
 ## Do not read this when
-- 個別の oracle 仕様や実装の詳細を確認したいとき
-- cmoc の一般的な開発手順や言語・ツール固有の手順を確認したいときは、対応する仕様文書や skill を直接読む
+- 個別機能の実装詳細やテスト内容だけを確認したい場合。
+- INDEX.md の構造や対象ファイルの一覧だけを確認したい場合。
 
 ## hash
-- 77d23570d567556574348b40f8db0ff01bb9215863ecc0993c8d2a41176280ee
+- e70e0e5912c67d8b3b9f617921cd84063bd3dc27cf5e7c749fe4917aef3e05c1
 
 # `prompt_editor_input.md`
 
