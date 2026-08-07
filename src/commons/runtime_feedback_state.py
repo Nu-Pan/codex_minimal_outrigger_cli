@@ -51,6 +51,28 @@ class IssueView:
     dispositions: list[dict[str, Any]] = field(default_factory=list)
 
 
+_MACHINE_RULE_CONTRACTS: dict[str, tuple[str, str, str]] = {
+    "feedback.reporter_unavailable.v1": (
+        "feedback.reporter_unavailable",
+        "tooling",
+        "reporter_component",
+    ),
+    "codex.structured_output_validation_exhausted.v1": (
+        "codex.structured_output_validation_exhausted",
+        "tooling",
+        "agent_call_kind",
+    ),
+}
+_MACHINE_REPORTER_COMPONENTS = {"reporter", "collector", "transport"}
+_MACHINE_REPORTER_FAILURE_CODES = {
+    "missing",
+    "version_mismatch",
+    "collector_unavailable",
+    "transport_unavailable",
+    "protocol_error",
+}
+
+
 def _record_id(prefix: str, body: dict[str, Any]) -> str:
     """ID field を除いた record body の canonical SHA256 を返す。"""
     return f"{prefix}{sha256_bytes(canonical_json_bytes(body))}"
@@ -85,6 +107,25 @@ def machine_canonical_key(observation: dict[str, Any]) -> str:
 def agent_canonical_key(observation_id: str) -> str:
     """agent report から新規 issue を作る canonical key を返す。"""
     return f"agent\0{observation_id}"
+
+
+def _is_machine_canonical_key(value: str) -> bool:
+    """rule registry に適合する machine issue canonical key かを返す。"""
+    parts = value.split("\0")
+    if len(parts) != 3:
+        return False
+    rule_id, subject_type, normalized_subject_id = parts
+    contract = _MACHINE_RULE_CONTRACTS.get(rule_id)
+    if contract is None or subject_type != contract[2] or not normalized_subject_id:
+        return False
+    if rule_id != "feedback.reporter_unavailable.v1":
+        return True
+    component, separator, failure_code = normalized_subject_id.partition(":")
+    return (
+        separator == ":"
+        and component in _MACHINE_REPORTER_COMPONENTS
+        and failure_code in _MACHINE_REPORTER_FAILURE_CODES
+    )
 
 
 def issue_directory(worktree: Path, current_issue_id: str) -> Path:
@@ -302,7 +343,7 @@ def validate_observation_envelope(
             "source_event",
         },
     )
-    if observation.get("schema_version") != 1:
+    if not _is_version_one(observation.get("schema_version")):
         errors.append("/schema_version: expected 1")
     observation_id_value = observation.get("observation_id")
     if not is_observation_id(observation_id_value):
@@ -402,6 +443,11 @@ def _is_timestamp(value: str) -> bool:
         return False
 
 
+def _is_version_one(value: object) -> bool:
+    """JSON number の version 1 だけを受理する。"""
+    return type(value) is int and value == 1
+
+
 def _validate_observation_context(context: dict[str, Any]) -> list[str]:
     """collector が付与する version 1 context を検査する。"""
     errors = _field_set(
@@ -470,7 +516,7 @@ def _validate_observation_versions(
         versions,
         {"reporter", "reporter_protocol", "observation_schema", "rule_id"},
     )
-    if versions.get("observation_schema") != 1:
+    if not _is_version_one(versions.get("observation_schema")):
         errors.append("/versions/observation_schema: expected 1")
     if source == "agent_report":
         for name in ("reporter", "reporter_protocol"):
@@ -559,7 +605,7 @@ def _validate_machine_observation(observation: dict[str, Any]) -> list[str]:
     ):
         if not isinstance(payload.get(name), str):
             errors.append(f"/payload/{name}: expected string")
-    if payload.get("rule_version") != 1:
+    if not _is_version_one(payload.get("rule_version")):
         errors.append("/payload/rule_version: expected 1")
     if not isinstance(payload.get("event_fields"), dict):
         errors.append("/payload/event_fields: expected object")
@@ -582,7 +628,7 @@ def _validate_machine_observation(observation: dict[str, Any]) -> list[str]:
     for name in ("event_id", "event_type", "log_path", "event_sha256"):
         if not isinstance(source_event.get(name), str):
             errors.append(f"/source_event/{name}: expected string")
-    if source_event.get("event_schema_version") != 1:
+    if not _is_version_one(source_event.get("event_schema_version")):
         errors.append("/source_event/event_schema_version: expected 1")
     event_sha = source_event.get("event_sha256")
     if isinstance(event_sha, str) and not re.fullmatch(r"[0-9a-f]{64}", event_sha):
@@ -615,19 +661,7 @@ def _validate_machine_observation(observation: dict[str, Any]) -> list[str]:
                 )
         if observation.get("observed_at") != event_fields.get("occurred_at"):
             errors.append("/observed_at: does not match source event")
-    rule_contracts = {
-        "feedback.reporter_unavailable.v1": (
-            "feedback.reporter_unavailable",
-            "tooling",
-            "reporter_component",
-        ),
-        "codex.structured_output_validation_exhausted.v1": (
-            "codex.structured_output_validation_exhausted",
-            "tooling",
-            "agent_call_kind",
-        ),
-    }
-    contract = rule_contracts.get(str(rule_id_value))
+    contract = _MACHINE_RULE_CONTRACTS.get(str(rule_id_value))
     if contract is None:
         errors.append("/payload/rule_id: rule is not allowlisted")
     else:
@@ -642,15 +676,9 @@ def _validate_machine_observation(observation: dict[str, Any]) -> list[str]:
             if rule_id_value == "feedback.reporter_unavailable.v1":
                 component = event_fields.get("component")
                 failure_code = event_fields.get("failure_code")
-                if component not in {"reporter", "collector", "transport"}:
+                if component not in _MACHINE_REPORTER_COMPONENTS:
                     errors.append("/payload/event_fields/component: unsupported value")
-                if failure_code not in {
-                    "missing",
-                    "version_mismatch",
-                    "collector_unavailable",
-                    "transport_unavailable",
-                    "protocol_error",
-                }:
+                if failure_code not in _MACHINE_REPORTER_FAILURE_CODES:
                     errors.append(
                         "/payload/event_fields/failure_code: unsupported value"
                     )
@@ -761,7 +789,11 @@ def _is_string_list(value: object, *, non_empty: bool = False) -> bool:
 
 def _validate_common_fields(record: dict[str, Any]) -> list[str]:
     """全 tracked record に共通する schema version を検査する。"""
-    return [] if record.get("schema_version") == 1 else ["schema_version must be 1"]
+    return (
+        []
+        if _is_version_one(record.get("schema_version"))
+        else ["schema_version must be 1"]
+    )
 
 
 def _require_timestamp(
@@ -865,6 +897,20 @@ def _validate_identity_record(record: dict[str, Any], path_id: str) -> list[str]
         is None
     ):
         errors.append("machine issue requires deterministic observation ID")
+    created_from = record.get("created_from_observation_id")
+    if (
+        record.get("origin") == "agent_report"
+        and isinstance(canonical_key, str)
+        and isinstance(created_from, str)
+        and canonical_key != agent_canonical_key(created_from)
+    ):
+        errors.append("agent canonical_key does not match created observation")
+    if (
+        record.get("origin") == "machine_rule"
+        and isinstance(canonical_key, str)
+        and not _is_machine_canonical_key(canonical_key)
+    ):
+        errors.append("machine canonical_key does not match rule registry")
     _require_timestamp(record, "created_at", errors)
     return errors
 
@@ -1257,6 +1303,22 @@ def _validate_tracked_record_relations(
             )
     for path, revision in revisions:
         current_issue_id = str(revision["issue_id"])
+        identity_record_value = identity_records.get(current_issue_id)
+        if (
+            isinstance(identity_record_value, dict)
+            and identity_record_value.get("origin") == "machine_rule"
+        ):
+            canonical_key = identity_record_value.get("canonical_key")
+            rule_id = (
+                canonical_key.split("\0", 1)[0]
+                if isinstance(canonical_key, str)
+                else ""
+            )
+            contract = _MACHINE_RULE_CONTRACTS.get(rule_id)
+            if contract is not None and revision.get("category") != contract[1]:
+                errors.append(
+                    f"{path}: machine issue category does not match rule registry"
+                )
         unknown = set(revision["source_observation_ids"]) - occurrence_ids.get(
             current_issue_id, set()
         )

@@ -302,24 +302,22 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の tracked append-only normalized state を一元的に扱うモジュール。identity、revision、occurrence、assessment、disposition、ingestion、report の各 record を構築・配置・canonical JSON として保存する。
-- raw observation envelope、各 tracked record の schema、content-addressed ID、パス整合性、record 間参照、Git conflict marker を検査する。
-- tracked state または指定 commit から issue view を読み込み、観測時刻と ID に基づいて effective revision・assessment・disposition を選択する。
-- feedback の canonical issue key、normalizer version、normalization unit ID、report ID など、append-only state の識別値を生成する。
+- feedback の append-only tracked state を表す record の構築・保存・検証・参照を一元管理する中核モジュール。
+- 観測、issue identity、revision、occurrence、assessment、disposition、ingestion、report の schema、content-addressed ID、record 間参照整合性を扱う。
+- tracked state から effective issue view を構築し、作業ツリーまたは指定 Git commit 時点の feedback 状態を読み取る下位機能への入口となる。
 
 ## Read this when
-- feedback observation の収集結果を tracked state へ正規化・保存する処理を変更するとき。
-- feedback record の schema、ID、canonical JSON、パス、参照関係の検査規則を確認するとき。
-- issue の effective state を現在または特定 Git commit から読み取る処理を変更するとき。
-- feedback normalization の再開単位、normalizer version、report record の識別規則を確認するとき。
+- feedback state の record schema、ID 生成、append-only 保存、JSON 検証、issue 間参照の整合性を変更・調査するとき。
+- 観測の正規化処理や report が利用する effective issue 選択、Git commit 時点の state 読み取りを確認するとき。
+- feedback の新しい record 種別や field を追加し、構築・検証・読み取りの一貫性を確認するとき。
 
 ## Do not read this when
-- agent report の入力 payload schema 自体を変更する場合は、まず対応する reporter input schema の正本と実装を読む。
-- tracked feedback state の永続パスや Git 実行の共通処理だけを変更する場合は、対応する runtime store または runtime git の直接実装を読む。
-- 人間向け disposition の作成・更新フローだけを変更する場合は、disposition を操作する上位の feedback workflow を読む。
+- agent からの feedback 入力 schema や issue 正規化の具体的な生成規則だけを確認したいときは、対応する oracle 仕様または専用の builder/schema を先に読む。
+- feedback の収集、イベント検出、Git 操作、CLI の実行制御だけを調べるときは、それぞれの担当モジュールへ直接進む。
+- 単純な runtime error 定義や canonical JSON、UUID、path 解決の共通実装だけを確認したいときは、インポート元の runtime 共通モジュールを読む。
 
 ## hash
-- e64699c20566dc521a9caf3ffc8c9d5b498266ac39e74b40d2b3dd2b8a173fc7
+- e3724f24e4687b8cc664e76aae331f40f4e7aae4e1f3d0e790b7ec088e22d6e7
 
 # `runtime_feedback_store.py`
 

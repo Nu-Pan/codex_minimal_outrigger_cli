@@ -571,6 +571,219 @@ def test_feedback_unit_validates_state_before_commit(tmp_path: Path) -> None:
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
+def test_feedback_state_rejects_boolean_schema_versions(tmp_path: Path) -> None:
+    """JSON の boolean を schema version 1 として受理しない。"""
+    root = make_repo(tmp_path)
+    observation_id = "fbo_00000000-0000-7000-8000-000000000001"
+    observed_at = rfc3339_now()
+    envelope = {
+        "schema_version": 1,
+        "observation_id": observation_id,
+        "source": "agent_report",
+        "observed_at": observed_at,
+        "context": _context(root),
+        "versions": {
+            "reporter": "1",
+            "reporter_protocol": "1",
+            "observation_schema": 1,
+            "rule_id": None,
+        },
+        "payload": _payload(kind="error", path=None),
+        "evidence_fingerprints": [],
+        "source_event": None,
+    }
+
+    assert validate_observation_envelope(envelope) == []
+    envelope["schema_version"] = True
+    assert "/schema_version: expected 1" in validate_observation_envelope(envelope)
+
+    canonical_key = f"agent\0{observation_id}"
+    current_issue_id = issue_id(canonical_key)
+    identity = identity_record(
+        current_issue_id,
+        canonical_key,
+        "agent_report",
+        observation_id,
+        observed_at,
+    )
+    identity["schema_version"] = True
+    occurrence = occurrence_record(
+        current_issue_id,
+        {
+            "observation_id": observation_id,
+            "observed_at": observed_at,
+            "context": {
+                "cmoc_session_id": None,
+                "subcommand_invocation_id": "scope",
+                "log_paths": [],
+            },
+        },
+        "a" * 64,
+    )
+    revision = revision_record(
+        current_issue_id,
+        observed_at,
+        [observation_id],
+        "tooling",
+        "summary",
+        "action",
+        "impact",
+        {"certainty": "unknown", "description": "unknown"},
+        [],
+    )
+    write_tracked_record(record_path(root, identity, "identity"), identity)
+    write_tracked_record(record_path(root, occurrence, "occurrence"), occurrence)
+    write_tracked_record(record_path(root, revision, "revision"), revision)
+
+    with pytest.raises(CmocError):
+        validate_tracked_feedback_state(root)
+
+
+def test_tracked_feedback_state_requires_origin_canonical_key(
+    tmp_path: Path,
+) -> None:
+    """identity の origin と canonical key の組み合わせを検査する。"""
+    root = tmp_path / "state"
+    observation_id = "fbo_00000000-0000-7000-8000-000000000001"
+    observed_at = "2026-01-01T00:00:00Z"
+    canonical_key = "agent\0different-observation"
+    current_issue_id = issue_id(canonical_key)
+    identity = identity_record(
+        current_issue_id,
+        canonical_key,
+        "agent_report",
+        observation_id,
+        observed_at,
+    )
+    occurrence = occurrence_record(
+        current_issue_id,
+        {
+            "observation_id": observation_id,
+            "observed_at": observed_at,
+            "context": {"subcommand_invocation_id": "scope"},
+        },
+        "a" * 64,
+    )
+    revision = revision_record(
+        current_issue_id,
+        observed_at,
+        [observation_id],
+        "tooling",
+        "summary",
+        "action",
+        "impact",
+        {"certainty": "unknown", "description": "unknown"},
+        [],
+    )
+    for kind, record in (
+        ("identity", identity),
+        ("occurrence", occurrence),
+        ("revision", revision),
+    ):
+        write_tracked_record(record_path(root, record, kind), record)
+
+    with pytest.raises(CmocError):
+        validate_tracked_feedback_state(root)
+
+
+def test_tracked_feedback_state_rejects_unknown_machine_subject(
+    tmp_path: Path,
+) -> None:
+    """machine issue の subject は rule registry の値に限定する。"""
+    root = tmp_path / "state"
+    observation_id = "fbo_" + "a" * 32
+    observed_at = "2026-01-01T00:00:00Z"
+    canonical_key = (
+        "feedback.reporter_unavailable.v1\0reporter_component\0unknown-subject"
+    )
+    current_issue_id = issue_id(canonical_key)
+    identity = identity_record(
+        current_issue_id,
+        canonical_key,
+        "machine_rule",
+        observation_id,
+        observed_at,
+    )
+    occurrence = occurrence_record(
+        current_issue_id,
+        {
+            "observation_id": observation_id,
+            "observed_at": observed_at,
+            "context": {"subcommand_invocation_id": "scope"},
+        },
+        "a" * 64,
+    )
+    revision = revision_record(
+        current_issue_id,
+        observed_at,
+        [observation_id],
+        "tooling",
+        "summary",
+        "action",
+        "impact",
+        {"certainty": "unknown", "description": "unknown"},
+        [],
+    )
+    for kind, record in (
+        ("identity", identity),
+        ("occurrence", occurrence),
+        ("revision", revision),
+    ):
+        write_tracked_record(record_path(root, record, kind), record)
+
+    with pytest.raises(CmocError):
+        validate_tracked_feedback_state(root)
+
+
+def test_tracked_feedback_state_requires_machine_rule_category(
+    tmp_path: Path,
+) -> None:
+    """machine issue の category は rule registry の値に限定する。"""
+    root = tmp_path / "state"
+    observation_id = "fbo_" + "a" * 32
+    observed_at = "2026-01-01T00:00:00Z"
+    canonical_key = (
+        "feedback.reporter_unavailable.v1\0reporter_component\0collector:missing"
+    )
+    current_issue_id = issue_id(canonical_key)
+    identity = identity_record(
+        current_issue_id,
+        canonical_key,
+        "machine_rule",
+        observation_id,
+        observed_at,
+    )
+    occurrence = occurrence_record(
+        current_issue_id,
+        {
+            "observation_id": observation_id,
+            "observed_at": observed_at,
+            "context": {"subcommand_invocation_id": "scope"},
+        },
+        "a" * 64,
+    )
+    revision = revision_record(
+        current_issue_id,
+        observed_at,
+        [observation_id],
+        "oracle",
+        "summary",
+        "action",
+        "impact",
+        {"certainty": "unknown", "description": "unknown"},
+        [],
+    )
+    for kind, record in (
+        ("identity", identity),
+        ("occurrence", occurrence),
+        ("revision", revision),
+    ):
+        write_tracked_record(record_path(root, record, kind), record)
+
+    with pytest.raises(CmocError):
+        validate_tracked_feedback_state(root)
+
+
 def test_normalizer_presence_keeps_changed_fingerprint_stale(
     tmp_path: Path,
 ) -> None:
