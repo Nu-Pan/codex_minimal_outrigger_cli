@@ -18,22 +18,19 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI を呼び出す際の包括的な運用規約を定める正本仕様。agent call の path context、環境変数、CLI 引数、sandbox と詳細なファイルアクセス制限、モデル/provider、プロンプト փոխանց送、feedback reporter、ログ保存、Structured Output 検証・補正、並列実行、失敗時の再試行・待機、および .agents 編集禁止を扱う。Codex 呼び出し実装やその設定・ログ・出力検証の挙動を確認する際の入口となる。
+- cmoc が Codex CLI を呼び出す際の包括的な規約を定める正本仕様。agent call と Codex call の区別、path context、環境変数、preflight、argv による設定上書き、sandbox・ファイルアクセス、モデル・provider、prompt 전달、feedback reporter、ログ、Structured Output 検証・補正、並列実行、失敗時の retry・待機方針を扱う。Codex CLI 呼び出しの実装や検証に関する各仕様の入口となる。
 
 ## Read this when
-- Codex CLI の初回呼び出し、resume、TUI 呼び出し、引数構築、prompt の渡し方、ログ保存を実装・変更・レビューするとき
-- AgentCallParameter の path context、file access mode、sandbox、model/provider、reasoning effort、approval 設定の適用規則を確認するとき
-- Structured Output の schema 指定、検証、補正 turn、session 再開、差分不変性を扱うとき
-- feedback reporter の登録・利用・終了処理、並列 call の分離、quota や一時的サーバー障害への対応を確認するとき
+- cmoc の Codex CLI 呼び出し方法、引数、sandbox、ファイルアクセス、path context、モデル設定、prompt 전달、ログ保存、Structured Output、feedback reporter、並列化、quota・一時障害時の retry を実装・変更・検証するとき
+- agent call と Codex call の境界や session ID、call ID、呼び出し単位の設定を確認するとき
+- Codex CLI 呼び出しに関する既存仕様が他の実装・テスト規約とどう関係するかを確認するとき
 
 ## Do not read this when
-- Codex CLI 呼び出しや Structured Output、関連するログ・sandbox・provider・feedback の挙動を扱わず、対象外の機能だけを調査・変更するとき
-- 個別 builder の詳細な実装責務だけを確認する場合は、まず対応する AgentCallParameter builder の正本へ進むとき
-- Windows toast 通知の effective configuration や callback 検証だけを扱う場合は、指定された Windows toast 通知仕様へ直接進むとき
-- Codex model provider の解決規則だけを扱う場合は、指定された model provider 仕様へ直接進むとき
+- Codex CLI 呼び出しの規約自体ではなく、Windows toast 通知、model provider の詳細、feedback observation の event schema、prompt standard、開発環境、設計、テスト実行などの個別仕様だけを確認する場合は、本文が指定する各正本へ直接進む
+- INDEX.md のルーティング情報だけを確認する場合や、Codex CLI を使わない一般的な実装・文書作業の場合
 
 ## hash
-- 25fabf9f0294cb673da6072ed4a60481cc8d1317112f86b1170382c398b1bdec
+- 6785ac96b8a0eb1a88f78b5033aaeda4b0fd3d455bba295202febce33e83cd7e
 
 # `codex_model_provider.md`
 
