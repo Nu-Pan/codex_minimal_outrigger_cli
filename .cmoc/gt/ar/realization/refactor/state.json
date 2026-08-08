@@ -1164,10 +1164,10 @@
     "last_investigated_at": "2026-07-27_17-07_58_869347000"
   },
   "test/_real_path_integration/sitecustomize.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "6d7489648f9840d3b97de6fd9d74e5408a172504727844b0ede6e65379e8a8f0",
+    "last_investigated_at": "2026-08-09_07-59_38_510322000"
   },
   "test/conftest.py": {
     "investigation_required": false,
