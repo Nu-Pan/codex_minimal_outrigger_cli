@@ -441,20 +441,19 @@
 # `test_file_inventory.py`
 
 ## Summary
-- Git 管理下の oracle・realization ファイルを full-tree で列挙し、除外境界、ignore 判定、nested repository、特殊ファイル、symlink、linked worktree を検証するテスト群。
-- ファイル列挙結果と refactor state の同期、SHA 更新、候補数増加時の Git 処理量が一定であることも検証する。
+- Git 管理下の oracle/realization ファイル列挙契約を検証するテスト群。通常・nested repository・linked worktree・各種 ignore source・除外境界を対象に、列挙結果、refactor state、SHA 更新、非通常ファイルや symlink の拒否、Git 処理量の安定性を確認する。ファイルインベントリ実装の挙動を確認するためのテスト入口。
 
 ## Read this when
-- ファイルインベントリ列挙や realization file 判定の実装を変更・検証するとき。
-- Git ignore、nested repository、metadata 除外、特殊ファイル・symlink の扱いを確認するとき。
-- refactor state の同期や列挙処理の性能特性を変更するとき。
+- oracle/realization ファイルの full-tree 列挙、Git ignore 判定、nested repository 境界、除外ディレクトリ、symlink・FIFO・device mode の扱いを変更または検証するとき
+- refactor state の同期やファイル SHA 更新が列挙結果と一致することを確認するとき
+- ファイル数増加時の Git 処理量や traversal の計算量を検証するとき
 
 ## Do not read this when
-- CLI の個別サブコマンドや、ファイル列挙・refactor state と無関係な機能を扱うとき。
-- テスト実行方法だけを確認したいときは、テスト実行手順の仕様を直接読む。
+- ファイル列挙や runtime_git の挙動に関係しない CLI 機能を変更または調査するとき
+- テスト実行方法だけを確認したいときは、repository local の test_execution の案内を先に読むべき
 
 ## hash
-- 3b17f5b62d6fb9519122318b78661719189acd7d5d3575659863392044770a3d
+- 111e740c45761cc98cedac17f6e8113db3e44d3cd80dfe2d0568bdcd7039f307
 
 # `test_indexing_cli.py`
 
@@ -931,15 +930,16 @@
 # `test_windows_toast.py`
 
 ## Summary
-- Windows toast 通知のテスト。端末結果の通知内容を短い必須項目に限定し、PowerShell transport が通知値を JSON stdin として安全に渡すこと、通知失敗を本処理へ波及させないことを検証する。Codex の turn 完了 callback について、turn 単位の重複排除、本文非使用、TUI invocation 内だけの一時 state、単独実行可能な argv を確認する。
+- Windows toast 通知のテストで、terminal result の短い表示内容、PowerShell transport への安全な JSON 渡し、通知失敗の隔離、Codex callback の turn 単位重複排除、TUI callback state の invocation 内限定を検証する。Windows toast 実装の挙動変更や関連テストの意図を確認する入口。
 
 ## Read this when
-- Windows toast の表示内容、PowerShell transport の引数・入力方式、通知失敗時の境界を変更または検証するとき
-- Codex callback の turn 完了通知、重複排除、callback state の寿命、TUI から起動する実コマンドを変更または検証するとき
+- Windows toast の表示内容、transport の引数・入力形式、PowerShell 実行境界を変更または調査するとき
+- Codex の agent-turn-complete callback、通知重複排除、callback state のライフサイクルを変更または調査するとき
+- 通知が terminal result の処理や TUI invocation の終了後に影響しないことを検証するとき
 
 ## Do not read this when
-- toast や Codex callback に関係しない機能の実装・テストを扱うとき
-- 通知機能の実装詳細そのものを確認する必要があり、まず対応する実装や正本仕様を読むべきとき
+- Windows toast や Codex callback の挙動に関係しないテスト・実装を扱うとき
+- 通知仕様そのものを確認する必要があり、参照元の oracle 仕様を直接読むべきとき
 
 ## hash
-- f1f0a9f3a04e4ada5ad53f104f3705c209336c73548820126cb535f8a17f9e6b
+- 8c868d432a6fbacdcfe191e01eff3c3a826d2a9198b30a28ba4d0220ea1656b2

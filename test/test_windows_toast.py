@@ -3,6 +3,7 @@
 根拠: {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 """
 
+import base64
 import json
 import os
 import subprocess
@@ -17,9 +18,20 @@ import commons.runtime_windows_toast as runtime_windows_toast
 _REAL_WINDOWS_TOAST_TRANSPORT = runtime_windows_toast._run_windows_toast_transport
 
 
+@pytest.mark.parametrize(
+    ("state", "state_text"),
+    [
+        ("completed", "完了"),
+        ("failed", "エラー終了"),
+        ("interrupted", "ユーザー中断完了"),
+        ("waiting", "入力待ち"),
+    ],
+)
 def test_terminal_result_uses_only_short_required_fields(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    state: str,
+    state_text: str,
 ) -> None:
     """toast が command、repository、状態だけを一行の短い内容にする。"""
     calls: list[tuple[str, str]] = []
@@ -33,10 +45,10 @@ def test_terminal_result_uses_only_short_required_fields(
     runtime_windows_toast.notify_terminal_result(
         "oracle\treview",
         repository,
-        "interrupted",
+        state,
     )
 
-    assert calls == [("cmoc oracle review", "repository name — ユーザー中断完了")]
+    assert calls == [("cmoc oracle review", f"repository name — {state_text}")]
     rendered = "\n".join(calls[0])
     assert str(repository) not in rendered
     assert "secret-parent" not in rendered
@@ -77,6 +89,11 @@ def test_transport_passes_notification_as_json_stdin(
     ]
     assert title not in "\n".join(args)
     assert message not in "\n".join(args)
+    encoded_script = args[5]
+    script = base64.b64decode(encoded_script).decode("utf-16-le")
+    assert title not in script
+    assert message not in script
+    assert "[Console]::In.ReadToEnd()" in script
     payload = kwargs["input"]
     assert isinstance(payload, bytes)
     assert json.loads(payload) == {"title": title, "message": message}
@@ -90,9 +107,11 @@ def test_notification_failure_does_not_escape(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """transport の timeout を terminal result の失敗へ変換しない。"""
+    calls: list[tuple[str, str]] = []
 
-    def fail_transport(_title: str, _message: str) -> bool:
+    def fail_transport(title: str, message: str) -> bool:
         """有限時間超過した transport を再現する。"""
+        calls.append((title, message))
         raise subprocess.TimeoutExpired(["powershell.exe"], 5)
 
     monkeypatch.setattr(
@@ -102,6 +121,7 @@ def test_notification_failure_does_not_escape(
     )
 
     runtime_windows_toast.notify_terminal_result("doctor", tmp_path, "failed")
+    assert calls == [("cmoc doctor", f"{tmp_path.name} — エラー終了")]
 
 
 def test_codex_callback_deduplicates_each_turn_and_ignores_message_text(
