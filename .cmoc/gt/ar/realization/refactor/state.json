@@ -1291,9 +1291,9 @@
   },
   "test/test_file_inventory.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "3b17f5b62d6fb9519122318b78661719189acd7d5d3575659863392044770a3d",
+    "last_investigated_at": "2026-08-08_17-53_39_252904000"
   },
   "test/test_indexing_cli.py": {
     "investigation_required": false,

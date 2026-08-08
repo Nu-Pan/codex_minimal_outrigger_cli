@@ -62,15 +62,28 @@ def _full_glob_reference(
     for path in root.rglob("*"):
         relative = path.relative_to(root)
         if relative.parts[0] in _EXCLUDED_ROOTS:
+            if len(relative.parts) == 1:
+                mode = path.lstat().st_mode
+                if not stat.S_ISDIR(mode) and not stat.S_ISREG(mode):
+                    raise AssertionError(
+                        f"reference pruning boundary is nonregular: {path}"
+                    )
             continue
-        if any(
-            path == metadata or metadata in path.parents for metadata in metadata_roots
-        ):
+        if path in metadata_roots:
+            mode = path.lstat().st_mode
+            if not stat.S_ISDIR(mode) and not stat.S_ISREG(mode):
+                raise AssertionError(
+                    f"reference nested Git metadata is nonregular: {path}"
+                )
+            continue
+        if any(metadata in path.parents for metadata in metadata_roots):
             continue
 
         mode = path.lstat().st_mode
         if stat.S_ISDIR(mode):
             continue
+        if not stat.S_ISREG(mode) and not stat.S_ISLNK(mode):
+            raise AssertionError(f"reference fixture contains a special file: {path}")
 
         owning_repository = max(
             (
@@ -90,7 +103,7 @@ def _full_glob_reference(
             continue
         if ignored.returncode != 1:
             raise AssertionError(f"reference check-ignore failed for {path}")
-        if not stat.S_ISREG(mode):
+        if stat.S_ISLNK(mode):
             raise AssertionError(f"reference fixture contains a special file: {path}")
         if path.name in _EXCLUDED_NAMES:
             continue
@@ -256,6 +269,18 @@ def test_inventory_rejects_nonregular_paths(
     path = root / (".agents" if location == "root-boundary" else "special")
 
     with _special_path(path, kind):
+        with pytest.raises(CmocError, match="oracle/realization file"):
+            enumerate_oracle_and_realization_files(root)
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
+def test_inventory_rejects_ignored_fifo_in_unpruned_area(tmp_path: Path) -> None:
+    """unpruned 領域の FIFO は ignore 対象でも列挙エラーにする。"""
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("special\n")
+    path = root / "special"
+
+    with _special_path(path, "fifo"):
         with pytest.raises(CmocError, match="oracle/realization file"):
             enumerate_oracle_and_realization_files(root)
 
