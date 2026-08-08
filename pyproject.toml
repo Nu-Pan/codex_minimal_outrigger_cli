@@ -40,7 +40,7 @@ where = ["src", "oracle/src"]
 pythonpath = ["src", "oracle/src"]
 timeout = 120
 markers = [
-    "gpu_integration: requires GPU-only inference with test-local Ollama",
+    "real_path_integration: exercises the production path with real Codex inference",
 ]
 
 [tool.ruff]

@@ -107,19 +107,21 @@
 # `pyproject.toml`
 
 ## Summary
-- プロジェクトの Python パッケージ設定。依存関係、開発用依存関係、`cmoc` CLI エントリーポイント、パッケージ配置、pytest・Ruff・mypy の設定を定義する。
+- Python プロジェクトのパッケージメタデータ、実行コマンド、依存関係、ビルド設定、および pytest・Ruff・mypy の開発ツール設定を定義する。Python パッケージ構成、依存関係、CLI エントリーポイント、または開発時の品質検査設定を確認する際の入口となる。
 
 ## Read this when
-- 依存関係や Python バージョン要件を確認するとき
-- `cmoc` コマンドのエントリーポイントやパッケージ構成を変更するとき
-- pytest、Ruff、mypy のプロジェクト設定を確認・変更するとき
+- 依存パッケージや開発用依存パッケージを追加・変更するとき
+- cmoc CLI のインストール後に使われる実行エントリーポイントを確認するとき
+- Python のビルド・パッケージ探索設定を変更または調査するとき
+- pytest、Ruff、mypy のプロジェクト共通設定を確認するとき
 
 ## Do not read this when
-- 個別の CLI 処理や実装ロジックを確認するとき
-- テストケースや oracle の正本仕様を確認するとき
+- 個別の CLI 挙動や内部実装を確認する場合は、src 配下の実装を直接読むとき
+- テストケースの具体的な内容やテスト固有の規則を確認する場合
+- 正本仕様や開発環境の運用手順を確認する場合は、対応する oracle 文書を読むとき
 
 ## hash
-- 62c23b5f8693844b19076cbd7c8e2cc4930ace5468300a33c0b5ae87e3886d9f
+- d7e54a5345610218deb1baa5ef4ecf56af5f7bd5cd71249f76a9bbaa99f1bbf1
 
 # `src`
 
@@ -144,17 +146,17 @@
 # `test`
 
 ## Summary
-- pytest による realization test 群を収録するディレクトリ。CLI、Codex runtime、ACP builder、indexing、oracle review、session/run state、Git/path/config、通知など、cmoc の外部挙動と永続化契約を検証する統合・回帰テスト、および共通 fixture・テスト支援モジュールを扱う。各機能の実装変更時に、対応する挙動のテスト入口として下位ファイルへ進む。
+- `test` ディレクトリは、cmoc の realization test を集約する回帰・統合・受け入れテスト領域。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session、config、Git、状態永続化などの外部挙動と安全境界を検証し、機能領域ごとのテストへの入口を提供する。
 
 ## Read this when
-- cmoc の特定機能について、実装変更に伴う外部挙動・回帰条件・統合 lifecycle の検証対象を探すとき。
-- CLI、Codex 実行、ACP builder、indexing、oracle review、session/run、Git/path、config、通知のテスト入口を選ぶとき。
-- 複数テストで共有される fixture、fake command、Git repository、Codex/Ollama 支援の責務を確認するとき。
+- cmoc の実装変更に対する外部挙動、回帰条件、統合 lifecycle を確認するとき。
+- テスト失敗を CLI、runtime、indexing、oracle review、session、config などの機能領域へ切り分けるとき。
+- 本番経路、Codex subprocess、Git worktree、永続 state、通知などの境界挙動を検証するとき。
 
 ## Do not read this when
-- 正本仕様、schema、prompt 規則、設計意図を確認することが目的の場合は、対応する oracle doc・oracle src・oracle schema を直接読む。
-- 本番実装の詳細だけを調査する場合は、対応する src ファイルを直接読む。
-- 一般的な pytest 実行方法だけを確認する場合は、repository local のテスト実行ルールを読む。
+- 正本仕様や Structured Output schema の内容そのものを確認・変更するときは、対応する oracle 文書・schema・source を直接読む。
+- 実装詳細だけを調べるときは、対応する src の実装を直接読む。
+- テスト実行方法や共通 fixture の定義だけを確認するときは、専用の実行規則や個別の支援モジュールへ直接進む。
 
 ## hash
-- 44ec4a6b442ed5eb83ef5be77cb1b45fffa121b56e1464fb2e1ca770b28cca14
+- 5687e9aa587fd540daf4940bdd53b0202061d4efebba923973bab2ff229ed5e9

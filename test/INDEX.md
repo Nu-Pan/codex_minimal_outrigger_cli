@@ -32,19 +32,17 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex CLI の実経路・runtime wrapper テストで共有する補助関数と最小テスト用 double を提供する。認証に依存しない隔離 Codex 環境の準備、Codex パラメータ生成、CLI 引数・設定 override の検査、subprocess 制御用 override の固定化が主な責務で、これらのテスト支援が必要な場合の入口となる。
+- Codex 実行関連テストで共有する最小のテストヘルパー群。テスト用ホーム環境、Structured Codex result double、AgentCallParameter、CLI 引数と設定 override の検査補助を提供し、runtime wrapper や TUI のテストから参照する入口となる。
 
 ## Read this when
-- Codex 実行環境の初期化や test-local Ollama 用設定を含む runtime wrapper テストを読むとき。
-- Codex CLI 引数、構造化出力、設定 override の検証ロジックを確認・変更するとき。
-- 複数の Codex 関連テストで共通する fixture や stub の挙動を確認するとき。
+- Codex 実行ラッパーまたは TUI のテストで、隔離した Codex 環境、既定パラメータ、結果 double、CLI override 引数の検証補助が必要なとき。
 
 ## Do not read this when
-- Codex runtime wrapper の実装そのものや、テスト対象の仕様を確認したいときは、対象の実装・oracle 文書を直接読む。
-- Codex と無関係なテストの fixture、assertion、テストケースだけを読むとき。
+- 本番の Codex 実行処理や CLI override の仕様を確認したいときは、対応する実装または正本仕様を直接読む。
+- この共通ヘルパーを利用しないテストや、Codex 実行と無関係なテストを調べるとき。
 
 ## hash
-- 168e75e83cb8c4a2c5f0e4014606871e8e45101a528f4dd6b06433974f63ac78
+- 5453104f8f54bd043468ac6d161ae7571a7728f86feb7b5482b74cebaa941032
 
 # `_command_support.py`
 
@@ -78,24 +76,21 @@
 ## hash
 - 1ecaade4dee17221fe4bca8c1837bef8e9d28957fd6bee025a6b52c299aea9e1
 
-# `_ollama_support.py`
+# `_real_path_integration`
 
 ## Summary
-- 実経路統合テスト向けに、case-local Ollama の導入・キャッシュ管理・モデル準備・GPU-only 推論確認・pytest 起動・プロセスグループ終了を一体で担うテスト支援モジュール。
-- 共有キャッシュの安全性、排他制御、atomic publish、case ごとの作業領域分離を扱い、統合テストが利用するローカル Ollama 接続情報と設定変換を提供する。
+- 実経路統合テストで subprocess を起動する際の Python 起動時フックを扱う。対象ディレクトリを PYTHONPATH に追加した場合に、AgentCallParameter のモデル種別と推論強度をテスト用の最小・低設定へ置き換える仕組みへの入口。
 
 ## Read this when
-- 実経路統合テストで Ollama を起動・利用する仕組みを調査または変更するとき。
-- Ollama のキャッシュ、モデルの materialize／publish、GPU-only 検証、動的 endpoint、process teardown の挙動を確認するとき。
-- case-local Ollama を向けた CmocConfig や、この支援モジュール経由の pytest runner を扱うとき。
+- 実経路統合テストの subprocess 環境で、モデル設定がテスト専用値へ変更される仕組みを確認するとき
+- 実経路統合テスト実行時の Python 起動フックや AgentCallParameter 初期化差し替えを調査するとき
 
 ## Do not read this when
-- 通常の Ollama provider 設定や本番実装の挙動だけを確認する場合は、設定・実装側の対象を直接読む。
-- Ollama を使わない単体テストや、一般的な pytest 実行方法だけを調べる場合。
-- モデル品質や応答内容そのものを評価する場合。
+- 通常の AgentCallParameter 設定や builder 実装を確認するとき
+- 実経路統合テスト以外の subprocess 起動設定、または個別テストケースの期待動作を調査するとき
 
 ## hash
-- 51b074c8cb0b59b3fbb3ee372cdad386653bfe5dc0bfb3fcf84999f5565989f2
+- cd158f0a4b49c6dd806a540691cca3df68de44ef6ee184bb1b82cd0a36a41bbc
 
 # `conftest.py`
 
@@ -268,20 +263,17 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ランタイムと case-local Ollama の統合テストを扱う。pytest 実行環境、Ollama キャッシュ分離・再利用、Codex の argv・override・stdin・出力・schema 配置、リポジトリ書き込み、汎用 model provider の契約を検証する。Codex 実行や Ollama テスト支援の挙動を確認・変更する際のテスト側の入口である。
+- Codex exec の実行環境分離、CLI 引数・stdin・出力ファイル契約、リポジトリ書き込み、UTF-8不正出力、汎用 model provider override、および CODEX_HOME 設定ファイル非生成を検証するテスト群。Codex 実行ランタイムや override 引数の挙動を変更・確認するときの入口。
 
 ## Read this when
-- Codex CLI 実行ランタイムのテスト仕様や、実際の Codex 呼び出し契約を確認するとき。
-- case-local Ollama のキャッシュ、モデル再利用、インストール復旧、pytest 実行環境の分離を確認するとき。
-- Codex の provider 設定、sandbox、approval、構造化出力、ログ、作業ディレクトリ、ファイル書き込みを検証するとき。
+- Codex exec の起動引数、sandbox・approval 設定、stdin 経由の prompt 渡し、出力取得を変更または検証するとき。
+- Codex 実行時の HOME/CODEX_HOME 分離、model provider 設定、リポジトリへの生成物、および不正 UTF-8 出力の扱いを確認するとき。
 
 ## Do not read this when
-- Codex 実行ランタイムの実装そのものを変更・調査する場合は、まず対応する src 側の runtime 実装を読む。
-- Ollama 支援関数の実装やモデル起動処理を直接調査する場合は、支援モジュールを読む。
-- 一般的な pytest 実行方法やテスト全体の選択基準だけを確認したい場合は、テスト実行ルールを読む。
+- Codex exec ランタイムやそのテストの挙動を扱わず、他の CLI 機能・設定・テストだけを調査するとき。
 
 ## hash
-- 568f6512768ca4cd8d72544bb96eb2bbc359a708974b39167e50d42f278db880
+- f9b08932a5ddebe6733210f7c69ca3df7b816260cc5f5b02d67addb3045ba76f
 
 # `test_codex_runtime_home.py`
 
@@ -318,18 +310,20 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex の quota 枯渇後に行う probe・待機・session resume・prompt 再実行の外部挙動を検証する回帰テスト。probe の共有、並行呼び出し、quota 復帰失敗、ログ・コンソール出力、CODEX_HOME と cwd、stdout JSONL からの session ID 復元まで、同一の retry 状態機械に属する観測点をまとめて扱う。
+- Codex quota exceeded 後の probe、quota polling、resume または同一 prompt の再実行を検証する回帰テスト群。代表 probe の共有と失敗伝播、session ID 復元、再試行回数、capacity retry、KeyboardInterrupt、状態解除を扱う。各 retry 状態の観測結果として、Codex 呼び出し列、stdout JSONL、output、call log、subcommand log、CODEX_HOME、cwd、sandbox、モデル設定を確認する。quota 復帰制御の外部挙動をまとめて検証する入口であり、実装仕様そのものを読む対象ではない。
 
 ## Read this when
-- Codex exec の quota retry、quota availability probe、session resume、quota 待機の並行制御を変更または調査するとき。
-- quota retry に関する call log、subcommand log、stdout・prompt・output の保存、エラー伝播、CODEX_HOME/cwd の挙動を確認するとき。
+- quota 枯渇から probe を経て resume または再実行する挙動を変更・調査するとき
+- 並行呼び出しにおける代表 probe の共有や probe 失敗の伝播を確認するとき
+- quota retry に関する session ID、ログ、stdout JSONL、CODEX_HOME、cwd の回帰を確認するとき
 
 ## Do not read this when
-- 通常の Codex exec 成功処理や quota と無関係な subprocess 実行を調査するときは、runtime 実装やその直接のテストを読む。
-- quota probe adapter の構築仕様だけを確認したい場合は、probe builder の実装・仕様を直接読む。
+- quota retry と無関係な Codex exec 実装や通常の呼び出し挙動を確認するとき
+- quota probe adapter の構築仕様を確認するときは、その builder と正本仕様を直接読む
+- 一般的なテスト実行方法や他の機能領域の回帰を調査するとき
 
 ## hash
-- be2c73e3cf6f2d6117a8e205ebcd34123d421068c01f07e934e8657263f5b291
+- 5412415392bf7eb4059ad07efd96e73d75ddacaeb98fca03eff10b92a23b4072
 
 # `test_codex_runtime_retry.py`
 
@@ -650,22 +644,22 @@
 # `test_production_cli.py`
 
 ## Summary
-- 実 Codex CLI と case-local Ollama を使う独立 process の本番経路受け入れ試験。
-- doctor、indexing、oracle review、realization apply/refactor、run/session の join・abandon、TUI・oracle edit・investigation など全末端サブコマンドを対象に、終了 code、report、state、Git、call log、PTY 上の応答完了と終了を検証する。
-- LLM の回答品質ではなく、応答後の cmoc の制御と外部から観測可能な副作用を確認するテスト領域の入口。
+- 全末端サブコマンドを、独立プロセス・実 Codex CLI・実推論を用いた利用者向け本番経路で検証する受け入れテスト。
+- 非対話コマンドと TUI コマンドを対象に、終了コード、report・state・Git 状態、Codex call log、PTY 上の応答完了と終了処理を検証する。
+- 新しい公開末端コマンドの試験漏れを検出し、LLM の回答品質ではなく cmoc の応答後制御と外部から観測可能な副作用を確認する。
 
 ## Read this when
-- CLI の全末端サブコマンドが実 Codex・実行環境・隔離された Ollama を通る本番経路を検証または変更するとき
-- 独立 process、Codex call log、セッション／run state、report、Git 状態、または TUI の PTY 操作に関する受け入れ試験を調べるとき
-- 新しい公開末端コマンドの追加により、本番経路試験の網羅性を確認するとき
+- CLI の末端サブコマンド追加・変更に伴う本番経路テストの対象範囲を確認するとき。
+- 独立プロセス、実 Codex、隔離環境、call log、セッション・run 状態、Git 副作用、または TUI の PTY 終了動作を検証するとき。
+- real-path integration の失敗原因や、非対話／TUI の代表正常系を調査するとき。
 
 ## Do not read this when
-- LLM の回答品質やプロンプト内容そのものを評価するとき
-- 単一サブコマンドの内部ロジックや unit test を直接調べるとき
-- 実 Codex CLI や Ollama を使わないテスト、または一般的なテスト実行方法だけを確認するとき
+- 単体テストやモックのみの制御ロジックを確認する場合は、該当する個別テストを直接読む。
+- CLI の仕様や実装責務を確認するだけで、本番経路の受け入れ試験を変更・調査しない場合。
+- LLM の回答品質やプロバイダ自体の機能を評価する場合。
 
 ## hash
-- 1285426fefe037a4a7e40fd8020adfc92a689519a285d87aaeca3a6e157defd8
+- b9e844b8156acbd09dce84f53d20240a188526d9080d011cc0257a35edf47e72
 
 # `test_prompt_parts.py`
 
