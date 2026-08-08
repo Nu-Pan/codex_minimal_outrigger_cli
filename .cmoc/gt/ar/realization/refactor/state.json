@@ -756,7 +756,7 @@
     "last_investigated_at": "2026-08-03_11-06_11_712260000"
   },
   "src/basic/struct_doc.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "0397791c0dc37c51edd489ea3dd01470322afc79499e4a5ddf069f9785bd13f9",
     "last_investigated_at": "2026-07-24_23-28_40_194341000"
@@ -786,7 +786,7 @@
     "last_investigated_at": "2026-08-06_14-14_18_536201000"
   },
   "src/commons/prompt_editor_input.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "714e1b66bc934aac54a81b9a64255547f48b5ea06cbcf7092367be60ddf8c4e3",
     "last_investigated_at": "2026-08-04_01-12_03_130285000"
@@ -1200,7 +1200,7 @@
     "last_investigated_at": "2026-08-06_08-15_04_007923000"
   },
   "test/test_acp_builder_tui_parameters.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "690dcff632dbbae0554cb917f595d38985d2ddc8eae16c07ed8422dd32814a79",
     "last_investigated_at": "2026-08-06_08-18_30_046433000"
@@ -1356,7 +1356,7 @@
     "last_investigated_at": "2026-08-05_20-15_24_932784000"
   },
   "test/test_packaged_import.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "f9793ebf99c08dcc0bc2b32653f4df3466e65aa7534c84661345ed760b31fd80",
     "last_investigated_at": "2026-08-06_09-13_49_128062000"
@@ -1452,7 +1452,7 @@
     "last_investigated_at": "2026-08-03_07-18_15_186250000"
   },
   "test/test_struct_doc_rendering.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "650a3dab8a023eb6c55dd32e6ed5ce178f4641d3f81b8805b33c18bce039c1db",
     "last_investigated_at": "2026-07-26_16-06_06_613047000"
