@@ -930,15 +930,16 @@
 # `test_windows_toast.py`
 
 ## Summary
-- Windows toast 通知のテスト。端末結果の通知内容を短い必須項目に限定し、PowerShell transport が通知値を JSON stdin として安全に渡すこと、通知失敗を本処理へ波及させないことを検証する。Codex の turn 完了 callback について、turn 単位の重複排除、本文非使用、TUI invocation 内だけの一時 state、単独実行可能な argv を確認する。
+- Windows toast 通知のテストで、terminal result の短い表示内容、PowerShell transport への安全な JSON 渡し、通知失敗の隔離、Codex callback の turn 単位重複排除、TUI callback state の invocation 内限定を検証する。Windows toast 実装の挙動変更や関連テストの意図を確認する入口。
 
 ## Read this when
-- Windows toast の表示内容、PowerShell transport の引数・入力方式、通知失敗時の境界を変更または検証するとき
-- Codex callback の turn 完了通知、重複排除、callback state の寿命、TUI から起動する実コマンドを変更または検証するとき
+- Windows toast の表示内容、transport の引数・入力形式、PowerShell 実行境界を変更または調査するとき
+- Codex の agent-turn-complete callback、通知重複排除、callback state のライフサイクルを変更または調査するとき
+- 通知が terminal result の処理や TUI invocation の終了後に影響しないことを検証するとき
 
 ## Do not read this when
-- toast や Codex callback に関係しない機能の実装・テストを扱うとき
-- 通知機能の実装詳細そのものを確認する必要があり、まず対応する実装や正本仕様を読むべきとき
+- Windows toast や Codex callback の挙動に関係しないテスト・実装を扱うとき
+- 通知仕様そのものを確認する必要があり、参照元の oracle 仕様を直接読むべきとき
 
 ## hash
-- f1f0a9f3a04e4ada5ad53f104f3705c209336c73548820126cb535f8a17f9e6b
+- 8c868d432a6fbacdcfe191e01eff3c3a826d2a9198b30a28ba4d0220ea1656b2
