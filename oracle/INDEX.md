@@ -20,20 +20,16 @@
 # `src`
 
 ## Summary
-- cmoc の AI Agent 呼び出しを構成する正本ソース群です。Agent Call パラメータ、用途別の呼び出し設定、prompt builder、Structured Output schema、feedback 契約、パス・設定・構造化 Markdown の基盤を扱います。
-- 用途別の Agent call 設定、prompt 構築、基礎モデル、oracle review・realization・session・TUI・indexing・feedback の定義へ進むための入口です。
+- `oracle/src` は、AI Agent 呼び出しに必要な正本ソースを収録する領域です。共通パラメータ、用途別設定、prompt 構築、Structured Output 契約、基礎モデルを扱い、下位要素の定義へ進む入口になります。
 
 ## Read this when
-- AI Agent 呼び出しのモデル種別、推論強度、ファイルアクセスモード、作業ディレクトリ、indexing preflight などの共通パラメータを確認するとき。
-- oracle review、realization、session、TUI、indexing、feedback などの特定フローの呼び出し設定や Structured Output schema を調査・変更するとき。
-- prompt の組み立て、静的・動的 prompt、placeholder、oracle／realization 規則、feedback reporting 規則を確認するとき。
-- cmoc の設定モデル、パスコンテキスト、Standard、構造化 Markdown、Agent Call の基礎モデルを確認するとき。
+- AI Agent 呼び出しのモデル、推論設定、ファイルアクセス、cwd、Structured Output schema を調査・変更するとき。
+- feedback、indexing、TUI など用途別の agent call 設定や prompt 構築部品の所在を確認するとき。
+- CmocConfig、call-scoped なパス解決、Standard、Requirement、構造化 Markdown の基盤定義を調査するとき。
 
 ## Do not read this when
-- 通常の CLI／TUI 実行フローや realization 実装・テストの挙動を調査するときは、呼び出し側または realization 側を直接読む。
-- oracle の正本仕様や Codex CLI の一般的な sandbox・permission 規則を確認するときは、対応する仕様文書を直接読む。
-- 特定用途の prompt 本文や schema の詳細だけを確認したいときは、該当する下位領域へ直接進む。
-- feedback の collector による保存・集約・重複判定だけを確認したいときは、collector 側の実装を直接読む。
+- 通常の realization 実装・テストや、CLI・TUI の実行フロー自体を調査するとき。
+- 特定の prompt builder 部品、用途別 schema、個別モデルの詳細だけを確認したいときは、該当する下位要素へ直接進む。
 
 ## hash
-- 3f3fb949de4b7a4f52d2963f9f65ac136e990d18daafdd45f2443945cf9e6f41
+- 5a7d4b04247230ccef52fddbf8177d285c20a2196e5cf068a099921493697562
