@@ -16,15 +16,14 @@ from cmoc_runtime import (
 )
 from commons.indexing import enable_indexing_preflight
 from commons.prompt_editor_input import (
+    ORIGINAL_PROMPT_PLACEHOLDER,
     collect_prompt_editor_input,
     ensure_prompt_editor_roots_ignored,
+    finalize_complete_prompt,
+    reserve_prompt_editor_input,
 )
 from commons.runtime_git import current_branch, require_clean_worktree
 from commons.runtime_state import load_session_part_for_branch
-
-# {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-ORACLE_EDIT_AUTOMATICALLY_INJECTED_INSTRUCTION = """- realization file の読み書き禁止
-- oracle file の編集に必要な cmoc 固有の契約は自動注入"""
 
 
 def cmoc_oracle_edit_impl() -> None:
@@ -36,7 +35,7 @@ def cmoc_oracle_edit_impl() -> None:
         command_name="oracle edit",
         command_argv=["cmoc", "oracle", "edit"],
         tui_process=True,
-        total_steps=6,
+        total_steps=7,
     )
 
 
@@ -44,23 +43,36 @@ def _cmoc_oracle_edit_body() -> None:
     """入力された oracle 編集指示から Codex TUI を起動する。"""
     repository = repo_root()
     current_root = work_root()
-    start_subcommand_step(2, "oracle 最終状態の指示を入力", "edit instruction")
-    original_path, instruction = collect_prompt_editor_input(
-        repository,
-        ORACLE_EDIT_AUTOMATICALLY_INJECTED_INSTRUCTION,
-    )
-    start_subcommand_step(3, "TUI 起動パラメータを構築", "build TUI parameter")
+
+    # oracle 編集契約を含む完全 prompt の skeleton とパラメータを先に固定する。
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+    start_subcommand_step(2, "TUI 起動パラメータを構築", "build TUI parameter")
+    time_stamp, original_path, complete_path = reserve_prompt_editor_input(repository)
     parameter = build_oracle_edit_launch_tui_parameter(
-        original_path.name.removesuffix("_orig.md"),
+        time_stamp,
+        ORIGINAL_PROMPT_PLACEHOLDER,
+    )
+    complete_prompt_skeleton = complete_path.read_text(encoding="utf-8")
+
+    start_subcommand_step(3, "oracle 最終状態の指示を入力", "edit instruction")
+    instruction = collect_prompt_editor_input(
+        original_path,
+        complete_prompt_skeleton,
+    )
+
+    start_subcommand_step(4, "完全プロンプトを確定", "finalize complete prompt")
+    finalize_complete_prompt(
+        complete_path,
+        complete_prompt_skeleton,
         instruction,
     )
-    start_subcommand_step(4, "TUI 起動前 indexing", "indexing preflight")
+    start_subcommand_step(5, "TUI 起動前 indexing", "indexing preflight")
 
     def _validate_and_start_launch_step() -> None:
         """oracle edit TUI の起動前提を検証し、最後の step を開始する。"""
-        start_subcommand_step(5, "TUI 起動の事前条件を確認", "validate TUI launch")
+        start_subcommand_step(6, "TUI 起動の事前条件を確認", "validate TUI launch")
         _require_oracle_edit_launch_preconditions(repository, current_root)
-        start_subcommand_step(6, "Codex TUI を起動", "launch Codex TUI")
+        start_subcommand_step(7, "Codex TUI を起動", "launch Codex TUI")
 
     run_codex_tui(
         parameter,

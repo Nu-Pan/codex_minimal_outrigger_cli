@@ -1,6 +1,8 @@
 """StructDoc の Markdown renderer 単体の整形挙動を検証する。
 
-分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+根拠:
+- {{work-root}}/oracle/src/oracle/other/struct_doc.py
+- {{work-root}}/oracle/doc/app_spec/prompt_standard.md
 """
 
 from basic.struct_doc import (
@@ -44,3 +46,21 @@ def test_struct_block_is_reexported_from_realization_compatibility_module() -> N
 
     assert '<cmoc_block id="target">' in rendered
     assert "# body" in rendered
+
+
+def test_struct_block_accepts_pre_rendered_markdown_as_opaque_child() -> None:
+    """描画済み文字列 child を外側で再検査せずそのまま埋め込む。"""
+    pre_rendered = '# rendered\n\n<cmoc_ref target="inner-target"/>\n'
+
+    rendered = render_as_markdown(
+        [
+            StructDoc("map", '<cmoc_ref target="outer-target"/>'),
+            StructDoc(
+                "container",
+                StructBlock("outer-target", pre_rendered),
+            ),
+        ]
+    )
+
+    assert pre_rendered in rendered
+    assert '<cmoc_block id="outer-target">' in rendered

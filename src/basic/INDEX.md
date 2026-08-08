@@ -48,15 +48,18 @@
 # `struct_doc.py`
 
 ## Summary
-- `oracle.other.struct_doc` の構造化文書 API を `basic` 側から再公開する入口。実装本体はここに置かず、既存の公開名を維持しながら利用者が `StructDoc` 系と `render_as_markdown` を引けるようにする。
+- 正本の構造化文書 API を再公開する互換層。型・処理は正本実装を参照し、文字列 child を含む StructBlock の Markdown 描画だけ局所的に補正する。
+- 構造化文書の型、コードブロック、文書生成ヘルパー、Markdown 描画 API を下位実装から利用するための入口。
 
 ## Read this when
-- `basic.struct_doc` という公開名で構造化文書の型やレンダラを使う先を探しているとき。
-- `basic` 側の公開 API から、構造化文書の実体がどこから供給されるかを確認したいとき。
+- 構造化文書 API の再公開内容や Markdown 描画の挙動を確認するとき
+- StructBlock の child が描画済み文字列である場合の変換・復元処理を調査するとき
+- 構造化文書の型やヘルパーの公開範囲を確認するとき
 
 ## Do not read this when
-- 構造化文書のレンダリング規則や型の制約そのものを知りたいときは、再公開先ではなく `oracle.other.struct_doc` を読む。
-- `basic.struct_doc` を残す必要性や削除条件を確認したいだけなら、この入口ではなく参照元の利用箇所を読む。
+- 正本の構造化文書型や通常の Markdown renderer の仕様だけを確認したいとき
+- 構造化文書と無関係な CLI、プロンプト、または別機能を調査するとき
+- 文字列 child の補正を伴わない一般的な renderer 利用箇所を直接確認できるとき
 
 ## hash
-- 0397791c0dc37c51edd489ea3dd01470322afc79499e4a5ddf069f9785bd13f9
+- aa7914b29e87c02b906f33b751fa99ff21d06e01eca039537b24de2a8c56b96b
