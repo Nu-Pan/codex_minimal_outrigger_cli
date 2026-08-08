@@ -77,7 +77,7 @@ class CmocConfigCodex:
             ModelClass.MAINSTREAM: CodexModelSpec(None, "gpt-5.6-terra"),
             ModelClass.FLAGSHIP: CodexModelSpec(None, "gpt-5.6-sol"),
             ModelClass.EFFICIENCY: CodexModelSpec(None, "gpt-5.6-luna"),
-            ModelClass.MINIMUM: CodexModelSpec(None, "gpt-5.4-mini"),
+            ModelClass.MINIMUM: CodexModelSpec(None, "gpt-5.6-luna"),
         }
     )
 
