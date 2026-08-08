@@ -18,18 +18,18 @@
 # `src`
 
 ## Summary
-- cmoc の oracle src を収める実装領域です。AI エージェント呼び出しのパラメータ、feedback 入力契約、設定・パス・構造化文書モデル、プロンプト構築部品を扱います。
-- agent call builder、feedback、基礎モデル、prompt builder という責務別の下位領域へ進むための入口です。
+- AI コーディングエージェント呼び出しに使う oracle src の実装領域。共通の agent call パラメータ、prompt の構成・規範・Structured Doc、パスや設定の基盤、TUI・indexing・feedback・oracle review・realization・session join 用の個別 builder を扱う。用途別の実装を調査する際の入口。
 
 ## Read this when
-- cmoc の oracle src 全体から、調査対象の責務を特定して適切な下位領域へ進みたいとき。
-- AI エージェント呼び出し、feedback reporter、設定・パスモデル、構造化文書、プロンプト構築のいずれかを横断して確認するとき。
+- agent call の共通パラメータ、モデル・推論・ファイルアクセス設定を確認するとき。
+- prompt の完全な組み立て、入力テンプレート、placeholder、oracle・realization・routing・feedback の共通規則を確認するとき。
+- TUI、indexing、feedback、oracle review、realization、session join の prompt builder を探すとき。
+- cmoc の設定、パス導出、Structured Doc の構造化・Markdown 化を確認するとき。
 
 ## Do not read this when
-- 特定の agent call builder の prompt や Structured Output schema を調査するときは、対応する下位領域へ直接進む。
-- feedback の入力契約だけを確認するときは、feedback の schema を直接読む。
-- 設定値、パス解決、Standard、StructDoc の個別定義だけを確認するときは、other の対応するモデルを直接読む。
-- プロンプト共通部品の実装詳細だけを確認するときは、prompt_builder またはその parts を直接読む。
+- 実際の cmoc サブコマンド実行や agent call 起動処理を確認するときは、呼び出し側・実行基盤を直接読む。
+- 個別 builder の詳細な prompt 契約や Structured Output 定義を確認するときは、該当する下位ファイルを直接読む。
+- collector 側の feedback 保存・集約や Git 操作の仕様を確認するときは、それぞれの担当領域を直接読む。
 
 ## hash
-- 63540f0412dcba7fc66a19f0e7574cffcdff6f19d1838d48e386e6b0f93174ce
+- f6a778a13fcec972aacf75aa5620b79ea60a6a6c48a79ae30e7d184780373cc0

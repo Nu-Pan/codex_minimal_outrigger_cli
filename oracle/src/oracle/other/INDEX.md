@@ -1,18 +1,19 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ固有設定を集約するデータクラス群。並列数、Codex のモデル・provider・reasoning 設定、oracle review の各ループ上限を扱い、JSON/TOML 設定値や永続化対象の構造を定義する。
+- cmoc のリポジトリ固有設定を集約するデータクラス群を定義する oracle src。JSON/TOML 共通値、Codex CLI の provider・モデル・推論 effort、oracle review のループ上限を扱う設定構造の入口。
 
 ## Read this when
-- CmocConfig の項目、デフォルト値、Codex CLI 向け設定、oracle review のループ回数を変更・参照するとき
-- 設定の JSON シリアライズ対象や model provider 設定の型を確認するとき
+- cmoc の設定項目や既定値を変更・参照するとき。
+- Codex CLI のモデル provider、モデル指定、推論 effort、ファイルアクセス規則違反時のリカバリ回数を確認するとき。
+- `cmoc oracle review` の所見列挙・マージ・検証ループの設定を確認するとき。
 
 ## Do not read this when
-- CLI コマンドの実行フローや設定ファイルの生成・同期処理を調べるとき
-- ModelClass や ReasoningEffort 自体の定義・意味を調べるときは、直接その定義元を読む
+- 永続化された設定 JSON の生成・同期・人手調整の実態だけを確認するときは、指定された設定ファイルや doctor の実装を直接読む。
+- `ModelClass` や `ReasoningEffort` の列挙値の定義を確認するときは、参照元の型定義を直接読む。
 
 ## hash
-- e7003c50485257f7fa16a0acaaf5ce70905c423e51d5a4c28ab9ab99113bc4eb
+- e90bca5f30bc59a885acd876512c52f6c26d38d3ebd0d5c68a92862d5300ca5d
 
 # `path_model.py`
 

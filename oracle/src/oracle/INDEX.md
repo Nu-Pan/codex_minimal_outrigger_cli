@@ -36,20 +36,19 @@
 # `other`
 
 ## Summary
-- cmoc の設定・パス解決・規範・構造化文書を扱う基礎モデル群を収録するディレクトリ。設定値や root 導出、Standard の文書化、Markdown 構造化処理の実装へ進む入口となる。
+- cmoc の oracle src にある共通基盤を扱うディレクトリ。リポジトリ設定、root と worktree のパス導出、Standard/Requirement の規範モデル、StructDoc の Markdown 変換と検証を提供し、それぞれの実装を読むための入口になる。
 
 ## Read this when
-- CmocConfig の設定項目や永続化構造を確認するとき
-- agent call の cwd・root・placeholder に関するパス解決を調査するとき
-- Standard や Requirement のモデル、または構造化 Markdown 生成の基盤を確認するとき
+- cmoc の共通設定や Codex CLI・oracle review の設定構造を確認するとき。
+- agent call の cwd、各種 root、placeholder、worktree 境界の導出やパス変換を調査するとき。
+- Standard/Requirement のモデルや StructDoc の構造化・Markdown 変換・参照検証を確認するとき。
 
 ## Do not read this when
-- CLI サブコマンドの実行フローや設定ファイル同期など、利用側の処理だけを調査するとき
-- ModelClass、ReasoningEffort、StructDoc など個別モデル自身の定義だけを確認するとき
-- 個別の規範本文、テスト、開発環境の実行手順を確認するとき
+- 個別の CLI サブコマンド、agent call の具体的なプロンプト生成、または共通モデルを利用する呼び出し側だけを調査するとき。
+- 永続化された設定 JSON の生成・同期・doctor の実装、列挙値の定義、個別の規範本文、既存テスト、開発環境の実行手順を直接確認するとき。
 
 ## hash
-- cc3b77dc08ddbb1b12d585f5e63b2630c6e225539a7714dd86f54d66fd8d2db0
+- 858d9da7a853f45063fa924c2c396aa54e1546f33a28a1268d283fb4834dba05
 
 # `prompt_builder`
 
