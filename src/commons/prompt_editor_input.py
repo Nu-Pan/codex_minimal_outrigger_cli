@@ -4,11 +4,8 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from types import FunctionType
 
-from oracle.prompt_builder import editor_input as _canonical_editor_input
-
-from basic.struct_doc import render_as_markdown as _render_as_markdown
+from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
 
 from .runtime_errors import CmocError
 from .runtime_git import ensure_cmoc_ignored
@@ -47,7 +44,7 @@ def collect_prompt_editor_input(
     # 正本が構築する案内と完全 prompt の skeleton を編集対象へ保存する。
     # {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
     original_prompt_path.write_text(
-        _build_prompt_editor_input_initial_text(complete_prompt_skeleton),
+        build_prompt_editor_input_initial_text(complete_prompt_skeleton),
         encoding="utf-8",
     )
 
@@ -125,33 +122,3 @@ def _require_single_original_prompt_placeholder(
         ["cmoc の prompt builder と oracle file の整合性を確認してください。"],
         f"placeholder: {ORIGINAL_PROMPT_PLACEHOLDER}\ncount: {count}",
     )
-
-
-def _build_prompt_editor_input_initial_text(
-    complete_prompt_skeleton: str,
-) -> str:
-    """正本 builder を文字列 child 対応 renderer で実行する。"""
-    # NOTE:
-    #   現行の正本 renderer は StructBlock の str child を受理する一方で、その
-    #   検証時に str.children を参照する。正本の案内文を複製せず局所的に補うため、
-    #   builder の globals だけを差し替えた関数を生成する。この互換処理は
-    #   oracle/src/oracle/other/struct_doc.py が str child を描画可能になれば削除する。
-    canonical_builder = _canonical_editor_input.build_prompt_editor_input_initial_text
-    builder_globals = {
-        **canonical_builder.__globals__,
-        "render_as_markdown": _render_as_markdown,
-    }
-    adapted_builder = FunctionType(
-        canonical_builder.__code__,
-        builder_globals,
-        canonical_builder.__name__,
-        canonical_builder.__defaults__,
-        canonical_builder.__closure__,
-    )
-    result: object = adapted_builder(complete_prompt_skeleton)
-    if not isinstance(result, str):
-        raise TypeError(
-            "build_prompt_editor_input_initial_text returned an unexpected type "
-            f"(type={type(result)})"
-        )
-    return result

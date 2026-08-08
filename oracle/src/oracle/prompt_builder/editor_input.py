@@ -1,6 +1,6 @@
 """ユーザー入力用エディタの初期テキスト正本。"""
 
-from oracle.other.struct_doc import StructDoc, StructBlock, render_as_markdown
+from oracle.other.struct_doc import StructBlock, StructDoc, render_as_markdown
 
 
 def build_prompt_editor_input_initial_text(
@@ -15,9 +15,9 @@ def build_prompt_editor_input_initial_text(
         後続の AI エージェントに渡される完全プロンプトのうち「エディタ経由で入力したプロンプトを配置する予定の場所」を `{{original-prompt-here}}` で仮置きした状態のテキスト。
 
     return:
-        入力先ファイルへへ注入する初期テキスト
+        入力先ファイルへ注入する初期テキスト
     """
-    intial_text = [
+    initial_text: list[StructDoc | StructBlock] = [
         StructDoc(
             "このファイルの使い方",
             """
@@ -95,4 +95,4 @@ def build_prompt_editor_input_initial_text(
         ),
         StructBlock("prompt template", complete_prompt_skeleton),
     ]
-    return "<!--\n" + render_as_markdown(intial_text) + "\n-->\n"
+    return "<!--\n" + render_as_markdown(initial_text) + "\n-->\n"

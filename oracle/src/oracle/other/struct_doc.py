@@ -152,7 +152,10 @@ def _render_as_markdown(
     """
     if isinstance(struct_node, StructBlock):
         result = f"<cmoc_block id={quoteattr(struct_node.block_id)}>\n"
-        result += _render_as_markdown(struct_node.child, depth)
+        child = struct_node.child
+        if isinstance(child, str):
+            return result + child + "</cmoc_block>\n"
+        result += _render_as_markdown(child, depth)
         result += "</cmoc_block>\n"
         return _collapse_blank_lines(result)
 
@@ -199,7 +202,8 @@ def _validate_references(roots: list[StructDoc | StructBlock]) -> None:
             if node.block_id in blocks:
                 raise ValueError(f"Duplicate cmoc_block id (id={node.block_id!r})")
             blocks[node.block_id] = node
-            _visit(node.child)
+            if isinstance(node.child, StructDoc):
+                _visit(node.child)
             return
 
         if isinstance(node.children, list):
