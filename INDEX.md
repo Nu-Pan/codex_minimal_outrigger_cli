@@ -89,21 +89,23 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を保持する oracle 領域。アプリケーション挙動、branch・commit・worktree のモデル、不採用設計、Python 開発規則を文書として定義し、Agent call、prompt、feedback、レビュー、indexing などの正本ソースも提供する。配下の doc は仕様本文、src はその仕様に基づく prompt・builder・補助処理の実装へ進む入口。
+- cmoc の正本仕様と、その仕様を具体化する正本ソースをまとめた領域です。
+- アプリケーション挙動、branch・commit・worktree のモデル、採用しなかった設計案、Python 開発規則を確認できます。
+- Agent 呼び出し、prompt 構築、Structured Output、feedback、パス・設定・構造化 Markdown の定義へ進む入口です。
 
 ## Read this when
-- cmoc の現行仕様、設計上の用語や制約、CLI・session・run・feedback・prompt の挙動を確認するとき
-- Python の開発環境、コーディング、CLI 設計、テスト規則や実行手順を確認するとき
-- Agent call、Structured Output、prompt 構築、oracle／realization／feedback／INDEX の規範に関わる実装を調査・変更するとき
-- 不採用となった設計案の背景や理由を確認するとき
+- cmoc の挙動仕様や共通実行規約の参照先を特定するとき
+- session・run・branch・commit・worktree の関係を確認するとき
+- Python の実装規則、テスト規則、開発環境、テスト実行手順を確認するとき
+- Agent 呼び出し、prompt、Structured Output、feedback の正本定義を調査するとき
 
 ## Do not read this when
-- 特定の仕様文書、サブコマンド、開発規則、または実装ファイルが明確な場合は、対応する配下の対象を直接読むとき
-- 通常の realization 実装・テストや CLI／TUI の実行処理そのものを調査するとき
-- 現行仕様に関係せず、不採用案の検討理由も必要ない単純な作業を行うとき
+- 対象が特定の仕様文書や実装に限定され、対応する下位領域を直接読めるとき
+- 実装やテストの具体的な挙動だけを確認するとき
+- 採用しなかった設計案の背景を調べる必要がない単純な作業を行うとき
 
 ## hash
-- 8055a886f8c133d0f7c09fd8d97613e4655f23380adb448f1c715acf087556b3
+- 84fbb681bbf34f5d76089a4ee0c9c0fe2647f7865c8418ec4174e03a889143f5
 
 # `pyproject.toml`
 

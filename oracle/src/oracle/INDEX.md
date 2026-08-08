@@ -35,36 +35,35 @@
 # `other`
 
 ## Summary
-- リポジトリ設定、パスモデル、規範モデル、構造化文書レンダラーを担う Python ソース群。設定値や永続化構造、root 解決、規範の構造化、Markdown 出力を調査・変更する際の入口となる。
+- cmoc の設定・パス解決・規範・構造化文書を扱う基礎モデル群を収録するディレクトリ。設定値や root 導出、Standard の文書化、Markdown 構造化処理の実装へ進む入口となる。
 
 ## Read this when
-- CmocConfig や Codex 設定、oracle review の上限、JSON/TOML シリアライズを確認するとき
-- agent call の cwd・work/repository/run root、root placeholder、パス変換や検証を確認するとき
-- Standard・Requirement の構造や StructDoc への変換を確認するとき
-- StructDoc の階層、Markdown レンダリング、cmoc_ref 検証、コードブロックや空行処理を確認するとき
+- CmocConfig の設定項目や永続化構造を確認するとき
+- agent call の cwd・root・placeholder に関するパス解決を調査するとき
+- Standard や Requirement のモデル、または構造化 Markdown 生成の基盤を確認するとき
 
 ## Do not read this when
-- CLI の実行フロー、設定ファイルの生成・同期、agent call prompt 生成などの利用側処理だけを調査するとき
-- ModelClass、ReasoningEffort、StructDoc 自体など、別ファイルに定義された概念の詳細だけを確認するとき
-- 個別の規範本文や、Markdown レンダリングを通らない他の oracle 文書の仕様だけを確認するとき
+- CLI サブコマンドの実行フローや設定ファイル同期など、利用側の処理だけを調査するとき
+- ModelClass、ReasoningEffort、StructDoc など個別モデル自身の定義だけを確認するとき
+- 個別の規範本文、テスト、開発環境の実行手順を確認するとき
 
 ## hash
-- 01ecbe8fd695e08e7b934d3c8c596ce87ab0fd7d09615d8dc1fb9728229c4da7
+- cc3b77dc08ddbb1b12d585f5e63b2630c6e225539a7714dd86f54d66fd8d2db0
 
 # `prompt_builder`
 
 ## Summary
-- プロンプト構築に関する型定義とビルダー実装をまとめたディレクトリ。プレースホルダ表現、完全なエージェント呼び出し用プロンプト、入力エディター初期文、共通規範を組み立てる部品を扱い、プロンプト生成処理の変更・調査時の入口になる。
+- プロンプト構築に必要な型定義、完全なプロンプト生成、エディタ入力生成、および共通の prompt builder 部品を扱うディレクトリ。各ファイル・下位ディレクトリの責務を確認する入口。
 
 ## Read this when
-- エージェント呼び出し用プロンプト全体の構成や統合条件を確認・変更するとき。
-- プレースホルダの型表現や、入力エディターの初期文を確認・変更するとき。
-- oracle・realization、アクセス制約、ルーティング、feedback などの共通プロンプト部品を確認・変更するとき。
+- プロンプトビルダーの構成や、目的に応じた実装ファイルの選択を確認するとき。
+- oracle・realization 規範、アクセス制約、ルーティング、feedback 規則をプロンプトへ組み込む処理を調査するとき。
+- 完全なエージェント用プロンプト、エディタ入力、プレースホルダ型の生成処理を変更・確認するとき。
 
 ## Do not read this when
-- 特定の静的プロンプト本文だけを確認・変更するときは、対応する parts 配下の実装を直接読む。
-- プロンプト構築に関係しない session 処理、CLI 実装、または他機能の調査をするとき。
-- oracle 文書や realization 実装そのものの内容を確認するとき.
+- 特定の静的プロンプト本文だけを確認したいとき。
+- プロンプトビルダーを利用する session 処理や CLI 実装だけを調査するとき。
+- Markdown 構造化文書の一般的な仕様や、プロンプトと無関係な機能を確認するとき。
 
 ## hash
-- 82f760fd7a944fea522f05af8af88ea913e293f418099ce30c21e2542a1528a2
+- 24759806aaba53ef4deda5f5040161d71c907a180d92168aef295c0155d90566
