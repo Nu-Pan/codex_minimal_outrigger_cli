@@ -53,34 +53,38 @@
 # `test_execution.md`
 
 ## Summary
-- 構築済みの cmoc 開発環境を前提に、現在の worktree と Python interpreter を決定し、preflight、focused test、品質検査、full test、GPU test、完了判定、結果報告までの実行手順を定める文書。pytest は repository local runner を使用し、Python development mode と ResourceWarning 検査を適用する。
+- 構築済みの cmoc 開発環境を対象に、test と品質検査の選択、preflight、実行、完了判定、結果報告を定める手順書。
+- 現在の worktree と適切な Python interpreter の決定、focused/full pytest、実経路統合テスト、Ruff、mypy、Python development mode、ResourceWarning 検査を扱う。
+- test の意味要件や環境構築、依存関係追加、権限拡張は責務外として、対応する正本仕様へ委譲する。
 
 ## Read this when
-- cmoc の test、pytest、Ruff、mypy、GPU integration test、品質検査を選択・実行・報告するとき。
-- Python 環境や依存関係の不足、test の skip・失敗、GPU test の sandbox escalation、full test の完了可否を判断するとき。
-- 変更後に fresh な完了ゲートを実行し、使用した worktree・interpreter・command・結果・skip reason を報告するとき。
+- cmoc の変更に対して実行すべき focused test、full test、Ruff、mypy を選ぶとき
+- 現在の worktree で preflight と品質検査を実行し、完了可否を判定するとき
+- pytest の skip、実経路統合テスト、Codex CLI、model provider、quota、timeout などの実行結果を報告するとき
 
 ## Do not read this when
-- realization test が満たすべき意味上の要件を確認する場合は、test_rule.md を直接読む。
-- Python 環境の新規構築、依存関係の追加、pip 操作を行う場合は、development_environment.md を直接読む。
-- test 実行以外の実装、仕様設計、または agent call の file access・作業範囲・sandbox 権限を判断する場合。
+- realization test が満たす意味上の要件を確認するときは test_rule.md を直接読む
+- Python 環境の新規構築、依存関係の追加、pip 操作を行うときは development_environment.md を直接読む
+- Codex CLI の呼び出し規則や実経路統合テスト固有の仕様を確認するときは、それぞれの正本仕様を直接読む
 
 ## hash
-- 53cf7109630279120a8f0d6905abe4d6ae04605afa8f447043fa4aef1e417ff8
+- 333f7ed9b3d623e8ced8ba572a79e4972bc03baf5107021c6033ef3c4699fbae
 
 # `test_rule.md`
 
 ## Summary
-- realization test の意味上の要件を定める正本文書。pytest、隔離された test-root、決定論的制御ロジック、Codex CLI を含む実経路統合テスト、test-local Ollama、GPU 実行、キャッシュ、クラウド backend 禁止、Fake Codex CLI の適用範囲を扱う。テスト実行手順や環境構築・依存操作の詳細は別の正本文書への入口として位置づけられる。
+- 対象は cmoc の realization test が満たすべき意味上の要件を定める正本文書です。pytest、tmp_path による隔離、決定論的制御ロジック、Codex CLI を含む実経路統合テスト、Fake Codex CLI の適用範囲を扱います。
+- テストの実行手順や品質検査の選択は別の test_execution 文書、環境構築や依存関係・pip 操作は development_environment 文書へ分岐するため、それらの入口ではありません。
 
 ## Read this when
-- realization test の追加・変更・レビューで、検証対象、実経路統合テスト、Codex CLI と Ollama の扱い、GPU marker、timeout、cache、backend 制約を判断するとき。
-- テストが仕様上の goal / non-goal や外部から観測可能な結果を満たしているか確認するとき。
+- realization test の新規作成・変更・レビューで、検証対象やテストの責務境界を確認するとき
+- 実経路統合テストの定義、対象サブコマンドとの対応、実在 Codex CLI・実推論の使用要件を確認するとき
+- テスト隔離、モデル設定、quota、Fake Codex CLI の適用条件を判断するとき
 
 ## Do not read this when
-- 構築済み環境でのテスト選択・実行・完了判定・報告手順だけを確認したいときは、test_execution.md を直接読む。
-- Python 環境の新規構築、依存関係の追加、pip 操作を行うときは、development_environment.md を直接読む。
-- LLM の回答品質、Codex CLI 自体や model provider の正しさ、有料クラウド backend、GPU 性能・推論速度そのものを評価するとき。
+- 構築済み環境でのテスト選択・実行・完了判定・報告手順を確認したいときは test_execution 文書を読む
+- Python 環境の新規構築、依存関係の追加、pip 操作を行うときは development_environment 文書を読む
+- テスト対象ではなく実装の設計責務や CLI 実装配置を判断するときは design_rule 文書など実装側の正本を読む
 
 ## hash
-- f1837a73e1fc07ba376aeb4a6cb5583c0b6e5eaf10a366a0bbb50508c1880ff3
+- d0ae77dbeb53077ad82230fb8c0c2d81d56841ad396bdaad7e670dfbce68c506
