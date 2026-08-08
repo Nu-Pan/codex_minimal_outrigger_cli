@@ -64,12 +64,12 @@ class StructBlock:
     プロンプト内でこのブロック参照するには `<cmoc_ref target="..."/>` の形式で記述する
     """
 
-    def __init__(self, block_id: str, child: StructDoc):
+    def __init__(self, block_id: str, child: StructDoc | str):
         if not isinstance(block_id, str):
             raise TypeError(f"block_id has unexpected type (type={type(block_id)})")
         if not block_id:
             raise ValueError("block_id must not be empty")
-        if not isinstance(child, StructDoc):
+        if not isinstance(child, (StructDoc, str)):
             raise TypeError(f"child has unexpected type (type={type(child)})")
         self._block_id = block_id
         self._child = child
@@ -79,7 +79,7 @@ class StructBlock:
         return self._block_id
 
     @property
-    def child(self) -> StructDoc:
+    def child(self) -> StructDoc | str:
         return self._child
 
 
