@@ -41,7 +41,6 @@ cd "$cmoc_work_root"
 - `src`
 - `oracle/src`
 - `test`
-- `test/_ollama_support.py`
 
 Python version、依存関係、pytest marker、timeout、Ruff、および mypy の機械可読な設定値は `pyproject.toml` を正本とする。選択した interpreter で次の command を実行する。
 
@@ -65,33 +64,30 @@ Python version、依存関係、pytest marker、timeout、Ruff、および mypy 
 - repository local skill の metadata を変更した場合は、`test/test_skill_metadata.py` を focused test とする。
 - implementation の変更では、`test/INDEX.md` の routing 情報と `rg` による import・symbol の参照検索から、対応する test file または node ID を選ぶ。
 - test helper の変更では、helper を直接検証する test と、変更した interface の主要な利用側を選ぶ。
-- test file に GPU test と非 GPU test が混在する場合は、`gpu_integration` marker で別 command に分ける。
+- test file に実経路統合テストとそれ以外の test が混在する場合は、`real_path_integration` marker で別 command に分ける。
 - Ruff の first-party 対象は `src`、`oracle/src`、`test` とし、変更中は変更 path に絞ってよい。
 - mypy の対象は `src` と `oracle/src` とし、`test` を追加しない。
 - 文書だけを変更した場合は、参照、用語、path、command、および project 設定との整合性を検査する。
 
-## repository local pytest runner を使用する
+## 選択した Python interpreter で pytest を実行する
 
-cmoc の pytest は、focused test と full test、GPU test と非 GPU test のいずれでも、選択した Python から次の interface を使用して起動する。
+cmoc の pytest は、focused test と full test、実経路統合テストとそれ以外の test のいずれでも、選択した Python から起動する。
 
 ```bash
-"$cmoc_python" test/_ollama_support.py run-pytest <pytest arguments>
+"$cmoc_python" -m pytest <pytest arguments>
 ```
 
-- `python -m pytest` または `pytest` を直接使用して、この runner を迂回してはいけない。
+- `pytest` executable を直接起動して、選択した interpreter を迂回してはいけない。
 - pytest の隔離だけを理由として run 固有の `TMPDIR` を設定してはいけない。
-- `TMPDIR`、`TMP`、または `TEMP` が設定済みの場合も runner を使用する。
-- cache の環境変数名、schema version、OS user namespacing、または root path を呼び出し側で組み立ててはいけない。
-- archive、binary、model の配置、cache hit、cache miss、materialize、および publish は test helper に任せる。
-- cache 状態、GPU 可視性、または既存 Ollama service を pytest command より前に独自判定してはいけない。
+- `TMPDIR`、`TMP`、または `TEMP` が設定済みの場合も、選択した interpreter から pytest を起動する。
 
 ## Python development mode と ResourceWarning 検査を適用する
 
-focused test と full test の全 pytest command で、runner が起動する Python process に development mode と `ResourceWarning` のエラー化を適用する。
+focused test と full test の全 pytest command で、pytest を実行する Python process に development mode と `ResourceWarning` のエラー化を適用する。
 
 ```bash
 PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
-    "$cmoc_python" test/_ollama_support.py run-pytest <pytest arguments>
+    "$cmoc_python" -m pytest <pytest arguments>
 ```
 
 - `ResourceWarning` 以外の全 warning を、この手順だけを根拠に一律でエラー化してはいけない。
@@ -100,18 +96,18 @@ PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
 
 ## 変更中の検査を実行する
 
-変更中は、非 GPU の focused test を repository 所定の sandbox 内で実行する。
+変更中は、実経路統合テスト以外の focused test を repository 所定の sandbox 内で実行する。
 
 ```bash
 PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
-    "$cmoc_python" test/_ollama_support.py run-pytest \
-    <test paths or node IDs> -ra -m "not gpu_integration"
+    "$cmoc_python" -m pytest \
+    <test paths or node IDs> -ra -m "not real_path_integration"
 ```
 
-- GPU の focused test は、後述する command 単位 sandbox escalation で別に実行する。
+- 対応する実経路統合テストがある場合は、`real_path_integration` marker を選択する別 command で実行する。
 - 変更した first-party path に Ruff check と Ruff format check を実行する。
 - `src` または `oracle/src` の変更には、変更 module と主要な利用側に mypy を実行する。
-- failure は、実行環境、外部 executable、timeout、cache または helper、test assertion のどこで発生したかを分類する。
+- failure は、実行環境、外部 executable、model provider、quota、timeout、helper、または test assertion のどこで発生したかを分類する。
 
 ## fresh な完了ゲートを実行する
 
@@ -122,43 +118,29 @@ PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
 "$cmoc_python" -m ruff format --check src oracle/src test
 "$cmoc_python" -m mypy src oracle/src
 PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
-    "$cmoc_python" test/_ollama_support.py run-pytest \
-    test -ra -m "not gpu_integration"
+    "$cmoc_python" -m pytest \
+    test -ra -m "not real_path_integration"
 PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
-    "$cmoc_python" test/_ollama_support.py run-pytest \
-    test -ra -m gpu_integration
+    "$cmoc_python" -m pytest \
+    test -ra -m real_path_integration
 ```
 
 - 過去の実行結果、focused test、または一部 command の成功だけで完了扱いにしてはいけない。
-- full test は、非 GPU full pytest と GPU full pytest の和集合とする。
-- Ruff check、Ruff format check、mypy、および非 GPU full pytest は repository 所定の sandbox 内で実行する。
-- 最後の GPU full pytest だけを command 単位 sandbox escalation の対象とする。
+- full test は、実経路統合テスト以外の full pytest と実経路統合テストの full pytest の和集合とする。
+- Ruff check、Ruff format check、mypy、および全 pytest command は repository 所定の sandbox 内で実行する。
 
-## GPU test だけを command 単位で sandbox escalation する
+## 実経路統合テストを実行する
 
-- `gpu_integration` を選択する pytest runner command とその descendant process だけに command 単位 sandbox escalation を要求してよい。
-- test-local Ollama が host の GPU device と実推論を使用するための例外とし、sandbox 内での事前失敗を要求しない。
-- GPU command は最初の実行から escalation を要求し、同じ command を先に sandbox 内で実行してはいけない。
-- escalation の理由には、test-local Ollama が host の GPU device を使用する必要があることを明記する。
-- Ruff、mypy、または `gpu_integration` 以外の pytest を sandbox 外で実行してはいけない。
-- agent call 全体へ `danger-full-access` を指定してはいけない。
-- GPU test のための prefix allow rule を作成または永続化してはいけない。
-- cache の利用、再構築、または永続化を理由に escalation の範囲を広げてはいけない。
-- escalated command が作成した test-local の一時 file と cache、および GPU device 以外の host resource を探索または操作してはいけない。
-
-escalation が利用不能、拒否、または review failure になった場合は、その時点で停止する。
-
-- 同じ GPU test を sandbox 内で再実行してはいけない。
-- GPU test と full test を未完了として報告する。
-- sandbox 外の GPU test が GPU 利用不能を理由に skip した場合も、GPU test と full test を未完了として扱う。
-- skip reason をそのまま報告する。
+- 実経路統合テストの意味上の要件、モデル設定、quota、および model provider の扱いは、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする。
+- pytest command から具体的な model provider またはモデル名を上書きしてはならない。
+- quota 枯渇時の待機と再開を含む Codex CLI 呼び出し規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` に従う。
+- 実経路統合テストを Fake、mock、stub、記録済み response、または起動確認へ置き換えて test 実行を完了扱いにしてはならない。
 
 ## 完了を判定する
 
 Python code 変更の完了には、fresh な完了ゲートの全 command が成功し、必要な外部経路が実際に検証されていることを要求する。
 
-- GPU test の未実行、失敗、または GPU 利用不能による skip がある場合は full test 未完了とする。
-- Real Codex CLI を必要とする test が環境不足で skip され、必要な実経路を検証できなかった場合は full test 未完了とする。
+- 実経路統合テストの未実行、失敗、または環境不足による skip がある場合は、full test 未完了とする。
 - その他の skip は reason と対象を確認し、今回必要な検証を欠く場合は未完了とする。
 - test または品質検査の失敗を残したまま完了扱いにしてはいけない。
 - development mode と `ResourceWarning` 検査だけですべての resource leak を検出できるとは保証しない。
@@ -171,11 +153,11 @@ Python code 変更の完了には、fresh な完了ゲートの全 command が�
 - preflight の結果
 - 実行した command と各終了状態
 - Ruff check、Ruff format check、および mypy の結果
-- sandbox 内の focused test と非 GPU full pytest の結果
-- escalated GPU focused test と GPU full pytest の結果
+- focused test と実経路統合テスト以外の full pytest の結果
+- 実経路統合テストの focused test と full pytest の結果
 - test 数、skip 数、および skip reason
-- Real Codex CLI を使う test の実行または skip
-- cache hit または cache miss など、出力から確認できた実行上の原因
+- 実在の Codex CLI executable と実推論を使う test の実行または skip
+- model provider、quota、timeout など、出力から確認できた実行上の原因
 - full test が fresh に完了したか、未完了ならその理由
 
 失敗した期待値を変更すべきかという意味上の判断は、実行上の原因分類と同じ作業として扱わない。必要な場合は、別の仕様調査として明示する。

@@ -22,60 +22,41 @@
 ## non-goal
 
 - LLM の回答品質や、Codex CLI に依頼した仕事の意味的な成功は cmoc の自動テストの目的としない
-- Codex CLI 自体、model provider、有料クラウド backend の正しさや安定性を保証することは目的としない
-- GPU の性能または推論速度そのものの評価は test の目的としない
+- Codex CLI 自体または model provider の正しさや安定性を保証することは目的としない
 
 ## 実経路統合テスト
 
+### 用語と選択
+
+- 正本用語は「実経路統合テスト」とする
+- 個々の test case は「実経路統合テストケース」と表記する
+- `e2e` を実経路統合テストの同義語、正本用語、または pytest marker として導入してはならない
+- 実経路統合テストを分離選択する pytest marker が必要な場合は、`real_path_integration` だけを使用する
+
+### 検証要件
+
 - 実経路統合テストとは、利用者向け CLI entrypoint を独立 process で実行し、本番と同じ code path、実在の外部 executable、および必要な実推論を使って、response 後の処理と外部から観測可能な結果まで検証する realization test である
-- 実行時点で公開されている全末端サブコマンドを対象とし、各 test case は終了 code とコマンド固有の外部から観測可能な結果を検証する
-- 公開末端サブコマンドと test case の対応は機械的に比較可能にする。公開末端サブコマンドの追加または rename に対して対応する test case がなければ test を失敗させる
-- Codex CLI 呼び出しには、実在の Codex CLI executable、実在の Ollama executable、および test-local Ollama による実推論を使用する。Fake、mock、stub、記録済み response、または起動確認だけでは実経路統合テストを代替できない
-- 本番との差は、`{{test-root}}` による隔離、決定論的な入力と対話操作の自動化、test-local Ollama、テスト用 SLM、および有料クラウド backend 禁止のために必要な範囲だけ許容する
+- 実行時点で公開されている全末端サブコマンドを対象とする
+- 各実経路統合テストケースは、終了 code とコマンド固有の外部から観測可能な結果を検証する
+- 公開末端サブコマンドと実経路統合テストケースの対応は、機械的に比較可能にする
+- 公開末端サブコマンドの追加または rename に対して、対応する実経路統合テストケースがなければ test を失敗させる
+- Codex CLI 呼び出しには、実在の Codex CLI executable と実推論を使用する
+- Fake、mock、stub、記録済み response、または起動確認だけでは実経路統合テストを代替できない
+- 本番との差は、`{{test-root}}` による隔離、決定論的な入力、対話操作の自動化、および本書が定める実経路統合テスト専用のモデル設定に必要な範囲だけ許容する
 - `--help`、shell completion、不正入力、事前条件違反、handler の直接呼び出し、または process を分離しない確認は、実経路統合テストとはみなさない
-- 新規の公開末端サブコマンドには、同じ変更で対応する実経路統合 test case を追加する
+- 新規の公開末端サブコマンドには、同じ変更で対応する実経路統合テストケースを追加する
 
-## test-local Ollama
+### Model、Reasoning Effort、quota、および model provider
 
-- Codex CLI 呼び出しを行う各 test case は、専用の Ollama process を `{{test-root}}` 内で都度起動する
-- Ollama の process runtime directory、HOME、model working directory、binary、PID、log、および port は test case ごとに独立させる
-- Ollama は loopback interface の動的空き port で listen させ、固定 port または既存の Ollama service に依存してはならない
-- 同じ cache root を使用する実経路統合テスト全体で、同時に稼働する test-local Ollama process は最大 1 つとする
-- 各 test case は Ollama 起動前に排他的な Ollama execution lock を取得し、process group の teardown が完了するまで保持する。並列実行された別の test case は lock の解放を待つ
-- Ollama execution lock は同時実行数を制限するものであり、異なる test case 間で Ollama process を共有するために使用してはならない
-- 同じ test case 内の複数 Codex CLI 呼び出しに限り、その test case の Ollama process を共有してよい
-- test case は Ollama を専用 process group として起動し、success、failure、timeout のいずれでも、その test case が起動した process group だけを teardown する
-- test-local Ollama は `CmocConfig` の通常の model provider 設定によって Codex CLI 呼び出し単位で選択し、test 専用の特殊な provider ID または provider 起動機能を cmoc に追加してはならない
-- テスト用 SLM は `qwen3:4b-instruct-2507-q4_K_M` とする
-- test-local Ollama は GPU だけで推論を実行し、CPU 推論への fallback を許容しない
-- test-local Ollama を必要とする test case には `gpu_integration` marker を付け、それ以外の test case へこの marker を付けてはならない
-- host 実行環境で GPU が利用できない場合、GPU 推論を開始できない場合、または GPU 推論を確認できない場合は、test-local Ollama を必要とする test case を skip する
-- Codex sandbox から GPU device が不可視でも、sandbox 外の同じ host 実行環境で GPU が利用可能なら、GPU が利用できない場合とはみなさない
-
-## timeout
-
-- test-local Ollama を必要とする test case の timeout は、テスト用 SLM を GPU で実行した正常時の実測時間と実行環境の揺らぎに基づいて設定する
-- CPU 推論または CPU 推論への fallback に要する時間を timeout の余裕に含めてはならない
-
-## test-local Ollama cache
-
-- Ollama archive、versioned binary、および pull 済み model は、system temporary directory 上の test 専用 cache にベストエフォートで半永続化する
-- cache の既定 root は、`tempfile.gettempdir()` で得た system temporary directory 配下で、OS user と cache schema version によって namespacing した directory とする
-- cache root の override に使用する test 専用環境変数は `CMOC_TEST_OLLAMA_CACHE` とする
-- cache root の選択は pytest の case/session 用一時領域の隔離から独立させ、利用可能な間は test run と agent call をまたいで同じ root を再利用可能にする
-- cache root に `{{cmoc-root}}` または `{{work-root}}` の配下を使用してはならず、cache path を `CmocConfig` に追加してはならない
-- cache root は使用前に、owner、directory であること、symlink でないこと、permission、読み書き、atomic rename、および file lock の利用可能性を検証する
-- system temporary directory が sandbox 内で利用できない場合は pytest session 用一時 directory へ fallback する
-- system reboot、OS cleanup、利用者操作などによる cache の欠落、削除、または破損は正常な cache miss として扱い、cold-cache から archive、versioned binary、および pull 済み model を再構築する。test の正しさを cache の存在に依存させてはならない
-- cache の利用または cold-cache からの再構築は repository 所定の test 用 sandbox 内で完了可能にする。cache 永続化だけを理由に sandbox 外実行（sandbox escape）、追加の writable root、または `danger-full-access` を要求してはならない
-- 通常の test teardown では cache を能動的に削除しない
-- cache の更新は排他的 lock の保持中に staging directory で構築し、完成後に atomic publish する。不完全な内容を cache hit として観測可能にしてはならない
-- 各 test case は cache から `{{test-root}}` 内へ独立した working set を materialize し、その working set から Ollama を起動する。cache を Ollama の live working directory として直接共有してはならない
-- materialize は、test case が共有 cache を変更せず、test 中に cache が消えても working set が影響を受けない方式とする。これを満たす具体的な方式は realization の裁量とする
-
-## クラウド backend
-
-- テスト目的の Real Codex CLI 呼び出しで、ChatGPT subscription 枠や従量課金の cloud API などの有料クラウド backend を使用してはならない
+- 実経路統合テストから発生するすべての Codex call は、`ModelClass.MINIMUM` と `ReasoningEffort.LOW` を使用する
+- このモデル設定は実経路統合テストだけの例外とする
+- 通常実行では、各 `AgentCallParameter` builder が model class と reasoning effort の選択を担う
+- 自動テストによる quota 消費を一律には禁止しない
+- 実経路統合テストでは、通常の `CmocConfig` で選択される model provider の quota 消費を許容する
+- 実経路統合テストの仕様へ、具体的な model provider またはモデル名を固定してはならない
+- model provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` を正本とする
+- 実経路統合テストは、model provider に対する cmoc の責務境界を広げない
+- quota 枯渇時の待機と再開を含む通常の Codex CLI 呼び出し規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` を正本とする
 
 ## Fake Codex CLI
 

@@ -130,7 +130,10 @@ call-scoped path context の適用範囲を次に示す。
 - model provider ID、provider-local key、および provider-local setting は、意味を変えず Codex CLI が解釈できる TOML key/value として符号化する
 - 選択していない provider の設定を argv に渡してはならない
 - model provider の選択と provider-local 設定に `--profile`、`$CODEX_HOME/config.toml`、または project config を使用してはならない
-- AgentCallParameter builder は model class と reasoning effort の選択を正本とし、実際の model provider、model、および reasoning effort の値は `CmocConfigCodex` から解決する
+- 実経路統合テスト以外の通常実行では、AgentCallParameter builder は model class と reasoning effort の選択を正本とする
+- 実際の model provider、model、および reasoning effort の値は `CmocConfigCodex` から解決する
+- 実経路統合テストだけに適用する model class と reasoning effort の例外は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする
+- この例外によって、通常実行の AgentCallParameter builder の責務を変更してはならない
 - cmoc は Model provider, Model, Reasoning Effort 設定についての情報を Codex CLI プロンプトに注入しない
 
 ## プロンプトの渡し方
