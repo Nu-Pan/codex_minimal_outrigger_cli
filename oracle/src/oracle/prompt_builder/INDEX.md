@@ -50,17 +50,17 @@
 # `parts`
 
 ## Summary
-- oracle と realization、レビュー、アクセス制約、INDEX.md ルーティングなど、agent prompt に組み込む各種規範を構造化文書として生成する prompt builder 部品群。個別ルールの実装内容を確認する際の入口であり、各部品が担当する規範へ振り分ける。
+- oracle と realization の規範、ファイルアクセス制約、ルーティング、feedback 報告など、agent prompt を構成する各部品を扱うディレクトリ。個別の prompt builder 部品の責務と、必要な調査・変更時の入口を確認するために読む。
 
 ## Read this when
-- prompt builder の規範生成処理を変更・調査するとき
-- oracle と realization の定義、適合性レビュー、conflict 解消、ファイルアクセス、feedback 報告、INDEX.md ルーティングなど、共通 prompt 規則の具体的な生成元を確認するとき
-- 対象となる個別ルールが特定でき、対応する部品の責務や構造化文書の生成方法を調べるとき
+- oracle・realization の基本概念や作業規範を prompt に組み込む処理を調査するとき
+- oracle review、conflict 解消、feedback 報告、ファイルアクセス、INDEX.md ルーティングなどの共通規則を変更・確認するとき
+- 対象となる prompt builder 部品の責務や適用条件を選ぶ必要があるとき
 
 ## Do not read this when
-- 個別の oracle 文書や realization 実装そのものの内容を確認するとき
-- prompt builder 以外の CLI 機能や session 処理の実装を調査するとき
-- 個別ルールではなく INDEX.md のエントリー内容だけを確認するときは、対象ファイルまたはディレクトリの INDEX.md を直接読む
+- 特定の oracle 文書や realization 実装そのものの内容を調査するとき
+- 個別の session 処理、CLI 実装、または prompt builder の呼び出し元だけを調査するとき
+- INDEX.md の個別エントリー内容だけを確認したいとき
 
 ## hash
-- e3d8fb56a112b45ae131963f5956c2aae73bdd5759fff66245b79758fe88d713
+- 86e050fc9dee8e46eca1513e49b80e9586e14679cde4fa5cfd09e971d118dc23

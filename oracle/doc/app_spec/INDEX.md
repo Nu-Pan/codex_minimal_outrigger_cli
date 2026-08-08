@@ -189,19 +189,20 @@
 # `misc_spec.md`
 
 ## Summary
-- oracle file と realization file の分類、Git ignore 判定、pruning、nested repository、性能不変条件、回帰検証を定義する雑多な仕様。
-- work-root の前提、cmoc 実行時のパス関係、タイムスタンプ形式、cmoc-managed-branch の意味を定める共通仕様として、関連実装・テストへ進む入口になる。
+- oracle file と realization file の列挙方法、traversal の事前 pruning、Git ignore 判定の性能不変条件、回帰検証、および work-root・実行時 cwd・タイムスタンプ・管理ブランチに関する前提を定義する雑多な仕様。関連するファイル列挙、symlink や nested repository の境界、性能要件、または cmoc 実行環境の用語を確認する際の入口となる。
 
 ## Read this when
-- ファイル列挙や分類結果、Git ignore、traversal/pruning、nested repository の扱いを確認・変更するとき。
-- 列挙性能、回帰検証、work-root の前提、cmoc の実行パス、タイムスタンプ、managed branch の定義を確認するとき。
+- oracle file／realization file の分類規則や full glob 相当の列挙結果を実装・検証するとき
+- pruning 境界、非通常ファイル、symlink、nested repository、Git ignore の扱いを確認するとき
+- Git subprocess 数や ignore source 検証回数など、列挙性能の不変条件と回帰検証条件を確認するとき
+- work-root、cmoc の実行 cwd、タイムスタンプ、cmoc-managed-branch の定義を確認するとき
 
 ## Do not read this when
-- 個別機能の実装詳細やテスト内容だけを確認したい場合。
-- INDEX.md の構造や対象ファイルの一覧だけを確認したい場合。
+- 特定の oracle または realization ファイルの内容や責務を確認することが目的で、この仕様の列挙・環境前提に関係しないとき
+- テスト実行手順や開発環境の構築手順を確認するときは、それぞれの専用の開発ルール文書へ直接進む
 
 ## hash
-- e70e0e5912c67d8b3b9f617921cd84063bd3dc27cf5e7c749fe4917aef3e05c1
+- 9db85fcbeb954960be775cd1d055e88636114eb836822432d93ed2e507638222
 
 # `prompt_editor_input.md`
 

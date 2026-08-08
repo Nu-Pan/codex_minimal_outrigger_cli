@@ -768,7 +768,7 @@ def enumerate_oracle_and_realization_files(
     根拠: {{work-root}}/oracle/doc/app_spec/misc_spec.md
     """
     # 常時対象外 root と検証済み Git metadata だけを事前 pruning し、ignored
-    # directory も含む残りの tree から regular file を収集する。
+    # directory も含む残りの tree から regular file と symlink を収集する。
     work_root = root.absolute()
     candidates_by_repository: dict[Path, list[Path]] = {}
     _collect_file_inventory_candidates(
@@ -786,9 +786,15 @@ def enumerate_oracle_and_realization_files(
     ):
         _validate_git_ignore_sources(repository, repository)
         ignored = _batch_untracked_git_ignored(repository, candidates)
-        included.extend(
-            candidate for candidate in candidates if candidate not in ignored
-        )
+        for candidate in candidates:
+            if candidate in ignored:
+                continue
+            if not _is_regular_file(candidate):
+                raise _file_inventory_error(
+                    candidate,
+                    "symlink が untracked かつ ignored ではありません。",
+                )
+            included.append(candidate)
 
     # Git 判定後の regular file を repository path だけで分類する。
     oracle_files: list[Path] = []
@@ -808,7 +814,7 @@ def _collect_file_inventory_candidates(
     owning_repository: Path,
     candidates_by_repository: dict[Path, list[Path]],
 ) -> None:
-    """directory 直下を lstat し、pruning 後の regular file を収集する。"""
+    """directory 直下を lstat し、pruning 後の候補 path を収集する。"""
     # 同じ directory の `.git` を他 entry より先に検証し、直下の file にも
     # 最内側の repository context を適用する。
     entries = _lstat_directory_entries(directory)
@@ -833,7 +839,6 @@ def _collect_file_inventory_candidates(
             _require_inventory_entry_kind(path, mode)
             continue
 
-        _require_inventory_entry_kind(path, mode)
         if stat.S_ISDIR(mode):
             _collect_file_inventory_candidates(
                 work_root,
@@ -841,8 +846,12 @@ def _collect_file_inventory_candidates(
                 current_repository,
                 candidates_by_repository,
             )
-        else:
+        elif stat.S_ISREG(mode) or stat.S_ISLNK(mode):
             candidates_by_repository.setdefault(current_repository, []).append(path)
+        else:
+            raise _file_inventory_error(
+                path, "directory、regular file、または symlink ではありません。"
+            )
 
 
 def _lstat_directory_entries(directory: Path) -> list[tuple[Path, int]]:
