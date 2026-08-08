@@ -55,22 +55,18 @@
 # `prompt_editor_input.py`
 
 ## Summary
-- エディタから受け取った利用者プロンプトを一時ファイルへ保存し、コメント除去後の入力を読み取る共通境界を担う。
-- 完全 prompt の skeleton に入力を挿入して確定し、必要な `.cmoc` ignore 設定と利用可能なエディタ選択も扱う。
-- プロンプト編集入出力の挙動や、エディタ起動・placeholder 検証・入力確定処理を確認したい場合の実装入口である。
+- エディタから受け取る利用者プロンプトを、予約した入力ファイルへ保存・読込し、完全な prompt skeleton のプレースホルダーを置換して確定する共通境界。エディタ選択、入力コメント除去、プレースホルダー検証、`.cmoc` ignore 保証も扱う。プロンプト編集フローや editor input の入出力処理を確認するときの入口。
 
 ## Read this when
-- プロンプトをエディタで編集する処理を変更または調査するとき。
-- original prompt の読み取り、complete prompt の確定、editor 用パスの ignore 設定を確認するとき。
-- 利用可能なエディタの選択順や、skeleton の placeholder 検証を確認するとき。
+- 利用者プロンプトのエディタ入力、完全 prompt の確定、入力ファイルの予約、利用可能なエディタの選択を変更または調査するとき。
+- 入力から HTML コメントや前後空白を除去する処理、prompt skeleton のプレースホルダー検証、エディタ用 `.cmoc` ignore の保証を確認するとき。
 
 ## Do not read this when
-- prompt の正本仕様や canonical builder の内容を確認したいときは、参照される oracle 側の文書または実装を直接読む。
-- prompt builder の Markdown 描画処理そのものを確認したいときは、描画実装を直接読む。
-- CLI 全体のエラー処理やパス管理の仕様を確認したいときは、対応する runtime 実装または正本仕様を直接読む。
+- prompt skeleton の内容やエディタ入力案内の正本仕様を確認する場合は、prompt builder または対応する oracle 文書を直接読む。
+- prompt editor input と無関係なランタイムエラー、Git 操作、パス生成、または一般的な CLI 処理を調査する場合。
 
 ## hash
-- 97d1ec4bf3fc999976afce502773623565a9ccef7e2b9eb5aaf728804ecdaade
+- f3eac66d141d815806253a176c70dd6d9e83e8ecdea2d0ffcf68db71b2021567
 
 # `runtime_cli.py`
 

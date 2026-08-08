@@ -89,20 +89,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を集約するディレクトリ。アプリケーション仕様、開発規則、不採用案の検討記録を扱い、個別の仕様文書や実装領域へ進むための入口となる。
+- cmoc の正本領域で、アプリケーション仕様・開発規則・不採用案の記録を集約する。個別の正本ドキュメントや oracle 側のエージェント呼び出し構築実装へ進むための入口。
 
 ## Read this when
-- cmoc のアプリケーション挙動や開発規則に関する正本文書の所在を確認するとき
-- CLI、実装、テスト、開発環境など複数の仕様領域にまたがる調査・変更対象を特定するとき
-- 採用しなかった設計案やリファクタ方針の背景を確認するとき
+- cmoc の正本ドキュメントや oracle 側の agent call 構築実装の所在を確認するとき
+- 複数の仕様領域または用途別 builder にまたがる調査対象を特定するとき
+- 個別仕様や実装を読む前に、適切な下位領域への入口を判断するとき
 
 ## Do not read this when
-- 確認対象の個別仕様文書がすでに特定できており、その本文だけを読めばよいとき
-- 実装コード、テストコード、開発成果物そのものを確認するとき
-- INDEX.md のルーティング情報だけを確認するとき
+- 確認対象の個別仕様文書がすでに特定できているとき
+- 実際のサブコマンド実行フローや agent call 起動処理を調べるとき
+- 個別の schema、基盤モデル、realization 実装、feedback 保存処理の詳細だけを確認するとき
 
 ## hash
-- 230cc29f464bd03d6147416db6a560b8e8a549383fe2a352228fcc1108b3cbf3
+- d6e770acf938fd75bde9c3c56580a3ee495362f5c55c7dd82a0f3139e78b00c9
 
 # `pyproject.toml`
 
@@ -126,22 +126,18 @@
 # `src`
 
 ## Summary
-- cmoc の realization 側 Python ソースツリー。Typer CLI のルート、各サブコマンド、共通 runtime helper、設定・互換 import shim、ACP builder adapter を含む。
-- CLI の公開入口と command tree はトップレベル実装、個別コマンドの処理はサブコマンド配下、横断的な実行・状態・Git・feedback・INDEX 処理は commons 配下へ進む。
-- acp、basic、config、oracle shim は既存 import 経路や正本側実装への接続を担う互換層で、ACP builder の用途別 adapter は acp 配下に整理されている。
+- cmoc CLI の realization 実装をまとめる公開パッケージ。トップレベル CLI、互換 import shim、共通 runtime、設定、ACP/basic API、サブコマンド群を扱い、目的の実装領域へ進むための起点となる。
 
 ## Read this when
-- cmoc の CLI 全体の入口、サブコマンド構成、または realization 側の主要な実装領域を確認するとき。
-- 共通 runtime と個別 CLI サブコマンドの責務境界を判断するとき。
-- ACP builder adapter、互換 import 経路、設定公開面の下位要素へ進む入口を選ぶとき。
+- cmoc の CLI 全体構成や公開入口を確認したいとき。
+- 共通 runtime、互換 import、設定、ACP/basic API、またはサブコマンドの実装先を選びたいとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime helper、builder adapter の詳細実装だけを確認したいときは、該当する下位要素を直接読む。
-- 正本仕様や canonical な型・処理の定義を確認したいときは、対応する oracle 側を直接読む。
-- テストの挙動や検証条件だけを確認したいときは、test 配下の対象を読む。
+- 特定サブコマンドや runtime 機能の内部処理を調べるときは、該当する下位要素を直接読む。
+- 正本仕様や oracle 側実装の詳細を確認するときは、対応する oracle 文書または実装を直接読む。
 
 ## hash
-- bf6905e26d028a39a06214fbfe595ba84b43e0048ecbebe07d7e15b274d66b2a
+- 53fd55fdf3329379d77248b0fea84a3880fbaa0950ff01d46a55b1b6c4fcafb9
 
 # `test`
 

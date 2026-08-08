@@ -18,20 +18,20 @@
 # `basic`
 
 ## Summary
-- `basic.*` の互換 import を提供する realization 側の公開入口。ACP 型、path model、構造化文書 API を再公開し、既存利用者向けの参照経路を維持する。個別モジュールの実装や正本仕様へ進むためのルーティング対象。
+- `basic.*` の互換 import を維持するための realization 側公開入口。ACP 型、path model、構造化文書 API を正本実装から再公開し、個別実装や正本仕様は保持しない。各モジュールの公開経路・互換参照を確認するための下位入口である。
 
 ## Read this when
-- `basic.*` の互換 import を維持・廃止する条件を判断するとき。
-- ACP 型、path model、構造化文書 API の realization 側公開面や参照経路を確認するとき。
-- 文字列 child を含む構造化文書の Markdown 描画補正を調査するとき。
+- `basic.*` の互換 import を維持・削除する判断をするとき。
+- realization 側から ACP 型、path model、構造化文書 API がどの経路で公開されるかを確認するとき。
+- 個別モジュールの再公開関係を調査するとき。
 
 ## Do not read this when
-- 個別モジュールの詳細実装や再公開内容だけを確認したいときは、該当モジュールを直接読む。
-- ACP 型、path model、構造化文書 API の正本仕様・定義を確認したいときは、oracle 側の正本を直接読む。
-- 互換 import や `basic` の公開面に関係しない CLI、プロンプト、別機能を調査するとき。
+- ACP 型、path model、構造化文書 API の正本仕様や実装詳細を確認したいときは、各再公開元の oracle 側を直接読む。
+- 個別 API の詳細や参照削除の影響だけを調べるときは、対象モジュールまたは参照箇所へ直接進む。
+- `basic.*` と無関係な処理を調査・変更するとき。
 
 ## hash
-- e143d1e333f9149e479c07ad78ab62cc47a489a1c38b3a192eba4e554842873f
+- 292bc262556c427d8a4a7636a2c7e14127adfdea1c7d57f167e9bfa04d4ce5ea
 
 # `cmoc_runtime.py`
 
@@ -51,21 +51,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行 lifecycle、Codex 実行、設定・状態管理、Git・パス・ログ・エラー・feedback、INDEX 更新など、複数機能から再利用される runtime 実装への入口。
-- 個別 helper の実装だけでなく、共通公開 API、Codex 実行制御、feedback 永続化、editing run lifecycle など、commons 配下の責務別モジュールへ進むためのルーティング単位。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。パッケージ初期化と、CLI、Codex 実行、設定・状態、Git、ログ、パス、feedback、エラー処理など複数の runtime 機能から再利用される公開 API・共通処理を扱う。配下の個別 runtime 実装へ進む前の入口。
 
 ## Read this when
-- cmoc の共通 runtime 機能を横断して調査・変更するとき
-- CLI、Codex、設定、状態、Git、ログ、feedback、パス、INDEX 更新などの共通実装の入口を選ぶとき
-- 特定の runtime helper の責務に対応する下位モジュールを特定するとき
+- cmoc の runtime 共通機能の構成や公開 API を確認するとき
+- 複数の runtime 機能にまたがる共通処理の実装箇所を探すとき
+- commons 配下の個別 helper・設定・状態・Git・Codex・feedback 関連実装を変更または調査するとき
 
 ## Do not read this when
-- 単一の runtime helper の具体的なアルゴリズムや挙動だけを調査・変更するとき
-- 個別 CLI サブコマンドの業務ロジックや引数定義だけを確認するとき
-- 正本仕様や、commons が再公開・委譲する機能の詳細仕様を確認するとき
+- 特定の runtime 機能の詳細な挙動やアルゴリズムだけを確認したいときは、対応する配下の個別モジュールを直接読む
+- CLI サブコマンド固有の業務ロジックや利用者向け仕様だけを確認したいとき
+- 正本仕様や INDEX.md の生成規則を確認したいときは、対応する oracle 文書または indexing 実装を直接読む
 
 ## hash
-- 68786a4685f6e7bd04c07ae954131b6129793461669d0e42c4f8e75a822ca6e7
+- b33391fdb461c6823b8f05028a10c190f671da1038f0f29ff99b8e95a6e55bff
 
 # `config`
 

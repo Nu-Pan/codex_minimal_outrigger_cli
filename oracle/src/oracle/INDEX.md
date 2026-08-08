@@ -36,33 +36,33 @@
 # `other`
 
 ## Summary
-- cmoc の oracle src にある共通基盤を扱うディレクトリ。リポジトリ設定、root と worktree のパス導出、Standard/Requirement の規範モデル、StructDoc の Markdown 変換と検証を提供し、それぞれの実装を読むための入口になる。
+- cmoc の oracle src にある基盤モデル群をまとめたディレクトリ。リポジトリ設定、root・worktree パス解決、規範モデル、構造化文書のデータ構造と Markdown 変換を扱い、これらの共通モデル実装を確認する入口となる。
 
 ## Read this when
-- cmoc の共通設定や Codex CLI・oracle review の設定構造を確認するとき。
-- agent call の cwd、各種 root、placeholder、worktree 境界の導出やパス変換を調査するとき。
-- Standard/Requirement のモデルや StructDoc の構造化・Markdown 変換・参照検証を確認するとき。
+- cmoc のリポジトリ固有設定、root placeholder や agent call のパス導出、Standard・Requirement のモデル、または StructDoc の構造化・Markdown 変換を調査・変更するとき。
+- 複数の共通モデルの責務分担や、これらを利用する oracle src の実装へ進む前に基盤定義を確認するとき。
 
 ## Do not read this when
-- 個別の CLI サブコマンド、agent call の具体的なプロンプト生成、または共通モデルを利用する呼び出し側だけを調査するとき。
-- 永続化された設定 JSON の生成・同期・doctor の実装、列挙値の定義、個別の規範本文、既存テスト、開発環境の実行手順を直接確認するとき。
+- 永続化された設定 JSON の生成・同期や doctor の具体的な挙動だけを確認するときは、対象の設定ファイルや doctor 実装を直接読む。
+- 個別の列挙型定義、個別の規範本文、StructDoc の正本仕様、または CLI・agent call などの利用側処理だけを調査するときは、それぞれの直接の定義・仕様・呼び出し側へ進む。
 
 ## hash
-- 858d9da7a853f45063fa924c2c396aa54e1546f33a28a1268d283fb4834dba05
+- 0925ecd2af76345af3913b3a776af54e93ab0a72ce1ae7bd6212c95be3b3daf3
 
 # `prompt_builder`
 
 ## Summary
-- エージェント用プロンプトを構成する部品群をまとめるディレクトリ。oracle・realization 規範、アクセス制約、ルーティング、feedback 報告などの共通規則を扱い、個別の prompt builder 部品へ進む入口となる。
+- エージェント呼び出し用プロンプトを構成する実装群。プレースホルダ型、完全なプロンプトの組み立て、エディタ初期入力、oracle・realization・アクセス制御・ルーティングなどの共通規範を扱う。各機能の詳細を確認する際の入口となる。
 
 ## Read this when
-- プロンプトに組み込む共通規則の責務や適用条件を確認・変更するとき。
-- oracle・realization、ファイルアクセス、ルーティング、feedback 報告に関する prompt builder 部品を選ぶとき。
+- エージェント呼び出し用プロンプトの構成や統合規則を調査・変更するとき。
+- プレースホルダの型、エディタ入力の初期文面、共通規範の注入条件を確認するとき。
+- 複数の prompt builder 部品から調査対象を選ぶ必要があるとき。
 
 ## Do not read this when
-- プロンプト全体の組み立て順序やプレースホルダ定義を確認したいときは、親ディレクトリの中核ビルダーや型定義を直接読む。
-- エージェント入力の初期テンプレートや記入ガイドラインを確認したいときは、入力生成側を直接読む。
-- 特定の共通規則の実装詳細を確認したいときは、配下の対応する部品へ直接進む。
+- 特定の静的プロンプト本文や個別規則だけを確認したいときは、対応する下位部品を直接読む。
+- prompt builder の呼び出し元や session・CLI 処理を調査するとき。
+- プロンプト構築と無関係な機能や、構造化文書の一般的な実装を確認するとき。
 
 ## hash
-- 0fd5b32e6b44d4663af557871612c48d95454a28f294959882cc86cd37d48583
+- 3fd75b4b70d43dfa3b0512a6417f033323e81676d3f16aba8ea9d953fc047ece
