@@ -270,13 +270,13 @@
     "last_investigated_at": "2026-08-03_08-28_05_718004000"
   },
   "oracle/doc/dev_rule/test_execution.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "53cf7109630279120a8f0d6905abe4d6ae04605afa8f447043fa4aef1e417ff8",
     "last_investigated_at": "2026-08-06_06-09_33_612764000"
   },
   "oracle/doc/dev_rule/test_rule.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "f1837a73e1fc07ba376aeb4a6cb5583c0b6e5eaf10a366a0bbb50508c1880ff3",
     "last_investigated_at": "2026-08-03_21-59_44_377954000"
