@@ -1,6 +1,8 @@
 """TUI 起動直前の CLI 前処理の外部挙動を検証する。
 
-正本仕様: {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
+正本仕様:
+- {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
+- {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
 """
 
 from collections.abc import Iterator
@@ -11,12 +13,12 @@ import pytest
 from _cli_support import run_doctor, runner
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
-from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.tui as tui_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
 from main import app
 
 
@@ -42,6 +44,10 @@ def test_editor_input_uses_canonical_text_and_keeps_timestamp_collisions(
     )
     opened: list[Path] = []
     initial_texts: list[str] = []
+    skeletons = [
+        "# first skeleton\n\n{{original-prompt-here}}\n",
+        "# second skeleton\n\n{{original-prompt-here}}\n",
+    ]
 
     monkeypatch.setattr(
         prompt_editor_input_module,
@@ -64,24 +70,70 @@ def test_editor_input_uses_canonical_text_and_keeps_timestamp_collisions(
 
     monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
 
-    first_path, first_input = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path,
-        "- first automatic instruction",
+    first_stamp, first_path, first_complete_path = (
+        prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
     )
-    second_path, second_input = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path,
-        "- second automatic instruction",
+    first_input = prompt_editor_input_module.collect_prompt_editor_input(
+        first_path,
+        skeletons[0],
+    )
+    second_stamp, second_path, second_complete_path = (
+        prompt_editor_input_module.reserve_prompt_editor_input(tmp_path)
+    )
+    second_input = prompt_editor_input_module.collect_prompt_editor_input(
+        second_path,
+        skeletons[1],
     )
 
-    assert initial_texts == [
-        build_prompt_editor_input_initial_text("- first automatic instruction"),
-        build_prompt_editor_input_initial_text("- second automatic instruction"),
-    ]
+    assert len(initial_texts) == 2
+    for initial_text, skeleton in zip(initial_texts, skeletons, strict=True):
+        assert initial_text.startswith("<!--\n# このファイルの使い方")
+        assert initial_text.endswith("\n-->\n")
+        assert '<cmoc_block id="prompt template">' in initial_text
+        assert skeleton in initial_text
+    assert first_stamp == "2026-06-27_10-00_00_000001000"
+    assert second_stamp == "2026-06-27_10-00_00_000002000"
     assert first_path.name == "2026-06-27_10-00_00_000001000_orig.md"
     assert second_path.name == "2026-06-27_10-00_00_000002000_orig.md"
+    assert first_complete_path.name == "2026-06-27_10-00_00_000001000_cmpl.md"
+    assert second_complete_path.name == "2026-06-27_10-00_00_000002000_cmpl.md"
     assert first_path != second_path
     assert first_input == "input-1"
     assert second_input == "input-2"
+
+
+@pytest.mark.parametrize(
+    "complete_prompt_skeleton",
+    [
+        "# marker is missing\n",
+        "{{original-prompt-here}}\n{{original-prompt-here}}\n",
+    ],
+)
+def test_editor_input_rejects_skeleton_without_one_placeholder(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    complete_prompt_skeleton: str,
+) -> None:
+    """置換対象が一つでない skeleton ではエディタを起動しない。"""
+    original_path = tmp_path / "input_orig.md"
+    original_path.touch()
+    editor_started = False
+
+    def fake_run(_argv: list[str]) -> SimpleNamespace:
+        """不正 skeleton で呼ばれてはならない editor 起動を記録する。"""
+        nonlocal editor_started
+        editor_started = True
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(prompt_editor_input_module.subprocess, "run", fake_run)
+
+    with pytest.raises(CmocError, match="skeleton"):
+        prompt_editor_input_module.collect_prompt_editor_input(
+            original_path,
+            complete_prompt_skeleton,
+        )
+
+    assert editor_started is False
 
 
 def test_tui_runs_editor_and_launches_codex_directly(
@@ -106,7 +158,28 @@ def test_tui_runs_editor_and_launches_codex_directly(
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    builder_calls: list[tuple[str, str, AgentCallParameter, str]] = []
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
+
+    real_build_parameter = tui_module.build_tui_launch_tui_parameter
+
+    def record_build_parameter(
+        time_stamp: str,
+        original_prompt: str,
+    ) -> AgentCallParameter:
+        """builder の引数、戻り値、および編集前の skeleton を記録する。"""
+        parameter = real_build_parameter(time_stamp, original_prompt)
+        prompt_suffix = " を読んで、その指示に従って下さい"
+        complete_path = Path(parameter.prompt.removesuffix(prompt_suffix))
+        builder_calls.append(
+            (
+                time_stamp,
+                original_prompt,
+                parameter,
+                complete_path.read_text(encoding="utf-8"),
+            )
+        )
+        return parameter
 
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         """TUI 起動 call を記録して生成パラメータを検証する。"""
@@ -119,19 +192,36 @@ def test_tui_runs_editor_and_launches_codex_directly(
         assert parameter.structured_output_schema_path is None
         assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
         assert "extra_read_paths" not in kwargs
+        assert parameter is builder_calls[0][2]
 
+    monkeypatch.setattr(
+        tui_module,
+        "build_tui_launch_tui_parameter",
+        record_build_parameter,
+    )
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
     assert result.exit_code == 0
+    assert len(builder_calls) == 1
+    assert builder_calls[0][1] == prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
+    assert (
+        builder_calls[0][3].count(
+            prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
+        )
+        == 1
+    )
     assert len(tui_calls) == 1
     orig_files = list(
         (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_orig.md")
     )
     assert len(orig_files) == 1
-    original_prompt = orig_files[0].read_text()
-    assert original_prompt.startswith(build_prompt_editor_input_initial_text(""))
+    editor_contents = orig_files[0].read_text()
+    assert editor_contents.startswith("<!--\n# このファイルの使い方")
+    assert '<cmoc_block id="prompt template">' in editor_contents
+    assert "# file read write rule - repo_write" in editor_contents
+    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER in editor_contents
     complete_files = list(
         (root / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
@@ -149,6 +239,12 @@ def test_tui_runs_editor_and_launches_codex_directly(
     assert "# オリジナルプロンプト" in complete_prompt
     assert "src を確認して必要なら直す" in complete_prompt
     assert "remove me" not in complete_prompt
+    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
+    assert complete_prompt == builder_calls[0][3].replace(
+        prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER,
+        "# 依頼\n\nsrc を確認して必要なら直す",
+        1,
+    )
     assert str(complete_files[0]) in tui_calls[0][0].prompt
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").is_dir()

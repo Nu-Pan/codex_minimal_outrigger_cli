@@ -1,35 +1,34 @@
 # `edit`
 
 ## Summary
-- oracle 編集用 TUI の起動パラメータを構築する実装を含む領域です。リポジトリルート、oracle 編集専用のアクセス制御、固定プロンプト、モデル設定、構造化出力、管理ログ保存を確認する入口になります。現時点では、確認対象となる本文ファイルを含まない空の領域もあります。
+- このディレクトリは、oracle 編集向けの起動関連実装を配置する領域です。現時点では空のサブディレクトリと、`cmoc oracle edit` の TUI 起動パラメータを構築する実装を含みます。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動条件やパラメータを確認・変更するとき。
-- oracle 編集時に使われるプロンプト、パスコンテキスト、アクセスモード、モデル設定、ログ保存の挙動を調べるとき。
+- `cmoc oracle edit` の TUI 起動設定、agent call パラメータ、完全 prompt の保存や動的構成を確認・変更するとき。
+- このディレクトリに追加されたファイルの内容や用途を確認するとき。
 
 ## Do not read this when
-- oracle file の編集内容や編集エージェントの一般的な役割を確認するとき。
-- 共通のプロンプト構築処理や realization 側の CLI・TUI 動作を確認するとき。
-- この領域に具体的な本文ファイルがなく、配下のファイルを直接確認できる場合。
+- oracle file の編集内容や realization 側の実装だけを確認する場合。
+- prompt の共通構築ロジックを確認する場合は、共通 prompt builder の対象を直接読む場合。
+- 空のサブディレクトリ配下を確認する必要がなく、具体的なファイルを直接確認できる場合。
 
 ## hash
-- 906c47065e8fde322cc925923c398f022ea6230fc1b3fcece490d0d0d70e280b
+- 014f1bb2b9e944bb525857130e0c65a9705a18df0639e5f79c6a243dc902317c
 
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動パラメータを構築する正本実装。oracle file 調査用プロンプトの生成・ログ保存と、モデル、権限、作業ディレクトリなどを固定した `AgentCallParameter` の返却を担う。
+- `cmoc oracle investigation` の TUI 起動設定を構築する実装。oracle file 調査用プロンプトを生成・保存し、モデル、アクセスモード、作業ディレクトリ、インデックス事前処理を含む起動パラメータを提供する。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動条件、調査用プロンプト、起動パラメータ構成を変更・確認するとき。
-- ユーザー指示を含む完全プロンプトの生成から起動前ログ保存までの流れを確認するとき。
+- `cmoc oracle investigation` の TUI 起動条件、調査プロンプト、使用モデル、ファイルアクセスモード、起動ログ保存の変更や確認を行うとき。
 
 ## Do not read this when
-- oracle file 調査の仕様や完全プロンプト共通構造を確認するとき。
-- `AgentCallParameter` の型定義やファイルアクセスモードの一般的な意味だけを確認するとき。
+- 他の cmoc コマンドの起動パラメータを扱うとき。
+- 汎用的なプロンプト生成処理を扱うとき。
 
 ## hash
-- 7c5fc3c611d4d9eba23dff64427007dff368c17235754cdd9d84ce1f8a9897ea
+- c80256b46fbf3a6ec4f065d31ee05e741f68cd13446ab6b0d47be66509b58657
 
 # `review`
 

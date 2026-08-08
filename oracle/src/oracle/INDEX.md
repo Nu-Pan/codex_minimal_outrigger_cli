@@ -1,20 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- 対象ディレクトリには、各種 cmoc フローで AI Agent 呼び出しに使う正本ソースが配置されている。共通の呼び出しパラメータ定義、feedback・indexing・oracle・realization・session・tui など用途別の prompt／起動設定、Structured Output schema の定義が下位要素への入口となる。
+- AI コーディングエージェント呼び出し用の oracle src を収める領域。共通の呼び出しパラメータ定義に加え、TUI、indexing、feedback、oracle 各処理、realization 追従、session join の prompt・実行条件・Structured Output 契約を構築する実装への入口。
+- 配下の各サブディレクトリは用途別の agent call builder と schema をまとめており、対象コマンドの起動パラメータや prompt 構成を調査するときに、該当する下位領域へ進む。
 
 ## Read this when
-- cmoc の特定フローで使われる AI Agent 呼び出しの prompt、モデル・推論設定、アクセス権限、作業ディレクトリ、実行前設定を調査・変更するとき。
-- Agent call の出力契約や用途別の Structured Output schema の定義を確認するとき。
-- 共通パラメータ定義または feedback、indexing、oracle、realization、session、tui の呼び出し設定の入口を探すとき。
+- AI エージェント呼び出しの共通パラメータ、モデル区分、推論強度、ファイルアクセスモード、作業ディレクトリ、indexing preflight の定義を確認するとき。
+- 特定の cmoc サブコマンドに対応する agent call の prompt、実行条件、Structured Output schema の構築箇所を特定するとき。
+- TUI、indexing、feedback、oracle、realization、session join のいずれかの agent call builder を変更・調査するとき。
 
 ## Do not read this when
-- 通常の realization 実装・テストや CLI／TUI の実行フローそのものを調査するときは、対応する realization 側または呼び出し側を直接読む。
-- 正本仕様そのもの、Codex CLI sandbox・permission profile の一般規則、共通 prompt 構築の詳細だけを調査するときは、それぞれの専用仕様・実装を直接読む。
-- 特定用途の prompt や schema 以外の agent call を調査するときは、該当する下位ディレクトリまたは共通定義を直接読む。
+- 実際の cmoc サブコマンドの実行フローや agent call の起動処理そのものを調査するときは、呼び出し側や実行基盤を直接読む。
+- prompt の共通構造・レンダリング仕様だけを確認するときは、共通 prompt builder を直接読む。
+- 個別の oracle file、realization file、Git 操作、レビュー基準の内容を確認するときは、それぞれの対象ファイルや正本仕様を直接読む。
 
 ## hash
-- b035301cb336018a668b3f20fcad66aa0c4fc4ddf0a8ec9c30a1d86b6b47e214
+- f3216980016e702b4d2b2d26542dd692239b2b6d24c6079c1a9653808c09fc86
 
 # `feedback`
 

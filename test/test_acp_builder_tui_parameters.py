@@ -18,6 +18,7 @@ from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
     [
         "# 依頼\n\nsrc の実装を確認する。",
         "README の構成を調査する。",
+        "{{original-prompt-here}}",
     ],
 )
 def test_tui_launch_builder_uses_fixed_parameter_and_standards(
@@ -63,6 +64,8 @@ def test_tui_launch_builder_uses_fixed_parameter_and_standards(
     assert "# conflict resolution standard" not in complete_prompt
     assert "# index entry standard" not in complete_prompt
     assert original_prompt in complete_prompt
+    if original_prompt == "{{original-prompt-here}}":
+        assert complete_prompt.count(original_prompt) == 1
 
 
 def test_tui_launch_module_exports_only_builder() -> None:

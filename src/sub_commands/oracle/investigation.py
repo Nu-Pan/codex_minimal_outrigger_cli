@@ -13,14 +13,12 @@ from cmoc_runtime import (
 )
 from commons.indexing import enable_indexing_preflight
 from commons.prompt_editor_input import (
+    ORIGINAL_PROMPT_PLACEHOLDER,
     collect_prompt_editor_input,
     ensure_prompt_editor_roots_ignored,
+    finalize_complete_prompt,
+    reserve_prompt_editor_input,
 )
-
-# {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
-ORACLE_INVESTIGATION_AUTOMATICALLY_INJECTED_INSTRUCTION = """- oracle file は読み取り専用
-- realization file の読み書き禁止
-- oracle file の調査に必要な cmoc 固有の契約は自動注入"""
 
 
 def cmoc_oracle_investigation_impl() -> None:
@@ -32,7 +30,7 @@ def cmoc_oracle_investigation_impl() -> None:
         command_name="oracle investigation",
         command_argv=["cmoc", "oracle", "investigation"],
         tui_process=True,
-        total_steps=4,
+        total_steps=5,
     )
 
 
@@ -40,17 +38,30 @@ def _cmoc_oracle_investigation_body() -> None:
     """入力された oracle 調査指示から Codex TUI を起動する。"""
     root = repo_root()
     current_root = work_root()
-    start_subcommand_step(2, "oracle 調査指示を入力", "edit investigation")
-    original_path, instruction = collect_prompt_editor_input(
-        root,
-        ORACLE_INVESTIGATION_AUTOMATICALLY_INJECTED_INSTRUCTION,
-    )
-    start_subcommand_step(3, "TUI 起動パラメータを構築", "build TUI parameter")
+
+    # oracle 調査契約を含む完全 prompt の skeleton とパラメータを先に固定する。
+    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
+    start_subcommand_step(2, "TUI 起動パラメータを構築", "build TUI parameter")
+    time_stamp, original_path, complete_path = reserve_prompt_editor_input(root)
     parameter = build_oracle_investigation_launch_tui_parameter(
-        original_path.name.removesuffix("_orig.md"),
+        time_stamp,
+        ORIGINAL_PROMPT_PLACEHOLDER,
+    )
+    complete_prompt_skeleton = complete_path.read_text(encoding="utf-8")
+
+    start_subcommand_step(3, "oracle 調査指示を入力", "edit investigation")
+    instruction = collect_prompt_editor_input(
+        original_path,
+        complete_prompt_skeleton,
+    )
+
+    start_subcommand_step(4, "完全プロンプトを確定", "finalize complete prompt")
+    finalize_complete_prompt(
+        complete_path,
+        complete_prompt_skeleton,
         instruction,
     )
-    start_subcommand_step(4, "Codex TUI を起動", "launch Codex TUI")
+    start_subcommand_step(5, "Codex TUI を起動", "launch Codex TUI")
     run_codex_tui(
         parameter,
         root=root,

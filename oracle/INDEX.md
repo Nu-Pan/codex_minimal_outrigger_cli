@@ -1,35 +1,35 @@
 # `doc`
 
 ## Summary
-- cmoc の正本ドキュメントをまとめたディレクトリ。アプリケーション挙動、branch・commit・worktree のモデル、採用しなかった設計案、Python 開発規則を扱い、各仕様領域の文書へ進むための入口となる。
+- cmoc の正本ドキュメントを集約するディレクトリ。アプリケーション仕様、branch・commit・worktree のモデル、不採用案の検討記録、Python 開発ルールを扱い、各仕様文書へ進むための入口となる。
 
 ## Read this when
-- cmoc の挙動仕様や共通実行規約の参照先を特定するとき
-- session・run の分岐、branch、commit、worktree の関係を確認するとき
-- realization refactor で採用しなかった方式の背景や理由を調べるとき
-- Python の実装、CLI 設計、開発環境、テスト規則・実行手順を確認するとき
+- cmoc のアプリケーション挙動、branch・worktree の関係、不採用設計の背景、Python 開発ルールの正本文書を特定するとき
+- 複数の正本ドキュメントにまたがる責務境界や参照先を判断するとき
 
 ## Do not read this when
-- 対象が特定のアプリケーション機能、開発規則、または branch model に限定され、対応する個別文書を直接読む方が適切なとき
-- 実装やテストの具体的なソース内容だけを確認するとき
-- 現行仕様ではなく、不採用案の検討理由も不要な単純な作業を行うとき
+- 読むべき個別文書がすでに特定されており、その本文へ直接進めるとき
+- 実装配置やテスト実行など、特定の開発ルール文書だけを確認すればよいとき
+- INDEX.md のルーティング情報だけを確認するとき
 
 ## hash
-- fb3da5bbd16011cbc444eb2988d1727ef6399539dcbcaa9941596408b67293fc
+- fa5811512be861b1792d08fadba76f188af336e1efc708f8132af83de01170fc
 
 # `src`
 
 ## Summary
-- `oracle/src` は、AI Agent 呼び出しに必要な正本ソースを収録する領域です。共通パラメータ、用途別設定、prompt 構築、Structured Output 契約、基礎モデルを扱い、下位要素の定義へ進む入口になります。
+- cmoc の oracle src を収める実装領域です。AI エージェント呼び出しのパラメータ、feedback 入力契約、設定・パス・構造化文書モデル、プロンプト構築部品を扱います。
+- agent call builder、feedback、基礎モデル、prompt builder という責務別の下位領域へ進むための入口です。
 
 ## Read this when
-- AI Agent 呼び出しのモデル、推論設定、ファイルアクセス、cwd、Structured Output schema を調査・変更するとき。
-- feedback、indexing、TUI など用途別の agent call 設定や prompt 構築部品の所在を確認するとき。
-- CmocConfig、call-scoped なパス解決、Standard、Requirement、構造化 Markdown の基盤定義を調査するとき。
+- cmoc の oracle src 全体から、調査対象の責務を特定して適切な下位領域へ進みたいとき。
+- AI エージェント呼び出し、feedback reporter、設定・パスモデル、構造化文書、プロンプト構築のいずれかを横断して確認するとき。
 
 ## Do not read this when
-- 通常の realization 実装・テストや、CLI・TUI の実行フロー自体を調査するとき。
-- 特定の prompt builder 部品、用途別 schema、個別モデルの詳細だけを確認したいときは、該当する下位要素へ直接進む。
+- 特定の agent call builder の prompt や Structured Output schema を調査するときは、対応する下位領域へ直接進む。
+- feedback の入力契約だけを確認するときは、feedback の schema を直接読む。
+- 設定値、パス解決、Standard、StructDoc の個別定義だけを確認するときは、other の対応するモデルを直接読む。
+- プロンプト共通部品の実装詳細だけを確認するときは、prompt_builder またはその parts を直接読む。
 
 ## hash
-- 5a7d4b04247230ccef52fddbf8177d285c20a2196e5cf068a099921493697562
+- 63540f0412dcba7fc66a19f0e7574cffcdff6f19d1838d48e386e6b0f93174ce
