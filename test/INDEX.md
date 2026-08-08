@@ -908,18 +908,19 @@
 # `test_struct_doc_rendering.py`
 
 ## Summary
-- 対象テストは StructDoc の Markdown renderer の単体挙動を検証し、通常本文と code block 内の連続空行を一つに縮約すること、StructBlock の互換公開、描画済み Markdown child の不透明な埋め込みを確認する。
+- StructDoc の Markdown renderer に対する単体テスト。連続空行の縮約、コードブロック内の整形、StructBlock の互換公開と埋め込み、無効な参照・重複 block ID の拒否を検証する。renderer の整形挙動や参照解決のテストへ進む入口。
 
 ## Read this when
-- StructDoc の Markdown 出力、空行の縮約、code block の整形を変更・検証するとき。
-- StructBlock の互換モジュールからの再公開や、描画済み Markdown child の埋め込み挙動を変更・検証するとき。
+- Markdown renderer の空行処理やコードブロック出力を変更・確認するとき
+- StructBlock の再公開、描画済み Markdown の埋め込み、cmoc_ref の検証挙動を変更・確認するとき
+- StructDoc renderer の関連テストを追加・修正するとき
 
 ## Do not read this when
-- Markdown renderer、StructBlock、またはこのテストが検証する互換公開に関係しない作業をするとき。
-- 仕様や実装の根拠を確認するときは、このテストではなく、記載された oracle の仕様・実装を直接読む。
+- StructDoc のモデル定義や renderer 本体の実装を直接調査する場合
+- Markdown 以外の出力形式や、renderer と無関係な CLI 挙動を調査する場合
 
 ## hash
-- 3d355cf31cbccee40dfab9aeff23f1782ed69aa7f241c5d564bfe3a820557529
+- d83e1e717144f9f42e6e9e616890340046a41f72d404f732b73314c152ad921c
 
 # `test_windows_toast.py`
 

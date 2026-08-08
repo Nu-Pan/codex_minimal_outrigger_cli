@@ -142,17 +142,18 @@
 # `test`
 
 ## Summary
-- `test` ディレクトリは、cmoc の realization test を集約する回帰・統合・受け入れテスト領域。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session、config、Git、状態永続化などの外部挙動と安全境界を検証し、機能領域ごとのテストへの入口を提供する。
+- テストコードを集約する realization test ディレクトリ。共通ヘルパー、ACP builder、Codex runtime、CLI、indexing、oracle review、session、設定・状態永続化などの外部挙動と回帰契約を検証する各テストへの入口。
 
 ## Read this when
-- cmoc の実装変更に対する外部挙動、回帰条件、統合 lifecycle を確認するとき。
-- テスト失敗を CLI、runtime、indexing、oracle review、session、config などの機能領域へ切り分けるとき。
-- 本番経路、Codex subprocess、Git worktree、永続 state、通知などの境界挙動を検証するとき。
+- 対象機能の外部挙動や回帰条件を確認するとき。
+- テスト用 fixture、fake subprocess、Git repository、Codex 環境などの共通支援を探すとき。
+- 複数領域にまたがる受け入れテストや本番経路テストの対象範囲を確認するとき。
 
 ## Do not read this when
-- 正本仕様や Structured Output schema の内容そのものを確認・変更するときは、対応する oracle 文書・schema・source を直接読む。
-- 実装詳細だけを調べるときは、対応する src の実装を直接読む。
-- テスト実行方法や共通 fixture の定義だけを確認するときは、専用の実行規則や個別の支援モジュールへ直接進む。
+- 正本仕様や設計意図を確認するときは、対応する oracle 文書・schema・oracle source を直接読む。
+- 実装詳細を確認するときは、対象機能の src 実装を直接読む。
+- テスト実行方法だけを確認するときは、repository local の test_execution の案内を読む。
+- 対象領域が明確な場合は、該当する個別テストまたは共通支援モジュールへ直接進む。
 
 ## hash
-- 5687e9aa587fd540daf4940bdd53b0202061d4efebba923973bab2ff229ed5e9
+- adf0a26f25cdbc03dffda292e590f322c6c52d10cfe7e27555917c318a5e1e5c
