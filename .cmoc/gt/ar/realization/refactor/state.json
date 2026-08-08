@@ -468,7 +468,7 @@
     "last_investigated_at": "2026-08-03_17-05_45_457823000"
   },
   "oracle/src/oracle/prompt_builder/editor_input.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "5622a37bf21a60f5ae6bc90f00c4a5d9350402e529f28f004aa46d3b26aa1c76",
     "last_investigated_at": "2026-08-03_06-06_02_842686000"
