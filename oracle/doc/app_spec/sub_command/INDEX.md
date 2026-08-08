@@ -77,38 +77,37 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドの正本仕様。oracle file を編集する Codex CLI TUI の目的、入力、起動前提、実行順序、編集境界、終了時の差分保持、中断制御、ログ方針を定義する。oracle edit の挙動や実装責務を確認する際の入口となる。
+- `cmoc oracle edit` は、ユーザー指示を受けて oracle file を Codex CLI の TUI で直接編集するサブコマンドの仕様を定義する。
+- 引数、プロンプト構築、起動前提、実行順序、編集境界、終了時の差分・中断・ログの扱いを確認するための仕様入口である。
 
 ## Read this when
-- `cmoc oracle edit` の実行順序、TUI 起動条件、起動パラメータ、編集可能範囲を実装・レビューするとき
-- oracle file 編集時のユーザー指示入力、権限境界、終了後の差分やログの扱いを確認するとき
-- oracle edit 固有の fork/join、session state、排他制御、中断処理の有無を判断するとき
+- oracle file の直接編集フローや TUI 起動条件を確認するとき。
+- `cmoc oracle edit` の権限境界、事前条件、終了後の差分保持、ログ方針を確認するとき。
 
 ## Do not read this when
-- realization file の通常の編集やテスト実行の仕様だけを確認したいとき
-- 他の cmoc サブコマンドのライフサイクルや TUI 起動仕様を調べるときは、それぞれのサブコマンド仕様を直接読む
-- プロンプト入力形式、標準プロンプト規範、Windows toast、Codex CLI 実行規則の詳細だけを確認したいときは、本文中で指定された各正本仕様を直接読む
+- 別のサブコマンドの実装や lifecycle を確認するとき。
+- プロンプト入力形式、TUI 起動パラメータ、toast 通知、Codex CLI 起動規則、feedback の詳細を確認するときは、本文が示す各正本仕様を直接読む。
 
 ## hash
-- adbf3c7de6fc441a05ba640594d7cd570ae6ef1e4a3311ce2ab0c6c2b9baa8bb
+- 547daa72fc4d83be5c73c7fdc116d86c55e5eba25f8adf1fdc6a317e97cb565d
 
 # `oracle_investigation.md`
 
 ## Summary
-- oracle file を根拠にユーザーの調査指示を受け付け、Codex CLI の TUI で調査結果を回答するサブコマンドの仕様を定義する。入力エディタ、調査用 launch parameter の構築、Codex CLI 起動、読み取り専用・変更禁止の扱いを扱う。
+- oracle file の調査指示を受け取り、完全プロンプトを構築して Codex CLI の TUI を起動するサブコマンドの仕様。引数や事前条件はなく、doctor preprocess、prompt builder による skeleton 構築、エディタ入力の反映、TUI 起動までの流れを扱う。エディタ入力、prompt の標準規範、TUI 起動パラメータ、Codex CLI 起動規則、Windows 通知など、詳細仕様への入口を示す。
 
 ## Read this when
-- oracle file に関する調査サブコマンドの起動手順、ユーザー指示の入力方法、TUI 起動パラメータ、Codex CLI の実行条件を確認するとき。
-- oracle investigation の実装や関連する正本仕様との責務境界を調べるとき。
+- oracle file を根拠に調査を起動するサブコマンドの実行手順や制約を確認したいとき
+- 調査指示のエディタ入力から完全プロンプト確定、Codex CLI TUI 起動までの仕様を確認したいとき
+- oracle file の読み取り専用や realization file の変更禁止など、調査結果と変更の扱いを確認したいとき
 
 ## Do not read this when
-- oracle file 自体の一般的な調査方法や編集規則を確認したいときは、共通の oracle 契約や調査対象の正本仕様を直接読む。
-- プロンプトエディタ入力の詳細文面を確認したいときは、指定された prompt editor input の正本を直接読む。
-- TUI 起動パラメータの具体的な構築内容を確認したいときは、対応する launch parameter builder の実装を直接読む。
-- Codex CLI の起動規則や Windows toast 通知の仕様だけを確認したいときは、それぞれの専用仕様を直接読む。
+- エディタ入力の具体的な初期値生成を確認したいときは、prompt editor input の正本を直接読む
+- TUI に渡す prompt や agent call parameter の詳細を確認したいときは、調査起動パラメータ builder の正本を直接読む
+- 汎用的な prompt 規範、Codex CLI の起動規則、Windows toast 通知の詳細だけを確認したいときは、それぞれの参照先を直接読む
 
 ## hash
-- 8973fa7f0b0033d99ac7337531679dfe25b2c7524c6d656924c19df6026fba50
+- 6dfcfd6bf64ed5d550b51147a9a04f6ce13f945a8f5be7ccd85ee9bb9a2a783b
 
 # `oracle_review.md`
 
@@ -224,16 +223,13 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの責務・引数・実行手順・プロンプト編集・AI Agent CLI/TUI 起動契約を定義する正本仕様。TUI 起動パラメータ、固定注入規範、Codex CLI 固有設定、feedback や通知の関連仕様を確認する入口。
+- `cmoc tui` サブコマンドの責務と実行フローを定義する正本仕様。ユーザープロンプトへの cmoc 固有規範の注入、エディタ入力による完全プロンプトの確定、固定パラメータによる AI Agent CLI/TUI の起動、および Codex CLI 固有の起動条件を扱う。
 
 ## Read this when
-- `cmoc tui` の挙動、実行順序、プロンプト入力、固定起動パラメータ、注入規範、バックエンド共通契約を実装・レビューするとき。
-- TUI 起動前の indexing preflight、feedback observation、Windows toast 通知、Codex CLI 起動設定との連携を確認するとき。
+- `cmoc tui` の実行手順、プロンプト構築、固定注入規範、起動パラメータ、バックエンド共通条件、または Codex CLI 起動条件を確認・変更するとき。
 
 ## Do not read this when
-- エディタ入力の詳細仕様だけを確認する場合は、指定された prompt editor input の正本を直接読む。
-- feedback observation や Windows toast 通知の詳細だけを確認する場合は、それぞれの正本仕様を直接読む。
-- Codex CLI の実行規則だけを確認する場合は、Codex exec rule の正本を直接読む。
+- エディタ入力の詳細仕様だけを確認するときは prompt editor input の正本を読む。フィードバック観測の保持・collector context・通知の詳細だけを確認するときは、それぞれ指定された feedback observation または Windows toast notification の正本を直接読む。
 
 ## hash
-- 56df86f658dc3c7df25308cdc0ded77d31381c3b437657232d769e94f5adc8d4
+- 25a7393cbf4c57b4edbb85990d02e88860f487b8e9539c3d3d9135944d513da9

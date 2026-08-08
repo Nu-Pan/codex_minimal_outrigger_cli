@@ -89,19 +89,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の人間所有の正本を収録する領域です。アプリケーション挙動、branch・run・worktree モデル、不採用案、開発規則を文書で定義し、agent call の prompt 構築・Structured Output・各用途別設定の正本ソースも提供します。文書または正本ソースの領域を特定する入口です。
+- cmoc の正本ドキュメントと oracle src を集約する領域です。アプリケーション仕様、branch・worktree モデル、不採用設計、Python 開発ルール、および agent call・feedback・設定・構造化文書・prompt builder の正本を扱います。doc と src の責務別領域へ進むための入口です。
 
 ## Read this when
-- cmoc の仕様、設計・開発規則、branch・run・worktree のモデルを確認するとき
-- agent call のモデル設定、prompt 構築、Structured Output 契約、用途別設定の正本ソースを調査するとき
-- 採用しなかった設計案の背景や理由を調べるとき
+- cmoc の正本資料全体から、調査対象がドキュメントか oracle src か、またその責務領域を特定するとき
+- アプリケーション仕様、開発ルール、agent call、feedback、設定・パス、構造化文書、prompt builder を横断して参照するとき
 
 ## Do not read this when
-- 通常の realization 実装やテストの具体的な内容だけを確認するとき
-- 対象が特定の仕様文書、開発規則、prompt builder 部品、用途別設定に限定され、下位対象を直接読む方が適切なとき
+- 読むべき個別文書や下位領域がすでに特定されており、そこへ直接進めるとき
+- 実装配置、テスト実行、特定の prompt や schema など、個別の正本だけを確認すればよいとき
 
 ## hash
-- 0ed4b37cf17079d34dd3451846a4987d75d7517c3c11713f6e2609711c4eb052
+- ee8505b8f7b6e97edd3ba57c5d872e9065414f12820c34c4eeb30d2b9a9616d1
 
 # `pyproject.toml`
 
