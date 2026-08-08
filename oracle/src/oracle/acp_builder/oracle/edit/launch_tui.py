@@ -21,6 +21,8 @@ def build_oracle_edit_launch_tui_parameter(
     Args:
         time_stamp: この `cmoc oracle edit` 呼び出しのタイムスタンプ文字列。
         user_instruction: oracle file の最終状態に関するユーザー指示。
+            エディタへ提示する完全プロンプトの skeleton を構築する場合は、
+            `{{original-prompt-here}}` を渡す。
 
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。

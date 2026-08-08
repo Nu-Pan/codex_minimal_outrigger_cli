@@ -14,9 +14,9 @@
 
 - エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする。
 - エディタ編集対象 file の初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する。
-- `automatically_injected_instruction` は、少なくとも realization file の読み書き禁止と、oracle file の編集に必要な cmoc 固有の契約が自動注入されることを伝える内容とする。
+- `build_oracle_edit_launch_tui_parameter` へ `{{original-prompt-here}}` を渡し、realization file の読み書き禁止と oracle file の編集に必要な cmoc 固有契約を含む完全プロンプトの skeleton を構築する。
+- 初期値へ渡す skeleton と、編集後に確定する完全プロンプトは、`build_oracle_edit_launch_tui_parameter` が構築した同じ完全プロンプトを使用する。
 - 汎用規範と動的プロンプトの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする。
-- 上記を満たす具体的な文面と追加内容は realization file 側の実装裁量とする。
 
 - cmoc は original prompt file の編集主体をこのサブコマンドに限定せず、排他的 writer を管理しない。他の TUI やエディタによる更新と、その並行操作から生じる競合や不整合は人間が管理する。
 
@@ -52,11 +52,12 @@
 ## 実行順序
 
 1. doctor preprocess を呼び出す。
-2. oracle file の最終状態に関するユーザー指示をエディタから受け取る。
-3. builder で TUI 起動パラメータを構築する。
-4. 過去の変更に対する遅延 indexing として、TUI 起動前の indexing preflight を行う。
-5. TUI 起動直前の事前条件を検査する。
-6. 1 つの Codex CLI TUI process を起動し、その終了コードでサブコマンドを終了する。
+2. `build_oracle_edit_launch_tui_parameter` へ `{{original-prompt-here}}` を渡し、完全プロンプトの skeleton と TUI 起動パラメータを構築する。
+3. skeleton を初期値として、oracle file の最終状態に関するユーザー指示をエディタから受け取る。
+4. ユーザー指示を skeleton へ挿入し、完全プロンプトを確定する。
+5. 過去の変更に対する遅延 indexing として、TUI 起動前の indexing preflight を行う。
+6. TUI 起動直前の事前条件を検査する。
+7. 1 つの Codex CLI TUI process を起動し、その終了コードでサブコマンドを終了する。
 
 ## TUI agent の編集境界
 

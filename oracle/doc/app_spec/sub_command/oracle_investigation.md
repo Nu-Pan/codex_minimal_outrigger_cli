@@ -15,20 +15,18 @@
 ## 実行手順
 
 1. doctor preprocess を呼び出す
-2. oracle file に関するユーザーの調査指示をエディタから受け取る
-3. `build_oracle_investigation_launch_tui_parameter` で TUI 起動パラメータを構築する
-4. 構築したパラメータで Codex CLI の TUI を起動する
+2. `build_oracle_investigation_launch_tui_parameter` へ `{{original-prompt-here}}` を渡し、完全プロンプトの skeleton と TUI 起動パラメータを構築する
+3. skeleton を初期値として、oracle file に関するユーザーの調査指示をエディタから受け取る
+4. ユーザー指示を skeleton へ挿入し、完全プロンプトを確定する
+5. 構築済みのパラメータで Codex CLI の TUI を起動する
 
 ## ユーザー指示の入力
 
 - エディタ入力の仕組みは `{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` を正本とする
 - エディタ編集対象ファイルの初期値は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_initial_text` で構築する
-- `automatically_injected_instruction` は、少なくとも以下の内容を伝える
-    - oracle file は読み取り専用である
-    - realization file は読み書き禁止である
-    - oracle file の調査に必要な cmoc 固有の契約は自動注入される
+- `build_oracle_investigation_launch_tui_parameter` へ `{{original-prompt-here}}` を渡し、oracle file の読み取り専用、realization file の読み書き禁止、および oracle file の調査に必要な cmoc 固有契約を含む完全プロンプトの skeleton を構築する
+- 初期値へ渡す skeleton と、編集後に確定する完全プロンプトは、`build_oracle_investigation_launch_tui_parameter` が構築した同じ完全プロンプトを使用する
 - 汎用規範と動的プロンプトの責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` を正本とする
-- 上記を満たす具体的な文面と追加内容は realization file 側の実装裁量とする
 
 ## TUI 起動パラメータ
 

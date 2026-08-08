@@ -69,6 +69,7 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
 
 - agent call の初回 prompt は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
 - 原則として、この動的構築された初回 prompt をそのまま agent call 側に渡すこととし、realization file 側でプロンプトを加工するのは禁止
+- エディタ入力を使用する agent call では、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` に従い、`build_*_parameter` 関数が構築した完全プロンプトの skeleton に対する `{{original-prompt-here}}` の 1 回の置換だけを例外として許容する
 - Structured Output の補正 prompt には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の出力補正規則を例外として適用する
 - 例外として、oracle src 側にバグがあって realization file 側でフォローする必要がある場合は、必要最低限の範囲内での加工を許容する
 
@@ -107,7 +108,9 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
     ```
 
 - `cmoc_block`、`id`、`cmoc_ref`、`target` は固定の名前とし、`target-1` は参照先を対応付ける可変値とする
-- 動的なプロンプト構築では、`cmoc_block` を参照対象の `StructDoc` を子に持つ構造として表し、`cmoc_ref` は参照元のプロンプト文字列内に直接記述する
+- 動的なプロンプト構築では、`cmoc_block` を `StructBlock` で表し、`cmoc_ref` は参照元のプロンプト文字列内に直接記述する
+- `StructBlock` の子には、参照対象の `StructDoc` または Markdown へレンダリング済みの文字列を使用できる
+- レンダリング済みの文字列を子にする場合、その文字列は事前のレンダリングで参照関係の検査を完了しているものとし、外側の構造では不透明な内容として再検査しない
 - Markdown へのレンダリング時に、各 `cmoc_ref` の参照対象が構築結果内に一つだけ存在することを検査し、参照対象の欠落、`cmoc_block` の `id` 重複、または不正な `cmoc_ref` 記法を検出した場合はプロンプト構築を失敗させる
 
 ## 言語

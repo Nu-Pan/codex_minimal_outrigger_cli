@@ -22,7 +22,8 @@ def build_tui_launch_tui_parameter(
         time_stamp: この `cmoc tui` 呼び出しのタイムスタンプ文字列。
         original_prompt: ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す
             オリジナルプロンプト。コメント除去と strip は呼び出し側で完了している
-            想定。
+            想定。エディタへ提示する完全プロンプトの skeleton を構築する場合は、
+            `{{original-prompt-here}}` を渡す。
 
     Returns:
         Codex CLI の TUI 起動に使う固定パラメータ。
