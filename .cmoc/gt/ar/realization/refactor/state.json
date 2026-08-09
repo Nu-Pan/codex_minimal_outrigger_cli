@@ -541,9 +541,9 @@
   },
   "pyproject.toml": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "62c23b5f8693844b19076cbd7c8e2cc4930ace5468300a33c0b5ae87e3886d9f",
-    "last_investigated_at": "2026-08-03_10-48_37_830578000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "d7e54a5345610218deb1baa5ef4ecf56af5f7bd5cd71249f76a9bbaa99f1bbf1",
+    "last_investigated_at": "2026-08-09_12-56_21_662368000"
   },
   "src/acp/__init__.py": {
     "investigation_required": false,
