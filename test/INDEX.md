@@ -650,20 +650,20 @@
 # `test_production_cli.py`
 
 ## Summary
-- 全末端サブコマンドを、独立プロセス・実 Codex CLI・実推論を用いた利用者向け本番経路で検証する受け入れ試験。非対話コマンドと TUI コマンドを対象に、終了 code、report・state・Git・Codex call log、PTY 上の応答完了と終了処理を確認する。全末端の本番経路や共通実行環境、隔離境界、外部 provider 待ちを確認したい場合の入口。
+- 全末端サブコマンドを、独立プロセス・実 Codex CLI・実推論を用いた本番経路で検証する受け入れ試験。CLI の終了コード、report・state・Git 状態、Codex call log、TUI の応答完了と終了を確認し、LLM の回答品質自体は判定しない。非対話コマンドと PTY 上の TUI コマンドに共通する隔離環境・実行・観測用ハーネスを含む。
 
 ## Read this when
-- CLI の全末端サブコマンドが本番経路で正常完了することを確認するとき
-- 実 Codex CLI、実推論、Codex の call log、外部永続 state、report、Git 状態を含む受け入れ試験を調査・変更するとき
-- 非対話実行、TUI の PTY 実行、応答完了後の終了操作、実行環境の隔離を確認するとき
+- CLI の公開末端サブコマンドを追加・変更し、本番経路での網羅的な実行検証を更新するとき
+- 独立プロセス、実 Codex CLI、実 provider、Codex call log、永続 state、Git 状態を含む統合試験の挙動を確認するとき
+- TUI コマンドの PTY 入出力、端末 capability query、応答完了判定、終了処理を調査するとき
 
 ## Do not read this when
-- 単一サブコマンドの内部ロジックや通常の単体テストを確認するとき
-- LLM の回答品質そのものを評価するとき
-- Codex や外部 provider を使わない低レベルの関数・状態処理だけを調査するとき
+- 単体テストや、実 Codex/provider を使わない決定論的な制御ロジックのテストだけを変更するとき
+- サブコマンドの実装仕様や通常の CLI 挙動を確認したいときは、対象となる実装または対応する正本仕様を直接読む
+- LLM の回答内容・品質そのものを評価するとき
 
 ## hash
-- 51fac52551a824c450d99df92ce91e7cdf43ffdc81a6967354bf98c45ffc4e29
+- 9ef9aaa41e0e2b664db778876a6a2f19ff6c28907cc4811a82078a3a09b8f3ef
 
 # `test_prompt_parts.py`
 

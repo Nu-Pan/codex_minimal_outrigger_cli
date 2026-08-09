@@ -1363,9 +1363,9 @@
   },
   "test/test_production_cli.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "aaf76c02aae5a469140980ba6e6b220dee1bd3910e601671b2a8ba372c3dc4ad",
-    "last_investigated_at": "2026-08-03_20-47_28_395218000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "51fac52551a824c450d99df92ce91e7cdf43ffdc81a6967354bf98c45ffc4e29",
+    "last_investigated_at": "2026-08-09_16-16_58_905524000"
   },
   "test/test_prompt_parts.py": {
     "investigation_required": true,

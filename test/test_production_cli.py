@@ -603,7 +603,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         assert completed_state["run"]["kind"] == kind
         joined_worktree = _run_worktree_from_state(root, completed_state)
         assert joined_worktree.is_dir()
-        run_production("run", "join")
+        run_without_codex("run", "join")
         _state_path, joined_state = _load_session_state(root, session_branch)
         assert joined_state["run"] == {
             "state": "ready",
