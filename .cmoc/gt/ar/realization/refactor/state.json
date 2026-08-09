@@ -48,7 +48,7 @@
     "last_investigated_at": "2026-07-23_14-46_06_968345000"
   },
   "oracle/doc/app_spec/console_and_file_log.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "03b116a9345a0f2cbaa067b1583e6cbd5430095524eda773b4d682acf9abef9a",
     "last_investigated_at": "2026-08-09_11-15_41_285419000"
@@ -156,7 +156,7 @@
     "last_investigated_at": "2026-08-09_11-44_44_235556000"
   },
   "oracle/doc/app_spec/sub_command/oracle_review.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "71825339f2c00979831c84e4ecc381abf0ee103624b7d9df58f1da5d56fa53da",
     "last_investigated_at": "2026-08-09_14-00_21_355432000"
@@ -186,7 +186,7 @@
     "last_investigated_at": "2026-07-23_21-35_16_325695000"
   },
   "oracle/doc/app_spec/sub_command/session_join.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "bdd1ca02b01f8793c07fc24dbe5b9dd609d534d52f03a1f0f40280a8d070e320",
     "last_investigated_at": "2026-08-09_11-56_45_932902000"
@@ -298,6 +298,18 @@
     "last_investigation_result": "findings",
     "last_investigated_sha256": "2794fc4b35000003fe7ae675a062ab6f5f75c07c921b2b25210ce2f4e90bf7c9",
     "last_investigated_at": "2026-08-07_09-51_39_513990000"
+  },
+  "oracle/src/oracle/acp_builder/feedback/verify_issue.json": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
+  "oracle/src/oracle/acp_builder/feedback/verify_issue.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "oracle/src/oracle/acp_builder/indexing/index_entry.json": {
     "investigation_required": false,
