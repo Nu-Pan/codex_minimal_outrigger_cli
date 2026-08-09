@@ -1350,10 +1350,10 @@
     "last_investigated_at": "2026-08-08_18-46_11_208813000"
   },
   "test/test_oracle_review_worktree.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "bb24e8f1e29da826cfe03ea61429d73eed522f7fca0e9c4dc3277fc47c83a974",
-    "last_investigated_at": "2026-08-05_20-15_24_932784000"
+    "last_investigated_sha256": "8b6cd9de414f150019cc4e7d59debec9309b7ebd4d686fed4bfa308e8f0aaa64",
+    "last_investigated_at": "2026-08-09_19-07_27_756922000"
   },
   "test/test_packaged_import.py": {
     "investigation_required": true,
