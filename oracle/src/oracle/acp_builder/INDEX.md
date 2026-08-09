@@ -31,18 +31,21 @@
 # `feedback`
 
 ## Summary
-- feedback observation を既存 issue への統合または新規 issue 作成へ正規化するための Structured Output schema と prompt builder 実装を扱う。観測結果、既存 issue 候補、原因・影響・対応候補・存在可能性の評価を入力から整理し、feedback 正規化処理の出力契約と AgentCallParameter 構築の入口を提供する。
+- feedback observation を既存 issue へ統合するか新規 issue とするかを判断する、正規化処理の oracle src と JSON Schema を扱うディレクトリ。正規化結果の契約確認には schema、agent call の prompt・参照範囲・設定確認には実装へ進む入口となる。
 
 ## Read this when
-- feedback observation から issue の統合または新規作成を判断する出力契約を確認するとき。
-- 正規化 prompt の参照範囲、読み取り専用制約、モデル設定、推論強度、Structured Output schema の対応を確認するとき。
+- feedback observation の issue 正規化処理、統合判断、入出力契約を確認・変更するとき
+- 正規化結果の必須項目、列挙値、文字数制約、関連 issue ID の扱いを確認するとき
+- feedback 正規化 agent call の参照範囲、入力形式、モデル・推論設定、Structured Output 制約を確認するとき
 
 ## Do not read this when
-- feedback issue の保存・取得や human disposition の決定だけを調べるとき。
-- raw Codex call log、feedback observation の保存形式、または別の prompt builder の実装を直接調べるとき。
+- feedback observation の収集・送信だけを扱うとき
+- feedback issue の保存形式や human disposition の運用を確認するとき
+- 正規化処理の具体的なテスト内容だけを確認するとき
+- 一般的な prompt 構築や別の agent call parameter の実装を確認するとき
 
 ## hash
-- 7aa0e70e501d38db3db0a1f193884c2dd6184ef9f9185b0c83b0da4278d24337
+- 11ff759448ed5a50db841a7ec879e9b5ecf5d802515d6f431820c0cacfb81167
 
 # `indexing`
 
@@ -65,22 +68,20 @@
 # `oracle`
 
 ## Summary
-- oracle 向け各サブコマンドの起動関連実装を扱う領域で、`edit`・`investigation`・`review` の個別フローへ進むための入口です。
-- oracle 編集、調査、レビューに関する TUI 起動設定、agent call パラメータ、プロンプト保存・構成、Structured Output 契約を対象とします。
+- oracle 向け ACP 呼び出しのサブコマンド別ビルダーを配置する領域です。oracle review の所見列挙・採否判定・統合・妥当性検証と、oracle investigation の調査起動設定を扱います。各実装の prompt、出力契約、起動条件を確認する入口です。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動設定や完全 prompt の保存・動的構成を確認または変更するとき。
-- `cmoc oracle investigation` の調査プロンプト、起動条件、モデル・アクセスモード、ログ保存を確認または変更するとき。
-- `cmoc oracle review` の所見生成・判定・整理・擁護・反証フローや、対応する agent call パラメータと Structured Output 契約を確認または変更するとき。
+- oracle review の所見列挙、採否判定、重複・矛盾の統合、妥当性検証に関する ACP 呼び出し契約や prompt 構築を確認・変更するとき。
+- oracle investigation の調査用 ACP 起動設定、調査 prompt、モデル、アクセスモード、作業ディレクトリを確認・変更するとき。
+- この領域にある oracle 向け ACP builder の用途や呼び出し条件を確認するとき。
 
 ## Do not read this when
 - oracle file の編集内容や realization 側の実装だけを確認する場合。
-- prompt の共通構築ロジックや一般的な agent call 基盤だけを確認する場合。
-- レビュー所見の内容・妥当性基準そのものを確認する場合。
-- 上記以外の `cmoc oracle` サブコマンドを扱う場合。
+- サブコマンドに依存しない共通 prompt 構築ロジックを確認する場合は、共通 prompt builder を直接読むべきです。
+- 個別のレビュー所見や、その根拠となる oracle 仕様を確認する場合は、該当する対象を直接読むべきです。
 
 ## hash
-- 688845a88fc138077403bb2d1ceb4f464ec7bbcba1e73e01ea73ec8018bd9f42
+- fade59eb8c125fb938f45e5bb72de7fcdd5641c325e8dd5c21f992c851cc0173
 
 # `realization`
 

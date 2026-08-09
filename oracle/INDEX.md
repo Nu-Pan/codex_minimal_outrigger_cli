@@ -19,17 +19,14 @@
 # `src`
 
 ## Summary
-- 対象領域は、cmoc の oracle 側でエージェント呼び出しを組み立てる実装の入口です。共通の呼び出しパラメータや prompt・Structured Output の構築と、TUI、indexing、feedback、oracle review、realization、session join など用途別の builder へ案内します。
+- AI コーディングエージェント基盤の正本実装を集約する入口。共通の agent call パラメータ、feedback 入力、リポジトリ設定・パス・規範・構造化文書モデル、プロンプト構築部品を扱い、目的に応じて acp_builder、feedback、other、prompt_builder 配下へ進む。
 
 ## Read this when
-- AI コーディングエージェントのモデル、推論強度、ファイルアクセス、作業ディレクトリ、Structured Output などの呼び出し契約を調べるとき。
-- 用途別の agent call parameter や prompt 構築箇所を特定するとき。
-- 共通 builder、基盤モデル、用途別 builder のどこから調査を始めるか判断するとき。
+- AI エージェント呼び出しの共通契約や Structured Output、feedback 入力モデル、リポジトリ設定・パスモデル、またはプロンプト構築の入口を確認するとき。
 
 ## Do not read this when
-- 実際のサブコマンド実行フローや agent call の起動処理を調べるとき。
-- prompt の共通構造や静的な規範部品だけを確認したいとき。
-- 個別の schema、基盤モデル、正本仕様、realization 実装、feedback 保存処理の詳細だけを確認したいとき。
+- 特定の agent call、サブコマンド、TUI 起動設定の詳細を調査するときは acp_builder 配下の対応する実装へ直接進む。
+- feedback の保存・集約・重複判定や、個別プロンプト本文・共通規範の詳細を確認するときは、対応する下位実装へ直接進む。
 
 ## hash
-- a89f29b34b0f33d0f44896bf7f709a868e867b8e0341e43d1d92c987ef12dad8
+- e65da9268108943503b89e232aacc27812c5b1e0ee20dbfe413e720bf341d193

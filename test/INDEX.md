@@ -416,19 +416,23 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の収集から保存、検証、normalization、増分 report 生成までを一続きで検証する受け入れテスト。reporter/collector の通信契約、context・rate limit・secret/path 安全性、冪等性、atomic recovery、feedback state の整合性、machine issue の抑制、Ctrl+C・publication recovery などを扱う。feedback subsystem の外部挙動や lifecycle を変更・調査する際の主要なテスト入口である。
+- feedback observation の reporter、collector、保存、rate limit、redaction、idempotency、atomic recovery を検証する受け入れテスト。
+- normalization unit と feedback state の整合性、canonical key、schema version、machine rule、revision 選択、writer lock、復旧処理を検証する。
+- feedback report の初回・増分生成、fingerprint 再検証、machine issue の抑制、invalid observation、ユーザー中断、publication recovery を一連の fixture lifecycle として検証する。
+- feedback subsystem に関する実装・正本仕様の挙動を横断的に確認する test suite であり、個別機能の単体テスト入口ではなく lifecycle assertion の入口である。
 
 ## Read this when
-- feedback observation の reporter、collector、state、normalization、report サブコマンドの挙動を変更または検証するとき
-- raw observation から report までの lifecycle、障害回復、増分処理、入力検証の受け入れ条件を確認するとき
+- feedback observation の収集・保存・reporter protocol の挙動を変更または検証するとき
+- feedback state、normalization unit、issue recurrence、incremental report の整合性を変更または検証するとき
+- feedback report の中断時処理、atomic file recovery、invalid input、secret redaction を調査するとき
 
 ## Do not read this when
-- feedback subsystem の実装詳細だけを確認する場合は、対象の commons、sub_commands、または acp.builder 実装を直接読むとよい
-- feedback 仕様そのものを確認する場合は、列挙された oracle の app_spec 文書を読むとよい
-- feedback と無関係な CLI 機能やテストの調査・変更には進まなくてよい
+- feedback subsystem 以外の CLI 機能や一般的なテスト実行方法を確認するとき
+- 個別実装の詳細を直接調査できる場合。collector、state、report の実装・正本仕様を先に読むべきとき
+- feedback の正本仕様そのものを変更・確認するとき。oracle の各仕様ファイルを直接読むべきである
 
 ## hash
-- 59694b34e8c9f8aa49f915583895d4709dce14daf6a4d226b2784bf14fe74e1d
+- 3b37b6741840018e24216e940c60228544acb05eb6f360e619ae36075724e149
 
 # `test_file_inventory.py`
 

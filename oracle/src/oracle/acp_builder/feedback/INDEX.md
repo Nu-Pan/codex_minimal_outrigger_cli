@@ -1,32 +1,33 @@
 # `normalize_issue.json`
 
 ## Summary
-- 対象ファイルは、複数の観測結果を既存 issue に統合するか新規 issue として正規化するための Structured Output schema を定義する。判断、issue 要約、人間の対応候補、影響、原因・存在可能性の評価、関連 issue ID を扱う。
-- 入力候補の issue ID を既存 issue に統合する場合と、新しい issue として扱う場合の排他的な出力契約を提供する下位仕様への入口である。
+- observation を既存 issue に統合するか新規 issue とするかを表す正規化結果の JSON Schema。統合先 ID、新規 issue 判定、要約、人間の対応候補、影響、原因評価、存在可能性、関連 issue ID を定義する。
 
 ## Read this when
-- 観測結果から issue の統合・新規作成判断を行う処理、またはその出力項目と必須条件を確認するとき。
-- 原因の確度、report 時点での存在可能性、対応候補、影響の記述ルールを確認するとき。
+- feedback observation の issue 正規化処理、統合判断、またはその入出力契約を確認・変更するとき
+- 正規化結果の必須項目、列挙値、文字数制約、関連 issue ID の扱いを確認するとき
 
 ## Do not read this when
-- 単に issue の実装箇所や実行フローを調べるだけで、正規化結果の出力契約を変更・検証する必要がないとき。
-- issue の保存・取得や別の Structured Output schema を直接確認する必要があるときは、それらの対象を読む。
+- feedback observation の収集・送信だけを扱い、issue 正規化結果を扱わないとき
+- 正規化処理の具体的な実装やテスト内容を確認する場合
 
 ## hash
-- 947eda2a227a3d2ab1e05ebeeb2dc445c6feb50d948fa0c9d09f6428f79998f9
+- 8e1462f8e78706cfa4ce334f96491af6630563d003815a43d4df01903460f2d8
 
 # `normalize_issue.py`
 
 ## Summary
-- `cmoc feedback report` における曖昧な issue の正規化用 AgentCallParameter を構築する正本実装。構造化 observation と絞り込み済み既存 issue 候補を入力し、指定参照範囲だけを許可する読み取り専用 prompt、モデル設定、Structured Output schema を組み立てる。
+- 構造化された feedback observation と絞り込み済みの既存 issue 候補を入力として、曖昧な issue の既存 issue への統合または新規作成を判断する agent call parameter を構築する oracle src。
+- 参照範囲を現在の指定参照対象に限定し、raw log・過去 session・feedback 保存 file の追加調査を禁止する prompt、モデル設定、READONLY 権限、構造化出力 schema の指定を担う。
 
 ## Read this when
-- feedback observation から既存 issue への統合または新規 issue 作成を判断する prompt の仕様・参照範囲・出力制約を確認するとき
-- feedback 正規化処理の AgentCallParameter、モデル、推論強度、読み取り専用設定、Structured Output schema の対応を確認するとき
+- `cmoc feedback report` の observation を既存 issue または新規 issue に正規化する prompt の挙動を確認・変更するとき
+- feedback 正規化 agent call の参照範囲、入力形式、モデル・推論設定、Structured Output 制約を確認するとき
 
 ## Do not read this when
-- feedback issue の保存処理や human disposition の決定を調べるとき
-- raw Codex call log、feedback observation 保存 file、または別の prompt builder の実装を直接調べるべきとき
+- feedback issue の保存形式や human disposition の運用を確認したいとき
+- 正規化結果の JSON schema 自体を確認したいときは、対応する schema を直接読む
+- 一般的な prompt 構築や別の agent call parameter の実装を確認したいとき
 
 ## hash
-- 126a46c0dada76cf04e9fcf8ffc0dd77e06601e5dd44f4ac9519f5a06c43f0e3
+- 8f2e7aa4c6b2f0f6fd3deec26e2c17e269485c058aeaa9f354330ae1b74fc50b

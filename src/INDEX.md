@@ -119,15 +119,16 @@
 # `sub_commands`
 
 ## Summary
-- `src/sub_commands` は cmoc の各サブコマンド実装をまとめるディレクトリで、doctor、feedback、indexing、oracle、realization、run、session、tui などの CLI 実行入口と固有処理への入口を提供する。個別サブコマンド実装を調べる際の上位ルーティング入口。
+- cmoc の各サブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの CLI 実行入口と、サブコマンド固有の処理への入口を提供する。未実装の apply、review も配置予定箇所として示されている。
+- サブコマンド全体の構成や、目的の CLI 実装への入口を確認するためのルーティング起点。個別処理の詳細は各サブコマンドまたは共通実装を直接確認する。
 
 ## Read this when
-- cmoc のサブコマンド構成や、対象サブコマンドの実装ファイルへの入口を確認するとき。
-- 複数のサブコマンドにまたがる CLI 実行入口や責務分担を確認するとき。
+- cmoc のサブコマンド構成や、対象サブコマンド実装への入口を確認するとき。
+- 複数サブコマンドにまたがる CLI 実行経路や、どの配下実装を読むべきか判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理、仕様、prompt、共通 runtime、builder の実装を調べるときは、対応する個別実装や参照先を直接読む。
-- サブコマンド以外の共通処理や正本仕様だけを調べるとき。
+- 特定サブコマンドの内部処理、仕様、prompt、TUI パラメータの詳細を確認するときは、該当する個別実装や参照先を直接読む。
+- 共通 runtime、Git 処理、state、report、正本仕様だけを確認したいときは、それぞれの共通実装または oracle 文書を直接読む。
 
 ## hash
-- 4ce5c55ec074573686d2faf79d489d6aceecb18669b49fd95cae2bebda2f0110
+- 4b899349e47f916a1838456a262cb2c8d87eacfd56a853a49c3ad3665add6cbe

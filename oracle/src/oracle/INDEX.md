@@ -1,21 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- AI コーディングエージェント呼び出し用の oracle src を収める領域。共通の呼び出しパラメータ定義に加え、TUI、indexing、feedback、oracle 各処理、realization 追従、session join の prompt・実行条件・Structured Output 契約を構築する実装への入口。
-- 配下の各サブディレクトリは用途別の agent call builder と schema をまとめており、対象コマンドの起動パラメータや prompt 構成を調査するときに、該当する下位領域へ進む。
+- AI コーディングエージェント呼び出し用の正本パラメータ・prompt builder を集約する oracle src。共通のモデル、推論強度、ファイルアクセスモード、Structured Output、cwd、indexing preflight の契約と、indexing、feedback、oracle、realization、session、TUI 向けの起動設定を扱う。
+- agent call の共通パラメータ契約を確認するときは共通定義へ、特定サブコマンドの prompt や出力契約を確認するときは対応する下位ディレクトリへ進む入口である。
 
 ## Read this when
-- AI エージェント呼び出しの共通パラメータ、モデル区分、推論強度、ファイルアクセスモード、作業ディレクトリ、indexing preflight の定義を確認するとき。
-- 特定の cmoc サブコマンドに対応する agent call の prompt、実行条件、Structured Output schema の構築箇所を特定するとき。
-- TUI、indexing、feedback、oracle、realization、session join のいずれかの agent call builder を変更・調査するとき。
+- AI コーディングエージェント呼び出しの共通パラメータ契約を確認・変更するとき。
+- indexing、feedback、oracle review・investigation・edit、realization apply・refactor、session join、TUI の agent call 設定や prompt builder の所在を判断するとき。
+- Structured Output schema と、それを利用する agent call builder の対応を確認するとき。
 
 ## Do not read this when
-- 実際の cmoc サブコマンドの実行フローや agent call の起動処理そのものを調査するときは、呼び出し側や実行基盤を直接読む。
-- prompt の共通構造・レンダリング仕様だけを確認するときは、共通 prompt builder を直接読む。
-- 個別の oracle file、realization file、Git 操作、レビュー基準の内容を確認するときは、それぞれの対象ファイルや正本仕様を直接読む。
+- 個別サブコマンドの実行フローや呼び出し側の運用を調査するときは、該当する上位実装を直接読む。
+- 具体的な oracle file、realization file、レビュー所見の内容を確認するときは、対象ファイルを直接読む。
+- 共通 prompt のレンダリング規則だけを確認するときは、prompt builder の実装を直接読む。
 
 ## hash
-- f3216980016e702b4d2b2d26542dd692239b2b6d24c6079c1a9653808c09fc86
+- 5a52bf4625cd49e755d330b2f4390640e81c0cb20c7c335e32249f8359de61a6
 
 # `feedback`
 

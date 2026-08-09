@@ -33,17 +33,18 @@
 # `review`
 
 ## Summary
-- oracle review の所見列挙・判定・マージ・擁護・反証に関する Structured Output スキーマと agent call パラメータ実装を扱う領域です。各ファイルは、所見の生成、妥当性判定、重複整理、賛成理由・反証理由の列挙という個別フローへの入口を提供します。
+- oracle review の各 agent call 用スキーマと prompt builder をまとめた領域。所見の列挙、判定、統合、妥当性の擁護・反証に関する出力契約と呼び出し条件を確認する入口。
 
 ## Read this when
-- `cmoc oracle review` の所見生成、妥当性判定、所見リスト整理、擁護理由または反証理由の列挙処理を変更・調査するとき。
-- レビュー用 agent call のプロンプト、oracle 読み取り範囲、モデル設定、Structured Output との対応を確認するとき。
-- 所見関連の Structured Output の入力・出力契約を確認するとき。
+- oracle review の所見列挙出力形式や新規所見列挙フローを扱うとき。
+- レビュー所見の採否判定形式や判定用 agent call を扱うとき。
+- レビュー所見の重複・矛盾の統合処理を扱うとき。
+- 所見の妥当性を支持・反証する理由の出力形式や prompt builder を扱うとき。
 
 ## Do not read this when
-- レビュー所見の内容や妥当性基準そのものを確認する場合は、対応するレビュー標準または対象 oracle file を直接読む。
-- Structured Output の共通生成処理や一般的な agent call 基盤だけを確認する場合は、共通実装を直接読む。
-- 所見列挙・判定・マージ・擁護・反証以外の `cmoc oracle review` サブコマンドを調査する場合。
+- 個々のレビュー所見の内容や、その根拠となる oracle 仕様を確認するとき。
+- oracle review の判定基準そのものや共通の agent call 基盤を調査するとき。
+- 所見列挙・判定・統合・妥当性検証以外の oracle review サブコマンドを調査するとき。
 
 ## hash
-- 348c466b7b71e9efe8ce66188142a1cca30f4397c9735e2d43e175b8a3be9f6b
+- 6523641af3d13ce33fbb31edc74b8691945fb982cf3af8628347f026e7c8ccce
