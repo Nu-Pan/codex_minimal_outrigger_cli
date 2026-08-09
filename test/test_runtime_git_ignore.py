@@ -8,11 +8,13 @@
 
 import os
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from _git_support import make_repo, run_git
 
+import commons.runtime_git as runtime_git
 from cmoc_runtime import (
     CmocError,
     ensure_cmoc_ignored,
@@ -20,6 +22,7 @@ from cmoc_runtime import (
     is_git_ignored,
     is_untracked_git_ignored,
 )
+from commons.runtime_results import CommandResult
 
 
 def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
@@ -104,6 +107,40 @@ def test_ignore_checks_reject_non_file_global_exclude(tmp_path: Path) -> None:
             checker(root, root / "probe")
     with pytest.raises(CmocError, match="global excludes"):
         ensure_cmoc_ignored(root)
+
+
+@pytest.mark.parametrize(
+    "checker",
+    [is_git_ignored, is_untracked_git_ignored],
+    ids=["index-aware", "untracked-aware"],
+)
+def test_ignore_checks_reject_check_ignore_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    checker: Callable[[Path, Path], bool],
+) -> None:
+    """check-ignore が判定不能なら未 ignore として分類しない。"""
+    root = make_repo(tmp_path)
+    path = root / "probe.txt"
+    path.write_text("probe\n")
+    original_run_git = runtime_git.run_git
+
+    def failing_check_ignore(
+        args: list[str], git_cwd: Path, check: bool = True
+    ) -> CommandResult:
+        """単一 path の check-ignore だけを失敗させる。"""
+        if args[:1] == ["check-ignore"]:
+            return CommandResult(
+                returncode=128,
+                stdout="",
+                stderr="simulated check-ignore failure",
+            )
+        return original_run_git(args, git_cwd, check)
+
+    monkeypatch.setattr(runtime_git, "run_git", failing_check_ignore)
+
+    with pytest.raises(CmocError, match="Git ignore 判定"):
+        checker(root, path)
 
 
 def test_ignore_checks_reject_non_file_nested_gitignore(tmp_path: Path) -> None:

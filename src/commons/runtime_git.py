@@ -592,6 +592,19 @@ def _validate_global_git_ignore_path(path: Path) -> None:
     _reject_non_file_path(path, "Git global excludes file")
 
 
+def _git_ignore_error(command: list[str], result: CommandResult) -> CmocError:
+    """check-ignore の判定不能を分類エラーへ変換する。"""
+    # {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # file の分類条件を満たすか不明なまま、ignore されていない扱いにしてはならない。
+    return CmocError(
+        "Git ignore 判定に失敗しました。",
+        ["Git repository と ignore source を確認してください。"],
+        f"command: git {' '.join(command)}\n"
+        f"stdout:\n{result.stdout}\n"
+        f"stderr:\n{result.stderr}",
+    )
+
+
 def _check_git_ignore(root: Path, relative: Path, *, no_index: bool) -> bool:
     """check-ignore が受け付ける literal な repository 相対 path を判定する。"""
     args = ["check-ignore"]
@@ -599,11 +612,10 @@ def _check_git_ignore(root: Path, relative: Path, *, no_index: bool) -> bool:
         args.append("--no-index")
     # check-ignore は :(literal) magic を受け付けないため、pathspec magic として
     # 解釈されない ./ を付けて path 名をそのまま渡す。
-    result = run_git(
-        [*args, "-q", "--", f"./{relative}"],
-        root,
-        check=False,
-    )
+    command_args = [*args, "-q", "--", f"./{relative}"]
+    result = run_git(command_args, root, check=False)
+    if result.returncode not in {0, 1}:
+        raise _git_ignore_error(command_args, result)
     return result.returncode == 0
 
 
@@ -942,12 +954,13 @@ def _batch_untracked_git_ignored(repository: Path, candidates: list[Path]) -> se
         capture_output=True,
     )
     if result.returncode not in {0, 1}:
-        raise CmocError(
-            "Git ignore 判定に失敗しました。",
-            ["Git repository と ignore source を確認してください。"],
-            "command: git check-ignore --stdin -z\n"
-            f"stdout:\n{result.stdout.decode(errors='replace')}\n"
-            f"stderr:\n{result.stderr.decode(errors='replace')}",
+        raise _git_ignore_error(
+            ["check-ignore", "--stdin", "-z"],
+            CommandResult(
+                result.returncode,
+                result.stdout.decode(errors="replace"),
+                result.stderr.decode(errors="replace"),
+            ),
         )
 
     ignored: set[Path] = set()
