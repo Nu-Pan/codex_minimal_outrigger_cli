@@ -278,18 +278,19 @@
 # `test_codex_runtime_home.py`
 
 ## Summary
-- Codex 実行時の CODEX_HOME 検証に関するテストを収録する。未設定時の既定値、設定値の保持、相対パスの解決、存在しないパスやファイル指定の事前拒否、および auth.json の形式に依存しない検証を確認する。
+- Codex 実行時の CODEX_HOME 解決・検証と、Codex subprocess への環境・作業ディレクトリ引き渡しを検証するテスト。欠落・非ディレクトリの home を subprocess 起動前に拒否すること、および auth.json の provider 固有スキーマを前提にしないことを確認する。Codex runtime 実装の挙動変更時に参照するテスト入口。
 
 ## Read this when
-- Codex subprocess 実行前の CODEX_HOME 検証や、Codex 実行環境の初期化に関する挙動を変更・調査するとき。
-- runtime_codex の home 引き渡し、相対パス解決、preflight failure のテスト対象を確認するとき。
+- CODEX_HOME の既定値・環境変数値・相対パス解決を変更するとき
+- Codex subprocess の起動前 preflight、環境変数、working directory、call log の挙動を変更するとき
+- Codex home の存在・ディレクトリ検証や auth.json の扱いを変更するとき
 
 ## Do not read this when
-- Codex home 検証以外の Codex 実行制御や、一般的な subprocess 呼び出しの挙動だけを調べるとき。
-- 実装の詳細や正本仕様を確認する必要があり、対応する runtime 実装または oracle 仕様を直接読むべきとき。
+- Codex runtime の home 解決・検証・subprocess 引き渡しに関係しない機能を変更するとき
+- テスト実行方法や共通テストヘルパー自体を確認したいときは、対応する実装・共通ヘルパーを直接読む
 
 ## hash
-- c38202e7a98131ba5573de6b1df0466aaac4ec9648417b330dd17036697393a4
+- 90644336a4ff674ab3cec2a17d849dc6a717d45a37d1856b96b47308712584d9
 
 # `test_codex_runtime_paths.py`
 
