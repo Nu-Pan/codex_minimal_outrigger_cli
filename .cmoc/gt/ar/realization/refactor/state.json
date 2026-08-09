@@ -786,10 +786,10 @@
     "last_investigated_at": "2026-08-06_14-14_18_536201000"
   },
   "src/commons/prompt_editor_input.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "714e1b66bc934aac54a81b9a64255547f48b5ea06cbcf7092367be60ddf8c4e3",
-    "last_investigated_at": "2026-08-04_01-12_03_130285000"
+    "last_investigated_sha256": "f3eac66d141d815806253a176c70dd6d9e83e8ecdea2d0ffcf68db71b2021567",
+    "last_investigated_at": "2026-08-09_17-05_50_513931000"
   },
   "src/commons/runtime_cli.py": {
     "investigation_required": true,
