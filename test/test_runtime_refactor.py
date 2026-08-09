@@ -58,6 +58,7 @@ def test_refactor_state_sync_globs_nested_repository_files(tmp_path: Path) -> No
         str(tmp_path / "nested-git"),
         str(nested),
     )
+    run_git(nested, "config", "core.excludesFile", "/dev/null")
     (nested / "module.py").write_text("VALUE = 1\n")
 
     state = sync_refactor_state(root)
