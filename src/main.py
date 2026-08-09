@@ -210,12 +210,10 @@ def indexing() -> None:
 
 
 @feedback_app.command("report")
-def feedback_report(
-    show_all: bool = typer.Option(False, "--all"),
-) -> None:
-    """raw feedback observation を増分 normalization して report を作る。"""
+def feedback_report() -> None:
+    """pending feedback observation から current report を publication する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
-    cmoc_feedback_report_impl(show_all)
+    cmoc_feedback_report_impl()
 
 
 def main() -> None:

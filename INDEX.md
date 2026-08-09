@@ -89,20 +89,18 @@
 # `oracle`
 
 ## Summary
-- cmoc の人間所有の正本仕様を集約する領域。アプリケーション仕様、開発規則、不採用案の検討記録、および AI コーディングエージェント基盤の正本実装を扱う。詳細な文書仕様は doc、正本実装は src 配下へ進む入口となる。
+- cmoc の人間所有の正本仕様群を収めるディレクトリ。アプリケーション仕様、設計・開発規則、ACP や prompt などの正本実装、正本テストを扱い、領域別の下位文書・実装・テストへ進む入口となる。
 
 ## Read this when
-- cmoc の正本仕様や開発規則の所在を確認するとき
-- CLI、実装、テスト、開発環境など複数の仕様領域にまたがる調査・変更対象を特定するとき
-- 正本実装の共通契約、Structured Output、feedback、リポジトリ設定、プロンプト構築の入口を確認するとき
+- cmoc の正本仕様、設計・開発規則、正本実装、または正本テストの所在を確認するとき。
+- 特定の仕様・実装・テストへ進む前に、oracle 配下の領域構成を把握するとき。
 
 ## Do not read this when
-- 個別の仕様文書や実装がすでに特定できており、その本文だけを読めばよいとき
-- 実装コード、テストコード、開発成果物そのものを直接確認するとき
-- INDEX.md のルーティング情報だけを確認するとき
+- 対象が特定の正本ドキュメント、実装、またはテストに明確に限定されている場合は、該当する下位領域へ直接進む。
+- realization 側の CLI 挙動や実装、テストの具体的内容を確認する場合は、対応する realization 側の直接の参照先を読む。
 
 ## hash
-- 7b80a419b63958e4fb76b28fb69dd81c96a94020cb983581d84b6d1952417c9f
+- 005639bec6a3f84f5ec3e09de92996960a0d9da1a08faab9870e798a6519f567
 
 # `pyproject.toml`
 
@@ -123,36 +121,36 @@
 # `src`
 
 ## Summary
-- cmoc の realization 実装をまとめる src ルート。CLI 起動入口、互換 import shim、共通 runtime、ACP adapter、設定、サブコマンド実装を含み、実際の処理領域へ進むための起点となる。
-- CLI 全体の command tree と引数処理は main.py、共通実行基盤は commons、ACP 互換層は acp、互換公開 API は basic と config、サブコマンド固有処理は sub_commands、正本側 oracle パッケージの解決は oracle.py を読む。
+- cmoc の realization 実装をまとめる src の起点。CLI 本体、サブコマンド、共通 runtime helper、互換 import shim、oracle 実装への入口を扱う。下位要素では、互換パッケージ、共通機能、CLI 起動入口、個別サブコマンドへ分岐する。
 
 ## Read this when
-- cmoc の realization 側 CLI 構成、公開 import 経路、共通 runtime、またはサブコマンド実装の入口を特定するとき。
-- 対象となる機能が main.py、acp、basic、commons、config、sub_commands のどこに実装されているか判断するとき。
-- src 起動時の cmoc_runtime または oracle パッケージ shim の解決経路を確認するとき。
+- CLI の起動経路、トップレベル構成、サブコマンドの配置を確認するとき。
+- 共通 runtime helper、設定・状態、Git・パス・ログ・feedback などの実装場所を調べるとき。
+- realization 側の互換 import や oracle 実装への委譲経路を確認するとき。
+- src 配下から対象となる個別実装へ読み進める起点を探すとき。
 
 ## Do not read this when
-- 正本仕様、正本実装、または oracle 側の builder の詳細を確認したいときは、oracle 配下の該当ファイルを直接読む。
-- 特定サブコマンドや runtime helper の内部挙動だけを調べるときは、対応する下位ディレクトリまたはモジュールへ直接進む。
-- テストや生成済みキャッシュ、パッケージメタデータだけを確認する場合。
+- 正本仕様や oracle 実装そのものを確認・変更するときは、対応する oracle 側を直接読む。
+- 特定サブコマンド、共通 helper、互換 shim の内部挙動が分かっているときは、該当する下位要素を直接読む。
+- src と無関係なテスト、利用箇所、補助ファイルを調査するとき。
 
 ## hash
-- 20de7c48830c8a846f1e0c4c57bd28da14aeef06b1a3f90f529b06f376aa449b
+- a8203714ceb0a76a68d642d50ef0c5d52bc326478be3b4705ca5ff3c2be7969f
 
 # `test`
 
 ## Summary
-- pytest による realization test suite。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/editing run、設定・Git・state・通知などの外部挙動と回帰条件を検証する。各機能領域の実装変更時に、対応する個別テストへ進むための入口。
+- test ディレクトリは、cmoc の realization test を集約する回帰検証領域である。
+- CLI、Codex runtime、ACP builder、indexing、oracle review、session/editing lifecycle、Git・state・設定・通知などの外部挙動と安全性を検証し、対象機能ごとのテストが実装・正本仕様への入口となる。
 
 ## Read this when
-- 実装変更に伴う外部挙動・回帰条件・統合 lifecycle の検証対象を選ぶとき
-- CLI、Codex runtime、indexing、oracle review、session、editing run、設定、Git、state、通知などの realization test を調査するとき
-- 共通 fixture やテスト用 Git repository、fake subprocess、Codex double の利用方法を確認するとき
+- 対象機能の外部挙動、回帰条件、異常系、安全性、CLI lifecycle、Git/worktree、永続 state、Codex 実行、indexing、oracle review、session/editing run をテスト側から確認するとき。
+- 対象機能に対応するテストモジュールの検証範囲や、関連する実装・oracle schema・正本仕様へ進む入口を特定するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc・oracle source・oracle schema を直接読む
-- 実装の詳細や単一関数の挙動だけを確認するときは、対応する src ファイルまたは専用テストを直接読む
-- テスト実行方法だけを確認するときは、repository local の test_execution の案内を読む
+- 正本仕様、schema の内容、実装責務、prompt 構築規則などを直接確認することが目的の場合は、対応する oracle または realization implementation を読むとき。
+- テスト実行方法や共通テスト環境の設定だけを確認する場合は、repository local の test execution 指針や共通 fixture を直接読むとき。
+- 対象機能と無関係なテスト、実装、CLI サブコマンドを調査するとき。
 
 ## hash
-- bfe1f245827e7145b4dc9a6ad35c96087172111d2ab7841018577ab653ae750f
+- 40431ddec4b899f52f87c62e7957c8cdee657d972cfd5bbfbdbdc8d9c2dae4c0

@@ -69,8 +69,8 @@ def test_help_renders_without_typer_click_compatibility_error() -> None:
     assert "run" in rendered
 
 
-def test_feedback_report_exposes_only_all_option() -> None:
-    """feedback report は表示範囲を広げる option だけを公開する。"""
+def test_feedback_report_exposes_no_subcommand_specific_options() -> None:
+    """feedback report は廃止済み --all を含む固有 option を公開しない。"""
     command = get_command(app)
     feedback = command.commands["feedback"]
     assert isinstance(feedback, click.Group)
@@ -82,4 +82,4 @@ def test_feedback_report_exposes_only_all_option() -> None:
         for option in parameter.opts
     }
 
-    assert options == {"--all"}
+    assert options == set()

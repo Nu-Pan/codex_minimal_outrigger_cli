@@ -1,21 +1,20 @@
 # `acp_builder`
 
 ## Summary
-- AI コーディングエージェント呼び出し用の正本パラメータ・prompt builder を集約する oracle src。共通のモデル、推論強度、ファイルアクセスモード、Structured Output、cwd、indexing preflight の契約と、indexing、feedback、oracle、realization、session、TUI 向けの起動設定を扱う。
-- agent call の共通パラメータ契約を確認するときは共通定義へ、特定サブコマンドの prompt や出力契約を確認するときは対応する下位ディレクトリへ進む入口である。
+- oracle 向け ACP 呼び出しのサブコマンド別ビルダーを配置する領域です。oracle review の所見列挙・採否判定・統合・妥当性検証と、oracle investigation の調査起動設定を扱います。各実装の prompt、出力契約、起動条件を確認する入口です。
 
 ## Read this when
-- AI コーディングエージェント呼び出しの共通パラメータ契約を確認・変更するとき。
-- indexing、feedback、oracle review・investigation・edit、realization apply・refactor、session join、TUI の agent call 設定や prompt builder の所在を判断するとき。
-- Structured Output schema と、それを利用する agent call builder の対応を確認するとき。
+- oracle review の所見列挙、採否判定、重複・矛盾の統合、妥当性検証に関する ACP 呼び出し契約や prompt 構築を確認・変更するとき。
+- oracle investigation の調査用 ACP 起動設定、調査 prompt、モデル、アクセスモード、作業ディレクトリを確認・変更するとき。
+- この領域にある oracle 向け ACP builder の用途や呼び出し条件を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの実行フローや呼び出し側の運用を調査するときは、該当する上位実装を直接読む。
-- 具体的な oracle file、realization file、レビュー所見の内容を確認するときは、対象ファイルを直接読む。
-- 共通 prompt のレンダリング規則だけを確認するときは、prompt builder の実装を直接読む。
+- oracle file の編集内容や realization 側の実装だけを確認する場合。
+- サブコマンドに依存しない共通 prompt 構築ロジックを確認する場合は、共通 prompt builder を直接読むべきです。
+- 個別のレビュー所見や、その根拠となる oracle 仕様を確認する場合は、該当する対象を直接確認すべきです。
 
 ## hash
-- 5a52bf4625cd49e755d330b2f4390640e81c0cb20c7c335e32249f8359de61a6
+- d4f87b365ec1edf55d4f89d6df57ac7c9e7a79028a648d05826e12fc08b53820
 
 # `feedback`
 

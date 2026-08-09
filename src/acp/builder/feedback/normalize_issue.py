@@ -1,4 +1,4 @@
-"""feedback issue 正規化の正本 builder を再公開する adapter。
+"""feedback issue 同一性判断の正本 builder を再公開する adapter。
 
 対応する oracle file:
 `{{work-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py`。

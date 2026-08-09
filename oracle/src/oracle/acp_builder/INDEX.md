@@ -31,21 +31,19 @@
 # `feedback`
 
 ## Summary
-- feedback observation を既存 issue へ統合するか新規 issue とするかを判断する、正規化処理の oracle src と JSON Schema を扱うディレクトリ。正規化結果の契約確認には schema、agent call の prompt・参照範囲・設定確認には実装へ進む入口となる。
+- フィードバック issue の同一性判定と現在状態の検証に用いる、agent call 用の prompt 構築処理およびその Structured Output schema をまとめた領域です。観測と候補 issue の比較、report cut 時点での verdict 判定へ進む入口になります。
 
 ## Read this when
-- feedback observation の issue 正規化処理、統合判断、入出力契約を確認・変更するとき
-- 正規化結果の必須項目、列挙値、文字数制約、関連 issue ID の扱いを確認するとき
-- feedback 正規化 agent call の参照範囲、入力形式、モデル・推論設定、Structured Output 制約を確認するとき
+- feedback issue の同一性判定または issue candidate の検証に関する prompt、入力制約、実行コンテキスト、出力契約を確認・変更するとき
+- 既存 issue と新規 issue の判定、または unresolved 等の検証 verdict の構造を扱うとき
 
 ## Do not read this when
-- feedback observation の収集・送信だけを扱うとき
-- feedback issue の保存形式や human disposition の運用を確認するとき
-- 正規化処理の具体的なテスト内容だけを確認するとき
-- 一般的な prompt 構築や別の agent call parameter の実装を確認するとき
+- feedback observation の記録・送信や、verification 後の保存処理だけを扱うとき
+- 候補 issue の絞り込み、report cut の作成、個別 issue の内容を確認するとき
+- 一般的な JSON Schema の仕様や ACP builder 共通設定だけを確認するとき
 
 ## hash
-- 11ff759448ed5a50db841a7ec879e9b5ecf5d802515d6f431820c0cacfb81167
+- 1546231dda74a9d33d032deb34dc79d9dd2f79e86db76744dc2d554d9a71e3ec
 
 # `indexing`
 

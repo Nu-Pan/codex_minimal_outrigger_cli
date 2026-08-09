@@ -1,16 +1,18 @@
-"""`cmoc feedback report` の repository-local 増分 normalization と report 生成。
+"""`cmoc feedback report` の active-state publication pipeline。
 
-この file は 16,000 文字を超えるが、snapshot 固定、normalization unit、checkpoint、
-unit manifest、state snapshot、および最終 report record は、一つの
-中断可能 transaction の順序を構成する。分割すると確定済み unit と deferred
-observation の境界を module 間で重複管理するため、report command の状態機械として
-一箇所に保つ。
+この module は固定済み report cut に対する deterministic processing、必要最小限の
+normalization、全 candidate の verification、および current pointer 切替を一つの
+transaction として扱う。各段階を分散すると中断後の checkpoint 再利用と固定入力の
+対応を重複管理するため、サブコマンド固有の状態機械としてまとめる。
 
 対応する oracle file:
 `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`。
 """
 
+import hashlib
+import html
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -22,6 +24,7 @@ from jsonschema.exceptions import SchemaError
 from acp.builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter,
 )
+from acp.builder.feedback.verify_issue import build_feedback_verify_issue_parameter
 from cmoc_runtime import (
     CmocError,
     current_branch,
@@ -34,321 +37,146 @@ from cmoc_runtime import (
     work_root,
 )
 from commons.runtime_feedback_state import (
-    IssueView,
+    ActiveState,
+    LegacyState,
     agent_canonical_key,
-    assessment_record,
-    build_state_snapshot,
-    effective_ingestion_receipts,
+    artifact_reference,
+    cleanup_published_report,
+    current_generation_artifacts,
+    current_pointer_path,
+    discard_report_cut,
     feedback_writer_lock,
-    identity_record,
-    ingestion_record,
+    generation_artifacts,
     issue_id,
-    load_effective_feedback_state,
-    load_issue_views,
-    load_issue_views_from_snapshot,
+    load_active_state,
+    load_legacy_state,
+    load_report_cut,
+    machine_aggregate_id,
     machine_canonical_key,
-    new_report_id,
-    normalization_unit_id,
-    normalizer_version,
-    occurrence_record,
-    prepare_report_publication,
-    previous_state_snapshot_id,
-    previous_successful_report_id,
-    publish_normalization_unit,
-    publish_report_record,
-    recover_normalization_units,
-    recover_report_publications,
-    report_record,
-    revision_record,
+    new_generation_id,
+    new_report_cut_id,
+    normalization_checkpoint_path,
+    publish_current_pointer,
+    publish_generation_artifacts,
+    recover_report_cut_checkpoint_references,
     validate_feedback_state,
     validate_observation_envelope,
+    verification_checkpoint_path,
+    write_checkpoint,
+    write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
     canonical_json_bytes,
     feedback_root,
     iter_observation_paths,
-    normalization_checkpoint_root,
+    mask_feedback_text,
     observation_path,
+    observation_publication_lock,
     parse_rfc3339,
-    recover_immutable_bytes_from_temporary,
-    report_snapshot_root,
+    read_json_object,
     rfc3339_now,
     sha256_bytes,
     write_immutable_bytes,
-    write_immutable_json,
 )
 from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_paths import reports_dir, timestamp
 from commons.runtime_results import StructuredOutputValidationIssue
 
+JsonObject = dict[str, Any]
+_REFERENCE_CONTENT_LIMIT = 16 * 1024
+_MACHINE_WINDOW_DAYS = 30
+_MACHINE_DIGEST_LIMIT = 64
 
-def cmoc_feedback_report_impl(
-    show_all: bool = False,
-) -> None:
-    """CLI runtime を通して feedback report を実行する。"""
+
+def cmoc_feedback_report_impl() -> None:
+    """CLI runtime を通して current feedback report を publication する。"""
     run_cli_subcommand(
         _cmoc_feedback_report_body,
-        show_all,
         command_name="feedback report",
-        command_argv=[
-            "cmoc",
-            "feedback",
-            "report",
-            *(["--all"] if show_all else []),
-        ],
-        total_steps=6,
+        command_argv=["cmoc", "feedback", "report"],
+        total_steps=7,
     )
 
 
-def _cmoc_feedback_report_body(
-    show_all: bool,
-) -> int:
-    """snapshot 内の未処理 observation を unit ごとに確定する。"""
-    repo = repo_root()
-    worktree = work_root()
+def _cmoc_feedback_report_body() -> int:
+    """writer lock 内で cleanup、cut、verification、publication を完了する。"""
+    repository = repo_root()
+    main_worktree = work_root()
     start_subcommand_step(
         2, "feedback report の事前条件を確認", "validate feedback report preconditions"
     )
-    _validate_preconditions(repo, worktree)
-    with feedback_writer_lock(repo):
+    _validate_preconditions(repository, main_worktree)
+
+    # report cut 固定前から失敗終了まで repository-level writer lock を保持する。
+    with feedback_writer_lock(repository):
         start_subcommand_step(
             3,
-            "feedback state の整合性を確認",
-            "validate feedback state",
+            "feedback state と未完了 cleanup を確認",
+            "validate feedback active state",
         )
-        recovered_units = recover_normalization_units(repo)
-        recover_report_publications(repo)
-        validate_feedback_state(repo, require_no_orphans=True)
-        return _cmoc_feedback_report_locked(repo, worktree, show_all, recovered_units)
+        state = validate_feedback_state(repository)
+        if state.cleanup_manifest is not None:
+            cleanup_published_report(repository)
+            state = validate_feedback_state(repository)
 
-
-def _cmoc_feedback_report_locked(
-    repo: Path,
-    worktree: Path,
-    show_all: bool,
-    recovered_unit_ids: list[str],
-) -> int:
-    """repository-level writer lock 保持中に report transaction を完了する。"""
-    previous_views = _previous_normal_issue_views(repo)
-
-    report_id = new_report_id()
-    generated_at = rfc3339_now()
-    start_subcommand_step(
-        4, "raw observation snapshot を保存", "snapshot raw observations"
-    )
-    snapshot, snapshot_sha256 = _write_snapshot(repo, report_id, generated_at)
-    entries = snapshot["observations"]
-    assert isinstance(entries, list)
-    observation_map = _read_snapshot_observations(entries)
-
-    # 既存 receipt の hash 一致を先に検査し、corruption を unit 処理へ混ぜない。
-    pending, _, normalization_unit_ids = _pending_entries(repo, entries)
-    normalization_unit_ids[:0] = recovered_unit_ids
-    invalid_count = 0
-    normalization_agent_call_count = 0
-    processed_count = 0
-    result = "ok"
-    partial_error: BaseException | None = None
-    start_subcommand_step(
-        5, "observation を増分 normalization", "normalize feedback observations"
-    )
-    try:
-        # schema 不正 record は改変せず invalid receipt だけを確定する。
-        valid_pending: list[dict[str, Any]] = []
-        for entry in pending:
-            observation_id = str(entry["observation_id"])
-            observation = observation_map.get(observation_id)
-            errors = (
-                ["raw observation is not valid JSON object"]
-                if observation is None
-                else validate_observation_envelope(
-                    observation,
-                    expected_repo_root=repo,
-                )
+        versions = _processing_versions()
+        resumable = load_report_cut(repository)
+        if resumable is not None:
+            manifest, manifest_path = resumable
+            recover_report_cut_checkpoint_references(
+                repository, manifest, manifest_path
             )
+            processing = manifest["processing"]
+            assert isinstance(processing, dict)
             if (
-                observation is not None
-                and observation.get("observation_id") != observation_id
+                processing.get("status") == "inconclusive"
+                or manifest["inputs"].get("versions") != versions
             ):
-                errors.append("/observation_id: file name and payload differ")
-            if errors:
-                unit_id = _publish_invalid_observation(
-                    repo, entry, errors, generated_at
+                # inconclusive と code/schema 変更後の cut は pending raw を残して作り直す。
+                discard_report_cut(repository, manifest, manifest_path)
+                resumable = None
+        if resumable is None:
+            start_subcommand_step(
+                4, "feedback report cut を固定", "freeze feedback report cut"
+            )
+            manifest, manifest_path = _create_report_cut(repository, state, versions)
+        else:
+            manifest, manifest_path = resumable
+            typer.echo(f"- feedback report cut を再開: `{manifest_path}`")
+
+        # current pointer 前の失敗は同じ cut と正式 checkpoint を再開可能に保つ。
+        try:
+            return _process_report_cut(
+                repository,
+                main_worktree,
+                state,
+                manifest,
+                manifest_path,
+            )
+        except KeyboardInterrupt:
+            if not _cut_is_current(repository, manifest):
+                _set_processing_state(
+                    repository,
+                    manifest,
+                    "interrupted",
+                    "user interruption",
                 )
-                normalization_unit_ids.append(unit_id)
-                invalid_count += 1
-                processed_count += 1
-            else:
-                valid_pending.append(entry)
-
-        # machine observation は canonical key 完全一致の集合を一 unit にする。
-        machine_groups: dict[str, list[dict[str, Any]]] = {}
-        agent_entries: list[dict[str, Any]] = []
-        for entry in valid_pending:
-            observation = observation_map[str(entry["observation_id"])]
-            if observation.get("source") == "machine_rule":
-                key = machine_canonical_key(observation)
-                machine_groups.setdefault(key, []).append(entry)
-            else:
-                agent_entries.append(entry)
-        for canonical_key, group in sorted(machine_groups.items()):
-            _issue, unit_id = _integrate_machine_group(
-                repo,
-                canonical_key,
-                group,
-                observation_map,
-                generated_at,
-            )
-            normalization_unit_ids.append(unit_id)
-            processed_count += len(group)
-
-        # agent observation は一件ずつ候補を絞り込み、曖昧な場合だけ agent を使う。
-        for entry in sorted(
-            agent_entries, key=lambda item: str(item["observation_id"])
-        ):
-            _issue, unit_id, agent_used = _integrate_agent_observation(
-                repo,
-                worktree,
-                entry,
-                observation_map,
-                generated_at,
-            )
-            normalization_unit_ids.append(unit_id)
-            normalization_agent_call_count += int(agent_used)
-            processed_count += 1
-
-        # 新規 observation がなくても、既存 evidence の現在 fingerprint が変われば
-        # machine assessment を独立 unit として追加する。
-        for view in load_issue_views(repo).values():
-            assessment_unit_id = _refresh_issue_assessment(
-                repo,
-                view,
-                observation_map,
-                generated_at,
-            )
-            if assessment_unit_id is not None:
-                normalization_unit_ids.append(assessment_unit_id)
-    except KeyboardInterrupt:
-        processed_count, invalid_count = _effective_observation_counts(repo, entries)
-        _, _, committed_unit_ids = _pending_entries(repo, entries)
-        normalization_unit_ids.extend(committed_unit_ids)
-        result = "interrupted"
-        _record_feedback_interruption()
-    except BaseException as exc:
-        processed_count, invalid_count = _effective_observation_counts(repo, entries)
-        _, _, committed_unit_ids = _pending_entries(repo, entries)
-        normalization_unit_ids.extend(committed_unit_ids)
-        result = "partial"
-        partial_error = exc
-
-    validate_feedback_state(repo, require_no_orphans=True)
-
-    # 確定済み unit manifest だけから report を作り、未処理 entry は deferred とする。
-    start_subcommand_step(
-        6, "feedback report と state snapshot を保存", "write feedback report"
-    )
-    views = load_issue_views(repo)
-    changed_issue_ids, disposition_changed_issue_ids = _issue_changes(
-        previous_views,
-        views,
-    )
-    deferred_count = _deferred_count(repo, entries)
-    default_visible, suppressed = _visible_issues(
-        views,
-        observation_map,
-        changed_issue_ids,
-        disposition_changed_issue_ids,
-        False,
-    )
-    visible = (
-        _visible_issues(
-            views,
-            observation_map,
-            changed_issue_ids,
-            disposition_changed_issue_ids,
-            True,
-        )[0]
-        if show_all
-        else default_visible
-    )
-    needs_revalidation_count = sum(
-        view.assessment is not None
-        and view.assessment.get("freshness") == "needs_revalidation"
-        for view in views.values()
-    )
-    recurrent_open_count = sum(
-        _is_recurrent_open(view, observation_map) for view in views.values()
-    )
-    if result == "ok" and (default_visible or invalid_count):
-        result = "attention"
-    normalization_unit_ids = list(dict.fromkeys(normalization_unit_ids))
-    state_snapshot, _state_snapshot_sha256 = build_state_snapshot(
-        repo, created_at=generated_at
-    )
-    state_snapshot_id = str(state_snapshot["state_snapshot_id"])
-    predecessor_id = previous_successful_report_id(repo)
-    report_path, report_sha256, report_content = _write_report(
-        repo=repo,
-        worktree=worktree,
-        report_id=report_id,
-        generated_at=generated_at,
-        snapshot_sha256=snapshot_sha256,
-        snapshot_count=len(entries),
-        processed_count=processed_count,
-        deferred_count=deferred_count,
-        invalid_count=invalid_count,
-        normalization_agent_call_count=normalization_agent_call_count,
-        changed_issue_ids=changed_issue_ids,
-        disposition_changed_issue_ids=disposition_changed_issue_ids,
-        recurrent_open_count=recurrent_open_count,
-        needs_revalidation_count=needs_revalidation_count,
-        suppressed_count=len(suppressed),
-        show_all=show_all,
-        normalization_unit_ids=normalization_unit_ids,
-        state_snapshot_id=state_snapshot_id,
-        previous_successful_report_id=predecessor_id,
-        result=result,
-        visible=visible,
-        observations=observation_map,
-        partial_error=partial_error,
-    )
-    report_state = report_record(
-        report_id=report_id,
-        generated_at=generated_at,
-        report_snapshot_sha256=snapshot_sha256,
-        report_snapshot_observation_count=len(entries),
-        processed_observation_count=processed_count,
-        deferred_observation_count=deferred_count,
-        report_path=report_path,
-        report_sha256=report_sha256,
-        result=result,
-        normalization_unit_ids=normalization_unit_ids,
-        state_snapshot_id=state_snapshot_id,
-        previous_successful_report_id=predecessor_id,
-    )
-    prepare_report_publication(repo, report_state)
-    write_immutable_bytes(report_path, report_content)
-    report_record_path = publish_report_record(repo, report_state)
-    validate_feedback_state(repo, require_no_orphans=True)
-    logger = current_subcommand_logger()
-    if logger is not None:
-        logger.event(
-            "feedback_report_committed",
-            report_id=report_id,
-            normalization_unit_ids=normalization_unit_ids,
-            state_snapshot_id=state_snapshot_id,
-            report_record_path=str(report_record_path),
-        )
-    typer.echo(f"- feedback report: `{report_path}`")
-    for unit_id in normalization_unit_ids:
-        typer.echo(f"- feedback normalization unit: `{unit_id}`")
-    typer.echo(f"- feedback state snapshot: `{state_snapshot_id}`")
-    typer.echo(f"- feedback report record: `{report_record_path}`")
-    if result == "partial":
-        return 2
-    if result == "error":
-        return 1
-    return 0
+            _record_feedback_interruption(manifest, manifest_path)
+            return 0
+        except BaseException as exc:
+            if not _cut_is_current(repository, manifest):
+                processing = manifest.get("processing")
+                status = (
+                    processing.get("status") if isinstance(processing, dict) else None
+                )
+                if status not in {"inconclusive", "publication_ready"}:
+                    _set_processing_state(
+                        repository,
+                        manifest,
+                        "failed" if status != "staging" else "staging",
+                        repr(exc),
+                    )
+            raise
 
 
 def _validate_preconditions(repo: Path, worktree: Path) -> None:
@@ -375,1322 +203,2204 @@ def _validate_preconditions(repo: Path, worktree: Path) -> None:
         )
 
 
-def _write_snapshot(
-    repo: Path, report_id: str, generated_at: str
-) -> tuple[dict[str, Any], str]:
-    """raw observation の path、ID、SHA256 を固定した manifest を保存する。"""
-    observations = [
-        {
-            "path": str(path.resolve()),
-            "observation_id": path.stem,
-            "sha256": sha256_bytes(path.read_bytes()),
-        }
-        for path in iter_observation_paths(repo)
-    ]
-    manifest: dict[str, Any] = {
+def _create_report_cut(
+    repo: Path, state: ActiveState, versions: JsonObject
+) -> tuple[JsonObject, Path]:
+    """pending raw、active state、legacy projection、現在参照を一度だけ固定する。"""
+    report_cut_id_value = new_report_cut_id()
+    with observation_publication_lock(repo):
+        entries, observations = _pending_observations(repo)
+        cut_at = rfc3339_now()
+    legacy = load_legacy_state(repo, observations) if state.current is None else None
+    references = _capture_report_cut_references(
+        repo,
+        observations,
+        state.issues,
+        legacy.issues if legacy is not None else {},
+    )
+    _verify_captured_references(repo, references)
+    manifest: JsonObject = {
         "schema_version": 1,
-        "report_id": report_id,
-        "generated_at": generated_at,
-        "observations": observations,
+        "report_cut_id": report_cut_id_value,
+        "cut_at": cut_at,
+        "inputs": {
+            "observations": entries,
+            "current": _active_state_input(repo, state),
+            "legacy": _legacy_state_input(legacy),
+            "references": references,
+            "versions": versions,
+        },
+        "processing": {
+            "status": "ready",
+            "normalization_checkpoints": [],
+            "verification_checkpoints": [],
+            "failure": None,
+        },
+        "publication": None,
     }
-    path = report_snapshot_root(repo) / f"{report_id}.json"
-    digest = write_immutable_json(path, manifest)
-    return manifest, digest
+    manifest_path, _digest = write_report_cut_manifest(repo, manifest)
+    loaded = load_report_cut(repo)
+    if loaded is None or loaded[0] != manifest or loaded[1] != manifest_path:
+        raise CmocError(
+            "feedback report cut を durable に固定できませんでした。",
+            ["report cut work directory を確認して再実行してください。"],
+            str(manifest_path),
+        )
+    typer.echo(f"- feedback report cut: `{manifest_path}`")
+    return manifest, manifest_path
 
 
-def _read_snapshot_observations(
-    entries: list[dict[str, Any]],
-) -> dict[str, dict[str, Any]]:
-    """snapshot path の raw JSON object を ID ごとに best effort で読む。"""
-    observations: dict[str, dict[str, Any]] = {}
-    for entry in entries:
-        observation_id = entry.get("observation_id")
-        path = entry.get("path")
-        if not isinstance(observation_id, str) or not isinstance(path, str):
-            continue
-        try:
-            raw_path = Path(path)
-            content = raw_path.read_bytes()
-            if sha256_bytes(content) != entry.get("sha256"):
-                raise CmocError(
-                    "snapshot 後に raw feedback observation が変化しました。",
-                    ["raw observation store の corruption を確認してください。"],
-                    str(raw_path),
-                )
-            value = json.loads(content)
-            if not isinstance(value, dict):
+def _pending_observations(
+    repo: Path,
+) -> tuple[list[JsonObject], dict[str, JsonObject]]:
+    """raw store の全 pending file を canonical validation して固定入力へ変換する。"""
+    root = feedback_root(repo) / "observation" / "v1"
+    if root.exists() and (root.is_symlink() or not root.is_dir()):
+        raise CmocError(
+            "feedback observation root が通常 directory ではありません。",
+            ["raw observation store を人間が確認してください。"],
+            str(root),
+        )
+    if root.is_dir():
+        for path in root.rglob("*"):
+            if path.is_dir() and not path.is_symlink():
                 continue
-            observations[observation_id] = value
-        except CmocError:
-            raise
-        except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
+            if (
+                path.is_symlink()
+                or not path.is_file()
+                or path.suffix != ".json"
+                or not path.name.startswith("fbo_")
+            ):
+                raise CmocError(
+                    "feedback raw store に未定義 artifact があります。",
+                    ["raw observation path を人間が確認してください。"],
+                    str(path),
+                )
+
+    entries: list[JsonObject] = []
+    observations: dict[str, JsonObject] = {}
+    hashes_by_id: dict[str, str] = {}
+    validation_errors: list[str] = []
+    for path in iter_observation_paths(repo):
+        try:
+            content = path.read_bytes()
+            observation = read_json_object(path)
+        except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
+            validation_errors.append(f"{path}: {exc}")
             continue
+        if canonical_json_bytes(observation) != content:
+            validation_errors.append(f"{path}: canonical JSON object ではありません")
+            continue
+        observation_id_value = observation.get("observation_id")
+        observed_at = observation.get("observed_at")
+        errors = validate_observation_envelope(observation, expected_repo_root=repo)
+        if (
+            not isinstance(observation_id_value, str)
+            or path.stem != observation_id_value
+        ):
+            errors.append("/observation_id: file name and payload differ")
+        if isinstance(observation_id_value, str) and isinstance(observed_at, str):
+            try:
+                if observation_path(repo, observation_id_value, observed_at) != path:
+                    errors.append("/: observation path does not match observed_at")
+            except ValueError as exc:
+                errors.append(f"/: {exc}")
+        if errors:
+            validation_errors.append(f"{path}: {'; '.join(errors)}")
+            continue
+        digest = sha256_bytes(content)
+        previous = hashes_by_id.setdefault(str(observation_id_value), digest)
+        if previous != digest:
+            validation_errors.append(
+                f"{path}: 同じ observation ID に異なる SHA256 があります"
+            )
+            continue
+        observations.setdefault(str(observation_id_value), observation)
+        entries.append(
+            {
+                "observation_id": observation_id_value,
+                "path": path.resolve().relative_to(repo.resolve()).as_posix(),
+                "sha256": digest,
+            }
+        )
+    if validation_errors:
+        raise CmocError(
+            "feedback report cut の raw observation validation に失敗しました。",
+            [
+                "表示された raw observation を修復せず、人間が保存領域を確認してください。"
+            ],
+            "\n".join(validation_errors),
+        )
+    entries.sort(key=lambda item: (str(item["observation_id"]), str(item["path"])))
+    return entries, observations
+
+
+def _active_state_input(repo: Path, state: ActiveState) -> JsonObject | None:
+    """cut 開始時の current generation を path/hash reference で固定する。"""
+    if state.current is None or state.generation_manifest is None:
+        return None
+    pointer_path = current_pointer_path(repo)
+    issue_references = state.generation_manifest.get("issues")
+    aggregate_references = state.generation_manifest.get("machine_aggregates")
+    if not isinstance(issue_references, list) or not isinstance(
+        aggregate_references, list
+    ):
+        raise ValueError("validated generation references are missing")
+    return {
+        "pointer": {
+            "value": state.current,
+            **artifact_reference(repo, pointer_path),
+        },
+        "generation_manifest": {
+            "path": state.current["generation_manifest_path"],
+            "sha256": state.current["generation_manifest_sha256"],
+        },
+        "issues": issue_references,
+        "machine_aggregates": aggregate_references,
+    }
+
+
+def _legacy_state_input(legacy: LegacyState | None) -> JsonObject | None:
+    """migration cut に compact projection と cleanup artifact を固定する。"""
+    if legacy is None:
+        return None
+    return {
+        "issues": [legacy.issues[key] for key in sorted(legacy.issues)],
+        "artifacts": list(legacy.cleanup_artifacts),
+    }
+
+
+def _capture_report_cut_references(
+    repo: Path,
+    observations: dict[str, JsonObject],
+    active_issues: dict[str, JsonObject],
+    legacy_issues: dict[str, JsonObject],
+) -> list[JsonObject]:
+    """agent に許可する observation と current repository reference を固定する。"""
+    references: dict[str, JsonObject] = {}
+    path_subjects: dict[Path, set[str]] = {}
+
+    # raw observation 自体は current verdict の根拠ではない別種 reference とする。
+    for observation_id_value, observation in sorted(observations.items()):
+        payload = observation.get("payload")
+        summary = payload.get("summary") if isinstance(payload, dict) else None
+        evidence = payload.get("evidence") if isinstance(payload, dict) else []
+        reference_id = f"obs:{observation_id_value}"
+        references[reference_id] = {
+            "reference_id": reference_id,
+            "kind": "observation",
+            "subjects": [observation_id_value],
+            "observation_id": observation_id_value,
+            "summary": summary if isinstance(summary, str) else "",
+            "evidence": evidence if isinstance(evidence, list) else [],
+        }
+        for path in _observation_reference_paths(repo, observation):
+            path_subjects.setdefault(path, set()).add(observation_id_value)
+
+    # active／legacy issue が保持する stable target を今回の cut で再取得する。
+    for current_issue_id, issue in sorted({**legacy_issues, **active_issues}.items()):
+        targets = issue.get("reference_targets")
+        if not isinstance(targets, list):
+            continue
+        for target in targets:
+            if not isinstance(target, dict) or not isinstance(target.get("path"), str):
+                continue
+            candidate = _repository_path(repo, target["path"])
+            if candidate is not None:
+                path_subjects.setdefault(candidate, set()).add(current_issue_id)
+        verification = issue.get("verification")
+        current_evidence = (
+            verification.get("current_evidence")
+            if isinstance(verification, dict)
+            else None
+        )
+        if isinstance(current_evidence, list):
+            for evidence in current_evidence:
+                if not isinstance(evidence, dict) or not isinstance(
+                    evidence.get("path"), str
+                ):
+                    continue
+                candidate = _repository_path(repo, evidence["path"])
+                if candidate is not None:
+                    path_subjects.setdefault(candidate, set()).add(current_issue_id)
+
+    # path ごとに一度だけ current state を取得し、複数 candidate の subject を共有する。
+    for path, subjects in sorted(path_subjects.items(), key=lambda item: str(item[0])):
+        reference = _capture_repository_reference(repo, path, sorted(subjects))
+        references[str(reference["reference_id"])] = reference
+    return [references[key] for key in sorted(references)]
+
+
+def _observation_reference_paths(repo: Path, observation: JsonObject) -> list[Path]:
+    """raw observation が既に拘束した repository 内 current target を返す。"""
+    paths: set[Path] = set()
+    fingerprints = observation.get("evidence_fingerprints")
+    if isinstance(fingerprints, list):
+        for fingerprint in fingerprints:
+            if isinstance(fingerprint, dict) and isinstance(
+                fingerprint.get("normalized_path"), str
+            ):
+                candidate = _repository_path(repo, fingerprint["normalized_path"])
+                if candidate is not None:
+                    paths.add(candidate)
+    source_event = observation.get("source_event")
+    if isinstance(source_event, dict) and isinstance(source_event.get("log_path"), str):
+        candidate = _repository_path(repo, source_event["log_path"])
+        if candidate is not None:
+            paths.add(candidate)
+    return sorted(paths)
+
+
+def _repository_path(repo: Path, value: str) -> Path | None:
+    """absolute／repository-relative value を lexical repository path へ制限する。"""
+    repository = repo.resolve(strict=False)
+    raw = Path(value)
+    candidate = (
+        Path(os.path.abspath(raw))
+        if raw.is_absolute()
+        else Path(os.path.abspath(repository / raw))
+    )
+    if candidate != repository and repository not in candidate.parents:
+        return None
+    return candidate
+
+
+def _capture_repository_reference(
+    repo: Path, path: Path, subjects: list[str]
+) -> JsonObject:
+    """repository path の content または typed fingerprint を secret-safe に固定する。"""
+    relative = path.relative_to(repo.resolve(strict=False)).as_posix()
+    reference_id = f"ref:{hashlib.sha256(relative.encode('utf-8')).hexdigest()[:24]}"
+    base: JsonObject = {
+        "reference_id": reference_id,
+        "subjects": subjects,
+        "path": relative,
+    }
+    try:
+        if path.is_symlink():
+            return {
+                **base,
+                "kind": "current_fingerprint",
+                "state": "unreadable",
+                "sha256": None,
+            }
+        if not path.exists():
+            return {
+                **base,
+                "kind": "current_fingerprint",
+                "state": "missing",
+                "sha256": None,
+            }
+        if not path.is_file():
+            return {
+                **base,
+                "kind": "current_fingerprint",
+                "state": "not_file",
+                "sha256": None,
+            }
+        content = path.read_bytes()
+    except OSError:
+        return {
+            **base,
+            "kind": "current_fingerprint",
+            "state": "unreadable",
+            "sha256": None,
+        }
+    digest = sha256_bytes(content)
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        return {
+            **base,
+            "kind": "current_fingerprint",
+            "state": "hashed",
+            "sha256": digest,
+        }
+    return {
+        **base,
+        "kind": "repository_content",
+        "state": "hashed",
+        "sha256": digest,
+        "content": mask_feedback_text(text[:_REFERENCE_CONTENT_LIMIT]),
+        "truncated": len(text) > _REFERENCE_CONTENT_LIMIT,
+    }
+
+
+def _verify_captured_references(repo: Path, references: list[JsonObject]) -> None:
+    """manifest 保存直前に current reference を同じ path から再取得して比較する。"""
+    for reference in references:
+        if reference.get("kind") == "observation":
+            continue
+        path_value = reference.get("path")
+        subjects = reference.get("subjects")
+        if not isinstance(path_value, str) or not isinstance(subjects, list):
+            raise ValueError("captured repository reference is malformed")
+        current = _capture_repository_reference(
+            repo, repo / path_value, [str(value) for value in subjects]
+        )
+        if current != reference:
+            raise CmocError(
+                "feedback report cut の current reference が capture 中に変化しました。",
+                ["repository state が安定してから再実行してください。"],
+                str(repo / path_value),
+            )
+
+
+def _processing_versions() -> JsonObject:
+    """builder、schema、および deterministic processing rule の content hash を返す。"""
+    normalize_builder = Path(
+        build_feedback_normalize_issue_parameter.__code__.co_filename
+    )
+    verify_builder = Path(build_feedback_verify_issue_parameter.__code__.co_filename)
+    module_path = Path(__file__)
+    state_path = module_path.parents[2] / "commons" / "runtime_feedback_state.py"
+    return {
+        "normalization_builder": sha256_bytes(normalize_builder.read_bytes()),
+        "normalization_schema": sha256_bytes(
+            normalize_builder.with_suffix(".json").read_bytes()
+        ),
+        "verification_builder": sha256_bytes(verify_builder.read_bytes()),
+        "verification_schema": sha256_bytes(
+            verify_builder.with_suffix(".json").read_bytes()
+        ),
+        "deterministic_processing": _combined_file_hash([module_path, state_path]),
+    }
+
+
+def _combined_file_hash(paths: list[Path]) -> str:
+    """path と content の canonical 順序から処理実装 version を返す。"""
+    digest = hashlib.sha256()
+    for path in sorted(paths, key=lambda item: str(item)):
+        digest.update(str(path).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _process_report_cut(
+    repo: Path,
+    worktree: Path,
+    initial_state: ActiveState,
+    manifest: JsonObject,
+    manifest_path: Path,
+) -> int:
+    """固定済み cut を正常 publication または terminal failure まで進める。"""
+    processing = manifest.get("processing")
+    if not isinstance(processing, dict):
+        raise ValueError("report cut processing must be an object")
+    if processing.get("status") == "publication_ready":
+        start_subcommand_step(
+            7, "feedback report を publication", "publish feedback report"
+        )
+        return _resume_publication(repo, manifest, manifest_path)
+
+    # resume 時も raw と active input の hash/reference を再検証する。
+    observations = _read_cut_observations(repo, manifest)
+    current_state = load_active_state(repo)
+    if _active_state_input(repo, current_state) != manifest["inputs"].get("current"):
+        raise CmocError(
+            "feedback report cut の current active state が開始時から変化しています。",
+            ["current pointer と report cut manifest を人間が確認してください。"],
+            str(manifest_path),
+        )
+    if initial_state.current != current_state.current:
+        raise CmocError(
+            "feedback report 実行中に current pointer が変化しました。",
+            ["repository-level feedback writer の所有状態を確認してください。"],
+            str(current_pointer_path(repo)),
+        )
+
+    start_subcommand_step(
+        5,
+        "observation を検証・集約・normalization",
+        "process feedback issue candidates",
+    )
+    _set_processing_state(repo, manifest, "processing", None)
+    candidates, machine_aggregates = _build_candidates(
+        repo, worktree, manifest, observations, current_state
+    )
+
+    start_subcommand_step(
+        6, "全 issue candidate を verification", "verify feedback issue candidates"
+    )
+    verdicts = _verify_candidates(repo, worktree, manifest, candidates)
+    inconclusive = sorted(
+        candidate_id
+        for candidate_id, result in verdicts.items()
+        if result.get("verdict") == "inconclusive"
+    )
+    if inconclusive:
+        _set_processing_state(
+            repo,
+            manifest,
+            "inconclusive",
+            f"inconclusive candidates: {', '.join(inconclusive)}",
+        )
+        raise CmocError(
+            "feedback issue verification が inconclusive でした。",
+            ["次回の `cmoc feedback report` は新しい report cut で再評価します。"],
+            f"candidates: {', '.join(inconclusive)}\nreport_cut: {manifest_path}",
+        )
+
+    start_subcommand_step(
+        7, "feedback report を publication", "publish feedback report"
+    )
+    return _publish_report(
+        repo,
+        worktree,
+        manifest,
+        manifest_path,
+        candidates,
+        machine_aggregates,
+        verdicts,
+        current_state,
+    )
+
+
+def _read_cut_observations(repo: Path, manifest: JsonObject) -> dict[str, JsonObject]:
+    """cut manifest が固定した raw byte 列を再検証し、完全一致 duplicate を除く。"""
+    inputs = manifest.get("inputs")
+    entries = inputs.get("observations") if isinstance(inputs, dict) else None
+    if not isinstance(entries, list):
+        raise ValueError("report cut observations must be an array")
+    observations: dict[str, JsonObject] = {}
+    hashes: dict[str, str] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError("report cut observation entry must be an object")
+        path = repo / str(entry.get("path"))
+        content = path.read_bytes()
+        digest = sha256_bytes(content)
+        if digest != entry.get("sha256"):
+            raise CmocError(
+                "feedback report cut の raw observation hash が変化しました。",
+                ["raw observation と report cut manifest を人間が確認してください。"],
+                str(path),
+            )
+        observation = read_json_object(path)
+        if canonical_json_bytes(observation) != content:
+            raise CmocError(
+                "feedback report cut の raw observation が canonical JSON ではありません。",
+                ["raw observation を人間が確認してください。"],
+                str(path),
+            )
+        errors = validate_observation_envelope(observation, expected_repo_root=repo)
+        observation_id_value = str(entry.get("observation_id"))
+        if observation.get("observation_id") != observation_id_value:
+            errors.append("/observation_id: manifest and payload differ")
+        if errors:
+            raise CmocError(
+                "feedback report cut の raw observation schema が不正です。",
+                [
+                    "raw observation を処理済みにせず、人間が保存領域を確認してください。"
+                ],
+                f"path: {path}\n" + "\n".join(errors),
+            )
+        previous_hash = hashes.setdefault(observation_id_value, digest)
+        if previous_hash != digest:
+            raise CmocError(
+                "同じ feedback observation ID に異なる内容があります。",
+                ["重複 raw observation を人間が確認してください。"],
+                observation_id_value,
+            )
+        observations.setdefault(observation_id_value, observation)
     return observations
 
 
-def _pending_entries(
-    repo: Path, entries: list[dict[str, Any]]
-) -> tuple[list[dict[str, Any]], int, list[str]]:
-    """receipt と hash が一致する entry を除き、corruption を拒否する。"""
-    pending: list[dict[str, Any]] = []
-    processed = 0
-    reused_unit_ids: list[str] = []
-    seen: dict[str, str] = {}
-    state = load_effective_feedback_state(repo)
-    receipts = {
-        str(record["observation_id"]): record
-        for relative, record in state.records.items()
-        if relative.startswith("ingestion/")
-    }
-    for entry in entries:
-        observation_id = str(entry.get("observation_id"))
-        digest = str(entry.get("sha256"))
-        previous_digest = seen.get(observation_id)
-        if previous_digest is not None:
-            if previous_digest != digest:
-                raise CmocError(
-                    "同じ observation ID に異なる SHA256 があります。",
-                    ["raw observation store の corruption を確認してください。"],
-                    f"observation_id: {observation_id}",
-                )
-            continue
-        seen[observation_id] = digest
-        receipt = receipts.get(observation_id)
-        if receipt is None:
-            pending.append(entry)
-            continue
-        if receipt.get("observation_sha256") != digest:
-            raise CmocError(
-                "ingestion receipt と raw observation の SHA256 が一致しません。",
-                [
-                    "raw observation と effective receipt の corruption を確認してください。"
-                ],
-                f"observation_id: {observation_id}",
-            )
-        processed += 1
-        unit_id = receipt.get("normalization_unit_id")
-        if isinstance(unit_id, str) and unit_id in state.unit_manifests:
-            reused_unit_ids.append(unit_id)
-    return pending, processed, reused_unit_ids
-
-
-def _record_feedback_interruption() -> None:
-    """ユーザー中断を正常な report 終了理由として console と log に残す。"""
-    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
-    mark_current_subcommand_interrupted()
-    typer.echo(
-        "# ユーザー中断要求を受け付けました\n"
-        "- 確定済みの normalization unit で feedback report を完了します。"
-    )
-    logger = current_subcommand_logger()
-    if logger is not None:
-        logger.event(
-            "user_interruption",
-            command="feedback report",
-            result="interrupted",
-        )
-
-
-def _previous_normal_issue_views(repo: Path) -> dict[str, IssueView]:
-    """正常 report 連鎖の直前 state snapshot から issue view を返す。"""
-    snapshot_id = previous_state_snapshot_id(repo)
-    return (
-        load_issue_views_from_snapshot(repo, snapshot_id)
-        if snapshot_id is not None
-        else {}
-    )
-
-
-def _issue_changes(
-    previous: dict[str, IssueView],
-    current: dict[str, IssueView],
-) -> tuple[set[str], set[str]]:
-    """直前の正常 state snapshot からの revision/disposition 差分を返す。"""
-    changed: set[str] = set()
-    disposition_changed: set[str] = set()
-    for current_issue_id, view in current.items():
-        old = previous.get(current_issue_id)
-        if old is None or old.revision.get("revision_id") != view.revision.get(
-            "revision_id"
-        ):
-            changed.add(current_issue_id)
-        old_decision = (
-            old.disposition.get("decision_id")
-            if old is not None and old.disposition is not None
-            else None
-        )
-        current_decision = (
-            view.disposition.get("decision_id")
-            if view.disposition is not None
-            else None
-        )
-        if old is not None and old_decision != current_decision:
-            disposition_changed.add(current_issue_id)
-    return changed, disposition_changed
-
-
-def _publish_invalid_observation(
-    repo: Path,
-    entry: dict[str, Any],
-    errors: list[str],
-    processed_at: str,
-) -> str:
-    """schema 不正 observation の invalid receipt を一 unit で確定する。"""
-    observation_id = str(entry["observation_id"])
-    version = normalizer_version(False)
-    unit_id = normalization_unit_id([observation_id], [], version)
-    receipt = ingestion_record(
-        observation_id,
-        str(entry["sha256"]),
-        processed_at,
-        unit_id,
-        version,
-        "invalid",
-        [],
-        errors,
-    )
-    return publish_normalization_unit(
-        repo,
-        normalization_unit_id_value=unit_id,
-        observations=[
-            {
-                "observation_id": observation_id,
-                "observation_sha256": str(entry["sha256"]),
-            }
-        ],
-        candidate_revision_ids=[],
-        normalizer_schema_sha256=version,
-        normalizer_version_value=version,
-        records=[("ingestion", receipt)],
-        checkpoint_sha256=None,
-    )
-
-
-def _integrate_machine_group(
-    repo: Path,
-    canonical_key: str,
-    entries: list[dict[str, Any]],
-    observations: dict[str, dict[str, Any]],
-    processed_at: str,
-) -> tuple[str, str]:
-    """同じ machine canonical key の observation を一 issue へ統合する。"""
-    current_issue_id = issue_id(canonical_key)
-    views = load_issue_views(repo)
-    existing = views.get(current_issue_id)
-    first = observations[str(entries[0]["observation_id"])]
-    payload = first["payload"]
-    assert isinstance(payload, dict)
-    records: list[tuple[str, dict[str, Any]]] = []
-    if existing is None:
-        records.append(
-            (
-                "identity",
-                identity_record(
-                    current_issue_id,
-                    canonical_key,
-                    "machine_rule",
-                    str(first["observation_id"]),
-                    str(first["observed_at"]),
-                ),
-            )
-        )
-    elif existing.identity.get("canonical_key") != canonical_key:
-        raise CmocError(
-            "feedback issue ID collision を検出しました。",
-            ["canonical key と issue directory を人間が確認してください。"],
-            current_issue_id,
-        )
-    source_ids = {
-        str(record.get("observation_id"))
-        for record in (existing.occurrences if existing is not None else [])
-    }
-    source_ids.update(str(entry["observation_id"]) for entry in entries)
-    records.append(
-        (
-            "revision",
-            revision_record(
-                current_issue_id,
-                processed_at,
-                sorted(source_ids),
-                str(payload["category"]),
-                str(payload["summary"]),
-                str(payload["human_action"]),
-                str(payload["impact"]),
-                {"certainty": "supported", "description": "allowlist rule matched"},
-                [],
-            ),
-        )
-    )
-    for entry in entries:
-        observation = observations[str(entry["observation_id"])]
-        records.append(
-            (
-                "occurrence",
-                occurrence_record(current_issue_id, observation, str(entry["sha256"])),
-            )
-        )
-    records.append(
-        (
-            "assessment",
-            assessment_record(
-                current_issue_id,
-                processed_at,
-                "unknown",
-                "unavailable",
-                "fingerprint_unavailable",
-                "machine event に現在状態の file fingerprint がないため再検証できない。",
-                [],
-            ),
-        )
-    )
-    version = normalizer_version(False)
-    unit_id = normalization_unit_id(
-        [str(entry["observation_id"]) for entry in entries], [], version
-    )
-    for entry in entries:
-        records.append(
-            (
-                "ingestion",
-                ingestion_record(
-                    str(entry["observation_id"]),
-                    str(entry["sha256"]),
-                    processed_at,
-                    unit_id,
-                    version,
-                    "integrated",
-                    [current_issue_id],
-                    [],
-                ),
-            )
-        )
-    published = publish_normalization_unit(
-        repo,
-        normalization_unit_id_value=unit_id,
-        observations=[
-            {
-                "observation_id": str(entry["observation_id"]),
-                "observation_sha256": str(entry["sha256"]),
-            }
-            for entry in entries
-        ],
-        candidate_revision_ids=[],
-        normalizer_schema_sha256=version,
-        normalizer_version_value=version,
-        records=records,
-        checkpoint_sha256=None,
-    )
-    return current_issue_id, published
-
-
-def _integrate_agent_observation(
+def _build_candidates(
     repo: Path,
     worktree: Path,
-    entry: dict[str, Any],
-    observations: dict[str, dict[str, Any]],
-    processed_at: str,
-) -> tuple[str, str, bool]:
-    """一 agent observation を exact match または normalization agent で統合する。"""
-    observation_id = str(entry["observation_id"])
-    observation = observations[observation_id]
-    views = load_issue_views(repo)
-    exact, candidates = _candidate_issues(observation, views, observations)
-    requires_agent = exact is None and bool(candidates)
-    agent_called = False
-    normalized: dict[str, Any]
-    selected: IssueView | None = exact
-    related_ids: list[str] = []
-    checkpoint_path: Path | None = None
-    candidate_revision_ids = [str(view.revision["revision_id"]) for view in candidates]
-    version = normalizer_version(requires_agent)
-    schema_sha256 = version
-
-    if requires_agent:
-        output, checkpoint_path, unit_id, agent_called, schema_sha256 = (
-            _normalize_with_agent(
-                repo,
-                worktree,
-                observation,
-                str(entry["sha256"]),
-                candidates,
-                version,
-            )
-        )
-        decision = output.get("decision")
-        if decision == "existing":
-            selected_id = output.get("existing_issue_id")
-            selected = views.get(str(selected_id))
-            if selected is None or selected not in candidates:
-                raise CmocError(
-                    "normalization agent が候補外 issue を選択しました。",
-                    [
-                        "normalization checkpoint と Structured Output を確認してください。"
-                    ],
-                    str(selected_id),
-                )
-        normalized_value = output.get("normalized_issue")
-        if not isinstance(normalized_value, dict):
-            raise ValueError("normalized_issue must be an object")
-        normalized = normalized_value
-        related = output.get("related_issue_ids", [])
-        related_ids = (
-            [str(value) for value in related] if isinstance(related, list) else []
-        )
-    else:
-        unit_id = normalization_unit_id(
-            [observation_id], candidate_revision_ids, version
-        )
-        normalized = _deterministic_normalized_issue(observation, selected)
-
-    if selected is None:
-        canonical_key = agent_canonical_key(observation_id)
-        current_issue_id = issue_id(canonical_key)
-        category = str(observation["payload"]["category"])
-    else:
-        canonical_key = str(selected.identity["canonical_key"])
-        current_issue_id = selected.issue_id
-        category = str(selected.revision["category"])
-    records: list[tuple[str, dict[str, Any]]] = []
-    if selected is None:
-        records.append(
-            (
-                "identity",
-                identity_record(
-                    current_issue_id,
-                    canonical_key,
-                    "agent_report",
-                    observation_id,
-                    str(observation["observed_at"]),
-                ),
-            )
-        )
-    existing_source_ids = {
-        str(record.get("observation_id"))
-        for record in (selected.occurrences if selected is not None else [])
+    manifest: JsonObject,
+    observations: dict[str, JsonObject],
+    state: ActiveState,
+) -> tuple[dict[str, JsonObject], dict[str, JsonObject]]:
+    """deterministic processing と必要な同一性判断だけで candidate 集合を作る。"""
+    candidates = {
+        current_issue_id: _candidate_from_active(issue)
+        for current_issue_id, issue in state.issues.items()
     }
-    existing_source_ids.add(observation_id)
-    cause = normalized.get("cause_assessment")
-    if not isinstance(cause, dict):
-        cause = {"certainty": "unknown", "description": "原因を評価できない。"}
-    records.extend(
-        [
-            (
-                "revision",
-                revision_record(
-                    current_issue_id,
-                    processed_at,
-                    sorted(existing_source_ids),
-                    category,
-                    str(normalized["summary"]),
-                    str(normalized["human_action"]),
-                    str(normalized["impact"]),
-                    {
-                        "certainty": str(cause["certainty"]),
-                        "description": str(cause["description"]),
-                    },
-                    related_ids,
-                ),
-            ),
-            (
-                "occurrence",
-                occurrence_record(current_issue_id, observation, str(entry["sha256"])),
-            ),
-        ]
-    )
-    assessment = _assessment_for_observation(
-        current_issue_id,
-        processed_at,
-        observation,
-        normalized.get("presence_assessment") if requires_agent else None,
-    )
-    records.append(("assessment", assessment))
-    records.append(
-        (
-            "ingestion",
-            ingestion_record(
-                observation_id,
-                str(entry["sha256"]),
-                processed_at,
-                unit_id,
-                version,
-                "integrated",
-                [current_issue_id],
-                [],
-            ),
-        )
-    )
-    checkpoint_sha256 = (
-        sha256_bytes(checkpoint_path.read_bytes())
-        if checkpoint_path is not None
-        else None
-    )
-    published = publish_normalization_unit(
+    inputs = manifest["inputs"]
+    assert isinstance(inputs, dict)
+    legacy = inputs.get("legacy")
+    if isinstance(legacy, dict):
+        legacy_issues = legacy.get("issues")
+        if not isinstance(legacy_issues, list):
+            raise ValueError("legacy issues must be an array")
+        for issue in legacy_issues:
+            if not isinstance(issue, dict) or not isinstance(
+                issue.get("candidate_id"), str
+            ):
+                raise ValueError("legacy issue projection is malformed")
+            candidates[str(issue["candidate_id"])] = dict(issue)
+
+    # machine observation は canonical key と recurrence rule だけで先に集約する。
+    machine_observations: dict[str, list[JsonObject]] = {}
+    agent_observations: list[JsonObject] = []
+    for observation in observations.values():
+        if observation.get("source") == "machine_rule":
+            machine_observations.setdefault(
+                machine_canonical_key(observation), []
+            ).append(observation)
+        else:
+            agent_observations.append(observation)
+    machine_aggregates = _process_machine_observations(
         repo,
-        normalization_unit_id_value=unit_id,
-        observations=[
-            {
-                "observation_id": observation_id,
-                "observation_sha256": str(entry["sha256"]),
-            }
-        ],
-        candidate_revision_ids=candidate_revision_ids,
-        normalizer_schema_sha256=schema_sha256,
-        normalizer_version_value=version,
-        records=records,
-        checkpoint_sha256=checkpoint_sha256,
+        manifest,
+        candidates,
+        state.machine_aggregates,
+        machine_observations,
     )
-    return current_issue_id, published, agent_called
+
+    # agent observation は observed_at と ID の canonical order で一件ずつ処理する。
+    for observation in sorted(
+        agent_observations,
+        key=lambda item: (
+            parse_rfc3339(str(item["observed_at"])),
+            str(item["observation_id"]),
+        ),
+    ):
+        exact, comparison = _agent_comparison_candidates(observation, candidates)
+        selected: JsonObject | None = exact
+        if selected is None and comparison:
+            selected_id = _normalize_issue_identity(
+                repo, worktree, manifest, observation, comparison
+            )
+            if selected_id is not None:
+                selected = candidates[selected_id]
+        if selected is None:
+            observation_id_value = str(observation["observation_id"])
+            canonical_key = agent_canonical_key(observation_id_value)
+            selected = _new_candidate(observation, canonical_key)
+            candidates[str(selected["candidate_id"])] = selected
+        _merge_observation(repo, selected, observation)
+
+    # candidate ごとに許可する cut reference を固定済み subject から機械選択する。
+    references = inputs.get("references")
+    assert isinstance(references, list)
+    for candidate in candidates.values():
+        subjects = {
+            str(candidate["candidate_id"]),
+            *[str(value) for value in candidate.get("source_observation_ids", [])],
+        }
+        candidate["reference_ids"] = sorted(
+            str(reference["reference_id"])
+            for reference in references
+            if isinstance(reference, dict)
+            and isinstance(reference.get("subjects"), list)
+            and subjects.intersection(str(value) for value in reference["subjects"])
+        )
+    return candidates, machine_aggregates
 
 
-def _candidate_issues(
-    observation: dict[str, Any],
-    views: dict[str, IssueView],
-    observations: dict[str, dict[str, Any]],
-) -> tuple[IssueView | None, list[IssueView]]:
-    """category、evidence path、fingerprint で normalization 候補を絞る。"""
+def _candidate_from_active(issue: JsonObject) -> JsonObject:
+    """active issue record を今回再検証する transient candidate へ変換する。"""
+    return {
+        "schema_version": 1,
+        "candidate_id": issue["issue_id"],
+        "origin": issue["origin"],
+        "canonical_key": issue["canonical_key"],
+        "category": issue["category"],
+        "summary": issue["summary"],
+        "impact": issue["impact"],
+        "occurrence_count": issue["occurrence_count"],
+        "affected_session_count": issue["affected_session_count"],
+        "session_digest": issue["session_digest"],
+        "first_observed_at": issue["first_observed_at"],
+        "last_observed_at": issue["last_observed_at"],
+        "representative_evidence": issue["representative_evidence"],
+        "reference_targets": issue["reference_targets"],
+        "latest_fingerprints": issue["latest_fingerprints"],
+        "machine_state": issue["machine_state"],
+        "source_observation_ids": [],
+        "deduplication_hints": [],
+        "reference_ids": [],
+        "state_source": "active",
+    }
+
+
+def _new_candidate(observation: JsonObject, canonical_key: str) -> JsonObject:
+    """一 observation から未集約の transient candidate を作る。"""
+    payload = observation["payload"]
+    assert isinstance(payload, dict)
+    return {
+        "schema_version": 1,
+        "candidate_id": issue_id(canonical_key),
+        "origin": observation["source"],
+        "canonical_key": canonical_key,
+        "category": payload["category"],
+        "summary": payload["summary"],
+        "impact": payload["impact"],
+        "occurrence_count": 0,
+        "affected_session_count": 0,
+        "session_digest": {"values": [], "saturated": False},
+        "first_observed_at": observation["observed_at"],
+        "last_observed_at": observation["observed_at"],
+        "representative_evidence": [],
+        "reference_targets": [],
+        "latest_fingerprints": [],
+        "machine_state": None,
+        "source_observation_ids": [],
+        "deduplication_hints": [],
+        "reference_ids": [],
+        "state_source": "new",
+    }
+
+
+def _merge_observation(
+    repo: Path, candidate: JsonObject, observation: JsonObject
+) -> None:
+    """一意な raw observation を compact candidate aggregate へ統合する。"""
+    observation_id_value = str(observation["observation_id"])
+    source_ids = candidate.setdefault("source_observation_ids", [])
+    assert isinstance(source_ids, list)
+    if observation_id_value in source_ids:
+        return
+    source_ids.append(observation_id_value)
+    source_ids.sort()
+    candidate["occurrence_count"] = int(candidate["occurrence_count"]) + 1
+    observed_at = str(observation["observed_at"])
+    if parse_rfc3339(observed_at) < parse_rfc3339(str(candidate["first_observed_at"])):
+        candidate["first_observed_at"] = observed_at
+    if parse_rfc3339(observed_at) >= parse_rfc3339(str(candidate["last_observed_at"])):
+        candidate["last_observed_at"] = observed_at
+        payload = observation["payload"]
+        assert isinstance(payload, dict)
+        candidate["summary"] = payload["summary"]
+        candidate["impact"] = payload["impact"]
+
+    # session digest と evidence は canonical order／fixed bound だけで保持対象を決める。
+    context = observation.get("context")
+    session_id_value = (
+        context.get("cmoc_session_id") if isinstance(context, dict) else None
+    )
+    if isinstance(session_id_value, str):
+        digest = hashlib.sha256(session_id_value.encode("utf-8")).hexdigest()
+        session_digest = candidate["session_digest"]
+        assert isinstance(session_digest, dict)
+        values = session_digest["values"]
+        assert isinstance(values, list)
+        if digest not in values:
+            if len(values) < 64:
+                values.append(digest)
+                values.sort()
+            else:
+                session_digest["saturated"] = True
+        candidate["affected_session_count"] = max(
+            int(candidate["affected_session_count"]), len(values)
+        )
+    payload = observation.get("payload")
+    if isinstance(payload, dict):
+        evidence = payload.get("evidence")
+        if isinstance(evidence, list):
+            candidate["representative_evidence"] = _bounded_objects(
+                [
+                    *candidate.get("representative_evidence", []),
+                    *[item for item in evidence if isinstance(item, dict)],
+                ],
+                5,
+            )
+        hint = payload.get("deduplication_hint")
+        if isinstance(hint, str):
+            hints = candidate.setdefault("deduplication_hints", [])
+            assert isinstance(hints, list)
+            if hint not in hints:
+                hints.append(hint)
+                hints.sort()
+    candidate["reference_targets"] = _bounded_objects(
+        [
+            *candidate.get("reference_targets", []),
+            *_observation_reference_targets(repo, observation),
+        ],
+        5,
+    )
+    fingerprints = observation.get("evidence_fingerprints")
+    if isinstance(fingerprints, list):
+        candidate["latest_fingerprints"] = _bounded_objects(
+            [item for item in fingerprints if isinstance(item, dict)], 5
+        )
+
+
+def _observation_reference_targets(
+    repo: Path, observation: JsonObject
+) -> list[JsonObject]:
+    """次回 cut で再取得できる stable repository target を抽出する。"""
+    targets: list[JsonObject] = []
+    payload = observation.get("payload")
+    if isinstance(payload, dict) and isinstance(payload.get("evidence"), list):
+        for evidence in payload["evidence"]:
+            if not isinstance(evidence, dict) or not isinstance(
+                evidence.get("path"), str
+            ):
+                continue
+            candidate = _repository_path(repo, evidence["path"])
+            if candidate is not None:
+                targets.append(
+                    {
+                        "path": candidate.relative_to(repo.resolve()).as_posix(),
+                        "kind": evidence.get("kind"),
+                        "location": evidence.get("location"),
+                    }
+                )
+    source_event = observation.get("source_event")
+    if isinstance(source_event, dict) and isinstance(source_event.get("log_path"), str):
+        candidate = _repository_path(repo, source_event["log_path"])
+        if candidate is not None:
+            targets.append(
+                {
+                    "path": candidate.relative_to(repo.resolve()).as_posix(),
+                    "kind": "log",
+                    "location": source_event.get("event_id"),
+                }
+            )
+    return targets
+
+
+def _bounded_objects(values: list[JsonObject], limit: int) -> list[JsonObject]:
+    """object を canonical byte 列で deduplicate し固定上限へ収める。"""
+    by_content = {canonical_json_bytes(value): value for value in values}
+    return [by_content[key] for key in sorted(by_content)[:limit]]
+
+
+def _agent_comparison_candidates(
+    observation: JsonObject, candidates: dict[str, JsonObject]
+) -> tuple[JsonObject | None, list[JsonObject]]:
+    """category、evidence subject、fingerprint、hint で比較候補を機械的に絞る。"""
     payload = observation["payload"]
     assert isinstance(payload, dict)
     category = payload.get("category")
-    deduplication_hint = payload.get("deduplication_hint")
-    fingerprints = observation.get("evidence_fingerprints", [])
-    current_by_path = {
-        item.get("normalized_path"): item.get("sha256")
-        for item in fingerprints
-        if isinstance(item, dict) and isinstance(item.get("normalized_path"), str)
-    }
-    current_fingerprint_pairs = [
-        (item.get("normalized_path"), item.get("sha256"))
-        for item in fingerprints
+    hint = payload.get("deduplication_hint")
+    current_fingerprints = _fingerprint_pairs(observation.get("evidence_fingerprints"))
+    current_paths = {path for path, _digest in current_fingerprints}
+    exact: list[JsonObject] = []
+    comparison: list[JsonObject] = []
+    for candidate in candidates.values():
+        if candidate.get("category") != category:
+            continue
+        previous_fingerprints = _fingerprint_pairs(candidate.get("latest_fingerprints"))
+        previous_paths = {path for path, _digest in previous_fingerprints}
+        exact_match = (
+            bool(current_fingerprints)
+            and all(digest is not None for _path, digest in current_fingerprints)
+            and current_fingerprints == previous_fingerprints
+        )
+        hint_match = isinstance(hint, str) and hint in candidate.get(
+            "deduplication_hints", []
+        )
+        if exact_match:
+            exact.append(candidate)
+        if current_paths.intersection(previous_paths) or hint_match:
+            comparison.append(candidate)
+    return (exact[0] if len(exact) == 1 else None), comparison
+
+
+def _fingerprint_pairs(value: object) -> list[tuple[str, str | None]]:
+    """fingerprint array を path/hash の canonical pair へ変換する。"""
+    if not isinstance(value, list):
+        return []
+    pairs = [
+        (str(item["normalized_path"]), item.get("sha256"))
+        for item in value
         if isinstance(item, dict) and isinstance(item.get("normalized_path"), str)
     ]
-    current_fingerprints_hashed = bool(current_fingerprint_pairs) and all(
-        isinstance(path, str) and isinstance(digest, str)
-        for path, digest in current_fingerprint_pairs
-    )
-    exact: list[IssueView] = []
-    candidates: list[IssueView] = []
-    for view in views.values():
-        if view.revision.get("category") != category:
-            continue
-        path_match = False
-        hash_match = False
-        hint_match = False
-        for occurrence in view.occurrences:
-            previous = observations.get(str(occurrence.get("observation_id")))
-            if previous is None:
-                continue
-            previous_payload = previous.get("payload")
-            if (
-                isinstance(deduplication_hint, str)
-                and isinstance(previous_payload, dict)
-                and previous_payload.get("deduplication_hint") == deduplication_hint
-            ):
-                # agent hint は候補検索だけに使い、完全一致や issue key には使わない。
-                hint_match = True
-            previous_fingerprints = previous.get("evidence_fingerprints", [])
-            previous_fingerprint_pairs: list[tuple[object, object]] = []
-            previous_fingerprints_hashed = True
-            for item in previous_fingerprints:
-                if not isinstance(item, dict):
-                    previous_fingerprints_hashed = False
-                    continue
-                path = item.get("normalized_path")
-                if path in current_by_path:
-                    path_match = True
-                if isinstance(path, str):
-                    digest = item.get("sha256")
-                    previous_fingerprint_pairs.append((path, digest))
-                    if not isinstance(digest, str):
-                        previous_fingerprints_hashed = False
-            if (
-                current_fingerprints_hashed
-                and previous_fingerprints_hashed
-                and sorted(previous_fingerprint_pairs)
-                == sorted(current_fingerprint_pairs)
-            ):
-                hash_match = True
-        if path_match or hint_match:
-            candidates.append(view)
-        if hash_match:
-            exact.append(view)
-    return (exact[0] if len(exact) == 1 else None), candidates
+    return sorted(set(pairs))
 
 
-def _normalize_with_agent(
+def _normalize_issue_identity(
     repo: Path,
     worktree: Path,
-    observation: dict[str, Any],
-    observation_sha256: str,
-    candidates: list[IssueView],
-    version: str,
-) -> tuple[dict[str, Any], Path, str, bool, str]:
-    """checkpoint を再利用し、必要な場合だけ normalization agent を呼ぶ。"""
-    observation_id = str(observation["observation_id"])
+    manifest: JsonObject,
+    observation: JsonObject,
+    candidates: list[JsonObject],
+) -> str | None:
+    """曖昧な agent observation の同一性だけを checkpoint 付きで判断する。"""
     candidate_payload = [
         {
-            "issue_id": view.issue_id,
-            "identity": view.identity,
-            "effective_revision": view.revision,
-            "effective_assessment": view.assessment,
-            "effective_disposition": view.disposition,
+            key: candidate[key]
+            for key in (
+                "candidate_id",
+                "origin",
+                "category",
+                "summary",
+                "impact",
+                "representative_evidence",
+                "reference_targets",
+                "latest_fingerprints",
+            )
         }
-        for view in candidates
+        for candidate in sorted(candidates, key=lambda item: str(item["candidate_id"]))
     ]
-    reference_paths: list[Path] = []
-    for item in observation.get("evidence_fingerprints", []):
-        if not isinstance(item, dict) or not isinstance(
-            item.get("normalized_path"), str
-        ):
-            continue
-        reference = _current_repo_path(Path(item["normalized_path"]), repo)
-        if reference is not None and reference.exists():
-            reference_paths.append(reference)
     parameter = build_feedback_normalize_issue_parameter(
         json.dumps(observation, ensure_ascii=False, sort_keys=True),
         json.dumps(candidate_payload, ensure_ascii=False, sort_keys=True),
-        reference_paths,
         worktree,
     )
     schema_path = parameter.structured_output_schema_path
     assert schema_path is not None
-    schema_sha256 = sha256_bytes(schema_path.read_bytes())
-    unit_id = normalization_unit_id(
-        [observation_id],
-        [str(view.revision["revision_id"]) for view in candidates],
-        schema_sha256,
+    allowed = {str(candidate["candidate_id"]) for candidate in candidates}
+    input_value = {"observation": observation, "candidates": candidate_payload}
+    input_sha256 = sha256_bytes(canonical_json_bytes(input_value))
+    observation_id_value = str(observation["observation_id"])
+    checkpoint = _normalization_checkpoint(
+        repo,
+        manifest,
+        observation_id_value,
+        input_sha256,
+        parameter.agent_call_kind,
+        schema_path,
+        allowed,
     )
-    checkpoint_path = normalization_checkpoint_root(repo) / f"{unit_id}.json"
-    allowed = {view.issue_id for view in candidates}
-    checkpoint, checkpoint_content = _recoverable_checkpoint(checkpoint_path)
-    if checkpoint is not None:
-        expected_candidate_ids = sorted(
-            str(view.revision["revision_id"]) for view in candidates
-        )
-        if (
-            checkpoint.get("schema_version") == 1
-            and checkpoint.get("normalization_unit_id") == unit_id
-            and checkpoint.get("observation_sha256") == observation_sha256
-            and checkpoint.get("schema_sha256") == schema_sha256
-            and checkpoint.get("candidate_revision_ids") == expected_candidate_ids
-            and checkpoint.get("normalizer_version") == version
-            and isinstance(checkpoint.get("structured_output"), dict)
-            and _normalization_output_matches_contract(
-                checkpoint["structured_output"], schema_path, allowed
-            )
-        ):
-            assert checkpoint_content is not None
-            structured_output = checkpoint["structured_output"]
-            assert isinstance(structured_output, dict)
-            normalization_result = structured_output["result"]
-            assert isinstance(normalization_result, dict)
-            recover_immutable_bytes_from_temporary(
-                checkpoint_path,
-                sha256_bytes(checkpoint_content),
-            )
-            return (
-                normalization_result,
-                checkpoint_path,
-                unit_id,
-                False,
-                schema_sha256,
-            )
-        raise CmocError(
-            "feedback normalization checkpoint が入力と一致しません。",
-            ["checkpoint の corruption を確認し、手動対応してください。"],
-            str(checkpoint_path),
-        )
+    if checkpoint is None:
 
-    def postcondition(
-        output: Any, changed_paths: frozenset[str]
-    ) -> tuple[StructuredOutputValidationIssue, ...]:
-        """候補外 issue ID と existing/related 重複を拒否する。"""
-        del changed_paths
-        return _normalization_candidate_issues(output, allowed)
+        def postcondition(
+            output: Any, changed_paths: frozenset[str]
+        ) -> tuple[StructuredOutputValidationIssue, ...]:
+            """候補外 issue ID を deterministic correction 対象にする。"""
+            del changed_paths
+            return _normalization_output_issues(output, allowed)
 
-    result = run_codex_exec(
-        parameter,
-        root=repo,
-        purpose="feedback issue normalization",
-        structured_output_postcondition=postcondition,
-    )
-    if not isinstance(result.output_json, dict):
-        raise ValueError("normalization output must be an object")
-    # {{work-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json
-    normalization_result = result.output_json.get("result")
-    if not isinstance(normalization_result, dict):
+        result = run_codex_exec(
+            parameter,
+            root=repo,
+            purpose="feedback issue identity normalization",
+            structured_output_postcondition=postcondition,
+        )
+        if not isinstance(result.output_json, dict):
+            raise ValueError("normalization output must be an object")
+        output_sha256 = sha256_bytes(canonical_json_bytes(result.output_json))
+        checkpoint = {
+            "schema_version": 1,
+            "kind": "normalization",
+            "report_cut_id": manifest["report_cut_id"],
+            "candidate_id": observation_id_value,
+            "input_sha256": input_sha256,
+            "builder_sha256": manifest["inputs"]["versions"]["normalization_builder"],
+            "schema_sha256": sha256_bytes(schema_path.read_bytes()),
+            "structured_output": result.output_json,
+            "output_sha256": output_sha256,
+        }
+        path = normalization_checkpoint_path(
+            repo, str(manifest["report_cut_id"]), observation_id_value
+        )
+        reference = write_checkpoint(repo, path, checkpoint)
+        _record_checkpoint(
+            repo,
+            manifest,
+            "normalization_checkpoints",
+            "observation_id",
+            observation_id_value,
+            reference,
+        )
+    structured_output = checkpoint.get("structured_output")
+    if not isinstance(structured_output, dict):
+        raise ValueError("normalization checkpoint output must be an object")
+    result_value = structured_output.get("result")
+    if not isinstance(result_value, dict):
         raise ValueError("normalization result must be an object")
-    checkpoint = {
-        "schema_version": 1,
-        "normalization_unit_id": unit_id,
-        "observation_sha256": observation_sha256,
-        "candidate_revision_ids": [
-            str(view.revision["revision_id"])
-            for view in sorted(
-                candidates,
-                key=lambda item: str(item.revision["revision_id"]),
-            )
-        ],
-        "schema_sha256": schema_sha256,
-        "normalizer_version": version,
-        "structured_output": result.output_json,
-    }
-    write_immutable_json(checkpoint_path, checkpoint)
-    return normalization_result, checkpoint_path, unit_id, True, schema_sha256
+    return (
+        str(result_value["existing_issue_id"])
+        if result_value.get("decision") == "existing"
+        else None
+    )
 
 
-def _recoverable_checkpoint(path: Path) -> tuple[dict[str, Any] | None, bytes | None]:
-    """final file または同一 byte 列の sibling temporary から checkpoint を読む。"""
-    temporaries: list[Path] = []
-    if path.parent.is_dir():
-        prefix = f".{path.name}."
-        temporaries = [
-            candidate
-            for candidate in path.parent.iterdir()
-            if candidate.name.startswith(prefix) and candidate.name.endswith(".tmp")
-        ]
-    if path.exists() or path.is_symlink():
-        if path.is_symlink() or not path.is_file():
-            raise CmocError(
-                "feedback normalization checkpoint path が通常 file ではありません。",
-                ["checkpoint path を人間が確認してください。"],
-                str(path),
-            )
-        candidates = [path, *temporaries]
-    else:
-        candidates = temporaries
-    if not candidates:
-        return None, None
-    contents: list[bytes] = []
-    for candidate in candidates:
-        if candidate.is_symlink() or not candidate.is_file():
-            raise CmocError(
-                "feedback normalization checkpoint temporary file が不正です。",
-                ["checkpoint path を人間が確認してください。"],
-                str(candidate),
-            )
-        contents.append(candidate.read_bytes())
-    if any(content != contents[0] for content in contents[1:]):
-        raise CmocError(
-            "feedback normalization checkpoint temporary file の byte 列が一致しません。",
-            ["異なる checkpoint 候補を人間が確認してください。"],
-            str(path),
-        )
-    try:
-        checkpoint = json.loads(contents[0])
-    except (UnicodeError, json.JSONDecodeError) as exc:
-        raise CmocError(
-            "feedback normalization checkpoint temporary file が JSON ではありません。",
-            ["checkpoint path を人間が確認してください。"],
-            str(path),
-        ) from exc
-    if (
-        not isinstance(checkpoint, dict)
-        or canonical_json_bytes(checkpoint) != contents[0]
-    ):
-        raise CmocError(
-            "feedback normalization checkpoint temporary file が canonical JSON object ではありません。",
-            ["checkpoint path を人間が確認してください。"],
-            str(path),
-        )
-    return checkpoint, contents[0]
-
-
-def _normalization_output_matches_contract(
-    output: dict[str, Any],
+def _normalization_checkpoint(
+    repo: Path,
+    manifest: JsonObject,
+    observation_id_value: str,
+    input_sha256: str,
+    agent_call_kind: str,
     schema_path: Path,
     allowed: set[str],
-) -> bool:
-    """checkpoint の Structured Output schema と決定論的事後条件を再検証する。"""
-    try:
-        schema = json.loads(schema_path.read_text(encoding="utf-8"))
-        validator_class = validators.validator_for(schema)
-        validator_class.check_schema(schema)
-        if tuple(validator_class(schema).iter_errors(output)):
-            return False
-    except (OSError, UnicodeError, json.JSONDecodeError, SchemaError, TypeError):
-        return False
-    return not _normalization_candidate_issues(output, allowed)
+) -> JsonObject | None:
+    """同じ cut/input の正式な normalization checkpoint だけを再利用する。"""
+    reference = _find_checkpoint_reference(
+        manifest, "normalization_checkpoints", "observation_id", observation_id_value
+    )
+    if reference is None:
+        return None
+    path = repo / str(reference["path"])
+    if sha256_bytes(path.read_bytes()) != reference.get("sha256"):
+        raise CmocError(
+            "feedback normalization checkpoint hash が一致しません。",
+            ["checkpoint と report cut manifest を人間が確認してください。"],
+            str(path),
+        )
+    checkpoint = read_json_object(path)
+    expected = {
+        "schema_version": 1,
+        "kind": "normalization",
+        "report_cut_id": manifest["report_cut_id"],
+        "candidate_id": observation_id_value,
+        "input_sha256": input_sha256,
+        "builder_sha256": manifest["inputs"]["versions"]["normalization_builder"],
+        "schema_sha256": sha256_bytes(schema_path.read_bytes()),
+    }
+    if any(checkpoint.get(key) != value for key, value in expected.items()):
+        raise CmocError(
+            "feedback normalization checkpoint が固定入力と一致しません。",
+            ["checkpoint を再利用せず、state を人間が確認してください。"],
+            f"path: {path}\nagent_call_kind: {agent_call_kind}",
+        )
+    output = checkpoint.get("structured_output")
+    if (
+        not isinstance(output, dict)
+        or sha256_bytes(canonical_json_bytes(output)) != checkpoint.get("output_sha256")
+        or not _structured_output_matches_schema(output, schema_path)
+        or _normalization_output_issues(output, allowed)
+    ):
+        raise CmocError(
+            "feedback normalization checkpoint output が正式な契約を満たしません。",
+            ["checkpoint を人間が確認してください。"],
+            str(path),
+        )
+    return checkpoint
 
 
-def _normalization_candidate_issues(
-    output: object,
-    allowed: set[str],
+def _normalization_output_issues(
+    output: object, allowed: set[str]
 ) -> tuple[StructuredOutputValidationIssue, ...]:
-    """normalization output が入力候補 ID だけを参照するか検査する。"""
-    if not isinstance(output, dict):
+    """normalization result が入力 candidate だけを選ぶか検査する。"""
+    if not isinstance(output, dict) or not isinstance(output.get("result"), dict):
         return ()
-    # {{work-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json
-    result = output.get("result")
-    if not isinstance(result, dict):
-        return ()
-    issues: list[StructuredOutputValidationIssue] = []
+    result = output["result"]
+    assert isinstance(result, dict)
     existing_id = result.get("existing_issue_id")
-    related = result.get("related_issue_ids", [])
-    if existing_id is not None and existing_id not in allowed:
-        issues.append(
+    if result.get("decision") == "existing" and existing_id not in allowed:
+        return (
             StructuredOutputValidationIssue(
                 "candidate issue ID",
                 "$.result.existing_issue_id",
                 f"one of {sorted(allowed)!r}",
                 repr(existing_id),
+            ),
+        )
+    return ()
+
+
+def _record_checkpoint(
+    repo: Path,
+    manifest: JsonObject,
+    list_name: str,
+    id_name: str,
+    id_value: str,
+    reference: JsonObject,
+) -> None:
+    """formal checkpoint reference を manifest へ canonical order で追加する。"""
+    processing = manifest["processing"]
+    assert isinstance(processing, dict)
+    entries = processing[list_name]
+    assert isinstance(entries, list)
+    entry = {id_name: id_value, **reference}
+    if not any(
+        isinstance(item, dict) and item.get(id_name) == id_value for item in entries
+    ):
+        entries.append(entry)
+        entries.sort(key=lambda item: str(item[id_name]))
+    write_report_cut_manifest(repo, manifest)
+
+
+def _find_checkpoint_reference(
+    manifest: JsonObject, list_name: str, id_name: str, id_value: str
+) -> JsonObject | None:
+    """manifest の checkpoint reference を ID で一意に選ぶ。"""
+    processing = manifest.get("processing")
+    entries = processing.get(list_name) if isinstance(processing, dict) else None
+    if not isinstance(entries, list):
+        raise ValueError(f"{list_name} must be an array")
+    matches = [
+        item
+        for item in entries
+        if isinstance(item, dict) and item.get(id_name) == id_value
+    ]
+    if len(matches) > 1:
+        raise ValueError(f"duplicate checkpoint reference: {id_value}")
+    return matches[0] if matches else None
+
+
+def _structured_output_matches_schema(output: JsonObject, schema_path: Path) -> bool:
+    """checkpoint output を正本 Structured Output schema で再検証する。"""
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        validator_class = validators.validator_for(schema)
+        validator_class.check_schema(schema)
+        return not tuple(validator_class(schema).iter_errors(output))
+    except (OSError, UnicodeError, json.JSONDecodeError, SchemaError, TypeError):
+        return False
+
+
+def _process_machine_observations(
+    repo: Path,
+    manifest: JsonObject,
+    candidates: dict[str, JsonObject],
+    previous_aggregates: dict[str, JsonObject],
+    observation_groups: dict[str, list[JsonObject]],
+) -> dict[str, JsonObject]:
+    """recurrence window／threshold を適用し、candidate と bounded aggregate を分ける。"""
+    active_by_key = {
+        str(candidate["canonical_key"]): candidate
+        for candidate in candidates.values()
+        if candidate.get("origin") == "machine_rule"
+    }
+    aggregates: dict[str, JsonObject] = {}
+    all_keys = sorted(
+        set(previous_aggregates) | set(observation_groups) | set(active_by_key)
+    )
+    for canonical_key in all_keys:
+        active_candidate = active_by_key.get(canonical_key)
+        previous = previous_aggregates.get(canonical_key)
+        if (
+            previous is None
+            and active_candidate is not None
+            and isinstance(active_candidate.get("machine_state"), dict)
+        ):
+            previous = active_candidate["machine_state"]
+        observations = sorted(
+            observation_groups.get(canonical_key, []),
+            key=lambda item: (
+                parse_rfc3339(str(item["observed_at"])),
+                str(item["observation_id"]),
+            ),
+        )
+        aggregate = _merge_machine_aggregate(
+            repo,
+            previous,
+            observations,
+            str(manifest["cut_at"]),
+            canonical_key,
+        )
+        if aggregate is None:
+            # legacy issue は現行 threshold を満たさなければ移行 candidate にしない。
+            if (
+                active_candidate is not None
+                and active_candidate.get("state_source") == "legacy"
+            ):
+                candidates.pop(str(active_candidate["candidate_id"]), None)
+            # current active issue は新しい report cut でも必ず verification する。
+            elif active_candidate is not None:
+                active_candidate["machine_state"] = None
+            continue
+        threshold_met = _machine_threshold_met(aggregate)
+        if active_candidate is not None:
+            if active_candidate.get("state_source") == "legacy" and not threshold_met:
+                candidates.pop(str(active_candidate["candidate_id"]), None)
+                aggregates[canonical_key] = aggregate
+                continue
+            for observation in observations:
+                _merge_observation(repo, active_candidate, observation)
+            _apply_machine_aggregate_to_candidate(active_candidate, aggregate)
+            continue
+        if threshold_met:
+            if not observations:
+                raise ValueError(
+                    "threshold aggregate without an issue candidate source"
+                )
+            candidate = _new_candidate(observations[0], canonical_key)
+            for observation in observations:
+                _merge_observation(repo, candidate, observation)
+            _apply_machine_aggregate_to_candidate(candidate, aggregate)
+            candidates[str(candidate["candidate_id"])] = candidate
+            continue
+        aggregates[canonical_key] = aggregate
+    return aggregates
+
+
+def _merge_machine_aggregate(
+    repo: Path,
+    previous: JsonObject | None,
+    observations: list[JsonObject],
+    cut_at: str,
+    canonical_key: str,
+) -> JsonObject | None:
+    """30 日 window 内の machine recurrence を daily bounded buckets へ集約する。"""
+    cut_time = parse_rfc3339(cut_at).astimezone(timezone.utc)
+    cutoff = cut_time - timedelta(days=_MACHINE_WINDOW_DAYS)
+    buckets_by_day: dict[str, JsonObject] = {}
+    representative: list[JsonObject] = []
+    fingerprints: list[JsonObject] = []
+    metadata: JsonObject = {}
+    if previous is not None:
+        metadata = dict(previous)
+        previous_buckets = previous.get("time_buckets")
+        if not isinstance(previous_buckets, list):
+            raise ValueError("machine aggregate time_buckets must be an array")
+        for bucket in previous_buckets:
+            if not isinstance(bucket, dict) or not isinstance(bucket.get("day"), str):
+                raise ValueError("machine aggregate bucket is malformed")
+            last = bucket.get("last_observed_at")
+            if isinstance(last, str) and parse_rfc3339(last) >= cutoff:
+                copied = json.loads(json.dumps(bucket, ensure_ascii=False))
+                assert isinstance(copied, dict)
+                copied.setdefault("scope_saturated", False)
+                copied.setdefault("agent_call_saturated", False)
+                buckets_by_day[str(bucket["day"])] = copied
+        representative.extend(
+            item
+            for item in previous.get("representative_evidence", [])
+            if isinstance(item, dict)
+        )
+        fingerprints.extend(
+            item
+            for item in previous.get("latest_fingerprints", [])
+            if isinstance(item, dict)
+        )
+
+    # 新しい occurrence を日単位 bucket へ加え、個別 occurrence record は残さない。
+    for observation in observations:
+        observed_at = str(observation["observed_at"])
+        occurred = parse_rfc3339(observed_at).astimezone(timezone.utc)
+        if occurred < cutoff or occurred > cut_time:
+            continue
+        payload = observation["payload"]
+        context = observation["context"]
+        assert isinstance(payload, dict) and isinstance(context, dict)
+        metadata = {
+            "rule_id": payload["rule_id"],
+            "category": payload["category"],
+            "summary": payload["summary"],
+            "impact": payload["impact"],
+            "human_action": payload["human_action"],
+        }
+        day = occurred.strftime("%Y-%m-%d")
+        bucket = buckets_by_day.setdefault(
+            day,
+            {
+                "day": day,
+                "count": 0,
+                "first_observed_at": observed_at,
+                "last_observed_at": observed_at,
+                "scope_digest": [],
+                "agent_call_digest": [],
+                "scope_saturated": False,
+                "agent_call_saturated": False,
+            },
+        )
+        bucket["count"] = int(bucket["count"]) + 1
+        if occurred < parse_rfc3339(str(bucket["first_observed_at"])):
+            bucket["first_observed_at"] = observed_at
+        if occurred > parse_rfc3339(str(bucket["last_observed_at"])):
+            bucket["last_observed_at"] = observed_at
+        scope = context.get("cmoc_session_id") or context.get(
+            "subcommand_invocation_id"
+        )
+        if isinstance(scope, str):
+            if _update_dimension_digest(bucket["scope_digest"], scope, observed_at):
+                bucket["scope_saturated"] = True
+        agent_call_id = context.get("agent_call_id")
+        if isinstance(agent_call_id, str):
+            if _update_dimension_digest(
+                bucket["agent_call_digest"], agent_call_id, observed_at
+            ):
+                bucket["agent_call_saturated"] = True
+        evidence = payload.get("event_fields")
+        if isinstance(evidence, dict):
+            representative.append(
+                {
+                    "kind": "machine_event",
+                    "text": str(payload["summary"]),
+                    "event_fields": evidence,
+                }
+            )
+        raw_fingerprints = observation.get("evidence_fingerprints")
+        if isinstance(raw_fingerprints, list):
+            fingerprints.extend(
+                item for item in raw_fingerprints if isinstance(item, dict)
+            )
+    if not buckets_by_day:
+        return None
+    if not all(
+        name in metadata
+        for name in ("rule_id", "category", "summary", "impact", "human_action")
+    ):
+        raise ValueError("machine aggregate metadata is incomplete")
+
+    # bucket 間の distinct dimension を bounded digest へ再集約する。
+    buckets = [buckets_by_day[key] for key in sorted(buckets_by_day)]
+    scope_digest, scope_saturated = _merge_dimension_digests(
+        [bucket["scope_digest"] for bucket in buckets],
+        cutoff,
+        any(bool(bucket.get("scope_saturated")) for bucket in buckets),
+    )
+    agent_digest, agent_call_saturated = _merge_dimension_digests(
+        [bucket["agent_call_digest"] for bucket in buckets],
+        cutoff,
+        any(bool(bucket.get("agent_call_saturated")) for bucket in buckets),
+    )
+    first = min(
+        (str(bucket["first_observed_at"]) for bucket in buckets), key=parse_rfc3339
+    )
+    last = max(
+        (str(bucket["last_observed_at"]) for bucket in buckets), key=parse_rfc3339
+    )
+    occurrence_count = sum(int(bucket["count"]) for bucket in buckets)
+    return {
+        "schema_version": 1,
+        "aggregate_id": machine_aggregate_id(canonical_key),
+        "rule_id": metadata["rule_id"],
+        "canonical_key": canonical_key,
+        "category": metadata["category"],
+        "summary": metadata["summary"],
+        "impact": metadata["impact"],
+        "human_action": metadata["human_action"],
+        "window_start": cutoff.isoformat().replace("+00:00", "Z"),
+        "window_end": cut_time.isoformat().replace("+00:00", "Z"),
+        "occurrence_count": occurrence_count,
+        "affected_session_count": len(scope_digest),
+        "threshold_counts": {
+            "recurrence_scope": len(scope_digest),
+            "agent_call": len(agent_digest),
+        },
+        "time_buckets": buckets,
+        "scope_digest": scope_digest,
+        "agent_call_digest": agent_digest,
+        "scope_saturated": scope_saturated,
+        "agent_call_saturated": agent_call_saturated,
+        "first_observed_at": first,
+        "last_observed_at": last,
+        "representative_evidence": _bounded_objects(representative, 5),
+        "latest_fingerprints": _bounded_objects(fingerprints, 5),
+    }
+
+
+def _update_dimension_digest(
+    digest: list[JsonObject], raw_value: str, observed_at: str
+) -> bool:
+    """threshold 判定に必要な distinct value と最終時刻だけを bounded 保存する。"""
+    value = hashlib.sha256(raw_value.encode("utf-8")).hexdigest()
+    for entry in digest:
+        if entry.get("value") == value:
+            if parse_rfc3339(observed_at) > parse_rfc3339(
+                str(entry["last_observed_at"])
+            ):
+                entry["last_observed_at"] = observed_at
+            return False
+    if len(digest) < _MACHINE_DIGEST_LIMIT:
+        digest.append({"value": value, "last_observed_at": observed_at})
+        digest.sort(key=lambda item: str(item["value"]))
+        return False
+    return True
+
+
+def _merge_dimension_digests(
+    groups: list[object], cutoff: datetime, previously_saturated: bool
+) -> tuple[list[JsonObject], bool]:
+    """bucket の dimension digest を固定上限へ統合する。"""
+    unique: dict[str, JsonObject] = {}
+    for group in groups:
+        if not isinstance(group, list):
+            continue
+        for item in group:
+            if (
+                not isinstance(item, dict)
+                or not isinstance(item.get("value"), str)
+                or not isinstance(item.get("last_observed_at"), str)
+                or parse_rfc3339(item["last_observed_at"]) < cutoff
+            ):
+                continue
+            key = str(item["value"])
+            previous = unique.get(key)
+            if previous is None or parse_rfc3339(
+                str(item["last_observed_at"])
+            ) > parse_rfc3339(str(previous["last_observed_at"])):
+                unique[key] = dict(item)
+    ordered = [unique[key] for key in sorted(unique)]
+    return (
+        ordered[:_MACHINE_DIGEST_LIMIT],
+        previously_saturated or len(ordered) > _MACHINE_DIGEST_LIMIT,
+    )
+
+
+def _machine_threshold_met(aggregate: JsonObject) -> bool:
+    """初期 allowlist rule の distinct recurrence threshold を判定する。"""
+    counts = aggregate.get("threshold_counts")
+    if not isinstance(counts, dict):
+        return False
+    scope_count = counts.get("recurrence_scope")
+    agent_count = counts.get("agent_call")
+    if aggregate.get("rule_id") == "feedback.reporter_unavailable.v1":
+        return isinstance(scope_count, int) and scope_count >= 2
+    if aggregate.get("rule_id") == "codex.structured_output_validation_exhausted.v1":
+        return (
+            isinstance(scope_count, int)
+            and scope_count >= 2
+            and isinstance(agent_count, int)
+            and agent_count >= 2
+        )
+    raise ValueError(f"unknown machine feedback rule: {aggregate.get('rule_id')!r}")
+
+
+def _apply_machine_aggregate_to_candidate(
+    candidate: JsonObject, aggregate: JsonObject
+) -> None:
+    """window-scoped machine aggregate を active candidate の compact field へ反映する。"""
+    candidate["origin"] = "machine_rule"
+    candidate["category"] = aggregate["category"]
+    candidate["summary"] = aggregate["summary"]
+    candidate["impact"] = aggregate["impact"]
+    candidate["occurrence_count"] = aggregate["occurrence_count"]
+    candidate["affected_session_count"] = aggregate["affected_session_count"]
+    candidate["session_digest"] = {
+        "values": [str(item["value"]) for item in aggregate["scope_digest"]],
+        "saturated": aggregate["scope_saturated"],
+    }
+    candidate["first_observed_at"] = aggregate["first_observed_at"]
+    candidate["last_observed_at"] = aggregate["last_observed_at"]
+    candidate["representative_evidence"] = aggregate["representative_evidence"]
+    candidate["latest_fingerprints"] = aggregate["latest_fingerprints"]
+    candidate["machine_state"] = aggregate
+
+
+def _verify_candidates(
+    repo: Path,
+    worktree: Path,
+    manifest: JsonObject,
+    candidates: dict[str, JsonObject],
+) -> dict[str, JsonObject]:
+    """全 candidate を一件ずつ固定参照だけで verification する。"""
+    inputs = manifest["inputs"]
+    assert isinstance(inputs, dict)
+    references = inputs.get("references")
+    if not isinstance(references, list):
+        raise ValueError("report cut references must be an array")
+    references_by_id = {
+        str(reference["reference_id"]): reference
+        for reference in references
+        if isinstance(reference, dict)
+        and isinstance(reference.get("reference_id"), str)
+    }
+    verdicts: dict[str, JsonObject] = {}
+    for candidate_id_value, candidate in sorted(candidates.items()):
+        allowed_ids = candidate.get("reference_ids")
+        if not isinstance(allowed_ids, list):
+            raise ValueError("candidate reference_ids must be an array")
+        allowed_references = [
+            references_by_id[reference_id]
+            for reference_id in allowed_ids
+            if reference_id in references_by_id
+        ]
+        payload = _verification_candidate_payload(candidate)
+        parameter = build_feedback_verify_issue_parameter(
+            json.dumps(payload, ensure_ascii=False, sort_keys=True),
+            json.dumps(allowed_references, ensure_ascii=False, sort_keys=True),
+            worktree,
+        )
+        schema_path = parameter.structured_output_schema_path
+        assert schema_path is not None
+        input_value = {"candidate": payload, "references": allowed_references}
+        input_sha256 = sha256_bytes(canonical_json_bytes(input_value))
+        checkpoint = _verification_checkpoint(
+            repo,
+            manifest,
+            candidate_id_value,
+            input_sha256,
+            schema_path,
+            references_by_id,
+            set(str(value) for value in allowed_ids),
+        )
+        if checkpoint is None:
+
+            def postcondition(
+                output: Any,
+                changed_paths: frozenset[str],
+                *,
+                expected_candidate_id: str = candidate_id_value,
+                allowed: set[str] = set(str(value) for value in allowed_ids),
+            ) -> tuple[StructuredOutputValidationIssue, ...]:
+                """candidate ID、reference ID、current evidence の受理条件を検査する。"""
+                del changed_paths
+                return _verification_output_issues(
+                    output,
+                    expected_candidate_id,
+                    allowed,
+                    references_by_id,
+                )
+
+            result = run_codex_exec(
+                parameter,
+                root=repo,
+                purpose=f"feedback issue verification ({candidate_id_value})",
+                structured_output_postcondition=postcondition,
+            )
+            if not isinstance(result.output_json, dict):
+                raise ValueError("verification output must be an object")
+            checkpoint = {
+                "schema_version": 1,
+                "kind": "verification",
+                "report_cut_id": manifest["report_cut_id"],
+                "candidate_id": candidate_id_value,
+                "input_sha256": input_sha256,
+                "builder_sha256": manifest["inputs"]["versions"][
+                    "verification_builder"
+                ],
+                "schema_sha256": sha256_bytes(schema_path.read_bytes()),
+                "structured_output": result.output_json,
+                "output_sha256": sha256_bytes(canonical_json_bytes(result.output_json)),
+            }
+            path = verification_checkpoint_path(
+                repo, str(manifest["report_cut_id"]), candidate_id_value
+            )
+            reference = write_checkpoint(repo, path, checkpoint)
+            _record_checkpoint(
+                repo,
+                manifest,
+                "verification_checkpoints",
+                "candidate_id",
+                candidate_id_value,
+                reference,
+            )
+        output = checkpoint.get("structured_output")
+        if not isinstance(output, dict) or not isinstance(output.get("result"), dict):
+            raise ValueError("verification checkpoint result is malformed")
+        verdicts[candidate_id_value] = output["result"]
+    return verdicts
+
+
+def _verification_candidate_payload(candidate: JsonObject) -> JsonObject:
+    """verification agent に渡す機械集約済み candidate field だけを返す。"""
+    names = (
+        "schema_version",
+        "candidate_id",
+        "origin",
+        "category",
+        "summary",
+        "impact",
+        "occurrence_count",
+        "affected_session_count",
+        "first_observed_at",
+        "last_observed_at",
+        "representative_evidence",
+        "reference_targets",
+        "latest_fingerprints",
+        "reference_ids",
+    )
+    return {name: candidate[name] for name in names}
+
+
+def _verification_checkpoint(
+    repo: Path,
+    manifest: JsonObject,
+    candidate_id_value: str,
+    input_sha256: str,
+    schema_path: Path,
+    references_by_id: dict[str, JsonObject],
+    allowed_ids: set[str],
+) -> JsonObject | None:
+    """同じ cut/input の正式な verification checkpoint だけを再利用する。"""
+    reference = _find_checkpoint_reference(
+        manifest, "verification_checkpoints", "candidate_id", candidate_id_value
+    )
+    if reference is None:
+        return None
+    path = repo / str(reference["path"])
+    if sha256_bytes(path.read_bytes()) != reference.get("sha256"):
+        raise CmocError(
+            "feedback verification checkpoint hash が一致しません。",
+            ["checkpoint と report cut manifest を人間が確認してください。"],
+            str(path),
+        )
+    checkpoint = read_json_object(path)
+    expected = {
+        "schema_version": 1,
+        "kind": "verification",
+        "report_cut_id": manifest["report_cut_id"],
+        "candidate_id": candidate_id_value,
+        "input_sha256": input_sha256,
+        "builder_sha256": manifest["inputs"]["versions"]["verification_builder"],
+        "schema_sha256": sha256_bytes(schema_path.read_bytes()),
+    }
+    if any(checkpoint.get(key) != value for key, value in expected.items()):
+        raise CmocError(
+            "feedback verification checkpoint が固定入力と一致しません。",
+            ["checkpoint を再利用せず、state を人間が確認してください。"],
+            str(path),
+        )
+    output = checkpoint.get("structured_output")
+    if (
+        not isinstance(output, dict)
+        or sha256_bytes(canonical_json_bytes(output)) != checkpoint.get("output_sha256")
+        or not _structured_output_matches_schema(output, schema_path)
+        or _verification_output_issues(
+            output,
+            candidate_id_value,
+            allowed_ids,
+            references_by_id,
+        )
+    ):
+        raise CmocError(
+            "feedback verification checkpoint output が正式な契約を満たしません。",
+            ["checkpoint を人間が確認してください。"],
+            str(path),
+        )
+    return checkpoint
+
+
+def _verification_output_issues(
+    output: object,
+    candidate_id_value: str,
+    allowed_ids: set[str],
+    references_by_id: dict[str, JsonObject],
+) -> tuple[StructuredOutputValidationIssue, ...]:
+    """verification schema 外の deterministic postcondition 違反を返す。"""
+    if not isinstance(output, dict) or not isinstance(output.get("result"), dict):
+        return ()
+    result = output["result"]
+    assert isinstance(result, dict)
+    issues: list[StructuredOutputValidationIssue] = []
+    if result.get("candidate_id") != candidate_id_value:
+        issues.append(
+            StructuredOutputValidationIssue(
+                "candidate ID",
+                "$.result.candidate_id",
+                repr(candidate_id_value),
+                repr(result.get("candidate_id")),
             )
         )
-    if isinstance(related, list):
-        invalid = [value for value in related if value not in allowed]
-        if invalid:
+    evidence = result.get("current_evidence")
+    evidence_items = evidence if isinstance(evidence, list) else []
+    used_ids = [
+        item.get("reference_id") for item in evidence_items if isinstance(item, dict)
+    ]
+    invalid_ids = [value for value in used_ids if value not in allowed_ids]
+    if invalid_ids:
+        issues.append(
+            StructuredOutputValidationIssue(
+                "allowed report cut references",
+                "$.result.current_evidence",
+                f"reference IDs from {sorted(allowed_ids)!r}",
+                repr(invalid_ids),
+            )
+        )
+    verdict = result.get("verdict")
+    if verdict in {"unresolved", "resolved", "not_actionable"}:
+        current_kinds = {
+            references_by_id[str(reference_id)].get("kind")
+            for reference_id in used_ids
+            if isinstance(reference_id, str) and reference_id in references_by_id
+        }
+        if not current_kinds.intersection(
+            {"repository_content", "current_fingerprint", "probe_result"}
+        ):
             issues.append(
                 StructuredOutputValidationIssue(
-                    "related candidate issue IDs",
-                    "$.result.related_issue_ids",
-                    f"subset of {sorted(allowed)!r}",
-                    repr(invalid),
+                    "concrete current evidence",
+                    "$.result.current_evidence",
+                    "at least one repository_content, current_fingerprint, or probe_result reference",
+                    repr(sorted(current_kinds, key=str)),
                 )
             )
-        if existing_id in related:
+        if verdict == "unresolved" and not current_kinds.intersection(
+            {"repository_content", "probe_result"}
+        ):
             issues.append(
                 StructuredOutputValidationIssue(
-                    "existing issue is not related duplicate",
-                    "$.result.related_issue_ids",
-                    "must not contain $.result.existing_issue_id",
-                    repr(related),
+                    "semantic unresolved evidence",
+                    "$.result.current_evidence",
+                    "repository_content or probe_result; fingerprint alone is insufficient",
+                    repr(sorted(current_kinds, key=str)),
                 )
             )
     return tuple(issues)
 
 
-def _deterministic_normalized_issue(
-    observation: dict[str, Any], selected: IssueView | None
-) -> dict[str, Any]:
-    """新規 agent report または exact match の revision 内容を決める。"""
-    if selected is not None:
-        return {
-            "summary": selected.revision["summary"],
-            "human_action": selected.revision["human_action"],
-            "impact": selected.revision["impact"],
-            "cause_assessment": selected.revision["cause_assessment"],
-        }
-    payload = observation["payload"]
-    assert isinstance(payload, dict)
-    cause = payload.get("cause")
-    assert isinstance(cause, dict)
-    # agent 自己申告の known は機械的に裏付けられないため supported へ昇格しない。
-    certainty = (
-        "suspected" if cause.get("certainty") in {"known", "suspected"} else "unknown"
-    )
-    return {
-        "summary": payload["summary"],
-        "human_action": payload["human_action_reason"],
-        "impact": payload["impact"],
-        "cause_assessment": {
-            "certainty": certainty,
-            "description": cause["description"],
-        },
-    }
-
-
-def _assessment_for_observation(
-    current_issue_id: str,
-    assessed_at: str,
-    observation: dict[str, Any],
-    agent_assessment: object,
-) -> dict[str, Any]:
-    """normalizer 判断または fingerprint 比較から assessment を構築する。"""
-    compared: list[dict[str, Any]] = []
-    unavailable = False
-    changed = False
-    context = observation.get("context")
-    repo_value = context.get("repo_root") if isinstance(context, dict) else None
-    repository = Path(repo_value) if isinstance(repo_value, str) else None
-    for item in observation.get("evidence_fingerprints", []):
-        if not isinstance(item, dict) or not isinstance(
-            item.get("normalized_path"), str
-        ):
-            continue
-        path = Path(item["normalized_path"])
-        current_state = "missing"
-        current_hash: str | None = None
-        try:
-            current_path = (
-                _current_repo_path(path, repository) if repository is not None else None
-            )
-            if current_path is None:
-                current_state = "unreadable"
-            elif current_path.is_file():
-                current_hash = sha256_bytes(current_path.read_bytes())
-                current_state = "hashed"
-            elif current_path.exists():
-                current_state = "not_file"
-        except OSError:
-            current_state = "unreadable"
-        compared.append(
-            {
-                "path": str(path),
-                "old_sha256": item.get("sha256"),
-                "current_sha256": current_hash,
-                "state": current_state,
-            }
-        )
-        unavailable |= current_state != "hashed" or item.get("state") != "hashed"
-        changed |= item.get("sha256") != current_hash
-    if isinstance(agent_assessment, dict):
-        if unavailable or not compared:
-            freshness = "unavailable"
-        elif changed:
-            freshness = "needs_revalidation"
-        else:
-            freshness = "current"
-        return assessment_record(
-            current_issue_id,
-            assessed_at,
-            str(agent_assessment.get("presence", "unknown")),
-            freshness,
-            "normalizer_assessment",
-            str(agent_assessment.get("reason", "normalizer assessment")),
-            compared,
-        )
-    if unavailable or not compared:
-        values = (
-            "unknown",
-            "unavailable",
-            "fingerprint_unavailable",
-            "現在の fingerprint を取得できない。",
-        )
-    elif changed:
-        values = (
-            "unknown",
-            "needs_revalidation",
-            "fingerprint_changed",
-            "observation 時点から fingerprint が変化した。",
-        )
-    else:
-        values = (
-            "likely_present",
-            "current",
-            "observation_matches_current",
-            "observation と現在の fingerprint が一致する。",
-        )
-    return assessment_record(
-        current_issue_id,
-        assessed_at,
-        values[0],
-        values[1],
-        values[2],
-        values[3],
-        compared,
-    )
-
-
-def _current_repo_path(path: Path, repository: Path) -> Path | None:
-    """現在解決される path が repository 内なら resolved path を返す。"""
-    try:
-        root = repository.resolve(strict=False)
-        resolved = path.resolve(strict=False)
-    except OSError:
-        return None
-    if resolved == root or root in resolved.parents:
-        return resolved
-    return None
-
-
-def _refresh_issue_assessment(
-    repo: Path,
-    view: IssueView,
-    observations: dict[str, dict[str, Any]],
-    assessed_at: str,
-) -> str | None:
-    """現在 fingerprint が前 assessment から変わった issue を再評価する。"""
-    available = [
-        (occurrence, observations.get(str(occurrence.get("observation_id"))))
-        for occurrence in view.occurrences
-    ]
-    available = [
-        (occurrence, observation)
-        for occurrence, observation in available
-        if observation is not None
-    ]
-    if not available:
-        return None
-    occurrence, observation = max(
-        available,
-        key=lambda item: (
-            _parse_time(item[0].get("observed_at"))
-            or datetime.min.replace(tzinfo=timezone.utc),
-            str(item[0].get("observation_id", "")),
-        ),
-    )
-    assert observation is not None
-    candidate = _assessment_for_observation(
-        view.issue_id,
-        assessed_at,
-        observation,
-        None,
-    )
-    previous_fingerprints = (
-        view.assessment.get("compared_fingerprints")
-        if view.assessment is not None
-        else None
-    )
-    if previous_fingerprints == candidate["compared_fingerprints"]:
-        return None
-    observation_id = str(occurrence["observation_id"])
-    version = normalizer_version(False)
-    schema_sha256 = sha256_bytes(
-        canonical_json_bytes(
-            {
-                "kind": "feedback-assessment-v1",
-                "compared_fingerprints": candidate["compared_fingerprints"],
-            }
-        )
-    )
-    unit_id = normalization_unit_id(
-        [observation_id],
-        [str(view.revision["revision_id"])],
-        schema_sha256,
-    )
-    return publish_normalization_unit(
-        repo,
-        normalization_unit_id_value=unit_id,
-        observations=[
-            {
-                "observation_id": observation_id,
-                "observation_sha256": str(occurrence["observation_sha256"]),
-            }
-        ],
-        candidate_revision_ids=[str(view.revision["revision_id"])],
-        normalizer_schema_sha256=schema_sha256,
-        normalizer_version_value=version,
-        records=[("assessment", candidate)],
-        checkpoint_sha256=None,
-    )
-
-
-def _effective_observation_counts(
-    repo: Path,
-    entries: list[dict[str, Any]],
-) -> tuple[int, int]:
-    """effective ingestion receipt から確定済み observation 数を再計算する。"""
-    processed = 0
-    invalid = 0
-    seen: set[str] = set()
-    receipts = effective_ingestion_receipts(repo)
-    for entry in entries:
-        observation_id = str(entry["observation_id"])
-        if observation_id in seen:
-            continue
-        seen.add(observation_id)
-        receipt = receipts.get(observation_id)
-        if receipt is None:
-            continue
-        processed += 1
-        invalid += int(receipt.get("status") == "invalid")
-    return processed, invalid
-
-
-def _deferred_count(repo: Path, entries: list[dict[str, Any]]) -> int:
-    """snapshot 内で effective ingestion receipt がない observation 数を返す。"""
-    receipts = effective_ingestion_receipts(repo)
-    return sum(str(entry["observation_id"]) not in receipts for entry in entries)
-
-
-def _is_open(view: IssueView) -> bool:
-    """effective disposition が未決定または open/acknowledged か判定する。"""
-    if view.disposition is None:
-        return True
-    return view.disposition.get("state") in {"open", "acknowledged"}
-
-
-def _is_recurrent_open(
-    view: IssueView,
-    observations: dict[str, dict[str, Any]],
-) -> bool:
-    """既定表示上の再発中かつ未終結 issue かを返す。"""
-    if not _is_open(view):
-        return False
-    if view.identity.get("origin") == "machine_rule":
-        return _machine_threshold_met(view, observations)
-    sessions = {
-        occurrence.get("cmoc_session_id")
-        for occurrence in view.occurrences
-        if isinstance(occurrence.get("cmoc_session_id"), str)
-    }
-    return len(sessions) >= 2
-
-
-def _parse_time(value: object) -> datetime | None:
-    """RFC 3339 timestamp を UTC datetime として best effort で読む。"""
-    if not isinstance(value, str):
-        return None
-    try:
-        return parse_rfc3339(value)
-    except ValueError:
-        return None
-
-
-def _machine_threshold_met(
-    view: IssueView, observations: dict[str, dict[str, Any]]
-) -> bool:
-    """初期 allowlist rule の recurrence threshold を型付き context で判定する。"""
-    if view.identity.get("origin") != "machine_rule":
-        return True
-    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
-    scopes: set[str] = set()
-    agent_calls: set[str] = set()
-    rule_id: str | None = None
-    for occurrence in view.occurrences:
-        observation = observations.get(str(occurrence.get("observation_id")))
-        if observation is None:
-            continue
-        observed_at = _parse_time(observation.get("observed_at"))
-        if observed_at is None or observed_at.astimezone(timezone.utc) < cutoff:
-            continue
-        payload = observation.get("payload")
-        context = observation.get("context")
-        if not isinstance(payload, dict) or not isinstance(context, dict):
-            continue
-        rule_id = str(payload.get("rule_id"))
-        scope = context.get("cmoc_session_id") or context.get(
-            "subcommand_invocation_id"
-        )
-        if isinstance(scope, str):
-            scopes.add(scope)
-        agent_call = context.get("agent_call_id")
-        if isinstance(agent_call, str):
-            agent_calls.add(agent_call)
-    if rule_id == "codex.structured_output_validation_exhausted.v1":
-        return len(scopes) >= 2 and len(agent_calls) >= 2
-    return len(scopes) >= 2
-
-
-def _visible_issues(
-    views: dict[str, IssueView],
-    observations: dict[str, dict[str, Any]],
-    changed: set[str],
-    disposition_changed: set[str],
-    show_all: bool,
-) -> tuple[list[IssueView], list[IssueView]]:
-    """既定 notification boundary に従って表示・抑制 issue を分ける。"""
-    visible: list[IssueView] = []
-    suppressed: list[IssueView] = []
-    for view in views.values():
-        threshold = _machine_threshold_met(view, observations)
-        if show_all:
-            visible.append(view)
-        elif view.identity.get("origin") == "machine_rule" and not threshold:
-            suppressed.append(view)
-        elif (
-            view.issue_id in changed
-            or _is_recurrent_open(view, observations)
-            or (
-                view.assessment is not None
-                and view.assessment.get("freshness") == "needs_revalidation"
-            )
-            or view.issue_id in disposition_changed
-        ):
-            visible.append(view)
-    visible.sort(
-        key=lambda view: (
-            view.issue_id not in changed,
-            not _is_recurrent_open(view, observations),
-            not (
-                view.assessment is not None
-                and view.assessment.get("freshness") == "needs_revalidation"
-            ),
-            view.issue_id not in disposition_changed,
-            view.issue_id,
-        )
-    )
-    return visible, suppressed
-
-
-def _write_report(
-    *,
+def _publish_report(
     repo: Path,
     worktree: Path,
-    report_id: str,
-    generated_at: str,
-    snapshot_sha256: str,
-    snapshot_count: int,
-    processed_count: int,
-    deferred_count: int,
-    invalid_count: int,
-    normalization_agent_call_count: int,
-    changed_issue_ids: set[str],
-    disposition_changed_issue_ids: set[str],
-    recurrent_open_count: int,
-    needs_revalidation_count: int,
-    suppressed_count: int,
-    show_all: bool,
-    normalization_unit_ids: list[str],
-    state_snapshot_id: str,
-    previous_successful_report_id: str | None,
-    result: str,
-    visible: list[IssueView],
-    observations: dict[str, dict[str, Any]],
-    partial_error: BaseException | None,
-) -> tuple[Path, str, bytes]:
-    """deterministic issue view の Markdown publication 内容を準備する。"""
-    directory = reports_dir(repo, "feedback")
-    directory.mkdir(parents=True, exist_ok=True)
-    timestamp_value = timestamp()
-    path = directory / f"{timestamp_value}.md"
-    if path.exists():
-        path = directory / f"{timestamp_value}_{report_id}.md"
-    fields: dict[str, object] = {
-        "command": "cmoc feedback report",
-        "generated_at": generated_at,
-        "repo_root": str(repo.resolve()),
-        "session_branch": current_branch(worktree),
-        "report_snapshot_sha256": snapshot_sha256,
-        "report_snapshot_observation_count": snapshot_count,
-        "processed_observation_count": processed_count,
-        "deferred_observation_count": deferred_count,
-        "invalid_observation_count": invalid_count,
-        "normalization_agent_call_count": normalization_agent_call_count,
-        "new_or_changed_issue_count": len(changed_issue_ids),
-        "recurrent_open_issue_count": recurrent_open_count,
-        "needs_revalidation_issue_count": needs_revalidation_count,
-        "disposition_change_count": len(disposition_changed_issue_ids),
-        "suppressed_machine_issue_count": suppressed_count,
-        "all": show_all,
-        "normalization_unit_ids": normalization_unit_ids,
-        "state_snapshot_id": state_snapshot_id,
-        "previous_successful_report_id": previous_successful_report_id,
-        "result": result,
+    manifest: JsonObject,
+    manifest_path: Path,
+    candidates: dict[str, JsonObject],
+    machine_aggregates: dict[str, JsonObject],
+    verdicts: dict[str, JsonObject],
+    current_state: ActiveState,
+) -> int:
+    """generation と report を準備し、manifest hash を固定して pointer を切り替える。"""
+    unresolved_ids = sorted(
+        candidate_id_value
+        for candidate_id_value, verdict in verdicts.items()
+        if verdict.get("verdict") == "unresolved"
+    )
+    result = "attention" if unresolved_ids else "ok"
+    publication = manifest.get("publication")
+    if publication is None:
+        generated_at = rfc3339_now()
+        generation_id_value = new_generation_id()
+        report_path = _new_report_path(repo)
+    elif isinstance(publication, dict):
+        generated_at = str(publication["generated_at"])
+        generation_id_value = str(publication["generation_id"])
+        report_reference = publication.get("report")
+        if not isinstance(report_reference, dict):
+            raise ValueError("staged report reference must be an object")
+        report_path = repo / str(report_reference["path"])
+        if publication.get("result") != result:
+            raise CmocError(
+                "staged feedback publication result が固定入力の再計算結果と一致しません。",
+                ["report cut manifest と正式 checkpoint を人間が確認してください。"],
+                str(manifest_path),
+            )
+    else:
+        raise ValueError("report cut publication must be an object or null")
+
+    references_by_id = _report_cut_references_by_id(manifest)
+    machine_aggregates = _next_machine_aggregates(
+        candidates, verdicts, machine_aggregates
+    )
+    active_issues = {
+        candidate_id_value: _active_issue_record(
+            manifest,
+            candidates[candidate_id_value],
+            verdicts[candidate_id_value],
+            references_by_id,
+            generated_at,
+        )
+        for candidate_id_value in unresolved_ids
     }
+    generation_manifest, generation_files, generation_reference = generation_artifacts(
+        repo,
+        generation_id=generation_id_value,
+        report_cut_id=str(manifest["report_cut_id"]),
+        created_at=generated_at,
+        issues=active_issues,
+        machine_aggregates=machine_aggregates,
+    )
+    generation_references = [
+        {
+            "path": path.resolve(strict=False)
+            .relative_to(repo.resolve(strict=False))
+            .as_posix(),
+            "sha256": sha256_bytes(content),
+        }
+        for path, content in generation_files
+    ]
+    report_content = _render_feedback_report(
+        repo,
+        worktree,
+        manifest,
+        generation_id_value,
+        generated_at,
+        result,
+        active_issues,
+    ).encode("utf-8")
+    report_reference = {
+        "path": report_path.resolve(strict=False)
+        .relative_to(repo.resolve(strict=False))
+        .as_posix(),
+        "sha256": sha256_bytes(report_content),
+    }
+    cleanup = {
+        "observations": _observation_cleanup_references(manifest),
+        "old_generation": current_generation_artifacts(repo, current_state),
+        "legacy": _legacy_cleanup_references(manifest),
+        "work_artifacts": _checkpoint_cleanup_references(manifest),
+    }
+    expected_publication: JsonObject = {
+        "generation_id": generation_id_value,
+        "generation_manifest": generation_reference,
+        "generation_artifacts": generation_references,
+        "report": report_reference,
+        "generated_at": generated_at,
+        "result": result,
+        "cleanup": cleanup,
+    }
+    if publication is not None and publication != expected_publication:
+        raise CmocError(
+            "staged feedback publication が固定入力の再計算結果と一致しません。",
+            ["report cut manifest と staged artifact を人間が確認してください。"],
+            str(manifest_path),
+        )
+
+    manifest["publication"] = expected_publication
+    _set_processing_state(repo, manifest, "staging", None)
+    publish_generation_artifacts(repo, generation_manifest, generation_files)
+    write_immutable_bytes(report_path, report_content)
+    if artifact_reference(repo, report_path) != report_reference:
+        raise CmocError(
+            "feedback Markdown report の保存後 hash が一致しません。",
+            ["staged report artifact を人間が確認してください。"],
+            str(report_path),
+        )
+
+    # publication_ready manifest の byte hash が current pointer の cleanup manifest ID になる。
+    processing = manifest["processing"]
+    assert isinstance(processing, dict)
+    processing["status"] = "publication_ready"
+    processing["failure"] = None
+    _path, manifest_sha256 = write_report_cut_manifest(repo, manifest)
+    publish_current_pointer(
+        repo,
+        generation_id=generation_id_value,
+        generation_manifest=generation_reference,
+        report_cut_id=str(manifest["report_cut_id"]),
+        report_cut_manifest_sha256=manifest_sha256,
+        report=report_reference,
+        published_at=rfc3339_now(),
+        result=result,
+    )
+    _record_publication_event(
+        manifest,
+        generation_reference,
+        report_reference,
+        result,
+        len(active_issues),
+    )
+    _finish_published_cleanup(repo, manifest_path)
+    typer.echo(f"- feedback report: `{repo / str(report_reference['path'])}`")
+    typer.echo(f"- active generation: `{generation_id_value}`")
+    typer.echo(f"- result: `{result}`")
+    return 0
+
+
+def _next_machine_aggregates(
+    candidates: dict[str, JsonObject],
+    verdicts: dict[str, JsonObject],
+    aggregates: dict[str, JsonObject],
+) -> dict[str, JsonObject]:
+    """active から外れる machine issue の threshold 未満 state を引き継ぐ。"""
+    result = dict(aggregates)
+    for candidate_id_value, candidate in candidates.items():
+        machine_state = candidate.get("machine_state")
+        verdict = verdicts.get(candidate_id_value)
+        if (
+            candidate.get("origin") != "machine_rule"
+            or not isinstance(machine_state, dict)
+            or not isinstance(verdict, dict)
+            or verdict.get("verdict") == "unresolved"
+            or _machine_threshold_met(machine_state)
+        ):
+            continue
+        canonical_key = candidate.get("canonical_key")
+        if not isinstance(canonical_key, str):
+            raise ValueError("machine candidate canonical key is missing")
+        result[canonical_key] = machine_state
+    return result
+
+
+def _resume_publication(repo: Path, manifest: JsonObject, manifest_path: Path) -> int:
+    """成果物保存後・pointer 切替前に止まった publication を hash から再開する。"""
+    publication = manifest.get("publication")
+    if not isinstance(publication, dict):
+        raise CmocError(
+            "publication_ready な feedback report cut に成果物参照がありません。",
+            ["report cut manifest を人間が確認してください。"],
+            str(manifest_path),
+        )
+    current_state = load_active_state(repo)
+    if current_state.current is None or current_state.current.get(
+        "report_cut_id"
+    ) != manifest.get("report_cut_id"):
+        if _active_state_input(repo, current_state) != manifest["inputs"].get(
+            "current"
+        ):
+            raise CmocError(
+                "feedback publication 再開前に current active state が変化しています。",
+                ["current pointer と report cut manifest を人間が確認してください。"],
+                str(manifest_path),
+            )
+        publish_current_pointer(
+            repo,
+            generation_id=str(publication["generation_id"]),
+            generation_manifest=_artifact_object(
+                publication.get("generation_manifest"), "generation manifest"
+            ),
+            report_cut_id=str(manifest["report_cut_id"]),
+            report_cut_manifest_sha256=sha256_bytes(manifest_path.read_bytes()),
+            report=_artifact_object(publication.get("report"), "Markdown report"),
+            published_at=rfc3339_now(),
+            result=str(publication["result"]),
+        )
+    _record_publication_event(
+        manifest,
+        _artifact_object(publication.get("generation_manifest"), "generation manifest"),
+        _artifact_object(publication.get("report"), "Markdown report"),
+        str(publication["result"]),
+        None,
+    )
+    _finish_published_cleanup(repo, manifest_path)
+    typer.echo(f"- feedback report: `{repo / str(publication['report']['path'])}`")
+    typer.echo(f"- active generation: `{publication['generation_id']}`")
+    typer.echo(f"- result: `{publication['result']}`")
+    return 0
+
+
+def _active_issue_record(
+    manifest: JsonObject,
+    candidate: JsonObject,
+    verdict: JsonObject,
+    references_by_id: dict[str, JsonObject],
+    verified_at: str,
+) -> JsonObject:
+    """unresolved candidate と最新 verification を compact active record にする。"""
+    if verdict.get("verdict") != "unresolved":
+        raise ValueError("only unresolved candidates can become active issues")
+    evidence = verdict.get("current_evidence")
+    if not isinstance(evidence, list):
+        raise ValueError("unresolved verdict current_evidence must be an array")
+    materialized = [
+        _materialize_current_evidence(item, references_by_id)
+        for item in evidence
+        if isinstance(item, dict)
+    ]
+    evidence_targets = [
+        {
+            "path": item["path"],
+            "kind": item.get("kind"),
+            "location": item.get("location"),
+        }
+        for item in materialized
+        if isinstance(item.get("path"), str)
+    ]
+    return {
+        "schema_version": 1,
+        "issue_id": candidate["candidate_id"],
+        "origin": candidate["origin"],
+        "canonical_key": candidate["canonical_key"],
+        "category": mask_feedback_text(str(candidate["category"])),
+        "summary": mask_feedback_text(str(candidate["summary"])),
+        "impact": mask_feedback_text(str(candidate["impact"])),
+        "occurrence_count": candidate["occurrence_count"],
+        "affected_session_count": candidate["affected_session_count"],
+        "session_digest": _masked_json_object(candidate["session_digest"]),
+        "first_observed_at": candidate["first_observed_at"],
+        "last_observed_at": candidate["last_observed_at"],
+        "representative_evidence": _masked_object_list(
+            candidate.get("representative_evidence"), 5
+        ),
+        "reference_targets": _masked_object_list(
+            _bounded_objects(
+                [
+                    *candidate.get("reference_targets", []),
+                    *evidence_targets,
+                ],
+                5,
+            ),
+            5,
+        ),
+        "latest_fingerprints": _masked_object_list(
+            candidate.get("latest_fingerprints"), 5
+        ),
+        "verification": {
+            "report_cut_id": manifest["report_cut_id"],
+            "verified_at": verified_at,
+            "reason": mask_feedback_text(str(verdict["reason"])),
+            "current_evidence": materialized,
+            "human_action": mask_feedback_text(str(verdict["human_action"])),
+        },
+        "machine_state": (
+            _masked_json_object(candidate["machine_state"])
+            if isinstance(candidate.get("machine_state"), dict)
+            else None
+        ),
+    }
+
+
+def _materialize_current_evidence(
+    evidence: JsonObject, references_by_id: dict[str, JsonObject]
+) -> JsonObject:
+    """cut-scoped ID を削除予定 artifact に依存しない compact evidence へ解決する。"""
+    reference_id = evidence.get("reference_id")
+    if not isinstance(reference_id, str) or reference_id not in references_by_id:
+        raise ValueError("verification evidence uses an unknown reference ID")
+    reference = references_by_id[reference_id]
+    materialized: JsonObject = {
+        "kind": reference.get("kind"),
+        "location": mask_feedback_text(str(evidence.get("location", ""))),
+        "finding": mask_feedback_text(str(evidence.get("finding", ""))),
+    }
+    for name in (
+        "path",
+        "state",
+        "sha256",
+        "probe_id",
+        "observation_id",
+        "summary",
+    ):
+        value = reference.get(name)
+        if value is not None:
+            materialized[name] = (
+                mask_feedback_text(value) if isinstance(value, str) else value
+            )
+    return materialized
+
+
+def _report_cut_references_by_id(manifest: JsonObject) -> dict[str, JsonObject]:
+    """固定済み reference を ID で引く。"""
+    inputs = manifest.get("inputs")
+    references = inputs.get("references") if isinstance(inputs, dict) else None
+    if not isinstance(references, list):
+        raise ValueError("report cut references must be an array")
+    return {
+        str(reference["reference_id"]): reference
+        for reference in references
+        if isinstance(reference, dict)
+        and isinstance(reference.get("reference_id"), str)
+    }
+
+
+def _render_feedback_report(
+    repo: Path,
+    worktree: Path,
+    manifest: JsonObject,
+    generation_id_value: str,
+    generated_at: str,
+    result: str,
+    issues: dict[str, JsonObject],
+) -> str:
+    """正常 publication 用の current unresolved issue 一覧だけを描画する。"""
+    fields = (
+        ("command", "cmoc feedback report"),
+        ("generated_at", generated_at),
+        ("repo_root", str(repo)),
+        ("session_branch", current_branch(worktree)),
+        ("report_cut_id", manifest["report_cut_id"]),
+        ("report_cut_at", manifest["cut_at"]),
+        ("active_generation_id", generation_id_value),
+        ("verification_candidate_count", _verification_candidate_count(manifest)),
+        ("unresolved_issue_count", len(issues)),
+        ("result", result),
+    )
     lines = [
         "---",
-        *[f"{key}: {_yaml(value)}" for key, value in fields.items()],
+        *[f"{name}: {_yaml_scalar(value)}" for name, value in fields],
         "---",
-        "# cmoc feedback report",
-        "",
     ]
-    if partial_error is not None:
-        lines.extend(["## Processing warning", "", repr(partial_error), ""])
-    if not visible:
-        lines.extend(["既定表示の対象 issue はありません。", ""])
-    for view in visible:
-        observed = sorted(
-            (str(item.get("observed_at")) for item in view.occurrences),
-            key=lambda value: (
-                _parse_time(value) or datetime.min.replace(tzinfo=timezone.utc)
-            ),
-        )
-        assessment = view.assessment or {}
-        disposition = (
-            str(view.disposition.get("state"))
-            if view.disposition is not None
-            else "not_disposed"
-        )
-        sessions = {
-            item.get("cmoc_session_id")
-            for item in view.occurrences
-            if item.get("cmoc_session_id") is not None
-        }
-        latest_occurrence = max(
-            view.occurrences,
-            key=lambda item: (
-                _parse_time(item.get("observed_at"))
-                or datetime.min.replace(tzinfo=timezone.utc),
-                str(item.get("observation_id", "")),
-            ),
-            default={},
-        )
-        latest_observation = observations.get(
-            str(latest_occurrence.get("observation_id", "")), {}
-        )
-        raw_reference = "unknown"
-        latest_observation_id = latest_observation.get("observation_id")
-        latest_observed_at = latest_observation.get("observed_at")
-        if isinstance(latest_observation_id, str) and isinstance(
-            latest_observed_at, str
-        ):
-            try:
-                raw_reference = str(
-                    observation_path(repo, latest_observation_id, latest_observed_at)
-                )
-            except ValueError:
-                pass
-        representative_evidence = _representative_evidence(latest_observation)
-        log_paths = latest_occurrence.get("log_paths", [])
-        log_reference = (
-            str(log_paths[0])
-            if isinstance(log_paths, list) and log_paths
-            else "unknown"
-        )
+    lines.extend(["# cmoc feedback report", "", "## Issues", ""])
+    if not issues:
+        lines.extend(["現在の未解決 issue はありません。", ""])
+        return "\n".join(lines)
+    for issue_id_value, issue in sorted(issues.items()):
+        verification = issue["verification"]
+        assert isinstance(verification, dict)
+        session_count = str(issue["affected_session_count"])
+        session_digest = issue.get("session_digest")
+        if isinstance(session_digest, dict) and session_digest.get("saturated") is True:
+            session_count += "+"
         lines.extend(
             [
-                f"## {view.issue_id}: {view.revision.get('summary', '')}",
+                f"### {_markdown_text(issue_id_value)}",
                 "",
-                f"- 人間の対応候補: {view.revision.get('human_action', '')}",
-                f"- occurrence 数: {len(view.occurrences)}",
-                f"- affected cmoc session 数: {len(sessions)}",
-                f"- 最初の観測日時: {observed[0] if observed else 'unknown'}",
-                f"- 最後の観測日時: {observed[-1] if observed else 'unknown'}",
-                f"- machine assessment: {assessment.get('presence', 'unknown')} / {assessment.get('freshness', 'unavailable')}",
-                f"- human disposition: {disposition}",
-                f"- 代表的な evidence: {representative_evidence}",
-                f"- issue directory: `{feedback_root(repo) / 'issue' / view.issue_id}`",
-                f"- raw observation: `{raw_reference}`",
-                f"- log: `{log_reference}`",
-                *(
-                    ["- 直前の正常 report 後に human disposition が変更されています。"]
-                    if view.issue_id in disposition_changed_issue_ids
-                    else []
-                ),
-                "",
+                f"- Category: {_markdown_text(issue['category'])}",
+                f"- Summary: {_markdown_text(issue['summary'])}",
+                f"- Impact: {_markdown_text(issue['impact'])}",
+                f"- Human action: {_markdown_text(verification['human_action'])}",
+                f"- Occurrences: {issue['occurrence_count']}",
+                f"- Affected sessions: {session_count}",
+                f"- First observed: {_markdown_text(issue['first_observed_at'])}",
+                f"- Last observed: {_markdown_text(issue['last_observed_at'])}",
+                "- Current evidence:",
             ]
         )
-        if show_all:
-            lines.extend(
-                [
-                    "```json",
-                    json.dumps(
-                        {
-                            "identity": view.identity,
-                            "revisions": view.revisions,
-                            "assessments": view.assessments,
-                            "dispositions": view.dispositions,
-                            "occurrences": view.occurrences,
-                        },
-                        ensure_ascii=False,
-                        sort_keys=True,
-                        indent=2,
-                    ),
-                    "```",
-                    "",
-                ]
+        for current_evidence in verification["current_evidence"]:
+            assert isinstance(current_evidence, dict)
+            target = (
+                current_evidence.get("path")
+                or current_evidence.get("probe_id")
+                or current_evidence.get("observation_id", "unknown")
             )
-    content = ("\n".join(lines) + "\n").encode("utf-8")
-    return path.resolve(), sha256_bytes(content), content
+            lines.append(
+                "  - "
+                f"{_markdown_text(target)} / "
+                f"{_markdown_text(current_evidence.get('location', ''))}: "
+                f"{_markdown_text(current_evidence.get('finding', ''))}"
+            )
+        lines.append("- Representative evidence:")
+        representative = issue.get("representative_evidence")
+        if isinstance(representative, list) and representative:
+            for evidence in representative:
+                lines.append(
+                    f"  - {_markdown_text(json.dumps(evidence, ensure_ascii=False, sort_keys=True))}"
+                )
+        else:
+            lines.append("  - none")
+        lines.append("")
+    return "\n".join(lines)
 
 
-def _representative_evidence(observation: dict[str, Any]) -> str:
-    """report 先頭に載せる一件の evidence を短く整形する。"""
-    payload = observation.get("payload")
-    if isinstance(payload, dict):
-        evidence = payload.get("evidence")
-        if isinstance(evidence, list):
-            for item in evidence:
-                if not isinstance(item, dict):
-                    continue
-                parts = [str(item.get("kind", "other")), str(item.get("text", ""))]
-                if isinstance(item.get("path"), str):
-                    parts.append(str(item["path"]))
-                if isinstance(item.get("location"), str):
-                    parts.append(str(item["location"]))
-                return " / ".join(part for part in parts if part)
-        summary = payload.get("summary")
-        if isinstance(summary, str):
-            return summary
-    source_event = observation.get("source_event")
-    if isinstance(source_event, dict) and isinstance(source_event.get("event_id"), str):
-        return f"event {source_event['event_id']}"
-    return "unknown"
+def _verification_candidate_count(manifest: JsonObject) -> int:
+    """正式 verification checkpoint 数を front matter の candidate 件数にする。"""
+    processing = manifest.get("processing")
+    checkpoints = (
+        processing.get("verification_checkpoints")
+        if isinstance(processing, dict)
+        else None
+    )
+    if not isinstance(checkpoints, list):
+        raise ValueError("verification checkpoints must be an array")
+    return len(checkpoints)
 
 
-def _yaml(value: object) -> str:
-    """front matter value を YAML 1.2 互換 JSON scalar/flow style にする。"""
+def _new_report_path(repo: Path) -> Path:
+    """衝突時も既存 report を上書きしない timestamp path を選ぶ。"""
+    directory = reports_dir(repo, "feedback")
+    while True:
+        path = directory / f"{timestamp()}.md"
+        if not path.exists() and not path.is_symlink():
+            return path
+
+
+def _yaml_scalar(value: object) -> str:
+    """YAML 1.2 と互換な JSON scalar を返す。"""
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, (int, float)):
         return str(value)
-    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    if value is None:
+        return "null"
+    return json.dumps(str(value), ensure_ascii=False)
+
+
+def _markdown_text(value: object) -> str:
+    """外部入力が Markdown の行構造を変更しない compact text を返す。"""
+    return html.escape(str(value).replace("\r", " ").replace("\n", " "), quote=False)
+
+
+def _masked_json_value(value: Any) -> Any:
+    """永続 compact state に含める文字列へ feedback secret masking を再適用する。"""
+    if isinstance(value, str):
+        return mask_feedback_text(value)
+    if isinstance(value, list):
+        return [_masked_json_value(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _masked_json_value(item) for key, item in value.items()}
+    return value
+
+
+def _masked_json_object(value: object) -> JsonObject:
+    """JSON object を deep copy しながら文字列を mask する。"""
+    if not isinstance(value, dict):
+        raise ValueError("expected JSON object")
+    masked = _masked_json_value(value)
+    assert isinstance(masked, dict)
+    return masked
+
+
+def _masked_object_list(value: object, limit: int) -> list[JsonObject]:
+    """bounded object array を deep copy しながら文字列を mask する。"""
+    if not isinstance(value, list):
+        raise ValueError("expected JSON object array")
+    result = [_masked_json_object(item) for item in value if isinstance(item, dict)]
+    return result[:limit]
+
+
+def _observation_cleanup_references(manifest: JsonObject) -> list[JsonObject]:
+    """cut に含まれる全 raw file を publication 後 cleanup target にする。"""
+    inputs = manifest.get("inputs")
+    entries = inputs.get("observations") if isinstance(inputs, dict) else None
+    if not isinstance(entries, list):
+        raise ValueError("report cut observations must be an array")
+    return [
+        {"path": entry["path"], "sha256": entry["sha256"]}
+        for entry in entries
+        if isinstance(entry, dict)
+    ]
+
+
+def _legacy_cleanup_references(manifest: JsonObject) -> list[JsonObject]:
+    """migration cut が固定した legacy artifact だけを cleanup target にする。"""
+    inputs = manifest.get("inputs")
+    legacy = inputs.get("legacy") if isinstance(inputs, dict) else None
+    if legacy is None:
+        return []
+    artifacts = legacy.get("artifacts") if isinstance(legacy, dict) else None
+    if not isinstance(artifacts, list):
+        raise ValueError("legacy artifacts must be an array")
+    return [dict(item) for item in artifacts if isinstance(item, dict)]
+
+
+def _checkpoint_cleanup_references(manifest: JsonObject) -> list[JsonObject]:
+    """正式 checkpoint file を manifest 自体より先に削除する一覧へまとめる。"""
+    processing = manifest.get("processing")
+    if not isinstance(processing, dict):
+        raise ValueError("report cut processing must be an object")
+    references: list[JsonObject] = []
+    for name in ("normalization_checkpoints", "verification_checkpoints"):
+        values = processing.get(name)
+        if not isinstance(values, list):
+            raise ValueError(f"{name} must be an array")
+        references.extend(
+            {"path": item["path"], "sha256": item["sha256"]}
+            for item in values
+            if isinstance(item, dict)
+        )
+    return sorted(references, key=lambda item: str(item["path"]))
+
+
+def _artifact_object(value: object, description: str) -> JsonObject:
+    """publication section の path/hash object を型付きで返す。"""
+    if not isinstance(value, dict) or set(value) != {"path", "sha256"}:
+        raise ValueError(f"{description} reference is malformed")
+    return value
+
+
+def _record_publication_event(
+    manifest: JsonObject,
+    generation_reference: JsonObject,
+    report_reference: JsonObject,
+    result: str,
+    unresolved_count: int | None,
+) -> None:
+    """publication point を subcommand log から一意に確認できるようにする。"""
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "feedback_report_published",
+            report_cut_id=manifest.get("report_cut_id"),
+            active_generation_id=manifest.get("publication", {}).get("generation_id"),
+            generation_manifest_path=generation_reference.get("path"),
+            report_path=report_reference.get("path"),
+            result=result,
+            unresolved_issue_count=unresolved_count,
+        )
+
+
+def _finish_published_cleanup(repo: Path, manifest_path: Path) -> None:
+    """pointer 切替後の cleanup failure を publication と分離した warning にする。"""
+    try:
+        cleanup_published_report(repo)
+    except BaseException as exc:
+        logger = current_subcommand_logger()
+        if logger is not None:
+            logger.event(
+                "feedback_report_cleanup_failed",
+                report_cut_manifest_path=str(manifest_path),
+                error=repr(exc),
+            )
+        typer.echo(
+            "- warning: feedback report は publication 済みですが cleanup は未完了です。"
+        )
+        typer.echo(f"- cleanup manifest: `{manifest_path}`")
+
+
+def _set_processing_state(
+    repo: Path, manifest: JsonObject, status: str, failure: str | None
+) -> None:
+    """固定入力を変えず processing status/failure だけを atomic update する。"""
+    processing = manifest.get("processing")
+    if not isinstance(processing, dict):
+        raise ValueError("report cut processing must be an object")
+    processing["status"] = status
+    processing["failure"] = failure
+    write_report_cut_manifest(repo, manifest)
+
+
+def _cut_is_current(repo: Path, manifest: JsonObject) -> bool:
+    """report cut が既に current pointer の publication point を越えたか返す。"""
+    try:
+        state = load_active_state(repo)
+    except BaseException:
+        return False
+    return state.current is not None and state.current.get(
+        "report_cut_id"
+    ) == manifest.get("report_cut_id")
+
+
+def _record_feedback_interruption(manifest: JsonObject, manifest_path: Path) -> None:
+    """中断を正常系として subcommand state、console、log へ記録する。"""
+    mark_current_subcommand_interrupted()
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "feedback_report_interrupted",
+            report_cut_id=manifest.get("report_cut_id"),
+            report_cut_manifest_path=str(manifest_path),
+        )
+    typer.echo("- feedback report はユーザー中断により終了しました。")
+    typer.echo(f"- 再開対象 report cut: `{manifest_path}`")

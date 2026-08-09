@@ -19,6 +19,8 @@ import re
 import secrets
 import time
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from functools import lru_cache
 from importlib import resources
@@ -155,34 +157,27 @@ def observation_root(repo: Path) -> Path:
     return feedback_root(repo) / "observation" / "v1"
 
 
-def report_snapshot_root(repo: Path) -> Path:
-    """feedback report の untracked snapshot manifest root を返す。"""
-    return feedback_root(repo) / "report_snapshot"
-
-
-def normalization_checkpoint_root(repo: Path) -> Path:
-    """normalization agent call checkpoint root を返す。"""
-    return feedback_root(repo) / "normalization_checkpoint"
-
-
-def normalization_unit_root(repo: Path) -> Path:
-    """durable に確定した normalization unit manifest root を返す。"""
-    return feedback_root(repo) / "normalization_unit"
-
-
-def normalization_recovery_root(repo: Path) -> Path:
-    """未確定 normalization unit の durable recovery metadata root を返す。"""
-    return feedback_root(repo) / "normalization_recovery"
-
-
-def state_snapshot_root(repo: Path) -> Path:
-    """repository-local normalized state snapshot root を返す。"""
-    return feedback_root(repo) / "state_snapshot"
-
-
-def report_recovery_root(repo: Path) -> Path:
-    """未確定 report publication の durable recovery metadata root を返す。"""
-    return feedback_root(repo) / "report_recovery"
+@contextmanager
+def observation_publication_lock(repo: Path) -> Iterator[None]:
+    """collector publication と report cut inventory の短い境界を直列化する。"""
+    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    root = feedback_root(repo)
+    if _has_symlink_component(root):
+        raise FeedbackRejected(
+            "context_invalid", f"feedback storage path uses a symlink: {root}"
+        )
+    root.mkdir(parents=True, exist_ok=True)
+    lock_path = root / ".observation.lock"
+    if lock_path.is_symlink() or (lock_path.exists() and not lock_path.is_file()):
+        raise FeedbackRejected(
+            "context_invalid", f"observation lock is not a regular file: {lock_path}"
+        )
+    with lock_path.open("a+") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def parse_rfc3339(value: str) -> datetime:
@@ -389,35 +384,36 @@ def _store_observation(
             "context_invalid", f"feedback observation root is unavailable: {root}"
         ) from exc
 
-    directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        fcntl.flock(directory_fd, fcntl.LOCK_EX)
-        for existing in root.rglob(path.name):
-            if existing == path:
-                continue
-            if _has_symlink_component(existing) or not existing.is_file():
-                raise FeedbackRejected(
-                    "context_invalid",
-                    f"observation ID path is not a regular file: {existing}",
-                )
-            try:
-                existing_content = existing.read_bytes()
-            except OSError as exc:
-                raise FeedbackRejected(
-                    "context_invalid",
-                    f"existing observation cannot be read: {existing}",
-                ) from exc
-            if sha256_bytes(existing_content) != digest:
-                raise FeedbackRejected(
-                    "context_invalid",
-                    f"observation ID collision or corruption: {existing}",
-                )
-            return existing.resolve()
-        write_immutable_json(path, envelope)
-        return path.resolve()
-    finally:
-        fcntl.flock(directory_fd, fcntl.LOCK_UN)
-        os.close(directory_fd)
+    with observation_publication_lock(repo):
+        directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            fcntl.flock(directory_fd, fcntl.LOCK_EX)
+            for existing in root.rglob(path.name):
+                if existing == path:
+                    continue
+                if _has_symlink_component(existing) or not existing.is_file():
+                    raise FeedbackRejected(
+                        "context_invalid",
+                        f"observation ID path is not a regular file: {existing}",
+                    )
+                try:
+                    existing_content = existing.read_bytes()
+                except OSError as exc:
+                    raise FeedbackRejected(
+                        "context_invalid",
+                        f"existing observation cannot be read: {existing}",
+                    ) from exc
+                if sha256_bytes(existing_content) != digest:
+                    raise FeedbackRejected(
+                        "context_invalid",
+                        f"observation ID collision or corruption: {existing}",
+                    )
+                return existing.resolve()
+            write_immutable_json(path, envelope)
+            return path.resolve()
+        finally:
+            fcntl.flock(directory_fd, fcntl.LOCK_UN)
+            os.close(directory_fd)
 
 
 _SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -451,6 +447,12 @@ def _mask_text(value: str) -> tuple[str, int]:
         masked, replacements = pattern.subn(f"[REDACTED:{kind}]", masked)
         count += replacements
     return masked, count
+
+
+def mask_feedback_text(value: str) -> str:
+    """report cut に保存する text へ raw observation と同じ secret masking を適用する。"""
+    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    return _mask_text(value)[0]
 
 
 def _mask_payload(value: Any) -> tuple[Any, int]:
@@ -720,32 +722,44 @@ def read_json_object(path: Path) -> dict[str, Any]:
     return value
 
 
-def ingestion_receipt_path(repo: Path, observation_id: str) -> Path:
-    """observation ごとの repository-local ingestion receipt path を返す。"""
-    return feedback_root(repo) / "ingestion" / f"{observation_id}.json"
-
-
 def unprocessed_observation_paths(repo: Path) -> list[Path]:
-    """effective ingestion receipt がない raw observation を返す。"""
-    # normalized state はこの module の primitive を使うため、reader だけを遅延 import する。
-    from .runtime_feedback_state import effective_ingestion_receipts
+    """raw store に残る pending observation を返す。"""
+    # publication 後 cleanup 中の observation だけを処理済みとして除外する。
+    from .runtime_feedback_state import published_cleanup_observation_ids
 
-    receipts = effective_ingestion_receipts(repo)
-    return [path for path in iter_observation_paths(repo) if path.stem not in receipts]
+    root = observation_root(repo)
+    if root.exists() or root.is_symlink():
+        if _has_symlink_component(root) or not root.is_dir():
+            raise ValueError(
+                f"feedback observation root is not a regular directory: {root}"
+            )
+        for path in root.rglob("*"):
+            if path.is_dir() and not path.is_symlink():
+                continue
+            if (
+                _has_symlink_component(path)
+                or not path.is_file()
+                or path.suffix != ".json"
+                or not path.name.startswith("fbo_")
+            ):
+                raise ValueError(
+                    f"feedback observation store has an invalid artifact: {path}"
+                )
+    processed_ids = published_cleanup_observation_ids(repo)
+    return [
+        path for path in iter_observation_paths(repo) if path.stem not in processed_ids
+    ]
 
 
 def feedback_completion_counts(
     repo: Path,
-) -> tuple[int | None, int | None, list[str]]:
-    """通常サブコマンド完了時の raw observation 件数と warning を返す。"""
+) -> tuple[int | None, list[str]]:
+    """通常サブコマンド完了時の pending observation 件数と warning を返す。"""
     # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
-    from .runtime_feedback_state import latest_successful_report_record
-
     try:
-        unprocessed = unprocessed_observation_paths(repo)
+        pending = unprocessed_observation_paths(repo)
     except Exception as exc:
         return (
-            None,
             None,
             [
                 "repository-local feedback state を安全に検証できないため件数を計算できません。",
@@ -753,52 +767,9 @@ def feedback_completion_counts(
             ],
         )
     warnings: list[str] = []
-    try:
-        latest = latest_successful_report_record(repo)
-    except Exception as exc:
-        latest = None
-        warnings.extend(
-            [
-                "正常 feedback report の連鎖を一意に解決できないため未処理件数を使用しました。",
-                f"feedback report chain: {exc}",
-            ]
-        )
-    if latest is None:
-        increased = len(unprocessed)
-    else:
-        report_id = latest.get("report_id")
-        manifest_path = report_snapshot_root(repo) / f"{report_id}.json"
-        try:
-            if _has_symlink_component(manifest_path) or not manifest_path.is_file():
-                raise ValueError("snapshot manifest path is not a regular file")
-            expected_manifest_sha = latest.get("report_snapshot_sha256")
-            if (
-                not isinstance(expected_manifest_sha, str)
-                or sha256_bytes(manifest_path.read_bytes()) != expected_manifest_sha
-            ):
-                raise ValueError("snapshot manifest hash differs from report record")
-            manifest = read_json_object(manifest_path)
-            if manifest.get("report_id") != report_id:
-                raise ValueError("snapshot report ID differs from report record")
-            entries = manifest.get("observations")
-            if not isinstance(entries, list):
-                raise ValueError("snapshot observations are missing")
-            previous_ids = {
-                entry.get("observation_id")
-                for entry in entries
-                if isinstance(entry, dict)
-                and isinstance(entry.get("observation_id"), str)
-            }
-            increased = sum(path.stem not in previous_ids for path in unprocessed)
-        except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
-            increased = len(unprocessed)
-            warnings.append(
-                "直前の正常な local feedback report の report snapshot を検証できないため未処理件数を使用しました。"
-            )
-
     # notification threshold は詳細を展開せず report 実行だけを促す。
     oldest_age_days: float | None = None
-    for path in unprocessed:
+    for path in pending:
         try:
             observation = read_json_object(path)
             observed_at = observation.get("observed_at")
@@ -813,10 +784,8 @@ def feedback_completion_counts(
             )
         except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
             continue
-    if len(unprocessed) >= 100 or (
-        oldest_age_days is not None and oldest_age_days >= 7
-    ):
+    if len(pending) >= 100 or (oldest_age_days is not None and oldest_age_days >= 7):
         warnings.append(
-            "未処理 feedback が蓄積しています。`cmoc feedback report` を実行してください。"
+            "pending feedback が蓄積しています。`cmoc feedback report` を実行してください。"
         )
-    return len(unprocessed), increased, warnings
+    return len(pending), warnings

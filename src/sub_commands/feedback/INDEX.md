@@ -15,19 +15,17 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の CLI 実装本体。raw observation の snapshot 固定、未処理 observation の増分 normalization、checkpoint・unit manifest・state snapshot の保存、最終 Markdown report と publication record の生成を、一つの中断可能な transaction として管理する。
-- machine_rule と agent_report の observation を issue に統合し、invalid observation、重複候補、assessment の再評価、deferred observation、表示対象・抑制対象を算出する。feedback report サブコマンドの状態機械を確認・変更する際の入口。
+- `cmoc feedback report` の active-state publication pipeline を実装するサブコマンドモジュール。固定済み report cut を起点に、raw observation の検証、agent・machine observation の deterministic な集約と normalization、全 issue candidate の verification、generation/report の生成、current pointer の切替、publication 後の cleanup までを一つの再開可能な処理単位として扱う。
 
 ## Read this when
-- `cmoc feedback report` の snapshot、normalization、checkpoint、unit publication、report publication の処理を調査・変更するとき。
-- machine observation と agent observation の issue 統合、candidate 選定、assessment freshness、再発判定、既定表示の規則を確認するとき。
-- feedback report の中断・部分完了・corruption recovery や session/run の事前条件を確認するとき。
+- `cmoc feedback report` の処理順序、report cut の固定・再開、checkpoint 検証、candidate 集約、verification、publication、cleanup の挙動を調べるとき。
+- feedback report の active state や current pointer の切替が、どの固定入力・成果物参照・hash に基づくかを確認するとき。
+- machine rule の recurrence 集約や agent observation の同一性判定、verification 出力の受理条件を変更・調査するとき。
 
 ## Do not read this when
-- feedback observation の受付や保存だけを調べるときは、observation 書き込み側の実装を直接確認する。
-- feedback state の record schema、lock、recovery primitive、issue view の構築を調べるときは、runtime feedback state/store の実装を直接確認する。
-- normalization agent に渡す parameter や Structured Output schema の定義だけを調べるときは、feedback normalization builder と対応する oracle schema を直接確認する。
-- report Markdown の一般的な出力先や timestamp path の共通処理だけを調べるときは、runtime paths の実装を直接確認する。
+- feedback observation の保存形式や共通 state・lock・artifact 操作そのものを調べる場合は、対応する `commons.runtime_feedback_*` の実装を直接読む。
+- normalization または verification agent の入力 builder・Structured Output schema の契約だけを調べる場合は、対応する builder と schema を直接読む。
+- `cmoc feedback report` 以外のサブコマンドの処理を調べる場合。
 
 ## hash
-- a2aea90660cf3644c9d6c264ce5315c532a9433c620046d12178db3613aeb62a
+- 45c71abdba7b3f76e0abe83382327c23781810bfdad40c3c3610130693f32c84

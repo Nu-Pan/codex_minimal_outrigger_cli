@@ -1,29 +1,47 @@
 # `__init__.py`
 
 ## Summary
-- feedback normalization 用の builder adapter を扱う。対応する oracle 実装を参照する際の入口となる。
+- feedback の issue 正規化・検証に対応する builder adapter パッケージ。対応する oracle 実装を起点に、feedback の normalize／verify 処理を確認する際の入口となる。
 
 ## Read this when
-- feedback の normalization 用 builder adapter の責務や対応する oracle file を確認するとき。
+- feedback issue の normalization または verification に関する builder adapter の構成を確認するとき
+- 対応する oracle の normalize_issue／verify_issue 実装との対応関係を確認するとき
 
 ## Do not read this when
-- feedback normalization 以外の builder 実装を調べるとき。具体的な normalization 処理の実装を確認する場合は、対応する oracle file を直接読む。
+- feedback 以外の builder adapter を調べるとき
+- 正規化・検証処理そのものの詳細を確認する場合は、対応する oracle file を直接読む
 
 ## hash
-- 146a63c76ef83bf2091b863cb528329ee2171de4c27917d4367e8076d999d8c5
+- 5be652524e2cf162bcb1e9f7afa2fb8fff79cfa9828f6648565cc06ee9728f4c
 
 # `normalize_issue.py`
 
 ## Summary
-- feedback issue の正規化パラメータを構築する正本 builder を再公開する adapter。feedback builder の公開入口として、正規化処理を利用する際に参照する。
+- feedback issue の同一性判断用パラメータ builder を、正本実装から ACP builder 側へ再公開する薄い adapter。実際の判断ロジックは持たず、対応する oracle 実装への入口を提供する。
 
 ## Read this when
-- feedback issue の正規化パラメータ builder の公開入口を確認したいとき。
-- feedback builder 経由で正規化処理を利用する箇所を調査するとき。
+- ACP builder から feedback issue の同一性判断用パラメータ生成を参照・追跡するとき
+- この builder の公開名や再公開元を確認するとき
 
 ## Do not read this when
-- 正規化 builder の実装や仕様そのものを確認したいときは、対応する oracle file を直接読む。
-- feedback issue 以外の builder や正規化処理を調査するとき。
+- feedback issue の正本となる同一性判断ロジックを理解・変更するときは、対応する oracle 実装を直接読む
+- feedback 以外の ACP builder や、別の feedback 処理の責務を調べるとき
 
 ## hash
-- e2c6155ff2f901eb4f7ffaa2e6a756a17bdf85e4d61d8bec81ae369673d228a3
+- a778c211293705ae8907658cee05b702ed4eebb56e7d1792d319d6b5824afc33
+
+# `verify_issue.py`
+
+## Summary
+- feedback issue verification の正本 builder を再公開する adapter。対応する oracle 実装から、feedback issue 検証用パラメータ builder を利用するための入口を提供する。
+
+## Read this when
+- feedback issue verification の builder の利用箇所や公開入口を確認するとき。
+- feedback issue 検証用パラメータ builder の import/export 経路を確認するとき。
+
+## Do not read this when
+- feedback issue verification の正本ロジックや仕様を確認するときは、対応する oracle 実装を直接読む。
+- feedback 以外の ACP builder を調査するとき。
+
+## hash
+- 33965a551ca9170b82e3525d1bbe5fe09f5ccefd6b48fb6c228dfa80ca16a667

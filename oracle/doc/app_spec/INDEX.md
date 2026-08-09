@@ -52,38 +52,37 @@
 # `console_and_file_log.md`
 
 ## Summary
-- コンソール表示とサブコマンドログファイルに関する正本仕様。時間・パスの表示形式、JSON Lines ログの配置・イベント・即時 flush、コンソールログの Markdown 形式、開始・ステップ・Codex CLI・完了通知の要件を定める。ログ出力や表示仕様の実装・検証時の入口となる。
+- コンソール出力、ファイルパス、サブコマンドの JSON Lines ログ、およびコンソールログの形式と必須内容を定める仕様。サブコマンド実行ログの実装・変更・検証時に、出力規則の入口として参照する。
+- 時間・パスの表示形式、ログイベント、Codex CLI 呼び出し通知、完了サマリーを扱う。Windows toast 通知の詳細は専用仕様へ委譲する。
 
 ## Read this when
-- サブコマンドのログファイル出力、イベント記録、flush、保存先を実装または検証するとき
-- コンソールの開始通知、ステップ通知、Codex CLI 通知、完了サマリーや表示フォーマットを実装または検証するとき
-- 時間表示やフルパス表示の仕様を確認するとき
+- サブコマンドログの保存先、JSON Lines 形式、イベント内容、即時 flush を実装または変更するとき
+- cmoc の標準出力・標準エラーに出すログの形式、ステップ通知、Codex CLI 通知、完了サマリーを実装または検証するとき
+- 時間表示またはフルパス表示のフォーマットを確認するとき
 
 ## Do not read this when
-- feedback observation のイベント契約そのものを確認するときは、指定された feedback observation 仕様を直接読む
-- Windows toast 通知の対象・順序・内容・失敗時の扱いだけを確認するときは、Windows toast notification 仕様を直接読む
-- ログやコンソール表示に関係しないサブコマンドの挙動を扱うとき
+- Windows toast 通知の対象・順序・内容・失敗時の扱いだけを確認するときは、専用の toast 通知仕様へ直接進む
+- サブコマンドやコンソール・ファイルログに関係しない機能の実装や調査を行うとき
 
 ## hash
-- 03b116a9345a0f2cbaa067b1583e6cbd5430095524eda773b4d682acf9abef9a
+- 865aa83147e94ce4fc48c30df3d012197c07f59b96405639e8e86cb23d6829cf
 
 # `doctor_preprocess.md`
 
 ## Summary
-- cmoc の各サブコマンド開始前に、リポジトリ状態、管理対象ファイルの追跡・同期状態、feedback reporter/client の利用可能性を検証し、可能な修復と tracked 差分の commit を行う doctor preprocess の正本仕様。doctor preprocess の責務、検証・修復手順、refactor state の同期タイミング、reporter 障害時の degraded warning の扱いを定義する。
+- cmoc の各サブコマンド開始前に、リポジトリと実行環境の共通前提を検証し、可能な範囲で修復する処理の正本仕様。git 追跡状態、refactor state の同期、feedback reporter/client の事前検証、および修復後の tracked 差分の commit を扱う。サブコマンド固有の前提条件は対象外で、doctor preprocess 正常終了後に各サブコマンドが検証する。
 
 ## Read this when
-- doctor preprocess の検証・修復処理を実装または変更するとき
-- サブコマンド共通の事前条件、refactor state の同期、または tracked 差分の commit の責務を確認するとき
-- feedback reporter/client の事前検証や利用不能時の継続条件を確認するとき
+- doctor preprocess の検証・修復手順、実行前の共通前提、または正常終了条件を変更・実装・レビューするとき
+- `.cmoc/gu`、`.agents`、設定ファイル、refactor state の git 追跡保証や同期処理を確認するとき
+- feedback MCP reporter/client の起動可能性、protocol compatibility、degraded warning の扱いを確認するとき
 
 ## Do not read this when
-- doctor preprocess 後に行う個別サブコマンド固有の事前条件や本命処理を調べるとき
-- feedback observation の reporter interface と protocol の詳細を確認するときは、feedback observation の正本仕様を直接読む
-- 実行対象ファイルの具体的な実装配置やテスト実行手順だけを確認するときは、対応する設計・テスト規則を直接読む
+- サブコマンド固有の事前条件や本命処理だけを扱い、doctor preprocess の共通検証・修復に関係しないとき
+- doctor preprocess の具体的な実装配置やテスト実行方法だけを調べるときは、対応する realization implementation または test の仕様・実装を直接確認するとき
 
 ## hash
-- 4c0446c5680999ea13cbe1f5d276e6aaaffc0262f9277665b214d4ed3363b77a
+- e0604bb0c2de87aa6960c60ddaa07519b9c7bab1f7de92a738ad8e1da8ceb659
 
 # `error_handling.md`
 
@@ -106,60 +105,60 @@
 # `feedback.md`
 
 ## Summary
-- feedback subsystem 全体の目的、観測源、raw observation から normalized state・report までの責務分離、用語、既存 workload との接続境界を定める正本仕様。詳細な observation、state、report の仕様へ進むための入口。
+- cmoc の作業中に観測された未解決かつ人間対応が必要な問題を、観測・候補化・現在状態の検証・公開に分離して扱う feedback subsystem の全体仕様。agent submission と allowlist 済み diagnostic を raw observation として収集し、report 実行時に normalization、verification、atomic publication を行う。詳細な観測、state 管理、report 処理の正本仕様へ進むための入口。
 
 ## Read this when
-- feedback subsystem の全体像、対象範囲、non-goal、データフローを確認するとき
-- feedback に関わる agent、collector、detector、normalizer、report の責務境界を判断するとき
-- realization 作業、TUI、中断、既存成果物との feedback 接続方針を確認するとき
+- feedback observation の収集経路、agent-facing MCP reporter、collector、diagnostic detector、または raw observation の責務を確認するときは観測仕様を読む。
+- active issue、pending observation、report cut、一時 state、または atomic publication の状態管理を確認するときは state 仕様を読む。
+- cmoc feedback report の事前条件、候補の normalization・verification、再開条件、または Markdown report の表示を確認するときは report 仕様を読む。
+- feedback subsystem と realization 作業、TUI、中断、異常終了、または既存成果物との境界を確認するとき。
 
 ## Do not read this when
-- raw observation の schema や保存規則だけを確認したい場合は observation 仕様を直接読むとき
-- normalized issue、machine assessment、human disposition、state snapshot の詳細だけを確認したい場合は state 仕様を直接読むとき
-- feedback report の実行条件、増分処理、再開、表示だけを確認したい場合は report 仕様を直接読むとき
+- 個別の observation schema や collector の実装詳細だけを確認したい場合は、全体方針ではなく観測仕様を直接読む。
+- active state の保存形式や publication の処理だけを確認したい場合は、state 仕様を直接読む。
+- feedback report の具体的な実行手順や verdict の判定だけを確認したい場合は、report 仕様を直接読む。
+- feedback と無関係な realization 実装、テスト、または一般的な indexing の作業を行う場合。
 
 ## hash
-- d4f6f13312254a460f175cc8563e4bc75bd91da223bdd5c924e088082385deeb
+- d1ce5a8444f167bea8b8d4c1f72479efcdfccd5c1d5cf07b918b3f0faa90a0e9
 
 # `feedback_observation.md`
 
 ## Summary
-- feedback observation の収集・保存仕様を定める文書。MCP reporter の入力契約と受け入れ検査、collector が付与する実行文脈、sandbox/transport/lifecycle、機械的な log detector の責務と allowlist、raw observation の envelope・永続化・retention・完了サマリーを扱う。feedback 機能全体の実装・仕様・運用を確認する際の入口となる。
+- feedback observation の agent 自己申告、機械的な log 検出、reporter/collector の受け入れ検査、context 付与、raw observation の atomic 保存・保持・削除条件を定める正本仕様。feedback 機能の実装、検査、保存形式、運用上の pending 判定を確認する際の入口となる。
 
 ## Read this when
-- agent-facing MCP reporter の interface、入力 schema の扱い、受け入れ条件、secret masking、capability や collector context を確認するとき
-- feedback observation の保存形式、ID、パス、重複処理、atomic durability、retention、未処理件数の表示を実装またはレビューするとき
-- structured log event から machine observation を検出する rule、issue key、threshold、初期 allowlist を確認するとき
-- feedback reporter/collector の障害や Structured Output validation exhausted の機械検出仕様を確認するとき
+- MCP reporter の agent-facing interface、入力検査、secret masking、capability と lifecycle を実装または確認するとき
+- 構造化 log event から diagnostic observation を検出する rule、allowlist、recurrence 集約の仕様を確認するとき
+- raw observation の envelope、保存先、重複処理、durability、retention、pending warning を実装または検証するとき
+- feedback の report state や codex 実行境界と observation の連携を調査するとき
 
 ## Do not read this when
-- feedback の人間向け observation payload schema だけを変更・確認する場合は、reporter input schema の正本を直接読む
-- 共通 prompt instruction の文面や注入条件だけを確認する場合は、feedback reporting standard の正本を直接読む
-- Codex 実行時の sandbox、permission profile、network 境界だけを確認する場合は、codex exec rule を直接読む
-- 一般的な feedback report の集計・正規化仕様だけを確認し、raw observation の収集・保存契約を扱わない場合は、該当する report 仕様へ直接進む
+- feedback の current pointer、report cut、normalization、publication の状態遷移だけを調査するときは、feedback state の仕様を直接読む
+- agent prompt に注入する共通 feedback instruction だけを確認するときは、共通 instruction の正本を直接読む
+- reporter input の field、enum、サイズ制限だけを確認するときは、reporter input schema を直接読む
+- feedback observation と無関係な CLI 機能や一般的な log 処理を調査するとき
 
 ## hash
-- f2e6b056acb0c072cd5bf4027a0cc571d8a132b9ae483a27adeccd09966d90fd
+- 2aead678c6985503affd6a5c550a50ec4f5d57c08b75732f476c3647081d3ef6
 
 # `feedback_state.md`
 
 ## Summary
-- feedback の repository-local 永続 state の正本仕様。issue、revision、occurrence、assessment、human disposition、ingestion receipt、normalization unit、report、state snapshot の保存単位・JSON schema・ID規則・immutability・hash整合性を定義する。
-- feedback の増分正規化、unit manifest による確定と再利用、effective record の選定、writer 排他制御、異常終了時の recovery、正常 report の predecessor 連鎖を扱う。feedback observation の raw形式や machine rule 自体ではなく、それらを永続 state として管理する実装の入口となる。
+- feedback の active issue、threshold 未満 machine aggregate、report cut、checkpoint、atomic publication、および legacy state 移行を含む repository-local active state の正本仕様。collector・reporter・normalizer・verification・cleanup 実装が保存先、耐久性、排他、整合性、再開条件を確認する際の入口。
 
 ## Read this when
-- feedback state の保存先、record schema、ID生成、canonical JSON、immutable file の扱いを実装または確認するとき
-- normalization unit の確定条件、checkpoint の再利用、effective record の選定、ingestion receipt による増分処理を扱うとき
-- feedback report、state snapshot、human disposition、writer 排他制御、異常終了後の再開や corruption 対応を実装・検証するとき
-- feedback の repository-local state と report の正常連鎖や retention の契約を確認するとき
+- feedback report の active state や current pointer の読み書きを実装・変更するとき
+- report cut の固定、checkpoint の再利用、publication、cleanup、異常終了からの再開を扱うとき
+- active issue、machine aggregate、issue identity、threshold、legacy state 移行の挙動を確認するとき
 
 ## Do not read this when
-- raw observation の形式や machine rule の判定規則を確認するだけのときは、feedback observation の正本を直接読む
-- feedback の利用者向け issue 概要、カテゴリ enum、agent report 入力項目だけを確認するときは、対応する feedback 仕様または reporter input 定義を直接読む
-- feedback state の具体的な CLI 実装やテスト手順だけを確認するときは、該当する realization implementation、oracle の design rule、または test rule を読む
+- raw observation の形式や machine rule registry だけを確認するときは、feedback observation の正本を直接読む
+- feedback の利用者向け要求や全体方針だけを確認するときは、feedback の上位仕様を直接読む
+- 保存 state を扱わない通常の CLI 機能や、既存 state と無関係なテストを変更するとき
 
 ## hash
-- d7162dc794f33afa2f45d82d30ae1d56d16cc7b1580c9421d8c29be159bf7b60
+- 4151c5742273f7e72d194b092c52e2fb52639493f35da264102446c3f0e4d5f5
 
 # `indexing.md`
 
@@ -240,73 +239,70 @@
 # `run_isolation.md`
 
 ## Summary
-- run の fork から join または abandon までのライフサイクルと、各操作の扱いを定義する仕様書。
-- run 固有のブランチ・linked worktree・パスコンテキスト、および run-root 外へ書き込める cmoc 管理データの例外を扱う。
+- run の fork から join または abandon までのライフサイクル、専用 fork サブコマンドによる編集 run、read-only 調査や機械的更新などの例外を定義する作業隔離規則。run 固有の branch・linked worktree、成果物の commit、session branch への merge、run-root 外へ書き込める cmoc 管理データの範囲を確認するための正本。
 
 ## Read this when
-- run の開始、成果物の取り込み、破棄、または session との関係を確認するとき
-- run 用の git branch、worktree、agent call の作業パスを確認するとき
-- feedback state や実行ログなど、run の隔離範囲外に保存される管理データの扱いを確認するとき
+- run の fork・join・abandon のライフサイクルや、編集 run と非編集 run の扱いを確認するとき
+- run branch、fork 時点の commit、linked worktree、成果物の merge・破棄規則を確認するとき
+- run-root 外への書き込み例外や、feedback・session state など cmoc 管理データの保存場所を確認するとき
 
 ## Do not read this when
-- 通常のサブコマンド仕様や workload 固有の処理内容だけを確認したいとき
-- run のライフサイクル、隔離、または git/worktree の運用に関係しない仕様を調べるとき
+- CLI サブコマンドの具体的な引数・実装を確認したいときは、該当する CLI 仕様または実装を直接読む
+- feedback の詳細な状態遷移や report 形式だけを確認したいときは、feedback state・feedback observation の正本仕様を直接読む
+- run 隔離や lifecycle、branch/worktree、管理データの書き込み範囲に関係しない作業のとき
 
 ## hash
-- b9ad96574a3885a7ba811c3204635430b4604cef6b3a146f306dd21c37e82865
+- 3aabd242a7edaf586c84b94a72a9ca44eb1325cf6e6031d5743aaceafc35d0ab
 
 # `session_state.md`
 
 ## Summary
-- cmoc workflow における session と、明示的な join を要する realization 編集 run の lifecycle を定義する正本仕様。session/run の状態、識別情報、fork 情報、状態遷移を扱い、feedback 関連の永続状態は対象外とする。
+- cmoc workflow における session と、明示的な join を必要とする realization 編集 run の lifecycle を定義する正本仕様。永続化する最小限の session/run 状態、識別情報、状態遷移を扱う。session・run の開始、実行、join 待ち、中断、失敗、join/abandon 後の状態を確認する入口であり、feedback state や report などの repository-local state の仕様は別文書から確認する。
 
 ## Read this when
-- session の新規作成、fork、状態確認、または session lifecycle の挙動を確認するとき
-- realization 編集 run の開始、実行、joinable/error、join、abandon の状態や保持情報を確認するとき
-- session と run の state schema や状態遷移を実装・レビューするとき
+- session または realization 編集 run の JSON state の項目、初期値、状態遷移、join/abandon に伴う更新規則を実装・確認するとき
+- cmoc session 系または cmoc run join/abandon の lifecycle と永続化範囲を確認するとき
 
 ## Do not read this when
-- feedback observation、issue、assessment、disposition、receipt、normalization、checkpoint、report、snapshot の保存仕様を確認するときは feedback state の正本を読む
-- oracle edit の run 扱いを確認するときは、この仕様ではなく oracle edit 固有の仕様を読む
-- 一般的な session/run CLI 操作の実装詳細や fork・merge の手順だけを確認するときは、対応する CLI・設計仕様を直接読む
+- feedback の pending observation、active issue、generation、checkpoint、report など repository-local feedback state の仕様を確認するとき
+- oracle edit の workload や、session/run state を直接扱わない cmoc workflow の仕様を調べるとき
 
 ## hash
-- 94620a5709e5d68ce8d81fe5ea3650c68f7e37e9492e98d75e110217d05ddfbc
+- a51826f9117628aed11af12abea90cb9d81df228584fb1457e70afad67115828
 
 # `sub_command`
 
 ## Summary
-- cmoc の各サブコマンドおよび session・realization run の仕様文書を集約するディレクトリ。doctor、indexing、tui、oracle 操作、feedback report、session 操作、realization apply/refactor などの実行条件・責務・状態遷移・ライフサイクルを確認する入口となる。各サブコマンド固有の詳細は個別文書へ、編集 run の共通 lifecycle は共通仕様へ進む。
+- cmoc の主要サブコマンド仕様をまとめたディレクトリ。doctor・indexing・tui、oracle 操作、realization apply/refactor、session／run lifecycle、feedback report の実行条件・処理フロー・状態遷移・エラー処理を確認するための入口。各ファイルが個別サブコマンドまたは関連 lifecycle の正本仕様を担う。
 
 ## Read this when
-- cmoc のサブコマンド仕様の所在を確認したいとき。
-- doctor、indexing、oracle 操作、feedback report、session 操作、realization apply/refactor、tui の実装・変更・検証対象を特定するとき。
-- サブコマンド固有仕様と、編集 run や session の共通 lifecycle の境界を判断するとき。
+- cmoc のサブコマンド仕様、実行条件、引数、処理フローを調査・実装・レビューするとき。
+- oracle／realization の編集・調査・レビュー、session／run の fork・join・abandon、feedback report の挙動を確認するとき。
+- 対象サブコマンドを特定でき、該当する個別仕様へ進む前に仕様群の構成を把握したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの詳細仕様をすでに特定しており、その本文だけを確認すればよいとき。
-- 共通の prompt、feedback、Codex 呼び出し、doctor preprocess、session state などの正本仕様だけを確認したいとき。
-- INDEX.md のルーティング情報だけを確認する必要があるとき。
+- サブコマンド共通ではない詳細仕様や実装・テスト配置だけを確認したいときは、各仕様が示す共通正本・設計規則・実装・テストを直接読む。
+- INDEX.md の生成規則や一般的な oracle／realization の定義だけを確認したいときは、上位の共通仕様を読む。
+- 対象が明確に特定のサブコマンドまたは lifecycle に限定されている場合は、このディレクトリ全体を網羅せず該当する仕様ファイルへ直接進む。
 
 ## hash
-- 921e5f7340f334378c4946df6af411e6ca4f2e6baa209a135b88e3551288451e
+- 3b135a554004d5e8982afa7ab8cf9bda7c5f7448b862149e4955515c045f4575
 
 # `subcommand_interruption.md`
 
 ## Summary
-- 中断可能な cmoc サブコマンドにおけるユーザー中断要求（Ctrl+C）の受付、共通の完了処理、正常系としての扱い、report・終了 log での識別方法を定義する仕様。
-- 対象サブコマンドごとに、中断後の run の状態、再開可否、確定済み部分結果や checkpoint の扱いを定める。
+- 実行中サブコマンドへの Ctrl+C によるユーザー中断を、正常系として扱う共通要件と対象サブコマンド別の扱いを定義する仕様。中断受付後の処理停止、確定済み結果・state・終了 log、再実行や再開の制約を確認する入口。
 
 ## Read this when
-- 中断可能なサブコマンドの挙動、Ctrl+C の処理、部分結果の確定、interrupted 完了、または中断後の再実行・再開可否を確認するとき。
-- `cmoc realization refactor fork`、`cmoc oracle review`、`cmoc feedback report` の中断仕様を実装・レビューするとき。
+- 中断可能サブコマンドの追加・変更、Ctrl+C の処理、ユーザー中断時の正常終了・state 更新・後処理を実装またはレビューするとき。
+- refactor fork、oracle review、feedback report の中断後の再開・再実行方針を確認するとき。
 
 ## Do not read this when
-- 通常のサブコマンドのエラー処理や、Ctrl+C を中断要求として扱うことが個別仕様に明記されていないサブコマンドを調べるとき。
-- Windows toast 通知の詳細を確認するときは、専用の通知仕様を直接読む。
+- 中断処理に関係しないサブコマンドの通常動作を調査するとき。
+- Windows toast 通知の詳細だけを確認するときは、通知仕様を直接読む。
 
 ## hash
-- bea325ca9cf30996074c014e517e8a851ea4b8c89c5be2f0018a48fdc6c16cd4
+- 9c53ef845a3465b5debb3db6b020f1bcfa39cb864524c16c27667b38301dcf8f
 
 # `usage.md`
 

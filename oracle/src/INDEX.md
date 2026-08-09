@@ -1,20 +1,19 @@
 # `oracle`
 
 ## Summary
-- AI コーディングエージェント呼び出しの共通パラメータ、feedback 入力、基盤モデル、プロンプト構築部品をまとめる oracle src の入口。
-- 呼び出し設定の共通定義を確認するときは acp_builder、feedback 正規化入力を確認するときは feedback、リポジトリ設定やパス・規範・構造化文書のモデルを確認するときは other、プロンプトの組み立てや共通規範を確認するときは prompt_builder 配下へ進む。
+- oracle src にある cmoc の正本実装群です。ACP 呼び出しパラメータ、完全な agent prompt、oracle・realization の規範、パス解決、設定モデル、構造化文書の Markdown 変換、feedback reporter 入力契約を扱います。用途別の実装を確認する場合は、ACP builder・prompt builder・other・feedback の下位領域が入口になります。
 
 ## Read this when
-- AI コーディングエージェント呼び出しのモデル、推論強度、ファイルアクセスモード、cwd、Structured Output、indexing preflight の共通契約を確認するとき。
-- feedback の入力構造や issue 正規化に使う Structured Output を確認するとき。
-- リポジトリ設定、パス解決、規範モデル、構造化文書モデルの定義を確認するとき。
-- プロンプトの共通構成、プレースホルダ、エディタ入力、oracle・realization・routing 関連の規範を確認するとき。
+- cmoc の oracle src 実装を調査・変更するとき。
+- サブコマンド別の ACP 呼び出し設定や prompt の構築を確認するとき。
+- agent prompt に注入する oracle・realization・review・routing・file access などの共通規範を確認するとき。
+- リポジトリ設定、パス解決、構造化文書モデル、Markdown 変換などの共通モデルを確認するとき。
+- feedback reporter が collector へ渡す入力契約を確認するとき。
 
 ## Do not read this when
-- 特定の agent call、サブコマンド、または TUI の起動設定を調査するときは、acp_builder 配下の対応する下位要素へ直接進む。
-- feedback の保存、集約、重複判定や、問題検出後の継続判断だけを調査するときは、対応する実装や collector 側へ直接進む。
-- 個別のプロンプト本文や共通規範の詳細だけを確認するときは、prompt_builder 配下の対応する部品へ直接進む。
-- 具体的な oracle file、realization file、レビュー所見の内容を確認するときは、対象ファイルを直接読む。
+- oracle の正本ドキュメントや正本テストを確認する場合は、対応する oracle/doc または oracle/test を直接読む。
+- realization 側の CLI 挙動や実装を確認する場合は、対応する realization implementation を直接読む。
+- 特定の下位領域の責務が明らかな場合は、このディレクトリ全体を読む必要はなく、対応する下位ディレクトリへ直接進む。
 
 ## hash
-- 9fbad843f8e44477af90f1da7e4595d99dd64c88cbed895e64f0f1fb183c0307
+- 571297b0ef9b1647482c9719baa29977021cde26f889dce5e6820ac6f9cd5e3b

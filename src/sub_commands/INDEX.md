@@ -31,21 +31,20 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装をまとめた領域。観測の受付後に行う report 処理と、その状態機械・issue 統合・publication を確認する入口を提供する。
+- feedback サブコマンドの実装を扱うディレクトリ。feedback の入口と、report の active-state publication pipeline の処理を確認・変更するときに進む。
 
 ## Read this when
-- feedback サブコマンドの report 処理、snapshot、normalization、checkpoint、publication を調査・変更するとき。
-- machine observation と agent observation の issue 統合、candidate 選定、assessment の再評価、表示・抑制規則を確認するとき。
-- report 処理の中断、部分完了、corruption recovery、session/run 前提条件を調査するとき。
+- feedback サブコマンドの挙動や実装を確認・変更するとき。
+- feedback report の report cut、再開、checkpoint 検証、candidate 集約、verification、publication、cleanup の処理を調べるとき。
+- feedback report の active state や current pointer の切替条件を確認するとき。
 
 ## Do not read this when
-- feedback observation の受付・保存だけを調べるとき。
-- feedback state の schema、lock、recovery primitive、issue view の構築を調べるとき。
-- normalization agent の parameter や Structured Output schema だけを確認するとき。
-- report の共通出力先や timestamp path の処理だけを調べるとき。
+- feedback observation の保存形式や共通 state・lock・artifact 操作を調べるとき。
+- normalization または verification agent の入力 builder・Structured Output schema の契約だけを調べるとき。
+- feedback 以外のサブコマンドを扱うとき。
 
 ## hash
-- 8b1c243fae586f0fafeb5b06001dd6f1bde73298d942b094e82ae978ddddaf66
+- a4d9d5424abe81e21d1d062ca92e2e596a652db02aeef7f0ef32a7412bbf729d
 
 # `indexing.py`
 
