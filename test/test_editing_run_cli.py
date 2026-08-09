@@ -2004,9 +2004,17 @@ def test_apply_failure_stops_tracked_codex_children_before_rollback(
     assert _state(state_path)["run"]["state"] == "error"
 
 
+@pytest.mark.parametrize(
+    "failure",
+    [
+        RuntimeError("process tracking setup failed"),
+        CmocError("process tracking setup failed", [], "tracking path"),
+    ],
+)
 def test_apply_start_failure_after_run_publish_is_reported(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    failure: BaseException,
 ) -> None:
     """run state 公開後の初期化失敗でも apply fork report を残す。
 
@@ -2017,7 +2025,7 @@ def test_apply_start_failure_after_run_publish_is_reported(
 
     def fail_process_tracking(*_args: object, **_kwargs: object) -> None:
         """process tracking 初期化の失敗を再現する。"""
-        raise RuntimeError("process tracking setup failed")
+        raise failure
 
     monkeypatch.setattr(
         lifecycle_module,

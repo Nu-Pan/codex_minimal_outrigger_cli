@@ -157,6 +157,18 @@ def start_editing_run(kind: str) -> EditingRunContext:
         require_clean_worktree(session_worktree)
         fork_commit = head_commit(session_worktree)
         run_branch, run_worktree = new_run_target(repository, session_id)
+        published_context = EditingRunContext(
+            repo=repository,
+            session_worktree=session_worktree,
+            session_id=session_id,
+            state_path=path,
+            session_branch=session_branch,
+            session_fork_commit=session_fork_commit,
+            kind=kind,
+            run_branch=run_branch,
+            run_fork_commit=fork_commit,
+            run_worktree=run_worktree,
+        )
         created = False
         published = False
         try:
@@ -176,8 +188,13 @@ def start_editing_run(kind: str) -> EditingRunContext:
             write_state(path, state)
             published = True
             write_run_process_id(repository, session_id, os.getpid())
-        except BaseException:
+        except BaseException as exc:
             if published:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # state を公開した後の CmocError も workload 側がこの run を
+                # report できるよう、競合時の CmocError と区別できる context を
+                # 例外へ付加する。
+                setattr(exc, "_published_editing_run_context", published_context)
                 state.run.state = "error"
                 write_state(path, state)
             else:
@@ -197,18 +214,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
                 if branch_exists(repository, run_branch):
                     delete_branch(repository, run_branch, force=True)
             raise
-    return EditingRunContext(
-        repo=repository,
-        session_worktree=session_worktree,
-        session_id=session_id,
-        state_path=path,
-        session_branch=session_branch,
-        session_fork_commit=session_fork_commit,
-        kind=kind,
-        run_branch=run_branch,
-        run_fork_commit=fork_commit,
-        run_worktree=run_worktree,
-    )
+    return published_context
 
 
 def resolve_active_run(

@@ -80,18 +80,23 @@
 # `realization`
 
 ## Summary
-- realization workload のサブコマンド群を束ねるパッケージ。workload の入口、apply、refactor の実行オーケストレーションと関連する状態遷移・差分検査・report 処理への入口を提供する。
+- realization workload サブコマンドのパッケージ入口。apply と refactor の各処理への入口を提供する。
+- apply workload と `realization apply fork` の実行フロー、状態遷移、変更検査、失敗時処理を扱う配下パッケージ。
+- realization refactor fork の対象選択から agent 呼び出し、変更・状態検証、finding 追跡、完了判定、cleanup、report 生成までを扱う配下パッケージ。
 
 ## Read this when
-- realization workload サブコマンド全体の構成や、apply・refactor の処理へ進む入口を確認するとき。
-- realization apply または refactor の実行順序、状態管理、差分・commit 検証、report 処理を調査するとき。
+- realization workload サブコマンドの構成や入口を確認するとき。
+- `cmoc realization apply fork` の実行フローや失敗時処理を調査するとき。
+- realization refactor fork の lifecycle、状態更新、finding 完了条件、report 生成を調査するとき。
 
 ## Do not read this when
-- realization workload に関係しない CLI サブコマンドを扱うとき。
-- apply agent 固有の prompt や、run lifecycle・process tracking・git 差分操作など共通処理の仕様だけを確認したいとき。
+- realization workload サブコマンドに関係しない処理を確認するとき。
+- apply または refactor の実装詳細だけを確認したい場合は、対応する配下パッケージを直接読む。
+- agent prompt や launch parameter の形式だけを確認したい場合は、対応する builder 実装を直接読む。
+- 編集 run 全般の共通状態管理や正本仕様だけを確認したい場合は、共通 runtime lifecycle または対応する oracle doc を直接読む。
 
 ## hash
-- be75104a33adab32d91f2931c63f6211a43bd71e0da0b23e82882e075df2372b
+- 8f8a6b68aaf7d9f3b94c67c26120fe9d7ad2ad7e8f3690749f0094e73ec7c5d8
 
 # `review`
 

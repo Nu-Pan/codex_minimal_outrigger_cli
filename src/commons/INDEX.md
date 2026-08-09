@@ -441,21 +441,21 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- editing run の開始から終了までを一貫して扱う共通ライフサイクル処理。session の準備確認、run branch/worktree の作成・復旧・state 遷移、work unit の commit/rollback、差分分類、INDEX 更新、cleanup 対象判定を担う。
-- EditingRunContext と lifecycle lock を共有し、run・session・worktree・branch・state の整合性を検証しながら、許可された realization 差分と想定外差分を判定する。
+- 明示的な join を必要とする editing run のライフサイクル共通処理を担う。session からの run 開始、active run の解決・復旧、state 遷移、work unit の commit/rollback、差分分類、INDEX 更新、worktree・branch の cleanup 判定を一つの文脈と lifecycle lock のもとで扱う。
 
 ## Read this when
-- editing run の開始、active run の解決・復旧、joinable/error への state 遷移、run の中断時 cleanup を調べるとき
-- run worktree の commit/rollback、INDEX 更新、oracle・realization・session 差分の分類や許可範囲を確認するとき
-- run branch、session branch、state file、管理 worktree の整合性検査や lifecycle lock の責務を追うとき
+- editing run の開始・join・復旧・終了処理を変更または調査するとき
+- run や session の state 遷移、branch/worktree の整合性検査、lifecycle lock を確認するとき
+- agent または run による変更 path の許可判定、oracle 差分、rename 対応の差分分類を確認するとき
+- work unit の commit/rollback や run worktree の INDEX 更新処理を確認するとき
 
 ## Do not read this when
-- 通常の prompt 生成や個別の oracle・realization 処理の詳細を確認したいときは、対応する prompt builder または app_spec の正本仕様を直接読む
-- INDEX の内容や一般的なインデックス生成規則だけを確認したいときは、indexing 関連の実装・仕様を直接読む
-- editing run の外部仕様そのものを確認したいときは、この共通処理ではなく design_rule または該当する app_spec を読む
+- 単純な session state のデータ構造や永続化形式だけを確認したいときは、state 管理の実装を直接読む
+- INDEX の生成規則や個別の indexing 処理だけを確認したいときは、indexing 実装を直接読む
+- Git の低レベル操作や run process ID の読み書きだけを確認したいときは、対応する runtime helper を直接読む
 
 ## hash
-- 36a92a606ab61f2979f9d145dc1b51601891bff5846b2910c0bbdf6f6ea530dc
+- f1e496317cee6391aa20f16955004648c572ab5e48753c117c31b61691913187
 
 # `runtime_run_report.py`
 
