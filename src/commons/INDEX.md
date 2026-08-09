@@ -352,21 +352,20 @@
 # `runtime_logging.py`
 
 ## Summary
-- サブコマンド実行時の JSON Lines ログとステップ計測を集約するランタイムロガーを提供する。ログイベントの排他追記、フィードバック検出器の失敗記録、経過時間・quota 待機時間の集計、ContextVar による現在の logger 参照を扱う。サブコマンドのログ出力、ステップ進捗計測、実行時フィードバック連携を実装・調査するときの入口である。
+- サブコマンド単位の JSON Lines ログを管理し、実行イベント、step の経過時間、Codex quota 待機時間を集約する runtime logger。ContextVar による current logger の参照・差し替え・復元も提供し、並行 event 追記をロックで直列化する。
 
 ## Read this when
-- サブコマンド単位のログファイル生成や JSON Lines event の記録を変更・調査するとき。
-- step の開始・終了、経過時間、quota 待機時間の集計を変更・調査するとき。
-- 現在のサブコマンド logger を runtime helper から参照する ContextVar の利用を変更・調査するとき。
-- feedback detector の呼び出しや detector failure の nonfatal な記録を変更・調査するとき。
+- サブコマンドのログファイル生成、JSON event の記録、step timing や quota 待機時間の集計を確認・変更するとき。
+- 深い runtime helper から現在のサブコマンド logger を参照する処理や、並行実行時のログ追記を調査するとき。
+- ログ event flush 後の feedback detector 呼び出しと、detector failure の非致命的な記録を確認するとき。
 
 ## Do not read this when
-- ログ形式や console 表示の正本仕様を確認することが目的の場合は、先に対応する oracle 文書を読む。
-- ログ保存先や timestamped path の生成規則だけを確認する場合は、runtime paths の実装またはその正本仕様を直接読む。
-- サブコマンド固有の処理や CLI の公開挙動を調査する場合は、該当するサブコマンド実装を直接読む。
+- ログやコンソールの正本仕様を確認する場合は、対象実装ではなく対応する oracle 仕様を直接読む。
+- runtime path や timestamped path の生成規則だけを確認する場合は、対象ファイルではなく runtime path 実装を直接読む。
+- feedback observation の保存形式や判定条件だけを確認する場合は、対象ファイルではなく feedback 仕様を直接読む。
 
 ## hash
-- 6315c00333bab7613d8a5cd856c54a34c603e525661d79d7a0fe967374f22b12
+- 930482a77490b4906a7dd1a33d718f6ed7b2070cb34ae6718a2461ace42152dd
 
 # `runtime_paths.py`
 

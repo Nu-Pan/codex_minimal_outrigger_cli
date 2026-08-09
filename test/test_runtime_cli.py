@@ -29,6 +29,7 @@ from _cli_support import run_doctor, runner
 from _git_support import make_repo, run_git
 
 import commons.runtime_cli as runtime_cli
+import commons.runtime_feedback as runtime_feedback
 import commons.runtime_logging as runtime_logging
 import commons.runtime_windows_toast as runtime_windows_toast
 import main as main_module
@@ -126,6 +127,47 @@ def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     assert all(event["event"] == "worker" for event in events)
     assert sorted(event["index"] for event in events) == list(range(worker_count))
     assert logger.quota_wait_sec == pytest.approx(worker_count * 0.25)
+
+
+def test_detector_does_not_swallow_keyboard_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """detector 中の Ctrl+C を本命サブコマンドの中断として扱う。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    def interrupt_detector(_event: dict[str, object], _log_path: Path) -> None:
+        """detector 中のユーザー中断を再現する。"""
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(runtime_feedback, "detect_feedback_event", interrupt_detector)
+
+    def invoke_stable_event() -> None:
+        """detector を呼び出す stable event を記録する。"""
+        logger = runtime_logging.current_subcommand_logger()
+        assert logger is not None
+        logger.event(
+            "feedback.reporter_unavailable",
+            event_schema_version=1,
+            event_id="evt_keyboard_interrupt",
+            event_type="feedback.reporter_unavailable",
+            occurred_at="2026-08-09T00:00:00Z",
+            subcommand_invocation_id=logger.invocation_id,
+            component="collector",
+            failure_code="protocol_error",
+        )
+
+    with pytest.raises(KeyboardInterrupt):
+        runtime_cli.run_cli_subcommand(
+            invoke_stable_event,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+            doctor_preprocess=False,
+        )
+
+    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert not any(event["event"] == "feedback.detector_failed" for event in events)
 
 
 def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
