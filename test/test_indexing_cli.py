@@ -306,7 +306,10 @@ def test_commit_index_updates_rejects_git_diff_failure(
     root = make_repo(tmp_path)
     calls: list[tuple[list[str], bool]] = []
 
-    def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    def fake_run_git(
+        args: list[str], git_cwd: Path, check: bool = True
+    ) -> CommandResult:
         """index commitのGit結果を固定し、diff失敗を再現する。"""
         calls.append((args, check))
         if args[0] == "add":

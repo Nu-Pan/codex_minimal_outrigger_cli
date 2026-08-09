@@ -917,7 +917,8 @@ def test_session_join_reports_unmerged_path_as_absolute(tmp_path: Path) -> None:
     target = root / "src" / "unmerged.py"
     target.parent.mkdir()
 
-    def fake_git(args: list[str], cwd: Path) -> cmoc_runtime.CommandResult:
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    def fake_git(args: list[str], git_cwd: Path) -> cmoc_runtime.CommandResult:
         """unmerged pathをNUL区切りで返すGit double。"""
         if args == ["diff", "--name-only", "-z", "--diff-filter=U"]:
             return cmoc_runtime.CommandResult(0, "src/unmerged.py\0", "")
@@ -1077,11 +1078,12 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     home_branch = session_home_branch(root, session_branch)
     original_run_git = session_join_module.run_git
 
-    def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> object:
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    def fake_run_git(args: list[str], git_cwd: Path, check: bool = True) -> object:
         """session branch削除だけを失敗させ、他のGit操作は委譲する。"""
         if args == ["branch", "-d", session_branch]:
             return cmoc_runtime.CommandResult(1, "", "branch is checked out elsewhere")
-        return original_run_git(args, cwd, check=check)
+        return original_run_git(args, git_cwd, check=check)
 
     monkeypatch.setattr(session_join_module, "run_git", fake_run_git)
 
@@ -1114,14 +1116,15 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
     original_run_git = session_join_module.run_git
     delete_calls = 0
 
-    def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> object:
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    def fake_run_git(args: list[str], git_cwd: Path, check: bool = True) -> object:
         """reachability確認を失敗させ、他のGit操作は委譲する。"""
         nonlocal delete_calls
         if args == ["merge-base", "--is-ancestor", session_branch, "HEAD"]:
             return cmoc_runtime.CommandResult(1, "", "")
         if args == ["branch", "-d", session_branch]:
             delete_calls += 1
-        return original_run_git(args, cwd, check=check)
+        return original_run_git(args, git_cwd, check=check)
 
     monkeypatch.setattr(session_join_module, "run_git", fake_run_git)
 

@@ -312,20 +312,20 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota 枯渇後の retry 状態機械を検証するテスト群。代表 quota probe の実行・共有・失敗伝播、poll 上限、capacity retry、session ID による resume と session ID 欠落時の再実行を扱う。
-- 各 Codex 呼び出しの prompt、stdout JSONL、stderr、output、call log、subcommand log に加え、CODEX_HOME と Codex cwd の引き継ぎを検証する。quota probe adapter の最小パラメータ化と公開 API 制約も対象に含む。
+- Codex quota exceeded 後の外部挙動を検証する回帰テスト群。quota availability probe の構築・共有・失敗伝播、session ID による resume と session ID 欠落時の再実行、quota polling 上限、capacity retry、並行呼び出し、CODEX_HOME/cwd、stdout JSONL・call log・subcommand log・コンソール出力を同じ retry 状態機械の観測点として扱う。Codex 実行の quota 復帰処理やそのログ契約を変更・調査するときの入口。
 
 ## Read this when
-- quota 枯渇からの Codex exec 復帰挙動を調査・変更するとき
-- quota probe の並行実行、capacity retry、非 quota 失敗、KeyboardInterrupt、poll 上限を確認するとき
-- quota retry に伴う session ID、resume、再実行、ログ、CODEX_HOME、cwd の挙動を検証するとき
+- Codex exec の quota exceeded 後の probe、待機、resume、再実行、retry 制御を変更または検証するとき
+- quota probe の失敗・KeyboardInterrupt・不正 JSONL・並行呼び出し時の伝播を確認するとき
+- quota retry に関する session ID、CODEX_HOME/cwd、call log、subcommand log、コンソール出力の回帰を調査するとき
 
 ## Do not read this when
-- quota retry や quota availability probe に関係しない Codex exec の挙動を調べるとき
-- Codex exec の正本仕様や quota probe builder の実装仕様だけを確認するときは、それぞれの仕様・実装へ直接進むとき
+- 通常の Codex exec 成功・失敗処理だけを変更または調査する場合は、quota retry の実装や直接の実行契約を読む
+- quota probe parameter の正本仕様や builder の実装を確認するだけの場合は、正本仕様または builder 実装を直接読む
+- quota retry と無関係な Codex CLI 引数、ログ、subcommand 処理を扱う場合は、この回帰テスト群を入口にしない
 
 ## hash
-- 08b6dbcdb9d6ed8f6a07b52f67be6f17bfab45814c7ff259dcedd8010953ca95
+- bdb11dc4430a0515fae63b77aa5f52c1918dd3cfd2078776cfc0d51c06e3d629
 
 # `test_codex_runtime_retry.py`
 
@@ -450,19 +450,20 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- `cmoc indexing` の CLI と preflight、linked worktree 対応、doctor による未初期化リポジトリ準備、Codex structured output による INDEX.md 生成、hash に基づく再生成省略、INDEX.md のみを対象とする commit lifecycle を外部挙動として検証するテスト群。dirty worktree や既存の非 INDEX 差分、git diff 異常時の拒否・保持も確認する。
+- `cmoc indexing` の CLI、preflight、worktree、INDEX.md 更新、Codex 呼び出し、commit lifecycle の外部挙動を検証するテスト群。indexing 機能の変更や失敗条件を確認するための入口。
 
 ## Read this when
-- `cmoc indexing` の実装・preflight・worktree 動作を変更または調査するとき
-- INDEX.md 更新、Codex index entry builder、commit 対象パス、既存差分の扱いを検証するとき
-- indexing 関連テストの失敗原因や期待される CLI 外部挙動を確認するとき
+- `cmoc indexing` の CLI 動作、事前条件、doctor、linked worktree 対応を変更または調査するとき。
+- INDEX.md の生成・更新、fresh hash 判定、Codex Structured Output、INDEX.md だけを commit する条件を変更または検証するとき。
+- dirty repository、非 INDEX 差分、git diff 失敗など indexing の拒否・異常系を確認するとき。
 
 ## Do not read this when
-- INDEX.md のルーティング生成そのものの仕様を確認したいときは、指定された oracle 文書と Structured Output schema を直接読む
-- indexing 以外のサブコマンドや、一般的な Git helper の実装だけを調査するとき
+- indexing の実装詳細や正本仕様を直接確認したいときは、対応する実装ファイルや oracle 仕様を先に読む。
+- 共通の doctor、Git テスト補助、Codex preflight、Structured Output schema だけを調べるときは、それぞれの定義元を直接読む。
+- indexing と無関係な CLI サブコマンドやテストの挙動を確認するとき。
 
 ## hash
-- c09669de8958f4bc5a0d2d523f0a0e5a7d7f6df3192e1ef89d8b1477d28b6c54
+- a471d1f42123e5c2e4ae92d709b1f6e99e0af21e1e6bec531e93983ffdcba017
 
 # `test_indexing_common.py`
 
@@ -608,21 +609,20 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- oracle review の隔離 run と INDEX.md 統合を検証する回帰テスト群。linked worktree・session snapshot・review branch の lifecycle、preflight、差分制約、merge conflict、cleanup、割り込み・異常終了時の復旧を扱う。oracle review の実装や関連する run isolation・branch model・indexing の挙動を確認する入口となる。
+- oracle review の隔離 run、linked worktree、snapshot fork、cleanup、merge、INDEX.md 統合、および差分制約を検証する pytest テスト群。oracle review の worktree lifecycle と INDEX 更新経路を確認する入口。
 
 ## Read this when
-- oracle review の review worktree、run branch、session snapshot の作成・所有・cleanup を変更または調査するとき
-- oracle review が INDEX.md だけを session に統合する契約、preflight、commit 済み・未コミット差分の検証を変更または調査するとき
-- review branch の merge conflict、merge rollback、割り込み、cleanup failure の挙動を変更または調査するとき
-- oracle review の回帰テストや関連する隔離 run のテスト要件を確認するとき
+- oracle review の run isolation、session branch からの fork、worktree・branch の cleanup、割り込み処理を変更または検証するとき
+- review worktree で INDEX.md のみを統合する仕様、preflight、merge conflict 復旧、差分検証を変更または検証するとき
+- oracle review の Structured Output 呼び出しや、関連する lifecycle lock・通知・report のテスト対象を確認するとき
 
 ## Do not read this when
-- oracle review の実装詳細を直接確認する必要があり、まず実装ファイルや正本仕様を読むべきとき
-- oracle review と無関係な CLI サブコマンド、通常の INDEX 生成、または別のテスト領域だけを扱うとき
-- 一般的な Git worktree・merge の使い方だけを確認したいとき
+- oracle review の実装詳細を変更するだけで、既存の挙動をテストまたは検証する必要がないとき
+- INDEX.md の一般的な生成規則だけを確認する場合は、indexing の正本仕様や INDEX 更新実装を直接読むとき
+- oracle review と無関係な CLI サブコマンド、通常の編集 run、または一般的な Git 操作を扱うとき
 
 ## hash
-- 8b6cd9de414f150019cc4e7d59debec9309b7ebd4d686fed4bfa308e8f0aaa64
+- e39dc8e131366743e556a39e7f2342680b7c3f721d26540d0d0f8049af594104
 
 # `test_packaged_import.py`
 
@@ -867,25 +867,19 @@
 # `test_session_cli.py`
 
 ## Summary
-- session の fork・join・abandon に関する CLI 外部挙動を、session branch と永続 state のライフサイクルとして一括検証する回帰テスト。
-- 通常の branch/state 作成・遷移に加え、state 保存失敗や session-id 衝突、cleanup 失敗時の rollback、破損 state、home branch 欠落を検証する。
-- linked worktree での session 操作、doctor preprocess、dirty worktree 拒否、state cleanup、sub-command log、stdout/stderr のエラー報告も対象とする。
-- session join の conflict 解消について、Codex 実行境界、REPO_WRITE sandbox、対象外変更の拒否、marker 検出、削除・mode・改行を含む path の扱い、branch 削除警告を検証する。
-- session CLI の実装や仕様を直接変更するファイルではなく、関連する外部挙動をまとめて確認する realization test として、session 状態遷移の回帰検証の入口になる。
+- session fork・join・abandon の CLI 外部挙動をまとめて検証する回帰テスト。session branch と永続 state の生成・遷移・cleanup・rollback、linked worktree、dirty worktree 拒否、preprocess、conflict 解消を扱う。session ライフサイクルに関するテストの入口。
 
 ## Read this when
-- session fork、join、abandon の CLI 挙動や回帰テストを調査・変更するとき。
-- session branch、session state、linked worktree のライフサイクルや rollback を確認するとき。
-- session join の conflict 解消、Codex 呼び出し境界、sandbox、差分検証を確認するとき。
-- doctor preprocess、dirty worktree、state cleanup、エラー出力やログの session CLI 連携を検証するとき。
+- session fork、join、abandon の外部挙動を確認するとき
+- session branch、session state、linked worktree のライフサイクルや cleanup・rollback を検証するとき
+- session join の conflict 解消、変更範囲検証、出力先、dirty worktree 拒否を確認するとき
 
 ## Do not read this when
-- session サブコマンドの実装詳細だけを確認する場合は、対応する src の実装ファイルを直接読む。
-- session state や join の正本仕様を確認する場合は、列挙された oracle doc・oracle src を直接読む。
-- session CLI と無関係なコマンド、一般的な Git helper、Codex prompt 全般のテストを調査する場合。
+- session サブコマンドの実装や正本仕様を確認するときは、対応する src または参照された oracle 文書を直接読む
+- session 以外の CLI 挙動や一般的な Git ヘルパーを確認するとき
 
 ## hash
-- 99597bfe90a4093c54bd4e5279c1b5f3f01a568b9059fff29cc7d9c80c22a233
+- bdbe6b1446a4386312f1c290558c4fdc5be5b976d8d933aea7673fa772406db6
 
 # `test_skill_metadata.py`
 

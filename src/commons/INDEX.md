@@ -257,21 +257,19 @@
 # `runtime_feedback.py`
 
 ## Summary
-- feedback observation の invocation-scoped collector と Codex call 単位の capability lifecycle を統合する中核 runtime 実装。Unix socket による reporter request の受付、並行処理、rate limit、保存、call 終了時の drain、degraded event の発行、allowlist 済み event の machine observation 化を担う。collector の開始・停止、現在 invocation の取得、call context の開始、doctor 用 reporter/collector 検証、accepted observation の取得が、この機能群への主な入口である。
+- feedback reporter の capability 発行、Codex call ごとの受付・drain・無効化、Unix socket collector、agent observation の保存、degraded event の記録、feedback event の allowlist 検出を統合する invocation-scoped runtime モジュール。feedback のライフサイクルと非致命的な利用不能処理を確認するための入口であり、保存形式や reporter protocol の詳細は対応する runtime_feedback_store / runtime_feedback_reporter と oracle 仕様へ進む。
 
 ## Read this when
-- feedback reporter、collector、observation の保存経路を変更・調査するとき
-- Codex call の capability、subprocess 環境、受付停止、drain、並行 request の挙動を確認するとき
-- reporter unavailable や Structured Output validation exhausted の event 検出・machine observation 化を確認するとき
-- doctor における reporter schema、MCP protocol、collector socket の可用性検証を変更するとき
+- feedback collector の起動・停止、Codex call context、reporter capability の環境継承、observation 受付や rate limit、degraded event、detector の挙動を変更・調査するとき。
+- feedback reporter の利用可能性検証や、並行 Codex call における受付停止・drain・保存結果を確認するとき。
 
 ## Do not read this when
-- 保存形式や observation payload の schema・永続化規則だけを確認したい場合は、runtime_feedback_store の実装または対応する oracle を直接読む
-- MCP reporter 自体の tool 実装や stdio protocol の詳細だけを確認したい場合は、runtime_feedback_reporter を直接読む
-- 一般的な subcommand logging や git context の仕様だけを確認したい場合は、対応する runtime_logging・runtime_git・runtime_state の実装を直接読む
+- observation の永続化形式、入力 schema、RFC3339 や observation ID の生成を直接調査するときは runtime_feedback_store を読む。
+- MCP reporter の tool 公開面・stdio protocol 自体を調査するときは runtime_feedback_reporter を読む。
+- feedback の正本となる人間向け要件を確認するときは対応する oracle 仕様を直接読む。
 
 ## hash
-- 455d13200beda2c58cee6982200b1d490d0c4fc0a842e4e0a1f3cbf52d895f21
+- a1795666ecedc77f1ecedf228f9e6420eaced6ac6e1363e7defab739cfb78cb8
 
 # `runtime_feedback_reporter.py`
 
