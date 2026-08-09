@@ -575,9 +575,13 @@ def _validate_git_ignore_sources(
     validate_local(_git_info_exclude_path(root), "Git info/exclude")
 
     directory = root
-    for part in relative.parts:
+    for part in relative.parts[:-1]:
         directory /= part
-        if not directory.is_dir():
+        try:
+            mode = directory.lstat().st_mode
+        except FileNotFoundError:
+            break
+        if not stat.S_ISDIR(mode):
             break
         _reject_non_file_path(directory / ".gitignore", "Git nested .gitignore")
 

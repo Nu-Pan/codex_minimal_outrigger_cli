@@ -155,6 +155,22 @@ def test_ignore_checks_reject_non_file_nested_gitignore(tmp_path: Path) -> None:
             checker(root, source / "probe")
 
 
+def test_ignore_checks_do_not_inspect_ignored_symlink_target(
+    tmp_path: Path,
+) -> None:
+    """ignored symlink の参照先を ignore source として検査しない。"""
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("*.link\n")
+    target = tmp_path / "outside"
+    target.mkdir()
+    (target / ".gitignore").mkdir()
+    link = root / "candidate.link"
+    link.symlink_to(target, target_is_directory=True)
+
+    for checker in (is_git_ignored, is_untracked_git_ignored):
+        assert checker(root, link)
+
+
 def test_ensure_cmoc_ignored_rejects_symlinked_gitignore(tmp_path: Path) -> None:
     """.gitignore の symlink 先を cmoc が書き換えないことを検証する。"""
     root = make_repo(tmp_path)
