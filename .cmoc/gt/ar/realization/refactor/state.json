@@ -900,10 +900,10 @@
     "last_investigated_at": "2026-08-05_21-20_06_841380000"
   },
   "src/commons/runtime_refactor.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "b2393d480925d0ef423511a4abc0a0b89bbdc64bff2058ec06a6fc3f268b9f79",
-    "last_investigated_at": "2026-08-05_17-54_12_325222000"
+    "last_investigated_sha256": "7fe3e1176584aba4799f1f9356120e8d1eec3d1e75a410014b938a7ff4b8c79f",
+    "last_investigated_at": "2026-08-09_18-16_30_246163000"
   },
   "src/commons/runtime_results.py": {
     "investigation_required": false,
