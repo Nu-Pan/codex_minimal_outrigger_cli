@@ -32,21 +32,21 @@
 # `join.py`
 
 ## Summary
-- `cmoc run join` の active editing run を session branch へ統合する CLI lifecycle 実装。merge 前の doctor・差分検査、force-resolve、merge conflict 処理、post-join hook、refactor state 同期、report 保存、失敗時 rollback、run worktree/branch cleanup までを一続きで扱う。
-- run の状態、session/run worktree の clean 条件、予期しない差分、INDEX.md のみ許容する conflict、cleanup pending/error への遷移など、join 成功・失敗時の状態不変条件を管理する下位実装への入口。
+- `cmoc run join` の active editing run を session branch へ統合する CLI 実装。merge 前の差分検査、force-resolve、merge conflict 処理、post-join hook、refactor state 同期、report 保存、失敗時 rollback、worktree/branch cleanup までの一連の lifecycle を扱う。
+- join 処理に関係する run state、session state、Git worktree/branch、process tracking、INDEX 再生成の連携を確認するための入口である。
 
 ## Read this when
-- `cmoc run join` の挙動、merge lifecycle、force-resolve、post-join 処理、run resource cleanup を変更・調査するとき。
-- join 失敗時の merge rollback、error state、lifecycle report、process tracking の停止処理を確認するとき。
-- INDEX.md conflict の自動再生成や、join 前後の refactor state 同期を確認するとき。
+- `cmoc run join` の実行条件、merge 処理、想定外差分の扱い、`--force-resolve` の挙動を変更または調査するとき
+- join 後の post-join state 同期、INDEX 再生成、lifecycle report、cleanup の成功・失敗状態を確認するとき
+- merge conflict、post-join 処理失敗、cleanup pending/error state からの復旧動作を追うとき
 
 ## Do not read this when
-- run の開始・編集・abandon など、join 以外の lifecycle を直接調査するとき。
-- workload 固有の編集処理や state 同期の一般実装を確認する場合は、それぞれの workload/runtime 実装を先に読むべきとき。
-- INDEX.md の生成規則そのものを調査するときは、INDEX 更新処理の実装や正本仕様を直接読むべき。
+- join 以外の run サブコマンドの開始・編集・abandon 動作だけを調査するとき
+- workload 固有の編集処理や refactor state 同期の単体実装を確認する場合は、それぞれの直接の実装を先に読むとき
+- INDEX.md の生成規則そのものや一般的な Git runtime helper の仕様だけを確認するとき
 
 ## hash
-- 0a4df4e1f7e7ed45d2ee93dcb41d63da28e9580bf5c671e927f179216397bba0
+- 52a852f2271506af727b89de9fd7c4de22c00e9c22461ac525d2fd7e76ff1a7f
 
 # `lifecycle.py`
 

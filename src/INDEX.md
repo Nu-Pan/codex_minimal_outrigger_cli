@@ -51,20 +51,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行基盤、Codex exec/TUI、設定・状態・Git・パス・ログ・エラー・feedback、INDEX lifecycle など、複数機能から再利用される共通 API と実装を扱う。各機能の個別実装へ進む前に、横断的な runtime 境界や公開入口を確認するためのディレクトリ。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。パッケージ初期化、CLI 実行基盤、Codex 実行、設定・状態・Git・パス・ログ、INDEX 更新、feedback、run lifecycle など、複数機能から共有される実装の入口。
+- 個別 runtime 機能の実装だけでなく、Codex 呼び出しや editing run、設定、feedback、doctor など横断的な共通処理を調査・変更する際に、配下の対応モジュールへ進むためのディレクトリ。
 
 ## Read this when
-- 複数の cmoc runtime 機能にまたがる共通 API、実行 lifecycle、設定・状態・Git・パス・ログ・feedback の連携を調査または変更するとき
-- Codex exec/TUI の起動境界、結果処理、preflight、process 制御を共通 runtime の観点から確認するとき
-- INDEX.md の生成・鮮度判定・更新 lifecycle の実装入口を確認するとき
+- 複数の CLI または runtime 機能にまたがる共通処理の実装箇所を特定するとき
+- Codex 実行、INDEX 更新、設定・状態・Git・パス・ログ、feedback、editing run の共通基盤を調査・変更するとき
+- commons パッケージの公開入口や、対象機能に対応する個別 runtime module へのルーティングを確認するとき
 
 ## Do not read this when
-- 特定のサブコマンドや runtime helper の具体的なアルゴリズムだけを調査する場合は、commons 配下の対応する個別実装へ直接進む
-- 正本仕様、設定型、prompt schema、feedback schema などの意図や契約を確認する場合は、対応する oracle 文書や専用仕様を直接読む
-- commons と無関係な CLI 機能や、上位 orchestration 固有の挙動だけを調査する場合
+- 特定の runtime helper の具体的なアルゴリズムや仕様だけを確認したいときは、対応する個別モジュールへ直接進む場合
+- 特定 CLI サブコマンドの個別処理や利用者向け仕様だけを調査するとき
+- 正本仕様や個別機能のデータ形式を確認することが目的で、共通実装の配置確認が不要なとき
 
 ## hash
-- b9646d08920205501773392bc5f845ad8ba7cdfc06a12c15433c02f8a95e064a
+- 1a72c36bf5532260563d3f60e0a5b5578a751934d6aad4d646c25f3c3f9f29cf
 
 # `config`
 
@@ -116,15 +117,17 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの realization 実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui など各サブコマンドの実行入口とオーケストレーションを扱い、個別サブコマンド実装へ進むための起点となる。apply と review には現在実装がない。
+- CLI サブコマンドの realization 実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui など各サブコマンドの実行入口・処理フローへの入口を提供する。apply と review は現在実装本文がなく、追加後の参照先となる。
 
 ## Read this when
-- CLI サブコマンドの構成や、目的のサブコマンド実装への入口を確認・変更するとき。
-- 複数サブコマンドにまたがる実行フローや、サブコマンド固有ディレクトリへの進み先を判断するとき。
+- CLI サブコマンドの構成や、対象サブコマンドの実行入口を確認・変更するとき。
+- feedback、oracle、realization、run、session などのサブコマンドにおける実行フロー、状態管理、report、cleanup、commit・merge 処理への入口を調査するとき。
+- doctor、indexing、tui の起動条件や preflight、入力処理、INDEX 更新・commit、Codex TUI 起動の連携を確認するとき。
+- apply または review の realization 実装を追加する場所や、追加後の入口を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの内部処理、共通 runtime、パラメータ構築、正本仕様を直接確認したいときは、該当する下位実装または oracle 文書を直接読む。
-- このディレクトリに実装がない apply や review の具体的処理を調べるとき。
+- 特定サブコマンドの内部処理、共通 helper、prompt、runtime、Git 処理、または正本仕様の詳細だけを調べるときは、該当する下位実装・共通実装・oracle 文書を直接読む。
+- 対象サブコマンド以外の CLI 実行フローを調査するとき。
 
 ## hash
-- fcb35dd401f5cc9d3d60eb767d600f493e5b708a8734cd3dcac2c0c426391fb5
+- be15c374eae6ecdfc82f0016ee4b2d8f5b3e983b3c26d172bbc4c4bc928c0828

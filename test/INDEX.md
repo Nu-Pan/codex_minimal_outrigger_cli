@@ -398,20 +398,25 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の realization apply/refactor fork と run join/abandon を横断する統合テスト。共通 lifecycle fixture を使い、run state、worktree・branch 資源、Codex child tracking、INDEX refresh、report、rollback、merge、cleanup、interrupt/error recovery の挙動を検証する。
+- workload fork と共通 run の join/abandon lifecycle を検証する統合 realization test。
+- realization apply/refactor の fork、run state・branch・worktree・process tracking、成果物の join、abandon cleanup を扱う。
+- 想定外の oracle・INDEX・管理対象ファイル変更、rename/delete、rollback、競合、interrupt、cleanup failure、report 保存、通知、refactor state 同期を検証する。
+- editing run の共通 fixture と state 遷移を前提に、個別の lifecycle 実装ではなく fork から joinable・join/error・abandon までの連続挙動を確認する入口。
 
 ## Read this when
-- realization apply/refactor fork の run lifecycle、変更 path 検証、管理対象外差分の拒否、commit/rollback、fork report を確認・変更するとき。
-- run join/abandon の merge、force-resolve、session state 同期、worktree・branch cleanup、process tracking、lifecycle report を確認・変更するとき。
-- editing run の中断、失敗、競合、未読 process tracking、INDEX refresh、副作用、Codex child 停止に関する統合挙動を検証するとき。
+- realization apply/refactor fork の end-to-end 挙動を変更・検証するとき。
+- run join または run abandon の state 遷移、merge、cleanup、worktree・branch・process tracking の扱いを確認するとき。
+- fork report・lifecycle report・通知・refactor state 同期、INDEX refresh の副作用や rollback を検証するとき。
+- agent の中断・失敗・不正な変更・並行 start など、editing run lifecycle の異常系を確認するとき。
 
 ## Do not read this when
-- 単一の lifecycle helper や report formatter の実装詳細だけを確認する場合は、対応する src の実装を直接読む。
-- INDEX の生成規則だけを確認する場合は、indexing の正本仕様または実装・専用テストを読む。
-- editing run と無関係な CLI コマンドやテストを調査する場合。
+- 単一の実装関数の局所的な仕様や通常処理だけを確認したいときは、対応する src 実装またはより直接的な単体 test を読む。
+- INDEX.md の生成規則そのものを確認したいときは、indexing の正本仕様や INDEX builder の実装を読む。
+- 通知仕様の詳細だけを確認したいときは、通知の正本仕様を直接読む。
+- run lifecycle と無関係な CLI command、state、report、refactor 処理を調査するとき。
 
 ## hash
-- 21ca1f982f6cf1ed051cd2004bd7fa4fda54d98380bb2d58f380bc579ea897d8
+- 7ad1e8c403077a5f2f3a2a40bbce8e8bb45bee5409ad3a8d1496fb71ad6996e5
 
 # `test_feedback.py`
 

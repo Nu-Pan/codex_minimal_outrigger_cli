@@ -110,18 +110,23 @@
 # `run`
 
 ## Summary
-- editing run の abandon・join など、実行ライフサイクルに関する CLI サブコマンドと共通互換 shim をまとめた領域。run の停止・統合・レポート・ライフサイクル処理を調査する際の入口。
+- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。active run の破棄・統合、共通ライフサイクル処理、run report writer への入口を提供する。
+- abandon.py は active editing run の停止、関連プロセス・worktree・branch・state の cleanup、ライフサイクルレポート出力を扱う。
+- join.py は active editing run の merge、conflict 解決、post-join 処理、state 同期、report 保存、rollback、cleanup を扱う。
+- lifecycle.py と report.py は、それぞれ共通 lifecycle 実装と report writer の旧 import path を維持する互換 shim である。
 
 ## Read this when
-- editing run の作成後 lifecycle、abandon、join、cleanup、状態遷移、レポート生成を調査・変更するとき。
-- run サブコマンド間で共有される lifecycle helper や旧 import path の互換性を確認するとき。
+- editing run の abandon または join の実行条件、状態遷移、merge・cleanup・rollback を調査・変更するとき。
+- run worktree、branch、state、process tracking、lifecycle report、post-join 処理の連携を追跡するとき。
+- editing run 共通 helper や report writer の旧 import path との互換性を確認するとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- 特定の run サブコマンドの詳細実装や canonical な共通 runtime/report 実装だけを確認したいときは、配下または commons 側の該当ファイルを直接読む。
+- 特定の共通 lifecycle や report writer の実装詳細だけを確認する場合は、canonical な commons 側の実装を直接読む。
+- workload 固有の編集処理や、一般的な Git runtime helper の仕様だけを確認する場合。
 
 ## hash
-- 8013fa5a8c188e86f32a2d4238e189a3214e25d6b28cc5dfa392076666666a43
+- b9be04f44dd594a3090de6e402b3418a738e1dac102b9ac48826ba41754aa7e9
 
 # `session`
 

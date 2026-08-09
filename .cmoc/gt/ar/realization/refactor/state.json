@@ -918,7 +918,7 @@
     "last_investigated_at": "2026-07-31_18-39_37_305280000"
   },
   "src/commons/runtime_run_lifecycle.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "1bc627c17c3ce127fa032a0b71340fbd854498a11ffcbc56780e8cdee78ba73f",
     "last_investigated_at": "2026-08-04_02-46_21_241563000"
@@ -1087,9 +1087,9 @@
   },
   "src/sub_commands/run/join.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "7f1678f84ac41a0dda3e44ebafd50f3500e35dfbd7303a56406df145d247177f",
-    "last_investigated_at": "2026-07-30_14-30_31_240130000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "0a4df4e1f7e7ed45d2ee93dcb41d63da28e9580bf5c671e927f179216397bba0",
+    "last_investigated_at": "2026-08-09_10-13_22_688219000"
   },
   "src/sub_commands/run/lifecycle.py": {
     "investigation_required": false,
