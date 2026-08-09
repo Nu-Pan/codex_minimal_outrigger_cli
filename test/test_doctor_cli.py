@@ -269,6 +269,21 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
     ]
 
 
+def test_doctor_repairs_missing_index_without_dropping_tracked_files(
+    tmp_path: Path,
+) -> None:
+    """欠落した Git index を復元し、既存の tracked file を保持する。"""
+
+    root = make_repo(tmp_path)
+    (root / ".git" / "index").unlink()
+
+    doctor_module.run_doctor_preprocess(root)
+
+    tracked = set(run_git(root, "ls-files").stdout.splitlines())
+    assert {"README.md", "oracle/spec.md"} <= tracked
+    assert run_git(root, "status", "--short").stdout == ""
+
+
 @pytest.mark.parametrize("index_flag", ["--assume-unchanged", "--skip-worktree"])
 def test_doctor_preserves_preexisting_index_flags(
     tmp_path: Path,

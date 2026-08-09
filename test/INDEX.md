@@ -380,20 +380,19 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の共有 lifecycle を外部挙動から検証する統合テスト。Git の ignore・tracked runtime・config・refactor state の修復、repair 順序、reporter probe の中断伝播、共有 lock、修復失敗時の index 復元を扱う。CLI と直接呼び出しの両方を通じて、既存の staged 差分・index flag・intent-to-add・rename・削除・unstaged hunk を保持し、修復用 commit が利用者変更を取り込まない契約を確認する。doctor preprocess の外部契約を検証するテスト群への入口であり、実装の詳細や個別の低レベル helper のテストを探す場合は別のテスト対象を読む。
+- doctor preprocess の共有 lifecycle を検証する統合テスト群。CLI と直接呼び出しの双方で、Git 状態・config・refactor state・共有 lock・reporter probe の挙動と、既存の staged index／unstaged 差分／index flags の保持を確認する。doctor preprocess の外部契約を調べる際のテスト側の入口。
 
 ## Read this when
-- doctor preprocess の CLI または直接呼び出しにおける修復 lifecycle、Git index の保全、linked worktree と repository の境界を検証・変更するとき
-- doctor の lock、config 同期、refactor state 同期、reporter 事前検証、repair commit の外部挙動を一続きの統合テストとして確認するとき
-- 既存の staged・unstaged 差分や index metadata を doctor が保持する契約を調査するとき
+- doctor preprocess の修復順序、修復対象、commit、lock 待機、割り込み伝播を変更・検証するとき
+- doctor が既存の staged／unstaged Git 差分、rename、削除、index flags、intent-to-add を保持する挙動を調べるとき
+- CLI 経由と直接呼び出しでの doctor preprocess の統合的な外部挙動を確認するとき
 
 ## Do not read this when
-- doctor preprocess の実装ロジックや正本仕様そのものを確認したいときは、実装または指定された oracle 文書を直接読む
-- doctor 以外の CLI サブコマンド、または個別 helper の局所的な単体挙動だけを確認したいとき
-- Git、config、refactor state の一般的な fixture や共通 test helper の定義を確認したいときは、それぞれの支援モジュールを直接読む
+- doctor preprocess の実装詳細や正本仕様を確認することが目的の場合は、まず doctor の実装または参照される oracle 仕様を読むとき
+- doctor preprocess と無関係な CLI サブコマンド、Git 補助 fixture、一般的な runtime doctor の単体挙動だけを調べるとき
 
 ## hash
-- 6ff9769ab1050644d4a791da38567da6e08f510e03c71db4eca665d540e69306
+- 45812bbb5addf62e1e60d970cfaf6458567b43e2722499bca0cf79efb3934cc0
 
 # `test_editing_run_cli.py`
 
