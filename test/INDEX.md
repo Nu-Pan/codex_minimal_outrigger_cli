@@ -227,20 +227,21 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理の外部挙動を検証するテスト。prompt editor 入力の予約・収集、入力 skeleton の検証、編集済み prompt による Codex TUI 起動、AgentCallParameter の生成、linked worktree 時のログ配置、`.cmoc` の ignore 設定を扱う。TUI 前処理の実装や対応する正本仕様を確認する際のテスト入口となる。
+- TUI 起動直前の CLI 前処理に関する外部挙動を検証するテスト。プロンプトエディタ入力の初期値・timestamp 衝突・不正 skeleton の扱い、編集後の Codex TUI 起動、linked worktree における prompt とログの配置、`.cmoc` の ignore 設定を対象とする。TUI 前処理や関連する prompt editor の挙動を確認する際の入口。
 
 ## Read this when
-- TUI サブコマンドの起動前処理、prompt editor 入力、Codex TUI 起動パラメータ、linked worktree における prompt・ログ保存先の挙動を確認または変更するとき。
-- 同一 timestamp の入力保持、不正な prompt skeleton の拒否、編集結果の prompt 反映、不要な追加 agent call の抑止を検証するとき。
-- repository と linked worktree の `.cmoc` ignore、および起動ログの保存場所を検証するとき。
+- TUI サブコマンドの統合的な起動挙動を変更・検証するとき
+- prompt editor の入力生成、skeleton 検証、timestamp 衝突処理を確認するとき
+- linked worktree での prompt・agent call context・ログ配置を確認するとき
+- TUI 実行時の `.cmoc` ignore とログ生成を検証するとき
 
 ## Do not read this when
-- TUI 前処理の実装詳細を確認する場合は、対応する `src` の実装を直接読む。
-- prompt editor 入力の単体仕様だけを確認する場合は、prompt editor の専用テストまたは正本仕様へ進む。
-- TUI 以外のサブコマンドの挙動を確認する場合は、このテストではなく対象サブコマンドのテストへ進む。
+- prompt editor の正本となる初期テキスト生成規則だけを確認したいとき
+- TUI 以外のサブコマンドや CLI 前処理を調査するとき
+- 実装内部の prompt builder や runtime preflight の詳細を直接確認する必要があるとき
 
 ## hash
-- 00f3a8b1aadf4a7c83aae745c92107cdeb4718f435b3dfc6976ad4acedcb4989
+- ad7ca9e8b2f311112e664db90bc0a0f7fdfe2ef0e10f847eeb4449e1a17aa3e3
 
 # `test_codex_runtime_errors.py`
 

@@ -140,17 +140,17 @@
 # `test`
 
 ## Summary
-- pytest による cmoc の realization test 群を収録するディレクトリ。CLI、Codex runtime、ACP builder、indexing、oracle review、session、state、設定、Git、通知などの外部挙動・境界条件・回帰契約を検証する。個別機能のテストを調査する際の入口となる。
+- pytest による realization test 群を収録するディレクトリ。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、Git/path 安全性、設定、通知など、cmoc の各機能に対する外部挙動・境界条件・回帰契約を検証する。個別テストは対象機能の実装や正本仕様へ進むための入口となる。
 
 ## Read this when
-- 実装変更に対応する回帰テストや受け入れテストを探すとき
-- CLI、Codex 実行、worktree・state lifecycle、indexing、oracle review、設定、Git、安全性などの外部挙動を検証するとき
-- テスト用の共通 helper や fixture の提供内容を確認するとき
+- cmoc の機能変更に対して、対応する外部挙動・回帰テスト・境界条件の検証対象を探すとき。
+- CLI、Codex 実行、indexing、oracle review、session、runtime state などの統合的な挙動を調査するとき。
+- 対象機能に対応する個別テストの検証範囲や、利用すべき共通テストヘルパーを確認するとき。
 
 ## Do not read this when
-- 正本仕様や schema の内容自体を確認・変更するときは、対応する oracle doc・oracle src・oracle schema を直接読む
-- 単一の実装関数の詳細だけを調査するときは、対応する src の実装を直接読む
-- テスト実行方法だけを確認するときは、repository local の test_execution の案内を読む
+- 正本仕様や Structured Output schema の内容そのものを確認・変更するときは、対応する oracle doc・oracle src・schema を直接読む。
+- 単一の実装関数の詳細だけを調査するときは、対応する src 実装を直接読む。
+- テスト実行方法や共通 fixture だけを確認するときは、対象のテスト実行規則または共通ヘルパーを直接読む。
 
 ## hash
-- 895af46b1663765f2bc6a3ac66599d2a846b58eea75c6e8c3c43b2e056ba13aa
+- 4b3b75e7d9da4b9a4b18986715770887d4d378782f88e1e84eef4741362e4540

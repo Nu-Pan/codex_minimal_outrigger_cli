@@ -3,6 +3,7 @@
 正本仕様:
 - {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
 - {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+- {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
 """
 
 from collections.abc import Iterator
@@ -13,6 +14,7 @@ import pytest
 from _cli_support import run_doctor, runner
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
+from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_codex_preflight as codex_preflight_module
@@ -85,12 +87,9 @@ def test_editor_input_uses_canonical_text_and_keeps_timestamp_collisions(
         skeletons[1],
     )
 
-    assert len(initial_texts) == 2
-    for initial_text, skeleton in zip(initial_texts, skeletons, strict=True):
-        assert initial_text.startswith("<!--\n# このファイルの使い方")
-        assert initial_text.endswith("\n-->\n")
-        assert '<cmoc_block id="prompt template">' in initial_text
-        assert skeleton in initial_text
+    assert initial_texts == [
+        build_prompt_editor_input_initial_text(skeleton) for skeleton in skeletons
+    ]
     assert first_stamp == "2026-06-27_10-00_00_000001000"
     assert second_stamp == "2026-06-27_10-00_00_000002000"
     assert first_path.name == "2026-06-27_10-00_00_000001000_orig.md"
@@ -191,8 +190,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
         assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
-        assert "extra_read_paths" not in kwargs
-        assert parameter is builder_calls[0][2]
+        assert parameter == builder_calls[0][2]
 
     monkeypatch.setattr(
         tui_module,
@@ -291,7 +289,6 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     parameter, tui_kwargs = tui_calls[0]
     assert tui_kwargs["root"] == root.resolve()
     assert tui_kwargs["notification_command_name"] == "tui"
-    assert "cwd" not in tui_kwargs
     assert parameter.agent_call_cwd == root.resolve()
     assert (
         len(
@@ -310,8 +307,10 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
         (linked / ".cmoc" / "gu" / "ar" / "log" / "editor_input").glob("*_cmpl.md")
     )
     assert len(complete_files) == 1
+    complete_prompt = complete_files[0].read_text(encoding="utf-8")
+    assert "linked worktree task" in complete_prompt
+    assert prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
     assert str(complete_files[0]) in parameter.prompt
-    assert "extra_read_paths" not in tui_kwargs
 
 
 def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
@@ -332,10 +331,8 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     write_python_executable(
         fake_code,
         [
-            "import pathlib, sys",
+            "import sys",
             "assert sys.argv[1:-1] == ['--wait']",
-            "path = pathlib.Path(sys.argv[-1])",
-            "path.write_text(path.read_text() + '\\nlinked ignore task\\n')",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")

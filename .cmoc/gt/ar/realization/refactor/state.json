@@ -1219,9 +1219,9 @@
   },
   "test/test_cli_tui.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "7caff6698462b8d5de5df1bba5a1b6b3298b87b201146255c81513baee8ba1c4",
-    "last_investigated_at": "2026-08-03_18-44_04_967297000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "00f3a8b1aadf4a7c83aae745c92107cdeb4718f435b3dfc6976ad4acedcb4989",
+    "last_investigated_at": "2026-08-09_15-24_53_791559000"
   },
   "test/test_codex_runtime_errors.py": {
     "investigation_required": false,
