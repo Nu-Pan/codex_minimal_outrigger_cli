@@ -1,12 +1,14 @@
-"""feedback の repository-local normalized state を扱う。
+"""feedback の repository-local active state と publication を扱う。
 
-この file は 16,000 文字を超えるが、record 構築、content-addressed ID、schema 検査、
-record 間参照、および effective record 選択は、append-only state の同じ不変条件を
-共有する。検査と読み取りを分けると、一方だけが新しい record field や選択規則へ
-追従する危険があるため、state model として一箇所に保つ。
+この module は report cut、active generation、current pointer、および cleanup の
+相互参照を同じ integrity boundary で検証する。publication point を複数 module へ
+分散させると、異常終了時に旧 state と新 state を混在させるため一箇所に保つ。
 
 対応する oracle file:
-`{{work-root}}/oracle/doc/app_spec/feedback_state.md`。
+
+- `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
+- `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
+- `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
 """
 
 import base64
@@ -15,10 +17,10 @@ import hashlib
 import json
 import os
 import re
+import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -29,37 +31,15 @@ from .runtime_feedback_store import (
     is_observation_id,
     is_uuid7_prefixed,
     machine_observation_id,
-    normalization_checkpoint_root,
-    normalization_recovery_root,
-    normalization_unit_root,
-    observation_root,
     parse_rfc3339,
-    recover_immutable_bytes_from_temporary,
-    report_recovery_root,
-    report_snapshot_root,
-    reporter_input_schema,
     reporter_input_validation_errors,
     sha256_bytes,
-    state_snapshot_root,
     uuid7_prefixed,
+    write_immutable_bytes,
     write_immutable_json,
 )
 
-
-@dataclass
-class IssueView:
-    """report と normalization candidate が共有する effective issue state。"""
-
-    issue_id: str
-    identity: dict[str, Any]
-    revision: dict[str, Any]
-    occurrences: list[dict[str, Any]]
-    assessment: dict[str, Any] | None
-    disposition: dict[str, Any] | None
-    revisions: list[dict[str, Any]] = field(default_factory=list)
-    assessments: list[dict[str, Any]] = field(default_factory=list)
-    dispositions: list[dict[str, Any]] = field(default_factory=list)
-
+JsonObject = dict[str, Any]
 
 _MACHINE_RULE_CONTRACTS: dict[str, tuple[str, str, str]] = {
     "feedback.reporter_unavailable.v1": (
@@ -81,11 +61,114 @@ _MACHINE_REPORTER_FAILURE_CODES = {
     "transport_unavailable",
     "protocol_error",
 }
+_LEGACY_ROOT_NAMES = {
+    "ingestion",
+    "issue",
+    "normalization_checkpoint",
+    "normalization_recovery",
+    "normalization_unit",
+    "report",
+    "report_recovery",
+    "report_snapshot",
+    "state_snapshot",
+}
 
 
-def _record_id(prefix: str, body: dict[str, Any]) -> str:
-    """ID field を除いた record body の canonical SHA256 を返す。"""
-    return f"{prefix}{sha256_bytes(canonical_json_bytes(body))}"
+@dataclass(frozen=True)
+class ActiveState:
+    """current pointer から検証済み active generation をまとめる。"""
+
+    current: JsonObject | None
+    generation_manifest: JsonObject | None
+    issues: dict[str, JsonObject]
+    machine_aggregates: dict[str, JsonObject]
+    cleanup_manifest: JsonObject | None
+    cleanup_manifest_path: Path | None
+
+
+@dataclass(frozen=True)
+class LegacyState:
+    """一回限りの移行 cut に渡す read-only legacy projection。"""
+
+    issues: dict[str, JsonObject]
+    cleanup_artifacts: tuple[JsonObject, ...]
+
+
+def active_root(repo: Path) -> Path:
+    """active generation と current pointer の root を返す。"""
+    return feedback_root(repo) / "active"
+
+
+def current_pointer_path(repo: Path) -> Path:
+    """唯一の current pointer path を返す。"""
+    return active_root(repo) / "current.json"
+
+
+def generation_root(repo: Path) -> Path:
+    """active generation artifact の root を返す。"""
+    return active_root(repo) / "generation"
+
+
+def generation_directory(repo: Path, generation_id: str) -> Path:
+    """UUIDv7 generation ID に対応する directory を返す。"""
+    if not is_uuid7_prefixed(generation_id, "fbg_"):
+        raise ValueError(f"invalid feedback generation ID: {generation_id!r}")
+    return generation_root(repo) / generation_id
+
+
+def report_work_root(repo: Path) -> Path:
+    """実行中または再開中の report cut root を返す。"""
+    return feedback_root(repo) / "work"
+
+
+def report_cut_directory(repo: Path, report_cut_id: str) -> Path:
+    """UUIDv7 report cut ID に対応する一時 directory を返す。"""
+    if not is_uuid7_prefixed(report_cut_id, "fbc_"):
+        raise ValueError(f"invalid feedback report cut ID: {report_cut_id!r}")
+    return report_work_root(repo) / report_cut_id
+
+
+def report_cut_manifest_path(repo: Path, report_cut_id: str) -> Path:
+    """report cut の mutable manifest path を返す。"""
+    return report_cut_directory(repo, report_cut_id) / "manifest.json"
+
+
+def normalization_checkpoint_path(
+    repo: Path, report_cut_id: str, observation_id: str
+) -> Path:
+    """cut-scoped normalization checkpoint path を返す。"""
+    if not is_observation_id(observation_id):
+        raise ValueError(f"invalid observation ID: {observation_id!r}")
+    return (
+        report_cut_directory(repo, report_cut_id)
+        / "checkpoint"
+        / "normalization"
+        / f"{observation_id}.json"
+    )
+
+
+def verification_checkpoint_path(
+    repo: Path, report_cut_id: str, candidate_id: str
+) -> Path:
+    """cut-scoped verification checkpoint path を返す。"""
+    if re.fullmatch(r"fbi_[a-z2-7]{26}", candidate_id) is None:
+        raise ValueError(f"invalid feedback issue ID: {candidate_id!r}")
+    return (
+        report_cut_directory(repo, report_cut_id)
+        / "checkpoint"
+        / "verification"
+        / f"{candidate_id}.json"
+    )
+
+
+def new_report_cut_id() -> str:
+    """新しい report cut 用 UUIDv7 ID を返す。"""
+    return uuid7_prefixed("fbc_")
+
+
+def new_generation_id() -> str:
+    """新しい active generation 用 UUIDv7 ID を返す。"""
+    return uuid7_prefixed("fbg_")
 
 
 def issue_id(canonical_key: str) -> str:
@@ -95,40 +178,39 @@ def issue_id(canonical_key: str) -> str:
     return f"fbi_{encoded[:26]}"
 
 
-def machine_canonical_key(observation: dict[str, Any]) -> str:
-    """machine rule payload から canonical issue key を構築する。"""
+def machine_aggregate_id(canonical_key: str) -> str:
+    """machine canonical key から bounded aggregate ID を返す。"""
+    digest = hashlib.sha256(canonical_key.encode("utf-8")).hexdigest()
+    return f"fba_{digest}"
+
+
+def machine_canonical_key(observation: JsonObject) -> str:
+    """allowlist machine observation から canonical issue key を返す。"""
     payload = observation.get("payload")
     if not isinstance(payload, dict):
         raise ValueError("machine observation payload must be an object")
-    rule_id = payload.get("rule_id")
-    subject_type = payload.get("subject_type")
-    normalized_subject_id = payload.get("normalized_subject_id")
-    if not all(
-        isinstance(value, str) and value
-        for value in (rule_id, subject_type, normalized_subject_id)
-    ):
-        raise ValueError("machine observation canonical key fields are invalid")
-    assert isinstance(rule_id, str)
-    assert isinstance(subject_type, str)
-    assert isinstance(normalized_subject_id, str)
-    return "\0".join((rule_id, subject_type, normalized_subject_id))
+    values = (
+        payload.get("rule_id"),
+        payload.get("subject_type"),
+        payload.get("normalized_subject_id"),
+    )
+    if not all(isinstance(value, str) for value in values):
+        raise ValueError("machine observation key fields must be strings")
+    return "\0".join(str(value) for value in values)
 
 
-def agent_canonical_key(observation_id: str) -> str:
-    """agent report から新規 issue を作る canonical key を返す。"""
-    return f"agent\0{observation_id}"
-
-
-def _is_machine_canonical_key(value: str) -> bool:
-    """rule registry に適合する machine issue canonical key かを返す。"""
+def _is_machine_canonical_key(value: str, rule_id: str | None = None) -> bool:
+    """allowlist rule の低カーディナリティ canonical key かを返す。"""
     parts = value.split("\0")
     if len(parts) != 3:
         return False
-    rule_id, subject_type, normalized_subject_id = parts
-    contract = _MACHINE_RULE_CONTRACTS.get(rule_id)
+    key_rule_id, subject_type, normalized_subject_id = parts
+    if rule_id is not None and key_rule_id != rule_id:
+        return False
+    contract = _MACHINE_RULE_CONTRACTS.get(key_rule_id)
     if contract is None or subject_type != contract[2] or not normalized_subject_id:
         return False
-    if rule_id != "feedback.reporter_unavailable.v1":
+    if key_rule_id != "feedback.reporter_unavailable.v1":
         return True
     component, separator, failure_code = normalized_subject_id.partition(":")
     return (
@@ -138,208 +220,20 @@ def _is_machine_canonical_key(value: str) -> bool:
     )
 
 
-def issue_directory(repo: Path, current_issue_id: str) -> Path:
-    """issue ごとの append-only record directory を返す。"""
-    return feedback_root(repo) / "issue" / current_issue_id
-
-
-def identity_record(
-    current_issue_id: str,
-    canonical_key: str,
-    origin: str,
-    observation_id: str,
-    created_at: str,
-) -> dict[str, Any]:
-    """初回作成後に変更しない issue identity を構築する。"""
-    return {
-        "schema_version": 1,
-        "issue_id": current_issue_id,
-        "origin": origin,
-        "canonical_key": canonical_key,
-        "created_from_observation_id": observation_id,
-        "created_at": created_at,
-    }
-
-
-def revision_record(
-    current_issue_id: str,
-    created_at: str,
-    source_observation_ids: list[str],
-    category: str,
-    summary: str,
-    human_action: str,
-    impact: str,
-    cause_assessment: dict[str, str],
-    related_issue_ids: list[str],
-) -> dict[str, Any]:
-    """normalized issue 内容の immutable revision を構築する。"""
-    body: dict[str, Any] = {
-        "schema_version": 1,
-        "issue_id": current_issue_id,
-        "created_at": created_at,
-        "source_observation_ids": sorted(set(source_observation_ids)),
-        "category": category,
-        "summary": summary,
-        "human_action": human_action,
-        "impact": impact,
-        "cause_assessment": cause_assessment,
-        "related_issue_ids": sorted(set(related_issue_ids)),
-    }
-    return {"revision_id": _record_id("", body), **body}
-
-
-def occurrence_record(
-    current_issue_id: str,
-    observation: dict[str, Any],
-    observation_sha256: str,
-) -> dict[str, Any]:
-    """raw observation と issue の対応を表す occurrence を構築する。"""
-    context = observation.get("context")
-    if not isinstance(context, dict):
-        context = {}
-    return {
-        "schema_version": 1,
-        "issue_id": current_issue_id,
-        "observation_id": observation["observation_id"],
-        "observation_sha256": observation_sha256,
-        "observed_at": observation["observed_at"],
-        "cmoc_session_id": context.get("cmoc_session_id"),
-        "subcommand_invocation_id": context.get("subcommand_invocation_id"),
-        "log_paths": context.get("log_paths", []),
-    }
-
-
-def assessment_record(
-    current_issue_id: str,
-    assessed_at: str,
-    presence: str,
-    freshness: str,
-    reason_code: str,
-    reason: str,
-    compared_fingerprints: list[dict[str, Any]],
-) -> dict[str, Any]:
-    """human disposition と独立した machine assessment を構築する。"""
-    body: dict[str, Any] = {
-        "schema_version": 1,
-        "issue_id": current_issue_id,
-        "assessed_at": assessed_at,
-        "presence": presence,
-        "freshness": freshness,
-        "reason_code": reason_code,
-        "reason": reason,
-        "compared_fingerprints": compared_fingerprints,
-    }
-    return {"assessment_id": _record_id("", body), **body}
-
-
-def ingestion_record(
-    observation_id: str,
-    observation_sha256: str,
-    processed_at: str,
-    normalization_unit_id: str,
-    normalizer_version: str,
-    status: str,
-    issue_ids: list[str],
-    validation_errors: list[str],
-) -> dict[str, Any]:
-    """一 observation の増分処理結果を表す receipt を構築する。"""
-    return {
-        "schema_version": 1,
-        "observation_id": observation_id,
-        "observation_sha256": observation_sha256,
-        "processed_at": processed_at,
-        "normalization_unit_id": normalization_unit_id,
-        "normalizer_version": normalizer_version,
-        "status": status,
-        "issue_ids": issue_ids,
-        "validation_errors": validation_errors,
-    }
-
-
-def report_record(
-    *,
-    report_id: str,
-    generated_at: str,
-    report_snapshot_sha256: str,
-    report_snapshot_observation_count: int,
-    processed_observation_count: int,
-    deferred_observation_count: int,
-    report_path: Path,
-    report_sha256: str,
-    result: str,
-    normalization_unit_ids: list[str],
-    state_snapshot_id: str | None,
-    previous_successful_report_id: str | None,
-) -> dict[str, Any]:
-    """feedback report と二種類の snapshot を結び付ける record を返す。"""
-    return {
-        "schema_version": 2,
-        "report_id": report_id,
-        "generated_at": generated_at,
-        "report_snapshot_sha256": report_snapshot_sha256,
-        "report_snapshot_observation_count": report_snapshot_observation_count,
-        "processed_observation_count": processed_observation_count,
-        "deferred_observation_count": deferred_observation_count,
-        "report_path": str(report_path.resolve()),
-        "report_sha256": report_sha256,
-        "result": result,
-        "normalization_unit_ids": normalization_unit_ids,
-        "state_snapshot_id": state_snapshot_id,
-        "previous_successful_report_id": previous_successful_report_id,
-    }
-
-
-def record_path(repo: Path, record: dict[str, Any], kind: str) -> Path:
-    """record kind と ID から repository-local path を返す。"""
-    root = feedback_root(repo)
-    current_issue_id = record.get("issue_id")
-    if kind == "identity":
-        assert isinstance(current_issue_id, str)
-        return issue_directory(repo, current_issue_id) / "identity.json"
-    id_fields = {
-        "revision": "revision_id",
-        "occurrence": "observation_id",
-        "assessment": "assessment_id",
-        "disposition": "decision_id",
-        "ingestion": "observation_id",
-        "report": "report_id",
-    }
-    if kind not in id_fields:
-        raise ValueError(f"unknown feedback record kind: {kind}")
-    record_id_value = record.get(id_fields[kind])
-    if not isinstance(record_id_value, str):
-        raise ValueError(f"feedback {kind} record ID is invalid")
-    if kind in {"revision", "occurrence", "assessment", "disposition"}:
-        assert isinstance(current_issue_id, str)
-        return (
-            issue_directory(repo, current_issue_id) / kind / (f"{record_id_value}.json")
-        )
-    return root / kind / f"{record_id_value}.json"
-
-
-def write_feedback_record(path: Path, record: dict[str, Any]) -> bool:
-    """append-only record を canonical form で durable 保存する。"""
-    content = canonical_json_bytes(record)
-    try:
-        existed = path.is_file() and path.read_bytes() == content
-        write_immutable_json(path, record)
-        return not existed
-    except Exception as exc:
-        if isinstance(exc, CmocError):
-            raise
-        raise CmocError(
-            "feedback append-only record を durable に保存できません。",
-            ["record path と filesystem の整合性を確認してください。"],
-            str(path),
-        ) from exc
+def agent_canonical_key(observation_id: str) -> str:
+    """新規 agent issue の最初の observation から canonical key を返す。"""
+    if not is_observation_id(observation_id):
+        raise ValueError(f"invalid observation ID: {observation_id!r}")
+    return f"agent\0{observation_id}"
 
 
 def validate_observation_envelope(
-    observation: dict[str, Any],
+    observation: JsonObject,
     *,
     expected_repo_root: Path | None = None,
 ) -> list[str]:
     """raw observation の安定 envelope field を検査する。"""
+    # トップレベルと共通 field を先に検査し、後続検査の型前提を固定する。
     errors = _field_set(
         observation,
         {
@@ -365,6 +259,7 @@ def validate_observation_envelope(
     if not isinstance(observed_at, str) or not _is_timestamp(observed_at):
         errors.append("/observed_at: timezone-aware RFC 3339 timestamp required")
 
+    # collector context と producer version を source 非依存で検査する。
     context = observation.get("context")
     if not isinstance(context, dict):
         errors.append("/context: expected object")
@@ -390,6 +285,7 @@ def validate_observation_envelope(
         for index, fingerprint in enumerate(fingerprints):
             errors.extend(_validate_evidence_fingerprint(fingerprint, index))
 
+    # source 固有 payload と raw evidence の対応を検査する。
     if observation.get("source") == "machine_rule" and not isinstance(
         observation.get("source_event"), dict
     ):
@@ -426,11 +322,11 @@ def validate_observation_envelope(
                     errors.append(
                         "/evidence_fingerprints: path evidence indexes do not match payload"
                     )
+
+    # 観測時点に解決済みの path は現在の symlink 状態で再解決しない。
     if isinstance(context, dict) and isinstance(fingerprints, list):
         repo_value = context.get("repo_root")
         if isinstance(repo_value, str) and Path(repo_value).is_absolute():
-            # raw fingerprint は観測時点で symlink 解決済みである。現在の filesystem
-            # 状態で再解決すると、後日の symlink 変更を raw schema 違反にしてしまう。
             repo_path = Path(os.path.abspath(repo_value))
             for index, fingerprint in enumerate(fingerprints):
                 if not isinstance(fingerprint, dict):
@@ -446,7 +342,7 @@ def validate_observation_envelope(
 
 
 def _is_timestamp(value: str) -> bool:
-    """timezone を持つ ISO 8601/RFC 3339 timestamp かを返す。"""
+    """timezone を持つ RFC 3339 timestamp かを返す。"""
     try:
         parse_rfc3339(value)
         return True
@@ -459,7 +355,26 @@ def _is_version_one(value: object) -> bool:
     return type(value) is int and value == 1
 
 
-def _validate_observation_context(context: dict[str, Any]) -> list[str]:
+def _field_set(record: JsonObject, expected: set[str]) -> list[str]:
+    """不足 field と追加 field を安定順で返す。"""
+    errors = [f"{name}: missing" for name in sorted(expected - record.keys())]
+    errors.extend(
+        f"{name}: additional property" for name in sorted(record.keys() - expected)
+    )
+    return errors
+
+
+def _is_string_list(value: object, *, non_empty: bool = False) -> bool:
+    """重複のない string 配列かを返す。"""
+    return (
+        isinstance(value, list)
+        and (not non_empty or bool(value))
+        and all(isinstance(item, str) for item in value)
+        and len(value) == len(set(value))
+    )
+
+
+def _validate_observation_context(context: JsonObject) -> list[str]:
     """collector が付与する version 1 context を検査する。"""
     errors = _field_set(
         context,
@@ -479,6 +394,7 @@ def _validate_observation_context(context: dict[str, Any]) -> list[str]:
             "log_paths",
         },
     )
+    # path と必須 context は空文字を含め string 型として検査する。
     for name in (
         "repo_root",
         "work_root",
@@ -518,10 +434,7 @@ def _validate_observation_context(context: dict[str, Any]) -> list[str]:
     return errors
 
 
-def _validate_observation_versions(
-    versions: dict[str, Any],
-    source: object,
-) -> list[str]:
+def _validate_observation_versions(versions: JsonObject, source: object) -> list[str]:
     """raw envelope の producer/schema version を検査する。"""
     errors = _field_set(
         versions,
@@ -582,7 +495,7 @@ def _validate_evidence_fingerprint(value: object, index: int) -> list[str]:
     return errors
 
 
-def _validate_machine_observation(observation: dict[str, Any]) -> list[str]:
+def _validate_machine_observation(observation: JsonObject) -> list[str]:
     """allowlist detector が作る payload と source event を検査する。"""
     errors: list[str] = []
     payload = observation.get("payload")
@@ -647,6 +560,8 @@ def _validate_machine_observation(observation: dict[str, Any]) -> list[str]:
     log_path = source_event.get("log_path")
     if isinstance(log_path, str) and not Path(log_path).is_absolute():
         errors.append("/source_event/log_path: expected absolute path")
+
+    # ID、version、および source event の相互参照を検査する。
     rule_id_value = payload.get("rule_id")
     event_id_value = source_event.get("event_id")
     observation_id_value = observation.get("observation_id")
@@ -672,6 +587,8 @@ def _validate_machine_observation(observation: dict[str, Any]) -> list[str]:
                 )
         if observation.get("observed_at") != event_fields.get("occurred_at"):
             errors.append("/observed_at: does not match source event")
+
+    # allowlist rule 固有の低カーディナリティ contract を検査する。
     contract = _MACHINE_RULE_CONTRACTS.get(str(rule_id_value))
     if contract is None:
         errors.append("/payload/rule_id: rule is not allowlisted")
@@ -684,607 +601,63 @@ def _validate_machine_observation(observation: dict[str, Any]) -> list[str]:
         if payload.get("subject_type") != expected_subject:
             errors.append("/payload/subject_type: does not match rule")
         if isinstance(event_fields, dict):
-            if rule_id_value == "feedback.reporter_unavailable.v1":
-                component = event_fields.get("component")
-                failure_code = event_fields.get("failure_code")
-                if component not in _MACHINE_REPORTER_COMPONENTS:
-                    errors.append("/payload/event_fields/component: unsupported value")
-                if failure_code not in _MACHINE_REPORTER_FAILURE_CODES:
-                    errors.append(
-                        "/payload/event_fields/failure_code: unsupported value"
-                    )
-                if (
-                    payload.get("normalized_subject_id")
-                    != f"{component}:{failure_code}"
-                ):
-                    errors.append(
-                        "/payload/normalized_subject_id: does not match event"
-                    )
-            else:
-                agent_call_kind = event_fields.get("agent_call_kind")
-                if not isinstance(agent_call_kind, str) or not agent_call_kind:
-                    errors.append(
-                        "/payload/event_fields/agent_call_kind: expected string"
-                    )
-                if payload.get("normalized_subject_id") != agent_call_kind:
-                    errors.append(
-                        "/payload/normalized_subject_id: does not match event"
-                    )
-                schema_sha = event_fields.get("schema_sha256")
-                if not isinstance(schema_sha, str) or not re.fullmatch(
-                    r"[0-9a-f]{64}", schema_sha
-                ):
-                    errors.append(
-                        "/payload/event_fields/schema_sha256: expected SHA256"
-                    )
-                if event_fields.get("last_failure_stage") not in {
-                    "json_parse",
-                    "schema_validation",
-                    "deterministic_postcondition",
-                    "resume_unavailable",
-                    "artifact_changed",
-                }:
-                    errors.append(
-                        "/payload/event_fields/last_failure_stage: unsupported value"
-                    )
+            errors.extend(
+                _validate_machine_rule_fields(str(rule_id_value), payload, event_fields)
+            )
     return errors
 
 
-def _field_set(record: dict[str, Any], expected: set[str]) -> list[str]:
-    """record の不足 field と未定義 field を返す。"""
-    actual = set(record)
-    errors = [f"missing field: {name}" for name in sorted(expected - actual)]
-    errors.extend(f"unknown field: {name}" for name in sorted(actual - expected))
-    return errors
-
-
-def _is_string_list(value: object, *, non_empty: bool = False) -> bool:
-    """重複のない文字列配列かを返す。"""
-    if not isinstance(value, list) or (non_empty and not value):
-        return False
-    return all(isinstance(item, str) for item in value) and len(value) == len(
-        set(value)
-    )
-
-
-def _validate_common_fields(record: dict[str, Any]) -> list[str]:
-    """全 normalized record に共通する schema version を検査する。"""
-    return (
-        []
-        if _is_version_one(record.get("schema_version"))
-        else ["schema_version must be 1"]
-    )
-
-
-def _require_timestamp(
-    record: dict[str, Any],
-    name: str,
-    errors: list[str],
-) -> None:
-    """record の必須 timestamp field を RFC 3339 として検査する。"""
-    value = record.get(name)
-    if not isinstance(value, str) or not _is_timestamp(value):
-        errors.append(f"{name} is not an RFC 3339 timestamp")
-
-
-def _validate_normalized_record(
-    root: Path,
-    path: Path,
-    record: dict[str, Any],
+def _validate_machine_rule_fields(
+    rule_id_value: str, payload: JsonObject, event_fields: JsonObject
 ) -> list[str]:
-    """path から record kind を確定し、schema と path/ID 対応を検査する。"""
-    relative = path.relative_to(root)
-    parts = relative.parts
-    errors = _validate_common_fields(record)
-    kind = ""
-    path_id = path.stem
-    if len(parts) == 3 and parts[0] == "issue" and parts[2] == "identity.json":
-        kind = "identity"
-        path_id = parts[1]
-    elif (
-        len(parts) == 4
-        and parts[0] == "issue"
-        and parts[2]
-        in {
-            "revision",
-            "occurrence",
-            "assessment",
-            "disposition",
-        }
-    ):
-        kind = parts[2]
-        if record.get("issue_id") != parts[1]:
-            errors.append("issue_id does not match path")
-    elif len(parts) == 2 and parts[0] == "ingestion":
-        kind = "ingestion"
-    else:
-        return [*errors, "unsupported normalized feedback record path"]
-
-    validators = {
-        "identity": _validate_identity_record,
-        "revision": _validate_revision_record,
-        "occurrence": _validate_occurrence_record,
-        "assessment": _validate_assessment_record,
-        "disposition": _validate_disposition_record,
-        "ingestion": _validate_ingestion_record,
-    }
-    errors.extend(validators[kind](record, path_id))
-    return errors
-
-
-def _validate_identity_record(record: dict[str, Any], path_id: str) -> list[str]:
-    """immutable issue identity の schema を検査する。"""
-    errors = _field_set(
-        record,
-        {
-            "schema_version",
-            "issue_id",
-            "origin",
-            "canonical_key",
-            "created_from_observation_id",
-            "created_at",
-        },
-    )
-    string_fields = (
-        "issue_id",
-        "canonical_key",
-        "created_from_observation_id",
-        "created_at",
-    )
-    if not all(isinstance(record.get(name), str) for name in string_fields):
-        errors.append("identity string field is invalid")
-    if record.get("origin") not in {"agent_report", "machine_rule"}:
-        errors.append("origin is invalid")
-    canonical_key = record.get("canonical_key")
-    if isinstance(canonical_key, str) and issue_id(canonical_key) != path_id:
-        errors.append("canonical_key hash does not match issue path")
-    if record.get("issue_id") != path_id:
-        errors.append("issue_id does not match path")
-    if not re.fullmatch(r"fbi_[a-z2-7]{26}", str(record.get("issue_id", ""))):
-        errors.append("issue_id is invalid")
-    if not is_observation_id(record.get("created_from_observation_id")):
-        errors.append("created_from_observation_id is invalid")
-    if record.get("origin") == "agent_report" and not is_uuid7_prefixed(
-        record.get("created_from_observation_id"), "fbo_"
-    ):
-        errors.append("agent issue requires reporter UUIDv7 observation")
-    if (
-        record.get("origin") == "machine_rule"
-        and re.fullmatch(
-            r"fbo_[0-9a-f]{32}", str(record.get("created_from_observation_id", ""))
-        )
-        is None
-    ):
-        errors.append("machine issue requires deterministic observation ID")
-    created_from = record.get("created_from_observation_id")
-    if (
-        record.get("origin") == "agent_report"
-        and isinstance(canonical_key, str)
-        and isinstance(created_from, str)
-        and canonical_key != agent_canonical_key(created_from)
-    ):
-        errors.append("agent canonical_key does not match created observation")
-    if (
-        record.get("origin") == "machine_rule"
-        and isinstance(canonical_key, str)
-        and not _is_machine_canonical_key(canonical_key)
-    ):
-        errors.append("machine canonical_key does not match rule registry")
-    _require_timestamp(record, "created_at", errors)
-    return errors
-
-
-def _validate_revision_record(record: dict[str, Any], path_id: str) -> list[str]:
-    """issue revision の schema と content-addressed ID を検査する。"""
-    errors = _field_set(
-        record,
-        {
-            "schema_version",
-            "revision_id",
-            "issue_id",
-            "created_at",
-            "source_observation_ids",
-            "category",
-            "summary",
-            "human_action",
-            "impact",
-            "cause_assessment",
-            "related_issue_ids",
-        },
-    )
-    if record.get("revision_id") != path_id or not re.fullmatch(
-        r"[0-9a-f]{64}", str(record.get("revision_id", ""))
-    ):
-        errors.append("revision_id is invalid")
-    body = {key: value for key, value in record.items() if key != "revision_id"}
-    if record.get("revision_id") != sha256_bytes(canonical_json_bytes(body)):
-        errors.append("revision_id hash does not match record")
-    if not _is_string_list(record.get("source_observation_ids"), non_empty=True):
-        errors.append("source_observation_ids is invalid")
-    if not _is_string_list(record.get("related_issue_ids")):
-        errors.append("related_issue_ids is invalid")
-    string_fields = (
-        "issue_id",
-        "created_at",
-        "category",
-        "summary",
-        "human_action",
-        "impact",
-    )
-    if not all(isinstance(record.get(name), str) for name in string_fields):
-        errors.append("revision string field is invalid")
-    category_schema = reporter_input_schema().get("properties", {}).get("category", {})
-    categories = (
-        category_schema.get("enum", []) if isinstance(category_schema, dict) else []
-    )
-    if record.get("category") not in categories:
-        errors.append("revision category is invalid")
-    cause = record.get("cause_assessment")
-    if not isinstance(cause, dict) or set(cause) != {"certainty", "description"}:
-        errors.append("cause_assessment is invalid")
-    elif cause.get("certainty") not in {
-        "supported",
-        "suspected",
-        "unknown",
-    } or not isinstance(cause.get("description"), str):
-        errors.append("cause_assessment value is invalid")
-    _require_timestamp(record, "created_at", errors)
-    return errors
-
-
-def _validate_occurrence_record(record: dict[str, Any], path_id: str) -> list[str]:
-    """observation occurrence の schema を検査する。"""
-    errors = _field_set(
-        record,
-        {
-            "schema_version",
-            "issue_id",
-            "observation_id",
-            "observation_sha256",
-            "observed_at",
-            "cmoc_session_id",
-            "subcommand_invocation_id",
-            "log_paths",
-        },
-    )
-    if record.get("observation_id") != path_id:
-        errors.append("observation_id does not match path")
-    if not is_observation_id(record.get("observation_id")):
-        errors.append("observation_id is invalid")
-    string_fields = (
-        "issue_id",
-        "observation_id",
-        "observation_sha256",
-        "observed_at",
-        "subcommand_invocation_id",
-    )
-    if not all(isinstance(record.get(name), str) for name in string_fields):
-        errors.append("occurrence string field is invalid")
-    session_id = record.get("cmoc_session_id")
-    if session_id is not None and not isinstance(session_id, str):
-        errors.append("cmoc_session_id is invalid")
-    if not _is_string_list(record.get("log_paths")):
-        errors.append("log_paths is invalid")
-    elif any(not Path(value).is_absolute() for value in record["log_paths"]):
-        errors.append("log_paths contains non-absolute path")
-    if not re.fullmatch(r"[0-9a-f]{64}", str(record.get("observation_sha256", ""))):
-        errors.append("observation_sha256 is invalid")
-    _require_timestamp(record, "observed_at", errors)
-    return errors
-
-
-def _validate_assessment_record(record: dict[str, Any], path_id: str) -> list[str]:
-    """machine assessment の schema と content-addressed ID を検査する。"""
-    errors = _field_set(
-        record,
-        {
-            "schema_version",
-            "assessment_id",
-            "issue_id",
-            "assessed_at",
-            "presence",
-            "freshness",
-            "reason_code",
-            "reason",
-            "compared_fingerprints",
-        },
-    )
-    if record.get("assessment_id") != path_id or not re.fullmatch(
-        r"[0-9a-f]{64}", str(record.get("assessment_id", ""))
-    ):
-        errors.append("assessment_id is invalid")
-    body = {key: value for key, value in record.items() if key != "assessment_id"}
-    if record.get("assessment_id") != sha256_bytes(canonical_json_bytes(body)):
-        errors.append("assessment_id hash does not match record")
-    if record.get("presence") not in {"unknown", "likely_present", "likely_absent"}:
-        errors.append("presence is invalid")
-    if record.get("freshness") not in {"current", "needs_revalidation", "unavailable"}:
-        errors.append("freshness is invalid")
-    if record.get("reason_code") not in {
-        "observation_matches_current",
-        "normalizer_assessment",
-        "fingerprint_changed",
-        "fingerprint_unavailable",
-    }:
-        errors.append("reason_code is invalid")
-    compared_fingerprints = record.get("compared_fingerprints")
-    if not isinstance(compared_fingerprints, list):
-        errors.append("compared_fingerprints is invalid")
-    else:
-        for index, fingerprint in enumerate(compared_fingerprints):
-            errors.extend(_validate_compared_fingerprint(fingerprint, index))
-    if not all(
-        isinstance(record.get(name), str)
-        for name in ("issue_id", "assessed_at", "reason")
-    ):
-        errors.append("assessment string field is invalid")
-    _require_timestamp(record, "assessed_at", errors)
-    return errors
-
-
-def _validate_compared_fingerprint(value: object, index: int) -> list[str]:
-    """assessment が保持する過去値と現在値の比較 record を検査する。"""
-    prefix = f"compared_fingerprints[{index}]"
-    if not isinstance(value, dict):
-        return [f"{prefix} is not an object"]
-    errors = [
-        f"{prefix}: {error}"
-        for error in _field_set(
-            value,
-            {"path", "old_sha256", "current_sha256", "state"},
-        )
-    ]
-    path = value.get("path")
-    if not isinstance(path, str) or not Path(path).is_absolute():
-        errors.append(f"{prefix}.path is invalid")
-    for name in ("old_sha256", "current_sha256"):
-        digest = value.get(name)
-        if digest is not None and (
-            not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None
-        ):
-            errors.append(f"{prefix}.{name} is invalid")
-    state = value.get("state")
-    if state not in {"hashed", "missing", "not_file", "unreadable"}:
-        errors.append(f"{prefix}.state is invalid")
-    if state == "hashed" and value.get("current_sha256") is None:
-        errors.append(f"{prefix}.current_sha256 is required for hashed state")
-    if state != "hashed" and value.get("current_sha256") is not None:
-        errors.append(f"{prefix}.current_sha256 must be null for non-hashed state")
-    return errors
-
-
-def _validate_disposition_record(record: dict[str, Any], path_id: str) -> list[str]:
-    """人間が作成する disposition record の schema を検査する。"""
-    errors = _field_set(
-        record,
-        {
-            "schema_version",
-            "decision_id",
-            "issue_id",
-            "decided_at",
-            "state",
-            "note",
-            "superseded_by",
-        },
-    )
-    if record.get("decision_id") != path_id or not is_uuid7_prefixed(
-        record.get("decision_id"), "fbd_"
-    ):
-        errors.append("decision_id is invalid")
-    if record.get("state") not in {
-        "open",
-        "acknowledged",
-        "resolved",
-        "ignored",
-        "superseded",
-    }:
-        errors.append("disposition state is invalid")
-    superseded_by = record.get("superseded_by")
-    if record.get("state") == "superseded":
-        if not isinstance(superseded_by, str) or superseded_by == record.get(
-            "issue_id"
-        ):
-            errors.append("superseded disposition requires another issue ID")
-    elif superseded_by is not None:
-        errors.append("superseded_by must be null unless state is superseded")
-    if not all(
-        isinstance(record.get(name), str)
-        for name in ("decision_id", "issue_id", "decided_at", "note")
-    ):
-        errors.append("disposition string field is invalid")
-    _require_timestamp(record, "decided_at", errors)
-    return errors
-
-
-def _validate_ingestion_record(record: dict[str, Any], path_id: str) -> list[str]:
-    """observation 単位の ingestion receipt schema を検査する。"""
-    errors = _field_set(
-        record,
-        {
-            "schema_version",
-            "observation_id",
-            "observation_sha256",
-            "processed_at",
-            "normalization_unit_id",
-            "normalizer_version",
-            "status",
-            "issue_ids",
-            "validation_errors",
-        },
-    )
-    if record.get("observation_id") != path_id:
-        errors.append("observation_id does not match path")
-    if not is_observation_id(record.get("observation_id")):
-        errors.append("observation_id is invalid")
-    if record.get("status") not in {"integrated", "invalid"}:
-        errors.append("ingestion status is invalid")
-    issue_ids = record.get("issue_ids")
-    validation_errors = record.get("validation_errors")
-    if not _is_string_list(issue_ids) or not _is_string_list(validation_errors):
-        errors.append("ingestion arrays are invalid")
-    elif record.get("status") == "integrated" and (not issue_ids or validation_errors):
-        errors.append("integrated ingestion arrays are inconsistent")
-    elif record.get("status") == "invalid" and (issue_ids or not validation_errors):
-        errors.append("invalid ingestion arrays are inconsistent")
-    string_fields = (
-        "observation_id",
-        "observation_sha256",
-        "processed_at",
-        "normalization_unit_id",
-        "normalizer_version",
-    )
-    if not all(isinstance(record.get(name), str) for name in string_fields):
-        errors.append("ingestion string field is invalid")
-    if not re.fullmatch(r"[0-9a-f]{64}", str(record.get("observation_sha256", ""))):
-        errors.append("observation_sha256 is invalid")
-    _require_timestamp(record, "processed_at", errors)
-    if not re.fullmatch(
-        r"fbu_[0-9a-f]{64}", str(record.get("normalization_unit_id", ""))
-    ):
-        errors.append("normalization_unit_id is invalid")
-    if not re.fullmatch(r"[0-9a-f]{64}", str(record.get("normalizer_version", ""))):
-        errors.append("normalizer_version is invalid")
-    return errors
-
-
-def _validate_normalized_record_relations(
-    root: Path,
-    records: list[tuple[Path, dict[str, Any]]],
-) -> None:
-    """issue 内 record の参照関係を検査する。"""
-    occurrence_ids: dict[str, set[str]] = {}
-    occurrence_hashes: dict[tuple[str, str], str] = {}
-    revisions: list[tuple[Path, dict[str, Any]]] = []
-    ingestions: list[tuple[Path, dict[str, Any]]] = []
-    dispositions: list[tuple[Path, dict[str, Any]]] = []
-    identities: set[str] = set()
-    identity_records: dict[str, dict[str, Any]] = {}
-    for path, record in records:
-        relative = path.relative_to(root).parts
-        if len(relative) >= 3 and relative[0] == "issue":
-            current_issue_id = relative[1]
-            if relative[2] == "identity.json":
-                identities.add(current_issue_id)
-                identity_records[current_issue_id] = record
-            elif relative[2] == "occurrence":
-                occurrence_ids.setdefault(current_issue_id, set()).add(
-                    str(record["observation_id"])
-                )
-                occurrence_hashes[(current_issue_id, str(record["observation_id"]))] = (
-                    str(record["observation_sha256"])
-                )
-            elif relative[2] == "revision":
-                revisions.append((path, record))
-            elif relative[2] == "disposition":
-                dispositions.append((path, record))
-        elif len(relative) == 2 and relative[0] == "ingestion":
-            ingestions.append((path, record))
+    """初期 allowlist の rule 固有 field を検査する。"""
     errors: list[str] = []
-    issue_directories = {
-        path.relative_to(root).parts[1]
-        for path, _record in records
-        if len(path.relative_to(root).parts) >= 3
-        and path.relative_to(root).parts[0] == "issue"
-    }
-    for current_issue_id in sorted(issue_directories - identities):
-        errors.append(f"issue/{current_issue_id}: identity.json is missing")
-    for current_issue_id, identity in identity_records.items():
-        created_from = str(identity["created_from_observation_id"])
-        if created_from not in occurrence_ids.get(current_issue_id, set()):
-            errors.append(
-                f"issue/{current_issue_id}: created observation has no occurrence"
-            )
-    for path, revision in revisions:
-        current_issue_id = str(revision["issue_id"])
-        identity_record_value = identity_records.get(current_issue_id)
-        if (
-            isinstance(identity_record_value, dict)
-            and identity_record_value.get("origin") == "machine_rule"
-        ):
-            canonical_key = identity_record_value.get("canonical_key")
-            rule_id = (
-                canonical_key.split("\0", 1)[0]
-                if isinstance(canonical_key, str)
-                else ""
-            )
-            contract = _MACHINE_RULE_CONTRACTS.get(rule_id)
-            if contract is not None and revision.get("category") != contract[1]:
-                errors.append(
-                    f"{path}: machine issue category does not match rule registry"
-                )
-        unknown = set(revision["source_observation_ids"]) - occurrence_ids.get(
-            current_issue_id, set()
-        )
-        if unknown:
-            errors.append(
-                f"{path}: source observations have no occurrence: {sorted(unknown)}"
-            )
-        unknown_related = set(revision["related_issue_ids"]) - identities
-        if unknown_related:
-            errors.append(
-                f"{path}: related issues do not exist: {sorted(unknown_related)}"
-            )
-    for path, disposition in dispositions:
-        target = disposition.get("superseded_by")
-        if target is not None and target not in identities:
-            errors.append(f"{path}: superseded issue does not exist: {target}")
-    for path, ingestion in ingestions:
-        if ingestion.get("status") != "integrated":
-            continue
-        observation_id_value = str(ingestion["observation_id"])
-        observation_hash = str(ingestion["observation_sha256"])
-        for current_issue_id in ingestion["issue_ids"]:
-            if current_issue_id not in identities:
-                errors.append(
-                    f"{path}: integrated issue does not exist: {current_issue_id}"
-                )
-                continue
-            occurrence_hash = occurrence_hashes.get(
-                (current_issue_id, observation_id_value)
-            )
-            if occurrence_hash != observation_hash:
-                errors.append(
-                    f"{path}: integrated issue occurrence/hash is missing or different: "
-                    f"{current_issue_id}"
-                )
-    if errors:
-        raise CmocError(
-            "feedback state の record 関係が不正です。",
-            ["欠落または不整合な append-only record を確認してください。"],
-            "\n".join(errors),
-        )
+    if rule_id_value == "feedback.reporter_unavailable.v1":
+        component = event_fields.get("component")
+        failure_code = event_fields.get("failure_code")
+        if component not in _MACHINE_REPORTER_COMPONENTS:
+            errors.append("/payload/event_fields/component: unsupported value")
+        if failure_code not in _MACHINE_REPORTER_FAILURE_CODES:
+            errors.append("/payload/event_fields/failure_code: unsupported value")
+        if payload.get("normalized_subject_id") != f"{component}:{failure_code}":
+            errors.append("/payload/normalized_subject_id: does not match event")
+        return errors
 
-
-@dataclass(frozen=True)
-class EffectiveFeedbackState:
-    """normalization unit manifest で確定した record 集合。"""
-
-    records: dict[str, dict[str, Any]]
-    unit_manifests: dict[str, dict[str, Any]]
+    agent_call_kind = event_fields.get("agent_call_kind")
+    if not isinstance(agent_call_kind, str) or not agent_call_kind:
+        errors.append("/payload/event_fields/agent_call_kind: expected string")
+    if payload.get("normalized_subject_id") != agent_call_kind:
+        errors.append("/payload/normalized_subject_id: does not match event")
+    schema_sha = event_fields.get("schema_sha256")
+    if not isinstance(schema_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", schema_sha):
+        errors.append("/payload/event_fields/schema_sha256: expected SHA256")
+    if event_fields.get("last_failure_stage") not in {
+        "json_parse",
+        "schema_validation",
+        "deterministic_postcondition",
+        "resume_unavailable",
+        "artifact_changed",
+    }:
+        errors.append("/payload/event_fields/last_failure_stage: unsupported value")
+    return errors
 
 
 @contextmanager
 def feedback_writer_lock(repo: Path) -> Iterator[None]:
     """repository ごとの feedback writer を非待機で排他する。"""
-    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    # root までの symlink を拒否して、lock と state の所有 repository を一致させる。
     repository = repo.resolve(strict=False)
     root = feedback_root(repository)
     current = root
     while current != repository:
         if current.is_symlink():
-            raise CmocError(
-                "feedback state root は symlink 経由で更新できません。",
-                ["repository-local state path を通常 directory に戻してください。"],
-                str(current),
-            )
+            raise _corruption("feedback state root が symlink です。", current)
         current = current.parent
     lock_path = root / ".writer.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     if lock_path.is_symlink() or (lock_path.exists() and not lock_path.is_file()):
-        raise CmocError(
-            "feedback writer lock path が通常 file ではありません。",
-            ["lock path を人間が確認してください。"],
-            str(lock_path),
+        raise _corruption(
+            "feedback writer lock path が通常 file ではありません。", lock_path
         )
     with lock_path.open("a+") as lock_file:
         try:
@@ -1301,152 +674,2760 @@ def feedback_writer_lock(repo: Path) -> Iterator[None]:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-def _canonical_object(path: Path, description: str) -> dict[str, Any]:
-    """canonical JSON object を読み、不正な durable artifact を拒否する。"""
+def _corruption(summary: str, path: Path, detail: str | None = None) -> CmocError:
+    """feedback state corruption を一貫した利用者向け error にする。"""
+    return CmocError(
+        summary,
+        ["repository-local feedback state を人間が確認してください。"],
+        detail or str(path),
+    )
+
+
+def _has_symlink_component(path: Path) -> bool:
+    """lexical path の既存 component に symlink があるかを返す。"""
+    current = path.absolute()
+    while current != current.parent:
+        if current.is_symlink():
+            return True
+        current = current.parent
+    return False
+
+
+def _read_canonical_object(path: Path, description: str) -> JsonObject:
+    """通常 file の canonical JSON object を読む。"""
+    if _has_symlink_component(path) or not path.is_file():
+        raise _corruption(f"{description} が通常 file ではありません。", path)
     try:
-        if path.is_symlink() or not path.is_file():
-            raise ValueError("regular file required")
         content = path.read_bytes()
         value = json.loads(content)
-        if not isinstance(value, dict):
-            raise ValueError("JSON object required")
-        if content != canonical_json_bytes(value):
-            raise ValueError("canonical JSON form required")
-        return value
-    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
-        raise CmocError(
-            f"{description} が不正です。",
-            ["schema、hash、および file 種別を確認してください。"],
-            f"path: {path}\nerror: {exc}",
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise _corruption(
+            f"{description} を canonical JSON として読めません。", path
+        ) from exc
+    if not isinstance(value, dict) or canonical_json_bytes(value) != content:
+        raise _corruption(
+            f"{description} が canonical JSON object ではありません。", path
+        )
+    return value
+
+
+def _atomic_write_json(path: Path, value: JsonObject) -> str:
+    """mutable pointer／manifest を sibling temporary から durable に置換する。"""
+    content = canonical_json_bytes(value)
+    if _has_symlink_component(path):
+        raise _corruption("feedback state path が symlink を含みます。", path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and (path.is_symlink() or not path.is_file()):
+        raise _corruption("feedback state path が通常 file ではありません。", path)
+    temporary = path.parent / f".{path.name}.{secrets.token_hex(12)}.tmp"
+    try:
+        with temporary.open("xb") as output:
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, path)
+        _flush_directory(path.parent)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return sha256_bytes(content)
+
+
+def _flush_directory(directory: Path) -> None:
+    """directory entry の変更を durable にする。"""
+    descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _relative_path(repo: Path, path: Path) -> str:
+    """repository 内 path を canonical POSIX relative path にする。"""
+    repository = repo.resolve(strict=False)
+    candidate = path.resolve(strict=False)
+    try:
+        return candidate.relative_to(repository).as_posix()
+    except ValueError as exc:
+        raise _corruption(
+            "feedback state の参照 path が repository 外です。", path
         ) from exc
 
 
-def _record_reference(root: Path, path: Path) -> dict[str, str]:
-    """feedback root 相対 path と現在 byte 列の SHA256 を返す。"""
+def _resolve_reference_path(
+    repo: Path, raw_path: object, expected_root: Path, description: str
+) -> Path:
+    """state 内の repository-relative path を期待 root 内へ解決する。"""
+    if not isinstance(raw_path, str) or not raw_path or Path(raw_path).is_absolute():
+        raise _corruption(
+            f"{description} path が不正です。", expected_root, repr(raw_path)
+        )
+    repository = repo.resolve(strict=False)
+    candidate = (repository / raw_path).resolve(strict=False)
+    expected = expected_root.resolve(strict=False)
+    if candidate != expected and expected not in candidate.parents:
+        raise _corruption(f"{description} path が期待 root 外です。", candidate)
+    return candidate
+
+
+def artifact_reference(repo: Path, path: Path) -> JsonObject:
+    """存在する通常 file の path と SHA256 reference を返す。"""
+    if _has_symlink_component(path) or not path.is_file():
+        raise _corruption("feedback artifact が通常 file ではありません。", path)
     return {
-        "path": path.relative_to(root).as_posix(),
+        "path": _relative_path(repo, path),
         "sha256": sha256_bytes(path.read_bytes()),
     }
 
 
-def _validate_reference(
-    root: Path,
+def _validate_artifact_reference(
+    repo: Path,
     reference: object,
     *,
+    expected_root: Path,
     description: str,
-) -> tuple[str, Path]:
-    """root 内の immutable file 参照と hash を検査する。"""
+) -> Path:
+    """artifact reference の field、path、および hash を検証する。"""
     if not isinstance(reference, dict) or set(reference) != {"path", "sha256"}:
-        raise CmocError(
-            f"{description} の file 参照が不正です。",
-            ["manifest の path と SHA256 を確認してください。"],
-            repr(reference),
+        raise _corruption(f"{description} reference が不正です。", expected_root)
+    path = _resolve_reference_path(
+        repo, reference.get("path"), expected_root, description
+    )
+    digest = reference.get("sha256")
+    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        raise _corruption(f"{description} SHA256 が不正です。", path)
+    if _has_symlink_component(path) or not path.is_file():
+        raise _corruption(f"{description} が存在する通常 file ではありません。", path)
+    if sha256_bytes(path.read_bytes()) != digest:
+        raise _corruption(f"{description} の SHA256 が一致しません。", path)
+    return path
+
+
+def _require_exact_fields(
+    value: object, fields: set[str], path: Path, description: str
+) -> JsonObject:
+    """永続 object が exact field set を持つことを要求する。"""
+    if not isinstance(value, dict) or set(value) != fields:
+        raise _corruption(
+            f"{description} の field set が不正です。",
+            path,
+            f"expected: {sorted(fields)!r}\nobserved: {sorted(value) if isinstance(value, dict) else type(value).__name__}",
         )
-    relative = reference.get("path")
-    expected = reference.get("sha256")
+    return value
+
+
+def _require_timestamp(value: object, path: Path, description: str) -> str:
+    """timezone-aware RFC 3339 timestamp を要求する。"""
+    if not isinstance(value, str) or not _is_timestamp(value):
+        raise _corruption(f"{description} timestamp が不正です。", path, repr(value))
+    return value
+
+
+def _require_nonnegative_integer(value: object, path: Path, description: str) -> int:
+    """bool ではない非負 integer を要求する。"""
+    if type(value) is not int or value < 0:
+        raise _corruption(
+            f"{description} が非負 integer ではありません。", path, repr(value)
+        )
+    return value
+
+
+def _validate_active_issue(record: JsonObject, path: Path) -> None:
+    """compact active issue record の schema と identity を検査する。"""
+    _require_exact_fields(
+        record,
+        {
+            "schema_version",
+            "issue_id",
+            "origin",
+            "canonical_key",
+            "category",
+            "summary",
+            "impact",
+            "occurrence_count",
+            "affected_session_count",
+            "session_digest",
+            "first_observed_at",
+            "last_observed_at",
+            "representative_evidence",
+            "reference_targets",
+            "latest_fingerprints",
+            "verification",
+            "machine_state",
+        },
+        path,
+        "active issue record",
+    )
+    if not _is_version_one(record.get("schema_version")):
+        raise _corruption("active issue schema version が不正です。", path)
+    current_issue_id = record.get("issue_id")
+    canonical_key = record.get("canonical_key")
     if (
-        not isinstance(relative, str)
-        or not relative
-        or Path(relative).is_absolute()
-        or ".." in Path(relative).parts
-        or not isinstance(expected, str)
-        or re.fullmatch(r"[0-9a-f]{64}", expected) is None
+        not isinstance(current_issue_id, str)
+        or not isinstance(canonical_key, str)
+        or issue_id(canonical_key) != current_issue_id
+        or path.stem != current_issue_id
     ):
-        raise CmocError(
-            f"{description} の file 参照が不正です。",
-            ["manifest の path と SHA256 を確認してください。"],
-            repr(reference),
+        raise _corruption(
+            "active issue identity が canonical key と一致しません。", path
         )
-    path = root / relative
-    try:
-        if path.is_symlink() or not path.is_file():
-            raise ValueError("referenced path is not a regular file")
-        actual = sha256_bytes(path.read_bytes())
-    except (OSError, ValueError) as exc:
-        raise CmocError(
-            f"{description} の参照先が欠落しています。",
-            ["手動対応が必要な path を確認してください。"],
-            str(path),
-        ) from exc
-    if actual != expected:
-        raise CmocError(
-            f"{description} の SHA256 が一致しません。",
-            ["改変された immutable file を人間が確認してください。"],
-            f"path: {path}\nexpected: {expected}\nactual: {actual}",
+    if record.get("origin") not in {"agent_report", "machine_rule"}:
+        raise _corruption("active issue origin が不正です。", path)
+    if record.get("origin") == "agent_report" and (
+        not canonical_key.startswith("agent\0")
+        or not is_observation_id(canonical_key.removeprefix("agent\0"))
+    ):
+        raise _corruption("agent active issue canonical key が不正です。", path)
+    if record.get("origin") == "machine_rule" and not _is_machine_canonical_key(
+        canonical_key
+    ):
+        raise _corruption("machine active issue canonical key が不正です。", path)
+    for name in ("category", "summary", "impact"):
+        if not isinstance(record.get(name), str) or not record[name]:
+            raise _corruption(
+                f"active issue {name} が空でない string ではありません。", path
+            )
+    occurrence_count = _require_nonnegative_integer(
+        record.get("occurrence_count"), path, "active issue occurrence_count"
+    )
+    if occurrence_count < 1:
+        raise _corruption(
+            "active issue occurrence_count は 1 以上である必要があります。", path
         )
-    return relative, path
+    affected_session_count = _require_nonnegative_integer(
+        record.get("affected_session_count"),
+        path,
+        "active issue affected_session_count",
+    )
+    if affected_session_count > occurrence_count:
+        raise _corruption(
+            "active issue affected session 数が occurrence 数を超えています。", path
+        )
+    first = _require_timestamp(
+        record.get("first_observed_at"), path, "first_observed_at"
+    )
+    last = _require_timestamp(record.get("last_observed_at"), path, "last_observed_at")
+    if parse_rfc3339(first) > parse_rfc3339(last):
+        raise _corruption("active issue の観測時刻順が逆転しています。", path)
 
-
-def _record_kind(relative: str) -> str | None:
-    """normalized record path から schema kind を返す。"""
-    parts = Path(relative).parts
-    if len(parts) == 3 and parts[0] == "issue" and parts[2] == "identity.json":
-        return "identity"
+    # bounded field は schema-fixed 上限と型を state 読み取り時に確認する。
+    for name in ("representative_evidence", "reference_targets", "latest_fingerprints"):
+        value = record.get(name)
+        if (
+            not isinstance(value, list)
+            or len(value) > 5
+            or not all(isinstance(item, dict) for item in value)
+        ):
+            raise _corruption(
+                f"active issue {name} が bounded object array ではありません。", path
+            )
+    reference_targets = record["reference_targets"]
+    assert isinstance(reference_targets, list)
+    for target in reference_targets:
+        assert isinstance(target, dict)
+        target_path = target.get("path")
+        if (
+            set(target) != {"path", "kind", "location"}
+            or not isinstance(target_path, str)
+            or not target_path
+            or Path(target_path).is_absolute()
+            or ".." in Path(target_path).parts
+        ):
+            raise _corruption("active issue reference target が不正です。", path)
+    latest_fingerprints = record["latest_fingerprints"]
+    assert isinstance(latest_fingerprints, list)
+    fingerprint_errors = [
+        error
+        for index, fingerprint in enumerate(latest_fingerprints)
+        for error in _validate_evidence_fingerprint(fingerprint, index)
+    ]
+    if fingerprint_errors:
+        raise _corruption(
+            "active issue fingerprint が不正です。",
+            path,
+            "\n".join(fingerprint_errors),
+        )
+    session_digest = _require_exact_fields(
+        record.get("session_digest"), {"values", "saturated"}, path, "session digest"
+    )
+    values = session_digest.get("values")
     if (
-        len(parts) == 4
-        and parts[0] == "issue"
-        and parts[2] in {"revision", "occurrence", "assessment", "disposition"}
+        not isinstance(values, list)
+        or not _is_string_list(values)
+        or not isinstance(session_digest.get("saturated"), bool)
+        or len(values) > 64
+        or values != sorted(set(values))
+        or not all(re.fullmatch(r"[0-9a-f]{64}", value) for value in values)
     ):
-        return parts[2]
-    if len(parts) == 2 and parts[0] == "ingestion":
-        return "ingestion"
-    return None
+        raise _corruption("active issue session digest が不正です。", path)
+    saturated = session_digest["saturated"]
+    if (not saturated and affected_session_count != len(values)) or (
+        saturated and affected_session_count < len(values)
+    ):
+        raise _corruption("active issue session count と digest が一致しません。", path)
+    verification = _require_exact_fields(
+        record.get("verification"),
+        {"report_cut_id", "verified_at", "reason", "current_evidence", "human_action"},
+        path,
+        "active issue verification",
+    )
+    if not is_uuid7_prefixed(verification.get("report_cut_id"), "fbc_"):
+        raise _corruption(
+            "active issue verification の report cut ID が不正です。", path
+        )
+    _require_timestamp(
+        verification.get("verified_at"), path, "verification verified_at"
+    )
+    if not isinstance(verification.get("reason"), str) or not verification["reason"]:
+        raise _corruption("active issue verification reason が空です。", path)
+    evidence = verification.get("current_evidence")
+    if (
+        not isinstance(evidence, list)
+        or not evidence
+        or len(evidence) > 5
+        or not all(isinstance(item, dict) for item in evidence)
+    ):
+        raise _corruption("active issue current evidence が不正です。", path)
+    for item in evidence:
+        assert isinstance(item, dict)
+        required = {"kind", "location", "finding"}
+        allowed = required | {
+            "path",
+            "state",
+            "sha256",
+            "probe_id",
+            "observation_id",
+            "summary",
+        }
+        if (
+            not required.issubset(item)
+            or not set(item).issubset(allowed)
+            or not all(isinstance(item[name], str) and item[name] for name in required)
+            or "reference_id" in item
+            or "content" in item
+        ):
+            raise _corruption("active issue current evidence entry が不正です。", path)
+    if (
+        not isinstance(verification.get("human_action"), str)
+        or not verification["human_action"]
+    ):
+        raise _corruption("active issue human action が空です。", path)
+    machine_state = record.get("machine_state")
+    if record.get("origin") == "machine_rule":
+        if machine_state is None:
+            return
+        if not isinstance(machine_state, dict):
+            raise _corruption(
+                "machine active issue の machine_state が不正です。", path
+            )
+        aggregate_id_value = machine_state.get("aggregate_id")
+        if not isinstance(aggregate_id_value, str):
+            raise _corruption("machine active issue aggregate ID が不正です。", path)
+        aggregate_path = (
+            path.parent.parent / "machine_aggregate" / f"{aggregate_id_value}.json"
+        )
+        _validate_machine_aggregate(machine_state, aggregate_path)
+        if machine_state.get("canonical_key") != canonical_key:
+            raise _corruption(
+                "machine active issue aggregate identity が一致しません。", path
+            )
+    if record.get("origin") == "agent_report" and machine_state is not None:
+        raise _corruption(
+            "agent active issue の machine_state は null である必要があります。", path
+        )
 
 
-def _validate_effective_record(
-    root: Path,
-    relative: str,
-    record: dict[str, Any],
+def _validate_machine_aggregate(record: JsonObject, path: Path) -> None:
+    """threshold 未満 machine aggregate の compact schema を検査する。"""
+    _require_exact_fields(
+        record,
+        {
+            "schema_version",
+            "aggregate_id",
+            "rule_id",
+            "canonical_key",
+            "category",
+            "summary",
+            "impact",
+            "human_action",
+            "window_start",
+            "window_end",
+            "occurrence_count",
+            "affected_session_count",
+            "threshold_counts",
+            "time_buckets",
+            "scope_digest",
+            "agent_call_digest",
+            "scope_saturated",
+            "agent_call_saturated",
+            "first_observed_at",
+            "last_observed_at",
+            "representative_evidence",
+            "latest_fingerprints",
+        },
+        path,
+        "machine aggregate record",
+    )
+    if not _is_version_one(record.get("schema_version")):
+        raise _corruption("machine aggregate schema version が不正です。", path)
+    canonical_key = record.get("canonical_key")
+    aggregate_id_value = record.get("aggregate_id")
+    rule_id_value = record.get("rule_id")
+    if (
+        not isinstance(canonical_key, str)
+        or machine_aggregate_id(canonical_key) != aggregate_id_value
+        or path.stem != aggregate_id_value
+        or not isinstance(rule_id_value, str)
+        or not _is_machine_canonical_key(canonical_key, rule_id_value)
+    ):
+        raise _corruption(
+            "machine aggregate identity が canonical key と一致しません。", path
+        )
+    if rule_id_value not in _MACHINE_RULE_CONTRACTS:
+        raise _corruption("machine aggregate rule が allowlist 外です。", path)
+    if record.get("category") != _MACHINE_RULE_CONTRACTS[rule_id_value][1]:
+        raise _corruption("machine aggregate category が rule と一致しません。", path)
+    for name in ("category", "summary", "impact", "human_action"):
+        if not isinstance(record.get(name), str) or not record[name]:
+            raise _corruption(f"machine aggregate {name} が空です。", path)
+    window_start = _require_timestamp(
+        record.get("window_start"), path, "machine aggregate window_start"
+    )
+    window_end = _require_timestamp(
+        record.get("window_end"), path, "machine aggregate window_end"
+    )
+    first = _require_timestamp(
+        record.get("first_observed_at"), path, "machine aggregate first_observed_at"
+    )
+    last = _require_timestamp(
+        record.get("last_observed_at"), path, "machine aggregate last_observed_at"
+    )
+    if parse_rfc3339(window_start) >= parse_rfc3339(window_end) or parse_rfc3339(
+        first
+    ) > parse_rfc3339(last):
+        raise _corruption("machine aggregate の時刻順が不正です。", path)
+    occurrence_count = _require_nonnegative_integer(
+        record.get("occurrence_count"), path, "machine aggregate occurrence_count"
+    )
+    affected_session_count = _require_nonnegative_integer(
+        record.get("affected_session_count"),
+        path,
+        "machine aggregate affected_session_count",
+    )
+    if occurrence_count < 1 or affected_session_count > occurrence_count:
+        raise _corruption("machine aggregate count が不正です。", path)
+    threshold_counts = _require_exact_fields(
+        record.get("threshold_counts"),
+        {"recurrence_scope", "agent_call"},
+        path,
+        "machine aggregate threshold counts",
+    )
+    for name in ("recurrence_scope", "agent_call"):
+        count = _require_nonnegative_integer(
+            threshold_counts.get(name), path, f"machine aggregate {name} count"
+        )
+        if count > 64:
+            raise _corruption(
+                "machine aggregate threshold count が上限を超えています。", path
+            )
+    for name in ("time_buckets", "scope_digest", "agent_call_digest"):
+        value = record.get(name)
+        if not isinstance(value, list) or len(value) > 64:
+            raise _corruption(
+                f"machine aggregate {name} が bounded array ではありません。", path
+            )
+    if not isinstance(record.get("scope_saturated"), bool) or not isinstance(
+        record.get("agent_call_saturated"), bool
+    ):
+        raise _corruption("machine aggregate saturation marker が不正です。", path)
+    for name in ("scope_digest", "agent_call_digest"):
+        digest = record[name]
+        assert isinstance(digest, list)
+        digest_values: list[str] = []
+        for item in digest:
+            entry = _require_exact_fields(
+                item,
+                {"value", "last_observed_at"},
+                path,
+                f"machine aggregate {name} entry",
+            )
+            digest_value = entry.get("value")
+            if (
+                not isinstance(digest_value, str)
+                or re.fullmatch(r"[0-9a-f]{64}", digest_value) is None
+            ):
+                raise _corruption(f"machine aggregate {name} value が不正です。", path)
+            _require_timestamp(
+                entry.get("last_observed_at"),
+                path,
+                f"machine aggregate {name} timestamp",
+            )
+            digest_values.append(digest_value)
+        if digest_values != sorted(set(digest_values)):
+            raise _corruption(
+                f"machine aggregate {name} が一意な辞書順ではありません。", path
+            )
+    if threshold_counts["recurrence_scope"] != len(
+        record["scope_digest"]
+    ) or threshold_counts["agent_call"] != len(record["agent_call_digest"]):
+        raise _corruption(
+            "machine aggregate threshold count と digest が一致しません。", path
+        )
+    buckets = record["time_buckets"]
+    assert isinstance(buckets, list)
+    bucket_days: list[str] = []
+    bucket_occurrence_count = 0
+    for item in buckets:
+        bucket = _require_exact_fields(
+            item,
+            {
+                "day",
+                "count",
+                "first_observed_at",
+                "last_observed_at",
+                "scope_digest",
+                "agent_call_digest",
+                "scope_saturated",
+                "agent_call_saturated",
+            },
+            path,
+            "machine aggregate time bucket",
+        )
+        day = bucket.get("day")
+        count = _require_nonnegative_integer(
+            bucket.get("count"), path, "machine aggregate bucket count"
+        )
+        bucket_first = _require_timestamp(
+            bucket.get("first_observed_at"), path, "machine aggregate bucket first"
+        )
+        bucket_last = _require_timestamp(
+            bucket.get("last_observed_at"), path, "machine aggregate bucket last"
+        )
+        if (
+            not isinstance(day, str)
+            or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", day) is None
+            or count < 1
+            or parse_rfc3339(bucket_first) > parse_rfc3339(bucket_last)
+        ):
+            raise _corruption("machine aggregate time bucket が不正です。", path)
+        for digest_name in ("scope_digest", "agent_call_digest"):
+            digest = bucket.get(digest_name)
+            saturation_name = digest_name.replace("_digest", "_saturated")
+            if (
+                not isinstance(digest, list)
+                or len(digest) > 64
+                or not isinstance(bucket.get(saturation_name), bool)
+            ):
+                raise _corruption("machine aggregate bucket digest が不正です。", path)
+            bucket_digest_values: list[str] = []
+            for digest_item in digest:
+                entry = _require_exact_fields(
+                    digest_item,
+                    {"value", "last_observed_at"},
+                    path,
+                    "machine aggregate bucket digest entry",
+                )
+                digest_value = entry.get("value")
+                if (
+                    not isinstance(digest_value, str)
+                    or re.fullmatch(r"[0-9a-f]{64}", digest_value) is None
+                ):
+                    raise _corruption(
+                        "machine aggregate bucket digest value が不正です。", path
+                    )
+                _require_timestamp(
+                    entry.get("last_observed_at"),
+                    path,
+                    "machine aggregate bucket digest timestamp",
+                )
+                bucket_digest_values.append(digest_value)
+            if bucket_digest_values != sorted(set(bucket_digest_values)):
+                raise _corruption(
+                    "machine aggregate bucket digest が canonical ではありません。",
+                    path,
+                )
+        bucket_days.append(day)
+        bucket_occurrence_count += count
+    if (
+        bucket_days != sorted(set(bucket_days))
+        or bucket_occurrence_count != occurrence_count
+    ):
+        raise _corruption("machine aggregate bucket 集計が一致しません。", path)
+    for name in ("representative_evidence", "latest_fingerprints"):
+        if (
+            not isinstance(record.get(name), list)
+            or len(record[name]) > 5
+            or not all(isinstance(item, dict) for item in record[name])
+        ):
+            raise _corruption(
+                f"machine aggregate {name} が bounded array ではありません。", path
+            )
+
+
+def _machine_aggregate_reaches_threshold(record: JsonObject) -> bool:
+    """allowlist rule の threshold を compact count から決定論的に判定する。"""
+    counts = record.get("threshold_counts")
+    if not isinstance(counts, dict):
+        return False
+    recurrence_scope = counts.get("recurrence_scope")
+    agent_call = counts.get("agent_call")
+    if record.get("rule_id") == "feedback.reporter_unavailable.v1":
+        return type(recurrence_scope) is int and recurrence_scope >= 2
+    if record.get("rule_id") == "codex.structured_output_validation_exhausted.v1":
+        return (
+            type(recurrence_scope) is int
+            and recurrence_scope >= 2
+            and type(agent_call) is int
+            and agent_call >= 2
+        )
+    return False
+
+
+def _load_generation(
+    repo: Path, manifest_path: Path, expected_generation_id: str | None = None
+) -> tuple[JsonObject, dict[str, JsonObject], dict[str, JsonObject]]:
+    """generation manifest と列挙 record を hash 付きで読み込む。"""
+    manifest = _read_canonical_object(manifest_path, "active generation manifest")
+    _require_exact_fields(
+        manifest,
+        {
+            "schema_version",
+            "generation_id",
+            "report_cut_id",
+            "created_at",
+            "issues",
+            "machine_aggregates",
+        },
+        manifest_path,
+        "active generation manifest",
+    )
+    generation_id_value = manifest.get("generation_id")
+    if (
+        not _is_version_one(manifest.get("schema_version"))
+        or not is_uuid7_prefixed(generation_id_value, "fbg_")
+        or (
+            expected_generation_id is not None
+            and generation_id_value != expected_generation_id
+        )
+        or manifest_path.parent.name != generation_id_value
+    ):
+        raise _corruption(
+            "active generation manifest identity が不正です。", manifest_path
+        )
+    if not is_uuid7_prefixed(manifest.get("report_cut_id"), "fbc_"):
+        raise _corruption(
+            "active generation の report cut ID が不正です。", manifest_path
+        )
+    _require_timestamp(
+        manifest.get("created_at"), manifest_path, "active generation created_at"
+    )
+    issue_refs = manifest.get("issues")
+    aggregate_refs = manifest.get("machine_aggregates")
+    if not isinstance(issue_refs, list) or not isinstance(aggregate_refs, list):
+        raise _corruption(
+            "active generation record references が array ではありません。",
+            manifest_path,
+        )
+
+    # manifest の canonical order と各 record の identity/hash を検証する。
+    issues: dict[str, JsonObject] = {}
+    issue_keys: list[str] = []
+    expected_issue_root = manifest_path.parent / "issue"
+    for reference in issue_refs:
+        item = _require_exact_fields(
+            reference,
+            {"issue_id", "path", "sha256"},
+            manifest_path,
+            "active issue reference",
+        )
+        current_issue_id = item.get("issue_id")
+        if not isinstance(current_issue_id, str):
+            raise _corruption(
+                "active issue reference ID が string ではありません。", manifest_path
+            )
+        path = _validate_artifact_reference(
+            repo,
+            {"path": item.get("path"), "sha256": item.get("sha256")},
+            expected_root=expected_issue_root,
+            description="active issue",
+        )
+        record = _read_canonical_object(path, "active issue record")
+        _validate_active_issue(record, path)
+        if record.get("issue_id") != current_issue_id or current_issue_id in issues:
+            raise _corruption("active issue reference identity が一致しません。", path)
+        issues[current_issue_id] = record
+        issue_keys.append(current_issue_id)
+    if issue_keys != sorted(issue_keys):
+        raise _corruption(
+            "active issue references が issue ID 順ではありません。", manifest_path
+        )
+
+    aggregates: dict[str, JsonObject] = {}
+    aggregate_keys: list[str] = []
+    expected_aggregate_root = manifest_path.parent / "machine_aggregate"
+    for reference in aggregate_refs:
+        item = _require_exact_fields(
+            reference,
+            {"canonical_key", "path", "sha256"},
+            manifest_path,
+            "machine aggregate reference",
+        )
+        canonical_key = item.get("canonical_key")
+        if not isinstance(canonical_key, str):
+            raise _corruption(
+                "machine aggregate canonical key が string ではありません。",
+                manifest_path,
+            )
+        path = _validate_artifact_reference(
+            repo,
+            {"path": item.get("path"), "sha256": item.get("sha256")},
+            expected_root=expected_aggregate_root,
+            description="machine aggregate",
+        )
+        record = _read_canonical_object(path, "machine aggregate record")
+        _validate_machine_aggregate(record, path)
+        if _machine_aggregate_reaches_threshold(record):
+            raise _corruption(
+                "threshold 到達済み machine aggregate が active aggregate に残っています。",
+                path,
+            )
+        if record.get("canonical_key") != canonical_key or canonical_key in aggregates:
+            raise _corruption(
+                "machine aggregate reference identity が一致しません。", path
+            )
+        aggregates[canonical_key] = record
+        aggregate_keys.append(canonical_key)
+    if aggregate_keys != sorted(aggregate_keys):
+        raise _corruption(
+            "machine aggregate references が canonical key 順ではありません。",
+            manifest_path,
+        )
+    return manifest, issues, aggregates
+
+
+def load_active_state(repo: Path) -> ActiveState:
+    """current pointer が選ぶ正常な active state と cleanup state を読む。"""
+    pointer_path = current_pointer_path(repo)
+    if not pointer_path.exists() and not pointer_path.is_symlink():
+        return ActiveState(None, None, {}, {}, None, None)
+    pointer = _read_canonical_object(pointer_path, "feedback current pointer")
+    _require_exact_fields(
+        pointer,
+        {
+            "schema_version",
+            "generation_id",
+            "generation_manifest_path",
+            "generation_manifest_sha256",
+            "report_cut_id",
+            "report_cut_manifest_sha256",
+            "report_path",
+            "report_sha256",
+            "published_at",
+            "result",
+        },
+        pointer_path,
+        "feedback current pointer",
+    )
+    if not _is_version_one(pointer.get("schema_version")):
+        raise _corruption(
+            "feedback current pointer schema version が不正です。", pointer_path
+        )
+    generation_id_value = pointer.get("generation_id")
+    report_cut_id_value = pointer.get("report_cut_id")
+    if not is_uuid7_prefixed(generation_id_value, "fbg_") or not is_uuid7_prefixed(
+        report_cut_id_value, "fbc_"
+    ):
+        raise _corruption("feedback current pointer の ID が不正です。", pointer_path)
+    if pointer.get("result") not in {"ok", "attention"}:
+        raise _corruption("feedback current pointer result が不正です。", pointer_path)
+    report_cut_manifest_hash = pointer.get("report_cut_manifest_sha256")
+    if (
+        not isinstance(report_cut_manifest_hash, str)
+        or re.fullmatch(r"[0-9a-f]{64}", report_cut_manifest_hash) is None
+    ):
+        raise _corruption(
+            "feedback current pointer の report cut hash が不正です。", pointer_path
+        )
+    _require_timestamp(
+        pointer.get("published_at"), pointer_path, "feedback publication"
+    )
+
+    # pointer が参照する generation と Markdown report を両方検証する。
+    generation_path = _validate_artifact_reference(
+        repo,
+        {
+            "path": pointer.get("generation_manifest_path"),
+            "sha256": pointer.get("generation_manifest_sha256"),
+        },
+        expected_root=generation_directory(repo, str(generation_id_value)),
+        description="current generation manifest",
+    )
+    generation_manifest, issues, aggregates = _load_generation(
+        repo, generation_path, str(generation_id_value)
+    )
+    if generation_manifest.get("report_cut_id") != report_cut_id_value:
+        raise _corruption(
+            "current generation と report cut が一致しません。", generation_path
+        )
+    _validate_artifact_reference(
+        repo,
+        {"path": pointer.get("report_path"), "sha256": pointer.get("report_sha256")},
+        expected_root=repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
+        description="current feedback Markdown report",
+    )
+
+    # cleanup manifest は切替後に残っている場合だけ hash 一致を要求する。
+    cut_path = report_cut_manifest_path(repo, str(report_cut_id_value))
+    cleanup_manifest: JsonObject | None = None
+    cleanup_path: Path | None = None
+    if cut_path.exists() or cut_path.is_symlink():
+        cleanup_manifest = _read_canonical_object(
+            cut_path, "published report cut manifest"
+        )
+        if sha256_bytes(cut_path.read_bytes()) != pointer.get(
+            "report_cut_manifest_sha256"
+        ):
+            raise _corruption(
+                "published report cut manifest hash が current pointer と一致しません。",
+                cut_path,
+            )
+        _validate_report_cut_manifest(
+            repo,
+            cleanup_manifest,
+            cut_path,
+            allow_missing_cleanup_targets=True,
+        )
+        if cleanup_manifest.get("report_cut_id") != report_cut_id_value:
+            raise _corruption(
+                "published report cut ID が current pointer と一致しません。", cut_path
+            )
+        processing = cleanup_manifest.get("processing")
+        if (
+            not isinstance(processing, dict)
+            or processing.get("status") != "publication_ready"
+        ):
+            raise _corruption(
+                "current pointer が未 publication の report cut を参照しています。",
+                cut_path,
+            )
+        cleanup_path = cut_path
+    return ActiveState(
+        pointer, generation_manifest, issues, aggregates, cleanup_manifest, cleanup_path
+    )
+
+
+def _validate_report_cut_manifest(
+    repo: Path,
+    manifest: JsonObject,
+    path: Path,
+    *,
+    allow_missing_cleanup_targets: bool = False,
 ) -> None:
-    """effective normalized record の path、schema、canonical form を検査する。"""
-    kind = _record_kind(relative)
-    path = root / relative
-    if kind is None:
-        raise CmocError(
-            "normalization manifest が未定義 path を参照しています。",
-            ["manifest と record path を確認してください。"],
-            relative,
+    """report cut manifest の固定入力と mutable section の schema を検査する。"""
+    _require_exact_fields(
+        manifest,
+        {
+            "schema_version",
+            "report_cut_id",
+            "cut_at",
+            "inputs",
+            "processing",
+            "publication",
+        },
+        path,
+        "report cut manifest",
+    )
+    report_cut_id_value = manifest.get("report_cut_id")
+    if (
+        not _is_version_one(manifest.get("schema_version"))
+        or not is_uuid7_prefixed(report_cut_id_value, "fbc_")
+        or path.parent.name != report_cut_id_value
+    ):
+        raise _corruption("report cut manifest identity が不正です。", path)
+    _require_timestamp(manifest.get("cut_at"), path, "report cut")
+    inputs = _require_exact_fields(
+        manifest.get("inputs"),
+        {"observations", "current", "legacy", "references", "versions"},
+        path,
+        "report cut inputs",
+    )
+    observations = inputs.get("observations")
+    if not isinstance(observations, list):
+        raise _corruption("report cut observations が array ではありません。", path)
+    observed_entries: list[tuple[str, str, str]] = []
+    hashes_by_id: dict[str, str] = {}
+    for entry in observations:
+        item = _require_exact_fields(
+            entry, {"observation_id", "path", "sha256"}, path, "report cut observation"
         )
-    errors = _validate_normalized_record(root, path, record)
-    if errors:
-        raise CmocError(
-            "repository-local feedback record が schema に適合しません。",
-            ["record を自動上書きせず、手動で corruption を確認してください。"],
-            f"path: {path}\nerrors: {'; '.join(errors)}",
+        observation_id_value = item.get("observation_id")
+        if not is_observation_id(observation_id_value):
+            raise _corruption("report cut observation ID が不正です。", path)
+        _validate_report_cut_artifact_reference(
+            repo,
+            {"path": item.get("path"), "sha256": item.get("sha256")},
+            expected_root=feedback_root(repo) / "observation" / "v1",
+            description="pending observation",
+            allow_missing=allow_missing_cleanup_targets,
+        )
+        observation_path_value = str(item.get("path"))
+        observation_hash = str(item.get("sha256"))
+        previous_hash = hashes_by_id.setdefault(
+            str(observation_id_value), observation_hash
+        )
+        if previous_hash != observation_hash:
+            raise _corruption("同じ observation ID に異なる hash があります。", path)
+        observed_entries.append(
+            (str(observation_id_value), observation_path_value, observation_hash)
+        )
+    if observed_entries != sorted(observed_entries):
+        raise _corruption("report cut observations が ID/path 順ではありません。", path)
+    current_input = inputs.get("current")
+    if current_input is not None:
+        _validate_report_cut_current_input(
+            repo,
+            current_input,
+            path,
+            allow_missing=allow_missing_cleanup_targets,
+        )
+    legacy_input = inputs.get("legacy")
+    if legacy_input is not None:
+        _validate_report_cut_legacy_input(
+            repo,
+            legacy_input,
+            path,
+            allow_missing=allow_missing_cleanup_targets,
+        )
+    references = inputs.get("references")
+    if not isinstance(references, list) or not all(
+        isinstance(item, dict) for item in references
+    ):
+        raise _corruption(
+            "report cut references が object array ではありません。", path
+        )
+    reference_ids = [item.get("reference_id") for item in references]
+    if (
+        not all(isinstance(item, str) and item for item in reference_ids)
+        or reference_ids != sorted(reference_ids)
+        or len(reference_ids) != len(set(reference_ids))
+    ):
+        raise _corruption(
+            "report cut reference ID が一意な辞書順ではありません。", path
+        )
+    for reference in references:
+        assert isinstance(reference, dict)
+        _validate_report_cut_reference(reference, path)
+    versions = inputs.get("versions")
+    if (
+        not isinstance(versions, dict)
+        or set(versions)
+        != {
+            "normalization_builder",
+            "normalization_schema",
+            "verification_builder",
+            "verification_schema",
+            "deterministic_processing",
+        }
+        or not all(
+            isinstance(key, str)
+            and isinstance(value, str)
+            and re.fullmatch(r"[0-9a-f]{64}", value)
+            for key, value in versions.items()
+        )
+    ):
+        raise _corruption(
+            "report cut processing versions が SHA256 object ではありません。", path
+        )
+    processing = _require_exact_fields(
+        manifest.get("processing"),
+        {"status", "normalization_checkpoints", "verification_checkpoints", "failure"},
+        path,
+        "report cut processing",
+    )
+    if processing.get("status") not in {
+        "ready",
+        "processing",
+        "interrupted",
+        "failed",
+        "inconclusive",
+        "staging",
+        "publication_ready",
+    }:
+        raise _corruption("report cut processing status が不正です。", path)
+    checkpoint_contracts = (
+        (
+            "normalization_checkpoints",
+            "observation_id",
+            report_cut_directory(repo, str(report_cut_id_value))
+            / "checkpoint"
+            / "normalization",
+            is_observation_id,
+        ),
+        (
+            "verification_checkpoints",
+            "candidate_id",
+            report_cut_directory(repo, str(report_cut_id_value))
+            / "checkpoint"
+            / "verification",
+            lambda value: (
+                isinstance(value, str)
+                and re.fullmatch(r"fbi_[a-z2-7]{26}", value) is not None
+            ),
+        ),
+    )
+    for name, id_name, expected_root, identity_validator in checkpoint_contracts:
+        entries = processing.get(name)
+        if not isinstance(entries, list):
+            raise _corruption(f"report cut {name} が array ではありません。", path)
+        identifiers: list[str] = []
+        for entry in entries:
+            item = _require_exact_fields(
+                entry,
+                {id_name, "path", "sha256"},
+                path,
+                f"report cut {name} entry",
+            )
+            identifier = item.get(id_name)
+            if not identity_validator(identifier):
+                raise _corruption(f"report cut {name} identity が不正です。", path)
+            checkpoint_path = _validate_report_cut_artifact_reference(
+                repo,
+                {"path": item.get("path"), "sha256": item.get("sha256")},
+                expected_root=expected_root,
+                description=f"report cut {name}",
+                allow_missing=allow_missing_cleanup_targets,
+            )
+            if checkpoint_path.exists():
+                checkpoint = _read_canonical_object(
+                    checkpoint_path, f"report cut {name} checkpoint"
+                )
+                _validate_report_cut_checkpoint(
+                    checkpoint,
+                    checkpoint_path,
+                    expected_kind=(
+                        "normalization"
+                        if name == "normalization_checkpoints"
+                        else "verification"
+                    ),
+                    expected_report_cut_id=str(report_cut_id_value),
+                    expected_candidate_id=str(identifier),
+                )
+            identifiers.append(str(identifier))
+        if identifiers != sorted(identifiers) or len(identifiers) != len(
+            set(identifiers)
+        ):
+            raise _corruption(f"report cut {name} が一意な ID 順ではありません。", path)
+    if processing.get("failure") is not None and not isinstance(
+        processing.get("failure"), str
+    ):
+        raise _corruption(
+            "report cut failure が string または null ではありません。", path
+        )
+    publication = manifest.get("publication")
+    if publication is not None:
+        _validate_publication_section(
+            repo,
+            publication,
+            path,
+            inputs=inputs,
+            processing=processing,
+        )
+    if (
+        processing.get("status") in {"staging", "publication_ready"}
+        and publication is None
+    ):
+        raise _corruption(
+            "publication 段階の report cut に成果物参照がありません。", path
         )
 
 
-def _validate_checkpoint_reference(
+def _validate_report_cut_current_input(
+    repo: Path,
+    value: object,
+    path: Path,
+    *,
+    allow_missing: bool,
+) -> None:
+    """cut 開始時の pointer と generation artifact references を検証する。"""
+    current = _require_exact_fields(
+        value,
+        {"pointer", "generation_manifest", "issues", "machine_aggregates"},
+        path,
+        "report cut current input",
+    )
+    pointer = _require_exact_fields(
+        current.get("pointer"),
+        {"value", "path", "sha256"},
+        path,
+        "report cut current pointer input",
+    )
+    pointer_value = pointer.get("value")
+    pointer_hash = pointer.get("sha256")
+    if (
+        not isinstance(pointer_value, dict)
+        or not isinstance(pointer_hash, str)
+        or sha256_bytes(canonical_json_bytes(pointer_value)) != pointer_hash
+    ):
+        raise _corruption("report cut current pointer snapshot が不正です。", path)
+    _require_exact_fields(
+        pointer_value,
+        {
+            "schema_version",
+            "generation_id",
+            "generation_manifest_path",
+            "generation_manifest_sha256",
+            "report_cut_id",
+            "report_cut_manifest_sha256",
+            "report_path",
+            "report_sha256",
+            "published_at",
+            "result",
+        },
+        path,
+        "report cut current pointer value",
+    )
+    generation_id_value = pointer_value.get("generation_id")
+    if (
+        not _is_version_one(pointer_value.get("schema_version"))
+        or not is_uuid7_prefixed(generation_id_value, "fbg_")
+        or not is_uuid7_prefixed(pointer_value.get("report_cut_id"), "fbc_")
+        or pointer_value.get("result") not in {"ok", "attention"}
+    ):
+        raise _corruption("report cut current pointer value が不正です。", path)
+    _require_timestamp(
+        pointer_value.get("published_at"), path, "report cut current publication"
+    )
+    for name in (
+        "generation_manifest_sha256",
+        "report_cut_manifest_sha256",
+        "report_sha256",
+    ):
+        digest = pointer_value.get(name)
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            raise _corruption(f"report cut current {name} が不正です。", path)
+    pointer_target = _resolve_reference_path(
+        repo, pointer.get("path"), active_root(repo), "report cut current pointer"
+    )
+    if pointer_target != current_pointer_path(repo):
+        raise _corruption("report cut current pointer path が不正です。", path)
+    if not allow_missing:
+        _validate_artifact_reference(
+            repo,
+            {"path": pointer.get("path"), "sha256": pointer_hash},
+            expected_root=active_root(repo),
+            description="report cut current pointer",
+        )
+    generation_reference = current.get("generation_manifest")
+    shaped_generation_reference = _artifact_reference_shape(
+        generation_reference, path, "current generation"
+    )
+    if shaped_generation_reference != {
+        "path": pointer_value.get("generation_manifest_path"),
+        "sha256": pointer_value.get("generation_manifest_sha256"),
+    }:
+        raise _corruption(
+            "report cut current generation と pointer snapshot が一致しません。", path
+        )
+    generation_path = _validate_report_cut_artifact_reference(
+        repo,
+        shaped_generation_reference,
+        expected_root=generation_directory(repo, str(generation_id_value)),
+        description="report cut current generation",
+        allow_missing=allow_missing,
+    )
+    if generation_path.name != "manifest.json":
+        raise _corruption("report cut current generation path が不正です。", path)
+    _validate_report_cut_artifact_reference(
+        repo,
+        {
+            "path": pointer_value.get("report_path"),
+            "sha256": pointer_value.get("report_sha256"),
+        },
+        expected_root=repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
+        description="report cut current Markdown report",
+        allow_missing=False,
+    )
+    contracts = (
+        ("issues", "issue_id"),
+        ("machine_aggregates", "canonical_key"),
+    )
+    reference_groups: dict[str, list[JsonObject]] = {}
+    for name, identity_name in contracts:
+        references = current.get(name)
+        if not isinstance(references, list):
+            raise _corruption(
+                f"report cut current {name} が array ではありません。", path
+            )
+        identities: list[str] = []
+        for reference in references:
+            item = _require_exact_fields(
+                reference,
+                {identity_name, "path", "sha256"},
+                path,
+                f"report cut current {name} reference",
+            )
+            identity = item.get(identity_name)
+            if (
+                not isinstance(identity, str)
+                or not identity
+                or (
+                    identity_name == "issue_id"
+                    and re.fullmatch(r"fbi_[a-z2-7]{26}", identity) is None
+                )
+                or (
+                    identity_name == "canonical_key"
+                    and not _is_machine_canonical_key(identity)
+                )
+            ):
+                raise _corruption(
+                    f"report cut current {name} identity が不正です。", path
+                )
+            _validate_report_cut_artifact_reference(
+                repo,
+                {"path": item.get("path"), "sha256": item.get("sha256")},
+                expected_root=generation_root(repo),
+                description=f"report cut current {name}",
+                allow_missing=allow_missing,
+            )
+            identities.append(identity)
+        if identities != sorted(set(identities)):
+            raise _corruption(
+                f"report cut current {name} が一意な辞書順ではありません。", path
+            )
+        reference_groups[name] = references
+    if not allow_missing:
+        generation_manifest, _issues, _aggregates = _load_generation(
+            repo, generation_path, str(generation_id_value)
+        )
+        if (
+            generation_manifest.get("report_cut_id")
+            != pointer_value.get("report_cut_id")
+            or generation_manifest.get("issues") != reference_groups["issues"]
+            or generation_manifest.get("machine_aggregates")
+            != reference_groups["machine_aggregates"]
+        ):
+            raise _corruption(
+                "report cut current input が generation manifest と一致しません。",
+                generation_path,
+            )
+
+
+def _validate_report_cut_legacy_input(
+    repo: Path,
+    value: object,
+    path: Path,
+    *,
+    allow_missing: bool,
+) -> None:
+    """一回限りの legacy compact projection と cleanup references を検証する。"""
+    legacy = _require_exact_fields(
+        value, {"issues", "artifacts"}, path, "report cut legacy input"
+    )
+    issues = legacy.get("issues")
+    if not isinstance(issues, list):
+        raise _corruption("report cut legacy issues が array ではありません。", path)
+    issue_ids: list[str] = []
+    expected_fields = {
+        "schema_version",
+        "candidate_id",
+        "origin",
+        "canonical_key",
+        "category",
+        "summary",
+        "impact",
+        "occurrence_count",
+        "affected_session_count",
+        "session_digest",
+        "first_observed_at",
+        "last_observed_at",
+        "representative_evidence",
+        "reference_targets",
+        "latest_fingerprints",
+        "machine_state",
+        "source_observation_ids",
+        "deduplication_hints",
+        "reference_ids",
+        "state_source",
+    }
+    for issue in issues:
+        candidate = _require_exact_fields(
+            issue, expected_fields, path, "report cut legacy issue projection"
+        )
+        candidate_id = candidate.get("candidate_id")
+        canonical_key = candidate.get("canonical_key")
+        if (
+            not _is_version_one(candidate.get("schema_version"))
+            or not isinstance(candidate_id, str)
+            or not isinstance(canonical_key, str)
+            or issue_id(canonical_key) != candidate_id
+            or candidate.get("origin") not in {"agent_report", "machine_rule"}
+            or candidate.get("state_source") != "legacy"
+            or not _is_string_list(
+                candidate.get("source_observation_ids"), non_empty=True
+            )
+            or candidate.get("reference_ids") != []
+            or candidate.get("machine_state") is not None
+        ):
+            raise _corruption("report cut legacy issue projection が不正です。", path)
+        source_ids = candidate["source_observation_ids"]
+        assert isinstance(source_ids, list)
+        if (
+            source_ids != sorted(source_ids)
+            or not all(is_observation_id(value) for value in source_ids)
+            or (
+                candidate.get("origin") == "agent_report"
+                and (
+                    not canonical_key.startswith("agent\0")
+                    or not is_observation_id(canonical_key.removeprefix("agent\0"))
+                )
+            )
+            or (
+                candidate.get("origin") == "machine_rule"
+                and not _is_machine_canonical_key(canonical_key)
+            )
+        ):
+            raise _corruption("report cut legacy issue identity が不正です。", path)
+        for name in ("category", "summary", "impact"):
+            if not isinstance(candidate.get(name), str) or not candidate[name]:
+                raise _corruption(f"report cut legacy issue {name} が空です。", path)
+        occurrence_count = _require_nonnegative_integer(
+            candidate.get("occurrence_count"), path, "legacy occurrence count"
+        )
+        affected_session_count = _require_nonnegative_integer(
+            candidate.get("affected_session_count"), path, "legacy session count"
+        )
+        if (
+            occurrence_count < 1
+            or occurrence_count != len(source_ids)
+            or affected_session_count > occurrence_count
+        ):
+            raise _corruption("report cut legacy issue count が不正です。", path)
+        first_observed_at = _require_timestamp(
+            candidate.get("first_observed_at"), path, "legacy first_observed_at"
+        )
+        last_observed_at = _require_timestamp(
+            candidate.get("last_observed_at"), path, "legacy last_observed_at"
+        )
+        if parse_rfc3339(first_observed_at) > parse_rfc3339(last_observed_at):
+            raise _corruption("report cut legacy issue の観測時刻順が不正です。", path)
+        session_digest = _require_exact_fields(
+            candidate.get("session_digest"),
+            {"values", "saturated"},
+            path,
+            "legacy session digest",
+        )
+        session_values = session_digest.get("values")
+        saturated = session_digest.get("saturated")
+        if (
+            not isinstance(session_values, list)
+            or session_values != sorted(set(session_values))
+            or len(session_values) > 64
+            or not all(
+                isinstance(value, str)
+                and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+                for value in session_values
+            )
+            or not isinstance(saturated, bool)
+            or (not saturated and affected_session_count != len(session_values))
+            or (saturated and affected_session_count < len(session_values))
+        ):
+            raise _corruption("report cut legacy session digest が不正です。", path)
+        hints = candidate.get("deduplication_hints")
+        if (
+            not _is_string_list(hints)
+            or not isinstance(hints, list)
+            or hints != sorted(hints)
+        ):
+            raise _corruption(
+                "report cut legacy deduplication hints が不正です。", path
+            )
+        for name in (
+            "representative_evidence",
+            "reference_targets",
+            "latest_fingerprints",
+        ):
+            values = candidate.get(name)
+            if (
+                not isinstance(values, list)
+                or len(values) > 5
+                or not all(isinstance(item, dict) for item in values)
+            ):
+                raise _corruption(f"report cut legacy {name} が不正です。", path)
+        targets = candidate["reference_targets"]
+        assert isinstance(targets, list)
+        for target in targets:
+            assert isinstance(target, dict)
+            target_path = target.get("path")
+            if (
+                set(target) != {"path", "kind", "location"}
+                or not isinstance(target_path, str)
+                or not target_path
+                or Path(target_path).is_absolute()
+                or ".." in Path(target_path).parts
+            ):
+                raise _corruption(
+                    "report cut legacy reference target が不正です。", path
+                )
+        fingerprints = candidate["latest_fingerprints"]
+        assert isinstance(fingerprints, list)
+        fingerprint_errors = [
+            error
+            for index, fingerprint in enumerate(fingerprints)
+            for error in _validate_evidence_fingerprint(fingerprint, index)
+        ]
+        if fingerprint_errors:
+            raise _corruption(
+                "report cut legacy fingerprint が不正です。",
+                path,
+                "\n".join(fingerprint_errors),
+            )
+        issue_ids.append(candidate_id)
+    if issue_ids != sorted(set(issue_ids)):
+        raise _corruption(
+            "report cut legacy issues が一意な ID 順ではありません。", path
+        )
+    artifacts = legacy.get("artifacts")
+    if not isinstance(artifacts, list):
+        raise _corruption("report cut legacy artifacts が array ではありません。", path)
+    artifact_paths: list[str] = []
+    for reference in artifacts:
+        shaped = _artifact_reference_shape(reference, path, "legacy artifact")
+        target = _resolve_reference_path(
+            repo, shaped["path"], feedback_root(repo), "legacy feedback artifact"
+        )
+        relative = target.relative_to(feedback_root(repo).resolve(strict=False))
+        if not relative.parts or relative.parts[0] not in _LEGACY_ROOT_NAMES:
+            raise _corruption("report cut legacy artifact path が不正です。", target)
+        _validate_report_cut_artifact_reference(
+            repo,
+            shaped,
+            expected_root=feedback_root(repo) / relative.parts[0],
+            description="report cut legacy artifact",
+            allow_missing=allow_missing,
+        )
+        artifact_paths.append(str(shaped["path"]))
+    if artifact_paths != sorted(set(artifact_paths)):
+        raise _corruption(
+            "report cut legacy artifacts が一意な path 順ではありません。", path
+        )
+
+
+def _validate_report_cut_reference(reference: JsonObject, path: Path) -> None:
+    """agent に渡す固定 reference の closed variant schema を検証する。"""
+    reference_id = reference.get("reference_id")
+    kind = reference.get("kind")
+    subjects = reference.get("subjects")
+    if (
+        not isinstance(reference_id, str)
+        or re.fullmatch(r"[A-Za-z0-9._:-]{1,200}", reference_id) is None
+        or not isinstance(subjects, list)
+        or not _is_string_list(subjects, non_empty=True)
+        or subjects != sorted(set(subjects))
+    ):
+        raise _corruption("report cut reference identity が不正です。", path)
+    common = {"reference_id", "kind", "subjects"}
+    if kind == "observation":
+        if set(reference) != common | {"observation_id", "summary", "evidence"}:
+            raise _corruption(
+                "report cut observation reference field が不正です。", path
+            )
+        if (
+            not is_observation_id(reference.get("observation_id"))
+            or not isinstance(reference.get("summary"), str)
+            or not isinstance(reference.get("evidence"), list)
+        ):
+            raise _corruption("report cut observation reference が不正です。", path)
+        return
+    if kind == "repository_content":
+        expected = common | {"path", "state", "sha256", "content", "truncated"}
+        if (
+            set(reference) != expected
+            or reference.get("state") != "hashed"
+            or not isinstance(reference.get("content"), str)
+            or not isinstance(reference.get("truncated"), bool)
+        ):
+            raise _corruption(
+                "report cut repository content reference が不正です。", path
+            )
+    elif kind == "current_fingerprint":
+        expected = common | {"path", "state", "sha256"}
+        if set(reference) != expected or reference.get("state") not in {
+            "hashed",
+            "missing",
+            "not_file",
+            "unreadable",
+        }:
+            raise _corruption("report cut fingerprint reference が不正です。", path)
+    elif kind == "probe_result":
+        if not common | {"probe_id"} <= set(reference) or not isinstance(
+            reference.get("probe_id"), str
+        ):
+            raise _corruption("report cut probe reference が不正です。", path)
+        return
+    else:
+        raise _corruption("report cut reference kind が不正です。", path)
+    reference_path = reference.get("path")
+    digest = reference.get("sha256")
+    if (
+        not isinstance(reference_path, str)
+        or not reference_path
+        or Path(reference_path).is_absolute()
+        or ".." in Path(reference_path).parts
+        or (
+            reference.get("state") == "hashed"
+            and (
+                not isinstance(digest, str)
+                or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+            )
+        )
+        or (reference.get("state") != "hashed" and digest is not None)
+    ):
+        raise _corruption("report cut repository reference value が不正です。", path)
+
+
+def _validate_report_cut_checkpoint(
+    checkpoint: JsonObject,
+    path: Path,
+    *,
+    expected_kind: str,
+    expected_report_cut_id: str,
+    expected_candidate_id: str,
+) -> None:
+    """formal normalization／verification checkpoint の content hash を検証する。"""
+    _require_exact_fields(
+        checkpoint,
+        {
+            "schema_version",
+            "kind",
+            "report_cut_id",
+            "candidate_id",
+            "input_sha256",
+            "builder_sha256",
+            "schema_sha256",
+            "structured_output",
+            "output_sha256",
+        },
+        path,
+        "report cut checkpoint",
+    )
+    output = checkpoint.get("structured_output")
+    if (
+        not _is_version_one(checkpoint.get("schema_version"))
+        or checkpoint.get("kind") != expected_kind
+        or checkpoint.get("report_cut_id") != expected_report_cut_id
+        or checkpoint.get("candidate_id") != expected_candidate_id
+        or not isinstance(output, dict)
+    ):
+        raise _corruption("report cut checkpoint identity が不正です。", path)
+    for name in ("input_sha256", "builder_sha256", "schema_sha256", "output_sha256"):
+        value = checkpoint.get(name)
+        if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+            raise _corruption(f"report cut checkpoint {name} が不正です。", path)
+    if sha256_bytes(canonical_json_bytes(output)) != checkpoint["output_sha256"]:
+        raise _corruption("report cut checkpoint output hash が一致しません。", path)
+
+
+def _artifact_reference_shape(
+    value: object, path: Path, description: str
+) -> JsonObject:
+    """path/SHA256 の closed object を existence 検査前に返す。"""
+    reference = _require_exact_fields(
+        value, {"path", "sha256"}, path, f"{description} reference"
+    )
+    if not isinstance(reference.get("path"), str) or not isinstance(
+        reference.get("sha256"), str
+    ):
+        raise _corruption(f"{description} reference field が不正です。", path)
+    return reference
+
+
+def _validate_report_cut_artifact_reference(
+    repo: Path,
+    reference: JsonObject,
+    *,
+    expected_root: Path,
+    description: str,
+    allow_missing: bool,
+) -> Path:
+    """publication 後 cleanup では missing を完了済みとして許す artifact 検証。"""
+    if set(reference) != {"path", "sha256"}:
+        raise _corruption(f"{description} reference が不正です。", expected_root)
+    target = _resolve_reference_path(
+        repo, reference.get("path"), expected_root, description
+    )
+    digest = reference.get("sha256")
+    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        raise _corruption(f"{description} SHA256 が不正です。", target)
+    if not target.exists() and not target.is_symlink() and allow_missing:
+        return target
+    return _validate_artifact_reference(
+        repo,
+        reference,
+        expected_root=expected_root,
+        description=description,
+    )
+
+
+def _validate_publication_section(
+    repo: Path,
+    value: object,
+    path: Path,
+    *,
+    inputs: JsonObject,
+    processing: JsonObject,
+) -> None:
+    """staged publication と cleanup target の閉じた schema を検査する。"""
+    publication = _require_exact_fields(
+        value,
+        {
+            "generation_id",
+            "generation_manifest",
+            "generation_artifacts",
+            "report",
+            "generated_at",
+            "result",
+            "cleanup",
+        },
+        path,
+        "report cut publication",
+    )
+    if not is_uuid7_prefixed(publication.get("generation_id"), "fbg_"):
+        raise _corruption("publication generation ID が不正です。", path)
+    _require_timestamp(
+        publication.get("generated_at"), path, "publication generated_at"
+    )
+    if publication.get("result") not in {"ok", "attention"}:
+        raise _corruption("publication result が不正です。", path)
+    generation_id_value = str(publication["generation_id"])
+    generation_reference = _artifact_reference_shape(
+        publication.get("generation_manifest"), path, "publication generation manifest"
+    )
+    report_reference = _artifact_reference_shape(
+        publication.get("report"), path, "publication report"
+    )
+    generation_artifacts_value = publication.get("generation_artifacts")
+    if not isinstance(generation_artifacts_value, list) or not all(
+        isinstance(item, dict) and set(item) == {"path", "sha256"}
+        for item in generation_artifacts_value
+    ):
+        raise _corruption("publication generation_artifacts が不正です。", path)
+    generation_artifacts = [
+        _artifact_reference_shape(item, path, "publication generation artifact")
+        for item in generation_artifacts_value
+    ]
+    generation_paths = [str(item["path"]) for item in generation_artifacts]
+    if (
+        not generation_artifacts
+        or generation_paths != sorted(set(generation_paths))
+        or generation_artifacts[-1] != generation_reference
+    ):
+        raise _corruption(
+            "publication generation artifact 一覧が canonical ではありません。", path
+        )
+    staged_missing = processing.get("status") != "publication_ready"
+    expected_generation_root = generation_directory(repo, generation_id_value)
+    for reference in generation_artifacts:
+        _validate_report_cut_artifact_reference(
+            repo,
+            reference,
+            expected_root=expected_generation_root,
+            description="publication generation artifact",
+            allow_missing=staged_missing,
+        )
+    generation_manifest_path = _resolve_reference_path(
+        repo,
+        generation_reference["path"],
+        expected_generation_root,
+        "publication generation manifest",
+    )
+    if generation_manifest_path.name != "manifest.json":
+        raise _corruption("publication generation manifest path が不正です。", path)
+    report_path = _validate_report_cut_artifact_reference(
+        repo,
+        report_reference,
+        expected_root=repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
+        description="publication Markdown report",
+        allow_missing=staged_missing,
+    )
+    if report_path.suffix != ".md":
+        raise _corruption("publication Markdown report path が不正です。", report_path)
+    if not staged_missing:
+        _require_only_expected_files(
+            expected_generation_root,
+            {
+                (repo / str(reference["path"])).resolve(strict=False)
+                for reference in generation_artifacts
+            },
+            "publication generation",
+        )
+        loaded, _issues, _aggregates = _load_generation(
+            repo, generation_manifest_path, generation_id_value
+        )
+        if loaded.get("report_cut_id") != path.parent.name:
+            raise _corruption(
+                "publication generation の report cut ID が一致しません。",
+                generation_manifest_path,
+            )
+        expected_generation_artifacts = [
+            {"path": item.get("path"), "sha256": item.get("sha256")}
+            for name in ("issues", "machine_aggregates")
+            for item in loaded.get(name, [])
+            if isinstance(item, dict)
+        ]
+        expected_generation_artifacts.append(generation_reference)
+        if generation_artifacts != expected_generation_artifacts:
+            raise _corruption(
+                "publication generation artifact が manifest の列挙と一致しません。",
+                generation_manifest_path,
+            )
+    cleanup = _require_exact_fields(
+        publication.get("cleanup"),
+        {"observations", "old_generation", "legacy", "work_artifacts"},
+        path,
+        "publication cleanup",
+    )
+    cleanup_lists: dict[str, list[JsonObject]] = {}
+    for name in ("observations", "old_generation", "legacy", "work_artifacts"):
+        entries = cleanup.get(name)
+        if not isinstance(entries, list) or not all(
+            isinstance(item, dict) and set(item) == {"path", "sha256"}
+            for item in entries
+        ):
+            raise _corruption(
+                f"publication cleanup {name} が artifact reference array ではありません。",
+                path,
+            )
+        shaped = [
+            _artifact_reference_shape(item, path, f"publication cleanup {name}")
+            for item in entries
+        ]
+        paths = [str(item["path"]) for item in shaped]
+        if len(paths) != len(set(paths)) or (
+            name != "observations" and paths != sorted(paths)
+        ):
+            raise _corruption(
+                f"publication cleanup {name} が一意な path 順ではありません。",
+                path,
+            )
+        cleanup_lists[name] = shaped
+
+    observation_inputs = inputs.get("observations")
+    if not isinstance(observation_inputs, list):
+        raise _corruption("report cut observations が array ではありません。", path)
+    expected_observations = [
+        {"path": item.get("path"), "sha256": item.get("sha256")}
+        for item in observation_inputs
+        if isinstance(item, dict)
+    ]
+    current_input = inputs.get("current")
+    expected_old_generation: list[JsonObject] = []
+    if isinstance(current_input, dict):
+        for name in ("issues", "machine_aggregates"):
+            references = current_input.get(name)
+            if not isinstance(references, list):
+                raise _corruption(f"report cut current {name} が不正です。", path)
+            expected_old_generation.extend(
+                {"path": item.get("path"), "sha256": item.get("sha256")}
+                for item in references
+                if isinstance(item, dict)
+            )
+        generation = current_input.get("generation_manifest")
+        if isinstance(generation, dict):
+            expected_old_generation.append(
+                {"path": generation.get("path"), "sha256": generation.get("sha256")}
+            )
+    expected_old_generation.sort(key=lambda item: str(item["path"]))
+    legacy_input = inputs.get("legacy")
+    expected_legacy = (
+        [dict(item) for item in legacy_input.get("artifacts", [])]
+        if isinstance(legacy_input, dict)
+        and isinstance(legacy_input.get("artifacts"), list)
+        else []
+    )
+    expected_legacy.sort(key=lambda item: str(item["path"]))
+    expected_work: list[JsonObject] = []
+    for name in ("normalization_checkpoints", "verification_checkpoints"):
+        entries = processing.get(name)
+        if not isinstance(entries, list):
+            raise _corruption(f"report cut {name} が不正です。", path)
+        expected_work.extend(
+            {"path": item.get("path"), "sha256": item.get("sha256")}
+            for item in entries
+            if isinstance(item, dict)
+        )
+    expected_work.sort(key=lambda item: str(item["path"]))
+    expected_cleanup = {
+        "observations": expected_observations,
+        "old_generation": expected_old_generation,
+        "legacy": expected_legacy,
+        "work_artifacts": expected_work,
+    }
+    if cleanup_lists != expected_cleanup:
+        raise _corruption(
+            "publication cleanup target が report cut の固定入力と一致しません。",
+            path,
+        )
+
+
+def load_report_cut(repo: Path) -> tuple[JsonObject, Path] | None:
+    """repository に高々一件ある再開対象 report cut を検証して返す。"""
+    root = report_work_root(repo)
+    if not root.exists() and not root.is_symlink():
+        return None
+    if _has_symlink_component(root) or not root.is_dir():
+        raise _corruption(
+            "feedback report work root が通常 directory ではありません。", root
+        )
+    directories = sorted(
+        path for path in root.iterdir() if path.is_dir() and not path.is_symlink()
+    )
+    unexpected = [path for path in root.iterdir() if path not in directories]
+    if unexpected:
+        raise _corruption(
+            "feedback report work root に未定義 artifact があります。", unexpected[0]
+        )
+    if len(directories) > 1:
+        raise _corruption("再開対象の feedback report cut が複数あります。", root)
+    if not directories:
+        return None
+    manifest_path = directories[0] / "manifest.json"
+    manifest = _read_canonical_object(manifest_path, "report cut manifest")
+    _validate_report_cut_manifest(
+        repo,
+        manifest,
+        manifest_path,
+        allow_missing_cleanup_targets=_current_pointer_selects_cut(
+            repo, manifest, manifest_path
+        ),
+    )
+    return manifest, manifest_path
+
+
+def _current_pointer_selects_cut(
+    repo: Path, manifest: JsonObject, manifest_path: Path
+) -> bool:
+    """manifest が current pointer 切替後の cleanup manifest かを byte hash で判定する。"""
+    pointer_path = current_pointer_path(repo)
+    if not pointer_path.exists() and not pointer_path.is_symlink():
+        return False
+    pointer = _read_canonical_object(pointer_path, "feedback current pointer")
+    return pointer.get("report_cut_id") == manifest.get(
+        "report_cut_id"
+    ) and pointer.get("report_cut_manifest_sha256") == sha256_bytes(
+        manifest_path.read_bytes()
+    )
+
+
+def write_report_cut_manifest(repo: Path, manifest: JsonObject) -> tuple[Path, str]:
+    """固定入力を維持したまま report cut manifest を atomic update する。"""
+    report_cut_id_value = manifest.get("report_cut_id")
+    if not isinstance(report_cut_id_value, str):
+        raise ValueError("report cut manifest requires report_cut_id")
+    path = report_cut_manifest_path(repo, report_cut_id_value)
+    _validate_report_cut_manifest_for_write(manifest, path)
+    if path.exists() or path.is_symlink():
+        previous = _read_canonical_object(path, "report cut manifest")
+        _validate_report_cut_manifest(repo, previous, path)
+        if previous.get("inputs") != manifest.get("inputs") or previous.get(
+            "cut_at"
+        ) != manifest.get("cut_at"):
+            raise _corruption("report cut の固定入力を更新しようとしました。", path)
+        current = load_active_state(repo).current
+        if current is not None and current.get("report_cut_id") == report_cut_id_value:
+            raise _corruption(
+                "publication 済み report cut manifest は更新できません。", path
+            )
+    digest = _atomic_write_json(path, manifest)
+    return path, digest
+
+
+def recover_report_cut_checkpoint_references(
+    repo: Path, manifest: JsonObject, manifest_path: Path
+) -> bool:
+    """formal checkpoint 保存後の停止で欠けた manifest reference を復元する。"""
+    processing = manifest.get("processing")
+    if not isinstance(processing, dict):
+        raise _corruption("report cut processing が不正です。", manifest_path)
+    report_cut_id_value = str(manifest.get("report_cut_id"))
+    changed = False
+    contracts = (
+        (
+            "normalization_checkpoints",
+            "observation_id",
+            "normalization",
+            manifest_path.parent / "checkpoint" / "normalization",
+            normalization_checkpoint_path,
+        ),
+        (
+            "verification_checkpoints",
+            "candidate_id",
+            "verification",
+            manifest_path.parent / "checkpoint" / "verification",
+            verification_checkpoint_path,
+        ),
+    )
+    for list_name, id_name, kind, root, expected_path_function in contracts:
+        entries = processing.get(list_name)
+        if not isinstance(entries, list):
+            raise _corruption(f"report cut {list_name} が不正です。", manifest_path)
+        by_id = {
+            str(item[id_name]): item
+            for item in entries
+            if isinstance(item, dict) and isinstance(item.get(id_name), str)
+        }
+        if not root.exists() and not root.is_symlink():
+            continue
+        if root.is_symlink() or not root.is_dir():
+            raise _corruption("feedback checkpoint root が不正です。", root)
+        for checkpoint_path_value in sorted(root.rglob("*")):
+            if (
+                checkpoint_path_value.is_dir()
+                and not checkpoint_path_value.is_symlink()
+            ):
+                continue
+            identity = checkpoint_path_value.stem
+            try:
+                expected_path = expected_path_function(
+                    repo, report_cut_id_value, identity
+                )
+            except ValueError as exc:
+                raise _corruption(
+                    "feedback checkpoint path が不正です。", checkpoint_path_value
+                ) from exc
+            if (
+                checkpoint_path_value.is_symlink()
+                or not checkpoint_path_value.is_file()
+                or checkpoint_path_value != expected_path
+            ):
+                raise _corruption(
+                    "feedback checkpoint path が不正です。", checkpoint_path_value
+                )
+            checkpoint = _read_canonical_object(
+                checkpoint_path_value, "formal feedback checkpoint"
+            )
+            _validate_report_cut_checkpoint(
+                checkpoint,
+                checkpoint_path_value,
+                expected_kind=kind,
+                expected_report_cut_id=report_cut_id_value,
+                expected_candidate_id=identity,
+            )
+            reference = artifact_reference(repo, checkpoint_path_value)
+            expected_entry = {id_name: identity, **reference}
+            existing = by_id.get(identity)
+            if existing is not None:
+                if existing != expected_entry:
+                    raise _corruption(
+                        "feedback checkpoint reference が file と一致しません。",
+                        checkpoint_path_value,
+                    )
+                continue
+            if manifest.get("publication") is not None:
+                raise _corruption(
+                    "staged publication に未列挙 checkpoint があります。",
+                    checkpoint_path_value,
+                )
+            entries.append(expected_entry)
+            by_id[identity] = expected_entry
+            changed = True
+        entries.sort(key=lambda item: str(item[id_name]))
+    if changed:
+        write_report_cut_manifest(repo, manifest)
+    return changed
+
+
+def _validate_report_cut_manifest_for_write(manifest: JsonObject, path: Path) -> None:
+    """未保存 artifact を含む manifest の構造だけを write 前に検査する。"""
+    # path/hash の存在検査は staged artifact の write 前には成立しないため、
+    # canonical JSON 化とトップレベルの閉じた schema をここで先に確認する。
+    try:
+        canonical_json_bytes(manifest)
+    except (TypeError, UnicodeError, ValueError) as exc:
+        raise _corruption(
+            "report cut manifest を canonical JSON 化できません。", path
+        ) from exc
+    if set(manifest) != {
+        "schema_version",
+        "report_cut_id",
+        "cut_at",
+        "inputs",
+        "processing",
+        "publication",
+    }:
+        raise _corruption("report cut manifest の top-level field が不正です。", path)
+    if not _is_version_one(manifest.get("schema_version")) or not is_uuid7_prefixed(
+        manifest.get("report_cut_id"), "fbc_"
+    ):
+        raise _corruption("report cut manifest identity が不正です。", path)
+
+
+def write_checkpoint(repo: Path, path: Path, checkpoint: JsonObject) -> JsonObject:
+    """正式な call result checkpoint を immutable に保存して参照を返す。"""
+    digest = write_immutable_json(path, checkpoint)
+    return {"path": _relative_path(repo, path), "sha256": digest}
+
+
+def read_checkpoint(
+    repo: Path, reference: object, expected_root: Path, description: str
+) -> JsonObject:
+    """manifest が参照する正式な checkpoint を hash 検証して読む。"""
+    path = _validate_artifact_reference(
+        repo, reference, expected_root=expected_root, description=description
+    )
+    return _read_canonical_object(path, description)
+
+
+def validate_feedback_state(repo: Path) -> ActiveState:
+    """current state、cleanup、および単一 work cut の整合性を検証する。"""
+    state = load_active_state(repo)
+    work = load_report_cut(repo)
+    if state.cleanup_manifest_path is not None:
+        if work is None or work[1] != state.cleanup_manifest_path:
+            raise _corruption(
+                "current pointer の cleanup manifest を一意に解決できません。",
+                state.cleanup_manifest_path,
+            )
+    elif work is not None:
+        processing = work[0].get("processing")
+        if isinstance(processing, dict) and processing.get("status") == "published":
+            raise _corruption(
+                "未定義の published report cut status があります。", work[1]
+            )
+    _validate_active_artifact_inventory(repo, state, work)
+    return state
+
+
+def _validate_active_artifact_inventory(
+    repo: Path,
+    state: ActiveState,
+    work: tuple[JsonObject, Path] | None,
+) -> None:
+    """current／staged／cleanup 対象以外の active artifact を拒否する。"""
+    root = active_root(repo)
+    if not root.exists() and not root.is_symlink():
+        return
+    allowed: set[Path] = set()
+    pointer_path = current_pointer_path(repo)
+    if pointer_path.exists() or pointer_path.is_symlink():
+        allowed.add(pointer_path.resolve(strict=False))
+    for reference in current_generation_artifacts(repo, state):
+        target = _resolve_reference_path(
+            repo,
+            reference.get("path"),
+            generation_root(repo),
+            "current generation inventory",
+        )
+        allowed.add(target.resolve(strict=False))
+    if work is not None:
+        publication = work[0].get("publication")
+        if isinstance(publication, dict):
+            generation_references = publication.get("generation_artifacts")
+            if not isinstance(generation_references, list):
+                raise _corruption(
+                    "staged generation artifact 一覧が不正です。", work[1]
+                )
+            for reference in generation_references:
+                if not isinstance(reference, dict):
+                    raise _corruption(
+                        "staged generation artifact reference が不正です。", work[1]
+                    )
+                target = _resolve_reference_path(
+                    repo,
+                    reference.get("path"),
+                    generation_root(repo),
+                    "staged generation inventory",
+                )
+                allowed.add(target.resolve(strict=False))
+            cleanup = publication.get("cleanup")
+            old_generation = (
+                cleanup.get("old_generation") if isinstance(cleanup, dict) else None
+            )
+            if not isinstance(old_generation, list):
+                raise _corruption(
+                    "staged publication の旧 generation cleanup が不正です。",
+                    work[1],
+                )
+            for reference in old_generation:
+                if not isinstance(reference, dict):
+                    raise _corruption(
+                        "旧 generation cleanup reference が不正です。", work[1]
+                    )
+                target = _resolve_reference_path(
+                    repo,
+                    reference.get("path"),
+                    generation_root(repo),
+                    "old generation inventory",
+                )
+                allowed.add(target.resolve(strict=False))
+    _require_only_expected_files(root, allowed, "feedback active state")
+
+
+def published_cleanup_observation_ids(repo: Path) -> set[str]:
+    """切替済み cleanup manifest が処理済みと列挙する observation ID を返す。"""
+    state = load_active_state(repo)
+    manifest = state.cleanup_manifest
+    if manifest is None:
+        return set()
+    publication = manifest.get("publication")
+    if not isinstance(publication, dict):
+        raise _corruption(
+            "published report cut に publication section がありません。",
+            state.cleanup_manifest_path or feedback_root(repo),
+        )
+    cleanup = publication.get("cleanup")
+    if not isinstance(cleanup, dict) or not isinstance(
+        cleanup.get("observations"), list
+    ):
+        raise _corruption(
+            "published report cut cleanup が不正です。",
+            state.cleanup_manifest_path or feedback_root(repo),
+        )
+    return {
+        Path(str(reference["path"])).stem
+        for reference in cleanup["observations"]
+        if isinstance(reference, dict) and isinstance(reference.get("path"), str)
+    }
+
+
+def generation_artifacts(
     repo: Path,
     *,
-    unit_id: str,
-    observations: list[dict[str, Any]],
-    candidate_revision_ids: list[str],
-    schema_sha256: str,
-    normalizer_version_value: str,
-    checkpoint_sha256: object,
-) -> None:
-    """checkpoint の hash と unit 入力との対応を record 保存前に検査する。"""
-    if checkpoint_sha256 is None:
-        return
-    checkpoint = normalization_checkpoint_root(repo) / f"{unit_id}.json"
-    if (
-        not isinstance(checkpoint_sha256, str)
-        or re.fullmatch(r"[0-9a-f]{64}", checkpoint_sha256) is None
-        or checkpoint.is_symlink()
-        or not checkpoint.is_file()
-        or sha256_bytes(checkpoint.read_bytes()) != checkpoint_sha256
-    ):
-        raise CmocError(
-            "normalization unit の checkpoint が欠落または不一致です。",
-            ["手動対応が必要な checkpoint path を確認してください。"],
-            str(checkpoint),
+    generation_id: str,
+    report_cut_id: str,
+    created_at: str,
+    issues: dict[str, JsonObject],
+    machine_aggregates: dict[str, JsonObject],
+) -> tuple[JsonObject, tuple[tuple[Path, bytes], ...], JsonObject]:
+    """新 generation の全 immutable byte 列と manifest reference を構築する。"""
+    directory = generation_directory(repo, generation_id)
+    if not is_uuid7_prefixed(report_cut_id, "fbc_"):
+        raise ValueError(f"invalid feedback report cut ID: {report_cut_id!r}")
+    _require_timestamp(created_at, directory, "active generation created_at")
+
+    # record byte 列を先に確定し、manifest はその hash だけを列挙する。
+    artifacts: list[tuple[Path, bytes]] = []
+    issue_references: list[JsonObject] = []
+    for current_issue_id, record in sorted(issues.items()):
+        path = directory / "issue" / f"{current_issue_id}.json"
+        _validate_active_issue(record, path)
+        content = canonical_json_bytes(record)
+        artifacts.append((path, content))
+        issue_references.append(
+            {
+                "issue_id": current_issue_id,
+                "path": _relative_path(repo, path),
+                "sha256": sha256_bytes(content),
+            }
         )
-    checkpoint_record = _canonical_object(
-        checkpoint, "normalization agent output checkpoint"
+    aggregate_references: list[JsonObject] = []
+    for canonical_key, record in sorted(machine_aggregates.items()):
+        aggregate_id_value = str(record.get("aggregate_id"))
+        path = directory / "machine_aggregate" / f"{aggregate_id_value}.json"
+        _validate_machine_aggregate(record, path)
+        if _machine_aggregate_reaches_threshold(record):
+            raise ValueError(
+                "threshold-reaching machine aggregate cannot be stored below threshold"
+            )
+        if record.get("canonical_key") != canonical_key:
+            raise ValueError("machine aggregate map key differs from canonical_key")
+        content = canonical_json_bytes(record)
+        artifacts.append((path, content))
+        aggregate_references.append(
+            {
+                "canonical_key": canonical_key,
+                "path": _relative_path(repo, path),
+                "sha256": sha256_bytes(content),
+            }
+        )
+    manifest = {
+        "schema_version": 1,
+        "generation_id": generation_id,
+        "report_cut_id": report_cut_id,
+        "created_at": created_at,
+        "issues": issue_references,
+        "machine_aggregates": aggregate_references,
+    }
+    manifest_path = directory / "manifest.json"
+    manifest_content = canonical_json_bytes(manifest)
+    artifacts.append((manifest_path, manifest_content))
+    reference = {
+        "path": _relative_path(repo, manifest_path),
+        "sha256": sha256_bytes(manifest_content),
+    }
+    return manifest, tuple(artifacts), reference
+
+
+def publish_generation_artifacts(
+    repo: Path,
+    manifest: JsonObject,
+    artifacts: tuple[tuple[Path, bytes], ...],
+) -> Path:
+    """generation records を保存し、manifest を最後に publication する。"""
+    if not artifacts:
+        raise ValueError("generation artifacts must include a manifest")
+    manifest_path = artifacts[-1][0]
+    if manifest_path.name != "manifest.json":
+        raise ValueError("generation manifest must be the final artifact")
+    # manifest より前の record を durable 保存してから publication marker を置く。
+    for path, content in artifacts[:-1]:
+        write_immutable_bytes(path, content)
+    write_immutable_bytes(manifest_path, artifacts[-1][1])
+    _require_only_expected_files(
+        manifest_path.parent,
+        {path.resolve(strict=False) for path, _content in artifacts},
+        "new active generation",
+    )
+    loaded, _issues, _aggregates = _load_generation(
+        repo, manifest_path, str(manifest.get("generation_id"))
+    )
+    if loaded != manifest:
+        raise _corruption(
+            "保存後の generation manifest が準備内容と異なります。", manifest_path
+        )
+    return manifest_path
+
+
+def current_generation_artifacts(repo: Path, state: ActiveState) -> list[JsonObject]:
+    """current generation を cleanup するための全 file reference を返す。"""
+    if state.current is None or state.generation_manifest is None:
+        return []
+    manifest = state.generation_manifest
+    references: list[JsonObject] = []
+    for group in (manifest.get("issues"), manifest.get("machine_aggregates")):
+        if not isinstance(group, list):
+            raise _corruption(
+                "current generation references が不正です。", current_pointer_path(repo)
+            )
+        for item in group:
+            if not isinstance(item, dict):
+                raise _corruption(
+                    "current generation reference が object ではありません。",
+                    current_pointer_path(repo),
+                )
+            references.append({"path": item.get("path"), "sha256": item.get("sha256")})
+    references.append(
+        {
+            "path": state.current.get("generation_manifest_path"),
+            "sha256": state.current.get("generation_manifest_sha256"),
+        }
+    )
+    return references
+
+
+def publish_current_pointer(
+    repo: Path,
+    *,
+    generation_id: str,
+    generation_manifest: JsonObject,
+    report_cut_id: str,
+    report_cut_manifest_sha256: str,
+    report: JsonObject,
+    published_at: str,
+    result: str,
+) -> JsonObject:
+    """generation と Markdown report の検証後に current pointer を切り替える。"""
+    if result not in {"ok", "attention"}:
+        raise ValueError(f"invalid normal feedback result: {result!r}")
+    _require_timestamp(published_at, current_pointer_path(repo), "feedback publication")
+    generation_path = _validate_artifact_reference(
+        repo,
+        generation_manifest,
+        expected_root=generation_directory(repo, generation_id),
+        description="new generation manifest",
+    )
+    loaded_manifest, _issues, _aggregates = _load_generation(
+        repo, generation_path, generation_id
+    )
+    if loaded_manifest.get("report_cut_id") != report_cut_id:
+        raise _corruption(
+            "new generation の report cut ID が一致しません。", generation_path
+        )
+    _validate_artifact_reference(
+        repo,
+        report,
+        expected_root=repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
+        description="new feedback Markdown report",
+    )
+    if re.fullmatch(r"[0-9a-f]{64}", report_cut_manifest_sha256) is None:
+        raise ValueError("report cut manifest SHA256 is invalid")
+    pointer = {
+        "schema_version": 1,
+        "generation_id": generation_id,
+        "generation_manifest_path": generation_manifest["path"],
+        "generation_manifest_sha256": generation_manifest["sha256"],
+        "report_cut_id": report_cut_id,
+        "report_cut_manifest_sha256": report_cut_manifest_sha256,
+        "report_path": report["path"],
+        "report_sha256": report["sha256"],
+        "published_at": published_at,
+        "result": result,
+    }
+    _atomic_write_json(current_pointer_path(repo), pointer)
+    # publication point の再読みにより pointer と両成果物をまとめて検証する。
+    loaded_state = load_active_state(repo)
+    if loaded_state.current != pointer:
+        raise _corruption(
+            "切替後の feedback current pointer が一致しません。",
+            current_pointer_path(repo),
+        )
+    return pointer
+
+
+def cleanup_published_report(repo: Path) -> bool:
+    """current pointer 切替後の cleanup を manifest 順で idempotent に完了する。"""
+    state = load_active_state(repo)
+    manifest = state.cleanup_manifest
+    manifest_path = state.cleanup_manifest_path
+    if manifest is None or manifest_path is None:
+        return False
+    publication = manifest.get("publication")
+    if not isinstance(publication, dict):
+        raise _corruption(
+            "published report cut に publication section がありません。", manifest_path
+        )
+    cleanup = publication.get("cleanup")
+    if not isinstance(cleanup, dict):
+        raise _corruption(
+            "published report cut cleanup が object ではありません。", manifest_path
+        )
+    cut_directory = manifest_path.parent
+
+    # manifest を最後まで recovery source として残せるよう、未知の work file を
+    # いずれかの削除より先に検出する。
+    expected_work_paths = {manifest_path.resolve(strict=False)}
+    for reference in _reference_list(cleanup, "work_artifacts", manifest_path):
+        target = _resolve_reference_path(
+            repo,
+            reference.get("path"),
+            cut_directory,
+            "completed report cut artifact",
+        )
+        expected_work_paths.add(target.resolve(strict=False))
+    _require_only_expected_files(
+        cut_directory, expected_work_paths, "published report cut"
+    )
+
+    # raw observation は publication point 後にだけ削除する。
+    for reference in _reference_list(cleanup, "observations", manifest_path):
+        _unlink_artifact_reference(
+            repo,
+            reference,
+            expected_root=feedback_root(repo) / "observation" / "v1",
+            description="processed observation",
+        )
+
+    # 旧 generation と legacy history は manifest に列挙した file だけを削除する。
+    for reference in _reference_list(cleanup, "old_generation", manifest_path):
+        _unlink_artifact_reference(
+            repo,
+            reference,
+            expected_root=generation_root(repo),
+            description="old active generation artifact",
+        )
+    for reference in _reference_list(cleanup, "legacy", manifest_path):
+        legacy_path = _resolve_reference_path(
+            repo, reference.get("path"), feedback_root(repo), "legacy feedback artifact"
+        )
+        relative = legacy_path.relative_to(feedback_root(repo).resolve(strict=False))
+        if not relative.parts or relative.parts[0] not in _LEGACY_ROOT_NAMES:
+            raise _corruption(
+                "cleanup target が legacy feedback state ではありません。", legacy_path
+            )
+        _unlink_artifact_reference(
+            repo,
+            reference,
+            expected_root=feedback_root(repo) / relative.parts[0],
+            description="legacy feedback artifact",
+        )
+
+    # checkpoint を削除し、cleanup manifest 自体を最後まで保持する。
+    for reference in _reference_list(cleanup, "work_artifacts", manifest_path):
+        _unlink_artifact_reference(
+            repo,
+            reference,
+            expected_root=cut_directory,
+            description="completed report cut artifact",
+        )
+    _prune_empty_directories(generation_root(repo), generation_root(repo))
+    for name in sorted(_LEGACY_ROOT_NAMES):
+        _prune_empty_directories(feedback_root(repo) / name, feedback_root(repo) / name)
+    _durable_unlink(manifest_path)
+    _prune_empty_directories(cut_directory, report_work_root(repo))
+    return True
+
+
+def _reference_list(container: JsonObject, name: str, path: Path) -> list[JsonObject]:
+    """cleanup section の artifact reference array を型付きで返す。"""
+    value = container.get(name)
+    if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
+        raise _corruption(
+            f"cleanup {name} が artifact reference array ではありません。", path
+        )
+    return value
+
+
+def _unlink_artifact_reference(
+    repo: Path,
+    reference: JsonObject,
+    *,
+    expected_root: Path,
+    description: str,
+) -> None:
+    """hash が一致する cleanup target を missing-ok で durable unlink する。"""
+    if set(reference) != {"path", "sha256"}:
+        raise _corruption(f"{description} reference が不正です。", expected_root)
+    path = _resolve_reference_path(
+        repo, reference.get("path"), expected_root, description
+    )
+    if not path.exists() and not path.is_symlink():
+        return
+    if _has_symlink_component(path) or not path.is_file():
+        raise _corruption(f"{description} が通常 file ではありません。", path)
+    expected_hash = reference.get("sha256")
+    if (
+        not isinstance(expected_hash, str)
+        or sha256_bytes(path.read_bytes()) != expected_hash
+    ):
+        raise _corruption(
+            f"{description} の hash が cleanup manifest と一致しません。", path
+        )
+    _durable_unlink(path)
+
+
+def _durable_unlink(path: Path) -> None:
+    """通常 file を unlink して parent directory を flush する。"""
+    if not path.exists() and not path.is_symlink():
+        return
+    if path.is_symlink() or not path.is_file():
+        raise _corruption("削除対象が通常 file ではありません。", path)
+    path.unlink()
+    _flush_directory(path.parent)
+
+
+def _prune_empty_directories(start: Path, stop: Path) -> None:
+    """start から stop までの空 directory だけを深い順に削除する。"""
+    if not start.exists() or start.is_symlink() or not start.is_dir():
+        return
+    directories = sorted(
+        (path for path in start.rglob("*") if path.is_dir() and not path.is_symlink()),
+        key=lambda item: len(item.parts),
+        reverse=True,
+    )
+    directories.append(start)
+    stop_resolved = stop.resolve(strict=False)
+    for directory in directories:
+        candidate = directory.resolve(strict=False)
+        if candidate != stop_resolved and stop_resolved not in candidate.parents:
+            continue
+        try:
+            directory.rmdir()
+        except OSError:
+            continue
+        if directory.parent.exists():
+            _flush_directory(directory.parent)
+
+
+def discard_report_cut(repo: Path, manifest: JsonObject, manifest_path: Path) -> None:
+    """publication されていない inconclusive／obsolete cut を安全に破棄する。"""
+    state = load_active_state(repo)
+    if state.current is not None and state.current.get("report_cut_id") == manifest.get(
+        "report_cut_id"
+    ):
+        raise _corruption(
+            "current pointer が参照する report cut は discard できません。",
+            manifest_path,
+        )
+
+    # staging 済み artifact は manifest が明示する path/hash だけを削除する。
+    allowed_work_paths = {manifest_path.resolve(strict=False)}
+    processing = manifest.get("processing")
+    if not isinstance(processing, dict):
+        raise _corruption(
+            "discard 対象 report cut processing が不正です。", manifest_path
+        )
+    for name in ("normalization_checkpoints", "verification_checkpoints"):
+        references = processing.get(name)
+        if not isinstance(references, list):
+            raise _corruption(f"discard 対象 {name} が不正です。", manifest_path)
+        for reference in references:
+            if not isinstance(reference, dict):
+                raise _corruption(
+                    f"discard 対象 {name} reference が不正です。", manifest_path
+                )
+            target = _resolve_reference_path(
+                repo,
+                reference.get("path"),
+                manifest_path.parent,
+                f"discard {name}",
+            )
+            allowed_work_paths.add(target.resolve(strict=False))
+
+    publication = manifest.get("publication")
+    if isinstance(publication, dict):
+        generation_references = publication.get("generation_artifacts")
+        if not isinstance(generation_references, list):
+            raise _corruption(
+                "staged generation artifact 一覧が不正です。", manifest_path
+            )
+        generation_paths = [
+            _resolve_reference_path(
+                repo,
+                reference.get("path") if isinstance(reference, dict) else None,
+                generation_root(repo),
+                "staged generation artifact",
+            )
+            for reference in generation_references
+        ]
+        if generation_paths:
+            generation_directory_path = generation_paths[0].parent
+            while generation_directory_path.parent != generation_root(repo):
+                generation_directory_path = generation_directory_path.parent
+            _require_only_expected_files(
+                generation_directory_path,
+                {path.resolve(strict=False) for path in generation_paths},
+                "staged generation",
+            )
+        for reference in generation_references:
+            if not isinstance(reference, dict):
+                raise _corruption(
+                    "staged generation artifact reference が不正です。", manifest_path
+                )
+            _unlink_artifact_reference(
+                repo,
+                reference,
+                expected_root=generation_root(repo),
+                description="staged generation artifact",
+            )
+        if generation_paths:
+            _prune_empty_directories(generation_directory_path, generation_root(repo))
+        report_reference = publication.get("report")
+        if isinstance(report_reference, dict):
+            report_path = _resolve_reference_path(
+                repo,
+                report_reference.get("path"),
+                repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
+                "staged feedback report",
+            )
+            if report_path.exists() or report_path.is_symlink():
+                _unlink_artifact_reference(
+                    repo,
+                    report_reference,
+                    expected_root=repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
+                    description="staged feedback report",
+                )
+
+    # work directory 内に manifest が列挙していない file があれば推測削除しない。
+    _require_only_expected_files(
+        manifest_path.parent,
+        allowed_work_paths,
+        "report cut",
+    )
+    for name in ("normalization_checkpoints", "verification_checkpoints"):
+        references = processing[name]
+        assert isinstance(references, list)
+        for reference in references:
+            assert isinstance(reference, dict)
+            _unlink_artifact_reference(
+                repo,
+                {"path": reference.get("path"), "sha256": reference.get("sha256")},
+                expected_root=manifest_path.parent,
+                description=f"discard {name}",
+            )
+    _durable_unlink(manifest_path)
+    _prune_empty_directories(manifest_path.parent, report_work_root(repo))
+
+
+def _require_only_expected_files(
+    root: Path, expected: set[Path], description: str
+) -> None:
+    """destructive cleanup 前に root 内 file がすべて manifest 由来か検査する。"""
+    if not root.exists() and not root.is_symlink():
+        return
+    if root.is_symlink() or not root.is_dir():
+        raise _corruption(f"{description} root が通常 directory ではありません。", root)
+    for path in root.rglob("*"):
+        if path.is_dir() and not path.is_symlink():
+            continue
+        if (
+            path.is_symlink()
+            or not path.is_file()
+            or path.resolve(strict=False) not in expected
+        ):
+            raise _corruption(f"{description} に未定義 artifact があります。", path)
+
+
+def load_legacy_state(
+    repo: Path, observations: dict[str, JsonObject]
+) -> LegacyState | None:
+    """append-only legacy state を read-only migration projection として検証する。"""
+    root = feedback_root(repo)
+    existing_roots = [
+        root / name
+        for name in sorted(_LEGACY_ROOT_NAMES)
+        if (root / name).exists() or (root / name).is_symlink()
+    ]
+    if not existing_roots:
+        return None
+
+    # cleanup に列挙できない特殊 file や非 canonical JSON を migration input にしない。
+    cleanup_artifacts: list[JsonObject] = []
+    for legacy_root in existing_roots:
+        if legacy_root.is_symlink() or not legacy_root.is_dir():
+            raise _corruption(
+                "legacy feedback state root が通常 directory ではありません。",
+                legacy_root,
+            )
+        for path in sorted(legacy_root.rglob("*")):
+            if path.is_dir() and not path.is_symlink():
+                continue
+            if path.is_symlink() or not path.is_file() or path.name.startswith("."):
+                raise _corruption(
+                    "legacy feedback state に未定義 artifact があります。", path
+                )
+            _read_canonical_object(path, "legacy feedback artifact")
+            cleanup_artifacts.append(artifact_reference(repo, path))
+
+    # unit manifest が列挙する record と checkpoint の hash を先に検証する。
+    unit_root = root / "normalization_unit"
+    if unit_root.is_dir():
+        for manifest_path in sorted(unit_root.glob("*.json")):
+            _validate_legacy_normalization_unit(repo, manifest_path, observations)
+    _validate_legacy_ingestion_records(repo, observations)
+
+    issues = _legacy_issue_projection(repo, observations)
+    return LegacyState(issues, tuple(cleanup_artifacts))
+
+
+def _validate_legacy_normalization_unit(
+    repo: Path, path: Path, observations_by_id: dict[str, JsonObject]
+) -> None:
+    """旧 unit manifest と feedback-root 相対 record/checkpoint を検証する。"""
+    manifest = _read_canonical_object(path, "legacy normalization unit")
+    _require_exact_fields(
+        manifest,
+        {
+            "schema_version",
+            "normalization_unit_id",
+            "observations",
+            "candidate_revision_ids",
+            "normalizer_schema_sha256",
+            "normalizer_version",
+            "records",
+            "checkpoint_sha256",
+        },
+        path,
+        "legacy normalization unit",
+    )
+    unit_id_value = manifest.get("normalization_unit_id")
+    observation_references = manifest.get("observations")
+    candidate_ids = manifest.get("candidate_revision_ids")
+    schema_hash = manifest.get("normalizer_schema_sha256")
+    normalizer_version_value = manifest.get("normalizer_version")
+    record_references = manifest.get("records")
+    if (
+        not _is_version_one(manifest.get("schema_version"))
+        or not isinstance(unit_id_value, str)
+        or path.stem != unit_id_value
+        or not isinstance(observation_references, list)
+        or not observation_references
+        or not _is_string_list(candidate_ids)
+        or not isinstance(candidate_ids, list)
+        or candidate_ids != sorted(candidate_ids)
+        or not all(re.fullmatch(r"[0-9a-f]{64}", value) for value in candidate_ids)
+        or not isinstance(schema_hash, str)
+        or re.fullmatch(r"[0-9a-f]{64}", schema_hash) is None
+        or not isinstance(normalizer_version_value, str)
+        or re.fullmatch(r"[0-9a-f]{64}", normalizer_version_value) is None
+        or not isinstance(record_references, list)
+        or not record_references
+    ):
+        raise _corruption("legacy normalization unit field が不正です。", path)
+    observation_ids: list[str] = []
+    for reference in observation_references:
+        item = _require_exact_fields(
+            reference,
+            {"observation_id", "observation_sha256"},
+            path,
+            "legacy normalization unit observation",
+        )
+        observation_id_value = item.get("observation_id")
+        observation_hash = item.get("observation_sha256")
+        observation = observations_by_id.get(str(observation_id_value))
+        if (
+            not is_observation_id(observation_id_value)
+            or not isinstance(observation_hash, str)
+            or re.fullmatch(r"[0-9a-f]{64}", observation_hash) is None
+            or observation is None
+            or sha256_bytes(canonical_json_bytes(observation)) != observation_hash
+        ):
+            raise _corruption(
+                "legacy normalization unit observation が raw store と一致しません。",
+                path,
+            )
+        observation_ids.append(str(observation_id_value))
+    if (
+        observation_ids != sorted(set(observation_ids))
+        or _legacy_normalization_unit_id(observation_ids, candidate_ids, schema_hash)
+        != unit_id_value
+    ):
+        raise _corruption("legacy normalization unit ID が入力と一致しません。", path)
+    reference_paths: list[str] = []
+    for reference in record_references:
+        record_path = _validate_legacy_artifact_reference(
+            repo, reference, "legacy normalization record"
+        )
+        relative = record_path.relative_to(feedback_root(repo)).as_posix()
+        if not (relative.startswith("issue/") or relative.startswith("ingestion/")):
+            raise _corruption(
+                "legacy normalization unit が未定義 record を参照しています。",
+                record_path,
+            )
+        if relative.startswith("ingestion/"):
+            ingestion = _read_canonical_object(
+                record_path, "legacy normalization ingestion record"
+            )
+            if ingestion.get("normalization_unit_id") != unit_id_value:
+                raise _corruption(
+                    "legacy ingestion receipt の unit ID が一致しません。",
+                    record_path,
+                )
+        reference_paths.append(relative)
+    if reference_paths != sorted(set(reference_paths)):
+        raise _corruption(
+            "legacy normalization record reference が canonical ではありません。", path
+        )
+    for candidate_id in candidate_ids:
+        matches = list(
+            (feedback_root(repo) / "issue").glob(f"*/revision/{candidate_id}.json")
+        )
+        if len(matches) != 1:
+            raise _corruption(
+                "legacy normalization candidate revision を一意に解決できません。",
+                path,
+            )
+    checkpoint_hash = manifest.get("checkpoint_sha256")
+    if checkpoint_hash is None:
+        return
+    if (
+        not isinstance(checkpoint_hash, str)
+        or re.fullmatch(r"[0-9a-f]{64}", checkpoint_hash) is None
+    ):
+        raise _corruption("legacy normalization checkpoint hash が不正です。", path)
+    checkpoint_path = (
+        feedback_root(repo) / "normalization_checkpoint" / f"{unit_id_value}.json"
     )
     if (
-        set(checkpoint_record)
+        _has_symlink_component(checkpoint_path)
+        or not checkpoint_path.is_file()
+        or sha256_bytes(checkpoint_path.read_bytes()) != checkpoint_hash
+    ):
+        raise _corruption(
+            "legacy normalization checkpoint hash が一致しません。", checkpoint_path
+        )
+    checkpoint = _read_canonical_object(
+        checkpoint_path, "legacy normalization checkpoint"
+    )
+    if (
+        set(checkpoint)
         != {
             "schema_version",
             "normalization_unit_id",
@@ -1456,1502 +3437,604 @@ def _validate_checkpoint_reference(
             "normalizer_version",
             "structured_output",
         }
-        or checkpoint_record.get("schema_version") != 1
-        or checkpoint_record.get("normalization_unit_id") != unit_id
-        or len(observations) != 1
-        or checkpoint_record.get("observation_sha256")
-        != observations[0].get("observation_sha256")
-        or checkpoint_record.get("candidate_revision_ids")
-        != sorted(candidate_revision_ids)
-        or checkpoint_record.get("schema_sha256") != schema_sha256
-        or checkpoint_record.get("normalizer_version") != normalizer_version_value
-        or not isinstance(checkpoint_record.get("structured_output"), dict)
+        or checkpoint.get("schema_version") != 1
+        or checkpoint.get("normalization_unit_id") != unit_id_value
+        or len(observation_references) != 1
+        or checkpoint.get("observation_sha256")
+        != observation_references[0].get("observation_sha256")
+        or checkpoint.get("candidate_revision_ids") != candidate_ids
+        or checkpoint.get("schema_sha256") != schema_hash
+        or checkpoint.get("normalizer_version") != normalizer_version_value
+        or not isinstance(checkpoint.get("structured_output"), dict)
     ):
-        raise CmocError(
-            "normalization checkpoint が unit の入力と一致しません。",
-            ["checkpoint と unit manifest を確認してください。"],
-            str(checkpoint),
+        raise _corruption(
+            "legacy normalization checkpoint が unit 入力と一致しません。",
+            checkpoint_path,
         )
 
 
-def _validate_unit_manifest(
-    repo: Path,
-    path: Path,
-) -> tuple[str, dict[str, Any], dict[str, dict[str, Any]]]:
-    """unit manifest と全参照 record/checkpoint を検査する。"""
-    manifest = _canonical_object(path, "normalization unit manifest")
-    expected_fields = {
-        "schema_version",
-        "normalization_unit_id",
-        "observations",
-        "candidate_revision_ids",
-        "normalizer_schema_sha256",
-        "normalizer_version",
-        "records",
-        "checkpoint_sha256",
-    }
-    if set(manifest) != expected_fields or manifest.get("schema_version") != 1:
-        raise CmocError(
-            "normalization unit manifest の schema が不正です。",
-            ["manifest field を確認してください。"],
-            str(path),
-        )
-    unit_id = manifest.get("normalization_unit_id")
-    observations = manifest.get("observations")
-    candidate_ids = manifest.get("candidate_revision_ids")
-    schema_sha = manifest.get("normalizer_schema_sha256")
-    version = manifest.get("normalizer_version")
-    references = manifest.get("records")
-    if (
-        not isinstance(unit_id, str)
-        or path.stem != unit_id
-        or not isinstance(observations, list)
-        or not observations
-        or not isinstance(candidate_ids, list)
-        or any(not isinstance(value, str) for value in candidate_ids)
-        or len(candidate_ids) != len(set(candidate_ids))
-        or not isinstance(schema_sha, str)
-        or re.fullmatch(r"[0-9a-f]{64}", schema_sha) is None
-        or not isinstance(version, str)
-        or re.fullmatch(r"[0-9a-f]{64}", version) is None
-        or not isinstance(references, list)
-        or not references
-    ):
-        raise CmocError(
-            "normalization unit manifest の field が不正です。",
-            ["unit の入力、schema hash、および record 参照を確認してください。"],
-            str(path),
-        )
-    observation_ids: list[str] = []
-    for item in observations:
-        if (
-            not isinstance(item, dict)
-            or set(item) != {"observation_id", "observation_sha256"}
-            or not is_observation_id(item.get("observation_id"))
-            or not isinstance(item.get("observation_sha256"), str)
-            or re.fullmatch(r"[0-9a-f]{64}", item["observation_sha256"]) is None
-        ):
-            raise CmocError(
-                "normalization unit manifest の observation 参照が不正です。",
-                ["observation ID と SHA256 を確認してください。"],
-                f"path: {path}\nvalue: {item!r}",
-            )
-        observation_ids.append(str(item["observation_id"]))
-    if (
-        len(observation_ids) != len(set(observation_ids))
-        or observations
-        != sorted(observations, key=lambda item: str(item["observation_id"]))
-        or candidate_ids != sorted(set(candidate_ids))
-        or normalization_unit_id(
-            observation_ids, [str(value) for value in candidate_ids], schema_sha
-        )
-        != unit_id
-    ):
-        raise CmocError(
-            "normalization unit ID が manifest 入力と一致しません。",
-            ["unit manifest の corruption を確認してください。"],
-            str(path),
-        )
-    checkpoint_sha = manifest.get("checkpoint_sha256")
-    _validate_checkpoint_reference(
-        repo,
-        unit_id=unit_id,
-        observations=observations,
-        candidate_revision_ids=[str(value) for value in candidate_ids],
-        schema_sha256=schema_sha,
-        normalizer_version_value=version,
-        checkpoint_sha256=checkpoint_sha,
-    )
-    root = feedback_root(repo)
-    records: dict[str, dict[str, Any]] = {}
-    for reference in references:
-        relative, record_path_value = _validate_reference(
-            root, reference, description="normalization unit record"
-        )
-        if relative in records:
-            raise CmocError(
-                "normalization unit manifest に重複 record があります。",
-                ["manifest を確認してください。"],
-                relative,
-            )
-        record = _canonical_object(record_path_value, "normalization unit record")
-        _validate_effective_record(root, relative, record)
-        if _record_kind(relative) == "disposition":
-            raise CmocError(
-                "normalization unit は human disposition を生成できません。",
-                ["human disposition writer と unit manifest を確認してください。"],
-                relative,
-            )
-        if (
-            _record_kind(relative) == "ingestion"
-            and record.get("normalization_unit_id") != unit_id
-        ):
-            raise CmocError(
-                "ingestion receipt の normalization unit ID が一致しません。",
-                ["unit manifest と receipt を確認してください。"],
-                relative,
-            )
-        records[relative] = record
-    reference_paths = [
-        str(reference.get("path"))
-        for reference in references
-        if isinstance(reference, dict)
-    ]
-    if reference_paths != sorted(reference_paths):
-        raise CmocError(
-            "normalization unit manifest の record 参照順が canonical ではありません。",
-            ["manifest の record path 順を確認してください。"],
-            str(path),
-        )
-    return unit_id, manifest, records
-
-
-def load_effective_feedback_state(repo: Path) -> EffectiveFeedbackState:
-    """valid な manifest が確定する normalized state を読む。"""
-    records: dict[str, dict[str, Any]] = {}
-    manifests: dict[str, dict[str, Any]] = {}
-    unit_root = normalization_unit_root(repo)
-    if unit_root.exists() and (unit_root.is_symlink() or not unit_root.is_dir()):
-        raise CmocError(
-            "normalization unit root が通常 directory ではありません。",
-            ["state root を確認してください。"],
-            str(unit_root),
-        )
-    if unit_root.is_dir():
-        for path in sorted(unit_root.glob("*.json")):
-            unit_id, manifest, unit_records = _validate_unit_manifest(repo, path)
-            manifests[unit_id] = manifest
-            for relative, record in unit_records.items():
-                existing = records.get(relative)
-                if existing is not None and canonical_json_bytes(
-                    existing
-                ) != canonical_json_bytes(record):
-                    raise CmocError(
-                        "effective feedback record の参照が競合しています。",
-                        ["unit manifest の record 参照を確認してください。"],
-                        relative,
-                    )
-                records[relative] = record
-
-    # disposition は human writer が 1 record ごとに durable 確定する。
-    issue_root = feedback_root(repo) / "issue"
-    if issue_root.is_dir():
-        for path in sorted(issue_root.glob("*/disposition/*.json")):
-            relative = path.relative_to(feedback_root(repo)).as_posix()
-            record = _canonical_object(path, "human disposition record")
-            _validate_effective_record(feedback_root(repo), relative, record)
-            records[relative] = record
-
-    observation_hashes = {
-        (str(record.get("observation_id")), str(record.get("observation_sha256")))
-        for relative, record in records.items()
-        if relative.startswith("ingestion/") or "/occurrence/" in relative
-    }
-    revision_ids = {
-        str(record.get("revision_id"))
-        for relative, record in records.items()
-        if "/revision/" in relative
-    }
-    for unit_id, manifest in manifests.items():
-        missing_observations = [
-            item
-            for item in manifest["observations"]
-            if (
-                str(item.get("observation_id")),
-                str(item.get("observation_sha256")),
-            )
-            not in observation_hashes
-        ]
-        missing_candidates = sorted(
-            set(str(value) for value in manifest["candidate_revision_ids"])
-            - revision_ids
-        )
-        if missing_observations or missing_candidates:
-            raise CmocError(
-                "normalization unit manifest の入力参照が effective state に存在しません。",
-                [
-                    "unit manifest、occurrence、ingestion receipt、revision を確認してください。"
-                ],
-                (
-                    f"unit: {unit_id}\n"
-                    f"observations: {missing_observations!r}\n"
-                    f"candidate revisions: {missing_candidates!r}"
-                ),
-            )
-
-    relation_records = [
-        (feedback_root(repo) / relative, record)
-        for relative, record in sorted(records.items())
-    ]
-    _validate_normalized_record_relations(feedback_root(repo), relation_records)
-    return EffectiveFeedbackState(records, manifests)
-
-
-def _normalized_record_paths(repo: Path) -> set[str]:
-    """manifest の有無にかかわらず実在する normalized artifact path を返す。"""
-    root = feedback_root(repo)
-    paths: set[str] = set()
-    for directory in (root / "issue", root / "ingestion"):
-        if not directory.is_dir():
-            continue
-        for path in directory.rglob("*"):
-            if path.is_dir() and not path.is_symlink():
-                continue
-            relative = path.relative_to(root).as_posix()
-            paths.add(relative)
-    return paths
-
-
-def validate_feedback_state(repo: Path, *, require_no_orphans: bool = False) -> None:
-    """effective state、unit、report、snapshot の schema/hash/参照を検査する。"""
-    state = load_effective_feedback_state(repo)
-    effective = set(state.records)
-    orphans = sorted(_normalized_record_paths(repo) - effective)
-    if require_no_orphans and orphans:
-        raise CmocError(
-            "manifest 確定前の orphan feedback record が残っています。",
-            ["自動再開できない path を人間が確認してください。"],
-            "\n".join(str(feedback_root(repo) / path) for path in orphans),
-        )
-    _validated_report_records(repo, state)
-
-
-def effective_ingestion_receipts(repo: Path) -> dict[str, dict[str, Any]]:
-    """effective ingestion receipt を observation ID で返す。"""
-    state = load_effective_feedback_state(repo)
-    return {
-        str(record["observation_id"]): record
-        for relative, record in state.records.items()
-        if relative.startswith("ingestion/")
-    }
-
-
-def _durable_unlink(path: Path) -> None:
-    """不要になった recovery metadata を削除し directory entry を flush する。"""
-    if not path.exists():
-        return
-    path.unlink()
-    directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        os.fsync(directory_fd)
-    finally:
-        os.close(directory_fd)
-
-
-def _normalization_recovery(
-    *,
-    normalization_unit_id_value: str,
-    observations: list[dict[str, str]],
-    candidate_revision_ids: list[str],
-    normalizer_schema_sha256: str,
-    normalizer_version_value: str,
-    records: list[tuple[str, dict[str, Any]]],
-    checkpoint_sha256: str | None,
-) -> dict[str, Any]:
-    """未確定 unit を同じ byte 列で再開する recovery record を構築する。"""
-    return {
-        "schema_version": 1,
-        "normalization_unit_id": normalization_unit_id_value,
-        "observations": sorted(observations, key=lambda item: item["observation_id"]),
-        "candidate_revision_ids": sorted(set(candidate_revision_ids)),
-        "normalizer_schema_sha256": normalizer_schema_sha256,
-        "normalizer_version": normalizer_version_value,
-        "records": [{"kind": kind, "record": record} for kind, record in records],
-        "checkpoint_sha256": checkpoint_sha256,
-    }
-
-
-def _load_normalization_recovery(
-    path: Path,
-) -> tuple[dict[str, Any], list[tuple[str, dict[str, Any]]]]:
-    """normalization recovery record を検査して record payload を復元する。"""
-    recovery = _canonical_object(path, "normalization unit recovery metadata")
-    expected = {
-        "schema_version",
-        "normalization_unit_id",
-        "observations",
-        "candidate_revision_ids",
-        "normalizer_schema_sha256",
-        "normalizer_version",
-        "records",
-        "checkpoint_sha256",
-    }
-    record_entries = recovery.get("records")
-    if (
-        set(recovery) != expected
-        or recovery.get("schema_version") != 1
-        or recovery.get("normalization_unit_id") != path.stem
-        or not isinstance(recovery.get("observations"), list)
-        or not isinstance(recovery.get("candidate_revision_ids"), list)
-        or not isinstance(record_entries, list)
-        or not record_entries
-    ):
-        raise CmocError(
-            "normalization unit recovery metadata の schema が不正です。",
-            ["未確定 unit の recovery path を人間が確認してください。"],
-            str(path),
-        )
-    records: list[tuple[str, dict[str, Any]]] = []
-    for entry in record_entries:
-        if (
-            not isinstance(entry, dict)
-            or set(entry) != {"kind", "record"}
-            or not isinstance(entry.get("kind"), str)
-            or not isinstance(entry.get("record"), dict)
-        ):
-            raise CmocError(
-                "normalization recovery の record が不正です。",
-                ["未確定 unit の recovery path を人間が確認してください。"],
-                str(path),
-            )
-        records.append((str(entry["kind"]), entry["record"]))
-    return recovery, records
-
-
-def recover_normalization_units(repo: Path) -> list[str]:
-    """durable recovery metadata がある未確定 unit を manifest まで確定する。"""
-    recovered: list[str] = []
-    root = normalization_recovery_root(repo)
-    if root.exists() and (root.is_symlink() or not root.is_dir()):
-        raise CmocError(
-            "normalization recovery root が通常 directory ではありません。",
-            ["手動対応が必要な recovery path を確認してください。"],
-            str(root),
-        )
-    if not root.is_dir():
-        return recovered
-    unsupported = [
-        path
-        for path in root.iterdir()
-        if path.is_symlink() or not path.is_file() or path.suffix != ".json"
-    ]
-    if unsupported:
-        raise CmocError(
-            "normalization recovery root に未定義 artifact があります。",
-            ["手動対応が必要な recovery path を確認してください。"],
-            "\n".join(str(path) for path in unsupported),
-        )
-    for path in sorted(root.glob("*.json")):
-        recovery, records = _load_normalization_recovery(path)
-        recovered.append(
-            publish_normalization_unit(
-                repo,
-                normalization_unit_id_value=str(recovery["normalization_unit_id"]),
-                observations=recovery["observations"],
-                candidate_revision_ids=recovery["candidate_revision_ids"],
-                normalizer_schema_sha256=str(recovery["normalizer_schema_sha256"]),
-                normalizer_version_value=str(recovery["normalizer_version"]),
-                records=records,
-                checkpoint_sha256=recovery.get("checkpoint_sha256"),
-            )
-        )
-    return recovered
-
-
-def publish_normalization_unit(
-    repo: Path,
-    *,
-    normalization_unit_id_value: str,
-    observations: list[dict[str, str]],
-    candidate_revision_ids: list[str],
-    normalizer_schema_sha256: str,
-    normalizer_version_value: str,
-    records: list[tuple[str, dict[str, Any]]],
-    checkpoint_sha256: str | None,
+def _legacy_normalization_unit_id(
+    observation_ids: list[str], candidate_revision_ids: list[str], schema_hash: str
 ) -> str:
-    """record を durable に保存し、unit manifest を最後に確定する。"""
-    manifest_path = (
-        normalization_unit_root(repo) / f"{normalization_unit_id_value}.json"
-    )
-    recovery_path = (
-        normalization_recovery_root(repo) / f"{normalization_unit_id_value}.json"
-    )
-    if manifest_path.is_file():
-        unit_id_value, existing_manifest, _records = _validate_unit_manifest(
-            repo, manifest_path
-        )
-        expected_inputs = _normalization_recovery(
-            normalization_unit_id_value=normalization_unit_id_value,
-            observations=observations,
-            candidate_revision_ids=candidate_revision_ids,
-            normalizer_schema_sha256=normalizer_schema_sha256,
-            normalizer_version_value=normalizer_version_value,
-            records=records,
-            checkpoint_sha256=checkpoint_sha256,
-        )
-        for name in (
-            "observations",
-            "candidate_revision_ids",
-            "normalizer_schema_sha256",
-            "normalizer_version",
-            "checkpoint_sha256",
-        ):
-            if existing_manifest.get(name) != expected_inputs[name]:
-                raise CmocError(
-                    "確定済み normalization unit の入力が再実行時と異なります。",
-                    ["raw observation と unit manifest を確認してください。"],
-                    f"unit: {unit_id_value}\nfield: {name}",
-                )
-        _durable_unlink(recovery_path)
-        return unit_id_value
-
-    requested_recovery = _normalization_recovery(
-        normalization_unit_id_value=normalization_unit_id_value,
-        observations=observations,
-        candidate_revision_ids=candidate_revision_ids,
-        normalizer_schema_sha256=normalizer_schema_sha256,
-        normalizer_version_value=normalizer_version_value,
-        records=records,
-        checkpoint_sha256=checkpoint_sha256,
-    )
-    if recovery_path.is_file():
-        recovery, recovered_records = _load_normalization_recovery(recovery_path)
-        for name in (
-            "normalization_unit_id",
-            "observations",
-            "candidate_revision_ids",
-            "normalizer_schema_sha256",
-            "normalizer_version",
-            "checkpoint_sha256",
-        ):
-            if recovery.get(name) != requested_recovery[name]:
-                raise CmocError(
-                    "未確定 normalization unit の recovery 入力が異なります。",
-                    ["recovery metadata と現在の unit 入力を確認してください。"],
-                    f"path: {recovery_path}\nfield: {name}",
-                )
-        records = recovered_records
-    if (
-        normalization_unit_id(
-            [item["observation_id"] for item in observations],
-            candidate_revision_ids,
-            normalizer_schema_sha256,
-        )
-        != normalization_unit_id_value
-    ):
-        raise ValueError("normalization unit ID does not match its inputs")
-    _validate_checkpoint_reference(
-        repo,
-        unit_id=normalization_unit_id_value,
-        observations=observations,
-        candidate_revision_ids=candidate_revision_ids,
-        schema_sha256=normalizer_schema_sha256,
-        normalizer_version_value=normalizer_version_value,
-        checkpoint_sha256=checkpoint_sha256,
-    )
-
-    root = feedback_root(repo)
-    if any(kind == "disposition" for kind, _record in records):
-        raise CmocError(
-            "normalization unit は human disposition を生成できません。",
-            ["human disposition は人間の明示操作で別途保存してください。"],
-            normalization_unit_id_value,
-        )
-    paths = [record_path(repo, record, kind) for kind, record in records]
-    if len(paths) != len(set(paths)):
-        raise CmocError(
-            "normalization unit が同じ path を複数回生成しています。",
-            ["unit の record 集合を確認してください。"],
-            normalization_unit_id_value,
-        )
-    current = load_effective_feedback_state(repo)
-    tentative = dict(current.records)
-    for (kind, record), path in zip(records, paths, strict=True):
-        relative = path.relative_to(root).as_posix()
-        if kind != _record_kind(relative):
-            raise ValueError(f"record kind does not match path: {relative}")
-        _validate_effective_record(root, relative, record)
-        existing = tentative.get(relative)
-        if existing is not None and canonical_json_bytes(
-            existing
-        ) != canonical_json_bytes(record):
-            raise CmocError(
-                "normalization unit が既存 effective record と競合しています。",
-                ["record path を人間が確認してください。"],
-                relative,
-            )
-        tentative[relative] = record
-    _validate_normalized_record_relations(
-        root,
-        [(root / relative, record) for relative, record in sorted(tentative.items())],
-    )
-
-    if not recovery_path.is_file():
-        write_immutable_json(recovery_path, requested_recovery)
-
-    references: list[dict[str, str]] = []
-    for (_kind, record), path in zip(records, paths, strict=True):
-        write_feedback_record(path, record)
-        references.append(_record_reference(root, path))
-    manifest: dict[str, Any] = {
-        "schema_version": 1,
-        "normalization_unit_id": normalization_unit_id_value,
-        "observations": sorted(observations, key=lambda item: item["observation_id"]),
-        "candidate_revision_ids": sorted(set(candidate_revision_ids)),
-        "normalizer_schema_sha256": normalizer_schema_sha256,
-        "normalizer_version": normalizer_version_value,
-        "records": sorted(references, key=lambda item: item["path"]),
-        "checkpoint_sha256": checkpoint_sha256,
-    }
-    try:
-        write_immutable_json(manifest_path, manifest)
-    except Exception as exc:
-        raise CmocError(
-            "normalization unit manifest を durable に確定できません。",
-            ["一部 record を effective state として扱わず、再実行してください。"],
-            str(manifest_path),
-        ) from exc
-    _validate_unit_manifest(repo, manifest_path)
-    _durable_unlink(recovery_path)
-    return normalization_unit_id_value
-
-
-def build_state_snapshot(
-    repo: Path,
-    *,
-    created_at: str,
-) -> tuple[dict[str, Any], str]:
-    """現在の effective state から immutable state snapshot を作成する。"""
-    state = load_effective_feedback_state(repo)
-    return write_state_snapshot_from_records(
-        repo,
-        records=state.records,
-        normalization_unit_ids=list(state.unit_manifests),
-        created_at=created_at,
-    )
-
-
-def write_state_snapshot_from_records(
-    repo: Path,
-    *,
-    records: dict[str, dict[str, Any]],
-    normalization_unit_ids: list[str],
-    created_at: str,
-) -> tuple[dict[str, Any], str]:
-    """検証済み record 集合から state snapshot を durable 保存する。"""
-    state = EffectiveFeedbackState(records, {})
-    root = feedback_root(repo)
-    for relative, record in state.records.items():
-        _validate_effective_record(root, relative, record)
-        path = root / relative
-        if (
-            path.is_symlink()
-            or not path.is_file()
-            or path.read_bytes() != canonical_json_bytes(record)
-        ):
-            raise CmocError(
-                "state snapshot の source record が保存済み byte 列と一致しません。",
-                ["snapshot source path を人間が確認してください。"],
-                str(path),
-            )
-    _validate_normalized_record_relations(
-        root,
-        [
-            (root / relative, record)
-            for relative, record in sorted(state.records.items())
-        ],
-    )
-    grouped: dict[str, dict[str, Any]] = {}
-    ingestion: list[dict[str, str]] = []
-    for relative in sorted(state.records):
-        path = root / relative
-        reference = _record_reference(root, path)
-        parts = Path(relative).parts
-        if parts[0] == "ingestion":
-            ingestion.append(reference)
-            continue
-        if parts[0] != "issue":
-            continue
-        bucket = grouped.setdefault(
-            parts[1],
-            {
-                "identity": None,
-                "revision": [],
-                "occurrence": [],
-                "assessment": [],
-                "disposition": [],
-            },
-        )
-        kind = "identity" if parts[2] == "identity.json" else parts[2]
-        if kind == "identity":
-            bucket[kind] = reference
-        else:
-            bucket[kind].append(reference)
-    views = load_issue_views(repo, state=state)
-    issues: list[dict[str, Any]] = []
-    for current_issue_id, view in sorted(views.items()):
-        bucket = grouped[current_issue_id]
-
-        def matching(
-            kind: str, field_name: str, value: object
-        ) -> dict[str, str] | None:
-            if value is None:
-                return None
-            for reference in bucket[kind]:
-                record = state.records[reference["path"]]
-                if record.get(field_name) == value:
-                    return reference
-            raise AssertionError(f"effective {kind} reference is missing")
-
-        issues.append(
-            {
-                "issue_id": current_issue_id,
-                "identity": bucket["identity"],
-                "effective_revision": matching(
-                    "revision", "revision_id", view.revision.get("revision_id")
-                ),
-                "effective_assessment": matching(
-                    "assessment",
-                    "assessment_id",
-                    view.assessment.get("assessment_id")
-                    if view.assessment is not None
-                    else None,
-                ),
-                "effective_disposition": matching(
-                    "disposition",
-                    "decision_id",
-                    view.disposition.get("decision_id")
-                    if view.disposition is not None
-                    else None,
-                ),
-                "occurrences": sorted(
-                    bucket["occurrence"], key=lambda item: item["path"]
-                ),
-            }
-        )
-    body: dict[str, Any] = {
-        "schema_version": 1,
-        "created_at": created_at,
-        "normalization_unit_ids": sorted(set(normalization_unit_ids)),
-        "ingestion_receipts": ingestion,
-        "issues": issues,
-    }
-    snapshot_id = f"fbs_{sha256_bytes(canonical_json_bytes(body))}"
-    snapshot = {"state_snapshot_id": snapshot_id, **body}
-    path = state_snapshot_root(repo) / f"{snapshot_id}.json"
-    try:
-        digest = write_immutable_json(path, snapshot)
-    except Exception as exc:
-        raise CmocError(
-            "feedback state snapshot を durable に保存できません。",
-            ["snapshot path と filesystem を確認してください。"],
-            str(path),
-        ) from exc
-    _load_state_snapshot(repo, snapshot_id)
-    return snapshot, digest
-
-
-def _load_state_snapshot(repo: Path, snapshot_id: str) -> dict[str, Any]:
-    """state snapshot の content ID と全 record 参照を検査して読む。"""
-    if re.fullmatch(r"fbs_[0-9a-f]{64}", snapshot_id) is None:
-        raise CmocError("feedback state snapshot ID が不正です。", [], snapshot_id)
-    path = state_snapshot_root(repo) / f"{snapshot_id}.json"
-    snapshot = _canonical_object(path, "feedback state snapshot")
-    required = {
-        "schema_version",
-        "state_snapshot_id",
-        "created_at",
-        "normalization_unit_ids",
-        "ingestion_receipts",
-        "issues",
-    }
-    body = {key: value for key, value in snapshot.items() if key != "state_snapshot_id"}
-    if (
-        set(snapshot) != required
-        or snapshot.get("schema_version") != 1
-        or snapshot.get("state_snapshot_id") != snapshot_id
-        or f"fbs_{sha256_bytes(canonical_json_bytes(body))}" != snapshot_id
-        or not isinstance(snapshot.get("created_at"), str)
-        or not _is_timestamp(snapshot["created_at"])
-        or not isinstance(snapshot.get("normalization_unit_ids"), list)
-        or not isinstance(snapshot.get("ingestion_receipts"), list)
-        or not isinstance(snapshot.get("issues"), list)
-    ):
-        raise CmocError(
-            "feedback state snapshot の schema または content ID が不正です。",
-            ["snapshot を人間が確認してください。"],
-            str(path),
-        )
-    unit_ids = snapshot["normalization_unit_ids"]
-    if unit_ids != sorted(set(unit_ids)) or any(
-        not isinstance(value, str) or re.fullmatch(r"fbu_[0-9a-f]{64}", value) is None
-        for value in unit_ids
-    ):
-        raise CmocError(
-            "feedback state snapshot の normalization unit ID が不正です。",
-            ["snapshot を人間が確認してください。"],
-            str(path),
-        )
-    root = feedback_root(repo)
-    ingestion_paths = [
-        str(reference.get("path"))
-        for reference in snapshot["ingestion_receipts"]
-        if isinstance(reference, dict)
-    ]
-    if ingestion_paths != sorted(ingestion_paths):
-        raise CmocError(
-            "feedback state snapshot の ingestion receipt 順が canonical ではありません。",
-            [],
-            str(path),
-        )
-    typed_references: list[tuple[object, str, str | None]] = [
-        (reference, "ingestion", None) for reference in snapshot["ingestion_receipts"]
-    ]
-    seen_issues: set[str] = set()
-    issue_ids = [
-        str(issue.get("issue_id"))
-        for issue in snapshot["issues"]
-        if isinstance(issue, dict)
-    ]
-    if issue_ids != sorted(issue_ids):
-        raise CmocError(
-            "feedback state snapshot の issue 順が canonical ではありません。",
-            [],
-            str(path),
-        )
-    for issue in snapshot["issues"]:
-        if (
-            not isinstance(issue, dict)
-            or set(issue)
-            != {
-                "issue_id",
-                "identity",
-                "effective_revision",
-                "effective_assessment",
-                "effective_disposition",
-                "occurrences",
-            }
-            or re.fullmatch(r"fbi_[a-z2-7]{26}", str(issue.get("issue_id", ""))) is None
-            or issue.get("identity") is None
-            or issue.get("effective_revision") is None
-        ):
-            raise CmocError(
-                "feedback state snapshot の issue が不正です。", [], str(path)
-            )
-        current_issue_id = str(issue["issue_id"])
-        if current_issue_id in seen_issues:
-            raise CmocError(
-                "feedback state snapshot の issue ID が重複しています。",
-                [],
-                current_issue_id,
-            )
-        seen_issues.add(current_issue_id)
-        for name in (
-            "identity",
-            "effective_revision",
-            "effective_assessment",
-            "effective_disposition",
-        ):
-            value = issue.get(name)
-            if value is not None:
-                kind = {
-                    "identity": "identity",
-                    "effective_revision": "revision",
-                    "effective_assessment": "assessment",
-                    "effective_disposition": "disposition",
-                }[name]
-                typed_references.append((value, kind, current_issue_id))
-        occurrences = issue.get("occurrences")
-        if not isinstance(occurrences, list):
-            raise CmocError(
-                "feedback state snapshot の occurrence が不正です。", [], str(path)
-            )
-        occurrence_paths = [
-            str(reference.get("path"))
-            for reference in occurrences
-            if isinstance(reference, dict)
-        ]
-        if occurrence_paths != sorted(occurrence_paths):
-            raise CmocError(
-                "feedback state snapshot の occurrence 順が canonical ではありません。",
-                [],
-                str(path),
-            )
-        typed_references.extend(
-            (reference, "occurrence", current_issue_id) for reference in occurrences
-        )
-    seen_paths: set[str] = set()
-    for reference, expected_kind, expected_issue_id in typed_references:
-        relative, record_path_value = _validate_reference(
-            root, reference, description="state snapshot record"
-        )
-        if relative in seen_paths or _record_kind(relative) != expected_kind:
-            raise CmocError(
-                "feedback state snapshot の record 参照が重複または kind 不一致です。",
-                ["snapshot manifest を人間が確認してください。"],
-                relative,
-            )
-        seen_paths.add(relative)
-        record = _canonical_object(record_path_value, "state snapshot record")
-        _validate_effective_record(root, relative, record)
-        if (
-            expected_issue_id is not None
-            and record.get("issue_id") != expected_issue_id
-        ):
-            raise CmocError(
-                "feedback state snapshot の issue 参照が別 issue を指しています。",
-                ["snapshot manifest を人間が確認してください。"],
-                relative,
-            )
-    return snapshot
-
-
-def load_issue_views_from_snapshot(
-    repo: Path, snapshot_id: str
-) -> dict[str, IssueView]:
-    """immutable state snapshot が指す effective issue view を復元する。"""
-    snapshot = _load_state_snapshot(repo, snapshot_id)
-    root = feedback_root(repo)
-    views: dict[str, IssueView] = {}
-    for issue in snapshot["issues"]:
-        assert isinstance(issue, dict)
-
-        def read_reference(reference: object) -> dict[str, Any] | None:
-            if reference is None:
-                return None
-            _relative, path = _validate_reference(
-                root, reference, description="state snapshot record"
-            )
-            return _canonical_object(path, "state snapshot record")
-
-        identity = read_reference(issue.get("identity"))
-        revision = read_reference(issue.get("effective_revision"))
-        if identity is None or revision is None:
-            raise CmocError(
-                "feedback state snapshot の issue 参照が欠落しています。",
-                [],
-                repr(issue),
-            )
-        occurrences = [
-            read_reference(reference) for reference in issue.get("occurrences", [])
-        ]
-        occurrence_records = [record for record in occurrences if record is not None]
-        assessment = read_reference(issue.get("effective_assessment"))
-        disposition = read_reference(issue.get("effective_disposition"))
-        current_issue_id = str(issue.get("issue_id"))
-        views[current_issue_id] = IssueView(
-            current_issue_id,
-            identity,
-            revision,
-            occurrence_records,
-            assessment,
-            disposition,
-            [revision],
-            [assessment] if assessment is not None else [],
-            [disposition] if disposition is not None else [],
-        )
-    return views
-
-
-def _validate_report_record_v2(record: dict[str, Any], path_id: str) -> list[str]:
-    """repository-local report publication record の schema を検査する。"""
-    expected = {
-        "schema_version",
-        "report_id",
-        "generated_at",
-        "report_snapshot_sha256",
-        "report_snapshot_observation_count",
-        "processed_observation_count",
-        "deferred_observation_count",
-        "report_path",
-        "report_sha256",
-        "result",
-        "normalization_unit_ids",
-        "state_snapshot_id",
-        "previous_successful_report_id",
-    }
-    errors = _field_set(record, expected)
-    if record.get("schema_version") != 2:
-        errors.append("schema_version must be 2")
-    if record.get("report_id") != path_id or not is_uuid7_prefixed(
-        record.get("report_id"), "fbr_"
-    ):
-        errors.append("report_id is invalid")
-    if record.get("result") not in {
-        "ok",
-        "attention",
-        "partial",
-        "interrupted",
-        "error",
-    }:
-        errors.append("result is invalid")
-    for name in (
-        "report_snapshot_observation_count",
-        "processed_observation_count",
-        "deferred_observation_count",
-    ):
-        value = record.get(name)
-        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-            errors.append(f"{name} is invalid")
-    normalization_ids = record.get("normalization_unit_ids")
-    if not _is_string_list(normalization_ids) or (
-        isinstance(normalization_ids, list)
-        and (
-            len(normalization_ids) != len(set(normalization_ids))
-            or any(
-                re.fullmatch(r"fbu_[0-9a-f]{64}", value) is None
-                for value in normalization_ids
-            )
-        )
-    ):
-        errors.append("normalization_unit_ids is invalid")
-    for name in ("report_snapshot_sha256", "report_sha256"):
-        if re.fullmatch(r"[0-9a-f]{64}", str(record.get(name, ""))) is None:
-            errors.append(f"{name} is invalid")
-    _require_timestamp(record, "generated_at", errors)
-    report_path_value = record.get("report_path")
-    if (
-        not isinstance(report_path_value, str)
-        or not Path(report_path_value).is_absolute()
-    ):
-        errors.append("report_path is invalid")
-    snapshot_id = record.get("state_snapshot_id")
-    if snapshot_id is None:
-        if record.get("result") != "error":
-            errors.append("state_snapshot_id is required")
-    elif (
-        not isinstance(snapshot_id, str)
-        or re.fullmatch(r"fbs_[0-9a-f]{64}", snapshot_id) is None
-    ):
-        errors.append("state_snapshot_id is invalid")
-    previous = record.get("previous_successful_report_id")
-    if previous is not None and (
-        not isinstance(previous, str) or not is_uuid7_prefixed(previous, "fbr_")
-    ):
-        errors.append("previous_successful_report_id is invalid")
-    return errors
-
-
-def _validate_report_artifacts(
-    repo: Path,
-    state: EffectiveFeedbackState,
-    record: dict[str, Any],
-    *,
-    require_markdown: bool,
-) -> None:
-    """report record が参照する snapshot、state、Markdown を検査する。"""
-    report_id = str(record["report_id"])
-    report_snapshot_path = report_snapshot_root(repo) / f"{report_id}.json"
-    report_snapshot = _canonical_object(
-        report_snapshot_path, "feedback report snapshot"
-    )
-    if (
-        set(report_snapshot)
-        != {"schema_version", "report_id", "generated_at", "observations"}
-        or report_snapshot.get("schema_version") != 1
-        or report_snapshot.get("report_id") != report_id
-        or report_snapshot.get("generated_at") != record["generated_at"]
-        or not isinstance(report_snapshot.get("observations"), list)
-        or sha256_bytes(report_snapshot_path.read_bytes())
-        != record["report_snapshot_sha256"]
-        or len(report_snapshot["observations"])
-        != record["report_snapshot_observation_count"]
-    ):
-        raise CmocError(
-            "feedback report snapshot が report record と一致しません。",
-            ["report snapshot と publication record を確認してください。"],
-            str(report_snapshot_path),
-        )
-    raw_root = observation_root(repo).resolve()
-    seen_observations: set[str] = set()
-    for entry in report_snapshot["observations"]:
-        if (
-            not isinstance(entry, dict)
-            or set(entry) != {"path", "observation_id", "sha256"}
-            or not is_observation_id(entry.get("observation_id"))
-            or not isinstance(entry.get("path"), str)
-            or not isinstance(entry.get("sha256"), str)
-            or re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]) is None
-        ):
-            raise CmocError(
-                "feedback report snapshot の observation 参照が不正です。",
-                ["report snapshot を人間が確認してください。"],
-                repr(entry),
-            )
-        raw_path = Path(entry["path"])
-        try:
-            resolved = raw_path.resolve(strict=True)
-            if (
-                raw_path.is_symlink()
-                or not raw_path.is_file()
-                or raw_root not in resolved.parents
-                or raw_path.stem != entry["observation_id"]
-                or sha256_bytes(raw_path.read_bytes()) != entry["sha256"]
-            ):
-                raise ValueError("raw observation path or hash differs")
-        except (OSError, ValueError) as exc:
-            raise CmocError(
-                "feedback report snapshot の raw observation を検証できません。",
-                ["raw observation store の corruption を確認してください。"],
-                str(raw_path),
-            ) from exc
-        observation_id_value = str(entry["observation_id"])
-        if observation_id_value in seen_observations:
-            raise CmocError(
-                "feedback report snapshot に重複 observation があります。",
-                ["report snapshot を人間が確認してください。"],
-                observation_id_value,
-            )
-        seen_observations.add(observation_id_value)
-
-    snapshot_id = record.get("state_snapshot_id")
-    if isinstance(snapshot_id, str):
-        state_snapshot = _load_state_snapshot(repo, snapshot_id)
-        unknown_snapshot_units = set(state_snapshot["normalization_unit_ids"]) - set(
-            state.unit_manifests
-        )
-        if unknown_snapshot_units:
-            raise CmocError(
-                "feedback state snapshot が未確定 normalization unit を参照しています。",
-                ["state snapshot と unit manifest を確認してください。"],
-                repr(sorted(unknown_snapshot_units)),
-            )
-    unknown_units = set(record["normalization_unit_ids"]) - set(state.unit_manifests)
-    if unknown_units:
-        raise CmocError(
-            "feedback report が未確定 normalization unit を参照しています。",
-            ["report record と unit manifest を確認してください。"],
-            repr(sorted(unknown_units)),
-        )
-
-    report_path_value = Path(str(record["report_path"]))
-    expected_directory = (
-        repo / ".cmoc" / "gu" / "ar" / "report" / "feedback"
-    ).resolve()
-    if report_path_value.parent.resolve() != expected_directory:
-        raise CmocError(
-            "feedback Markdown report path が保存領域外です。",
-            ["report publication metadata を確認してください。"],
-            str(report_path_value),
-        )
-    if not require_markdown:
-        return
-    if (
-        report_path_value.is_symlink()
-        or not report_path_value.is_file()
-        or sha256_bytes(report_path_value.read_bytes()) != record["report_sha256"]
-    ):
-        raise CmocError(
-            "feedback Markdown report が欠落または不一致です。",
-            ["report artifact と publication metadata を確認してください。"],
-            str(report_path_value),
-        )
-
-
-def _validated_report_records(
-    repo: Path,
-    state: EffectiveFeedbackState | None = None,
-    *,
-    permitted_atomic_report_id: str | None = None,
-) -> dict[str, dict[str, Any]]:
-    """publication artifact を含む全 report record を検査する。"""
-    state = state or load_effective_feedback_state(repo)
-    directory = feedback_root(repo) / "report"
-    records: dict[str, dict[str, Any]] = {}
-    if directory.exists() and (directory.is_symlink() or not directory.is_dir()):
-        raise CmocError(
-            "feedback report record root が通常 directory ではありません。",
-            ["report record root を人間が確認してください。"],
-            str(directory),
-        )
-    if not directory.is_dir():
-        return records
-    permitted_prefix = (
-        f".{permitted_atomic_report_id}.json."
-        if permitted_atomic_report_id is not None
-        else None
-    )
-    unsupported = []
-    for path in directory.iterdir():
-        permitted_temporary = (
-            permitted_prefix is not None
-            and path.name.startswith(permitted_prefix)
-            and path.name.endswith(".tmp")
-            and not path.is_symlink()
-            and path.is_file()
-        )
-        if not permitted_temporary and (
-            path.is_symlink() or not path.is_file() or path.suffix != ".json"
-        ):
-            unsupported.append(path)
-    if unsupported:
-        raise CmocError(
-            "feedback report record root に未定義 artifact があります。",
-            ["report record root を人間が確認してください。"],
-            "\n".join(str(path) for path in unsupported),
-        )
-    for path in sorted(directory.glob("*.json")):
-        record = _canonical_object(path, "feedback report record")
-        errors = _validate_report_record_v2(record, path.stem)
-        if errors:
-            raise CmocError(
-                "feedback report record の schema が不正です。",
-                ["publication record を人間が確認してください。"],
-                f"{path}: {'; '.join(errors)}",
-            )
-        report_id = str(record["report_id"])
-        _validate_report_artifacts(repo, state, record, require_markdown=True)
-        records[report_id] = record
-    try:
-        _successful_report_head(records)
-    except ValueError as exc:
-        raise CmocError(
-            "正常な local feedback report の連鎖が不正です。",
-            ["report record の predecessor を人間が確認してください。"],
-            str(exc),
-        ) from exc
-    return records
-
-
-def _expected_report_predecessor(
-    records: dict[str, dict[str, Any]],
-) -> str | None:
-    """現在の正常 report 連鎖から次 publication の predecessor を返す。"""
-    head = _successful_report_head(records)
-    return str(head["report_id"]) if head is not None else None
-
-
-def prepare_report_publication(repo: Path, record: dict[str, Any]) -> Path:
-    """Markdown 保存前に publication metadata を durable recovery として固定する。"""
-    state = load_effective_feedback_state(repo)
-    report_id = str(record.get("report_id", ""))
-    errors = _validate_report_record_v2(record, report_id)
-    if errors:
-        raise CmocError(
-            "feedback report publication metadata の schema が不正です。",
-            ["report 生成処理を確認してください。"],
-            "; ".join(errors),
-        )
-    records = _validated_report_records(
-        repo,
-        state,
-        permitted_atomic_report_id=report_id,
-    )
-    if report_id in records:
-        if canonical_json_bytes(records[report_id]) != canonical_json_bytes(record):
-            raise CmocError(
-                "同じ report ID の publication record が異なります。",
-                ["report record の corruption を確認してください。"],
-                report_id,
-            )
-        return record_path(repo, record, "report")
-    expected = _expected_report_predecessor(records)
-    if record.get("previous_successful_report_id") != expected:
-        raise CmocError(
-            "feedback report の predecessor が現在の正常連鎖と一致しません。",
-            ["同じ repository の report publication を直列化してください。"],
-            f"expected: {expected!r}\nactual: {record.get('previous_successful_report_id')!r}",
-        )
-    _validate_report_artifacts(repo, state, record, require_markdown=False)
-    recovery_path = report_recovery_root(repo) / f"{report_id}.json"
-    write_immutable_json(recovery_path, record)
-    return recovery_path
-
-
-def publish_report_record(repo: Path, record: dict[str, Any]) -> Path:
-    """artifact 検証後に report record を最後の publication artifact として保存する。"""
-    report_id = str(record.get("report_id", ""))
-    recovery_path = report_recovery_root(repo) / f"{report_id}.json"
-    prepare_report_publication(repo, record)
-    publication_path = record_path(repo, record, "report")
-    if publication_path.is_file() and not recovery_path.is_file():
-        return publication_path
-    recovery = _canonical_object(recovery_path, "feedback report recovery metadata")
-    if canonical_json_bytes(recovery) != canonical_json_bytes(record):
-        raise CmocError(
-            "feedback report recovery metadata が publication 内容と異なります。",
-            ["report recovery path を人間が確認してください。"],
-            str(recovery_path),
-        )
-    report_path_value = Path(str(record["report_path"]))
-    try:
-        recover_immutable_bytes_from_temporary(
-            report_path_value,
-            str(record["report_sha256"]),
-        )
-    except Exception as exc:
-        raise CmocError(
-            "feedback Markdown report の temporary file を安全に回収できません。",
-            ["一致しない report artifact を人間が確認してください。"],
-            str(report_path_value),
-        ) from exc
-    state = load_effective_feedback_state(repo)
-    _validate_report_artifacts(repo, state, record, require_markdown=True)
-    write_feedback_record(publication_path, record)
-    _validated_report_records(repo, state)
-    _durable_unlink(recovery_path)
-    return publication_path
-
-
-def recover_report_publications(repo: Path) -> list[str]:
-    """中断後に artifact が揃った report publication だけを確定する。"""
-    recovered: list[str] = []
-    root = report_recovery_root(repo)
-    if root.exists() and (root.is_symlink() or not root.is_dir()):
-        raise CmocError(
-            "feedback report recovery root が通常 directory ではありません。",
-            ["手動対応が必要な path を確認してください。"],
-            str(root),
-        )
-    if not root.is_dir():
-        return recovered
-    unsupported = [
-        path
-        for path in root.iterdir()
-        if path.is_symlink() or not path.is_file() or path.suffix != ".json"
-    ]
-    if unsupported:
-        raise CmocError(
-            "feedback report recovery root に未定義 artifact があります。",
-            ["手動対応が必要な path を確認してください。"],
-            "\n".join(str(path) for path in unsupported),
-        )
-    for path in sorted(root.glob("*.json")):
-        record = _canonical_object(path, "feedback report recovery metadata")
-        publication = publish_report_record(repo, record)
-        recovered.append(publication.stem)
-    return recovered
-
-
-def _successful_report_head(
-    records: dict[str, dict[str, Any]],
-) -> dict[str, Any] | None:
-    """predecessor 連鎖を検査し、正常 report の先頭を返す。"""
-    normal = {
-        report_id: record
-        for report_id, record in records.items()
-        if record.get("result") in {"ok", "attention"}
-    }
-    for report_id, record in records.items():
-        if report_id in normal:
-            continue
-        previous = record.get("previous_successful_report_id")
-        if previous is not None and previous not in normal:
-            raise ValueError(
-                f"report {report_id} has unknown successful predecessor {previous}"
-            )
-    if not normal:
-        return None
-    children: dict[str, list[str]] = {}
-    referenced: set[str] = set()
-    for report_id, record in normal.items():
-        previous = record.get("previous_successful_report_id")
-        if previous is not None:
-            children.setdefault(str(previous), []).append(report_id)
-            if previous in normal:
-                referenced.add(str(previous))
-            else:
-                raise ValueError(
-                    f"normal report {report_id} has unknown predecessor {previous}"
-                )
-    forks = {key: value for key, value in children.items() if len(value) > 1}
-    if forks:
-        raise ValueError(f"normal report chain forks: {forks}")
-    heads = set(normal) - referenced
-    if len(heads) != 1:
-        raise ValueError(f"normal report chain has {len(heads)} heads")
-    head_id = heads.pop()
-    visited: set[str] = set()
-    cursor: str | None = head_id
-    while cursor in normal:
-        if cursor in visited:
-            raise ValueError("normal report chain contains a cycle")
-        visited.add(cursor)
-        previous = normal[cursor].get("previous_successful_report_id")
-        cursor = str(previous) if previous is not None else None
-    if cursor is not None:
-        raise ValueError(f"normal report chain terminates at {cursor!r}")
-    if visited != set(normal):
-        raise ValueError("normal report chain is disconnected")
-    return normal[head_id]
-
-
-def latest_successful_report_record(repo: Path) -> dict[str, Any] | None:
-    """一意な predecessor 連鎖の先頭にある正常 report を返す。"""
-    state = load_effective_feedback_state(repo)
-    records = _validated_report_records(repo, state)
-    return _successful_report_head(records)
-
-
-def previous_successful_report_id(repo: Path) -> str | None:
-    """新しい report が記録する predecessor ID を返す。"""
-    latest = latest_successful_report_record(repo)
-    if latest is not None:
-        return str(latest["report_id"])
-    return None
-
-
-def previous_state_snapshot_id(repo: Path) -> str | None:
-    """直前の正常 report に対応する state snapshot ID を返す。"""
-    latest = latest_successful_report_record(repo)
-    if latest is not None:
-        value = latest.get("state_snapshot_id")
-        return str(value) if isinstance(value, str) else None
-    return None
-
-
-def _effective_revision(
-    records: list[dict[str, Any]],
-    occurrences: list[dict[str, Any]],
-) -> dict[str, Any]:
-    """observation 最大時刻、次に revision ID で effective revision を選ぶ。"""
-    observed_at_by_id = {
-        str(record.get("observation_id", "")): str(record.get("observed_at", ""))
-        for record in occurrences
-    }
-
-    def key(record: dict[str, Any]) -> tuple[datetime, str]:
-        source_ids = record.get("source_observation_ids", [])
-        observed_values = [
-            observed_at_by_id.get(str(value), "") for value in source_ids
-        ]
-        return (
-            max(
-                (_timestamp_key(value) for value in observed_values),
-                default=_timestamp_key(""),
-            ),
-            str(record.get("revision_id", "")),
-        )
-
-    return max(records, key=key)
-
-
-def _timestamp_key(value: object) -> datetime:
-    """record 選択用に RFC 3339 を UTC-aware datetime へ変換する。"""
-    if isinstance(value, str):
-        try:
-            return parse_rfc3339(value).astimezone(timezone.utc)
-        except ValueError:
-            pass
-    return datetime.min.replace(tzinfo=timezone.utc)
-
-
-def load_issue_views(
-    repo: Path,
-    *,
-    state: EffectiveFeedbackState | None = None,
-) -> dict[str, IssueView]:
-    """manifest が指す record だけから effective issue view を構築する。"""
-    state = state or load_effective_feedback_state(repo)
-    grouped: dict[str, dict[str, Any]] = {}
-    for relative, record in state.records.items():
-        parts = Path(relative).parts
-        if len(parts) < 3 or parts[0] != "issue":
-            continue
-        bucket = grouped.setdefault(
-            parts[1],
-            {
-                "identity": None,
-                "revision": [],
-                "occurrence": [],
-                "assessment": [],
-                "disposition": [],
-            },
-        )
-        kind = "identity" if parts[2] == "identity.json" else parts[2]
-        if kind == "identity":
-            bucket[kind] = record
-        else:
-            bucket[kind].append(record)
-    views: dict[str, IssueView] = {}
-    for current_issue_id, bucket in sorted(grouped.items()):
-        identity = bucket["identity"]
-        revisions = bucket["revision"]
-        if (
-            not isinstance(identity, dict)
-            or not isinstance(revisions, list)
-            or not revisions
-        ):
-            continue
-        occurrences = bucket["occurrence"]
-        assessments = bucket["assessment"]
-        dispositions = bucket["disposition"]
-        assert isinstance(occurrences, list)
-        assert isinstance(assessments, list)
-        assert isinstance(dispositions, list)
-        views[current_issue_id] = _build_issue_view(
-            current_issue_id,
-            identity,
-            revisions,
-            occurrences,
-            assessments,
-            dispositions,
-        )
-    return views
-
-
-def _build_issue_view(
-    current_issue_id: str,
-    identity: dict[str, Any],
-    revisions: list[dict[str, Any]],
-    occurrences: list[dict[str, Any]],
-    assessments: list[dict[str, Any]],
-    dispositions: list[dict[str, Any]],
-) -> IssueView:
-    """一 issue の record 集合から effective view を構築する。"""
-    assessment = (
-        max(
-            assessments,
-            key=lambda record: (
-                _timestamp_key(record.get("assessed_at")),
-                str(record.get("assessment_id", "")),
-            ),
-        )
-        if assessments
-        else None
-    )
-    disposition = (
-        max(
-            dispositions,
-            key=lambda record: (
-                _timestamp_key(record.get("decided_at")),
-                str(record.get("decision_id", "")),
-            ),
-        )
-        if dispositions
-        else None
-    )
-    return IssueView(
-        current_issue_id,
-        identity,
-        _effective_revision(revisions, occurrences),
-        occurrences,
-        assessment,
-        disposition,
-        revisions,
-        assessments,
-        dispositions,
-    )
-
-
-def normalizer_version(agent_used: bool) -> str:
-    """agent builder/schema または deterministic schema version の hash を返す。"""
-    if not agent_used:
-        return sha256_bytes(b"cmoc-feedback-schema-v1")
-    from oracle.acp_builder.feedback import normalize_issue
-
-    source_path = Path(normalize_issue.__file__)
-    schema_path = source_path.with_suffix(".json")
-    digest = hashlib.sha256()
-    for path in sorted((source_path, schema_path), key=str):
-        digest.update(hashlib.sha256(path.read_bytes()).hexdigest().encode("ascii"))
-    return digest.hexdigest()
-
-
-def normalization_unit_id(
-    observation_ids: list[str],
-    candidate_revision_ids: list[str],
-    normalizer_schema_sha256: str,
-) -> str:
-    """入力と候補と schema から再開可能な normalization unit ID を返す。"""
+    """旧仕様の content-addressed normalization unit ID を再計算する。"""
     body = {
         "observation_ids": sorted(observation_ids),
         "candidate_revision_ids": sorted(candidate_revision_ids),
-        "normalizer_schema_sha256": normalizer_schema_sha256,
+        "normalizer_schema_sha256": schema_hash,
     }
     return f"fbu_{sha256_bytes(canonical_json_bytes(body))}"
 
 
-def new_report_id() -> str:
-    """feedback report 用 UUIDv7 ID を返す。"""
-    return uuid7_prefixed("fbr_")
+def _validate_legacy_artifact_reference(
+    repo: Path, reference: object, description: str
+) -> Path:
+    """旧 manifest の feedback-root 相対 path と SHA256 を検証する。"""
+    if not isinstance(reference, dict) or set(reference) != {"path", "sha256"}:
+        raise _corruption(f"{description} reference が不正です。", feedback_root(repo))
+    relative = reference.get("path")
+    expected_hash = reference.get("sha256")
+    if (
+        not isinstance(relative, str)
+        or not relative
+        or Path(relative).is_absolute()
+        or ".." in Path(relative).parts
+        or not isinstance(expected_hash, str)
+        or re.fullmatch(r"[0-9a-f]{64}", expected_hash) is None
+    ):
+        raise _corruption(
+            f"{description} reference field が不正です。", feedback_root(repo)
+        )
+    target = feedback_root(repo) / relative
+    if (
+        _has_symlink_component(target)
+        or not target.is_file()
+        or sha256_bytes(target.read_bytes()) != expected_hash
+    ):
+        raise _corruption(f"{description} hash が一致しません。", target)
+    return target
+
+
+def _validate_legacy_ingestion_records(
+    repo: Path, observations_by_id: dict[str, JsonObject]
+) -> None:
+    """legacy ingestion receipt の schema と raw/unit 参照を検証する。"""
+    root = feedback_root(repo) / "ingestion"
+    if not root.exists() and not root.is_symlink():
+        return
+    if root.is_symlink() or not root.is_dir():
+        raise _corruption("legacy ingestion root が不正です。", root)
+    for path in sorted(root.iterdir()):
+        if path.is_symlink() or not path.is_file() or path.suffix != ".json":
+            raise _corruption("legacy ingestion path が不正です。", path)
+        record = _read_canonical_object(path, "legacy ingestion receipt")
+        _require_exact_fields(
+            record,
+            {
+                "schema_version",
+                "observation_id",
+                "observation_sha256",
+                "processed_at",
+                "normalization_unit_id",
+                "normalizer_version",
+                "status",
+                "issue_ids",
+                "validation_errors",
+            },
+            path,
+            "legacy ingestion receipt",
+        )
+        observation_id_value = record.get("observation_id")
+        observation = observations_by_id.get(str(observation_id_value))
+        observation_hash = record.get("observation_sha256")
+        unit_id_value = record.get("normalization_unit_id")
+        issue_ids = record.get("issue_ids")
+        validation_errors = record.get("validation_errors")
+        if (
+            not _is_version_one(record.get("schema_version"))
+            or path.stem != observation_id_value
+            or not is_observation_id(observation_id_value)
+            or observation is None
+            or not isinstance(observation_hash, str)
+            or sha256_bytes(canonical_json_bytes(observation)) != observation_hash
+            or not isinstance(unit_id_value, str)
+            or re.fullmatch(r"fbu_[0-9a-f]{64}", unit_id_value) is None
+            or not (
+                feedback_root(repo) / "normalization_unit" / f"{unit_id_value}.json"
+            ).is_file()
+            or not isinstance(record.get("normalizer_version"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", record["normalizer_version"]) is None
+            or record.get("status") not in {"integrated", "invalid"}
+            or not _is_string_list(issue_ids)
+            or not _is_string_list(validation_errors)
+            or not all(
+                re.fullmatch(r"fbi_[a-z2-7]{26}", value) is not None
+                for value in issue_ids or []
+            )
+            or (
+                record.get("status") == "integrated"
+                and (not issue_ids or validation_errors)
+            )
+            or (
+                record.get("status") == "invalid"
+                and (issue_ids or not validation_errors)
+            )
+        ):
+            raise _corruption("legacy ingestion receipt が不正です。", path)
+        _require_timestamp(record.get("processed_at"), path, "legacy ingestion")
+
+
+def _legacy_issue_projection(
+    repo: Path, observations: dict[str, JsonObject]
+) -> dict[str, JsonObject]:
+    """legacy issue directory から現行 candidate に必要な compact 値だけを抽出する。"""
+    root = feedback_root(repo) / "issue"
+    if not root.exists():
+        return {}
+    if root.is_symlink() or not root.is_dir():
+        raise _corruption("legacy issue root が通常 directory ではありません。", root)
+    projected: dict[str, JsonObject] = {}
+    for directory in sorted(root.iterdir()):
+        if directory.is_symlink() or not directory.is_dir():
+            raise _corruption(
+                "legacy issue entry が通常 directory ではありません。", directory
+            )
+        allowed_entries = {
+            "identity.json",
+            "revision",
+            "occurrence",
+            "assessment",
+            "disposition",
+        }
+        for entry in directory.iterdir():
+            if (
+                entry.name not in allowed_entries
+                or entry.is_symlink()
+                or (entry.name == "identity.json" and not entry.is_file())
+                or (entry.name != "identity.json" and not entry.is_dir())
+            ):
+                raise _corruption(
+                    "legacy issue directory に未定義 artifact があります。", entry
+                )
+        identity_path = directory / "identity.json"
+        identity = _read_canonical_object(identity_path, "legacy issue identity")
+        _require_exact_fields(
+            identity,
+            {
+                "schema_version",
+                "issue_id",
+                "origin",
+                "canonical_key",
+                "created_from_observation_id",
+                "created_at",
+            },
+            identity_path,
+            "legacy issue identity",
+        )
+        current_issue_id = identity.get("issue_id")
+        canonical_key = identity.get("canonical_key")
+        if (
+            not _is_version_one(identity.get("schema_version"))
+            or not isinstance(current_issue_id, str)
+            or not isinstance(canonical_key, str)
+            or issue_id(canonical_key) != current_issue_id
+            or directory.name != current_issue_id
+            or identity.get("origin") not in {"agent_report", "machine_rule"}
+            or not is_observation_id(identity.get("created_from_observation_id"))
+        ):
+            raise _corruption("legacy issue identity が不正です。", identity_path)
+        _require_timestamp(identity.get("created_at"), identity_path, "legacy issue")
+        if (
+            identity.get("origin") == "agent_report"
+            and canonical_key
+            != agent_canonical_key(str(identity["created_from_observation_id"]))
+        ) or (
+            identity.get("origin") == "machine_rule"
+            and not _is_machine_canonical_key(canonical_key)
+        ):
+            raise _corruption(
+                "legacy issue canonical key が origin と一致しません。", identity_path
+            )
+        revisions = _legacy_records(directory / "revision", "legacy issue revision")
+        occurrences = _legacy_records(
+            directory / "occurrence", "legacy issue occurrence"
+        )
+        if not revisions or not occurrences:
+            raise _corruption(
+                "legacy issue に revision または occurrence がありません。", directory
+            )
+        for revision_path, revision in revisions:
+            _validate_legacy_revision(revision, revision_path, str(current_issue_id))
+        for assessment_path, assessment in _legacy_records(
+            directory / "assessment", "legacy issue assessment"
+        ):
+            _validate_legacy_assessment(
+                assessment, assessment_path, str(current_issue_id)
+            )
+        for disposition_path, disposition in _legacy_records(
+            directory / "disposition", "legacy issue disposition"
+        ):
+            _validate_legacy_disposition(
+                disposition, disposition_path, str(current_issue_id)
+            )
+
+        # occurrence と raw observation の hash/reference integrity を確認する。
+        source_ids: list[str] = []
+        observed_at: list[str] = []
+        session_values: set[str] = set()
+        for occurrence_path, occurrence in occurrences:
+            _require_exact_fields(
+                occurrence,
+                {
+                    "schema_version",
+                    "issue_id",
+                    "observation_id",
+                    "observation_sha256",
+                    "observed_at",
+                    "cmoc_session_id",
+                    "subcommand_invocation_id",
+                    "log_paths",
+                },
+                occurrence_path,
+                "legacy occurrence",
+            )
+            observation_id_value = occurrence.get("observation_id")
+            observation = observations.get(str(observation_id_value))
+            if (
+                not _is_version_one(occurrence.get("schema_version"))
+                or occurrence.get("issue_id") != current_issue_id
+                or occurrence_path.stem != observation_id_value
+                or not is_observation_id(observation_id_value)
+                or observation is None
+                or observation.get("source") != identity.get("origin")
+                or sha256_bytes(canonical_json_bytes(observation))
+                != occurrence.get("observation_sha256")
+                or observation.get("observed_at") != occurrence.get("observed_at")
+                or not isinstance(occurrence.get("subcommand_invocation_id"), str)
+                or not occurrence["subcommand_invocation_id"]
+                or not _is_string_list(occurrence.get("log_paths"))
+                or any(
+                    not Path(log_path).is_absolute()
+                    for log_path in occurrence.get("log_paths", [])
+                )
+                or (
+                    occurrence.get("cmoc_session_id") is not None
+                    and not isinstance(occurrence.get("cmoc_session_id"), str)
+                )
+                or (
+                    identity.get("origin") == "machine_rule"
+                    and machine_canonical_key(observation) != canonical_key
+                )
+            ):
+                raise _corruption(
+                    "legacy occurrence と raw observation が一致しません。",
+                    occurrence_path,
+                )
+            source_ids.append(str(observation_id_value))
+            observed_at.append(str(occurrence["observed_at"]))
+            session_id_value = occurrence.get("cmoc_session_id")
+            if isinstance(session_id_value, str):
+                session_values.add(_digest_value(session_id_value))
+        if identity.get("created_from_observation_id") not in source_ids:
+            raise _corruption(
+                "legacy issue の作成 observation に occurrence がありません。",
+                identity_path,
+            )
+        occurrence_id_set = set(source_ids)
+        for revision_path, revision in revisions:
+            revision_sources = revision.get("source_observation_ids")
+            assert isinstance(revision_sources, list)
+            if not set(revision_sources).issubset(occurrence_id_set):
+                raise _corruption(
+                    "legacy revision が存在しない occurrence を参照しています。",
+                    revision_path,
+                )
+
+        # 旧 effective revision 規則どおり source の最大 observed_at、次に ID で選ぶ。
+        observed_by_id = {
+            str(observation_id_value): str(
+                observations[str(observation_id_value)]["observed_at"]
+            )
+            for observation_id_value in source_ids
+        }
+        _effective_path, effective = max(
+            revisions,
+            key=lambda item: (
+                max(
+                    (
+                        parse_rfc3339(observed_by_id[source_id])
+                        for source_id in item[1].get("source_observation_ids", [])
+                        if source_id in observed_by_id
+                    ),
+                    default=parse_rfc3339("1970-01-01T00:00:00Z"),
+                ),
+                str(item[1].get("revision_id", "")),
+            ),
+        )
+        representative, targets, fingerprints, hints = _legacy_evidence_projection(
+            repo,
+            [observations[source_id] for source_id in sorted(set(source_ids))],
+        )
+        digest_values = sorted(session_values)[:64]
+        projected[str(current_issue_id)] = {
+            "schema_version": 1,
+            "candidate_id": current_issue_id,
+            "origin": identity["origin"],
+            "canonical_key": canonical_key,
+            "category": effective["category"],
+            "summary": effective["summary"],
+            "impact": effective["impact"],
+            "occurrence_count": len(set(source_ids)),
+            "affected_session_count": len(session_values),
+            "session_digest": {
+                "values": digest_values,
+                "saturated": len(session_values) > len(digest_values),
+            },
+            "first_observed_at": min(observed_at, key=parse_rfc3339),
+            "last_observed_at": max(observed_at, key=parse_rfc3339),
+            "representative_evidence": representative,
+            "reference_targets": targets,
+            "latest_fingerprints": fingerprints,
+            "machine_state": None,
+            "source_observation_ids": sorted(set(source_ids)),
+            "deduplication_hints": hints,
+            "reference_ids": [],
+            "state_source": "legacy",
+        }
+    return projected
+
+
+def _legacy_records(root: Path, description: str) -> list[tuple[Path, JsonObject]]:
+    """legacy record directory の canonical JSON object を列挙する。"""
+    if not root.is_dir() or root.is_symlink():
+        return []
+    records: list[tuple[Path, JsonObject]] = []
+    for path in sorted(root.iterdir()):
+        if path.is_symlink() or not path.is_file() or path.suffix != ".json":
+            raise _corruption(f"{description} path が不正です。", path)
+        records.append((path, _read_canonical_object(path, description)))
+    return records
+
+
+def _validate_legacy_revision(
+    record: JsonObject, path: Path, current_issue_id: str
+) -> None:
+    """migration に使用する legacy revision の content-addressed ID を検査する。"""
+    _require_exact_fields(
+        record,
+        {
+            "schema_version",
+            "revision_id",
+            "issue_id",
+            "created_at",
+            "source_observation_ids",
+            "category",
+            "summary",
+            "human_action",
+            "impact",
+            "cause_assessment",
+            "related_issue_ids",
+        },
+        path,
+        "legacy revision",
+    )
+    revision_id_value = record.get("revision_id")
+    body = {key: value for key, value in record.items() if key != "revision_id"}
+    if (
+        not _is_version_one(record.get("schema_version"))
+        or record.get("issue_id") != current_issue_id
+        or not isinstance(revision_id_value, str)
+        or sha256_bytes(canonical_json_bytes(body)) != revision_id_value
+        or path.stem != revision_id_value
+        or not _is_string_list(record.get("source_observation_ids"), non_empty=True)
+        or not all(
+            is_observation_id(value)
+            for value in record.get("source_observation_ids", [])
+        )
+        or not _is_string_list(record.get("related_issue_ids"))
+        or not all(
+            isinstance(value, str)
+            and re.fullmatch(r"fbi_[a-z2-7]{26}", value) is not None
+            for value in record.get("related_issue_ids", [])
+        )
+    ):
+        raise _corruption("legacy revision identity が不正です。", path)
+    _require_timestamp(record.get("created_at"), path, "legacy revision")
+    for name in ("category", "summary", "human_action", "impact"):
+        if not isinstance(record.get(name), str) or not record[name]:
+            raise _corruption(f"legacy revision {name} が空です。", path)
+    cause = _require_exact_fields(
+        record.get("cause_assessment"),
+        {"certainty", "description"},
+        path,
+        "legacy cause assessment",
+    )
+    if cause.get("certainty") not in {
+        "supported",
+        "suspected",
+        "unknown",
+    } or not isinstance(cause.get("description"), str):
+        raise _corruption("legacy cause assessment が不正です。", path)
+
+
+def _validate_legacy_assessment(
+    record: JsonObject, path: Path, current_issue_id: str
+) -> None:
+    """migration で破棄予定の legacy assessment も schema/hash 検証する。"""
+    _require_exact_fields(
+        record,
+        {
+            "schema_version",
+            "assessment_id",
+            "issue_id",
+            "assessed_at",
+            "presence",
+            "freshness",
+            "reason_code",
+            "reason",
+            "compared_fingerprints",
+        },
+        path,
+        "legacy assessment",
+    )
+    assessment_id_value = record.get("assessment_id")
+    body = {key: value for key, value in record.items() if key != "assessment_id"}
+    if (
+        not _is_version_one(record.get("schema_version"))
+        or record.get("issue_id") != current_issue_id
+        or not isinstance(assessment_id_value, str)
+        or path.stem != assessment_id_value
+        or sha256_bytes(canonical_json_bytes(body)) != assessment_id_value
+        or record.get("presence") not in {"unknown", "likely_present", "likely_absent"}
+        or record.get("freshness")
+        not in {"current", "needs_revalidation", "unavailable"}
+        or record.get("reason_code")
+        not in {
+            "observation_matches_current",
+            "normalizer_assessment",
+            "fingerprint_changed",
+            "fingerprint_unavailable",
+        }
+        or not isinstance(record.get("reason"), str)
+    ):
+        raise _corruption("legacy assessment identity が不正です。", path)
+    _require_timestamp(record.get("assessed_at"), path, "legacy assessment")
+    compared = record.get("compared_fingerprints")
+    if not isinstance(compared, list):
+        raise _corruption("legacy compared fingerprints が不正です。", path)
+    for fingerprint in compared:
+        item = _require_exact_fields(
+            fingerprint,
+            {"path", "old_sha256", "current_sha256", "state"},
+            path,
+            "legacy compared fingerprint",
+        )
+        fingerprint_path = item.get("path")
+        if (
+            not isinstance(fingerprint_path, str)
+            or not Path(fingerprint_path).is_absolute()
+        ):
+            raise _corruption("legacy compared fingerprint path が不正です。", path)
+        for name in ("old_sha256", "current_sha256"):
+            digest = item.get(name)
+            if digest is not None and (
+                not isinstance(digest, str)
+                or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+            ):
+                raise _corruption(
+                    f"legacy compared fingerprint {name} が不正です。", path
+                )
+        state = item.get("state")
+        if (
+            state not in {"hashed", "missing", "not_file", "unreadable"}
+            or (state == "hashed" and item.get("current_sha256") is None)
+            or (state != "hashed" and item.get("current_sha256") is not None)
+        ):
+            raise _corruption("legacy compared fingerprint state が不正です。", path)
+
+
+def _validate_legacy_disposition(
+    record: JsonObject, path: Path, current_issue_id: str
+) -> None:
+    """migration verdict には使わない legacy human disposition を検証する。"""
+    _require_exact_fields(
+        record,
+        {
+            "schema_version",
+            "decision_id",
+            "issue_id",
+            "decided_at",
+            "state",
+            "note",
+            "superseded_by",
+        },
+        path,
+        "legacy disposition",
+    )
+    state = record.get("state")
+    superseded_by = record.get("superseded_by")
+    if (
+        not _is_version_one(record.get("schema_version"))
+        or record.get("issue_id") != current_issue_id
+        or record.get("decision_id") != path.stem
+        or not is_uuid7_prefixed(record.get("decision_id"), "fbd_")
+        or state not in {"open", "acknowledged", "resolved", "ignored", "superseded"}
+        or not isinstance(record.get("note"), str)
+        or (
+            state == "superseded"
+            and (
+                not isinstance(superseded_by, str)
+                or re.fullmatch(r"fbi_[a-z2-7]{26}", superseded_by) is None
+                or superseded_by == current_issue_id
+            )
+        )
+        or (state != "superseded" and superseded_by is not None)
+    ):
+        raise _corruption("legacy disposition が不正です。", path)
+    _require_timestamp(record.get("decided_at"), path, "legacy disposition")
+
+
+def _legacy_evidence_projection(
+    repo: Path,
+    observations: list[JsonObject],
+) -> tuple[list[JsonObject], list[JsonObject], list[JsonObject], list[str]]:
+    """legacy raw observation から bounded evidence と stable target を抽出する。"""
+    representative: list[JsonObject] = []
+    targets: list[JsonObject] = []
+    fingerprints: list[JsonObject] = []
+    hints: list[str] = []
+    for observation in observations:
+        payload = observation.get("payload")
+        if isinstance(payload, dict):
+            hint = payload.get("deduplication_hint")
+            if isinstance(hint, str):
+                hints.append(hint)
+            evidence = payload.get("evidence")
+            if isinstance(evidence, list):
+                representative.extend(
+                    item for item in evidence if isinstance(item, dict)
+                )
+                for item in evidence:
+                    if not isinstance(item, dict) or not isinstance(
+                        item.get("path"), str
+                    ):
+                        continue
+                    raw_path = Path(item["path"])
+                    candidate = (
+                        raw_path.resolve(strict=False)
+                        if raw_path.is_absolute()
+                        else (repo / raw_path).resolve(strict=False)
+                    )
+                    repository = repo.resolve(strict=False)
+                    if candidate != repository and repository not in candidate.parents:
+                        raise _corruption(
+                            "legacy evidence path が repository 外です。", candidate
+                        )
+                    targets.append(
+                        {
+                            "path": candidate.relative_to(repository).as_posix(),
+                            "kind": item.get("kind"),
+                            "location": item.get("location"),
+                        }
+                    )
+        raw_fingerprints = observation.get("evidence_fingerprints")
+        if isinstance(raw_fingerprints, list):
+            fingerprints.extend(
+                item for item in raw_fingerprints if isinstance(item, dict)
+            )
+    return (
+        _bounded_objects(representative, 5),
+        _bounded_objects(targets, 5),
+        _bounded_objects(fingerprints, 5),
+        sorted(set(hints)),
+    )
+
+
+def _bounded_objects(values: list[JsonObject], limit: int) -> list[JsonObject]:
+    """JSON object を canonical order で重複除去して固定上限へ収める。"""
+    by_bytes = {canonical_json_bytes(value): value for value in values}
+    return [by_bytes[key] for key in sorted(by_bytes)[:limit]]
+
+
+def _digest_value(value: str) -> str:
+    """bounded distinct digest に保存する低露出 SHA256 を返す。"""
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()

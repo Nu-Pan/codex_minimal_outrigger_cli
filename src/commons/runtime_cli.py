@@ -265,11 +265,9 @@ def _emit_completion_summary(
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
     try:
-        unprocessed, increased, warnings = feedback_completion_counts(logger.root)
-        unprocessed_text = "unavailable" if unprocessed is None else str(unprocessed)
-        increased_text = "unavailable" if increased is None else str(increased)
-        typer.echo(f"- 未処理 feedback observation: `{unprocessed_text}`")
-        typer.echo(f"- 直前の正常な local feedback report 後の増加: `{increased_text}`")
+        pending, warnings = feedback_completion_counts(logger.root)
+        pending_text = "unavailable" if pending is None else str(pending)
+        typer.echo(f"- pending feedback observation: `{pending_text}`")
         for warning in warnings:
             typer.echo(f"- warning: {warning}")
     except BaseException:

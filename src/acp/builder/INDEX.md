@@ -45,18 +45,18 @@
 # `feedback`
 
 ## Summary
-- feedback normalization 用の builder adapter をまとめるディレクトリ。feedback builder の公開入口と、対応する oracle 実装へのルーティングを担う。
+- feedback issue の正規化・検証に関する ACP builder adapter をまとめたディレクトリ。対応する oracle 実装の builder を再公開し、feedback issue の normalize／verify 処理へ進む入口を提供する。
 
 ## Read this when
-- feedback issue の正規化パラメータ builder の公開入口や参照先を確認するとき。
-- feedback builder 経由で正規化処理を利用する箇所を調査するとき。
+- feedback issue の normalization または verification に関する ACP builder adapter の構成を確認するとき
+- feedback issue の同一性判断用パラメータ builder や検証用パラメータ builder の公開・import 経路を追跡するとき
 
 ## Do not read this when
-- feedback normalization 以外の builder 実装を調べるとき。
-- 正規化 builder の具体的な実装や仕様を確認するときは、対応する oracle file を直接読む。
+- feedback 以外の builder adapter を調べるとき
+- 正規化・検証の具体的な判断ロジックや仕様を確認・変更するときは、対応する oracle 実装を直接読む
 
 ## hash
-- e07cc95b5d6752cc55467387169ba8d8b4b61e0eb4f5f73f66071a7ed17e3e1b
+- fa1026a4829e12e2edc6b4754f179d1770d66fcb12edd9d0c52a0d5c280945b3
 
 # `indexing`
 
