@@ -79,9 +79,8 @@
     - サブコマンド全体の経過時間
     - サブコマンド全体の Codex CLI quota 回復待ち時間
     - サブコマンドの戻り値
-    - repository-local な effective ingestion receipt がない raw feedback observation 数
-    - 直前の正常な local feedback report の report snapshot 後に増えた raw feedback observation 数
+    - raw store に残る repository-local な pending feedback observation 数
 
-feedback の件数は詳細を展開せず、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の通知境界に従う。件数、算出失敗、または warning を、サブコマンドの戻り値、run state、retry、または成功判定へ反映してはならない。
+正常 publication 前の report cut に含まれる observation も pending 数に含める。feedback の件数は詳細を展開せず、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の通知境界に従う。件数、算出失敗、または warning を、サブコマンドの戻り値、run state、retry、または成功判定へ反映してはならない。
 
 Windows toast 通知の対象、発火順序、通知内容、および失敗時の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。

@@ -1,0 +1,226 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "result"
+  ],
+  "properties": {
+    "result": {
+      "description": "report cut 時点の issue candidate に対する verification verdict。",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/unresolved_result"
+        },
+        {
+          "$ref": "#/$defs/resolved_result"
+        },
+        {
+          "$ref": "#/$defs/not_actionable_result"
+        },
+        {
+          "$ref": "#/$defs/inconclusive_result"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "current_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference_id",
+        "location",
+        "finding"
+      ],
+      "properties": {
+        "reference_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,200}$",
+          "description": "入力された report cut reference を指す ID。"
+        },
+        "location": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,500}$",
+          "description": "参照内の path、行、field、または probe result の位置。"
+        },
+        "finding": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1200}$",
+          "description": "candidate の現在状態を示す具体的な所見。"
+        }
+      }
+    },
+    "unresolved_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "verdict",
+        "current_evidence",
+        "human_action",
+        "reason"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^fbi_[a-z2-7]{26}$",
+          "description": "入力された issue candidate の ID。"
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "unresolved"
+          ],
+          "description": "問題が現在も存在し、作業外にいる人間の対応が必要である。"
+        },
+        "current_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/current_evidence"
+          },
+          "description": "report cut の現在参照を指す具体的な evidence。"
+        },
+        "human_action": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1200}$",
+          "description": "現在の作業外にいる人間が取る必要のある具体的な対応。"
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1200}$",
+          "description": "current evidence から verdict を導いた理由。"
+        }
+      }
+    },
+    "resolved_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "verdict",
+        "current_evidence",
+        "human_action",
+        "reason"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^fbi_[a-z2-7]{26}$",
+          "description": "入力された issue candidate の ID。"
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "resolved"
+          ],
+          "description": "問題が report cut 時点では存在しない。"
+        },
+        "current_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/current_evidence"
+          },
+          "description": "問題が存在しないことを確認した report cut reference。"
+        },
+        "human_action": {
+          "type": "null",
+          "description": "resolved では human action を返さない。"
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1200}$",
+          "description": "問題が存在しないと判断した理由。"
+        }
+      }
+    },
+    "not_actionable_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "verdict",
+        "current_evidence",
+        "human_action",
+        "reason"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^fbi_[a-z2-7]{26}$",
+          "description": "入力された issue candidate の ID。"
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "not_actionable"
+          ],
+          "description": "状態は存在しても feedback の人間向け報告基準を満たさない。"
+        },
+        "current_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/current_evidence"
+          },
+          "description": "人間向け報告基準との照合に使用した report cut reference。"
+        },
+        "human_action": {
+          "type": "null",
+          "description": "not_actionable では human action を返さない。"
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1200}$",
+          "description": "人間向け報告基準を満たさない理由。"
+        }
+      }
+    },
+    "inconclusive_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "verdict",
+        "current_evidence",
+        "human_action",
+        "reason"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^fbi_[a-z2-7]{26}$",
+          "description": "入力された issue candidate の ID。"
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "inconclusive"
+          ],
+          "description": "許可された report cut reference だけでは判定できない。"
+        },
+        "current_evidence": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/current_evidence"
+          },
+          "description": "確認できた report cut reference。空配列を許容する。"
+        },
+        "human_action": {
+          "type": "null",
+          "description": "inconclusive では human action を返さない。"
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,1200}$",
+          "description": "判定不能となった不足情報または矛盾。"
+        }
+      }
+    }
+  }
+}

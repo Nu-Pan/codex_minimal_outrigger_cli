@@ -35,5 +35,5 @@
 - 個別仕様が明示する cmoc 管理データは、例外として `{{repo-root}}` 側へ書き込んでよい。
     - e.g. 実行ログと session state は `{{run-root}}/.cmoc/gu` ではなく `{{repo-root}}/.cmoc/gu` に保存する。
     - accepted feedback observation は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従って `{{repo-root}}/.cmoc/gu/ar/feedback` に保存する。
-    - normalized feedback state、normalization checkpoint、report record、および snapshot は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` に従って同じ repository-local root に保存する。
+    - feedback の active generation、current pointer、report cut、一時 checkpoint、および Markdown report は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` に従って同じ repository-local root に保存する。
 - run の join または abandon は、`{{repo-root}}` 側で確定済みの feedback state を取り込み、破棄、または巻き戻さない。

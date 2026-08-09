@@ -1,4 +1,4 @@
-"""`cmoc feedback report` の曖昧な issue 正規化 prompt 正本。"""
+"""`cmoc feedback report` の曖昧な issue 同一性判断 prompt 正本。"""
 
 # std
 from pathlib import Path
@@ -10,11 +10,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import (
-    AgentCallPathContext,
-    RootPathPlaceHolder,
-    resolve_ph_path,
-)
+from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
@@ -22,68 +18,52 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 def build_feedback_normalize_issue_parameter(
     observation_json: str,
     candidate_issues_json: str,
-    current_reference_paths: list[Path],
     agent_call_cwd: Path,
 ) -> AgentCallParameter:
-    """構造化 observation と絞り込み済み候補だけから issue を正規化する。"""
+    """構造化 observation と絞り込み済み候補から issue の同一性だけを判断する。"""
+    # report cut 外の状態を参照しない prompt と call context を構築する。
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
-    reference_paths = [
-        str(resolve_ph_path(path, RootPathPlaceHolder.WORK, path_context))
-        for path in current_reference_paths
-    ]
-    references_text = (
-        "\n".join(f"- `{path}`" for path in reference_paths)
-        if reference_paths
-        else "- なし"
-    )
-    reference_scope = "\n".join(
-        (
-            "- 現在状態の確認が必要な場合に限り、次の参照対象を読んでよい",
-            references_text,
-            "- 指定されていない raw log、過去の Codex session、"
-            "feedback observation 保存 file を追加調査してはいけない",
-        )
-    )
-
     prompt = build_complete_prompt(
-        role="- あなたは人間向け feedback issue の正規化担当です",
+        role="- あなたは人間向け feedback issue の同一性判断担当です",
         summary="""
-        - 構造化済み observation を、絞り込み済みの既存 issue 候補と比較し、既存 issue への統合または新規 issue の作成を判断すること
-        - raw Codex call log は読み直さず、入力された observation、既存 issue 候補、および指定された現在の参照対象だけを根拠にすること
+        - 構造化済み observation を、絞り込み済みの既存 issue candidate と比較すること
+        - observation が入力候補と同じ issue か、新しい issue かだけを判断すること
         """,
         goal="""
-        - 指定された Structured Output schema に従って正規化結果を返すこと
+        - 指定された Structured Output schema に従って同一性判断を返すこと
         - agent が申告した原因、重要度、および重複判定用 hint を確定事実として扱っていないこと
-        - 現在の存在可能性を、入力と指定された現在参照だけから machine assessment として評価すること
-        - human disposition を決定または変更していないこと
+        - issue の summary、impact、原因、現在性、actionability、human action、verification verdict、または relation を生成していないこと
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         aux_static_prompt=[
             StructDoc(
+                "参照禁止",
+                """
+                - 入力以外の file、raw log、過去の Codex session、feedback state、および候補外 issue を読んではならない
+                """,
+            ),
+            StructDoc(
                 "Structured Output の決定論的事後条件",
                 """
-                - `result.existing_issue_id` と `result.related_issue_ids` に含めてよいのは、入力された既存 issue 候補の issue ID だけとする
-                - `result.decision=existing` の場合、`result.existing_issue_id` を `result.related_issue_ids` に重複させてはいけない
+                - `result.decision=existing` の `result.existing_issue_id` は、入力された既存 issue candidate の issue ID と完全一致させる
+                - `result.decision=new` の `result.existing_issue_id` は `null` とする
                 """,
             ),
         ],
         aux_dynamic_prompt=[
             StructDoc(
-                "参照範囲",
-                reference_scope,
-            ),
-            StructDoc(
                 "構造化済み observation",
                 StructCodeBlock("json", observation_json),
             ),
             StructDoc(
-                "既存 issue 候補",
+                "既存 issue candidate",
                 StructCodeBlock("json", candidate_issues_json),
             ),
         ],
     )
 
+    # 同一性判断専用の Structured Output と読み取り専用設定を返す。
     return AgentCallParameter(
         agent_call_kind=build_feedback_normalize_issue_parameter.__name__,
         model_class=ModelClass.MAINSTREAM,

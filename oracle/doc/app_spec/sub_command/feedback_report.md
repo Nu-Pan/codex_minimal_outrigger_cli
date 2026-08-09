@@ -1,202 +1,256 @@
 # `cmoc feedback report`
 
-本書は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` が定義する delayed normalization と feedback report の挙動を定める。raw observation は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md`、repository-local record schema と整合性は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` を正本とする。
+本書は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` が定義する issue candidate の機械処理、normalization、verification、および人間向け report の publication を定める。raw observation は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md`、repository-local active state と atomic publication は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` を正本とする。
 
 ## 引数
 
-- 位置引数は受け取らない。
-- `--all` を受け取る。
-    - 既定表示で省略する全 disposition 済み issue、threshold 未満の machine issue、全 revision、全 assessment、および全 occurrence を表示する。
-    - 既定値は false とする。
+- 位置引数を受け取らない。
+- サブコマンド固有 option を受け取らない。
+- 旧 `--all` は廃止する。処理履歴、解決済み issue、または threshold 未満の machine aggregate を表示する代替 mode は提供しない。
 
-## 事前条件と repository-local state
+## 事前条件と処理開始順序
 
-doctor preprocess の後、次の条件をすべて満たす場合だけ実行する。
+次の順序で report を開始する。
+
+1. doctor preprocess を実行する。
+2. session と run の事前条件を検証する。
+3. repository-level feedback writer 排他を取得する。
+4. repository-local feedback state の schema、hash、path、および参照整合性を検証する。
+5. current pointer の切替後に未完了の cleanup があれば、完了済み report cut manifest から再開する。
+6. 再開可能な report cut があれば検証して再開し、なければ新しい report cut を固定する。
+
+session と run の事前条件を次に示す。
 
 - main worktree 上の active な `{{cmoc-session-branch}}` が checkout されている。
 - 対応する session state の `session.state=active` である。
 - `run.state=ready` である。
-- repository-level feedback writer 排他を取得できる。
 
 report は Git commit を作成しない。git working tree と staging area の clean 状態は事前条件にしない。
 
-report は編集 run を作らず、session state と run state を変更しない。normalized feedback state は `{{repo-root}}` に属し、現在の branch には属さない。session または run の join と abandon は、確定済み unit、ingestion receipt、report record、checkpoint、および snapshot を取り込み、破棄、または巻き戻さない。
+report は編集 run を作らず、session state と run state を変更しない。feedback state は `{{repo-root}}` に属し、現在の branch には属さない。
 
-## repository-local state の検証
+state root または current pointer が存在しない状態は有効な初期状態とする。ただし legacy state が存在する場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の一回限りの切替を先に適用する。整合性違反または corruption がある場合は state を変更せず、正常 report を publication しない。
 
-writer 排他を取得した後、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` に従って repository-local feedback state の schema、hash、参照整合性、および確定済み unit を検証する。state root が存在しない状態は有効な初期状態として扱う。違反または破損がある場合は、effective state を変更せずエラー終了する。
+## report cut
 
-## report snapshot と増分処理
+新しい report cut は、doctor preprocess と repository-level feedback writer 排他取得の後に固定する。cut は今回の report 要求が評価する時点を表す。
 
-コマンド開始時に、存在する raw observation の path、ID、および SHA256 を固定した immutable な report snapshot を作り、次へ atomic かつ durable に保存する。
+cut では、少なくとも次の入力を固定する。
 
-```text
-{{repo-root}}/.cmoc/gu/ar/feedback/report_snapshot/{{report-id}}.json
-```
+- 今回処理する全 pending observation
+- current pointer が指す active generation、前回から保持している全 active issue、および全 bounded machine aggregate
+- 各 candidate の現在状態を確認するための repository 内参照内容または fingerprint
+- allowlist 済み current-state probe が必要な場合は、その入力と結果
+- normalization、verification、および決定論的処理規則の version
 
-report snapshot は、この report が処理する raw observation 集合だけを表す。normalized feedback state を表す state snapshot とは別の record であり、相互に代用してはならない。
+cut の manifest、reference ID、hash、および durability は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` を正本とする。
 
-report 自身の normalization agent call が新しい observation を生成した場合、その observation は report snapshot に加えず次回 report へ回す。直前の正常な local report 後の増加数は、直前の正常 report の report snapshot に含まれず、repository-local な effective ingestion receipt がない observation の件数とする。
+cut の固定後に追加された observation は今回の manifest に加えず、次回 report の対象とする。normalization agent または verification agent が reporter へ新しい observation を送信した場合も同じとする。
 
-report snapshot は変更または自動削除しない。retention を Git branch、commit、または branch reachability に依存させない。別 clone または別 machine への複製は保証しない。
+report-time agent に live repository state を後から読ませてはならない。agent へ渡す現在参照は、report cut に固定した content、excerpt、fingerprint、または probe result に限定する。cut の参照だけでは現在状態を判断できない candidate は `inconclusive` とする。
 
-effective ingestion receipt の observation ID と SHA256 が一致する observation は処理済みとする。ID は一致するが SHA256 が異なる場合は corruption としてエラー終了する。
+current-state probe は、stable probe ID、型付き入力、固定した実行対象、timeout、出力上限、および secret masking が事前定義された allowlist entry だけを使用する。probe は read-only とし、repository、外部 state、または feedback state を変更してはならない。agent に command、引数、環境変数、または追加 probe を選ばせてはならない。適合する probe がない場合は arbitrary shell command で補わず、固定済み repository reference だけで検証する。
 
-増分処理は、次の順序で行う。
+## 処理フロー
 
-1. observation schema を検証し、observation ID と SHA256 で重複を除去する。
-2. machine observation を、rule の canonical key による完全一致で統合する。
-3. agent observation と既存 issue の比較候補を、category、正規化済み evidence subject、および既存 occurrence の fingerprint で機械的に絞り込む。deduplication hint は検索 hint にだけ使用する。
-4. 完全一致では決められない候補だけを normalization agent call へ渡す。
-5. observation 発生時点と現在の evidence file または config fingerprint を比較する。
-6. normalized issue state と ingestion receipt を durable な normalization unit として確定する。
-7. report snapshot に対する feedback report を決定論的にレンダリングする。
+report cut は、次の順序で処理する。
 
-schema 不正な raw observation は改変せず、`status=invalid` の ingestion receipt と validation error を保存する。同じ不正 observation を毎回再検証しない。report では producer または保存領域の問題として差分要約へ表示する。
+1. observation と既存 active state の schema、hash、path、および参照整合性を機械検証する。
+2. 完全に同じ observation を除去する。
+3. machine observation を canonical key で集約する。
+4. recurrence window 外の occurrence を集計から除外する。
+5. threshold 未満の machine observation は issue を作らず、bounded aggregate として次の active generation 候補へ保持する。
+6. agent observation の比較候補を category、evidence subject、および fingerprint などの安定情報で機械的に絞る。
+7. issue の同一性を完全一致で決められない場合だけ normalization agent を使用する。
+8. normalization 後の全 issue candidate と、前回から残る全 active issue を verification agent で検証する。
+9. 全 candidate の検証が成功した場合だけ、Markdown report と新しい active generation を作成し、current pointer を切り替える。
+10. current pointer の切替後に、処理済み raw observation、解決済みまたは報告対象外の issue、旧 generation、および完了済み一時 state を削除する。
 
-## normalization agent call
+機械的な順序を変更して、AI に validation、完全一致 deduplication、canonical key 集約、recurrence window、threshold、または候補絞り込みを代行させてはならない。
 
-曖昧な候補だけに `build_feedback_normalize_issue_parameter` を 1 回使用する。builder は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py`、専用 schema は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json` を正本とする。
+## validation と完全一致 deduplication
+
+raw observation の schema と hash は、report cut manifest の値と一致しなければならない。同じ observation ID と同じ canonical SHA256 は同一 observation として 1 回だけ処理する。同じ ID で hash が異なる場合は corruption として停止する。
+
+schema 不正、path 違反、参照不整合、または hash 不一致の observation を invalid receipt として処理済みにしてはならない。1 件でも validation を通過できない入力がある場合は、新しい正常 report と active generation を publication せず、問題の path と理由を console と subcommand log に示す。
+
+完全一致 deduplication の結果を履歴 record として保存しない。正常 publication 後は、同じ cut に含まれた重複 raw observation も処理済み入力として削除する。
+
+## machine observation の集約
+
+machine observation は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` が定める canonical key、recurrence scope、および rule-defined threshold dimension だけで決定論的に集約する。自由文、AI 判断、または session ID を canonical key へ追加してはならない。
+
+前回の bounded aggregate と今回の observation を合わせ、rule の recurrence window 外にある occurrence と threshold dimension digest を先に除外する。window 内の distinct recurrence 条件が threshold を満たさない場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` が定める bounded aggregate だけを保持する。
+
+threshold 未満の aggregate は issue candidate、active issue、または人間向け report の項目にしてはならない。threshold を満たした machine aggregate は 1 件の issue candidate とし、同じ canonical key の active issue がある場合は機械的に統合する。
+
+## agent observation の候補絞り込み
+
+agent observation は、次の安定情報で既存 issue candidate の比較候補を機械的に絞る。
+
+- category
+- evidence の subject type と正規化済み repository path
+- observation 時点と report cut 時点の fingerprint
+- agent が入力した deduplication hint
+
+既存 issue candidate の候補 pool には、report cut 開始時の active issue と、同じ cut で先に形成した provisional issue candidate を含める。agent observation は `observed_at`、次に observation ID の辞書順で処理し、同じ cut 内の同一 issue を重複作成しない。
+
+deduplication hint は検索 hint にだけ使用し、canonical key または同一性の確定根拠にしてはならない。機械的な完全一致で既存 issue candidate と同一と決まる場合は normalization agent を呼び出さない。
+
+## normalization agent
+
+曖昧な同一性判断だけに `build_feedback_normalize_issue_parameter` を使用する。builder は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py`、専用 schema は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json` を正本とする。
 
 normalization agent の入力は、次の情報に限定する。
 
 - 検証済みの構造化 observation
-- 機械的に絞り込んだ既存 issue 候補
-- 現在状態の確認に必要な repository 内参照 path
+- 機械的に絞り込んだ既存 issue candidate。active issue と同じ cut の provisional issue candidate を含む
 
-raw Codex call log、元の Codex session、および候補外 issue を読み直してはならない。file access mode は `READONLY` とし、normalization agent は feedback state を編集しない。
+normalization agent は、既存 candidate と同一か、新しい issue かだけを返す。summary、impact、原因、現在の存在可能性、actionability、human action、verification verdict、または relation を生成してはならない。
 
-normalization agent が既存 issue を選んだ場合も、cmoc は元 observation と新しい occurrence を保持する。新規 issue を選び、既存問題が変質した可能性がある場合は `related_issue_ids` を revision に残す。元 issue を削除または自動で superseded にしてはならない。
+raw Codex call log、元の Codex session、report cut の現在参照、feedback 保存 file、および候補外 issue を追加調査してはならない。file access mode は `READONLY` とし、feedback state を編集しない。
 
-新規 issue の category は source observation の category とする。既存 issue へ統合する場合は effective revision の category を維持し、normalization agent に category を推測または変更させない。
+既存 issue を選ぶ output の issue ID は入力 candidate に含まれていなければならない。新規 issue を選ぶ場合は existing issue ID を `null` とする。schema と決定論的事後条件に適合しない output は、Codex call の共通 Structured Output 規則に従って補正する。正式な output を受理できない場合は report 全体を失敗させる。
 
-## notification threshold
+## verification candidate
 
-machine issue は threshold 未満でも normalized issue と occurrence を保持するが、既定 report の issue 一覧へ表示しない。rule の recurrence window 内で threshold を満たした時点から表示する。
+verification の対象集合は、次の candidate を issue identity で重複なく統合した集合とする。
 
-agent report は 1 件でも人間が明示的に報告した observation であるため、machine rule の recurrence threshold を適用しない。ただし normalization により既存 issue と統合してよい。
+- threshold を満たした machine issue candidate
+- normalization 後の agent issue candidate
+- report cut 開始時に current だった全 active issue
 
-## machine assessment と鮮度
+新しい observation がない active issue、fingerprint が変化していない active issue、および前回と同じ内容に見える active issue も省略してはならない。active issue を新しい generation へ持ち越すには、今回の report cut に対する新しい `unresolved` verdict が必要である。
 
-過去の `{{work-root}}` を再構築できるとは仮定しない。observation は発生時点の evidence と fingerprint を保持し、report は現在状態への鮮度だけを評価する。
+candidate の summary、impact、occurrence aggregate、および参照対象は、機械的な統合結果から構築する。verification agent に candidate の追加、分割、統合、または探索を依頼してはならない。
 
-- 比較対象 fingerprint が前回 assessment と一致する場合は、既存の presence と `freshness=current` を維持してよい。
-- fingerprint が変わった場合は、`presence=unknown`, `freshness=needs_revalidation` の新しい assessment を追加する。
-- 現在の fingerprint を取得できない場合は、`freshness=unavailable` とする。
-- 問題が別の問題へ変質した可能性がある場合は、新しい issue と relation を作り、元 issue を上書きしない。
-- 新しい observation が disposition 済み issue と一致しても、disposition を変更しない。
+## verification agent
 
-normalization agent call を行った unit では、専用 Structured Output の `presence_assessment` を assessment record の presence と reason に使用する。agent call を行わない unit では、observation の fingerprint と現在値が一致する場合だけ `presence=likely_present` とし、それ以外は `unknown` とする。`likely_absent` を fingerprint の変化だけから機械的に設定してはならない。
+各 candidate の検証には `build_feedback_verify_issue_parameter` を使用する。builder は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.py`、専用 schema は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json` を正本とする。
 
-fingerprint の変化、`likely_absent`、または normalization agent の判断だけを根拠に、human disposition を `resolved`, `ignored`, `superseded` へ変更してはならない。
+agent call は 1 candidate と、その candidate に許可した report cut reference だけを入力とする。file access mode は `READONLY` とするが、report cut に含まれない file、live repository state、raw log、過去 session、別 candidate、または feedback state を読んではならない。
 
-## 処理単位、確定、および再開
+verification agent は、次の verdict から 1 つを返す。
 
-normalization unit は、次のいずれかとする。
+- `unresolved`
+    - report cut 時点でも問題が存在し、現在の作業外にいる人間の対応が必要である。
+- `resolved`
+    - 問題が report cut 時点では存在しない。
+- `not_actionable`
+    - 状態は存在しても、feedback の人間向け報告基準を満たさない。
+- `inconclusive`
+    - 許可された report cut reference だけでは判定できない。
 
-- 同じ machine canonical key を持つ未処理 observation の集合
-- 1 件の agent observation と、その絞り込み済み候補
-- 1 issue に対する fingerprint assessment
+verification agent は候補外の問題を探索しない。feedback state、repository file、config、または問題の根拠を自動修正してはならない。
 
-unit ID、unit manifest、effective record、および integrity check は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` を正本とする。各 unit は、生成する全 record を検証して durable 保存し、unit manifest を最後に確定してから次へ進む。Git commit、Git tree、または HEAD は unit の確定に使用しない。
+## verification output の受理条件
 
-normalization agent の正式な出力を受理した時点で、同仕様が定める checkpoint を atomic かつ durable に保存する。同じ入力、候補、および schema で再実行する場合は checkpoint を検証して再利用し、同じ observation のために quota を再消費しない。unit の確定後も checkpoint を削除しない。
+Structured Output schema に加え、次の決定論的事後条件をすべて満たす output だけを正式な verification result として受理する。
 
-中断または一部失敗時は、確定済み unit manifest と checkpoint を維持する。実行中 unit は、全 record と unit manifest を安全に確定できる場合だけ確定する。それ以外は未確定のまま effective state から除外し、次回 report が recovery metadata と checkpoint から再開する。未確定 unit の一部を Git rollback または file の部分削除で有効化してはならない。
+- output の candidate ID が入力 candidate ID と完全一致する。
+- current evidence の reference ID が、その candidate に許可された report cut reference に存在する。
+- `unresolved | resolved | not_actionable` は 1 件以上の具体的な current evidence を持つ。
+- `unresolved | resolved | not_actionable` の current evidence は、少なくとも 1 件の `repository_content | current_fingerprint | probe_result` を参照する。
+- 過去の observation だけを current evidence とした `unresolved | resolved | not_actionable` を受理しない。
+- `unresolved` は空でない具体的な human action を持つ。
+- fingerprint だけでは問題の存在を意味的に確認できない場合、fingerprint の一致だけを根拠とした `unresolved` を受理しない。
+- `resolved | not_actionable | inconclusive` の human action は `null` である。
 
-同じ report snapshot を再実行した場合は、effective ingestion receipt、確定済み unit manifest、および checkpoint を再利用する。同じ observation に対する重複 record、重複 normalization unit、または重複 normalization agent call を生成してはならない。
+`unresolved` の current evidence は、report cut の具体的な subject、path、location、field、または probe result を指し、問題が現在も存在する理由を人間が確認できる説明を含む。
 
-## report と state snapshot の確定
+schema validation または決定論的事後条件の補正を尽くしても正式な output を受理できない場合は、AI call failure とする。`inconclusive` は schema 上有効でも正常 publication を許可しない。
 
-report snapshot の処理が完了、一部失敗、またはユーザー中断で停止した後、effective state の整合性を再検証する。整合している場合は、現在の effective normalized state を immutable state snapshot として保存し、Markdown report と report record を durable に保存する。
+## 全候補が確定しない場合
 
-report record は、対応する state snapshot と Markdown report の durable 保存および hash 検証後に、最後の publication record として保存する。report record がない artifact を正常 report として読み取ってはならない。
+次のいずれかが 1 件でも発生した場合は、新しい正常 report と active generation を publication しない。
 
-state snapshot と report record の schema、正常 report の predecessor、および retention は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` を正本とする。report record と front matter の `normalization_unit_ids` には、この report で確定または再利用した normalization unit ID を処理順に記録する。Git commit ID は記録しない。
+- `inconclusive`
+- normalization または verification の AI call failure
+- Structured Output の受理失敗
+- report cut、active state、または input の corruption
+- current pointer を含む durable publication failure
 
-保存途中の異常終了後は、report path、report hash、state snapshot、および report record の対応を検証する。全 artifact が一致する場合だけ既存出力を再利用する。一部だけが残り安全に確定できない場合は、新しい正常 report として扱わず、手動対応が必要な path を示す。
+未検証 candidate、`inconclusive` candidate、または前回の active issue を、新しい人間向け issue として提示してはならない。直前の current pointer が指す正常 report と active generation を、引き続き正常な最新状態として維持する。
 
-effective state の corruption、writer 排他の喪失、または durable 保存の失敗がある場合は、state が整合していると偽って report を確定しない。それまでの確定済み unit、checkpoint、report snapshot、および以前の正常 report を保持する。
+失敗理由、candidate ID、再開可能性、および一時 state の path は console と subcommand log から判別可能にする。正式な checkpoint と再開 state の retention は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` に従う。
 
-## ユーザー中断
+## 正常 publication
 
-このコマンドは中断可能サブコマンドとし、共通動作は `{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` を正本とする。中断要求後は新しい normalization unit または Codex call を開始しない。処理単位の確定規則に従い、整合した effective state から `result=interrupted` の report を保存する。
+全 verification candidate が `unresolved | resolved | not_actionable` のいずれかへ確定した場合だけ、正常 publication へ進む。
 
-## report の保存先と front matter
+新しい active generation には、次の record だけを含める。
 
-report は Markdown + YAML Front Matter とし、次へ保存する。
+- `unresolved` candidate ごとの compact active issue record
+- recurrence threshold 未満の bounded machine aggregate
+
+`resolved` と `not_actionable` の candidate は、新しい active generation と人間向け issue 一覧に含めない。処理済み observation や disposition record を、削除の代わりとして残してはならない。
+
+正常 result は、次の 2 種類だけとする。
+
+- `ok`: 全 candidate の検証が完了し、`unresolved` が 0 件である。
+- `attention`: 全 candidate の検証が完了し、`unresolved` が 1 件以上ある。
+
+active generation、Markdown report、current pointer、および切替後 cleanup の順序は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の atomic publication を正本とする。旧 state または処理済み observation を current pointer の切替前に削除してはならない。
+
+current pointer の durable な切替後に cleanup だけが失敗した場合は、publication 済みの `ok | attention` と current pointer を巻き戻さない。その invocation は cleanup 未完了の warning と manifest path を console と subcommand log に示す。次回 invocation は cleanup を再開し、完了できない場合は新しい report cut を作らずエラー終了する。
+
+## ユーザー中断と再開
+
+このコマンドは中断可能サブコマンドとし、共通動作は `{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` を正本とする。
+
+中断要求後は、新しい normalization、verification、correction、retry、または Codex call を開始しない。実行中 call から正式な output を安全に受理できた場合は checkpoint として保存してよい。それ以外は未完了として扱う。
+
+中断時は Markdown report、active generation、または current pointer を新たに publication しない。report cut manifest、固定済み reference、および正式な checkpoint だけを保持する。次回の `cmoc feedback report` は同じ report cut を検証して再開し、cut 固定後に追加された observation は次の cut へ残す。
+
+中断による完了は共通規則どおり正常系とするが、`ok | attention` の正常 report result ではない。console と subcommand log から中断と再開対象 cut を判別可能にする。
+
+## report の保存と表示
+
+正常 report は Markdown + YAML Front Matter とし、次へ保存する。
 
 ```text
 {{repo-root}}/.cmoc/gu/ar/report/feedback/{{time-stamp}}.md
 ```
 
-front matter は、次の field を持つ。
+front matter は、次の field に限定する。
 
 - `command`: `cmoc feedback report`
 - `generated_at`
 - `repo_root`
-- `session_branch`: 実行 context であり、feedback state の所有者または差分基準ではない
-- `report_snapshot_sha256`
-- `report_snapshot_observation_count`
-- `processed_observation_count`
-- `deferred_observation_count`
-- `invalid_observation_count`
-- `normalization_agent_call_count`
-- `new_or_changed_issue_count`
-- `recurrent_open_issue_count`
-- `needs_revalidation_issue_count`
-- `disposition_change_count`
-- `suppressed_machine_issue_count`
-- `all`: boolean
-- `normalization_unit_ids`
-- `state_snapshot_id`
-- `previous_successful_report_id`
-- `result`
+- `session_branch`: 実行 context であり、feedback state の所有者ではない
+- `report_cut_id`
+- `report_cut_at`
+- `active_generation_id`
+- `verification_candidate_count`
+- `unresolved_issue_count`
+- `result`: `ok | attention`
 
-`result` は、次のいずれかとする。
+issue 一覧には `unresolved` だけを issue ID の辞書順で表示する。各 issue には、次の現在情報を簡潔に示す。
 
-- `ok`: 処理が完了し、既定表示の対象 issue がない。
-- `attention`: 処理が完了し、既定表示の対象 issue または invalid observation がある。
-- `partial`: 一部 unit の処理に失敗したが、確定済み state から report を保存できた。
-- `interrupted`: ユーザー中断までの確定済み state から report を保存した。
-- `error`: 有効な report または整合した repository-local state を確定できなかった。
-
-本仕様で「正常完了した feedback report」とは、`result=ok | attention` の report を指す。
-
-## report 差分の基準
-
-直前の正常な local report は、正常 report record の predecessor 連鎖から一意に決める。正常 report がまだない場合は predecessor は存在しない。branch reachability、過去 commit の tree、または timestamp の大小で選んではならない。
-
-新しい正常 report は、直前の正常 report に対応する immutable state snapshot と、今回確定した state snapshot を比較する。新規 revision、assessment、disposition、および occurrence の差分は、snapshot が列挙する record ID と SHA256 で判定する。record 内の timestamp だけで差分を判定してはならない。
-
-直前の正常 report がない場合は、現在の effective state を初回差分として扱う。predecessor、state snapshot、または参照 hash を一意に検証できない場合は、新しい正常 report を確定せずエラーとする。raw observation の report snapshot を normalized state の差分基準に使用してはならない。
-
-## 既定表示
-
-既定 report は raw occurrence を展開せず、issue を次の順序で提示する。
-
-1. 直前の正常 report 後に新規作成された issue、または effective revision が変化した issue
-2. 複数 session で再発している、effective disposition が未決定または `open | acknowledged` の issue
-3. effective assessment が `needs_revalidation` の issue
-4. `resolved | ignored | superseded` など、直前の正常 report 後の disposition 差分要約
-
-各 issue の先頭には、次の情報を簡潔に示す。
-
-- issue ID、問題の要約、および人間の対応候補
-- occurrence 数と affected cmoc session 数
+- issue ID、category、summary、および impact
+- verification agent が確定した human action
+- report cut の対象を指す concrete current evidence
+- occurrence count と affected session count
 - 最初と最後の観測日時
-- machine assessment の presence と freshness
-- effective human disposition。未決定の場合は `not_disposed` と表示する
-- 代表的な evidence
-- issue directory、raw observation、および log への参照
+- bounded な representative evidence
 
-全 revision、全 assessment、全 disposition、全 occurrence、および threshold 未満 issue は `--all` の場合だけ表示する。
+current evidence は cut-scoped reference ID を manifest で解決し、repository path、subject、probe ID、location、fingerprint、および finding のうち該当する情報を report 内へ materialize する。削除予定の work artifact だけを指す link にしてはならない。
+
+次の情報は front matter、issue 一覧、差分要約、または補助 section に表示してはならない。
+
+- `resolved` または `not_actionable` の candidate
+- `inconclusive` または未検証の candidate
+- threshold 未満の machine aggregate
+- disposition の変更履歴
+- revision、assessment、occurrence、normalization、または verification の履歴
+- 前回 report との差分
+
+過去の Markdown report は、今回の issue 表示、deduplication、処理済み判定、state 差分、または今回の publication 可否の入力にしない。artifact 自体の retention は active state の compaction と分離する。
 
 ## 終了コード
 
 - `ok` と `attention` は終了コード 0 とする。
-- `error` は終了コード 1 とする。
-- `partial` は終了コード 2 とする。
-- `interrupted` は、共通のユーザー中断規則に従う正常系として終了コード 0 とする。
+- ユーザー中断は、共通の中断規則に従って終了コード 0 とする。
+- validation failure、`inconclusive`、AI call failure、state corruption、required cleanup recovery failure、および durable publication failure は終了コード 1 とする。
 
-issue の件数、severity、presence、freshness、または human disposition だけを理由に非 0 を返してはならない。この終了コードは `cmoc feedback report` 自身の処理結果だけを表し、他 workload の成功判定へ伝播させない。
+issue の件数、category、impact、または human action だけを理由に非 0 を返してはならない。この終了コードは `cmoc feedback report` 自身の処理結果だけを表し、他 workload の成功判定へ伝播させない。

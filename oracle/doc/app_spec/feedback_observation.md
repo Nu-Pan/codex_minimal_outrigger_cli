@@ -130,7 +130,7 @@ stdio MCP process と invocation-scoped collector の間の IPC 方式と framin
 
 detector は、構造化 log event から diagnostic observation を作るだけとする。検出の成否と内容を、task の失敗、成果物の拒否、run state、終了コード、retry、または recovery の条件にしてはならない。
 
-detector は event が flush された後に rule を評価する。rule に一致した occurrence は、通知 threshold 未満でも raw observation として保存する。threshold を満たすかの集約は `cmoc feedback report` が行う。
+detector は event が flush された後に rule を評価する。rule に一致した occurrence は、recurrence threshold 未満でも raw observation として保存する。threshold を満たすかの集約は `cmoc feedback report` が行う。
 
 machine observation は agent 用 reporter transport を経由しない。detector は検出結果を cmoc collector へ渡し、collector だけが observation store へ保存する。検出または保存の失敗は構造化 log event と warning に留め、本命 subcommand の結果を変更しない。
 
@@ -156,7 +156,7 @@ detector rule は allowlist とし、各 rule は次の情報を持つ。
 - reporter input schema と同じ enum に従う issue category
 - 人間向けの短い summary と、反復時に生じる impact
 - 人間が取り得る具体的な対応
-- notification threshold と recurrence window
+- recurrence threshold と recurrence window
 - 除外する期待動作
 - `subject_type` と低カーディナリティの `normalized_subject_id` の構築方法
 
@@ -272,13 +272,12 @@ observation は sibling temporary file への write、file flush、atomic rename
 
 accepted response 後に observation が未保存となる状態や sibling temporary file が残る状態を許容してはならない。
 
-raw observation は normalization 後も変更または自動削除しない。初期仕様では retention を無期限とし、自動 pruning と prune subcommand を提供しない。pruning を追加する場合は、少なくとも repository-local な effective ingestion receipt が存在する observation だけを対象とし、未処理 observation を削除しない別仕様を先に定義する。
+raw observation は、正常な feedback report の active state へ反映されるまで pending observation として保持する。report cut に含まれたこと、normalization または verification の checkpoint が作られたこと、あるいは staged report が保存されたことだけを理由に削除してはならない。
 
-通常のサブコマンド完了サマリーは、詳細を展開せず次の 2 値だけを表示する。
+`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` が定める current pointer を新しい正常 report へ切り替えた後に限り、その report cut で処理した raw observation を自動削除する。削除は idempotent とし、切替後に追加された observation、別の未完了 report cut が参照する observation、および validation を通過できなかった observation を対象にしてはならない。
 
-- repository-local な effective ingestion receipt がない raw observation 数
-- 直前の正常な local feedback report の report snapshot 後に増えた raw observation 数
+処理済み observation の ingestion receipt または履歴 record は作らない。処理済みかどうかは、正常 publication 前は report cut manifest から判断する。current pointer の切替後に raw file が残っている間は、同 pointer が識別する cleanup manifest への列挙で判断する。cleanup 完了後は raw observation 自体が削除済みであることによって表す。
 
-直前の正常な local feedback report がない場合は、後者を前者と同数とする。report record はあるが対応する report snapshot がない、hash が一致しない、または正常 report の連鎖を一意に解決できない場合も同じ fallback を使用し、理由を warning として示す。raw observation の report snapshot と normalized state の state snapshot を混同してはならない。
+通常のサブコマンド完了サマリーは、raw store に残る pending observation 数だけを詳細なしで表示する。実行中または中断中の report cut に含まれる observation も、正常 publication までは pending 数に含める。current pointer の切替後に cleanup manifest が処理済みとして列挙する observation は pending 数から除外する。
 
-未処理 observation が 100 件以上、または最古の未処理 observation が 7 日以上前の場合は、`cmoc feedback report` の実行を促す warning を追加する。この warning と件数計算の失敗は、サブコマンドの終了コードまたは run state を変更しない。
+pending observation が 100 件以上、または最古の pending observation が 7 日以上前の場合は、`cmoc feedback report` の実行を促す warning を追加する。この warning と件数計算の失敗は、サブコマンドの終了コードまたは run state を変更しない。

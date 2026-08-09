@@ -23,7 +23,7 @@
 
 ### 検証
 
-- 非追跡保証は `.cmoc/gu` の一部用途だけではなく、feedback の observation、normalized state、checkpoint、report、snapshot を含むツリー全体と、将来作成される全 descendant に適用する
+- 非追跡保証は `.cmoc/gu` の一部用途だけではなく、feedback の pending observation、active state、report cut、checkpoint、および Markdown report を含むツリー全体と、将来作成される全 descendant に適用する
 - 必要な操作
     - `/.cmoc/gu/` を `{{repo-root}}/.gitignore` に追加する
     - 既に tracked な `{{repo-root}}/.cmoc/gu` ツリー内ファイルは追跡を解除する (e.g. `git rm --cached`)

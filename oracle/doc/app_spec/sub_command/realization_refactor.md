@@ -145,7 +145,7 @@
 
 ## feedback との境界
 
-- findings、`resolution.status`、current fork の unresolved target、および refactor state を feedback observation または human disposition として自動変換しない。
+- findings、`resolution.status`、current fork の unresolved target、および refactor state を feedback observation または active issue として自動変換しない。
 - agent が共通 reporter で明示的に申告した observation と、allowlist 済み log detector の observation だけを `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` に従って別途保存する。
 - feedback の有無または内容は、refactor loop、`investigation_required`、`completion_reason`、run state、および終了コードへ影響させない。
 

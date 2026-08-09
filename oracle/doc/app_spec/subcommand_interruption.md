@@ -24,9 +24,9 @@
 
 - ユーザー中断要求を受け付けた cmoc は、新しい処理単位の開始を止める。
 - 実行中だった処理単位を完了させるか rollback するかは個別仕様または実装裁量とする。ただし、破損した部分結果や未確定の部分結果を完了済みとして残してはいけない。
-- 確定済みの部分結果を保持したまま、個別仕様が定める state 更新、後処理、report 保存、および終了 log 出力を行う。
+- 確定済みの部分結果を保持したまま、個別仕様が定める state 更新と後処理を行い、終了 log を出力する。中断時に report を保存するかは個別仕様に従う。
 - ユーザー中断要求による完了は正常系とし、エラー結果またはエラー終了として扱ってはいけない。
-- report と終了 log から、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
+- 個別仕様が保存を認める report または再開 state と、終了 log から、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
 - ユーザー中断要求を受け付けた後は、そのサブコマンドのための新しい Codex CLI 呼び出し、retry、quota 回復待ち、および Codex CLI session の再開を行わない。この指示は `codex_exec_rule.md` の待機・再開規則より優先する。
 - 通常の完了処理自体に失敗した場合は、ユーザー中断要求による正常系ではなく、個別仕様と error handling 規則に従う。
 - ユーザー中断要求による terminal result の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする。
@@ -36,6 +36,6 @@
 - `cmoc realization refactor fork` は active run を `joinable` にし、同じ run を再開しない。
 - refactor の確定済み部分結果から続きを行う場合は、`cmoc run join` の後に新しい fork を開始する。
 - `cmoc oracle review` は途中位置から再開せず、同じサブコマンドを後から呼び出した場合は新しい run として扱う。
-- `cmoc feedback report` は確定済み normalization unit manifest と checkpoint を保持する。実行中 unit は、全 record を durable に保存して manifest を確定できる場合だけ effective state に含める。確定できない unit は部分 record を読み取らず、整合した state から `result=interrupted` の report を保存する。
-- 中断後に再実行した場合は、effective ingestion receipt、確定済み unit manifest、および正式な normalization agent output の checkpoint を再利用し、未処理 observation だけを処理する。
-- 編集 run または oracle review の中断位置を再開する checkpoint を保存してはいけない。`cmoc feedback report` が同一 observation の normalization agent call を再実行しないために保存する call result checkpoint は、中断位置を表さないためこの禁止の対象外とする。
+- `cmoc feedback report` は固定済み report cut manifest、reference、および正式な normalization／verification checkpoint だけを保持する。中断時は Markdown report、active generation、または current pointer を新たに publication しない。
+- 中断後に再実行した場合は同じ report cut と正式な checkpoint を検証して再利用する。cut 固定後に追加された observation は再開中の cut へ加えず、次の report cut で処理する。
+- 編集 run または oracle review の中断位置を再開する checkpoint を保存してはいけない。`cmoc feedback report` が同じ report cut の normalization／verification agent call を再実行しないために保存する正式な call result checkpoint は、中断位置を表さないためこの禁止の対象外とする。
