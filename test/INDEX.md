@@ -450,20 +450,21 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- `cmoc indexing` の CLI、preflight、worktree、INDEX.md 更新、Codex 呼び出し、commit lifecycle の外部挙動を検証するテスト群。indexing 機能の変更や失敗条件を確認するための入口。
+- `cmoc indexing` の CLI と preflight の外部挙動を検証するテスト群。doctor による初期化、現在の linked worktree の選択、未コミット差分の拒否・保持、Codex structured output による INDEX.md 生成、fresh hash 時の生成省略、INDEX.md のみの commit と異常時の拒否を扱う。indexing の実装や仕様を確認する際のテスト入口である。
 
 ## Read this when
-- `cmoc indexing` の CLI 動作、事前条件、doctor、linked worktree 対応を変更または調査するとき。
-- INDEX.md の生成・更新、fresh hash 判定、Codex Structured Output、INDEX.md だけを commit する条件を変更または検証するとき。
-- dirty repository、非 INDEX 差分、git diff 失敗など indexing の拒否・異常系を確認するとき。
+- `cmoc indexing` の正常系・異常系の挙動を変更または調査するとき
+- worktree、doctor、preflight、既存の未コミット差分の扱いを確認するとき
+- Codex 呼び出し、INDEX.md 更新、fresh hash による省略、commit 対象の制約を確認するとき
 
 ## Do not read this when
-- indexing の実装詳細や正本仕様を直接確認したいときは、対応する実装ファイルや oracle 仕様を先に読む。
-- 共通の doctor、Git テスト補助、Codex preflight、Structured Output schema だけを調べるときは、それぞれの定義元を直接読む。
-- indexing と無関係な CLI サブコマンドやテストの挙動を確認するとき。
+- indexing の正本仕様や CLI 契約を確認する場合は oracle の indexing 仕様を直接読む
+- Codex structured output の項目定義だけを確認する場合は対応する schema を直接読む
+- 実装の責務や内部処理を確認する場合は対応する src ファイルを直接読む
+- indexing と無関係な CLI やテストを調べる場合
 
 ## hash
-- a471d1f42123e5c2e4ae92d709b1f6e99e0af21e1e6bec531e93983ffdcba017
+- c8971ee4d75ccbc5d1309244856b7cb153bc6f39deacce958a3ac285a3d8328e
 
 # `test_indexing_common.py`
 

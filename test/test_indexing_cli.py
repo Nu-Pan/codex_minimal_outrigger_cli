@@ -347,7 +347,7 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
         calls.append(update_root)
         raise AssertionError("dirty cmoc indexing must stop before updating INDEX.md")
 
-    monkeypatch.setattr(indexing_common, "update_indexes", fake_update_indexes)
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
