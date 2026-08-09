@@ -369,10 +369,9 @@ class FeedbackInvocation:
                 raise FeedbackRejected(
                     "rate_limited", "accepted observation limit reached", retryable=True
                 )
-            # Keep every in-flight reservation in the limit.  A durable store can
-            # take longer than the rate window; expiring a pending reservation by
-            # its start time would allow more than three observations to become
-            # accepted in the same 60-second window.
+            # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+            # 保留中の予約も上限に含める。永続保存が rate window より長くかかることがあり、
+            # 開始時刻で保留予約を失効させると、同じ 60 秒間に 3 件を超えて受理できる。
             if len(context.accepted_times) + len(context.pending_times) >= 3:
                 raise FeedbackRejected(
                     "rate_limited",
@@ -652,8 +651,12 @@ def _validate_collector_protocol(socket_path: Path) -> None:
         )
 
 
-def _validate_stdio_reporter(expected_schema: dict[str, Any], cwd: Path) -> None:
+def _validate_stdio_reporter(
+    expected_schema: dict[str, Any], reporter_cwd: Path
+) -> None:
     """local stdio MCP process を起動し、公開 tool 面と schema を確認する。"""
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    # reporter process の起動先は、他の process の cwd と区別できる内部名で扱う。
     requests = [
         {
             "jsonrpc": "2.0",
@@ -674,7 +677,7 @@ def _validate_stdio_reporter(expected_schema: dict[str, Any], cwd: Path) -> None
     try:
         result = subprocess.run(
             [sys.executable, "-m", "commons.runtime_feedback_reporter"],
-            cwd=cwd,
+            cwd=reporter_cwd,
             input=stdin_text,
             text=True,
             encoding="utf-8",

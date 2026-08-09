@@ -362,7 +362,11 @@ def _copy_current_index(root: Path) -> Path:
         if current_index.exists():
             shutil.copy2(current_index, index_path)
         else:
+            # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
             _run_git_with_index(["read-tree", "HEAD"], root, index_path)
+            # 修復処理の Git command は通常の index を参照するため、index が
+            # 欠落していた場合も HEAD の完全な index を先に復元する。
+            shutil.copyfile(index_path, current_index)
         return index_path
     except BaseException:
         index_path.unlink(missing_ok=True)

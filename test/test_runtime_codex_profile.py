@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from _codex_support import codex_arg_value, codex_override_config
+from _codex_support import codex_arg_value, codex_override_config, codex_parameter
 from oracle.other.cmoc_config import CodexModelProviderConfig, CodexModelSpec
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
@@ -41,26 +41,15 @@ _SANDBOX_BY_MODE = {
 }
 
 
-def _parameter(mode: FileAccessMode) -> AgentCallParameter:
-    """指定modeの最小AgentCallParameterを作る。"""
-    return AgentCallParameter(
-        agent_call_kind="test_agent_call",
-        model_class=ModelClass.EFFICIENCY,
-        reasoning_effort=ReasoningEffort.LOW,
-        file_access_mode=mode,
-        prompt="prompt",
-        structured_output_schema_path=None,
-        agent_call_cwd=Path.cwd(),
-    )
-
-
 @pytest.mark.parametrize(("mode", "sandbox"), _SANDBOX_BY_MODE.items())
 def test_codex_overrides_use_dedicated_sandbox_argument(
     mode: FileAccessMode, sandbox: str
 ) -> None:
     """全 file access mode を専用 --sandbox 引数へ欠落なく変換する。"""
     config = CmocConfig()
-    args = build_codex_override_args(_parameter(mode), config)
+    args = build_codex_override_args(
+        codex_parameter(mode, agent_call_cwd=Path.cwd()), config
+    )
 
     assert args.count("--sandbox") == 1
     assert codex_arg_value(args, "--sandbox") == sandbox
@@ -115,7 +104,7 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
 def test_codex_overrides_reject_unknown_file_access_mode() -> None:
     """未知 mode では sandbox を推測せず、Codex 起動前の構築段階で失敗する。"""
     parameter = replace(
-        _parameter(FileAccessMode.READONLY),
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
         file_access_mode=cast(FileAccessMode, "future_mode"),
     )
 
@@ -139,7 +128,10 @@ def test_feedback_capability_values_are_not_written_to_codex_argv(
     ):
         monkeypatch.setenv(name, value)
 
-    args = build_codex_override_args(_parameter(FileAccessMode.READONLY), CmocConfig())
+    args = build_codex_override_args(
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
+        CmocConfig(),
+    )
     rendered = "\n".join(args)
 
     for value in secret_values:
@@ -148,7 +140,9 @@ def test_feedback_capability_values_are_not_written_to_codex_argv(
 
 def test_prepare_codex_overrides_matches_builder_defaults() -> None:
     """callback 未指定の prepare 境界は builder の既定 argv と一致する。"""
-    parameter = _parameter(FileAccessMode.REALIZATION_WRITE)
+    parameter = codex_parameter(
+        FileAccessMode.REALIZATION_WRITE, agent_call_cwd=Path.cwd()
+    )
     config = CmocConfig()
     assert prepare_codex_override_args(parameter, config) == (
         build_codex_override_args(parameter, config)
@@ -164,7 +158,7 @@ def test_codex_overrides_encode_tui_notification_command_as_toml_data() -> None:
     ]
 
     args = build_codex_override_args(
-        _parameter(FileAccessMode.READONLY),
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
         CmocConfig(),
         notification_command=command,
     )

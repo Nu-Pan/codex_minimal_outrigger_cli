@@ -896,11 +896,12 @@ def test_oracle_review_restores_interrupted_merge_conflict(
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     original_run_git = review_index_module.run_git
 
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
     def interrupt_during_merge(
-        args: list[str], cwd: Path, check: bool = True
+        args: list[str], git_cwd: Path, check: bool = True
     ) -> CommandResult:
         """conflict state 作成直後の Ctrl+C を再現する。"""
-        result = original_run_git(args, cwd, check=check)
+        result = original_run_git(args, git_cwd, check=check)
         if args[:2] == ["merge", "--no-ff"]:
             raise KeyboardInterrupt()
         return result
@@ -937,11 +938,12 @@ def test_oracle_review_cleans_untracked_merge_rollback_residue(
     leftover = root / "merge-leftover.txt"
     original_run_git = review_index_module.run_git
 
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
     def fail_abort_with_leftover(
-        args: list[str], cwd: Path, check: bool = True
+        args: list[str], git_cwd: Path, check: bool = True
     ) -> CommandResult:
         """merge abort 失敗後に未追跡 path が残る状態を再現する。"""
-        result = original_run_git(args, cwd, check=check)
+        result = original_run_git(args, git_cwd, check=check)
         if args == ["merge", "--abort"]:
             leftover.write_text("partial merge output\n")
             return CommandResult(1, result.stdout, result.stderr)

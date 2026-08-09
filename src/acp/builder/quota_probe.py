@@ -1,27 +1,25 @@
 """quota availability probe の互換入口。"""
 
-from collections.abc import Callable
-from importlib import import_module
-from typing import cast
+from collections.abc import Callable as _Callable
+from importlib import import_module as _import_module
+from typing import cast as _cast
 
-from basic.acp import (
-    AgentCallParameter,
-    FileAccessMode,
-    ModelClass,
-    ReasoningEffort,
-)
+from basic.acp import AgentCallParameter as _AgentCallParameter
+from basic.acp import FileAccessMode as _FileAccessMode
+from basic.acp import ModelClass as _ModelClass
+from basic.acp import ReasoningEffort as _ReasoningEffort
 
 __all__ = ["build_quota_availability_probe_parameter"]
 
 
 def build_quota_availability_probe_parameter(
-    base_parameter: AgentCallParameter,
-) -> AgentCallParameter:
+    base_parameter: _AgentCallParameter,
+) -> _AgentCallParameter:
     """正本 builder を使い、未配布時は空 stdin の最小 probe を返す。"""
     try:
-        oracle_module = import_module("oracle.acp_builder.quota_probe")
-        build_oracle_parameter = cast(
-            Callable[[AgentCallParameter], AgentCallParameter],
+        oracle_module = _import_module("oracle.acp_builder.quota_probe")
+        build_oracle_parameter = _cast(
+            _Callable[[_AgentCallParameter], _AgentCallParameter],
             getattr(oracle_module, "build_quota_availability_probe_parameter"),
         )
     except ModuleNotFoundError as exc:
@@ -35,11 +33,11 @@ def build_quota_availability_probe_parameter(
         # 現在の oracle tree は最小 availability call だけを定義し、専用 builder を持たない。
         # 空 stdin により prompt を realization layer へコピーせず、optional oracle builder
         # を含まない package でも quota polling を実行可能にする。
-        return AgentCallParameter(
+        return _AgentCallParameter(
             agent_call_kind=build_quota_availability_probe_parameter.__name__,
-            model_class=ModelClass.MINIMUM,
-            reasoning_effort=ReasoningEffort.LOW,
-            file_access_mode=FileAccessMode.READONLY,
+            model_class=_ModelClass.MINIMUM,
+            reasoning_effort=_ReasoningEffort.LOW,
+            file_access_mode=_FileAccessMode.READONLY,
             prompt="",
             structured_output_schema_path=None,
             agent_call_cwd=base_parameter.agent_call_cwd,

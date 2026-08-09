@@ -306,7 +306,10 @@ def test_commit_index_updates_rejects_git_diff_failure(
     root = make_repo(tmp_path)
     calls: list[tuple[list[str], bool]] = []
 
-    def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    def fake_run_git(
+        args: list[str], git_cwd: Path, check: bool = True
+    ) -> CommandResult:
         """index commitのGit結果を固定し、diff失敗を再現する。"""
         calls.append((args, check))
         if args[0] == "add":
@@ -344,7 +347,7 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
         calls.append(update_root)
         raise AssertionError("dirty cmoc indexing must stop before updating INDEX.md")
 
-    monkeypatch.setattr(indexing_common, "update_indexes", fake_update_indexes)
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 

@@ -71,10 +71,11 @@ class SubcommandLogger:
                 from .runtime_feedback import detect_feedback_event
 
                 detect_feedback_event(record, self.path)
-            except BaseException as exc:
+            except Exception as exc:
+                # KeyboardInterrupt などのユーザー中断は detector failure として握り潰さない。
                 self._record_detector_failure(exc)
 
-    def _record_detector_failure(self, error: BaseException) -> None:
+    def _record_detector_failure(self, error: Exception) -> None:
         """detector failure を nonfatal な自由 event と warning に留める。"""
         record = {
             "event": "feedback.detector_failed",
@@ -87,9 +88,13 @@ class SubcommandLogger:
                 with self.path.open("a") as log_file:
                     log_file.write(json.dumps(record, ensure_ascii=False) + "\n")
                     log_file.flush()
-        except BaseException:
+        except Exception:
             pass
-        print("warning: feedback detector failed", file=sys.stderr, flush=True)
+        try:
+            print("warning: feedback detector failed", file=sys.stderr, flush=True)
+        except Exception:
+            # warning の出力失敗も detector failure と同じ非致命境界に留める。
+            pass
 
     def start_step(
         self, index: str, description: str, log_description: str | None = None

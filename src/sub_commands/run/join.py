@@ -115,6 +115,7 @@ def _cmoc_run_join_body(force_resolve: bool) -> None:
         session_unexpected = unexpected_session_paths(
             context.session_worktree,
             session_changes,
+            base=context.run_fork_commit,
             ignored_paths=session_doctor_state_paths,
         )
         if session_unexpected:

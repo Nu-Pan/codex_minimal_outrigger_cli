@@ -126,7 +126,10 @@ def run_cli_subcommand(
         # 非中断可能な TUI の Ctrl+C は Codex CLI に委ね、cmoc の error report に変換しない。
         if logger:
             _finish_failed_subcommand(logger, name, 130, exc)
-        terminal_state = "failed"
+        # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+        # TUI のユーザー終了にはサブコマンドの terminal result 通知を追加しない。
+        if not tui_process:
+            terminal_state = "failed"
         raise
     except BaseException as exc:
         failed_returncode = error_returncode if error_returncode is not None else 1

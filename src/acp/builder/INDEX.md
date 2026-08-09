@@ -96,17 +96,16 @@
 # `quota_probe.py`
 
 ## Summary
-- quota availability probe の互換 builder。利用可能な正本 builder を委譲先として解決し、optional oracle builder がない配布形態では、最小モデル・低推論・読み取り専用・空 stdin の quota polling 用パラメータを生成する。
+- 互換配布向けの quota availability probe builder。正本 builder が利用可能なら動的に委譲し、未配布時は最小の読み取り専用 probe パラメータを生成する。quota polling 用の呼び出し設定へ進む入口。
 
 ## Read this when
-- quota availability probe の呼び出し経路、正本 builder への委譲、または oracle builder 未配布時の互換 fallback を確認するとき。
+- quota availability probe の呼び出しパラメータ生成、正本 builder への委譲、または optional oracle builder 未同梱時の互換 fallback を確認・変更するとき。
 
 ## Do not read this when
-- quota probe の正本仕様や canonical builder の詳細を確認したいとき。oracle 側の該当実装・仕様を直接読むこと。
-- quota polling 以外の ACP builder や一般的な AgentCallParameter の仕様を確認するとき。各担当領域の直接の実装・仕様へ進むこと。
+- canonical な quota probe 仕様や builder 本体を確認したいときは、正本側の builder と oracle 仕様を直接読む。一般的な ACP パラメータ生成や他の probe の挙動を調べるときは、それぞれの実装へ進む。
 
 ## hash
-- 6de081322a7c345a77160cd3f575b27f994fe305aea137e57709bc44fde31ab3
+- 621d28401b116690ded1c277f87c7f6e123798cd6d17286d1187c4d9d587e5be
 
 # `realization`
 

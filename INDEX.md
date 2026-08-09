@@ -89,74 +89,68 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を集約するディレクトリ。アプリケーション仕様、開発規則、不採用案の検討記録を扱い、個別の仕様文書や実装領域へ進むための入口となる。
+- cmoc の正本領域で、アプリケーション仕様・開発規則・不採用案の記録を集約する。個別の正本ドキュメントや oracle 側のエージェント呼び出し構築実装へ進むための入口。
 
 ## Read this when
-- cmoc のアプリケーション挙動や開発規則に関する正本文書の所在を確認するとき
-- CLI、実装、テスト、開発環境など複数の仕様領域にまたがる調査・変更対象を特定するとき
-- 採用しなかった設計案やリファクタ方針の背景を確認するとき
+- cmoc の正本ドキュメントや oracle 側の agent call 構築実装の所在を確認するとき
+- 複数の仕様領域または用途別 builder にまたがる調査対象を特定するとき
+- 個別仕様や実装を読む前に、適切な下位領域への入口を判断するとき
 
 ## Do not read this when
-- 確認対象の個別仕様文書がすでに特定できており、その本文だけを読めばよいとき
-- 実装コード、テストコード、開発成果物そのものを確認するとき
-- INDEX.md のルーティング情報だけを確認するとき
+- 確認対象の個別仕様文書がすでに特定できているとき
+- 実際のサブコマンド実行フローや agent call 起動処理を調べるとき
+- 個別の schema、基盤モデル、realization 実装、feedback 保存処理の詳細だけを確認するとき
 
 ## hash
-- 230cc29f464bd03d6147416db6a560b8e8a549383fe2a352228fcc1108b3cbf3
+- d6e770acf938fd75bde9c3c56580a3ee495362f5c55c7dd82a0f3139e78b00c9
 
 # `pyproject.toml`
 
 ## Summary
-- Python プロジェクトのパッケージメタデータ、実行コマンド、依存関係、ビルド設定、および pytest・Ruff・mypy の開発ツール設定を定義する。Python パッケージ構成、依存関係、CLI エントリーポイント、または開発時の品質検査設定を確認する際の入口となる。
+- Python プロジェクトのパッケージ metadata、依存関係、CLI エントリーポイント、ビルド設定、pytest・Ruff・mypy の開発ツール設定を定義する正本設定。Python パッケージ構成や開発・品質検査の実行条件を確認する入口となる。
 
 ## Read this when
-- 依存パッケージや開発用依存パッケージを追加・変更するとき
-- cmoc CLI のインストール後に使われる実行エントリーポイントを確認するとき
-- Python のビルド・パッケージ探索設定を変更または調査するとき
-- pytest、Ruff、mypy のプロジェクト共通設定を確認するとき
+- 依存関係、対応 Python バージョン、`cmoc` CLI の公開エントリーポイント、パッケージ配置、ビルド方式を確認するとき
+- pytest、Ruff、mypy のプロジェクト共通設定や開発用依存関係を確認するとき
 
 ## Do not read this when
-- 個別の CLI 挙動や内部実装を確認する場合は、src 配下の実装を直接読むとき
-- テストケースの具体的な内容やテスト固有の規則を確認する場合
-- 正本仕様や開発環境の運用手順を確認する場合は、対応する oracle 文書を読むとき
+- CLI の具体的な処理やランタイム挙動を確認したいときは、実装モジュールを直接読む
+- テストケースの内容や仕様上の期待動作を確認したいときは、該当する仕様・テストを直接読む
 
 ## hash
-- d7e54a5345610218deb1baa5ef4ecf56af5f7bd5cd71249f76a9bbaa99f1bbf1
+- 6fb45f79a560a43b8ae51d23bdb53e4dc711587caffea78ce1020d595036510e
 
 # `src`
 
 ## Summary
-- cmoc の realization 側 Python ソースツリー。Typer CLI のルート、各サブコマンド、共通 runtime helper、設定・互換 import shim、ACP builder adapter を含む。
-- CLI の公開入口と command tree はトップレベル実装、個別コマンドの処理はサブコマンド配下、横断的な実行・状態・Git・feedback・INDEX 処理は commons 配下へ進む。
-- acp、basic、config、oracle shim は既存 import 経路や正本側実装への接続を担う互換層で、ACP builder の用途別 adapter は acp 配下に整理されている。
+- cmoc の realization 側ソースをまとめる実装ディレクトリ。Typer CLI のルート入口、互換 import shim、共通 runtime helper、ACP builder、各サブコマンド実装を提供する。
+- CLI 全体の command tree や公開入口を確認したい場合はルート実装へ進み、共通基盤・ACP 互換層・個別サブコマンドの詳細を調べる場合は対応する下位ディレクトリへ進む。
 
 ## Read this when
-- cmoc の CLI 全体の入口、サブコマンド構成、または realization 側の主要な実装領域を確認するとき。
-- 共通 runtime と個別 CLI サブコマンドの責務境界を判断するとき。
-- ACP builder adapter、互換 import 経路、設定公開面の下位要素へ進む入口を選ぶとき。
+- cmoc の CLI 全体の起動経路、トップレベル command、サブコマンド構成を確認するとき。
+- realization 側の `acp.*`、`basic.*`、`config.*`、`cmoc_runtime` 互換 import 入口の位置づけを確認するとき。
+- 共通 runtime、ACP builder、session・oracle・realization・run・feedback・TUI などのサブコマンド実装への入口を特定するとき。
 
 ## Do not read this when
-- 特定のサブコマンド、runtime helper、builder adapter の詳細実装だけを確認したいときは、該当する下位要素を直接読む。
-- 正本仕様や canonical な型・処理の定義を確認したいときは、対応する oracle 側を直接読む。
-- テストの挙動や検証条件だけを確認したいときは、test 配下の対象を読む。
+- 正本仕様や oracle 側の builder・実装を確認したいときは、oracle 配下を直接読む。
+- 特定サブコマンドの業務ロジック、共通 helper の詳細、または個別 builder の prompt 処理を調べるときは、対応する下位要素へ直接進む。
+- CLI と無関係なテストや補助ファイルだけを確認するとき。
 
 ## hash
-- bf6905e26d028a39a06214fbfe595ba84b43e0048ecbebe07d7e15b274d66b2a
+- d81bf47fbff2047080a415fec1bc4447aa23eba8787e7f19cbd2e66ccb45f03d
 
 # `test`
 
 ## Summary
-- `test` ディレクトリは、cmoc の realization test を集約する回帰・統合・受け入れテスト領域。ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session、config、Git、状態永続化などの外部挙動と安全境界を検証し、機能領域ごとのテストへの入口を提供する。
+- cmoc の realization test を集約するディレクトリ。ACP builder、Codex runtime、CLI、indexing、oracle review、session lifecycle、設定・Git・通知などの外部挙動と回帰条件を検証する。各テストファイルが機能領域ごとの詳細な確認入口となる。
 
 ## Read this when
-- cmoc の実装変更に対する外部挙動、回帰条件、統合 lifecycle を確認するとき。
-- テスト失敗を CLI、runtime、indexing、oracle review、session、config などの機能領域へ切り分けるとき。
-- 本番経路、Codex subprocess、Git worktree、永続 state、通知などの境界挙動を検証するとき。
+- 複数の機能領域にまたがる realization test の対象を探すとき
+- 特定機能の外部契約や回帰条件を検証するテストファイルを選ぶとき
 
 ## Do not read this when
-- 正本仕様や Structured Output schema の内容そのものを確認・変更するときは、対応する oracle 文書・schema・source を直接読む。
-- 実装詳細だけを調べるときは、対応する src の実装を直接読む。
-- テスト実行方法や共通 fixture の定義だけを確認するときは、専用の実行規則や個別の支援モジュールへ直接進む。
+- 正本仕様や実装詳細そのものを確認するときは、対応する oracle または src のファイルを直接読む
+- テスト実行方法や共通 fixture だけを確認するときは、該当する実行設定または共通ヘルパーを直接読む
 
 ## hash
-- 5687e9aa587fd540daf4940bdd53b0202061d4efebba923973bab2ff229ed5e9
+- c69eecabf4fd40ae01371d7a6c3519bb744ec47c9113c696bb37327a441c3751

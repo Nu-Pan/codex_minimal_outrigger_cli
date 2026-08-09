@@ -46,6 +46,7 @@ from commons.runtime_run_lifecycle import (
     raw_oracle_diff,
     set_run_state,
     start_editing_run,
+    unexpected_session_paths,
     worktree_change_paths,
 )
 from commons.runtime_state import SessionState
@@ -206,6 +207,63 @@ def test_raw_oracle_diff_excludes_oracle_gitlinks(
     end = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     assert raw_oracle_diff(root, base, end) == ""
+
+
+def test_raw_oracle_diff_excludes_oracle_symlinks(
+    tmp_path: Path,
+) -> None:
+    """oracle file ではない symlink を raw diff に含めない。"""
+    root = make_repo(tmp_path)
+    target = tmp_path / "outside.md"
+    target.write_text("outside\n")
+    symlink = root / "oracle" / "symlink.md"
+    symlink.symlink_to(target)
+    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "add", "-f", "oracle/symlink.md")
+    run_git(root, "commit", "-m", "add oracle symlink")
+    end = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    assert raw_oracle_diff(root, base, end) == ""
+
+
+def test_unexpected_session_paths_rejects_oracle_symlink(
+    tmp_path: Path,
+) -> None:
+    """session 差分の oracle 判定が symlink を regular file として扱わない。"""
+    root = make_repo(tmp_path)
+    target = tmp_path / "outside.md"
+    target.write_text("outside\n")
+    symlink = root / "oracle" / "symlink.md"
+    symlink.symlink_to(target)
+    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    assert unexpected_session_paths(
+        root,
+        [GitChange("A", ("oracle/symlink.md",))],
+        base=base,
+    ) == ["oracle/symlink.md"]
+
+
+def test_unexpected_session_paths_allows_deleted_oracle_file(
+    tmp_path: Path,
+) -> None:
+    """session branch の fork 時点 oracle file の削除を許可する。"""
+    root = make_repo(tmp_path)
+    oracle_path = root / "oracle" / "deleted.md"
+    oracle_path.write_text("before\n")
+    run_git(root, "add", "oracle/deleted.md")
+    run_git(root, "commit", "-m", "add oracle file")
+    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    oracle_path.unlink()
+
+    assert (
+        unexpected_session_paths(
+            root,
+            [GitChange("D", ("oracle/deleted.md",))],
+            base=base,
+        )
+        == []
+    )
 
 
 def test_run_reports_keep_distinct_files_on_timestamp_collision(
@@ -1946,9 +2004,17 @@ def test_apply_failure_stops_tracked_codex_children_before_rollback(
     assert _state(state_path)["run"]["state"] == "error"
 
 
+@pytest.mark.parametrize(
+    "failure",
+    [
+        RuntimeError("process tracking setup failed"),
+        CmocError("process tracking setup failed", [], "tracking path"),
+    ],
+)
 def test_apply_start_failure_after_run_publish_is_reported(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    failure: BaseException,
 ) -> None:
     """run state 公開後の初期化失敗でも apply fork report を残す。
 
@@ -1959,7 +2025,7 @@ def test_apply_start_failure_after_run_publish_is_reported(
 
     def fail_process_tracking(*_args: object, **_kwargs: object) -> None:
         """process tracking 初期化の失敗を再現する。"""
-        raise RuntimeError("process tracking setup failed")
+        raise failure
 
     monkeypatch.setattr(
         lifecycle_module,

@@ -32,7 +32,6 @@ from typing import Any
 import click
 import pytest
 from _codex_support import (
-    FakeCodexResult,
     codex_arg_value,
     codex_override_config,
 )
@@ -41,7 +40,7 @@ from _git_support import current_branch, make_repo, run_git
 from typer.main import get_command
 
 from basic.acp import ModelClass, ReasoningEffort
-from commons.indexing import commit_index_updates, update_indexes
+from commons.indexing import commit_index_updates, render_index_entry
 from commons.runtime_config import write_config
 from commons.runtime_feedback import (
     FEEDBACK_CAPABILITY_ENV,
@@ -173,22 +172,32 @@ do not modify files. For every other call, follow its explicit prompt exactly.
 
 
 def _write_fresh_index_fixture(root: Path) -> None:
-    """TUI 本体と無関係な indexing 推論を deterministic fixture に置き換える。"""
+    """TUI 本体と無関係な INDEX.md を、実推論なしで最新状態へ準備する。"""
 
     # {{work-root}}/oracle/doc/dev_rule/test_rule.md
-    # indexing 末端の実推論は非対話 scenario で検証し、TUI case は fresh INDEX の
-    # 正規 preflight と各 TUI 自身の実推論だけを対象にする。
-    def fixed_index_entry(*_args: object, **_kwargs: object) -> FakeCodexResult:
-        """production test の indexing preflight 用に固定 schema response を返す。"""
-        return FakeCodexResult(
-            {
-                "summary": ["Minimal production-path test fixture."],
-                "read_this_when": ["Testing the isolated production path."],
-                "do_not_read_this_when": ["Working outside this fixture."],
-            }
+    # {{work-root}}/oracle/doc/app_spec/indexing.md
+    # indexing 末端の実推論は非対話 scenario で検証する。TUI case は valid な
+    # INDEX.md を直接用意し、TUI 自身の実推論を Codex callback で置き換えない。
+    entry = {
+        "summary": ["Minimal production-path test fixture."],
+        "read_this_when": ["Testing the isolated production path."],
+        "do_not_read_this_when": ["Working outside this fixture."],
+    }
+    oracle_index = root / "oracle" / "INDEX.md"
+    oracle_index.write_text(
+        render_index_entry(root, root / "oracle" / "spec.md", entry)
+    )
+    root_index = root / "INDEX.md"
+    root_index.write_text(
+        "\n\n".join(
+            [
+                render_index_entry(root, root / "README.md", entry).rstrip(),
+                render_index_entry(root, root / "oracle", entry).rstrip(),
+            ]
         )
-
-    commit_index_updates(root, update_indexes(root, fixed_index_entry))
+        + "\n"
+    )
+    commit_index_updates(root, [oracle_index, root_index])
 
 
 def _source_codex_home() -> Path:
@@ -594,7 +603,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         assert completed_state["run"]["kind"] == kind
         joined_worktree = _run_worktree_from_state(root, completed_state)
         assert joined_worktree.is_dir()
-        run_production("run", "join")
+        run_without_codex("run", "join")
         _state_path, joined_state = _load_session_state(root, session_branch)
         assert joined_state["run"] == {
             "state": "ready",

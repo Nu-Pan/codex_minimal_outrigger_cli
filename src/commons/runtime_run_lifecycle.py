@@ -12,6 +12,7 @@ INDEX 更新、cleanup 判定は同じ EditingRunContext と lifecycle lock を�
 """
 
 import os
+import stat
 from collections.abc import Collection
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -26,6 +27,7 @@ from .runtime_git import (
     current_branch,
     delete_branch,
     head_commit,
+    is_oracle_file_path,
     is_realization_file_path,
     literal_pathspec,
     remove_worktree,
@@ -155,6 +157,18 @@ def start_editing_run(kind: str) -> EditingRunContext:
         require_clean_worktree(session_worktree)
         fork_commit = head_commit(session_worktree)
         run_branch, run_worktree = new_run_target(repository, session_id)
+        published_context = EditingRunContext(
+            repo=repository,
+            session_worktree=session_worktree,
+            session_id=session_id,
+            state_path=path,
+            session_branch=session_branch,
+            session_fork_commit=session_fork_commit,
+            kind=kind,
+            run_branch=run_branch,
+            run_fork_commit=fork_commit,
+            run_worktree=run_worktree,
+        )
         created = False
         published = False
         try:
@@ -174,8 +188,13 @@ def start_editing_run(kind: str) -> EditingRunContext:
             write_state(path, state)
             published = True
             write_run_process_id(repository, session_id, os.getpid())
-        except BaseException:
+        except BaseException as exc:
             if published:
+                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # state を公開した後の CmocError も workload 側がこの run を
+                # report できるよう、競合時の CmocError と区別できる context を
+                # 例外へ付加する。
+                setattr(exc, "_published_editing_run_context", published_context)
                 state.run.state = "error"
                 write_state(path, state)
             else:
@@ -195,18 +214,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
                 if branch_exists(repository, run_branch):
                     delete_branch(repository, run_branch, force=True)
             raise
-    return EditingRunContext(
-        repo=repository,
-        session_worktree=session_worktree,
-        session_id=session_id,
-        state_path=path,
-        session_branch=session_branch,
-        session_fork_commit=session_fork_commit,
-        kind=kind,
-        run_branch=run_branch,
-        run_fork_commit=fork_commit,
-        run_worktree=run_worktree,
-    )
+    return published_context
 
 
 def resolve_active_run(
@@ -487,6 +495,7 @@ def unexpected_session_paths(
     session_worktree: Path,
     changes: list[GitChange],
     *,
+    base: str,
     ignored_paths: Collection[str] = (),
 ) -> list[str]:
     """run 開始後の session branch にある想定外 path を返す。"""
@@ -498,7 +507,7 @@ def unexpected_session_paths(
             for path in change.paths
             if path not in ignored
             and not (
-                _is_oracle_path(path)
+                _is_oracle_change_path(session_worktree, base, path)
                 or _is_index_path(path)
                 or is_root_memo(session_worktree, session_worktree / path)
             )
@@ -595,7 +604,7 @@ def _is_run_expected_path(
 
 
 def _is_oracle_path(path: str) -> bool:
-    """repository 相対 path が INDEX/AGENTS 以外の oracle file か判定する。"""
+    """repository 相対 path が oracle file 候補の場所か判定する。"""
     parts = Path(path).parts
     return (
         bool(parts)
@@ -609,7 +618,7 @@ def _is_oracle_path(path: str) -> bool:
 
 
 def _is_oracle_tree_file(worktree: Path, commit: str, path: str) -> bool:
-    """commit tree の path が oracle の blob entry か判定する。"""
+    """commit tree の path が oracle の regular-file entry か判定する。"""
     if not _is_oracle_path(path):
         return False
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
@@ -629,14 +638,28 @@ def _is_oracle_tree_file(worktree: Path, commit: str, path: str) -> bool:
     for entry in entries:
         metadata, separator, entry_path = entry.partition("\t")
         metadata_fields = metadata.split()
-        if (
+        if not (
             separator
             and entry_path == path
             and len(metadata_fields) >= 2
             and metadata_fields[1] == "blob"
         ):
+            continue
+        try:
+            entry_mode = int(metadata_fields[0], 8)
+        except (IndexError, ValueError):
+            continue
+        if stat.S_ISREG(entry_mode):
             return True
     return False
+
+
+def _is_oracle_change_path(worktree: Path, base: str, path: str) -> bool:
+    """change path が現在または fork 時点の oracle regular file か判定する。"""
+    candidate = worktree / path
+    if candidate.exists() or candidate.is_symlink():
+        return is_oracle_file_path(worktree, candidate)
+    return _is_oracle_tree_file(worktree, base, path)
 
 
 def _is_index_path(path: str) -> bool:

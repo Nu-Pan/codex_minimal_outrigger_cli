@@ -1,19 +1,18 @@
 # `oracle`
 
 ## Summary
-- AI コーディングエージェント呼び出し用の oracle src をまとめる領域。共通パラメータ、各種 agent call builder、prompt 構成、Structured Output 契約を扱う下位領域への入口。
-- feedback、共通基盤、prompt 構築など、agent call に関連する用途別の実装を選択して調査できる。
+- cmoc の oracle src にあるエージェント呼び出し構築実装のルート。共通パラメータ、prompt 構築、Structured Output schema、および TUI・indexing・feedback・oracle review・realization・session join 向けの呼び出し定義を扱う。
+- 共通モデル、構造化文書、パス解決、規範モデルは基盤領域に、prompt の共通構造は prompt 構築領域に、用途別の呼び出し条件と schema は acp_builder 配下の各用途領域に分かれている。
 
 ## Read this when
-- agent call の共通パラメータや実行条件を確認するとき。
-- TUI、indexing、feedback、oracle、realization、session join などの agent call builder を調査・変更するとき。
-- prompt の共通規則、oracle・realization 制約、ルーティング、feedback 報告の構築箇所を探すとき。
-- cmoc の設定、root/worktree のパス導出、Standard/Requirement、StructDoc などの共通基盤を確認するとき。
+- AI コーディングエージェントのモデル、推論強度、ファイルアクセス、作業ディレクトリ、Structured Output などの呼び出し契約を調査するとき。
+- cmoc の TUI、indexing、feedback、oracle、realization、session join のいずれかに対応する prompt や agent call parameter の構築箇所を特定するとき。
+- 共通 prompt builder、基盤モデル、または用途別 builder のどこから調査を始めるか判断するとき。
 
 ## Do not read this when
-- 実際の cmoc サブコマンドの実行フローや agent call の起動処理を調査するときは、呼び出し側や実行基盤を直接読む。
-- 個別の oracle file、realization file、Git 操作、レビュー基準、collector 側の feedback 保存・集約仕様を確認するときは、それぞれの対象を直接読む。
-- prompt 全体の組み立て順序や初期入力テンプレートなど、共通部品以外の構成を確認するときは、対応する中核ビルダーや入力生成側を直接読む。
+- 実際の cmoc サブコマンドの実行フローや agent call の起動処理を調査するときは、呼び出し側または実行基盤を直接読む。
+- prompt の共通構造や静的な規範部品だけを確認したいときは、prompt 構築領域または対応する部品へ直接進む。
+- 個別の schema、基盤モデル、正本仕様、realization 実装、または feedback 保存処理の詳細だけを確認したいときは、対応する直接の対象を読む。
 
 ## hash
-- 375c3f69ae160ff30885c2db8254f736a9dc2c52ae39a25842213149d93caa74
+- 6760e918ada732a1e1d9cf64b41d3fab5b71e3eb778de547385306f5fef00264

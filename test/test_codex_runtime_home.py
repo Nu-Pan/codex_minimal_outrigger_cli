@@ -37,8 +37,8 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     home = tmp_path / "home"
     codex_home = home / ".codex"
     codex_home.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
     monkeypatch.delenv("CODEX_HOME", raising=False)
-    monkeypatch.setattr(Path, "home", lambda: home)
     stub_codex_overrides(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -85,6 +85,9 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
 ) -> None:
     """設定された home value を保持し、解決済み path を記録する。"""
     root = make_repo(tmp_path)
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
@@ -136,6 +139,9 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
 ) -> None:
     """相対 home を Codex subprocess の working directory から解決する。"""
     root = make_repo(tmp_path)
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
@@ -188,6 +194,9 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
 ) -> None:
     """Codex subprocess の起動前に欠落した home を拒否する。"""
     root = make_repo(tmp_path)
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
     codex_calls = _spy_codex_subprocess(monkeypatch)
     missing_home = tmp_path / "missing_codex_home"
     monkeypatch.setenv("CODEX_HOME", str(missing_home))
@@ -221,6 +230,9 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
 ) -> None:
     """Codex subprocess の起動前に file を指す home を拒否する。"""
     root = make_repo(tmp_path)
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
     codex_calls = _spy_codex_subprocess(monkeypatch)
     codex_home = tmp_path / "codex_home_file"
     codex_home.write_text("not a directory\n")

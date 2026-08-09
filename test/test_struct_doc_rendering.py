@@ -5,6 +5,9 @@
 - {{work-root}}/oracle/doc/app_spec/prompt_standard.md
 """
 
+import pytest
+from oracle.other.struct_doc import StructBlock as OracleStructBlock
+
 from basic.struct_doc import (
     StructBlock,
     StructCodeBlock,
@@ -37,6 +40,8 @@ def test_render_as_markdown_collapses_code_block_blank_lines() -> None:
 
 def test_struct_block_is_reexported_from_realization_compatibility_module() -> None:
     """Oracle の参照 block 型を basic.struct_doc から同一型で公開する。"""
+    assert StructBlock is OracleStructBlock
+
     rendered = render_as_markdown(
         [
             StructDoc("map", '<cmoc_ref target="target"/>'),
@@ -62,5 +67,37 @@ def test_struct_block_accepts_pre_rendered_markdown_as_opaque_child() -> None:
         ]
     )
 
-    assert pre_rendered in rendered
-    assert '<cmoc_block id="outer-target">' in rendered
+    assert (
+        f'<cmoc_block id="outer-target">\n{pre_rendered}</cmoc_block>\n'
+    ) in rendered
+
+
+@pytest.mark.parametrize(
+    ("roots", "error_message"),
+    [
+        pytest.param(
+            [StructDoc("map", '<cmoc_ref target="missing"/>')],
+            "cmoc_ref target is not present",
+            id="missing-target",
+        ),
+        pytest.param(
+            [
+                StructBlock("duplicate", StructDoc("first", "body")),
+                StructBlock("duplicate", StructDoc("second", "body")),
+            ],
+            "Duplicate cmoc_block id",
+            id="duplicate-block-id",
+        ),
+        pytest.param(
+            [StructDoc("map", '<cmoc_ref target="target" />')],
+            "Invalid cmoc_ref syntax",
+            id="invalid-reference-syntax",
+        ),
+    ],
+)
+def test_render_as_markdown_rejects_invalid_references(
+    roots: list[StructDoc | StructBlock], error_message: str
+) -> None:
+    """参照先欠落、block id 重複、不正な参照記法を拒否する。"""
+    with pytest.raises(ValueError, match=error_message):
+        render_as_markdown(roots)

@@ -196,10 +196,17 @@ def _cmoc_realization_apply_fork_body() -> None:
         if context is None:
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
             # 共通事前条件の CmocError では、既存 run をこの fork の失敗として
-            # 回収してはいけない。非 CmocError は start 後の公開処理失敗、または
-            # start 処理が context を呼び出し側へ返す前に送出した失敗だけを回収する。
-            if start_attempted and start_was_ready and not isinstance(exc, CmocError):
-                context = recover_started_run("realization_apply")
+            # 回収してはいけない。start が公開済み context を付加した例外、または
+            # start 処理が context を呼び出し側へ返す前の非 CmocError だけを回収する。
+            if start_attempted and start_was_ready:
+                if isinstance(exc, CmocError):
+                    published_context = getattr(
+                        exc, "_published_editing_run_context", None
+                    )
+                    if isinstance(published_context, EditingRunContext):
+                        context = published_context
+                else:
+                    context = recover_started_run("realization_apply")
             if context is None:
                 raise
         if agent_commit_check_active and agent_head is not None:

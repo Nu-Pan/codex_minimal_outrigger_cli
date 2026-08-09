@@ -25,6 +25,7 @@ from _codex_support import (
 from _command_support import write_python_executable
 from _git_support import make_repo
 
+import acp.builder.quota_probe as quota_probe_module
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
 from acp.builder.quota_probe import build_quota_availability_probe_parameter
@@ -400,6 +401,14 @@ def test_quota_probe_adapter_builds_minimal_probe() -> None:
     assert probe.agent_call_cwd == base.agent_call_cwd
 
 
+def test_quota_probe_adapter_exports_only_builder() -> None:
+    """quota probe の互換 module が builder 以外を公開しないことを検証する。"""
+    assert quota_probe_module.__all__ == ["build_quota_availability_probe_parameter"]
+    assert {name for name in vars(quota_probe_module) if not name.startswith("_")} == {
+        "build_quota_availability_probe_parameter"
+    }
+
+
 def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -415,10 +424,11 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     probe_prompt = quota_probe_prompt(root)
     records: list[tuple[str, Path, Path, Path, Path]] = []
 
+    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
     def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         """初回、probe、resume の cwd と CODEX_HOME を記録する。"""
         stdin = cast(TextIO, kwargs["stdin"]).read()
-        cwd = Path(cast(str, kwargs["cwd"]))
+        codex_process_cwd = Path(cast(str, kwargs["cwd"]))
         kind = (
             "resume"
             if "resume" in argv
@@ -428,7 +438,13 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
         )
         home = Path(cast(dict[str, str], kwargs["env"])["CODEX_HOME"])
         records.append(
-            (kind, cwd, home, cwd / home, Path(argv[argv.index("--cd") + 1]))
+            (
+                kind,
+                codex_process_cwd,
+                home,
+                codex_process_cwd / home,
+                Path(argv[argv.index("--cd") + 1]),
+            )
         )
         if kind == "initial":
             return subprocess.CompletedProcess(
@@ -479,8 +495,8 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
         ),
     ]
     assert records == [
-        (kind, cwd, home, resolved_home, codex_cd)
-        for kind, cwd, home, resolved_home, codex_cd in expected
+        (kind, expected_codex_cwd, home, resolved_home, codex_cd)
+        for kind, expected_codex_cwd, home, resolved_home, codex_cd in expected
     ]
 
 
