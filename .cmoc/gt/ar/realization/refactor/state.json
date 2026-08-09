@@ -918,10 +918,10 @@
     "last_investigated_at": "2026-07-31_18-39_37_305280000"
   },
   "src/commons/runtime_run_lifecycle.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "1bc627c17c3ce127fa032a0b71340fbd854498a11ffcbc56780e8cdee78ba73f",
-    "last_investigated_at": "2026-08-04_02-46_21_241563000"
+    "last_investigated_sha256": "36a92a606ab61f2979f9d145dc1b51601891bff5846b2910c0bbdf6f6ea530dc",
+    "last_investigated_at": "2026-08-09_17-30_34_232040000"
   },
   "src/commons/runtime_run_report.py": {
     "investigation_required": false,
