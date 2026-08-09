@@ -1272,10 +1272,10 @@
     "last_investigated_at": "2026-08-03_13-22_19_698652000"
   },
   "test/test_doctor_cli.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "dda671fcb93055d51d0813a6c07f4a0d0541814d51c376364cb9b4b04b4b3091",
-    "last_investigated_at": "2026-07-30_19-08_08_941131000"
+    "last_investigated_sha256": "45812bbb5addf62e1e60d970cfaf6458567b43e2722499bca0cf79efb3934cc0",
+    "last_investigated_at": "2026-08-09_10-46_56_803160000"
   },
   "test/test_editing_run_cli.py": {
     "investigation_required": true,
