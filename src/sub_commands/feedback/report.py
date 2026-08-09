@@ -978,12 +978,16 @@ def _normalize_with_agent(
             )
         ):
             assert checkpoint_content is not None
+            structured_output = checkpoint["structured_output"]
+            assert isinstance(structured_output, dict)
+            normalization_result = structured_output["result"]
+            assert isinstance(normalization_result, dict)
             recover_immutable_bytes_from_temporary(
                 checkpoint_path,
                 sha256_bytes(checkpoint_content),
             )
             return (
-                checkpoint["structured_output"],
+                normalization_result,
                 checkpoint_path,
                 unit_id,
                 False,
@@ -1010,6 +1014,10 @@ def _normalize_with_agent(
     )
     if not isinstance(result.output_json, dict):
         raise ValueError("normalization output must be an object")
+    # {{work-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json
+    normalization_result = result.output_json.get("result")
+    if not isinstance(normalization_result, dict):
+        raise ValueError("normalization result must be an object")
     checkpoint = {
         "schema_version": 1,
         "normalization_unit_id": unit_id,
@@ -1026,7 +1034,7 @@ def _normalize_with_agent(
         "structured_output": result.output_json,
     }
     write_immutable_json(checkpoint_path, checkpoint)
-    return result.output_json, checkpoint_path, unit_id, True, schema_sha256
+    return normalization_result, checkpoint_path, unit_id, True, schema_sha256
 
 
 def _recoverable_checkpoint(path: Path) -> tuple[dict[str, Any] | None, bytes | None]:
@@ -1110,14 +1118,18 @@ def _normalization_candidate_issues(
     """normalization output が入力候補 ID だけを参照するか検査する。"""
     if not isinstance(output, dict):
         return ()
+    # {{work-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json
+    result = output.get("result")
+    if not isinstance(result, dict):
+        return ()
     issues: list[StructuredOutputValidationIssue] = []
-    existing_id = output.get("existing_issue_id")
-    related = output.get("related_issue_ids", [])
+    existing_id = result.get("existing_issue_id")
+    related = result.get("related_issue_ids", [])
     if existing_id is not None and existing_id not in allowed:
         issues.append(
             StructuredOutputValidationIssue(
                 "candidate issue ID",
-                "$.existing_issue_id",
+                "$.result.existing_issue_id",
                 f"one of {sorted(allowed)!r}",
                 repr(existing_id),
             )
@@ -1128,7 +1140,7 @@ def _normalization_candidate_issues(
             issues.append(
                 StructuredOutputValidationIssue(
                     "related candidate issue IDs",
-                    "$.related_issue_ids",
+                    "$.result.related_issue_ids",
                     f"subset of {sorted(allowed)!r}",
                     repr(invalid),
                 )
@@ -1137,8 +1149,8 @@ def _normalization_candidate_issues(
             issues.append(
                 StructuredOutputValidationIssue(
                     "existing issue is not related duplicate",
-                    "$.related_issue_ids",
-                    "must not contain $.existing_issue_id",
+                    "$.result.related_issue_ids",
+                    "must not contain $.result.existing_issue_id",
                     repr(related),
                 )
             )

@@ -63,8 +63,8 @@ def build_feedback_normalize_issue_parameter(
             StructDoc(
                 "Structured Output の決定論的事後条件",
                 """
-                - `existing_issue_id` と `related_issue_ids` に含めてよいのは、入力された既存 issue 候補の issue ID だけとする
-                - `decision=existing` の場合、`existing_issue_id` を `related_issue_ids` に重複させてはいけない
+                - `result.existing_issue_id` と `result.related_issue_ids` に含めてよいのは、入力された既存 issue 候補の issue ID だけとする
+                - `result.decision=existing` の場合、`result.existing_issue_id` を `result.related_issue_ids` に重複させてはいけない
                 """,
             ),
         ],

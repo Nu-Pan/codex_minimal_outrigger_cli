@@ -10,6 +10,7 @@ feedback subsystem test として保つ。
 - {{work-root}}/oracle/doc/app_spec/feedback_state.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
 - {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+- {{work-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json
 """
 
 import json
@@ -22,6 +23,7 @@ from pathlib import Path
 import pytest
 from _cli_support import run_doctor, runner
 from _git_support import current_branch, make_repo, run_git
+from jsonschema import ValidationError, validate
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_preflight as codex_preflight_module
@@ -285,12 +287,73 @@ def test_feedback_normalizer_builder_has_call_kind_and_readonly_scope(
     assert parameter.file_access_mode is FileAccessMode.READONLY
     assert parameter.structured_output_schema_path is not None
     assert parameter.structured_output_schema_path.name == "normalize_issue.json"
+    assert "`result.existing_issue_id`" in parameter.prompt
+    schema = json.loads(parameter.structured_output_schema_path.read_text())
+    normalized_issue = {
+        "summary": "summary",
+        "human_action": "action",
+        "impact": "impact",
+        "cause_assessment": {
+            "certainty": "unknown",
+            "description": "unknown",
+        },
+        "presence_assessment": {
+            "presence": "unknown",
+            "reason": "unknown",
+        },
+    }
+    for result in (
+        {
+            "decision": "existing",
+            "existing_issue_id": "fbi_candidate",
+            "normalized_issue": normalized_issue,
+            "related_issue_ids": [],
+        },
+        {
+            "decision": "new",
+            "existing_issue_id": None,
+            "normalized_issue": normalized_issue,
+            "related_issue_ids": [],
+        },
+    ):
+        validate({"result": result}, schema)
+    with pytest.raises(ValidationError):
+        validate(
+            {
+                "result": {
+                    "decision": "existing",
+                    "existing_issue_id": None,
+                    "normalized_issue": normalized_issue,
+                    "related_issue_ids": [],
+                }
+            },
+            schema,
+        )
     assert (
         parameter.prompt.index("# routing rule")
         < parameter.prompt.index("# 参照範囲")
         < parameter.prompt.index("# 構造化済み observation")
     )
     assert parameter.prompt.count("cmoc_feedback.submit_observation") == 1
+
+
+def test_feedback_normalization_postcondition_reads_result_envelope() -> None:
+    """候補 ID の事後条件を schema の result envelope に適用する。"""
+    issues = feedback_report_module._normalization_candidate_issues(
+        {
+            "result": {
+                "existing_issue_id": "fbi_other",
+                "related_issue_ids": ["fbi_other"],
+            }
+        },
+        {"fbi_candidate"},
+    )
+
+    assert [issue.location for issue in issues] == [
+        "$.result.existing_issue_id",
+        "$.result.related_issue_ids",
+        "$.result.related_issue_ids",
+    ]
 
 
 def test_collector_validates_context_rate_and_durable_observation(

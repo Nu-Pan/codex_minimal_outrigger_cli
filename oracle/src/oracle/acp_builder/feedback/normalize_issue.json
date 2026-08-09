@@ -2,27 +2,22 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "decision",
-    "existing_issue_id",
-    "normalized_issue",
-    "related_issue_ids"
+    "result"
   ],
   "properties": {
-    "decision": {
-      "type": "string",
-      "enum": [
-        "existing",
-        "new"
-      ],
-      "description": "observation を既存 issue へ統合するか、新しい issue とするかの判断。"
-    },
-    "existing_issue_id": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "description": "decision=existing の場合に限り、入力候補から選んだ issue ID。"
-    },
+    "result": {
+      "description": "observation を既存 issue へ統合するか、新しい issue とするかの正規化結果。",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/existing_result"
+        },
+        {
+          "$ref": "#/$defs/new_result"
+        }
+      ]
+    }
+  },
+  "$defs": {
     "normalized_issue": {
       "type": "object",
       "additionalProperties": false,
@@ -36,20 +31,17 @@
       "properties": {
         "summary": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 200,
+          "pattern": "^[\\s\\S]{1,200}$",
           "description": "人間向けの短い問題要約。"
         },
         "human_action": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 1200,
+          "pattern": "^[\\s\\S]{1,1200}$",
           "description": "人間が取り得る具体的な対応候補。"
         },
         "impact": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 1200,
+          "pattern": "^[\\s\\S]{1,1200}$",
           "description": "複数 observation から確認できる作業への影響。"
         },
         "cause_assessment": {
@@ -71,8 +63,7 @@
             },
             "description": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 1200,
+              "pattern": "^[\\s\\S]{1,1200}$",
               "description": "確定事実と推測を区別した原因の評価。"
             }
           }
@@ -96,8 +87,7 @@
             },
             "reason": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 1200,
+              "pattern": "^[\\s\\S]{1,1200}$",
               "description": "presence の根拠と不確実性。"
             }
           }
@@ -107,37 +97,68 @@
     "related_issue_ids": {
       "type": "array",
       "maxItems": 5,
-      "uniqueItems": true,
-      "description": "同一 issue ではないが、問題の変質や派生を追うために関係を残す入力候補の issue ID。",
+      "description": "同一 issue ではないが、問題の変質や派生を追うために関係を重複なく残す入力候補の issue ID。",
       "items": {
         "type": "string"
       }
-    }
-  },
-  "anyOf": [
-    {
+    },
+    "existing_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "existing_issue_id",
+        "normalized_issue",
+        "related_issue_ids"
+      ],
       "properties": {
         "decision": {
+          "type": "string",
           "enum": [
             "existing"
-          ]
+          ],
+          "description": "observation を既存 issue へ統合する判断。"
         },
         "existing_issue_id": {
-          "type": "string"
+          "type": "string",
+          "description": "入力候補から選んだ統合先の issue ID。"
+        },
+        "normalized_issue": {
+          "$ref": "#/$defs/normalized_issue"
+        },
+        "related_issue_ids": {
+          "$ref": "#/$defs/related_issue_ids"
         }
       }
     },
-    {
+    "new_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "existing_issue_id",
+        "normalized_issue",
+        "related_issue_ids"
+      ],
       "properties": {
         "decision": {
+          "type": "string",
           "enum": [
             "new"
-          ]
+          ],
+          "description": "observation を新しい issue とする判断。"
         },
         "existing_issue_id": {
-          "type": "null"
+          "type": "null",
+          "description": "新しい issue とする場合は null。"
+        },
+        "normalized_issue": {
+          "$ref": "#/$defs/normalized_issue"
+        },
+        "related_issue_ids": {
+          "$ref": "#/$defs/related_issue_ids"
         }
       }
     }
-  ]
+  }
 }
