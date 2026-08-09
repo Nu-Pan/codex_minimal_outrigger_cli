@@ -468,10 +468,10 @@
     "last_investigated_at": "2026-08-03_17-05_45_457823000"
   },
   "oracle/src/oracle/prompt_builder/editor_input.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "5622a37bf21a60f5ae6bc90f00c4a5d9350402e529f28f004aa46d3b26aa1c76",
-    "last_investigated_at": "2026-08-03_06-06_02_842686000"
+    "last_investigated_sha256": "8e0e00750f5522e373745c22ef25eea8d71f729cbbd49bf20cac2393d250895e",
+    "last_investigated_at": "2026-08-09_10-58_09_700849000"
   },
   "oracle/src/oracle/prompt_builder/parts/apply_review_standard.py": {
     "investigation_required": false,
