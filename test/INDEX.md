@@ -682,20 +682,21 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- CLI の共通 runner における error、log、preflight、completion、terminal 通知の外部契約を検証するテスト。duration 表示、並列 logger、例外・終了コード、stdout/stderr、work root、current worktree、completion probe、副作用境界までを一体的に扱う。CLI lifecycle の共有挙動を確認する入口であり、個別実装の詳細テストではない。
+- CLI ライフサイクルの外部契約を検証する大規模な pytest モジュール。共通 runner と work root を介した duration 表示、サブコマンドログ、並列イベント、doctor/pre-log preflight、エラー report、終了コード、KeyboardInterrupt、Windows terminal 通知、CLI 引数解析、work root 制約、shell completion probe の挙動を扱う。CLI 実装や runtime の変更が、これらの境界条件に影響するときの主要な回帰検証入口である。
 
 ## Read this when
-- CLI の error report、stdout/stderr 境界、終了コード、KeyboardInterrupt、doctor preflight、pre-log check、subcommand log、completion probe、terminal 通知、duration 表示、並列 logger を検証または変更するとき
-- 共通 CLI runner の開始・終了処理や work root と current worktree の扱いを確認するとき
+- CLI の error report、stdout/stderr 出力、終了コード、例外・Ctrl+C 処理を変更または検証するとき
+- サブコマンド logger、command lifecycle event、並列 worker 記録、ログ flush、duration 表示を変更または検証するとき
+- doctor preflight、pre-log check、work root 判定、worktree 上のログ保存先を変更または検証するとき
+- shell completion probe の副作用抑制や CLI parser の公開 option 制約を変更または検証するとき
+- 成功・失敗・中断時の terminal/toast 通知境界を変更または検証するとき
 
 ## Do not read this when
-- error rendering の実装だけを確認する場合は、CmocError と render_error の実装を直接読む
-- logger の内部実装だけを確認する場合は、SubcommandLogger と runtime_logging の実装を直接読む
-- completion の CLI 定義だけを確認する場合は、completion を実装する main 側の対象を直接読む
-- doctor の前処理仕様だけを確認する場合は、doctor preprocess の実装または正本仕様を直接読む
+- CLI lifecycle、logging、preflight、completion、error handling のいずれも関係しない機能を変更または調査するとき
+- 個別の実装詳細や正本仕様を確認することが目的で、対応する runtime 実装または oracle 文書を直接読むべきとき
 
 ## hash
-- f8af72449867906548518c411bc118ccf6c3b87bf8215a61dff91ce64d76f420
+- 6dd177f64da54ba4da157036ae58c68d1c3a8c7f90642ecfbf16b21aa770de46
 
 # `test_runtime_codex_conflicts.py`
 

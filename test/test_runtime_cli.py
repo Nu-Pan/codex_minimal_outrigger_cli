@@ -292,6 +292,35 @@ def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(
     assert events[-1]["returncode"] == 130
 
 
+def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """TUI の Ctrl+C は Codex CLI に委ね、終了 toast を追加しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    notifications: list[str] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda _command, _repository, state: notifications.append(state),
+    )
+
+    def interrupt() -> None:
+        """TUI process から伝播した Ctrl+C を再現する。"""
+        raise KeyboardInterrupt()
+
+    with pytest.raises(KeyboardInterrupt):
+        runtime_cli.run_cli_subcommand(
+            interrupt,
+            command_name="tui",
+            command_argv=["cmoc", "tui"],
+            doctor_preprocess=False,
+            tui_process=True,
+        )
+
+    assert notifications == []
+
+
 @pytest.mark.parametrize(
     ("tui_process", "expected_state"),
     [(False, "completed"), (True, None)],
