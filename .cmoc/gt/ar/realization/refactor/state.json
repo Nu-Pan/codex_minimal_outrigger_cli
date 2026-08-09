@@ -655,9 +655,9 @@
   },
   "src/acp/builder/quota_probe.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "53cb131c3313e1f5578fcb289b0afa963a2ba5e0a184345ede301eb26faf67fd",
-    "last_investigated_at": "2026-08-03_10-55_55_897789000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "6de081322a7c345a77160cd3f575b27f994fe305aea137e57709bc44fde31ab3",
+    "last_investigated_at": "2026-08-09_13-10_10_658592000"
   },
   "src/acp/builder/realization/__init__.py": {
     "investigation_required": false,

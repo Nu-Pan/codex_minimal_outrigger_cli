@@ -1,19 +1,21 @@
 # `acp`
 
 ## Summary
-- ACP 互換の realization package。`acp.*` の公開 import 経路を維持しつつ、下位の builder adapter などを通じて canonical な oracle 側実装へ接続する。
-- `acp` 公開入口の存廃判断と、builder 用途別の下位要素へ進むための起点となる。
+- `acp` 互換公開入口を扱う realization package。既存の `acp.*` import 経路を維持しつつ、canonical な `oracle` 側の builder や実体モジュールへ委譲・適合する。
+- 下位には、builder の共通 Markdown fence 補正、indexing・feedback・session・TUI・quota probe、oracle command、realization apply/refactor、review adapter がある。
 
 ## Read this when
-- `acp.*` の互換 import 経路や公開入口全体を確認したいとき。
-- ACP builder の用途別 adapter へ進む入口を選びたいとき。
+- 既存利用者や realization code の `acp.*` 参照を維持・移行・削除する条件を確認するとき。
+- canonical builder への委譲に加え、動的 prompt 本文・差分・review finding の埋め込み補正が必要な互換 adapter の入口を探すとき。
+- builder 配下の command 別 adapter や共通 prompt fence 処理へ進む前に、互換層全体の責務を把握したいとき。
 
 ## Do not read this when
-- `acp` 公開入口の存廃だけを判断したいなら、入口モジュールを直接読む。
-- 特定の builder の実装・canonical 仕様・利用箇所を調べたいなら、該当する下位要素または参照元を直接読む。
+- canonical な `oracle` 側の builder の仕様や prompt 本文を調べたいとき。
+- 個別 builder の内部挙動、具体的な command 処理、または利用者向けの参照元を直接調べたいときは、該当する下位要素や参照元へ進む。
+- `acp.*` 互換入口の存廃ではなく、実体モジュールそのものを変更・検証したいとき。
 
 ## hash
-- 19748d31bd6289625fef47d1a672db39bd72ee4039df05de799d7d7caeb3ec5a
+- 0546b07587dfb4189aba0072416e559620856925b9234f872060bf4691cb6a8f
 
 # `basic`
 

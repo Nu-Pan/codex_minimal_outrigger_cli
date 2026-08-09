@@ -25,6 +25,7 @@ from _codex_support import (
 from _command_support import write_python_executable
 from _git_support import make_repo
 
+import acp.builder.quota_probe as quota_probe_module
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
 from acp.builder.quota_probe import build_quota_availability_probe_parameter
@@ -398,6 +399,14 @@ def test_quota_probe_adapter_builds_minimal_probe() -> None:
     assert probe.structured_output_schema_path is None
     assert probe.run_indexing_preflight is False
     assert probe.agent_call_cwd == base.agent_call_cwd
+
+
+def test_quota_probe_adapter_exports_only_builder() -> None:
+    """quota probe の互換 module が builder 以外を公開しないことを検証する。"""
+    assert quota_probe_module.__all__ == ["build_quota_availability_probe_parameter"]
+    assert {name for name in vars(quota_probe_module) if not name.startswith("_")} == {
+        "build_quota_availability_probe_parameter"
+    }
 
 
 def test_quota_probe_uses_codex_cwd_for_relative_codex_home(

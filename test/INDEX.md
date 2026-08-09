@@ -310,20 +310,20 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota exceeded 後の probe、quota polling、resume または同一 prompt の再実行を検証する回帰テスト群。代表 probe の共有と失敗伝播、session ID 復元、再試行回数、capacity retry、KeyboardInterrupt、状態解除を扱う。各 retry 状態の観測結果として、Codex 呼び出し列、stdout JSONL、output、call log、subcommand log、CODEX_HOME、cwd、sandbox、モデル設定を確認する。quota 復帰制御の外部挙動をまとめて検証する入口であり、実装仕様そのものを読む対象ではない。
+- Codex quota 枯渇後の retry 状態機械を検証するテスト群。代表 quota probe の実行・共有・失敗伝播、poll 上限、capacity retry、session ID による resume と session ID 欠落時の再実行を扱う。
+- 各 Codex 呼び出しの prompt、stdout JSONL、stderr、output、call log、subcommand log に加え、CODEX_HOME と Codex cwd の引き継ぎを検証する。quota probe adapter の最小パラメータ化と公開 API 制約も対象に含む。
 
 ## Read this when
-- quota 枯渇から probe を経て resume または再実行する挙動を変更・調査するとき
-- 並行呼び出しにおける代表 probe の共有や probe 失敗の伝播を確認するとき
-- quota retry に関する session ID、ログ、stdout JSONL、CODEX_HOME、cwd の回帰を確認するとき
+- quota 枯渇からの Codex exec 復帰挙動を調査・変更するとき
+- quota probe の並行実行、capacity retry、非 quota 失敗、KeyboardInterrupt、poll 上限を確認するとき
+- quota retry に伴う session ID、resume、再実行、ログ、CODEX_HOME、cwd の挙動を検証するとき
 
 ## Do not read this when
-- quota retry と無関係な Codex exec 実装や通常の呼び出し挙動を確認するとき
-- quota probe adapter の構築仕様を確認するときは、その builder と正本仕様を直接読む
-- 一般的なテスト実行方法や他の機能領域の回帰を調査するとき
+- quota retry や quota availability probe に関係しない Codex exec の挙動を調べるとき
+- Codex exec の正本仕様や quota probe builder の実装仕様だけを確認するときは、それぞれの仕様・実装へ直接進むとき
 
 ## hash
-- 5412415392bf7eb4059ad07efd96e73d75ddacaeb98fca03eff10b92a23b4072
+- 08b6dbcdb9d6ed8f6a07b52f67be6f17bfab45814c7ff259dcedd8010953ca95
 
 # `test_codex_runtime_retry.py`
 
