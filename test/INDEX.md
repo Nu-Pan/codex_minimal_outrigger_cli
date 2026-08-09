@@ -721,19 +721,18 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- Codex CLI の sandbox argv 生成を検証するテスト。permission profile に依存する path-based 引数が builder API に残っていないことと、各 FileAccessMode 向けに生成した sandbox 引数を実 Codex CLI が受理することを確認する。runtime_codex_profile と Codex CLI parser の境界を確認したい場合の入口。
+- Codex sandbox argv が permission profile に依存しないことを検証するテスト。`build_codex_override_args` と `prepare_codex_override_args` に path 別の read/write 権限入力を渡す入口が残っていないことを確認する。
 
 ## Read this when
-- Codex CLI 起動引数の生成・変更が sandbox 指定や permission profile に影響する場合
-- build_codex_override_args または prepare_codex_override_args の API 契約を確認する場合
-- FileAccessMode ごとの Codex CLI parser 互換性を検証・変更する場合
+- Codex 実行用 argv builder の permission profile 非依存性を検証するとき
+- path 別の権限入力を builder API が受け付けないことを確認するとき
 
 ## Do not read this when
-- Codex CLI の通常の実行処理や permission profile の正本仕様を確認したい場合は、実装・仕様の直接対象へ進む
-- Codex CLI を使わないテストや、sandbox argv 生成に関係しないテスト変更の場合
+- argv builder の実装仕様を確認するときは、実装ファイルを直接読む
+- Codex 実行ルールやテスト全体の要件を確認するときは、対応する oracle 文書を読む
 
 ## hash
-- 67cb600edd5ca3c074353d664b5163183194f681e2ed93803f15c14637127b11
+- 961873113d6b122317114063f7ccd93ee437f4c39fd5dfe1bab3b4b8b55bd796
 
 # `test_runtime_codex_profile.py`
 

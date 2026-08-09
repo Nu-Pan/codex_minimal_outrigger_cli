@@ -277,9 +277,9 @@
   },
   "oracle/doc/dev_rule/test_rule.md": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "f1837a73e1fc07ba376aeb4a6cb5583c0b6e5eaf10a366a0bbb50508c1880ff3",
-    "last_investigated_at": "2026-08-03_21-59_44_377954000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "d0ae77dbeb53077ad82230fb8c0c2d81d56841ad396bdaad7e670dfbce68c506",
+    "last_investigated_at": "2026-08-09_16-42_05_775324000"
   },
   "oracle/src/oracle/acp_builder/basic.py": {
     "investigation_required": true,
