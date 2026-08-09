@@ -1393,9 +1393,9 @@
   },
   "test/test_runtime_codex_profile.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "54867cf498f40b53957007f1ca6f35ba64a01f0da03c24605446bdc0a8fba141",
-    "last_investigated_at": "2026-08-05_18-00_02_354357000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "1ad54a1d64add564f00b59396b1e9514466389e5b371618643e1c36b3eae0710",
+    "last_investigated_at": "2026-08-09_18-29_32_017816000"
   },
   "test/test_runtime_config.py": {
     "investigation_required": false,
