@@ -53,20 +53,20 @@
 # `commons`
 
 ## Summary
-- src/commons は、cmoc の共通 runtime helper として CLI、Codex 実行、設定・状態、Git、ログ、パス、feedback など複数の runtime 機能から再利用される実装群をまとめるディレクトリです。パッケージ入口と、各共通機能の個別実装へ進むための起点になります。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行、Codex、設定、Git、パス、ログ、状態、feedback、エラー処理など、複数の機能から再利用される runtime API と lifecycle 実装を扱う。各個別 helper やサブシステムの実装へ進むための入口。
 
 ## Read this when
-- 複数の runtime 機能にまたがる共通 helper の配置や責務の境界を確認するとき
-- commons 配下の共通 API、Codex 実行補助、設定・状態管理、Git・パス・ログ・feedback などの実装を調査・変更するとき
-- 対象となる個別 runtime module を特定し、その実装へ進む必要があるとき
+- commons 配下の共通 runtime API、公開シンボル、パッケージ構成を確認するとき
+- CLI、Codex、設定、Git、パス、ログ、状態、feedback など複数の runtime 機能を横断して実装入口を探すとき
+- INDEX.md の生成、Codex 実行、editing run、doctor、feedback、設定永続化などの共通 lifecycle を調査するとき
 
 ## Do not read this when
-- 特定の helper や runtime 機能の具体的なアルゴリズムだけを確認したいときは、commons 配下の対応する個別実装を直接読む
-- CLI の単一サブコマンド固有の業務ロジックや正本仕様だけを確認したいとき
-- commons と無関係な実装、テスト、または oracle 文書を調査するとき
+- 特定の runtime helper のアルゴリズムや挙動を確認したいとき
+- 特定の CLI サブコマンドや個別機能の利用者向け仕様だけを確認したいとき
+- commons の個別実装ファイルが対象として明確な場合
 
 ## hash
-- 6c84f462ab84d642d9da861ab5a01db68f6e511603b3bf58795daac7054e7df0
+- 43a4f9df32f4bbc0468f13f2774cba88e948c507a0c43656ea07d83b4b3d4b87
 
 # `config`
 
@@ -119,17 +119,17 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの CLI 入口と処理を扱い、個別サブコマンド実装を確認する際の起点となる。
-- apply と review は現在実装本文がなく、将来の実装追加先として示されている。
+- サブコマンド実装の入口をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui の各処理と、現在実装のない apply・review の配置先を含む。
+- feedback は report の再開可能なトランザクション処理、oracle は oracle 系処理、realization は apply/refactor workload、run と session はそれぞれのライフサイクル処理への入口を提供する。
 
 ## Read this when
-- 特定の cmoc サブコマンドの実装場所や、サブコマンド群の構成を確認するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui の実行フローや責務の入口を調査・変更するとき。
+- サブコマンド実装の構成や目的の実装への入口を確認するとき。
+- 特定サブコマンドの CLI 実行フロー、状態遷移、cleanup、report、または関連する下位パッケージへの導線を調べるとき。
 
 ## Do not read this when
-- サブコマンドに共通する CLI ランタイムや状態管理の実装詳細だけを確認したいとき。
-- 特定サブコマンドの内部処理、prompt builder、oracle 文書など、より直接的な実装または仕様の参照先が分かっているとき。
-- cmoc のサブコマンド以外の実装を扱うとき。
+- サブコマンドに関係しない共通処理や正本仕様だけを確認するとき。
+- 特定サブコマンドの内部処理、prompt・builder、store・state、または oracle 文書の詳細を直接確認したいときは、対応する下位実装や仕様文書へ進む。
+- apply または review の実装内容を確認したいときは、実装が追加されるまでこのディレクトリを入口として読む必要はない。
 
 ## hash
-- 7d53e2db56d575b05eab79c33399665a38ca19c7ad7a6dca6c01b964ee8df5d3
+- 4669174815ef02d60f25e62f6dc7d3b0348cdc8b1242c39906693bd37f55eeba

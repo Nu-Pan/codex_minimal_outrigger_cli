@@ -290,20 +290,20 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の repository-local state を単一の integrity boundary で管理する中核実装。report cut の作成・再開・checkpoint、active generation と current pointer の検証・公開、canonical JSON・SHA256・symlink・atomic write による artifact 整合性、publication 後の cleanup、legacy state の read-only migration projection を扱う。feedback state の永続化・復旧・公開・削除処理へ進む入口であり、観測収集や report 集約の個別実装そのものではない。
+- feedback の repository-local state を検証・公開・cleanup する中核モジュール。report cut、active generation、current pointer、issue/aggregate artifact、checkpoint、publication 後の削除を同一 integrity boundary で扱う。feedback の永続状態整合性、公開処理、復旧・cleanup の実装を確認する入口。
 
 ## Read this when
-- feedback state の schema、artifact reference、generation、current pointer、report cut、publication、cleanup、discard、checkpoint の挙動を変更または調査するとき
-- active issue や machine aggregate の identity、threshold、bounded evidence、時刻・hash・canonical order の検証を確認するとき
-- 異常終了後の report cut 復旧、publication 後 cleanup、legacy state の移行検証を確認するとき
+- feedback observation の report cut、active state、current pointer、generation、publication、cleanup の挙動を変更・調査するとき
+- feedback state の canonical JSON、artifact hash、path 制約、checkpoint、machine aggregate の検証を確認するとき
+- feedback report 処理から永続 state の生成・切替・復旧処理へ進むとき
 
 ## Do not read this when
-- 観測 envelope の生成・入力受付・reporter validation だけを扱うとき
-- 観測の正規化、issue 候補の生成、verification、Markdown report の内容生成だけを扱うとき
-- CmocError や共通の JSON・hash・runtime utility の定義だけを確認するとき
+- feedback observation の入力形式や収集だけを確認する場合は observation 関連の oracle・collector 実装を読む
+- feedback report の CLI 入力や利用者向け結果表示だけを確認する場合は subcommand/report 実装を直接読む
+- 共通の ID、JSON、日時、hash、immutable write の仕様だけを確認する場合は runtime feedback store を直接読む
 
 ## hash
-- 265f5586a73f45715b1030a86db4a260b602cfa4851ff22e12596821383da7e9
+- fff9560bfb0aa5c3d4b3604400569585487fce2c2eebfbf3a3e6a61daa14c3b9
 
 # `runtime_feedback_store.py`
 

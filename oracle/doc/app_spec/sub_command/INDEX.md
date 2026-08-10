@@ -39,19 +39,23 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の機械処理から正常 publication、保存・表示、終了コードまでを定めるサブコマンド仕様。feedback observation/state の正本を参照し、report cut、deduplication、machine aggregate、normalization、verification、atomic publication、再開・中断を扱う。feedback report の挙動や実装、検証条件を確認する際の入口。
+- `cmoc feedback report` の引数、開始前検証、report cut 固定、observation の検証・集約、normalization、verification、atomic publication、cleanup、中断再開、Markdown report 保存、終了コードを定義する。feedback の処理フローと人間向け issue report の仕様を確認するための正本である。
 
 ## Read this when
-- feedback report サブコマンドの引数、前提条件、処理順序、report cut、candidate 処理、normalization、verification、publication、保存形式、表示内容、終了コードを確認するとき
-- feedback report の実装やテストが、feedback observation/state や interruption の仕様に適合しているかを確認するとき
+- `cmoc feedback report` の挙動、引数、前提条件、終了コードを実装または確認するとき
+- feedback observation から issue candidate を作成・集約する処理を実装または確認するとき
+- normalization agent、verification agent、Structured Output の受理条件を扱うとき
+- report cut、active generation、current pointer、atomic publication、cleanup、再開処理を扱うとき
+- 人間向け feedback report の形式や表示対象を確認するとき
 
 ## Do not read this when
-- raw observation の schema や issue candidate の定義だけを確認したいときは feedback observation の正本を読む
-- repository-local state の schema、hash、atomic publication、cleanup、checkpoint の詳細だけを確認したいときは feedback state の正本を読む
-- サブコマンド共通の中断動作だけを確認したいときは subcommand interruption の正本を読む
+- raw observation の schema や送信規則だけを確認するときは feedback observation の正本を読む
+- repository-local feedback state の schema、durability、generation、pointer、cleanup retention だけを確認するときは feedback state の正本を読む
+- サブコマンド共通の中断動作だけを確認するときは subcommand interruption の正本を読む
+- normalization または verification の専用 builder・schema の詳細だけを確認するときは対応する oracle source と schema を直接読む
 
 ## hash
-- 3a7dc8547ef6f4db66bf15e268ae70268798489cc3ba4141c61f950232b642b0
+- c6d1fb25344d0f507b12cca38c7b6a5f487dde969ca7fe4400d6eb9c44850948
 
 # `indexing.md`
 
