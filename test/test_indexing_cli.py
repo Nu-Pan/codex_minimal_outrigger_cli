@@ -363,10 +363,15 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
 def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_index(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """preflight が既存差分を保持しつつ INDEX.md だけを commit する。"""
+    """preflight が staged・unstaged 差分を保ち INDEX.md だけを commit する。"""
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
-    (root / "README.md").write_text("# repo\n\nchanged\n")
+    readme_path = root / "README.md"
+    readme_path.write_text("# staged change\n")
+    run_git(root, "add", "README.md")
+    readme_path.write_text("# unstaged change\n")
+    staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
+    unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
 
     def fake_update_indexes(
         update_root: Path, codex_exec: Callable[..., object] | None = None
@@ -387,4 +392,9 @@ def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_inde
         root, "show", "--name-only", "--pretty=", "HEAD"
     ).stdout.splitlines()
     assert committed_paths == ["INDEX.md"]
-    assert run_git(root, "status", "--short").stdout == " M README.md\n"
+    assert (
+        run_git(root, "diff", "--cached", "--", "README.md").stdout
+        == staged_diff_before
+    )
+    assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
+    assert run_git(root, "status", "--short").stdout == "MM README.md\n"

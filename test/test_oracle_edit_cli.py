@@ -78,7 +78,7 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     monkeypatch: pytest.MonkeyPatch,
     tui_fails: bool,
 ) -> None:
-    """oracle edit が run lifecycle を使わず TUI の oracle 差分を保持する。"""
+    """既存差分を保ったまま run lifecycle なしで oracle を編集する。"""
     root = _prepared_repo(tmp_path, monkeypatch)
     active_run = RunPart(
         "running",
@@ -88,6 +88,12 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     )
     _session_branch, session_state_path = _activate_session(root, run=active_run)
     state_before = json.loads(session_state_path.read_text())
+    readme_path = root / "README.md"
+    readme_path.write_text("# staged change\n")
+    run_git(root, "add", "README.md")
+    readme_path.write_text("# unstaged change\n")
+    staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
+    unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
     time_stamp = "2026-07-20_00-00-00_000000000"
     editor_path = (
         root / ".cmoc" / "gu" / "ar" / "log" / "editor_input" / f"{time_stamp}_orig.md"
@@ -195,12 +201,14 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         assert update_root == root
         events.append("indexing")
 
-    real_require_clean = oracle_edit_module.require_clean_worktree
+    real_require_launch_preconditions = (
+        oracle_edit_module._require_oracle_edit_launch_preconditions
+    )
 
-    def record_clean_check(check_root: Path) -> None:
-        """oracle edit の clean worktree 検査を記録して本来の検査へ委譲する。"""
+    def record_launch_preconditions(repository: Path, current_root: Path) -> None:
+        """oracle edit の起動前提検査を記録して本来の検査へ委譲する。"""
         events.append("check")
-        real_require_clean(check_root)
+        real_require_launch_preconditions(repository, current_root)
 
     def fake_runtime_tui(
         parameter: AgentCallParameter,
@@ -221,8 +229,8 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     )
     monkeypatch.setattr(
         oracle_edit_module,
-        "require_clean_worktree",
-        record_clean_check,
+        "_require_oracle_edit_launch_preconditions",
+        record_launch_preconditions,
     )
     monkeypatch.setattr(
         codex_preflight_module,
@@ -279,6 +287,12 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     )
     assert (root / "oracle" / "spec.md").read_text() == "# edited spec\n"
     assert json.loads(session_state_path.read_text()) == state_before
+    assert readme_path.read_text() == "# unstaged change\n"
+    assert (
+        run_git(root, "diff", "--cached", "--", "README.md").stdout
+        == staged_diff_before
+    )
+    assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
     assert run_git(root, "status", "--short", "oracle/spec.md").stdout.strip()
     assert not (
         root / ".cmoc" / "gu" / "ar" / "report" / "oracle" / "edit" / "fork"
@@ -291,7 +305,6 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         ("linked", "main worktree"),
         ("non_session", "session branch"),
         ("inactive", "active な session"),
-        ("dirty", "git 未コミット差分"),
     ],
 )
 def test_oracle_edit_launch_preconditions(
@@ -319,9 +332,6 @@ def test_oracle_edit_launch_preconditions(
             str(current_root),
             "HEAD",
         )
-    elif case == "dirty":
-        (root / "README.md").write_text("dirty\n")
-
     with pytest.raises(CmocError, match=message):
         oracle_edit_module._require_oracle_edit_launch_preconditions(
             root,
