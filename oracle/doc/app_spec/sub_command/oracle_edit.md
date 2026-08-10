@@ -3,7 +3,7 @@
 ## 目的
 
 - oracle file の最終状態に関するユーザー指示を受け取り、`{{repo-root}}` を agent call の cwd とする Codex CLI の TUI で oracle file を直接編集する。
-- TUI の変更は未コミットのまま残し、人間が差分の確認、追加修正、commit、破棄に責任を持つ。
+- TUI 起動時点の既存未コミット差分と TUI の変更は分離せず、TUI 終了時に filesystem 上に残る差分を維持する。人間が差分の確認、追加修正、commit、破棄に責任を持つ。
 - このサブコマンドは編集 run ではなく、fork, join, abandon lifecycle、run branch、linked worktree、session state の `run` section を使用しない。
 
 ## 引数
@@ -25,8 +25,9 @@
 - doctor preprocess と TUI 起動前の indexing preflight の後、TUI を起動する直前に以下を検査し、満たさない場合はエラー終了する。
     - 呼び出し元の worktree が main worktree であり、`{{work-root}}` と `{{repo-root}}` が一致する。
     - 現在の branch が、対応する session state で `active` な `{{cmoc-session-branch}}` である。
-    - git 未コミット差分が存在しない。
-- clean worktree を用意する責任は人間にある。cmoc は事前条件を満たすために既存差分を commit, stash, rollback, または退避しない。
+- git working tree または staging area に未コミット差分が存在しても、それを理由に TUI の起動を拒否しない。
+- cmoc は TUI を起動するために、既存差分を commit, stash, rollback, または退避して worktree を clean にしない。
+- doctor preprocess と indexing preflight による変更と commit は、それぞれ `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` と `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` に従う。indexing 開始時点の既存 `INDEX.md` 差分は、indexing の自動 commit に含まれてよい。
 - 起動可否の判定では session state の `run` section を読み書きせず、`run.state` を排他条件にしない。
 
 ## TUI 起動パラメータ
@@ -69,6 +70,7 @@
 
 - TUI が終了コード 0 を返した場合は正常終了し、非 0 を返した場合はエラー終了する。
 - 終了コードにかかわらず、TUI が filesystem 上に残した差分をそのまま維持する。
+- TUI 起動時点の既存未コミット差分と TUI による変更を、この invocation ごとの成果物として分離しない。
 - cmoc は TUI 終了後に自動 commit, rollback, stash, 差分修正、branch または worktree の作成、変更 path の成果物認定を行わない。
 - TUI 終了後の indexing は行わず、agent による `INDEX.md` 更新も禁止する。更新は、次に indexing preflight を伴う cmoc コマンドが呼ばれるまで遅延してよい。
 

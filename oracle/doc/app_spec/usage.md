@@ -16,8 +16,8 @@
     - cmoc は `{{cmoc-session-branch}}` を作成して checkout する。
 3. 短い仕様変更・実装変更 loop を繰り返す。
     1. 必要に応じて `cmoc oracle investigation` で read-only の調査を行う。
-    2. 人間が oracle file を直接編集するか、clean な `{{cmoc-session-branch}}` 上で `cmoc oracle edit` の TUI を起動する。
-        - TUI の変更は未コミットで残る。人間が差分を確認し、必要なら追加修正する。
+    2. 人間が oracle file を直接編集するか、main worktree の active な `{{cmoc-session-branch}}` 上で `cmoc oracle edit` の TUI を起動する。
+        - TUI 起動時点の既存未コミット差分と TUI の変更は分離されず、filesystem 上に残る。人間が差分を確認し、必要なら追加修正する。
     3. 人間が oracle file の変更を commit または破棄する。破棄した場合は必要に応じて loop の先頭へ戻る。
     4. 人間が `cmoc oracle review` を呼び出す。
     5. review 結果から修正が必要と判断した場合は、次の手順を修正が不要と判断するまで繰り返す。
