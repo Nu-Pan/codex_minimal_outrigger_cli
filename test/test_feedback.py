@@ -16,6 +16,7 @@ agent-facing reporter から raw store、report cut、verification、current poi
 import hashlib
 import json
 from collections.abc import Iterator
+from inspect import unwrap
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -289,6 +290,20 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
             },
             normalize_schema,
         )
+
+
+def test_feedback_verification_version_includes_delegated_builder() -> None:
+    """verification checkpoint の version が adapter と oracle builder を識別する。"""
+    adapter_path = feedback_report_module._builder_source_path(
+        build_feedback_verify_issue_parameter
+    )
+    canonical_path = feedback_report_module._builder_source_path(
+        unwrap(build_feedback_verify_issue_parameter)
+    )
+
+    assert feedback_report_module._processing_versions()["verification_builder"] == (
+        feedback_report_module._combined_file_hash([adapter_path, canonical_path])
+    )
 
 
 def test_feedback_verification_postcondition_rejects_non_concrete_text() -> None:

@@ -547,7 +547,10 @@ def _processing_versions() -> JsonObject:
     return {
         "normalization_builder": sha256_bytes(normalize_builder.read_bytes()),
         "normalization_schema": sha256_bytes(normalize_schema.read_bytes()),
-        "verification_builder": sha256_bytes(verify_builder.read_bytes()),
+        "verification_builder": _builder_version_hash(
+            build_feedback_verify_issue_parameter,
+            verify_builder,
+        ),
         "verification_schema": sha256_bytes(verify_schema.read_bytes()),
         "deterministic_processing": _combined_file_hash([module_path, state_path]),
     }
@@ -559,6 +562,15 @@ def _builder_source_path(builder: Callable[..., object]) -> Path:
     if source is None:
         raise ValueError("builder source path is unavailable")
     return Path(source)
+
+
+def _builder_version_hash(builder: Callable[..., object], source: Path) -> str:
+    """adapter と unwrap 先の builder を含む version hash を返す。"""
+    canonical_source = _builder_source_path(unwrap(builder))
+    sources = {source, canonical_source}
+    if len(sources) == 1:
+        return sha256_bytes(source.read_bytes())
+    return _combined_file_hash(list(sources))
 
 
 def _combined_file_hash(paths: list[Path]) -> str:
