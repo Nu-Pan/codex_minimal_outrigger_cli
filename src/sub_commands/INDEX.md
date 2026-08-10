@@ -84,23 +84,22 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply と refactor の各処理への入口を提供する。
-- apply workload と `realization apply fork` の実行フロー、状態遷移、変更検査、失敗時処理を扱う配下パッケージ。
-- realization refactor fork の対象選択から agent 呼び出し、変更・状態検証、finding 追跡、完了判定、cleanup、report 生成までを扱う配下パッケージ。
+- realization workload サブコマンドのパッケージ入口。apply workload と refactor fork の実装、およびそれぞれのCLI実行フローへ案内する。
 
 ## Read this when
-- realization workload サブコマンドの構成や入口を確認するとき。
-- `cmoc realization apply fork` の実行フローや失敗時処理を調査するとき。
-- realization refactor fork の lifecycle、状態更新、finding 完了条件、report 生成を調査するとき。
+- realization workload サブコマンドの実装構成や入口を確認するとき。
+- realization apply の実行、差分検査、run lifecycle、成果物commit、fork report、異常時処理を調査するとき。
+- realization refactor fork の対象選択、agent呼び出し、変更・状態検証、finding追跡、完了判定、cleanup、report生成を調査するとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき。
-- apply または refactor の実装詳細だけを確認したい場合は、対応する配下パッケージを直接読む。
-- agent prompt や launch parameter の形式だけを確認したい場合は、対応する builder 実装を直接読む。
-- 編集 run 全般の共通状態管理や正本仕様だけを確認したい場合は、共通 runtime lifecycle または対応する oracle doc を直接読む。
+- realization apply や realization refactor 以外の処理を扱うとき。
+- apply fork の実行パラメータ構築だけを確認するときは、対応するlaunch parameter builderを直接読む。
+- refactor agent promptやchange summaryの入力形式だけを確認するときは、対応するbuilder実装を直接読む。
+- 編集runの共通ライフサイクル、git変更分類、process tracking、report書式などの一般実装だけを確認するときは、インポート先の共通runtimeモジュールを直接読む。
+- 正本仕様そのものを確認するときは、対応するoracle docを直接読む。
 
 ## hash
-- 8f8a6b68aaf7d9f3b94c67c26120fe9d7ad2ad7e8f3690749f0094e73ec7c5d8
+- de21ea428f2f02cf3349981ad06b9033e9d85844bf7e51a2648e48b4de04f751
 
 # `review`
 

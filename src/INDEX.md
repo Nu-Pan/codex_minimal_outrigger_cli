@@ -114,15 +114,22 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装を集約するディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの実行入口と、各処理領域の下位パッケージへの入口を提供する。apply と review は現在実装ファイルがなく、将来の配置先として扱われる。
+- CLI サブコマンドの実装をまとめる領域。doctor、indexing、tui、session、run、realization、oracle、feedback の実行入口と、各処理に固有のライフサイクル・検証・レポート生成を扱う。
+- 個別サブコマンドの実行フローや、その配下にある処理単位の責務を確認するための入口となる。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、目的のサブコマンドの実行入口を確認するとき。
-- 複数サブコマンドにまたがる実装配置や責務分担の入口を判断するとき。
+- CLI サブコマンドの実装構成や、サブコマンド間の責務分担を確認するとき。
+- session や editing run の作成・統合・中断、worktree・branch・state の更新、競合解消を調査するとき。
+- realization の apply・refactor 実行、agent 呼び出し、変更検証、状態更新、cleanup、レポート生成を調査するとき。
+- oracle の edit・investigation・review 実行、対象列挙、所見処理、INDEX 差分統合、レポート生成を調査するとき。
+- feedback report の observation 集約、正規化・検証、checkpoint、publication、cleanup を調査するとき。
+- indexing、doctor、tui の CLI 実行入口や、入力準備・preflight・実行結果の扱いを確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理、共通ランタイム、正本仕様、または下位パッケージの具体的実装だけを確認したいとき。
-- 対象が apply または review で、実装が追加されていない状態の具体的挙動を調査するとき。
+- 特定サブコマンドの詳細な処理だけを調べる場合は、対応する下位実装を直接読む。
+- 共通の CLI ランタイム、Git 操作、run lifecycle、prompt 入力、feedback state/store、レポート writer の仕様や実装だけを確認する場合は、インポート先の共通モジュールを直接読む。
+- agent prompt、Structured Output schema、またはサブコマンドの正本仕様を確認する場合は、対応する builder や oracle 文書を直接読む。
+- この領域に属さない共通基盤や、個別サブコマンドの実装に依存しない処理を調査するとき。
 
 ## hash
-- 3b4fff7acf004cb3e045767141ec3da9be3e848b57cb3d760a9b99d3f716e70c
+- 6a34928f0d21dc35b7a903a495a34c5681a5b61770d469c5e87fed45bc6b9b49

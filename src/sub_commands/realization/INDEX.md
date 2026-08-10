@@ -15,19 +15,21 @@
 # `apply`
 
 ## Summary
-- realization apply に関する処理をまとめたディレクトリ。apply workload の実装と、`realization apply fork` の CLI 実行フローを確認する入口となる。
+- `realization apply` に関する処理をまとめるディレクトリで、apply workload の実装と `cmoc realization apply fork` のCLIオーケストレーションを確認する入口。fork実行の差分検査、run lifecycle、成果物のcommit、joinable run・fork report生成、異常時のrollbackやcleanupも扱う。
 
 ## Read this when
-- realization apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の実行フロー、run state 遷移、fork report、変更検査、失敗時の rollback・cleanup・joinable 公開を調査・変更するとき。
+- realization の apply workload の内容を調査・変更するとき
+- `cmoc realization apply fork` の実行フロー、成功時のjoinable化、fork report、差分始点、agent変更の検査を調べるとき
+- apply fork の異常終了時のrollback、error state、cleanup warning、agent commit検出、許可される変更範囲やINDEX生成差分を確認するとき
 
 ## Do not read this when
-- apply workload の実装詳細だけを確認したい場合は、配下の workload 実装を直接読む。
-- agent のプロンプト生成や launch parameter を確認したい場合は、対応する builder 実装を直接読む。
-- editing run 全般の状態管理や共通 rollback の仕様・実装を確認したい場合は、共通 runtime lifecycle または対応する正本仕様を直接読む。
+- apply workload や apply fork 以外の処理を扱うとき
+- realization apply agent の実行パラメータ構築だけを調べるときは、launch parameter builder を直接読む
+- editing run の共通ライフサイクル、git変更分類、process tracking、report書式の一般実装だけを調べるときは、インポート先の共通runtimeモジュールを直接読む
+- 正本仕様そのものを確認するとき
 
 ## hash
-- 11c127c114c434911902b1dc3f817e22ec1a3f17109d79087d8ced934a3e13b7
+- 1498cc25f67b10fe93ce86fb281921772690e0c2121f14905ff683b0d4b8b0bd
 
 # `refactor`
 
