@@ -1266,10 +1266,10 @@
     "last_investigated_at": "2026-08-10_13-56_17_049949000"
   },
   "test/test_codex_runtime_quota_retry.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "114395fbebf31845ed23367f4e7d18e0648b6b6c9881569137745424a2eb1836",
-    "last_investigated_at": "2026-08-06_08-42_19_473069000"
+    "last_investigated_sha256": "bdb11dc4430a0515fae63b77aa5f52c1918dd3cfd2078776cfc0d51c06e3d629",
+    "last_investigated_at": "2026-08-10_14-10_57_911275000"
   },
   "test/test_codex_runtime_retry.py": {
     "investigation_required": true,
