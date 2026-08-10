@@ -98,20 +98,19 @@
 # `oracle_investigation.md`
 
 ## Summary
-- oracle file の調査指示を受け取り、完全プロンプトを構築して Codex CLI の TUI を起動するサブコマンドの仕様。引数や事前条件はなく、doctor preprocess、prompt builder による skeleton 構築、エディタ入力の反映、TUI 起動までの流れを扱う。エディタ入力、prompt の標準規範、TUI 起動パラメータ、Codex CLI 起動規則、Windows 通知など、詳細仕様への入口を示す。
+- oracle file の調査指示をエディタから受け取り、oracle を根拠に調査する Codex CLI TUI の起動フローと制約を定義する。調査サブコマンドの実装・プロンプト構築・TUI 起動条件を確認する際の入口。
 
 ## Read this when
-- oracle file を根拠に調査を起動するサブコマンドの実行手順や制約を確認したいとき
-- 調査指示のエディタ入力から完全プロンプト確定、Codex CLI TUI 起動までの仕様を確認したいとき
-- oracle file の読み取り専用や realization file の変更禁止など、調査結果と変更の扱いを確認したいとき
+- oracle file に関する調査サブコマンドの挙動、エディタ入力、完全プロンプトの構築、Codex CLI TUI の起動方法を確認するとき。
+- 調査中の oracle file と realization file の読み書き制約、indexing preflight や自動 commit の扱いを確認するとき。
 
 ## Do not read this when
-- エディタ入力の具体的な初期値生成を確認したいときは、prompt editor input の正本を直接読む
-- TUI に渡す prompt や agent call parameter の詳細を確認したいときは、調査起動パラメータ builder の正本を直接読む
-- 汎用的な prompt 規範、Codex CLI の起動規則、Windows toast 通知の詳細だけを確認したいときは、それぞれの参照先を直接読む
+- oracle 調査以外のサブコマンドの仕様を確認するとき。
+- プロンプト入力の一般規範だけを確認したいときは、エディタ入力やプロンプト標準の正本を直接読む。
+- TUI 起動パラメータの詳細だけを確認したいときは、起動パラメータを構築する実装を直接読む。
 
 ## hash
-- 6dfcfd6bf64ed5d550b51147a9a04f6ce13f945a8f5be7ccd85ee9bb9a2a783b
+- 739df540e4968d8c651c866e90e76ff42db17c11de6b959c98bba946de815a09
 
 # `oracle_review.md`
 

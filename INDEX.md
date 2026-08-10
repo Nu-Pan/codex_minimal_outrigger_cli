@@ -89,21 +89,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を収めるディレクトリ。アプリケーション仕様、開発規則、branch・commit・worktree、設計案などを扱い、実装や調査で参照すべき正本文書への入口を提供する。
-- 複数の仕様領域にまたがる前提確認では上位ルーティング先となり、正本ドキュメントは doc、正本実装は src から辿れる。
+- cmoc の正本仕様を収める領域への入口。アプリケーション仕様、branch・commit・worktree モデル、開発規則、不採用案の記録、および正本実装群を扱う。詳細確認では、仕様文書または用途別の実装下位領域へ進む。
 
 ## Read this when
-- cmoc の正本仕様や開発規則から、対象領域に対応する文書を探すとき
-- CLI、run・session、branch・worktree、実装、テスト、開発環境など複数領域の前提を確認するとき
-- 正本実装の責務や構造化文書、設定、feedback reporter などの共通実装を確認するとき
+- cmoc の正本仕様や正本実装を調査・変更するとき
+- アプリケーション挙動、branch・commit・worktree のモデル、開発規則を確認するとき
+- oracle src の共通実装やサブコマンド別の prompt・ACP 設定を確認するとき
 
 ## Do not read this when
-- 特定の機能や規則の正本文書が分かっているときは、その文書を直接読む
-- 実装・テストの具体的な挙動を確認するときは、対応する実装・テストを直接読む
-- 構築済み環境でのテスト選択や実行手順だけを確認するときは、専用の手順文書を直接読む
+- 特定機能の詳細仕様を確認する場合は、該当する oracle/doc の下位仕様書を直接読む
+- 個別の実装責務が明らかな場合は、対応する oracle/src の下位領域を直接読む
+- realization 側の CLI 挙動や実装を確認する場合は、対応する realization implementation を直接読む
+- INDEX.md 生成規則や oracle／realization の一般原則を確認する場合は、専用の正本仕様を直接読む
 
 ## hash
-- 11a550284821b65b5c0b1cff06be7f6dfd5a51f95caad87c8b8007842c4e5bc8
+- b9cbd5d1e32b9bfc26677afc5b302abcd4dce5a1ec7b1ccf1709e40a4c128049
 
 # `pyproject.toml`
 

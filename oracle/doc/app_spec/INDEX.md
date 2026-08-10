@@ -276,19 +276,20 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンドと session・編集 run lifecycle、feedback report、TUI、indexing の正本仕様を扱うディレクトリ。各文書は、個別機能の引数、事前条件、実行手順、状態遷移、エラー処理、レポートや後処理の契約を確認する入口である。
+- cmoc のサブコマンド仕様を集約する正本ドキュメント群。doctor、indexing、tui、oracle 操作、session／run lifecycle、realization apply／refactor、feedback report の実行条件・処理フロー・状態遷移・終了処理を確認するための入口。各サブコマンドまたは共通 lifecycle の仕様へ進む際に利用する。
 
 ## Read this when
-- cmoc のサブコマンド仕様を実装・変更・レビューし、対象機能の責務や実行条件を特定したいとき。
-- session または編集 run の fork・join・abandon、realization apply・refactor の lifecycle や状態同期を確認したいとき。
-- feedback report、TUI、oracle 操作、indexing、doctor の実行フローや終了処理を確認したいとき。
+- cmoc のサブコマンドの挙動、引数、実行前提、処理手順、終了条件を確認・変更するとき。
+- oracle／realization の編集・調査・レビュー、session／run の fork・join・abandon、feedback report の仕様を確認するとき。
+- 複数サブコマンドに共通する lifecycle ではなく、特定サブコマンドの責務と仕様書の入口を選びたいとき。
 
 ## Do not read this when
-- 対象機能の内部処理、共通仕様、専用 builder・schema、設計・テスト規約だけを確認したいときは、各文書が示すより直接的な正本仕様や実装・テストを読む。
-- prompt 入力、feedback observation・state、run isolation、subcommand interruption などの独立仕様だけを調べるとき。
+- サブコマンド共通の定義、実装配置、テスト規約、割り込み規則などを確認したい場合は、それぞれの共通正本を直接読む。
+- 特定サブコマンド内部の専用処理、builder、schema、state の詳細だけを確認したい場合は、各文書が示す専用の正本や実装を直接読む。
+- INDEX.md の生成規則や oracle／realization の一般定義だけを確認したい場合は、より上位の共通仕様を読む。
 
 ## hash
-- 7d7ccf199d68848cd9ed933063991bbb563aaa43f60125af9420ea0a78d00d55
+- 82ec37da96d0c0f4f51950f03402cc22a756bfd16191cb9d2e60d677218154c6
 
 # `subcommand_interruption.md`
 

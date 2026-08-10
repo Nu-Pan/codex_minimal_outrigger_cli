@@ -1,19 +1,19 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション全体に関わる正本仕様をまとめたディレクトリ。CLI 自動補完、Codex CLI 呼び出し、model provider、ログ、doctor 前処理、feedback、prompt、run・session lifecycle、サブコマンド、中断、利用手順、Windows toast 通知などの仕様への入口を提供する。
-- 個別機能の挙動仕様や共通基盤仕様を実装・変更・レビューする際に、対象領域の正本文書を選ぶための上位ルーティング先となる。
+- cmoc のアプリケーション仕様を構成する正本ドキュメント群。CLI 自動補完、Codex CLI 呼び出し、ログ、doctor 前処理、feedback、prompt、run/session、サブコマンド、中断、workflow、Windows toast 通知などの挙動・責務・境界を扱う。各機能の仕様確認や実装・レビュー時に、該当する下位仕様へ進む入口となる。
 
 ## Read this when
-- cmoc のアプリケーション仕様から、対象機能に対応する正本文書への入口を探すとき
-- CLI、Codex 呼び出し、feedback、prompt、run/session、サブコマンド、ログ、通知など複数の仕様領域にまたがる挙動や責務境界を確認するとき
+- cmoc のアプリケーション挙動、サブコマンド、workflow、Codex 連携、ログ、feedback、prompt、run/session、通知の正本仕様を確認するとき
+- 複数のアプリケーション仕様にまたがる責務境界や、対象仕様書の入口を選ぶ必要があるとき
 
 ## Do not read this when
-- 特定の機能の詳細仕様が特定できているときは、このディレクトリ全体ではなく該当する正本文書を直接読む
-- 実装・テストの具体的な挙動、開発環境、設計、テスト実行手順だけを確認するときは、それぞれの専用仕様や実装・テストを直接読む
+- 開発環境、設計ルール、テスト実行など開発手順だけを確認するときは、対応する開発ルール文書を直接読む
+- 特定機能の詳細仕様を確認する場合は、このディレクトリ全体ではなく該当する下位仕様書を直接読む
+- INDEX.md の自動生成規則や oracle／realization の一般的な列挙規則だけを確認するときは、専用の正本仕様を読む
 
 ## hash
-- 033b8c9d74ef5667f3a9283fca11a818d667badb8764d00bebd7b45d4d805d50
+- 90395813885b71a9a35f9f763737bf4affbca1297dec9a38e834c2bd65abe20c
 
 # `branch_model.md`
 
