@@ -16,6 +16,7 @@ agent-facing reporter から raw store、report cut、verification、current poi
 import hashlib
 import json
 from collections.abc import Iterator
+from inspect import unwrap
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -262,7 +263,15 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
     assert normalizer.structured_output_schema_path is not None
     assert verifier.structured_output_schema_path is not None
     assert "同一性" in normalizer.prompt
+    assert (
+        "`result.decision=new` の `result.existing_issue_id` は `null` とする"
+        not in normalizer.prompt
+    )
     assert "unresolved | resolved | not_actionable | inconclusive" in verifier.prompt
+    assert (
+        "`resolved | not_actionable | inconclusive` の human action は `null` とする"
+        not in verifier.prompt
+    )
     normalize_schema = json.loads(normalizer.structured_output_schema_path.read_text())
     verify_schema = json.loads(verifier.structured_output_schema_path.read_text())
     validate(
@@ -285,6 +294,79 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
             },
             normalize_schema,
         )
+
+
+def test_feedback_verification_version_includes_delegated_builder() -> None:
+    """verification checkpoint の version が adapter と oracle builder を識別する。"""
+    adapter_path = feedback_report_module._builder_source_path(
+        build_feedback_verify_issue_parameter
+    )
+    canonical_path = feedback_report_module._builder_source_path(
+        unwrap(build_feedback_verify_issue_parameter)
+    )
+
+    assert feedback_report_module._processing_versions()["verification_builder"] == (
+        feedback_report_module._combined_file_hash([adapter_path, canonical_path])
+    )
+
+
+def test_feedback_verification_postcondition_rejects_non_concrete_text() -> None:
+    """schema の末尾改行と空白だけの text を verification で受理しない。"""
+    candidate_id = "fbi_" + "a" * 26
+    reference_id = _repository_reference_id("README.md")
+    references = {reference_id: {"kind": "repository_content"}}
+    valid = _verification_output(candidate_id, "unresolved")
+    assert not feedback_report_module._verification_output_issues(
+        valid, candidate_id, set(references), references
+    )
+
+    cases: list[tuple[dict[str, object], str]] = [
+        (
+            {"human_action": " \n"},
+            "$.result.human_action",
+        ),
+        (
+            {"human_action": "a" * 1200 + "\n"},
+            "$.result.human_action",
+        ),
+        (
+            {"reason": " \n"},
+            "$.result.reason",
+        ),
+        (
+            {
+                "current_evidence": [
+                    {
+                        "reference_id": reference_id,
+                        "location": "a" * 500 + "\n",
+                        "finding": "current finding",
+                    }
+                ]
+            },
+            "$.result.current_evidence[0].location",
+        ),
+        (
+            {
+                "current_evidence": [
+                    {
+                        "reference_id": reference_id,
+                        "location": "README.md:1",
+                        "finding": " \n",
+                    }
+                ]
+            },
+            "$.result.current_evidence[0].finding",
+        ),
+    ]
+    for updates, location in cases:
+        output = _verification_output(candidate_id, "unresolved")
+        result = output["result"]
+        assert isinstance(result, dict)
+        result.update(updates)
+        issues = feedback_report_module._verification_output_issues(
+            output, candidate_id, set(references), references
+        )
+        assert any(issue.location == location for issue in issues)
 
 
 def test_collector_validates_context_rate_and_durable_observation(

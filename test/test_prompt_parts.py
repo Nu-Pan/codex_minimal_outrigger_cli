@@ -3,7 +3,21 @@
 各 prompt part の rendering と complete prompt の有効化・placeholder 展開は同じ
 StructDoc 出力を共有する一つの責務であるため、prompt builder 回帰として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+対応する正本:
+- {{work-root}}/oracle/doc/app_spec/prompt_standard.md
+- {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+- {{work-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/apply_review_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_review_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_oracle_reference_rule.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/routing_rule.py
 """
 
 from pathlib import Path

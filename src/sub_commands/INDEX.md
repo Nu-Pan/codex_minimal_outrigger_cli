@@ -31,23 +31,22 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装領域。feedback サブコマンドの処理を確認・変更するときの入口で、配下にサブコマンド固有の実装と report のトランザクション処理を含む。
-- report は `cmoc feedback report` の active-state publication pipeline を担い、raw observation の検証から候補集約、verification、generation/report の staging、current pointer の切替、publication 後 cleanup までを再開可能な transaction として扱う。
+- feedback サブコマンドの実装領域。feedback の CLI 入口と、raw observation から report の検証・集約・生成・公開・cleanup までの active-state publication pipeline を扱う。
+- feedback report の処理順序、再開可能な report cut、checkpoint、writer lock、candidate 集約、normalization/verification、current pointer 公開の挙動を確認・変更するときの入口。
 
 ## Read this when
 - feedback サブコマンドの挙動や実装を確認・変更するとき。
-- `cmoc feedback report` の全体フロー、report cut、checkpoint、candidate 集約、verification、publication、cleanup を調べるとき。
+- feedback observation から issue candidate や machine aggregate を作る処理、deduplication、30 日 recurrence threshold を調査するとき。
+- normalization・verification、report artifact の生成、publication、失敗・中断・cleanup 状態の遷移を調査するとき。
 
 ## Do not read this when
-- feedback 以外のサブコマンドを扱うとき。
-- observation 保存形式や canonical JSON の詳細だけを調べるときは feedback store の実装を直接読む。
-- active state、generation artifact、current pointer のデータ契約だけを調べるときは feedback state の実装を直接読む。
-- normalization／verification の agent parameter や schema だけを調べるときは対応する builder と schema を直接読む。
-- CLI 共通実行制御や subcommand state だけを調べるときは runtime の実装を直接読む。
-- feedback report の正本仕様を確認するときは対応する oracle 文書を読む。
+- feedback observation の envelope や active state の永続化形式そのものを確認する場合は、参照される runtime feedback state/store の実装を直接読む。
+- normalization・verification の agent prompt や Structured Output schema の正本を確認する場合は、対応する builder と oracle schema を直接読む。
+- CLI の一般的な実行基盤、session/run state、ログ機構の共通仕様を確認する場合は、各共通モジュールを読む。
+- publication 後の Markdown report 表示だけを確認する場合は、report の生成処理または実際の出力 artifact を直接読む。
 
 ## hash
-- d10a83c126608a0197eb1b6c11acebfa34cf41e025c048c97a97e07bce82b73b
+- 7758528ba1cd0299f38f05abd815c88f5d344d9d6737c8e542419859e3891553
 
 # `indexing.py`
 
@@ -67,39 +66,40 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめるパッケージ。編集・調査・レビューの CLI 起動処理、レビュー対象選定、レビュー実行ループ、パス解決、レポート生成、INDEX 差分の統合までの入口を提供する。各個別実装を確認する際の起点。
+- oracle 系サブコマンドの実装パッケージ。編集、調査、レビューの CLI 実行経路と、レビュー対象列挙・ループ・パス解決・レポート生成・INDEX 差分統合の補助処理をまとめる。
+- oracle 編集・調査は入力プロンプトの確定と Codex TUI 起動を担い、レビューは隔離 worktree の lifecycle、所見処理、INDEX.md の安全な merge、結果レポートまでを統括する。配下の各実装が個別機能の詳細確認への入口となる。
 
 ## Read this when
-- oracle 系サブコマンドの構成や、目的のサブコマンド実装への入口を確認するとき。
-- oracle review の対象選定、実行ライフサイクル、INDEX 差分統合、パス解決、レポート生成の責務分担を調べるとき。
+- oracle 系サブコマンド全体の構成、CLI 起動経路、または各サブコマンド間の責務分担を確認するとき。
+- oracle review の隔離実行、所見処理、対象ファイル列挙、パス正規化、レポート生成、INDEX 差分統合の実装入口を判断するとき。
 
 ## Do not read this when
-- 特定サブコマンドの内部処理や prompt・TUI パラメータの詳細だけを確認するときは、該当する個別実装または import 先を直接読む。
-- oracle の正本仕様や編集・レビュー契約を確認するときは、対応する oracle 文書を直接読む。
+- 個別サブコマンドの起動前提やプロンプト入力の詳細だけを確認する場合は、該当する実装を直接読んでください。
+- レビュー所見ループ、Git merge、対象列挙、パス解決、レポート描画の具体的な挙動だけを調べる場合は、それぞれの補助実装を直接読んでください。
+- oracle 系サブコマンドの正本仕様や編集・レビュー契約を確認する場合は、対応する oracle 仕様文書を直接読んでください。
 
 ## hash
-- 772c8d6f32c26d8eb74fe9db0f9343e0264ba2a8b1e3072e552816d10ddc0c74
+- 25c0bf55eae4f8b1afdcd57956417f5f07a595f6232a8adfde7b52cc2cbcfcad
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply と refactor の各処理への入口を提供する。
-- apply workload と `realization apply fork` の実行フロー、状態遷移、変更検査、失敗時処理を扱う配下パッケージ。
-- realization refactor fork の対象選択から agent 呼び出し、変更・状態検証、finding 追跡、完了判定、cleanup、report 生成までを扱う配下パッケージ。
+- realization workload サブコマンドのパッケージ入口。apply workload と refactor fork の実装、およびそれぞれのCLI実行フローへ案内する。
 
 ## Read this when
-- realization workload サブコマンドの構成や入口を確認するとき。
-- `cmoc realization apply fork` の実行フローや失敗時処理を調査するとき。
-- realization refactor fork の lifecycle、状態更新、finding 完了条件、report 生成を調査するとき。
+- realization workload サブコマンドの実装構成や入口を確認するとき。
+- realization apply の実行、差分検査、run lifecycle、成果物commit、fork report、異常時処理を調査するとき。
+- realization refactor fork の対象選択、agent呼び出し、変更・状態検証、finding追跡、完了判定、cleanup、report生成を調査するとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき。
-- apply または refactor の実装詳細だけを確認したい場合は、対応する配下パッケージを直接読む。
-- agent prompt や launch parameter の形式だけを確認したい場合は、対応する builder 実装を直接読む。
-- 編集 run 全般の共通状態管理や正本仕様だけを確認したい場合は、共通 runtime lifecycle または対応する oracle doc を直接読む。
+- realization apply や realization refactor 以外の処理を扱うとき。
+- apply fork の実行パラメータ構築だけを確認するときは、対応するlaunch parameter builderを直接読む。
+- refactor agent promptやchange summaryの入力形式だけを確認するときは、対応するbuilder実装を直接読む。
+- 編集runの共通ライフサイクル、git変更分類、process tracking、report書式などの一般実装だけを確認するときは、インポート先の共通runtimeモジュールを直接読む。
+- 正本仕様そのものを確認するときは、対応するoracle docを直接読む。
 
 ## hash
-- 8f8a6b68aaf7d9f3b94c67c26120fe9d7ad2ad7e8f3690749f0094e73ec7c5d8
+- de21ea428f2f02cf3349981ad06b9033e9d85844bf7e51a2648e48b4de04f751
 
 # `review`
 

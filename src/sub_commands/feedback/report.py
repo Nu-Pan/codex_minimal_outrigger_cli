@@ -13,7 +13,9 @@ import hashlib
 import html
 import json
 import os
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
+from inspect import getsourcefile, unwrap
 from pathlib import Path
 from typing import Any
 
@@ -532,23 +534,43 @@ def _verify_captured_references(repo: Path, references: list[JsonObject]) -> Non
 
 def _processing_versions() -> JsonObject:
     """builder、schema、および deterministic processing rule の content hash を返す。"""
-    normalize_builder = Path(
-        build_feedback_normalize_issue_parameter.__code__.co_filename
-    )
-    verify_builder = Path(build_feedback_verify_issue_parameter.__code__.co_filename)
+    normalize_builder = _builder_source_path(build_feedback_normalize_issue_parameter)
+    verify_builder = _builder_source_path(build_feedback_verify_issue_parameter)
+    normalize_schema = _builder_source_path(
+        unwrap(build_feedback_normalize_issue_parameter)
+    ).with_suffix(".json")
+    verify_schema = _builder_source_path(
+        unwrap(build_feedback_verify_issue_parameter)
+    ).with_suffix(".json")
     module_path = Path(__file__)
     state_path = module_path.parents[2] / "commons" / "runtime_feedback_state.py"
     return {
         "normalization_builder": sha256_bytes(normalize_builder.read_bytes()),
-        "normalization_schema": sha256_bytes(
-            normalize_builder.with_suffix(".json").read_bytes()
+        "normalization_schema": sha256_bytes(normalize_schema.read_bytes()),
+        "verification_builder": _builder_version_hash(
+            build_feedback_verify_issue_parameter,
+            verify_builder,
         ),
-        "verification_builder": sha256_bytes(verify_builder.read_bytes()),
-        "verification_schema": sha256_bytes(
-            verify_builder.with_suffix(".json").read_bytes()
-        ),
+        "verification_schema": sha256_bytes(verify_schema.read_bytes()),
         "deterministic_processing": _combined_file_hash([module_path, state_path]),
     }
+
+
+def _builder_source_path(builder: Callable[..., object]) -> Path:
+    """builder の実装 file path を検証用 hash の入力として返す。"""
+    source = getsourcefile(builder)
+    if source is None:
+        raise ValueError("builder source path is unavailable")
+    return Path(source)
+
+
+def _builder_version_hash(builder: Callable[..., object], source: Path) -> str:
+    """adapter と unwrap 先の builder を含む version hash を返す。"""
+    canonical_source = _builder_source_path(unwrap(builder))
+    sources = {source, canonical_source}
+    if len(sources) == 1:
+        return sha256_bytes(source.read_bytes())
+    return _combined_file_hash(list(sources))
 
 
 def _combined_file_hash(paths: list[Path]) -> str:
@@ -1760,6 +1782,61 @@ def _verification_output_issues(
                     repr(sorted(current_kinds, key=str)),
                 )
             )
+    # {{work-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json
+    # の text pattern は構造を検証するが、末尾改行を含む上限超過や空白だけの
+    # 内容を弾き切れないため、prompt で宣言した concrete text 条件をここで固定する。
+    text_values: list[tuple[str, object, int]] = [
+        ("reason", result.get("reason"), 1200),
+    ]
+    if verdict == "unresolved":
+        text_values.append(("human_action", result.get("human_action"), 1200))
+    for name, value, maximum in text_values:
+        if not isinstance(value, str):
+            continue
+        if not value.strip():
+            issues.append(
+                StructuredOutputValidationIssue(
+                    f"non-empty {name}",
+                    f"$.result.{name}",
+                    "a concrete non-whitespace string",
+                    repr(value),
+                )
+            )
+        if len(value) > maximum:
+            issues.append(
+                StructuredOutputValidationIssue(
+                    f"{name} length",
+                    f"$.result.{name}",
+                    f"at most {maximum} characters",
+                    repr(len(value)),
+                )
+            )
+    for index, item in enumerate(evidence_items):
+        if not isinstance(item, dict):
+            continue
+        for name, maximum in (("location", 500), ("finding", 1200)):
+            value = item.get(name)
+            if not isinstance(value, str):
+                continue
+            path = f"$.result.current_evidence[{index}].{name}"
+            if not value.strip():
+                issues.append(
+                    StructuredOutputValidationIssue(
+                        f"non-empty evidence {name}",
+                        path,
+                        "a concrete non-whitespace string",
+                        repr(value),
+                    )
+                )
+            if len(value) > maximum:
+                issues.append(
+                    StructuredOutputValidationIssue(
+                        f"evidence {name} length",
+                        path,
+                        f"at most {maximum} characters",
+                        repr(len(value)),
+                    )
+                )
     return tuple(issues)
 
 

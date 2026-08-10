@@ -14,6 +14,7 @@ interrupt 復旧は同じ review round と fake Codex call 列を検証する一
 現状は review loop 回帰として一箇所に保つ。
 """
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -32,7 +33,7 @@ class _FakeCodexResult:
     根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     """
 
-    def __init__(self, output_json: dict[str, object]) -> None:
+    def __init__(self, output_json: Mapping[str, object]) -> None:
         """Structured Output の payload を保持する。"""
         self.output_json = output_json
 

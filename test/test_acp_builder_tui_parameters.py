@@ -35,6 +35,7 @@ def test_tui_launch_builder_uses_fixed_parameter_and_standards(
         original_prompt,
     )
 
+    assert parameter.agent_call_kind == "build_tui_launch_tui_parameter"
     assert parameter.model_class == ModelClass.FLAGSHIP
     assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE

@@ -36,6 +36,7 @@ def test_path_based_permission_inputs_are_absent_from_builder_api() -> None:
     config = CmocConfig()
     for builder in (build_codex_override_args, prepare_codex_override_args):
         for name in (
+            "root",
             "extra_read_paths",
             "extra_writable_paths",
             "extra_read_root",

@@ -15,22 +15,22 @@
 # `report.py`
 
 ## Summary
-- 対象は `cmoc feedback report` の active-state publication pipeline を実装するサブコマンド固有モジュールです。固定済み report cut を入力に、raw observation の検証、候補の deterministic 集約と agent normalization、全候補の verification、generation/report の staging、current pointer 切替、publication 後 cleanup までを一つの再開可能な transaction として扱います。
-- `feedback report` の処理順序、report cut、candidate 集約、checkpoint、publication、cleanup を調べる際の入口です。
+- `cmoc feedback report` の active-state publication pipeline を実装するサブコマンド本体。固定した report cut を起点に、raw observation の検証、agent/machine candidate の deterministic 集約、normalization と全 candidate verification、生成物の staging、current pointer 切替、publication 後 cleanup までを一つの再開可能な transaction として処理する。
+- main worktree・active session branch・ready run state などの事前条件を確認し、writer lock、report cut manifest、hash 付き reference、normalization/verification checkpoint により中断後も同じ固定入力を再利用できるようにする。
+- machine rule observation には 30 日 window、日次 bucket、bounded digest、allowlist threshold を適用し、agent observation には category・evidence fingerprint・deduplication hint に基づく比較と必要時の identity normalization を行う。
+- verification 結果から unresolved issue、machine aggregate、Markdown report、generation artifact を構築し、成果物の hash を検証してから current pointer を公開する。公開済み cut の再開、ユーザー中断、失敗状態、cleanup warning、publication event の記録も扱う。
 
 ## Read this when
-- `cmoc feedback report` の全体フローや transaction 境界を確認するとき
-- report cut の固定・再開、observation 検証、checkpoint の再利用を確認するとき
-- observation から issue candidate と machine aggregate を作る規則を確認するとき
-- verification 結果から generation、Markdown report、current pointer を publication する処理を確認するとき
-- publication 後の cleanup や中断・失敗時の状態遷移を確認するとき
+- `cmoc feedback report` の処理順序、再開可能な report cut、checkpoint、writer lock、current pointer publication の挙動を確認するとき。
+- feedback observation から issue candidate・machine aggregate を作る deterministic processing、deduplication、30 日 recurrence threshold を調査するとき。
+- normalization/verification agent call の入力、Structured Output schema の再検証、許可された reference と current evidence の制約を確認するとき。
+- feedback report、active generation、cleanup manifest、publication event の生成または障害時の状態遷移を調査するとき。
 
 ## Do not read this when
-- observation 保存形式や canonical JSON の詳細だけを調べるときは feedback store の実装を直接読む
-- active state、generation artifact、current pointer のデータ契約だけを調べるときは feedback state の実装を直接読む
-- normalization／verification の agent parameter や schema だけを調べるときは対応する builder と schema を直接読む
-- CLI 共通実行制御や subcommand state だけを調べるときは runtime の実装を直接読む
-- feedback report の正本仕様を確認するときは対応する oracle 文書を読む
+- feedback observation の envelope や active state の永続化形式そのものを確認する場合は、参照される runtime feedback state/store の実装を直接読む。
+- normalization・verification の agent prompt や Structured Output schema の正本を確認する場合は、対応する builder と oracle schema を直接読む。
+- CLI の一般的な実行基盤、session/run state、ログ機構の共通仕様を確認する場合は、ここではなく `cmoc_runtime` など各共通モジュールを読む。
+- publication 後の Markdown report 表示だけを確認する場合は、report の生成処理または実際の出力 artifact を直接読む。
 
 ## hash
-- 35f7be7463a1087ff746eb0ec6c82b1cdc45508b10fe74e4269fd1d96dc61543
+- 856925b90c2182a09cbb7c288422f3c3f553adc00fa38e65f31f1126a2e0ee8c

@@ -1,21 +1,17 @@
 # `acp`
 
 ## Summary
-- `acp` 互換パッケージを提供する realization 領域。canonical な `oracle` 実装への互換 import、prompt 補正、builder・feedback・session・TUI 関連の adapter を扱う。
-- 下位要素では、builder の共通処理、個別 adapter、oracle 互換入口、realization 操作用の adapter へ分岐する。
+- ACP互換の実装群をまとめる realization 側の入口。公開入口と builder パッケージへのルーティングを提供する。
 
 ## Read this when
-- 既存の `acp.*` または `acp.builder.*` 参照を維持しつつ canonical な `oracle` 実装へ委譲する経路を調査するとき。
-- builder の prompt 生成補正、quota probe、indexing、feedback、session join、TUI、realization 操作の adapter の所属領域を判断するとき。
-- `acp` 互換パッケージ全体から、該当する下位 adapter や共通処理へ読み進めるとき。
+- ACP互換公開面の構成や、builder 配下の実装へ進む入口を判断するとき。
 
 ## Do not read this when
-- canonical な oracle 実装の仕様や挙動そのものを確認・変更するときは、対応する oracle 側を直接読む。
-- CLI の実行処理、利用者向け公開面、`acp` の利用箇所を調査するときは、各参照元や実行処理を直接読む。
-- 特定 adapter の内部挙動だけを確認したいときは、このディレクトリ全体ではなく該当する下位要素を直接読む。
+- canonical な oracle 実装の仕様を確認したいとき。
+- 特定の adapter や builder 内部の詳細実装を直接調べたいとき。
 
 ## hash
-- 6b525d9f04227e7a452c5ac6039b5d6e902f6523be7ad95dfc4efc1bcfcaeee8
+- 6569a9ddda74324dbee4b843f2e7a78e7615e45e6ae21c89f06fd80612b8e504
 
 # `basic`
 
@@ -53,20 +49,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行、Codex、設定、Git、パス、ログ、状態、feedback、エラー処理など、複数の機能から再利用される runtime API と lifecycle 実装を扱う。各個別 helper やサブシステムの実装へ進むための入口。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行、Codex、設定・状態、Git、ログ、パス、feedback、INDEX 更新など、複数の runtime 機能から再利用される公開 API と個別実装を扱う。各共通機能の実装や公開入口へ進むためのディレクトリ。
 
 ## Read this when
-- commons 配下の共通 runtime API、公開シンボル、パッケージ構成を確認するとき
-- CLI、Codex、設定、Git、パス、ログ、状態、feedback など複数の runtime 機能を横断して実装入口を探すとき
-- INDEX.md の生成、Codex 実行、editing run、doctor、feedback、設定永続化などの共通 lifecycle を調査するとき
+- cmoc の共通 runtime 機能の構成や、対象となる helper の所在を確認するとき
+- 複数の runtime 機能にまたがる共通 API・状態・実行制御・永続化処理を調査または変更するとき
+- INDEX 更新、Codex 実行、feedback、設定、Git、ログ、パスなどの個別実装へ進む入口を探すとき
 
 ## Do not read this when
-- 特定の runtime helper のアルゴリズムや挙動を確認したいとき
-- 特定の CLI サブコマンドや個別機能の利用者向け仕様だけを確認したいとき
-- commons の個別実装ファイルが対象として明確な場合
+- 特定の helper や runtime 機能の具体的な挙動だけを調査する場合は、commons 配下の対応する個別実装を直接読む
+- 利用者向けの正本仕様や CLI サブコマンド固有の業務ロジックだけを確認する場合は、対応する仕様またはサブコマンド実装へ直接進む
 
 ## hash
-- 43a4f9df32f4bbc0468f13f2774cba88e948c507a0c43656ea07d83b4b3d4b87
+- 0d38d343cf80d4bafded8d8c0695cc1e9e804d996b49983f3a4e24b90c0ebe93
 
 # `config`
 
@@ -119,17 +114,22 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装の入口をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui の各処理と、現在実装のない apply・review の配置先を含む。
-- feedback は report の再開可能なトランザクション処理、oracle は oracle 系処理、realization は apply/refactor workload、run と session はそれぞれのライフサイクル処理への入口を提供する。
+- CLI サブコマンドの実装をまとめる領域。doctor、indexing、tui、session、run、realization、oracle、feedback の実行入口と、各処理に固有のライフサイクル・検証・レポート生成を扱う。
+- 個別サブコマンドの実行フローや、その配下にある処理単位の責務を確認するための入口となる。
 
 ## Read this when
-- サブコマンド実装の構成や目的の実装への入口を確認するとき。
-- 特定サブコマンドの CLI 実行フロー、状態遷移、cleanup、report、または関連する下位パッケージへの導線を調べるとき。
+- CLI サブコマンドの実装構成や、サブコマンド間の責務分担を確認するとき。
+- session や editing run の作成・統合・中断、worktree・branch・state の更新、競合解消を調査するとき。
+- realization の apply・refactor 実行、agent 呼び出し、変更検証、状態更新、cleanup、レポート生成を調査するとき。
+- oracle の edit・investigation・review 実行、対象列挙、所見処理、INDEX 差分統合、レポート生成を調査するとき。
+- feedback report の observation 集約、正規化・検証、checkpoint、publication、cleanup を調査するとき。
+- indexing、doctor、tui の CLI 実行入口や、入力準備・preflight・実行結果の扱いを確認するとき。
 
 ## Do not read this when
-- サブコマンドに関係しない共通処理や正本仕様だけを確認するとき。
-- 特定サブコマンドの内部処理、prompt・builder、store・state、または oracle 文書の詳細を直接確認したいときは、対応する下位実装や仕様文書へ進む。
-- apply または review の実装内容を確認したいときは、実装が追加されるまでこのディレクトリを入口として読む必要はない。
+- 特定サブコマンドの詳細な処理だけを調べる場合は、対応する下位実装を直接読む。
+- 共通の CLI ランタイム、Git 操作、run lifecycle、prompt 入力、feedback state/store、レポート writer の仕様や実装だけを確認する場合は、インポート先の共通モジュールを直接読む。
+- agent prompt、Structured Output schema、またはサブコマンドの正本仕様を確認する場合は、対応する builder や oracle 文書を直接読む。
+- この領域に属さない共通基盤や、個別サブコマンドの実装に依存しない処理を調査するとき。
 
 ## hash
-- 4669174815ef02d60f25e62f6dc7d3b0348cdc8b1242c39906693bd37f55eeba
+- 6a34928f0d21dc35b7a903a495a34c5681a5b61770d469c5e87fed45bc6b9b49

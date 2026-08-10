@@ -117,7 +117,11 @@ def test_oracle_review_interrupt_reports_only_completed_enumerations(
     logs = sorted(
         (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
     )
-    assert '"event": "user_interruption"' in logs[-1].read_text()
+    review_logs = [
+        log for log in logs if '"command": "oracle review"' in log.read_text()
+    ]
+    assert review_logs
+    assert any('"event": "user_interruption"' in log.read_text() for log in review_logs)
 
 
 def test_oracle_review_writes_report(

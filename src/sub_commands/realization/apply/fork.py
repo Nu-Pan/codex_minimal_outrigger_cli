@@ -142,6 +142,27 @@ def _cmoc_realization_apply_fork_body() -> None:
             # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
             # agent の realization 差分と cmoc が生成する INDEX.md を同じ処理単位に
             # 含め、後続の commit/rollback が両方へ同じように適用されるようにする。
+            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # INDEX refresh 前に tracked Codex child を停止し、agent 終了後の遅延
+            # 書き込みを cmoc の生成差分へ混ぜない。
+            cleanup_warnings.extend(
+                stop_tracked_codex_children(context.repo, context.session_id)
+            )
+            if agent_commit_check_active and agent_head is not None:
+                _ensure_agent_did_not_commit(run_worktree, agent_head)
+            post_agent_paths = worktree_change_paths(
+                context.run_worktree,
+                include_rename_sources=True,
+            )
+            unexpected = unexpected_agent_paths(context, post_agent_paths)
+            unexpected.extend(
+                path
+                for path in post_agent_paths
+                if path not in changed_agent_paths and path not in unexpected
+            )
+            unexpected.sort()
+            if unexpected:
+                raise _unexpected_change_error(unexpected)
             refresh_indexes(context.run_worktree, commit=False)
             # {{work-root}}/oracle/doc/app_spec/run_isolation.md
             # 後続 process の遅い書き込みを差分検査・commit に混ぜないよう、最終

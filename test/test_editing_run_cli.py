@@ -468,6 +468,62 @@ def test_apply_rejects_agent_index_change_before_index_refresh(
     assert not (run_worktree / "INDEX.md").exists()
 
 
+def test_apply_rejects_delayed_agent_index_change_before_index_refresh(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """agent child の遅延 INDEX.md 書き込みを cmoc 生成物として受理しない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    """
+    _root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    run_worktree: Path | None = None
+    late_written = False
+    refresh_calls = 0
+
+    def fake_apply(
+        parameter: AgentCallParameter,
+        **_kwargs: object,
+    ) -> SimpleNamespace:
+        """apply agent の正常終了を再現する。"""
+        nonlocal run_worktree
+        run_worktree = parameter.agent_call_cwd
+        return SimpleNamespace(returncode=0, output_json=None)
+
+    def fake_stop(_root: Path, _session_id: str) -> list[str]:
+        """停止直前に tracked child が最後の INDEX.md 書き込みを行う状態を再現する。"""
+        nonlocal late_written
+        assert run_worktree is not None
+        if not late_written:
+            (run_worktree / "INDEX.md").write_text("agent change\n")
+            late_written = True
+        return []
+
+    def fake_refresh(_worktree: Path, *, commit: bool) -> list[Path]:
+        """遅延 agent 差分の検査前に INDEX 更新へ進まないことを確認する。"""
+        nonlocal refresh_calls
+        assert not commit
+        refresh_calls += 1
+        return []
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
+    monkeypatch.setattr(apply_module, "stop_tracked_codex_children", fake_stop)
+    monkeypatch.setattr(apply_module, "refresh_indexes", fake_refresh)
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert refresh_calls == 0
+    assert run_worktree is not None
+    assert _state(state_path)["run"]["state"] == "error"
+    assert not (run_worktree / "INDEX.md").exists()
+
+
 def test_apply_rejects_agent_commit_and_rolls_back_unit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1200,7 +1256,7 @@ def test_apply_fork_stops_tracked_codex_children_before_joinable(
     )
 
     assert result.exit_code == 0, result.output
-    assert stopped == [child]
+    assert stopped == [child, child]
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
