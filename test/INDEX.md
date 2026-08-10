@@ -742,20 +742,20 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex argv の model、sandbox、provider 上書き契約と、構造化出力 schema の保存・読み取りを検証する realization test。file access mode から専用 sandbox 引数への変換、approval や MCP feedback 設定、通知 callback、provider の TOML 表現、未知・未定義 provider の拒否を扱う。Codex 実行プロファイルの argv 構築・schema 保存・JSON 読み取り挙動を確認したい場合の入口。
+- Codex argv 構築と実行環境準備の契約を検証する realization test。file access mode から sandbox・approval・model・reasoning 設定への変換、MCP feedback context の扱い、provider override の TOML 化、schema 保存と output JSON 読み込みの境界を扱う。Codex 実行プロファイルやその呼び出し引数の挙動を確認する際の入口。
 
 ## Read this when
-- Codex の model、sandbox、approval、provider 上書き argv の契約を変更または検証するとき
-- MCP feedback 起動情報や TUI 通知設定が Codex argv にどう反映されるか確認するとき
-- 構造化出力 schema の改行保持・SHA256 保存、または不正 UTF-8 出力の扱いを確認するとき
+- Codex の sandbox、model、reasoning、provider 上書き引数の変換を変更または検証するとき
+- Codex subprocess の環境変数、feedback MCP 設定、notification callback の引き渡しを変更または検証するとき
+- structured output schema の保存や Codex output JSON の読み込み挙動を変更または検証するとき
 
 ## Do not read this when
-- Codex 実行プロファイルの実装詳細を確認する場合は、まず対応する realization implementation を直接読むとき
-- 一般的な ACP の agent parameter や CmocConfig の仕様だけを調べるとき
-- このテストが対象としない CLI 機能や別の実行経路を調べるとき
+- Codex 実行プロファイルの実装詳細を直接調査する必要があり、先に commons.runtime_codex_profile を読むべきとき
+- feedback reporter 自体のプロトコルや collector 実装だけを調査するとき
+- Codex argv、provider、schema、output JSON に関係しないテストを扱うとき
 
 ## hash
-- 3780de299806fd2ed2b0876cbf92f3ad5cd834f13a70677c0137575730987f0f
+- 96fa16e923c3e1702608877c229908299ec4136cc27f8c555a018cb229eea5c3
 
 # `test_runtime_config.py`
 

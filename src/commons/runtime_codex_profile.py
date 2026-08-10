@@ -676,7 +676,20 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
     value = os.environ.get("CODEX_HOME")
     if value is None:
         value = str(codex_home)
-    return {**os.environ, "CODEX_HOME": value}
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # 別の Codex call や親 process の reporter context を degraded call へ継承させず、
+    # 現在 call の FeedbackCall が登録済み capability だけを後から追加できるようにする。
+    feedback_env_names = {
+        FEEDBACK_CAPABILITY_ENV,
+        FEEDBACK_COLLECTOR_ENV,
+        FEEDBACK_PROTOCOL_ENV,
+    }
+    environment = {
+        name: environment_value
+        for name, environment_value in os.environ.items()
+        if name not in feedback_env_names
+    }
+    return {**environment, "CODEX_HOME": value}
 
 
 def run_codex_subprocess(

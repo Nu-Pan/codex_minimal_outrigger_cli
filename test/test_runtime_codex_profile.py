@@ -20,6 +20,7 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import (
     build_codex_override_args,
+    codex_subprocess_env,
     prepare_codex_override_args,
     prepare_schema,
     read_output_json,
@@ -136,6 +137,29 @@ def test_feedback_capability_values_are_not_written_to_codex_argv(
 
     for value in secret_values:
         assert value not in rendered
+
+
+def test_codex_subprocess_env_does_not_inherit_feedback_context(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """親 process の別 call 用 reporter context を Codex env へ継承しない。"""
+    for name, value in (
+        (FEEDBACK_CAPABILITY_ENV, "stale-capability"),
+        (FEEDBACK_COLLECTOR_ENV, "/tmp/stale-collector.sock"),
+        (FEEDBACK_PROTOCOL_ENV, "stale-protocol"),
+    ):
+        monkeypatch.setenv(name, value)
+
+    environment = codex_subprocess_env(tmp_path / ".codex")
+
+    assert all(
+        name not in environment
+        for name in (
+            FEEDBACK_CAPABILITY_ENV,
+            FEEDBACK_COLLECTOR_ENV,
+            FEEDBACK_PROTOCOL_ENV,
+        )
+    )
 
 
 def test_prepare_codex_overrides_matches_builder_defaults() -> None:

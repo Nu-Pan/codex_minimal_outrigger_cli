@@ -56,20 +56,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行、Codex、設定、Git、パス、ログ、状態、feedback、エラー処理など、複数の機能から再利用される runtime API と lifecycle 実装を扱う。各個別 helper やサブシステムの実装へ進むための入口。
+- cmoc のランタイム共通補助機能をまとめる commons パッケージ。公開 API の集約、CLI 実行 lifecycle、Codex exec/TUI、設定・状態・Git・パス・ログ・feedback・エラーなど、複数の機能から再利用される実装への入口。
+- INDEX.md の生成・鮮度判定・更新 lifecycle、prompt editor input、Codex 実行境界、feedback の収集・保存・公開、editing run の lifecycle など、個別の共通 runtime 実装を扱う。
 
 ## Read this when
-- commons 配下の共通 runtime API、公開シンボル、パッケージ構成を確認するとき
-- CLI、Codex、設定、Git、パス、ログ、状態、feedback など複数の runtime 機能を横断して実装入口を探すとき
-- INDEX.md の生成、Codex 実行、editing run、doctor、feedback、設定永続化などの共通 lifecycle を調査するとき
+- cmoc の複数機能にまたがる runtime helper や共通公開 API の責務を確認・変更するとき
+- CLI、Codex 実行、設定、状態、Git、ログ、パス、feedback、editing run などの共通実装の入口を探すとき
+- INDEX.md 更新処理や prompt editor input の共通 lifecycle を調査するとき
 
 ## Do not read this when
-- 特定の runtime helper のアルゴリズムや挙動を確認したいとき
-- 特定の CLI サブコマンドや個別機能の利用者向け仕様だけを確認したいとき
-- commons の個別実装ファイルが対象として明確な場合
+- 特定のサブコマンド固有の業務ロジックや利用者向け仕様だけを確認したいとき
+- 個別 runtime module の具体的なアルゴリズム、永続化形式、正本仕様を直接確認したいとき
+- commons と無関係な実装や、下位モジュールの詳細だけを調査するとき
 
 ## hash
-- 43a4f9df32f4bbc0468f13f2774cba88e948c507a0c43656ea07d83b4b3d4b87
+- 7e16b10e9dc4bc5294f33ccbcb62ee4f858fc33319e9b36054912ac0f393176a
 
 # `config`
 

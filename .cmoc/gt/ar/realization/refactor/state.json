@@ -37,9 +37,9 @@
   },
   "oracle/doc/app_spec/codex_exec_rule.md": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "27206b325bc56ecab208cd8dbce8eb14a92ff2875eb05b92913d8ade5576ed83",
-    "last_investigated_at": "2026-08-06_09-32_32_762637000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "6785ac96b8a0eb1a88f78b5033aaeda4b0fd3d455bba295202febce33e83cd7e",
+    "last_investigated_at": "2026-08-10_15-24_16_099826000"
   },
   "oracle/doc/app_spec/codex_model_provider.md": {
     "investigation_required": false,
@@ -840,7 +840,7 @@
     "last_investigated_at": "2026-08-05_18-13_54_084125000"
   },
   "src/commons/runtime_codex_profile.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "217a2d18c640e54151b133627b31e6c7d59a727df335d174c5ee017625898afa",
     "last_investigated_at": "2026-08-10_12-04_27_764850000"
