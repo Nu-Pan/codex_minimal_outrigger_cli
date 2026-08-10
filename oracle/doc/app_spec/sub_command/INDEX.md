@@ -80,19 +80,20 @@
 # `oracle_edit.md`
 
 ## Summary
-- `cmoc oracle edit` は、ユーザー指示を受けて oracle file を Codex CLI の TUI で直接編集するサブコマンドの仕様を定義する。
-- 引数、プロンプト構築、起動前提、実行順序、編集境界、終了時の差分・中断・ログの扱いを確認するための仕様入口である。
+- oracle file を直接編集するサブコマンドの正本仕様。目的、入力プロンプト、起動前提、TUI 起動パラメータ、編集境界、実行順序、終了時の差分保持、中断制御、ログの扱いを定義する。oracle edit の実装や挙動を確認する際の入口。
 
 ## Read this when
-- oracle file の直接編集フローや TUI 起動条件を確認するとき。
-- `cmoc oracle edit` の権限境界、事前条件、終了後の差分保持、ログ方針を確認するとき。
+- oracle file を編集するサブコマンドの仕様、起動条件、TUI 連携、編集権限、終了処理を変更・確認するとき。
+- doctor preprocess、indexing preflight、Codex CLI TUI の起動順序やパラメータを調べるとき。
+- TUI 終了後の差分、エラー終了、中断、ログ記録の扱いを確認するとき。
 
 ## Do not read this when
-- 別のサブコマンドの実装や lifecycle を確認するとき。
-- プロンプト入力形式、TUI 起動パラメータ、toast 通知、Codex CLI 起動規則、feedback の詳細を確認するときは、本文が示す各正本仕様を直接読む。
+- oracle investigation など別サブコマンドの仕様だけを確認するとき。
+- 一般的なプロンプト入力規則や共通標準の詳細を確認する場合は、参照先の正本仕様を直接読む。
+- oracle file の内容編集そのものではなく、realization 実装の配置やテスト規約だけを確認するとき。
 
 ## hash
-- 547daa72fc4d83be5c73c7fdc116d86c55e5eba25f8adf1fdc6a317e97cb565d
+- a9670777613cbc02485cfe0be8a35658b12d7c48eb4b303b3755e5c4d35b1e4b
 
 # `oracle_investigation.md`
 

@@ -276,19 +276,19 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンド仕様を集約するディレクトリ。doctor、indexing、tui、oracle 操作、session／run lifecycle、feedback report、realization apply／refactor の実行条件・責務・状態遷移を確認するための入口であり、各サブコマンドの詳細仕様へルーティングする。
+- cmoc の主要サブコマンドと session・編集 run lifecycle、feedback report、TUI、indexing の正本仕様を扱うディレクトリ。各文書は、個別機能の引数、事前条件、実行手順、状態遷移、エラー処理、レポートや後処理の契約を確認する入口である。
 
 ## Read this when
-- cmoc のサブコマンドの挙動、引数、事前条件、実行フロー、終了処理を調査・実装・レビューするとき。
-- session／run の fork・join・abandon、realization の適用・リファクタリング、feedback report の処理を確認するとき。
-- oracle の編集・調査・レビュー、または cmoc の doctor・indexing・tui の入口仕様を確認するとき。
+- cmoc のサブコマンド仕様を実装・変更・レビューし、対象機能の責務や実行条件を特定したいとき。
+- session または編集 run の fork・join・abandon、realization apply・refactor の lifecycle や状態同期を確認したいとき。
+- feedback report、TUI、oracle 操作、indexing、doctor の実行フローや終了処理を確認したいとき。
 
 ## Do not read this when
-- サブコマンド内部の共通処理、専用 builder、schema、git 操作、feedback state などの詳細だけを確認したいときは、各仕様が示す直接の正本を読む。
-- 一般的な oracle／realization の定義や INDEX.md の作成規則だけを確認したいときは、上位の共通仕様を読む。
+- 対象機能の内部処理、共通仕様、専用 builder・schema、設計・テスト規約だけを確認したいときは、各文書が示すより直接的な正本仕様や実装・テストを読む。
+- prompt 入力、feedback observation・state、run isolation、subcommand interruption などの独立仕様だけを調べるとき。
 
 ## hash
-- dc2144080df77ae908edbebe54db3ff3df42f1646c3a658027990a32877c1e94
+- 7d7ccf199d68848cd9ed933063991bbb563aaa43f60125af9420ea0a78d00d55
 
 # `subcommand_interruption.md`
 
@@ -309,18 +309,19 @@
 # `usage.md`
 
 ## Summary
-- cmoc の初回準備から session fork、oracle の調査・編集・review、realization apply/refactor、run の join/abandon、session join までの標準 workflow と workload の使い分けを案内する使用方法の文書。cmoc 運用を開始・確認する際の入口となる。
+- `cmoc` の初回セットアップ、セッション分岐・統合、oracle の調査・編集・レビュー、realization の apply/refactor 実行と run lifecycle を含む標準 workflow を説明する利用手順。cmoc の運用手順や workload の使い分けを確認する入口。
 
 ## Read this when
-- cmoc の基本的な呼び出し方法、初回セットアップ、標準的な開発 workflow を確認するとき
-- realization apply と realization refactor、oracle edit の使い分けを判断するとき
+- cmoc を初めて導入・実行するとき
+- oracle 変更から realization 反映までの workflow や session/run lifecycle を確認するとき
+- realization apply と realization refactor の使い分けを確認するとき
 
 ## Do not read this when
-- 特定の oracle file の仕様内容や実装責務を確認したいとき
-- テスト実行手順や設計ルールなど、個別の開発ルールを確認するときは、それぞれの直接の文書を読む
+- 個別の oracle 仕様や realization 実装の内容を確認したいとき
+- cmoc の内部設計・開発環境・テスト実行規則を確認したいときは、それぞれの専用文書を直接読む
 
 ## hash
-- 392e99a23a54c277fc5d87fe88ddbab54ad59e1f4beed41412aea3e897d670fd
+- 39da44eb91651a997184df522e971bdc5bad67987fc185cf451173fd7e95b4fb
 
 # `windows_toast_notification.md`
 

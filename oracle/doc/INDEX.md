@@ -1,20 +1,19 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様を集約するディレクトリ。CLI 自動補完、Codex CLI 呼び出し、ログ、doctor 前処理、feedback、prompt、run/session、サブコマンド、Windows toast 通知など、個別機能の正本仕様へ進むための入口となる。
+- cmoc のアプリケーション全体に関わる正本仕様をまとめたディレクトリ。CLI 自動補完、Codex CLI 呼び出し、model provider、ログ、doctor 前処理、feedback、prompt、run・session lifecycle、サブコマンド、中断、利用手順、Windows toast 通知などの仕様への入口を提供する。
+- 個別機能の挙動仕様や共通基盤仕様を実装・変更・レビューする際に、対象領域の正本文書を選ぶための上位ルーティング先となる。
 
 ## Read this when
-- cmoc のアプリケーション挙動に関する正本仕様を探すとき
-- CLI、Codex 呼び出し、ログ、feedback、prompt、run/session、サブコマンド、通知の仕様を調査・実装・レビューするとき
-- 対象機能の詳細仕様が app_spec 配下にあるか判断するとき
+- cmoc のアプリケーション仕様から、対象機能に対応する正本文書への入口を探すとき
+- CLI、Codex 呼び出し、feedback、prompt、run/session、サブコマンド、ログ、通知など複数の仕様領域にまたがる挙動や責務境界を確認するとき
 
 ## Do not read this when
-- 開発環境、設計ルール、テスト実行などの開発規約を確認するときは、それぞれの専用文書へ直接進む
-- 特定仕様の実装コードやテストコードだけを確認したいときは、対応する realization source または test を直接読む
-- INDEX.md の生成・更新ルール自体を確認するときは、indexing の仕様を直接読む
+- 特定の機能の詳細仕様が特定できているときは、このディレクトリ全体ではなく該当する正本文書を直接読む
+- 実装・テストの具体的な挙動、開発環境、設計、テスト実行手順だけを確認するときは、それぞれの専用仕様や実装・テストを直接読む
 
 ## hash
-- b493dbcfa8d906b6443b4999328ff131507044cc7b8fca74ade62a250e1f8880
+- 033b8c9d74ef5667f3a9283fca11a818d667badb8764d00bebd7b45d4d805d50
 
 # `branch_model.md`
 
