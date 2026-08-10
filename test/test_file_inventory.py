@@ -479,6 +479,37 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(tmp_path: Path) ->
     assert "nested/outer-root.txt" in realization_files
 
 
+def test_inventory_validates_duplicate_global_ignore_source_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """同一 global ignore source の検証を一度の列挙で重複させない。"""
+    root = make_repo(tmp_path)
+    global_ignore = tmp_path / "global-ignore"
+    global_ignore.write_text("ignored.txt\n")
+    run_git(root, "config", "--local", "--add", "core.excludesFile", str(global_ignore))
+    run_git(root, "config", "--local", "--add", "core.excludesFile", str(global_ignore))
+    (root / "ignored.txt").write_text("ignored\n")
+
+    validated: list[Path] = []
+    original_validate = runtime_git._validate_global_git_ignore_path
+
+    def counting_validate(path: Path) -> None:
+        """検証された global ignore source を記録する。"""
+        validated.append(path)
+        original_validate(path)
+
+    monkeypatch.setattr(
+        runtime_git, "_validate_global_git_ignore_path", counting_validate
+    )
+
+    _, realization_files = _relative_sets(
+        root, enumerate_oracle_and_realization_files(root)
+    )
+
+    assert "ignored.txt" not in realization_files
+    assert validated.count(global_ignore) == 1
+
+
 def test_single_path_classifier_uses_nested_repository_context(tmp_path: Path) -> None:
     """単一 path 分類も最内側 repository の ignore と metadata 境界を使う。"""
     root = make_repo(tmp_path)

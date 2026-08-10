@@ -553,7 +553,11 @@ def _global_git_ignore_paths(root: Path) -> list[Path]:
         for line in configured.stdout.splitlines():
             if line:
                 path = Path(line)
-                paths.append(path if path.is_absolute() else root / path)
+                resolved = path if path.is_absolute() else root / path
+                # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+                # 同じ ignore source の検証結果を一度の列挙内で再利用する。
+                if resolved not in paths:
+                    paths.append(resolved)
         return paths
     config_home = os.environ.get("XDG_CONFIG_HOME")
     base = Path(config_home) if config_home else Path.home() / ".config"
