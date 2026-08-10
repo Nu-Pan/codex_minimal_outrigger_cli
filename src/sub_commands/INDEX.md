@@ -31,23 +31,22 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装領域。feedback サブコマンドの処理を確認・変更するときの入口で、配下にサブコマンド固有の実装と report のトランザクション処理を含む。
-- report は `cmoc feedback report` の active-state publication pipeline を担い、raw observation の検証から候補集約、verification、generation/report の staging、current pointer の切替、publication 後 cleanup までを再開可能な transaction として扱う。
+- feedback サブコマンド群の実装入口。feedback observation の保存ではなく、report 作成と active-state publication pipeline を扱う。
+- 固定済み report cut を起点に、raw observation の検証、candidate の集約、normalization・verification checkpoint の再利用、generation artifact と Markdown report の生成、current pointer の切替、publication 後の cleanup を担う。
+- main worktree や active session branch などの事前条件、writer lock 下の状態遷移、hash・canonical JSON・schema・secret masking による整合性検証、machine feedback rule の recurrence 集約、resume/interruption を確認するための入口である。
 
 ## Read this when
-- feedback サブコマンドの挙動や実装を確認・変更するとき。
-- `cmoc feedback report` の全体フロー、report cut、checkpoint、candidate 集約、verification、publication、cleanup を調べるとき。
+- feedback サブコマンドの処理フロー、report cut、candidate 集約、normalization・verification、publication、resume/interruption の挙動を調べるとき
+- feedback active state、current pointer、generation artifact、checkpoint、raw observation の整合性や hash 検証を確認するとき
+- machine feedback rule の recurrence threshold や Markdown report の出力内容を確認するとき
 
 ## Do not read this when
-- feedback 以外のサブコマンドを扱うとき。
-- observation 保存形式や canonical JSON の詳細だけを調べるときは feedback store の実装を直接読む。
-- active state、generation artifact、current pointer のデータ契約だけを調べるときは feedback state の実装を直接読む。
-- normalization／verification の agent parameter や schema だけを調べるときは対応する builder と schema を直接読む。
-- CLI 共通実行制御や subcommand state だけを調べるときは runtime の実装を直接読む。
-- feedback report の正本仕様を確認するときは対応する oracle 文書を読む。
+- feedback observation の保存、入力 envelope、secret masking などの store 共通処理だけを調べるとき
+- issue normalization や verification の agent parameter・Structured Output schema の契約だけを調べるとき
+- active state や generation artifact の共通永続化 API の詳細だけを調べるとき
 
 ## hash
-- d10a83c126608a0197eb1b6c11acebfa34cf41e025c048c97a97e07bce82b73b
+- c0769f9c3391d8c8d871d0fb4448e361036a1dee6359909951ce6064e98fb316
 
 # `indexing.py`
 

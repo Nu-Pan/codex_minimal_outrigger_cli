@@ -1760,6 +1760,61 @@ def _verification_output_issues(
                     repr(sorted(current_kinds, key=str)),
                 )
             )
+    # {{work-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json
+    # の text pattern は構造を検証するが、末尾改行を含む上限超過や空白だけの
+    # 内容を弾き切れないため、prompt で宣言した concrete text 条件をここで固定する。
+    text_values: list[tuple[str, object, int]] = [
+        ("reason", result.get("reason"), 1200),
+    ]
+    if verdict == "unresolved":
+        text_values.append(("human_action", result.get("human_action"), 1200))
+    for name, value, maximum in text_values:
+        if not isinstance(value, str):
+            continue
+        if not value.strip():
+            issues.append(
+                StructuredOutputValidationIssue(
+                    f"non-empty {name}",
+                    f"$.result.{name}",
+                    "a concrete non-whitespace string",
+                    repr(value),
+                )
+            )
+        if len(value) > maximum:
+            issues.append(
+                StructuredOutputValidationIssue(
+                    f"{name} length",
+                    f"$.result.{name}",
+                    f"at most {maximum} characters",
+                    repr(len(value)),
+                )
+            )
+    for index, item in enumerate(evidence_items):
+        if not isinstance(item, dict):
+            continue
+        for name, maximum in (("location", 500), ("finding", 1200)):
+            value = item.get(name)
+            if not isinstance(value, str):
+                continue
+            path = f"$.result.current_evidence[{index}].{name}"
+            if not value.strip():
+                issues.append(
+                    StructuredOutputValidationIssue(
+                        f"non-empty evidence {name}",
+                        path,
+                        "a concrete non-whitespace string",
+                        repr(value),
+                    )
+                )
+            if len(value) > maximum:
+                issues.append(
+                    StructuredOutputValidationIssue(
+                        f"evidence {name} length",
+                        path,
+                        f"at most {maximum} characters",
+                        repr(len(value)),
+                    )
+                )
     return tuple(issues)
 
 

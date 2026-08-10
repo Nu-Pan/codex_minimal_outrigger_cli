@@ -418,20 +418,22 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の pending observation、active state、report cut、verification checkpoint、atomic publication、cleanup を同一 repository fixture で検証する realization test。agent-facing reporter の公開面、collector の context/rate 制限・永続化・redaction、machine observation の冪等性と再発閾値、agent issue の検証・集約・解決、異常時の publication 阻止と中断復旧、active generation の整合性検証を扱う。feedback 機能の実装挙動や対応する oracle 仕様を確認する際のテスト入口。
+- フィードバック observation の保存から report publication までを、同一 repository fixture で外部挙動として検証するテスト群。
+- agent-facing reporter の単一 tool 公開、collector の context・rate 制限・失効・path 境界・secret masking、machine observation の idempotency と recurrence threshold を扱う。
+- feedback report の空 report、agent issue の unresolved/resolved 遷移、active state の compact 化、report cut・verification checkpoint・publication pointer・cleanup の中断再開を検証する。
+- raw artifact の不正、active generation の hash 不一致や未列挙 artifact など、publication を止める破損検出も対象にする。
 
 ## Read this when
-- feedback observation の収集・正規化・検証・report publication・active state・cleanup の外部挙動を確認するとき
-- feedback report の再実行、中断復旧、checkpoint 再利用、atomic publication、部分 cleanup の挙動を変更または調査するとき
-- raw observation の schema 検証、rate limit、path boundary、secret masking、machine recurrence threshold を確認するとき
+- feedback observation の reporter、collector、raw store、pending 件数、validation を確認するとき。
+- feedback report の verification、machine aggregate、active state、generation、current pointer の挙動を確認するとき。
+- 中断・再開、checkpoint 再利用、atomic publication、部分 cleanup、corruption detection の仕様適合を調べるとき。
 
 ## Do not read this when
-- feedback 以外の CLI 機能や一般的な repository fixture の挙動だけを調べるとき
-- 正本仕様の内容を確認することが目的で、実装テストの具体的な検証ケースを読む必要がないとき
-- feedback の実装詳細を直接変更・調査する作業で、まず realization implementation や対応する oracle file を読むべきとき
+- feedback 機能の正本仕様や実装詳細を直接確認したいときは、対応する oracle file または実装モジュールを読む。
+- feedback 以外のサブコマンドや一般的な CLI テストの挙動を調べるとき。
 
 ## hash
-- 71ece1306214b2f8dc7f80b6108e613db50ddba3a59cb976a3bc4f2d970b9384
+- f929055e44d6adb6cf396f14d212cb5e1cd0f52c71a0e9a8a9dfafeaabb137c4
 
 # `test_file_inventory.py`
 

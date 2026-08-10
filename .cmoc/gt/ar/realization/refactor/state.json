@@ -301,9 +301,9 @@
   },
   "oracle/src/oracle/acp_builder/feedback/verify_issue.json": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "49d2a67344bebe92475f921fc7d25286d371c7f93878a143c876cee9c26245e5",
+    "last_investigated_at": "2026-08-10_10-25_18_318534000"
   },
   "oracle/src/oracle/acp_builder/feedback/verify_issue.py": {
     "investigation_required": true,
