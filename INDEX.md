@@ -89,22 +89,20 @@
 # `oracle`
 
 ## Summary
-- cmoc の人間所有の正本仕様を収めるディレクトリ。CLI や共通 lifecycle、Codex CLI 呼び出し、prompt、feedback、ログ、状態管理、worktree、開発規則などの仕様文書と、ACP・prompt builder・設定モデル・パスモデル・feedback 入力契約などの正本実装を扱う。仕様文書は機能領域別の doc、正本実装は ACP builder・prompt builder・other・feedback などの src 配下が入口になる。
+- cmoc の人間所有の正本ファイルを収める上位ディレクトリ。正本ドキュメントと正本実装を通じて、アプリケーション仕様、設計・開発規則、ACP 呼び出しや prompt 構築、共通モデル、feedback reporter 契約を確認する入口となる。
 
 ## Read this when
-- cmoc の正本仕様、仕様間の関係、現行の CLI・workflow・状態管理・feedback・Codex CLI 呼び出し規約を確認するとき
-- oracle src の ACP 呼び出し設定、agent prompt、oracle・realization 規範、パスや設定の共通モデル、構造化文書変換、feedback reporter 入力契約を確認するとき
-- 採用しなかった設計案や作業方式の理由を確認するときは、正本ドキュメント内の considered_alternative へ進むとき
-- 特定の仕様領域や実装責務が明らかな場合に、doc または src の対応する下位ディレクトリへ進む入口を選ぶとき
+- cmoc の正本仕様・設計・開発規則を調査するとき
+- 正本実装の責務や、ACP・prompt・パス解決・設定・Markdown 変換・feedback 契約を調査するとき
+- oracle/doc または oracle/src のどの下位領域へ進むべきか判断するとき
 
 ## Do not read this when
-- 特定の CLI サブコマンドや個別機能の詳細仕様を確認する場合は、doc 配下の対応する個別文書へ直接進むとき
-- 特定の ACP builder、prompt builder、feedback、other 実装の詳細を確認する場合は、src 配下の対応する下位領域へ直接進むとき
-- realization 側の CLI 挙動や実装を確認する場合は、oracle ではなく realization implementation を直接読むとき
-- 一般的な利用手順、単一の開発手順、provider 固有の稼働・認証・推論品質を調査する場合は、対応する利用手順書・開発規則・外部サービスの資料へ直接進むとき
+- 特定の仕様・設計・開発規則の詳細を確認したい場合は、oracle/doc 配下の該当文書へ直接進む
+- 正本実装の詳細を確認したい場合は、oracle/src 配下の対応する下位領域へ直接進む
+- realization 側の CLI 挙動や実装、テストコードを確認したい場合は、対応する realization file を直接読む
 
 ## hash
-- 6dff54a232ed7ee6f4ef149c2dbec5de10267da8879d3284ee96a26491cd1505
+- 51026e5ee03e642dc72c2887e959ddb6ad6746f1bbf90530d6eefcceaac4d4ca
 
 # `pyproject.toml`
 

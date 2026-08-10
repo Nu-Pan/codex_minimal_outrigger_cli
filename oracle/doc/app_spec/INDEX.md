@@ -70,19 +70,21 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- cmoc の各サブコマンド開始前に、リポジトリと実行環境の共通前提を検証し、可能な範囲で修復する処理の正本仕様。git 追跡状態、refactor state の同期、feedback reporter/client の事前検証、および修復後の tracked 差分の commit を扱う。サブコマンド固有の前提条件は対象外で、doctor preprocess 正常終了後に各サブコマンドが検証する。
+- cmoc の各サブコマンド開始前に、リポジトリを実行可能な状態へ検証・修復する doctor preprocess の正本仕様。共通前提の保証、修復困難時のエラー終了、tracked 差分の commit、feedback reporter/client の degraded warning を扱う。doctor preprocess の具体的な検証・修復要件を確認する入口であり、個別サブコマンドの本命処理仕様ではない。
 
 ## Read this when
-- doctor preprocess の検証・修復手順、実行前の共通前提、または正常終了条件を変更・実装・レビューするとき
-- `.cmoc/gu`、`.agents`、設定ファイル、refactor state の git 追跡保証や同期処理を確認するとき
-- feedback MCP reporter/client の起動可能性、protocol compatibility、degraded warning の扱いを確認するとき
+- doctor preprocess の責務や実行順序を実装・レビューするとき
+- `.cmoc/gu`、`.agents`、`config.json`、refactor state の追跡状態や同期要件を確認するとき
+- feedback MCP reporter/client の事前検証、protocol compatibility、利用不能時の扱いを確認するとき
+- doctor preprocess 完了後に個別サブコマンドが検証すべき前提との境界を確認するとき
 
 ## Do not read this when
-- サブコマンド固有の事前条件や本命処理だけを扱い、doctor preprocess の共通検証・修復に関係しないとき
-- doctor preprocess の具体的な実装配置やテスト実行方法だけを調べるときは、対応する realization implementation または test の仕様・実装を直接確認するとき
+- 特定サブコマンド固有の事前条件や本命処理を確認するとき
+- git working tree または staging area の clean 状態の検査仕様だけを確認するとき
+- doctor preprocess が保証する対象ではなく、個別サブコマンドの仕様を直接確認すべきとき
 
 ## hash
-- e0604bb0c2de87aa6960c60ddaa07519b9c7bab1f7de92a738ad8e1da8ceb659
+- 7082572dae6260e1658de16f08ecc0f00e588b5d36f7097610a1776e429ac7a1
 
 # `error_handling.md`
 
@@ -274,20 +276,19 @@
 # `sub_command`
 
 ## Summary
-- cmoc の主要サブコマンドに関する正本仕様をまとめたディレクトリ。doctor、indexing、oracle 編集・調査・レビュー、realization apply・refactor、session／run lifecycle、feedback report、TUI の実行条件・責務・状態遷移・レポート契約を扱う。各サブコマンドや共通 lifecycle の仕様を確認する際の入口となる。
+- cmoc の主要サブコマンド仕様を集約するディレクトリ。doctor、indexing、tui、oracle 操作、session／run lifecycle、feedback report、realization apply／refactor の実行条件・責務・状態遷移を確認するための入口であり、各サブコマンドの詳細仕様へルーティングする。
 
 ## Read this when
-- cmoc のサブコマンドの挙動、引数、実行前提、処理フローを確認または変更するとき。
-- oracle／realization の編集・調査・レビュー、realization apply／refactor、session／run の fork・join・abandon lifecycle を扱うとき。
-- feedback report の生成処理、状態管理、TUI 起動、doctor preprocess や indexing への委譲を確認するとき。
+- cmoc のサブコマンドの挙動、引数、事前条件、実行フロー、終了処理を調査・実装・レビューするとき。
+- session／run の fork・join・abandon、realization の適用・リファクタリング、feedback report の処理を確認するとき。
+- oracle の編集・調査・レビュー、または cmoc の doctor・indexing・tui の入口仕様を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの内部処理や共通処理の詳細だけを確認したい場合は、各仕様が示す専用の正本や実装を直接読む。
-- oracle／realization の一般的な定義、run isolation、session 共通状態、feedback observation／state など、別領域の共通仕様だけを確認するとき。
-- 実装・テストの具体的な配置や開発・実行規則だけを確認するときは、対応する設計・テスト規則や realization ファイルを読む。
+- サブコマンド内部の共通処理、専用 builder、schema、git 操作、feedback state などの詳細だけを確認したいときは、各仕様が示す直接の正本を読む。
+- 一般的な oracle／realization の定義や INDEX.md の作成規則だけを確認したいときは、上位の共通仕様を読む。
 
 ## hash
-- 3d748ec5817c27a16a8bf45ee785ccb43a54e2ca97161ed781827156a231322e
+- dc2144080df77ae908edbebe54db3ff3df42f1646c3a658027990a32877c1e94
 
 # `subcommand_interruption.md`
 
@@ -308,19 +309,18 @@
 # `usage.md`
 
 ## Summary
-- cmoc の基本的な呼び出し方法、初回準備、通常の session・oracle・realization の workflow、および apply と refactor の使い分けを説明する利用手順書。cmoc を使った開発 lifecycle の入口にあたる。
+- cmoc の初回準備から session fork、oracle の調査・編集・review、realization apply/refactor、run の join/abandon、session join までの標準 workflow と workload の使い分けを案内する使用方法の文書。cmoc 運用を開始・確認する際の入口となる。
 
 ## Read this when
-- cmoc の初回セットアップや基本的な呼び出し方法を確認するとき
-- session fork/join、oracle 編集・レビュー、realization apply/refactor の手順を確認するとき
-- realization apply と realization refactor の使い分けを判断するとき
+- cmoc の基本的な呼び出し方法、初回セットアップ、標準的な開発 workflow を確認するとき
+- realization apply と realization refactor、oracle edit の使い分けを判断するとき
 
 ## Do not read this when
-- 特定の oracle file の仕様や編集内容を確認したいとき
-- cmoc の内部実装や個別コマンドの詳細な技術仕様を調査するときは、対象コマンドまたは実装の文書を直接読む
+- 特定の oracle file の仕様内容や実装責務を確認したいとき
+- テスト実行手順や設計ルールなど、個別の開発ルールを確認するときは、それぞれの直接の文書を読む
 
 ## hash
-- 67c1e11a5d4ebc3936273d706933419f4e789856bd1afb62c8baeed5896e0296
+- 392e99a23a54c277fc5d87fe88ddbab54ad59e1f4beed41412aea3e897d670fd
 
 # `windows_toast_notification.md`
 

@@ -223,13 +223,17 @@
 # `tui.md`
 
 ## Summary
-- `cmoc tui` サブコマンドの責務と実行フローを定義する正本仕様。ユーザープロンプトへの cmoc 固有規範の注入、エディタ入力による完全プロンプトの確定、固定パラメータによる AI Agent CLI/TUI の起動、および Codex CLI 固有の起動条件を扱う。
+- `cmoc tui` は、cmoc 固有の契約と適用条件付きの基本規範をユーザープロンプトへ注入し、固定起動パラメータで AI Agent CLI/TUI を直接起動するサブコマンド。プロンプト編集、起動前処理、共通規範、feedback・通知、Codex CLI 固有設定の入口を担う。
 
 ## Read this when
-- `cmoc tui` の実行手順、プロンプト構築、固定注入規範、起動パラメータ、バックエンド共通条件、または Codex CLI 起動条件を確認・変更するとき。
+- `cmoc tui` の実行手順、プロンプト skeleton の構築・編集・確定、または AI Agent CLI/TUI の起動条件を確認するとき。
+- cmoc 固有規範の固定注入、model class・reasoning effort・file access mode、Structured Output の扱いを確認するとき。
+- Codex CLI バックエンドでの起動コマンド、`$CODEX_HOME`、preflight validation、CLI 引数による設定上書きを確認するとき。
 
 ## Do not read this when
-- エディタ入力の詳細仕様だけを確認するときは prompt editor input の正本を読む。フィードバック観測の保持・collector context・通知の詳細だけを確認するときは、それぞれ指定された feedback observation または Windows toast notification の正本を直接読む。
+- プロンプトエディタの入力仕様だけを確認するときは、本文が示す prompt editor input の正本を直接読む。
+- indexing preflight、feedback observation、Windows toast 通知の詳細だけを確認するときは、本文が示す各専用の正本を直接読む。
+- `cmoc tui` 以外のサブコマンドの実装や起動契約だけを確認するとき。
 
 ## hash
-- 25a7393cbf4c57b4edbb85990d02e88860f487b8e9539c3d3d9135944d513da9
+- cd20c3f389050775bff6007054a381fc5ff187d203f93ecc5d6d0dafb41b1c3c

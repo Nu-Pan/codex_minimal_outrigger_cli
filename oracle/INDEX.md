@@ -1,24 +1,20 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様を機能領域別に案内するディレクトリ。CLI、workflow、feedback、ログ、Codex CLI 呼び出し、通知、自動補完、共通 lifecycle、branch・commit・worktree、開発規則などの個別文書への入口を提供する。
-- 現行仕様だけでなく、採用しなかった設計案の検討記録にも分岐できる。
+- cmoc の正本ドキュメントを収める上位ディレクトリ。アプリケーション仕様、branch・commit・worktree のモデル、不採用案の検討記録、開発規則へ進むための入口となる。
 
 ## Read this when
-- cmoc の CLI や共通 lifecycle の仕様を確認・変更するとき
-- Codex CLI 呼び出し、prompt、feedback、ログ、通知、自動補完、run・session・state・エラー処理・中断の仕様を確認するとき
-- session fork、run の隔離、branch・commit・worktree、run report、apply、session join の関係を確認するとき
-- Python、CLI 設計、開発環境、テスト要件、テスト実行・品質検査の適用文書を選ぶとき
-- realization refactor で採用しなかった作業方式や状態管理方式の理由を確認するとき
+- cmoc の仕様・設計・開発規則を調査し、対象領域の正本文書を選ぶとき
+- CLI 挙動、session/run の分岐、開発環境、テスト要件・実行手順などの文書入口を探すとき
+- realization refactor で採用・不採用となった方式の背景を確認するとき
 
 ## Do not read this when
-- 特定の CLI サブコマンドや個別機能の詳細仕様を確認する場合は、対応する個別仕様へ直接進むとき
-- 実装配置、テスト実行方法、Python 環境構築、依存関係追加など単一の開発手順だけを確認する場合は、対応する開発ルールや realization へ直接進むとき
-- 一般的な利用手順だけを確認する場合は、利用手順書へ直接進むとき
-- provider 固有の稼働、認証、推論品質、外部サービスの詳細を調査する場合は、このディレクトリを参照先にしないとき
+- 特定機能の詳細仕様を確認したい場合は、アプリケーション仕様配下の該当文書へ直接進む
+- 実装コードやテストコードの内容だけを確認したい場合は、対応する realization source または test を直接読む
+- INDEX.md の生成・更新ルールだけを確認したい場合は、indexing の仕様へ直接進む
 
 ## hash
-- 224e8012753030db0c50694432c40e02d28b8d81b00fd3629c4fb658939d5754
+- a23897e0fdbe40c90ca2e88e6a7549ff61d5e6ff478b483659c06850a1ac5625
 
 # `src`
 
