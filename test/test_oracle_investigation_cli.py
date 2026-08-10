@@ -2,6 +2,7 @@
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
+- {{work-root}}/oracle/doc/app_spec/indexing.md
 - {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
 - {{work-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py
 """
@@ -14,6 +15,7 @@ from _cli_support import run_doctor, runner
 from _git_support import make_repo
 
 import acp.builder.oracle.investigation.launch_tui as launch_tui_module
+import commons.runtime_cli as runtime_cli_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.investigation as investigation_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
@@ -45,6 +47,29 @@ def test_oracle_investigation_has_no_session_precondition(
     editor_calls: list[tuple[Path, str]] = []
     built_parameters: list[AgentCallParameter] = []
     events: list[str] = []
+    preflight_enable_calls = 0
+
+    real_enable_indexing_preflight = investigation_module.enable_indexing_preflight
+
+    def record_enable_indexing_preflight() -> None:
+        """本命処理より前の indexing preflight 登録を記録する。"""
+        nonlocal preflight_enable_calls
+        preflight_enable_calls += 1
+        real_enable_indexing_preflight()
+
+    real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
+
+    def record_run_doctor_preprocess(
+        target_root: Path,
+        *,
+        sync_refactor_entries: bool = True,
+    ) -> None:
+        """CLI invocation 内の doctor preprocess を記録して本来の処理へ委譲する。"""
+        events.append("doctor")
+        real_run_doctor_preprocess(
+            target_root,
+            sync_refactor_entries=sync_refactor_entries,
+        )
 
     def fake_reserve_prompt_editor_input(
         target_root: Path,
@@ -102,6 +127,16 @@ def test_oracle_investigation_has_no_session_precondition(
     )
     monkeypatch.setattr(
         investigation_module,
+        "enable_indexing_preflight",
+        record_enable_indexing_preflight,
+    )
+    monkeypatch.setattr(
+        runtime_cli_module,
+        "run_doctor_preprocess",
+        record_run_doctor_preprocess,
+    )
+    monkeypatch.setattr(
+        investigation_module,
         "build_oracle_investigation_launch_tui_parameter",
         record_build_parameter,
     )
@@ -123,6 +158,7 @@ def test_oracle_investigation_has_no_session_precondition(
     ) -> None:
         """確定後の TUI 起動を記録する。"""
         events.append("tui")
+        assert preflight_enable_calls == 1
         calls.append((parameter, kwargs))
 
     monkeypatch.setattr(
@@ -138,7 +174,7 @@ def test_oracle_investigation_has_no_session_precondition(
     )
 
     assert result.exit_code == 0
-    assert events == ["build", "editor", "finalize", "tui"]
+    assert events == ["doctor", "build", "editor", "finalize", "tui"]
     assert len(built_parameters) == 1
     assert len(editor_calls) == 1
     assert editor_calls[0][0] == editor_path

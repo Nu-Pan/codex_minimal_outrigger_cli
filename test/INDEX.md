@@ -530,18 +530,19 @@
 # `test_oracle_investigation_cli.py`
 
 ## Summary
-- このテストは、`cmoc oracle investigation` が main worktree かつ session なしでも起動できることを、doctor、prompt editor、prompt 確定、TUI 起動の順序と生成パラメータを通じて検証する。併せて、investigation の realization adapter が builder 以外の公開名を持たないことを確認する。CLI 起動条件と investigation builder の公開面を確認したいときの入口になる。
+- `cmoc oracle investigation` の CLI 起動契約を検証するテスト。session なしの main worktree で起動できること、doctor preprocess から TUI 起動までの処理順序、完全 prompt の確定、固定された AgentCallParameter、および builder の公開 API を扱う。oracle investigation の起動経路と対応する realization adapter のテスト入口となる。
 
 ## Read this when
-- `oracle investigation` の CLI 起動可否、session 前提の有無、prompt editor から TUI 起動までの呼び出し順を検証・変更するとき。
-- investigation launch TUI builder の公開 API と、生成される AgentCallParameter の設定を確認するとき。
+- `oracle investigation` サブコマンドの起動前処理、prompt editor 入力、完全 prompt 確定、TUI 起動順序を変更または検証するとき
+- `build_oracle_investigation_launch_tui_parameter` の返却パラメータや公開シンボルを変更するとき
+- main worktree で session 前提なしに `oracle investigation` を起動できる条件を確認するとき
 
 ## Do not read this when
-- oracle investigation の実装詳細そのものを変更・調査する場合は、参照されている oracle 仕様や launch TUI 実装を直接読む。
-- 他の subcommand の起動条件や、一般的な CLI テスト基盤だけを確認する場合は、このテストを入口にしない。
+- oracle investigation の prompt 内容や TUI パラメータの正本仕様だけを確認する場合は、対応する oracle 文書・oracle 実装を直接読む
+- 他のサブコマンドの起動条件や builder 公開 API を確認する場合は、このテストではなく対象サブコマンドのテストを読む
 
 ## hash
-- b754cb3c1f0ed4f012119528c3bd9c95a9f209c900f27203e5122fd2b3ddd49f
+- 5890c6ba24dd8dd612dc1afd541f60ec34cc81a90553c42da2f032fef0774b25
 
 # `test_oracle_review_loop.py`
 
