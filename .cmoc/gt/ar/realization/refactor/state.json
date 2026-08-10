@@ -420,10 +420,10 @@
     "last_investigated_at": "2026-08-06_10-23_05_063295000"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "fb010285bf85bf62984330369c1f7e6f99a45c49ead01679bfc04c36101b8cfa",
-    "last_investigated_at": "2026-08-06_07-36_17_259856000"
+    "last_investigated_sha256": "3d695ad5c71bce43e9aee3aa04d0443a72254c9b6f933ed8cb53246ec25dd33b",
+    "last_investigated_at": "2026-08-10_13-23_19_319442000"
   },
   "oracle/src/oracle/acp_builder/session/join/conflict_resolution.py": {
     "investigation_required": false,
