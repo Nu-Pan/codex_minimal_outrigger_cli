@@ -31,20 +31,23 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装を扱うディレクトリ。feedback の入口と、report の active-state publication pipeline の処理を確認・変更するときに進む。
+- feedback サブコマンドの実装領域。feedback サブコマンドの処理を確認・変更するときの入口で、配下にサブコマンド固有の実装と report のトランザクション処理を含む。
+- report は `cmoc feedback report` の active-state publication pipeline を担い、raw observation の検証から候補集約、verification、generation/report の staging、current pointer の切替、publication 後 cleanup までを再開可能な transaction として扱う。
 
 ## Read this when
 - feedback サブコマンドの挙動や実装を確認・変更するとき。
-- feedback report の report cut、再開、checkpoint 検証、candidate 集約、verification、publication、cleanup の処理を調べるとき。
-- feedback report の active state や current pointer の切替条件を確認するとき。
+- `cmoc feedback report` の全体フロー、report cut、checkpoint、candidate 集約、verification、publication、cleanup を調べるとき。
 
 ## Do not read this when
-- feedback observation の保存形式や共通 state・lock・artifact 操作を調べるとき。
-- normalization または verification agent の入力 builder・Structured Output schema の契約だけを調べるとき。
 - feedback 以外のサブコマンドを扱うとき。
+- observation 保存形式や canonical JSON の詳細だけを調べるときは feedback store の実装を直接読む。
+- active state、generation artifact、current pointer のデータ契約だけを調べるときは feedback state の実装を直接読む。
+- normalization／verification の agent parameter や schema だけを調べるときは対応する builder と schema を直接読む。
+- CLI 共通実行制御や subcommand state だけを調べるときは runtime の実装を直接読む。
+- feedback report の正本仕様を確認するときは対応する oracle 文書を読む。
 
 ## hash
-- a4d9d5424abe81e21d1d062ca92e2e596a652db02aeef7f0ef32a7412bbf729d
+- d10a83c126608a0197eb1b6c11acebfa34cf41e025c048c97a97e07bce82b73b
 
 # `indexing.py`
 

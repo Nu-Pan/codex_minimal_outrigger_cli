@@ -15,17 +15,22 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の active-state publication pipeline を実装するサブコマンドモジュール。固定済み report cut を起点に、raw observation の検証、agent・machine observation の deterministic な集約と normalization、全 issue candidate の verification、generation/report の生成、current pointer の切替、publication 後の cleanup までを一つの再開可能な処理単位として扱う。
+- 対象は `cmoc feedback report` の active-state publication pipeline を実装するサブコマンド固有モジュールです。固定済み report cut を入力に、raw observation の検証、候補の deterministic 集約と agent normalization、全候補の verification、generation/report の staging、current pointer 切替、publication 後 cleanup までを一つの再開可能な transaction として扱います。
+- `feedback report` の処理順序、report cut、candidate 集約、checkpoint、publication、cleanup を調べる際の入口です。
 
 ## Read this when
-- `cmoc feedback report` の処理順序、report cut の固定・再開、checkpoint 検証、candidate 集約、verification、publication、cleanup の挙動を調べるとき。
-- feedback report の active state や current pointer の切替が、どの固定入力・成果物参照・hash に基づくかを確認するとき。
-- machine rule の recurrence 集約や agent observation の同一性判定、verification 出力の受理条件を変更・調査するとき。
+- `cmoc feedback report` の全体フローや transaction 境界を確認するとき
+- report cut の固定・再開、observation 検証、checkpoint の再利用を確認するとき
+- observation から issue candidate と machine aggregate を作る規則を確認するとき
+- verification 結果から generation、Markdown report、current pointer を publication する処理を確認するとき
+- publication 後の cleanup や中断・失敗時の状態遷移を確認するとき
 
 ## Do not read this when
-- feedback observation の保存形式や共通 state・lock・artifact 操作そのものを調べる場合は、対応する `commons.runtime_feedback_*` の実装を直接読む。
-- normalization または verification agent の入力 builder・Structured Output schema の契約だけを調べる場合は、対応する builder と schema を直接読む。
-- `cmoc feedback report` 以外のサブコマンドの処理を調べる場合。
+- observation 保存形式や canonical JSON の詳細だけを調べるときは feedback store の実装を直接読む
+- active state、generation artifact、current pointer のデータ契約だけを調べるときは feedback state の実装を直接読む
+- normalization／verification の agent parameter や schema だけを調べるときは対応する builder と schema を直接読む
+- CLI 共通実行制御や subcommand state だけを調べるときは runtime の実装を直接読む
+- feedback report の正本仕様を確認するときは対応する oracle 文書を読む
 
 ## hash
-- 45c71abdba7b3f76e0abe83382327c23781810bfdad40c3c3610130693f32c84
+- 35f7be7463a1087ff746eb0ec6c82b1cdc45508b10fe74e4269fd1d96dc61543
