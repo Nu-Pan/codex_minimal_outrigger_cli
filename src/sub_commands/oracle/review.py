@@ -120,7 +120,7 @@ def _cmoc_oracle_review_body(
     _require_clean_worktree(current_root)
     ensure_cmoc_ignored(current_root)
     config = load_config(current_root)
-    run_branch = ""
+    run_branch: str | None = None
     review_worktree = root
     run_fork_commit = head_commit(current_root)
     run_join_commit = None
@@ -141,6 +141,15 @@ def _cmoc_oracle_review_body(
         nonlocal review_worktree_created, run_branch_created
         if not (review_worktree_created or run_branch_created):
             return None
+        if run_branch is None:
+            return CmocError(
+                "oracle review の隔離 run の cleanup に失敗しました。",
+                [
+                    "review worktree と run branch の状態を確認してください。",
+                    "残った隔離 run の資源を整理してから再実行してください。",
+                ],
+                "run branch was not resolved before cleanup",
+            )
         try:
             # {{work-root}}/oracle/doc/branch_model.md
             # worktree を先に削除してから branch を削除するため、cleanup 中に同じ

@@ -603,6 +603,38 @@ def test_oracle_review_unexpected_base_exception_during_run_creation_cleans_reso
     assert "unexpected create failure" in result.output
 
 
+def test_oracle_review_reports_unknown_run_branch_as_null_before_target_creation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run target 作成前の失敗 report は未確定の branch を null で表す。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    def fail_new_run_target(_root: Path, _session_id: str) -> tuple[str, Path]:
+        """run branch が確定する前の失敗を再現する。"""
+        raise RuntimeError("run target selection failed")
+
+    monkeypatch.setattr(review_module, "new_run_target", fail_new_run_target)
+
+    result = runner.invoke(
+        app,
+        ["oracle", "review", "--scope", "full"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code != 0
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    rendered = report_path.read_text()
+    assert "result: error" in rendered
+    assert "run_branch: null" in rendered
+
+
 @pytest.mark.parametrize(
     ("relative_path", "content"),
     [
