@@ -1405,9 +1405,9 @@
   },
   "test/test_runtime_codex_permissions.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "5c5b1bcc7012fea9d7929919ca98cf8bb9cb85e61003e1a66d0ba4015af5bfe8",
-    "last_investigated_at": "2026-08-06_11-20_16_224006000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "961873113d6b122317114063f7ccd93ee437f4c39fd5dfe1bab3b4b8b55bd796",
+    "last_investigated_at": "2026-08-10_16-36_23_484864000"
   },
   "test/test_runtime_codex_profile.py": {
     "investigation_required": true,

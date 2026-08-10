@@ -727,18 +727,19 @@
 # `test_runtime_codex_permissions.py`
 
 ## Summary
-- Codex sandbox argv が permission profile に依存しないことを検証するテスト。`build_codex_override_args` と `prepare_codex_override_args` に path 別の read/write 権限入力を渡す入口が残っていないことを確認する。
+- Codex sandbox の argv builder が permission profile に依存しないことを検証するテスト。最小の AgentCallParameter と CmocConfig を用いて、path 別の read/write 例外を builder API が受け付けない契約を確認する。
 
 ## Read this when
-- Codex 実行用 argv builder の permission profile 非依存性を検証するとき
-- path 別の権限入力を builder API が受け付けないことを確認するとき
+- Codex override argv の builder API を変更・レビューするとき。
+- permission profile や path 別の read/write 例外を builder の引数として扱わないことを検証するとき。
+- runtime Codex permissions に関する realization test の対象範囲を確認するとき。
 
 ## Do not read this when
-- argv builder の実装仕様を確認するときは、実装ファイルを直接読む
-- Codex 実行ルールやテスト全体の要件を確認するときは、対応する oracle 文書を読む
+- argv builder の実装や permission profile の仕様そのものを確認したいときは、対応する実装または oracle 仕様を直接読む。
+- Codex sandbox permissions と無関係なテストや AgentCallParameter の一般的な利用方法を調べるとき。
 
 ## hash
-- 961873113d6b122317114063f7ccd93ee437f4c39fd5dfe1bab3b4b8b55bd796
+- 1e79dc80a0c9011af727643dd92c4ec3d855b3d0a1176410f044360e5b691cb3
 
 # `test_runtime_codex_profile.py`
 

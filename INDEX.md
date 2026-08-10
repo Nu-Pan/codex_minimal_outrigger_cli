@@ -148,16 +148,17 @@
 # `test`
 
 ## Summary
-- pytest による realization test 群を収録するディレクトリ。CLI、runtime、Codex 実行、indexing、oracle review、session lifecycle などの外部契約・異常系・永続化・Git worktree 挙動を検証し、各機能の回帰テストへ進む入口となる。
+- pytest による realization test と共通 test helper をまとめたテスト領域。CLI、runtime、Codex 実行、indexing、oracle review、session/editing lifecycle、設定・通知・永続 state など、実装の外部契約や境界条件を検証する各テストへの入口となる。
 
 ## Read this when
-- 既存機能の外部挙動、異常系、ライフサイクル、永続 state、Git 操作、Codex 実行、indexing、oracle review のテストを追加・変更・調査するとき。
-- テスト用 fixture や共通 helper、pytest の subprocess・通知隔離・packaged layout 検証を確認するとき。
+- 実装変更に対応する回帰テストや外部挙動の検証先を選ぶとき
+- CLI、runtime、Codex、indexing、oracle review、session、設定、通知などの realization test を調査するとき
+- pytest 共通 fixture、Git repository fixture、fake command、Codex test double など共有テスト支援を確認するとき
 
 ## Do not read this when
-- 正本仕様や実装責務を確認することが目的の場合は、対応する oracle 文書または src の実装を直接読む。
-- 通常のテスト実行方法や品質ゲートだけを確認する場合は、repository local の test execution 手順を読む。
-- 対象機能と無関係なテスト領域を調査する場合は、このディレクトリ全体ではなく該当するテストを直接読む。
+- 正本仕様や設計意図を確認することが目的の場合は、対応する oracle 文書・oracle source・schema を直接読む
+- 実装の責務や内部処理を調査する場合は、対応する src ファイルを直接読む
+- テスト実行手順や品質ゲートだけを確認する場合は、repository local の test execution 手順を読む
 
 ## hash
-- d764aa357de56518519ac382c814bb610af4fbeb0fd22676e9b5787c40e74574
+- a34721250b1f0cb426603a020d0ee5825c8f4aa9825b496409bba9f9181a3a27
