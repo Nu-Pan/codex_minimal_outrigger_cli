@@ -178,19 +178,20 @@
 # `test_acp_builder_tui_parameters.py`
 
 ## Summary
-- TUI 起動 builder が生成する固定実行 parameter と prompt の契約を検証するテスト。元の prompt に依存しないモデル・推論・ファイルアクセス設定、作業ディレクトリ、indexing preflight、生成 prompt の内容と重複抑制を確認し、互換 module の公開 API を単一 builder に限定する。
-- TUI 起動 parameter builder の実装や、その固定規範・実行設定・公開面の変更を検証する realization test への入口。
+- TUI 起動 builder の parameter 生成を検証するテスト。固定された agent call 種別、モデル、推論設定、ファイルアクセスモード、作業ディレクトリ、indexing preflight、および生成 prompt の規範参照と元 prompt の保持を確認する。併せて、互換 module の公開 API が現行 builder のみに限定されることを検証する。TUI 起動 parameter やその公開面の挙動を変更・調査するときのテスト入口。
 
 ## Read this when
-- TUI 起動 builder の parameter、prompt 合成、固定規範の適用、または互換 module の公開 API を変更・レビューするとき。
-- TUI 起動経路でモデル、推論強度、ファイルアクセス、作業ディレクトリ、preflight、structured output の設定契約を確認するとき。
+- TUI 起動 builder が固定 parameter または prompt を正しく構成するか確認するとき
+- TUI 起動用互換 module の公開 export を変更・調査するとき
+- 関連する builder 実装の変更が既存の prompt 規範参照や parameter 契約に与える影響を確認するとき
 
 ## Do not read this when
-- TUI 以外の builder や一般的な prompt 生成の挙動だけを調査するとき。
-- 実装の詳細や正本仕様を確認する必要があり、対応する builder 実装または oracle source を直接読む方が適切なとき。
+- TUI 以外の builder の parameter を調査するとき
+- builder 実装そのものの責務や正本仕様を確認するときは、対応する実装または oracle を直接読む
+- 一般的な TUI 表示・操作のテストを調査するとき
 
 ## hash
-- 2d6b3a362ed00d5ab1a0a2c3740d62b52df6b797afd1b425b6e2a9009c3dc46d
+- ac22c83af87a4bb1c1d9269a739a27fe69d0c8dda7e34dfbe96c3f61438e1baa
 
 # `test_basic_runtime.py`
 
