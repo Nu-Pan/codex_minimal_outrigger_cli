@@ -263,6 +263,10 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
     assert normalizer.structured_output_schema_path is not None
     assert verifier.structured_output_schema_path is not None
     assert "同一性" in normalizer.prompt
+    assert (
+        "`result.decision=new` の `result.existing_issue_id` は `null` とする"
+        not in normalizer.prompt
+    )
     assert "unresolved | resolved | not_actionable | inconclusive" in verifier.prompt
     assert (
         "`resolved | not_actionable | inconclusive` の human action は `null` とする"

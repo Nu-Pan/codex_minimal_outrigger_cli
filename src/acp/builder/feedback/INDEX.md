@@ -17,18 +17,16 @@
 # `normalize_issue.py`
 
 ## Summary
-- feedback issue の同一性判断用パラメータ builder を、正本実装から ACP builder 側へ再公開する薄い adapter。実際の判断ロジックは持たず、対応する oracle 実装への入口を提供する。
+- feedback issue の同一性判断用 canonical builder を再公開する realization adapter。oracle builder が生成する AgentCallParameter を基に、Structured Output schema と重複する new 判定用の prompt 指示だけを除去する。
 
 ## Read this when
-- ACP builder から feedback issue の同一性判断用パラメータ生成を参照・追跡するとき
-- この builder の公開名や再公開元を確認するとき
+- feedback issue の normalize 処理へ渡す AgentCallParameter の生成経路や、canonical prompt の重複指示補正を確認するとき。
 
 ## Do not read this when
-- feedback issue の正本となる同一性判断ロジックを理解・変更するときは、対応する oracle 実装を直接読む
-- feedback 以外の ACP builder や、別の feedback 処理の責務を調べるとき
+- feedback issue の同一性判断ロジックそのもの、Structured Output schema の定義、または oracle builder の正本仕様を確認したいとき。これらは対応する oracle file や canonical builder を直接読む。
 
 ## hash
-- a778c211293705ae8907658cee05b702ed4eebb56e7d1792d319d6b5824afc33
+- 8990916ccd631feb12ea3af9224a9e2e8aa7559f58777b73ddb05b73aae0809d
 
 # `verify_issue.py`
 

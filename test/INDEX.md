@@ -419,22 +419,24 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の agent-facing reporter、raw observation store、verification、report cut、active state、atomic publication、current pointer、cleanup を同一 repository fixture で検証する統合テスト。
-- 正常系だけでなく、入力境界、rate limit、冪等性、threshold、破損検知、中断再開、部分 cleanup、publication 前後の durable state を確認する。
+- feedback の pending observation、active state、report cut、verification、current pointer、cleanup を、同一 repository fixture で end-to-end に検証する realization test。
+- agent-facing reporter の canonical submission、collector の context・rate 制限・永続化、secret masking、machine observation の idempotency と recurrence threshold を扱う。
+- report publication の空状態、issue の unresolved/resolved 遷移、checkpoint 再利用、interruption recovery、atomic pointer 切替、部分 cleanup、active generation の整合性検証を対象とする。
+- feedback の CLI 実装や正本仕様を読む前に、外部挙動と publication 境界をテストから確認するための入口である。
 
 ## Read this when
-- feedback report の外部挙動や publication lifecycle を確認・変更するとき。
-- pending raw observation が active issue または bounded machine aggregate へ集約される流れを検証するとき。
-- Codex verification checkpoint、再開処理、atomic pointer 切替、publication 後 cleanup の回復性を確認するとき。
-- feedback reporter の MCP discovery、collector 転送、context validation、rate limit、secret masking を確認するとき。
+- feedback report の外部挙動や collector/reporter 境界を変更・検証するとき。
+- pending raw observation が active issue または machine aggregate へ集約される条件を確認するとき。
+- report cut、verification checkpoint、publication、cleanup の中断・再開・失敗時の挙動を確認するとき。
+- active generation の manifest、hash、未定義 artifact に対する corruption 検証を確認するとき。
 
 ## Do not read this when
-- feedback の正本仕様や実装責務を確認したいときは、列挙された oracle document・oracle builder・実装ファイルを直接読む。
-- feedback report の単体実装詳細だけを確認したいときは、対応する realization implementation を直接読む。
-- 通常のテスト実行方法や品質ゲートだけを確認したいときは、このテストではなく repository local の test execution 手順を読む。
+- feedback の正本仕様を確認したいときは、対応する oracle 文書を直接読む。
+- feedback report の実装責務や CLI の配置を確認したいときは、対応する realization implementation を直接読む。
+- feedback と無関係な機能の挙動や一般的な pytest 実行方法だけを調べるとき。
 
 ## hash
-- ccf88b736a132d6018ef9ddde7d94ad193f456c03385884afa8d713326626c21
+- 64ce80ec2e7441026c3ca15dfce4a29360617d8b80be770e1b7160141c84ad2a
 
 # `test_file_inventory.py`
 

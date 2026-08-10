@@ -125,40 +125,37 @@
 # `src`
 
 ## Summary
-- CLI の Typer アプリケーションと console script の起動入口を提供し、引数解析エラーを cmoc 形式へ変換する。doctor、tui、indexing、feedback、session、oracle、realization、run の各コマンドを登録し、処理本体は対応するサブコマンド実装へ委譲する。
-- ACP builder の互換入口、共通 runtime helper、設定・基本型の互換 import、正本 oracle package の解決 shim をまとめる。
-- CLI の各サブコマンド実装と、ACP builder の機能別 adapter へ進むための上位ディレクトリである。
+- cmoc の realization 側 Python 実装をまとめる CLI 起動・公開パッケージの入口。Typer による CLI 登録と起動を担うほか、ACP・基本型・共通 runtime・設定の互換公開、CLI サブコマンド実装、正本 oracle package の解決 shim を含む。
+- CLI 全体の構成や起動経路は `main.py`、共通 runtime は `commons`、CLI サブコマンドは `sub_commands`、ACP 関連は `acp`、基本 API の互換入口は `basic`、設定の互換入口は `config` へ進む。
 
 ## Read this when
-- CLI の起動経路、トップレベルコマンド、サブコマンド階層を確認・変更するとき。
-- Typer/Click の引数解析、補完、終了処理、CLI エラー変換を調査するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、TUI の実装入口を探すとき。
-- ACP 互換入口、共通 runtime、設定・基本 API、oracle package shim の所在を確認するとき。
+- cmoc の realization 側 CLI の公開構成、トップレベルコマンド、サブコマンド階層を確認するとき。
+- ACP や基本 API、設定、共通 runtime の realization 側における配置と公開入口を判断するとき。
+- src 起動時の `oracle.*` 解決や、互換 import path の構成を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理内容だけを調査・変更するときは、対応するサブコマンド実装を直接読む。
-- commons 配下の個別 runtime helper の挙動だけを確認するときは、対象 helper を直接読む。
-- ACP builder の具体的な生成ロジックだけを調査するときは、該当する builder 下位要素を直接読む。
-- canonical な oracle 実装や正本仕様を確認するときは、oracle 配下の対象ファイルを直接読む。
-- 互換 import path と無関係な利用箇所の公開面を調査するとき。
+- 特定サブコマンドの処理詳細を調査するときは `sub_commands` 配下へ直接進む。
+- 共通 runtime の個別挙動を調査するときは `commons` 配下の対応する module へ直接進む。
+- ACP builder の内部実装を調査するときは `acp/builder` 配下へ直接進む。
+- ACP 型、基本型、設定、正本 oracle の仕様や実装詳細を確認するときは、それぞれの再公開元または `oracle` 側へ直接進む。
 
 ## hash
-- 337202b10e87575c591aac060de737e34d1f76f6db8889e6136ac0c7245d544d
+- 5570b487747235f714f613fdbfbadcf2c57e16d5e8082284416c23be5f24fbc9
 
 # `test`
 
 ## Summary
-- pytest による realization test と共通 test helper をまとめたテスト領域。CLI、runtime、Codex 実行、indexing、oracle review、session/editing lifecycle、設定・通知・永続 state など、実装の外部契約や境界条件を検証する各テストへの入口となる。
+- cmoc の realization test 群を集約し、CLI・runtime・Codex 実行・indexing・oracle review・session/editing run・設定・通知などの外部契約と回帰条件を検証するディレクトリ。
+- 個別テスト、テスト共通 fixture、Git・CLI・Codex・外部コマンド用のテストヘルパーへ進む入口であり、対象機能の実装責務や正本仕様を代替するものではない。
 
 ## Read this when
-- 実装変更に対応する回帰テストや外部挙動の検証先を選ぶとき
-- CLI、runtime、Codex、indexing、oracle review、session、設定、通知などの realization test を調査するとき
-- pytest 共通 fixture、Git repository fixture、fake command、Codex test double など共有テスト支援を確認するとき
+- 対象機能の pytest による外部挙動、異常系、統合 lifecycle、入出力契約、永続 state、Git/worktree 境界を確認するとき。
+- 共通 fixture やテストヘルパーを利用・変更するとき。
 
 ## Do not read this when
-- 正本仕様や設計意図を確認することが目的の場合は、対応する oracle 文書・oracle source・schema を直接読む
-- 実装の責務や内部処理を調査する場合は、対応する src ファイルを直接読む
-- テスト実行手順や品質ゲートだけを確認する場合は、repository local の test execution 手順を読む
+- 本番実装の責務や内部処理を確認するときは、対応する src ファイルを直接読む。
+- 正本仕様、schema、設計意図を確認するときは、対応する oracle 文書・oracle source・schema を直接読む。
+- テスト実行規約や開発環境の手順だけを確認するときは、該当する規約文書を直接読む。
 
 ## hash
-- a34721250b1f0cb426603a020d0ee5825c8f4aa9825b496409bba9f9181a3a27
+- dfbcdbe935ecadd772bc0f3d7eed42ebe8e36487faa66549ccf6305a235c7369
