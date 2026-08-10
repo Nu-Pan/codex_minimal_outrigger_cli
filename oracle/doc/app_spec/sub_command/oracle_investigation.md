@@ -48,5 +48,6 @@
 ## 調査結果と変更の扱い
 
 - 調査結果は Codex CLI の TUI でユーザーへ回答する
-- Codex CLI の TUI は oracle file を読み取り専用として扱い、realization file を読み書きしない
-- oracle file の変更および自動 commit は行わない
+- Codex CLI の TUI は oracle file を変更せず、realization file を読み書きしない
+- Codex CLI の TUI は oracle file の変更結果を自動 commit しない
+- `run_indexing_preflight=True` による indexing preflight の `INDEX.md` 更新および自動 commit は、前項の禁止対象に含めない
