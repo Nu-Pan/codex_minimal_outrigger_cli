@@ -4,7 +4,7 @@
 
 ## state の原則
 
-feedback state は、現在の未解決問題を処理するための active state である。過去の判断を再構築する append-only ledger として使用してはならない。
+feedback state は、現在の未解決問題を処理するための active state である。
 
 長期保存してよい repository-local state は、次の情報に限定する。
 
@@ -15,7 +15,7 @@ feedback state は、現在の未解決問題を処理するための active sta
 - publication 済みの Markdown report
 - 現在の active generation と正常 report を一意に選ぶ current pointer
 
-解決済み issue、処理済み observation、および完了済み checkpoint を通常状態へ残してはならない。異常終了からの回復に必要な旧 generation と staged artifact は一時的に残ってよいが、current pointer の切替後に idempotent に削除する。
+解決済み issue、処理済み observation、および完了済み checkpoint を通常状態へ残してはならない。異常終了からの回復に必要な切替前の active generation と staged artifact は一時的に残ってよいが、current pointer の切替後に idempotent に削除する。
 
 ## 所有単位と保存先
 
@@ -92,7 +92,7 @@ generation ID は `fbg_` と UUIDv7 の組み合わせとする。manifest は�
 - publication 時刻
 - `result`: `ok | attention`
 
-current pointer が参照する generation と report の両方を検証できる場合だけ、その組み合わせを最新の正常 report と active state とする。timestamp、Markdown report の列挙順、Git commit、branch reachability、または predecessor chain から最新状態を推測してはならない。
+current pointer が参照する generation と report の両方を検証できる場合だけ、その組み合わせを最新の正常 report と active state とする。他の artifact、timestamp、Git commit、または branch reachability から最新状態を推測してはならない。
 
 current pointer が識別する report cut manifest は、切替後 cleanup が完了すれば存在しなくてよい。manifest が存在する場合は pointer の SHA256 と一致することを検証し、新しい report cut より先に cleanup を再開する。manifest が存在しないことだけを current pointer の corruption としてはならない。
 
@@ -102,7 +102,7 @@ machine issue の canonical key は、`{{cmoc-root}}/oracle/doc/app_spec/feedbac
 
 issue ID は、canonical key の SHA256 を lowercase base32 とし、その先頭 26 文字へ `fbi_` を付けた値とする。normalization agent が既存 active issue との同一性を選んだ場合は、その issue ID と canonical key を維持する。同じ issue ID で異なる canonical key が見つかった場合は collision として停止し、salt を暗黙に追加してはならない。
 
-解決後に削除された agent issue と後日の observation が同一であるかを履歴から復元することは保証しない。machine issue は canonical key が同じであれば、再発時にも同じ issue ID となる。
+active state に存在しない過去の agent issue と、後日の observation の同一性は判定しない。machine issue は canonical key が同じであれば、再発時にも同じ issue ID となる。
 
 ## active issue record
 
@@ -120,7 +120,7 @@ active issue record は、直近の正常 report で `unresolved` と検証さ�
 - 最新 verification の report cut ID、検証日時、reason、current evidence、および human action
 - machine issue だけ、recurrence window 外を除外するための bounded time bucket と rule-defined threshold dimension summary
 
-最新 verification は `unresolved` の受理条件を満たした情報だけを保存する。verdict 自体は active issue であることから `unresolved` と一意に決まるため、履歴用の verdict 配列を持たない。
+最新 verification は `unresolved` の受理条件を満たした情報だけを保存する。verdict 自体は active issue であることから `unresolved` と一意に決まるため、verdict の配列を持たない。
 
 representative evidence と current evidence は、raw observation や削除予定の work artifact への参照だけにしてはならない。次回 report cut で現在状態を再取得できる安定した subject と、Markdown report で人間が確認できる compact な説明を保持する。secret を複製してはならない。
 
@@ -128,7 +128,7 @@ active issue record を作る際は、verification output の cut-scoped referen
 
 representative evidence、reference target、fingerprint、distinct-session digest、および time bucket の上限超過処理は、report cut の固定入力に対する canonical order と schema-fixed bound だけで決定する。AI に保持対象を選ばせてはならない。
 
-全 occurrence、revision、assessment、または過去 verification を保持してはならない。件数、affected session 数、最初と最後の観測日時は compact aggregate として更新する。distinct-session digest が schema の上限へ達した後は saturation marker を設定し、affected session count を下限値として `{{count}}+` と表示してよい。
+個々の observation と過去の verification は保持してはならない。件数、affected session 数、最初と最後の観測日時は compact aggregate として更新する。distinct-session digest が schema の上限へ達した後は saturation marker を設定し、affected session count を下限値として `{{count}}+` と表示してよい。
 
 machine issue の集計値は recurrence window 内の occurrence だけから計算する。bounded time bucket と rule-defined threshold dimension summary は、window 外の値を決定論的に除外できる情報を持つ一方、個々の occurrence record を保持してはならない。
 
@@ -198,16 +198,16 @@ normalization と verification の正式な Structured Output は、対応する
 2. Markdown report を最終 path へ durable 保存する。
 3. generation manifest と Markdown report の schema、path、および hash を再検証する。
 4. 両方を参照する新しい `active/current.json` を sibling temporary file から atomic rename し、parent directory を flush する。
-5. current pointer の切替後に、処理済み raw observation、旧 active generation、完了した report cut、一時 artifact、および legacy state を idempotent に削除する。
+5. current pointer の切替後に、処理済み raw observation、切替前の active generation、完了した report cut、および一時 artifact を idempotent に削除する。
 
-current pointer の切替だけを、active state と正常 report の publication point とする。切替前に旧 active generation または処理対象 observation を削除してはならない。
+current pointer の切替だけを、active state と正常 report の publication point とする。切替前に現在の active generation または処理対象 observation を削除してはならない。
 
 切替前に異常終了した場合は、直前の current pointer が引き続き唯一の正常 state を指す。staged generation または Markdown artifact を正常 report として扱ってはならない。
 
 切替後の cleanup では、current pointer と hash が一致する完了済み report cut manifest を cleanup manifest として使用する。次の対象を順に削除し、各 directory の flush を完了する。
 
 1. manifest が列挙する処理済み raw observation
-2. 旧 active generation、legacy state、および staged artifact
+2. 切替前の active generation と staged artifact
 3. 完了済み normalization／verification checkpoint と reference snapshot
 4. cleanup manifest 自体と空になった work directory
 
@@ -216,15 +216,3 @@ cleanup manifest は最後に削除する。途中で失敗した場合は新し
 current pointer が切替済みの cleanup では、manifest に列挙された削除対象が既に存在しないことを完了済みとして扱う。まだ存在する対象の hash 不一致、manifest 自体の hash 不一致、または manifest にない対象の推測削除は corruption として停止する。
 
 publication 済み Markdown report の retention は active state の compaction と分離する。過去の Markdown report を deduplication、処理済み判定、active state の差分、または最新 report の選択に使用してはならない。
-
-## legacy state からの一回限りの切替
-
-append-only な issue、revision、occurrence、assessment、human disposition、ingestion receipt、normalization unit、report snapshot、state snapshot、または predecessor chain を持つ legacy state は、新しい active state と並行運用しない。
-
-`active/current.json` がなく legacy state が存在する最初の report では、legacy state を read-only の移行入力として扱う。移行 cut は、全 raw observation と、legacy state から整合して読み取れる effective issue の compact projection を入力に含める。legacy machine record にも新しい recurrence window と threshold を機械適用し、threshold 未満は bounded aggregate とする。legacy human disposition は新しい verification verdict の代わりに使用しない。
-
-legacy state の schema、hash、または参照整合性を確認できない場合は、新しい正常 report を publication せず、legacy state を変更しない。移行 cut の全候補を通常どおり verification できた場合だけ、新しい generation と report を atomic に publication する。
-
-`active/current.json` へ切り替えるまでは、legacy state が一意に示す直前の正常 report を人間向けの latest normal report として維持する。この例外は移行失敗時に既存の正常 report を失わないためだけに使用し、legacy report または predecessor chain を新しい deduplication、candidate state、差分、または処理済み判定の入力にしてはならない。
-
-current pointer の切替後は、legacy normalized state と履歴 record を idempotent に削除する。移行用 copy、legacy checkpoint、または旧履歴の backup を feedback state として永久保存してはならない。

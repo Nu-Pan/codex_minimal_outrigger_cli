@@ -70,7 +70,7 @@ def test_help_renders_without_typer_click_compatibility_error() -> None:
 
 
 def test_feedback_report_exposes_no_subcommand_specific_options() -> None:
-    """feedback report は廃止済み --all を含む固有 option を公開しない。"""
+    """feedback report がサブコマンド固有 option を公開しないことを確認する。"""
     command = get_command(app)
     feedback = command.commands["feedback"]
     assert isinstance(feedback, click.Group)

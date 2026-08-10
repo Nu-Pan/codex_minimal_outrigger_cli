@@ -1,8 +1,8 @@
 """feedback の pending observation、active state、atomic publication を検証する。
 
 agent-facing reporter から raw store、report cut、verification、current pointer、cleanup
-までを同じ repository fixture で追跡する。履歴 ledger は現行仕様に存在しないため、
-publication 後に compact active state だけが残ることを外部境界として検証する。
+までを同じ repository fixture で追跡する。publication 後に compact active state だけが
+残ることを外部境界として検証する。
 
 対応する oracle file:
 
@@ -177,64 +177,6 @@ def _store_agent_issue(root: Path, session_id: str) -> tuple[str, Path, str]:
     )
     observation_id = str(accepted["observation_id"])
     return observation_id, raw_path, issue_id(f"agent\0{observation_id}")
-
-
-def _write_legacy_issue(root: Path, observation: dict[str, object]) -> str:
-    """移行 test 用の最小 append-only legacy issue state を保存する。"""
-    observation_id = str(observation["observation_id"])
-    canonical_key = (
-        machine_canonical_key(observation)
-        if observation["source"] == "machine_rule"
-        else f"agent\0{observation_id}"
-    )
-    current_issue_id = issue_id(canonical_key)
-    directory = feedback_root(root) / "issue" / current_issue_id
-    identity = {
-        "schema_version": 1,
-        "issue_id": current_issue_id,
-        "origin": observation["source"],
-        "canonical_key": canonical_key,
-        "created_from_observation_id": observation_id,
-        "created_at": observation["observed_at"],
-    }
-    payload = observation["payload"]
-    assert isinstance(payload, dict)
-    revision_body = {
-        "schema_version": 1,
-        "issue_id": current_issue_id,
-        "created_at": observation["observed_at"],
-        "source_observation_ids": [observation_id],
-        "category": payload["category"],
-        "summary": payload["summary"],
-        "human_action": payload.get("human_action", "legacy action"),
-        "impact": payload["impact"],
-        "cause_assessment": {"certainty": "unknown", "description": "legacy"},
-        "related_issue_ids": [],
-    }
-    revision_id = hashlib.sha256(canonical_json_bytes(revision_body)).hexdigest()
-    revision = {"revision_id": revision_id, **revision_body}
-    context = observation["context"]
-    assert isinstance(context, dict)
-    occurrence = {
-        "schema_version": 1,
-        "issue_id": current_issue_id,
-        "observation_id": observation_id,
-        "observation_sha256": hashlib.sha256(
-            canonical_json_bytes(observation)
-        ).hexdigest(),
-        "observed_at": observation["observed_at"],
-        "cmoc_session_id": context.get("cmoc_session_id"),
-        "subcommand_invocation_id": context["subcommand_invocation_id"],
-        "log_paths": context["log_paths"],
-    }
-    for path, value in (
-        (directory / "identity.json", identity),
-        (directory / "revision" / f"{revision_id}.json", revision),
-        (directory / "occurrence" / f"{observation_id}.json", occurrence),
-    ):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(canonical_json_bytes(value))
-    return current_issue_id
 
 
 def test_reporter_exposes_only_canonical_submission_tool(
@@ -457,7 +399,7 @@ def test_feedback_writer_lock_rejects_concurrent_writer(tmp_path: Path) -> None:
                 pass
 
 
-def test_empty_report_publishes_current_generation_without_history(
+def test_empty_report_publishes_current_generation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """candidate がなくても ok report と空 active generation を atomic publication する。"""
@@ -482,9 +424,6 @@ def test_empty_report_publishes_current_generation_without_history(
     text = report.read_text()
     assert 'result: "ok"' in text
     assert "unresolved_issue_count: 0" in text
-    assert not any(
-        (feedback_root(root) / name).exists() for name in ("ingestion", "issue")
-    )
 
 
 def test_agent_issue_is_verified_compacted_then_removed_when_resolved(
@@ -598,7 +537,7 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
 
 
 def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
-    """同じ日 bucket に新旧 scope があっても 30 日外の digest で threshold を満たさない。"""
+    """同じ日 bucket の scope でも 30 日 window 外の digest は threshold に含めない。"""
     canonical_key = (
         "feedback.reporter_unavailable.v1\0reporter_component\0reporter:missing"
     )
@@ -649,7 +588,6 @@ def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
             "origin": "machine_rule",
             "canonical_key": canonical_key,
             "machine_state": aggregate,
-            "state_source": "active",
         }
     }
     carried = feedback_report_module._next_machine_aggregates(
@@ -669,131 +607,7 @@ def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
     assert candidates[candidate_id]["machine_state"] is None
 
 
-def test_legacy_machine_issue_below_threshold_migrates_to_bounded_aggregate(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """一回限りの移行で旧 machine issue にも現行 recurrence threshold を適用する。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
-    log_path = root / ".cmoc/gu/ar/log/test.jsonl"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    log_path.write_text('{"event":"reporter unavailable"}\n')
-    event = {
-        "event_schema_version": 1,
-        "event_id": "evt_legacy",
-        "event_type": "feedback.reporter_unavailable",
-        "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": "scope_legacy",
-        "component": "reporter",
-        "failure_code": "missing",
-    }
-    _observation_id, raw_path = store_machine_observation(
-        root,
-        _context(root, session_id="session_legacy"),
-        rule_id="feedback.reporter_unavailable.v1",
-        category="tooling",
-        subject_type="reporter_component",
-        normalized_subject_id="reporter:missing",
-        summary="feedback reporter が利用できない。",
-        impact="agent observation が欠落する。",
-        human_action="reporter を確認する。",
-        event=event,
-        log_path=log_path,
-    )
-    observation = read_json_object(raw_path)
-    legacy_issue_id = _write_legacy_issue(root, observation)
-    canonical_key = machine_canonical_key(observation)
-    monkeypatch.setattr(
-        feedback_report_module,
-        "run_codex_exec",
-        lambda *_args, **_kwargs: pytest.fail(
-            "threshold 未満の legacy machine issue を verification してはならない"
-        ),
-    )
-
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-
-    assert result.exit_code == 0, result.output
-    state = load_active_state(root)
-    assert legacy_issue_id not in state.issues
-    assert set(state.machine_aggregates) == {canonical_key}
-    assert not (feedback_root(root) / "issue").exists()
-    assert not raw_path.exists()
-
-
-def test_legacy_unit_uses_feedback_root_relative_record_references(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """旧 unit manifest の path 形式を検証して一回限りの移行後に削除する。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    observation_id, raw_path, candidate_id = _store_agent_issue(root, session_id)
-    observation = read_json_object(raw_path)
-    legacy_issue_id = _write_legacy_issue(root, observation)
-    observation_hash = hashlib.sha256(canonical_json_bytes(observation)).hexdigest()
-    schema_hash = "a" * 64
-    normalizer_version = "b" * 64
-    unit_id = feedback_state_module._legacy_normalization_unit_id(
-        [observation_id], [], schema_hash
-    )
-    ingestion = {
-        "schema_version": 1,
-        "observation_id": observation_id,
-        "observation_sha256": observation_hash,
-        "processed_at": observation["observed_at"],
-        "normalization_unit_id": unit_id,
-        "normalizer_version": normalizer_version,
-        "status": "integrated",
-        "issue_ids": [legacy_issue_id],
-        "validation_errors": [],
-    }
-    ingestion_path = feedback_root(root) / "ingestion" / f"{observation_id}.json"
-    ingestion_path.parent.mkdir(parents=True, exist_ok=True)
-    ingestion_path.write_bytes(canonical_json_bytes(ingestion))
-    record_paths = sorted(
-        [
-            *(feedback_root(root) / "issue" / legacy_issue_id).rglob("*.json"),
-            ingestion_path,
-        ],
-        key=lambda path: path.relative_to(feedback_root(root)).as_posix(),
-    )
-    unit = {
-        "schema_version": 1,
-        "normalization_unit_id": unit_id,
-        "observations": [
-            {
-                "observation_id": observation_id,
-                "observation_sha256": observation_hash,
-            }
-        ],
-        "candidate_revision_ids": [],
-        "normalizer_schema_sha256": schema_hash,
-        "normalizer_version": normalizer_version,
-        "records": [
-            {
-                "path": path.relative_to(feedback_root(root)).as_posix(),
-                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-            }
-            for path in record_paths
-        ],
-        "checkpoint_sha256": None,
-    }
-    unit_path = feedback_root(root) / "normalization_unit" / f"{unit_id}.json"
-    unit_path.parent.mkdir(parents=True, exist_ok=True)
-    unit_path.write_bytes(canonical_json_bytes(unit))
-    _install_codex_outputs(
-        monkeypatch, _verification_output(candidate_id, "unresolved")
-    )
-
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-
-    assert result.exit_code == 0, result.output
-    assert set(load_active_state(root).issues) == {candidate_id}
-    assert not unit_path.exists()
-    assert not ingestion_path.exists()
-
-
-def test_invalid_raw_observation_blocks_publication_without_receipt(
+def test_invalid_raw_observation_blocks_publication(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """validation 不通過 raw を処理済みにせず、正常 report を publication しない。"""
@@ -810,7 +624,6 @@ def test_invalid_raw_observation_blocks_publication_without_receipt(
     assert raw_path.read_text() == "not-json\n"
     assert not (feedback_root(root) / "active" / "current.json").exists()
     assert not list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
-    assert not (feedback_root(root) / "ingestion").exists()
 
 
 def test_undefined_raw_json_artifact_blocks_publication(

@@ -4,7 +4,7 @@
 
 feedback subsystem は、cmoc が起動した Codex の作業中に判明した問題から、現在も未解決であり、作業外にいる人間の対応が必要な issue だけを提示する。
 
-feedback state は履歴台帳ではない。現在の report に必要な小さな active state として管理する。
+feedback state は、現在の report に必要な小さな active state として管理する。
 
 観測源は次の 2 種類に限定する。
 
@@ -49,7 +49,7 @@ feedback の処理段階は、観測、同一性判断、現在状態の検証�
 
 normalization agent は現在性、actionability、または report 掲載可否を判断しない。verification agent は候補外の問題を探索せず、feedback state または根拠となった対象を編集しない。
 
-append-only な machine assessment と human disposition は使用しない。問題が現在も存在するかは、report cut ごとの verification verdict だけで判断する。明示的な ignore または suppression の UI と永続形式は未定義とし、将来追加する場合も active issue とは独立した compact state とする。
+問題が現在も存在するかは、report cut ごとの verification verdict だけで判断する。
 
 agent-facing の送信面は、call-scoped な local stdio MCP reporter/client が公開する `cmoc_feedback.submit_observation` だけとする。MCP reporter/client は request を invocation-scoped collector へ転送する。保存 context は collector が call capability から確定し、raw observation は collector だけが `.cmoc/gu` へ atomic に保存する。agent と MCP reporter/client は保存先を直接操作しない。
 
@@ -84,9 +84,6 @@ feedback は診断と人間への提示だけに使用する。次の用途に�
 - agent-facing transport の変更を理由とする normalization、verification、active state、または report semantics の変更
 - issue または AI-generated kaizen の後続 Codex call への自動注入
 - sandbox、config、oracle file、realization file、または feedback の根拠となった対象の自動修正
-- 解決済み issue の履歴再構築
-- occurrence 単位の完全な監査証跡
-- 過去 report 間の revision、assessment、または disposition 差分
 - report-time agent による候補外の新規問題探索
 - 別 clone または別 machine への feedback state の複製
 

@@ -276,7 +276,7 @@ raw observation は、正常な feedback report の active state へ反映され
 
 `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` が定める current pointer を新しい正常 report へ切り替えた後に限り、その report cut で処理した raw observation を自動削除する。削除は idempotent とし、切替後に追加された observation、別の未完了 report cut が参照する observation、および validation を通過できなかった observation を対象にしてはならない。
 
-処理済み observation の ingestion receipt または履歴 record は作らない。処理済みかどうかは、正常 publication 前は report cut manifest から判断する。current pointer の切替後に raw file が残っている間は、同 pointer が識別する cleanup manifest への列挙で判断する。cleanup 完了後は raw observation 自体が削除済みであることによって表す。
+処理済み状態を表す専用 record は作らない。処理済みかどうかは、正常 publication 前は report cut manifest から判断する。current pointer の切替後に raw file が残っている間は、同 pointer が識別する cleanup manifest への列挙で判断する。cleanup 完了後は raw observation 自体が削除済みであることによって表す。
 
 通常のサブコマンド完了サマリーは、raw store に残る pending observation 数だけを詳細なしで表示する。実行中または中断中の report cut に含まれる observation も、正常 publication までは pending 数に含める。current pointer の切替後に cleanup manifest が処理済みとして列挙する observation は pending 数から除外する。
 

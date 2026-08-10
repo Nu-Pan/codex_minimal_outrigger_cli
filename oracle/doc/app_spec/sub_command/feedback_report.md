@@ -6,7 +6,6 @@
 
 - 位置引数を受け取らない。
 - サブコマンド固有 option を受け取らない。
-- 旧 `--all` は廃止する。処理履歴、解決済み issue、または threshold 未満の machine aggregate を表示する代替 mode は提供しない。
 
 ## 事前条件と処理開始順序
 
@@ -29,7 +28,7 @@ report は Git commit を作成しない。git working tree と staging area の
 
 report は編集 run を作らず、session state と run state を変更しない。feedback state は `{{repo-root}}` に属し、現在の branch には属さない。
 
-state root または current pointer が存在しない状態は有効な初期状態とする。ただし legacy state が存在する場合は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の一回限りの切替を先に適用する。整合性違反または corruption がある場合は state を変更せず、正常 report を publication しない。
+state root または current pointer が存在しない状態は有効な初期状態とする。既存 state に整合性違反または corruption がある場合は state を変更せず、正常 report を publication しない。
 
 ## report cut
 
@@ -64,7 +63,7 @@ report cut は、次の順序で処理する。
 7. issue の同一性を完全一致で決められない場合だけ normalization agent を使用する。
 8. normalization 後の全 issue candidate と、前回から残る全 active issue を verification agent で検証する。
 9. 全 candidate の検証が成功した場合だけ、Markdown report と新しい active generation を作成し、current pointer を切り替える。
-10. current pointer の切替後に、処理済み raw observation、解決済みまたは報告対象外の issue、旧 generation、および完了済み一時 state を削除する。
+10. current pointer の切替後に、処理済み raw observation、解決済みまたは報告対象外の issue、切替前の active generation、および完了済み一時 state を削除する。
 
 機械的な順序を変更して、AI に validation、完全一致 deduplication、canonical key 集約、recurrence window、threshold、または候補絞り込みを代行させてはならない。
 
@@ -74,7 +73,7 @@ raw observation の schema と hash は、report cut manifest の値と一致し
 
 schema 不正、path 違反、参照不整合、または hash 不一致の observation を invalid receipt として処理済みにしてはならない。1 件でも validation を通過できない入力がある場合は、新しい正常 report と active generation を publication せず、問題の path と理由を console と subcommand log に示す。
 
-完全一致 deduplication の結果を履歴 record として保存しない。正常 publication 後は、同じ cut に含まれた重複 raw observation も処理済み入力として削除する。
+完全一致 deduplication の結果は永続 state に保存しない。正常 publication 後は、同じ cut に含まれた重複 raw observation も処理済み入力として削除する。
 
 ## machine observation の集約
 
@@ -183,14 +182,14 @@ schema validation または決定論的事後条件の補正を尽くしても�
 - `unresolved` candidate ごとの compact active issue record
 - recurrence threshold 未満の bounded machine aggregate
 
-`resolved` と `not_actionable` の candidate は、新しい active generation と人間向け issue 一覧に含めない。処理済み observation や disposition record を、削除の代わりとして残してはならない。
+`resolved` と `not_actionable` の candidate は、新しい active generation と人間向け issue 一覧に含めない。処理済み observation は、current pointer の切替後に cleanup する。
 
 正常 result は、次の 2 種類だけとする。
 
 - `ok`: 全 candidate の検証が完了し、`unresolved` が 0 件である。
 - `attention`: 全 candidate の検証が完了し、`unresolved` が 1 件以上ある。
 
-active generation、Markdown report、current pointer、および切替後 cleanup の順序は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の atomic publication を正本とする。旧 state または処理済み observation を current pointer の切替前に削除してはならない。
+active generation、Markdown report、current pointer、および切替後 cleanup の順序は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の atomic publication を正本とする。切替前の active generation または処理済み observation を current pointer の切替前に削除してはならない。
 
 current pointer の durable な切替後に cleanup だけが失敗した場合は、publication 済みの `ok | attention` と current pointer を巻き戻さない。その invocation は cleanup 未完了の warning と manifest path を console と subcommand log に示す。次回 invocation は cleanup を再開し、完了できない場合は新しい report cut を作らずエラー終了する。
 
@@ -241,8 +240,7 @@ current evidence は cut-scoped reference ID を manifest で解決し、reposit
 - `resolved` または `not_actionable` の candidate
 - `inconclusive` または未検証の candidate
 - threshold 未満の machine aggregate
-- disposition の変更履歴
-- revision、assessment、occurrence、normalization、または verification の履歴
+- normalization、verification、または publication の途中結果
 - 前回 report との差分
 
 過去の Markdown report は、今回の issue 表示、deduplication、処理済み判定、state 差分、または今回の publication 可否の入力にしない。artifact 自体の retention は active state の compaction と分離する。

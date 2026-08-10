@@ -38,7 +38,6 @@ from cmoc_runtime import (
 )
 from commons.runtime_feedback_state import (
     ActiveState,
-    LegacyState,
     agent_canonical_key,
     artifact_reference,
     cleanup_published_report,
@@ -49,7 +48,6 @@ from commons.runtime_feedback_state import (
     generation_artifacts,
     issue_id,
     load_active_state,
-    load_legacy_state,
     load_report_cut,
     machine_aggregate_id,
     machine_canonical_key,
@@ -206,17 +204,15 @@ def _validate_preconditions(repo: Path, worktree: Path) -> None:
 def _create_report_cut(
     repo: Path, state: ActiveState, versions: JsonObject
 ) -> tuple[JsonObject, Path]:
-    """pending raw、active state、legacy projection、現在参照を一度だけ固定する。"""
+    """pending raw、active state、および現在参照を一度だけ固定する。"""
     report_cut_id_value = new_report_cut_id()
     with observation_publication_lock(repo):
         entries, observations = _pending_observations(repo)
         cut_at = rfc3339_now()
-    legacy = load_legacy_state(repo, observations) if state.current is None else None
     references = _capture_report_cut_references(
         repo,
         observations,
         state.issues,
-        legacy.issues if legacy is not None else {},
     )
     _verify_captured_references(repo, references)
     manifest: JsonObject = {
@@ -226,7 +222,6 @@ def _create_report_cut(
         "inputs": {
             "observations": entries,
             "current": _active_state_input(repo, state),
-            "legacy": _legacy_state_input(legacy),
             "references": references,
             "versions": versions,
         },
@@ -360,21 +355,10 @@ def _active_state_input(repo: Path, state: ActiveState) -> JsonObject | None:
     }
 
 
-def _legacy_state_input(legacy: LegacyState | None) -> JsonObject | None:
-    """migration cut に compact projection と cleanup artifact を固定する。"""
-    if legacy is None:
-        return None
-    return {
-        "issues": [legacy.issues[key] for key in sorted(legacy.issues)],
-        "artifacts": list(legacy.cleanup_artifacts),
-    }
-
-
 def _capture_report_cut_references(
     repo: Path,
     observations: dict[str, JsonObject],
     active_issues: dict[str, JsonObject],
-    legacy_issues: dict[str, JsonObject],
 ) -> list[JsonObject]:
     """agent に許可する observation と current repository reference を固定する。"""
     references: dict[str, JsonObject] = {}
@@ -397,8 +381,8 @@ def _capture_report_cut_references(
         for path in _observation_reference_paths(repo, observation):
             path_subjects.setdefault(path, set()).add(observation_id_value)
 
-    # active／legacy issue が保持する stable target を今回の cut で再取得する。
-    for current_issue_id, issue in sorted({**legacy_issues, **active_issues}.items()):
+    # active issue が保持する stable target を今回の cut で再取得する。
+    for current_issue_id, issue in sorted(active_issues.items()):
         targets = issue.get("reference_targets")
         if not isinstance(targets, list):
             continue
@@ -722,17 +706,6 @@ def _build_candidates(
     }
     inputs = manifest["inputs"]
     assert isinstance(inputs, dict)
-    legacy = inputs.get("legacy")
-    if isinstance(legacy, dict):
-        legacy_issues = legacy.get("issues")
-        if not isinstance(legacy_issues, list):
-            raise ValueError("legacy issues must be an array")
-        for issue in legacy_issues:
-            if not isinstance(issue, dict) or not isinstance(
-                issue.get("candidate_id"), str
-            ):
-                raise ValueError("legacy issue projection is malformed")
-            candidates[str(issue["candidate_id"])] = dict(issue)
 
     # machine observation は canonical key と recurrence rule だけで先に集約する。
     machine_observations: dict[str, list[JsonObject]] = {}
@@ -815,7 +788,6 @@ def _candidate_from_active(issue: JsonObject) -> JsonObject:
         "source_observation_ids": [],
         "deduplication_hints": [],
         "reference_ids": [],
-        "state_source": "active",
     }
 
 
@@ -843,7 +815,6 @@ def _new_candidate(observation: JsonObject, canonical_key: str) -> JsonObject:
         "source_observation_ids": [],
         "deduplication_hints": [],
         "reference_ids": [],
-        "state_source": "new",
     }
 
 
@@ -1270,22 +1241,12 @@ def _process_machine_observations(
             canonical_key,
         )
         if aggregate is None:
-            # legacy issue は現行 threshold を満たさなければ移行 candidate にしない。
-            if (
-                active_candidate is not None
-                and active_candidate.get("state_source") == "legacy"
-            ):
-                candidates.pop(str(active_candidate["candidate_id"]), None)
             # current active issue は新しい report cut でも必ず verification する。
-            elif active_candidate is not None:
+            if active_candidate is not None:
                 active_candidate["machine_state"] = None
             continue
         threshold_met = _machine_threshold_met(aggregate)
         if active_candidate is not None:
-            if active_candidate.get("state_source") == "legacy" and not threshold_met:
-                candidates.pop(str(active_candidate["candidate_id"]), None)
-                aggregates[canonical_key] = aggregate
-                continue
             for observation in observations:
                 _merge_observation(repo, active_candidate, observation)
             _apply_machine_aggregate_to_candidate(active_candidate, aggregate)
@@ -1889,7 +1850,6 @@ def _publish_report(
     cleanup = {
         "observations": _observation_cleanup_references(manifest),
         "old_generation": current_generation_artifacts(repo, current_state),
-        "legacy": _legacy_cleanup_references(manifest),
         "work_artifacts": _checkpoint_cleanup_references(manifest),
     }
     expected_publication: JsonObject = {
@@ -2291,18 +2251,6 @@ def _observation_cleanup_references(manifest: JsonObject) -> list[JsonObject]:
         for entry in entries
         if isinstance(entry, dict)
     ]
-
-
-def _legacy_cleanup_references(manifest: JsonObject) -> list[JsonObject]:
-    """migration cut が固定した legacy artifact だけを cleanup target にする。"""
-    inputs = manifest.get("inputs")
-    legacy = inputs.get("legacy") if isinstance(inputs, dict) else None
-    if legacy is None:
-        return []
-    artifacts = legacy.get("artifacts") if isinstance(legacy, dict) else None
-    if not isinstance(artifacts, list):
-        raise ValueError("legacy artifacts must be an array")
-    return [dict(item) for item in artifacts if isinstance(item, dict)]
 
 
 def _checkpoint_cleanup_references(manifest: JsonObject) -> list[JsonObject]:
