@@ -267,17 +267,21 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex exec の実行環境分離、CLI 引数・stdin・出力ファイル契約、リポジトリ書き込み、UTF-8不正出力、汎用 model provider override、および CODEX_HOME 設定ファイル非生成を検証するテスト群。Codex 実行ランタイムや override 引数の挙動を変更・確認するときの入口。
+- Codex CLI 実行ランタイムの統合テスト。引数、stdin、sandbox、override、作業ディレクトリ、出力ログ、リポジトリ書き込み、UTF-8 異常時の扱いを検証する。
+- 汎用 model provider 設定の反映と、組み込み local provider 用フラグを使わないことを検証する。
+- Codex 実行準備時に CODEX_HOME の設定ファイルを生成しないことも確認する。
 
 ## Read this when
-- Codex exec の起動引数、sandbox・approval 設定、stdin 経由の prompt 渡し、出力取得を変更または検証するとき。
-- Codex 実行時の HOME/CODEX_HOME 分離、model provider 設定、リポジトリへの生成物、および不正 UTF-8 出力の扱いを確認するとき。
+- Codex exec の argv、stdin、sandbox、approval、override、出力処理、実行結果の構築を変更または調査するとき。
+- model provider や provider 設定の Codex CLI への反映方法を変更または調査するとき。
+- CODEX_HOME の隔離や実行時設定ファイル生成の有無を変更または調査するとき。
 
 ## Do not read this when
-- Codex exec ランタイムやそのテストの挙動を扱わず、他の CLI 機能・設定・テストだけを調査するとき。
+- Codex CLI 実行や model provider に関係しない機能のテスト・実装を扱うとき。
+- 個別の設定値の正本仕様を確認する必要があり、対応する oracle 文書を直接読むべきとき。
 
 ## hash
-- f9b08932a5ddebe6733210f7c69ca3df7b816260cc5f5b02d67addb3045ba76f
+- 2f411c2f478506ed67afa8da0df3364b8617078192d51325cb5f49ace2b40972
 
 # `test_codex_runtime_home.py`
 

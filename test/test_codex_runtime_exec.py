@@ -83,12 +83,13 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    config = CmocConfig()
 
     result = run_codex_exec(
         codex_parameter(FileAccessMode.REPO_WRITE, agent_call_cwd=root),
         root=root,
         capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
+        config=config,
     )
 
     record = json.loads(recorder.read_text())
@@ -97,7 +98,7 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
         "--ask-for-approval",
         "on-request",
         "--model",
-        "gpt-5.6-luna",
+        config.codex.model[ModelClass.EFFICIENCY].model,
     ]
     assert record["args"][record["args"].index("exec") + 1] == "--skip-git-repo-check"
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
@@ -149,6 +150,7 @@ def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
     assert result.output_text == "\ufffd"
 
 
+# {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
 def test_run_codex_exec_uses_generic_provider_without_builtin_local_flags(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

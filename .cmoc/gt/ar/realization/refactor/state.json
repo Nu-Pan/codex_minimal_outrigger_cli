@@ -1249,9 +1249,9 @@
   },
   "test/test_codex_runtime_exec.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "92e17c3771e48773696c4e0e3766ef299910d93f7d832755d8c6675d334bf331",
-    "last_investigated_at": "2026-08-06_13-38_40_333008000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "f9b08932a5ddebe6733210f7c69ca3df7b816260cc5f5b02d67addb3045ba76f",
+    "last_investigated_at": "2026-08-10_18-26_06_844563000"
   },
   "test/test_codex_runtime_home.py": {
     "investigation_required": true,
