@@ -42,6 +42,18 @@ def _run_from_packaged_layout(
     )
 
 
+def _copy_source_tree(source: Path, target: Path) -> None:
+    """bytecode cache を除いた source tree を packaged layout へコピーする。
+
+    根拠: {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    """
+    shutil.copytree(
+        source,
+        target,
+        ignore=shutil.ignore_patterns("__pycache__", "*.py[cod]"),
+    )
+
+
 def test_oracle_review_enumerate_builder_imports_from_packaged_layout(
     tmp_path: Path,
 ) -> None:
@@ -61,9 +73,9 @@ def test_oracle_review_enumerate_builder_imports_from_packaged_layout(
     assert "oracle/src" in setuptools_config["packages"]["find"]["where"]
 
     target = tmp_path / "site"
-    shutil.copytree(root / "src" / "acp", target / "acp")
-    shutil.copytree(root / "src" / "basic", target / "basic")
-    shutil.copytree(root / "oracle" / "src" / "oracle", target / "oracle")
+    _copy_source_tree(root / "src" / "acp", target / "acp")
+    _copy_source_tree(root / "src" / "basic", target / "basic")
+    _copy_source_tree(root / "oracle" / "src" / "oracle", target / "oracle")
 
     result = _run_from_packaged_layout(
         target,
@@ -94,8 +106,8 @@ def test_oracle_edit_and_prompt_editor_import_from_packaged_layout(
     root = Path(__file__).parents[1]
     target = tmp_path / "site"
     for package in ("acp", "basic", "commons"):
-        shutil.copytree(root / "src" / package, target / package)
-    shutil.copytree(root / "oracle" / "src" / "oracle", target / "oracle")
+        _copy_source_tree(root / "src" / package, target / package)
+    _copy_source_tree(root / "oracle" / "src" / "oracle", target / "oracle")
 
     result = _run_from_packaged_layout(
         target,
@@ -139,8 +151,8 @@ def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
     """
     root = Path(__file__).parents[1]
     target = tmp_path / "site"
-    shutil.copytree(root / "src" / "acp", target / "acp")
-    shutil.copytree(root / "oracle" / "src" / "oracle", target / "oracle")
+    _copy_source_tree(root / "src" / "acp", target / "acp")
+    _copy_source_tree(root / "oracle" / "src" / "oracle", target / "oracle")
 
     result = _run_from_packaged_layout(
         target,
@@ -170,8 +182,8 @@ def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
     """
     root = Path(__file__).parents[1]
     target = tmp_path / "site"
-    shutil.copytree(root / "src" / "config", target / "config")
-    shutil.copytree(root / "oracle" / "src" / "oracle", target / "oracle")
+    _copy_source_tree(root / "src" / "config", target / "config")
+    _copy_source_tree(root / "oracle" / "src" / "oracle", target / "oracle")
 
     result = _run_from_packaged_layout(
         target,

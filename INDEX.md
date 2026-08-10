@@ -146,17 +146,19 @@
 # `test`
 
 ## Summary
-- pytest による realization test 群を集約するディレクトリ。CLI、runtime、Codex 実行、ACP builder、indexing、oracle review、session lifecycle、設定、通知などの外部挙動と回帰条件を検証し、個別テストモジュールへの入口を提供する。
+- pytest による realization test 群をまとめた領域。CLI、Codex runtime、indexing、oracle review、session/editing lifecycle、feedback、設定・Git・通知などの外部契約と異常系を検証する。共通 fixture と test helper、packaged import 境界、StructDoc renderer、repository skill metadata も扱う。各機能の回帰テストへ進むための入口。
 
 ## Read this when
-- 複数の機能領域にまたがる回帰テストの対象や入口を探すとき
-- CLI、runtime、Codex、indexing、oracle review などの外部契約をテスト側から確認するとき
-- 共通 fixture やテスト用 Git・Codex・外部コマンド環境の扱いを確認するとき
+- CLI サブコマンド、Codex 実行、indexing、oracle review、session/editing lifecycle の外部挙動や回帰契約を調査するとき
+- runtime の path・state・config・Git ignore・process cleanup・retry・sandbox・通知の境界条件を検証するとき
+- feedback publication、Structured Output builder、prompt rendering、packaging/import 境界のテストを確認するとき
+- 対象機能に対応する realization test の範囲や共通 fixture・helper の利用箇所を探すとき
 
 ## Do not read this when
-- 正本仕様や実装責務を確認したいときは、対応する oracle 文書または src の実装を直接読む
-- 単一機能の詳細な挙動を調べる場合は、このディレクトリ全体ではなく該当するテストモジュールへ進む
-- テスト実行手順や品質ゲートだけを確認したいときは、専用の test execution 手順を読む
+- 正本仕様や設計意図を確認するときは、対応する oracle 文書・oracle source を直接読む
+- 実装責務や内部処理を確認するときは、対応する src の実装を直接読む
+- テスト実行手順や品質ゲートだけを確認するときは、repository local の test execution 手順を直接読む
+- 単一機能の詳細を調べるときは、この領域全体ではなく対応する個別テストへ直接進む
 
 ## hash
-- cfa259df160fd6f1223c4480123b8ae3c802bb4bc671a83abcc22abad41a3218
+- 201a97e2384c6b414c3e4a37c08fadfb4193abf683ed7862d72666ee5c2af51e
