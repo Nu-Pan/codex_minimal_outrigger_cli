@@ -14,6 +14,7 @@ from _codex_support import setup_codex_home
 from _git_support import current_branch, make_repo, run_git
 
 import commons.indexing as indexing_module
+import commons.runtime_cli as runtime_cli_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.oracle.edit as oracle_edit_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
@@ -97,6 +98,21 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     built_parameters: list[AgentCallParameter] = []
     events: list[str] = []
 
+    real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
+
+    def record_run_doctor_preprocess(
+        target_root: Path,
+        *,
+        sync_refactor_entries: bool = True,
+    ) -> None:
+        """対象 invocation の doctor preprocess を記録して本来の処理へ委譲する。"""
+        assert target_root == root
+        events.append("doctor")
+        real_run_doctor_preprocess(
+            target_root,
+            sync_refactor_entries=sync_refactor_entries,
+        )
+
     def fake_reserve_prompt_editor_input(
         target_root: Path,
     ) -> tuple[str, Path, Path]:
@@ -148,6 +164,11 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
         oracle_edit_module,
         "reserve_prompt_editor_input",
         fake_reserve_prompt_editor_input,
+    )
+    monkeypatch.setattr(
+        runtime_cli_module,
+        "run_doctor_preprocess",
+        record_run_doctor_preprocess,
     )
     monkeypatch.setattr(
         oracle_edit_module,
@@ -221,7 +242,15 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     )
     assert "# file read write rule - pure_oracle_write" in complete_prompt_skeleton
     assert "oracle file だけを編集し" in complete_prompt_skeleton
-    assert events == ["build", "editor", "finalize", "indexing", "check", "tui"]
+    assert events == [
+        "doctor",
+        "build",
+        "editor",
+        "finalize",
+        "indexing",
+        "check",
+        "tui",
+    ]
     assert len(calls) == 1
     parameter, kwargs = calls[0]
     assert parameter is built_parameters[0]
