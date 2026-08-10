@@ -230,21 +230,20 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理に関する外部挙動を検証するテスト。プロンプトエディタ入力の初期値・timestamp 衝突・不正 skeleton の扱い、編集後の Codex TUI 起動、linked worktree における prompt とログの配置、`.cmoc` の ignore 設定を対象とする。TUI 前処理や関連する prompt editor の挙動を確認する際の入口。
+- TUI 起動直前の CLI 前処理に関する外部挙動を検証するテスト。プロンプトエディタ入力の初期値と timestamp 衝突、skeleton 検証、編集済み prompt による Codex TUI 起動、linked worktree での保存先、および `.cmoc` の ignore を扱う。TUI サブコマンドの前処理と起動経路を確認する入口であり、個別の prompt builder や runtime 実装の詳細を調べる前に読む。
 
 ## Read this when
-- TUI サブコマンドの統合的な起動挙動を変更・検証するとき
-- prompt editor の入力生成、skeleton 検証、timestamp 衝突処理を確認するとき
-- linked worktree での prompt・agent call context・ログ配置を確認するとき
-- TUI 実行時の `.cmoc` ignore とログ生成を検証するとき
+- `tui` サブコマンドの起動前処理、エディタ入力、編集済み prompt、Codex TUI の直接起動の外部挙動を確認または変更するとき
+- timestamp 衝突時の入力ファイル保持、prompt skeleton の placeholder 検証、または linked worktree におけるログ・prompt 保存先を確認するとき
+- TUI 実行時の staged/unstaged 差分保持や `.cmoc` の git ignore 挙動を検証するとき
 
 ## Do not read this when
-- prompt editor の正本となる初期テキスト生成規則だけを確認したいとき
-- TUI 以外のサブコマンドや CLI 前処理を調査するとき
-- 実装内部の prompt builder や runtime preflight の詳細を直接確認する必要があるとき
+- prompt editor や prompt builder の単体実装だけを確認する場合は、対応する実装または oracle を直接読む
+- TUI 以外のサブコマンドの外部挙動を確認する場合は、各サブコマンドのテストを読む
+- 一般的な CLI 起動や git worktree の仕様だけを調べる場合は、このテストを入口にしない
 
 ## hash
-- ad7ca9e8b2f311112e664db90bc0a0f7fdfe2ef0e10f847eeb4449e1a17aa3e3
+- 13a18baef796e717056913606fbb12a5fcc15f265321cac14203033ac8c9f4fe
 
 # `test_codex_runtime_errors.py`
 
@@ -467,21 +466,19 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- `cmoc indexing` の CLI と preflight の外部挙動を検証するテスト群。doctor による初期化、現在の linked worktree の選択、未コミット差分の拒否・保持、Codex structured output による INDEX.md 生成、fresh hash 時の生成省略、INDEX.md のみの commit と異常時の拒否を扱う。indexing の実装や仕様を確認する際のテスト入口である。
+- 対象は `cmoc indexing` の CLI、preflight、worktree、INDEX.md 更新、Codex structured output、commit lifecycle の外部挙動を検証するテストスイートです。未初期化・dirty・linked worktree・既存 hash・Git 差分などの条件分岐を扱い、INDEX.md だけを commit する制約も確認します。indexing 実装や仕様変更時の受け入れテストの入口です。
 
 ## Read this when
-- `cmoc indexing` の正常系・異常系の挙動を変更または調査するとき
-- worktree、doctor、preflight、既存の未コミット差分の扱いを確認するとき
-- Codex 呼び出し、INDEX.md 更新、fresh hash による省略、commit 対象の制約を確認するとき
+- `cmoc indexing` の事前条件、doctor、preflight、Codex 呼び出し、INDEX.md 更新、commit 条件を変更または検証するとき。
+- dirty repository、linked worktree、既存 hash、staged・unstaged 差分、Git 異常終了に対する indexing の外部挙動を確認するとき。
 
 ## Do not read this when
-- indexing の正本仕様や CLI 契約を確認する場合は oracle の indexing 仕様を直接読む
-- Codex structured output の項目定義だけを確認する場合は対応する schema を直接読む
-- 実装の責務や内部処理を確認する場合は対応する src ファイルを直接読む
-- indexing と無関係な CLI やテストを調べる場合
+- indexing の実装詳細を調査・変更する場合は、対応する src 実装を直接読むとき。
+- 正本仕様や Structured Output schema だけを確認する場合は、対応する oracle 文書・schema を直接読むとき。
+- indexing と無関係な CLI サブコマンドや、一般的なテスト実行手順だけを扱うとき。
 
 ## hash
-- c8971ee4d75ccbc5d1309244856b7cb153bc6f39deacce958a3ac285a3d8328e
+- 9c71098080c6d203b7aecc61472ff51f850540bee02bbc6162df06d0e4bc9c69
 
 # `test_indexing_common.py`
 
@@ -522,18 +519,18 @@
 # `test_oracle_edit_cli.py`
 
 ## Summary
-- `cmoc oracle edit` の main worktree TUI 制御を検証するテスト。doctor 前処理、prompt 編集、indexing preflight、clean worktree 検査、TUI 起動の順序と引数を確認し、成功・失敗時の oracle 差分保持および session state 不変を検証する。起動前提違反（main worktree、session branch、active session、clean worktree）も検証する。
+- `cmoc oracle edit` の main worktree TUI 制御を検証する pytest テストです。doctor 前処理、プロンプト編集・確定、indexing preflight、起動前提検査、TUI 実行順序と引数、編集結果・既存差分・session state の保持、TUI 失敗時の終了、および main worktree／session 状態の前提違反を扱います。oracle edit の実装や仕様を変更・検証するときに、対応する外部挙動のテスト入口として読みます。
 
 ## Read this when
-- `cmoc oracle edit` の CLI 挙動、TUI 起動フロー、起動前提条件を変更・調査するとき。
-- oracle edit の session state 保持、prompt editor、indexing preflight、TUI 呼び出し契約を確認するとき。
+- `cmoc oracle edit` の TUI 起動フロー、起動前提、終了コード、生成 prompt、または既存の Git 差分・session state 保持を変更・検証するとき。
+- oracle edit の処理順序や runtime TUI への引数、doctor・indexing preflight 連携をテストで確認するとき。
 
 ## Do not read this when
-- oracle edit 以外のサブコマンドや一般的な CLI テストを扱うとき。
-- oracle edit の実装詳細そのものを確認する必要があり、実装ファイルまたは正本仕様を直接読むべきとき。
+- oracle edit の実装詳細や正本仕様そのものを確認したい場合は、まず対応する oracle 仕様または実装を直接読みます。
+- oracle edit と無関係な CLI サブコマンド、一般的なテスト共通処理、他の TUI の挙動だけを調べる場合。
 
 ## hash
-- f5f0a7f1e9185ee530ee7616ae391b63c642533d31c450a8cf105bab71af238a
+- bd0d5243ac1dacc1392025159ec77eff07c538ca28c79a77eb550f6b955ab212
 
 # `test_oracle_investigation_cli.py`
 

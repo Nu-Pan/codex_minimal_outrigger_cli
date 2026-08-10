@@ -139,10 +139,16 @@ def test_tui_runs_editor_and_launches_codex_directly(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """編集済み prompt から追加 agent call なしで Codex TUI を起動する。"""
+    """既存差分を保ち、編集済み prompt から Codex TUI を直接起動する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
+    readme_path = root / "README.md"
+    readme_path.write_text("# staged change\n")
+    run_git(root, "add", "README.md")
+    readme_path.write_text("# unstaged change\n")
+    staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
+    unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake_code = bin_dir / "code"
@@ -244,6 +250,12 @@ def test_tui_runs_editor_and_launches_codex_directly(
         1,
     )
     assert str(complete_files[0]) in tui_calls[0][0].prompt
+    assert readme_path.read_text() == "# unstaged change\n"
+    assert (
+        run_git(root, "diff", "--cached", "--", "README.md").stdout
+        == staged_diff_before
+    )
+    assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").is_dir()
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()

@@ -22,7 +22,7 @@ from commons.prompt_editor_input import (
     finalize_complete_prompt,
     reserve_prompt_editor_input,
 )
-from commons.runtime_git import current_branch, require_clean_worktree
+from commons.runtime_git import current_branch
 from commons.runtime_state import load_session_part_for_branch
 
 
@@ -84,11 +84,12 @@ def _cmoc_oracle_edit_body() -> None:
     )
 
 
+# {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
 def _require_oracle_edit_launch_preconditions(
     repository: Path,
     current_root: Path,
 ) -> None:
-    """main worktree の active session branch と clean 状態を要求する。"""
+    """main worktree の active session branch を要求する。"""
     if current_root.resolve() != repository.resolve():
         raise CmocError(
             "cmoc oracle edit は main worktree から実行してください。",
@@ -109,4 +110,3 @@ def _require_oracle_edit_launch_preconditions(
             ["active な cmoc session branch で再実行してください。"],
             f"session.state: {session.state}\nstate: {state_file}",
         )
-    require_clean_worktree(current_root)

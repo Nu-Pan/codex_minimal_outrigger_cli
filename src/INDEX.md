@@ -114,22 +114,15 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめる領域。doctor、indexing、tui、session、run、realization、oracle、feedback の実行入口と、各処理に固有のライフサイクル・検証・レポート生成を扱う。
-- 個別サブコマンドの実行フローや、その配下にある処理単位の責務を確認するための入口となる。
+- cmoc の各サブコマンド実装を配置するディレクトリ。apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui の実行入口や関連処理への下位要素を案内する。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、サブコマンド間の責務分担を確認するとき。
-- session や editing run の作成・統合・中断、worktree・branch・state の更新、競合解消を調査するとき。
-- realization の apply・refactor 実行、agent 呼び出し、変更検証、状態更新、cleanup、レポート生成を調査するとき。
-- oracle の edit・investigation・review 実行、対象列挙、所見処理、INDEX 差分統合、レポート生成を調査するとき。
-- feedback report の observation 集約、正規化・検証、checkpoint、publication、cleanup を調査するとき。
-- indexing、doctor、tui の CLI 実行入口や、入力準備・preflight・実行結果の扱いを確認するとき。
+- サブコマンド実装の構成や、対象サブコマンドの CLI 実行入口を確認・変更するとき。
+- 複数のサブコマンドにまたがる実装配置や、個別サブコマンドの下位実装へ進む入口を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理だけを調べる場合は、対応する下位実装を直接読む。
-- 共通の CLI ランタイム、Git 操作、run lifecycle、prompt 入力、feedback state/store、レポート writer の仕様や実装だけを確認する場合は、インポート先の共通モジュールを直接読む。
-- agent prompt、Structured Output schema、またはサブコマンドの正本仕様を確認する場合は、対応する builder や oracle 文書を直接読む。
-- この領域に属さない共通基盤や、個別サブコマンドの実装に依存しない処理を調査するとき。
+- 特定サブコマンドの詳細処理だけを調査する場合は、対応する下位実装を直接読む。
+- 共通ランタイム、oracle 仕様、または各サブコマンドから参照される共通処理だけを確認する場合は、該当する共通実装や正本仕様を直接読む。
 
 ## hash
-- 6a34928f0d21dc35b7a903a495a34c5681a5b61770d469c5e87fed45bc6b9b49
+- 754891b3980877ba2ccf9de901924a825e38bcd808c7bdfbb2ea3784da843bd6

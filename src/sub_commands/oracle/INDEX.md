@@ -29,21 +29,17 @@
 # `edit.py`
 
 ## Summary
-- `cmoc oracle edit` サブコマンドから、oracle 編集指示を入力する Codex TUI を起動する実装。
-- main worktree、active な `cmoc/session/` ブランチ、clean worktree などの起動前提を検証し、プロンプト入力の確定と indexing preflight を経て TUI を開始する。
-- oracle edit の CLI 起動経路と実行前提を確認する際の入口であり、個別のプロンプト編集処理や TUI パラメータ構築の詳細は import 先へ委ねる。
+- `cmoc oracle edit` サブコマンドの実行入口と、oracle 編集指示から Codex TUI を起動する処理を担う。入力予約・収集・完全プロンプト確定、indexing 前処理、main worktree 上の active な session branch の検証を経て TUI を起動する。
 
 ## Read this when
-- `cmoc oracle edit` の CLI runtime、TUI 起動フロー、または main worktree・session branch・clean worktree の実行前提を確認するとき。
-- oracle 編集指示の受付から Codex TUI 起動までの処理順序を確認するとき。
+- `cmoc oracle edit` の CLI 実行フロー、TUI 起動条件、oracle 編集プロンプトの入力処理を確認または変更するとき。
 
 ## Do not read this when
-- oracle edit の正本仕様や編集契約を確認するときは、oracle 編集の仕様文書を直接読む。
-- プロンプト入力の予約・収集・確定処理を確認するときは、プロンプト編集入力の実装を直接読む。
-- TUI 起動パラメータの内容や session 状態のロード処理を確認するときは、それぞれの import 先を直接読む。
+- oracle 編集プロンプトの内容や契約そのものを確認したいときは、参照コメントで示される oracle 仕様を直接読む。
+- 他のサブコマンドの実行フローや、共通のプロンプト入力・runtime state 実装だけを調べるとき。
 
 ## hash
-- 4bcb74fa76fe2be27b2af6e014479981d256266e41b45106ed294f882230866a
+- 0b47a7f3dccecd7d83a526a3a7203e743a2912e63d47d3267d10cd68de6dbe67
 
 # `investigation.py`
 
