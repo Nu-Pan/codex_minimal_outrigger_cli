@@ -145,18 +145,16 @@
 # `test`
 
 ## Summary
-- test ディレクトリは、pytest による realization test と共通テスト支援を集約する。CLI、runtime、Codex 実行、indexing、oracle review、session lifecycle などの外部契約・境界条件を検証する各テストと、隔離環境や Git・Codex・外部コマンドを準備する共有 helper が下位要素への主な入口となる。
+- pytest による realization test 群を収録する。CLI、Codex runtime、indexing、oracle review、session、feedback、設定、Git/worktree lifecycle などの外部契約と回帰挙動を検証する。各機能領域の個別テストへ進む入口となる。
 
 ## Read this when
-- 実装変更や仕様適合性の確認に伴い、対応する realization test の期待外部挙動・回帰条件を特定するとき
-- CLI、runtime、Codex、indexing、oracle review、session、config、通知などのテスト対象領域を横断して、該当するテスト入口を選ぶとき
-- テスト用の隔離 worktree、Git repository、Codex 環境、fake subprocess、toast 隔離などの共通支援を確認するとき
+- 実装変更に対応する外部挙動や回帰テストを探すとき
+- 複数のテスト領域にまたがる統合挙動や lifecycle を確認するとき
 
 ## Do not read this when
-- 正本仕様・設計意図・schema の内容を確認する場合は、対応する oracle 文書または oracle source/schema を直接読む
-- 実装の責務や内部処理を確認する場合は、該当する src ファイルを直接読む
-- テスト実行方法や品質ゲートだけを確認する場合は、テスト実行規約を直接読む
-- このディレクトリが扱わない機能や、個別テストから直接特定できる単一実装の詳細だけを調査する場合
+- 正本仕様を確認するときは対応する oracle 文書を直接読む
+- 実装責務や内部処理を確認するときは対象の src ファイルを直接読む
+- テスト対象と無関係な機能や一般的な pytest 実行方法だけを調べるとき
 
 ## hash
-- 0597e429c9334d4b3008a2e2a0509948879141854905748d030c72380fdc2f77
+- e9b9827e65d50686e9746b7b610776dbac880e7be958e3ff904b9c119e0ff961

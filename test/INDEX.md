@@ -673,20 +673,18 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 標準 prompt parts のレンダリングと complete prompt の組み立てを検証する回帰テスト。各 standard の主要文言、選択的な注入、file access mode ごとの規則、placeholder の統合・展開、共通 routing/feedback instruction の存在を確認する。prompt builder 周辺の変更時に、対象挙動を一括確認する入口となる。
+- 標準 prompt parts と complete prompt の構築結果を検証するテスト。各標準規則のレンダリング、complete prompt への条件付き注入、placeholder の保持・統合・競合検出、file access mode ごとの内容を扱う。prompt builder 回帰テストの入口であり、個別の標準規則や prompt builder 実装を変更・調査する際に確認する。
 
 ## Read this when
-- prompt part の構成・レンダリングを変更または検証するとき
-- complete prompt に standard、補助 prompt、placeholder、共通 instruction を追加・変更するとき
-- file access mode や prompt の注入条件に関する回帰を調査するとき
+- prompt builder の標準規則、complete prompt の構成、placeholder 展開、file access mode の挙動を変更・検証するとき
+- 標準 prompt の注入漏れ、重複、不要な注入、レンダリング内容の回帰を調査するとき
 
 ## Do not read this when
-- 個別の prompt part の本文や生成ロジックだけを直接調査する場合
-- prompt builder と無関係なテストや実装を変更する場合
-- テスト実行方法や環境設定だけを確認する場合
+- 標準規則本文の意図や prompt builder の実装詳細を直接確認することが目的のとき
+- prompt builder と無関係なテストや実装を変更・調査するとき
 
 ## hash
-- 7ff0699cc450721a174a34254789ca573f67ae981364e0a39cd419650f72e596
+- 21bc948f3ca8879b7fba369bf4bff7c033df991d5f423f268b0de34f3a52bad3
 
 # `test_runtime_cli.py`
 
