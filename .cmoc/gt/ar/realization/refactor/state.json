@@ -1346,8 +1346,8 @@
   "test/test_oracle_review_loop.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "1d68a2d1286f19d8fc2e7fcc7f3e4f39ca02afc02e7129c36128c98f78818422",
-    "last_investigated_at": "2026-08-06_09-05_19_655218000"
+    "last_investigated_sha256": "251e2e2a4de5ab1be5a36fe810621c47261e740bebb346a93d98966e8cc26ae8",
+    "last_investigated_at": "2026-08-10_14-42_02_285311000"
   },
   "test/test_oracle_review_merge_operations.py": {
     "investigation_required": false,

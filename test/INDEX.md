@@ -547,20 +547,20 @@
 # `test_oracle_review_loop.py`
 
 ## Summary
-- oracle review の finding loop を検証する回帰テスト。対象 oracle に応じた finding の引き継ぎ、main worktree と review worktree 間のパス対応、challenger/advocate の同一周回理由、interrupt 時の部分結果保持、merge の postcondition と失敗伝播を fake Codex call で確認する。oracle review の検証・実装変更時に、review loop の外部契約を確認するための入口となる。
+- 対象 oracle の review loop に対する回帰テストを一箇所で扱う。finding の対象別列挙、関連 finding の引き継ぎ、challenger/advocate の理由連携、merge の入力条件、judge 判定、割り込み時の部分結果保持、merge 失敗伝播を fake Codex call で検証する。
+- oracle review の実装や正本仕様そのものではなく、review round と fake call 列の外部契約を検証する realization test への入口である。
 
 ## Read this when
-- oracle review の finding 列挙・検証・merge・judgement の挙動を変更または調査するとき
-- review loop の interrupt 復旧、partial progress、worktree context、Structured Output の postcondition を確認するとき
-- 関連する oracle review の正本仕様と実装がこの回帰テストを満たすか検証するとき
+- oracle review の finding 列挙・理由検証・merge・judge の回帰挙動を確認するとき
+- oracle review の割り込み復旧、部分結果、隔離 worktree の call context、Structured Output の postcondition をテストするとき
 
 ## Do not read this when
-- oracle review 以外のサブコマンドや、finding loop の外部契約に関係しないテストを調査するとき
-- テスト実行方法そのものを確認したい場合は、テスト実行規則や直接の実行設定を読むとき
-- oracle review の正本仕様や prompt 構築実装を確認することが目的の場合は、記載された oracle 文書や実装を直接読むとき
+- oracle review の仕様や設計意図を確認したいときは、列挙された oracle 文書を直接読む
+- review loop の実装を変更・調査するときは、まず対応する src の実装とその INDEX.md を読む
+- 一般的なテスト規約だけを確認したいときは、テスト規約の oracle 文書を直接読む
 
 ## hash
-- 251e2e2a4de5ab1be5a36fe810621c47261e740bebb346a93d98966e8cc26ae8
+- 05cf957fd8fde8f2c786dacb0539b4c07e5e8e0fed6781e1527438aacba967b0
 
 # `test_oracle_review_merge_operations.py`
 
