@@ -125,36 +125,39 @@
 # `src`
 
 ## Summary
-- CLI の Typer アプリケーションと互換 import 入口をまとめる realization 領域。トップレベル CLI、サブコマンド、共通 runtime、`acp`・`basic`・`config` の互換パッケージ、正本 `oracle` の package shim を扱う。
-- CLI の実行入口やサブコマンド構成を確認し、共通 runtime、互換パッケージ、個別サブコマンドへ読み進めるための上位入口。
+- `src` は cmoc の実行側コードをまとめる入口で、Typer による CLI 起動、トップレベルおよび階層型サブコマンドの登録、引数解析エラーの cmoc 形式への変換を扱う。
+- CLI の処理本体は `sub_commands`、共通 runtime は `commons`、互換 import 入口は `acp`、`basic`、`config`、`cmoc_runtime.py`、正本 package 解決は `oracle.py` に分かれている。対象領域ごとの実装へ進むための最上位ルーティング入口である。
 
 ## Read this when
-- CLI 全体のコマンド登録、引数解析、補完、起動経路を確認するとき。
-- トップレベルのサブコマンド、共通 runtime、互換 import パッケージの所属領域を判断するとき。
-- `src` 配下から目的の CLI 実装または共通処理へ読み進めるとき。
+- cmoc の CLI 起動経路、Typer アプリケーション構成、トップレベルおよびサブコマンドの登録を確認・変更するとき。
+- CLI 引数解析エラー、補完、終了処理がどの実装へ委譲されるかを調べるとき。
+- `src` 配下で、共通 runtime、互換 import shim、またはサブコマンド実装の入口を選ぶとき。
+- `oracle.*`、`acp.*`、`basic.*`、`config.*`、`cmoc_runtime` の import 解決経路を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの内部処理だけを確認するときは、対応する `sub_commands` 配下を直接読む。
-- runtime helper の詳細や lifecycle の挙動を確認するときは、`commons` 配下を直接読む。
-- `acp`・`basic`・`config` の個別 adapter や互換 import の詳細を確認するときは、該当パッケージを直接読む。
-- canonical な `oracle.*` の実装や仕様を確認するときは、`oracle` 側を直接読む。
+- 特定サブコマンドの処理内容を調査・変更するときは、`sub_commands` 配下の対応する実装を直接読む。
+- 共通 runtime の個別 helper や lifecycle の挙動を確認するときは、`commons` 配下の対象 module を直接読む。
+- `acp`、`basic`、`config`、`cmoc_runtime.py` の互換入口の詳細を確認するときは、該当する対象を直接読む。
+- 正本仕様または正本側 `oracle.*` の実装内容を確認するときは、`src` の shim ではなく `oracle` 配下を直接読む。
+- CLI から呼び出される個別機能の生成ロジックや内部アルゴリズムだけを調べるとき。
 
 ## hash
-- f7fad0d18c026cf23ac446df8b35942e0254c10e65e5abae482c275b9fc194dc
+- 265235e77456fd1f35ef30cf010a81969fe0ea7e3a22f7175c1bef909697700a
 
 # `test`
 
 ## Summary
-- pytest による realization test を集約するディレクトリ。CLI、runtime、Codex 実行、indexing、oracle review、session、feedback などの外部挙動と境界条件を検証し、各機能の個別テストへ進む入口となる。
+- pytest による realization test 群を収録するディレクトリ。CLI、runtime、Codex 実行、Git/worktree、indexing、oracle review、session、feedback、設定、通知などの外部契約と安全性を検証する。個別機能の回帰テストや共通テストヘルパーへ進む入口となる。
 
 ## Read this when
-- 対象機能の外部契約、異常系、ライフサイクル、Git・worktree・subprocess 境界をテスト側から確認するとき
-- 対応する realization test の所在や、関連する回帰テスト群を選ぶとき
+- 対象機能の外部挙動、CLI lifecycle、Codex runtime、Git/worktree lifecycle、indexing、oracle review、session、feedback、設定、通知のテストケースを調査・変更するとき。
+- テスト用の共通 fixture や fake subprocess、Git repository、Codex 環境の構築方法を確認するとき。
+- 複数のテストモジュールにまたがる回帰契約や統合挙動の入口を探すとき。
 
 ## Do not read this when
-- 正本仕様を確認するときは、対応する oracle 文書・schema・source を直接読む
-- 実装詳細を確認するときは、対象機能の src ファイルを直接読む
-- 共通 fixture、個別の CLI、runtime、builder、Codex 実行経路の契約だけを確認するときは、該当するテストファイルへ直接進む
+- 正本仕様、Structured Output schema、実装詳細そのものを確認するときは、対応する oracle または src ファイルを直接読む。
+- テスト実行方法だけを確認するときは、repository local の test_execution の案内を読む。
+- 対象機能と無関係なテストや、個別実装の単独確認だけを行うとき。
 
 ## hash
-- 435adc10e915aacf7eff389220fde40572f481b837b70b940e6c84442d93100e
+- 55504c51904622d9a1ca54fa5f1960ee75fc727a63996640884a6f02cebc6dcf

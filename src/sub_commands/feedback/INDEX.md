@@ -15,20 +15,20 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の active-state publication pipeline を実装するサブコマンド本体。固定済み report cut を起点に、raw observation の検証、agent/machine candidate の deterministic 集約、normalization・verification checkpoint の再利用、report・generation artifact の生成、current pointer の切替、publication 後の cleanup までを一つの transaction として処理する。
-- main worktree、active session branch、ready run state などの事前条件を検査し、writer lock 下で中断・失敗・publication 再開を含む状態遷移を管理する。raw observation や repository reference の hash、canonical JSON、schema、secret masking を検証して固定入力と成果物の整合性を保つ。
-- agent observation の issue 同一性判定には normalization agent call、全 candidate の現況判定には verification agent call を用い、結果を正式な checkpoint として保存・再検証する。machine rule については recurrence window、日次 bucket、distinct scope/agent-call threshold に基づき集約する。
-- 未解決 issue から active generation と Markdown feedback report を描画し、generation manifest・report・cleanup 情報を固定したうえで current pointer を publication する。ログ、CLI 表示、cleanup failure warning も担当する。
+- `cmoc feedback report` の active-state publication pipeline を実装するサブコマンドモジュール。固定済み report cut を入力として、raw observation の検証、agent／machine candidate の deterministic 集約、必要な normalization と全 candidate の verification、generation・Markdown report の生成、current pointer の切替、publication 後の cleanup までを一つの再開可能な transaction として扱う。
+- report cut manifest、processing／publication 状態、normalization・verification checkpoint、current state と repository reference の hash を用いて、中断・失敗・再開時の入力固定と成果物整合性を検証する。machine rule には 30 日 window、日次 bucket、bounded digest、allowlist threshold を適用し、agent observation には candidate identity normalization を適用する。
+- このファイルは `cmoc feedback report` の CLI 実行フローと report publication の責務を確認するときの入口であり、candidate の normalization／verification parameter の詳細は対応する builder と Structured Output schema、active state・artifact 操作の詳細は `commons.runtime_feedback_state`、raw observation の保存・検証の詳細は `commons.runtime_feedback_store` を読む。
 
 ## Read this when
-- `cmoc feedback report` の処理フロー、report cut、candidate 集約、normalization/verification、publication、resume/interruption の挙動を調べるとき
-- feedback active state、current pointer、generation artifact、checkpoint、raw observation の整合性や hash 検証を確認するとき
-- machine feedback rule の recurrence threshold や report の Markdown 出力内容を確認するとき
+- `cmoc feedback report` の実行前提、report cut の固定、checkpoint 再利用、candidate 集約、verification、generation／report publication、current pointer 切替の挙動を確認・変更するとき。
+- feedback report の中断・失敗・再開時に、どの入力と成果物を hash／reference で固定するかを確認するとき。
+- machine feedback rule の recurrence 集約や agent observation の issue identity normalization の処理入口を調べるとき。
 
 ## Do not read this when
-- feedback observation の保存・入力 envelope・secret masking など store 共通処理だけを調べるときは、feedback store の実装を直接読む
-- issue normalization や verification の agent parameter・Structured Output schema の契約だけを調べるときは、対応する builder と oracle schema を直接読む
-- active state や generation artifact の共通永続化 API の詳細だけを調べるときは、`runtime_feedback_state` を直接読む
+- normalization agent に渡す parameter やその Structured Output 契約だけを確認したい場合は、対応する feedback normalization builder／schema を直接読む。
+- verification agent の parameter、出力 schema、postcondition 契約だけを確認したい場合は、対応する feedback verification builder／schema を直接読む。
+- active state、generation artifact、pointer、cleanup の共通データ操作だけを確認したい場合は、`commons.runtime_feedback_state` を直接読む。
+- raw observation の保存、canonical JSON、path、masking、publication lock の共通処理だけを確認したい場合は、`commons.runtime_feedback_store` を直接読む。
 
 ## hash
-- 89bf5186d85804891a2fbc92367bc5eb6731a3a32236778a0b8096d4accd2c32
+- 7885c875f38a1b0f8cc72996603e79887e466ce9887eecc8d98b882f96bc7652

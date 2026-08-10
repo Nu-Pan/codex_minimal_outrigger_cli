@@ -45,18 +45,18 @@
 # `feedback`
 
 ## Summary
-- feedback issue の正規化・検証に関する ACP builder adapter をまとめたディレクトリ。対応する oracle 実装の builder を再公開し、feedback issue の normalize／verify 処理へ進む入口を提供する。
+- feedback issue の normalize／verify に関する ACP builder adapter をまとめるディレクトリ。oracle 実装を ACP builder から利用するための入口であり、配下に同一性判断用パラメータ builder と verification 用 AgentCallParameter builder を含む。
 
 ## Read this when
 - feedback issue の normalization または verification に関する ACP builder adapter の構成を確認するとき
-- feedback issue の同一性判断用パラメータ builder や検証用パラメータ builder の公開・import 経路を追跡するとき
+- feedback issue の oracle 実装を ACP builder 側からどう再公開・補正しているかを確認するとき
 
 ## Do not read this when
 - feedback 以外の builder adapter を調べるとき
-- 正規化・検証の具体的な判断ロジックや仕様を確認・変更するときは、対応する oracle 実装を直接読む
+- normalize／verify の正本ロジックや verdict 条件そのものを確認・変更するときは、対応する oracle file または Structured Output schema を直接読む
 
 ## hash
-- fa1026a4829e12e2edc6b4754f179d1770d66fcb12edd9d0c52a0d5c280945b3
+- 5ea8c6810a94fffec465243c08508b0033278b163b6184c71de8900091b0fc86
 
 # `indexing`
 

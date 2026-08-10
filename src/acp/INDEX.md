@@ -17,15 +17,16 @@
 # `builder`
 
 ## Summary
-- 対象ディレクトリの責務と、下位の builder adapter・共通処理・互換入口へのルーティングを簡潔に示すエントリーです。
+- ACP builder の互換・委譲 adapter 群をまとめるパッケージ。basic、common、feedback、indexing、oracle、quota_probe、realization、session、tui など、正本実装への接続や既存 import 経路の維持、prompt の code fence 保護を扱う下位要素への入口となる。
 
 ## Read this when
-- ACP builder の realization package 全体の構成、正本実装への委譲経路、prompt 生成用の共通処理、互換 import 入口を調査するとき。
-- 特定の builder adapter の所属領域を判断し、下位ディレクトリまたは個別モジュールへ読み進めるとき。
+- ACP builder の adapter 構成、正本 builder への委譲経路、既存 import 互換性を調査するとき。
+- 特定の command、session、index、feedback、quota probe、TUI、realization builder の下位実装へ進む入口を選ぶとき。
 
 ## Do not read this when
-- canonical な oracle builder の仕様や実装そのものを確認・変更するときは、oracle 側の対応対象を直接読む。
-- ACP builder の利用箇所、CLI の実行処理、利用者向け公開面を調査するときは、各参照元や実行処理を直接読む。
+- canonical な oracle 実装や正本仕様そのものを確認・変更するときは、対応する oracle 側対象を直接読む。
+- ACP builder の特定機能の具体的な生成ロジックを調査するときは、該当する下位要素を直接読む。
+- builder 以外の CLI 実行処理や利用箇所の公開面を調査するとき。
 
 ## hash
-- 1778b94e80a9ad9c0f19f7b69de33ad8e5d82447939508424fa137d249b5d63a
+- 13aa1b37386b7e4ee9e652ae4c864846a5863d068a01df396970ef988807b7ad

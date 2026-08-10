@@ -31,22 +31,20 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンド群の実装入口。feedback observation の保存ではなく、report 作成と active-state publication pipeline を扱う。
-- 固定済み report cut を起点に、raw observation の検証、candidate の集約、normalization・verification checkpoint の再利用、generation artifact と Markdown report の生成、current pointer の切替、publication 後の cleanup を担う。
-- main worktree や active session branch などの事前条件、writer lock 下の状態遷移、hash・canonical JSON・schema・secret masking による整合性検証、machine feedback rule の recurrence 集約、resume/interruption を確認するための入口である。
+- feedback サブコマンドの実装入口。固定済み report cut を基に raw observation を検証・集約し、candidate の normalization と verification、report 生成、current pointer 切替、publication 後の cleanup までを再開可能な transaction として扱う。
 
 ## Read this when
-- feedback サブコマンドの処理フロー、report cut、candidate 集約、normalization・verification、publication、resume/interruption の挙動を調べるとき
-- feedback active state、current pointer、generation artifact、checkpoint、raw observation の整合性や hash 検証を確認するとき
-- machine feedback rule の recurrence threshold や Markdown report の出力内容を確認するとき
+- `cmoc feedback report` の実行フロー、report cut の固定、checkpoint の再利用、candidate 集約、verification、report publication、current pointer 切替を確認・変更するとき。
+- 中断・失敗・再開時の入力固定、hash／reference による成果物整合性、machine rule の recurrence 集約、agent observation の issue identity normalization の入口を調べるとき。
 
 ## Do not read this when
-- feedback observation の保存、入力 envelope、secret masking などの store 共通処理だけを調べるとき
-- issue normalization や verification の agent parameter・Structured Output schema の契約だけを調べるとき
-- active state や generation artifact の共通永続化 API の詳細だけを調べるとき
+- feedback 以外のサブコマンドを扱うとき。
+- normalization や verification の parameter、Structured Output 契約だけを確認したい場合。
+- active state、generation artifact、pointer、cleanup の共通データ操作だけを確認したい場合。
+- raw observation の保存・canonical JSON・path・masking・publication lock の共通処理だけを確認したい場合。
 
 ## hash
-- c0769f9c3391d8c8d871d0fb4448e361036a1dee6359909951ce6064e98fb316
+- 4d527a7ddc25f1a12ac1738472a2382dd9ef91e1c8221247bf3c65a7c156fae5
 
 # `indexing.py`
 
