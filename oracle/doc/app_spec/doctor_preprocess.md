@@ -7,6 +7,8 @@
 - doctor preprocess は各サブコマンドの本命処理の開始前に必ず実行される
 - 各サブコマンドに共通して必要な検証・修復は、個別サブコマンドではなく doctor preprocess の責務とする
 - 各サブコマンド固有の事前条件は、doctor preprocess が正常終了した後に検証する
+- doctor preprocess は、git working tree または staging area の clean 状態を検査しない
+- clean 状態を必要とするサブコマンドだけが、doctor preprocess の正常終了後に個別仕様として検査する
 - 修復困難な場合はその場で cmoc をエラー終了する
 - feedback MCP reporter/client の利用不能だけは本命 workload を妨げないため、本書の reporter 固有規則を優先して degraded warning とする
 

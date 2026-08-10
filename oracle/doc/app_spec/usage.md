@@ -18,12 +18,16 @@
     1. 必要に応じて `cmoc oracle investigation` で read-only の調査を行う。
     2. 人間が oracle file を直接編集するか、clean な `{{cmoc-session-branch}}` 上で `cmoc oracle edit` の TUI を起動する。
         - TUI の変更は未コミットで残る。人間が差分を確認し、必要なら追加修正する。
-    3. 人間が `cmoc oracle review` を呼び出し、必要なら oracle file を修正する。
-    4. 人間が oracle file の変更を commit または破棄する。破棄した場合は必要に応じて loop の先頭へ戻る。
-    5. 人間が `cmoc realization apply fork` を呼び出す。
+    3. 人間が oracle file の変更を commit または破棄する。破棄した場合は必要に応じて loop の先頭へ戻る。
+    4. 人間が `cmoc oracle review` を呼び出す。
+    5. review 結果から修正が必要と判断した場合は、次の手順を修正が不要と判断するまで繰り返す。
+        1. oracle file を再度変更する。
+        2. oracle file の変更を commit する。
+        3. `cmoc oracle review` を再実行する。
+    6. 人間が `cmoc realization apply fork` を呼び出す。
         - cmoc は前回 join 済み apply から現在までの oracle commit 差分を注入し、run worktree 上の `codex exec` 1 回でリポジトリ全体の realization を追従させる。
-    6. 人間が `cmoc run join` で apply run を取り込むか、`cmoc run abandon` で破棄する。
-    7. 人間が現状の実装で問題ないと判断するまで繰り返す。
+    7. 人間が `cmoc run join` で apply run を取り込むか、`cmoc run abandon` で破棄する。
+    8. 人間が現状の実装で問題ないと判断するまで繰り返す。
 4. 必要に応じて、ファイル単位の網羅的な追従を行う。
     1. 人間が `cmoc realization refactor fork` を呼び出す。
         - cmoc は refactor state の調査要求に従い、差分情報を渡さずに 1 file ずつ調査する。

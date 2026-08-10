@@ -13,7 +13,7 @@
 
 ## 事前条件
 
-- なし
+- git working tree と staging area が clean であることを事前条件にせず、いずれかに未コミット差分が存在しても実行する
 
 ## 実行手順
 
@@ -45,7 +45,7 @@
 - installed skill は任意の追加規範として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
 - builder は model class を `FLAGSHIP`、reasoning effort を `MAX`、file access mode を `REPO_WRITE` とする
 - Structured Output は要求しない
-- TUI 起動前の indexing preflight を行う
+- TUI 起動前の indexing preflight は `{{cmoc-root}}/oracle/doc/app_spec/indexing.md` に従い、git working tree または staging area に既存差分があっても実行する
 - 共通 feedback instruction、TUI process の collector context、および accepted observation の保持は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` に従う
 - このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` を正本とする
 
