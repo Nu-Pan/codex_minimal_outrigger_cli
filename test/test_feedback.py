@@ -181,6 +181,33 @@ def _install_codex_outputs(
     monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_run_codex_exec)
 
 
+def _install_verification_verdicts(
+    monkeypatch: pytest.MonkeyPatch,
+    verdicts: dict[str, tuple[str, str]],
+    calls: list[str] | None = None,
+) -> None:
+    """candidate ID ごとに verdict と current reference path を返す。"""
+
+    def fake_run_codex_exec(*_args: object, **kwargs: object) -> SimpleNamespace:
+        purpose = kwargs.get("purpose")
+        prefix = "feedback issue verification ("
+        if not isinstance(purpose, str) or not purpose.startswith(prefix):
+            pytest.fail(f"unexpected feedback agent call: {purpose!r}")
+        candidate_id = purpose.removeprefix(prefix).removesuffix(")")
+        if calls is not None:
+            calls.append(candidate_id)
+        verdict, reference_path = verdicts[candidate_id]
+        return SimpleNamespace(
+            output_json=_verification_output(
+                candidate_id,
+                verdict,
+                reference_path=reference_path,
+            )
+        )
+
+    monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_run_codex_exec)
+
+
 def _store_agent_issue(root: Path, session_id: str) -> tuple[str, Path, str]:
     """README を evidence とする agent observation と issue ID を返す。"""
     accepted, raw_path = store_agent_observation(
@@ -951,6 +978,204 @@ def test_agent_issue_is_verified_compacted_then_removed_when_resolved(
         (feedback_root(root) / "active" / "generation").iterdir()
     )
     assert len(generation_directories) == 1
+
+
+def test_inconclusive_verdict_saves_incomplete_report_without_publication(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """全 verdict を診断し、current/raw を維持したまま次回は新しい cut にする。"""
+    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    _first_observation_id, _first_raw, readme_candidate_id = _store_agent_issue(
+        root, session_id
+    )
+    other_path = root / "OTHER.md"
+    other_path.write_text("current evidence\n")
+    accepted, _other_raw = store_agent_observation(
+        root,
+        _context(root, session_id=session_id),
+        _payload(text="OTHER の反復問題を確認した。", path="OTHER.md"),
+    )
+    other_observation_id = str(accepted["observation_id"])
+    other_candidate_id = issue_id(f"agent\0{other_observation_id}")
+    reference_paths = {
+        readme_candidate_id: "README.md",
+        other_candidate_id: "OTHER.md",
+    }
+    initial_calls: list[str] = []
+    _install_verification_verdicts(
+        monkeypatch,
+        {
+            candidate_id: ("unresolved", reference_path)
+            for candidate_id, reference_path in reference_paths.items()
+        },
+        initial_calls,
+    )
+
+    first = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert first.exit_code == 0, first.output
+    assert initial_calls == sorted(reference_paths)
+    first_state = validate_feedback_state(root)
+    assert set(first_state.issues) == set(reference_paths)
+    pointer_path = feedback_root(root) / "active" / "current.json"
+    first_pointer = pointer_path.read_bytes()
+    normal_reports = list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
+    assert len(normal_reports) == 1
+    generation_count = len(
+        list((feedback_root(root) / "active" / "generation").iterdir())
+    )
+
+    _pending_observation_id, pending_raw, _new_candidate_id = _store_agent_issue(
+        root, session_id
+    )
+    inconclusive_id = min(reference_paths)
+    unresolved_id = next(
+        candidate_id
+        for candidate_id in reference_paths
+        if candidate_id != inconclusive_id
+    )
+    incomplete_calls: list[str] = []
+    _install_verification_verdicts(
+        monkeypatch,
+        {
+            candidate_id: (
+                "inconclusive" if candidate_id == inconclusive_id else "unresolved",
+                reference_path,
+            )
+            for candidate_id, reference_path in reference_paths.items()
+        },
+        incomplete_calls,
+    )
+
+    incomplete = runner.invoke(app, ["feedback", "report"])
+
+    assert incomplete.exit_code == 1
+    assert incomplete_calls == sorted(reference_paths)
+    assert "result: `incomplete`" in incomplete.output
+    assert "verification candidates: `2`" in incomplete.output
+    assert "unresolved candidates: `1`" in incomplete.output
+    assert "inconclusive candidates: `1`" in incomplete.output
+    assert "normal publication: `not completed`" in incomplete.output
+    assert pointer_path.read_bytes() == first_pointer
+    assert pending_raw.exists()
+    assert len(list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))) == 1
+    assert (
+        len(list((feedback_root(root) / "active" / "generation").iterdir()))
+        == generation_count
+    )
+    terminal = load_report_cut(root)
+    assert terminal is not None
+    terminal_manifest, _terminal_path = terminal
+    assert terminal_manifest["processing"]["status"] == "incomplete"
+    assert terminal_manifest["publication"] is None
+    diagnostic = terminal_manifest["diagnostic"]
+    assert isinstance(diagnostic, dict)
+    diagnostic_report = root / str(diagnostic["report"]["path"])
+    text = diagnostic_report.read_text()
+    assert 'result: "incomplete"' in text
+    assert "active_generation_id" not in text
+    assert "verification_candidate_count: 2" in text
+    assert "unresolved_candidate_count: 1" in text
+    assert "inconclusive_candidate_count: 1" in text
+    assert text.index(
+        "## 確定済みだが今回未 publication の unresolved candidate"
+    ) < text.index("## inconclusive candidate")
+    assert f"### {unresolved_id}" in text
+    assert f"### {inconclusive_id}" in text
+    assert "今回の active generation へ publication されていません" in text
+    assert "確認できた current evidence はありません" in text
+
+    rerun_calls: list[str] = []
+    _install_verification_verdicts(
+        monkeypatch,
+        {
+            candidate_id: ("resolved", reference_path)
+            for candidate_id, reference_path in reference_paths.items()
+        },
+        rerun_calls,
+    )
+    rerun = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert rerun.exit_code == 0, rerun.output
+    assert rerun_calls == sorted(reference_paths)
+    assert load_report_cut(root) is None
+    assert not pending_raw.exists()
+    assert diagnostic_report.exists()
+    assert pointer_path.read_bytes() != first_pointer
+    assert validate_feedback_state(root).issues == {}
+
+
+@pytest.mark.parametrize(
+    ("write_error", "first_exit_code"),
+    [(OSError("diagnostic write failed"), 1), (KeyboardInterrupt(), 0)],
+    ids=("write-error", "user-interruption"),
+)
+def test_incomplete_report_write_failure_reuses_formal_checkpoints(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    write_error: BaseException,
+    first_exit_code: int,
+) -> None:
+    """診断未完了は staging cut を保持し、再実行で AI call を繰り返さない。"""
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    _observation_id, raw_path, candidate_id = _store_agent_issue(root, session_id)
+    _install_codex_outputs(
+        monkeypatch,
+        _verification_output(candidate_id, "inconclusive"),
+    )
+    original_write = feedback_report_module.write_immutable_bytes
+
+    def fail_diagnostic_write(path: Path, content: bytes) -> str:
+        if path.parent.name == "incomplete":
+            raise write_error
+        return original_write(path, content)
+
+    monkeypatch.setattr(
+        feedback_report_module,
+        "write_immutable_bytes",
+        fail_diagnostic_write,
+    )
+
+    failed = runner.invoke(app, ["feedback", "report"])
+
+    assert failed.exit_code == first_exit_code
+    staged = load_report_cut(root)
+    assert staged is not None
+    staged_manifest, _staged_path = staged
+    assert staged_manifest["processing"]["status"] == "diagnostic_staging"
+    assert len(staged_manifest["processing"]["verification_checkpoints"]) == 1
+    diagnostic = staged_manifest["diagnostic"]
+    assert isinstance(diagnostic, dict)
+    report_path = root / str(diagnostic["report"]["path"])
+    assert not report_path.exists()
+    assert raw_path.exists()
+    assert not (feedback_root(root) / "active" / "current.json").exists()
+
+    monkeypatch.setattr(
+        feedback_report_module,
+        "write_immutable_bytes",
+        original_write,
+    )
+    monkeypatch.setattr(
+        feedback_report_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: pytest.fail(
+            "formal verification checkpoint must be reused"
+        ),
+    )
+    resumed = runner.invoke(app, ["feedback", "report"])
+
+    assert resumed.exit_code == 1
+    terminal = load_report_cut(root)
+    assert terminal is not None
+    assert terminal[0]["processing"]["status"] == "incomplete"
+    assert report_path.exists()
+    assert raw_path.exists()
+    assert not (feedback_root(root) / "active" / "current.json").exists()
 
 
 def test_machine_observation_stays_bounded_until_recurrence_threshold(

@@ -109,20 +109,24 @@
 # `feedback.md`
 
 ## Summary
-- feedback subsystem の目的、処理モデル、正本仕様の分担、共通原則、既存 workload との境界、non-goal を定義する仕様書。feedback の全体設計や、観測・state・report の責務分担を確認する入口となる。
+- feedback subsystem 全体の目的、処理モデル、共通原則、正本仕様の分担、既存 workload との境界、および non-goal を定義する仕様の入口。
+- 観測の raw 保存、repository-local state の publication、normalization・verification、正常 report と incomplete 診断 report の関係を横断的に確認する際に読む。
 
 ## Read this when
-- feedback subsystem の目的や処理モデルを理解するとき
-- feedback の正本仕様の分担、共通原則、既存 workload との境界、non-goal を確認するとき
-- feedback observation・state・report の各仕様へ進む前に全体の責務境界を把握するとき
+- feedback subsystem の責務や、agent submission と machine detector から report publication までの処理モデルを確認するとき
+- observation・state・feedback_report の各正本仕様が何を定義するかを確認し、適切な下位仕様へ進むとき
+- unresolved、resolved、not_actionable、inconclusive の扱い、active state、report cut、正常 publication の境界を把握するとき
+- 既存 workload の成果物を feedback へ自動変換しない条件や、feedback を task state と分離する原則を確認するとき
 
 ## Do not read this when
-- agent submission の報告基準、収集経路、受け入れ検査、機械 detector、raw 保存だけを確認したいとき
+- observation の報告基準、収集経路、受け入れ検査、機械 detector、raw 保存だけを確認したいとき
 - repository-local state、report cut、checkpoint、atomic publication、cleanup だけを確認したいとき
-- cmoc feedback report の事前条件、処理順序、normalization、verification、表示、終了結果だけを確認したいとき
+- cmoc feedback report の事前条件、normalization、verification、表示、終了結果だけを確認したいとき
+- feedback の具体的な入力 schema、normalization prompt、verification prompt の詳細を確認したいとき
+- 実装詳細、テスト、または realization file の挙動だけを調べるとき
 
 ## hash
-- f7112fafacde4b04420564ce43c64447ca9dc2cd9773e5f7ff83c9368f42e309
+- 037a71f07a0107a2802e5d61e4ed484f2f2e96a6a1d022be78d89f192803be9e
 
 # `feedback_observation.md`
 
@@ -147,20 +151,22 @@
 # `feedback_state.md`
 
 ## Summary
-- feedback report が使用する repository-local state の正本。active generation、current pointer、report cut、reference、checkpoint、atomic publication、cleanup、および JSON の永続化・排他制御を扱う。feedback state の配置・保持範囲・issue identity・publication 順序・再開条件を確認する必要がある作業の入口となる。
+- feedback report が使用する repository-local state の正本。active generation、current pointer、report cut、reference、checkpoint、incomplete 診断 report の責務と保存範囲を定義し、atomic publication、排他制御、再開、cleanup、および corruption 防止の境界を示す。
 
 ## Read this when
-- feedback state の初期状態、artifact 配置、保持対象、generation または issue record の構造を変更・実装するとき
-- report cut の固定、checkpoint の再利用、publication、current pointer の切替、cleanup、失敗時の再開動作を確認するとき
-- feedback writer の排他、canonical JSON、hash、durable 保存、corruption 処理を確認するとき
+- feedback state の配置、保持対象、JSON canonical form、hash、排他制御を確認するとき
+- active issue や threshold 未満 machine aggregate の identity・保持・昇格条件を決めるとき
+- report cut の固定入力、checkpoint の再利用条件、inconclusive 時の扱いを実装または検証するとき
+- 正常な Markdown report の publication 順序、current pointer の切替、cleanup の条件を確認するとき
+- incomplete 診断 report の durable 保存と、直前の正常 publication を維持する動作を確認するとき
 
 ## Do not read this when
-- raw observation の形式、detector rule、recurrence threshold 自体を確認するだけのときは、feedback observation の正本を直接読む
-- feedback state を変更しない通常の report 利用者向け表示や、既に確定した Markdown report の内容だけを確認するとき
-- repository-local state ではなく session、run、branch の一般的なライフサイクルを確認するとき
+- raw observation の形式や detector rule 自体を確認したい場合は、feedback observation の正本を直接読むとき
+- feedback report の人間向け内容や表示形式だけを確認する場合
+- active state と report publication に関係しない機能の実装・調査を行う場合
 
 ## hash
-- e83c65eba118b5f88e82fcd47e6c311252dbe84c46d63465e4c2cd9359123f38
+- e48bc94eb8576a2e559811a0097f633db9563055fe8dd42b07bf6122d0c3684d
 
 # `indexing.md`
 
@@ -278,20 +284,21 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンド仕様を集約する領域。doctor、indexing、tui、oracle 操作、realization の apply／refactor、session／run lifecycle、feedback report などの実行契約を確認する入口であり、各サブコマンドの引数・事前条件・処理順序・状態遷移・中断や失敗時の扱いを、対象コマンド単位の仕様へ案内する。
+- cmoc の各サブコマンド仕様を集約するディレクトリ。doctor、indexing、tui、oracle／realization の操作、session／run lifecycle、feedback report など、個別コマンドの実行条件・手順・状態遷移・完了処理を確認するための入口となる。
+- 特定のサブコマンドの挙動や実装・テストを扱う場合は、対応する仕様文書へ進む。複数サブコマンドに共通する run lifecycle、session lifecycle、feedback の詳細は、それぞれの共通仕様文書を読む。
+- インデクシング、doctor preprocess、prompt editor、Codex CLI、feedback observation／state など、本文から参照される個別機能の正本仕様を確認したい場合は、該当する参照先へ直接進む。
 
 ## Read this when
-- cmoc の特定サブコマンドの挙動、実行条件、状態遷移、エラー処理を確認・変更するとき。
-- サブコマンド間で共有される session、run、feedback、doctor preprocess、indexing、agent 起動などの境界を仕様上確認するとき。
-- 対象となるサブコマンド仕様が複数候補にまたがり、まず利用者向けの実行契約から調査を始めるとき。
+- cmoc のサブコマンド仕様の対象領域を特定し、対応する個別仕様文書への入口を探すとき。
+- サブコマンド間で共通する run／session lifecycle や feedback 処理の仕様文書を探すとき。
+- 実装・レビュー対象が doctor、indexing、tui、oracle、realization、session、run、feedback のいずれに属するかを判断するとき。
 
 ## Do not read this when
-- サブコマンドではなく、個別処理の内部実装や prompt・Structured Output schema の詳細だけを確認したいとき。
-- oracle／realization の一般的な責務・適合性や、feedback state・observation の保存規則など、本文から参照される別の正本仕様を直接確認すべきとき。
-- 通常の git 操作や、対象コマンドと無関係な共通ライブラリの挙動だけを調べるとき。
+- 特定のサブコマンドや共通機能の詳細仕様が明確な場合は、このディレクトリ全体ではなく対応する仕様文書を直接読む。
+- 個別機能の内部実装、prompt editor の詳細、Codex CLI の一般的な起動規則、oracle／realization の適合性基準だけを確認したい場合は、参照される正本仕様へ直接進む。
 
 ## hash
-- 8f7a8e3b12b2b070e6bb927ac3fc47aee38fe03fabd9b1f01b943ea9082b1662
+- 38bdde03d014d13540ad46e67d94b4c22e1897780351499a1edcee42c577c7db
 
 # `subcommand_interruption.md`
 

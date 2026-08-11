@@ -433,24 +433,21 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の pending observation を agent-facing reporter から raw store、report cut、verification、active state、current pointer、atomic publication、cleanup まで追跡し、publication 後に compact active state だけが残る外部境界を検証するテスト。
-- reporter と collector の protocol・capability・rate limit・context 検証、path boundary、secret masking、idempotent machine observation、canonical JSON、writer lock、agent builder の readonly/schema 制約を扱う。
-- agent issue と machine aggregate の候補化・deduplication・fingerprint・recurrence threshold・window expiry・verification、resolved issue の除去を扱う。
-- 中断・再開時の durable report cut、checkpoint 回復、publication-ready state、partial cleanup、pointer と generation artifact の整合性、未定義・改変 artifact の corruption 検出を検証する。
-- feedback report の実装や対応する oracle の挙動を、repository fixture を用いた統合的な回帰テストから確認するための入口である。
+- feedback の pending observation、active state、report cut、verification、atomic publication、cleanup を同一 repository fixture で検証するテスト群。agent-facing reporter の MCP 境界、collector の受理・制限・永続化、候補同定、verification、再開可能な checkpoint、publication 後の compact state を確認する。feedback 実装や関連 oracle の挙動を調べる際のテスト入口。
 
 ## Read this when
-- feedback の reporter、collector、raw observation、active state、report cut、verification、publication、cleanup の外部挙動を変更または検証するとき。
-- feedback report の中断・再開、checkpoint 再利用、current pointer、active generation、未定義 artifact や改変検出を調査するとき。
-- feedback の normalize/verify builder、evidence fingerprint、machine observation の recurrence threshold や expiry を確認するとき。
+- feedback observation の保存・検証・secret masking・path boundary を変更または確認するとき
+- feedback report の候補集約、verification verdict、report cut、checkpoint、interruption、atomic publication、cleanup を変更または確認するとき
+- active state、current pointer、generation artifact、raw observation の整合性や corruption 検出を確認するとき
+- feedback reporter の MCP discovery、collector 転送、protocol validation を変更または確認するとき
 
 ## Do not read this when
-- feedback 以外の機能のテストを調査するとき。
-- feedback の実装詳細や正本仕様を直接確認する目的では、対応する実装ファイルまたは oracle file を読むとき。
-- 一般的な pytest の実行方法だけを確認するとき。
+- feedback の正本仕様や CLI の利用者向け挙動を確認するだけの場合は、対応する oracle または subcommand 仕様を直接読む
+- feedback 実装の責務や配置を判断する場合は、テスト本文ではなく design rule と対象実装を先に読む
+- feedback と無関係な CLI、report、state、test fixture の変更を扱う場合
 
 ## hash
-- d6ca42d0331547e5673b4b3cdf80da62757858b785c2baa35e7b720a1acc1bcc
+- 8e6097154659a81f54ef6ddf6203d9cff4295061a44ef463f34dd8b78d6b8f38
 
 # `test_file_inventory.py`
 
