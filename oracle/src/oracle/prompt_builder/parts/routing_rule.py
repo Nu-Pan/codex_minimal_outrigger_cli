@@ -16,31 +16,13 @@ def build_routing_rule(
         {"work-root": root_definitions["work-root"]},
         StructDoc(
             "routing rule",
-            StructDoc(
-                "INDEX.md の扱い",
-                """
-                - `INDEX.md` は、同階層のファイル・ディレクトリへ進むためのルーティング情報である
-                - `INDEX.md` は本文の代替ではなく、読むべき本文を選ぶための案内として扱う
-                - `Summary`、`Read this when`、`Do not read this when` をヒントに、作業に必要な文章を読みに行く
-                """,
-            ),
-            StructDoc(
-                "読み進め方",
-                """
-                - 作業開始時に対象領域を推定し、それと近い階層の `INDEX.md` を読む
-                - 対象領域を推定出来ない場合は `{{work-root}}/INDEX.md` を起点に読む
-                - 下位ディレクトリへ進む場合は、その階層の `INDEX.md` も必要に応じて読む
-                - `INDEX.md` を読んでも判断できない場合は、候補となる本文を読んで根拠を確認する
-                - 関連しそうなファイルを総当たりで読む前に、まず `INDEX.md` で候補を絞る
-                """,
-            ),
-            StructDoc(
-                "判断基準",
-                """
-                - `Read this when` に現在の作業が当てはまる対象を優先して読む
-                - `Do not read this when` に現在の作業が当てはまる対象は、より直接の読む先を探す
-                - `INDEX.md` と本文が乖離している可能性がある場合は、本文を根拠として扱う
-                """,
-            ),
+            """
+            - `INDEX.md` は、同階層の対象へ進むための routing 情報であり、本文の代替ではない
+            - 作業対象に近い階層の `INDEX.md` から読み始め、対象領域を推定できない場合は `{{work-root}}/INDEX.md` を起点にする
+            - `Summary`、`Read this when`、および `Do not read this when` で候補を絞ってから、必要な本文を読む
+            - 下位ディレクトリへ進む場合は、その階層の `INDEX.md` も必要に応じて使用する
+            - `INDEX.md` と本文が異なる場合、意味の根拠には本文を使用する
+            - 関連候補を総当たりで読む前に routing で対象を絞る
+            """,
         ),
     )

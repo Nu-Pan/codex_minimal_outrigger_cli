@@ -56,71 +56,15 @@ def build_complete_prompt(
     conflict_resolution_standard: bool = False,
     realization_oracle_reference_rule: bool = False,
     index_entry_standard: bool = False,
+    routing_rule: bool = True,
 ) -> list[StructDoc | StructBlock]:
-    """agent call にそのまま渡すことができる完全なプロンプトを構築する
+    """選択された agent 向け文面を完全 prompt として構築する。
 
-    入力プロンプトキャッシュヒット率の観点から、以下の工夫を取り入れている
+    Args:
+        routing_rule: repository 内の参照先を選ぶ routing 文面を含めるか。
 
-    - 呼び出し内容によらず不変なプロンプトパーツを「静的プロンプト」として前半にまとめる
-    - 呼び出し内容次第で変わりうるプロンプトパーツを「動的プロンプト」として後半にまとめる
-    - 静的プロンプトのうち、出現頻度の高いものを前半側に持ってくる
-    - プロンプトパーツの順序は一定にする
-    - 完全固定文言の「プロンプト内地図」を先頭に置き、今回の用件などの重要情報を参照する
-    - 変動要素を可能な限りプレースホルダ化し、実際の値との対応関係を動的プロンプト側で書くことで、変動要素だけを動的プロンプト側に押しやる
-
-    role:
-        agent が果たすべき役割の短い説明
-
-    summary:
-        agent への依頼する作業の概要・短い説明
-
-    goal:
-        agent が作業完了と判断する条件・基準
-
-    file_access_mode:
-        agent によるファイルアクセスに対する制限設定
-
-    path_context:
-        AgentCallParameter.agent_call_cwd から事前に構築した call-scoped path context
-
-    aux_static_prompt:
-        任意に追加可能な静的プロンプト
-        毎回必ず同じ文面となるプロンプトはこちら
-
-    aux_dynamic_prompt:
-        任意に追加可能な動的プロンプト
-        毎回変化する可能性があるプロンプトはこちら
-
-    aux_placeholder_def:
-        任意に追加可能なプレースホルダ定義
-
-    oracle_and_realization_basic:
-        True の時、oracle, realization についての基本情報をプロンプトに注入する
-
-    oracle_standard:
-        True の時、oracle standard をプロンプトに注入する
-
-    realization_standard:
-        True の時、realization standard をプロンプトに注入する
-
-    oracle_review_standard:
-        True の時、oracle review standard をプロンプトに注入する
-
-    apply_review_standard:
-        True の時、apply review standard をプロンプトに注入する
-
-    conflict_resolution_standard:
-        True の時、conflict resolution standard をプロンプトに注入する
-
-    realization_oracle_reference_rule:
-        True の時、realization code から oracle file path を参照する規則を
-        プロンプトに注入する
-
-    index_entry_standard:
-        True の時、index entry standard をプロンプトに注入する
-
-    return:
-        agent call にそのまま渡すことができる完全なプロンプト
+    Returns:
+        agent call へ渡す構造化済み prompt。
     """
     # 完全 prompt 自身が参照できる root 定義を call-scoped context から初期化する
     ph_map: PlaceholderMap = path_context.root_placeholder_definitions()
@@ -161,7 +105,6 @@ def build_complete_prompt(
         or apply_review_standard
         or conflict_resolution_standard
         or realization_oracle_reference_rule
-        or index_entry_standard
     ):
         oracle_and_realization_basic = True
 
@@ -189,7 +132,8 @@ def build_complete_prompt(
         prompt.extend(aux_static_prompt)
     if file_access_mode != FileAccessMode.NO_RULE:
         _extend_static_prompt(build_file_access_rule, file_access_mode, path_context)
-    _extend_static_prompt(build_routing_rule, path_context)
+    if routing_rule:
+        _extend_static_prompt(build_routing_rule, path_context)
 
     # 動的プロンプトを構築
     prompt.extend((role_block, summary_block, goal_block))

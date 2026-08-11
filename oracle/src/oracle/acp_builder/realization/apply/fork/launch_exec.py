@@ -1,4 +1,4 @@
-"""`cmoc realization apply fork` の `codex exec` prompt 正本。"""
+"""`cmoc realization apply fork` の prompt 文面と起動パラメータの構築定義。"""
 
 # std
 from pathlib import Path

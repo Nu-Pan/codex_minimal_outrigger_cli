@@ -45,11 +45,21 @@ agent が入力する JSON schema の唯一の正本は、`{{cmoc-root}}/oracle/
 
 schema に含まれる agent 申告の原因、重要度、および重複判定用 hint は、確定事実または issue key として扱わない。
 
+### 人間向け報告基準
+
+agent は、現在の workload だけでは解消できず、作業外にいる人間の対応によって再発防止、反復的な浪費の削減、または人間意図の確定が可能な問題だけを報告する。
+
+通常の workload 内で解決した問題、仕様どおりの制約、および具体的な根拠がない改善案は報告対象にしない。報告対象を発見した場合は、その時点で reporter を使用し、報告後も可能な限り本命 workload を継続する。報告対象がない場合は、feedback 用の出力または reporter call を行わない。
+
+reporter の利用不能または submission の拒否は、本命 workload の成功条件を変更しない。
+
 ### prompt への共通 instruction
 
-共通 instruction の文面と報告基準は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py` の `build_feedback_reporting_standard` だけを正本とする。`build_complete_prompt` は同生成結果を全 agent call へ無条件に 1 回だけ注入する。個別 builder が有効化する option にしてはならない。
+共通 instruction の正確な agent 向け文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py` の `build_feedback_reporting_standard` で管理する。報告基準の意味仕様は、本書の「人間向け報告基準」とする。prompt 文面だけを報告基準の正本として扱ってはならない。
 
-共通 instruction には `cmoc_feedback.submit_observation` を使うことだけを示す。schema、context field、入力例、文字数制限、受け入れ検査、および MCP reporter から collector までの内部 transport を複製してはならない。
+`build_complete_prompt` は同文面を全 agent call へ無条件に 1 回だけ注入する。個別 builder が有効化する option にしてはならない。
+
+共通 instruction では、報告時に `cmoc_feedback.submit_observation` を使うよう指示する。schema、context field、入力例、文字数制限、受け入れ検査、および MCP reporter から collector までの内部 transport を複製してはならない。
 
 ### reporter の受け入れ検査
 

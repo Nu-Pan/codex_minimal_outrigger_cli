@@ -1,4 +1,4 @@
-"""realization file を扱う agent call に注入する規範の正本。"""
+"""realization file を扱う agent call 向け instruction 文面の構築定義。"""
 
 # cmoc
 from oracle.other.path_model import AgentCallPathContext
@@ -16,10 +16,6 @@ def build_realization_standard(
     standards = [
         Standard(
             title="realization file を現行の oracle file に適合させる",
-            backgrounds=[
-                "realization file は oracle file に記述された人間意図を具体化する",
-                "正本仕様にない実装詳細は実装者の小さな裁量で補われる",
-            ],
             requirements=[
                 Requirement(
                     "必須",
@@ -41,10 +37,6 @@ def build_realization_standard(
         ),
         Standard(
             title="現行仕様に必要な実装だけを保つ",
-            backgrounds=[
-                "重複、旧実装、不要な公開面は AI が読む文脈と保守対象を増やす",
-                "将来の可能性だけに基づく抽象化は現行仕様の実装を複雑にする",
-            ],
             requirements=[
                 Requirement(
                     "必須",
@@ -70,10 +62,6 @@ def build_realization_standard(
         ),
         Standard(
             title="対象 repository 固有の手順で変更を検証する",
-            backgrounds=[
-                "言語、framework、tool 固有の開発手順は対象 repository が所有する",
-                "cmoc は任意の対象 repository の開発手順を内蔵しない",
-            ],
             requirements=[
                 Requirement(
                     "必須",

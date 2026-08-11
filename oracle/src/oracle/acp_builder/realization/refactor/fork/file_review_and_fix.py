@@ -1,4 +1,4 @@
-"""`cmoc realization refactor fork` のファイル単位レビュー・修正 prompt 正本。"""
+"""refactor fork のファイル単位レビュー・修正 prompt 文面の構築定義。"""
 
 # std
 from pathlib import Path

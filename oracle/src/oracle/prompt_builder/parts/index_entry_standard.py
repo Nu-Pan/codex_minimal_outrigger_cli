@@ -15,10 +15,6 @@ def build_index_entry_standard() -> tuple[PlaceholderMap, StructDoc]:
     standards = [
         Standard(
             title="INDEX.md エントリーは読むべき対象へのルーティング情報である",
-            backgrounds=[
-                "AI agent は作業前に INDEX.md を読み、どのファイル・ディレクトリへ進むべきかを判断する",
-                "INDEX.md エントリーの価値は、対象本文を読む前に、読むべきかどうかを判断できることにある",
-            ],
             requirements=[
                 Requirement(
                     "必須",
@@ -40,10 +36,6 @@ def build_index_entry_standard() -> tuple[PlaceholderMap, StructDoc]:
         ),
         Standard(
             title="INDEX.md エントリーは対象内容に根拠を持つ",
-            backgrounds=[
-                "INDEX.md は対象ファイル・ディレクトリの現在内容から生成される",
-                "対象外の責務まで書くと、AI agent が不要なファイルを読む原因になる",
-            ],
             requirements=[
                 Requirement(
                     "必須",
@@ -61,10 +53,6 @@ def build_index_entry_standard() -> tuple[PlaceholderMap, StructDoc]:
         ),
         Standard(
             title="機械的に補える情報を INDEX.md エントリーの意味情報に混ぜない",
-            backgrounds=[
-                "ファイル・ディレクトリの識別子、ハッシュ、出力形式は、この agent call の外側の仕組みで補われる",
-                "機械的に分かる情報を自然言語へ混ぜるほど、ルーティング判断に必要な意味情報が薄まる",
-            ],
             requirements=[
                 Requirement(
                     "禁止",

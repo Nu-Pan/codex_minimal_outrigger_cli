@@ -51,9 +51,9 @@ class ReasoningEffort(StrEnum):
 class FileAccessMode(StrEnum):
     """cmoc 上の論理的なファイルアクセスモード
 
-    各モードの詳細は `build_file_access_rule` を参照
-    Codex CLI sandbox への対応と permission profile の禁止規則は
-    `oracle/doc/app_spec/codex_exec_rule.md` を正本とする
+    各 mode の意味と Codex CLI sandbox への対応は
+    `oracle/doc/app_spec/codex_exec_rule.md` を正本とする。
+    `build_file_access_rule` は agent に渡す正確な制限文面を構築する。
     """
 
     READONLY = auto()

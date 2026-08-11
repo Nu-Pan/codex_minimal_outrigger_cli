@@ -1,4 +1,4 @@
-"""`cmoc oracle review` の所見採否判定 prompt 正本。"""
+"""oracle review の所見採否判定用 prompt 文面と起動パラメータの構築定義。"""
 
 # std
 from pathlib import Path

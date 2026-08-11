@@ -1,4 +1,4 @@
-"""`cmoc oracle investigation` の TUI 起動 prompt 正本。"""
+"""`cmoc oracle investigation` の prompt 文面と TUI 起動パラメータの構築定義。"""
 
 # cmoc
 from oracle.acp_builder.basic import (

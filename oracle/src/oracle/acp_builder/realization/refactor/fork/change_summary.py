@@ -1,4 +1,4 @@
-"""`cmoc realization refactor fork` の変更要約生成 prompt 正本。"""
+"""refactor fork の変更要約用 prompt 文面と起動パラメータの構築定義。"""
 
 # std
 from pathlib import Path
@@ -45,7 +45,7 @@ def build_realization_refactor_fork_change_summary_parameter(
                 StructCodeBlock("diff", raw_git_diff),
             ),
         ],
-        oracle_and_realization_basic=True,
+        routing_rule=False,
     )
 
     # report 用の分類は品質より経済性を優先する。

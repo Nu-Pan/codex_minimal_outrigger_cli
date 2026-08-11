@@ -5,35 +5,17 @@ from oracle.other.struct_doc import StructDoc
 
 
 class Standard:
-    """
-    「何らかの事柄が従うべき規範」のフォーマットを定義するクラス
-    e.g. INDEX.md エントリーは index entry standard に従う。
-    index entry standard は `Standard` を元に生成される。
-    規範の定義は cmoc が所有し、適用対象は各 prompt part の適用条件が定める。
-    """
+    """agent 向け instruction の要求文面を構造化する。"""
 
     def __init__(
         self,
         title: str,
-        backgrounds: list[str],
         requirements: list["Requirement"],
         examples: list[str] = list(),
     ):
         # title
         # - この standard の見出し
         self._title = title
-        # backgrounds
-        # - この standard が必要になる背景・前提
-        # - 必須フィールド
-        # - requirements と内容が重複しないように注意
-        if (
-            isinstance(backgrounds, list)
-            and len(backgrounds) > 0
-            and all(isinstance(i, str) for i in backgrounds)
-        ):
-            self._backgrounds = backgrounds
-        else:
-            raise ValueError(f"Invalid backgrounds (backgrounds={backgrounds})")
         # requirements
         # - この standard が要求する規範
         # - 必須フィールド
@@ -64,10 +46,6 @@ class Standard:
     @property
     def title(self) -> str:
         return self._title
-
-    @property
-    def backgrounds(self) -> list[str]:
-        return self._backgrounds
 
     @property
     def requirements(self) -> list["Requirement"]:
@@ -101,18 +79,12 @@ class Requirement:
 
 
 def standard_to_struct_doc(standard: Standard) -> StructDoc:
-    """
-    standard を StructDocs に変換する。
-    """
+    """agent 向け instruction 文面へ変換する。"""
     fields = [
-        StructDoc(
-            "背景",
-            ".\n".join(f"- {b}" for b in standard.backgrounds),
-        ),
         StructDoc(
             "要求",
             ".\n".join(f"- [{r.label}] {r.body}" for r in standard.requirements),
-        ),
+        )
     ]
     if standard.examples:
         fields.append(

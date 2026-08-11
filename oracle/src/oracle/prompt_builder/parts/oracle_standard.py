@@ -1,4 +1,4 @@
-"""oracle file を扱う agent call に注入する規範の正本。"""
+"""oracle file を扱う agent call 向け instruction 文面の構築定義。"""
 
 # cmoc
 from oracle.other.path_model import AgentCallPathContext
@@ -16,10 +16,6 @@ def build_oracle_standard(
     standards = [
         Standard(
             title="oracle file を正本仕様断片として扱う",
-            backgrounds=[
-                "oracle file は人間が所有し、realization file が具体化する正本仕様断片である",
-                "installed skill は実行環境ごとに存在しない場合がある",
-            ],
             requirements=[
                 Requirement("必須", "判断の根拠を関連する oracle file に置く"),
                 Requirement(
@@ -38,10 +34,6 @@ def build_oracle_standard(
         ),
         Standard(
             title="重要な人間意図へ絞り、仕様の隙間を許容する",
-            backgrounds=[
-                "oracle file の規模は人間が維持し、AI が読む文脈量に影響する",
-                "正本仕様断片の間に未定義部分が残ることは意図された状態である",
-            ],
             requirements=[
                 Requirement(
                     "必須",
@@ -68,10 +60,6 @@ def build_oracle_standard(
         ),
         Standard(
             title="実装から正本仕様を逆算しない",
-            backgrounds=[
-                "realization file には実装者の裁量、過去の都合、偶然の挙動が含まれ得る",
-                "実装上の制約は正本仕様の実現可能性を調べる材料にはなる",
-            ],
             requirements=[
                 Requirement(
                     "禁止",
@@ -89,10 +77,6 @@ def build_oracle_standard(
         ),
         Standard(
             title="正本仕様断片の整合性と検索性を保つ",
-            backgrounds=[
-                "相互に矛盾する正本仕様断片から一貫した realization file は導けない",
-                "用語と命名の揺れは検索と読解を不安定にする",
-            ],
             requirements=[
                 Requirement(
                     "禁止",

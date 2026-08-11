@@ -1,4 +1,4 @@
-"""`cmoc indexing` の目次情報生成 prompt 正本。"""
+"""`cmoc indexing` の agent 向け prompt 文面と起動パラメータの構築定義。"""
 
 # std
 from pathlib import Path

@@ -45,9 +45,10 @@
 
 ## agent call 規則
 
-- 個別 agent call の詳細仕様は、対応する `build_oracle_review_*_parameter()` を正本とする
-- 所見の判定基準は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/oracle_review_standard.py` の `build_oracle_review_standard` だけを正本とする
-- 所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定の全 builder は、`build_oracle_review_standard` の同じ生成結果を prompt へ注入する
+- 個別 agent call の意味上の責務と判断基準は本書で定義する。
+- 対応する `build_oracle_review_*_parameter()` は、各 agent call の正確な prompt 文面と起動パラメータを構築する。
+- `{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/oracle_review_standard.py` の `build_oracle_review_standard` は、本書の所見成立条件を agent へ伝える正確な文面を構築する。
+- 所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定の全 builder は、同じ所見成立条件の文面を prompt へ注入する
 - Structured Output schema は出力構造だけを定義し、所見の判定基準を定義しない
 
 ## 「run の隔離実行」とは
@@ -89,7 +90,16 @@ oracle review の finding、採否判定、および verdict を feedback observ
 
 ## 「所見」の定義
 
-- `build_oracle_review_standard` を正本とする
+所見は、oracle file の具体的な記述だけから問題が成立する場合に限る。realization file、外部事情、または未確認の可能性を追加しなければ成立しない事項は所見にしない。
+
+所見の重大度は、次の基準で決める。
+
+- `fatal` は、正本仕様断片同士に解釈の余地がない矛盾がある場合、または仕様に従うと実装者の裁量では解消できない問題が必ず発生する場合とする。
+- `minor` は、文意または検索性を損なう誤字、脱字、明確な文法誤り、用語不統一、または表記揺れであり、正本仕様の意味を変えずに修正できる場合とする。
+
+`fatal` 所見は、両立する妥当な実装方針が残っていない理由を、具体的な正本仕様断片から説明できなければならない。
+
+仕様の隙間、複数の妥当解、好み、推測、および一般的なベストプラクティスだけを根拠とする事項は所見にしない。所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定では、この同じ成立条件を使用する。
 
 ## 所見の ID 管理
 
@@ -112,7 +122,7 @@ oracle review の finding、採否判定、および verdict を feedback observ
 
 - ダーティフラグが true の oracle file 1 件ごとに、独立した agent call を行う
 - このファイルごとの agent call は配列実行して良い
-- agent call の詳細は `build_oracle_review_enumerate_finding_parameter` を正本とする
+- agent call の正確な prompt 文面と起動パラメータは `build_oracle_review_enumerate_finding_parameter` で構築する
 
 ## 「所見リストマージループ」の詳細
 
@@ -123,7 +133,8 @@ oracle review の finding、採否判定、および verdict を feedback observ
 
 - 所見リストマージループの各周回で、所見リスト全体に対する agent call を行う
 - cmoc は返却された編集操作を所見リストへ適用する
-- agent call の詳細仕様は `build_oracle_review_merge_finding_parameter` を正本とする
+- agent call の正確な prompt 文面と起動パラメータは `build_oracle_review_merge_finding_parameter` で構築する
+- Structured Output の各編集操作が参照する `target_ids` は、入力した所見リストの `finding_id` 集合に含まれなければならない
 
 ## 「所見リスト検証ループ」の詳細
 
@@ -138,19 +149,19 @@ oracle review の finding、採否判定、および verdict を feedback observ
 
 - ダーティフラグが true の所見 1 件ごとに agent call を行う
 - この所見ごとの agent call は並列実行してよい
-- agent call 詳細仕様は `build_oracle_review_validate_finding_challenger_parameter` を正本とする
+- agent call の正確な prompt 文面と起動パラメータは `build_oracle_review_validate_finding_challenger_parameter` で構築する
 
 ## 「その所見が妥当である理由の記述」の詳細
 
 - ダーティフラグが true の所見 1 件ごとに agent call を行う
 - この所見ごとの agent call は並列実行してよい
-- agent call 詳細仕様は `build_oracle_review_validate_finding_advocate_parameter` を正本とする
+- agent call の正確な prompt 文面と起動パラメータは `build_oracle_review_validate_finding_advocate_parameter` で構築する
 
 ## 「その所見の採用・不採用の判定」の詳細
 
 - 所見 1 件ごとに、採用・不採用判定の agent call を行う
 - この所見ごとの agent call は並列実行してよい
-- agent call 詳細仕様は `build_oracle_review_judge_finding_parameter` を正本とする
+- agent call の正確な prompt 文面と起動パラメータは `build_oracle_review_judge_finding_parameter` で構築する
 
 ## レポート
 

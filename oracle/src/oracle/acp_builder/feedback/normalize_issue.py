@@ -1,4 +1,4 @@
-"""`cmoc feedback report` の曖昧な issue 同一性判断 prompt 正本。"""
+"""feedback issue の同一性判断用 prompt 文面と起動パラメータの構築定義。"""
 
 # std
 from pathlib import Path
@@ -61,6 +61,7 @@ def build_feedback_normalize_issue_parameter(
                 StructCodeBlock("json", candidate_issues_json),
             ),
         ],
+        routing_rule=False,
     )
 
     # 同一性判断専用の Structured Output と読み取り専用設定を返す。

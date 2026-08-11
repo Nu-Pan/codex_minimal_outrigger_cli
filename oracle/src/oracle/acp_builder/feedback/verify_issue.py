@@ -1,4 +1,4 @@
-"""`cmoc feedback report` の issue verification prompt 正本。"""
+"""feedback issue の検証用 prompt 文面と起動パラメータの構築定義。"""
 
 # std
 from pathlib import Path
@@ -77,6 +77,7 @@ def build_feedback_verify_issue_parameter(
                 StructCodeBlock("json", report_cut_references_json),
             ),
         ],
+        routing_rule=False,
     )
 
     # verification 専用の Structured Output と読み取り専用設定を返す。

@@ -9,18 +9,7 @@ def build_file_access_rule(
     mode: FileAccessMode,
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, StructDoc]:
-    """
-    AI エージェントによるファイル読み書き規則のプロンプトを構築する
-
-    規則は、原則として、リポジトリ全体 repo-write をベースとした deny list 形式で記述する。
-    規則は、任意の repository に適用できる汎用的なものに限定される。
-
-    mode:
-        読み書きモードプリセット
-
-    path_context:
-        AgentCallParameter.agent_call_cwd と同じ値から構築した call-scoped path context
-    """
+    """file access mode に対応する agent 向け制限文面を構築する。"""
     # リポジトリ外 deny ルール
     # NOTE
     #   work-root 外の書き込み禁止は、言わなくてもわかりそう。

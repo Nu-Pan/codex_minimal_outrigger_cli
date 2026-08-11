@@ -1,4 +1,4 @@
-"""`cmoc oracle review` の所見否定理由列挙 prompt 正本。"""
+"""oracle review の反証理由列挙用 prompt 文面と起動パラメータの構築定義。"""
 
 # std
 from pathlib import Path

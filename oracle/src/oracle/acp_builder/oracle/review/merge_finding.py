@@ -1,4 +1,4 @@
-"""`cmoc oracle review` の所見リストマージ prompt 正本。"""
+"""oracle review の所見統合用 prompt 文面と起動パラメータの構築定義。"""
 
 # std
 from pathlib import Path

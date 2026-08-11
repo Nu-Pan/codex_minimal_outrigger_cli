@@ -24,13 +24,14 @@
 
 ## agent call と file access
 
-- `build_realization_apply_fork_launch_exec_parameter` が、追従対象 commit 範囲と raw oracle diff を含む完全 prompt を `AgentCallParameter.prompt` として返す。
+- 追従要否と適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` の「oracle file に対する realization file の適合性」を正本とする。
+- `build_realization_apply_fork_launch_exec_parameter` は、同基準を agent へ伝える正確な prompt 文面と起動パラメータを構築し、追従対象 commit 範囲と raw oracle diff を含む完全 prompt を `AgentCallParameter.prompt` として返す。
 - `{{cmoc-run-worktree}}` を agent call の cwd とする `codex exec` を 1 回だけ本命 agent call として実行する。Codex CLI の TUI は起動しない。
 - 本命の追従作業を複数の agent call に分割してはいけない。
 - 収束判定のために同じ作業を反復してはいけない。
 - 本命 agent call 終了後に、別の agent call で作業を補完してはいけない。
 - prompt は、注入差分とリポジトリ全体の関連 oracle file および realization file を根拠に、必要な implementation、test、ancillary を修正するよう要求する。
-- builder は `build_oracle_standard`、`build_realization_standard`、および `build_apply_review_standard` の規範を固定で prompt へ注入する。
+- builder は、oracle file と realization file の責務および適合性を agent へ伝える文面を固定で prompt へ注入する。
 - installed skill の有無によって、追従要否、適合性、または完了の判定基準を変えてはいけない。
 - file access mode は `REALIZATION_WRITE` とし、agent は realization file だけを変更する。
 

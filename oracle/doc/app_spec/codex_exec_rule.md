@@ -3,7 +3,8 @@
 ## 基本
 
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
-- 個別の `codex exec` 呼び出しの仕様は `{{cmoc-root}}/oracle/src/oracle/acp_builder` ツリー内の AgentCallParameter builder を正本とする
+- 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする
+- `{{cmoc-root}}/oracle/src/oracle/acp_builder` ツリー内の AgentCallParameter builder は、個別 agent call の正確な prompt 文面と起動パラメータを構築する
 - 本書で agent call とは、1 個の `AgentCallParameter` に対する論理的な呼び出し単位を指す
 - Structured Output の出力補正を行う場合も、初回 `codex exec` と補正用 `codex exec resume` を合わせて 1 回の agent call とする
 - 本書で Codex call とは、初回実行や補正を含む個々の Codex CLI 呼び出しを指す
@@ -12,7 +13,10 @@
 
 ## agent call の path context
 
-- call-scoped path context のデータモデル、各 member の意味、および `AgentCallPathContext.agent_call_cwd` からの導出規則は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext` class 定義と class・member comment を正本とする
+- `agent_call_cwd` は、子 agent call に設定する cwd とする
+- `work_root` は、`agent_call_cwd` を含む最寄りの Git worktree root とする
+- `repo_root` は、`work_root` が属する Git repository の main worktree root とする
+- call-scoped path context の正確なデータモデルと導出処理は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext` で管理する
 - AgentCallParameter builder は、完全 prompt を構築する前に `AgentCallParameter.agent_call_cwd` を決定する
 - `AgentCallParameter.agent_call_cwd` は必須の呼び出しパラメータとし、cmoc process の cwd から暗黙に補完してはならない
 - builder は、決定済みの `AgentCallParameter.agent_call_cwd` だけを `agent_call_cwd` keyword argument に渡して `AgentCallPathContext` を構築する
@@ -92,8 +96,20 @@ call-scoped path context の適用範囲を次に示す。
 
 ### 詳細なファイルアクセス制限
 
-- 個別の AgentCallParameter builder は論理的な file access mode を選択する正本とする
-- file access mode ごとの詳細なファイルアクセス制限は、`build_file_access_rule` が生成するプロンプトで Codex CLI に指示する
+- 全 file access mode では、次の制限を共通で適用する
+    - `{{work-root}}` ツリー外の読み書きを禁止する。`{{work-root}}` と `{{repo-root}}` が異なる場合は、`{{repo-root}}/.cmoc/g*/ar` ツリー内の読み取りだけを例外とする
+    - `{{work-root}}/.git`、`{{work-root}}/.agents`、`{{work-root}}/.codex`、および `{{work-root}}/.cmoc/g*/ar` ツリー内の書き込みを禁止する
+    - `AGENTS.md` と `INDEX.md` の書き込みを禁止する
+    - `{{work-root}}/memo` の読み書きを禁止する
+- 各 mode は、共通制限に次の制限を追加する
+    - `READONLY`: oracle file と realization file の書き込みを禁止する
+    - `PURE_ORACLE_READ`: oracle file の書き込みと realization file の読み書きを禁止する
+    - `REPO_WRITE`: 追加の制限を設けない
+    - `PURE_ORACLE_WRITE`: realization file の読み書きを禁止する
+    - `REALIZATION_WRITE`: oracle file の書き込みを禁止する
+    - `NO_RULE`: 詳細な file access instruction を prompt に追加しない特殊 mode とする
+- 個別 agent call が選択する file access mode は、対応する oracle doc の作業範囲と一致させる。AgentCallParameter builder は、その正確な選択値を構築する
+- `build_file_access_rule` は、本節の制限を agent へ伝える正確な prompt 文面を構築する
 - path ごとの読み書き可否など、`read-only` と `workspace-write` だけでは表現できない制限を sandbox に反映しようとしてはならない
 - 詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する
 
@@ -130,7 +146,7 @@ call-scoped path context の適用範囲を次に示す。
 - model provider ID、provider-local key、および provider-local setting は、意味を変えず Codex CLI が解釈できる TOML key/value として符号化する
 - 選択していない provider の設定を argv に渡してはならない
 - model provider の選択と provider-local 設定に `--profile`、`$CODEX_HOME/config.toml`、または project config を使用してはならない
-- 実経路統合テスト以外の通常実行では、AgentCallParameter builder は model class と reasoning effort の選択を正本とする
+- 実経路統合テスト以外の通常実行では、対応する oracle doc が model class と reasoning effort の意味上の選択を定め、AgentCallParameter builder が正確な選択値を構築する
 - 実際の model provider、model、および reasoning effort の値は `CmocConfigCodex` から解決する
 - 実経路統合テストだけに適用する model class と reasoning effort の例外は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` を正本とする
 - この例外によって、通常実行の AgentCallParameter builder の責務を変更してはならない
@@ -138,9 +154,10 @@ call-scoped path context の適用範囲を次に示す。
 
 ## プロンプトの渡し方
 
-- AgentCallParameter builder が生成した `AgentCallParameter.prompt` は、初回 Codex call に渡すプロンプト本文の正本とする
+- 初回 Codex call に渡す正確な prompt 文面は、人間が所有する oracle src の AgentCallParameter builder と prompt builder で管理する
+- builder が生成した `AgentCallParameter.prompt` は、その agent call に渡す実行時の入力本文であり、意味仕様または prompt 文面の正本ではない
 - exec 用 builder は完全 prompt を `AgentCallParameter.prompt` として直接返す。editor-input log など別 file の path を読む指示だけを間接 prompt として返してはいけない
-- cmoc は `AgentCallParameter.prompt` を、可能な限りそのまま初回 Codex call に渡すこと
+- cmoc は `AgentCallParameter.prompt` の意味内容を変更せず、初回 Codex call に渡すこと
 - cmoc は初回 Codex call へ渡す直前の段階で、`AgentCallParameter.prompt` に指示文、注意書き、説明、整形、要約、翻訳、補助文脈、モデル・reasoning effort 情報を追加してはならない
 - Structured Output の補正 prompt は、初回 prompt を加工したものではなく、本書の出力補正規則に従う次の turn の入力として構築する
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意味内容を変更しない範囲に限って許可する

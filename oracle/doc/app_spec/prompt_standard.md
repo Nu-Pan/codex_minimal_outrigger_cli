@@ -3,12 +3,48 @@
 
 ## 概要
 
-- cmoc が agent に渡すプロンプトが従うべき規範を述べる
-- これは cmoc に固有の規範である（任意のプロダクトに適用可能な規範ではない）ため oracle doc として述べる
+- cmoc が agent call に渡す prompt の責務、情報量、文面管理、および構築規則を定める。
+- 本書は、cmoc の意味仕様と agent 向け prompt 文面を別の正本として管理する境界を定める。
+
+## 正本と実行時生成物の責務境界
+
+### 意味仕様の正本
+
+- cmoc の要求、判断基準、および責務を定義する正本は、cmoc 開発者が読む oracle doc とする。
+- prompt に含まれない事項を、cmoc の意味仕様に存在しない事項として扱ってはならない。
+- prompt、prompt builder、または生成済み prompt だけから cmoc の意味仕様を逆算してはならない。
+- agent call に意味上の判断基準を適用する場合は、対応する oracle doc にその基準を定義する。
+
+### prompt 文面の正本
+
+- 子 agent に実際に渡す正確な prompt 文面は、人間が所有してレビューする `{{cmoc-root}}/oracle/src/oracle/prompt_builder` および `{{cmoc-root}}/oracle/src/oracle/acp_builder` の oracle src で管理する。
+- prompt builder は、agent 向け文面と起動パラメータの構築定義である。cmoc の意味仕様の唯一の正本ではない。
+- oracle doc は意味と責務を定義し、oracle src はその agent call に必要な正確な表現を構築する。oracle doc に prompt 文面をそのまま複製してはならない。
+
+### 実行時生成物
+
+- `AgentCallParameter.prompt`、生成済み prompt、完全 prompt の skeleton、および editor input は実行時生成物であり、正本ではない。
+- log に保存された生成済み prompt または editor input を、意味仕様または prompt 文面の編集元として扱ってはならない。
+
+## prompt に含める情報
+
+- prompt は、個別 agent call の遂行に必要な情報を選択して伝える指示とする。正本仕様または cmoc 開発者向け仕様書の代替にしてはならない。
+- prompt へ文言を追加する場合は、その agent call の遂行に必要な理由を説明できなければならない。
+- agent が参照可能な情報は、必要に応じて参照先または `INDEX.md` routing を示し、本文を網羅的に複製してはならない。
+- 子 agent の判断に不要な背景、設計理由、実装事情、および網羅的な仕様説明を含めてはならない。
+- 作業に必要な定義、権限制約、作業範囲、完了条件、および出力契約は保持する。
+- 単純な短文化または固定の削減率を目的に、必要な情報を削ってはならない。
+
+## prompt 文面の所有と受け渡し
+
+- prompt 文面の執筆と変更は oracle src で行い、realization implementation に独自の文面判断を委ねてはならない。
+- realization implementation は、oracle src が構築した prompt の保存、意味を変えない機械的変換、および受け渡しだけを担ってよい。
+- realization implementation は、prompt に指示を独自に追加、要約、補完、翻訳、または仕様化してはならない。
+- 正本仕様の意味を agent へ伝える場合も、その agent call の遂行に必要な表現だけを oracle src の prompt 文面に置く。
 
 ## cmoc 固有契約と installed skill の責務境界
 
-- cmoc の agent call が解釈に必要とする次の契約は、cmoc が所有する oracle src から動的プロンプトへ注入する
+- cmoc の agent call が解釈に必要とする契約の意味は、関連する oracle doc に定義する。各 agent call に必要な表現は、cmoc が所有する oracle src から動的 prompt へ注入する
     - cmoc 固有の概念
     - file access
     - `INDEX.md` routing
@@ -25,17 +61,29 @@
 
 ## 規範を決定論的に注入する
 
-- agent call ごとに必要な規範は、対応する `build_*_parameter` 関数が `build_complete_prompt` の固定引数として選択する
+- agent call ごとに必要な instruction は、対応する `build_*_parameter` 関数が `build_complete_prompt` の固定引数として選択する。
+- builder による選択は、対応する oracle doc の意味仕様を実現するものであり、選択した prompt part だけを判断基準の正本にしてはならない。
 - 規範の選択に installed skill、設定による任意切替、または追加の agent call を使用してはいけない
 - `cmoc tui` は、適用条件を明記した cmoc の基本規範を固定で注入する
 - `cmoc tui` のオリジナルプロンプトに応じて規範を選択する agent call を行ってはいけない
-- indexing agent call は、`build_index_entry_standard` が定める index entry standard の責務を維持する
+- repository の参照が必要な agent call だけに routing rule を注入する。入力された情報だけを参照する agent call には注入しない。
+- prompt part の有効化によって、その文面が参照しない cmoc 固有概念を一律に追加してはならない。
+- indexing agent call は、対応する index entry instruction を固定で注入する。
+
+共通 prompt part が伝える意味仕様の参照先を次に示す。
+
+- oracle file と realization file の分類、責務、および適合性は、`{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` とする。
+- file access mode と詳細な制限は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` とする。
+- `INDEX.md` の entry と routing は、`{{cmoc-root}}/oracle/doc/app_spec/indexing.md` とする。
+- oracle review の所見成立条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_review.md` とする。
+- session join の conflict 解消条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/session_join.md` とする。
+- human feedback の報告基準は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` とする。
 
 ## 人間向け feedback instruction を共通注入する
 
-- `build_complete_prompt` は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py` の生成結果を全 agent call へ無条件に 1 回だけ注入する
+- 共通 instruction の正確な文面は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py` の構築定義で管理する。
+- `build_complete_prompt` は、同文面を全 agent call へ無条件に 1 回だけ注入する
 - 個別の `build_*_parameter` 関数、個別 prompt、または個別 Structured Output schema に同じ reporting instruction を追加してはならない
-- reporting instruction の判断基準、reporter、collector、および保存責務は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` を正本とする
 - feedback field を持たない既存 Structured Output の意味と受理条件を変更してはならない
 
 ## Structured Output の出力契約
@@ -53,10 +101,11 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
 
 - 実行時状態を必要とするため schema で表現できない条件だけを、決定論的事後条件にする
 - 実行時状態を必要とする条件には、agent call が実際に変更した path 集合との照合や、入力された ID 集合への参照を含める
-- 決定論的事後条件は、対応する `build_*_parameter` 関数が構築する初回 prompt 内の一箇所に置く
+- 各決定論的事後条件の意味と機械的な受理基準は、対応する workload の oracle doc に定義する。
+- 対応する `build_*_parameter` 関数は、同条件の正確な agent 向け文面を初回 prompt 内の一箇所に置く
 - 機械的に検証する各条件は、初回応答前に agent が読み取れる形で宣言する
-- 同じ決定論的事後条件を schema、複数の個別 prompt、prompt part、または oracle doc に重複させてはいけない
-- oracle doc から個別の決定論的事後条件を示す必要がある場合は、正本である builder と初回 prompt 内の節を参照する
+- validator は oracle doc が定義する条件を実装し、prompt 文面から受理条件を逆算してはならない。
+- 同じ agent 向け文面を schema、複数の個別 prompt、または prompt part に重複させてはいけない
 
 ### 受理条件の境界
 
@@ -65,13 +114,12 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
 - 補正 turn で新しい受理条件を追加してはいけない
 - prompt、schema、および validator の矛盾を出力補正の retry で隠してはいけない
 
-## agent call に渡すプロンプトは、oracle src 定義の関数を使用する
+## agent call に渡す prompt を構築する
 
 - agent call の初回 prompt は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
-- 原則として、この動的構築された初回 prompt をそのまま agent call 側に渡すこととし、realization file 側でプロンプトを加工するのは禁止
+- 動的構築された初回 prompt は、意味内容を変更せず agent call 側に渡す。realization file 側で prompt を加工してはならない
 - エディタ入力を使用する agent call では、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` に従い、`build_*_parameter` 関数が構築した完全プロンプトの skeleton に対する `{{original-prompt-here}}` の 1 回の置換だけを例外として許容する
 - Structured Output の補正 prompt には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の出力補正規則を例外として適用する
-- 例外として、oracle src 側にバグがあって realization file 側でフォローする必要がある場合は、必要最低限の範囲内での加工を許容する
 
 ## 記法
 
@@ -83,7 +131,7 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
 ### プレースホルダ
 
 - プレースホルダは、`{{repo-root}}` のように名前を二重波括弧で囲って表記する
-- root path placeholder の意味と値は、`{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext` を正本とする
+- root path placeholder の意味は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の path context に従い、具体的な値は `{{cmoc-root}}/oracle/src/oracle/other/path_model.py` の `AgentCallPathContext` で構築する
 - 個別の prompt part は、自身の文面で参照する root path placeholder の定義を、同じ `AgentCallPathContext` から取得して `PlaceholderMap` として返す
 - 個別の prompt part は、`{{work-root}}` または `{{repo-root}}` の値を独自に解決してはならない
 - 個別の prompt part が path に応じて文面を変える場合は、`build_complete_prompt` と同じ call-scoped path context を明示的に受け取る

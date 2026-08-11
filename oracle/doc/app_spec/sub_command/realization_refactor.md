@@ -4,7 +4,8 @@
 
 - realization refactor は、oracle file と realization file を起点とするファイル単位の追従調査を、current fork で保留した unresolved target 以外の調査要求がなくなるまで繰り返す workload である。
 - 所見調査・修正を行う agent call には commit 差分や変更要約を渡さず、oracle file と realization file を調査対象として渡す。
-- 所見調査・修正用 builder は `build_oracle_standard`、`build_realization_standard`、および `build_apply_review_standard` の規範を固定で prompt へ注入する。
+- 所見、追従要否、および適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md` の「oracle file に対する realization file の適合性」を正本とする。
+- 所見調査・修正用 builder は、oracle file と realization file の責務および適合性を agent へ伝える正確な文面を固定で prompt へ注入する。
 - installed skill の有無によって、所見、追従要否、適合性、または完了の判定基準を変えてはいけない。
 - 短い変更ループを担う realization apply とは workload を分ける。
 - fork, join, abandon の共通 lifecycle は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` を正本とする。
@@ -89,8 +90,11 @@
 1. 調査対象 file の現在の SHA256 を調査時点の hash として取得する。
 2. `build_realization_refactor_fork_file_review_and_fix_parameter` に調査対象 path だけを渡し、所見調査、realization file の修正、および検証を 1 回の agent call で行う。
 3. agent call が正常終了した後、機械的検証へ合格した Structured Output と、その agent call による realization file の差分から処理結果を決定する。
-    - `changed_paths` 照合の決定論的事後条件は、`build_realization_refactor_fork_file_review_and_fix_parameter` が初回 prompt に構築する「Structured Output の決定論的事後条件」だけを正本とする。
-    - cmoc は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` に従って同事後条件を検証する。本書に同じ条件を重複定義しない。
+    - 実際の変更 path 集合は、agent call の開始時点を基準として出力時点に残る realization file の net 差分を、schema の `changed_paths` と同じ path 表現へ正規化した集合とする。
+    - 申告された変更 path 集合は、全所見の `changed_paths` の和集合とする。同じ path を複数の所見が申告してよいが、`evidences[].path` はこの集合に含めない。
+    - Structured Output は、申告された変更 path 集合と実際の変更 path 集合が一致する場合だけ受理する。
+    - `build_realization_refactor_fork_file_review_and_fix_parameter` は、この決定論的事後条件の正確な agent 向け文面を初回 prompt に 1 回だけ置く。
+    - cmoc は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` に従って同事後条件を検証する。
     - 以下で実際の変更 path 集合という場合は、同事後条件の検証で算出した集合を指す。
     - `findings` が空の場合は、所見なしとする。
     - `findings` が 1 件以上あり、全所見の `resolution.status` が `fixed` であり、実際の変更 path 集合が空の場合は、処理結果を所見なしへ正規化する。

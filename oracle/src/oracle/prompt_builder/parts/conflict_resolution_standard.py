@@ -1,4 +1,4 @@
-"""session join の conflict 解消だけに適用する規範。"""
+"""session join の conflict 解消用 instruction 文面の構築定義。"""
 
 # cmoc
 from oracle.other.standard import Requirement, Standard, standard_to_struct_doc
@@ -10,10 +10,6 @@ def build_conflict_resolution_standard() -> tuple[PlaceholderMap, StructDoc]:
     """oracle / realization の意味を保つ conflict 解消規範を構築する。"""
     standard = Standard(
         title="両 branch の意味を保って conflict marker だけを解消する",
-        backgrounds=[
-            "session join の conflict 解消は仕様変更またはリファクタを行う作業ではない",
-            "oracle file は conflict 解消後も realization file の正本である",
-        ],
         requirements=[
             Requirement(
                 "必須",

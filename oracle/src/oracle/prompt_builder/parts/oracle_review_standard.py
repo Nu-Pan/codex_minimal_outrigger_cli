@@ -1,4 +1,4 @@
-"""oracle review の所見判定規範を構築する単一の正本。"""
+"""oracle review の所見成立条件を伝える agent 向け文面の構築定義。"""
 
 # cmoc
 from oracle.other.standard import Requirement, Standard, standard_to_struct_doc
@@ -11,10 +11,6 @@ def build_oracle_review_standard() -> tuple[PlaceholderMap, StructDoc]:
     standards = [
         Standard(
             title="実装者の裁量で解消不能な問題だけを fatal 所見にする",
-            backgrounds=[
-                "明確に矛盾する正本仕様断片から一貫した実装は導けない",
-                "仕様に従うと必ず発生する解消不能な問題には人間判断が必要である",
-            ],
             requirements=[
                 Requirement(
                     "必須",
@@ -36,10 +32,6 @@ def build_oracle_review_standard() -> tuple[PlaceholderMap, StructDoc]:
         ),
         Standard(
             title="文意または検索性を損なう表記上の誤りだけを minor 所見にする",
-            backgrounds=[
-                "誤字や文法誤りは正本仕様の理解を損なう",
-                "用語不統一と表記揺れは関連仕様の検索を不安定にする",
-            ],
             requirements=[
                 Requirement(
                     "必須",
@@ -57,10 +49,6 @@ def build_oracle_review_standard() -> tuple[PlaceholderMap, StructDoc]:
         ),
         Standard(
             title="oracle file の具体的な記述だけから問題と言えない事項は所見にしない",
-            backgrounds=[
-                "oracle file は仕様全体を網羅しない正本仕様断片である",
-                "所見の各段階で同じ採否境界を使用しなければ判定が不安定になる",
-            ],
             requirements=[
                 Requirement(
                     "必須",

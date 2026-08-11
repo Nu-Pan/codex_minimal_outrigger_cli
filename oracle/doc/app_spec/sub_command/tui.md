@@ -34,7 +34,7 @@
 ### 全バックエンド共通
 
 - ユーザーのプロンプト入力前に `build_tui_launch_tui_parameter` で構築した固定パラメータを、完全プロンプトの確定後に使用して TUI を直接起動する
-- TUI 起動パラメータは `build_tui_launch_tui_parameter` を正本とする
+- TUI の意味上の責務と起動条件は本書を正本とする。`build_tui_launch_tui_parameter` は、正確な prompt 文面と TUI 起動パラメータを構築する
 - builder は次の規範を、オリジナルプロンプトの内容によらず固定で注入する
     - `build_oracle_standard`
     - `build_realization_standard`
@@ -42,6 +42,7 @@
     - `build_apply_review_standard`
     - `build_realization_oracle_reference_rule`
 - 各規範は自身が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
+- oracle file と realization file の責務および適合性は `{{cmoc-root}}/oracle/doc/app_spec/misc_spec.md`、oracle review の所見成立条件は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_review.md` を意味仕様の正本とする
 - installed skill は任意の追加規範として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
 - builder は model class を `FLAGSHIP`、reasoning effort を `MAX`、file access mode を `REPO_WRITE` とする
 - Structured Output は要求しない

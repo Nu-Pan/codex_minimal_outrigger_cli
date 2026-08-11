@@ -98,7 +98,7 @@ deduplication hint は検索 hint にだけ使用し、canonical key または�
 
 ## normalization agent
 
-曖昧な同一性判断だけに `build_feedback_normalize_issue_parameter` を使用する。builder は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py`、専用 schema は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json` を正本とする。
+曖昧な同一性判断だけに `build_feedback_normalize_issue_parameter` を使用する。判断の意味仕様は本節を正本とする。`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.py` は正確な prompt 文面と起動パラメータを構築し、専用 schema の正本は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json` とする。
 
 normalization agent の入力は、次の情報に限定する。
 
@@ -125,7 +125,7 @@ candidate の summary、impact、occurrence aggregate、および参照対象は
 
 ## verification agent
 
-各 candidate の検証には `build_feedback_verify_issue_parameter` を使用する。builder は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.py`、専用 schema は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json` を正本とする。
+各 candidate の検証には `build_feedback_verify_issue_parameter` を使用する。検証の意味仕様は本節と「verification output の受理条件」を正本とする。`{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.py` は正確な prompt 文面と起動パラメータを構築し、専用 schema の正本は `{{cmoc-root}}/oracle/src/oracle/acp_builder/feedback/verify_issue.json` とする。
 
 agent call は 1 candidate と、その candidate に許可した report cut reference だけを入力とする。file access mode は `READONLY` とするが、report cut に含まれない file、live repository state、raw log、過去 session、別 candidate、または feedback state を読んではならない。
 

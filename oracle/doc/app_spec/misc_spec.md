@@ -1,6 +1,53 @@
 
 # cmoc の雑多な仕様
 
+## oracle file と realization file の責務
+
+oracle file は、人間が所有して全責任を負う正本仕様断片とする。agent は oracle file の作成、変更、調査、およびレビューを補助してよいが、realization file から正本仕様を逆算してはならない。
+
+oracle file の下位概念は、次の責務で区別する。
+
+- oracle doc は `{{work-root}}/oracle/doc` に置き、cmoc の要求、判断基準、および責務を自然言語で定義する意味仕様の正本とする。
+- oracle src は `{{work-root}}/oracle/src` に置き、人間が所有する正確な実装定義と schema をプログラミング言語または設定形式で管理する。agent 向け文面の責務は `{{cmoc-root}}/oracle/doc/app_spec/prompt_standard.md` に従う。
+- oracle test は `{{work-root}}/oracle/test` に置き、プログラミング言語で正本仕様を検査する。
+
+realization file は、oracle file に記述された人間意図を具体化する成果物とする。realization file は AI が編集し、正本仕様を述べる場所にしてはならない。
+
+realization file の下位概念は、次の責務で区別する。
+
+- realization implementation は `{{work-root}}/src` に置き、product の実装と挙動を記述する設定を含む。
+- realization test は `{{work-root}}/test` に置き、realization code の外部挙動または制御ロジックを検査する。
+- realization ancillary は、実装と test 以外の補助的な realization file とする。
+
+## oracle file を扱う判断基準
+
+- 判断の根拠は関連する oracle file に置く。cmoc 固有契約または oracle file と installed skill が競合する場合は、前者を優先する。
+- installed skill の存在または一般的なベストプラクティスだけを、oracle file の意味または作業完了条件の根拠にしてはならない。
+- 実装差を許容しない事項と、人間が判断すべき境界を明示する。仕様の隙間を網羅的に埋めるためだけの分類、列挙、または新規 oracle file を追加してはならない。
+- 明示仕様の隙間は、関連する oracle file と、アクセス可能な場合の既存実装および test から自然に導ける小さな範囲で実装者が補ってよい。過剰な実装を誘発し得る境界では goal と non-goal を読み取れるようにする。
+- realization file の都合、過去の実装、または偶然の挙動だけから正本仕様を導いてはならない。実装上の制約は、仕様の矛盾または実現不能を調べる材料に限って使用してよい。
+- 関連する正本仕様断片の整合性、一般方針と個別仕様の優先関係、用語、および検索性を保つ。依頼の対象外である既存仕様の意味を維持する。
+- oracle file の作成または変更では、同じ概念の用語と表記を統一し、名前と定義を一致させる。文意または検索性を損なう誤字、脱字、および文法誤りを残さず、同じ意味の記述を重複させない。
+
+## realization file を扱う判断基準
+
+- 関連する oracle file を先に確認し、その明示要求と矛盾しない realization file にする。
+- oracle src の定義または prompt 文面を realization file へ正本のように複製しない。同じ情報が必要な場合は、参照、生成、または意味を変えない変換によって正本を一箇所に保つ。
+- 現行仕様に必要な implementation、test、設定、および ancillary だけを保つ。旧仕様の分岐、同じ責務の重複、および根拠のない公開面や抽象化を追加しない。
+- 新しい実装は実在する責務境界または重複に対応させ、既存の近い責務を同時に整理する。簡潔化によって意味、可読性、失敗時挙動、または必要な検証を損なわない。
+- 対象 repository が追跡する手順を配置場所にかかわらず特定し、必要な検証を行う。手順または実行環境が利用できない範囲を検証済みとして扱わない。
+
+## oracle file に対する realization file の適合性
+
+realization apply と realization refactor は、次の基準で追従要否と所見を判断する。
+
+- oracle file の具体的な要求と realization file の具体的な挙動が明確に不整合な場合は、修正対象とする。
+- realization file だけから実行不能または明白な致命的バグと説明できる場合は、修正対象とする。
+- 修正対象は、根拠となる oracle file と realization file、または致命的な実装箇所を特定できなければならない。
+- oracle file に記述がないこと、複数の妥当解、好み、推測、または一般的なベストプラクティスだけを根拠に修正対象を作らない。
+- 調査開始時点ですでに解消されている問題を所見として扱わない。
+- 修正後も関連する oracle file の明示要求を満たし、realization file の既存挙動を正本仕様へ逆流させない。
+
 ## oracle file と realization file の列挙方法
 
 ### 分類結果

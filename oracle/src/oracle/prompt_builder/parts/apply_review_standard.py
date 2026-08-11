@@ -1,4 +1,4 @@
-"""oracle file に対する realization file の適合性判定規範。"""
+"""oracle file への適合性を判断する agent 向け文面の構築定義。"""
 
 # cmoc
 from oracle.other.standard import Requirement, Standard, standard_to_struct_doc
@@ -11,10 +11,6 @@ def build_apply_review_standard() -> tuple[PlaceholderMap, StructDoc]:
     standards = [
         Standard(
             title="明確な不適合または致命的な実装問題を修正対象にする",
-            backgrounds=[
-                "realization file は oracle file の明示要求に適合しなければならない",
-                "実行不能な明白なバグは仕様の隙間として許容できない",
-            ],
             requirements=[
                 Requirement(
                     "必須",
@@ -36,10 +32,6 @@ def build_apply_review_standard() -> tuple[PlaceholderMap, StructDoc]:
         ),
         Standard(
             title="仕様の隙間や改善案だけを修正対象にしない",
-            backgrounds=[
-                "oracle file に明記されていない実装詳細には複数の妥当解があり得る",
-                "realization の追従作業は一般的な品質改善の列挙を目的としない",
-            ],
             requirements=[
                 Requirement(
                     "禁止",
