@@ -561,13 +561,17 @@ def _processing_versions() -> JsonObject:
     normalize_canonical_builder = _builder_source_path(
         unwrap(build_feedback_normalize_issue_parameter)
     )
+    # normalization adapter が prompt を変換する helper も checkpoint version に含める。
+    normalize_prompt_fence = normalize_builder.parents[1] / "common" / "prompt_fence.py"
     normalize_schema = normalize_canonical_builder.with_suffix(".json")
     verify_schema = verify_builder.with_suffix(".json")
     module_path = Path(__file__)
     state_path = module_path.parents[2] / "commons" / "runtime_feedback_state.py"
     return {
         "normalization_builder": _builder_version_hash(
-            normalize_builder, normalize_canonical_builder
+            normalize_builder,
+            normalize_canonical_builder,
+            (normalize_prompt_fence,),
         ),
         "normalization_schema": sha256_bytes(normalize_schema.read_bytes()),
         "verification_builder": sha256_bytes(verify_builder.read_bytes()),
@@ -584,9 +588,13 @@ def _builder_source_path(builder: Callable[..., object]) -> Path:
     return Path(source)
 
 
-def _builder_version_hash(source: Path, canonical_source: Path) -> str:
-    """adapter と canonical builder の変更を checkpoint version へ反映する。"""
-    sources = {source, canonical_source}
+def _builder_version_hash(
+    source: Path,
+    canonical_source: Path,
+    dependency_sources: tuple[Path, ...] = (),
+) -> str:
+    """builder と prompt 構築依存の変更を checkpoint version へ反映する。"""
+    sources = {source, canonical_source, *dependency_sources}
     if len(sources) == 1:
         return sha256_bytes(source.read_bytes())
     return _combined_file_hash(list(sources))

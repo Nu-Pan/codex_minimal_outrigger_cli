@@ -31,19 +31,22 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装をまとめるディレクトリ。観測の保存・検証から report の生成・公開・再開処理まで、feedback 機能の実装を確認・変更するときの入口。
+- feedback サブコマンドの実装領域。feedback の処理を確認・変更する際の入口であり、配下の実装へ進むためのルーティングを担う。
+- report.py は `cmoc feedback report` の再開可能な publication pipeline を実装する。固定した report cut から raw observation の検証、candidate 集約、normalization・verification、generation と Markdown report の作成、current pointer の切替、cleanup までを扱う。report 実行順序、publication 整合性、再開・中断処理、出力や候補集約を調査・変更するときに読む。
 
 ## Read this when
-- feedback サブコマンド全体の挙動や、観測から active issue candidate・machine aggregate を経て report を公開する処理を確認・変更するとき。
-- report cut、normalization、verification、checkpoint、publication、current pointer 切替、cleanup、中断後の再開を横断して調査するとき。
+- feedback サブコマンドの挙動や実装を確認・変更するとき。
+- `cmoc feedback report` の report cut、candidate 集約、normalization・verification、publication、再開・中断処理、cleanup を調査・変更するとき。
+- feedback report の Markdown 出力、machine rule の recurrence 集約、agent observation の issue identity 判定を確認するとき。
 
 ## Do not read this when
 - feedback 以外のサブコマンドを扱うとき。
-- 観測の保存・canonical validation・参照取得だけを変更または調査する場合は、feedback store／state の実装を直接読む。
-- 入力契約・Structured Output schema、正本仕様、Markdown report の表示形式だけを確認する場合は、それぞれの対応する builder・schema・oracle specification・描画関数または report 仕様を直接読む。
+- raw observation 保存形式や active state の共有ユーティリティだけを確認する場合。
+- normalization または verification agent の prompt・Structured Output schema を確認する場合。
+- report cut の正本仕様や `cmoc feedback report` 以外の処理を確認する場合。
 
 ## hash
-- b6bbae726b605c07e5afd61135340bf916253cef19c0da72778169b240498aa6
+- 6746d32b01040c93529629e33f93b21dc1253e9d078ac0dd0f6ff659e169158c
 
 # `indexing.py`
 

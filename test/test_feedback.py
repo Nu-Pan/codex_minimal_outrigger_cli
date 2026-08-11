@@ -346,12 +346,15 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
 
 
 def test_feedback_processing_versions_hash_canonical_builders() -> None:
-    """checkpoint version は実際に prompt を構築する oracle src を識別する。"""
+    """checkpoint version は prompt 構築 builder とその依存を識別する。"""
     normalize_adapter_path = feedback_report_module._builder_source_path(
         build_feedback_normalize_issue_parameter
     )
     normalize_path = feedback_report_module._builder_source_path(
         _build_canonical_normalize_parameter
+    )
+    normalize_prompt_fence_path = (
+        normalize_adapter_path.parents[1] / "common" / "prompt_fence.py"
     )
     verify_path = feedback_report_module._builder_source_path(
         _build_canonical_verify_parameter
@@ -371,7 +374,9 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
     )
     versions = feedback_report_module._processing_versions()
     normalization_version = feedback_report_module._builder_version_hash(
-        normalize_adapter_path, normalize_path
+        normalize_adapter_path,
+        normalize_path,
+        (normalize_prompt_fence_path,),
     )
     assert versions["normalization_builder"] == normalization_version
     assert versions["verification_builder"] == feedback_report_module.sha256_bytes(

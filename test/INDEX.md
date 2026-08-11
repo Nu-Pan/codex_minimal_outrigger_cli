@@ -429,23 +429,22 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の reporter、collector、raw observation store、active state、report cut、verification、atomic publication、cleanup を同一 repository fixture で検証するテスト群。
-- agent および machine observation の受理・検証・rate limit・冪等性・secret masking、candidate 集約と verification、threshold 管理を扱う。
-- report 中断・checkpoint 再利用・publication 再開・部分 cleanup を含む durable state 遷移と、manifest、hash、pointer、artifact の破損検出を検証する feedback 機能の統合テスト入口。
+- feedback の pending observation を agent-facing reporter から raw store、report cut、verification、active state、report publication、cleanup まで一貫して検証するテスト群。
+- repository fixture を使い、入力検証、rate limit、secret masking、idempotency、threshold 集約、再開可能な中断、atomic publication、publication 後の compact active state を確認する。
+- feedback report の外部境界と永続状態の整合性を検証する入口であり、個別の正本仕様や実装詳細を確認する場合は列挙された oracle file または実装へ進む。
 
 ## Read this when
-- feedback reporter または collector の入力契約、保存、rate limit、context 検証を変更・調査するとき
-- feedback report の candidate 正規化、verification、threshold、checkpoint、再開処理を変更・調査するとき
-- active state、report cut、atomic publication、current pointer、cleanup の整合性や障害復旧を確認するとき
-- feedback 機能の実装が raw observation の削除後に compact active state だけを残す外部挙動へ適合するか検証するとき
+- feedback の observation 保存・検証・集約・report publication・cleanup の挙動を変更または検証するとき
+- report cut、verification checkpoint、interruption recovery、active generation、current pointer の整合性を確認するとき
+- agent-facing reporter と collector の公開境界や、machine observation の再発 threshold を確認するとき
 
 ## Do not read this when
-- feedback の正本仕様や CLI の利用手順だけを確認する場合は、対応する oracle 文書または sub-command 仕様を直接読む
-- feedback 以外の機能、または単体の正規化・verification builder の実装詳細だけを調査する場合は、対応する実装・oracle source のテストへ直接進む
-- 一般的な test runner や repository 全体の品質検査方法だけを確認する場合
+- feedback の仕様上の意図や契約を確認したい場合は対応する oracle file を直接読む
+- feedback の実装方式や CLI 責務を確認したい場合は対応する実装ファイルを直接読む
+- feedback report の外部挙動と永続状態を扱わない作業では、このテスト群を読む必要はない
 
 ## hash
-- 5dbe370b815295194ae2e8fb40a8c56e635af9c99c62ce26dbbe1098b7d3715a
+- e56b5bf6c05a9c3b908cd0f504a91bf512088399afbb8342574f5fc381366feb
 
 # `test_file_inventory.py`
 

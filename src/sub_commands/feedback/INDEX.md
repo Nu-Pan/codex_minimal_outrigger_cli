@@ -15,18 +15,18 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の active-state publication pipeline を担う実装。固定した report cut を入力として、raw observation の検証、agent observation の candidate 集約・同一性判断、machine recurrence の集約、全 candidate の verification、generation/report の作成、current pointer 切替、publication 後の cleanup と中断・再開処理までを一つの transaction として実行する。feedback report の処理順序、checkpoint 再利用、固定参照、publication 状態遷移を変更・調査するときの主な入口である。
+- `cmoc feedback report` の active-state publication pipeline を実装するモジュール。固定済み report cut を起点に、raw observation の検証、agent/machine candidate の deterministic 集約、必要な normalization、全候補の verification、generation・Markdown report の作成、current pointer 切替、publication 後の cleanup までを一つの再開可能な transaction として扱う。
+- report cut、checkpoint、generation、current pointer の hash/reference を検証し、処理中断・失敗・cleanup 未完了から安全に再開できる状態機械を提供する。feedback report サブコマンドの実行フローと publication 整合性を確認する際の入口であり、詳細な state schema やサブコマンド仕様は対応する oracle 文書を読む。
 
 ## Read this when
-- `cmoc feedback report` の実行フロー、report cut、normalization、verification、publication、current pointer 切替、cleanup、または中断後の再開挙動を確認・変更するとき。
-- feedback observation から active issue candidate や machine aggregate が生成される条件、同一性判断、verification 結果の反映を確認するとき。
-- feedback report の durable checkpoint、固定入力・repository reference の検証、publication の atomicity や再実行安全性を調査するとき。
+- `cmoc feedback report` の実行順序、report cut の固定、candidate 集約、normalization/verification、publication、再開・中断処理を変更または調査するとき。
+- raw observation、active state、checkpoint、generation artifact、current pointer の整合性検証や cleanup の挙動を確認するとき。
+- feedback report の Markdown 出力、machine rule の recurrence 集約、agent observation の issue identity 判定の実装を確認するとき。
 
 ## Do not read this when
-- feedback observation の保存・canonical validation・参照取得だけを変更または調査する場合は、feedback store／state の実装を直接読む。
-- issue normalization や verification agent の入力契約・Structured Output schema 自体を確認する場合は、対応する builder と schema を直接読む。
-- feedback report の正本仕様や interruption policy の意図を確認する場合は、対応する oracle specification を直接読む。
-- Markdown report の表示形式だけを確認する場合は、描画関数または report 仕様を直接読む。
+- feedback の raw observation 保存形式や active state の共有ユーティリティだけを確認する場合は、対応する `commons` の実装を直接読む。
+- normalization または verification agent の prompt・Structured Output schema 自体を確認する場合は、対応する builder と schema を直接読む。
+- `cmoc feedback report` 以外のサブコマンドの処理や、report cut の正本仕様を確認する場合は、この実装ではなく該当するサブコマンド仕様・oracle 文書へ進む。
 
 ## hash
-- 746a6f79ef543e5b8fa4eb690def1ffd72879643ed0472fd24343cf2211089a9
+- c42649c0b7c336ba0ad569ea0c9fb6f1f62c0f14ec78ffa70babf82f62795269
