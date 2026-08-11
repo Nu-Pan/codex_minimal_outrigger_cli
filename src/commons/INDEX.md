@@ -293,22 +293,21 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の repository-local state を一貫した integrity boundary で管理する中核モジュール。report cut、active generation、current pointer、publication、checkpoint、artifact hash、cleanup の生成・検証・切替・復旧・破棄を扱う。
-- feedback state の読み書きや整合性検証、report publication の実装、active issue または machine aggregate の永続化形式と参照関係を確認する際の入口。異常終了後の checkpoint 回復や publication 後 cleanup の挙動もここから確認する。
+- feedback の repository-local state を一貫した integrity boundary で管理する中核モジュール。report cut、active generation、current pointer、publication 後の cleanup を構築・検証・永続化する。
+- 観測 envelope、machine rule、issue・aggregate、artifact の path/hash、checkpoint、publication 参照を検証し、atomic 更新、排他、復旧、不要 artifact の拒否、安全な cleanup を提供する。
 
 ## Read this when
-- feedback observation の report cut、active generation、current pointer、publication、cleanup の相互整合性を調査・変更するとき
-- feedback state artifact の canonical JSON、SHA256 参照、ID、path 境界、symlink 防御、writer lock の検証を確認するとき
-- active issue や machine aggregate の永続 schema、集計 identity、threshold 判定を確認するとき
-- report cut の checkpoint 保存・読み取り・回復、publication 後の cleanup または未完了 cut の破棄を確認するとき
+- feedback observation の収集結果を report cut として処理し、active state または Markdown report を publication する実装を確認するとき
+- current pointer、generation、report cut、checkpoint、cleanup の整合性検証や異常終了後の復旧動作を確認するとき
+- feedback state の artifact 配置、hash 参照、ID・timestamp・canonical JSON の制約を変更または調査するとき
 
 ## Do not read this when
-- feedback observation の入力 envelope や reporter payload の生成・検証だけを確認する場合は、対応する observation/reporting 実装を直接読む
-- feedback CLI の利用者向けコマンド仕様や agent への report 入出力契約だけを確認する場合は、対応する subcommand または oracle 仕様を直接読む
-- Markdown の feedback report の表示内容だけを確認する場合は、report 生成実装を直接読む
+- feedback の観測 payload や report の利用者向け仕様だけを確認したいときは、対応する oracle または subcommand の仕様を直接読む
+- feedback reporter の呼び出しや CLI の引数処理だけを確認したいときは、この state 管理実装ではなく呼び出し側の実装を読む
+- INDEX.md の routing 情報だけを更新する場合は、state の実装詳細を読む必要はない
 
 ## hash
-- e40b53574ead9643b286aeea4f67c55626c6ea7765174cb10c762f68538184b6
+- f75c2ddc372d1408a6bfd09d3aada7b2a7c57b3bcf37e4e0ffec006ad4dfa762
 
 # `runtime_feedback_store.py`
 

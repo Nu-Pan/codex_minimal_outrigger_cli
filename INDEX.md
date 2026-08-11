@@ -125,23 +125,21 @@
 # `src`
 
 ## Summary
-- cmoc の実行側ソースツリー。Typer による CLI 全体の起動入口、トップレベルおよびサブコマンドの登録、CLI 引数解析エラーの cmoc 形式への変換を担う。
-- CLI の処理本体は `sub_commands` 配下へ委譲し、共通 runtime helper は `commons`、設定互換入口は `config`、ACP および basic の互換 import 入口は各パッケージへ分かれている。正本側 `oracle.*` の解決用 package shim も含む。
-- CLI 構成や起動経路から個別コマンド、共通 runtime、互換 import、ACP builder の下位実装へ進むための最上位の実装入口である。
+- src は、cmoc の実行側コードを収めるルートで、CLI 起動入口、サブコマンド、共有 runtime、互換 import shim を横断して調査する際の起点となる。個別の正本仕様や各機能の詳細実装は、対応する oracle 側または下位モジュールへ進む。
 
 ## Read this when
-- cmoc の CLI 起動経路、Typer アプリケーション構成、トップレベルおよびサブコマンドの登録を確認・変更するとき。
-- CLI 引数解析エラーの変換、補完時の実行制御、console script からの起動を調査するとき。
-- `commons`、`config`、`acp`、`basic`、`oracle`、`sub_commands` のどの実装領域へ進むべきかを判断するとき。
+- src 配下の CLI 構成、実行入口、サブコマンド、共有 runtime の責務分担を確認するとき。
+- src 側の互換 import 経路や、実行側コードから正本実装へ接続する入口を調査するとき。
+- 特定の機能の実装箇所を特定し、対応する下位ディレクトリへ進む必要があるとき。
 
 ## Do not read this when
-- 個別サブコマンドの処理内容を確認・変更するときは、対応する `sub_commands` 配下を直接読む。
-- 共通 runtime helper の具体的な挙動を確認するときは、`commons` 配下の該当 module を直接読む。
-- 設定定義、正本側 `oracle.*` の実装、ACP builder、basic 型の詳細を確認するときは、それぞれの正本または下位実装を直接読む。
-- 互換 import path の存廃だけを判断するときは、該当する shim または互換入口を直接読む。
+- 個別サブコマンドの具体的な処理だけを調査・変更するときは、対応する sub_commands 配下を直接読む。
+- 共有 helper のアルゴリズムやデータ形式だけを確認するときは、commons 配下の該当 module を直接読む。
+- 正本仕様や oracle 側の実装内容を確認するときは、対応する oracle 文書または oracle/src/oracle 配下を直接読む。
+- INDEX.md の routing 規則やエントリー生成内容だけを確認するときは、src 配下の実装へ進まない。
 
 ## hash
-- 3b493f21a449866ca39fc63908196170a61c5bf371db4ed1a36618213af96a4a
+- 13496df3cb53b6a35d5f5943959ef3cae41677119ccf78532b36aacbfd2f2519
 
 # `test`
 
