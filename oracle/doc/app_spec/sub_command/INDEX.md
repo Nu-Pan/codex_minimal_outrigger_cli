@@ -39,21 +39,21 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の report cut 固定、observation の検証・重複排除・集約、normalization/verification agent の利用、全候補の検証、および atomic publication を定める正本仕様。feedback state と observation の仕様を前提に、repository-local な active generation と Markdown report の生成・cleanup・再開を扱う。
+- pending observation と直前の active state を report cut に固定し、現在も人間対応が必要な issue だけを新しい active state と Markdown report に公開する `cmoc feedback report` の仕様。入力検証、重複排除・集約、normalization、verification、publication、cleanup、中断・再開、終了コードまでを扱う。feedback state や observation の詳細仕様、および normalization・verification の prompt/schema を確認する際の入口となる。
 
 ## Read this when
-- `cmoc feedback report` の実装、テスト、障害処理、publication 順序、終了コードを確認するとき
-- feedback observation の処理、issue candidate の同一性判定、verification verdict、human action、current evidence の要件を確認するとき
-- report cut、中断後の再開、current pointer、active generation、cleanup の整合性を確認するとき
+- `cmoc feedback report` の CLI 契約、事前条件、report cut、処理順序、publication 判定、report 保存、終了コードを確認するとき。
+- pending observation や active issue を、人間対応が必要なものだけ新しい report と active generation に反映する処理を実装・検証するとき。
+- report の中断・再開、state corruption、cleanup failure、verification failure の扱いを確認するとき。
 
 ## Do not read this when
-- raw observation の schema や保存規則だけを確認するときは feedback observation の仕様を読む
-- feedback state の durable layout、hash、manifest、atomic publication の詳細だけを確認するときは feedback state の仕様を読む
-- normalization agent の正確な prompt や Structured Output schema を変更・確認するときは対応する oracle source と schema を直接読む
-- 共通のユーザー中断動作だけを確認するときは subcommand interruption の仕様を読む
+- raw observation の schema や保存規則だけを確認する場合は、feedback observation の正本を直接読む。
+- state、checkpoint、publication、cleanup の詳細だけを確認する場合は、feedback state の正本を直接読む。
+- normalization または verification agent の正確な prompt・起動パラメータ・Structured Output schema を確認する場合は、対応する oracle の実装・schema を直接読む。
+- 通常の別サブコマンドの CLI 契約や、feedback report と無関係な report 生成処理を確認する場合。
 
 ## hash
-- 20d4501308b105a337b59693c710dc8fa4e1afa508b871c8ba36876541c630f0
+- 42f275417e78f180cc35ae7fd094c9a9e3c5422da21d11ac60be325c3bf1909e
 
 # `indexing.md`
 

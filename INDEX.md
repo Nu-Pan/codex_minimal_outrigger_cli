@@ -89,22 +89,23 @@
 # `oracle`
 
 ## Summary
-- cmoc の人間所有の正本仕様を収める領域。アプリケーション仕様、開発規則、oracle 側ソースコード、構造化出力スキーマなどを扱い、実装やレビュー時に人間定義の挙動・責務境界・生成規則を確認するための上位入口となる。下位の文書・ソース領域へ進む起点。
+- cmoc の正本文書を集約する領域。CLI の挙動仕様、session・run・branch・commit・worktree のモデル、開発・テスト規則、および採用しなかった設計案を扱う。
+- 実装・テスト・環境構築・状態管理・agent call の判断では、目的に対応する仕様または oracle 側定義へ進む入口となる。
 
 ## Read this when
-- cmoc の正本仕様や開発上の規則を確認するとき
-- アプリケーション仕様、branch・commit・worktree モデル、開発環境、テスト要件を調べるとき
-- agent call、prompt、Structured Output schema、oracle・realization・routing・feedback の規則を調査するとき
-- 実装やレビューの前提となる人間定義の責務境界・設計判断を確認するとき
+- CLI の自動補完、サブコマンド、出力、session・run の分離、feedback、状態管理などの現行挙動を確認するとき
+- branch・commit・worktree の関係や、cmoc の開発環境・設計・コーディング・テスト規則を確認するとき
+- 採用しなかった実装方式や設計案の背景、不採用理由を調査するとき
+- agent call の prompt、Structured Output schema、oracle・realization・routing・feedback の定義を調査するとき
 
 ## Do not read this when
-- 特定の実装ファイルやテストファイルの具体的な挙動だけを確認すれば足りるとき
-- 特定機能の詳細仕様が下位の専用文書に明確に定義されているとき
-- collector 側の feedback 保存・集約処理だけを調査するとき
-- 採用済み仕様ではなく、実装や実行成果物の形式だけを確認したいとき
+- 特定の CLI 挙動、出力、通知、状態、サブコマンド、テスト要件、または agent call の定義が明らかな場合は、対応する下位文書へ直接進むとき
+- テストや品質検査の実行手順だけを確認するときは、テスト実行手順へ直接進むとき
+- 現行の realization 実装、ログ、実行成果物、または具体的な状態ファイルの形式だけを確認するときは、対応する直接の対象へ進むとき
+- 採用済みの現行仕様や実装の根拠を確認するときは、不採用案の検討記録を入口にしないとき
 
 ## hash
-- 0935a095830d78aba11caaab8c32281610e5e8557d0722280e76537e7773eeeb
+- a104f006ba157ec5f84dfca1778f554cc9f1d961f514b6edceb401feceb6060b
 
 # `pyproject.toml`
 
