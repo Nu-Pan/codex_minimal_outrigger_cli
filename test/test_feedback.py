@@ -246,6 +246,51 @@ def test_reporter_exposes_only_canonical_submission_tool(
     assert request["payload"] == _payload()
 
 
+@pytest.mark.parametrize(
+    "response",
+    [
+        b'{"status":"accepted"}\n',
+        b'{"status":"rejected","code":"schema_invalid","message":"invalid","retryable":true}\n',
+        b'{"status":"rejected","code":[],"message":"invalid","retryable":false}\n',
+    ],
+)
+def test_reporter_rejects_invalid_collector_result(
+    monkeypatch: pytest.MonkeyPatch, response: bytes
+) -> None:
+    """collector の不正な domain result を MCP result として転送しない。"""
+
+    class FakeSocket:
+        def __enter__(self) -> "FakeSocket":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def settimeout(self, _seconds: int) -> None:
+            return None
+
+        def connect(self, _path: str) -> None:
+            return None
+
+        def sendall(self, _value: bytes) -> None:
+            return None
+
+        def recv(self, _size: int) -> bytes:
+            return response
+
+    monkeypatch.setattr(reporter_module.socket, "socket", lambda *_args: FakeSocket())
+    monkeypatch.setenv("CMOC_FEEDBACK_COLLECTOR_SOCKET", "/tmp/collector.sock")
+    monkeypatch.setenv("CMOC_FEEDBACK_CAPABILITY", "secret-capability")
+    monkeypatch.setenv("CMOC_FEEDBACK_PROTOCOL_VERSION", "1")
+
+    assert reporter_module._submit(_payload()) == {
+        "status": "rejected",
+        "code": "protocol_mismatch",
+        "message": "invalid collector response",
+        "retryable": False,
+    }
+
+
 def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) -> None:
     """canonical prompt を保ち、入力だけを使う agent call を構築する。"""
     root = make_repo(tmp_path)

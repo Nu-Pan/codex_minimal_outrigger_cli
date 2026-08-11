@@ -21,6 +21,23 @@ from .runtime_feedback_store import (
 
 MCP_PROTOCOL_VERSION = REPORTER_PROTOCOL_VERSION
 _SERVER_NAME = "cmoc-feedback-reporter"
+_REJECTION_CODES = frozenset(
+    {
+        "schema_invalid",
+        "payload_too_large",
+        "path_outside_repo",
+        "evidence_empty",
+        "rate_limited",
+        "suspected_secret",
+        "context_invalid",
+        "collector_unavailable",
+        "protocol_mismatch",
+        "transport_unavailable",
+    }
+)
+_RETRYABLE_REJECTION_CODES = frozenset(
+    {"rate_limited", "collector_unavailable", "transport_unavailable"}
+)
 
 
 def _rejected(code: str, message: str, retryable: bool) -> dict[str, object]:
@@ -31,6 +48,38 @@ def _rejected(code: str, message: str, retryable: bool) -> dict[str, object]:
         "message": message,
         "retryable": retryable,
     }
+
+
+def _validated_collector_result(value: object) -> dict[str, object] | None:
+    """collector の domain result が agent-facing 契約に適合するか検査する。"""
+    if not isinstance(value, dict):
+        return None
+    status = value.get("status")
+    if status == "accepted":
+        observation_id = value.get("observation_id")
+        redaction_count = value.get("redaction_count")
+        if (
+            not isinstance(observation_id, str)
+            or not observation_id
+            or type(redaction_count) is not int
+            or redaction_count < 0
+        ):
+            return None
+        return value
+    if status != "rejected":
+        return None
+    code = value.get("code")
+    message = value.get("message")
+    retryable = value.get("retryable")
+    if (
+        not isinstance(code, str)
+        or code not in _REJECTION_CODES
+        or not isinstance(message, str)
+        or type(retryable) is not bool
+        or (retryable and code not in _RETRYABLE_REJECTION_CODES)
+    ):
+        return None
+    return value
 
 
 def _submit(payload: object) -> dict[str, object]:
@@ -77,12 +126,10 @@ def _submit(payload: object) -> dict[str, object]:
         value = json.loads(response.split(b"\n", 1)[0])
     except (UnicodeError, json.JSONDecodeError):
         return _rejected("protocol_mismatch", "invalid collector response", False)
-    if not isinstance(value, dict) or value.get("status") not in {
-        "accepted",
-        "rejected",
-    }:
+    validated = _validated_collector_result(value)
+    if validated is None:
         return _rejected("protocol_mismatch", "invalid collector response", False)
-    return value
+    return validated
 
 
 def _tool_result(result: dict[str, object]) -> dict[str, object]:

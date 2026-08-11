@@ -429,27 +429,23 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の agent-facing reporter、collector、raw store、rate limit、context 検証を対象とするテストスイート。
-- agent および machine observation の重複排除、secret masking、path 境界、再発閾値、pending 件数を検証する。
-- feedback report の report cut、Codex verification checkpoint、interruption recovery、atomic publication、current pointer、active generation、cleanup を同一 repository fixture 上で検証する。
-- 正常 publication 後に raw observation と一時 artifact が除去され、compact な active state と report だけが外部境界として残ることを確認する。
-- feedback の保存・状態・report 仕様や normalize/verify builder の挙動を変更・実装・レビューするときの realization test として読む。
+- feedback の agent-facing reporter、collector、raw observation、report cut、verification checkpoint、active state、current pointer、cleanup を一つの repository fixture で検証するテスト群。
+- feedback report の正常系に加え、schema・path・secret・rate limit・idempotence の検証、Codex builder の readonly／schema 制約、threshold 集約、割り込みからの再開、atomic publication、破損 artifact の検出、publication 後の cleanup を扱う。feedback の外部境界と永続状態の遷移を確認するためのテスト入口である。
 
 ## Read this when
-- feedback reporter の MCP discovery、collector 転送、observation schema、rate limit、capability、context 検証を確認するとき。
-- feedback report の pending observation 集約、machine recurrence threshold、issue verification、resolved issue の除去を確認するとき。
-- report cut の durable checkpoint、Ctrl+C からの再開、publication-ready state、pointer 切替、部分 cleanup の挙動を確認するとき。
-- active state、generation manifest、current pointer、cleanup manifest の hash・artifact 整合性や corruption 検出を確認するとき。
-- feedback normalize/verify builder の readonly 性、schema、prompt fence、processing version hash を検証するとき。
+- feedback reporter または collector の受理・拒否契約を変更するとき
+- feedback observation の保存、validation、rate limit、secret masking、重複排除を変更するとき
+- feedback report の candidate 正規化、verification、threshold、checkpoint、割り込み再開を変更するとき
+- active state、current pointer、generation、report cut、cleanup、atomic publication の挙動を変更または検証するとき
+- feedback 関連の implementation が既存テストで満たす外部挙動を確認するとき
 
 ## Do not read this when
-- feedback の一般的な CLI 利用方法や正本仕様そのものを確認したい場合は、対応する feedback observation・state・report の oracle 文書を直接読む。
-- feedback の normalize/verify prompt や Structured Output schema の定義を変更・確認する場合は、対応する oracle builder と schema を直接読む。
-- feedback と無関係な subcommand、report、active state、または通常の fixture 共通処理を調査する場合。
-- テスト実行手順だけを確認する場合は、repository local の test execution 指示を読む。
+- feedback の正本仕様や oracle builder 自体を読むことが目的のとき
+- feedback と無関係な subcommand、runtime、またはテスト領域を変更するとき
+- 個別の schema 定義や実装の詳細を直接確認すれば足り、report publication から cleanup までの統合挙動を確認する必要がないとき
 
 ## hash
-- 20ecae0f001d8d98414e77a9b1675a4f50a993af16a52c5b76b4fa3071cc6ef0
+- bdf186592baeee851f4441f093dee5d4bdbe12890208e2f23642f4a0ee238279
 
 # `test_file_inventory.py`
 
