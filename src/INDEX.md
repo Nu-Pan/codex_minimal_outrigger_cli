@@ -118,18 +118,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの個別サブコマンド実装へ進む入口であり、各コマンドの実行フローや構成を確認する際に参照する。
-- apply と review は現在実装本文がなく、将来それらのサブコマンド実装を追加・確認する場合の配置領域として扱う。
+- cmoc の各サブコマンド実装をまとめる領域。doctor、feedback、indexing、oracle、realization、run、session、tui などの個別実装へ進む入口であり、サブコマンド単位の実行フローや責務の所在を確認するために読む。
+- realization 配下には apply・refactor などの workload 実装領域があり、run 配下には編集 run の lifecycle と互換 shim、oracle 配下には oracle 系機能の実装がある。各機能の詳細は対応する下位領域へ進む。
 
 ## Read this when
-- cmoc の特定サブコマンドの実装入口や、サブコマンド間の実装領域を特定するとき
-- doctor、feedback、indexing、oracle、realization、run、session、tui などのサブコマンドの実行フローや構成を調査・変更するとき
-- サブコマンド実装の追加先として apply または review の領域を確認するとき
+- cmoc のサブコマンド実装の構成を確認するとき。
+- 対象がどのサブコマンドの実装領域に属するかを特定し、個別実装への入口を探すとき。
+- 複数のサブコマンドにまたがる実装配置や責務の境界を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理を直接調査・変更する場合は、このディレクトリの案内ではなく該当する個別実装や下位領域を直接読むとき
-- サブコマンドが参照する oracle 仕様、共通 runtime、state、Git 操作、Structured Output schema などの正本や共通実装だけを確認するとき
-- このディレクトリに属さない処理や、他のサブコマンドの実装を扱うとき
+- 特定サブコマンドの詳細な実行フローや処理内容を調査するときは、対応する個別実装を直接読む。
+- サブコマンド共通の runtime、Git 操作、state 管理、仕様、prompt、schema の詳細だけを確認するときは、対応する共通実装または正本仕様へ直接進む。
+- サブコマンド実装に関係しない処理を調査するとき。
 
 ## hash
-- 3e800d82e57995181319547c68f55e0c393f71e31ac22859ccf68ee07ac3b76c
+- 317310cdf92a581a72f744ac5109aeb8e30b5b512f217de91b0f309ffd59f92b

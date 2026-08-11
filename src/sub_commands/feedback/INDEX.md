@@ -15,17 +15,20 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の publication／diagnostic pipeline を一つの transaction として実装するモジュール。固定済み report cut を起点に、raw observation の検証、candidate の deterministic 集約、normalization と verification、正常 publication または incomplete 診断、checkpoint 再開、中断処理、cleanup までを統括する。
-- feedback report 固有の状態機械と publication 境界を確認するための入口であり、normalization／verification の個別処理や feedback state の共通データモデルを読む前に、サブコマンド全体の処理経路を把握したい場合に適する。
+- `cmoc feedback report` の report cut 固定から、normalization・全 candidate verification・正常 publication または incomplete 診断までを一つの transaction として実行する CLI runtime。
+- raw observation、active state、repository reference、処理バージョンを固定し、checkpoint による中断後の再開と deterministic な issue 集約を管理する。
+- verification 結果に基づき active generation・Markdown report・current pointer を publication し、判定不能 candidate がある場合は通常 publication せず診断 report を保存する。
+- feedback report サブコマンドの状態遷移、cleanup、interruption、publication ログを実装する下位実装への入口。
 
 ## Read this when
-- feedback report サブコマンドの report cut 固定、raw observation の検証・集約、candidate 処理、checkpoint、publication、incomplete 診断の挙動を変更または調査するとき
-- feedback report の中断・再開、current pointer、active generation、cleanup、固定 repository reference、machine recurrence 集約の処理を確認するとき
+- `cmoc feedback report` の report cut、checkpoint 再開、candidate 集約、verification、publication、incomplete 診断の挙動を変更または調査するとき。
+- feedback raw observation と active state から current report が生成される処理経路を確認するとき。
+- publication 前後の中断処理、artifact cleanup、current pointer 更新、subcommand log 記録を確認するとき。
 
 ## Do not read this when
-- feedback state の正本データモデルや共通 state 操作を確認したいときは、対応する feedback state の oracle または共通 runtime モジュールを直接読む
-- normalization builder、verification builder、Structured Output schema だけを確認したいときは、それぞれの builder または schema を直接読む
-- report の仕様上の要件だけを確認したいときは、対応する feedback report の oracle file を直接読む
+- feedback observation の保存・envelope 検証だけを扱うときは、raw observation の store 実装を直接読む。
+- issue normalization または verification 用 prompt・Structured Output schema の契約だけを扱うときは、対応する builder と schema を直接読む。
+- feedback state のデータ契約や report サブコマンドの正本仕様を確認するときは、対応する oracle file を読む。
 
 ## hash
-- 735f44f088bd947e22697336ae8810a21e760c8cc4fb7c70543f656efd25bb0a
+- af5d2483affbd930c32cf16dfab300ca699ce37f184263262438017c55a22ed3

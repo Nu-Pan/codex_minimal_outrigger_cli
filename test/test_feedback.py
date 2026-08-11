@@ -7,6 +7,7 @@ agent-facing reporter から raw store、report cut、verification、current poi
 対応する oracle file:
 
 - `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
+- `{{work-root}}/oracle/doc/app_spec/console_and_file_log.md`
 - `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
 - `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
 - `{{work-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json`
@@ -896,6 +897,8 @@ def test_empty_report_publishes_current_generation(
     """candidate がなくても ok report と空 active generation を atomic publication する。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
+    log_dir = root / ".cmoc/gu/ar/log/sub_command"
+    previous_logs = set(log_dir.glob("*.jsonl"))
     monkeypatch.setattr(
         feedback_report_module,
         "run_codex_exec",
@@ -905,6 +908,13 @@ def test_empty_report_publishes_current_generation(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
+    [log_path] = set(log_dir.glob("*.jsonl")) - previous_logs
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    [publication_event] = [
+        event for event in events if event["event"] == "feedback_report_published"
+    ]
+    assert Path(publication_event["generation_manifest_path"]).is_absolute()
+    assert Path(publication_event["report_path"]).is_absolute()
     state = validate_feedback_state(root)
     assert state.current is not None
     assert state.current["result"] == "ok"
@@ -1050,9 +1060,21 @@ def test_inconclusive_verdict_saves_incomplete_report_without_publication(
         incomplete_calls,
     )
 
+    log_dir = root / ".cmoc/gu/ar/log/sub_command"
+    previous_logs = set(log_dir.glob("*.jsonl"))
     incomplete = runner.invoke(app, ["feedback", "report"])
 
     assert incomplete.exit_code == 1
+    [incomplete_log_path] = set(log_dir.glob("*.jsonl")) - previous_logs
+    incomplete_events = [
+        json.loads(line) for line in incomplete_log_path.read_text().splitlines()
+    ]
+    [incomplete_event] = [
+        event
+        for event in incomplete_events
+        if event["event"] == "feedback_report_incomplete"
+    ]
+    assert Path(incomplete_event["report_path"]).is_absolute()
     assert incomplete_calls == sorted(reference_paths)
     assert "result: `incomplete`" in incomplete.output
     assert "verification candidates: `2`" in incomplete.output
