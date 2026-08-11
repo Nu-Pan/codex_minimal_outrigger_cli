@@ -125,37 +125,37 @@
 # `src`
 
 ## Summary
-- cmoc の CLI 実装領域。Typer によるコマンド階層、引数解析エラーの cmoc 形式への変換、console script からの起動を担い、各コマンドの処理は対応する下位実装へ委譲する。
-- 互換 import shim、共通 runtime helper、設定入口、ACP/basic の互換公開入口、および doctor・session・oracle・realization・run・feedback・TUI・INDEX 更新の各サブコマンドを下位対象へ案内する起点である。
+- cmoc の realization 側 Python ソースツリー。Typer による CLI の公開入口、サブコマンド実装、共通 runtime helper、互換 import shim を提供し、正本側 oracle 実装へ接続する。CLI 構成や realization 側の実行経路を調べる際の起点となる。
 
 ## Read this when
-- CLI の公開コマンド構成、起動経路、Typer/Click の引数解析エラー処理を確認・変更するとき。
-- CLI から個別サブコマンド、共通 runtime、互換入口のどこへ進むべきかを判断するとき。
+- CLI のトップレベル入口、サブコマンド登録、引数解析、補完、終了処理を確認・変更するとき。
+- doctor、indexing、tui、session、oracle、realization、run、feedback などの realization 側サブコマンドの実行経路を特定するとき。
+- Codex 実行、設定・状態管理、Git、ログ、INDEX 更新、feedback などの共通 runtime helper の配置を調査するとき。
+- src から oracle.* や cmoc_runtime を解決する互換 import 経路を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの処理内容、共通 runtime helper の詳細、正本 oracle 実装、または互換 shim の具体的な挙動を確認したいときは、対応する下位対象を直接読む。
-- CLI の公開構成や起動経路と無関係な仕様・実装を調査するとき。
+- 正本側 oracle.* の仕様、prompt、builder、または個別ロジックを確認したいときは oracle/src/oracle 配下を直接読む。
+- 特定サブコマンドや helper の具体的な処理だけを調査・変更するときは、対応する下位モジュールを直接読む。
+- 利用者向けの正本仕様や設計根拠だけを確認したいときは、対応する oracle 文書を直接読む。
+- INDEX.md の生成規則や routing 情報だけを確認したいとき。
 
 ## hash
-- f38a5d08ecbe7f8eac423178191cfc19cfc3777946ce39b5266f71fc4d7e6700
+- f452a139bf35bd592dc53917e776c7f8c78ef726ae9284b9532be2936d2697a9
 
 # `test`
 
 ## Summary
-- cmoc の realization test 一式を収めるテスト領域。CLI、runtime、Codex 実行、indexing、session、oracle review、ACP builder、設定、通知、Structured Output、packaged import などの外部挙動と契約を検証する。
-- 共通 fixture・fake command・Git repository・Codex 環境・正本 schema 参照 helper は、複数テストが共有する隔離実行条件の入口となる。
-- 実経路統合テスト用の subprocess 起動設定も含み、実際の path と最小のモデル設定で検証するテストへ進む起点となる。
+- `test` ディレクトリは、cmoc の realization test を集約し、ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session、feedback、state、設定、通知などの外部契約と安全性を検証する。各テストファイルが個別機能の回帰検証への入口となる。
 
 ## Read this when
-- CLI サブコマンドや lifecycle、Git worktree・session state、Codex subprocess、indexing、oracle review、ACP builder の外部契約を変更または検証するとき。
-- runtime の path・state・config・file access・Git ignore・refactor・通知などの制御ロジックに対する回帰テストを探すとき。
-- テスト用の共通 fixture、fake external command、Git repository、Codex 実行環境、正本 schema 参照方法を確認するとき。
-- 複数領域をまたぐ本番経路または実経路統合テストの隔離条件を確認するとき。
+- 実装や正本仕様の変更が、対応する機能の外部挙動・入力検証・永続状態・Git lifecycle・subprocess 境界へ与える影響を確認するとき。
+- 対象機能に対応する realization test の既存ケース、共有 fixture、受け入れ条件を特定するとき。
+- 複数の CLI サブコマンド、runtime、builder、report、state の統合的な回帰挙動を確認するとき。
 
 ## Do not read this when
-- 対象機能の実装責務や正本仕様そのものを確認する場合は、対応する src 実装または oracle 文書・schema を直接読む。
-- 個別テスト領域と無関係な機能を調査する場合は、このディレクトリ全体ではなく対象実装と対応するテストへ直接進む。
-- 一般的な pytest 実行方法や開発環境の規約だけを確認する場合は、専用のテスト実行手順・開発規約を読む。
+- 正本仕様、設計意図、Structured Output schema、実装責務そのものを確認する場合は、対応する oracle 文書・schema・実装を直接読む。
+- 対象機能が明確で、その機能に対応する個別テストだけを読めば足りる場合は、このディレクトリ全体を入口にしない。
+- 一般的なテスト実行手順や開発環境の規約だけを確認する場合は、専用の実行指示・開発規約を読む。
 
 ## hash
-- f03c94dfb75b28143eab3dae1ca3eb329cd254dd71fe5324041c77fd33b98f8f
+- d183e20ab9c9921b2c514e53b3cadd6e444aeafb56bfd239380f40c8be71aa76

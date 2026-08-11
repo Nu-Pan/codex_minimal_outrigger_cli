@@ -32,6 +32,7 @@ from oracle.acp_builder.feedback.verify_issue import (
 )
 
 import commons.runtime_codex_preflight as codex_preflight_module
+import commons.runtime_feedback as feedback_module
 import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
 import sub_commands.feedback.report as feedback_report_module
@@ -41,7 +42,11 @@ from acp.builder.feedback.normalize_issue import (
 from acp.builder.feedback.verify_issue import build_feedback_verify_issue_parameter
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError
-from commons.runtime_feedback import FeedbackInvocation
+from commons.runtime_feedback import (
+    FeedbackInvocation,
+    begin_feedback_call,
+    start_feedback_invocation,
+)
 from commons.runtime_feedback_state import (
     cleanup_published_report,
     feedback_writer_lock,
@@ -528,6 +533,74 @@ def test_collector_validates_context_rate_and_durable_observation(
     with pytest.raises(FeedbackRejected) as context_error:
         invocation._submit_request(request)
     assert context_error.value.code == "context_invalid"
+
+
+def test_collector_rejects_observation_without_current_head(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """current HEAD を取得できない場合は invalid context を保存しない。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+
+    def fail_head_commit(_root: Path) -> str:
+        """collector context の HEAD 取得失敗を再現する。"""
+        raise RuntimeError("git is unavailable")
+
+    monkeypatch.setattr(feedback_module, "head_commit", fail_head_commit)
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    call = invocation.register_call(
+        agent_call_id="agc_head_failure",
+        agent_call_kind="build_head_failure",
+        codex_call_id="cdc_head_failure",
+        log_paths=[],
+    )
+
+    with pytest.raises(FeedbackRejected) as error:
+        invocation._submit_request(
+            {"protocol": "1", "capability": call.capability, "payload": _payload()}
+        )
+
+    assert error.value.code == "context_invalid"
+    assert iter_observation_paths(root) == []
+    invocation.close_call(call)
+
+
+def test_feedback_degradation_preserves_keyboard_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """collector の degraded fallback はユーザー中断を握り潰さない。"""
+    root = make_repo(tmp_path)
+    logger = SubcommandLogger(root, "feedback test")
+
+    def interrupt_start(_self: FeedbackInvocation) -> None:
+        """collector 起動中のユーザー中断を再現する。"""
+        raise KeyboardInterrupt()
+
+    original_start = FeedbackInvocation.start
+    monkeypatch.setattr(FeedbackInvocation, "start", interrupt_start)
+    with pytest.raises(KeyboardInterrupt):
+        start_feedback_invocation(root, root, "feedback test", logger)
+    monkeypatch.setattr(FeedbackInvocation, "start", original_start)
+
+    class InterruptingInvocation:
+        """call context 登録を中断する collector double。"""
+
+        def register_call(self, **_kwargs: object) -> object:
+            """call context 登録中のユーザー中断を再現する。"""
+            raise KeyboardInterrupt()
+
+    invocation = InterruptingInvocation()
+    monkeypatch.setattr(
+        feedback_module, "current_feedback_invocation", lambda: invocation
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        begin_feedback_call(
+            agent_call_id="agc_interrupt",
+            agent_call_kind="build_interrupt",
+            codex_call_id="cdc_interrupt",
+            log_paths=[],
+        )
 
 
 def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> None:

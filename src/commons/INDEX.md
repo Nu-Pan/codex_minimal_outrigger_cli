@@ -257,19 +257,19 @@
 # `runtime_feedback.py`
 
 ## Summary
-- feedback reporter の capability 発行、Codex call ごとの受付・drain・無効化、Unix socket collector、agent observation の保存、degraded event の記録、feedback event の allowlist 検出を統合する invocation-scoped runtime モジュール。feedback のライフサイクルと非致命的な利用不能処理を確認するための入口であり、保存形式や reporter protocol の詳細は対応する runtime_feedback_store / runtime_feedback_reporter と oracle 仕様へ進む。
+- サブコマンド invocation 単位の feedback collector lifecycle を担い、Codex call ごとの capability 発行、並行する observation request の受付、call 終了時の drain、collector 利用不能時の degraded event、および stable event の detector を統合する。
+- feedback reporter と collector の IPC、rate limit、保存 context、call 終了順序、doctor による reporter availability 検査を確認するための入口である。
 
 ## Read this when
-- feedback collector の起動・停止、Codex call context、reporter capability の環境継承、observation 受付や rate limit、degraded event、detector の挙動を変更・調査するとき。
-- feedback reporter の利用可能性検証や、並行 Codex call における受付停止・drain・保存結果を確認するとき。
+- feedback observation の受付・保存経路、Codex call の capability context、invocation-scoped collector の開始・停止・drain を変更または調査するとき
+- reporter/collector の利用不能 event、structured output validation failure などの検出、または doctor の reporter availability 検査を変更するとき
 
 ## Do not read this when
-- observation の永続化形式、入力 schema、RFC3339 や observation ID の生成を直接調査するときは runtime_feedback_store を読む。
-- MCP reporter の tool 公開面・stdio protocol 自体を調査するときは runtime_feedback_reporter を読む。
-- feedback の正本となる人間向け要件を確認するときは対応する oracle 仕様を直接読む。
+- observation の保存形式や RFC3339・ID 生成などの永続化 primitive だけを確認する場合は、feedback store の実装を直接読む
+- reporter が公開する MCP tool の schema や stdio protocol だけを確認する場合は、reporter 実装を直接読む
 
 ## hash
-- a1795666ecedc77f1ecedf228f9e6420eaced6ac6e1363e7defab739cfb78cb8
+- 8daf2ff9f779537dc535e9a076a000b4af784ebc3c01b078e230667851a45f3c
 
 # `runtime_feedback_reporter.py`
 
