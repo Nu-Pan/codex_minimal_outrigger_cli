@@ -307,6 +307,7 @@ def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
 
     def interrupt() -> None:
         """TUI process から伝播した Ctrl+C を再現する。"""
+        runtime_cli.mark_current_tui_process_started()
         raise KeyboardInterrupt()
 
     with pytest.raises(KeyboardInterrupt):
@@ -319,6 +320,36 @@ def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
         )
 
     assert notifications == []
+
+
+def test_cli_tui_startup_keyboard_interrupt_emits_failure_notification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TUI process 起動前の Ctrl+C は失敗結果として通知する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    notifications: list[str] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda _command, _repository, state: notifications.append(state),
+    )
+
+    def interrupt_before_launch() -> None:
+        """TUI 起動前の準備処理から伝播した Ctrl+C を再現する。"""
+        raise KeyboardInterrupt()
+
+    with pytest.raises(KeyboardInterrupt):
+        runtime_cli.run_cli_subcommand(
+            interrupt_before_launch,
+            command_name="tui",
+            command_argv=["cmoc", "tui"],
+            doctor_preprocess=False,
+            tui_process=True,
+        )
+
+    assert notifications == ["failed"]
 
 
 @pytest.mark.parametrize(

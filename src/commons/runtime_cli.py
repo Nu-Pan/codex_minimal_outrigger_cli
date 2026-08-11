@@ -29,6 +29,9 @@ _CURRENT_STEP_TOTAL: ContextVar[int | None] = ContextVar(
 _CURRENT_USER_INTERRUPTION: ContextVar[bool | None] = ContextVar(
     "CURRENT_USER_INTERRUPTION", default=None
 )
+_CURRENT_TUI_PROCESS_STARTED: ContextVar[bool | None] = ContextVar(
+    "CURRENT_TUI_PROCESS_STARTED", default=None
+)
 
 
 def run_cli_subcommand(
@@ -60,6 +63,7 @@ def run_cli_subcommand(
     feedback_invocation = None
     feedback_token = None
     step_total_token = None
+    tui_process_started_token = _CURRENT_TUI_PROCESS_STARTED.set(False)
     interruption_token = _CURRENT_USER_INTERRUPTION.set(False)
     error_returncode: int | None = None
     impl_started = False
@@ -152,7 +156,7 @@ def run_cli_subcommand(
             _finish_failed_subcommand(logger, name, 130, exc)
         # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
         # TUI のユーザー終了にはサブコマンドの terminal result 通知を追加しない。
-        if not tui_process:
+        if not tui_process or not _CURRENT_TUI_PROCESS_STARTED.get():
             terminal_state = "failed"
         raise
     except BaseException as exc:
@@ -177,6 +181,7 @@ def run_cli_subcommand(
             _CURRENT_STEP_TOTAL.reset(step_total_token)
         if logger_token is not None:
             reset_current_subcommand_logger(logger_token)
+        _CURRENT_TUI_PROCESS_STARTED.reset(tui_process_started_token)
         _CURRENT_USER_INTERRUPTION.reset(interruption_token)
         if terminal_state is not None:
             _notify_terminal_result_safely(name, notification_root, terminal_state)
@@ -188,6 +193,15 @@ def mark_current_subcommand_interrupted() -> None:
     # runner 外の直接呼び出しでは次の invocation へ state を漏らさない。
     if _CURRENT_USER_INTERRUPTION.get() is not None:
         _CURRENT_USER_INTERRUPTION.set(True)
+
+
+def mark_current_tui_process_started() -> None:
+    """現在の TUI invocation が Codex process の起動境界へ到達したと印付けする。"""
+    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    # TUI 起動前の KeyboardInterrupt だけを terminal failure notification の対象にし、
+    # 実際の TUI process から伝播したユーザー終了には追加通知を出さない。
+    if _CURRENT_TUI_PROCESS_STARTED.get() is not None:
+        _CURRENT_TUI_PROCESS_STARTED.set(True)
 
 
 def _notify_terminal_result_safely(

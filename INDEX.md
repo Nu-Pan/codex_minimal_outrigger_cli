@@ -125,37 +125,35 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の実行側ソースツリーで、Typer/Click による最上位 CLI、サブコマンド実装、共通 runtime helper、互換 import 入口をまとめる。CLI と realization 側の実装領域を特定し、必要に応じて `sub_commands`、`commons`、互換 shim の下位対象へ進むための入口。
+- `src` は cmoc の realization 実装ルートで、CLI の最上位入口、oracle・basic・config の互換 import 入口、共通 runtime helper、サブコマンド実装をまとめる。配下の個別実装領域へ進むための最上位 routing 入口である。
 
 ## Read this when
-- cmoc の CLI 全体、サブコマンド登録、引数解析、補完、CLI エラー処理を調査・変更するとき。
-- doctor、tui、session、oracle、realization、run、feedback、indexing の実行入口や処理領域を特定するとき。
-- 共通 runtime、設定、状態、Git/worktree、Codex 実行、feedback、INDEX 更新、run lifecycle の配置を確認するとき。
-- `acp.*`、`basic.*`、`config.*`、`cmoc_runtime`、`oracle.*` の realization 側互換 import 経路を確認するとき。
+- cmoc の realization 実装全体の構成や、CLI 起動経路・互換公開入口・共通 runtime・サブコマンドの所在を確認するとき。
+- トップレベル CLI のコマンド登録、引数解析、補完、または CLI エラー変換の調査・変更を開始するとき。
+- 特定のサブコマンドや runtime 機能へ進む前に、対象の実装領域を特定するとき。
 
 ## Do not read this when
-- canonical な `oracle.*` の仕様、prompt、builder、設定定義、または本体ロジックを確認したいときは、正本側の対応対象を直接読む。
-- 特定のサブコマンド、runtime helper、設定型、または互換 shim の具体的な挙動が既に分かっているときは、対応する実装ファイルを直接読む。
-- CLI や realization 側実装と無関係な仕様、テスト、ドキュメントだけを調査するとき。
-- INDEX.md の routing 規則やエントリー生成内容だけを確認するとき。
+- 正本仕様や oracle 側パッケージの実装内容を確認したいときは、対応する oracle 文書・パッケージを直接読む。
+- 特定のサブコマンド、互換 shim、または runtime helper の詳細処理を確認したいときは、src の最上位ではなく該当する下位実装を直接読む。
+- INDEX.md の routing 規則やエントリー生成内容だけを確認したいときは、実装本文へ進まない。
 
 ## hash
-- 2e0347cd20805d2c739e817411c5d0885c7ae07777e24eb1e8e199cb1a2612bc
+- 0b09e65bb1d09d4fd43b26b4937b1a3d3660f5c0f2a6855f73d89425cbce7f08
 
 # `test`
 
 ## Summary
-- テストコードから、ACP builder、Codex runtime、CLI、indexing、oracle review、session、feedback、設定、Git、TUI などの各機能に対応する realization test と共通 test support へ進むための入口。個別テストは、それぞれの機能の外部挙動、回帰条件、統合 lifecycle、公開契約を検証する。
+- realization test 群を集約し、CLI・runtime・Codex 実行・session/editing run・oracle review・indexing・feedback などの外部挙動と境界条件を検証するテスト領域。個別機能の実装契約ではなく、対応するテスト対象へ進むための入口として機能する。
 
 ## Read this when
-- 特定機能の外部挙動、回帰条件、統合 lifecycle、CLI 契約、runtime 契約を検証するテストを探すとき。
-- テスト対象に対応する既存ケースや、共通 fixture・subprocess・Git repository helper の入口を特定するとき。
-- ACP builder、Codex 実行、indexing、oracle review、session、feedback、設定、TUI、Windows toast などの realization test を追加・変更・レビューするとき。
+- 機能変更や仕様確認にあたり、既存の外部挙動・失敗条件・状態遷移・Git/worktree 境界を検証するテストを特定するとき。
+- CLI、Codex runtime、session lifecycle、editing run、oracle review、indexing、feedback、設定、通知などの回帰テストの所在を絞り込むとき。
+- 実装変更に対する受け入れテストまたは統合テストの対象範囲を確認するとき。
 
 ## Do not read this when
-- 実装の責務や処理詳細を確認する場合は、対応する src 実装を直接読む。
-- 正本仕様、設計意図、Structured Output schema、エラー規約を確認する場合は、対応する oracle 文書や schema を直接読む。
-- テスト実行方法や一般的な開発規約だけを確認する場合は、専用の実行手順・規約文書を読む。
+- 実装の責務や正本仕様そのものを確認する場合は、対応する src 実装または oracle 文書を直接読むとき。
+- 共通テスト規約や実行手順だけを確認する場合は、専用の規約・実行手順を直接読むとき。
+- 対象機能と無関係なテスト領域を調査するとき。
 
 ## hash
-- bb1fc4aee4c258c5751adb4b9b11233fb5a4944d82ffe7a04e81f667dc5d2591
+- d9996ab89ca1376bc7363308749d924d99407790fe23b144aa7d0f18e6c11521

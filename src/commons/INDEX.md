@@ -71,20 +71,20 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンドの共通実行ライフサイクルを管理する中核モジュール。work root の検査、サブコマンドログ、doctor preprocess、step 通知、feedback invocation、正常・中断・失敗時の終了処理、エラー表示、完了通知を集約する。CLI 実行経路のライフサイクルや共通終了挙動を確認するときの入口であり、個別サブコマンドの実装詳細は各実装対象を直接読む。
+- 対象ファイルは、CLIサブコマンドに共通する実行ライフサイクルと状態管理を集約する。work root の検査、サブコマンドログ、doctor 前処理、feedback invocation、step 通知、成功・中断・失敗時の終了処理、エラー表示、完了通知を一元的に扱い、個別サブコマンド実装から共通運用を確認する入口となる。
+- 中断状態や TUI プロセス起動境界の印付け、step 開始通知、失敗終了処理、完了サマリー生成など、サブコマンド共通 runner の補助 API と内部処理も含む。
 
 ## Read this when
-- CLI サブコマンドの開始から終了までの共通処理を変更・調査するとき
-- サブコマンドログ、step の進捗表示、完了サマリー、終了コードの扱いを確認するとき
-- doctor preprocess、feedback invocation、ユーザー中断、エラー表示、Windows toast 通知の接続点を確認するとき
+- CLIサブコマンドの実行順序、ログ生成、doctor 前処理、feedback lifecycle、step 表示、戻り値・例外の終了処理を確認するとき。
+- KeyboardInterrupt、TUI 起動後の終了、Windows terminal result 通知、サブコマンド完了サマリーの挙動を変更または調査するとき。
+- 個別サブコマンドが共通 runner の引数や補助関数を利用しており、共通の実行境界を確認する必要があるとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の処理や入力検証だけを確認するとき
-- ログ出力、エラー描画、パス解決、feedback 保存など個別機能の実装詳細を確認するときは、それぞれの runtime モジュールを直接読む
-- 正本仕様や oracle 文書の内容を確認するとき
+- 個別サブコマンドの業務ロジック、doctor・feedback・logging など各機能の詳細仕様だけを確認したいときは、それぞれの実装または正本仕様を直接読む。
+- CLI共通ライフサイクルやこのファイルが提供する補助 API に関係しない設定、パス処理、通知実装の調査では、該当する対象へ直接進む。
 
 ## hash
-- e588dba9f2a7a05da973a259603a8840f545cd9ca7cea8171b25a6aefd72993a
+- 7a4b235c65908724cdfe59780a3318f8aae179b485fd4de3e2831d0249879008
 
 # `runtime_codex.py`
 
@@ -172,16 +172,22 @@
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI の起動処理を担当する実装。設定上書き引数、作業ディレクトリ、Codex HOME、通知 callback、呼び出しログ、feedback 用環境、成功・失敗イベントを準備し、Codex subprocess を実行する。TUI 起動経路や Codex 呼び出しログ・終了処理を確認する際の入口となる。
+- Codex TUI の起動処理を担当し、設定上書き、作業ディレクトリ・Codex ホームの解決、通知 callback、call log、feedback call、実行結果とエラーの記録をまとめて管理する。
+- Codex CLI/TUI の呼び出し経路や、起動時のログ・通知・feedback 連携、失敗時の例外処理を確認したい場合の入口となる。
 
 ## Read this when
-- Codex TUI の起動、設定上書き、Codex subprocess の実行結果、呼び出しログ、通知 callback、feedback 連携を調査・変更するとき。
+- Codex TUI の起動方法、引数や環境変数の準備を変更・調査するとき
+- Codex 呼び出しの call log、実行時間、return code、logger event の記録を確認するとき
+- TUI 起動時の通知 callback や feedback call のライフサイクルを確認するとき
+- Codex CLI/TUI 呼び出し失敗時の例外変換やエラー報告を確認するとき
 
 ## Do not read this when
-- Codex の通常の非 TUI 実行処理だけを調査するとき。設定値の定義や個別のログ形式の正本を確認する場合は、参照コメントで示された設定・仕様ファイルを直接読む。
+- Codex TUI 以外の Codex subprocess 実行処理だけを確認したいときは、実際の subprocess 実行を担う対象を直接読む
+- Codex の設定値の読み込み・上書き規則そのものだけを確認したいときは、設定処理を担う対象を直接読む
+- 共通ログ、通知、feedback、パス解決の個別実装だけを確認したいときは、それぞれの専用対象を直接読む
 
 ## hash
-- beb932fb492747edaf1009a5537bea7b381cc5c99218079dc803ae42f47f6bd6
+- fd2b2c22bfd19e952764e4546585555f06a45612fc050fffb1f75b27c09f6063
 
 # `runtime_config.py`
 

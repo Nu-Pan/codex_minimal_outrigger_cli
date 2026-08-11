@@ -7,6 +7,7 @@ from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
 
+from .runtime_cli import mark_current_tui_process_started
 from .runtime_codex_logging import (
     emit_codex_call_console,
     format_codex_call_error,
@@ -138,10 +139,12 @@ def _run_codex_tui_process(
         log_paths=[call_path],
     )
     try:
+        environment = feedback_call.subprocess_env(codex_subprocess_env(codex_home))
+        mark_current_tui_process_started()
         result = run_codex_subprocess(
             argv,
             cwd=agent_call_cwd,
-            env=feedback_call.subprocess_env(codex_subprocess_env(codex_home)),
+            env=environment,
             check=True,
         )
         returncode = result.returncode

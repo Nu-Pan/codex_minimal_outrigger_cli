@@ -704,22 +704,23 @@
 # `test_runtime_cli.py`
 
 ## Summary
-- 対象は、CLI の error report、console/file log、preflight、shell completion、終了通知、中断境界を、共通 runner と subcommand event の外部契約として検証する pytest 集合です。CLI ライフサイクルの挙動を変更・調査し、これらの境界条件を確認するときの入口になります。
-- error handling やログ形式そのものの正本仕様を読む必要がある場合は参照先の oracle 文書へ、実装の詳細や個別機能だけを確認する場合は対応する runtime/main 実装や専用テストへ直接進んでください。
+- CLI の error、log、preflight、completion 境界を検証する統合テスト。共通 runner と work root、subcommand event、終了処理を共有する外部契約を一箇所で扱い、CLI lifecycle 全体の回帰検証の入口になる。
+- duration 表示、サブコマンドログの衝突・並列記録、error report、KeyboardInterrupt、terminal notification、doctor preprocess、work root 制約、引数解析、shell completion probe、pre-log check を検証する。
 
 ## Read this when
-- CLI の想定済みエラーが stdout の構造化 Markdown report と終了コードに変換される挙動を確認するとき
-- 共通 runner による doctor preflight、pre-log check、subcommand log の開始・終了記録、work root の扱いを検証するとき
-- KeyboardInterrupt、TUI、terminal notification、shell completion probe の副作用境界を確認するとき
-- SubcommandLogger の timestamp 衝突、並列 event 記録、quota wait、duration 表示を確認するとき
+- CLI lifecycle の共通 runner、終了コード、command event、サブコマンドログ、cleanup、terminal notification の挙動を変更・検証するとき
+- CLI error report の stdout 出力、Click 引数解析エラー、CmocError の Markdown 整形、KeyboardInterrupt の扱いを確認するとき
+- doctor preprocess、pre-log check、current work root 制約、shell completion probe の副作用境界を確認するとき
+- CLI の duration 表示や SubcommandLogger の timestamp 衝突・並列 worker 記録を変更・検証するとき
 
 ## Do not read this when
-- error report の仕様やログ・preflight・completion の正本定義を確認したい場合は、直接 oracle/doc/app_spec の対応文書を読むとき
-- 単一の CLI 実装関数の内部ロジックや、個別サブコマンド固有の挙動だけを調べるとき
-- このテスト集合に含まれない機能のテストを探すとき
+- 個別機能の実装詳細だけを確認する場合は、対応する runtime 実装を直接読むとき
+- error、log、preflight、completion の外部契約に関係しないサブコマンドやデータ処理を調査するとき
+- テスト仕様ではなく、CLI の正本仕様を確認する場合は参照されている oracle 文書を直接読むとき
+- completion の補完候補生成そのものだけを確認する場合は、completion 実装または正本仕様を直接読むとき
 
 ## hash
-- 6c5773bfe45e643f9f4c2eec970363f571b17936146419473e62ca9fdd78fa6a
+- d2f55368451952d71aeed1380c33c4ef95186bc72282df7c71c7ce5d85ff83c7
 
 # `test_runtime_codex_conflicts.py`
 
