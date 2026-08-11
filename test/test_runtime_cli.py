@@ -417,6 +417,41 @@ def test_cli_terminal_notification_distinguishes_user_interruption(
     assert calls == ["interrupted"]
 
 
+def test_interruptible_cli_handles_common_preprocess_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """interruptible command の common preprocess 中断を正常完了として扱う。"""
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    calls: list[str] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda _command, _repository, state: calls.append(state),
+    )
+
+    def interrupt_doctor(_root: Path) -> None:
+        """common doctor preprocess 中のユーザー中断を再現する。"""
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", interrupt_doctor)
+
+    runtime_cli.run_cli_subcommand(
+        lambda: pytest.fail("implementation must not start after interruption"),
+        command_name="interruptible probe",
+        command_argv=["cmoc", "interruptible-probe"],
+        interruptible=True,
+    )
+
+    assert calls == ["interrupted"]
+    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 0
+    assert events[-1]["result"] == "interrupted"
+
+
 def test_cli_notification_failure_does_not_change_terminal_result(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

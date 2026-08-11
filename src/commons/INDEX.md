@@ -71,19 +71,20 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンド共通の実行ライフサイクルを管理する。work root 検査、doctor preprocess、サブコマンドログ、step 通知、feedback invocation、完了・失敗処理、エラー表示、終了通知を扱う。
-- サブコマンド横断の中断状態、実行 step、完了サマリー、終了コード、経過時間、quota 待機時間の記録を提供する共通入口である。
+- CLI サブコマンドの共通実行ライフサイクルを管理する中核モジュール。work root の検査、サブコマンドログ、doctor preprocess、step 通知、feedback invocation、正常・中断・失敗時の終了処理、エラー表示、完了通知を集約する。CLI 実行経路のライフサイクルや共通終了挙動を確認するときの入口であり、個別サブコマンドの実装詳細は各実装対象を直接読む。
 
 ## Read this when
-- CLI サブコマンドの共通実行処理、ログ記録、step 通知、doctor preprocess、エラー終了、feedback invocation、Windows terminal result 通知を変更または確認するとき。
-- サブコマンドの work root 実行条件や、成功・失敗・ユーザー中断時の終了経路を確認するとき。
+- CLI サブコマンドの開始から終了までの共通処理を変更・調査するとき
+- サブコマンドログ、step の進捗表示、完了サマリー、終了コードの扱いを確認するとき
+- doctor preprocess、feedback invocation、ユーザー中断、エラー表示、Windows toast 通知の接続点を確認するとき
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックだけを変更または確認するとき。
-- ログ保存、feedback store、エラー描画、パス解決、Windows 通知の具体的な実装だけを確認するときは、それぞれの専用モジュールへ直接進む。
+- 特定サブコマンド固有の処理や入力検証だけを確認するとき
+- ログ出力、エラー描画、パス解決、feedback 保存など個別機能の実装詳細を確認するときは、それぞれの runtime モジュールを直接読む
+- 正本仕様や oracle 文書の内容を確認するとき
 
 ## hash
-- ea74f93b9ea5f993cbb88c5c8788b0c2be5a184723c88c1a43b95e6db03f0233
+- e588dba9f2a7a05da973a259603a8840f545cd9ca7cea8171b25a6aefd72993a
 
 # `runtime_codex.py`
 

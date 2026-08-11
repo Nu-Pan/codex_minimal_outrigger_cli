@@ -73,6 +73,8 @@ def cmoc_realization_refactor_fork_impl() -> None:
         _cmoc_realization_refactor_fork_body,
         command_name="realization refactor fork",
         command_argv=["cmoc", "realization", "refactor", "fork"],
+        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        interruptible=True,
         total_steps=6,
     )
 

@@ -25,6 +25,7 @@ import typer
 
 from cmoc_runtime import (
     CmocError,
+    SessionState,
     branch_exists,
     create_run_worktree,
     current_branch,
@@ -100,6 +101,8 @@ def cmoc_oracle_review_impl(scope: str) -> None:
         run_codex_exec,
         command_name="oracle review",
         command_argv=["cmoc", "oracle", "review", "--scope", scope],
+        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        interruptible=True,
         total_steps=8,
     )
 
@@ -111,19 +114,13 @@ def _cmoc_oracle_review_body(
     """現在の session branch の oracle を isolated review worktree 上でレビューする。"""
     root = repo_root()
     current_root = work_root()
-    branch = current_branch(current_root)
-    session_id, _state_path, state = load_state_for_branch(root, branch)
-    if not branch.startswith("cmoc/session/") or state.session.state != "active":
-        raise CmocError(
-            "oracle review は active session branch 上で実行してください。", [], branch
-        )
-    _require_clean_worktree(current_root)
-    ensure_cmoc_ignored(current_root)
-    config = load_config(current_root)
+    branch = ""
+    session_id = ""
+    state = SessionState()
     run_branch: str | None = None
     review_worktree = root
-    run_fork_commit = head_commit(current_root)
-    run_join_commit = None
+    run_fork_commit: str | None = None
+    run_join_commit: str | None = None
     all_oracle_files: list[Path] = []
     oracle_files: list[Path] = []
     evaluated_oracle_files: list[Path] = []
@@ -132,6 +129,39 @@ def _cmoc_oracle_review_body(
     run_branch_created = False
     interrupted = False
     cleanup_error: CmocError | None = None
+
+    try:
+        branch = current_branch(current_root)
+        session_id, _state_path, state = load_state_for_branch(root, branch)
+        if not branch.startswith("cmoc/session/") or state.session.state != "active":
+            raise CmocError(
+                "oracle review は active session branch 上で実行してください。",
+                [],
+                branch,
+            )
+        _require_clean_worktree(current_root)
+        ensure_cmoc_ignored(current_root)
+        config = load_config(current_root)
+        run_fork_commit = head_commit(current_root)
+    except KeyboardInterrupt:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+        # run resource を作る前の中断でも、空の確定結果を interrupted report として残す。
+        _record_oracle_review_interruption()
+        report_path = write_oracle_review_report(
+            root,
+            scope,
+            branch,
+            state,
+            0,
+            [],
+            [],
+            None,
+            run_fork_commit,
+            None,
+            interrupted=True,
+        )
+        typer.echo(str(report_path.resolve()))
+        return
 
     def _cleanup_created_resources() -> CmocError | None:
         """今回作成した review resource だけを cleanup して所有権を破棄する。
@@ -180,6 +210,7 @@ def _cmoc_oracle_review_body(
             run_branch_created = False
 
     try:
+        assert run_fork_commit is not None
         start_subcommand_step(2, "run の隔離実行を開始", "start isolated review")
         # {{work-root}}/oracle/doc/app_spec/run_isolation.md
         # editing run と review run が同じ branch/worktree namespace を共有するため、

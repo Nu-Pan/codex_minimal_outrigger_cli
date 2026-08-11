@@ -95,12 +95,14 @@ def cmoc_feedback_report_impl() -> None:
         _cmoc_feedback_report_body,
         command_name="feedback report",
         command_argv=["cmoc", "feedback", "report"],
+        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        interruptible=True,
         total_steps=7,
     )
 
 
 def _cmoc_feedback_report_body() -> int:
-    """writer lock 内で cleanup、cut、verification、publication を完了する。"""
+    """writer lock を確保して cleanup、cut、verification、publication を完了する。"""
     repository = repo_root()
     main_worktree = work_root()
     try:
@@ -117,96 +119,109 @@ def _cmoc_feedback_report_body() -> int:
         return 0
 
     # report cut 固定前から失敗終了まで repository-level writer lock を保持する。
-    with feedback_writer_lock(repository):
-        # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    try:
+        lock = feedback_writer_lock(repository)
+        lock.__enter__()
+    except KeyboardInterrupt:
         # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-        manifest: JsonObject | None = None
-        manifest_path: Path | None = None
-        try:
-            start_subcommand_step(
-                3,
-                "feedback state と未完了 cleanup を確認",
-                "validate feedback active state",
-            )
-            state = validate_feedback_state(repository)
-            if state.cleanup_manifest is not None:
-                cleanup_published_report(repository)
-                state = validate_feedback_state(repository)
+        # writer lock の取得中、cut を開始していない invocation の中断を正常終了する。
+        _record_feedback_interruption(None, None)
+        return 0
+    try:
+        return _cmoc_feedback_report_locked_body(repository, main_worktree)
+    finally:
+        # lock 解放中の Ctrl+C は、publication 後の正常完了処理失敗として common
+        # runner の error 経路へ伝播させる。
+        lock.__exit__(None, None, None)
 
-            versions = _processing_versions()
+
+def _cmoc_feedback_report_locked_body(repository: Path, main_worktree: Path) -> int:
+    """保持中の writer lock 内で feedback report cut を処理する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    manifest: JsonObject | None = None
+    manifest_path: Path | None = None
+    try:
+        start_subcommand_step(
+            3,
+            "feedback state と未完了 cleanup を確認",
+            "validate feedback active state",
+        )
+        state = validate_feedback_state(repository)
+        if state.cleanup_manifest is not None:
+            cleanup_published_report(repository)
+            state = validate_feedback_state(repository)
+
+        versions = _processing_versions()
+        resumable = load_report_cut(repository)
+        if resumable is not None:
+            manifest, manifest_path = resumable
+            recover_report_cut_checkpoint_references(
+                repository, manifest, manifest_path
+            )
+            processing = manifest["processing"]
+            assert isinstance(processing, dict)
+            if (
+                processing.get("status") == "inconclusive"
+                or manifest["inputs"].get("versions") != versions
+            ):
+                # inconclusive と code/schema 変更後の cut は pending raw を残して作り直す。
+                discard_report_cut(repository, manifest, manifest_path)
+                manifest = None
+                manifest_path = None
+        if manifest is None or manifest_path is None:
+            start_subcommand_step(
+                4, "feedback report cut を固定", "freeze feedback report cut"
+            )
+            manifest, manifest_path = _create_report_cut(repository, state, versions)
+        else:
+            typer.echo(f"- feedback report cut を再開: `{manifest_path}`")
+
+        # current pointer 前の失敗は同じ cut と正式 checkpoint を再開可能に保つ。
+        return _process_report_cut(
+            repository,
+            main_worktree,
+            state,
+            manifest,
+            manifest_path,
+        )
+    except KeyboardInterrupt:
+        # cut 固定前にも Ctrl+C を正常な中断として処理する。create_report_cut が
+        # manifest を durable 保存した直後に中断した場合は、唯一の再開対象 cut を
+        # 再読してその state だけを interrupted にする。
+        if manifest is None or manifest_path is None:
             resumable = load_report_cut(repository)
             if resumable is not None:
                 manifest, manifest_path = resumable
-                recover_report_cut_checkpoint_references(
-                    repository, manifest, manifest_path
-                )
-                processing = manifest["processing"]
-                assert isinstance(processing, dict)
-                if (
-                    processing.get("status") == "inconclusive"
-                    or manifest["inputs"].get("versions") != versions
-                ):
-                    # inconclusive と code/schema 変更後の cut は pending raw を残して作り直す。
-                    discard_report_cut(repository, manifest, manifest_path)
-                    manifest = None
-                    manifest_path = None
-            if manifest is None or manifest_path is None:
-                start_subcommand_step(
-                    4, "feedback report cut を固定", "freeze feedback report cut"
-                )
-                manifest, manifest_path = _create_report_cut(
-                    repository, state, versions
-                )
-            else:
-                typer.echo(f"- feedback report cut を再開: `{manifest_path}`")
-
-            # current pointer 前の失敗は同じ cut と正式 checkpoint を再開可能に保つ。
-            return _process_report_cut(
+        if (
+            manifest is not None
+            and manifest_path is not None
+            and not _cut_is_current(repository, manifest)
+        ):
+            _set_processing_state(
                 repository,
-                main_worktree,
-                state,
                 manifest,
-                manifest_path,
+                "interrupted",
+                "user interruption",
             )
-        except KeyboardInterrupt:
-            # cut 固定前にも Ctrl+C を正常な中断として処理する。create_report_cut が
-            # manifest を durable 保存した直後に中断した場合は、唯一の再開対象 cut を
-            # 再読してその state だけを interrupted にする。
-            if manifest is None or manifest_path is None:
-                resumable = load_report_cut(repository)
-                if resumable is not None:
-                    manifest, manifest_path = resumable
-            if (
-                manifest is not None
-                and manifest_path is not None
-                and not _cut_is_current(repository, manifest)
-            ):
+        _record_feedback_interruption(manifest, manifest_path)
+        return 0
+    except BaseException as exc:
+        if (
+            manifest is not None
+            and manifest_path is not None
+            and not _cut_is_current(repository, manifest)
+        ):
+            processing = manifest.get("processing")
+            status = processing.get("status") if isinstance(processing, dict) else None
+            if status not in {"inconclusive", "publication_ready"}:
                 _set_processing_state(
                     repository,
                     manifest,
-                    "interrupted",
-                    "user interruption",
+                    "failed" if status != "staging" else "staging",
+                    repr(exc),
                 )
-            _record_feedback_interruption(manifest, manifest_path)
-            return 0
-        except BaseException as exc:
-            if (
-                manifest is not None
-                and manifest_path is not None
-                and not _cut_is_current(repository, manifest)
-            ):
-                processing = manifest.get("processing")
-                status = (
-                    processing.get("status") if isinstance(processing, dict) else None
-                )
-                if status not in {"inconclusive", "publication_ready"}:
-                    _set_processing_state(
-                        repository,
-                        manifest,
-                        "failed" if status != "staging" else "staging",
-                        repr(exc),
-                    )
-            raise
+        raise
 
 
 def _validate_preconditions(repo: Path, worktree: Path) -> None:

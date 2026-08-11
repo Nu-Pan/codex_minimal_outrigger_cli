@@ -31,18 +31,20 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装領域。feedback observation の保存処理と、report の active-state publication pipeline を含む下位モジュールへの入口。
+- feedback サブコマンドの実装領域。feedback サブコマンド共通の入口と、観測データから issue candidate を検証・集約し、report artifact と current pointer を再開可能な transaction として publication する report 処理を扱う。
 
 ## Read this when
-- feedback サブコマンドの実装全体を確認・変更するとき。
-- feedback report の report cut、処理状態遷移、candidate の検証、publication を追跡するとき。
+- feedback サブコマンドの挙動、処理順序、状態遷移、再開動作を確認・変更するとき
+- feedback observation から issue candidate への変換、normalization、recurrence 集約、verification を調べるとき
+- feedback generation、Markdown report、current pointer の publication、interruption、cleanup を調べるとき
 
 ## Do not read this when
-- feedback 以外のサブコマンドを扱うとき。
-- feedback observation や report の共通実装、正本仕様、利用方法だけを確認するときは、それぞれの専用対象を直接読む。
+- feedback observation の書き込みや共通 state/store のデータ形式だけを調べるとき
+- normalize/verify 用 agent prompt や Structured Output schema の契約だけを確認するとき
+- feedback 以外のサブコマンドを扱うとき
 
 ## hash
-- ed98982912020d314c4abd27acabf2c7697f6149799fa3ad692d7d57a0d98502
+- a05c1144474e800bc478bccd588060aec29026db9c4d9c9b1a864b16060b3609
 
 # `indexing.py`
 
@@ -62,36 +64,34 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめる package で、oracle の編集・調査・レビューを行う CLI の入口と関連する処理を扱う。
-- 編集・調査サブコマンドの起動処理に加え、レビュー対象の列挙、review loop、パス解決、INDEX 差分の merge、レポート生成までが下位要素に分割されている。各機能の詳細を確認する際の入口となる。
+- oracle 系サブコマンドを構成する実装群をまとめる package の境界であり、oracle の編集・調査・レビューに関する CLI 実行、レビュー制御、対象選定、パス解決、レポート生成などの下位実装へ進む入口です。
 
 ## Read this when
-- oracle サブコマンド群の構成、共通する責務の分担、または個別サブコマンドへの入口を確認するとき。
-- oracle review の実行管理から対象列挙、判定ループ、INDEX merge、レポート生成までの関連実装をたどるとき。
+- oracle 系サブコマンドの構成や、編集・調査・レビュー機能の実装入口を確認するとき。
+- oracle review の実行制御、対象選定、パス解決、結果出力といった関連実装の所在を把握するとき。
 
 ## Do not read this when
-- 特定のサブコマンドの実行フローやレビュー補助処理の詳細だけを確認する場合は、該当する下位実装を直接読む。
-- oracle 編集・調査・レビューの契約やプロンプト内容そのものを確認する場合は、参照される oracle 仕様を直接読む。
+- 特定の oracle サブコマンドの詳細な実行フローを確認するときは、該当する個別実装を直接読んでください。
+- oracle 編集・調査・レビューの契約やプロンプト内容そのものを確認するときは、対応する oracle 仕様を直接読んでください。
 
 ## hash
-- 5f7d625641883143b44ef90c1b87b3958c79739eb1af1d0a2f022b19382d09f9
+- f3d7d78e2a812543dabb7c6810b328632f4c00f2ae58601de7c6708264582b08
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口で、apply と refactor の処理領域へ進むためのルーティング対象です。apply では workload 実装と fork 実行ライフサイクル、refactor ではリファクタリング fork の実行・状態同期・差分検証・report 生成を扱います。
+- realization workload サブコマンドを構成するパッケージで、サブコマンドの入口、apply 処理、リファクタリング処理へのルーティングを担う。配下の各実装を確認するための上位入口。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- realization apply または refactor の処理内容、fork 実行フロー、完了判定、変更検証、cleanup、report 出力を調査するとき。
+- realization workload サブコマンド全体の構成や、apply・リファクタリング処理のどちらを確認すべきか判断するとき。
+- realization サブコマンドの実装領域を調査または変更するとき。
 
 ## Do not read this when
-- realization サブコマンドに関係しない処理を確認するとき。
-- apply または refactor の正本仕様・CLI 契約・利用者向け手順だけを確認するとき。
-- 共通 runtime、editing run の共通 lifecycle、単一処理単位の agent prompt や Structured Output parameter だけを確認するとき。
+- realization workload に関係しないサブコマンドを確認するとき。
+- apply の実行ライフサイクルだけを調査する場合は apply の対象へ、リファクタリングの実行フローだけを調査する場合は refactor の対象へ直接進む。
 
 ## hash
-- cbfa46999545ed609bbdbff4234054ea73bff6afad7b2dbb7bd6202ab4e1821f
+- 52de2b20ad84777810fb00969bf4d07b114bd3f917c4de29c9748ed61871551f
 
 # `review`
 

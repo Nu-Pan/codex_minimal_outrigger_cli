@@ -15,19 +15,19 @@
 # `fork.py`
 
 ## Summary
-- realization の refactor fork 全体を単一の lifecycle として実行する CLI サブコマンド実装。run の初期化、refactor state と INDEX の同期、realization file 単位の agent 調査・修正、差分と commit の検証、current fork 内の unresolved 管理、完了判定、joinable/error/interruption 状態の cleanup、fork report と完了ログの生成を担う。refactor fork の実行フロー、処理単位の進捗、完了不変条件、agent の commit・想定外変更・遅延 descendant に対する安全検査を確認する際の入口である。
+- realization refactor fork の CLI 実行全体を管理するワークロード実装。refactor state の初期化・INDEX 同期から、realization file 単位の agent 調査・修正、差分と commit の検証、unresolved 所見の current fork 内追跡、完了条件の検査、joinable/error/interruption 状態の cleanup、fork report と完了ログの生成までを一つの lifecycle として扱う。realization refactor fork の実行フロー、処理単位の commit や agent 変更制約、unresolved 管理、完了判定、report 内容を確認・変更するときの入口である。
 
 ## Read this when
-- realization refactor fork サブコマンドの実行 lifecycle、処理単位の選択と commit、unresolved finding の追跡、自然完了または unresolved 完了の判定を調査するとき
-- refactor fork における interruption/error cleanup、run state の更新、rollback、Codex child 停止、fork report の内容を確認するとき
-- agent が変更できる path、agent commit の拒否、INDEX refresh 後の差分検証、rename と refactor state の対応付けを確認するとき
-- refactor fork の完了ログ、変更概要、state 集計、report 出力を変更またはレビューするとき
+- realization refactor fork サブコマンドの全体 lifecycle、実行状態遷移、処理単位の進捗管理を調査するとき
+- refactor state と INDEX の初期化・同期、realization file の選択、agent call 後の差分検証や commit 処理を変更するとき
+- unresolved finding の追跡、rename 後の state path との整合、natural completion と completed_with_unresolved の判定を確認するとき
+- 中断・例外時の child process 停止、rollback、run state 更新、fork report 生成の挙動を確認するとき
 
 ## Do not read this when
-- realization refactor の正本仕様や CLI 契約だけを確認する場合は、対応する app_spec の仕様文書を直接読む
-- 単一処理単位の agent prompt／Structured Output parameter の内容だけを確認する場合は、file review builder の実装を直接読む
-- change summary の入力契約や生成規則だけを確認する場合は、change summary builder を直接読む
-- 共通の editing run、process tracking、INDEX refresh、git 差分分類の一般仕様だけを調査する場合は、各共通 runtime module または対応する正本仕様を直接読む
+- realization refactor fork の agent 用入力パラメータや所見 schema の詳細だけを確認したい場合は、対応する builder 実装を直接読む
+- refactor state の一般的なデータ構造や target 選択規則だけを確認したい場合は、runtime_refactor の実装を直接読む
+- run isolation、editing run、INDEX 更新など共通 runtime の一般仕様だけを確認したい場合は、参照されている共通 runtime または oracle 仕様を直接読む
+- fork report の共通レンダリング形式だけを確認したい場合は、runtime_run_report の実装を直接読む
 
 ## hash
-- e3de3b6bc2648c36de48673ab417cc25152c43458b03958519731371facbd93a
+- af7adfc3aa36830eafcb73330378bf8485e91a9b1fbb7889d61f77f5fa7f06fa

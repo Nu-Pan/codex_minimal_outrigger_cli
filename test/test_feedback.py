@@ -1299,6 +1299,28 @@ def test_interruption_during_preconditions_is_normal(
     assert not (feedback_root(root) / "active" / "current.json").exists()
 
 
+def test_interruption_during_writer_lock_acquisition_is_normal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """report cut 前の writer lock 取得中断を正常終了として扱う。"""
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    root = make_repo(tmp_path)
+    _active_session(root, monkeypatch)
+
+    def interrupt_lock(_repo: Path) -> object:
+        """writer lock の取得中にユーザー中断を再現する。"""
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(feedback_report_module, "feedback_writer_lock", interrupt_lock)
+
+    interrupted = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert interrupted.exit_code == 0, interrupted.output
+    assert "ユーザー中断" in interrupted.output
+    assert load_report_cut(root) is None
+    assert not (feedback_root(root) / "active" / "current.json").exists()
+
+
 def test_report_cut_rejects_observation_path_mismatch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
