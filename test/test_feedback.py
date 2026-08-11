@@ -804,6 +804,32 @@ def test_interruption_reuses_formal_verification_checkpoint(
     assert not raw_path.exists()
 
 
+def test_interruption_during_cut_creation_is_normal_and_resumable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cut 固定中の Ctrl+C も report を publication せず再開 state を残す。"""
+    root = make_repo(tmp_path)
+    _active_session(root, monkeypatch)
+    original_create = feedback_report_module._create_report_cut
+
+    def interrupt_after_durable_cut(*args: object, **kwargs: object) -> None:
+        original_create(*args, **kwargs)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(
+        feedback_report_module, "_create_report_cut", interrupt_after_durable_cut
+    )
+
+    interrupted = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert interrupted.exit_code == 0, interrupted.output
+    resumable = load_report_cut(root)
+    assert resumable is not None
+    assert resumable[0]["processing"]["status"] == "interrupted"
+    assert not (feedback_root(root) / "active" / "current.json").exists()
+    assert not list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
+
+
 def test_checkpoint_file_is_recovered_before_agent_call_reuse(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

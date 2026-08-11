@@ -109,43 +109,49 @@ def _cmoc_feedback_report_body() -> int:
 
     # report cut 固定前から失敗終了まで repository-level writer lock を保持する。
     with feedback_writer_lock(repository):
-        start_subcommand_step(
-            3,
-            "feedback state と未完了 cleanup を確認",
-            "validate feedback active state",
-        )
-        state = validate_feedback_state(repository)
-        if state.cleanup_manifest is not None:
-            cleanup_published_report(repository)
-            state = validate_feedback_state(repository)
-
-        versions = _processing_versions()
-        resumable = load_report_cut(repository)
-        if resumable is not None:
-            manifest, manifest_path = resumable
-            recover_report_cut_checkpoint_references(
-                repository, manifest, manifest_path
-            )
-            processing = manifest["processing"]
-            assert isinstance(processing, dict)
-            if (
-                processing.get("status") == "inconclusive"
-                or manifest["inputs"].get("versions") != versions
-            ):
-                # inconclusive と code/schema 変更後の cut は pending raw を残して作り直す。
-                discard_report_cut(repository, manifest, manifest_path)
-                resumable = None
-        if resumable is None:
-            start_subcommand_step(
-                4, "feedback report cut を固定", "freeze feedback report cut"
-            )
-            manifest, manifest_path = _create_report_cut(repository, state, versions)
-        else:
-            manifest, manifest_path = resumable
-            typer.echo(f"- feedback report cut を再開: `{manifest_path}`")
-
-        # current pointer 前の失敗は同じ cut と正式 checkpoint を再開可能に保つ。
+        # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        manifest: JsonObject | None = None
+        manifest_path: Path | None = None
         try:
+            start_subcommand_step(
+                3,
+                "feedback state と未完了 cleanup を確認",
+                "validate feedback active state",
+            )
+            state = validate_feedback_state(repository)
+            if state.cleanup_manifest is not None:
+                cleanup_published_report(repository)
+                state = validate_feedback_state(repository)
+
+            versions = _processing_versions()
+            resumable = load_report_cut(repository)
+            if resumable is not None:
+                manifest, manifest_path = resumable
+                recover_report_cut_checkpoint_references(
+                    repository, manifest, manifest_path
+                )
+                processing = manifest["processing"]
+                assert isinstance(processing, dict)
+                if (
+                    processing.get("status") == "inconclusive"
+                    or manifest["inputs"].get("versions") != versions
+                ):
+                    # inconclusive と code/schema 変更後の cut は pending raw を残して作り直す。
+                    discard_report_cut(repository, manifest, manifest_path)
+                    manifest = None
+                    manifest_path = None
+            if manifest is None or manifest_path is None:
+                start_subcommand_step(
+                    4, "feedback report cut を固定", "freeze feedback report cut"
+                )
+                manifest, manifest_path = _create_report_cut(
+                    repository, state, versions
+                )
+            else:
+                typer.echo(f"- feedback report cut を再開: `{manifest_path}`")
+
+            # current pointer 前の失敗は同じ cut と正式 checkpoint を再開可能に保つ。
             return _process_report_cut(
                 repository,
                 main_worktree,
@@ -154,7 +160,18 @@ def _cmoc_feedback_report_body() -> int:
                 manifest_path,
             )
         except KeyboardInterrupt:
-            if not _cut_is_current(repository, manifest):
+            # cut 固定前にも Ctrl+C を正常な中断として処理する。create_report_cut が
+            # manifest を durable 保存した直後に中断した場合は、唯一の再開対象 cut を
+            # 再読してその state だけを interrupted にする。
+            if manifest is None or manifest_path is None:
+                resumable = load_report_cut(repository)
+                if resumable is not None:
+                    manifest, manifest_path = resumable
+            if (
+                manifest is not None
+                and manifest_path is not None
+                and not _cut_is_current(repository, manifest)
+            ):
                 _set_processing_state(
                     repository,
                     manifest,
@@ -164,7 +181,11 @@ def _cmoc_feedback_report_body() -> int:
             _record_feedback_interruption(manifest, manifest_path)
             return 0
         except BaseException as exc:
-            if not _cut_is_current(repository, manifest):
+            if (
+                manifest is not None
+                and manifest_path is not None
+                and not _cut_is_current(repository, manifest)
+            ):
                 processing = manifest.get("processing")
                 status = (
                     processing.get("status") if isinstance(processing, dict) else None
@@ -2401,15 +2422,20 @@ def _cut_is_current(repo: Path, manifest: JsonObject) -> bool:
     ) == manifest.get("report_cut_id")
 
 
-def _record_feedback_interruption(manifest: JsonObject, manifest_path: Path) -> None:
+def _record_feedback_interruption(
+    manifest: JsonObject | None, manifest_path: Path | None
+) -> None:
     """中断を正常系として subcommand state、console、log へ記録する。"""
     mark_current_subcommand_interrupted()
     logger = current_subcommand_logger()
     if logger is not None:
         logger.event(
             "feedback_report_interrupted",
-            report_cut_id=manifest.get("report_cut_id"),
-            report_cut_manifest_path=str(manifest_path),
+            report_cut_id=(manifest.get("report_cut_id") if manifest else None),
+            report_cut_manifest_path=(str(manifest_path) if manifest_path else None),
         )
     typer.echo("- feedback report はユーザー中断により終了しました。")
-    typer.echo(f"- 再開対象 report cut: `{manifest_path}`")
+    if manifest_path is None:
+        typer.echo("- 再開対象 report cut: なし")
+    else:
+        typer.echo(f"- 再開対象 report cut: `{manifest_path}`")
