@@ -1,9 +1,9 @@
-"""`cmoc feedback report` の active-state publication pipeline。
+"""`cmoc feedback report` の publication／diagnostic pipeline。
 
 この module は固定済み report cut に対する deterministic processing、必要最小限の
-normalization、全 candidate の verification、および current pointer 切替を一つの
-transaction として扱う。各段階を分散すると中断後の checkpoint 再利用と固定入力の
-対応を重複管理するため、サブコマンド固有の状態機械としてまとめる。
+normalization、全 candidate の verification、正常 publication、および incomplete
+診断を一つの transaction として扱う。各段階を分散すると中断後の checkpoint 再利用と
+固定入力の対応を重複管理するため、サブコマンド固有の状態機械としてまとめる。
 
 対応する oracle file:
 - `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
@@ -162,10 +162,10 @@ def _cmoc_feedback_report_locked_body(repository: Path, main_worktree: Path) -> 
             processing = manifest["processing"]
             assert isinstance(processing, dict)
             if (
-                processing.get("status") == "inconclusive"
+                processing.get("status") == "incomplete"
                 or manifest["inputs"].get("versions") != versions
             ):
-                # inconclusive と code/schema 変更後の cut は pending raw を残して作り直す。
+                # terminal incomplete と obsolete cut は raw を残して work state だけ捨てる。
                 discard_report_cut(repository, manifest, manifest_path)
                 manifest = None
                 manifest_path = None
@@ -198,12 +198,15 @@ def _cmoc_feedback_report_locked_body(repository: Path, main_worktree: Path) -> 
             and manifest_path is not None
             and not _cut_is_current(repository, manifest)
         ):
-            _set_processing_state(
-                repository,
-                manifest,
-                "interrupted",
-                "user interruption",
-            )
+            processing = manifest.get("processing")
+            status = processing.get("status") if isinstance(processing, dict) else None
+            if manifest.get("diagnostic") is None and status != "incomplete":
+                _set_processing_state(
+                    repository,
+                    manifest,
+                    "interrupted",
+                    "user interruption",
+                )
         _record_feedback_interruption(manifest, manifest_path)
         return 0
     except BaseException as exc:
@@ -214,7 +217,11 @@ def _cmoc_feedback_report_locked_body(repository: Path, main_worktree: Path) -> 
         ):
             processing = manifest.get("processing")
             status = processing.get("status") if isinstance(processing, dict) else None
-            if status not in {"inconclusive", "publication_ready"}:
+            if manifest.get("diagnostic") is None and status not in {
+                "diagnostic_staging",
+                "incomplete",
+                "publication_ready",
+            }:
                 _set_processing_state(
                     repository,
                     manifest,
@@ -279,6 +286,7 @@ def _create_report_cut(
             "failure": None,
         },
         "publication": None,
+        "diagnostic": None,
     }
     manifest_path, _digest = write_report_cut_manifest(repo, manifest)
     loaded = load_report_cut(repo)
@@ -647,7 +655,7 @@ def _process_report_cut(
     manifest: JsonObject,
     manifest_path: Path,
 ) -> int:
-    """固定済み cut を正常 publication または terminal failure まで進める。"""
+    """固定済み cut を正常 publication または incomplete 診断まで進める。"""
     processing = manifest.get("processing")
     if not isinstance(processing, dict):
         raise ValueError("report cut processing must be an object")
@@ -656,6 +664,7 @@ def _process_report_cut(
             7, "feedback report を publication", "publish feedback report"
         )
         return _resume_publication(repo, manifest, manifest_path)
+    resume_diagnostic = processing.get("status") == "diagnostic_staging"
 
     # resume 時も raw と active input の hash/reference を再検証する。
     observations = _read_cut_observations(repo, manifest)
@@ -678,7 +687,8 @@ def _process_report_cut(
         "observation を検証・集約・normalization",
         "process feedback issue candidates",
     )
-    _set_processing_state(repo, manifest, "processing", None)
+    if not resume_diagnostic:
+        _set_processing_state(repo, manifest, "processing", None)
     candidates, machine_aggregates = _build_candidates(
         repo, worktree, manifest, observations, current_state
     )
@@ -687,22 +697,26 @@ def _process_report_cut(
         6, "全 issue candidate を verification", "verify feedback issue candidates"
     )
     verdicts = _verify_candidates(repo, worktree, manifest, candidates)
-    inconclusive = sorted(
-        candidate_id
-        for candidate_id, result in verdicts.items()
-        if result.get("verdict") == "inconclusive"
-    )
-    if inconclusive:
-        _set_processing_state(
-            repo,
-            manifest,
-            "inconclusive",
-            f"inconclusive candidates: {', '.join(inconclusive)}",
+    if any(result.get("verdict") == "inconclusive" for result in verdicts.values()):
+        start_subcommand_step(
+            7,
+            "incomplete 診断 report を保存",
+            "save incomplete feedback diagnostic",
         )
+        return _publish_incomplete_report(
+            repo,
+            worktree,
+            manifest,
+            manifest_path,
+            candidates,
+            verdicts,
+        )
+
+    if resume_diagnostic:
         raise CmocError(
-            "feedback issue verification が inconclusive でした。",
-            ["次回の `cmoc feedback report` は新しい report cut で再評価します。"],
-            f"candidates: {', '.join(inconclusive)}\nreport_cut: {manifest_path}",
+            "staged incomplete 診断と正式 checkpoint の verdict が一致しません。",
+            ["report cut manifest と checkpoint を人間が確認してください。"],
+            str(manifest_path),
         )
 
     start_subcommand_step(
@@ -2192,6 +2206,101 @@ def _publish_report(
     return 0
 
 
+def _publish_incomplete_report(
+    repo: Path,
+    worktree: Path,
+    manifest: JsonObject,
+    manifest_path: Path,
+    candidates: dict[str, JsonObject],
+    verdicts: dict[str, JsonObject],
+) -> int:
+    """全 verdict を materialize し、正常 publication と独立して保存する。"""
+    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    unresolved_count = sum(
+        verdict.get("verdict") == "unresolved" for verdict in verdicts.values()
+    )
+    inconclusive_count = sum(
+        verdict.get("verdict") == "inconclusive" for verdict in verdicts.values()
+    )
+    if inconclusive_count == 0:
+        raise ValueError("incomplete report requires an inconclusive verdict")
+
+    diagnostic = manifest.get("diagnostic")
+    if diagnostic is None:
+        generated_at = rfc3339_now()
+        report_path = _new_report_path(repo, incomplete=True)
+    elif isinstance(diagnostic, dict):
+        generated_at = str(diagnostic["generated_at"])
+        report_reference = diagnostic.get("report")
+        if not isinstance(report_reference, dict):
+            raise ValueError("staged diagnostic report reference must be an object")
+        report_path = repo / str(report_reference["path"])
+    else:
+        raise ValueError("report cut diagnostic must be an object or null")
+
+    report_content = _render_incomplete_report(
+        repo,
+        worktree,
+        manifest,
+        generated_at,
+        candidates,
+        verdicts,
+    ).encode("utf-8")
+    report_reference = {
+        "path": report_path.resolve(strict=False)
+        .relative_to(repo.resolve(strict=False))
+        .as_posix(),
+        "sha256": sha256_bytes(report_content),
+    }
+    expected_diagnostic: JsonObject = {
+        "report": report_reference,
+        "generated_at": generated_at,
+        "result": "incomplete",
+    }
+    if diagnostic is not None and diagnostic != expected_diagnostic:
+        raise CmocError(
+            "staged incomplete 診断が正式 checkpoint の再計算結果と一致しません。",
+            ["report cut manifest と正式 checkpoint を人間が確認してください。"],
+            str(manifest_path),
+        )
+    if manifest.get("publication") is not None:
+        raise CmocError(
+            "正常 publication と incomplete 診断を同じ report cut に保存できません。",
+            ["report cut manifest を人間が確認してください。"],
+            str(manifest_path),
+        )
+
+    manifest["diagnostic"] = expected_diagnostic
+    _set_processing_state(repo, manifest, "diagnostic_staging", None)
+    write_immutable_bytes(report_path, report_content)
+    if artifact_reference(repo, report_path) != report_reference:
+        raise CmocError(
+            "incomplete 診断 report の保存後 hash が一致しません。",
+            ["診断 report artifact を人間が確認してください。"],
+            str(report_path),
+        )
+
+    processing = manifest["processing"]
+    assert isinstance(processing, dict)
+    processing["status"] = "incomplete"
+    processing["failure"] = None
+    write_report_cut_manifest(repo, manifest)
+    _record_incomplete_event(
+        manifest,
+        report_reference,
+        unresolved_count,
+        inconclusive_count,
+    )
+    typer.echo("- result: `incomplete`")
+    typer.echo(f"- incomplete report: `{report_path}`")
+    typer.echo(f"- verification candidates: `{len(verdicts)}`")
+    typer.echo(f"- unresolved candidates: `{unresolved_count}`")
+    typer.echo(f"- inconclusive candidates: `{inconclusive_count}`")
+    typer.echo("- normal publication: `not completed`")
+    return 1
+
+
 def _next_machine_aggregates(
     candidates: dict[str, JsonObject],
     verdicts: dict[str, JsonObject],
@@ -2457,6 +2566,131 @@ def _render_feedback_report(
     return "\n".join(lines)
 
 
+def _render_incomplete_report(
+    repo: Path,
+    worktree: Path,
+    manifest: JsonObject,
+    generated_at: str,
+    candidates: dict[str, JsonObject],
+    verdicts: dict[str, JsonObject],
+) -> str:
+    """未 publication の確定 verdict と判定不能理由を単独で読める形にする。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    unresolved_ids = sorted(
+        candidate_id_value
+        for candidate_id_value, verdict in verdicts.items()
+        if verdict.get("verdict") == "unresolved"
+    )
+    inconclusive_ids = sorted(
+        candidate_id_value
+        for candidate_id_value, verdict in verdicts.items()
+        if verdict.get("verdict") == "inconclusive"
+    )
+    fields = (
+        ("command", "cmoc feedback report"),
+        ("generated_at", generated_at),
+        ("repo_root", str(repo)),
+        ("session_branch", current_branch(worktree)),
+        ("report_cut_id", manifest["report_cut_id"]),
+        ("report_cut_at", manifest["cut_at"]),
+        ("verification_candidate_count", len(verdicts)),
+        ("unresolved_candidate_count", len(unresolved_ids)),
+        ("inconclusive_candidate_count", len(inconclusive_ids)),
+        ("result", "incomplete"),
+    )
+    lines = [
+        "---",
+        *[f"{name}: {_yaml_scalar(value)}" for name, value in fields],
+        "---",
+        "# cmoc feedback report: incomplete",
+        "",
+        "この診断 report は正常 publication ではありません。",
+        "新しい active generation と current pointer は publication されていません。",
+        "直前の正常 publication が存在する場合は、その publication が current のままです。",
+        "",
+        "## 確定済みだが今回未 publication の unresolved candidate",
+        "",
+        "以下の verdict は診断情報であり、今回の active generation へ publication されていません。",
+        "直前の正常 active generation に同じ issue が含まれる可能性とは区別してください。",
+        "",
+    ]
+    references_by_id = _report_cut_references_by_id(manifest)
+    if not unresolved_ids:
+        lines.extend(["該当 candidate はありません。", ""])
+    for candidate_id_value in unresolved_ids:
+        candidate = candidates[candidate_id_value]
+        verdict = verdicts[candidate_id_value]
+        lines.extend(
+            [
+                f"### {_markdown_text(candidate_id_value)}",
+                "",
+                f"- Origin: {_markdown_text(mask_feedback_text(str(candidate['origin'])))}",
+                f"- Category: {_markdown_text(mask_feedback_text(str(candidate['category'])))}",
+                f"- Summary: {_markdown_text(mask_feedback_text(str(candidate['summary'])))}",
+                f"- Impact: {_markdown_text(mask_feedback_text(str(candidate['impact'])))}",
+                f"- Verification reason: {_markdown_text(mask_feedback_text(str(verdict['reason'])))}",
+                f"- Human action: {_markdown_text(mask_feedback_text(str(verdict['human_action'])))}",
+                "- Current evidence:",
+            ]
+        )
+        _append_diagnostic_current_evidence(
+            lines,
+            verdict.get("current_evidence"),
+            references_by_id,
+        )
+        lines.append("")
+
+    lines.extend(["## inconclusive candidate", ""])
+    for candidate_id_value in inconclusive_ids:
+        candidate = candidates[candidate_id_value]
+        verdict = verdicts[candidate_id_value]
+        lines.extend(
+            [
+                f"### {_markdown_text(candidate_id_value)}",
+                "",
+                f"- Summary: {_markdown_text(mask_feedback_text(str(candidate['summary'])))}",
+                f"- Reason: {_markdown_text(mask_feedback_text(str(verdict['reason'])))}",
+                "- Current evidence:",
+            ]
+        )
+        _append_diagnostic_current_evidence(
+            lines,
+            verdict.get("current_evidence"),
+            references_by_id,
+        )
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _append_diagnostic_current_evidence(
+    lines: list[str],
+    evidence: object,
+    references_by_id: dict[str, JsonObject],
+) -> None:
+    """cut reference を診断 report 内の自己完結した current evidence にする。"""
+    values = evidence if isinstance(evidence, list) else []
+    materialized = [
+        _materialize_current_evidence(item, references_by_id)
+        for item in values
+        if isinstance(item, dict)
+    ]
+    if not materialized:
+        lines.append("  - 確認できた current evidence はありません。")
+        return
+    for item in materialized:
+        target = (
+            item.get("path")
+            or item.get("probe_id")
+            or item.get("observation_id", "unknown")
+        )
+        lines.append(
+            "  - "
+            f"{_markdown_text(target)} / "
+            f"{_markdown_text(item.get('location', ''))}: "
+            f"{_markdown_text(item.get('finding', ''))}"
+        )
+
+
 def _verification_candidate_count(manifest: JsonObject) -> int:
     """正式 verification checkpoint 数を front matter の candidate 件数にする。"""
     processing = manifest.get("processing")
@@ -2470,9 +2704,11 @@ def _verification_candidate_count(manifest: JsonObject) -> int:
     return len(checkpoints)
 
 
-def _new_report_path(repo: Path) -> Path:
-    """衝突時も既存 report を上書きしない timestamp path を選ぶ。"""
+def _new_report_path(repo: Path, *, incomplete: bool = False) -> Path:
+    """正常／診断 report の既存 artifact を上書きしない path を選ぶ。"""
     directory = reports_dir(repo, "feedback")
+    if incomplete:
+        directory /= "incomplete"
     while True:
         path = directory / f"{timestamp()}.md"
         if not path.exists() and not path.is_symlink():
@@ -2579,6 +2815,27 @@ def _record_publication_event(
             report_path=report_reference.get("path"),
             result=result,
             unresolved_issue_count=unresolved_count,
+        )
+
+
+def _record_incomplete_event(
+    manifest: JsonObject,
+    report_reference: JsonObject,
+    unresolved_count: int,
+    inconclusive_count: int,
+) -> None:
+    """正常 publication 不成立と durable な診断 report を log に記録する。"""
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "feedback_report_incomplete",
+            report_cut_id=manifest.get("report_cut_id"),
+            report_path=report_reference.get("path"),
+            result="incomplete",
+            verification_candidate_count=_verification_candidate_count(manifest),
+            unresolved_candidate_count=unresolved_count,
+            inconclusive_candidate_count=inconclusive_count,
+            normal_publication=False,
         )
 
 

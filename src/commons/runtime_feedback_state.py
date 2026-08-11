@@ -1,8 +1,8 @@
-"""feedback の repository-local active state と publication を扱う。
+"""feedback の repository-local active state、publication、診断を扱う。
 
-この module は report cut、active generation、current pointer、および cleanup の
-相互参照を同じ integrity boundary で検証する。publication point を複数 module へ
-分散させると、異常終了時に切替前後の state を混在させるため一箇所に保つ。
+この module は report cut、active generation、current pointer、incomplete 診断、
+および cleanup の相互参照を同じ integrity boundary で検証する。state transition を
+複数 module へ分散させると、異常終了時に確定前後の state を混在させるため一箇所に保つ。
 
 対応する oracle file:
 
@@ -1570,6 +1570,7 @@ def _validate_report_cut_manifest(
             "inputs",
             "processing",
             "publication",
+            "diagnostic",
         },
         path,
         "report cut manifest",
@@ -1707,7 +1708,8 @@ def _validate_report_cut_manifest(
         "processing",
         "interrupted",
         "failed",
-        "inconclusive",
+        "diagnostic_staging",
+        "incomplete",
         "staging",
         "publication_ready",
     }:
@@ -1790,13 +1792,102 @@ def _validate_report_cut_manifest(
             inputs=inputs,
             processing=processing,
         )
-    if (
-        processing.get("status") in {"staging", "publication_ready"}
-        and publication is None
-    ):
+    diagnostic = manifest.get("diagnostic")
+    if diagnostic is not None:
+        _validate_diagnostic_section(
+            repo,
+            diagnostic,
+            path,
+            processing=processing,
+        )
+    status = processing.get("status")
+    if status in {"diagnostic_staging", "incomplete"} and diagnostic is None:
+        raise _corruption(
+            "incomplete 段階の report cut に診断 report 参照がありません。", path
+        )
+    if diagnostic is not None and status not in {
+        "diagnostic_staging",
+        "incomplete",
+    }:
+        raise _corruption("診断 report 参照を持つ report cut status が不正です。", path)
+    if publication is not None and diagnostic is not None:
+        raise _corruption(
+            "正常 publication と incomplete 診断を同じ cut に併存できません。", path
+        )
+    if status in {"staging", "publication_ready"} and publication is None:
         raise _corruption(
             "publication 段階の report cut に成果物参照がありません。", path
         )
+
+
+def _validate_diagnostic_section(
+    repo: Path,
+    value: object,
+    path: Path,
+    *,
+    processing: JsonObject,
+) -> None:
+    """`incomplete` 診断 report と正式 checkpoint の対応を検証する。"""
+    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    diagnostic = _require_exact_fields(
+        value,
+        {
+            "report",
+            "generated_at",
+            "result",
+        },
+        path,
+        "report cut diagnostic",
+    )
+    _require_timestamp(diagnostic.get("generated_at"), path, "diagnostic generated_at")
+    if diagnostic.get("result") != "incomplete":
+        raise _corruption("diagnostic result が不正です。", path)
+
+    checkpoint_references = processing.get("verification_checkpoints")
+    if not isinstance(checkpoint_references, list):
+        raise _corruption("diagnostic verification checkpoint が不正です。", path)
+    has_inconclusive = False
+    checkpoint_root = (
+        report_cut_directory(repo, path.parent.name) / "checkpoint" / "verification"
+    )
+    for reference in checkpoint_references:
+        if not isinstance(reference, dict):
+            raise _corruption(
+                "diagnostic verification checkpoint reference が不正です。", path
+            )
+        checkpoint = read_checkpoint(
+            repo,
+            {"path": reference.get("path"), "sha256": reference.get("sha256")},
+            checkpoint_root,
+            "diagnostic verification checkpoint",
+        )
+        output = checkpoint.get("structured_output")
+        result = output.get("result") if isinstance(output, dict) else None
+        verdict = result.get("verdict") if isinstance(result, dict) else None
+        has_inconclusive = has_inconclusive or verdict == "inconclusive"
+    if not has_inconclusive:
+        raise _corruption("diagnostic に inconclusive checkpoint がありません。", path)
+
+    report_reference = _artifact_reference_shape(
+        diagnostic.get("report"), path, "incomplete diagnostic report"
+    )
+    report_root = repo / ".cmoc" / "gu" / "ar" / "report" / "feedback" / "incomplete"
+    report_path = _validate_report_cut_artifact_reference(
+        repo,
+        report_reference,
+        expected_root=report_root,
+        description="incomplete diagnostic Markdown report",
+        allow_missing=processing.get("status") == "diagnostic_staging",
+    )
+    if (
+        report_path.parent != report_root.resolve(strict=False)
+        or report_path.suffix != ".md"
+    ):
+        raise _corruption(
+            "incomplete diagnostic Markdown report path が不正です。", report_path
+        )
+    if processing.get("failure") is not None:
+        raise _corruption("incomplete diagnostic processing failure が不正です。", path)
 
 
 def _validate_report_cut_current_input(
@@ -2394,7 +2485,7 @@ def _validate_publication_section(
 
 
 def load_report_cut(repo: Path) -> tuple[JsonObject, Path] | None:
-    """repository に高々一件ある再開対象 report cut を検証して返す。"""
+    """repository に高々一件ある進行中または terminal な cut を返す。"""
     root = report_work_root(repo)
     if not root.exists() and not root.is_symlink():
         return None
@@ -2470,7 +2561,10 @@ def _validate_report_cut_artifact_inventory(
             ),
         ),
     )
-    publication_exists = manifest.get("publication") is not None
+    result_staged = (
+        manifest.get("publication") is not None
+        or manifest.get("diagnostic") is not None
+    )
     report_cut_id_value = str(manifest.get("report_cut_id"))
     for artifact in manifest_path.parent.rglob("*"):
         if artifact.is_dir() and not artifact.is_symlink():
@@ -2484,9 +2578,9 @@ def _validate_report_cut_artifact_inventory(
         for root, kind, path_factory, identity_validator in checkpoint_contracts:
             if artifact.parent != root:
                 continue
-            if publication_exists:
+            if result_staged:
                 raise _corruption(
-                    "staged publication に未列挙 checkpoint があります。", artifact
+                    "staged report result に未列挙 checkpoint があります。", artifact
                 )
             identity = artifact.stem
             if not identity_validator(identity):
@@ -2632,9 +2726,12 @@ def recover_report_cut_checkpoint_references(
                         checkpoint_path_value,
                     )
                 continue
-            if manifest.get("publication") is not None:
+            if (
+                manifest.get("publication") is not None
+                or manifest.get("diagnostic") is not None
+            ):
                 raise _corruption(
-                    "staged publication に未列挙 checkpoint があります。",
+                    "staged report result に未列挙 checkpoint があります。",
                     checkpoint_path_value,
                 )
             entries.append(expected_entry)
@@ -2663,6 +2760,7 @@ def _validate_report_cut_manifest_for_write(manifest: JsonObject, path: Path) ->
         "inputs",
         "processing",
         "publication",
+        "diagnostic",
     }:
         raise _corruption("report cut manifest の top-level field が不正です。", path)
     if not _is_version_one(manifest.get("schema_version")) or not is_uuid7_prefixed(
@@ -3127,7 +3225,8 @@ def _prune_empty_directories(start: Path, stop: Path) -> None:
 
 
 def discard_report_cut(repo: Path, manifest: JsonObject, manifest_path: Path) -> None:
-    """publication されていない inconclusive／obsolete cut を安全に破棄する。"""
+    """raw observation を残し、terminal／obsolete cut の work state を破棄する。"""
+    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
     state = load_active_state(repo)
     if state.current is not None and state.current.get("report_cut_id") == manifest.get(
         "report_cut_id"
@@ -3214,6 +3313,30 @@ def discard_report_cut(repo: Path, manifest: JsonObject, manifest_path: Path) ->
                     expected_root=repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
                     description="staged feedback report",
                 )
+
+    diagnostic = manifest.get("diagnostic")
+    if isinstance(diagnostic, dict) and processing.get("status") != "incomplete":
+        report_reference = diagnostic.get("report")
+        if not isinstance(report_reference, dict):
+            raise _corruption(
+                "staged diagnostic report reference が不正です。", manifest_path
+            )
+        report_root = (
+            repo / ".cmoc" / "gu" / "ar" / "report" / "feedback" / "incomplete"
+        )
+        report_path = _resolve_reference_path(
+            repo,
+            report_reference.get("path"),
+            report_root,
+            "staged incomplete diagnostic report",
+        )
+        _unlink_artifact_reference(
+            repo,
+            report_reference,
+            expected_root=report_root,
+            description="staged incomplete diagnostic report",
+        )
+        _prune_empty_directories(report_path.parent, report_root.parent)
 
     # work directory 内に manifest が列挙していない file があれば推測削除しない。
     _require_only_expected_files(

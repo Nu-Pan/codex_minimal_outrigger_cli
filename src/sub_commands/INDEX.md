@@ -31,20 +31,19 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装領域。feedback サブコマンド共通の入口と、観測データから issue candidate を検証・集約し、report artifact と current pointer を再開可能な transaction として publication する report 処理を扱う。
+- feedback サブコマンドの実装を構成するモジュール群。feedback report の publication／diagnostic pipeline と、その入口となるサブコマンド実装を扱う。feedback サブコマンド全体の挙動や配下モジュールの役割を確認・変更するときの入口。
 
 ## Read this when
-- feedback サブコマンドの挙動、処理順序、状態遷移、再開動作を確認・変更するとき
-- feedback observation から issue candidate への変換、normalization、recurrence 集約、verification を調べるとき
-- feedback generation、Markdown report、current pointer の publication、interruption、cleanup を調べるとき
+- feedback サブコマンドの処理経路、report cut、raw observation の検証・集約、normalization、verification、checkpoint、publication、incomplete 診断を調査・変更するとき。
+- feedback report の中断・再開、current pointer、active generation、cleanup、固定 repository reference、machine recurrence 集約を確認するとき。
 
 ## Do not read this when
-- feedback observation の書き込みや共通 state/store のデータ形式だけを調べるとき
-- normalize/verify 用 agent prompt や Structured Output schema の契約だけを確認するとき
-- feedback 以外のサブコマンドを扱うとき
+- feedback state の正本データモデルや共通 state 操作だけを確認したいときは、対応する feedback state の oracle または共通 runtime モジュールを直接読む。
+- normalization builder、verification builder、Structured Output schema、report の仕様要件だけを確認したいときは、それぞれの直接の実装・schema・oracle file を読む。
+- feedback 以外のサブコマンドを扱うとき。
 
 ## hash
-- a05c1144474e800bc478bccd588060aec29026db9c4d9c9b1a864b16060b3609
+- 4486d48f4735194006df41f1660a80d11ec7315562cb94d30e187f65c88b32f6
 
 # `indexing.py`
 

@@ -299,21 +299,22 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の repository-local state を一貫した integrity boundary で管理する中核モジュール。report cut、active generation、current pointer、publication 後の cleanup を構築・検証・永続化する。
-- 観測 envelope、machine rule、issue・aggregate、artifact の path/hash、checkpoint、publication 参照を検証し、atomic 更新、排他、復旧、不要 artifact の拒否、安全な cleanup を提供する。
+- feedback の repository-local state を一つの integrity boundary で管理する中核 module。report cut、active generation、current pointer、checkpoint、publication、incomplete 診断、cleanup の生成・検証・復旧・破棄を扱う。
+- 観測 envelope、machine aggregate、active issue、report cut manifest、artifact reference の schema・identity・canonical JSON・SHA256・path containment を検証し、異常終了後の checkpoint recovery と publication 後 cleanup を支える。
+- feedback state の遷移や永続 artifact の整合性を確認する際の実装入口であり、raw observation の入力仕様や Markdown report の表示仕様そのものを読む入口ではない。
 
 ## Read this when
-- feedback observation の収集結果を report cut として処理し、active state または Markdown report を publication する実装を確認するとき
-- current pointer、generation、report cut、checkpoint、cleanup の整合性検証や異常終了後の復旧動作を確認するとき
-- feedback state の artifact 配置、hash 参照、ID・timestamp・canonical JSON の制約を変更または調査するとき
+- feedback state の保存形式、current pointer、active generation、report cut の処理状態を確認するとき。
+- feedback の publication、incomplete 診断、checkpoint、artifact hash、symlink 防止、writer lock、cleanup または recovery の挙動を調べるとき。
+- feedback state の corruption 検出や、state transition を複数 module に分散させない責務を確認するとき。
 
 ## Do not read this when
-- feedback の観測 payload や report の利用者向け仕様だけを確認したいときは、対応する oracle または subcommand の仕様を直接読む
-- feedback reporter の呼び出しや CLI の引数処理だけを確認したいときは、この state 管理実装ではなく呼び出し側の実装を読む
-- INDEX.md の routing 情報だけを更新する場合は、state の実装詳細を読む必要はない
+- raw observation の envelope や reporter 入力の仕様だけを確認する場合は、feedback observation の仕様・実装を直接読む。
+- feedback report の Markdown 内容や subcommand の利用者向け契約だけを確認する場合は、feedback report の仕様・実装を直接読む。
+- feedback state を変更せず、単に個別の共通 ID・時刻・JSON helper の定義だけを確認する場合は、runtime feedback store を直接読む。
 
 ## hash
-- f75c2ddc372d1408a6bfd09d3aada7b2a7c57b3bcf37e4e0ffec006ad4dfa762
+- b02d17fd46c20b2db47c84b98ef7f13a913d672ca24bfd877e280acf1af80ba9
 
 # `runtime_feedback_store.py`
 
