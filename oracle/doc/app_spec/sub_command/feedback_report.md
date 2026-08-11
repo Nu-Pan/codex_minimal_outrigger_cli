@@ -1,6 +1,6 @@
 # `cmoc feedback report`
 
-`cmoc feedback report` は、pending observation と直前の active state を report cut に固定し、現在も人間対応が必要な issue だけを新しい active state と Markdown report へ publication する。
+`cmoc feedback report` は、pending observation と直前の active state を report cut に固定し、現在も人間対応が必要な issue だけを新しい active state と Markdown report へ publication する。1 件以上の candidate が `inconclusive` になった場合は正常 publication を行わず、確定済みの判定と blocker を `incomplete` 診断 report へ保存する。
 
 raw observation は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` を正本とする。state、checkpoint、publication、および cleanup は `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` を正本とする。
 
@@ -22,7 +22,8 @@ raw observation は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` 
 4. repository-level feedback writer 排他を取得する。
 5. current pointer と既存 state の schema、path、hash、および参照整合性を検証する。
 6. publication 後の cleanup が残っていれば、先に再開する。
-7. 再開可能な report cut があれば再利用し、なければ新しい cut を固定する。
+7. terminal な `incomplete` cut の work artifact が残っていれば、state 仕様に従って削除する。
+8. 再開可能な report cut があれば再利用し、なければ新しい cut を固定する。
 
 state root または current pointer が存在しない状態は、有効な初期状態とする。既存 state に corruption がある場合は state を変更せず、新しい report を publication しない。
 
@@ -52,10 +53,14 @@ report cut は、次の順序で処理する。
 5. agent observation の比較候補を、category、evidence subject、path、および fingerprint などの安定情報で絞る。
 6. 同一性を機械的に確定できない agent observation だけを normalization agent へ渡す。
 7. 形成した issue candidate と直前の全 active issue を verification agent で検証する。
-8. 全 candidate が確定した場合だけ、新しい active generation と Markdown report を作る。
-9. state 仕様に従って current pointer を切り替え、その後に処理済み input と一時 state を cleanup する。
+8. 全 candidate の正式な verification checkpoint をそろえる。
+9. 全 candidate が `unresolved | resolved | not_actionable` のいずれかなら、新しい active generation と正常 Markdown report を作る。
+10. 1 件以上が `inconclusive` なら、新しい active generation を作らず、`incomplete` 診断 report を作る。
+11. 正常 report を作った場合だけ、state 仕様に従って current pointer を切り替え、その後に処理済み input と一時 state を cleanup する。
 
 validation、完全一致 deduplication、machine key 集約、recurrence window、threshold、および候補絞り込みを AI に代行させてはならない。
+
+受理済みの `inconclusive` verdict は、同じ cut の残りの candidate に対する verification を打ち切る理由にしない。別の失敗またはユーザー中断がない限り、全 candidate の verification を完了する。
 
 ## 機械処理
 
@@ -136,7 +141,9 @@ schema に加え、次の条件をすべて満たす output だけを受理す�
 
 schema または決定論的事後条件に適合する output を補正後も受理できなければ、AI call failure とする。
 
-## publication の判定
+## 結果と正常 publication
+
+### 正常 result
 
 全 candidate が `unresolved | resolved | not_actionable` のいずれかへ確定した場合だけ、正常 publication を行う。
 
@@ -150,7 +157,17 @@ schema または決定論的事後条件に適合する output を補正後も�
 - `ok`: `unresolved` が 0 件
 - `attention`: `unresolved` が 1 件以上
 
-`inconclusive`、AI call failure、Structured Output の受理失敗、state corruption、または durable publication failure が 1 件でもあれば、新しい正常 publication を行わない。直前の current pointer を維持し、未検証 candidate や前回の active issue を新しい report として提示しない。
+### `incomplete` result
+
+全 candidate の verification output を受理でき、1 件以上が `inconclusive` だった場合は `result: incomplete` とする。`inconclusive` は、正常 publication を完了できなかった report processing blocker であり、`unresolved` または active issue ではない。
+
+`incomplete` では、state 仕様に従って診断 report だけを durable に保存する。確定した `unresolved | resolved | not_actionable` の正式な checkpoint は、同じ cut の確定済み結果として扱う。ただし、その結果を新しい active generation へ部分 publication してはならない。
+
+`incomplete` では、直前の current pointer と正常 publication を維持する。report cut が処理した raw observation を cleanup しない。
+
+validation failure、AI call failure、Structured Output の受理失敗、state corruption、または durable publication failure を `incomplete` として扱ってはならない。`inconclusive` の checkpoint があっても、全 candidate の verification output を受理できなければ `incomplete` 診断 report を作らない。
+
+正常 publication と `incomplete` のどちらも成立しない場合は、新しい正常 publication を行わない。直前の current pointer を維持し、未検証 candidate や前回の active issue を新しい report として提示しない。
 
 current pointer の切替後に cleanup だけが失敗した場合は、publication 済みの result を巻き戻さない。warning と cleanup manifest path を示し、次回 invocation で cleanup を再開する。
 
@@ -162,7 +179,22 @@ current pointer の切替後に cleanup だけが失敗した場合は、publica
 
 再開に必要な report cut、reference、および正式な checkpoint だけを保持する。次回の `cmoc feedback report` は同じ cut を検証して再開する。cut 固定後の observation は次の cut へ残す。
 
+terminal な `incomplete` cut は、中断または失敗した cut の再開対象にしない。
+
+## `incomplete` 後の再実行
+
+人間が `inconclusive` の原因を修正した後は、次の明示的な `cmoc feedback report` で candidate を再検証する。この invocation は、直前の `incomplete` cut と checkpoint を再利用せず、新しい report cut と reference を固定する。raw observation と直前の正常 active state は、新しい cut の入力として維持する。
+
+再検証後の処理は、verdict に応じて次のとおりとする。
+
+- 全 candidate が確定した場合は、既存の正常 publication 手順へ進む。
+- `unresolved` は、新しい active generation の active issue として publication する。
+- `resolved | not_actionable` は、新しい active generation に含めない。
+- 1 件以上が再び `inconclusive` になった場合は、新しい `incomplete` 診断 report を保存する。
+
 ## report の保存と表示
+
+### 正常 report
 
 正常 report は Markdown と YAML Front Matter で構成し、次へ保存する。
 
@@ -189,9 +221,39 @@ current evidence は、削除予定の cut 内 reference だけを指す link �
 - normalization、verification、または publication の途中結果
 - 前回 report との差分
 
+### `incomplete` 診断 report
+
+`incomplete` 診断 report は正常 report と別の Markdown file とし、次へ durable に保存する。
+
+```text
+{{repo-root}}/.cmoc/gu/ar/report/feedback/incomplete/{{time-stamp}}.md
+```
+
+front matter には、次の情報だけを含める。
+
+- command、生成日時、repo root、および実行時の session branch
+- report cut の ID と固定日時
+- verification candidate 数、`unresolved` 数、および `inconclusive` 数
+- `result: incomplete`
+
+active generation ID は含めない。診断 report の先頭には、正常 publication が成立していないことを明示する。直前の正常 publication が current のままであることも明示する。
+
+診断 report の本文には、次の独立したセクションをこの順序で設ける。
+
+1. `確定済みだが今回未 publication の unresolved candidate`
+2. `inconclusive candidate`
+
+確定済みの `unresolved` candidate は、安定した candidate ID 順で表示する。各 candidate には、identity、category、summary、impact、verification reason、human action、および concrete current evidence を示す。このセクションの verdict は診断情報であり、今回の新しい active generation へ publication 済みではないことを明示する。直前の正常 active generation に同じ issue が含まれる可能性と、今回の publication が成立していないことを混同させてはならない。
+
+`inconclusive` candidate も、安定した candidate ID 順で表示する。各 candidate には、candidate ID、summary、判定不能となった reason、および確認できた current evidence を示す。current evidence が空の場合は、確認できた evidence がないことを明示する。
+
+両セクションの current evidence は、削除され得る report cut reference だけを指す link にしない。人間が診断 report だけから確認できる path、subject、probe、location、fingerprint、または finding を materialize する。
+
+診断 report を durable に保存した後の完了表示には、`result: incomplete`、report path、verification candidate 数、`unresolved` 数、`inconclusive` 数、および正常 publication が成立しなかったことを示す。candidate の詳細は Markdown report に表示し、console へ重複して列挙しない。
+
 ## 終了コード
 
 - `ok`、`attention`、およびユーザー中断は終了コード 0 とする。
-- validation failure、`inconclusive`、AI call failure、state corruption、required cleanup recovery failure、および durable publication failure は終了コード 1 とする。
+- `incomplete`、validation failure、AI call failure、state corruption、required cleanup recovery failure、診断 report の durable 保存失敗、および durable publication failure は終了コード 1 とする。
 
 issue の件数、category、impact、または human action だけを理由に非 0 を返してはならない。終了コードは本コマンド自身の処理結果だけを表し、他 workload の成功判定へ伝播させない。

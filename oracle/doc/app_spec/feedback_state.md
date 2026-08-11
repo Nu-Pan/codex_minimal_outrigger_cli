@@ -12,8 +12,9 @@ feedback state は、現在の未解決問題と、進行中の report を安全
 - 現在 `unresolved` である issue の compact record
 - recurrence threshold 未満の machine observation の bounded aggregate
 - 中断または失敗から report を再開するための report cut と正式な checkpoint
-- publication 済みの Markdown report
-- 現在の active generation と Markdown report を選ぶ current pointer
+- publication 済みの正常 Markdown report
+- durable 保存済みの `incomplete` 診断 report
+- 現在の active generation と正常 Markdown report を選ぶ current pointer
 
 解決済み issue、処理済み observation、および完了済み checkpoint を active state の履歴として残してはならない。過去の Markdown report の retention は、active state の compaction と分離する。
 
@@ -36,7 +37,9 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
     ├── reference/...
     └── checkpoint/...
 
-{{repo-root}}/.cmoc/gu/ar/report/feedback/{{time-stamp}}.md
+{{repo-root}}/.cmoc/gu/ar/report/feedback/
+├── {{time-stamp}}.md
+└── incomplete/{{time-stamp}}.md
 ```
 
 `{{repo-root}}/.cmoc/gu` 全体を Git 追跡対象外とする。session と run の join または abandon は、feedback state を取り込み、破棄、巻き戻し、または複製してはならない。
@@ -54,8 +57,9 @@ state を構成する artifact の役割を次に示す。
 | report cut manifest | 1 回の report に使用する固定入力と処理状態の正本 |
 | reference | candidate の現在状態を検証するため、report cut に固定した repository content、fingerprint、または probe result |
 | checkpoint | 受理済み normalization または verification output の再利用可能な記録 |
+| `incomplete` 診断 report | `inconclusive` によって正常 publication が成立しなかった cut の確定済み判定と blocker を materialize した durable な Markdown report |
 
-timestamp、Git commit、branch reachability、または directory の列挙順から current state を推測してはならない。current pointer が参照する generation manifest と Markdown report の path および hash を検証できる場合だけ、その組を最新の正常 publication とする。
+timestamp、Git commit、branch reachability、または directory の列挙順から current state を推測してはならない。current pointer が参照する generation manifest と正常 Markdown report の path および hash を検証できる場合だけ、その組を最新の正常 publication とする。current pointer は `incomplete` 診断 report を参照しない。
 
 ## JSON と排他制御
 
@@ -124,23 +128,47 @@ reference には cut 内で一意な ID と種別を付ける。保存内容に�
 
 repository content の capture 中に値が変化した場合は、未確定 cut を破棄して再取得するか、state を変更せずエラー終了する。異なる時点の内容を 1 つの cut として扱ってはならない。
 
-cut の固定後は入力を変更しない。後から追加された observation は次回の cut へ残す。処理状態、checkpoint reference、publication target、および cleanup target だけを atomic に追記または更新してよい。
+cut の固定後は入力を変更しない。後から追加された observation は次回の cut へ残す。処理状態、checkpoint reference、正常 publication target、診断 report target、および cleanup target だけを atomic に追記または更新してよい。
 
 同じ repository で、再開対象の report cut は高々 1 件とする。完了した cut を履歴として蓄積しない。
 
 ### checkpoint
 
-normalization と verification の output は、schema と決定論的事後条件を満たした後だけ正式な checkpoint として保存する。checkpoint は、入力、builder、schema、および output を hash で結び付ける。
+normalization と verification の output は、schema と決定論的事後条件を満たした後だけ正式な checkpoint として保存する。verification verdict が `inconclusive` であるかにかかわらず、受理済み output には同じ checkpoint 規則を適用する。checkpoint は、入力、builder、schema、および output を hash で結び付ける。
 
 同じ report cut と同じ入力で再開する場合は、整合する checkpoint を再利用する。未完了 call、不適合 output、correction の途中結果、および失敗履歴を checkpoint として保存してはならない。
 
 中断または失敗時は、再開に必要な report cut、reference、および正式な checkpoint だけを保持する。正常 publication 後は、active issue record に materialize した情報を除き削除する。
 
-`inconclusive` は有効な verdict だが、正常 publication へ進めない terminal result とする。次の明示的な report 要求では、同じ固定入力から再開せず、新しい cut を作る前に一時 state を破棄してよい。
+`inconclusive` は有効な verdict だが、正常 publication へ進めない report processing blocker とする。
 
-## atomic publication
+## `incomplete` 診断 report
 
-新しい正常 report は、次の順序で publication する。
+全 candidate の正式な verification checkpoint がそろい、1 件以上が `inconclusive` である場合は、その report cut を `incomplete` として終端させる。`inconclusive` を `unresolved` または active issue に変換してはならない。
+
+`incomplete` 診断 report は、次へ durable に保存する。
+
+```text
+{{repo-root}}/.cmoc/gu/ar/report/feedback/incomplete/{{time-stamp}}.md
+```
+
+診断 report は、sibling temporary file への write、file flush、atomic rename、および parent directory の flush によって保存する。report cut reference または checkpoint を削除しても単独で読める内容を最終 file に materialize する。最終 file の path と hash を再検証し、report cut manifest に記録してから cut を terminal な `incomplete` とする。
+
+診断 report の durable 保存は、正常 publication から独立した state transition とする。保存しても、次の state を変更しない。
+
+- 新しい active generation を作成または publication しない。
+- current pointer を切り替えない。
+- 直前の正常 publication を current のまま維持する。
+- report cut が処理した raw observation を cleanup しない。
+- active issue と threshold 未満 machine aggregate を置き換えない。
+
+診断 report の durable 保存後は、report cut を terminal な `incomplete` として記録する。次の明示的な `cmoc feedback report` は同じ cut の checkpoint を再利用せず、新しい cut を作る。新しい cut を作る前に、terminal な cut の work artifact を manifest に従って削除する。この削除に raw observation を含めてはならない。
+
+診断 report を durable に保存できなかった場合は、cut を `incomplete` として完了させない。再開に必要な report cut、reference、および正式な checkpoint を保持し、正常 publication と raw observation の cleanup を行わずにエラー終了する。
+
+## 正常 report の atomic publication
+
+新しい正常 report は、次の順序で publication する。`incomplete` 診断 report の保存に、この publication 手順または current pointer を使用してはならない。
 
 1. 新しい active generation の record と manifest を durable 保存する。
 2. Markdown report を最終 path へ durable 保存する。
@@ -151,5 +179,7 @@ normalization と verification の output は、schema と決定論的事後条�
 current pointer の切替だけを publication point とする。切替前に異常終了した場合は、直前の pointer が引き続き current となる。staged artifact を正常 report として扱ってはならない。
 
 cleanup は、current pointer と hash で結び付いた report cut manifest を使用して idempotent に行う。cleanup が途中で失敗しても current pointer を巻き戻さない。次回の report は cleanup を完了してから新しい cut を作る。
+
+`incomplete` 診断 report の保存は、publication 後の cleanup を開始する条件にならない。
 
 manifest にない対象を推測して削除してはならない。manifest または対象の hash が一致しない場合は corruption として停止する。

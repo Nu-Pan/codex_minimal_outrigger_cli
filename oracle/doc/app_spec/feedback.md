@@ -2,7 +2,9 @@
 
 ## 目的
 
-feedback subsystem は、cmoc の作業中に見つかった問題のうち、現在も未解決であり、現在の作業外にいる人間の対応が必要なものだけを提示する。
+feedback subsystem は、cmoc の作業中に見つかった問題のうち、現在も未解決であり、現在の作業外にいる人間の対応が必要なものだけを正常 report で提示する。
+
+verification verdict が `inconclusive` の candidate がある場合は、正常 publication を行わない。代わりに、確定済みの判定と判定不能の原因を `incomplete` 診断 report で提示する。
 
 feedback は診断と報告のための独立した仕組みである。feedback の有無や内容は、本命 workload の成功判定、state、retry、または recovery を変更しない。`cmoc feedback report` 自身の成否だけは、同サブコマンドの終了結果へ反映する。
 
@@ -23,11 +25,12 @@ feedback は、観測時の申告と report 時の判断を分離する。
 | issue candidate | observation と直前の active state から組み立てた検証対象。候補であるだけでは人間向け report に掲載しない。 |
 | active issue | report cut 時点で `unresolved` と検証された issue。次回の検証に必要な compact record を保持する。 |
 | report cut | 1 回の report が評価する observation、直前の active state、および現在状態の参照を固定した入力境界。 |
-| feedback report | 全 candidate の検証が確定した場合に publication する active state と Markdown report の組。 |
+| feedback report | 全 candidate が `unresolved | resolved | not_actionable` のいずれかに確定した場合に、正常 publication する active state と Markdown report の組。 |
+| `incomplete` 診断 report | 全 candidate の verification output を受理でき、1 件以上が `inconclusive` だった場合に保存する Markdown report。正常 publication と active state には含めない。 |
 
 issue の同一性を機械的に確定できない場合だけ、normalization agent を使用する。normalization agent は、入力候補との同一性だけを判断する。
 
-各 issue candidate の現在性と actionability は、verification agent が `unresolved | resolved | not_actionable | inconclusive` のいずれかで判断する。人間向け report には `unresolved` だけを掲載する。
+各 issue candidate の現在性と actionability は、verification agent が `unresolved | resolved | not_actionable | inconclusive` のいずれかで判断する。正常 report には `unresolved` だけを掲載する。`inconclusive` は active issue にせず、`incomplete` 診断 report にだけ掲載する。
 
 全体の流れを次に示す。
 
@@ -35,8 +38,10 @@ issue の同一性を機械的に確定できない場合だけ、normalization 
 agent submission ─┐
                   ├─> pending observation ─> report cut ─> normalization ─> verification
 machine detector ─┘                                                        │
-                                                                            v
-                                                     active state + Markdown report
+                                                                            ├─> normal publication
+                                                                            │    active state + Markdown report
+                                                                            └─> incomplete diagnostic
+                                                                                 Markdown report only
 ```
 
 ## 正本仕様の分担
@@ -58,10 +63,12 @@ feedback 全体で、次の原則を維持する。
 - raw observation、active state、および report の一時 state は `{{repo-root}}/.cmoc/gu` に属する repository-local data とする。
 - feedback data は branch、session、または run の成果物ではない。join と abandon によって取り込み、破棄、または巻き戻さない。
 - report cut の固定後に追加された observation は、次回の report で処理する。
-- 全 candidate の verification が確定した場合だけ、新しい active state と Markdown report を一組として publication する。
-- report が完了しなかった場合は、直前の正常 publication を current のまま維持する。
+- 全 candidate が `unresolved | resolved | not_actionable` のいずれかに確定した場合だけ、新しい active state と正常 Markdown report を一組として publication する。
+- 全 candidate の verification output を受理でき、1 件以上が `inconclusive` だった場合は、`incomplete` 診断 report だけを durable に保存する。
+- `incomplete` 診断 report の保存は正常 publication ではない。新しい active state を作らず、直前の current pointer と pending observation を維持する。
+- 正常 publication が完了しなかった場合は、直前の正常 publication を current のまま維持する。
 - report-time agent は、候補外の問題を探索せず、repository または feedback state を変更しない。
-- feedback report、active issue、および AI-generated kaizen を、後続の Codex call へ自動注入しない。
+- feedback report、`incomplete` 診断 report、active issue、および AI-generated kaizen を、後続の Codex call へ自動注入しない。
 
 別 clone、別 machine、または Git remote への feedback data の複製は保証しない。
 
