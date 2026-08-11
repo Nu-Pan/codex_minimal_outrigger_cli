@@ -75,8 +75,8 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     import commons.runtime_codex_tui as tui_module
 
     override_args = [
-        "--ask-for-approval",
-        "on-request",
+        "--config",
+        'approval_policy="on-request"',
         "--model",
         "fake",
         "--config",

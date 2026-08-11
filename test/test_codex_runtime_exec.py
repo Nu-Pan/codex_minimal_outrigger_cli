@@ -40,8 +40,8 @@ def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     assert "--profile" not in args
     assert "-p" not in args
     assert codex_arg_value(args, "--sandbox") in {"read-only", "workspace-write"}
-    assert codex_arg_value(args, "--ask-for-approval") == "on-request"
     override = codex_override_config(args)
+    assert override["approval_policy"] == "on-request"
     assert override["approvals_reviewer"] == "auto_review"
     assert "sandbox_workspace_write" not in override
     assert "features" not in override
@@ -95,8 +95,8 @@ def test_run_codex_exec_injects_overrides_and_starts_codex(
     record = json.loads(recorder.read_text())
     _assert_codex_exec_contract(record["args"], "prompt")
     assert record["args"][:4] == [
-        "--ask-for-approval",
-        "on-request",
+        "--config",
+        'approval_policy="on-request"',
         "--model",
         config.codex.model[ModelClass.EFFICIENCY].model,
     ]

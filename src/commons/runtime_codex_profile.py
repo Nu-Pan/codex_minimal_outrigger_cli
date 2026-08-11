@@ -606,8 +606,7 @@ def build_codex_override_args(
     notification_argv: list[JsonTomlValue] = []
     notification_argv.extend(notification_command or ())
     args = [
-        "--ask-for-approval",
-        "on-request",
+        *_config_override("approval_policy", _toml_string("on-request")),
         "--model",
         model_spec.model,
         "--sandbox",

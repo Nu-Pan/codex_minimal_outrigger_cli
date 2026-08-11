@@ -102,21 +102,19 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- 1 回の Codex exec における subprocess 実行ループを統括する状態機械。Structured Output の schema・JSON・事後条件検証と補正 turn、capacity retry、quota 待機および代表 probe、resume 継続を扱う。各呼び出しの prompt・stdout・stderr・output・call log を保存し、console と subcommand event へ結果を記録する。TUI 起動や低水準の Codex 実行補助ではなく、exec 実行制御全体を確認する入口である。
+- 1 回の agent call における Codex exec の実行制御を担い、subprocess 起動、実行記録、Structured Output の検証・補正、capacity retry、quota 待機と代表 probe、resume 継続を同じ状態機械で管理する。exec 実行の分岐と共有状態を確認するための入口であり、TUI 起動処理は別 module に分離されている。
 
 ## Read this when
-- Codex exec の再試行、Structured Output の補正・検証、quota 待機や代表 probe、resume session の継続処理を変更または調査するとき。
-- Codex call の prompt log、stdout/stderr、output、call log の保存や、console・subcommand event の状態記録を変更または調査するとき。
-- 作業成果物の snapshot、補正 turn による変更検出・復元、最終的な CodexExecResult の組み立てを確認するとき。
+- Codex exec の起動条件、argv・cwd・環境、prompt/output/call log の保存、実行結果の event 記録を確認または変更するとき。
+- Structured Output の JSON parse、JSON Schema、宣言済み事後条件の検証、補正 turn、補正時の成果物不変性、resume session の扱いを確認するとき。
+- capacity error の再試行、quota error の待機・代表 probe・並列呼び出し間の再開、quota polling の失敗処理を確認するとき。
 
 ## Do not read this when
-- TUI の起動や TUI 固有の分岐を変更・調査するときは、TUI 用 module を直接読む。
-- Codex の argv、環境変数、Codex home、schema 準備、出力 JSON 読み取りの個別実装だけを変更・調査するときは、runtime_codex_profile を直接読む。
-- Codex call の console 表示や共通 error formatting だけを変更・調査するときは、runtime_codex_logging を直接読む。
-- 設定読み込み、feedback、worktree snapshot、パス生成など単独の補助機能だけを変更・調査するときは、それぞれの専用 module を直接読む。
+- TUI の起動や TUI 専用の分岐を確認するときは、TUI を担当する別 module を直接読む。
+- Codex subprocess の個別エラー判定、schema 準備、設定読み込み、ログ出力、feedback、worktree snapshot の詳細実装だけを確認するときは、対応する専用 module を直接読む。
 
 ## hash
-- b8557009906e7ff053e9a08070b99f4ed51bc2cddec44cca8ce3cf27a6cc0cfd
+- 9e0ac1709cfc107b029fdfa8fc72aefcfcb378e7cd01d207bcf7f2c70d9cfe8a
 
 # `runtime_codex_logging.py`
 
@@ -152,20 +150,23 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。起動時の sandbox・argv・config override・CODEX_HOME・環境変数・Structured Output schema 配置と、実行時の process tracking・process group の安全な停止・JSONL 出力解析・capacity/quota/unexpected error 判定を扱う。Codex CLI の実行環境と機械的な実行結果を解釈する下位実装への入口。
+- Codex CLI subprocess 境界の実装。起動前の sandbox・CODEX_HOME・schema・argv/env 構成、実行中の child process tracking と安全な process group 停止、実行後の JSON/JSONL 出力解析および capacity・quota・予期しないエラー判定を担う。Codex 呼び出しの実行環境や機械的な結果解釈を確認する際の入口であり、設定値そのものや実行時エラー型の定義は各専用モジュールを直接読む。
 
 ## Read this when
-- Codex CLI に渡す sandbox、model/provider、notification、MCP、shell environment の argv を確認するとき。
-- CODEX_HOME、subprocess 環境、schema の hash store 配置、Codex CLI 不在時の実行時エラーを確認するとき。
-- editing run の process tracking file、lock、PID/start time/process group の検証、pidfd による signal、SIGTERM/SIGKILL cleanup を確認するとき。
-- Codex の JSONL stdout/stderr、session ID、capacity/quota/retry 対象、unexpected error の判定を確認するとき。
+- Codex CLI に渡す sandbox、model/provider、通知、feedback MCP、TOML override の argv を変更・調査するとき
+- CODEX_HOME、subprocess 環境、schema の hash store 配置、Codex CLI 不在時の扱いを確認するとき
+- editing run の child process tracking、PID reuse 対策、pidfd、process group の停止・cleanup を変更・調査するとき
+- Codex の stdout JSONL から session ID や error message を抽出し、capacity・quota・unexpected error の判定を確認するとき
 
 ## Do not read this when
-- Codex CLI 境界以外の cmoc 実装、一般的な設定値の定義、または Codex CLI の正本仕様だけを確認する場合。
-- 対象の個別責務を直接定義する runtime_config、runtime_content、runtime_errors、runtime_feedback、runtime_paths の実装を確認する場合は、それらを先に読む。
+- cmoc の設定項目や JSON/TOML 値の正規化規則だけを確認する場合は runtime_config を直接読む
+- CmocError の構造や利用者向けエラー文面の共通定義だけを確認する場合は runtime_errors を直接読む
+- feedback の環境変数名や reporter の実装だけを確認する場合は runtime_feedback を直接読む
+- schema store や runtime content のパス・ハッシュ保存仕様だけを確認する場合は runtime_paths または runtime_content を直接読む
+- Codex subprocess 境界に関係しない CLI コマンドやアプリケーション仕様を調査する場合
 
 ## hash
-- 54a3a9a36d244a6741c0893e94d1d66f6f6873337702b65c3412f399c939871e
+- a81ebf7110ecf1090bca1274a413c580eb00f9dfc8c0d88f435eed6eb36dd3ff
 
 # `runtime_codex_tui.py`
 

@@ -32,17 +32,18 @@
 # `_codex_support.py`
 
 ## Summary
-- Codex 実行関連テストで共有する最小のテストヘルパー群。テスト用ホーム環境、Structured Codex result double、AgentCallParameter、CLI 引数と設定 override の検査補助を提供し、runtime wrapper や TUI のテストから参照する入口となる。
+- Codex 実行ラッパー関連テストで共用する、認証に依存しないテスト環境、既定パラメータ、CLI 引数解析、Codex override のスタブを提供する。runtime テストから再利用されるテスト支援の入口。
 
 ## Read this when
-- Codex 実行ラッパーまたは TUI のテストで、隔離した Codex 環境、既定パラメータ、結果 double、CLI override 引数の検証補助が必要なとき。
+- Codex 実行の runtime wrapper テストを追加・変更し、共通の一時環境や Codex パラメータ、CLI 引数検証用ヘルパーが必要なとき。
+- Codex の subprocess 制御をテストする際に、実際の override 生成を固定値へ差し替える方法を確認したいとき。
 
 ## Do not read this when
-- 本番の Codex 実行処理や CLI override の仕様を確認したいときは、対応する実装または正本仕様を直接読む。
-- この共通ヘルパーを利用しないテストや、Codex 実行と無関係なテストを調べるとき。
+- Codex 実行ロジック自体や本番 CLI の挙動を確認・変更するときは、実装対象のモジュールを直接読む。
+- Structured Output schema の定義や一般的なテスト規約だけを確認したいときは、対応する仕様・規約文書を直接読む。
 
 ## hash
-- 5453104f8f54bd043468ac6d161ae7571a7728f86feb7b5482b74cebaa941032
+- 5b56b039a83a8845f85bd3ec2097eb80a803281a4ade7c305575f1887f28e898
 
 # `_command_support.py`
 
@@ -270,21 +271,20 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ランタイムの統合テスト。引数、stdin、sandbox、override、作業ディレクトリ、出力ログ、リポジトリ書き込み、UTF-8 異常時の扱いを検証する。
-- 汎用 model provider 設定の反映と、組み込み local provider 用フラグを使わないことを検証する。
-- Codex 実行準備時に CODEX_HOME の設定ファイルを生成しないことも確認する。
+- Codex CLI 実行ランタイムと、その設定・結果処理の契約を検証するテスト群。
+- argv、stdin、sandbox、approval override、作業ディレクトリ、出力ログ、invalid UTF-8、Codex HOME の分離を扱う。
+- 汎用 model provider の override が組み込み local provider 用フラグなしで渡されることも検証する。
 
 ## Read this when
-- Codex exec の argv、stdin、sandbox、approval、override、出力処理、実行結果の構築を変更または調査するとき。
-- model provider や provider 設定の Codex CLI への反映方法を変更または調査するとき。
-- CODEX_HOME の隔離や実行時設定ファイル生成の有無を変更または調査するとき。
+- Codex 実行ラッパーの CLI 引数、stdin、sandbox、approval、作業ディレクトリ、出力ログ、結果解析の挙動を確認・変更・回帰検証する場合
+- Codex の model provider override や Codex HOME に設定ファイルを生成しない契約を確認する場合
 
 ## Do not read this when
-- Codex CLI 実行や model provider に関係しない機能のテスト・実装を扱うとき。
-- 個別の設定値の正本仕様を確認する必要があり、対応する oracle 文書を直接読むべきとき。
+- Codex 実行ランタイムの契約ではなく、共通テスト helper、リポジトリ生成 helper、または個別の設定クラスの実装を直接調べる場合
+- 対象が検証する CLI 契約を使わず、別の実装・仕様・テスト対象だけを確認すればよい場合
 
 ## hash
-- 2f411c2f478506ed67afa8da0df3364b8617078192d51325cb5f49ace2b40972
+- 24bf1bf51545e110332d1cc8c6336a9c3dc9ac5c9214ff805b89c90161b83802
 
 # `test_codex_runtime_home.py`
 
@@ -322,20 +322,19 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota exceeded 後の外部挙動を検証する回帰テスト群。quota availability probe の構築・共有・失敗伝播、session ID による resume と session ID 欠落時の再実行、quota polling 上限、capacity retry、並行呼び出し、CODEX_HOME/cwd、stdout JSONL・call log・subcommand log・コンソール出力を同じ retry 状態機械の観測点として扱う。Codex 実行の quota 復帰処理やそのログ契約を変更・調査するときの入口。
+- Codex quota exceeded 後の probe・待機・resume・再実行を検証する回帰テスト群。quota probe の構築、session ID 復元、共有 probe、retry 状態、ログ・標準出力・CODEX_HOME・cwd、失敗伝播、並行呼び出しを一体として扱い、Codex exec の quota 復帰挙動を確認する入口。
 
 ## Read this when
-- Codex exec の quota exceeded 後の probe、待機、resume、再実行、retry 制御を変更または検証するとき
-- quota probe の失敗・KeyboardInterrupt・不正 JSONL・並行呼び出し時の伝播を確認するとき
-- quota retry に関する session ID、CODEX_HOME/cwd、call log、subcommand log、コンソール出力の回帰を調査するとき
+- Codex exec の quota 超過後の待機、quota availability probe、resume または同一 prompt の再実行を変更・調査するとき
+- quota retry の session ID、probe の失敗処理、poll 上限、capacity retry、並行呼び出しの挙動を検証するとき
+- Codex 呼び出しログ、subcommand log、probe の JSONL 出力、CODEX_HOME や Codex cwd の記録に関する回帰を確認するとき
 
 ## Do not read this when
-- 通常の Codex exec 成功・失敗処理だけを変更または調査する場合は、quota retry の実装や直接の実行契約を読む
-- quota probe parameter の正本仕様や builder の実装を確認するだけの場合は、正本仕様または builder 実装を直接読む
-- quota retry と無関係な Codex CLI 引数、ログ、subcommand 処理を扱う場合は、この回帰テスト群を入口にしない
+- quota retry や Codex exec の復帰制御に関係せず、通常の Codex 実行、別の subcommand、または probe adapter 単体の実装だけを調査するとき
+- 対象の具体的な実装責務や正本仕様を確認する必要があるときは、このテストではなく quota retry の実装または codex exec の正本仕様を直接読むとき
 
 ## hash
-- bdb11dc4430a0515fae63b77aa5f52c1918dd3cfd2078776cfc0d51c06e3d629
+- 48eea6302eabb238b2ace686a8fbf005902d7d67bf9339f42d6381ec73c4d322
 
 # `test_codex_runtime_retry.py`
 
@@ -374,20 +373,20 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 実行ラッパーの振る舞いを検証するテスト群。完成済みプロンプトの読み込み、作業ディレクトリ・sandbox・CLI 引数、呼び出しログとサブコマンドイベント、終了結果や例外時のエラー記録を確認する。Codex TUI 実行処理の実装や、そのログ・アクセス制約に関するテストの入口。
+- Codex TUI 実行ラッパーのテスト入口。完成済み prompt の読み込み、作業ディレクトリ・sandbox・CLI 引数の制約、成功・CLI 不在・KeyboardInterrupt・非 0 終了時の call log／サブコマンドイベント／コンソール要約を検証する。TUI 実行時のアクセス境界やログ仕様のテストを追加・変更・調査するときに読む。
 
 ## Read this when
-- Codex TUI の実行引数、prompt の扱い、agent call のアクセスモードを変更または検証するとき
-- Codex TUI の成功、CLI 不在、KeyboardInterrupt、非 0 終了時のログ・コンソール報告を変更または確認するとき
-- TUI call log と codex_call サブコマンドイベントの生成契約をテストするとき
+- Codex TUI の実行経路、prompt 読み込み、linked worktree 対応、CLI 呼び出し引数を検証するとき
+- TUI 呼び出しの成功・失敗・割り込み時における call log、イベント、コンソール出力の挙動を確認するとき
+- TUI 関連の realization test の要件や既存ケースを把握するとき
 
 ## Do not read this when
-- Codex TUI 以外の Codex 実行経路や一般的なサブコマンドのテストを扱うとき
-- 実装の詳細を確認することが目的で、対応する runtime 実装や oracle 仕様を直接読むべきとき
-- prompt 構築規則、ログ形式、通知仕様そのものを変更・確認するとき
+- Codex TUI の実装自体を変更・調査する場合は、まず対応する realization 実装と正本仕様を読む
+- TUI 以外の Codex 実行経路、一般的なログ機構、別サブコマンドのテストだけを扱う場合
+- テスト実行方法や開発環境の設定だけを確認する場合は、専用の開発ルールを直接読む
 
 ## hash
-- bfd29666737329453563f4dc1683fcd4286ea87f5519d1b46bf72a84fb8482b7
+- 31cbc124383f272312f9699cd74e209aef041c0e04e316dbe39546d48a0d1540
 
 # `test_doctor_cli.py`
 
@@ -748,20 +747,19 @@
 # `test_runtime_codex_profile.py`
 
 ## Summary
-- Codex argv 構築と実行環境準備の契約を検証する realization test。file access mode から sandbox・approval・model・reasoning 設定への変換、MCP feedback context の扱い、provider override の TOML 化、schema 保存と output JSON 読み込みの境界を扱う。Codex 実行プロファイルやその呼び出し引数の挙動を確認する際の入口。
+- Codex argv 構築と subprocess 環境、schema 一時保存、JSON 出力読込を検証する realization test。file access mode ごとの sandbox、model/provider 上書き、TOML エンコード、通知 callback、feedback context の扱いと、異常系での起動前検証を対象とする。runtime Codex profile の実装を変更・レビューするときの挙動確認入口。
 
 ## Read this when
-- Codex の sandbox、model、reasoning、provider 上書き引数の変換を変更または検証するとき
-- Codex subprocess の環境変数、feedback MCP 設定、notification callback の引き渡しを変更または検証するとき
-- structured output schema の保存や Codex output JSON の読み込み挙動を変更または検証するとき
+- Codex の sandbox、model、provider、通知、feedback MCP 設定を argv または環境へ変換する処理を変更するとき。
+- schema のハッシュ保存や Codex 出力 JSON の読込処理を変更するとき。
+- Codex 起動前の不正な file access mode や未定義 provider の検証を確認するとき。
 
 ## Do not read this when
-- Codex 実行プロファイルの実装詳細を直接調査する必要があり、先に commons.runtime_codex_profile を読むべきとき
-- feedback reporter 自体のプロトコルや collector 実装だけを調査するとき
-- Codex argv、provider、schema、output JSON に関係しないテストを扱うとき
+- Codex runtime profile の実装・契約を変更せず、他の agent call や CLI 引数変換とは無関係なテストを扱うとき。
+- schema 検証そのものや一般的な JSON schema の互換性を確認するときは、schema 専用の仕様・テストを直接読む。
 
 ## hash
-- 96fa16e923c3e1702608877c229908299ec4136cc27f8c555a018cb229eea5c3
+- 868fe3c3f60b14fda88f4809f6307a3b8ebd08d4d0d3a33b5977689783c11bc1
 
 # `test_runtime_config.py`
 
