@@ -31,22 +31,21 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装領域。feedback の CLI 入口と、raw observation から report の検証・集約・生成・公開・cleanup までの active-state publication pipeline を扱う。
-- feedback report の処理順序、再開可能な report cut、checkpoint、writer lock、candidate 集約、normalization/verification、current pointer 公開の挙動を確認・変更するときの入口。
+- feedback サブコマンドの実装をまとめたディレクトリ。feedback の各処理、特に observation から issue candidate を生成して検証し、report と generation artifact を公開する処理への入口となる。
+- サブコマンド全体の入口と CLI 実行フローは初期化モジュールで確認し、report の固定入力、deterministic 集約、verification、transaction 境界、publication 後 cleanup は report 実装モジュールで確認する。
 
 ## Read this when
 - feedback サブコマンドの挙動や実装を確認・変更するとき。
-- feedback observation から issue candidate や machine aggregate を作る処理、deduplication、30 日 recurrence threshold を調査するとき。
-- normalization・verification、report artifact の生成、publication、失敗・中断・cleanup 状態の遷移を調査するとき。
+- feedback observation から issue candidate を生成・検証し、report の staging や current pointer 切替を調査するとき。
 
 ## Do not read this when
-- feedback observation の envelope や active state の永続化形式そのものを確認する場合は、参照される runtime feedback state/store の実装を直接読む。
-- normalization・verification の agent prompt や Structured Output schema の正本を確認する場合は、対応する builder と oracle schema を直接読む。
-- CLI の一般的な実行基盤、session/run state、ログ機構の共通仕様を確認する場合は、各共通モジュールを読む。
-- publication 後の Markdown report 表示だけを確認する場合は、report の生成処理または実際の出力 artifact を直接読む。
+- feedback 以外のサブコマンドを扱うとき。
+- feedback observation の共通 envelope・raw store・canonical JSON・secret masking だけを確認したいときは、feedback store の runtime モジュールを直接読む。
+- normalization や verification の prompt・Structured Output schema だけを確認したいときは、対応する builder と oracle schema を直接読む。
+- active state や generation artifact などの共通データ構造・永続化だけを確認したいときは、feedback state runtime モジュールを直接読む。
 
 ## hash
-- 7758528ba1cd0299f38f05abd815c88f5d344d9d6737c8e542419859e3891553
+- b0d15659827f50ee0fbb645c0d0825ee9bf824c501fb7cfd7454c8eadffb2117
 
 # `indexing.py`
 

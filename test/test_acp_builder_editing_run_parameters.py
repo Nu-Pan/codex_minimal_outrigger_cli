@@ -133,6 +133,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     )
     assert "対象 repository が要求する必要な検証" in review.prompt
     assert "# realization oracle reference rule" in review.prompt
+    assert "# routing rule" in review.prompt
     review_schema = json.loads(review.structured_output_schema_path.read_text())
     finding_schema = review_schema["properties"]["findings"]["items"]
     assert "changed_paths" in finding_schema["required"]
@@ -149,6 +150,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     )
     assert summary.run_indexing_preflight is True
     assert f"- {{{{work-root}}}} = {editing_run_worktree.resolve()}" in summary.prompt
+    assert "# routing rule" not in summary.prompt
     summary_schema = json.loads(summary.structured_output_schema_path.read_text())
     assert summary_schema["properties"]["changes"]["minItems"] == 1
     start = summary.prompt.index("# run branch 上の refactor 差分")

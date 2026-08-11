@@ -110,54 +110,57 @@
 # `test_acp_builder_editing_run_parameters.py`
 
 ## Summary
-- editing run workload の canonical builder adapter を検証するテスト。apply builder が commit 範囲・raw diff・標準規則を prompt と実行設定へ反映し、refactor builder が canonical Structured Output schema、実行設定、決定論的事後条件を使うことを確認する。
-- テスト用 linked worktree を隔離して作成し、raw diff 内の三連 backtick や prompt 境界風マーカーが外側の prompt 境界を壊さず保持されることも検証する。対応する builder 実装と oracle schema の挙動を確認する入口となる。
+- editing run workload の canonical builder adapter を検証するテスト。apply builder の実行設定、commit 範囲、oracle raw diff、標準プロンプトの埋め込みを確認する。refactor builder では canonical Structured Output schema、実行設定、対象 path、レビュー条件、決定論的事後条件を確認する。raw diff 内の三連 backtick や境界風見出しを安全に保持できることも検証する。
 
 ## Read this when
-- apply または refactor の editing run builder の prompt 構成、実行パラメータ、Structured Output schema の利用を変更・検証するとき
-- raw diff の埋め込み、prompt 境界のエスケープ、linked worktree 上での builder 動作を確認するとき
-- 対応する canonical builder adapter や oracle schema の回帰テストを調査するとき
+- editing run の apply または refactor 用 builder の挙動を変更・レビューするとき。
+- builder が生成する prompt の commit 情報、oracle diff、標準規則、Structured Output schema、実行設定を確認するとき。
+- raw diff のコードフェンスや prompt 境界風テキストの扱いを変更するとき。
+- canonical schema の必須項目や変更 path の事後条件を変更するとき。
 
 ## Do not read this when
-- builder 以外の ACP 実装や一般的な git worktree 操作だけを調査するとき
-- Structured Output schema の正本内容そのものを変更・確認するときは、対応する oracle schema を直接読む
-- prompt 標準規則の定義や realization の設計意図を確認するときは、対応する oracle 文書を直接読む
+- editing run builder や対応する canonical schema の挙動に関係しない実装を調査するとき。
+- 一般的な git fixture、共有 test support、または無関係な agent call parameter のテストを読むとき。
+- prompt や Structured Output schema の内容を確認する必要がなく、対象の実装ファイルを直接検証できるとき。
 
 ## hash
-- 275dd9bf6d20cf16b1d14eef2d39e10d576a1cc6a0fe685cd7a9fcba7fde4504
+- a793d55ba07208954044e43a71a822d29dff84c0d82b4fea6144fac0bcaf7ea8
 
 # `test_acp_builder_indexing_parameters.py`
 
 ## Summary
-- indexing の index entry builder に対するテストで、モデル・推論強度・ファイルアクセス権などの実行パラメータ、Structured Output schema の必須配列制約、対象本文中のコードフェンスやプレースホルダー風見出しの保持、互換モジュールの公開シンボルを検証する。index entry 生成パラメータやその公開面を変更・確認する際のテスト入口。
+- indexing の index entry builder が返す parameter の実行設定、structured output schema の必須条件、対象本文のプロンプト埋め込み境界、および互換 module の公開面を検証するテストです。index entry builder の変更や、その parameter・schema・互換 export の挙動を確認するときの入口になります。
 
 ## Read this when
-- index entry builder のパラメータ、Structured Output schema、プロンプト本文境界、互換モジュールの公開 API を変更または検証するとき
-- indexing 関連のテスト失敗の原因を調査するとき
+- index entry builder の model・reasoning・file access・cwd・preflight 設定を変更または検証するとき
+- index entry 用 structured output schema の semantic 配列の必須条件を変更または検証するとき
+- 対象本文に code fence や placeholder 風見出しを含む場合の prompt 境界処理を変更または検証するとき
+- index entry builder の互換 module が公開する builder を変更または検証するとき
 
 ## Do not read this when
-- index entry の文章生成ルール自体を確認したいときは、対応する oracle の実装・schema を直接読む
-- indexing 以外の builder や一般的なテスト実行方法だけを確認したいとき
+- index entry の生成内容そのものや INDEX.md のルーティング規則だけを確認したいとき
+- indexing builder 以外の ACP builder の parameter や schema を扱うとき
 
 ## hash
-- 9ebfc98223d1b38c30d1e12a8f789d1d40fa1b70550dcb2114614d682bbb7833
+- ccd3c970a8ae2024afb7f5ccb9070dcfd9568baab14ce0a6c3289d5dc249408f
 
 # `test_acp_builder_oracle_review_parameters.py`
 
 ## Summary
-- oracle review ACP builder 群の parameter、structured-output schema、公開関数、モデル・アクセス設定、および動的 prompt の code fence 保護を回帰検証するテスト。canonical builder との互換性や oracle schema との一致も確認する。
-- review の enumerate、judge、merge、validate advocate/challenger 各 builder に共通する所見判定規範と、動的入力・placeholder・section 境界の保持を検証するレビュー系テストの入口。
+- oracle review ACP builder 群の parameter、Structured Output schema、公開 builder 名、共有 review 規範、および動的 prompt の code fence 保護を回帰検証するテスト。review builder の互換契約や入力保持、schema 一致、model・reasoning・file access 設定を確認する入口である。
 
 ## Read this when
-- oracle review builder の parameter、schema、公開面、prompt 生成、動的入力の fence 保護を変更または検証するとき。
-- review builder の canonical 実装との互換性や、oracle 側 schema との一致を確認するとき。
+- oracle review builder の parameter 設定、schema、公開面、canonical builder との互換性を検証または変更するとき
+- review builder が動的入力を prompt に埋め込む処理や nested code fence 保護を調査するとき
+- review 所見の共有判定規範や validation・merge・enumeration の回帰を確認するとき
 
 ## Do not read this when
-- review builder 以外の ACP builder や、実装詳細そのものを確認したいとき。
-- 所見判定規範の正本や schema 定義を変更・確認する場合は、対応する oracle source または prompt builder の正本を直接読むとき。
+- review builder の実装そのものを変更・調査するときは、対応する oracle または realization implementation を直接読む
+- review builder 以外の ACP builder や一般的なテスト実行方法だけを確認するとき
+- oracle review の schema 定義自体を確認するときは、対応する oracle schema を直接読む
 
 ## hash
-- 132c1befabbafd5ec40f3e5c8916d29559a97a332da9b38f25465bf999fe5099
+- 46d364d500e788424b82fe992a3a3079e7e3c45284c5272125c5a2299cce7407
 
 # `test_acp_builder_session_join_parameters.py`
 
@@ -426,24 +429,20 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の pending observation、active state、report cut、verification、current pointer、cleanup を、同一 repository fixture で end-to-end に検証する realization test。
-- agent-facing reporter の canonical submission、collector の context・rate 制限・永続化、secret masking、machine observation の idempotency と recurrence threshold を扱う。
-- report publication の空状態、issue の unresolved/resolved 遷移、checkpoint 再利用、interruption recovery、atomic pointer 切替、部分 cleanup、active generation の整合性検証を対象とする。
-- feedback の CLI 実装や正本仕様を読む前に、外部挙動と publication 境界をテストから確認するための入口である。
+- feedback の agent-facing reporter、collector、raw observation store、report cut、verification checkpoint、active state、atomic publication、cleanup を同一 repository fixture で検証する統合テスト。feedback report の正常系・再開・冪等性・閾値集約・解決済み issue の除去と、破損 raw artifact や active generation 改変時の publication 拒否を扱う。feedback 機能の挙動変更や report publication の整合性を確認する際のテスト入口であり、個別の正本仕様や実装詳細を読む代替ではない。
 
 ## Read this when
-- feedback report の外部挙動や collector/reporter 境界を変更・検証するとき。
-- pending raw observation が active issue または machine aggregate へ集約される条件を確認するとき。
-- report cut、verification checkpoint、publication、cleanup の中断・再開・失敗時の挙動を確認するとき。
-- active generation の manifest、hash、未定義 artifact に対する corruption 検証を確認するとき。
+- feedback observation の受付、検証、保存、redaction、rate limit、冪等性を変更または確認するとき
+- feedback report の issue 集約、verification、checkpoint 再利用、atomic publication、current pointer、cleanup を変更または確認するとき
+- active state や report cut の破損検出、未定義 artifact の扱い、publication 後の外部境界をテストするとき
 
 ## Do not read this when
-- feedback の正本仕様を確認したいときは、対応する oracle 文書を直接読む。
-- feedback report の実装責務や CLI の配置を確認したいときは、対応する realization implementation を直接読む。
-- feedback と無関係な機能の挙動や一般的な pytest 実行方法だけを調べるとき。
+- feedback の正本仕様の意味や制約を確認したいときは、対応する oracle doc と oracle src を直接読む
+- feedback 実装の責務や内部ロジックを調査するときは、テスト結果だけで判断せず対象の realization implementation を読む
+- feedback と無関係な CLI 機能や一般的なテスト実行方法だけを確認するとき
 
 ## hash
-- 64ce80ec2e7441026c3ca15dfce4a29360617d8b80be770e1b7160141c84ad2a
+- 95db35d97dacddbb1a0bb5ed0ba4f0fb5b1f25aadc35d1e67c9e1c89f818c54d
 
 # `test_file_inventory.py`
 
@@ -678,18 +677,20 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 標準 prompt parts と complete prompt の構築結果を検証するテスト。各標準規則のレンダリング、complete prompt への条件付き注入、placeholder の保持・統合・競合検出、file access mode ごとの内容を扱う。prompt builder 回帰テストの入口であり、個別の標準規則や prompt builder 実装を変更・調査する際に確認する。
+- 標準 prompt parts の render 結果と complete prompt の構成・placeholder 展開を検証する回帰テスト群。各標準規則の単体 render、選択的な注入、既定での省略、file access mode 別の内容、feedback instruction の一意性、placeholder の統合・競合検出を扱う。prompt builder の挙動を変更・検証する際のテスト入口であり、標準規則本文や prompt builder 実装そのものを読む代替ではない。
 
 ## Read this when
-- prompt builder の標準規則、complete prompt の構成、placeholder 展開、file access mode の挙動を変更・検証するとき
-- 標準 prompt の注入漏れ、重複、不要な注入、レンダリング内容の回帰を調査するとき
+- prompt builder の標準 prompt parts または complete prompt の構成を変更し、既存の render 内容・注入条件・既定値への影響を確認するとき
+- 標準規則の追加・分離・選択注入、file access mode、placeholder 展開や競合検出の回帰を調査するとき
+- prompt builder 関連のテスト実行箇所を特定するとき
 
 ## Do not read this when
-- 標準規則本文の意図や prompt builder の実装詳細を直接確認することが目的のとき
-- prompt builder と無関係なテストや実装を変更・調査するとき
+- 一般的な INDEX 案内文書の構成や prompt 標準の正本を確認したいとき
+- prompt builder と無関係なテストや、単一の標準規則の詳細仕様だけを確認する場合
+- 実装の責務や設計判断を確認する場合
 
 ## hash
-- 21bc948f3ca8879b7fba369bf4bff7c033df991d5f423f268b0de34f3a52bad3
+- 0fa041092ec246271b4434a5135e1f2ccb0fe05fe0440bcb3d795a9525f44e93
 
 # `test_runtime_cli.py`
 

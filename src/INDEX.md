@@ -1,17 +1,19 @@
 # `acp`
 
 ## Summary
-- ACP互換の実装群をまとめる realization 側の入口。公開入口と builder パッケージへのルーティングを提供する。
+- ACP 互換アダプターを収めるパッケージ。公開入口と builder 系の互換 import 経路を維持し、oracle 側の canonical 実装や各下位 adapter へ進むための入口を提供する。
 
 ## Read this when
-- ACP互換公開面の構成や、builder 配下の実装へ進む入口を判断するとき。
+- acp 配下の互換 import 経路や adapter 構成を確認・変更するとき
+- acp の公開入口を残すか、oracle 側の実体へ移行できるかを判断するとき
+- builder、feedback、indexing、oracle、realization、session、TUI 関連の adapter の入口を探すとき
 
 ## Do not read this when
-- canonical な oracle 実装の仕様を確認したいとき。
-- 特定の adapter や builder 内部の詳細実装を直接調べたいとき。
+- canonical な oracle 実装の仕様や本体ロジックを確認したいとき
+- 特定の下位 adapter の詳細実装や acp.builder の利用箇所を直接調査したいとき
 
 ## hash
-- 6569a9ddda74324dbee4b843f2e7a78e7615e45e6ae21c89f06fd80612b8e504
+- 0f193d77bce75f4c379d2c462c343fb64a507596cc761144ba0209b6a4b46c83
 
 # `basic`
 
@@ -114,15 +116,15 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装を配置するディレクトリ。apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui の実行入口や関連処理への下位要素を案内する。
+- サブコマンド実装をまとめるパッケージ。doctor、feedback、indexing、oracle、realization、run、session、tui などの CLI 入口と、それぞれの実行フローへの案内を提供する。apply と review は現在実装本文がなく、将来の実装配置先として示されている。
 
 ## Read this when
-- サブコマンド実装の構成や、対象サブコマンドの CLI 実行入口を確認・変更するとき。
-- 複数のサブコマンドにまたがる実装配置や、個別サブコマンドの下位実装へ進む入口を確認するとき。
+- cmoc のサブコマンド実装の構成や、特定サブコマンドの実行入口を確認・変更するとき。
+- サブコマンド間の責務分担を確認し、対象となる下位実装へ進む入口を探すとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理だけを調査する場合は、対応する下位実装を直接読む。
-- 共通ランタイム、oracle 仕様、または各サブコマンドから参照される共通処理だけを確認する場合は、該当する共通実装や正本仕様を直接読む。
+- 特定サブコマンドの詳細な挙動、共通ランタイム、builder、oracle 仕様を直接調査する場合は、対応する下位実装または oracle 文書を直接読む。
+- サブコマンド以外の実装領域を扱うとき。
 
 ## hash
-- 754891b3980877ba2ccf9de901924a825e38bcd808c7bdfbb2ea3784da843bd6
+- 074c687c982694a8b802d91c306232c5ec4ea30452212bb61eb5821da803b172
