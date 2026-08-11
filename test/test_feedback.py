@@ -16,6 +16,7 @@ agent-facing reporter から raw store、report cut、verification、current poi
 import hashlib
 import json
 from collections.abc import Iterator
+from inspect import unwrap
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -309,8 +310,46 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
         )
 
 
+def test_feedback_normalize_builder_protects_nested_code_fences(
+    tmp_path: Path,
+) -> None:
+    """normalization の動的 JSON が prompt section の境界を閉じないことを検証する。"""
+    root = make_repo(tmp_path)
+    nested = "before\n```\ninside\n```\nafter"
+    observation_json = json.dumps({"payload": {"summary": nested}})
+    candidate_json = json.dumps(
+        [{"candidate_id": "fbi_" + "a" * 26, "summary": nested}]
+    )
+
+    parameter = build_feedback_normalize_issue_parameter(
+        observation_json,
+        candidate_json,
+        root,
+    )
+
+    observation_start = parameter.prompt.index("# 構造化済み observation")
+    observation_end = parameter.prompt.index(
+        "\n\n# 既存 issue candidate", observation_start
+    )
+    candidate_start = observation_end + 2
+    candidate_end = parameter.prompt.index(
+        "\n\n# place holder definition", candidate_start
+    )
+    observation_section = parameter.prompt[observation_start:observation_end]
+    candidate_section = parameter.prompt[candidate_start:candidate_end]
+    assert observation_section.startswith("# 構造化済み observation\n\n````json\n")
+    assert observation_section.endswith("\n````")
+    assert candidate_section.startswith("# 既存 issue candidate\n\n````json\n")
+    assert candidate_section.endswith("\n````")
+    assert observation_json in observation_section
+    assert candidate_json in candidate_section
+
+
 def test_feedback_processing_versions_hash_canonical_builders() -> None:
     """checkpoint version は実際に prompt を構築する oracle src を識別する。"""
+    normalize_adapter_path = feedback_report_module._builder_source_path(
+        build_feedback_normalize_issue_parameter
+    )
     normalize_path = feedback_report_module._builder_source_path(
         _build_canonical_normalize_parameter
     )
@@ -320,7 +359,7 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
 
     assert (
         feedback_report_module._builder_source_path(
-            build_feedback_normalize_issue_parameter
+            unwrap(build_feedback_normalize_issue_parameter)
         )
         == normalize_path
     )
@@ -331,9 +370,10 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
         == verify_path
     )
     versions = feedback_report_module._processing_versions()
-    assert versions["normalization_builder"] == feedback_report_module.sha256_bytes(
-        normalize_path.read_bytes()
+    normalization_version = feedback_report_module._builder_version_hash(
+        normalize_adapter_path, normalize_path
     )
+    assert versions["normalization_builder"] == normalization_version
     assert versions["verification_builder"] == feedback_report_module.sha256_bytes(
         verify_path.read_bytes()
     )

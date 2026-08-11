@@ -15,18 +15,18 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の active-state publication pipeline を実装するサブコマンド。固定した report cut に対する raw observation の検証、candidate 集約、normalization、全 candidate の verification、generation・Markdown report の生成、current pointer 切替、publication 後 cleanup を一貫して扱う。
-- report cut、checkpoint、参照 artifact、publication 成果物の hash を検証し、中断・失敗時には同じ固定入力から再開できる。active issue と machine aggregate の更新も担当する。
+- `cmoc feedback report` の active-state publication pipeline を担う実装。固定した report cut を入力として、raw observation の検証、agent observation の candidate 集約・同一性判断、machine recurrence の集約、全 candidate の verification、generation/report の作成、current pointer 切替、publication 後の cleanup と中断・再開処理までを一つの transaction として実行する。feedback report の処理順序、checkpoint 再利用、固定参照、publication 状態遷移を変更・調査するときの主な入口である。
 
 ## Read this when
-- `cmoc feedback report` の実行条件、全体処理フロー、report cut の固定・再開・中断処理を確認するとき。
-- feedback observation から issue candidate と machine aggregate を構築し、normalization・verification を経て active state を更新する挙動を調べるとき。
-- generation artifact、Markdown report、current pointer の publication 順序、失敗時の状態遷移、cleanup failure の扱いを確認するとき。
+- `cmoc feedback report` の実行フロー、report cut、normalization、verification、publication、current pointer 切替、cleanup、または中断後の再開挙動を確認・変更するとき。
+- feedback observation から active issue candidate や machine aggregate が生成される条件、同一性判断、verification 結果の反映を確認するとき。
+- feedback report の durable checkpoint、固定入力・repository reference の検証、publication の atomicity や再実行安全性を調査するとき。
 
 ## Do not read this when
-- raw observation の保存形式や envelope validation だけを確認したい場合は、feedback store と observation validation の実装を直接読む。
-- normalization または verification agent の Structured Output 契約だけを確認したい場合は、対応する builder と schema を直接読む。
-- active state や artifact path の共通データモデル・操作だけを確認したい場合は、`commons.runtime_feedback_state` を直接読む。
+- feedback observation の保存・canonical validation・参照取得だけを変更または調査する場合は、feedback store／state の実装を直接読む。
+- issue normalization や verification agent の入力契約・Structured Output schema 自体を確認する場合は、対応する builder と schema を直接読む。
+- feedback report の正本仕様や interruption policy の意図を確認する場合は、対応する oracle specification を直接読む。
+- Markdown report の表示形式だけを確認する場合は、描画関数または report 仕様を直接読む。
 
 ## hash
-- 7c3567f3506fbde495e8a8f66022d524d06fc9f912f2f72115c9f4abfe436ef4
+- 746a6f79ef543e5b8fa4eb690def1ffd72879643ed0472fd24343cf2211089a9

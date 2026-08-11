@@ -16,7 +16,7 @@ import json
 import os
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
-from inspect import getsourcefile
+from inspect import getsourcefile, unwrap
 from pathlib import Path
 from typing import Any
 
@@ -558,12 +558,17 @@ def _processing_versions() -> JsonObject:
     """builder、schema、および deterministic processing rule の content hash を返す。"""
     normalize_builder = _builder_source_path(build_feedback_normalize_issue_parameter)
     verify_builder = _builder_source_path(build_feedback_verify_issue_parameter)
-    normalize_schema = normalize_builder.with_suffix(".json")
+    normalize_canonical_builder = _builder_source_path(
+        unwrap(build_feedback_normalize_issue_parameter)
+    )
+    normalize_schema = normalize_canonical_builder.with_suffix(".json")
     verify_schema = verify_builder.with_suffix(".json")
     module_path = Path(__file__)
     state_path = module_path.parents[2] / "commons" / "runtime_feedback_state.py"
     return {
-        "normalization_builder": sha256_bytes(normalize_builder.read_bytes()),
+        "normalization_builder": _builder_version_hash(
+            normalize_builder, normalize_canonical_builder
+        ),
         "normalization_schema": sha256_bytes(normalize_schema.read_bytes()),
         "verification_builder": sha256_bytes(verify_builder.read_bytes()),
         "verification_schema": sha256_bytes(verify_schema.read_bytes()),
@@ -577,6 +582,14 @@ def _builder_source_path(builder: Callable[..., object]) -> Path:
     if source is None:
         raise ValueError("builder source path is unavailable")
     return Path(source)
+
+
+def _builder_version_hash(source: Path, canonical_source: Path) -> str:
+    """adapter と canonical builder の変更を checkpoint version へ反映する。"""
+    sources = {source, canonical_source}
+    if len(sources) == 1:
+        return sha256_bytes(source.read_bytes())
+    return _combined_file_hash(list(sources))
 
 
 def _combined_file_hash(paths: list[Path]) -> str:

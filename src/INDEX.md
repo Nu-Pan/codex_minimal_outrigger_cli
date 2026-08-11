@@ -1,18 +1,22 @@
 # `acp`
 
 ## Summary
-- ACP互換の公開入口と、`acp.builder` 配下の互換・委譲層を扱う。既存の`acp` import経路の存廃、canonical実装への接続、builder adapter群への入口を確認するための階層。
+- ACP 互換の公開入口を担い、既存の `acp.*` 参照を `oracle.*` または実体モジュールへ移行する際の判断材料を提供する。互換入口の存廃を検討する場合の入口であり、具体的な実装や移行先の詳細は対応する実体モジュールを直接読む。
+- ACP builder の互換入口と adapter をまとめ、canonical な oracle builder への接続を維持する。quota probe、session、TUI、realization、review、feedback、および動的 Markdown section の code fence 保護に関する下位実装へ進む必要がある場合に読む。canonical 実装の仕様や個別 builder の具体的な処理を確認する場合は、対応する oracle 側または下位実装を直接読む。
 
 ## Read this when
-- `acp`公開名を維持・削除する判断や、`oracle`側の実体への移行導線を確認するとき。
-- ACP builderのadapter構成、互換import経路、canonical実装への委譲先を調査するとき。
+- `acp` という公開名の存続・削除や、既存参照を壊さず oracle 側の実体へ切り替える導線を判断するとき。
+- ACP builder の互換 import 経路、oracle 実装への委譲、adapter 構成を調査・変更するとき。
+- quota probe、session join、TUI 起動、realization apply/refactor、review finding、feedback issue、または動的 prompt section の code fence 保護に関係する builder の入口を探すとき。
 
 ## Do not read this when
-- 具体的なACP実装や`acp.builder`配下の個別builderの処理内容を確認・変更するときは、対応する実体モジュールまたは下位対象を直接読む。
-- ACPやbuilderと無関係なCLI、公開API、利用箇所を調査するときは、それぞれの対象を直接読む。
+- 互換入口ではなく `acp.*` の具体的な内部挙動を変更したいときは、該当する実体モジュールを直接読む。
+- canonical な oracle builder の仕様・prompt 内容・本体ロジックを確認したいときは、対応する oracle 側の対象を直接読む。
+- 個別 builder の具体的な処理や利用箇所を調査したいときは、該当する下位実装または参照元を直接読む。
+- INDEX エントリーの routing 規則や生成内容だけを確認したいときは、builder 実装へ進まない。
 
 ## hash
-- 249b7858f7985680d719613ddacaa06b29d615d32551ee4b5c40fce604a8534c
+- 17bf164f4503c60243123704d3d04ea58f664e5a68193b815e206ad98d470ab2
 
 # `basic`
 
@@ -116,18 +120,15 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装をまとめる領域。doctor、feedback、indexing、oracle、realization、run、session、tui などの CLI 入口と、関連する下位実装へのルーティングを担う。
-- サブコマンドごとの実行フローや状態管理、レビュー・編集・レポート生成などの詳細を確認する際の起点となる。apply と realization review は現在具体的な実装を持たない。
+- CLI サブコマンドの実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの各サブコマンド入口と、その実行フローを確認するための上位ルーティング入口となる。apply と review は現在実装がなく、将来の実装配置先として示されている。
 
 ## Read this when
-- サブコマンドの実装構成や、目的の CLI 実行入口を特定するとき。
-- 複数のサブコマンドにまたがる実装領域の責務分担や、下位要素への入口を確認するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui の実装を調査・変更するとき。
+- 複数の CLI サブコマンドにまたがる実装構成や、目的のサブコマンド実装への入口を確認するとき
+- サブコマンドの実行経路、ライフサイクル、状態管理、レポート生成などを横断して調査するとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理、共通 runtime、builder、store、schema、正本仕様を直接確認する場合。
-- apply または realization review の具体的な実装内容を確認する場合。
-- 対象サブコマンド以外の処理だけを調査する場合。
+- 特定サブコマンドの詳細実装だけを調査する場合は、対応する下位実装を直接読む
+- サブコマンド共通ランタイム、正本仕様、入力契約や Structured Output schema の詳細だけを確認する場合は、それぞれの対応する実装・仕様を直接読む
 
 ## hash
-- 1ede40fe72dd82908678304ee07d5ccfbd06b92fdb3a89132a177901a35f0f3b
+- 8a6c6f4a36c6df448a8a5b83d90a37507519196c2cb21ca585a8e1790d3b3279

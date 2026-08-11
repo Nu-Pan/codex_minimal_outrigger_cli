@@ -45,18 +45,18 @@
 # `feedback`
 
 ## Summary
-- feedback issue の正規化・検証に関する builder adapter をまとめるパッケージ。既存の import 経路から利用する互換層として、配下の builder 関数を参照する入口となる。
+- feedback issue の正規化・検証に関する builder adapter をまとめるパッケージ。canonical builder の互換 import 経路を提供し、対応する oracle 実装へ進むための入口となる。
 
 ## Read this when
-- feedback issue の normalization または verification に関する builder adapter の構成を確認するとき
-- feedback issue 用 builder の公開 import 経路や、配下の normalize・verify adapter を追跡するとき
+- feedback issue の normalization または verification に関する builder adapter の構成や公開経路を確認するとき。
+- feedback issue 用 builder の canonical 実装と互換 import 経路の対応関係を確認するとき。
 
 ## Do not read this when
-- feedback 以外の builder adapter を調べるとき
-- builder の正本仕様や prompt 構築・起動パラメータの詳細を確認するときは、対応する oracle file を直接読む
+- feedback 以外の builder adapter を調べるとき。
+- builder の prompt 構築、動的 JSON の保護、検証処理などの詳細を確認するときは、対応する oracle 実装を直接読む。
 
 ## hash
-- 08053b14ae66e2429f0bbd63341c153b782d94254b42351a90690a1191fc75fe
+- 68755f894e15ad969b0d39c64a1af28dc93d9cfd6df4b15920f8b97b7f997165
 
 # `indexing`
 
