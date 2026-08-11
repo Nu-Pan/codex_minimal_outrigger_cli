@@ -31,6 +31,7 @@ from .runtime_feedback_store import (
     is_observation_id,
     is_uuid7_prefixed,
     machine_observation_id,
+    observation_path,
     parse_rfc3339,
     reporter_input_validation_errors,
     sha256_bytes,
@@ -1585,13 +1586,42 @@ def _validate_report_cut_manifest(
         observation_id_value = item.get("observation_id")
         if not is_observation_id(observation_id_value):
             raise _corruption("report cut observation ID が不正です。", path)
-        _validate_report_cut_artifact_reference(
+        observation_target = _validate_report_cut_artifact_reference(
             repo,
             {"path": item.get("path"), "sha256": item.get("sha256")},
             expected_root=feedback_root(repo) / "observation" / "v1",
             description="pending observation",
             allow_missing=allow_missing_cleanup_targets,
         )
+        if observation_target.exists():
+            observation = _read_canonical_object(
+                observation_target, "pending observation"
+            )
+            if observation.get("observation_id") != observation_id_value:
+                raise _corruption(
+                    "pending observation の ID が report cut manifest と一致しません。",
+                    observation_target,
+                )
+            observed_at = observation.get("observed_at")
+            if not isinstance(observed_at, str):
+                raise _corruption(
+                    "pending observation の observed_at が不正です。",
+                    observation_target,
+                )
+            try:
+                expected_path = observation_path(
+                    repo, str(observation_id_value), observed_at
+                )
+            except ValueError as exc:
+                raise _corruption(
+                    "pending observation の observed_at が不正です。",
+                    observation_target,
+                ) from exc
+            if expected_path != observation_target:
+                raise _corruption(
+                    "pending observation path が observation ID と observed_at に一致しません。",
+                    observation_target,
+                )
         observation_path_value = str(item.get("path"))
         observation_hash = str(item.get("sha256"))
         previous_hash = hashes_by_id.setdefault(

@@ -31,18 +31,20 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装領域。サブコマンド全体の入口と、report の active-state publication pipeline を扱う。feedback の挙動や実装を確認・変更する際に、配下の実装へ進むための起点となる。
+- feedback サブコマンドの実装領域。raw observation の保存・検証、issue candidate の集約と normalization・verification、report 生成、active state の publication を扱う下位実装への入口。
 
 ## Read this when
 - feedback サブコマンドの挙動や実装を確認・変更するとき。
-- feedback report の状態機械、観測値の検証、candidate 集約、verification、publication、再開・中断・失敗処理を調べるとき。
+- observation から report と active state が生成・更新される処理の入口を特定するとき。
 
 ## Do not read this when
 - feedback 以外のサブコマンドを扱うとき。
-- feedback の共通データ構造、agent parameter の normalize/verify 契約、Structured Output schema、Markdown report の一般的な表示仕様だけを調べるとき。
+- raw observation の保存形式や envelope validation の詳細だけを確認したいときは、feedback store と observation validation の実装を直接読む。
+- normalization・verification の Structured Output 契約だけを確認したいときは、対応する builder と schema を直接読む。
+- active state や artifact path の共通データモデル・操作だけを確認したいときは、共通 runtime state 実装を直接読む。
 
 ## hash
-- 512ff0d7c995099e9c870fa254ddf6dbc890ab4d261876b600f80be8329f185c
+- 3be7b3850b03ea42064064e9e23e8d69f67a5d5c50397bb0eb36c0e9058b823d
 
 # `indexing.py`
 

@@ -701,6 +701,13 @@ def _read_cut_observations(repo: Path, manifest: JsonObject) -> dict[str, JsonOb
         observation_id_value = str(entry.get("observation_id"))
         if observation.get("observation_id") != observation_id_value:
             errors.append("/observation_id: manifest and payload differ")
+        observed_at = observation.get("observed_at")
+        if isinstance(observed_at, str):
+            try:
+                if observation_path(repo, observation_id_value, observed_at) != path:
+                    errors.append("/: observation path does not match observed_at")
+            except ValueError as exc:
+                errors.append(f"/: {exc}")
         if errors:
             raise CmocError(
                 "feedback report cut の raw observation schema が不正です。",
@@ -970,27 +977,86 @@ def _agent_comparison_candidates(
     category = payload.get("category")
     hint = payload.get("deduplication_hint")
     current_fingerprints = _fingerprint_pairs(observation.get("evidence_fingerprints"))
-    current_paths = {path for path, _digest in current_fingerprints}
+    current_subjects = _observation_evidence_subjects(observation)
     exact: list[JsonObject] = []
     comparison: list[JsonObject] = []
     for candidate in candidates.values():
         if candidate.get("category") != category:
             continue
         previous_fingerprints = _fingerprint_pairs(candidate.get("latest_fingerprints"))
-        previous_paths = {path for path, _digest in previous_fingerprints}
+        previous_subjects = _candidate_evidence_subjects(candidate)
         exact_match = (
             bool(current_fingerprints)
             and all(digest is not None for _path, digest in current_fingerprints)
             and current_fingerprints == previous_fingerprints
+            and bool(current_subjects)
+            and current_subjects.issubset(previous_subjects)
         )
         hint_match = isinstance(hint, str) and hint in candidate.get(
             "deduplication_hints", []
         )
         if exact_match:
             exact.append(candidate)
-        if current_paths.intersection(previous_paths) or hint_match:
+        if current_subjects.intersection(previous_subjects) or hint_match:
             comparison.append(candidate)
     return (exact[0] if len(exact) == 1 else None), comparison
+
+
+def _observation_evidence_subjects(
+    observation: JsonObject,
+) -> set[tuple[str, str]]:
+    """observation の path evidence を subject type と repository-relative path へ揃える。"""
+    payload = observation.get("payload")
+    context = observation.get("context")
+    fingerprints = observation.get("evidence_fingerprints")
+    if (
+        not isinstance(payload, dict)
+        or not isinstance(payload.get("evidence"), list)
+        or not isinstance(context, dict)
+        or not isinstance(context.get("repo_root"), str)
+        or not isinstance(fingerprints, list)
+    ):
+        return set()
+    repo_root = Path(str(context["repo_root"]))
+    evidence = payload["evidence"]
+    subjects: set[tuple[str, str]] = set()
+    for fingerprint in fingerprints:
+        if not isinstance(fingerprint, dict):
+            continue
+        index = fingerprint.get("evidence_index")
+        normalized_path = fingerprint.get("normalized_path")
+        if (
+            type(index) is not int
+            or not isinstance(normalized_path, str)
+            or index < 0
+            or index >= len(evidence)
+        ):
+            continue
+        evidence_item = evidence[index]
+        if not isinstance(evidence_item, dict) or not isinstance(
+            evidence_item.get("kind"), str
+        ):
+            continue
+        try:
+            relative_path = Path(normalized_path).relative_to(repo_root).as_posix()
+        except ValueError:
+            relative_path = normalized_path
+        subjects.add((relative_path, evidence_item["kind"]))
+    return subjects
+
+
+def _candidate_evidence_subjects(candidate: JsonObject) -> set[tuple[str, str]]:
+    """candidate が保持する stable target から subject type と path を返す。"""
+    targets = candidate.get("reference_targets")
+    if not isinstance(targets, list):
+        return set()
+    return {
+        (str(target["path"]), str(target["kind"]))
+        for target in targets
+        if isinstance(target, dict)
+        and isinstance(target.get("path"), str)
+        and isinstance(target.get("kind"), str)
+    }
 
 
 def _fingerprint_pairs(value: object) -> list[tuple[str, str | None]]:
@@ -1784,17 +1850,6 @@ def _verification_output_issues(
                     "concrete current evidence",
                     "$.result.current_evidence",
                     "at least one repository_content, current_fingerprint, or probe_result reference",
-                    repr(sorted(current_kinds, key=str)),
-                )
-            )
-        if verdict == "unresolved" and not current_kinds.intersection(
-            {"repository_content", "probe_result"}
-        ):
-            issues.append(
-                StructuredOutputValidationIssue(
-                    "semantic unresolved evidence",
-                    "$.result.current_evidence",
-                    "repository_content or probe_result; fingerprint alone is insufficient",
                     repr(sorted(current_kinds, key=str)),
                 )
             )

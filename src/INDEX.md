@@ -50,19 +50,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 実装をまとめるパッケージ。CLI 実行 lifecycle、Codex subprocess/TUI 連携、設定・状態・パス管理、Git 操作、ログ、エラー、feedback、INDEX 更新、editing run など、複数機能から利用される実行時境界を提供する。各機能の公開 API と共通処理を横断して確認する入口であり、具体的な挙動の調査は配下の担当モジュールへ進む。
+- cmoc の各機能から共有される runtime helper をまとめる commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態・Git・パス・ログ・feedback・run lifecycle など、複数の runtime 機能にまたがる共通処理を確認する際の入口。配下の個別モジュールへ進むためのディレクトリ単位のルーティング対象。
 
 ## Read this when
-- cmoc の複数サブコマンドにまたがる runtime helper や公開 API の責務を把握するとき
-- Codex 実行、設定・状態・Git・パス・ログ・feedback・INDEX 更新などの共通実装の配置を調査するとき
-- commons 配下の個別モジュールを変更する前に、共通境界と関連する実装群を確認するとき
+- 複数の runtime 機能に共通する helper や公開 API の配置を確認するとき
+- commons 配下のどの runtime モジュールを読むべきか判断するとき
+- CLI、Codex、設定、状態、Git、ログ、feedback、run lifecycle などを横断して共通処理の依存関係を調査するとき
 
 ## Do not read this when
-- 単一の runtime helper、CLI サブコマンド、Codex 実行経路、設定形式、feedback 保存形式などの具体的な実装だけを調査するときは、対応する配下モジュールを直接読む
-- 正本仕様や利用者向け挙動を確認することが目的で、実装の配置や共通 API を調査しないときは、対応する仕様文書を直接読む
+- 特定の runtime helper のアルゴリズムや入出力契約を確認したい場合は、対応する commons 配下の個別モジュールを直接読むとき
+- 利用者向けコマンドの業務ロジックだけを調査する場合
+- 正本仕様や個別機能の詳細な挙動を確認する場合は、対応する oracle 文書または専用実装へ直接進むとき
 
 ## hash
-- 52da482bd62703eb9a12a5887f3aee803f72c5fc96ea8e4dba433e4648879321
+- 71357f295cf1ed7617d11b27663a36a0f87443ea04c6b16eb92ae7f48aa5fe8e
 
 # `config`
 
@@ -115,15 +116,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの各サブコマンド入口と、関連する実行フローへの下位実装を扱う。apply と realization review は現時点で実装がなく、追加時の配置先となる。
+- cmoc の各サブコマンド実装をまとめる領域。doctor、feedback、indexing、oracle、realization、run、session、tui などの CLI 入口と、関連する下位実装へのルーティングを担う。
+- サブコマンドごとの実行フローや状態管理、レビュー・編集・レポート生成などの詳細を確認する際の起点となる。apply と realization review は現在具体的な実装を持たない。
 
 ## Read this when
-- CLI サブコマンドの構成や各コマンド実装への入口を確認するとき。
-- 特定サブコマンドの実行フロー、ライフサイクル、状態管理、レビュー、レポート生成などを調査・変更するとき。
+- サブコマンドの実装構成や、目的の CLI 実行入口を特定するとき。
+- 複数のサブコマンドにまたがる実装領域の責務分担や、下位要素への入口を確認するとき。
+- doctor、feedback、indexing、oracle、realization、run、session、tui の実装を調査・変更するとき。
 
 ## Do not read this when
-- サブコマンド共通のランタイム、データ構造、仕様、または下位実装の詳細だけを確認する場合。
-- 対象がこのディレクトリ配下のサブコマンドに関係しない場合。
+- 特定サブコマンドの詳細な処理、共通 runtime、builder、store、schema、正本仕様を直接確認する場合。
+- apply または realization review の具体的な実装内容を確認する場合。
+- 対象サブコマンド以外の処理だけを調査する場合。
 
 ## hash
-- 97eb140926c641e03851b426b8bcb7227988d80c16b79760d6526485ea43747e
+- 1ede40fe72dd82908678304ee07d5ccfbd06b92fdb3a89132a177901a35f0f3b

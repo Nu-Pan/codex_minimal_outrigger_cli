@@ -398,6 +398,60 @@ def test_feedback_verification_postcondition_rejects_non_concrete_text() -> None
         assert any(issue.location == location for issue in issues)
 
 
+def test_feedback_verification_accepts_semantic_current_fingerprint() -> None:
+    """意味を持つ current fingerprint だけの unresolved evidence を受理する。"""
+    candidate_id = "fbi_" + "a" * 26
+    reference_id = _repository_reference_id("missing.cfg")
+    references = {
+        reference_id: {
+            "kind": "current_fingerprint",
+            "path": "missing.cfg",
+            "state": "missing",
+            "sha256": None,
+        }
+    }
+    output = _verification_output(
+        candidate_id, "unresolved", reference_path="missing.cfg"
+    )
+
+    assert not feedback_report_module._verification_output_issues(
+        output, candidate_id, set(references), references
+    )
+
+
+def test_agent_candidate_comparison_requires_evidence_subject_type() -> None:
+    """同じ path でも異なる evidence subject type を同一候補へ絞り込まない。"""
+    observation = {
+        "context": {"repo_root": "/repo"},
+        "payload": {
+            "category": "tooling",
+            "evidence": [{"kind": "oracle", "path": "README.md"}],
+        },
+        "evidence_fingerprints": [
+            {
+                "evidence_index": 0,
+                "normalized_path": "/repo/README.md",
+                "state": "hashed",
+                "sha256": "a" * 64,
+            }
+        ],
+    }
+    candidate = {
+        "candidate_id": "fbi_" + "b" * 26,
+        "category": "tooling",
+        "latest_fingerprints": observation["evidence_fingerprints"],
+        "reference_targets": [{"path": "README.md", "kind": "file", "location": None}],
+        "deduplication_hints": [],
+    }
+
+    exact, comparison = feedback_report_module._agent_comparison_candidates(
+        observation, {str(candidate["candidate_id"]): candidate}
+    )
+
+    assert exact is None
+    assert comparison == []
+
+
 def test_collector_validates_context_rate_and_durable_observation(
     tmp_path: Path,
 ) -> None:
@@ -828,6 +882,45 @@ def test_interruption_during_cut_creation_is_normal_and_resumable(
     assert resumable[0]["processing"]["status"] == "interrupted"
     assert not (feedback_root(root) / "active" / "current.json").exists()
     assert not list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
+
+
+def test_report_cut_rejects_observation_path_mismatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """report cut が observed_at と異なる raw path を固定していないことを検証する。"""
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    _observation_id, raw_path, _candidate_id = _store_agent_issue(root, session_id)
+    original_create = feedback_report_module._create_report_cut
+
+    def interrupt_after_durable_cut(*args: object, **kwargs: object) -> None:
+        original_create(*args, **kwargs)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(
+        feedback_report_module, "_create_report_cut", interrupt_after_durable_cut
+    )
+    interrupted = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert interrupted.exit_code == 0, interrupted.output
+    resumable = load_report_cut(root)
+    assert resumable is not None
+    manifest, manifest_path = resumable
+
+    forged_path = (
+        feedback_root(root) / "observation" / "v1" / "2099" / "01" / raw_path.name
+    )
+    forged_path.parent.mkdir(parents=True, exist_ok=True)
+    forged_path.write_bytes(raw_path.read_bytes())
+    observations = manifest["inputs"]["observations"]
+    assert isinstance(observations, list) and len(observations) == 1
+    assert isinstance(observations[0], dict)
+    observations[0]["path"] = forged_path.relative_to(root).as_posix()
+    manifest_path.write_bytes(canonical_json_bytes(manifest))
+
+    with pytest.raises(CmocError, match="observation path"):
+        load_report_cut(root)
+    assert raw_path.exists()
+    assert forged_path.exists()
 
 
 def test_checkpoint_file_is_recovered_before_agent_call_reuse(

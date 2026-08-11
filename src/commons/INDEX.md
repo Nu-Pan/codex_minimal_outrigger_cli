@@ -292,23 +292,22 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の repository-local state を一元的に管理・検証する実装で、report cut、active generation、current pointer、checkpoint、publication、cleanup の相互参照と SHA256、canonical JSON、ID、時刻、artifact inventory を検査する。
-- feedback report の再開・復旧・公開・current 切替・publication 後 cleanup・未公開 cut の破棄に必要な path 生成、immutable artifact 保存、atomic 更新、writer lock、状態読込・検証を提供する。
-- agent report と allowlist machine rule の observation を active issue または threshold 未満の machine aggregate として扱い、generation artifact の構築・公開と旧状態の安全な cleanup を担う。
+- feedback の repository-local state を一貫した integrity boundary で管理する中核モジュール。report cut、active generation、current pointer、publication、checkpoint、artifact hash、cleanup の生成・検証・切替・復旧・破棄を扱う。
+- feedback state の読み書きや整合性検証、report publication の実装、active issue または machine aggregate の永続化形式と参照関係を確認する際の入口。異常終了後の checkpoint 回復や publication 後 cleanup の挙動もここから確認する。
 
 ## Read this when
-- feedback state の永続形式、整合性検証、corruption error、canonical JSON、hash 付き artifact reference を調べるとき
-- feedback report の report cut の作成・再開・checkpoint 復旧・publication・current pointer 切替・cleanup・discard の処理を追跡するとき
-- active issue、machine aggregate、generation manifest、current state の読み書きや相互参照の責務を確認するとき
-- repository ごとの feedback writer 排他、atomic write、durable unlink、symlink と未定義 artifact の拒否を確認するとき
+- feedback observation の report cut、active generation、current pointer、publication、cleanup の相互整合性を調査・変更するとき
+- feedback state artifact の canonical JSON、SHA256 参照、ID、path 境界、symlink 防御、writer lock の検証を確認するとき
+- active issue や machine aggregate の永続 schema、集計 identity、threshold 判定を確認するとき
+- report cut の checkpoint 保存・読み取り・回復、publication 後の cleanup または未完了 cut の破棄を確認するとき
 
 ## Do not read this when
-- feedback observation の入力 envelope や machine rule の仕様だけを確認し、repository-local state の集約・公開・cleanup を調べないときは observation の collector または oracle 文書を直接読む
-- feedback report の CLI 引数、agent call の実行手順、Markdown report の内容生成だけを調べるときは対応する subcommand 実装または仕様を直接読む
-- active state を利用する側の表示・判定ロジックだけを調べ、state の検証や更新処理を追跡する必要がないとき
+- feedback observation の入力 envelope や reporter payload の生成・検証だけを確認する場合は、対応する observation/reporting 実装を直接読む
+- feedback CLI の利用者向けコマンド仕様や agent への report 入出力契約だけを確認する場合は、対応する subcommand または oracle 仕様を直接読む
+- Markdown の feedback report の表示内容だけを確認する場合は、report 生成実装を直接読む
 
 ## hash
-- 3159f5bf13460dfebc7f9668a53d0b8f8ebf13b5b5b5e6a85a8525d730441537
+- e40b53574ead9643b286aeea4f67c55626c6ea7765174cb10c762f68538184b6
 
 # `runtime_feedback_store.py`
 
