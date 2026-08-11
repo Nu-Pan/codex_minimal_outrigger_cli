@@ -222,21 +222,20 @@
 # `runtime_doctor.py`
 
 ## Summary
-- doctor preprocess の修復処理全体を担う実装。doctor lock による排他、config・refactor state・ignore・.agents の同期、Git 一時 index の退避・合成・復元、修復 commit、失敗時の index 復元と追跡状態検証を一つの lifecycle として扱う。
+- doctor preprocess における修復処理、Git common directory 単位の排他ロック、一時 index の退避・合成・復元、修復 commit の lifecycle をまとめて担う。current worktree と main worktree の ignore・.agents・runtime state を同期し、利用者の staged 状態を保ったまま doctor 修復だけを commit する実装の入口。
 
 ## Read this when
-- doctor preprocess の修復順序、排他制御、修復対象の同期、修復 commit、または Git index の退避・復元挙動を変更・調査するとき。
-- 修復処理が staged 状態、worktree、Git common directory、HEAD 起点の一時 index とどう連携するかを確認するとき。
-- doctor が .agents、.gitignore、config、refactor state の追跡状態を保証できない原因を調べるとき。
+- doctor preprocess の修復対象、lock、Git index の保存・復元、修復 commit の挙動を変更または調査するとき。
+- doctor が main worktree と current worktree の共有 Git 状態を扱う際の失敗時復元や staged deletion の扱いを確認するとき。
+- config、refactor state、.agents placeholder、.cmoc/gu の追跡・ignore 同期が commit lifecycle にどう組み込まれるか確認するとき。
 
 ## Do not read this when
-- doctor preprocess の正本仕様や期待する外部挙動を確認する場合は、先に参照されている oracle の仕様文書を読む。
-- config の同期処理そのものを変更・調査する場合は、config 同期を担当する実装へ直接進む。
-- refactor state の同期処理そのものを変更・調査する場合は、refactor state を担当する実装へ直接進む。
-- 一般的な Git 実行や runtime error・feedback・path 解決の共通仕様だけを確認する場合は、対応する共通実装へ直接進む。
+- doctor preprocess の正本仕様や利用者向け挙動を確認するだけの場合は、先に対応する app_spec 文書を読む。
+- Git コマンドの一般的な実行、runtime config の同期単体、refactor state の同期単体を変更する場合は、それぞれの専用実装へ直接進む。
+- reporter の可用性検証や degraded 通知の詳細だけを調査する場合は、runtime feedback の実装へ直接進む。
 
 ## hash
-- b6269b70373b8681f7e0229c210f835d26e351f391b04802aa35e6d14df5eb24
+- 6bed0137889ec8412df24e8beab7d54e89af25c43b92df450435e7f56d264184
 
 # `runtime_errors.py`
 

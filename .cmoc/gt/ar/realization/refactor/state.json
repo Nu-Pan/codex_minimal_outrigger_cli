@@ -56,8 +56,8 @@
   "oracle/doc/app_spec/doctor_preprocess.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "5cafeef78d2ac95e25e30d8f4c70e23e8856ff0822bcb7d103642ae096e6c6c1",
-    "last_investigated_at": "2026-08-07_16-05_28_161891000"
+    "last_investigated_sha256": "7082572dae6260e1658de16f08ecc0f00e588b5d36f7097610a1776e429ac7a1",
+    "last_investigated_at": "2026-08-11_22-14_30_222646000"
   },
   "oracle/doc/app_spec/error_handling.md": {
     "investigation_required": false,
@@ -1290,7 +1290,7 @@
     "last_investigated_at": "2026-08-09_13-47_31_197181000"
   },
   "test/test_doctor_cli.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "45812bbb5addf62e1e60d970cfaf6458567b43e2722499bca0cf79efb3934cc0",
     "last_investigated_at": "2026-08-09_10-46_56_803160000"

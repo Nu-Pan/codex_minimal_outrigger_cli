@@ -168,6 +168,26 @@ def test_doctor_preprocess_propagates_interrupt_during_reporter_probe(
         doctor_module.run_doctor_preprocess(root)
 
 
+def test_doctor_preprocess_propagates_unexpected_reporter_probe_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """予期しない reporter 検証エラーを利用不能 warning に変換しない。"""
+    root = make_repo(tmp_path)
+
+    def fail_probe() -> None:
+        """reporter 検証内部の予期しない失敗を再現する。"""
+        raise RuntimeError("unexpected reporter probe failure")
+
+    monkeypatch.setattr(
+        doctor_module,
+        "validate_feedback_reporter_availability",
+        fail_probe,
+    )
+
+    with pytest.raises(RuntimeError, match="unexpected reporter probe failure"):
+        doctor_module.run_doctor_preprocess(root)
+
+
 def test_doctor_preprocess_propagates_interrupt_during_reporter_schema_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
