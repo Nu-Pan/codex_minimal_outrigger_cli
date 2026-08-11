@@ -39,21 +39,22 @@
 # `feedback_report.md`
 
 ## Summary
-- pending observation と直前の active state を report cut に固定し、現在も人間対応が必要な issue だけを新しい active state と Markdown report に公開する `cmoc feedback report` の仕様。入力検証、重複排除・集約、normalization、verification、publication、cleanup、中断・再開、終了コードまでを扱う。feedback state や observation の詳細仕様、および normalization・verification の prompt/schema を確認する際の入口となる。
+- `cmoc feedback report` の処理契約を定義する正本仕様。pending observation と直前の active state から report cut を固定し、検証結果に応じて active generation と正常または incomplete の Markdown report を publication する流れを扱う。
+- CLI 引数、事前条件、cut 固定、validation・deduplication・集約・normalization・verification・publication・cleanup・再開・中断・終了コードまで、コマンド全体の挙動を確認するための入口である。
 
 ## Read this when
-- `cmoc feedback report` の CLI 契約、事前条件、report cut、処理順序、publication 判定、report 保存、終了コードを確認するとき。
-- pending observation や active issue を、人間対応が必要なものだけ新しい report と active generation に反映する処理を実装・検証するとき。
-- report の中断・再開、state corruption、cleanup failure、verification failure の扱いを確認するとき。
+- feedback report コマンドの実装、挙動、状態遷移、publication、再開、中断、終了コードを確認または変更するとき
+- feedback observation、feedback state、normalization agent、verification agent との連携契約を確認するとき
+- 正常 report と `incomplete` 診断 report の保存内容や表示条件を確認するとき
 
 ## Do not read this when
-- raw observation の schema や保存規則だけを確認する場合は、feedback observation の正本を直接読む。
-- state、checkpoint、publication、cleanup の詳細だけを確認する場合は、feedback state の正本を直接読む。
-- normalization または verification agent の正確な prompt・起動パラメータ・Structured Output schema を確認する場合は、対応する oracle の実装・schema を直接読む。
-- 通常の別サブコマンドの CLI 契約や、feedback report と無関係な report 生成処理を確認する場合。
+- raw observation の schema や記録規則だけを確認する場合は feedback observation の正本へ進む
+- state、checkpoint、publication、cleanup の永続化規則だけを確認する場合は feedback state の正本へ進む
+- normalization または verification の prompt・起動パラメータ・Structured Output schema を確認する場合は対応する oracle source と schema へ直接進む
+- 中断時の共通動作だけを確認する場合は subcommand interruption の正本へ直接進む
 
 ## hash
-- 42f275417e78f180cc35ae7fd094c9a9e3c5422da21d11ac60be325c3bf1909e
+- 339d0646d7a6aeaa292d88defae111f5d97fc1f273822657fc43aed31fcd269d
 
 # `indexing.md`
 

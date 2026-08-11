@@ -89,23 +89,26 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書を集約する領域。CLI の挙動仕様、session・run・branch・commit・worktree のモデル、開発・テスト規則、および採用しなかった設計案を扱う。
-- 実装・テスト・環境構築・状態管理・agent call の判断では、目的に対応する仕様または oracle 側定義へ進む入口となる。
+- cmoc の正本文書と正確な実装定義をまとめた領域。CLI の利用時挙動、session・run・branch・worktree のライフサイクル、feedback、prompt、INDEX.md、エラー処理、不採用案、開発・テスト規約を扱う。目的に応じて仕様文書、開発ルール、不採用案の記録へ進む入口となる。
+- oracle doc は cmoc の要求、判断基準、責務を自然言語で定義する正本であり、アプリケーション仕様、branch model、検討済み代替案、開発規約に分かれる。現行仕様や実装の根拠を確認するときは、該当する doc の本文へ進む。
+- oracle src は agent call の prompt builder、Structured Output schema、path・config・structured document などの正確な実装定義を扱う。prompt 文面、agent call の起動条件、出力形式、パスモデルや設定モデルを確認・変更するときの入口となる。
 
 ## Read this when
-- CLI の自動補完、サブコマンド、出力、session・run の分離、feedback、状態管理などの現行挙動を確認するとき
-- branch・commit・worktree の関係や、cmoc の開発環境・設計・コーディング・テスト規則を確認するとき
-- 採用しなかった実装方式や設計案の背景、不採用理由を調査するとき
-- agent call の prompt、Structured Output schema、oracle・realization・routing・feedback の定義を調査するとき
+- cmoc の正本仕様の所在を特定し、CLI の利用時挙動やサブコマンドの責務を確認するとき
+- session、run、branch、commit、worktree の関係や lifecycle を確認するとき
+- feedback の観測・状態管理・報告、prompt 構築、INDEX.md 生成、oracle と realization の境界を調査するとき
+- 不採用となった作業方式や状態管理方式の理由を確認するとき
+- Python 実装の配置、開発環境、コーディング規約、テスト要件、テスト実行手順を確認するとき
+- agent call の prompt、Structured Output schema、パスモデル、設定モデルなどの正確な定義を確認するとき
 
 ## Do not read this when
-- 特定の CLI 挙動、出力、通知、状態、サブコマンド、テスト要件、または agent call の定義が明らかな場合は、対応する下位文書へ直接進むとき
-- テストや品質検査の実行手順だけを確認するときは、テスト実行手順へ直接進むとき
-- 現行の realization 実装、ログ、実行成果物、または具体的な状態ファイルの形式だけを確認するときは、対応する直接の対象へ進むとき
-- 採用済みの現行仕様や実装の根拠を確認するときは、不採用案の検討記録を入口にしないとき
+- 目的の個別仕様、開発ルール、検討記録、または oracle src の定義が明確な場合は、その本文へ直接進むとき
+- realization implementation や realization test の具体的な挙動だけを確認するとき
+- 現行仕様の確認に不採用案を読む必要がないとき
+- 通常の CLI 実行処理や collector の実装だけを調査するとき
 
 ## hash
-- a104f006ba157ec5f84dfca1778f554cc9f1d961f514b6edceb401feceb6060b
+- 001ebfdb6db807a844f76a5af8a1e00ec371d11ac0046fbbed958899a3b03c47
 
 # `pyproject.toml`
 
