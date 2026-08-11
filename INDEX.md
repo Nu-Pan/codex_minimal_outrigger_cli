@@ -125,24 +125,23 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の実行時パッケージ領域で、Typer による CLI 全体の公開入口と、各トップレベル・サブコマンドへの委譲を担う。CLI 起動、コマンド階層、引数解析エラーの cmoc 形式への変換を確認する場合の上位入口である。
-- 互換 import 用の `acp`、`basic`、`config` と、共有 runtime helper をまとめる `commons` を含む。互換公開面、共通 runtime の配置、各下位モジュールへの routing を確認する必要がある場合に読む。
-- `sub_commands` 配下には doctor、feedback、indexing、oracle、realization、run、session、tui の実装があり、個別コマンドの処理フローや lifecycle を調査する際の入口となる。`oracle.py` は src 起動時に正本側 `oracle.*` を解決する package shim である。
+- cmoc の実行側ソースをまとめるルート。Typer による CLI アプリケーションを構成し、doctor、tui、session、oracle、realization、run、indexing、feedback などの公開コマンドを対応する実装へ委譲する。
+- `main.py` は console script からの起動、コマンド階層、引数解析エラーの cmoc 形式への変換、補完時の扱いを担う。`oracle.py`、`cmoc_runtime.py`、`basic`、`config` には正本実装や公開名への互換 import 入口がある。
+- 共通 runtime helper は `commons`、個別 CLI 処理は `sub_commands`、ACP builder の互換入口と adapter は `acp` に分かれており、具体的な挙動を確認する際の上位ルーティング入口となる。
 
 ## Read this when
-- cmoc の console script から CLI が起動し、Typer のトップレベル／サブコマンドへ到達する経路を確認・変更するとき
-- CLI の引数解析エラー、補完、終了処理、および cmoc 形式のエラー表示を確認するとき
-- 複数のサブコマンドや共通 runtime にまたがる実装配置を把握し、適切な下位ディレクトリへ進むとき
-- `acp.*`、`basic.*`、`config.*` の互換 import 入口や、src 起動時の `oracle.*` 解決経路を調査するとき
+- cmoc CLI の公開コマンド構成、起動経路、Typer/Click の引数解析・補完・終了処理を確認または変更するとき。
+- `src` 側の互換 import 入口と、`commons`、`sub_commands`、`acp`、`basic`、`config` への実装上の入口を把握するとき。
+- 複数のサブコマンドや共通 runtime にまたがる実行経路を調査するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理内容だけを調査・変更する場合は、対応する `sub_commands` 配下の実装を直接読む
-- 共通 runtime helper の具体的なアルゴリズムや契約を確認する場合は、`commons` 配下の該当モジュールを直接読む
-- 互換入口の正本仕様や実体実装を確認する場合は、対応する oracle 側または実体モジュールを直接読む
-- CLI の正本仕様や個別機能の詳細な挙動だけを確認する場合は、参照されている仕様書または専用実装を直接読む
+- 特定サブコマンドの処理内容だけを調査・変更する場合は、対応する `sub_commands` 配下を直接読む。
+- runtime helper のアルゴリズムや状態・永続化の詳細だけを確認する場合は、対応する `commons` の module を直接読む。
+- 正本仕様、canonical な oracle 実装、または個別 ACP builder の具体的な処理を確認する場合は、対応する oracle 側・下位実装を直接読む。
+- INDEX エントリーの routing 規則や生成内容だけを確認する場合は、`src` の実装へ進まない。
 
 ## hash
-- 79f457ea65954e1744ce26acede75aedfc833d5418e51f3d229ead13ca3c7745
+- a93f4827e205ccb2692bd39c8b015c958f7f0335fa691524027a7d3b9a6eb3db
 
 # `test`
 

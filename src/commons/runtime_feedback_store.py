@@ -9,6 +9,7 @@ record の同一性判定が重複するため、raw observation store の境界
 
 - `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
 - `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
+- `{{work-root}}/oracle/src/oracle/feedback/reporter_input.json`
 """
 
 import fcntl
