@@ -103,10 +103,18 @@ def _cmoc_feedback_report_body() -> int:
     """writer lock 内で cleanup、cut、verification、publication を完了する。"""
     repository = repo_root()
     main_worktree = work_root()
-    start_subcommand_step(
-        2, "feedback report の事前条件を確認", "validate feedback report preconditions"
-    )
-    _validate_preconditions(repository, main_worktree)
+    try:
+        start_subcommand_step(
+            2,
+            "feedback report の事前条件を確認",
+            "validate feedback report preconditions",
+        )
+        _validate_preconditions(repository, main_worktree)
+    except KeyboardInterrupt:
+        # 共通 runner は KeyboardInterrupt を失敗終了へ変換するため、report cut
+        # 固定前の中断も feedback report 固有の正常な中断として記録する。
+        _record_feedback_interruption(None, None)
+        return 0
 
     # report cut 固定前から失敗終了まで repository-level writer lock を保持する。
     with feedback_writer_lock(repository):
@@ -460,7 +468,7 @@ def _observation_reference_paths(repo: Path, observation: JsonObject) -> list[Pa
 
 
 def _repository_path(repo: Path, value: str) -> Path | None:
-    """absolute／repository-relative value を lexical repository path へ制限する。"""
+    """absolute／repository-relative value を repository 内の path へ制限する。"""
     repository = repo.resolve(strict=False)
     raw = Path(value)
     candidate = (
@@ -469,6 +477,12 @@ def _repository_path(repo: Path, value: str) -> Path | None:
         else Path(os.path.abspath(repository / raw))
     )
     if candidate != repository and repository not in candidate.parents:
+        return None
+    try:
+        resolved = candidate.resolve(strict=False)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if resolved != repository and repository not in resolved.parents:
         return None
     return candidate
 
@@ -789,7 +803,13 @@ def _build_candidates(
             str(item["observation_id"]),
         ),
     ):
-        exact, comparison = _agent_comparison_candidates(observation, candidates)
+        exact, comparison = _agent_comparison_candidates(
+            observation,
+            candidates,
+            current_cut_fingerprint_pairs=_report_cut_fingerprint_pairs(
+                repo, manifest, observation
+            ),
+        )
         selected: JsonObject | None = exact
         if selected is None and comparison:
             selected_id = _normalize_issue_identity(
@@ -887,9 +907,13 @@ def _merge_observation(
     source_ids.sort()
     candidate["occurrence_count"] = int(candidate["occurrence_count"]) + 1
     observed_at = str(observation["observed_at"])
-    if parse_rfc3339(observed_at) < parse_rfc3339(str(candidate["first_observed_at"])):
+    observed_time = parse_rfc3339(observed_at)
+    if observed_time < parse_rfc3339(str(candidate["first_observed_at"])):
         candidate["first_observed_at"] = observed_at
-    if parse_rfc3339(observed_at) >= parse_rfc3339(str(candidate["last_observed_at"])):
+    is_latest_observation = observed_time >= parse_rfc3339(
+        str(candidate["last_observed_at"])
+    )
+    if is_latest_observation:
         candidate["last_observed_at"] = observed_at
         payload = observation["payload"]
         assert isinstance(payload, dict)
@@ -942,7 +966,7 @@ def _merge_observation(
         5,
     )
     fingerprints = observation.get("evidence_fingerprints")
-    if isinstance(fingerprints, list):
+    if is_latest_observation and isinstance(fingerprints, list):
         candidate["latest_fingerprints"] = _bounded_objects(
             [item for item in fingerprints if isinstance(item, dict)], 5
         )
@@ -990,7 +1014,10 @@ def _bounded_objects(values: list[JsonObject], limit: int) -> list[JsonObject]:
 
 
 def _agent_comparison_candidates(
-    observation: JsonObject, candidates: dict[str, JsonObject]
+    observation: JsonObject,
+    candidates: dict[str, JsonObject],
+    *,
+    current_cut_fingerprint_pairs: list[tuple[str, str, str | None]] | None = None,
 ) -> tuple[JsonObject | None, list[JsonObject]]:
     """category、evidence subject、fingerprint、hint で比較候補を機械的に絞る。"""
     payload = observation["payload"]
@@ -998,6 +1025,15 @@ def _agent_comparison_candidates(
     category = payload.get("category")
     hint = payload.get("deduplication_hint")
     current_fingerprints = _fingerprint_pairs(observation.get("evidence_fingerprints"))
+    current_cut_matches_observation = (
+        current_cut_fingerprint_pairs is not None
+        and len(current_cut_fingerprint_pairs) == len(current_fingerprints)
+        and all(
+            state == "hashed" for _path, state, _sha256 in current_cut_fingerprint_pairs
+        )
+        and [(path, sha256) for path, _state, sha256 in current_cut_fingerprint_pairs]
+        == current_fingerprints
+    )
     current_subjects = _observation_evidence_subjects(observation)
     exact: list[JsonObject] = []
     comparison: list[JsonObject] = []
@@ -1010,6 +1046,7 @@ def _agent_comparison_candidates(
             bool(current_fingerprints)
             and all(digest is not None for _path, digest in current_fingerprints)
             and current_fingerprints == previous_fingerprints
+            and current_cut_matches_observation
             and bool(current_subjects)
             and current_subjects.issubset(previous_subjects)
         )
@@ -1021,6 +1058,64 @@ def _agent_comparison_candidates(
         if current_subjects.intersection(previous_subjects) or hint_match:
             comparison.append(candidate)
     return (exact[0] if len(exact) == 1 else None), comparison
+
+
+def _report_cut_fingerprint_pairs(
+    repo: Path, manifest: JsonObject, observation: JsonObject
+) -> list[tuple[str, str, str | None]]:
+    """observation subject に紐付く report cut current fingerprint を返す。"""
+    inputs = manifest.get("inputs")
+    references = inputs.get("references") if isinstance(inputs, dict) else None
+    observation_id_value = observation.get("observation_id")
+    if not isinstance(references, list) or not isinstance(observation_id_value, str):
+        return []
+    current: dict[str, tuple[str, str | None]] = {}
+    for reference in references:
+        if not isinstance(reference, dict) or reference.get("kind") not in {
+            "repository_content",
+            "current_fingerprint",
+        }:
+            continue
+        subjects = reference.get("subjects")
+        path = reference.get("path")
+        state = reference.get("state")
+        sha256 = reference.get("sha256")
+        if (
+            not isinstance(subjects, list)
+            or observation_id_value not in subjects
+            or not isinstance(path, str)
+            or not isinstance(state, str)
+            or (sha256 is not None and not isinstance(sha256, str))
+        ):
+            continue
+        candidate = _repository_path(repo, path)
+        if candidate is None:
+            continue
+        current[str(candidate)] = (state, sha256)
+
+    fingerprints = observation.get("evidence_fingerprints")
+    if not isinstance(fingerprints, list):
+        return []
+    result: list[tuple[str, str, str | None]] = []
+    for fingerprint in fingerprints:
+        if not isinstance(fingerprint, dict):
+            continue
+        path = fingerprint.get("normalized_path")
+        state = fingerprint.get("state")
+        sha256 = fingerprint.get("sha256")
+        if (
+            not isinstance(path, str)
+            or not isinstance(state, str)
+            or (sha256 is not None and not isinstance(sha256, str))
+        ):
+            continue
+        candidate = _repository_path(repo, path)
+        if candidate is None:
+            continue
+        current_value = current.get(str(candidate))
+        if current_value is not None:
+            result.append((str(candidate), current_value[0], current_value[1]))
+    return sorted(set(result))
 
 
 def _observation_evidence_subjects(
@@ -1357,11 +1452,15 @@ def _process_machine_observations(
         )
         if aggregate is None:
             # current active issue は新しい report cut でも必ず verification する。
-            if active_candidate is not None:
-                active_candidate["machine_state"] = None
+            # window 外になった state は次の aggregate として保存せず、active issue
+            # の最後の threshold state は verification 中も表現可能なまま保持する。
             continue
         threshold_met = _machine_threshold_met(aggregate)
         if active_candidate is not None:
+            if not threshold_met:
+                # 部分的に window 外となった aggregate も threshold 未満 state として
+                # active issue へ上書きせず、unresolved の再検証結果だけを反映する。
+                continue
             for observation in observations:
                 _merge_observation(repo, active_candidate, observation)
             _apply_machine_aggregate_to_candidate(active_candidate, aggregate)
@@ -2472,7 +2571,7 @@ def _finish_published_cleanup(repo: Path, manifest_path: Path) -> None:
     """pointer 切替後の cleanup failure を publication と分離した warning にする。"""
     try:
         cleanup_published_report(repo)
-    except BaseException as exc:
+    except Exception as exc:
         logger = current_subcommand_logger()
         if logger is not None:
             logger.event(

@@ -31,22 +31,18 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装領域。feedback の処理を確認・変更する際の入口であり、配下の実装へ進むためのルーティングを担う。
-- report.py は `cmoc feedback report` の再開可能な publication pipeline を実装する。固定した report cut から raw observation の検証、candidate 集約、normalization・verification、generation と Markdown report の作成、current pointer の切替、cleanup までを扱う。report 実行順序、publication 整合性、再開・中断処理、出力や候補集約を調査・変更するときに読む。
+- feedback サブコマンドの実装領域。feedback observation の保存処理と、report の active-state publication pipeline を含む下位モジュールへの入口。
 
 ## Read this when
-- feedback サブコマンドの挙動や実装を確認・変更するとき。
-- `cmoc feedback report` の report cut、candidate 集約、normalization・verification、publication、再開・中断処理、cleanup を調査・変更するとき。
-- feedback report の Markdown 出力、machine rule の recurrence 集約、agent observation の issue identity 判定を確認するとき。
+- feedback サブコマンドの実装全体を確認・変更するとき。
+- feedback report の report cut、処理状態遷移、candidate の検証、publication を追跡するとき。
 
 ## Do not read this when
 - feedback 以外のサブコマンドを扱うとき。
-- raw observation 保存形式や active state の共有ユーティリティだけを確認する場合。
-- normalization または verification agent の prompt・Structured Output schema を確認する場合。
-- report cut の正本仕様や `cmoc feedback report` 以外の処理を確認する場合。
+- feedback observation や report の共通実装、正本仕様、利用方法だけを確認するときは、それぞれの専用対象を直接読む。
 
 ## hash
-- 6746d32b01040c93529629e33f93b21dc1253e9d078ac0dd0f6ff659e169158c
+- ed98982912020d314c4abd27acabf2c7697f6149799fa3ad692d7d57a0d98502
 
 # `indexing.py`
 

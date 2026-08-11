@@ -16,6 +16,7 @@ agent-facing reporter から raw store、report cut、verification、current poi
 import hashlib
 import json
 from collections.abc import Iterator
+from datetime import datetime, timedelta, timezone
 from inspect import unwrap
 from pathlib import Path
 from types import SimpleNamespace
@@ -547,6 +548,109 @@ def test_agent_candidate_comparison_requires_evidence_subject_type() -> None:
     assert comparison == []
 
 
+def test_agent_candidate_exact_match_requires_report_cut_fingerprint() -> None:
+    """observation 時点と異なる cut fingerprint では exact merge しない。"""
+    observation = {
+        "observation_id": "fbo_00000000-0000-7000-8000-000000000001",
+        "context": {"repo_root": "/repo"},
+        "payload": {
+            "category": "tooling",
+            "evidence": [{"kind": "oracle", "path": "README.md"}],
+        },
+        "evidence_fingerprints": [
+            {
+                "evidence_index": 0,
+                "normalized_path": "/repo/README.md",
+                "state": "hashed",
+                "sha256": "a" * 64,
+            }
+        ],
+    }
+    candidate = {
+        "candidate_id": "fbi_" + "b" * 26,
+        "category": "tooling",
+        "latest_fingerprints": observation["evidence_fingerprints"],
+        "reference_targets": [
+            {"path": "README.md", "kind": "oracle", "location": None}
+        ],
+        "deduplication_hints": [],
+    }
+    manifest = {
+        "inputs": {
+            "references": [
+                {
+                    "reference_id": "ref:readme",
+                    "kind": "repository_content",
+                    "subjects": [observation["observation_id"]],
+                    "path": "README.md",
+                    "state": "hashed",
+                    "sha256": "b" * 64,
+                }
+            ]
+        }
+    }
+
+    current_cut = feedback_report_module._report_cut_fingerprint_pairs(
+        Path("/repo"), manifest, observation
+    )
+    exact, comparison = feedback_report_module._agent_comparison_candidates(
+        observation,
+        {str(candidate["candidate_id"]): candidate},
+        current_cut_fingerprint_pairs=current_cut,
+    )
+
+    assert exact is None
+    assert comparison == [candidate]
+
+
+def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> None:
+    """遅れて到着した古い observation が latest fingerprint を巻き戻さない。"""
+    newer = {
+        "observation_id": "fbo_new",
+        "source": "agent_report",
+        "observed_at": "2026-08-02T00:00:00Z",
+        "context": {"cmoc_session_id": "session"},
+        "payload": {
+            "category": "tooling",
+            "summary": "new",
+            "impact": "impact",
+            "evidence": [{"kind": "file", "path": "README.md", "text": "new"}],
+        },
+        "evidence_fingerprints": [
+            {
+                "evidence_index": 0,
+                "normalized_path": "/repo/README.md",
+                "state": "hashed",
+                "sha256": "b" * 64,
+            }
+        ],
+    }
+    older = {
+        **newer,
+        "observation_id": "fbo_old",
+        "observed_at": "2026-08-01T00:00:00Z",
+        "payload": {
+            **newer["payload"],
+            "summary": "old",
+            "evidence": [{"kind": "file", "path": "README.md", "text": "old"}],
+        },
+        "evidence_fingerprints": [
+            {
+                "evidence_index": 0,
+                "normalized_path": "/repo/README.md",
+                "state": "hashed",
+                "sha256": "a" * 64,
+            }
+        ],
+    }
+    candidate = feedback_report_module._new_candidate(newer, "agent\0fbo_new")
+    feedback_report_module._merge_observation(Path("/repo"), candidate, newer)
+    feedback_report_module._merge_observation(Path("/repo"), candidate, older)
+
+    assert candidate["last_observed_at"] == newer["observed_at"]
+    assert candidate["latest_fingerprints"] == newer["evidence_fingerprints"]
+
+
 def test_collector_validates_context_rate_and_durable_observation(
     tmp_path: Path,
 ) -> None:
@@ -683,6 +787,17 @@ def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> No
     assert result["redaction_count"] == 1
     assert "[REDACTED:authorization]" in path.read_text()
     assert "abcdefghijklmnopqrstuvwxyz" not in path.read_text()
+
+
+def test_report_reference_rejects_symlinked_parent_outside(tmp_path: Path) -> None:
+    """report cut reference が symlink 親経由の repository 外 path を読まない。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.txt").write_text("SECRET\n")
+    (root / "link").symlink_to(outside, target_is_directory=True)
+
+    assert feedback_report_module._repository_path(root, "link/secret.txt") is None
 
 
 def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
@@ -907,6 +1022,105 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
             assert state.issues[issue_id(str(canonical_key))]["occurrence_count"] == 2
 
 
+def test_active_machine_issue_keeps_threshold_state_after_window_expires(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """window 外で threshold 未満になった active machine issue を最後の state で再検証する。"""
+    root = make_repo(tmp_path)
+    _active_session(root, monkeypatch)
+    log_path = root / ".cmoc/gu/ar/log/test.jsonl"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text('{"event":"reporter unavailable"}\n')
+    canonical_key: str | None = None
+    base = datetime.now(timezone.utc)
+
+    for index in range(2):
+        occurred_at = base - timedelta(days=1 if index == 0 else 20)
+        event = {
+            "event_schema_version": 1,
+            "event_id": f"evt_expiry_{index}",
+            "event_type": "feedback.reporter_unavailable",
+            "occurred_at": occurred_at.isoformat(timespec="seconds").replace(
+                "+00:00", "Z"
+            ),
+            "subcommand_invocation_id": f"scope_expiry_{index}",
+            "component": "reporter",
+            "failure_code": "missing",
+        }
+        context = _context(root, session_id=f"session_expiry_{index}")
+        context["subcommand_invocation_id"] = f"scope_expiry_{index}"
+        _observation_id, raw_path = store_machine_observation(
+            root,
+            context,
+            rule_id="feedback.reporter_unavailable.v1",
+            category="tooling",
+            subject_type="reporter_component",
+            normalized_subject_id="reporter:missing",
+            summary="feedback reporter が反復して利用できない。",
+            impact="agent observation が欠落する。",
+            human_action="reporter を確認する。",
+            event=event,
+            log_path=log_path,
+        )
+        canonical_key = machine_canonical_key(read_json_object(raw_path))
+
+    assert canonical_key is not None
+    candidate_id = issue_id(canonical_key)
+    _install_codex_outputs(
+        monkeypatch,
+        _verification_output(
+            candidate_id,
+            "unresolved",
+            reference_path=".cmoc/gu/ar/log/test.jsonl",
+        ),
+    )
+    first = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert first.exit_code == 0, first.output
+    first_state = load_active_state(root)
+    assert set(first_state.issues) == {candidate_id}
+    assert isinstance(first_state.issues[candidate_id]["machine_state"], dict)
+
+    partially_expired = (
+        (base + timedelta(days=11)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    )
+    monkeypatch.setattr(
+        feedback_report_module, "rfc3339_now", lambda: partially_expired
+    )
+    _install_codex_outputs(
+        monkeypatch,
+        _verification_output(
+            candidate_id,
+            "unresolved",
+            reference_path=".cmoc/gu/ar/log/test.jsonl",
+        ),
+    )
+    second = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert second.exit_code == 0, second.output
+    second_state = load_active_state(root)
+    assert set(second_state.issues) == {candidate_id}
+    assert isinstance(second_state.issues[candidate_id]["machine_state"], dict)
+
+    fully_expired = (
+        (base + timedelta(days=31)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    )
+    monkeypatch.setattr(feedback_report_module, "rfc3339_now", lambda: fully_expired)
+    _install_codex_outputs(
+        monkeypatch,
+        _verification_output(
+            candidate_id,
+            "unresolved",
+            reference_path=".cmoc/gu/ar/log/test.jsonl",
+        ),
+    )
+    third = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert third.exit_code == 0, third.output
+    third_state = load_active_state(root)
+    assert set(third_state.issues) == {candidate_id}
+    assert isinstance(third_state.issues[candidate_id]["machine_state"], dict)
+
+
 def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
     """日次 bucket が window 境界をまたぐ場合は occurrence ごと破棄する。"""
     canonical_key = (
@@ -1062,6 +1276,27 @@ def test_interruption_during_cut_creation_is_normal_and_resumable(
     assert resumable[0]["processing"]["status"] == "interrupted"
     assert not (feedback_root(root) / "active" / "current.json").exists()
     assert not list((root / ".cmoc/gu/ar/report/feedback").glob("*.md"))
+
+
+def test_interruption_during_preconditions_is_normal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """report cut 固定前の Ctrl+C も feedback report の正常中断にする。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    def interrupt_preconditions(*_args: object) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(
+        feedback_report_module, "_validate_preconditions", interrupt_preconditions
+    )
+    interrupted = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert interrupted.exit_code == 0, interrupted.output
+    assert "ユーザー中断" in interrupted.output
+    assert load_report_cut(root) is None
+    assert not (feedback_root(root) / "active" / "current.json").exists()
 
 
 def test_report_cut_rejects_observation_path_mismatch(
@@ -1257,6 +1492,34 @@ def test_partial_cleanup_keeps_publication_and_excludes_processed_pending(
     assert load_report_cut(root) is None
     assert iter_observation_paths(root) == []
     assert load_active_state(root).current is not None
+
+
+def test_cleanup_keyboard_interrupt_is_reported_as_user_interruption(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """pointer 切替後の cleanup 中断を正常完了と区別して state に残す。"""
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, session_id)
+    _install_codex_outputs(
+        monkeypatch, _verification_output(candidate_id, "unresolved")
+    )
+    original_unlink = feedback_state_module._durable_unlink
+
+    def interrupt_cleanup(_path: Path) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(feedback_state_module, "_durable_unlink", interrupt_cleanup)
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert "ユーザー中断" in result.output
+    state = validate_feedback_state(root)
+    assert state.current is not None
+    assert state.cleanup_manifest is not None
+
+    monkeypatch.setattr(feedback_state_module, "_durable_unlink", original_unlink)
+    assert cleanup_published_report(root) is True
 
 
 def test_current_pointer_rejects_publication_cross_reference_mismatch(
