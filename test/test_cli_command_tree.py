@@ -18,6 +18,7 @@
 
 import click
 from typer.main import get_command
+from typer.testing import CliRunner
 
 from main import app
 
@@ -68,9 +69,14 @@ def test_help_renders_without_typer_click_compatibility_error() -> None:
     assert "realization" in rendered
     assert "run" in rendered
 
+    runner = CliRunner()
+    for command_path in (("oracle", "review"), ("run", "join")):
+        result = runner.invoke(app, [*command_path, "--help"])
+        assert result.exit_code == 0, result.output
+
 
 def test_feedback_report_exposes_no_subcommand_specific_options() -> None:
-    """feedback report がサブコマンド固有 option を公開しないことを確認する。"""
+    """feedback report が位置引数と固有 option を公開しないことを確認する。"""
     command = get_command(app)
     feedback = command.commands["feedback"]
     assert isinstance(feedback, click.Group)
@@ -81,5 +87,11 @@ def test_feedback_report_exposes_no_subcommand_specific_options() -> None:
         if isinstance(parameter, click.Option)
         for option in parameter.opts
     }
+    arguments = {
+        parameter.name
+        for parameter in report.params
+        if isinstance(parameter, click.Argument)
+    }
 
+    assert arguments == set()
     assert options == set()
