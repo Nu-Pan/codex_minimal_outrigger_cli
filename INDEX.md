@@ -145,17 +145,17 @@
 # `test`
 
 ## Summary
-- pytest による realization test 群を集約し、CLI、runtime、ACP builder、Codex 実行、oracle review、session、indexing、設定・状態永続化などの外部挙動と契約を検証する。個別テストは各機能領域の回帰検証への入口となる。
+- テストコードから、ACP builder、Codex runtime、CLI、indexing、oracle review、session、feedback、設定、Git、TUI などの各機能に対応する realization test と共通 test support へ進むための入口。個別テストは、それぞれの機能の外部挙動、回帰条件、統合 lifecycle、公開契約を検証する。
 
 ## Read this when
-- 複数の realization test から、変更対象の機能に対応する回帰テストや統合テストを特定するとき。
-- CLI lifecycle、Codex runtime、worktree・Git 状態、oracle review、editing run、session、indexing などの外部契約をテストから確認するとき。
-- 対象機能の境界条件、安全性、失敗時の状態保持、subprocess や永続 state の検証範囲を把握するとき。
+- 特定機能の外部挙動、回帰条件、統合 lifecycle、CLI 契約、runtime 契約を検証するテストを探すとき。
+- テスト対象に対応する既存ケースや、共通 fixture・subprocess・Git repository helper の入口を特定するとき。
+- ACP builder、Codex 実行、indexing、oracle review、session、feedback、設定、TUI、Windows toast などの realization test を追加・変更・レビューするとき。
 
 ## Do not read this when
-- 実装の責務や正本仕様そのものを確認・変更するときは、対応する src 実装または oracle 文書を直接読む。
-- 共通テスト helper、テスト実行規約、個別の schema 定義だけを確認したいときは、該当する helper・実行手順・schema を直接読む。
-- テスト対象がこのディレクトリで扱う機能領域や外部契約に該当しないとき。
+- 実装の責務や処理詳細を確認する場合は、対応する src 実装を直接読む。
+- 正本仕様、設計意図、Structured Output schema、エラー規約を確認する場合は、対応する oracle 文書や schema を直接読む。
+- テスト実行方法や一般的な開発規約だけを確認する場合は、専用の実行手順・規約文書を読む。
 
 ## hash
-- 3a16483c14c236dfd18d18252281ceab9d4aedb158d518ceeb7b088cec6d1720
+- bb1fc4aee4c258c5751adb4b9b11233fb5a4944d82ffe7a04e81f667dc5d2591
