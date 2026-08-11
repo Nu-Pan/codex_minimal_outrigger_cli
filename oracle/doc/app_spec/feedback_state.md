@@ -1,218 +1,155 @@
-# feedback の repository-local active state
+# feedback の repository-local state
 
-本書は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` が定義する active issue、threshold 未満の machine aggregate、report cut の一時 state、および atomic publication を定める。raw observation と machine rule の正本は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` とする。
+本書は、feedback report が使用する repository-local state、report cut、checkpoint、atomic publication、および cleanup を定める。raw observation と detector rule は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` を正本とする。
 
-## state の原則
+## state の目的
 
-feedback state は、現在の未解決問題を処理するための active state である。
+feedback state は、現在の未解決問題と、進行中の report を安全に扱うための active state である。履歴 database にはしない。
 
-長期保存してよい repository-local state は、次の情報に限定する。
+長期保持してよい情報を次に示す。
 
-- active state へまだ反映していない pending observation
-- 現在 `unresolved` である active issue ごとの compact record 1 件
-- recurrence threshold 未満の machine observation に必要な bounded aggregate
-- 実行中、中断中、または安全な publication 再開中の report cut manifest と正式な checkpoint
+- active state へ未反映の pending observation
+- 現在 `unresolved` である issue の compact record
+- recurrence threshold 未満の machine observation の bounded aggregate
+- 中断または失敗から report を再開するための report cut と正式な checkpoint
 - publication 済みの Markdown report
-- 現在の active generation と正常 report を一意に選ぶ current pointer
+- 現在の active generation と Markdown report を選ぶ current pointer
 
-解決済み issue、処理済み observation、および完了済み checkpoint を通常状態へ残してはならない。異常終了からの回復に必要な切替前の active generation と staged artifact は一時的に残ってよいが、current pointer の切替後に idempotent に削除する。
+解決済み issue、処理済み observation、および完了済み checkpoint を active state の履歴として残してはならない。過去の Markdown report の retention は、active state の compaction と分離する。
 
-## 所有単位と保存先
+## 所有範囲と配置
 
-feedback state は、すべて `{{repo-root}}` が所有する。現在の branch、`{{work-root}}`、session、および run は所有単位にしない。
+feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、session、および run は所有単位にしない。
 
-保存領域の論理構成を次に示す。
+論理的な配置を次に示す。
 
 ```text
 {{repo-root}}/.cmoc/gu/ar/feedback/
 ├── observation/v1/...
 ├── active/current.json
-├── active/generation/{{generation-id}}/manifest.json
-├── active/generation/{{generation-id}}/issue/{{issue-id}}.json
-├── active/generation/{{generation-id}}/machine_aggregate/{{aggregate-id}}.json
+├── active/generation/{{generation-id}}/
+│   ├── manifest.json
+│   ├── issue/...
+│   └── machine_aggregate/...
 └── work/{{report-cut-id}}/
     ├── manifest.json
     ├── reference/...
-    └── checkpoint/
-        ├── normalization/...
-        └── verification/...
-```
+    └── checkpoint/...
 
-Markdown report は、次へ保存する。
-
-```text
 {{repo-root}}/.cmoc/gu/ar/report/feedback/{{time-stamp}}.md
 ```
 
-`{{repo-root}}/.cmoc/gu` 全体を Git 追跡対象外とする。session または run の join と abandon は、この state を取り込み、破棄、巻き戻し、または複製してはならない。
+`{{repo-root}}/.cmoc/gu` 全体を Git 追跡対象外とする。session と run の join または abandon は、feedback state を取り込み、破棄、巻き戻し、または複製してはならない。
 
-state root または `active/current.json` が存在しない状態は、有効な初期状態とする。空 directory または `.gitkeep` は作らない。
+state root または current pointer が存在しない状態は、有効な初期状態とする。空 directory や `.gitkeep` は作らない。
 
-## JSON と durability の共通規則
+## artifact の役割
 
-全 JSON file は UTF-8、object key の辞書順、末尾改行ありの canonical form で保存する。hash は canonical byte 列の SHA256 とする。
+state を構成する artifact の役割を次に示す。
 
-durable 保存は、sibling temporary file への write、file flush、atomic rename、および parent directory の flush を含む。immutable artifact と同じ path に同じ byte 列を再保存する操作は idempotent とする。同じ path に異なる byte 列がある場合は corruption として停止し、自動上書きしない。
+| artifact | 役割 |
+|---|---|
+| active generation | 同じ report で確定した active issue と threshold 未満 aggregate の immutable な集合 |
+| current pointer | 現在の正常な active generation と Markdown report を一意に選ぶ publication point |
+| report cut manifest | 1 回の report に使用する固定入力と処理状態の正本 |
+| reference | candidate の現在状態を検証するため、report cut に固定した repository content、fingerprint、または probe result |
+| checkpoint | 受理済み normalization または verification output の再利用可能な記録 |
 
-active generation、current pointer、report cut manifest、および checkpoint は、schema、hash、path、参照先、および相互参照の整合性を使用前に検証する。検証に失敗した state を無視して新しい正常 report を publication してはならない。
+timestamp、Git commit、branch reachability、または directory の列挙順から current state を推測してはならない。current pointer が参照する generation manifest と Markdown report の path および hash を検証できる場合だけ、その組を最新の正常 publication とする。
 
-## writer 排他制御
+## JSON と排他制御
 
-active state、report cut、および current pointer を更新する処理は、`{{repo-root}}` ごとの repository-level feedback writer 排他制御へ従う。同じ repository で複数の `cmoc feedback report` が同時に state を更新してはならない。
+state の JSON は、UTF-8、object key の辞書順、末尾改行ありの canonical form で保存する。hash は canonical byte 列の SHA256 とする。
 
-`cmoc feedback report` は、report cut の固定前から current pointer の切替、再開 state の確定、または失敗終了まで writer 排他を保持する。長時間の AI 検証を理由に、同じ repository で別の report writer を並行させてはならない。
+immutable artifact は、sibling temporary file への write、file flush、atomic rename、および parent directory の flush によって durable に保存する。同じ path への同じ byte 列の再保存は idempotent とする。同じ path に異なる byte 列がある場合は corruption として停止し、自動上書きしない。
 
-排他の lock file、lease、待機、および stale owner 回復の具体方式は実装裁量とする。所有者を安全に判定できない lock を暗黙に破棄してはならない。排他を取得できない呼び出しは state を変更せず、競合中であることを示して待機または終了する。
+active state を変更する `cmoc feedback report` は、`{{repo-root}}` ごとの feedback writer 排他を使用する。排他は、report cut の固定前から publication、再開 state の確定、または失敗終了まで保持する。
 
-raw observation の publication と report cut の境界は線形化する。cut 作成中だけ collector の atomic publication と協調する具体方式は実装裁量とする。cut 固定後は collector が新しい observation を保存できなければならない。
+lock の方式は実装裁量とする。所有者を安全に判定できない lock を暗黙に破棄してはならない。cut 固定後も collector は新しい observation を保存できなければならない。
 
-## active generation と current pointer
+## active generation
 
-### generation manifest
+active generation には、次の record だけを含める。
 
-active generation は、active issue record と threshold 未満の machine aggregate だけを含む。generation manifest は、少なくとも次の情報を持つ。
+- 直近の正常 report で `unresolved` と検証された active issue
+- recurrence threshold 未満の machine aggregate
 
-- `schema_version`
-- `generation_id`
-- generation を作成した `report_cut_id`
-- 作成日時
-- active issue record の path と SHA256 を issue ID 順に並べた配列
-- machine aggregate record の path と SHA256 を canonical key 順に並べた配列
+generation manifest は、generation ID、作成元の report cut、作成日時、および各 record の path と hash を固定する。全 record を保存して検証した後に manifest を保存する。valid な manifest がない generation を読み取ってはならない。
 
-generation ID は `fbg_` と UUIDv7 の組み合わせとする。manifest は、列挙する全 record を durable 保存して検証した後に最後に保存する。valid な manifest がない generation を active state として読み取ってはならない。
+### issue identity
 
-### current pointer
+machine issue の canonical key は、detector rule が定める machine issue key とする。
 
-`active/current.json` は、現在の正常 publication を一意に選ぶ唯一の pointer である。少なくとも次の情報を持つ。
+agent observation から新しい issue を作る場合は、最初の observation ID から安定した canonical key を作る。normalization agent が既存 issue との同一性を選んだ場合は、既存の issue ID と canonical key を維持する。
 
-- `schema_version`
-- generation ID、manifest path、および manifest SHA256
-- report cut ID と、publication に使用した report cut manifest の SHA256
-- Markdown report path と SHA256
-- publication 時刻
-- `result`: `ok | attention`
+issue ID は canonical key の hash から決定論的に生成する。同じ issue ID と異なる canonical key が見つかった場合は collision として停止し、暗黙に salt を追加してはならない。
 
-current pointer が参照する generation と report の両方を検証できる場合だけ、その組み合わせを最新の正常 report と active state とする。他の artifact、timestamp、Git commit、または branch reachability から最新状態を推測してはならない。
+active state に残っていない過去の agent issue と、後日の observation の同一性は判定しない。machine issue は canonical key が同じであれば、再発時にも同じ issue identity を使用する。
 
-current pointer が識別する report cut manifest は、切替後 cleanup が完了すれば存在しなくてよい。manifest が存在する場合は pointer の SHA256 と一致することを検証し、新しい report cut より先に cleanup を再開する。manifest が存在しないことだけを current pointer の corruption としてはならない。
+### active issue record
 
-## issue identity
+active issue record は、次回の候補絞り込み、verification、および人間向け表示に必要な情報だけを保持する。
 
-machine issue の canonical key は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の rule registry が定める machine issue key とする。agent observation から新規作成する issue の canonical key は、`agent\0{{最初の observation ID}}` とする。
+- issue identity、origin、category、summary、および impact
+- occurrence count、affected session count、最初と最後の観測日時
+- bounded な representative evidence、subject、および fingerprint
+- 最新の `unresolved` verification の reason、current evidence、および human action
+- machine issue の場合だけ、recurrence window を評価できる bounded summary
 
-issue ID は、canonical key の SHA256 を lowercase base32 とし、その先頭 26 文字へ `fbi_` を付けた値とする。normalization agent が既存 active issue との同一性を選んだ場合は、その issue ID と canonical key を維持する。同じ issue ID で異なる canonical key が見つかった場合は collision として停止し、salt を暗黙に追加してはならない。
+evidence は、削除予定の raw observation や report cut だけを参照してはならない。次回 report で再確認できる安定した subject と、人間が確認できる compact な説明を materialize する。secret を複製してはならない。
 
-active state に存在しない過去の agent issue と、後日の observation の同一性は判定しない。machine issue は canonical key が同じであれば、再発時にも同じ issue ID となる。
+保持件数と集計情報は schema-fixed な上限を持つ。上限超過時の選択は、report cut の固定入力に対して決定論的に行う。AI に保持対象を選ばせない。
 
-## active issue record
+`resolved` または `not_actionable` の issue は、新しい generation に含めない。`inconclusive` が 1 件でもある場合は、新しい generation 自体を publication しない。
 
-active issue record は、直近の正常 report で `unresolved` と検証された issue につき 1 件だけ保存する。record は、次回の候補絞り込み、verification、および人間向け表示に必要な情報だけを持つ。
+### threshold 未満の machine aggregate
 
-- `schema_version`
-- issue ID、origin、および canonical key
-- category、summary、および impact
-- occurrence count と affected session count
-- affected session count の更新に必要な bounded distinct-session digest と saturation marker
-- 最初と最後の観測日時
-- 最大 5 件の representative evidence
-- 最大 5 件の evidence subject、repository path、または allowlist 済み probe ID
-- 最大 5 件の最新 fingerprint
-- 最新 verification の report cut ID、検証日時、reason、current evidence、および human action
-- machine issue だけ、recurrence window 外を除外するための bounded time bucket と rule-defined threshold dimension summary
+machine observation は、rule の canonical key と recurrence window で集約する。threshold 未満の場合は issue を作らず、判定に必要な count、distinct dimension、time bucket、代表 evidence、および fingerprint だけを bounded aggregate として保持する。
 
-最新 verification は `unresolved` の受理条件を満たした情報だけを保存する。verdict 自体は active issue であることから `unresolved` と一意に決まるため、verdict の配列を持たない。
+threshold を満たした aggregate は issue candidate へ昇格し、同じ generation に aggregate として重複保存しない。window 外の occurrence を除いた結果が空なら aggregate を削除する。threshold 未満 aggregate は人間向け report に表示しない。
 
-representative evidence と current evidence は、raw observation や削除予定の work artifact への参照だけにしてはならない。次回 report cut で現在状態を再取得できる安定した subject と、Markdown report で人間が確認できる compact な説明を保持する。secret を複製してはならない。
+## report cut と checkpoint
 
-active issue record を作る際は、verification output の cut-scoped reference ID を report cut manifest で解決し、repository path、subject、probe ID、location、および fingerprint のうち該当する安定情報を record へ materialize する。削除する report cut の reference ID だけを残してはならない。
+### report cut
 
-representative evidence、reference target、fingerprint、distinct-session digest、および time bucket の上限超過処理は、report cut の固定入力に対する canonical order と schema-fixed bound だけで決定する。AI に保持対象を選ばせてはならない。
+report cut manifest は、少なくとも次の入力を固定する。
 
-個々の observation と過去の verification は保持してはならない。件数、affected session 数、最初と最後の観測日時は compact aggregate として更新する。distinct-session digest が schema の上限へ達した後は saturation marker を設定し、affected session count を下限値として `{{count}}+` と表示してよい。
+- 今回処理する pending observation
+- cut 開始時の current pointer、active issue、および machine aggregate
+- candidate の現在状態を確認する reference
+- allowlist 済み current-state probe の入力と結果
+- normalization、verification、schema、および決定論的処理規則の version
 
-machine issue の集計値は recurrence window 内の occurrence だけから計算する。bounded time bucket と rule-defined threshold dimension summary は、window 外の値を決定論的に除外できる情報を持つ一方、個々の occurrence record を保持してはならない。
+reference には cut 内で一意な ID と種別を付ける。保存内容には raw observation と同等以上の secret masking を適用する。live repository state の後読みを report cut の代わりにしてはならない。
 
-verification が `resolved` または `not_actionable` とした issue は、新しい generation に含めない。`inconclusive` の issue を active issue として維持または新規作成することも禁止する。`inconclusive` が 1 件でもある場合は generation 自体を publication しないため、直前の active generation がそのまま current となる。
+repository content の capture 中に値が変化した場合は、未確定 cut を破棄して再取得するか、state を変更せずエラー終了する。異なる時点の内容を 1 つの cut として扱ってはならない。
 
-## threshold 未満の machine aggregate
+cut の固定後は入力を変更しない。後から追加された observation は次回の cut へ残す。処理状態、checkpoint reference、publication target、および cleanup target だけを atomic に追記または更新してよい。
 
-machine observation は、rule の recurrence window 内にある occurrence だけを canonical key ごとに集約する。window 外の occurrence と scope marker は、新しい generation を作る前に除外する。
+同じ repository で、再開対象の report cut は高々 1 件とする。完了した cut を履歴として蓄積しない。
 
-threshold 未満の machine observation は issue record を作らず、canonical key ごとに bounded aggregate 1 件だけを保存する。aggregate は、次の情報に限定する。
+### checkpoint
 
-- schema version、aggregate ID、rule ID、および canonical key
-- category、summary、impact、および detector が定めた human action
-- recurrence window の境界
-- occurrence count、affected session count、および rule が要求する distinct threshold dimension ごとの count
-- window 外の値を除外するための bounded time bucket
-- threshold 判定に必要な recurrence scope、agent call、または他の rule-defined dimension の digest と最終観測日時。各 dimension の件数は rule の threshold 未満に制限する
-- 最初と最後の観測日時
-- bounded な representative evidence と最新 fingerprint
+normalization と verification の output は、schema と決定論的事後条件を満たした後だけ正式な checkpoint として保存する。checkpoint は、入力、builder、schema、および output を hash で結び付ける。
 
-aggregate ID は canonical key の SHA256 lowercase hexadecimal に `fba_` を付けた値とする。threshold を満たした aggregate は issue candidate へ昇格させ、同じ generation に threshold 未満 aggregate として重複保存しない。
+同じ report cut と同じ入力で再開する場合は、整合する checkpoint を再利用する。未完了 call、不適合 output、correction の途中結果、および失敗履歴を checkpoint として保存してはならない。
 
-threshold 未満 aggregate は人間向け report に表示しない。window 外の occurrence を除いた結果が空になった aggregate は削除する。
+中断または失敗時は、再開に必要な report cut、reference、および正式な checkpoint だけを保持する。正常 publication 後は、active issue record に materialize した情報を除き削除する。
 
-## report cut の一時 state
+`inconclusive` は有効な verdict だが、正常 publication へ進めない terminal result とする。次の明示的な report 要求では、同じ固定入力から再開せず、新しい cut を作る前に一時 state を破棄してよい。
 
-report cut は `work/{{report-cut-id}}/manifest.json` を正本とする。report cut ID は `fbc_` と UUIDv7 の組み合わせとする。
-
-manifest は、少なくとも次の入力を canonical value と、artifact がある場合の path および SHA256 で固定する。
-
-- schema version、report cut ID、および cut を固定した日時
-- 今回処理する pending observation の ID、path、および SHA256
-- cut 開始時の current pointer、active generation、全 active issue、および全 bounded machine aggregate
-- candidate の現在状態を確認するために取得した repository 内参照内容または fingerprint
-- allowlist 済み current-state probe を実行した場合の probe ID、入力、および結果
-- normalization と verification の builder、schema、および決定論的処理規則の version
-- cut の処理状態と、再開に必要な正式な checkpoint の path と SHA256
-- publication 前に確定した新 generation、Markdown report、および切替後 cleanup target の path と SHA256
-
-参照には cut 内で一意な reference ID と、`observation | repository_content | current_fingerprint | probe_result` の種別を付ける。repository content を保存するか、必要な excerpt と fingerprint だけを保存するかは、安全性と秘密情報の境界を満たす限り実装裁量とする。
-
-report cut の参照は、元の call が読める repository 内対象だけから作る。保存する内容にも raw observation と同等以上の secret masking を適用する。live repository path を後から読み直すことを、report cut の代わりにしてはならない。
-
-manifest を durable 保存する前に、captured repository content と fingerprint を同じ path の再取得結果で検証する。capture 中に値が変化した場合は未確定 cut を破棄して再取得するか、state を変更せずエラー終了する。異なる時点の repository content を 1 つの安定した cut として偽ってはならない。
-
-cut 固定後に追加された observation は manifest へ追記せず、次回 report の pending observation とする。cut の input section にある active state、参照内容、fingerprint、および probe result も固定後に更新してはならない。processing status、checkpoint reference、および publication／cleanup section は、固定入力を変えない atomic update だけを許容する。current pointer には publication 直前の最終 manifest hash を記録する。
-
-repository ごとに、再開対象の report cut は高々 1 件とする。別の cut の完了済み checkpoint または manifest を履歴として蓄積してはならない。
-
-## checkpoint と再開
-
-normalization と verification の正式な Structured Output は、対応する agent call の全受理条件を満たした後だけ checkpoint として durable 保存する。checkpoint は、入力 hash、candidate ID、builder hash、schema hash、正式な出力、および出力 hash を持つ。
-
-同じ report cut と同じ入力で再開する場合は、整合する checkpoint を再利用し、同じ agent call の quota を再消費しない。入力、builder、schema、または決定論的事後条件が異なる checkpoint は再利用しない。
-
-未完了 call、schema 不適合 output、または決定論的事後条件に違反した output を正式な checkpoint として保存してはならない。correction call の一時結果と失敗履歴を repository-local feedback state へ蓄積してはならない。
-
-中断、AI call failure、または durable publication failure では、同じ report cut を安全に再開するための manifest と正式な checkpoint だけを保持する。正常 publication 後は active issue record に取り込まれた最新 verification を除き、cut の manifest、参照 snapshot、および全 checkpoint を削除する。
-
-`inconclusive` は有効な verification verdict だが、同じ固定入力から正常 publication へ進めない terminal result とする。その cut は正常 report として publication せず、次の明示的な report 要求が新しい cut を作る前に一時 state を削除してよい。診断は subcommand log に残す。
-
-## atomic publication と cleanup
+## atomic publication
 
 新しい正常 report は、次の順序で publication する。
 
-1. 新しい active generation の全 record と manifest を durable 保存する。
+1. 新しい active generation の record と manifest を durable 保存する。
 2. Markdown report を最終 path へ durable 保存する。
-3. generation manifest と Markdown report の schema、path、および hash を再検証する。
-4. 両方を参照する新しい `active/current.json` を sibling temporary file から atomic rename し、parent directory を flush する。
-5. current pointer の切替後に、処理済み raw observation、切替前の active generation、完了した report cut、および一時 artifact を idempotent に削除する。
+3. generation manifest と Markdown report の path および hash を再検証する。
+4. 両方を参照する current pointer を atomic に切り替える。
+5. current pointer の切替後に、処理済み observation、切替前の generation、および完了済み work artifact を cleanup する。
 
-current pointer の切替だけを、active state と正常 report の publication point とする。切替前に現在の active generation または処理対象 observation を削除してはならない。
+current pointer の切替だけを publication point とする。切替前に異常終了した場合は、直前の pointer が引き続き current となる。staged artifact を正常 report として扱ってはならない。
 
-切替前に異常終了した場合は、直前の current pointer が引き続き唯一の正常 state を指す。staged generation または Markdown artifact を正常 report として扱ってはならない。
+cleanup は、current pointer と hash で結び付いた report cut manifest を使用して idempotent に行う。cleanup が途中で失敗しても current pointer を巻き戻さない。次回の report は cleanup を完了してから新しい cut を作る。
 
-切替後の cleanup では、current pointer と hash が一致する完了済み report cut manifest を cleanup manifest として使用する。次の対象を順に削除し、各 directory の flush を完了する。
-
-1. manifest が列挙する処理済み raw observation
-2. 切替前の active generation と staged artifact
-3. 完了済み normalization／verification checkpoint と reference snapshot
-4. cleanup manifest 自体と空になった work directory
-
-cleanup manifest は最後に削除する。途中で失敗した場合は新しい current pointer を巻き戻さず、次回の feedback report が同じ manifest を検証して cleanup を完了してから、新しい report cut を作成する。manifest が先に失われ、処理済み raw observation を安全に識別できない状態は corruption として扱う。
-
-current pointer が切替済みの cleanup では、manifest に列挙された削除対象が既に存在しないことを完了済みとして扱う。まだ存在する対象の hash 不一致、manifest 自体の hash 不一致、または manifest にない対象の推測削除は corruption として停止する。
-
-publication 済み Markdown report の retention は active state の compaction と分離する。過去の Markdown report を deduplication、処理済み判定、active state の差分、または最新 report の選択に使用してはならない。
+manifest にない対象を推測して削除してはならない。manifest または対象の hash が一致しない場合は corruption として停止する。
