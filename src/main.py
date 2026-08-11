@@ -1,3 +1,4 @@
+import inspect
 import os
 from collections.abc import Sequence
 from enum import Enum
@@ -45,6 +46,34 @@ def _click_exception_types() -> tuple[type[BaseException], ...]:
 
 
 _CLICK_EXCEPTION_TYPES = _click_exception_types()
+
+
+def _patch_typer_click_help_compatibility() -> None:
+    """Click 8.2 の option help 変更を Typer の互換実装へ反映する。"""
+    # {{work-root}}/oracle/doc/dev_rule/design_rule.md
+    # CLI の引数解釈とライブラリ間の互換境界は main.py に閉じ込める。
+    if "ctx" in inspect.signature(click.Option.make_metavar).parameters:
+        # Click 8.2 は metavar の生成に context を要求するが、Typer 0.12 は渡さない。
+        original_make_metavar = typer.core.TyperOption.make_metavar
+
+        def make_metavar_compatibility(
+            self: typer.core.TyperOption,
+            ctx: click.Context | None = None,
+        ) -> str:
+            """Typer から context なしで呼ばれる metavar を補完する。"""
+            return original_make_metavar(
+                self,
+                ctx if ctx is not None else click.get_current_context(),
+            )
+
+        setattr(
+            typer.core.TyperOption,
+            "make_metavar",
+            make_metavar_compatibility,
+        )
+
+
+_patch_typer_click_help_compatibility()
 
 
 class _CmocTyperGroup(typer.core.TyperGroup):
