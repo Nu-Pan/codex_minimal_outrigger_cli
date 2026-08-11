@@ -137,7 +137,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert argv_calls[0][-1] == "-"
     assert all(record["codex_home"] == str(codex_home) for record in call_records)
     assert call_records[1]["stdin"] == probe_prompt
-    assert argv_calls[1][:3] == ["--ask-for-approval", "on-request", "--model"]
+    assert argv_calls[1][:3] == [
+        "--config",
+        'approval_policy="on-request"',
+        "--model",
+    ]
     assert argv_calls[1][argv_calls[1].index("exec") + 1] == "--skip-git-repo-check"
     assert codex_arg_value(argv_calls[1], "--model") == "gpt-5.6-luna"
     assert codex_arg_value(argv_calls[1], "--sandbox") == "read-only"

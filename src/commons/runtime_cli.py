@@ -29,6 +29,9 @@ _CURRENT_STEP_TOTAL: ContextVar[int | None] = ContextVar(
 _CURRENT_USER_INTERRUPTION: ContextVar[bool | None] = ContextVar(
     "CURRENT_USER_INTERRUPTION", default=None
 )
+_CURRENT_TUI_PROCESS_STARTED: ContextVar[bool | None] = ContextVar(
+    "CURRENT_TUI_PROCESS_STARTED", default=None
+)
 
 
 def run_cli_subcommand(
@@ -41,6 +44,7 @@ def run_cli_subcommand(
     use_work_root_runtime: bool = False,
     doctor_preprocess: bool = True,
     tui_process: bool = False,
+    interruptible: bool = False,
     total_steps: int = 1,
     **kwargs: Any,
 ) -> None:
@@ -59,8 +63,10 @@ def run_cli_subcommand(
     feedback_invocation = None
     feedback_token = None
     step_total_token = None
+    tui_process_started_token = _CURRENT_TUI_PROCESS_STARTED.set(False)
     interruption_token = _CURRENT_USER_INTERRUPTION.set(False)
     error_returncode: int | None = None
+    impl_started = False
     name = command_name or impl.__name__
     notification_root = Path.cwd()
     terminal_state: ToastState | None = None
@@ -94,6 +100,7 @@ def run_cli_subcommand(
             # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
             # 固有の事前条件で失敗しても、サブコマンドログは先に作成しておく。
             pre_log_check(runtime_root)
+        impl_started = True
         impl_result = impl(*args, **kwargs)
         returncode = impl_result if isinstance(impl_result, int) else 0
         if returncode:
@@ -122,13 +129,34 @@ def run_cli_subcommand(
                 "interrupted" if _CURRENT_USER_INTERRUPTION.get() else "completed"
             )
     except KeyboardInterrupt as exc:
+        if interruptible and not impl_started:
+            # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+            # interruptible workload の固有処理へ到達する前の common lifecycle
+            # (collector、doctor、pre-log check) だけを正常中断として確定する。
+            mark_current_subcommand_interrupted()
+            if logger is not None:
+                logger.finish_current_step()
+                logger.event(
+                    "user_interruption",
+                    result="interrupted",
+                )
+                logger.event(
+                    "command_finished",
+                    returncode=0,
+                    elapsed_sec=logger.elapsed(),
+                    quota_wait_sec=logger.quota_wait_sec,
+                    result="interrupted",
+                )
+                _emit_completion_summary(logger, name, 0)
+            terminal_state = "interrupted"
+            return
         # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
         # 非中断可能な TUI の Ctrl+C は Codex CLI に委ね、cmoc の error report に変換しない。
         if logger:
             _finish_failed_subcommand(logger, name, 130, exc)
         # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
         # TUI のユーザー終了にはサブコマンドの terminal result 通知を追加しない。
-        if not tui_process:
+        if not tui_process or not _CURRENT_TUI_PROCESS_STARTED.get():
             terminal_state = "failed"
         raise
     except BaseException as exc:
@@ -153,6 +181,7 @@ def run_cli_subcommand(
             _CURRENT_STEP_TOTAL.reset(step_total_token)
         if logger_token is not None:
             reset_current_subcommand_logger(logger_token)
+        _CURRENT_TUI_PROCESS_STARTED.reset(tui_process_started_token)
         _CURRENT_USER_INTERRUPTION.reset(interruption_token)
         if terminal_state is not None:
             _notify_terminal_result_safely(name, notification_root, terminal_state)
@@ -164,6 +193,15 @@ def mark_current_subcommand_interrupted() -> None:
     # runner 外の直接呼び出しでは次の invocation へ state を漏らさない。
     if _CURRENT_USER_INTERRUPTION.get() is not None:
         _CURRENT_USER_INTERRUPTION.set(True)
+
+
+def mark_current_tui_process_started() -> None:
+    """現在の TUI invocation が Codex process の起動境界へ到達したと印付けする。"""
+    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    # TUI 起動前の KeyboardInterrupt だけを terminal failure notification の対象にし、
+    # 実際の TUI process から伝播したユーザー終了には追加通知を出さない。
+    if _CURRENT_TUI_PROCESS_STARTED.get() is not None:
+        _CURRENT_TUI_PROCESS_STARTED.set(True)
 
 
 def _notify_terminal_result_safely(

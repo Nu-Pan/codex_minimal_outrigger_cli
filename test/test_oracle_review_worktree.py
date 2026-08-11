@@ -345,6 +345,38 @@ def test_oracle_review_interrupt_during_run_creation_cleans_resources(
     assert "result: interrupted" in report_path.read_text()
 
 
+def test_oracle_review_interrupt_during_preconditions_writes_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run resource 作成前の中断でも interrupted report を保存する。"""
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    def interrupt_current_branch(_root: Path) -> str:
+        """review 固有事前条件中のユーザー中断を再現する。"""
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(review_module, "current_branch", interrupt_current_branch)
+
+    result = runner.invoke(
+        app,
+        ["oracle", "review", "--scope", "full"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    assert "result: interrupted" in report_path.read_text()
+    assert run_git(root, "branch", "--list", "cmoc/run/*").stdout == ""
+
+
 def test_oracle_review_interrupt_after_branch_only_creation_cleans_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

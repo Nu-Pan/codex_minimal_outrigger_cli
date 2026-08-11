@@ -17,14 +17,15 @@
 # `index_entry.py`
 
 ## Summary
-- 既存の acp.builder.indexing.index_entry 参照を維持する互換入口。正本 builder へ委譲し、対象本文のコードフェンスを保護した AgentCallParameter を生成する。
+- 互換性維持のため、旧来の `acp.builder.indexing.index_entry` 参照から正本のインデックスエントリー生成 builder を再公開する入口。対象パス・内容・agent の実行ディレクトリを受け取り、正本 builder が作る agent call parameter をそのまま返す。
 
 ## Read this when
-- index_entry の互換参照、正本 builder への委譲、または対象本文のプロンプト埋め込み時のコードフェンス保護を変更・確認するとき。
+- 旧来の `acp.builder.indexing.index_entry` 参照の互換性、移行状況、またはインデックスエントリー生成用の agent call parameter の受け渡しを確認するとき。
+- この互換入口の削除可否を判断するとき。realization 側と利用者向け公開面から旧参照がなくなったことを確認する必要がある。
 
 ## Do not read this when
-- 正本の builder 仕様やプロンプト構築自体を変更・確認するときは、oracle 側の対応ファイルを直接読む。
-- index 作成処理や他の prompt fence 保護処理だけを変更・確認するとき。
+- 正本のインデックスエントリー生成 builder の実装や prompt 受け渡し仕様を確認したいときは、再公開入口ではなく正本側を直接読む。
+- インデックスエントリーの内容や routing 規則を確認したいだけで、旧参照の互換性を扱わないとき。
 
 ## hash
-- b092e2255012c464484aedf6665543543a554ff95e2f4508e91e063858237730
+- 80bfd6581aaad9c0f9890bd39041a8165fac751a9246c4787922de033dbcd812

@@ -17,16 +17,19 @@
 # `normalize_issue.py`
 
 ## Summary
-- feedback issue の同一性判断 builder を既存の import 経路から利用するための互換層です。実装の正本ではなく、対応する oracle の builder を再公開します。
+- feedback issue の同一性判断 builder を、canonical builder の互換 import 経路として再公開する対象。canonical prompt を取得し、動的な observation JSON と既存 issue candidate JSON の code fence を保護してから返す。
 
 ## Read this when
-- feedback issue の同一性判断 builder をこの互換 import 経路経由で利用または追跡するとき。
+- feedback issue の同一性判断用 agent call parameter を互換 import 経路から構築するとき。
+- canonical prompt の再公開時に、動的 JSON 内の backtick が後続の prompt section を命令として解釈されないよう保護する処理を確認するとき。
 
 ## Do not read this when
-- builder の本来の仕様や実装詳細を確認するときは、対応する oracle file を直接読みます。
+- canonical な feedback issue 同一性判断 builder の prompt 内容や仕様を確認するときは、対応する oracle file を直接読む。
+- 動的 JSON の code fence 保護処理そのものを変更・確認するときは、prompt fence 保護の共通実装を直接読む。
+- feedback issue の正規化以外の builder の挙動を確認するときは、この互換 import 経路を入口にしない。
 
 ## hash
-- 5202e2148d7808b8f162a5e470d561a74476d8458b5984a569f9ed4b7cc110ec
+- c6d131fb7f21aaa97e881a84777bc5f11b0d6178c3dad3543290f0c5e18e970f
 
 # `verify_issue.py`
 

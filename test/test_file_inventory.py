@@ -318,7 +318,12 @@ def test_inventory_rejects_symlink_when_ignore_status_is_unknown(
     ) -> subprocess.CompletedProcess:
         """一括 ignore 判定だけを失敗させる。"""
         command = args[0]
-        if command == ["git", "check-ignore", "--stdin", "-z"]:
+        if (
+            isinstance(command, list)
+            and command
+            and command[0] == "git"
+            and "check-ignore" in command
+        ):
             return subprocess.CompletedProcess(
                 command,
                 128,

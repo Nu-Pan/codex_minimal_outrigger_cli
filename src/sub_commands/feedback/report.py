@@ -6,7 +6,8 @@ transaction として扱う。各段階を分散すると中断後の checkpoint
 対応を重複管理するため、サブコマンド固有の状態機械としてまとめる。
 
 対応する oracle file:
-`{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`。
+- `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
+- `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
 """
 
 import hashlib
@@ -15,7 +16,7 @@ import json
 import os
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
-from inspect import getsourcefile
+from inspect import getsourcefile, unwrap
 from pathlib import Path
 from typing import Any
 
@@ -94,21 +95,53 @@ def cmoc_feedback_report_impl() -> None:
         _cmoc_feedback_report_body,
         command_name="feedback report",
         command_argv=["cmoc", "feedback", "report"],
+        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        interruptible=True,
         total_steps=7,
     )
 
 
 def _cmoc_feedback_report_body() -> int:
-    """writer lock 内で cleanup、cut、verification、publication を完了する。"""
+    """writer lock を確保して cleanup、cut、verification、publication を完了する。"""
     repository = repo_root()
     main_worktree = work_root()
-    start_subcommand_step(
-        2, "feedback report の事前条件を確認", "validate feedback report preconditions"
-    )
-    _validate_preconditions(repository, main_worktree)
+    try:
+        start_subcommand_step(
+            2,
+            "feedback report の事前条件を確認",
+            "validate feedback report preconditions",
+        )
+        _validate_preconditions(repository, main_worktree)
+    except KeyboardInterrupt:
+        # 共通 runner は KeyboardInterrupt を失敗終了へ変換するため、report cut
+        # 固定前の中断も feedback report 固有の正常な中断として記録する。
+        _record_feedback_interruption(None, None)
+        return 0
 
     # report cut 固定前から失敗終了まで repository-level writer lock を保持する。
-    with feedback_writer_lock(repository):
+    try:
+        lock = feedback_writer_lock(repository)
+        lock.__enter__()
+    except KeyboardInterrupt:
+        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        # writer lock の取得中、cut を開始していない invocation の中断を正常終了する。
+        _record_feedback_interruption(None, None)
+        return 0
+    try:
+        return _cmoc_feedback_report_locked_body(repository, main_worktree)
+    finally:
+        # lock 解放中の Ctrl+C は、publication 後の正常完了処理失敗として common
+        # runner の error 経路へ伝播させる。
+        lock.__exit__(None, None, None)
+
+
+def _cmoc_feedback_report_locked_body(repository: Path, main_worktree: Path) -> int:
+    """保持中の writer lock 内で feedback report cut を処理する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    manifest: JsonObject | None = None
+    manifest_path: Path | None = None
+    try:
         start_subcommand_step(
             3,
             "feedback state と未完了 cleanup を確認",
@@ -134,49 +167,61 @@ def _cmoc_feedback_report_body() -> int:
             ):
                 # inconclusive と code/schema 変更後の cut は pending raw を残して作り直す。
                 discard_report_cut(repository, manifest, manifest_path)
-                resumable = None
-        if resumable is None:
+                manifest = None
+                manifest_path = None
+        if manifest is None or manifest_path is None:
             start_subcommand_step(
                 4, "feedback report cut を固定", "freeze feedback report cut"
             )
             manifest, manifest_path = _create_report_cut(repository, state, versions)
         else:
-            manifest, manifest_path = resumable
             typer.echo(f"- feedback report cut を再開: `{manifest_path}`")
 
         # current pointer 前の失敗は同じ cut と正式 checkpoint を再開可能に保つ。
-        try:
-            return _process_report_cut(
+        return _process_report_cut(
+            repository,
+            main_worktree,
+            state,
+            manifest,
+            manifest_path,
+        )
+    except KeyboardInterrupt:
+        # cut 固定前にも Ctrl+C を正常な中断として処理する。create_report_cut が
+        # manifest を durable 保存した直後に中断した場合は、唯一の再開対象 cut を
+        # 再読してその state だけを interrupted にする。
+        if manifest is None or manifest_path is None:
+            resumable = load_report_cut(repository)
+            if resumable is not None:
+                manifest, manifest_path = resumable
+        if (
+            manifest is not None
+            and manifest_path is not None
+            and not _cut_is_current(repository, manifest)
+        ):
+            _set_processing_state(
                 repository,
-                main_worktree,
-                state,
                 manifest,
-                manifest_path,
+                "interrupted",
+                "user interruption",
             )
-        except KeyboardInterrupt:
-            if not _cut_is_current(repository, manifest):
+        _record_feedback_interruption(manifest, manifest_path)
+        return 0
+    except BaseException as exc:
+        if (
+            manifest is not None
+            and manifest_path is not None
+            and not _cut_is_current(repository, manifest)
+        ):
+            processing = manifest.get("processing")
+            status = processing.get("status") if isinstance(processing, dict) else None
+            if status not in {"inconclusive", "publication_ready"}:
                 _set_processing_state(
                     repository,
                     manifest,
-                    "interrupted",
-                    "user interruption",
+                    "failed" if status != "staging" else "staging",
+                    repr(exc),
                 )
-            _record_feedback_interruption(manifest, manifest_path)
-            return 0
-        except BaseException as exc:
-            if not _cut_is_current(repository, manifest):
-                processing = manifest.get("processing")
-                status = (
-                    processing.get("status") if isinstance(processing, dict) else None
-                )
-                if status not in {"inconclusive", "publication_ready"}:
-                    _set_processing_state(
-                        repository,
-                        manifest,
-                        "failed" if status != "staging" else "staging",
-                        repr(exc),
-                    )
-            raise
+        raise
 
 
 def _validate_preconditions(repo: Path, worktree: Path) -> None:
@@ -438,7 +483,7 @@ def _observation_reference_paths(repo: Path, observation: JsonObject) -> list[Pa
 
 
 def _repository_path(repo: Path, value: str) -> Path | None:
-    """absolute／repository-relative value を lexical repository path へ制限する。"""
+    """absolute／repository-relative value を repository 内の path へ制限する。"""
     repository = repo.resolve(strict=False)
     raw = Path(value)
     candidate = (
@@ -447,6 +492,12 @@ def _repository_path(repo: Path, value: str) -> Path | None:
         else Path(os.path.abspath(repository / raw))
     )
     if candidate != repository and repository not in candidate.parents:
+        return None
+    try:
+        resolved = candidate.resolve(strict=False)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if resolved != repository and repository not in resolved.parents:
         return None
     return candidate
 
@@ -536,12 +587,21 @@ def _processing_versions() -> JsonObject:
     """builder、schema、および deterministic processing rule の content hash を返す。"""
     normalize_builder = _builder_source_path(build_feedback_normalize_issue_parameter)
     verify_builder = _builder_source_path(build_feedback_verify_issue_parameter)
-    normalize_schema = normalize_builder.with_suffix(".json")
+    normalize_canonical_builder = _builder_source_path(
+        unwrap(build_feedback_normalize_issue_parameter)
+    )
+    # normalization adapter が prompt を変換する helper も checkpoint version に含める。
+    normalize_prompt_fence = normalize_builder.parents[1] / "common" / "prompt_fence.py"
+    normalize_schema = normalize_canonical_builder.with_suffix(".json")
     verify_schema = verify_builder.with_suffix(".json")
     module_path = Path(__file__)
     state_path = module_path.parents[2] / "commons" / "runtime_feedback_state.py"
     return {
-        "normalization_builder": sha256_bytes(normalize_builder.read_bytes()),
+        "normalization_builder": _builder_version_hash(
+            normalize_builder,
+            normalize_canonical_builder,
+            (normalize_prompt_fence,),
+        ),
         "normalization_schema": sha256_bytes(normalize_schema.read_bytes()),
         "verification_builder": sha256_bytes(verify_builder.read_bytes()),
         "verification_schema": sha256_bytes(verify_schema.read_bytes()),
@@ -555,6 +615,18 @@ def _builder_source_path(builder: Callable[..., object]) -> Path:
     if source is None:
         raise ValueError("builder source path is unavailable")
     return Path(source)
+
+
+def _builder_version_hash(
+    source: Path,
+    canonical_source: Path,
+    dependency_sources: tuple[Path, ...] = (),
+) -> str:
+    """builder と prompt 構築依存の変更を checkpoint version へ反映する。"""
+    sources = {source, canonical_source, *dependency_sources}
+    if len(sources) == 1:
+        return sha256_bytes(source.read_bytes())
+    return _combined_file_hash(list(sources))
 
 
 def _combined_file_hash(paths: list[Path]) -> str:
@@ -679,6 +751,13 @@ def _read_cut_observations(repo: Path, manifest: JsonObject) -> dict[str, JsonOb
         observation_id_value = str(entry.get("observation_id"))
         if observation.get("observation_id") != observation_id_value:
             errors.append("/observation_id: manifest and payload differ")
+        observed_at = observation.get("observed_at")
+        if isinstance(observed_at, str):
+            try:
+                if observation_path(repo, observation_id_value, observed_at) != path:
+                    errors.append("/: observation path does not match observed_at")
+            except ValueError as exc:
+                errors.append(f"/: {exc}")
         if errors:
             raise CmocError(
                 "feedback report cut の raw observation schema が不正です。",
@@ -739,7 +818,13 @@ def _build_candidates(
             str(item["observation_id"]),
         ),
     ):
-        exact, comparison = _agent_comparison_candidates(observation, candidates)
+        exact, comparison = _agent_comparison_candidates(
+            observation,
+            candidates,
+            current_cut_fingerprint_pairs=_report_cut_fingerprint_pairs(
+                repo, manifest, observation
+            ),
+        )
         selected: JsonObject | None = exact
         if selected is None and comparison:
             selected_id = _normalize_issue_identity(
@@ -837,9 +922,13 @@ def _merge_observation(
     source_ids.sort()
     candidate["occurrence_count"] = int(candidate["occurrence_count"]) + 1
     observed_at = str(observation["observed_at"])
-    if parse_rfc3339(observed_at) < parse_rfc3339(str(candidate["first_observed_at"])):
+    observed_time = parse_rfc3339(observed_at)
+    if observed_time < parse_rfc3339(str(candidate["first_observed_at"])):
         candidate["first_observed_at"] = observed_at
-    if parse_rfc3339(observed_at) >= parse_rfc3339(str(candidate["last_observed_at"])):
+    is_latest_observation = observed_time >= parse_rfc3339(
+        str(candidate["last_observed_at"])
+    )
+    if is_latest_observation:
         candidate["last_observed_at"] = observed_at
         payload = observation["payload"]
         assert isinstance(payload, dict)
@@ -892,7 +981,7 @@ def _merge_observation(
         5,
     )
     fingerprints = observation.get("evidence_fingerprints")
-    if isinstance(fingerprints, list):
+    if is_latest_observation and isinstance(fingerprints, list):
         candidate["latest_fingerprints"] = _bounded_objects(
             [item for item in fingerprints if isinstance(item, dict)], 5
         )
@@ -940,7 +1029,10 @@ def _bounded_objects(values: list[JsonObject], limit: int) -> list[JsonObject]:
 
 
 def _agent_comparison_candidates(
-    observation: JsonObject, candidates: dict[str, JsonObject]
+    observation: JsonObject,
+    candidates: dict[str, JsonObject],
+    *,
+    current_cut_fingerprint_pairs: list[tuple[str, str, str | None]] | None = None,
 ) -> tuple[JsonObject | None, list[JsonObject]]:
     """category、evidence subject、fingerprint、hint で比較候補を機械的に絞る。"""
     payload = observation["payload"]
@@ -948,27 +1040,154 @@ def _agent_comparison_candidates(
     category = payload.get("category")
     hint = payload.get("deduplication_hint")
     current_fingerprints = _fingerprint_pairs(observation.get("evidence_fingerprints"))
-    current_paths = {path for path, _digest in current_fingerprints}
+    current_cut_matches_observation = (
+        current_cut_fingerprint_pairs is not None
+        and len(current_cut_fingerprint_pairs) == len(current_fingerprints)
+        and all(
+            state == "hashed" for _path, state, _sha256 in current_cut_fingerprint_pairs
+        )
+        and [(path, sha256) for path, _state, sha256 in current_cut_fingerprint_pairs]
+        == current_fingerprints
+    )
+    current_subjects = _observation_evidence_subjects(observation)
     exact: list[JsonObject] = []
     comparison: list[JsonObject] = []
     for candidate in candidates.values():
         if candidate.get("category") != category:
             continue
         previous_fingerprints = _fingerprint_pairs(candidate.get("latest_fingerprints"))
-        previous_paths = {path for path, _digest in previous_fingerprints}
+        previous_subjects = _candidate_evidence_subjects(candidate)
         exact_match = (
             bool(current_fingerprints)
             and all(digest is not None for _path, digest in current_fingerprints)
             and current_fingerprints == previous_fingerprints
+            and current_cut_matches_observation
+            and bool(current_subjects)
+            and current_subjects.issubset(previous_subjects)
         )
         hint_match = isinstance(hint, str) and hint in candidate.get(
             "deduplication_hints", []
         )
         if exact_match:
             exact.append(candidate)
-        if current_paths.intersection(previous_paths) or hint_match:
+        if current_subjects.intersection(previous_subjects) or hint_match:
             comparison.append(candidate)
     return (exact[0] if len(exact) == 1 else None), comparison
+
+
+def _report_cut_fingerprint_pairs(
+    repo: Path, manifest: JsonObject, observation: JsonObject
+) -> list[tuple[str, str, str | None]]:
+    """observation subject に紐付く report cut current fingerprint を返す。"""
+    inputs = manifest.get("inputs")
+    references = inputs.get("references") if isinstance(inputs, dict) else None
+    observation_id_value = observation.get("observation_id")
+    if not isinstance(references, list) or not isinstance(observation_id_value, str):
+        return []
+    current: dict[str, tuple[str, str | None]] = {}
+    for reference in references:
+        if not isinstance(reference, dict) or reference.get("kind") not in {
+            "repository_content",
+            "current_fingerprint",
+        }:
+            continue
+        subjects = reference.get("subjects")
+        path = reference.get("path")
+        state = reference.get("state")
+        sha256 = reference.get("sha256")
+        if (
+            not isinstance(subjects, list)
+            or observation_id_value not in subjects
+            or not isinstance(path, str)
+            or not isinstance(state, str)
+            or (sha256 is not None and not isinstance(sha256, str))
+        ):
+            continue
+        candidate = _repository_path(repo, path)
+        if candidate is None:
+            continue
+        current[str(candidate)] = (state, sha256)
+
+    fingerprints = observation.get("evidence_fingerprints")
+    if not isinstance(fingerprints, list):
+        return []
+    result: list[tuple[str, str, str | None]] = []
+    for fingerprint in fingerprints:
+        if not isinstance(fingerprint, dict):
+            continue
+        path = fingerprint.get("normalized_path")
+        state = fingerprint.get("state")
+        sha256 = fingerprint.get("sha256")
+        if (
+            not isinstance(path, str)
+            or not isinstance(state, str)
+            or (sha256 is not None and not isinstance(sha256, str))
+        ):
+            continue
+        candidate = _repository_path(repo, path)
+        if candidate is None:
+            continue
+        current_value = current.get(str(candidate))
+        if current_value is not None:
+            result.append((str(candidate), current_value[0], current_value[1]))
+    return sorted(set(result))
+
+
+def _observation_evidence_subjects(
+    observation: JsonObject,
+) -> set[tuple[str, str]]:
+    """observation の path evidence を subject type と repository-relative path へ揃える。"""
+    payload = observation.get("payload")
+    context = observation.get("context")
+    fingerprints = observation.get("evidence_fingerprints")
+    if (
+        not isinstance(payload, dict)
+        or not isinstance(payload.get("evidence"), list)
+        or not isinstance(context, dict)
+        or not isinstance(context.get("repo_root"), str)
+        or not isinstance(fingerprints, list)
+    ):
+        return set()
+    repo_root = Path(str(context["repo_root"]))
+    evidence = payload["evidence"]
+    subjects: set[tuple[str, str]] = set()
+    for fingerprint in fingerprints:
+        if not isinstance(fingerprint, dict):
+            continue
+        index = fingerprint.get("evidence_index")
+        normalized_path = fingerprint.get("normalized_path")
+        if (
+            type(index) is not int
+            or not isinstance(normalized_path, str)
+            or index < 0
+            or index >= len(evidence)
+        ):
+            continue
+        evidence_item = evidence[index]
+        if not isinstance(evidence_item, dict) or not isinstance(
+            evidence_item.get("kind"), str
+        ):
+            continue
+        try:
+            relative_path = Path(normalized_path).relative_to(repo_root).as_posix()
+        except ValueError:
+            relative_path = normalized_path
+        subjects.add((relative_path, evidence_item["kind"]))
+    return subjects
+
+
+def _candidate_evidence_subjects(candidate: JsonObject) -> set[tuple[str, str]]:
+    """candidate が保持する stable target から subject type と path を返す。"""
+    targets = candidate.get("reference_targets")
+    if not isinstance(targets, list):
+        return set()
+    return {
+        (str(target["path"]), str(target["kind"]))
+        for target in targets
+        if isinstance(target, dict)
+        and isinstance(target.get("path"), str)
+        and isinstance(target.get("kind"), str)
+    }
 
 
 def _fingerprint_pairs(value: object) -> list[tuple[str, str | None]]:
@@ -1248,11 +1467,15 @@ def _process_machine_observations(
         )
         if aggregate is None:
             # current active issue は新しい report cut でも必ず verification する。
-            if active_candidate is not None:
-                active_candidate["machine_state"] = None
+            # window 外になった state は次の aggregate として保存せず、active issue
+            # の最後の threshold state は verification 中も表現可能なまま保持する。
             continue
         threshold_met = _machine_threshold_met(aggregate)
         if active_candidate is not None:
+            if not threshold_met:
+                # 部分的に window 外となった aggregate も threshold 未満 state として
+                # active issue へ上書きせず、unresolved の再検証結果だけを反映する。
+                continue
             for observation in observations:
                 _merge_observation(repo, active_candidate, observation)
             _apply_machine_aggregate_to_candidate(active_candidate, aggregate)
@@ -1286,6 +1509,7 @@ def _merge_machine_aggregate(
     representative: list[JsonObject] = []
     fingerprints: list[JsonObject] = []
     metadata: JsonObject = {}
+    previous_buckets_truncated = False
     if previous is not None:
         metadata = dict(previous)
         previous_buckets = previous.get("time_buckets")
@@ -1294,23 +1518,32 @@ def _merge_machine_aggregate(
         for bucket in previous_buckets:
             if not isinstance(bucket, dict) or not isinstance(bucket.get("day"), str):
                 raise ValueError("machine aggregate bucket is malformed")
+            first = bucket.get("first_observed_at")
             last = bucket.get("last_observed_at")
-            if isinstance(last, str) and parse_rfc3339(last) >= cutoff:
+            if not isinstance(first, str) or not isinstance(last, str):
+                raise ValueError("machine aggregate bucket timestamps are malformed")
+            if parse_rfc3339(first) >= cutoff and parse_rfc3339(last) <= cut_time:
                 copied = json.loads(json.dumps(bucket, ensure_ascii=False))
                 assert isinstance(copied, dict)
                 copied.setdefault("scope_saturated", False)
                 copied.setdefault("agent_call_saturated", False)
                 buckets_by_day[str(bucket["day"])] = copied
-        representative.extend(
-            item
-            for item in previous.get("representative_evidence", [])
-            if isinstance(item, dict)
-        )
-        fingerprints.extend(
-            item
-            for item in previous.get("latest_fingerprints", [])
-            if isinstance(item, dict)
-        )
+            else:
+                # A daily bucket that straddles the moving boundary cannot be
+                # split without retaining individual occurrences.  Drop the
+                # whole bucket so expired occurrences are never counted.
+                previous_buckets_truncated = True
+        if not previous_buckets_truncated:
+            representative.extend(
+                item
+                for item in previous.get("representative_evidence", [])
+                if isinstance(item, dict)
+            )
+            fingerprints.extend(
+                item
+                for item in previous.get("latest_fingerprints", [])
+                if isinstance(item, dict)
+            )
 
     # 新しい occurrence を日単位 bucket へ加え、個別 occurrence record は残さない。
     for observation in observations:
@@ -1752,17 +1985,6 @@ def _verification_output_issues(
                     "concrete current evidence",
                     "$.result.current_evidence",
                     "at least one repository_content, current_fingerprint, or probe_result reference",
-                    repr(sorted(current_kinds, key=str)),
-                )
-            )
-        if verdict == "unresolved" and not current_kinds.intersection(
-            {"repository_content", "probe_result"}
-        ):
-            issues.append(
-                StructuredOutputValidationIssue(
-                    "semantic unresolved evidence",
-                    "$.result.current_evidence",
-                    "repository_content or probe_result; fingerprint alone is insufficient",
                     repr(sorted(current_kinds, key=str)),
                 )
             )
@@ -2364,7 +2586,7 @@ def _finish_published_cleanup(repo: Path, manifest_path: Path) -> None:
     """pointer 切替後の cleanup failure を publication と分離した warning にする。"""
     try:
         cleanup_published_report(repo)
-    except BaseException as exc:
+    except Exception as exc:
         logger = current_subcommand_logger()
         if logger is not None:
             logger.event(
@@ -2401,15 +2623,20 @@ def _cut_is_current(repo: Path, manifest: JsonObject) -> bool:
     ) == manifest.get("report_cut_id")
 
 
-def _record_feedback_interruption(manifest: JsonObject, manifest_path: Path) -> None:
+def _record_feedback_interruption(
+    manifest: JsonObject | None, manifest_path: Path | None
+) -> None:
     """中断を正常系として subcommand state、console、log へ記録する。"""
     mark_current_subcommand_interrupted()
     logger = current_subcommand_logger()
     if logger is not None:
         logger.event(
             "feedback_report_interrupted",
-            report_cut_id=manifest.get("report_cut_id"),
-            report_cut_manifest_path=str(manifest_path),
+            report_cut_id=(manifest.get("report_cut_id") if manifest else None),
+            report_cut_manifest_path=(str(manifest_path) if manifest_path else None),
         )
     typer.echo("- feedback report はユーザー中断により終了しました。")
-    typer.echo(f"- 再開対象 report cut: `{manifest_path}`")
+    if manifest_path is None:
+        typer.echo("- 再開対象 report cut: なし")
+    else:
+        typer.echo(f"- 再開対象 report cut: `{manifest_path}`")

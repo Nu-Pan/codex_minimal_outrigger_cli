@@ -307,6 +307,7 @@ def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
 
     def interrupt() -> None:
         """TUI process から伝播した Ctrl+C を再現する。"""
+        runtime_cli.mark_current_tui_process_started()
         raise KeyboardInterrupt()
 
     with pytest.raises(KeyboardInterrupt):
@@ -319,6 +320,36 @@ def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
         )
 
     assert notifications == []
+
+
+def test_cli_tui_startup_keyboard_interrupt_emits_failure_notification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TUI process 起動前の Ctrl+C は失敗結果として通知する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    notifications: list[str] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda _command, _repository, state: notifications.append(state),
+    )
+
+    def interrupt_before_launch() -> None:
+        """TUI 起動前の準備処理から伝播した Ctrl+C を再現する。"""
+        raise KeyboardInterrupt()
+
+    with pytest.raises(KeyboardInterrupt):
+        runtime_cli.run_cli_subcommand(
+            interrupt_before_launch,
+            command_name="tui",
+            command_argv=["cmoc", "tui"],
+            doctor_preprocess=False,
+            tui_process=True,
+        )
+
+    assert notifications == ["failed"]
 
 
 @pytest.mark.parametrize(
@@ -415,6 +446,41 @@ def test_cli_terminal_notification_distinguishes_user_interruption(
     )
 
     assert calls == ["interrupted"]
+
+
+def test_interruptible_cli_handles_common_preprocess_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """interruptible command の common preprocess 中断を正常完了として扱う。"""
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    calls: list[str] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda _command, _repository, state: calls.append(state),
+    )
+
+    def interrupt_doctor(_root: Path) -> None:
+        """common doctor preprocess 中のユーザー中断を再現する。"""
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", interrupt_doctor)
+
+    runtime_cli.run_cli_subcommand(
+        lambda: pytest.fail("implementation must not start after interruption"),
+        command_name="interruptible probe",
+        command_argv=["cmoc", "interruptible-probe"],
+        interruptible=True,
+    )
+
+    assert calls == ["interrupted"]
+    [log_path] = (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 0
+    assert events[-1]["result"] == "interrupted"
 
 
 def test_cli_notification_failure_does_not_change_terminal_result(

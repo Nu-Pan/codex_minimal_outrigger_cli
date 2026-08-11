@@ -17,17 +17,17 @@
 # `builder`
 
 ## Summary
-- ACP builder の互換アダプター群を収めるパッケージ。既存の acp.builder.* import 経路を維持しつつ、oracle 側の canonical builder、共通処理、feedback・indexing・oracle・realization・session・TUI 関連の下位実装へ進む入口を提供する。
+- ACP builder の互換入口と builder adapter をまとめるパッケージ。oracle 側の canonical 実装への接続を維持し、quota probe、session、TUI、realization、review、feedback など処理領域別の下位 builder と、動的 Markdown section の code fence 保護用共通処理への routing 起点を提供する。
 
 ## Read this when
-- acp.builder 配下の互換 import 経路、builder adapter の構成、canonical 実装への委譲先を確認するとき
-- ACP builder の共通処理、feedback・indexing・oracle・realization・session・TUI 関連の adapter を調査・変更するとき
-- quota probe など、パッケージ直下にある個別 builder の呼び出しパラメータ生成や fallback を確認するとき
+- ACP builder の互換 import 経路、oracle 実装への委譲、または builder adapter の構成を調査・変更するとき
+- quota probe、session join、TUI 起動、realization apply/refactor、review finding、feedback issue のいずれかに関係する builder の入口を探すとき
+- 動的 prompt section の code fence 保護や section 実体位置特定を扱う共通処理へ進むとき
 
 ## Do not read this when
-- canonical な oracle builder の仕様や本体ロジックを確認するときは、oracle 側の対象を直接読む
-- 特定の下位 adapter の詳細実装を調査するときは、対応する下位パッケージまたはモジュールを直接読む
-- acp.builder の利用箇所や利用者向け公開面を確認するときは、各参照元を直接読む
+- canonical な oracle builder の仕様・prompt 内容・本体ロジックを確認するときは、対応する oracle 側の対象を直接読む
+- 個別 builder の具体的な処理や利用箇所を調査するときは、このパッケージの入口ではなく該当する下位実装または参照元を直接読む
+- INDEX エントリーの routing 規則や生成内容だけを確認するときは、builder 実装の対象へ進まない
 
 ## hash
-- 85f1ce5a05b815c10d79797e0be8827377c6bf6bd996b90f8e71cdeccc12d8cf
+- d20654f8e0be0d31cf01c5ca0999ea0971674a510050a57668a6911a55cbbf64

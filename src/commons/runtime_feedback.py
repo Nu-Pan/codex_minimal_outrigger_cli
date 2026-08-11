@@ -48,6 +48,15 @@ _CURRENT_FEEDBACK_INVOCATION: ContextVar["FeedbackInvocation | None"] = ContextV
 )
 
 
+def _is_git_object_id(value: object) -> bool:
+    """feedback context に保存できる Git object ID かを返す。"""
+    return (
+        isinstance(value, str)
+        and len(value) in {40, 64}
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
 class ReporterAvailabilityError(RuntimeError):
     """doctor が stable component/failure code へ変換できる事前検証失敗。"""
 
@@ -111,7 +120,7 @@ class FeedbackCall:
         if self._invocation is not None and self._call_context is not None:
             try:
                 self._invocation.close_call(self._call_context)
-            except BaseException:
+            except Exception:
                 # reporter lifecycle の失敗を本命 Codex call の戻り値へ伝播させない。
                 emit_reporter_unavailable("collector", "transport_unavailable")
 
@@ -177,11 +186,11 @@ class FeedbackInvocation:
 
                 _, _, state = load_state_for_branch(self.repo, branch)
                 run_kind = state.run.kind
-        except BaseException:
+        except Exception:
             pass
         try:
             commit = head_commit(self.worktree)
-        except BaseException:
+        except Exception:
             commit = ""
         return {
             "repo_root": str(self.repo),
@@ -227,12 +236,13 @@ class FeedbackInvocation:
         listener = self._listener
         if listener is not None:
             listener.close()
-        if self._server_thread is not None:
+        if self._server_thread is not None and self._server_thread.is_alive():
             self._server_thread.join(timeout=5)
         with self._condition:
             workers = list(self._worker_threads)
         for worker in workers:
-            worker.join(timeout=5)
+            if worker.is_alive():
+                worker.join(timeout=5)
         self.socket_path.unlink(missing_ok=True)
 
     def _serve(self) -> None:
@@ -308,7 +318,7 @@ class FeedbackInvocation:
         capability = secrets.token_urlsafe(32)
         try:
             current_head = head_commit(self.worktree)
-        except BaseException:
+        except Exception:
             current_head = self._base_context["head_commit"]
         resolved_log_paths = list(
             dict.fromkeys(
@@ -384,8 +394,17 @@ class FeedbackInvocation:
             storage_context = dict(context.context)
             try:
                 storage_context["head_commit"] = head_commit(self.worktree)
-            except BaseException:
-                pass
+            except Exception:
+                if not _is_git_object_id(storage_context.get("head_commit")):
+                    raise FeedbackRejected(
+                        "context_invalid",
+                        "collector cannot determine the current HEAD commit",
+                    )
+            if not _is_git_object_id(storage_context.get("head_commit")):
+                raise FeedbackRejected(
+                    "context_invalid",
+                    "collector context has an invalid HEAD commit",
+                )
             result, path = store_agent_observation(self.repo, storage_context, payload)
             accepted_at = time.monotonic()
             with self._condition:
@@ -512,8 +531,17 @@ class FeedbackInvocation:
         }
         try:
             context["head_commit"] = head_commit(self.worktree)
-        except BaseException:
-            pass
+        except Exception:
+            if not _is_git_object_id(context.get("head_commit")):
+                raise FeedbackRejected(
+                    "context_invalid",
+                    "collector cannot determine the current HEAD commit",
+                )
+        if not _is_git_object_id(context.get("head_commit")):
+            raise FeedbackRejected(
+                "context_invalid",
+                "collector context has an invalid HEAD commit",
+            )
         store_machine_observation(
             self.repo,
             context,
@@ -534,11 +562,27 @@ def start_feedback_invocation(
     try:
         invocation = FeedbackInvocation(repo, worktree, command, logger)
         invocation.start()
-    except BaseException:
+    except Exception:
+        _discard_failed_feedback_invocation(invocation)
         emit_reporter_unavailable("collector", "collector_unavailable", logger)
         invocation = None
+    except BaseException:
+        _discard_failed_feedback_invocation(invocation)
+        raise
     token = _CURRENT_FEEDBACK_INVOCATION.set(invocation)
     return invocation, token
+
+
+def _discard_failed_feedback_invocation(
+    invocation: FeedbackInvocation | None,
+) -> None:
+    """起動途中の collector を中断時も残さず破棄する。"""
+    if invocation is None:
+        return
+    try:
+        invocation.stop()
+    except Exception:
+        pass
 
 
 def stop_feedback_invocation(
@@ -550,7 +594,7 @@ def stop_feedback_invocation(
         if invocation is not None:
             try:
                 invocation.stop()
-            except BaseException:
+            except Exception:
                 emit_reporter_unavailable("collector", "transport_unavailable")
     finally:
         _CURRENT_FEEDBACK_INVOCATION.reset(token)
@@ -583,7 +627,7 @@ def begin_feedback_call(
             codex_session_id=codex_session_id,
             log_paths=log_paths,
         )
-    except BaseException:
+    except Exception:
         emit_reporter_unavailable("collector", "collector_unavailable")
         return FeedbackCall(None, None)
     return FeedbackCall(invocation, context)
@@ -746,13 +790,13 @@ def emit_reporter_unavailable(
                 component=component,
                 failure_code=failure_code,
             )
-        except BaseException:
+        except Exception:
             pass
     try:
         typer.echo(
             f"warning: feedback {component} unavailable ({failure_code})",
         )
-    except BaseException:
+    except Exception:
         pass
 
 

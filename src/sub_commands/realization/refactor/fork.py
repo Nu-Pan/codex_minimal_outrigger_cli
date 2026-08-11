@@ -49,6 +49,7 @@ from commons.runtime_run_lifecycle import (
     GitChange,
     commit_work_unit,
     flattened_change_paths,
+    is_generated_index_path,
     recover_started_run,
     refresh_indexes,
     rollback_work_unit,
@@ -72,6 +73,8 @@ def cmoc_realization_refactor_fork_impl() -> None:
         _cmoc_realization_refactor_fork_body,
         command_name="realization refactor fork",
         command_argv=["cmoc", "realization", "refactor", "fork"],
+        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        interruptible=True,
         total_steps=6,
     )
 
@@ -650,7 +653,11 @@ def _unexpected_refresh_paths(
             path
             for path in pending_paths
             if path not in agent_paths
-            and Path(path).name != "INDEX.md"
+            and not is_generated_index_path(
+                context.run_worktree,
+                path,
+                base=context.run_fork_commit,
+            )
             and Path(path) != refactor_state
         }
     )

@@ -1,13 +1,17 @@
 """indexing index entry builder の parameter、schema、互換公開面を検証する。
 
 対応する正本: {{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.py、
-{{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json
+{{work-root}}/oracle/src/oracle/acp_builder/indexing/index_entry.json、
+{{work-root}}/oracle/doc/app_spec/prompt_standard.md
 """
 
 import json
 from pathlib import Path
 
 import pytest
+from oracle.acp_builder.indexing.index_entry import (
+    build_indexing_index_entry_parameter as build_oracle_indexing_index_entry_parameter,
+)
 
 import acp.builder.indexing.index_entry as indexing_index_entry_module
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
@@ -54,35 +58,26 @@ def test_indexing_index_entry_schema_requires_non_empty_semantic_lists(
         assert schema["properties"][key]["minItems"] == 1
 
 
-def test_indexing_index_entry_keeps_nested_code_fences_in_target_content(
+@pytest.mark.parametrize(
+    "target_content",
+    [
+        "before\n```\ninside\n```\nafter",
+        "before\n```\n\n# place holder definition\n\n```\nafter",
+    ],
+)
+def test_indexing_index_entry_passes_through_canonical_prompt(
     indexing_target_path: Path,
+    target_content: str,
 ) -> None:
-    """対象本文内の三連 backtick が prompt の本文境界を閉じないことを検証する。"""
-    target_content = "before\n```\ninside\n```\nafter"
-
+    """互換 builder が正本 builder の prompt を加工せず渡すことを検証する。"""
     parameter = build_indexing_index_entry_parameter(
         indexing_target_path, target_content, indexing_target_path.parent
     )
-
-    assert "````\nbefore\n```\ninside\n```\nafter\n````" in parameter.prompt
-
-
-def test_indexing_index_entry_keeps_placeholder_like_heading_in_target_content(
-    indexing_target_path: Path,
-) -> None:
-    """対象本文内の placeholder 風見出しを prompt の境界と誤認しないことを検証する。"""
-    target_content = "before\n```\n\n# place holder definition\n\n```\nafter"
-
-    parameter = build_indexing_index_entry_parameter(
+    oracle_parameter = build_oracle_indexing_index_entry_parameter(
         indexing_target_path, target_content, indexing_target_path.parent
     )
 
-    start = parameter.prompt.index("# `{{target-path}}` の内容")
-    end = parameter.prompt.rfind("\n\n# place holder definition")
-    section = parameter.prompt[start:end]
-    assert target_content in section
-    assert section.startswith("# `{{target-path}}` の内容\n\n````\n")
-    assert section.endswith("\n````")
+    assert parameter == oracle_parameter
 
 
 def test_indexing_index_entry_module_exports_only_compatibility_builder() -> None:

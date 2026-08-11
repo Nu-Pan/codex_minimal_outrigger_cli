@@ -226,8 +226,7 @@ def _base_exec_argv(override_args: list[str], agent_call_cwd: Path) -> list[str]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # cmoc は linked worktree や生成 root から Codex を実行し得るため、repo の検証は
     # Codex CLI startup ではなく cmoc 自身の preflight が担う。
-    # `--ask-for-approval` は Codex の root parser だけが受理するため、
-    # 共通の設定上書きは `exec` より前へ置く。
+    # Codex の root parser が受理する共通の設定上書きは `exec` より前へ置く。
     return [
         "codex",
         *override_args,

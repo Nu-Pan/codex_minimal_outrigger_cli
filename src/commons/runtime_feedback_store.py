@@ -9,6 +9,7 @@ record の同一性判定が重複するため、raw observation store の境界
 
 - `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
 - `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
+- `{{work-root}}/oracle/src/oracle/feedback/reporter_input.json`
 """
 
 import fcntl
@@ -103,6 +104,7 @@ def canonical_json_bytes(value: object) -> bytes:
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),
+            allow_nan=False,
         )
         + "\n"
     ).encode("utf-8")
@@ -484,11 +486,16 @@ def _normalized_evidence_path(repo: Path, raw_path: str) -> Path:
     candidate = Path(raw_path)
     if not candidate.is_absolute():
         candidate = repo / candidate
-    # 存在する path は symlink 解決後、存在しない path は字句的に正規化する。
-    if candidate.exists() or candidate.is_symlink():
-        normalized = candidate.resolve(strict=False)
-    else:
-        normalized = Path(os.path.abspath(candidate))
+    try:
+        # 存在する path は symlink 解決後、存在しない path は字句的に正規化する。
+        if candidate.exists() or candidate.is_symlink():
+            normalized = candidate.resolve(strict=False)
+        else:
+            normalized = Path(os.path.abspath(candidate))
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise FeedbackRejected(
+            "path_outside_repo", "evidence path cannot be normalized"
+        ) from exc
     if normalized != repo and repo not in normalized.parents:
         raise FeedbackRejected(
             "path_outside_repo", f"evidence path is outside repository: {raw_path}"
@@ -543,6 +550,16 @@ def validate_agent_payload(
     evidence = payload.get("evidence")
     if not isinstance(evidence, list) or not evidence:
         raise FeedbackRejected("evidence_empty", "evidence must not be empty")
+
+    # secret masking で `..` や symlink を含む元の path が別の repo 内 path に
+    # 変形されても、入力時点の repository 境界を迂回できないよう先に検査する。
+    for item in evidence:
+        if not isinstance(item, dict) or item.get("kind") not in _PATH_EVIDENCE_KINDS:
+            continue
+        raw_path = item.get("path")
+        if not isinstance(raw_path, str):
+            raise FeedbackRejected("evidence_empty", "path evidence requires a path")
+        _normalized_evidence_path(repo, raw_path)
 
     # secret は schema 検査後に mask し、mask 後の payload を raw record に保存する。
     masked_value, redaction_count = _mask_payload(payload)

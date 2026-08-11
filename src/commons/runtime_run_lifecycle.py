@@ -27,6 +27,7 @@ from .runtime_git import (
     current_branch,
     delete_branch,
     head_commit,
+    is_git_ignored,
     is_oracle_file_path,
     is_realization_file_path,
     literal_pathspec,
@@ -508,7 +509,7 @@ def unexpected_session_paths(
             if path not in ignored
             and not (
                 _is_oracle_change_path(session_worktree, base, path)
-                or _is_index_path(path)
+                or is_generated_index_path(session_worktree, path, base=base)
                 or is_root_memo(session_worktree, session_worktree / path)
             )
         }
@@ -591,7 +592,7 @@ def _is_run_expected_path(
     fork_commit: str,
 ) -> bool:
     """path が run branch の管理対象差分か判定する。"""
-    if _is_index_path(path):
+    if is_generated_index_path(root, path, base=fork_commit):
         return True
     if kind == "realization_refactor" and _is_refactor_state_path(root, path):
         return True
@@ -624,6 +625,11 @@ def _is_oracle_tree_file(worktree: Path, commit: str, path: str) -> bool:
     # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
     # raw diff の対象は両端で定義上の oracle file だった path に限るため、
     # directory や Gitlink の tree entry は file として扱わない。
+    return _is_regular_tree_file(worktree, commit, path)
+
+
+def _is_regular_tree_file(worktree: Path, commit: str, path: str) -> bool:
+    """commit tree の path が regular file entry か判定する。"""
     entries = run_git(
         [
             "ls-tree",
@@ -662,9 +668,33 @@ def _is_oracle_change_path(worktree: Path, base: str, path: str) -> bool:
     return _is_oracle_tree_file(worktree, base, path)
 
 
-def _is_index_path(path: str) -> bool:
-    """repository 相対 path が INDEX.md か判定する。"""
-    return Path(path).name == "INDEX.md"
+def is_generated_index_path(
+    root: Path,
+    path: str,
+    *,
+    base: str | None = None,
+) -> bool:
+    """cmoc が indexable directory に生成する INDEX.md か判定する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # 許可対象は任意の basename ではなく、indexing が実際に配置できる path に
+    # 限定する。hidden directory、git ignore 対象、root memo は indexable ではない。
+    relative = Path(path)
+    if relative.name != "INDEX.md":
+        return False
+    if any(part.startswith(".") for part in relative.parts[:-1]):
+        return False
+    parent = root / relative.parent
+    if parent.is_symlink():
+        return False
+    if parent.exists() and not parent.is_dir():
+        return False
+    # 削除・rename 元では現在の parent が消えているため、fork tree の regular
+    # INDEX.md を fallback として許可する。{{work-root}}/oracle/doc/app_spec/indexing.md
+    if not parent.exists() and (
+        base is None or not _is_regular_tree_file(root, base, relative.as_posix())
+    ):
+        return False
+    return not is_root_memo(root, parent) and not is_git_ignored(root, parent)
 
 
 def _is_refactor_state_path(root: Path, path: str) -> bool:

@@ -48,6 +48,7 @@ from commons.runtime_run_lifecycle import (
     EditingRunContext,
     GitChange,
     commit_work_unit,
+    is_generated_index_path,
     refresh_indexes,
     resolve_active_run,
     tree_changes,
@@ -470,7 +471,14 @@ def _resolve_index_only_conflict_or_fail(
         context.session_worktree,
     ).stdout.split("\0")
     conflicts = [path for path in fields if path]
-    if conflicts and all(Path(path).name == "INDEX.md" for path in conflicts):
+    if conflicts and all(
+        is_generated_index_path(
+            context.session_worktree,
+            path,
+            base=context.run_fork_commit,
+        )
+        for path in conflicts
+    ):
         for path in conflicts:
             if _has_ours_conflict_stage(context.session_worktree, path):
                 run_git(
