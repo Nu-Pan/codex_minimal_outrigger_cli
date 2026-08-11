@@ -25,6 +25,7 @@ from commons.runtime_run_lifecycle import (
     GitChange,
     commit_work_unit,
     flattened_change_paths,
+    is_generated_index_path,
     raw_oracle_diff,
     recover_started_run,
     refresh_indexes,
@@ -187,7 +188,7 @@ def _cmoc_realization_apply_fork_body() -> None:
                 path
                 for path in pending_paths
                 if path not in changed_agent_paths
-                and Path(path).name != "INDEX.md"
+                and not is_generated_index_path(context.run_worktree, path)
                 and path not in unexpected
             )
             unexpected.sort()

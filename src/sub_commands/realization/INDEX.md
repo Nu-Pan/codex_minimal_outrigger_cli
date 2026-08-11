@@ -15,36 +15,37 @@
 # `apply`
 
 ## Summary
-- `realization apply` に関する処理をまとめるディレクトリで、apply workload の実装と `cmoc realization apply fork` のCLIオーケストレーションを確認する入口。fork実行の差分検査、run lifecycle、成果物のcommit、joinable run・fork report生成、異常時のrollbackやcleanupも扱う。
+- 指定ディレクトリは realization の apply 処理を担い、apply workload の実装と `realization apply fork` の実行ライフサイクルを確認する入口です。
+- `fork.py` は editing run の作成から agent 実行、変更検査、INDEX 再生成、commit または rollback、fork report 保存までを一体として管理し、apply 固有の差分始点と feedback 情報も扱います。
 
 ## Read this when
-- realization の apply workload の内容を調査・変更するとき
-- `cmoc realization apply fork` の実行フロー、成功時のjoinable化、fork report、差分始点、agent変更の検査を調べるとき
-- apply fork の異常終了時のrollback、error state、cleanup warning、agent commit検出、許可される変更範囲やINDEX生成差分を確認するとき
+- realization の apply workload の内容を調査・変更するとき。
+- `cmoc realization apply fork` の CLI 挙動、run の完了状態、agent の変更許可範囲、commit 防止、INDEX 再生成、差分の commit・rollback を確認するとき。
+- fork report に記録される完了理由、変更パス、return code、cleanup warning、feedback 情報を確認するとき。
 
 ## Do not read this when
-- apply workload や apply fork 以外の処理を扱うとき
-- realization apply agent の実行パラメータ構築だけを調べるときは、launch parameter builder を直接読む
-- editing run の共通ライフサイクル、git変更分類、process tracking、report書式の一般実装だけを調べるときは、インポート先の共通runtimeモジュールを直接読む
-- 正本仕様そのものを確認するとき
+- apply workload や `realization apply fork` の実行全体ではなく、agent 起動パラメータの構築方法だけを確認する場合。
+- editing run の共通ライフサイクルや git 差分操作の詳細だけを確認する場合。
+- apply の正本仕様や利用者向け手順を確認する場合。
 
 ## hash
-- 1498cc25f67b10fe93ce86fb281921772690e0c2121f14905ff683b0d4b8b0bd
+- 88043850330809edcca17aedfb1ed1a7c1aeb3364f4c249070277512dd6b758e
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージ。refactor fork の full-cycle 実行と、対象選択から agent 呼び出し、変更・状態検証、finding 追跡、完了判定、cleanup、report 生成までの lifecycle への入口を提供する。
+- realization のリファクタリング処理をまとめるパッケージで、関連するリファクタリング処理への入口となる。
+- refactor fork の実行 lifecycle、処理単位の agent 調査・修正、状態同期、差分・commit 検証、unresolved 管理、cleanup、report 生成を扱う。
 
 ## Read this when
-- realization のリファクタリング処理の構成や入口を確認するとき。
-- realization refactor fork の実行フロー、処理単位の commit、state 更新、unresolved finding の完了条件を調査・変更するとき。
-- agent による変更検証、INDEX 更新、run の joinable/error/interruption 処理、fork report の生成を追跡するとき。
+- realization のリファクタリング処理の内容や構成を確認するとき
+- refactor fork の実行フロー、進捗、完了判定、unresolved finding の追跡を調査するとき
+- refactor fork の interruption/error cleanup、agent の変更検査、差分検証、report 出力を確認または変更するとき
 
 ## Do not read this when
-- realization のリファクタリング以外の処理を確認するとき。
-- realization refactor の agent prompt や change summary の入力形式だけを確認するときは、対応する builder 実装を直接読む。
-- 編集 run の一般的な状態遷移や worktree isolation の正本仕様だけを確認するときは、対応する oracle doc を直接読む。
+- realization refactor の正本仕様や CLI 契約だけを確認する場合
+- 単一処理単位の agent prompt や Structured Output parameter だけを確認する場合
+- change summary の入力契約・生成規則、または共通 runtime の一般仕様だけを確認する場合
 
 ## hash
-- 8722271f8ae83385f3107e553bf82bbf341bc068c0623c5da0fe30bfbb6fca7b
+- 0dc90fd7f41e86bea09ed43203525e06b24340b3429de173d5e681dd6b628e74

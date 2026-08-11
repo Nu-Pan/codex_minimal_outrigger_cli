@@ -54,20 +54,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI、Codex 実行、設定・状態管理、Git、パス、ログ、feedback、INDEX 更新、editing run など、複数機能から再利用される実装への入口を提供する。
-- 下位には各機能の個別 runtime module があり、横断的な API 構成や対象 module の選択を確認する起点となる。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行、Codex 呼び出し、設定・状態、Git、ログ、パス、feedback、run lifecycle など複数の上位機能から再利用される共通 API と実装の入口。
+- INDEX.md の検査・生成 lifecycle、prompt editor input、各種 runtime 境界、Codex exec/TUI、設定、Git、feedback、run state/report など、commons 配下の個別機能へ進むためのルーティング対象。
 
 ## Read this when
-- 複数の cmoc runtime 機能にまたがる共通処理の所在や依存関係を調査するとき
-- commons 配下の runtime helper、公開 API、ライフサイクル処理の構成を確認・変更するとき
-- 対象となる個別 runtime module を特定して、そこへ読み進む必要があるとき
+- 複数の cmoc runtime 機能にまたがる共通処理や公開 API の所在を確認するとき
+- CLI、Codex、設定、Git、ログ、パス、feedback、session/run lifecycle の共通実装を調査・変更するとき
+- commons 配下で対象となる個別 runtime module を選び、その責務や下位実装への入口を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部実装やアルゴリズムだけを確認したいときは、該当する個別 module を直接読む
-- CLI サブコマンド固有の挙動や正本仕様だけを確認したいときは、対応する実装または oracle 文書へ直接進む
+- 特定の runtime helper のアルゴリズムや挙動だけを確認したい場合は、対応する個別 module を直接読むとき
+- 利用者向けの正本仕様や CLI サブコマンド固有の業務ロジックだけを確認したい場合は、対応する仕様書またはサブコマンド実装へ直接進むとき
+- INDEX.md の個別 entry のルーティング方針だけを確認したい場合
 
 ## hash
-- fb85a60dbc50353e68838d71de58c3e905f067271ae77874c92ea8fb80389d4c
+- 6eeb7f07708e55c6cd720dcf4dc5330262c5764f9025455af7d21e2b58f04c45
 
 # `config`
 
@@ -120,15 +121,15 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装を配置するディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの個別コマンド実装と、未実装コマンドの配置先を案内する入口。
+- cmoc の各サブコマンド実装をまとめる領域。doctor、feedback、indexing、oracle、realization、review、run、session、tui など、個別サブコマンドの実行入口と処理領域へ進むためのルーティング対象。
 
 ## Read this when
-- cmoc のサブコマンド実装の構成や、対象コマンドの実装入口を確認するとき。
-- 複数のサブコマンドにまたがる CLI 実装の配置や責務分担を調査するとき。
+- cmoc のサブコマンド実装の構成や、対象サブコマンドの実装入口を確認するとき。
+- 複数のサブコマンドにまたがる実装領域や、個別パッケージへの進み先を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理仕様や共通 runtime の実装だけを確認するときは、該当する下位実装または参照先の仕様を直接読む。
-- サブコマンド以外の共通処理、正本仕様、テストだけを扱うとき。
+- 特定サブコマンドの詳細な実行フローや処理内容を調査する場合は、該当する下位実装を直接読む。
+- サブコマンドの正本仕様、CLI 契約、共通 runtime の実装だけを確認する場合は、それぞれの専用仕様・共通実装を直接読む。
 
 ## hash
-- 4094b9c735646f0ccf7f0a939f7068ca7745ab1a786e3632c62ee61f15d8aab1
+- a7d365a45e6399e5fd3a8cf9a2cd0670d5735777abbfba27c3264e1ff6691a90

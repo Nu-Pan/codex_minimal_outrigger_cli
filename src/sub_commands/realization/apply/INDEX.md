@@ -15,18 +15,19 @@
 # `fork.py`
 
 ## Summary
-- このファイルは `cmoc realization apply fork` サブコマンドの実行本体で、realization apply agent を隔離 run 上で起動し、oracle 差分を基準に成果物を検査・commit して joinable run と fork report を生成する。agent の想定外変更、commit、子プロセス、cleanup、rollback、error state も扱う。
-- `src/sub_commands/realization/apply` 配下で、apply fork のCLIオーケストレーション、差分検査、run lifecycle、report 保存の入口となる。agent起動パラメータ自体やrun lifecycleの共通実装を確認する場合は、インポート先の専用モジュールへ進む。
+- `realization apply fork` の実行全体を管理し、差分追従 agent の起動結果を検査して joinable または error 状態の run として公開する CLI 実装。
+- editing run の作成、oracle raw diff の構築、agent 実行、想定外変更と agent commit の検出、INDEX 再生成、処理単位の commit、rollback、fork report 保存を一つの処理単位として扱う。
+- apply 固有の差分始点と accepted feedback observation を fork report に記録する。
 
 ## Read this when
-- `cmoc realization apply fork` の実行フロー、成功時のjoinable化、fork report、差分始点、agent変更の検査を調べるとき
-- apply fork の異常終了時のrollback、error state、cleanup warning、agent commit検出の挙動を調べるとき
-- apply fork が許可する変更範囲やINDEX生成差分の扱いを確認するとき
+- `cmoc realization apply fork` の CLI 挙動や run の成功・失敗状態を確認するとき。
+- realization apply agent の変更許可範囲、commit 防止、INDEX 再生成、tracked Codex child の停止、差分の commit・rollback を調査するとき。
+- fork report の完了理由、変更パス、return code、cleanup warning、feedback 情報の記録方法を確認するとき。
 
 ## Do not read this when
-- realization apply agent が受け取る実行パラメータの構築方法だけを調べるときは、launch parameter builder を直接読む
-- editing run の共通ライフサイクル、git変更分類、process tracking、report書式の一般実装だけを調べるときは、インポート先の共通runtimeモジュールを直接読む
-- apply fork以外のサブコマンドの動作や、正本仕様そのものを確認するとき
+- agent 起動パラメータの構築方法だけを確認する場合は、launch parameter の実装を直接読む。
+- editing run の共通ライフサイクルや git 差分操作の詳細だけを確認する場合は、共通 runtime lifecycle 実装を直接読む。
+- apply の正本仕様や利用者向け手順だけを確認する場合は、対応する仕様書を直接読む。
 
 ## hash
-- c5898fbe87d9ed0b7cda721952d82bc499b54cf7caae98b8c46d93b35b7421d4
+- 9f6a8b4bf311f2bedd98f6202973ee9860609d4ff20043e38d32fa9658b983b9

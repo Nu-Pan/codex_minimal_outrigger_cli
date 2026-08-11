@@ -79,22 +79,19 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。apply workload と refactor fork の実装、およびそれぞれのCLI実行フローへ案内する。
+- realization workload サブコマンドのパッケージ入口で、apply と refactor の処理領域へ進むためのルーティング対象です。apply では workload 実装と fork 実行ライフサイクル、refactor ではリファクタリング fork の実行・状態同期・差分検証・report 生成を扱います。
 
 ## Read this when
-- realization workload サブコマンドの実装構成や入口を確認するとき。
-- realization apply の実行、差分検査、run lifecycle、成果物commit、fork report、異常時処理を調査するとき。
-- realization refactor fork の対象選択、agent呼び出し、変更・状態検証、finding追跡、完了判定、cleanup、report生成を調査するとき。
+- realization workload サブコマンドの実装や構成を確認するとき。
+- realization apply または refactor の処理内容、fork 実行フロー、完了判定、変更検証、cleanup、report 出力を調査するとき。
 
 ## Do not read this when
-- realization apply や realization refactor 以外の処理を扱うとき。
-- apply fork の実行パラメータ構築だけを確認するときは、対応するlaunch parameter builderを直接読む。
-- refactor agent promptやchange summaryの入力形式だけを確認するときは、対応するbuilder実装を直接読む。
-- 編集runの共通ライフサイクル、git変更分類、process tracking、report書式などの一般実装だけを確認するときは、インポート先の共通runtimeモジュールを直接読む。
-- 正本仕様そのものを確認するときは、対応するoracle docを直接読む。
+- realization サブコマンドに関係しない処理を確認するとき。
+- apply または refactor の正本仕様・CLI 契約・利用者向け手順だけを確認するとき。
+- 共通 runtime、editing run の共通 lifecycle、単一処理単位の agent prompt や Structured Output parameter だけを確認するとき。
 
 ## hash
-- de21ea428f2f02cf3349981ad06b9033e9d85844bf7e51a2648e48b4de04f751
+- cbfa46999545ed609bbdbff4234054ea73bff6afad7b2dbb7bd6202ab4e1821f
 
 # `review`
 
@@ -113,23 +110,19 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドをまとめるパッケージ。active run の破棄・統合、共通ライフサイクル処理、run report writer への入口を提供する。
-- abandon.py は active editing run の停止、関連プロセス・worktree・branch・state の cleanup、ライフサイクルレポート出力を扱う。
-- join.py は active editing run の merge、conflict 解決、post-join 処理、state 同期、report 保存、rollback、cleanup を扱う。
-- lifecycle.py と report.py は、それぞれ共通 lifecycle 実装と report writer の旧 import path を維持する互換 shim である。
+- editing run の共通 lifecycle サブコマンドと、旧 import path を維持する互換 shim をまとめるパッケージ。`abandon` と `join` の停止・終了・cleanup 処理、および共通 lifecycle/report 実装への入口を提供する。
 
 ## Read this when
-- editing run の abandon または join の実行条件、状態遷移、merge・cleanup・rollback を調査・変更するとき。
-- run worktree、branch、state、process tracking、lifecycle report、post-join 処理の連携を追跡するとき。
-- editing run 共通 helper や report writer の旧 import path との互換性を確認するとき。
+- `cmoc run abandon` または `cmoc run join` の lifecycle、process 停止、差分検査、merge、report、resource cleanup を調査・変更するとき。
+- editing run 関連の旧 import path と canonical な共通実装の対応関係を確認するとき。
 
 ## Do not read this when
 - editing run 以外のサブコマンドを扱うとき。
-- 特定の共通 lifecycle や report writer の実装詳細だけを確認する場合は、canonical な commons 側の実装を直接読む。
-- workload 固有の編集処理や、一般的な Git runtime helper の仕様だけを確認する場合。
+- 共通 lifecycle や report の実装詳細だけを確認する場合は、canonical な commons 側の実装を直接読む。
+- 特定の run 処理の詳細を調べる場合は、このパッケージ入口ではなく該当する実装ファイルを直接読む。
 
 ## hash
-- b9be04f44dd594a3090de6e402b3418a738e1dac102b9ac48826ba41754aa7e9
+- 29cc74a42dc1ea81641da803919b7bd2c6516f4871db1c58377724e48f0ad7cf
 
 # `session`
 

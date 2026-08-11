@@ -2223,6 +2223,30 @@ def test_run_join_allows_oracle_change_on_session_branch(
     assert (root / "oracle" / "spec.md").read_text() == "session oracle change\n"
 
 
+def test_run_join_rejects_non_generated_index_change_on_session_branch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """hidden directory の INDEX.md を cmoc 生成物として merge しない。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_apply")
+    (context.run_worktree / "README.md").write_text("realized\n")
+    commit_work_unit(context.run_worktree, "run change")
+    set_run_state(context, "joinable")
+    managed_index = root / ".agents" / "INDEX.md"
+    managed_index.write_text("not generated\n")
+    run_git(root, "add", ".agents/INDEX.md")
+    run_git(root, "commit", "-m", "unexpected hidden index")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert ".agents/INDEX.md" in result.output
+    assert _state(state_path)["run"]["state"] == "joinable"
+
+
 def test_run_join_from_run_worktree_allows_doctor_state_sync(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

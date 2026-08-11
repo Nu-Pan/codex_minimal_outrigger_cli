@@ -411,23 +411,24 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の fork、run worktree、session state、fork report、join、abandon を横断する統合 realization test。
-- apply/refactor の agent 境界、INDEX 更新、process tracking、rollback、commit、merge、cleanup、error・interrupt recovery など、共通 lifecycle の外部挙動を検証する。
-- fork と join/abandon が共有する branch・state 遷移を一続きの fixture で検証するための、下位 lifecycle 実装テストへの入口。
+- editing run の realization apply/refactor fork と run join/abandon を、共通の session state・run worktree・process tracking・report lifecycle を使って検証する統合 realization test。
+- agent が変更できる対象、INDEX 更新、oracle/managed file の差分制御、commit・rollback・rename・delete・force-resolve を検証する。
+- Codex child process の追跡・停止、cleanup warning、割り込み・失敗・競合・破損した tracking への復旧、refactor の unresolved target と永続 cycle を検証する。
+- 個別実装の詳細を確認する入口ではなく、editing run 全体の lifecycle 契約や複数サブコマンド間の統合挙動を確認するためのテスト入口である。
 
 ## Read this when
-- realization apply/refactor fork の lifecycle 挙動を変更・検証するとき
-- run join または run abandon の state、worktree、branch cleanup、merge rollback を調査するとき
-- Codex child process tracking、INDEX refresh、agent の予期しない差分・commit、report 生成を検証するとき
-- editing run の中断・失敗・競合開始・復旧時の統合的な挙動を確認するとき
+- realization apply/refactor fork の run lifecycle、session state 遷移、joinable/error/ready の扱いを変更・調査するとき。
+- run join または run abandon の merge、cleanup、force-resolve、report 保存、失敗時 rollback を変更・調査するとき。
+- run worktree、process tracking、Codex child 停止、INDEX refresh、managed file 差分検証の統合挙動を確認するとき。
+- refactor の target 選択、unresolved finding、rename 後の state 同期、completion report を変更・調査するとき。
 
 ## Do not read this when
-- 単一の lifecycle helper や subcommand 実装の詳細だけを調査する場合
-- fork/join/abandon と無関係な CLI 機能や通常の unit test を確認する場合
-- 正本仕様や通知仕様を確認する場合は、対応する oracle 文書を直接読むとき
+- 単一の lifecycle helper やサブコマンドの局所実装だけを確認し、統合経路や既存の境界条件を調べる必要がないとき。
+- editing run と無関係な CLI、仕様、テスト領域を扱うとき。
+- この統合テストで検証される lifecycle ではなく、テスト共通 fixture や一般的なテスト実行方法だけを確認したいとき。
 
 ## hash
-- 6b79b9c581ca43b34d8799098cb0ce1c14ed1f537143f28558b3ff65c9126151
+- beafe1fe0069655647dedea74e34cd0f4ae35a847d6216f1c60ee3d7b9a6713d
 
 # `test_feedback.py`
 
