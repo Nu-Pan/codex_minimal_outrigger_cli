@@ -61,18 +61,17 @@
 # `indexing`
 
 ## Summary
-- acp.builder.indexing 名前空間を既存の参照点として維持し、正本側の index 関連実装へ委譲する互換入口を提供するディレクトリ。名前空間の互換維持と、対象本文を組み込む AgentCallParameter 生成を扱う。
+- 旧来の `acp.builder.indexing` 参照を維持する互換入口をまとめた層。正本実装を持たず、index 関連の builder へ既存の名前空間から到達するための下位要素を案内する。
 
 ## Read this when
-- 既存の acp.builder.indexing 参照を壊さずに index 関連機能へ到達させる必要があるとき。
-- index_entry の正本 builder への委譲や、対象本文をプロンプトへ埋め込む際のコードフェンス保護を確認・変更するとき。
+- `acp.builder.indexing` から正本の index 関連機能へ進む互換経路や、旧参照の維持・削除可否を確認するとき。
 
 ## Do not read this when
-- index 関連の正本実装やプロンプト構築仕様そのものを変更・確認するときは、正本側の対応ファイルを直接読む。
-- この互換名前空間を廃止・整理する場合は、まず利用側の参照先と互換維持の要否を確認する。
+- index 関連の正本実装や prompt 受け渡し仕様を変更・確認するときは、`oracle.acp_builder.indexing` 側を直接読む。
+- インデックスエントリーの routing 規則や生成内容だけを確認し、互換入口を扱わないとき。
 
 ## hash
-- 07317faa574f6c7bf9fbe3c1147a482510b656f8e8645c62791424988aa92c1e
+- 1c8da24f240805f39c5f79ce1ca72634f5148162f3d7ab5dfb1f822f685347df
 
 # `oracle`
 

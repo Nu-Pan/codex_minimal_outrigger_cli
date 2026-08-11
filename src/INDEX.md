@@ -1,19 +1,18 @@
 # `acp`
 
 ## Summary
-- ACP 互換アダプターを収めるパッケージ。公開入口と builder 系の互換 import 経路を維持し、oracle 側の canonical 実装や各下位 adapter へ進むための入口を提供する。
+- ACP互換の公開入口と、`acp.builder` 配下の互換・委譲層を扱う。既存の`acp` import経路の存廃、canonical実装への接続、builder adapter群への入口を確認するための階層。
 
 ## Read this when
-- acp 配下の互換 import 経路や adapter 構成を確認・変更するとき
-- acp の公開入口を残すか、oracle 側の実体へ移行できるかを判断するとき
-- builder、feedback、indexing、oracle、realization、session、TUI 関連の adapter の入口を探すとき
+- `acp`公開名を維持・削除する判断や、`oracle`側の実体への移行導線を確認するとき。
+- ACP builderのadapter構成、互換import経路、canonical実装への委譲先を調査するとき。
 
 ## Do not read this when
-- canonical な oracle 実装の仕様や本体ロジックを確認したいとき
-- 特定の下位 adapter の詳細実装や acp.builder の利用箇所を直接調査したいとき
+- 具体的なACP実装や`acp.builder`配下の個別builderの処理内容を確認・変更するときは、対応する実体モジュールまたは下位対象を直接読む。
+- ACPやbuilderと無関係なCLI、公開API、利用箇所を調査するときは、それぞれの対象を直接読む。
 
 ## hash
-- 0f193d77bce75f4c379d2c462c343fb64a507596cc761144ba0209b6a4b46c83
+- 249b7858f7985680d719613ddacaa06b29d615d32551ee4b5c40fce604a8534c
 
 # `basic`
 
