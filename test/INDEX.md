@@ -429,23 +429,24 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の agent-facing reporter、collector、raw observation、report cut、verification checkpoint、active state、current pointer、cleanup を一つの repository fixture で検証するテスト群。
-- feedback report の正常系に加え、schema・path・secret・rate limit・idempotence の検証、Codex builder の readonly／schema 制約、threshold 集約、割り込みからの再開、atomic publication、破損 artifact の検出、publication 後の cleanup を扱う。feedback の外部境界と永続状態の遷移を確認するためのテスト入口である。
+- feedback の pending observation から report cut、verification、active state の atomic publication、current pointer、cleanup までを同一 repository fixture で検証するテスト群。
+- agent-facing reporter の canonical submission、collector の context/rate 制限、secret masking、path 境界、machine observation の冪等性と recurrence threshold を扱う。
+- Codex builder の readonly・schema 制約、prompt fence、processing version hash、および verification evidence の妥当性を検証する。
+- 中断・checkpoint 回復・publication/cleanup 部分失敗・manifest/hash/reference 不整合を corruption として扱う境界を確認する。feedback の実装、状態形式、report subcommand、observation の保存や publication 復旧を変更・検証するときの主要な入口である。
 
 ## Read this when
-- feedback reporter または collector の受理・拒否契約を変更するとき
-- feedback observation の保存、validation、rate limit、secret masking、重複排除を変更するとき
-- feedback report の candidate 正規化、verification、threshold、checkpoint、割り込み再開を変更するとき
-- active state、current pointer、generation、report cut、cleanup、atomic publication の挙動を変更または検証するとき
-- feedback 関連の implementation が既存テストで満たす外部挙動を確認するとき
+- feedback observation の reporter/collector 契約や raw store の検証を変更するとき
+- feedback report の cut、Codex verification、active state、current pointer、generation publication、cleanup、再開処理を変更または調査するとき
+- feedback の path 境界、secret masking、rate limit、冪等性、recurrence threshold、manifest/hash 整合性を検証するとき
+- feedback 関連の builder prompt、structured output、checkpoint versioning の挙動を確認するとき
 
 ## Do not read this when
-- feedback の正本仕様や oracle builder 自体を読むことが目的のとき
-- feedback と無関係な subcommand、runtime、またはテスト領域を変更するとき
-- 個別の schema 定義や実装の詳細を直接確認すれば足り、report publication から cleanup までの統合挙動を確認する必要がないとき
+- feedback と無関係な CLI、状態管理、report、テスト対象を変更・調査するとき
+- 仕様や実装の正本を確認する必要があり、対応する oracle file や realization file を直接読むべきとき
+- 既存の feedback テストを実行するだけで、テスト内容の設計や期待挙動を読む必要がないとき
 
 ## hash
-- bdf186592baeee851f4441f093dee5d4bdbe12890208e2f23642f4a0ee238279
+- 70974a017299b296abffd24ee598134552d77148d3fc2316ba296586b7d2914e
 
 # `test_file_inventory.py`
 

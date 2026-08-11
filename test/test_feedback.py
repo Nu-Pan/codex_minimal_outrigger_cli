@@ -658,6 +658,16 @@ def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> No
             _payload(path=str(tmp_path / "outside.txt")),
         )
     assert outside.value.code == "path_outside_repo"
+    with pytest.raises(FeedbackRejected) as masked_outside:
+        store_agent_observation(
+            root,
+            _context(root),
+            _payload(
+                path="Authorization: Bearer abcdefghijklmnopqrstuvwxyz/../../outside.txt"
+            ),
+        )
+    assert masked_outside.value.code == "path_outside_repo"
+
     (root / "loop").symlink_to("loop")
     with pytest.raises(FeedbackRejected) as malformed:
         store_agent_observation(root, _context(root), _payload(path="loop"))
@@ -705,6 +715,13 @@ def test_completion_count_reports_only_pending_raw_observations(tmp_path: Path) 
     store_agent_observation(root, _context(root), _payload())
 
     assert feedback_completion_counts(root) == (1, [])
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_canonical_json_rejects_non_json_numbers(value: float) -> None:
+    """raw と state に標準 JSON でない数値を保存しない。"""
+    with pytest.raises(ValueError):
+        canonical_json_bytes({"value": value})
 
 
 def test_completion_count_warns_instead_of_ignoring_unknown_raw_artifact(

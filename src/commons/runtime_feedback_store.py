@@ -104,6 +104,7 @@ def canonical_json_bytes(value: object) -> bytes:
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),
+            allow_nan=False,
         )
         + "\n"
     ).encode("utf-8")
@@ -549,6 +550,16 @@ def validate_agent_payload(
     evidence = payload.get("evidence")
     if not isinstance(evidence, list) or not evidence:
         raise FeedbackRejected("evidence_empty", "evidence must not be empty")
+
+    # secret masking で `..` や symlink を含む元の path が別の repo 内 path に
+    # 変形されても、入力時点の repository 境界を迂回できないよう先に検査する。
+    for item in evidence:
+        if not isinstance(item, dict) or item.get("kind") not in _PATH_EVIDENCE_KINDS:
+            continue
+        raw_path = item.get("path")
+        if not isinstance(raw_path, str):
+            raise FeedbackRejected("evidence_empty", "path evidence requires a path")
+        _normalized_evidence_path(repo, raw_path)
 
     # secret は schema 検査後に mask し、mask 後の payload を raw record に保存する。
     masked_value, redaction_count = _mask_payload(payload)
