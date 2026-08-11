@@ -17,17 +17,19 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の変更差分を人間向け要約へ変換する AgentCallParameter を構築する。差分を実行時プロンプトへ埋め込み、読み取り専用・効率重視の実行条件と変更要約用 Structured Output schema を設定する。
+- refactor fork の確定済み Git 差分を人間向けに要約する agent call の定義。prompt の役割・要約対象・完了条件、読み取り専用の実行条件、実行モデルや推論設定、linked worktree の扱い、Structured Output schema の参照先をまとめて構築する。refactor fork の変更要約処理へ進む入口であり、一般的な prompt 構築や refactor 本体の実装とは責務が異なる。
 
 ## Read this when
-- refactor fork の差分要約 prompt の構築方法、入力差分の渡し方、または要約用 AgentCall の実行条件を変更・確認するとき。
+- refactor fork の変更要約 agent call の起動パラメータ、prompt、読み取り専用の実行条件を確認するとき
+- refactor 差分を入力とする要約処理のモデル分類、推論設定、作業ディレクトリ、Structured Output schema の構成を変更または調査するとき
 
 ## Do not read this when
-- refactor fork の実際の変更処理や差分生成の挙動を確認したいとき。変更処理側の実装を直接読むこと。
-- 変更要約の出力項目や JSON schema を確認したいとき。対応する schema 定義を直接読むこと。
+- refactor fork の実際のコード変更や差分生成処理を調べるとき
+- refactor と無関係な prompt の共通構築規則を調べるとき
+- 変更要約の出力項目や JSON schema の詳細だけを確認するときは、対応する schema 定義へ直接進む
 
 ## hash
-- 31727a9d9e6e699906258cbf32b18b7fab70f27ae54cfe19371beaf16c07a4cc
+- cd77f8c64c6201ed4c3cee9eee1772ac87afb788b0d8120b7063dca25352fe16
 
 # `file_review_and_fix.json`
 
@@ -49,18 +51,17 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- oracle file または realization file を起点とする、ファイル単位の実装レビュー兼修正用 AgentCallParameter を構築する。対象 path と linked worktree を受け取り、完全な調査・修正プロンプト、ファイルアクセス範囲、モデル設定、構造化出力スキーマ、事前インデックス実行条件をまとめる。
-- レビュー対象ファイルを起点に、差分へ依存せず work-root 内の必要な oracle file と realization file を調査し、所見の修正と検証まで行わせる処理への入口である。
+- refactor fork におけるファイル単位レビュー・修正用の AgentCallParameter を構築する定義。対象パスを起点に完全プロンプト、アクセス権、モデル設定、構造化出力スキーマ、作業用 worktree を組み立てる。
 
 ## Read this when
-- ファイル単位の realization refactor fork のレビュー・修正処理を変更するとき
-- レビュー用 AgentCallParameter のプロンプト構成、アクセスモード、モデル設定、構造化出力指定、パスコンテキストを確認するとき
-- 対象ファイルを起点とした調査・修正・検証の完了条件や作業上の制約を確認するとき
+- ファイル単位のレビュー・修正 agent call の prompt や実行パラメータを変更・確認するとき
+- レビュー結果の構造化出力、oracle/realization 参照規則、修正後検証の要求を確認するとき
+- refactor fork のレビュー処理から agent call を起動する経路を調査するとき
 
 ## Do not read this when
-- レビュー対象の実装そのものや、レビュー結果の構造化出力スキーマだけを確認したいとき
-- ファイル単位ではない fork 処理や、別の prompt builder の責務だけを調査するとき
-- 通常の realization 実装・テストの挙動を確認する場合は、対応する realization file または oracle file を直接読むとき
+- レビュー対象ファイルの実装内容や個別の所見だけを確認するとき
+- 一般的な prompt 構築機能や別の agent call 種別を調査するとき
+- 構造化出力 JSON Schema の具体的な制約だけを確認するとき
 
 ## hash
-- 3d695ad5c71bce43e9aee3aa04d0443a72254c9b6f933ed8cb53246ec25dd33b
+- 276ababf5454576e1f351a31fd91e5575b8b55123098dd2b0b5d8890bdb26ea2

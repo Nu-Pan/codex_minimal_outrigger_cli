@@ -1,36 +1,34 @@
 # `apply_review_standard.py`
 
 ## Summary
-- oracle file に対する realization file の適合性判定規範を構築する実装。明確な仕様不整合や実行不能な致命的バグを修正対象とし、根拠を具体化する。
-- oracle file に明記されない実装詳細、好み、推測、一般的な改善案だけでは修正対象にせず、realization の挙動を oracle 仕様へ逆流させないための適用基準を定義する。
-- oracle の要求に対する realization の追従要否、所見、修正内容を判断する処理を調べる際の入口。
+- oracle file に対する realization file の追従要否とレビュー所見を判断するための規範を構築する。明確な仕様不整合または realization 側だけで説明できる致命的な実装問題を修正対象とし、根拠となる対象を具体的に示す。
 
 ## Read this when
-- oracle file と realization file の適合性、追従要否、レビュー所見、修正対象の判定規範を確認するとき
-- apply review standard の構造化文書や、その構築に使われる Requirement・Standard の扱いを変更または調査するとき
+- oracle file の要求に realization file が適合しているか確認するとき
+- 仕様不整合や実行不能、明白な致命的バグを修正対象として扱うか判断するとき
 
 ## Do not read this when
-- 一般的なコード品質改善やベストプラクティスのレビューだけを行うとき
-- oracle の適合性判定ではなく、別の prompt builder 部品や realization 実装そのものを直接調査するとき
+- 仕様に記述がないことだけを理由に改善案を検討するとき
+- 複数の妥当解、好み、推測、一般的なベストプラクティスに基づくコード品質改善を検討するとき
 
 ## hash
-- bf29bea4168dbc8d59d7d6c3d0e676ff93f39a6d6fc6dd2ed4465862df7f5c0c
+- 6c2eb183509fcd3e15f0b5975e995b75756e68379bb87996431b4c48b7c9e9e5
 
 # `conflict_resolution_standard.py`
 
 ## Summary
-- session join における conflict marker 解消専用の規範を構築する oracle source。両 branch の意図と挙動を保ち、conflict 解消に不要な変更を禁止し、判断不能な場合は未解消事項として報告する要件を構造化文書へ変換する。
+- session join の conflict marker 解消に適用する instruction 文面の構築定義。両 branch と関連 oracle file の意味を保つ conflict 解消規範を組み立てる、prompt builder の部品。
 
 ## Read this when
-- `cmoc session join` の conflict marker 解消ルールや適用条件を確認するとき
-- conflict 解消用の prompt または規範構造を変更・レビューするとき
+- `cmoc session join` の conflict marker 解消用 instruction の内容や適用条件を確認するとき
+- conflict 解消規範の requirements と、それを構造化文書へ変換する流れを調べるとき
 
 ## Do not read this when
-- conflict 解消以外の session 処理を確認するとき
-- 一般的な oracle / realization 規範の定義を確認するときは、対応する標準定義を直接読む
+- 通常の session join 処理や conflict 解消の実装動作を調べるとき
+- prompt builder の別の instruction 部品を直接調べるとき
 
 ## hash
-- c9e43334d126ed735a55807763442ee34292bfe17bfa2545c8e84e166b4d7c91
+- 2053e0baa0a518f506d48450a8c6b0beafd477bc076577519abb05283d51fcc8
 
 # `feedback_reporting_standard.py`
 
@@ -49,38 +47,41 @@
 # `file_access_rule.py`
 
 ## Summary
-- ファイルアクセスモードに応じた、AI エージェント向けの読み書き禁止規則を構築する。リポジトリ外、管理対象ディレクトリ、AGENTS.md・INDEX.md・memo、oracle file・realization file などのアクセス制約をモード別に組み立てる。
-- ファイルアクセス規則の文面とプレースホルダー定義を生成する責務を持つ。アクセス権限の実行環境設定そのものではなく、プロンプトに使用する規則文面の入口である。
+- agent のファイルアクセスモードに応じた読み書き制限文面を構築する。リポジトリ外、予約領域、oracle/realization file などの禁止規則を共通規則とモード別に組み立て、パス用プレースホルダー定義と構造化文書を返す。
+- アクセス規則の生成ロジックや FileAccessMode ごとの制限を確認・変更するときの実装入口であり、実際のファイルアクセス設定や各 oracle/realization file の内容を確認する対象ではない。
 
 ## Read this when
-- AI エージェントのファイル読み書き規則を変更・確認するとき
-- FileAccessMode ごとの oracle file・realization file のアクセス制約や、パスプレースホルダーの生成を調べるとき
-- リポジトリ外アクセスや .git・.agents・.codex・.cmoc・memo への制約文面を調べるとき
+- ファイルアクセスモードの追加・変更・検証が必要なとき
+- agent 向けの読み書き制限文面、パス境界、oracle/realization file の扱いを調査するとき
+- file access rule の戻り値やプレースホルダー定義の生成元を確認するとき
 
 ## Do not read this when
-- 特定のサブコマンドや機能の実装責務を調べるとき
-- Codex CLI の sandbox 設定や実行権限の正本仕様を調べるときは、対応する oracle 文書を先に確認する
-- INDEX.md の生成・更新処理そのものを調べるとき
+- 特定の oracle file や realization file の本文・仕様・実装を調査するとき
+- Codex CLI の sandbox 実行規則そのものを確認するときは、対応する正本仕様を読むべきである
+- INDEX.md のルーティング情報だけを更新・確認するとき
 
 ## hash
-- 16cc4569cb6d50750e5f0012d24a558b04cf8ffd01192ef3e51498a4e005b8f9
+- 74be481ba7fd0c5e8a88245c84d926f1893af482cffed83164591005ff59be85
 
 # `index_entry_standard.py`
 
 ## Summary
-- INDEX.md エントリーが満たすべき規範文書を生成する。対象の責務、内容に基づくルーティング、機械的情報を含めない方針を定義する。
+- INDEX.md エントリーが満たすべき規範を構造化して生成する。対象を読むべき条件、対象固有の責務、適切な入口、対象外となる境界を定義する。
+- エントリーには対象本文から根拠を持って言える情報だけを含め、推測による責務の拡張や詳細説明を避ける。
+- 機械的に補える識別情報や出力形式の説明を除き、ルーティング判断に必要な意味情報だけを提供する。
 
 ## Read this when
-- INDEX.md のエントリーを新規作成・更新するとき
-- 対象を読むべき条件、対象の責務、他対象との境界を判断するとき
-- エントリーに含める情報の粒度や、対象内容に基づく根拠を確認するとき
+- INDEX.md エントリーの規範や生成基準を確認・変更するとき。
+- 対象を読むべき条件、責務、他の対象ではなく対象へ進む理由を判断するとき。
+- エントリーに含める情報の範囲や、対象を読まなくてよい境界を確認するとき。
 
 ## Do not read this when
-- INDEX.md エントリー以外のプロンプト生成規範を確認するとき
-- 対象ファイル固有の実装内容や、一般的な StructDoc の構造を確認するときは、対応する実装・定義を直接読む
+- 具体的な対象の実装内容や個別仕様を直接確認することが目的のとき。
+- 既存の INDEX.md のルーティングだけで目的の対象を特定でき、エントリー生成規範を確認する必要がないとき。
+- Structured Output の形式や機械的な識別情報だけを確認したいとき。
 
 ## hash
-- 942b23384c6e0468b807b626d94ad638b8898badc3a7dd37cd5cb0a8f771ddce
+- 871f8990511d3d804e6ce7e1763bf3eefd5ae27f3f63c1e68d19b2624b3adaa3
 
 # `oracle_and_realization_basic.py`
 
@@ -101,35 +102,37 @@
 # `oracle_review_standard.py`
 
 ## Summary
-- oracle review 全段階で共有する所見判定規範を構築する正本実装。fatal・minor・所見なしの判定境界、根拠の要件、適用条件を定義する。
+- oracle review の所見判定規範を構築する関数を提供する。oracle file のレビューで fatal・minor として扱える問題の成立条件、根拠の境界、適用条件を構造化文書としてまとめる。
 
 ## Read this when
-- oracle file の所見を列挙、統合、検証、擁護・反証理由の整理、または採否判定するとき
-- fatal と minor の判定基準や、仕様の具体的記述に基づく所見の成立条件を確認するとき
+- oracle review の所見を列挙・統合・検証・採否判定する agent 向けの共有基準を確認するとき。
+- fatal と minor の判定条件や、oracle file の具体的記述に基づく所見の境界を確認するとき。
 
 ## Do not read this when
-- oracle review の所見判定を扱わず、一般的な仕様規範や別の prompt builder 部品だけを確認するとき
-- 所見判定規範そのものではなく、Requirement・Standard・StructDoc のデータ構造や変換処理を確認するとき
+- レビュー基準そのものではなく、個別の oracle file の内容や実装適合性を確認したいとき。
+- 構造化文書の一般的な構築方法や placeholder の扱いだけを確認したいとき。
 
 ## hash
-- 831f63ed0ce47db11c675b76a03db06362fba62446e299ea7d6e6858f6d5a3e6
+- 245f8307112102d50bc9ed8fc79281a2823d0760048f6b57b48d0050b4d46b0a
 
 # `oracle_standard.py`
 
 ## Summary
-- oracle file の作成・変更・調査・レビューに適用する規範を、call-scoped な work-root 定義とともに構築する。oracle file を正本仕様断片として扱うこと、仕様の隙間を過剰に埋めないこと、実装から仕様を逆算しないこと、仕様間の整合性・用語統一・検索性を保つことを定義する。
+- oracle file を扱う agent call 向けの標準規範を構築する。oracle を正本仕様として扱い、実装からの逆算を避け、仕様間の整合性・優先関係・用語・検索性を保つための要求を StructDoc として返す。
+- AgentCallPathContext から call-scoped な work-root 定義を取得し、標準文書とともに PlaceholderMap を生成する。oracle file の作成・変更・調査・レビューに関する instruction 文面へ組み込む入口である。
 
 ## Read this when
-- oracle file に関する規範の構築・変更・適用条件を確認するとき
-- oracle file と realization file、既存実装、installed skill の優先関係を判断するとき
-- 正本仕様断片の追加・変更に伴う境界、整合性、用語統一を確認するとき
+- oracle file に関する agent call の規範、作業条件、または instruction 文面の生成経路を変更・調査するとき
+- build_oracle_standard が返す placeholder と StructDoc の構造、適用条件、要求項目を確認するとき
+- oracle を正本仕様として扱うルールや、仕様の隙間・整合性・検索性に関する標準を確認するとき
 
 ## Do not read this when
-- realization file の実装やテスト自体の設計・変更だけを行うとき
-- oracle file に関する規範ではなく、個別の oracle file の内容を確認するとき
+- realization file の実装規範だけを確認する場合
+- oracle 固有の標準文面ではなく、agent call のパス情報や一般的な prompt builder の構造だけを調査する場合
+- 既存の INDEX.md エントリーやルーティング情報そのものを確認する場合
 
 ## hash
-- 4c37309fee606d2905ef28dca1322a86d786d78aa8c90e7211995a02079364ed
+- a99341abd7ea1375fde6549f8cb8915b498fa4df392fb8087640ca802ff1de47
 
 # `realization_oracle_reference_rule.py`
 
@@ -150,35 +153,31 @@
 # `realization_standard.py`
 
 ## Summary
-- realization file の作成・変更・レビュー時に適用する規範を、対象 repository の work-root 定義とともに構築する。
-- oracle file への適合、不要な実装や公開面の抑制、repository 固有手順による検証という3領域を扱う。
-- realization file の作業規範を注入する prompt builder 部品への入口である。
+- realization file を作成・変更・レビューする agent call に適用する規範本文を、call-scoped な work-root 参照とともに構築する。oracle file への適合、不要な実装や公開面を増やさない最小実装、repository 固有手順による検証を扱う。realization 作業向け instruction 生成の入口となる。
 
 ## Read this when
-- realization file の作成、変更、リファクタ、またはレビューに適用される規範を確認するとき
-- oracle file と realization file の責務境界、重複禁止、参照・生成・変換の扱いを確認するとき
-- 対象 repository 固有の手順による検証要件を確認するとき
+- realization file の作成・変更・リファクタ・レビューに関する agent call の規範生成を確認するとき
+- oracle と realization の責務分離、最小実装、repository 固有の検証手順を含む標準の構築元を確認するとき
 
 ## Do not read this when
-- oracle file 自体の仕様を作成・変更するとき
-- INDEX.md のルーティング規則そのものを確認するとき
-- realization file に関係しない prompt builder の部品を調査するとき
+- INDEX.md のルーティング情報だけを確認したいとき
+- realization file 自体の具体的な実装や個別のテスト内容を確認したいときは、対象の実装またはテストへ直接進む
 
 ## hash
-- 72ee123baa624d77b27881c41104fb4d31a59634b2faf3b7dcf83de77fe9dbea
+- b1829faebcfd080351d1b0f7625f49471a6e6d15f2ecc8aefe7caf4a0e52eba5
 
 # `routing_rule.py`
 
 ## Summary
-- INDEX.md を使って必要な本文へ進むためのルーティング規則を構築する関数を定義する。call-scoped context から work-root の定義を取得し、INDEX.md の扱い・読み進め方・判断基準を含む構造化文書とプレースホルダ map を返す。
+- INDEX.md を使った本文へのルーティング規則を構築するプロンプト部品。作業対象に近い INDEX.md から読み始め、Summary・Read this when・Do not read this when で候補を絞り、必要な本文へ進む手順を定義する。下位階層の INDEX.md の利用と、INDEX.md より本文を優先する判断も扱う。
 
 ## Read this when
-- INDEX.md の役割、読み進め方、対象本文へ進む判断基準を変更・確認するとき
-- routing rule の構造化文書生成や work-root プレースホルダの扱いを変更するとき
+- INDEX.md の読み進め方や、関連する本文を routing 情報で絞る仕組みを確認するとき。
+- プロンプトへ埋め込む routing rule の内容や、work-root の参照方法を変更するとき。
 
 ## Do not read this when
-- INDEX.md の個別エントリー内容や対象ファイルの責務を確認したいとき
-- ルーティング規則以外の prompt builder 部品を変更・調査するとき
+- 特定の INDEX.md の既存エントリーや本文を確認したいとき。
+- routing 以外のプロンプト部品の生成規則を確認したいとき。
 
 ## hash
-- bd6e9b76921aaddbccba9336ae77740768a301b4cc6026b3083008a25e525d14
+- 2ebd20e0c920860904622c216abda854150d36a13101df2052f3da03e5389295

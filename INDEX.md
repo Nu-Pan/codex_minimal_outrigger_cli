@@ -89,21 +89,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を収める領域への入口。アプリケーション仕様、branch・commit・worktree モデル、開発規則、不採用案の記録、および正本実装群を扱う。詳細確認では、仕様文書または用途別の実装下位領域へ進む。
+- cmoc の人間所有の正本仕様を収める領域。アプリケーション仕様、開発規則、oracle 側ソースコード、構造化出力スキーマなどを扱い、実装やレビュー時に人間定義の挙動・責務境界・生成規則を確認するための上位入口となる。下位の文書・ソース領域へ進む起点。
 
 ## Read this when
-- cmoc の正本仕様や正本実装を調査・変更するとき
-- アプリケーション挙動、branch・commit・worktree のモデル、開発規則を確認するとき
-- oracle src の共通実装やサブコマンド別の prompt・ACP 設定を確認するとき
+- cmoc の正本仕様や開発上の規則を確認するとき
+- アプリケーション仕様、branch・commit・worktree モデル、開発環境、テスト要件を調べるとき
+- agent call、prompt、Structured Output schema、oracle・realization・routing・feedback の規則を調査するとき
+- 実装やレビューの前提となる人間定義の責務境界・設計判断を確認するとき
 
 ## Do not read this when
-- 特定機能の詳細仕様を確認する場合は、該当する oracle/doc の下位仕様書を直接読む
-- 個別の実装責務が明らかな場合は、対応する oracle/src の下位領域を直接読む
-- realization 側の CLI 挙動や実装を確認する場合は、対応する realization implementation を直接読む
-- INDEX.md 生成規則や oracle／realization の一般原則を確認する場合は、専用の正本仕様を直接読む
+- 特定の実装ファイルやテストファイルの具体的な挙動だけを確認すれば足りるとき
+- 特定機能の詳細仕様が下位の専用文書に明確に定義されているとき
+- collector 側の feedback 保存・集約処理だけを調査するとき
+- 採用済み仕様ではなく、実装や実行成果物の形式だけを確認したいとき
 
 ## hash
-- b9cbd5d1e32b9bfc26677afc5b302abcd4dce5a1ec7b1ccf1709e40a4c128049
+- 0935a095830d78aba11caaab8c32281610e5e8557d0722280e76537e7773eeeb
 
 # `pyproject.toml`
 
