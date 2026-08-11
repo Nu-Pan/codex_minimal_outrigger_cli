@@ -484,11 +484,16 @@ def _normalized_evidence_path(repo: Path, raw_path: str) -> Path:
     candidate = Path(raw_path)
     if not candidate.is_absolute():
         candidate = repo / candidate
-    # 存在する path は symlink 解決後、存在しない path は字句的に正規化する。
-    if candidate.exists() or candidate.is_symlink():
-        normalized = candidate.resolve(strict=False)
-    else:
-        normalized = Path(os.path.abspath(candidate))
+    try:
+        # 存在する path は symlink 解決後、存在しない path は字句的に正規化する。
+        if candidate.exists() or candidate.is_symlink():
+            normalized = candidate.resolve(strict=False)
+        else:
+            normalized = Path(os.path.abspath(candidate))
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise FeedbackRejected(
+            "path_outside_repo", "evidence path cannot be normalized"
+        ) from exc
     if normalized != repo and repo not in normalized.parents:
         raise FeedbackRejected(
             "path_outside_repo", f"evidence path is outside repository: {raw_path}"

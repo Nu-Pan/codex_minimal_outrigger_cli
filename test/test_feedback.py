@@ -441,6 +441,10 @@ def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> No
             _payload(path=str(tmp_path / "outside.txt")),
         )
     assert outside.value.code == "path_outside_repo"
+    (root / "loop").symlink_to("loop")
+    with pytest.raises(FeedbackRejected) as malformed:
+        store_agent_observation(root, _context(root), _payload(path="loop"))
+    assert malformed.value.code == "path_outside_repo"
 
     redacted = _payload(
         text="request failed before Authorization: Bearer abcdefghijklmnopqrstuvwxyz",

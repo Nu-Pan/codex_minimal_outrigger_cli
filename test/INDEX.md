@@ -429,24 +429,24 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の pending observation を raw store から収集し、agent-facing reporter と machine detector の入力境界、context・rate limit・path・secret の検証、idempotency を検証するテスト群。
-- feedback report による issue の normalize・verification、recurrence threshold、resolved issue の除去、compact active state への集約を同一 repository fixture で検証する。
-- report cut、verification checkpoint、interruption・publication 再開、atomic current pointer、部分 cleanup、active generation の hash・artifact 整合性を外部境界として検証する。対応する正本仕様と feedback 用 builder の実装へ進むためのテスト入口である。
+- feedback の pending observation から active issue を生成し、verification 結果を反映して report を atomic publication する一連の外部挙動を検証するテスト。
+- agent-facing reporter と collector の契約、context・rate limit・path 境界・secret masking・machine observation の冪等性を扱う。
+- report cut、verification checkpoint、割り込みからの再開、部分 cleanup、active generation の hash・未定義 artifact 検出まで、publication 後に compact active state だけを残す境界を確認する。
 
 ## Read this when
-- feedback の raw observation から active state・report までの一連の処理を変更またはレビューするとき
-- feedback report の中断再開、checkpoint、atomic publication、current pointer、cleanup の挙動を確認するとき
-- agent reporter または machine observation の schema・重複排除・rate limit・検証境界を確認するとき
-- active generation の manifest、hash、未定義 artifact に対する破損検出を確認するとき
+- feedback report の処理経路や観測保存の外部挙動を変更・レビューするとき
+- agent observation または machine observation の検証、集約、再発閾値、active issue の解決・削除を確認するとき
+- report cut、Codex verification、checkpoint、atomic publication、cleanup、割り込み復旧を変更・検証するとき
+- feedback reporter の MCP discovery や collector 転送、入力制約、認証 capability、rate limit を確認するとき
+- feedback の raw store、active state、current pointer、generation manifest の破損検出をテストするとき
 
 ## Do not read this when
-- feedback の正本仕様上の意図や状態契約を確認する場合は、対応する oracle の app_spec 文書を直接読むとき
-- normalize・verify の prompt や Structured Output schema の定義だけを確認する場合は、対応する oracle builder と schema を直接読むとき
-- feedback report の通常利用手順だけを確認する場合は、feedback report の subcommand 仕様を直接読むとき
-- feedback と無関係な CLI、テスト fixture、または一般的な repository 機能を調査するとき
+- feedback の正本仕様や oracle builder の prompt・schema 自体を確認する場合は、対応する oracle file を直接読むとき
+- feedback report の実装詳細を調べるだけの場合は、実装ファイルを直接読むとき
+- feedback と無関係な CLI 機能や一般的なテスト実行方法を調べるとき
 
 ## hash
-- 3c66bbb8ac92b0d970a6d0d1fa3e7d36d12fc386cae5bcb8c84a1896c1eb39cd
+- 675b879f56444ec3e127b90b96f31253e665d423a354494a63f0d4fd27555596
 
 # `test_file_inventory.py`
 
