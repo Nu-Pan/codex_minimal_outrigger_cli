@@ -14,7 +14,7 @@ import os
 import shutil
 import subprocess
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -50,7 +50,7 @@ def run_doctor_preprocess(
         main_root = repo_root(root)
         repair_roots = [main_root] if main_root == root else [main_root, root]
 
-        repairs: list[tuple[Path, Path, bool, bool, bool]] = []
+        repairs: list[tuple[Path, Path, bool, bool, bool, set[str]]] = []
         original_indexes: list[tuple[Path, Path]] = []
         try:
             for repair_root in repair_roots:
@@ -59,6 +59,11 @@ def run_doctor_preprocess(
                 include_gu_ignore = repair_root == main_root
                 original_index_path = _copy_current_index(repair_root)
                 original_indexes.append((repair_root, original_index_path))
+                preserved_runtime_paths = (
+                    _preexisting_runtime_paths(repair_root, original_index_path)
+                    if include_config
+                    else set()
+                )
                 # ensure_cmoc_ignored と _ensure_agents_tracked は通常 index を
                 # 変更するため、後続処理の失敗時も元の staged 状態へ戻せるようにする。
                 if include_gu_ignore:
@@ -73,6 +78,7 @@ def run_doctor_preprocess(
                         agents_gitkeep_added,
                         include_config,
                         include_gu_ignore,
+                        preserved_runtime_paths,
                     )
                 )
 
@@ -102,6 +108,7 @@ def run_doctor_preprocess(
             agents_gitkeep_added,
             include_config,
             include_gu_ignore,
+            preserved_runtime_paths,
         ) in repairs:
             restored_index_path: Path | None = None
             try:
@@ -111,6 +118,7 @@ def run_doctor_preprocess(
                     include_config=include_config,
                     include_agents=repair_root == root,
                     include_gu_ignore=include_gu_ignore,
+                    preserved_runtime_paths=preserved_runtime_paths,
                 )
                 _commit_doctor_repairs(
                     repair_root,
@@ -119,6 +127,7 @@ def run_doctor_preprocess(
                     agents_gitkeep_added,
                     include_config=include_config,
                     include_gu_ignore=include_gu_ignore,
+                    preserved_runtime_paths=preserved_runtime_paths,
                 )
             except BaseException:
                 if restored_index_path is None:
@@ -225,6 +234,50 @@ def _validate_tracked_runtime_files(root: Path) -> None:
         )
 
 
+def _preexisting_runtime_paths(root: Path, index_path: Path) -> set[str]:
+    """doctor 開始前から差分がある runtime path を repair 対象から外す。"""
+    # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+    # config は人間が編集するため、既存の staged/unstaged 変更を doctor の
+    # repair commit に混ぜない。state も同じ一時 index で扱うため同じ境界にする。
+    paths = {
+        str(config_path(root).relative_to(root)),
+        str(refactor_state_path(root).relative_to(root)),
+    }
+    return {
+        path
+        for path in paths
+        if _path_changed_before_doctor(root, index_path, path)
+        and _index_has_entry(root, index_path, path)
+    }
+
+
+def _path_changed_before_doctor(root: Path, index_path: Path, path: str) -> bool:
+    """元 index と worktree のどちらかに doctor 前の差分があるか返す。"""
+    staged = _run_git_with_index(
+        ["diff", "--cached", "--name-only", "HEAD", "--", path],
+        root,
+        index_path,
+    ).stdout
+    unstaged = _run_git_with_index(
+        ["diff", "--name-only", "--", path],
+        root,
+        index_path,
+    ).stdout
+    return bool(staged.strip() or unstaged.strip())
+
+
+def _index_has_entry(root: Path, index_path: Path, path: str) -> bool:
+    """一時 index に path の entry があるか返す。"""
+    return bool(
+        _run_git_with_index(
+            ["ls-files", "--stage", "--", path],
+            root,
+            index_path,
+            check=False,
+        ).stdout.strip()
+    )
+
+
 def _commit_doctor_repairs(
     root: Path,
     restored_index_path: Path,
@@ -233,6 +286,7 @@ def _commit_doctor_repairs(
     *,
     include_config: bool,
     include_gu_ignore: bool,
+    preserved_runtime_paths: set[str],
 ) -> None:
     """doctorの修復差分をcommitし、呼び出し元のGit indexを復元する。"""
     try:
@@ -241,6 +295,7 @@ def _commit_doctor_repairs(
             agents_gitkeep_added,
             include_config=include_config,
             include_gu_ignore=include_gu_ignore,
+            preserved_runtime_paths=preserved_runtime_paths,
         )
     except BaseException:
         _restore_index(root, original_index_path)
@@ -263,6 +318,7 @@ def _commit_doctor_repairs_from_head(
     *,
     include_config: bool,
     include_gu_ignore: bool,
+    preserved_runtime_paths: set[str],
 ) -> None:
     """HEAD起点の一時indexでdoctor修復だけをcommitする。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -277,7 +333,11 @@ def _commit_doctor_repairs_from_head(
             _stage_gitignore_repair(root, index_path)
         _stage_agents_gitkeep_repair(root, index_path, agents_gitkeep_added)
         if include_config:
-            _stage_tracked_runtime_repair(root, index_path)
+            _stage_tracked_runtime_repair(
+                root,
+                index_path,
+                skip_paths=preserved_runtime_paths,
+            )
         if include_gu_ignore:
             _run_git_with_index(
                 ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
@@ -321,6 +381,7 @@ def _restored_index(
     include_config: bool,
     include_agents: bool,
     include_gu_ignore: bool,
+    preserved_runtime_paths: set[str],
 ) -> Path:
     """doctor 修復を合成した一時 index file を作る。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -335,7 +396,11 @@ def _restored_index(
         if include_agents:
             _stage_agents_gitkeep_repair_from_index(root, index_path)
         if include_config:
-            _stage_tracked_runtime_repair(root, index_path)
+            _stage_tracked_runtime_repair(
+                root,
+                index_path,
+                skip_paths=preserved_runtime_paths,
+            )
         if include_gu_ignore:
             _run_git_with_index(
                 ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
@@ -424,10 +489,18 @@ def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
     _stage_blob(root, index_path, ".agents/.gitkeep", mode, blob)
 
 
-def _stage_tracked_runtime_repair(root: Path, index_path: Path) -> None:
+def _stage_tracked_runtime_repair(
+    root: Path,
+    index_path: Path,
+    *,
+    skip_paths: Collection[str] = (),
+) -> None:
     """同期済み config/state を ignore 規則に左右されず一時 index へ載せる。"""
     for path in (config_path(root), refactor_state_path(root)):
-        _stage_text(root, index_path, str(path.relative_to(root)), path.read_text())
+        relative = str(path.relative_to(root))
+        if relative in skip_paths:
+            continue
+        _stage_text(root, index_path, relative, path.read_text())
 
 
 def _is_staged_deletion_of_head_entry(

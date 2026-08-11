@@ -866,8 +866,8 @@
   "src/commons/runtime_doctor.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "8cfeaf3289f1b93ed4eb92279118878345cef2f76f8d01424a8744e0c7871843",
-    "last_investigated_at": "2026-08-09_10-35_03_450148000"
+    "last_investigated_sha256": "6bed0137889ec8412df24e8beab7d54e89af25c43b92df450435e7f56d264184",
+    "last_investigated_at": "2026-08-12_07-20_47_342827000"
   },
   "src/commons/runtime_errors.py": {
     "investigation_required": false,

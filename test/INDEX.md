@@ -392,21 +392,21 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の共有 lifecycle を、CLI 呼び出しと直接呼び出しの両方から検証する統合テスト。repository/worktree の前提で、`.cmoc/gu` の ignore、`.agents`、config、refactor state の修復、doctor lock、reporter probe の例外伝播、修復 commit、および既存 Git index の staged 差分・flag・rename・intent-to-add・unstaged hunk の保持を扱う。doctor preprocess の外部契約と副作用を確認するテスト群への入口。
+- doctor preprocess の共有 lifecycle を、CLI 呼び出しと直接呼び出しの両方から検証する統合テスト。
+- 同一 repository/worktree 前提の lock、CLI/config、Git index、`.cmoc/gu`、`.agents`、refactor state の修復と副作用を扱う。
+- 修復順序、エラー伝播、linked worktree、既存の staged・unstaged 差分や index flag の保持、生成物の commit 範囲を検証する外部契約テスト群への入口。
 
 ## Read this when
-- doctor preprocess の修復 lifecycle、CLI と直接呼び出しの挙動、linked worktree と共有 lock の扱いを検証・変更するとき
-- 修復時の config/state 生成、`.agents` や `.cmoc/gu` の追跡状態、repair commit の対象を確認するとき
-- doctor が既存の staged/unstaged Git index 状態や index flag を保持する契約を確認するとき
-- reporter probe の中断・予期しない例外が warning に変換されず伝播する挙動を確認するとき
+- doctor preprocess の外部挙動、修復 lifecycle、共有 lock、Git index 保持のテスト内容を確認するとき。
+- doctor の CLI または直接呼び出しに関する統合テストを追加・変更・レビューするとき。
+- `.cmoc/gu`、`.agents`、config、refactor state の修復や linked worktree での挙動を検証するとき。
 
 ## Do not read this when
-- doctor preprocess の実装詳細や正本仕様を確認することが目的の場合は、対応する doctor 実装または参照される正本仕様を直接読むとき
-- doctor 以外の CLI サブコマンド、一般的な Git fixture、または個別の低レベル helper の挙動だけを確認するとき
-- テスト実行方法や共通テスト helper の詳細だけが必要なときは、該当する実行手順または helper を直接読むとき
+- doctor の実装詳細や正本仕様そのものを確認することが目的のときは、実装または指定された oracle 文書を直接読む。
+- doctor preprocess と無関係な単体テスト、一般的な Git テスト、または別の CLI サブコマンドの挙動だけを確認するとき。
 
 ## hash
-- f4c67f55926c4bd5d22b94d53f1248c6d07668fe9df9c35b732fb49a1933becd
+- 91ae1af380710c1ed1f0ded0f524c5a85364b0947a1c90a22e7c6fd90f0ab364
 
 # `test_editing_run_cli.py`
 

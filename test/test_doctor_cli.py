@@ -273,9 +273,10 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
         *,
         include_config: bool,
         include_gu_ignore: bool,
+        preserved_runtime_paths: set[str],
     ) -> None:
         """repair commit の失敗を再現する。"""
-        del include_config, include_gu_ignore
+        del include_config, include_gu_ignore, preserved_runtime_paths
         raise RuntimeError("repair commit failure")
 
     monkeypatch.setattr(doctor_module, "_commit_doctor_repairs_from_head", fail_commit)
@@ -383,6 +384,40 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
         check=False,
     )
     assert check_ignore.returncode == 1
+
+
+def test_doctor_does_not_commit_preexisting_staged_config_change(
+    tmp_path: Path,
+) -> None:
+    """doctor が事前に stage された人間の config 変更を修復 commit に混ぜない。"""
+
+    root = make_repo(tmp_path)
+    doctor_module.run_doctor_preprocess(root)
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    data = json.loads(config_path.read_text())
+    data["num_parallel"] = 99
+    config_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    run_git(root, "add", ".cmoc/gt/ar/config.json")
+    before_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == before_head
+    assert (
+        json.loads(run_git(root, "show", "HEAD:.cmoc/gt/ar/config.json").stdout)[
+            "num_parallel"
+        ]
+        != 99
+    )
+    assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
+        ".cmoc/gt/ar/config.json"
+    ]
+    assert (
+        json.loads(run_git(root, "show", ":.cmoc/gt/ar/config.json").stdout)[
+            "num_parallel"
+        ]
+        == 99
+    )
 
 
 def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
