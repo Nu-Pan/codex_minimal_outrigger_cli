@@ -17,51 +17,59 @@
 # `complete_prompt.py`
 
 ## Summary
-- エージェント呼び出しに渡す完全なプロンプトを、固定・動的パーツ、プレースホルダ定義、各種規範の有効化条件を考慮して組み立てる中核ビルダー。プロンプト内の役割・依頼概要・完了条件の参照ブロックと、oracle/realization、アクセス制御、ルーティングなどの共通規則を統合する入口。
+- 選択された規則・補助プロンプト・動的な役割情報を統合し、placeholder 定義を解決した完全な agent prompt を構築する。prompt builder の最終的な注入順序や、規則間の依存関係を変更・確認するときの入口となる。
 
 ## Read this when
-- エージェント呼び出し用プロンプト全体の構成、注入する規範、動的情報、プレースホルダ定義を変更または確認するとき。
-- 複数のプロンプトパーツをどの順序・条件で統合するかを調査するとき。
-- 同名プレースホルダの競合検出や call-scoped path context からの定義構築を確認するとき。
+- agent call に渡す完全 prompt の組み立て順序、静的・動的 prompt の統合、placeholder 定義の衝突処理を変更または確認するとき。
+- oracle、realization、review、routing などの規則をどの条件で自動的に有効化するかを調査するとき。
 
 ## Do not read this when
-- 特定の静的プロンプトの本文や個別規則だけを変更・確認する場合は、対応する parts 配下のビルダーを直接読む。
-- 構造化ドキュメントの基本モデルやファイルアクセス規則そのものを確認する場合は、対応する定義・規則のファイルを直接読む。
-- プロンプト全体の組み立てや注入条件に関係しない機能を調査する場合。
+- 個別の prompt 規則本文を確認したい場合は、対応する parts の builder を直接読む。
+- placeholder の型や path context の仕様だけを確認したい場合は、PlaceholderMap または AgentCallPathContext の定義を直接読む。
 
 ## hash
-- 3152b5f0203565318e2087466fef2e930d3f094282e78cdd8bf85adfd6f17069
+- 68dfd1e711e8356f5a416c8a3259795af4e25286ca77c1a6df78b09a734c1266
 
 # `editor_input.py`
 
 ## Summary
-- 後続の AI エージェントへ渡す、ユーザー入力用エディタの初期テキストを構築する関数を定義する。入力ファイルの使い方、プロンプト記入ガイドライン、完全なプロンプトの挿入位置を構造化 Markdown と HTML コメントとして生成する。
+- エディタ経由で後続 AI エージェントへ渡すユーザー入力ファイルの初期表示文面を構築する定義。入力方法、記入の目安、完全プロンプトのテンプレートを含む初期テキストを生成する。
 
 ## Read this when
-- エディタ経由で受け取るユーザープロンプトの初期内容や、プロンプト記入ガイドラインの生成・変更を扱うとき。
-- 完全なプロンプト雛形を初期テキストへ埋め込む処理を確認するとき。
+- エディタ経由のプロンプト入力ファイルに表示する初期文面の構造や内容を確認・変更するとき。
+- ユーザー入力と完全プロンプトの差し込み位置、HTML コメントによる非転送部分の扱いを確認するとき。
 
 ## Do not read this when
-- 通常のプロンプト構築や、エディタ入力以外のユーザー入力経路を扱うとき。
-- 構造化文書の一般的な Markdown レンダリング仕様を確認したいときは、構造文書の実装を直接読むこと。
+- エディタ経由の初期文面ではなく、完全プロンプト全体の生成規則を確認したいとき。
+- Markdown 構造の一般的なレンダリング処理そのものを確認したいとき。
 
 ## hash
-- 8e0e00750f5522e373745c22ef25eea8d71f729cbbd49bf20cac2393d250895e
+- ab47b18db214c4c267917f67e838f69065647618f31a1ad2a28d24cbba352aa9
 
 # `parts`
 
 ## Summary
-- oracle と realization の規範、ファイルアクセス制約、ルーティング、feedback 報告など、agent prompt を構成する各部品を扱うディレクトリ。個別の prompt builder 部品の責務と、必要な調査・変更時の入口を確認するために読む。
+- oracle file と realization file の追従要否・レビュー所見を判断する規範の構築部品。仕様不整合や致命的実装問題のレビュー基準を確認するときの入口。
+- session join の conflict marker 解消用 instruction と、関連 oracle file の意味を保つ conflict 解消規範を構築する部品。conflict 解消 prompt の要件を確認するときに読む。
+- 全 agent call 共通の human feedback 報告規範を構築する部品。作業外の人間対応へ報告すべき問題の条件や報告後の継続方針を確認するときに読む。
+- agent のファイルアクセスモードに応じた読み書き制限、パス境界、oracle/realization file の扱いを構築する部品。アクセス規則やその placeholder の生成を変更・検証するときの入口。
+- INDEX.md エントリーの責務、読むべき条件、対象外境界を構造化して生成する部品。ルーティング情報の生成基準や含める情報の範囲を確認するときに読む。
+- oracle と realization の定義・役割・分類を、work-root に応じて構築する prompt 部品。基本概念の説明文や root placeholder の生成を変更するときの入口。
+- oracle review における fatal・minor の成立条件と根拠の境界を構造化して構築する部品。oracle のレビュー所見を判定・統合する基準を確認するときに読む。
+- oracle file を正本仕様として扱うための標準規範を構築する部品。oracle の作成・変更・調査・レビューに適用する要求や仕様間整合性の基準を確認するときの入口。
+- realization code に対応する oracle file の path をコメントへ記載する規則を構築する部品。realization 実装時の oracle 参照ルールや path placeholder の生成を確認するときに読む。
+- realization file の作成・変更・レビューに適用する標準規範を構築する部品。oracle への適合、最小実装、repository 固有の検証手順を含む instruction の生成元を確認するときの入口。
+- INDEX.md から対象本文へ進む routing 規則を構築する prompt 部品。Summary・Read this when・Do not read this when による候補絞り込みや下位 INDEX.md の利用手順を確認するときに読む。
 
 ## Read this when
-- oracle・realization の基本概念や作業規範を prompt に組み込む処理を調査するとき
-- oracle review、conflict 解消、feedback 報告、ファイルアクセス、INDEX.md ルーティングなどの共通規則を変更・確認するとき
-- 対象となる prompt builder 部品の責務や適用条件を選ぶ必要があるとき
+- このディレクトリ内の prompt builder 部品の責務、生成文面、構造化文書、placeholder の変更・調査・レビューを行うとき
+- 特定の agent call 向け標準規範や routing・feedback・access rule の構築経路を確認するとき
 
 ## Do not read this when
-- 特定の oracle 文書や realization 実装そのものの内容を調査するとき
-- 個別の session 処理、CLI 実装、または prompt builder の呼び出し元だけを調査するとき
-- INDEX.md の個別エントリー内容だけを確認したいとき
+- 個別の oracle 文書、realization 実装、realization test の内容を調査するとき
+- prompt builder 部品を組み合わせる呼び出し元や agent call 全体の選択処理を調べるとき
+- 既存 INDEX.md のルーティング情報だけを確認・更新するとき
+- Structured Output schema の形式や、ファイル名・hash など機械的な識別情報だけを確認するとき
 
 ## hash
-- 86e050fc9dee8e46eca1513e49b80e9586e14679cde4fa5cfd09e971d118dc23
+- 0b99319ef7f10c06868eaa2803459106002521ad633822fa5feebd968ee10b8b

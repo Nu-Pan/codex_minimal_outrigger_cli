@@ -15,7 +15,7 @@ import json
 import os
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
-from inspect import getsourcefile, unwrap
+from inspect import getsourcefile
 from pathlib import Path
 from typing import Any
 
@@ -536,21 +536,14 @@ def _processing_versions() -> JsonObject:
     """builder、schema、および deterministic processing rule の content hash を返す。"""
     normalize_builder = _builder_source_path(build_feedback_normalize_issue_parameter)
     verify_builder = _builder_source_path(build_feedback_verify_issue_parameter)
-    normalize_schema = _builder_source_path(
-        unwrap(build_feedback_normalize_issue_parameter)
-    ).with_suffix(".json")
-    verify_schema = _builder_source_path(
-        unwrap(build_feedback_verify_issue_parameter)
-    ).with_suffix(".json")
+    normalize_schema = normalize_builder.with_suffix(".json")
+    verify_schema = verify_builder.with_suffix(".json")
     module_path = Path(__file__)
     state_path = module_path.parents[2] / "commons" / "runtime_feedback_state.py"
     return {
         "normalization_builder": sha256_bytes(normalize_builder.read_bytes()),
         "normalization_schema": sha256_bytes(normalize_schema.read_bytes()),
-        "verification_builder": _builder_version_hash(
-            build_feedback_verify_issue_parameter,
-            verify_builder,
-        ),
+        "verification_builder": sha256_bytes(verify_builder.read_bytes()),
         "verification_schema": sha256_bytes(verify_schema.read_bytes()),
         "deterministic_processing": _combined_file_hash([module_path, state_path]),
     }
@@ -562,15 +555,6 @@ def _builder_source_path(builder: Callable[..., object]) -> Path:
     if source is None:
         raise ValueError("builder source path is unavailable")
     return Path(source)
-
-
-def _builder_version_hash(builder: Callable[..., object], source: Path) -> str:
-    """adapter と unwrap 先の builder を含む version hash を返す。"""
-    canonical_source = _builder_source_path(unwrap(builder))
-    sources = {source, canonical_source}
-    if len(sources) == 1:
-        return sha256_bytes(source.read_bytes())
-    return _combined_file_hash(list(sources))
 
 
 def _combined_file_hash(paths: list[Path]) -> str:

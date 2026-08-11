@@ -1,50 +1,49 @@
 # `edit`
 
 ## Summary
-- このディレクトリは、oracle 編集向けの起動関連実装を配置する領域です。現時点では空のサブディレクトリと、`cmoc oracle edit` の TUI 起動パラメータを構築する実装を含みます。
+- oracle 編集フローの TUI 起動処理を扱うディレクトリで、agent call の起動パラメータと完全 prompt の生成・管理ログ保存を確認する入口です。現時点では本文ファイルを含まない空のディレクトリです。
+- 配下の具体的なファイルを確認できる場合は、そのファイルを直接読み、共通 prompt 構築規則や agent call パラメータ型は担当モジュールを参照してください。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動設定、agent call パラメータ、完全 prompt の保存や動的構成を確認・変更するとき。
-- このディレクトリに追加されたファイルの内容や用途を確認するとき。
+- `cmoc oracle edit` の TUI 起動処理、agent call パラメータ、完全 prompt の生成、または関連する作業環境・権限・ログ保存の挙動を確認するとき。
+- このディレクトリにファイルが追加され、その内容や用途を確認する必要があるとき。
 
 ## Do not read this when
-- oracle file の編集内容や realization 側の実装だけを確認する場合。
-- prompt の共通構築ロジックを確認する場合は、共通 prompt builder の対象を直接読む場合。
-- 空のサブディレクトリ配下を確認する必要がなく、具体的なファイルを直接確認できる場合。
+- oracle file の具体的な編集内容や仕様を確認するとき。
+- prompt の共通構築規則や agent call パラメータの型定義を確認するとき。
+- このディレクトリ配下の具体的なファイルを直接確認できるとき。
 
 ## hash
-- 014f1bb2b9e944bb525857130e0c65a9705a18df0639e5f79c6a243dc902317c
+- 52be3bfbd9a1fc56345bb483733f54d2e6757e54707cd2f5966b076a4bde6169
 
 # `investigation`
 
 ## Summary
-- `cmoc oracle investigation` の TUI 起動設定を構築する実装。oracle file 調査用プロンプトを生成・保存し、モデル、アクセスモード、作業ディレクトリ、インデックス事前処理を含む起動パラメータを提供する。
+- `cmoc oracle investigation` 向けに、調査用プロンプトと Codex CLI TUI の起動情報を構築する実装の入口。固定の役割・制約・作業範囲、ログ保存先、実行設定を扱う。
 
 ## Read this when
-- `cmoc oracle investigation` の TUI 起動条件、調査プロンプト、使用モデル、ファイルアクセスモード、起動ログ保存の変更や確認を行うとき。
+- `cmoc oracle investigation` の TUI 起動条件、プロンプト構築、調査用ファイルアクセスモード、モデル・推論設定を確認または変更するとき。
 
 ## Do not read this when
-- 他の cmoc コマンドの起動パラメータを扱うとき。
-- 汎用的なプロンプト生成処理を扱うとき。
+- oracle investigation の調査内容や oracle file の仕様を確認するときは、調査対象の oracle file やプロンプト構築処理を直接読む。
+- 通常の Codex CLI 起動処理や、他の cmoc コマンドの起動パラメータだけを確認するとき。
 
 ## hash
-- c80256b46fbf3a6ec4f065d31ee05e741f68cd13446ab6b0d47be66509b58657
+- 38e50e5b8701ac3ea37f69f8e6b656928c722718536d2eeb50a7d43cbc2d36c3
 
 # `review`
 
 ## Summary
-- oracle review の各 agent call 用スキーマと prompt builder をまとめた領域。所見の列挙、判定、統合、妥当性の擁護・反証に関する出力契約と呼び出し条件を確認する入口。
+- oracle review の所見列挙・採否判定・検証理由生成・統合に関するスキーマと、各処理のエージェント呼び出しパラメータ構築実装をまとめた領域。oracle review の処理経路や入出力契約を調べる際の入口となる。
 
 ## Read this when
-- oracle review の所見列挙出力形式や新規所見列挙フローを扱うとき。
-- レビュー所見の採否判定形式や判定用 agent call を扱うとき。
-- レビュー所見の重複・矛盾の統合処理を扱うとき。
-- 所見の妥当性を支持・反証する理由の出力形式や prompt builder を扱うとき。
+- oracle review で所見を列挙、判定、擁護・反証、統合する処理を確認するとき。
+- 各レビュー処理の Structured Output schema、プロンプト、モデル設定、アクセス範囲、起動条件を確認・変更するとき。
 
 ## Do not read this when
-- 個々のレビュー所見の内容や、その根拠となる oracle 仕様を確認するとき。
-- oracle review の判定基準そのものや共通の agent call 基盤を調査するとき。
-- 所見列挙・判定・統合・妥当性検証以外の oracle review サブコマンドを調査するとき。
+- oracle review 以外の agent call parameter 構築を調べるとき。
+- レビュー所見の内容や根拠仕様そのものを調査するとき。
+- 個別の出力形式だけを確認する場合は、該当する JSON Schema を直接読む。
 
 ## hash
-- 6523641af3d13ce33fbb31edc74b8691945fb982cf3af8628347f026e7c8ccce
+- f260447b6475c8470ac7f1305b41a6297fef12da5609cd42855c9ca197c43707

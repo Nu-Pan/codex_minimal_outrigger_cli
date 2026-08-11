@@ -136,13 +136,13 @@ def test_build_routing_rule_renders_core_reading_rules() -> None:
     assert "Summary" in rendered
     assert "Read this when" in rendered
     assert "Do not read this when" in rendered
-    assert "必要な文章を読みに行く" in rendered
+    assert "必要な本文を読む" in rendered
     assert "総当たりで読む前" in rendered
 
 
-def test_complete_prompt_always_includes_routing_rule() -> None:
-    """complete promptが常にrouting ruleを含むことを検証する。"""
-    prompt = build_complete_prompt(
+def test_complete_prompt_controls_routing_rule_explicitly() -> None:
+    """repository 参照の有無に応じて routing rule を選択する。"""
+    default_prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
         goal="- goal",
@@ -150,9 +150,18 @@ def test_complete_prompt_always_includes_routing_rule() -> None:
         path_context=_path_context(),
         aux_dynamic_prompt=[],
     )
+    input_only_prompt = build_complete_prompt(
+        role="- role",
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
+        aux_dynamic_prompt=[],
+        routing_rule=False,
+    )
 
-    rendered = render_as_markdown(prompt)
-    assert "# routing rule" in rendered
+    assert "# routing rule" in render_as_markdown(default_prompt)
+    assert "# routing rule" not in render_as_markdown(input_only_prompt)
 
 
 def test_complete_prompt_includes_feedback_instruction_exactly_once() -> None:
@@ -317,8 +326,9 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
     rendered = render_as_markdown(prompt)
     assert "cmoc 固有契約または oracle file と installed skill" in rendered
     assert "現行仕様に必要な実装だけを保つ" in rendered
-    assert "所見の各段階で同じ採否境界" in rendered
+    assert "所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定" in rendered
     assert "両 branch の意味を保って conflict marker だけを解消する" in rendered
+    assert "### 背景" not in rendered
     for forbidden in ["{{cmoc-root}}", "{{run-root}}"]:
         assert forbidden not in rendered
     assert "{{repo-root}}" in rendered
@@ -475,10 +485,7 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
     assert "読むべき対象へのルーティング情報" in rendered
     assert "対象内容に根拠" in rendered
     assert "機械的に補える情報" in rendered
-    assert (
-        "ファイル・ディレクトリの識別子、ハッシュ、出力形式は、この agent call の外側"
-        in rendered
-    )
+    assert "対象が担う責務と、同階層の他対象ではなくその対象へ進む理由" in rendered
     assert "ファイル名・ディレクトリ名・ハッシュ値" in rendered
     assert "Structured Output schema を読めば分かる出力項目名・型・形式" in rendered
     assert "関連しそうという理由だけ" in rendered
@@ -500,7 +507,7 @@ def test_complete_prompt_can_include_index_entry_standard() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "# oracle and realization basic" in rendered
+    assert "# oracle and realization basic" not in rendered
     assert "# index entry standard" in rendered
     assert "# oracle standard" not in rendered
     assert "# realization standard" not in rendered

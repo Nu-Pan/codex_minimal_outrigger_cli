@@ -16,7 +16,6 @@ agent-facing reporter から raw store、report cut、verification、current poi
 import hashlib
 import json
 from collections.abc import Iterator
-from inspect import unwrap
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -24,6 +23,12 @@ import pytest
 from _cli_support import run_doctor, runner
 from _git_support import current_branch, make_repo, run_git
 from jsonschema import ValidationError, validate
+from oracle.acp_builder.feedback.normalize_issue import (
+    build_feedback_normalize_issue_parameter as _build_canonical_normalize_parameter,
+)
+from oracle.acp_builder.feedback.verify_issue import (
+    build_feedback_verify_issue_parameter as _build_canonical_verify_parameter,
+)
 
 import commons.runtime_codex_preflight as codex_preflight_module
 import commons.runtime_feedback_reporter as reporter_module
@@ -236,42 +241,50 @@ def test_reporter_exposes_only_canonical_submission_tool(
 
 
 def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) -> None:
-    """normalization は同一性だけ、verification は現在 verdict だけを返す。"""
+    """canonical prompt を保ち、入力だけを使う agent call を構築する。"""
     root = make_repo(tmp_path)
     candidate_id = "fbi_" + "a" * 26
+    observation_json = json.dumps({"observation_id": "fbo_input"})
+    candidates_json = json.dumps([{"candidate_id": candidate_id}])
+    candidate_json = json.dumps({"candidate_id": candidate_id})
+    references_json = json.dumps(
+        [
+            {
+                "reference_id": "ref:readme",
+                "kind": "repository_content",
+                "content": "# repo",
+            }
+        ]
+    )
     normalizer = build_feedback_normalize_issue_parameter(
-        json.dumps({"observation_id": "fbo_input"}),
-        json.dumps([{"candidate_id": candidate_id}]),
+        observation_json,
+        candidates_json,
         root,
     )
     verifier = build_feedback_verify_issue_parameter(
-        json.dumps({"candidate_id": candidate_id}),
-        json.dumps(
-            [
-                {
-                    "reference_id": "ref:readme",
-                    "kind": "repository_content",
-                    "content": "# repo",
-                }
-            ]
-        ),
+        candidate_json,
+        references_json,
         root,
     )
 
+    assert normalizer == _build_canonical_normalize_parameter(
+        observation_json,
+        candidates_json,
+        root,
+    )
+    assert verifier == _build_canonical_verify_parameter(
+        candidate_json,
+        references_json,
+        root,
+    )
     assert normalizer.file_access_mode is FileAccessMode.READONLY
     assert verifier.file_access_mode is FileAccessMode.READONLY
     assert normalizer.structured_output_schema_path is not None
     assert verifier.structured_output_schema_path is not None
     assert "同一性" in normalizer.prompt
-    assert (
-        "`result.decision=new` の `result.existing_issue_id` は `null` とする"
-        not in normalizer.prompt
-    )
     assert "unresolved | resolved | not_actionable | inconclusive" in verifier.prompt
-    assert (
-        "`resolved | not_actionable | inconclusive` の human action は `null` とする"
-        not in verifier.prompt
-    )
+    assert "# routing rule" not in normalizer.prompt
+    assert "# routing rule" not in verifier.prompt
     normalize_schema = json.loads(normalizer.structured_output_schema_path.read_text())
     verify_schema = json.loads(verifier.structured_output_schema_path.read_text())
     validate(
@@ -296,17 +309,33 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
         )
 
 
-def test_feedback_verification_version_includes_delegated_builder() -> None:
-    """verification checkpoint の version が adapter と oracle builder を識別する。"""
-    adapter_path = feedback_report_module._builder_source_path(
-        build_feedback_verify_issue_parameter
+def test_feedback_processing_versions_hash_canonical_builders() -> None:
+    """checkpoint version は実際に prompt を構築する oracle src を識別する。"""
+    normalize_path = feedback_report_module._builder_source_path(
+        _build_canonical_normalize_parameter
     )
-    canonical_path = feedback_report_module._builder_source_path(
-        unwrap(build_feedback_verify_issue_parameter)
+    verify_path = feedback_report_module._builder_source_path(
+        _build_canonical_verify_parameter
     )
 
-    assert feedback_report_module._processing_versions()["verification_builder"] == (
-        feedback_report_module._combined_file_hash([adapter_path, canonical_path])
+    assert (
+        feedback_report_module._builder_source_path(
+            build_feedback_normalize_issue_parameter
+        )
+        == normalize_path
+    )
+    assert (
+        feedback_report_module._builder_source_path(
+            build_feedback_verify_issue_parameter
+        )
+        == verify_path
+    )
+    versions = feedback_report_module._processing_versions()
+    assert versions["normalization_builder"] == feedback_report_module.sha256_bytes(
+        normalize_path.read_bytes()
+    )
+    assert versions["verification_builder"] == feedback_report_module.sha256_bytes(
+        verify_path.read_bytes()
     )
 
 

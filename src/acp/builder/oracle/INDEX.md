@@ -54,17 +54,17 @@
 # `review`
 
 ## Summary
-- `cmoc oracle review` の realization adapter 群をまとめるディレクトリ。Oracle review の finding 列挙・判定・統合・妥当性検証に用いる canonical builder の互換入口を提供し、動的なレビュー内容を prompt section として安全に埋め込む処理を扱う。各ファイルが用途別の builder adapter への入口となる。
+- `cmoc oracle review` の realization adapter package。oracle review の finding 列挙・統合・判定・妥当性検証用 canonical builder を再公開し、動的な所見や理由を prompt に埋め込む際の code fence 保護を担う。個別 builder adapter の実装を確認する入口。
 
 ## Read this when
-- `cmoc oracle review` の realization adapter の構成や、finding 関連 agent call parameter builder の入口を確認するとき。
-- finding、擁護理由、反対理由の列挙・判定・統合処理で、canonical builder への委譲や prompt fence 保護を調査・変更するとき。
-- oracle review の finding path 処理や、既存 caller 向け互換 adapter の挙動を確認するとき。
+- oracle review の finding 関連 agent call parameter の realization adapter を調査・変更するとき
+- canonical builder への委譲と、動的な所見・理由の prompt section 保護の構成を確認するとき
+- finding の列挙、統合、判定、妥当性検証の adapter の所在を特定するとき
 
 ## Do not read this when
-- oracle review の正本仕様や canonical builder の実装・prompt 本文・モデル設定を確認するとき。
-- builder 以外の CLI 実装や、oracle review と無関係な agent call、prompt、path 処理を調査するとき。
-- prompt fence 保護の共通実装そのものだけを確認するときは、専用の共通処理または canonical 実装を直接読む。
+- oracle review の正本仕様、prompt 内容、モデル設定を確認するときは対応する oracle 実装を直接読む
+- builder 共通の prompt fence 処理を確認するときは共通 adapter の実装を直接読む
+- oracle review と無関係な ACP builder や CLI 実装を調査するとき
 
 ## hash
-- 63c3ccd431a12a6eee385da143d1ac96b307f26f867d0d6c6725bf09ee48ba48
+- 5dd026ac454b8e5268ecab1b6103104c45ab3950cc028696e9ce4f2f5910102a

@@ -45,18 +45,18 @@
 # `feedback`
 
 ## Summary
-- feedback issue の正規化・検証を担う builder adapter パッケージ。対応する oracle 実装を起点に、canonical builder の呼び出しと実運用向け prompt の補正を確認するための入口となる。配下に normalization 用と verification 用の adapter がある。
+- feedback issue の正規化・検証に関する builder adapter をまとめるパッケージ。既存の import 経路から利用する互換層として、配下の builder 関数を参照する入口となる。
 
 ## Read this when
 - feedback issue の normalization または verification に関する builder adapter の構成を確認するとき
-- canonical builder と realization adapter の対応関係や prompt 補正の入口を確認するとき
+- feedback issue 用 builder の公開 import 経路や、配下の normalize・verify adapter を追跡するとき
 
 ## Do not read this when
 - feedback 以外の builder adapter を調べるとき
-- 正規化・検証処理の詳細、verdict 条件、Structured Output schema、または oracle の正本仕様を確認するとき
+- builder の正本仕様や prompt 構築・起動パラメータの詳細を確認するときは、対応する oracle file を直接読む
 
 ## hash
-- ba0b46cc28553af7031c889569786364cc95ef41e6f980e311b67dbbbfe3b45f
+- 08053b14ae66e2429f0bbd63341c153b782d94254b42351a90690a1191fc75fe
 
 # `indexing`
 
@@ -77,21 +77,23 @@
 # `oracle`
 
 ## Summary
-- oracle command builder の realization package。`cmoc oracle` 配下の各 command builder adapter への入口をまとめ、正本 builder への委譲経路や TUI 起動パラメータ生成を扱う。
-- oracle edit、oracle investigation、oracle review の用途別 adapter が下位要素として配置されている。
+- oracle command builder の realization package。oracle command builder 関連の各 builder adapter への入口として、oracle edit・investigation・review の実装領域を案内する。
+- oracle edit は TUI 起動パラメータ生成、editor input directory の準備、oracle 側 builder 呼び出しを扱う。
+- oracle investigation は launch TUI 用パラメータ生成、完全な prompt の保存先準備、正本 builder への委譲を扱う。
+- oracle review は finding の列挙・統合・判定・妥当性検証用 canonical builder の再公開と、動的 prompt section の code fence 保護を扱う。
 
 ## Read this when
-- oracle command builder realization package の責務や構成を確認するとき。
-- `cmoc oracle edit`、`cmoc oracle investigation`、`cmoc oracle review` の builder adapter への入口を選ぶとき。
-- 各 command の TUI 起動パラメータ生成、正本 builder への委譲、review finding 関連処理の経路を調べるとき。
+- oracle command builder の realization adapter の責務や構成を確認するとき。
+- oracle edit、oracle investigation、oracle review の builder adapter への入口を探すとき。
+- 各下位パッケージの TUI 起動パラメータ生成、正本 builder への委譲、または review finding 処理の実装へ進むとき。
 
 ## Do not read this when
-- oracle 側の canonical builder の仕様、prompt 本文、モデル設定を直接確認したいとき。
-- oracle command builder 以外の CLI、ACP、実行時処理を調べるとき。
-- 特定 command の具体的な実装詳細を確認する場合は、該当する下位 adapter を直接読むとき。
+- oracle 側 builder の正本仕様、prompt 内容、または本体ロジックを確認したいとき。
+- oracle edit・investigation・review と無関係な builder、ACP、CLI 実装を調べるとき。
+- 具体的な編集処理や review の個別 adapter 実装を確認したいときは、対応する下位パッケージを直接読む。
 
 ## hash
-- 18463836dc75b25542916f55c623ac06e143062987b60b6ecef88fe360837c5f
+- 7fddd72a119b2bba3e406da45c8c366cada1b6427df197ed1b171d9e5e68364e
 
 # `quota_probe.py`
 

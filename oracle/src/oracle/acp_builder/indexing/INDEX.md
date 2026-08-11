@@ -17,16 +17,14 @@
 # `index_entry.py`
 
 ## Summary
-- `cmoc indexing` の目次情報生成用 agent call パラメータを構築する実装。対象内容を埋め込んだ完全 prompt、Structured Output schema、読み取り専用アクセス、低コストのモデル・推論設定、agent call の実行コンテキストを定義する。indexing 用 prompt 生成処理の入口。
+- `cmoc indexing` が目次エントリー生成用の agent call を起動するためのパラメータ構築を担当する。対象パスと本文から prompt、構造化出力 schema、cwd、読み取り専用設定などを組み立てる実装であり、indexing 処理の agent 呼び出し定義への入口となる。
 
 ## Read this when
-- `cmoc indexing` の INDEX.md エントリー生成 prompt や agent call 設定を変更・調査するとき
-- indexing 用 agent call のモデル、推論強度、ファイルアクセス権限、Structured Output schema の指定元を確認するとき
+- `cmoc indexing` の agent 呼び出しパラメータ、prompt、model・reasoning 設定、構造化出力 schema、または indexing preflight の設定を変更・確認するとき。
 
 ## Do not read this when
-- 実際の INDEX.md 生成処理や indexing サブコマンドの実行フローを調査するとき
-- Structured Output schema 自体の定義だけを確認するとき
-- 一般的な prompt 構築処理や他の agent call 種別を調査するとき
+- 通常の index エントリー内容や INDEX.md のルーティング規則を確認したいときは、対象となる INDEX.md や別の indexing 実装を直接読む。
+- agent call の基本型、アクセスモード、モデル設定の定義自体を確認したいときは、参照されている acp_builder の基本定義を読む。
 
 ## hash
-- e09159d85f8b3c8cc12186ecac98dc67c859df93fbe389a7a4a47c36b6064b26
+- 6b7c879d30af3cfe0954165e3a59b0843b78654248bf7804b72ac65436efcdb4

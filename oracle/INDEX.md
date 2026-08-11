@@ -1,38 +1,37 @@
 # `doc`
 
 ## Summary
-- cmoc のアプリケーション仕様、branch・commit・worktree のモデル、開発規則、不採用案の検討記録を扱う正本ドキュメント群への入口。各領域の詳細確認時に、該当する下位仕様書へ進むためのルーティングを担う。
+- cmoc の正本仕様ドキュメント群を収める領域。アプリケーション仕様、branch・commit・worktree モデル、開発ルール、採用しなかった設計案の記録を扱い、実装やレビューで人間定義の挙動・責務境界・開発上の規則を確認するための入口となる。
 
 ## Read this when
-- cmoc のアプリケーション挙動や仕様間の責務境界を確認するとき
-- branch・commit・worktree のモデルを確認するとき
-- 開発規則の対象領域を選ぶとき
-- realization refactor で採用しなかった方式の理由を確認するとき
+- cmoc のアプリケーション機能、session・run の分岐モデル、branch／commit／worktree の関係を確認するとき
+- Python 実装、CLI の配置、開発環境、テスト要件、テスト実行手順を確認するとき
+- realization refactor の採用・不採用となった作業方式や設計判断の背景を調べるとき
+- 複数の正本仕様領域から対象文書を選び、詳細本文へ進む入口が必要なとき
 
 ## Do not read this when
-- 特定機能の詳細仕様だけを確認する場合は、該当する下位仕様書を直接読む
-- 個別の開発手順だけを確認する場合は、対応する開発規則文書を直接読む
-- INDEX.md 生成規則や oracle／realization の一般原則だけを確認する場合は、専用の正本仕様を直接読む
+- 特定の実装ファイルやテストファイルの具体的な挙動だけを確認すれば足りるとき
+- 特定機能の詳細仕様がアプリケーション仕様の下位領域に直接定義されており、その本文へ直接進めるとき
+- 開発環境、テスト要件、テスト実行手順など、対象の専用文書が明確で直接参照できるとき
+- 採用済みの現行仕様ではなく、単に実装や実行成果物の形式を確認したいとき
 
 ## hash
-- 4b00d1d2b46dcb0755830f16e18722ae7146ffb0e10ff46a892182e6df6fe542
+- c4c7145d95ba5e436215f6b3b24974d5964fc000a2b9537f443f42d57068b3ac
 
 # `src`
 
 ## Summary
-- oracle src にある cmoc の正本実装群です。ACP 呼び出しパラメータ、完全な agent prompt、oracle・realization の規範、パス解決、設定モデル、構造化文書の Markdown 変換、feedback reporter 入力契約を扱います。用途別の実装を確認する場合は、ACP builder・prompt builder・other・feedback の下位領域が入口になります。
+- cmoc の oracle 側ソースコードと構造化出力スキーマの領域。agent call の共通パラメータ、用途別の prompt 構築、oracle・realization・routing・feedback の規則、レビュー判定、パスモデルや文書モデルを扱い、下位ディレクトリの個別定義へ進む入口となる。
 
 ## Read this when
-- cmoc の oracle src 実装を調査・変更するとき。
-- サブコマンド別の ACP 呼び出し設定や prompt の構築を確認するとき。
-- agent prompt に注入する oracle・realization・review・routing・file access などの共通規範を確認するとき。
-- リポジトリ設定、パス解決、構造化文書モデル、Markdown 変換などの共通モデルを確認するとき。
-- feedback reporter が collector へ渡す入力契約を確認するとき。
+- agent call のモデル、推論強度、ファイルアクセス、作業コンテキストを確認・変更するとき。
+- 用途別の prompt、Structured Output schema、oracle review、feedback 判定、index entry 生成の定義を調査・変更するとき。
+- oracle と realization の扱い、prompt の共通規則、Markdown・構造化文書の生成基盤を確認するとき。
 
 ## Do not read this when
-- oracle の正本ドキュメントや正本テストを確認する場合は、対応する oracle/doc または oracle/test を直接読む。
-- realization 側の CLI 挙動や実装を確認する場合は、対応する realization implementation を直接読む。
-- 特定の下位領域の責務が明らかな場合は、このディレクトリ全体を読む必要はなく、対応する下位ディレクトリへ直接進む。
+- 通常の CLI 実行処理、realization 側の実装・テスト、または oracle の自然言語仕様そのものを確認するとき。
+- feedback の保存・集約・重複判定など collector 側の処理だけを調査するとき。
+- 特定の agent call や規則が明らかな場合は、この領域全体ではなく該当する下位ディレクトリへ直接進むとき。
 
 ## hash
-- bc5b9604838954b2ee9dde0d538419d06e16b4c1f2a3f61d959e9e96a7bbeb5f
+- 2163e860a6467b14ed0e0668fe5abb1da55df3ff2887282e842ab10f88013e04

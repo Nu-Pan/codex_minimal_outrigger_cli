@@ -35,20 +35,18 @@
 # `standard.py`
 
 ## Summary
-- 規範（Standard）の定義モデルと、規範を構造化文書（StructDoc）へ変換する処理を提供する。Standard は題名、背景、要求、任意の判断例を保持し、Requirement は要求のラベルと本文を表す。
+- agent 向け instruction の要求文面を構造化する標準と、その要求項目を表すデータモデルを定義する。標準のタイトル・要求・判断例を保持し、構造化文書へ変換する処理への入口となる。
 
 ## Read this when
-- Standard や Requirement のデータ構造・入力検証を確認するとき
-- 規範定義を StructDoc 形式へ変換する処理を確認するとき
-- INDEX.md エントリーなど、規範の適用形式を調査するとき
+- agent 向け instruction の標準形式、要求ラベル、要求項目の保持方法を確認するとき
+- Standard や Requirement の生成・利用、または標準から StructDoc への変換処理を調べるとき
 
 ## Do not read this when
-- 個別の規範本文や適用対象の要件を確認したいとき
-- StructDoc 自体の仕様や実装を確認したいときは、まず StructDoc の定義を直接読む場合
-- 規範を利用する呼び出し側の処理だけを調査するとき
+- 個別の instruction 本文や StructDoc の一般的な仕様だけを確認したいとき
+- 標準データモデルを使わない oracle の実装やテストを調べるとき
 
 ## hash
-- dc88f4650fb393d33b5b609ee0a739f9960737fd8fc42fd7cda51f037e1dab00
+- ea5e913634ed23bbaa5a52fff4aa9ec65634c0aeb10e175c19ec814ae4aac184
 
 # `struct_doc.py`
 

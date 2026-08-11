@@ -15,17 +15,18 @@
 # `enumerate_finding.py`
 
 ## Summary
-- Oracle review の finding 列挙用 canonical builder を互換的に再公開する realization adapter。関連所見の prompt fence 保護と、symlink 経由の oracle path を lexical path に戻す補正を扱う。
+- canonical な oracle review finding 列挙用 parameter builder を再公開する互換アダプター。関連所見を含む prompt の code fence を保護し、既存の呼び出し元を canonical 実装へ移行するまでの入口となる。
 
 ## Read this when
-- oracle review の finding 列挙 parameter builder の互換 adapter、prompt fence 保護、または symlink 経由の oracle path 処理を変更・調査するとき。
+- oracle review finding の列挙 parameter builder の既存呼び出し元や互換性を確認するとき
+- 関連所見を prompt に埋め込む際の code fence 保護処理を確認するとき
 
 ## Do not read this when
-- canonical な oracle review finding 列挙 builder 自体を変更するときは、oracle 側の実装を直接読む。
-- oracle review の finding 列挙と無関係な builder、prompt、path 処理を変更するとき。
+- canonical な builder の仕様や本体実装を確認したいときは、oracle 側の実装を直接読む
+- review finding の列挙以外の ACP builder や prompt fence 処理を調査するとき
 
 ## hash
-- 033c8e7e82e8e8377c70d38d7d23f0e7bf99b1e88337bdeba64c19da6dd5b850
+- 8c135f902786c590b13d59c5748de7cb2a49b0a15c5375565c976e3b67931df5
 
 # `judge_finding.py`
 
