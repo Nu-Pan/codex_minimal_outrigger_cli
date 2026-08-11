@@ -6,7 +6,8 @@ transaction として扱う。各段階を分散すると中断後の checkpoint
 対応を重複管理するため、サブコマンド固有の状態機械としてまとめる。
 
 対応する oracle file:
-`{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`。
+- `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
+- `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
 """
 
 import hashlib
@@ -1307,6 +1308,7 @@ def _merge_machine_aggregate(
     representative: list[JsonObject] = []
     fingerprints: list[JsonObject] = []
     metadata: JsonObject = {}
+    previous_buckets_truncated = False
     if previous is not None:
         metadata = dict(previous)
         previous_buckets = previous.get("time_buckets")
@@ -1315,23 +1317,32 @@ def _merge_machine_aggregate(
         for bucket in previous_buckets:
             if not isinstance(bucket, dict) or not isinstance(bucket.get("day"), str):
                 raise ValueError("machine aggregate bucket is malformed")
+            first = bucket.get("first_observed_at")
             last = bucket.get("last_observed_at")
-            if isinstance(last, str) and parse_rfc3339(last) >= cutoff:
+            if not isinstance(first, str) or not isinstance(last, str):
+                raise ValueError("machine aggregate bucket timestamps are malformed")
+            if parse_rfc3339(first) >= cutoff and parse_rfc3339(last) <= cut_time:
                 copied = json.loads(json.dumps(bucket, ensure_ascii=False))
                 assert isinstance(copied, dict)
                 copied.setdefault("scope_saturated", False)
                 copied.setdefault("agent_call_saturated", False)
                 buckets_by_day[str(bucket["day"])] = copied
-        representative.extend(
-            item
-            for item in previous.get("representative_evidence", [])
-            if isinstance(item, dict)
-        )
-        fingerprints.extend(
-            item
-            for item in previous.get("latest_fingerprints", [])
-            if isinstance(item, dict)
-        )
+            else:
+                # A daily bucket that straddles the moving boundary cannot be
+                # split without retaining individual occurrences.  Drop the
+                # whole bucket so expired occurrences are never counted.
+                previous_buckets_truncated = True
+        if not previous_buckets_truncated:
+            representative.extend(
+                item
+                for item in previous.get("representative_evidence", [])
+                if isinstance(item, dict)
+            )
+            fingerprints.extend(
+                item
+                for item in previous.get("latest_fingerprints", [])
+                if isinstance(item, dict)
+            )
 
     # 新しい occurrence を日単位 bucket へ加え、個別 occurrence record は残さない。
     for observation in observations:

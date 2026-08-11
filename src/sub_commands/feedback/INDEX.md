@@ -15,17 +15,17 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の active-state publication pipeline を実装するサブコマンド固有モジュール。固定した report cut を入力に、raw observation の検証、candidate の deterministic processing、normalization と全 candidate の verification、generation/report の作成、current pointer の切替、publication 後の cleanup までを一つの再開可能な transaction として扱う。feedback report の処理順序、checkpoint 再利用、中断・失敗時の状態遷移、publication 契約を確認する入口。
+- `cmoc feedback report` の active-state publication pipeline を実装するモジュール。固定済み report cut を入力に、raw observation の検証、agent/machine candidate の deterministic 集約、normalization と全 candidate の verification、checkpoint 再利用、report・generation artifact の作成、current pointer 切替、publication 後 cleanup までを単一 transaction として扱う。feedback report の状態機械、再開、中断、失敗処理の実装を確認したいときの入口。
 
 ## Read this when
-- `cmoc feedback report` の実行経路、report cut の固定・再開、observation の集約、issue candidate の normalization、verification、generation publication、current pointer 切替を変更・調査するとき。
-- feedback report の active state、checkpoint、固定参照、machine recurrence aggregate、publication cleanup の整合性や中断時の挙動を確認するとき。
+- `cmoc feedback report` の cut 固定から publication までの処理順序や責務を調べるとき。
+- feedback observation の validation、machine recurrence 集約、agent issue 同一性判定、verification checkpoint の再利用を変更・調査するとき。
+- feedback report の current pointer 切替、generation artifact、cleanup、interruption/resume の挙動を確認するとき。
 
 ## Do not read this when
-- feedback observation の envelope や raw store の書き込み・読み出し仕様だけを確認する場合は、feedback store または observation validation の実装を直接読む。
-- normalize/verify agent の入力 builder や Structured Output schema の契約だけを確認する場合は、対応する builder・schema を直接読む。
-- active state、generation artifact、current pointer の共通永続化処理だけを確認する場合は、`runtime_feedback_state` を直接読む。
-- Markdown report の表示形式だけを確認する場合は、`_render_feedback_report` とその仕様を直接読む。
+- feedback observation の envelope や永続 state の共通データ構造だけを調べる場合は、対応する runtime state/store の実装を直接読む。
+- normalize/verify agent parameter や Structured Output schema の契約だけを調べる場合は、各 builder と schema を直接読む。
+- 他の feedback サブコマンドの CLI 処理や、Markdown report の一般的な表示仕様だけを調べる場合は、対応する専用モジュール・oracle file を直接読む。
 
 ## hash
-- 35c95df4daa334562483b5bbc5bb70df323548cace16a7829c15d9eca22fcdd6
+- a2cae4206f3c41c6c8d8bb58895bc3ffb14d827618e7a2384e6a0e836329af85

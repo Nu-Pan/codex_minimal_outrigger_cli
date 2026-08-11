@@ -1153,6 +1153,19 @@ def _validate_machine_aggregate(record: JsonObject, path: Path) -> None:
         raise _corruption(
             "machine aggregate threshold count と digest が一致しません。", path
         )
+    scope_digest = record["scope_digest"]
+    assert isinstance(scope_digest, list)
+    if record["scope_saturated"]:
+        if affected_session_count < len(scope_digest):
+            raise _corruption(
+                "machine aggregate affected session count が digest の下限を下回っています。",
+                path,
+            )
+    elif affected_session_count != len(scope_digest):
+        raise _corruption(
+            "machine aggregate affected session count と scope digest が一致しません。",
+            path,
+        )
     buckets = record["time_buckets"]
     assert isinstance(buckets, list)
     bucket_days: list[str] = []
@@ -1188,6 +1201,8 @@ def _validate_machine_aggregate(record: JsonObject, path: Path) -> None:
             or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", day) is None
             or count < 1
             or parse_rfc3339(bucket_first) > parse_rfc3339(bucket_last)
+            or parse_rfc3339(bucket_first) < parse_rfc3339(window_start)
+            or parse_rfc3339(bucket_last) > parse_rfc3339(window_end)
         ):
             raise _corruption("machine aggregate time bucket が不正です。", path)
         for digest_name in ("scope_digest", "agent_call_digest"):
@@ -1449,12 +1464,16 @@ def load_active_state(repo: Path) -> ActiveState:
         raise _corruption(
             "current generation と report cut が一致しません。", generation_path
         )
-    _validate_artifact_reference(
+    report_path = _validate_artifact_reference(
         repo,
         {"path": pointer.get("report_path"), "sha256": pointer.get("report_sha256")},
         expected_root=repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
         description="current feedback Markdown report",
     )
+    if report_path.suffix != ".md":
+        raise _corruption(
+            "current feedback Markdown report path が不正です。", report_path
+        )
 
     # cleanup manifest は切替後に残っている場合だけ hash 一致を要求する。
     cut_path = report_cut_manifest_path(repo, str(report_cut_id_value))
@@ -1488,6 +1507,29 @@ def load_active_state(repo: Path) -> ActiveState:
         ):
             raise _corruption(
                 "current pointer が未 publication の report cut を参照しています。",
+                cut_path,
+            )
+        publication = cleanup_manifest.get("publication")
+        if not isinstance(publication, dict):
+            raise _corruption(
+                "current pointer の publication section が不正です。", cut_path
+            )
+        if (
+            publication.get("generation_id") != generation_id_value
+            or publication.get("generation_manifest")
+            != {
+                "path": pointer.get("generation_manifest_path"),
+                "sha256": pointer.get("generation_manifest_sha256"),
+            }
+            or publication.get("report")
+            != {
+                "path": pointer.get("report_path"),
+                "sha256": pointer.get("report_sha256"),
+            }
+            or publication.get("result") != pointer.get("result")
+        ):
+            raise _corruption(
+                "current pointer と publication artifact の参照が一致しません。",
                 cut_path,
             )
         cleanup_path = cut_path
@@ -1809,7 +1851,7 @@ def _validate_report_cut_current_input(
     )
     if generation_path.name != "manifest.json":
         raise _corruption("report cut current generation path が不正です。", path)
-    _validate_report_cut_artifact_reference(
+    report_path = _validate_report_cut_artifact_reference(
         repo,
         {
             "path": pointer_value.get("report_path"),
@@ -1819,6 +1861,10 @@ def _validate_report_cut_current_input(
         description="report cut current Markdown report",
         allow_missing=False,
     )
+    if report_path.suffix != ".md":
+        raise _corruption(
+            "report cut current Markdown report path が不正です。", report_path
+        )
     contracts = (
         ("issues", "issue_id"),
         ("machine_aggregates", "canonical_key"),
@@ -2263,7 +2309,93 @@ def load_report_cut(repo: Path) -> tuple[JsonObject, Path] | None:
             repo, manifest, manifest_path
         ),
     )
+    _validate_report_cut_artifact_inventory(repo, manifest, manifest_path)
     return manifest, manifest_path
+
+
+def _validate_report_cut_artifact_inventory(
+    repo: Path, manifest: JsonObject, manifest_path: Path
+) -> None:
+    """manifest が列挙しない work artifact を、checkpoint 回復前も検査する。"""
+    processing = manifest.get("processing")
+    if not isinstance(processing, dict):
+        raise _corruption("report cut processing が不正です。", manifest_path)
+    expected: set[Path] = {manifest_path.resolve(strict=False)}
+    for name in ("normalization_checkpoints", "verification_checkpoints"):
+        entries = processing.get(name)
+        if not isinstance(entries, list):
+            raise _corruption(f"report cut {name} が不正です。", manifest_path)
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise _corruption(
+                    f"report cut {name} reference が不正です。", manifest_path
+                )
+            target = _resolve_reference_path(
+                repo,
+                entry.get("path"),
+                manifest_path.parent,
+                f"report cut {name}",
+            )
+            expected.add(target.resolve(strict=False))
+
+    checkpoint_contracts = (
+        (
+            manifest_path.parent / "checkpoint" / "normalization",
+            "normalization",
+            normalization_checkpoint_path,
+            is_observation_id,
+        ),
+        (
+            manifest_path.parent / "checkpoint" / "verification",
+            "verification",
+            verification_checkpoint_path,
+            lambda value: (
+                isinstance(value, str)
+                and re.fullmatch(r"fbi_[a-z2-7]{26}", value) is not None
+            ),
+        ),
+    )
+    publication_exists = manifest.get("publication") is not None
+    report_cut_id_value = str(manifest.get("report_cut_id"))
+    for artifact in manifest_path.parent.rglob("*"):
+        if artifact.is_dir() and not artifact.is_symlink():
+            continue
+        if artifact.is_symlink() or not artifact.is_file():
+            raise _corruption("report cut に未定義 artifact があります。", artifact)
+        resolved = artifact.resolve(strict=False)
+        if resolved in expected:
+            continue
+        recovered_checkpoint = False
+        for root, kind, path_factory, identity_validator in checkpoint_contracts:
+            if artifact.parent != root:
+                continue
+            if publication_exists:
+                raise _corruption(
+                    "staged publication に未列挙 checkpoint があります。", artifact
+                )
+            identity = artifact.stem
+            if not identity_validator(identity):
+                raise _corruption("report cut checkpoint path が不正です。", artifact)
+            try:
+                expected_path = path_factory(repo, report_cut_id_value, identity)
+            except ValueError as exc:
+                raise _corruption(
+                    "report cut checkpoint path が不正です。", artifact
+                ) from exc
+            if artifact != expected_path:
+                raise _corruption("report cut checkpoint path が不正です。", artifact)
+            checkpoint = _read_canonical_object(artifact, "formal feedback checkpoint")
+            _validate_report_cut_checkpoint(
+                checkpoint,
+                artifact,
+                expected_kind=kind,
+                expected_report_cut_id=report_cut_id_value,
+                expected_candidate_id=identity,
+            )
+            recovered_checkpoint = True
+            break
+        if not recovered_checkpoint:
+            raise _corruption("report cut に未定義 artifact があります。", artifact)
 
 
 def _current_pointer_selects_cut(
@@ -2705,12 +2837,14 @@ def publish_current_pointer(
         raise _corruption(
             "new generation の report cut ID が一致しません。", generation_path
         )
-    _validate_artifact_reference(
+    report_path = _validate_artifact_reference(
         repo,
         report,
         expected_root=repo / ".cmoc" / "gu" / "ar" / "report" / "feedback",
         description="new feedback Markdown report",
     )
+    if report_path.suffix != ".md":
+        raise _corruption("new feedback Markdown report path が不正です。", report_path)
     if re.fullmatch(r"[0-9a-f]{64}", report_cut_manifest_sha256) is None:
         raise ValueError("report cut manifest SHA256 is invalid")
     pointer = {

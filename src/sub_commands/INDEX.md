@@ -31,21 +31,18 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装領域。feedback サブコマンドの処理を確認・変更するときの入口で、配下のサブコマンド固有実装へ進むために読む。
+- feedback サブコマンドの実装領域。サブコマンド全体の入口と、report の active-state publication pipeline を扱う。feedback の挙動や実装を確認・変更する際に、配下の実装へ進むための起点となる。
 
 ## Read this when
 - feedback サブコマンドの挙動や実装を確認・変更するとき。
-- feedback report の処理経路、再開・中断、candidate の処理、publication の整合性を調査するとき。
+- feedback report の状態機械、観測値の検証、candidate 集約、verification、publication、再開・中断・失敗処理を調べるとき。
 
 ## Do not read this when
 - feedback 以外のサブコマンドを扱うとき。
-- feedback observation の保存・検証仕様だけを確認する場合。
-- normalize/verify の入力 builder や Structured Output schema だけを確認する場合。
-- active state、generation artifact、current pointer の共通永続化処理だけを確認する場合。
-- Markdown report の表示形式だけを確認する場合。
+- feedback の共通データ構造、agent parameter の normalize/verify 契約、Structured Output schema、Markdown report の一般的な表示仕様だけを調べるとき。
 
 ## hash
-- f1c64bcfc252e2af11b796cedf3e2cdd60344d0d1c062cedc46442888fdba77f
+- 512ff0d7c995099e9c870fa254ddf6dbc890ab4d261876b600f80be8329f185c
 
 # `indexing.py`
 

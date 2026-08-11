@@ -292,20 +292,23 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の repository-local state を検証・公開・cleanup する中核モジュール。report cut、active generation、current pointer、issue/aggregate artifact、checkpoint、publication 後の削除を同一 integrity boundary で扱う。feedback の永続状態整合性、公開処理、復旧・cleanup の実装を確認する入口。
+- feedback の repository-local state を一元的に管理・検証する実装で、report cut、active generation、current pointer、checkpoint、publication、cleanup の相互参照と SHA256、canonical JSON、ID、時刻、artifact inventory を検査する。
+- feedback report の再開・復旧・公開・current 切替・publication 後 cleanup・未公開 cut の破棄に必要な path 生成、immutable artifact 保存、atomic 更新、writer lock、状態読込・検証を提供する。
+- agent report と allowlist machine rule の observation を active issue または threshold 未満の machine aggregate として扱い、generation artifact の構築・公開と旧状態の安全な cleanup を担う。
 
 ## Read this when
-- feedback observation の report cut、active state、current pointer、generation、publication、cleanup の挙動を変更・調査するとき
-- feedback state の canonical JSON、artifact hash、path 制約、checkpoint、machine aggregate の検証を確認するとき
-- feedback report 処理から永続 state の生成・切替・復旧処理へ進むとき
+- feedback state の永続形式、整合性検証、corruption error、canonical JSON、hash 付き artifact reference を調べるとき
+- feedback report の report cut の作成・再開・checkpoint 復旧・publication・current pointer 切替・cleanup・discard の処理を追跡するとき
+- active issue、machine aggregate、generation manifest、current state の読み書きや相互参照の責務を確認するとき
+- repository ごとの feedback writer 排他、atomic write、durable unlink、symlink と未定義 artifact の拒否を確認するとき
 
 ## Do not read this when
-- feedback observation の入力形式や収集だけを確認する場合は observation 関連の oracle・collector 実装を読む
-- feedback report の CLI 入力や利用者向け結果表示だけを確認する場合は subcommand/report 実装を直接読む
-- 共通の ID、JSON、日時、hash、immutable write の仕様だけを確認する場合は runtime feedback store を直接読む
+- feedback observation の入力 envelope や machine rule の仕様だけを確認し、repository-local state の集約・公開・cleanup を調べないときは observation の collector または oracle 文書を直接読む
+- feedback report の CLI 引数、agent call の実行手順、Markdown report の内容生成だけを調べるときは対応する subcommand 実装または仕様を直接読む
+- active state を利用する側の表示・判定ロジックだけを調べ、state の検証や更新処理を追跡する必要がないとき
 
 ## hash
-- fff9560bfb0aa5c3d4b3604400569585487fce2c2eebfbf3a3e6a61daa14c3b9
+- 3159f5bf13460dfebc7f9668a53d0b8f8ebf13b5b5b5e6a85a8525d730441537
 
 # `runtime_feedback_store.py`
 

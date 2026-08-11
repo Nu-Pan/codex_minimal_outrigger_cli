@@ -541,6 +541,28 @@ def test_empty_report_publishes_current_generation(
     assert "unresolved_issue_count: 0" in text
 
 
+def test_current_pointer_rejects_non_markdown_report_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """current pointer が Markdown 以外の report artifact を選べない。"""
+    root = make_repo(tmp_path)
+    _active_session(root, monkeypatch)
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+
+    pointer_path = feedback_root(root) / "active" / "current.json"
+    pointer = read_json_object(pointer_path)
+    current_report = root / str(pointer["report_path"])
+    invalid_report = current_report.with_suffix(".json")
+    invalid_report.write_bytes(current_report.read_bytes())
+    pointer["report_path"] = invalid_report.relative_to(root).as_posix()
+    pointer["report_sha256"] = hashlib.sha256(invalid_report.read_bytes()).hexdigest()
+    pointer_path.write_bytes(canonical_json_bytes(pointer))
+
+    with pytest.raises(CmocError, match="Markdown report path"):
+        load_active_state(root)
+
+
 def test_agent_issue_is_verified_compacted_then_removed_when_resolved(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -652,7 +674,7 @@ def test_machine_observation_stays_bounded_until_recurrence_threshold(
 
 
 def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
-    """同じ日 bucket の scope でも 30 日 window 外の digest は threshold に含めない。"""
+    """日次 bucket が window 境界をまたぐ場合は occurrence ごと破棄する。"""
     canonical_key = (
         "feedback.reporter_unavailable.v1\0reporter_component\0reporter:missing"
     )
@@ -693,33 +715,7 @@ def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
         canonical_key,
     )
 
-    assert aggregate is not None
-    assert aggregate["threshold_counts"]["recurrence_scope"] == 1
-    assert feedback_report_module._machine_threshold_met(aggregate) is False
-    candidate_id = issue_id(canonical_key)
-    candidates = {
-        candidate_id: {
-            "candidate_id": candidate_id,
-            "origin": "machine_rule",
-            "canonical_key": canonical_key,
-            "machine_state": aggregate,
-        }
-    }
-    carried = feedback_report_module._next_machine_aggregates(
-        candidates,
-        {candidate_id: {"verdict": "resolved"}},
-        {},
-    )
-    assert carried == {canonical_key: aggregate}
-
-    feedback_report_module._process_machine_observations(
-        Path("/unused"),
-        {"cut_at": "2026-03-05T12:00:00Z"},
-        candidates,
-        {},
-        {},
-    )
-    assert candidates[candidate_id]["machine_state"] is None
+    assert aggregate is None
 
 
 def test_invalid_raw_observation_blocks_publication(
@@ -877,6 +873,32 @@ def test_checkpoint_file_is_recovered_before_agent_call_reuse(
     assert load_report_cut(root) is None
 
 
+def test_unlisted_report_cut_artifact_is_corruption(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """report cut manifest が列挙しない work file を無視しない。"""
+    root = make_repo(tmp_path)
+    _active_session(root, monkeypatch)
+    original_create = feedback_report_module._create_report_cut
+
+    def interrupt_after_durable_cut(*args: object, **kwargs: object) -> None:
+        original_create(*args, **kwargs)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(
+        feedback_report_module, "_create_report_cut", interrupt_after_durable_cut
+    )
+    interrupted = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert interrupted.exit_code == 0, interrupted.output
+    resumable = load_report_cut(root)
+    assert resumable is not None
+    unexpected = resumable[1].parent / "unexpected.json"
+    unexpected.write_text("{}\n")
+
+    with pytest.raises(CmocError, match="未定義 artifact"):
+        load_report_cut(root)
+
+
 def test_publication_ready_cut_resumes_without_reverification(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -962,6 +984,50 @@ def test_partial_cleanup_keeps_publication_and_excludes_processed_pending(
     assert load_report_cut(root) is None
     assert iter_observation_paths(root) == []
     assert load_active_state(root).current is not None
+
+
+def test_current_pointer_rejects_publication_cross_reference_mismatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cleanup manifest の publication artifact が pointer とずれたら停止する。"""
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, session_id)
+    _install_codex_outputs(
+        monkeypatch, _verification_output(candidate_id, "unresolved")
+    )
+    original_unlink = feedback_state_module._durable_unlink
+
+    def fail_cleanup(_path: Path) -> None:
+        raise OSError("cleanup interrupted")
+
+    monkeypatch.setattr(
+        feedback_state_module,
+        "_durable_unlink",
+        fail_cleanup,
+    )
+    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+    monkeypatch.setattr(feedback_state_module, "_durable_unlink", original_unlink)
+
+    state = load_active_state(root)
+    assert state.cleanup_manifest_path is not None
+    manifest_path = state.cleanup_manifest_path
+    manifest = read_json_object(manifest_path)
+    publication = manifest["publication"]
+    assert isinstance(publication, dict)
+    publication["result"] = "ok"
+    manifest_path.write_bytes(canonical_json_bytes(manifest))
+
+    pointer_path = feedback_root(root) / "active" / "current.json"
+    pointer = read_json_object(pointer_path)
+    pointer["report_cut_manifest_sha256"] = hashlib.sha256(
+        manifest_path.read_bytes()
+    ).hexdigest()
+    pointer_path.write_bytes(canonical_json_bytes(pointer))
+
+    with pytest.raises(CmocError, match="publication artifact"):
+        load_active_state(root)
 
 
 def test_active_generation_hash_mismatch_is_corruption(

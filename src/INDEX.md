@@ -50,19 +50,19 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行 lifecycle、Codex exec/TUI、設定・状態・Git・パス・ログ・エラー、feedback、INDEX 更新、editing run など、複数機能から再利用される共通 API と実装を扱う。各個別 runtime 機能へ進むための入口。
+- cmoc の共通 runtime 実装をまとめるパッケージ。CLI 実行 lifecycle、Codex subprocess/TUI 連携、設定・状態・パス管理、Git 操作、ログ、エラー、feedback、INDEX 更新、editing run など、複数機能から利用される実行時境界を提供する。各機能の公開 API と共通処理を横断して確認する入口であり、具体的な挙動の調査は配下の担当モジュールへ進む。
 
 ## Read this when
-- cmoc の共通 runtime API、共通 lifecycle、または複数の runtime 機能にまたがる依存関係を調査・変更するとき
-- CLI、Codex 実行、設定、状態、Git、パス、ログ、feedback、INDEX 更新、editing run の共通処理の入口を探すとき
-- 対象となる個別 runtime module が特定できず、commons 配下の責務分担を把握するとき
+- cmoc の複数サブコマンドにまたがる runtime helper や公開 API の責務を把握するとき
+- Codex 実行、設定・状態・Git・パス・ログ・feedback・INDEX 更新などの共通実装の配置を調査するとき
+- commons 配下の個別モジュールを変更する前に、共通境界と関連する実装群を確認するとき
 
 ## Do not read this when
-- 特定の runtime helper や個別サブコマンドの具体的な挙動だけを調査する場合は、対応する個別実装へ直接進むとき
-- 正本仕様、設定型、状態 schema、Structured Output schema など、commons の公開・実装構成以外を確認する場合は、対応する oracle または専用定義を直接読むとき
+- 単一の runtime helper、CLI サブコマンド、Codex 実行経路、設定形式、feedback 保存形式などの具体的な実装だけを調査するときは、対応する配下モジュールを直接読む
+- 正本仕様や利用者向け挙動を確認することが目的で、実装の配置や共通 API を調査しないときは、対応する仕様文書を直接読む
 
 ## hash
-- 78b158936329c63dcdc1f5033005bcc43e3176f9ee4f09d5c830e9c5661e5143
+- 52da482bd62703eb9a12a5887f3aee803f72c5fc96ea8e4dba433e4648879321
 
 # `config`
 
@@ -115,15 +115,15 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの各CLI入口と、配下のサブコマンド固有処理へ進むためのルーティング起点を担う。
+- CLI サブコマンドの実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの各サブコマンド入口と、関連する実行フローへの下位実装を扱う。apply と realization review は現時点で実装がなく、追加時の配置先となる。
 
 ## Read this when
-- サブコマンドの実装構成や、対象サブコマンドのCLI実行入口を確認・変更するとき。
-- 複数のサブコマンドにまたがる実装配置や、各サブコマンド配下の責務分担をたどるとき。
+- CLI サブコマンドの構成や各コマンド実装への入口を確認するとき。
+- 特定サブコマンドの実行フロー、ライフサイクル、状態管理、レビュー、レポート生成などを調査・変更するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な処理だけを確認する場合は、対応する下位実装を直接読む。
-- サブコマンドから参照される共通処理、正本仕様、Structured Output schema、入力builderの詳細だけを確認する場合は、それぞれの直接の実装・仕様を読む。
+- サブコマンド共通のランタイム、データ構造、仕様、または下位実装の詳細だけを確認する場合。
+- 対象がこのディレクトリ配下のサブコマンドに関係しない場合。
 
 ## hash
-- 93aa5eb6701de00d6cb9d3636dd0b587322a43ed633751f6d3480cdb42a732d2
+- 97eb140926c641e03851b426b8bcb7227988d80c16b79760d6526485ea43747e
