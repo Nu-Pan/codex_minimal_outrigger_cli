@@ -15,19 +15,20 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の CLI 実行全体を管理するワークロード実装。refactor state の初期化・INDEX 同期から、realization file 単位の agent 調査・修正、差分と commit の検証、unresolved 所見の current fork 内追跡、完了条件の検査、joinable/error/interruption 状態の cleanup、fork report と完了ログの生成までを一つの lifecycle として扱う。realization refactor fork の実行フロー、処理単位の commit や agent 変更制約、unresolved 管理、完了判定、report 内容を確認・変更するときの入口である。
+- realization refactor fork の CLI 実行全体を管理する単一 workload。run の初期化から対象 file ごとの agent 調査・修正、refactor state と INDEX の同期、処理単位の commit、完了判定、joinable/error/interruption 状態の report 保存までを一貫して扱う。
+- current fork 内の unresolved finding、rename、変更 path、agent の commit 違反、cleanup 失敗を追跡し、完了理由と変更概要を確定するための上位 orchestration の入口。個別の agent prompt 生成や report 表示形式の詳細を確認する場合は、それぞれの builder・runtime・report 実装へ進む。
 
 ## Read this when
-- realization refactor fork サブコマンドの全体 lifecycle、実行状態遷移、処理単位の進捗管理を調査するとき
-- refactor state と INDEX の初期化・同期、realization file の選択、agent call 後の差分検証や commit 処理を変更するとき
-- unresolved finding の追跡、rename 後の state path との整合、natural completion と completed_with_unresolved の判定を確認するとき
-- 中断・例外時の child process 停止、rollback、run state 更新、fork report 生成の挙動を確認するとき
+- realization refactor fork の実行順序、処理単位の lifecycle、run state の遷移、完了不変条件を調査するとき
+- 対象 file の選択、agent call 後の差分検証、refactor state 更新、commit と unresolved 管理の関係を確認するとき
+- 中断・例外・cleanup failure 時の rollback、error report、joinable 公開条件を確認するとき
+- fork report の生成内容、completion reason、変更概要、未解決 finding の追跡方法を確認するとき
 
 ## Do not read this when
-- realization refactor fork の agent 用入力パラメータや所見 schema の詳細だけを確認したい場合は、対応する builder 実装を直接読む
-- refactor state の一般的なデータ構造や target 選択規則だけを確認したい場合は、runtime_refactor の実装を直接読む
-- run isolation、editing run、INDEX 更新など共通 runtime の一般仕様だけを確認したい場合は、参照されている共通 runtime または oracle 仕様を直接読む
-- fork report の共通レンダリング形式だけを確認したい場合は、runtime_run_report の実装を直接読む
+- 個別の realization file を直接修正・レビューする方法だけを確認したいときは、file review 用の builder または対象 realization file を読む
+- refactor state のデータ構造や target 選択ロジックだけを確認したいときは、runtime_refactor の実装を直接読む
+- run の一般的な isolation、編集 run の作成・join・abandon 契約だけを確認したいときは、対応する app specification または runtime lifecycle を直接読む
+- INDEX.md の生成規則や routing だけを確認したいときは、indexing の仕様・実装を読む
 
 ## hash
-- af7adfc3aa36830eafcb73330378bf8485e91a9b1fbb7889d61f77f5fa7f06fa
+- 0a3548b70ba94f748a122e1015af465927ffbe6c6afffb7c856356cef8ab62eb

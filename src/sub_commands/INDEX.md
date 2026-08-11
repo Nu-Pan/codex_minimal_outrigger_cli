@@ -80,18 +80,18 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドを構成するパッケージで、サブコマンドの入口、apply 処理、リファクタリング処理へのルーティングを担う。配下の各実装を確認するための上位入口。
+- realization workload サブコマンドのパッケージ入口。配下には apply と refactor の実装領域があり、それぞれ apply 処理とリファクタリング処理の調査・変更への入口となる。
 
 ## Read this when
-- realization workload サブコマンド全体の構成や、apply・リファクタリング処理のどちらを確認すべきか判断するとき。
-- realization サブコマンドの実装領域を調査または変更するとき。
+- realization workload サブコマンドの実装や構成を確認するとき。
+- realization の apply または refactor 処理の対象領域を特定し、配下の実装へ進むとき。
 
 ## Do not read this when
-- realization workload に関係しないサブコマンドを確認するとき。
-- apply の実行ライフサイクルだけを調査する場合は apply の対象へ、リファクタリングの実行フローだけを調査する場合は refactor の対象へ直接進む。
+- realization workload サブコマンドに関係しない処理を確認するとき。
+- apply や refactor の個別実装を直接調査・変更する場合は、対応する下位領域へ進むとき。
 
 ## hash
-- 52de2b20ad84777810fb00969bf4d07b114bd3f917c4de29c9748ed61871551f
+- 4f2e61fc48e0635d52899fc9dd53b227b004ed8f8d2bd0fae18bf95c1461f729
 
 # `review`
 
@@ -110,19 +110,24 @@
 # `run`
 
 ## Summary
-- editing run の共通 lifecycle サブコマンドと、旧 import path を維持する互換 shim をまとめるパッケージ。`abandon` と `join` の停止・終了・cleanup 処理、および共通 lifecycle/report 実装への入口を提供する。
+- 編集 run の共通 lifecycle サブコマンドと、その実装・互換 shim へのルーティング入口。active run の停止・統合・cleanup、共通 lifecycle helper、report writer の責務を確認するために読む。
+- active editing run を状態に応じて停止し、process、worktree、branch、state、tracking を cleanup する abandon 処理。停止失敗や cleanup 未完了時の資源保持、lifecycle report の生成も扱う。
+- active run の差分を検査して session branch へ merge し、INDEX.md conflict の再生成、post-join hook、refactor state 同期、report 保存、失敗時 rollback、cleanup を行う join lifecycle。
+- 共通 editing run lifecycle 実装を旧 import path から再公開する互換 shim。共通処理そのものではなく、旧参照との互換性や canonical 実装への移行を確認するときに読む。
+- 共通 run report writer を旧 import path から再公開する互換 shim。lifecycle report または fork report の参照互換性を確認するときに読む。
 
 ## Read this when
-- `cmoc run abandon` または `cmoc run join` の lifecycle、process 停止、差分検査、merge、report、resource cleanup を調査・変更するとき。
-- editing run 関連の旧 import path と canonical な共通実装の対応関係を確認するとき。
+- editing run の停止、統合、失敗復旧、cleanup、process tracking、state 同期、lifecycle report の挙動を調査または変更するとき
+- run join における想定外差分、force-resolve、INDEX.md 限定 conflict 処理、post-join hook、refactor state 同期を確認するとき
+- 旧 import path の lifecycle helper または report writer の互換性を確認するとき
 
 ## Do not read this when
-- editing run 以外のサブコマンドを扱うとき。
-- 共通 lifecycle や report の実装詳細だけを確認する場合は、canonical な commons 側の実装を直接読む。
-- 特定の run 処理の詳細を調べる場合は、このパッケージ入口ではなく該当する実装ファイルを直接読む。
+- editing run 以外のサブコマンドを扱うとき
+- 特定の共通 helper、Git 操作、state 管理、report writer の canonical 実装詳細だけを確認するときは、それぞれの commons 側実装を直接読む
+- run の workload 固有処理や CLI 一般起動処理だけを調査するとき
 
 ## hash
-- 29cc74a42dc1ea81641da803919b7bd2c6516f4871db1c58377724e48f0ad7cf
+- e2d8137bb96c1def3e634c2c07b2f4a61f95b3a1aede98383871042558d0b68c
 
 # `session`
 

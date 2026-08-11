@@ -1106,8 +1106,8 @@
   "src/sub_commands/run/join.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "0a4df4e1f7e7ed45d2ee93dcb41d63da28e9580bf5c671e927f179216397bba0",
-    "last_investigated_at": "2026-08-09_10-13_22_688219000"
+    "last_investigated_sha256": "78e84f3cfaa4b7c7d3ed473a295a8e3d671276dfd3f187a60f1ea4ce941cd158",
+    "last_investigated_at": "2026-08-12_01-46_00_918937000"
   },
   "src/sub_commands/run/lifecycle.py": {
     "investigation_required": false,

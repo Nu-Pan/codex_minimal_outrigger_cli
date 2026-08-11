@@ -54,18 +54,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行 lifecycle、Codex 呼び出し、設定・状態・Git・パス・ログ・feedback・エラー処理など、複数の機能から再利用される共通実装と公開 API を扱う。各 runtime 機能や共通境界の調査・変更時に、配下の個別モジュールへ進むための入口。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 共通 lifecycle、Codex 実行、設定・状態管理、Git、ログ、パス、feedback、INDEX 更新など、複数の runtime 機能から利用される実装への入口。
+- 配下には共通 API の再公開モジュールと、各 runtime 機能を担う個別実装が含まれる。特定機能の実装や仕様を確認・変更する場合は、該当する下位モジュールまたは正本仕様へ進む。
 
 ## Read this when
-- 複数の cmoc runtime 機能にまたがる共通 API、実行境界、状態管理、Git、パス、ログ、feedback、エラー処理を調査・変更するとき
-- commons 配下で対象となる runtime helper や公開入口を特定するとき
+- 複数の cmoc runtime 機能にまたがる共通 helper や公開 API の配置を確認するとき
+- CLI、Codex 実行、設定、状態、Git、ログ、パス、feedback、INDEX 更新などの runtime 実装を調査する入口を探すとき
+- commons 配下の個別 runtime module を利用・変更する前に、同階層の構成と責務分担を把握するとき
 
 ## Do not read this when
-- 特定の runtime helper の内部実装や個別サブコマンドの挙動だけを確認したいときは、対応する配下の実装へ直接進む
-- 正本仕様や利用者向け挙動だけを確認する場合は、対応する oracle 文書またはサブコマンド仕様を直接読む
+- 特定の runtime helper のアルゴリズムや挙動を確認・変更したいときは、対応する下位実装を直接読む
+- 利用者向けの正本仕様、CLI 個別サブコマンドの業務ロジック、または特定機能の入力契約だけを確認したいときは、対応する仕様・実装へ直接進む
 
 ## hash
-- 34e4fb1051302b75ee5b9ff823983713a831485c32060806524adc7154891a19
+- f41b51adfcd86627ad90022843e1057087bd9be08f201a222fd29d1ca46230e0
 
 # `config`
 
@@ -118,17 +120,16 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装を集約するディレクトリ。doctor、feedback、indexing、oracle、realization、review、run、session、tui の各実装領域へ進むための入口であり、apply は現時点で実装がない。
+- CLI サブコマンド実装をまとめるディレクトリ。各サブコマンドの実行入口や、oracle・realization・run・session などの下位機能領域へのルーティング起点として扱う。
+- apply、doctor、feedback、indexing、oracle、realization、review、run、session、tui の各サブコマンド実装または関連実装領域を含む。
 
 ## Read this when
-- サブコマンド実装の構成や、対象のサブコマンドに対応する実装領域を特定するとき。
-- 特定のサブコマンドの実行入口やライフサイクル処理を調査・変更するとき。
-- oracle や realization など、配下に複数の実装領域を持つサブコマンド群の入口を確認するとき。
+- CLI サブコマンドの構成や、特定サブコマンドの実装領域を特定するとき
+- サブコマンドの実行入口から、oracle・realization・run・session などの下位実装へ進むとき
 
 ## Do not read this when
-- 特定サブコマンドの詳細処理を確認する場合は、このディレクトリではなく該当する実装ファイルや下位パッケージを直接読む。
-- CLI ランタイム、共通 state/store、agent prompt、Structured Output schema、正本仕様の内容だけを確認したいとき。
-- apply サブコマンドを扱うが、実装が追加されていない状態のとき。
+- 特定サブコマンドの詳細な処理内容を確認する場合は、対応する下位実装を直接読む
+- 共通ランタイム、共通 state/store、Git 処理、プロンプト編集などの詳細だけを調べる場合は、それぞれの共通実装や正本仕様を直接読む
 
 ## hash
-- 45b673cb90fe1db4dd0cf83a07956de76c3dd1192eed75e35705eabe5a15693d
+- 7f1b99a70eb10ed31f3aa1fdb1f35aff78eb88143bc8b3523006e68efd33162c

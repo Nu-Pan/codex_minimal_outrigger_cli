@@ -440,19 +440,20 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- 明示的な join を必要とする editing run の lifecycle 共通処理を担う。session からの run 起動、active run の解決・回収、state 遷移、process ID 管理、worktree の rollback と commit、INDEX 更新、agent・run・session の差分分類、oracle 差分抽出、run target の確保と cleanup を一箇所で扱う。editing run の branch・worktree・state の不変条件を横断して確認するための入口であり、個別サブコマンドから共通 lifecycle 挙動を追う際に参照する。
+- 明示的な join を必要とする editing run の共通 lifecycle を一元管理する実装。session の準備状態検査、run branch/worktree の作成・公開・復旧、state 遷移、workload commit、INDEX 更新、差分分類、oracle 差分検出、想定外 path の検査、cleanup 判定に必要な共通処理を提供する。run lifecycle と lifecycle lock を共有するため、editing run lifecycle の入口として読む。
 
 ## Read this when
-- editing run の開始、joinable/error への state 遷移、run の recovery、worktree の作成・削除、commit・rollback を変更または調査するとき
-- agent が変更できる realization file、生成された INDEX.md、refactor state、oracle 差分の許可範囲を確認するとき
-- run branch と session branch の差分分類、rename/copy を含む変更 path の扱い、lifecycle lock による競合制御を確認するとき
+- editing run の開始、active run の解決・復旧、joinable/error への状態変更を実装または調査するとき
+- run worktree の作成・削除、commit、INDEX 更新、差分 path の分類、oracle・realization・生成 INDEX の許可判定を確認するとき
+- session branch と run branch の対応、fork commit、worktree path、process ID、lifecycle lock に関する不変条件を確認するとき
 
 ## Do not read this when
-- 個別 editing run サブコマンドの利用者向け仕様だけを確認する場合
-- SessionState の構造や Git 実行、path 解決、INDEX 生成の詳細実装を単独で確認する場合は、それぞれの専用モジュールまたは仕様へ直接進む
+- editing run の利用者向け状態遷移やサブコマンド契約だけを確認したいときは、対応する app_spec の仕様を直接読む
+- realization の具体的な編集処理だけを確認したいときは、realization 実装または対応する app_spec を直接読む
+- INDEX の生成規則だけを確認したいときは、indexing の仕様・実装を直接読む
 
 ## hash
-- fa6208b822e4e446b58f12009d69f99a4c37ddd601ce36db2a2b34978fba15f6
+- c2cdbf8d538fdb37ec0db1a73a03831016541d4f6447e3bfe4f1e6589c89e7d3
 
 # `runtime_run_report.py`
 

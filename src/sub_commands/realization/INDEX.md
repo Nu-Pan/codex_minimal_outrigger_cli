@@ -15,34 +15,36 @@
 # `apply`
 
 ## Summary
-- 指定ディレクトリは realization の apply 処理を担い、apply workload の実装と `realization apply fork` の実行ライフサイクルを確認する入口です。
-- `fork.py` は editing run の作成から agent 実行、変更検査、INDEX 再生成、commit または rollback、fork report 保存までを一体として管理し、apply 固有の差分始点と feedback 情報も扱います。
+- realization の apply 処理を構成する実装を扱うディレクトリ。apply workload の実装と、apply fork における agent 実行、差分検査、run状態更新、rollback、fork report保存の入口となる。
 
 ## Read this when
 - realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の CLI 挙動、run の完了状態、agent の変更許可範囲、commit 防止、INDEX 再生成、差分の commit・rollback を確認するとき。
-- fork report に記録される完了理由、変更パス、return code、cleanup warning、feedback 情報を確認するとき。
+- `cmoc realization apply fork` の実行フロー、run状態遷移、fork reportの保存条件を調べるとき。
+- apply agentが作成した差分の許可範囲、commit検査、想定外変更、失敗時のrollbackやerror stateを確認・変更するとき。
 
 ## Do not read this when
-- apply workload や `realization apply fork` の実行全体ではなく、agent 起動パラメータの構築方法だけを確認する場合。
-- editing run の共通ライフサイクルや git 差分操作の詳細だけを確認する場合。
-- apply の正本仕様や利用者向け手順を確認する場合。
+- apply workload以外のrealization処理を扱うとき。
+- apply agent自体のプロンプト生成や差分適用仕様を調べるとき。
+- editing run全般の共通ライフサイクル、INDEX生成機能そのものの仕様や実装を調べるとき。
 
 ## hash
-- 88043850330809edcca17aedfb1ed1a7c1aeb3364f4c249070277512dd6b758e
+- 2eb7b3e16a04df8e5901fe5b1081254e24ec9cf33810dcec224ead9f8de8563e
 
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理を構成するパッケージ。関連するリファクタリング処理の構成と、refactor fork の実行フローを確認するための入口となる。
+- realization のリファクタリング処理をまとめるパッケージ。fork 単位の実行管理と、関連するリファクタリング処理への入口を提供する。
 
 ## Read this when
-- realization のリファクタリング処理の構成を確認するとき
-- realization refactor fork の lifecycle、状態遷移、進捗管理、完了判定、report 生成を調査または変更するとき
+- realization のリファクタリング作業の構成や実行管理を確認するとき
+- 対象 file の調査・修正、refactor state と INDEX の同期、commit、完了判定、report 保存を含む fork のライフサイクルを確認するとき
+- refactor fork の unresolved finding、rename、変更 path、agent 違反、cleanup failure の追跡を確認するとき
 
 ## Do not read this when
 - realization のリファクタリング以外の処理を確認するとき
-- agent 用入力パラメータや所見 schema、refactor state の一般構造、共通 runtime の仕様、fork report の共通レンダリング形式だけを確認するときは、対応する下位実装または共通仕様を直接読む
+- 個別の realization file の修正・レビュー方法だけを確認したいとき
+- refactor state のデータ構造や target 選択ロジックだけを確認したいとき
+- INDEX.md の生成規則や routing だけを確認したいとき
 
 ## hash
-- 5085c3766e84d37f77ab0a1eb68b7635159eb78bb36e8ff04659257ed8156faa
+- d7f438e5e9473162267f907970f7567797c0a137239f7eb7732eadcd321ddc5a

@@ -653,7 +653,11 @@ def _unexpected_refresh_paths(
             path
             for path in pending_paths
             if path not in agent_paths
-            and not is_generated_index_path(context.run_worktree, path)
+            and not is_generated_index_path(
+                context.run_worktree,
+                path,
+                base=context.run_fork_commit,
+            )
             and Path(path) != refactor_state
         }
     )

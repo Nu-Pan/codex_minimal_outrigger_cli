@@ -472,7 +472,12 @@ def _resolve_index_only_conflict_or_fail(
     ).stdout.split("\0")
     conflicts = [path for path in fields if path]
     if conflicts and all(
-        is_generated_index_path(context.session_worktree, path) for path in conflicts
+        is_generated_index_path(
+            context.session_worktree,
+            path,
+            base=context.run_fork_commit,
+        )
+        for path in conflicts
     ):
         for path in conflicts:
             if _has_ours_conflict_stage(context.session_worktree, path):

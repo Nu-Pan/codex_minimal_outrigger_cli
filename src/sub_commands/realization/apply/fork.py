@@ -188,7 +188,11 @@ def _cmoc_realization_apply_fork_body() -> None:
                 path
                 for path in pending_paths
                 if path not in changed_agent_paths
-                and not is_generated_index_path(context.run_worktree, path)
+                and not is_generated_index_path(
+                    context.run_worktree,
+                    path,
+                    base=context.run_fork_commit,
+                )
                 and path not in unexpected
             )
             unexpected.sort()

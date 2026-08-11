@@ -411,24 +411,24 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の realization apply/refactor fork と run join/abandon を、共通の session state・run worktree・process tracking・report lifecycle を使って検証する統合 realization test。
-- agent が変更できる対象、INDEX 更新、oracle/managed file の差分制御、commit・rollback・rename・delete・force-resolve を検証する。
-- Codex child process の追跡・停止、cleanup warning、割り込み・失敗・競合・破損した tracking への復旧、refactor の unresolved target と永続 cycle を検証する。
-- 個別実装の詳細を確認する入口ではなく、editing run 全体の lifecycle 契約や複数サブコマンド間の統合挙動を確認するためのテスト入口である。
+- editing run の apply/refactor fork と run join/abandon を横断する統合 realization test。共通 lifecycle fixture を使い、run state・branch・worktree・process tracking・report の生成、遷移、cleanup、rollback、merge を検証する。
+- oracle や INDEX.md など管理対象外差分の拒否・復元、rename/delete、symlink、path 判定、INDEX refresh の副作用制御を検証する。
+- Codex child の追跡・停止、agent commit や preflight commit の rollback、例外・中断・cleanup 失敗時の state/report 保全を検証する。
+- refactor の target 調査、unresolved finding、永続 state、change summary、changed_paths 検証と、apply 結果の report・feedback 観測情報を検証する。apply/refactor lifecycle、run join/abandon の挙動を変更・不具合調査するときの統合テスト入口。
 
 ## Read this when
-- realization apply/refactor fork の run lifecycle、session state 遷移、joinable/error/ready の扱いを変更・調査するとき。
-- run join または run abandon の merge、cleanup、force-resolve、report 保存、失敗時 rollback を変更・調査するとき。
-- run worktree、process tracking、Codex child 停止、INDEX refresh、managed file 差分検証の統合挙動を確認するとき。
-- refactor の target 選択、unresolved finding、rename 後の state 同期、completion report を変更・調査するとき。
+- editing run の realization apply fork または realization refactor fork の lifecycle 挙動を変更・検証するとき
+- run join/abandon の state 遷移、merge、worktree・branch cleanup、force-resolve を変更・検証するとき
+- Codex child tracking、INDEX refresh、管理対象外差分、rollback、report 保存の統合動作を確認するとき
+- refactor target state、unresolved finding、rename、changed_paths、completion report の実装を変更するとき
 
 ## Do not read this when
-- 単一の lifecycle helper やサブコマンドの局所実装だけを確認し、統合経路や既存の境界条件を調べる必要がないとき。
-- editing run と無関係な CLI、仕様、テスト領域を扱うとき。
-- この統合テストで検証される lifecycle ではなく、テスト共通 fixture や一般的なテスト実行方法だけを確認したいとき。
+- INDEX.md の生成・ルーティング規則だけを変更するとき
+- 単一関数の局所的なロジックを、その統合 lifecycle や CLI 挙動を確認せずに調査するとき
+- run lifecycle と無関係な CLI、oracle、refactor state の機能を変更するとき
 
 ## hash
-- beafe1fe0069655647dedea74e34cd0f4ae35a847d6216f1c60ee3d7b9a6713d
+- b36a607af1cc442defb363dc9c2570c24ae299892519b0c81427aacc34ebcfa5
 
 # `test_feedback.py`
 

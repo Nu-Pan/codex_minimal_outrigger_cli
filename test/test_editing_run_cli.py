@@ -2223,6 +2223,48 @@ def test_run_join_allows_oracle_change_on_session_branch(
     assert (root / "oracle" / "spec.md").read_text() == "session oracle change\n"
 
 
+def test_generated_index_path_requires_indexable_parent(tmp_path: Path) -> None:
+    """存在しない親や symlink 親の INDEX.md を cmoc 生成物として扱わない。"""
+    root = make_repo(tmp_path)
+    generated_directory = root / "generated"
+    generated_directory.mkdir()
+    symlink_target = root / "symlink-target"
+    symlink_target.mkdir()
+    (root / "symlink-parent").symlink_to(symlink_target, target_is_directory=True)
+
+    assert lifecycle_module.is_generated_index_path(root, "generated/INDEX.md")
+    assert not lifecycle_module.is_generated_index_path(root, "missing/INDEX.md")
+    assert not lifecycle_module.is_generated_index_path(root, "symlink-parent/INDEX.md")
+
+
+def test_run_join_accepts_deleted_nested_generated_index(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """realization directory の削除に伴う生成 INDEX.md の削除を許可する。"""
+    root, _session_branch, _state_path = _start_session(tmp_path, monkeypatch)
+    generated_directory = root / "src" / "nested"
+    generated_directory.mkdir(parents=True)
+    (generated_directory / "module.py").write_text("before\n")
+    (generated_directory / "INDEX.md").write_text("generated\n")
+    run_git(root, "add", "src")
+    run_git(root, "commit", "-m", "add realization directory")
+
+    context = start_editing_run("realization_apply")
+    run_directory = context.run_worktree / "src" / "nested"
+    (run_directory / "module.py").unlink()
+    (run_directory / "INDEX.md").unlink()
+    run_directory.rmdir()
+    (run_directory.parent).rmdir()
+    commit_work_unit(context.run_worktree, "delete realization directory")
+    set_run_state(context, "joinable")
+    monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
+
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+
+
 def test_run_join_rejects_non_generated_index_change_on_session_branch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2516,25 +2558,31 @@ def test_run_join_cleanup_checks_branch_deletion_postcondition(
     assert warnings == ["run branch cleanup failed"]
 
 
+@pytest.mark.parametrize("relative_path", ["INDEX.md", "src/nested/INDEX.md"])
 def test_run_join_resolves_deleted_session_index_conflict(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    relative_path: str,
 ) -> None:
     """session 側で削除された INDEX.md の conflict を再生成可能な状態にする。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
-    index_path = root / "INDEX.md"
+    index_path = root / relative_path
+    index_path.parent.mkdir(parents=True, exist_ok=True)
     index_path.write_text("base index\n")
-    run_git(root, "add", "INDEX.md")
+    run_git(root, "add", relative_path)
     run_git(root, "commit", "-m", "add index")
     context = start_editing_run("realization_apply")
-    (context.run_worktree / "INDEX.md").write_text("run index\n")
+    (context.run_worktree / relative_path).write_text("run index\n")
     commit_work_unit(context.run_worktree, "run index change")
     set_run_state(context, "joinable")
     index_path.unlink()
-    run_git(root, "add", "INDEX.md")
+    if index_path.parent != root:
+        index_path.parent.rmdir()
+        index_path.parent.parent.rmdir()
+    run_git(root, "add", relative_path)
     run_git(root, "commit", "-m", "delete session index")
     monkeypatch.setattr(run_join_module, "refresh_indexes", _no_index_refresh)
 
