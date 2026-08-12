@@ -234,20 +234,21 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理に関する外部挙動を検証するテスト。プロンプトエディタ入力の初期値と timestamp 衝突、skeleton 検証、編集済み prompt による Codex TUI 起動、linked worktree での保存先、および `.cmoc` の ignore を扱う。TUI サブコマンドの前処理と起動経路を確認する入口であり、個別の prompt builder や runtime 実装の詳細を調べる前に読む。
+- TUI 起動直前の CLI 前処理と、その外部挙動を検証するテスト群。
+- エディタ入力の正本初期値、timestamp 衝突時の保持、skeleton のプレースホルダー制約を扱う。
+- 編集済み prompt による Codex TUI の直接起動、linked worktree での prompt・agent call context・ログ配置、`.cmoc` ignore の保証を検証する。
 
 ## Read this when
-- `tui` サブコマンドの起動前処理、エディタ入力、編集済み prompt、Codex TUI の直接起動の外部挙動を確認または変更するとき
-- timestamp 衝突時の入力ファイル保持、prompt skeleton の placeholder 検証、または linked worktree におけるログ・prompt 保存先を確認するとき
-- TUI 実行時の staged/unstaged 差分保持や `.cmoc` の git ignore 挙動を検証するとき
+- TUI サブコマンドの起動前処理や、エディタ編集後の prompt からの直接起動を確認・変更するとき
+- prompt editor input の timestamp 衝突、skeleton 検証、編集前後の prompt 内容を検証するとき
+- linked worktree におけるログ配置、起動 context、repository と worktree の `.cmoc` ignore を確認するとき
 
 ## Do not read this when
-- prompt editor や prompt builder の単体実装だけを確認する場合は、対応する実装または oracle を直接読む
-- TUI 以外のサブコマンドの外部挙動を確認する場合は、各サブコマンドのテストを読む
-- 一般的な CLI 起動や git worktree の仕様だけを調べる場合は、このテストを入口にしない
+- TUI 前処理ではなく prompt 編集や TUI 起動の実装詳細を調べるときは、対応する正本仕様または実装ファイルを直接読む
+- 他の CLI サブコマンド、一般的な git 操作、または TUI 起動後の Codex 実行を調べるとき
 
 ## hash
-- 13a18baef796e717056913606fbb12a5fcc15f265321cac14203033ac8c9f4fe
+- 5ee6c662797c5659acfb9fea23cc960cdd7eb2d826719780e23cc533a3f569b0
 
 # `test_codex_runtime_errors.py`
 

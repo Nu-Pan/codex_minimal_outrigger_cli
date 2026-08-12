@@ -17,6 +17,7 @@ from _git_support import make_repo, run_git
 from oracle.prompt_builder.editor_input import build_prompt_editor_input_initial_text
 
 import commons.prompt_editor_input as prompt_editor_input_module
+import commons.runtime_cli as runtime_cli_module
 import commons.runtime_codex_preflight as codex_preflight_module
 import sub_commands.tui as tui_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
@@ -149,6 +150,22 @@ def test_tui_runs_editor_and_launches_codex_directly(
     readme_path.write_text("# unstaged change\n")
     staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
     unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
+    events: list[str] = []
+
+    real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
+
+    def record_run_doctor_preprocess(
+        target_root: Path,
+        *,
+        sync_refactor_entries: bool = True,
+    ) -> None:
+        """TUI invocation 内の doctor preprocess を記録して本来の処理へ委譲する。"""
+        events.append("doctor")
+        real_run_doctor_preprocess(
+            target_root,
+            sync_refactor_entries=sync_refactor_entries,
+        )
+
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake_code = bin_dir / "code"
@@ -173,6 +190,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
         original_prompt: str,
     ) -> AgentCallParameter:
         """builder の引数、戻り値、および編集前の skeleton を記録する。"""
+        events.append("build")
         parameter = real_build_parameter(time_stamp, original_prompt)
         prompt_suffix = " を読んで、その指示に従って下さい"
         complete_path = Path(parameter.prompt.removesuffix(prompt_suffix))
@@ -188,6 +206,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
 
     def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         """TUI 起動 call を記録して生成パラメータを検証する。"""
+        events.append("tui")
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
         assert kwargs["notification_command_name"] == "tui"
@@ -196,8 +215,18 @@ def test_tui_runs_editor_and_launches_codex_directly(
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
         assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
-        assert parameter == builder_calls[0][2]
+        assert parameter is builder_calls[0][2]
 
+    monkeypatch.setattr(
+        tui_module,
+        "enable_indexing_preflight",
+        lambda: events.append("enable"),
+    )
+    monkeypatch.setattr(
+        runtime_cli_module,
+        "run_doctor_preprocess",
+        record_run_doctor_preprocess,
+    )
     monkeypatch.setattr(
         tui_module,
         "build_tui_launch_tui_parameter",
@@ -208,6 +237,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
     assert result.exit_code == 0
+    assert events == ["enable", "doctor", "build", "tui"]
     assert len(builder_calls) == 1
     assert builder_calls[0][1] == prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER
     assert (

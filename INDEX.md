@@ -149,16 +149,16 @@
 # `test`
 
 ## Summary
-- pytest による realization test と共通テスト支援を集約するディレクトリ。CLI、runtime、Codex 実行、indexing、oracle review、session、設定、通知などの外部挙動・契約を検証する各テストへの入口を提供する。
+- cmoc の realization test 群を集約するディレクトリ。CLI、runtime、ACP builder、Codex 実行、oracle review、session、indexing、設定、通知などの外部挙動・契約・安全性を検証するテストへの入口。
 
 ## Read this when
-- 対象機能の外部挙動、回帰条件、統合 lifecycle、または対応する共通 test helper を確認・変更するとき。
-- 実装変更に対する既存テストの対象範囲や、関連する受け入れテストを特定するとき。
+- 機能変更や仕様変更に対応する既存の realization test、回帰テスト、受け入れテストを特定するとき。
+- CLI、runtime、Codex 実行、indexing、oracle review、session、設定などの外部挙動をテストから確認するとき。
 
 ## Do not read this when
-- 正本仕様や実装責務そのものを確認する場合は、対応する oracle または src の対象を直接読む。
-- テスト実行手順だけを確認する場合は、専用の test execution 規約を読む。
-- 特定の機能と無関係なテストを総覧する必要がない場合は、このディレクトリ全体ではなく該当テストへ直接進む。
+- 実装の責務や正本仕様そのものを確認するときは、対応する src 実装または oracle 文書を直接読む。
+- 共通テスト支援だけを調べるときは、対象の support helper を直接読む。
+- テスト実行方法や開発環境の規約だけを確認するときは、専用の実行規約・開発規約を読む。
 
 ## hash
-- 04efa763ddd36b3e8fca8b2270e3a1ec0b5c278a13f10e25e2191260658767db
+- ec944d165d96be46a45d9536fdafeaf17b506cb51abbac0a6495b8a896978510
