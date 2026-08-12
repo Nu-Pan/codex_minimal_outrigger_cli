@@ -89,23 +89,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本ドキュメント群を集約するディレクトリ。アプリケーション仕様、branch・commit・worktree のモデル、採用しなかった設計案、開発ルールを扱い、目的に応じた下位文書への入口となる。
+- cmoc の人間所有の正本仕様を分類して読むためのルート。自然言語の要求・判断基準・責務を定める仕様文書、正確な実装定義や Structured Output schema、関連するテスト規約を扱う。CLI 共通挙動、agent call、prompt、feedback、session/run、branch・commit・worktree、開発・テスト規則、不採用案の記録へ進む入口となる。
 
 ## Read this when
-- cmoc の正本仕様や開発ルールの所在を確認するとき
-- CLI・Codex 呼び出し・ログ・feedback・prompt・run／session・通知などのアプリケーション挙動を調べるとき
-- session fork、run の隔離、branch・commit・worktree の関係を調べるとき
-- 実装配置、開発環境、テスト要件、テスト実行手順を確認するとき
-- 現行仕様ではなく、採用しなかった設計案の背景や採否理由を調べるとき
+- cmoc の仕様、設計、開発規則、テスト規約の入口を特定するとき
+- CLI サブコマンド、Codex 呼び出し、prompt、ログ、feedback、session/run、branch・commit・worktree の正本仕様を調査するとき
+- 正確な agent call 定義、schema、共通実装部品を確認するとき
+- 採用しなかった設計や作業方式の理由を確認するとき
 
 ## Do not read this when
-- 実装ファイルやテストの具体的な挙動だけを確認する場合
-- 読むべき特定の正本文書が既に判明しており、その本文へ直接進める場合
-- 単一の CLI サブコマンドの挙動だけを確認し、関連する仕様の分担や境界を調べる必要がない場合
-- 現行仕様や実装の直接の参照先が必要で、採用しなかった設計案の背景を確認する必要がない場合
+- 確認対象の仕様本文や開発規則が既に特定できており、該当する下位文書へ直接進めるとき
+- 実装ファイル、realization file、テスト、実行ログ、生成成果物の具体的内容だけを調査するとき
+- 特定の schema の項目・型・形式だけを確認するときは、対応する schema を直接読む
 
 ## hash
-- 322d868c4c1fed1fdf6058befb8f0051a4d58556f0a048054a5d3fbe2b2bcaab
+- 6931d685b6a1d2808364ab743ff3a42c93d4728a71c2754754183588f47dc56b
 
 # `pyproject.toml`
 

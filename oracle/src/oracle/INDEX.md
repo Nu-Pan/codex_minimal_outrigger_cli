@@ -1,21 +1,19 @@
 # `acp_builder`
 
 ## Summary
-- 対象ディレクトリには、agent call の共通データモデルやサブコマンド別の呼び出し定義が置かれており、各処理の prompt・モデル・推論強度・ファイルアクセス・Structured Output 連携を確認するための入口です。
-- 基本的な AgentCallParameter の契約は `basic.py`、indexing・oracle・realization・session・tui・quota probe など個別用途の呼び出し構築は対応するサブディレクトリまたはモジュールへ進みます。
+- AI エージェント呼び出しの基礎モデル、用途別の prompt・起動パラメータ定義、および oracle・realization・session・tui・indexing・feedback・quota probe 向けの構築処理を扱う領域。共通の呼び出し契約を確認した後、目的に対応する下位定義へ進むための入口。
 
 ## Read this when
-- agent call の共通パラメータ契約、モデル選択、推論強度、ファイルアクセスモードを確認・変更するとき
-- indexing、oracle、realization、session、tui、quota probe、feedback など特定用途の prompt や起動設定を確認・変更するとき
-- agent call と Structured Output schema、indexing preflight、作業ディレクトリの接続を調査するとき
+- AI エージェント呼び出しの共通パラメータ、または用途別の prompt・モデル・推論強度・アクセス権限・作業ディレクトリ・事前 indexing 設定を確認・変更するとき
+- indexing、feedback、quota probe、oracle、realization、session join、tui の agent call 構築定義を調査するとき
 
 ## Do not read this when
-- 通常の INDEX.md の内容や生成対象ファイル自身の責務だけを調べるとき
-- バックエンド固有のモデル名解決や具体的なアクセス規則の文面だけを確認するとき
-- agent call の実行処理や個別の生成・適用ロジックだけを調べるときは、対応する実装を直接読む
+- 通常のサブコマンド実行フロー、agent call の実行処理、または個別の oracle・realization ファイルの内容を確認するとき
+- Structured Output の項目・型・形式だけを確認するときは、対応する下位 schema を直接読む
+- 共通の ACP builder 実装や、バックエンド固有のモデル解決・ファイルアクセス規則だけを確認するときは、それぞれの直接の定義へ進む
 
 ## hash
-- 257bec0b102f75dd942bdfc0e7af3f5a80756416aabb9617452efd3ae174e8b7
+- a3de673dfc2a30e15090d4da8ddd32a123ce481aabc3d0d78bd8849003cbe51e
 
 # `feedback`
 
@@ -59,20 +57,17 @@
 # `prompt_builder`
 
 ## Summary
-- プレースホルダ名を実パスや文字列へ対応付ける型定義を置く。置換対象を共通表現で扱う必要がある場合の入口。
-- 選択した規則・補助プロンプト・動的な役割情報を統合し、placeholder を解決して完全な agent prompt を構築する。prompt の統合順序や規則の有効化条件を確認する入口。
-- エディタ経由で後続 AI エージェントへ渡すユーザー入力ファイルの初期表示文面を構築する。入力案内や完全 prompt の差し込み構造を扱う。
-- oracle・realization の追従要否やレビュー基準、conflict 解消、human feedback、アクセス制限、INDEX.md ルーティング、oracle/realization の規範など、agent call 向け標準規則を構築する prompt 部品群。個別規則の生成経路を確認する入口。
+- agent call 向けの完全な構造化 prompt を組み立てる実装群。placeholder 定義、静的・動的 prompt の統合、エディタ入力文面、各種規範や routing・feedback・access rule の構築部品を扱い、prompt 生成経路を確認する際の入口となる。
 
 ## Read this when
-- prompt builder の型定義、完全 prompt の統合処理、エディタ入力文面の構造を変更または確認するとき。
-- 特定の agent call 向けに oracle、realization、review、routing、feedback、アクセス規則などの標準規範がどのように構築されるかを調査するとき。
+- prompt builder の構成や、agent call 用 prompt の生成・統合順序を調査するとき。
+- oracle・realization・レビュー・routing・human feedback・file access などの標準規範が、どの部品から構築されるか確認するとき。
+- placeholder の定義、エディタ入力の初期文面、構造化 prompt の組み立てを変更・レビューするとき。
 
 ## Do not read this when
 - 個別の oracle 文書、realization 実装、realization test の内容を調査するとき。
-- prompt builder 部品を組み合わせる呼び出し元や agent call 全体の選択処理を調べるときは、呼び出し元の実装を直接読む。
-- 既存 INDEX.md のルーティング情報だけを確認・更新するとき。
-- Structured Output schema の形式や、ファイル名・hash など機械的な識別情報だけを確認するとき。
+- prompt builder を呼び出す上位の選択処理や agent call の実行方法だけを確認したいとき。
+- Structured Output schema や構造化文書型そのものだけを確認したいときは、該当する型定義を直接読む。
 
 ## hash
-- 6cf1b086cadb55f225321c3b47855deb1f9b7dccf576022213d9b31590a3e867
+- 4787824fd631ba0053b4c988234b7bb60c67df522d38c788abc57a83774c9e0e

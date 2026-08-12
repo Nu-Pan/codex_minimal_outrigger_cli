@@ -16,20 +16,18 @@
 # `normalize_issue.py`
 
 ## Summary
-- feedback issue の同一性判断に使う agent call parameter を構築する定義。構造化 observation と絞り込み済み候補だけを入力として、既存 issue との同一性または新規 issue を判断する prompt、読み取り専用の call context、モデル設定、Structured Output schema の参照をまとめる。
+- 構造化された feedback observation と、事前に絞り込まれた既存 issue candidate を比較し、同一 issue か新規 issue かを判定するための agent call parameter を構築する。feedback issue の同一性判断に必要な prompt、読み取り専用の call context、Structured Output schema の指定を担う。
 
 ## Read this when
-- feedback issue の重複・同一性判定用 agent call parameter を変更または確認するとき
-- observation と既存 issue candidate を用いた prompt 構築規則を確認するとき
-- normalize issue のモデル、推論、ファイルアクセス、indexing preflight などの起動設定を確認するとき
+- feedback observation を既存 issue candidate と照合し、同一 issue の再報告か新規 issue かを判定する処理を変更・調査するとき
+- 同一性判断用 prompt の入力範囲、参照禁止条件、または agent call の読み取り専用設定を確認するとき
 
 ## Do not read this when
-- feedback issue の summary、impact、原因、現在性、actionability、human action、verification verdict、relation の生成規則を確認したいとき
-- feedback state の保存や候補 issue の絞り込み処理を変更または確認するとき
-- 同一性判定の Structured Output schema 自体を変更または検証するとき
+- issue の summary、impact、原因、重要度、現在性、actionability、human action、verification verdict、relation を生成・確定する処理を調べるとき
+- 候補 issue の絞り込みや feedback state の保存・更新処理を直接調べるとき
 
 ## hash
-- 9094802205a6c2b8b6cf14e3608447414595558e0e8ee955a5a45584b3b02bbd
+- 036ff1f061244c0860726b49546fb80933306c407207e135ecd6003c6b2eff48
 
 # `verify_issue.json`
 
@@ -53,18 +51,17 @@
 # `verify_issue.py`
 
 ## Summary
-- feedback issue の検証担当向け AgentCallParameter を構築する定義。report cut 時点の固定済み参照、candidate、agent call context から、読み取り専用の検証 prompt と Structured Output 設定を生成する。
-- issue candidate の判定基準、参照・変更禁止事項、Structured Output の事後条件を prompt に組み込み、検証結果を所定の schema へ接続する。
+- feedback issue candidate を、report cut 時点で固定された参照だけから検証する prompt と agent call 起動パラメータの構築定義。
+- 人間の対応が必要な未解決 issue の判定に加え、resolved・not_actionable・inconclusive の判定条件と Structured Output の事後条件を prompt に組み込む。
+- 読み取り専用の agent call として、指定モデル・推論設定・検証用 schema・agent call context を返す。
 
 ## Read this when
-- feedback issue の検証 prompt や起動パラメータを変更するとき
-- candidate、report cut reference、verification verdict の制約を確認するとき
-- AgentCallParameter の読み取り専用設定や Structured Output schema の接続を確認するとき
+- feedback issue candidate の検証 prompt または検証用 agent call の起動パラメータを変更・調査するとき
+- report cut reference 以外の live state や feedback state を読まない検証境界を確認するとき
 
 ## Do not read this when
-- feedback issue の報告・保存処理そのものを変更するとき
-- 一般的な prompt builder や共通の agent call 型の仕様だけを確認するとき
-- 検証対象の issue candidate や report cut reference の内容を直接確認するとき
+- feedback issue の報告・保存・候補生成を変更・調査するとき
+- 一般的な agent call パラメータや検証結果 schema を直接確認すれば足りるとき
 
 ## hash
-- 8ab1f0a937e4acf0cd9d890f3484a045d2207200e533cc8ab6cc0f9987121ec0
+- 06e683b45d98d5e107abd1ec4bfe81ac61b67e21180475bfc787bfd4b603373b
