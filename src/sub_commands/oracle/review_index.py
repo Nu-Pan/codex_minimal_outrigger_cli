@@ -2,12 +2,17 @@ from pathlib import Path
 
 from cmoc_runtime import CmocError, head_commit, run_git
 from commons.runtime_git import literal_pathspec, status_path_statuses
+from commons.runtime_run_lifecycle import is_generated_index_path
 
 
 def commit_review_index_changes(review_worktree: Path) -> bool:
     """review worktree 上の INDEX.md 変更だけを commit する。"""
     changed_paths = review_worktree_status_paths(review_worktree)
-    non_index = [path for path in changed_paths if Path(path).name != "INDEX.md"]
+    non_index = [
+        path
+        for path in changed_paths
+        if not is_generated_index_path(review_worktree, path)
+    ]
     if non_index:
         raise CmocError(
             "oracle review が INDEX.md 以外の差分を作成しました。",
@@ -15,7 +20,7 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
             "\n".join(non_index),
         )
     changed_index_paths = [
-        path for path in changed_paths if Path(path).name == "INDEX.md"
+        path for path in changed_paths if is_generated_index_path(review_worktree, path)
     ]
     if not changed_index_paths:
         return False
@@ -49,7 +54,11 @@ def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> 
         review_worktree,
         ["diff", "--no-renames", "--name-only", f"{base_commit}..HEAD"],
     )
-    non_index = [path for path in changed_paths if Path(path).name != "INDEX.md"]
+    non_index = [
+        path
+        for path in changed_paths
+        if not is_generated_index_path(review_worktree, path, base=base_commit)
+    ]
     if non_index:
         raise CmocError(
             "review branch に INDEX.md 以外の commit 済み差分があります。",

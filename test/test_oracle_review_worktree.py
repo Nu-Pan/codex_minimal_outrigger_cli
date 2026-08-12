@@ -1103,6 +1103,27 @@ def test_review_branch_rejects_non_index_rename_to_index(
         review_module.review_branch_has_index_changes(root, base_commit)
 
 
+@pytest.mark.parametrize("relative_path", [".agents/INDEX.md", "memo/INDEX.md"])
+def test_review_branch_rejects_non_generated_index_commit(
+    tmp_path: Path,
+    relative_path: str,
+) -> None:
+    """indexing 対象外 directory の INDEX.md commit を統合しない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/indexing.md。
+    """
+    root = make_repo(tmp_path)
+    index_path = root / relative_path
+    index_path.parent.mkdir(parents=True)
+    index_path.write_text("unexpected\n")
+    run_git(root, "add", "--", relative_path)
+    run_git(root, "commit", "-m", "add non-generated index")
+    base_commit = run_git(root, "rev-parse", "HEAD^").stdout.strip()
+
+    with pytest.raises(CmocError, match="INDEX.md 以外の commit 済み差分"):
+        review_module.review_branch_has_index_changes(root, base_commit)
+
+
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])
 def test_oracle_review_rejects_non_index_worktree_changes(
     tmp_path: Path,
@@ -1150,6 +1171,44 @@ def test_oracle_review_rejects_non_index_worktree_changes(
     assert "oracle review が INDEX.md 以外の差分を作成しました。" in result.output
     assert (root / "README.md").read_text() == "# repo\n"
     assert not (root / "generated.txt").exists()
+
+
+@pytest.mark.parametrize("relative_path", [".agents/INDEX.md", "memo/INDEX.md"])
+def test_oracle_review_rejects_non_generated_index_worktree_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    relative_path: str,
+) -> None:
+    """indexing 対象外 directory の INDEX.md を session に統合しない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/indexing.md。
+    """
+
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """indexing 対象外の INDEX.md を review worktree に作る。"""
+        assert _schema_name(parameter) == "enumerate_finding.json"
+        review_worktree = _review_worktree_from_enumeration(kwargs)
+        unexpected_index = review_worktree / relative_path
+        unexpected_index.parent.mkdir(parents=True, exist_ok=True)
+        unexpected_index.write_text("unexpected\n")
+        return _FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["oracle", "review", "--scope", "full"])
+
+    assert result.exit_code != 0
+    assert "oracle review が INDEX.md 以外の差分を作成しました。" in result.output
+    assert relative_path in result.output
 
 
 def test_oracle_review_reports_cleanup_failure(

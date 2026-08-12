@@ -1032,7 +1032,7 @@
     "last_investigated_at": "2026-08-10_11-35_41_670831000"
   },
   "src/sub_commands/oracle/review_index.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "9d8452af51dc2c2076407b1ddb8daa9152eb8e7e3b6170c7a014dff1e06382a7",
     "last_investigated_at": "2026-07-31_06-17_28_291386000"
@@ -1369,9 +1369,9 @@
   },
   "test/test_oracle_review_worktree.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "8b6cd9de414f150019cc4e7d59debec9309b7ebd4d686fed4bfa308e8f0aaa64",
-    "last_investigated_at": "2026-08-09_19-07_27_756922000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "2dcb0c426f55461007924b8155a93d3cb78e86d11e2fe3d613beb064ee4a7c75",
+    "last_investigated_at": "2026-08-12_16-26_23_987069000"
   },
   "test/test_packaged_import.py": {
     "investigation_required": true,
