@@ -92,8 +92,8 @@
   "oracle/doc/app_spec/misc_spec.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "9db85fcbeb954960be775cd1d055e88636114eb836822432d93ed2e507638222",
-    "last_investigated_at": "2026-08-10_15-43_44_848634000"
+    "last_investigated_sha256": "849da108e141534024127d65879d7d2fd7d367be895bbb080d0c8095d57a973b",
+    "last_investigated_at": "2026-08-12_22-33_15_965311000"
   },
   "oracle/doc/app_spec/prompt_editor_input.md": {
     "investigation_required": false,
@@ -918,7 +918,7 @@
     "last_investigated_at": "2026-08-05_21-20_06_841380000"
   },
   "src/commons/runtime_refactor.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "7fe3e1176584aba4799f1f9356120e8d1eec3d1e75a410014b938a7ff4b8c79f",
     "last_investigated_at": "2026-08-09_18-16_30_246163000"

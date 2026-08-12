@@ -389,21 +389,18 @@
 # `runtime_refactor.py`
 
 ## Summary
-- refactor state の読み込み・検証・保存・同期を担う共通ランタイム実装。state path の安全性、JSON schema、work-root 相対 path、調査履歴の SHA256 と時刻形式を検証する。
-- oracle/realization file の列挙、未調査対象の優先選択、全対象への再調査要求を提供する。refactor state に関する実装の入口であり、上位 CLI フローや正本仕様の入口ではない。
+- refactor state の読み込み・schema 検証・保存・同期・調査対象選択を担う共通ランタイム実装。state の永続化契約、調査履歴の整合性、oracle/realization file 集合との同期、未調査対象の優先順位を確認する際の入口となる。
 
 ## Read this when
-- refactor state の読み込み、書き込み、schema 検証、path 検証、file 集合との同期を変更・調査するとき。
-- refactor workload の対象列挙、未調査対象の優先選択、全対象への再調査要求を確認するとき。
-- state path の symlink・非通常ファイル拒否や、調査履歴の整合性検証を確認するとき。
+- refactor state の形式や検証、path 安全性、調査履歴を変更・調査するとき
+- refactor 対象の列挙、state 同期、次の調査対象の選択を確認するとき
 
 ## Do not read this when
-- doctor preprocess や realization refactor の利用者向け仕様を確認することが目的で、実装の詳細が不要なとき。対応する oracle doc を直接読む。
-- CLI のコマンド受付や上位 orchestration の挙動だけを確認するとき。呼び出し側の実装を直接読む。
-- refactor state と無関係な共通 runtime 機能を調査するとき。
+- 個別の oracle または realization file の仕様だけを確認するとき
+- refactor state を扱わない runtime helper の挙動を確認するとき
 
 ## hash
-- 7fe3e1176584aba4799f1f9356120e8d1eec3d1e75a410014b938a7ff4b8c79f
+- 804583f0f4e3a093dc4a97d82fdfb3e63e4c671e7268ec3471a7a0bcf3ba92f9
 
 # `runtime_results.py`
 

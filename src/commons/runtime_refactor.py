@@ -50,8 +50,10 @@ def write_refactor_state(root: Path, state: RefactorState) -> None:
     validated = _validated_state(path, state)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(dict(sorted(validated.items())), ensure_ascii=False, indent=2)
-        + "\n",
+        # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+        # JSON の ASCII escape で surrogateescape された filesystem path も UTF-8
+        # の state file へ保存し、列挙結果の entry を失わないようにする。
+        json.dumps(dict(sorted(validated.items())), ensure_ascii=True, indent=2) + "\n",
         encoding="utf-8",
     )
 

@@ -20,7 +20,11 @@ from commons.runtime_git import (
     enumerate_oracle_and_realization_files,
     is_realization_file_path,
 )
-from commons.runtime_refactor import sync_refactor_state, write_refactor_state
+from commons.runtime_refactor import (
+    load_refactor_state,
+    sync_refactor_state,
+    write_refactor_state,
+)
 
 _EXCLUDED_ROOTS = {".git", ".agents", ".codex", ".cmoc", "memo"}
 _EXCLUDED_NAMES = {"AGENTS.md", "INDEX.md"}
@@ -197,6 +201,19 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
         synchronized["README.md"]["last_investigated_sha256"] == previous_readme_digest
     )
     assert synchronized["oracle/spec.md"]["investigation_required"] is False
+
+
+def test_refactor_state_sync_round_trips_non_utf8_filename(tmp_path: Path) -> None:
+    """非 UTF-8 filename も列挙結果と state entry を保持する。"""
+    root = make_repo(tmp_path)
+    invalid_name = os.fsdecode(b"non-utf8-\xff.txt")
+    invalid_path = root / invalid_name
+    invalid_path.write_bytes(b"non-utf8 filename\n")
+
+    state = sync_refactor_state(root)
+
+    assert invalid_name in state
+    assert load_refactor_state(root) == state
 
 
 def test_inventory_prunes_only_exact_roots_and_verified_nested_git_metadata(

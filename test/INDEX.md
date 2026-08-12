@@ -448,21 +448,19 @@
 # `test_file_inventory.py`
 
 ## Summary
-- Git 管理下の full-tree 列挙機能を検証するテスト。除外境界、nested repository、ignore source、symlink・FIFO・デバイス等の非通常ファイル、linked worktree、単一パス分類、候補数増加時の Git 処理量を扱う。runtime_git の列挙・分類ロジックや refactor state 同期を変更・検証する際の挙動テスト入口となる。
+- Git 管理下の work-root を対象に、oracle・realization ファイルの full-tree 列挙契約を検証するテスト。除外ルート、除外名、Git ignore、nested repository、Git metadata、symlink・FIFO・socket・device などの非通常ファイル、refactor state の同期と SHA 更新を扱う。runtime_git の列挙・単一パス分類および refactor state 同期処理の回帰検証への入口となる。
 
 ## Read this when
-- oracle・realization ファイルのインベントリ列挙や Git ignore 判定を変更するとき
-- 除外ディレクトリ、nested repository、linked worktree、ignore source の扱いを確認するとき
-- symlink や FIFO など非通常ファイルの安全な拒否、および列挙処理量の回帰を検証するとき
-- refactor state の同期が列挙結果と SHA 更新に追随することを確認するとき
+- oracle・realization ファイルの列挙範囲、Git ignore の適用、nested repository の境界、非通常ファイルの拒否動作を変更または検証するとき。
+- refactor state のファイル集合・SHA・investigation 状態の同期動作を変更または検証するとき。
+- 候補数増加時の Git 処理量や ignore source 検証回数など、列挙処理の性能特性を確認するとき。
 
 ## Do not read this when
-- インベントリ列挙や Git ignore・repository 境界に関係しない機能を変更・調査するとき
-- refactor state の保存形式だけを扱い、ファイル列挙結果との連携を確認する必要がないとき
-- 単一パス分類や linked worktree、特殊ファイルの挙動を直接対象としない通常のテスト実行だけを行うとき
+- 列挙や refactor state 同期の外部挙動を扱わず、別の runtime 機能だけを変更・調査するとき。
+- 単一の正本仕様や実装の詳細を確認することが目的で、テストの期待動作を確認する必要がないとき。
 
 ## hash
-- 462bacfc2c8ca285fb9e70845896fc12db7249bc3fa6253acc21ff266b4aed69
+- 9f14e7c05f17bdd8b0e8600f12d4573af3bfbb57741f3e42abab68b89b646021
 
 # `test_indexing_cli.py`
 
