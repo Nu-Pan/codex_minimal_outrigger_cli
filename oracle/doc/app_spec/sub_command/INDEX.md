@@ -39,22 +39,21 @@
 # `feedback_report.md`
 
 ## Summary
-- `cmoc feedback report` の処理契約を定義する正本仕様。pending observation と直前の active state から report cut を固定し、検証結果に応じて active generation と正常または incomplete の Markdown report を publication する流れを扱う。
-- CLI 引数、事前条件、cut 固定、validation・deduplication・集約・normalization・verification・publication・cleanup・再開・中断・終了コードまで、コマンド全体の挙動を確認するための入口である。
+- 人間対応が必要なフィードバックだけを検証し、正常な active state と Markdown report を publication する `cmoc feedback report` の正本仕様。pending observation の固定、重複排除・集約、normalization と verification、正常 publication、`incomplete` 診断、再開・中断、cleanup、終了コードまでを定義する。feedback report の処理順序、候補の判定、report 内容、state 遷移を確認する入口。
 
 ## Read this when
-- feedback report コマンドの実装、挙動、状態遷移、publication、再開、中断、終了コードを確認または変更するとき
-- feedback observation、feedback state、normalization agent、verification agent との連携契約を確認するとき
-- 正常 report と `incomplete` 診断 report の保存内容や表示条件を確認するとき
+- `cmoc feedback report` の CLI 契約、事前条件、処理順序、state publication、終了コードを実装・レビューするとき
+- feedback observation や feedback state と連携する処理の挙動、verification verdict、正常 report と `incomplete` report の違いを確認するとき
+- 中断後の再開、`inconclusive` 後の再実行、cleanup recovery の仕様を確認するとき
 
 ## Do not read this when
-- raw observation の schema や記録規則だけを確認する場合は feedback observation の正本へ進む
-- state、checkpoint、publication、cleanup の永続化規則だけを確認する場合は feedback state の正本へ進む
-- normalization または verification の prompt・起動パラメータ・Structured Output schema を確認する場合は対応する oracle source と schema へ直接進む
-- 中断時の共通動作だけを確認する場合は subcommand interruption の正本へ直接進む
+- raw observation の schema や記録規則だけを確認する場合は feedback observation の正本を読む
+- state、checkpoint、current pointer、publication、cleanup の永続化規則だけを確認する場合は feedback state の正本を直接読む
+- normalization または verification agent の prompt・Structured Output schema を確認する場合は、それぞれの実装・schema 正本を直接読む
+- `cmoc feedback report` 以外のサブコマンドの契約や一般的な割り込み規則だけを確認する場合
 
 ## hash
-- 339d0646d7a6aeaa292d88defae111f5d97fc1f273822657fc43aed31fcd269d
+- 548db3cc149293086029cd4c400d06c0ca29a00fe95de6a3e4fa3c321c4147c4
 
 # `indexing.md`
 

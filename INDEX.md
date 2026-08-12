@@ -89,26 +89,26 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と正確な実装定義をまとめた領域。CLI の利用時挙動、session・run・branch・worktree のライフサイクル、feedback、prompt、INDEX.md、エラー処理、不採用案、開発・テスト規約を扱う。目的に応じて仕様文書、開発ルール、不採用案の記録へ進む入口となる。
-- oracle doc は cmoc の要求、判断基準、責務を自然言語で定義する正本であり、アプリケーション仕様、branch model、検討済み代替案、開発規約に分かれる。現行仕様や実装の根拠を確認するときは、該当する doc の本文へ進む。
-- oracle src は agent call の prompt builder、Structured Output schema、path・config・structured document などの正確な実装定義を扱う。prompt 文面、agent call の起動条件、出力形式、パスモデルや設定モデルを確認・変更するときの入口となる。
+- cmoc の正本ドキュメント群。現行のアプリケーション仕様、branch・commit・worktree モデル、開発ルール、採用しなかった設計案の検討記録を扱う。
+- `doc` は利用者向け挙動仕様、Git の状態モデル、開発環境・設計・テスト規則、代替案の背景を確認する入口。目的に応じてアプリケーション仕様、開発ルール、branch model、検討記録へ進む。
+- `src` は oracle 側の実装・定義を扱う領域で、agent call、prompt 構築、Structured Output、oracle／realization／routing／feedback の規則、パスモデル、文書モデルなどの個別定義への入口。
 
 ## Read this when
-- cmoc の正本仕様の所在を特定し、CLI の利用時挙動やサブコマンドの責務を確認するとき
-- session、run、branch、commit、worktree の関係や lifecycle を確認するとき
-- feedback の観測・状態管理・報告、prompt 構築、INDEX.md 生成、oracle と realization の境界を調査するとき
-- 不採用となった作業方式や状態管理方式の理由を確認するとき
-- Python 実装の配置、開発環境、コーディング規約、テスト要件、テスト実行手順を確認するとき
-- agent call の prompt、Structured Output schema、パスモデル、設定モデルなどの正確な定義を確認するとき
+- cmoc の正本仕様や開発ルールの所在を確認するとき
+- CLI、Codex 呼び出し、prompt、ログ、feedback、run／session、通知などの現行挙動を調べるとき
+- branch、commit、worktree、session fork、run 隔離、apply、join の関係を確認するとき
+- 実装配置、開発環境、テスト要件、テスト実行手順を確認するとき
+- agent call の prompt 構築、Structured Output、oracle／realization、routing、feedback の定義を調べるとき
+- 現行仕様ではなく、採用しなかった設計案の背景や採否理由を確認するとき
 
 ## Do not read this when
-- 目的の個別仕様、開発ルール、検討記録、または oracle src の定義が明確な場合は、その本文へ直接進むとき
-- realization implementation や realization test の具体的な挙動だけを確認するとき
-- 現行仕様の確認に不採用案を読む必要がないとき
-- 通常の CLI 実行処理や collector の実装だけを調査するとき
+- 具体的な実装ファイルやテストの挙動だけを確認する場合
+- 読むべき特定の正本文書や src 配下の定義がすでに判明しており、その本文へ直接進める場合
+- 単一の CLI サブコマンドの挙動だけを確認し、関連仕様の分担や境界を調べる必要がない場合
+- 現行仕様や実装の直接の参照先だけが必要で、採用しなかった設計案の背景を確認する必要がない場合
 
 ## hash
-- 001ebfdb6db807a844f76a5af8a1e00ec371d11ac0046fbbed958899a3b03c47
+- 20083d15b7c28d21d107184c9c02da74c2300c65bbc54a0c9f4a10e9e558cc7e
 
 # `pyproject.toml`
 
