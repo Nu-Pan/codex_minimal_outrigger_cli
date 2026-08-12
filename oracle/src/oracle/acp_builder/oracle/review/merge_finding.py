@@ -9,7 +9,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
+from oracle.other.path_model import AgentCallPathContext
 
 # cmoc
 from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
@@ -18,6 +18,8 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 def build_oracle_review_merge_finding_parameter(
     findings: str,
+    *,
+    agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """
     `cmoc oracle review` サブコマンド、所見リストマージ用。
@@ -25,9 +27,12 @@ def build_oracle_review_merge_finding_parameter(
 
     findings: str
         現状の所見リスト。各所見は finding_id を含む想定。
+
+    agent_call_cwd: Path
+        oracle review agent call を実行する worktree
     """
-    # oracle review は main worktree を agent_call_cwd として先に確定する
-    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
+    # 隔離済み review worktree を起点に prompt と起動パラメータを構築する
+    path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
 
     # プロンプト
     prompt = build_complete_prompt(

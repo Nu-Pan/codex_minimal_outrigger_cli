@@ -170,12 +170,20 @@ def _render_as_markdown(
             result += _render_as_markdown(c, depth + 1) + "\n"
     elif isinstance(struct_doc.children, StructCodeBlock):
         result += "\n"
+        # 動的本文中の backtick が外側の Markdown code block を閉じないよう、
+        # 本文の最長 backtick 列より 1 文字長く、かつ最低 3 文字の fence を使う。
+        body = ntqs(struct_doc.children.body)
+        longest_backtick_run = max(
+            (len(match.group()) for match in re.finditer(r"`+", body)),
+            default=0,
+        )
+        fence = "`" * max(3, longest_backtick_run + 1)
         if struct_doc.children.info:
-            result += f"```{struct_doc.children.info}\n"
+            result += f"{fence}{struct_doc.children.info}\n"
         else:
-            result += "```\n"
-        result += ntqs(struct_doc.children.body) + "\n"
-        result += "```\n"
+            result += f"{fence}\n"
+        result += body + "\n"
+        result += f"{fence}\n"
     elif isinstance(struct_doc.children, str):
         result += "\n"
         result += ntqs(struct_doc.children) + "\n"

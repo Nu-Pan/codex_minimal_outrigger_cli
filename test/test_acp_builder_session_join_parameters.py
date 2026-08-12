@@ -7,6 +7,9 @@ from pathlib import Path
 
 import pytest
 from _git_support import make_repo
+from oracle.acp_builder.session.join.conflict_resolution import (
+    build_session_join_conflict_resolution_parameter as build_canonical_conflict_parameter,
+)
 
 import acp.builder.session.join.conflict_resolution as session_conflict_resolution_module
 from acp.builder.session.join.conflict_resolution import (
@@ -34,6 +37,10 @@ def test_session_join_compatibility_module_exports_only_builder() -> None:
         for name in vars(session_conflict_resolution_module)
         if not name.startswith("_")
     } == {"build_session_join_conflict_resolution_parameter"}
+    assert (
+        build_session_join_conflict_resolution_parameter
+        is build_canonical_conflict_parameter
+    )
 
 
 def test_session_join_conflict_resolution_uses_repo_write_mode(

@@ -38,6 +38,15 @@ def test_render_as_markdown_collapses_code_block_blank_lines() -> None:
     assert rendered == "# root\n\n```text\nfirst\n\nsecond\n```\n"
 
 
+def test_render_as_markdown_uses_fence_longer_than_dynamic_body() -> None:
+    """本文の backtick 列が外側の code block を閉じないことを検証する。"""
+    body = "before\n```\ninside\n````\nafter"
+
+    rendered = render_as_markdown(StructDoc("root", StructCodeBlock("text", body)))
+
+    assert rendered == f"# root\n\n`````text\n{body}\n`````\n"
+
+
 def test_struct_block_is_reexported_from_realization_compatibility_module() -> None:
     """Oracle の参照 block 型を basic.struct_doc から同一型で公開する。"""
     assert StructBlock is OracleStructBlock

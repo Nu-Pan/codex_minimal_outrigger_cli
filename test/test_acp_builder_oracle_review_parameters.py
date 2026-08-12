@@ -22,6 +22,18 @@ from jsonschema import ValidationError, validate
 from oracle.acp_builder.oracle.review.enumerate_finding import (
     build_oracle_review_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
 )
+from oracle.acp_builder.oracle.review.judge_finding import (
+    build_oracle_review_judge_finding_parameter as _build_oracle_judge_parameter,
+)
+from oracle.acp_builder.oracle.review.merge_finding import (
+    build_oracle_review_merge_finding_parameter as _build_oracle_merge_parameter,
+)
+from oracle.acp_builder.oracle.review.validate_finding_advocate import (
+    build_oracle_review_validate_finding_advocate_parameter as _build_oracle_validate_advocate_parameter,
+)
+from oracle.acp_builder.oracle.review.validate_finding_challenger import (
+    build_oracle_review_validate_finding_challenger_parameter as _build_oracle_validate_challenger_parameter,
+)
 
 import acp.builder.oracle.review.enumerate_finding as review_enumerate_finding_module
 import acp.builder.oracle.review.judge_finding as review_judge_finding_module
@@ -45,45 +57,57 @@ from acp.builder.oracle.review.validate_finding_challenger import (
 )
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
 
 @pytest.mark.parametrize(
-    ("module", "exported_name"),
+    ("module", "exported_name", "canonical_builder"),
     [
         (
             review_enumerate_finding_module,
             "build_oracle_review_enumerate_finding_parameter",
+            _build_oracle_enumerate_parameter,
         ),
         (
             review_judge_finding_module,
             "build_oracle_review_judge_finding_parameter",
+            _build_oracle_judge_parameter,
         ),
         (
             review_merge_finding_module,
             "build_oracle_review_merge_finding_parameter",
+            _build_oracle_merge_parameter,
         ),
         (
             review_validate_advocate_module,
             "build_oracle_review_validate_finding_advocate_parameter",
+            _build_oracle_validate_advocate_parameter,
         ),
         (
             review_validate_challenger_module,
             "build_oracle_review_validate_finding_challenger_parameter",
+            _build_oracle_validate_challenger_parameter,
         ),
     ],
 )
 def test_review_compatibility_modules_export_only_builders(
-    module: ModuleType, exported_name: str
+    module: ModuleType,
+    exported_name: str,
+    canonical_builder: Callable[..., AgentCallParameter],
 ) -> None:
     """review互換moduleが指定されたbuilderだけを公開することを検証する。"""
     assert getattr(module, "__all__", None) == [exported_name]
     assert {name for name in vars(module) if not name.startswith("_")} == {
         exported_name
     }
+    assert getattr(module, exported_name) is canonical_builder
 
 
 def test_oracle_review_merge_finding_uses_efficiency_model() -> None:
     """merge finding builderがefficiency modelとmax reasoningを選ぶことを検証する。"""
-    parameter = build_oracle_review_merge_finding_parameter("[]")
+    parameter = build_oracle_review_merge_finding_parameter(
+        "[]", agent_call_cwd=REPO_ROOT
+    )
 
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MAX
@@ -94,7 +118,7 @@ def test_oracle_review_merge_finding_uses_efficiency_model() -> None:
 def test_oracle_review_judge_finding_uses_max_reasoning() -> None:
     """judge finding builderがefficiency modelとmax reasoningを選ぶことを検証する。"""
     parameter = build_oracle_review_judge_finding_parameter(
-        "finding", "advocate", "challenger"
+        "finding", "advocate", "challenger", agent_call_cwd=REPO_ROOT
     )
 
     assert parameter.model_class == ModelClass.EFFICIENCY
@@ -126,7 +150,7 @@ def test_oracle_review_builders_share_finding_judgement_standard(
     arguments: tuple[object, ...],
 ) -> None:
     """review の全段階で単一の所見判定規範を注入する。"""
-    prompt = builder(*arguments).prompt
+    prompt = builder(*arguments, agent_call_cwd=REPO_ROOT).prompt
 
     assert "# oracle review standard" in prompt
     assert "実装者の裁量で解消不能な問題だけを fatal 所見にする" in prompt
@@ -139,6 +163,7 @@ def test_oracle_review_enumerate_finding_schema_matches_oracle_source() -> None:
     parameter = build_oracle_review_enumerate_finding_parameter(
         Path("{{work-root}}/oracle/spec.md"),
         "[]",
+        agent_call_cwd=REPO_ROOT,
     )
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MAX
@@ -179,10 +204,12 @@ def test_oracle_review_enumerate_parameter_matches_oracle_builder() -> None:
     parameter = build_oracle_review_enumerate_finding_parameter(
         oracle_path,
         related_findings,
+        agent_call_cwd=REPO_ROOT,
     )
     oracle_parameter = _build_oracle_enumerate_parameter(
         oracle_path,
         related_findings,
+        agent_call_cwd=REPO_ROOT,
     )
 
     assert parameter == oracle_parameter
@@ -190,7 +217,9 @@ def test_oracle_review_enumerate_parameter_matches_oracle_builder() -> None:
 
 def test_oracle_review_merge_finding_schema_matches_oracle_source() -> None:
     """merge finding builder の schema と work-root placeholder を検証する。"""
-    parameter = build_oracle_review_merge_finding_parameter(findings="[]")
+    parameter = build_oracle_review_merge_finding_parameter(
+        findings="[]", agent_call_cwd=REPO_ROOT
+    )
     assert "{{oracle-root}}" not in parameter.prompt
     assert "`{{work-root}}/oracle` ツリー内" in parameter.prompt
     assert "# Structured Output の決定論的事後条件" in parameter.prompt
@@ -258,7 +287,9 @@ def test_oracle_review_validate_finding_schema_matches_oracle_source(
     builder: Callable[[str, str, str], AgentCallParameter], schema_name: str
 ) -> None:
     """validate finding builderのschemaと動的入力保持を検証する。"""
-    parameter = builder("finding", "known advocate", "known challenger")
+    parameter = builder(
+        "finding", "known advocate", "known challenger", agent_call_cwd=REPO_ROOT
+    )
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MAX
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
@@ -290,6 +321,7 @@ def test_oracle_review_validate_finding_advocate_preserves_dynamic_text() -> Non
         finding,
         known_advocate,
         known_challenger,
+        agent_call_cwd=REPO_ROOT,
     )
 
     assert finding in parameter.prompt
@@ -335,7 +367,7 @@ def test_oracle_review_builders_protect_nested_dynamic_code_fences(
     block_count: int,
 ) -> None:
     """review入力内の三連 backtick が各動的本文の境界を閉じないことを検証する。"""
-    parameter = builder(*arguments)
+    parameter = builder(*arguments, agent_call_cwd=REPO_ROOT)
 
     assert parameter.prompt.count("````text\nbefore\n") == block_count
     assert parameter.prompt.count("\nafter\n````") == block_count
@@ -348,7 +380,9 @@ def test_oracle_review_merge_keeps_placeholder_marker_in_findings() -> None:
         "```text\nunsafe\n```\nafter"
     )
 
-    parameter = build_oracle_review_merge_finding_parameter(findings)
+    parameter = build_oracle_review_merge_finding_parameter(
+        findings, agent_call_cwd=REPO_ROOT
+    )
 
     start = parameter.prompt.index("# 現状の所見リスト")
     end = parameter.prompt.rfind("\n\n# place holder definition")
@@ -366,6 +400,7 @@ def test_oracle_review_fence_protection_ignores_marker_in_later_input() -> None:
         nested,
         "known\n\n# 所見が妥当であるとする理由",
         "known",
+        agent_call_cwd=REPO_ROOT,
     )
 
     assert parameter.prompt.count("````text\nbefore\n") == 1
@@ -380,6 +415,7 @@ def test_oracle_review_fence_protection_keeps_marker_in_current_input() -> None:
         finding,
         "known",
         "known",
+        agent_call_cwd=REPO_ROOT,
     )
 
     assert parameter.prompt.count("````text\nbefore\n") == 1
@@ -402,6 +438,7 @@ def test_oracle_review_fence_protection_uses_actual_later_section() -> None:
         finding,
         advocate,
         "known challenger",
+        agent_call_cwd=REPO_ROOT,
     )
 
     actual_start = parameter.prompt.rindex("# 所見が妥当であるとする理由")
@@ -433,7 +470,7 @@ def test_oracle_review_validation_fence_protection_uses_actual_later_section(
         "# 既知の妥当ではないとする理由\n\ntrailing"
     )
 
-    parameter = builder(finding, advocate, "known challenger")
+    parameter = builder(finding, advocate, "known challenger", agent_call_cwd=REPO_ROOT)
 
     actual_start = parameter.prompt.rindex("# 既知の妥当であるとする理由")
     actual_end = parameter.prompt.index(
@@ -455,6 +492,7 @@ def test_oracle_review_fence_protection_matches_renderer_blank_line_normalizatio
         finding,
         "known advocate",
         "known challenger",
+        agent_call_cwd=REPO_ROOT,
     )
 
     start = parameter.prompt.index("# 所見の内容")
@@ -492,7 +530,7 @@ def test_oracle_review_fence_protection_handles_marker_like_first_input(
         "```text\nunsafe\n```\nafter"
     )
 
-    parameter = builder(finding, "known", "known")
+    parameter = builder(finding, "known", "known", agent_call_cwd=REPO_ROOT)
 
     assert f"````text\n{finding}\n````" in parameter.prompt
 
@@ -523,7 +561,9 @@ def test_oracle_review_fence_protection_keeps_placeholder_marker_in_final_input(
         "```text\nunsafe\n```\nafter"
     )
 
-    parameter = builder("finding", "known advocate", challenger)
+    parameter = builder(
+        "finding", "known advocate", challenger, agent_call_cwd=REPO_ROOT
+    )
 
     start = parameter.prompt.index(section_heading)
     end = parameter.prompt.rfind("\n\n# place holder definition")

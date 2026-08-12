@@ -12,7 +12,6 @@ from oracle.acp_builder.basic import (
 from oracle.other.path_model import (
     AgentCallPathContext,
     resolve_real_path,
-    resolve_repo_root,
 )
 
 # cmoc
@@ -23,6 +22,8 @@ from oracle.prompt_builder.complete_prompt import build_complete_prompt
 def build_oracle_review_enumerate_finding_parameter(
     oracle_path: Path,
     related_findings: str,
+    *,
+    agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """
     `cmoc oracle review` サブコマンド、新規所見列挙用。
@@ -33,9 +34,12 @@ def build_oracle_review_enumerate_finding_parameter(
 
     related_findings: str
         現状の所見リストのうち、レビュー対象ファイルと関連するもの
+
+    agent_call_cwd: Path
+        oracle review agent call を実行する worktree
     """
-    # oracle review は main worktree を agent_call_cwd として先に確定する
-    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
+    # 隔離済み review worktree を起点に prompt と起動パラメータを構築する
+    path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
 
     # プロンプト
     prompt = build_complete_prompt(

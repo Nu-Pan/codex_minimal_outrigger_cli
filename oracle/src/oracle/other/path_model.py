@@ -181,22 +181,28 @@ def resolve_repo_root(
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
     start_path が指定されていれば、その探索開始 path を起点とする。
     start_path が省略されていれば、cmoc process の cwd を探索開始 path とする。
-    「`.git` ディレクトリを直下に持つディレクトリ」を探索する。
+    最寄りの Git worktree marker から main worktree を特定する。
     """
-    # 指定された探索開始 path または cmoc process の cwd から探索する
+    # 最寄りの worktree marker を優先し、外側の別 repository を誤認しない。
+    git_command_cwd: Path | None = None
     for candidate in _enumerate_candidates(start_path, Path.cwd()):
-        if (candidate / ".git").is_dir():
+        dot_git_path = candidate / ".git"
+        if dot_git_path.is_dir():
             return candidate
-    # git command の cwd に使う探索開始ディレクトリを解決する
-    if start_path is None:
-        git_command_cwd = Path.cwd()
-    elif start_path.is_dir():
-        git_command_cwd = start_path.resolve()
-    else:
-        git_command_cwd = start_path.resolve().parent
+        if dot_git_path.is_file():
+            git_command_cwd = candidate
+            break
+
+    # marker を見つけられない場合も、既存どおり開始位置から Git に問い合わせる。
+    if git_command_cwd is None:
+        if start_path is None:
+            git_command_cwd = Path.cwd()
+        elif start_path.is_dir():
+            git_command_cwd = start_path.resolve()
+        else:
+            git_command_cwd = start_path.resolve().parent
     # git コマンドからの特定を試みる
-    # NOTE
-    #   `{{run-root}}` が `{{repo-root}}` の外にある場合向けの処理
+    # linked worktree の common directory から main worktree を解決する。
     git_result = subprocess.run(
         ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
         cwd=git_command_cwd,

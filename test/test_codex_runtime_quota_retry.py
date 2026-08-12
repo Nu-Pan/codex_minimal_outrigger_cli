@@ -24,6 +24,9 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _git_support import make_repo
+from oracle.acp_builder.quota_probe import (
+    build_quota_availability_probe_parameter as build_canonical_quota_probe_parameter,
+)
 
 import acp.builder.quota_probe as quota_probe_module
 import cmoc_runtime
@@ -383,8 +386,9 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     assert codex_events[1]["error"] == "KeyboardInterrupt()"
 
 
-def test_quota_probe_adapter_builds_minimal_probe() -> None:
-    """配布 tree に正本 builder がなくても最小 probe を構築する。"""
+def test_quota_probe_adapter_uses_canonical_complete_prompt(tmp_path: Path) -> None:
+    """quota probe が正本 builder の完全 prompt と最小設定を使用する。"""
+    root = make_repo(tmp_path)
     base = AgentCallParameter(
         agent_call_kind="test_agent_call",
         model_class=ModelClass.FLAGSHIP,
@@ -392,16 +396,21 @@ def test_quota_probe_adapter_builds_minimal_probe() -> None:
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt="base",
         structured_output_schema_path=None,
-        agent_call_cwd=Path("/tmp/base-cwd"),
+        agent_call_cwd=root,
         run_indexing_preflight=True,
     )
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     probe = build_quota_availability_probe_parameter(base)
 
+    assert probe == build_canonical_quota_probe_parameter(root)
     assert probe.model_class == ModelClass.MINIMUM
     assert probe.reasoning_effort == ReasoningEffort.LOW
     assert probe.file_access_mode == FileAccessMode.READONLY
-    assert probe.prompt == ""
+    assert probe.prompt
+    assert "# human feedback reporting" in probe.prompt
+    assert probe.prompt.count("# human feedback reporting") == 1
+    assert "# routing rule" not in probe.prompt
+    assert "追加の調査や作業を行わず" in probe.prompt
     assert probe.structured_output_schema_path is None
     assert probe.run_indexing_preflight is False
     assert probe.agent_call_cwd == base.agent_call_cwd

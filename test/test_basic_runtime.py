@@ -75,7 +75,7 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
 ) -> None:
     """linked worktree では repo root と run/work root を分けて扱う。"""
     root = make_repo(tmp_path)
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
+    linked = tmp_path / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
 
     monkeypatch.chdir(linked)

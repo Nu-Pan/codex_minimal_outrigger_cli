@@ -99,10 +99,10 @@ def _assert_review_call_context(
     assert parameter.agent_call_cwd == review_worktree
 
 
-def test_oracle_review_rebinds_all_calls_to_review_worktree(
+def test_oracle_review_builds_all_calls_for_review_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """canonical builder が main root を見ても review call は snapshot context を使う。
+    """canonical builder が全 review call を snapshot context から構築する。
 
     根拠:
 

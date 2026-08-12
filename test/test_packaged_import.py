@@ -54,12 +54,12 @@ def _copy_source_tree(source: Path, target: Path) -> None:
     )
 
 
-def test_oracle_review_enumerate_builder_imports_from_packaged_layout(
+def test_canonical_agent_builders_import_from_packaged_layout(
     tmp_path: Path,
 ) -> None:
-    """oracle review builder の packaged import と出力契約を検証する。
+    """oracle review と quota probe の packaged import を検証する。
 
-    正本 builder が packaged layout でも schema と prompt を参照し、期待する
+    正本 builder が packaged layout でも schema と完全 prompt を参照し、期待する
     parameter を生成できることを確認する。
     根拠: {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.py
     {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/enumerate_finding.json
@@ -82,13 +82,24 @@ def test_oracle_review_enumerate_builder_imports_from_packaged_layout(
         (
             "import json; "
             "from pathlib import Path; "
+            "from basic.acp import AgentCallParameter, FileAccessMode, "
+            "ModelClass, ReasoningEffort; "
             "from acp.builder.oracle.review.enumerate_finding import "
             "build_oracle_review_enumerate_finding_parameter as build; "
-            "p = build(Path('{{work-root}}/oracle/spec.md'), '[]'); "
+            "from acp.builder.quota_probe import "
+            "build_quota_availability_probe_parameter as build_probe; "
+            "p = build(Path('{{work-root}}/oracle/spec.md'), '[]', "
+            "agent_call_cwd=Path.cwd()); "
             "assert p.structured_output_schema_path.name == 'enumerate_finding.json'; "
             "schema = json.loads(p.structured_output_schema_path.read_text()); "
             "assert schema['required'] == ['findings']; "
-            "assert '# oracle review standard' in p.prompt"
+            "assert '# oracle review standard' in p.prompt; "
+            "base = AgentCallParameter('base', ModelClass.MINIMUM, "
+            "ReasoningEffort.LOW, FileAccessMode.READONLY, 'base', None, Path.cwd()); "
+            "probe = build_probe(base); "
+            "assert probe.prompt; "
+            "assert '# human feedback reporting' in probe.prompt; "
+            "assert '# routing rule' not in probe.prompt"
         ),
         tmp_path,
     )

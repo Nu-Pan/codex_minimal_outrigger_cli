@@ -9,7 +9,7 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
-from oracle.other.path_model import AgentCallPathContext, resolve_repo_root
+from oracle.other.path_model import AgentCallPathContext
 
 # cmoc
 from oracle.other.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
@@ -20,6 +20,8 @@ def build_oracle_review_judge_finding_parameter(
     finding: str,
     advocate_reasons: str,
     challenger_reasons: str,
+    *,
+    agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """
     `cmoc oracle review` サブコマンド、所見採否判定用。
@@ -31,9 +33,12 @@ def build_oracle_review_judge_finding_parameter(
         所見が妥当である理由。
     challenger_reasons: str
         所見が妥当ではない理由。
+
+    agent_call_cwd: Path
+        oracle review agent call を実行する worktree
     """
-    # oracle review は main worktree を agent_call_cwd として先に確定する
-    path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
+    # 隔離済み review worktree を起点に prompt と起動パラメータを構築する
+    path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
 
     # プロンプト
     prompt = build_complete_prompt(

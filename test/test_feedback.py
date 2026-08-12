@@ -18,7 +18,6 @@ import hashlib
 import json
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
-from inspect import unwrap
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -467,45 +466,29 @@ def test_feedback_verify_builder_protects_nested_code_fences(
 
 def test_feedback_processing_versions_hash_canonical_builders() -> None:
     """checkpoint version は prompt 構築 builder とその依存を識別する。"""
-    normalize_adapter_path = feedback_report_module._builder_source_path(
-        build_feedback_normalize_issue_parameter
-    )
     normalize_path = feedback_report_module._builder_source_path(
         _build_canonical_normalize_parameter
-    )
-    normalize_prompt_fence_path = (
-        normalize_adapter_path.parents[1] / "common" / "prompt_fence.py"
-    )
-    verify_adapter_path = feedback_report_module._builder_source_path(
-        build_feedback_verify_issue_parameter
     )
     verify_path = feedback_report_module._builder_source_path(
         _build_canonical_verify_parameter
     )
+    renderer_path = feedback_report_module._builder_source_path(
+        feedback_report_module.render_as_markdown
+    )
 
     assert (
-        feedback_report_module._builder_source_path(
-            unwrap(build_feedback_normalize_issue_parameter)
-        )
-        == normalize_path
+        build_feedback_normalize_issue_parameter is _build_canonical_normalize_parameter
     )
-    assert (
-        feedback_report_module._builder_source_path(
-            unwrap(build_feedback_verify_issue_parameter)
-        )
-        == verify_path
-    )
+    assert build_feedback_verify_issue_parameter is _build_canonical_verify_parameter
     versions = feedback_report_module._processing_versions()
     normalization_version = feedback_report_module._builder_version_hash(
-        normalize_adapter_path,
         normalize_path,
-        (normalize_prompt_fence_path,),
+        (renderer_path,),
     )
     assert versions["normalization_builder"] == normalization_version
     verification_version = feedback_report_module._builder_version_hash(
-        verify_adapter_path,
         verify_path,
-        (verify_adapter_path.parents[1] / "common" / "prompt_fence.py",),
+        (renderer_path,),
     )
     assert versions["verification_builder"] == verification_version
 

@@ -14,6 +14,12 @@ from pathlib import Path
 import pytest
 from _acp_builder_support import oracle_schema_path
 from _git_support import make_repo, run_git
+from oracle.acp_builder.realization.apply.fork.launch_exec import (
+    build_realization_apply_fork_launch_exec_parameter as build_canonical_apply_parameter,
+)
+from oracle.acp_builder.realization.refactor.fork.change_summary import (
+    build_realization_refactor_fork_change_summary_parameter as build_canonical_summary_parameter,
+)
 
 from acp.builder.realization.apply.fork.launch_exec import (
     build_realization_apply_fork_launch_exec_parameter,
@@ -44,6 +50,18 @@ def editing_run_worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
     )
     monkeypatch.chdir(root)
     return run_worktree
+
+
+def test_editing_run_compatibility_builders_reexport_canonical_functions() -> None:
+    """互換 import 経路が prompt を加工せず正本 builder を再公開する。"""
+    assert (
+        build_realization_apply_fork_launch_exec_parameter
+        is build_canonical_apply_parameter
+    )
+    assert (
+        build_realization_refactor_fork_change_summary_parameter
+        is build_canonical_summary_parameter
+    )
 
 
 def test_realization_apply_builder_embeds_commit_range_and_raw_diff(

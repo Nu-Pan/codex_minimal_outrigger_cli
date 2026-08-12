@@ -6,7 +6,6 @@
 """
 
 import json
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -78,7 +77,7 @@ def test_indexing_index_entry_protects_nested_target_content_fences(
         indexing_target_path, target_content, indexing_target_path.parent
     )
 
-    assert parameter == replace(oracle_parameter, prompt=parameter.prompt)
+    assert parameter == oracle_parameter
     start = parameter.prompt.index("# `{{target-path}}` の内容")
     end = parameter.prompt.rfind("\n\n# place holder definition")
     section = parameter.prompt[start:end]

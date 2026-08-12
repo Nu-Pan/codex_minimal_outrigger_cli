@@ -16,13 +16,14 @@ import json
 import os
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
-from inspect import getsourcefile, unwrap
+from inspect import getsourcefile
 from pathlib import Path
 from typing import Any
 
 import typer
 from jsonschema import validators
 from jsonschema.exceptions import SchemaError
+from oracle.other.struct_doc import render_as_markdown
 
 from acp.builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter,
@@ -595,30 +596,21 @@ def _processing_versions() -> JsonObject:
     """builder、schema、および deterministic processing rule の content hash を返す。"""
     normalize_builder = _builder_source_path(build_feedback_normalize_issue_parameter)
     verify_builder = _builder_source_path(build_feedback_verify_issue_parameter)
-    normalize_canonical_builder = _builder_source_path(
-        unwrap(build_feedback_normalize_issue_parameter)
-    )
-    verify_canonical_builder = _builder_source_path(
-        unwrap(build_feedback_verify_issue_parameter)
-    )
-    # normalization adapter が prompt を変換する helper も checkpoint version に含める。
-    normalize_prompt_fence = normalize_builder.parents[1] / "common" / "prompt_fence.py"
-    verify_prompt_fence = verify_builder.parents[1] / "common" / "prompt_fence.py"
-    normalize_schema = normalize_canonical_builder.with_suffix(".json")
-    verify_schema = verify_canonical_builder.with_suffix(".json")
+    # 動的 code fence を構築する canonical renderer も checkpoint version に含める。
+    prompt_renderer = _builder_source_path(render_as_markdown)
+    normalize_schema = normalize_builder.with_suffix(".json")
+    verify_schema = verify_builder.with_suffix(".json")
     module_path = Path(__file__)
     state_path = module_path.parents[2] / "commons" / "runtime_feedback_state.py"
     return {
         "normalization_builder": _builder_version_hash(
             normalize_builder,
-            normalize_canonical_builder,
-            (normalize_prompt_fence,),
+            (prompt_renderer,),
         ),
         "normalization_schema": sha256_bytes(normalize_schema.read_bytes()),
         "verification_builder": _builder_version_hash(
             verify_builder,
-            verify_canonical_builder,
-            (verify_prompt_fence,),
+            (prompt_renderer,),
         ),
         "verification_schema": sha256_bytes(verify_schema.read_bytes()),
         "deterministic_processing": _combined_file_hash([module_path, state_path]),
@@ -635,11 +627,10 @@ def _builder_source_path(builder: Callable[..., object]) -> Path:
 
 def _builder_version_hash(
     source: Path,
-    canonical_source: Path,
     dependency_sources: tuple[Path, ...] = (),
 ) -> str:
     """builder と prompt 構築依存の変更を checkpoint version へ反映する。"""
-    sources = {source, canonical_source, *dependency_sources}
+    sources = {source, *dependency_sources}
     if len(sources) == 1:
         return sha256_bytes(source.read_bytes())
     return _combined_file_hash(list(sources))
