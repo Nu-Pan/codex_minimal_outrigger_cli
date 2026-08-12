@@ -408,24 +408,23 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- editing run の apply/refactor fork と run join/abandon を横断する統合 realization test。共通 lifecycle fixture を使い、run state・branch・worktree・process tracking・report の生成、遷移、cleanup、rollback、merge を検証する。
-- oracle や INDEX.md など管理対象外差分の拒否・復元、rename/delete、symlink、path 判定、INDEX refresh の副作用制御を検証する。
-- Codex child の追跡・停止、agent commit や preflight commit の rollback、例外・中断・cleanup 失敗時の state/report 保全を検証する。
-- refactor の target 調査、unresolved finding、永続 state、change summary、changed_paths 検証と、apply 結果の report・feedback 観測情報を検証する。apply/refactor lifecycle、run join/abandon の挙動を変更・不具合調査するときの統合テスト入口。
+- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、Git branch、process tracking、Codex child tracking、report を共有する lifecycle として検証する。
+- realization apply/refactor fork の正常完了、割り込み、agent・INDEX・oracle・管理対象ファイルの不正変更、commit・refresh・rollback・cleanup 失敗を検証する。
+- run join/abandon の merge、force-resolve、rename/delete、INDEX conflict、state sync、report 保存、worktree・branch cleanup と再試行可能性を検証する。
+- fork report と lifecycle report の変更 path、warning、unresolved finding、feedback observation、特殊文字の escaping、および timestamp collision を検証する。
 
 ## Read this when
-- editing run の realization apply fork または realization refactor fork の lifecycle 挙動を変更・検証するとき
-- run join/abandon の state 遷移、merge、worktree・branch cleanup、force-resolve を変更・検証するとき
-- Codex child tracking、INDEX refresh、管理対象外差分、rollback、report 保存の統合動作を確認するとき
-- refactor target state、unresolved finding、rename、changed_paths、completion report の実装を変更するとき
+- realization apply/refactor fork と run join/abandon の統合ライフサイクルを確認するとき
+- editing run の差分制約、worktree 隔離、process・child tracking、rollback、interrupt/error recovery を横断的に検証するとき
+- fork report または lifecycle report の生成内容と cleanup 結果を確認するとき
 
 ## Do not read this when
-- INDEX.md の生成・ルーティング規則だけを変更するとき
-- 単一関数の局所的なロジックを、その統合 lifecycle や CLI 挙動を確認せずに調査するとき
-- run lifecycle と無関係な CLI、oracle、refactor state の機能を変更するとき
+- 個別コマンドの実装責務や正本仕様だけを確認する場合
+- run lifecycle の共通実装を直接調査する場合は、対応する commons または sub_commands の実装を読むとき
+- INDEX 更新の一般仕様だけを確認する場合は、indexing の正本仕様や専用テストを読むとき
 
 ## hash
-- b36a607af1cc442defb363dc9c2570c24ae299892519b0c81427aacc34ebcfa5
+- 8f685d574a3ab45ee7ad81dfa6168498bb5fdd8b3d67ea65d0d9c809e5b969a3
 
 # `test_feedback.py`
 

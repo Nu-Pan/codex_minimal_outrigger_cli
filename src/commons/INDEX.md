@@ -442,20 +442,22 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- 明示的な join を必要とする editing run の共通 lifecycle を一元管理する実装。session の準備状態検査、run branch/worktree の作成・公開・復旧、state 遷移、workload commit、INDEX 更新、差分分類、oracle 差分検出、想定外 path の検査、cleanup 判定に必要な共通処理を提供する。run lifecycle と lifecycle lock を共有するため、editing run lifecycle の入口として読む。
+- 明示的な join を必要とする editing run の lifecycle 共通処理を担う。session からの run 開始、state 解決・遷移、branch/worktree 管理、workload の rollback・commit、差分分類、INDEX 更新、cleanup に関わる共通入口である。
+- 同じ EditingRunContext と lifecycle lock を共有するため、run の開始から差分確定までの不変条件を一箇所で確認する必要がある場合に読む。個別 subcommand の仕様や realization 実装ではなく、複数の editing run 処理にまたがる lifecycle 制御を調べる際の入口である。
 
 ## Read this when
-- editing run の開始、active run の解決・復旧、joinable/error への状態変更を実装または調査するとき
-- run worktree の作成・削除、commit、INDEX 更新、差分 path の分類、oracle・realization・生成 INDEX の許可判定を確認するとき
-- session branch と run branch の対応、fork commit、worktree path、process ID、lifecycle lock に関する不変条件を確認するとき
+- editing run を開始、再開、joinable/error へ遷移、または active run として解決するとき。
+- run branch/worktree の作成・検証・削除、session state と process tracking の整合性を確認するとき。
+- workload 差分の rollback・commit、許可された realization・INDEX・refactor state の判定、oracle 差分や rename を含む差分分類を調べるとき。
+- run worktree の INDEX 更新や、未確定 run の recovery・cleanup 条件を確認するとき。
 
 ## Do not read this when
-- editing run の利用者向け状態遷移やサブコマンド契約だけを確認したいときは、対応する app_spec の仕様を直接読む
-- realization の具体的な編集処理だけを確認したいときは、realization 実装または対応する app_spec を直接読む
-- INDEX の生成規則だけを確認したいときは、indexing の仕様・実装を直接読む
+- 個別の editing subcommand が要求する入力・出力・利用者向け挙動だけを確認したいときは、該当する subcommand 仕様を直接読む。
+- realization file の実装内容や realization 固有の変更規則だけを確認したいときは、該当する realization file またはその仕様を直接読む。
+- INDEX.md 生成規則、Git 実行補助、state schema など単一の下位責務だけを調べる場合は、対応する専用対象を直接読む。
 
 ## hash
-- c2cdbf8d538fdb37ec0db1a73a03831016541d4f6447e3bfe4f1e6589c89e7d3
+- 4fa54bd7c712da95de56c17c022bb61c54870eee5b41971fbe058fd47a535288
 
 # `runtime_run_report.py`
 

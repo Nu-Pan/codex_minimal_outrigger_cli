@@ -2200,6 +2200,23 @@ def test_recover_started_run_rejects_run_owned_by_other_process(
     assert context.run_worktree.exists()
 
 
+def test_recover_started_run_rejects_unreadable_process_tracking(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """壊れた tracking を未作成として別 process の run recovery に使わない。"""
+    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_refactor")
+    tracking_path = run_process_id_path(
+        root, session_branch.removeprefix("cmoc/session/")
+    )
+    tracking_path.write_text("not a process identity\n")
+
+    assert lifecycle_module.recover_started_run("realization_refactor") is None
+    assert _state(state_path)["run"]["state"] == "running"
+    assert context.run_worktree.exists()
+
+
 def test_run_join_allows_oracle_change_on_session_branch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
