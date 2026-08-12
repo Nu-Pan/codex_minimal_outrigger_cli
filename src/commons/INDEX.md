@@ -35,22 +35,20 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の検査・生成・鮮度判定・書き込み・commit を一貫して扱う indexing lifecycle の共通実装。
-- directory traversal、既存 entry の hash 検証と再利用、不足 entry の Codex 生成、深さ順更新、排他 lock、更新差分の commit が責務範囲である。
-- INDEX.md 更新処理の実装入口として、indexing の挙動や lifecycle の変更を調査するときに進む対象。
+- INDEX.md の検査・生成・commit lifecycle を一括して担う共通実装。directory traversal、既存 entry の再利用判定、対象 hash の計算、Codex による entry 生成、INDEX.md の書き込み、更新 commit、排他 lock を扱う。
+- indexing preflight から呼び出される更新処理の入口であり、下位の runtime_* モジュールは Codex 実行、Git path、preflight など個別の補助責務を確認するために使う。
 
 ## Read this when
-- INDEX.md の自動生成、entry の再利用条件、hash による鮮度判定を変更・調査するとき。
-- indexable なファイル・directory の列挙、symlink・binary・ignored path の扱いを確認するとき。
-- Codex による entry 生成、並列実行、preflight、lock、INDEX.md 更新 commit の流れを確認するとき。
+- INDEX.md の preflight 更新、深さ順の再生成、entry の鮮度判定、生成結果の描画、または indexing commit の挙動を変更・調査するとき
+- INDEX.md 更新時の repository lock、Git worktree、並列生成、symlink・binary・ignore 対象の扱いを確認するとき
 
 ## Do not read this when
-- 個別の INDEX.md entry の内容やルーティング方針だけを確認したいとき。
-- Codex prompt の entry schema や生成 parameter の定義だけを調べるときは、該当する prompt builder の実装を直接読む。
-- indexing と無関係な runtime path、git、Codex profile、結果処理の単独仕様を調べるとき。
+- Codex 呼び出し前処理そのものの登録や実行制御だけを確認したいときは runtime_codex_preflight を読む
+- Codex の process tracking や cwd、Git 共通処理など単一の補助機能だけを確認したいときは対応する runtime_* モジュールを直接読む
+- INDEX.md entry の Structured Output schema や prompt parameter の定義だけを確認したいときは indexing index entry builder を直接読む
 
 ## hash
-- d1a409629aa6096f9c87d815521f50f668ac4cf632b6133acdd514c521ebbc7e
+- 8fefbe49f0e8e092762a94166e4d1007089cff74a7d3121229b67df722326886
 
 # `prompt_editor_input.py`
 

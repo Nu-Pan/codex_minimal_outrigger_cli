@@ -51,21 +51,18 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行ライフサイクル、Codex 呼び出し、設定・状態・Git・パス・ログ・feedback・エラー処理など、複数の runtime 機能から再利用される実装と公開 API を扱う。
-- パッケージ初期化、共通 API の再公開、INDEX 更新 lifecycle、prompt editor 入出力、Codex exec/TUI、設定・状態・Git・feedback・run lifecycle など、個別の共通責務へ進む入口となる。
+- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行基盤、Codex 呼び出し、設定・状態管理、Git・パス・ログ、feedback、editing run、INDEX 更新など、複数機能から再利用される共通処理を扱う。個別の機能を調査・変更するときは、ここから担当モジュールへ進む入口となる。
 
 ## Read this when
-- 複数の cmoc runtime 機能にまたがる共通処理の入口や責務分担を確認するとき
-- CLI、Codex、設定、状態、Git、ログ、パス、feedback、editing run などの共通実装を変更・調査するとき
-- 対象となる個別 runtime helper の実装ファイルを特定し、そこへ進む必要があるとき
+- 複数の runtime 機能にまたがる共通 API、状態、実行ライフサイクル、保存先、エラー処理の関係を調査するとき
+- commons 配下の個別実装の担当領域を特定し、適切なモジュールへ進む必要があるとき
 
 ## Do not read this when
-- 特定の runtime helper の具体的なアルゴリズムや挙動だけを確認したい場合は、対応する個別モジュールへ直接進むとき
-- CLI サブコマンド固有の業務ロジックや利用者向け仕様だけを確認したいとき
-- 正本仕様、設定型、feedback schema、path model など、commons の実装ではなく対応する仕様・定義を確認することが目的のとき
+- 特定の runtime helper のアルゴリズムや詳細仕様だけを調査する場合は、対応する個別モジュールを直接読むとき
+- CLI サブコマンド固有の業務ロジックや正本仕様だけを確認する場合は、該当する実装・仕様へ直接進むとき
 
 ## hash
-- 04b20f60191b3bfe3725fa890a573dc40b676058b4642c0a91a0612712db26df
+- 85cd87211ae4a7e982230a58f6b795ad71a42d4fab07d3fe72663ab507d8b349
 
 # `config`
 

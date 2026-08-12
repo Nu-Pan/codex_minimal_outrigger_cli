@@ -9,6 +9,7 @@ hash 検証、書き込み、commit は同じ index plan・lock・Codex context 
 """
 
 import fcntl
+import os
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -389,12 +390,33 @@ def index_target_hash(root: Path, path: Path) -> str:
     """INDEX.md entry の鮮度判定に使う対象 hash を計算する。"""
     if path.is_file():
         return file_sha256(path)
-    parts = []
+    parts: list[str] = []
     for child in indexable_children(root, path):
         child_hash = index_target_hash(root, child)
         kind = "dir" if child.is_dir() else "file"
-        parts.append(f"{kind}\0{child.relative_to(root)}\0{child_hash}\n")
+        relative_path = _directory_hash_relative_path(root, child)
+        parts.append(f"{kind}\0{relative_path}\0{child_hash}\n")
     return text_sha256("".join(parts))
+
+
+def _directory_hash_relative_path(root: Path, path: Path) -> str:
+    """directory hash 用 relative path を UTF-8 文字列へ正規化する。"""
+    relative_path = path.relative_to(root).as_posix()
+    try:
+        relative_path.encode("utf-8")
+    except UnicodeEncodeError:
+        # filesystem の surrogateescape 由来 byte はそのまま UTF-8 にできない。
+        # percent encoding で ASCII の可逆表現へ変換し、hash serialization を
+        # {{work-root}}/oracle/doc/app_spec/indexing.md の UTF-8 文字列として保つ。
+        encoded_parts: list[str] = []
+        for character in relative_path:
+            codepoint = ord(character)
+            if 0xDC80 <= codepoint <= 0xDCFF:
+                encoded_parts.extend(f"%{byte:02X}" for byte in os.fsencode(character))
+            else:
+                encoded_parts.append(character)
+        return "".join(encoded_parts)
+    return relative_path
 
 
 def render_index_entry(
