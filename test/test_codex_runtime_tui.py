@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from _codex_support import (
+    codex_arg_value,
     codex_override_config,
     codex_parameter,
     setup_codex_home,
@@ -92,8 +93,9 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
     assert record["args"][record["args"].index("--sandbox") + 1] == "read-only"
     override_config = codex_override_config(record["args"])
-    assert "--ask-for-approval" not in record["args"]
-    assert override_config["approval_policy"] == "on-request"
+    assert codex_arg_value(record["args"], "--ask-for-approval") == "on-request"
+    assert "--approve-for-me" not in record["args"]
+    assert "approval_policy" not in override_config
     assert override_config["approvals_reviewer"] == "auto_review"
     notification_command = override_config["notify"]
     assert isinstance(notification_command, list)
@@ -352,8 +354,8 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
     call_log = json.loads(call_logs[0].read_text())
     assert call_log["argv"][:3] == [
         "codex",
-        "--config",
-        'approval_policy="on-request"',
+        "--ask-for-approval",
+        "on-request",
     ]
     assert "--profile" not in call_log["argv"]
     assert "profile_name" not in call_log

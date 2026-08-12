@@ -151,23 +151,19 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界の実装。起動前の sandbox・CODEX_HOME・schema・argv/env 構成、実行中の child process tracking と安全な process group 停止、実行後の JSON/JSONL 出力解析および capacity・quota・予期しないエラー判定を担う。Codex 呼び出しの実行環境や機械的な結果解釈を確認する際の入口であり、設定値そのものや実行時エラー型の定義は各専用モジュールを直接読む。
+- Codex CLI subprocess 境界の実行環境構築と実行結果解釈を担う。sandbox、argv、CODEX_HOME、provider 設定、Feedback MCP、process tracking、schema 配置、JSONL 出力・エラー判定を扱い、呼び出し側が Codex の起動条件や失敗時の分類を確認するための入口となる。
 
 ## Read this when
-- Codex CLI に渡す sandbox、model/provider、通知、feedback MCP、TOML override の argv を変更・調査するとき
-- CODEX_HOME、subprocess 環境、schema の hash store 配置、Codex CLI 不在時の扱いを確認するとき
-- editing run の child process tracking、PID reuse 対策、pidfd、process group の停止・cleanup を変更・調査するとき
-- Codex の stdout JSONL から session ID や error message を抽出し、capacity・quota・unexpected error の判定を確認するとき
+- Codex CLI に渡す sandbox、model/provider、通知、Feedback MCP、環境変数、schema の設定を変更・確認するとき。
+- editing run における Codex subprocess の process group tracking、PID 再利用対策、停止・cleanup を調査するとき。
+- Codex の JSONL 出力から session ID、capacity/quota/unexpected error を判定する処理を確認するとき。
 
 ## Do not read this when
-- cmoc の設定項目や JSON/TOML 値の正規化規則だけを確認する場合は runtime_config を直接読む
-- CmocError の構造や利用者向けエラー文面の共通定義だけを確認する場合は runtime_errors を直接読む
-- feedback の環境変数名や reporter の実装だけを確認する場合は runtime_feedback を直接読む
-- schema store や runtime content のパス・ハッシュ保存仕様だけを確認する場合は runtime_paths または runtime_content を直接読む
-- Codex subprocess 境界に関係しない CLI コマンドやアプリケーション仕様を調査する場合
+- Codex 呼び出し側の prompt 生成や run 全体の業務フローだけを確認する場合。
+- Codex CLI と無関係な設定、エラー型、Feedback reporter 実装の詳細を直接調査する場合は、それぞれの担当対象へ進む。
 
 ## hash
-- a81ebf7110ecf1090bca1274a413c580eb00f9dfc8c0d88f435eed6eb36dd3ff
+- 54a3a9a36d244a6741c0893e94d1d66f6f6873337702b65c3412f399c939871e
 
 # `runtime_codex_tui.py`
 

@@ -38,8 +38,8 @@
   "oracle/doc/app_spec/codex_exec_rule.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "6785ac96b8a0eb1a88f78b5033aaeda4b0fd3d455bba295202febce33e83cd7e",
-    "last_investigated_at": "2026-08-10_15-24_16_099826000"
+    "last_investigated_sha256": "7d18f4117a3b7cb80baf366c94c83d063742c17b869bba7a34851fd7dfd799f0",
+    "last_investigated_at": "2026-08-12_22-07_42_178808000"
   },
   "oracle/doc/app_spec/codex_model_provider.md": {
     "investigation_required": false,
@@ -840,7 +840,7 @@
     "last_investigated_at": "2026-08-05_18-13_54_084125000"
   },
   "src/commons/runtime_codex_profile.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "a81ebf7110ecf1090bca1274a413c580eb00f9dfc8c0d88f435eed6eb36dd3ff",
     "last_investigated_at": "2026-08-12_19-27_10_949359000"
@@ -1164,7 +1164,7 @@
     "last_investigated_at": "2026-07-27_16-39_55_386747000"
   },
   "test/_codex_support.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "5b56b039a83a8845f85bd3ec2097eb80a803281a4ade7c305575f1887f28e898",
     "last_investigated_at": "2026-08-12_12-15_31_281348000"
@@ -1266,7 +1266,7 @@
     "last_investigated_at": "2026-08-10_13-56_17_049949000"
   },
   "test/test_codex_runtime_quota_retry.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "48eea6302eabb238b2ace686a8fbf005902d7d67bf9339f42d6381ec73c4d322",
     "last_investigated_at": "2026-08-12_21-02_57_925376000"
@@ -1410,7 +1410,7 @@
     "last_investigated_at": "2026-08-10_16-36_23_484864000"
   },
   "test/test_runtime_codex_profile.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "868fe3c3f60b14fda88f4809f6307a3b8ebd08d4d0d3a33b5977689783c11bc1",
     "last_investigated_at": "2026-08-12_15-33_42_634343000"
