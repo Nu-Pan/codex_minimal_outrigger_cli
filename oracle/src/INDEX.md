@@ -1,20 +1,20 @@
 # `oracle`
 
 ## Summary
-- AI コーディングエージェント呼び出しに関する正本ソースの入口。共通モデル、用途別の agent call 定義、feedback 入力契約、prompt 構築、oracle の共通基盤を扱う下位領域へ進むための起点。
+- cmoc の正本側 Python 実装と構造化定義を集約するディレクトリです。agent call の構築、feedback 入力契約、設定・パス・構造化文書の共通モデル、prompt 部品の生成を扱います。
+- agent call の用途別定義や起動パラメータを調査するときは `acp_builder`、feedback reporter の入力契約を調査するときは `feedback`、設定・パスモデル・構造化文書を調査するときは `other`、完全 prompt や標準規則の構築を調査するときは `prompt_builder` へ進みます。
 
 ## Read this when
-- agent call の共通パラメータ、モデル、推論強度、ファイルアクセス設定を確認するとき。
-- indexing、feedback、oracle、realization、session、tui など用途別の agent call 定義を調査・変更するとき。
-- feedback reporter の入力契約や、問題の分類・重要度・根拠・継続状態の表現を確認するとき。
-- prompt の placeholder 解決、統合順序、標準規則、Structured Output 契約の入口を確認するとき。
-- oracle の設定、パスモデル、agent instruction、構造化文書モデル、Markdown レンダリングを確認するとき。
+- cmoc の正本実装を構成する agent call、prompt、設定、パスモデル、構造化文書、feedback 契約の責務範囲を確認するとき
+- agent call の prompt や起動パラメータ、Structured Output 連携の用途別定義を調査するとき
+- cmoc 共通の設定値、Codex モデル設定、作業パスの placeholder、agent 向け標準文面、Markdown 構造化処理を調査するとき
+- feedback reporter が扱う問題分類・重要度・影響・根拠・継続状態の入力契約を確認するとき
 
 ## Do not read this when
-- 通常のコマンド処理や agent call の生成処理そのものを確認するとき。
-- collector 側の feedback 保存・集約・重複判定だけを確認したいとき。
-- 個別の oracle 文書、realization 実装、realization test、既存 INDEX.md の内容を確認するとき。
-- agent call と無関係な実装仕様や処理内容だけを調査するとき。
+- 個別の oracle 文書、realization 実装、realization test の正本内容を確認するときは、該当する対象を直接読む
+- collector による feedback の保存・集約・重複判定や、agent call の実行処理を確認するときは、その処理の実装を直接読む
+- 既存 INDEX.md のルーティング情報だけを確認・変更するときは、このディレクトリの実装本文を読む必要はない
+- Structured Output schema の項目名・型・形式だけを確認するときは、該当 schema を直接読む
 
 ## hash
-- a1beb47ea6b0f6593537431098cf6e5fe3784878032686f8bd812d145eba7d85
+- 08251c7d206b21c8f2f519f8bd05d84ba84b237b5d7edaf983a4e9801dde34b1

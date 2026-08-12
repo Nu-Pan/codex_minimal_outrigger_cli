@@ -22,17 +22,20 @@
 # `src`
 
 ## Summary
-- cmoc の oracle 側ソースコードと構造化出力スキーマの領域。agent call の共通パラメータ、用途別の prompt 構築、oracle・realization・routing・feedback の規則、レビュー判定、パスモデルや文書モデルを扱い、下位ディレクトリの個別定義へ進む入口となる。
+- cmoc の正本側 Python 実装と構造化定義を集約するディレクトリです。agent call のパラメータ、prompt の構築、設定・パス・構造化文書の共通モデル、feedback 入力契約を扱います。
+- agent call の用途別定義を調査するときは、用途別の構築定義へ進みます。設定・パス・構造化文書を調査するときは共通モデルへ、prompt の構成規則を調査するときは prompt 構築定義へ進みます。feedback reporter の入力契約を調査するときは feedback の構造化定義へ進みます。
 
 ## Read this when
-- agent call のモデル、推論強度、ファイルアクセス、作業コンテキストを確認・変更するとき。
-- 用途別の prompt、Structured Output schema、oracle review、feedback 判定、index entry 生成の定義を調査・変更するとき。
-- oracle と realization の扱い、prompt の共通規則、Markdown・構造化文書の生成基盤を確認するとき。
+- cmoc の正本実装における agent call、prompt、設定、パスモデル、構造化文書、feedback 契約の責務範囲を確認するとき
+- agent call の起動パラメータや用途別 prompt 定義の入口を特定するとき
+- cmoc 共通のモデル選択、推論強度、ファイルアクセス、パス placeholder、構造化 Markdown の定義を調査するとき
+- feedback reporter が受け取る問題分類、重要度、影響、根拠、継続状態の契約を確認するとき
 
 ## Do not read this when
-- 通常の CLI 実行処理、realization 側の実装・テスト、または oracle の自然言語仕様そのものを確認するとき。
-- feedback の保存・集約・重複判定など collector 側の処理だけを調査するとき。
-- 特定の agent call や規則が明らかな場合は、この領域全体ではなく該当する下位ディレクトリへ直接進むとき。
+- 個別の prompt 構築定義、設定モデル、パスモデル、構造化文書、feedback 契約の本文を確認するときは、該当する下位対象を直接読む
+- collector による feedback の保存・集約・重複判定や、agent call の実行処理を確認するとき
+- realization 実装や realization test の正本内容を確認するとき
+- 既存の INDEX.md のルーティング情報だけを確認するとき
 
 ## hash
-- 2163e860a6467b14ed0e0668fe5abb1da55df3ff2887282e842ab10f88013e04
+- 9b6635c247d2613c0704e7a079613b2021ce5deed395549579712c3b53bbca1e

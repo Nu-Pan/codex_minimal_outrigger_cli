@@ -15,18 +15,18 @@
 # `change_summary.py`
 
 ## Summary
-- realization refactor の change summary builder を適合させる adapter。正本 builder が生成した agent call parameter の prompt に対し、raw Git diff をコードフェンス保護した内容へ差し替えて再公開する。
+- realization refactor の fork における change summary builder を、oracle 実装から再公開する互換入口。対応する builder を利用するための下位実装への入口として機能する。
 
 ## Read this when
-- realization refactor の fork における change summary 用 agent call parameter の生成や prompt 保護処理を変更・調査するとき。
-- raw Git diff のコードフェンス保護と、正本 builder parameter の再利用方法を確認するとき。
+- realization refactor の fork に関する change summary parameter builder を利用・変更・調査するとき。
+- 互換入口から再公開される builder の参照元を確認するとき。
 
 ## Do not read this when
-- 正本の change summary builder や JSON 定義そのものを変更・調査するときは、対応する oracle file を直接読む。
-- change summary 以外の realization refactor builder や prompt fence 共通処理を調査するとき。
+- change summary builder の実装詳細を確認する必要があるときは、直接 oracle 側の実装を読む。
+- realization refactor の fork や change summary builder に関係しない作業。
 
 ## hash
-- a83ec0611410a3ec583fa30996680b1cf7fcb8bc394ebe3f5ff81cfa4c83a1b7
+- c0d7a42b998e37cd0eb58c2bed866165a5efdd716ffffa493db1a14b5780c2d8
 
 # `file_review_and_fix.py`
 

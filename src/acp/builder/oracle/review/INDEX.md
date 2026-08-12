@@ -15,79 +15,75 @@
 # `enumerate_finding.py`
 
 ## Summary
-- canonical な oracle review finding 列挙用 parameter builder を再公開する互換アダプター。関連所見を含む prompt の code fence を保護し、既存の呼び出し元を canonical 実装へ移行するまでの入口となる。
+- oracle review finding enumeration の canonical 実装を再公開する互換 import 経路。既存の acp.builder.oracle.review.enumerate_finding 呼び出し元から利用するための薄い委譲対象であり、実装内容を確認・変更するときは参照先の canonical 実装へ進む。
 
 ## Read this when
-- oracle review finding の列挙 parameter builder の既存呼び出し元や互換性を確認するとき
-- 関連所見を prompt に埋め込む際の code fence 保護処理を確認するとき
+- 既存の acp.builder.oracle.review.enumerate_finding からの import 互換性や再公開対象を確認するとき。
 
 ## Do not read this when
-- canonical な builder の仕様や本体実装を確認したいときは、oracle 側の実装を直接読む
-- review finding の列挙以外の ACP builder や prompt fence 処理を調査するとき
+- oracle review finding enumeration の実装仕様や処理内容を確認するときは、この互換経路ではなく canonical 実装を直接読む場合。
 
 ## hash
-- 8c135f902786c590b13d59c5748de7cb2a49b0a15c5375565c976e3b67931df5
+- 2da575386b541b2d2404f8d4213b85ea85c7b8204d8c961bec03d8198f646c36
 
 # `judge_finding.py`
 
 ## Summary
-- oracle review の finding judgment 用 canonical builder を再公開する互換 adapter。動的な所見・賛成理由・反対理由を prompt fence で保護し、既存 caller が canonical oracle path へ移行するまでの入口を提供する。
+- 対象は、oracle review の finding judgment 用パラメータ生成関数を canonical 実装へ転送する互換 import 経路である。canonical 実装の移行中に旧 import 経路を確認する入口として扱う。
 
 ## Read this when
-- oracle review の finding judgment parameter builder の caller や互換 import を調査・変更するとき。
-- 動的レビュー内容を prompt 内の所定セクションとして安全に埋め込む処理を確認するとき。
+- oracle review の finding judgment パラメータ生成関数について、旧 `acp.builder.oracle.review.judge_finding` import 経路との互換性や移行状況を確認するとき。
 
 ## Do not read this when
-- canonical な builder の仕様や prompt 本文を確認したいときは、参照先の oracle 実装を直接読む。
-- oracle review や finding judgment と無関係な builder、prompt、CLI 処理を調査するとき。
+- canonical な oracle review の finding judgment 実装そのものを変更・確認するとき。
+- oracle review と無関係な builder 実装や、旧 import 経路を利用しない処理を調べるとき。
 
 ## hash
-- 72e2700ef3f0572acede306cd6aa250cc47eb95a7b8536ec631dda68ae9321a1
+- 3e915545cbcdbb4483339b271d5de1d82fee999a4a493f88bcee5ad101729c23
 
 # `merge_finding.py`
 
 ## Summary
-- oracle review finding の canonical parameter builder を再公開する realization adapter。動的な所見リストを prompt に埋め込む際、コードブロックの fence を保護する。
+- oracle review finding merge の互換 import 経路を提供し、対応する oracle 実装のパラメータ生成機能へ進むための入口。
 
 ## Read this when
-- oracle review finding の agent call parameter を生成・再公開する実装を確認するとき。
-- 所見リストの prompt 埋め込みやコードブロック fence 保護の挙動を確認するとき。
+- oracle review finding merge のパラメータ生成機能を、互換 import 経路から利用または確認するとき
 
 ## Do not read this when
-- canonical builder 自体の仕様や prompt 内容を確認したいときは、対応する oracle の実装・定義を直接読む。
-- review finding と無関係な agent call builder や prompt fence 処理を調査するとき。
+- 対応する oracle 実装の詳細を確認したいとき
+- review finding merge 以外の機能を確認するとき
 
 ## hash
-- e7eee39c1cc6da7a9c11626c164a5f34322d6814f43fce8aec86e8adc409b439
+- a4d7c7e6d16ff5cc0f6f1ebf56e4a4cd1bc8239b094b3048d8e65376f9ed16a9
 
 # `validate_finding_advocate.py`
 
 ## Summary
-- レビュー所見が妥当である理由を列挙する canonical prompt builder の realization adapter。canonical parameter を再利用し、対象所見と既知理由を含む動的 prompt section を fence で保護する。レビュー処理から擁護理由列挙用 parameter を構築する入口である。
+- oracle review advocate validation の canonical 実装を互換 import 経路として公開する薄いモジュール。review finding advocate の検証パラメータ生成を利用する実装やテストで、従来の src 側 import 経路を確認するときに読む。
 
 ## Read this when
-- 擁護理由列挙用 builder の realization 側の委譲や動的 prompt section 保護を確認するとき
-- レビュー所見・既知理由の prompt 注入防止処理を追跡するとき
+- review finding advocate の検証パラメータ生成を src 側の互換 import 経路から利用する必要があるとき
+- canonical 実装への再公開関係を確認するとき
 
 ## Do not read this when
-- canonical な prompt 内容、モデル設定、ファイルアクセス設定を確認するときは oracle 側の実装を読む
-- 妥当ではない理由の列挙や所見判定の処理を確認するときは、それぞれの専用 builder を直接読む
+- 検証パラメータ生成の実際の処理内容、入力条件、出力仕様を確認したいとき。canonical 実装を直接読む
+- review advocate validation と無関係な oracle review 機能を調べるとき
 
 ## hash
-- 565d65144153e071e455c57663ac03bba887173be798cfaaecca3d49fa03a52b
+- 461fcbe483378ad0de8724fd04347686c8354d8d1bdd61c89496ba121fb0ee42
 
 # `validate_finding_challenger.py`
 
 ## Summary
-- oracle review の finding challenger 検証用パラメータ生成を再公開する互換 adapter。canonical oracle 実装の builder を呼び出し、finding・既知理由の prompt section を fence 保護して返す。
+- oracle review challenger validation の旧 import 経路を互換維持する薄い委譲モジュール。canonical 実装の詳細ではなく、既存 caller からの互換 import が必要な場合の入口として扱う。
 
 ## Read this when
-- oracle review の finding challenger 検証処理や、その agent call parameter の生成・prompt 保護を変更するとき。
-- canonical 実装への移行状況や、旧 adapter caller の互換維持を確認するとき。
+- `acp.builder.oracle.review.validate_finding_challenger` からの既存 import を維持・確認する必要があるとき
+- 互換 import 経路や canonical 実装への委譲関係を確認するとき
 
 ## Do not read this when
-- canonical な oracle review builder 自体の仕様・実装を変更する作業。
-- prompt fence の共通処理だけを調査・変更する作業。
+- oracle review challenger validation の実装内容を変更・確認するときは、canonical 実装を直接読む
+- この互換経路を利用しない新規 caller を実装するとき
 
 ## hash
-- b937c8eec287e4aeac088b29ae3f6cf090fa8829e45a257dfe46b37cdc3deb33
+- d786c87e2d221b325dab298f376e2a25e92ac82dc194872d69e6a6df04d8f202

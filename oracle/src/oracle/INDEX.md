@@ -1,20 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- `oracle/acp_builder` 配下の正本ソース本文を確認するための入口。AI コーディングエージェント呼び出しに使う共通モデル、用途別の呼び出し定義、prompt・実行条件・Structured Output 契約を扱う下位領域へ進む起点となる。
+- 対象ディレクトリには、agent call の共通データモデルやサブコマンド別の呼び出し定義が置かれており、各処理の prompt・モデル・推論強度・ファイルアクセス・Structured Output 連携を確認するための入口です。
+- 基本的な AgentCallParameter の契約は `basic.py`、indexing・oracle・realization・session・tui・quota probe など個別用途の呼び出し構築は対応するサブディレクトリまたはモジュールへ進みます。
 
 ## Read this when
-- agent call の共通パラメータやモデル・推論強度・ファイルアクセス設定を確認するとき
-- indexing、feedback、oracle、realization、session、tui など用途別の agent call 定義を調査・変更するとき
-- 配下の正本ソースの有無や、agent call 関連の Structured Output 契約の入口を確認するとき
+- agent call の共通パラメータ契約、モデル選択、推論強度、ファイルアクセスモードを確認・変更するとき
+- indexing、oracle、realization、session、tui、quota probe、feedback など特定用途の prompt や起動設定を確認・変更するとき
+- agent call と Structured Output schema、indexing preflight、作業ディレクトリの接続を調査するとき
 
 ## Do not read this when
-- 通常のコマンド処理や agent call の生成処理そのものを確認するとき
-- oracle file の仕様本文や、実際の INDEX.md のルーティング内容を確認するとき
-- agent call と無関係な実装仕様や処理内容だけを調査するとき
+- 通常の INDEX.md の内容や生成対象ファイル自身の責務だけを調べるとき
+- バックエンド固有のモデル名解決や具体的なアクセス規則の文面だけを確認するとき
+- agent call の実行処理や個別の生成・適用ロジックだけを調べるときは、対応する実装を直接読む
 
 ## hash
-- e3f65e061b3e6a1edf89366c9a62f61b94dcc1f4f634db51cbac70346111412a
+- 257bec0b102f75dd942bdfc0e7af3f5a80756416aabb9617452efd3ae174e8b7
 
 # `feedback`
 
@@ -35,23 +36,25 @@
 # `other`
 
 ## Summary
-- oracle の共通基盤実装をまとめた領域。リポジトリ設定、agent call のパスモデル、agent 向け instruction 標準、階層構造を持つ文書モデルと Markdown レンダリングを扱う。各機能の共通データモデルや変換処理を確認する入口となる。
+- cmoc のリポジトリ固有設定を集約するデータクラス群を定義する。JSON/TOML 共通値、Codex CLI の provider・モデル・推論 effort、oracle review のループ上限を扱う設定構造の入口。
+- cmoc のパス表記に用いる root placeholder と、agent call 単位の work root・repository root を表現するモデルを定義する。placeholder 付きパスの解決、Git worktree・repository root の探索、実パスから placeholder 表記への変換を担う。
+- agent 向け instruction の要求文面を構造化する標準と、その要求項目を表すデータモデルを定義する。標準の保持と StructDoc への変換処理の入口を担う。
+- 構造化文書の要素を見出し階層付き Markdown へ変換するヘルパーを提供する。文書構造、参照可能なブロック、コードブロックを表現し、参照先やブロック ID の検証、文字列のインデント正規化を担う。
 
 ## Read this when
-- cmoc の設定項目や既定値、Codex CLI の provider・モデル・推論 effort、oracle review のループ設定を確認・変更するとき。
-- agent call の cwd、repository root・work root・run root の導出、root placeholder、実パス変換、worktree 境界を確認・変更するとき。
-- agent 向け instruction の標準形式、要求項目のデータモデル、標準から構造化文書への変換を確認するとき。
-- 構造化文書のモデル、Markdown レンダリング、cmoc_block 参照検証、見出し深度計算、空行や文字列正規化を確認・変更するとき。
+- cmoc の設定項目や既定値、Codex CLI のモデル設定、ファイルアクセス規則違反時のリカバリ回数、または oracle review のループ設定を変更・確認するとき。
+- cmoc のパス placeholder、agent call の作業コンテキスト、worktree や repository root の探索・変換規則を変更・調査するとき。
+- agent 向け instruction の標準形式、要求ラベル、Standard・Requirement の生成や StructDoc への変換を調べるとき。
+- Markdown をプログラムで組み立てる処理、見出し階層、cmoc_block・cmoc_ref、コードフェンス、参照検証の挙動を変更・調査するとき。
 
 ## Do not read this when
-- 永続化された設定 JSON の生成・同期・調整だけを確認するときは、対象の設定ファイルや doctor 実装を直接読む。
-- ModelClass や ReasoningEffort の列挙値だけを確認するときは、参照元の型定義を直接読む。
-- CLI の具体的なサブコマンドや agent call prompt の生成処理だけを調査するときは、それぞれの直接実装を読む。
-- 個別の instruction 本文や構造化文書の正本仕様だけを確認するときは、対応する仕様文書を読む。
-- 一般的な Markdown 生成や、この領域のモデルを使わない機能を調査するときは、対象機能へ直接進む。
+- 永続化された設定 JSON の生成・同期・人手調整だけを確認するときは、対象の設定ファイルや doctor 実装を直接読む。列挙型の値だけを確認するときは、その型定義を直接読む。
+- パスモデルを利用する個別機能だけを確認するとき、またはパス解決と無関係な一般的な CLI・oracle・realization 仕様を読むとき。
+- 個別の instruction 本文や StructDoc の一般仕様だけを確認するとき、または標準データモデルを使わない oracle 実装・テストを調べるとき。
+- 通常の Markdown 記述や構造化文書を使わない文書生成処理を確認するとき、またはレンダリング実装の挙動が目的でないとき。
 
 ## hash
-- 41ef3ab12e8ab887215a10fe786213665fa3bcc98dd488914539686c0e287ec1
+- 457a12faf12238fa7b95ede55e89ce82363626bd49c2bcdf1cff218b5f721ad0
 
 # `prompt_builder`
 

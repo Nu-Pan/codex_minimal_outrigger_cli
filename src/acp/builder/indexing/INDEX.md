@@ -17,17 +17,14 @@
 # `index_entry.py`
 
 ## Summary
-- 正本の index-entry builder を互換入口として再公開し、既存の acp.builder.indexing.index_entry 参照を維持する。正本 builder の parameter 生成結果を利用しつつ、対象本文を prompt に埋め込む際のコードフェンスを保護する。
-- index-entry 生成処理の互換参照を調査・変更するときの入口であり、実装の正本や prompt 受け渡し仕様そのものを確認する場合は、再公開先の正本 builder または prompt 標準仕様へ進む。
+- `oracle` 側の index-entry パラメータ生成機能を `acp.builder.indexing.index_entry` から利用するための互換入口。旧参照を維持する必要がある場合に、公開される生成関数の再公開内容を確認する起点となる。
 
 ## Read this when
-- 既存の acp.builder.indexing.index_entry 参照を維持する互換入口の挙動を確認・変更するとき
-- index-entry 生成 prompt に対象本文を受け渡す際のコードフェンス保護を確認するとき
+- `acp.builder.indexing.index_entry` の互換性維持や旧参照の削除条件を確認するとき。
 
 ## Do not read this when
-- 正本の index-entry builder の実装や仕様を確認する場合
-- prompt の受け渡し規則そのものを確認する場合
-- 互換参照が不要になった後の公開面・削除条件を判断する場合
+- index-entry 生成の実装詳細を確認したいときは、再公開元の `oracle` 側実装を直接読む。
+- `acp.builder.indexing` の別機能や、旧参照の利用状況を調査しないとき。
 
 ## hash
-- df469394274b0fb7e906f0ba973dc2d44e79a45555d08d3ec02d0794e5ff72dd
+- 6250929e8aef3d4fa7e09a0b2b69e1cecb8c2ee1b53aa26c9604fbc5fc86d631

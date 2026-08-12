@@ -17,32 +17,33 @@
 # `normalize_issue.py`
 
 ## Summary
-- feedback issue の同一性判断 builder を、canonical builder の互換 import 経路として再公開する対象。canonical prompt を取得し、動的な observation JSON と既存 issue candidate JSON の code fence を保護してから返す。
+- 対象は feedback issue の同一性判断用 builder への互換 import 経路を提供する。実装内容や仕様を確認する必要があり、同じ feedback builder 領域で互換的な import 経路を探すときの入口になる。
 
 ## Read this when
-- feedback issue の同一性判断用 agent call parameter を互換 import 経路から構築するとき。
-- canonical prompt の再公開時に、動的 JSON 内の backtick が後続の prompt section を命令として解釈されないよう保護する処理を確認するとき。
+- feedback issue の同一性判断 builder を利用するコードの import 経路や互換性を確認するとき
+- この互換モジュールがどの builder を再公開しているかを確認するとき
 
 ## Do not read this when
-- canonical な feedback issue 同一性判断 builder の prompt 内容や仕様を確認するときは、対応する oracle file を直接読む。
-- 動的 JSON の code fence 保護処理そのものを変更・確認するときは、prompt fence 保護の共通実装を直接読む。
-- feedback issue の正規化以外の builder の挙動を確認するときは、この互換 import 経路を入口にしない。
+- issue 同一性判断 builder の実装仕様やパラメータ生成ロジックを確認したいときは、対応する oracle の実装を直接読む
+- feedback issue 以外の builder や、互換 import 経路に関係しない処理を調べるとき
 
 ## hash
-- c6d131fb7f21aaa97e881a84777bc5f11b0d6178c3dad3543290f0c5e18e970f
+- 5202e2148d7808b8f162a5e470d561a74476d8458b5984a569f9ed4b7cc110ec
 
 # `verify_issue.py`
 
 ## Summary
-- feedback issue candidate を固定済みの report cut references だけから検証する agent call parameter の互換 import 経路。canonical prompt を再公開し、動的 JSON 内の backtick が後続の prompt section を壊さないよう fence を保護する。
+- 対象は feedback issue verification builder の互換 import 経路を提供する薄いラッパーであり、対応する oracle 実装への入口として扱う。
+- feedback issue の verification parameter builder を利用・変更・挙動確認する作業で、互換 import 経路の役割を確認するために読む。
+- oracle 側の実装内容や verification builder の詳細な仕様を確認する必要がある場合は、この対象ではなく対応する oracle file を直接読む。
 
 ## Read this when
-- feedback issue candidate の検証用 agent call parameter 構築経路を確認するとき
-- candidate JSON と report cut references JSON の prompt 埋め込み時に code fence 保護が必要な処理を確認するとき
+- feedback issue verification parameter builder の import 経路や互換ラッパーの責務を確認するとき。
+- この互換経路を利用するコードの参照先を判断するとき。
 
 ## Do not read this when
-- 検証 prompt の正本文面、判定基準、Structured Output schema を確認したいとき
-- feedback issue 以外の agent call parameter 構築処理を調べるとき
+- verification parameter builder の実装ロジック、入力検証、出力仕様を確認するとき。
+- 互換 import 経路を経由せず、oracle 実装を直接調査・変更できるとき。
 
 ## hash
-- 9dea2003b38f147230346e365b3dca841a88c884a47cd98355bda94be8b86db1
+- 9267c65850b6c1fe972e4a2e51019b4dc52c0677844e38bdfbf8740668bfc02a

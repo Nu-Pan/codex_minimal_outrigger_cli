@@ -34,16 +34,16 @@
 # `review`
 
 ## Summary
-- oracle review の所見列挙・採否判定・検証理由生成・統合に関するスキーマと、各処理のエージェント呼び出しパラメータ構築実装をまとめた領域。oracle review の処理経路や入出力契約を調べる際の入口となる。
+- oracle review の所見列挙・妥当性検証・判定・統合に関する Structured Output schema と、各処理の agent call パラメータ構築定義を扱うディレクトリ。レビュー所見の入出力形式を確認する場合は JSON schema 定義へ、agent call の prompt・読み取り範囲・実行設定を確認する場合は対応する Python 定義へ進む入口となる。
 
 ## Read this when
-- oracle review で所見を列挙、判定、擁護・反証、統合する処理を確認するとき。
-- 各レビュー処理の Structured Output schema、プロンプト、モデル設定、アクセス範囲、起動条件を確認・変更するとき。
+- oracle review の所見を列挙、妥当性検証、提示可否判定、または重複・矛盾の整理する処理を確認するとき。
+- レビュー所見に関する Structured Output の形式や、対応する agent call の prompt・モデル・読み取り制約・実行設定を調査するとき。
 
 ## Do not read this when
-- oracle review 以外の agent call parameter 構築を調べるとき。
-- レビュー所見の内容や根拠仕様そのものを調査するとき。
-- 個別の出力形式だけを確認する場合は、該当する JSON Schema を直接読む。
+- oracle review の一般的な実行本体やレビュー基準そのものを確認するとき。
+- 所見の根拠となる oracle file、レビュー対象の実装、または通常の agent call 構築処理を調査するとき。
+- 個別の出力形式だけを確認する場合は、対応する JSON schema を直接読む。
 
 ## hash
-- f260447b6475c8470ac7f1305b41a6297fef12da5609cd42855c9ca197c43707
+- fe4cadf276441991fcf49f6f9e305e752b209984216989cdff85e34617941f75

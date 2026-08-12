@@ -18,19 +18,19 @@
 # `path_model.py`
 
 ## Summary
-- ルートパスプレースホルダと、agent call の cwd から repo/work/run root を導出するパスモデルを定義する。実パスとの相互変換、root 探索、call-scoped context の構築を扱う。パス解決や root placeholder、worktree 境界の実装・変更を確認するときの入口。
+- cmoc のパス表記に用いる root placeholder と、agent call 単位の work root・repository root を表現するモデルを定義する。
+- placeholder を含むパスの実体解決と、Git worktree・repository root の探索および実パスから placeholder 表記への変換を担う。
 
 ## Read this when
-- root placeholder の追加・変更や、placeholder を含むパスの実体解決を調査するとき
-- agent call の cwd、work root、repository root、run root の導出規則を確認するとき
-- 実パスと placeholder 表記の変換、worktree 探索、パス入力の検証を変更・テストするとき
+- cmoc のパス placeholder、agent call の作業コンテキスト、worktree や repository root の解決規則を確認・変更するとき。
+- placeholder 付きパスと実パスの相互変換、または root 探索の挙動を調査するとき。
 
 ## Do not read this when
-- CLI の具体的なサブコマンドや agent call prompt の生成処理だけを調査するとき
-- パスモデルを利用する個別機能の挙動だけを確認し、root 解決や placeholder 変換自体を扱わないとき
+- パスモデルを利用する個別機能の処理だけを確認するとき。
+- cmoc の一般的な CLI 挙動や、パス解決とは無関係な oracle・realization の仕様を読むとき。
 
 ## hash
-- 8660330a40e76a5e7acf35ec03434282d0e05c4569a0319712e061d391fc848b
+- 83cea74218b4c0877790ce4230ac7e1e8d0485e3c6d81fb290596f5d6709c70e
 
 # `standard.py`
 
@@ -51,13 +51,16 @@
 # `struct_doc.py`
 
 ## Summary
-- 階層構造を持つ文書モデルを Markdown にレンダリングするヘルパーを提供する。文書・ブロック・コードブロックの構造化、cmoc_block 参照の検証、見出し深度の自動計算、空行と三重引用文字列の正規化を扱う。
+- 構造化された文書要素を見出し階層付き Markdown へ変換するヘルパーを提供する。StructDoc、StructBlock、StructCodeBlock で文書構造・参照可能なブロック・コードブロックを表現し、レンダリング時に参照先の欠落やブロック ID の重複を検証する。
 
 ## Read this when
-- 構造化文書のデータモデル、Markdown レンダリング、cmoc_block 参照検証、見出し深度計算、または関連する文字列正規化の挙動を確認・変更するとき。
+- Markdown 文書をプログラムで組み立てる処理を変更または調査するとき。
+- StructDoc の階層見出し、cmoc_block、cmoc_ref、コードフェンスのレンダリング挙動を確認するとき。
+- 構造化文書内の参照検証やトリプルクォート文字列のインデント正規化を扱うとき。
 
 ## Do not read this when
-- 一般的な Markdown 生成や、構造化文書以外の CLI・プロンプト処理を確認するとき。cmoc_block の正本仕様を確認する場合は、先に仕様文書を読む。
+- 通常の Markdown の記述方法や、構造化文書を利用しない別の文書生成処理を確認するとき。
+- cmoc プロンプト全体の仕様や参照ルーティングを確認することが目的で、レンダリング実装の挙動を調べる必要がないとき。
 
 ## hash
-- 3486a19956bf59e4ea551c4cdbb81105a9de2e6d5337fb2c0239eb85a0e1eb7a
+- d9c978e1dfb51d768350c6e4baf3159c9db4f8a400a3ca8a29b97e7e764833e9

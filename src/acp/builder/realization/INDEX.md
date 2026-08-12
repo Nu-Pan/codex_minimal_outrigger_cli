@@ -15,39 +15,33 @@
 # `apply`
 
 ## Summary
-- `__init__.py` は realization apply 用の builder adapter を提供し、apply 処理の builder 実装へ進む入口となる。
-- `fork` は `cmoc realization apply fork` 用の builder adapter 群を収め、初期化と launch_exec adapter による oracle builder 呼び出しおよび prompt 内 raw oracle git diff のコードフェンス保護を担う。fork 適用処理における builder 接続点の入口である。
+- realization apply 用の builder adapter を提供するモジュール。apply 系 builder 実装を確認する際の入口となる。
+- fork 適用向け builder adapter を配下に持つサブディレクトリ。`cmoc realization apply fork` の launch_exec パラメータ生成へ進むための入口となる。
 
 ## Read this when
-- realization apply の builder adapter の責務や実装を確認するとき
-- apply 処理の builder 実装を辿るとき
-- `cmoc realization apply fork` の builder adapter の配置・責務を確認するとき
-- apply fork の launch_exec builder の引数、oracle builder との adapter 境界、prompt 内 diff フェンス保護を確認・変更するとき
+- realization apply の builder adapter の責務や、apply 系 builder 実装の配置を確認するとき
+- `cmoc realization apply fork` の builder adapter や launch_exec パラメータ生成を確認するとき
 
 ## Do not read this when
-- apply 処理以外の builder 実装を確認するとき
-- builder adapter の詳細実装を直接確認する場合
-- fork 適用処理そのものの実装詳細を調査するとき
-- apply fork 以外の builder adapter を調査するとき
-- prompt fence 保護の共通処理や正本 builder の仕様を確認するとき
+- apply 以外の realization builder を確認するとき
+- fork の launch_exec パラメータ生成そのものの実装詳細を直接確認するとき
 
 ## hash
-- 57a0537b9501de7783fe84e97545b76d19c05684a168f04670a729aee468461c
+- 1aff7bd61edfd5529e41a280a5cd7b7d325315f8879f7b155e750a471a4618fe
 
 # `refactor`
 
 ## Summary
-- realization refactor における builder adapter パッケージ。refactor 処理の builder 関連実装へ進む入口。
-- fork 用 builder adapter を提供し、change summary と file review and fix の builder 接続・再公開を扱う。
+- realization refactor の builder adapter を収めるパッケージ。refactor 処理における builder 関連実装へ進む入口であり、fork 用の互換的な builder adapter も含む。
 
 ## Read this when
 - realization refactor の builder adapter の責務や実装入口を確認するとき。
-- fork の builder adapter、または change summary・file review and fix の agent call parameter builder の接続や公開 API を変更・調査するとき。
+- fork の change summary または file review and fix parameter builder の公開 API、参照元、接続を確認するとき。
 
 ## Do not read this when
 - builder adapter 以外の refactor 処理を確認するとき。
 - fork 以外の builder 実装を調査するとき。
-- 正本 builder の parameter 定義・JSON 定義、prompt fence 共通処理を確認・変更するとき。
+- builder の parameter 定義や実装詳細を、対応する oracle 側の実装から直接確認できるとき。
 
 ## hash
-- 919e1c2f18330e415fd3ed57b7b0a2db49f15d291b83fdcafcf4e84b343aa516
+- 9967ee89fdb7e90dfd3488fbe7ed2698f1535924ffd79a69418eda3f742a629e

@@ -18,18 +18,15 @@
 # `conflict_resolution.py`
 
 ## Summary
-- 互換 import 経路として、canonical な session join conflict resolution 実装を再公開する薄いアダプター。競合ファイル一覧を canonical parameter に渡し、生成済み prompt の conflict 対象ファイル節だけ fence 保護して返す。
-- session join の競合解決 parameter を利用する既存 caller から canonical 実装へ移行するまでの暫定的な入口。
+- `acp.builder.session.join.conflict_resolution` からの互換 import 経路を提供し、canonical な session join conflict resolution 実装へ委譲する。
 
 ## Read this when
-- `acp.builder.session.join.conflict_resolution` からの互換 import を調査・変更するとき
-- 競合 path の prompt 埋め込みや code block fence 保護の挙動を確認するとき
-- session join conflict resolution の canonical parameter と互換ラッパーの差分を確認するとき
+- 既存 caller の互換 import を維持する必要があるとき。
+- session join の conflict resolution への import 経路と canonical 実装への委譲関係を確認するとき。
 
 ## Do not read this when
-- canonical な conflict resolution の仕様や本体実装を確認したいときは、oracle 側の canonical 実装を直接読む
-- session join の競合解決以外の builder や prompt fence 処理を調査するとき
-- 互換 import caller がなく、canonical path への移行完了後の構成だけを確認するとき
+- conflict resolution の仕様や実装内容を確認するときは、canonical 実装を直接読む。
+- session join の conflict resolution と無関係な処理を調査するとき。
 
 ## hash
-- df1c9fc7faf28466fa86b69c0bc45f518f61457d14fc616e0b9d9adb5664c105
+- 80dd736d61e6995d92c4ad91df4c25fadaf86f51cec5a0fa7d97bcfdf01a96b5

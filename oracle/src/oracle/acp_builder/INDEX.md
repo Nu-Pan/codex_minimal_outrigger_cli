@@ -1,17 +1,3 @@
-# `apply`
-
-## Summary
-- このディレクトリには、参照可能な正本ソース本文がない。正本ソースの有無を確認するための入口である。
-
-## Read this when
-- このディレクトリの内容や、参照可能な正本ソースの有無を確認するとき。
-
-## Do not read this when
-- 実装仕様や処理内容を確認したいとき。
-
-## hash
-- 0af302f7be7ef5db5b5b3790733cdc5b9d23e3de43be05b57a4287af7ea9be0d
-
 # `basic.py`
 
 ## Summary
@@ -64,23 +50,37 @@
 # `oracle`
 
 ## Summary
-- oracle 関連の agent call 起動処理を用途別に分けた領域です。oracle 編集フロー、調査フロー、レビュー処理の prompt・起動条件・パラメータ構築を確認する入口として機能します。
+- oracle 関連の agent call 構築定義を扱うディレクトリです。対話型の oracle 編集・調査と、oracle file のレビューに関する prompt、ファイルアクセスモード、実行設定、Structured Output schema の確認入口になります。
+- 編集・調査の TUI 起動処理を確認する場合は edit または investigation へ、所見の列挙・妥当性検証・採否判定・統合を確認する場合は review へ進みます。review では、処理本体と対応する出力 schema を目的に応じて確認します。
 
 ## Read this when
-- `cmoc oracle edit` の TUI 起動、agent call パラメータ、完全 prompt の生成、作業環境・権限・ログ保存を確認するとき。
-- `cmoc oracle investigation` の調査用 prompt、Codex CLI TUI 起動条件、ファイルアクセスモード、モデル・推論設定を確認するとき。
-- oracle review の所見列挙・判定・擁護や反証・統合、Structured Output schema、prompt、モデル設定、アクセス範囲、起動条件を確認するとき。
-- 配下に具体的なファイルが追加され、その内容や用途を確認するとき。
+- oracle 用 agent call の責務分担、prompt 構築、読み取り・書き込み権限、実行設定の入口を判断するとき。
+- oracle 編集や調査の TUI 起動処理を確認するとき。
+- oracle review の所見生成から検証、採否判定、重複・矛盾の整理までの処理群を確認するとき。
 
 ## Do not read this when
-- oracle file の編集内容や仕様そのものを確認するとき。
-- prompt の共通構築規則や agent call パラメータの型定義だけを確認するとき。
-- oracle investigation の調査対象や oracle review の所見内容・根拠仕様を確認するとき。
-- 通常の Codex CLI 起動処理や、oracle 以外の cmoc コマンドの起動パラメータだけを確認するとき。
-- 個別の出力形式だけを確認する場合。
+- oracle file 自体の編集内容、調査対象、レビュー基準を確認するときは、対象の oracle file やレビュー処理を直接読みます。
+- 個別の起動処理だけを確認するときは edit または investigation を直接読みます。
+- 個別の Structured Output の形式だけを確認するときは review 配下の対応する schema を直接読みます。
 
 ## hash
-- ff9b5a6bb78972a6f54edbfcf2ff9f2a5a8397313d275cbeca7f97d3b8d5c6a3
+- dfad978d10e074acb1d73329f183c66b21aefcbff2c643ea0b34b91a21a71447
+
+# `quota_probe.py`
+
+## Summary
+- Codex CLI の quota 回復確認用 agent call を構築する定義。quota probe 用の完全 prompt と起動パラメータを組み立てる入口として機能する。
+
+## Read this when
+- Codex CLI の利用可能性や quota 回復確認用 agent call の構築を変更・調査するとき。
+- quota probe の prompt、モデル・推論設定、読み取り専用設定、実行コンテキストの決定を確認するとき。
+
+## Do not read this when
+- quota probe 以外の agent call 構築を変更・調査するとき。
+- 一般的な prompt 生成規則や他の ACP パラメータ定義を直接確認する場合。
+
+## hash
+- 1e350f6b6a20e73903ee41b54ac531753f8e67704ccf9d2250cbd15cd1ebd448
 
 # `realization`
 

@@ -31,22 +31,20 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装を担うディレクトリ。入力 observation の保存処理と、report publication／diagnostic pipeline の実装を扱う。feedback サブコマンドの実装を確認・変更するときの入口。
+- feedback サブコマンドの実装領域。観測結果の保存形式、report の candidate 集約・検証・publication、状態遷移や再開処理を確認・変更する際の入口。配下の report 実装と共有 primitive の責務を切り分けて読むためのルーティング対象。
 
 ## Read this when
-- feedback サブコマンドの挙動や実装を確認・変更するとき。
-- feedback observation の入力・保存処理、または report cut から report publication／incomplete 診断までの処理を調べるとき。
-- report の再開、状態管理、normalization／verification、artifact や checkpoint の連携を調べるとき。
+- feedback サブコマンドの挙動、実行経路、状態遷移、割り込み・失敗・再開処理を調査または変更するとき
+- raw observation から candidate を生成し、verification や Markdown report の publication まで行う report pipeline を確認するとき
+- feedback の observation envelope や保存形式と report 実装の関係を確認するとき
 
 ## Do not read this when
-- feedback 以外のサブコマンドを扱うとき。
-- feedback observation の入力形式や保存処理だけを確認し、該当する観測 envelope／store 実装へ直接進めるとき。
-- normalization／verification agent の prompt・builder・Structured Output schema だけを確認し、対応する builder や正本 schema へ直接進めるとき。
-- feedback state の正本仕様や利用者向け挙動だけを確認し、対応する oracle の app specification を先に読むとき。
-- 共通の lock、active state、artifact、checkpoint、pointer 操作だけを確認し、commons 配下の実装へ直接進めるとき。
+- feedback 以外のサブコマンドを扱うとき
+- normalization／verification の prompt builder や Structured Output schema だけを確認するとき
+- feedback state、generation artifact、checkpoint、raw store など共有 primitive の実装だけを確認するとき
 
 ## hash
-- e2257f80cf52ab5c9a842297fd9cbc1ca805ef04fc8b7ee2d59999c87ef0666a
+- ff4402743400a1cc0753a359c8b7de8149e13660ffc80ad3c4d723dd99933ba3
 
 # `indexing.py`
 
@@ -66,19 +64,19 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドの実装をまとめるディレクトリ。oracle の編集・調査・レビューの各 CLI 実行経路と、それらを支えるレビュー対象列挙、パス解決、レポート生成、INDEX 差分処理などへの入口となる。
+- oracle 系サブコマンドの実装をまとめるディレクトリ。oracle の編集・調査・レビューに関する各サブコマンドと、その実行フローを支える補助実装への入口となる。
 
 ## Read this when
-- oracle 系サブコマンドの構成や、編集・調査・レビュー機能の実装箇所を確認するとき。
-- oracle review の対象列挙、パス解決、レビュー結果の出力、INDEX.md の commit・merge 処理を調査するとき。
+- oracle 系サブコマンドの構成や、編集・調査・レビューの実行経路を確認するとき
+- oracle review の対象列挙、レビュー loop、レポート生成、INDEX 差分の統合など、oracle review を支える実装の所在を確認するとき
 
 ## Do not read this when
-- 個別サブコマンドの詳細な実行フローを確認する場合は、該当する実装ファイルへ直接進む。
-- oracle の調査・編集契約やプロンプト内容そのものを確認する場合は、対応する oracle 仕様を直接読む。
-- 共通のプロンプト入力処理や TUI 起動パラメータの詳細だけを確認する場合は、対応する共通モジュールまたは専用実装へ進む。
+- 特定の oracle サブコマンドの詳細な挙動を確認する場合は、該当する個別実装を直接読む
+- oracle の編集・調査・レビューに関する契約やプロンプト内容そのものを確認する場合は、対応する oracle 仕様を直接読む
+- 共通のプロンプト入力処理や Git・パス処理の詳細だけを確認する場合は、該当する専用実装を直接読む
 
 ## hash
-- ced40e35b79d0ff61c3e19d460573df1c397c904796c2a60cf129c08bf28647a
+- 5a5520709dac251611061fcc643f35d78201fea6dc38ea173acca29d5e77377f
 
 # `realization`
 
