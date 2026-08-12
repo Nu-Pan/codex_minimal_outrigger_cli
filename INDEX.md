@@ -89,23 +89,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本ドキュメント群を集約するディレクトリ。アプリケーション仕様、branch・commit・worktree のモデル、採用しなかった設計案、開発ルールを扱い、目的に応じた下位文書への入口となる。
+- cmoc の人間所有の正本仕様を分類して読むためのルート。自然言語の要求・判断基準・責務を定める仕様文書、正確な実装定義や Structured Output schema、関連するテスト規約を扱う。CLI 共通挙動、agent call、prompt、feedback、session/run、branch・commit・worktree、開発・テスト規則、不採用案の記録へ進む入口となる。
 
 ## Read this when
-- cmoc の正本仕様や開発ルールの所在を確認するとき
-- CLI・Codex 呼び出し・ログ・feedback・prompt・run／session・通知などのアプリケーション挙動を調べるとき
-- session fork、run の隔離、branch・commit・worktree の関係を調べるとき
-- 実装配置、開発環境、テスト要件、テスト実行手順を確認するとき
-- 現行仕様ではなく、採用しなかった設計案の背景や採否理由を調べるとき
+- cmoc の仕様、設計、開発規則、テスト規約の入口を特定するとき
+- CLI サブコマンド、Codex 呼び出し、prompt、ログ、feedback、session/run、branch・commit・worktree の正本仕様を調査するとき
+- 正確な agent call 定義、schema、共通実装部品を確認するとき
+- 採用しなかった設計や作業方式の理由を確認するとき
 
 ## Do not read this when
-- 実装ファイルやテストの具体的な挙動だけを確認する場合
-- 読むべき特定の正本文書が既に判明しており、その本文へ直接進める場合
-- 単一の CLI サブコマンドの挙動だけを確認し、関連する仕様の分担や境界を調べる必要がない場合
-- 現行仕様や実装の直接の参照先が必要で、採用しなかった設計案の背景を確認する必要がない場合
+- 確認対象の仕様本文や開発規則が既に特定できており、該当する下位文書へ直接進めるとき
+- 実装ファイル、realization file、テスト、実行ログ、生成成果物の具体的内容だけを調査するとき
+- 特定の schema の項目・型・形式だけを確認するときは、対応する schema を直接読む
 
 ## hash
-- 322d868c4c1fed1fdf6058befb8f0051a4d58556f0a048054a5d3fbe2b2bcaab
+- 6931d685b6a1d2808364ab743ff3a42c93d4728a71c2754754183588f47dc56b
 
 # `pyproject.toml`
 
@@ -147,17 +145,17 @@
 # `test`
 
 ## Summary
-- pytest による realization test と共通 test helper を収録し、CLI、runtime、Codex 実行、indexing、oracle review、session/run lifecycle、feedback、設定、packaging などの外部契約を検証するテスト領域。各個別テストや共通 helper への入口として使う。
+- pytest による realization test 群と共通テスト支援を収録する領域。CLI、Codex runtime、indexing、oracle review、session/run lifecycle、設定、Git、prompt、通知などの外部挙動を検証する。各個別テストや共通 helper の責務を調べる際の入口となる。
 
 ## Read this when
-- cmoc の既存外部挙動、CLI lifecycle、Codex runtime、worktree・state 管理、indexing、oracle review、session/run、feedback、設定、packaging などの回帰テスト対象を特定するとき。
-- 対象機能の変更に対して、どの統合テスト・runtime テスト・builder 契約テストを確認すべきか絞り込むとき。
-- テスト共通 fixture、fake command、Git repository、Codex 呼び出し、schema path などの支援機構を確認するとき。
+- 対象機能の外部挙動、回帰条件、統合 lifecycle、境界条件をテストから確認するとき。
+- テスト共通 fixture、Git repository fixture、Codex fake、外部 command、schema path 解決などの支援機構を確認するとき。
+- 実装変更に対応する realization test の範囲を特定するとき。
 
 ## Do not read this when
-- 本番実装の責務や正本仕様そのものを確認するときは、対応する src 実装または oracle 文書・schema を直接読む。
-- 単一機能の詳細を調査する場合は、この階層を総覧するのではなく、対象挙動を直接検証するテストへ進む。
-- テスト実行手順だけを確認する場合は、repository local の test execution 指示を読む。
+- 正本仕様、schema の内容、または本番実装の責務を確認することが目的のときは、対応する oracle 文書・schema・実装を直接読む。
+- テスト実行手順だけを確認するときは、repository local の test execution 指示を読む。
+- 対象機能と無関係なテストや共通 helper を読む必要はない。
 
 ## hash
-- 9e5081b79cd52b8003a72954c6481f1711e25a87716a108b8d63f3820821c044
+- b159d8e69b5a0f596711e950608673a7402c5d220e76bdb77435eebc557b01d9

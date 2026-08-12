@@ -17,19 +17,17 @@
 # `change_summary.py`
 
 ## Summary
-- refactor fork の確定済み Git 差分を人間向けに要約する agent call の定義。prompt の役割・要約対象・完了条件、読み取り専用の実行条件、実行モデルや推論設定、linked worktree の扱い、Structured Output schema の参照先をまとめて構築する。refactor fork の変更要約処理へ進む入口であり、一般的な prompt 構築や refactor 本体の実装とは責務が異なる。
+- refactor fork の変更差分を人間向けに要約する agent call の prompt と起動パラメータを構築する定義。差分を動的 prompt に埋め込み、readonly の linked worktree 上で指定 schema の要約を生成する処理への入口。
 
 ## Read this when
-- refactor fork の変更要約 agent call の起動パラメータ、prompt、読み取り専用の実行条件を確認するとき
-- refactor 差分を入力とする要約処理のモデル分類、推論設定、作業ディレクトリ、Structured Output schema の構成を変更または調査するとき
+- refactor fork の作業差分を要約する agent call の構築方法、入力差分の渡し方、実行モデルや作業ディレクトリなどの起動条件を確認するとき。
 
 ## Do not read this when
-- refactor fork の実際のコード変更や差分生成処理を調べるとき
-- refactor と無関係な prompt の共通構築規則を調べるとき
-- 変更要約の出力項目や JSON schema の詳細だけを確認するときは、対応する schema 定義へ直接進む
+- refactor fork の差分要約そのものや出力形式だけを確認したいときは、変更要約用の schema を直接読む。
+- refactor fork 以外の agent call 構築や、一般的な prompt の組み立て規則を確認するとき。
 
 ## hash
-- cd77f8c64c6201ed4c3cee9eee1772ac87afb788b0d8120b7063dca25352fe16
+- b17cc5297186030d4e3176bae423ea5a5f9ece171ef159aea14893ed32dd6c79
 
 # `file_review_and_fix.json`
 
@@ -51,17 +49,18 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- refactor fork におけるファイル単位レビュー・修正用の AgentCallParameter を構築する定義。対象パスを起点に完全プロンプト、アクセス権、モデル設定、構造化出力スキーマ、作業用 worktree を組み立てる。
+- 対象ファイルは、refactor fork におけるファイル単位レビュー・修正用 AgentCallParameter の構築を担う。対象 path と run worktree を受け取り、レビュー対象を起点に調査・修正・検証を行う完全な prompt、oracle/realization の参照規則、書き込み範囲、構造化出力 schema、実行設定を組み立てる。
+- このファイルはレビュー兼修正 agent の呼び出し定義を確認または変更するときの入口であり、実際のレビュー prompt 文面や出力契約を変更する場合に読む。呼び出し対象の個別レビュー実装や、schema の詳細だけを確認する場合は、それぞれの直接の定義へ進む。
 
 ## Read this when
-- ファイル単位のレビュー・修正 agent call の prompt や実行パラメータを変更・確認するとき
-- レビュー結果の構造化出力、oracle/realization 参照規則、修正後検証の要求を確認するとき
-- refactor fork のレビュー処理から agent call を起動する経路を調査するとき
+- refactor fork のファイル単位レビュー・修正 agent の呼び出しパラメータ、prompt 構築、アクセス権限、検証規則、または実行モデル設定を確認・変更するとき
+- ファイル単位レビュー用 agent が、対象ファイルを起点にどの範囲を調査し、どの条件で realization file を修正するかを確認するとき
+- この agent call の構造化出力契約と、変更 path 集合の申告条件を含む事後条件を確認するとき
 
 ## Do not read this when
-- レビュー対象ファイルの実装内容や個別の所見だけを確認するとき
-- 一般的な prompt 構築機能や別の agent call 種別を調査するとき
-- 構造化出力 JSON Schema の具体的な制約だけを確認するとき
+- レビュー対象ファイルそのものの実装内容や、レビュー結果の所見だけを確認したいとき
+- 構造化出力 schema の項目・型・形式だけを確認したいときは、対応する schema 定義を直接読む
+- 共通 prompt 構築処理や path 解決処理だけを確認したいときは、対応する共通実装を直接読む
 
 ## hash
-- 276ababf5454576e1f351a31fd91e5575b8b55123098dd2b0b5d8890bdb26ea2
+- bfeeff85da635b4807768764c42bbdeee1ed2830e087efc501a2b321a44ef52d

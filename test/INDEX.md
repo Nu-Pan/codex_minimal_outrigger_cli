@@ -692,20 +692,21 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 標準 prompt parts の render 結果と complete prompt の構成・placeholder 展開を検証する回帰テスト群。各標準規則の単体 render、選択的な注入、既定での省略、file access mode 別の内容、feedback instruction の一意性、placeholder の統合・競合検出を扱う。prompt builder の挙動を変更・検証する際のテスト入口であり、標準規則本文や prompt builder 実装そのものを読む代替ではない。
+- 標準 prompt parts の rendering と complete prompt の組み立てを検証する回帰テスト。各 standard の注入条件、内容、相互排他、placeholder 展開、file access mode、feedback 指示、INDEX entry standard の出力境界を扱う。prompt builder の標準規則や complete prompt の構成を確認する際のテスト入口である。
 
 ## Read this when
-- prompt builder の標準 prompt parts または complete prompt の構成を変更し、既存の render 内容・注入条件・既定値への影響を確認するとき
-- 標準規則の追加・分離・選択注入、file access mode、placeholder 展開や競合検出の回帰を調査するとき
-- prompt builder 関連のテスト実行箇所を特定するとき
+- prompt part または complete prompt の rendering を変更・検証するとき
+- standard の注入条件、既定値、相互排他、placeholder 展開を変更・検証するとき
+- file access mode ごとの prompt 内容や共通 feedback 指示を変更・検証するとき
+- prompt builder の回帰テスト対象と検証される主要な構成を把握するとき
 
 ## Do not read this when
-- 一般的な INDEX 案内文書の構成や prompt 標準の正本を確認したいとき
-- prompt builder と無関係なテストや、単一の標準規則の詳細仕様だけを確認する場合
-- 実装の責務や設計判断を確認する場合
+- prompt builder の実装責務や正本仕様そのものを確認する場合
+- prompt builder と無関係なテストや機能を調査・変更する場合
+- テスト対象の具体的な標準文面や実装詳細を直接確認する必要がある場合は、対応する prompt builder の実装または正本仕様を読む
 
 ## hash
-- 0fa041092ec246271b4434a5135e1f2ccb0fe05fe0440bcb3d795a9525f44e93
+- be22fb91be8530bf1eff6ac34c17b7b11b87b9867fbe5910106b6bd9219b2696
 
 # `test_runtime_cli.py`
 

@@ -82,7 +82,6 @@ def test_conflict_resolution_standard_is_injected_without_editing_standards() ->
     assert "conflict marker の解消に不要な仕様変更" in rendered_doc
 
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.REPO_WRITE,
@@ -110,7 +109,6 @@ def test_realization_oracle_reference_rule_is_independently_selectable() -> None
     assert "`{{work-root}}` 起点の oracle file path" in rendered_doc
 
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
@@ -143,7 +141,6 @@ def test_build_routing_rule_renders_core_reading_rules() -> None:
 def test_complete_prompt_controls_routing_rule_explicitly() -> None:
     """repository 参照の有無に応じて routing rule を選択する。"""
     default_prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -151,7 +148,6 @@ def test_complete_prompt_controls_routing_rule_explicitly() -> None:
         aux_dynamic_prompt=[],
     )
     input_only_prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -164,10 +160,26 @@ def test_complete_prompt_controls_routing_rule_explicitly() -> None:
     assert "# routing rule" not in render_as_markdown(input_only_prompt)
 
 
+def test_complete_prompt_maps_responsibility_and_task_to_summary() -> None:
+    """担当と主作業を独立 role ではなく summary から参照する。"""
+    prompt = build_complete_prompt(
+        summary="- あなたは prompt 検証担当です\n- 対象 prompt を確認すること",
+        goal="- prompt の参照関係が妥当であること",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
+    )
+
+    rendered = render_as_markdown(prompt)
+    assert '## 担当と依頼の概要\n\n<cmoc_ref target="summary"/>' in rendered
+    assert "あなたは prompt 検証担当です" in rendered
+    assert "対象 prompt を確認すること" in rendered
+    assert '<cmoc_ref target="role"/>' not in rendered
+    assert '<cmoc_block id="role">' not in rendered
+
+
 def test_complete_prompt_includes_feedback_instruction_exactly_once() -> None:
     """全 agent call の共通 feedback instruction が一経路だけで注入される。"""
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -188,7 +200,6 @@ def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
     context = _path_context()
 
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -199,7 +210,6 @@ def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
 
     with pytest.raises(ValueError, match="Conflicting placeholder definition"):
         build_complete_prompt(
-            role="- role",
             summary="- summary",
             goal="- goal",
             file_access_mode=FileAccessMode.READONLY,
@@ -275,7 +285,6 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
 def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
     """NO_RULE時に標準file access ruleを挿入しないことを検証する。"""
     prompt = build_complete_prompt(
-        role="role",
         summary="summary",
         goal="goal",
         file_access_mode=FileAccessMode.NO_RULE,
@@ -289,7 +298,6 @@ def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
 def test_complete_prompt_can_include_apply_review_standard() -> None:
     """complete promptへapply review standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -308,7 +316,6 @@ def test_complete_prompt_can_include_apply_review_standard() -> None:
 def test_complete_prompt_preserves_injected_standard_terms() -> None:
     """complete promptが注入した各standardの主要語とplaceholderを保持することを検証する。"""
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -361,8 +368,10 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     monkeypatch.chdir(repo_root)
 
     prompt = build_complete_prompt(
-        role="- cmoc から呼び出された AI Agent です",
-        summary="- {{repo-root}} ツリー内の realization file を修正すること",
+        summary=(
+            "- cmoc から呼び出された AI Agent です\n"
+            "- {{repo-root}} ツリー内の realization file を修正すること"
+        ),
         goal="- realization standard と oracle standard に従うこと",
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
@@ -405,7 +414,6 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
     monkeypatch.chdir(repo_root)
 
     prompt = build_complete_prompt(
-        role="- role",
         summary="- {{work-root}}/src/app.py を確認すること",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -428,7 +436,6 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
     """既定のcomplete promptがapply review standardを含めないことを検証する。"""
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -458,7 +465,6 @@ def test_build_realization_standard_renders_core_conformance_rules() -> None:
 def test_complete_prompt_can_include_realization_standard() -> None:
     """complete promptへrealization standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -497,7 +503,6 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
 def test_complete_prompt_can_include_index_entry_standard() -> None:
     """complete promptへindex entry standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -516,7 +521,6 @@ def test_complete_prompt_can_include_index_entry_standard() -> None:
 def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
     """既定のcomplete promptがindex entry standardを含めないことを検証する。"""
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -549,7 +553,6 @@ def test_build_oracle_review_standard_renders_core_review_rules() -> None:
 def test_complete_prompt_can_include_oracle_review_standard() -> None:
     """complete promptへoracle review standardを追加できることを検証する。"""
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
@@ -568,7 +571,6 @@ def test_complete_prompt_can_include_oracle_review_standard() -> None:
 def test_complete_prompt_omits_oracle_review_standard_by_default() -> None:
     """既定のcomplete promptがoracle review standardを含めないことを検証する。"""
     prompt = build_complete_prompt(
-        role="- role",
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,

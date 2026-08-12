@@ -230,22 +230,26 @@
 # `prompt_standard.md`
 
 ## Summary
-- プロンプトの意味仕様と実行時 prompt 文面の正本を分離し、agent call に必要な情報だけを動的に注入・受け渡しするための責務境界と構築規則を定める文書。prompt の情報量、cmoc 固有契約、feedback、Structured Output、placeholder、参照関係、言語などを扱う。prompt builder／acp builder の設計や変更、agent call の契約・注入規則を確認する入口であり、個別の意味仕様そのものを確認する場合は参照先の oracle doc、正確な prompt 文面を確認する場合は対応する oracle src へ進む。
+- cmoc の agent call に渡す prompt の責務、情報量、正本の境界、構築規則、および実行時生成物の扱いを定義する文書。
+- 意味仕様を oracle doc、正確な prompt 文面を oracle src、実行時の prompt を生成物として分離し、各層の責務と変更範囲を明確にする。
+- prompt に含める情報、cmoc 固有契約と installed skill の境界、規範の決定論的注入、feedback instruction、Structured Output の schema・事後条件・受理条件の役割を定める。
+- summary と goal の責務分担、agent call 用 prompt の構築方法、プレースホルダと cmoc_block/cmoc_ref による参照関係、Markdown/GFM と言語方針を扱う。
+- prompt builder および acp builder の文面・構築規則を確認する必要がある作業における、意味仕様と実装上の受け渡しの境界を示す入口となる。
 
 ## Read this when
-- prompt builder または acp builder の責務、正本、動的 prompt 構築規則を変更・確認するとき
-- agent call に注入する情報、cmoc 固有契約、installed skill、routing rule の境界を確認するとき
-- feedback reporting や Structured Output の schema・validator・決定論的事後条件の責務分担を確認するとき
-- placeholder や cmoc_block／cmoc_ref を含む prompt 記法と参照関係の検証規則を確認するとき
+- agent call の prompt に指示や参照先を追加・変更するとき
+- oracle doc、oracle src、prompt builder、realization implementation の責務境界を確認するとき
+- Structured Output の schema、決定論的事後条件、validator、補正 prompt の役割や受理条件を検討するとき
+- summary、goal、role の動的な作業記述を設計または見直すとき
+- cmoc_block、cmoc_ref、placeholder、path context を用いた prompt 構築規則を確認するとき
 
 ## Do not read this when
-- 個別の cmoc 意味仕様や file access の詳細な判断基準だけを確認する場合は、本文で指定された対応する oracle doc を直接読む
-- 子 agent に渡す正確な prompt 文面を確認・変更する場合は、この文書ではなく対応する oracle src を直接読む
-- 生成済み prompt、ログ、editor input の内容だけを確認する場合
-- prompt と無関係な実装、テスト、またはリポジトリ固有の開発手順を確認する場合
+- prompt の意味仕様や agent call の構築規則を扱わず、対象 repository 固有の実装・テスト手順だけを確認するとき
+- 生成済み prompt や log の内容を単に参照するだけで、正本の変更や責務判断を行わないとき
+- Structured Output の schema ではなく、通常のデータ形式や一般的な JSON Schema を扱うとき
 
 ## hash
-- a7597c976cb355d28698b4aefb330f58dc774789363bc379f47c4bbd9ce8952a
+- 5ee26b865683eaf0be6b913b1800b3706a66f28a5442f7dbf5bc856e766bab96
 
 # `run_isolation.md`
 
