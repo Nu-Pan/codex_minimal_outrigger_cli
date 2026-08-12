@@ -284,21 +284,19 @@
 # `sub_command`
 
 ## Summary
-- cmoc の各サブコマンド仕様を集約するディレクトリ。doctor、indexing、tui、oracle／realization の操作、session／run lifecycle、feedback report など、個別コマンドの実行条件・手順・状態遷移・完了処理を確認するための入口となる。
-- 特定のサブコマンドの挙動や実装・テストを扱う場合は、対応する仕様文書へ進む。複数サブコマンドに共通する run lifecycle、session lifecycle、feedback の詳細は、それぞれの共通仕様文書を読む。
-- インデクシング、doctor preprocess、prompt editor、Codex CLI、feedback observation／state など、本文から参照される個別機能の正本仕様を確認したい場合は、該当する参照先へ直接進む。
+- cmoc のサブコマンドごとの正本仕様を集約するディレクトリ。doctor、indexing、tui、oracle／realization の各 workload、session／run lifecycle、feedback report など、個別コマンドの契約と実行条件を確認する入口である。
 
 ## Read this when
-- cmoc のサブコマンド仕様の対象領域を特定し、対応する個別仕様文書への入口を探すとき。
-- サブコマンド間で共通する run／session lifecycle や feedback 処理の仕様文書を探すとき。
-- 実装・レビュー対象が doctor、indexing、tui、oracle、realization、session、run、feedback のいずれに属するかを判断するとき。
+- 特定の cmoc サブコマンドの引数、事前条件、実行手順、終了条件、状態遷移を確認したいとき。
+- oracle／realization の編集・調査・レビュー、session／run の fork・join・abandon、feedback report の仕様を調べるとき。
+- 対象コマンドを特定でき、対応する個別仕様へ進む前にサブコマンド仕様群の構成を把握したいとき。
 
 ## Do not read this when
-- 特定のサブコマンドや共通機能の詳細仕様が明確な場合は、このディレクトリ全体ではなく対応する仕様文書を直接読む。
-- 個別機能の内部実装、prompt editor の詳細、Codex CLI の一般的な起動規則、oracle／realization の適合性基準だけを確認したい場合は、参照される正本仕様へ直接進む。
+- サブコマンドではなく、doctor preprocess、indexing の意味そのもの、feedback state、prompt editor、共通 interruption など委譲先の正本仕様だけを確認したいとき。
+- 特定の realization 実装や TUI 実装の内部詳細だけを調べるときは、対応する realization file や実装を直接読む。
 
 ## hash
-- 38bdde03d014d13540ad46e67d94b4c22e1897780351499a1edcee42c577c7db
+- 2f964924f3a4db85873c0d40cff357dfad7107eea951445540c3bdb3ed4c792f
 
 # `subcommand_interruption.md`
 

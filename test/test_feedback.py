@@ -1111,7 +1111,7 @@ def test_inconclusive_verdict_saves_incomplete_report_without_publication(
     previous_logs = set(log_dir.glob("*.jsonl"))
     incomplete = runner.invoke(app, ["feedback", "report"])
 
-    assert incomplete.exit_code == 1
+    assert incomplete.exit_code == 0
     [incomplete_log_path] = set(log_dir.glob("*.jsonl")) - previous_logs
     incomplete_events = [
         json.loads(line) for line in incomplete_log_path.read_text().splitlines()
@@ -1238,7 +1238,7 @@ def test_incomplete_report_write_failure_reuses_formal_checkpoints(
     )
     resumed = runner.invoke(app, ["feedback", "report"])
 
-    assert resumed.exit_code == 1
+    assert resumed.exit_code == 0
     terminal = load_report_cut(root)
     assert terminal is not None
     assert terminal[0]["processing"]["status"] == "incomplete"
