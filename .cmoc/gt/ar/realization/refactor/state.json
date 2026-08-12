@@ -1314,10 +1314,10 @@
     "last_investigated_at": "2026-08-12_00-14_51_121513000"
   },
   "test/test_indexing_cli.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "a471d1f42123e5c2e4ae92d709b1f6e99e0af21e1e6bec531e93983ffdcba017",
-    "last_investigated_at": "2026-08-09_20-01_29_306481000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "9c71098080c6d203b7aecc61472ff51f850540bee02bbc6162df06d0e4bc9c69",
+    "last_investigated_at": "2026-08-12_17-27_50_240342000"
   },
   "test/test_indexing_common.py": {
     "investigation_required": false,
