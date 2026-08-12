@@ -16,6 +16,7 @@ from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_git import is_oracle_file_path, is_realization_file_path
 from commons.runtime_refactor import (
     RefactorState,
+    is_normalized_relative_path,
     load_refactor_state,
     select_refactor_target,
     sync_refactor_state,
@@ -101,6 +102,33 @@ def test_refactor_target_classifiers_require_file_entries(
     assert not is_realization_file_path(root, realization_directory, branch="HEAD")
     assert is_realization_file_path(root, realization_file, branch="HEAD")
     assert not is_realization_file_path(root, root / "missing.py")
+
+
+def test_refactor_target_classifiers_reject_symlinked_parent(
+    tmp_path: Path,
+) -> None:
+    """classifier が symlink 親を通じて work-root 外の file を扱わない。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    source = root / "src"
+    source.mkdir()
+    (source / "module.py").write_text("inside\n")
+    (source / "deleted.py").write_text("deleted\n")
+    run_git(root, "add", "src/module.py", "src/deleted.py")
+    run_git(root, "commit", "-m", "add realization module")
+    (outside / "module.py").write_text("outside\n")
+    (source / "module.py").unlink()
+    (source / "deleted.py").unlink()
+    source.rmdir()
+    source.symlink_to(outside, target_is_directory=True)
+    (root / "oracle" / "linked").symlink_to(outside, target_is_directory=True)
+
+    assert not is_realization_file_path(root, root / "src" / "module.py", branch="HEAD")
+    assert not is_realization_file_path(
+        root, root / "src" / "deleted.py", branch="HEAD"
+    )
+    assert not is_oracle_file_path(root, root / "oracle" / "linked" / "module.py")
 
 
 @pytest.mark.parametrize(
@@ -317,6 +345,12 @@ def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:
 
     with pytest.raises(CmocError, match="refactor state"):
         load_refactor_state(root)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows path semantics are unavailable")
+def test_refactor_state_rejects_drive_relative_path() -> None:
+    """Windows の drive-relative path を work-root 相対 path として受け入れない。"""
+    assert not is_normalized_relative_path("C:outside")
 
 
 @pytest.mark.parametrize("result", [[], {}])

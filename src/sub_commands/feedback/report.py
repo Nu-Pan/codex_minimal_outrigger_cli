@@ -598,10 +598,14 @@ def _processing_versions() -> JsonObject:
     normalize_canonical_builder = _builder_source_path(
         unwrap(build_feedback_normalize_issue_parameter)
     )
+    verify_canonical_builder = _builder_source_path(
+        unwrap(build_feedback_verify_issue_parameter)
+    )
     # normalization adapter が prompt を変換する helper も checkpoint version に含める。
     normalize_prompt_fence = normalize_builder.parents[1] / "common" / "prompt_fence.py"
+    verify_prompt_fence = verify_builder.parents[1] / "common" / "prompt_fence.py"
     normalize_schema = normalize_canonical_builder.with_suffix(".json")
-    verify_schema = verify_builder.with_suffix(".json")
+    verify_schema = verify_canonical_builder.with_suffix(".json")
     module_path = Path(__file__)
     state_path = module_path.parents[2] / "commons" / "runtime_feedback_state.py"
     return {
@@ -611,7 +615,11 @@ def _processing_versions() -> JsonObject:
             (normalize_prompt_fence,),
         ),
         "normalization_schema": sha256_bytes(normalize_schema.read_bytes()),
-        "verification_builder": sha256_bytes(verify_builder.read_bytes()),
+        "verification_builder": _builder_version_hash(
+            verify_builder,
+            verify_canonical_builder,
+            (verify_prompt_fence,),
+        ),
         "verification_schema": sha256_bytes(verify_schema.read_bytes()),
         "deterministic_processing": _combined_file_hash([module_path, state_path]),
     }
@@ -2193,6 +2201,7 @@ def _publish_report(
         result=result,
     )
     _record_publication_event(
+        repo,
         manifest,
         generation_reference,
         report_reference,
@@ -2287,6 +2296,7 @@ def _publish_incomplete_report(
     processing["failure"] = None
     write_report_cut_manifest(repo, manifest)
     _record_incomplete_event(
+        repo,
         manifest,
         report_reference,
         unresolved_count,
@@ -2360,6 +2370,7 @@ def _resume_publication(repo: Path, manifest: JsonObject, manifest_path: Path) -
             result=str(publication["result"]),
         )
     _record_publication_event(
+        repo,
         manifest,
         _artifact_object(publication.get("generation_manifest"), "generation manifest"),
         _artifact_object(publication.get("report"), "Markdown report"),
@@ -2797,7 +2808,19 @@ def _artifact_object(value: object, description: str) -> JsonObject:
     return value
 
 
+def _full_log_path(repo: Path, value: object) -> str | None:
+    """subcommand log に記録する artifact path をフルパスへ変換する。"""
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    if not isinstance(value, str):
+        return None
+    path = Path(value)
+    if not path.is_absolute():
+        path = repo / path
+    return str(path.resolve(strict=False))
+
+
 def _record_publication_event(
+    repo: Path,
     manifest: JsonObject,
     generation_reference: JsonObject,
     report_reference: JsonObject,
@@ -2811,14 +2834,17 @@ def _record_publication_event(
             "feedback_report_published",
             report_cut_id=manifest.get("report_cut_id"),
             active_generation_id=manifest.get("publication", {}).get("generation_id"),
-            generation_manifest_path=generation_reference.get("path"),
-            report_path=report_reference.get("path"),
+            generation_manifest_path=_full_log_path(
+                repo, generation_reference.get("path")
+            ),
+            report_path=_full_log_path(repo, report_reference.get("path")),
             result=result,
             unresolved_issue_count=unresolved_count,
         )
 
 
 def _record_incomplete_event(
+    repo: Path,
     manifest: JsonObject,
     report_reference: JsonObject,
     unresolved_count: int,
@@ -2830,7 +2856,7 @@ def _record_incomplete_event(
         logger.event(
             "feedback_report_incomplete",
             report_cut_id=manifest.get("report_cut_id"),
-            report_path=report_reference.get("path"),
+            report_path=_full_log_path(repo, report_reference.get("path")),
             result="incomplete",
             verification_candidate_count=_verification_candidate_count(manifest),
             unresolved_candidate_count=unresolved_count,

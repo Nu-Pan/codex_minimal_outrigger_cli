@@ -95,6 +95,7 @@ def test_ensure_cmoc_ignored_rejects_non_file_info_exclude(tmp_path: Path) -> No
         ensure_cmoc_ignored(root)
 
 
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
 def test_ignore_checks_reject_non_file_global_exclude(tmp_path: Path) -> None:
     """global excludes が特殊 file でも git check-ignore を停止させない。"""
     root = make_repo(tmp_path)
@@ -143,6 +144,7 @@ def test_ignore_checks_reject_check_ignore_failure(
         checker(root, path)
 
 
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
 def test_ignore_checks_reject_non_file_nested_gitignore(tmp_path: Path) -> None:
     """path 親 directory の特殊 .gitignore でも git check-ignore を停止させない。"""
     root = make_repo(tmp_path)

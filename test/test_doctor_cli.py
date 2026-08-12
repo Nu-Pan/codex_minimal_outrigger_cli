@@ -30,6 +30,7 @@ from _git_support import make_repo, run_git
 import commons.runtime_doctor as doctor_module
 import commons.runtime_feedback_store as feedback_store_module
 from commons.runtime_errors import CmocError
+from commons.runtime_feedback import ReporterAvailabilityError
 from commons.runtime_refactor import RefactorState
 
 
@@ -138,14 +139,66 @@ def test_doctor_preprocess_follows_repair_order(
         events.append("state")
         return original_state(path, sync_entries=sync_entries)
 
+    def observe_reporter() -> None:
+        """reporter 事前検証の呼び出し順を記録する。"""
+        events.append("reporter")
+
     monkeypatch.setattr(doctor_module, "ensure_cmoc_ignored", observe_ignore)
     monkeypatch.setattr(doctor_module, "_ensure_agents_tracked", observe_agents)
     monkeypatch.setattr(doctor_module, "sync_config", observe_config)
     monkeypatch.setattr(doctor_module, "sync_refactor_state", observe_state)
+    monkeypatch.setattr(
+        doctor_module,
+        "validate_feedback_reporter_availability",
+        observe_reporter,
+    )
 
     doctor_module.run_doctor_preprocess(root)
 
-    assert events == ["ignore", "agents", "config", "state"]
+    assert events == ["ignore", "agents", "config", "state", "reporter"]
+
+
+def test_doctor_preprocess_continues_with_degraded_reporter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """reporter 利用不能を warning と event に留めて本命処理を続ける。"""
+    root = make_repo(tmp_path)
+
+    def unavailable() -> None:
+        """reporter の利用不能を再現する。"""
+        raise ReporterAvailabilityError(
+            "reporter", "missing", "feedback reporter cannot be started"
+        )
+
+    monkeypatch.setattr(
+        doctor_module,
+        "validate_feedback_reporter_availability",
+        unavailable,
+    )
+
+    result = run_doctor(root)
+
+    assert result.exit_code == 0
+    assert "warning: feedback reporter unavailable (missing)" in result.stdout
+    log_paths = list(
+        (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob("*.jsonl")
+    )
+    events = [
+        json.loads(line) for path in log_paths for line in path.read_text().splitlines()
+    ]
+    assert any(
+        event.get("event") == "feedback.reporter_unavailable"
+        and event.get("component") == "reporter"
+        and event.get("failure_code") == "missing"
+        for event in events
+    )
+    assert run_git(root, "ls-files", "--", ".cmoc/gt/ar/config.json").stdout.strip()
+    assert run_git(
+        root,
+        "ls-files",
+        "--",
+        ".cmoc/gt/ar/realization/refactor/state.json",
+    ).stdout.strip()
 
 
 def test_doctor_preprocess_propagates_interrupt_during_reporter_probe(
@@ -273,9 +326,10 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
         *,
         include_config: bool,
         include_gu_ignore: bool,
+        preserved_runtime_paths: set[str],
     ) -> None:
         """repair commit の失敗を再現する。"""
-        del include_config, include_gu_ignore
+        del include_config, include_gu_ignore, preserved_runtime_paths
         raise RuntimeError("repair commit failure")
 
     monkeypatch.setattr(doctor_module, "_commit_doctor_repairs_from_head", fail_commit)
@@ -383,6 +437,40 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
         check=False,
     )
     assert check_ignore.returncode == 1
+
+
+def test_doctor_does_not_commit_preexisting_staged_config_change(
+    tmp_path: Path,
+) -> None:
+    """doctor が事前に stage された人間の config 変更を修復 commit に混ぜない。"""
+
+    root = make_repo(tmp_path)
+    doctor_module.run_doctor_preprocess(root)
+    config_path = root / ".cmoc" / "gt" / "ar" / "config.json"
+    data = json.loads(config_path.read_text())
+    data["num_parallel"] = 99
+    config_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    run_git(root, "add", ".cmoc/gt/ar/config.json")
+    before_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == before_head
+    assert (
+        json.loads(run_git(root, "show", "HEAD:.cmoc/gt/ar/config.json").stdout)[
+            "num_parallel"
+        ]
+        != 99
+    )
+    assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
+        ".cmoc/gt/ar/config.json"
+    ]
+    assert (
+        json.loads(run_git(root, "show", ":.cmoc/gt/ar/config.json").stdout)[
+            "num_parallel"
+        ]
+        == 99
+    )
 
 
 def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(

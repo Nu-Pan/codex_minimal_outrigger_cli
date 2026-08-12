@@ -15,17 +15,17 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の publication／diagnostic pipeline を一つの transaction として実装するモジュール。固定済み report cut を起点に、raw observation の検証、candidate の deterministic 集約、normalization と verification、正常 publication または incomplete 診断、checkpoint 再開、中断処理、cleanup までを統括する。
-- feedback report 固有の状態機械と publication 境界を確認するための入口であり、normalization／verification の個別処理や feedback state の共通データモデルを読む前に、サブコマンド全体の処理経路を把握したい場合に適する。
+- `cmoc feedback report` の publication／diagnostic pipeline を一つの transaction として実装する module。固定済み report cut、raw observation と current reference の検証、deterministic candidate 集約、normalization／verification checkpoint の再利用、正常 publication または incomplete 診断を扱う。
+- feedback report サブコマンドの状態機械と成果物処理の実装入口であり、report cut の作成・再開から generation、Markdown report、current pointer の publication、publication 後 cleanup までを確認する場合に読む。
 
 ## Read this when
-- feedback report サブコマンドの report cut 固定、raw observation の検証・集約、candidate 処理、checkpoint、publication、incomplete 診断の挙動を変更または調査するとき
-- feedback report の中断・再開、current pointer、active generation、cleanup、固定 repository reference、machine recurrence 集約の処理を確認するとき
+- `cmoc feedback report` の全体フロー、report cut の固定・再開、checkpoint 付き normalization／verification、正常 publication または incomplete 診断の挙動を調べるとき。
+- feedback observation と active feedback state から candidate・machine aggregate を生成し、current reference を検証して publication する処理を変更するとき。
+- publication 前後の interruption、failure、cleanup、current pointer の状態遷移や subcommand log event を確認するとき。
 
 ## Do not read this when
-- feedback state の正本データモデルや共通 state 操作を確認したいときは、対応する feedback state の oracle または共通 runtime モジュールを直接読む
-- normalization builder、verification builder、Structured Output schema だけを確認したいときは、それぞれの builder または schema を直接読む
-- report の仕様上の要件だけを確認したいときは、対応する feedback report の oracle file を直接読む
+- feedback state の正本スキーマやサブコマンドの詳細仕様を確認する場合は、対応する oracle file を直接読む。
+- 個別の normalization／verification prompt builder、runtime state/store、report rendering helper の単独仕様を調べる場合は、該当する直接の実装または oracle file へ進む。
 
 ## hash
-- 735f44f088bd947e22697336ae8810a21e760c8cc4fb7c70543f656efd25bb0a
+- 906cad8e8ce596929a9baa261753805a4dea9c28f9a35d83891cb4b15da9dd5e

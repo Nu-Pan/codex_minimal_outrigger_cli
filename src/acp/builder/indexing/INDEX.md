@@ -17,15 +17,17 @@
 # `index_entry.py`
 
 ## Summary
-- 互換性維持のため、旧来の `acp.builder.indexing.index_entry` 参照から正本のインデックスエントリー生成 builder を再公開する入口。対象パス・内容・agent の実行ディレクトリを受け取り、正本 builder が作る agent call parameter をそのまま返す。
+- 正本の index-entry builder を互換入口として再公開し、既存の acp.builder.indexing.index_entry 参照を維持する。正本 builder の parameter 生成結果を利用しつつ、対象本文を prompt に埋め込む際のコードフェンスを保護する。
+- index-entry 生成処理の互換参照を調査・変更するときの入口であり、実装の正本や prompt 受け渡し仕様そのものを確認する場合は、再公開先の正本 builder または prompt 標準仕様へ進む。
 
 ## Read this when
-- 旧来の `acp.builder.indexing.index_entry` 参照の互換性、移行状況、またはインデックスエントリー生成用の agent call parameter の受け渡しを確認するとき。
-- この互換入口の削除可否を判断するとき。realization 側と利用者向け公開面から旧参照がなくなったことを確認する必要がある。
+- 既存の acp.builder.indexing.index_entry 参照を維持する互換入口の挙動を確認・変更するとき
+- index-entry 生成 prompt に対象本文を受け渡す際のコードフェンス保護を確認するとき
 
 ## Do not read this when
-- 正本のインデックスエントリー生成 builder の実装や prompt 受け渡し仕様を確認したいときは、再公開入口ではなく正本側を直接読む。
-- インデックスエントリーの内容や routing 規則を確認したいだけで、旧参照の互換性を扱わないとき。
+- 正本の index-entry builder の実装や仕様を確認する場合
+- prompt の受け渡し規則そのものを確認する場合
+- 互換参照が不要になった後の公開面・削除条件を判断する場合
 
 ## hash
-- 80bfd6581aaad9c0f9890bd39041a8165fac751a9246c4787922de033dbcd812
+- df469394274b0fb7e906f0ba973dc2d44e79a45555d08d3ec02d0794e5ff72dd

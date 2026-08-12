@@ -40,6 +40,7 @@ from cmoc_runtime import (
     repo_root,
     run_cli_subcommand,
     run_codex_exec,
+    run_doctor_preprocess,
     start_subcommand_step,
     work_root,
 )
@@ -104,6 +105,8 @@ def cmoc_oracle_review_impl(scope: str) -> None:
         # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
         interruptible=True,
         total_steps=8,
+        # oracle review は doctor 中断でも固有の interrupted report を保存する。
+        doctor_preprocess=False,
     )
 
 
@@ -131,6 +134,10 @@ def _cmoc_oracle_review_body(
     cleanup_error: CmocError | None = None
 
     try:
+        # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+        # 共通 runner の impl 前中断経路を迂回し、doctor 中断も review report へ到達させる。
+        start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
+        run_doctor_preprocess(current_root)
         branch = current_branch(current_root)
         session_id, _state_path, state = load_state_for_branch(root, branch)
         if not branch.startswith("cmoc/session/") or state.session.state != "active":

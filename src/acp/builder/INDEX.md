@@ -45,33 +45,40 @@
 # `feedback`
 
 ## Summary
-- feedback issue の正規化・検証に関する builder adapter をまとめるパッケージ。canonical builder の互換 import 経路を提供し、対応する oracle 実装へ進むための入口となる。
+- feedback issue の正規化・検証に対応する builder adapter パッケージ。canonical builder の互換 import 経路を提供し、feedback の normalize／verify 用 agent call parameter 構築への入口となる。
+- normalize_issue.py は feedback issue の同一性判断用 builder、verify_issue.py は feedback issue candidate の検証用 builder を扱う。
 
 ## Read this when
-- feedback issue の normalization または verification に関する builder adapter の構成や公開経路を確認するとき。
-- feedback issue 用 builder の canonical 実装と互換 import 経路の対応関係を確認するとき。
+- feedback issue の normalization または verification に関する builder adapter の構成を確認するとき
+- feedback issue の同一性判断・candidate 検証用 agent call parameter の構築経路を確認するとき
+- 対応する canonical builder や oracle 実装との互換 import 関係を確認するとき
 
 ## Do not read this when
-- feedback 以外の builder adapter を調べるとき。
-- builder の prompt 構築、動的 JSON の保護、検証処理などの詳細を確認するときは、対応する oracle 実装を直接読む。
+- feedback 以外の builder adapter を調べるとき
+- canonical prompt の内容、判定基準、Structured Output schema など処理仕様の詳細を確認するときは、対応する oracle file を直接読む
+- prompt 内の動的 JSON に対する code fence 保護の共通実装を確認・変更するときは、その共通実装を直接読む
 
 ## hash
-- 68755f894e15ad969b0d39c64a1af28dc93d9cfd6df4b15920f8b97b7f997165
+- c1bd97eefb66acf06af9a48ed9e2cecadc9ba44a6e8b001964345c3c954bb0f8
 
 # `indexing`
 
 ## Summary
-- 旧来の `acp.builder.indexing` 参照を維持する互換入口をまとめた層。正本実装を持たず、index 関連の builder へ既存の名前空間から到達するための下位要素を案内する。
+- `acp.builder.indexing` を既存の参照点として維持し、正本実装 `oracle.acp_builder.indexing` への互換入口を提供する層。index 関連機能の実体ではなく、既存参照の互換性や削除条件を確認するための入口。
+- 正本の index-entry builder を再公開し、対象本文を prompt に埋め込む際のコードフェンス保護を追加する互換入口。既存参照の挙動や対象本文の prompt 受け渡しを確認する際に読む。
 
 ## Read this when
-- `acp.builder.indexing` から正本の index 関連機能へ進む互換経路や、旧参照の維持・削除可否を確認するとき。
+- 既存の `acp.builder.indexing.*` 参照を維持する必要があるとき
+- `acp.builder.indexing.index_entry` の互換入口の挙動を確認・変更するとき
+- 対象本文を prompt に渡す際のコードフェンス保護を確認するとき
 
 ## Do not read this when
-- index 関連の正本実装や prompt 受け渡し仕様を変更・確認するときは、`oracle.acp_builder.indexing` 側を直接読む。
-- インデックスエントリーの routing 規則や生成内容だけを確認し、互換入口を扱わないとき。
+- 正本の index 関連実装を確認・変更するときは `oracle.acp_builder.indexing` 側を読む
+- prompt の受け渡し規則そのものを確認するときは prompt 標準仕様を読む
+- 互換参照を削除・整理するときは、この層ではなく realization 側と利用者向け公開面の参照を確認する
 
 ## hash
-- 1c8da24f240805f39c5f79ce1ca72634f5148162f3d7ab5dfb1f822f685347df
+- b5114e1cbbf40a5a398040d10425a4c3d21bcabbab99be54d679857777480111
 
 # `oracle`
 

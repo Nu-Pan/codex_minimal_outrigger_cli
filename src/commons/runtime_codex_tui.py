@@ -105,7 +105,7 @@ def _run_codex_tui_process(
         parameter.prompt,
     ]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    ts, call_path = _reserve_timestamped_path(log_dir, "_tui_call.json", timestamp)
+    ts, call_path = _reserve_timestamped_path(log_dir, "_call.json", timestamp)
     agent_call_id = uuid7_prefixed("agc_")
     codex_call_id = uuid7_prefixed("cdc_")
     call_path.write_text(

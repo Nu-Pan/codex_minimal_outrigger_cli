@@ -10,7 +10,7 @@ interrupt 時の部分保存は同じ review loop 状態を共有する一つの
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
@@ -29,6 +29,8 @@ from acp.builder.oracle.review.validate_finding_advocate import (
 from acp.builder.oracle.review.validate_finding_challenger import (
     build_oracle_review_validate_finding_challenger_parameter,
 )
+from basic.acp import AgentCallParameter
+from basic.path_model import AgentCallPathContext
 from commons.runtime_results import (
     CodexExecCallable,
     StructuredOutputValidationIssue,
@@ -74,6 +76,46 @@ def _report_step(
     """
     if step_callback is not None:
         step_callback(index, description, log_description)
+
+
+def _bind_review_parameter_to_worktree(
+    parameter: AgentCallParameter, worktree: Path
+) -> AgentCallParameter:
+    """canonical review parameter を isolated review worktree の context へ束縛する。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    および {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+
+    oracle review の canonical builder は main worktree を既定の context として
+    構築する。review run が linked worktree を fork した後は、そのまま実行すると
+    parameter の cwd、prompt の root 定義、indexing preflight の対象が分裂するため、
+    canonical builder が生成した prompt の placeholder 定義だけを call-scoped context
+    に合わせ、その他の prompt と parameter は変更しない。
+    """
+    source_context = AgentCallPathContext(parameter.agent_call_cwd)
+    target_context = AgentCallPathContext(worktree)
+    marker = "\n# place holder definition\n"
+    before, separator, definitions = parameter.prompt.rpartition(marker)
+    if not separator:
+        raise ValueError("oracle review prompt has no placeholder definition section")
+
+    for name, source_value, target_value in (
+        ("work-root", source_context.work_root, target_context.work_root),
+        (
+            "oracle-root",
+            source_context.work_root / "oracle",
+            target_context.work_root / "oracle",
+        ),
+    ):
+        definitions = definitions.replace(
+            f"- {{{{{name}}}}} = {source_value}",
+            f"- {{{{{name}}}}} = {target_value}",
+        )
+    return replace(
+        parameter,
+        prompt=before + separator + definitions,
+        agent_call_cwd=target_context.agent_call_cwd,
+    )
 
 
 def run_oracle_review_loop(
@@ -137,15 +179,18 @@ def _run_oracle_review_loop(
         )
         for oracle_path in sorted(dirty_files):
             result = codex_exec(
-                build_oracle_review_enumerate_finding_parameter(
-                    oracle_path,
-                    json.dumps(
-                        _findings_related_to_oracle_path(
-                            findings, oracle_path, worktree, log_root
+                _bind_review_parameter_to_worktree(
+                    build_oracle_review_enumerate_finding_parameter(
+                        oracle_path,
+                        json.dumps(
+                            _findings_related_to_oracle_path(
+                                findings, oracle_path, worktree, log_root
+                            ),
+                            ensure_ascii=False,
+                            indent=2,
                         ),
-                        ensure_ascii=False,
-                        indent=2,
                     ),
+                    worktree,
                 ),
                 root=log_root,
                 config=config,
@@ -169,7 +214,7 @@ def _run_oracle_review_loop(
         _report_step(step_callback, "4/8, 2/2", "所見リストをマージ", "merge findings")
         for _ in range(config.oracle_review.num_merge_findings_loop):
             findings, added_count, changed = _merge_findings(
-                log_root, findings, next_id, config, codex_exec
+                log_root, worktree, findings, next_id, config, codex_exec
             )
             progress.findings = findings
             if not changed:
@@ -246,10 +291,13 @@ def _validate_and_judge_findings(
             )
             finding_text = json.dumps(finding, ensure_ascii=False, indent=2)
             challenger = codex_exec(
-                build_oracle_review_validate_finding_challenger_parameter(
-                    finding_text,
-                    "\n".join(finding["advocate_reasons"]),
-                    "\n".join(finding["challenger_reasons"]),
+                _bind_review_parameter_to_worktree(
+                    build_oracle_review_validate_finding_challenger_parameter(
+                        finding_text,
+                        "\n".join(finding["advocate_reasons"]),
+                        "\n".join(finding["challenger_reasons"]),
+                    ),
+                    worktree,
                 ),
                 root=log_root,
                 config=config,
@@ -267,10 +315,13 @@ def _validate_and_judge_findings(
                 "advocate finding",
             )
             advocate = codex_exec(
-                build_oracle_review_validate_finding_advocate_parameter(
-                    finding_text,
-                    "\n".join(finding["advocate_reasons"]),
-                    "\n".join(finding["challenger_reasons"]),
+                _bind_review_parameter_to_worktree(
+                    build_oracle_review_validate_finding_advocate_parameter(
+                        finding_text,
+                        "\n".join(finding["advocate_reasons"]),
+                        "\n".join(finding["challenger_reasons"]),
+                    ),
+                    worktree,
                 ),
                 root=log_root,
                 config=config,
@@ -284,10 +335,13 @@ def _validate_and_judge_findings(
     _report_step(step_callback, 6, "所見を採用・不採用判定", "judge findings")
     for finding in findings:
         judge = codex_exec(
-            build_oracle_review_judge_finding_parameter(
-                json.dumps(finding, ensure_ascii=False, indent=2),
-                "\n".join(finding["advocate_reasons"]),
-                "\n".join(finding["challenger_reasons"]),
+            _bind_review_parameter_to_worktree(
+                build_oracle_review_judge_finding_parameter(
+                    json.dumps(finding, ensure_ascii=False, indent=2),
+                    "\n".join(finding["advocate_reasons"]),
+                    "\n".join(finding["challenger_reasons"]),
+                ),
+                worktree,
             ),
             root=log_root,
             config=config,
@@ -300,6 +354,7 @@ def _validate_and_judge_findings(
 
 def _merge_findings(
     log_root: Path,
+    worktree: Path,
     findings: list[dict],
     next_id: int,
     config: CmocConfig,
@@ -308,8 +363,11 @@ def _merge_findings(
     """所見リストの編集操作を、検証済み Structured Output から適用する。"""
     # {{work-root}}/oracle/src/oracle/acp_builder/oracle/review/merge_finding.py
     operations = codex_exec(
-        build_oracle_review_merge_finding_parameter(
-            json.dumps(findings, ensure_ascii=False, indent=2)
+        _bind_review_parameter_to_worktree(
+            build_oracle_review_merge_finding_parameter(
+                json.dumps(findings, ensure_ascii=False, indent=2)
+            ),
+            worktree,
         ),
         root=log_root,
         config=config,

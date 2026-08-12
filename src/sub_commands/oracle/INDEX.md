@@ -62,57 +62,55 @@
 # `review.py`
 
 ## Summary
-- oracle review の CLI 実行と isolated run lifecycle を統括する実装。active session branch の検証、review worktree と run branch の作成、review loop の実行、INDEX 差分の commit・merge、完了時の report 出力を扱う。中断・例外・部分作成にも対応し、作成した resource の cleanup と cleanup failure の report まで一貫して管理する。
+- oracle review の CLI 実行と isolated run のライフサイクルを統括する。active session branch の検証、レビュー対象の列挙と review loop の実行、INDEX 差分の commit・merge、割り込みや失敗時の report と作成済み resource の cleanup を扱う。oracle review の実行経路、隔離 worktree・branch の所有権、cleanup または中断時の挙動を確認する際の入口となる。
 
 ## Read this when
-- oracle review の CLI runtime、isolated review run の resource ownership、lifecycle lock、worktree・branch の作成と削除を確認または変更するとき
-- oracle review の中断、失敗、部分作成、cleanup failure における状態遷移と report 処理を追跡するとき
-- review run の結果を session branch へ merge する呼び出し経路を確認するとき
+- oracle review サブコマンドの実行開始から report 出力までの制御フローを変更・調査するとき
+- review run の worktree・branch 作成、merge、cleanup、lifecycle lock の扱いを確認するとき
+- KeyboardInterrupt、部分作成、失敗、cleanup failure 時の report と状態遷移を確認するとき
 
 ## Do not read this when
-- review 対象ファイルの列挙条件だけを確認したいときは review target の実装へ直接進む
-- review loop の所見生成・評価済みファイル管理だけを確認したいときは review loop の実装へ直接進む
-- INDEX 差分の commit・conflict resolution・merge の詳細だけを確認したいときは review index の実装へ直接進む
-- report の表示形式や出力内容だけを確認したいときは review report の実装へ直接進む
+- レビュー対象の列挙規則だけを確認したい場合は、対象列挙を担う下位実装を直接読む
+- review loop 内の所見生成・評価処理だけを確認したい場合は、review loop の実装を直接読む
+- report の表示形式や INDEX merge の詳細だけを確認したい場合は、それぞれの専用実装を直接読む
 
 ## hash
-- 5b3efa63d2fb04804ac5cfb0da202990775cad00c5c0322f840438a1f7430d17
+- 54c6c1a0de7e75cdee1703f509fd1f01203c0c9ddc305ed59e7a06c98ed1e8a4
 
 # `review_index.py`
 
 ## Summary
-- oracle review 用 worktree の INDEX.md 差分を検査・commitし、review branch を session branch へ安全に merge する処理を扱う。
-- INDEX.md 以外の変更検出、merge conflict の解決、失敗時の worktree 復旧、Git path の安全な列挙を下位実装への入口として提供する。
+- oracle review 用 worktree の変更を検査し、INDEX.md だけを commit・merge する処理を担う。変更 path の収集、INDEX.md 以外の差分拒否、review branch の merge、INDEX.md 競合の自動解決、merge 失敗後の復旧を扱う。
 
 ## Read this when
-- oracle review の INDEX.md commit、review branch の merge、INDEX.md 限定 conflict 解決、merge 失敗時の復旧挙動を変更・調査するとき。
-- review worktree の変更 path 判定や Git の rename・quote 済み path の扱いを確認するとき。
+- oracle review の隔離 worktree で、変更を INDEX.md のみに限定して commit する処理を確認・変更するとき
+- review branch の merge、INDEX.md 競合の自動解決、merge 失敗後の worktree 復旧を確認するとき
 
 ## Do not read this when
-- 通常の oracle review 機能や INDEX.md 生成処理の仕様を確認したいだけで、review branch の Git 操作実装を変更・調査しないとき。
-- 一般的な Git 実行ヘルパーの仕様や他サブコマンドの中断処理を直接確認する場合。
+- 通常の oracle 実装や review 以外の Git 操作を調べるとき
+- INDEX.md の routing 生成規則や、別の sub_command の挙動だけを確認するとき
 
 ## hash
-- 9d8452af51dc2c2076407b1ddb8daa9152eb8e7e3b6170c7a014dff1e06382a7
+- 25c107dfb7502bb0b2f7548d2b556eb277d4f90054e95533b71e75c139ac077a
 
 # `review_loop.py`
 
 ## Summary
-- oracle review の所見列挙・マージ・妥当性検証・採否判定を一連のループとして実行する実装。中断時には確定済みの所見と評価済みファイルを部分結果として保持し、再開可能な進捗管理を担う。
-- 所見の対象パス正規化、merge 操作の Structured Output 検証、所見リストへの追加・削除・置換適用も扱う。oracle review の状態共有とループ制御を確認するための入口であり、個別 agent prompt の内容を調べる場合は各 review builder へ進む。
+- oracle review の finding 列挙から merge、反証・擁護による検証、採否判定までの反復処理を一元管理する実装。review worktree への実行コンテキスト束縛、進捗保持、中断時の部分結果引き継ぎ、finding の path 正規化と merge 操作適用も扱う。oracle review loop の全体挙動や中断・再開、finding の統合・検証・判定を追跡する際の入口となる。
 
 ## Read this when
-- oracle review の列挙、マージ、反証・擁護、採否判定の実行順序やループ回数を変更・確認するとき
-- KeyboardInterrupt 発生時の部分保存、評価済みファイル、確定済み所見の扱いを調べるとき
-- finding の対象 oracle path の関連付けや merge operation の適用・入力 ID 検証を調べるとき
+- oracle review の finding 列挙、merge、検証、judge の処理順序や反復終了条件を確認するとき
+- review worktree 用に agent call parameter の prompt と実行コンテキストを束縛する挙動を調べるとき
+- KeyboardInterrupt 発生時に確定済み finding と評価済みファイルをどう保持するか確認するとき
+- finding の対象 oracle path の対応付けや merge operation の適用規則を確認するとき
 
 ## Do not read this when
-- 個別の enumerate、validate、judge、merge agent prompt のパラメータ仕様だけを確認したいときは、対応する review builder を直接読む
-- oracle review の CLI 起動条件や利用者向けコマンド仕様だけを確認したいときは、review loop の呼び出し元または oracle review の仕様文書を読む
-- 一般的な finding データ構造やパス操作の定義だけを確認したいときは、対応する review path・finding utility を直接読む
+- finding の列挙・検証・判定用 agent prompt の内容や Structured Output 定義だけを確認したいときは、各 review builder の対象へ直接進む
+- oracle review のパス計算だけを確認したいときは、review path を扱う対象へ直接進む
+- review loop を呼び出す上位コマンドの CLI 引数や外部実行フローだけを確認したいときは、呼び出し元の対象へ進む
 
 ## hash
-- 3bd2bac468cf8543617a42ba0c84d70aaad30d530ae5b088d21e999ce434178f
+- 809a65591544df21ce62e85cce214680fbc9dbeca79c6d6e6aedef1116f300de
 
 # `review_paths.py`
 

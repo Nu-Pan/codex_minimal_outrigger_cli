@@ -1839,6 +1839,52 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
     assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
+def test_refactor_rejects_delayed_agent_commit_after_index_refresh(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """agent descendant の遅延 commit を処理単位の検査で拒否する。"""
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    refresh_calls = 0
+
+    def fake_refresh(worktree: Path, *, commit: bool) -> list[Path]:
+        """INDEX refresh 中に遅延した agent commit を再現する。"""
+        nonlocal refresh_calls
+        assert not commit
+        refresh_calls += 1
+        if refresh_calls == 2:
+            (worktree / "README.md").write_text("delayed agent commit\n")
+            run_git(worktree, "add", "README.md")
+            run_git(worktree, "commit", "-m", "delayed agent commit")
+        return []
+
+    monkeypatch.setattr(refactor_module, "refresh_indexes", fake_refresh)
+    monkeypatch.setattr(
+        refactor_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=0,
+            output_json={"findings": []},
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    parts = _state(state_path)["run"]["branch"].split("/")
+    worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
+    assert (worktree / "README.md").read_text() == "# repo\n"
+    assert (
+        "delayed agent commit"
+        not in run_git(worktree, "log", "--format=%s").stdout.splitlines()
+    )
+
+
 def test_apply_failure_rolls_back_index_with_realization_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2060,6 +2106,64 @@ def test_apply_failure_stops_tracked_codex_children_before_rollback(
     assert _state(state_path)["run"]["state"] == "error"
 
 
+def test_apply_error_cleanup_rejects_delayed_agent_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """error cleanup の停止後検査で遅延 agent commit を run に残さない。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    run_worktree: Path | None = None
+
+    def fail_apply(
+        parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> NoReturn:
+        """本命 agent の失敗後に error cleanup へ進む状態を再現する。"""
+        nonlocal run_worktree
+        before_agent_call = kwargs["before_agent_call"]
+        assert callable(before_agent_call)
+        before_agent_call()
+        run_worktree = parameter.agent_call_cwd
+        raise RuntimeError("agent failed")
+
+    def delayed_agent_commit(_root: Path, _session_id: str) -> list[str]:
+        """停止処理の直前に agent child が commit した状態を再現する。"""
+        assert run_worktree is not None
+        (run_worktree / "README.md").write_text("delayed agent commit\n")
+        run_git(run_worktree, "add", "README.md")
+        run_git(run_worktree, "commit", "-m", "delayed agent commit")
+        return []
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fail_apply)
+    monkeypatch.setattr(
+        apply_module,
+        "stop_tracked_codex_children",
+        delayed_agent_commit,
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    assert run_worktree is not None
+    assert (run_worktree / "README.md").read_text() == "# repo\n"
+    assert (
+        "delayed agent commit"
+        not in run_git(run_worktree, "log", "--format=%s").stdout.splitlines()
+    )
+    report_path = next(
+        Path(line.removeprefix("- fork report: `").removesuffix("`"))
+        for line in result.output.splitlines()
+        if line.startswith("- fork report: `")
+    )
+    assert "agent commit cleanup failed" in report_path.read_text()
+
+
 @pytest.mark.parametrize(
     "failure",
     [
@@ -2194,6 +2298,23 @@ def test_recover_started_run_rejects_run_owned_by_other_process(
         child_processes=(),
     )
     monkeypatch.setattr(lifecycle_module, "read_run_process_id", lambda *_args: tracked)
+
+    assert lifecycle_module.recover_started_run("realization_refactor") is None
+    assert _state(state_path)["run"]["state"] == "running"
+    assert context.run_worktree.exists()
+
+
+def test_recover_started_run_rejects_unreadable_process_tracking(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """壊れた tracking を未作成として別 process の run recovery に使わない。"""
+    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    context = start_editing_run("realization_refactor")
+    tracking_path = run_process_id_path(
+        root, session_branch.removeprefix("cmoc/session/")
+    )
+    tracking_path.write_text("not a process identity\n")
 
     assert lifecycle_module.recover_started_run("realization_refactor") is None
     assert _state(state_path)["run"]["state"] == "running"

@@ -69,7 +69,10 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
         raise CmocError("session home branch を特定できません。", [], str(path))
     start_subcommand_step(3, "session branch を merge", "merge session branch")
     try:
-        run_git(["switch", home], work)
+        # {{work-root}}/oracle/doc/app_spec/session_state.md:
+        # session_home_branch は local branch なので、同名 remote-tracking branch を
+        # Git に推測させて別の merge target を作らない。
+        run_git(["switch", "--no-guess", home], work)
         merge = git(["merge", "--no-ff", branch], work, check=False)
         if merge.returncode != 0:
             resolve_session_join_conflict(work, codex_exec, git)
@@ -245,10 +248,8 @@ def _reject_conflict_context_changes(before_contents: dict[Path, bytes]) -> None
     for path, before in before_contents.items():
         after = _read_regular_file(path)
         if after is None:
-            if path.exists() or path.is_symlink():
-                changed.append(path)
-                continue
-            after = b""
+            changed.append(path)
+            continue
         if not _preserves_conflict_context(before, after):
             changed.append(path)
     if changed:
@@ -307,6 +308,7 @@ def _preserves_conflict_context(before: bytes, after: bytes) -> bool:
 
     @lru_cache(maxsize=None)
     def matches(segment_index: int, position: int) -> bool:
+        """指定位置から残りの conflict context segment を順序どおり探す。"""
         if segment_index == len(segments):
             # 最後の conflict block の置換本文は任意の line を含み得る。
             return True

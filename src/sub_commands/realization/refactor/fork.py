@@ -459,6 +459,10 @@ def _run_refactor_unit(
     cleanup_warnings.extend(
         stop_tracked_codex_children(context.repo, context.session_id) or []
     )
+    # {{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py
+    # agent descendant の遅延 commit が INDEX refresh 中に発生しても、処理単位の
+    # status 検査をすり抜けて run branch へ残さない。
+    _ensure_agent_did_not_commit(context.run_worktree, agent_head)
     all_unit_paths = worktree_change_paths(
         context.run_worktree,
         include_rename_sources=True,

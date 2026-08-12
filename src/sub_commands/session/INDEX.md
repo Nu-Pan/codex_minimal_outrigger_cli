@@ -44,18 +44,16 @@
 # `join.py`
 
 ## Summary
-- `cmoc session join` の実行処理と merge conflict 解消を担う実装。session branch の事前条件確認、home branch への merge、マージ後の状態保存と branch 削除、警告表示までを扱う。
-- conflict 発生時は対象 path を NUL 区切りで取得し、Codex に解消を依頼した後、許可外の変更・marker 外の変更・未解決 marker・unmerged path を検査して merge commit を完了する。
+- `cmoc session join` の実行処理を担い、active な session branch を session home branch に安全に merge して後始末する実装。事前条件の検証、競合解消の委譲、変更範囲・conflict marker・unmerged path の検査、merge 後の session branch 削除と結果表示までを扱う。session join の実行フローや競合解消の制約を確認・変更するときの入口であり、session 状態の一般定義や他サブコマンドの処理を調べる場合は直接それぞれの仕様・実装へ進む。
 
 ## Read this when
-- `cmoc session join` の CLI 挙動、実行前提、branch merge、session state 更新、branch 削除条件を確認するとき
-- session join の merge conflict 処理、conflict marker 検査、Codex 呼び出し後の変更範囲検証を調査・変更するとき
-- session join のエラー出力先、進捗 step、警告表示を確認するとき
+- `cmoc session join` の事前条件、merge 対象、session branch の削除条件を確認するとき。
+- merge conflict の自動解消、Codex 呼び出し後に許可外変更を拒否する検査、conflict marker と unmerged path の扱いを確認・変更するとき。
+- session join の CLI 出力、失敗時の stderr 処理、Git path の安全な取得方法を確認するとき。
 
 ## Do not read this when
-- session の作成・実行・離脱など、session join 以外のサブコマンドの挙動だけを確認するとき
-- conflict 解消用 prompt の内容や Codex 実行共通規則を直接確認したいときは、それぞれの prompt 定義・実行規則を読む
-- Git 状態取得の共通処理だけを確認したいときは、共通の runtime Git 実装を直接読む
+- session join 以外のサブコマンドの実行フローを確認するとき。
+- session state や Codex 実行規則の一般定義だけを確認する場合は、それぞれの正本仕様を直接読む。
 
 ## hash
-- b8e19759006c930fb59075adae4e8ff8bc78a3d8de25a6ca14f7d2e3459fc69e
+- 4d9415b661b1f766f7affd1e1cb477872bd1fa1bbd00d06274d5e906b256bcf7

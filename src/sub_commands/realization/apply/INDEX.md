@@ -15,19 +15,18 @@
 # `fork.py`
 
 ## Summary
-- `cmoc realization apply fork` の実行本体を担い、realization apply agent を起動して差分を検査・commitし、runをjoinableまたはerror状態としてfork reportに記録する。
-- editing runの作成、oracle差分の構築、agent実行、想定外変更やagent commitの検出、INDEX再生成、変更のrollback・state更新・report保存までを一連の処理として扱う。
-- realization apply forkのCLI処理と、agent commit検査、preflight commit rollback、エラー時report生成などの補助処理を確認する入口である。
+- `realization apply fork` の実行フローを担当する CLI 実装。editing run を開始し、差分追従 agent を実行した後、想定外変更・agent による commit・遅延 child の書き込みを検査し、INDEX 生成を含む差分を処理単位として commit して joinable run と fork report を公開する。失敗時は変更を rollback し、error state と report を保存する。
+- apply 差分の始点 commit、oracle diff、Codex 実行結果、cleanup 警告、accepted feedback の参照を report に反映するほか、agent の commit 検出、preflight commit の rollback、想定外差分の利用者向けエラー変換などの補助処理を含む。
 
 ## Read this when
-- `cmoc realization apply fork` の実行フロー、run状態遷移、fork reportの保存条件を調べるとき。
-- realization apply agentが作成した差分の許可範囲、commit検査、想定外変更の扱いを変更または確認するとき。
-- apply fork失敗時のCodex child停止、差分rollback、error state、cleanup warningの記録を調べるとき。
+- `cmoc realization apply fork` の CLI 実行、editing run の joinable/error 遷移、apply 差分の commit・rollback・report 保存の挙動を調査または変更するとき。
+- realization apply agent が作成した変更と cmoc が生成する INDEX 差分の境界、agent の commit や遅延 Codex child の扱いを確認するとき。
+- apply fork report の差分始点、Codex return code、accepted feedback、cleanup warning の記録内容を確認するとき。
 
 ## Do not read this when
-- realization apply agent自体のプロンプト生成や差分適用仕様を調べるときは、agent launch parameterの実装または対応する正本仕様を直接読む。
-- editing run全般のjoin・abandonや共通ライフサイクルの仕様を調べるときは、共通runtime lifecycleまたはediting runの正本仕様を直接読む。
-- INDEX生成機能そのものの仕様や実装を調べるときは、indexingの仕様または実装を直接読む。
+- realization apply の agent 起動パラメータ自体を変更する場合は、agent launch parameter の実装を直接読む。
+- editing run の共通ライフサイクル、git 操作、state 管理、index refresh の一般仕様を確認するだけの場合は、対応する `commons.runtime_run*` 実装または oracle/specification を直接読む。
+- apply fork の利用者向け仕様や run isolation・indexing の正本仕様を確認する場合は、この実装ではなく参照されている app specification を読む。
 
 ## hash
-- 710c25ffaf466fc4c12f3e50a2931903a5638de62df20e441080773388007503
+- 1d5e79c19264330cf256f3cc06e908f15632a7decd4cccc080038ff69a5b7900

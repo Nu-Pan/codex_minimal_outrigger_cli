@@ -48,6 +48,7 @@ from .runtime_run import (
     expected_run_worktree,
     read_run_process_id,
     run_lifecycle_lock,
+    run_process_id_path,
     worktree_for_branch,
     worktree_for_branch_optional,
     write_run_process_id,
@@ -299,6 +300,12 @@ def recover_started_run(kind: str) -> EditingRunContext | None:
     if context.kind != kind:
         return None
     tracked = read_run_process_id(context.repo, context.session_id)
+    tracking_path = run_process_id_path(context.repo, context.session_id)
+    if tracked is None and (tracking_path.exists() or tracking_path.is_symlink()):
+        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # 壊れた tracking を「未作成」と区別できないまま recovery すると、別
+        # process の active run をこの invocation が回収し得るため fail closed にする。
+        return None
     if tracked is not None and (
         tracked.process_id != os.getpid()
         or tracked.start_time is None

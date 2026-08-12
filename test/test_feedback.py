@@ -7,6 +7,7 @@ agent-facing reporter から raw store、report cut、verification、current poi
 対応する oracle file:
 
 - `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
+- `{{work-root}}/oracle/doc/app_spec/console_and_file_log.md`
 - `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
 - `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
 - `{{work-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json`
@@ -423,6 +424,47 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
     assert candidate_json in candidate_section
 
 
+def test_feedback_verify_builder_protects_nested_code_fences(
+    tmp_path: Path,
+) -> None:
+    """verification の動的 JSON が prompt section の境界を閉じないことを検証する。"""
+    root = make_repo(tmp_path)
+    nested = "before\n```\ninside\n```\nafter"
+    candidate_json = json.dumps({"candidate_id": "fbi_" + "a" * 26, "summary": nested})
+    references_json = json.dumps(
+        [
+            {
+                "reference_id": "ref:readme",
+                "kind": "repository_content",
+                "content": nested,
+            }
+        ]
+    )
+
+    parameter = build_feedback_verify_issue_parameter(
+        candidate_json,
+        references_json,
+        root,
+    )
+
+    candidate_start = parameter.prompt.index("# issue candidate")
+    candidate_end = parameter.prompt.index(
+        "\n\n# report cut references", candidate_start
+    )
+    references_start = candidate_end + 2
+    references_end = parameter.prompt.index(
+        "\n\n# place holder definition", references_start
+    )
+    candidate_section = parameter.prompt[candidate_start:candidate_end]
+    references_section = parameter.prompt[references_start:references_end]
+    assert candidate_section.startswith("# issue candidate\n\n````json\n")
+    assert candidate_section.endswith("\n````")
+    assert references_section.startswith("# report cut references\n\n````json\n")
+    assert references_section.endswith("\n````")
+    assert candidate_json in candidate_section
+    assert references_json in references_section
+
+
 def test_feedback_processing_versions_hash_canonical_builders() -> None:
     """checkpoint version は prompt 構築 builder とその依存を識別する。"""
     normalize_adapter_path = feedback_report_module._builder_source_path(
@@ -433,6 +475,9 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
     )
     normalize_prompt_fence_path = (
         normalize_adapter_path.parents[1] / "common" / "prompt_fence.py"
+    )
+    verify_adapter_path = feedback_report_module._builder_source_path(
+        build_feedback_verify_issue_parameter
     )
     verify_path = feedback_report_module._builder_source_path(
         _build_canonical_verify_parameter
@@ -446,7 +491,7 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
     )
     assert (
         feedback_report_module._builder_source_path(
-            build_feedback_verify_issue_parameter
+            unwrap(build_feedback_verify_issue_parameter)
         )
         == verify_path
     )
@@ -457,9 +502,12 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
         (normalize_prompt_fence_path,),
     )
     assert versions["normalization_builder"] == normalization_version
-    assert versions["verification_builder"] == feedback_report_module.sha256_bytes(
-        verify_path.read_bytes()
+    verification_version = feedback_report_module._builder_version_hash(
+        verify_adapter_path,
+        verify_path,
+        (verify_adapter_path.parents[1] / "common" / "prompt_fence.py",),
     )
+    assert versions["verification_builder"] == verification_version
 
 
 def test_feedback_verification_postcondition_rejects_non_concrete_text() -> None:
@@ -896,6 +944,8 @@ def test_empty_report_publishes_current_generation(
     """candidate がなくても ok report と空 active generation を atomic publication する。"""
     root = make_repo(tmp_path)
     _active_session(root, monkeypatch)
+    log_dir = root / ".cmoc/gu/ar/log/sub_command"
+    previous_logs = set(log_dir.glob("*.jsonl"))
     monkeypatch.setattr(
         feedback_report_module,
         "run_codex_exec",
@@ -905,6 +955,13 @@ def test_empty_report_publishes_current_generation(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
+    [log_path] = set(log_dir.glob("*.jsonl")) - previous_logs
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    [publication_event] = [
+        event for event in events if event["event"] == "feedback_report_published"
+    ]
+    assert Path(publication_event["generation_manifest_path"]).is_absolute()
+    assert Path(publication_event["report_path"]).is_absolute()
     state = validate_feedback_state(root)
     assert state.current is not None
     assert state.current["result"] == "ok"
@@ -1050,9 +1107,21 @@ def test_inconclusive_verdict_saves_incomplete_report_without_publication(
         incomplete_calls,
     )
 
+    log_dir = root / ".cmoc/gu/ar/log/sub_command"
+    previous_logs = set(log_dir.glob("*.jsonl"))
     incomplete = runner.invoke(app, ["feedback", "report"])
 
     assert incomplete.exit_code == 1
+    [incomplete_log_path] = set(log_dir.glob("*.jsonl")) - previous_logs
+    incomplete_events = [
+        json.loads(line) for line in incomplete_log_path.read_text().splitlines()
+    ]
+    [incomplete_event] = [
+        event
+        for event in incomplete_events
+        if event["event"] == "feedback_report_incomplete"
+    ]
+    assert Path(incomplete_event["report_path"]).is_absolute()
     assert incomplete_calls == sorted(reference_paths)
     assert "result: `incomplete`" in incomplete.output
     assert "verification candidates: `2`" in incomplete.output

@@ -31,19 +31,18 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装を構成するモジュール群。feedback report の publication／diagnostic pipeline と、その入口となるサブコマンド実装を扱う。feedback サブコマンド全体の挙動や配下モジュールの役割を確認・変更するときの入口。
+- feedback サブコマンドの実装領域。観測データからの report 生成、検証、checkpoint 管理、publication、診断、状態遷移および成果物の cleanup を扱う。feedback の処理全体を確認・変更する際の入口となる。
 
 ## Read this when
-- feedback サブコマンドの処理経路、report cut、raw observation の検証・集約、normalization、verification、checkpoint、publication、incomplete 診断を調査・変更するとき。
-- feedback report の中断・再開、current pointer、active generation、cleanup、固定 repository reference、machine recurrence 集約を確認するとき。
+- feedback サブコマンドの全体フローや状態遷移を確認・変更するとき。
+- report cut の固定・再開、candidate 集約、normalization／verification、report publication、current pointer、失敗時の診断や cleanup を扱うとき。
 
 ## Do not read this when
-- feedback state の正本データモデルや共通 state 操作だけを確認したいときは、対応する feedback state の oracle または共通 runtime モジュールを直接読む。
-- normalization builder、verification builder、Structured Output schema、report の仕様要件だけを確認したいときは、それぞれの直接の実装・schema・oracle file を読む。
 - feedback 以外のサブコマンドを扱うとき。
+- feedback の正本スキーマや個別 helper の仕様・実装だけを調べるときは、対応する oracle file または直接の対象へ進む。
 
 ## hash
-- 4486d48f4735194006df41f1660a80d11ec7315562cb94d30e187f65c88b32f6
+- e131bb8ea9f9f25768166e1c178e6f7debf6da68ce6c9b7133a00cfbe51237f3
 
 # `indexing.py`
 
@@ -63,34 +62,35 @@
 # `oracle`
 
 ## Summary
-- oracle 系サブコマンドを構成する実装群をまとめる package の境界であり、oracle の編集・調査・レビューに関する CLI 実行、レビュー制御、対象選定、パス解決、レポート生成などの下位実装へ進む入口です。
+- oracle 系サブコマンドの実装をまとめるディレクトリ。oracle の編集・調査・レビューの各 CLI 実行経路と、それらを支えるレビュー対象列挙、パス解決、レポート生成、INDEX 差分処理などへの入口となる。
 
 ## Read this when
-- oracle 系サブコマンドの構成や、編集・調査・レビュー機能の実装入口を確認するとき。
-- oracle review の実行制御、対象選定、パス解決、結果出力といった関連実装の所在を把握するとき。
+- oracle 系サブコマンドの構成や、編集・調査・レビュー機能の実装箇所を確認するとき。
+- oracle review の対象列挙、パス解決、レビュー結果の出力、INDEX.md の commit・merge 処理を調査するとき。
 
 ## Do not read this when
-- 特定の oracle サブコマンドの詳細な実行フローを確認するときは、該当する個別実装を直接読んでください。
-- oracle 編集・調査・レビューの契約やプロンプト内容そのものを確認するときは、対応する oracle 仕様を直接読んでください。
+- 個別サブコマンドの詳細な実行フローを確認する場合は、該当する実装ファイルへ直接進む。
+- oracle の調査・編集契約やプロンプト内容そのものを確認する場合は、対応する oracle 仕様を直接読む。
+- 共通のプロンプト入力処理や TUI 起動パラメータの詳細だけを確認する場合は、対応する共通モジュールまたは専用実装へ進む。
 
 ## hash
-- f3d7d78e2a812543dabb7c6810b328632f4c00f2ae58601de7c6708264582b08
+- ced40e35b79d0ff61c3e19d460573df1c397c904796c2a60cf129c08bf28647a
 
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。配下には apply と refactor の実装領域があり、それぞれ apply 処理とリファクタリング処理の調査・変更への入口となる。
+- realization workload サブコマンド全体のパッケージ入口。配下の apply や refactor など、realization に関する個別 workload の実装へ進む起点となる。
 
 ## Read this when
-- realization workload サブコマンドの実装や構成を確認するとき。
-- realization の apply または refactor 処理の対象領域を特定し、配下の実装へ進むとき。
+- realization workload サブコマンドの実装構成や、apply・refactor など配下の処理を確認するとき。
+- realization 配下の workload を横断して、どの個別実装を読むべきか判断するとき。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply や refactor の個別実装を直接調査・変更する場合は、対応する下位領域へ進むとき。
+- apply または refactor の具体的な実行 lifecycle や状態管理を確認する場合は、対応する個別実装へ直接進むとき。
 
 ## hash
-- 4f2e61fc48e0635d52899fc9dd53b227b004ed8f8d2bd0fae18bf95c1461f729
+- 9755f41edc34313f6424146666e7267651d9b1978e880bc0993ab6fcc9844c25
 
 # `review`
 
@@ -131,20 +131,19 @@
 # `session`
 
 ## Summary
-- session サブコマンドの実装パッケージ。session の各ライフサイクル処理を確認する際の入口となる。
-- session の abandon、fork、join における branch 操作、state 更新、競合解消、失敗時の復旧を扱う。
+- session サブコマンドの実装パッケージ。session の各ライフサイクル処理を確認・変更する際の入口であり、開始・継続・完了・破棄に相当する個別処理へ進むためのルーティングを担う。
 
 ## Read this when
-- session サブコマンドの実装や構成を確認・変更するとき。
-- session の作成、離脱、統合、branch・state のライフサイクルを調査するとき。
-- session join の merge conflict 解消や検証処理を確認するとき。
+- session サブコマンドの実装構成や、fork・join・abandon の各処理の入口を確認するとき。
+- session の branch・state を扱うライフサイクル処理を確認・変更するとき。
 
 ## Do not read this when
 - session 以外のサブコマンドを扱うとき。
-- session の共通 state データ構造、runtime Git 処理、Codex 実行規則だけを確認したいときは、それぞれの共通実装や定義を直接読む。
+- 特定の session 処理の詳細を確認する場合は、該当する個別サブコマンド実装を直接読む。
+- session state の一般定義や共通 runtime の仕様だけを確認する場合は、それぞれの正本仕様・共通実装を直接読む。
 
 ## hash
-- 8a0dfef628903e21e7fae720cdfc2150168e3c41e5d0776d9d80ec9fd63a111d
+- eca8a6509002c96e29d6832c8753e099c704b3a21f6823212b83ce7d5dc542ad
 
 # `tui.py`
 

@@ -15,6 +15,7 @@ CLI lifecycle から分離して検証する。根拠は
 分割根拠: {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
+import hashlib
 import json
 import os
 import threading
@@ -268,6 +269,47 @@ def test_update_indexes_reuses_entry_after_empty_file_becomes_directory(
 
     assert target not in calls
     assert existing_entry in (root / "INDEX.md").read_text()
+
+
+def test_index_target_hash_handles_non_utf8_child_name(tmp_path: Path) -> None:
+    """directory hash が非 UTF-8 filename を含んでも UTF-8 serialization を作る。"""
+    root = make_repo(tmp_path)
+    directory = root / "target"
+    directory.mkdir()
+    invalid_name = os.fsdecode(b"note-\xfe.txt")
+    target = directory / invalid_name
+    target.write_bytes(b"note\n")
+
+    content_hash = hashlib.sha256(b"note\n").hexdigest()
+    expected = hashlib.sha256(
+        f"file\0target/note-%FE.txt\0{content_hash}\n".encode("utf-8")
+    ).hexdigest()
+
+    assert indexing_common.index_target_hash(root, directory) == expected
+
+
+def test_index_target_hash_distinguishes_literal_percent_from_non_utf8_name(
+    tmp_path: Path,
+) -> None:
+    """directory hash が literal `%` と非 UTF-8 byte の filename を区別する。"""
+    literal_parent = tmp_path / "literal"
+    invalid_parent = tmp_path / "invalid"
+    literal_parent.mkdir()
+    invalid_parent.mkdir()
+    literal_root = make_repo(literal_parent)
+    invalid_root = make_repo(invalid_parent)
+    literal_directory = literal_root / "target"
+    invalid_directory = invalid_root / "target"
+    literal_directory.mkdir()
+    invalid_directory.mkdir()
+
+    (literal_directory / "note-%FE.txt").write_bytes(b"note\n")
+    invalid_name = os.fsdecode(b"note-\xfe.txt")
+    (invalid_directory / invalid_name).write_bytes(b"note\n")
+
+    assert indexing_common.index_target_hash(
+        literal_root, literal_directory
+    ) != indexing_common.index_target_hash(invalid_root, invalid_directory)
 
 
 def test_update_indexes_generates_sibling_entries_in_stable_render_order(

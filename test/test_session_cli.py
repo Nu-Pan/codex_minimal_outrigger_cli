@@ -10,6 +10,8 @@ fixture を追う文脈が分散する。現状は session CLI 回帰として�
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
 - {{work-root}}/oracle/doc/app_spec/feedback_state.md
 - {{work-root}}/oracle/doc/app_spec/session_state.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 """
 
@@ -803,7 +805,7 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
 
 
-@pytest.mark.parametrize("change_kind", ["context", "mode"])
+@pytest.mark.parametrize("change_kind", ["context", "mode", "delete"])
 def test_session_join_rejects_extra_conflict_file_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change_kind: str
 ) -> None:
@@ -821,11 +823,19 @@ def test_session_join_rejects_extra_conflict_file_changes(
     )
     session_branch = current_branch(root)
     home_branch = session_home_branch(root, session_branch)
-    target.write_text("prefix\nsession change\nsuffix\n")
+    session_content = (
+        "session change\n"
+        if change_kind == "delete"
+        else "prefix\nsession change\nsuffix\n"
+    )
+    home_content = (
+        "home change\n" if change_kind == "delete" else "prefix\nhome change\nsuffix\n"
+    )
+    target.write_text(session_content)
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "session change")
     run_git(root, "switch", home_branch)
-    target.write_text("prefix\nhome change\nsuffix\n")
+    target.write_text(home_content)
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "home change")
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
@@ -837,7 +847,10 @@ def test_session_join_rejects_extra_conflict_file_changes(
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
-        """conflict marker 外または file mode を変更した agent を再現する。"""
+        """conflict marker 外の変更、file mode 変更、または file 削除を再現する。"""
+        if change_kind == "delete":
+            target.unlink()
+            return FakeCodexResult()
         target.write_text(
             "prefix\nresolved change\n"
             + ("changed suffix\n" if change_kind == "context" else "suffix\n")
@@ -854,7 +867,7 @@ def test_session_join_rejects_extra_conflict_file_changes(
     assert current_branch(root) == home_branch
     expected_summary = (
         "conflict 対象 file の不要な差分が残っています。"
-        if change_kind == "context"
+        if change_kind in {"context", "delete"}
         else "conflict 解消以外の差分が残っています。"
     )
     assert expected_summary in result.stderr
@@ -1141,6 +1154,56 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
     )
     assert "- deleted_session_branch: `False`" in result.output
     assert f"session branch was not deleted: {session_branch}" in result.output
+
+
+def test_session_join_rejects_missing_home_branch_before_remote_guess(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """local home branch がない場合に同名 remote branch へ join しない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+    {{work-root}}/oracle/doc/app_spec/session_state.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
+    run_git(root, "branch", "-D", home_branch)
+
+    remote = tmp_path / "remote.git"
+    subprocess.run(
+        ["git", "init", "--bare", str(remote)],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    run_git(root, "remote", "add", "origin", str(remote))
+    run_git(root, "push", "origin", f"{home_commit}:refs/heads/{home_branch}")
+    run_git(root, "config", "checkout.defaultRemote", "origin")
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == session_branch
+    assert "git コマンドが失敗しました。" in result.stderr
+    assert "git switch --no-guess" in result.stderr
+    assert "git コマンドが失敗しました。" not in result.stdout
+    assert run_git(root, "branch", "--show-current").stdout.strip() == session_branch
+    assert (
+        run_git(
+            root,
+            "show-ref",
+            "--verify",
+            f"refs/remotes/origin/{home_branch}",
+        ).returncode
+        == 0
+    )
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == home_commit
 
 
 def test_session_join_error_report_is_written_to_stdout(

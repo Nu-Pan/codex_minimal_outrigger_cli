@@ -54,12 +54,13 @@ def test_codex_overrides_use_dedicated_sandbox_argument(
 
     assert args.count("--sandbox") == 1
     assert codex_arg_value(args, "--sandbox") == sandbox
-    assert "--ask-for-approval" not in args
+    assert codex_arg_value(args, "--ask-for-approval") == "on-request"
+    assert "--approve-for-me" not in args
     assert codex_arg_value(args, "--model") == (
         config.codex.model[ModelClass.EFFICIENCY].model
     )
     parsed = codex_override_config(args)
-    assert parsed["approval_policy"] == "on-request"
+    assert "approval_policy" not in parsed
     assert parsed["approvals_reviewer"] == "auto_review"
     assert (
         parsed["model_reasoning_effort"]
