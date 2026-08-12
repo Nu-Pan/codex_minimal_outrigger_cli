@@ -81,18 +81,22 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンドのパッケージ入口。配下には apply と refactor の実装領域があり、それぞれ apply 処理とリファクタリング処理の調査・変更への入口となる。
+- realization workload サブコマンドのパッケージ入口。配下の apply および refactor の実装へ進むための起点となる。
+- apply は apply workload の実行フロー、agent 実行後の差分検査、run 状態更新、rollback、fork report 保存を扱う。
+- refactor は refactor fork の lifecycle、対象選択、変更検証、state 更新、INDEX 同期、完了・中断・エラー処理を扱う。
 
 ## Read this when
 - realization workload サブコマンドの実装や構成を確認するとき。
-- realization の apply または refactor 処理の対象領域を特定し、配下の実装へ進むとき。
+- apply workload の実行フロー、run 状態遷移、差分検査、失敗時処理を調査・変更するときは apply へ進む。
+- refactor fork の実行 lifecycle、対象選択、完了条件、変更検証、状態更新を調査するときは refactor へ進む。
 
 ## Do not read this when
 - realization workload サブコマンドに関係しない処理を確認するとき。
-- apply や refactor の個別実装を直接調査・変更する場合は、対応する下位領域へ進むとき。
+- apply agent のプロンプト生成や差分適用仕様だけを確認するときは、より直接該当する agent 実装へ進む。
+- editing run 共通 lifecycle、INDEX 生成機能、run isolation、interruption などの一般仕様だけを確認するときは、対応する共通実装・正本仕様へ直接進む。
 
 ## hash
-- 4f2e61fc48e0635d52899fc9dd53b227b004ed8f8d2bd0fae18bf95c1461f729
+- 917f590ce1df8dd1598a6dd7c53f92907aa03aa2ec281c003c780563f21d72a1
 
 # `review`
 

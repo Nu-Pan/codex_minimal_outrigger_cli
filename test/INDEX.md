@@ -408,23 +408,21 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、Git branch、process tracking、Codex child tracking、report を共有する lifecycle として検証する。
-- realization apply/refactor fork の正常完了、割り込み、agent・INDEX・oracle・管理対象ファイルの不正変更、commit・refresh・rollback・cleanup 失敗を検証する。
-- run join/abandon の merge、force-resolve、rename/delete、INDEX conflict、state sync、report 保存、worktree・branch cleanup と再試行可能性を検証する。
-- fork report と lifecycle report の変更 path、warning、unresolved finding、feedback observation、特殊文字の escaping、および timestamp collision を検証する。
+- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、Codex child tracking、INDEX 更新、merge、cleanup、rollback、process interruption など、apply/refactor fork から run lifecycle 完了までの外部挙動を検証する。
+- apply と refactor が共有する lifecycle fixture・branch・state 遷移を一続きで扱い、想定外差分、managed file、agent commit、遅延処理、rename/delete、report 保存、失敗時の resource 保持と recovery も対象にする。
 
 ## Read this when
-- realization apply/refactor fork と run join/abandon の統合ライフサイクルを確認するとき
-- editing run の差分制約、worktree 隔離、process・child tracking、rollback、interrupt/error recovery を横断的に検証するとき
-- fork report または lifecycle report の生成内容と cleanup 結果を確認するとき
+- realization apply/refactor fork と run join/abandon の統合 lifecycle が正しく連携するか確認するとき。
+- run state、worktree/branch cleanup、Codex process tracking、INDEX refresh、rollback、merge conflict、report の失敗時挙動を変更・調査するとき。
+- agent が作成した差分や commit、user interruption、process tracking 異常、未解決 refactor finding の扱いを検証するとき。
 
 ## Do not read this when
-- 個別コマンドの実装責務や正本仕様だけを確認する場合
-- run lifecycle の共通実装を直接調査する場合は、対応する commons または sub_commands の実装を読むとき
-- INDEX 更新の一般仕様だけを確認する場合は、indexing の正本仕様や専用テストを読むとき
+- 単一の apply、refactor、join、abandon 実装の詳細だけを確認すれば足り、共通 lifecycle の統合挙動を調べないとき。
+- 通知仕様そのもの、正本 app specification、または INDEX 生成ロジック単体の仕様を確認するときは、それぞれの oracle・実装・専用 test へ直接進む。
+- テスト共通 helper や個別 command の単純な入出力だけを確認し、この統合 test の lifecycle 境界に関係しないとき。
 
 ## hash
-- 8f685d574a3ab45ee7ad81dfa6168498bb5fdd8b3d67ea65d0d9c809e5b969a3
+- ddc84fc2bbf0b686ec5c51ec179ba4a848fb90a42c8306c1d4f4d5a3b1ad2aae
 
 # `test_feedback.py`
 

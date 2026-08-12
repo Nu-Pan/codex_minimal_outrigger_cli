@@ -33,18 +33,20 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング処理をまとめるパッケージ。fork 単位の実行管理と、関連するリファクタリング処理への入口を提供する。
+- realization のリファクタリング作業を扱うパッケージ。refactor fork の実行 lifecycle と関連処理への入口となる。
+- fork の実行順序、対象選択、agent による変更検証、state 更新、INDEX 同期、完了・中断・エラー時の処理を確認する際は fork 実装へ進む。
 
 ## Read this when
-- realization のリファクタリング作業の構成や実行管理を確認するとき
-- 対象 file の調査・修正、refactor state と INDEX の同期、commit、完了判定、report 保存を含む fork のライフサイクルを確認するとき
-- refactor fork の unresolved finding、rename、変更 path、agent 違反、cleanup failure の追跡を確認するとき
+- realization refactor fork の CLI 実行 lifecycle や処理順序を調査するとき
+- 対象 realization file の選択、findings と unresolved の整合、refactor state 更新、完了条件を確認するとき
+- agent の変更検証、INDEX refresh、rollback・joinable・error 処理を確認するとき
+- fork report や completion log の生成内容・完了理由を確認するとき
 
 ## Do not read this when
-- realization のリファクタリング以外の処理を確認するとき
-- 個別の realization file の修正・レビュー方法だけを確認したいとき
-- refactor state のデータ構造や target 選択ロジックだけを確認したいとき
-- INDEX.md の生成規則や routing だけを確認したいとき
+- file review agent の入力形式や調査・修正プロンプトだけを確認する場合
+- 正常完了時の変更概要生成の入力・Structured Output を確認する場合
+- refactor state の一般的な保存・同期仕様だけを確認する場合
+- run isolation や interruption の正本仕様を確認する場合
 
 ## hash
-- d7f438e5e9473162267f907970f7567797c0a137239f7eb7732eadcd321ddc5a
+- 6d967dc9ec35685fad62a7e8185c1e5e92cae8c9f2a49bcbdcf72eff281457a9

@@ -1087,9 +1087,9 @@
   },
   "src/sub_commands/realization/refactor/fork.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "efa28f51af82485c8669dd9c16ae2518a2f7b3f4c8f5d3c0fcace3a47365f678",
-    "last_investigated_at": "2026-08-09_18-56_36_160963000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "0a3548b70ba94f748a122e1015af465927ffbe6c6afffb7c856356cef8ab62eb",
+    "last_investigated_at": "2026-08-12_15-55_56_413901000"
   },
   "src/sub_commands/run/__init__.py": {
     "investigation_required": false,

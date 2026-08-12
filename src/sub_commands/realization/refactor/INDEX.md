@@ -15,20 +15,20 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の CLI 実行全体を管理する単一 workload。run の初期化から対象 file ごとの agent 調査・修正、refactor state と INDEX の同期、処理単位の commit、完了判定、joinable/error/interruption 状態の report 保存までを一貫して扱う。
-- current fork 内の unresolved finding、rename、変更 path、agent の commit 違反、cleanup 失敗を追跡し、完了理由と変更概要を確定するための上位 orchestration の入口。個別の agent prompt 生成や report 表示形式の詳細を確認する場合は、それぞれの builder・runtime・report 実装へ進む。
+- realization refactor fork の full-cycle workload を実行する中核実装。対象 realization file の選択、agent による調査・修正、差分と commit の検証、refactor state の更新、INDEX 同期、unresolved findings の current fork 内管理、完了判定、joinable/error/interruption 時の cleanup と fork report 作成までを一つの lifecycle として担う。
+- realization refactor fork の実行経路、処理単位の commit・中断復旧・エラー処理・完了理由、report 内容や変更概要の挙動を確認または変更するときの入口となる。対象 file 単体の agent prompt や change summary の詳細だけを確認する場合は、それぞれの builder 実装を直接読む。
 
 ## Read this when
-- realization refactor fork の実行順序、処理単位の lifecycle、run state の遷移、完了不変条件を調査するとき
-- 対象 file の選択、agent call 後の差分検証、refactor state 更新、commit と unresolved 管理の関係を確認するとき
-- 中断・例外・cleanup failure 時の rollback、error report、joinable 公開条件を確認するとき
-- fork report の生成内容、completion reason、変更概要、未解決 finding の追跡方法を確認するとき
+- realization refactor fork の CLI 実行 lifecycle や処理順序を調査するとき
+- 対象選択、findings と unresolved の整合、refactor state 更新、完了条件を確認するとき
+- agent の変更検証、commit 防止、INDEX refresh、run の rollback・joinable・error 処理を確認するとき
+- fork report や completion log の生成内容・完了理由を確認するとき
 
 ## Do not read this when
-- 個別の realization file を直接修正・レビューする方法だけを確認したいときは、file review 用の builder または対象 realization file を読む
-- refactor state のデータ構造や target 選択ロジックだけを確認したいときは、runtime_refactor の実装を直接読む
-- run の一般的な isolation、編集 run の作成・join・abandon 契約だけを確認したいときは、対応する app specification または runtime lifecycle を直接読む
-- INDEX.md の生成規則や routing だけを確認したいときは、indexing の仕様・実装を読む
+- file review agent の入力形式や調査・修正プロンプトだけを確認する場合
+- 正常完了時の変更概要生成の入力・Structured Output を確認する場合
+- refactor state の一般的な保存・同期仕様だけを確認する場合
+- run isolation や interruption の正本仕様を確認する場合は、対応する oracle specification を直接読む
 
 ## hash
-- 0a3548b70ba94f748a122e1015af465927ffbe6c6afffb7c856356cef8ab62eb
+- 7d96a660ba6633bf0155193ffce66368eb778489f881705e0911c072378bc409
