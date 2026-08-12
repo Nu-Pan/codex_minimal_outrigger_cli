@@ -426,10 +426,10 @@
     "last_investigated_at": "2026-08-10_13-23_19_319442000"
   },
   "oracle/src/oracle/acp_builder/session/join/conflict_resolution.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "dfc44168527415b0ea1cdcc2dd290a6c89090a5fcad5ef8627db3495b085100b",
-    "last_investigated_at": "2026-08-09_12-42_24_970519000"
+    "last_investigated_sha256": "b2f2b3f50bbd3d97d30643cb225bc0c5e5f0f36af7c72a4874be233eaf4df05f",
+    "last_investigated_at": "2026-08-12_10-05_37_398442000"
   },
   "oracle/src/oracle/acp_builder/tui/launch_tui.py": {
     "investigation_required": true,
