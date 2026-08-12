@@ -888,20 +888,25 @@
 # `test_session_cli.py`
 
 ## Summary
-- 対象は session fork／join／abandon の CLI 外部挙動を検証する回帰テスト群で、session branch と永続 state のライフサイクルを一つの状態遷移として扱う。fork の作成・衝突・rollback、abandon の復元・cleanup、join の merge・conflict 解消・branch cleanup、linked worktree、doctor preprocess、dirty worktree 拒否、エラー報告を確認する。session CLI の仕様変更や回帰調査で、これらの挙動を横断的に検証したいときの入口になる。
-- 対象は巨大な単一テストファイルだが、branch／state fixture を共有する session ライフサイクル検証を分散させず、同じ文脈で追跡するために集約されている。
+- session fork・join・abandon の CLI 外部挙動を、branch と永続 session state のライフサイクルとして一体的に検証する回帰テスト群。
+- session branch の作成・衝突・保存失敗時の rollback、home branch への復帰、state 更新・cleanup・復元を扱う。
+- linked worktree、dirty worktree、preprocess、home branch 不在、state 不正、conflict 解消、差分検査、エラー報告、session branch 削除警告など、session 操作の境界条件を検証する。
+- session コマンドの挙動、session state の遷移、branch/worktree 操作、join 時の conflict resolution を確認したい場合の回帰テスト入口。
 
 ## Read this when
-- session fork、join、abandon の外部挙動を変更・レビュー・デバッグするとき
-- session branch、session state、linked worktree、cleanup、conflict resolution の回帰を調査するとき
-- session CLI の dirty worktree 拒否、doctor preprocess、stdout／stderr のエラー報告、Codex conflict agent 境界を検証するとき
+- session fork・join・abandon の仕様変更や不具合調査を行うとき。
+- session branch、session state、linked worktree のライフサイクルや rollback を変更するとき。
+- join の conflict resolution、変更範囲検査、Codex 呼び出し境界、エラー出力を確認するとき。
+- doctor preprocess と session 操作の前後関係、dirty worktree や home branch 不在時の挙動を検証するとき。
 
 ## Do not read this when
-- session の実装詳細や正本仕様そのものを確認したいときは、対応する session サブコマンド実装または oracle 仕様を直接読む
-- session CLI と無関係なテスト、または session lifecycle を伴わない一般的な Git／Codex 挙動を調査するとき
+- session CLI の実装詳細だけを確認したい場合は、対応する session サブコマンド実装を直接読む。
+- session state の正本形式や遷移規則だけを確認したい場合は、session state 仕様を直接読む。
+- conflict resolution のプロンプト生成規則だけを確認したい場合は、conflict resolution の実装・仕様を直接読む。
+- session と無関係な CLI、Git 操作、一般的なテスト支援機能を調べる場合。
 
 ## hash
-- 6b7f2c6880b97d13c4bee24d972d24652db34d5083018b0e38811b78285a9da9
+- 46f4688370451d46da3b01ab09b6e39e3fe7f0895ea8a39ff5bf72aa7e1246d7
 
 # `test_skill_metadata.py`
 

@@ -10,6 +10,8 @@ fixture を追う文脈が分散する。現状は session CLI 回帰として�
 - {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
 - {{work-root}}/oracle/doc/app_spec/feedback_state.md
 - {{work-root}}/oracle/doc/app_spec/session_state.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+- {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 """
 
