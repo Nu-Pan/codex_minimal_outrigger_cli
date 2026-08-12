@@ -820,20 +820,19 @@
 # `test_runtime_git_ignore.py`
 
 ## Summary
-- Git ignore の安全な更新・判定に関する runtime 機能を検証するテスト。cmoc 用 ignore パターンの追加、literal path の判定、check-ignore 失敗時のエラー化、.gitignore・info/exclude・global excludes の特殊ファイルや symlink に対する安全性、および既存の有効なパターンへの安定した追記を扱う。
+- Git ignore の安全な更新と判定を検証するテスト。cmoc 用 ignore パターンの追加、index-aware／untracked-aware な判定、特殊ファイル・symlink・判定失敗時のエラー処理を対象とする。runtime の Git ignore 実装やその回帰を確認する入口。
 
 ## Read this when
-- Git ignore 判定や cmoc 用 ignore 設定の実装を変更・レビューするとき
-- `.gitignore`、Git の info/exclude、global excludes、symlink・特殊ファイルに対するエラー処理を検証するとき
-- runtime の Git 操作に関するテストの期待挙動を確認するとき
+- Git ignore パターンの追加・更新処理を変更または検証するとき
+- is_git_ignored、is_untracked_git_ignored、ensure_cmoc_ignored、ensure_cmoc_ignored_in_exclude の挙動を確認するとき
+- 特殊ファイル、symlink、global excludes、check-ignore 失敗時の安全性を扱うとき
 
 ## Do not read this when
-- Git ignore や runtime Git 操作に関係しない機能を変更・調査するとき
-- Git ignore の実装詳細そのものを確認する必要があり、対応する runtime 実装を直接読むべきとき
-- doctor preprocess や editing run の仕様だけを確認する場合
+- Git ignore 以外の runtime 機能を扱うとき
+- テスト対象の実装や仕様を直接確認したいときは、runtime 実装または根拠として示された仕様・プロンプト定義を先に読むべき場合
 
 ## hash
-- c1a0f125ced06cab999fea8e72d2c2183a5f9e4899d43cc88c3569ba09904709
+- d8841b7ae36f232f45c82847ea7fb9f8fda21bf534bbdba559959193d394a62d
 
 # `test_runtime_refactor.py`
 
