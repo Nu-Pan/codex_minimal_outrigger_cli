@@ -88,6 +88,86 @@ def _assert_review_call_context(
     assert parameter.agent_call_cwd == review_worktree
 
 
+def test_oracle_review_rebinds_all_calls_to_review_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """canonical builder が main root を見ても review call は snapshot context を使う。
+
+    根拠:
+
+    - {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    """
+    repo_root, review_worktree = _make_review_context(tmp_path, monkeypatch)
+    monkeypatch.chdir(repo_root)
+    oracle_path = review_worktree / "oracle" / "spec.md"
+    oracle_path.write_text("# spec\n")
+    config = CmocConfig(
+        oracle_review=CmocConfigOracleReview(
+            num_enumerate_findings_loop=1,
+            num_merge_findings_loop=1,
+            num_validate_findings_loop=1,
+        ),
+    )
+    parameters: list[AgentCallParameter] = []
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> _FakeCodexResult:
+        """全 review 段階の parameter context と placeholder を検証する。"""
+        parameters.append(parameter)
+        assert kwargs["root"] == repo_root
+        assert parameter.agent_call_cwd == review_worktree
+        assert f"- {{{{repo-root}}}} = {repo_root}" in parameter.prompt
+        assert f"- {{{{work-root}}}} = {review_worktree}" in parameter.prompt
+        schema_name = _schema_name(parameter)
+        if schema_name == "enumerate_finding.json":
+            return _FakeCodexResult(
+                {
+                    "findings": [
+                        {
+                            "oracle_path": "{{oracle-root}}/spec.md",
+                            "severity": "fatal",
+                            "title": "finding",
+                            "reason": "reason",
+                        }
+                    ]
+                }
+            )
+        if schema_name == "merge_finding.json":
+            return _FakeCodexResult({"operations": []})
+        if schema_name in {
+            "validate_finding_challenger.json",
+            "validate_finding_advocate.json",
+        }:
+            return _FakeCodexResult({"reasons": []})
+        if schema_name == "judge_finding.json":
+            return _FakeCodexResult({"verdict": "reject", "reason": "reason"})
+        raise AssertionError(schema_name)
+
+    findings = review_module.run_oracle_review_loop(
+        repo_root,
+        review_worktree,
+        [oracle_path],
+        config,
+        fake_run_codex_exec,
+    )
+
+    assert len(findings) == 1
+    schema_names: list[str] = []
+    for parameter in parameters:
+        schema_path = parameter.structured_output_schema_path
+        assert schema_path is not None
+        schema_names.append(schema_path.name)
+    assert schema_names == [
+        "enumerate_finding.json",
+        "merge_finding.json",
+        "validate_finding_challenger.json",
+        "validate_finding_advocate.json",
+        "judge_finding.json",
+    ]
+
+
 def test_oracle_review_enumerate_receives_only_related_findings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

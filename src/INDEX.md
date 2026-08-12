@@ -119,18 +119,15 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装をまとめる領域。doctor、feedback、indexing、oracle、realization、run、session、tui などの個別実装へ進む入口であり、サブコマンド単位の実行フローや責務の所在を確認するために読む。
-- realization 配下には apply・refactor などの workload 実装領域があり、run 配下には編集 run の lifecycle と互換 shim、oracle 配下には oracle 系機能の実装がある。各機能の詳細は対応する下位領域へ進む。
+- cmoc の各サブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、review、run、session、tui などの CLI 実行入口と処理領域へ進むためのルーティング起点となる。
 
 ## Read this when
-- cmoc のサブコマンド実装の構成を確認するとき。
-- 対象がどのサブコマンドの実装領域に属するかを特定し、個別実装への入口を探すとき。
-- 複数のサブコマンドにまたがる実装配置や責務の境界を確認するとき。
+- cmoc のサブコマンド実装の構成や、対象サブコマンドの実装入口を特定するとき。
+- 特定サブコマンドの実行フロー、ライフサイクル、状態管理、レビュー、TUI 連携などを調査・変更するときに、該当する下位実装へ進む前の入口として確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な実行フローや処理内容を調査するときは、対応する個別実装を直接読む。
-- サブコマンド共通の runtime、Git 操作、state 管理、仕様、prompt、schema の詳細だけを確認するときは、対応する共通実装または正本仕様へ直接進む。
-- サブコマンド実装に関係しない処理を調査するとき。
+- サブコマンド共通ランタイム、oracle・schema・builder など、正本や共通実装が別の場所にある処理だけを調査するとき。
+- 対象サブコマンドが明確で、その下位実装を直接確認・変更できるとき。
 
 ## hash
-- 317310cdf92a581a72f744ac5109aeb8e30b5b512f217de91b0f309ffd59f92b
+- 0a38f9aa58acc6ba932272260bab8f42f1e9aac6c6ce072e6a3e7e022b0bb135

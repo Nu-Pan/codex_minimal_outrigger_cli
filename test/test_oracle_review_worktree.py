@@ -139,7 +139,11 @@ def test_oracle_review_uses_linked_worktree_branch_and_oracle(
     branch = run_git(linked, "branch", "--show-current").stdout.strip()
     assert branch.startswith("cmoc/session/")
     assert agent_call_cwds
-    assert set(agent_call_cwds) == {root}
+    assert all(path != root for path in agent_call_cwds)
+    assert all(
+        path.is_relative_to(root / ".cmoc" / "gu" / "worktree")
+        for path in agent_call_cwds
+    )
     assert Path.cwd() == linked
     assert any("linked.md" in call for call in calls)
 
@@ -245,7 +249,14 @@ def test_oracle_review_retries_run_target_collision(
     assert collision_worktree.exists()
     assert run_git(root, "branch", "--list", collision_branch).stdout.strip()
     assert agent_call_cwds
-    assert set(agent_call_cwds) == {root}
+    assert set(agent_call_cwds) == {
+        root
+        / ".cmoc"
+        / "gu"
+        / "worktree"
+        / session_id
+        / "2026-07-28_00-00-00_000000001"
+    }
 
 
 def test_oracle_review_does_not_cleanup_preexisting_target_after_create_failure(
@@ -806,10 +817,10 @@ def test_oracle_review_merges_review_index_changes(
     assert all(not path.exists() and not path.is_symlink() for path in review_worktrees)
 
 
-def test_oracle_review_preflight_uses_main_worktree_path_context(
+def test_oracle_review_preflight_uses_review_worktree_path_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """review agent call の preflight は canonical main worktree context を使う。
+    """review agent call の preflight は review worktree context を使う。
 
     根拠: {{work-root}}/oracle/doc/app_spec/run_isolation.md、
     {{work-root}}/oracle/doc/app_spec/indexing.md。
@@ -860,15 +871,27 @@ def test_oracle_review_preflight_uses_main_worktree_path_context(
 
     assert result.exit_code == 0
     assert (root / "INDEX.md").read_text() == "# preflight review index\n"
-    assert review_worktrees and set(review_worktrees) == {root}
+    assert review_worktrees
+    assert all(path != root for path in review_worktrees)
+    assert all(
+        path.is_relative_to(root / ".cmoc" / "gu" / "worktree")
+        for path in review_worktrees
+    )
     assert (
-        run_git(root, "log", "--first-parent", "-1", "--pretty=%s").stdout.strip()
+        run_git(
+            root,
+            "log",
+            "--all",
+            "--grep=^cmoc indexing$",
+            "-1",
+            "--pretty=%s",
+        ).stdout.strip()
         == "cmoc indexing"
     )
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "run_join_commit: null" in rendered
+    assert "run_join_commit: null" not in rendered
 
 
 @pytest.mark.parametrize("index_relative_path", ["INDEX.md", "日本語[1]/INDEX.md"])
