@@ -24,8 +24,8 @@ def build_feedback_verify_issue_parameter(
     # live state を参照しない verification prompt と call context を構築する。
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
-        role="- あなたは人間向け feedback issue の検証担当です",
         summary="""
+        - あなたは人間向け feedback issue の検証担当です
         - 1 件の issue candidate を report cut 時点の固定済み参照だけから検証すること
         - 現在も未解決であり、作業外にいる人間の対応が必要な issue だけを `unresolved` とすること
         """,

@@ -30,8 +30,8 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
 
     # 対象 file を起点に、調査から検証までを行う完全プロンプトを構築する。
     prompt = build_complete_prompt(
-        role="- あなたはソフトウェア実装のファイル単位レビュー兼修正担当です",
         summary="""
+        - あなたはソフトウェア実装のファイル単位レビュー兼修正担当です
         - oracle file または realization file である `{{target-path}}` を起点に `{{work-root}}` ツリー内の所見を調査し、対応する realization file を修正すること
         """,
         goal="""

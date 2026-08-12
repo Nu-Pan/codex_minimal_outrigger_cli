@@ -24,8 +24,8 @@ def build_feedback_normalize_issue_parameter(
     # report cut 外の状態を参照しない prompt と call context を構築する。
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
-        role="- あなたは人間向け feedback issue の同一性判断担当です",
         summary="""
+        - あなたは人間向け feedback issue の同一性判断担当です
         - 構造化済み observation を、絞り込み済みの既存 issue candidate と比較すること
         - observation が入力候補と同じ issue か、新しい issue かだけを判断すること
         """,

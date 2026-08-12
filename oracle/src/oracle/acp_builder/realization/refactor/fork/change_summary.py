@@ -30,8 +30,8 @@ def build_realization_refactor_fork_change_summary_parameter(
 
     # 確定済み差分だけを入力とする変更要約 prompt を構築する。
     prompt = build_complete_prompt(
-        role="- あなたはソフトウェア変更内容の要約担当です",
         summary="""
+        - あなたはソフトウェア変更内容の要約担当です
         - `{{work-root}}` ツリー内の refactor 差分を、人間が読むために要約すること
         """,
         goal="""

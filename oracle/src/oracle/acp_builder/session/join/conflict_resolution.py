@@ -40,8 +40,8 @@ def build_session_join_conflict_resolution_parameter(
     path_list = "\n".join(str(path) for path in resolved_paths)
     # プロンプト
     prompt = build_complete_prompt(
-        role="- あなたは git merge conflict の解消担当です",
         summary="""
+        - あなたは git merge conflict の解消担当です
         - `{{work-root}}` ツリー内の merge conflict marker を解消すること
         """,
         goal="""

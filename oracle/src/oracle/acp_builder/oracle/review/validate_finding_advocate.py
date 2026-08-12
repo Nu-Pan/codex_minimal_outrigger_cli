@@ -42,8 +42,10 @@ def build_oracle_review_validate_finding_advocate_parameter(
 
     # プロンプト
     prompt = build_complete_prompt(
-        role="- あなたはソフトウェア仕様断片レビュー所見の擁護担当です",
-        summary="- 対象所見が妥当である理由を調査すること",
+        summary="""
+        - あなたはソフトウェア仕様断片レビュー所見の擁護担当です
+        - 対象所見が妥当である理由を調査すること
+        """,
         goal="""
         - 指定の Structured Output schema に従って、対象所見が妥当である理由を返していること
         - 既存の理由と重複しないよう、新規理由だけが列挙されていること

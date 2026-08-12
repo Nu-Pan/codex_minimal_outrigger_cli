@@ -55,8 +55,8 @@ def build_realization_apply_fork_launch_exec_parameter(
 
     # 追従対象と完了条件を固定した完全 prompt を構築する。
     complete_prompt = build_complete_prompt(
-        role="- あなたは realization file の差分追従担当です",
         summary="""
+        - あなたは realization file の差分追従担当です
         - 追従対象変更 <cmoc_ref target="realization_apply_change"/> から読み取れる oracle file の変更を、`{{work-root}}` リポジトリ全体の realization file に反映すること
         - 差分に現れた file だけを作業範囲にせず、関連する oracle file と realization file をリポジトリ全体から調査すること
         """,

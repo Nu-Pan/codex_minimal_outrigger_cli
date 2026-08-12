@@ -40,7 +40,6 @@ def _merge_placeholder_definitions(
 
 def build_complete_prompt(
     *,
-    role: str,
     summary: str,
     goal: str,
     file_access_mode: FileAccessMode,
@@ -61,6 +60,8 @@ def build_complete_prompt(
     """選択された agent 向け文面を完全 prompt として構築する。
 
     Args:
+        summary: agent の担当、主作業、対象、および作業範囲。
+        goal: agent call の終了時に満たされるべき状態。
         routing_rule: repository 内の参照先を選ぶ routing 文面を含めるか。
 
     Returns:
@@ -71,7 +72,6 @@ def build_complete_prompt(
     _merge_placeholder_definitions(ph_map, aux_placeholder_def)
 
     # 動的プロンプトの参照先
-    role_block = StructBlock("role", StructDoc("role", role))
     summary_block = StructBlock("summary", StructDoc("summary", summary))
     goal_block = StructBlock("goal", StructDoc("goal", goal))
 
@@ -79,8 +79,7 @@ def build_complete_prompt(
     prompt: list[StructDoc | StructBlock] = [
         StructDoc(
             "プロンプト内地図",
-            StructDoc("あなたの役割", '<cmoc_ref target="role"/>'),
-            StructDoc("依頼の概要", '<cmoc_ref target="summary"/>'),
+            StructDoc("担当と依頼の概要", '<cmoc_ref target="summary"/>'),
             StructDoc("作業の完了条件", '<cmoc_ref target="goal"/>'),
         )
     ]
@@ -136,7 +135,7 @@ def build_complete_prompt(
         _extend_static_prompt(build_routing_rule, path_context)
 
     # 動的プロンプトを構築
-    prompt.extend((role_block, summary_block, goal_block))
+    prompt.extend((summary_block, goal_block))
     prompt.extend(aux_dynamic_prompt)
 
     # プレースホルダマップを構築

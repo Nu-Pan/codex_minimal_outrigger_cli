@@ -32,8 +32,8 @@ def build_oracle_edit_launch_tui_parameter(
 
     # ユーザー指示以外を固定した完全 prompt を構築する。
     complete_prompt = build_complete_prompt(
-        role="- あなたは oracle file の編集担当です",
         summary="""
+        - あなたは oracle file の編集担当です
         - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/> が要求する最終状態を `{{work-root}}/oracle` ツリー内の oracle file に反映すること
         """,
         goal="""

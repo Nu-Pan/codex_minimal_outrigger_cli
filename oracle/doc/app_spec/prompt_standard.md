@@ -114,6 +114,22 @@ Structured Output の機械的な受理条件は、schema と宣言済みの決�
 - 補正 turn で新しい受理条件を追加してはいけない
 - prompt、schema、および validator の矛盾を出力補正の retry で隠してはいけない
 
+## `summary` と `goal` の責務境界
+
+動的な作業記述の責務境界を次のとおり定める。
+
+- `build_complete_prompt` は、agent call 固有の動的な指示として `summary` と `goal` を受け取る。
+- `build_complete_prompt` は、独立した `role` を受け取らない。
+- `summary` は、agent の担当、主作業、対象、および作業範囲を定義する。
+- 担当を明示する必要がある場合は、`summary` の先頭に記載する。
+- `goal` は、agent call の終了時に満たされるべき状態を定義する。
+- `goal` には、成果物、出力契約、整合性、検証済み状態、および維持すべき非変更状態のうち、完了後に判定できる条件を記載する。
+- 「何を、どの対象へ行うか」は `summary` に置く。
+- 「完了時に何が成立していなければならないか」は `goal` に置く。
+- 同じ要求を `summary` と `goal` の両方へ重複して記載してはならない。
+- 作業手順、参照方法、および完了判定ではない禁止事項は、目的に対応する個別の prompt part に置く。
+- `cmoc tui` の自由形式オリジナルプロンプトを解析し、`summary` と `goal` へ意味分類する追加の agent call を行ってはならない。
+
 ## agent call に渡す prompt を構築する
 
 - agent call の初回 prompt は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する

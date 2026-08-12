@@ -43,8 +43,8 @@ def build_oracle_review_enumerate_finding_parameter(
 
     # プロンプト
     prompt = build_complete_prompt(
-        role="- あなたはソフトウェア仕様断片のレビュー担当です",
         summary="""
+        - あなたはソフトウェア仕様断片のレビュー担当です
         - `{{oracle-path}}` を起点に `{{oracle-root}}` ツリー内の oracle file をレビューすること
         - 必要なら `{{oracle-path}}` 以外の関連する oracle file も読むこと
         """,

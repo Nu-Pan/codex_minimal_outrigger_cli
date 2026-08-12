@@ -42,9 +42,13 @@ def build_oracle_review_judge_finding_parameter(
 
     # プロンプト
     prompt = build_complete_prompt(
-        role="- あなたはソフトウェア仕様断片レビュー所見の採否判定担当です",
-        summary="- 指定の所見を人間へ提示すべきか判定すること",
-        goal="- 指定された Structured Output schema に従って判定結果を返すこと",
+        summary="""
+        - あなたはソフトウェア仕様断片レビュー所見の採否判定担当です
+        - 指定の所見を人間へ提示すべきか判定すること
+        """,
+        goal="""
+        - 指定された Structured Output schema に従って判定結果を返すこと
+        """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         path_context=path_context,
         aux_dynamic_prompt=[

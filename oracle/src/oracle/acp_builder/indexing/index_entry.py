@@ -40,9 +40,13 @@ def build_indexing_index_entry_parameter(
 
     # プロンプト
     prompt = build_complete_prompt(
-        role="- あなたはソフトウェアリポジトリのルーティング文書作成担当です",
-        summary="- `{{target-path}}` の `INDEX.md` 用エントリーを生成すること",
-        goal="- 指定された Structured Output schema に従ってエントリーを返すこと",
+        summary="""
+        - あなたはソフトウェアリポジトリのルーティング文書作成担当です
+        - `{{target-path}}` の `INDEX.md` 用エントリーを生成すること
+        """,
+        goal="""
+        - 指定された Structured Output schema に従ってエントリーを返すこと
+        """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         aux_dynamic_prompt=[

@@ -34,9 +34,12 @@ def build_tui_launch_tui_parameter(
     # 完全なプロンプトを生成してファイルに保存
     original_prompt_ref = '<cmoc_ref target="original_prompt"/>'
     complete_prompt = build_complete_prompt(
-        role=original_prompt_ref,
-        summary=original_prompt_ref,
-        goal=original_prompt_ref,
+        summary=f"""
+        - オリジナルプロンプト {original_prompt_ref} に従って作業すること
+        """,
+        goal=f"""
+        - オリジナルプロンプト {original_prompt_ref} が要求する成果と完了条件を満たしていること
+        """,
         file_access_mode=FileAccessMode.REPO_WRITE,
         path_context=path_context,
         aux_dynamic_prompt=[

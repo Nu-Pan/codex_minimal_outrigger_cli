@@ -33,8 +33,8 @@ def build_oracle_investigation_launch_tui_parameter(
 
     # ユーザー指示以外を固定した完全プロンプトを構築する
     complete_prompt = build_complete_prompt(
-        role="- あなたは oracle file の調査担当です",
         summary="""
+        - あなたは oracle file の調査担当です
         - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/> が要求する調査を `{{work-root}}/oracle` ツリー内の oracle file に基づいて行い、結果をユーザーへ回答すること
         """,
         goal="""

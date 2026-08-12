@@ -20,9 +20,13 @@ def build_quota_availability_probe_parameter(
     # quota probe 自身の cwd から完全 prompt と起動パラメータを構築する。
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
     prompt = build_complete_prompt(
-        role="- あなたは Codex CLI の利用可能性確認担当です",
-        summary="- 追加の調査や作業を行わず、短い応答を 1 回返すこと",
-        goal="- 応答を返して呼び出しを完了していること",
+        summary="""
+        - あなたは Codex CLI の利用可能性確認担当です
+        - 追加の調査や作業を行わず、短い応答を 1 回返すこと
+        """,
+        goal="""
+        - 応答を返して呼び出しを完了していること
+        """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         routing_rule=False,
