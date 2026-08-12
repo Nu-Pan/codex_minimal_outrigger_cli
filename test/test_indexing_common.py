@@ -288,6 +288,30 @@ def test_index_target_hash_handles_non_utf8_child_name(tmp_path: Path) -> None:
     assert indexing_common.index_target_hash(root, directory) == expected
 
 
+def test_index_target_hash_distinguishes_literal_percent_from_non_utf8_name(
+    tmp_path: Path,
+) -> None:
+    """directory hash が literal `%` と非 UTF-8 byte の filename を区別する。"""
+    literal_parent = tmp_path / "literal"
+    invalid_parent = tmp_path / "invalid"
+    literal_parent.mkdir()
+    invalid_parent.mkdir()
+    literal_root = make_repo(literal_parent)
+    invalid_root = make_repo(invalid_parent)
+    literal_directory = literal_root / "target"
+    invalid_directory = invalid_root / "target"
+    literal_directory.mkdir()
+    invalid_directory.mkdir()
+
+    (literal_directory / "note-%FE.txt").write_bytes(b"note\n")
+    invalid_name = os.fsdecode(b"note-\xfe.txt")
+    (invalid_directory / invalid_name).write_bytes(b"note\n")
+
+    assert indexing_common.index_target_hash(
+        literal_root, literal_directory
+    ) != indexing_common.index_target_hash(invalid_root, invalid_directory)
+
+
 def test_update_indexes_generates_sibling_entries_in_stable_render_order(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

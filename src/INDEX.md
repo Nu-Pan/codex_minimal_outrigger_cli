@@ -51,18 +51,20 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行基盤、Codex 呼び出し、設定・状態管理、Git・パス・ログ、feedback、editing run、INDEX 更新など、複数機能から再利用される共通処理を扱う。個別の機能を調査・変更するときは、ここから担当モジュールへ進む入口となる。
+- cmoc の commons パッケージとして、CLI・Codex 実行・設定・状態・Git・ログ・パス・feedback・editing run などで共有される runtime helper をまとめる領域。共通 API の公開入口から、各機能の個別実装や結果型、永続化・ライフサイクル管理へ進むための起点となる。
 
 ## Read this when
-- 複数の runtime 機能にまたがる共通 API、状態、実行ライフサイクル、保存先、エラー処理の関係を調査するとき
-- commons 配下の個別実装の担当領域を特定し、適切なモジュールへ進む必要があるとき
+- 複数の cmoc runtime 機能にまたがる共通 API、実行境界、状態管理、Git 操作、ログ、feedback、パス処理を横断して確認するとき
+- commons 配下の共通 helper の責務分担や、公開入口から個別 runtime 実装へ進む経路を把握するとき
+- Codex exec/TUI、INDEX preflight、editing run、doctor、feedback などの共通 runtime lifecycle を調査するとき
 
 ## Do not read this when
-- 特定の runtime helper のアルゴリズムや詳細仕様だけを調査する場合は、対応する個別モジュールを直接読むとき
-- CLI サブコマンド固有の業務ロジックや正本仕様だけを確認する場合は、該当する実装・仕様へ直接進むとき
+- 特定の runtime helper のアルゴリズムや個別機能の挙動だけを確認したいときは、対応する個別実装を直接読む
+- CLI サブコマンド固有の業務ロジックや利用者向け仕様だけを確認したいときは、該当する subcommand または正本仕様を直接読む
+- 設定型、feedback の schema、INDEX entry の生成規則など、commons の共通入口ではなく専用仕様が責務を持つ内容を確認するとき
 
 ## hash
-- 85cd87211ae4a7e982230a58f6b795ad71a42d4fab07d3fe72663ab507d8b349
+- f4e4864c1ca96f1debb2f962c4571a582ce59ebc8c85bd0aafc4bd06e72d7f97
 
 # `config`
 

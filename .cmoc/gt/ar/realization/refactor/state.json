@@ -799,9 +799,9 @@
   },
   "src/commons/indexing.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "d1a409629aa6096f9c87d815521f50f668ac4cf632b6133acdd514c521ebbc7e",
-    "last_investigated_at": "2026-08-06_14-14_18_536201000"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "8fefbe49f0e8e092762a94166e4d1007089cff74a7d3121229b67df722326886",
+    "last_investigated_at": "2026-08-13_02-48_49_448894000"
   },
   "src/commons/prompt_editor_input.py": {
     "investigation_required": false,

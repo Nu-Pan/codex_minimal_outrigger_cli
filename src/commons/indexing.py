@@ -402,21 +402,18 @@ def index_target_hash(root: Path, path: Path) -> str:
 def _directory_hash_relative_path(root: Path, path: Path) -> str:
     """directory hash 用 relative path を UTF-8 文字列へ正規化する。"""
     relative_path = path.relative_to(root).as_posix()
-    try:
-        relative_path.encode("utf-8")
-    except UnicodeEncodeError:
-        # filesystem の surrogateescape 由来 byte はそのまま UTF-8 にできない。
-        # percent encoding で ASCII の可逆表現へ変換し、hash serialization を
-        # {{work-root}}/oracle/doc/app_spec/indexing.md の UTF-8 文字列として保つ。
-        encoded_parts: list[str] = []
-        for character in relative_path:
-            codepoint = ord(character)
-            if 0xDC80 <= codepoint <= 0xDCFF:
-                encoded_parts.extend(f"%{byte:02X}" for byte in os.fsencode(character))
-            else:
-                encoded_parts.append(character)
-        return "".join(encoded_parts)
-    return relative_path
+    # filesystem の surrogateescape 由来 byte はそのまま UTF-8 にできない。
+    # percent encoding で ASCII の可逆表現へ変換し、literal の `%` も escape
+    # prefix として予約することで、異なる filename の hash 衝突を防ぐ。
+    # {{work-root}}/oracle/doc/app_spec/indexing.md
+    encoded_parts: list[str] = []
+    for character in relative_path:
+        codepoint = ord(character)
+        if character == "%" or 0xDC80 <= codepoint <= 0xDCFF:
+            encoded_parts.extend(f"%{byte:02X}" for byte in os.fsencode(character))
+        else:
+            encoded_parts.append(character)
+    return "".join(encoded_parts)
 
 
 def render_index_entry(
