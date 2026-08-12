@@ -45,18 +45,21 @@
 # `feedback`
 
 ## Summary
-- feedback issue の正規化・検証に関する builder adapter をまとめるパッケージ。canonical builder の互換 import 経路を提供し、対応する oracle 実装へ進むための入口となる。
+- feedback issue の正規化・検証に対応する builder adapter パッケージ。canonical builder の互換 import 経路を提供し、feedback の normalize／verify 用 agent call parameter 構築への入口となる。
+- normalize_issue.py は feedback issue の同一性判断用 builder、verify_issue.py は feedback issue candidate の検証用 builder を扱う。
 
 ## Read this when
-- feedback issue の normalization または verification に関する builder adapter の構成や公開経路を確認するとき。
-- feedback issue 用 builder の canonical 実装と互換 import 経路の対応関係を確認するとき。
+- feedback issue の normalization または verification に関する builder adapter の構成を確認するとき
+- feedback issue の同一性判断・candidate 検証用 agent call parameter の構築経路を確認するとき
+- 対応する canonical builder や oracle 実装との互換 import 関係を確認するとき
 
 ## Do not read this when
-- feedback 以外の builder adapter を調べるとき。
-- builder の prompt 構築、動的 JSON の保護、検証処理などの詳細を確認するときは、対応する oracle 実装を直接読む。
+- feedback 以外の builder adapter を調べるとき
+- canonical prompt の内容、判定基準、Structured Output schema など処理仕様の詳細を確認するときは、対応する oracle file を直接読む
+- prompt 内の動的 JSON に対する code fence 保護の共通実装を確認・変更するときは、その共通実装を直接読む
 
 ## hash
-- 68755f894e15ad969b0d39c64a1af28dc93d9cfd6df4b15920f8b97b7f997165
+- c1bd97eefb66acf06af9a48ed9e2cecadc9ba44a6e8b001964345c3c954bb0f8
 
 # `indexing`
 

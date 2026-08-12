@@ -598,10 +598,14 @@ def _processing_versions() -> JsonObject:
     normalize_canonical_builder = _builder_source_path(
         unwrap(build_feedback_normalize_issue_parameter)
     )
+    verify_canonical_builder = _builder_source_path(
+        unwrap(build_feedback_verify_issue_parameter)
+    )
     # normalization adapter が prompt を変換する helper も checkpoint version に含める。
     normalize_prompt_fence = normalize_builder.parents[1] / "common" / "prompt_fence.py"
+    verify_prompt_fence = verify_builder.parents[1] / "common" / "prompt_fence.py"
     normalize_schema = normalize_canonical_builder.with_suffix(".json")
-    verify_schema = verify_builder.with_suffix(".json")
+    verify_schema = verify_canonical_builder.with_suffix(".json")
     module_path = Path(__file__)
     state_path = module_path.parents[2] / "commons" / "runtime_feedback_state.py"
     return {
@@ -611,7 +615,11 @@ def _processing_versions() -> JsonObject:
             (normalize_prompt_fence,),
         ),
         "normalization_schema": sha256_bytes(normalize_schema.read_bytes()),
-        "verification_builder": sha256_bytes(verify_builder.read_bytes()),
+        "verification_builder": _builder_version_hash(
+            verify_builder,
+            verify_canonical_builder,
+            (verify_prompt_fence,),
+        ),
         "verification_schema": sha256_bytes(verify_schema.read_bytes()),
         "deterministic_processing": _combined_file_hash([module_path, state_path]),
     }

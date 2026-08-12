@@ -15,20 +15,17 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の report cut 固定から、normalization・全 candidate verification・正常 publication または incomplete 診断までを一つの transaction として実行する CLI runtime。
-- raw observation、active state、repository reference、処理バージョンを固定し、checkpoint による中断後の再開と deterministic な issue 集約を管理する。
-- verification 結果に基づき active generation・Markdown report・current pointer を publication し、判定不能 candidate がある場合は通常 publication せず診断 report を保存する。
-- feedback report サブコマンドの状態遷移、cleanup、interruption、publication ログを実装する下位実装への入口。
+- `cmoc feedback report` の publication／diagnostic pipeline を一つの transaction として実装する module。固定済み report cut、raw observation と current reference の検証、deterministic candidate 集約、normalization／verification checkpoint の再利用、正常 publication または incomplete 診断を扱う。
+- feedback report サブコマンドの状態機械と成果物処理の実装入口であり、report cut の作成・再開から generation、Markdown report、current pointer の publication、publication 後 cleanup までを確認する場合に読む。
 
 ## Read this when
-- `cmoc feedback report` の report cut、checkpoint 再開、candidate 集約、verification、publication、incomplete 診断の挙動を変更または調査するとき。
-- feedback raw observation と active state から current report が生成される処理経路を確認するとき。
-- publication 前後の中断処理、artifact cleanup、current pointer 更新、subcommand log 記録を確認するとき。
+- `cmoc feedback report` の全体フロー、report cut の固定・再開、checkpoint 付き normalization／verification、正常 publication または incomplete 診断の挙動を調べるとき。
+- feedback observation と active feedback state から candidate・machine aggregate を生成し、current reference を検証して publication する処理を変更するとき。
+- publication 前後の interruption、failure、cleanup、current pointer の状態遷移や subcommand log event を確認するとき。
 
 ## Do not read this when
-- feedback observation の保存・envelope 検証だけを扱うときは、raw observation の store 実装を直接読む。
-- issue normalization または verification 用 prompt・Structured Output schema の契約だけを扱うときは、対応する builder と schema を直接読む。
-- feedback state のデータ契約や report サブコマンドの正本仕様を確認するときは、対応する oracle file を読む。
+- feedback state の正本スキーマやサブコマンドの詳細仕様を確認する場合は、対応する oracle file を直接読む。
+- 個別の normalization／verification prompt builder、runtime state/store、report rendering helper の単独仕様を調べる場合は、該当する直接の実装または oracle file へ進む。
 
 ## hash
-- af5d2483affbd930c32cf16dfab300ca699ce37f184263262438017c55a22ed3
+- 906cad8e8ce596929a9baa261753805a4dea9c28f9a35d83891cb4b15da9dd5e

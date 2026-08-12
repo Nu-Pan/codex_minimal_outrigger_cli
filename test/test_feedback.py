@@ -424,6 +424,47 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
     assert candidate_json in candidate_section
 
 
+def test_feedback_verify_builder_protects_nested_code_fences(
+    tmp_path: Path,
+) -> None:
+    """verification の動的 JSON が prompt section の境界を閉じないことを検証する。"""
+    root = make_repo(tmp_path)
+    nested = "before\n```\ninside\n```\nafter"
+    candidate_json = json.dumps({"candidate_id": "fbi_" + "a" * 26, "summary": nested})
+    references_json = json.dumps(
+        [
+            {
+                "reference_id": "ref:readme",
+                "kind": "repository_content",
+                "content": nested,
+            }
+        ]
+    )
+
+    parameter = build_feedback_verify_issue_parameter(
+        candidate_json,
+        references_json,
+        root,
+    )
+
+    candidate_start = parameter.prompt.index("# issue candidate")
+    candidate_end = parameter.prompt.index(
+        "\n\n# report cut references", candidate_start
+    )
+    references_start = candidate_end + 2
+    references_end = parameter.prompt.index(
+        "\n\n# place holder definition", references_start
+    )
+    candidate_section = parameter.prompt[candidate_start:candidate_end]
+    references_section = parameter.prompt[references_start:references_end]
+    assert candidate_section.startswith("# issue candidate\n\n````json\n")
+    assert candidate_section.endswith("\n````")
+    assert references_section.startswith("# report cut references\n\n````json\n")
+    assert references_section.endswith("\n````")
+    assert candidate_json in candidate_section
+    assert references_json in references_section
+
+
 def test_feedback_processing_versions_hash_canonical_builders() -> None:
     """checkpoint version は prompt 構築 builder とその依存を識別する。"""
     normalize_adapter_path = feedback_report_module._builder_source_path(
@@ -434,6 +475,9 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
     )
     normalize_prompt_fence_path = (
         normalize_adapter_path.parents[1] / "common" / "prompt_fence.py"
+    )
+    verify_adapter_path = feedback_report_module._builder_source_path(
+        build_feedback_verify_issue_parameter
     )
     verify_path = feedback_report_module._builder_source_path(
         _build_canonical_verify_parameter
@@ -447,7 +491,7 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
     )
     assert (
         feedback_report_module._builder_source_path(
-            build_feedback_verify_issue_parameter
+            unwrap(build_feedback_verify_issue_parameter)
         )
         == verify_path
     )
@@ -458,9 +502,12 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
         (normalize_prompt_fence_path,),
     )
     assert versions["normalization_builder"] == normalization_version
-    assert versions["verification_builder"] == feedback_report_module.sha256_bytes(
-        verify_path.read_bytes()
+    verification_version = feedback_report_module._builder_version_hash(
+        verify_adapter_path,
+        verify_path,
+        (verify_adapter_path.parents[1] / "common" / "prompt_fence.py",),
     )
+    assert versions["verification_builder"] == verification_version
 
 
 def test_feedback_verification_postcondition_rejects_non_concrete_text() -> None:
