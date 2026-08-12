@@ -1386,7 +1386,7 @@
     "last_investigated_at": "2026-08-12_13-20_32_882512000"
   },
   "test/test_prompt_parts.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "0fa041092ec246271b4434a5135e1f2ccb0fe05fe0440bcb3d795a9525f44e93",
     "last_investigated_at": "2026-08-13_00-43_28_870436000"
