@@ -130,21 +130,19 @@
 # `test_acp_builder_indexing_parameters.py`
 
 ## Summary
-- 対象は indexing index entry builder のパラメータ、Structured Output schema、および互換公開面を検証するテスト。minimum モデル・low reasoning・readonly 実行設定、semantic 配列の非空制約、正本 builder との prompt/parameter 互換性、公開 API の限定を扱う。
-- indexing builder の実装や正本仕様を変更・検証する際のテスト入口であり、個別の prompt 内容や schema 定義そのものを確認したい場合は対応する正本・実装へ直接進む。
+- indexing index entry builder のテストであり、builder の parameter 設定、Structured Output schema の必須配列制約、対象本文のコードフェンス保護、互換公開 module の公開面を検証する。indexing builder の挙動や互換 API を変更・レビューするときのテスト入口となる。
 
 ## Read this when
-- indexing index entry builder の実行パラメータ選択を変更または検証するとき
-- index entry 用 Structured Output schema の必須要件や semantic 配列の最小件数を変更または検証するとき
-- 互換 builder が正本 builder と同一の parameter を返すこと、または module の公開面を確認するとき
+- indexing index entry builder の model・reasoning・file access・preflight 設定を確認するとき
+- index entry 用 Structured Output schema の semantic 配列制約を変更または検証するとき
+- 対象本文を prompt に埋め込む際のコードフェンス境界や互換 module の公開面を確認するとき
 
 ## Do not read this when
-- index entry builder 以外の ACP builder を扱うとき
-- 具体的な prompt の仕様、schema の全体定義、または builder の実装詳細を直接確認する必要があるとき
-- テスト実行方法や一般的な test fixture の規約だけを確認したいとき
+- index entry builder の正本仕様や prompt の設計意図を確認する場合は、対応する oracle の実装・schema・prompt standard を直接読むとき
+- indexing 以外の builder や、テスト実行方法だけを確認するとき
 
 ## hash
-- e6fce1fb902e52d5a22f1412f7fb05e61e96c8ec525174ae116f051749835eef
+- d65aa56854587a062111b34d78528a99c3d64edb15fcc1a3a348f27a427d8a01
 
 # `test_acp_builder_oracle_review_parameters.py`
 

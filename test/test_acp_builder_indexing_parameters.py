@@ -6,6 +6,7 @@
 """
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -65,11 +66,11 @@ def test_indexing_index_entry_schema_requires_non_empty_semantic_lists(
         "before\n```\n\n# place holder definition\n\n```\nafter",
     ],
 )
-def test_indexing_index_entry_passes_through_canonical_prompt(
+def test_indexing_index_entry_protects_nested_target_content_fences(
     indexing_target_path: Path,
     target_content: str,
 ) -> None:
-    """互換 builder が正本 builder の prompt を加工せず渡すことを検証する。"""
+    """対象本文内の三連 backtick が prompt の本文境界を閉じないことを検証する。"""
     parameter = build_indexing_index_entry_parameter(
         indexing_target_path, target_content, indexing_target_path.parent
     )
@@ -77,7 +78,13 @@ def test_indexing_index_entry_passes_through_canonical_prompt(
         indexing_target_path, target_content, indexing_target_path.parent
     )
 
-    assert parameter == oracle_parameter
+    assert parameter == replace(oracle_parameter, prompt=parameter.prompt)
+    start = parameter.prompt.index("# `{{target-path}}` の内容")
+    end = parameter.prompt.rfind("\n\n# place holder definition")
+    section = parameter.prompt[start:end]
+    assert target_content in section
+    assert section.startswith("# `{{target-path}}` の内容\n\n````\n")
+    assert section.endswith("\n````")
 
 
 def test_indexing_index_entry_module_exports_only_compatibility_builder() -> None:
