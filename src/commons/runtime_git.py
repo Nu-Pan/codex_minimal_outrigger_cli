@@ -914,9 +914,28 @@ def _repository_context_for_path(root: Path, candidate: Path) -> Path | None:
     work_root = root.absolute()
     absolute_candidate = candidate.absolute()
     try:
-        absolute_candidate.relative_to(work_root)
+        relative_candidate = absolute_candidate.relative_to(work_root)
     except ValueError:
         return None
+    if ".." in relative_candidate.parts:
+        return None
+
+    # {{work-root}}/oracle/doc/app_spec/misc_spec.md
+    # symlink の親を通る path は参照先を repository context や分類へ混入させるため、
+    # 最終 component の symlink path だけを扱う ignore 判定と区別して拒否する。
+    parent = work_root
+    for part in relative_candidate.parts[:-1]:
+        parent /= part
+        try:
+            metadata = parent.lstat()
+        except FileNotFoundError:
+            break
+        except OSError as exc:
+            raise _file_inventory_error(
+                parent, f"path を検証できません: {exc}"
+            ) from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            return None
     if absolute_candidate == work_root:
         return work_root
 
@@ -1048,6 +1067,9 @@ def is_realization_file_path(
     candidate = path if path.is_absolute() else root / path
     if _file_classification(root, candidate) != "realization":
         return False
+    repository = _repository_context_for_path(root, candidate)
+    if repository is None:
+        return False
     relative = candidate.absolute().relative_to(root.absolute())
     if branch and not _path_exists_without_following_symlinks(candidate):
         # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
@@ -1079,10 +1101,7 @@ def is_realization_file_path(
         return False
     if not _is_regular_file(candidate):
         return False
-    repository = _repository_context_for_path(root, candidate)
-    return repository is not None and not _is_untracked_git_ignored_in_repository(
-        repository, candidate
-    )
+    return not _is_untracked_git_ignored_in_repository(repository, candidate)
 
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:

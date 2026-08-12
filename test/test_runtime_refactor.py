@@ -103,6 +103,33 @@ def test_refactor_target_classifiers_require_file_entries(
     assert not is_realization_file_path(root, root / "missing.py")
 
 
+def test_refactor_target_classifiers_reject_symlinked_parent(
+    tmp_path: Path,
+) -> None:
+    """classifier が symlink 親を通じて work-root 外の file を扱わない。"""
+    root = make_repo(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    source = root / "src"
+    source.mkdir()
+    (source / "module.py").write_text("inside\n")
+    (source / "deleted.py").write_text("deleted\n")
+    run_git(root, "add", "src/module.py", "src/deleted.py")
+    run_git(root, "commit", "-m", "add realization module")
+    (outside / "module.py").write_text("outside\n")
+    (source / "module.py").unlink()
+    (source / "deleted.py").unlink()
+    source.rmdir()
+    source.symlink_to(outside, target_is_directory=True)
+    (root / "oracle" / "linked").symlink_to(outside, target_is_directory=True)
+
+    assert not is_realization_file_path(root, root / "src" / "module.py", branch="HEAD")
+    assert not is_realization_file_path(
+        root, root / "src" / "deleted.py", branch="HEAD"
+    )
+    assert not is_oracle_file_path(root, root / "oracle" / "linked" / "module.py")
+
+
 @pytest.mark.parametrize(
     "replacement",
     [

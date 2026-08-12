@@ -834,19 +834,20 @@
 # `test_runtime_refactor.py`
 
 ## Summary
-- realization refactor の永続 state 同期・検証・target 選択を検証するテスト。oracle と realization の正確な file 集合、履歴保持、変更時の再調査化、優先順位付き選択を扱う。path escape、非通常 file、symlink、gitlink、特殊 path、state schema・UTF-8・timestamp などの安全性と入力拒否も確認する。
+- realization refactor の永続 state 同期・検証・target 選択を検証するテスト。oracle と realization の対象集合、履歴保持、変更時の再調査化、state schema の拒否条件、path classifier の安全性、未調査・最古優先の選択規則を扱う。runtime_refactor や関連 classifier の挙動を確認する際のテスト入口となる。
 
 ## Read this when
-- refactor state の同期、読み書き、schema 検証、調査履歴の扱いを変更または確認するとき
-- oracle/realization file の分類規則や refactor target の選択ロジックを変更または検証するとき
-- state path や repository path の symlink・非通常 file・path escape 対策を確認するとき
+- refactor state の同期、読み書き、履歴保持、変更検出を変更または検証するとき。
+- oracle・realization file の path classifier が親 path escape、symlink、非通常 file、Gitlink、branch 上の特殊 path をどう扱うか確認するとき。
+- refactor target の優先順位や除外指定の挙動を確認するとき。
+- state の不正な path、timestamp、調査結果、文字コードなどに対するエラー処理を確認するとき。
 
 ## Do not read this when
-- refactor 以外の runtime 機能や、state・target 選択に関係しないテストを扱うとき
-- 正本仕様の内容を確認することが目的のときは、まず参照先として示された oracle 仕様を読む
+- refactor state や target selection に関係しない CLI 機能、一般的な Git 操作、または別のテスト領域だけを調べるとき。
+- 仕様上の定義や実装の責務を確認することが目的で、検証例そのものを読む必要がないときは、正本仕様または runtime_refactor の実装を直接読む。
 
 ## hash
-- 8f31764a0c1fd5af9a11d8cebcc100c7cddcb5d969b2b4e8e4230522032afe8a
+- 983e2bf8512b0c39237bf75266960b125f13bf3f4a8718b697fab06be77af3e4
 
 # `test_runtime_state.py`
 
