@@ -1410,10 +1410,10 @@
     "last_investigated_at": "2026-08-10_16-36_23_484864000"
   },
   "test/test_runtime_codex_profile.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "1ad54a1d64add564f00b59396b1e9514466389e5b371618643e1c36b3eae0710",
-    "last_investigated_at": "2026-08-09_18-29_32_017816000"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "868fe3c3f60b14fda88f4809f6307a3b8ebd08d4d0d3a33b5977689783c11bc1",
+    "last_investigated_at": "2026-08-12_15-33_42_634343000"
   },
   "test/test_runtime_config.py": {
     "investigation_required": false,
