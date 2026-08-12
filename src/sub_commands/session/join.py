@@ -69,7 +69,10 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
         raise CmocError("session home branch を特定できません。", [], str(path))
     start_subcommand_step(3, "session branch を merge", "merge session branch")
     try:
-        run_git(["switch", home], work)
+        # {{work-root}}/oracle/doc/app_spec/session_state.md:
+        # session_home_branch は local branch なので、同名 remote-tracking branch を
+        # Git に推測させて別の merge target を作らない。
+        run_git(["switch", "--no-guess", home], work)
         merge = git(["merge", "--no-ff", branch], work, check=False)
         if merge.returncode != 0:
             resolve_session_join_conflict(work, codex_exec, git)

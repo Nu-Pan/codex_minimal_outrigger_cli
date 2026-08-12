@@ -891,22 +891,20 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork・join・abandon の CLI 外部挙動を、session branch と session state のライフサイクルに沿って検証する回帰テスト群。
-- linked worktree、state の作成・更新・cleanup、rollback、session-id 衝突、dirty worktree 拒否、doctor preprocess の順序を扱う。
-- session join では conflict 解消、Codex 呼び出しの sandbox と prompt 境界、対象外差分の拒否、削除・mode・改行を含む path、branch 削除 warning、error report を検証する。
+- 対象は session fork／join／abandon の CLI 外部挙動を検証する回帰テスト群で、session branch と永続 state のライフサイクルを一つの状態遷移として扱う。fork の作成・衝突・rollback、abandon の復元・cleanup、join の merge・conflict 解消・branch cleanup、linked worktree、doctor preprocess、dirty worktree 拒否、エラー報告を確認する。session CLI の仕様変更や回帰調査で、これらの挙動を横断的に検証したいときの入口になる。
+- 対象は巨大な単一テストファイルだが、branch／state fixture を共有する session ライフサイクル検証を分散させず、同じ文脈で追跡するために集約されている。
 
 ## Read this when
-- session fork・join・abandon の利用者向け挙動を横断して回帰確認するとき
-- session branch と session state の作成、遷移、復元、削除を検証するとき
-- linked worktree 上の session 操作や doctor preprocess 前提を確認するとき
-- session join の conflict 解消、Codex 実行境界、対象外差分の拒否を確認するとき
+- session fork、join、abandon の外部挙動を変更・レビュー・デバッグするとき
+- session branch、session state、linked worktree、cleanup、conflict resolution の回帰を調査するとき
+- session CLI の dirty worktree 拒否、doctor preprocess、stdout／stderr のエラー報告、Codex conflict agent 境界を検証するとき
 
 ## Do not read this when
-- session サブコマンドの仕様や実装の詳細を確認したいときは、対応する正本仕様または実装を直接読む
-- session CLI 以外の機能や、共通 fixture・Git helper 単体の挙動だけを確認したいとき
+- session の実装詳細や正本仕様そのものを確認したいときは、対応する session サブコマンド実装または oracle 仕様を直接読む
+- session CLI と無関係なテスト、または session lifecycle を伴わない一般的な Git／Codex 挙動を調査するとき
 
 ## hash
-- 976d054a9c139de4a7152e992eb29694f2cb8d8d2f0a25305d1efcf47d4048a9
+- 6b7f2c6880b97d13c4bee24d972d24652db34d5083018b0e38811b78285a9da9
 
 # `test_skill_metadata.py`
 

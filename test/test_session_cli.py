@@ -1154,6 +1154,56 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
     assert f"session branch was not deleted: {session_branch}" in result.output
 
 
+def test_session_join_rejects_missing_home_branch_before_remote_guess(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """local home branch がない場合に同名 remote branch へ join しない。
+
+    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+    {{work-root}}/oracle/doc/app_spec/session_state.md
+    """
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
+    run_git(root, "branch", "-D", home_branch)
+
+    remote = tmp_path / "remote.git"
+    subprocess.run(
+        ["git", "init", "--bare", str(remote)],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    run_git(root, "remote", "add", "origin", str(remote))
+    run_git(root, "push", "origin", f"{home_commit}:refs/heads/{home_branch}")
+    run_git(root, "config", "checkout.defaultRemote", "origin")
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == session_branch
+    assert "git コマンドが失敗しました。" in result.stderr
+    assert "git switch --no-guess" in result.stderr
+    assert "git コマンドが失敗しました。" not in result.stdout
+    assert run_git(root, "branch", "--show-current").stdout.strip() == session_branch
+    assert (
+        run_git(
+            root,
+            "show-ref",
+            "--verify",
+            f"refs/remotes/origin/{home_branch}",
+        ).returncode
+        == 0
+    )
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == home_commit
+
+
 def test_session_join_error_report_is_written_to_stdout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

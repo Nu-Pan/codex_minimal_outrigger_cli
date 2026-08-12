@@ -115,16 +115,19 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの実行入口と、配下の workload・lifecycle 実装へ進むためのルーティング起点となる。apply および realization/review は現時点で具体的な実装本文がなく、実装追加時の配置先として扱う。
+- CLI サブコマンド実装をまとめる領域。各サブコマンドの実行入口や処理フローを確認する際の起点となる。
+- doctor、feedback、indexing、oracle、realization、run、session、tui の各領域へ進み、対象となるサブコマンドの実装や lifecycle を調査・変更する。
+- apply と realization/review は現在具体的な実装本文がなく、実装追加後の確認先として扱う。
 
 ## Read this when
-- CLI サブコマンドの実装構成や、特定サブコマンドの実行入口を確認・変更するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかの処理領域を調査するとき。
-- workload の実行、editing run の lifecycle、session の lifecycle、oracle 系処理、または TUI 起動処理への入口を探すとき。
+- CLI サブコマンドの構成や、複数サブコマンドにまたがる実装入口を確認するとき
+- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかの実行フローや lifecycle を調査・変更するとき
+- apply または realization/review の実装追加先や、配下の実装構成を確認するとき
 
 ## Do not read this when
-- 個別サブコマンドの詳細仕様や共通 helper の canonical 実装だけを確認するときは、対応する下位実装または oracle 仕様へ直接進む。
-- サブコマンド実装に関係しない処理を調査するとき。
+- 特定サブコマンドの詳細処理だけを確認するときは、対応する個別実装へ直接進む
+- oracle や doctor preprocess などの正本仕様を確認するときは、参照される oracle 文書を直接読む
+- CLI 共通ランタイム、共通 helper、Git 操作、state 管理などの実装詳細だけを確認するときは、対応する共通実装へ直接進む
 
 ## hash
-- 96573455773f38c465ce55578517a2403ad2d19094bead364d1e383a758e28c1
+- 51d0aeaa149e6c7fb4de6fafdf89663e7e157e7b71b3ff63e2b27d137e091270
