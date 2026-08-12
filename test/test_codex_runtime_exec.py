@@ -36,7 +36,7 @@ def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     assert "--json" in args
     assert "--output-last-message" in args
     assert args[-1] == "-"
-    assert all(prompt not in arg for arg in args)
+    assert prompt not in args
     assert "--profile" not in args
     assert "-p" not in args
     assert codex_arg_value(args, "--sandbox") in {"read-only", "workspace-write"}

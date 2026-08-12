@@ -269,22 +269,21 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ランタイムの統合テストを担い、実行引数・sandbox・override・stdin/stdout・生成結果・CODEX_HOME 分離を検証する。
-- 汎用 model provider の設定が Codex CLI に正しく渡され、組み込み local provider 用フラグを使わないことも確認する。
-- Codex 実行設定や provider 連携、出力解析、リポジトリ書き込み動作を変更・調査する際のテスト仕様の入口となる。
+- Codex CLI 実行ランタイムのテストを集約し、実行時の argv、stdin、作業ディレクトリ、sandbox・approval override、出力保存、リポジトリ書き込み、および CODEX_HOME 設定ファイル非生成を検証する。
+- 汎用 model provider の override が適用され、組み込み local provider 用フラグを使わないことを確認する。
+- Codex 実行処理や override 引数生成の挙動を変更・調査するときのテスト入口であり、Codex CLI の仕様そのものや provider 設定の正本を確認する場合は参照先として示された oracle 文書を直接読む。
 
 ## Read this when
-- Codex exec の argv 契約、prompt の stdin 渡し、sandbox または approval 設定を変更・検証するとき
-- Codex 実行によるファイル生成、出力ファイル、invalid UTF-8 の扱い、CODEX_HOME の設定ファイル非生成を確認するとき
-- 汎用 model provider の override や provider 設定の CLI 連携を変更・検証するとき
+- Codex exec の起動引数、stdin 渡し、sandbox・approval 設定、出力処理、作業ディレクトリ、または CODEX_HOME の扱いを変更・検証するとき。
+- Codex model provider の汎用 override や local provider 用 CLI フラグ不使用の挙動を確認するとき。
+- Codex 実行ランタイムの回帰テスト対象を特定するとき。
 
 ## Do not read this when
-- Codex 実行ランタイムや model provider の挙動に関係しないテストを調査するとき
-- 実装の責務や配置を確認したい場合は、対応する runtime または provider 実装を直接読むとき
-- テスト実行手順や全体の品質検査方法だけを確認する場合は、テスト実行ルールを読むとき
+- Codex CLI や model provider の正本仕様を確認することが目的で、テスト実装を調べる必要がないとき。
+- Codex 実行以外の機能、または共通 test helper 自体の責務を直接調べるとき。
 
 ## hash
-- da0c5fee023909e6ddf4596a63d57f4101daacc530ea0f703bcd64dea435bb05
+- c17774b35f2d0061f459a32b6d3670b3d6ed0ddcdf61cb161486155629318994
 
 # `test_codex_runtime_home.py`
 
