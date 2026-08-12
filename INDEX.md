@@ -129,24 +129,21 @@
 # `src`
 
 ## Summary
-- cmoc CLI の realization 側実装をまとめる `src` ツリーの入口。最上位 CLI、互換 import shim、共通 runtime、サブコマンド実装へ進むための routing を提供する。
-- `main.py` は Typer/Click による CLI 階層と引数解析・補完・エラー変換を扱い、`sub_commands` 配下へ各処理を委譲する。
-- `commons` は複数機能で共有する runtime helper、`acp`・`basic`・`config`・`cmoc_runtime.py`・`oracle.py` は正本実装や旧 import path への互換入口を扱う。
+- cmoc の CLI 実装と互換 import 入口をまとめる `src` 配下。最上位 CLI は Typer/Click のコマンド構成と引数解析を定義し、サブコマンド実装へ処理を委譲する。
+- `commons` は共通 runtime helper、`sub_commands` は CLI サブコマンド、`acp`・`basic`・`config`・`cmoc_runtime.py`・`oracle.py` は正本実装または旧 import path への互換入口を扱う。個別処理や共通機能の詳細へ進む際の上位入口となる。
 
 ## Read this when
-- cmoc の CLI 全体の入口、サブコマンド階層、引数解析、補完、CLI エラー変換を確認するとき。
-- 共通 runtime helper、状態管理、Git、Codex 実行、feedback、INDEX 更新などの共有実装の配置を特定するとき。
-- `acp.*`、`basic.*`、`config.*`、`cmoc_runtime`、`oracle.*` の互換 import 経路を確認するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui のサブコマンド実装へ進む入口を判断するとき。
+- cmoc の CLI 全体の入口、Typer/Click の引数解析、コマンド階層、補完、CLI エラー変換を確認するとき。
+- 共通 runtime 実装、CLI サブコマンド実装、または `acp.*`・`basic.*`・`config.*`・`cmoc_runtime`・`oracle.*` の互換 import 経路から対象領域を特定するとき。
+- 対象が `commons`、`sub_commands`、互換入口のいずれに属するかを判断し、対応する下位ファイルへ進むとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックや lifecycle の詳細を確認するときは、対応する `sub_commands` 配下を直接読む。
-- 正本仕様、正本 builder、正本設定、正本 `oracle.*` 実装を確認するときは、対応する `oracle` 側の対象を直接読む。
-- 特定の runtime helper や互換 shim の実装詳細だけを調べるときは、該当する下位ファイルを直接読む。
-- `src` 配下と無関係な仕様、テスト、利用箇所を調査するとき。
+- 特定サブコマンドの業務ロジックや状態遷移を確認するときは、対応する `sub_commands` 配下を直接読む。
+- 共通 runtime の個別機能や正本仕様を確認するときは、対応する `commons` モジュールまたは oracle 文書を直接読む。
+- 互換入口の公開関係だけでなく、正本側の実装・仕様や利用箇所を調査するときは、対応する正本対象または参照元へ直接進む。
 
 ## hash
-- f38bbbb3d5b83a6b82b27c56c25675137d624228a03a9c90c238b701c9f48d43
+- 204941e3b5818bc1eb2fc38b81310a8562a6f563dfed58ba6cd40ab3077e993d
 
 # `test`
 

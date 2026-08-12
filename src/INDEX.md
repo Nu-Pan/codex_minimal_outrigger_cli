@@ -119,18 +119,16 @@
 # `sub_commands`
 
 ## Summary
-- 各 cmoc サブコマンドの CLI 実装をまとめる領域。doctor、feedback、indexing、oracle、realization、run、session、tui などの実行入口と、サブコマンド固有の lifecycle・状態更新・検証・cleanup 処理へ進むための起点となる。
-- apply と review は現時点で具体的な実装本文がなく、将来そのサブコマンド実装を追加・確認する際の配置先として扱う。
+- CLI サブコマンド実装をまとめる領域。doctor、feedback、indexing、oracle、realization、run、session、tui などの実行入口と、各サブコマンド配下の具体的な処理へ進むための起点となる。
 
 ## Read this when
-- cmoc のサブコマンド実装の構成や、対象サブコマンドの実行入口を確認・変更するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかについて、CLI 実行フローやサブコマンド固有の処理へ進む必要があるとき。
-- apply または review の実装を追加・変更する場所を確認するとき。
+- サブコマンド全体の構成や、対象の実装入口を確認するとき。
+- 特定のサブコマンドの実行フロー、状態遷移、差分処理、report、cleanup などを調査・変更するときは、該当する下位実装へ進む。
+- oracle 系または realization workload 系の処理で、対象となる個別サブコマンドの位置を判断するとき。
 
 ## Do not read this when
-- サブコマンド共通の CLI ランタイム、Git、state、report writer などの canonical 実装詳細だけを確認したいとき。
-- サブコマンド固有の正本仕様、prompt、Structured Output schema、store、builder など、より直接該当する下位実装や oracle file を読むべきとき。
-- cmoc サブコマンドに関係しない処理を調査・変更するとき。
+- CLI 共通ランタイム、共通 helper、正本仕様、agent・schema・builder の詳細だけを確認する場合は、対応する直接の実装または仕様文書へ進む。
+- 対象がこの領域のサブコマンド実装に関係しない場合。
 
 ## hash
-- 3542bc46be628f06dfc5764aeb794d4e8e24e59513966e49b84e902999ff0594
+- 8ade8a2869248b344fe4124b69e04878f2d2114d4cc194a814df90e1a19e20f9

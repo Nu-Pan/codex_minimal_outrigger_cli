@@ -307,6 +307,7 @@ def _preserves_conflict_context(before: bytes, after: bytes) -> bool:
 
     @lru_cache(maxsize=None)
     def matches(segment_index: int, position: int) -> bool:
+        """指定位置から残りの conflict context segment を順序どおり探す。"""
         if segment_index == len(segments):
             # 最後の conflict block の置換本文は任意の line を含み得る。
             return True
