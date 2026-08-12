@@ -891,19 +891,22 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork・join・abandon の CLI 外部挙動をまとめて検証する回帰テスト。session branch と永続 state の生成・遷移・cleanup・rollback、linked worktree、dirty worktree 拒否、preprocess、conflict 解消を扱う。session ライフサイクルに関するテストの入口。
+- session fork・join・abandon の CLI 外部挙動を、session branch と session state のライフサイクルに沿って検証する回帰テスト群。
+- linked worktree、state の作成・更新・cleanup、rollback、session-id 衝突、dirty worktree 拒否、doctor preprocess の順序を扱う。
+- session join では conflict 解消、Codex 呼び出しの sandbox と prompt 境界、対象外差分の拒否、削除・mode・改行を含む path、branch 削除 warning、error report を検証する。
 
 ## Read this when
-- session fork、join、abandon の外部挙動を確認するとき
-- session branch、session state、linked worktree のライフサイクルや cleanup・rollback を検証するとき
-- session join の conflict 解消、変更範囲検証、出力先、dirty worktree 拒否を確認するとき
+- session fork・join・abandon の利用者向け挙動を横断して回帰確認するとき
+- session branch と session state の作成、遷移、復元、削除を検証するとき
+- linked worktree 上の session 操作や doctor preprocess 前提を確認するとき
+- session join の conflict 解消、Codex 実行境界、対象外差分の拒否を確認するとき
 
 ## Do not read this when
-- session サブコマンドの実装や正本仕様を確認するときは、対応する src または参照された oracle 文書を直接読む
-- session 以外の CLI 挙動や一般的な Git ヘルパーを確認するとき
+- session サブコマンドの仕様や実装の詳細を確認したいときは、対応する正本仕様または実装を直接読む
+- session CLI 以外の機能や、共通 fixture・Git helper 単体の挙動だけを確認したいとき
 
 ## hash
-- bdbe6b1446a4386312f1c290558c4fdc5be5b976d8d933aea7673fa772406db6
+- 976d054a9c139de4a7152e992eb29694f2cb8d8d2f0a25305d1efcf47d4048a9
 
 # `test_skill_metadata.py`
 

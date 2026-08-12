@@ -803,7 +803,7 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
 
 
-@pytest.mark.parametrize("change_kind", ["context", "mode"])
+@pytest.mark.parametrize("change_kind", ["context", "mode", "delete"])
 def test_session_join_rejects_extra_conflict_file_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change_kind: str
 ) -> None:
@@ -821,11 +821,19 @@ def test_session_join_rejects_extra_conflict_file_changes(
     )
     session_branch = current_branch(root)
     home_branch = session_home_branch(root, session_branch)
-    target.write_text("prefix\nsession change\nsuffix\n")
+    session_content = (
+        "session change\n"
+        if change_kind == "delete"
+        else "prefix\nsession change\nsuffix\n"
+    )
+    home_content = (
+        "home change\n" if change_kind == "delete" else "prefix\nhome change\nsuffix\n"
+    )
+    target.write_text(session_content)
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "session change")
     run_git(root, "switch", home_branch)
-    target.write_text("prefix\nhome change\nsuffix\n")
+    target.write_text(home_content)
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "home change")
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
@@ -837,7 +845,10 @@ def test_session_join_rejects_extra_conflict_file_changes(
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
-        """conflict marker 外または file mode を変更した agent を再現する。"""
+        """conflict marker 外の変更、file mode 変更、または file 削除を再現する。"""
+        if change_kind == "delete":
+            target.unlink()
+            return FakeCodexResult()
         target.write_text(
             "prefix\nresolved change\n"
             + ("changed suffix\n" if change_kind == "context" else "suffix\n")
@@ -854,7 +865,7 @@ def test_session_join_rejects_extra_conflict_file_changes(
     assert current_branch(root) == home_branch
     expected_summary = (
         "conflict 対象 file の不要な差分が残っています。"
-        if change_kind == "context"
+        if change_kind in {"context", "delete"}
         else "conflict 解消以外の差分が残っています。"
     )
     assert expected_summary in result.stderr

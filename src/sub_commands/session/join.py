@@ -245,10 +245,8 @@ def _reject_conflict_context_changes(before_contents: dict[Path, bytes]) -> None
     for path, before in before_contents.items():
         after = _read_regular_file(path)
         if after is None:
-            if path.exists() or path.is_symlink():
-                changed.append(path)
-                continue
-            after = b""
+            changed.append(path)
+            continue
         if not _preserves_conflict_context(before, after):
             changed.append(path)
     if changed:

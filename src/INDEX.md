@@ -115,17 +115,16 @@
 # `sub_commands`
 
 ## Summary
-- サブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui など、各 CLI 機能の実行入口やライフサイクル処理へ進むためのルーティング起点となる。apply と review は現在具体的な実装がなく、実装追加後の確認先として扱う。
+- CLI サブコマンドの実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの実行入口と、配下の workload・lifecycle 実装へ進むためのルーティング起点となる。apply および realization/review は現時点で具体的な実装本文がなく、実装追加時の配置先として扱う。
 
 ## Read this when
-- cmoc のサブコマンド実装の構成や、対象機能の CLI 実行入口を確認するとき。
-- 対象が doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかで、対応する実装ファイルへの入口を判断するとき。
-- realization workload、editing run、session lifecycle など、複数の下位実装にまたがる処理の入口を確認するとき。
+- CLI サブコマンドの実装構成や、特定サブコマンドの実行入口を確認・変更するとき。
+- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかの処理領域を調査するとき。
+- workload の実行、editing run の lifecycle、session の lifecycle、oracle 系処理、または TUI 起動処理への入口を探すとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な仕様や共通処理の実装だけを確認する場合は、対応する下位実装または oracle 仕様を直接読む。
-- サブコマンド以外の共通 CLI ランタイム、個別 helper、Git 操作、state 管理の詳細だけを調査するとき。
-- apply または review の具体的な処理を確認する場合は、実装が追加されるまでこのディレクトリ内に読むべき実装本文はない。
+- 個別サブコマンドの詳細仕様や共通 helper の canonical 実装だけを確認するときは、対応する下位実装または oracle 仕様へ直接進む。
+- サブコマンド実装に関係しない処理を調査するとき。
 
 ## hash
-- 97fec361101f3509ca1ab462741515f57312fc7f77cb0de454915e792ccffdbf
+- 96573455773f38c465ce55578517a2403ad2d19094bead364d1e383a758e28c1
