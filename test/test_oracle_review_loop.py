@@ -18,7 +18,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
-from _git_support import make_repo
+from _git_support import make_repo, run_git
 
 import sub_commands.oracle.review as review_module
 import sub_commands.oracle.review_loop as review_loop_module
@@ -57,18 +57,28 @@ def _purpose(kwargs: dict[str, object]) -> str:
 def _make_review_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Path, Path]:
-    """ログ用 repo root と実行用 review worktree を分離して用意する。
+    """同じ repository の main root と linked review worktree を用意する。
 
     根拠:
 
     - {{work-root}}/oracle/doc/dev_rule/test_rule.md
     - {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    - {{work-root}}/oracle/doc/app_spec/run_isolation.md
     """
     repo_root = make_repo(tmp_path)
     review_parent = tmp_path / "review"
     review_parent.mkdir()
-    review_worktree = make_repo(review_parent)
-    monkeypatch.chdir(review_worktree)
+    review_worktree = review_parent / "worktree"
+    run_git(
+        repo_root,
+        "worktree",
+        "add",
+        "-b",
+        "review-test",
+        str(review_worktree),
+        "HEAD",
+    )
+    monkeypatch.chdir(repo_root)
     return repo_root, review_worktree
 
 
@@ -78,11 +88,12 @@ def _assert_review_call_context(
     repo_root: Path,
     review_worktree: Path,
 ) -> None:
-    """review agent call が隔離 worktree を実行基準にすることを検証する。
+    """process cwd を変えず、agent call parameter だけを隔離 worktree に束縛する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_review.md
+    および {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     """
-    assert Path.cwd() == review_worktree
+    assert Path.cwd() == repo_root
     assert kwargs["root"] == repo_root
     assert "cwd" not in kwargs
     assert parameter.agent_call_cwd == review_worktree
