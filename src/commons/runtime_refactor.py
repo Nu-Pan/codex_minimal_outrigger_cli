@@ -184,6 +184,8 @@ def is_normalized_relative_path(value: str) -> bool:
         bool(path.parts)
         and "\x00" not in value
         and not path.is_absolute()
+        and not path.drive
+        and not path.root
         and ".." not in path.parts
         and path.as_posix() == value
     )

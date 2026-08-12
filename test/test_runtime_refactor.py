@@ -16,6 +16,7 @@ from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_git import is_oracle_file_path, is_realization_file_path
 from commons.runtime_refactor import (
     RefactorState,
+    is_normalized_relative_path,
     load_refactor_state,
     select_refactor_target,
     sync_refactor_state,
@@ -344,6 +345,12 @@ def test_refactor_state_rejects_parent_path_escape(tmp_path: Path) -> None:
 
     with pytest.raises(CmocError, match="refactor state"):
         load_refactor_state(root)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows path semantics are unavailable")
+def test_refactor_state_rejects_drive_relative_path() -> None:
+    """Windows の drive-relative path を work-root 相対 path として受け入れない。"""
+    assert not is_normalized_relative_path("C:outside")
 
 
 @pytest.mark.parametrize("result", [[], {}])
