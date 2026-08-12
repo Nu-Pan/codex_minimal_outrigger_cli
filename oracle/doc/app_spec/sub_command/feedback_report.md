@@ -159,7 +159,7 @@ schema または決定論的事後条件に適合する output を補正後も�
 
 ### `incomplete` result
 
-全 candidate の verification output を受理でき、1 件以上が `inconclusive` だった場合は `result: incomplete` とする。`inconclusive` は、正常 publication を完了できなかった report processing blocker であり、`unresolved` または active issue ではない。
+全 candidate の verification output を受理でき、1 件以上が `inconclusive` であり、診断 report を durable に保存して report cut を terminal な `incomplete` として確定できた場合は `result: incomplete` とする。`inconclusive` は、正常 publication を完了できなかった report processing blocker であり、`unresolved` または active issue ではない。
 
 `incomplete` では、state 仕様に従って診断 report だけを durable に保存する。確定した `unresolved | resolved | not_actionable` の正式な checkpoint は、同じ cut の確定済み結果として扱う。ただし、その結果を新しい active generation へ部分 publication してはならない。
 
@@ -169,7 +169,7 @@ validation failure、AI call failure、Structured Output の受理失敗、state
 
 正常 publication と `incomplete` のどちらも成立しない場合は、新しい正常 publication を行わない。直前の current pointer を維持し、未検証 candidate や前回の active issue を新しい report として提示しない。
 
-current pointer の切替後に cleanup だけが失敗した場合は、publication 済みの result を巻き戻さない。warning と cleanup manifest path を示し、次回 invocation で cleanup を再開する。
+current pointer の切替後に cleanup だけが失敗した場合は、publication 済みの result を巻き戻さない。warning と cleanup manifest path を示し、終了コード 0 とする。次回 invocation で cleanup を再開する。
 
 ## ユーザー中断と再開
 
@@ -253,7 +253,9 @@ active generation ID は含めない。診断 report の先頭には、正常 pu
 
 ## 終了コード
 
-- `ok`、`attention`、およびユーザー中断は終了コード 0 とする。
-- `incomplete`、validation failure、AI call failure、state corruption、required cleanup recovery failure、診断 report の durable 保存失敗、および durable publication failure は終了コード 1 とする。
+- `ok`、`attention`、`incomplete`、およびユーザー中断は終了コード 0 とする。
+- validation failure、AI call failure、Structured Output の受理失敗、state corruption、required cleanup recovery failure、診断 report の durable 保存失敗、および durable publication failure は終了コード 1 とする。
+
+終了コードは、今回の invocation が利用可能な report result を終端状態として確定できたかを表す。直前の正常 report が current のまま残っていること、または一般的なエラー説明を出力できたことだけでは、今回の invocation が report result を確定したとはみなさない。
 
 issue の件数、category、impact、または human action だけを理由に非 0 を返してはならない。終了コードは本コマンド自身の処理結果だけを表し、他 workload の成功判定へ伝播させない。
