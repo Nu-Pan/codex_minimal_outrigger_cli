@@ -8,10 +8,11 @@ from commons.runtime_run_lifecycle import is_generated_index_path
 def commit_review_index_changes(review_worktree: Path) -> bool:
     """review worktree 上の INDEX.md 変更だけを commit する。"""
     changed_paths = review_worktree_status_paths(review_worktree)
+    base_commit = head_commit(review_worktree) if changed_paths else None
     non_index = [
         path
         for path in changed_paths
-        if not is_generated_index_path(review_worktree, path)
+        if not is_generated_index_path(review_worktree, path, base=base_commit)
     ]
     if non_index:
         raise CmocError(
@@ -20,19 +21,15 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
             "\n".join(non_index),
         )
     changed_index_paths = [
-        path for path in changed_paths if is_generated_index_path(review_worktree, path)
+        path
+        for path in changed_paths
+        if is_generated_index_path(review_worktree, path, base=base_commit)
     ]
     if not changed_index_paths:
         return False
-    run_git(
-        [
-            "add",
-            "-A",
-            "--",
-            *[literal_pathspec(path) for path in changed_index_paths],
-        ],
-        review_worktree,
-    )
+    # 変更済み path は上で全て generated INDEX.md と確認済みなので、rename 元の
+    # 親 directory が消えていても削除側を含めてまとめて stage できるようにする。
+    run_git(["add", "-A"], review_worktree)
     staged = run_git(
         ["diff", "--cached", "--name-only"], review_worktree
     ).stdout.splitlines()

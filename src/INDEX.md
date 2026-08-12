@@ -119,18 +119,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui などの各コマンド入口と実行ライフサイクルへ進むための起点となる。
-- apply は現時点で実装がなく、実装追加後に確認する対象として扱う。oracle と realization は配下の個別実装へ、run は編集 run の共通 lifecycle や互換 shim へ進む入口である。
+- 各 cmoc サブコマンドの CLI 実装をまとめる領域。doctor、feedback、indexing、oracle、realization、run、session、tui などの実行入口と、サブコマンド固有の lifecycle・状態更新・検証・cleanup 処理へ進むための起点となる。
+- apply と review は現時点で具体的な実装本文がなく、将来そのサブコマンド実装を追加・確認する際の配置先として扱う。
 
 ## Read this when
-- CLI サブコマンドの構成や、対象コマンドの実装入口を確認するとき。
-- doctor、feedback、indexing、oracle、realization、run、session、tui の実行フローやライフサイクル実装を調査・変更するとき。
-- apply サブコマンドの実装が追加され、その内容を確認するとき。
+- cmoc のサブコマンド実装の構成や、対象サブコマンドの実行入口を確認・変更するとき。
+- doctor、feedback、indexing、oracle、realization、run、session、tui のいずれかについて、CLI 実行フローやサブコマンド固有の処理へ進む必要があるとき。
+- apply または review の実装を追加・変更する場所を確認するとき。
 
 ## Do not read this when
-- サブコマンド以外の共通実装や正本仕様だけを確認したいときは、対応する commons、builder、schema、oracle file を直接読む。
-- 特定サブコマンド配下の個別処理だけを調査するときは、このディレクトリではなく該当する下位実装へ直接進む。
-- apply 以外のサブコマンドを扱う際に、未実装の apply 入口を読む必要はない。
+- サブコマンド共通の CLI ランタイム、Git、state、report writer などの canonical 実装詳細だけを確認したいとき。
+- サブコマンド固有の正本仕様、prompt、Structured Output schema、store、builder など、より直接該当する下位実装や oracle file を読むべきとき。
+- cmoc サブコマンドに関係しない処理を調査・変更するとき。
 
 ## hash
-- 9a835cc0fa328c399ff20d8c6628f5d5b0674548de1e8479c7c1234db11ef49f
+- 3542bc46be628f06dfc5764aeb794d4e8e24e59513966e49b84e902999ff0594

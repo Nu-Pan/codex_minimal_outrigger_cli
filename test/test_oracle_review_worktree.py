@@ -1067,6 +1067,29 @@ def test_commit_review_index_changes_accepts_nested_untracked_index(
     )
 
 
+def test_commit_review_index_changes_accepts_generated_index_directory_rename(
+    tmp_path: Path,
+) -> None:
+    """生成済み INDEX.md の親 directory rename を INDEX 差分として commit する。"""
+
+    root = make_repo(tmp_path)
+    old_directory = root / "old-directory"
+    old_directory.mkdir()
+    (old_directory / "INDEX.md").write_text("# generated\n")
+    run_git(root, "add", "old-directory/INDEX.md")
+    run_git(root, "commit", "-m", "add generated index")
+
+    run_git(root, "mv", "old-directory", "new-directory")
+
+    assert review_module.commit_review_index_changes(root) is True
+    assert not old_directory.exists()
+    assert (root / "new-directory" / "INDEX.md").exists()
+    assert (
+        run_git(root, "show", "--format=", "--name-only", "HEAD").stdout.strip()
+        == "new-directory/INDEX.md"
+    )
+
+
 def test_review_branch_accepts_index_path_with_git_quoted_parent(
     tmp_path: Path,
 ) -> None:
