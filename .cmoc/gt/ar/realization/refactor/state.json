@@ -104,8 +104,8 @@
   "oracle/doc/app_spec/prompt_standard.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "1e9cd5e7db4c1c92d20aacef558e51e33f68c06775436477ee6654b9c276a8e9",
-    "last_investigated_at": "2026-08-10_17-08_54_021441000"
+    "last_investigated_sha256": "a7597c976cb355d28698b4aefb330f58dc774789363bc379f47c4bbd9ce8952a",
+    "last_investigated_at": "2026-08-13_00-25_52_523608000"
   },
   "oracle/doc/app_spec/run_isolation.md": {
     "investigation_required": true,
