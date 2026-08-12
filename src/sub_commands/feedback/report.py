@@ -2308,7 +2308,7 @@ def _publish_incomplete_report(
     typer.echo(f"- unresolved candidates: `{unresolved_count}`")
     typer.echo(f"- inconclusive candidates: `{inconclusive_count}`")
     typer.echo("- normal publication: `not completed`")
-    return 1
+    return 0
 
 
 def _next_machine_aggregates(

@@ -129,36 +129,36 @@
 # `src`
 
 ## Summary
-- cmoc CLI の実装入口。Typer/Click によるトップレベル command 階層、引数解析、補完、CLI エラー変換を定義し、doctor・tui・session・oracle・realization・run・feedback・indexing の処理を各 subcommand へ委譲する。
-- CLI の共通 runtime helper、Codex 実行、Git・設定・状態・ログ・feedback・INDEX 更新、ACP builder adapter、および互換 import 入口を含む実装領域。CLI の個別処理や共通 helper、builder の詳細を調査する際の上位入口となる。
+- cmoc CLI の実装ルート。Typer/Click による最上位コマンド、引数解析、補完、エラー変換を定義し、doctor・session・oracle・realization・run・feedback・tui などの処理を下位実装へ委譲する。
+- 互換 import の公開入口も含む。`oracle.*` パッケージ解決、`cmoc_runtime` の再公開、`basic.*` と `acp.*` の互換入口を確認し、個別機能の実装や正本仕様へ進むための起点となる。
 
 ## Read this when
-- cmoc の CLI 全体の command 構成、トップレベルの引数解析、補完、エラー変換を確認・変更するとき
-- doctor、tui、session、oracle、realization、run、feedback、indexing の実行入口を横断して探索するとき
-- CLI 実行を支える runtime helper、Codex 呼び出し、Git・設定・状態・ログ・feedback・INDEX 更新の配置を把握するとき
-- ACP 互換 builder、realization や oracle の実行入口、または `basic.*`・`config.*`・`cmoc_runtime` の互換 import 経路を調査するとき
+- cmoc の CLI 全体の入口、コマンド階層、引数解析、補完、または CLI エラー変換を確認するとき
+- doctor、session、oracle、realization、run、feedback、tui の実装入口を選ぶとき
+- `oracle.*`、`cmoc_runtime`、`basic.*`、`acp.*` の互換 import 経路や移行境界を確認するとき
 
 ## Do not read this when
-- 特定の subcommand、runtime helper、ACP builder、互換 shim の具体的な挙動だけを確認したいときは、該当する下位対象を直接読む
-- oracle の正本仕様や `oracle.*` の実体実装を確認するときは、oracle 側の対応する仕様・実装を直接読む
-- src の CLI や runtime 実装と無関係な処理を調査するとき
+- 特定サブコマンドの lifecycle や業務ロジックを確認したいときは、対応する `sub_commands` 配下を直接読む
+- 共有 runtime helper、Git、state、logging、feedback、path 処理の詳細を確認したいときは、対応する `commons` 配下を直接読む
+- `oracle.*` の正本実装や `basic.*`・`acp.*` の個別 API の仕様を確認したいときは、対応する正本または下位モジュールを直接読む
 
 ## hash
-- de926660d5fd49181fd091a805ff1e43d37883277e2a33df6c6145e14157fd52
+- ea90dedec8468d5129d6342f545f7294ed10483d83093ca8d0d02a574a03c311
 
 # `test`
 
 ## Summary
-- pytest による realization test 群をまとめたディレクトリ。CLI、runtime、Codex 実行、session/run lifecycle、oracle review、indexing、config、Windows toast など、実装の外部挙動や回帰条件を検証する各テストへの入口となる。
+- pytest による realization test 群を集約し、ACP builder、Codex runtime、CLI lifecycle、indexing、oracle review、session/run state、設定、通知などの外部挙動と境界条件を検証するテスト入口。個別機能の回帰テストへ進むための階層。
 
 ## Read this when
-- 対象機能の外部挙動、境界条件、回帰テスト、または対応する realization test の所在を確認するとき。
-- CLI、Codex runtime、indexing、oracle review、session/run、config、Git、worktree、通知などの検証対象を横断して探すとき。
+- 対象機能の外部契約、回帰条件、異常系、CLI・Git・worktree・subprocess 連携をテスト側から確認するとき。
+- 実装変更に対応する専用テストや、関連する統合 lifecycle test の所在を特定するとき。
+- テスト対象が複数の runtime・CLI・永続 state にまたがり、単体テストだけでは検証範囲を把握できないとき。
 
 ## Do not read this when
-- 実装の責務や正本仕様そのものを確認するときは、対応する src または oracle の対象を直接読む。
-- テスト対象に関係しない領域を調査するとき。
-- テスト共通 helper の責務だけを確認するときは、該当する support ファイルを直接読む。
+- 正本仕様、Structured Output schema、prompt 規範、または実装責務そのものを確認する場合は、対応する oracle 文書・schema・実装を直接読むとき。
+- テスト実行環境や共通 fixture だけを確認する場合は、該当する共通 support ファイルやテスト実行規則へ直接進むとき。
+- 対象機能が明確で、その機能専用のテストファイルを直接読む方が適切なとき。
 
 ## hash
-- df4aa1060c4931ce683f64ef9362b7f4f80b5c3373537a2eb830259b7bc09b98
+- a506312a0b9baf6fee33bb550cc76c5bfdbb610551822b6eabe950c5017f091c
