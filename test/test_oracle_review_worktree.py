@@ -388,6 +388,35 @@ def test_oracle_review_interrupt_during_preconditions_writes_report(
     assert run_git(root, "branch", "--list", "cmoc/run/*").stdout == ""
 
 
+def test_oracle_review_interrupt_during_doctor_writes_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """doctor preprocess 中の中断でも review report を保存する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    def interrupt_doctor(_root: Path) -> None:
+        """doctor preprocess 中のユーザー中断を再現する。"""
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(review_module, "run_doctor_preprocess", interrupt_doctor)
+
+    result = runner.invoke(
+        app,
+        ["oracle", "review", "--scope", "full"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    report = report_path.read_text()
+    assert "result: interrupted" in report
+    assert "oracle_count_total: 0" in report
+    assert "oracle_count_evaluated: 0" in report
+
+
 def test_oracle_review_interrupt_after_branch_only_creation_cleans_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

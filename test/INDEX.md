@@ -626,19 +626,23 @@
 # `test_oracle_review_worktree.py`
 
 ## Summary
-- このテストモジュールは、`oracle review` の隔離 run における worktree・branch lifecycle と、生成された INDEX.md の検証・統合を回帰テストする。session branch／snapshot commit を起点にした linked worktree、衝突回避、割り込み・例外時の cleanup、lifecycle lock、merge rollback、差分制約、preflight の worktree context、INDEX.md の commit と conflict 解決までを対象とし、oracle review の実装や仕様変更時に外部挙動を確認するための入口である。
+- review 用の隔離 worktree と branch の lifecycle、および review で生成された INDEX.md の検証・統合を回帰テストする。
+- oracle review の対象 worktree 選択、snapshot からの fork、衝突回避、割り込み・例外時の cleanup、merge rollback、差分制約、preflight path context、report、notification を検証する。
+- oracle review の review worktree lifecycle、INDEX 差分の許可範囲、merge conflict 復旧、cleanup 失敗を変更または検証するときの入口である。
 
 ## Read this when
-- oracle review の run worktree、session branch、snapshot fork、branch/worktree cleanup、割り込み時の report を変更・調査するとき
-- oracle review による INDEX.md の preflight、差分検証、session への merge、merge conflict rollback を変更・調査するとき
-- これらの lifecycle や INDEX 統合に関する回帰テストの追加・変更・失敗原因を確認するとき
+- oracle review の隔離 run がどの branch・commit・worktree を使うか確認するとき
+- review worktree の作成・cleanup、割り込みや予期しない例外、lifecycle lock の挙動を変更または検証するとき
+- review branch から INDEX.md のみを session に統合する条件、差分検証、merge conflict の復旧を確認するとき
+- oracle review の report や terminal notification の回帰挙動を確認するとき
 
 ## Do not read this when
-- oracle review の一般的な所見判定ロジックや Structured Output の内容だけを確認するときは、review 実装または専用 schema を直接読む
-- oracle review と無関係な run lifecycle、worktree、INDEX.md 更新の挙動を扱うときは、それぞれの実装・仕様・テストを直接読む
+- oracle review の実装そのものを調べるときは、対応する sub_commands の実装を直接読む
+- 一般的な INDEX.md 生成規則だけを確認するときは、indexing の正本仕様を直接読む
+- oracle review と無関係な worktree lifecycle、merge、またはテストを扱うとき
 
 ## hash
-- 8e19c752fb5d604003082d6c0c583e6de0b67236c96532f3dc167ed934d97a8d
+- 8bca1e26933ec2546d6724e29ae447897a85931569345c5d07b769df1d664054
 
 # `test_packaged_import.py`
 
