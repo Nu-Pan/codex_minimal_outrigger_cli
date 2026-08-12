@@ -350,6 +350,13 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     return payload
 
 
+def _is_tui_call_log(path: Path) -> bool:
+    """exec ではない共通 call log を TUI の呼び出しとして判定する。"""
+    payload = json.loads(path.read_text())
+    argv = payload["argv"]
+    return isinstance(argv, list) and "exec" not in argv
+
+
 def _load_session_state(root: Path, branch: str) -> tuple[Path, dict[str, Any]]:
     """session branch に対応する外部永続 state を読み込む。"""
     session_id = branch.removeprefix("cmoc/session/")
@@ -677,7 +684,7 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert response.strip()
     assert "Shutting down" in transcript
     new_calls = _codex_call_logs(root) - calls_before
-    tui_calls = {path for path in new_calls if path.name.endswith("_tui_call.json")}
+    tui_calls = {path for path in new_calls if _is_tui_call_log(path)}
     exec_calls = new_calls - tui_calls
     assert len(tui_calls) == 1
     tui_payload = _assert_real_codex_call(next(iter(tui_calls)), tui=True)

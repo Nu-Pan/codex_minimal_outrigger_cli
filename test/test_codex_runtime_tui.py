@@ -30,7 +30,7 @@ from config.cmoc_config import CmocConfig
 def _tui_call_logs(root: Path) -> list[Path]:
     """repository に書き込まれた TUI call log を返す。"""
     directory = root / ".cmoc" / "gu" / "ar" / "log" / "codex"
-    return list(directory.glob("*_tui_call.json"))
+    return list(directory.glob("*_call.json"))
 
 
 # 根拠: TUI の prompt、アクセス境界、Codex 呼び出し、ログ出力を検証する。
@@ -227,8 +227,8 @@ def test_run_codex_tui_keeps_call_logs_on_timestamp_collision(
 
     call_logs = sorted(_tui_call_logs(root))
     assert [path.name for path in call_logs] == [
-        "2026-06-27_10-00_00_000001000_tui_call.json",
-        "2026-06-27_10-00_00_000002000_tui_call.json",
+        "2026-06-27_10-00_00_000001000_call.json",
+        "2026-06-27_10-00_00_000002000_call.json",
     ]
     assert [json.loads(path.read_text())["timestamp"] for path in call_logs] == [
         "2026-06-27_10-00_00_000001000",

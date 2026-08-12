@@ -172,22 +172,21 @@
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI の起動処理を担当し、設定上書き、作業ディレクトリ・Codex ホームの解決、通知 callback、call log、feedback call、実行結果とエラーの記録をまとめて管理する。
-- Codex CLI/TUI の呼び出し経路や、起動時のログ・通知・feedback 連携、失敗時の例外処理を確認したい場合の入口となる。
+- Codex TUI の起動処理を担う実装。エージェント呼び出しパラメーターから作業ディレクトリ、設定上書き argv、CODEX_HOME、通知 callback、call log、feedback 用環境を準備し、Codex サブプロセスを実行する。
+- Codex 呼び出しの成功・失敗をコンソールおよび logger に記録し、起動失敗は再送出し、サブプロセス失敗は call log の場所を含む CmocError に変換する。Codex TUI 呼び出し全体の実行経路を確認する入口として使用する。
 
 ## Read this when
-- Codex TUI の起動方法、引数や環境変数の準備を変更・調査するとき
-- Codex 呼び出しの call log、実行時間、return code、logger event の記録を確認するとき
-- TUI 起動時の通知 callback や feedback call のライフサイクルを確認するとき
-- Codex CLI/TUI 呼び出し失敗時の例外変換やエラー報告を確認するとき
+- Codex TUI または Codex CLI サブプロセスの起動経路を追跡するとき。
+- Codex の設定上書き、作業ディレクトリ、CODEX_HOME、通知 callback、feedback 連携、call log の生成を変更・確認するとき。
+- Codex 呼び出しのログ記録、例外処理、終了コードの扱いを変更・確認するとき。
 
 ## Do not read this when
-- Codex TUI 以外の Codex subprocess 実行処理だけを確認したいときは、実際の subprocess 実行を担う対象を直接読む
-- Codex の設定値の読み込み・上書き規則そのものだけを確認したいときは、設定処理を担う対象を直接読む
-- 共通ログ、通知、feedback、パス解決の個別実装だけを確認したいときは、それぞれの専用対象を直接読む
+- Codex サブプロセスを起動せず、設定上書き argv の組み立てだけを確認する場合は runtime_codex_profile 側を直接読む。
+- Codex 呼び出しの設定ファイル読込だけを確認する場合は runtime_config 側を直接読む。
+- ログ保存、feedback、Windows 通知の個別仕様や実装だけを確認する場合は、それぞれの専用モジュールまたは正本仕様を直接読む。
 
 ## hash
-- fd2b2c22bfd19e952764e4546585555f06a45612fc050fffb1f75b27c09f6063
+- ce6c1bbf3143cad0b3d566c85d9899ff5b122f3b56ce56d146b68afcb809e691
 
 # `runtime_config.py`
 

@@ -373,20 +373,19 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 実行ラッパーのテスト入口。完成済み prompt の読み込み、作業ディレクトリ・sandbox・CLI 引数の制約、成功・CLI 不在・KeyboardInterrupt・非 0 終了時の call log／サブコマンドイベント／コンソール要約を検証する。TUI 実行時のアクセス境界やログ仕様のテストを追加・変更・調査するときに読む。
+- `run_codex_tui` の実行契約を検証するテスト群。prompt の読み込みとファイルアクセスモード、Codex CLI の作業ディレクトリ・引数、成功／失敗時の call log・サブコマンドイベント・コンソール要約を扱う。
 
 ## Read this when
-- Codex TUI の実行経路、prompt 読み込み、linked worktree 対応、CLI 呼び出し引数を検証するとき
-- TUI 呼び出しの成功・失敗・割り込み時における call log、イベント、コンソール出力の挙動を確認するとき
-- TUI 関連の realization test の要件や既存ケースを把握するとき
+- TUI 呼び出しで、完成済み prompt、リポジトリの linked worktree、アクセスモード、CLI 引数が期待どおり維持されることを確認したいとき
+- Codex CLI の正常終了、非 0 終了、CLI 不在、KeyboardInterrupt に対するエラー処理とログ記録を確認したいとき
+- TUI call log の timestamp 衝突時の保持や、サブコマンドログとの対応を確認したいとき
 
 ## Do not read this when
-- Codex TUI の実装自体を変更・調査する場合は、まず対応する realization 実装と正本仕様を読む
-- TUI 以外の Codex 実行経路、一般的なログ機構、別サブコマンドのテストだけを扱う場合
-- テスト実行方法や開発環境の設定だけを確認する場合は、専用の開発ルールを直接読む
+- Codex TUI の実装詳細や正本仕様を確認したいときは、対応する runtime 実装または oracle 文書を直接読む
+- TUI ではない Codex 実行経路や、一般的な Git・テストヘルパーの挙動だけを確認したいとき
 
 ## hash
-- 31cbc124383f272312f9699cd74e209aef041c0e04e316dbe39546d48a0d1540
+- ccd887bb5605fd77e7e7033d089a14e3174a148c8cd12b5e169062bf88eac467
 
 # `test_doctor_cli.py`
 
@@ -662,20 +661,22 @@
 # `test_production_cli.py`
 
 ## Summary
-- 全末端サブコマンドを、独立プロセス・実 Codex CLI・実推論を用いた本番経路で検証する受け入れ試験。CLI の終了コード、report・state・Git 状態、Codex call log、TUI の応答完了と終了を確認し、LLM の回答品質自体は判定しない。非対話コマンドと PTY 上の TUI コマンドに共通する隔離環境・実行・観測用ハーネスを含む。
+- 独立 process、実 Codex CLI、実推論、PTY を用いて、利用者向け CLI の全末端サブコマンドが本番経路で完了することを検証する受け入れ試験。
+- 終了 code、report・state・Git の状態、Codex call log、TUI の応答完了と終了操作を確認し、LLM の回答品質自体は判定しない。
+- 非対話サブコマンドと TUI サブコマンドの共通隔離環境、実行条件、外部状態検証を一続きの試験として扱う。
 
 ## Read this when
-- CLI の公開末端サブコマンドを追加・変更し、本番経路での網羅的な実行検証を更新するとき
-- 独立プロセス、実 Codex CLI、実 provider、Codex call log、永続 state、Git 状態を含む統合試験の挙動を確認するとき
-- TUI コマンドの PTY 入出力、端末 capability query、応答完了判定、終了処理を調査するとき
+- CLI の末端サブコマンドを追加・変更し、利用者向け本番経路での代表正常系を確認するとき。
+- 実 Codex CLI や実推論を含む production-path integration test の実行条件、隔離環境、call log 検証を確認するとき。
+- 非対話 command の終了状態・report・session/run state・Git 状態、または TUI の PTY 応答完了と終了処理を検証するとき。
 
 ## Do not read this when
-- 単体テストや、実 Codex/provider を使わない決定論的な制御ロジックのテストだけを変更するとき
-- サブコマンドの実装仕様や通常の CLI 挙動を確認したいときは、対象となる実装または対応する正本仕様を直接読む
-- LLM の回答内容・品質そのものを評価するとき
+- LLM の回答内容や品質そのものを評価するとき。
+- 単一サブコマンド内部の実装詳細や、実推論を使わない単体テストの仕様を確認するときは、対象サブコマンドの実装・専用テストを直接読む。
+- Codex CLI を使わない通常の CLI 操作や、production path 全体を対象としない局所的な状態検証だけを行うとき。
 
 ## hash
-- 9ef9aaa41e0e2b664db778876a6a2f19ff6c28907cc4811a82078a3a09b8f3ef
+- d2c43aea2340d16947623881cde5333ff689edf15a0b4257fffaef7afd884c10
 
 # `test_prompt_parts.py`
 
