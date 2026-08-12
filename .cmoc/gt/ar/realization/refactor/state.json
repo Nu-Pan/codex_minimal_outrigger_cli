@@ -1038,10 +1038,10 @@
     "last_investigated_at": "2026-07-31_06-17_28_291386000"
   },
   "src/sub_commands/oracle/review_loop.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "3bd2bac468cf8543617a42ba0c84d70aaad30d530ae5b088d21e999ce434178f",
-    "last_investigated_at": "2026-08-06_13-25_55_059118000"
+    "last_investigated_sha256": "809a65591544df21ce62e85cce214680fbc9dbeca79c6d6e6aedef1116f300de",
+    "last_investigated_at": "2026-08-12_15-15_49_156154000"
   },
   "src/sub_commands/oracle/review_paths.py": {
     "investigation_required": false,
