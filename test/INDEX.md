@@ -408,21 +408,24 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、Codex child tracking、INDEX 更新、merge、cleanup、rollback、process interruption など、apply/refactor fork から run lifecycle 完了までの外部挙動を検証する。
-- apply と refactor が共有する lifecycle fixture・branch・state 遷移を一続きで扱い、想定外差分、managed file、agent commit、遅延処理、rename/delete、report 保存、失敗時の resource 保持と recovery も対象にする。
+- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、process tracking、INDEX 更新、rollback、join/abandon cleanup、refactor cycle を同じ lifecycle fixture で検証する。
+- apply fork と refactor fork の正常完了・中断・失敗時の state 遷移、成果物、report、Codex child 停止、管理対象外差分の拒否を扱う。
+- run join の merge、競合解決、session 側変更との統合、生成 INDEX の扱い、post-join 同期失敗時の rollback と cleanup 状態を検証する。
+- run abandon の process tracking 検証、worktree・branch cleanup、破損 tracking や cleanup 失敗時の資源保持を検証する。
 
 ## Read this when
-- realization apply/refactor fork と run join/abandon の統合 lifecycle が正しく連携するか確認するとき。
-- run state、worktree/branch cleanup、Codex process tracking、INDEX refresh、rollback、merge conflict、report の失敗時挙動を変更・調査するとき。
-- agent が作成した差分や commit、user interruption、process tracking 異常、未解決 refactor finding の扱いを検証するとき。
+- editing run の apply/refactor fork、run join、run abandon の lifecycle 挙動を変更または検証するとき。
+- session state と run worktree の共有、fork report・lifecycle report、process tracking、Codex child cleanup の連携を確認するとき。
+- INDEX refresh、oracle・realization 差分の許可範囲、agent commit・遅延変更・rollback の境界を確認するとき。
+- refactor の unresolved target、rename、永続 state、cycle completion、中断時の確定済み進捗を検証するとき。
 
 ## Do not read this when
-- 単一の apply、refactor、join、abandon 実装の詳細だけを確認すれば足り、共通 lifecycle の統合挙動を調べないとき。
-- 通知仕様そのもの、正本 app specification、または INDEX 生成ロジック単体の仕様を確認するときは、それぞれの oracle・実装・専用 test へ直接進む。
-- テスト共通 helper や個別 command の単純な入出力だけを確認し、この統合 test の lifecycle 境界に関係しないとき。
+- INDEX 更新機構そのものの単体挙動だけを確認するときは、indexing 関連の直接の実装・テストを読む。
+- session や run lifecycle の実装詳細を変更せず、単純な CLI 利用方法や仕様概要だけを確認するとき。
+- apply fork、refactor fork、run join、run abandon の統合 lifecycle に関係しない機能のテストを探しているとき。
 
 ## hash
-- ddc84fc2bbf0b686ec5c51ec179ba4a848fb90a42c8306c1d4f4d5a3b1ad2aae
+- 95a278f12d40e2e70dbfa53461b43ea4352e40f6c4b659c55a6734a65dbfcd80
 
 # `test_feedback.py`
 

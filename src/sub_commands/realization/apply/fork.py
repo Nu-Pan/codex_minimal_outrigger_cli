@@ -246,6 +246,7 @@ def _cmoc_realization_apply_fork_body() -> None:
             codex_returncode,
             exc,
             cleanup_warnings,
+            agent_head=agent_head if agent_commit_check_active else None,
         )
         error = CmocError(
             "realization apply fork は error state で停止しました。",
@@ -318,6 +319,8 @@ def _record_error(
     codex_returncode: int | None,
     exc: BaseException,
     cleanup_warnings: list[str] | None = None,
+    *,
+    agent_head: str | None = None,
 ) -> Path:
     """apply run の差分を戻し、error state と fork report を保存する。"""
     cleanup_errors = list(cleanup_warnings or [])
@@ -327,6 +330,16 @@ def _record_error(
         )
     except BaseException as cleanup_error:
         cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
+    if agent_head is not None:
+        try:
+            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+            # 初回検査後に遅延 child が作った commit も、停止完了後に検出して
+            # agent boundary の HEAD へ戻し、error run へ混入させない。
+            _ensure_agent_did_not_commit(context.run_worktree, agent_head)
+        except BaseException as agent_commit_error:
+            cleanup_errors.append(
+                f"agent commit cleanup failed: {agent_commit_error!r}"
+            )
     try:
         rollback_work_unit(context.run_worktree)
     except BaseException as cleanup_error:

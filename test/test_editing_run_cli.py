@@ -2106,6 +2106,64 @@ def test_apply_failure_stops_tracked_codex_children_before_rollback(
     assert _state(state_path)["run"]["state"] == "error"
 
 
+def test_apply_error_cleanup_rejects_delayed_agent_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """error cleanup の停止後検査で遅延 agent commit を run に残さない。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    run_worktree: Path | None = None
+
+    def fail_apply(
+        parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> NoReturn:
+        """本命 agent の失敗後に error cleanup へ進む状態を再現する。"""
+        nonlocal run_worktree
+        before_agent_call = kwargs["before_agent_call"]
+        assert callable(before_agent_call)
+        before_agent_call()
+        run_worktree = parameter.agent_call_cwd
+        raise RuntimeError("agent failed")
+
+    def delayed_agent_commit(_root: Path, _session_id: str) -> list[str]:
+        """停止処理の直前に agent child が commit した状態を再現する。"""
+        assert run_worktree is not None
+        (run_worktree / "README.md").write_text("delayed agent commit\n")
+        run_git(run_worktree, "add", "README.md")
+        run_git(run_worktree, "commit", "-m", "delayed agent commit")
+        return []
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fail_apply)
+    monkeypatch.setattr(
+        apply_module,
+        "stop_tracked_codex_children",
+        delayed_agent_commit,
+    )
+
+    result = runner.invoke(
+        app,
+        ["realization", "apply", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    assert _state(state_path)["run"]["state"] == "error"
+    assert run_worktree is not None
+    assert (run_worktree / "README.md").read_text() == "# repo\n"
+    assert (
+        "delayed agent commit"
+        not in run_git(run_worktree, "log", "--format=%s").stdout.splitlines()
+    )
+    report_path = next(
+        Path(line.removeprefix("- fork report: `").removesuffix("`"))
+        for line in result.output.splitlines()
+        if line.startswith("- fork report: `")
+    )
+    assert "agent commit cleanup failed" in report_path.read_text()
+
+
 @pytest.mark.parametrize(
     "failure",
     [

@@ -15,20 +15,22 @@
 # `apply`
 
 ## Summary
-- realization の apply 処理を構成する実装を扱うディレクトリ。apply workload の実装と、apply fork における agent 実行、差分検査、run状態更新、rollback、fork report保存の入口となる。
+- realization の apply 処理に関する実装を扱うディレクトリ。apply workload の実装と、`realization apply fork` の CLI 実行フローを調査・変更する際の入口となる。
+- apply fork では editing run の開始、差分追従 agent の実行、想定外変更や agent commit などの検査、INDEX 生成を含む変更の commit、joinable/error 状態と report の保存を扱う。
 
 ## Read this when
 - realization の apply workload の内容を調査・変更するとき。
-- `cmoc realization apply fork` の実行フロー、run状態遷移、fork reportの保存条件を調べるとき。
-- apply agentが作成した差分の許可範囲、commit検査、想定外変更、失敗時のrollbackやerror stateを確認・変更するとき。
+- `cmoc realization apply fork` の実行フロー、editing run の状態遷移、差分の commit・rollback・report 保存を確認するとき。
+- apply agent の変更と cmoc が生成する INDEX 差分の境界、agent commit や遅延 child の扱いを確認するとき。
 
 ## Do not read this when
-- apply workload以外のrealization処理を扱うとき。
-- apply agent自体のプロンプト生成や差分適用仕様を調べるとき。
-- editing run全般の共通ライフサイクル、INDEX生成機能そのものの仕様や実装を調べるとき。
+- apply workload 以外の realization 処理を扱うとき。
+- apply agent の起動パラメータだけを変更するときは、agent launch parameter の実装を直接読む。
+- editing run の共通ライフサイクル、git 操作、state 管理、index refresh の一般仕様だけを確認するときは、対応する共通実装または正本仕様を直接読む。
+- apply fork の利用者向け仕様や run isolation・indexing の正本仕様を確認するときは、参照されている app specification を読む。
 
 ## hash
-- 2eb7b3e16a04df8e5901fe5b1081254e24ec9cf33810dcec224ead9f8de8563e
+- 1cac93e44cd9b42024897895b67141aebefc28ad7144e9c990518c4195d92219
 
 # `refactor`
 
