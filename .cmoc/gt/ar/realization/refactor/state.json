@@ -1470,10 +1470,10 @@
     "last_investigated_at": "2026-08-03_07-18_15_186250000"
   },
   "test/test_struct_doc_rendering.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "d83e1e717144f9f42e6e9e616890340046a41f72d404f732b73314c152ad921c",
-    "last_investigated_at": "2026-08-12_00-34_12_183703000"
+    "last_investigated_sha256": "47d5a4c7a1dd53b0987d65acbc89ee232459d35a49eeca8c34d150fd5760a8a5",
+    "last_investigated_at": "2026-08-13_21-16_02_893539000"
   },
   "test/test_windows_toast.py": {
     "investigation_required": true,
