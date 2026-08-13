@@ -42,6 +42,7 @@ def test_indexing_index_entry_uses_minimum_model_and_low_reasoning(
     assert parameter.run_indexing_preflight is False
     assert "# index entry standard" in parameter.prompt
     assert "# oracle and realization basic" not in parameter.prompt
+    assert "# routing rule" not in parameter.prompt
 
 
 def test_indexing_index_entry_schema_requires_non_empty_semantic_lists(

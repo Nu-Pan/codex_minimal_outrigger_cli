@@ -168,6 +168,7 @@ def test_oracle_review_builders_share_finding_judgement_standard(
     assert parameter.agent_call_cwd == tmp_path.resolve()
     assert f"- {{{{work-root}}}} = {tmp_path.resolve()}" in prompt
     assert "# oracle review standard" in prompt
+    assert "# routing rule" in prompt
     assert "実装者の裁量で解消不能な問題だけを fatal 所見にする" in prompt
     assert "文意または検索性を損なう表記上の誤りだけを minor 所見にする" in prompt
     assert "所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定" in prompt

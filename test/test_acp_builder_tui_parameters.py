@@ -62,8 +62,11 @@ def test_tui_launch_builder_uses_fixed_parameter_and_standards(
         "# realization oracle reference rule",
     ):
         assert heading in complete_prompt
-    assert "# conflict resolution standard" not in complete_prompt
+    assert "# 両 branch の意味を保って conflict marker だけを解消する" not in (
+        complete_prompt
+    )
     assert "# index entry standard" not in complete_prompt
+    assert "# routing rule" in complete_prompt
     assert original_prompt in complete_prompt
     if original_prompt == "{{original-prompt-here}}":
         assert complete_prompt.count(original_prompt) == 1

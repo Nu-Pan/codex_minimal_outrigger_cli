@@ -282,6 +282,7 @@ def test_oracle_edit_runs_tui_without_using_run_lifecycle_and_preserves_changes(
     )
     assert "oracle spec を更新する" in complete_prompt
     assert "# oracle standard" in complete_prompt
+    assert "# routing rule" in complete_prompt
     assert "realization file、`INDEX.md`、`AGENTS.md` を編集していない" in (
         complete_prompt
     )

@@ -35,18 +35,19 @@
 # `standard.py`
 
 ## Summary
-- agent 向け instruction の要求文面を構造化する標準と、その要求項目を表すデータモデルを定義する。標準のタイトル・要求・判断例を保持し、構造化文書へ変換する処理への入口となる。
+- 標準（Standard）・標準グループ・標準コレクションの immutable な値オブジェクトと、標準コレクションの衝突検査付き合成および agent 向け StructDoc への変換を定義する。標準の検証規則、決定的なグループ／標準順序、instruction 文面の構築を確認するための入口。
 
 ## Read this when
-- agent 向け instruction の標準形式、要求ラベル、要求項目の保持方法を確認するとき
-- Standard や Requirement の生成・利用、または標準から StructDoc への変換処理を調べるとき
+- agent 向け instruction の標準定義、適用範囲、必須・禁止・推奨・許容事項を追加・変更するとき
+- 複数の標準コレクションを合成する際の ID 衝突検査や決定的な出力順を確認するとき
+- 合成済み標準を StructDoc の instruction 文面へ変換する処理を確認・変更するとき
 
 ## Do not read this when
-- 個別の instruction 本文や StructDoc の一般的な仕様だけを確認したいとき
-- 標準データモデルを使わない oracle の実装やテストを調べるとき
+- INDEX.md のルーティングだけを確認するとき
+- 標準値の具体的な利用箇所や個別の instruction 内容だけを確認したいときは、直接その利用元または標準定義へ進む
 
 ## hash
-- ea5e913634ed23bbaa5a52fff4aa9ec65634c0aeb10e175c19ec814ae4aac184
+- 90d295e650bfb26425810fe363c87be76fa078cf104b11fc22f0b23f4744272b
 
 # `struct_doc.py`
 
