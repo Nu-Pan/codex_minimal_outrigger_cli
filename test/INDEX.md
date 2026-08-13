@@ -437,24 +437,23 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の pending observation、active state、report cut、verification、atomic publication、cleanup を同一 repository fixture で検証するテスト群。
-- agent-facing reporter の MCP 公開境界、collector の context・rate 制限・永続保存、path 境界・secret masking、machine observation の冪等性と閾値処理を扱う。
-- feedback report の正常・空・inconclusive・中断・失敗・再開経路を通じて、checkpoint 再利用、publication の原子性、active state の整合性、部分 cleanup、破損 artifact 検出を検証する。
-- feedback の実装、report subcommand、state/store、reporter、normalize/verify builder、または対応する oracle 仕様の挙動を変更・調査するときのテスト入口である。
+- feedback observation の reporter、collector、raw store、report cut、verification、active state、atomic publication、cleanup を同一 repository fixture で検証する統合テスト。
+- feedback report の正常系・中断・再開・診断未完了・部分 cleanup と、JSON schema、path boundary、secret masking、fingerprint、checkpoint、artifact 整合性の外部挙動を確認する。
+- feedback 関連の実装や正本仕様を変更し、pending observation から compact active state への遷移、publication 後の raw artifact cleanup、破損時の停止条件を確認する必要がある場合のテスト入口。
 
 ## Read this when
-- feedback observation の収集・保存・正規化・検証・report publication の外部挙動を確認するとき。
-- feedback report の再開可能性、atomic publication、active generation、cleanup、破損検出を変更またはレビューするとき。
-- agent-facing reporter の MCP tool 境界、collector の capability・rate limit・context 検証を確認するとき。
-- machine observation の recurrence threshold、window expiry、aggregate から issue への遷移を確認するとき。
+- feedback の agent-facing reporter、collector、observation envelope、rate limit、context validation を変更または検証するとき。
+- feedback report の candidate normalization、verification verdict、report cut、checkpoint、atomic publication、current pointer、active state、cleanup を変更または検証するとき。
+- feedback の path boundary、symlink、secret redaction、canonical JSON、fingerprint、artifact hash、未定義 artifact 検出を変更または検証するとき。
+- feedback 関連の中断・再開や、inconclusive report、部分 cleanup、machine observation の threshold/window 挙動を確認するとき。
 
 ## Do not read this when
-- feedback と無関係な CLI subcommand、一般的な logging、session、git helper の挙動だけを扱うとき。
-- report の Markdown 表現だけを変更・確認する場合は、まず report rendering または対応する仕様・実装を直接読むとき。
-- normalize/verify builder の prompt や schema だけを調査する場合は、対応する builder 実装・oracle schema を直接読むとき。
+- feedback 機能と無関係な CLI、ログ、session、report の変更を扱うとき。
+- 単一の実装関数の局所的な挙動を確認するだけで、feedback の永続状態や publication 境界を扱わないとき。
+- feedback の正本仕様や agent builder の詳細を直接確認する必要があり、このテストではなく対応する oracle file や実装本文が直接の入口になるとき。
 
 ## hash
-- 53b7467c201ecd0f06161629660279fd93a8499c3e2c228533bb4b99c3453869
+- f49c7cb27abcdd69d3babf229d2bddd620e4c828838687757ca9d0e91f0a5e5c
 
 # `test_file_inventory.py`
 

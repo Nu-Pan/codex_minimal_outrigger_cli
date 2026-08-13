@@ -52,21 +52,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行 lifecycle、Codex 呼び出し、設定・状態・パス、Git・ログ・エラー、INDEX 更新、feedback、editing run、コンテンツ処理など、複数機能から再利用される実行時処理を扱う。
-- commons 配下の共通 runtime 機能を横断して調査・変更するときの入口であり、個別機能の詳細を確認する場合は対応する下位実装へ進む。
+- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 共通ライフサイクル、Codex 実行、設定・状態、Git・パス・ログ、feedback、editing run、INDEX 更新など、複数の機能から再利用される実装を扱う。
+- パッケージの公開 API を確認する場合は初期化・再公開モジュールから入り、特定機能の挙動やアルゴリズムを調べる場合は commons 配下の担当 runtime モジュールへ進むための入口。
 
 ## Read this when
-- 複数の CLI・Codex・状態管理・Git・ログなどにまたがる共通 runtime の責務や依存関係を確認するとき
-- commons 配下の共通実行時処理を追加・変更し、関連する下位実装の入口を特定するとき
-- INDEX 更新、feedback、editing run など、複数の runtime 機能が共有する lifecycle 境界を調査するとき
+- 複数の cmoc runtime 機能にまたがる共通 helper の責務や構成を確認するとき
+- CLI、Codex、設定、状態、Git、パス、ログ、feedback、editing run、INDEX 更新の共通実装の入口を探すとき
+- commons 配下の個別 runtime モジュールへ進む前に、対象機能の担当範囲を絞り込むとき
 
 ## Do not read this when
-- 特定の runtime helper や個別サブコマンドの内部実装だけを確認したいとき
-- 正本仕様、Structured Output schema、設定型、state schema など、commons の実装ではなく対応する仕様・型定義を直接読むべきとき
-- commons と無関係な機能や、単一の下位モジュールだけで完結する処理を調査するとき
+- 特定の runtime helper の具体的な実装やアルゴリズムだけを確認したいとき
+- 個別サブコマンドの業務ロジックや利用者向け仕様だけを調査するとき
+- 正本仕様、Structured Output schema、または単一機能の詳細契約を確認することが目的のとき
 
 ## hash
-- 33c83de7640cbd63cdd319ec2f303f15eb02d9b07d393ee378edca3d36070748
+- 959ce3456975601283fd4ff54f4b5aa7430113b8712b18b1fb2c99ae8d951e55
 
 # `config`
 

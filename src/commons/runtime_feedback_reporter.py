@@ -103,7 +103,7 @@ def _submit(payload: object) -> dict[str, object]:
             connection.settimeout(10)
             connection.connect(socket_path)
             connection.sendall(
-                json.dumps(request, ensure_ascii=False, separators=(",", ":")).encode(
+                json.dumps(request, ensure_ascii=True, separators=(",", ":")).encode(
                     "utf-8"
                 )
                 + b"\n"

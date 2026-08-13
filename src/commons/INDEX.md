@@ -279,21 +279,16 @@
 # `runtime_feedback_reporter.py`
 
 ## Summary
-- call-scoped stdio MCP サーバーとして、Codex から受け取った feedback observation を capability 情報付きで collector へ転送し、collector 結果を MCP の structuredContent と text に変換する実装。
-- MCP の initialize、ping、tools/list、tools/call と newline-framed JSON-RPC 入出力を扱い、collector との Unix socket 通信、応答検証、transport/domain rejection の分類を担う。
-- feedback 送信経路、MCP reporter のプロトコル契約、collector 応答の妥当性検証を確認する際の実装入口であり、payload の詳細な入力制約は runtime feedback store や対応する oracle file から確認する。
+- Codex が起動する call-scoped stdio MCP feedback reporter/client。collector との Unix ソケット通信、MCP JSON-RPC の初期化・ping・tool 一覧・観測送信、collector 応答の検証と agent-facing 結果整形を担う。feedback 報告機能の通信境界として、関連する runtime feedback 実装から送信処理の確認へ進む入口。
 
 ## Read this when
-- feedback observation の MCP reporter が collector へ接続・転送する処理を変更または調査するとき
-- initialize、tools/list、tools/call など reporter の JSON-RPC 対応や stdio framing を確認するとき
-- collector 応答の accepted/rejected 判定、プロトコル不整合、retryable 判定の実装を確認するとき
+- 人間対応が必要な問題の observation 送信経路、feedback collector との通信、reporter の MCP JSON-RPC 挙動、collector 応答の受理・拒否検証を調査または変更するとき。
 
 ## Do not read this when
-- feedback observation の保存規則、入力 schema、secret 検出など domain validation 自体を確認する場合は、runtime feedback store または対応する oracle file を直接読むとき
-- feedback を送信しない通常の MCP サーバー実装や、別の CLI 通信経路を調査するとき
+- feedback の観測内容の仕様や保存・検証規則を確認するときは、対応する oracle file や runtime feedback store を直接読む場合。feedback 機能と無関係な MCP server や CLI 実装を調査するとき。
 
 ## hash
-- b5d72c183831d02b2b05c8a94b655e6c76833118f8b912a9c4d20469a93abb93
+- 1065a0e3d846f06e17628770d8a51947c789ad4091fa0c04661ac64b1b4383f7
 
 # `runtime_feedback_state.py`
 

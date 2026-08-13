@@ -274,6 +274,45 @@ def test_reporter_exposes_only_canonical_submission_tool(
     assert request["payload"] == _payload()
 
 
+def test_reporter_returns_rejection_for_non_utf8_payload_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """UTF-8 化できない JSON 文字列も collector の rejected へ到達させる。"""
+    sent: list[bytes] = []
+
+    class FakeSocket:
+        def __enter__(self) -> "FakeSocket":
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def settimeout(self, _seconds: int) -> None:
+            return None
+
+        def connect(self, _path: str) -> None:
+            return None
+
+        def sendall(self, value: bytes) -> None:
+            sent.append(value)
+
+        def recv(self, _size: int) -> bytes:
+            return (
+                b'{"status":"rejected","code":"schema_invalid",'
+                b'"message":"payload is not valid UTF-8","retryable":false}\n'
+            )
+
+    monkeypatch.setattr(reporter_module.socket, "socket", lambda *_args: FakeSocket())
+    monkeypatch.setenv("CMOC_FEEDBACK_COLLECTOR_SOCKET", "/tmp/collector.sock")
+    monkeypatch.setenv("CMOC_FEEDBACK_CAPABILITY", "secret-capability")
+    monkeypatch.setenv("CMOC_FEEDBACK_PROTOCOL_VERSION", "1")
+
+    result = reporter_module._submit(_payload(text="\ud800"))
+
+    assert result["status"] == "rejected"
+    assert json.loads(sent[0])["payload"]["evidence"][0]["text"] == "\ud800"
+
+
 @pytest.mark.parametrize(
     "response",
     [
