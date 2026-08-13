@@ -115,20 +115,20 @@
 # `oracle_review.md`
 
 ## Summary
-- `cmoc oracle review` サブコマンドの仕様を定義し、oracle のレビュー範囲・所見の列挙／統合／検証／採否判定・中断処理・Markdown レポート生成までの流れを扱う。oracle review の実行仕様を確認・変更するときの入口であり、一般的なレビュー仕様や自動生成 INDEX の確認には直接の対象ではない。
+- `cmoc oracle review` サブコマンドの正本仕様。oracle のレビュー範囲、所見の列挙・統合・検証・採否判定、隔離実行、割り込み処理、および Markdown レポート生成の責務と手順を定義する。oracle の整合性や明白な誤りをレビューし、結果を人間へ報告する処理の入口となる。
 
 ## Read this when
-- `cmoc oracle review` の引数、事前条件、実行手順、agent call、所見の成立条件、スコープ、ループ上限、採否判定を確認するとき
-- oracle review のユーザー中断時の確定済み部分結果の扱いを確認するとき
-- oracle review レポートの保存先、frontmatter、Verdict、評価対象ファイル、所見セクションの要件を確認するとき
+- oracle file のレビュー処理、レビュー範囲（セッション／全体）、所見の重大度や採否基準を確認するとき
+- 所見の列挙・マージ・検証・判定を行う agent call の責務や反復条件を確認するとき
+- レビューの中断処理、隔離実行、またはレポートの体裁・保存方法を変更するとき
 
 ## Do not read this when
-- oracle review 以外のサブコマンドの仕様を確認するとき
-- oracle review の実装詳細を確認したいときは、対応する realization implementation を直接読む
-- 自動生成される INDEX.md 自体の内容をレビューするとき
+- oracle review の実装詳細だけを確認する場合
+- レビュー結果をもとに oracle file 自体を修正する場合
+- 自動生成される INDEX.md の内容や一般的なレビュー手法だけを確認する場合
 
 ## hash
-- b8042455cc5171a2cab690559a26795529edc87001c1a3dfb904b8da938ca9c0
+- 3d3af739d12e1cce2c7ba68739dd4607588a081461f8a7db0052875c4b77951f
 
 # `realization_apply.md`
 
@@ -205,20 +205,23 @@
 # `session_join.md`
 
 ## Summary
-- `cmoc session join` の正本仕様。アクティブな session branch を対応する home branch へマージし、session 状態を joined に更新して後始末するまでの完了処理を定義する。引数、事前条件、doctor preprocess、マージ、conflict 解消、feedback state との境界、異常終了時および branch 削除条件を扱う。
+- `cmoc session join` のセッション完了処理を定義する仕様。現在のセッションブランチと状態を検証し、ホームブランチへマージし、必要に応じて競合解消・状態更新・ブランチ削除を行う一連の責務を扱う。セッション join の引数、事前条件、マージ手順、競合解消、feedback state の境界を確認する必要がある場合の入口となる。
 
 ## Read this when
-- session 完了時の join 処理、対象 branch や session state の事前検証を実装・確認するとき
-- home branch への merge、merge conflict の解消手順、session state 更新や session branch 削除の条件を確認するとき
-- feedback state を session join の merge 対象から除外する境界を確認するとき
+- `cmoc session join` の動作、引数、事前条件、実行順序を実装または確認するとき
+- セッションブランチをホームブランチへマージする処理を変更するとき
+- merge conflict の解消手順や oracle file の扱いを確認するとき
+- session state の更新やセッションブランチ削除条件を確認するとき
+- repository-local feedback state を session join の対象外として扱う境界を確認するとき
 
 ## Do not read this when
 - 通常の git branch 間 merge wrapper の仕様を確認したいとき
-- session の作成・実行・状態管理そのものを確認したいときは、それぞれの専用仕様を直接読む
-- repository-local feedback state の収集・集約・報告処理を確認したいとき
+- session の作成、実行、状態管理のうち join 処理以外を確認したいとき
+- feedback state 自体の生成・集約・報告仕様を確認したいとき
+- 一般的な oracle file 編集や realization refactor の規則だけを確認したいとき
 
 ## hash
-- b0571d86bb8deb8db244311a02aab26748f491735281a0d09ad9c1ec362eaa59
+- 890046a7082a55da8b4afa5a7bd132a63ddcb2afc6021743bd9603f3c6206021
 
 # `tui.md`
 

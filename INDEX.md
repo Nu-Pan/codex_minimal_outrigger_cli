@@ -89,21 +89,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の人間所有の正本仕様を分類して読むためのルート。自然言語の要求・判断基準・責務を定める仕様文書、正確な実装定義や Structured Output schema、関連するテスト規約を扱う。CLI 共通挙動、agent call、prompt、feedback、session/run、branch・commit・worktree、開発・テスト規則、不採用案の記録へ進む入口となる。
+- cmoc の正本文書と開発規則を集約する領域。利用者向け仕様、branch・commit・worktree のモデル、設計検討記録、Python 実装・CLI 設計・開発環境・テスト要件・テスト実行手順の確認に進む入口となる。
 
 ## Read this when
-- cmoc の仕様、設計、開発規則、テスト規約の入口を特定するとき
-- CLI サブコマンド、Codex 呼び出し、prompt、ログ、feedback、session/run、branch・commit・worktree の正本仕様を調査するとき
-- 正確な agent call 定義、schema、共通実装部品を確認するとき
-- 採用しなかった設計や作業方式の理由を確認するとき
+- cmoc の挙動仕様や機能間の責務境界を確認するとき
+- session・run の分岐、commit、worktree の用語や関係を確認するとき
+- 採用されなかった作業方式や設計案の理由を確認するとき
+- Python 実装、CLI 設計、開発環境、テスト要件、テスト実行手順の正本文書を探すとき
 
 ## Do not read this when
-- 確認対象の仕様本文や開発規則が既に特定できており、該当する下位文書へ直接進めるとき
-- 実装ファイル、realization file、テスト、実行ログ、生成成果物の具体的内容だけを調査するとき
-- 特定の schema の項目・型・形式だけを確認するときは、対応する schema を直接読む
+- 確認対象の仕様本文、開発ルール、検討記録がすでに特定できており、その対象を直接読めばよいとき
+- 実装コード、テスト内容、ログ、実行成果物の詳細を調べるとき
+- INDEX.md の生成規則やルーティング情報だけを確認するとき
 
 ## hash
-- 6931d685b6a1d2808364ab743ff3a42c93d4728a71c2754754183588f47dc56b
+- 7855071760c5f262cc01df7c1c8d478064f685b6ef4c8faf473625b8c0937be6
 
 # `pyproject.toml`
 

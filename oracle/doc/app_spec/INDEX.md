@@ -171,43 +171,39 @@
 # `indexing.md`
 
 ## Summary
-- `cmoc` が `INDEX.md` を配置・更新するためのインデクシング規則、目次情報の要件、処理順序、並列実行条件、実行タイミングを定義する。
-- `INDEX.md` の個別エントリー生成時に参照する、インデクシング仕様の正本である。
+- cmoc がリポジトリ内に INDEX.md を配置・更新する仕組みの仕様を定義する文書。配置対象、目次情報の形式と意味要件、ハッシュ、インデクシング順序、コミット、agent call の並列化、実行条件を扱う。
 
 ## Read this when
-- `INDEX.md` の自動生成・更新処理の仕様を確認するとき。
-- 目次情報の対象範囲、意味要件、ハッシュ、処理順序、並列化、コミット条件を実装または検証するとき。
-- インデクシング前後の agent call や `run_indexing_preflight` の扱いを確認するとき。
+- INDEX.md の自動生成・更新処理の仕様を確認するとき
+- 目次エントリーの内容、ハッシュ計算、対象範囲、更新・コミット手順を変更または検証するとき
+- インデクシングの深さ優先処理や agent call の並列実行条件を確認するとき
 
 ## Do not read this when
-- 個別の実装ファイルやテストの具体的な挙動だけを確認する場合。
-- 目次情報から読むべき対象を選ぶだけで、インデクシング仕様そのものを確認・変更しない場合。
-- アプリケーション固有の仕様や一般的なドキュメント作成規則を調べる場合。
+- 個別の実装コードの詳細や CLI の一般的な責務だけを確認したいとき
+- 特定ファイルの目次エントリー本文だけを読むべきで、インデクシング全体の仕様確認が不要なとき
+- 既存テストの実行方法や Python 開発環境の設定を確認するときは、それぞれの専用仕様・手順を読む
 
 ## hash
-- cbfe78d28a5d079d389e9d5753bd8ed3a9c53913d87f522fa5985f950c377138
+- e94b7463e662ccbeb3beffe84e449e7b895dfdcf9460a9bccfe704fbc2078ce7
 
 # `misc_spec.md`
 
 ## Summary
-- cmoc における oracle file と realization file の責務、判断基準、適合性、分類方法、列挙時の traversal・Git ignore・性能不変条件・回帰検証、および work-root や実行時刻などの共通仮定を定義する雑多な正本仕様。これらの概念や列挙処理の仕様を確認する際の入口となる。
+- cmoc における oracle file と realization file の責務、取り扱い判断基準、適合性、および列挙方法を定義する雑多な仕様の正本。oracle と realization の境界や列挙仕様を確認する際の入口であり、下位の実装・テスト仕様そのものの代替ではない。
+- work-root の仮定、cmoc 実行時のパス文脈、タイムスタンプ形式、cmoc-managed-branch の対象範囲など、複数の機能領域にまたがる共通契約を扱う。
 
 ## Read this when
-- oracle file と realization file の責務や配置を確認するとき
-- oracle と realization の判断基準、適合性、仕様優先関係を確認するとき
-- oracle file または realization file の分類・列挙方法を実装、変更、検証するとき
-- Git ignore、pruning、symlink、nested repository、linked worktree の扱いを確認するとき
-- 列挙処理の性能不変条件や回帰検証の境界を確認するとき
-- work-root の仮定、cmoc 実行時の cwd、タイムスタンプ、managed branch の定義を確認するとき
+- oracle file と realization file の責務境界、分類、適合性、列挙対象、Git ignore、traversal、性能不変条件、または回帰検証の仕様を確認・変更するとき
+- work-root、agent call の cwd、タイムスタンプ、または cmoc-managed-branch の定義を確認するとき
+- doctor preprocess や realization refactor state 同期に関わる file 列挙結果の意味・境界・性能条件を調査するとき
 
 ## Do not read this when
-- 特定の oracle doc・src・test の個別仕様だけを確認すれば足りるとき
-- 実装配置や CLI 責務境界を判断する場合は design_rule を直接読むとき
-- テスト追加・変更の規則を確認する場合は test_rule を直接読むとき
-- 既存テストの実行方法だけを確認する場合は test_execution の手順を直接読むとき
+- 特定の oracle doc・oracle src・oracle test の個別仕様だけを確認する場合は、その対象を直接読む
+- realization implementation や realization test の具体的な実装詳細だけを変更・調査し、本文で定義する共通契約に関係しない場合
+- INDEX.md のルーティング情報だけを確認する場合
 
 ## hash
-- 849da108e141534024127d65879d7d2fd7d367be895bbb080d0c8095d57a973b
+- dd28109f5dd320f5f811caf07ae818b74afe15b2e3bdf69d63cd66cd373e14c1
 
 # `prompt_editor_input.md`
 
@@ -230,26 +226,23 @@
 # `prompt_standard.md`
 
 ## Summary
-- cmoc の agent call に渡す prompt の責務、情報量、正本の境界、構築規則、および実行時生成物の扱いを定義する文書。
-- 意味仕様を oracle doc、正確な prompt 文面を oracle src、実行時の prompt を生成物として分離し、各層の責務と変更範囲を明確にする。
-- prompt に含める情報、cmoc 固有契約と installed skill の境界、規範の決定論的注入、feedback instruction、Structured Output の schema・事後条件・受理条件の役割を定める。
-- summary と goal の責務分担、agent call 用 prompt の構築方法、プレースホルダと cmoc_block/cmoc_ref による参照関係、Markdown/GFM と言語方針を扱う。
-- prompt builder および acp builder の文面・構築規則を確認する必要がある作業における、意味仕様と実装上の受け渡しの境界を示す入口となる。
+- cmoc の agent call 用 prompt に含める情報、正本仕様・oracle src・realization implementation の責務境界、および実行時生成物の位置づけを定める。
+- prompt part の決定論的な注入、共通 feedback instruction、Structured Output の schema・事後条件・受理条件の境界、`summary` と `goal` の使い分けを扱う。
+- prompt 構築時の参照関係、placeholder、Markdown 記法、言語方針を確認するための共通ルーティング入口である。
 
 ## Read this when
 - agent call の prompt に指示や参照先を追加・変更するとき
-- oracle doc、oracle src、prompt builder、realization implementation の責務境界を確認するとき
-- Structured Output の schema、決定論的事後条件、validator、補正 prompt の役割や受理条件を検討するとき
-- summary、goal、role の動的な作業記述を設計または見直すとき
-- cmoc_block、cmoc_ref、placeholder、path context を用いた prompt 構築規則を確認するとき
+- oracle doc、oracle src、realization implementation、実行時生成物の責務境界を判断するとき
+- Structured Output の schema、決定論的事後条件、補正 prompt の責務を設計・レビューするとき
+- `summary`、`goal`、prompt part、placeholder、`cmoc_block` / `cmoc_ref` の扱いを確認するとき
 
 ## Do not read this when
-- prompt の意味仕様や agent call の構築規則を扱わず、対象 repository 固有の実装・テスト手順だけを確認するとき
-- 生成済み prompt や log の内容を単に参照するだけで、正本の変更や責務判断を行わないとき
-- Structured Output の schema ではなく、通常のデータ形式や一般的な JSON Schema を扱うとき
+- cmoc の個別機能に固有の意味仕様だけを確認する場合は、対応する oracle doc を直接読む
+- prompt の正確な文面や builder の実装を変更する場合は、対応する oracle src を直接読む
+- realization 側の保存・受け渡し実装だけを確認する場合は、対象 realization file とその担当仕様を読む
 
 ## hash
-- 5ee26b865683eaf0be6b913b1800b3706a66f28a5442f7dbf5bc856e766bab96
+- 94c675220dcadb58d65458abde1ae6ac94b166b8e54809b7e4dd6e558be1b240
 
 # `run_isolation.md`
 
@@ -288,19 +281,19 @@
 # `sub_command`
 
 ## Summary
-- cmoc のサブコマンドごとの正本仕様を集約するディレクトリ。doctor、indexing、tui、oracle／realization の各 workload、session／run lifecycle、feedback report など、個別コマンドの契約と実行条件を確認する入口である。
+- cmoc の主要サブコマンド仕様を集約する入口。doctor、indexing、tui、oracle 編集・調査・レビュー、realization apply・refactor、session／run の fork・join・abandon、feedback report の実行条件・ライフサイクル・状態遷移・入出力契約を確認するための文書群を扱う。各サブコマンドの挙動を変更・実装・レビューする際は、該当する仕様へ進む。
 
 ## Read this when
-- 特定の cmoc サブコマンドの引数、事前条件、実行手順、終了条件、状態遷移を確認したいとき。
-- oracle／realization の編集・調査・レビュー、session／run の fork・join・abandon、feedback report の仕様を調べるとき。
-- 対象コマンドを特定でき、対応する個別仕様へ進む前にサブコマンド仕様群の構成を把握したいとき。
+- cmoc のサブコマンドの引数、事前条件、実行手順、終了条件を確認したいとき。
+- oracle、realization、session、run、feedback に関する処理のライフサイクルや状態遷移を確認したいとき。
+- 目的のサブコマンドが doctor、indexing、tui、oracle、realization、session、run、feedback のいずれに属するかを特定し、その正本仕様への入口を探すとき。
 
 ## Do not read this when
-- サブコマンドではなく、doctor preprocess、indexing の意味そのもの、feedback state、prompt editor、共通 interruption など委譲先の正本仕様だけを確認したいとき。
-- 特定の realization 実装や TUI 実装の内部詳細だけを調べるときは、対応する realization file や実装を直接読む。
+- サブコマンドに属さない共通仕様、内部実装、prompt editor、state 永続化、agent の Structured Output schema だけを確認したいときは、それぞれの参照先となる正本や実装を直接読む。
+- 特定のサブコマンドの詳細を確認できている場合は、このディレクトリ全体を横断して読む必要はなく、該当する仕様へ直接進む。
 
 ## hash
-- 2f964924f3a4db85873c0d40cff357dfad7107eea951445540c3bdb3ed4c792f
+- eaca51782352118a679fc33bd5937d2f90ddbc6d3ce82a563e9b2d8d9842951a
 
 # `subcommand_interruption.md`
 
