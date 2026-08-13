@@ -6,8 +6,10 @@ StructDoc 出力を共有する一つの責務であるため、prompt builder �
 対応する正本:
 - {{work-root}}/oracle/doc/app_spec/prompt_standard.md
 - {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+- {{work-root}}/oracle/src/oracle/other/standard.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/apply_review_standard.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/common_standard.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/feedback_reporting_standard.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -18,11 +20,20 @@ StructDoc 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_oracle_reference_rule.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 - {{work-root}}/oracle/src/oracle/prompt_builder/parts/routing_rule.py
+- {{work-root}}/oracle/src/oracle/prompt_builder/parts/standard_definitions.py
 """
 
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
+from oracle.other.standard import (
+    Standard,
+    StandardCollection,
+    StandardGroup,
+    combine_standard_collections,
+    standard_collection_to_struct_docs,
+)
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 from oracle.prompt_builder.parts.apply_review_standard import (
     build_apply_review_standard as _build_apply_review_standard,
@@ -59,26 +70,148 @@ def _path_context() -> AgentCallPathContext:
     return AgentCallPathContext(agent_call_cwd=Path.cwd())
 
 
+def _render_standard_collection(collection: StandardCollection) -> str:
+    """StandardCollection を complete prompt と同じ経路で render する。"""
+    return render_as_markdown(standard_collection_to_struct_docs(collection))
+
+
+def test_standard_values_are_immutable_and_require_meaningful_text() -> None:
+    """Standard は入れ子の文面も固定し、空の規範を拒否する。"""
+    standard = Standard(
+        standard_id="sample.standard",
+        title="sample",
+        required=["required"],
+        prohibited=["prohibited"],
+    )
+
+    assert standard.required == ("required",)
+    assert standard.prohibited == ("prohibited",)
+    with pytest.raises(FrozenInstanceError):
+        setattr(standard, "title", "changed")
+    with pytest.raises(ValueError, match="at least one requirement"):
+        Standard(standard_id="empty.standard", title="empty")
+    with pytest.raises(ValueError, match="non-empty strings"):
+        Standard(
+            standard_id="invalid.standard",
+            title="invalid",
+            required=("",),
+        )
+
+
+def test_standard_collection_renders_labels_without_internal_ids() -> None:
+    """規範本文は label 順に render し、合成用 ID を prompt へ出さない。"""
+    standard = Standard(
+        standard_id="internal.standard-id",
+        title="規範タイトル",
+        required=("必須本文",),
+        prohibited=("禁止本文",),
+        recommended=("推奨本文",),
+        permitted=("許容本文",),
+        examples=("判断例本文",),
+    )
+    collection = StandardCollection(
+        groups=(
+            StandardGroup(
+                group_id="internal.group-id",
+                title="group title",
+                scope="適用範囲",
+                standards=(standard,),
+            ),
+        )
+    )
+
+    rendered = _render_standard_collection(collection)
+
+    assert "# 規範タイトル（適用範囲）" in rendered
+    labels = ("**必須**", "**禁止**", "**推奨**", "**許容**", "**判断例**")
+    assert [rendered.index(label) for label in labels] == sorted(
+        rendered.index(label) for label in labels
+    )
+    assert "internal.standard-id" not in rendered
+    assert "internal.group-id" not in rendered
+
+
+def test_combined_standard_collections_are_deduplicated_and_order_independent() -> None:
+    """共有 Standard を一度だけ残し、builder の選択順から出力順を切り離す。"""
+    realization = _build_realization_standard()
+    apply_review = _build_apply_review_standard()
+
+    forward = combine_standard_collections(realization, apply_review)
+    reverse = combine_standard_collections(apply_review, realization)
+
+    assert forward == reverse
+    rendered = _render_standard_collection(forward)
+    assert (
+        rendered.count(
+            "realization file の都合または挙動を根拠に oracle file の意味を変更"
+        )
+        == 1
+    )
+    assert rendered.index("oracle file を正本として扱う") < rendered.index(
+        "realization standard"
+    )
+    assert rendered.index("realization standard") < rendered.index(
+        "所見・修正対象に具体的な根拠を求める"
+    )
+
+
+def test_combined_standard_collections_reject_conflicting_ids() -> None:
+    """同じ ID に異なる Standard または group 定義を割り当てない。"""
+    first_standard = Standard("shared.standard", "first", required=("body",))
+    conflicting_standard = Standard(
+        "shared.standard", "conflicting", required=("body",)
+    )
+    first = StandardCollection(
+        (StandardGroup("group.first", "first group", "scope", (first_standard,)),)
+    )
+    conflicting = StandardCollection(
+        (
+            StandardGroup(
+                "group.second",
+                "second group",
+                "scope",
+                (conflicting_standard,),
+            ),
+        )
+    )
+
+    with pytest.raises(ValueError, match="Conflicting Standard definition"):
+        combine_standard_collections(first, conflicting)
+
+    conflicting_group = StandardCollection(
+        (
+            StandardGroup(
+                "group.first",
+                "conflicting group",
+                "scope",
+                (Standard("other.standard", "other", required=("body",)),),
+            ),
+        )
+    )
+    with pytest.raises(ValueError, match="Conflicting StandardGroup definition"):
+        combine_standard_collections(first, conflicting_group)
+
+
 def test_build_apply_review_standard_renders_core_review_aspects() -> None:
-    """apply review standardの主要な所見境界がrenderされることを検証する。"""
-    doc = _build_apply_review_standard()[1]
+    """apply review standard の主要な所見境界が render される。"""
+    collection = _build_apply_review_standard()
 
-    assert isinstance(doc, StructDoc)
-    assert doc.title == "apply review standard"
+    assert isinstance(collection, StandardCollection)
 
-    rendered = render_as_markdown(doc)
+    rendered = _render_standard_collection(collection)
+    assert "apply review standard" in rendered
     assert "oracle file に対する realization file の追従要否" in rendered
     assert "明確な不適合または致命的な実装問題" in rendered
-    assert "仕様の隙間や改善案だけを修正対象にしない" in rendered
+    assert "所見・修正対象に具体的な根拠を求める" in rendered
+    assert "oracle file に記述がないこと、仕様の隙間" in rendered
     assert "調査開始時点ですでに解消されている問題" in rendered
 
 
 def test_conflict_resolution_standard_is_injected_without_editing_standards() -> None:
     """conflict 解消には専用規範だけを編集規範として注入する。"""
-    doc = _build_conflict_resolution_standard()[1]
-    rendered_doc = render_as_markdown(doc)
-    assert doc.title == "conflict resolution standard"
-    assert "`cmoc session join` の conflict marker を解消する場合だけ" in rendered_doc
+    collection = _build_conflict_resolution_standard()
+    rendered_doc = _render_standard_collection(collection)
+    assert "`cmoc session join` の conflict marker 解消時だけ" in rendered_doc
     assert "conflict marker の解消に不要な仕様変更" in rendered_doc
 
     prompt = build_complete_prompt(
@@ -90,7 +223,7 @@ def test_conflict_resolution_standard_is_injected_without_editing_standards() ->
     )
     rendered = render_as_markdown(prompt)
     assert "# oracle and realization basic" in rendered
-    assert "# conflict resolution standard" in rendered
+    assert "# 両 branch の意味を保って conflict marker だけを解消する" in rendered
     for heading in (
         "# oracle standard",
         "# realization standard",
@@ -147,17 +280,17 @@ def test_complete_prompt_controls_routing_rule_explicitly() -> None:
         path_context=_path_context(),
         aux_dynamic_prompt=[],
     )
-    input_only_prompt = build_complete_prompt(
+    repository_prompt = build_complete_prompt(
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
         path_context=_path_context(),
         aux_dynamic_prompt=[],
-        routing_rule=False,
+        routing_rule=True,
     )
 
-    assert "# routing rule" in render_as_markdown(default_prompt)
-    assert "# routing rule" not in render_as_markdown(input_only_prompt)
+    assert "# routing rule" not in render_as_markdown(default_prompt)
+    assert "# routing rule" in render_as_markdown(repository_prompt)
 
 
 def test_complete_prompt_maps_responsibility_and_task_to_summary() -> None:
@@ -349,7 +482,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         "realization standard",
         "oracle review standard",
         "apply review standard",
-        "conflict resolution standard",
+        "両 branch の意味を保って conflict marker だけを解消する",
         "realization oracle reference rule",
         "index entry standard",
         "oracle file",
@@ -449,12 +582,12 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
 
 def test_build_realization_standard_renders_core_conformance_rules() -> None:
     """realization standard の適合性と検証境界が render される。"""
-    doc = _build_realization_standard(_path_context())[1]
+    collection = _build_realization_standard()
 
-    assert isinstance(doc, StructDoc)
-    assert doc.title == "realization standard"
+    assert isinstance(collection, StandardCollection)
 
-    rendered = render_as_markdown(doc)
+    rendered = _render_standard_collection(collection)
+    assert "realization standard" in rendered
     assert "realization file を現行の oracle file に適合させる" in rendered
     assert "現行仕様に必要な実装だけを保つ" in rendered
     assert "対象 repository 固有の手順で変更を検証する" in rendered
@@ -482,12 +615,12 @@ def test_complete_prompt_can_include_realization_standard() -> None:
 
 def test_build_index_entry_standard_renders_core_output_rules() -> None:
     """index entry standardの出力境界がrenderされることを検証する。"""
-    doc = _build_index_entry_standard()[1]
+    collection = _build_index_entry_standard()
 
-    assert isinstance(doc, StructDoc)
-    assert doc.title == "index entry standard"
+    assert isinstance(collection, StandardCollection)
 
-    rendered = render_as_markdown(doc)
+    rendered = _render_standard_collection(collection)
+    assert "index entry standard" in rendered
     assert "読むべき対象へのルーティング情報" in rendered
     assert "対象内容に根拠" in rendered
     assert "機械的に補える情報" in rendered
@@ -534,19 +667,19 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
 
 def test_build_oracle_review_standard_renders_core_review_rules() -> None:
     """oracle review standardのseverityと所見境界がrenderされることを検証する。"""
-    doc = _build_oracle_review_standard()[1]
+    collection = _build_oracle_review_standard()
 
-    assert isinstance(doc, StructDoc)
-    assert doc.title == "oracle review standard"
+    assert isinstance(collection, StandardCollection)
 
-    rendered = render_as_markdown(doc)
+    rendered = _render_standard_collection(collection)
+    assert "oracle review standard" in rendered
     assert "fatal" in rendered
     assert "minor" in rendered
     assert "正本仕様断片同士に解釈の余地がない明確な矛盾" in rendered
     assert "実装者の裁量では解消不能" in rendered
     assert "誤字" in rendered
     assert "用語不統一" in rendered
-    assert "oracle file の具体的な記述だけから問題と言えない" in rendered
+    assert "oracle file だけから成立する問題を所見にする" in rendered
     assert "所見の列挙、統合、擁護理由列挙、反証理由列挙、および採否判定" in rendered
 
 

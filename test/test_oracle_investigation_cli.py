@@ -205,6 +205,7 @@ def test_oracle_investigation_has_no_session_precondition(
         1,
     )
     assert "# oracle standard" in complete_prompt
+    assert "# routing rule" in complete_prompt
     assert "oracle の根拠を調査する" in complete_prompt
 
 

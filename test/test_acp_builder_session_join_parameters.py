@@ -59,7 +59,10 @@ def test_session_join_conflict_resolution_uses_repo_write_mode(
     assert "conflict 対象ファイル" in parameter.prompt
     assert str(conflicted_path) in parameter.prompt
     assert parameter.run_indexing_preflight is False
-    assert "# conflict resolution standard" in parameter.prompt
+    assert "# 両 branch の意味を保って conflict marker だけを解消する" in (
+        parameter.prompt
+    )
+    assert "# routing rule" in parameter.prompt
     for heading in (
         "# oracle standard",
         "# realization standard",
