@@ -124,22 +124,20 @@
 # `src`
 
 ## Summary
-- cmoc の実装ツリー全体を束ねる `src` 配下の入口。CLI 最上位入口、互換 import shim、共通 runtime helper、ACP・basic・config の公開経路、各サブコマンド実装へのルーティングを扱う。
-- CLI 全体の構成や、互換パッケージと runtime 実装の大まかな責務境界を把握するための起点であり、詳細確認時は各下位パッケージへ進む。
+- cmocの実行可能コードを集約するsrc領域。Typer/Clickによる最上位CLI入口、各サブコマンド、共通runtime helper、ACP互換builder、正本oracle・設定・basic APIへの互換shimを扱う。CLI全体や実装領域の入口として、目的に応じて下位ディレクトリまたは個別モジュールへ進む。
 
 ## Read this when
-- cmoc の実装領域全体から、CLI 入口・共通 runtime・互換 shim・サブコマンドのどこを読むべきか判断するとき。
-- トップレベル CLI のコマンド登録、ACP/basic/config の互換公開経路、または `cmoc_runtime` と `oracle` の解決入口を確認するとき。
-- 複数のサブコマンドや共通 runtime にまたがる実装配置を調査するとき。
+- cmoc CLIのトップレベルコマンド構成、引数解析、補完、CLIエラー変換の入口を確認するとき。
+- 複数のサブコマンドで共有されるruntime処理、またはサブコマンド実装の配置を調べるとき。
+- ACP互換入口・builder群や、oracle、basic、config、cmoc_runtimeの互換import経路を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの処理内容や業務ロジックを確認したいときは、対応する `sub_commands` 配下を直接読む。
-- runtime helper の具体的なアルゴリズムや状態管理を確認したいときは、`commons` 配下の対応モジュールを直接読む。
-- ACP、basic、config、oracle の正本実装や詳細仕様を確認したいときは、対応する正本側または下位対象を直接読む。
-- 単一ファイルの内部挙動だけを調査・変更するときは、この領域を入口に総当たりせず対象ファイルへ進む。
+- 特定サブコマンドの処理ロジックや利用者向け仕様だけを確認したいときは、対応するsub_commands配下または正本仕様を直接読む。
+- 個別のruntime helperのアルゴリズムや状態処理だけを調べたいときは、commons配下の該当モジュールを直接読む。
+- ACP builder、basic API、設定、oracleの正本実装詳細を確認したいときは、各互換入口ではなく対応する実体またはoracle側を直接読む。
 
 ## hash
-- 53e3909f8123cb2cbdb0f799fb4ff2f8a677f843cf8427f73cd7c1269a8e7256
+- d559d9facd372fae7550069ed847807ebb3afade876d83114cc10f0e82e896fd
 
 # `test`
 

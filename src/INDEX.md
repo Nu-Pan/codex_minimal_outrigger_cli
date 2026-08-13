@@ -52,20 +52,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper をまとめる commons パッケージ。CLI 実行ライフサイクル、Codex exec/TUI、設定・状態、Git・パス・ログ・エラー、feedback、editing run、INDEX 更新など、複数の runtime 機能から再利用される実装への入口となる。
+- cmoc のランタイム共通補助機能を集約する commons パッケージ。CLI 共通ライフサイクル、Codex 実行、設定・状態、Git、パス、ログ、feedback、run lifecycle など、複数の上位機能から再利用される実装への入口。
+- 配下には、共通 API の公開入口、INDEX 更新 lifecycle、Codex exec/TUI、設定・状態・Git・パス・ログ、feedback、editing run などの個別 runtime helper が含まれる。
 
 ## Read this when
-- commons 配下の共通 runtime helper の責務や、複数の runtime 機能にまたがる公開 API を確認するとき
-- CLI、Codex 実行、設定・状態管理、Git・パス・ログ、feedback、editing run、INDEX 更新の共通実装を調査・変更するとき
-- 個別 runtime module の担当範囲を特定し、対応する helper へ進む必要があるとき
+- cmoc の複数機能にまたがる runtime helper の責務や実装配置を確認するとき
+- CLI、Codex 実行、設定、状態、Git、feedback、editing run などの共通処理を調査・変更するとき
+- 対象となる個別 runtime helper を特定し、その実装へ進む入口を探すとき
 
 ## Do not read this when
-- 特定の helper や個別 runtime 機能のアルゴリズム・仕様だけを確認したいときは、commons 配下の対応する実装へ直接進む
-- 利用者向けの CLI サブコマンド挙動や正本仕様だけを確認したいときは、該当する subcommand 実装または oracle 文書を直接読む
-- commons と無関係な realization 実装や他のパッケージを調査するとき
+- 単一の runtime helper の具体的なアルゴリズムや挙動だけを確認したいときは、commons 配下の対応する個別実装へ直接進む
+- 利用者向けの CLI サブコマンド仕様や正本仕様だけを確認したいときは、該当する command 実装または oracle 文書を直接読む
+- commons に属さない realization 実装や個別アプリケーション機能を調査するとき
 
 ## hash
-- 4ce78d40b40c425798958ba93b105791714c5d7003e31e6d7e713f51416b88a5
+- 488e4e43557474f882aefed1705b636c503836c7dcc5186f907d73c1e168f500
 
 # `config`
 

@@ -300,22 +300,21 @@
 # `runtime_feedback_state.py`
 
 ## Summary
-- feedback の repository-local state を一つの integrity boundary で管理する中核 module。report cut、active generation、current pointer、checkpoint、publication、incomplete 診断、cleanup の生成・検証・復旧・破棄を扱う。
-- 観測 envelope、machine aggregate、active issue、report cut manifest、artifact reference の schema・identity・canonical JSON・SHA256・path containment を検証し、異常終了後の checkpoint recovery と publication 後 cleanup を支える。
-- feedback state の遷移や永続 artifact の整合性を確認する際の実装入口であり、raw observation の入力仕様や Markdown report の表示仕様そのものを読む入口ではない。
+- フィードバックの repository-local state を扱う中核モジュール。観測の envelope 検証、report cut の作成・再開・checkpoint 回復・破棄、active generation と current pointer の検証・公開、incomplete 診断、publication 後の cleanup を一つの integrity boundary で管理する。
+- feedback state の永続 artifact、canonical JSON、SHA256、ID、path、時刻、schema、参照整合性を検証し、異常状態を利用者向けエラーへ変換する。feedback report の report cut や active state の遷移・復旧・cleanup の実装を確認する入口である。
 
 ## Read this when
-- feedback state の保存形式、current pointer、active generation、report cut の処理状態を確認するとき。
-- feedback の publication、incomplete 診断、checkpoint、artifact hash、symlink 防止、writer lock、cleanup または recovery の挙動を調べるとき。
-- feedback state の corruption 検出や、state transition を複数 module に分散させない責務を確認するとき。
+- feedback の active state、current pointer、generation、report cut、checkpoint、publication、incomplete 診断、または cleanup の挙動を変更・調査するとき
+- raw observation の envelope、machine rule、agent report、artifact reference、canonical JSON、hash、ID、path の整合性検証を確認するとき
+- feedback report 処理の中断復旧、publication 後の cleanup、不要または未定義 artifact の拒否を確認するとき
 
 ## Do not read this when
-- raw observation の envelope や reporter 入力の仕様だけを確認する場合は、feedback observation の仕様・実装を直接読む。
-- feedback report の Markdown 内容や subcommand の利用者向け契約だけを確認する場合は、feedback report の仕様・実装を直接読む。
-- feedback state を変更せず、単に個別の共通 ID・時刻・JSON helper の定義だけを確認する場合は、runtime feedback store を直接読む。
+- feedback の観測を MCP tool から登録する処理だけを確認するときは、観測受付側の実装を直接読む
+- feedback report の Markdown 内容や agent 向け入力の生成仕様だけを確認するときは、対応する report 仕様・生成実装を直接読む
+- 一般的な runtime error の定義や低レベルの JSON・時刻・ID utility だけを確認するときは、各 utility の実装を直接読む
 
 ## hash
-- b02d17fd46c20b2db47c84b98ef7f13a913d672ca24bfd877e280acf1af80ba9
+- b3d2322c62167f70037aadb2a617b9f0b72e9be6819abac9e4f26a4f07c9e7ee
 
 # `runtime_feedback_store.py`
 
