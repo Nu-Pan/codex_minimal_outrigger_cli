@@ -400,22 +400,22 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess の外部契約を検証する統合テスト。CLI と直接呼び出しの両方を通じて、Git 状態・ignore・agents・config・refactor state の修復、修復順序、共有ロック、reporter の劣化時挙動と例外伝播を確認する。
-- 修復 commit が既存の staged／unstaged 変更、index flag、intent-to-add、rename、削除を保持すること、および欠落 index や symlink などの境界条件を検証する。doctor preprocess の lifecycle と副作用を確認するための、doctor 実装・CLI の下位テストへの入口である。
+- doctor preprocess の外部契約を検証する統合テスト。CLI と直接呼び出しの双方を対象に、Git 状態・config・refactor state・`.cmoc/gu`・`.agents` の修復、修復順序、reporter の degraded/error 挙動、共有 lock、linked worktree の境界を一続きの lifecycle として確認する。
+- 修復 commit が既存の staged 変更、unstaged hunk、rename、削除、index flag、intent-to-add を壊さず保持すること、および symlink 経由の危険な書き込みを拒否することを検証する。doctor preprocess 実装や関連 fixture・補助関数を調べる際の入口となる。
 
 ## Read this when
-- doctor preprocess の CLI または直接呼び出しにおける修復契約を変更・検証するとき
-- Git index の既存変更を保持した修復 commit、linked worktree、共有 doctor lock の挙動を調査するとき
-- config、refactor state、.cmoc/gu、.agents の生成・追跡・ignore 修復を統合的に確認するとき
-- feedback reporter の利用不能、schema probe の中断、予期しない例外の扱いを確認するとき
+- doctor preprocess の CLI または直接呼び出し時の外部挙動を変更・検証するとき
+- `.cmoc/gu`、`.agents`、config、refactor state、Git index の修復・commit・lock・linked worktree 挙動を確認するとき
+- reporter の利用不能、割り込み、予期しないエラー、および修復失敗時の扱いを確認するとき
+- doctor の修復が既存の staged/unstaged 変更や index metadata を保持することをテスト・レビューするとき
 
 ## Do not read this when
-- doctor preprocess 以外のサブコマンドや、単一の補助関数の局所実装だけを調査するとき
-- Git 操作の一般的な仕様や個別 fixture の実装を直接確認したい場合は、対応する実装・補助モジュールを読むとき
-- reporter 自体の schema 定義や feedback 保存処理だけを変更・調査するときは、その実装または専用テストを直接読むとき
+- doctor preprocess の外部契約ではなく、個別の低レベル Git ヘルパーや reporter 実装そのものだけを調べるときは、対応する実装・単体テストへ直接進む
+- doctor 以外の CLI サブコマンドや、config・refactor state の一般仕様だけを確認するとき
+- 統合 fixture、linked worktree、共有 doctor lock、修復 commit の lifecycle に関係しないテストを探すとき
 
 ## hash
-- 6d3a727fff60a0e576eb9151e28b5ce83b15ed42db91c97b6622684cb3ab7c96
+- bf4dcb898410aa130156f066e408bac5941e91a1773d4e5007e083412e9aac45
 
 # `test_editing_run_cli.py`
 

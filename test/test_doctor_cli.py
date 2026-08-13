@@ -11,8 +11,12 @@ lock・CLI/config・Git index はテスト観点としては分かれるが、�
 複数のモジュールで重複して読む必要があり、局所的な読解量が増えるため、
 責務を doctor preprocess の外部契約に限定して一つに保つ。
 
-正本仕様: `{{work-root}}/oracle/doc/app_spec/doctor_preprocess.md`,
-`{{work-root}}/oracle/doc/app_spec/sub_command/doctor.md`。
+正本仕様:
+- `{{work-root}}/oracle/doc/app_spec/doctor_preprocess.md`
+- `{{work-root}}/oracle/doc/app_spec/misc_spec.md`
+- `{{work-root}}/oracle/doc/app_spec/sub_command/doctor.md`
+- `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`
+- `{{work-root}}/oracle/src/oracle/other/cmoc_config.py`
 """
 
 import json
