@@ -20,23 +20,19 @@
 # `src`
 
 ## Summary
-- oracle/src は、cmoc の oracle 実装を構成する Python パッケージのルートである。agent call の論理パラメータ、prompt の組み立て、Structured Output schema、設定・パス・構造化文書のモデル、feedback 入力契約を扱う。
-- acp_builder は用途別の agent call パラメータを構築する。session、tui、feedback、indexing、oracle review、oracle edit/investigation、realization apply/refactor の各処理へ進む入口である。
-- prompt_builder は共通 prompt と構成部品を組み立てる。アクセス規則、oracle・realization 規則、routing、index entry、feedback、conflict resolution の標準文面を確認するときに進む。
-- other は agent call と prompt 構築で共有する設定、パス、構造化文書、標準規約のモデルを提供する。個別の共通型や変換処理を確認するときに進む。
-- feedback は feedback reporter の入力契約を定義する。feedback issue の正規化・検証用 agent call と、reporter input schema を確認するときに進む。
+- AI エージェント呼び出しに必要なパラメータ、パスコンテキスト、設定、Structured Markdown、完全 prompt の構築基盤を提供する。
+- acp_builder はモデル・推論・ファイルアクセスを含む agent call パラメータと用途別 builder、prompt_builder は共通 prompt と規則部品、other はパス解決・設定・構造化文書・要求モデルを扱う。各用途や共通機能を調査するときの上位入口として、配下の oracle、acp_builder、prompt_builder、other へ進む。
 
 ## Read this when
-- oracle/src 配下の複数領域にまたがる agent call、prompt、schema、共有モデル、feedback 契約の関係を調査・変更するとき。
-- 対象領域が acp_builder、prompt_builder、other、feedback のどれに属するかを判断し、下位ディレクトリへの調査入口を選ぶとき。
-- oracle 実装パッケージ全体の責務分担や、用途別 agent call 定義と共通 prompt・共有モデルの接続を確認するとき。
+- agent call の共通パラメータ、モデル・推論設定、ファイルアクセスモード、cwd、Structured Output、indexing preflight を確認・変更するとき。
+- 用途別の agent call builder、quota probe、oracle・realization・feedback・session・TUI の起動パラメータの配置先を判断するとき。
+- 完全 prompt の組み立て、共通規則部品、パス placeholder の解決、設定モデル、構造化 Markdown の生成を調査・変更するとき。
 
 ## Do not read this when
-- 特定の agent call の prompt と起動パラメータだけを確認する場合は、該当する acp_builder 配下へ直接進む。
-- 共通 prompt の単一部品だけを確認する場合は、該当する prompt_builder 配下へ直接進む。
-- 設定・パス・構造化文書など単一の共有モデルだけを確認する場合は、other 配下へ直接進む。
-- feedback reporter の入力項目や feedback issue の個別処理だけを確認する場合は、feedback 配下へ直接進む。
-- agent call の実行、CLI バックエンド、状態保存、realization 実装を調べる場合は、oracle/src ではなく対応する実行側・状態管理側・realization 側を読む。
+- 特定用途の agent call 定義が明確なときは oracle または acp_builder 配下の該当領域を直接読む。
+- prompt の共通部品や完全 prompt の構築だけが目的のときは prompt_builder 配下を直接読む。
+- パス解決、設定、要求モデル、構造化 Markdown のいずれか一つだけが目的のときは other 配下の該当対象を直接読む。
+- agent call の実行処理や対象ファイルの仕様を確認することが目的のときは、それぞれの実行側または仕様側の対象を直接読む。
 
 ## hash
-- ba7cc3c09f9432b620a9b11fc5c53e6c175c832286072434b3d297087582c822
+- eb4fa8ae9a5cee5e1e2892c3c628f94d8034a17bc4b84e70917022eb576831b3

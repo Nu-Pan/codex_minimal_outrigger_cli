@@ -1,18 +1,18 @@
 # `fork`
 
 ## Summary
-- refactor fork における変更要約とファイル単位レビュー・修正の agent call 定義、およびそれらの構造化出力スキーマを扱う領域。変更差分の意味的要約、レビュー結果の記録、対象ファイルの調査・修正・検証に関する入口を提供する。
-- 変更要約の出力契約だけを確認する場合は change_summary.json、レビュー結果の項目や対応状態だけを確認する場合は file_review_and_fix.json を読む。agent call の構築条件や prompt、権限、検証規則を確認する場合は対応する Python 定義へ進む。
+- 変更要約とファイル単位のレビュー・修正を扱う Structured Output 定義および agent call 構築定義をまとめた領域。差分要約の出力契約、refactor fork の agent call 起動条件、レビュー用 prompt と検証設定を確認するための入口となる。
 
 ## Read this when
-- refactor fork の変更差分を構造化して要約したいとき
-- ファイル単位のレビュー・修正 agent の呼び出し条件、調査範囲、修正権限、検証規則を確認・変更するとき
-- 変更要約またはレビュー・修正結果の出力契約を確認するとき
+- 変更内容を意味論的カテゴリ別に要約する出力契約を確認するとき
+- refactor fork の差分要約 agent call の入力差分、起動条件、実行環境を確認するとき
+- refactor fork のファイル単位レビュー・修正用 prompt、oracle・realization 参照規則、検証設定を確認するとき
+- レビュー・修正結果の出力契約や、所見の根拠・対応状態の記録方法を確認するとき
 
 ## Do not read this when
-- 個別のレビュー対象ファイルの実装内容や、具体的なレビュー所見を調査するとき
-- 変更要約またはレビュー結果の項目・型・形式だけを確認するときは、対応する JSON スキーマへ直接進む
-- 共通の prompt 構築処理や path 解決処理だけを確認したいときは、共通実装へ直接進む
+- 変更要約やレビュー・修正結果の出力項目・形式だけを確認する場合は、該当する Structured Output schema を直接読む
+- レビュー対象の実装内容や個別仕様を調査する場合は、対象の oracle file または realization file を直接読む
+- refactor fork 以外の agent call 構築や一般的な prompt 生成規則を確認する場合は、該当する別の定義を直接読む
 
 ## hash
-- 1e3e3256a5b3dd5395892895bfc5a50489dfee299870410f07de0fbaf6f2fe0d
+- f33c71d1a90dee9a52ce62a73d5d8a8447ef951d0fbc4685471447096b9a7908

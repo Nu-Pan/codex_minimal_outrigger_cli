@@ -49,18 +49,18 @@
 # `file_review_and_fix.py`
 
 ## Summary
-- 対象ファイルは、refactor fork におけるファイル単位レビュー・修正用 AgentCallParameter の構築を担う。対象 path と run worktree を受け取り、レビュー対象を起点に調査・修正・検証を行う完全な prompt、oracle/realization の参照規則、書き込み範囲、構造化出力 schema、実行設定を組み立てる。
-- このファイルはレビュー兼修正 agent の呼び出し定義を確認または変更するときの入口であり、実際のレビュー prompt 文面や出力契約を変更する場合に読む。呼び出し対象の個別レビュー実装や、schema の詳細だけを確認する場合は、それぞれの直接の定義へ進む。
+- refactor fork におけるファイル単位レビュー・修正用の AgentCallParameter を構築する。対象ファイルを起点に完全プロンプトを生成し、oracle・realization の参照、レビュー、修正、検証、Structured Output の報告条件を定義する。
+- パスコンテキスト、ファイルアクセス権限、モデル・推論設定、構造化出力スキーマ、実行時の作業ディレクトリをまとめ、ファイル単位の追従処理へ渡す入口となる。
 
 ## Read this when
-- refactor fork のファイル単位レビュー・修正 agent の呼び出しパラメータ、prompt 構築、アクセス権限、検証規則、または実行モデル設定を確認・変更するとき
-- ファイル単位レビュー用 agent が、対象ファイルを起点にどの範囲を調査し、どの条件で realization file を修正するかを確認するとき
-- この agent call の構造化出力契約と、変更 path 集合の申告条件を含む事後条件を確認するとき
+- refactor fork のファイル単位レビュー・修正処理を追加・変更するとき
+- 対象ファイルを起点とするレビュー用プロンプト、oracle・realization の参照規則、修正後検証の設定を確認するとき
+- AgentCallParameter のモデル、作業ディレクトリ、アクセスモード、Structured Output 設定を確認するとき
 
 ## Do not read this when
-- レビュー対象ファイルそのものの実装内容や、レビュー結果の所見だけを確認したいとき
-- 構造化出力 schema の項目・型・形式だけを確認したいときは、対応する schema 定義を直接読む
-- 共通 prompt 構築処理や path 解決処理だけを確認したいときは、対応する共通実装を直接読む
+- レビュー対象ファイルの実装内容そのものを調査するときは、対象の oracle file または realization file を直接読む
+- レビュー結果の出力項目や JSON Schema の形式だけを確認するときは、関連する Structured Output schema を直接読む
+- refactor fork 以外の AgentCallParameter 構築や、一般的なプロンプト生成の仕様だけを確認するとき
 
 ## hash
-- bfeeff85da635b4807768764c42bbdeee1ed2830e087efc501a2b321a44ef52d
+- 69bfa835a0e66f27e52a62ce2349dfc9c41db79f4a8256afee2271e6609ce1ab

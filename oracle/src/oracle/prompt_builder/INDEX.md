@@ -17,20 +17,18 @@
 # `complete_prompt.py`
 
 ## Summary
-- 選択した規範・補助プロンプト・動的な依頼内容を統合し、agent call 用の完全な構造化 prompt を構築する入口。placeholder 定義を統合し、依存する規範を自動的に有効化したうえで、静的規則・動的 summary/goal・定義情報を決定論的な順序でまとめる。
+- agent call 向けの完全な構造化プロンプトを構築する中核モジュール。要約・完了条件・ファイルアクセス・oracle/realization・レビュー・routing などの選択可能な規則を依存関係に従って組み合わせ、placeholder 定義を統合した prompt を返す。各種 prompt builder の組み立て順序と有効化条件を確認したい場合の入口となる。
 
 ## Read this when
-- agent call に渡す完全 prompt の構成、規範の依存関係、静的 prompt と動的 prompt の注入順序を確認したいとき
-- placeholder 定義の統合や同名定義の競合時の扱いを確認したいとき
-- oracle、realization、review、routing などの選択オプションがどの補助規則を連動して有効化するかを確認したいとき
+- agent 向け prompt の構成、規則の有効化条件、builder の注入順序、placeholder 定義の統合動作を変更または調査するとき。
+- 新しい prompt 規則や補助 prompt を完全 prompt に組み込む経路を確認するとき。
 
 ## Do not read this when
-- 個別の oracle・realization・file access・routing 規則の本文を確認したいだけのときは、それぞれの規則ビルダーまたは正本を直接読む
-- prompt の構造化データ型やブロック表現そのものを確認したいだけのときは、StructDoc、StructBlock などの定義を直接読む
-- agent call の実行、CLI の利用、または生成済み prompt の具体的な内容だけを確認したいとき
+- 個別の oracle、realization、レビュー、ファイルアクセス、routing 規則の本文だけを確認したいときは、対応する parts 配下の builder を直接読む。
+- prompt 構築結果の利用側や呼び出し元の挙動だけを調査するときは、呼び出し元の実装を直接読む。
 
 ## hash
-- 5947a9ed09d7476bd93871b1cee478d031ef383b49b07f9578e7827047e029a7
+- f131fcc03239a0fe31c640c9c735106fbcb45c6cbbf9f6227fdf0d95de983a86
 
 # `editor_input.py`
 

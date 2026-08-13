@@ -89,23 +89,27 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本文書と oracle 実装を集約する領域。アプリケーション仕様、branch・session・run・commit・worktree のモデル、採用しなかった設計案、開発環境・設計・テストのルールを扱う。
-- oracle/doc は利用者向け挙動、サブコマンド、実行規則、開発ルール、検討記録を確認する入口である。
-- oracle/src は agent call のパラメータ、prompt の組み立て、Structured Output、設定・パス・構造化文書モデル、feedback 契約を確認する入口である。下位領域として acp_builder、prompt_builder、other、feedback を持つ。
+- cmoc の正本を集約する oracle 領域。利用者向け仕様、branch・commit・worktree のモデル、不採用設計の記録、開発ルールを提供する。
+- app_spec は CLI の挙動、prompt、session・run、feedback、indexing、ログ、エラー処理などのアプリケーション仕様を扱う。
+- branch_model は cmoc が管理する branch、commit、worktree の用語と関係を定義する。
+- considered_alternative は realization refactor などで採用しなかった作業方式や設計案の理由を記録する。
+- dev_rule はコーディング、設計、開発環境、テスト実装、テスト実行に関する開発ルールを定義する。
+- src は oracle 側の実装基盤であり、agent call parameter、用途別 builder、prompt 構築、パス・設定・構造化文書モデル、feedback reporter 入力スキーマを扱う。配下の app_spec、branch_model、considered_alternative、dev_rule、src が個別確認の入口になる。
 
 ## Read this when
-- cmoc の正本文書がどの領域にあるかを特定するとき
-- 利用者向け仕様、session・run・branch・commit・worktree の関係、または不採用設計の理由を調べるとき
-- Python 実装、CLI 設計、開発環境、テスト要件・実行手順の正本を探すとき
-- agent call、prompt、Structured Output、共有モデル、feedback 契約の責務分担を調べるとき
+- cmoc の利用者向け仕様やサブコマンドの挙動を確認するとき。
+- session・run の状態、branch・commit・worktree の関係、作業隔離を確認するとき。
+- prompt、agent call、feedback、indexing、ログ、エラー処理などの正本仕様を探すとき。
+- 採用されなかった設計案や realization refactor の判断理由を確認するとき。
+- Python 実装、agent call builder、prompt builder、設定、パスモデル、構造化文書、feedback 入力スキーマの配置や責務を確認するとき。
 
 ## Do not read this when
-- 確認対象の仕様本文、開発ルール、検討記録、agent call 定義、prompt 部品、共有モデル、feedback 契約が特定できており、その対象を直接読めるとき
-- realization 実装、通常の CLI 実装、状態保存、テスト内容、ログ、実行成果物の詳細を調べるとき
-- INDEX.md の生成規則やルーティング情報だけを確認するとき
+- 確認対象の仕様本文、開発ルール、検討記録、または実装ファイルがすでに特定できているときは、その対象を直接読む。
+- realization 側の実装やテスト、実行ログ、生成成果物の詳細を確認するとき。
+- INDEX.md の生成規則やルーティング情報だけを確認するとき。
 
 ## hash
-- 27ba67a97f54af8c0867a1c5f41763a2fc6de9025114b4f6f54c787dc2f2d924
+- 6920339227acbe4e3dbc1066608ce2694e73f0b83b8b7881aff4b8652f07bb08
 
 # `pyproject.toml`
 

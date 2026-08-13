@@ -1,20 +1,20 @@
 # `acp_builder`
 
 ## Summary
-- AI エージェント呼び出しの共通パラメータと、cmoc の各サブコマンド・処理領域に対応する prompt、Structured Output schema、モデル・権限・作業ディレクトリ・indexing preflight 設定の構築定義を集約する領域。feedback、indexing、TUI、oracle review、realization、session join、quota probe の個別設定へ進む入口。
+- AI エージェント呼び出しに必要な共通データモデルと、indexing・oracle・realization・session・TUI・quota probe など用途別の起動定義を扱う領域。各用途の prompt、Structured Output、実行権限、作業ディレクトリ、モデル・推論設定を確認するための入口。
 
 ## Read this when
-- AgentCallParameter の共通契約やモデル区分、推論強度、ファイルアクセスモードを確認・変更するとき。
-- 特定の cmoc 処理が起動する AI エージェントの prompt、Structured Output schema、モデル、権限、作業ディレクトリ、indexing preflight の設定を調べるとき。
-- feedback issue、INDEX.md エントリー生成、TUI、oracle review、realization の apply/refactor、session join の conflict 解消、quota availability probe の呼び出し定義を調べるとき。
+- AI エージェント呼び出しの共通パラメータや用途別の起動条件を調査・変更するとき
+- 特定用途の prompt、出力契約、アクセスモード、モデル、推論強度、cwd、preflight 設定を確認するとき
+- 配下の用途別定義へ進む前に、どの領域を読むべきか判断するとき
 
 ## Do not read this when
-- 実際の agent call 実行処理や Codex CLI バックエンドへのモデル名解決を調べるとき。
-- 各処理の業務ロジック、状態保存、候補絞り込み、レビュー実行、realization の通常実装を調べるときは、対応する実行側・状態管理側・realization 実装へ直接進む。
-- 共通 prompt 構築規則、パス解決、Structured Output schema の一般的な制約だけを確認するときは、それぞれの共通定義または個別 schema へ直接進む。
+- 対象用途の具体的な prompt や Structured Output の詳細を直接確認できるとき
+- 共通 prompt 生成規則だけを調べるとき
+- 実際の agent call 実行処理、対象ファイルの仕様、または通常の session join 処理を調べるとき
 
 ## hash
-- 2f4a76bba98733088f3f68a59a32e7ab20cbf93826da90f91342c120642ccfc7
+- c7c42a03da38420de26179d512fb58089a41df5d20b9b01745203e40f9345d89
 
 # `feedback`
 
@@ -58,17 +58,18 @@
 # `prompt_builder`
 
 ## Summary
-- agent call 向けの完全な構造化 prompt を組み立てる実装群。placeholder 定義、静的・動的 prompt の統合、エディタ入力文面、各種規範や routing・feedback・access rule の構築部品を扱い、prompt 生成経路を確認する際の入口となる。
+- agent call 向けの構造化プロンプトを組み立てるモジュール群。完全 prompt の統合、エディタ入力文面、placeholder 型、oracle・realization・レビュー・アクセス制限・routing などの規則部品を扱い、prompt 生成経路や個別 builder の責務を調べる際の入口となる。
 
 ## Read this when
-- prompt builder の構成や、agent call 用 prompt の生成・統合順序を調査するとき。
-- oracle・realization・レビュー・routing・human feedback・file access などの標準規範が、どの部品から構築されるか確認するとき。
-- placeholder の定義、エディタ入力の初期文面、構造化 prompt の組み立てを変更・レビューするとき。
+- agent 向け prompt の構成や builder の組み合わせを変更・調査するとき。
+- oracle、realization、レビュー、human feedback、ファイルアクセス、INDEX routing などの標準規則を prompt に組み込む経路を確認するとき。
+- エディタ入力用の初期文面や placeholder 表現の定義を確認・変更するとき。
 
 ## Do not read this when
 - 個別の oracle 文書、realization 実装、realization test の内容を調査するとき。
-- prompt builder を呼び出す上位の選択処理や agent call の実行方法だけを確認したいとき。
-- Structured Output schema や構造化文書型そのものだけを確認したいときは、該当する型定義を直接読む。
+- prompt builder を呼び出す側の選択処理や agent call 全体の挙動だけを調べるとき。
+- 既存の INDEX.md のルーティング情報だけを確認・更新するとき。
+- Structured Output schema の形式や、ファイル名・hash など機械的な識別情報だけを確認するとき。
 
 ## hash
-- 4787824fd631ba0053b4c988234b7bb60c67df522d38c788abc57a83774c9e0e
+- 1f27c8649a6d8312ae1c40de828b871ea0455b77b2b09f790bf4b2cbe54dad88
