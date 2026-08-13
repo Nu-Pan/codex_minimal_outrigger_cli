@@ -50,6 +50,12 @@ from oracle.prompt_builder.parts.index_entry_standard import (
 from oracle.prompt_builder.parts.oracle_review_standard import (
     build_oracle_review_standard as _build_oracle_review_standard,
 )
+from oracle.prompt_builder.parts.oracle_standard import (
+    build_oracle_investigation_standard as _build_oracle_investigation_standard,
+)
+from oracle.prompt_builder.parts.oracle_standard import (
+    build_oracle_standard as _build_oracle_standard,
+)
 from oracle.prompt_builder.parts.realization_oracle_reference_rule import (
     build_realization_oracle_reference_rule as _build_realization_oracle_reference_rule,
 )
@@ -147,7 +153,7 @@ def test_combined_standard_collections_are_deduplicated_and_order_independent() 
         )
         == 1
     )
-    assert rendered.index("oracle file を正本として扱う") < rendered.index(
+    assert rendered.index("oracle file を正本仕様断片として扱う") < rendered.index(
         "realization standard"
     )
     assert rendered.index("realization standard") < rendered.index(
@@ -190,6 +196,47 @@ def test_combined_standard_collections_reject_conflicting_ids() -> None:
     )
     with pytest.raises(ValueError, match="Conflicting StandardGroup definition"):
         combine_standard_collections(first, conflicting_group)
+
+
+def test_oracle_standards_separate_investigation_from_editing_rules() -> None:
+    """読み取り専用調査には、編集判断にだけ必要な規範を含めない。"""
+    editing = _render_standard_collection(_build_oracle_standard())
+    investigation = _render_standard_collection(_build_oracle_investigation_standard())
+
+    for shared in (
+        "oracle file を正本仕様断片として扱う",
+        "判断根拠と installed skill の優先関係を守る",
+        "実装から正本仕様を逆算しない",
+    ):
+        assert shared in editing
+        assert shared in investigation
+    assert "定義済みの事項と未定義の事項を区別する" in investigation
+    for editing_only in (
+        "realization file から oracle file へ意味を逆流させない",
+        "一般論だけを根拠に oracle file の要求を変更しない",
+        "重要な人間意図へ絞り、仕様の隙間を許容する",
+        "実装上の制約は仕様の矛盾または実現不能の調査に限って使用する",
+        "正本仕様断片の整合性と検索性を保つ",
+    ):
+        assert editing_only in editing
+        assert editing_only not in investigation
+
+
+def test_complete_prompt_can_include_oracle_investigation_standard() -> None:
+    """調査用 Standard を基本定義とともに独立して注入する。"""
+    prompt = build_complete_prompt(
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        path_context=_path_context(),
+        oracle_investigation_standard=True,
+    )
+
+    rendered = render_as_markdown(prompt)
+    assert "# oracle and realization basic" in rendered
+    assert "# oracle investigation standard" in rendered
+    assert "# oracle standard" not in rendered
+    assert "定義済みの事項と未定義の事項を区別する" in rendered
 
 
 def test_build_apply_review_standard_renders_core_review_aspects() -> None:
@@ -324,6 +371,30 @@ def test_complete_prompt_includes_feedback_instruction_exactly_once() -> None:
     assert rendered.count("# human feedback reporting") == 1
     assert rendered.count("cmoc_feedback.submit_observation") == 1
     assert "feedback 保存 file は直接編集しない" in rendered
+    assert "現在の workload だけでは解消できず" in rendered
+    assert "外部挙動を左右する人間意図の確定" in rendered
+    assert "通常の workload 内で解決した問題" in rendered
+
+
+def test_complete_prompt_renders_file_classification_boundaries() -> None:
+    """基本定義が exact root と owning repository の分類境界を伝える。"""
+    prompt = build_complete_prompt(
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=_path_context(),
+        oracle_and_realization_basic=True,
+    )
+
+    rendered = render_as_markdown(prompt)
+    for expected in (
+        "nested の同名 path は、名前だけで対象外にしない",
+        "nested Git working tree の `.git` path",
+        "最内側の検証済み Git working tree を owning repository とする",
+        "tracked な regular file は、ignore pattern に一致しても分類対象に含める",
+        "untracked かつ ignored な regular file だけとする",
+    ):
+        assert expected in rendered
 
 
 def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(

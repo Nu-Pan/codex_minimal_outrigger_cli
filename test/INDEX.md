@@ -546,20 +546,21 @@
 # `test_oracle_investigation_cli.py`
 
 ## Summary
-- `oracle investigation` CLI が session 前提なしで起動し、doctor preprocess、prompt 構築、エディタ入力、完全 prompt 確定、TUI 起動を所定順序で実行することを検証する。
-- TUI 起動パラメータのモデル、推論強度、ファイルアクセスモード、作業ディレクトリ、indexing preflight、および完全 prompt の内容を検証する。
-- investigation 用 realization adapter が公開する builder の範囲を検証する。
+- 対象は oracle investigation CLI の起動条件と起動前後の処理順を検証する pytest で、session 前提なしの起動、doctor/build/editor/finalize/TUI の連携、生成される prompt と AgentCallParameter の契約を確認する。
+- investigation の realization adapter が公開する builder API を限定していることも検証するため、CLI 起動フローやそのテスト契約を変更・調査するときの入口になる。
 
 ## Read this when
-- `oracle investigation` の起動条件、処理順序、prompt editor 連携、完全 prompt 確定、または TUI 起動パラメータを変更・検証するとき。
-- oracle investigation の builder の公開 API を変更・検証するとき。
+- `oracle investigation` サブコマンドの CLI 起動条件、main worktree での session 不要起動、または indexing preflight を含む起動順を確認するとき。
+- prompt editor 入力、完全 prompt の確定、TUI 起動に渡す AgentCallParameter の値や prompt 内容をテストで確認・変更するとき。
+- `acp.builder.oracle.investigation.launch_tui` の公開 API（builder のみ）に関する realization adapter のテスト契約を確認するとき。
 
 ## Do not read this when
-- oracle investigation の意味仕様や prompt 構築実装そのものを確認する場合は、まず対応する oracle 仕様または builder 実装を直接読む。
-- 他のサブコマンドの CLI 起動条件や builder 公開 API のみを扱う場合。
+- oracle investigation の正本仕様そのものを確認する場合は、まず `oracle/doc/app_spec/sub_command/oracle_investigation.md` などの仕様書を読む。
+- CLI 共通の doctor、prompt editor、または indexing の一般仕様だけを調べる場合は、それぞれの専用仕様・実装・テストへ直接進む。
+- investigation builder の実装詳細だけを確認する場合は、`oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` を直接読む。
 
 ## hash
-- 91a06469412651de9979b96dc8b6a67e4961d62c91aad740f41b57ceacb73028
+- abbf273c94a5245700d671437e85fea1cacbd47b99873da23ab6e238a17dfff9
 
 # `test_oracle_review_loop.py`
 
@@ -698,23 +699,23 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- 標準 prompt parts と complete prompt の組み立て結果を、StructDoc の rendering として検証する回帰テスト群。
-- Standard の不変性・入力制約・重複排除・競合検出、および各 prompt standard の主要な規範文を確認する。
-- file access mode、routing、feedback、placeholder、standard の選択注入、既定時の省略など、complete prompt の構成制御を検証する。
-- prompt builder の標準定義や組み立て処理の変更が、rendered prompt の内容や注入条件に影響する場合に参照する入口である。
+- 標準 prompt parts と complete prompt の統合を検証する回帰テストです。
+- Standard の不変性・入力検証・重複排除・競合検出と、StructDoc への描画結果を確認します。
+- 各標準規則の個別生成、file access mode ごとの内容、complete prompt への条件付き注入、標準規則の既定値、placeholder 展開・保持・競合検出を一つの検証入口にまとめています。
 
 ## Read this when
-- prompt parts の標準文、StandardCollection の合成・rendering、または complete prompt の構成条件を変更・検証するとき。
-- 各標準の注入条件、既定で含めるかどうか、file access mode ごとの規則、placeholder 展開の回帰を調査するとき。
-- prompt builder 周辺のテスト対象と、rendered prompt に保持すべき主要語・見出しを確認するとき。
+- prompt builder の標準規則、prompt parts、complete prompt の描画または注入挙動を変更・検証するとき
+- Standard、StandardCollection、StandardGroup の合成・描画・不変性・競合検出に関する回帰を確認するとき
+- file access mode、oracle investigation、review、conflict resolution、routing、INDEX entry などの標準規則が complete prompt に正しく含まれるか確認するとき
+- root placeholder の定義、literal token の保持、placeholder の重複・競合処理を検証するとき
 
 ## Do not read this when
-- prompt builder や標準定義に関係しない機能の実装・テストを扱うとき。
-- prompt の組み立て処理そのものではなく、個別標準の正本仕様だけを確認する必要があるとき。
-- INDEX.md の routing 情報や Structured Output の出力形式だけを確認する場合。
+- prompt builder の実装詳細や正本仕様の意味を直接確認することが目的の場合は、対応する oracle または realization の実装・仕様を先に読むとよい
+- prompt builder と無関係な機能のテストや、個別の標準規則本文だけを確認する場合
+- INDEX.md エントリーの出力形式そのものを確認する場合は、対象テストではなく index entry standard の正本を読むべきとき
 
 ## hash
-- 42703f1e0cc220bc340c469d7c93e0c974b14276827c0a8ba049832fc1a75bcc
+- 2557603427d299b2b9c3a015ce5ad74db6d57b6bd7b4bf315d5eca43e9530208
 
 # `test_runtime_cli.py`
 

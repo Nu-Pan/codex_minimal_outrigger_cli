@@ -1,20 +1,20 @@
 # `acp_builder`
 
 ## Summary
-- AI エージェント呼び出しに必要な共通データモデルと、indexing・oracle・realization・session・TUI・quota probe など用途別の起動定義を扱う領域。各用途の prompt、Structured Output、実行権限、作業ディレクトリ、モデル・推論設定を確認するための入口。
+- AI コーディングエージェント呼び出しの構築定義を集約する領域。共通の呼び出しパラメータ、quota probe、feedback 判定、INDEX エントリー生成、oracle 操作、realization 適用・レビュー、session conflict 解消、TUI 起動を扱う。用途別の prompt、Structured Output schema、モデル・推論強度、ファイルアクセスモード、作業ディレクトリ、indexing preflight の設定を確認するための上位入口で、具体的な挙動は各下位領域へ進む。
 
 ## Read this when
-- AI エージェント呼び出しの共通パラメータや用途別の起動条件を調査・変更するとき
-- 特定用途の prompt、出力契約、アクセスモード、モデル、推論強度、cwd、preflight 設定を確認するとき
-- 配下の用途別定義へ進む前に、どの領域を読むべきか判断するとき
+- 特定の agent call の用途が複数領域にまたがり、まず呼び出し構築定義の下位入口を選ぶとき
+- agent call の共通パラメータ契約と、用途別の起動設定の配置を把握するとき
+- oracle、realization、feedback、indexing、session、TUI の agent call 構築定義を横断して確認・変更するとき
 
 ## Do not read this when
-- 対象用途の具体的な prompt や Structured Output の詳細を直接確認できるとき
-- 共通 prompt 生成規則だけを調べるとき
-- 実際の agent call 実行処理、対象ファイルの仕様、または通常の session join 処理を調べるとき
+- 特定の agent call の実装や Structured Output schema が明確で、対応する下位ファイルを直接読めるとき
+- prompt の共通生成規則、agent call の実行処理、バックエンド固有のモデル解決、またはファイルアクセス規則の正本だけを確認するとき
+- 対象となる oracle file、realization file、feedback state、または INDEX.md の実際の内容を調査するとき
 
 ## hash
-- c7c42a03da38420de26179d512fb58089a41df5d20b9b01745203e40f9345d89
+- 3f9984abfb6b79736583aa2275bd489db7d42a8444d51bd8b8ec0d89ecd7b703
 
 # `feedback`
 
@@ -55,18 +55,24 @@
 # `prompt_builder`
 
 ## Summary
-- prompt builder の完全 prompt 構築、placeholder 定義、エディタ入力文面を扱う実装群。agent call 向けの静的・動的 prompt、標準規範、アクセス制御、ルーティング規則の組み立てを調べる入口。
-- parts は、oracle・realization、レビュー、conflict 解消、feedback 報告、file access、INDEX.md ルーティングなどの prompt 部品を選択・構成する下位実装群。個別規範の定義や注入条件を調べるときに進む。
+- プレースホルダ名と実パス・文字列の対応を表す型定義。プレースホルダ展開時の置換対象を統一して扱うための基礎要素。
+- cmoc の agent 向け完全プロンプトを構築する中心ビルダー。summary・goal、共通規則、oracle/realization、レビュー、ルーティング、補助プロンプトなどを決定的な順序で統合し、placeholder の依存関係や競合も処理する。
+- エディタ経由で後続 AI エージェントへ渡すユーザー入力ファイルの初期表示文面を構築する定義。入力方法、記入目安、完全プロンプトの差し込み位置、HTML コメントによる非転送部分を扱う。
+- oracle・realization、レビュー、conflict 解消、feedback、ファイルアクセス、INDEX.md ルーティングなど、agent prompt を構成する標準群と規則文面の生成部品をまとめる。用途別の標準コレクションや個別標準定義への入口となる。
 
 ## Read this when
-- 完全 prompt の構築順序、動的 prompt の差し込み、標準規範の依存関係、placeholder 定義の統合を変更または調査するとき。
-- prompt builder の公開入口、エディタ入力用初期文面、または placeholder と実値の対応表現を確認するとき。
-- 個別の oracle・realization 規範、レビュー基準、アクセス制限、feedback 報告、INDEX.md ルーティング規則の構築を確認するとき。
+- プレースホルダ展開に使う型の意味や、文字列と Path を混在させる置換対象の表現を確認したいときは、プレースホルダ型定義を読む。
+- agent 向け完全プロンプトの構成、注入順序、placeholder 統合、または oracle/realization・レビュー・routing などの自動有効化条件を変更・調査するときは、完全プロンプトビルダーを読む。
+- エディタ経由のプロンプト入力ファイルに表示する初期文面、ユーザー入力と完全プロンプトの差し込み、HTML コメントによる非転送部分を確認・変更するときは、エディタ入力定義を読む。
+- cmoc の agent prompt に組み込む標準コレクション、アクセス・routing・feedback 規則、または用途別の標準群の選択関係を調査するときは、parts ディレクトリを読む。
 
 ## Do not read this when
-- 個別 standard の本文そのものを確認したいときは、規範定義を直接読む。
-- prompt の利用側が渡す summary・goal や、具体的な oracle・realization・テストの内容を確認したいときは、呼び出し側または対象ファイルへ直接進む。
-- 構造化 prompt と無関係な機能の実装詳細を調べるとき。
+- プロンプト本文の生成手順や置換ロジックの詳細だけを知りたい場合は、プレースホルダ型定義ではなく実装側を読む。
+- 個別の規則本文や Standard の内容だけを確認したい場合は、完全プロンプトビルダーではなく対応する parts builder または oracle 文書を直接読む。
+- Structured Output の契約や、prompt builder 外の agent call 実行処理だけを調査する場合は、完全プロンプトビルダーを読む必要はない。
+- エディタ経由の初期文面ではなく完全プロンプト全体の生成規則や、Markdown の一般的なレンダリング処理だけを確認したい場合は、エディタ入力定義を読まない。
+- 個別の oracle・realization の仕様・実装・テストや、具体的な標準文面の判定基準だけを確認したい場合は、parts ではなく該当する標準定義・対象ファイルへ直接進む。
+- INDEX.md の既存エントリーや Codex CLI の実行・sandbox 規則だけを確認したい場合は、parts を読む必要はない。
 
 ## hash
-- 9df2b6dac8efb4c3bfcf3c09aceba03d008012e95af2876468c39a4fe7314234
+- 3e06725d766ac5483219f1916deb90362344de391122aaa2893f969142124339
