@@ -185,6 +185,10 @@ def test_oracle_investigation_has_no_session_precondition(
     )
     assert "# file read write rule - pure_oracle_read" in complete_prompt_skeleton
     assert "oracle file の調査担当" in complete_prompt_skeleton
+    assert "関連する oracle file を根拠とする読み取り専用調査だけ" in (
+        complete_prompt_skeleton
+    )
+    assert "未定義の事項を正本仕様として断定していない" in (complete_prompt_skeleton)
     assert len(calls) == 1
     parameter, kwargs = calls[0]
     assert parameter is built_parameters[0]
@@ -204,7 +208,8 @@ def test_oracle_investigation_has_no_session_precondition(
         "oracle の根拠を調査する",
         1,
     )
-    assert "# oracle standard" in complete_prompt
+    assert "# oracle investigation standard" in complete_prompt
+    assert "# oracle standard" not in complete_prompt
     assert "# routing rule" in complete_prompt
     assert "oracle の根拠を調査する" in complete_prompt
 
