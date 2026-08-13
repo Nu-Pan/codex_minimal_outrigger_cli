@@ -1,34 +1,50 @@
 # `apply_review_standard.py`
 
 ## Summary
-- oracle file に対する realization file の追従要否とレビュー所見を判断するための規範を構築する。明確な仕様不整合または realization 側だけで説明できる致命的な実装問題を修正対象とし、根拠となる対象を具体的に示す。
+- oracle file に対する realization file の追従要否・所見・修正を判断するための規範コレクションを構築する。共通の oracle 権威・所見根拠に加え、apply review 固有の判断基準をまとめる入口である。
 
 ## Read this when
-- oracle file の要求に realization file が適合しているか確認するとき
-- 仕様不整合や実行不能、明白な致命的バグを修正対象として扱うか判断するとき
+- oracle file と realization file の適合性をレビューするとき
+- realization の追従要否、既解決状態、修正対象を判断するための prompt 構築を確認するとき
 
 ## Do not read this when
-- 仕様に記述がないことだけを理由に改善案を検討するとき
-- 複数の妥当解、好み、推測、一般的なベストプラクティスに基づくコード品質改善を検討するとき
+- apply review 以外の規範選択や prompt 部分を確認するとき
+- 具体的な規範本文の定義だけを確認したいときは、個別の standard 定義へ直接進む
 
 ## hash
-- 6c2eb183509fcd3e15f0b5975e995b75756e68379bb87996431b4c48b7c9e9e5
+- 29e3fc51416862b8771eb3faf6c7138c181338e38bf612c72414a17f96819d2e
+
+# `common_standard.py`
+
+## Summary
+- 複数用途で共有する `StandardGroup` の構成定義を提供する。oracle・realization file の扱いに適用する標準グループと、所見・修正対象の判断に適用する標準グループを確認する入口である。
+
+## Read this when
+- oracle・realization file を扱う際に、適用する標準グループの構成を確認するとき
+- 所見や修正対象を判断する際に、finding basis の標準グループの構成を確認するとき
+
+## Do not read this when
+- 個々の標準の具体的な内容を確認するときは、標準定義を直接読む場合
+- StandardGroup の一般的な実装や型の仕様を確認するときは、定義元を直接読む場合
+
+## hash
+- 41b1cbc3a20e26282638025bf101d011a87a2664216193a374a7aee316ae96cd
 
 # `conflict_resolution_standard.py`
 
 ## Summary
-- session join の conflict marker 解消に適用する instruction 文面の構築定義。両 branch と関連 oracle file の意味を保つ conflict 解消規範を組み立てる、prompt builder の部品。
+- `cmoc session join` の conflict marker 解消時に適用する instruction 文面の構築定義。oracle と realization の意味を保つ conflict 解消規範を、標準グループとして選択・収集する入口。
 
 ## Read this when
-- `cmoc session join` の conflict marker 解消用 instruction の内容や適用条件を確認するとき
-- conflict 解消規範の requirements と、それを構造化文書へ変換する流れを調べるとき
+- `cmoc session join` の conflict 解消用 instruction の構成や適用範囲を確認するとき。
+- conflict 解消時に oracle / realization の意味を保持する標準グループの選択を確認するとき。
 
 ## Do not read this when
-- 通常の session join 処理や conflict 解消の実装動作を調べるとき
-- prompt builder の別の instruction 部品を直接調べるとき
+- conflict 解消規範の具体的な内容や、両方の branch を保持する要件を確認するとき。これらは選択される conflict resolution standard の定義へ直接進む。
+- `cmoc session join` の conflict 解消以外の instruction 文面や標準構成を確認するとき。
 
 ## hash
-- 2053e0baa0a518f506d48450a8c6b0beafd477bc076577519abb05283d51fcc8
+- f44a82a0edc28e5e359598a4145df3a6c58e68e68bf4e06435d05fdf83089da5
 
 # `feedback_reporting_standard.py`
 
@@ -66,22 +82,20 @@
 # `index_entry_standard.py`
 
 ## Summary
-- INDEX.md エントリーが満たすべき規範を構造化して生成する。対象を読むべき条件、対象固有の責務、適切な入口、対象外となる境界を定義する。
-- エントリーには対象本文から根拠を持って言える情報だけを含め、推測による責務の拡張や詳細説明を避ける。
-- 機械的に補える識別情報や出力形式の説明を除き、ルーティング判断に必要な意味情報だけを提供する。
+- INDEX.md 用エントリー生成時に適用する規範群を選択する標準コレクションを構築する。
+- エントリーのルーティング、本文に基づく根拠、意味情報の扱いに関する標準をまとめ、生成規則を確認する入口となる。
 
 ## Read this when
-- INDEX.md エントリーの規範や生成基準を確認・変更するとき。
-- 対象を読むべき条件、責務、他の対象ではなく対象へ進む理由を判断するとき。
-- エントリーに含める情報の範囲や、対象を読まなくてよい境界を確認するとき。
+- INDEX.md 用エントリーの生成規則や適用標準を確認するとき。
+- エントリー標準の選択範囲を変更するとき。
 
 ## Do not read this when
-- 具体的な対象の実装内容や個別仕様を直接確認することが目的のとき。
-- 既存の INDEX.md のルーティングだけで目的の対象を特定でき、エントリー生成規範を確認する必要がないとき。
-- Structured Output の形式や機械的な識別情報だけを確認したいとき。
+- 個別標準の詳細を確認するときは、各標準定義を直接読む。
+- INDEX.md の既存内容を確認するときは、対象の INDEX.md を直接読む。
+- エントリー標準の選択と無関係な prompt builder の処理を調べるとき。
 
 ## hash
-- 871f8990511d3d804e6ce7e1763bf3eefd5ae27f3f63c1e68d19b2624b3adaa3
+- d23d22e6166934c598bd5203e79e6975c05315d82c2dc118ffc93159f434c7e9
 
 # `oracle_and_realization_basic.py`
 
@@ -102,37 +116,33 @@
 # `oracle_review_standard.py`
 
 ## Summary
-- oracle review の所見判定規範を構築する関数を提供する。oracle file のレビューで fatal・minor として扱える問題の成立条件、根拠の境界、適用条件を構造化文書としてまとめる。
+- oracle review の全段階で共有する所見判定規範を構築する。所見の列挙・統合・検証・採否判定に関する標準群を選択し、所見成立の基礎規範と oracle review 固有の規範をまとめた標準コレクションを返す。
 
 ## Read this when
-- oracle review の所見を列挙・統合・検証・採否判定する agent 向けの共有基準を確認するとき。
-- fatal と minor の判定条件や、oracle file の具体的記述に基づく所見の境界を確認するとき。
+- oracle review における所見判定規範の構成や、共有される標準群を確認・変更するとき。
 
 ## Do not read this when
-- レビュー基準そのものではなく、個別の oracle file の内容や実装適合性を確認したいとき。
-- 構造化文書の一般的な構築方法や placeholder の扱いだけを確認したいとき。
+- oracle review の個別標準の具体的な判定内容だけを確認したいときは、各標準定義を直接読む。
+- 所見成立の基礎規範だけを確認したいときは、共通標準群の定義を直接読む。
 
 ## hash
-- 245f8307112102d50bc9ed8fc79281a2823d0760048f6b57b48d0050b4d46b0a
+- 49ce591233470c0d04becdb629013b582be1c30f010782087d89bc9a02626259
 
 # `oracle_standard.py`
 
 ## Summary
-- oracle file を扱う agent call 向けの標準規範を構築する。oracle を正本仕様として扱い、実装からの逆算を避け、仕様間の整合性・優先関係・用語・検索性を保つための要求を StructDoc として返す。
-- AgentCallPathContext から call-scoped な work-root 定義を取得し、標準文書とともに PlaceholderMap を生成する。oracle file の作成・変更・調査・レビューに関する instruction 文面へ組み込む入口である。
+- oracle file の作成・変更・調査・レビューを扱う agent call に適用する規範の集合を構築する。共通の権限規範と、oracle file 固有の根拠・意図と欠落・逆算禁止・整合性と検索性に関する規範をまとめるため、oracle 向け標準の選択や適用範囲を確認する入口となる。
 
 ## Read this when
-- oracle file に関する agent call の規範、作業条件、または instruction 文面の生成経路を変更・調査するとき
-- build_oracle_standard が返す placeholder と StructDoc の構造、適用条件、要求項目を確認するとき
-- oracle を正本仕様として扱うルールや、仕様の隙間・整合性・検索性に関する標準を確認するとき
+- oracle file を扱う agent call にどの標準群を適用するか確認または変更するとき
+- oracle file 向け instruction の標準構成や適用範囲を調査するとき
 
 ## Do not read this when
-- realization file の実装規範だけを確認する場合
-- oracle 固有の標準文面ではなく、agent call のパス情報や一般的な prompt builder の構造だけを調査する場合
-- 既存の INDEX.md エントリーやルーティング情報そのものを確認する場合
+- 個別の標準規範の本文や詳細な要求を確認したいときは、各 standard 定義を直接読む
+- oracle file 以外の agent call に適用する標準構成を確認するとき
 
 ## hash
-- a99341abd7ea1375fde6549f8cb8915b498fa4df392fb8087640ca802ff1de47
+- afb6960336a99a57c832b4edf43e73ca8c05adede1e1d5a940eff12f055f16ad
 
 # `realization_oracle_reference_rule.py`
 
@@ -153,18 +163,20 @@
 # `realization_standard.py`
 
 ## Summary
-- realization file を作成・変更・レビューする agent call に適用する規範本文を、call-scoped な work-root 参照とともに構築する。oracle file への適合、不要な実装や公開面を増やさない最小実装、repository 固有手順による検証を扱う。realization 作業向け instruction 生成の入口となる。
+- realization file の作成・変更・リファクタ・レビュー時に適用する標準群を選択し、oracle authority standard group と realization standard group を含む StandardCollection を構築する。
+- realization standard group には、oracle 適合性、現行仕様限定、リポジトリ検証の三つの規範をまとめる。
 
 ## Read this when
-- realization file の作成・変更・リファクタ・レビューに関する agent call の規範生成を確認するとき
-- oracle と realization の責務分離、最小実装、repository 固有の検証手順を含む標準の構築元を確認するとき
+- realization file に関する agent call の instruction 文面や適用規範の構成を変更・レビューするとき
+- realization file 向けの標準コレクションを構築する責務を確認するとき
 
 ## Do not read this when
-- INDEX.md のルーティング情報だけを確認したいとき
-- realization file 自体の具体的な実装や個別のテスト内容を確認したいときは、対象の実装またはテストへ直接進む
+- 個別の realization standard の内容や適用条件を確認したいとき
+- oracle authority standard group の定義を直接確認したいとき
+- realization file 自体の実装やテストの内容を確認したいとき
 
 ## hash
-- b1829faebcfd080351d1b0f7625f49471a6e6d15f2ecc8aefe7caf4a0e52eba5
+- 277f72a8edb9f33de8db05bb6bd6fc2f141abc77b016a5835742f214c5f85d76
 
 # `routing_rule.py`
 
@@ -181,3 +193,21 @@
 
 ## hash
 - 2ebd20e0c920860904622c216abda854150d36a13101df2052f3da03e5389295
+
+# `standard_definitions.py`
+
+## Summary
+- 全用途で共有する Standard 定義の正本を集約し、oracle、realization、finding、review、conflict resolution、INDEX エントリーに関する要求・禁止事項を標準識別子付きで提供する。複数の prompt や検証処理が共通の標準文面を参照する際の入口となる。
+
+## Read this when
+- 共有 Standard の文面、標準識別子、要求・禁止事項を追加・変更・確認するとき
+- 複数の作業領域にまたがる標準要求の優先関係や適用範囲を確認するとき
+- prompt 生成や検証処理が利用する標準定義の全体像を確認するとき
+
+## Do not read this when
+- 特定の oracle file、realization file、test、または INDEX.md の具体的な内容だけを確認するときは、対象本文を直接読む
+- Standard の実装クラスや個別の prompt 組み立て処理だけを調査し、共有標準文面の意味を確認する必要がないとき
+- リポジトリ固有の実行手順や実装挙動を確認するときは、対応する手順書・realization file・test を読む
+
+## hash
+- 1396aa69a38eda5f350b17d0120d4c4c3f32719bcbcfd6c341dc84be02fdf575

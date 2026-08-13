@@ -35,41 +35,39 @@
 # `other`
 
 ## Summary
-- cmoc のリポジトリ固有設定を集約するデータクラス群を定義する。JSON/TOML 共通値、Codex CLI の provider・モデル・推論 effort、oracle review のループ上限を扱う設定構造の入口。
-- cmoc のパス表記に用いる root placeholder と、agent call 単位の work root・repository root を表現するモデルを定義する。placeholder 付きパスの解決、Git worktree・repository root の探索、実パスから placeholder 表記への変換を担う。
-- agent 向け instruction の要求文面を構造化する標準と、その要求項目を表すデータモデルを定義する。標準の保持と StructDoc への変換処理の入口を担う。
-- 構造化文書の要素を見出し階層付き Markdown へ変換するヘルパーを提供する。文書構造、参照可能なブロック、コードブロックを表現し、参照先やブロック ID の検証、文字列のインデント正規化を担う。
+- cmoc の設定、パス解決、標準定義、構造化 Markdown 生成という、oracle 実装を支える共通モデル群の入口。設定値や agent call の root context、instruction 標準の合成、StructDoc のレンダリングを扱う対象へ進む際に読む。
 
 ## Read this when
-- cmoc の設定項目や既定値、Codex CLI のモデル設定、ファイルアクセス規則違反時のリカバリ回数、または oracle review のループ設定を変更・確認するとき。
-- cmoc のパス placeholder、agent call の作業コンテキスト、worktree や repository root の探索・変換規則を変更・調査するとき。
-- agent 向け instruction の標準形式、要求ラベル、Standard・Requirement の生成や StructDoc への変換を調べるとき。
-- Markdown をプログラムで組み立てる処理、見出し階層、cmoc_block・cmoc_ref、コードフェンス、参照検証の挙動を変更・調査するとき。
+- cmoc のリポジトリ固有設定、Codex CLI 設定、oracle review のループ設定を確認・変更するとき。
+- agent call の work root・repository root、root placeholder、実パスとの相互変換や Git worktree 探索を調査するとき。
+- agent 向け標準の検証・合成・決定的順序・instruction 文面化を確認するとき。
+- 構造化文書を Markdown に変換する見出し、cmoc_block／cmoc_ref、コードブロック、参照検証の挙動を確認するとき。
 
 ## Do not read this when
-- 永続化された設定 JSON の生成・同期・人手調整だけを確認するときは、対象の設定ファイルや doctor 実装を直接読む。列挙型の値だけを確認するときは、その型定義を直接読む。
-- パスモデルを利用する個別機能だけを確認するとき、またはパス解決と無関係な一般的な CLI・oracle・realization 仕様を読むとき。
-- 個別の instruction 本文や StructDoc の一般仕様だけを確認するとき、または標準データモデルを使わない oracle 実装・テストを調べるとき。
-- 通常の Markdown 記述や構造化文書を使わない文書生成処理を確認するとき、またはレンダリング実装の挙動が目的でないとき。
+- 永続化された設定ファイルの生成・同期・編集処理だけを確認するときは、対象の設定ファイルや doctor 実装を直接読む。
+- ModelClass、ReasoningEffort、その他の参照元型の具体的な列挙値だけを確認するときは、その型定義を直接読む。
+- 個別機能における設定・パスモデル・標準・構造化文書の利用方法だけを確認するときは、利用元を直接読む。
+- oracle や realization の仕様、通常の Markdown 記法、構造化文書を利用しない文書生成を確認するときは、この共通モデル群を読まない。
 
 ## hash
-- 457a12faf12238fa7b95ede55e89ce82363626bd49c2bcdf1cff218b5f721ad0
+- 4c5b20c8577c323ed7c92e402386e4484cc0bb06bdd7bc756378e57a67568e16
 
 # `prompt_builder`
 
 ## Summary
-- agent call 向けの構造化プロンプトを組み立てるモジュール群。完全 prompt の統合、エディタ入力文面、placeholder 型、oracle・realization・レビュー・アクセス制限・routing などの規則部品を扱い、prompt 生成経路や個別 builder の責務を調べる際の入口となる。
+- agent call 用の完全 prompt を組み立てる定義群。placeholder、動的な概要・完了条件、feedback、oracle・realization 規範、ファイルアクセス制約、INDEX.md の routing 規則を統合する入口で、prompt の構築順序や適用条件を調べるときに読む。
+- 個別の standard、oracle・realization の基本概念、アクセス規則、routing 規則は下位の定義へ分かれており、必要な規範や部品を特定した後の入口として機能する。
+- エディタ経由で後続 agent に渡す初期入力文面の構築も扱い、入力説明と完全 prompt の差し込み構造を確認できる。
 
 ## Read this when
-- agent 向け prompt の構成や builder の組み合わせを変更・調査するとき。
-- oracle、realization、レビュー、human feedback、ファイルアクセス、INDEX routing などの標準規則を prompt に組み込む経路を確認するとき。
-- エディタ入力用の初期文面や placeholder 表現の定義を確認・変更するとき。
+- agent call の完全 prompt を構成する部品、注入順序、placeholder 統合、standard の依存関係を変更または調査するとき。
+- oracle・realization、review、conflict 解消、feedback 報告、ファイルアクセス、INDEX.md routing の prompt 規則を探すとき。
+- エディタ経由のユーザー入力文面や、後続 agent に渡す prompt template の構造を確認するとき。
 
 ## Do not read this when
-- 個別の oracle 文書、realization 実装、realization test の内容を調査するとき。
-- prompt builder を呼び出す側の選択処理や agent call 全体の挙動だけを調べるとき。
-- 既存の INDEX.md のルーティング情報だけを確認・更新するとき。
-- Structured Output schema の形式や、ファイル名・hash など機械的な識別情報だけを確認するとき。
+- 個別の oracle file、realization file、仕様書、実装、テストの内容を調査するときは、対象本文へ直接進む。
+- 特定の standard の判定基準だけを確認するときは、対応する standard 定義へ直接進む。
+- 実際の agent call の利用側や CLI の実行手順だけを確認するときは、呼び出し側または該当する手順書を読む。
 
 ## hash
-- 1f27c8649a6d8312ae1c40de828b871ea0455b77b2b09f790bf4b2cbe54dad88
+- b88406699fc73da0afc5c2183cd8b779b6a82cfc31f40b69b8fa6f8ca2fb58b3

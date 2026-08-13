@@ -20,19 +20,21 @@
 # `src`
 
 ## Summary
-- AI エージェント呼び出しに必要なパラメータ、パスコンテキスト、設定、Structured Markdown、完全 prompt の構築基盤を提供する。
-- acp_builder はモデル・推論・ファイルアクセスを含む agent call パラメータと用途別 builder、prompt_builder は共通 prompt と規則部品、other はパス解決・設定・構造化文書・要求モデルを扱う。各用途や共通機能を調査するときの上位入口として、配下の oracle、acp_builder、prompt_builder、other へ進む。
+- AI エージェント呼び出しのパラメータ構築、完全 prompt の生成、Structured Markdown、パス・設定・規範モデルをまとめる実装群のルート。
+- 用途別の agent call 定義は `acp_builder`、prompt の合成と入力処理は `prompt_builder`、feedback 入力契約は `feedback`、共有設定・パス・構造化文書モデルは `other` へ進む入口。
+- 呼び出し条件やモデル・推論設定・ファイルアクセスモード・cwd・Structured Output の構築全体を確認するときに読む対象。
 
 ## Read this when
-- agent call の共通パラメータ、モデル・推論設定、ファイルアクセスモード、cwd、Structured Output、indexing preflight を確認・変更するとき。
-- 用途別の agent call builder、quota probe、oracle・realization・feedback・session・TUI の起動パラメータの配置先を判断するとき。
-- 完全 prompt の組み立て、共通規則部品、パス placeholder の解決、設定モデル、構造化 Markdown の生成を調査・変更するとき。
+- AI エージェント呼び出しの共通パラメータ、モデルクラス、推論強度、ファイルアクセスモード、cwd、indexing preflight を調査・変更するとき。
+- 用途別 agent call の起動定義や Structured Output schema の配置先を判断するとき。
+- 複数の prompt 規範、routing 規則、placeholder、ファイルアクセス規則を完全 prompt へ統合する処理を調査するとき。
+- agent call のパスコンテキスト、cmoc 設定、Structured Markdown の構造モデルを確認するとき。
 
 ## Do not read this when
-- 特定用途の agent call 定義が明確なときは oracle または acp_builder 配下の該当領域を直接読む。
-- prompt の共通部品や完全 prompt の構築だけが目的のときは prompt_builder 配下を直接読む。
-- パス解決、設定、要求モデル、構造化 Markdown のいずれか一つだけが目的のときは other 配下の該当対象を直接読む。
-- agent call の実行処理や対象ファイルの仕様を確認することが目的のときは、それぞれの実行側または仕様側の対象を直接読む。
+- 特定用途の agent call 定義が明らかな場合は、`acp_builder` 配下の該当用途へ直接進むとき。
+- prompt の個別規範や editor 入力処理だけを確認する場合は、`prompt_builder` 配下の該当実装へ直接進むとき。
+- feedback の入力契約だけを調査する場合は、`feedback` 配下の schema を直接読むとき。
+- 設定・パス・構造化文書の個別仕様だけを確認する場合は、`other` 配下の該当モデルへ直接進むとき。
 
 ## hash
-- eb4fa8ae9a5cee5e1e2892c3c628f94d8034a17bc4b84e70917022eb576831b3
+- 88a3612c571892cfa0a6b9df05a7391f4f7070c662fa41df9c36e9e2daa87227

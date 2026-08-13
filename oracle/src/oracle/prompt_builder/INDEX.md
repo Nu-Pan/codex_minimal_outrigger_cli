@@ -17,18 +17,24 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call 向けの完全な構造化プロンプトを構築する中核モジュール。要約・完了条件・ファイルアクセス・oracle/realization・レビュー・routing などの選択可能な規則を依存関係に従って組み合わせ、placeholder 定義を統合した prompt を返す。各種 prompt builder の組み立て順序と有効化条件を確認したい場合の入口となる。
+- 完全 prompt を構築する中心的な builder です。agent call の path context から placeholder 定義を初期化し、補助 prompt と各種 standard を統合して、最終的な構造化 prompt を返します。
+- oracle・realization 関連の規範には依存関係があり、適用する standard に応じて基礎概念や oracle standard を自動的に有効化します。feedback reporting は全 agent call に共通して注入されます。
+- 静的 standard、個別 rule、補助 prompt、file access rule、routing rule、summary・goal などの動的 prompt を決められた順序で組み立てるため、prompt の構成や有効化経路を変更・調査するときの入口です。
+- 同名 placeholder の異値定義を拒否し、standard collection を合成してから一度だけ構造化文書へ変換することで、定義の衝突と重複出力を管理します。
 
 ## Read this when
-- agent 向け prompt の構成、規則の有効化条件、builder の注入順序、placeholder 定義の統合動作を変更または調査するとき。
-- 新しい prompt 規則や補助 prompt を完全 prompt に組み込む経路を確認するとき。
+- 完全 prompt の構築順序や、静的・動的 prompt の注入位置を変更または確認するとき
+- oracle、realization、review、conflict resolution、index entry の各 standard がどの条件で連鎖的に有効化されるかを追跡するとき
+- placeholder 定義の統合、衝突検出、path context 由来の定義を調査するとき
+- standard collection の合成や、file access・routing ルールの注入経路を確認するとき
 
 ## Do not read this when
-- 個別の oracle、realization、レビュー、ファイルアクセス、routing 規則の本文だけを確認したいときは、対応する parts 配下の builder を直接読む。
-- prompt 構築結果の利用側や呼び出し元の挙動だけを調査するときは、呼び出し元の実装を直接読む。
+- 個別の standard の文言や責務だけを確認する場合は、対応する standard builder を直接読むとき
+- 特定の file access rule、routing rule、oracle・realization rule の詳細だけを確認する場合は、対応する個別 rule を直接読むとき
+- prompt の利用側が渡す summary・goal の内容だけを確認する場合は、呼び出し側を直接読むとき
 
 ## hash
-- f131fcc03239a0fe31c640c9c735106fbcb45c6cbbf9f6227fdf0d95de983a86
+- 9f962a7ed31696f419b02012bd1d1bb73052907a30d7360e09585eb5ae582872
 
 # `editor_input.py`
 
@@ -49,27 +55,17 @@
 # `parts`
 
 ## Summary
-- oracle file と realization file の追従要否・レビュー所見を判断する規範の構築部品。仕様不整合や致命的実装問題のレビュー基準を確認するときの入口。
-- session join の conflict marker 解消用 instruction と、関連 oracle file の意味を保つ conflict 解消規範を構築する部品。conflict 解消 prompt の要件を確認するときに読む。
-- 全 agent call 共通の human feedback 報告規範を構築する部品。作業外の人間対応へ報告すべき問題の条件や報告後の継続方針を確認するときに読む。
-- agent のファイルアクセスモードに応じた読み書き制限、パス境界、oracle/realization file の扱いを構築する部品。アクセス規則やその placeholder の生成を変更・検証するときの入口。
-- INDEX.md エントリーの責務、読むべき条件、対象外境界を構造化して生成する部品。ルーティング情報の生成基準や含める情報の範囲を確認するときに読む。
-- oracle と realization の定義・役割・分類を、work-root に応じて構築する prompt 部品。基本概念の説明文や root placeholder の生成を変更するときの入口。
-- oracle review における fatal・minor の成立条件と根拠の境界を構造化して構築する部品。oracle のレビュー所見を判定・統合する基準を確認するときに読む。
-- oracle file を正本仕様として扱うための標準規範を構築する部品。oracle の作成・変更・調査・レビューに適用する要求や仕様間整合性の基準を確認するときの入口。
-- realization code に対応する oracle file の path をコメントへ記載する規則を構築する部品。realization 実装時の oracle 参照ルールや path placeholder の生成を確認するときに読む。
-- realization file の作成・変更・レビューに適用する標準規範を構築する部品。oracle への適合、最小実装、repository 固有の検証手順を含む instruction の生成元を確認するときの入口。
-- INDEX.md から対象本文へ進む routing 規則を構築する prompt 部品。Summary・Read this when・Do not read this when による候補絞り込みや下位 INDEX.md の利用手順を確認するときに読む。
+- oracle・realization の扱い、各種 review・conflict 解消、feedback 報告、ファイルアクセス、INDEX.md ルーティングなど、agent call 用 prompt 部品の構築定義を集約するディレクトリ。個別の標準定義、共通標準グループ、概念説明、アクセス規則を確認するための入口として機能する。
 
 ## Read this when
-- このディレクトリ内の prompt builder 部品の責務、生成文面、構造化文書、placeholder の変更・調査・レビューを行うとき
-- 特定の agent call 向け標準規範や routing・feedback・access rule の構築経路を確認するとき
+- agent call 用の prompt 部品全体から、対象の規範・ルーティング・アクセス規則・oracle/realization 説明の構築定義を探すとき
+- oracle、realization、oracle review、apply review、conflict 解消、feedback 報告の instruction 構成を確認または変更するとき
+- INDEX.md エントリー生成に適用する標準群や、共有 Standard 定義の利用範囲を確認するとき
 
 ## Do not read this when
-- 個別の oracle 文書、realization 実装、realization test の内容を調査するとき
-- prompt builder 部品を組み合わせる呼び出し元や agent call 全体の選択処理を調べるとき
-- 既存 INDEX.md のルーティング情報だけを確認・更新するとき
-- Structured Output schema の形式や、ファイル名・hash など機械的な識別情報だけを確認するとき
+- 特定の oracle file、realization file、test、または INDEX.md の本文や実装内容を調査するときは、対象を直接読む
+- 個別標準の具体的な判定要求だけを確認したいときは、対応する standard 定義へ直接進む
+- prompt 部品ではなく、リポジトリ固有の実行手順や CLI 実装の挙動を確認するときは、対応する oracle・realization・手順書を読む
 
 ## hash
-- 0b99319ef7f10c06868eaa2803459106002521ad633822fa5feebd968ee10b8b
+- 3cf8e21213c8b179ceabd3aa91f480c1baa06140f39219a9aed000d1a89fe685
