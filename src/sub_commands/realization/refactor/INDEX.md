@@ -15,20 +15,22 @@
 # `fork.py`
 
 ## Summary
-- realization refactor fork の full-cycle workload を実行する中核実装。対象 realization file の選択、agent による調査・修正、差分と commit の検証、refactor state の更新、INDEX 同期、unresolved findings の current fork 内管理、完了判定、joinable/error/interruption 時の cleanup と fork report 作成までを一つの lifecycle として担う。
-- realization refactor fork の実行経路、処理単位の commit・中断復旧・エラー処理・完了理由、report 内容や変更概要の挙動を確認または変更するときの入口となる。対象 file 単体の agent prompt や change summary の詳細だけを確認する場合は、それぞれの builder 実装を直接読む。
+- realization refactor fork の CLI 実行全体を管理する一時状態共有型の workload 実装。run の作成・初期化・中断/error cleanup・joinable 公開・fork report 保存までの lifecycle を担う。
+- refactor state から対象 realization file を選び、file 単位の Codex 調査・修正、変更 path と commit の検証、所見および unresolved 状態の更新、INDEX 同期を処理する。
+- 処理完了時には investigation_required と unresolved target の一致を検査し、natural completion または unresolved 付き完了を判定する。変更概要、処理単位、未解決所見、state、cleanup 警告を fork report と終了ログへまとめる。
+- realization refactor fork の実行 lifecycle、対象選択後の処理単位、run isolation、refactor state、INDEX 更新、structured output の changed_paths 検証、完了・中断・error report の挙動を確認するための入口である。
 
 ## Read this when
-- realization refactor fork の CLI 実行 lifecycle や処理順序を調査するとき
-- 対象選択、findings と unresolved の整合、refactor state 更新、完了条件を確認するとき
-- agent の変更検証、commit 防止、INDEX refresh、run の rollback・joinable・error 処理を確認するとき
-- fork report や completion log の生成内容・完了理由を確認するとき
+- realization refactor fork CLI の実行順序、run state、joinable 公開、fork report、完了条件を変更または調査するとき
+- refactor 対象 file の選択、Codex agent call、所見の unresolved 管理、rename 後の state reconcile、処理単位 commit の挙動を確認するとき
+- 中断・例外時の Codex child 停止、rollback、error state、report 保存の責務を確認するとき
+- refactor state と INDEX refresh による差分検証、agent の commit 禁止、changed_paths の postcondition を調査するとき
 
 ## Do not read this when
-- file review agent の入力形式や調査・修正プロンプトだけを確認する場合
-- 正常完了時の変更概要生成の入力・Structured Output を確認する場合
-- refactor state の一般的な保存・同期仕様だけを確認する場合
-- run isolation や interruption の正本仕様を確認する場合は、対応する oracle specification を直接読む
+- realization refactor の一般仕様や CLI 契約だけを確認したい場合は、先に対応する oracle の app specification を読む
+- file 単位の agent prompt や finding schema の生成内容だけを調査する場合は、対応する builder 実装へ直接進む
+- run の共通 lifecycle、git 差分分類、process tracking など共通機構の詳細だけを確認する場合は、参照されている commons 実装へ直接進む
+- INDEX 生成規則そのものや INDEX 更新処理だけを確認する場合は、indexing 関連の仕様・実装へ直接進む
 
 ## hash
-- 7d96a660ba6633bf0155193ffce66368eb778489f881705e0911c072378bc409
+- 6ba39b1993f25a5d0414bf6899f21d7d3a70cae0410d5388058bca5beae3a83c

@@ -415,23 +415,24 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run lifecycle の統合 realization test。apply/refactor fork、run join/abandon、session state、run worktree、Git merge/rollback、process tracking、INDEX 更新、fork/lifecycle report の連携と異常系を検証する。
-- 同一の lifecycle fixture を共有し、run の状態遷移、変更 path の扱い、agent の不正変更・commit、遅延処理、中断、cleanup 失敗、report 保存までを一続きの統合テストとして扱う。
-- apply または refactor fork、run join/abandon、editing run の resource cleanup、process tracking、INDEX refresh、fork report や lifecycle report の挙動を変更・調査・検証するときの入口。
+- workload fork と共通 run lifecycle の統合 realization test。apply/refactor fork、run join/abandon の共有 state・worktree・branch・report lifecycle を、成功・失敗・中断・cleanup failure まで検証する。
+- Codex child の process tracking、INDEX refresh、oracle・管理対象 file の差分制御、rollback、rename/delete、report 保存、refactor state 同期を横断的に確認する。run lifecycle や realization fork の挙動を変更・調査する際の統合テスト入口である。
 
 ## Read this when
-- realization apply/refactor fork と run join/abandon の統合挙動を確認するとき
-- editing run の running・joinable・ready・error 状態遷移や run worktree/branch の cleanup を調査するとき
-- agent の予期しない変更、commit、遅延書き込み、中断、process tracking、rollback の回帰を検証するとき
-- fork report、lifecycle report、changed paths、unresolved refactor target、INDEX refresh の検証内容を確認するとき
+- realization apply fork または realization refactor fork の run 公開、agent 境界、commit、INDEX refresh、完了 report を確認するとき。
+- run join または run abandon の state 遷移、merge、worktree・branch cleanup、force-resolve、失敗時 rollback を確認するとき。
+- Codex child の追跡・停止、遅延変更や遅延 commit、process tracking の破損・欠落を伴う lifecycle を検証するとき。
+- oracle・INDEX.md・refactor state などの管理対象差分、rename/delete、path 検証、report escaping の統合挙動を変更するとき。
+- editing run の中断、並行 start、既存 error run の recovery、cleanup failure からの再試行可能性を確認するとき。
 
 ## Do not read this when
-- 個別の apply、refactor、join、abandon 実装の詳細だけを確認したいときは、対応する realization または run 実装へ直接進む
-- INDEX entry の生成・更新規則そのものを確認するとき
-- 統合 lifecycle を伴わない単体の helper や一般的な Git 操作だけを調査するとき
+- 単一関数の内部ロジックだけを対象とする unit test の調査や変更で、editing run の lifecycle 統合挙動に関係しないとき。
+- session fork の基本的な生成処理だけを確認し、run の fork・join・abandon や共有 state を扱わないとき。
+- INDEX.md の routing 内容そのものを変更・レビューするとき。
+- realization apply/refactor の agent prompt や Structured Output schema だけを確認し、run lifecycle の統合結果を扱わないとき。
 
 ## hash
-- 5d511b8c04bd6217763c66b931b95db382b172899210795c7e0cf3a7fa0a38d9
+- 93b5bda71f8ef405dc41ea8a9b98ec0205ccf603a430887c0e7b0cdb02d42658
 
 # `test_feedback.py`
 

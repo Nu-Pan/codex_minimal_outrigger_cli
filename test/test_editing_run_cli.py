@@ -3473,6 +3473,54 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     assert completion["report_path"] == str(report.resolve())
 
 
+def test_refactor_interrupt_before_run_creation_is_normal_completion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """run 作成前の fork lifecycle 中断も正常終了として記録する。"""
+    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    original_step = refactor_module.start_subcommand_step
+
+    def interrupt_before_run(
+        index: int | str,
+        description: str,
+        log_description: str | None = None,
+    ) -> None:
+        """run 作成 step の開始直前に利用者中断を再現する。"""
+        if index == 2:
+            raise KeyboardInterrupt()
+        original_step(index, description, log_description)
+
+    monkeypatch.setattr(refactor_module, "start_subcommand_step", interrupt_before_run)
+
+    result = runner.invoke(
+        app,
+        ["realization", "refactor", "fork"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert _state(state_path)["run"]["state"] == "ready"
+    assert "# ERROR" not in result.output
+    events = [
+        json.loads(line)
+        for path in (root / ".cmoc" / "gu" / "ar" / "log" / "sub_command").glob(
+            "*.jsonl"
+        )
+        for line in path.read_text().splitlines()
+    ]
+    assert any(
+        event.get("event") == "user_interruption"
+        and event.get("result") == "interrupted"
+        for event in events
+    )
+    assert any(
+        event.get("event") == "command_finished" and event.get("returncode") == 0
+        for event in events
+    )
+
+
 def test_refactor_interrupt_during_indexing_preflight_is_joinable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -3523,11 +3571,13 @@ def test_refactor_interrupt_during_indexing_preflight_is_joinable(
     assert 'completion_reason: "user_interruption"' in report.read_text()
 
 
+@pytest.mark.parametrize("interrupt_point", ["commit", "post_commit_record"])
 def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    interrupt_point: str,
 ) -> None:
-    """処理単位の commit 後に中断しても確定済み進捗を report する。"""
+    """処理単位の commit または確定記録後に中断しても進捗を report する。"""
     root, _session_branch, state_path = _start_session(tmp_path, monkeypatch)
     monkeypatch.setattr(refactor_module, "refresh_indexes", _no_index_refresh)
     call_log = (tmp_path / "unresolved_call.json").resolve()
@@ -3561,6 +3611,8 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
         return SimpleNamespace(returncode=0, output_json={"findings": []})
 
     original_commit = refactor_module.commit_work_unit
+    original_tree_changes = refactor_module.tree_changes
+    tree_interrupted = False
 
     def commit_then_interrupt(
         worktree: Path,
@@ -3569,12 +3621,33 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
     ) -> str | None:
         """README の処理単位を commit した直後に中断する。"""
         result = original_commit(worktree, message, **kwargs)
-        if message == "cmoc realization refactor README.md":
+        if (
+            interrupt_point == "commit"
+            and message == "cmoc realization refactor README.md"
+        ):
             raise KeyboardInterrupt()
         return result
 
+    def interrupt_during_recording(
+        worktree: Path,
+        base: str,
+        end: str = "HEAD",
+    ) -> list[GitChange]:
+        """commit 済み処理単位の差分記録中断を再現する。"""
+        nonlocal tree_interrupted
+        changes = original_tree_changes(worktree, base, end)
+        if (
+            interrupt_point == "post_commit_record"
+            and not tree_interrupted
+            and any("README.md" in change.paths for change in changes)
+        ):
+            tree_interrupted = True
+            raise KeyboardInterrupt()
+        return changes
+
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
     monkeypatch.setattr(refactor_module, "commit_work_unit", commit_then_interrupt)
+    monkeypatch.setattr(refactor_module, "tree_changes", interrupt_during_recording)
 
     result = runner.invoke(
         app,

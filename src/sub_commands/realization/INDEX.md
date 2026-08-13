@@ -35,20 +35,20 @@
 # `refactor`
 
 ## Summary
-- realization のリファクタリング作業を扱うパッケージ。refactor fork の実行 lifecycle と関連処理への入口となる。
-- fork の実行順序、対象選択、agent による変更検証、state 更新、INDEX 同期、完了・中断・エラー時の処理を確認する際は fork 実装へ進む。
+- realization のリファクタリング処理をまとめるパッケージで、関連するリファクタリング処理への入口を提供する。
+- fork.py は realization refactor fork CLI の実行 lifecycle と一時状態共有型 workload を管理し、対象 realization file の選択、Codex による調査・修正、変更検証、所見管理、INDEX 同期、fork report 保存までを扱う。
 
 ## Read this when
-- realization refactor fork の CLI 実行 lifecycle や処理順序を調査するとき
-- 対象 realization file の選択、findings と unresolved の整合、refactor state 更新、完了条件を確認するとき
-- agent の変更検証、INDEX refresh、rollback・joinable・error 処理を確認するとき
-- fork report や completion log の生成内容・完了理由を確認するとき
+- realization のリファクタリング処理の構成や実行入口を確認するとき
+- refactor fork CLI の実行順序、run state、対象 file の処理単位、完了条件、fork report を調査・変更するとき
+- 中断・例外時の停止、rollback、cleanup、error state の挙動を確認するとき
+- refactor state、INDEX 同期、changed_paths 検証、所見の unresolved 管理を確認するとき
 
 ## Do not read this when
-- file review agent の入力形式や調査・修正プロンプトだけを確認する場合
-- 正常完了時の変更概要生成の入力・Structured Output を確認する場合
-- refactor state の一般的な保存・同期仕様だけを確認する場合
-- run isolation や interruption の正本仕様を確認する場合
+- realization refactor の一般仕様や CLI 契約だけを確認する場合
+- file 単位の agent prompt や finding schema の生成内容だけを確認する場合
+- run lifecycle、git 差分分類、process tracking など共通機構の詳細だけを確認する場合
+- INDEX 生成規則や INDEX 更新処理だけを確認する場合
 
 ## hash
-- 6d967dc9ec35685fad62a7e8185c1e5e92cae8c9f2a49bcbdcf72eff281457a9
+- a76634eebce7f45b64553259b6e504b87c28afbfe0acce184a4ef35ede1fcaba
