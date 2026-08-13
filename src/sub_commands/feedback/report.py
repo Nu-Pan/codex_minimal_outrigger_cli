@@ -68,6 +68,7 @@ from commons.runtime_feedback_state import (
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
+    _has_symlink_component,
     canonical_json_bytes,
     feedback_root,
     iter_observation_paths,
@@ -306,7 +307,10 @@ def _pending_observations(
 ) -> tuple[list[JsonObject], dict[str, JsonObject]]:
     """raw store の全 pending file を canonical validation して固定入力へ変換する。"""
     root = feedback_root(repo) / "observation" / "v1"
-    if root.exists() and (root.is_symlink() or not root.is_dir()):
+    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    # dangling symlink と symlink 化された親 directory も、空の初期 state と
+    # 誤認して publication しない。
+    if _has_symlink_component(root) or (root.exists() and not root.is_dir()):
         raise CmocError(
             "feedback observation root が通常 directory ではありません。",
             ["raw observation store を人間が確認してください。"],
@@ -562,12 +566,16 @@ def _capture_repository_reference(
             "state": "hashed",
             "sha256": digest,
         }
+    masked_text = mask_feedback_text(text)
     return {
         **base,
         "kind": "repository_content",
         "state": "hashed",
         "sha256": digest,
-        "content": mask_feedback_text(text[:_REFERENCE_CONTENT_LIMIT]),
+        # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+        # private key block が capture 上限をまたいでも、先に全体を mask して
+        # report cut の bounded content へ secret の断片を保存しない。
+        "content": masked_text[:_REFERENCE_CONTENT_LIMIT],
         "truncated": len(text) > _REFERENCE_CONTENT_LIMIT,
     }
 
@@ -2005,11 +2013,12 @@ def _verification_output_issues(
         )
     verdict = result.get("verdict")
     if verdict in {"unresolved", "resolved", "not_actionable"}:
-        current_kinds = {
-            references_by_id[str(reference_id)].get("kind")
+        current_references = [
+            references_by_id[str(reference_id)]
             for reference_id in used_ids
             if isinstance(reference_id, str) and reference_id in references_by_id
-        }
+        ]
+        current_kinds = {reference.get("kind") for reference in current_references}
         if not current_kinds.intersection(
             {"repository_content", "current_fingerprint", "probe_result"}
         ):
@@ -2018,6 +2027,22 @@ def _verification_output_issues(
                     "concrete current evidence",
                     "$.result.current_evidence",
                     "at least one repository_content, current_fingerprint, or probe_result reference",
+                    repr(sorted(current_kinds, key=str)),
+                )
+            )
+        if verdict == "unresolved" and not any(
+            reference.get("kind") in {"repository_content", "probe_result"}
+            or (
+                reference.get("kind") == "current_fingerprint"
+                and reference.get("state") != "hashed"
+            )
+            for reference in current_references
+        ):
+            issues.append(
+                StructuredOutputValidationIssue(
+                    "semantic current evidence",
+                    "$.result.current_evidence",
+                    "repository content, probe result, or a non-hash fingerprint state",
                     repr(sorted(current_kinds, key=str)),
                 )
             )
@@ -2877,17 +2902,24 @@ def _record_incomplete_event(
 
 
 def _finish_published_cleanup(repo: Path, manifest_path: Path) -> None:
-    """pointer 切替後の cleanup failure を publication と分離した warning にする。"""
+    """pointer 切替後の一時的な filesystem cleanup failure だけを warning にする。"""
     try:
         cleanup_published_report(repo)
-    except Exception as exc:
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # filesystem の一時的な cleanup failure だけを warning にし、manifest/hash
+    # 不整合などの state corruption は required cleanup recovery failure として
+    # 共通 error 経路へ伝播させる。
+    except OSError as exc:
         logger = current_subcommand_logger()
         if logger is not None:
-            logger.event(
-                "feedback_report_cleanup_failed",
-                report_cut_manifest_path=str(manifest_path),
-                error=repr(exc),
-            )
+            try:
+                logger.event(
+                    "feedback_report_cleanup_failed",
+                    report_cut_manifest_path=str(manifest_path),
+                    error=repr(exc),
+                )
+            except Exception:
+                pass
         typer.echo(
             "- warning: feedback report は publication 済みですが cleanup は未完了です。"
         )

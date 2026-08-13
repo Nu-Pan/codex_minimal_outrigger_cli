@@ -437,21 +437,22 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の reporter、collector、raw observation、report cut、verification、active state、atomic publication、cleanup を同一 repository fixture で検証する統合テスト。
-- 正常 publication 後に pending raw が compact active state へ集約されることに加え、resolved による除去、inconclusive・中断・失敗時の再開、checkpoint 再利用、部分 cleanup を確認する。
-- schema・path 境界・secret masking・fingerprint・collision・artifact hash など、publication 前後の整合性検証と破損時の停止条件を確認するためのテスト入口。
+- feedback observation の受理から raw 保存、report cut、verification、active state への atomic publication、cleanup までを repository fixture で検証する統合テスト群。
+- agent-facing reporter の MCP 境界、正規化・verification 用 agent builder、path 境界と secret masking、重複・閾値・fingerprint 判定、破損検出を扱う。
+- 中断、再開、checkpoint 再利用、部分 cleanup、publication 後の active state 検証など、feedback report の永続状態遷移を確認する入口。
 
 ## Read this when
-- feedback report の外部挙動を実装または変更し、reporter から publication・cleanup までの代表経路を確認するとき。
-- feedback report の中断・再開、incomplete report、verification checkpoint、writer lock、partial cleanup の挙動を調査するとき。
-- raw observation、active generation、current pointer、report cut の検証や改変検出が関係するテストを選ぶとき。
+- feedback observation の reporter、collector、store、report cut、verification、active state、publication、cleanup の挙動を変更または検証するとき。
+- feedback report の中断・再開、Codex 呼出しの checkpoint、machine observation の再発閾値、raw artifact の検証を調査するとき。
+- feedback 関連の oracle 仕様と実装の外部境界を、同一 repository fixture による実例から確認したいとき。
 
 ## Do not read this when
-- feedback の正本仕様や CLI 実装の責務を確認することが目的の場合は、対応する oracle file または実装対象を直接読む。
-- feedback report と無関係な機能のテストや、一般的なテスト実行手順だけを確認する場合。
+- feedback 領域と無関係な CLI やテストの変更を扱うとき。
+- 個別の正本仕様や agent builder の実装内容を直接確認する場合は、それぞれの oracle file や実装対象を読むとき。
+- テスト実行方法や一般的な fixture ユーティリティだけを確認したい場合。
 
 ## hash
-- 0f96149dacf5675f01b528db11fec8932576a7f81bf7bd930a68569a298a4a8d
+- c58350b890633460954a5145ace5ca1d48cd575fbfdb4723c5fb5589cc749fad
 
 # `test_file_inventory.py`
 

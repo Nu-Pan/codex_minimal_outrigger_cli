@@ -612,6 +612,44 @@ def test_feedback_verification_accepts_semantic_current_fingerprint() -> None:
     )
 
 
+def test_feedback_verification_rejects_opaque_current_fingerprint() -> None:
+    """hash だけの current fingerprint では unresolved を受理しない。"""
+    candidate_id = "fbi_" + "a" * 26
+    reference_id = _repository_reference_id("README.md")
+    references = {
+        reference_id: {
+            "kind": "current_fingerprint",
+            "path": "README.md",
+            "state": "hashed",
+            "sha256": "a" * 64,
+        }
+    }
+    output = _verification_output(candidate_id, "unresolved")
+
+    issues = feedback_report_module._verification_output_issues(
+        output, candidate_id, set(references), references
+    )
+
+    assert any(
+        issue.expected
+        == "repository content, probe result, or a non-hash fingerprint state"
+        for issue in issues
+    )
+
+
+def test_pending_observations_rejects_symlinked_root(tmp_path: Path) -> None:
+    """symlink 化された raw root を空の初期 state として扱わない。"""
+    root = make_repo(tmp_path)
+    observation_parent = feedback_root(root) / "observation"
+    observation_parent.mkdir(parents=True)
+    (observation_parent / "v1").symlink_to(
+        tmp_path / "missing-observations", target_is_directory=True
+    )
+
+    with pytest.raises(CmocError, match="observation root"):
+        feedback_report_module._pending_observations(root)
+
+
 def test_agent_candidate_comparison_requires_evidence_subject_type() -> None:
     """同じ path でも異なる evidence subject type を同一候補へ絞り込まない。"""
     observation = {
@@ -941,6 +979,33 @@ def test_report_reference_rejects_symlinked_parent_outside(tmp_path: Path) -> No
     (root / "link").symlink_to(outside, target_is_directory=True)
 
     assert feedback_report_module._repository_path(root, "link/secret.txt") is None
+
+
+def test_report_reference_masks_secret_across_content_limit(tmp_path: Path) -> None:
+    """capture 上限をまたぐ private key block の断片を保存しない。"""
+    root = make_repo(tmp_path)
+    path = root / "secret.txt"
+    private_key = (
+        "-----BEGIN PRIVATE KEY-----\n" + "A" * 256 + "\n-----END PRIVATE KEY-----"
+    )
+    path.write_text(
+        "x"
+        * (
+            feedback_report_module._REFERENCE_CONTENT_LIMIT
+            - len("[REDACTED:private_key]")
+            - 10
+        )
+        + private_key
+    )
+
+    reference = feedback_report_module._capture_repository_reference(
+        root, path, ["subject"]
+    )
+
+    assert reference["kind"] == "repository_content"
+    assert reference["truncated"] is True
+    assert "[REDACTED:private_key]" in reference["content"]
+    assert "A" * 50 not in reference["content"]
 
 
 def test_machine_detector_observation_id_is_idempotent(tmp_path: Path) -> None:
@@ -1876,6 +1941,34 @@ def test_partial_cleanup_keeps_publication_and_excludes_processed_pending(
     assert load_report_cut(root) is None
     assert iter_observation_paths(root) == []
     assert load_active_state(root).current is not None
+
+
+def test_cleanup_corruption_is_a_required_recovery_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """publication 後の state corruption は warning ではなく終了コード 1 にする。"""
+    root = make_repo(tmp_path)
+    session_id = _active_session(root, monkeypatch)
+    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, session_id)
+    _install_codex_outputs(
+        monkeypatch, _verification_output(candidate_id, "unresolved")
+    )
+
+    def fail_cleanup(_path: Path) -> None:
+        raise CmocError(
+            "cleanup state is corrupt",
+            ["inspect the cleanup manifest"],
+            str(_path),
+        )
+
+    monkeypatch.setattr(feedback_state_module, "_durable_unlink", fail_cleanup)
+    result = runner.invoke(app, ["feedback", "report"])
+
+    assert result.exit_code == 1
+    assert "cleanup は未完了" not in result.output
+    state = validate_feedback_state(root)
+    assert state.current is not None
+    assert state.cleanup_manifest is not None
 
 
 def test_cleanup_keyboard_interrupt_is_reported_as_user_interruption(

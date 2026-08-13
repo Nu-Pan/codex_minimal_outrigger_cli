@@ -31,21 +31,20 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装を担うディレクトリです。CLI からの実行入口と、report cut を起点に raw observation の検証・集約、checkpoint 再利用、verification、正常 publication または incomplete 診断保存までを処理する report pipeline を含みます。
-- feedback report の状態機械、publication、再開・中断・失敗時の整合性、raw observation や repository reference の固定処理を確認・変更するときの入口です。共通の feedback state／store API、builder、schema、または一般的な CLI runner の詳細は、それぞれの定義元を直接参照してください。
+- feedback サブコマンドの実装をまとめたディレクトリ。サブコマンドの入口から、report の publication／diagnostic pipeline、観測の集約、normalization・verification、checkpoint と再開、publication および失敗時の状態遷移までを扱う。feedback サブコマンド全体の実行経路や report 処理を確認・変更するときの入口。
 
 ## Read this when
-- feedback サブコマンドの実装や挙動を確認・変更するとき。
-- feedback report の report cut、candidate 集約、normalization／verification、checkpoint、publication、incomplete 診断、cleanup、再開処理を調査するとき。
-- raw observation の検証、repository reference の capture、current pointer や generation artifact との整合性を確認するとき。
+- feedback サブコマンドの挙動や実装を確認・変更するとき。
+- feedback report の report cut、candidate 集約、normalization、verification、publication、再開・中断・失敗時の処理を調査・変更するとき。
+- feedback observation、checkpoint、current pointer、cleanup など report 処理に関わる状態遷移を確認するとき。
 
 ## Do not read this when
-- feedback の永続 state や raw store の共通データ構造・ファイル操作だけを確認する場合。
-- normalization／verification の prompt、builder、Structured Output schema だけを確認する場合。
-- feedback 以外のサブコマンドや、一般的な CLI runner の挙動だけを確認する場合。
+- feedback 以外のサブコマンドを扱うとき。
+- feedback の正本状態契約やサブコマンド仕様だけを確認するときは、対応する oracle file を直接読む。
+- raw observation store や feedback state の共通操作だけを確認するときは、それぞれの runtime 実装を直接読む。
 
 ## hash
-- 979f01cb29ce427bdeb19b6531a30cc63fdc9c1df6c179e5552c1c00a32c6aff
+- 805dda5c5a4c5a699329f8c6cd747fdd1379cccb6b30cef47a07dff09a92f592
 
 # `indexing.py`
 
