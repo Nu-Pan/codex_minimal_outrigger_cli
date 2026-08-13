@@ -1145,6 +1145,28 @@ def test_completion_count_warns_instead_of_ignoring_unknown_raw_artifact(
     assert warnings
 
 
+@pytest.mark.parametrize("invalid_parent", ["dangling_symlink", "file"])
+def test_completion_count_rejects_invalid_observation_parent(
+    tmp_path: Path,
+    invalid_parent: str,
+) -> None:
+    """不正な observation 親を空の初期 state として扱わない。"""
+    root = make_repo(tmp_path)
+    observation_parent = feedback_root(root) / "observation"
+    observation_parent.parent.mkdir(parents=True)
+    if invalid_parent == "dangling_symlink":
+        observation_parent.symlink_to(
+            tmp_path / "missing-observations", target_is_directory=True
+        )
+    else:
+        observation_parent.write_text("not a directory")
+
+    pending, warnings = feedback_completion_counts(root)
+
+    assert pending is None
+    assert warnings
+
+
 def test_feedback_writer_lock_rejects_concurrent_writer(tmp_path: Path) -> None:
     """同じ repository で二つ目の report writer を開始しない。"""
     root = make_repo(tmp_path)

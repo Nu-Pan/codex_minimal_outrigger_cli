@@ -18,6 +18,7 @@ import json
 import os
 import re
 import secrets
+import stat
 import time
 import uuid
 from collections.abc import Iterator
@@ -751,11 +752,25 @@ def unprocessed_observation_paths(repo: Path) -> list[Path]:
     from .runtime_feedback_state import published_cleanup_observation_ids
 
     root = observation_root(repo)
-    if root.exists() or root.is_symlink():
-        if _has_symlink_component(root) or not root.is_dir():
+    # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+    # 不正な親 component を、存在しない初期 state として扱わない。
+    current = os.path.abspath(root)
+    while current != os.path.dirname(current):
+        try:
+            mode = os.lstat(current).st_mode
+        except FileNotFoundError:
+            current = os.path.dirname(current)
+            continue
+        except OSError as exc:
+            raise ValueError(
+                f"feedback observation root is not a regular directory: {root}"
+            ) from exc
+        if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
             raise ValueError(
                 f"feedback observation root is not a regular directory: {root}"
             )
+        current = os.path.dirname(current)
+    if root.exists():
         for path in root.rglob("*"):
             if path.is_dir() and not path.is_symlink():
                 continue
