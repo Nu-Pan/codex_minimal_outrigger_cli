@@ -31,20 +31,20 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装領域。観測結果の保存形式、report の candidate 集約・検証・publication、状態遷移や再開処理を確認・変更する際の入口。配下の report 実装と共有 primitive の責務を切り分けて読むためのルーティング対象。
+- feedback サブコマンドの実装をまとめたディレクトリ。feedback サブコマンドの処理を確認・変更するときの入口で、個別の report 処理や state・agent 契約の詳細へ進むための起点となる。
 
 ## Read this when
-- feedback サブコマンドの挙動、実行経路、状態遷移、割り込み・失敗・再開処理を調査または変更するとき
-- raw observation から candidate を生成し、verification や Markdown report の publication まで行う report pipeline を確認するとき
-- feedback の observation envelope や保存形式と report 実装の関係を確認するとき
+- feedback サブコマンドの挙動や実装を確認・変更するとき。
+- report の publication、diagnostic、checkpoint 再開、candidate 変換、verification、generation 切替を調査するとき。
 
 ## Do not read this when
-- feedback 以外のサブコマンドを扱うとき
-- normalization／verification の prompt builder や Structured Output schema だけを確認するとき
-- feedback state、generation artifact、checkpoint、raw store など共有 primitive の実装だけを確認するとき
+- feedback 以外のサブコマンドを扱うとき。
+- feedback state の正本データ構造や永続化契約だけを確認する場合。
+- normalization／verification agent の prompt、Structured Output schema、builder の契約だけを確認する場合。
+- report の表示形式だけを確認する場合。
 
 ## hash
-- ff4402743400a1cc0753a359c8b7de8149e13660ffc80ad3c4d723dd99933ba3
+- 86ae1386fe29176843ea39d38e0bdd81a436d24385d32e09b07a2147b7873163
 
 # `indexing.py`
 
@@ -81,18 +81,18 @@
 # `realization`
 
 ## Summary
-- realization workload サブコマンド全体のパッケージ入口。配下の apply や refactor など、realization に関する個別 workload の実装へ進む起点となる。
+- realization workload サブコマンドのパッケージ入口で、配下の apply と refactor の処理へ進むための起点。apply workload の実行フローや refactor fork のライフサイクルを確認する際に対象を選ぶ。
 
 ## Read this when
-- realization workload サブコマンドの実装構成や、apply・refactor など配下の処理を確認するとき。
-- realization 配下の workload を横断して、どの個別実装を読むべきか判断するとき。
+- realization workload サブコマンドの実装構成や入口を確認するとき。
+- apply workload または realization refactor の処理を調査・変更するとき。
 
 ## Do not read this when
-- realization workload サブコマンドに関係しない処理を確認するとき。
-- apply または refactor の具体的な実行 lifecycle や状態管理を確認する場合は、対応する個別実装へ直接進むとき。
+- realization に関係しない処理を確認するとき。
+- 共通ライフサイクル、CLI 契約、INDEX 更新規則など、より直接対応する共通実装や正本仕様を確認するとき。
 
 ## hash
-- 9755f41edc34313f6424146666e7267651d9b1978e880bc0993ab6fcc9844c25
+- 69e98a3c5cc5c69a34276cc6e1e7368b204ef4f49af540303b1de06d598a2773
 
 # `review`
 

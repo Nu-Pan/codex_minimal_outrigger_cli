@@ -68,6 +68,7 @@ from commons.runtime_feedback_state import (
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
+    _has_symlink_component,
     canonical_json_bytes,
     feedback_root,
     iter_observation_paths,
@@ -306,7 +307,10 @@ def _pending_observations(
 ) -> tuple[list[JsonObject], dict[str, JsonObject]]:
     """raw store の全 pending file を canonical validation して固定入力へ変換する。"""
     root = feedback_root(repo) / "observation" / "v1"
-    if root.exists() and (root.is_symlink() or not root.is_dir()):
+    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    # dangling symlink と symlink 化された親 directory も、空の初期 state と
+    # 誤認して publication しない。
+    if _has_symlink_component(root) or (root.exists() and not root.is_dir()):
         raise CmocError(
             "feedback observation root が通常 directory ではありません。",
             ["raw observation store を人間が確認してください。"],
@@ -339,7 +343,14 @@ def _pending_observations(
         except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
             validation_errors.append(f"{path}: {exc}")
             continue
-        if canonical_json_bytes(observation) != content:
+        try:
+            canonical_content = canonical_json_bytes(observation)
+        except (TypeError, UnicodeError, ValueError) as exc:
+            validation_errors.append(
+                f"{path}: canonical JSON object ではありません: {exc}"
+            )
+            continue
+        if canonical_content != content:
             validation_errors.append(f"{path}: canonical JSON object ではありません")
             continue
         observation_id_value = observation.get("observation_id")
@@ -562,12 +573,16 @@ def _capture_repository_reference(
             "state": "hashed",
             "sha256": digest,
         }
+    masked_text = mask_feedback_text(text)
     return {
         **base,
         "kind": "repository_content",
         "state": "hashed",
         "sha256": digest,
-        "content": mask_feedback_text(text[:_REFERENCE_CONTENT_LIMIT]),
+        # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+        # private key block が capture 上限をまたいでも、先に全体を mask して
+        # report cut の bounded content へ secret の断片を保存しない。
+        "content": masked_text[:_REFERENCE_CONTENT_LIMIT],
         "truncated": len(text) > _REFERENCE_CONTENT_LIMIT,
     }
 
@@ -849,7 +864,7 @@ def _build_candidates(
             observation_id_value = str(observation["observation_id"])
             canonical_key = agent_canonical_key(observation_id_value)
             selected = _new_candidate(observation, canonical_key)
-            candidates[str(selected["candidate_id"])] = selected
+            _insert_candidate(candidates, selected)
         _merge_observation(repo, selected, observation)
 
     # candidate ごとに許可する cut reference を固定済み subject から機械選択する。
@@ -920,6 +935,26 @@ def _new_candidate(observation: JsonObject, canonical_key: str) -> JsonObject:
         "deduplication_hints": [],
         "reference_ids": [],
     }
+
+
+def _insert_candidate(candidates: dict[str, JsonObject], candidate: JsonObject) -> None:
+    """異なる canonical key の issue ID collision を publication 前に停止する。"""
+    candidate_id_value = candidate.get("candidate_id")
+    canonical_key = candidate.get("canonical_key")
+    if not isinstance(candidate_id_value, str) or not isinstance(canonical_key, str):
+        raise ValueError("candidate identity is malformed")
+    previous = candidates.get(candidate_id_value)
+    if previous is not None and previous.get("canonical_key") != canonical_key:
+        raise CmocError(
+            "feedback issue ID collision を検出しました。",
+            [
+                "異なる canonical key に同じ issue ID を割り当てず、report を停止しました。"
+            ],
+            f"issue_id: {candidate_id_value}\n"
+            f"existing canonical_key: {previous.get('canonical_key')!r}\n"
+            f"new canonical_key: {canonical_key!r}",
+        )
+    candidates[candidate_id_value] = candidate
 
 
 def _merge_observation(
@@ -1239,15 +1274,29 @@ def _normalize_issue_identity(
         }
         for candidate in sorted(candidates, key=lambda item: str(item["candidate_id"]))
     ]
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # deduplication hint は候補検索だけで使い、issue identity の根拠として
+    # normalization agent へ渡さない。
+    normalization_observation = {
+        **observation,
+        "payload": {
+            key: value
+            for key, value in observation["payload"].items()
+            if key != "deduplication_hint"
+        },
+    }
     parameter = build_feedback_normalize_issue_parameter(
-        json.dumps(observation, ensure_ascii=False, sort_keys=True),
+        json.dumps(normalization_observation, ensure_ascii=False, sort_keys=True),
         json.dumps(candidate_payload, ensure_ascii=False, sort_keys=True),
         worktree,
     )
     schema_path = parameter.structured_output_schema_path
     assert schema_path is not None
     allowed = {str(candidate["candidate_id"]) for candidate in candidates}
-    input_value = {"observation": observation, "candidates": candidate_payload}
+    input_value = {
+        "observation": normalization_observation,
+        "candidates": candidate_payload,
+    }
     input_sha256 = sha256_bytes(canonical_json_bytes(input_value))
     observation_id_value = str(observation["observation_id"])
     checkpoint = _normalization_checkpoint(
@@ -1502,7 +1551,7 @@ def _process_machine_observations(
             for observation in observations:
                 _merge_observation(repo, candidate, observation)
             _apply_machine_aggregate_to_candidate(candidate, aggregate)
-            candidates[str(candidate["candidate_id"])] = candidate
+            _insert_candidate(candidates, candidate)
             continue
         aggregates[canonical_key] = aggregate
     return aggregates
@@ -1985,11 +2034,12 @@ def _verification_output_issues(
         )
     verdict = result.get("verdict")
     if verdict in {"unresolved", "resolved", "not_actionable"}:
-        current_kinds = {
-            references_by_id[str(reference_id)].get("kind")
+        current_references = [
+            references_by_id[str(reference_id)]
             for reference_id in used_ids
             if isinstance(reference_id, str) and reference_id in references_by_id
-        }
+        ]
+        current_kinds = {reference.get("kind") for reference in current_references}
         if not current_kinds.intersection(
             {"repository_content", "current_fingerprint", "probe_result"}
         ):
@@ -1998,6 +2048,22 @@ def _verification_output_issues(
                     "concrete current evidence",
                     "$.result.current_evidence",
                     "at least one repository_content, current_fingerprint, or probe_result reference",
+                    repr(sorted(current_kinds, key=str)),
+                )
+            )
+        if verdict == "unresolved" and not any(
+            reference.get("kind") in {"repository_content", "probe_result"}
+            or (
+                reference.get("kind") == "current_fingerprint"
+                and reference.get("state") != "hashed"
+            )
+            for reference in current_references
+        ):
+            issues.append(
+                StructuredOutputValidationIssue(
+                    "semantic current evidence",
+                    "$.result.current_evidence",
+                    "repository content, probe result, or a non-hash fingerprint state",
                     repr(sorted(current_kinds, key=str)),
                 )
             )
@@ -2857,17 +2923,24 @@ def _record_incomplete_event(
 
 
 def _finish_published_cleanup(repo: Path, manifest_path: Path) -> None:
-    """pointer 切替後の cleanup failure を publication と分離した warning にする。"""
+    """pointer 切替後の一時的な filesystem cleanup failure だけを warning にする。"""
     try:
         cleanup_published_report(repo)
-    except Exception as exc:
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # filesystem の一時的な cleanup failure だけを warning にし、manifest/hash
+    # 不整合などの state corruption は required cleanup recovery failure として
+    # 共通 error 経路へ伝播させる。
+    except OSError as exc:
         logger = current_subcommand_logger()
         if logger is not None:
-            logger.event(
-                "feedback_report_cleanup_failed",
-                report_cut_manifest_path=str(manifest_path),
-                error=repr(exc),
-            )
+            try:
+                logger.event(
+                    "feedback_report_cleanup_failed",
+                    report_cut_manifest_path=str(manifest_path),
+                    error=repr(exc),
+                )
+            except Exception:
+                pass
         typer.echo(
             "- warning: feedback report は publication 済みですが cleanup は未完了です。"
         )

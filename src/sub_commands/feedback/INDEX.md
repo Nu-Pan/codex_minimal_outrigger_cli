@@ -15,22 +15,17 @@
 # `report.py`
 
 ## Summary
-- `cmoc feedback report` の publication／diagnostic pipeline を実装するサブコマンド本体。固定済み report cut を起点に、raw observation の検証、issue candidate の deterministic 集約、必要な normalization、全 candidate の verification、正常 publication、または incomplete 診断までを一つの transaction として処理する。
-- report cut、checkpoint、generation artifact、current pointer、cleanup、割り込み・失敗状態を連携させ、中断後の再開や publication 前後の整合性検証を担う。feedback report の処理順序、candidate 同一性判定、machine rule の集約、verification 結果の永続化、Markdown report 描画を確認するための入口である。
-- feedback report サブコマンドの実装挙動、feedback state の遷移、割り込み時の扱い、または report publication／diagnostic pipeline の変更・調査を行うときに読む。個別の normalization／verification prompt や共有 feedback state／store の責務だけを確認する場合は、対応する builder または commons の実装を直接読む。
+- `cmoc feedback report` サブコマンドの publication／diagnostic pipeline を実装するモジュール。固定した report cut に対して raw observation の検証、candidate の deterministic 集約・normalization、全 candidate の verification、正常な active generation／Markdown report の publication、または incomplete 診断 report の保存までを一つの transaction として扱う。中断・失敗時の checkpoint 再開、current pointer の整合性確認、artifact の hash 検証、publication 後 cleanup、ログ記録も担う。feedback report の処理順序や checkpoint／publication の実装を確認する入口であり、feedback state のデータ契約そのものを確認する場合は対応する state 仕様、agent 入出力契約を確認する場合は normalize／verify builder と schema を読む。
 
 ## Read this when
-- `cmoc feedback report` の実行経路、事前条件、writer lock、report cut 固定、再開処理を確認するとき
-- raw observation から candidate・machine aggregate を生成する deterministic processing や agent による normalization を調査するとき
-- 全 candidate の verification、checkpoint の検証・再利用、inconclusive による incomplete 診断を確認するとき
-- generation artifact、Markdown report、current pointer の publication と publication 後 cleanup の関係を確認するとき
-- feedback report の中断・失敗・再開時の状態記録やログイベントを変更・検証するとき
+- `cmoc feedback report` の実行フロー、report cut、normalization、verification、publication、incomplete 診断の挙動を変更・調査するとき
+- feedback report の中断再開、checkpoint の再利用、current pointer の切替、artifact cleanup、hash 整合性を確認するとき
+- raw observation や active issue がどのように candidate・generation・Markdown report へ変換されるかを確認するとき
 
 ## Do not read this when
-- feedback observation の envelope や保存形式そのものだけを確認する場合
-- normalization／verification agent の prompt builder や Structured Output schema の内容だけを確認する場合
-- feedback state、generation artifact、checkpoint、raw store の共有 primitive だけを確認する場合
-- feedback report 以外のサブコマンドの状態機械や publication 処理を調査する場合
+- feedback state の正本データ構造や永続化契約だけを確認する場合は、先に対応する feedback state 仕様を読む
+- normalization／verification agent の prompt、Structured Output schema、builder の契約だけを確認する場合は、それぞれの builder・schema を直接読む
+- report の表示形式だけを確認する場合は、render 関数または対応する仕様を直接読む
 
 ## hash
-- 23a01fb04ea0f12e0927e82cdd01244ecfac9d4ebf22523efb7d015652ff6ba7
+- 84be1c92fe983a23839f545240e0a21ce5ac19b443c79c59b8231780d088c260

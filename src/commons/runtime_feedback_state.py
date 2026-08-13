@@ -813,7 +813,12 @@ def _require_nonnegative_integer(value: object, path: Path, description: str) ->
     return value
 
 
-def _validate_active_issue(record: JsonObject, path: Path) -> None:
+def _validate_active_issue(
+    record: JsonObject,
+    path: Path,
+    *,
+    expected_report_cut_id: str | None = None,
+) -> None:
     """compact active issue record の schema と identity を検査する。"""
     _require_exact_fields(
         record,
@@ -957,6 +962,14 @@ def _validate_active_issue(record: JsonObject, path: Path) -> None:
     if not is_uuid7_prefixed(verification.get("report_cut_id"), "fbc_"):
         raise _corruption(
             "active issue verification の report cut ID が不正です。", path
+        )
+    if (
+        expected_report_cut_id is not None
+        and verification.get("report_cut_id") != expected_report_cut_id
+    ):
+        raise _corruption(
+            "active issue verification が generation の report cut と一致しません。",
+            path,
         )
     _require_timestamp(
         verification.get("verified_at"), path, "verification verified_at"
@@ -1358,7 +1371,11 @@ def _load_generation(
             description="active issue",
         )
         record = _read_canonical_object(path, "active issue record")
-        _validate_active_issue(record, path)
+        _validate_active_issue(
+            record,
+            path,
+            expected_report_cut_id=str(manifest.get("report_cut_id")),
+        )
         if record.get("issue_id") != current_issue_id or current_issue_id in issues:
             raise _corruption("active issue reference identity が一致しません。", path)
         issues[current_issue_id] = record
@@ -1413,8 +1430,22 @@ def _load_generation(
 
 def load_active_state(repo: Path) -> ActiveState:
     """current pointer が選ぶ正常な active state と cleanup state を読む。"""
+    active_directory = active_root(repo)
+    if _has_symlink_component(active_directory) or (
+        active_directory.exists() and not active_directory.is_dir()
+    ):
+        raise _corruption(
+            "feedback active state root が通常 directory ではありません。",
+            active_directory,
+        )
     pointer_path = current_pointer_path(repo)
     if not pointer_path.exists() and not pointer_path.is_symlink():
+        work = load_report_cut(repo)
+        _validate_active_artifact_inventory(
+            repo,
+            ActiveState(None, None, {}, {}, None, None),
+            work,
+        )
         return ActiveState(None, None, {}, {}, None, None)
     pointer = _read_canonical_object(pointer_path, "feedback current pointer")
     _require_exact_fields(
@@ -1474,6 +1505,12 @@ def load_active_state(repo: Path) -> ActiveState:
     if generation_manifest.get("report_cut_id") != report_cut_id_value:
         raise _corruption(
             "current generation と report cut が一致しません。", generation_path
+        )
+    expected_result = "attention" if issues else "ok"
+    if pointer.get("result") != expected_result:
+        raise _corruption(
+            "feedback current pointer result が generation の issue 数と一致しません。",
+            pointer_path,
         )
     report_root = repo / ".cmoc" / "gu" / "ar" / "report" / "feedback"
     report_path = _validate_artifact_reference(
@@ -2917,7 +2954,11 @@ def generation_artifacts(
     issue_references: list[JsonObject] = []
     for current_issue_id, record in sorted(issues.items()):
         path = directory / "issue" / f"{current_issue_id}.json"
-        _validate_active_issue(record, path)
+        _validate_active_issue(
+            record,
+            path,
+            expected_report_cut_id=report_cut_id,
+        )
         content = canonical_json_bytes(record)
         artifacts.append((path, content))
         issue_references.append(
@@ -3049,6 +3090,12 @@ def publish_current_pointer(
     if loaded_manifest.get("report_cut_id") != report_cut_id:
         raise _corruption(
             "new generation の report cut ID が一致しません。", generation_path
+        )
+    expected_result = "attention" if _issues else "ok"
+    if result != expected_result:
+        raise _corruption(
+            "new feedback result が generation の issue 数と一致しません。",
+            generation_path,
         )
     report_root = repo / ".cmoc" / "gu" / "ar" / "report" / "feedback"
     report_path = _validate_artifact_reference(

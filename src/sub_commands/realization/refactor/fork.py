@@ -138,7 +138,19 @@ def _cmoc_realization_refactor_fork_body() -> None:
             if start_attempted and start_was_ready:
                 context = recover_started_run("realization_refactor")
             if context is None:
-                raise
+                if start_attempted and start_was_ready:
+                    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                    # ready 確認後の run 公開を特定できない場合は、別 invocation の
+                    # resource を誤って成功扱いで回収しない。
+                    raise
+                # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+                # run 作成前の fork lifecycle であっても Ctrl+C は正常な中断として
+                # 終了し、共通 runner に子 process の失敗として扱わせない。
+                mark_current_subcommand_interrupted()
+                logger = current_subcommand_logger()
+                if logger is not None:
+                    logger.event("user_interruption", result="interrupted")
+                return
         cleanup_errors: list[str] = []
         try:
             cleanup_warnings.extend(
@@ -568,54 +580,74 @@ def _commit_refactor_unit(
     try:
         commit_result = commit_work_unit(context.run_worktree, message)
     finally:
-        after_head = run_git(["rev-parse", "HEAD"], context.run_worktree, check=False)
-        if commit_result is not None or (
-            after_head.returncode == 0 and after_head.stdout.strip() != before_head
-        ):
+        # commit_work_unit が返した hash は、commit 成功後の HEAD probe より確定度が
+        # 高い。probe 直前の Ctrl+C で、既に commit 済みの処理単位を report から
+        # 取り落とさないよう、成功時はその hash をそのまま tree_changes へ渡す。
+        after_head: str | None = commit_result
+        if after_head is None:
+            head_probe = run_git(
+                ["rev-parse", "HEAD"], context.run_worktree, check=False
+            )
+            if head_probe.returncode == 0:
+                after_head = head_probe.stdout.strip()
+        if after_head is not None and after_head != before_head:
             units.append((target, finding_count))
-            committed_changes = tree_changes(
-                context.run_worktree,
-                before_head,
-                after_head.stdout.strip(),
-            )
-            rename_paths = {
-                change.paths[0]: change.paths[1]
-                for change in committed_changes
-                if change.status.startswith("R") and len(change.paths) == 2
-            }
-            state = load_refactor_state(context.run_worktree)
-            if target not in rename_paths and target not in state:
-                # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-                # Git は内容の変更量が大きい rename を delete/add として記録する。
-                # 所見が宣言した changed_paths に旧 target と新 path が含まれ、そこから
-                # 新しく現れた realization file が一つだけなら、先にその対応を採用する。
-                # それ以外は、処理単位で新しく現れた realization file が一つだけの
-                # 場合に限って旧 target をその path へ対応付ける。
-                new_state_paths = {
-                    path
-                    for path in pending_realization_paths
-                    if path != target
-                    and path in state
-                    and path not in state_paths_before
-                }
-                declared_candidates = sorted(
-                    path for path in unresolved_changed_paths if path in new_state_paths
+            unresolved_before = dict(unresolved_findings)
+            try:
+                committed_changes = tree_changes(
+                    context.run_worktree,
+                    before_head,
+                    after_head,
                 )
-                candidates = declared_candidates or sorted(new_state_paths)
-                if len(declared_candidates) == 1:
-                    rename_paths[target] = declared_candidates[0]
-                elif len(candidates) == 1:
-                    rename_paths[target] = candidates[0]
-            _reconcile_unresolved_findings(
-                state,
-                rename_paths,
-                unresolved_findings,
-            )
-            if unresolved:
-                # commit 済みの対象だけを current fork 内で保留し、次の対象へ進む。
-                unresolved_target = rename_paths.get(target, target)
-                if unresolved_target in state:
-                    unresolved_findings[unresolved_target] = unresolved
+                rename_paths = {
+                    change.paths[0]: change.paths[1]
+                    for change in committed_changes
+                    if change.status.startswith("R") and len(change.paths) == 2
+                }
+                state = load_refactor_state(context.run_worktree)
+                if target not in rename_paths and target not in state:
+                    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+                    # Git は内容の変更量が大きい rename を delete/add として記録する。
+                    # 所見が宣言した changed_paths に旧 target と新 path が含まれ、そこから
+                    # 新しく現れた realization file が一つだけなら、先にその対応を採用する。
+                    # それ以外は、処理単位で新しく現れた realization file が一つだけの
+                    # 場合に限って旧 target をその path へ対応付ける。
+                    new_state_paths = {
+                        path
+                        for path in pending_realization_paths
+                        if path != target
+                        and path in state
+                        and path not in state_paths_before
+                    }
+                    declared_candidates = sorted(
+                        path
+                        for path in unresolved_changed_paths
+                        if path in new_state_paths
+                    )
+                    candidates = declared_candidates or sorted(new_state_paths)
+                    if len(declared_candidates) == 1:
+                        rename_paths[target] = declared_candidates[0]
+                    elif len(candidates) == 1:
+                        rename_paths[target] = candidates[0]
+                _reconcile_unresolved_findings(
+                    state,
+                    rename_paths,
+                    unresolved_findings,
+                )
+                if unresolved:
+                    # commit 済みの対象だけを current fork 内で保留し、次の対象へ進む。
+                    unresolved_target = rename_paths.get(target, target)
+                    if unresolved_target in state:
+                        unresolved_findings[unresolved_target] = unresolved
+            except BaseException:
+                # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+                # commit 後の差分 inspection 中断でも、確定済み finding を report から
+                # 失わない。rename の確定前は旧 target を保守的に保持する。
+                unresolved_findings.clear()
+                unresolved_findings.update(unresolved_before)
+                if unresolved:
+                    unresolved_findings[target] = unresolved
+                raise
 
 
 def _reconcile_unresolved_findings(

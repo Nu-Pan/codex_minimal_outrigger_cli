@@ -142,7 +142,22 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     (ignored / "tracked.txt").write_text("tracked ignored\n")
     (ignored / "untracked.txt").write_text("untracked ignored\n")
     (root / "visible.txt").write_text("visible\n")
-    run_git(root, "add", "-f", ".gitignore", "ignored/tracked.txt")
+    excluded_names = (
+        "AGENTS.md",
+        "INDEX.md",
+        "oracle/AGENTS.md",
+        "oracle/INDEX.md",
+    )
+    for relative in excluded_names:
+        (root / relative).write_text("excluded from inventory\n")
+    run_git(
+        root,
+        "add",
+        "-f",
+        ".gitignore",
+        "ignored/tracked.txt",
+        *excluded_names,
+    )
     run_git(root, "commit", "-m", "add ignored fixture")
 
     nested = _make_nested_repo(root / "nested")
@@ -161,6 +176,7 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     assert "visible.txt" in actual[1]
     assert "nested/kept.outer" in actual[1]
     assert "nested/dropped.nested" not in actual[1]
+    assert set(excluded_names).isdisjoint(actual[0] | actual[1])
 
     state = sync_refactor_state(root)
     assert set(state) == expected[0] | expected[1]
@@ -235,6 +251,9 @@ def test_inventory_prunes_only_exact_roots_and_verified_nested_git_metadata(
     fake_metadata = nested / "fake" / ".git"
     fake_metadata.mkdir(parents=True)
     (fake_metadata / "kept.txt").write_text("not repository metadata\n")
+    fake_metadata_file = nested / "fake-file" / ".git"
+    fake_metadata_file.parent.mkdir(parents=True)
+    fake_metadata_file.write_text("not repository metadata\n")
 
     scanned: list[Path] = []
     original_scandir = runtime_git.os.scandir
@@ -255,6 +274,7 @@ def test_inventory_prunes_only_exact_roots_and_verified_nested_git_metadata(
     }
     assert expected_nested <= realization_files
     assert "nested/fake/.git/kept.txt" in realization_files
+    assert "nested/fake-file/.git" in realization_files
     assert all(root / name not in scanned for name in _EXCLUDED_ROOTS)
 
 

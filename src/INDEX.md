@@ -52,20 +52,18 @@
 # `commons`
 
 ## Summary
-- cmoc の commons パッケージとして、CLI・Codex 実行・設定・状態・Git・ログ・パス・feedback・editing run などで共有される runtime helper をまとめる領域。共通 API の公開入口から、各機能の個別実装や結果型、永続化・ライフサイクル管理へ進むための起点となる。
+- cmoc の共通 runtime helper を集約する commons パッケージ。CLI 実行ライフサイクル、Codex exec/TUI、設定・状態、Git・パス・ログ、feedback、refactor、エラー、結果型など、複数の runtime 機能から再利用される実装と公開 API への入口を提供する。
 
 ## Read this when
-- 複数の cmoc runtime 機能にまたがる共通 API、実行境界、状態管理、Git 操作、ログ、feedback、パス処理を横断して確認するとき
-- commons 配下の共通 helper の責務分担や、公開入口から個別 runtime 実装へ進む経路を把握するとき
-- Codex exec/TUI、INDEX preflight、editing run、doctor、feedback などの共通 runtime lifecycle を調査するとき
+- 複数の runtime 機能にまたがる共通 API、実行境界、状態管理、Git・パス・ログ、feedback などの実装入口を確認するとき
+- commons 配下の個別 helper の責務や、Codex 実行・INDEX 更新・editing run の lifecycle など横断的な挙動を調査または変更するとき
 
 ## Do not read this when
-- 特定の runtime helper のアルゴリズムや個別機能の挙動だけを確認したいときは、対応する個別実装を直接読む
-- CLI サブコマンド固有の業務ロジックや利用者向け仕様だけを確認したいときは、該当する subcommand または正本仕様を直接読む
-- 設定型、feedback の schema、INDEX entry の生成規則など、commons の共通入口ではなく専用仕様が責務を持つ内容を確認するとき
+- 特定の runtime helper のアルゴリズムや個別サブコマンドの業務ロジックだけを確認したいときは、該当する下位実装を直接読む
+- 利用者向けの正本仕様、Structured Output schema、設定型、feedback report 内容など、commons の公開・共通実装以外が正本となる内容を確認するとき
 
 ## hash
-- f4e4864c1ca96f1debb2f962c4571a582ce59ebc8c85bd0aafc4bd06e72d7f97
+- 3797614e4dd72e9f892a72a016734ca26bdd854e9dbe1ef86983ef7b304f72a3
 
 # `config`
 
@@ -118,15 +116,15 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装をまとめるディレクトリ。doctor、feedback、indexing、oracle、realization、run、session、tui など、各 CLI サブコマンドの実行入口やライフサイクル処理へ進むためのルーティング起点となる。
+- CLI サブコマンドの実装をまとめるディレクトリ。各サブコマンドの実行入口や実装構成を確認する際の起点であり、対象のサブコマンドに対応する下位要素へ進むために読む。現在は apply と review の実装本文がなく、doctor、feedback、indexing、oracle、realization、run、session、tui などの実装入口が配置されている。
 
 ## Read this when
-- 特定のサブコマンドの実装場所や、サブコマンド横断の実行構成を確認するとき
-- CLI サブコマンドの実行フロー、状態管理、report、worktree 操作などの実装入口を特定するとき
+- cmoc の特定サブコマンドの実装入口や実行フローを調査・変更するとき。
+- サブコマンドごとの処理領域を特定し、対応する下位実装へ進む起点を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な挙動や仕様を確認する場合は、対応する個別実装または正本仕様を直接読む
-- 共通ランタイム、Git・パス処理、state 管理などの専用実装だけを確認する場合は、それぞれの共通実装を直接読む
+- サブコマンドに共通する CLI ランタイム、Git・パス処理、state 管理などの詳細だけを確認するとき。
+- サブコマンドの正本仕様や、特定サブコマンド配下の具体的な処理を直接確認すべきとき。
 
 ## hash
-- 96e027406fa60e59b3d8680d0871599de0a067e91659ee9aec13be515e1dcd75
+- 1c6d040a622b3d194446880ca56536a02e99a0bc3e4fed09898b13b7fe54fbba

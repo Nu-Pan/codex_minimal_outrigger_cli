@@ -130,11 +130,11 @@ def test_codex_callback_deduplicates_each_turn_and_ignores_message_text(
     """同じ turn は一度だけ通知し、callback 本文を通知へ渡さない。"""
     state_root = tmp_path / "callback-state"
     state_root.mkdir()
-    calls: list[tuple[str, str, str]] = []
+    calls: list[tuple[str, str]] = []
     monkeypatch.setattr(
         runtime_windows_toast,
-        "_notify_fields",
-        lambda command, repository, state: calls.append((command, repository, state)),
+        "_run_windows_toast_transport",
+        lambda title, message: calls.append((title, message)) or True,
     )
     payload = json.dumps(
         {
@@ -157,7 +157,7 @@ def test_codex_callback_deduplicates_each_turn_and_ignores_message_text(
         results = list(executor.map(runtime_windows_toast.main, [arguments] * 8))
 
     assert results == [0] * 8
-    assert calls == [("oracle edit", "repository", "waiting")]
+    assert calls == [("cmoc oracle edit", "repository — 入力待ち")]
     assert "prompt secret" not in repr(calls)
     assert "assistant secret" not in repr(calls)
 
@@ -165,7 +165,7 @@ def test_codex_callback_deduplicates_each_turn_and_ignores_message_text(
     next_payload["turn-id"] = "turn-2"
     arguments[-1] = json.dumps(next_payload)
     assert runtime_windows_toast.main(arguments) == 0
-    assert calls[-1] == ("oracle edit", "repository", "waiting")
+    assert calls[-1] == ("cmoc oracle edit", "repository — 入力待ち")
     assert len(calls) == 2
 
 

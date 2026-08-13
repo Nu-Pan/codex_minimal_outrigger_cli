@@ -18,6 +18,7 @@ import json
 import os
 import re
 import secrets
+import stat
 import time
 import uuid
 from collections.abc import Iterator
@@ -488,8 +489,14 @@ def _normalized_evidence_path(repo: Path, raw_path: str) -> Path:
         candidate = repo / candidate
     try:
         # 存在する path は symlink 解決後、存在しない path は字句的に正規化する。
+        # 非存在の leaf でも、既存の symlink 親が repo 外を指す場合は拒否する。
+        resolved = candidate.resolve(strict=False)
+        if resolved != repo and repo not in resolved.parents:
+            raise FeedbackRejected(
+                "path_outside_repo", f"evidence path is outside repository: {raw_path}"
+            )
         if candidate.exists() or candidate.is_symlink():
-            normalized = candidate.resolve(strict=False)
+            normalized = resolved
         else:
             normalized = Path(os.path.abspath(candidate))
     except (OSError, RuntimeError, ValueError) as exc:
@@ -745,11 +752,25 @@ def unprocessed_observation_paths(repo: Path) -> list[Path]:
     from .runtime_feedback_state import published_cleanup_observation_ids
 
     root = observation_root(repo)
-    if root.exists() or root.is_symlink():
-        if _has_symlink_component(root) or not root.is_dir():
+    # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+    # 不正な親 component を、存在しない初期 state として扱わない。
+    current = os.path.abspath(root)
+    while current != os.path.dirname(current):
+        try:
+            mode = os.lstat(current).st_mode
+        except FileNotFoundError:
+            current = os.path.dirname(current)
+            continue
+        except OSError as exc:
+            raise ValueError(
+                f"feedback observation root is not a regular directory: {root}"
+            ) from exc
+        if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
             raise ValueError(
                 f"feedback observation root is not a regular directory: {root}"
             )
+        current = os.path.dirname(current)
+    if root.exists():
         for path in root.rglob("*"):
             if path.is_dir() and not path.is_symlink():
                 continue
@@ -772,15 +793,15 @@ def feedback_completion_counts(
     repo: Path,
 ) -> tuple[int | None, list[str]]:
     """通常サブコマンド完了時の pending observation 件数と warning を返す。"""
+    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
     try:
         pending = unprocessed_observation_paths(repo)
-    except Exception as exc:
+    except Exception:
         return (
             None,
             [
                 "repository-local feedback state を安全に検証できないため件数を計算できません。",
-                f"feedback state: {exc}",
             ],
         )
     warnings: list[str] = []

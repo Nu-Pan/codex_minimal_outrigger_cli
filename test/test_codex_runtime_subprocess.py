@@ -1,6 +1,7 @@
 import errno
 import os
 import signal
+import sys
 from pathlib import Path
 
 import pytest
@@ -678,7 +679,7 @@ def test_tracked_codex_subprocess_reaps_child_when_group_cleanup_fails(
 
     def fail_group_cleanup(*_args: object, **_kwargs: object) -> None:
         group_cleanup_calls.append(True)
-        raise CmocError("group cleanup failed")
+        raise CmocError("group cleanup failed", [], "test group cleanup failure")
 
     monkeypatch.setattr(
         runtime_codex_profile, "_record_tracked_child_process", fail_record
@@ -783,6 +784,23 @@ def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
 
     assert result.stdout == "ok\n"
     assert not tracking_path.exists()
+
+
+def test_run_codex_subprocess_notifies_after_process_start() -> None:
+    """process 起動 callback を Popen 成功後に一度だけ呼び出す。"""
+    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    callbacks: list[str] = []
+
+    result = run_codex_subprocess(
+        [sys.executable, "-c", "print('ok')"],
+        text=True,
+        capture_output=True,
+        check=True,
+        process_started_callback=lambda: callbacks.append("started"),
+    )
+
+    assert callbacks == ["started"]
+    assert result.stdout == "ok\n"
 
 
 def test_run_codex_subprocess_preserves_missing_cwd_error(

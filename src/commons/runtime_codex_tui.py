@@ -140,12 +140,12 @@ def _run_codex_tui_process(
     )
     try:
         environment = feedback_call.subprocess_env(codex_subprocess_env(codex_home))
-        mark_current_tui_process_started()
         result = run_codex_subprocess(
             argv,
             cwd=agent_call_cwd,
             env=environment,
             check=True,
+            process_started_callback=mark_current_tui_process_started,
         )
         returncode = result.returncode
     except subprocess.CalledProcessError as exc:

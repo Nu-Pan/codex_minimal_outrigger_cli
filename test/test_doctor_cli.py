@@ -11,8 +11,12 @@ lock・CLI/config・Git index はテスト観点としては分かれるが、�
 複数のモジュールで重複して読む必要があり、局所的な読解量が増えるため、
 責務を doctor preprocess の外部契約に限定して一つに保つ。
 
-正本仕様: `{{work-root}}/oracle/doc/app_spec/doctor_preprocess.md`,
-`{{work-root}}/oracle/doc/app_spec/sub_command/doctor.md`。
+正本仕様:
+- `{{work-root}}/oracle/doc/app_spec/doctor_preprocess.md`
+- `{{work-root}}/oracle/doc/app_spec/misc_spec.md`
+- `{{work-root}}/oracle/doc/app_spec/sub_command/doctor.md`
+- `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`
+- `{{work-root}}/oracle/src/oracle/other/cmoc_config.py`
 """
 
 import json
@@ -657,6 +661,20 @@ def test_doctor_preserves_existing_untracked_gitkeep_content(
 
     assert run_git(root, "show", "HEAD:.agents/.gitkeep").stdout == "human content\n"
     assert gitkeep.read_text() == "human content\n"
+    assert run_git(root, "status", "--short").stdout == ""
+
+
+def test_doctor_restores_missing_tracked_gitkeep(tmp_path: Path) -> None:
+    """tracked な `.agents/.gitkeep` の unstaged deletion を復元する。"""
+
+    root = make_repo(tmp_path)
+    doctor_module.run_doctor_preprocess(root)
+    gitkeep = root / ".agents" / ".gitkeep"
+    gitkeep.unlink()
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert gitkeep.read_text() == ""
     assert run_git(root, "status", "--short").stdout == ""
 
 
