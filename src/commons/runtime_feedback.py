@@ -747,7 +747,15 @@ def _validate_stdio_reporter(
         tools_list = next(value for value in responses if value.get("id") == 2)
         server_info = initialize["result"]["serverInfo"]
         tools = tools_list["result"]["tools"]
+        if (
+            not isinstance(server_info, dict)
+            or not isinstance(tools, list)
+            or len(tools) != 1
+            or not isinstance(tools[0], dict)
+        ):
+            raise TypeError("MCP response has an invalid result shape")
     except (
+        AttributeError,
         KeyError,
         TypeError,
         ValueError,
@@ -759,8 +767,6 @@ def _validate_stdio_reporter(
         ) from exc
     if (
         server_info.get("version") != REPORTER_PROTOCOL_VERSION
-        or not isinstance(tools, list)
-        or len(tools) != 1
         or tools[0].get("name") != "submit_observation"
         or tools[0].get("inputSchema") != expected_schema
     ):

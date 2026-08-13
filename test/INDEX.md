@@ -437,24 +437,20 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の pending observation、active state、report cut、verification、atomic publication、cleanup を同一 repository fixture で検証するテスト群。
-- agent-facing reporter の MCP 公開、collector の context・rate limit・永続保存・secret masking、Codex builder の readonly/schema 制約と prompt 境界を扱う。
-- agent issue と machine observation の候補化・同一性判定・再発閾値・fingerprint・verification、resolved/inconclusive を含む report 処理を検証する。
-- report cut、checkpoint、interruption、publication 再開、current pointer、active generation、部分 cleanup と corruption 検出の外部境界を確認する。
+- feedback の pending observation、active state、report cut、verification、atomic publication、cleanup を同一 repository fixture で検証するテスト群。agent-facing reporter の MCP 境界、collector の受理・拒否、観測データの正規化・秘匿、候補同一性判定、verification checkpoint、割り込みからの再開、publication 後の active state 圧縮までを扱う。feedback report の挙動や永続状態の整合性を確認する際の入口となる。
 
 ## Read this when
-- feedback reporter または collector の受理・拒否・保存動作を変更または調査するとき。
-- feedback report の候補化、verification、再開可能な checkpoint、publication、active state、cleanup の挙動を変更または調査するとき。
-- raw observation や report cut、active generation の path・hash・symlink 境界、secret masking、破損検出を確認するとき。
-- feedback 専用 Codex prompt builder、structured output schema、verification verdict の検証要件を確認するとき。
+- feedback observation の保存・検証・rate limit・context、または agent-facing reporter protocol の挙動を確認するとき
+- feedback report の候補生成、verification、inconclusive/interrupted 状態、checkpoint 再利用、atomic publication を確認するとき
+- active state、current pointer、generation artifact、cleanup manifest の破損検出や publication 後の raw cleanup を確認するとき
 
 ## Do not read this when
-- feedback 機能以外の CLI、runtime、storage、reporting の挙動だけを扱うとき。
-- テスト fixture や pytest 実行方法だけを調べるときは、テスト実行手順や共通 test support を先に読む。
-- feedback の正本仕様や builder の実装詳細そのものを確認する必要がある場合は、このテストだけで判断せず、対応する oracle file または実装を直接読む。
+- feedback 機能の正本仕様や CLI 契約そのものを確認する場合は、対応する oracle の app_spec 文書や sub_command 仕様を直接読む
+- feedback 実装の詳細を変更・調査する場合は、このテストだけでなく対象実装と対応する oracle file を直接読む
+- feedback と無関係な subcommand、report、state、または一般的なテスト実行規則だけを確認する場合
 
 ## hash
-- 6f6d63a29a9826ab84d890aaa7a0a4f690198a3a6f9076a91e3f7754c87fc7ec
+- bee5815f58e5952d69ef3b3b69d079e6877764051fd2aae8a404148ed15acbc4
 
 # `test_file_inventory.py`
 

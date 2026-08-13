@@ -45,6 +45,7 @@ from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_feedback import (
     FeedbackInvocation,
+    ReporterAvailabilityError,
     begin_feedback_call,
     start_feedback_invocation,
 )
@@ -311,6 +312,27 @@ def test_reporter_returns_rejection_for_non_utf8_payload_text(
 
     assert result["status"] == "rejected"
     assert json.loads(sent[0])["payload"]["evidence"][0]["text"] == "\ud800"
+
+
+def test_reporter_probe_rejects_non_object_mcp_response(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """不正な JSON object 形状を reporter protocol error として扱う。"""
+    monkeypatch.setattr(
+        feedback_module.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=0,
+            stdout="[1]\n",
+            stderr="",
+        ),
+    )
+
+    with pytest.raises(ReporterAvailabilityError, match="invalid MCP data") as error:
+        feedback_module._validate_stdio_reporter({}, tmp_path)
+
+    assert error.value.component == "reporter"
+    assert error.value.failure_code == "protocol_error"
 
 
 @pytest.mark.parametrize(
