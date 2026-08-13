@@ -1267,15 +1267,29 @@ def _normalize_issue_identity(
         }
         for candidate in sorted(candidates, key=lambda item: str(item["candidate_id"]))
     ]
+    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # deduplication hint は候補検索だけで使い、issue identity の根拠として
+    # normalization agent へ渡さない。
+    normalization_observation = {
+        **observation,
+        "payload": {
+            key: value
+            for key, value in observation["payload"].items()
+            if key != "deduplication_hint"
+        },
+    }
     parameter = build_feedback_normalize_issue_parameter(
-        json.dumps(observation, ensure_ascii=False, sort_keys=True),
+        json.dumps(normalization_observation, ensure_ascii=False, sort_keys=True),
         json.dumps(candidate_payload, ensure_ascii=False, sort_keys=True),
         worktree,
     )
     schema_path = parameter.structured_output_schema_path
     assert schema_path is not None
     allowed = {str(candidate["candidate_id"]) for candidate in candidates}
-    input_value = {"observation": observation, "candidates": candidate_payload}
+    input_value = {
+        "observation": normalization_observation,
+        "candidates": candidate_payload,
+    }
     input_sha256 = sha256_bytes(canonical_json_bytes(input_value))
     observation_id_value = str(observation["observation_id"])
     checkpoint = _normalization_checkpoint(

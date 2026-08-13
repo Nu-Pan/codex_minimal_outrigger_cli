@@ -462,6 +462,66 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
     assert candidate_json in candidate_section
 
 
+def test_feedback_normalization_excludes_candidate_search_hint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """候補検索専用 hint を normalization agent の入力へ渡さない。"""
+    root = make_repo(tmp_path)
+    observation_id = "fbo_00000000-0000-7000-8000-000000000001"
+    candidate_id = "fbi_" + "a" * 26
+    observation = {
+        "observation_id": observation_id,
+        "payload": {
+            "category": "tooling",
+            "summary": "同一性判断の入力",
+            "impact": "候補検索用の hint を含む。",
+            "deduplication_hint": "候補検索だけに使う文字列",
+            "evidence": [{"kind": "file", "path": "README.md"}],
+        },
+    }
+    candidate = {
+        "candidate_id": candidate_id,
+        "origin": "agent_report",
+        "category": "tooling",
+        "summary": "既存候補",
+        "impact": "既存候補の影響",
+        "representative_evidence": [],
+        "reference_targets": [],
+        "latest_fingerprints": [],
+    }
+    captured_prompts: list[str] = []
+
+    def fake_run_codex_exec(parameter: object, **_kwargs: object) -> SimpleNamespace:
+        assert hasattr(parameter, "prompt")
+        captured_prompts.append(str(parameter.prompt))
+        return SimpleNamespace(
+            output_json={"result": {"decision": "new", "existing_issue_id": None}}
+        )
+
+    monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(
+        feedback_report_module,
+        "_record_checkpoint",
+        lambda *_args, **_kwargs: None,
+    )
+
+    manifest = {
+        "report_cut_id": "fbc_00000000-0000-7000-8000-000000000001",
+        "inputs": {"versions": {"normalization_builder": "0" * 64}},
+        "processing": {"normalization_checkpoints": []},
+    }
+
+    assert (
+        feedback_report_module._normalize_issue_identity(
+            root, root, manifest, observation, [candidate]
+        )
+        is None
+    )
+    assert len(captured_prompts) == 1
+    assert "deduplication_hint" not in captured_prompts[0]
+    assert "候補検索だけに使う文字列" not in captured_prompts[0]
+
+
 def test_feedback_verify_builder_protects_nested_code_fences(
     tmp_path: Path,
 ) -> None:
