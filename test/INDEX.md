@@ -437,21 +437,24 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の pending observation、active state、report cut、verification、atomic publication、cleanup を同一 repository fixture で検証する統合テスト。agent-facing reporter と collector の境界、schema・context・rate limit・path 検証、secret masking、machine observation の集約・threshold・期限、Codex builder の readonly/schema 制約を扱う。
-- 正常 publication、incomplete・interrupted report の再開、checkpoint の再利用、current pointer と generation artifact の整合性、部分 cleanup、改変・未定義 artifact の corruption 検出までを検証する feedback report 実装の主要な外部挙動への入口。
+- feedback の pending observation、active state、report cut、verification、atomic publication、cleanup を同一 repository fixture で検証するテスト群。
+- agent-facing reporter の MCP 公開境界、collector の context・rate 制限・永続保存、path 境界・secret masking、machine observation の冪等性と閾値処理を扱う。
+- feedback report の正常・空・inconclusive・中断・失敗・再開経路を通じて、checkpoint 再利用、publication の原子性、active state の整合性、部分 cleanup、破損 artifact 検出を検証する。
+- feedback の実装、report subcommand、state/store、reporter、normalize/verify builder、または対応する oracle 仕様の挙動を変更・調査するときのテスト入口である。
 
 ## Read this when
-- feedback observation の collector・reporter・raw store 動作を変更または検証するとき
-- feedback report の issue normalization、verification、report cut、active state publication、checkpoint、cleanup、再開処理を変更または検証するとき
-- feedback の path 境界、secret masking、rate limit、machine observation threshold、atomicity、corruption 検出の挙動を確認するとき
+- feedback observation の収集・保存・正規化・検証・report publication の外部挙動を確認するとき。
+- feedback report の再開可能性、atomic publication、active generation、cleanup、破損検出を変更またはレビューするとき。
+- agent-facing reporter の MCP tool 境界、collector の capability・rate limit・context 検証を確認するとき。
+- machine observation の recurrence threshold、window expiry、aggregate から issue への遷移を確認するとき。
 
 ## Do not read this when
-- feedback 以外の機能だけを変更・検証するとき
-- feedback の正本仕様や Codex prompt builder の定義そのものを確認する必要があり、対応する oracle file や実装ファイルを直接読む方が適切なとき
-- 単純な reporter protocol の実装確認だけで、統合的な report publication・state・cleanup の挙動を扱わないとき
+- feedback と無関係な CLI subcommand、一般的な logging、session、git helper の挙動だけを扱うとき。
+- report の Markdown 表現だけを変更・確認する場合は、まず report rendering または対応する仕様・実装を直接読むとき。
+- normalize/verify builder の prompt や schema だけを調査する場合は、対応する builder 実装・oracle schema を直接読むとき。
 
 ## hash
-- 6eb5224c688a85b66a48ae48f51787ee878c032db7f0b17b38b276e127ea50d1
+- 53b7467c201ecd0f06161629660279fd93a8499c3e2c228533bb4b99c3453869
 
 # `test_file_inventory.py`
 

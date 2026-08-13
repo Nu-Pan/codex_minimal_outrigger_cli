@@ -488,8 +488,14 @@ def _normalized_evidence_path(repo: Path, raw_path: str) -> Path:
         candidate = repo / candidate
     try:
         # 存在する path は symlink 解決後、存在しない path は字句的に正規化する。
+        # 非存在の leaf でも、既存の symlink 親が repo 外を指す場合は拒否する。
+        resolved = candidate.resolve(strict=False)
+        if resolved != repo and repo not in resolved.parents:
+            raise FeedbackRejected(
+                "path_outside_repo", f"evidence path is outside repository: {raw_path}"
+            )
         if candidate.exists() or candidate.is_symlink():
-            normalized = candidate.resolve(strict=False)
+            normalized = resolved
         else:
             normalized = Path(os.path.abspath(candidate))
     except (OSError, RuntimeError, ValueError) as exc:

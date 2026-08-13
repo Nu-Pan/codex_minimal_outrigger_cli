@@ -835,6 +835,15 @@ def test_agent_store_rejects_outside_path_and_masks_secret(tmp_path: Path) -> No
         store_agent_observation(root, _context(root), _payload(path="loop"))
     assert malformed.value.code == "path_outside_repo"
 
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (root / "outside-link").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(FeedbackRejected) as missing_outside:
+        store_agent_observation(
+            root, _context(root), _payload(path="outside-link/missing.txt")
+        )
+    assert missing_outside.value.code == "path_outside_repo"
+
     redacted = _payload(
         text="request failed before Authorization: Bearer abcdefghijklmnopqrstuvwxyz",
         kind="error",
