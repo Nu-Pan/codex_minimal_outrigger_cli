@@ -738,10 +738,10 @@
     "last_investigated_at": "2026-07-24_21-56_24_592457000"
   },
   "src/acp/builder/session/join/conflict_resolution.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "df1c9fc7faf28466fa86b69c0bc45f518f61457d14fc616e0b9d9adb5664c105",
-    "last_investigated_at": "2026-08-06_13-17_22_685157000"
+    "last_investigated_sha256": "80dd736d61e6995d92c4ad91df4c25fadaf86f51cec5a0fa7d97bcfdf01a96b5",
+    "last_investigated_at": "2026-08-13_10-57_27_122364000"
   },
   "src/acp/builder/tui/__init__.py": {
     "investigation_required": false,
