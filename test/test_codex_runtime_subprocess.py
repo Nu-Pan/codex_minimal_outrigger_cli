@@ -679,7 +679,7 @@ def test_tracked_codex_subprocess_reaps_child_when_group_cleanup_fails(
 
     def fail_group_cleanup(*_args: object, **_kwargs: object) -> None:
         group_cleanup_calls.append(True)
-        raise CmocError("group cleanup failed")
+        raise CmocError("group cleanup failed", [], "test group cleanup failure")
 
     monkeypatch.setattr(
         runtime_codex_profile, "_record_tracked_child_process", fail_record
