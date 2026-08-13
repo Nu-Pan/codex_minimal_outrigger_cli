@@ -260,7 +260,7 @@ def test_reporter_exposes_only_canonical_submission_tool(
             sent.append(value)
 
         def recv(self, _size: int) -> bytes:
-            return b'{"status":"accepted","observation_id":"fbo_test","redaction_count":0}\n'
+            return b'{"status":"accepted","observation_id":"fbo_00000000-0000-7000-8000-000000000001","redaction_count":0}\n'
 
     monkeypatch.setattr(reporter_module.socket, "socket", lambda *_args: FakeSocket())
     monkeypatch.setenv("CMOC_FEEDBACK_COLLECTOR_SOCKET", "/tmp/collector.sock")
@@ -339,6 +339,7 @@ def test_reporter_probe_rejects_non_object_mcp_response(
     "response",
     [
         b'{"status":"accepted"}\n',
+        b'{"status":"accepted","observation_id":"fbo_test","redaction_count":0}\n',
         b'{"status":"rejected","code":"schema_invalid","message":"invalid","retryable":true}\n',
         b'{"status":"rejected","code":[],"message":"invalid","retryable":false}\n',
     ],
