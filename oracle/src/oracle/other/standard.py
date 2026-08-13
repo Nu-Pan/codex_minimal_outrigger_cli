@@ -1,96 +1,181 @@
 from dataclasses import dataclass
-from typing import Literal
 
 from oracle.other.struct_doc import StructDoc
 
 
+@dataclass(frozen=True)
 class Standard:
-    """agent 向け instruction の要求文面を構造化する。"""
+    """agent 向け instruction の一つの規範を表す immutable な値。"""
 
-    def __init__(
-        self,
-        title: str,
-        requirements: list["Requirement"],
-        examples: list[str] = list(),
-    ):
-        # title
-        # - この standard の見出し
-        self._title = title
-        # requirements
-        # - この standard が要求する規範
-        # - 必須フィールド
-        if (
-            isinstance(requirements, list)
-            and len(requirements) > 0
-            and all(isinstance(i, Requirement) for i in requirements)
+    # ID は合成時の同一性検査だけに使い、prompt へは出力しない。
+    standard_id: str
+    title: str
+    required: tuple[str, ...] = ()
+    prohibited: tuple[str, ...] = ()
+    recommended: tuple[str, ...] = ()
+    permitted: tuple[str, ...] = ()
+    # requirements だけでは判断できない場合に限り、判断例を持たせる。
+    examples: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """文字列群を tuple に固定し、値の入れ子まで immutable にする。"""
+        if not self.standard_id or not self.title:
+            raise ValueError("Standard ID and title must not be empty")
+        for field_name in (
+            "required",
+            "prohibited",
+            "recommended",
+            "permitted",
+            "examples",
         ):
-            self._requirements = requirements
-        else:
-            raise ValueError(f"Invalid requirements (requirements={requirements})")
-        # examples
-        # - requirements フィールドだけからは汲み取り切れない意図を補足するための判断例を書く
-        # - requirements フィールドだけからわかるようなことを examples で冗長に補足することはしない
-        # - requirements フィールドに書いていない事を examples フィールドに新しく書いてはいけない
-        # - 典型的には、状況例、判断の根拠・判断結果の３段構成で書く
-        if (
-            isinstance(examples, list)
-            and len(examples) > 0
-            and all(isinstance(i, str) for i in examples)
-        ):
-            self._examples = examples
-        elif isinstance(examples, list) and len(examples) == 0:
-            self._examples = list()
-        else:
-            raise ValueError(f"Invalid example (example={examples})")
-
-    @property
-    def title(self) -> str:
-        return self._title
-
-    @property
-    def requirements(self) -> list["Requirement"]:
-        return self._requirements
-
-    @property
-    def examples(self) -> list[str]:
-        return self._examples
+            object.__setattr__(
+                self,
+                field_name,
+                _as_text_tuple(field_name, getattr(self, field_name)),
+            )
+        if not any((self.required, self.prohibited, self.recommended, self.permitted)):
+            raise ValueError("Standard must contain at least one requirement")
 
 
 @dataclass(frozen=True)
-class Requirement:
-    """
-    Standard の要求フィールド
-    Standard が要求する規範
-    """
+class StandardGroup:
+    """同じ適用範囲を持つ複数の Standard をまとめる immutable な値。"""
 
-    # ラベル
-    # 必須: 破ると standard 違反になる
-    # 禁止: してはいけない
-    # 推奨: 原則として従うが、理由があれば外してよい
-    # 許容: 禁止ではないことを明示する
-    label: Literal["必須", "禁止", "推奨", "許容"]
+    # group ID も合成と順序付けだけに使い、prompt へは出力しない。
+    group_id: str
+    title: str
+    scope: str
+    standards: tuple[Standard, ...]
 
-    # 要求の本文
-    # １文で簡潔に書く
-    # - e.g. 良い要求の書き方
-    #     - 必須: 対象を読むべき条件を判断できる意味情報を書く
-    #     - 禁止: 対象外の責務を推測で追加してはいけない
-    body: str
+    def __post_init__(self) -> None:
+        """group 自身と保持する Standard を検証する。"""
+        if not self.group_id or not self.title or not self.scope:
+            raise ValueError("StandardGroup ID, title, and scope must not be empty")
+        standards = tuple(self.standards)
+        if not standards or not all(
+            isinstance(standard, Standard) for standard in standards
+        ):
+            raise ValueError("StandardGroup must contain Standard values")
+        object.__setattr__(self, "standards", standards)
 
 
-def standard_to_struct_doc(standard: Standard) -> StructDoc:
-    """agent 向け instruction 文面へ変換する。"""
-    fields = [
-        StructDoc(
-            "要求",
-            ".\n".join(f"- [{r.label}] {r.body}" for r in standard.requirements),
+@dataclass(frozen=True)
+class StandardCollection:
+    """合成および render の単位となる StandardGroup の集合。"""
+
+    groups: tuple[StandardGroup, ...] = ()
+
+    def __post_init__(self) -> None:
+        """保持する group を immutable な tuple に固定する。"""
+        groups = tuple(self.groups)
+        if not all(isinstance(group, StandardGroup) for group in groups):
+            raise ValueError("StandardCollection must contain StandardGroup values")
+        object.__setattr__(self, "groups", groups)
+
+
+def combine_standard_collections(
+    *collections: StandardCollection,
+) -> StandardCollection:
+    """Standard ID の衝突を検査し、選択順に依存しない集合へ合成する。"""
+    # ID ごとの定義と、重複 Standard を置く決定的な group を集める。
+    group_definitions: dict[str, tuple[str, str]] = {}
+    standard_definitions: dict[str, Standard] = {}
+    owner_group_ids: dict[str, str] = {}
+    for collection in collections:
+        for group in collection.groups:
+            group_definition = (group.title, group.scope)
+            if (
+                group.group_id in group_definitions
+                and group_definitions[group.group_id] != group_definition
+            ):
+                raise ValueError(
+                    "Conflicting StandardGroup definition "
+                    f"(group_id={group.group_id!r})"
+                )
+            group_definitions[group.group_id] = group_definition
+
+            for standard in group.standards:
+                current = standard_definitions.get(standard.standard_id)
+                if current is not None and current != standard:
+                    raise ValueError(
+                        "Conflicting Standard definition "
+                        f"(standard_id={standard.standard_id!r})"
+                    )
+                standard_definitions[standard.standard_id] = standard
+                owner_group_ids[standard.standard_id] = min(
+                    owner_group_ids.get(standard.standard_id, group.group_id),
+                    group.group_id,
+                )
+
+    # group と Standard の ID で並べ、builder の選択順から出力順を切り離す。
+    standards_by_group: dict[str, list[Standard]] = {}
+    for standard_id, standard in standard_definitions.items():
+        standards_by_group.setdefault(owner_group_ids[standard_id], []).append(standard)
+    return StandardCollection(
+        tuple(
+            StandardGroup(
+                group_id,
+                *group_definitions[group_id],
+                tuple(
+                    sorted(
+                        standards_by_group[group_id],
+                        key=lambda standard: standard.standard_id,
+                    )
+                ),
+            )
+            for group_id in sorted(standards_by_group)
         )
-    ]
+    )
+
+
+def standard_collection_to_struct_docs(
+    collection: StandardCollection,
+) -> list[StructDoc]:
+    """合成済み collection を agent 向け instruction 文面へ変換する。"""
+    # 適用範囲は独立した定型節にせず、各 group の見出しへ統合する。
+    documents = []
+    for group in collection.groups:
+        standards = [
+            (standard, _standard_body(standard)) for standard in group.standards
+        ]
+        if len(standards) == 1:
+            standard, body = standards[0]
+            documents.append(StructDoc(f"{standard.title}（{group.scope}）", body))
+        else:
+            documents.append(
+                StructDoc(
+                    f"{group.title}（{group.scope}）",
+                    *(StructDoc(standard.title, body) for standard, body in standards),
+                )
+            )
+    return documents
+
+
+def _standard_body(standard: Standard) -> str:
+    """label ごとの要求文群と、必要な場合だけ判断例を構築する。"""
+    # label の順序を固定し、空の文群は label ごと出力しない。
+    fields: list[str] = []
+    for label, requirements in (
+        ("必須", standard.required),
+        ("禁止", standard.prohibited),
+        ("推奨", standard.recommended),
+        ("許容", standard.permitted),
+    ):
+        if requirements:
+            fields.append(
+                f"**{label}**\n\n" + "\n".join(f"- {body}" for body in requirements)
+            )
     if standard.examples:
         fields.append(
-            StructDoc(
-                "判断例",
-                ".\n".join(f"- {e}" for e in standard.examples),
-            ),
+            "**判断例**\n\n"
+            + "\n".join(f"- {example}" for example in standard.examples)
         )
-    return StructDoc(standard.title, *fields)
+    return "\n\n".join(fields)
+
+
+def _as_text_tuple(field_name: str, values: tuple[str, ...]) -> tuple[str, ...]:
+    """要求文群を immutable にし、空または文字列以外の要素を拒否する。"""
+    result = tuple(values)
+    if not all(isinstance(value, str) and value for value in result):
+        raise ValueError(f"Standard.{field_name} must contain non-empty strings")
+    return result

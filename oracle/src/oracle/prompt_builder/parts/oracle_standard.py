@@ -1,118 +1,32 @@
 """oracle file を扱う agent call 向け instruction 文面の構築定義。"""
 
-# cmoc
-from oracle.other.path_model import AgentCallPathContext
-from oracle.other.standard import Requirement, Standard, standard_to_struct_doc
-from oracle.other.struct_doc import StructDoc
-from oracle.prompt_builder.basic import PlaceholderMap
+from functools import cache
+
+from oracle.other.standard import StandardCollection, StandardGroup
+
+from .common_standard import ORACLE_AUTHORITY_STANDARD_GROUP
+from .standard_definitions import (
+    ORACLE_AUTHORITATIVE_BASIS_STANDARD,
+    ORACLE_CONSISTENCY_AND_SEARCHABILITY_STANDARD,
+    ORACLE_INTENT_AND_GAPS_STANDARD,
+    ORACLE_NO_REVERSE_ENGINEERING_STANDARD,
+)
 
 
-def build_oracle_standard(
-    path_context: AgentCallPathContext,
-) -> tuple[PlaceholderMap, StructDoc]:
-    """oracle file の作成・変更・調査・レビューに必要な規範を構築する。"""
-    # 規範本文が参照する work-root を call-scoped context から取得する。
-    root_definitions = path_context.root_placeholder_definitions()
-    standards = [
-        Standard(
-            title="oracle file を正本仕様断片として扱う",
-            requirements=[
-                Requirement("必須", "判断の根拠を関連する oracle file に置く"),
-                Requirement(
-                    "必須",
-                    "cmoc 固有契約または oracle file と installed skill が競合する場合は前者を優先する",
-                ),
-                Requirement(
-                    "禁止",
-                    "installed skill の存在を oracle file の意味または作業完了条件の前提にしてはいけない",
-                ),
-                Requirement(
-                    "禁止",
-                    "一般的なベストプラクティスだけを根拠に oracle file の要求を変更してはいけない",
-                ),
-            ],
+@cache
+def build_oracle_standard() -> StandardCollection:
+    """oracle file の作成・変更・調査・レビューに必要な規範を選択する。"""
+    oracle_group = StandardGroup(
+        group_id="20.oracle",
+        title="oracle standard",
+        scope="oracle file の作成・変更・調査・レビュー時",
+        standards=(
+            ORACLE_AUTHORITATIVE_BASIS_STANDARD,
+            ORACLE_INTENT_AND_GAPS_STANDARD,
+            ORACLE_NO_REVERSE_ENGINEERING_STANDARD,
+            ORACLE_CONSISTENCY_AND_SEARCHABILITY_STANDARD,
         ),
-        Standard(
-            title="重要な人間意図へ絞り、仕様の隙間を許容する",
-            requirements=[
-                Requirement(
-                    "必須",
-                    "実装差を許容しない事項と、人間が判断すべき境界を明示する",
-                ),
-                Requirement(
-                    "禁止",
-                    "仕様全体を網羅するためだけの分類、列挙、説明を追加してはいけない",
-                ),
-                Requirement(
-                    "許容",
-                    "明示仕様の隙間は、現行の oracle file と、file access が許す場合の"
-                    "既存実装・既存 test から自然に導ける小さな範囲で実装者が補ってよい",
-                ),
-                Requirement(
-                    "禁止",
-                    "未定義部分を埋めることだけを目的に oracle file を増やしてはいけない",
-                ),
-                Requirement(
-                    "必須",
-                    "過剰な実装を誘発し得る境界では goal と non-goal を読み取れるようにする",
-                ),
-            ],
-        ),
-        Standard(
-            title="実装から正本仕様を逆算しない",
-            requirements=[
-                Requirement(
-                    "禁止",
-                    "oracle file を調査せず、実装だけから正本仕様を導いてはいけない",
-                ),
-                Requirement(
-                    "禁止",
-                    "既存実装の都合または挙動だけを根拠に oracle file を変更してはいけない",
-                ),
-                Requirement(
-                    "許容",
-                    "正本仕様の矛盾または実現不能を調べる場合に限り、実装上の制約を修正提案の材料にしてよい",
-                ),
-            ],
-        ),
-        Standard(
-            title="正本仕様断片の整合性と検索性を保つ",
-            requirements=[
-                Requirement(
-                    "禁止",
-                    "一方の正本仕様断片に従うと別の正本仕様断片へ必ず違反する状態を作ってはいけない",
-                ),
-                Requirement(
-                    "必須",
-                    "一般方針と個別仕様の優先関係を読み取れるようにする",
-                ),
-                Requirement(
-                    "必須",
-                    "依頼の対象外である既存仕様の意味を維持する",
-                ),
-                Requirement(
-                    "必須",
-                    "oracle file を作成または変更する場合は、同じ概念の用語と表記を統一し、名前から推測される意味を定義と一致させる",
-                ),
-                Requirement(
-                    "必須",
-                    "oracle file を作成または変更する場合は、文意または検索性を損なう誤字、脱字、文法誤りを残さない",
-                ),
-                Requirement(
-                    "禁止",
-                    "oracle file を作成または変更する場合は、同じ意味の記述を複数箇所へ重複させてはいけない",
-                ),
-            ],
-        ),
-    ]
-    return (
-        {"work-root": root_definitions["work-root"]},
-        StructDoc(
-            "oracle standard",
-            StructDoc(
-                "適用条件",
-                "- oracle file を作成、変更、調査、またはレビューする場合に適用する",
-            ),
-            *[standard_to_struct_doc(standard) for standard in standards],
-        ),
+    )
+    return StandardCollection(
+        groups=(ORACLE_AUTHORITY_STANDARD_GROUP, oracle_group),
     )

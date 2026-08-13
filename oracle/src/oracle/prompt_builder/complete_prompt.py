@@ -3,6 +3,11 @@ from typing import Callable
 
 from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
+from oracle.other.standard import (
+    StandardCollection,
+    combine_standard_collections,
+    standard_collection_to_struct_docs,
+)
 from oracle.other.struct_doc import StructBlock, StructDoc
 
 from .basic import PlaceholderMap
@@ -113,20 +118,28 @@ def build_complete_prompt(
     _extend_static_prompt(build_feedback_reporting_standard, path_context)
     if oracle_and_realization_basic:
         _extend_static_prompt(build_oracle_and_realization_basic, path_context)
+
+    # 各 builder は Standard を選択するだけとし、全用途分を合成後に一度だけ
+    # StructDoc へ変換する。これにより横断的な共通 Standard も一度だけ出力する。
+    standard_collections: list[StandardCollection] = []
     if oracle_standard:
-        _extend_static_prompt(build_oracle_standard, path_context)
+        standard_collections.append(build_oracle_standard())
     if realization_standard:
-        _extend_static_prompt(build_realization_standard, path_context)
+        standard_collections.append(build_realization_standard())
     if apply_review_standard:
-        _extend_static_prompt(build_apply_review_standard)
+        standard_collections.append(build_apply_review_standard())
     if oracle_review_standard:
-        _extend_static_prompt(build_oracle_review_standard)
+        standard_collections.append(build_oracle_review_standard())
     if conflict_resolution_standard:
-        _extend_static_prompt(build_conflict_resolution_standard)
+        standard_collections.append(build_conflict_resolution_standard())
+    if index_entry_standard:
+        standard_collections.append(build_index_entry_standard())
+    combined_standards = combine_standard_collections(*standard_collections)
+    prompt.extend(standard_collection_to_struct_docs(combined_standards))
+
+    # Standard ではない静的規則は従来の構築経路で注入する。
     if realization_oracle_reference_rule:
         _extend_static_prompt(build_realization_oracle_reference_rule, path_context)
-    if index_entry_standard:
-        _extend_static_prompt(build_index_entry_standard)
     if aux_static_prompt:
         prompt.extend(aux_static_prompt)
     if file_access_mode != FileAccessMode.NO_RULE:
