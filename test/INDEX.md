@@ -344,19 +344,21 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex exec の再試行・失敗処理を、fake subprocess の外部挙動として検証するテスト群。Structured Output の補正、schema 検証、capacity retry、JSONL error、中断、retry 上限、成果物差分保持、共有 call log と subcommand event を扱う。Codex 実行制御やログ契約の変更時に、同じ状態機械の分岐を一続きの文脈で確認する入口となる。
+- Codex exec の retry と失敗時ログを検証するテスト群。Structured Output の出力補正、capacity retry、JSONL error、中断、retry 上限、差分保持を、fake subprocess の最終結果・呼び出し回数・call log・subcommand event まで含む外部挙動として一続きに確認する。
+- run_codex_exec の retry 状態と共有ログ schema を同じ読み取り文脈で検証するためのテスト入口であり、異常系を個別の責務へ分割せず扱う。
 
 ## Read this when
-- Codex CLI 実行の retry 状態、subprocess 呼び出し回数、Structured Output 補正、capacity error、未知の JSONL error、中断処理を変更または検証するとき。
-- Codex call log、subcommand event、retry 上限・backoff、補正時の session 継続や成果物差分保持の挙動を確認するとき。
+- run_codex_exec の Structured Output 検証失敗、出力補正、capacity retry、未知の JSONL error、中断、retry 上限、または補正時の成果物差分保持を変更・検証するとき
+- Codex subprocess の呼び出し回数、session 継続、call log、codex_call event、subcommand event の対応を確認するとき
+- fake Codex の応答から最終結果とログ列までを外部挙動として検証するテストを追加・変更するとき
 
 ## Do not read this when
-- Codex exec の通常成功経路だけを確認する場合は、成功経路を直接扱う実装やテストを読む。
-- ログ出力全般の仕様を確認するだけの場合は、共有ログ仕様の正本を直接読む。
-- Codex exec 以外の subprocess や retry 機構を変更する場合は、このテストを起点にせず対象機能の直接の実装・テストを読む。
+- Codex exec の通常成功経路だけを確認するとき
+- retry や失敗時ログに関係しない別の runtime 機能を調査するとき
+- run_codex_exec の実装責務や正本仕様そのものを確認する必要があり、テスト本文ではなく実装・仕様を直接読むべきとき
 
 ## hash
-- 26441a62c170af68cead1933f16fda8daba140c589bbbd631c02fe817149a85b
+- 173c657a24987edd03acd7527f1104695e6c1e2434795510050b6903618c0559
 
 # `test_codex_runtime_subprocess.py`
 

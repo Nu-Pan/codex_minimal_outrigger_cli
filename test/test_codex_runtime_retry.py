@@ -132,6 +132,56 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     assert len({event["codex_call_id"] for event in codex_events}) == 2
 
 
+@pytest.mark.parametrize("non_json_constant", ["NaN", "Infinity", "-Infinity"])
+def test_run_codex_exec_corrects_non_json_numeric_constant(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    non_json_constant: str,
+) -> None:
+    """JSON 仕様外の非有限数を Structured Output の parse failure として補正する。"""
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    bin_dir = tmp_path / "non_json_constant_bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "non_json_constant_counter"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            f"output.write_text({non_json_constant!r} if count == 0 else '1')",
+            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    schema = tmp_path / "non_json_constant_schema.json"
+    schema.write_text(json.dumps({"type": "number"}))
+
+    result = run_codex_exec(
+        AgentCallParameter(
+            "test_agent_call",
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
+            schema,
+            root,
+        ),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert result.output_json == 1
+    assert counter.read_text() == "2"
+
+
 def test_run_codex_exec_corrects_declared_postcondition(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -456,7 +506,9 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     assert expected_error in codex_events[0]["error"]
 
 
-@pytest.mark.parametrize("schema_bytes", [b"{", b'{"$schema": 1}', b"\xff"])
+@pytest.mark.parametrize(
+    "schema_bytes", [b"{", b'{"$schema": 1}', b'{"minimum": NaN}', b"\xff"]
+)
 def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, schema_bytes: bytes
 ) -> None:

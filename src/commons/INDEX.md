@@ -103,19 +103,21 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- 1 回の agent call における Codex exec の実行制御を担い、subprocess 起動、実行記録、Structured Output の検証・補正、capacity retry、quota 待機と代表 probe、resume 継続を同じ状態機械で管理する。exec 実行の分岐と共有状態を確認するための入口であり、TUI 起動処理は別 module に分離されている。
+- 1 回の agent call における Codex CLI exec の実行制御を担う中核モジュール。prompt・call・stdout/stderr・output のログ保存、Codex subprocess 起動、エラー分類と capacity retry、quota availability probe による待機・resume、Structured Output の JSON parse／schema／事後条件検証と同一 session での補正、作業成果物変更の検出・復元、subcommand event と診断情報の記録を一体的に扱う。TUI 起動など別責務の実装入口ではなく、exec の再試行・検証・実行記録の挙動を確認または変更するときの入口である。
 
 ## Read this when
-- Codex exec の起動条件、argv・cwd・環境、prompt/output/call log の保存、実行結果の event 記録を確認または変更するとき。
-- Structured Output の JSON parse、JSON Schema、宣言済み事後条件の検証、補正 turn、補正時の成果物不変性、resume session の扱いを確認するとき。
-- capacity error の再試行、quota error の待機・代表 probe・並列呼び出し間の再開、quota polling の失敗処理を確認するとき。
+- Codex exec の subprocess 起動条件、argv、cwd、環境変数、prompt stdin、Codex Home、Structured Output schema の扱いを確認するとき
+- capacity error の再試行、quota 枯渇時の代表 probe・待機・resume、session ID の継続挙動を調査または変更するとき
+- Structured Output の parse／schema／宣言済み事後条件検証、補正 prompt、補正回数上限、補正中の成果物保護を確認するとき
+- Codex call の prompt・実行条件・stdout/stderr・output・console／subcommand event の記録や失敗診断を確認するとき
 
 ## Do not read this when
-- TUI の起動や TUI 専用の分岐を確認するときは、TUI を担当する別 module を直接読む。
-- Codex subprocess の個別エラー判定、schema 準備、設定読み込み、ログ出力、feedback、worktree snapshot の詳細実装だけを確認するときは、対応する専用 module を直接読む。
+- TUI の起動や画面制御そのものを調査するときは、TUI 起動を担う別 module を直接読む
+- Codex exec の個別ログ整形、profile 判定、config 読み込み、quota probe parameter の生成など、既に分離された補助機能だけを確認するときは該当する runtime module を直接読む
+- 単に Codex の出力 schema の項目や形式を確認するだけのときは、対応する schema 定義を直接読む
 
 ## hash
-- 9e0ac1709cfc107b029fdfa8fc72aefcfcb378e7cd01d207bcf7f2c70d9cfe8a
+- 0d1578ed5cffacb9d486b35a92516c3268d1435470dabfe488b9c07598eee77c
 
 # `runtime_codex_logging.py`
 
