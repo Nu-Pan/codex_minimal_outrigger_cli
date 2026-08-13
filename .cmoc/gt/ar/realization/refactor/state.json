@@ -498,10 +498,10 @@
     "last_investigated_at": "2026-08-11_12-03_41_804748000"
   },
   "oracle/src/oracle/prompt_builder/parts/common_standard.py": {
-    "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "a65023fc8999435be18fdde6c8828d78e926bbb047de44a0cad74de7e7e78460",
+    "last_investigated_at": "2026-08-14_08-53_24_739965000"
   },
   "oracle/src/oracle/prompt_builder/parts/conflict_resolution_standard.py": {
     "investigation_required": true,
