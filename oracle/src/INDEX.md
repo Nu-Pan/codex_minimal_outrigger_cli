@@ -1,22 +1,18 @@
 # `oracle`
 
 ## Summary
-- AI エージェント呼び出しのパラメータモデルと、用途別の prompt・Structured Output・アクセスモード・cwd・モデル設定を構築する実装群の入口。
-- agent call の共通データ型、indexing・quota probe・session などの起動定義、prompt の統合、パスモデル、設定モデル、構造化 Markdown の処理を扱う。
-- 配下の用途別定義や共通モデルへ進む前に、エージェント呼び出し構築全体の責務分担を確認するための対象。
+- cmoc の oracle 実装を構成する共通モデル・設定、AI エージェント呼び出しパラメータ、完全 prompt 構築、feedback reporter 入力契約をまとめた領域。用途別の起動定義や prompt 規範、パス解決、構造化文書、設定モデルへ進むための入口。
 
 ## Read this when
-- AI エージェント呼び出しの共通パラメータ、モデル・推論設定、ファイルアクセスモード、cwd、preflight の扱いを調査・変更するとき。
-- 用途別 agent call の prompt、Structured Output schema、起動条件を確認するとき。
-- 完全 prompt の構築、placeholder、標準規則、routing 規則の統合方法を調査するとき。
-- cmoc の設定、agent call 用パスコンテキスト、構造化 Markdown のモデルやレンダリングを確認するとき。
-- indexing、quota availability probe、session などの用途別起動定義へ進む入口を判断するとき.
+- AI エージェント呼び出しのモデル、推論強度、ファイルアクセス、cwd、Structured Output、indexing preflight の共通契約を調査・変更するとき。
+- agent 向け完全 prompt の構築、placeholder、Standard の合成、パス表現、構造化 Markdown の扱いを確認するとき。
+- feedback reporter が collector に渡す入力契約の分類、影響、根拠、継続状態を確認するとき。
+- 配下の acp_builder、other、prompt_builder、feedback のどの領域を読むべきか判断するとき。
 
 ## Do not read this when
-- 特定用途の prompt や Structured Output の詳細が明らかで、該当する下位定義を直接確認できるとき。
-- 個別の feedback 入力契約や検証処理だけを調査するときは、feedback の対象を直接読む。
-- oracle・realization の具体的な処理、通常の session join、または対象ファイルの仕様だけを確認するときは、該当する下位実装や仕様を直接読む。
-- Codex CLI の利用可能性確認だけを行うときは、quota probe の定義を直接読む。
+- 特定の用途に固有な prompt、Structured Output、起動パラメータの詳細を直接確認できる場合。
+- agent call の実行処理、oracle・realization の個別仕様、collector 側の feedback 保存・集約処理だけを確認したい場合。
+- 通常の Markdown 生成や、oracle の共通モデルを利用しない機能の実装詳細だけを調べる場合。
 
 ## hash
-- 43f56f1be4556f2473d5502787d0778aff7676c0f68996d96f20327ad7af96b5
+- 2673ba21cb7014f8bfdcc4e61ff0910696d6f77885c5f888be97030f259f768a

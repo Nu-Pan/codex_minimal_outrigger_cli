@@ -197,17 +197,17 @@
 # `standard_definitions.py`
 
 ## Summary
-- 全用途で共有する Standard 定義の正本を集約し、oracle、realization、finding、review、conflict resolution、INDEX エントリーに関する要求・禁止事項を標準識別子付きで提供する。複数の prompt や検証処理が共通の標準文面を参照する際の入口となる。
+- Oracle と realization、レビュー、conflict、INDEX.md に関する全用途の Standard 定義を一元管理する。正本仕様の扱い、現行仕様への適合、検証、根拠、修正対象、レビュー所見、conflict 解消、INDEX エントリー作成の判断基準を確認する入口である。個別の実装挙動や各 oracle file の具体的要件は、対応する oracle・realization file を直接読む。
 
 ## Read this when
-- 共有 Standard の文面、標準識別子、要求・禁止事項を追加・変更・確認するとき
-- 複数の作業領域にまたがる標準要求の優先関係や適用範囲を確認するとき
-- prompt 生成や検証処理が利用する標準定義の全体像を確認するとき
+- oracle file を正本として扱う規則、realization の適合・検証規則、所見や修正対象の基準を確認するとき
+- conflict marker の解消方針や INDEX.md エントリーの作成基準を確認するとき
+- 複数用途で共有される Standard の定義または適用範囲を変更するとき
 
 ## Do not read this when
-- 特定の oracle file、realization file、test、または INDEX.md の具体的な内容だけを確認するときは、対象本文を直接読む
-- Standard の実装クラスや個別の prompt 組み立て処理だけを調査し、共有標準文面の意味を確認する必要がないとき
-- リポジトリ固有の実行手順や実装挙動を確認するときは、対応する手順書・realization file・test を読む
+- 特定の oracle file の内容、個別実装の責務、または対象機能のテスト手順だけを確認するとき
+- Structured Output の項目形式だけを確認するときは、対象スキーマを直接読む方が適切な場合
+- この定義群に関係しない機能の実装詳細や一般的なコーディング方針を調べるとき
 
 ## hash
-- 1396aa69a38eda5f350b17d0120d4c4c3f32719bcbcfd6c341dc84be02fdf575
+- 12c989b794e3d99ff77a10de046db4e989cc75f2d14207e43abcbbe06099a564

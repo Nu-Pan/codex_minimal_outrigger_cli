@@ -55,17 +55,17 @@
 # `parts`
 
 ## Summary
-- oracle・realization の扱い、各種 review・conflict 解消、feedback 報告、ファイルアクセス、INDEX.md ルーティングなど、agent call 用 prompt 部品の構築定義を集約するディレクトリ。個別の標準定義、共通標準グループ、概念説明、アクセス規則を確認するための入口として機能する。
+- `oracle/src/oracle/prompt_builder/parts` 配下の各 prompt builder 部品を、担当する規範・アクセス制御・oracle/realization 概念・ルーティングなどの観点から選択的に読むための入口。各エントリーは、対象の責務と、個別標準定義や呼び出し元へ進むべき境界を示す。
 
 ## Read this when
-- agent call 用の prompt 部品全体から、対象の規範・ルーティング・アクセス規則・oracle/realization 説明の構築定義を探すとき
-- oracle、realization、oracle review、apply review、conflict 解消、feedback 報告の instruction 構成を確認または変更するとき
-- INDEX.md エントリー生成に適用する標準群や、共有 Standard 定義の利用範囲を確認するとき
+- oracle・realization、レビュー、conflict 解消、feedback 報告、ファイルアクセス制限、INDEX.md ルーティングなどの prompt 部品の責務や適用範囲を確認するとき
+- 特定の規範群を構築する prompt builder の構成、選択範囲、返却する構造化文書やプレースホルダーの扱いを調査するとき
+- INDEX.md エントリー生成規則や、oracle file と realization file の参照規則を prompt に組み込む処理を確認するとき
 
 ## Do not read this when
-- 特定の oracle file、realization file、test、または INDEX.md の本文や実装内容を調査するときは、対象を直接読む
-- 個別標準の具体的な判定要求だけを確認したいときは、対応する standard 定義へ直接進む
-- prompt 部品ではなく、リポジトリ固有の実行手順や CLI 実装の挙動を確認するときは、対応する oracle・realization・手順書を読む
+- 個別の standard 定義本文、特定の oracle file・realization file・テストの具体的内容を確認したいときは、それぞれの定義元や対象ファイルへ直接進む
+- INDEX.md の既存エントリーや更新状況だけを確認したいときは、対象の INDEX.md を直接読む
+- Structured Output の項目形式だけを確認したいとき、または prompt builder と無関係な機能の実装詳細を調べるときは、このディレクトリを読まない
 
 ## hash
-- 3cf8e21213c8b179ceabd3aa91f480c1baa06140f39219a9aed000d1a89fe685
+- e8280126517e7d2a64add56657eec3965744347b0db2a8341156b917f78c4241

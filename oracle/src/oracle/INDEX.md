@@ -55,19 +55,18 @@
 # `prompt_builder`
 
 ## Summary
-- agent call 用の完全 prompt を組み立てる定義群。placeholder、動的な概要・完了条件、feedback、oracle・realization 規範、ファイルアクセス制約、INDEX.md の routing 規則を統合する入口で、prompt の構築順序や適用条件を調べるときに読む。
-- 個別の standard、oracle・realization の基本概念、アクセス規則、routing 規則は下位の定義へ分かれており、必要な規範や部品を特定した後の入口として機能する。
-- エディタ経由で後続 agent に渡す初期入力文面の構築も扱い、入力説明と完全 prompt の差し込み構造を確認できる。
+- prompt builder の完全 prompt 構築、placeholder 定義、エディタ入力文面を扱う実装群。agent call 向けの静的・動的 prompt、標準規範、アクセス制御、ルーティング規則の組み立てを調べる入口。
+- parts は、oracle・realization、レビュー、conflict 解消、feedback 報告、file access、INDEX.md ルーティングなどの prompt 部品を選択・構成する下位実装群。個別規範の定義や注入条件を調べるときに進む。
 
 ## Read this when
-- agent call の完全 prompt を構成する部品、注入順序、placeholder 統合、standard の依存関係を変更または調査するとき。
-- oracle・realization、review、conflict 解消、feedback 報告、ファイルアクセス、INDEX.md routing の prompt 規則を探すとき。
-- エディタ経由のユーザー入力文面や、後続 agent に渡す prompt template の構造を確認するとき。
+- 完全 prompt の構築順序、動的 prompt の差し込み、標準規範の依存関係、placeholder 定義の統合を変更または調査するとき。
+- prompt builder の公開入口、エディタ入力用初期文面、または placeholder と実値の対応表現を確認するとき。
+- 個別の oracle・realization 規範、レビュー基準、アクセス制限、feedback 報告、INDEX.md ルーティング規則の構築を確認するとき。
 
 ## Do not read this when
-- 個別の oracle file、realization file、仕様書、実装、テストの内容を調査するときは、対象本文へ直接進む。
-- 特定の standard の判定基準だけを確認するときは、対応する standard 定義へ直接進む。
-- 実際の agent call の利用側や CLI の実行手順だけを確認するときは、呼び出し側または該当する手順書を読む。
+- 個別 standard の本文そのものを確認したいときは、規範定義を直接読む。
+- prompt の利用側が渡す summary・goal や、具体的な oracle・realization・テストの内容を確認したいときは、呼び出し側または対象ファイルへ直接進む。
+- 構造化 prompt と無関係な機能の実装詳細を調べるとき。
 
 ## hash
-- b88406699fc73da0afc5c2183cd8b779b6a82cfc31f40b69b8fa6f8ca2fb58b3
+- 9df2b6dac8efb4c3bfcf3c09aceba03d008012e95af2876468c39a4fe7314234

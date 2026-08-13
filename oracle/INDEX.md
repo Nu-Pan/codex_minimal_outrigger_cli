@@ -20,21 +20,19 @@
 # `src`
 
 ## Summary
-- AI エージェント呼び出しのパラメータ構築、完全 prompt の生成、Structured Markdown、パス・設定・規範モデルをまとめる実装群のルート。
-- 用途別の agent call 定義は `acp_builder`、prompt の合成と入力処理は `prompt_builder`、feedback 入力契約は `feedback`、共有設定・パス・構造化文書モデルは `other` へ進む入口。
-- 呼び出し条件やモデル・推論設定・ファイルアクセスモード・cwd・Structured Output の構築全体を確認するときに読む対象。
+- oracle の実装ソースを集約する領域。AI エージェント呼び出しの論理パラメータ、モデル・推論強度・ファイルアクセス、cwd と indexing preflight、リポジトリ設定、root placeholder を含むパス解決、Standard と構造化文書、完全 prompt の構築、feedback reporter 入力契約を扱う。用途別の agent call 定義や oracle review など、より具体的な実装領域へ進む前の入口として機能する。
 
 ## Read this when
-- AI エージェント呼び出しの共通パラメータ、モデルクラス、推論強度、ファイルアクセスモード、cwd、indexing preflight を調査・変更するとき。
-- 用途別 agent call の起動定義や Structured Output schema の配置先を判断するとき。
-- 複数の prompt 規範、routing 規則、placeholder、ファイルアクセス規則を完全 prompt へ統合する処理を調査するとき。
-- agent call のパスコンテキスト、cmoc 設定、Structured Markdown の構造モデルを確認するとき。
+- 共通の agent call パラメータ、モデル選択、推論強度、ファイルアクセス制約、Structured Output、indexing preflight の実装を調べるとき。
+- agent call の cwd を起点とした work root・repository root・run root の解決や、prompt 内の root placeholder の扱いを確認するとき。
+- Standard の合成、構造化文書の Markdown 化、placeholder を含む完全 prompt の構築規則を確認するとき。
+- feedback reporter が受け取る問題分類、影響、原因の確度、根拠、継続状態を確認するとき。
+- 共通実装ではなく、用途固有の acp builder、prompt の Standard、feedback 処理、oracle review へ進むべきかを判断するとき。
 
 ## Do not read this when
-- 特定用途の agent call 定義が明らかな場合は、`acp_builder` 配下の該当用途へ直接進むとき。
-- prompt の個別規範や editor 入力処理だけを確認する場合は、`prompt_builder` 配下の該当実装へ直接進むとき。
-- feedback の入力契約だけを調査する場合は、`feedback` 配下の schema を直接読むとき。
-- 設定・パス・構造化文書の個別仕様だけを確認する場合は、`other` 配下の該当モデルへ直接進むとき。
+- 特定の用途に固有な agent call の起動定義や Structured Output の内容が対象で、用途別の実装を直接確認できるとき。
+- Codex CLI の実行処理、realization 側の個別仕様、collector による feedback の保存・集約だけを調べるとき。
+- oracle の共通モデルや prompt 構築を利用しない機能の実装詳細だけを確認するとき。
 
 ## hash
-- 88a3612c571892cfa0a6b9df05a7391f4f7070c662fa41df9c36e9e2daa87227
+- 53c3dbb84061e18a276869bb584969d192572d52a3d494907143a867cc197c20

@@ -89,22 +89,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様を集約する領域。自然言語によるアプリケーション仕様、branch・run・session のモデル、採用しなかった設計案の記録、開発ルール、agent call の実装定義・schema・prompt 規範を扱う。仕様や agent 向け定義の詳細を確認するときは、`doc` または `src` の該当領域へ進む入口となる。
+- cmoc の正本文書と oracle 実装ソースを集約する領域。利用者向け仕様、session・run・branch・commit・worktree のモデル、不採用設計の検討記録、Python・CLI・開発環境・テストの正本文書、および agent call・prompt 構築・feedback reporter などの共通実装への入口を提供する。詳細を確認するときは、用途や責務に対応する下位対象へ進む。
 
 ## Read this when
-- cmoc の要求、挙動、責務境界、状態遷移、CLI 契約を確認するとき
-- branch、run、session、worktree、commit のモデルや関係を確認するとき
-- 採用しなかった設計案や実装方針の検討理由を確認するとき
-- Python 実装、CLI 設計、開発環境、テスト要件、テスト実行手順の正本を探すとき
-- agent call の prompt、起動パラメータ、Structured Output schema、共通規範の正確な定義を確認するとき
+- cmoc の正本文書、開発ルール、設計検討記録の所在を確認するとき
+- session・run・branch・commit・worktree の用語や関係を確認するとき
+- agent call の共通パラメータ、prompt 構築、root 解決、indexing preflight、feedback reporter の共通実装を調べるとき
+- 実装や仕様の具体的な担当領域へ進む前に、oracle 内の適切な下位対象を判断するとき
 
 ## Do not read this when
-- 確認対象の仕様本文、開発ルール、検討記録、agent call 定義、schema がすでに特定できており、その対象を直接読めばよいとき
-- realization implementation、テスト実装、ログ、実行成果物の具体的な内容を調べるとき
+- 確認対象の仕様本文、開発ルール、検討記録、または共通実装がすでに特定できており、その下位対象を直接読めるとき
+- Codex CLI の実行処理、realization 側の個別仕様、collector による feedback 保存・集約、実装コードやログの詳細だけを調べるとき
 - INDEX.md の生成規則やルーティング情報だけを確認するとき
 
 ## hash
-- fcdc6b0425221c0bc4825bb467334619be603401f0ed9db9129767d9adcbc376
+- 4b6bd96e163fd918bd4d240ef1e37759f16727782a136cb37015255f30ccfb4f
 
 # `pyproject.toml`
 
