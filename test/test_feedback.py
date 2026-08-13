@@ -437,7 +437,8 @@ def test_feedback_agent_builders_are_readonly_and_schema_scoped(tmp_path: Path) 
         },
         normalize_schema,
     )
-    validate(_verification_output(candidate_id, "unresolved"), verify_schema)
+    for verdict in ("unresolved", "resolved", "not_actionable", "inconclusive"):
+        validate(_verification_output(candidate_id, verdict), verify_schema)
     with pytest.raises(ValidationError):
         validate(
             {
@@ -1234,10 +1235,13 @@ def test_current_pointer_rejects_non_markdown_report_path(
         load_active_state(root)
 
 
-def test_agent_issue_is_verified_compacted_then_removed_when_resolved(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("terminal_verdict", ["resolved", "not_actionable"])
+def test_agent_issue_is_verified_compacted_then_removed_for_terminal_verdict(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    terminal_verdict: str,
 ) -> None:
-    """pending raw を unresolved active issue へ集約し、次回 resolved なら active から除く。"""
+    """pending raw を active issue へ集約し、terminal verdict なら active から除く。"""
     root = make_repo(tmp_path)
     session_id = _active_session(root, monkeypatch)
     _observation_id, raw_path, candidate_id = _store_agent_issue(root, session_id)
@@ -1257,7 +1261,9 @@ def test_agent_issue_is_verified_compacted_then_removed_when_resolved(
     assert "reference_id" not in json.dumps(issue["verification"], ensure_ascii=False)
     assert feedback_completion_counts(root) == (0, [])
 
-    _install_codex_outputs(monkeypatch, _verification_output(candidate_id, "resolved"))
+    _install_codex_outputs(
+        monkeypatch, _verification_output(candidate_id, terminal_verdict)
+    )
     second = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert second.exit_code == 0, second.output

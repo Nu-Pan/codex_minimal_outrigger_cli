@@ -437,23 +437,22 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback の agent-facing reporter、collector、raw observation store、report cut、verification、active state、atomic publication、cleanup を同一 repository fixture で検証するテスト群。
-- feedback report の正常・空・中断・診断未完了・再開・部分 cleanup における durable checkpoint、current pointer、active generation、raw observation の外部境界を確認する。
-- reporter protocol、入力検証、秘密情報マスキング、repository path 境界、候補同一性、verification evidence、machine observation の recurrence threshold と state 保持も対象とする。
+- feedback の pending observation、active state、report cut、verification、atomic publication、cleanup を同一 repository fixture で検証する統合テスト。
+- agent-facing reporter の MCP 境界、collector の入力検証・rate limit・永続化、agent/machine issue の集約と再検証、interruption・corruption・部分 cleanup からの復旧を扱う。
+- feedback report 実装や関連 oracle の挙動を変更・検証する際に、外部境界と再開保証を確認するための入口となる。
 
 ## Read this when
-- feedback の reporter や collector の MCP protocol・capability・rate limit・context 検証を変更または調査するとき
-- feedback report の候補正規化、verification、report cut、checkpoint、publication、active state、cleanup の挙動を変更または調査するとき
-- raw observation の保存、validation、秘密情報 masking、symlink を含む path boundary、machine observation 集約を変更または調査するとき
-- 中断・再実行・部分失敗時に publication と durable state が仕様どおり復旧できるか確認するとき
+- feedback observation の reporter/collector protocol、raw store、state、report cut、active generation、publication、cleanup の挙動を確認するとき
+- feedback report の中断・再実行、verification checkpoint、terminal verdict、machine recurrence threshold を変更または検証するとき
+- feedback 関連の永続 artifact 改変、symlink/path boundary、secret masking、corruption 検出の回帰を調査するとき
 
 ## Do not read this when
-- feedback 以外のサブコマンドや一般的な CLI 実行経路だけを変更・調査するとき
-- feedback の正本仕様や個別実装の詳細を確認することが目的で、外部挙動の回帰テストを確認する必要がないとき
-- 単純なテスト実行方法や共通 fixture の利用方法だけを確認するとき
+- feedback 以外の subcommand や一般的な CLI 挙動だけを扱うとき
+- feedback の正本仕様や prompt/schema 定義そのものを確認する必要があり、対応する oracle または builder を直接読む方が適切なとき
+- 単純な reporter の実装詳細だけを確認し、report publication・state 遷移・raw observation の統合挙動を確認する必要がないとき
 
 ## hash
-- 10436049f23b8d05eac6990be020ad98a6942fffd62de7782db7eed22f92e096
+- 84df1ccf17ce1dbe0af314b70c6a0599156c9a3f93f17087f033f082055b7c9e
 
 # `test_file_inventory.py`
 
