@@ -149,6 +149,16 @@ def start_editing_run(kind: str) -> EditingRunContext:
     with run_lifecycle_lock(repository, session_id):
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # editor 入力中や並行 process の間に状態が変わり得るため lock 内で再検査する。
+        locked_branch = current_branch(session_worktree)
+        if locked_branch != session_branch:
+            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # lock 外で確認した session branch と fork 対象が変わった場合、別
+            # branch の HEAD から run を作成して元の state を更新しない。
+            raise CmocError(
+                "editing run の current branch が lock 内で変更されました。",
+                ["対象の session branch を確認してから再実行してください。"],
+                f"expected: {session_branch}\ncurrent: {locked_branch}",
+            )
         _, _, state = load_state_for_branch(repository, session_branch)
         if state.session.state != "active" or state.run.state != "ready":
             raise CmocError(
@@ -684,15 +694,22 @@ def is_generated_index_path(
     """cmoc が indexable directory に生成する INDEX.md か判定する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # 許可対象は任意の basename ではなく、indexing が実際に配置できる path に
-    # 限定する。hidden directory、git ignore 対象、root memo は indexable ではない。
+    # 限定する。hidden directory、symlink、git ignore 対象、root memo は indexable
+    # ではない。
     relative = Path(path)
     if relative.name != "INDEX.md":
         return False
     if any(part.startswith(".") for part in relative.parts[:-1]):
         return False
-    parent = root / relative.parent
-    if parent.is_symlink():
+    candidate = root / relative
+    ancestor = root
+    for part in relative.parts[:-1]:
+        ancestor /= part
+        if ancestor.is_symlink():
+            return False
+    if candidate.is_symlink():
         return False
+    parent = candidate.parent
     if parent.exists() and not parent.is_dir():
         return False
     # 削除・rename 元では現在の parent が消えているため、fork tree の regular

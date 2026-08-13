@@ -2255,6 +2255,37 @@ def test_refactor_start_failure_does_not_recover_existing_error_run(
     assert current_branch(root) == context.session_branch
 
 
+def test_start_run_rechecks_session_branch_under_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """fork lock 待機中の branch 変更で別 session の run を作成しない。"""
+    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    original_current_branch = lifecycle_module.current_branch
+    calls = 0
+
+    def switch_branch_after_ready_check(_root: Path) -> str:
+        """lock 内の再検査だけへ別 branch を返す。"""
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            return "cmoc/session/changed-before-fork"
+        return original_current_branch(_root)
+
+    monkeypatch.setattr(
+        lifecycle_module,
+        "current_branch",
+        switch_branch_after_ready_check,
+    )
+
+    with pytest.raises(CmocError, match="current branch が lock 内で変更"):
+        start_editing_run("realization_apply")
+
+    assert _state(state_path)["run"]["state"] == "ready"
+    assert current_branch(root) == session_branch
+    assert not list((root / ".cmoc" / "gu" / "worktree").glob("*/*"))
+
+
 def test_refactor_cmoc_start_error_does_not_recover_competing_run(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2345,17 +2376,23 @@ def test_run_join_allows_oracle_change_on_session_branch(
 
 
 def test_generated_index_path_requires_indexable_parent(tmp_path: Path) -> None:
-    """存在しない親や symlink 親の INDEX.md を cmoc 生成物として扱わない。"""
+    """存在しない親や symlink 経由の INDEX.md を cmoc 生成物として扱わない。"""
     root = make_repo(tmp_path)
     generated_directory = root / "generated"
     generated_directory.mkdir()
     symlink_target = root / "symlink-target"
     symlink_target.mkdir()
     (root / "symlink-parent").symlink_to(symlink_target, target_is_directory=True)
+    (symlink_target / "nested").mkdir()
 
     assert lifecycle_module.is_generated_index_path(root, "generated/INDEX.md")
     assert not lifecycle_module.is_generated_index_path(root, "missing/INDEX.md")
     assert not lifecycle_module.is_generated_index_path(root, "symlink-parent/INDEX.md")
+    assert not lifecycle_module.is_generated_index_path(
+        root, "symlink-parent/nested/INDEX.md"
+    )
+    (root / "generated" / "INDEX.md").symlink_to(root / "index-target.md")
+    assert not lifecycle_module.is_generated_index_path(root, "generated/INDEX.md")
 
 
 def test_run_join_accepts_deleted_nested_generated_index(

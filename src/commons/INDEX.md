@@ -441,22 +441,20 @@
 # `runtime_run_lifecycle.py`
 
 ## Summary
-- 明示的な join を必要とする editing run の lifecycle 共通処理を担う。session からの run 開始、state 解決・遷移、branch/worktree 管理、workload の rollback・commit、差分分類、INDEX 更新、cleanup に関わる共通入口である。
-- 同じ EditingRunContext と lifecycle lock を共有するため、run の開始から差分確定までの不変条件を一箇所で確認する必要がある場合に読む。個別 subcommand の仕様や realization 実装ではなく、複数の editing run 処理にまたがる lifecycle 制御を調べる際の入口である。
+- 明示的な join を必要とする editing run のライフサイクル共通処理を担う。run の開始・active context 解決・state 遷移・work unit の commit/rollback、差分分類、INDEX 更新、cleanup 判定までを一つの context と lifecycle lock のもとで扱う。
 
 ## Read this when
-- editing run を開始、再開、joinable/error へ遷移、または active run として解決するとき。
-- run branch/worktree の作成・検証・削除、session state と process tracking の整合性を確認するとき。
-- workload 差分の rollback・commit、許可された realization・INDEX・refactor state の判定、oracle 差分や rename を含む差分分類を調べるとき。
-- run worktree の INDEX 更新や、未確定 run の recovery・cleanup 条件を確認するとき。
+- editing run の開始、joinable/error への state 遷移、run branch/worktree の回収や検証を変更・調査するとき
+- work unit の commit/rollback、run・session・agent 差分の許可範囲、rename を含む差分分類を確認するとき
+- run worktree の INDEX 更新や、実行後の予期しない変更・cleanup 判定の責務を確認するとき
 
 ## Do not read this when
-- 個別の editing subcommand が要求する入力・出力・利用者向け挙動だけを確認したいときは、該当する subcommand 仕様を直接読む。
-- realization file の実装内容や realization 固有の変更規則だけを確認したいときは、該当する realization file またはその仕様を直接読む。
-- INDEX.md 生成規則、Git 実行補助、state schema など単一の下位責務だけを調べる場合は、対応する専用対象を直接読む。
+- 個別の runtime helper の実装だけを変更・調査し、editing run lifecycle の不変条件や差分許可範囲に関係しないとき
+- session や editing run の利用者向け仕様を確認することが目的で、ライフサイクル共通処理の実装詳細を読む必要がないとき
+- INDEX.md の経路情報だけを確認する場合や、対象の下位仕様・専用 runtime module を直接読む方が適切なとき
 
 ## hash
-- 4fa54bd7c712da95de56c17c022bb61c54870eee5b41971fbe058fd47a535288
+- 073f721d8d73d136a33db1cb6043197e8f8b016855afcbf12c5410a06776c0ba
 
 # `runtime_run_report.py`
 

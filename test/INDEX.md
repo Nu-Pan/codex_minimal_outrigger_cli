@@ -415,24 +415,23 @@
 # `test_editing_run_cli.py`
 
 ## Summary
-- workload fork と共通 run join/abandon の統合 realization test。editing run の session state、run worktree、fork report、process tracking、INDEX 更新、rollback、join/abandon cleanup、refactor cycle を同じ lifecycle fixture で検証する。
-- apply fork と refactor fork の正常完了・中断・失敗時の state 遷移、成果物、report、Codex child 停止、管理対象外差分の拒否を扱う。
-- run join の merge、競合解決、session 側変更との統合、生成 INDEX の扱い、post-join 同期失敗時の rollback と cleanup 状態を検証する。
-- run abandon の process tracking 検証、worktree・branch cleanup、破損 tracking や cleanup 失敗時の資源保持を検証する。
+- workload fork と共通 run lifecycle の統合 realization test。apply/refactor fork、run join/abandon、session state、run worktree、Git merge/rollback、process tracking、INDEX 更新、fork/lifecycle report の連携と異常系を検証する。
+- 同一の lifecycle fixture を共有し、run の状態遷移、変更 path の扱い、agent の不正変更・commit、遅延処理、中断、cleanup 失敗、report 保存までを一続きの統合テストとして扱う。
+- apply または refactor fork、run join/abandon、editing run の resource cleanup、process tracking、INDEX refresh、fork report や lifecycle report の挙動を変更・調査・検証するときの入口。
 
 ## Read this when
-- editing run の apply/refactor fork、run join、run abandon の lifecycle 挙動を変更または検証するとき。
-- session state と run worktree の共有、fork report・lifecycle report、process tracking、Codex child cleanup の連携を確認するとき。
-- INDEX refresh、oracle・realization 差分の許可範囲、agent commit・遅延変更・rollback の境界を確認するとき。
-- refactor の unresolved target、rename、永続 state、cycle completion、中断時の確定済み進捗を検証するとき。
+- realization apply/refactor fork と run join/abandon の統合挙動を確認するとき
+- editing run の running・joinable・ready・error 状態遷移や run worktree/branch の cleanup を調査するとき
+- agent の予期しない変更、commit、遅延書き込み、中断、process tracking、rollback の回帰を検証するとき
+- fork report、lifecycle report、changed paths、unresolved refactor target、INDEX refresh の検証内容を確認するとき
 
 ## Do not read this when
-- INDEX 更新機構そのものの単体挙動だけを確認するときは、indexing 関連の直接の実装・テストを読む。
-- session や run lifecycle の実装詳細を変更せず、単純な CLI 利用方法や仕様概要だけを確認するとき。
-- apply fork、refactor fork、run join、run abandon の統合 lifecycle に関係しない機能のテストを探しているとき。
+- 個別の apply、refactor、join、abandon 実装の詳細だけを確認したいときは、対応する realization または run 実装へ直接進む
+- INDEX entry の生成・更新規則そのものを確認するとき
+- 統合 lifecycle を伴わない単体の helper や一般的な Git 操作だけを調査するとき
 
 ## hash
-- 95a278f12d40e2e70dbfa53461b43ea4352e40f6c4b659c55a6734a65dbfcd80
+- 5d511b8c04bd6217763c66b931b95db382b172899210795c7e0cf3a7fa0a38d9
 
 # `test_feedback.py`
 
