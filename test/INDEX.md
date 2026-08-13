@@ -437,23 +437,21 @@
 # `test_feedback.py`
 
 ## Summary
-- feedback observation の reporter、collector、raw store、report cut、verification、active state、atomic publication、cleanup を同一 repository fixture で検証する統合テスト。
-- feedback report の正常系・中断・再開・診断未完了・部分 cleanup と、JSON schema、path boundary、secret masking、fingerprint、checkpoint、artifact 整合性の外部挙動を確認する。
-- feedback 関連の実装や正本仕様を変更し、pending observation から compact active state への遷移、publication 後の raw artifact cleanup、破損時の停止条件を確認する必要がある場合のテスト入口。
+- feedback の reporter、collector、raw observation、report cut、verification、active state、atomic publication、cleanup を同一 repository fixture で検証する統合テスト。
+- 正常 publication 後に pending raw が compact active state へ集約されることに加え、resolved による除去、inconclusive・中断・失敗時の再開、checkpoint 再利用、部分 cleanup を確認する。
+- schema・path 境界・secret masking・fingerprint・collision・artifact hash など、publication 前後の整合性検証と破損時の停止条件を確認するためのテスト入口。
 
 ## Read this when
-- feedback の agent-facing reporter、collector、observation envelope、rate limit、context validation を変更または検証するとき。
-- feedback report の candidate normalization、verification verdict、report cut、checkpoint、atomic publication、current pointer、active state、cleanup を変更または検証するとき。
-- feedback の path boundary、symlink、secret redaction、canonical JSON、fingerprint、artifact hash、未定義 artifact 検出を変更または検証するとき。
-- feedback 関連の中断・再開や、inconclusive report、部分 cleanup、machine observation の threshold/window 挙動を確認するとき。
+- feedback report の外部挙動を実装または変更し、reporter から publication・cleanup までの代表経路を確認するとき。
+- feedback report の中断・再開、incomplete report、verification checkpoint、writer lock、partial cleanup の挙動を調査するとき。
+- raw observation、active generation、current pointer、report cut の検証や改変検出が関係するテストを選ぶとき。
 
 ## Do not read this when
-- feedback 機能と無関係な CLI、ログ、session、report の変更を扱うとき。
-- 単一の実装関数の局所的な挙動を確認するだけで、feedback の永続状態や publication 境界を扱わないとき。
-- feedback の正本仕様や agent builder の詳細を直接確認する必要があり、このテストではなく対応する oracle file や実装本文が直接の入口になるとき。
+- feedback の正本仕様や CLI 実装の責務を確認することが目的の場合は、対応する oracle file または実装対象を直接読む。
+- feedback report と無関係な機能のテストや、一般的なテスト実行手順だけを確認する場合。
 
 ## hash
-- f49c7cb27abcdd69d3babf229d2bddd620e4c828838687757ca9d0e91f0a5e5c
+- 0f96149dacf5675f01b528db11fec8932576a7f81bf7bd930a68569a298a4a8d
 
 # `test_file_inventory.py`
 

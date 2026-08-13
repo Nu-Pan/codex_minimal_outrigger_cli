@@ -849,7 +849,7 @@ def _build_candidates(
             observation_id_value = str(observation["observation_id"])
             canonical_key = agent_canonical_key(observation_id_value)
             selected = _new_candidate(observation, canonical_key)
-            candidates[str(selected["candidate_id"])] = selected
+            _insert_candidate(candidates, selected)
         _merge_observation(repo, selected, observation)
 
     # candidate ごとに許可する cut reference を固定済み subject から機械選択する。
@@ -920,6 +920,26 @@ def _new_candidate(observation: JsonObject, canonical_key: str) -> JsonObject:
         "deduplication_hints": [],
         "reference_ids": [],
     }
+
+
+def _insert_candidate(candidates: dict[str, JsonObject], candidate: JsonObject) -> None:
+    """異なる canonical key の issue ID collision を publication 前に停止する。"""
+    candidate_id_value = candidate.get("candidate_id")
+    canonical_key = candidate.get("canonical_key")
+    if not isinstance(candidate_id_value, str) or not isinstance(canonical_key, str):
+        raise ValueError("candidate identity is malformed")
+    previous = candidates.get(candidate_id_value)
+    if previous is not None and previous.get("canonical_key") != canonical_key:
+        raise CmocError(
+            "feedback issue ID collision を検出しました。",
+            [
+                "異なる canonical key に同じ issue ID を割り当てず、report を停止しました。"
+            ],
+            f"issue_id: {candidate_id_value}\n"
+            f"existing canonical_key: {previous.get('canonical_key')!r}\n"
+            f"new canonical_key: {canonical_key!r}",
+        )
+    candidates[candidate_id_value] = candidate
 
 
 def _merge_observation(
@@ -1502,7 +1522,7 @@ def _process_machine_observations(
             for observation in observations:
                 _merge_observation(repo, candidate, observation)
             _apply_machine_aggregate_to_candidate(candidate, aggregate)
-            candidates[str(candidate["candidate_id"])] = candidate
+            _insert_candidate(candidates, candidate)
             continue
         aggregates[canonical_key] = aggregate
     return aggregates

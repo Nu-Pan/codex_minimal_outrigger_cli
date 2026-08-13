@@ -700,6 +700,43 @@ def test_agent_candidate_exact_match_requires_report_cut_fingerprint() -> None:
     assert comparison == [candidate]
 
 
+def test_issue_id_collision_stops_candidate_building(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """異なる agent canonical key が同じ issue ID になった場合は候補を上書きしない。"""
+    observations = {
+        observation_id: {
+            "observation_id": observation_id,
+            "source": "agent_report",
+            "observed_at": observed_at,
+            "context": {},
+            "payload": {
+                "category": "tooling",
+                "summary": "同じ issue ID を持つ候補",
+                "impact": "候補 identity の衝突を検出する。",
+                "evidence": [{"kind": "other", "text": observation_id}],
+            },
+            "evidence_fingerprints": [],
+        }
+        for observation_id, observed_at in (
+            ("fbo_00000000-0000-7000-8000-000000000001", "2026-08-01T00:00:00Z"),
+            ("fbo_00000000-0000-7000-8000-000000000002", "2026-08-02T00:00:00Z"),
+        )
+    }
+    monkeypatch.setattr(
+        feedback_report_module, "issue_id", lambda _canonical_key: "fbi_" + "a" * 26
+    )
+
+    with pytest.raises(CmocError, match="collision"):
+        feedback_report_module._build_candidates(
+            tmp_path,
+            tmp_path,
+            {"inputs": {"references": []}},
+            observations,
+            SimpleNamespace(issues={}, machine_aggregates={}),
+        )
+
+
 def test_merge_observation_keeps_latest_fingerprint_for_older_observation() -> None:
     """遅れて到着した古い observation が latest fingerprint を巻き戻さない。"""
     newer = {

@@ -31,20 +31,21 @@
 # `feedback`
 
 ## Summary
-- feedback サブコマンドの実装領域。観測結果の保存形式、report の candidate 集約・検証・publication、状態遷移や再開処理を確認・変更する際の入口。配下の report 実装と共有 primitive の責務を切り分けて読むためのルーティング対象。
+- feedback サブコマンドの実装を担うディレクトリです。CLI からの実行入口と、report cut を起点に raw observation の検証・集約、checkpoint 再利用、verification、正常 publication または incomplete 診断保存までを処理する report pipeline を含みます。
+- feedback report の状態機械、publication、再開・中断・失敗時の整合性、raw observation や repository reference の固定処理を確認・変更するときの入口です。共通の feedback state／store API、builder、schema、または一般的な CLI runner の詳細は、それぞれの定義元を直接参照してください。
 
 ## Read this when
-- feedback サブコマンドの挙動、実行経路、状態遷移、割り込み・失敗・再開処理を調査または変更するとき
-- raw observation から candidate を生成し、verification や Markdown report の publication まで行う report pipeline を確認するとき
-- feedback の observation envelope や保存形式と report 実装の関係を確認するとき
+- feedback サブコマンドの実装や挙動を確認・変更するとき。
+- feedback report の report cut、candidate 集約、normalization／verification、checkpoint、publication、incomplete 診断、cleanup、再開処理を調査するとき。
+- raw observation の検証、repository reference の capture、current pointer や generation artifact との整合性を確認するとき。
 
 ## Do not read this when
-- feedback 以外のサブコマンドを扱うとき
-- normalization／verification の prompt builder や Structured Output schema だけを確認するとき
-- feedback state、generation artifact、checkpoint、raw store など共有 primitive の実装だけを確認するとき
+- feedback の永続 state や raw store の共通データ構造・ファイル操作だけを確認する場合。
+- normalization／verification の prompt、builder、Structured Output schema だけを確認する場合。
+- feedback 以外のサブコマンドや、一般的な CLI runner の挙動だけを確認する場合。
 
 ## hash
-- ff4402743400a1cc0753a359c8b7de8149e13660ffc80ad3c4d723dd99933ba3
+- 979f01cb29ce427bdeb19b6531a30cc63fdc9c1df6c179e5552c1c00a32c6aff
 
 # `indexing.py`
 
