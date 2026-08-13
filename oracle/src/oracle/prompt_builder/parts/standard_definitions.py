@@ -27,7 +27,7 @@ ORACLE_INTENT_AND_GAPS_STANDARD = Standard(
     standard_id="oracle.20.intent_and_gaps",
     title="重要な人間意図へ絞り、仕様の隙間を許容する",
     required=(
-        "実装差を許容しない事項と、人間が判断すべき境界を明示する",
+        "実装差を許容しない事項と、人間が判断した事項は、境界として明示する",
         "過剰な実装を誘発し得る境界では goal と non-goal を読み取れるようにする",
     ),
     prohibited=(
@@ -35,7 +35,7 @@ ORACLE_INTENT_AND_GAPS_STANDARD = Standard(
         "未定義部分を埋めることだけを目的に oracle file を増やしてはいけない",
     ),
     permitted=(
-        "明示仕様の隙間は、現行の oracle file と、file access が許す場合の既存実装・既存 test から自然に導ける小さな範囲で実装者が補ってよい",
+        "明示仕様の隙間は、現行の oracle file と、file access が許す場合の既存実装・既存 test から自然に導ける範囲で実装者が補ってよい",
     ),
 )
 
