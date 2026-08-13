@@ -53,23 +53,20 @@
 # `oracle`
 
 ## Summary
-- oracle 用 agent call の起動定義をまとめる領域です。oracle file の編集・調査・レビューに分かれ、各用途の完全 prompt、読み取り／書き込み権限、作業ディレクトリ、モデルと推論強度、インデックス事前処理を構築します。レビュー領域では所見の列挙、妥当性の擁護・反証、採否判定、重複・矛盾の統合に対応します。用途別の具体的な起動条件や prompt の構成を確認する際の入口です。
+- oracle 関連の agent call 起動処理を種別ごとにまとめるディレクトリです。oracle file の編集・調査・review に関する TUI 起動条件、完全 prompt の生成・保存、Structured Output schema、所見処理の契約、モデルやアクセス範囲などの実行設定を確認・変更する際の入口になります。下位には、編集用の `edit`、調査用の `investigation`、review の所見処理用の `review` があります。
 
 ## Read this when
-- oracle file を編集・調査する agent call の起動条件、prompt、ファイルアクセス範囲を確認または変更するとき
-- oracle review の所見列挙、擁護・反証、採否判定、統合に関する agent call の契約や実行条件を確認するとき
-- oracle 用の agent call における作業ディレクトリ、モデル、推論強度、インデックス事前処理の設定を調査するとき
-- この領域に新しい用途別の agent call 定義が追加され、その役割や下位領域への入口を確認するとき
+- oracle file 向け agent call の起動パラメータ、prompt、Structured Output schema、実行条件を種別横断で確認するとき。
+- oracle の編集・調査・review のいずれかに関する下位実装へ進む前に、担当領域の入口を選ぶとき。
+- 下位ディレクトリの追加や用途変更により、oracle agent call の構成を確認する必要があるとき。
 
 ## Do not read this when
-- 共通 prompt の構築規則だけを確認したいときは、prompt builder の実装を直接読む
-- agent call の基本型やファイルアクセスモードの定義だけを確認したいときは、acp builder の基本定義を直接読む
-- oracle file の正本仕様やレビュー対象そのものを確認したいときは、対象の oracle file とその INDEX.md を直接読む
-- TUI や oracle 操作の実行本体を調査するときは、対応するサブコマンドの実装入口へ直接進む
-- 特定の用途の起動定義を直接確認できるときは、このディレクトリ全体の入口を読む必要はない
+- 特定の agent call 種別の実装が明確な場合は、対応する `edit`、`investigation`、または `review` の下位入口へ直接進むとき。
+- prompt builder の共通構築規則、acp builder の基本型、oracle 編集処理の実行本体、TUI UI 自体だけを確認したいときは、それぞれの直接の実装入口を読むとき。
+- oracle file の正本仕様やレビュー対象の実装そのものを確認するとき。
 
 ## hash
-- 1cbe50056b8f43bde0fa844a6a31abe0b791ee3ec348ae08fe01b99164125d8f
+- 9196aea36f892c8cd108d2ac73e960143bd45c5e8cfceef129ade0ad69a2f17c
 
 # `quota_probe.py`
 

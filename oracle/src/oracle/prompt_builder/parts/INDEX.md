@@ -17,18 +17,20 @@
 # `common_standard.py`
 
 ## Summary
-- 複数用途で共有する `StandardGroup` の構成定義を提供する。oracle・realization file の扱いに適用する標準グループと、所見・修正対象の判断に適用する標準グループを確認する入口である。
+- 複数用途で共有する StandardGroup の構成定義をまとめる。
+- oracle・realization file を扱う時の oracle authority 標準群と、所見・修正対象の判断時に用いる finding basis 標準群を構成するエントリーである。
 
 ## Read this when
-- oracle・realization file を扱う際に、適用する標準グループの構成を確認するとき
-- 所見や修正対象を判断する際に、finding basis の標準グループの構成を確認するとき
+- oracle・realization file を扱う際に、適用する oracle authority 標準群の構成を確認したいとき。
+- 所見・修正対象の判断時に、適用する finding basis 標準群の構成を確認したいとき。
+- oracle authority 標準群について、基本標準のみの構成と、oracle authority no reverse flow 標準を追加した構成の違いを確認したいとき。
 
 ## Do not read this when
-- 個々の標準の具体的な内容を確認するときは、標準定義を直接読む場合
-- StandardGroup の一般的な実装や型の仕様を確認するときは、定義元を直接読む場合
+- StandardGroup の個別標準の本文や詳細な判定基準を確認したいとき。
+- 標準そのものの定義を確認したいときは、参照されている standard_definitions の対象へ直接進む。
 
 ## hash
-- 41b1cbc3a20e26282638025bf101d011a87a2664216193a374a7aee316ae96cd
+- a65023fc8999435be18fdde6c8828d78e926bbb047de44a0cad74de7e7e78460
 
 # `conflict_resolution_standard.py`
 
@@ -49,16 +51,18 @@
 # `feedback_reporting_standard.py`
 
 ## Summary
-- 全 agent call に共通する、人間向け feedback 報告規範の prompt 部分を構築する。作業外の人間対応で再発防止・浪費削減・意図確定につながる問題だけを報告対象とし、専用 MCP tool による報告後も本来の作業を継続するための標準文面を提供する。
+- 全 agent call に共通する、人間向け feedback 報告の判定基準と報告手順を構築する。現在の作業外の人間対応で再発防止・反復的浪費の削減・人間意図の確定が可能な問題を MCP feedback tool へ報告するための共通入口である。
 
 ## Read this when
-- 全 agent call 共通の feedback 報告ルールや、人間への問題報告用 prompt の生成処理を確認・変更するとき。
+- agent call 共通の human feedback 報告ルールを変更・確認するとき
+- feedback を報告すべき問題の範囲や、報告後の継続方針を確認するとき
 
 ## Do not read this when
-- 個別 agent call の作業内容や、feedback 保存先の実装を直接確認したいとき。通常の作業内で解決済みの問題や、単なる改善提案を扱うとき。
+- 個別の prompt builder 部品や、feedback 内容そのものの保存形式だけを調べるとき
+- 通常の workload 内で解決済みの問題や、根拠のない改善案を扱うとき
 
 ## hash
-- b8637771d4871133e4db01d49c7e6d05f105f213e4d5b819003338d42385066c
+- bd6497bee29a5aa1d0f35d0423869b24d79127d4e61d1ea8097504d0e1ffa08b
 
 # `file_access_rule.py`
 
@@ -100,18 +104,21 @@
 # `oracle_and_realization_basic.py`
 
 ## Summary
-- 対象ファイルは、oracle と realization の定義・役割・下位分類を、動的な work-root 定義を用いて構築するプロンプト部品です。呼び出し元へは PlaceholderMap と StructDoc の組を返し、oracle/realization の基本説明を組み立てる入口になります。
+- oracle と realization の分類境界、および両者の役割を定義する基本説明文を構築する。
+- oracle 側では oracle doc・oracle src・oracle test、realization 側では realization code・implementation・test・ancillary の下位概念を整理する。
+- call-scoped context から work-root の定義を取得し、説明文中のプレースホルダーへ渡す処理を含む。
 
 ## Read this when
-- oracle と realization の基本概念を説明するプロンプト生成や、その文面・構造を変更または確認するとき。
-- AgentCallPathContext からルート定義を取得し、StructDoc とプレースホルダーの組を返す処理を追跡するとき。
+- oracle file と realization file の分類規則や責務を確認するとき。
+- oracle doc/src/test と realization implementation/test/ancillary の区分を確認するとき。
+- oracle と realization に関する基本説明文の生成経路を変更・調査するとき。
 
 ## Do not read this when
-- 特定の oracle 文書や realization 実装の内容そのものを調べるとき。
-- プロンプト部品の選択・組み合わせだけを調べるときは、該当する prompt builder の呼び出し元を直接読む。
+- oracle と realization の分類や基本概念を扱わず、別の prompt_builder part を直接確認すべきとき。
+- 具体的な分類アルゴリズムやテスト実装を確認する場合に、対応する実装・テスト対象へ直接進めるとき。
 
 ## hash
-- 3ebaefdba6473a30c6510a47642027979a34061132dd26b4472f8c5c11321d7d
+- 7d70bb60c470aff3275d9de18ec27d6b68d9da9fab51e7cf7a7608aa58964008
 
 # `oracle_review_standard.py`
 
@@ -131,18 +138,23 @@
 # `oracle_standard.py`
 
 ## Summary
-- oracle file の作成・変更・調査・レビューを扱う agent call に適用する規範の集合を構築する。共通の権限規範と、oracle file 固有の根拠・意図と欠落・逆算禁止・整合性と検索性に関する規範をまとめるため、oracle 向け標準の選択や適用範囲を確認する入口となる。
+- oracle file を扱う agent call 向けの instruction 文面を構築する標準コレクションを提供する。
+- 作成・変更・レビュー用には権威性、編集根拠、意図と空白、逆算推論禁止、実装制約、一貫性と検索可能性に関する規範を選択する。
+- 読み取り専用調査用には、権威性、逆算推論禁止、定義済み事項と未定義事項に関する規範だけを選択する。
+- 各標準コレクションはキャッシュされ、共通の authority standard group または authority core standard group と用途別グループを組み合わせて返される。
 
 ## Read this when
-- oracle file を扱う agent call にどの標準群を適用するか確認または変更するとき
-- oracle file 向け instruction の標準構成や適用範囲を調査するとき
+- oracle file の作成・変更・レビューに適用する標準コレクションの構成や選択範囲を確認するとき
+- oracle file の読み取り専用調査に適用する標準コレクションの構成や選択範囲を確認するとき
+- oracle file 向け agent call の instruction 文面で、作業用途に応じた標準グループの選択を追跡するとき
 
 ## Do not read this when
-- 個別の標準規範の本文や詳細な要求を確認したいときは、各 standard 定義を直接読む
-- oracle file 以外の agent call に適用する標準構成を確認するとき
+- 個別の oracle 規範本文を確認したいときは、ここではなく各標準定義の対象を直接読むべきである
+- StandardCollection や StandardGroup の一般的な構造・実装を確認したいときは、ここではなくそれらの定義元を直接読むべきである
+- oracle file の具体的な作成・変更・レビュー手順そのものを確認したいときは、ここではなく該当する規範または手順の対象を読むべきである
 
 ## hash
-- afb6960336a99a57c832b4edf43e73ca8c05adede1e1d5a940eff12f055f16ad
+- 68f044ddde2f93779e774f515c2348ef0b2e7018cde02032fe3ffec24e698b19
 
 # `realization_oracle_reference_rule.py`
 
@@ -197,17 +209,17 @@
 # `standard_definitions.py`
 
 ## Summary
-- Oracle と realization、レビュー、conflict、INDEX.md に関する全用途の Standard 定義を一元管理する。正本仕様の扱い、現行仕様への適合、検証、根拠、修正対象、レビュー所見、conflict 解消、INDEX エントリー作成の判断基準を確認する入口である。個別の実装挙動や各 oracle file の具体的要件は、対応する oracle・realization file を直接読む。
+- 標準文面をコード上の定義として一元管理し、oracle の権威性・仕様調査、realization の適合、レビュー、conflict 解消、INDEX エントリー作成など、cmoc の判断規則を共有する入口。個別の標準内容を確認・変更する作業ではこの定義を読む。
 
 ## Read this when
-- oracle file を正本として扱う規則、realization の適合・検証規則、所見や修正対象の基準を確認するとき
-- conflict marker の解消方針や INDEX.md エントリーの作成基準を確認するとき
-- 複数用途で共有される Standard の定義または適用範囲を変更するとき
+- oracle file と realization file の優先関係、正本仕様からの逸脱防止、未定義事項の扱いを確認するとき
+- realization の実装・テスト・設定を現行仕様へ適合させる方針を確認するとき
+- oracle review、修正対象の選定、conflict marker 解消、INDEX.md エントリー生成の判定基準を確認するとき
 
 ## Do not read this when
-- 特定の oracle file の内容、個別実装の責務、または対象機能のテスト手順だけを確認するとき
-- Structured Output の項目形式だけを確認するときは、対象スキーマを直接読む方が適切な場合
-- この定義群に関係しない機能の実装詳細や一般的なコーディング方針を調べるとき
+- 特定の oracle file の具体的な仕様だけを確認する場合
+- 対象の実装挙動やテスト手順を直接確認する場合
+- 標準定義や、それが定める判断・レビュー基準を変更しない通常の作業
 
 ## hash
-- 12c989b794e3d99ff77a10de046db4e989cc75f2d14207e43abcbbe06099a564
+- 783ad1286864e56c69ef0557a9544f0acedadab8ff8cda12dabe779da6ab4197

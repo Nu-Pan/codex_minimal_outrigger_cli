@@ -20,19 +20,19 @@
 # `src`
 
 ## Summary
-- oracle の実装ソースを集約する領域。AI エージェント呼び出しの論理パラメータ、モデル・推論強度・ファイルアクセス、cwd と indexing preflight、リポジトリ設定、root placeholder を含むパス解決、Standard と構造化文書、完全 prompt の構築、feedback reporter 入力契約を扱う。用途別の agent call 定義や oracle review など、より具体的な実装領域へ進む前の入口として機能する。
+- cmoc の oracle 実装を構成する下位領域への入口。AI agent 呼び出しのパラメータ・用途別起動定義、feedback 入力の検証と正規化、共通設定・パス・構造化文書モデル、prompt の構築と標準定義を扱う。
+- agent call のモデル・推論強度・ファイルアクセス・cwd などの起動パラメータや、oracle/realization の調査・編集・レビュー・適用フローを確認するときは acp_builder へ進む。
+- feedback の入力検証・正規化や Structured Output 契約を確認するときは feedback へ進む。
+- 設定、モデル指定、パスプレースホルダ、構造化文書、標準の共通モデルを確認するときは other へ進む。
+- 完全な prompt の組み立て、prompt 部品、agent 向け標準・アクセス規則・ルーティング規則を確認するときは prompt_builder へ進む。
 
 ## Read this when
-- 共通の agent call パラメータ、モデル選択、推論強度、ファイルアクセス制約、Structured Output、indexing preflight の実装を調べるとき。
-- agent call の cwd を起点とした work root・repository root・run root の解決や、prompt 内の root placeholder の扱いを確認するとき。
-- Standard の合成、構造化文書の Markdown 化、placeholder を含む完全 prompt の構築規則を確認するとき。
-- feedback reporter が受け取る問題分類、影響、原因の確度、根拠、継続状態を確認するとき。
-- 共通実装ではなく、用途固有の acp builder、prompt の Standard、feedback 処理、oracle review へ進むべきかを判断するとき。
+- oracle 実装の担当領域を特定し、acp_builder、feedback、other、prompt_builder のどこから調査または変更を始めるか判断するとき。
+- agent call、feedback、共通モデル、prompt 構築の複数領域にまたがる変更や調査で、下位入口を選ぶとき。
 
 ## Do not read this when
-- 特定の用途に固有な agent call の起動定義や Structured Output の内容が対象で、用途別の実装を直接確認できるとき。
-- Codex CLI の実行処理、realization 側の個別仕様、collector による feedback の保存・集約だけを調べるとき。
-- oracle の共通モデルや prompt 構築を利用しない機能の実装詳細だけを確認するとき。
+- 対象となる下位領域や個別ファイルが明確で、そこへ直接進めるとき。
+- oracle の正本仕様、realization の実装、または INDEX.md のルーティング規則そのものを確認するとき。
 
 ## hash
-- 53c3dbb84061e18a276869bb584969d192572d52a3d494907143a867cc197c20
+- eab64a844e6f21eb6ba0f257e89c743836544ab775cbb7de6c80fbb074e47989
